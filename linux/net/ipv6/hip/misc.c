@@ -7,6 +7,8 @@
  * - Mika Kousa <mkousa@cc.hut.fi>
  */
 
+#include <net/ipv6.h>
+
 #include "misc.h"
 #include "debug.h"
 #include "builder.h"
@@ -166,7 +168,7 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 int hip_lhi_are_equal(const struct hip_lhi *lhi1,
 		      const struct hip_lhi *lhi2) 
 {
-	return !memcmp(&lhi1->hit, &lhi2->hit, sizeof(struct in6_addr));
+	return !ipv6_addr_cmp(&lhi1->hit, &lhi2->hit);
 }
 
 /*
@@ -192,7 +194,7 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2)
 {
-	return (memcmp(hit1, hit2, sizeof(struct in6_addr)) > 0);
+	return (ipv6_addr_cmp(hit1, hit2) > 0);
 }
 
 

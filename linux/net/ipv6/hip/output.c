@@ -265,6 +265,7 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	buf->checksum = htons(0);
         len = hip_get_msg_total_len(buf);
 	csum = csum_partial((char*) buf, len, 0);
+	HIP_DEBUG("csum test=0x%x\n", csum);
 
 	lock_sock(hip_output_socket->sk);
 
@@ -276,8 +277,9 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	}
 
 	_HIP_DUMP_MSG(buf);
+	HIP_DEBUG("pkt out: len=%d proto=%d csum=0x%x\n", len, ofl->proto, csum);
 	HIP_DEBUG_IN6ADDR("pkt out: src IPv6 addr: ", &(ofl->fl6_src));
-	HIP_DEBUG_IN6ADDR("pkt out: dst IPv6 addr: ", &(ofl->fl6_dst));
+ 	HIP_DEBUG_IN6ADDR("pkt out: dst IPv6 addr: ", &(ofl->fl6_dst));
 
 	buf->checksum = csum_ipv6_magic(&(ofl->fl6_src), &(ofl->fl6_dst), len,
 					ofl->proto, csum);
@@ -298,6 +300,7 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		err = ip6_push_pending_frames(hip_output_socket->sk);
 
 	release_sock(hip_output_socket->sk);
+
  out_err:
 	return err;
 }

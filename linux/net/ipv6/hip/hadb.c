@@ -1785,6 +1785,14 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 	if ( (len += snprintf(page+len, count-len, "HIT %s", addr_str)) >= count)
 		goto error;
 
+	if (entry->default_spi_out == 0) {
+		/* extra check for addr_any ? */
+		hip_in6_ntop(&entry->bex_address, addr_str);
+		if ( (len += snprintf(page+len, count-len,
+				      "\n SPI 0x0\n  %s", addr_str)) >= count)
+			goto error;
+	}
+
 	list_for_each_entry_safe(spi_out, spi_tmp, &entry->spis_out, list) {
 		int n_addrs = 0;
 

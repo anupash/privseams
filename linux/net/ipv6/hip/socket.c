@@ -1046,10 +1046,9 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 
  	/************** BOS packet ready ***************/
 	HIP_DEBUG("sending BOS\n");
-
 	/* Use All Nodes Addresses (link-local) RFC2373
-	   FF02:0:0:0:0:0:0:1 as the destination multicast address */
-	ipv6_addr_all_nodes(&daddr);
+ 	   FF02:0:0:0:0:0:0:1 as the destination multicast address */
+ 	ipv6_addr_all_nodes(&daddr);
 
 	/* Iterate through all the network devices, recording source
 	 * addresses for BOS packets */
@@ -1143,6 +1142,7 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 		fl.fl6_dst = daddr;
 		fl.fl6_src = saddr[i];
 
+		HIP_DEBUG("pre csum totlen=%u\n", hip_get_msg_total_len(bos));
 		/* Send it! */
 		err = hip_csum_send_fl(&(saddr[i]), &daddr, bos, &fl);
 		if (err)

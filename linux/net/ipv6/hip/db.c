@@ -8,6 +8,8 @@
  *
  */
 
+#include <net/ipv6.h>
+
 #include "db.h"
 #include "misc.h"
 #include "builder.h"
@@ -334,53 +336,48 @@ int hip_copy_different_localhost_hit(struct in6_addr *target,
 	return err;
 } 
 
-static struct hip_lhi *hip_get_any_hit(struct hip_db_struct *db)
+/* Get a LHI from given DB @db */
+/* @res must be previously allocated */
+/* Returns: 0 if a lhi was copied successfully to @res, < 0 otherwise. */
+int hip_get_any_hit(struct hip_db_struct *db, struct hip_lhi *res)
 {
 	struct hip_host_id_entry *tmp;
-	struct hip_lhi *res;
 	unsigned long lf;
 
-	if (list_empty(&db->db_head))
-		return NULL;
-
-	res = kmalloc(sizeof(struct hip_lhi), GFP_KERNEL);
 	if (!res)
-		return NULL;
+		return -EINVAL;
+	if (list_empty(&db->db_head))
+		return -EINVAL;
 
 	HIP_READ_LOCK_DB(db);
-
+	/* why get .next and not the first ? */
 	tmp = list_entry(db->db_head.next, struct hip_host_id_entry, next);
 	if (!tmp) {
 		HIP_READ_UNLOCK_DB(db);
-		kfree(res);
-		return NULL;
+		return -EINVAL;
 	}
-
 	memcpy(res, &tmp->lhi, sizeof(struct hip_lhi));
-
 	HIP_READ_UNLOCK_DB(db);
 
-	return res;
+	return 0;
 }
 
 int hip_get_any_local_hit(struct in6_addr *dst)
 {
-	struct hip_lhi *lhi;
+	struct hip_lhi lhi;
 
-	lhi = hip_get_any_hit(&hip_local_hostid_db);
-	if (!lhi) {
+	if (!dst) {
+		HIP_ERROR("NULL dst\n");
+		return -EINVAL;
+	}
+	if (hip_get_any_hit(&hip_local_hostid_db, &lhi) != 0) {
 		HIP_ERROR("Could not retrieve any local HIT\n");
 		return -ENOENT;
 	}
-
-	if (dst) {
-		memcpy(dst, &lhi->hit, sizeof(struct in6_addr));
-		kfree(lhi);
-		return 0;
-	} 
-
-	return -EINVAL;
+	ipv6_addr_copy(dst, &lhi.hit);
+	return 0;
 }
+
 /**
  * hip_get_host_id - Copies the host id into newly allocated memory
  * and returns it to the caller.

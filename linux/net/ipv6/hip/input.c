@@ -2706,13 +2706,15 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	uint16_t csum;
 	struct in6_addr our_hit, opportunistic_hit;
 
-	_HIP_DEBUG("skb len=%d, v6hdr payload_len=%d/hip hdr pkt total len=%d\n",
-		  (*skb)->len, ntohs((*skb)->nh.ipv6h->payload_len),
-		  (hip_common->payload_len+1)*8);
+	HIP_DEBUG("skb len=%d, skb data_len=%d, v6hdr payload_len=%d/hip_common payloadlen=%d mgtotlen=%d\n",
+		  (*skb)->len, (*skb)->data_len, ntohs((*skb)->nh.ipv6h->payload_len),
+		  (hip_common->payload_len+1)*8,
+		  hip_get_msg_total_len(hip_common)
+		  );
 
 	if (ntohs((*skb)->nh.ipv6h->payload_len) !=
 	     hip_get_msg_total_len(hip_common)) {
-		HIP_ERROR("Invalid HIP packet length (IPv6 hdr payload_len=%d/HIP pkt len=%d). Dropping\n",
+		HIP_ERROR("Invalid HIP packet length (IPv6 hdr payload_len=%d/HIP pkt payloadlen=%d). Dropping\n",
 			  ntohs((*skb)->nh.ipv6h->payload_len),
 			  hip_get_msg_total_len(hip_common));
 		err = -EINVAL;
