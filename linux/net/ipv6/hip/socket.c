@@ -738,6 +738,8 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 		goto out_err;
 	}
 
+	_HIP_HEXDUMP("rsa host id\n", rsa_host_identity,
+		    hip_get_param_total_len(rsa_host_identity));
 
 	err = hip_private_host_id_to_hit(dsa_host_identity, &dsa_lhi.hit,
 					 HIP_HIT_TYPE_HASH126);

@@ -1409,7 +1409,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	struct hip_common *r2 = NULL;
 	struct hip_common *i2;
  	int err = 0;
-	int algo = 0;
+	//int algo = 0;
 	int clear = 0;
 	u8 *signature;
 // 	u8 signature[HIP_DSA_SIGNATURE_LEN];
@@ -1494,9 +1494,12 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		}
 	}
 
+#if 0
 	/********** SIGNATURE *********/
 	{
 		struct hip_host_id *hitmp;
+
+		HIP_DUMP_MSG(ctx->input);
 
 		hitmp = hip_get_param(ctx->input, HIP_PARAM_HOST_ID);
 		if (!hitmp) {
@@ -1505,21 +1508,23 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 			goto out_err;
 		}
 	
-		algo = hip_get_host_id_algo(hitmp);
+		//algo = hip_get_host_id_algo(hitmp);
 	}
+	//algo = HIP_HI_RSA;
+#endif
 
-	host_id_private = hip_get_any_localhost_host_id(algo);
+	host_id_private = hip_get_any_localhost_host_id(ctx->host_id_algo);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
 	}
 
-	if (algo == HIP_HI_RSA) {
+	if (ctx->host_id_algo == HIP_HI_RSA) {
 		signature = kmalloc(HIP_RSA_SIGNATURE_LEN, GFP_KERNEL);
-	} else if (algo == HIP_HI_DSA) {
+	} else if (ctx->host_id_algo == HIP_HI_DSA) {
 		signature = kmalloc(HIP_DSA_SIGNATURE_LEN, GFP_KERNEL);
 	} else {
-		HIP_ERROR("Unknown algo\n");
+		HIP_ERROR("Unknown host id algo: %d\n", ctx->host_id_algo);
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -1536,13 +1541,17 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		goto out_err;
 	}
 
-	if (algo == HIP_HI_RSA) {
+	if (ctx->host_id_algo == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(r2, signature,
-							 HIP_RSA_SIGNATURE_LEN, HIP_SIG_RSA);
-	} else {
+							 HIP_RSA_SIGNATURE_LEN,
+							 HIP_SIG_RSA);
+	} else if (ctx->host_id_algo == HIP_HI_DSA) {
 		err = hip_build_param_signature_contents(r2, signature,
 							 HIP_DSA_SIGNATURE_LEN,
 							 HIP_SIG_DSA);
+	} else {
+		HIP_ERROR("Unsupported Host ID algo: %d\n", ctx->host_id_algo);
+		err = -ENOENT;
 	}
 
  	if (err) {
@@ -1794,6 +1803,11 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	_HIP_DEBUG("SIGNATURE in I2 ok\n");
 
 	/* do the rest */
+
+
+	/* store host_id algo for create_r2 */
+	ctx->host_id_algo = hip_get_host_id_algo(host_id_in_enc);
+
   	/* Add peer's host id to peer_id database (is there need to
   	   do this?) */
 	{
@@ -2163,6 +2177,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
  	sig = hip_get_param(r2, HIP_PARAM_HIP_SIGNATURE);
  	if (!sig) {
  		err = -ENOENT;
+		HIP_ERROR("No signature found\n");
  		goto out_err;
  	}
 

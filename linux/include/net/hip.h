@@ -712,6 +712,7 @@ struct hip_context
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
 	uint16_t keymat_index; /* KEYMAT offset */
+	uint8_t host_id_algo; /* used in create_r2 */
 };
 
 struct hip_context_dh_sig

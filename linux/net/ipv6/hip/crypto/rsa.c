@@ -229,7 +229,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		 int priv_klen)
 {
 	RSA_secret_key rsk = {0};
-	MPI data, msig;
+	MPI data, msig; /* tmp_mpi  */
 	int err = 0, len, slice;
 	u8 *c = private_key;
 	u8 *buf = NULL;
@@ -325,13 +325,20 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	}
 	HIP_HEXDUMP("Data to be signed", buf, len);
 
-	msig = mpi_alloc(mpi_get_nlimbs(rsk.n));
-	secret(msig, data, &rsk);
+	msig = mpi_alloc(mpi_get_nbits(rsk.n) / 8);
 
-	len = mpi_get_nbits(rsk.n) / 8;
-	/* 8 must not be 27, it should be always 28. This should be
+	/* use the code in comments to check the signature */
+	//tmp_mpi = mpi_alloc(mpi_get_nbits(rsk.n) / 8);
+	secret(msig, data, &rsk);
+	//public(tmp_mpi, msig, (RSA_public_key *)&rsk);
+	//if (mpi_cmp( tmp_mpi, data))
+	//     HIP_DEBUG("Signature is buggy!\n");
+
+
+	len = (mpi_get_nbits(rsk.n) + 7) / 8;
+	/* 8 must not be 127, it should be always 128. This should be
 	    handled better */
-	len += 1; /* rsk.n */
+	//	len += 1; /* rsk.n */
         if (gcry_mpi_print(GCRYMPI_FMT_USG, signature, 
 			   &len, msig) != 0) {
 		log_error("Error encoding RSA signature\n");
@@ -379,10 +386,9 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	/* XX CHECK: should this be divided by 6 ?*/
 	/*slice = (pub_klen - len);*/
 	/* XX CHECK: should slice affect len ? */
-	slice = (pub_klen - len) / 2;
-	len = 2 * slice;
-
-	HIP_DEBUG("slice:%d\n",slice);
+	//slice = (pub_klen - len) / 2; // XX CHANGE: MIIKA TEST
+	//len = 2 * slice;
+	len = pub_klen - len - 1;
 
 	if (gcry_mpi_scan(&rpk.n, GCRYMPI_FMT_USG, c, &len) != 0) {
 		log_error("Error parsing RSA public n\n");
@@ -418,7 +424,7 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	HIP_HEXDUMP("digest", digest, HIP_AH_SHA_LEN);
 
-	len = mpi_get_nbits(rpk.n) / 8;
+	len = (mpi_get_nbits(rpk.n) + 7) / 8;
 	if (gcry_mpi_scan(&data, GCRYMPI_FMT_USG, buf, &len) != 0) {
 		log_error("Error parsing signature data\n");
 		goto cleanup;
@@ -426,7 +432,7 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	HIP_HEXDUMP("Data to be signed", buf, len);
 
-	result = mpi_alloc(mpi_get_nlimbs(rpk.n));
+	result = mpi_alloc(mpi_get_nbits(rpk.n) / 8);
 	if (!result) {
 		log_error("mpi alloc rpk.n\n");
 		goto cleanup;
@@ -442,10 +448,7 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	}
 #endif
 
-	public(result, data, &rpk); 
-	HIP_HEXDUMP("calculated signature", result, len);
-
-	len = mpi_get_nbits(rpk.n) / 8;
+	len = (mpi_get_nbits(rpk.n) + 7) / 8;
 	if (gcry_mpi_scan(&orig, GCRYMPI_FMT_USG, signature, &len) != 0)
 	{
 		log_error("Error reading signature data\n");
@@ -453,8 +456,13 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	}
 
 	HIP_HEXDUMP("original signature", signature, len);
+	HIP_HEXDUMP("orig.num", orig->d, len);
 
-	err = mpi_cmp(orig, result);
+	public(result, /*data*/ orig, &rpk); 
+	HIP_HEXDUMP("calculated signature", result->d, len);
+	HIP_HEXDUMP("original data:", data->d, len);
+
+	err = mpi_cmp(data, result);
 
  cleanup:
 	/* XX FIX: OTHER MPIs (data, orig, )?!? see the e.g. DSA functions */
