@@ -1,28 +1,34 @@
-$Id: README,v 1.5 2003/11/03 10:58:26 krisu Exp $
+HIP support for tcpdump 
+-----------------------
 
-
-HIP support for tcpdump 3.7.2
------------------------------
-
-Status: experimental, not supported actively, might even be broken
+Status: supported, but might be broken
         or show incorrect values
+
+Patches available for versions: 3.7.2, 3.8.3
+
 
 Installation instructions:
 
-Get tcpdump-3.7.2 from http://www.tcpdump.org/release/tcpdump-3.7.2.tar.gz
-Unpack it: tar xfvz tcpdump-3.7.2.tar.gz
-Change to the newly created directory: cd tcpdump-3.7.2
-Patch tcpdump: patch -p1 < /location/of/tcpdump-3.7.2-hip.patch
+Get source code for tcpdump-3.8.3 from http://www.tcpdump.org/ (or
+tcpdump-3.7.2 if you prefer).
 
-Edit Makefile.in: find line "INCLS = .." and add the location of
-linux/include within then installation HIPL directory,
-e.g. -I/somewhere/hipl/linux/include
+Unpack it: tar xfvz tcpdump-3.8.3.tar.gz
+
+Change to the newly created directory: cd tcpdump-3.8.3
+
+Patch tcpdump: patch -p1 < /location/of/tcpdump-3.8.3-hip.patch
+
+Edit Makefile.in: find line "INCLS = .." (somewhere near line 45).
+Add "-I" and the location of linux/include within the HIPL installation directory,
+e.g. "-I/somewhere/hipl/linux/include". The resulting line should be something like
+this: INCLS = -I. -I/somewhere/hipl/linux/include @V_INCLS@
 
 The rest of the installation proceeds as is written in the tcpdump
 INSTALL file. Remember to give option --enable-ipv6 to configure.
 
 Remember to use long enough snaplen (option -s) to capture the HIP
-packets.
+packets fully.
+
 
 Example usage:
 
@@ -31,6 +37,9 @@ tcpdump -s10000 -i netdevtolisten 'proto 99'
 
 Show also the parameters:
 tcpdump -s10000 -i netdevtolisten -v 'proto 99'
+
+Show the parameters and IPsec ESP traffic:
+tcpdump -s10000 -i netdevtolisten -v 'proto 99 or esp'
 
 
 
@@ -118,4 +127,3 @@ UML patch for 2.4.20 with HIP support in Debian Sarge
 
 Same as above apply. There will be lots of errors during
 the compilation of the UML kernel, but just ignore them.
-
