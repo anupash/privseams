@@ -997,7 +997,7 @@ int hip_check_network_msg(const struct hip_common *msg)
 		} else if (current_param_type < prev_param_type) {
 			err = -ENOMSG;
 			HIP_ERROR("Wrong order of parameters (%d, %d)\n",
-				  current_param_type, prev_param_type);
+				  prev_param_type, current_param_type);
 			break;
 		} else if (hip_check_network_param_attributes(current_param)) {
 			err = -EINVAL;
