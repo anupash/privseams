@@ -53,6 +53,7 @@ int esp6_output(struct sk_buff **pskb)
 	int alen;
 	int nfrags;
 
+printk(KERN_DEBUG "esp6_output, dst %p\n", dst);
 	esp = x->data;
 	hdr_len = (*pskb)->h.raw - (*pskb)->data +
 		sizeof(*esph) + esp->conf.ivlen;
@@ -103,6 +104,7 @@ int esp6_output(struct sk_buff **pskb)
 #endif
 
 	esph->spi = x->id.spi;
+printk(KERN_DEBUG "esp6_output esph spi 0x%x\n", ntohl(esph->spi));
 	esph->seq_no = htonl(++x->replay.oseq);
 
 	if (esp->conf.ivlen)
@@ -172,10 +174,10 @@ int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_b
 	memcpy(tmp_hdr, skb->nh.raw, hdr_len);
 
 	/* If integrity check is required, do this. */
-        if (0 && esp->auth.icv_full_len) {
+        if (esp->auth.icv_full_len) {
 		u8 sum[esp->auth.icv_full_len];
 		u8 sum1[alen];
-printk(KERN_DEBUG "test icv alen=%d\n", alen);
+//printk(KERN_DEBUG "test icv alen=%d\n", alen);
 
 		esp->auth.icv(esp, skb, 0, skb->len-alen, sum);
 

@@ -849,6 +849,8 @@ struct hip_hadb_state
 
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
+
+	int skbtest;
 };
 
 struct hip_cookie_entry {

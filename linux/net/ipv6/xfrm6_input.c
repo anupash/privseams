@@ -44,7 +44,7 @@ int xfrm6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 	nhoff = *nhoffp;
 	nexthdr = skb->nh.raw[nhoff];
 
-printk(KERN_DEBUG "nexthdr pre parse_spi=%d\n", nexthdr);
+// printk(KERN_DEBUG "nexthdr pre parse_spi=%d\n", nexthdr);
 	if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) != 0)
 		goto drop;
 
@@ -87,7 +87,7 @@ printk(KERN_DEBUG "nexthdr pre parse_spi=%d\n", nexthdr);
 			goto drop_unlock;
 //	printk(KERN_DEBUG "expire ok\n");
 		nexthdr = x->type->input(x, &(xfrm_vec[xfrm_nr].decap), skb);
-		printk(KERN_DEBUG "nexthdr=%d\n", nexthdr);
+//		printk(KERN_DEBUG "nexthdr=%d\n", nexthdr);
 		if (nexthdr <= 0)
 			goto drop_unlock;
 

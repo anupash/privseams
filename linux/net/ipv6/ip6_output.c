@@ -269,10 +269,33 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 	ipv6_addr_copy(&hdr->daddr, first_hop);
 
 	mtu = dst_pmtu(dst);
+
+	printk(KERN_DEBUG "ip6_xmit, skb->dst %p\n", skb->dst);
 	if ((skb->len <= mtu) || ipfragok) {
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0)
+		int ret = HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb);
+//		if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0)
+		if (ret < 0)
 			goto end_hip;
+		if (ret == 5) {
+			struct dst_entry *dst_tmp;
+			int err2;
+
+			sk_dst_reset(sk);
+			err2 = ip6_dst_lookup(sk, &dst_tmp, fl);
+			if (err2) {
+				sk->sk_err_soft = -err2;
+				goto end_hip;
+			}
+
+			ip6_dst_store(sk, dst_tmp, NULL);
+			/* copypaste tcp_v6_xmit */
+			//sk->sk_route_caps = dst_tmp->dev->features & 
+				//	~(NETIF_F_IP_CSUM | NETIF_F_TSO);
+			//tcp_sk(sk)->ext2_header_len = dst_tmp->header_len;
+
+			skb->dst = dst_clone(dst_tmp);
+		}
 #endif
 		IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);
 		return NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, dst->dev, ip6_maybe_reroute);
@@ -1155,6 +1178,7 @@ int ip6_push_pending_frames(struct sock *sk)
 	ipv6_addr_copy(&hdr->daddr, final_dst);
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	printk(KERN_DEBUG "ip6_push_pending_frames\n");
 	if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0) {
 		kfree_skb(skb);
 		goto error;

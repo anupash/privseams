@@ -37,6 +37,10 @@
 
 #include <net/checksum.h>
 #include <net/addrconf.h>
+#include <net/xfrm.h>
+#include <linux/netfilter.h>
+#include <linux/skbuff.h>
+#include <net/ip6_route.h>
 
 /**
  * hip_handle_output - handle outgoing IPv6 packets
@@ -172,6 +176,164 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		break;
 	}
 
+	HIP_DEBUG("entry default spi 0x%x\n", entry->default_spi_out);
+#ifdef CONFIG_NETFILTER
+	if (skb && entry->skbtest) {
+//		struct rt6_info *rt;
+
+		hip_print_hit("hdr->saddr", &(hdr->saddr));
+		hip_print_hit("hdr->daddr", &(hdr->daddr));
+
+		hip_print_hit("skb->nh.ipv6h.saddr", &(skb->nh.ipv6h->saddr));
+		hip_print_hit("skb->nh.ipv6h.daddr", &(skb->nh.ipv6h->daddr));
+		HIP_DEBUG("dst %p\n", skb->dst);
+
+	entry->skbtest = 0;
+	err = 5;
+	goto out;
+
+		if (skb->dst) {
+			int err;
+			struct flowi fl;
+
+			struct dst_entry *child = skb->dst;
+			int t = 0;
+			while (child) {
+				if (child->obsolete > 0 ||
+				    (child->dev && !netif_running(child->dev)) ||
+				    (child->xfrm && child->xfrm->km.state != XFRM_STATE_VALID)) {
+					t = 1;
+					break;
+				}
+				child = child->child;
+			}
+
+			if (skb->dst->xfrm) {
+				xfrm_state_put(skb->dst->xfrm);
+				//skb->dst->xfrm = NULL;
+			}
+
+			if (t) {
+				dst_release(skb->dst);
+				skb->dst = NULL;
+			}
+#if 1
+
+
+			HIP_DEBUG("skb->dst %p\n", skb->dst);
+//			dst_release(skb->dst);
+//			skb->dst = NULL;
+
+			memset(&fl, 0 , sizeof(struct flowi));
+			fl.oif = 0;
+			fl.fl6_flowlabel = 0;
+//			ipv6_addr_copy(&fl.fl6_src, &(hdr->saddr));
+//			ipv6_addr_copy(&fl.fl6_dst, &(hdr->daddr));
+
+			ipv6_addr_copy(&fl.fl6_src, &entry->hit_our);
+			ipv6_addr_copy(&fl.fl6_dst, &entry->hit_peer);
+
+			err = ip6_dst_lookup(skb->sk, &skb->dst, &fl);
+			if (err) {
+				HIP_ERROR("ip6_dst_lookup err=%d\n", err);
+			}
+			HIP_DEBUG("skb->dst 2 %p\n", skb->dst);
+#endif
+#if 0
+			int err;
+			struct dst_entry *dst_tmp;
+			struct flowi fl;
+
+			fl.proto = IPPROTO_HIP;
+			fl.fl6_dst = r;
+			fl.oif = 0;
+			fl.fl6_flowlabel = 0;
+
+			/* copypaste from tcp_v6_xmit, might be very wrong */
+			sk_dst_reset(skb->sk);
+			err = ip6_dst_lookup(skb->sk, &dst_tmp, &fl);
+			if (err) {
+				HIP_ERROR("dst_lookup err=%d\n", err);
+				sk->sk_err_soft = -err;
+			}
+			ip6_dst_store(skb->sk, dst_tmp, NULL);
+			skb->sk->sk_route_caps = dst_tmp->dev->features &
+				~(NETIF_F_IP_CSUM | NETIF_F_TSO);
+			tcp_sk(sk)->ext2_header_len = dst_tmp->header_len;
+			skb->dst = dst_clone(dst_tmp);
+#endif
+		} else
+			HIP_DEBUG("no ops\n");
+#if 0
+		rt = rt6_lookup(&hdr->daddr, &hdr->saddr, 0, 0);
+		if (rt) {
+			HIP_DEBUG("got rt\n");
+			
+		} else
+			HIP_ERROR("NULL rt\n");
+#endif
+
+#if 0
+		if (ip6_route_me_harder(skb))
+			HIP_ERROR("rmh failed\n");
+		else
+			HIP_DEBUG("skb rmh ok\n");
+#endif
+		entry->skbtest = 0;
+	} else
+		_HIP_DEBUG("skb null | skbtest 0\n");
+#endif
+
+#if 0
+	if (skb) {
+//#ifdef CONFIG_NETFILTER
+//		HIP_DEBUG("setting skb NFC_ALTERED\n");
+//		skb->nfcache |= NFC_ALTERED;
+//#else
+		if (skb->dst) {
+			/* ip6_route_me_harder */
+			struct dst_entry *dst;
+			struct flowi fl = {
+				.oif = skb->sk ? skb->sk->sk_bound_dev_if : 0,
+				.nl_u =
+				{ .ip6_u =
+				  { .daddr = hdr->daddr,
+				    .saddr = hdr->saddr, } },
+				.proto = hdr->nexthdr,
+			};
+			HIP_DEBUG("call ip6_route_output\n");
+			dst = ip6_route_output(skb->sk, &fl);
+			if (dst->error) {
+				//IP6_INC_STATS(IPSTATS_MIB_OUTNOROUTES);
+				LIMIT_NETDEBUG(
+					HIP_DEBUG("No more route.\n"));
+				dst_release(dst);
+				err = -EINVAL;
+				goto out;
+			}
+			dst_release(skb->dst);
+			skb->dst = dst;
+			
+		} else
+			HIP_DEBUG("no dst\n");
+//#endif
+	}
+#endif
+
+#if 0
+	if (skb && skb->dst) {
+		if (skb->dst->xfrm) {
+			struct xfrm_state *x = skb->dst->xfrm;
+			struct xfrm_id *id = &x->id;
+			//HIP_DEBUG("xfrm->id.spi=0x%x\n", ntohl(((dst->xfrm)->id).spi));
+			HIP_DEBUG("xfrm->id.spi=0x%x\n", ntohl(id->spi));
+			id->spi = htonl(entry->default_spi_out);
+		} else
+			HIP_ERROR("no dst->xfrm\n");
+	} else
+		HIP_ERROR("no dst\n");
+#endif
+
  out:
 	if (entry)
 		hip_put_ha(entry);
@@ -304,7 +466,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, &fl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err) {
- 		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);
+ 		HIP_ERROR("ip6_append_data failed (err=%d)\n", err);
 		ip6_flush_pending_frames(hip_output_socket->sk);
 	} else
 		err = ip6_push_pending_frames(hip_output_socket->sk);
