@@ -342,12 +342,11 @@ struct hip_common *hip_create_r1(struct in6_addr *src_hit)
 	if (written < 0) {
  		HIP_ERROR("Could not extract DH public key\n");
  		goto out_err;
- 	}
- 
+ 	} 
 
- 	err = hip_build_param_dh_fixed_contents(msg,
- 						HIP_DEFAULT_DH_GROUP_ID,
- 						dh_data, written);
+ 	err = hip_build_param_diffie_hellman_contents(msg,
+						      HIP_DEFAULT_DH_GROUP_ID,
+						      dh_data, written);
  	if (err) {
  		HIP_ERROR("Building of DH failed (%d)\n", err);
  		goto out_err;
@@ -379,7 +378,7 @@ struct hip_common *hip_create_r1(struct in6_addr *src_hit)
 
  	/********** Host_id **********/
 
- 	err = hip_build_param(msg, host_id_pub);
+	err = hip_build_param(msg, host_id_pub);
  	if (err) {
  		HIP_ERROR("Building of host id failed\n");
  		goto out_err;

@@ -71,7 +71,7 @@ following options:
   [*] Cipher Algorithms
   --- 64 bit blocksize
   <*> 3DES cipher
-  --- Depracated
+  --- Deprecated
   <*> NULL cipher
   [*] Digest Algorithms
   <*>  SHA1 digest

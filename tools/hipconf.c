@@ -120,9 +120,11 @@ int handle_hi(struct hip_common *msg,
   char *filebasename = NULL;
   int fmt;
   struct hip_lhi lhi;
+  struct hip_host_id *host_id = NULL;
   unsigned char *dsa_key_rr = NULL;
   int dsa_key_rr_len;
   DSA *dsa_key = NULL;
+  const char *hostname = "test.hostname.com";
 
   HIP_INFO("action=%d optc=%d\n", action, optc);
 
@@ -235,7 +237,7 @@ int handle_hi(struct hip_common *msg,
       goto out;
     }
 
-    err = dsa_to_hit(dsa_key, HIP_HIT_TYPE_HASH126, &lhi.hit);
+    err = dsa_to_hit(dsa_key_rr, HIP_HIT_TYPE_HASH126, &lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       err = -EINVAL;
@@ -267,10 +269,15 @@ int handle_hi(struct hip_common *msg,
   if (numeric_action == ACTION_DEL)
     goto skip_host_id;
 
-  err = hip_build_param_host_id_contents(msg, dsa_key_rr,
-					 dsa_key_rr_len, HIP_HI_DSA);
+  err = alloc_and_set_host_id_param_hdr(&host_id, dsa_key_rr_len, HIP_HI_DSA,
+					hostname);
   if (err) {
-    HIP_ERROR("build param error %d\n", err);
+    goto out;
+  }
+
+  err = hip_build_param_host_id(msg, host_id, dsa_key_rr, hostname);
+  if (err) {
+    HIP_ERROR("Building of host id failed\n");
     goto out;
   }
 
@@ -286,6 +293,8 @@ int handle_hi(struct hip_common *msg,
 
  out:
 
+  if (host_id)
+    free(host_id);
   if (dsa_key)
     DSA_free(dsa_key);
   if (dsa_key_rr)

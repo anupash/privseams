@@ -82,9 +82,9 @@ DSA *create_dsa_key(int bits) {
  *
  * Returns: 0 if HIT was created successfully, else negative.
  */
-int dsa_to_hit(DSA *dsa, int type, struct in6_addr *hit) {
-  int err = 0, pubkey_len;
-  unsigned char *pubkey = NULL;
+int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
+  int err = 0, pubkey_len = 405; // XX FIX
+  //unsigned char *pubkey = NULL;
   char addrstr[INET6_ADDRSTRLEN];
   unsigned char *sha, sha_hash[SHA_DIGEST_LENGTH];
   int i;
@@ -99,31 +99,6 @@ int dsa_to_hit(DSA *dsa, int type, struct in6_addr *hit) {
 
   HIP_INFO("Create HIT from HI\n");
   
-  pubkey = malloc(BN_num_bytes(dsa->pub_key));
-  if (!pubkey) {
-    HIP_ERROR("malloc(%d) failed\n", BN_num_bytes(dsa->pub_key));
-    err = -ENOMEM;
-    goto out_err;
-  }
-  
-  pubkey_len = BN_bn2bin(dsa->pub_key, pubkey);
-  if (pubkey_len <= 0) {
-    HIP_ERROR("Bignumber conversion to binaryfailed\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-
-  inet_ntop(AF_INET6, hit, addrstr, sizeof(addrstr));
-  HIP_DEBUG("*** HIT %s ***\n", addrstr);
-
-  _HIP_DEBUG("pklen=%d type=%d\n", pubkey_len, type);
-
-  if (pubkey_len <= 0) {
-    HIP_ERROR("Bad DSA pubkey, len <= 0\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-
   if (type == HIP_HIT_TYPE_HASH126) {
     HIP_DEBUG("HIT type is HASH126\n");
   } else if (type == HIP_HIT_TYPE_HAA_HASH) {
@@ -140,7 +115,7 @@ int dsa_to_hit(DSA *dsa, int type, struct in6_addr *hit) {
      bits of a Hash of the key.  For example, if the Identity is DSA, these
      bits MUST be the least significant 126 bits of the SHA-1 [FIPS-180-1]
      hash of the DSA public key Host Identity.  */
-  sha = SHA1(pubkey, pubkey_len, (unsigned char *) &sha_hash);
+  sha = SHA1(dsa, pubkey_len, (unsigned char *) &sha_hash);
   if (!sha) {
     HIP_ERROR("sha hash failed\n");
     err = -EINVAL;
@@ -194,12 +169,13 @@ int dsa_to_hit(DSA *dsa, int type, struct in6_addr *hit) {
     hit->s6_addr32[i] = l;
     _HIP_DEBUG("\n");
   }
+
+  inet_ntop(AF_INET6, hit, addrstr, sizeof(addrstr));
+  HIP_DEBUG("*** HIT %s ***\n", addrstr);
   
  out_err:
 
-  if (pubkey)
-    free(pubkey);
-  if (tmp)
+   if (tmp)
     BN_free(tmp);
 
   return err;
@@ -346,6 +322,9 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   bn2bin_len = BN_bn2bin(dsa->priv_key, bn_buf);
   memcpy(p,bn_buf,bn2bin_len);
+
+  p += bn2bin_len;
+  HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
 
   /*  _HIP_DEBUG("q len=%d\n", bn2bin_len);
   if (!bn2bin_len) {
@@ -575,4 +554,25 @@ DSA *load_dsa_keys(char *filenamebase) {
     DSA_free(dsa_tmp);
 
   return NULL;
+}
+
+int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
+				    unsigned int key_rr_len,
+				    uint8_t algo,
+				    const char *hostname)
+{
+  int err = 0;
+  struct hip_host_id host_id_hdr;
+
+  hip_build_param_host_id_hdr(&host_id_hdr, hostname,
+			      key_rr_len, algo);
+
+  *host_id = malloc(hip_get_param_total_len(&host_id_hdr));
+  if (!host_id) {
+    err = -ENOMEM;
+  }  
+
+  memcpy(*host_id, &host_id_hdr, sizeof(host_id_hdr));
+
+  return err;
 }

@@ -132,6 +132,8 @@ int main(int argc,char *argv[]) {
   bzero(receiveddata, IP_MAXPACKET);
   bzero(mylovemostdata, IP_MAXPACKET);
 
+  printf("Input some text, press enter and ctrl+d\n");
+
   while ((ch = fgetc(stdin)) != EOF && (datalen < IP_MAXPACKET)) { // horrible code
     mylovemostdata[datalen] = (unsigned char) ch;
     datalen++;

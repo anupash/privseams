@@ -8,7 +8,7 @@ for the strings "XX" or "TODO" to locate the file specific TODO items.
 IETF 59 action items
 ====================
 
-[MIKA] Host ID
+[DONE] Host ID
 [DONE] Type constants for parameters.
 
 IETF 58 action items
@@ -280,6 +280,23 @@ SA was created.  It is used for replay protection.
 Bug reports
 ===========
 
+Miika Komu: cookie indexes fail randomly:
+
+Feb 20 07:54:26 crash kernel: hip_solve_puzzle: *** Puzzle solved ***:
+ae6a19d2d1d939cb
+Feb 20 07:54:26 crash kernel: hip_handle_r1: R1 Successfully received
+   
+Feb
+20 07:52:00 oops kernel: hip_fetch_cookie_entry:
+Calculated index:
+9 Feb 20 07:52:00 oops kernel: hip_verify_cookie:error: WARNING: Unknown
+cookie
+Feb 20 07:52:00 oops kernel: hip_handle_i2:error: Birthday cookie checks
+failed
+Feb 20 07:52:00 oops kernel: hip_worker: Recoverable error occured
+
+
+
 Date: Thu, 19 Feb 2004 11:20:02 +0000
 From: Simon Schuetz <simon.schuetz@netlab.nec.de>
 Reply-To: hipl-users@freelists.org
@@ -296,6 +313,34 @@ Sometimes I did not even get to enter the 2nd line before the machine died.
 > could show the output of "ifconfig" and "/proc/net/hip/*" before the
 > handover? Thanks.
 
+Date: Thu, 29 Jan 2004 22:18:07 +0200 (EET)
+
+2004-01-29 16:42:00) Mika: @kludge 19:41:45 ~/op/hipl-1.0/test>make
+gcc -DHAVE_CONFIG_H -I. -I. -I.     -I../tools -I../libinet6/include -I..
+-I../linux/include -I../linux/net/ipv6/hip -DHIP_UNITTEST_MODE
+-DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g -c listifaces.c
+listifaces.c:3:21: ifaddrs.h: No such file or directory
+
+Date: Mon, 2 Feb 2004 19:03:08 +0200 (EET)
+
+libinet6 requires tools to be built before it.
+
+Solution: a global configure/make system.
+
+Date: Mon, 09 Feb 2004 11:54:20 +0200
+
+Bug: hip_socket->sk does not have locks.
+Solution: add a semaphore or spinlock to hip_socket->sk.
+
+Date: Thu, 26 Feb 2004 14:41:23 +0200 (EET)
+
+* check that the dst hit of an incoming packet belongs to the localhost
+* check that the hit maps into the host id
+
+Date: Mon, 1 Mar 2004 06:47:57 +0200 (EET)
+
+During IETF, Thomas said that birthday count is quite huge. It should
+be incremental from zero?
 
 action items:
 =============
@@ -328,7 +373,12 @@ action items:
   * random seed to files using OpenSSL (RAND_seed)
 
 * Miika
+  * remove warnings from tla commit
+  * hipd_handle_async_unit_test is broken
+  * remove include/net/keymat.h
   * HIP native API
+  * Checks in the kernel that the HIT matches to the HI to prevent HI ownership
+    forging. I will need this anyway in the Native API...
   * remove include/net/keymat.h
   * remove hip_get_any_localhost_any and replace with select_any_id
   * clean up the state machine handling
@@ -417,6 +467,7 @@ action items:
   * xx
 
 * unassigned/all:
+  * handle ESP code is almost the same for initiator and responder; unifify
   * check: HIP_DEBUG must not expand to empty string if debugging is disabled
     (if (x) HIP_DEBUG(..) may be erroneous), expand to do { } while (0); instead
   * we should have different kind of dh keys (one for each group because

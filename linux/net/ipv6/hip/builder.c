@@ -259,23 +259,23 @@ void hip_set_param_type(void *tlv_common, hip_tlv_type_t type) {
 }
 
 /**
- * hip_get_dh_fixed_param_public_value_contents - get dh public value contents
+ * hip_get_diffie_hellman_param_public_value_contents - get dh public value contents
  * @tlv_common: pointer to the dh parameter
  *
  * Returns: pointer to the public value of Diffie-Hellman parameter
  */
-void *hip_get_dh_fixed_param_public_value_contents(const void *tlv_common) {
-	return (void *) tlv_common + sizeof(struct hip_dh_fixed);
+void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common) {
+	return (void *) tlv_common + sizeof(struct hip_diffie_hellman);
 }
 
 /**
- * hip_get_dh_fixed_param_public_value_len - get dh public value real length
+ * hip_get_diffie_hellman_param_public_value_len - get dh public value real length
  * @dh: pointer to the Diffie-Hellman parameter
  *
  * Returns: the length of the public value Diffie-Hellman parameter in bytes
  *          (in host byte order).
  */
-hip_tlv_len_t hip_get_dh_fixed_param_public_value_len(const struct hip_dh_fixed *dh)
+hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
 {
 	return hip_get_param_contents_len(dh) - sizeof(uint8_t);
 }
@@ -365,7 +365,7 @@ uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test)
 }
 
 uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id) {
-	return host_id->algorithm; /* 8 bits, no ntons() */
+	return host_id->rdata.algorithm; /* 8 bits, no ntons() */
 }
 
 /**
@@ -463,13 +463,12 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_SPI_LSI,
 			HIP_PARAM_BIRTHDAY_COOKIE_R1,
 			HIP_PARAM_BIRTHDAY_COOKIE_I2,
-			HIP_PARAM_DH_FIXED,
+			HIP_PARAM_DIFFIE_HELLMAN,
 			HIP_PARAM_NES_INFO,
 			HIP_PARAM_HIP_TRANSFORM,
 			HIP_PARAM_ESP_TRANSFORM,
 			HIP_PARAM_ENCRYPTED,
 			HIP_PARAM_HOST_ID,
-			HIP_PARAM_HOST_ID_FQDN,
 			HIP_PARAM_CERT,
 			HIP_PARAM_REA_INFO,
 			HIP_PARAM_AC_INFO,
@@ -768,7 +767,7 @@ void hip_calc_hdr_len(struct hip_common *msg)
  * calculation of parameter lengths. The @tlv_size is usually just
  * sizeof(struct hip_tlv_common), but it can include other fields than
  * just the type and length. For example, DIFFIE_HELLMAN parameter includes
- * the group field as in hip_build_param_dh_fixed_contents().
+ * the group field as in hip_build_param_diffie_hellman_contents().
  */
 void hip_calc_generic_param_len(void *tlv_common,
 			      hip_tlv_len_t tlv_size,
@@ -888,12 +887,17 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		uint16_t i;
 		hip_transform_suite_t suite;
 		err = -EPROTONOSUPPORT;
+
+		HIP_DEBUG("Checking HIP transform\n");
 		for (i = 0; i < HIP_TRANSFORM_HIP_MAX; i++) {
-			suite = hip_get_param_transform_suite_id((struct hip_hip_transform *) param, i);
+			suite = hip_get_param_transform_suite_id(param, i);
 			if (suite == HIP_TRANSFORM_3DES ||
 			    suite == HIP_TRANSFORM_NULL) {
 				err = 0;
+				HIP_DEBUG("Matched suite: %d\n", suite);
 				break;
+			} else {
+				HIP_DEBUG("Skipping suite: %d\n", suite);
 			}
 		}
 		if (err)
@@ -906,8 +910,11 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		uint16_t i;
 		hip_transform_suite_t suite;
 		err = -EPROTONOSUPPORT;
+		HIP_DEBUG("Checking ESP transform\n");
+		HIP_HEXDUMP("ESP transform", (char *) param,
+			    hip_get_param_total_len(param));
 		for (i = 0; i < HIP_TRANSFORM_ESP_MAX; i++) {
-			suite = hip_get_param_transform_suite_id((struct hip_esp_transform *) param, i);
+			suite = hip_get_param_transform_suite_id(param, i);
 			if (suite ==  HIP_ESP_3DES_SHA1 ||
 			    suite == HIP_ESP_NULL_SHA1) {
 				err = 0;
@@ -915,7 +922,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 			}
 		}
 		if (err)
-			HIP_ERROR("Could not find suitable HIP transform\n");
+			HIP_ERROR("Could not find suitable ESP transform\n");
 		break;
 	}
 	case HIP_PARAM_HOST_ID:
@@ -926,12 +933,8 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 			err = -EPROTONOSUPPORT;
 			HIP_ERROR("Host id algo %d not supported\n", algo);
 		}
+		break;
 	}
-		break;
-	case HIP_PARAM_HOST_ID_FQDN:
-		err = -EPROTONOSUPPORT;
-		HIP_ERROR("Host id fqdn not supported\n");
-		break;
 	}
 
 	return err;
@@ -1433,66 +1436,84 @@ int hip_build_param_cookie(struct hip_common *msg, int solved,
 }
 
 /**
- * hip_build_param_dh_fixed_contents - build HIP fixed DH contents
+ * hip_build_param_diffie_hellman_contents - build HIP DH contents
  * @msg:      the message where the DH parameter will be appended
  * @group_id: the group id of the DH parameter as specified in the drafts
  * @pubkey:   the public key part of the DH
  * 
  * Returns:   zero on success, or non-zero on error
  */
-int hip_build_param_dh_fixed_contents(struct hip_common *msg,
+int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 				      uint8_t group_id,
 				      void *pubkey,
 				      hip_tlv_len_t pubkey_len)
 {
 	int err = 0;
-	struct hip_dh_fixed dh_fixed;
+	struct hip_diffie_hellman diffie_hellman;
 
 	HIP_ASSERT(pubkey_len >= sizeof(struct hip_tlv_common));
 
-	hip_set_param_type(&dh_fixed, HIP_PARAM_DH_FIXED);
-	hip_calc_generic_param_len(&dh_fixed, sizeof(struct hip_dh_fixed),
+	hip_set_param_type(&diffie_hellman, HIP_PARAM_DIFFIE_HELLMAN);
+	hip_calc_generic_param_len(&diffie_hellman, sizeof(struct hip_diffie_hellman),
 				   pubkey_len);
-	dh_fixed.group_id = group_id; /* 1 byte, no htons() */
+	diffie_hellman.group_id = group_id; /* 1 byte, no htons() */
 
-	err = hip_build_generic_param(msg, &dh_fixed,
-				      sizeof(struct hip_dh_fixed), pubkey);
+	err = hip_build_generic_param(msg, &diffie_hellman,
+				      sizeof(struct hip_diffie_hellman), pubkey);
 
 	return err;
 }
 
+void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
+				 const char *hostname,
+				 hip_tlv_len_t rr_data_len,
+                                 uint8_t algorithm)
+{
+	uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
+	uint16_t fqdn_len = strlen(hostname);
+
+	host_id_hdr->hi_length = htons(hi_len);
+	host_id_hdr->fqdn_length = htons(fqdn_len);
+
+        hip_set_param_type(host_id_hdr, HIP_PARAM_HOST_ID);
+        hip_calc_generic_param_len(host_id_hdr, sizeof(struct hip_host_id),
+				   hi_len -
+				   sizeof(struct hip_host_id_key_rdata) +
+				   fqdn_len);
+
+        host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
+        host_id_hdr->rdata.protocol = 0xFF; /* RFC 2535 */
+	/* algo is 8 bits, no htons */
+        host_id_hdr->rdata.algorithm = algorithm;
+
+	HIP_DEBUG("hilen=%d totlen=%d contlen=%d\n",
+		  ntohs(host_id_hdr->hi_length),
+		  hip_get_param_contents_len(host_id_hdr),
+		  hip_get_param_total_len(host_id_hdr));
+}
+
 /**
- * hip_build_param_host_id_contents - build and append host id into message
- * @msg:           the message where the host id parameter will be appended
- * @contents:      pointer to the host id contents (i.e. the DNS KEY RR encoded
- *                 public key of the host)
- * @contents_size: size of @contents
+ * hip_build_param_host_id - build and append host id into message
+ * @XXTODO:        XX TODO
  * @algorithm:     the crypto algorithm used for the host id (as in the drafts)
  *
- * Returns: zero on success, or negative on error
  */
-int hip_build_param_host_id_contents(struct hip_common *msg,
-				     const void *contents,
-				     hip_tlv_len_t contents_size,
-				     uint8_t algorithm)
+int hip_build_param_host_id(struct hip_common *msg,
+			     const struct hip_host_id *host_id_hdr,
+			     const void *rr_data,
+			     const char *fqdn)
+
 {
 	int err = 0;
-	struct hip_host_id hid;
-       
-	HIP_ASSERT(sizeof(struct hip_host_id) >=
-		   sizeof(struct hip_tlv_common));
+	unsigned int rr_len = ntohs(host_id_hdr->hi_length) -
+		sizeof(struct hip_host_id_key_rdata);
+	char *ptr = (char *) (host_id_hdr + 1);
 
-	hip_set_param_type(&hid, HIP_PARAM_HOST_ID);
-	hip_calc_generic_param_len(&hid, sizeof(struct hip_host_id),
-				   contents_size);
+	memcpy(ptr, rr_data, rr_len);
+	ptr += rr_len;
 
-	hid.flags = htons(0x0200); /* key is for a host */
-	hid.protocol = 0xFF; /* RFC 2535 */
-	hid.algorithm = algorithm; /* algo is 8 bits, no htons */
-
-	err = hip_build_generic_param(msg, &hid,
-				      sizeof(struct hip_host_id), contents);
-
+	memcpy(ptr, fqdn, ntohs(host_id_hdr->fqdn_length));
+        err = hip_build_param(msg, host_id_hdr);
 	return err;
 }
 
@@ -1544,6 +1565,13 @@ int hip_build_param_transform(struct hip_common *msg,
 
 	transform_max = hip_get_transform_max(transform_type);
 
+	if (!(transform_type == HIP_PARAM_ESP_TRANSFORM ||
+	      transform_type == HIP_PARAM_HIP_TRANSFORM)) {
+		err = -EINVAL;
+		HIP_ERROR("Invalid transform type %d\n", transform_type);
+		goto out_err;
+	}
+
 	/* Check that the maximum number of transforms is not overflowed */
 	if (transform_max > 0 && transform_count > transform_max) {
 		err = -E2BIG;
@@ -1551,15 +1579,28 @@ int hip_build_param_transform(struct hip_common *msg,
 			  transform_count, transform_type);
 		goto out_err;
 	}
-	
+
+	if (transform_type == HIP_PARAM_ESP_TRANSFORM) {
+		((struct hip_esp_transform *)&transform_param)->reserved = 0;
+	}
+
 	/* Copy and convert transforms to network byte order. */
 	for(i = 0; i < transform_count; i++) {
-		transform_param.suite_id[i] = htons(transform_suite[i]);
+		if (transform_type == HIP_PARAM_ESP_TRANSFORM) {
+			((struct hip_esp_transform *)&transform_param)->suite_id[i] = htons(transform_suite[i]);
+		} else {
+			((struct hip_hip_transform *)&transform_param)->suite_id[i] = htons(transform_suite[i]);
+		}
 	}
 
 	hip_set_param_type(&transform_param, transform_type);
-	hip_calc_param_len(&transform_param,
-			   transform_count * sizeof(hip_transform_suite_t));
+	if (transform_type == HIP_PARAM_ESP_TRANSFORM) {
+		hip_calc_param_len(&transform_param,
+				   2+transform_count * sizeof(hip_transform_suite_t));
+	} else {
+		hip_calc_param_len(&transform_param,
+				   transform_count * sizeof(hip_transform_suite_t));
+	}
 	err = hip_build_param(msg, &transform_param);
 
  out_err:
@@ -1576,13 +1617,17 @@ int hip_build_param_transform(struct hip_common *msg,
  */
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv, const uint16_t index)
 {
+	/* TODO: this function should return an error value instead of
+	 * hip_transform_suite_t */
+
 	hip_transform_suite_t suite = 0;
 	hip_tlv_type_t type;
 	uint16_t transform_max;
 	const struct hip_any_transform *tf =
 		(const struct hip_any_transform *) transform_tlv;
 
-	type = hip_get_param_type(tf); 
+	type = hip_get_param_type(tf);
+	HIP_ASSERT(type == HIP_PARAM_ESP_TRANSFORM || type == HIP_PARAM_HIP_TRANSFORM); // XX FIXME: SHOULD RETURN AN ERROR
 	transform_max = hip_get_transform_max(type);
 
 	/* Check that the maximum number of transforms is not overflowed */
@@ -1590,7 +1635,12 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 		HIP_ERROR("Illegal range for transform (%d) for type %d.\n",
 			  index, type);
 	} else {
-		suite = ntohs(tf->suite_id[index]);
+	       	if (type == HIP_PARAM_ESP_TRANSFORM) {
+			suite = ntohs(((struct hip_esp_transform *)tf)->suite_id[index]);
+		} else {
+			suite = ntohs(((struct hip_hip_transform *)tf)->suite_id[index]);
+		}
+		HIP_DEBUG("selected suite %d\n", suite);
 	}
 	
 	return suite;
@@ -1747,12 +1797,15 @@ int hip_build_param_encrypted(struct hip_common *msg,
 	hip_calc_param_len(&enc, sizeof(struct hip_encrypted) -
 			   sizeof(struct hip_tlv_common) +
 			   hip_get_param_total_len(host_id));
+	HIP_DEBUG("hostid len=%d\n", hip_get_param_total_len(host_id));
 	enc.reserved = htonl(0);
 	memset(enc.iv, 0x00, HIP_PARAM_ENCRYPTED_IV_LEN);
 
 	err = hip_build_generic_param(msg, &enc,
 				      sizeof(struct hip_encrypted),
 				      host_id);
+	HIP_DEBUG("enc totlen=%d, contlen=%d\n", hip_get_param_total_len(&enc),
+		  hip_get_param_contents_len(&enc));
 	return err;
 }
 

@@ -71,6 +71,14 @@
 #define HIP_USER_BASE_MAX                  23 /* exclusive */
 /* End of extended messages for the daemon */
 
+#define HIP_HOST_ID_RR_DSA_MAX_T_VAL           8
+#define HIP_HOST_ID_RR_T_SIZE                  1
+#define HIP_HOST_ID_RR_Q_SIZE                  20
+#define HIP_HOST_ID_RR_P_BASE_SIZE             20
+#define HIP_HOST_ID_RR_G_BASE_SIZE             20
+#define HIP_HOST_ID_RR_Y_BASE_SIZE             20
+#define HIP_HOST_ID_RR_DSA_PRIV_KEY_SIZE       20
+
 #define HIP_PAYLOAD 64
 
 
@@ -95,13 +103,12 @@
 #define HIP_PARAM_SPI_LSI             1
 #define HIP_PARAM_BIRTHDAY_COOKIE_R1  3
 #define HIP_PARAM_BIRTHDAY_COOKIE_I2  5
-#define HIP_PARAM_DH_FIXED            7
-#define HIP_PARAM_NES_INFO           11
+#define HIP_PARAM_NES_INFO            9
+#define HIP_PARAM_DIFFIE_HELLMAN     13
 #define HIP_PARAM_HIP_TRANSFORM      17
 #define HIP_PARAM_ESP_TRANSFORM      19
 #define HIP_PARAM_ENCRYPTED          21
-#define HIP_PARAM_HOST_ID            33
-#define HIP_PARAM_HOST_ID_FQDN       35
+#define HIP_PARAM_HOST_ID            35
 #define HIP_PARAM_CERT               64
 #define HIP_PARAM_REA_INFO          128
 #define HIP_PARAM_AC_INFO           129 /* mm-01: to be removed */
@@ -298,7 +305,7 @@ struct hip_birthday_cookie {
 	uint64_t     val_jk;
 } __attribute__ ((packed));
 
-struct hip_dh_fixed {
+struct hip_diffie_hellman {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
 
@@ -318,6 +325,8 @@ struct hip_hip_transform {
 struct hip_esp_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
+
+	uint16_t reserved;
 
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
@@ -340,28 +349,23 @@ struct hip_any_transform {
 				       HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
 
-struct hip_host_id {
-	hip_tlv_type_t     type;
-	hip_tlv_len_t      length;
-
-	uint16_t     flags;
-	uint8_t      protocol;
-	uint8_t      algorithm;
+/* RFC2535 3.1 KEY RDATA format */
+struct hip_host_id_key_rdata {
+	uint16_t flags;
+	uint8_t protocol;
+	uint8_t algorithm;
 
 	/* fixed part ends */
 } __attribute__ ((packed));
 
-struct hip_host_id_fqdn {
+struct hip_host_id {
 	hip_tlv_type_t     type;
-	hip_tlv_len_t     length;
+	hip_tlv_len_t      length;
 
 	uint16_t     hi_length;
 	uint16_t     fqdn_length;
 
-	uint16_t     flags;
-	uint8_t      protocol;
-	uint8_t      algorithm;
-
+	struct hip_host_id_key_rdata rdata;
 	/* fixed part ends */
 } __attribute__ ((packed));
 
@@ -450,34 +454,10 @@ struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
 };
 
-struct hip_packet
-{
-	/* Pointers to all possible TLVs in the packet */
-	/* todo: does not work with multiple TLVs of same type */
-	struct hip_common *common; /* kmallocated, remember to free */
-	struct hip_spi_lsi *spi_lsi;
-	struct hip_birthday_cookie *bc;
-	struct hip_dh_fixed *dhf;
-	struct hip_dh *dh;
-	struct hip_host_id *host_id;
-	struct hip_host_id_fqdn *host_id_fqdn;
-	struct hip_encrypted *enc;
-	struct hip_sig *hsig;
-	struct hip_sig2 *hsig2;
-	struct hip_hmac *hmac;
-
-	struct hip_hip_transform *hip_transform;
-	struct hip_esp_transform *esp_transform;
-	struct hip_cert *cert;
-	struct hip_rea_info *rea;
-	struct hip_ac_info *ac; /* mm-01: to be removed */
-	struct hip_fa_info *fa; /* mm-01: to be removed */
-};
-
 struct hip_packet_dh_sig
 {
 	struct hip_common *common; 
-	struct hip_dh_fixed *dhf;
+	struct hip_diffie_hellman *dh;
 	struct hip_host_id *host_id;
 	struct hip_sig2 *hsig2;
 };

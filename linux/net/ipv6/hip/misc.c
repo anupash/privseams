@@ -69,13 +69,14 @@ int hip_lhi_are_equal(const struct hip_lhi *lhi1,
 	return !memcmp(&lhi1->hit, &lhi2->hit, sizeof(struct in6_addr));
 }
 
+#if 0 // XX REMOVE: NOT USED ANYMORE
 /* Extract only the "public key" part of the local host identify.
  * Enables to store the whole key in one record (secret key).
  * This function should be extended with different functionality depending on
  * the algorithm (so it should check the algorithm field).
  * The extraction is performed so that the key (and the relevant hip_host_id
  * structure) is copied to the place that the buffer argument points to.
- * 
+ *
  * Return value is buffer + struct hip_host_id + public key data or NULL if failed
  */
 u8 *host_id_extract_public_key(u8 *buffer, struct hip_host_id *data)
@@ -91,7 +92,7 @@ u8 *host_id_extract_public_key(u8 *buffer, struct hip_host_id *data)
 	t = *buf; /* T */
 
 	if (t > 8) { /* error */
-		HIP_ERROR("Invalid T-value in DSA key (%x)\n", t);
+		HIP_ERROR("Invalid T-value in DSA key (0x%x)\n", t);
 		return NULL; 
 	}
 
@@ -102,14 +103,18 @@ u8 *host_id_extract_public_key(u8 *buffer, struct hip_host_id *data)
 		buffer += hip_get_param_total_len(data);
 		HIP_DEBUG("No private key\n");
 	} else {
-		memcpy(buffer,data,sizeof(struct hip_tlv_common) + (len - 20));
-		hip_set_param_contents_len(buffer,(len-20));
+		memcpy(buffer, data,
+		       sizeof(struct hip_tlv_common) + 
+		       (len - ));
+		hip_set_param_contents_len(buffer,
+				(len - HIP_HOST_ID_DSA_PRIV_KEY_DEF_LEN));
 		HIP_HEXDUMP("own hid",data,sizeof(struct hip_tlv_common));
 		buffer += hip_get_param_total_len(buffer);
 		HIP_DEBUG("Private key\n");
 	}
 	return buffer;
 }
+#endif
 
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
 {

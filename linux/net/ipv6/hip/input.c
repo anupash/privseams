@@ -153,13 +153,13 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 	   are accepted
 	*/
 
-	if (host_id->algorithm != 3) {
-		HIP_ERROR("Unsupported algorithm:%d\n", host_id->algorithm);
+	if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
+		HIP_ERROR("Unsupported algorithm:%d\n", hip_get_host_id_algo(host_id));
 		goto out_err;
 	}
 
 
-	_HIP_HEXDUMP("Signature data (create)", buffer_start, buffer_length);
+	HIP_HEXDUMP("Signature data (create)", buffer_start, buffer_length);
 
 	if (hip_build_digest(HIP_DIGEST_SHA1, buffer_start, buffer_length,
 			     sha1_digest) < 0)
@@ -168,9 +168,9 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 		goto out_err;
 	}
 
-	_HIP_HEXDUMP("create digest", sha1_digest, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("create digest", sha1_digest, HIP_AH_SHA_LEN);
 
-	_HIP_HEXDUMP("dsa key", (u8 *)(host_id + 1), hip_get_param_contents_len(host_id) - 4);
+	HIP_HEXDUMP("dsa key", (u8 *)(host_id + 1), hip_get_param_contents_len(host_id) - 4);
 
 	err = hip_dsa_sign(sha1_digest,(u8 *)(host_id + 1),signature);
 	if (err) {
@@ -178,7 +178,7 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 		return 0;
 	}
 
-	_HIP_HEXDUMP("signature",signature,42);
+	HIP_HEXDUMP("signature",signature,42);
 
 	err = 1;
  out_err:
@@ -192,8 +192,7 @@ int hip_create_signature(void *buffer_start, int buffer_length,
  * @buffer_start: Pointer to the start of the buffer over which to calculate
  *                SHA1-160 digest.
  * @buffer_length: Length of the buffer at @buffer_start
- * @host_id: Pointer to either HOST_ID or HOST_ID_FQDN (as specified by the HIP
- *           draft).
+ * @host_id: Pointer to HOST_ID (as specified by the HIP draft).
  * @signature: Pointer to the signature
  *
  * Returns true (1) if ok, false (0) otherwise.
@@ -210,12 +209,12 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 
 	/* check for all algorithms */
 
-	if (host_id->algorithm != 3) {
-		HIP_ERROR("Not a supported algorithm: %d\n",host_id->algorithm);
+	if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
+		HIP_ERROR("Unsupported algorithm:%d\n", hip_get_host_id_algo(host_id));
 		return 0;
 	}
 
-	_HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
+	HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
 
 	if (hip_build_digest(HIP_DIGEST_SHA1,buffer_start,buffer_length,sha1_digest)) 
 	{
@@ -223,13 +222,13 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 		goto out_err;
 	}
 
-	_HIP_HEXDUMP("Verify hexdump", sha1_digest, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("Verify hexdump", sha1_digest, HIP_AH_SHA_LEN);
 
 	public_key_len = hip_get_param_contents_len(host_id) - 4;
 
-	_HIP_HEXDUMP("verify key", public_key, public_key_len);
+	HIP_HEXDUMP("verify key", public_key, public_key_len);
 
-	_HIP_HEXDUMP("Verify hexdump sig **", signature, 42);
+	HIP_HEXDUMP("Verify hexdump sig **", signature, 42);
 
 	tmp = hip_dsa_verify(sha1_digest, public_key, signature);
 
@@ -243,9 +242,10 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 		HIP_HEXDUMP("digest",sha1_digest,20);
 		HIP_HEXDUMP("signature",signature,42);
 		HIP_HEXDUMP("public key",public_key,public_key_len);
-		// break; // uncomment if you don't care about the correctness of the DSA signature
+		//break; // uncomment if you don't care about the correctness of the DSA signature
 	default:
 		HIP_ERROR("Signature verification failed: %d\n", tmp);
+
 		goto out_err;
 	}
 
@@ -265,7 +265,7 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
  * Returns the length of the shared secret in octets if successful,
  * or -1 if an error occured.
  */
-int hip_calculate_shared_secret(struct hip_dh_fixed *dhf, u8* buffer, 
+int hip_calculate_shared_secret(struct hip_diffie_hellman *dhf, u8* buffer, 
 				int bufsize)
 {
 	signed int len;
@@ -329,14 +329,14 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	memset(dh_shared_key, 0, dh_shared_len); /* 1024 -> hip_get_dh_size ? */
 
-	param = hip_get_param(msg, HIP_PARAM_DH_FIXED);
+	param = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
 	if (!param) {
 		err = -ENOENT;
 		HIP_ERROR("No Diffie-Hellman param found\n");
 		goto out_err;
 	}
 
-	dh_shared_len = hip_calculate_shared_secret((struct hip_dh_fixed *) param, 
+	dh_shared_len = hip_calculate_shared_secret((struct hip_diffie_hellman *) param, 
 						    dh_shared_key, dh_shared_len);
 	if (dh_shared_len < 0) {
 		HIP_ERROR("Calculation of shared secret failed\n");
@@ -470,7 +470,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
 	struct hip_host_id *host_id_pub = NULL;
 	struct hip_host_id *host_id_private = NULL;
-	struct hip_host_id *host_id_in_enc = NULL;
+	//struct hip_host_id *host_id_in_enc = NULL;
+	char *host_id_in_enc = NULL;
 	struct hip_encrypted *enc_in_msg = NULL;
 	struct in6_addr daddr;
 	u8 *dh_data = NULL;
@@ -478,7 +479,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 	struct hip_common *i2 = NULL;
 	struct hip_param *param;
 	struct hip_birthday_cookie *bc = NULL;
-	struct hip_dh_fixed *dh_req;
+	struct hip_diffie_hellman *dh_req;
 	int state;
 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 
@@ -563,8 +564,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 	
 	/********** Diffie-Hellman *********/
 
- 	dh_req = hip_get_param(ctx->input, HIP_PARAM_DH_FIXED);
- 
+ 	dh_req = hip_get_param(ctx->input, HIP_PARAM_DIFFIE_HELLMAN);
  	if (!dh_req) {
  		err = -ENOENT;
  		HIP_ERROR("Internal error\n");
@@ -580,8 +580,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 	
 	_HIP_HEXDUMP("Own DH key", dh_data, n);
 	
-	err = hip_build_param_dh_fixed_contents(i2,dh_req->group_id, dh_data,
-						written);
+	err = hip_build_param_diffie_hellman_contents(i2,dh_req->group_id,
+						      dh_data, written);
 	if (err) {
 		HIP_ERROR("Building of DH failed (%d)\n", err);
 		goto out_err;
@@ -648,9 +648,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
  				   HIP_PARAM_ENCRYPTED);
  	HIP_ASSERT(enc_in_msg); /* Builder internal error. */
 
- 	host_id_in_enc = (struct hip_host_id *) (enc_in_msg + 1);
+ 	host_id_in_enc = (char *) (enc_in_msg + 1);
 
-	err = hip_crypto_encrypted((char*) host_id_in_enc,
+	err = hip_crypto_encrypted(host_id_in_enc,
 				   enc_in_msg->iv,
 				   /* hip transform was selected above */
 				   transform_hip_suite,
@@ -701,6 +701,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
  	hip_set_param_lsi_value(spi_lsi, 0x01000000 |
  		 (ntohl(ctx->input->hitr.in6_u.u6_addr32[3]) & 0x00ffffff));
  
+	HIP_DEBUG("lsi in i2: 0x%.8x\n", hip_get_param_lsi_value(spi_lsi));
+
 	/* Do not modify the packet after this point or signature
 	 * will not validate */
 
@@ -825,15 +827,13 @@ int hip_handle_r1(struct sk_buff *skb)
 	struct hip_context *ctx = NULL;
 	struct hip_birthday_cookie *bc;
 	uint64_t solved_puzzle;
-	struct hip_host_id *peer_host_id; /* Host ID FQDN not supported yet */
-	u8 origlen;
+	struct hip_host_id *peer_host_id;
+	int origlen;
 	struct in6_addr tmpaddr;
 	int s;
 	struct hip_sig2 *sig2 = NULL;
 	struct hip_lhi peer_lhi;
 	int64_t birthday;
-
-	HIP_DEBUG("Received R1\n");
 
 	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
 	if (!ctx) {
@@ -854,7 +854,6 @@ int hip_handle_r1(struct sk_buff *skb)
 		hip_copy_any_localhost_hit(&ctx->input->hitr);
 	}
 
-
  	bc = hip_get_param(r1, HIP_PARAM_BIRTHDAY_COOKIE_R1);
  	if (!bc) {
  		err = -ENOENT;
@@ -867,15 +866,15 @@ int hip_handle_r1(struct sk_buff *skb)
 
 	/* Do the obvious quick-discard tests: Birthday, ... */
 	if (!hip_birthday_success(birthday, ntoh64(bc->birthday))) {
-		HIP_ERROR("Received birthday with old date. NOT Dropping\n");	
-		/* err = -EINVAL; */
+		HIP_ERROR("Received birthday with old date. Dropping\n");
+		err = -EINVAL;
 		/* goto out_err; */
 	}
 
 	/* Validate signature. First prepare the packet for SHA1 digest */
 	sig2 = hip_get_param(r1, HIP_PARAM_HIP_SIGNATURE2);
 	if (!sig2) {
-		HIP_ERROR("No signature2 found in R1\n");
+		HIP_ERROR("No SIGNATURE2 found in R1\n");
 		err = -ENOENT;
 		goto out_err;
 	}
@@ -884,22 +883,14 @@ int hip_handle_r1(struct sk_buff *skb)
 
  	ipv6_addr_copy(&tmpaddr, &r1->hitr);
  	memset(&r1->hitr, 0, sizeof(struct in6_addr));
-		
+
 	origlen = hip_get_msg_total_len(r1);
 	hip_set_msg_total_len(r1, s);
 	r1->checksum = 0;
 
-	peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID_FQDN);
-
- 	if (peer_host_id) {
- 		HIP_ERROR("Host_id_fqdn not supported yet)\n");
- 		err = -EAFNOSUPPORT;
- 		goto out_err;
- 	}
- 	
  	peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID);
  	if (!peer_host_id) {
- 		HIP_ERROR("No host id found in R1\n");
+ 		HIP_ERROR("No HOST_ID found in R1\n");
  		err = -ENOENT;
  		goto out_err;
  	}
@@ -912,16 +903,17 @@ int hip_handle_r1(struct sk_buff *skb)
 		err = -EINVAL;
 		goto out_err;
 	}
-	
+
  	ipv6_addr_copy(&r1->hitr, &tmpaddr);
  	hip_set_msg_total_len(r1, origlen);
+
  	/* the checksum is not restored because it was already checked in
  	   hip_inbound */
 
 	/* signature is ok, now save the host id to db */
  	peer_lhi.anonymous = 0;
 	ipv6_addr_copy(&peer_lhi.hit, &r1->hits);
- 	
+
  	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id);
  	if (err == -EEXIST) {
  		HIP_INFO("Host id already exists. Ignoring.\n");
@@ -984,6 +976,8 @@ int hip_receive_r1(struct sk_buff *skb)
 	struct hip_common *hip_common;
 	int state;
 	int err = 0;
+
+	HIP_DEBUG("Received R1\n");
 
 	hip_common = (struct hip_common*) (skb)->h.raw;
 
@@ -1068,6 +1062,8 @@ int hip_create_r2(struct hip_context *ctx)
  	int err = 0;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
 
+	HIP_DEBUG("\n");
+
 	i2 = ctx->input;
 	ok = hip_hadb_exists_entry(&i2->hits,HIP_ARG_HIT);
 	if (!ok) {
@@ -1104,6 +1100,7 @@ int hip_create_r2(struct hip_context *ctx)
  	param = hip_get_param(ctx->input, HIP_PARAM_BIRTHDAY_COOKIE_I2);
  	if (!param) {
  		err = -ENOENT;
+		HIP_ERROR("Did not find birthday cookie on i2\n");
  		goto out_err;
  	}
 
@@ -1116,12 +1113,14 @@ int hip_create_r2(struct hip_context *ctx)
 		esp_tf = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM);
 		if (!esp_tf) {
 			err = -ENOENT;
+			HIP_ERROR("Did not find ESP transform on i2\n");
 			goto out_err;
 		}
 
 		spi_lsi = hip_get_param(ctx->input, HIP_PARAM_SPI_LSI);
 		if (!spi_lsi) {
 			err = -ENOENT;
+			HIP_ERROR("Did not find SPI LSI on i2\n");
 			goto out_err;
 		}
 
@@ -1217,6 +1216,7 @@ int hip_create_r2(struct hip_context *ctx)
 		entry = hip_hadb_access_db(&i2->hits,HIP_ARG_HIT);
 		if (!entry) {
 			hip_hadb_release_ex_db_access(fl);
+			HIP_ERROR("Did not find HIT on hadb\n");
 			goto out_err;
 		}
 		/* this is a delayed "insertation" from some 20 lines above */
@@ -1256,8 +1256,6 @@ int hip_create_r2(struct hip_context *ctx)
  	if (err) {
  		HIP_ERROR("building of SPI_LSI failed (err=%d)\n", err);
  		goto out_err;
-
-
 	}
 
 	/*********** HMAC ************/
@@ -1268,6 +1266,7 @@ int hip_create_r2(struct hip_context *ctx)
 		if (!hip_hadb_get_info(&ctx->input->hits, &hmac,
 				       HIP_HADB_OWN_HMAC|HIP_ARG_HIT)) {
 			err = -ENOENT;
+			HIP_ERROR("Failed to get HIT source from hadb\n");
 			goto out_err;
 		}
 		
@@ -1347,7 +1346,6 @@ int hip_handle_i2(struct sk_buff *skb)
  
  	HIP_DEBUG("\n");
 
-
 	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
 	if (!ctx) {
 		err = -ENOMEM;
@@ -1364,6 +1362,7 @@ int hip_handle_i2(struct sk_buff *skb)
  	enc = hip_get_param(ctx->input, HIP_PARAM_ENCRYPTED);
  	if (!enc) {
  		err = -ENOENT;
+		HIP_ERROR("Could not find enc parameter\n");
  		goto out_err;
  	}
  
@@ -1384,6 +1383,7 @@ int hip_handle_i2(struct sk_buff *skb)
  	bc = hip_get_param(ctx->input, HIP_PARAM_BIRTHDAY_COOKIE_I2);
  	if (!bc) {
  		err = -ENOENT;
+		HIP_ERROR("Could not find i2 birthday cookie\n");
  		goto out_err;
  	}
 
@@ -1435,6 +1435,7 @@ int hip_handle_i2(struct sk_buff *skb)
 	param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM);
 	if (!param) {
 		err = -ENOENT;
+		HIP_ERROR("Did not find HIP transform\n");
 		goto out_err;
 	}
 
@@ -1449,6 +1450,7 @@ int hip_handle_i2(struct sk_buff *skb)
 				   HIP_DIRECTION_DECRYPT);
 	if (err) {
 		err = -EINVAL;
+		HIP_ERROR("Decryption of Host ID failed\n");
 		goto out_err;
 	}
 
@@ -1465,8 +1467,11 @@ int hip_handle_i2(struct sk_buff *skb)
  	sig = hip_get_param(ctx->input, HIP_PARAM_HIP_SIGNATURE);
  	if (!sig) {
  		err = -ENOENT;
+		HIP_ERROR("Could not signature on i2.\n");
  		goto out_err;
  	}
+
+	HIP_HEXDUMP("sig in i2", sig, hip_get_param_total_len(sig));
 
  	len = ((u8 *) sig) - ((u8 *) ctx->input);
  	hip_zero_msg_checksum(ctx->input);
@@ -1474,6 +1479,7 @@ int hip_handle_i2(struct sk_buff *skb)
 
  	if (len < 0) {
  		err = -ENOENT;
+		HIP_ERROR("Invalid signature len\n");
  		goto out_err;
  	}
 
@@ -1482,9 +1488,9 @@ int hip_handle_i2(struct sk_buff *skb)
  	if (!hip_verify_signature(ctx->input, len, host_id_in_enc,
  				  (u8 *) (sig + 1))) {
  		HIP_ERROR("Verification of I2 signature failed\n");
- 		err = -EINVAL;
+		err = -EINVAL;
  		goto out_err;
-  	}
+	}
 
   	/* Add peer's host id to peer_id database (is there need to
   	   do this?) */
@@ -1512,6 +1518,7 @@ int hip_handle_i2(struct sk_buff *skb)
 		kfree(tmp_host_id);
 	if (ctx)
 		kfree(ctx);
+
 	return err;
 }
 

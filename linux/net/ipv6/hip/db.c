@@ -1033,12 +1033,11 @@ int hip_add_host_id(struct hip_db_struct *db,
 		err = -ENOMEM;
 		goto out_err;
 	}
-	
+
 	/* copy lhi and host_id (host_id is already in network byte order) */
 	id_entry->lhi.anonymous = lhi->anonymous;
 	ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
 	memcpy(id_entry->host_id, host_id, hip_get_param_total_len(host_id));
-
 
 	HIP_WRITE_LOCK_DB(db);
 
@@ -1265,7 +1264,7 @@ struct hip_host_id *hip_get_any_localhost_host_id(void)
 struct hip_host_id *hip_get_any_localhost_public_key()
 {
 	struct hip_host_id *tmp;
-	int len;
+	hip_tlv_len_t len;
 	u8 T;
 
 	/* T could easily have been an int, since the compiler will
@@ -1279,23 +1278,34 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 
        /* check T, Miika won't like this */
 	T = *((u8 *)(tmp + 1));
-	if (T > 8) { 
-		HIP_ERROR("Invalid T-value in DSA key (%x)\n",T);
+	if (T > 8) {
+		HIP_ERROR("Invalid T-value in DSA key (0x%x)\n",T);
 		kfree(tmp);
 		return NULL;
 	}
 
 	if (T != 8) {
-		HIP_DEBUG("T-value in DSA-key not 8 (%x)!\n",T);
+		HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n",T);
 	}
 
 	/* assuming all local keys are full DSA keys */
 	len = hip_get_param_contents_len(tmp);
+
+	HIP_DEBUG("Host ID len before cut-off: %d\n",
+		  hip_get_param_total_len(tmp));
+
 	/* the secret component of the DSA key is always 20 bytes */
-	hip_set_param_contents_len(tmp,(len-20));
+	hip_set_param_contents_len(tmp,(len - 20));
+
+	HIP_DEBUG("Host ID len after cut-off: %d\n",
+		  hip_get_param_total_len(tmp));
+
+	tmp->hi_length = htons(ntohs(tmp->hi_length) - 20);
+
 	return tmp;
 }
 
+#if 0
 /**
  * hip_insert_any_localhost_public_key - Copy any localhost public key into 
  * the @target.
@@ -1307,7 +1317,7 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 int hip_insert_any_localhost_public_key(u8 *target)
 {
 	struct hip_host_id *tmp = NULL;
-	int len;
+	hip_tlv_len_t len;
 	u8 *buf;
 	int err = 0;
 
@@ -1332,14 +1342,17 @@ int hip_insert_any_localhost_public_key(u8 *target)
 	}
 
 	len = hip_get_param_contents_len(tmp);
-	memcpy(target,tmp,sizeof(struct hip_tlv_common) + (len - 20));
-	hip_set_param_contents_len(target,(len-20));
+	memcpy(target, tmp, sizeof(struct hip_tlv_common) + (len - 20));
+	hip_set_param_contents_len(target,(len - 20));
+
+	// XX BUG: set also host_id->hi_length
 
  end_err:
 	if (tmp)
 		kfree(tmp);
 	return err;
 }
+#endif
 		
 int hip_add_peer_info_nolock(struct in6_addr *hit, struct in6_addr *addr)
 {

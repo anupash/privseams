@@ -1,6 +1,6 @@
 diff -Nru tcpdump-3.7.2/Makefile.in tcpdump-3.7.2-hip/Makefile.in
 --- tcpdump-3.7.2/Makefile.in	Mon Dec 10 10:21:23 2001
-+++ tcpdump-3.7.2-hip/Makefile.in	Tue Jan 20 15:43:25 2004
++++ tcpdump-3.7.2-hip/Makefile.in	Fri Feb 20 02:10:13 2004
 @@ -71,7 +71,7 @@
  	print-bootp.c print-beep.c print-cdp.c print-chdlc.c \
  	print-cip.c print-cnfp.c print-decnet.c print-domain.c \
@@ -12,7 +12,7 @@ diff -Nru tcpdump-3.7.2/Makefile.in tcpdump-3.7.2-hip/Makefile.in
  	print-l2tp.c print-lane.c print-lcp.c print-llc.c print-lwres.c \
 diff -Nru tcpdump-3.7.2/configure.in tcpdump-3.7.2-hip/configure.in
 --- tcpdump-3.7.2/configure.in	Wed Feb 26 08:07:16 2003
-+++ tcpdump-3.7.2-hip/configure.in	Wed Nov 19 12:48:32 2003
++++ tcpdump-3.7.2-hip/configure.in	Fri Feb 20 02:08:10 2004
 @@ -131,7 +131,7 @@
  }
  ],
@@ -24,7 +24,7 @@ diff -Nru tcpdump-3.7.2/configure.in tcpdump-3.7.2-hip/configure.in
  [ AC_MSG_RESULT(no)
 diff -Nru tcpdump-3.7.2/interface.h tcpdump-3.7.2-hip/interface.h
 --- tcpdump-3.7.2/interface.h	Wed Feb 26 08:07:16 2003
-+++ tcpdump-3.7.2-hip/interface.h	Wed Nov 19 12:48:32 2003
++++ tcpdump-3.7.2-hip/interface.h	Fri Feb 20 02:08:10 2004
 @@ -308,6 +308,7 @@
  extern int rt6_print(const u_char *, const u_char *);
  extern void ospf6_print(const u_char *, u_int);
@@ -35,8 +35,8 @@ diff -Nru tcpdump-3.7.2/interface.h tcpdump-3.7.2-hip/interface.h
  
 diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 --- tcpdump-3.7.2/print-hip.c	Thu Jan  1 02:00:00 1970
-+++ tcpdump-3.7.2-hip/print-hip.c	Tue Jan 20 17:10:29 2004
-@@ -0,0 +1,468 @@
++++ tcpdump-3.7.2-hip/print-hip.c	Tue Feb 24 20:31:25 2004
+@@ -0,0 +1,513 @@
 +/*
 + * Copyright (c) 1988, 1989, 1990, 1991, 1992, 1993, 1994
 + *	The Regents of the University of California.  All rights reserved.
@@ -87,14 +87,17 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +/* TODO: check TLV lengths before trying to parse them */
 +
 +static struct tok hip_types[] = {
-+	{ HIP_I1,  "I1"  },
-+	{ HIP_R1,  "R1"  },
-+	{ HIP_I2,  "I2"  },
-+	{ HIP_R2,  "R2"  },
-+	{ HIP_REA, "REA" },
-+	{ HIP_AC,  "AC"  },
-+	{ HIP_ACR, "ACR" },
-+	{ 0,       NULL  }
++	{ HIP_I1,  "I1"     },
++	{ HIP_R1,  "R1"     },
++	{ HIP_I2,  "I2"     },
++	{ HIP_R2,  "R2"     },
++	{ HIP_NES, "UPDATE" },
++	{ HIP_REA, "REA"    },
++	{ HIP_AC,  "AC"     },
++	{ HIP_ACR, "ACR"    },
++	{ HIP_BOS, "BOS"    },
++	{ HIP_CER, "CER"    },
++	{ 0, NULL           }
 +};
 +
 +static struct tok hip_param_types[] = {
@@ -102,21 +105,22 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	{ HIP_PARAM_BIRTHDAY_COOKIE_I2, "BIRTHDAY_COOKIE_I2" },
 +	{ HIP_PARAM_BIRTHDAY_COOKIE_R1, "BIRTHDAY_COOKIE_R1" },
 +	{ HIP_PARAM_CERT,               "CERT"               },
-+	{ HIP_PARAM_DH_FIXED,           "DH_FIXED"           },
++	{ HIP_PARAM_DIFFIE_HELLMAN,     "DIFFIE_HELLMAN"     },
 +	{ HIP_PARAM_ENCRYPTED,          "ENCRYPTED"          },
 +	{ HIP_PARAM_ESP_TRANSFORM,      "ESP_TRANSFORM"      },
 +	{ HIP_PARAM_FA_INFO,            "FA_INFO"            },
 +	{ HIP_PARAM_HIP_SIGNATURE,      "HIP_SIGNATURE"      },
-+ 	{ HIP_PARAM_HIP_SIGNATURE2,     "HIP_SIGNATURE2"     },
 +	{ HIP_PARAM_HIP_TRANSFORM,      "HIP_TRANSFORM"      },
 +	{ HIP_PARAM_HMAC,               "HMAC"               },
 +	{ HIP_PARAM_HOST_ID,            "HOST_ID"            },
-+	{ HIP_PARAM_HOST_ID_FQDN,       "HOST_ID_FQDN"       },
++	{ HIP_PARAM_NES_INFO,           "HIP_PARAM_NES_INFO" },
 +	{ HIP_PARAM_REA_INFO,           "REA_INFO"           },
 +	{ HIP_PARAM_SPI_LSI,            "SPI_LSI"            },
++ 	{ HIP_PARAM_HIP_SIGNATURE2,     "HIP_SIGNATURE2"     },
 +	{ 0, NULL }
 +};
 +
++#if 0
 +static struct tok hip_hip_transform_types[] = {
 +	{ HIP_TRANSFORM_RESERVED, "reserved" },
 +	{ HIP_TRANSFORM_NULL,     "NULL"     },
@@ -124,6 +128,8 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	{ HIP_TRANSFORM_AES_128,  "AES_128"  },
 +	{ 0, NULL }
 +};
++#endif
++#define hip_hip_transform_types hip_esp_transform_types
 +
 +static struct tok hip_esp_transform_types[] = {
 +	{ HIP_ESP_RESERVED,      "reserved"      },
@@ -133,6 +139,12 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	{ HIP_ESP_BLOWFISH_SHA1, "BLOWFISH-SHA1" },
 +	{ HIP_ESP_NULL_SHA1,     "NULL-SHA1"     },
 +	{ HIP_ESP_NULL_MD5,      "NULL-MD5"      },
++	{ 0, NULL }
++};
++
++static struct tok hip_rdata_algorithms[] = {
++	{ HIP_HI_DSA, "DSA" },
++	{ 5,          "RSA" },
 +	{ 0, NULL }
 +};
 +
@@ -199,9 +211,10 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	printf(")");
 +}
 +
-+void hip_print_param_dh_fixed(const struct hip_tlv_common *tlv) {
-+	struct hip_dh_fixed *p = (struct hip_dh_fixed *) tlv;
-+	printf("(group_id=%s(%u),public value=0x", tok2str(hip_dh_group_id_types, NULL, p->group_id), p->group_id);
++void hip_print_param_diffie_hellman(const struct hip_tlv_common *tlv) {
++	struct hip_diffie_hellman *p = (struct hip_diffie_hellman *) tlv;
++	printf("(group_id=%s(%u),public value=0x",
++	       tok2str(hip_dh_group_id_types, NULL, p->group_id), p->group_id);
 +	hip_hexdump((u_char *)p+sizeof(struct hip_tlv_common)+sizeof(uint8_t),
 +		    ntohs(p->length) - sizeof(uint8_t));
 +	printf(")");
@@ -227,18 +240,20 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	u_int16_t *id;
 +
 +	printf("(");
++	printf("reserved=0x%x,", ntohs(p->reserved));
++
 +	if (ntohs(p->length) == 0) {
 +		printf("no transforms)");
 +		return;
 +	}
 +
-+	n = ntohs(p->length) / sizeof(u_int16_t);
++	n = (ntohs(p->length)-sizeof(uint16_t)) / sizeof(u_int16_t);
 +	if (n > HIP_TRANSFORM_ESP_MAX) {
 +	  printf("too many Suite IDs (%d))", n);
 +	  return;
 +	}
 +
-+	id = (u_int16_t *) ((u_char *)p+sizeof(struct hip_tlv_common));
++	id = (u_int16_t *) ((u_char *)p+sizeof(uint16_t)+sizeof(struct hip_tlv_common));
 +	for (i = 1; i <= n; i++, id++) {
 +	  if (i > 1)
 +	    printf(",");
@@ -280,36 +295,49 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +
 +}
 +
++
 +void hip_print_param_host_id(const struct hip_tlv_common *tlv) {
 +	struct hip_host_id *p = (struct hip_host_id *) tlv;
 +	u_int8_t t, alg;
 +	u_char *cp;
++	int i;
++
++	printf("(HI Length=%d, FQDN Length=%d, ", ntohs(p->hi_length), ntohs(p->fqdn_length));
 +
 +	/* HOST ID is in RFC2535 KEY RDATA format */
-+	cp = (u_char *)p + sizeof(struct hip_tlv_common);
++	cp = (u_char *)p + sizeof(struct hip_tlv_common)+2*sizeof(uint16_t);
 +
-+	printf("(flags=0x%08x%08x", *cp, *(cp+1));
++	printf("HI: flags=0x%08x%08x", *cp, *(cp+1));
 +	cp += sizeof(u_int16_t);
-+	printf(",protocol=%d", *cp++);
++	printf(",protocol=%d", *cp);
++	cp++;
 +	alg = *cp;
 +	printf(",algorithm=%d", alg);
 +
 +	/* check if algorithm is listed in HIP drafts */
 +	/* 3=DSA, 5=RSA */
-+	if (! (alg == 3 || alg == 5) ) {
++	if (! (alg == HIP_HI_DSA || alg == 5) ) {
 +		printf(" unknown algorithm");
-+		return;
++		goto print_fqdn;
 +	}
 +
-+	if (alg != 3) {
++	if (alg != HIP_HI_DSA) {
 +		printf(" RSA parsing not supported yet");
-+		return;
++		goto print_fqdn;
 +	}
 +
-+	printf("(");
-+	if (alg == 3)
-+		printf("DSA");
-+	printf(")");
++	//	printf("(");
++
++
++ /* Convert a token value to a string; use "fmt" if not found.
++    
++ const char * tok2str(register const struct tok *lp, register const char *fmt,
++ register int v)
++ */
++	printf("(%s)", tok2str(hip_rdata_algorithms, "unknown", alg));
++	//	if (alg == HIP_HI_DSA)
++	//	printf("DSA");
++ //	printf(")");
 +
 +	cp++;
 +
@@ -317,7 +345,7 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	printf(" T=%d", t);
 +	if (ntohs(p->length) < (4+1+20+3*(64 + t*8))) {
 +		printf(",truncated RDATA)");
-+		return;
++		goto print_fqdn;
 +	}
 +	cp++;
 +	printf(",Q=0x"); hip_hexdump(cp, 20);
@@ -327,6 +355,12 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	printf(",G=0x"); hip_hexdump(cp, 64 + t*8);
 +	cp += 64 + t*8;
 +	printf(",Y=0x"); hip_hexdump(cp, 64 + t*8);
++
++ print_fqdn:
++	printf(" FQDN=");
++	for (i = 0; i < ntohs(p->fqdn_length); i++, cp++)
++		printf("%c", *cp);
++
 +	printf(")");
 +}
 +
@@ -339,6 +373,14 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	printf(")");
 +}
 +
++void hip_print_param_nes_info(const struct hip_tlv_common *tlv) {
++	struct hip_nes_info *p = (struct hip_nes_info *) tlv;
++
++	printf("(is_reply=%d,keymat_index incl R-bit=0x%x,NES ID=%u,old_spi=0x%x,new_spi=0x%x)",
++	       ntohs(p->keymat_index) & 0x8000 ? 1 : 0, ntohs(p->keymat_index),
++	       ntohs(p->nes_id), ntohl(p->old_spi), ntohl(p->new_spi));
++}
++
 +void hip_print_param_rea_info(const struct hip_tlv_common *tlv) {
 +	struct hip_rea_info *p = (struct hip_rea_info *) tlv;
 +	printf("(Interface ID=0x%x,spi_rev=0x%x,spi=0x%x,new_spi=0x%x,keymat_index=0x%x,REA ID=%u)",
@@ -348,14 +390,14 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +
 +void hip_print_param_spi_lsi(const struct hip_tlv_common *tlv) {
 +	struct hip_spi_lsi *p = (struct hip_spi_lsi *) tlv;
-+	printf("(spi=0x%x,lsi=0x%x)", p->spi, p->lsi);
++	printf("(spi=0x%x,lsi=0x%x)", ntohl(p->spi), ntohl(p->lsi));
 +}
 +
 +void hip_print_param_hip_signature2(const struct hip_tlv_common *tlv) {
 +	struct hip_sig2 *p = (struct hip_sig2 *) tlv;
 +	/* draft: same algorithm as in ESP_TRANSFORM */
 +	printf("(algorithm=%s(%u),signature=0x",
-+	       tok2str(hip_esp_transform_types, NULL, p->algorithm), p->algorithm);
++	       tok2str(hip_rdata_algorithms, NULL, p->algorithm), p->algorithm);
 +	hip_hexdump((u_char *)p + sizeof(struct hip_tlv_common) + 
 +		    sizeof(u_int8_t), ntohs(p->length)-sizeof(u_int8_t));
 +	printf(")");
@@ -466,8 +508,8 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	    case HIP_PARAM_BIRTHDAY_COOKIE_R1:
 +	      hip_print_param_cookie(tlv, 1);
 +	      break;
-+	    case HIP_PARAM_DH_FIXED:
-+	      hip_print_param_dh_fixed(tlv);
++	    case HIP_PARAM_DIFFIE_HELLMAN:
++	      hip_print_param_diffie_hellman(tlv);
 +	      break;
 +	    case HIP_PARAM_ENCRYPTED:
 +	      hip_print_param_encrypted(tlv);
@@ -491,6 +533,9 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	    case HIP_PARAM_REA_INFO:
 +	      hip_print_param_rea_info(tlv);
 +	      break;
++	    case HIP_PARAM_NES_INFO:
++	      hip_print_param_nes_info(tlv);
++	      break;
 +	    case HIP_PARAM_SPI_LSI:
 +	      hip_print_param_spi_lsi(tlv);
 +	      break;
@@ -507,7 +552,7 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +}
 diff -Nru tcpdump-3.7.2/print-ip6.c tcpdump-3.7.2-hip/print-ip6.c
 --- tcpdump-3.7.2/print-ip6.c	Fri Nov 16 04:17:36 2001
-+++ tcpdump-3.7.2-hip/print-ip6.c	Wed Nov 19 12:48:32 2003
++++ tcpdump-3.7.2-hip/print-ip6.c	Fri Feb 20 02:08:10 2004
 @@ -184,10 +184,15 @@
  		case IPPROTO_IPV4:
  			ip_print(cp, len);
@@ -527,7 +572,7 @@ diff -Nru tcpdump-3.7.2/print-ip6.c tcpdump-3.7.2-hip/print-ip6.c
  			goto end;
 diff -Nru tcpdump-3.7.2/print-sctp.c tcpdump-3.7.2-hip/print-sctp.c
 --- tcpdump-3.7.2/print-sctp.c	Wed Feb 26 08:07:22 2003
-+++ tcpdump-3.7.2-hip/print-sctp.c	Wed Nov 19 12:48:32 2003
++++ tcpdump-3.7.2-hip/print-sctp.c	Fri Feb 20 02:08:10 2004
 @@ -46,12 +46,13 @@
  #include <sys/time.h>
  #include <sys/socket.h>

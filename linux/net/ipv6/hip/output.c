@@ -423,7 +423,6 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_hit)
 	src_addr = &skb->nh.ipv6h->saddr;
 	dst_addr = &skb->nh.ipv6h->daddr;
 
-
 	r1pkt = hip_get_r1(src_addr, dst_addr);
 	if (!r1pkt)
 	{
@@ -952,9 +951,11 @@ static int hip_send_rea(struct in6_addr *dst_hit,int interface_id,
 			HIP_ERROR("Got no HID\n");
 			goto out_err;
 		}
-		if (hid->algorithm != 3) { /* only DSA is supported */
+		//if (hid->algorithm != 3) { /* only DSA is supported */
+		if (hip_get_host_id_algo(hid) != HIP_HI_DSA) {
 			HIP_ERROR("Don't know the length of the signature for algorithm: %d",
-				  hid->algorithm);
+				  hip_get_host_id_algo(hid));
+	    //				  hid->algorithm);
 			goto out_err;
 		}
 
@@ -966,7 +967,8 @@ static int hip_send_rea(struct in6_addr *dst_hit,int interface_id,
                         goto out_err;
 		}
 		err = hip_build_param_signature_contents(rea_packet, sig+1,
-							 41, hid->algorithm);
+							 41, hip_get_host_id_algo(hid));
+		//		 41, hid->algorithm);
                 pkt_len += hip_get_param_total_len(sig);
                 hip_set_msg_total_len(rea_packet, pkt_len);
         }

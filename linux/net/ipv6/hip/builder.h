@@ -46,8 +46,8 @@ hip_tlv_len_t hip_get_param_contents_len(const void *tlv_common);
 void hip_set_param_contents_len(void *tlv_common, hip_tlv_len_t len);
 hip_tlv_type_t hip_get_param_type(const void *tlv_common);
 void hip_set_param_type(void *tlv_common, hip_tlv_type_t type);
-void *hip_get_dh_fixed_param_public_value_contents(const void *tlv_common);
-hip_tlv_len_t hip_get_dh_fixed_param_public_value_len(const struct hip_dh_fixed *dh);
+void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common);
+hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh);
 void hip_set_param_spi_value(struct hip_spi_lsi *spi_lsi, uint32_t spi);
 void hip_set_param_lsi_value(struct hip_spi_lsi *spi_lsi, uint32_t lsi);
 uint32_t hip_get_param_spi_value(const struct hip_spi_lsi *spi_lsi);
@@ -95,14 +95,22 @@ int hip_build_param_signature_contents(struct hip_common *msg,
 int hip_build_param_cookie(struct hip_common *msg, int solved,
 			   uint64_t birthday, uint64_t random_i,
 			   uint64_t random_j_k);
-int hip_build_param_dh_fixed_contents(struct hip_common *msg,
+int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 				      uint8_t group_id,
 				      void *pubkey,
 				      hip_tlv_len_t pub_len);
+/*
+ int hip_build_param_host_id_contents(struct hip_common *msg,
+ 				     const void *contents,
+ 				     hip_tlv_len_t contents_size,
+ 				     uint16_t hi_length,
+ 				     uint16_t fqdn_length);
+*/
 int hip_build_param_host_id_contents(struct hip_common *msg,
 				     const void *contents,
 				     hip_tlv_len_t contents_size,
-				     uint8_t algorithm);
+				     uint16_t hi_length,
+				     uint16_t fqdn_length);
 int hip_build_param_transform(struct hip_common *msg,
 			      const hip_tlv_type_t transform_type,
 			      const hip_transform_suite_t transform_suite[],
