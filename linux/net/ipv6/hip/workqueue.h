@@ -53,10 +53,10 @@ int hip_init_workqueue(int netlink_fd);
 void hip_uninit_workqueue(void);
 int hip_insert_work_order(struct hip_work_order *hwo);
 struct hip_work_order *hip_get_work_order(void);
-struct hip_work_order *hip_create_job_with_hit(int mask,
-					       const struct in6_addr *hit);
+//struct hip_work_order *hip_create_job_with_hit(int mask,
+//					       const struct in6_addr *hit);
 struct hip_work_order *hip_init_job(int mask);
 void hip_free_work_order(struct hip_work_order *hwo);
 
-void hwo_default_destructor(struct hip_work_order *hwo);
+//void hwo_default_destructor(struct hip_work_order *hwo);
 #endif /* HIP_WORKQUEUE */

@@ -15,6 +15,7 @@
 #include <stdio.h>      /* stderr and others */
 #include <sys/socket.h> /* socket functions */
 #include <sys/select.h> /* select */
+#include <net/hip.h>
 
 #include "hipd.h"
 #include "debug.h"
@@ -33,7 +34,7 @@ void hip_exit(int signal) {
 
 int main(int argc, char *argv[]) {
      char ch;
-     char buff[NETLINK_HIP_MSG_SIZE];
+     char buff[HIP_MAX_NETLINK_PACKET];
      fd_set read_fdset;
      int foreground = 0;
      int highest_descriptor;

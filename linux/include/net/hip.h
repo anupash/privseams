@@ -50,6 +50,7 @@ typedef uint16_t in_port_t;
 #endif /* __KERNEL__ */
 
 #define HIP_MAX_PACKET 2048
+#define HIP_MAX_NETLINK_PACKET 3072
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
