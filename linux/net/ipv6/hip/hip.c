@@ -1174,64 +1174,60 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
 
 /**
  * hip_create_device_addrlist - get interface addresses
- * @idev: inet6 device of which addresses are retrieved
+ * @event_dev: network device of which addresses are retrieved from
  * @addr_list: where the pointer to address list is stored
  * @idev_addr_count: number of addresses in @addr_list
  *
  * Caller is responsible for kfreeing @addr_list.
- * This function assumes that we have the device lock.
  *
  * Returns: 0 if addresses were retrieved successfully. If there was
  * no error but interface has no IPv6 addresses, @addr_list is NULL
  * and 0 is returned. Else < 0 is returned and @addr_list contains
  * NULL.
  */
-static int hip_create_device_addrlist(struct inet6_dev *idev,
+static int hip_create_device_addrlist(struct net_device *event_dev,
 				       struct hip_rea_info_addr_item **addr_list,
 				       int *idev_addr_count)
 {
-	/* TODO: idev -> ifindex, devgetbyifindex, idev */
-
-	/* TODO: return list_head */
+	struct inet6_dev *idev;
 	struct inet6_ifaddr *ifa = NULL;
 	char addrstr[INET6_ADDRSTRLEN];
 	int i = 0;
 	int err = 0;
 	struct hip_rea_info_addr_item *tmp_list = NULL;
+	int n_addrs = 0;
 
 	*idev_addr_count = 0;
 
+        read_lock(&addrconf_lock);
+	idev = in6_dev_get(event_dev);
 	if (!idev) {
-		HIP_ERROR("NULL idev\n");
-		return -EINVAL;
+		HIP_DEBUG("event_dev has no IPv6 addrs, returning\n");
+		goto out;
 	}
+	read_lock(&idev->lock);
 
-	HIP_DEBUG("idev=%s ifindex=%d\n", idev->dev->name, idev->dev->ifindex);
-
-
-	for (ifa = idev->addr_list; ifa; (*idev_addr_count)++, ifa = ifa->if_next) {
+	for (ifa = idev->addr_list; ifa; ifa = ifa->if_next) {
 		spin_lock_bh(&ifa->lock);
 		hip_in6_ntop(&ifa->addr, addrstr);
-		HIP_DEBUG("addr %d: %s flags=0x%x valid_lft=%u j-ts=%lu\n",
-			  *idev_addr_count+1, addrstr, ifa->flags,
+		HIP_DEBUG("addr %d: %s flags=0x%x valid_lft=%u jiffies-ifa_timestamp=%lu\n",
+			  n_addrs+1, addrstr, ifa->flags,
 			  ifa->valid_lft, (jiffies-ifa->tstamp)/HZ);
 		if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL) {
 			HIP_DEBUG("not counting link local address\n");
-			(*idev_addr_count)--;
-		}
+		} else
+			n_addrs++;
 		spin_unlock_bh(&ifa->lock);
 	}
-	HIP_DEBUG("address list count=%d\n", *idev_addr_count);
+	HIP_DEBUG("address list count=%d\n", n_addrs);
 
-	if (*idev_addr_count > 0) {
+	if (n_addrs > 0) {
 		/* create address list for building of REA */
-
-		/* todo: convert to struct list_head ? */
-		tmp_list = kmalloc(*idev_addr_count * sizeof(struct hip_rea_info_addr_item), GFP_ATOMIC);
+		tmp_list = kmalloc(n_addrs * sizeof(struct hip_rea_info_addr_item), GFP_ATOMIC);
 		if (!tmp_list) {
 			HIP_DEBUG("addr_list creation failed\n");
 			err = -ENOMEM;
-			goto out_err;
+			goto out_in6_unlock;
 		}
 
 		/* todo: skip addresses which we don't want/need to include into
@@ -1241,7 +1237,7 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
 		 * the peers, policy ?
 		 */
 		for (i = 0, ifa = idev->addr_list;
-		     ifa && i < *idev_addr_count; ifa = ifa->if_next, i++) {
+		     ifa && i < n_addrs; ifa = ifa->if_next, i++) {
 			spin_lock_bh(&ifa->lock);
 			if (!(ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL)) {
 				ipv6_addr_copy(&tmp_list[i].address, &ifa->addr);
@@ -1259,8 +1255,12 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
 	}
 
 	*addr_list = tmp_list;
+	*idev_addr_count = n_addrs;
 
- out_err:
+ out_in6_unlock:
+	read_unlock(&idev->lock);
+ out:
+	read_unlock(&addrconf_lock);
 	return err;
 }
 
@@ -1269,80 +1269,38 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
 
 /**
  * hip_net_event_handle - finish netdev and inet6 event handling
- * @event_src: event source
  * @event_dev: the network device which caused the event
- * @event: the event XXXXXXX USELESSS ?
- *
- * This function does the actual work (sending of UPDATE, that is).
- *
+ * @idev_addr_count: on return tells how many addresses are in @addr_list
+ * @addr_list: list of addresses of the device @event_dev
+
  * Events caused by loopback devices are ignored.
  *
- * XXXX REMOVE ?: NOTE: this uses our own REA parameter extension (REA parameter containing no addresses)
- *
- * @event_src is 0 if @event to be handled came from hip_handle_ipv6_dad_completed,
- * or 1 if @event came from netdevice_notifier.
+ * @event_src is %EVENTSRC_INET6 if @event to be handled came from
+ * hip_handle_ipv6_dad_completed, or %EVENTSRC_NETDEV if @event came
+ * from netdevice_notifier.
  */
-static void hip_net_event_handle(int event_src, struct net_device *event_dev)
-//				 unsigned long event)
+static void hip_net_event_handle(struct net_device *event_dev, int *idev_addr_count,
+				 struct hip_rea_info_addr_item **addr_list)
 {
         int err = 0;
-        struct inet6_dev *idev;
-        int idev_addr_count = 0;
-        struct hip_rea_info_addr_item *addr_list = NULL;
 
-	/* hip_net_event checks validity of event_dev */
+	*idev_addr_count = 0;
+	*addr_list = NULL;
 
-        if (! (event_src == EVENTSRC_INET6 || event_src == EVENTSRC_NETDEV) ) {
-                HIP_ERROR("unknown event source %d\n", event_src);
-                return;
-        }
-
-        read_lock(&addrconf_lock);
-
-	//HIP_DEBUG("event_src=%s event=%lu dev=%s ifindex=%d\n",
-	HIP_DEBUG("event_src=%s dev=%s ifindex=%d\n",
-		  event_src == EVENTSRC_INET6 ? "inet6" : "netdev",
-		  /*event,*/ event_dev->name, event_dev->ifindex);
-
-        /* skip events caused by loopback (as long as we do not have
-           loopback support) */
+        /* Skip events caused by loopback devices (as long as we do
+	 * not have loopback support). TODO: skip tunnels etc. */
         if (event_dev->flags & IFF_LOOPBACK) {
                 HIP_DEBUG("ignoring event from loopback device\n");
-		goto out;
+		return;
         }
 
-	idev = in6_dev_get(event_dev);
-	if (!idev) {
-		HIP_DEBUG("NULL idev on event (no IPv6 addrs)\n");
-		goto out;
+	err = hip_create_device_addrlist(event_dev, addr_list, idev_addr_count);
+	if (err) {
+		HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
+		goto out_err;
 	}
-	read_lock(&idev->lock);
-
-	/* When a network device gets NETDEV_DOWN, create a 0 address REA parameter,
-	 * else (an IPv6 address was added or deleted or
-	 * network device came up) send "all addresses REA" */
-	if (event_src != EVENTSRC_NETDEV) {
-		err = hip_create_device_addrlist(idev, &addr_list,
-						 &idev_addr_count);
-		if (err) {
-			HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
-			goto out_err;
-		}
-	}
-
-	if (idev_addr_count > 0)
-		hip_send_update_all(addr_list, idev_addr_count, event_dev->ifindex); /* move this to hip_net_event */
-	else
-		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
 
  out_err:
-	read_unlock(&idev->lock);
-	in6_dev_put(idev);
-	if (addr_list)
-		kfree(addr_list);
-
- out:
-        read_unlock(&addrconf_lock);
         return;
 }
 
@@ -1354,10 +1312,8 @@ struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
 	struct hip_work_order *hwo;
 
 	hwo = hip_init_job(GFP_ATOMIC);
-	if (!hwo) {
-		HIP_ERROR("No memory for hwo\n");
+	if (!hwo)
 		return NULL;
-	}
 
 	hwo->type = HIP_WO_TYPE_MSG;
 	hwo->subtype = subtype;
@@ -1409,19 +1365,6 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 		HIP_ERROR("Unable to handle address event\n");
 		goto out;
   	}
-#if 0
-  	hwo = hip_init_job(GFP_ATOMIC);
-  	if (!hwo) {
-		HIP_ERROR("No memory to handle ifa event\n");
-		goto out;
-  	}
-
-	hwo->type = HIP_WO_TYPE_MSG;
-	hwo->subtype = HIP_WO_SUBTYPE_IN6_EVENT;
-	hwo->arg1 = (void *)event_dev->ifindex;
-	hwo->arg2 = (void *)NETDEV_UP;
-	hwo->destructor = NULL;
-#endif
 	hip_insert_work_order(hwo);
 
  out_idev_put:
@@ -1446,8 +1389,14 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 {
 	struct net_device *event_dev;
+        int idev_addr_count = 0;
+        struct hip_rea_info_addr_item *addr_list = NULL;
 
-	HIP_DEBUG("ifindex=%d event_src=%u event=%u\n", ifindex, event_src, event);
+        if (! (event_src == EVENTSRC_INET6 || event_src == EVENTSRC_NETDEV) ) {
+                HIP_ERROR("unknown event source %d\n", event_src);
+                return;
+        }
+
 	event_dev = dev_get_by_index(ifindex);
 	if (!event_dev) {
 		HIP_DEBUG("Network interface (ifindex=%d) does not exist anymore\n",
@@ -1455,12 +1404,26 @@ static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 		return;
 	}
 
-//	hip_net_event_handle(event_src, event_dev, event);
-	hip_net_event_handle(event_src, event_dev);
+	HIP_DEBUG("event_src=%s dev=%s ifindex=%d event=%u\n",
+		  event_src == EVENTSRC_INET6 ? "inet6" : "netdev",
+		  event_dev->name, ifindex, event);
+
+	/* dev_get_by_index does a dev_hold */
+	hip_net_event_handle(event_dev, &idev_addr_count, &addr_list);
 	dev_put(event_dev);
+
+	/* send UPDATEs if there are addresses to be informed to the peers */
+	if (idev_addr_count > 0)
+		hip_send_update_all(addr_list, idev_addr_count, ifindex);
+	else
+		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+
+	if (addr_list)
+		kfree(addr_list);
 }
 
-/** hip_handle_inet6_addr_del - handle IPv6 address deletion event
+/**
+ * hip_handle_inet6_addr_del - handle IPv6 address deletion events
  * @ifindex: the interface index of the network device which caused the event
  */
 void hip_handle_inet6_addr_del(int ifindex) {
@@ -1474,25 +1437,8 @@ void hip_handle_inet6_addr_del(int ifindex) {
 		HIP_ERROR("Unable to handle address event\n");
 		goto out;
   	}
-
-#if 0
-	hwo = hip_init_job(GFP_ATOMIC);
-	if (!hwo) {
-		HIP_ERROR("No memory to handle net event\n");
-		goto out;
-	}
-
-	hwo->type = HIP_WO_TYPE_MSG;
-	hwo->subtype = HIP_WO_SUBTYPE_IN6_EVENT;
-	hwo->arg1 = (void *)ifindex;
-	hwo->arg2 = (void *)NETDEV_DOWN;
-	hwo->destructor = NULL;
-#endif
-
 	hip_insert_work_order(hwo);
-
  out:
-//	hip_net_event(ifindex, EVENTSRC_INET6, NETDEV_DOWN);
 }
 
 
@@ -1507,8 +1453,7 @@ void hip_handle_inet6_addr_del(int ifindex) {
  * Returns: always %NOTIFY_DONE.
  */
 static int hip_netdev_event_handler(struct notifier_block *notifier_block,
-                                    unsigned long event,
-                                    void *ptr)
+                                    unsigned long event, void *ptr)
 {
         struct net_device *event_dev;
 	struct hip_work_order *hwo;
@@ -1525,9 +1470,7 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
                 HIP_ERROR("NULL event_dev, shouldn't happen ?\n");
                 return NOTIFY_DONE;
         }
-
 	dev_hold(event_dev);
-
 
 	hwo = hip_net_event_prepare_hwo(HIP_WO_SUBTYPE_DEV_EVENT,
 					event_dev->ifindex, event);
@@ -1535,20 +1478,6 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 		HIP_ERROR("Unable to handle address event\n");
 		goto out;
   	}
-#if 0
-	hwo = hip_init_job(GFP_ATOMIC);
-	if (!hwo) {
-		HIP_ERROR("No memory to handle net event\n");
-		goto out;
-	}
-
-	hwo->type = HIP_WO_TYPE_MSG;
-	hwo->subtype = HIP_WO_SUBTYPE_DEV_EVENT;
-	hwo->arg1 = (void *)event_dev->ifindex;
-	hwo->arg2 = (void *)event;
-	hwo->destructor = NULL;
-#endif
-
 	hip_insert_work_order(hwo);
 
  out:
@@ -1714,21 +1643,45 @@ static int hip_init_procfs(void)
 	if (!hip_proc_root)
 		return -1;
 
-	/* todo: use hip_proc_root */
-	create_proc_read_entry("net/hip/lhi", 0, 0, hip_proc_read_lhi, NULL);
-	create_proc_read_entry("net/hip/sdb_state", 0, 0,
-			       hip_proc_read_hadb_state, NULL);
-	create_proc_read_entry("net/hip/sdb_peer_addrs", 0, 0,
-			       hip_proc_read_hadb_peer_addrs, NULL);
-	create_proc_read_entry("net/hip/sdb_peer_spi_list", 0, 0,
-			       hip_proc_read_hadb_peer_spi_list, NULL);
-
+	/* todo: set file permission modes */
+	if (!create_proc_read_entry("lhi", 0, hip_proc_root, hip_proc_read_lhi, NULL))
+		goto out_err_root;
+	if (!create_proc_read_entry("sdb_state", 0, hip_proc_root,
+			       hip_proc_read_hadb_state, NULL))
+		goto out_err_lhi;
+	if (!create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
+			       hip_proc_read_hadb_peer_addrs, NULL))
+		goto out_err_sdb_state;
+	if (!create_proc_read_entry("sdb_peer_spi_list", 0, hip_proc_root,
+			       hip_proc_read_hadb_peer_spi_list, NULL))
+		goto out_err_peer_addrs;
 	/* a simple way to trigger sending of UPDATE packet to all peers */
-	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
+	if (!create_proc_read_entry("send_update", 0, hip_proc_root,
+			       hip_proc_send_update, NULL))
+		goto out_err_spi_list;
 	/* for testing dummy NOTIFY packets */
-	create_proc_read_entry("net/hip/send_notify", 0, 0, hip_proc_send_notify, NULL);
+	if (!create_proc_read_entry("send_notify", 0, hip_proc_root,
+			       hip_proc_send_notify, NULL))
+		goto out_err_send_update;
+
+	HIP_DEBUG("profcs init successful\n");
 	return 1;
 
+ out_err_send_update:
+	remove_proc_entry("send_update", hip_proc_root);
+ out_err_spi_list:
+	remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
+ out_err_peer_addrs:
+	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
+ out_err_sdb_state:
+	remove_proc_entry("sdb_state", hip_proc_root);
+ out_err_lhi:
+	remove_proc_entry("lhi", hip_proc_root);
+ out_err_root:
+	remove_proc_entry("net/hip", NULL);
+
+	HIP_ERROR("profcs init failed\n");
+	return -1;
 }
 
 /**
@@ -1737,14 +1690,13 @@ static int hip_init_procfs(void)
 static void hip_uninit_procfs(void)
 {
 	HIP_DEBUG("\n");
-	remove_proc_entry("net/hip/lhi", hip_proc_root);
-	remove_proc_entry("net/hip/sdb_state", hip_proc_root);
-	remove_proc_entry("net/hip/sdb_peer_addrs", hip_proc_root);
-	remove_proc_entry("net/hip/send_update", hip_proc_root);
-	remove_proc_entry("net/hip/send_notify", hip_proc_root);
-	remove_proc_entry("net/hip/sdb_peer_spi_list", hip_proc_root);
+	remove_proc_entry("lhi", hip_proc_root);
+	remove_proc_entry("sdb_state", hip_proc_root);
+	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
+	remove_proc_entry("send_update", hip_proc_root);
+	remove_proc_entry("send_notify", hip_proc_root);
+	remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
 	remove_proc_entry("net/hip", NULL);
-	return;
 }
 #endif /* CONFIG_PROC_FS */
 

@@ -85,8 +85,9 @@ static inline void hip_hadb_rem_state_spi(void *entry)
 	hip_ha_t *ha = (hip_ha_t *)entry;
 
 	ha->hastate &= ~HIP_HASTATE_SPIOK;
+	hip_hadb_delete_spi_list_all(entry); // check
+	HIP_DEBUG("set entry->default_spi_out to 0 ?\n");
 	hip_ht_delete(&hadb_spi, entry);
-//	hip_hadb_delete_spi_list(ha, ha->default_spi_out); // check
 }
 
 /**
@@ -1069,6 +1070,7 @@ void hip_hadb_dump_spi_list_all(void)
 	(void) hip_for_each_ha(hip_hadb_dump_spi_list, NULL);
 }
 
+/* delete all addresses from SPI list of the entry belonging to the given SPI */
 void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_peer_spi_list_item *spi_list, *tmp;
@@ -1103,6 +1105,26 @@ void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi)
         }
 	if (!i)
 		HIP_DEBUG("SPI not found\n");
+}
+
+/* delete all addresses from SPI list of the entry */
+void hip_hadb_delete_spi_list_all(hip_ha_t *entry)
+{
+	struct hip_peer_spi_list_item *spi_list, *tmp;
+	struct hip_peer_addr_list_item *addr, *tmp2;
+
+	HIP_DEBUG("entry=0x%p\n", entry);
+	/* no locking */
+        list_for_each_entry_safe(spi_list, tmp, &entry->peer_spi_list, list) {
+		HIP_DEBUG("deleting SPI list 0x%x\n", spi_list->spi);
+		list_for_each_entry_safe(addr, tmp2, &spi_list->peer_addr_list, list) {
+			list_del(&addr->list);
+			kfree(addr);
+		}
+		list_del(&spi_list->list);
+		kfree(spi_list);
+        }
+	HIP_DEBUG("done\n");
 }
 
 /** hip_get_default_spi_out - Get the SPI to use in the outbound ESP packet

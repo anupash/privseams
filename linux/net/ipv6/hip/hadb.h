@@ -73,6 +73,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 int hip_hadb_dump_spi_list(hip_ha_t *entry, void *unused);
 void hip_hadb_dump_spi_list_all(void);
 void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi);
+void hip_hadb_delete_spi_list_all(hip_ha_t *entry);
 uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
 
 /***********************************************/
