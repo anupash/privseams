@@ -85,10 +85,6 @@
 #include <net/hip_glue.h>
 #endif
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#endif
-
 /* Set to 3 to get tracing... */
 #define ACONF_DEBUG 2
 
@@ -1631,6 +1627,16 @@ static int inet6_addr_del(int ifindex, struct in6_addr *pfx, int plen)
 			 */
 			if (idev->addr_list == NULL)
 				addrconf_ifdown(idev->dev, 1);
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+			/* We must avoid sending multiple UPDATEs when
+			 * network device goes down. addrconf_ifdown
+			 * sends NETDEV_DOWN notification, so we
+			 * handle address deletion only when there are
+			 * addresses left after deletion of an IPv6
+			 * address */
+			else
+				HIP_CALLFUNC(hip_handle_inet6_addr_del, 0)(ifindex);
+#endif
 			return 0;
 		}
 	}
@@ -1966,7 +1972,7 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 	struct inet6_dev *idev;
 	struct inet6_ifaddr *ifa, **bifa;
 	int i;
-
+	printk(KERN_DEBUG "device %d is going down\n", dev->ifindex);
 	ASSERT_RTNL();
 
 	rt6_ifdown(dev);
@@ -2067,6 +2073,7 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 		neigh_parms_release(&nd_tbl, idev->nd_parms);
 		in6_dev_put(idev);
 	}
+	printk(KERN_DEBUG "device is down\n");
 	return 0;
 }
 
@@ -2233,6 +2240,10 @@ static void addrconf_dad_completed(struct inet6_ifaddr *ifp)
 		if (!ipv6_addr_any(&addr))
 			ipv6_dev_ac_inc(ifp->idev->dev, &addr);
 	}
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	printk(KERN_DEBUG "DAD completed %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(ifp->addr));
+	HIP_CALLFUNC(hip_handle_ipv6_dad_completed, 0)(ifp);
+#endif
 }
 
 #ifdef CONFIG_PROC_FS
@@ -3006,10 +3017,6 @@ static void ipv6_ifa_notify(int event, struct inet6_ifaddr *ifp)
 			ip6_rt_addr_del(&ifp->addr, ifp->idev->dev);
 		break;
 	}
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	HIP_CALLFUNC(hip_handle_ipv6_ifa_notify, 0)(ifp, event);
-#endif
 }
 
 #ifdef CONFIG_SYSCTL
