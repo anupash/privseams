@@ -44,7 +44,7 @@ static void hip_hadb_hold_entry(void *entry)
 		return;
 
 	atomic_inc(&ha->refcnt);
-	HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt));
+	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt));
 }
 
 static void hip_hadb_put_entry(void *entry)
@@ -58,7 +58,7 @@ static void hip_hadb_put_entry(void *entry)
 		hip_hadb_delete_state(ha);
                 HIP_DEBUG("HA: %p deleted.\n", ha);
 	} else {
-                HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, atomic_read(&ha->refcnt));
+                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, atomic_read(&ha->refcnt));
         }
 }
 
