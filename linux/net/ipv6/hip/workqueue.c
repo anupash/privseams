@@ -169,7 +169,7 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 		return -1;
 	}
 
-	if (hwo->type < 0 || hwo->type > HIP_MAX_WO_TYPES)
+	if (hwo->hdr.type < 0 || hwo->hdr.type > HIP_MAX_WO_TYPES)
 		return -1;
 
 #ifndef CONFIG_HIP_USERSPACE

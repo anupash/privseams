@@ -1,14 +1,14 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 
+#include "debug.h" /* logging facilities */
 #include "netlink.h"
 
-static int nl_sequence_number = 0;
 static int netlink_fd;
 
 struct hip_work_order *hip_netlink_receive(void) {
 	struct hip_work_order *result = NULL;
-	struct hip_work_order_hdr *hwoh;
+	struct hip_work_order *hwo;
 	struct nlmsghdr *nlh = NULL;
 	struct sockaddr_nl nladdr;
 	struct msghdr msg;
@@ -37,11 +37,11 @@ struct hip_work_order *hip_netlink_receive(void) {
 		goto err;
 	}
 	
-	hwoh = (struct hip_work_order_hdr *)NLMSG_DATA(nlh);
-	result->type = hwoh->type;
-	result->subtype = hwoh->subtype;
-	msg_len = hip_get_msg_total_len(&hwoh->msg);
-	
+	hwo = (struct hip_work_order *)NLMSG_DATA(nlh);
+
+	memcpy(result, hwo, sizeof(struct hip_work_order_hdr));
+
+	msg_len = hip_get_msg_total_len(&(hwo->msg));	
 	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
 	if (!result->msg) {
 		HIP_ERROR("Out of memory.\n");
@@ -50,7 +50,7 @@ struct hip_work_order *hip_netlink_receive(void) {
 		goto err;
 	}
 	
-	memcpy(result->msg, &hwoh->msg, msg_len);
+	memcpy(result->msg, &(hwo->msg), msg_len);
 	
  err:
 	if (nlh)
@@ -61,8 +61,7 @@ struct hip_work_order *hip_netlink_receive(void) {
 
 int hip_netlink_send(struct hip_work_order *hwo) 
 {
-	/** FIXME: slightly too much memory is being allocated (hip_common is wasted) */
-	struct hip_work_order_hdr *hdr;
+	struct hip_work_order *h;
 	struct sockaddr_nl dest_addr;
 	struct msghdr msg;
 	struct nlmsghdr *nlh = NULL;
@@ -86,10 +85,9 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	nlh->nlmsg_flags = 0;
 	
 	/* Fill in the netlink message payload */
-	hdr = (struct hip_work_order_hdr *)NLMSG_DATA(nlh);
-	hdr->type = hwo->type;
-	hdr->subtype = hwo->subtype;
-	memcpy(&hdr->msg, hwo->msg, msg_len);
+	h = (struct hip_work_order *)NLMSG_DATA(nlh);
+	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
+	memcpy(&h->msg, hwo->msg, msg_len);
 
 	/* Send */
 	iov.iov_base = (void *)nlh;
@@ -129,7 +127,6 @@ int hip_netlink_open(int *s_net)
 	if (bind(*s_net, (struct sockaddr *)&local, sizeof(local)) < 0)
 		return(-1);
         
-	nl_sequence_number = time(NULL);
 	netlink_fd = *s_net;
 	return(0);
 }
