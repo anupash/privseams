@@ -176,8 +176,10 @@ int hip_hadb_get_info(void *arg, void *arg1, int type);
 int hip_hadb_multiset(void *arg, int *getlist, int amount, void *arg1,
 		      void *arg2, void *arg3, void *arg4, int type);
 int hip_hadb_set_info(void *arg, void *arg1, int type);
+int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 
 // host id functions
+int hip_get_any_local_hit(struct in6_addr *dst);
 
 int        hip_add_host_id(struct hip_db_struct *db,const struct hip_lhi *lhi,
 			   const struct hip_host_id *host_id);
@@ -203,5 +205,9 @@ void       hip_uninit_hadb(void);
 extern struct hip_db_struct hip_peer_hostid_db;
 extern struct hip_db_struct hip_local_hostid_db;
 extern struct hip_db_struct hip_hadb;
+
+
+int hip_hadb_for_each_entry(FILTER_FUNC filter, ACCESS_FUNC accessor, 
+			    struct list_head *head);
 
 #endif /* _HIP_DB */

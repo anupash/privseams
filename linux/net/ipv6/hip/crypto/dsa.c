@@ -135,8 +135,12 @@ verify(MPI r, MPI s, MPI hash, DSA_public_key *pkey )
     MPI exp[3];
 
 
-    if( !(mpi_cmp_ui( r, 0 ) > 0 && mpi_cmp( r, pkey->q ) < 0) ) {
-	    log_error("assertion 0 < r < q  failed\n");
+    if( !(mpi_cmp_ui( r, 0 ) > 0) ) {
+	    log_error("assertion 0 < r failed\n");
+	    return 0;
+    }
+    if ( !(mpi_cmp( r, pkey->q ) < 0) ) {
+	    log_error("assertion r < q  failed\n");
 	    return 0; /* assertion	0 < r < q  failed */
     }
     if( !(mpi_cmp_ui( s, 0 ) > 0 && mpi_cmp( s, pkey->q ) < 0) ) {

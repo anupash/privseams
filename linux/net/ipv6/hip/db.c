@@ -186,6 +186,24 @@ static struct hip_hadb_state *hip_hadb_find_by_hit(struct in6_addr *hit)
 
 }
 
+static int hip_hadb_delete_by_hit(struct in6_addr *hit)
+{
+	struct hip_hadb_state *tmp, *entry;
+
+	if (list_empty(&hip_hadb.db_head))
+		return -EINVAL;
+
+	list_for_each_entry_safe(entry, tmp, &hip_hadb.db_head, next) {
+		if (!ipv6_addr_cmp(&entry->hit_peer, hit)) {
+			list_del(&entry->next);
+			kfree(entry);
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
 /**
  * hip_sdb_find_by_spi - find the entry having SPI @spi as the peer's SPI
  * @spi: The SPI value used as a key for the host association state record.
@@ -810,6 +828,8 @@ void hip_hadb_delete_entry_nolock(struct hip_hadb_state *entry)
 	if ((--hip_hadb.db_cnt) < 0)
 		HIP_ERROR("Database corrupted!\n");
 	list_del(&entry->next);
+	/* XXX: Should we free the memory, also? */
+	kfree(entry);
 }
 
 
@@ -858,13 +878,12 @@ void hip_uninit_hadb(void)
  *        @accessor, will be linked to this list. The list *must* be
  *        initially empty.
  *
- * Default behaviour, when both @filter and @accessor are NULLs, is to
- * fill the @head list with the %hit_peers of all the entries found in 
- * the HADB.
+ * typedef int (*FILTER_FUNC)(struct hip_hadb_state *);
+ * typedef void (*ACCESS_FUNC)(struct hip_hadb_state *, struct hip_entry_list *);
  *
- * NOTE: This is SLOW FUNCTION! Try to use minimally, and ONLY in khipd.
- * It allocated GFP_KERNEL memory with read lock held. Which could cause
- * problems.
+ * Default behaviour, when both @filter and @accessor are NULLs, is to
+ * fill the @head list with the *hit_peers* of all the entries found in 
+ * the HADB.
  *
  * Return number of entries that were processed. The filtered ones, are
  * not included in the count. A negative value is returned upon an error.
@@ -876,11 +895,10 @@ int hip_hadb_for_each_entry(FILTER_FUNC filter, ACCESS_FUNC accessor,
 {
 	unsigned long lf;
 	struct hip_hadb_state *entry;
-	struct hip_entry_list *elist;
+	struct hip_entry_list *elist, *iter;
 	int num = 0;
 
 	if (!list_empty(head)) {
-		HIP_ERROR("Argument list must be empty\n");
 		return -ENOTEMPTY;
 	}
 
@@ -892,7 +910,7 @@ int hip_hadb_for_each_entry(FILTER_FUNC filter, ACCESS_FUNC accessor,
 				continue;
 		}
 
-		elist = kmalloc(sizeof(struct hip_entry_list),GFP_KERNEL);
+		elist = kmalloc(sizeof(struct hip_entry_list),GFP_ATOMIC);
 		if (!elist) {
 			HIP_READ_UNLOCK_DB(&hip_hadb);
 			num = -ENOMEM;
@@ -914,11 +932,19 @@ int hip_hadb_for_each_entry(FILTER_FUNC filter, ACCESS_FUNC accessor,
 
  free_on_error:
 /* clear the argument list */
-	while(!list_empty(head)) {
-		kfree(head->next);
-	}
-	return num;
+	if (elist)
+		kfree(elist);
 
+	list_for_each_entry_safe(elist, iter, head, list) {
+		list_del(&elist->list);
+		kfree(elist);
+	}
+
+	if (!list_empty(head)) {
+		HIP_ERROR("List removal failed\n");
+	}
+
+	return num;
 }
 
 
@@ -1182,7 +1208,53 @@ int hip_copy_different_localhost_hit(struct in6_addr *target,
 	return err;
 } 
 
+static struct hip_lhi *hip_get_any_hit(struct hip_db_struct *db)
+{
+	struct hip_host_id_entry *tmp;
+	struct hip_lhi *res;
+	unsigned long lf;
 
+	if (list_empty(&db->db_head))
+		return NULL;
+
+	res = kmalloc(sizeof(struct hip_lhi), GFP_KERNEL);
+	if (!res)
+		return NULL;
+
+	HIP_READ_LOCK_DB(db);
+
+	tmp = list_entry(db->db_head.next, struct hip_host_id_entry, next);
+	if (!tmp) {
+		HIP_READ_UNLOCK_DB(db);
+		kfree(res);
+		return NULL;
+	}
+
+	memcpy(res, &tmp->lhi, sizeof(struct hip_lhi));
+	
+	HIP_READ_UNLOCK_DB(db);
+
+	return res;
+}
+
+int hip_get_any_local_hit(struct in6_addr *dst)
+{
+	struct hip_lhi *lhi;
+
+	lhi = hip_get_any_hit(&hip_local_hostid_db);
+	if (!lhi) {
+		HIP_ERROR("Could not retrieve any local HIT\n");
+		return -ENOENT;
+	}
+
+	if (dst) {
+		memcpy(dst, &lhi->hit, sizeof(struct in6_addr));
+		kfree(lhi);
+		return 0;
+	} 
+
+	return -EINVAL;
+}
 /**
  * hip_get_host_id - Copies the host id into newly allocated memory
  * and returns it to the caller.
@@ -1353,7 +1425,24 @@ int hip_insert_any_localhost_public_key(u8 *target)
 	return err;
 }
 #endif
-		
+
+/**
+ * Currently deletes the whole entry...
+ */		
+int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
+{
+	unsigned long lf;
+	int err = 0;
+
+	HIP_WRITE_LOCK_DB(&hip_hadb);
+
+	err = hip_hadb_delete_by_hit(hit);
+
+	HIP_WRITE_UNLOCK_DB(&hip_hadb);
+	return err;
+}
+
+
 int hip_add_peer_info_nolock(struct in6_addr *hit, struct in6_addr *addr)
 {
 	int err;
@@ -1378,8 +1467,15 @@ int hip_add_peer_info_nolock(struct in6_addr *hit, struct in6_addr *addr)
 		HIP_DEBUG("created a new sdb entry\n");
 
 		entry->state = HIP_STATE_START;
-		hip_hadb_insert_entry_nolock(entry);
 		ipv6_addr_copy(&entry->hit_peer,hit);
+		/* XXX: This is wrong. As soon as we have native socket API, we
+		 * should enter here the correct sender... (currently unknown).
+		 */
+		if (hip_get_any_local_hit(&entry->hit_our) == 0)
+			HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
+		else 
+			HIP_ERROR("Could not assign local hit... continuing\n");
+		hip_hadb_insert_entry_nolock(entry);
 	}
 
 	/* note: we can't just simply use hip_sdb_entry_init() here

@@ -304,16 +304,19 @@ static inline struct sock *__tcp_v6_lookup_established(struct in6_addr *saddr, u
 	 */
 	hash = tcp_v6_hashfn(daddr, hnum, saddr, sport);
 	head = &tcp_ehash[hash];
+
 	read_lock(&head->lock);
 	sk_for_each(sk, node, &head->chain) {
 		/* For IPV6 do the cheaper port and family tests first. */
 		if(TCP_IPV6_MATCH(sk, saddr, daddr, ports, dif))
 			goto hit; /* You sunk my battleship! */
 	}
+
 	/* Must check for a TIME_WAIT'er before going to listener hash. */
 	sk_for_each(sk, node, &(head + tcp_ehash_size)->chain) {
 		/* FIXME: acme: check this... */
 		struct tcp_tw_bucket *tw = (struct tcp_tw_bucket *)sk;
+
 
 		if(*((__u32 *)&(tw->tw_dport))	== ports	&&
 		   sk->sk_family		== PF_INET6) {
@@ -322,11 +325,14 @@ static inline struct sock *__tcp_v6_lookup_established(struct in6_addr *saddr, u
 			   (!sk->sk_bound_dev_if || sk->sk_bound_dev_if == dif))
 				goto hit;
 		}
+
 	}
+
 	read_unlock(&head->lock);
 	return NULL;
 
 hit:
+
 	sock_hold(sk);
 	read_unlock(&head->lock);
 	return sk;
@@ -520,6 +526,8 @@ static int tcp_v6_hash_connect(struct sock *sk)
 	}
 
 	head = &tcp_bhash[tcp_bhashfn(inet_sk(sk)->num)];
+
+	printk("jotain... hash_connect: %p\n",head);
 	tb = tb_head(head);
 
 	spin_lock_bh(&head->lock);
@@ -672,6 +680,7 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 	if (err)
 		goto failure;
 
+	printk("saddr in tcp6: %p\n",saddr);
 	if (saddr == NULL) {
 		saddr = &fl.fl6_src;
 		ipv6_addr_copy(&np->rcv_saddr, saddr);

@@ -105,7 +105,7 @@ int hip_is_supported_tlv(hip_tlv_type_t tlv)
  */
 int hip_is_our_spi(uint32_t spi, struct in6_addr *hit)
 {
-	int res = hip_hadb_get_info(spi, hit, HIP_HADB_OWN_HIT|HIP_ARG_SPI);
+	int res = hip_hadb_get_info((void *)spi, hit, HIP_HADB_OWN_HIT|HIP_ARG_SPI);
 
 	HIP_DEBUG("SPI check: %d\n",res);
 	return res;
@@ -119,22 +119,20 @@ int hip_is_our_spi(uint32_t spi, struct in6_addr *hit)
  * are replaced with the corresponding HITs before the packet is
  * delivered to ESP.
  */
-void hip_handle_esp(struct ipv6hdr *hdr)
+void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 {
-	u32 spi;
 	int tlist[2];
 	int k;
 
 	if (hdr->nexthdr == IPPROTO_ESP) {
-		spi = ntohl(((struct ipv6_esp_hdr*) (hdr+1))->spi);
 
 		tlist[0] = HIP_HADB_OWN_HIT;
 		tlist[1] = HIP_HADB_PEER_HIT;
 
 		k = hip_hadb_multiget((void *)spi,tlist,2,&hdr->daddr,&hdr->saddr,
 				      NULL,NULL,HIP_ARG_SPI);
-		if (k < 2) {
-			HIP_DEBUG("Could not copy HITs\n");
+		if (k < 3) {
+			HIP_DEBUG("Could not copy HITs, or SPI (%x) not ours\n",spi);
 			return;
 		}
 	}
@@ -706,7 +704,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 		}
 		/* XXX: -EAGAIN */
 
-		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x\n", spi_our);
+		spi_our = ntohl(spi_our);
+
+		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_our);
 	}
 
 	/* update SPI_LSI parameter because it has not been filled with SPI
@@ -1149,7 +1149,6 @@ int hip_create_r2(struct hip_context *ctx)
 			goto out_err;
 		}
 
-		/* jlu XXX: WRITE Entry not written to before this */
 		entry->peer_controls = ntohs(i2->control);
 		entry->birthday = ntoh64(((struct hip_birthday_cookie *)param)->birthday);
 		/* todo: check if this is really our HIT? */
@@ -1202,14 +1201,15 @@ int hip_create_r2(struct hip_context *ctx)
 		}
 		/* XXX: Check -EAGAIN */
 
-		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x\n", spi_our);
+		spi_our = ntohl(spi_our);
+		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_our);
 		/* ok, found an unused SPI to use */
 	}
 
 	/* XXX: Krisu check this SPI setting! */
 	hip_hadb_get_peer_spi_by_hit(&i2->hits, &spi_peer);
 	
-	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x\n", spi_peer);
+	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_peer);
 /*
 	err = hip_setup_esp(&i2->hits, &i2->hitr,
 			    &spi_peer,
@@ -1217,6 +1217,7 @@ int hip_create_r2(struct hip_context *ctx)
 			    &ctx->hip_espr.key,
 			    &ctx->hip_authr.key);
 */
+	spi_peer = htonl(spi_peer);
 	err = hip_setup_esp(&i2->hitr, &i2->hits, &ctx->skb_in->nh.ipv6h->saddr,
 			    &spi_peer, esptfm, &ctx->hip_espr.key,
 			    &ctx->hip_authr.key, XFRM_POLICY_OUT);
@@ -1756,8 +1757,6 @@ int hip_handle_r2(struct sk_buff *skb)
  		goto out_err;
  	}
 
-	/* jlu XXX: WRITE: The only place in R2 handlers where entry
-	 * is written to */
 	{
 		int tmp_list[4];
 		int tfm;
@@ -1787,6 +1786,11 @@ int hip_handle_r2(struct sk_buff *skb)
 				    &ctx->hip_espi.key,
 				    &ctx->hip_authi.key);
 */
+		HIP_DEBUG("Setting out-policy SPI=0x%x (host)\n",spi_recvd);
+
+		spi_recvd = htonl(spi_recvd); // apparently XFRM wants in big endian
+
+
 		err = hip_setup_esp(&r2->hitr, sender, &ctx->skb_in->nh.ipv6h->saddr,
 				    &spi_recvd, tfm, &ctx->hip_espi.key,
 				    &ctx->hip_authi.key, XFRM_POLICY_OUT);

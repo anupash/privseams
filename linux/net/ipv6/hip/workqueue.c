@@ -22,11 +22,6 @@ struct hip_work_order *hip_get_work_order(void)
 
 	wq = &__get_cpu_var(hip_workqueue);
 
-	HIP_ERROR("Debug data 1\n");
-	HIP_ERROR("wq: %p\n",wq);
-	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
-	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
-
 	/* Wait for job */
 	down(wq->worklock);
 
@@ -41,22 +36,12 @@ struct hip_work_order *hip_get_work_order(void)
 		goto err;
 	}
 
-	HIP_ERROR("Some debug data 2\n");
-	HIP_ERROR("wq: %p\n",wq);
-	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
-	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
-
 	result = list_entry(wq->workqueue->next, struct hip_work_order, queue);
 	if (!result) {
 		HIP_ERROR("Couldn't extract the main structure from the list\n");
 		result = NULL;
 		goto err;
 	}
-
-	HIP_ERROR("Some debug data 3\n");
-	HIP_ERROR("wq: %p\n",wq);
-	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
-	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
 
 	list_del(wq->workqueue->next);
 
@@ -80,19 +65,10 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 
 	wq = &__get_cpu_var(hip_workqueue);
 
-	HIP_ERROR("Some debug data 4\n");
-	HIP_ERROR("wq: %p\n",wq);
-	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
-	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
 
 	local_irq_save(eflags);
 
 	list_add_tail(&hwo->queue,wq->workqueue);
-
-	HIP_ERROR("Some debug data 5\n");
-	HIP_ERROR("wq: %p\n",wq);
-	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
-	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
 
 	up(wq->worklock); // tell the worker, that there is work
 	local_irq_restore(eflags);
@@ -118,8 +94,6 @@ int hip_init_workqueue()
 
 	INIT_LIST_HEAD(lh);
 	init_MUTEX_LOCKED(sem);
-
-	HIP_ERROR("HIP Semaphore initial: %d\n",atomic_read(&sem->count));
 
 	data = &__get_cpu_var(hip_workqueue);
 	data->worklock = sem;
@@ -199,4 +173,3 @@ struct hip_work_order *hip_create_job_with_hit(int gfp_mask,
 	hwo->arg1 = tmp;
 	return hwo;
 }
-

@@ -837,9 +837,12 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 		goto out_err_release;
         }
 
+	printk("Eihän: %x\n",fl->fl6_src.s6_addr32[3]);
+
 	return 0;
 
 out_err_release:
+	printk("Jahas.. pahasti kävi\n");
 	dst_release(*dst);
 	*dst = NULL;
 	return err;

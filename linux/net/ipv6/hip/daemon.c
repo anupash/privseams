@@ -184,7 +184,7 @@ int hipd_handle_async_del_hi(const struct hip_common *msg)
 int hipd_handle_async_add_map_hit_ip(const struct hip_common *msg)
 {
 	struct in6_addr *hit, *ip, *ip_copy;
-	struct hip_work_order *hwo;
+	struct hip_work_order *hwo = NULL;
 	char buf[46];
 	int err = 0;
 
@@ -230,7 +230,81 @@ int hipd_handle_async_add_map_hit_ip(const struct hip_common *msg)
 	hwo->subtype = HIP_WO_SUBTYPE_ADDMAP;
 
 	hip_insert_work_order(hwo);
+	return err;
  out:
+	if (hwo) {
+		if (hwo->arg1)
+			kfree(hwo->arg1);
+		kfree(hwo);
+	}
+	return err;
+}
+
+/**
+ * hipd_handle_async_del_map_hit_ip - handle deletion of a mapping
+ * @msg: the message containing the mapping to be deleted
+ *
+ * Currently this function is unimplemented.
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hipd_handle_async_del_map_hit_ip(const struct hip_common *msg)
+{
+	struct in6_addr *hit, *ip, *ip_copy;
+	struct hip_work_order *hwo = NULL;
+	char buf[46];
+	int err = 0;
+
+
+	hit = (struct in6_addr *)
+		hip_get_param_contents(msg, HIP_PARAM_HIT);
+	if (!hit) {
+		HIP_ERROR("handle async map: no hit\n");
+		err = -ENODATA;
+		goto out;
+	}
+
+	ip = (struct in6_addr *)
+		hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	if (!ip) {
+		HIP_ERROR("handle async map: no ipv6 address\n");
+		err = -ENODATA;
+		goto out;
+	}
+
+	hip_in6_ntop(hit, buf);
+	HIP_INFO("map HIT: %s\n", buf);
+	hip_in6_ntop(ip, buf);
+	HIP_INFO("map IP: %s\n", buf);
+	
+	hwo = hip_create_job_with_hit(GFP_KERNEL,hit); // i think KERNEL is ok here
+	if (!hwo) {
+		HIP_ERROR("No memory for hit <-> ip mapping\n");
+		err = -ENOMEM;
+		goto out;
+	}
+
+	ip_copy = kmalloc(sizeof(struct in6_addr),GFP_KERNEL);
+	if (!ip_copy) {
+		HIP_ERROR("No memory to copy IP to work order\n");
+		err = -ENOMEM;
+		goto out;
+	}
+
+	ipv6_addr_copy(ip_copy,ip);
+	hwo->arg2 = ip_copy;
+	hwo->type = HIP_WO_TYPE_MSG;
+	hwo->subtype = HIP_WO_SUBTYPE_DELMAP;
+
+	hip_insert_work_order(hwo);
+	return err;
+
+ out:
+	if (hwo) {
+		if (hwo->arg1)
+			kfree(hwo->arg1);
+		kfree(hwo);
+	}
 	return err;
 }
 
@@ -261,23 +335,6 @@ int hipd_handle_async_rst(const struct hip_common *msg)
 
 	hip_insert_work_order(hwo);
  out:
-	return err;
-}
-
-/**
- * hipd_handle_async_del_map_hit_ip - handle deletion of a mapping
- * @msg: the message containing the mapping to be deleted
- *
- * Currently this function is unimplemented.
- *
- * Returns: zero on success, or negative error value on failure
- */
-int hipd_handle_async_del_map_hit_ip(const struct hip_common *msg)
-{
-	int err = 0;
-
-	err = -ENOSYS; /* not implemented yet */
-
 	return err;
 }
 

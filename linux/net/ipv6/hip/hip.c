@@ -781,12 +781,13 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
  * No we don't anymore :) [if this is in draft, then the impl. is now
  * officially broken].
  */
-void hip_unknown_spi(struct sk_buff *skb)
+void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 {
 	int err = 0; /* not returned */
 
 	/* draft: If the R1 is a response to an ESP packet with an unknown
 	   SPI, the Initiator HIT SHOULD be zero. */
+	HIP_DEBUG("Received Unknown SPI: %x\n", ntohl(spi));
 	HIP_INFO("Sending R1 with NULL dst HIT\n");
 
 	/* We cannot know the destination HIT */
@@ -893,13 +894,17 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
 	HIP_DEBUG("PASKA!\n");
 
-	if (!ipv6_addr_is_hit(&fl->fl6_dst))
+	if (!ipv6_addr_is_hit(&fl->fl6_dst)) {
+		HIP_ERROR("AMMU ITTES!\n");
 		return 0;
+	}
 
 	if (!hip_hadb_get_own_hit_by_hit(&fl->fl6_dst, hit_storage)) {
 		HIP_ERROR("Could not get own hit, corresponding to the peer hit\n");
 		return 0;
 	}
+
+	HIP_DEBUG_HIT("source osoite", hit_storage);
 	return 1;
 }
 
@@ -1521,6 +1526,11 @@ static int hip_do_work(void)
 				res = KHIPD_ERROR;
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
+			/* arg1 = d-hit arg2=d-ipv6 */
+			res = hip_del_peer_info(job->arg1, job->arg2);
+			if (res < 0)
+				res = KHIPD_ERROR;
+			break;
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
 			/* arg1 = dhit, or :: for all entries */
 			res = hip_hadb_flush_states(job->arg1);

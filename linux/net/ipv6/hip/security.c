@@ -61,7 +61,6 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	}
 
 	xfrm_state_delete(xs);
-	xfrm_state_put(xs);
 	
 	return 0;
 }
@@ -92,8 +91,8 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 	hip_delete_spd(own, peer, XFRM_POLICY_IN);
 
 	/* Delete SAs */
-	hip_delete_sa(spi_peer, peer);
-	hip_delete_sa(spi_our, own);
+	hip_delete_sa(spi_peer, own);
+	hip_delete_sa(spi_our, peer);
 
 	return 0;
 }
@@ -101,7 +100,7 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 
 
 static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
-			int dir)
+			int spi, int dir)
 {
 	int err = 0;
 	struct xfrm_policy *xp;
@@ -135,6 +134,9 @@ static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
 	
 	tmpl = &xp->xfrm_vec[0];
 
+	ipv6_addr_copy((struct in6_addr *)&tmpl->id.daddr, dst);
+	tmpl->id.spi = spi;
+	tmpl->id.proto = IPPROTO_ESP;
 	tmpl->reqid = 666;
 	tmpl->mode = XFRM_MODE_TRANSPORT;
 	tmpl->share = 0; // unique. Is this the correct number?
@@ -335,7 +337,7 @@ int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 	HIP_DEBUG("Setting up %s SA: [OK] (SPI=%x)\n",
 		  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", *spi);
 
-	err = hip_setup_sp(srchit, dsthit, dir);
+	err = hip_setup_sp(srchit, dsthit, *spi, dir);
 	if (err) {
 		HIP_DEBUG("Setting up %s SA: [FAILED] (err=%d)",
 			  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", 
@@ -345,7 +347,7 @@ int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 		return err;
 	}
 
-	HIP_DEBUG("Setting up %s SA: [OK] (SPI=%x)\n",
+	HIP_DEBUG("Setting up %s SP: [OK] (SPI=%x)\n",
 		  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", *spi);
 
 	return 0;

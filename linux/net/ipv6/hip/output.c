@@ -1074,6 +1074,15 @@ static int hip_send_rea(struct in6_addr *dst_hit,int interface_id,
 	return err;
 }
 
+/* Simple filter function 
+ */
+static inline int hip_filter_all_established(struct hip_hadb_state *entry)
+{
+	if (entry->state == HIP_STATE_ESTABLISHED)
+		return 1;
+	return 0;
+}
+
 /**
  * hip_send_rea_all - send REA packet to every peer
  * @interface_id: the ifindex the network device which caused the event
@@ -1094,30 +1103,31 @@ static int hip_send_rea(struct in6_addr *dst_hit,int interface_id,
 void hip_send_rea_all(int interface_id, struct hip_rea_info_addr_item *addresses,
 		      int rea_info_address_count, int netdev_flags)
 {
-  //	struct hip_sdb_state *sdb_state = NULL;
-	struct hip_hadb_state *entry;
-	int flags = 0;
+	struct hip_entry_list *entry, *iter;
+	int err = 0;
+	struct list_head head;
 
-	//	spin_lock_irqsave(&hip_sdb_lock, flags);
 
 	HIP_DEBUG("interface_id=%d address_count=%d netdev_flags=0x%x\n",
 		  interface_id, rea_info_address_count, netdev_flags);
 
-	hip_hadb_acquire_db_access(&flags);
-	//	sdb_state = hip_sdb_get_first_state();
-	//while(sdb_state != NULL) {
-	list_for_each_entry(entry, &hip_hadb.db_head, next) {
-		//if (sdb_state->state == HIP_STATE_ESTABLISHED) {
-		if (entry->state == HIP_STATE_ESTABLISHED) {
-			//(void)hip_send_rea(sdb_state, interface_id, addresses,
-			(void) hip_send_rea(&entry->hit_peer, interface_id, addresses,
-					    rea_info_address_count, netdev_flags);
-		}
-		//sdb_state = hip_sdb_get_next_state(sdb_state);
-	}
+	INIT_LIST_HEAD(&head);
 
-	hip_hadb_release_db_access(flags);
-	//	spin_unlock_irqrestore(&hip_sdb_lock, flags);
+	err = hip_hadb_for_each_entry(hip_filter_all_established, NULL,
+				      &head);
+
+	if (err < 0) {
+		HIP_ERROR("Error while fetching established connections: %d\n",err);
+		return;
+	}
+	/* some of entries might have disappeared */
+	list_for_each_entry_safe(entry, iter, &head, list) {
+		(void) hip_send_rea(&entry->peer_hit, interface_id, addresses,
+				    rea_info_address_count, netdev_flags);
+		list_del(&entry->list);
+		kfree(entry);
+	}
+	
 	return;
 }
 

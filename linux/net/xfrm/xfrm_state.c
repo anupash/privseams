@@ -374,6 +374,7 @@ static void __xfrm_state_insert(struct xfrm_state *x)
 {
 	unsigned h = xfrm_dst_hash(&x->id.daddr, x->props.family);
 
+	printk("__xfrm_state_insert: hashed=%d\n",h);
 	list_add(&x->bydst, xfrm_state_bydst+h);
 	xfrm_state_hold(x);
 

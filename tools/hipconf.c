@@ -376,17 +376,12 @@ int handle_map(struct hip_common *msg, int action,
     }
     break;
   case ACTION_DEL:
-    /* 
-       err = hip_build_user_hdr(msg, HIP_USER_DEL_MAP_HIT_IP, 0);
-       if (err) {
-       HIP_ERROR("build hdr failed: %s\n", strerror(err));
-       goto out;
-       }
-    */
-    HIP_ERROR("Not supported in the kernel module\n");
-    err = -ENOSYS;
-    goto out;
-    break;
+	  err = hip_build_user_hdr(msg, HIP_USER_DEL_MAP_HIT_IP, 0);
+	  if (err) {
+		  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		  goto out;
+	  }
+	  break;
   }
 
  out:

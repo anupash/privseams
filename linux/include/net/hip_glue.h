@@ -20,7 +20,7 @@
 struct hip_callable_functions {
 	/* int (*hip_exchange) (struct sockaddr *uaddr, int addr_len); */
 
-	void (*hip_handle_esp) (struct ipv6hdr *ipv6);
+	void (*hip_handle_esp) (uint32_t spi, struct ipv6hdr *ipv6);
 	int (*hip_handle_output) (struct ipv6hdr *hdr, struct sk_buff *skb);
 
 	int (*hip_bypass_ipsec) (void);
@@ -32,7 +32,7 @@ struct hip_callable_functions {
 	int (*hip_inbound) (struct sk_buff **skb, unsigned int *nhoff);
 
 	
-	void (*hip_unknown_spi) (struct sk_buff *skb);
+	void (*hip_unknown_spi) (struct sk_buff *skb, uint32_t spi);
 	void (*hip_handle_dst_unreachable) (struct sk_buff *skb);
 	int (*hip_is_our_spi) (uint32_t spi, struct in6_addr *hit);
 };

@@ -440,7 +440,8 @@ int hip_check_network_msg_type(const struct hip_common *msg) {
  */
 int hip_check_userspace_param_type(const struct hip_tlv_common *param)
 {
-	return (hip_get_param_type(param) < HIP_PARAM_MAX) ? 1 : 0;
+	return 1;
+//	return (hip_get_param_type(param) < HIP_PARAM_MAX) ? 1 : 0;
 }
 
 /**

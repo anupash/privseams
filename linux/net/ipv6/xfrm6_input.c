@@ -51,14 +51,21 @@ int xfrm6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 		if (xfrm_nr == XFRM_MAX_DEPTH)
 			goto drop;
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		HIP_CALLPROC(hip_handle_esp)(ntohl(spi), iph);
+#endif
 		x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nexthdr, AF_INET6);
 		if (x == NULL) {
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-			/* Try to send R1 */
-			HIP_CALLPROC(hip_unknown_spi)(skb);
-#else
-			goto drop;
+			/* SPI was unknown. Currently Linux IPsec doesn't seem to
+			 * do anything. HIP, on the other hand, assumes that the
+			 * connection was reset and tries to reestablish it.
+			 *
+			 * This could lead to DoSes... if birthday check is omitted.
+			 */
+//			HIP_CALLPROC(hip_unknown_spi)(skb,spi);
 #endif
+			goto drop;
 		}
 		spin_lock(&x->lock);
 		if (unlikely(x->km.state != XFRM_STATE_VALID))
