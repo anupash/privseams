@@ -84,7 +84,7 @@ static void hip_hadb_put_hs(void *entry)
 		hip_hadb_delete_hs(hs);
                 HIP_DEBUG("HS: %p deleted\n", hs);
 	} else {
-		HIP_DEBUG("HS: %p, refcnt decremented to: %d\n", hs, atomic_read(&hs->refcnt));
+		_HIP_DEBUG("HS: %p, refcnt decremented to: %d\n", hs, atomic_read(&hs->refcnt));
         }
 }
 
@@ -95,7 +95,7 @@ static void hip_hadb_hold_hs(void *entry)
 		return;
 
 	atomic_inc(&hs->refcnt);
-	HIP_DEBUG("HS: %p, refcnt incremented to: %d\n", hs, atomic_read(&hs->refcnt));
+	_HIP_DEBUG("HS: %p, refcnt incremented to: %d\n", hs, atomic_read(&hs->refcnt));
 }
 
 void hip_hadb_remove_hs(struct hip_hit_spi *hs)
@@ -160,7 +160,7 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 {
 	struct hip_hit_spi *hs;
 
-	HIP_DEBUG("SPI=0x%x\n", spi);
+	_HIP_DEBUG("SPI=0x%x\n", spi);
 	hs = (struct hip_hit_spi *) hip_ht_find(&hadb_spi_list, (void *)spi);
 	if (hs) {
 		hip_hit_t hit;
@@ -1140,7 +1140,7 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
         }
 
 	HIP_UNLOCK_HA(entry);
-	HIP_DEBUG("newest spi_in is 0x%x", spi);
+	HIP_DEBUG("newest spi_in is 0x%x\n", spi);
 	return spi;
 }
 

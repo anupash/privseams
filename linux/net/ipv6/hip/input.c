@@ -1410,6 +1410,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	/********** SPI_LSI **********/
 	barrier();
 //	spi_in = entry->spi_in;
+	HIP_ERROR("entry should have only one spi_in now, fix\n");
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 
 	err = hip_build_param_spi(r2, spi_in);
@@ -2132,6 +2133,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
 		memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 		//spi_in = entry->spi_in;
+		HIP_ERROR("entry should have only one spi_in now, fix\n");
 		spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		tfm = entry->esp_transform;
 

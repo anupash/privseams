@@ -524,7 +524,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 		HIP_DEBUG("Set up new incoming SA, new_spi_in=0x%x\n", new_spi_in);
 
 		// entry->new_spi_in = new_spi_in;
-		hip_update_set_new_spi(entry, prev_spi_in, new_spi_in, ntohl(nes->old_spi));
+		hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in, ntohl(nes->old_spi));
 
 		HIP_DEBUG("Stored SPI 0x%x to new_spi_in\n", new_spi_in);
 
@@ -641,7 +641,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	entry->stored_received_nes.old_spi = ntohl(nes->old_spi);
 	entry->stored_received_nes.new_spi = ntohl(nes->new_spi);
 	entry->update_state_flags |= 0x2;
-	HIP_DEBUG("saved NES\n");
+	_HIP_DEBUG("saved NES\n");
 
 	/* associate Old SPI with Update ID */
 	hip_update_set_status(entry, prev_spi_in, HIP_SPI_DIRECTION_IN, 0x1 | 0x8,
@@ -847,7 +847,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 
 	/* clear out spi value from hadb */
 //	entry->new_spi_in = 0;
-	hip_update_set_new_spi(entry, new_spi_in, 0, 0);
+	hip_update_set_new_spi_in(entry, new_spi_in, 0, 0);
 
 	/* activate the new inbound and outbound SAs */
 	HIP_DEBUG("finalizing the new inbound SA, SPI=0x%x\n", new_spi_in);
@@ -988,7 +988,10 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 //	HIP_DEBUG("update_state_flags=%d\n", entry->update_state_flags);
 //	if (entry->update_state_flags == 0x3) {
 	/* if (ack && seq && nes) ? */
-	if (nes && hip_update_get_spi_status(entry, ntohl(nes->old_spi)) == 0x1) {
+//	if (nes && hip_update_get_spi_status(entry, ntohl(nes->old_spi)) == 0x1) {
+	if (nes && hip_update_get_spi_status(entry,
+					     hip_update_get_prev_spi_in(entry, ntohl(nes->old_spi)))
+	    == 0x1) {
 		/* our SEQ is now ACKed and peer's NES is stored */
 		err = hip_update_finish_rekeying(msg, entry);
 	}
@@ -1413,11 +1416,23 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			HIP_ERROR("Error while setting up new IPsec SA (err=%d)\n", err);
 			goto out_err;
 		}
-		HIP_DEBUG("New inbound SA created with New SPI (in)=0x%x\n", new_spi_in);
-		// entry->new_spi_in = new_spi_in;
-		// HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
+		HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
 	} else
 		HIP_DEBUG("not creating a new SA\n");
+
+	if (!mapped_spi) {
+		struct hip_spi_in_item spi_in_data;
+
+		HIP_DEBUG("previously unknown ifindex, creating a new item to inbound spis_in\n");
+		memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
+		spi_in_data.spi = new_spi_in;
+		spi_in_data.ifindex = ifindex;
+		spi_in_data.updating = 1;
+		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
+		if (err) {
+			goto out_err;
+		}
+	}
 
 	/* this might break something */
 //	memset(&entry->stored_received_nes, 0, sizeof(struct hip_nes));
@@ -1478,18 +1493,26 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	} else
 		HIP_DEBUG("not adding NES\n");
 
+	/* new spi is changed when rekeying finishes */
 	/* make new ifindex-SA mapping if necessary */
-	if (mapped_spi == 0) {
+	if (!mapped_spi) {
+		/* actually useless, if hadb_add_spi was called earlier ? */
 		if (make_new_sa) { /* todo: move this to rekeying_finish */
 			if (!ifindex)
 				ifindex = hip_ifindex2spi_get_ifindex(entry, nes_old_spi);
-			HIP_DEBUG("not previously mapped, ifindex to remap=%u\n", ifindex);
+			HIP_DEBUG("inbound SPI not previously mapped, ifindex to remap=%u\n", ifindex);
 			if (ifindex)
 				hip_ifindex2spi_map_add(entry, new_spi_in, ifindex); /* or nes_new_spi ? */
 			} else
 				HIP_DEBUG("ifindex not found\n");
 	} else
 		HIP_DEBUG("not adding SPI 0x%x to ifindex map, SPI already mapped\n", nes_new_spi);
+
+
+//	if (nes_old_spi != nes_new_spi)
+	hip_update_set_new_spi_in(entry, nes_old_spi, nes_new_spi, 0);
+//	else
+//		HIP_DEBUG("not setting new_spi, old spi = new spi\n"); /* set for old=spi too */
 
 //	entry->update_id_out++;
 	update_id_out = entry->update_id_out + 1;

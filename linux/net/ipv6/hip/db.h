@@ -234,7 +234,7 @@ uint32_t hip_get_spi_to_update(hip_ha_t *entry);
 uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *dev_addr);
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set);
 int hip_update_get_spi_status(hip_ha_t *entry, uint32_t spi);
-void hip_update_set_new_spi(hip_ha_t *entry, uint32_t spi, uint32_t new_spi, uint32_t spi_out);
+void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi, uint32_t spi_out);
 void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi);
 uint32_t hip_update_get_new_spi(hip_ha_t *entry, uint32_t spi);
 void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
