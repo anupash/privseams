@@ -146,10 +146,23 @@ int setmyeid(int sockfd, struct sockaddr_eid *my_eid,
     goto out_err;
   }
 
+  if (strlen(servname) == 0) {
+    port = 0;
+    goto skip_port_conversion;
+  }
+
   err = convert_port_string_to_number(servname, &port);
   if (err) {
     HIP_ERROR("Port conversion failed (%d)\n", err);
     goto out_err;
+  }
+
+ skip_port_conversion:
+
+  /* Handler "don't care" port number */
+  if (port == 0) {
+    while (port < 1024) // XX FIXME: CHECK UPPER BOUNDARY
+	   port = rand();
   }
 
   HIP_DEBUG("port=%d\n", port);
@@ -171,7 +184,7 @@ int setmyeid(int sockfd, struct sockaddr_eid *my_eid,
   }
 
   len = hip_get_msg_total_len(msg);
-  err = getsockopt(sockfd, IPPROTO_HIP, HIP_SOCK_OPT_SET_MY_EID, msg, &len);
+  err = getsockopt(sockfd, IPPROTO_HIP, SO_HIP_SET_MY_EID, msg, &len);
   if (err) {
     HIP_ERROR("getsockopt for my eid failed (%d)\n", err);
     err = EEI_SYSTEM;
@@ -299,6 +312,37 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 
   if (msg)
     hip_msg_free(msg);
+
+  return err;
+}
+
+int load_hip_endpoint_pem(char *filebasename, struct endpoint **endpoint)
+{
+  int err = 0;
+  DSA *dsa = NULL;
+
+  *endpoint = NULL;
+
+  err = load_dsa_private_key(filebasename, &dsa);
+  if (err) {
+    HIP_ERROR("Failed to load DSA private key (%d)\n", err);
+    goto out_err;
+  }
+
+  // XX FIX: host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
+
+  err = dsa_to_hip_endpoint(dsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+  if (err) {
+    HIP_ERROR("Failed to convert DSA key to HIP endpoint (%d)\n", err);
+    goto out_err;
+  }
+
+ out_err:
+
+  if (dsa)
+    DSA_free(dsa);
+  if (err && *endpoint)
+    free(*endpoint);
 
   return err;
 }

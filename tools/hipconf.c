@@ -450,7 +450,7 @@ int main(int argc, char *argv[]) {
     goto out;
   }
   
-  set_logtype(LOGTYPE_STDERR); // we don't want log messages via syslog
+  hip_set_logtype(LOGTYPE_STDERR); // we don't want log messages via syslog
 
   action = get_action(argv[1]);
   if (action <= 0 || action >= ACTION_MAX) {

@@ -53,7 +53,7 @@ int main(int argc,char *argv[]) {
   int proto;
   socklen_t peer_eid_len;
 
-  set_logtype(LOGTYPE_STDERR);
+  hip_set_logtype(LOGTYPE_STDERR);
 
   if (signal(SIGTERM, sig_handler) == SIG_ERR) {
     err = 1;

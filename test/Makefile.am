@@ -13,6 +13,7 @@ bin_PROGRAMS += conntest-client
 bin_PROGRAMS += conntest-server
 bin_PROGRAMS += conntest-client-gai
 bin_PROGRAMS += conntest-client-native
+bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
 bin_PROGRAMS += unittest
 bin_PROGRAMS += libinet6test
@@ -25,6 +26,9 @@ conntest_client_gai_SOURCES = conntest-client-gai.c
 conntest_client_gai_LDADD = ../libinet6/libinet6.a
 conntest_client_native_SOURCES = conntest-client-native.c debug.c
 conntest_client_native_LDADD = ../libinet6/libinet6.a
+conntest_client_native_user_key_SOURCES = \
+                               conntest-client-native-user-key.c debug.c
+conntest_client_native_user_key_LDADD = ../libinet6/libinet6.a
 conntest_server_native_SOURCES = conntest-server-native.c debug.c
 conntest_server_native_LDADD = ../libinet6/libinet6.a
 conntest_server_SOURCES = conntest-server.c debug.c

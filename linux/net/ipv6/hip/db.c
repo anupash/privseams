@@ -217,20 +217,17 @@ static struct hip_hadb_state *hip_hadb_find_by_hit(struct in6_addr *hit)
 
 static int hip_hadb_delete_by_hit(struct in6_addr *hit)
 {
-	struct hip_hadb_state *tmp, *entry;
+	struct hip_hadb_state *entry;
 
 	if (list_empty(&hip_hadb.db_head))
 		return -EINVAL;
 
-	list_for_each_entry_safe(entry, tmp, &hip_hadb.db_head, next) {
-		if (!ipv6_addr_cmp(&entry->hit_peer, hit)) {
-			list_del(&entry->next);
-			hip_hadb_delete_entry_nolock(entry);
-			return 0;
-		}
-	}
+	entry = hip_hadb_access_db(hit, HIP_ARG_HIT);
+	if (!entry)
+		return -EINVAL;
 
-	return -EINVAL;
+	hip_hadb_delete_entry_nolock(entry);
+	return 0;
 }
 
 /**
@@ -717,11 +714,9 @@ static void hip_hadb_entry_free(struct hip_hadb_state *entry)
 {
 	/* IPsec */
 	if (likely(entry->spi_peer)) {
-		hip_delete_spd(&entry->hit_our, &entry->hit_peer, XFRM_POLICY_OUT);
 		hip_delete_sa(entry->spi_peer, &entry->hit_our);
 	}
 	if (likely(entry->spi_our)) {
-		hip_delete_spd(&entry->hit_peer, &entry->hit_our, XFRM_POLICY_IN);
 		hip_delete_sa(entry->spi_our, &entry->hit_peer);
 	}
 	if (unlikely(entry->new_spi_peer))
@@ -1858,7 +1853,9 @@ int hip_proc_send_update(char *page, char **start, off_t off,
 			 int count, int *eof, void *data)
 {
 	HIP_DEBUG("\n");
+#if 0
 	hip_send_update_all();
+#endif
 	*eof = 1;
 
 	return 0;
@@ -2390,6 +2387,8 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_eid_no_lock(struct hip_db_stru
 	struct hip_eid_db_entry *entry;
 
 	list_for_each_entry(entry, &db->db_head, next) {
+		HIP_DEBUG("comparing %d with %d\n",
+			  ntohs(entry->eid.eid_val), ntohs(eid->eid_val));
 		if (entry->eid.eid_val == eid->eid_val)
 			    return entry;
 	}
@@ -2421,21 +2420,23 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 			goto out_err;
 		}
 
-		entry->eid.eid_val = (is_local) ?
+		entry->eid.eid_val = ((is_local) ?
 			htons(hip_create_unique_local_eid()) :
-			htons(hip_create_unique_peer_eid());
+			htons(hip_create_unique_peer_eid()));
 		entry->eid.eid_family = PF_HIP;
 		memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
 
+		HIP_DEBUG("Generated eid val %d\n", entry->eid.eid_val);
+
 		memcpy(&entry->lhi, lhi, sizeof(struct hip_lhi));
 		memcpy(&entry->owner_info, owner_info,
-		       sizeof(entry->owner_info));
+		       sizeof(struct hip_eid_owner_info));
 
-		/* Finished. Append the entry to the list. */
-		list_add_tail(&entry->next, &db->db_head);
+		/* Finished. Add the entry to the list. */
+		list_add(&entry->next, &db->db_head);
 	} else {
 		/* XX TODO: Ownership is not changed here; should it? */
-		memcpy(eid, &entry->eid, sizeof(eid));
+		memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
 	}
 
  out_err:

@@ -25,7 +25,7 @@
 
 #include "hip.h"
 #include "keymat.h"
-
+#include "security.h"
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -1432,9 +1432,10 @@ static int hip_init_procfs(void)
 	create_proc_read_entry("net/hip/sdb_peer_addrs", 0, 0,
 			       hip_proc_read_hadb_peer_addrs, NULL);
 
-	/* a simple way to trigger sending of UPDATE packet to all peers */
+/* a simple way to trigger sending of UPDATE packet to all peers */
 	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
 	return 1;
+
 }
 
 /**
@@ -1545,7 +1546,9 @@ static int hip_do_work(void)
 			break;
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_update(job->arg1);
+			kfree_skb(job->arg1);
+			res = 0;
+//			res = hip_receive_update(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
 		case HIP_WO_SUBTYPE_RECV_REA:
@@ -1750,6 +1753,12 @@ static int __init hip_init(void)
 	if (hip_init_socket_handler() < 0)
 		goto out;
 
+	if (hip_setup_sp(XFRM_POLICY_OUT) < 0)
+		goto out;
+
+	if (hip_setup_sp(XFRM_POLICY_IN) < 0)
+		goto out;
+
 	for(i=0;i<NR_CPUS;i++) {
 		pid = kernel_thread(hip_worker, (void *) i, CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD);
 		if (IS_ERR(ERR_PTR(pid)))
@@ -1813,6 +1822,8 @@ static void __exit hip_cleanup(void)
 
 	HIP_DEBUG("Thread(s) finished\n");
 
+	hip_delete_sp(XFRM_POLICY_IN);
+	hip_delete_sp(XFRM_POLICY_OUT);
 	hip_uninit_netdev_notifier(); 	/* comment this if network device event */
 	hip_uninit_register_inet6addr_notifier();
 	hip_uninit_ioctl();

@@ -279,3 +279,21 @@ oops # ./java HipClient crash 12345 oops 54321
 The shell script "test/java" contains some LD_PRELOAD, library and
 class path information necessary for executing the HIP enabled java
 applications.
+
+HIP Enabled Telnet
+=========================
+
+# cd libinet
+# ./configure
+# make
+# cd ../test/telnetd
+# ./configure
+# make
+# cd ../telnet
+# ./configure
+# make
+
+oops  # telnetd/telnetd -debug 12345
+crash # telnet/telnet oops username 12345
+
+Note: username must be non-root.

@@ -71,7 +71,7 @@ VERSION = @VERSION@
 
 AUTOMAKE_OPTIONS = foreign
 CFLAGS =  -I../tools -I../libinet6/include -I.. -I../linux/include -I../linux/net/ipv6/hip -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
-bin_PROGRAMS = align checksum conntest-client conntest-server conntest-client-gai conntest-client-native conntest-server-native unittest libinet6test listifaces
+bin_PROGRAMS = align checksum conntest-client conntest-server conntest-client-gai conntest-client-native conntest-client-native-user-key conntest-server-native unittest libinet6test listifaces
 
 align_SOURCES = align.c
 checksum_SOURCES = checksum.c checksum.h
@@ -80,6 +80,9 @@ conntest_client_gai_SOURCES = conntest-client-gai.c
 conntest_client_gai_LDADD = ../libinet6/libinet6.a
 conntest_client_native_SOURCES = conntest-client-native.c debug.c
 conntest_client_native_LDADD = ../libinet6/libinet6.a
+conntest_client_native_user_key_SOURCES =                                 conntest-client-native-user-key.c debug.c
+
+conntest_client_native_user_key_LDADD = ../libinet6/libinet6.a
 conntest_server_native_SOURCES = conntest-server-native.c debug.c
 conntest_server_native_LDADD = ../libinet6/libinet6.a
 conntest_server_SOURCES = conntest-server.c debug.c
@@ -123,6 +126,10 @@ conntest_client_gai_LDFLAGS =
 conntest_client_native_OBJECTS =  conntest-client-native.o debug.o
 conntest_client_native_DEPENDENCIES =  ../libinet6/libinet6.a
 conntest_client_native_LDFLAGS = 
+conntest_client_native_user_key_OBJECTS =  \
+conntest-client-native-user-key.o debug.o
+conntest_client_native_user_key_DEPENDENCIES =  ../libinet6/libinet6.a
+conntest_client_native_user_key_LDFLAGS = 
 conntest_server_native_OBJECTS =  conntest-server-native.o debug.o
 conntest_server_native_DEPENDENCIES =  ../libinet6/libinet6.a
 conntest_server_native_LDFLAGS = 
@@ -149,13 +156,13 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 TAR = tar
 GZIP_ENV = --best
 DEP_FILES =  .deps/align.P .deps/builder.P .deps/checksum.P \
-.deps/conntest-client-gai.P .deps/conntest-client-native.P \
-.deps/conntest-client.P .deps/conntest-server-native.P \
-.deps/conntest-server.P .deps/crypto.P .deps/debug.P .deps/hipconf.P \
-.deps/libinet6test.P .deps/listifaces.P .deps/message.P .deps/suite.P \
-.deps/unit.P .deps/unittest.P
-SOURCES = $(align_SOURCES) $(checksum_SOURCES) $(conntest_client_SOURCES) $(conntest_server_SOURCES) $(conntest_client_gai_SOURCES) $(conntest_client_native_SOURCES) $(conntest_server_native_SOURCES) $(unittest_SOURCES) $(libinet6test_SOURCES) $(listifaces_SOURCES)
-OBJECTS = $(align_OBJECTS) $(checksum_OBJECTS) $(conntest_client_OBJECTS) $(conntest_server_OBJECTS) $(conntest_client_gai_OBJECTS) $(conntest_client_native_OBJECTS) $(conntest_server_native_OBJECTS) $(unittest_OBJECTS) $(libinet6test_OBJECTS) $(listifaces_OBJECTS)
+.deps/conntest-client-gai.P .deps/conntest-client-native-user-key.P \
+.deps/conntest-client-native.P .deps/conntest-client.P \
+.deps/conntest-server-native.P .deps/conntest-server.P .deps/crypto.P \
+.deps/debug.P .deps/hipconf.P .deps/libinet6test.P .deps/listifaces.P \
+.deps/message.P .deps/suite.P .deps/unit.P .deps/unittest.P
+SOURCES = $(align_SOURCES) $(checksum_SOURCES) $(conntest_client_SOURCES) $(conntest_server_SOURCES) $(conntest_client_gai_SOURCES) $(conntest_client_native_SOURCES) $(conntest_client_native_user_key_SOURCES) $(conntest_server_native_SOURCES) $(unittest_SOURCES) $(libinet6test_SOURCES) $(listifaces_SOURCES)
+OBJECTS = $(align_OBJECTS) $(checksum_OBJECTS) $(conntest_client_OBJECTS) $(conntest_server_OBJECTS) $(conntest_client_gai_OBJECTS) $(conntest_client_native_OBJECTS) $(conntest_client_native_user_key_OBJECTS) $(conntest_server_native_OBJECTS) $(unittest_OBJECTS) $(libinet6test_OBJECTS) $(listifaces_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -267,6 +274,10 @@ conntest-client-gai: $(conntest_client_gai_OBJECTS) $(conntest_client_gai_DEPEND
 conntest-client-native: $(conntest_client_native_OBJECTS) $(conntest_client_native_DEPENDENCIES)
 	@rm -f conntest-client-native
 	$(LINK) $(conntest_client_native_LDFLAGS) $(conntest_client_native_OBJECTS) $(conntest_client_native_LDADD) $(LIBS)
+
+conntest-client-native-user-key: $(conntest_client_native_user_key_OBJECTS) $(conntest_client_native_user_key_DEPENDENCIES)
+	@rm -f conntest-client-native-user-key
+	$(LINK) $(conntest_client_native_user_key_LDFLAGS) $(conntest_client_native_user_key_OBJECTS) $(conntest_client_native_user_key_LDADD) $(LIBS)
 
 conntest-server-native: $(conntest_server_native_OBJECTS) $(conntest_server_native_DEPENDENCIES)
 	@rm -f conntest-server-native

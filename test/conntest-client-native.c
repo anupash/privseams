@@ -80,8 +80,8 @@ int main(int argc,char *argv[]) {
   int sockfd = 0, socktype;
   se_family_t endpoint_family;
 
-  set_logtype(LOGTYPE_STDERR);
-  set_logfmt(LOGFMT_SHORT);
+  hip_set_logtype(LOGTYPE_STDERR);
+  hip_set_logfmt(LOGFMT_SHORT);
  
   if (argc != 4) {
     HIP_ERROR("Usage: %s host tcp|udp port\n", argv[0]);
