@@ -684,6 +684,7 @@ struct hip_peer_addr_list_item
 {
 	struct list_head list;
 	uint32_t         interface_id;
+	uint32_t         spi;
 	struct in6_addr  address;
 	int address_state;              /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */

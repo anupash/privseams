@@ -895,7 +895,7 @@ int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi)
 
 	/* no locking */
 
-	HIP_DEBUG("spi=0x%x\n", spi);
+	HIP_DEBUG("SPI=0x%x\n", spi);
 
         list_for_each_entry_safe(item, tmp, &entry->peer_spi_list, list) {
 		i++;
@@ -916,27 +916,19 @@ int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi)
 	item->spi = spi;
 	INIT_LIST_HEAD(&item->peer_addr_list);
 	ipv6_addr_copy(&item->preferred_address, &in6addr_any);
-	list_add_tail(&item->list, &entry->peer_spi_list);
+	list_add(&item->list, &entry->peer_spi_list);
 
  out_err:
  out:
 	return err;
 }
 
-/* get pointer to the SPI list */
+/* get pointer to the SPI list or NULL if SPI list does not exist */
 struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_peer_spi_list_item *item, *tmp;
-
 	/* no locking */
-
-	HIP_DEBUG("spi=0x%x\n", spi);
-
-	if (!entry || !&entry->peer_spi_list) {
-		HIP_ERROR("invals\n");
-		return NULL;
-	}
-
+	HIP_DEBUG("SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->peer_spi_list, list) {
 		_HIP_DEBUG("item=0x%p\n", item);
 		if (item->spi == spi)
@@ -946,8 +938,9 @@ struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t s
 }
 
 /* add an address belonging to the SPI list */
+/* or update old values */
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
-			     uint32_t interface_id, int address_state, uint32_t lifetime,
+			     int address_state, uint32_t lifetime,
 			     int is_preferred_addr)
 {
 	/* no locking */
@@ -1001,9 +994,13 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	} else
 		HIP_DEBUG("update old addr item\n");
 
-	new_addr->interface_id = interface_id;
 	new_addr->lifetime = lifetime;
-	ipv6_addr_copy(&new_addr->address, addr);
+	if (new)
+		ipv6_addr_copy(&new_addr->address, addr);
+	if (!new && new_addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
+		new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+		HIP_DEBUG("updated address state DEPRECATED->UNVERIFIED\n");
+	}
 	new_addr->address_state = address_state;
 	do_gettimeofday(&new_addr->modified_time);
 
@@ -1013,7 +1010,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 
 	if (new) {
-		HIP_DEBUG("adding new addr to list\n");
+		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
 	}
 
@@ -1471,7 +1468,7 @@ int hip_proc_read_hadb_peer_spi_list(char *page, char **start, off_t off,
 	} else
 		page[ps.len] = '\0';
 
-	hip_hadb_dump_spis();
+//	hip_hadb_dump_spis();
 	return ps.len;
 }
 

@@ -312,7 +312,7 @@ int hip_handle_rea_finish(struct hip_rea_info *rea_info, hip_ha_t *entry,
 
 	/* todo: convert to struct list_head */
 	addrlist_len = hip_get_param_total_len(rea_info) -
-		sizeof(struct hip_rea_info_addr_item);
+		sizeof(struct hip_rea_info_addr_item); /* wrong ? -sizeof(struct hip_rea_info) */
 	n_addrs = addrlist_len / sizeof(struct hip_rea_info_addr_item);
 	_HIP_DEBUG("addlistlen=%d naddrs=%d\n", addrlist_len, n_addrs);
 	HIP_DEBUG("REA-in contains %d addresses\n", n_addrs);

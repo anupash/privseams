@@ -171,15 +171,16 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 		old_spi_out = entry->spi_out;
 		hip_hadb_remove_state_spi(entry);
 		entry->spi_out = entry->new_spi_out;
+		hip_hadb_insert_state(entry);
 
 		entry->default_spi_out = entry->spi_out;
 		HIP_DEBUG("set default SPI out=0x%x\n", entry->default_spi_out);
 
 		/* test, todo: addr from rea */
-		hip_print_hit("v6addr_test", &s->v6addr_test);
+//		hip_print_hit("v6addr_test", &s->v6addr_test);
 		hip_hadb_add_addr_to_spi(entry, entry->default_spi_out, &s->v6addr_test, 0, PEER_ADDR_STATE_ACTIVE, 0, 0);
 
-		hip_hadb_insert_state(entry);
+//		hip_hadb_insert_state(entry);
 		hip_print_hit("finalizing", &s->hit);
 		hip_finalize_sa(&s->hit, entry->new_spi_out);
 #if 0
@@ -271,6 +272,71 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	*keymat_offset_new = k;
 	*calc_index_new = c;
 	memcpy(Kn_out, Kn, HIP_AH_SHA_LEN);
+ out_err:
+	return err;
+}
+
+int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *rea)
+{
+	/* assume that caller has the entry lock */
+	int err = 0;
+	uint32_t spi;
+	struct hip_rea_info_addr_item *rea_addr_item;
+	int i = 0, n_addrs;
+
+	/* mm-02-pre1 8.2 Handling received REAs */
+
+	spi = ntohl(rea->spi);
+	HIP_DEBUG("SPI=0x%x\n", spi);
+
+	if ((hip_get_param_total_len(rea) - sizeof(struct hip_rea_info_mm02)) %
+	    sizeof(struct hip_rea_info_addr_item))
+		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n", rea->length);
+
+	n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea_info_mm02)) /
+		sizeof(struct hip_rea_info_addr_item);
+	HIP_DEBUG(" REA has %d addresses, rea param len=%d\n", n_addrs, hip_get_param_total_len(rea));
+	if (n_addrs == 0) {
+		HIP_ERROR("REA (SPI=0x%x) contains no addresses\n", spi);
+		return 0;
+	}
+
+	/* 1.  The host checks if the SPI listed is a new one.  If it
+	   is a new one, it creates a new SPI that contains no addresses. */
+	if (!hip_hadb_get_spi_list(entry, spi)) {
+		err = hip_hadb_add_peer_spi(entry, spi);
+		if (err) {
+			HIP_DEBUG("failed to create a new SPI list\n");
+			goto out_err;
+		}
+		HIP_DEBUG("created a new SPI list\n");
+	}
+
+	rea_addr_item = (void *)rea+sizeof(struct hip_rea_info_mm02);
+	for(; i < n_addrs; i++, rea_addr_item++) {
+		struct in6_addr *address = &rea_addr->address;
+		uint32_t lifetime = ntohl(rea_addr->lifetime);
+		int is_preferred = ntohl(rea_addr->reserved) == 1 << 31;
+		hip_print_hit("REA address", address);
+		HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
+			   is_preferred ? "yes" : "no", ntohl(rea_addr->reserved),
+			  lifetime);
+		/* 2. check that the address is a legal unicast or anycast address */
+		if (! (ipv6_addr_type(address) & IPV6_ADDR_UNICAST) ) {
+			HIP_DEBUG("skipping non-unicast address\n");
+			continue;
+		}
+		/* 3. check if the address is already bound to the SPI + add/update address */
+		err = hip_hadb_add_addr_to_spi(entry, spi, address, PEER_ADDR_STATE_UNVERIFIED,
+					       lifetime, is_preferrer);
+		if (err) {
+			HIP_DEBUG("failed to add/update address to the SPI list\n");
+			goto out_err;
+		}
+		/* 4. Mark all addresses on the SPI that were NOT listed in the REA
+		   parameter as DEPRECATED. */
+	}
+
  out_err:
 	return err;
 }
@@ -409,20 +475,30 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 
 
 	while (	(rea = hip_get_nth_param(msg, HIP_PARAM_REA_INFO, rea_i)) != NULL) {
+		HIP_DEBUG("Found REA parameter [%d]\n", rea_i);
+		err = hip_update_handle_rea_parameter(entry, rea);
+		HIP_DEBUG("rea param handling ret %d\n", err);
+		err = 0;
+#if 0
 		struct hip_rea_info_addr_item *rea_addr;
 		int i = 0, n_addrs;
+
 		HIP_DEBUG("Found REA parameter [%d]\n", rea_i);
 		HIP_DEBUG(" SPI=0x%x\n", ntohl(rea->spi));
-		if ((ntohs(rea->length) - sizeof(struct hip_rea_info_mm02)) % sizeof(struct hip_rea_info_addr_item))
+		HIP_DEBUG("%d %d %d\n", hip_get_param_total_len(rea), sizeof(struct hip_rea_info_mm02), sizeof(struct hip_rea_info_addr_item));
+		if ((hip_get_param_total_len(rea) - sizeof(struct hip_rea_info_mm02)) % sizeof(struct hip_rea_info_addr_item))
 			HIP_ERROR("addr item list len modulo not zero, (len=%d)\n", rea->length);
-		n_addrs = (ntohs(rea->length) - sizeof(struct hip_rea_info_mm02)) / sizeof(struct hip_rea_info_addr_item);
-		HIP_DEBUG(" REA has %d addresses, rea->length=%d\n", n_addrs, ntohs(rea->length));
+		n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea_info_mm02)) / sizeof(struct hip_rea_info_addr_item);
+		HIP_DEBUG(" REA has %d addresses, rea param len=%d\n", n_addrs, hip_get_param_total_len(rea));
 		while (i < n_addrs) {
-//			rea_addr = (void *)rea+sizeof(struct hip_rea_info_mm02)+i*sizeof(struct hip_rea_info_addr_item);
-//			HIP_DEBUG(" addr %d: lifetime=0x%x\n", i, ntohl(rea_addr->lifetime));
-//			hip_print_hit("rea addr", &rea_addr->address);
+			rea_addr = (void *)rea+sizeof(struct hip_rea_info_mm02)+i*sizeof(struct hip_rea_info_addr_item);
+			HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
+				  ntohl(rea_addr->reserved) == 1 << 31 ? "yes" : "no", ntohl(rea_addr->reserved),
+				  ntohl(rea_addr->lifetime));
+			hip_print_hit("rea addr", &rea_addr->address);
 			i++;
 		}
+#endif
 		rea_i++;
 	}
 
@@ -1106,12 +1182,17 @@ int hip_send_update(struct hip_hadb_state *entry)
 
 	{
 		/* mm02 rea test */
-		struct hip_rea_info_addr_item addresses;
-		addresses.lifetime = 0;
-		addresses.reserved = 0;
-		ipv6_addr_set(&addresses.address, htonl(0x3ffe), 0, 0, htonl(1));
+		struct hip_rea_info_addr_item addresses[2];
 
-		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, &addresses, 1);
+		addresses[0].lifetime = htonl(0x1234);
+		addresses[0].reserved = htonl(1 << 31); // preferred address
+		ipv6_addr_set(&addresses[0].address, htons(0x3ffe), 0, 0, htonl(2));
+
+		addresses[1].lifetime = htonl(0x5678);
+		addresses[1].reserved = 0;
+		ipv6_addr_set(&addresses[1].address, htons(0xfe80), 0, 0, htonl(2));
+
+		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, &addresses[0], 2);
 		if (err) {
 			HIP_ERROR("Building of REA param failed\n");
 			goto out_err;
