@@ -176,9 +176,9 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 
-		err = ipv6_get_saddr(NULL, &hdr->daddr, &hdr->saddr);
+		err = ipv6_get_saddr(skb->dst, &hdr->daddr, &hdr->saddr);
 		if (err) {
-			HIP_ERROR("Could get a source address\n");
+			HIP_ERROR("Couldn't get a source address\n");
 			err = -EADDRNOTAVAIL;
 			goto out;
 		}
@@ -281,62 +281,49 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* buf)
 {
 	int err = 0;
-	struct in6_addr saddr;
-	struct dst_entry *dst;
+	struct dst_entry *dst = NULL;
 
 	struct flowi fl;
 	unsigned int csum;
 	unsigned int len;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 
 	fl.proto = IPPROTO_HIP;
 	fl.fl6_dst = *peer_addr;
 	fl.oif = 0;
 	fl.fl6_flowlabel = 0;
 
-	if (!src_addr) {
-		HIP_DEBUG("null src_addr, get src addr\n");
-		err = ipv6_get_saddr(NULL, &fl.fl6_dst, &saddr);
-		if (err) {
-			hip_in6_ntop(peer_addr, addrstr);
-			HIP_ERROR("Couldn't get source IPv6 address for dst address %s\n", addrstr);
-			goto out_err;
-		}
-		fl.fl6_src = saddr;
-	} else {
-		HIP_DEBUG("use given src addr\n");
+	if (src_addr)
 		fl.fl6_src = *src_addr;
-	}
+	else
+		memset(&fl.fl6_src, 0, sizeof(*src_addr));
+
 
 	buf->checksum = htons(0);
 	len = (buf->payload_len + 1) << 3;
+	csum = csum_partial((char*) buf, len, 0);
 
-	/* 
-	 * jlu XXX: UNCLEAR: 
-	 *
-	 * Should we use the length from the HIP-header to compute "length" in
-	 * the pseudoheader:
-	 * Currently: YES
-	 *
-	 * Should we use the encoded length or convert it to bytes first?
-	 * Currently: encoded
-	 *
-	 * Should we include the piggybacked ESP in the checksum?
-	 * Currently: NO
-	 *
-	 * [RFC2460, RFC????]
-	 */
-	//#ifdef CONFIG_HIP_DEBUG
+	lock_sock(hip_output_socket->sk);
+
+	err = ip6_dst_lookup(hip_output_socket->sk, &dst, &fl);
+	if (err) {
+		HIP_ERROR("Unable to route HIP packet\n");
+		release_sock(hip_output_socket->sk);
+		goto out_err;
+	}
+
+#ifdef CONFIG_HIP_DEBUG
 	_HIP_HEXDUMP("***CHECKSUM DATA", buf, len);
 	HIP_DEBUG("pkt out: len=%d proto=%d\n", len, fl.proto);
 	hip_in6_ntop(&fl.fl6_src, addrstr);
 	HIP_DEBUG("pkt out: src IPv6 addr: %s\n", addrstr);
 	hip_in6_ntop(&fl.fl6_dst, addrstr);
 	HIP_DEBUG("pkt out: dst IPv6 addr: %s\n", addrstr);
-	//#endif
+#endif
 
-	/* Interop with Julien: no htons here */
-	csum = csum_partial((char*) buf, len, 0);
+
 	buf->checksum = csum_ipv6_magic(&fl.fl6_src, &fl.fl6_dst, len,
 					fl.proto, csum);
 	HIP_DEBUG("pkt out: checksum value (host order): 0x%x\n",
@@ -345,19 +332,13 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	if (buf->checksum == 0)
 		buf->checksum = -1;
 
-	err = ip6_dst_lookup(hip_output_socket->sk, &dst, &fl);
-	if (err) {
-		HIP_ERROR("Unable to route HIP packet\n");
-		goto out_err;
-	}
-
 	
-	lock_sock(hip_output_socket->sk);
  	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, &fl, (struct rt6_info *)dst, MSG_DONTWAIT);
-	if (err)
-		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);
-	else
+	if (err) {
+ 		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);
+		ip6_flush_pending_frames(hip_output_socket->sk);
+	} else
 		err = ip6_push_pending_frames(hip_output_socket->sk);
 
 	release_sock(hip_output_socket->sk);
