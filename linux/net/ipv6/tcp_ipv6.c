@@ -566,9 +566,6 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 	struct dst_entry *dst;
 	int addr_type;
 	int err;
-	/* BEGIN HIPL PATCH */
-	int hip_xfrm_lookup_flags = 0;
-	/* END HIPL PATCH */
 
 	if (addr_len < SIN6_LEN_RFC2133) 
 		return -EINVAL;
@@ -693,13 +690,16 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 		ipv6_addr_copy(&fl.fl6_dst, final_p);
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	if (ipv6_addr_is_hit(&fl.fl6_dst))
-		hip_xfrm_lookup_flags = !in_atomic();
-#endif /* CONFIG_HIP */		
-	if ((err = xfrm_lookup(&dst, &fl, sk, hip_xfrm_lookup_flags)) < 0) {
+	if ((err = xfrm_lookup(&dst, &fl, sk, ipv6_addr_is_hit(&fl.fl6_dst) ? !in_atomic() : 0)) < 0) {
 		dst_release(dst);
 		goto failure;
 	}
+#else
+	if ((err = xfrm_lookup(&dst, &fl, sk, 0)) < 0) {
+		dst_release(dst);
+		goto failure;
+	}
+#endif /* CONFIG_HIP */
 
 	if (saddr == NULL) {
 		saddr = &fl.fl6_src;

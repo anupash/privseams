@@ -51,28 +51,20 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 {
 	unsigned h = __xfrm6_spi_hash(daddr, spi, proto);
 	struct xfrm_state *x;
-	/* BEGIN HIPL PATCH */
-	int cmp, is_hit;
-	
-	/* XX FIXME: DOES THIS AFFECT ORDINARY ESP TRAFFIC WITHOUT HIP? */
+
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
-		cmp = ipv6_addr_cmp((struct in6_addr *)daddr,
-				    (struct in6_addr *)&x->id.daddr);
-		is_hit = ipv6_addr_is_hit((struct in6_addr *) daddr);
 		if (x->props.family == AF_INET6 && spi == x->id.spi &&
-		    !cmp && (is_hit || proto == x->id.proto))
-		{
-		        printk(KERN_DEBUG "SPI found\n");
+		    !ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr) &&
+		    proto == x->id.proto) {
+		        /* printk(KERN_DEBUG "SPI 0x%x found\n", ntohl(spi)); */
 			xfrm_state_hold(x);
 			return x;
 		}
 	}
-	/* END HIPL PATCH */
-
-	return NULL;
 
 #ifdef CONFIG_HIP_DEBUG
-	printk(KERN_DEBUG "SA lookup (spi: %x) failed\n", spi);
+	if (ipv6_addr_is_hit((struct in6_addr *) daddr))
+		printk(KERN_DEBUG "SA lookup (SPI %x) failed\n", ntohl(spi));
 #endif
 	return NULL;
 }
