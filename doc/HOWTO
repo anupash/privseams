@@ -1,0 +1,215 @@
+
+Warning
+=======
+
+HIPL code is currently at a very experimental level. Use at your own
+responsibility! Using VMWare or User Mode Linux is recommended for
+testing HIPL.
+
+Requirements
+============
+
+* Mandatory
+  * Linux Operating System
+  * gcc compiler _2.9x_, the linux source tree does not compile with 3.x!
+  * OpenSSL-library and developer headers
+  * GNU make
+  * the latest versions of autoconf and automake
+  * perl, lorder
+
+* Optional
+  * USAGI Toolkit (contains ping6, pfkey and netcat6)
+  * latex, dvips, dvipdf, fig2dev, docbook-utils (for building the
+    HIPL documentation)
+
+Building the Documentation
+==========================
+
+Architectural documentation:
+
+  % cd hipl/doc
+  % make design_choices.dvi design_choices.ps design_choices.pdf
+
+Kernelspace API:
+
+This compiles the whole kernel documentation (may take a while) along
+with HIPL kernel module documentation:
+
+  % cd hipl/linux
+  % make sgmldocs htmldocs pdfdocs psdocs
+
+The HIPL kernel module documentation will appear on the following files
+(depending on the format you selected for building the documentation):
+
+  hipl/linux/Documentation/DocBook/hipl-kernelspace-api.*
+
+The building of kernel documentation may take a while, so please be
+patient.
+
+Userspace API:
+
+  % cd hipl/doc
+  % make hipl-userspace-api.sgml hipl-userspace-api.pdf hipl-userspace-api.ps
+
+Compiling the Kernel
+====================
+
+The 2.4 kernel series compiles only with gcc 2.9x series. Do not use
+gcc 3.x because it won't compile the kernel. Check your default gcc
+version version with "gcc --version".
+
+HIPL kernel is in hipl/linux folder. Compile the kernel with the
+following options:
+
+  Legend: [*] built-in  [ ] excluded  <M> module  < > module capable
+
+  Code maturity level options
+  [*] Prompt for development and/or incomplete code/drivers
+
+  Cryptography support (CryptoAPI)
+  [*] CryptoAPI support
+  [*] Cipher Algorithms
+  --- 64 bit blocksize
+  <*> 3DES cipher
+  --- Depracated
+  <*> NULL cipher
+  [*] Digest Algorithms
+  <*>  SHA1 digest
+
+  Networking options 
+  [*] TCP/IP networking
+  [*] The IPsec protocol (EXPERIMENTAL)
+  <*> The IPv6 protocol (EXPERIMENTAL)
+  [*] IPv6: IP Security Support (EXPERIMENTAL)
+  <M> HIP (EXPERIMENTAL)
+  [*]   HIP: debugging (NEW)
+
+The HIP option will not be visible if all the options presented in the 
+list above are not included into the kernel. For the moment DSA and DH
+will not work if compiled as modules.
+
+HIP debugging is not mandatory, but use of it is highly recommended in
+order to get more information when problems arise. HIP debugging
+information is logged using syslog's facility "kernel" and priority
+"debug". Remember to set up your /etc/syslog.conf correctly if you do
+not see the log messages (see syslog.conf manual page for more info).
+
+For more information about USAGI modules, download a USAGI kernel and
+see files usagi/doc/CONFIG.linux24 and usagi/doc/HOWTO/IPsec. You do
+not need an USAGI pluto daemon for HIP to work.
+
+Compiling Userland Applications
+=================================
+
+After you have successfully compiled and installed USAGI kernel and
+rebooted both of the hosts, you need to compile the HIP command line
+configurator (hipconf). Hipconf is located in hipl/tools folder and
+it is compiled simply as follows:
+
+  cd hipl/tools
+  ./configure
+  make
+
+You should have an IPv6 application for creating a connection between
+hosts. USAGI toolkit includes such tools but there is also a very
+simple application in hipl/test folder. You can compile it as follows:
+
+  cd hipl/libinet6
+  ./configure
+  make
+  cd ../test
+  ./configure
+  make conntest-client-gai conntest-server
+
+It is not necessary to "make install" the applications. You can execute
+them straight from their source directories.
+
+Testing a HIP connection between two hosts
+==========================================
+
+HIPL developers test HIP using two machines called crash (3ffe::1) and
+oops (3ffe::2). They are used through this whole document as examples
+even though you probably have your own naming and addressing
+conventions.
+
+We expect that you have two hosts for testing HIP which will be
+referred to as "crash" and "oops". You should run these commands in
+the testing hosts as root. conntest-client-gai and
+conntest-server can also be run as a non-root user, with
+conntest-server using port numbers less than 1024 still requires root
+privileges.
+
+oops:
+
+  /etc/hosts:
+    3ffe::1 crash
+
+  /etc/hip/hosts:
+    HIT_OF_CRASH crash
+
+  ifconfig eth0 inet6 add 3ffe::2/64
+  mknod /dev/hip c 126 0
+  modprobe hipmod
+  cd somewhere/hipl
+  tools/hipconf new hi default # only the first time when you run hip
+  tools/hipconf add hi default
+  test/conntest-server tcp 1111
+
+crash:
+
+  ifconfig eth0 inet6 add 3ffe::1/64
+  mknod /dev/hip c 126 0
+  modprobe hipmod
+  cd somewhere/hipl
+  tools/hipconf new hi default # only the first time when you run hip
+  tools/hipconf add hi default &
+  test/conntest-client-gai oops tcp 1111
+  <type some text in crash, press enter and ctrl+d and you
+   should see some text appearing in the output of the hosts>
+
+This will setup a HIP connection between the two hosts. You should
+replace HIT_OF_XXX with the HIT of the host XXX. The host default HI
+is generated with the command "hipconf new hi default" (only needed on
+the first run) and sent to the kernel module with ".hipconf add hi
+default" The value of the HIT can be found from file
+/proc/net/hip/lhi.  You can see information on current HIP connections
+from file /proc/net/hip/sdb_state. Support for both of these /proc
+files require that you select HIP debugging option during the kernel
+compilation process. mknod command can be omitted if you already have
+device file /dev/hip.
+
+Mappings between HITs and IPv6 addresses are usually set up
+automatically with the hosts files. Manual configuration is also
+possible but not necessary:
+
+  tools/hipconf add map PEER_HIT PEER_IP
+
+See the log messages for information about the result of HIP base
+exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
+tools for dumping the network traffic during the base exchange.
+
+There is also a script called "hipsetup" in "hipl/test" directory for
+quick testing of the base exchange. Run it without arguments to see
+how it is used. The script requires some external applications that
+will be prompted if they are not found.
+
+Testing Handover
+================
+
+The handover code is based on draft-nikander-hip-mm-00
+specification. Not all of the features all yet implemented and the
+code quality is still far from bullet proof.
+
+A naive handover test example is below. It assumes that you have
+already established the base exchange between the hosts. You also need
+to have the nc6 tool which can be found from e.g. "www.freshmeat.net".
+
+  <first, establish a HIP connection as intructed in the previous section>
+  oops  # nc6 -l -p 12345
+  crash # nc6 <the HIT of oops> 12345
+  crash # <type some text and press enter>
+  oops  # <the text that you typed in crash should appear in oops console>
+  crash # ifconfig eth0 inet6 del 3ffe::1/64
+  crash # ifconfig eth0 inet6 add 3ffe::3/64
+  crash # <type some text and press enter>
+  oops  # <the text that you typed in crash should appear in oops console>

@@ -1,0 +1,29 @@
+$Id: README,v 1.4 2003/10/14 15:42:09 krisu Exp $
+
+INTRODUCTION
+============
+
+HIPL (HIP for Linux) is a software project at Helsinki Institute for
+Information Technology (HIIT) and Helsinki University of Technology
+(HUT). The purpose is to implement the Host Identity Payload/Protocol
+on Linux.
+
+DOCUMENTATION
+=============
+
+The documentation is divided in the following topics:
+
+Topic                                   Location
+-------------------------------------------------------------------
+Architecture				hipl/doc/design_choices
+Developer guide				hipl/doc/HACKING
+Kernelspace API				hipl/linux/hipl-func
+Usage and installation			hipl/doc/HOWTO
+Userspace API				hipd/doc/hipl-userspace-api
+Web pages (download instructions)	hipl/public_html
+
+Architectural, kernelspace API and userspace API are available in
+various formats but they require building. For building instructions,
+see HOWTO.
+
+

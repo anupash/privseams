@@ -1,0 +1,22 @@
+/* config.h.in.  Generated automatically from configure.in by autoheader 2.13.  */
+
+/* Define if you have the open64 function.  */
+#undef HAVE_OPEN64
+
+/* Define if you have the <netash/ash.h> header file.  */
+#undef HAVE_NETASH_ASH_H
+
+/* Define if you have the <netatalk/at.h> header file.  */
+#undef HAVE_NETATALK_AT_H
+
+/* Define if you have the <netax25/ax25.h> header file.  */
+#undef HAVE_NETAX25_AX25_H
+
+/* Define if you have the <neteconet/ec.h> header file.  */
+#undef HAVE_NETECONET_EC_H
+
+/* Define if you have the <netipx/ipx.h> header file.  */
+#undef HAVE_NETIPX_IPX_H
+
+/* Define if you have the <netrose/rose.h> header file.  */
+#undef HAVE_NETROSE_ROSE_H

@@ -1,0 +1,225 @@
+
+ABOUT
+=====
+
+This file contains developer information on policies in the HIPL
+project.
+
+
+AUTOCONF AND AUTOMAKE
+=====================
+
+Autoconf and automake tools help developers to avoid from "include
+header dependency hell" so they are also used by HIPL in "tools" and
+"test" directories. Standard linux kernel supports only plain old
+Makefiles, so "linux" subdirectory is not controlled with
+autoconf/automake. The "doc" directory uses plain old Makefile because
+it uses the same documentation building system as "linux". Libinet6
+has been imported from the Usagi project and uses only automake (no
+autoconf).
+
+If you need to add or remove source/header files or modify build
+rules, edit "Makefile.am". If you need to modify dependencies, edit
+"configure.ac". After editing the files, run "autoreconf". Autoreconf
+may then update some files (config.h.in, config.sub, configure,
+Makefile, Makefile.in) and you need to commit them too into the CVS
+along with your new source and header files.
+
+If you need to share a file between userspace and kernelspace, place
+it in the kernelspace and modify userspace Makefile.am to create a
+link to it from userspace (CVS does not accept links). For example,
+"tools/Makefile.am" makes a local link to
+"hipl/linux/net/ipv6/builder.c" by the following rule:
+
+	builder.c:
+        	$(LN_S) ../linux/net/ipv6/hip/builder.c .
+
+
+CODING CONVENTIONS
+==================
+
+- All kernelspace code should follow the standard linux coding conventions
+  listed in <linux_root>/Documentation/CodingStyle
+
+- All code shared between userspace and kernel should follow kernel
+  coding style.
+
+- HIPL code should use the prefix "hip_" in all function and global variable
+  definitions to avoid namespace pollution in the kernel. The prefix is
+  not necessary in userspace code, but the same naming conventions might
+  be clearer to use anyway.
+
+- The width of one line should be limited to 80 characters in
+  userspace code. This rule may be relaxed in the kernel code because
+  the space is very limited due to the 8 character indentation.
+
+VERSION MANAGEMENT
+==================
+
+Version management is controlled and applied with tla. You should be
+aquinted with tla version management (which is very different from cvs
+version management) before reading this section. Here is the
+simplified picture of the version management tree which will be
+explained below:
+
+
+test branch           o---------------o
+                      |               |
+                      |               |
+main--1.0    --> X----o---------o-----o---... ---o
+                      |         |                |
+                      |         |                |
+                      |         |                |
+release 0.x  -->  main--0.1  main--0.2           |
+                                                 |
+                                                 |
+                                                 |
+main--2.0    -->                                 o------o-----------o---...
+                                                        |           |
+                                                        |           |
+                                                        |           |
+release 1.x                                         main--1.1  main--1.2
+
+
+The time advances in the ascii picture from left to right. The birth
+of the version management tree is marked with an "X", the branchpoints
+are marked with "o" characters and patches to a specific branch are
+marked with "-" characters. Three subsequent dots denote a
+repetition. The branches are named or characterized on the left of the
+tree.
+
+main--1.0, main--2.0 (and so fort) branches are stable
+branches. Stable means that the code is guaranteed to compile and work
+on those branches. Only bug fixes and well tested new features can be
+applied to the stable branches.
+
+Test branches are the opposite of stable branches. New features are
+tested on the test branches and therefore the code is not guaranteed
+to work properly and it may not even compile. When a feature has been
+stabilised, it is merged into the stable branch.
+
+Release branches act as milestones in the stable branch. The release
+branches are branched from the stable branch after major architectural
+changes or some amount of bugfixes. The release branches are a bit
+different from what is usually referred as to "snapshots" because one
+is able to apply new patches to a specific release branch. This way,
+it is possible to include bug, demo and performance fixes for a
+specific release branch without necessarily merging the fixes into
+the stable branch.
+
+DEBUGGING
+=========
+
+Debugging the kernel with gdb is not possible unless you're running
+User Mode Linux and in such cases you may prefer manual debugging
+statements in the code. It may be also your personal favourite to
+prefer debugging statements over gdb in the userspace. HIPL provides a
+set of wrappers for adding debugging statements in a concise way:
+
+- HIP_DIE(arguments as for printk)
+- HIP_ERROR(arguments as for printk)
+- HIP_INFO(arguments as for printk) 
+- HIP_DEBUG(arguments as for printk) 
+
+The wrappers exists for many reasons. First, it is very convinient to
+have the same syntax for the debug statements indepently of whether
+you degugging in kernel or userspace.
+
+Second, an "ad hoc" debug statement mechanism would make it more
+difficult to adopt HIPL into production environment because it would
+be awkward to comment all the superfluous debug messages. The
+superfluous debug messages can be suppressed by a single switch to
+configure (CONFIG_HIP_DEBUG) if an unified interface for debugging is
+used.
+
+Third reason for the existance of wrappers is that a uniform
+importancy level of debug messages can be enforced. For example, error
+messages are more important than info messages and info messages are
+more important than debug messages. One benefit of the importancy of
+levels is that the debug messages can be cathegorized into two groups:
+the ones that are always included in a build and the ones that are
+included only in a development build. HIP_DEBUG belongs to the latter
+group and the other functions belong to the second group.
+
+The fourth reason for justifying the wrappers is that some programs
+cannot be run interactively on the screen in production
+environment. For example, the HIP daemon is preferred to be run as a
+background process in production environment by the end-users. The
+debug statements cannot be printed on the screen in such a case;
+instead, the statements have to passed via syslog. On the other hand,
+the developer wants to run the daemon interactively. The wrappers make
+it possible to please both of the groups easily.
+
+Debug statements should not be removed from code because someone may
+have use for the debug statement later on. The preferred way is to put a
+"_" in front of the debug function name to prevent the debug statement
+to ever to be shown (indepently of whether the build is a development
+or production build):
+
+- _HIP_DIE(..)
+- _HIP_ERROR(..)
+- _HIP_INFO(.. 
+- _HIP_DEBUG(..) 
+
+DOCUMENTATION
+=============
+
+The list of available HIPL documentation is listed in README. Both the
+kernel and the userspace API are documented in Linux kernel docbook
+format (see hipl/linux/Documentation/DocBook). Here is an example how
+docbook style comments should be used for commenting functions:
+
+/**
+ * sum2 - sum the given two integers
+ * @a: the first integer to be summed
+ * @b: the second integer to be summed
+ *
+ * the freeform longer description goes here (may
+ * span multiple lines)
+ *
+ * Returns: the sum of @a and @b.
+ *
+ */
+int sum2(int a, int b) {
+  return a + b;
+}
+
+
+NOTE!
+
+- The first two stars are REQUIRED. Otherwise docbook does not
+  include the function in its output.
+- The summary line may be just ONE line.
+- The description of the parameters must begin IMMEDIATELY on the
+  next line after the function summary. Otherwise you will experience    
+  odd docbook behaviour (the descriptions appear twice in the text).
+- Please use the following indentation type for the parameters:
+    @test:   blah blah
+    @foobar: description of foobar
+             continues to the next line
+- You can refence other functions by adding empty brackets() after the
+  function name.
+- see Documentation/kernel-doc-nano-HOWTO.txt for more details on
+  documentation styles
+
+SUBMITTING PATCHES
+==================
+
+HIPL is still work in progress. The code is being constantly developed
+and it may be difficult to merge your contribution to the HIPL code.
+
+If you still want to submit patches to the HIPL project, see that the
+patch follows the TLA POLICY (see above). Build your patches against
+the the latest MAIN version in TLA.  It would be nice if you would
+build one (or multiple) unit test case to validate your patch.
+
+TESTING
+=======
+
+The project has a tailored unit testing environment which makes it
+possible to run tests in the HIP kernel module and userspace. It is
+recommended that the developer builds a new test case when creating
+new functionality or repairing old functionality. Still, there are
+some tangled functionality, especially in the kernel, that is
+very difficult to test with unit testing. Manual black box testing
+should be used to cover changes in the code in such cases.

@@ -1,0 +1,111 @@
+% $Id: design_choices.tex,v 1.237 2003/10/24 10:24:24 mkomu Exp $
+
+%%%%%%%%%%%%%%%%%%%% GENERAL TODO SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% - Put all of the figs into ``fig'' directory
+% - Merge Torsten's comments in this paper
+%   - Long sections should be split into smaller
+%     - Example: \textbf{Keyword} begins this section..
+%   - Some sections contain repeated information, is this bad?
+%     - Resolver architecture contains redundant information
+%       - Network socket API: The motivation behind the flags...
+%       - If both transparency and AI_HIP...
+%     - Userspace network applications
+%        - HIP aware applications may require...
+%        - Technically this is a correct way...
+% - Jouni Korhonen suggested
+%   - more stuff to DNS part -> Miika's thesis corrects this.
+%   - more punctuality with the solutions (state/sequence transition graphs)
+%   - separate ``we did not implement x because'' things from the text
+%     because they are being repeated all over the text
+%   - clarify the things we did not implement
+%   - clarify why we implemented x with method y
+% - mention about transport/tunnel mode and which/why our implementation
+%   uses it
+% - Merge Henderson's email comments in this paper
+%   - One packet buffer - compare to Jukka's thoughts
+%   - HIs can be distributed using CERTs - requires PKI
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[a4paper,titlepage]{article}
+\usepackage{fancyhdr}
+\usepackage{a4wide}
+%\usepackage{alltt}
+\usepackage{moreverb}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{supertabular}
+\usepackage{array}          % XX TODO: is this needed?
+%\usepackage{enumerate}
+\usepackage{varioref}
+\usepackage{hyperref}       % keep this as the last one
+\begin{document}
+
+\input{design_choices_macros}
+
+\title{Host Identity Protocol for Linux}
+\author{Catharina Candolin, \texttt{candolin@tml.hut.fi} \\
+        Miika Komu, \texttt{miika.komu@hiit.fi} \\
+	Mika Kousa, \texttt{mika.kousa@hiit.fi} \\
+	Janne Lundberg, \texttt{jlu@tcs.hut.fi} \\
+	Kristian Slavov, \texttt{kristian.slavov@hiit.fi} \\
+	\\
+        Helsinki Institute for Information Technology \\       
+        Helsinki University of Technology: \\
+        Department of Computer Science and Engineering}
+\maketitle
+
+
+\fancyhf{} % Clear all fields
+\fancyhead[C]{\small Host Identity Protocol for Linux}
+\fancyfoot[C]{ \thepage }
+\pagestyle{fancy}
+
+\tableofcontents
+
+\newpage
+
+\section*{Acknowledgements}
+
+This research is funded by the National Technology Agency of Finland
+(TEKES), Elisa Communications, Ericsson, Nokia, TeliaSonera,
+Creanor, and More Magic Software. We thank Jukka Ylitalo, Jorma Wall,
+Petri Jokela, and especially Pekka Nikander from Ericsson Research for
+fruitful cooperation and interoperability testing with their
+implementation of HIP for BSD. Furthermore, we are grateful for the
+valuable discussions and comments we have had with Andrew McGregor and
+Thomas Henderson. Torsten R{\"u}ger (HIIT) and Jouni Korhonen
+(TeliaSonera) gave also some valuable comments on this document.
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%% DOCUMENT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{abstract}
+One of the main problems with IP has been its lack of
+security. Although IPSec and DNSSec have provided some level of
+security to IP, the notion of a true identity for hosts is still
+missing. Typically, the IP address of the host has been used as the
+host identity, regardless of the fact that it is nothing more than
+routing information. The purpose of the Host Identity Payload/Protocol
+(HIP) architecture is to add a cryptographically based name space, the
+Host Identity, to the IP protocol. The Host Identity serves as the
+identity of the host, whereas the IP address is merely used for
+routing purposes.  In this document, we describe the HIP architecture
+further, and present our IPv6 based implementation of HIP for Linux.
+\end{abstract}
+
+\input{hipl.tex}
+
+\bibliographystyle{plain}
+\bibliography{design_choices}
+
+
+\appendix
+\newpage
+\pagebreak
+
+\include{catalogue}
+
+\end{document}

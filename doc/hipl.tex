@@ -1,0 +1,1326 @@
+\section{Introduction}
+\label{sec:introduction}
+
+The lack of security has been one of the main problems with
+IP. Although IPSec \cite{rfc2401} and DNSSec \cite{rfc3008} have
+provided some level of security to IP, such as data origin
+authentication, confidentiality, integrity, and so forth, the notion
+of a true identity for hosts is still missing. The IP address has
+typically been used both to identify the host and to provide routing
+information. This has led to the misuse of IP addresses for
+identification purposes in many security schemes. To overcome the
+problems related to the current use of IP addresses, the Host Identity
+Payload/Protocol (HIP) architecture adds a cryptographically based
+name space, the Host Identity, to the IP protocol.  Each host (or more
+specifically, its networking kernel or stack) is assigned at least one
+Host Identity, which can be either public or anonymous. The Host
+Identity can be used for authentication purposes to support trust
+between systems, enhance mobility and dynamic IP renumbering, aid in
+protocol translation/transition and reduce denial-of-service
+attacks. Furthermore, as all of the higher protocols are bound to the
+Host Identity instead of the IP address, the IP address can now be
+used solely for routing purposes.
+
+This document describes the implementation effort of the \textit{Host
+Identity Protocol for Linux (HIPL)} project \cite{hipl}. The
+implementation is based on the standard Linux kernel with USAGI
+patches and supports only IPv6 protocol. Some background knowledge is
+also provided for the reader unfamiliar with HIP.
+
+\subsection{Related Work}
+\label{sec:related_work}
+
+There are some protocols that have similar kind of functionality as
+HIP has. Examples of these protocols are Stream Control Transmission
+Protocol (SCTP) and Mobile IPv6.
+
+SCTP provides a means for each SCTP endpoint to provide the other
+endpoint (during association startup) with a list of transport
+addresses (i.e., multiple IP addresses in combination with an SCTP
+port) through which that endpoint can be reached and from which it
+will originate SCTP packets. The association spans transfers over all
+of the possible source/destination combinations which may be generated
+from each endpoint's lists. \cite{rfc2960}. Connection setup with SCTP
+is similar to HIP, a cookie exchange mechanism is also used during the
+connection setup procedure. SCTP uses cryptographic hash functions for
+data integrity checks.
+
+Mobile IPv6 tries to make mobility transparent to applications using
+higher level protocols. Mobile IPv6 \cite{rfc2002} addresses also
+security issues.
+
+HIP is being developed in four independent projects. HIPL
+implementation is described in this document. Andrew McGregor is
+developing a cross-platform version \cite{pyhip} with Python
+programming language, Ericsson Research \cite{ericsson} is working on
+a NetBSD implementation \cite{netbsd} and Boeing \cite{boeing} is
+developing an Linux IPv4 implementation.
+
+\section{Background}
+\label{sec:background}
+
+\subsection{HIP Architecture}
+
+There are two name spaces in use in the Internet today: IP addresses
+and domain names.  IP addresses have been used both to identify the
+network interface of the host and the routing direction vector.  The
+three main problems with the current name spaces are that dynamic
+readdressing cannot be directly managed, anonymity is not provided in
+a consistent and trustable manner, and authentication for systems and
+datagrams is not provided.
+
+In \cite{hiparch} , the HIP architecture is introduced. HIP introduces
+a new cryptographically based name space, the Host Identity (HI), and
+adds a Host Layer between the network and the transport layer in the
+IP stack.
+
+The modification to the IP stack is depicted in
+\autoref{fig:stack_model}. In the current architecture, each process
+is identified by a process ID (PID). The process may establish
+transport layer connections to other hosts (or to the host itself),
+and the transport layer connection is then identified using the source
+and destination IP addresses as well as the source and destination
+ports. On the IP layer, the IP address is used as the endpoint
+identifier, and on the MAC layer, the hardware address is used. In
+HIP, the transport layer is modified so that the connections are
+identified using the source and destination HIs as well as the source
+and destination ports.  HIP then provides a binding between the HIs
+and the IP addresses, e.g. using DNS \cite{rfc1034}.
+
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[scale=0.7]{fig/stack_model}
+\end{center}
+\caption{The current IP stack and the HIP based stack}
+\label{fig:stack_model}
+\end{figure}
+
+The HI is typically a cryptographic public key, which serves as the
+endpoint identifier of the node. Each host will have at least one HI
+assigned to its networking kernel or stack. The HI can be either
+public or anonymous. Public HIs may be stored in directories, such as
+DNS, in order to allow the host to be contacted by other hosts. A host
+may have several HIs, and it may also generate temporary (anonymous)
+
+HIs on the fly for establishing connections to other hosts. The main
+purpose of anonymous HIs is to provide privacy protection to the host,
+should the host not wish to use its public HI(s).
+
+The HI is never directly used in any Internet protocol. It is stored
+in a repository, and is passed in HIP. Protocols use a 128-bit Host
+Identity Tag (HIT), which is a hash of the HI.  Another representation
+of the HI is the Local Scope Identity (LSI), which has a size of 32
+bits, but is local to the host. Its main purpose is to support
+backwards compatibility with the IPv4 API.
+
+The main advantages of using HIT in protocols instead of the HI is
+that its fixed length makes protocol coding easier and also does not
+add as much overhead to the data packets as a public key would. It
+also presents a consistent format to the protocol regardless of the
+underlying identity technology used. HIT functions much like the SPI
+does in IPSec, but instead of being an arbitrary 32-bit value that
+identifies the Security Association for a datagram (together with the
+destination IP address and security protocol), HIT identifies the
+public key that can validate the packet authentication.
+
+The probability that a collision will occur is extremely
+small. However, should there be two public keys for one HIT, the HIT
+acts as a hint for the correct public key to use.
+
+The HIP architecture basically solves the problems of dynamic
+readdressing, anonymity, and authentication. As the IP address no
+longer functions as an endpoint identifier, the problem of mobility
+becomes trivial, as the node may easily change its HI and IP address
+bindings as it moves. Anonymity is provided by temporary and anonymous
+HIs. Furthermore, as the name space is cryptographically based, it
+becomes possible to perform authentication based on the HIs. In
+\cite{ndss-inthip}, the concept of integrating security, mobility, and
+multihoming based on HIP is discussed further.
+
+\subsection{The Host Layer Protocol}
+
+The Host Layer Protocol (HLP) is a signaling protocol between the
+communicating endpoints. The main purpose of the protocol is to
+perform mutual end-to-end authentication and to create IPSec ESP
+\cite{rfc2406} Security Associations to be used for integrity
+protection and possibly also encryption. Furthermore, the protocol
+performs reachability verification using a simple challenge-response
+scheme.
+
+The HLP protocol provides seven message types, of which four are
+dedicated to the base exchange. In \autoref{fig:base_exchange}, the
+base exchange is depicted. In the first message, I1, the initiator I
+sends its own HIT and the HIT of the responder to the responder. The
+responder R replies with message R1, which contains the HITs of I and
+itself as well as a puzzle based challenge for I to solve. The purpose
+of the challenge is to make the protocol resistant to
+denial-of-service attacks. (Puzzle based schemes have been previously
+used for providing DoS protection to both authentication
+\cite{clientpuzzle} and encryption \cite{opportkey} protocols.) I
+solves the puzzle and sends in I2 the HITs of itself and R as well as
+the solution to the puzzle, and performs the authentication. R2 now
+commits itself to the communication, and responds with the HITs of I
+and itself, and performs the authentication. After this, I and R have
+performed the mutual authentication and established Security
+Associations for ESP, and can now engage in secure
+communications. Furthermore, reachability is verified by the fact that
+the protocol has more than two rounds.
+
+\begin{figure}[htt]
+\begin{center}
+\includegraphics[scale=0.7]{fig/base_exchange}
+\end{center}
+\caption{The base exchange of the Host Layer Protocol}
+\label{fig:base_exchange}
+\end{figure}
+
+If I does not have any prior information of R, it may retrieve the
+information from a repository, such as DNS. I sends a lookup query to
+the DNS server, which replies with R's address, HI, and HIT.
+
+There are some other message types in the HLP. The HIP New SPI Packet
+(NES) provides the peer system with its new SPI, provides a new
+Diffie-Hellman key to produce new keying material, and provides any
+intermediate system with the mapping of the old SPI to the new.  The
+intermediate system with the mapping of the old SPI to the new. The
+HIP Readdress Packet (REA) allows a hos t to notify its partners of a
+change of the IP address (e.g. as a result of mobility). HIP Address
+Check (AC) and Address Check Reply (ACR) packets are used both as an
+address probe and as an implicit acknowledgement to a REA packet
+\cite{hip-mm}. The HIP Bootstrap Packet (BOS) is used when the
+initiator is unable to learn a responder's information from a
+repository.
+
+\subsection{HIPL Implementation}
+
+Linux was selected as the platform for implementing HIP. It was a
+natural choice because the developers were already familiar with
+Linux. Documentation about kernel development was also needed because
+all of the project members were unfamiliar with kernel development in
+the beginning of the project. There was enough documentation about
+Linux kernel development (for example
+\url{http://www.kernelhacking.org/}, \cite{kernelarch},
+\cite{kernellinks}, \cite{kmodguide}) that made Linux platform a
+reasonable choice.
+
+When the HIPL project was started, the standard Linux kernel did not
+include IPSec functionality which is needed for HIP. There were two
+projects providing IPSec support for the Linux kernel: USAGI Linux
+\cite{usagi} and FreeS/WAN \cite{freeswan}. USAGI Linux was selected
+because FreeS/WAN did not support IPv6 and project members wanted to
+concentrate on developing an IPv6 implementation of HIP.
+
+The main goal of the project is to develop a HIP drafts \cite{hip},
+\cite{hiparch}, \cite{hipimpl}, \cite{hip-mm} compliant implementation
+of HIP. The implementation does not implement IPv4 support for
+HIP. Modularity was emphasized in the design because HIP
+specifications were prone to change and hardcoding might have later
+rebound on during the project. To achieve modularity, code was kept
+clear and simple. Both unit testing and interoperability testing has
+been used throughout the project.
+
+This project is a research project and thereby the non-goals of the
+project are related to production quality code. Usability and
+performance are not in the main focus of the project.
+
+\section{Implementation Architecture}
+\label{sec:implementation_architecture}
+
+This section describes the architecture of the implementation as it
+is. The requirements for the implementation architecture cannot be
+found from this document because the requirements are already
+specified in the HIP drafts \cite{hiparch}, \cite{hip} and
+\cite{hip-mm}. The most important design decisions of the architecture
+are explained in \autoref{sec:catalogue}. The outcomes of the project
+are further evaluated in \autoref{sec:lessons_learned} and
+\autoref{sec:future_work}.
+
+A general model of operation is first discussed in
+\autoref{sec:kernel_model_architecture} because it affects the design
+of all components in the system. Each individual component is then
+explained in the rest of the sections.
+
+The networking stack component (in
+\autoref{sec:networking_stack_architecture}) is used to create, inject
+and remove HIP headers from network traffic. The daemon component is
+needed for handling e.g. cryptographic operations that cannot be done
+in the kernel and it is described in
+\autoref{sec:daemon_architecture}. The resolver component is described
+in \autoref{sec:resolver_architecture}. The network application point
+of view is described in
+\autoref{sec:application_architecture}. Finally,
+\autoref{sec:collaboration_of_architecture_components} concludes with
+collaboration of all components.
+
+\subsection{Kernel Model}
+\label{sec:kernel_model_architecture}
+
+HIP functionality can be implemented using two different models. The
+two models reflect the decision how to distribute the ``intelligence''
+of the protocol. In the first model, the HIP protocol is implemented
+entirely in userspace. In the second model, the whole HIP protocol is
+in the operating system kernel.
+
+The distribution of the intelligence does not necessarily have to be
+``all in the kernel'' or ``all in the userspace''. A hybrid model is
+also possible. Both the kernel and the userspace co-operate in order
+to process HIP related data in such a model. However, the intelligence
+does not distribute evenly in the hybrid model in practice. It is more
+convenient to store the state of HIP connections in either space and
+the space where the state is stored has to have more intelligence. The
+term ``kernelspace orientated model'' will be used for the case where
+the state is stored in the kernel. Vice versa, ``userspace orientated
+model'' will be used when the userspace is responsible of storing the
+state.
+
+Both of the models consists of two interoperating components. In the
+context of HIPL implementation, the kernel component is called as
+\textit{HIP network module}. The userspace component is called as
+\textit{HIP daemon}. Both of the components exchange information with
+each other, and the network module interoperates also with kernel
+networking stack. \autoref{fig:kernel_model_architecture} represents
+the relationship of the network module and the daemon.
+
+\begin{figure}[hbt]
+ \centering
+ \includegraphics[scale=0.5]{fig/kernel_model}
+ \caption{Kernel model}
+ \label{fig:kernel_model_architecture}
+\end{figure}
+
+The distribution of state (and with it also the intelligence) affects
+the architecture of the implementation and it also results some
+practical pros and cons. A comparison of the models is given in
+\autoref{sec:kernel_model_design_choices}.
+
+The HIPL architecture is based on the model where intelligence is
+located mainly in the kernel module. The daemon is mainly responsible
+sending the Host Identity configuration of the localhost to the kernel
+module. The reason for selecting a kernel based approach is not
+obvious: it was selected both by accident and as a consequence of the
+project architect's initial prototype. Consequences of this choice are
+discussed in \autoref{sec:kernel_model_lessons}.
+
+\subsection{Networking Stack}
+\label{sec:networking_stack_architecture}
+
+HIP headers are needed to be inserted to and captured from network
+traffic in any implementation of the HIP protocol. There were two
+alternatives on how to do this, and a comparison of them is in
+\autoref{sec:networking_stack_design_choices}. The HIPL implementation
+is based on the ``hooks'' approach, which is described in more detail
+in this section.
+
+Some of the hooks were placed in the IPv6 part of the networking
+stack. Originally the hooks were bound to the \textit{connect} system
+call in TCP layer, but they were refactored into IPv6 layer so that
+UDP and other transport layer protocols would work transparently.
+
+Only a single packet will be queued in the output side of the IPv6
+stack during base exchange. This means that TCP retransmissions will
+be dropped during a slow HIP base exchange, for example. A more closer
+view of the implementation of the hooks is provided in the following
+paragraphs.
+
+The hooks in the output side of the IPv6 stack intercept packets that
+are destined to HIT addresses. The hooks do nothing for an outgoing
+packet if the destination address is an IPv6 address. If the
+destination address is a HIT, the hooks check for an earlier base
+exchange with the destination HIT. If a base exchange has not been yet
+done with the destination HIT, the original packet is queued and an I1
+packet is sent instead of the original packet. If a base exchange has
+already been done with the destination HIT, the hooks catch the packet
+when it is built ready (including IPv6 and ESP headers). Source and
+destination addresses are HITs at this point but they will be
+converted to IPv6 addresses before the IPv6 layer can transmit the
+packet to network.
+
+There is no actual hook in the input side of the IPv6 stack. HIP is
+registered as a normal transport layer protocol listening for the
+packets in the base exchange. When a HIP connection is established, a
+hook in the input handler of ESP is triggered. This hook checks the
+SPI of the incoming packet. If the incoming packet is not associated
+with a HIT, the packet is returned as normally. If the SPI belongs to
+a HIP connection, the source and destination HITs corresponding to the
+SPI are searched from kernel database and they are copied over source
+and destination IPv6 addresses. Finally control of flow returns to
+normal ESP handler.
+
+Input and output side of the hooks are visualized in
+\autoref{fig:input_hooks} and \autoref{fig:output_hooks}.
+\autoref{tbl:hook_descriptions} explains each numbered point in the
+figures. An interface name in code and an explanation for each point
+is given in the figure.
+
+\begin{figure}
+   \begin{minipage}[b]{0.4\textwidth}
+      \centering
+      \includegraphics[height=0.5\textheight]{fig/input}
+      \caption{Input side of networking stack}
+      \label{fig:input_hooks}
+   \end{minipage}%
+   \hfill%
+   \begin{minipage}[b]{0.9\textwidth}
+      \centering
+      \centering
+      \includegraphics[height=0.5\textheight]{fig/output}
+      \caption{Output side of networking stack}
+      \label{fig:output_hooks}
+   \end{minipage}%
+\end{figure}
+
+\setlongtables
+\begin{longtable}{|c|p{0.2\textwidth}|p{0.6\textwidth}|}
+\\\hline
+\endhead
+\endfoot
+Point & Function Name & Operation \\\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+a & \textit{hip\_bypass\_ipsec} &
+
+A packet with a HIP header is received. IPSec processing is skipped. \\
+
+b & \textit{hip\_handle\_esp} &
+
+The packet has a SPI that belongs to HIP. The IPv6 addresses are
+replaced with the corresponding HITs before the packet is delivered to
+ESP. \\
+
+c & \textit{hip\_unknown\_spi} &
+
+A packet from an unknown SPI is received and an R1 packet must be sent
+as a response.\\
+
+d & \textit{hip\_inbound} &
+
+A packet with a HIP header is received. The HIP module is called.\\
+
+e & \textit{hip\_get\_hits} &
+
+Kernel is about to send a packet with a HIT as destination address. A
+source HIT is required before the packet can be sent.\\
+
+f & \textit{hip\_get\_saddr\_udp} &
+
+A packet is being sent and destination address is a HIT. This hook is
+essentially equivalent to \textit{hip\_get\_hits} but it is called
+from the IPv6 layer. The hook handles all other packets except the
+ones produced by TCP.\\
+
+g & \textit{hip\_handle\_output (x2)} &
+
+An IPv6 packet is being sent out that has a HIT as the destination
+address. An IPv6 address corresponding to the HIT is searched from the
+kernel database. The HIT will be replaced with the corresponding IPv6
+address in the IPv6 header. \\
+
+h & \textit{hip\_get\_addr} &
+  
+A small modification in routing and neighbour discovery is needed
+because they behave in a rather odd way in Linux: transport protocols
+select the routes to be used even though it should really be selected
+by network layer protocols. This hook would not be needed if the
+kernel routing behaved as expected. The hook is physically located in
+routing handler and it is triggered by transport layer. Routing
+handler receives a query for the route to the given HIT address and the
+hook tells the routing handler the IPv6 address corresponding to the
+HIT.\\
+
+\hline
+\caption{Descriptions for \autoref{fig:input_hooks} and
+\autoref{fig:output_hooks}}
+\label{tbl:hook_descriptions}
+\end{longtable}
+
+\subsection{Mobility and Multihoming}
+\label{sec:mobility_and_multihoming_architecture}
+
+The implementation supports the mobility and multihoming features of
+HIP: REA, AC and ACR packets can be sent and received. The mobility
+and multihoming part of the code is at a very experimental level at
+the current moment.
+
+\autoref{fig:rea} depicts HIP mobility and multihoming. The HIP
+network module is notified when an IPv6 address is added to or removed
+from some of its network interface(s). When a change occurs in the
+interfaces, all of the addresses of the interface, which caused the
+event, are received in the kernel modules. The addresses are then sent
+in a REA packet to all of the peers of the host that have an existing
+HIP security association with the host.
+
+\begin{figure}[hbt]
+ \centering
+ \includegraphics[scale=0.5]{fig/rea}
+ \caption{Multihoming and Mobility}
+ \label{fig:rea}
+\end{figure}
+
+When a peer host receives the REA packet, it must validate all
+addresses listed in the REA packet. This is achieved by sending an AC
+(Address Check) packet to each of the addresses listed in the REA
+packet. When an AC packet is received, it must be acknowledged with an
+ACR (Address Check Reply) packet to verify that there really is a host
+at the address where the AC was sent to. Finally when the ACR is
+received, the host which originally received the REA now knows that
+the peer is reachable from the address corresponding to the AC packet.
+
+If the AC packet is not replied with a ACR, the address corresponding
+to the AC packet is not reachable and therefore the address is not
+usable for any communication (unless the address is later contained in
+a new REA received and the AC is replied with ACR).
+
+\subsection{HIP daemon}
+\label{sec:daemon_architecture}
+
+At first, an userspace daemon was needed to handle asymmetric
+cryptography in the kernel because asymmetric cryptography was not
+supported in the kernel. The required asymmetric cryptographical
+functions were later ported to the kernelspace and the need for an
+userspace daemon was reduced to a minimum. Currently, the main purpose
+of the daemon is just to create, store and send Host Identity related
+DSA material to the kernel module.
+
+The daemon is used by the kernel module to perform many small
+operations on data. The kernel module can send queries such as ``send
+me the Host Identity configuration'' to the daemon. The daemon send a
+response for the given query and the response either contains the
+answer to the query or an error message if something went
+wrong. Generally speaking, messages between the kernel module and the
+daemon are exchanged synchronously in a \textit{request-response}
+scheme.
+
+The request-response scheme is implemented using a unified interface
+in the kernel. When a request is carried out in the kernel, the
+current context of execution will be saved. The contents of the
+context depends on the operation being executed, but a minimal context
+defines at least a reference to a ``callback function''. The callback
+function is called after the request has been served in the daemon and
+the daemon has sent a response message to the kernel module. The
+kernel module can restore its state based on the information stored in
+the context and then continue its execution where it was left off.
+
+The kernel module loses its control of flow while the daemon is
+computing a response for the kernel module. A lock or a semaphore
+could be used to put the kernel module to ``sleep'' while daemon is
+computing a response but there are two reasons why sleeping is not
+used. The first reason is that some daemon requests are executed in
+IRQ context in the kernel and sleeping until a daemon response arrives
+is not possible. The second reason is that even though it is sometimes
+(in user context) possible to sleep until a daemon response arrives,
+this would result a more complex interface for daemon calls.
+
+There are two consequences of the release of control in the kernel
+which affect the implementation design. The first consequence is the
+overhead and complexity of saving and restoring of the state of
+processing of a HIP header in the kernel. This is a bit error prone
+because it requires dynamic memory allocation and deallocation and the
+state structures need to be filled correctly.
+
+The second consequence is called ``chained code'' and it is related to
+the processing model of HIP headers. The the reasoning and naming
+choice for it deserve a bit longer explanation. Processing of one HIP
+header requires multiple requests to the daemon. This results multiple
+releases of control in the kernel. The control is returned back to the
+kernel when the daemon has computed a response. The response from the
+daemon triggers a ``callback'' function in the kernel which restores
+the state of processing of the HIP header and enables the kernel
+module to continue where it was left off. Thus, in order for the
+kernel module to process a whole HIP header, multiple callback
+functions are required. This means splitting up the code that
+processes a HIP header into multiple functions instead of a single
+function. The functions are called in a specific order. One can
+visualize this model of operation with a ``chain'' where the
+individual elements of the chain are the callback functions and the
+chain itself represents the ordering of the elements, since the
+elements of the chain are linked together. Hence, the term ``chained
+code'' has been derived from this visualization and it will be used
+throughout this document to refer to the model of processing of HIP
+headers.
+
+However, the amount of chained code has been minimized in the
+implementation because the asymmetric crypto needed for HIP has been
+ported into kernel. The chained code is required only for commincating
+the Host Identity configuration to the kernelspace.
+
+The implementation of the daemon has some limitations, such as the
+number of requests to be served simultaneously. This limitation has
+significance mainly in the efficiency of a SMP host. Still, the
+limitation has some advantages in the area of simplification: locking,
+multiplexing and ordering of messages between the daemon and the
+kernel remain relatively simple, thus following the project goals
+stated in \autoref{sec:background}. The messaging mechanism is still
+implemented modularly so that SMP support would be relatively simple
+to add if the implementation went for production use later. SMP
+support is not important because the responsibilities of the daemon
+are quite small.
+
+The actual request-response scheme is implemented in a straightforward
+manner: since the implementation can serve only one daemon request at
+a time, subsequent requests are saved into a FIFO queue. An arriving
+response message from the daemon triggers a new daemon request from
+the top of the FIFO queue.
+
+The communication protocol between the kernel module and the daemon is
+based on \textit{ioctl} system calls. The messaging protocol recycles
+the same format as in the HIP protocol \cite{hip} to avoid redundant
+parsing code. The header is interpreted differently so that error
+messages can be carried with the message more conveniently, for
+example. Some extensions have been added to the parameters listed in
+\cite{hip} for internal purposes.
+
+\subsection{Asymmetric Cryptograhic Module}
+
+A generic asymmetric cryptophic module was developed for handling some
+of the DSA and Diffie-Hellman functionality. The main reason for this
+was that the implementation architecture was revised to be more kernel
+orientated. The cryptographic module is heavily based on the OpenSSL
+library and it supports the operations listed in
+\autoref{tbl:asymmetric_crypto_ops}.
+
+\begin{table}[htb]
+\centering
+\begin{tabular}{|l|}\hline
+Cryptographic Operation \\\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Create cookie  \\
+Solve cookie \\
+Validate cookie \\
+Sign packet with DSA \\
+Verify DSA signature \\
+Create DH shared secret \\
+\hline
+\end{tabular}
+\caption{The operations supported in the asymmetric cryptophic module}
+\label{tbl:asymmetric_crypto_ops}
+\end{table}
+
+\subsection{Resolver}
+\label{sec:resolver_architecture}
+
+A typical network application makes a connection to a peer by using
+the fully qualified domain name (FQDN) of the peer. The FQDN is
+queried from DNS to get the corresponding IPv6 address. The querying
+interface is specified in the network socket application interface and
+it is commonly known as the \textit{resolver}.
+
+Network applications need additional support in the network socket
+interface for two different reasons if HIP is to be used. The first
+reason is that a hostname query from DNS should result in HITs instead
+of IPv6 addresses or otherwise the kernel module would assume a
+connection without HIP. This is discussed in more detail
+\vpageref[below]{sec:api_architecture}. The second reason is that a HIT
+to
+IPv6 mapping should be sent to the kernel as a side effect of a
+hostname query. Otherwise the kernel knows that it will be using HIP
+but the networking layer does not have a physical address where to
+send packets to. This is further discussed
+\vpageref[below]{sec:mapping_architecture}.
+
+There are different groups of network applications from the HIP point
+of view, and they are described in more detail in
+\autoref{sec:application_architecture}. Two specific groups with
+different needs have been identified in our implementation
+architecture: legacy applications and HIP aware applications. Legacy
+applications should be able to run HIP without any changes in source
+code. HIP aware applications can require or deny the use of HIP
+explicitly. A motivation for the application to require HIP could be
+the end-to-end security, for example. Performance reasons could be a
+reason to deny usage of HIP, for example, in a small device with a
+limited computing capacity.
+
+\subsubsection{Network Socket API}
+\label{sec:api_architecture}
+
+Traditional UNIX systems have a library called \textit{libc} which
+contains an implementation for the BSD socket interface \cite{stevens}
+which are needed by network applications. USAGI has a separate libc
+implementation for testing purposes and it is called
+\textit{libinet6}. It is also used in the HIPL project.
+
+Network applications typically use DNS names to address peers. DNS
+names have to be resolved to IPv6 addresses in libc before network
+connections can be established with peers. The resolver routines have
+been modified in the implementation so that DNS queries prefer HITs to
+IPv6 addresses as return values. Otherwise the kernel would just
+receive IPv6 addresses and assume that HIP will not be used.
+
+It appeared to be sufficient to modify only one resolver function,
+\textit{getaddrinfo}, for experimentation purposes. It was preferred
+to the other resolver functions because it was the most generic
+function of them all. Two new flags were added to the function and the
+flags modify the behavior of the resolver function. The motivation
+behind the flags is that some legacy systems may want to use HIP
+without no changes in application code. Some other systems may require
+or deny the use of HIP explicitly.
+
+\textit{Transparent mode} in the API means that DNS queries resolve
+silently to HITs instead of IPv6 addresses. This is only possible
+because HITs are stored in the same data structures as IPv6
+addresses. HITs and IPv6 addresses can then be distinguished by the
+two upper bits in the address.
+
+Backwards compatibility of legacy network applications is the greatest
+benefit of transparent mode because no changes are required in source
+files of the existing network applications to enable HIP
+connections. To be more specific about changes, applications which are
+dynamically linked to \textit{libc} do not need any changes, but
+statically linked applications require to be recompiled. The
+recompilation of applications may even be omitted by overriding the
+\textit{libc} as presented in \cite{libcoverride}.
+
+Transparent mode is set or unset by a compile time flag in
+libinet6. This means that transparent mode is system specific instead
+of application specific. Transparent mode is enabled by default.
+
+The other flag is concerned about enforcing the use of HIP
+independently of transparent mode. The name of the flag is
+\textit{AI\_HIP} and it is passed as a parameter to the resolver
+routine. If the flag is set, the resolver returns only HITs as the
+result for query of the hostname. Effectively, this means that
+connections will be established with HIP or not at all.
+
+A typical example of a network application that used \textit{AI\_HIP}
+flag would be a HIP aware application that needs end-to-end
+authentication and security or mobility features provided by HIP. A
+source code example for such an application is shown in
+\autoref{tbl:ai_hip_example}. Legacy applications cannot use this
+option because it is an extension to the existing network socket API.
+
+\begin{table}[hbt]
+\begin{verbatim}
+01  struct addrinfo hints;
+02  struct addrinfo *res;
+03  int err;
+04  int fd;
+05
+06  hints.ai_flags = AI_HIP | AI_CANONNAME;
+07  hints.ai_family = AF_INET6;
+08  hints.ai_socktype = SOCK_STREAM;
+09  hints.ai_protocol = 0;
+10
+11  err = getaddrinfo("hip.host.org", "echo", &hints, &res);
+12  fd = socket(res->ai_family, res->ai_socktype, res->protocol);
+13  connect(fd, res->ai_addr, res->ai_addrlen);
+14  close(fd);
+15  freeaddrinfo(res);
+\end{verbatim}
+\caption{Example use of \textit{AI\_HIP} flag in C language.}
+\label{tbl:ai_hip_example}
+\end{table}
+
+There are many address resolving routines in the network socket
+API. The implementation supports \textit{getaddrinfo}, because it is
+the most generic resolver function. Supporting just one function
+seemed also to be enough for experimentation purposes. The output of
+\textit{getaddrinfo} with different combinations of the
+\textit{AI\_HIP} flag and the transparency flag is shown in
+\autoref{tbl:getaddrinfo_combo}. The table is valid only if the object
+of the query is a FQDN name, otherwise \textit{getaddrinfo} behaves as
+without HIPL modifications.
+
+\begin{table}[htb]
+\centering
+\begin{tabular}{|l|l|l|l|l|} \hline
+Transparent mode & \textit{AI\_HIP}  & output                   \\\hline
+off        & not set        & no HITs                    \\
+off        & set            & only HITs                  \\
+on         & set            & only HITs                  \\
+on         & not set        & HITs before IPv6 addresses \\
+\hline
+\end{tabular}
+\caption{The output of \textit{getaddrinfo} with different combinations of
+the transparent mode flag and the \textit{AI\_HIP} flag. }
+\label{tbl:getaddrinfo_combo}
+\end{table}
+
+If both transparency and \textit{AI\_HIP} are not set, it is assumed
+that the administrator of the system has consciously disabled HIP in
+the system. A reason for this may be that the host cannot handle the
+overhead of the HIP protocol. On the other hand, if \textit{AI\_HIP}
+is set, only HITs will be returned because the application is assumed
+to require HIP. This means that the application is HIP aware and, for
+example, wants to benefit from the end-to-end security provided by
+HIP. The type of the application is assumed to be legacy if
+transparency mode is off and no \textit{AI\_HIP} flag is explicitly
+set. Legacy applications are not HIP aware but the administrator of
+the system has enabled HIP transparency mode so that even legacy
+applications can use HIP.
+
+\subsubsection{Mapping}
+\label{sec:mapping_architecture}
+
+This section discusses a modification in the resolver that is not
+visible to network application developers and users. The modification
+is about mapping of HITs and IPv6 addresses. It is separated from the
+API discussion \vpageref[above]{sec:api_architecture} because it is a side
+effect in the resolver and does not change the way API is used.
+
+A typical network application commonly addresses hosts in FQDN form
+instead of using an IPv6 address directly. The FQDN name is mapped to
+a HIT using a resolver call as discussed
+\vpageref[above]{sec:api_architecture}. The mapping is communicated to kernel
+during the resolver call in the implementation. The resolver is
+queried for an FQDN which is resolved to both a HIT and an IPv6
+address. The HIT and the IPv6 address are sent to the kernel module as
+a side effect so that the kernel module knows the network address of
+the peer later upon a \textit{connect} call.
+
+There are two problems related to mapping. The first one is a local
+security problem and the second one is related to establishing a
+connection without a resolver call. Problem descriptions and simple
+solutions for both of the problems in the implementation are described
+below.
+
+The local security problem is a consequence of sending the mappings
+directly from the resolver to the kernel. In a typical Unix system,
+all users are allowed to use network applications and thereby also the
+resolver must be accessible to all users. The resolver is linked to
+the network application and therefore the resolver is executed using
+the privileges of the user of the network application. As a result of
+this, the kernel module must allow incoming mapping from every user of
+the local system. The core of the problem is that a local intruder
+could mimic the behavior of the resolver and send a large amount
+invalid mapping entries to the kernel module. The mapping table of the
+kernel module would then be poisoned if the mapping table was shared
+between all users. The poisoning of mapping tables would effectively
+result a Denial of Service for HIP applications in the system.
+
+The security problem is solved by tagging each mapping with the UID of
+the user of the application. When kernel searches for a mapping upon
+connection attempt, valid mappings and connection initiator's mappings
+are preferred first. The worst thing the intruder could then do is to
+poison his own mapping tables. The preference of UIDs is listed in
+\autoref{tbl:preference_of_mappings}.
+
+\begin{table}[htb]
+\begin{enumerate}
+\item Valid mappings
+\item User
+\item Root
+\item Other users
+\end{enumerate}
+\caption{Preference of mappings}
+\label{tbl:preference_of_mappings}
+\end{table}
+
+A valid mapping means that a HIP security association has once been
+successfully created using the specified mapping. Therefore valid
+mappings are preferred first. Mapping of the application user and the
+system administrator are second and third in the preference list
+because they are trusted users. It is important to leave the other
+users as the last group to avoid poisoning. Other users have to have
+the lowest preference because a local attacker could otherwise poison
+the mapping tables of the other users.
+
+The other problem occurs when a network application attempts to
+connect directly to a HIT without any resolver call. The resolver call
+is essential for the connection to succeed because the resolver sends
+the HIT to IPv6 mappings to the kernel module as a side
+effect. Otherwise the kernel just knows the HIT of the peer but cannot
+actually deliver the packet to the network because the corresponding
+IPv6 address is not known. The only option to handle this problem in
+the implementation is manual mapping which can be performed using a
+command line tool.
+
+\subsection{Userspace Network Applications}
+\label{sec:application_architecture}
+
+New HIP aware applications may require the use of HIP or may deny the
+use of it for performance reasons, for example. Legacy applications
+should be able to use HIP without any changes to source code. This is
+not always true for legacy applications and the restrictions are
+discussed in this section. This section is closely related to
+\autoref{sec:resolver_architecture} but the viewpoint is in the
+network applications.
+
+HIP aware applications may require or deny the use of HIP. A reason to
+require HIP would be to benefit from multihoming, end-to-end security
+and mobility features of HIP. A reason to deny the use of HIP would be
+to avoid the overhead caused by HIP in a device with limited computing
+capacity.
+
+Typical legacy IPv6 applications should be able to use HIP in
+transparent mode just by relinking them to USAGI libinet6 with HIP
+modifications. Later on, libinet6 could be merged with standard libc,
+so even the relinking would not be required.
+
+It has not been specified earlier, what a ``typical'' network
+application is from the HIP point of view. A typical application means
+an application that is willing to accept peer names in FQDN form. If
+the peer names are not mapped to HITs through a resolver call before
+attempting a connection, HIP cannot be used in the application even in
+transparent mode.  A limiting element in the implementation is that
+only \textit{getaddrinfo} resolving interface is supported in the
+implementation. More resolver interfaces should be supported in the
+future.
+
+Typical legacy network applications such as Telnet clients and web
+browsers should work as they are in transparent HIP mode. NAT,
+firewall \cite{hiparch} and other raw packet handler software may need
+changes in application code to support HIP. Network applications
+cannot use HIP at all if they use IPv6 addresses directly instead of
+using FQDN identifiers. The implementation assumes that connections
+are established without HIP intervention in such cases.
+
+There is a special scenario that was already discussed
+\vpageref{sec:mapping_architecture} but it is worth mentioning also in
+here. HIP may be used to establish connections directly to HITs
+without no previous resolver call in applications. Technically this is
+a correct way to use HIP but it is still a research problem that is
+discussed \vpageref[below]{sec:mapping_lessons}. The only solution in the
+implementation is to set the HIT to IPv6 mappings manually before
+establishing connections.
+
+\subsection{Collaboration of Components}
+\label{sec:collaboration_of_architecture_components}
+
+% XX TODO: is responder point of view described in the example?
+
+This section gives a summary of the collaboration of the components
+using a network application example.
+\autoref{fig:collaboration_architecture} visualizes the total system
+architecture. The interfaces between the components are labeled with
+letters for simplicity in the figure.
+
+\begin{figure}[hbt]
+ \centering
+ \includegraphics[scale=0.5]{fig/collaboration}
+ \caption{Collaboration of components}
+ \label{fig:collaboration_architecture}
+\end{figure}
+
+Only a minimal base exchange is demonstrated in this example scenario
+because it has been the main focus in the project. The scenario is
+simplified, and the details can be found from
+\autoref{sec:implementation_architecture}. Mobility and multihoming
+are not demonstrated in this scenario.
+
+The configuration in this example consists of two hosts with HIPL
+enabled kernels. Both of the hosts use ``legacy'' userspace
+applications that are not HIP aware. Transparent mode is enabled in
+libinet6 in both of the hosts because the type of the applications is
+legacy. The hosts will be referred to as initiator and responder,
+depending on who starts the base exchange.
+
+Initiator is a host installed with a web browser that is linked to
+libinet6. Responder has a HTTP server listening for incoming
+requests. A DNS server of the domain of the responder is configured to
+contain the FQDN and the IPv6 address of the responder. The HIT of the
+responder is also stored in a DNS server of the domain of the
+responder.
+
+The HIP network module is loaded into the kernel and the userspace
+daemon is started in both of the hosts during boot-up. The HIP network
+module in the kernel queries a Host Identity for the localhost
+immediately after the daemon has notified the kernel module that the
+daemon is available for serving requests. Interface \textbf{a} will be
+used for this. The kernel module also builds up a list of prebuilt R1
+packets for quick sending. HIP connections can now be established.
+
+The user of the initiator host inputs the FQDN address of the
+responder into the web browser to view the web pages in the
+responder's HTTP server. The browser sends a DNS query for the FQDN
+using the resolver routine \textit{getaddrinfo} using interface
+\textbf{c}. The resolver query is served by the modified resolver
+because the browser is linked to libinet6.
+
+The modified resolver queries DNS using the responder's FQDN. The
+resolver finds a matching entry: an IPv6 address and a HIT. Now, two
+things are done before the entries are returned in a list from the
+resolver. First, the resolver organizes the order of the entries
+before returning them. The HIT of the responder is placed in front of
+the list before the IPv6 address because transparent mode is used in
+libinet6 (see \autoref{tbl:getaddrinfo_combo}). Second, the mapping of
+the HIT to the corresponding IPv6 address is sent to the kernel using
+interface \textbf{d} as described
+\vpageref{sec:mapping_architecture}.
+
+Control of flow returns to the browser after the resolver call is
+completed. The result of the resolver call is a list containing first
+the HIT address and then the IPv6 address of the responder. The
+browser is assumed to make a straightforward choice and select the
+first address from the list, which is a HIT in this case. The HIT is
+then used in socket calls. Because the browser uses the HTTP
+\cite{rfc2616} protocol on top of TCP, it passes the HIT to the
+\textit{connect} call in the network socket API (interface
+\textbf{b}).
+
+The \textit{connect} call is handled by the TCP layer in the kernel.
+The TCP layer begins to establish the connection by a TCP handshake
+process which sends a SYN packet to the responder. The SYN packet is
+carried to the IPv6 layer to be transmitted to network but the HIP
+output hook captures the packet before the IPv6 layer (interface
+\textbf{e}) because the destination address is a HIT. The hook finds
+out that there are no earlier security associations with the peer and
+determines that a base exchange needs to be done between the peers
+before the SYN packet can be sent to the responder.
+
+The initiator initializes the base exchange by sending an I1 packet
+using interface \textbf{f}. R1, I2 and R2 packets are exchanged after
+this. During this, the kernel module checks the validity of incoming
+packets, builds up outgoing packets and sends them. The kernel module
+updates its state machine during base exchange.
+
+After the base exchange is successfully completed and handled in both
+hosts, the connection is secured with ESP. The TCP handshake can
+continue using interface \textbf{f} now and once it has been
+completed, the initiator can finally view the web pages from the HTTP
+server of the responder.
+
+The security associations that are created during the base exchange
+are host specific and not connection specific. This means that packets
+related to other connections between the same hosts do not require a
+new base exchange.
+
+\section{Lessons Learned}
+\label{sec:lessons_learned}
+
+\subsection{Kernel Model}
+\label{sec:kernel_model_lessons}
+
+The kernel model in HIPL project is very different from the other HIP
+implementation projects presented in \autoref{sec:related_work}. HIPL
+project chose a kernel-oriented approach whereas other projects seem
+to have adopted a daemon-oriented approach. A short comparison of both
+of the approaches was given in
+\autoref{sec:kernel_model_architecture}.
+
+The HIP protocol is implemented mainly in the kernel. The main reason
+for the existence of the daemon is to store and send the Host Identity
+configuration to the kernel module.
+
+A common reason to implement a research protocol, such as HIP, in
+userspace is that the development process itself is easier. Bugs are
+always present during development and tracing bugs is easier in
+userspace. Nevertheless, tracing bugs has generally been only a bit
+more harder in the kernel than in userspace. One of the reasons for
+this may be that the base exchange itself has acted as a coarse
+grained regression test which is run every time before any new code is
+shared with the other developers.
+
+It is probably easier to refactor the HIPL implementation to a
+daemon-oriented version than vice versa if that is someday
+required. Anyway, it is educational to have implementation experience
+from different kind of implementation architectures while HIP is more
+research than reality.
+
+\subsection{Networking Stack}
+\label{sec:networking_stack_lessons}
+
+The HIP layer had to be added between the transport and the network
+layers in the Linux networking stack. This was considered a difficult
+task because the interfaces between the layers were vague in
+Linux. Before the HIP layer could have been added, the interfaces
+between the transport and the network layers would have had to be
+refactored. Clean and unified interfaces would have then made it
+easier to add the HIP layer into the networking stack. Refactoring
+failed because of a couple of reasons.
+
+Quality of the code in the input side of the Linux IPv6 stack was
+good, but quality of the output side of the IPv6 stack code was
+generally poor. Building of IPv6 headers in the output side is an
+example of bad quality code: both TCP and UDP layers have their own
+functions to build the same IP headers. Interfaces to the builder
+functions have totally different semantics depending on the protocol
+used and unifying them would have meant that the TCP and all other
+protocols (UDP, neighbor discovery, ICMP, MLD, etc) would have to be
+rewritten from scratch.
+
+An obvious consequence of such a complete refactoring attempt would
+have been a delayed schedule in the implementation of the actual HIP
+protocol because the refactoring itself had had lasted far too
+long. There would have been also other non-obvious consequences in the
+refactoring. USAGI patches in the code would have also broken down
+because USAGI is based on the standard Linux kernel. Synchronizing
+code to USAGI and the standard Linux kernel would have probably
+required tremendous effort. The adoption of an implementation based on
+non-standard kernel would have been also questionable.
+
+Hooks were an appealing alternative to refactoring the networking
+stack because hooks were fast to implement and they were already
+successfully used in the MIPL project \cite{mipl}. Originally some of
+the hooks were placed in TCP \textit{connect} call handler in the
+kernel but the hooks were moved down to the IPv6 layer. This
+simplified the code and UDP support was also achieved with no extra
+effort.
+
+USAGI IPSec was merged to HIPL with minimum effort. USAGI works as it
+is without any changes except for the hook in the input handler of ESP
+explained in \autoref{sec:networking_stack_architecture}. Security
+associations can also be set up directly inside the kernel due to the
+kernel based architecture (see
+\autoref{sec:kernel_model_architecture}).
+
+\subsection{Userspace Daemon}
+\label{sec:userspace_daemon_lessons}
+
+The most important ingredient in the design of the daemon architecture
+is kernel orientation. Kernel orientation means a ``master-slave''
+relationship between the kernel and the daemon. This results in quite
+a simple implementation of the daemon mainly because the daemon needs
+no state information.
+
+The interface between the kernel and the daemon is unambiguous. Main
+reason for this is the kernel orientation. For example,
+\textit{PF\_KEY} \cite{rfc2367} messages are not needed to be sent to
+the daemon. The unambiguous interface is also achieved by using the
+same parameters as in the HIP drafts to avoid redundant packet parsing
+code. Excluding threads in the daemon has simplified also the actual
+implementation of the interface because there is no need for ordering
+and multiplexing of the messages in the kernel.
+
+HIPL project members had no previous experience on OpenSSL
+programming, but it was quite easy to comprehend with some programming
+examples. Interfaces to the OpenSSL library are easy to use. OpenSSL
+documentation was generally good even though some manual pages of some
+of the functions were missing.
+
+\subsection{Asymmetric Crypto Module}
+
+To move all cryptographic functions to kernel, some cryptographic
+functions had to be ported. The natural choice was to port OpenSSL's
+implementations of Diffie-Hellman, Digital Signature Algorithm and Big
+number library.  This required stripping off most of the outputting
+functions. Also all modularity that was present in the original
+version, was stripped off.  This was done to simplify and flatten the
+code. The less code in kernel the less chances for bugs and the easier
+to debug.
+
+The ported algorithms were added to the \textit{crypto api} interface.
+The algorithms can be installed as modules, although at the moment
+this is not yet supported. The kernel module does not really care
+about which implementation of the DH and/or the DSA algorithms it
+uses.
+
+The licence on the OpenSSL algorithms and on the ported parts (crypto
+api modules) is a BSD variant, but not GPL compatible.  Since the
+kernel module does not directly use the algorithms, but rather through
+the crypto api, it can be released under GPL licence.
+
+\subsection{Resolver}
+
+\subsubsection{Network Socket API}
+\label{sec:api_lessons}
+
+The network API presented \vpageref{sec:api_architecture} was a
+result of several iterations. The specification was originally overly
+complex and it was simplified radically. Especially the transparent
+API was considered a good way to make the adoption of HIP easier by
+supporting legacy applications. Supporting both efficiency and
+security critical applications was also considered important in API
+design as it can be seen from \autoref{tbl:getaddrinfo_combo}.
+
+\subsubsection{Mapping}
+\label{sec:mapping_lessons}
+
+A weakness in the way mappings are communicated to the kernel was
+discovered even before communication of the mappings was even
+implemented. Tagging the mapping messages with the UID of the
+application user was presented as a solution for the problem and it
+was selected from a couple of proposals. The reason for its selection
+was that it was straightforward, efficient and easy to implement.
+
+Sending the mappings to the kernel as a side effect of a resolver call
+is not architecturally clean, but it is currently the only way to do
+it. Connection attempts without resolver calls are problematic because
+HIP can only be used with manual keying in such situations. A solution
+to this problem would be that HITs could be used to query IPv6
+addresses from DNS or some other directory. This remains to be a
+research problem.
+
+\subsection{Practical Lessons}
+\label{sec:practical_lessons}
+
+This project has been a been a good practical introduction to kernel
+programming in general. The networking stack modifications were mainly
+done by the project architect and it would have been better for the
+other members to participate more in networking stack
+modifications. The time constraints in the project led to
+specialization and partition of the jobs to the networking stack, the
+daemon and the resolver. Increasing the amount of pair/group
+programming would have provided more cross knowledge about each
+working area but it would have required more time.
+
+The base exchange has acted as a white box regression test for the
+whole system. Daemon and resolver have some existing unit test code
+but more emphasis should be placed on unit testing of all components
+in the system to catch bugs as early as possible. Unit testing of
+kernel functionality is generally very difficult but some unit testing
+could be embedded in the kernel using the existing daemon calling
+mechanism. This is described in more detail in
+\autoref{sec:networking_stack_future_work}.
+
+Term ``rewrite code'' is not a good substitute for the term ``refactor
+code '' (\cite{refactoring}) because refactoring always includes unit
+testing whereas rewriting necessarily does not. Still, code rewriting
+has been done frequently during this project. Lack of experience and
+hasty planning can be seen as the root causes of rewriting code.
+
+\section{Future Work}
+\label{sec:future_work}
+
+HIPL is still a work in progress and all features described in this
+document are not yet fully implemented. The most important future work
+areas in the implementation is described in this section. A more
+detailed and comprehensive list of future work can be found from the
+project TODO file \cite{hipl}.
+
+\subsection{Kernel Model}
+\label{sec:kernel_model_future_work}
+
+Once all the cryptographic functions are ported to kernel, major
+changes to the kernel model are required. Firstly, the idea is to
+isolate the HIP working thread out of the other contexts and
+events. This is probably done by creating working queues for incoming,
+outgoing and daemon messages.  The worker thread continiously polls
+(by some means) all the queues.  The working thread's running cycle
+completes when it has performed the action that the message
+requires. And then the cycle begins again.
+
+Since there will be more than one message queue, it will be
+interesting to find out, how to prioritize different queues. Is
+incoming packet more important than outgoging ones? Or should the
+daemon messages be always handled first? What happens then if some
+malicious user succeeds in constantly sending daemon messages to the
+HIP module?  We could also consider if there is a way to make sure
+that the HIP module does not consume too much processing time.
+
+What happens in multiprocessor machine? The initial plan is to add one
+worker per processor. All workers would have sepparate working queues.
+This way they are isolated from each other as much as possible.
+Naturally there are common data structures that need to be protected.
+That protection should be quite straight forward, as the worker
+threads are not ran in sensitive contexts. This means that they can
+sleep without causing harm to the system. The same does not if the we
+would process the packets straight as they come from the network stack
+in an interrupt context.
+
+All in all, for future the kernel model provides lots of challenges to
+be researched.
+
+\subsection{Networking Stack}
+\label{sec:networking_stack_future_work}
+
+Implementation work was first focused on the base exchange, but
+currently there is more interest to implement HIP mobility and
+multihoming features according to the \cite{hip-mm} draft. The
+implementation for mobility and multihoming support is at a highly
+experimental level at the current moment, partly because the
+specifications are far from complete yet.
+
+An automated unit testing framework has been created for testing the
+userspace and kernelspace code. Some of the functions related to the
+networking stack can be tested using the unit testing framework, but
+most of the code is so dependent of the standard Linux networking
+stack code that the HIP part of the code is quite difficult to test in
+isolation. Black box testing has been used instead.
+
+IPv4 support has been excluded from the project goals but it would be
+an appealing feature in HIPL. IPv4 support requires its own hooking
+mechanism because IPv4 and IPv6 layer code are separated in the
+kernel.
+
+\subsection{Mobility and Multihoming}
+\label{sec:future_mobility_and_multihoming}
+
+The general problem of selecting ``the best'' destination address for
+a peer is also present in the implementation. Currently, any reachable
+address is selected non-deterministically and used as the destination
+address. This approach might result in degraded performance if an
+address with low Quality of Service characteristics is selected for
+the destination address. However, the QoS service is issues are out of
+the scope.
+
+A forwarding agent (\cite{hiparch}, \cite{hip-mm}) and related packets
+(FAQ, FAA) must also be implemented for gain a full support for the
+mobility and multihoming features.
+
+\subsection{Userspace Daemon}
+\label{sec:daemon_future_work}
+
+Daemon calling mechanism is based on \textit{ioctl} calls. However,
+\textit{ioctl} is considered deprecated in the 2.6 kernel series. When
+the implementation is adopted to the 2.6 kernel series, \textit{sysfs}
+should be used instead of the deprecated \textit{ioctl}. This has been
+noted in advance by using a unified daemon calling mechanism that can
+be later refactored easier.
+
+\subsection{Resolver}
+\label{sec:resolver_future_work}
+
+\subsubsection{Network Socket API}
+\label{sec:api_future_work}
+
+The lack of an socket API specified for HIP is a problem for the
+API. An official draft should be created to force the unification of
+the API of different implementations. \cite{hipapi} serves as a first
+step towards such a draft.
+
+HIPL specification for the API \vpageref{sec:api_architecture} is
+purely tentative and it is expected to changed radically in
+\cite{hipapi}. HIPL API contributes only a solution to the IPv6
+address space and ignores IPv4 issues altogether, which is a major
+drawback. \cite{boeing} describes also a small interface enhancement
+for the IPv4 sockets.
+
+Other resolver functions, such as \textit{gethostbyname}, should also
+be modified to support HIP. Until then, \textit{getaddrinfo} suffices
+for testing purposes.
+
+Transparent mode is controlled by a static compilation flag in
+libinet6. This means that transparent mode is host specific and not
+application specific. There has been some talk about a more dynamic
+method to control transparent mode, such as using function
+\textit{setsockopt}. This is a bit contradictory because the
+transparent mode is targeted for the legacy applications and the
+source code in legacy applications should not be altered.
+
+Transparent mode may break existing applications, such as IP
+integrated applications. This should be investigated and tested with
+existing applications.
+
+\subsubsection{Mapping}
+\label{sec:mapping_future_work}
+
+Mapping of HITs to IPv6 addresses is sent to the kernel as a side
+effect of resolver calls. This is not architecturally the most elegant
+way to do this but it has to do until some better mechanism is
+invented.
+
+The side effect in the resolver does not solve the situation where a
+connection is established directly to a HIT without any resolver
+call. Either DNS should support searching of the HITs or some other
+HIT capable directory should be used. DNS is a bit troublesome because
+it is hierarchical and HITs are not hierarchical even though there has
+been some discussion about hierarchical HITs. This issue remains to be
+a research problem.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+In this document, we described the HIP architecture, which has been
+designed to overcome problems mainly with respect to security,
+mobility, and privacy in the current Internet. HIP adds a new layer,
+the Host Layer, between the networking and transport layer in the IP
+stack, and introduces a Host Identity (HI) to serve as an endpoint
+identifier of the host. Typically, the HI is represented by a public
+key. Each host will have at least one HI assigned to its networking
+kernel or stack. As the HI is used to identify the hosts, the IP
+addresses are used merely for routing purposes.
+
+HIP defines a Host Layer Protocol to be used as a signaling protocol
+between end hosts. The purpose of the protocol is to perform mutual
+end-to-end authentication and to establish IPSec Security
+Associations. HLP consists of seven message types, of which four are
+part of the HIP base exchange.
+
+As part of this document, we presented our IPv6 based implementation
+of HIP for Linux. The Host Layer Protocol is implemented as a kernel
+module, which uses a user space daemon process to perform some
+cryptographic operations. The advantage of our approach is that the
+kernel can remain as intact as possible, with only minor
+modifications. Furthermore, the modifications are backwards compatible
+so that the host is able to do networking without HIP. Our
+implementation is based on Linux kernel version 2.4.20 with USAGI
+patches.
