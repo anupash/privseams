@@ -4,7 +4,7 @@
 #include "debug.h"
 #include "misc.h"
 #include "db.h"
-#include "security.h"
+#include "dh.h"
 #include "hashtable.h"
 #include "builder.h"
 

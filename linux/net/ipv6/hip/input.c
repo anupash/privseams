@@ -23,7 +23,7 @@
 #include "crypto/dsa.h"
 #include "builder.h"
 #include "hip.h"
-#include "security.h"
+#include "dh.h"
 #include "misc.h"
 #include "workqueue.h"
 #include "db.h"

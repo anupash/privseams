@@ -16,7 +16,7 @@
 #include "db.h"
 #include "cookie.h"
 #include "keymat.h"
-#include "security.h"
+#include "dh.h"
 #include "misc.h"
 #include "output.h"
 #include "workqueue.h"

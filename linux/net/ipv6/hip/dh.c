@@ -15,7 +15,7 @@
 #  include <net/ipv6.h>
 #endif /* __KERNEL__ */
 
-#include "security.h"
+#include "dh.h"
 #include "crypto/dh.h"
 #include "hip.h"
 #include "debug.h"

@@ -12,7 +12,7 @@
 #include <net/hip.h>
 #include "update.h"
 #include "hip.h"
-#include "security.h"
+#include "dh.h"
 #include "input.h"
 #include "hadb.h"
 #include "db.h"
