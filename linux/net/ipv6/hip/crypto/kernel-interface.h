@@ -9,12 +9,7 @@
 #include <linux/string.h>
 #include <linux/random.h>
 
-#ifdef SUBARCH
-/* UML in use? */
-#  include <asm-um/arch/mpi-defs.h>
-#else /* !SUBARCH */
-#  include <asm/mpi-defs.h>
-#endif
+#include "mpi-defs.h"
 
 #include "../debug.h"
 #include "mpi-internal.h"
