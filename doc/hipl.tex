@@ -159,7 +159,7 @@ reachability verification using a simple challenge-response scheme.
 % todo: bex 4 + update = 5
 % + cer + notify + close + close_ack = 9
 
-\ac{HIP} provides seven message types, of which four are dedicated to
+\ac{HIP} provides nine message types, of which four are dedicated to
 the base exchange. In \autoref{fig:base_exchange}, the base exchange
 is depicted. In the first message, I1, the initiator I sends its own
 \ac{HIT} and the \ac{HIT} of the responder to the responder. The
@@ -194,29 +194,74 @@ and \ac{HIT}.
 % XX FIX: move BOS here ?
 
 \subsection{Mobility and Multihoming Extentension}
+\label{sec:mm-ext}
 
 % XX FIX Mika:
-% - draw a picture/pictures of the basic update stuff?
-% - fix the cite
+
+% - update the text to cover the new mm mechism and remove old stuff
+% on jo
+
+%   - tell also the reason why there is now one SA pair / interface;
+%     the reason is replay window
+% menee kai impl-sektioon
+
+There are some other message types in the \ac{HIP}. One of them is the
+UPDATE packet which provides the peer system a new \ac{SPI} to use
+when sending outbound data. UPDATE also provides possibly a new
+\ac{DH} key to produce new keying material, and provides any
+intermediate system with the mapping of the old
+\ac{SPI} to the new.
+
+\cite{hip-ietf-mm-00} provides a way for
+supporting mobility and multihoming using UPDATE packets. UPDATE
+packet includes then REA (contains a list of addresses of the host),
+SEQ, and ACK parameters, and possibly DIFFIE\_HELLMAN parameter. If
+the packet contains a NES parameter, rekeying is also performed. The
+existence of these parameters depends on the desired mobility scenario
+described in \cite{hip-ietf-mm-00}.
+
 % - move the ``theory'' stuff from 3.8 to here
 %   - picture
 %   - explanation of the readdressing mechanism
-% - update the text to cover the new mm mechism and remove old stuff
-%   - tell also the reason why there is now one SA pair / interface;
-%     the reason is replay window
 
-There are some other message types in the \ac{HIP}. The UPDATE Packet
-provides the peer system with its new \ac{SPI}, provides possibly a
-new \ac{DH} key to produce new keying material, and provides any
-intermediate system with the mapping of the old \ac{SPI} to the new.
+% jaa tämä tänne vai:
 
-\cite{hip-mm} \textbf{cite must be IETF-HIP-MM} provides a way for
-supporting mobility and multihoming using UPDATE packets. UPDATE
-packets include then REA (contains a list of addresses of the host),
-SEQ, and ACK parameters, and possibly DIFFIE\_HELLMAN parameter. If
-the packet contains a NES parameter, rekeying is performed. The
-existence of these parameters depend on desired mobility scenario
-described in \cite{hip-mm}.
+A typical mobility exchange is quite simple. 
+
+First the HIP module selectes the addresses to be included in a REA
+parameter. The REA parameter and a sequence number in a SEQ parameter
+are added to the UPDATE packet. Then the UPDATE packet is sent to
+all of the peers with which there is an existing HIP security
+association.
+
+When a peer host receives the initial UPDATE packet, it must validate
+all addresses listed in the REA parameter. This is achieved by sending
+a reply UPDATE packet to each of the addresses listed in the initial
+UPDATE packet. This reply UPDATE packet contains ECHO\_REQUEST and SEQ
+parameters.
+
+When a reply UPDATE packet is received, it must be acknowledged with
+an UPDATE packet which contains ECHO\_REPLY and ACK parameter. This is
+needed to verify that there really is a host at the address where the
+UPDATE was sent from. When a host receives these addres verification
+UPDATE packets, it can start using them when sending data to its peer.
+
+If the reply UPDATE packet is not replied, the address corresponding
+to the address tested in the REA parameter of the initial UPDATE
+packet is not reachable and therefore the address is not usable for
+any communication until next readdressing of the peer.
+
+An example mobility exchange is depicted in figure
+\ref{fig:mm-readdress}.
+
+\begin{figure}[hbt]
+ \centering
+ \includegraphics[scale=0.8]{fig/mm-update}
+ \caption{Multihoming and Mobility, readdress with mobile-initiated rekey}
+ \label{fig:mm-readdress}
+\end{figure}
+
+
 
 \subsection{HIPL Implementation}
 
@@ -230,20 +275,18 @@ Linux kernel development (for example
 \cite{kernellinks}, \cite{kmodguide}) that made Linux platform a
 reasonable choice.
 
-% current mainline based on 2.6 ..
-
-When the \ac{HIPL} project was started, the standard Linux kernel did
-not include \ac{IPsec} functionality which is needed for
-\ac{HIP}. There were two projects providing \ac{IPsec} support for the
-Linux kernel: USAGI Linux~\cite{usagi} and
+When the \ac{HIPL} project was started, the standard Linux kernel
+series 2.4 did not include \ac{IPsec} functionality which is needed
+for \ac{HIP}. There were two projects providing \ac{IPsec} support for
+the Linux kernel: USAGI Linux~\cite{usagi} and
 FreeS/WAN~\cite{freeswan}. USAGI Linux was selected because FreeS/WAN
 did not support IPv6 and project members wanted to concentrate on
-developing an IPv6 implementation of \ac{HIP}.
+developing an IPv6 implementation of \ac{HIP}. Now that the
+implementation was moved to kernel series 2.6, the \ac{IPsec} support is
+built-in into the kernel.
 
-% 2.6 has built-in IPsec
-%
 The main goal of the project is to develop a \ac{HIP}
-drafts~\cite{hip,hiparch,hipimpl,hip-mm} compliant implementation of
+drafts~\cite{hip,hiparch,hipimpl,hip-ietf-mm-00} compliant implementation of
 \ac{HIP}. The implementation does not implement IPv4 support for
 \ac{HIP}. Modularity was emphasized in the design because \ac{HIP}
 specifications were prone to change and hardcoding might have later
@@ -251,7 +294,7 @@ rebound on during the project. To achieve modularity, code was kept
 clear and simple. Both unit testing and interoperability testing has
 been used throughout the project.
 
-% IPv4-tuen tila
+% IPv4-tuen tila ?
 % unit testing .. none
 
 This project is a research project and thereby the non-goals of the
@@ -264,7 +307,7 @@ performance are not in the main focus of the project.
 This section describes the architecture of the implementation as it
 is. The requirements for the implementation architecture cannot be
 found from this document because the requirements are already
-specified in the \ac{HIP} drafts~\cite{hiparch,hip,hip-mm}. The most
+specified in the \ac{HIP} drafts~\cite{hiparch,hip,hip-ietf-mm-00}. The most
 important design decisions of the architecture are explained in
 \autoref{sec:catalogue}. The outcomes of the project are further
 evaluated in \autoref{sec:lessons_learned} and
@@ -315,14 +358,16 @@ that information consists of adding/deleting mappings from the
 \ac{HADB}.
 
 \subsection{The Location of HIP in the Kernel}
+\label{sec:loc_hip_kernel}
 
 % XX TODO Kristian: this stuff is already in Networking Stack chapter!?
 
 The \ac{HIP} layer is located conceptually between the transport and
 the network layer in the networking stack. One of our goals has been
-not to affect the transport layer at all. We have achieved this goal.
-% .. transport layer with minimum amount of changes.
-% ``We have achieved this goal.'' .. or not
+not to affect the transport layers at all or with minimal changes if
+it is absolutely necessary. We have achieved this goal quite well,
+only some few line long changes needed to be done to other layer code.
+
 The \ac{HIP} protocol handler is registered with IPv6 on bootup (or
 when the module is loaded into the kernel). This enables us to use the
 kernel's built-in functionality of passing the IPv6 packets with a
@@ -331,48 +376,51 @@ kernel's built-in functionality of passing the IPv6 packets with a
 Since the actual data, that flows after \ac{HIP} connection setup,
 does not use \ac{HIP} protocol headers, we have added hooks to some
 receiving/transmitting functions in the Linux network stack. Currently
-we have XXX hooks in the underlying IPv6 code:
+we have the following hooks in the underlying IPv6 code:
 
 \begin{description}
 
 \item[hip\_handle\_esp] When an incoming \ac{ESP} packet arrives, we need to
   rewrite its IPv6 source and destination addresses with the
-  corresponding \ac{HIT}. To do IPv6 to \ac{HIT} mapping we have to consult our
+  corresponding \acp{HIT}. To do IPv6 to \ac{HIT} mapping we have to consult our
   \ac{HADB}. Correct \ac{HA} is found by using the \ac{SPI}
   value in the \ac{ESP} packet as the search key.
 % .. ? .. This function is called just
 % before we look up the Security Association (SA) from SAD.
 
 \item[hip\_handle\_output] An outgoing \ac{ESP} packet has \acp{HIT} in the
-  IPv6 header's source and destination address fields. In this function we
-  do the \ac{HIT} to IPv6 mapping.  Again, we need to consult our \ac{HA}
-  database. This function is called just before we call IPv6's
-  \verb|dst\_output|.
+  IPv6 header's source and destination address fields. In this
+  function we do the \ac{HIT} to IPv6 mapping.  Again, we need to
+  consult our \ac{HA} database. This function is called just before
+  IPv6 passes the packet to the lower layer functions.
+%  \verb|dst\_output|.
 % dst_output / maybe_reroute, depends..change
 % --> right before the packet is passed to lower layer.
 
 \item[hip\_get\_addr]
-% ?
+This function selects an address from the set of the usable IPv6 addresses of
+the peer. The selected address is used as the destination address of
+the outgoing packet.
 
 \item[hip\_get\_saddr]
-% ?
+Selects the source HIT when an outbound packet is to be sent
+containing only the destination HIT.
 
 \item[hip\_unknown\_spi] This hook is related to an ongoing discussion about
-  what to do if an \ac{ESP} packet with an unknown \ac{SPI} value arrives at
-  the host. If enabled, we assume that the peer has rebooted and send R1.
-% proposed: send notify
-% current impl: do nothing
+  what to do if an \ac{ESP} packet with an unknown \ac{SPI} value
+  arrives at the host. It has been proposed that a NOTIFY packet is
+  sent. Current implementation does not do anything.
+% If enabled, we assume that the peer has rebooted and send R1.
 
 \item[hip\_trigger\_bex] A hook to trigger the base exchange (connection
       setup).
-
 % to be removed and moved to xfrm code (register xfrm key manager and set
 % callback function for .acquire)
 
 \item[hip\_handle\_ipv6\_dad\_completed] Used when a new IPv6 address
-is added. When the kernel has performed the \ac{DAD}, we call this
-hook and notify active \ac{HIP} peers about the new address. Events
-caused by link local addresses are ignored.
+is added. When the kernel has performed the \ac{DAD} successfully, we
+call this hook and notify active \ac{HIP} peers about the new
+address. Events caused by link local addresses are ignored.
 \end{description}
 
 \subsection{IPsec Usage}
@@ -396,11 +444,11 @@ available, as is the case when we first connect to the peer, the
 
 The caller process will be put to sleep until the \ac{SA} is valid, or
 has timeouted.  Default timeout period is 30 seconds\footnote{This is
-% timeout .. in ACQ state ?
 defined by the Linux 2.6 IPsec stack.}. The process will sleep even if
 the socket is a non-blocking one.
 \footnote{Perhaps we should do something to alleviate this minor
 problem?}
+% timeout .. in ACQ state ?
 
 If the \ac{HIP} base exchange procedure is successful, we have 2 valid
 SAs: one outgoing and one incoming. All the sleepers waiting for the
@@ -411,50 +459,60 @@ longer sleep, if the socket has been set to non-blocking.
 
 \subsection{Internal data structures}
 
-\ac{HIPL} contains couple of global data structures. In this section
+\ac{HIPL} contains a couple of global data structures. In this section
 we describe their intended use and locking policies.
 
 \subsubsection{Host Association Data Base}
+\label{sec:hadb}
 
 The \ac{HADB} maintains a collection of Host Associations (HA). Each
-\ac{HA} holds necessary information to establish and maintain an
-\ac{HIP} association between two peer hosts. \acp{HA} consist of both
-parties' \acp{HIT}, \ac{SPI} numbers required for \ac{ESP} traffic,
-security keys, keying material to derive new keys and some state
-information.  The \acp{HA} are distinguished by peer's \ac{HIT} and
-own \ac{SPI} number (ie. the \ac{SPI} number that appears in \ac{ESP}
-encapsulated packets destined to us).  To be able to access the
-\acp{HIT} efficiently, they are stored in two different hash tables:
-one using peer's \ac{HIT}, and one own \ac{SPI} number as hash table
-key.
+\ac{HA} holds necessary information to establish and maintain a
+\ac{HIP} association between the two hosts. \acp{HA} consist of both
+parties' \acp{HIT}, \ac{SPI} values required for \ac{ESP} traffic,
+IPv6 addresses, security keys, keying material to derive new keys and
+some state information.  The \acp{HA} are distinguished by peer's
+\ac{HIT} and inbound \ac{SPI} values (ie. the \ac{SPI} value that appears
+in \ac{ESP} encapsulated packets destined to us).  To be able to
+access the \acp{HIT} efficiently, they are stored in two different
+hash tables: one using peer's \ac{HIT} as the hash key, and one
+SPI-HIT table which maps \ac{SPI} values to \acp{HIT}. The SPI-HIT
+table is needed for multiple \ac{IPsec} \ac{SA} support.
 
 The former is required, when either we are sending some transport
 data, or due to \ac{HIP} control messages (base exchange, readdressing
 etc). The latter is used only when an incoming \ac{ESP} encapsulated
 arrives. We need to map it to a certain \ac{HIP} connection. At that
 time, we are not aware of the \acp{HIT} involved, but only the
-\ac{SPI} number.
+\ac{SPI} value. When \ac{ESP} is received, the received looks up the
+corresponding \ac{HIT}, and after that the host can get the correct
+\ac{HA} by using the retrieved \ac{HIT} as the hash key.
 
-% OLD, SPIOK not used
+% WAAAAAAAAAAAAAS ? The \ac{HA} consists of XX.
 
-The \ac{HA} consists of XX. The \ac{HA} has internal state. This state
-varies between \verb|HIP_HASTATE_VALID|, \verb|HIP_HASTATE_SPIOK| and
-\verb|HIP_HASTATE_HITOK|, meaning that the HA is inserted in both hash
-tables, inserted in the SPI hash table and inserted in the HIT hash
-table, respectively.
+%The \ac{HA} has internal state. This state varies between
+%\verb|HIP_HASTATE_VALID|, \verb|HIP_HASTATE_SPIOK| and
+%\verb|HIP_HASTATE_HITOK|, meaning that the HA is inserted in both hash
+%tables, inserted in the SPI hash table and inserted in the HIT hash
+%table, respectively.
 
-Although there are two hash tables, there are only one set of
-\acp{HA}. This entity, that holds \acp{HA} in one or two hash tables,
-is called the \ac{HADB}.
+The \ac{HA} has internal state. This state varies between
+\verb|HIP_HASTATE_INVALID| and \verb|HIP_HASTATE_HITOK|, meaning that
+\ac{HA} is not fully usable yet or it is inserted in the HIT hash table,
+respectively.
+
+% oh * .. multiple SA support breaks this
+%Although there are two hash tables, there are only one set of
+%\acp{HA}. This entity, that holds \acp{HA} in one or two hash tables,
+%is called the \ac{HADB}.
+%changed to:
+The entity that holds \acp{HA} in hash tables, is called the \ac{HADB}.
 
 There is a reference counter in every \ac{HA}. This counter must be
 incremented using \verb|hip_hold_ha()| macro whenever we receive a
 reference to the \ac{HA}. Obviously the reverse holds for decrementing
 the counter using \verb|hip_put_ha()|. When the reference counter
-reaches zero, the memory allocates for the \ac{HA} is automatically
+reaches zero, the resources allocated for the \ac{HA} are automatically
 deleted.
-
-% SPI-HIT hashtable, needed for multiple SA support
 
 \subsubsection{HADB Locking}
 
@@ -630,15 +688,29 @@ from kernel database and they are copied over source and destination
 IPv6 addresses. Finally control of flow returns to normal \ac{ESP}
 handler.
 
+Additional functions not directly related to sending or receiving
+packets were also needed for effective \ac{HIP}. Address events are
+these kind of things which needed to be modified. A host wants to know
+if it has a new IPv6 address or an IPv6 address is deleted. As
+described in \ref{sec:loc_hip_kernel},
+function \verb|hip_handle_ipv6_dad_completed| handles
+\ac{DAD} events and function \verb|hip_handle_inet6_addr_del| handles the
+events caused by single address deletion.
+
 Input and output side of the hooks are visualized in
 \autoref{fig:input_hooks} and \autoref{fig:output_hooks}.
 \autoref{tbl:hook_descriptions} explains each numbered point in the
 figures. An interface name in code and an explanation for each point
-is given in the figure.
+is given in the figure. 
 
 % XX FIX MIKA:
 % - add the missing hooks (DAD, what else did you add? esp?) to the figures
 %
+% hip_handle_ipv6_dad_completed
+% hip_handle_inet6_addr_del
+% .. mutta näitä ei voi oikein laittaa kuvaan, koska ne ovat ulkoisia tapahtumia
+% ->selostettu yläpuolella
+
 \begin{figure}
    \begin{minipage}[b]{0.4\textwidth}
       \centering
@@ -659,6 +731,8 @@ is given in the figure.
 % XX FIX MIKA:
 % - add description of the missing hooks (DAD, what else did you add? esp?)
 %
+% ks. ed.
+
 \setlongtables
 \begin{longtable}{|c|p{0.2\textwidth}|p{0.6\textwidth}|}
 \\\hline
@@ -681,7 +755,7 @@ c & \verb|hip_unknown_spi| &
 
 A packet from an unknown SPI is received and an R1 packet must be sent
 as a response.\\
-% must..
+% XX: must..currently not: sec:loc_hip_kernel
 
 d & \verb|hip_inbound| &
 
@@ -728,8 +802,6 @@ HIT.\\
 \label{sec:mobility_and_multihoming_architecture}
 
 % XX FIX Mika
-% - move the readdressing ``theory'' to section 2 (mobility and multihoming
-%   extensions)
 % - update the text to cover the new mm mechism and remove old stuff
 % - tell more about the CURRENT implementation
 %   - changes in the hadb
@@ -738,56 +810,47 @@ HIT.\\
 %   - what else was changed?
 
 The implementation has some level of support for the mobility and
-multihoming features defined in the draft \cite{hip-mm}. Scenarios
-``Mobility with single SA pair'' and ``Host multihoming'' were the
-main targets of the current implementation.
+multihoming features defined in the draft
+\cite{hip-ietf-mm-00}. Scenarios ``Mobility with single SA pair'' and
+``Host multihoming'' were the main targets of the current
+implementation. The rest of the scenarios are not planned to be
+implemented in the nar future.
 
-Old style support for REA, AC, and ACR packets is removed. Current
-implementation uses UPDATE packets for mobility and multihoming.
+%Old style support for REA, AC, and ACR packets is removed. Current
+%implementation uses UPDATE packets for mobility and multihoming.
 
-%HIP: REA, AC and ACR packets can be sent and received. The mobility
-%and multihoming part of the code is at a very experimental level at
-%the current moment.
+The changes needed compared to the previous version can be consireded
+major. Most notable change had to be done to the \ac{HADB} (see
+\ref{sec:hadb}). The previous version was designed for
+\acp{HA} which know only of one simultaneous \ac{SPI} at the same
+time. However, the mobility draft \cite{hip-ietf-mm-00} shows how to
+use many simultaneous \ac{SPI} values. It also describes how IPv6
+addresses can be bound to the \acp{SPI}. The SPI-HIT hash table (see
+\ref{sec:hadb}) was needed because if the peer has many \ac{SPI}
+values, the hashing values will be different and we would get
+incorrect results for \ac{HA} lookup in the case if only single hash
+table were used.
 
+The current implementation implements the suggestion ``one \ac{IPsec}
+\ac{SA} per one network interface'' proposed in
+\cite{hip-ietf-mm-00}. If only \ac{SA} was used, the \ac{ESP} replay
+window might drop incoming packets if packets arrive at many different
+paths having different characteristics. Having many simultaneous
+\acp{SA}, the other \acp{SA} do not affect the replay window of any
+other \ac{SA}.
 
-\autoref{fig:rea} depicts \ac{HIP} mobility and multihoming. The
-\ac{HIP} network module is notified when an IPv6 address is added to
-or removed from some of its network interface(s). Another type of
+%\autoref{fig:rea} depicts \ac{HIP} mobility and multihoming.
+The \ac{HIP} network module is notified when an IPv6 address is added
+to or removed from some of its network interface(s). Another type of
 events are network device events. The \ac{HIP} module is notified when
 a network device goes down or comes up. Actually, the event when
 network comes up is ignored, because at that time the interface
-usually has no usable addresses, so the modle waits for IPv6 address
+usually has no usable addresses, so the module waits for IPv6 address
 addition events.
 
 When a change occurs in an interface, the HIP module selects the
-addresses within the interface. The selected addresses are then
-included in a REA parameter. The REA parameter is then sent in a
-UPDATE packet to all of the peers of the host that have an existing
-HIP security association with the host.
-
-\begin{figure}[hbt]
- \centering
- \includegraphics[scale=0.5]{fig/rea}
- \caption{Multihoming and Mobility}
- \label{fig:rea}
-\end{figure}
-
-When a peer host receives the initial UPDATE packet, it must validate
-all addresses listed in the REA parameter. This is achieved by sending
-a reply UPDATE packet to each of the addresses listed in the initial
-UPDATE packet. This reply UPDATE packet contains ECHO\_REQUEST and SEQ
-parameters.
-
-When a reply UPDATE packet is received, it must be acknowledged with
-an UPDATE packet which contains ECHO\_REPLY and ACK parameter. This is
-needed to verify that there really is a host at the address where the
-UPDATE was sent from. When a host receives these addres verification
-UPDATE packets, it can start using them when sending data to its peer.
-
-If the reply UPDATE packet is not replied, the address corresponding
-to the address tested in the REA parameter of the initial UPDATE
-packet is not reachable and therefore the address is not usable for
-any communication until next readdressing of the peer.
+addresses within the interface and proceeds as described in
+\autoref{sec:mm-ext}.
 
 \subsection{Asymmetric Cryptography Support in the Linux Kernel}
 
@@ -1438,12 +1501,13 @@ be researched.
 \subsection{Networking Stack}
 \label{sec:networking_stack_future_work}
 
+% vanha ?
 Implementation work was first focused on the base exchange, but
 currently there is more interest to implement \ac{HIP} mobility and
-multihoming features according to the \cite{hip-mm} draft. The
-implementation for mobility and multihoming support is at a highly
-experimental level at the current moment, partly because the
-specifications are far from complete yet.
+multihoming features according to the \cite{hip-ietf-mm-00} draft.
+%The implementation for mobility and multihoming support is at a highly
+%experimental level at the current moment, partly because the
+%specifications are far from complete yet.
 
 An automated unit testing framework has been created for testing the
 userspace and kernelspace code. Some of the functions related to the
@@ -1452,6 +1516,7 @@ most of the code is so dependent of the standard Linux networking
 stack code that the \ac{HIP} part of the code is quite difficult to
 test in isolation. Black box testing has been used instead.
 
+% uusi ?
 IPv4 support has been excluded from the project goals but it would be
 an appealing feature in \ac{HIPL}. IPv4 support requires its own
 hooking mechanism because IPv4 and IPv6 layer code are separated in
