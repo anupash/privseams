@@ -391,6 +391,7 @@ void free_endpointinfo(struct endpointinfo *res)
  * @servname: the service port name (e.g. "http" or "12345")
  * @hints:    selects which type of endpoints is going to be resolved
  * @res:      the result of the query
+ * @algo:     the algorithm of the host identifier (hip/hosts file)
  *
  * This function is for libinet6 internal purposes only. This function does
  * not resolve private identities, only public identities. The locators of
@@ -410,10 +411,12 @@ void free_endpointinfo(struct endpointinfo *res)
 int get_localhost_endpointinfo(const char *basename,
 			       const char *servname,
 			       const struct endpointinfo *hints,
-			       struct endpointinfo **res)
+			       struct endpointinfo **res,
+			       int algo)
 {
   int err = 0;
   DSA *dsa = NULL;
+  RSA *rsa = NULL;
   struct endpoint_hip *endpoint_hip = NULL;
   char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
   struct if_nameindex *ifaces = NULL;
@@ -433,14 +436,20 @@ int get_localhost_endpointinfo(const char *basename,
   }
 
   /* Only private keys are handled. */
-  err = load_dsa_private_key(basename, &dsa);
+  if(algo == HIP_HI_RSA)
+    err = load_rsa_private_key(basename, &rsa);
+  else
+    err = load_dsa_private_key(basename, &dsa);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Loading of private key %s failed\n", basename);
     goto out_err;
   }
 
-  err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ei_flags, hostname);
+  if(algo == HIP_HI_RSA)
+    err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ei_flags, hostname);
+  else
+    err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ei_flags, hostname);
   if (err) {
     HIP_ERROR("Failed to allocate and build endpoint.\n");
     err = EEI_SYSTEM;
@@ -513,7 +522,10 @@ int get_localhost_endpointinfo(const char *basename,
 
  out_err:
 
-  if (dsa)
+  if (rsa)
+    RSA_free(rsa);
+
+ if (dsa)
     DSA_free(dsa);
 
   if (endpoint_hip)
@@ -1114,6 +1126,10 @@ int getendpointinfo(const char *nodename, const char *servname,
 {
   int err = 0;
   struct endpointinfo modified_hints;
+  struct endpointinfo *first, *current, *new;
+  char *dsa_filenamebase = NULL, *rsa_filenamebase = NULL, 
+    *dsa_filenamebase_pub = NULL, *rsa_filenamebase_pub = NULL;
+  int rsa_filenamebase_len, dsa_filenamebase_len, ret;
 
   HIP_DEBUG("\n");
 
@@ -1124,6 +1140,69 @@ int getendpointinfo(const char *nodename, const char *servname,
     goto err_out;
   }
 
+  /* TODO: default filename stuff is used both here and in hipconf, 
+   maybe an utility function for this? */
+  dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+    strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
+  rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+    strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
+  
+  dsa_filenamebase = malloc(dsa_filenamebase_len);
+  if (!dsa_filenamebase) {
+    HIP_ERROR("Could allocate DSA file name\n");
+    err = -ENOMEM;
+    goto err_out;
+  }
+  rsa_filenamebase = malloc(rsa_filenamebase_len);
+  if (!rsa_filenamebase) {
+    HIP_ERROR("Could allocate RSA file name\n");
+    err = -ENOMEM;
+      goto err_out;
+  }
+  dsa_filenamebase_pub = malloc(dsa_filenamebase_len+4);
+  if (!dsa_filenamebase) {
+    HIP_ERROR("Could allocate DSA (pub) file name\n");
+    err = -ENOMEM;
+    goto err_out;
+  }
+  rsa_filenamebase_pub = malloc(rsa_filenamebase_len+4);
+  if (!rsa_filenamebase) {
+    HIP_ERROR("Could allocate RSA (pub) file name\n");
+    err = -ENOMEM;
+    goto err_out;
+  }
+
+  ret = snprintf(dsa_filenamebase, dsa_filenamebase_len, "%s/%s",
+		 DEFAULT_CONFIG_DIR,
+		 DEFAULT_HOST_DSA_KEY_FILE_BASE);
+  if (ret <= 0) {
+    err = -EINVAL;
+    goto err_out;
+  }
+  ret = snprintf(rsa_filenamebase, rsa_filenamebase_len, "%s/%s",
+		 DEFAULT_CONFIG_DIR,
+		 DEFAULT_HOST_RSA_KEY_FILE_BASE);
+  if (ret <= 0) {
+    err = -EINVAL;
+    goto err_out;
+  }
+  ret = snprintf(dsa_filenamebase_pub, dsa_filenamebase_len+4, "%s/%s%s",
+		 DEFAULT_CONFIG_DIR,
+		 DEFAULT_HOST_DSA_KEY_FILE_BASE,
+		 DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
+  if (ret <= 0) {
+    err = -EINVAL;
+    goto err_out;
+  }
+  ret = snprintf(rsa_filenamebase_pub, rsa_filenamebase_len+4, "%s/%s%s",
+		 DEFAULT_CONFIG_DIR,
+		 DEFAULT_HOST_RSA_KEY_FILE_BASE,
+		 DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
+  if (ret <= 0) {
+    err = -EINVAL;
+    goto err_out;
+  }
+  
   if (hints) {
     memcpy(&modified_hints, hints, sizeof(struct endpointinfo));
   } else {
@@ -1148,8 +1227,41 @@ int getendpointinfo(const char *nodename, const char *servname,
   }
 
   if (nodename == NULL) {
-    char *basename = DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_DSA_KEY_FILE_BASE;
-    err = get_localhost_endpointinfo(basename, servname, &modified_hints, res);
+    first = (struct endpointinfo *)NULL;
+    current = (struct endpointinfo *)NULL;
+    new = (struct endpointinfo *)NULL;
+    
+    *res = calloc(1, sizeof(struct endpointinfo));
+    if (!*res) {
+      err = EEI_MEMORY;
+      goto err_out;
+    }
+   
+    /* TODO: check the algorithm automatically somehow - by reading 
+       the first line in PEM keys and using strcmp e.g.*/
+    
+    err = get_localhost_endpointinfo(rsa_filenamebase_pub, servname, 
+				     &modified_hints, &first, HIP_HI_RSA);
+
+    err = get_localhost_endpointinfo(dsa_filenamebase_pub, servname, 
+				     &modified_hints, &new, HIP_HI_DSA);
+    
+    first->ei_next = new;
+    current = new;
+
+    modified_hints.ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+
+    err = get_localhost_endpointinfo(rsa_filenamebase, servname, 
+				     &modified_hints, &new, HIP_HI_RSA);
+    current->ei_next = new;
+    current = new;
+
+    err = get_localhost_endpointinfo(dsa_filenamebase, servname, 
+				     &modified_hints, &new, HIP_HI_DSA);
+
+    current->ei_next = new;
+    current = new;    
+    *res = first;
   } else {
     err = get_peer_endpointinfo(_PATH_HIP_HOSTS, nodename, servname,
 				&modified_hints, res);

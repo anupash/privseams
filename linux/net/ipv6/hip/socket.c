@@ -1326,6 +1326,10 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+
+	lhi.anonymous =
+	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
+		1 : 0;
 	
 	if (hip_host_id_contains_private_key(host_id)) {
 		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
@@ -1367,10 +1371,6 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	/* The eid port information will be filled by the resolver. It is not
 	   really meaningful in the eid db. */
 	eid.eid_port = htons(0);
-	
-	lhi.anonymous =
-	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
-		1 : 0;
 	
 	/* XX TODO: check UID/GID permissions before adding ? */
 	err = hip_db_set_my_eid(&eid, &lhi, &owner_info);

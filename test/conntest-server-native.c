@@ -45,7 +45,7 @@ static void sig_handler(int signo) {
 }
 
 int main(int argc,char *argv[]) {
-  struct endpointinfo hints, *res = NULL;
+  struct endpointinfo hints, *res = NULL, *test = NULL;
   struct sockaddr_eid peer_eid;
   char *port_name, mylovemostdata[IP_MAXPACKET];
   int recvnum, sendnum, serversock = 0, sockfd = 0, err = 0, on = 1;
@@ -101,6 +101,20 @@ int main(int argc,char *argv[]) {
     err = 1;
     goto out;
   }
+
+  /*debug*/
+#if 0
+  if (res->ei_next) {
+    test = res->ei_next;
+    printf("ei_flags[res]: %d \n",res->ei_flags);
+    printf("ei_flags[next]: %d \n",test->ei_flags);
+    test = test->ei_next;
+    printf("ei_flags[next2]: %d \n",test->ei_flags);
+    test = test->ei_next;
+    printf("ei_flags[next3]: %d \n",test->ei_flags);
+
+  }
+#endif
 
   if (socktype == SOCK_STREAM && listen(serversock, 1) < 0) {
       HIP_PERROR("listen");
