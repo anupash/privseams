@@ -91,18 +91,16 @@ LIST_HEAD(hip_sent_rea_info_pkts);
 LIST_HEAD(hip_sent_ac_info_pkts);
 
 
-/*
-	void	(*err_handler)(struct sk_buff *skb,
-			       struct inet6_skb_parm *opt,
-			       int type, int code, int offset,
-			       __u32 info);
-*/
+static void hip_err_handler(struct sk_buff *skb,
+			    struct inet6_skb_parm *opt,
+			    int type, int code, int offset,
+			    __u32 info);
+
 static struct inet6_protocol hip_protocol = {
 	.handler     = hip_inbound,
-//	.err_handler = hip_errhand,
+	.err_handler = hip_err_handler,
 	.flags       = INET6_PROTO_NOPOLICY,
 };
-
 
 /**
  * hip_get_dh_size - determine the size for required to store DH shared secret
@@ -1402,6 +1400,13 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 	return NOTIFY_DONE;
 }
 
+
+static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt, 
+			    int type, int code, int offset, __u32 info)
+{
+	HIP_DEBUG("type=%d code=%d offset=%d, info=%u\n", type, code, offset, info);
+}
+
 /**
  * hip_handle_dst_unreachable - ICMPv6 Destination Unreachable message handler
  * @skb: sk_buff containing the received ICMPv6 packet
@@ -1422,8 +1427,7 @@ void hip_handle_dst_unreachable(struct sk_buff *skb)
 #endif
 
 	/* todo: option to allow/disallow icmpv6 handling */
-
-	if (!pskb_may_pull(skb, 4+sizeof(struct ipv6hdr))) {
+	if (!pskb_may_pull(skb, 4+sizeof(struct ipv6hdr))) { /* already checked in icmpv6_rcv/icmpv6_notify ? */
 		/* RFC 2463 sec 3.1 */
 		HIP_DEBUG("Too short an ICMP packet\n");
 		return;
