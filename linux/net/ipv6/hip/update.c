@@ -1240,9 +1240,6 @@ int hip_receive_update(struct sk_buff *skb)
 
 /* hip_send_update - send initial UPDATE packet to the peer */
 
-/* if addr_list is non-NULL (netdev initiated sending of UPDATE), perform
-   readdress without rekeying as in mm02-pre3 */
-/* REA: addrlist items belong to the spi */
 int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item *addr_list,
 		    int addr_count, int ifindex)
 {
@@ -1255,6 +1252,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	struct hip_host_id *host_id_private;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_crypto_key null_key;
+	int make_new_sa = 0;
 
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d\n",
 		  addr_list, addr_count, ifindex);
@@ -1281,26 +1279,35 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	hip_print_hit("sending UPDATE to", &entry->hit_peer);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
 
-	/* mm stuff */
-	if (addr_list && addr_count > 0) {
+	/* mm stuff, per-ifindex SA */
+	if (addr_list) {
 		spi = hip_ifindex2spi_get_spi(entry, ifindex);
 		HIP_DEBUG("mapped spi=0x%x\n", spi);
 		if (spi) {
 			/* NES not needed */
 			HIP_DEBUG("5.1 Mobility with single SA pair, readdress with no rekeying\n");
+			HIP_DEBUG("Reusing old SA\n");
 			/* 5.1 Mobility with single SA pair */
 			err = hip_build_param_rea_info_mm02(update_packet, spi, addr_list, addr_count);
 			if (err) {
 				HIP_ERROR("Building of REA param failed\n");
 				goto out_err;
 			}
+			HIP_DEBUG("Plain REA+SEQ UPDATE\n");
 			goto plain_rea_out;
+		} else {
+			HIP_DEBUG("5.2 Host multihoming\n");
+			make_new_sa = 1;
+			HIP_DEBUG("TODO\n");
 		}
 	}
 
 	/* we can not know yet from where we should start to draw keys
 	   from the keymat, so we just zero a key and fill in the keys later */
 	memset(&null_key.key, 0, HIP_MAX_KEY_LEN);
+
+	/* TODO: CREATE A NEW SA ONLY IF IFINDEX2SPI MAP RETURNS NON-ZERO ? */
+
 	/* get a New SPI, prepare a new incoming IPsec SA */
 
 	/* TODO: Just call xfrm_alloc_spi instead */
@@ -1316,20 +1323,15 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	entry->new_spi_in = new_spi_in;
 	HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
 
-	if (ifindex) /* todo: move to rekeying_finish */
+	if (make_new_sa) /* todo: move this to rekeying_finish */
 		hip_ifindex2spi_map_add(entry, new_spi_in, ifindex);
 
-	if (addr_list && addr_count > 0) {
-		/* tell the peer about additional interface */
-		/* mm02-pre3 5.2 Host multihoming */
-		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, addr_list, addr_count);
-		if (err) {
-			HIP_ERROR("Building of REA param failed\n");
-			goto out_err;
-		}
-	}
+ plain_rea_out:
+	/* jumping here from above will probabaly break
+	 * entry->stored_received_nes stuff .. */
 
-	_HIP_ERROR("remove hip_get_new_update_id, Update ID is per HA\n");
+	HIP_ERROR("is plain_rea_out here ok ?\n");
+
 	entry->update_id_out++;
 	update_id_out = entry->update_id_out;
 	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
@@ -1343,9 +1345,16 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	entry->update_state_flags = 0;
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
-	if (addr_list && addr_count > 0) /* mm02-pre3 5.2 Host multihoming */
-		err = hip_build_param_nes(update_packet, entry->current_keymat_index,
-					  new_spi_in, new_spi_in); 
+
+	if (addr_list) {
+		/* mm02-pre3 5.2 Host multihoming */
+		if (make_new_sa) {
+			HIP_ERROR("CHECK: MAKE NEW SA\n");
+			err = hip_build_param_nes(update_packet, entry->current_keymat_index,
+						  new_spi_in, new_spi_in); 
+		} else
+			HIP_ERROR("CHECK: DO NOT MAKE NEW SA\n");
+	}
 	else /* plain UPDATE */
 		err = hip_build_param_nes(update_packet, entry->current_keymat_index,
 					  entry->spi_in, new_spi_in); 
@@ -1395,7 +1404,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");
 
- plain_rea_out:
+// plain_rea_out:
 
 	/* send UPDATE */
         HIP_DEBUG("Sending UPDATE packet\n");

@@ -1372,7 +1372,7 @@ static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 		HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
 	} else {
 		/* send UPDATEs if there are addresses to be informed to the peers */
-		if (idev_addr_count > 0)
+		if (idev_addr_count > 0 && addr_list)
 			hip_send_update_all(addr_list, idev_addr_count, ifindex);
 		else
 			HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");

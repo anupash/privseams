@@ -814,16 +814,16 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 }
 
 
+/* inbound IPsec SA mappings to devices, each netdev has its own SA */
+
 /* assumes locked HA */
 void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
 {
 	struct hip_ifindex2spi_map *m;
 	struct list_head *pos, *tmp;
-	int i = 1;
 	char str[INET6_ADDRSTRLEN];
 
 	HIP_DEBUG("spi=0x%x ifindex=%d\n", spi, ifindex);
-
 
 	m = kmalloc(sizeof(struct hip_ifindex2spi_map), GFP_ATOMIC);
 	if (!m) {
@@ -833,15 +833,14 @@ void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
 
 	m->spi = spi;
 	m->ifindex = ifindex;
+	/* todo: check for duplicates */
 	list_add(&m->list, &entry->ifindex2spi_map);
 
 	hip_in6_ntop(&entry->hit_peer, str);
 	HIP_DEBUG("Current ifindex->SPI mappings for %s:\n", str);
 	list_for_each_safe(pos, tmp, &entry->ifindex2spi_map) {
 		m = list_entry(pos, struct hip_ifindex2spi_map, list);
-		//HIP_DEBUG("%d: HIT %s SPI=0x%x ifindex=%d\n", i, str, m->spi, m->ifindex);
-		HIP_DEBUG("%d: SPI=0x%x ifindex=%d\n", i, m->spi, m->ifindex);
-		i++;
+		HIP_DEBUG("SPI=0x%x ifindex=%d\n", m->spi, m->ifindex);
 	}
 	HIP_DEBUG("End of mapping list\n");
 
