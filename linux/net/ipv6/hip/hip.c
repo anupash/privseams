@@ -1291,6 +1291,11 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 	in6_ifa_hold(ifa);
 	hip_print_hit("ifa address", &ifa->addr);
 
+	if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL) {
+		HIP_DEBUG("skipping event on link local address\n");
+		goto out_ifa_put;
+	}
+
 	idev = ifa->idev;
         if (!idev) {
                 HIP_DEBUG("NULL idev\n");
@@ -1308,18 +1313,15 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 					event_dev->ifindex, NETDEV_UP);
   	if (!hwo) {
 		HIP_ERROR("Unable to handle address event\n");
-		goto out;
-  	}
-	hip_insert_work_order(hwo);
+  	} else
+		hip_insert_work_order(hwo);
 
+	dev_put(event_dev);
  out_idev_put:
 	in6_dev_put(idev);
  out_ifa_put:
 	in6_ifa_put(ifa);
  out:
-	if (event_dev)
-		dev_put(event_dev);
-
 	return;
 }
 

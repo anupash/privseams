@@ -1491,7 +1491,7 @@ static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
  * @data: ignored
  *
  * This debug function lists every SPI and their IPv6 addresses and their properties
- * for every peer. The list can be dumped from from file
+ * for every peer. The list can be dumped from file
  * /proc/net/hip/sdb_peer_spi_list
  *
  * Returns: number of bytes written to @page.
