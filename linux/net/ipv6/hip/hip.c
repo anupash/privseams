@@ -1921,20 +1921,9 @@ void hip_uninit_netdev_notifier(void)
         unregister_netdevice_notifier(&hip_netdev_notifier);
 }
 
-static int hip_do_work(void)
+static int hip_do_work(struct hip_work_order *job)
 {
 	int res = 0;
-	struct hip_work_order *job;
-
-	job = hip_get_work_order();
-	if (!job) {
-		HIP_DEBUG("Did not get anything from the work queue\n");
-		res = KHIPD_ERROR;
-		goto out_err;
-	}
-
-	HIP_DEBUG("New job: type=%d subtype=%d\n", job->type, job->subtype);
-
 	switch (job->type) {
 	case HIP_WO_TYPE_INCOMING:
 		switch(job->subtype) {
@@ -2066,6 +2055,8 @@ static int hip_worker(void *t)
 
 	/* work loop */
 	while(1) {
+          struct hip_work_order *job;
+
 		if (signal_pending(current)) {
 			HIP_INFO("HIP thread pid %d got SIGKILL, cleaning up\n", pid);
 			/* zero thread pid so we do not kill other
@@ -2083,7 +2074,14 @@ static int hip_worker(void *t)
 			refrigerator(PF_FREEZE);
 		}
 
-		result = hip_do_work();
+          job = hip_get_work_order();
+          if (!job) {
+               HIP_DEBUG("Did not get anything from the work queue\n");
+               result = KHIPD_ERROR;
+          } else {         
+               HIP_DEBUG("New job: type=%d subtype=%d\n", job->type, job->subtype);
+               result = hip_do_work(job);
+          }
 		if (result < 0) {
 			if (result == KHIPD_ERROR)
 				HIP_INFO("Recoverable error occured (%d)\n", result);

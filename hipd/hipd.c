@@ -67,10 +67,14 @@ int main(int argc, char *argv[]) {
 
      /* Open the netlink socket for kernel communication */
      if (hip_netlink_open() < 0) {
-          //log_(ERR, "Netlink socket error: %s\n", strerror(errno));
+          HIP_ERROR("Netlink socket error: %s\n", strerror(errno));
           //unlink(HIP_LOCK_FILENAME);
           return(1);
      }
+
+     /* Workqueue stores a reference to the socket handle to provide a
+      * simple interface its callers */
+     hip_init_workqueue(s_net);
 
      highest_descriptor = s_net;
 
@@ -78,30 +82,35 @@ int main(int argc, char *argv[]) {
      for (;;) { 
           /* prepare file descriptor sets */
           FD_ZERO(&read_fdset);
-          //FD_SET(s_net, &read_fdset);
+          FD_SET(s_net, &read_fdset);
           timeout.tv_sec = 1;
           timeout.tv_usec = 0;
 
           /* wait for socket activity */
           if ((err = select((highest_descriptor + 1), &read_fdset, 
                             NULL, NULL, &timeout)) < 0) {
-               //log_(NORMT, "select() error: %s.\n", strerror(errno));
+		  HIP_INFO("select() error: %s.\n", strerror(errno));
+
           } else if (err == 0) { 
-               /* idle cycle - select() timeout */               
-               
+		  /* idle cycle - select() timeout */               
+		  
           } else if (FD_ISSET(s_net, &read_fdset)) {
-               /* Something on Netlink socket */
-               err = read(s_net, buff, sizeof(buff));
+		  /* Something on Netlink socket */
+		  hip_get_work_order();
+		  
+
+		  /*err = read(s_net, buff, sizeof(buff));
                if (err < 0) {
-                    //   log_(NORMT, "Netlink read() error - %d %s\n", 
-                    //   errno, strerror(errno));
-               }
-               
-               // FIXME: process the message kernel HIPL sent
-               
+	       HIP_INFO("Netlink read() error - %d %s\n", 
+	       errno, strerror(errno));
+	       }*/
+		  
+		  // FIXME: process the message kernel HIPL sent
+		  // transform the netlink msg to a work order
+		  
                // hip_handle_netlink(buff, err);
           } else {
-               //log_(NORMT, "unknown socket activity.");
+              HIP_INFO("unknown socket activity.");
           } /* select */
      }
 

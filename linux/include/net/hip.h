@@ -876,16 +876,27 @@ struct hip_cookie_entry {
 	struct in6_addr initiator;
 	struct in6_addr responder;
 };
+#endif /* __KERNEL__ */
 
 struct hip_work_order {
 	int type;
 	int subtype;
-	struct hip_common *msg;
+     struct hip_common *msg;
+#ifdef __KERNEL__
+#ifndef CONFIG_HIP_USERSPACE
 	struct list_head queue;
+#endif
+#endif
 	void (*destructor)(struct hip_work_order *hwo);
 };
 
+struct hip_work_order_hdr {
+	int type;
+	int subtype;
+     struct hip_common msg;
+};
 
+#ifdef __KERNEL__
 struct hip_host_id_entry {
 /* this needs to be first (list_for_each_entry, list 
    head being of different type) */

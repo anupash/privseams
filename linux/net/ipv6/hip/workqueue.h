@@ -2,9 +2,9 @@
 #define HIP_WORKQUEUE
 
 #ifdef __KERNEL__
-#  include <linux/spinlock.h>
-#  include <net/ipv6.h>
-#endif /* __KERNEL__ */
+#include <linux/spinlock.h>
+#include <net/ipv6.h>
+#endif
 
 #include <net/hip.h>
 
@@ -41,9 +41,15 @@
 #define HIP_WO_SUBTYPE_DEV_EVENT  210
 #define HIP_WO_SUBTYPE_ADDRVS     211
 
+#ifdef __KERNEL__
 extern struct semaphore hip_work;
+#endif
 
+#ifdef __KERNEL__
 int hip_init_workqueue(void);
+#else
+int hip_init_workqueue(int netlink_fd);
+#endif
 void hip_uninit_workqueue(void);
 int hip_insert_work_order(struct hip_work_order *hwo);
 struct hip_work_order *hip_get_work_order(void);
