@@ -1,8 +1,10 @@
-/* Rendezvous Server functionality for HIP.
+/*
+ * Rendezvous Server functionality for HIP.
  *
- * Kristian Slavov, 2004
+ * Authors:
+ * - Kristian Slavov
  *
- * Lisence: GPL
+ * Licence: GNU/GPL
  */
 
 #include "rvs.h"

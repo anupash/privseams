@@ -1,12 +1,11 @@
 /*
  * This file contains KEYMAT handling functions for HIPL.
  *  
+ * Licence: GNU/GPL
  * Authors:
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Kristian Slavov <ksl@iki.fi>
  *
- *  TODO:
- *  - include copyright information here
  */
 
 #include <linux/crypto.h>

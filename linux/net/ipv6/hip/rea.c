@@ -1,3 +1,13 @@
+/*
+ * HIP mobility and multihoming related functions
+ *
+ * Licence: GNU/GPL
+ *
+ * Authors:
+ * - Miika Komu <miika@iki.fi>
+ * - Mika Kousa <mkousa@cc.hut.fi>
+ */
+
 #if 1
 #include <linux/skbuff.h>
 

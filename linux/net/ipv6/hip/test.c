@@ -20,9 +20,6 @@
  * Author:
  * - Miika Komu <miika@iki.fi>
  *
- * TODO:
- * - xx
- *
  */
 
 #include "unit.h"

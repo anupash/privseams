@@ -1,5 +1,5 @@
 /*
- * Building and parsing functions for hipd (and later for hip) messages.
+ * Building and parsing functions for hipconf and HIP kernel module messages.
  * These functions work both in the userspace and in the kernel. Keep in mind
  * the following things when using the builder:
  * - Never access members of hip_common and hip_tlv_common directly. Use
@@ -40,33 +40,6 @@
  * - note: in network packets, you should use hip_build_network_hdr()
  *   instead of hip_build_user_hdr() !
  *
- * TODO:
- * - add validation functions for host_id, host_id_eid
- * - move hip_builder.h to this dir
- * - a separate function for accessing parameters with same id (i.e. you
- *   give the "current" point of searching in the message)
- * - consider embbedding hip_tlv_common in all parameter structs in hip.h?
- * - alignment
- *   - Building of generic parameter should be done using array copy instead
- *     of memcpy()? Memcpy might involve some performance penalties when
- *     trying to read/write unaligned data.
- *   - should we have a get_sizeof_param(param_type) function instead
- *     of just relying on packed structures?
- * - consider supporting vararg for build_param()?
- *   - this complicates things too much.. especially in parsing
- * - unit tests for builder.c
- * - set the version number to something bizarre in hip daemon header builder
- *   so that e.g. dumper can tell the difference between daemon and network
- *   headers
- * - hip_dump_msg() should display also network headers
- * - uncomment commented assertions and test them
- * - Can {daemon|network} header be built before other headers?
- * - fix: get/set msg type err network byte order
- * - a new header for hipd messages? hip_daemon_msg etc.
- * - some of the builder functions could be named better
- *
- * BUGS:
- * - 
  */
 
 #include "builder.h"

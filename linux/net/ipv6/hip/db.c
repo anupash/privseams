@@ -6,18 +6,6 @@
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
  *
- * TODO:
- * - change all of these functions to static
- * - sdb accessors and locking
- *   - all accessors should use get_first and get_next functions
- *   - each sdb state can have its own lock and the get_first/get_next
- *     functions use that lock
- * - host id accessors and locking
- *   - use the lock macro!
- *   - use the get_first and get_next accessors, not directly!
- *
- * BUGS:
- * - hip_built_r1 has no acquire_lock
  */
 
 #include "db.h"

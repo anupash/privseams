@@ -1,3 +1,9 @@
+/*
+ * Licence: GNU/GPL
+ * Authors:
+ * - Mika Kousa <mkousa@cc.hut.fi>
+ */
+
 #include <net/hip.h>
 #include <linux/xfrm.h>
 #include <net/xfrm.h>

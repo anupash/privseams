@@ -7,20 +7,6 @@
  *          Kristian Slavov <kslavov@hiit.fi>
  *          Anthony D. Joseph <adj@hiit.fi>
  *
- * TODO:
- * - sdb accessors and locking
- * - hip_init and unit: check and rewrite!
- * - Mika: locks are missing from proc_xx functions
- * - add, find, del host id: modify to take care of peer addresses also
- * - lhi naming convention is used incorrectly in peer_info stuff?
- * - check network byte ordering in hip_{add|del|get}_lhi
- * - separate the tlv checking code into an own function from handle_r1?
- * - All context->{hip_in|hip_out}->pointers are not filled. Currently
- *   this is not a problem, but may cause bugs later?
- * - locking to hip_proc_read_lhi and others
- * - EEXIST -> ENOMSG ?
- * - hip_inet6addr_event_handler and hip_netdev_event_handler
- *   share a lot of same looking code
  */
 
 #include "hip.h"

@@ -1,6 +1,8 @@
 /*
  * HIPL security related functions
  *
+ * Licence: GNU/GPL
+ *
  * Authors:
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Kristian Slavov <ksl@iki.fi>

@@ -1,13 +1,10 @@
 /*
  * HIP socket handler - handle PF_HIP type sockets
  *
+ * Licence: GNU/GPL
  * Authors:
  *          Miika Komu <miika@iki.fi>
  *          Anthony D. Joseph <adj@hiit.fi>
- *
- * Todo:
- * - Do we need separate proto ops for dgrams?
- * - What functions should return just zero?
  *
  */
 
@@ -27,37 +24,8 @@
 #include <net/addrconf.h>
 
 extern struct net_proto_family hip_family_ops;
-//extern struct net_proto_family inet_family_ops;
 extern struct proto_ops inet_stream_ops;
 extern struct proto_ops inet_dgram_ops;
-//extern struct net_proto_family inet6_family_ops;
-extern struct proto_ops inet6_stream_ops;
-extern struct proto_ops inet6_dgram_ops;
-extern int inet6_create(struct socket *sock, int protocol);
-
-extern struct net_proto_family hip_family_ops;
-//extern struct net_proto_family inet_family_ops;
-extern struct proto_ops inet_stream_ops;
-extern struct proto_ops inet_dgram_ops;
-//extern struct net_proto_family inet6_family_ops;
-extern struct proto_ops inet6_stream_ops;
-extern struct proto_ops inet6_dgram_ops;
-extern int inet6_create(struct socket *sock, int protocol);
-
-extern struct net_proto_family hip_family_ops;
-//extern struct net_proto_family inet_family_ops;
-extern struct proto_ops inet_stream_ops;
-extern struct proto_ops inet_dgram_ops;
-//extern struct net_proto_family inet6_family_ops;
-extern struct proto_ops inet6_stream_ops;
-extern struct proto_ops inet6_dgram_ops;
-extern int inet6_create(struct socket *sock, int protocol);
-
-extern struct net_proto_family hip_family_ops;
-//extern struct net_proto_family inet_family_ops;
-extern struct proto_ops inet_stream_ops;
-extern struct proto_ops inet_dgram_ops;
-//extern struct net_proto_family inet6_family_ops;
 extern struct proto_ops inet6_stream_ops;
 extern struct proto_ops inet6_dgram_ops;
 extern int inet6_create(struct socket *sock, int protocol);
@@ -800,7 +768,6 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
         return err;
 }
 
-/* static */
 int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 					  const struct in6_addr *ip,
 					  int insert, int rvs)
@@ -1252,8 +1219,8 @@ int hip_socket_handle_unit_test(const struct hip_common *msg)
 }
 
 /*
- * This function is similar to hip_socket_handle_add_local_hi but there are three
- * major differences:
+ * This function is similar to hip_socket_handle_add_local_hi but there are
+ * three major differences:
  * - this function is used by native HIP sockets (not hipconf)
  * - HIP sockets require EID handling which is done here
  * - this function DOES NOT call hip_precreate_r1, so you need launch

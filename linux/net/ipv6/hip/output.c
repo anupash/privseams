@@ -1,27 +1,11 @@
 /*
  * HIP output
  *
+ * Licence: GNU/GPL
  * Authors: Janne Lundberg <jlu@tcs.hut.fi>
  *          Miika Komu <miika@iki.fi>
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
- *
- * TODO:
- * - If a function returns a value, we MUST NOT ignore it
- * - make null-cipher optional, so that the module can be loaded without it
- * - timeouts to cookies
- * - LOCKING TO REA/AC sent lists
- * - AC/ACR: more accurate RTT timing than jiffies ?
- * - hip_send_rea_all: test with multiple REA_INFO payloads (mm-00 sec 6.1.1)
- * - document hip_getfrag using docbook
- * - rename hip_rea_delete_sent_list_one -> hip_rea_delete_sent_list
- * - remove duplicate code, REA/AC list
- * - adding of HMAC/signature to the packet: own functions
- *
- * BUGS:
- * - It should be signalled somehow when building of R1 is 100 % 
- *   complete. Otherwise an incomplete packet could be sent for
- *   the initiator?
  *
  */
 
@@ -312,10 +296,12 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	if (buf->checksum == 0)
 		buf->checksum = -1;
 
+	HIP_HEXDUMP("whole packet", buf, len);
+	
  	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, ofl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err) {
- 		HIP_ERROR("ip6_append_data failed (err=%d)\n", err);
+ 		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);
 		ip6_flush_pending_frames(hip_output_socket->sk);
 	} else
 		err = ip6_push_pending_frames(hip_output_socket->sk);

@@ -1,14 +1,18 @@
 /*
  * Work queue functions for HIP
- * Authors: Kristian Slavov <ksl@iki.fi>
+ *
+ * Licence: GNU/GPL
+ * Authors:
+ * - Kristian Slavov <ksl@iki.fi>
  *
  * Common comments: __get_cpu_var() is used instead of the get_cpu_var() since
- * each workqueue "listener" is bound to a certain cpu. Workorder is always inserted
- * into the workqueue of the sender. This is actually the only place where we would
- * like the adder to be in the same cpu as the workqueue he is adding to.
- * This is ensured by local_irq_save().
+ * each workqueue "listener" is bound to a certain cpu. Workorder is always
+ * inserted into the workqueue of the sender. This is actually the only place
+ * where we would like the adder to be in the same cpu as the workqueue he is
+ * adding to. This is ensured by local_irq_save().
  *
  */
+
 #include "workqueue.h"
 #include "debug.h"
 

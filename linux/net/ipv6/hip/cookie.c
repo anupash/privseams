@@ -1,6 +1,7 @@
 /*
  * HIP cookie handling
  * 
+ * Licence: GNU/GPL
  * Authors: Kristian Slavov <ksl@iki.fi>
  *          Miika Komu <miika@iki.fi>
  *

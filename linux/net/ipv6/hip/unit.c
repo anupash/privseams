@@ -4,13 +4,10 @@
  *
  * NOTE: This file is shared between userspace and kernel!
  *
- * Author:
+ * Licence: GNU/GPL
+ * Authors:
  * - Miika Komu <miika@iki.fi>
  *
- * TODO:
- * - Space, suite and case structures are somewhat the same; this could
- *   better exploited by combining the several almost-the-same-copy-paste
- *   functions into one, signle function.
  */
 
 #include "unit.h"

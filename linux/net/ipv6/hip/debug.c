@@ -1,6 +1,7 @@
 /*
  * HIP kernelspace debugging functions
  *
+ * Licence: GNU/GPL
  * Authors:
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>

@@ -1,41 +1,12 @@
 /*
  * HIP input
  *
+ * Licence: GNU/GPL
  * Authors: Janne Lundberg <jlu@tcs.hut.fi>
  *          Miika Komu <miika@iki.fi>
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
  *          Anthony D. Joseph <adj@hiit.fi>
- *
- * TODO:
- * - hip_inbound: the state should be changed in hip_inbound, not in the
- *   functions that are called from hip_inbound!
- * - If a function returns a value, we MUST NOT ignore it
- * - hip_handle_i2_finish_sig, hip_handle_r2_finish: check return values of
- *   hip_setup_ipsec
- * - make null-cipher optional, so that the module can be loaded without it
- * - decrypt encrypted field in handle_i2
- * - check buffer overflow (ctx->htpr) issues in building of R1
- * - convert building of r1 to use only builder functions
- * - later on everything should be built/parsed using builder
- * - No hip packets should be sent or received before autosetup
- *   is finished:
- *     if (hipd_get_auto_setup_state() != HIPD_AUTO_SETUP_STATE_FINISHED)
- *       fail_somehow();
- * - verify signatures in base exchange handlers
- * - separate the tlv checking code into an own function from handle_r1?
- * - LOCKING TO REA
- * - AC/ACR: more accurate RTT timing than jiffies ?
- * - cancel sent rea timer when ACR is received
- *
- * BUGS:
- * - possible kernel panic if module is rmmod'd and REA timer
- *   expires after that
- * - It should be signalled somehow when building of R1 is 100 %
- *   complete. Otherwise an incomplete packet could be sent for
- *   the initiator?
- * - handle_i2 trusts the source HIT in the received I2 packet: DoS?
- * - the functions in this file probably leak memory (skbs?)
  *
  */
 
@@ -2818,7 +2789,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 
 	_HIP_DEBUG_SKB((*skb)->nh.ipv6h, skb);
 
-	_HIP_HEXDUMP("HIP PACKET", hip_common,
+	HIP_HEXDUMP("HIP PACKET", hip_common,
 		     (hip_common->payload_len+1) << 3);
 
 	err = hip_verify_network_header(hip_common, skb);
