@@ -1100,7 +1100,7 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
 }
 
 /**
- * hip_get_saddr_udp - get source HIT
+ * hip_get_saddr - get source HIT
  * @fl: flow containing the destination HIT
  * @hit_storage: where the source address is to be stored
  *
@@ -1124,7 +1124,6 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 	}
 
 	ipv6_addr_copy(hit_storage, &entry->hit_our);
-
 	hip_put_ha(entry);
 
 	return 1;
@@ -1358,57 +1357,25 @@ struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
 
 /**
  * hip_handle_ipv6_dad_completed - handle IPv6 address events
- * @ifa: IPv6 address of an interface which caused the event
+ * @ifindex: the ifindex of the interface which caused the event
  *
  * This function gets notification when DAD procedure has finished
- * successfully for an address @ifa.
+ * successfully for an address in the network device @ifindex.
  */
-void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
-	struct net_device *event_dev = NULL;
-	struct inet6_dev *idev = NULL;
+void hip_handle_ipv6_dad_completed(int ifindex) {
 	struct hip_work_order *hwo;
 
-	HIP_DEBUG("\n");
-
-	if (!ifa) {
-		HIP_ERROR("ifa is NULL\n");
-		goto out;
+	HIP_DEBUG("ifindex=%d\n", ifindex);
+	if (!ifindex) {
+		HIP_ERROR("no ifindex\n");
+		return;
 	}
-
-	in6_ifa_hold(ifa);
-	hip_print_hit("ifa address", &ifa->addr);
-
-	if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL) {
-		HIP_DEBUG("skipping event on link local address\n");
-		goto out_ifa_put;
-	}
-
-	idev = ifa->idev;
-        if (!idev) {
-                HIP_DEBUG("NULL idev\n");
-		goto out_ifa_put;
-        }
-	in6_dev_hold(idev);
-	event_dev = idev->dev;
-        if (!event_dev) {
-                HIP_ERROR("NULL event_dev, shouldn't happen ?\n");
-		goto out_idev_put;
-        }
-	dev_hold(event_dev);
-
 	hwo = hip_net_event_prepare_hwo(HIP_WO_SUBTYPE_IN6_EVENT,
-					event_dev->ifindex, NETDEV_UP);
+					ifindex, NETDEV_UP);
   	if (!hwo) {
 		HIP_ERROR("Unable to handle address event\n");
   	} else
 		hip_insert_work_order(hwo);
-
-	dev_put(event_dev);
- out_idev_put:
-	in6_dev_put(idev);
- out_ifa_put:
-	in6_ifa_put(ifa);
- out:
 	return;
 }
 

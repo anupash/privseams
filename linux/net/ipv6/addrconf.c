@@ -2259,7 +2259,13 @@ static void addrconf_dad_completed(struct inet6_ifaddr *ifp)
 	}
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	HIP_CALLFUNC(hip_handle_ipv6_dad_completed, 0)(ifp);
+	if (ipv6_addr_type(&ifp->addr) & IPV6_ADDR_LINKLOCAL) {
+		printk(KERN_DEBUG "DAD: skipping HIP event on link local address\n");
+	} else {
+		printk(KERN_DEBUG "DAD: ifa address=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
+		       NIP6(ifp->addr));
+		HIP_CALLFUNC(hip_handle_ipv6_dad_completed, 0)(dev->ifindex);
+	}
 #endif
 }
 
