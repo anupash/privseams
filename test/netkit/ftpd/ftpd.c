@@ -721,6 +721,9 @@ main(int argc, char *argv[], char **envp)
 	} else {
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_flags = AI_CANONNAME;
+#ifdef HIP_LEGACY
+		hints.ai_flags |= AI_HIP;
+#endif
 		if (getaddrinfo(hostname, NULL, &hints, &res) == 0) {
 			strcpy(hostname, res->ai_canonname);
 			freeaddrinfo(res);
@@ -2442,6 +2445,9 @@ extended_port(const char *arg)
 			goto protounsupp;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_NUMERICHOST;	/*no DNS*/
+#ifdef HIP_LEGACY /* XX FIXME - does not work */
+		hints.ai_flags |= AI_HIP;
+#endif
 		if (getaddrinfo(result[1], result[2], &hints, &res))
 			goto parsefail;
 		if (res->ai_next)

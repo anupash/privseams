@@ -528,15 +528,15 @@ static const yysigned_char yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const unsigned short int yyrline[] =
 {
-       0,   153,   153,   155,   160,   164,   169,   175,   186,   200,
-     209,   217,   225,   231,   238,   244,   278,   292,   306,   312,
-     318,   325,   332,   339,   344,   351,   356,   363,   370,   375,
-     382,   396,   401,   406,   413,   417,   435,   439,   446,   453,
-     458,   463,   467,   474,   484,   499,   513,   520,   536,   543,
-     569,   586,   608,   613,   619,   633,   646,   651,   654,   658,
-     662,   685,   724,   747,   751,   755,   762,   767,   772,   777,
-     782,   786,   791,   797,   805,   809,   813,   820,   824,   828,
-     835,   879,   883,   911
+       0,   153,   153,   155,   160,   164,   169,   175,   186,   203,
+     212,   220,   228,   234,   241,   247,   281,   295,   309,   315,
+     321,   328,   335,   342,   347,   354,   359,   366,   373,   378,
+     385,   399,   404,   409,   416,   420,   438,   442,   449,   456,
+     461,   466,   470,   477,   487,   502,   516,   523,   539,   546,
+     572,   589,   611,   616,   622,   636,   649,   654,   657,   661,
+     665,   688,   731,   754,   758,   762,   769,   774,   779,   784,
+     789,   793,   798,   804,   812,   816,   820,   827,   831,   835,
+     842,   886,   890,   918
 };
 #endif
 
@@ -1464,7 +1464,7 @@ yyreduce:
     break;
 
   case 9:
-#line 201 "ftpcmd.y"
+#line 204 "ftpcmd.y"
     {
 			if (epsvall) {
 				reply(501, "EPRT disallowed after EPSV ALL");
@@ -1476,7 +1476,7 @@ yyreduce:
     break;
 
   case 10:
-#line 210 "ftpcmd.y"
+#line 213 "ftpcmd.y"
     {
 			if (epsvall) {
 				reply(501, "PASV disallowed after EPSV ALL");
@@ -1487,7 +1487,7 @@ yyreduce:
     break;
 
   case 11:
-#line 218 "ftpcmd.y"
+#line 221 "ftpcmd.y"
     {
 			if (epsvall) {
 				reply(501, "LPSV disallowed after EPSV ALL");
@@ -1498,7 +1498,7 @@ yyreduce:
     break;
 
   case 12:
-#line 226 "ftpcmd.y"
+#line 229 "ftpcmd.y"
     {
 			if (yyvsp[-3].i) {
 				long_passive("EPSV", ex_prot2af(yyvsp[-1].i));
@@ -1507,7 +1507,7 @@ yyreduce:
     break;
 
   case 13:
-#line 232 "ftpcmd.y"
+#line 235 "ftpcmd.y"
     {
 			if (yyvsp[-3].i) {
 				reply(200, "EPSV ALL command successful.");
@@ -1517,7 +1517,7 @@ yyreduce:
     break;
 
   case 14:
-#line 239 "ftpcmd.y"
+#line 242 "ftpcmd.y"
     {
 			if (yyvsp[-1].i) {
 				long_passive("EPSV", PF_UNSPEC);
@@ -1526,7 +1526,7 @@ yyreduce:
     break;
 
   case 15:
-#line 245 "ftpcmd.y"
+#line 248 "ftpcmd.y"
     {
 			if (yyvsp[-3].i) {
 				switch (cmd_type) {
@@ -1563,7 +1563,7 @@ yyreduce:
     break;
 
   case 16:
-#line 279 "ftpcmd.y"
+#line 282 "ftpcmd.y"
     {
 			if (yyvsp[-3].i) {
 				switch (yyvsp[-1].i) {
@@ -1580,7 +1580,7 @@ yyreduce:
     break;
 
   case 17:
-#line 293 "ftpcmd.y"
+#line 296 "ftpcmd.y"
     {
 			if (yyvsp[-3].i) {
 				switch (yyvsp[-1].i) {
@@ -1597,7 +1597,7 @@ yyreduce:
     break;
 
   case 18:
-#line 307 "ftpcmd.y"
+#line 310 "ftpcmd.y"
     {
 			if (yyvsp[-3].i) {
 				reply(202, "ALLO command ignored.");
@@ -1606,7 +1606,7 @@ yyreduce:
     break;
 
   case 19:
-#line 313 "ftpcmd.y"
+#line 316 "ftpcmd.y"
     {
 			if (yyvsp[-7].i) {
 				reply(202, "ALLO command ignored.");
@@ -1615,7 +1615,7 @@ yyreduce:
     break;
 
   case 20:
-#line 319 "ftpcmd.y"
+#line 322 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				retrieve((char *) 0, yyvsp[-1].s);
@@ -1625,7 +1625,7 @@ yyreduce:
     break;
 
   case 21:
-#line 326 "ftpcmd.y"
+#line 329 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				store(yyvsp[-1].s, "w", 0);
@@ -1635,7 +1635,7 @@ yyreduce:
     break;
 
   case 22:
-#line 333 "ftpcmd.y"
+#line 336 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				store(yyvsp[-1].s, "a", 0);
@@ -1645,7 +1645,7 @@ yyreduce:
     break;
 
   case 23:
-#line 340 "ftpcmd.y"
+#line 343 "ftpcmd.y"
     {
 			if (yyvsp[-1].i)
 				send_file_list(".");
@@ -1653,7 +1653,7 @@ yyreduce:
     break;
 
   case 24:
-#line 345 "ftpcmd.y"
+#line 348 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				send_file_list(yyvsp[-1].s);
@@ -1663,7 +1663,7 @@ yyreduce:
     break;
 
   case 25:
-#line 352 "ftpcmd.y"
+#line 355 "ftpcmd.y"
     {
 			if (yyvsp[-1].i)
 				retrieve("/bin/ls -lgA", "");
@@ -1671,7 +1671,7 @@ yyreduce:
     break;
 
   case 26:
-#line 357 "ftpcmd.y"
+#line 360 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				retrieve("/bin/ls -lgA %s", yyvsp[-1].s);
@@ -1681,7 +1681,7 @@ yyreduce:
     break;
 
   case 27:
-#line 364 "ftpcmd.y"
+#line 367 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				statfilecmd(yyvsp[-1].s);
@@ -1691,7 +1691,7 @@ yyreduce:
     break;
 
   case 28:
-#line 371 "ftpcmd.y"
+#line 374 "ftpcmd.y"
     {
 			if (yyvsp[-1].i)
 				statcmd();
@@ -1699,7 +1699,7 @@ yyreduce:
     break;
 
   case 29:
-#line 376 "ftpcmd.y"
+#line 379 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				delete(yyvsp[-1].s);
@@ -1709,7 +1709,7 @@ yyreduce:
     break;
 
   case 30:
-#line 383 "ftpcmd.y"
+#line 386 "ftpcmd.y"
     {
 			if (yyvsp[-3].i) {
 				if (fromname) {
@@ -1726,7 +1726,7 @@ yyreduce:
     break;
 
   case 31:
-#line 397 "ftpcmd.y"
+#line 400 "ftpcmd.y"
     {
 			if (yyvsp[-1].i)
 				reply(225, "ABOR command successful.");
@@ -1734,7 +1734,7 @@ yyreduce:
     break;
 
   case 32:
-#line 402 "ftpcmd.y"
+#line 405 "ftpcmd.y"
     {
 			if (yyvsp[-1].i)
 				cwd(pw->pw_dir);
@@ -1742,7 +1742,7 @@ yyreduce:
     break;
 
   case 33:
-#line 407 "ftpcmd.y"
+#line 410 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				cwd(yyvsp[-1].s);
@@ -1752,14 +1752,14 @@ yyreduce:
     break;
 
   case 34:
-#line 414 "ftpcmd.y"
+#line 417 "ftpcmd.y"
     {
 			help(cmdtab, (char *) 0);
 		}
     break;
 
   case 35:
-#line 418 "ftpcmd.y"
+#line 421 "ftpcmd.y"
     {
 			char *cp = yyvsp[-1].s;
 
@@ -1780,14 +1780,14 @@ yyreduce:
     break;
 
   case 36:
-#line 436 "ftpcmd.y"
+#line 439 "ftpcmd.y"
     {
 			reply(200, "NOOP command successful.");
 		}
     break;
 
   case 37:
-#line 440 "ftpcmd.y"
+#line 443 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				makedir(yyvsp[-1].s);
@@ -1797,7 +1797,7 @@ yyreduce:
     break;
 
   case 38:
-#line 447 "ftpcmd.y"
+#line 450 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				removedir(yyvsp[-1].s);
@@ -1807,7 +1807,7 @@ yyreduce:
     break;
 
   case 39:
-#line 454 "ftpcmd.y"
+#line 457 "ftpcmd.y"
     {
 			if (yyvsp[-1].i)
 				pwd();
@@ -1815,7 +1815,7 @@ yyreduce:
     break;
 
   case 40:
-#line 459 "ftpcmd.y"
+#line 462 "ftpcmd.y"
     {
 			if (yyvsp[-1].i)
 				cwd("..");
@@ -1823,14 +1823,14 @@ yyreduce:
     break;
 
   case 41:
-#line 464 "ftpcmd.y"
+#line 467 "ftpcmd.y"
     {
 			help(sitetab, (char *) 0);
 		}
     break;
 
   case 42:
-#line 468 "ftpcmd.y"
+#line 471 "ftpcmd.y"
     {
 			help(sitetab, yyvsp[-1].s);
 
@@ -1840,7 +1840,7 @@ yyreduce:
     break;
 
   case 43:
-#line 475 "ftpcmd.y"
+#line 478 "ftpcmd.y"
     {
 			int oldmask;
 
@@ -1853,7 +1853,7 @@ yyreduce:
     break;
 
   case 44:
-#line 485 "ftpcmd.y"
+#line 488 "ftpcmd.y"
     {
 			int oldmask;
 
@@ -1871,7 +1871,7 @@ yyreduce:
     break;
 
   case 45:
-#line 500 "ftpcmd.y"
+#line 503 "ftpcmd.y"
     {
 			if (yyvsp[-5].i && (yyvsp[-1].s != NULL)) {
 				if (yyvsp[-3].i > 0777)
@@ -1888,7 +1888,7 @@ yyreduce:
     break;
 
   case 46:
-#line 514 "ftpcmd.y"
+#line 517 "ftpcmd.y"
     {
 			if (yyvsp[-2].i)
 			  reply(200,
@@ -1898,7 +1898,7 @@ yyreduce:
     break;
 
   case 47:
-#line 521 "ftpcmd.y"
+#line 524 "ftpcmd.y"
     {
 			if (yyvsp[-4].i) {
 				if (yyvsp[-1].i < 30 || yyvsp[-1].i > maxtimeout) {
@@ -1917,7 +1917,7 @@ yyreduce:
     break;
 
   case 48:
-#line 537 "ftpcmd.y"
+#line 540 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				store(yyvsp[-1].s, "w", 1);
@@ -1927,7 +1927,7 @@ yyreduce:
     break;
 
   case 49:
-#line 544 "ftpcmd.y"
+#line 547 "ftpcmd.y"
     {
 			if (yyvsp[-1].i)
 #ifdef __linux__
@@ -1948,7 +1948,7 @@ yyreduce:
     break;
 
   case 50:
-#line 570 "ftpcmd.y"
+#line 573 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL)
 				sizecmd(yyvsp[-1].s);
@@ -1958,7 +1958,7 @@ yyreduce:
     break;
 
   case 51:
-#line 587 "ftpcmd.y"
+#line 590 "ftpcmd.y"
     {
 			if (yyvsp[-3].i && yyvsp[-1].s != NULL) {
 				struct stat stbuf;
@@ -1983,7 +1983,7 @@ yyreduce:
     break;
 
   case 52:
-#line 609 "ftpcmd.y"
+#line 612 "ftpcmd.y"
     {
 			reply(221, "Goodbye.");
 			dologout(0);
@@ -1991,14 +1991,14 @@ yyreduce:
     break;
 
   case 53:
-#line 614 "ftpcmd.y"
+#line 617 "ftpcmd.y"
     {
 			yyerrok;
 		}
     break;
 
   case 54:
-#line 620 "ftpcmd.y"
+#line 623 "ftpcmd.y"
     {
 			restart_point = (off_t) 0;
 			if (yyvsp[-3].i && yyvsp[-1].s) {
@@ -2014,7 +2014,7 @@ yyreduce:
     break;
 
   case 55:
-#line 634 "ftpcmd.y"
+#line 637 "ftpcmd.y"
     {
 			if (yyvsp[-3].i) {
 			    fromname = (char *) 0;
@@ -2027,14 +2027,14 @@ yyreduce:
     break;
 
   case 57:
-#line 651 "ftpcmd.y"
+#line 654 "ftpcmd.y"
     {
 			yyval.s = (char *)calloc(1, sizeof(char));
 		}
     break;
 
   case 60:
-#line 664 "ftpcmd.y"
+#line 667 "ftpcmd.y"
     {
 			char *a, *p;
 
@@ -2056,7 +2056,7 @@ yyreduce:
     break;
 
   case 61:
-#line 691 "ftpcmd.y"
+#line 694 "ftpcmd.y"
     {
 			memset(&data_dest, 0, sizeof(data_dest));
 			if (yyvsp[-40].i != 6 || yyvsp[-38].i != 16 || yyvsp[-4].i != 2 ||
@@ -2071,7 +2071,6 @@ yyreduce:
 			    yyvsp[-2].i < 0 || yyvsp[-2].i > 255 || yyvsp[0].i < 0 || yyvsp[0].i > 255) {
 			} else {
 #if defined(INET6) || defined(HIP_NATIVE)
-
 				char *a, *p;
 #ifdef HIP_NATIVE
 				data_dest.su_family = AF_HIP;
@@ -2098,7 +2097,7 @@ yyreduce:
     break;
 
   case 62:
-#line 727 "ftpcmd.y"
+#line 734 "ftpcmd.y"
     {
 			char *a, *p;
 
@@ -2119,28 +2118,28 @@ yyreduce:
     break;
 
   case 63:
-#line 748 "ftpcmd.y"
+#line 755 "ftpcmd.y"
     {
 			yyval.i = FORM_N;
 		}
     break;
 
   case 64:
-#line 752 "ftpcmd.y"
+#line 759 "ftpcmd.y"
     {
 			yyval.i = FORM_T;
 		}
     break;
 
   case 65:
-#line 756 "ftpcmd.y"
+#line 763 "ftpcmd.y"
     {
 			yyval.i = FORM_C;
 		}
     break;
 
   case 66:
-#line 763 "ftpcmd.y"
+#line 770 "ftpcmd.y"
     {
 			cmd_type = TYPE_A;
 			cmd_form = FORM_N;
@@ -2148,7 +2147,7 @@ yyreduce:
     break;
 
   case 67:
-#line 768 "ftpcmd.y"
+#line 775 "ftpcmd.y"
     {
 			cmd_type = TYPE_A;
 			cmd_form = yyvsp[0].i;
@@ -2156,7 +2155,7 @@ yyreduce:
     break;
 
   case 68:
-#line 773 "ftpcmd.y"
+#line 780 "ftpcmd.y"
     {
 			cmd_type = TYPE_E;
 			cmd_form = FORM_N;
@@ -2164,7 +2163,7 @@ yyreduce:
     break;
 
   case 69:
-#line 778 "ftpcmd.y"
+#line 785 "ftpcmd.y"
     {
 			cmd_type = TYPE_E;
 			cmd_form = yyvsp[0].i;
@@ -2172,14 +2171,14 @@ yyreduce:
     break;
 
   case 70:
-#line 783 "ftpcmd.y"
+#line 790 "ftpcmd.y"
     {
 			cmd_type = TYPE_I;
 		}
     break;
 
   case 71:
-#line 787 "ftpcmd.y"
+#line 794 "ftpcmd.y"
     {
 			cmd_type = TYPE_L;
 			cmd_bytesz = CHAR_BIT;
@@ -2187,7 +2186,7 @@ yyreduce:
     break;
 
   case 72:
-#line 792 "ftpcmd.y"
+#line 799 "ftpcmd.y"
     {
 			cmd_type = TYPE_L;
 			cmd_bytesz = yyvsp[0].i;
@@ -2195,7 +2194,7 @@ yyreduce:
     break;
 
   case 73:
-#line 798 "ftpcmd.y"
+#line 805 "ftpcmd.y"
     {
 			cmd_type = TYPE_L;
 			cmd_bytesz = yyvsp[0].i;
@@ -2203,49 +2202,49 @@ yyreduce:
     break;
 
   case 74:
-#line 806 "ftpcmd.y"
+#line 813 "ftpcmd.y"
     {
 			yyval.i = STRU_F;
 		}
     break;
 
   case 75:
-#line 810 "ftpcmd.y"
+#line 817 "ftpcmd.y"
     {
 			yyval.i = STRU_R;
 		}
     break;
 
   case 76:
-#line 814 "ftpcmd.y"
+#line 821 "ftpcmd.y"
     {
 			yyval.i = STRU_P;
 		}
     break;
 
   case 77:
-#line 821 "ftpcmd.y"
+#line 828 "ftpcmd.y"
     {
 			yyval.i = MODE_S;
 		}
     break;
 
   case 78:
-#line 825 "ftpcmd.y"
+#line 832 "ftpcmd.y"
     {
 			yyval.i = MODE_B;
 		}
     break;
 
   case 79:
-#line 829 "ftpcmd.y"
+#line 836 "ftpcmd.y"
     {
 			yyval.i = MODE_C;
 		}
     break;
 
   case 80:
-#line 836 "ftpcmd.y"
+#line 843 "ftpcmd.y"
     {
 			/*
 			 * Problem: this production is used for all pathname
@@ -2289,7 +2288,7 @@ yyreduce:
     break;
 
   case 82:
-#line 884 "ftpcmd.y"
+#line 891 "ftpcmd.y"
     {
 			int ret, dec, multby, digit;
 
@@ -2315,7 +2314,7 @@ yyreduce:
     break;
 
   case 83:
-#line 911 "ftpcmd.y"
+#line 918 "ftpcmd.y"
     {
 			if (logged_in)
 				yyval.i = 1;
@@ -2330,7 +2329,7 @@ yyreduce:
     }
 
 /* Line 1010 of yacc.c.  */
-#line 2326 "y.tab.c"
+#line 2333 "y.tab.c"
 
   yyvsp -= yylen;
   yyssp -= yylen;
@@ -2555,7 +2554,7 @@ yyreturn:
 }
 
 
-#line 921 "ftpcmd.y"
+#line 928 "ftpcmd.y"
 
 
 extern jmp_buf errcatch;

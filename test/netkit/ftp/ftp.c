@@ -107,6 +107,9 @@ union sockunion {
 	} su_si;
 	struct	sockaddr		su_sa;
 	struct	sockaddr_in  		su_sin;
+#ifdef HIP_NATIVE
+	struct	sockaddr_eid		su_eid;
+#endif
 #ifdef INET6
 	struct	sockaddr_in6 		su_sin6;
 #endif
@@ -114,7 +117,11 @@ union sockunion {
 #define	su_family	su_sa.sa_family
 #define	su_port		su_si.si_port
 
-#ifdef INET6
+
+#ifdef HIP_NATIVE
+#define ex_af2prot(a) (a == AF_INET ? 1 : (a == AF_INET6 ? 2 : \
+                        (a == AF_HIP ? 3 : 0)))
+#elif INET6
 #define ex_af2prot(a) (a == AF_INET ? 1 : (a == AF_INET6 ? 2 : 0))
 #else
 #define ex_af2prot(a) (a == AF_INET ? 1 : 0)
@@ -156,7 +163,10 @@ hookup(const char *host, const char *port)
 	int s, tos, error;
 	socklen_t len;
 	static char hostnamebuf[256];
+#if 0
 	struct addrinfo hints, *res, *res0;
+#endif
+	struct endpointinfo hints, *res, *res0;
 	char hbuf[MAXHOSTNAMELEN], pbuf[NI_MAXSERV];
 	char *cause = "ftp: unknown";
 
@@ -168,9 +178,18 @@ hookup(const char *host, const char *port)
 	}
 	memset(&hisctladdr, 0, sizeof(hisctladdr));
 	memset(&hints, 0, sizeof(hints));
+#ifdef HIP_NATIVE
+	hints.ei_flags = EI_CANONNAME;
+	hints.ei_socktype = SOCK_STREAM;
+	error = getendpointinfo(host, pbuf, &hints, &res0);
+#else
+#  ifdef HIP_LEGACY
 	hints.ai_flags = AI_CANONNAME;
 	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags |= AI_HIP;
+#  endif
 	error = getaddrinfo(host, pbuf, &hints, &res0);
+#endif
 	if (error) {
 		if (port) {
 			strcpy(hbuf, " ");
@@ -179,29 +198,105 @@ hookup(const char *host, const char *port)
 			pbuf[0] = '\0';
 		}
 		fprintf(stderr, "ftp: %s%s%s: %s\n", host, hbuf, pbuf,
+#ifdef HIP_NATIVE
+						gepi_strerror(error));
+#else
 						gai_strerror(error));
+#endif
 		code = -1;
 		return (0);
 	}
 
+#ifdef HIP_NATIVE
+	if (res0->ei_canonname) {
+		struct endpointinfo h, *a;
+		memset(&h, 0, sizeof(h));
+		h.ei_family = PF_HIP;
+		h.ei_socktype = SOCK_STREAM;
+		h.ei_flags = AI_NUMERICHOST; // XX FIXME: EI_
+
+		if (!getendpointinfo(res0->ei_canonname, NULL, &h, &a)) {
+			strncpy(hostnamebuf, res0->ei_canonname, sizeof(hostnamebuf));
+			free_endpointinfo(a);
+		} else
+			strncpy(hostnamebuf, host, sizeof(hostnamebuf));
+	}
+#else
 	if (res0->ai_canonname) {
 		struct addrinfo h, *a;
 		memset(&h, 0, sizeof(h));
 		h.ai_family = PF_UNSPEC;
 		h.ai_socktype = SOCK_STREAM;
 		h.ai_flags = AI_NUMERICHOST;
+#ifdef HIP_LEGACY /* XX FIX ME: does not work */
+		hints.ai_flags |= AI_HIP;
+#endif
 		if (!getaddrinfo(res0->ai_canonname, NULL, &h, &a)) {
 			strncpy(hostnamebuf, res0->ai_canonname, sizeof(hostnamebuf));
 			freeaddrinfo(a);
 		} else
 			strncpy(hostnamebuf, host, sizeof(hostnamebuf));
 	}
+#endif
 	else
 		strncpy(hostnamebuf, host, sizeof(hostnamebuf));
 	hostnamebuf[sizeof(hostnamebuf) - 1] = '\0';
 	hostname = hostnamebuf;
 	
 	s = -1;
+#ifdef HIP_NATIVE
+	for (res = res0; res; res = res->ei_next) {
+		if (!ex_af2prot(res->ei_family)) {
+			cause = "ftp: mismatch address family";
+			errno = EPROTONOSUPPORT;
+			continue;
+		}
+		if ((size_t)res->ei_endpointlen > sizeof(hisctladdr)) {
+			cause = "ftp: mismatch struct sockaddr size";
+			errno = EPROTO;
+			continue;
+		}
+		if (getendpointaddrinfo(res->ei_endpoint, res->ei_endpointlen,
+					hbuf, sizeof(hbuf), NULL, 0,
+					NI_NUMERICHOST))
+			strcpy(hbuf, "???");
+		if (res0->ei_next)	/* if we have multiple possibilities */
+			fprintf(stdout, "Trying %s...\n", hbuf);
+		s = socket(res->ei_family, res->ei_socktype, res->ei_protocol);
+		if (s < 0) {
+			cause = "ftp: socket";
+			continue;
+		}
+		while ((error = connect(s, res->ei_endpoint,
+					res->ei_endpointlen)) < 0
+				&& errno == EINTR) {
+			;
+		}
+		if (error) {
+			/* this "if" clause is to prevent print warning twice */
+			if (res->ei_next) {
+				fprintf(stderr,
+					"ftp: connect to address %s", hbuf);
+				perror("");
+			}
+			cause = "ftp: connect";
+			close(s);
+			s = -1;
+			continue;
+		}
+		/* finally we got one */
+		break;
+	}
+	if (s < 0) {
+		perror(cause);
+		code = -1;
+		free_endpointinfo(res0);
+		return NULL;
+	}
+	len = res->ei_endpointlen;
+	memcpy(&hisctladdr, res->ei_endpoint, len);
+	free_endpointinfo(res0);
+#else
 	for (res = res0; res; res = res->ai_next) {
 		if (!ex_af2prot(res->ai_family)) {
 			cause = "ftp: mismatch address family";
@@ -252,6 +347,8 @@ hookup(const char *host, const char *port)
 	len = res->ai_addrlen;
 	memcpy(&hisctladdr, res->ai_addr, len);
 	freeaddrinfo(res0);
+#endif
+
 	if (getsockname(s, (struct sockaddr *)&myctladdr, &len) < 0) {
 		perror("ftp: getsockname");
 		code = -1;
@@ -1228,7 +1325,7 @@ initconn(void)
 				result = command(pasvcmd = "PASV");
 			}
 			break;
-#ifdef INET6
+#if defined(INET6) || defined (HIP_NATIVE)
 		case AF_INET6:
 			if (try_epsv) {
 				result = command(pasvcmd = "EPSV 2");
@@ -1332,6 +1429,11 @@ initconn(void)
 				data_addr.su_sin6.sin6_addr.s6_addr32[3] =
 							htonl(pack4(ad+12));
 				data_addr.su_port = htons(pack2(po));
+				break;
+#endif
+#ifdef HIP_NATIVE
+			case AF_HIP:
+				XX FIXME;
 				break;
 #endif
 			default:
@@ -1466,6 +1568,12 @@ noport:
 				p[0], p[1]);
 			break;
 #endif
+#ifdef HIP_NATIVE
+		case AF_HIP:
+			XX FIXME;
+			break;
+#endif
+
 		default:
 			result = COMPLETE + 1; /* xxx */
 		}

@@ -16,13 +16,13 @@ CXXCPP=@CXXCPP@
 CC=gcc
 CXX=@CXX@
 DEFS=-D_USAGI -DINET6  
-CFLAGS=-I../libinet6/include -g -O2 $(DEFS)
+CFLAGS=-I../libinet6/include -g -O2 -I../../../tools -I../../../libinet6/include -I../../.. -I../../../linux/include -I../../../linux/net/ipv6/hip -DHIP_NATIVE -g $(DEFS)
 CXXFLAGS= $(DEFS)
 
 OBJS=
 LIBOBJS=@LIBOBJS@
 LDFLAGS=
-LIBS=-L../libinet6 -linet6 
+LIBS=-L../../../libinet6 -linet6 -lcrypto -L../libinet6 -linet6 
 
 INSTALL=/usr/bin/install -c
 INSTALL_PROG=${INSTALL}

@@ -36,13 +36,13 @@ sed 's/%@/@@/; s/@%/@@/; s/%g$/@g/; /@g$/s/[\\&%]/\\&/g;
 /^[ 	]*VPATH[ 	]*=[^:]*$/d
 
 s%@SHELL@%/bin/sh%g
-s%@CFLAGS@%-I../libinet6/include -g -O2%g
+s%@CFLAGS@%-I../libinet6/include -g -O2 -I../../../tools -I../../../libinet6/include -I../../.. -I../../../linux/include -I../../../linux/net/ipv6/hip -DHIP_NATIVE -g%g
 s%@CPPFLAGS@%%g
 s%@CXXFLAGS@%%g
 s%@FFLAGS@%%g
 s%@DEFS@% %g
 s%@LDFLAGS@%%g
-s%@LIBS@%-L../libinet6 -linet6 %g
+s%@LIBS@%-L../../../libinet6 -linet6 -lcrypto -L../libinet6 -linet6 %g
 s%@exec_prefix@%${prefix}%g
 s%@prefix@%/usr/local/v6%g
 s%@program_transform_name@%s,x,x,%g
