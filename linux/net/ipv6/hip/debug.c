@@ -19,8 +19,8 @@ inline void hip_debug_skb(const struct ipv6hdr *hdr, const struct sk_buff *skb)
 		_HIP_DEBUG("ip6hdr=%p src %p dst %p skbdev %p\n",
 			  ip6hdr, &ip6hdr->saddr, &ip6hdr->daddr,
 			  skb->dev);
-		in6_ntop(&ip6hdr->saddr, src);
-		in6_ntop(&ip6hdr->daddr, dst);
+		hip_in6_ntop(&ip6hdr->saddr, src);
+		hip_in6_ntop(&ip6hdr->daddr, dst);
 		HIP_DEBUG("pkt out: saddr %s daddr %s\n", src, dst);
 		if (skb->dev) {
 			HIP_DEBUG("pkt out: dev %s (ifindex %d)\n",
@@ -37,7 +37,7 @@ inline void hip_debug_skb(const struct ipv6hdr *hdr, const struct sk_buff *skb)
 inline void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
 	char dst[INET6_ADDRSTRLEN];
-	in6_ntop(hit, dst);
+	hip_in6_ntop(hit, dst);
 	HIP_DEBUG("%s: %s\n", str, dst);
 	return;
 }

@@ -305,8 +305,9 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
-	return ((a->s6_addr[0] & 0x40 == 0x40) ||
-		(a->s6_addr[0] & 0x80 == 0x80));
+	int t = a->s6_addr[0] & 0xC0;
+	return ((t == 0x40) ||
+		(t == 0x80));
 }
 #endif
 

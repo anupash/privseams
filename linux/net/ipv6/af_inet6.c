@@ -106,6 +106,13 @@ kmem_cache_t *tcp6_sk_cachep;
 kmem_cache_t *udp6_sk_cachep;
 kmem_cache_t *raw6_sk_cachep;
 
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+/* Placeholder for HIP hooks */
+struct hip_callable_functions hip_functions;
+#endif
+
 /* The inetsw table contains everything that inet_create needs to
  * build a new socket.
  */

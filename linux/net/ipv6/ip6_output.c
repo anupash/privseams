@@ -724,8 +724,8 @@ slow_path:
 	kfree_skb(skb);
 	IP6_INC_STATS(Ip6FragOKs);
 	return err;
-
-fail:
+	
+ fail:
 	kfree_skb(skb); 
 	IP6_INC_STATS(Ip6FragFails);
 	return err;
@@ -783,7 +783,7 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 		 */
 		ipv6_addr_copy(&daddr,&fl->fl6_dst);
 		if (ipv6_addr_is_hit(&fl->fl6_dst)) {
-			if (!HIP_CALLPROC(hip_get_saddr)(&fl, &fl->fl6src)) {
+			if (!HIP_CALLFUNC(hip_get_saddr,0)(fl, &fl->fl6_src)) {
 				err = -ENETUNREACH;
 				goto out_err_release;
 			}
@@ -792,13 +792,13 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 #endif
 		*dst = ip6_route_output(sk, fl);
 	}
-
-
+	
+	
 	if ((err = (*dst)->error))
 		goto out_err_release;
 
 	if (ipv6_addr_any(&fl->fl6_src)) {
-
+		
 		err = ipv6_get_saddr(*dst, &fl->fl6_dst, &fl->fl6_src);
 
 		if (err) {

@@ -47,7 +47,7 @@ HIP_INIT_DB(hip_hadb, "hadb");
 
 
 /* Declare entry structure and lf integer for storing the flags */
-#define HIP_HADB_WRAP_BEGIN_VOID struct hip_hadb_state *entry; int lf
+#define HIP_HADB_WRAP_BEGIN_VOID struct hip_hadb_state *entry; unsigned long lf
 
 /* The same as above, but declare also res variable, that is used
  * later by other macros to return value from function */
@@ -145,7 +145,7 @@ static void hip_uninit_hostid_db(struct hip_db_struct *db)
 {
 	struct list_head *curr, *iter;
 	struct hip_host_id_entry *tmp;
-	int lf;
+	unsigned long lf;
 
 	HIP_WRITE_LOCK_DB(db);
 
@@ -236,7 +236,7 @@ static int hip_hadb_get_peer_addr(struct hip_hadb_state *entry,
         list_for_each(pos, &entry->peer_addr_list) {
                 s = list_entry(pos, struct hip_peer_addr_list_item, list);
 #ifdef CONFIG_HIP_DEBUG
-		in6_ntop(&s->address, addrstr);
+		hip_in6_ntop(&s->address, addrstr);
 		_HIP_DEBUG("%s modified_time=%ld.%06ld\n", addrstr,
 			  s->modified_time.tv_sec, s->modified_time.tv_usec);
 #endif
@@ -269,7 +269,7 @@ static int hip_hadb_get_peer_addr(struct hip_hadb_state *entry,
 	else {
 		ipv6_addr_copy(addr, &candidate->address);
 #ifdef CONFIG_HIP_DEBUG
-		in6_ntop(addr, addrstr);
+		hip_in6_ntop(addr, addrstr);
 		_HIP_DEBUG("select %s from if=0x%x\n", addrstr, s->interface_id);
 #endif
 	}
@@ -306,7 +306,7 @@ hip_hadb_get_peer_addr_info(struct hip_hadb_state *entry, struct in6_addr *addr,
 	HIP_DEBUG("\n");
 	list_for_each(pos, &entry->peer_addr_list) {
 		s = list_entry(pos, struct hip_peer_addr_list_item, list);
-		in6_ntop(&s->address, addrstr);
+		hip_in6_ntop(&s->address, addrstr);
 		_HIP_DEBUG("address %d: %s interface_id 0x%x (%u), lifetime 0x%x (%u)\n",
 			  i, addrstr,  s->interface_id, s->interface_id, s->lifetime, s->lifetime);
 		if (!ipv6_addr_cmp(&s->address, addr)) {
@@ -366,7 +366,7 @@ hip_hadb_set_peer_addr_info(struct hip_hadb_state *entry, struct in6_addr *addr,
 		 * when interface/lifetime is changed ?
 		 */
 
-		in6_ntop(&s->address, addrstr);
+		hip_in6_ntop(&s->address, addrstr);
 		_HIP_DEBUG("address %d: %s interface_id 0x%x (%u), lifetime 0x%x (%u)\n",
 			  i, addrstr,  s->interface_id, s->interface_id, s->lifetime, s->lifetime);
 		if (!ipv6_addr_cmp(&s->address, addr)) {
@@ -414,7 +414,7 @@ hip_hadb_add_peer_addr(struct hip_hadb_state *entry, struct in6_addr *new_addr,
 	uint32_t prev_if;
 
 	HIP_DEBUG("\n");
-	in6_ntop(new_addr, addrstr);
+	hip_in6_ntop(new_addr, addrstr);
 	HIP_DEBUG("new_addr %s, interface_id 0x%x (%u), lifetime 0x%x (%u)\n",
 		  addrstr, interface_id, interface_id, lifetime, lifetime);
 
@@ -470,7 +470,7 @@ hip_hadb_delete_peer_addrlist_one(struct hip_hadb_state *entry, struct in6_addr 
 
 	list_for_each_safe(pos, tmp, &entry->peer_addr_list) {
 		item = list_entry(pos, struct hip_peer_addr_list_item, list);
-		in6_ntop(&item->address, addrstr);
+		hip_in6_ntop(&item->address, addrstr);
 		_HIP_DEBUG("%p: address %d: %s interface_id 0x%x (%u), lifetime 0x%x (%u)\n",
 			   item, i, addrstr,  item->interface_id, item->interface_id, item->lifetime, item->lifetime);
 		if (!ipv6_addr_cmp(&item->address, addr)) {
@@ -505,7 +505,7 @@ hip_hadb_delete_peer_addr_if(struct hip_hadb_state *entry, uint32_t interface_id
 		item = list_entry(pos, struct hip_peer_addr_list_item, list);
 		HIP_DEBUG("item=0x%p &item->address=0x%p if=%u\n", item, item ? &item->address : NULL, item->interface_id);
 		if (item->interface_id == interface_id) {
-			in6_ntop(&item->address, addrstr);
+			hip_in6_ntop(&item->address, addrstr);
 			HIP_DEBUG("delete address %s itemlist=0x%p in=%p ip=%p\n", addrstr, &item->list, item->list.next, item->list.prev);
 			list_del(&item->list);
 			kfree(item);
@@ -552,12 +552,12 @@ hip_hadb_delete_peer_address_not_in_list(struct hip_hadb_state *entry,
 	list_for_each_safe(pos, tmp, &entry->peer_addr_list) {
 		int found = 0;
 		item = list_entry(pos, struct hip_peer_addr_list_item, list);
-		in6_ntop(&item->address, addrstr);
+		hip_in6_ntop(&item->address, addrstr);
 		_HIP_DEBUG("test address %d: %s if=0x%x\n", i, addrstr, item->interface_id);
 		for (j = 0, p = addrlist; j < n_addrs;
 		     j++, p += sizeof(struct hip_rea_info_addr_item)) {
 			struct hip_rea_info_addr_item *addr = (struct hip_rea_info_addr_item *) p;
-			in6_ntop(&addr->address, addrstr2);
+			hip_in6_ntop(&addr->address, addrstr2);
 			_HIP_DEBUG(" against address: %s\n", addrstr2);
 			if (!ipv6_addr_cmp(&item->address, &addr->address)) {
 				/* address is still valid */
@@ -609,7 +609,7 @@ static void hip_hadb_delete_peer_addrlist(struct hip_hadb_state *entry) {
 
         list_for_each_safe(pos, iter, &entry->peer_addr_list) {
                 item = list_entry(pos, struct hip_peer_addr_list_item, list);
-                in6_ntop(&item->address, addrstr);
+                hip_in6_ntop(&item->address, addrstr);
                 _HIP_DEBUG("%p: address %d: %s interface_id 0x%x (%u), lifetime 0x%x (%u)\n",
 			   item, i++, addrstr,  item->interface_id, item->interface_id, 
 			   item->lifetime, item->lifetime);
@@ -826,7 +826,7 @@ void hip_uninit_hadb(void)
 	struct hip_peer_addr_list_item *pali;
 	struct list_head *iter,*iter2;
 	struct list_head *tmp,*tmp2;
-	int lf; // lock flags
+	unsigned long lf; // lock flags
 
 	HIP_WRITE_LOCK_DB(&hip_hadb);
 
@@ -874,7 +874,7 @@ void hip_uninit_hadb(void)
 int hip_hadb_for_each_entry(FILTER_FUNC filter, ACCESS_FUNC accessor, 
 			    struct list_head *head)
 {
-	int lf;
+	unsigned long lf;
 	struct hip_hadb_state *entry;
 	struct hip_entry_list *elist;
 	int num = 0;
@@ -926,7 +926,8 @@ int hip_hadb_for_each_entry(FILTER_FUNC filter, ACCESS_FUNC accessor,
 
 int hip_hadb_flush_states(struct in6_addr *hit)
 {
-	int num,lf; // lf = lock flags
+	int num;
+	unsigned long lf; // lf = lock flags
 	struct list_head mylist = LIST_HEAD_INIT(mylist);
 	struct hip_entry_list *hiplist;
 	struct hip_hadb_state *entry;
@@ -974,7 +975,7 @@ int hip_hadb_flush_states(struct in6_addr *hit)
  */
 void hip_hadb_insert_entry(struct hip_hadb_state *entry) 
 {
-	int lf;
+	unsigned long lf;
 	HIP_WRITE_LOCK_DB(&hip_hadb);
 	hip_hadb_insert_entry_nolock(entry);
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
@@ -1011,7 +1012,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	int err = 0;
 	struct hip_host_id_entry *id_entry;
 	struct hip_host_id_entry *old_entry;
-	int lf;
+	unsigned long lf;
 	
 	_HIP_HEXDUMP("adding host id",lhi,sizeof(struct hip_lhi));
 
@@ -1095,7 +1096,7 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 {
 	int err = -ENOENT;
 	struct hip_host_id_entry *id = NULL;
-	int lf;
+	unsigned long lf;
 
 	HIP_ASSERT(lhi != NULL);
 
@@ -1133,7 +1134,7 @@ int hip_copy_any_localhost_hit(struct in6_addr *target)
 {
 	struct hip_host_id_entry *entry;
 	int err = 0;
-	int lf;
+	unsigned long lf;
 
 	HIP_READ_LOCK_DB(&hip_local_hostid_db);
 
@@ -1164,7 +1165,7 @@ int hip_copy_different_localhost_hit(struct in6_addr *target,
 				     struct in6_addr *source)
 {
 	struct hip_host_id_entry *entry;
-	int lf;
+	unsigned long lf;
 	int err = -ENOENT;
 
 	HIP_READ_LOCK_DB(&hip_local_hostid_db);
@@ -1203,7 +1204,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 
 	struct hip_host_id_entry *tmp;
 	struct hip_host_id *result;
-	int lf;
+	unsigned long lf;
 	int t;
 	
 	result = kmalloc(1024, GFP_KERNEL);
@@ -1350,7 +1351,7 @@ int hip_add_peer_info_nolock(struct in6_addr *hit, struct in6_addr *addr)
 	 * unsigned long flags = 0;
 	 * spin_lock_irqsave(&hip_sdb_lock, flags); */
 
-	in6_ntop(hit, str);
+	hip_in6_ntop(hit, str);
 	HIP_DEBUG("called: HIT %s\n", str);
 
 	entry = hip_hadb_access_db(hit,HIP_ARG_HIT);
@@ -1403,7 +1404,7 @@ int hip_add_peer_info_nolock(struct in6_addr *hit, struct in6_addr *addr)
 int hip_add_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 {
 	int err;
-	int lf;
+	unsigned long lf;
 
 	/* note: can't lock here or else hip_sdb_add_peer_address will block
 	 * unsigned long flags = 0;
@@ -1471,10 +1472,10 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 				 states[entry->state] : "UNKNOWN",
 				      entry->peer_controls)) >= count)
 			break;
-		in6_ntop(&entry->hit_our, addr_str);
+		hip_in6_ntop(&entry->hit_our, addr_str);
 		if ( (len += snprintf(page+len, count-len, " %s", addr_str)) >= count)
 			break;
-		in6_ntop(&entry->hit_peer, addr_str);
+		hip_in6_ntop(&entry->hit_peer, addr_str);
 		if ( (len += snprintf(page+len, count-len, " %s", addr_str)) >= count)
 			break;
 		if ( (len += snprintf(page+len, count-len,
@@ -1487,7 +1488,7 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 
 		list_for_each(pos, &entry->peer_addr_list) {
 			s = list_entry(pos, struct hip_peer_addr_list_item, list);
-			in6_ntop(&s->address, addr_str);
+			hip_in6_ntop(&s->address, addr_str);
 			if ( (len += snprintf(page+len, count-len,
 					      i>0 ? ",%d=%s" : " %d=%s", i+1, addr_str)) >= count)
 				goto err;
@@ -1495,7 +1496,7 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 		}
 
 		if (hip_hadb_get_peer_addr(entry, &addr) == 0) {
-			in6_ntop(&addr, addr_str);
+			hip_in6_ntop(&addr, addr_str);
 			len += snprintf(page+len, count-len, " %s", addr_str);
 		} else
 			len += snprintf(page+len, count-len, " (no addr)");
@@ -1559,13 +1560,13 @@ int hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
 		struct hip_peer_addr_list_item *s;
 		int i = 0;
 
-		in6_ntop(&entry->hit_peer, addr_str);
+		hip_in6_ntop(&entry->hit_peer, addr_str);
 		if ( (len += snprintf(page+len, count-len, "HIT %s", addr_str)) >= count)
 			break;
 
 		list_for_each(pos, &entry->peer_addr_list) {
 			s = list_entry(pos, struct hip_peer_addr_list_item, list);
-			in6_ntop(&s->address, addr_str);
+			hip_in6_ntop(&s->address, addr_str);
 			(void)hip_timeval_diff(&now, &s->modified_time, &addr_age);
 			if ( (len += snprintf(page+len, count-len,
 					      "\n %s state=0x%x if=0x%x lifetime=0x%x "
@@ -1620,7 +1621,7 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
 
         int len = 0;
 	int i;
-	unsigned int lf = 0;
+	unsigned long lf = 0;
 	struct hip_host_id_entry *item;
 	char in6buf[INET6_ADDRSTRLEN];
 
@@ -1635,7 +1636,7 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
 
 	i=0;
 	list_for_each_entry(item,&hip_local_hostid_db.db_head,next) {
-		in6_ntop(&item->lhi.hit, in6buf);
+		hip_in6_ntop(&item->lhi.hit, in6buf);
 		len += snprintf(page+len, count-len, "%d %d %s %s\n",
 				++i,
 				1,
@@ -2050,7 +2051,7 @@ int hip_hadb_set_info(void *arg, void *arg1, int type)
 
 void hip_hadb_acquire_ex_db_access(int *flags)
 {
-	int lf;
+	unsigned long lf;
 
 	HIP_WRITE_LOCK_DB(&hip_hadb);
 	*flags = lf;
@@ -2058,13 +2059,13 @@ void hip_hadb_acquire_ex_db_access(int *flags)
 
 void hip_hadb_release_ex_db_access(int flags)
 {
-	int lf = flags;
+	unsigned long lf = flags;
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
 }
 
 void hip_hadb_acquire_db_access(int *flags)
 {
-	int lf;
+	unsigned long lf;
        
 	HIP_READ_LOCK_DB(&hip_hadb);
 	*flags = lf;
@@ -2072,7 +2073,7 @@ void hip_hadb_acquire_db_access(int *flags)
 
 void hip_hadb_release_db_access(int flags)
 {
-	int lf = flags;
+	unsigned long lf = flags;
 	HIP_READ_UNLOCK_DB(&hip_hadb);
 }
 

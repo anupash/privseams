@@ -24,6 +24,13 @@
 /* should implement with another data structure. 2.6.x will provide
  * ready code, so for now, the linked-list is fine.
  */
+struct hip_db_struct {
+        struct list_head db_head;
+        rwlock_t         db_lock;
+	char *           db_name;
+        int              db_cnt;
+};
+
 
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { \
@@ -102,17 +109,11 @@
 	read_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
 
+//        KRISU_STOP_TIMER(KMM_SPINLOCK,"write lock "__FUNCTION__);
 #define HIP_WRITE_UNLOCK_DB(db) do { \
-        KRISU_STOP_TIMER(KMM_SPINLOCK,"write lock "__FUNCTION__);\
 	write_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
 
-struct hip_db_struct {
-        struct list_head db_head;
-        rwlock_t         db_lock;
-	char *           db_name;
-        int              db_cnt;
-};
 
 struct hip_entry_list {
         struct list_head list;

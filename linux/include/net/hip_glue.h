@@ -27,10 +27,11 @@ struct hip_callable_functions {
 	int (*hip_get_addr) (struct in6_addr *hit, struct in6_addr *addr);
 	int (*hip_get_hits) (struct in6_addr *hitd, struct in6_addr *hits);
 
-	void (*hip_get_saddr_udp) (struct flowi *fl, struct in6_addr *hit_storage);
+	int (*hip_get_saddr) (struct flowi *fl, struct in6_addr *hit_storage);
 
-	int (*hip_inbound) (struct sk_buff **skb, int unused);
+	int (*hip_inbound) (struct sk_buff **skb, unsigned int *nhoff);
 
+	
 	void (*hip_unknown_spi) (struct sk_buff *skb);
 	void (*hip_handle_dst_unreachable) (struct sk_buff *skb);
 };

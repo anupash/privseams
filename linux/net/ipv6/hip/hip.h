@@ -12,6 +12,7 @@
 #include <net/ipv6.h>
 #include <net/hip.h>
 #include <net/sock.h>
+#include <net/protocol.h>
 
 #include <asm/scatterlist.h>
 #include <asm/io.h>

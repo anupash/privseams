@@ -2659,9 +2659,13 @@ int hip_verify_network_header(struct hip_common *hip_common,
  * packet type is determined and control is passed to corresponding
  * handler function which processes the packet.
  *
- * TODO: returns always -1, is this ok ?
+ * We must free the skb by ourselves, if an error occures!
+ *
+ * Return 0, if packet accepted
+ *       <0, if error
+ *       >0, if other protocol payload (piggybacking)
  */
-int hip_inbound(struct sk_buff **skb, int unused)
+int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 {
 	struct hip_common *hip_common;
 	struct hip_work_order *hwo;
@@ -2748,7 +2752,5 @@ int hip_inbound(struct sk_buff **skb, int unused)
  out_err:
 	/* We must not use kfree_skb here... (worker thread releases) */
 
-	/* see the "interface" (hdrproc_lst) in ipv6/exthdrs.c:
-	   return always -1  */
-	return -1; 
+	return 0;
 }

@@ -46,6 +46,18 @@ config INET6_ESP
 
 	  If unsure, say Y.
 
+config ESPBEET
+	bool "Bound End-to-End Tunnel (BEET) mode for ESP"
+	depends on INET6_ESP
+	---help---
+	  The BEET mode augments the existing ESP tunnel and transport modes.  
+	  For end-to-end tunnels, the BEET mode provides limited tunnel mode semantics 
+	  without the regular tunnel mode overhead.  The mode is intended to support 
+	  new uses of ESP, including Host Identity Protocol (HIP), mobility and 
+	  multi-address multi-homing.
+
+	  If unsure, say N.
+
 config INET6_IPCOMP
 	tristate "IPv6: IPComp transformation"
 	depends on IPV6
@@ -70,6 +82,7 @@ config HIP
 	bool "Host Identity Protocol"
 	depends on IPV6
 	select INET6_ESP
+	select ESPBEET
 	---help---
 	  Support for Host Identity Protocol. HIP creates an additional layer
 	  between networking and transport layers. Application are supposed to see

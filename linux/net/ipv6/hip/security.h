@@ -5,6 +5,7 @@
 #include <linux/in6.h>
 #include <net/hip.h>
 #include <net/ipv6.h>
+#include <net/xfrm.h>
 
 #include "debug.h"
 #include "db.h"
@@ -13,7 +14,7 @@
 #define ESP_3DES_KEY_BITS 192
 
 int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
-		  uint32_t spi, int encalg, void *enckey,
+		  uint32_t *spi, int encalg, void *enckey,
 		  void *authkey);
 
 int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer);

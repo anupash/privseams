@@ -1537,15 +1537,15 @@ static int hip_worker(void *unused)
 	if (hip_init_netdev_notifier() < 0)
 		goto out_err4;
 
- 	HIP_SETCALL(hip_bypass_ipsec, hip_bypass_ipsec);   //ok
-	HIP_SETCALL(hip_handle_output, hip_handle_output); //nok
-	HIP_SETCALL(hip_handle_esp, hip_handle_esp);       //ok
-	HIP_SETCALL(hip_get_addr, hip_get_addr);           //ok
-	HIP_SETCALL(hip_get_hits, hip_get_hits);           //ok
-	HIP_SETCALL(hip_inbound, hip_inbound);             //nok
-	HIP_SETCALL(hip_get_saddr_udp, hip_get_saddr_udp); //ok
-	HIP_SETCALL(hip_unknown_spi, hip_unknown_spi);     //ok
-	HIP_SETCALL(hip_handle_dst_unreachable, hip_handle_dst_unreachable);  //ok
+ 	HIP_SETCALL(hip_bypass_ipsec, hip_bypass_ipsec);   
+	HIP_SETCALL(hip_handle_output, hip_handle_output); 
+	HIP_SETCALL(hip_handle_esp, hip_handle_esp);       
+	HIP_SETCALL(hip_get_addr, hip_get_addr);           
+	HIP_SETCALL(hip_get_hits, hip_get_hits);           
+	HIP_SETCALL(hip_inbound, hip_inbound);             
+	HIP_SETCALL(hip_get_saddr, hip_get_saddr);       
+	HIP_SETCALL(hip_unknown_spi, hip_unknown_spi);   
+	HIP_SETCALL(hip_handle_dst_unreachable, hip_handle_dst_unreachable); 
 
 	/* work loop */
 
@@ -1574,7 +1574,7 @@ static int hip_worker(void *unused)
 
 	HIP_INVALIDATE(hip_handle_dst_unreachable);
 	HIP_INVALIDATE(hip_unknown_spi);
-	HIP_INVALIDATE(hip_get_saddr_udp);
+	HIP_INVALIDATE(hip_get_saddr);
 	HIP_INVALIDATE(hip_inbound);
 	HIP_INVALIDATE(hip_get_hits);
 	HIP_INVALIDATE(hip_get_addr);
@@ -1690,8 +1690,6 @@ module_init(hip_init);
 module_exit(hip_cleanup);
 
 /*
-	int	(*handler)(struct sk_buff **skb, unsigned int *nhoffp);
-
 	void	(*err_handler)(struct sk_buff *skb,
 			       struct inet6_skb_parm *opt,
 			       int type, int code, int offset,
@@ -1699,6 +1697,6 @@ module_exit(hip_cleanup);
 */
 static struct inet6_protocol hip_protocol = {
 	.handler     = hip_inbound,
-	.err_handler = hip_errhand,
-	.flags       = INET6_PROTO_NOPOLICY, // posssibly also INET6_PROTO_FINAL
-}
+//	.err_handler = hip_errhand,
+	.flags       = INET6_PROTO_NOPOLICY,
+};

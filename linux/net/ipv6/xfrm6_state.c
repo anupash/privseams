@@ -51,7 +51,9 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 {
 	unsigned h = __xfrm6_spi_hash(daddr, spi, proto);
 	struct xfrm_state *x;
-	int res,conv;
+	int res;
+#ifdef CONFIG_ESPBEET
+	int conv;
 
 	conv = 0; // keep compiler happy
 
@@ -60,10 +62,15 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 	 */
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	if (!hip_is_hit(daddr)) {
+	if (!ipv6_addr_is_hit((struct in6_addr *)daddr)) {
 		conv = 1;
 	}
 #endif
+
+	/* add other cases */
+
+
+#endif /* CONFIG_ESPBEET */
 
 	/* BEET mode checks: If SA has to be looked up by the other
 	 * (inner or outer, depending on the implementation) address, then

@@ -6,50 +6,35 @@
 
 /**
  * hip_delete_spd - delete an SPD entry
- * @hitd: destination HIT of SPD
- * @hits: source HIT of SPD
+ * @hitd: destination HIT (peer's)
+ * @hits: source HIT (own)
+ *
  *
  * Returns: 0 if successful, else < 0.
  */
-int hip_delete_spd(struct in6_addr *hitd, struct in6_addr *hits)
+int hip_delete_spd(struct in6_addr *hitd, struct in6_addr *hits, int dir)
 {
 	int err = 0;
-	struct xfrm_selector xp_sel;
+	struct xfrm_selector sel;
 
-	memset(&xp_sel, 0, sizeof(struct xfrm_selector));
+	memset(&sel, 0, sizeof(sel));
 
-	/* Delete both SPDs first */
-	ipv6_addr_copy(&xp_sel.daddr, hitd);
-	ipv6_addr_copy(&xp_sel.saddr, hits);
+	sel.family = AF_INET6;
+	sel.prefixlen_d = 128;
+	sel.prefixlen_s = 128;
+	sel.proto = 0; // what here?
 
-	xp_sel.dport = 0;
-	xp_sel.sport = 0;
-	xp_sel.dport_mask = 0;
-	xp_sel.sport_mask = 0;
+	ipv6_addr_copy((struct in6_addr *)&sel.saddr, hits);
+	ipv6_addr_copy((struct in6_addr *)&sel.daddr, hitd);
 
-	xp_sel.family = AF_INET6;
-	xp_sel.prefixlen_d = 128;
-	xp_sel.prefixlen_s = 128;
-	xp_sel.proto = 0;
-
-	xp_sel.user = 0; /* XXX: Is this correct? */
-	xp_sel.ifindex = 0; /* XXX: what about this? */
-
-	xfrm_policy_bysel(XFRM_POLICY_IN, &xp_sel, 1);
-	xfrm_policy_bysel(XFRM_POLICY_OUT, &xp_sel, 1);
-
-	err = spd_remove(&selector);
-	if (err == -ESRCH) {
-		HIP_ERROR("Error while deleting SPD: SPD not found\n");
-		goto out_err;
-	} else if (err) {
-		HIP_ERROR("Error while deleting SPD: err=%d\n", err);
-	} else
+	if (xfrm_policy_bysel(dir, &sel, 1)) { 
 		HIP_DEBUG("spd_remove was successful\n");
-
- out_err:
+	} else {
+		HIP_DEBUG("No SPD entry found\n");
+		err = -ENOENT;
+	}
 	return err;
-} 
+}
 
 /**
  * hip_delete_sa - delete HIP SA which has SPI of @spi
@@ -59,36 +44,26 @@ int hip_delete_spd(struct in6_addr *hitd, struct in6_addr *hits)
  *
  * Returns: 0 if successful, else < 0.
  */
-int hip_delete_sa(u32 spi, struct in6_addr *dst, struct in6_addr *src)
+int hip_delete_sa(u32 spi, struct in6_addr *dst)
 {
-	int err = 0;
-	struct sockaddr_in6 sin6_d;
-	struct sockaddr_in6 sin6_s;
+	struct xfrm_state *xs;
+	xfrm_address_t *xaddr;
 
-	struct ipsec_sa *sa;
 
 	/* todo: return if spi == 0 ? (first time use of sdb_entry) */
 
-	hip_set_sockaddr(&sin6_d, dst);
-	hip_set_sockaddr(&sin6_s, src);
+	xaddr = (xfrm_address_t *)dst;
 
-	if (sadb_find_by_address_proto_spi((struct sockaddr*) &sin6_s, 128, 
-					   (struct sockaddr*) &sin6_d, 128, 
-					   SADB_SATYPE_ESP,
-					   htonl(spi),
-					   &sa) == -EEXIST) {
-		HIP_DEBUG("Found matching SA. SPI: 0x%x\n", spi); 
-		/* sadb_find_by_address_proto_spi increases sa's
-		   reference counter, so decrement it before removing
-		   the sa (see sadb.c) */
-		ipsec_sa_put(sa);
-		sadb_remove(sa);
-	} else {
-		HIP_ERROR("Did not find matching SA. SPI: 0x%x\n", spi);
-		err = -1;
+	xs = xfrm_state_lookup(xaddr, spi, IPPROTO_ESP, AF_INET6);
+	if (!xs) {
+		HIP_ERROR("Could not find SA!\n");
+		return -ENOENT;
 	}
 
-	return err;
+	xfrm_state_delete(xs);
+	xfrm_state_put(xs);
+	
+	return 0;
 }
 /**
  * hip_delete_esp - delete entry's IPsec SPD and SA
@@ -113,15 +88,59 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 	}
 
 	/* Delete SPDs */
-	hip_delete_spd(peer, own);
-	hip_delete_spd(own, peer);
+	hip_delete_spd(peer, own, XFRM_POLICY_OUT);
+	hip_delete_spd(own, peer, XFRM_POLICY_IN);
 
 	/* Delete SAs */
-	hip_delete_sa(spi_peer, peer, own);
-	hip_delete_sa(spi_our, own, peer);
+	hip_delete_sa(spi_peer, peer);
+	hip_delete_sa(spi_our, own);
 
 	return 0;
 }
+
+
+
+static int hip_setup_sp(struct in6_addr *dst, struct in6_addr *src)
+{
+	int err = 0;
+	struct xfrm_policy *xp;
+
+	/* SP... */
+
+	xp = xfrm_policy_alloc(GFP_KERNEL);
+	if (!xp) {
+		HIP_ERROR("Failed ipsec_sa_kmalloc\n");
+		return -ENOBUFS;
+	}
+
+	xp->action = XFRM_POLICY_ALLOW;
+
+	memcpy(&xp->selector.daddr, dst, sizeof(struct in6_addr));
+	memcpy(&xp->selector.saddr, src, sizeof(struct in6_addr));
+	xp->selector.family = xp->family = AF_INET6;
+	xp->selector.prefixlen_d = 128;
+	xp->selector.prefixlen_s = 128;
+	xp->selector.proto = 0; // any?
+	xp->selector.sport = xp->selector.dport = xp->selector.sport_mask = 0;
+	xp->selector.dport_mask = 0;
+
+	xp->lft.soft_byte_limit = XFRM_INF;
+	xp->lft.hard_byte_limit = XFRM_INF;
+	xp->lft.soft_packet_limit = XFRM_INF;	 
+	xp->lft.hard_packet_limit = XFRM_INF;	 
+
+	xp->xfrm_nr = 0;
+	
+	err = xfrm_policy_insert(XFRM_POLICY_OUT, xp, 1);
+	if (err) {
+		kfree(xp);
+		return err;
+	}
+
+	xfrm_pol_put(xp); // really?
+	return 0;
+}
+
 
 /**
  * hip_setup_esp - setup IPsec SPD and SA entries having given parameters
@@ -135,17 +154,14 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
  * Returns: 0 if successful, else < 0.
  */
 int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
-		  uint32_t *spi, int encalg, void *enckey,
-		  void *authkey)
+		   uint32_t *spi, int encalg, void *enckey,
+		   void *authkey)
 {
-	int tmp;
-	int err = 0;
-
-	size_t akeylen, ekeylen;
-	struct xfrm_policy *xp;
+	int err;
 	struct xfrm_state *xs;
-	struct xfrm_algo_desc *aad, *ead;
-/* first SA (xs), then SP (xp)*/
+	struct xfrm_algo_desc *ead;
+	struct xfrm_algo_desc *aad;
+	size_t 	akeylen,ekeylen;
 
 	akeylen = ekeylen = 0;
 
@@ -165,13 +181,13 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 
 	switch (encalg) {
 	case HIP_ESP_3DES_SHA1:
-		ead = xfrm_ealg_get_by_id(SADB_EALG_3DESCBC);
+		ead = xfrm_ealg_get_byid(SADB_EALG_3DESCBC);
 		if (!ead) {
 			HIP_ERROR("3DES not supported\n");
 			goto out_free;
 		}
 
-		aad = xfrm_ealg_get_by_id(SADB_AALG_SHA1HMAC);
+		aad = xfrm_ealg_get_byid(SADB_AALG_SHA1HMAC);
 		if (!aad) {
 			HIP_ERROR("SHA1 not supported\n");
 			goto out_free;
@@ -192,23 +208,23 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 
 		break;
 	case HIP_ESP_NULL_SHA1:
-		ead = xfrm_ealg_get_by_id(SADB_EALG_NONE);
+		ead = xfrm_ealg_get_byid(SADB_EALG_NONE);
 		if (!ead) {
 			HIP_ERROR("3DES not supported\n");
 			goto out_free;
 		}
 
-		aad = xfrm_ealg_get_by_id(SADB_AALG_SHA1HMAC);
+		aad = xfrm_ealg_get_byid(SADB_AALG_SHA1HMAC);
 		if (!aad) {
 			HIP_ERROR("SHA1 not supported\n");
 			goto out_free;
 		}
 
 		err = -ENOBUFS;
-		xs->ealg = kmalloc(sizeof(struct xfrm_algo));
+		xs->ealg = kmalloc(sizeof(struct xfrm_algo),GFP_KERNEL);
 		if (!xs->ealg)
 			goto out_free;
-		xs->aalg = kmalloc(sizeof(struct xfrm_algo) + 160/8);
+		xs->aalg = kmalloc(sizeof(struct xfrm_algo) + 160/8, GFP_KERNEL);
 		if (!xs->aalg)
 			goto out_free;
 
@@ -218,6 +234,7 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 		xs->props.aalgo = SADB_AALG_SHA1HMAC;
 
 	default:
+		ead = aad = NULL;
 		HIP_ERROR("Not supported type: 0x%x\n",encalg);
 		HIP_ASSERT(0);
 	}
@@ -257,59 +274,26 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 		goto out_free;
 	}
 
-	/* SP... */
-
-	xp = xfrm_policy_alloc(GFP_KERNEL);
-	if (!xp) {
-		HIP_ERROR("Failed ipsec_sa_kmalloc\n");
-		err = -ENOBUFS;
-		goto out_free;
+	err = hip_setup_sp(dst,src);
+	if (!err) {
+		HIP_DEBUG("ESP setup: [OK]\n");
+		return 0;
 	}
 
-	xp->action = XFRM_POLICY_ALLOW;
+ out_free:
+	if (xs) {
+		if (xs->aalg)
+			kfree(xs->aalg);
+		if (xs->ealg)
+			kfree(xs->ealg);
+		kfree(xs);
+	}
 
-	memcpy(&xp->selector.daddr, dst, sizeof(struct in6_addr));
-	memcpy(&xp->selector.saddr, src, sizeof(struct in6_addr));
-	xp->selector.family = xp.family = AF_INET6;
-	xp->selector.prefixlen_d = 128;
-	xp->selector.prefixlen_s = 128;
-	xp->selector.proto = 0; // any?
-	xp->selector.sport = xp->selector.dport = xp->selector.sport_mask = 0;
-	xp->selector.dport_mask = 0;
-
-	xp->lft.soft_byte_limit = XFRM_INF;
-	xp->lft.hard_byte_limit = XFRM_INF;
-	xp->lft.soft_packet_limit = XFRM_INF;	 
-	xp->lft.hard_packet_limit = XFRM_INF;	 
-
-	xp->xfrm_nr = 0;
-	
-	err = xfrm_policy_insert(XFRM_POLICY_OUT, xp, 1);
-	if (!err)
-		goto out_free;
-
-	xfrm_pol_put(xp);
-
-	return err;
-
- out_err_spd_append:
-	sa_index_kfree(policy->esp_sa_idx);
- out_err_sa_index:
- out_err_sp_kmalloc:
-	sadb_remove(sa_entry);
- out_err_append:
- out_err_malloc_auth:
-	if (auth_msg)
-		kfree(auth_msg);
- out_err_key_to_esp:
-	if (ext_msg)
-		kfree(ext_msg);
- out_err_malloc_key:
-	ipsec_sa_kfree(sa_entry);
- out_err_nofree:
-	return err;
-
+	return -EINVAL;
 }
+
+
+
 
 
 /**

@@ -114,6 +114,9 @@ struct xfrm_state
 		int		trailer_len;
 	} props;
 
+#if defined(CONFIG_ESPBEET)
+	xfrm_address_t   outeraddr;
+#endif
 	struct xfrm_lifetime_cfg lft;
 
 	/* Data for transformer */
@@ -155,6 +158,12 @@ enum {
 	XFRM_STATE_ERROR,
 	XFRM_STATE_EXPIRED,
 	XFRM_STATE_DEAD
+};
+
+enum {
+	XFRM_MODE_TRANSPORT=0,
+	XFRM_MODE_TUNNEL,
+	XFRM_MODE_BEET
 };
 
 struct xfrm_type;
