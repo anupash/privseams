@@ -75,8 +75,8 @@ int main(int argc,char *argv[]) {
   struct addrinfo *res, *ai;
   int gai_err;
  
-  set_logtype(LOGTYPE_STDERR);
-  set_logfmt(LOGFMT_SHORT);
+  hip_set_logtype(LOGTYPE_STDERR);
+  hip_set_logfmt(LOGFMT_SHORT);
 
   if (argc != 4) {
     fprintf(stderr, "Usage: %s host tcp|udp port\n", argv[0]);

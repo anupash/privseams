@@ -2,7 +2,7 @@
  * Echo STDIN to a selected server which should echo it back.
  * Use this application with conntest-server-xx.
  *
- * usage: ./conntest-client-native host tcp|udp port
+ * usage: ./conntest-client-native-user-key host tcp|udp port
  *        (reads stdin)
  *
  * Notes:
@@ -64,7 +64,7 @@ void debug_endpoint(struct endpointinfo *res)
 
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *res = NULL;
-  struct sockaddr_eid peer;
+  struct sockaddr_eid my_eid, peer;
   struct timeval stats_before, stats_after;
   unsigned long stats_diff_sec, stats_diff_usec;
   char mylovemostdata[IP_MAXPACKET];
@@ -79,6 +79,8 @@ int main(int argc,char *argv[]) {
   int err = 0;
   int sockfd = 0, socktype;
   se_family_t endpoint_family;
+  char *user_key_base = "/etc/hip/hip_host_dsa_key";
+  struct endpoint *endpoint;
 
   hip_set_logtype(LOGTYPE_STDERR);
   hip_set_logfmt(LOGFMT_SHORT);
@@ -110,6 +112,19 @@ int main(int argc,char *argv[]) {
   sockfd = socket(endpoint_family, socktype, 0);
   if (sockfd == -1) {
     HIP_ERROR("creation of socket failed\n");
+    err = 1;
+    goto out;
+  }
+
+  err = load_hip_endpoint_pem(user_key_base, &endpoint);
+  if (err) {
+    HIP_ERROR("Failed to load user HIP key %s\n", user_key_base);
+    goto out;
+  }
+
+  err = setmyeid(sockfd, &my_eid, "", endpoint, NULL);
+  if (err) {
+    HIP_ERROR("Failed to set up my EID (%d)\n", err);
     err = 1;
     goto out;
   }

@@ -108,8 +108,30 @@ int hip_select_socket_handler(struct socket *sock,
 			      struct proto_ops **handler)
 {
 	int err = 0;
-	// XX FIXME: WHEN TO SELECT UDP AND IPV4?
-	*handler = &inet6_stream_ops;
+
+	HIP_ASSERT(sock && sock->sk);
+
+	HIP_DEBUG("sock_type=%d  sk_proto=%d\n",
+		  sock->sk->sk_type, sock->sk->sk_protocol);
+
+	/* XX FIXME: How to handle IPPROTO_RAW? */
+	/* XX FIXME: How to react on IPPROTO_HIP */
+
+	switch (sock->sk->sk_protocol) {
+	case IPPROTO_TCP:
+	  *handler = &inet6_stream_ops;
+	  break;
+	case IPPROTO_UDP:
+	  *handler = &inet6_dgram_ops;
+	  break;
+	default:
+	  *handler = NULL;
+	  err = -EPROTONOSUPPORT;
+	  HIP_ERROR("Cannot select protocol handler for proto %d.",
+		    sock->sk->sk_protocol);
+	  break;
+	}
+
 	return err;
 }
 
@@ -127,6 +149,8 @@ int hip_socket_get_eid_info(struct socket *sock,
 		HIP_ERROR("Failed to select a socket handler\n");
 		goto out_err;
 	}
+
+	HIP_DEBUG("Querying for eid value %d\n", ntohs(eid->eid_val));
 
 	err = hip_db_get_lhi_by_eid(eid, lhi, &owner_info, eid_is_local);
 	if (err) {
@@ -250,6 +274,8 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 	/* Note: connect calls autobind if the application has not already
 	   called bind manually. */
 	
+	/* XX CHECK: what about autobind src eid ? */
+
 	err = socket_handler->connect(sock, (struct sockaddr *) &sockaddr_in6,
 				      sizeof(struct sockaddr_in6), flags);
 	if (err) {
@@ -262,11 +288,29 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 	return err;
 }
 
+/*
+ * untested
+ */
 int hip_socket_socketpair(struct socket *sock1, struct socket *sock2)
 {
 	int err = 0;
+	struct proto_ops *socket_handler;
+
 	HIP_DEBUG("\n");
-	err = -ENOSYS;
+
+	err = hip_select_socket_handler(sock1, &socket_handler);
+	if (err) {
+		goto out_err;
+	}
+
+	err = socket_handler->socketpair(sock1, sock2);
+	if (err) {
+		HIP_ERROR("Inet socket handler failed (%d)\n", err);
+		goto out_err;
+	}
+
+ out_err:
+
 	return err;
 }
 
@@ -366,12 +410,28 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 	return err;
 }
 
+/*
+ * XX TODO: fall back to IPV6 POLL
+ */
 unsigned int hip_socket_poll(struct file *file, struct socket *sock,
 			     struct poll_table_struct *wait)
 {
-	unsigned int mask = 0;
+	int err = 0;
+	int mask = 0;
+	struct proto_ops *socket_handler;
+
 	HIP_DEBUG("\n");
-	mask = POLLERR;
+
+	err = hip_select_socket_handler(sock, &socket_handler);
+	if (err) {
+		mask = POLLERR;
+		goto out_err;
+	}
+
+	mask = socket_handler->poll(file, sock, wait);
+
+ out_err:
+	
 	return mask;
 }
 
@@ -379,8 +439,23 @@ int hip_socket_ioctl(struct socket *sock, unsigned int cmd,
 		     unsigned long arg)
 {
 	int err = 0;
+	struct proto_ops *socket_handler;
+
 	HIP_DEBUG("\n");
-	err = -ENOSYS;
+
+	err = hip_select_socket_handler(sock, &socket_handler);
+	if (err) {
+		goto out_err;
+	}
+
+	err = socket_handler->ioctl(sock, cmd, arg);
+	if (err) {
+		HIP_ERROR("Inet socket handler failed (%d)\n", err);
+		goto out_err;
+	}
+
+ out_err:
+
 	return err;
 }
 
@@ -410,8 +485,23 @@ int hip_socket_listen(struct socket *sock, int backlog)
 int hip_socket_shutdown(struct socket *sock, int flags)
 {
 	int err = 0;
+	struct proto_ops *socket_handler;
+
 	HIP_DEBUG("\n");
-	err = -ENOSYS;
+
+	err = hip_select_socket_handler(sock, &socket_handler);
+	if (err) {
+		goto out_err;
+	}
+
+	err = socket_handler->shutdown(sock, flags);
+	if (err) {
+		HIP_ERROR("Inet socket handler failed (%d)\n", err);
+		goto out_err;
+	}
+
+ out_err:
+
 	return err;
 }
 
@@ -513,6 +603,8 @@ int hip_socket_set_my_eid(struct hip_common *request,
 		goto out_err;
 	}
 
+	HIP_DEBUG("EID value was set to %d\n", ntohs(eid.eid_val));
+
 	/* Clear the response (in the case it is the same as the request) and
 	   write a return message */
 	
@@ -530,13 +622,30 @@ int hip_socket_set_my_eid(struct hip_common *request,
 	return err;
 }
 
+/*
+ * Currently we just fall back to IPv6.
+ */
 int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 			  char *optval, int optlen)
 {
 	int err = 0;
+	struct proto_ops *socket_handler;
+
 	HIP_DEBUG("\n");
 
-	err = -ENOSYS;
+	err = hip_select_socket_handler(sock, &socket_handler);
+	if (err) {
+		goto out_err;
+	}
+
+	err = socket_handler->setsockopt(sock, level, optname, optval, optlen);
+	if (err) {
+		HIP_ERROR("Inet socket handler failed (%d)\n", err);
+		goto out_err;
+	}
+
+ out_err:
+
 	return err;
 }
 
@@ -548,9 +657,28 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	
 	HIP_DEBUG("\n");
 
-	/* XX CHECK: what happens when the the optval buffer is overflowed? */
+	/* Check if the socket option really belongs to the actual socket
+	   handler */
+	if (optname != SO_HIP_SET_MY_EID) {
+		struct proto_ops *socket_handler;
+		
+		HIP_DEBUG("\n");
+		
+		err = hip_select_socket_handler(sock, &socket_handler);
+		if (err) {
+			goto out_err;
+		}		
+		err = socket_handler->getsockopt(sock, level, optname, optval,
+						 optlen);
+		if (err) {
+			HIP_ERROR("Inet socket handler failed (%d)\n", err);
+			goto out_err;
+		}
+		/* Skip the HIP socket option code */
+		goto out_err;
+	}
 
-	/* XX FIX ME: what about normal inet6 socket option queries? */
+	/* XX CHECK: what happens when the the optval buffer is overflowed? */
 
 	err = hip_check_userspace_msg(msg);
 	if (err) {
@@ -574,7 +702,7 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	   * XX TODO: setting my eid may be subject to some race conditions
 	   *
 	   */
-	case HIP_SOCK_OPT_SET_MY_EID:
+	case SO_HIP_SET_MY_EID:
 	  err = hip_socket_set_my_eid(msg, msg);
 	  if (err) {
 		  HIP_ERROR("Setting of my eid failed\n");
@@ -674,11 +802,26 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 }
 
 int hip_socket_mmap(struct file *file, struct socket *sock,
-		    struct vm_area_struct * vma)
+		    struct vm_area_struct *vma)
 {
 	int err = 0;
+	struct proto_ops *socket_handler;
+
 	HIP_DEBUG("\n");
-	err = -ENOSYS;
+
+	err = hip_select_socket_handler(sock, &socket_handler);
+	if (err) {
+		goto out_err;
+	}
+
+	err = socket_handler->mmap(file, sock, vma);
+	if (err) {
+		HIP_ERROR("Inet socket handler failed (%d)\n", err);
+		goto out_err;
+	}
+
+ out_err:
+
 	return err;
 }
 
@@ -686,7 +829,22 @@ ssize_t hip_socket_sendpage(struct socket *sock, struct page *page, int offset,
 			    size_t size, int flags)
 {
 	int err = 0;
+	struct proto_ops *socket_handler;
+
 	HIP_DEBUG("\n");
-	err = -ENOSYS;
+
+	err = hip_select_socket_handler(sock, &socket_handler);
+	if (err) {
+		goto out_err;
+	}
+
+	err = socket_handler->sendpage(sock, page, offset, size, flags);
+	if (err) {
+		HIP_ERROR("Inet socket handler failed (%d)\n", err);
+		goto out_err;
+	}
+
+ out_err:
+
 	return err;
 }

@@ -95,7 +95,8 @@ typedef uint16_t in_port_t;
 
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 
-#define HIP_SOCK_OPT_SET_MY_EID            1
+/* Begin from a high number to avoid collisions with existing socket opts */
+#define SO_HIP_SET_MY_EID            200
 /* Other HIP socket options */
 
 #define HIP_ENDPOINT_FLAG_HIT              1
