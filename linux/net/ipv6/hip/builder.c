@@ -1177,7 +1177,6 @@ int hip_build_user_hdr(struct hip_common *msg,
 	return err;
 }
 
-#ifdef __KERNEL__
 /**
  * hip_build_network_hdr - write network header into message
  * @msg:          the message where the HIP network should be written
@@ -1257,6 +1256,8 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
  out_err:
 	return err;
 }
+
+#ifdef __KERNEL__
 
 /**
  * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter

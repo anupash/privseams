@@ -69,4 +69,27 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix, sa_family_t family,
 			const struct sockaddr *sockaddr);
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
+/**
+ * hip_state_str - get name for a state
+ * @state: state value
+ *
+ * Returns: state name as a string.
+ */
+static inline const char *hip_state_str(unsigned int state)
+{
+	const char *str = "UNKNOWN";
+        static const char *states[] =
+	{ "NONE", "UNASSOCIATED", "I1_SENT",
+	  "I2_SENT", "R2_SENT", "ESTABLISHED", "REKEYING",
+	  "FAILED" };
+        if (state <= ARRAY_SIZE(states))
+	  str = states[state];
+        else
+	  HIP_ERROR("invalid state %u\n", state);
+
+        return str;
+}
+
 #endif /* DEBUG_H */

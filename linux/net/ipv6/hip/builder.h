@@ -21,7 +21,7 @@
 #include <netinet/ip6.h>
 #include <net/hip.h>
 #include <sys/socket.h>
-//#include "debug.h"
+#include "misc.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
