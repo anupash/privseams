@@ -94,7 +94,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask);
 #define hip_put_ha(ha) do { \
 	if (atomic_dec_and_test(&ha->refcnt)) { \
 		hip_hadb_delete_state(ha); \
-                HIP_DEBUG("HA: %p deleted.\n", ha); \
+                HIP_DEBUG("HA: %p deleted\n", ha); \
 	} else { \
                 _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, atomic_read(&ha->refcnt)); \
         } \

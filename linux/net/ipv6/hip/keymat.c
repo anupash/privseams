@@ -231,17 +231,16 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		goto out_err;
 	}
 
-	_HIP_DEBUG("Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
-		  entry->current_keymat_index, entry->keymat_calc_index);
 	_HIP_DEBUG("one byte index at req'd index in the end should be %u\n",
 		  (*keymat_index / HIP_AH_SHA_LEN + 1) % 256);
 
 	if (*keymat_index < *Kn_is_at) {
-		HIP_ERROR("requested keymat index %u is lower than index of Kn (%u)\n",
+		HIP_ERROR("requested keymat index %u is lower than lowest keymat index of Kn (%u)\n",
 			  *keymat_index, *Kn_is_at);
 		err = -EINVAL;
 		goto out_err;
 	}
+	/* todo: check here if we have to test *keymat_index < entry->current_keymat_index ? */
 
 	/* before calculating any hashes test if we already have
 	 * needed amount of ready keymat

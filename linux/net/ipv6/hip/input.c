@@ -1900,6 +1900,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		ipv6_addr_copy(&entry->hit_peer,&i2->hits);
 		ipv6_addr_copy(&entry->hit_our,&i2->hitr);
 		
+		HIP_ERROR("INSERTING STATE\n");
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
 		/* insert automatically holds for the data structure
@@ -1908,11 +1909,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		 */
 	}
 
-	/* If we have old SAs and SPDs with these HITs delete them
-	 * ignoring the return value */
-	/* keep this here or move this to prev else ? */
-	hip_delete_esp(entry);
-
+	/* If we have old SAs with these HITs delete them */
+ 	hip_delete_esp(entry);
 
 	{
 		struct hip_spi *hspi;
@@ -2022,6 +2020,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 
+	HIP_ERROR("INSERTING STATE\n");
 	hip_hadb_insert_state(entry);
 
 	err = hip_create_r2(ctx, entry);
@@ -2109,7 +2108,6 @@ int hip_receive_i2(struct sk_buff *skb)
 	} else {
 		barrier();
 		state = entry->state;
-
 	}
 
  	switch(state) {
@@ -2128,7 +2126,7 @@ int hip_receive_i2(struct sk_buff *skb)
 		HIP_UNLOCK_HA(entry);
  		break;
  	case HIP_STATE_ESTABLISHED:
- 		HIP_DEBUG("Received I2 in state ESTABLISHED!!!\n");
+ 		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
  		err = hip_handle_i2(skb, entry);
 
 		HIP_LOCK_HA(entry);
@@ -2137,9 +2135,9 @@ int hip_receive_i2(struct sk_buff *skb)
 		HIP_UNLOCK_HA(entry);
  		break;
  	case HIP_STATE_REKEYING:
-		HIP_DEBUG("Received I2 in REKEYING\n");
+		HIP_DEBUG("Received I2 in state REKEYING\n");
  		err = hip_handle_i2(skb, entry);
-		
+
 		HIP_LOCK_HA(entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;

@@ -185,7 +185,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	st = ha->hastate;
 
 	if (ha->spi_in != 0 && !(st & HIP_HASTATE_SPIOK)) {
-		
+
 		tmp = hip_ht_find(&hadb_spi, (void *)ha->spi_in);
 		if (!tmp) {
 			hip_ht_add(&hadb_spi, ha);
@@ -238,7 +238,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 
 	hip_hadb_delete_peer_addrlist(ha);
 	hip_ifindex2spi_map_delete_all(ha);
-	/* keymat & mm-01 stuff */
+	/* keymat & mm stuff */
 	if (ha->dh_shared_key)
 		kfree(ha->dh_shared_key);
 
@@ -290,14 +290,13 @@ void hip_hadb_remove_state(hip_ha_t *ha)
 
 	if ((ha->hastate & HIP_HASTATE_SPIOK) && ha->spi_in > 0)
 		hip_hadb_rem_state_spi(ha);
-	
+
 	if ((ha->hastate & HIP_HASTATE_HITOK) && !ipv6_addr_any(&ha->hit_peer))
 		hip_hadb_rem_state_hit(ha);
 
-	HIP_UNLOCK_HA(ha);
-
 	HIP_DEBUG("Removed HA: %p from HADB hash tables. References remaining: %d\n",
 		  ha, atomic_read(&ha->refcnt));
+	HIP_UNLOCK_HA(ha);
 }
 
 
@@ -492,6 +491,7 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry,
 				modified_time->tv_sec = s->modified_time.tv_sec;
 				modified_time->tv_usec = s->modified_time.tv_usec;
 			}
+			HIP_UNLOCK_HA(entry);
 			return 1;
 		}
 		i++;
@@ -780,10 +780,13 @@ void hip_hadb_delete_peer_addrlist(hip_ha_t *entry) {
 
         HIP_DEBUG("\n");
 
-	if (list_empty(&entry->peer_addr_list))
-		return;
-
 	HIP_LOCK_HA(entry);
+
+	if (list_empty(&entry->peer_addr_list)) {
+		HIP_UNLOCK_HA(entry);
+		return;
+	}
+
         list_for_each_entry_safe(item, iter, &entry->peer_addr_list, list) {
                 hip_in6_ntop(&item->address, addrstr);
                 _HIP_DEBUG("%p: address %d: %s interface_id 0x%x (%u), lifetime 0x%x (%u)\n",
@@ -1127,6 +1130,7 @@ uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
 	HIP_LOCK_HA(entry);
 	spi = entry->default_spi_out;
 	HIP_UNLOCK_HA(entry);
+	hip_put_ha(entry);
 	*state_ok = spi ? 1 : 0;
 	return spi;
 }

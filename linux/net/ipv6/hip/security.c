@@ -395,7 +395,7 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 {
 	struct xfrm_state *xs;
 
-	HIP_DEBUG("Searching for spi: %x (%x)\n",spi, htonl(spi));
+	HIP_DEBUG("Searching for spi: 0x%x (net 0x%x)\n", spi, htonl(spi));
 
 	xs = xfrm_state_lookup((xfrm_address_t *)hit, htonl(spi),
 			       IPPROTO_ESP, AF_INET6);

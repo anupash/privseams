@@ -1204,8 +1204,10 @@ int hip_receive_update(struct sk_buff *skb)
 	}
 
 	/* check that Old SPI value exists */
-	if (nes && (ntohl(nes->old_spi) != entry->spi_out)) {
-		HIP_ERROR("Old SPI value 0x%x in NES parameter does not belong to the currentSPI 0x%x in HA\n",
+	if (nes &&
+	    (nes->old_spi != nes->new_spi) && /* mm-02 check */
+	    (ntohl(nes->old_spi) != entry->spi_out)) {
+		HIP_ERROR("Old SPI value 0x%x in NES parameter does not belong to the current SPI 0x%x in HA\n",
 			  ntohl(nes->old_spi), entry->spi_out);
 		goto out_err;
 	}
@@ -1268,7 +1270,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	if (!addr_list)
 		HIP_DEBUG("Plain UPDATE\n");
 	else
-		HIP_DEBUG("mm UPDATE\n");
+		HIP_DEBUG("mm-02 UPDATE\n");
 
 	/* start building UPDATE packet */
 	update_packet = hip_msg_alloc();
