@@ -674,25 +674,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
  		 * &ctx->hip_espr.key and &ctx->hip_authr.key are already set
  		 * by hip_produce_keying_material called in hip_handle_r1 */
 
-		/* Try to find a suitable random SPI */
-		do {
-			get_random_bytes(&spi_our, sizeof(uint32_t));
-		} while (spi_our < 256); /* RFC 2406 section 2.1 */
-
-		HIP_DEBUG("trying to set up inbound IPsec with SPI=0x%x\n", 
-			  spi_our);
-
 		err = hip_setup_esp(&ctx->input->hitr, 
 				    &ctx->input->hits,
-				    spi_our,
+				    &spi_our,
 				    transform_esp_suite,
 				    &ctx->hip_espr.key,
 				    &ctx->hip_authr.key);
-		if (err == -EEXIST) {
-			HIP_DEBUG("SA already exists for the SPI=0x%x\n", 
-				  spi_our);
-			continue;
-		} else if (err) {
+		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
 			/* hip_delete_spd/hip_delete_sa ? */
 			goto out_err;
@@ -1176,27 +1164,12 @@ int hip_create_r2(struct hip_context *ctx)
 
 	/* Set up IPsec associations */
 	while (1) {
-		/* TODO: maximum number of tries even though the
-		 * probability is really small ? */
-
-		/* Try to find an unused SPI. draft says that "The SPI
-		 * selection SHOULD be random", we support this. Also
-		 * check first that we do not violate RFC 2406 section
-		 * 2.1 */
-		do {
-			get_random_bytes(&spi_our, sizeof(uint32_t));
-		} while (spi_our < 256);
-
-		HIP_DEBUG("trying to set up inbound IPsec with SPI=0x%x\n", spi_our);
 		err = hip_setup_esp(&i2->hitr, &i2->hits,
-				    spi_our,
+				    &spi_our,
 				    esptfm,
 				    &ctx->hip_espi.key,
 				    &ctx->hip_authi.key);
-		if (err == -EEXIST) {
-			HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_our);
-			continue;
-		} else if (err) {
+		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
 			hip_delete_esp(&i2->hitr,&i2->hits);
 			goto out_err;
@@ -1207,11 +1180,12 @@ int hip_create_r2(struct hip_context *ctx)
 		break;
 	}
 
+	/* XXX: Krisu check this SPI setting! */
 	hip_hadb_get_peer_spi_by_hit(&i2->hits,&spi_peer);
 	
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x\n", spi_peer);
 	err = hip_setup_esp(&i2->hits, &i2->hitr,
-			    spi_peer,
+			    &spi_peer,
 			    esptfm,
 			    &ctx->hip_espr.key,
 			    &ctx->hip_authr.key);

@@ -40,7 +40,7 @@
 extern struct semaphore hip_work;
 
 void hip_stop_khipd(void);
-void hip_init_workqueue(void);
+int hip_init_workqueue(void);
 void hip_uninit_workqueue(void);
 int hip_insert_work_order(struct hip_work_order *hwo);
 struct hip_work_order *hip_get_work_order(void);

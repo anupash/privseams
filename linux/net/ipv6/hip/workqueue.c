@@ -6,32 +6,44 @@
 
 #include "workqueue.h"
 
-static struct list_head *hip_workqueue;
+struct hip_pc_wq {
+	struct semaphore *worklock;
+	struct list_head *workqueue;
+};
 
+static DEFINE_PER_CPU(struct hip_pc_wq *, hip_workqueue);
+
+/* SLEEPS! */
 struct hip_work_order *hip_get_work_order(void)
 {
-	int eflags;
+	unsigned long eflags;
+	struct hip_pc_wq *wq;
 	struct hip_work_order *result;
+
+	wq = __get_cpu_var(hip_workqueue);
+
+	/* Wait for job */
+	down(wq->worklock);
 
 	/* every processor has its own worker thread, so
 	   spin lock is not needed. Only local irq disabling
 	*/
 	local_irq_save(eflags); 
 
-	if (list_empty(hip_workqueue)) {
+	if (list_empty(wq->workqueue)) {
 		HIP_ERROR("Work queue empty?\n");
 		result = NULL;
 		goto err;
 	}
 
-	result = list_entry(hip_workqueue->next, struct hip_work_order, queue);
+	result = list_entry(wq->workqueue->next, struct hip_work_order, queue);
 	if (!result) {
 		HIP_ERROR("Couldn't extract the main structure from the list\n");
 		result = NULL;
 		goto err;
 	}
 
-	list_del(hip_workqueue->next);
+	list_del(wq->workqueue->next);
 
  err:	
 	local_irq_restore(eflags);
@@ -41,7 +53,8 @@ struct hip_work_order *hip_get_work_order(void)
 
 int hip_insert_work_order(struct hip_work_order *hwo)
 {
-	int eflags;
+	unsigned long eflags;
+	struct hip_pc_wq *wq;
 
 	/* sanity check? */
 
@@ -49,34 +62,52 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 		return -1;
 
 	HIP_DEBUG("Inserting a nakki\n");
+
+	wq = __get_cpu_var(hip_workqueue);
 	local_irq_save(eflags);
 
-	list_add_tail(&hwo->queue,hip_workqueue);
+	list_add_tail(&hwo->queue,wq->workqueue);
 
-	up(&hip_work); // tell the worker, that there is work
+	up(wq->worklock); // tell the worker, that there is work
 	local_irq_restore(eflags);
 	return 1;
 }
 
 
-void hip_init_workqueue()
+int hip_init_workqueue()
 {
+	struct list_head *lh;
+	struct semaphore *sem;
+	struct hip_pc_wq *old;
 
-	hip_workqueue = kmalloc(sizeof(struct list_head),GFP_KERNEL);
+	lh = kmalloc(sizeof(struct list_head),GFP_KERNEL);
+	if (!lh)
+		return -ENOBUFS;
 
-	INIT_LIST_HEAD(hip_workqueue);
-
-	if (!list_empty(hip_workqueue)) {
-		HIP_DEBUG("Hip_workqueue not empty!!!\n");
+	sem = kmalloc(sizeof(struct semaphore), GFP_KERNEL);
+	if (!sem) {
+		kfree(lh);
+		return -ENOBUFS;
 	}
+
+	INIT_LIST_HEAD(lh);
+	init_MUTEX_LOCKED(sem);
+
+	old = __get_cpu_var(hip_workqueue);
+	old->worklock = sem;
+	old->workqueue = lh;
+	return 0;
 }
 
 void hip_uninit_workqueue()
 {
 	struct list_head *pos,*iter;
+	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
 
-	list_for_each_safe(pos,iter,hip_workqueue) {
+	wq = __get_cpu_var(hip_workqueue);
+
+	list_for_each_safe(pos, iter, wq->workqueue) {
 		hwo = list_entry(pos,struct hip_work_order,queue);
 		if (hwo) {
 			if (hwo->arg1)
@@ -87,10 +118,12 @@ void hip_uninit_workqueue()
 		}
 		list_del(pos);
 	}
-	kfree(hip_workqueue);
+	kfree(wq->workqueue);
+	/* XXX: is there a possiblity that somebody would be using the semaphore? */
+	kfree(wq->worklock);
 }
 
-
+/* XXX: Redesign this one, to enable killing all the threads. */
 void hip_stop_khipd()
 {
 	struct hip_work_order *hwo;

@@ -25,13 +25,14 @@
 
 #include "hip.h"
 
-static int hip_working = 0; /* 1 when thread is active */
+static atomic_t hip_working = ATOMIC_INIT(0);
 
-static time_t         load_time;          /* Wall clock time at module load */
+static time_t load_time;          /* Wall clock time at module load XXX: why? */
 
 static struct notifier_block hip_notifier_block;
 static struct notifier_block hip_netdev_notifier;
 static void hip_uninit_cipher(void); // forward decl.
+static void hip_cleanup(void);
 
 /* All cipher and digest implementations we support. */
 static struct crypto_tfm *impl_3des_cbc = NULL;
@@ -43,6 +44,7 @@ struct crypto_tfm *impl_null = NULL;
 struct crypto_tfm *impl_sha1 = NULL;
 spinlock_t dh_table_lock = SPIN_LOCK_UNLOCKED;
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
+
 #ifdef KRISUS_THESIS
 struct timeval gtv_start;
 struct timeval gtv_stop;
@@ -51,7 +53,6 @@ int gtv_inuse;
 int kmm; // krisu_measurement_mode
 #endif
 
-DECLARE_MUTEX_LOCKED(hip_work);
 spinlock_t hip_workqueue_lock = SPIN_LOCK_UNLOCKED;
 
 #ifdef CONFIG_PROC_FS
@@ -60,6 +61,19 @@ static struct proc_dir_entry *hip_proc_root = NULL;
 
 LIST_HEAD(hip_sent_rea_info_pkts);
 LIST_HEAD(hip_sent_ac_info_pkts);
+
+
+/*
+	void	(*err_handler)(struct sk_buff *skb,
+			       struct inet6_skb_parm *opt,
+			       int type, int code, int offset,
+			       __u32 info);
+*/
+static struct inet6_protocol hip_protocol = {
+	.handler     = hip_inbound,
+//	.err_handler = hip_errhand,
+	.flags       = INET6_PROTO_NOPOLICY,
+};
 
 
 /**
@@ -1512,47 +1526,25 @@ static int hip_do_work(void)
 	return res;
 }
 
-static int hip_worker(void *unused)
+static int hip_worker(void *cpuid)
 {
 	int result = 0;
 
-	hip_working = 1;
-	daemonize("khipd");
+	/* set up thread */
+	daemonize("khipd/%d",cpuid);
+
+	set_cpus_allowed(current, cpumask_of_cpu(cpuid));
+	//set_user_nice(current, 0); //XXX: Set this as you please 
+
 
 	/* initialize */
 
 	hip_init_workqueue();
 
-	if (hip_init_daemon() < 0)
-		goto out_err1;
-
-	if (hip_init_ioctl() < 0)
-		goto out_err2;
-
-	if (hip_init_register_inet6addr_notifier() < 0)
-		goto out_err3;
-
-	/* comment this to disable network device event handler
-	   (crashed sometimes) */
-	if (hip_init_netdev_notifier() < 0)
-		goto out_err4;
-
- 	HIP_SETCALL(hip_bypass_ipsec, hip_bypass_ipsec);   
-	HIP_SETCALL(hip_handle_output, hip_handle_output); 
-	HIP_SETCALL(hip_handle_esp, hip_handle_esp);       
-	HIP_SETCALL(hip_get_addr, hip_get_addr);           
-	HIP_SETCALL(hip_get_hits, hip_get_hits);           
-	HIP_SETCALL(hip_inbound, hip_inbound);             
-	HIP_SETCALL(hip_get_saddr, hip_get_saddr);       
-	HIP_SETCALL(hip_unknown_spi, hip_unknown_spi);   
-	HIP_SETCALL(hip_handle_dst_unreachable, hip_handle_dst_unreachable); 
-
+	atomic_inc(&hip_working);
 	/* work loop */
 
 	while(1) {
-		down(&hip_work);
-		HIP_DEBUG("Got work\n");
-
 		result = hip_do_work();
 		if (result < 0) {
 			if (result == KHIPD_QUIT) {
@@ -1571,6 +1563,89 @@ static int hip_worker(void *unused)
 
 
 	/* cleanup */
+	hip_uninit_workqueue();
+
+	atomic_dec(&hip_working);
+
+	return 0;
+}
+
+
+
+static int hip_init(void)
+{
+	int i,pid;
+
+	HIP_INFO("Initializing HIP module\n");
+	hip_get_load_time();
+	
+	if(!hip_init_r1())
+		goto out;
+
+	if (hip_init_sock() < 0)
+		goto out;
+
+	if (hip_init_cipher() < 0)
+		goto out;
+
+#ifdef CONFIG_PROC_FS
+	if (hip_init_procfs() < 0)
+		goto out;
+#endif /* CONFIG_PROC_FS */
+
+	if (hip_init_daemon() < 0)
+		goto out;
+
+	if (hip_init_ioctl() < 0)
+		goto out;
+
+	if (hip_init_register_inet6addr_notifier() < 0)
+		goto out;
+
+	/* comment this to disable network device event handler
+	   (crashed sometimes) */
+	if (hip_init_netdev_notifier() < 0)
+		goto out;
+
+	for(i=0;i<NR_CPUS;i++) {
+		pid = kernel_thread(hip_worker, (void *) i, CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD);
+		if (IS_ERR(ERR_PTR(pid)))
+			goto out;
+	}
+
+ 	HIP_SETCALL(hip_bypass_ipsec, hip_bypass_ipsec);   
+	HIP_SETCALL(hip_handle_output, hip_handle_output); 
+	HIP_SETCALL(hip_handle_esp, hip_handle_esp);       
+	HIP_SETCALL(hip_get_addr, hip_get_addr);           
+	HIP_SETCALL(hip_get_hits, hip_get_hits);           
+	HIP_SETCALL(hip_inbound, hip_inbound);             
+	HIP_SETCALL(hip_get_saddr, hip_get_saddr);       
+	HIP_SETCALL(hip_unknown_spi, hip_unknown_spi);   
+	HIP_SETCALL(hip_handle_dst_unreachable, hip_handle_dst_unreachable); 
+
+	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
+		HIP_ERROR("Could not add HIP protocol\n");
+		goto out;
+	}
+
+	HIP_INFO("HIP module initialized successfully\n");
+	return 0;
+
+
+ out:
+	hip_cleanup();
+	HIP_ERROR("Failed to init module\n");
+	return -EINVAL;
+}
+
+/*
+ * We first invalidate the hooks, so that softirqs wouldn't enter them.
+ */
+static void hip_cleanup(void)
+{
+	HIP_INFO("uninitializing HIP module\n");
+
+	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
 
 	HIP_INVALIDATE(hip_handle_dst_unreachable);
 	HIP_INVALIDATE(hip_unknown_spi);
@@ -1582,97 +1657,32 @@ static int hip_worker(void *unused)
 	HIP_INVALIDATE(hip_handle_output);
 	HIP_INVALIDATE(hip_bypass_ipsec);
 
-	hip_uninit_workqueue();
-	// out_err5:
-	hip_uninit_netdev_notifier(); 	/* comment this if network device event */
- out_err4:
-	hip_uninit_register_inet6addr_notifier();
- out_err3:
-	hip_uninit_ioctl();
- out_err2:
-	hip_uninit_daemon();
- out_err1:
-	hip_working = 0;
-
-	return (result+1);
-}
-
-
-
-static int hip_init(void)
-{
-	HIP_INFO("Initializing HIP module\n");
-	hip_get_load_time();
-
-	
-	if(!hip_init_r1())
-		goto out_err1;
-
-	if (hip_init_sock() < 0)
-		goto out_err2;
-
-	if (hip_init_cipher() < 0)
-		goto out_err4;
-
-#ifdef CONFIG_PROC_FS
-	if (hip_init_procfs() < 0)
-		goto out_err6;
-#endif /* CONFIG_PROC_FS */
-
-
-	kernel_thread(hip_worker, NULL,CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD);
-
-	HIP_INFO("HIP module initialized successfully\n");
-	return 0;
-
-
-#ifdef CONFIG_PROC_FS
-	hip_uninit_procfs();
-#endif /* CONFIG_PROC_FS */
-
- out_err6:
-	hip_uninit_host_id_dbs();
-
-	//out_err5:
-	hip_uninit_cipher();
-	
- out_err4:
- 	hip_uninit_hadb();
-
-	//out_err3:
-	hip_uninit_sock();
-	
- out_err2:
-	hip_uninit_r1();
-
- out_err1:
-	hip_rea_delete_sent_list();
-	hip_ac_delete_sent_list();
-
-	HIP_ERROR("Failed to init module\n");
-	return -EINVAL;
-}
-
-static void hip_cleanup(void)
-{
-	HIP_INFO("uninitializing HIP module\n");
-
-	if (hip_working) {
+	if (atomic_read(&hip_working) != 0) {
 		hip_stop_khipd(); /* tell the hip kernel thread(s) to stop */
 
-		while(hip_working)
+		while(atomic_read(&hip_working)) {
+			HIP_DEBUG("%d HIP threads left\n",atomic_read(&hip_working));
 			schedule(); /* wait until stopped */
+		}
 	}
 
-	HIP_DEBUG("Thread finished\n");
+	HIP_DEBUG("Thread(s) finished\n");
+
+	hip_uninit_netdev_notifier(); 	/* comment this if network device event */
+	hip_uninit_register_inet6addr_notifier();
+	hip_uninit_ioctl();
+	hip_uninit_daemon();
 
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();
 #endif /* CONFIG_PROC_FS */
+
 	hip_uninit_host_id_dbs();
 	hip_uninit_hadb();
 	hip_uninit_sock();
 	hip_uninit_r1();
+
+	/* XXX: Mika are these in correct place? */
 	hip_rea_delete_sent_list();
 	hip_ac_delete_sent_list();
 	HIP_INFO("HIP module uninitialized successfully\n");
@@ -1689,14 +1699,3 @@ MODULE_PARM_DESC(kmm, "Measuring mode: 1 = Global timing, 2 = {I,R}{1,2} timing,
 module_init(hip_init);
 module_exit(hip_cleanup);
 
-/*
-	void	(*err_handler)(struct sk_buff *skb,
-			       struct inet6_skb_parm *opt,
-			       int type, int code, int offset,
-			       __u32 info);
-*/
-static struct inet6_protocol hip_protocol = {
-	.handler     = hip_inbound,
-//	.err_handler = hip_errhand,
-	.flags       = INET6_PROTO_NOPOLICY,
-};
