@@ -31,6 +31,11 @@ hipd_SOURCES = hipd.c netlink.c
 #builder.c: builder.h
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
 
+debug.h:
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.h .
+debug.c:
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.c .
+
 #$(HIPL_LIBINET6_LIB_STATIC):
 #	$(MAKE) -C $(HIPL_LIBINET6)
 

@@ -17,7 +17,7 @@
 #include <sys/select.h> /* select */
 
 #include "hipd.h"
-#include "regex.h"
+#include "debug.h"
 
 void usage() {
      fprintf(stderr, "hipl usage\n");
