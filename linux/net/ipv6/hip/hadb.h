@@ -8,8 +8,8 @@
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
 
-#define HIP_LOCK_HA(ha) do { spin_lock(&ha->lock); } while(0)
-#define HIP_UNLOCK_HA(ha) do { spin_unlock(&ha->lock); } while(0)
+#define HIP_LOCK_HA(ha) do { spin_lock_bh(&ha->lock); } while(0)
+#define HIP_UNLOCK_HA(ha) do { spin_unlock_bh(&ha->lock); } while(0)
 
 
 /*************** BASE FUNCTIONS *******************/

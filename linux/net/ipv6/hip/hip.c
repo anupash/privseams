@@ -709,7 +709,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	}
 
 	entry->dh_shared_key_len = 0;
-	entry->dh_shared_key = kmalloc(ctx->dh_shared_key_len, GFP_KERNEL);
+	entry->dh_shared_key = kmalloc(ctx->dh_shared_key_len, GFP_ATOMIC);
 	if (!entry->dh_shared_key) {
 		HIP_ERROR("entry dh_shared kmalloc failed\n");
 		err = -ENOMEM;
@@ -1636,20 +1636,22 @@ static void hip_uninit_cipher(void)
 static int hip_init_procfs(void)
 {
 	HIP_DEBUG("procfs init\n");
-	hip_proc_root = create_proc_entry("net/hip", S_IFDIR, NULL);
+	hip_proc_root = create_proc_entry("hip", S_IFDIR, proc_net);
 	if (!hip_proc_root)
 		return -1;
 
-	create_proc_read_entry("net/hip/lhi", 0, 0, hip_proc_read_lhi, NULL);
-	create_proc_read_entry("net/hip/sdb_state", 0, 0,
+	create_proc_read_entry("lhi", 0, hip_proc_root, hip_proc_read_lhi, NULL);
+	create_proc_read_entry("sdb_state", 0, hip_proc_root,
 			       hip_proc_read_hadb_state, NULL);
-	create_proc_read_entry("net/hip/sdb_peer_addrs", 0, 0,
+	create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
 			       hip_proc_read_hadb_peer_addrs, NULL);
 
 	/* a simple way to trigger sending of UPDATE packet to all peers */
-	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
+	create_proc_read_entry("send_update", 0, hip_proc_root,
+			       hip_proc_send_update, NULL);
 	/* for testing dummy NOTIFY packets */
-	create_proc_read_entry("net/hip/send_notify", 0, 0, hip_proc_send_notify, NULL);
+	create_proc_read_entry("send_notify", 0, hip_proc_root,
+			       hip_proc_send_notify, NULL);
 	return 1;
 
 }
@@ -1660,12 +1662,12 @@ static int hip_init_procfs(void)
 static void hip_uninit_procfs(void)
 {
 	HIP_DEBUG("\n");
-	remove_proc_entry("net/hip/lhi", hip_proc_root);
-	remove_proc_entry("net/hip/sdb_state", hip_proc_root);
-	remove_proc_entry("net/hip/sdb_peer_addrs", hip_proc_root);
-	remove_proc_entry("net/hip/send_update", hip_proc_root);
-	remove_proc_entry("net/hip/send_notify", hip_proc_root);
-	remove_proc_entry("net/hip", NULL);
+	remove_proc_entry("lhi", hip_proc_root);
+	remove_proc_entry("sdb_state", hip_proc_root);
+	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
+	remove_proc_entry("send_update", hip_proc_root);
+	remove_proc_entry("send_notify", hip_proc_root);
+	remove_proc_entry("hip", proc_net);
 	return;
 }
 #endif /* CONFIG_PROC_FS */
