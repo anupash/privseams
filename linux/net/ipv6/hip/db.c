@@ -393,7 +393,7 @@ int hip_get_any_hit(struct hip_db_struct *db, struct hip_lhi *res,
 	
 	HIP_READ_LOCK_DB(db);
 
-	list_for_each_entry(entry, db->db_head.next, next) {
+	list_for_each_entry(entry, &db->db_head, next) {
 		if (hip_get_host_id_algo(entry->host_id) == algo) {
 	                memcpy(res, &entry->lhi, sizeof(struct hip_lhi));
 			HIP_READ_UNLOCK_DB(db);
@@ -719,6 +719,7 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo) {
 
 struct hip_host_id *hip_get_localhost_public_key(struct hip_lhi *lhi)
 {
+	/* XX TODO: use lhi when selecting among multiple rsa or dsa keys */
 	struct hip_host_id *result = NULL;
 	struct hip_host_id *hi_pub = NULL;
 	result = hip_get_host_id(&hip_local_hostid_db, lhi);

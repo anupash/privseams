@@ -1540,10 +1540,16 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 // 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	uint16_t mask;
 #ifdef CONFIG_HIP_RVS
-	  int create_rva = 0;
+	int create_rva = 0;
 #endif
+	struct hip_lhi lhi;
 
 	HIP_DEBUG("\n");
+
+	/* dig our hit from host association entry and use it later for 
+	 getting the private and public parts for the right HI */
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+        memcpy(&(lhi.hit), &entry->hit_our, sizeof(struct in6_addr));
 
 	/* assume already locked entry */
 	i2 = ctx->input;
@@ -1615,7 +1621,8 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		struct hip_crypto_key hmac;
 
 		host_id_public =
-			hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+			hip_get_localhost_public_key(&lhi);
+		        //hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 
 		HIP_HEXDUMP("host id for HMAC2", host_id_public,
 			    hip_get_param_total_len(host_id_public));
@@ -1629,7 +1636,8 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		}
 	}
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
+        //hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
