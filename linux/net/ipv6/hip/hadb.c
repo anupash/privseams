@@ -1298,7 +1298,8 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 }
 
 /* have_nes is 1, if there is NES in the same packet as the ACK was */
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes)
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
+			   struct hip_echo_response *echo_resp)
 {
 	size_t n, i;
 	uint32_t *peer_update_id;
@@ -1339,22 +1340,39 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes)
 		}
 
 		/* see if the ACK was response to address verification */
+		if (echo_resp) {
 		list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
 			struct hip_peer_addr_list_item *addr, *addr_tmp;
 
 			list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
 				HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
 				if (addr->seq_update_id == puid) {
+					if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
+						HIP_ERROR("echo data len mismatch\n");
+						continue;
+					}
+					if (memcmp(addr->echo_data,
+						    (void *)echo_resp+sizeof(struct hip_tlv_common),
+						    sizeof(addr->echo_data)) != 0) {
+						HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
+						continue;
+					}
 					HIP_DEBUG("addr: ack = addr seq, setting state to ACTIVE\n");
 					addr->address_state = PEER_ADDR_STATE_ACTIVE;
 
-					HIP_DEBUG("testing kludge, setting address as default out addr\n");
-					ipv6_addr_copy(&out_item->preferred_address, &addr->address);
-					HIP_DEBUG("setting default SPI out to 0x%x\n", out_item->spi);
-					entry->default_spi_out = out_item->spi;
-					ipv6_addr_copy(&entry->preferred_address, &addr->address);
+					if (addr->is_preferred) {
+						HIP_DEBUG("testing kludge, setting address as default out addr\n");
+						ipv6_addr_copy(&out_item->preferred_address, &addr->address);
+						HIP_DEBUG("setting default SPI out to 0x%x\n", out_item->spi);
+						entry->default_spi_out = out_item->spi;
+						ipv6_addr_copy(&entry->preferred_address, &addr->address);
+					} else
+						HIP_DEBUG("address was not set as preferred address in REA\n");
 				}
 			}
+		}
+		} else {
+			HIP_DEBUG("no ECHO_RESPONSE in same packet with ACK\n");
 		}
 	}
  out_err:
@@ -1428,7 +1446,7 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 /* add an address belonging to the SPI list */
 /* or update old values */
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
-			     int address_state, uint32_t lifetime,
+			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr, uint32_t update_id)
 {
 	/* no locking */
@@ -1471,19 +1489,45 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	new_addr->lifetime = lifetime;
 	if (new)
 		ipv6_addr_copy(&new_addr->address, addr);
-	if (!new && new_addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
-		new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-		HIP_DEBUG("updated address state DEPRECATED->UNVERIFIED\n");
-	}
-	new_addr->address_state = address_state;
-	do_gettimeofday(&new_addr->modified_time);
-	new_addr->seq_update_id = update_id;
 
+	/* If the address is already bound, its lifetime is updated.
+	   If the status of the address is DEPRECATED, the status is
+	   changed to UNVERIFIED.  If the address is not already bound,
+	   the address is added, and its status is set to UNVERIFIED. */
+	if (!new) {
+		switch (new_addr->address_state) {
+		case PEER_ADDR_STATE_DEPRECATED:
+			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+			HIP_DEBUG("updated address state DEPRECATED->UNVERIFIED\n");
+			break;
+ 		case PEER_ADDR_STATE_ACTIVE:
+			HIP_DEBUG("address state stays in ACTIVE\n");
+			break;
+		default:
+			HIP_ERROR("state is UNVERIFIED, shouldn't even be here ?\n");
+			break;
+		}
+	} else {
+		if (is_bex_address) {
+			/* workaround for special case */
+			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
+			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
+		} else {
+			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+			HIP_DEBUG("set initial address state UNVERIFIED\n");
+		}
+	}
+
+	do_gettimeofday(&new_addr->modified_time);
+	new_addr->seq_update_id = 0;
+	new_addr->is_preferred = is_preferred_addr;
+
+#if 0
 	if (is_preferred_addr) {
 		ipv6_addr_copy(&spi_list->preferred_address, addr);
 		ipv6_addr_copy(&entry->preferred_address, addr); // test
 	}
-
+#endif
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);

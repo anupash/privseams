@@ -730,10 +730,13 @@ struct hip_peer_addr_list_item
 	struct in6_addr  address;
 	int              address_state; /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */
+	int              is_preferred;  /* 1 if this address was set as preferred address in the REA*/
 	uint32_t         lifetime;
 	struct timeval   modified_time; /* time when this address was
 					   added or updated */
-	uint32_t seq_update_id; /* the Update ID in SEQ parameter this address is related to */
+	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
+					   this address is related to */
+	uint8_t          echo_data[4];     /* data put into the ECHO_REQUEST parameter */
 };
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
