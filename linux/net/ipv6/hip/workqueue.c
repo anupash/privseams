@@ -11,7 +11,7 @@ struct hip_pc_wq {
 	struct list_head *workqueue;
 };
 
-static DEFINE_PER_CPU(struct hip_pc_wq *, hip_workqueue);
+static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
 
 /* SLEEPS! */
 struct hip_work_order *hip_get_work_order(void)
@@ -20,7 +20,12 @@ struct hip_work_order *hip_get_work_order(void)
 	struct hip_pc_wq *wq;
 	struct hip_work_order *result;
 
-	wq = __get_cpu_var(hip_workqueue);
+	wq = &__get_cpu_var(hip_workqueue);
+
+	HIP_ERROR("Debug data 1\n");
+	HIP_ERROR("wq: %p\n",wq);
+	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
+	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
 
 	/* Wait for job */
 	down(wq->worklock);
@@ -36,12 +41,22 @@ struct hip_work_order *hip_get_work_order(void)
 		goto err;
 	}
 
+	HIP_ERROR("Some debug data 2\n");
+	HIP_ERROR("wq: %p\n",wq);
+	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
+	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
+
 	result = list_entry(wq->workqueue->next, struct hip_work_order, queue);
 	if (!result) {
 		HIP_ERROR("Couldn't extract the main structure from the list\n");
 		result = NULL;
 		goto err;
 	}
+
+	HIP_ERROR("Some debug data 3\n");
+	HIP_ERROR("wq: %p\n",wq);
+	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
+	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
 
 	list_del(wq->workqueue->next);
 
@@ -61,12 +76,23 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 	if (hwo->type < 0 || hwo->type > HIP_MAX_WO_TYPES)
 		return -1;
 
-	HIP_DEBUG("Inserting a nakki\n");
+	HIP_ERROR("Inserting a nakki\n");
 
-	wq = __get_cpu_var(hip_workqueue);
+	wq = &__get_cpu_var(hip_workqueue);
+
+	HIP_ERROR("Some debug data 4\n");
+	HIP_ERROR("wq: %p\n",wq);
+	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
+	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
+
 	local_irq_save(eflags);
 
 	list_add_tail(&hwo->queue,wq->workqueue);
+
+	HIP_ERROR("Some debug data 5\n");
+	HIP_ERROR("wq: %p\n",wq);
+	HIP_ERROR("worklock: %p (cnt: %d, sleepz: %d)\n",wq->worklock, atomic_read(&wq->worklock->count), wq->worklock->sleepers);
+	HIP_ERROR("workqueue: %p (%p <-> %p)\n",wq->workqueue, wq->workqueue->prev, wq->workqueue->next);
 
 	up(wq->worklock); // tell the worker, that there is work
 	local_irq_restore(eflags);
@@ -78,7 +104,7 @@ int hip_init_workqueue()
 {
 	struct list_head *lh;
 	struct semaphore *sem;
-	struct hip_pc_wq *old;
+	struct hip_pc_wq *data;
 
 	lh = kmalloc(sizeof(struct list_head),GFP_KERNEL);
 	if (!lh)
@@ -93,9 +119,11 @@ int hip_init_workqueue()
 	INIT_LIST_HEAD(lh);
 	init_MUTEX_LOCKED(sem);
 
-	old = __get_cpu_var(hip_workqueue);
-	old->worklock = sem;
-	old->workqueue = lh;
+	HIP_ERROR("HIP Semaphore initial: %d\n",atomic_read(&sem->count));
+
+	data = &__get_cpu_var(hip_workqueue);
+	data->worklock = sem;
+	data->workqueue = lh;
 	return 0;
 }
 
@@ -105,7 +133,7 @@ void hip_uninit_workqueue()
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
 
-	wq = __get_cpu_var(hip_workqueue);
+	wq = &__get_cpu_var(hip_workqueue);
 
 	list_for_each_safe(pos, iter, wq->workqueue) {
 		hwo = list_entry(pos,struct hip_work_order,queue);

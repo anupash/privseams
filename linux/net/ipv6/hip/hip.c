@@ -1526,14 +1526,15 @@ static int hip_do_work(void)
 	return res;
 }
 
-static int hip_worker(void *cpuid)
+static int hip_worker(void *cpu_id)
 {
 	int result = 0;
+	int cid = (int) cpu_id;
 
 	/* set up thread */
-	daemonize("khipd/%d",cpuid);
+	daemonize("khipd/%d",cid);
 
-	set_cpus_allowed(current, cpumask_of_cpu(cpuid));
+	set_cpus_allowed(current, cpumask_of_cpu(cid));
 	//set_user_nice(current, 0); //XXX: Set this as you please 
 
 
@@ -1572,7 +1573,7 @@ static int hip_worker(void *cpuid)
 
 
 
-static int hip_init(void)
+static int __init hip_init(void)
 {
 	int i,pid;
 
@@ -1641,7 +1642,7 @@ static int hip_init(void)
 /*
  * We first invalidate the hooks, so that softirqs wouldn't enter them.
  */
-static void hip_cleanup(void)
+static void __exit hip_cleanup(void)
 {
 	HIP_INFO("uninitializing HIP module\n");
 

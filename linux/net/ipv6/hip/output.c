@@ -125,14 +125,14 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			reverse = hip_create_job_with_hit(GFP_ATOMIC,&hdr->daddr);
 			if (!reverse) {
 				HIP_ERROR("Could not undo state change\n");
-				goto memout;
+				goto out;
 			}
 
-			hwo->type = HIP_WO_TYPE_OUTGOING;
-			hwo->subtype = HIP_WO_SUBTYPE_DEL_CONN;
+			reverse->type = HIP_WO_TYPE_OUTGOING;
+			reverse->subtype = HIP_WO_SUBTYPE_DEL_CONN;
 
 			hip_insert_work_order(reverse);
-			goto memout;
+			goto out;
 		}
 
 		break;

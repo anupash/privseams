@@ -83,6 +83,7 @@ config HIP
 	depends on IPV6
 	select INET6_ESP
 	select ESPBEET
+	select CRYPTO_NULL
 	---help---
 	  Support for Host Identity Protocol. HIP creates an additional layer
 	  between networking and transport layers. Application are supposed to see
