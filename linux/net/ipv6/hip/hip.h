@@ -1,45 +1,6 @@
 #ifndef HIP_HIP_H
 #define HIP_HIP_H
 
-/*
-#include <linux/spinlock.h>
-#include <linux/crypto.h>
-#include <linux/net.h>
-#include <linux/proc_fs.h>
-
-#include <net/hip_glue.h>
-#include <net/addrconf.h>
-#include <net/ipv6.h>
-#include <net/hip.h>
-#include <net/sock.h>
-#include <net/protocol.h>
-
-#include <asm/scatterlist.h>
-#include <asm/io.h>
-
-
-#include "workqueue.h"
-#include "daemon.h"
-#include "debug.h"
-#include "cookie.h"
-#include "input.h"
-#include "output.h"
-#include "ioctl.h"
-#include "builder.h"
-#include "crypto/dh.h"
-#include "crypto/dsa.h"
-#include "misc.h"
-#include "socket.h"
-#include "hadb.h"
-#include "update.h"
-*/
-
-/*
-#include "misc.h"
-#include "hadb.h"
-#include "output.h"
-#include "input.h"
-*/
 #include "crypto/dh.h"
 
 #include <linux/time.h>

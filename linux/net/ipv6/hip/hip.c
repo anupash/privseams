@@ -1246,46 +1246,6 @@ static int hip_create_device_addrlist(struct net_device *event_dev,
 	return err;
 }
 
-#define EVENTSRC_INET6 0
-#define EVENTSRC_NETDEV 1
-
-/**
- * hip_net_event_handle - finish netdev and inet6 event handling
- * @event_dev: the network device which caused the event
- * @idev_addr_count: on return tells how many addresses are in @addr_list
- * @addr_list: list of addresses of the device @event_dev
-
- * Events caused by loopback devices are ignored.
- *
- * @event_src is %EVENTSRC_INET6 if @event to be handled came from
- * hip_handle_ipv6_dad_completed, or %EVENTSRC_NETDEV if @event came
- * from netdevice_notifier.
- */
-static void hip_net_event_handle(struct net_device *event_dev, int *idev_addr_count,
-				 struct hip_rea_info_addr_item **addr_list)
-{
-        int err = 0;
-
-	*idev_addr_count = 0;
-	*addr_list = NULL;
-
-        /* Skip events caused by loopback devices (as long as we do
-	 * not have loopback support). TODO: skip tunnels etc. */
-        if (event_dev->flags & IFF_LOOPBACK) {
-                HIP_DEBUG("ignoring event from loopback device\n");
-		return;
-        }
-
-	err = hip_create_device_addrlist(event_dev, addr_list, idev_addr_count);
-	if (err) {
-		HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
-		goto out_err;
-	}
-
- out_err:
-        return;
-}
-
 /* helper function for creating and initializing work order for
  * network events */
 struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
@@ -1360,6 +1320,9 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 	return;
 }
 
+#define EVENTSRC_INET6 0
+#define EVENTSRC_NETDEV 1
+
 /** hip_net_event - start handling the network device event
  * @ifindex: the device which caused the event
  * @event_src: 0 for IPv6 address events and 1 for network device related events
@@ -1370,9 +1333,12 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
  */
 static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 {
+	int err = 0;
 	struct net_device *event_dev;
         int idev_addr_count = 0;
         struct hip_rea_info_addr_item *addr_list = NULL;
+
+	HIP_DEBUG("\n");
 
         if (! (event_src == EVENTSRC_INET6 || event_src == EVENTSRC_NETDEV) ) {
                 HIP_ERROR("unknown event source %d\n", event_src);
@@ -1385,20 +1351,32 @@ static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 			  ifindex);
 		return;
 	}
+	/* dev_get_by_index does a dev_hold */
 
 	HIP_DEBUG("event_src=%s dev=%s ifindex=%d event=%u\n",
 		  event_src == EVENTSRC_INET6 ? "inet6" : "netdev",
 		  event_dev->name, ifindex, event);
 
-	/* dev_get_by_index does a dev_hold */
-	hip_net_event_handle(event_dev, &idev_addr_count, &addr_list);
+        /* Skip events caused by loopback devices (as long as we do
+	 * not have loopback support). TODO: skip tunnels etc. */
+        if (event_dev->flags & IFF_LOOPBACK) {
+                HIP_DEBUG("ignoring event from loopback device\n");
+		dev_put(event_dev);
+		return;
+        }
+
+	err = hip_create_device_addrlist(event_dev, &addr_list, &idev_addr_count);
 	dev_put(event_dev);
 
-	/* send UPDATEs if there are addresses to be informed to the peers */
-	if (idev_addr_count > 0)
-		hip_send_update_all(addr_list, idev_addr_count, ifindex);
-	else
-		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+	if (err) {
+		HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
+	} else {
+		/* send UPDATEs if there are addresses to be informed to the peers */
+		if (idev_addr_count > 0)
+			hip_send_update_all(addr_list, idev_addr_count, ifindex);
+		else
+			HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+	}
 
 	if (addr_list)
 		kfree(addr_list);
