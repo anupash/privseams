@@ -1865,14 +1865,19 @@ static int hip_do_work(void)
 			break;
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
+
+
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			hip_rvs_set_request_flag(job->arg1);
-			res = hip_trigger_bex(job->arg1);
-			if (res < 0)
-				res = KHIPD_ERROR;
+			{
+				struct ipv6hdr hdr = {0};
+				ipv6_addr_copy(&hdr.daddr, job->arg1);
+				hip_handle_output(&hdr, NULL);
+			}
+			res = 0;
 			break;
 #endif
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
