@@ -812,6 +812,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		hip_hold_ha(entry); /* released at the end */
 	}
 
+	/* TODO: move this inside !entry */
 	err = hip_hadb_add_peer_addr(entry, addr, 0, 0, PEER_ADDR_STATE_ACTIVE);
 	if (err) {
 		HIP_ERROR("error while adding a new peer address\n");

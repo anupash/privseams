@@ -307,7 +307,7 @@ case $MODE in
 	#
 	echo "Initiator mode"
 	# wait a few secs for HIP socket handlers and addition of local host ID setup
-	sleep 2
+	sleep 3
 	echo "Connecting to peer host $PEER_NAME"
 	$HIPL_DIR/test/conntest-client-gai $PEER_NAME $PROTO $PORT < /dev/null
 	check_hip_state_established $PEER_NAME
