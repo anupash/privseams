@@ -565,7 +565,7 @@ struct hip_host_id *hip_get_localhost_host_id(struct hip_lhi *lhi)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
+struct hip_host_id *hip_get_any_localhost_dsa_public_key(struct hip_lhi *lhi)
 {
 	struct hip_host_id *tmp;
 	hip_tlv_len_t len;
@@ -576,7 +576,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	/* T could easily have been an int, since the compiler will
 	   probably add 3 alignment bytes here anyway. */
 
-	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL,HIP_HI_DSA);
+	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,lhi,HIP_HI_DSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
@@ -639,14 +639,14 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
+struct hip_host_id *hip_get_any_localhost_rsa_public_key(struct hip_lhi *lhi)
 {
 	struct hip_host_id *tmp;
 	hip_tlv_len_t len;
 	uint16_t dilen;
 	char *from, *to;
 
-	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL, HIP_HI_RSA);
+	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,lhi, HIP_HI_RSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
@@ -708,9 +708,9 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo) {
 	struct hip_host_id *hi = NULL;
 
 	if(algo == HIP_HI_DSA) {
-		hi = hip_get_any_localhost_dsa_public_key();
+		hi = hip_get_any_localhost_dsa_public_key(NULL);
 	} else if (algo == HIP_HI_RSA) {
-		hi = hip_get_any_localhost_rsa_public_key();
+		hi = hip_get_any_localhost_rsa_public_key(NULL);
 	} else {
 	  HIP_ERROR("unknown hi algo: (%d)",algo);
 	}
@@ -724,9 +724,9 @@ struct hip_host_id *hip_get_localhost_public_key(struct hip_lhi *lhi)
 	struct hip_host_id *hi_pub = NULL;
 	result = hip_get_host_id(&hip_local_hostid_db, lhi);
 	if (hip_get_host_id_algo(result) == HIP_HI_RSA) {
-		hi_pub = hip_get_any_localhost_rsa_public_key();
+		hi_pub = hip_get_any_localhost_rsa_public_key(lhi);
 	} else if (hip_get_host_id_algo(result) == HIP_HI_DSA) {
-		hi_pub = hip_get_any_localhost_dsa_public_key();
+		hi_pub = hip_get_any_localhost_dsa_public_key(lhi);
 	} else
 		HIP_ERROR("Unsupported algorithm:%d\n", 
 			  hip_get_host_id_algo(result));
