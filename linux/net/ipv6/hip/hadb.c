@@ -1043,8 +1043,8 @@ int hip_hadb_dump_spi_list(hip_ha_t *entry, void *unused)
 		i = 1;
 		list_for_each_entry_safe(addr, tmp2, &spi_list->peer_addr_list, list) {
 			hip_in6_ntop(&addr->address, str);
-			HIP_DEBUG(" address %d: %s if=0x%x state=0x%x lifetime=0x%x modified mod=%ld.%06ld\n", i, str,
-				  addr->interface_id, addr->address_state, addr->lifetime,
+			HIP_DEBUG(" address %d: %s state=0x%x lifetime=0x%x modified mod=%ld.%06ld\n",
+				  i, str, addr->address_state, addr->lifetime,
 				  addr->modified_time.tv_sec, addr->modified_time.tv_usec);
 			i++;
 		}

@@ -1182,10 +1182,10 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
 		}
 	}
 
-	if (idev_addr_count > 0)
+//	if (idev_addr_count > 0)
 		hip_send_update_all(addr_list, idev_addr_count);
-	else
-		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+//	else
+//		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
 
  out_err:
 	read_unlock(&idev->lock);
@@ -1198,126 +1198,6 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
         return;
 }
 
-
-
-
-
-#if 0
-/**
- * hip_net_event_handle - finish netdev and inet6 event handling
- * @event_src: event source
- * @event_dev: the network device which caused the event
- * @event: the event
- *
- * This function does the actual work (sending of REA, that is) after
- * the event type was inspected in XXXX OLD hip_inet6addr_event_handler or
- * hip_netdev_event_handler.
- *
- * Events caused by loopback devices are ignored.
- *
- * NOTE: this uses our own REA extension (REA containing no addresses)
- *
- * @event_src is 0 if @event to be handled came from hip_handle_ipv6_dad_completed,
- * or 1 if @event came from netdevice_notifier.
- */
-static void hip_net_event_handle(int event_src, struct net_device *event_dev,
-				 unsigned long event)
-{
-        int err = 0;
-        struct net_device *dev;
-        struct inet6_dev *idev;
-        int idev_addr_count = 0;
-        struct hip_rea_info_addr_item *addr_list = NULL;
-
-	/* hip_net_event checks validity of event_dev */
-
-	HIP_DEBUG("event_src=%s event=%lu dev=%s ifindex=%d\n",
-		  event_src == EVENTSRC_INET6 ? "ipv6_ifa" : "netdev",
-		  event, event_dev->name, event_dev->ifindex);
-
-        if (! (event_src == EVENTSRC_INET6 || event_src == EVENTSRC_NETDEV) ) {
-                HIP_ERROR("unknown event source %d\n", event_src);
-                return;
-        }
-
-        /* skip events caused by loopback (as long as we do not have
-           loopback support) */
-        if (event_dev->flags & IFF_LOOPBACK) {
-                HIP_DEBUG("ignoring loopback event\n");
-                return;
-        }
-
-        read_lock(&dev_base_lock);
-        read_lock(&addrconf_lock);
-
-	/* send separate REAs for each network interface (todo: one REA) */
-        for (dev = dev_base; dev; dev = dev->next) {
-		int rea_netdev;
-                HIP_DEBUG("dev loop: dev=%s ifindex=%d\n", dev->name, dev->ifindex);
-
-                /* skip loopback devices */
-                if (dev->flags & IFF_LOOPBACK) {
-                        HIP_DEBUG("skipping loopback device\n");
-                        continue;
-                }
-                idev = in6_dev_get(dev);
-                if (!idev) {
-                        HIP_DEBUG("NULL idev on event %ld (no IPv6 addrs), skipping\n", event);
-                        continue;
-                }
-                read_lock(&idev->lock);
-
-                idev_addr_count = 0;
-                addr_list = NULL;
-
-		/* When a network device gets NETDEV_DOWN, create a 0
-		 * address REA if dev is the device which went down,
-		 * else (an IPv6 address was added or deleted or
-		 * network device came up) send "all addresses REA" */
-                if (event_src == EVENTSRC_NETDEV && dev->ifindex == event_dev->ifindex) {
-			idev_addr_count = 0;
-			addr_list = NULL;
-		} else {
-			err = hip_create_device_addrlist(idev, &addr_list,
-							 &idev_addr_count);
-			if (err) {
-				HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
-				goto out_err;
-			}
-			HIP_ASSERT(idev_addr_count >= 0);
-#if 0
-			/* we don't want to send REA with 0 entries, or do we? */
-			if (idev_addr_count == 0)
-				goto out_err;
-#endif
-		}
-		/* Now we have the addresses to be included in the REA, send REAs */
-
-		/* When an IPv6 address was added, try to use the same
-		 * interface for sending out the REA as which caused
-		 * the event. Else we let the kernel dedice the
-		 * interface to use. */
-                if (event_src == EVENTSRC_INET6 && event == NETDEV_UP) {
-			rea_netdev = REA_OUT_NETDEV_GIVEN;
-		} else {
-			rea_netdev = REA_OUT_NETDEV_ANY;
-		}
-		hip_send_update_all(addr_list, idev_addr_count);
-  //		hip_send_rea_all(dev->ifindex, addr_list,
-  //				 idev_addr_count, rea_netdev);
-
-        out_err:
-                read_unlock(&idev->lock);
-                in6_dev_put(idev);
-                if (addr_list)
-                        kfree(addr_list);
-        }
-
-        read_unlock(&addrconf_lock);
-        read_unlock(&dev_base_lock);
-        return;
-}
-#endif
 
 /**
  * hip_handle_ipv6_dad_completed - handle IPv6 address events
