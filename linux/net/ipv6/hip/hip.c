@@ -994,9 +994,15 @@ static void hip_get_load_time(void)
 int hip_add_sk_to_waitlist(struct in6_addr *hit, struct sock *sk)
 {
 	struct hip_work_order *hwo;
+	int state = 0;
 
 	if (!ipv6_addr_is_hit(hit))
 		return -ENOTHIT;
+
+	hip_hadb_get_info(hit, &state, HIP_HADB_STATE|HIP_ARG_HIT);
+
+	if (state == HIP_STATE_ESTABLISHED)
+		return -EISCONN;
 
 	hwo = hip_create_job_with_hit(GFP_KERNEL,hit);
 	if (!hwo) {

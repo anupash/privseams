@@ -59,7 +59,7 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
 		res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
-#if 0
+#if 1
 		if (!res)
 			printk("Requested SPI: %x, SA's SPI: %x and protos: %x / %x\n",spi,x->id.spi,proto,x->id.proto);
 #endif

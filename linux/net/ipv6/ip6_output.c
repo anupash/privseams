@@ -731,6 +731,35 @@ slow_path:
 	return err;
 }
 
+/* Searching for route to destination and applying IPsec.
+ * With HIP there are 4 cases (all related to the fl):
+ * NULL address (::) is considered to be an IPv6 one.
+ *
+ * 1). src and dst are HITs
+ * 2). src and dst are IPv6s
+ * 3). src is a HIT, dst is IPv6
+ * 4). src is a IPv6, dst is HIT
+ *
+ * I.   Both HITs
+ *      - Happens when upper layer protocol sends a packet.
+ *      - TCP SYN
+ *      - We can have active HA or not.
+ *      Backup dst HIT and replace both src and dst with IPv6
+ *      addresses. Then do the routing. Before IPsec processing
+ *      copy the backuped dst HIT over the dst. Do IPsec.
+ *
+ * II.  Both IPv6s
+ *      - Happens when upper layer protocol does not use HIP.
+ *      - Should do IPsec normally
+ *      - bypass HIP
+ *
+ * III. Dst = IPv6, Src = HIT
+ *      - is this possible?
+ *
+ * IV.  Dst = HIT, Src = IPv6
+ *      - Same as I
+ *
+ */
 int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 {
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)

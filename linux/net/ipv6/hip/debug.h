@@ -13,7 +13,7 @@
 #define HIP_INFO(fmt, args...) \
      printk(KERN_DEBUG "%s: " fmt , __FUNCTION__ , ##args)
 #define HIP_ERROR(fmt, args...) \
-     printk(KERN_DEBUG "%s: error: " fmt , __FUNCTION__ , ##args)
+     printk(KERN_DEBUG "%s: ***ERROR***: " fmt , __FUNCTION__ , ##args)
 #define HIP_ASSERT(s) do {\
      if (!(s)) {                                                 \
          HIP_ERROR("assertion failed on line %d\n", __LINE__); \

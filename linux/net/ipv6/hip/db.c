@@ -713,21 +713,7 @@ static void hip_hadb_free_socks_nolock(struct hip_hadb_state *entry, int error)
 static void hip_hadb_entry_free(struct hip_hadb_state *entry)
 {
 	/* IPsec */
-	if (likely(entry->spi_peer)) {
-		hip_delete_sa(entry->spi_peer, &entry->hit_our);
-	}
-	if (likely(entry->spi_our)) {
-		hip_delete_sa(entry->spi_our, &entry->hit_peer);
-	}
-	if (unlikely(entry->new_spi_peer))
-		hip_delete_sa(entry->new_spi_peer, &entry->hit_our);
-	if (unlikely(entry->new_spi_our))
-		hip_delete_sa(entry->new_spi_our, &entry->hit_peer);
-
-	entry->spi_peer = 0;
-	entry->spi_our = 0;
-	entry->new_spi_peer = 0;
-	entry->new_spi_our = 0;
+	/* is not allowed with HADB lock held */
 
 	/* peer addr list */
 	hip_hadb_delete_peer_addrlist(entry);
@@ -789,23 +775,17 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi(struct hip_db_struct *db,
 static int hip_hadb_reinit_state(struct hip_hadb_state *entry)
 {
 	HIP_ERROR("Don't call this function!\n");
-	HIP_ASSERT(0);
-/* we need to define what "reinitialization" means in this
- * context.
- *
- 	HIP_DEBUG("** TODO: call hip_hadb_entry_free ? **\n");
+
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->peer_controls = 0;
-	entry->spi_peer = 0;
-	entry->spi_our = 0;
-	entry->lsi_peer = 0;
-	entry->lsi_our = 0;
-	entry->esp_transform = 0;
-	entry->birthday = 0;
-	entry->kg.sk = NULL;
+	hip_delete_esp(&entry->hit_our, &entry->hit_peer);
 
-	memset(&entry->hit_our,0,sizeof(struct in6_addr));
-*/
+	entry->esp_transform = 0;
+	entry->birthday = 0; // XXXX
+
+	hip_hadb_free_socks_nolock(entry,1);
+
+// XXX	memset(&entry->hit_our,0,sizeof(struct in6_addr));
 	return 0;
 }
 
@@ -847,7 +827,8 @@ int hip_hadb_save_sk(struct in6_addr *arg, struct sock *sk)
 	HIP_HADB_WRAP_W_ACCESS(-EINVAL);
 
 	if (entry->state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("Already connected\n");
+		/* we should fire all the sleeping TCP socks... */
+		HIP_DEBUG("Already connected... this is broken\n");
 		res = -EISCONN;
 		HIP_HADB_WRAP_W_END;
 	}
@@ -862,7 +843,6 @@ int hip_hadb_save_sk(struct in6_addr *arg, struct sock *sk)
 
 	sock_hold(kg->sk);
 	list_add(&kg->socklist, &entry->kg.socklist);
-
 	state = entry->state;
 
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
@@ -1518,6 +1498,16 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 {
 	unsigned long lf;
 	int err = 0;
+	struct in6_addr own;
+	int getlist[1] = { HIP_HADB_OWN_HIT };
+	void *setlist[1] = { &own };
+
+	if (hip_hadb_multiget(hit, 1, getlist, setlist, HIP_ARG_HIT) < 1) {
+		HIP_ERROR("Does not work!\n");
+		return -EINVAL;
+	}
+
+	hip_delete_esp(&own, hit);
 
 	HIP_WRITE_LOCK_DB(&hip_hadb);
 
@@ -2336,7 +2326,7 @@ int hip_hadb_set_info(void *arg, void *dst, int type)
 	return res;
 }
 
-void hip_hadb_acquire_ex_db_access(int *flags)
+void hip_hadb_acquire_ex_db_access(unsigned long *flags)
 {
 	unsigned long lf;
 
@@ -2344,13 +2334,13 @@ void hip_hadb_acquire_ex_db_access(int *flags)
 	*flags = lf;
 }
 
-void hip_hadb_release_ex_db_access(int flags)
+void hip_hadb_release_ex_db_access(unsigned long flags)
 {
 	unsigned long lf = flags;
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
 }
 
-void hip_hadb_acquire_db_access(int *flags)
+void hip_hadb_acquire_db_access(unsigned long *flags)
 {
 	unsigned long lf;
        
@@ -2358,7 +2348,7 @@ void hip_hadb_acquire_db_access(int *flags)
 	*flags = lf;
 }
 
-void hip_hadb_release_db_access(int flags)
+void hip_hadb_release_db_access(unsigned long flags)
 {
 	unsigned long lf = flags;
 	HIP_READ_UNLOCK_DB(&hip_hadb);

@@ -34,8 +34,11 @@ static spinlock_t xfrm_state_lock = SPIN_LOCK_UNLOCKED;
  * Main use is finding SA after policy selected tunnel or transport mode.
  * Also, it can be used by ah/esp icmp error handler to find offending SA.
  */
-static struct list_head xfrm_state_bydst[XFRM_DST_HSIZE];
-static struct list_head xfrm_state_byspi[XFRM_DST_HSIZE];
+struct list_head xfrm_state_bydst[XFRM_DST_HSIZE];
+struct list_head xfrm_state_byspi[XFRM_DST_HSIZE];
+
+EXPORT_SYMBOL(xfrm_state_bydst);
+EXPORT_SYMBOL(xfrm_state_byspi);
 
 DECLARE_WAIT_QUEUE_HEAD(km_waitq);
 

@@ -30,8 +30,8 @@ int hip_delete_sp(int dir)
 	sel.prefixlen_s = 2;
 	sel.proto = 0;
 
-	sel.saddr.a6[0] = 0x40000000;
-	sel.daddr.a6[0] = 0x40000000;
+	sel.saddr.a6[0] = htonl(0x40000000);
+	sel.daddr.a6[0] = htonl(0x40000000);
 
 	if (xfrm_policy_bysel(dir, &sel, 1)) { 
 		HIP_DEBUG("SPD removed successfully\n");
@@ -42,6 +42,31 @@ int hip_delete_sp(int dir)
 	return err;
 }
 
+extern struct list_head *xfrm_state_bydst;
+extern struct list_head *xfrm_state_byspi;
+
+static void hip_hirmu_kludge(int byspi)
+{
+	int i;
+	char str[256] = {0};
+	char meep[64] = {0};
+	struct xfrm_state *xs;
+
+	HIP_DEBUG("DUMPING SPI TABLE\n");
+	for(i = 0; i < 1024; i++) {
+		if (!list_empty(&xfrm_state_byspi[i])) {
+			sprintf(meep, "%d: -> ", i);
+			strcat(str, meep);
+			list_for_each_entry(xs, &xfrm_state_byspi[i], byspi) {
+				sprintf(meep, "%lx [%s] -> ", xs->id.spi, xs->km.state == XFRM_STATE_VALID ? " OK" : "NOK");
+				strcat(str, meep);
+			}
+			HIP_DEBUG("%s\n",str);
+			memset(str,0,256);
+		}
+	}
+	HIP_DEBUG("END-OF-DUMP\n");
+}
 /**
  * hip_delete_sa - delete HIP SA which has SPI of @spi
  * @spi: SPI value of SA
@@ -63,7 +88,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	}
 	xaddr = (xfrm_address_t *)dst;
 
-	xs = xfrm_state_lookup(xaddr, spi, IPPROTO_ESP, AF_INET6);
+	xs = xfrm_state_lookup(xaddr, htonl(spi), IPPROTO_ESP, AF_INET6);
 	if (!xs) {
 		HIP_ERROR("Could not find SA!\n");
 		return -ENOENT;
@@ -85,6 +110,8 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 	int getlist[4];
 	void *setlist[4];
 	int k;
+
+	hip_hirmu_kludge(1);
 
 	getlist[0] = HIP_HADB_PEER_SPI;
 	getlist[1] = HIP_HADB_OWN_SPI;
@@ -109,6 +136,12 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 		hip_delete_sa(new_spi_peer, own);
 	if (k > 3)
 		hip_delete_sa(new_spi_our, peer);
+
+	k = 0;
+	setlist[0] = &k;
+	setlist[1] = &k;
+	setlist[2] = &k;
+	setlist[3] = &k;
 
 	return 0;
 }
@@ -137,8 +170,8 @@ int hip_setup_sp(int dir)
 
 	memset(&xp->selector.daddr, 0, sizeof(struct in6_addr));
 	memset(&xp->selector.saddr, 0, sizeof(struct in6_addr));
-	xp->selector.daddr.a6[0] = 0x40000000;
-	xp->selector.saddr.a6[0] = 0x40000000;
+	xp->selector.daddr.a6[0] = htonl(0x40000000);
+	xp->selector.saddr.a6[0] = htonl(0x40000000);
 	xp->selector.family = xp->family = AF_INET6;
 	xp->selector.prefixlen_d = 2;
 	xp->selector.prefixlen_s = 2;
@@ -165,7 +198,7 @@ int hip_setup_sp(int dir)
 	tmpl->reqid = 1;
 	tmpl->mode = XFRM_MODE_TRANSPORT;
 	tmpl->share = 0; // unique. Is this the correct number?
-	tmpl->optional = 0; /* check: is 0 ok ? */
+	tmpl->optional = 1; /* check: is 0 ok ? */
 	tmpl->aalgos = ~0;
 	tmpl->ealgos = ~0;
 	tmpl->calgos = ~0;
@@ -326,6 +359,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	}
 
 	xs->km.state = XFRM_STATE_VALID;
+	xs->lft.hard_add_expires_seconds = LONG_MAX;
 
 	xfrm_state_put(xs);
 	HIP_DEBUG("New SA added successfully\n");
