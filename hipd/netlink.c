@@ -100,7 +100,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	/* FIXME: errors of sendmsg */
 
 	HIP_FREE(nlh);
-	return 1;
+	return 0;
 }
 
 /*
@@ -110,13 +110,13 @@ int hip_netlink_send(struct hip_work_order *hwo)
  *
  * Returns 0 on success, -1 otherwise.
  */
-int hip_netlink_open(int *s_net)
+int hip_netlink_open(int *fd)
 {
 	struct sockaddr_nl local;
         
-	if (*s_net)
-		close(*s_net);
-	if ((*s_net = socket(AF_NETLINK, SOCK_RAW, NETLINK_HIP)) < 0)
+	if (*fd)
+		close(*fd);
+	if ((*fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_HIP)) < 0)
 		return(-1);
 	
 	memset(&local, 0, sizeof(local));
@@ -124,10 +124,10 @@ int hip_netlink_open(int *s_net)
 	/* subscribe to link, IPv4/IPv6 address notifications */
 	local.nl_groups = 0; // FIXME: HIP -types
         
-	if (bind(*s_net, (struct sockaddr *)&local, sizeof(local)) < 0)
+	if (bind(*fd, (struct sockaddr *)&local, sizeof(local)) < 0)
 		return(-1);
         
-	netlink_fd = *s_net;
+	netlink_fd = *fd;
 	return(0);
 }
 

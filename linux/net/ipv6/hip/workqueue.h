@@ -31,9 +31,10 @@
 
 /* subtypes from 101 to 200 reserved for HIP_WO_TYPE_OUTGOING */
 
-#define HIP_WO_SUBTYPE_NEW_CONN   101
-#define HIP_WO_SUBTYPE_DEL_CONN   102 // reinitialize state to start
-#define HIP_WO_SUBTYPE_SKWAIT     103
+#define HIP_WO_SUBTYPE_NEW_CONN    101
+#define HIP_WO_SUBTYPE_DEL_CONN    102 // reinitialize state to start
+#define HIP_WO_SUBTYPE_SKWAIT      103
+#define HIP_WO_SUBTYPE_SEND_PACKET 104
 
 /* subtypes from 201 to 300 reserved for HIP_WO_TYPE_MSG */
 

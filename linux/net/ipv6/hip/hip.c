@@ -1912,6 +1912,7 @@ static int hip_do_work(struct hip_work_order *job)
 		break;
 	case HIP_WO_TYPE_OUTGOING:
 		HIP_INFO("Nothing for outgoing stuff\n");
+		// FIXME: implement HIP packet sending subtype (HIP_WO_SUBTYPE_SEND_PACKET);
 		break;
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
