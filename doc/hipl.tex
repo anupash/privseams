@@ -584,80 +584,71 @@ is given in the figure.
 % tai oikeastaan nämä kuuluvatkin tuohon Address configiin
 
 \begin{figure}
-   \begin{minipage}[b]{0.4\textwidth}
+   \begin{minipage}[b]{0.5\textwidth}
       \centering
-      \includegraphics[height=0.5\textheight]{fig/input}
+      \includegraphics[height=0.4\textheight]{fig/input}
       \caption{Input side of networking stack}
       \label{fig:input_hooks}
    \end{minipage}%
    \hfill%
-   \begin{minipage}[b]{0.9\textwidth}
+   \begin{minipage}[b]{0.5\textwidth}
       \centering
       \centering
-      \includegraphics[height=0.5\textheight]{fig/output}
+      \includegraphics[height=0.4\textheight]{fig/output}
       \caption{Output side of networking stack}
       \label{fig:output_hooks}
    \end{minipage}%
 \end{figure}
 
 \setlongtables
-\begin{longtable}{|c|p{0.2\textwidth}|p{0.6\textwidth}|}
-\\\hline
+\begin{longtable}{|p{0.05\textwidth}|p{0.25\textwidth}|p{0.6\textwidth}|}
+\hline
 \endhead
 \endfoot
-Point & Function Name & Operation \\\hline
+Hook & Function Name & Operation \\\hline
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-a & \verb|hip_bypass_ipsec| &
+a & \verb|hip_inbound| &
 
-A packet with a \ac{HIP} header is received. \ac{IPSec} processing is skipped. \\
+A packet with a \ac{HIP} header is received. This is not really a hook;
+the function has been registered as a HIP protocol handler using linux
+kernel interfaces. \\
 
 b & \verb|hip_handle_esp| &
 
-The packet has a SPI that belongs to \ac{HIP}. The IPv6 addresses are
-replaced with the corresponding \acp{HIT} before the packet is delivered to
-ESP. \\
+Received an ESP packet that has a SPI that belongs to \ac{HIP}. The IPv6
+addresses are replaced with the corresponding \acp{HIT} before the ESP handling
+can proceed. \\
 
-c & \verb|hip_unknown_spi| &
-
-A packet from an unknown SPI is received and an R1 packet must be sent
-as a response.\\
-% XX: must..currently not: sec:loc_hip_kernel
-
-d & \verb|hip_inbound| &
-
-A packet with a \ac{HIP} header is received. The \ac{HIP} module is called.\\
-
-e & \verb|hip_get_hits| &
-
-Kernel is about to send a packet with a HIT as destination address. A
-source HIT is required before the packet can be sent.\\
-
-f & \verb|hip_get_saddr_udp| &
-
-A packet is being sent and destination address is a HIT. This hook is
-essentially equivalent to \verb|hip_get_hits| but it is called
-from the IPv6 layer. The hook handles all other packets except the
-ones produced by TCP.\\
-
-g & \verb|hip_handle_output| (x2) &
+c & \verb|hip_handle_output| &
 
 An IPv6 packet is being sent out that has a HIT as the destination
 address. An IPv6 address corresponding to the HIT is searched from the
 kernel database. The HIT will be replaced with the corresponding IPv6
-address in the IPv6 header. \\
+address in the IPv6 header. The hook is both in the TCP and IPv6 code. \\
 
-h & \verb|hip_get_addr| &
+d & \verb|hip_trigger_bex| &
+
+A hook to trigger the base exchange. \\
+
+e & \verb|hip_handle_ipv6_dad_c| &
+
+This hook is called when a new IPv6 address is added. When the kernel
+has performed the \ac{DAD} successfully, we call this hook and notify
+active \ac{HIP} peers about the new address. Events caused by link
+local addresses are ignored. \\
+
+f & \verb|hip_get_addr| &
   
 A small modification in routing and neighbor discovery is needed
 because they behave in a rather odd way in Linux: transport protocols
 select the routes to be used even though it should really be selected
 by network layer protocols. This hook would not be needed if the
-kernel routing behaved as expected. The hook is physically located in
-routing handler and it is triggered by transport layer. Routing
-handler receives a query for the route to the given HIT address and the
-hook tells the routing handler the IPv6 address corresponding to the
-HIT.\\
+kernel routing behaved ``intuitively''. The hook is physically
+located in routing handler and it is triggered by transport
+layer. Routing handler receives a query for the route to the given HIT
+address and the hook tells the routing handler the IPv6 address
+corresponding to the HIT. \\
 
 \hline
 \caption{Descriptions for \autoref{fig:input_hooks} and
@@ -804,17 +795,15 @@ where to send packets to. This is further discussed
 \vpageref[below]{sec:mapping_architecture}.
 
 There are different groups of network applications from the \ac{HIP}
-point of view, and they are described in more detail in
-\autoref{sec:application_architecture}. Two specific groups with
-different needs have been identified in our implementation
-architecture: legacy applications and \ac{HIP} aware
-applications. Legacy applications should be able to run \ac{HIP}
-without any changes in source code. \ac{HIP} aware applications can
-require or deny the use of \ac{HIP} explicitly. A motivation for the
-application to require \ac{HIP} could be the end-to-end security, for
-example. Performance reasons could be a reason to deny usage of
-\ac{HIP}, for example, in a small device with a limited computing
-capacity.
+point of view. Two specific groups with different needs have been
+identified in our implementation architecture: legacy applications and
+\ac{HIP} aware applications. Legacy applications should be able to run
+\ac{HIP} without any changes in source code. \ac{HIP} aware
+applications can require or deny the use of \ac{HIP} explicitly. A
+motivation for the application to require \ac{HIP} could be the
+end-to-end security, for example. Performance reasons could be a
+reason to deny usage of \ac{HIP}, for example, in a small device with
+a limited computing capacity.
 
 \subsubsection{Legacy Sockets API}
 \label{sec:legacy_api_architecture}
@@ -937,11 +926,6 @@ explicitly set. Legacy applications are not \ac{HIP} aware but the
 administrator of the system has enabled \ac{HIP} transparency mode so
 that even legacy applications can use \ac{HIP}.
 
-\subsubsection{Native Sockets API}
-\label{sec:native_api_architecture}
-
-% XX FIX MIIKA
-
 \subsubsection{Mappings}
 \label{sec:mapping_architecture}
 
@@ -1019,160 +1003,170 @@ corresponding IPv6 address is not known. The only option to handle
 this problem in the implementation is manual mapping which can be
 performed using a command line tool.
 
-\subsubsection{Userspace Network Applications}
-\label{sec:application_architecture}
+\subsubsection{Native Sockets API}
+\label{sec:native_api_architecture}
 
 % XX FIX MIIKA
-% - should I remove this?
 
-New \ac{HIP} aware applications may require the use of \ac{HIP} or may
-deny the use of it for performance reasons, for example. Legacy
-applications should be able to use \ac{HIP} without any changes to
-source code. This is not always true for legacy applications and the
-restrictions are discussed in this section.
+\subsubsection{Interaction Between the Components}
 
-\ac{HIP} aware applications may require or deny the use of \ac{HIP}. A
-reason to require \ac{HIP} would be to benefit from multihoming,
-end-to-end security and mobility features of \ac{HIP}. A reason to
-deny the use of \ac{HIP} would be to avoid the overhead caused by
-\ac{HIP} in a device with limited computing capacity.
+The interaction between the components is illustrated using sequence
+diagrams. The sequence diagrams show the control flow through
+different function calls from the userspace to kernelspace. We do
+not show the full execution trace but instead focus on the most
+relevant functions. The reader should not become confused by the naming
+of the functions, because the IPv6 module reuses some of the IPv4
+functions (e.g. \verb|inet_create|). However, some functions are IPv6
+specific (e.g. \verb|inet6_bind|).
 
-Typical legacy IPv6 applications should be able to use \ac{HIP} in
-transparent mode just by relinking them to USAGI libinet6 with \ac{HIP}
-modifications. Later on, libinet6 could be merged with standard libc,
-so even the relinking would not be required.
+The diagrams are based on a use scenario where we have two simple
+network applications with host specified identities. The server
+application binds to a port on the server host, listens for
+connections, and accepts the connections. The client application on
+the client host calls the resolver to get the ED of the server
+host. The client application then connects to the server port and
+sends some data to the server, which is successfully received by the
+server application. The applications use \ac{TCP} for data
+transmission and, for simplicity, the sockets are assumed to be
+blocking.
 
-It has not been specified earlier, what a ``typical'' network
-application is from the \ac{HIP} point of view. A typical application
-means an application that is willing to accept peer names in \ac{FQDN}
-form. If the peer names are not mapped to \acp{HIT} through a resolver
-call before attempting a connection, \ac{HIP} cannot be used in the
-application even in transparent mode.  A limiting element in the
-implementation is that only \verb|getaddrinfo| resolving interface is
-supported in the implementation. More resolver interfaces should be
-supported in the future.
+\paragraph{Setup on the Server}
 
-Typical legacy network applications such as Telnet clients and web
-browsers should work as they are in transparent \ac{HIP}
-mode. \ac{NAT}, firewall~\cite{hiparch} and other raw packet handler
-software may need changes in application code to support
-\ac{HIP}. Network applications cannot use \ac{HIP} at all if they use
-IPv6 addresses directly instead of using \ac{FQDN} identifiers. The
-implementation assumes that connections are established without
-\ac{HIP} intervention in such cases.
+The socket initialization of the server application is visualized in
+\autoref{fig:bind_diagram}. The server application creates a socket
+with the \verb|socket| call, which eventually calls the
+\verb|hip_create_socket| function in the HIP socket handler. The
+socket handler wraps the call to the transport/network module, which
+calls \verb|inet_create| to create a \verb|socket| structure. The
+control returns to the server application and it calls
+\verb|getendpointinfo| resolver. The resolver queries the necessary
+HIs and locators and calls \verb|setlocaled| to return a local ED
+corresponding to the HI and locator information. The \verb|setlocaled|
+call sends the information to the HIP module. The HIP module generates
+a local ED, stores it to the local ED data structure described in the
+HIP module and returns the ED to the resolver. The resolver returns
+the ED to the application.
 
-There is a special scenario that was already discussed
-\vpageref{sec:mapping_architecture} but it is worth mentioning also in
-here. \ac{HIP} may be used to establish connections directly to HITs
-without no previous resolver call in applications. Technically this is
-a correct way to use \ac{HIP} but it is still a research problem that
-is discussed \vpageref[below]{sec:mapping_lessons}. The only solution
-in the implementation is to set the \ac{HIT} to IPv6 mappings manually
-before establishing connections.
-
-\subsection{Collaboration of Components}
-\label{sec:collaboration_of_architecture_components}
-
-% XX TODO: we do not have any daemon anymore
-% XX TODO: is responder point of view described in the example?
-
-This section gives a summary of the collaboration of the components
-using a network application example.
-\autoref{fig:collaboration_architecture} visualizes the total system
-architecture. The interfaces between the components are labeled with
-letters for simplicity in the figure.
-
-\begin{figure}[hbt]
- \centering
- \includegraphics[scale=0.5]{fig/collaboration}
- \caption{Collaboration of components}
- \label{fig:collaboration_architecture}
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.95\textwidth]{fig/bind_diagram}
+\end{center}
+\caption{Bind sequence diagram}
+\label{fig:bind_diagram}
 \end{figure}
 
-Only a minimal base exchange is demonstrated in this example scenario
-because it has been the main focus in the project. The scenario is
-simplified, and the details can be found from
-\autoref{sec:implementation_architecture}. Mobility and multihoming
-are not demonstrated in this scenario.
+The server application is now ready to bind to the socket using the ED
+and the port number. The \verb|bind| call eventually translates to a
+\verb|hip_bind| call in the HIP socket hander. The socket handler maps
+the ED to a local HIT using \verb|hip_db_get_lhi_by_ed| and stores the
+HIT into the \verb|socket| structure. It binds to the HIT by calling
+\verb|inet6_bind| in the transport/network module. The bind call
+returns and the application execution is resumed.
 
-The configuration in this example consists of two hosts with \ac{HIPL}
-enabled kernels. Both of the hosts use ``legacy'' userspace
-applications that are not \ac{HIP} aware. Transparent mode is enabled
-in \verb|libinet6| in both of the hosts because the type of the
-applications is legacy. The hosts will be referred to as initiator and
-responder, depending on who starts the base exchange.
+The server application is now almost ready to receive data from the
+socket. The server application calls \verb|listen|, which calls
+\verb|hip_listen| and \verb|inet_listen| in a row. The application
+resumes its control and calls \verb|accept| to receive a new socket
+descriptor, which the server application needs in order to communicate
+with the client. The \verb|accept| call translates first to a
+\verb|hip_accept| and then to a \verb|inet_accept| call. The 
+\verb|accept| call blocks until the client connects to the server.
 
-Initiator is a host installed with a web browser that is linked to
-\verb|libinet6|. Responder has a \ac{HTTP} server listening for
-incoming requests. A \ac{DNS} server of the domain of the responder is
-configured to contain the \ac{FQDN} and the IPv6 address of the
-responder. The \ac{HIT} of the responder is also stored in a \ac{DNS}
-server of the domain of the responder.
+\paragraph{Connection Setup on the Client}
 
-The \ac{HIP} network module is loaded into the kernel and the
-userspace daemon is started in both of the hosts during boot-up. The
-\ac{HIP} network module in the kernel queries a \ac{HI} for the
-localhost immediately after the daemon has notified the kernel module
-that the daemon is available for serving requests. Interface
-\textbf{a} will be used for this. The kernel module also builds up a
-list of prebuilt R1 packets for quick sending. \ac{HIP} connections
-can now be established.
+The connection setup on the client is depicted in
+\autoref{fig:connect_diagram}. Initially, the setup is very similar to
+the server. A \verb|socket| structure is created with
+\verb|hip_create_socket|. The application calls \verb|getendpointinfo|
+to resolve the peer {endpoint}. The call also sends the peer HI
+and locators to the HIP module. The HIP module generates an ED for the
+peer, stores it into the peer ED data structure, and returns the ED.
 
-The user of the initiator host inputs the \ac{FQDN} address of the
-responder into the web browser to view the web pages in the
-responder's \ac{HTTP} server. The browser sends a \ac{DNS} query for
-the \ac{FQDN} using the resolver routine \verb|getaddrinfo| using
-interface \textbf{c}. The resolver query is served by the modified
-resolver because the browser is linked to \verb|libinet6|.
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.95\textwidth]{fig/connect_diagram}
+\end{center}
+\caption{Connect sequence diagram}
+\label{fig:connect_diagram}
+\end{figure}
 
-The modified resolver queries \ac{DNS} using the responder's
-\ac{FQDN}. The resolver finds a matching entry: an IPv6 address and a
-\ac{HIT}. Now, two things are done before the entries are returned in
-a list from the resolver. First, the resolver organizes the order of
-the entries before returning them. The \ac{HIT} of the responder is
-placed in front of the list before the IPv6 address because
-transparent mode is used in \verb|libinet6| (see
-\autoref{tbl:getaddrinfo_combo}). Second, the mapping of the \ac{HIT}
-to the corresponding IPv6 address is sent to the kernel using
-interface \textbf{d} as described \vpageref{sec:mapping_architecture}.
+The client initiates the TCP connection using \verb|connect|, which
+eventually calls \\ {\verb|hip_connect|} in the HIP socket handler. The
+socket handler maps the peer ED value to the peer HIT with
+\verb|hip_hadb_get_lhi_by_ed|. The handler stores the HIT into the
+\verb|socket| structure. The socket handler calls the
+\verb|inet_stream_connect| in the transport/network module to initiate
+TCP handshake. The transport/network module generates the first SYN
+packet, and the global HIT based SP triggers IPsec processing. If the
+IPsec module cannot find a valid SA, it triggers a base exchange and
+the application sleeps until the SA is established. If a valid SA
+exists, the client sends the SYN packet encapsulated in an ESP
+packet. Finally, the application resumes its control.
 
-Control of flow returns to the browser after the resolver call is
-completed. The result of the resolver call is a list containing first
-the \ac{HIT} address and then the IPv6 address of the responder. The
-browser is assumed to make a straightforward choice and select the
-first address from the list, which is a \ac{HIT} in this case. The
-\ac{HIT} is then used in socket calls. Because the browser uses the
-\ac{HTTP}~\cite{rfc2616} protocol on top of \ac{TCP}, it passes the
-\ac{HIT} to the \verb|connect| call in the network socket \ac{API}
-(interface \textbf{b}).
+There is one thing that is not illustrated in the figure, but is worth
+mentioning. The \verb|inet_stream_connect| call also triggers
+\verb|inet_autobind|, because the client application does not make an
+explicit bind. The call assigns an ephemeral port for the socket.  The
+source ED is bound to a default HI of the host and the corresponding
+locator set is assigned to any interface available on the host.
 
-The \verb|connect| call is handled by the \ac{TCP} layer in the
-kernel.  The \ac{TCP} layer begins to establish the connection by a
-\ac{TCP} handshake process which sends a SYN packet to the
-responder. The SYN packet is carried to the IPv6 layer to be
-transmitted to network but the \ac{HIP} output hook captures the
-packet before the IPv6 layer (interface \textbf{e}) because the
-destination address is a \ac{HIT}. The hook finds out that there are
-no earlier security associations with the peer and determines that a
-base exchange needs to be done between the peers before the SYN packet
-can be sent to the responder.
+The server application was being blocked by the \verb|accept| call. It
+continues execution and it can now receive data from the client
+application.
 
-The initiator initializes the base exchange by sending an I1 packet
-using interface \textbf{f}. R1, I2 and R2 packets are exchanged after
-this. During this, the kernel module checks the validity of incoming
-packets, builds up outgoing packets and sends them. The kernel module
-updates its state machine during base exchange.
+\paragraph{Sending Data}
 
-After the base exchange is successfully completed and handled in both
-hosts, the connection is secured with \ac{ESP}. The \ac{TCP} handshake
-can continue using interface \textbf{f} now and once it has been
-completed, the initiator can finally view the web pages from the
-\ac{HTTP} server of the responder.
+Now it is time for the client application to send some data to the
+server application. The execution path is illustrated in
+\autoref{fig:send_diagram}. The application makes a \verb|send| call,
+which is translated into \verb|hip_send| call in the HIP socket
+handler. There is no need for a ED to HIT conversion here as the
+corresponding \verb|socket| structure has already been configured to
+use the peer HIT as the destination IPv6 address.
 
-The \acp{SA} that are created during the base exchange are host
-specific and not connection specific. This means that packets related
-to other connections between the same hosts do not require a new base
-exchange.
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.95\textwidth]{fig/send_diagram}
+\end{center}
+\caption{Send diagram}
+\label{fig:send_diagram}
+\end{figure}
+
+The socket handler calls \verb|inet_sendmsg| in the transport/network
+module to transmit the data into the network. The global SP takes care
+of encapsulating the data into ESP envelopes. Before the the packet to
+the network, \verb|hip_handle_output| hook intercepts the packet and
+notices that the destination address is a HIT, instead of an IPv6
+address. The hook replaces the HIT with an IPv6 addresses. Finally,
+the hook returns control of the flow to the transport/network module
+that transmits the ESP encapsulated packet to the network
+\footnote{There is a minor caveat related to the global SP that
+matches to any HIT. The \texttt{hip\_handle\_output} is called first
+to replace the source and destination HITs with IPv6 addresses. The
+\texttt{esp\_output} is called after that to check for a match on the
+global SP based on HITs. It works because the decision to use ESP is
+made before calling the \texttt{hip\_handle\_output} function}.
+
+\paragraph{Receiving Data}
+
+The data retrieval is illustrated in \autoref{fig:recv_diagram}.  The
+server application calls \verb|recv| to receive the data from the
+client application. The \verb|recv| is translated into a
+\verb|inet_recvmsg| call, which blocks until some data is
+received. The data packet arrives from the network and eventually
+enters the \verb|xfrm6_rcv| function, which handles the ESP processing
+in the packet. The function is hooked with the \verb|hip_handle_esp|
+to replace the IPv6 addresses with HITs so that the proper SA can be
+found in the IPsec module. Finally, the IPsec module wakes up the
+application to read the data from the socket.
+
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=0.95\textwidth]{fig/recv_diagram}
+\end{center}
+\caption{Recv diagram}
+\label{fig:recv_diagram}
+\end{figure}
 
 \section{Future Work}
 \label{sec:future_work}

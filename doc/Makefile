@@ -17,7 +17,8 @@ LINUX      = ../linux
 
 FIGS = fig/collaboration.fig fig/hooks.fig fig/kernel_model.fig \
        fig/input.fig fig/output.fig fig/base_exchange.fig \
-       fig/stack_model.fig fig/mm-update.fig
+       fig/stack_model.fig fig/mm-update.fig fig/bind_diagram.fig \
+       fig/connect_diagram.fig fig/send_diagram.fig fig/recv_diagram.fig
 
 BIBS                   = design_choices.bib
 DESIGN_CHOICES_SOURCES = catalogue.tex design_choices_macros.tex hipl.tex
