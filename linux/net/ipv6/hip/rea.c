@@ -349,8 +349,8 @@ int hip_handle_rea_finish(struct hip_rea_info *rea_info, hip_ha_t *entry,
 		if (hip_hadb_get_peer_addr_info(entry, &addr->address, &prev_if, 
 						NULL, NULL)) 
 		{
-			/* Hmm..I think we still have to send REA if interface changes, check */
-			HIP_DEBUG("do not resend AC to already know address\n");
+			/* Hmm..I think we still have to send AC if interface changes, check */
+			_HIP_DEBUG("do not resend AC to already know address\n");
 			if (prev_if != rea_info->interface_id) {
 				HIP_DEBUG("address' iface changed -> update info\n");
 				/* todo: update lifetime too ? */
@@ -373,14 +373,16 @@ int hip_handle_rea_finish(struct hip_rea_info *rea_info, hip_ha_t *entry,
 						     rea_info->interface_id, addr->lifetime);
 			_HIP_DEBUG("known address moved to the end of the peer address list\n");
 			/* (testing) continue; */
-		}
-		HIP_DEBUG("is not known address, send AC\n");
+		} else 
+			HIP_DEBUG("is not known address\n");
 
 		if (ntohl(addr->reserved) != 0)
 			HIP_DEBUG("reserved in REA_INFO not zero (0x%x), ignored\n", ntohl(addr->reserved));
 
 		current_time = jiffies; /* for testing, see todo */
 		_HIP_DEBUG("current_time=0x%x/%u\n", current_time, current_time);
+
+		HIP_DEBUG("send AC\n");
 
 		//err = hip_send_ac_or_acr(HIP_AC, our_hit, NULL, &addr->address, hip_get_new_ac_id(),
 		err = hip_send_ac_or_acr(HIP_AC, entry, src_addr, &addr->address,
