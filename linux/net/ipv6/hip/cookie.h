@@ -13,6 +13,7 @@
 #include "debug.h"
 #include "hip.h"
 #include "builder.h"
+#include "output.h"
 
 struct hip_r1entry {
 	struct hip_common *r1;

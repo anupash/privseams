@@ -26,6 +26,7 @@
 #ifdef __KERNEL__
 int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb);
 int hip_csum_verify(struct sk_buff *skb);
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
 int hip_send_r1(struct sk_buff *skb);
 int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 		struct in6_addr *dst_hit);
