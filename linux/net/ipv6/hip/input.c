@@ -1334,6 +1334,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		goto out_err;
 	}
 	entry->default_spi_out = spi_out;
+	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
 	hip_hadb_dump_spi_list(entry, NULL);
 
 	{
@@ -1860,6 +1861,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,
 					       0, PEER_ADDR_STATE_ACTIVE, 0, 1);
 		entry->default_spi_out = spi_recvd;
+		HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 		HIP_DEBUG("add spi err ret=%d\n", err);
 		hip_hadb_dump_spi_list(entry, NULL);
 		HIP_UNLOCK_HA(entry);

@@ -1063,6 +1063,24 @@ void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi)
 		HIP_DEBUG("SPI not found\n");
 }
 
+uint32_t hip_get_default_spi_out(struct in6_addr *hit)
+{
+	uint32_t spi;
+	hip_ha_t *entry;
+
+	HIP_DEBUG("\n");
+
+	entry = hip_hadb_find_byhit(hit);
+	if (!entry) {
+		HIP_DEBUG("entry not found\n");
+		return 0;
+	}
+
+	HIP_LOCK_HA(entry);
+	spi = entry->default_spi_out;
+	HIP_UNLOCK_HA(entry);
+	return spi;
+}
 
 int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 {

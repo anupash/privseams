@@ -1803,6 +1803,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_trigger_bex);
 	HIP_SETCALL(hip_handle_ipv6_ifa_notify);
 	HIP_SETCALL(hip_update_spi_waitlist_ispending);
+	HIP_SETCALL(hip_get_default_spi_out);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
 		HIP_ERROR("Could not add HIP protocol\n");
@@ -1837,6 +1838,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_get_addr);
 	HIP_INVALIDATE(hip_handle_esp);
 	HIP_INVALIDATE(hip_handle_output);
+	HIP_INVALIDATE(hip_get_default_spi_out);
 
 	if (atomic_read(&hip_working) != 0) {
 		hip_stop_khipd(); /* tell the hip kernel thread(s) to stop */

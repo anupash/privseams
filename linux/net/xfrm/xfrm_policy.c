@@ -24,6 +24,10 @@
 #include <net/xfrm.h>
 #include <net/ip.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 DECLARE_MUTEX(xfrm_cfg_sem);
 
 static rwlock_t xfrm_policy_lock = RW_LOCK_UNLOCKED;
@@ -806,15 +810,23 @@ restart:
 			return 0;
 		}
 
-		if (nx > 0) {
-		  int i = 0;
-		  printk(KERN_DEBUG "xfrm_lookup: nx=%d\n", nx);
-		  printk(KERN_DEBUG "fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
-		  for (i = 0; i < nx; i++) {
-		    printk(KERN_DEBUG "xfrm_lookup: SPI %d=0x%x\n", i, ntohl(xfrm[i]->id.spi));
-		  }
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		if (nx == 1 && ipv6_addr_is_hit(&fl->fl6_dst)) {
+			/* with HIP nx is always 1 ? */
+			uint32_t spi;
+			printk(KERN_DEBUG "xfrm_lookup: nx == 1\n");
+			printk(KERN_DEBUG "fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
+			printk(KERN_DEBUG "xfrm_lookup: SPI=0x%x\n", ntohl(xfrm[0]->id.spi));
+			spi = HIP_CALLFUNC(hip_get_default_spi_out, 0) (&fl->fl6_dst);
+			if (!spi) {
+				printk(KERN_DEBUG "outbound SPI not found\n");
+				err = -ENOMSG;
+				goto error;
+			}
+			printk(KERN_DEBUG "changing outbound SPI to 0x%x\n", spi);
+			xfrm[0]->id.spi = htonl(spi);
 		}
-
+#endif
 		dst = &rt->u.dst;
 		err = xfrm_bundle_create(policy, xfrm, nx, fl, &dst, family);
 
