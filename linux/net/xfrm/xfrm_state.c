@@ -408,7 +408,6 @@ int xfrm_state_add(struct xfrm_state *x)
 	struct xfrm_state *x1;
 	int err;
 
-	printk(KERN_DEBUG "xfrm_state_add\n");
 
 	afinfo = xfrm_state_get_afinfo(x->props.family);
 	if (unlikely(afinfo == NULL))
@@ -417,7 +416,7 @@ int xfrm_state_add(struct xfrm_state *x)
 	spin_lock_bh(&xfrm_state_lock);
 
 	x1 = afinfo->state_lookup(&x->id.daddr, x->id.spi, x->id.proto);
-	printk(KERN_DEBUG "xfrm_state_add x1_0=0x%p\n", x1);
+
 	if (!x1) {
 		x1 = afinfo->find_acq(
 			x->props.mode, x->props.reqid, x->id.proto,
@@ -427,14 +426,14 @@ int xfrm_state_add(struct xfrm_state *x)
 			x1 = NULL;
 		}
 	}
-	printk(KERN_DEBUG "xfrm_state_add x1_1=0x%p\n", x1);
+
 	if (x1 && x1->id.spi) {
 		xfrm_state_put(x1);
 		x1 = NULL;
 		err = -EEXIST;
 		goto out;
 	}
-	printk(KERN_DEBUG "xfrm_state_add inserting x->id.spi 0x%x\n", x->id.spi);
+
 	__xfrm_state_insert(x);
 	err = 0;
 
@@ -772,7 +771,6 @@ int km_query(struct xfrm_state *x, struct xfrm_tmpl *t, struct xfrm_policy *pol)
 	struct xfrm_mgr *km;
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	printk(KERN_DEBUG "Querying SA\n");
 	if (pol->selector.daddr.a6[0] == htonl(0x40000000) &&
 	    pol->selector.prefixlen_d == 2) {
 		/* this must trigger Base Exchange */

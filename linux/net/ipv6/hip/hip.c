@@ -1785,17 +1785,12 @@ static int __init hip_init(void)
 			goto out;
 	}
 
- 	HIP_SETCALL(hip_bypass_ipsec);
 	HIP_SETCALL(hip_handle_output);
-	HIP_SETCALL(hip_add_sk_to_waitlist);
 	HIP_SETCALL(hip_handle_esp);
 	HIP_SETCALL(hip_get_addr);
-	HIP_SETCALL(hip_get_hits);
-	HIP_SETCALL(hip_inbound);
 	HIP_SETCALL(hip_get_saddr);
 	HIP_SETCALL(hip_unknown_spi);
 	HIP_SETCALL(hip_handle_dst_unreachable);
-	HIP_SETCALL(hip_is_our_spi);
 	HIP_SETCALL(hip_trigger_bex);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
@@ -1826,12 +1821,9 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_dst_unreachable);
 	HIP_INVALIDATE(hip_unknown_spi);
 	HIP_INVALIDATE(hip_get_saddr);
-	HIP_INVALIDATE(hip_inbound);
-	HIP_INVALIDATE(hip_get_hits);
 	HIP_INVALIDATE(hip_get_addr);
 	HIP_INVALIDATE(hip_handle_esp);
 	HIP_INVALIDATE(hip_handle_output);
-	HIP_INVALIDATE(hip_bypass_ipsec);
 
 	if (atomic_read(&hip_working) != 0) {
 		hip_stop_khipd(); /* tell the hip kernel thread(s) to stop */

@@ -116,7 +116,7 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	/* we are only called, if the protocol is ESP */
 
 	k = hip_hadb_multiget((void *)spi, 2, tlist, setlist, HIP_ARG_SPI);
-	if (k < 3) {
+	if (k < 2) {
 		HIP_DEBUG("Could not copy HITs, or SPI (%x) not ours\n",spi);
 	}
 	return;
@@ -1448,6 +1448,10 @@ int hip_create_r2(struct hip_context *ctx)
 			HIP_DEBUG("hip_store_base_exchange_keys failed\n");
 			goto out_err;
 		}
+
+		hip_finalize_sa(&i2->hits, spi_peer);
+		hip_finalize_sa(&i2->hitr, spi_our);
+
 	}
 
 	HIP_DEBUG("Reached ESTABLISHED state\n");

@@ -22,20 +22,10 @@ struct hip_callable_functions {
 
 	void (*hip_handle_esp) (uint32_t spi, struct ipv6hdr *ipv6);
 	int (*hip_handle_output) (struct ipv6hdr *hdr, struct sk_buff *skb);
-	int (*hip_add_sk_to_waitlist) (struct in6_addr *hit, struct sock *sk);
-
-	int (*hip_bypass_ipsec) (void);
 	int (*hip_get_addr) (struct in6_addr *hit, struct in6_addr *addr);
-	int (*hip_get_hits) (struct in6_addr *hitd, struct in6_addr *hits);
-
 	int (*hip_get_saddr) (struct flowi *fl, struct in6_addr *hit_storage);
-
-	int (*hip_inbound) (struct sk_buff **skb, unsigned int *nhoff);
-
-	
 	void (*hip_unknown_spi) (struct sk_buff *skb, uint32_t spi);
 	void (*hip_handle_dst_unreachable) (struct sk_buff *skb);
-	int (*hip_is_our_spi) (uint32_t spi, struct in6_addr *hit);
 	int (*hip_trigger_bex) (struct in6_addr *dsthit);
 };
 
