@@ -33,6 +33,12 @@ static int hip_hadb_hash_hit(hip_hit_t *hit)
  */
 void hip_hadb_delete_state(hip_ha_t *ha)
 {
+	/* Delete SAs */
+	hip_delete_sa(spi_out, &entry->hit_peer);
+	hip_delete_sa(spi_in, &entry->hit_our);
+	hip_delete_sa(new_spi_out, &entry->hit_peer);
+	hip_delete_sa(new_spi_in, &entry->hit_our);
+
 	/* peer addr list */
 	hip_hadb_delete_peer_addrlist(ha);
 
