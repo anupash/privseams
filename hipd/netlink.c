@@ -6,6 +6,15 @@
 
 static int netlink_fd;
 
+/* base exchange IPv6 addresses need to be put into ifindex2spi map,
+ * so a function is needed which gets the ifindex of the network
+ * device which has the address @addr */
+int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
+{
+	exit(1);
+	return 1;
+}
+
 struct hip_work_order *hip_netlink_receive(void) {
 	struct hip_work_order *result = NULL;
 	struct hip_work_order *hwo;

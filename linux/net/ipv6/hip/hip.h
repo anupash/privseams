@@ -46,6 +46,7 @@
 #define read_lock_irqsave(a,b) do {} while(0)
 #define spin_unlock_irqrestore(a,b) do {} while(0)
 #define write_lock_irqsave(a,b) do {} while(0)
+#define write_unlock_irqrestore(a,b) do {} while(0)
 #define read_unlock_irqrestore(a,b) do {} while(0)
 
 #ifndef MIN
@@ -55,10 +56,6 @@
 #ifndef MAX
 #  define MAX(a,b)	((a)>(b)?(a):(b))
 #endif
-
-/* XX FIXME: implement in libinet6/debug.c and libinet6/debug.h */
-#define HIP_DEBUG_HIT(str, hit) do {} while(0)
-#define _HIP_DEBUG_HIT(str, hit) do {} while(0)
 
 /* XX FIXME: implement with a userspace semaphore etc? */
 #define wmb() do {} while(0)

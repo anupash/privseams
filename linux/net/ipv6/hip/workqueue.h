@@ -52,6 +52,7 @@
 #ifdef __KERNEL__
 //extern struct semaphore hip_work; // (tkoponen: this is used nowhere, remove?)
 #endif
+void hwo_default_destructor(struct hip_work_order *hwo);
 int hip_init_workqueue(void);
 void hip_uninit_workqueue(void);
 int hip_insert_work_order(struct hip_work_order *hwo);

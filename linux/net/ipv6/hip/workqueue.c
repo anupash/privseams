@@ -25,6 +25,18 @@ static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
 #endif
 
 /**
+ * hwo_default_destructor - Default destructor for work order
+ *
+ * Simple... if you don't understand, then you shouldn't be
+ * dealing with the kernel.
+ */
+void hwo_default_destructor(struct hip_work_order *hwo)
+{
+	if (hwo && hwo->msg)
+          HIP_FREE(hwo->msg);
+}
+
+/**
  * hip_get_work_order - Get one work order from workqueue
  * 
  * HIP daemons call this function when waiting for
@@ -320,6 +332,7 @@ int hip_do_work(struct hip_work_order *job)
 		break;
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
+#ifdef __KERNEL__ /* this has to be done differently in the userspace */
 		case HIP_WO_SUBTYPE_IN6_EVENT:
 			hip_net_event((int)job->hdr.arg1, 0, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
@@ -328,6 +341,7 @@ int hip_do_work(struct hip_work_order *job)
 			hip_net_event((int)job->hdr.arg1, 1, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
 			break;
+#endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_ADDMAP:
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);

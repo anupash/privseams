@@ -30,19 +30,23 @@
             hip_hexdump(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)
 #define HIP_DEBUG_SOCKADDR(prefix, family, sockaddr) \
  hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, family, sockaddr)
-#define HIP_DUMP_MSG(msg) { info(__FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
+#define HIP_DUMP_MSG(msg) { hip_info(__FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
 #define HIP_PERROR(s) hip_perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
 #define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
 
+/* XX FIXME: implement! */
+#define HIP_DEBUG_HIT(str, hit) do {} while(0)
+
 /* these are used for disabling a debugging command temporarily */
-#define _HIP_DEBUG(...)
-#define _HIP_INFO(...)
-#define _HIP_ERROR(...)
-#define _HIP_DIE(...)
-#define _HIP_HEXDUMP(prefix, str, len)
-#define _HIP_DUMP_MSG(msg)
-#define _HIP_PERROR(s)
-#define _HIP_ASSERT(s)
+#define _HIP_DEBUG(...) do {} while(0)
+#define _HIP_INFO(...) do {} while(0)
+#define _HIP_ERROR(...) do {} while(0)
+#define _HIP_DIE(...) do {} while(0)
+#define _HIP_HEXDUMP(prefix, str, len) do {} while(0)
+#define _HIP_DUMP_MSG(msg) do {} while(0)
+#define _HIP_PERROR(s) do {} while(0)
+#define _HIP_ASSERT(s) do {} while(0)
+#define _HIP_DEBUG_HIT(str, hit) do {} while(0)
 
 enum logtype { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
 enum logfmt { LOGFMT_SHORT, LOGFMT_LONG };

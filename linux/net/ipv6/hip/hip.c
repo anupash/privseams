@@ -636,7 +636,8 @@ static void hip_get_load_time(void)
 
 /* base exchange IPv6 addresses need to be put into ifindex2spi map,
  * so a function is needed which gets the ifindex of the network
- * device which has the address @addr */
+ * device which has the address @addr
+ */
 int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
 {
 	int ifindex = 0;

@@ -20,6 +20,7 @@ typedef struct { } rwlock_t;
 #include "socket.h"
 #include "output.h"
 #include "update.h"
+#include "hidb.h"
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
