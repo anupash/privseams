@@ -874,7 +874,26 @@ uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex)
 	return spi;
 }
 
-/* just pick one */
+/* bad name */
+uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi_out)
+{
+	struct hip_spi_in_item *item, *tmp;
+	uint32_t spi = 0;
+
+	HIP_DEBUG("prev_spi_out=0x%x\n", prev_spi_out);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: ifindex=%d spi=0x%x nes_spi_out=0x%x\n",
+			  item->ifindex, item->spi, item->nes_spi_out);
+		if (item->nes_spi_out == prev_spi_out) {
+			HIP_DEBUG("found\n");
+			spi = item->spi;
+			break;
+		}
+        }
+	return spi;
+}
+
+/* just pick one, kludge test */
 uint32_t hip_get_spi_to_update(hip_ha_t *entry)
 {
 	struct hip_spi_in_item *item, *tmp;
@@ -893,6 +912,35 @@ uint32_t hip_get_spi_to_update(hip_ha_t *entry)
 	return spi;
 }
 
+/* test: get the SPI of the SA belonging to the interface through
+   which we received the UPDATE */
+/* also sets updating flag of SPI to 1 */
+uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *dev_addr)
+{
+	struct hip_spi_in_item *item, *tmp;
+	int ifindex;
+	uint32_t spi = 0;
+
+	hip_print_hit("dst dev_addr", dev_addr);
+	ifindex = hip_ipv6_devaddr2ifindex(dev_addr);
+	HIP_DEBUG("ifindex of dst dev=%d\n", ifindex);
+	if (!ifindex)
+		goto out;
+
+	/* lock ? */
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		if (item->ifindex == ifindex) {
+			item->updating = 1;
+			spi = item->spi;
+			break;
+		}
+        }
+ out:
+	HIP_DEBUG("returning spi 0x%x\n", spi);
+	return spi;
+}
+
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
 {
 	struct hip_spi_in_item *item, *tmp;
@@ -900,11 +948,62 @@ void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
 		HIP_DEBUG("item: ifindex=%d spi=0x%x updating=%d\n",
 			  item->ifindex, item->spi, item->updating);
 		if (item->spi == spi) {
+			HIP_DEBUG("setting updating status to %d\n", set);
 			item->updating = set;
 			break;
 		}
         }
 }
+
+/* spi_out is the SPI which was in the received NES Old SPI field */
+void hip_update_set_new_spi(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
+			    uint32_t spi_out /* test */)
+{
+	struct hip_spi_in_item *item, *tmp;
+	HIP_DEBUG("spi=0x%x new_spi=0x%x spi_out=0x%x\n", spi, new_spi, spi_out);
+
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: spi=0x%x new_spi=0x%x\n",
+			  item->spi, item->new_spi);
+		if (item->spi == spi) {
+			HIP_DEBUG("setting new_spi\n");
+			if (!item->updating) {
+				HIP_ERROR("SA update not in progress, continuing anyway\n");
+			}
+			if (item->new_spi) {
+				HIP_ERROR("previous new_spi is not zero: 0x%x\n", item->new_spi);
+				HIP_ERROR("todo: delete previous new_spi\n");
+			}
+			item->new_spi = new_spi;
+			if (spi_out)
+				item->nes_spi_out = spi_out;
+			else
+				HIP_DEBUG("not setting nes_spi_out\n");
+			break;
+		}
+        }
+}
+
+uint32_t hip_update_get_new_spi(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_spi_in_item *item, *tmp;
+	uint32_t new_spi = 0;
+
+	HIP_DEBUG("spi=0x%x\n", spi);
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: spi=0x%x new_spi=0x%x\n",
+			  item->spi, item->new_spi);
+		if (item->spi == spi) {
+			new_spi = item->new_spi;
+			break;
+		}
+        }
+	return new_spi;
+}
+
+
+
+
 
 #if 0
 /* inbound IPsec SA mappings to devices, each netdev has its own SA */

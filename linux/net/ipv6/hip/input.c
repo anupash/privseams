@@ -1551,7 +1551,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	hip_ha_t *entry = ha;
 	int esptfm;
 	uint32_t spi_in, spi_out;
-	int ifindex = 0;
+	//int ifindex = 0;
 	struct hip_spi_in_item spi_in_data;
  	HIP_DEBUG("\n");
 

@@ -229,8 +229,12 @@ void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi);
 void hip_ifindex2spi_map_delete_all(hip_ha_t *entry);
 uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex);
 int hip_ifindex2spi_get_ifindex(hip_ha_t *entry, uint32_t spi);
+uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi_out);
 uint32_t hip_get_spi_to_update(hip_ha_t *entry);
+uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *dev_addr);
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set);
+void hip_update_set_new_spi(hip_ha_t *entry, uint32_t spi, uint32_t new_spi, uint32_t spi_out);
+uint32_t hip_update_get_new_spi(hip_ha_t *entry, uint32_t spi);
 
 extern struct hip_db_struct hip_peer_hostid_db;
 extern struct hip_db_struct hip_local_hostid_db;

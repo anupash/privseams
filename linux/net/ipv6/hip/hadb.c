@@ -991,7 +991,7 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 {
 	int err = 0;
-	struct hip_spi_out_item *item, *tmp;
+	//struct hip_spi_out_item *item, *tmp;
 	uint32_t spi_out;
 
 	spi_out = data->spi;
@@ -1061,6 +1061,8 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 }
 
 /*
+
+old, todo: update
 
 outbound SPIs and the addresses belonging to a SPI value are in list:
 

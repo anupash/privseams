@@ -812,6 +812,9 @@ struct hip_spi_in_item
 	int              ifindex; /* ifindex if the netdev to which this is related to */
 	unsigned long    timestamp;
 	int              updating; /* UPDATE is in progress */
+	uint32_t         nes_spi_out; /* UPDATE, the stored outbound
+				       * SPI related to the inbound
+				       * SPI we sent in reply (?) */
 	// int update_state_flags; /* TODO: move from hadb_state to here */
 };
 
@@ -821,6 +824,7 @@ struct hip_spi_out_item
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
 	// int update_state_flags; /* TODO: move from hadb_state to here */
+	// peer addresses
 };
 
 struct hip_hadb_state
