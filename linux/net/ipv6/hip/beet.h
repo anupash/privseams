@@ -1,0 +1,51 @@
+/**
+ * BEET API for the kernel and the userspace. XFRM API is for
+ * management of IPsec SAs and BEET API is for management of
+ * HIT<->SPI,IP mappings. 
+ */
+#ifndef HIP_BEET_H
+#define HIP_BEET_H
+
+#include <linux/in6.h>  /* struct in6_addr */
+#include <linux/list.h> /* struct list */
+#include "debug.h"
+
+#define HIP_BEETDB_SIZE 53
+
+#ifdef __KERNEL__
+
+/* BEET database entry struct and access functions to retrieve them. */
+struct hip_xfrm_state {
+        uint32_t             spi;                 /* SPI either in or
+                                                     out */
+	int                  dir;                 /* Direction */
+	hip_hit_t            hit_our;             /* The HIT we use with
+						   * this host */
+	hip_hit_t            hit_peer;            /* Peer's HIT */    
+	struct in6_addr      preferred_peer_addr; /* preferred dst
+						   * address to use when
+						   * sending data to
+						   * peer */
+	int                  state;               /* state */
+};
+
+/* For inbound packet processing (SPI->(HITd,HITs) mapping) */
+struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi);
+
+/* For outbound packet processing (HITd->(SPI, IP) mapping */
+struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit);
+
+#endif /* __KERNEL__ */
+
+/*
+ * These are wrappers to netlink calls (from the userspace daemon to
+ * the kernel XFRM management) or to the BEET patch (from the kernel
+ * daemon to the kernel XFRM management). The functions are used to
+ * manage the replica of HADB within the kernel.
+ */
+int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
+int hip_xfrm_update(uint32_t spi, struct in6_addr * dst_addr, int state, int dir);
+int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir);
+
+#endif /* HIP_BEET_H */
+
