@@ -1054,23 +1054,6 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 	return 1;
 }
 
-/**
- * hip_trigger_bex - Trigger HIP base exchange
- * @dsthit: Destination HIT
- *
- * Returns 0
- */
-int hip_trigger_bex(struct in6_addr *dsthit)
-{
-	struct ipv6hdr hdr = {0};
-
-	HIP_DEBUG("TODO: MOVE THIS TO XFRM KM HANDLER AND REMOVE STUFF FROM xfrm_state.c/km_query\n");
-
-	ipv6_addr_copy(&hdr.daddr, dsthit);
-	hip_handle_output(&hdr, NULL);
-	return 0;
-}
-
 
 /**
  * hip_get_hits - get this host's HIT to be used in source HIT
@@ -1512,16 +1495,18 @@ static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt,
 	return;
 }
 
-/* Handler which is notified when SA state has changes.
-   TODO: send UPDATE when SA lifetime has expired. */
+/* Handler which is notified when SA state has changed.
+   TODO: send UPDATE when SA lifetime has expired or is about to expire. */
 static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
 {
-	HIP_DEBUG("x=0x%p hard=%d\n", x, hard);
-	HIP_DEBUG("x: SPI=0x%x state=%d\n", ntohl(x->id.spi), x->km.state);
-	HIP_DEBUG("TODO..\n");
+	HIP_DEBUG("SPI=0x%x hard expiration=%d state=%d\n",
+		  ntohl(x->id.spi), hard, x->km.state);
+	HIP_DEBUG("TODO..send UPDATE ?\n");
 #if 0
 	if (SA is HIP SA) {
 		hip_ha_t *entry;
+
+		/* todo: zero the spi from hadb */
 		/* was this event caused by inbound SA ?*/
 		entry = hip_hadb_find_byspi(ntohl(x->id.spi));
 		if (entry) {
@@ -1536,45 +1521,73 @@ static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
 	return 0;
 }
 
-#if 0
-/* TODO: remove kludge from km_query and use this as the handler when HITs are acquired */
-static int hip_xfrm_handler_acquire(struct xfrm_state *xs, struct xfrm_tmpl *xtmpl,
-			     struct xfrm_policy *pol, int dir)
+/* This function is called when XFRM key manager does not know SA for
+ * given destination address. If the destination address is a HIT we
+ * must trigger base exchange to that HIT.
+ *
+ * Also it seems that we get here if the IPsec SA has expired and we
+ * are trying to send HIP traffic to that SA.
+ */
+static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
+				    struct xfrm_tmpl *xtmpl,
+				    struct xfrm_policy *pol, int dir)
 {
-	int err = -EINVAL; /* ? */
+	int err = -EINVAL;
+	char str[INET6_ADDRSTRLEN];
+	struct ipv6hdr hdr = {0};
 
-	if (pol->selector.daddr == htonl(0x40000000) &&
-	    pol->selector.prefixlen_d == 2) {
-		/* this must trigger Base Exchange */
-		err = hip_trigger_bex((struct in6_addr *)&(xs->id.daddr));
+	hip_in6_ntop((struct in6_addr *) &(xs->id.daddr), str);
+	HIP_DEBUG("daddr=%s dir=%d\n", str, dir);
+
+	if (! (pol->selector.daddr.a6[0] == htonl(0x40000000) &&
+	       pol->selector.prefixlen_d == 2)) {
+		hip_in6_ntop((struct in6_addr *) &(pol->selector.daddr), str);
+		HIP_ERROR("Policy (pol daddr=%s) is not for HIP, returning\n",
+			  str);
+		goto out;
 	}
-	HIP_DEBUG("err=%d\n", err);
+
+	if (!hip_is_hit((struct in6_addr *) &(xs->id.daddr))) {
+		HIP_ERROR("%s not a HIT\n", str);
+		goto out;
+	}
+
+	err = 0;
+	ipv6_addr_copy(&hdr.daddr, (struct in6_addr *) &(xs->id.daddr));
+	hip_handle_output(&hdr, NULL);
+	
+out:
+	HIP_DEBUG("returning, err=%d\n", err);
 	return err;
 }
-#endif
 
-static int hip_xfrm_handler_policy_notify(struct xfrm_policy *xp, int dir, int hard)
+/* Called when policy is expired */
+static int hip_xfrm_handler_policy_notify(struct xfrm_policy *xp,
+					  int dir, int hard)
 {
-	HIP_DEBUG("xp=0x%p dir=%d hard=%d\n", xp, dir, hard);
+	HIP_DEBUG("xp=0x%p dir=%d hard expiration=%d\n", xp, dir, hard);
 	HIP_DEBUG("TODO..\n");
 	return 0;
 }
 
+/* Callbacks for HIP related IPsec SA management functions */
 static struct xfrm_mgr hip_xfrm_km_mgr = {
 	.id		= "HIP",
 	.notify		= hip_xfrm_handler_notify,
-	/* .acquire	= hip_xfrm_handler_acquire, fix this when km_query is fixed */
-	/* .compile_policy = hip_xfrm_handler_compile_policy, */
-	.notify_policy	= hip_xfrm_handler_policy_notify,
+	.acquire	= hip_xfrm_handler_acquire,
+	.notify_policy	= hip_xfrm_handler_policy_notify
+	/* .compile_policy = hip_xfrm_handler_compile_policy, not needed ? */
 };
 
-/* Handler for XFRM key management calls */
-/* TODO */
+/* Register handler for XFRM key management calls */
 int hip_register_xfrm_km_handler(void)
 {
 	int err;
+
 	HIP_DEBUG("registering XFRM key management handler\n");
 	err = xfrm_register_km(&hip_xfrm_km_mgr);
+	if (err)
+		HIP_DEBUG("Registration of XFRM km handler failed, err=%d\n", err);
 	return err;
 }
 
@@ -2001,7 +2014,6 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_get_addr);
 	HIP_SETCALL(hip_get_saddr);
 	HIP_SETCALL(hip_unknown_spi);
-	HIP_SETCALL(hip_trigger_bex);
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
 	/* HIP_SETCALL(hip_update_spi_waitlist_ispending); */
@@ -2019,12 +2031,10 @@ static int __init hip_init(void)
 	if (hip_init_netdev_notifier() < 0)
 		goto out;
 
-#if 0
 	if (hip_register_xfrm_km_handler()) {
 		HIP_ERROR("Could not register XFRM key manager for HIP\n");
 		goto out;
 	}
-#endif
 
 	HIP_INFO("HIP module initialized successfully\n");
 	return 0;
@@ -2045,7 +2055,7 @@ static void __exit hip_cleanup(void)
 	HIP_INFO("Uninitializing HIP module\n");
 
 	/* unregister XFRM km handler */
-	//xfrm_unregister_km(&hip_xfrm_km_mgr);
+	xfrm_unregister_km(&hip_xfrm_km_mgr);
 
 	/* disable callbacks for HIP packets and notifier chains */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
@@ -2055,7 +2065,6 @@ static void __exit hip_cleanup(void)
 	//HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
-	HIP_INVALIDATE(hip_trigger_bex);
 	HIP_INVALIDATE(hip_unknown_spi);
 	HIP_INVALIDATE(hip_get_saddr);
 	HIP_INVALIDATE(hip_get_addr);

@@ -65,22 +65,18 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	struct xfrm_state *xs;
 	xfrm_address_t *xaddr;
 
-	//hip_print_hit("dst address", dst);
 	if (spi == 0) {
 		return -EINVAL;
 	}
-	HIP_DEBUG("spi=0x%x\n", spi);
 
+	HIP_DEBUG("SPI=0x%x\n", spi);
 	xaddr = (xfrm_address_t *)dst;
-
 	xs = xfrm_state_lookup(xaddr, htonl(spi), IPPROTO_ESP, AF_INET6);
 	if (!xs) {
-		HIP_ERROR("Could not find SA for SPI 0x%x!\n", spi);
+		HIP_ERROR("Could not find SA for SPI 0x%x (already expired ?)\n", spi);
 		return -ENOENT;
 	}
-	
-	xfrm_state_put(xs); /* as in xfrm_user.c, xfrm_del_sa
-			       xfrm_state_lookup incs xs's refcount */
+	xfrm_state_put(xs);
 	xfrm_state_delete(xs);
 
 	return 0;
@@ -92,7 +88,6 @@ int hip_delete_esp(hip_ha_t *entry)
 	/* assumes already locked entry */
 	hip_hadb_delete_inbound_spis(entry);
 	hip_hadb_delete_outbound_spis(entry);
-
 	return 0;
 }
 
@@ -129,10 +124,16 @@ int hip_setup_sp(int dir)
 	xp->selector.sport = xp->selector.dport = 0;
 	xp->selector.sport_mask = xp->selector.dport_mask = 0;
 
+	/* set policy to never expire */
 	xp->lft.soft_byte_limit = XFRM_INF;
 	xp->lft.hard_byte_limit = XFRM_INF;
 	xp->lft.soft_packet_limit = XFRM_INF;
 	xp->lft.hard_packet_limit = XFRM_INF;
+	xp->lft.soft_add_expires_seconds = 0;
+	xp->lft.hard_add_expires_seconds = 0;
+	xp->lft.soft_use_expires_seconds = 0;
+	xp->lft.hard_use_expires_seconds = 0;
+
 	/* xp->curlft. add_time and use_time are set in xfrm_policy_insert */
 
 	xp->family = AF_INET6; /* ? */
@@ -155,15 +156,14 @@ int hip_setup_sp(int dir)
 	err = xfrm_policy_insert(dir, xp, 1);
 	if (err) {
 		if (err == -EEXIST)
-			HIP_DEBUG("SP policy already exists\n");
+			HIP_ERROR("SP policy already exists, ignore ?\n");
 		else
-			HIP_ERROR("Could not insert new SP policy, err=%d\n", err);
+			HIP_ERROR("Could not insert new SP, err=%d\n", err);
 		// xfrm_policy_delete(xp); ?
 		xfrm_pol_put(xp);
-		return err;
 	}
 
-	return 0;
+	return err;
 }
 
 /* returns 0 if SPI could not  be allocated, SPI is in host byte order */
@@ -229,7 +229,8 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	size_t akeylen, ekeylen; /* in bits */
 
 	HIP_DEBUG("SPI=0x%x alg=%d already_acquired=%d direction=%s\n",
-		  *spi, alg, already_acquired, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
+		  *spi, alg, already_acquired,
+		  direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
 	akeylen = ekeylen = 0;
 	err = -EEXIST;
 
