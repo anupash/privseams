@@ -86,7 +86,7 @@ int rxrpc_create_transport(unsigned short port,
 	trans->port = port;
 
 	/* create a UDP socket to be my actual transport endpoint */
-	ret = sock_create(PF_INET, SOCK_DGRAM, IPPROTO_UDP, &trans->socket);
+	ret = sock_create_kern(PF_INET, SOCK_DGRAM, IPPROTO_UDP, &trans->socket);
 	if (ret < 0)
 		goto error;
 
@@ -341,6 +341,11 @@ static int rxrpc_incoming_msg(struct rxrpc_transport *trans,
 	msg->trans = trans;
 	msg->state = RXRPC_MSG_RECEIVED;
 	msg->stamp = pkt->stamp;
+	if (msg->stamp.tv_sec == 0) {
+		do_gettimeofday(&msg->stamp); 
+		if (pkt->sk) 
+			sock_enable_timestamp(pkt->sk);
+	} 
 	msg->seq = ntohl(msg->hdr.seq);
 
 	/* attach the packet */

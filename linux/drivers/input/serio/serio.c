@@ -154,7 +154,7 @@ static int serio_thread(void *nothing)
 		serio_handle_events();
 		wait_event_interruptible(serio_wait, !list_empty(&serio_event_list)); 
 		if (current->flags & PF_FREEZE)
-			refrigerator(PF_IOTHREAD);
+			refrigerator(PF_FREEZE);
 	} while (!signal_pending(current));
 
 	printk(KERN_DEBUG "serio: kseriod exiting\n");
@@ -195,6 +195,9 @@ irqreturn_t serio_interrupt(struct serio *serio,
                 ret = serio->dev->interrupt(serio, data, flags, regs);
 	} else {
 		if (!flags) {
+			if ((serio->type == SERIO_8042 ||
+				serio->type == SERIO_8042_XL) && (data != 0xaa))
+					return ret;
 			serio_rescan(serio);
 			ret = IRQ_HANDLED;
 		}

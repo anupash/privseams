@@ -238,7 +238,7 @@ int __init iph5526_probe(struct net_device *dev)
 
 static int __init iph5526_probe_pci(struct net_device *dev)
 {
-	struct fc_info *fi = (struct fc_info *)dev->priv;
+	struct fc_info *fi = dev->priv;
 	fi->dev = dev;
 	dev->base_addr = fi->base_addr;
 	dev->irq = fi->irq;
@@ -2908,16 +2908,16 @@ static int iph5526_close(struct net_device *dev)
 
 static void iph5526_timeout(struct net_device *dev)
 {
-	struct fc_info *fi = (struct fc_info*)dev->priv;
+	struct fc_info *fi = dev->priv;
 	printk(KERN_WARNING "%s: timed out on send.\n", dev->name);
-	fi->fc_stats.rx_dropped++;
+	fi->fc_stats.tx_dropped++;
 	dev->trans_start = jiffies;
 	netif_wake_queue(dev);
 }
 
 static int iph5526_send_packet(struct sk_buff *skb, struct net_device *dev)
 {
-	struct fc_info *fi = (struct fc_info*)dev->priv;
+	struct fc_info *fi = dev->priv;
 	int status = 0;
 	short type = 0;
 	u_long flags;
@@ -2953,7 +2953,7 @@ static int iph5526_send_packet(struct sk_buff *skb, struct net_device *dev)
 		fi->fc_stats.tx_packets++;
 	}
 	else
-		fi->fc_stats.rx_dropped++;
+		fi->fc_stats.tx_dropped++;
 	dev->trans_start = jiffies;
 	/* We free up the IP buffers in the OCI_interrupt handler.
 	 * status == 0 implies that the frame was not transmitted. So the
@@ -3688,7 +3688,7 @@ int count = 0, j;
 
 static struct net_device_stats * iph5526_get_stats(struct net_device *dev)
 {	
-struct fc_info *fi = (struct fc_info*)dev->priv; 
+struct fc_info *fi = dev->priv;
 	return (struct net_device_stats *) &fi->fc_stats;
 }
 
@@ -4501,7 +4501,7 @@ static int __init iph5526_init(void)
 		iph5526_probe_pci(dev);
 		err = register_netdev(dev);
 		if (err < 0) {
-			kfree(dev);
+			free_netdev(dev);
 			printk("iph5526.c: init_fcdev failed for card #%d\n", i+1);
 			break;
 		}

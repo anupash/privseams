@@ -69,8 +69,6 @@ KERN_INFO "  http://www.scyld.com/network/ne2k-pci.html\n";
 #if defined(__powerpc__)
 #define inl_le(addr)  le32_to_cpu(inl(addr))
 #define inw_le(addr)  le16_to_cpu(inw(addr))
-#define insl insl_ns
-#define outsl outsl_ns
 #endif
 
 #define PFX DRV_NAME ": "
@@ -359,6 +357,9 @@ static int __devinit ne2k_pci_init_one (struct pci_dev *pdev,
 	dev->open = &ne2k_pci_open;
 	dev->stop = &ne2k_pci_close;
 	dev->ethtool_ops = &ne2k_pci_ethtool_ops;
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	dev->poll_controller = ei_poll;
+#endif
 	NS8390_init(dev, 0);
 
 	i = register_netdev(dev);

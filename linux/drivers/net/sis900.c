@@ -1650,9 +1650,6 @@ static int sis900_rx(struct net_device *net_dev)
 				break;
 			}
 
-			pci_dma_sync_single(sis_priv->pci_dev, 
-				sis_priv->rx_ring[entry].bufptr, RX_BUF_SIZE, 
-				PCI_DMA_FROMDEVICE);
 			pci_unmap_single(sis_priv->pci_dev, 
 				sis_priv->rx_ring[entry].bufptr, RX_BUF_SIZE, 
 				PCI_DMA_FROMDEVICE);
@@ -2093,7 +2090,7 @@ static void set_rx_mode(struct net_device *net_dev)
 		     i++, mclist = mclist->next) {
 			unsigned int bit_nr =
 				sis900_mcast_bitnr(mclist->dmi_addr, revision);
-			mc_filter[bit_nr >> 4] |= (1 << bit_nr);
+			mc_filter[bit_nr >> 4] |= (1 << (bit_nr & 0xf));
 		}
 	}
 

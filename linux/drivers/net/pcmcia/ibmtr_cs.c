@@ -178,7 +178,7 @@ static dev_link_t *ibmtr_attach(void)
 
     link = &info->link;
     link->priv = info;
-    info->ti = dev->priv; 
+    info->ti = netdev_priv(dev);
 
     link->io.Attributes1 = IO_DATA_PATH_WIDTH_8;
     link->io.NumPorts1 = 4;
@@ -256,7 +256,7 @@ static void ibmtr_detach(dev_link_t *link)
 	unregister_netdev(dev);
 
     {
-	struct tok_info *ti = (struct tok_info *)dev->priv;
+	struct tok_info *ti = netdev_priv(dev);
 	del_timer_sync(&(ti->tr_timer));
     }
     if (link->state & DEV_CONFIG)
@@ -287,7 +287,7 @@ static void ibmtr_config(dev_link_t *link)
     client_handle_t handle = link->handle;
     ibmtr_dev_t *info = link->priv;
     struct net_device *dev = info->dev;
-    struct tok_info *ti = dev->priv;
+    struct tok_info *ti = netdev_priv(dev);
     tuple_t tuple;
     cisparse_t parse;
     win_req_t req;
@@ -317,13 +317,10 @@ static void ibmtr_config(dev_link_t *link)
     /* Try PRIMARY card at 0xA20-0xA23 */
     link->io.BasePort1 = 0xA20;
     i = pcmcia_request_io(link->handle, &link->io);
-    if (i == CS_SUCCESS) {
-	memcpy(info->node.dev_name, "tr0\0", 4);
-    } else {
+    if (i != CS_SUCCESS) {
 	/* Couldn't get 0xA20-0xA23.  Try ALTERNATE at 0xA24-0xA27. */
 	link->io.BasePort1 = 0xA24;
 	CS_CHECK(RequestIO, pcmcia_request_io(link->handle, &link->io));
-	memcpy(info->node.dev_name, "tr1\0", 4);
     }
     dev->base_addr = link->io.BasePort1;
 
@@ -367,15 +364,17 @@ static void ibmtr_config(dev_link_t *link)
         Adapters Technical Reference"  SC30-3585 for this info.  */
     ibmtr_hw_setup(dev, mmiobase);
 
+    link->dev = &info->node;
+    link->state &= ~DEV_CONFIG_PENDING;
+
     i = ibmtr_probe_card(dev);
-    
     if (i != 0) {
 	printk(KERN_NOTICE "ibmtr_cs: register_netdev() failed\n");
+	link->dev = NULL;
 	goto failed;
     }
 
-    link->dev = &info->node;
-    link->state &= ~DEV_CONFIG_PENDING;
+    strcpy(info->node.dev_name, dev->name);
 
     printk(KERN_INFO "%s: port %#3lx, irq %d,",
            dev->name, dev->base_addr, dev->irq);
@@ -412,7 +411,7 @@ static void ibmtr_release(dev_link_t *link)
     pcmcia_release_io(link->handle, &link->io);
     pcmcia_release_irq(link->handle, &link->irq);
     if (link->win) {
-	struct tok_info *ti = dev->priv;
+	struct tok_info *ti = netdev_priv(dev);
 	iounmap((void *)ti->mmio);
 	pcmcia_release_window(link->win);
 	pcmcia_release_window(info->sram_win_handle);
@@ -444,7 +443,8 @@ static int ibmtr_event(event_t event, int priority,
         link->state &= ~DEV_PRESENT;
         if (link->state & DEV_CONFIG) {
 	    /* set flag to bypass normal interrupt code */
-	    ((struct tok_info *)dev->priv)->sram_virt |= 1;
+	    struct tok_info *priv = netdev_priv(dev);
+	    priv->sram_virt |= 1;
 	    netif_device_detach(dev);
 	    ibmtr_release(link);
         }

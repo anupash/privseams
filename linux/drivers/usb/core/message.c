@@ -213,9 +213,8 @@ static void sg_clean (struct usb_sg_request *io)
 static void sg_complete (struct urb *urb, struct pt_regs *regs)
 {
 	struct usb_sg_request	*io = (struct usb_sg_request *) urb->context;
-	unsigned long		flags;
 
-	spin_lock_irqsave (&io->lock, flags);
+	spin_lock (&io->lock);
 
 	/* In 2.5 we require hcds' endpoint queues not to progress after fault
 	 * reports, until the completion callback (this!) returns.  That lets
@@ -269,7 +268,7 @@ static void sg_complete (struct urb *urb, struct pt_regs *regs)
 	if (!io->count)
 		complete (&io->complete);
 
-	spin_unlock_irqrestore (&io->lock, flags);
+	spin_unlock (&io->lock);
 }
 
 
@@ -441,12 +440,11 @@ nomem:
  */
 void usb_sg_wait (struct usb_sg_request *io)
 {
-	int		i;
-	unsigned long	flags;
+	int		i, entries = io->entries;
 
 	/* queue the urbs.  */
-	spin_lock_irqsave (&io->lock, flags);
-	for (i = 0; i < io->entries && !io->status; i++) {
+	spin_lock_irq (&io->lock);
+	for (i = 0; i < entries && !io->status; i++) {
 		int	retval;
 
 		io->urbs [i]->dev = io->dev;
@@ -455,7 +453,7 @@ void usb_sg_wait (struct usb_sg_request *io)
 		/* after we submit, let completions or cancelations fire;
 		 * we handshake using io->status.
 		 */
-		spin_unlock_irqrestore (&io->lock, flags);
+		spin_unlock_irq (&io->lock);
 		switch (retval) {
 			/* maybe we retrying will recover */
 		case -ENXIO:	// hc didn't queue this one
@@ -479,17 +477,25 @@ void usb_sg_wait (struct usb_sg_request *io)
 
 			/* fail any uncompleted urbs */
 		default:
+			spin_lock_irq (&io->lock);
+			io->count -= entries - i;
+			if (io->status == -EINPROGRESS)
+				io->status = retval;
+			if (io->count == 0)
+				complete (&io->complete);
+			spin_unlock_irq (&io->lock);
+
 			io->urbs [i]->dev = 0;
 			io->urbs [i]->status = retval;
 			dev_dbg (&io->dev->dev, "%s, submit --> %d\n",
 				__FUNCTION__, retval);
 			usb_sg_cancel (io);
 		}
-		spin_lock_irqsave (&io->lock, flags);
+		spin_lock_irq (&io->lock);
 		if (retval && io->status == -ECONNRESET)
 			io->status = retval;
 	}
-	spin_unlock_irqrestore (&io->lock, flags);
+	spin_unlock_irq (&io->lock);
 
 	/* OK, yes, this could be packaged as non-blocking.
 	 * So could the submit loop above ... but it's easier to
@@ -566,13 +572,16 @@ int usb_get_descriptor(struct usb_device *dev, unsigned char type, unsigned char
 	memset(buf,0,size);	// Make sure we parse really received data
 
 	while (i--) {
-		/* retries if the returned length was 0; flakey device */
+		/* retry on length 0 or stall; some devices are flakey */
 		if ((result = usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
 				    USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
 				    (type << 8) + index, 0, buf, size,
 				    HZ * USB_CTRL_GET_TIMEOUT)) > 0
-				|| result == -EPIPE)
+				|| result != -EPIPE)
 			break;
+
+		dev_dbg (&dev->dev, "RETRY descriptor, result %d\n", result);
+		result = -ENOMSG;
 	}
 	return result;
 }
@@ -716,7 +725,8 @@ int usb_clear_halt(struct usb_device *dev, int pipe)
 	 * this request for iso endpoints, which can't halt!
 	 */
 	result = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
-		USB_REQ_CLEAR_FEATURE, USB_RECIP_ENDPOINT, 0, endp, NULL, 0,
+		USB_REQ_CLEAR_FEATURE, USB_RECIP_ENDPOINT,
+		USB_ENDPOINT_HALT, endp, NULL, 0,
 		HZ * USB_CTRL_SET_TIMEOUT);
 
 	/* don't un-halt or force to DATA0 except on success */
@@ -777,14 +787,17 @@ void usb_disable_endpoint(struct usb_device *dev, unsigned int epaddr)
  */
 void usb_disable_interface(struct usb_device *dev, struct usb_interface *intf)
 {
-	struct usb_host_interface *hintf =
-			&intf->altsetting[intf->act_altsetting];
+	struct usb_host_interface *alt = intf->cur_altsetting;
 	int i;
 
-	for (i = 0; i < hintf->desc.bNumEndpoints; ++i) {
+	for (i = 0; i < alt->desc.bNumEndpoints; ++i) {
 		usb_disable_endpoint(dev,
-				hintf->endpoint[i].desc.bEndpointAddress);
+				alt->endpoint[i].desc.bEndpointAddress);
 	}
+}
+
+static void release_interface(struct device *dev)
+{
 }
 
 /*
@@ -821,7 +834,7 @@ void usb_disable_device(struct usb_device *dev, int skip_ep0)
 			interface = dev->actconfig->interface[i];
 			dev_dbg (&dev->dev, "unregistering interface %s\n",
 				interface->dev.bus_id);
-			device_del(&interface->dev);
+			device_unregister (&interface->dev);
 		}
 		dev->actconfig = 0;
 		if (dev->state == USB_STATE_CONFIGURED)
@@ -870,12 +883,11 @@ void usb_enable_endpoint(struct usb_device *dev,
 void usb_enable_interface(struct usb_device *dev,
 		struct usb_interface *intf)
 {
-	struct usb_host_interface *hintf =
-			&intf->altsetting[intf->act_altsetting];
+	struct usb_host_interface *alt = intf->cur_altsetting;
 	int i;
 
-	for (i = 0; i < hintf->desc.bNumEndpoints; ++i)
-		usb_enable_endpoint(dev, &hintf->endpoint[i].desc);
+	for (i = 0; i < alt->desc.bNumEndpoints; ++i)
+		usb_enable_endpoint(dev, &alt->endpoint[i].desc);
 }
 
 /**
@@ -914,30 +926,34 @@ void usb_enable_interface(struct usb_device *dev,
 int usb_set_interface(struct usb_device *dev, int interface, int alternate)
 {
 	struct usb_interface *iface;
+	struct usb_host_interface *alt;
 	int ret;
 	int manual = 0;
 
 	iface = usb_ifnum_to_if(dev, interface);
 	if (!iface) {
-		warn("selecting invalid interface %d", interface);
+		dev_dbg(&dev->dev, "selecting invalid interface %d\n",
+			interface);
 		return -EINVAL;
 	}
 
-	if (alternate < 0 || alternate >= iface->num_altsetting)
+	alt = usb_altnum_to_altsetting(iface, alternate);
+	if (!alt) {
+		warn("selecting invalid altsetting %d", alternate);
 		return -EINVAL;
+	}
 
 	ret = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
 				   USB_REQ_SET_INTERFACE, USB_RECIP_INTERFACE,
-				   iface->altsetting[alternate]
-				   	.desc.bAlternateSetting,
-				   interface, NULL, 0, HZ * 5);
+				   alternate, interface, NULL, 0, HZ * 5);
 
 	/* 9.4.10 says devices don't need this and are free to STALL the
 	 * request if the interface only has one alternate setting.
 	 */
 	if (ret == -EPIPE && iface->num_altsetting == 1) {
-		dbg("manual set_interface for dev %d, iface %d, alt %d",
-			dev->devnum, interface, alternate);
+		dev_dbg(&dev->dev,
+			"manual set_interface for iface %d, alt %d\n",
+			interface, alternate);
 		manual = 1;
 	} else if (ret < 0)
 		return ret;
@@ -951,7 +967,7 @@ int usb_set_interface(struct usb_device *dev, int interface, int alternate)
 	/* prevent submissions using previous endpoint settings */
 	usb_disable_interface(dev, iface);
 
-	iface->act_altsetting = alternate;
+	iface->cur_altsetting = alt;
 
 	/* If the interface only has one altsetting and the device didn't
 	 * accept the request, we attempt to carry out the equivalent action
@@ -959,13 +975,11 @@ int usb_set_interface(struct usb_device *dev, int interface, int alternate)
 	 * new altsetting.
 	 */
 	if (manual) {
-		struct usb_host_interface *iface_as =
-				&iface->altsetting[alternate];
 		int i;
 
-		for (i = 0; i < iface_as->desc.bNumEndpoints; i++) {
+		for (i = 0; i < alt->desc.bNumEndpoints; i++) {
 			unsigned int epaddr =
-				iface_as->endpoint[i].desc.bEndpointAddress;
+				alt->endpoint[i].desc.bEndpointAddress;
 			unsigned int pipe =
 	__create_pipe(dev, USB_ENDPOINT_NUMBER_MASK & epaddr)
 	| (usb_endpoint_out(epaddr) ? USB_DIR_OUT : USB_DIR_IN);
@@ -1039,18 +1053,29 @@ int usb_reset_configuration(struct usb_device *dev)
 	/* re-init hc/hcd interface/endpoint state */
 	for (i = 0; i < config->desc.bNumInterfaces; i++) {
 		struct usb_interface *intf = config->interface[i];
+		struct usb_host_interface *alt;
 
-		intf->act_altsetting = 0;
+		alt = usb_altnum_to_altsetting(intf, 0);
+
+		/* No altsetting 0?  We'll assume the first altsetting.
+		 * We could use a GetInterface call, but if a device is
+		 * so non-compliant that it doesn't have altsetting 0
+		 * then I wouldn't trust its reply anyway.
+		 */
+		if (!alt)
+			alt = &intf->altsetting[0];
+
+		intf->cur_altsetting = alt;
 		usb_enable_interface(dev, intf);
 	}
 	return 0;
 }
 
-/**
+/*
  * usb_set_configuration - Makes a particular device setting be current
  * @dev: the device whose configuration is being updated
  * @configuration: the configuration being chosen.
- * Context: !in_interrupt ()
+ * Context: !in_interrupt(), caller holds dev->serialize
  *
  * This is used to enable non-default device modes.  Not all devices
  * use this kind of configurability; many devices only have one
@@ -1086,7 +1111,6 @@ int usb_set_configuration(struct usb_device *dev, int configuration)
 	struct usb_host_config *cp = NULL;
 	
 	/* dev->serialize guards all config changes */
-	down(&dev->serialize);
 
 	for (i=0; i<dev->descriptor.bNumConfigurations; i++) {
 		if (dev->config[i].desc.bConfigurationValue == configuration) {
@@ -1129,31 +1153,58 @@ int usb_set_configuration(struct usb_device *dev, int configuration)
 		 */
 		for (i = 0; i < cp->desc.bNumInterfaces; ++i) {
 			struct usb_interface *intf = cp->interface[i];
-			struct usb_interface_descriptor *desc;
+			struct usb_host_interface *alt;
 
-			intf->act_altsetting = 0;
-			desc = &intf->altsetting [0].desc;
+			alt = usb_altnum_to_altsetting(intf, 0);
+
+			/* No altsetting 0?  We'll assume the first altsetting.
+			 * We could use a GetInterface call, but if a device is
+			 * so non-compliant that it doesn't have altsetting 0
+			 * then I wouldn't trust its reply anyway.
+			 */
+			if (!alt)
+				alt = &intf->altsetting[0];
+
+			intf->cur_altsetting = alt;
 			usb_enable_interface(dev, intf);
-
 			intf->dev.parent = &dev->dev;
 			intf->dev.driver = NULL;
 			intf->dev.bus = &usb_bus_type;
 			intf->dev.dma_mask = dev->dev.dma_mask;
+			intf->dev.release = release_interface;
+			device_initialize (&intf->dev);
 			sprintf (&intf->dev.bus_id[0], "%d-%s:%d.%d",
 				 dev->bus->busnum, dev->devpath,
 				 configuration,
-				 desc->bInterfaceNumber);
+				 alt->desc.bInterfaceNumber);
+		}
+
+		/* Now that all interfaces are setup, probe() calls
+		 * may claim() any interface that's not yet bound.
+		 * Many class drivers need that: CDC, audio, video, etc.
+		 */
+		for (i = 0; i < cp->desc.bNumInterfaces; ++i) {
+			struct usb_interface *intf = cp->interface[i];
+			struct usb_interface_descriptor *desc;
+
+			desc = &intf->altsetting [0].desc;
 			dev_dbg (&dev->dev,
-				"registering %s (config #%d, interface %d)\n",
+				"adding %s (config #%d, interface %d)\n",
 				intf->dev.bus_id, configuration,
 				desc->bInterfaceNumber);
-			device_add (&intf->dev);
+			ret = device_add (&intf->dev);
+			if (ret != 0) {
+				dev_err(&dev->dev,
+					"device_add(%s) --> %d\n",
+					intf->dev.bus_id,
+					ret);
+				continue;
+			}
 			usb_create_driverfs_intf_files (intf);
 		}
 	}
 
 out:
-	up(&dev->serialize);
 	return ret;
 }
 
@@ -1196,20 +1247,22 @@ int usb_string(struct usb_device *dev, int index, char *buf, size_t size)
 
 	/* get langid for strings if it's not yet known */
 	if (!dev->have_langid) {
-		err = usb_get_string(dev, 0, 0, tbuf, 4);
+		err = usb_get_descriptor(dev, USB_DT_STRING, 0, tbuf, 4);
 		if (err < 0) {
-			err("error getting string descriptor 0 (error=%d)", err);
+			dev_err (&dev->dev,
+				"string descriptor 0 read error: %d\n",
+				err);
 			goto errout;
 		} else if (err < 4 || tbuf[0] < 4) {
-			err("string descriptor 0 too short");
+			dev_err (&dev->dev, "string descriptor 0 too short\n");
 			err = -EINVAL;
 			goto errout;
 		} else {
 			dev->have_langid = -1;
 			dev->string_langid = tbuf[2] | (tbuf[3]<< 8);
 				/* always use the first langid listed */
-			dbg("USB device number %d default language ID 0x%x",
-				dev->devnum, dev->string_langid);
+			dev_dbg (&dev->dev, "default language 0x%04x\n",
+				dev->string_langid);
 		}
 	}
 
@@ -1218,11 +1271,19 @@ int usb_string(struct usb_device *dev, int index, char *buf, size_t size)
 	 */
 
 	err = usb_get_string(dev, dev->string_langid, index, tbuf, 2);
+	if (err == -EPIPE) {
+		dev_dbg(&dev->dev, "RETRY string %d read/%d\n", index, 2);
+		err = usb_get_string(dev, dev->string_langid, index, tbuf, 2);
+	}
 	if(err<2)
 		goto errout;
 	len=tbuf[0];	
 	
 	err = usb_get_string(dev, dev->string_langid, index, tbuf, len);
+	if (err == -EPIPE) {
+		dev_dbg(&dev->dev, "RETRY string %d read/%d\n", index, len);
+		err = usb_get_string(dev, dev->string_langid, index, tbuf, len);
+	}
 	if (err < 0)
 		goto errout;
 
@@ -1260,6 +1321,5 @@ EXPORT_SYMBOL(usb_string);
 // synchronous calls that also maintain usbcore state
 EXPORT_SYMBOL(usb_clear_halt);
 EXPORT_SYMBOL(usb_reset_configuration);
-EXPORT_SYMBOL(usb_set_configuration);
 EXPORT_SYMBOL(usb_set_interface);
 

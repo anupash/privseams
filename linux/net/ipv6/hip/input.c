@@ -1628,6 +1628,10 @@ int hip_handle_i2(struct sk_buff *skb)
 		
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
+		/* insert automatically holds for the data structure
+		 * references, but since we continue to use the entry,
+		 * we have to hold for our own usage too
+		 */
 	} else {
 		/* now what.. birthday check was ok... so? */
 	}
@@ -1846,7 +1850,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		HIP_DEBUG("Reached ESTABLISHED state\n");
 		
 		hip_hadb_insert_state(entry);
-
+		
 		/* these will change SAs' state from ACQUIRE to VALID, and
 		 * wake up any transport sockets waiting for a SA
 		 */

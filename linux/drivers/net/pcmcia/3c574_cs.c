@@ -283,7 +283,7 @@ static dev_link_t *tc574_attach(void)
 	dev = alloc_etherdev(sizeof(struct el3_private));
 	if (!dev)
 		return NULL;
-	lp = dev->priv;
+	lp = netdev_priv(dev);
 	link = &lp->link;
 	link->priv = dev;
 
@@ -384,11 +384,13 @@ static void tc574_detach(dev_link_t *link)
 #define CS_CHECK(fn, ret) \
   do { last_fn = (fn); if ((last_ret = (ret)) != 0) goto cs_failed; } while (0)
 
+static char *ram_split[] = {"5:3", "3:1", "1:1", "3:5"};
+
 static void tc574_config(dev_link_t *link)
 {
 	client_handle_t handle = link->handle;
 	struct net_device *dev = link->priv;
-	struct el3_private *lp = dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	tuple_t tuple;
 	cisparse_t parse;
 	unsigned short buf[32];
@@ -396,6 +398,7 @@ static void tc574_config(dev_link_t *link)
 	ioaddr_t ioaddr;
 	u16 *phys_addr;
 	char *cardname;
+	union wn3_config config;
 
 	phys_addr = (u16 *)dev->dev_addr;
 
@@ -431,15 +434,7 @@ static void tc574_config(dev_link_t *link)
 	dev->irq = link->irq.AssignedIRQ;
 	dev->base_addr = link->io.BasePort1;
 
-	if (register_netdev(dev) != 0) {
-		printk(KERN_NOTICE "3c574_cs: register_netdev() failed\n");
-		goto failed;
-	}
-
 	ioaddr = dev->base_addr;
-	strcpy(lp->node.dev_name, dev->name);
-	link->dev = &lp->node;
-	link->state &= ~DEV_CONFIG_PENDING;
 
 	/* The 3c574 normally uses an EEPROM for configuration info, including
 	   the hardware address.  The future products may include a modem chip
@@ -467,24 +462,14 @@ static void tc574_config(dev_link_t *link)
 	} else
 		cardname = "3Com 3c574";
 
-	printk(KERN_INFO "%s: %s at io %#3lx, irq %d, hw_addr ",
-		   dev->name, cardname, dev->base_addr, dev->irq);
-
-	for (i = 0; i < 6; i++)
-		printk("%02X%s", dev->dev_addr[i], ((i<5) ? ":" : ".\n"));
-
 	{
-		u_char mcr, *ram_split[] = {"5:3", "3:1", "1:1", "3:5"};
-		union wn3_config config;
+		u_char mcr;
 		outw(2<<11, ioaddr + RunnerRdCtrl);
 		mcr = inb(ioaddr + 2);
 		outw(0<<11, ioaddr + RunnerRdCtrl);
 		printk(KERN_INFO "  ASIC rev %d,", mcr>>3);
 		EL3WINDOW(3);
 		config.i = inl(ioaddr + Wn3_Config);
-		printk(" %dK FIFO split %s Rx:Tx, %sMII interface.\n",
-			   8 << config.u.ram_size, ram_split[config.u.ram_split],
-			   config.u.autoselect ? "autoselect " : "");
 		lp->default_media = config.u.xcvr;
 		lp->autoselect = config.u.autoselect;
 	}
@@ -530,6 +515,25 @@ static void tc574_config(dev_link_t *link)
 			mdio_write(ioaddr, lp->phys, 4, lp->advertising);
 		}
 	}
+
+	link->state &= ~DEV_CONFIG_PENDING;
+	link->dev = &lp->node;
+
+	if (register_netdev(dev) != 0) {
+		printk(KERN_NOTICE "3c574_cs: register_netdev() failed\n");
+		link->dev = NULL;
+		goto failed;
+	}
+
+	strcpy(lp->node.dev_name, dev->name);
+
+	printk(KERN_INFO "%s: %s at io %#3lx, irq %d, hw_addr ",
+		   dev->name, cardname, dev->base_addr, dev->irq);
+	for (i = 0; i < 6; i++)
+		printk("%02X%s", dev->dev_addr[i], ((i<5) ? ":" : ".\n"));
+	printk(" %dK FIFO split %s Rx:Tx, %sMII interface.\n",
+		   8 << config.u.ram_size, ram_split[config.u.ram_split],
+		   config.u.autoselect ? "autoselect " : "");
 
 	return;
 
@@ -733,7 +737,7 @@ static void mdio_write(ioaddr_t ioaddr, int phy_id, int location, int value)
 /* Reset and restore all of the 3c574 registers. */
 static void tc574_reset(struct net_device *dev)
 {
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	int i, ioaddr = dev->base_addr;
 	unsigned long flags;
 
@@ -814,7 +818,7 @@ static void tc574_reset(struct net_device *dev)
 
 static int el3_open(struct net_device *dev)
 {
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	dev_link_t *link = &lp->link;
 
 	if (!DEV_OK(link))
@@ -837,7 +841,7 @@ static int el3_open(struct net_device *dev)
 
 static void el3_tx_timeout(struct net_device *dev)
 {
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	ioaddr_t ioaddr = dev->base_addr;
 	
 	printk(KERN_NOTICE "%s: Transmit timed out!\n", dev->name);
@@ -852,7 +856,7 @@ static void el3_tx_timeout(struct net_device *dev)
 
 static void pop_tx_status(struct net_device *dev)
 {
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	ioaddr_t ioaddr = dev->base_addr;
 	int i;
     
@@ -877,7 +881,7 @@ static void pop_tx_status(struct net_device *dev)
 static int el3_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	ioaddr_t ioaddr = dev->base_addr;
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	unsigned long flags;
 
 	DEBUG(3, "%s: el3_start_xmit(length = %ld) called, "
@@ -909,7 +913,7 @@ static int el3_start_xmit(struct sk_buff *skb, struct net_device *dev)
 static irqreturn_t el3_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 {
 	struct net_device *dev = (struct net_device *) dev_id;
-	struct el3_private *lp = dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	ioaddr_t ioaddr, status;
 	int work_budget = max_interrupt_work;
 	int handled = 0;
@@ -1002,7 +1006,7 @@ static irqreturn_t el3_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 static void media_check(unsigned long arg)
 {
 	struct net_device *dev = (struct net_device *) arg;
-	struct el3_private *lp = dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	ioaddr_t ioaddr = dev->base_addr;
 	unsigned long flags;
 	unsigned short /* cable, */ media, partner;
@@ -1074,7 +1078,7 @@ reschedule:
 
 static struct net_device_stats *el3_get_stats(struct net_device *dev)
 {
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 
 	if (netif_device_present(dev)) {
 		unsigned long flags;
@@ -1091,7 +1095,7 @@ static struct net_device_stats *el3_get_stats(struct net_device *dev)
  */
 static void update_stats(struct net_device *dev)
 {
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	ioaddr_t ioaddr = dev->base_addr;
 	u8 rx, tx, up;
 
@@ -1128,7 +1132,7 @@ static void update_stats(struct net_device *dev)
 
 static int el3_rx(struct net_device *dev, int worklimit)
 {
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	ioaddr_t ioaddr = dev->base_addr;
 	short rx_status;
 	
@@ -1190,7 +1194,7 @@ static struct ethtool_ops netdev_ethtool_ops = {
 /* Provide ioctl() calls to examine the MII xcvr state. */
 static int el3_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 {
-	struct el3_private *lp = (struct el3_private *)dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	ioaddr_t ioaddr = dev->base_addr;
 	u16 *data = (u16 *)&rq->ifr_data;
 	int phy = lp->phys & 0x1f;
@@ -1259,7 +1263,7 @@ static void set_rx_mode(struct net_device *dev)
 static int el3_close(struct net_device *dev)
 {
 	ioaddr_t ioaddr = dev->base_addr;
-	struct el3_private *lp = dev->priv;
+	struct el3_private *lp = netdev_priv(dev);
 	dev_link_t *link = &lp->link;
 
 	DEBUG(2, "%s: shutting down ethercard.\n", dev->name);

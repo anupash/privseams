@@ -66,7 +66,7 @@ static DEFINE_PER_CPU(struct tasklet_struct, rcu_tasklet) = {NULL};
  * The read-side of critical section that use call_rcu() for updation must 
  * be protected by rcu_read_lock()/rcu_read_unlock().
  */
-void call_rcu(struct rcu_head *head, void (*func)(void *arg), void *arg)
+void fastcall call_rcu(struct rcu_head *head, void (*func)(void *arg), void *arg)
 {
 	int cpu;
 	unsigned long flags;
@@ -103,6 +103,8 @@ static void rcu_do_batch(struct list_head *list)
  */
 static void rcu_start_batch(long newbatch)
 {
+	cpumask_t active;
+
 	if (rcu_batch_before(rcu_ctrlblk.maxbatch, newbatch)) {
 		rcu_ctrlblk.maxbatch = newbatch;
 	}
@@ -110,7 +112,10 @@ static void rcu_start_batch(long newbatch)
 	    !cpus_empty(rcu_ctrlblk.rcu_cpu_mask)) {
 		return;
 	}
-	rcu_ctrlblk.rcu_cpu_mask = cpu_online_map;
+	/* Can't change, since spin lock held. */
+	active = idle_cpu_mask;
+	cpus_complement(active);
+	cpus_and(rcu_ctrlblk.rcu_cpu_mask, cpu_online_map, active);
 }
 
 /*
@@ -153,6 +158,60 @@ out_unlock:
 	spin_unlock(&rcu_ctrlblk.mutex);
 }
 
+
+#ifdef CONFIG_HOTPLUG_CPU
+
+/* warning! helper for rcu_offline_cpu. do not use elsewhere without reviewing
+ * locking requirements, the list it's pulling from has to belong to a cpu
+ * which is dead and hence not processing interrupts.
+ */
+static void rcu_move_batch(struct list_head *list)
+{
+	struct list_head *entry;
+	int cpu = smp_processor_id();
+
+	local_irq_disable();
+	while (!list_empty(list)) {
+		entry = list->next;
+		list_del(entry);
+		list_add_tail(entry, &RCU_nxtlist(cpu));
+	}
+	local_irq_enable();
+}
+
+static void rcu_offline_cpu(int cpu)
+{
+	/* if the cpu going offline owns the grace period
+	 * we can block indefinitely waiting for it, so flush
+	 * it here
+	 */
+	spin_lock_irq(&rcu_ctrlblk.mutex);
+	if (cpus_empty(rcu_ctrlblk.rcu_cpu_mask))
+		goto unlock;
+
+	cpu_clear(cpu, rcu_ctrlblk.rcu_cpu_mask);
+	if (cpus_empty(rcu_ctrlblk.rcu_cpu_mask)) {
+		rcu_ctrlblk.curbatch++;
+		/* We may avoid calling start batch if
+		 * we are starting the batch only
+		 * because of the DEAD CPU (the current
+		 * CPU will start a new batch anyway for
+		 * the callbacks we will move to current CPU).
+		 * However, we will avoid this optimisation
+		 * for now.
+		 */
+		rcu_start_batch(rcu_ctrlblk.maxbatch);
+	}
+unlock:
+	spin_unlock_irq(&rcu_ctrlblk.mutex);
+
+	rcu_move_batch(&RCU_curlist(cpu));
+	rcu_move_batch(&RCU_nxtlist(cpu));
+
+	tasklet_kill_immediate(&RCU_tasklet(cpu), cpu);
+}
+
+#endif
 
 /*
  * This does the RCU processing work from tasklet context. 
@@ -214,7 +273,11 @@ static int __devinit rcu_cpu_notify(struct notifier_block *self,
 	case CPU_UP_PREPARE:
 		rcu_online_cpu(cpu);
 		break;
-	/* Space reserved for CPU_OFFLINE :) */
+#ifdef CONFIG_HOTPLUG_CPU
+	case CPU_DEAD:
+		rcu_offline_cpu(cpu);
+		break;
+#endif
 	default:
 		break;
 	}

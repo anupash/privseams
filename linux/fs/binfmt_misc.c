@@ -26,6 +26,7 @@
 #include <linux/pagemap.h>
 #include <linux/namei.h>
 #include <linux/mount.h>
+#include <linux/syscalls.h>
 
 #include <asm/uaccess.h>
 
@@ -51,7 +52,7 @@ typedef struct {
 	struct dentry *dentry;
 } Node;
 
-static rwlock_t entries_lock __attribute__((unused)) = RW_LOCK_UNLOCKED;
+static rwlock_t entries_lock = RW_LOCK_UNLOCKED;
 static struct vfsmount *bm_mnt;
 static int entry_count;
 

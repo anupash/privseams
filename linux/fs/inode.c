@@ -126,12 +126,15 @@ static struct inode *alloc_inode(struct super_block *sb)
 		inode->i_blocks = 0;
 		inode->i_bytes = 0;
 		inode->i_generation = 0;
+#ifdef CONFIG_QUOTA
 		memset(&inode->i_dquot, 0, sizeof(inode->i_dquot));
+#endif
 		inode->i_pipe = NULL;
 		inode->i_bdev = NULL;
 		inode->i_cdev = NULL;
 		inode->i_rdev = 0;
 		inode->i_security = NULL;
+		inode->dirtied_when = 0;
 		if (security_inode_alloc(inode)) {
 			if (inode->i_sb->s_op->destroy_inode)
 				inode->i_sb->s_op->destroy_inode(inode);
@@ -144,7 +147,6 @@ static struct inode *alloc_inode(struct super_block *sb)
  		mapping->host = inode;
 		mapping->flags = 0;
 		mapping_set_gfp_mask(mapping, GFP_HIGHUSER);
-		mapping->dirtied_when = 0;
 		mapping->assoc_mapping = NULL;
 		mapping->backing_dev_info = &default_backing_dev_info;
 		if (sb->s_bdev)
@@ -176,15 +178,12 @@ void inode_init_once(struct inode *inode)
 {
 	memset(inode, 0, sizeof(*inode));
 	INIT_HLIST_NODE(&inode->i_hash);
-	INIT_LIST_HEAD(&inode->i_data.clean_pages);
-	INIT_LIST_HEAD(&inode->i_data.dirty_pages);
-	INIT_LIST_HEAD(&inode->i_data.locked_pages);
-	INIT_LIST_HEAD(&inode->i_data.io_pages);
 	INIT_LIST_HEAD(&inode->i_dentry);
 	INIT_LIST_HEAD(&inode->i_devices);
 	sema_init(&inode->i_sem, 1);
+	init_rwsem(&inode->i_alloc_sem);
 	INIT_RADIX_TREE(&inode->i_data.page_tree, GFP_ATOMIC);
-	spin_lock_init(&inode->i_data.page_lock);
+	spin_lock_init(&inode->i_data.tree_lock);
 	init_MUTEX(&inode->i_data.i_shared_sem);
 	atomic_set(&inode->i_data.truncate_count, 0);
 	INIT_LIST_HEAD(&inode->i_data.private_list);
@@ -216,10 +215,8 @@ void __iget(struct inode * inode)
 		return;
 	}
 	atomic_inc(&inode->i_count);
-	if (!(inode->i_state & (I_DIRTY|I_LOCK))) {
-		list_del(&inode->i_list);
-		list_add(&inode->i_list, &inode_in_use);
-	}
+	if (!(inode->i_state & (I_DIRTY|I_LOCK)))
+		list_move(&inode->i_list, &inode_in_use);
 	inodes_stat.nr_unused--;
 }
 
@@ -304,8 +301,7 @@ static int invalidate_list(struct list_head *head, struct super_block * sb, stru
 		invalidate_inode_buffers(inode);
 		if (!atomic_read(&inode->i_count)) {
 			hlist_del_init(&inode->i_hash);
-			list_del(&inode->i_list);
-			list_add(&inode->i_list, dispose);
+			list_move(&inode->i_list, dispose);
 			inode->i_state |= I_FREEING;
 			count++;
 			continue;
@@ -1017,10 +1013,8 @@ static void generic_forget_inode(struct inode *inode)
 	struct super_block *sb = inode->i_sb;
 
 	if (!hlist_unhashed(&inode->i_hash)) {
-		if (!(inode->i_state & (I_DIRTY|I_LOCK))) {
-			list_del(&inode->i_list);
-			list_add(&inode->i_list, &inode_unused);
-		}
+		if (!(inode->i_state & (I_DIRTY|I_LOCK)))
+			list_move(&inode->i_list, &inode_unused);
 		inodes_stat.nr_unused++;
 		spin_unlock(&inode_lock);
 		if (!sb || (sb->s_flags & MS_ACTIVE))
@@ -1178,6 +1172,8 @@ void inode_update_time(struct inode *inode, int ctime_too)
 	struct timespec now;
 	int sync_it = 0;
 
+	if (IS_NOCMTIME(inode))
+		return;
 	if (IS_RDONLY(inode))
 		return;
 
@@ -1214,15 +1210,13 @@ EXPORT_SYMBOL(inode_needs_sync);
  */
 #ifdef CONFIG_QUOTA
 
-/* Functions back in dquot.c */
-void put_dquot_list(struct list_head *);
+/* Function back in dquot.c */
 int remove_inode_dquot_ref(struct inode *, int, struct list_head *);
 
-void remove_dquot_ref(struct super_block *sb, int type)
+void remove_dquot_ref(struct super_block *sb, int type, struct list_head *tofree_head)
 {
 	struct inode *inode;
 	struct list_head *act_head;
-	LIST_HEAD(tofree_head);
 
 	if (!sb->dq_op)
 		return;	/* nothing to do */
@@ -1232,26 +1226,24 @@ void remove_dquot_ref(struct super_block *sb, int type)
 	list_for_each(act_head, &inode_in_use) {
 		inode = list_entry(act_head, struct inode, i_list);
 		if (inode->i_sb == sb && IS_QUOTAINIT(inode))
-			remove_inode_dquot_ref(inode, type, &tofree_head);
+			remove_inode_dquot_ref(inode, type, tofree_head);
 	}
 	list_for_each(act_head, &inode_unused) {
 		inode = list_entry(act_head, struct inode, i_list);
 		if (inode->i_sb == sb && IS_QUOTAINIT(inode))
-			remove_inode_dquot_ref(inode, type, &tofree_head);
+			remove_inode_dquot_ref(inode, type, tofree_head);
 	}
 	list_for_each(act_head, &sb->s_dirty) {
 		inode = list_entry(act_head, struct inode, i_list);
 		if (IS_QUOTAINIT(inode))
-			remove_inode_dquot_ref(inode, type, &tofree_head);
+			remove_inode_dquot_ref(inode, type, tofree_head);
 	}
 	list_for_each(act_head, &sb->s_io) {
 		inode = list_entry(act_head, struct inode, i_list);
 		if (IS_QUOTAINIT(inode))
-			remove_inode_dquot_ref(inode, type, &tofree_head);
+			remove_inode_dquot_ref(inode, type, tofree_head);
 	}
 	spin_unlock(&inode_lock);
-
-	put_dquot_list(&tofree_head);
 }
 
 #endif
@@ -1327,6 +1319,16 @@ void wake_up_inode(struct inode *inode)
 		wake_up_all(wq);
 }
 
+static __initdata unsigned long ihash_entries;
+static int __init set_ihash_entries(char *str)
+{
+	if (!str)
+		return 0;
+	ihash_entries = simple_strtoul(str, &str, 0);
+	return 1;
+}
+__setup("ihash_entries=", set_ihash_entries);
+
 /*
  * Initialize the waitqueues and inode hash table.
  */
@@ -1340,9 +1342,13 @@ void __init inode_init(unsigned long mempages)
 	for (i = 0; i < ARRAY_SIZE(i_wait_queue_heads); i++)
 		init_waitqueue_head(&i_wait_queue_heads[i].wqh);
 
-	mempages >>= (14 - PAGE_SHIFT);
-	mempages *= sizeof(struct hlist_head);
-	for (order = 0; ((1UL << order) << PAGE_SHIFT) < mempages; order++)
+	if (!ihash_entries)
+		ihash_entries = PAGE_SHIFT < 14 ?
+				mempages >> (14 - PAGE_SHIFT) :
+				mempages << (PAGE_SHIFT - 14);
+
+	ihash_entries *= sizeof(struct hlist_head);
+	for (order = 0; ((1UL << order) << PAGE_SHIFT) < ihash_entries; order++)
 		;
 
 	do {

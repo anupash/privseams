@@ -204,7 +204,7 @@ static __inline__ int __test_and_change_bit(int nr, volatile void * addr)
 }
 
 /**
- * test_and_change_bit - Change a bit and return its new value
+ * test_and_change_bit - Change a bit and return its old value
  * @nr: Bit to change
  * @addr: Address to count from
  *
@@ -502,6 +502,8 @@ static __inline__ int ffs(int x)
 
 /* find last set bit */
 #define fls(x) generic_fls(x)
+
+#define ARCH_HAS_ATOMIC_UNSIGNED 1
 
 #endif /* __KERNEL__ */
 

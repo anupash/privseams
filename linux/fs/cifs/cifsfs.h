@@ -60,8 +60,6 @@ extern int cifs_getattr(struct vfsmount *, struct dentry *, struct kstat *);
 extern int cifs_setattr(struct dentry *, struct iattr *);
 
 extern struct inode_operations cifs_file_inode_ops;
-extern void cifs_truncate_file(struct inode *);
-
 extern struct inode_operations cifs_symlink_inode_ops;
 
 /* Functions related to files and directories */
@@ -80,6 +78,7 @@ extern int cifs_file_mmap(struct file * , struct vm_area_struct *);
 extern struct file_operations cifs_dir_ops;
 extern int cifs_dir_open(struct inode *inode, struct file *file);
 extern int cifs_readdir(struct file *file, void *direntry, filldir_t filldir);
+extern long cifs_fcntl(int, unsigned int, unsigned long, struct file *);
 
 /* Functions related to dir entries */
 extern struct dentry_operations cifs_dentry_ops;
@@ -94,4 +93,5 @@ extern int 	cifs_setxattr(struct dentry *, const char *, const void *,
 			 size_t, int);
 extern ssize_t	cifs_getxattr(struct dentry *, const char *, void *, size_t);
 extern ssize_t	cifs_listxattr(struct dentry *, char *, size_t);
-#endif				/* _CIFSSMB_H */
+#define CIFS_VERSION   "1.13"
+#endif				/* _CIFSFS_H */

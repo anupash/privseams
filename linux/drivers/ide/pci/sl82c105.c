@@ -481,8 +481,6 @@ static void __init init_hwif_sl82c105(ide_hwif_t *hwif)
 #endif /* CONFIG_BLK_DEV_IDEDMA */
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
 static int __devinit sl82c105_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	ide_pci_device_t *d = &sl82c105_chipsets[id->driver_data];
@@ -496,6 +494,7 @@ static struct pci_device_id sl82c105_pci_tbl[] = {
 	{ PCI_VENDOR_ID_WINBOND, PCI_DEVICE_ID_WINBOND_82C105, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, sl82c105_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "W82C105 IDE",

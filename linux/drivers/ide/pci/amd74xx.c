@@ -88,6 +88,8 @@ static unsigned char amd_cyc2udma[] = { 6, 6, 5, 4, 0, 1, 1, 2, 2, 3, 3, 3, 3, 3
 #include <linux/stat.h>
 #include <linux/proc_fs.h>
 
+static u8 amd74xx_proc;
+
 static unsigned char amd_udma2cyc[] = { 4, 6, 8, 10, 3, 2, 1, 15 };
 static unsigned long amd_base;
 static struct pci_dev *bmide_dev;
@@ -398,7 +400,7 @@ static unsigned int __init init_chipset_amd74xx(struct pci_dev *dev, const char 
         if (!amd74xx_proc) {
                 amd_base = pci_resource_start(dev, 4);
                 bmide_dev = dev;
-                ide_pci_register_host_proc(&amd74xx_procs[0]);
+		ide_pci_create_host_proc("amd74xx", amd74xx_get_info);
                 amd74xx_proc = 1;
         }
 #endif /* DISPLAY_AMD_TIMINGS && CONFIG_PROC_FS */
@@ -439,8 +441,6 @@ static void __init init_hwif_amd74xx(ide_hwif_t *hwif)
         hwif->drives[1].autodma = hwif->autodma;
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
 static int __devinit amd74xx_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	amd_chipset = amd74xx_chipsets + id->driver_data;
@@ -467,6 +467,7 @@ static struct pci_device_id amd74xx_pci_tbl[] = {
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE3S_SATA2,	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 12 },
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, amd74xx_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "AMD IDE",

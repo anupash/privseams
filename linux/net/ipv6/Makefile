@@ -20,3 +20,5 @@ obj-$(CONFIG_NETFILTER)	+= netfilter/
 
 obj-$(CONFIG_IPV6_TUNNEL) += ip6_tunnel.o
 obj-$(CONFIG_HIP) += hip/
+
+obj-y += exthdrs_core.o

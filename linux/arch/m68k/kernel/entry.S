@@ -42,7 +42,7 @@
 #include <asm/traps.h>
 #include <asm/unistd.h>
 
-#include "m68k_defs.h"
+#include <asm/offsets.h>
 
 .globl system_call, buserr, trap
 .globl resume, ret_from_exception
@@ -528,7 +528,7 @@ sys_call_table:
 	.long sys_ni_syscall				/* old profil syscall holder */
 	.long sys_statfs
 	.long sys_fstatfs	/* 100 */
-	.long sys_ioperm
+	.long sys_ni_syscall				/* ioperm for i386 */
 	.long sys_socketcall
 	.long sys_syslog
 	.long sys_setitimer

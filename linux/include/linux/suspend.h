@@ -24,7 +24,7 @@ typedef struct pbe {
 #define SWAP_FILENAME_MAXLENGTH	32
 
 struct suspend_header {
-	__u32 version_code;
+	u32 version_code;
 	unsigned long num_physpages;
 	char machine[8];
 	char version[20];
@@ -80,5 +80,11 @@ static inline void thaw_processes(void)
 
 }
 #endif	/* CONFIG_PM */
+
+asmlinkage void do_magic(int is_resume);
+asmlinkage void do_magic_resume_1(void);
+asmlinkage void do_magic_resume_2(void);
+asmlinkage void do_magic_suspend_1(void);
+asmlinkage void do_magic_suspend_2(void);
 
 #endif /* _LINUX_SWSUSP_H */

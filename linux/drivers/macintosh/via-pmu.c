@@ -44,6 +44,7 @@
 #include <linux/interrupt.h>
 #include <linux/device.h>
 #include <linux/suspend.h>
+#include <linux/syscalls.h>
 #include <asm/prom.h>
 #include <asm/machdep.h>
 #include <asm/io.h>
@@ -136,7 +137,8 @@ static int data_index;
 static int data_len;
 static volatile int adb_int_pending;
 static volatile int disable_poll;
-static struct adb_request bright_req_1, bright_req_2, bright_req_3;
+static struct adb_request bright_req_1, bright_req_2;
+static unsigned long async_req_locks;
 static struct device_node *vias;
 static int pmu_kind = PMU_UNKNOWN;
 static int pmu_fully_inited = 0;
@@ -403,7 +405,6 @@ static int __init via_pmu_start(void)
 
 	bright_req_1.complete = 1;
 	bright_req_2.complete = 1;
-	bright_req_3.complete = 1;
 #ifdef CONFIG_PMAC_PBOOK
 	batt_req.complete = 1;
 	if (pmac_call_feature(PMAC_FTR_SLEEP_STATE,NULL,0,-1) >= 0)
@@ -649,7 +650,7 @@ done_battery_state_ohare(struct adb_request* req)
 	unsigned int bat_flags = PMU_BATT_TYPE_HOOPER;
 	long pcharge, charge, vb, vmax, lmax;
 	long vmax_charging, vmax_charged;
-	long current, voltage, time, max;
+	long amperage, voltage, time, max;
 	int mb = pmac_call_feature(PMAC_FTR_GET_MB_INFO,
 			NULL, PMAC_MB_INFO_MODEL, 0);
 
@@ -676,10 +677,10 @@ done_battery_state_ohare(struct adb_request* req)
 			bat_flags |= PMU_BATT_CHARGING;
 		vb = (req->reply[1] << 8) | req->reply[2];
 		voltage = (vb * 265 + 72665) / 10;
-		current = req->reply[5];
+		amperage = req->reply[5];
 		if ((req->reply[0] & 0x01) == 0) {
-			if (current > 200)
-				vb += ((current - 200) * 15)/100;
+			if (amperage > 200)
+				vb += ((amperage - 200) * 15)/100;
 		} else if (req->reply[0] & 0x02) {
 			vb = (vb * 97) / 100;
 			vmax = vmax_charging;
@@ -694,21 +695,23 @@ done_battery_state_ohare(struct adb_request* req)
 			if (pcharge < charge)
 				charge = pcharge;
 		}
-		if (current > 0)
-			time = (charge * 16440) / current;
+		if (amperage > 0)
+			time = (charge * 16440) / amperage;
 		else
 			time = 0;
 		max = 100;
-		current = -current;
+		amperage = -amperage;
 	} else
-		charge = max = current = voltage = time = 0;
+		charge = max = amperage = voltage = time = 0;
 
 	pmu_batteries[pmu_cur_battery].flags = bat_flags;
 	pmu_batteries[pmu_cur_battery].charge = charge;
 	pmu_batteries[pmu_cur_battery].max_charge = max;
-	pmu_batteries[pmu_cur_battery].current = current;
+	pmu_batteries[pmu_cur_battery].amperage = amperage;
 	pmu_batteries[pmu_cur_battery].voltage = voltage;
 	pmu_batteries[pmu_cur_battery].time_remaining = time;
+
+	clear_bit(0, &async_req_locks);
 }
 
 static void __pmac
@@ -734,7 +737,7 @@ done_battery_state_smart(struct adb_request* req)
 	 */
 	 
 	unsigned int bat_flags = PMU_BATT_TYPE_SMART;
-	int current;
+	int amperage;
 	unsigned int capa, max, voltage;
 	
 	if (req->reply[1] & 0x01)
@@ -749,12 +752,12 @@ done_battery_state_smart(struct adb_request* req)
 			case 3:
 			case 4: capa = req->reply[2];
 				max = req->reply[3];
-				current = *((signed char *)&req->reply[4]);
+				amperage = *((signed char *)&req->reply[4]);
 				voltage = req->reply[5];
 				break;
 			case 5: capa = (req->reply[2] << 8) | req->reply[3];
 				max = (req->reply[4] << 8) | req->reply[5];
-				current = *((signed short *)&req->reply[6]);
+				amperage = *((signed short *)&req->reply[6]);
 				voltage = (req->reply[8] << 8) | req->reply[9];
 				break;
 			default:
@@ -763,33 +766,35 @@ done_battery_state_smart(struct adb_request* req)
 				break;
 		}
 	} else
-		capa = max = current = voltage = 0;
+		capa = max = amperage = voltage = 0;
 
-	if ((req->reply[1] & 0x01) && (current > 0))
+	if ((req->reply[1] & 0x01) && (amperage > 0))
 		bat_flags |= PMU_BATT_CHARGING;
 
 	pmu_batteries[pmu_cur_battery].flags = bat_flags;
 	pmu_batteries[pmu_cur_battery].charge = capa;
 	pmu_batteries[pmu_cur_battery].max_charge = max;
-	pmu_batteries[pmu_cur_battery].current = current;
+	pmu_batteries[pmu_cur_battery].amperage = amperage;
 	pmu_batteries[pmu_cur_battery].voltage = voltage;
-	if (current) {
-		if ((req->reply[1] & 0x01) && (current > 0))
+	if (amperage) {
+		if ((req->reply[1] & 0x01) && (amperage > 0))
 			pmu_batteries[pmu_cur_battery].time_remaining
-				= ((max-capa) * 3600) / current;
+				= ((max-capa) * 3600) / amperage;
 		else
 			pmu_batteries[pmu_cur_battery].time_remaining
-				= (capa * 3600) / (-current);
+				= (capa * 3600) / (-amperage);
 	} else
 		pmu_batteries[pmu_cur_battery].time_remaining = 0;
 
 	pmu_cur_battery = (pmu_cur_battery + 1) % pmu_battery_count;
+
+	clear_bit(0, &async_req_locks);
 }
 
 static void __pmac
 query_battery_state(void)
 {
-	if (!batt_req.complete)
+	if (test_and_set_bit(0, &async_req_locks))
 		return;
 	if (pmu_kind == PMU_OHARE_BASED)
 		pmu_request(&batt_req, done_battery_state_ohare,
@@ -861,7 +866,7 @@ proc_get_batt(char *page, char **start, off_t off,
 	p += sprintf(p, "max_charge : %d\n",
 		pmu_batteries[batnum].max_charge);
 	p += sprintf(p, "current    : %d\n",
-		pmu_batteries[batnum].current);
+		pmu_batteries[batnum].amperage);
 	p += sprintf(p, "voltage    : %d\n",
 		pmu_batteries[batnum].voltage);
 	p += sprintf(p, "time rem.  : %d\n",
@@ -1689,20 +1694,30 @@ pmu_set_backlight_enable(int on, int level, void* data)
 	return 0;
 }
 
+static void __openfirmware
+pmu_bright_complete(struct adb_request *req)
+{
+	if (req == &bright_req_1)
+		clear_bit(1, &async_req_locks);
+	if (req == &bright_req_2)
+		clear_bit(2, &async_req_locks);
+}
+
 static int __openfirmware
 pmu_set_backlight_level(int level, void* data)
 {
 	if (vias == NULL)
 		return -ENODEV;
 
-	if (!bright_req_1.complete)
+	if (test_and_set_bit(1, &async_req_locks))
 		return -EAGAIN;
-	pmu_request(&bright_req_1, NULL, 2, PMU_BACKLIGHT_BRIGHT,
+	pmu_request(&bright_req_1, pmu_bright_complete, 2, PMU_BACKLIGHT_BRIGHT,
 		backlight_to_bright[level]);
-	if (!bright_req_2.complete)
+	if (test_and_set_bit(2, &async_req_locks))
 		return -EAGAIN;
-	pmu_request(&bright_req_2, NULL, 2, PMU_POWER_CTRL, PMU_POW_BACKLIGHT
-		| (level > BACKLIGHT_OFF ? PMU_POW_ON : PMU_POW_OFF));
+	pmu_request(&bright_req_2, pmu_bright_complete, 2, PMU_POWER_CTRL,
+		    PMU_POW_BACKLIGHT | (level > BACKLIGHT_OFF ?
+					 PMU_POW_ON : PMU_POW_OFF));
 
 	return 0;
 }
@@ -2292,8 +2307,6 @@ restore_via_state(void)
 	out_8(&via[IER], IER_SET | SR_INT | CB1_INT);
 }
 
-extern long sys_sync(void);
-
 static int __pmac
 pmac_suspend_devices(void)
 {
@@ -2331,6 +2344,8 @@ pmac_suspend_devices(void)
 		return -EBUSY;
 	}
 	
+	preempt_disable();
+	
 	/* Make sure the decrementer won't interrupt us */
 	asm volatile("mtdec %0" : : "r" (0x7fffffff));
 	/* Make sure any pending DEC interrupt occurring while we did
@@ -2353,6 +2368,7 @@ pmac_suspend_devices(void)
 	if (ret) {
 		wakeup_decrementer();
 		local_irq_enable();
+		preempt_enable();
 		device_resume();
 		broadcast_wake();
 		printk(KERN_ERR "Driver powerdown failed\n");
@@ -2361,7 +2377,8 @@ pmac_suspend_devices(void)
 
 	/* Wait for completion of async backlight requests */
 	while (!bright_req_1.complete || !bright_req_2.complete ||
-		!bright_req_3.complete || !batt_req.complete)
+
+			!batt_req.complete)
 		pmu_poll();
 
 	/* Giveup the lazy FPU & vec so we don't have to back them
@@ -2398,6 +2415,8 @@ pmac_wakeup_devices(void)
 	local_irq_enable();
 
 	pmu_blink(1);
+
+	preempt_enable();
 
 	/* Resume devices */
 	device_resume();
@@ -2674,9 +2693,9 @@ powerbook_sleep_3400(void)
 		mb();
 
 	pmac_wakeup_devices();
-
 	pbook_free_pci_save();
 	iounmap(mem_ctrl);
+
 	return 0;
 }
 

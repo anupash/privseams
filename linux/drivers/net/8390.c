@@ -513,8 +513,17 @@ irqreturn_t ei_interrupt(int irq, void *dev_id, struct pt_regs * regs)
 		}
 	}
 	spin_unlock(&ei_local->page_lock);
-	return IRQ_HANDLED;
+	return IRQ_RETVAL(nr_serviced > 0);
 }
+
+#ifdef CONFIG_NET_POLL_CONTROLLER
+void ei_poll(struct net_device *dev)
+{
+	disable_irq(dev->irq);
+	ei_interrupt(dev->irq, dev, NULL);
+	enable_irq(dev->irq);
+}
+#endif
 
 /**
  * ei_tx_err - handle transmitter error
@@ -1075,7 +1084,7 @@ void NS8390_init(struct net_device *dev, int startp)
 	for(i = 0; i < 6; i++) 
 	{
 		outb_p(dev->dev_addr[i], e8390_base + EN1_PHYS_SHIFT(i));
-		if(inb_p(e8390_base + EN1_PHYS_SHIFT(i))!=dev->dev_addr[i])
+		if (ei_debug > 1 && inb_p(e8390_base + EN1_PHYS_SHIFT(i))!=dev->dev_addr[i])
 			printk(KERN_ERR "Hw. address read/write mismap %d\n",i);
 	}
 
@@ -1124,6 +1133,9 @@ static void NS8390_trigger_send(struct net_device *dev, unsigned int length,
 EXPORT_SYMBOL(ei_open);
 EXPORT_SYMBOL(ei_close);
 EXPORT_SYMBOL(ei_interrupt);
+#ifdef CONFIG_NET_POLL_CONTROLLER
+EXPORT_SYMBOL(ei_poll);
+#endif
 EXPORT_SYMBOL(ei_tx_timeout);
 EXPORT_SYMBOL(NS8390_init);
 EXPORT_SYMBOL(__alloc_ei_netdev);

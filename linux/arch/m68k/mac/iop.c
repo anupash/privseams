@@ -87,7 +87,7 @@
  * or more messages on the receive channels have gone to the MSG_NEW state.
  *
  * Since each channel handles only one message we have to implement a small
- * interrupt-driven queue on our end. Messages to e sent are placed on the
+ * interrupt-driven queue on our end. Messages to be sent are placed on the
  * queue for sending and contain a pointer to an optional callback function.
  * The handler for a message is called when the message state goes to
  * MSG_COMPLETE.
@@ -317,7 +317,7 @@ void __init iop_register_interrupts(void)
 {
 	if (iop_ism_present) {
 		if (oss_present) {
-			sys_request_irq(OSS_IRQLEV_IOPISM, iop_ism_irq,
+			cpu_request_irq(OSS_IRQLEV_IOPISM, iop_ism_irq,
 					IRQ_FLG_LOCK, "ISM IOP",
 					(void *) IOP_NUM_ISM);
 			oss_irq_enable(IRQ_MAC_ADB);

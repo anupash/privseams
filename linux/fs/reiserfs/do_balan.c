@@ -30,34 +30,11 @@ struct tree_balance * cur_tb = NULL; /* detects whether more than one
                                         is interrupting do_balance */
 #endif
 
-/*
- * AKPM: The __mark_buffer_dirty() call here will not
- * put the buffer on the dirty buffer LRU because we've just
- * set BH_Dirty.  That's a thinko in reiserfs.
- *
- * I'm reluctant to "fix" this bug because that would change
- * behaviour.  Using mark_buffer_dirty() here would make the
- * buffer eligible for VM and periodic writeback, which may
- * violate ordering constraints.  I'll just leave the code
- * as-is by removing the __mark_buffer_dirty call altogether.
- *
- * Chris says this code has "probably never been run" anyway.
- * It is due to go away.
- */
-
 inline void do_balance_mark_leaf_dirty (struct tree_balance * tb, 
 					struct buffer_head * bh, int flag)
 {
-    if (reiserfs_dont_log(tb->tb_sb)) {
-	if (!test_set_buffer_dirty(bh)) {
-//	    __mark_buffer_dirty(bh) ;
-	    tb->need_balance_dirty = 1;
-	}
-    } else {
-	int windex = push_journal_writer("do_balance") ;
-	journal_mark_dirty(tb->transaction_handle, tb->transaction_handle->t_super, bh) ;
-	pop_journal_writer(windex) ;
-    }
+    journal_mark_dirty(tb->transaction_handle,
+                       tb->transaction_handle->t_super, bh) ;
 }
 
 #define do_balance_mark_internal_dirty do_balance_mark_leaf_dirty
@@ -1366,7 +1343,8 @@ static void check_internal_node (struct super_block * s, struct buffer_head * bh
 
 static int locked_or_not_in_tree (struct buffer_head * bh, char * which)
 {
-  if ( buffer_locked (bh) || !B_IS_IN_TREE (bh) ) {
+  if ( (!reiserfs_buffer_prepared(bh) && buffer_locked (bh)) ||
+        !B_IS_IN_TREE (bh) ) {
     reiserfs_warning ("vs-12339: locked_or_not_in_tree: %s (%b)\n", which, bh);
     return 1;
   } 

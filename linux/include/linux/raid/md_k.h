@@ -186,7 +186,8 @@ struct mddev_s
 {
 	void				*private;
 	mdk_personality_t		*pers;
-	int				__minor;
+	dev_t				unit;
+	int				md_minor;
 	struct list_head 		disks;
 	int				sb_dirty;
 	int				ro;
@@ -211,9 +212,9 @@ struct mddev_s
 
 	struct mdk_thread_s		*thread;	/* management thread */
 	struct mdk_thread_s		*sync_thread;	/* doing resync or reconstruct */
-	unsigned long			curr_resync;	/* blocks scheduled */
+	sector_t			curr_resync;	/* blocks scheduled */
 	unsigned long			resync_mark;	/* a recent timestamp */
-	unsigned long			resync_mark_cnt;/* blocks written at resync_mark */
+	sector_t			resync_mark_cnt;/* blocks written at resync_mark */
 
 	/* recovery/resync flags 
 	 * NEEDED:   we might need to start a resync/recover
@@ -235,6 +236,7 @@ struct mddev_s
 	struct semaphore		reconfig_sem;
 	atomic_t			active;
 
+	int				changed;	/* true if we might need to reread partition info */
 	int				degraded;	/* whether md should consider
 							 * adding a spare
 							 */
@@ -272,15 +274,6 @@ struct mdk_personality_s
 };
 
 
-/*
- * Currently we index md_array directly, based on the minor
- * number. This will have to change to dynamic allocation
- * once we start supporting partitioning of md devices.
- */
-static inline int mdidx (mddev_t * mddev)
-{
-	return mddev->__minor;
-}
 static inline char * mdname (mddev_t * mddev)
 {
 	return mddev->gendisk ? mddev->gendisk->disk_name : "mdX";
@@ -322,7 +315,7 @@ typedef struct mdk_thread_s {
 
 #define THREAD_WAKEUP  0
 
-#define __wait_event_lock_irq(wq, condition, lock) 			\
+#define __wait_event_lock_irq(wq, condition, lock, cmd) 		\
 do {									\
 	wait_queue_t __wait;						\
 	init_waitqueue_entry(&__wait, current);				\
@@ -333,7 +326,7 @@ do {									\
 		if (condition)						\
 			break;						\
 		spin_unlock_irq(&lock);					\
-		blk_run_queues();					\
+		cmd;							\
 		schedule();						\
 		spin_lock_irq(&lock);					\
 	}								\
@@ -341,36 +334,11 @@ do {									\
 	remove_wait_queue(&wq, &__wait);				\
 } while (0)
 
-#define wait_event_lock_irq(wq, condition, lock) 			\
+#define wait_event_lock_irq(wq, condition, lock, cmd) 			\
 do {									\
 	if (condition)	 						\
 		break;							\
-	__wait_event_lock_irq(wq, condition, lock);			\
-} while (0)
-
-
-#define __wait_disk_event(wq, condition) 				\
-do {									\
-	wait_queue_t __wait;						\
-	init_waitqueue_entry(&__wait, current);				\
-									\
-	add_wait_queue(&wq, &__wait);					\
-	for (;;) {							\
-		set_current_state(TASK_UNINTERRUPTIBLE);		\
-		if (condition)						\
-			break;						\
-		blk_run_queues();					\
-		schedule();						\
-	}								\
-	current->state = TASK_RUNNING;					\
-	remove_wait_queue(&wq, &__wait);				\
-} while (0)
-
-#define wait_disk_event(wq, condition) 					\
-do {									\
-	if (condition)	 						\
-		break;							\
-	__wait_disk_event(wq, condition);				\
+	__wait_event_lock_irq(wq, condition, lock, cmd);		\
 } while (0)
 
 #endif

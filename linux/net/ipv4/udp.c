@@ -787,6 +787,7 @@ int udp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	if (flags & MSG_ERRQUEUE)
 		return ip_recv_error(sk, msg, len);
 
+try_again:
 	skb = skb_recv_datagram(sk, flags, noblock, &err);
 	if (!skb)
 		goto out;
@@ -852,7 +853,9 @@ csum_copy_err:
 
 	skb_free_datagram(sk, skb);
 
-	return -EAGAIN;	
+	if (noblock)
+		return -EAGAIN;	
+	goto try_again;
 }
 
 int udp_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len)
@@ -972,6 +975,7 @@ static int udp_encap_rcv(struct sock * sk, struct sk_buff *skb)
 			/* Must be an IKE packet.. pass it through */
 			return 1;
 
+	decaps:
 		/* At this point we are sure that this is an ESPinUDP packet,
 		 * so we need to remove 'len' bytes from the packet (the UDP
 		 * header and optional ESP marker bytes) and then modify the
@@ -998,6 +1002,20 @@ static int udp_encap_rcv(struct sock * sk, struct sk_buff *skb)
 
 		/* and let the caller know to send this into the ESP processor... */
 		return -1;
+
+	case UDP_ENCAP_ESPINUDP_NON_IKE:
+		/* Check if this is a keepalive packet.  If so, eat it. */
+		if (len == 1 && udpdata[0] == 0xff) {
+			return 0;
+		} else if (len > 2 * sizeof(u32) + sizeof(struct ip_esp_hdr) &&
+			   udpdata32[0] == 0 && udpdata32[1] == 0) {
+			
+			/* ESP Packet with Non-IKE marker */
+			len = sizeof(struct udphdr) + 2 * sizeof(u32);
+			goto decaps;
+		} else
+			/* Must be an IKE packet.. pass it through */
+			return 1;
 
 	default:
 		if (net_ratelimit())

@@ -45,6 +45,7 @@
 #include <linux/smp_lock.h>
 #include <linux/rwsem.h>
 #include <linux/stddef.h>
+#include <linux/device.h>
 #include <net/slhc_vj.h>
 #include <asm/atomic.h>
 
@@ -270,6 +271,8 @@ static struct channel *ppp_find_channel(int unit);
 static int ppp_connect_channel(struct channel *pch, int unit);
 static int ppp_disconnect_channel(struct channel *pch);
 static void ppp_destroy_channel(struct channel *pch);
+
+static struct class_simple *ppp_class;
 
 /* Translates a PPP protocol number to a NP index (NP == network protocol) */
 static inline int proto_to_npindex(int proto)
@@ -675,20 +678,25 @@ static int ppp_ioctl(struct inode *inode, struct file *file,
 
 		if (copy_from_user(&uprog, (void __user *) arg, sizeof(uprog)))
 			break;
+		err = -EINVAL;
+		if (uprog.len > BPF_MAXINSNS)
+			break;
 		err = -ENOMEM;
-		len = uprog.len * sizeof(struct sock_filter);
-		code = kmalloc(len, GFP_KERNEL);
-		if (code == 0)
-			break;
-		err = -EFAULT;
-		if (copy_from_user(code, (void __user *) uprog.filter, len)) {
-			kfree(code);
-			break;
-		}
-		err = sk_chk_filter(code, uprog.len);
-		if (err) {
-			kfree(code);
-			break;
+		if (uprog.len > 0) {
+			len = uprog.len * sizeof(struct sock_filter);
+			code = kmalloc(len, GFP_KERNEL);
+			if (code == NULL)
+				break;
+			err = -EFAULT;
+			if (copy_from_user(code, (void __user *) uprog.filter, len)) {
+				kfree(code);
+				break;
+			}
+			err = sk_chk_filter(code, uprog.len);
+			if (err) {
+				kfree(code);
+				break;
+			}
 		}
 		filtp = (cmd == PPPIOCSPASS)? &ppp->pass_filter: &ppp->active_filter;
 		ppp_lock(ppp);
@@ -799,15 +807,29 @@ static int __init ppp_init(void)
 	printk(KERN_INFO "PPP generic driver version " PPP_VERSION "\n");
 	err = register_chrdev(PPP_MAJOR, "ppp", &ppp_device_fops);
 	if (!err) {
+		ppp_class = class_simple_create(THIS_MODULE, "ppp");
+		if (IS_ERR(ppp_class)) {
+			err = PTR_ERR(ppp_class);
+			goto out_chrdev;
+		}
+		class_simple_device_add(ppp_class, MKDEV(PPP_MAJOR, 0), NULL, "ppp");
 		err = devfs_mk_cdev(MKDEV(PPP_MAJOR, 0),
 				S_IFCHR|S_IRUSR|S_IWUSR, "ppp");
 		if (err)
-			unregister_chrdev(PPP_MAJOR, "ppp");
+			goto out_class;
 	}
 
+out:
 	if (err)
 		printk(KERN_ERR "failed to register PPP device (%d)\n", err);
 	return err;
+
+out_class:
+	class_simple_device_remove(MKDEV(PPP_MAJOR,0));
+	class_simple_destroy(ppp_class);
+out_chrdev:
+	unregister_chrdev(PPP_MAJOR, "ppp");
+	goto out;
 }
 
 /*
@@ -972,7 +994,11 @@ ppp_send_frame(struct ppp *ppp, struct sk_buff *skb)
 		/* check if we should pass this packet */
 		/* the filter instructions are constructed assuming
 		   a four-byte PPP header on each packet */
-		*skb_push(skb, 2) = 1;
+		{
+			u_int16_t *p = (u_int16_t *) skb_push(skb, 2);
+
+			*p = htons(4); /* indicate outbound in DLT_LINUX_SLL */;
+		}
 		if (ppp->pass_filter.filter
 		    && sk_run_filter(skb, ppp->pass_filter.filter,
 				     ppp->pass_filter.len) == 0) {
@@ -1515,7 +1541,11 @@ ppp_receive_nonmp_frame(struct ppp *ppp, struct sk_buff *skb)
 		/* check if the packet passes the pass and active filters */
 		/* the filter instructions are constructed assuming
 		   a four-byte PPP header on each packet */
-		*skb_push(skb, 2) = 0;
+		{
+			u_int16_t *p = (u_int16_t *) skb_push(skb, 2);
+
+			*p = 0; /* indicate inbound in DLT_LINUX_SLL */
+		}
 		if (ppp->pass_filter.filter
 		    && sk_run_filter(skb, ppp->pass_filter.filter,
 				     ppp->pass_filter.len) == 0) {
@@ -2540,6 +2570,8 @@ static void __exit ppp_cleanup(void)
 	if (unregister_chrdev(PPP_MAJOR, "ppp") != 0)
 		printk(KERN_ERR "PPP: failed to unregister PPP device\n");
 	devfs_remove("ppp");
+	class_simple_device_remove(MKDEV(PPP_MAJOR, 0));
+	class_simple_destroy(ppp_class);
 }
 
 /*
@@ -2668,3 +2700,4 @@ EXPORT_SYMBOL(all_ppp_units); /* for debugging */
 EXPORT_SYMBOL(all_channels); /* for debugging */
 MODULE_LICENSE("GPL");
 MODULE_ALIAS_CHARDEV_MAJOR(PPP_MAJOR);
+MODULE_ALIAS("/dev/ppp");

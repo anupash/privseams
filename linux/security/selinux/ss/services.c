@@ -9,6 +9,15 @@
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License version 2,
  *      as published by the Free Software Foundation.
+ *
+ * Updated: Frank Mayer <mayerf@tresys.com> and Karl MacMillan <kmacmillan@tresys.com>
+ *
+ * 	Added conditional policy language extensions
+ *
+ * Copyright (C) 2003 - 2004 Tresys Technology, LLC
+ *	This program is free software; you can redistribute it and/or modify
+ *  	it under the terms of the GNU General Public License as published by
+ *	the Free Software Foundation, version 2.
  */
 #include <linux/kernel.h>
 #include <linux/slab.h>
@@ -17,6 +26,7 @@
 #include <linux/errno.h>
 #include <linux/in.h>
 #include <linux/sched.h>
+#include <linux/audit.h>
 #include <asm/semaphore.h>
 #include "flask.h"
 #include "avc.h"
@@ -26,7 +36,10 @@
 #include "policydb.h"
 #include "sidtab.h"
 #include "services.h"
+#include "conditional.h"
 #include "mls.h"
+
+extern void selnl_notify_policyload(u32 seqno);
 
 static rwlock_t policy_rwlock = RW_LOCK_UNLOCKED;
 #define POLICY_RDLOCK read_lock(&policy_rwlock)
@@ -223,6 +236,9 @@ static int context_struct_compute_av(struct context *scontext,
 			avd->auditallow = avtab_auditallow(avdatum);
 	}
 
+	/* Check conditional av table for additional permissions */
+	cond_compute_av(&policydb.te_cond_avtab, &avkey, avd);
+
 	/*
 	 * Remove any permissions prohibited by the MLS policy.
 	 */
@@ -247,7 +263,7 @@ static int context_struct_compute_av(struct context *scontext,
 	 * pair.
 	 */
 	if (tclass == SECCLASS_PROCESS &&
-	    avd->allowed && PROCESS__TRANSITION &&
+	    (avd->allowed & PROCESS__TRANSITION) &&
 	    scontext->role != tcontext->role) {
 		for (ra = policydb.role_allow; ra; ra = ra->next) {
 			if (scontext->role == ra->role &&
@@ -384,7 +400,7 @@ int security_sid_to_context(u32 sid, char **scontext, u32 *scontext_len)
 			char *scontextp;
 
 			*scontext_len = strlen(initial_sid_to_string[sid]) + 1;
-			scontextp = kmalloc(*scontext_len,GFP_KERNEL);
+			scontextp = kmalloc(*scontext_len,GFP_ATOMIC);
 			strcpy(scontextp, initial_sid_to_string[sid]);
 			*scontext = scontextp;
 			goto out;
@@ -440,9 +456,7 @@ int security_context_to_sid(char *scontext, u32 scontext_len, u32 *sid)
 				goto out;
 			}
 		}
-		printk(KERN_ERR "security_context_to_sid: called before "
-		       "initial load_policy on unknown context %s\n", scontext);
-		rc = -EINVAL;
+		*sid = SECINITSID_KERNEL;
 		goto out;
 	}
 	*sid = SECSID_NULL;
@@ -533,32 +547,34 @@ out:
 	return rc;
 }
 
-static inline int compute_sid_handle_invalid_context(
+static int compute_sid_handle_invalid_context(
 	struct context *scontext,
 	struct context *tcontext,
 	u16 tclass,
 	struct context *newcontext)
 {
-	int rc = 0;
+	char *s = NULL, *t = NULL, *n = NULL;
+	u32 slen, tlen, nlen;
 
-	if (selinux_enforcing) {
-		rc = -EACCES;
-	} else {
-		char *s, *t, *n;
-		u32 slen, tlen, nlen;
-
-		context_struct_to_string(scontext, &s, &slen);
-		context_struct_to_string(tcontext, &t, &tlen);
-		context_struct_to_string(newcontext, &n, &nlen);
-		printk(KERN_ERR "security_compute_sid:  invalid context %s", n);
-		printk(" for scontext=%s", s);
-		printk(" tcontext=%s", t);
-		printk(" tclass=%s\n", policydb.p_class_val_to_name[tclass-1]);
-		kfree(s);
-		kfree(t);
-		kfree(n);
-	}
-	return rc;
+	if (context_struct_to_string(scontext, &s, &slen) < 0)
+		goto out;
+	if (context_struct_to_string(tcontext, &t, &tlen) < 0)
+		goto out;
+	if (context_struct_to_string(newcontext, &n, &nlen) < 0)
+		goto out;
+	audit_log(current->audit_context,
+		  "security_compute_sid:  invalid context %s"
+		  " for scontext=%s"
+		  " tcontext=%s"
+		  " tclass=%s",
+		  n, s, t, policydb.p_class_val_to_name[tclass-1]);
+out:
+	kfree(s);
+	kfree(t);
+	kfree(n);
+	if (!selinux_enforcing)
+		return 0;
+	return -EACCES;
 }
 
 static int security_compute_sid(u32 ssid,
@@ -571,6 +587,7 @@ static int security_compute_sid(u32 ssid,
 	struct role_trans *roletr = 0;
 	struct avtab_key avkey;
 	struct avtab_datum *avdatum;
+	struct avtab_node *node;
 	unsigned int type_change = 0;
 	int rc = 0;
 
@@ -637,6 +654,18 @@ static int security_compute_sid(u32 ssid,
 	avkey.target_type = tcontext->type;
 	avkey.target_class = tclass;
 	avdatum = avtab_search(&policydb.te_avtab, &avkey, AVTAB_TYPE);
+
+	/* If no permanent rule, also check for enabled conditional rules */
+	if(!avdatum) {
+		node = avtab_search_node(&policydb.te_cond_avtab, &avkey, specified);
+		for (; node != NULL; node = avtab_search_node_next(node, specified)) {
+			if (node->datum.specified & AVTAB_ENABLED) {
+				avdatum = &node->datum;
+				break;
+			}
+		}
+	}
+
 	type_change = (avdatum && (avdatum->specified & specified));
 	if (type_change) {
 		/* Use the type from the type transition/member/change rule. */
@@ -998,6 +1027,7 @@ int security_load_policy(void *data, size_t len)
 			return -EINVAL;
 		}
 		ss_initialized = 1;
+
 		LOAD_UNLOCK;
 		selinux_complete_init();
 		return 0;
@@ -1044,6 +1074,7 @@ int security_load_policy(void *data, size_t len)
 	memcpy(&policydb, &newpolicydb, sizeof policydb);
 	sidtab_set(&sidtab, &newsidtab);
 	seqno = ++latest_granting;
+
 	POLICY_WRUNLOCK;
 	LOAD_UNLOCK;
 
@@ -1052,6 +1083,7 @@ int security_load_policy(void *data, size_t len)
 	sidtab_destroy(&oldsidtab);
 
 	avc_ss_reset(seqno);
+	selnl_notify_policyload(seqno);
 
 	return 0;
 
@@ -1156,6 +1188,18 @@ out:
 	return rc;
 }
 
+static int match_ipv6_addrmask(u32 *input, u32 *addr, u32 *mask)
+{
+	int i, fail = 0;
+
+	for(i = 0; i < 4; i++)
+		if(addr[i] != (input[i] & mask[i])) {
+			fail = 1;
+			break;
+		}
+
+	return !fail;
+}
 
 /**
  * security_node_sid - Obtain the SID for a node (host).
@@ -1170,22 +1214,47 @@ int security_node_sid(u16 domain,
 		      u32 *out_sid)
 {
 	int rc = 0;
-	u32 addr;
 	struct ocontext *c;
 
 	POLICY_RDLOCK;
 
-	if (domain != AF_INET || addrlen != sizeof(u32)) {
+	switch (domain) {
+	case AF_INET: {
+		u32 addr;
+
+		if (addrlen != sizeof(u32)) {
+			rc = -EINVAL;
+			goto out;
+		}
+
+		addr = *((u32 *)addrp);
+
+		c = policydb.ocontexts[OCON_NODE];
+		while (c) {
+			if (c->u.node.addr == (addr & c->u.node.mask))
+				break;
+			c = c->next;
+		}
+		break;
+	}
+
+	case AF_INET6:
+		if (addrlen != sizeof(u64) * 2) {
+			rc = -EINVAL;
+			goto out;
+		}
+		c = policydb.ocontexts[OCON_NODE6];
+		while (c) {
+			if (match_ipv6_addrmask(addrp, c->u.node6.addr,
+						c->u.node6.mask))
+				break;
+			c = c->next;
+		}
+		break;
+
+	default:
 		*out_sid = SECINITSID_NODE;
 		goto out;
-	}
-	addr = *((u32 *)addrp);
-
-	c = policydb.ocontexts[OCON_NODE];
-	while (c) {
-		if (c->u.node.addr == (addr & c->u.node.mask))
-			break;
-		c = c->next;
 	}
 
 	if (c) {
@@ -1272,8 +1341,6 @@ int security_get_user_sids(u32 fromsid,
 			if (!ebitmap_get_bit(&role->types, j))
 				continue;
 			usercon.type = j+1;
-			if (usercon.type == fromcon->type)
-				continue;
 			mls_for_user_ranges(user,usercon) {
 				rc = context_struct_compute_av(fromcon, &usercon,
 							       SECCLASS_PROCESS,
@@ -1421,6 +1488,119 @@ int security_fs_use(
 		}
 	}
 
+out:
+	POLICY_RDUNLOCK;
+	return rc;
+}
+
+int security_get_bools(int *len, char ***names, int **values)
+{
+	int i, rc = -ENOMEM;
+
+	POLICY_RDLOCK;
+	*names = NULL;
+	*values = NULL;
+
+	*len = policydb.p_bools.nprim;
+	if (!*len) {
+		rc = 0;
+		goto out;
+	}
+
+	*names = (char**)kmalloc(sizeof(char*) * *len, GFP_ATOMIC);
+	if (!*names)
+		goto err;
+	memset(*names, 0, sizeof(char*) * *len);
+
+	*values = (int*)kmalloc(sizeof(int) * *len, GFP_ATOMIC);
+	if (!*values)
+		goto err;
+
+	for (i = 0; i < *len; i++) {
+		size_t name_len;
+		(*values)[i] = policydb.bool_val_to_struct[i]->state;
+		name_len = strlen(policydb.p_bool_val_to_name[i]) + 1;
+		(*names)[i] = (char*)kmalloc(sizeof(char) * name_len, GFP_ATOMIC);
+		if (!(*names)[i])
+			goto err;
+		strncpy((*names)[i], policydb.p_bool_val_to_name[i], name_len);
+		(*names)[i][name_len - 1] = 0;
+	}
+	rc = 0;
+out:
+	POLICY_RDUNLOCK;
+	return rc;
+err:
+	if (*names) {
+		for (i = 0; i < *len; i++)
+			if ((*names)[i])
+				kfree((*names)[i]);
+	}
+	if (*values)
+		kfree(*values);
+	goto out;
+}
+
+
+int security_set_bools(int len, int *values)
+{
+	int i, rc = 0;
+	int lenp, seqno = 0;
+	struct cond_node *cur;
+
+	POLICY_WRLOCK;
+
+	lenp = policydb.p_bools.nprim;
+	if (len != lenp) {
+		rc = -EFAULT;
+		goto out;
+	}
+
+	printk(KERN_INFO "security: committed booleans { ");
+	for (i = 0; i < len; i++) {
+		if (values[i]) {
+			policydb.bool_val_to_struct[i]->state = 1;
+		} else {
+			policydb.bool_val_to_struct[i]->state = 0;
+		}
+		if (i != 0)
+			printk(", ");
+		printk("%s:%d", policydb.p_bool_val_to_name[i],
+		       policydb.bool_val_to_struct[i]->state);
+	}
+	printk(" }\n");
+
+	for (cur = policydb.cond_list; cur != NULL; cur = cur->next) {
+		rc = evaluate_cond_node(&policydb, cur);
+		if (rc)
+			goto out;
+	}
+
+	seqno = ++latest_granting;
+
+out:
+	POLICY_WRUNLOCK;
+	if (!rc) {
+		avc_ss_reset(seqno);
+		selnl_notify_policyload(seqno);
+	}
+	return rc;
+}
+
+int security_get_bool_value(int bool)
+{
+	int rc = 0;
+	int len;
+
+	POLICY_RDLOCK;
+
+	len = policydb.p_bools.nprim;
+	if (bool >= len) {
+		rc = -EFAULT;
+		goto out;
+	}
+
+	rc = policydb.bool_val_to_struct[bool]->state;
 out:
 	POLICY_RDUNLOCK;
 	return rc;

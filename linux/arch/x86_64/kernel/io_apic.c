@@ -34,6 +34,7 @@
 #include <asm/io.h>
 #include <asm/smp.h>
 #include <asm/desc.h>
+#include <asm/proto.h>
 
 int sis_apic_bug; /* not actually supported, dummy for compile */
 
@@ -211,7 +212,6 @@ static int __init enable_ioapic_setup(char *str)
 __setup("noapic", disable_ioapic_setup);
 __setup("apic", enable_ioapic_setup);
 
-#ifndef CONFIG_SMP
 #include <asm/pci-direct.h>
 #include <linux/pci_ids.h>
 #include <linux/pci.h>
@@ -220,7 +220,11 @@ __setup("apic", enable_ioapic_setup);
    off. Check for an Nvidia or VIA PCI bridge and turn it off.
    Use pci direct infrastructure because this runs before the PCI subsystem. 
 
-   Can be overwritten with "apic" */
+   Can be overwritten with "apic"
+
+   And another hack to disable the IOMMU on VIA chipsets.
+
+   Kludge-O-Rama. */
 void __init check_ioapic(void) 
 { 
 	int num,slot,func; 
@@ -245,12 +249,23 @@ void __init check_ioapic(void)
 							 PCI_VENDOR_ID);
 				vendor &= 0xffff;
 				switch (vendor) { 
-				case PCI_VENDOR_ID_NVIDIA: 
 				case PCI_VENDOR_ID_VIA:
+#ifdef CONFIG_GART_IOMMU
+					if (end_pfn >= (0xffffffff>>PAGE_SHIFT) &&
+					    !iommu_aperture_allowed) {
+						printk(KERN_INFO
+    "Looks like a VIA chipset. Disabling IOMMU. Overwrite with \"iommu=allowed\"\n");
+						iommu_aperture_disabled = 1;
+					}
+#endif
+					/* FALL THROUGH */
+				case PCI_VENDOR_ID_NVIDIA:
+#ifndef CONFIG_SMP
 					printk(KERN_INFO 
      "PCI bridge %02x:%02x from %x found. Setting \"noapic\". Overwrite with \"apic\"\n",
 					       num,slot,vendor); 
 					skip_ioapic_setup = 1;
+#endif
 					return;
 				} 
 
@@ -263,7 +278,6 @@ void __init check_ioapic(void)
 		}
 	}
 } 
-#endif
 
 static int __init ioapic_pirq_setup(char *str)
 {
@@ -1653,6 +1667,7 @@ static inline void check_timer(void)
 		 */
 		unmask_IO_APIC_irq(0);
 		if (timer_irq_works()) {
+			nmi_watchdog_default();
 			if (nmi_watchdog == NMI_IO_APIC) {
 				disable_8259A_irq(0);
 				setup_nmi();
@@ -1674,6 +1689,7 @@ static inline void check_timer(void)
 		setup_ExtINT_IRQ0_pin(pin2, vector);
 		if (timer_irq_works()) {
 			printk("works.\n");
+			nmi_watchdog_default();
 			if (nmi_watchdog == NMI_IO_APIC) {
 				setup_nmi();
 				check_nmi_watchdog();
@@ -1724,18 +1740,10 @@ static inline void check_timer(void)
 
 /*
  *
- * IRQ's that are handled by the old PIC in all cases:
+ * IRQ's that are handled by the PIC in the MPS IOAPIC case.
  * - IRQ2 is the cascade IRQ, and cannot be a io-apic IRQ.
  *   Linux doesn't really care, as it's not actually used
  *   for any interrupt handling anyway.
- * - There used to be IRQ13 here as well, but all
- *   MPS-compliant must not use it for FPU coupling and we
- *   want to use exception 16 anyway.  And there are
- *   systems who connect it to an I/O APIC for other uses.
- *   Thus we don't mark it special any longer.
- *
- * Additionally, something is definitely wrong with irq9
- * on PIIX4 boards.
  */
 #define PIC_IRQS	(1<<2)
 
@@ -1743,7 +1751,11 @@ void __init setup_IO_APIC(void)
 {
 	enable_IO_APIC();
 
-	io_apic_irqs = ~PIC_IRQS;
+	if (acpi_ioapic)
+		io_apic_irqs = ~0;	/* all IRQs go through IOAPIC */
+	else
+		io_apic_irqs = ~PIC_IRQS;
+
 	printk("ENABLING IO-APIC IRQs\n");
 
 	/*
@@ -1758,23 +1770,6 @@ void __init setup_IO_APIC(void)
 	if (!acpi_ioapic)
 		print_IO_APIC();
 }
-
-/* Ensure the ACPI SCI interrupt level is active low, edge-triggered */
-
-void __init mp_config_ioapic_for_sci(int irq)
-{
-#if 0 /* fixme */
-       int ioapic;
-       int ioapic_pin;
-
-       ioapic = mp_find_ioapic(irq);
-
-       ioapic_pin = irq - mp_ioapic_routing[ioapic].irq_start;
-
-       io_apic_set_pci_routing(ioapic, ioapic_pin, irq);
-#endif
-}
-
 
 /* --------------------------------------------------------------------------
                           ACPI-based IOAPIC Configuration
@@ -1800,7 +1795,7 @@ int __init io_apic_get_unique_id (int ioapic, int apic_id)
 	 *      advantage of new APIC bus architecture.
 	 */
 
-	if (!physids_empty(apic_id_map))
+	if (physids_empty(apic_id_map))
 		apic_id_map = phys_cpu_present_map;
 
 	spin_lock_irqsave(&ioapic_lock, flags);
@@ -1906,7 +1901,11 @@ int io_apic_set_pci_routing (int ioapic, int pin, int irq, int edge_level, int a
 	entry.polarity = active_high_low;
 	entry.mask = 1;					 /* Disabled (masked) */
 
-	add_pin_to_irq(irq, ioapic, pin);
+	/*
+	 * IRQs < 16 are already in the irq_2_pin[] map
+	 */
+	if (irq >= 16)
+		add_pin_to_irq(irq, ioapic, pin);
 
 	entry.vector = assign_irq_vector(irq);
 

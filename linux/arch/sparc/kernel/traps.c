@@ -131,23 +131,23 @@ void die_if_kernel(char *str, struct pt_regs *regs)
 	do_exit(SIGSEGV);
 }
 
-void do_hw_interrupt(unsigned long type, unsigned long psr, unsigned long pc)
+void do_hw_interrupt(struct pt_regs *regs, unsigned long type)
 {
 	siginfo_t info;
 
 	if(type < 0x80) {
 		/* Sun OS's puke from bad traps, Linux survives! */
 		printk("Unimplemented Sparc TRAP, type = %02lx\n", type);
-		die_if_kernel("Whee... Hello Mr. Penguin", current->thread.kregs);
+		die_if_kernel("Whee... Hello Mr. Penguin", regs);
 	}	
 
-	if(psr & PSR_PS)
-		die_if_kernel("Kernel bad trap", current->thread.kregs);
+	if(regs->psr & PSR_PS)
+		die_if_kernel("Kernel bad trap", regs);
 
 	info.si_signo = SIGILL;
 	info.si_errno = 0;
 	info.si_code = ILL_ILLTRP;
-	info.si_addr = (void *)pc;
+	info.si_addr = (void *)regs->pc;
 	info.si_trapno = type - 0x80;
 	force_sig_info(SIGILL, &info, current);
 }
@@ -260,7 +260,7 @@ void do_fpd_trap(struct pt_regs *regs, unsigned long pc, unsigned long npc,
 	} else {
 		fpload(&current->thread.float_regs[0], &current->thread.fsr);
 	}
-	current->flags |= PF_USEDFPU;
+	current_thread_info()->flags |= _TIF_USEDFPU;
 #endif
 }
 
@@ -291,7 +291,7 @@ void do_fpe_trap(struct pt_regs *regs, unsigned long pc, unsigned long npc,
 #ifndef CONFIG_SMP
 	if(!fpt) {
 #else
-        if(!(fpt->flags & PF_USEDFPU)) {
+        if(!(fpt->thread_info->flags & _TIF_USEDFPU)) {
 #endif
 		fpsave(&fake_regs[0], &fake_fsr, &fake_queue[0], &fake_depth);
 		regs->psr &= ~PSR_EF;
@@ -334,7 +334,7 @@ void do_fpe_trap(struct pt_regs *regs, unsigned long pc, unsigned long npc,
 	/* nope, better SIGFPE the offending process... */
 	       
 #ifdef CONFIG_SMP
-	fpt->flags &= ~PF_USEDFPU;
+	fpt->thread_info->flags &= ~_TIF_USEDFPU;
 #endif
 	if(psr & PSR_PS) {
 		/* The first fsr store/load we tried trapped,

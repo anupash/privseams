@@ -11,6 +11,7 @@ struct scsi_cmnd;
 struct scsi_device;
 struct Scsi_Host;
 struct scsi_host_cmd_pool;
+struct scsi_transport_template;
 
 
 /*
@@ -344,12 +345,6 @@ struct scsi_host_template {
 	 * module_init/module_exit.
 	 */
 	struct list_head legacy_hosts;
-
-	/*
-	 * Default flags settings, these modify the setting of scsi_device
-	 * bits.
-	 */
-	unsigned int flags;
 };
 
 /*
@@ -395,6 +390,7 @@ struct Scsi_Host {
 	unsigned int            eh_kill:1; /* set when killing the eh thread */
 	wait_queue_head_t       host_wait;
 	struct scsi_host_template *hostt;
+	struct scsi_transport_template *transportt;
 	volatile unsigned short host_busy;   /* commands actually active on low-level */
 	volatile unsigned short host_failed; /* commands that failed. */
     

@@ -50,6 +50,8 @@
 #define RFCOMM_TTY_MAJOR 216		/* device node major id of the usb/bluetooth.c driver */
 #define RFCOMM_TTY_MINOR 0
 
+static struct tty_driver *rfcomm_tty_driver;
+
 struct rfcomm_dev {
 	struct list_head	list;
 	atomic_t		refcnt;
@@ -97,6 +99,8 @@ static void rfcomm_dev_destruct(struct rfcomm_dev *dev)
 	rfcomm_dlc_unlock(dlc);
 
 	rfcomm_dlc_put(dlc);
+
+	tty_unregister_device(rfcomm_tty_driver, dev->id);
 
 	/* Refcount should only hit zero when called from rfcomm_dev_del()
 	   which will have taken us off the list. Everything else are
@@ -239,8 +243,11 @@ out:
 	if (err) {
 		kfree(dev);
 		return err;
-	} else
-		return dev->id;
+	}
+
+	tty_register_device(rfcomm_tty_driver, dev->id, NULL);
+
+	return dev->id;
 }
 
 static void rfcomm_dev_del(struct rfcomm_dev *dev)
@@ -308,7 +315,7 @@ static int rfcomm_create_dev(struct sock *sk, unsigned long arg)
 
 	if (req.flags != NOCAP_FLAGS && !capable(CAP_NET_ADMIN))
 		return -EPERM;
-	
+
 	if (req.flags & (1 << RFCOMM_REUSE_DLC)) {
 		/* Socket must be connected */
 		if (sk->sk_state != BT_CONNECTED)
@@ -347,11 +354,13 @@ static int rfcomm_release_dev(unsigned long arg)
 
 	BT_DBG("dev_id %id flags 0x%x", req.dev_id, req.flags);
 
-	if (!capable(CAP_NET_ADMIN))
-		return -EPERM;
-	
 	if (!(dev = rfcomm_dev_get(req.dev_id)))
 		return -ENODEV;
+
+	if (dev->flags != NOCAP_FLAGS && !capable(CAP_NET_ADMIN)) {
+		rfcomm_dev_put(dev);
+		return -EPERM;
+	}
 
 	if (req.flags & (1 << RFCOMM_HANGUP_NOW))
 		rfcomm_dlc_close(dev->dlc, 0);
@@ -871,8 +880,6 @@ static int rfcomm_tty_tiocmset(struct tty_struct *tty, struct file *filp, unsign
 
 /* ---- TTY structure ---- */
 
-static struct tty_driver *rfcomm_tty_driver;
-
 static struct tty_operations rfcomm_ops = {
 	.open			= rfcomm_tty_open,
 	.close			= rfcomm_tty_close,
@@ -906,7 +913,7 @@ int rfcomm_init_ttys(void)
 	rfcomm_tty_driver->minor_start	= RFCOMM_TTY_MINOR;
 	rfcomm_tty_driver->type		= TTY_DRIVER_TYPE_SERIAL;
 	rfcomm_tty_driver->subtype	= SERIAL_TYPE_NORMAL;
-	rfcomm_tty_driver->flags	= TTY_DRIVER_REAL_RAW;
+	rfcomm_tty_driver->flags	= TTY_DRIVER_REAL_RAW | TTY_DRIVER_NO_DEVFS;
 	rfcomm_tty_driver->init_termios	= tty_std_termios;
 	rfcomm_tty_driver->init_termios.c_cflag	= B9600 | CS8 | CREAD | HUPCL | CLOCAL;
 	tty_set_operations(rfcomm_tty_driver, &rfcomm_ops);

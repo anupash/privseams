@@ -45,7 +45,6 @@
 #include <asm/prom.h>
 #include <asm/hardirq.h>
 
-int dump_fpu(struct pt_regs *regs, elf_fpregset_t *fpregs);
 extern unsigned long _get_SP(void);
 
 struct task_struct *last_task_used_math = NULL;
@@ -84,7 +83,7 @@ kernel_stack_top(struct task_struct *tsk)
 unsigned long
 task_top(struct task_struct *tsk)
 {
-	return ((unsigned long)tsk) + sizeof(struct task_struct);
+	return ((unsigned long)tsk) + sizeof(struct thread_info);
 }
 
 /* check to make sure the kernel stack is healthy */
@@ -164,6 +163,8 @@ dump_altivec(struct pt_regs *regs, elf_vrregset_t *vrregs)
 void
 enable_kernel_altivec(void)
 {
+	WARN_ON(current_thread_info()->preempt_count == 0 && !irqs_disabled());
+
 #ifdef CONFIG_SMP
 	if (current->thread.regs && (current->thread.regs->msr & MSR_VEC))
 		giveup_altivec(current);
@@ -173,11 +174,14 @@ enable_kernel_altivec(void)
 	giveup_altivec(last_task_used_altivec);
 #endif /* __SMP __ */
 }
+EXPORT_SYMBOL(enable_kernel_altivec);
 #endif /* CONFIG_ALTIVEC */
 
 void
 enable_kernel_fp(void)
 {
+	WARN_ON(current_thread_info()->preempt_count == 0 && !irqs_disabled());
+
 #ifdef CONFIG_SMP
 	if (current->thread.regs && (current->thread.regs->msr & MSR_FP))
 		giveup_fpu(current);
@@ -187,13 +191,16 @@ enable_kernel_fp(void)
 	giveup_fpu(last_task_used_math);
 #endif /* CONFIG_SMP */
 }
+EXPORT_SYMBOL(enable_kernel_fp);
 
 int
-dump_fpu(struct pt_regs *regs, elf_fpregset_t *fpregs)
+dump_task_fpu(struct task_struct *tsk, elf_fpregset_t *fpregs)
 {
-	if (regs->msr & MSR_FP)
-		giveup_fpu(current);
-	memcpy(fpregs, &current->thread.fpr[0], sizeof(*fpregs));
+	preempt_disable();
+	if (tsk->thread.regs && (tsk->thread.regs->msr & MSR_FP))
+		giveup_fpu(tsk);
+	preempt_enable();
+	memcpy(fpregs, &tsk->thread.fpr[0], sizeof(*fpregs));
 	return 1;
 }
 
@@ -266,8 +273,8 @@ void show_regs(struct pt_regs * regs)
 	trap = TRAP(regs);
 	if (trap == 0x300 || trap == 0x600)
 		printk("DAR: %08lX, DSISR: %08lX\n", regs->dar, regs->dsisr);
-	printk("TASK = %p[%d] '%s' ",
-	       current, current->pid, current->comm);
+	printk("TASK = %p[%d] '%s' THREAD: %p",
+	       current, current->pid, current->comm, current->thread_info);
 	printk("Last syscall: %ld ", current->thread.last_syscall);
 
 #if defined(CONFIG_4xx) && defined(DCRN_PLB0_BEAR)
@@ -296,6 +303,16 @@ void show_regs(struct pt_regs * regs)
 			break;
 	}
 	printk("\n");
+#ifdef CONFIG_KALLSYMS
+	/*
+	 * Lookup NIP late so we have the best change of getting the
+	 * above info out without failing
+	 */
+	printk("NIP [%08lx] ", regs->nip);
+	print_symbol("%s\n", regs->nip);
+	printk("LR [%08lx] ", regs->link);
+	print_symbol("%s\n", regs->link);
+#endif
 	show_stack(current, (unsigned long *) regs->gpr[1]);
 }
 
@@ -330,12 +347,14 @@ void prepare_to_copy(struct task_struct *tsk)
 
 	if (regs == NULL)
 		return;
+	preempt_disable();
 	if (regs->msr & MSR_FP)
 		giveup_fpu(current);
 #ifdef CONFIG_ALTIVEC
 	if (regs->msr & MSR_VEC)
 		giveup_altivec(current);
 #endif /* CONFIG_ALTIVEC */
+	preempt_enable();
 }
 
 /*
@@ -480,12 +499,14 @@ int sys_execve(unsigned long a0, unsigned long a1, unsigned long a2,
 	error = PTR_ERR(filename);
 	if (IS_ERR(filename))
 		goto out;
+	preempt_disable();
 	if (regs->msr & MSR_FP)
 		giveup_fpu(current);
 #ifdef CONFIG_ALTIVEC
 	if (regs->msr & MSR_VEC)
 		giveup_altivec(current);
 #endif /* CONFIG_ALTIVEC */
+	preempt_enable();
 	error = do_execve(filename, (char __user *__user *) a1,
 			  (char __user *__user *) a2, regs);
 	if (error == 0)
@@ -650,8 +671,6 @@ void __init ll_puts(const char *s)
 /*
  * These bracket the sleeping functions..
  */
-extern void scheduling_functions_start_here(void);
-extern void scheduling_functions_end_here(void);
 #define first_sched    ((unsigned long) scheduling_functions_start_here)
 #define last_sched     ((unsigned long) scheduling_functions_end_here)
 

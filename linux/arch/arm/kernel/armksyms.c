@@ -22,12 +22,12 @@
 #include <linux/tty.h>
 #include <linux/vt_kern.h>
 #include <linux/smp_lock.h>
+#include <linux/syscalls.h>
 
 #include <asm/byteorder.h>
 #include <asm/elf.h>
 #include <asm/io.h>
 #include <asm/irq.h>
-#include <asm/pgalloc.h>
 #include <asm/proc-fns.h>
 #include <asm/processor.h>
 #include <asm/semaphore.h>
@@ -42,14 +42,6 @@ extern void inswb(unsigned int port, void *to, int len);
 extern void outswb(unsigned int port, const void *to, int len);
 
 extern void __bad_xchg(volatile void *ptr, int size);
-
-/*
- * syscalls
- */
-extern int sys_write(int, const char *, int);
-extern int sys_read(int, char *, int);
-extern int sys_lseek(int, off_t, int);
-extern int sys_exit(int);
 
 /*
  * libgcc functions - functions that are used internally by the
@@ -80,8 +72,6 @@ extern void fp_init(union fp_state *);
  * This has a special calling convention; it doesn't
  * modify any of the usual registers, except for LR.
  */
-extern void __do_softirq(void);
-
 #define EXPORT_SYMBOL_ALIAS(sym,orig)		\
  const struct kernel_symbol __ksymtab_##sym	\
   __attribute__((section("__ksymtab"))) =	\
@@ -95,11 +85,6 @@ EXPORT_SYMBOL_ALIAS(kern_fp_enter,fp_enter);
 EXPORT_SYMBOL_ALIAS(fp_printk,printk);
 EXPORT_SYMBOL_ALIAS(fp_send_sig,send_sig);
 
-#ifdef CONFIG_VT
-EXPORT_SYMBOL(kd_mksound);
-#endif
-
-EXPORT_SYMBOL_NOVERS(__do_softirq);
 EXPORT_SYMBOL_NOVERS(__backtrace);
 
 	/* platform dependent support */
@@ -194,11 +179,7 @@ EXPORT_SYMBOL(__arch_copy_from_user);
 EXPORT_SYMBOL(__arch_copy_to_user);
 EXPORT_SYMBOL(__arch_clear_user);
 EXPORT_SYMBOL(__arch_strnlen_user);
-
-	/* consistent area handling */
-EXPORT_SYMBOL(consistent_alloc);
-EXPORT_SYMBOL(consistent_free);
-EXPORT_SYMBOL(consistent_sync);
+EXPORT_SYMBOL(__arch_strncpy_from_user);
 
 EXPORT_SYMBOL_NOVERS(__get_user_1);
 EXPORT_SYMBOL_NOVERS(__get_user_2);

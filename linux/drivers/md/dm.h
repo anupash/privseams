@@ -115,6 +115,8 @@ struct list_head *dm_table_get_devices(struct dm_table *t);
 int dm_table_get_mode(struct dm_table *t);
 void dm_table_suspend_targets(struct dm_table *t);
 void dm_table_resume_targets(struct dm_table *t);
+int dm_table_any_congested(struct dm_table *t, int bdi_bits);
+void dm_table_unplug_all(struct dm_table *t);
 
 /*-----------------------------------------------------------------
  * A registry of target types.
@@ -123,6 +125,8 @@ int dm_target_init(void);
 void dm_target_exit(void);
 struct target_type *dm_get_target_type(const char *name);
 void dm_put_target_type(struct target_type *t);
+int dm_target_iterate(void (*iter_func)(struct target_type *tt,
+					void *param), void *param);
 
 
 /*-----------------------------------------------------------------
@@ -151,6 +155,16 @@ static inline unsigned long dm_div_up(unsigned long n, unsigned long size)
 	return dm_round_up(n, size) / size;
 }
 
+static inline sector_t to_sector(unsigned long n)
+{
+	return (n >> 9);
+}
+
+static inline unsigned long to_bytes(sector_t n)
+{
+	return (n << 9);
+}
+
 /*
  * The device-mapper can be driven through one of two interfaces;
  * ioctl or filesystem, depending which patch you have applied.
@@ -166,5 +180,7 @@ void dm_linear_exit(void);
 
 int dm_stripe_init(void);
 void dm_stripe_exit(void);
+
+void *dm_vcalloc(unsigned long nmemb, unsigned long elem_size);
 
 #endif

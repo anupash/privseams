@@ -63,7 +63,7 @@
 //#define DEBUG				// Undef me for production
 
 #ifdef DEBUG
-#define DPRINTF(x, a...) printk(KERN_DEBUG "W9966: "__FUNCTION__ "(): "x, ##a)
+#define DPRINTF(x, a...) printk(KERN_DEBUG "W9966: %s(): "x, __FUNCTION__ , ##a)
 #else
 #define DPRINTF(x...)
 #endif
@@ -959,10 +959,9 @@ static void w9966_detach(struct parport *port)
 
 
 static struct parport_driver w9966_ppd = {
-	W9966_DRIVERNAME,
-	w9966_attach,
-	w9966_detach,
-	NULL
+	.name = W9966_DRIVERNAME,
+	.attach = w9966_attach,
+	.detach = w9966_detach,
 };
 
 // Module entry point

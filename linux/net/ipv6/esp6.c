@@ -288,9 +288,8 @@ int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_b
 
 		padlen = nexthdr[0];
 		if (padlen+2 >= elen) {
-			if (net_ratelimit()) {
-				printk(KERN_WARNING "ipsec esp packet is garbage padlen=%d, elen=%d\n", padlen+2, elen);
-			}
+			LIMIT_NETDEBUG(
+				printk(KERN_WARNING "ipsec esp packet is garbage padlen=%d, elen=%d\n", padlen+2, elen));
 			ret = -EINVAL;
 			goto out;
 		}
@@ -432,6 +431,8 @@ int esp6_init_state(struct xfrm_state *x, void *args)
 	esp->conf.padlen = 0;
 	if (esp->conf.ivlen) {
 		esp->conf.ivec = kmalloc(esp->conf.ivlen, GFP_KERNEL);
+		if (unlikely(esp->conf.ivec == NULL))
+			goto error;
 		get_random_bytes(esp->conf.ivec, esp->conf.ivlen);
 	}
 	crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len);

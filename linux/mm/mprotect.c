@@ -114,10 +114,11 @@ static int
 mprotect_attempt_merge(struct vm_area_struct *vma, struct vm_area_struct *prev,
 		unsigned long end, int newflags)
 {
-	struct mm_struct * mm = vma->vm_mm;
+	struct mm_struct * mm;
 
 	if (!prev || !vma)
 		return 0;
+	mm = vma->vm_mm;
 	if (prev->vm_end != vma->vm_start)
 		return 0;
 	if (!can_vma_merge(prev, newflags))
@@ -173,7 +174,8 @@ mprotect_fixup(struct vm_area_struct *vma, struct vm_area_struct **pprev,
 	 * a MAP_NORESERVE private mapping to writable will now reserve.
 	 */
 	if (newflags & VM_WRITE) {
-		if (!(vma->vm_flags & (VM_ACCOUNT|VM_WRITE|VM_SHARED))) {
+		if (!(vma->vm_flags & (VM_ACCOUNT|VM_WRITE|VM_SHARED))
+				&& VM_MAYACCT(vma)) {
 			charged = (end - start) >> PAGE_SHIFT;
 			if (security_vm_enough_memory(charged))
 				return -ENOMEM;
@@ -237,7 +239,7 @@ sys_mprotect(unsigned long start, size_t len, unsigned long prot)
 	len = PAGE_ALIGN(len);
 	end = start + len;
 	if (end < start)
-		return -EINVAL;
+		return -ENOMEM;
 	if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC | PROT_SEM))
 		return -EINVAL;
 	if (end == start)

@@ -23,7 +23,6 @@
 #include <linux/mm.h>
 #include <linux/delay.h>
 #include <linux/init.h>
-
 #include <linux/ide.h>
 
 #include <asm/traps.h>
@@ -62,7 +61,7 @@ static int gIER,gIFR,gBufA,gBufB;
 #define MAC_CLOCK_LOW		(MAC_CLOCK_TICK&0xFF)
 #define MAC_CLOCK_HIGH		(MAC_CLOCK_TICK>>8)
 
-static int  nubus_active = 0;
+static int  nubus_active;
 
 void via_debug_dump(void);
 irqreturn_t via1_irq(int, void *, struct pt_regs *);
@@ -261,24 +260,27 @@ void __init via_init_clock(irqreturn_t (*func)(int, void *, struct pt_regs *))
 void __init via_register_interrupts(void)
 {
 	if (via_alt_mapping) {
-		sys_request_irq(IRQ_AUTO_1, via1_irq, IRQ_FLG_LOCK|IRQ_FLG_FAST,
-				"software", (void *) via1);
-		sys_request_irq(IRQ_AUTO_6, via1_irq, IRQ_FLG_LOCK|IRQ_FLG_FAST,
-				"via1", (void *) via1);
+		cpu_request_irq(IRQ_AUTO_1, via1_irq,
+				IRQ_FLG_LOCK|IRQ_FLG_FAST, "software",
+				(void *) via1);
+		cpu_request_irq(IRQ_AUTO_6, via1_irq,
+				IRQ_FLG_LOCK|IRQ_FLG_FAST, "via1",
+				(void *) via1);
 	} else {
-		sys_request_irq(IRQ_AUTO_1, via1_irq, IRQ_FLG_LOCK|IRQ_FLG_FAST,
-				"via1", (void *) via1);
+		cpu_request_irq(IRQ_AUTO_1, via1_irq,
+				IRQ_FLG_LOCK|IRQ_FLG_FAST, "via1",
+				(void *) via1);
 #if 0 /* interferes with serial on some machines */
 		if (!psc_present) {
-			sys_request_irq(IRQ_AUTO_6, mac_bang, IRQ_FLG_LOCK,
+			cpu_request_irq(IRQ_AUTO_6, mac_bang, IRQ_FLG_LOCK,
 					"Off Switch", mac_bang);
 		}
 #endif
 	}
-	sys_request_irq(IRQ_AUTO_2, via2_irq, IRQ_FLG_LOCK|IRQ_FLG_FAST,
+	cpu_request_irq(IRQ_AUTO_2, via2_irq, IRQ_FLG_LOCK|IRQ_FLG_FAST,
 			"via2", (void *) via2);
 	if (!psc_present) {
-		sys_request_irq(IRQ_AUTO_4, mac_scc_dispatch, IRQ_FLG_LOCK,
+		cpu_request_irq(IRQ_AUTO_4, mac_scc_dispatch, IRQ_FLG_LOCK,
 				"scc", mac_scc_dispatch);
 	}
 	request_irq(IRQ_MAC_NUBUS, via_nubus_irq, IRQ_FLG_LOCK|IRQ_FLG_FAST,

@@ -3,13 +3,14 @@
  * Authors: Kristian Slavov <ksl@iki.fi>
  *
  */
+#include "workqueue.h"
+#include "debug.h"
+
 #include <asm/semaphore.h>
 #include <asm/percpu.h>
 #include <asm/system.h>
 #include <linux/list.h>
-
-#include "workqueue.h"
-#include "debug.h"
+#include <linux/interrupt.h>
 
 struct hip_pc_wq {
 	struct semaphore *worklock;
@@ -110,6 +111,7 @@ void hip_uninit_workqueue()
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
 
+	local_bh_disable();
 	wq = &__get_cpu_var(hip_workqueue);
 
 	list_for_each_safe(pos, iter, wq->workqueue) {
@@ -124,8 +126,8 @@ void hip_uninit_workqueue()
 		list_del(pos);
 	}
 	kfree(wq->workqueue);
-	/* XXX: is there a possiblity that somebody would be using the semaphore? */
 	kfree(wq->worklock);
+	local_bh_enable();
 }
 
 /* XXX: Redesign this one, to enable killing all the threads. */

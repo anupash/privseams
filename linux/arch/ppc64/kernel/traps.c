@@ -37,9 +37,6 @@
 #include <asm/processor.h>
 #include <asm/ppcdebug.h>
 
-extern int fix_alignment(struct pt_regs *);
-extern void bad_page_fault(struct pt_regs *, unsigned long, int);
-
 #ifdef CONFIG_PPC_PSERIES
 /* This is true if we are using the firmware NMI handler (typically LPAR) */
 extern int fwnmi_active;
@@ -67,14 +64,57 @@ EXPORT_SYMBOL(__debugger_fault_handler);
 
 static spinlock_t die_lock = SPIN_LOCK_UNLOCKED;
 
-void die(const char *str, struct pt_regs *regs, long err)
+int die(const char *str, struct pt_regs *regs, long err)
 {
 	static int die_counter;
+	int nl = 0;
+
+	if (debugger_fault_handler(regs))
+		return 1;
+
+	if (debugger(regs))
+		return 1;
 
 	console_verbose();
 	spin_lock_irq(&die_lock);
 	bust_spinlocks(1);
 	printk("Oops: %s, sig: %ld [#%d]\n", str, err, ++die_counter);
+#ifdef CONFIG_PREEMPT
+	printk("PREEMPT ");
+	nl = 1;
+#endif
+#ifdef CONFIG_SMP
+	printk("SMP NR_CPUS=%d ", NR_CPUS);
+	nl = 1;
+#endif
+#ifdef CONFIG_DEBUG_PAGEALLOC
+	printk("DEBUG_PAGEALLOC ");
+	nl = 1;
+#endif
+#ifdef CONFIG_NUMA
+	printk("NUMA ");
+	nl = 1;
+#endif
+	switch(systemcfg->platform) {
+		case PLATFORM_PSERIES:
+			printk("PSERIES ");
+			nl = 1;
+			break;
+		case PLATFORM_PSERIES_LPAR:
+			printk("PSERIES LPAR ");
+			nl = 1;
+			break;
+		case PLATFORM_ISERIES_LPAR:
+			printk("ISERIES LPAR ");
+			nl = 1;
+			break;
+		case PLATFORM_POWERMAC:
+			printk("POWERMAC ");
+			nl = 1;
+			break;
+	}
+	if (nl)
+		printk("\n");
 	show_regs(regs);
 	bust_spinlocks(0);
 	spin_unlock_irq(&die_lock);
@@ -89,15 +129,16 @@ void die(const char *str, struct pt_regs *regs, long err)
 		panic("Fatal exception");
 	}
 	do_exit(SIGSEGV);
+
+	return 0;
 }
 
 static void
 _exception(int signr, siginfo_t *info, struct pt_regs *regs)
 {
 	if (!user_mode(regs)) {
-		if (debugger(regs))
+		if (die("Exception in kernel mode", regs, signr))
 			return;
-		die("Exception in kernel mode\n", regs, signr);
 	}
 
 	force_sig_info(signr, info, current);
@@ -151,8 +192,7 @@ SystemResetException(struct pt_regs *regs)
 	}
 #endif
 
-	if (!debugger(regs))
-		die("System Reset", regs, 0);
+	die("System Reset", regs, 0);
 
 	/* Must die if the interrupt is not recoverable */
 	if (!(regs->msr & MSR_RI))
@@ -209,9 +249,6 @@ static int recover_mce(struct pt_regs *regs, struct rtas_error_log err)
  *
  * On hardware prior to Power 4 these exceptions were asynchronous which
  * means we can't tell exactly where it occurred and so we can't recover.
- *
- * Note that the debugger should test RI=0 and warn the user that system
- * state has been corrupted.
  */
 void
 MachineCheckException(struct pt_regs *regs)
@@ -229,12 +266,11 @@ MachineCheckException(struct pt_regs *regs)
 	}
 #endif
 
-	if (debugger_fault_handler(regs))
-		return;
-	if (debugger(regs))
-		return;
+	die("Machine check", regs, 0);
 
-	die("Machine check in kernel mode", regs, 0);
+	/* Must die if the interrupt is not recoverable */
+	if (!(regs->msr & MSR_RI))
+		panic("Unrecoverable Machine check");
 }
 
 void
@@ -360,9 +396,6 @@ ProgramCheckException(struct pt_regs *regs)
 {
 	siginfo_t info;
 
-	if (debugger_fault_handler(regs))
-		return;
-
 	if (regs->msr & 0x100000) {
 		/* IEEE FP exception */
 
@@ -401,16 +434,18 @@ ProgramCheckException(struct pt_regs *regs)
 	}
 }
 
-void
-KernelFPUnavailableException(struct pt_regs *regs)
+void KernelFPUnavailableException(struct pt_regs *regs)
 {
-	die("Unrecoverable FP Unavailable Exception in Kernel", regs, 0);
+	printk(KERN_EMERG "Unrecoverable FP Unavailable Exception "
+			  "%lx at %lx\n", regs->trap, regs->nip);
+	die("Unrecoverable FP Unavailable Exception", regs, SIGABRT);
 }
 
-void
-KernelAltivecUnavailableException(struct pt_regs *regs)
+void KernelAltivecUnavailableException(struct pt_regs *regs)
 {
-	die("Unrecoverable VMX/Altivec Unavailable Exception in Kernel", regs, 0);
+	printk(KERN_EMERG "Unrecoverable VMX/Altivec Unavailable Exception "
+			  "%lx at %lx\n", regs->trap, regs->nip);
+	die("Unrecoverable VMX/Altivec Unavailable Exception", regs, SIGABRT);
 }
 
 void
@@ -430,16 +465,16 @@ SingleStepException(struct pt_regs *regs)
 	_exception(SIGTRAP, &info, regs);	
 }
 
+static void dummy_perf(struct pt_regs *regs)
+{
+}
+
+void (*perf_irq)(struct pt_regs *) = dummy_perf;
+
 void
 PerformanceMonitorException(struct pt_regs *regs)
 {
-	siginfo_t info;
-
-	info.si_signo = SIGTRAP;
-	info.si_errno = 0;
-	info.si_code = TRAP_BRKPT;
-	info.si_addr = 0;
-	_exception(SIGTRAP, &info, regs);
+	perf_irq(regs);
 }
 
 void
@@ -491,6 +526,30 @@ AltivecAssistException(struct pt_regs *regs)
 	current->thread.vscr.u[3] |= 0x10000;
 }
 #endif /* CONFIG_ALTIVEC */
+
+/*
+ * We enter here if we get an unrecoverable exception, that is, one
+ * that happened at a point where the RI (recoverable interrupt) bit
+ * in the MSR is 0.  This indicates that SRR0/1 are live, and that
+ * we therefore lost state by taking this exception.
+ */
+void unrecoverable_exception(struct pt_regs *regs)
+{
+	printk(KERN_EMERG "Unrecoverable exception %lx at %lx\n",
+	       regs->trap, regs->nip);
+	die("Unrecoverable exception", regs, SIGABRT);
+}
+
+/*
+ * We enter here if we discover during exception entry that we are
+ * running in supervisor mode with a userspace value in the stack pointer.
+ */
+void kernel_bad_stack(struct pt_regs *regs)
+{
+	printk(KERN_EMERG "Bad kernel stack pointer %lx at %lx\n",
+	       regs->gpr[1], regs->nip);
+	die("Bad kernel stack pointer", regs, SIGABRT);
+}
 
 void __init trap_init(void)
 {

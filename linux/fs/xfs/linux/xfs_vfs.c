@@ -117,7 +117,6 @@ vfs_mntupdate(
 	return ((*bhvtovfsops(next)->vfs_mntupdate)(next, fl, args));
 }
 
-
 int
 vfs_root(
 	struct bhv_desc		*bdp,
@@ -229,6 +228,18 @@ vfs_force_shutdown(
 	while (! (bhvtovfsops(next))->vfs_force_shutdown)
 		next = BHV_NEXT(next);
 	((*bhvtovfsops(next)->vfs_force_shutdown)(next, fl, file, line));
+}
+
+void
+vfs_freeze(
+	struct bhv_desc		*bdp)
+{
+	struct bhv_desc		*next = bdp;
+
+	ASSERT(next);
+	while (! (bhvtovfsops(next))->vfs_freeze)
+		next = BHV_NEXT(next);
+	((*bhvtovfsops(next)->vfs_freeze)(next));
 }
 
 vfs_t *

@@ -24,7 +24,6 @@
 #include <linux/init.h>
 #include <linux/types.h>
 #include <linux/time.h>
-#include <linux/proc_fs.h>
 #include <linux/efi.h>
 
 #include <asm/io.h>
@@ -40,19 +39,6 @@ extern efi_status_t efi_call_phys (void *, ...);
 struct efi efi;
 EXPORT_SYMBOL(efi);
 static efi_runtime_services_t *runtime;
-
-/*
- * efi_dir is allocated here, but the directory isn't created
- * here, as proc_mkdir() doesn't work this early in the bootup
- * process.  Therefore, each module, like efivars, must test for
- *    if (!efi_dir)  efi_dir = proc_mkdir("efi", NULL);
- * prior to creating their own entries under /proc/efi.
- */
-#ifdef CONFIG_PROC_FS
-struct proc_dir_entry *efi_dir;
-EXPORT_SYMBOL(efi_dir);
-#endif
-
 static unsigned long mem_limit = ~0UL;
 
 #define efi_call_virt(f, args...)	(*(f))(args)
@@ -399,9 +385,7 @@ efi_map_pal_code (void)
 	int pal_code_count = 0;
 	u64 mask, psr;
 	u64 vaddr;
-#ifdef CONFIG_IA64_MCA
 	int cpu;
-#endif
 
 	efi_map_start = __va(ia64_boot_param->efi_memmap);
 	efi_map_end   = efi_map_start + ia64_boot_param->efi_memmap_size;
@@ -463,13 +447,11 @@ efi_map_pal_code (void)
 		ia64_set_psr(psr);		/* restore psr */
 		ia64_srlz_i();
 
-#ifdef CONFIG_IA64_MCA
 		cpu = smp_processor_id();
 
 		/* insert this TR into our list for MCA recovery purposes */
 		ia64_mca_tlb_list[cpu].pal_base = vaddr & mask;
 		ia64_mca_tlb_list[cpu].pal_paddr = pte_val(mk_pte_phys(md->phys_addr, PAGE_KERNEL));
-#endif
 	}
 }
 
@@ -678,8 +660,7 @@ efi_get_iobase (void)
 	for (p = efi_map_start; p < efi_map_end; p += efi_desc_size) {
 		md = p;
 		if (md->type == EFI_MEMORY_MAPPED_IO_PORT_SPACE) {
-			/* paranoia attribute checking */
-			if (md->attribute == (EFI_MEMORY_UC | EFI_MEMORY_RUNTIME))
+			if (md->attribute & EFI_MEMORY_UC)
 				return md->phys_addr;
 		}
 	}
@@ -752,10 +733,47 @@ valid_phys_addr_range (unsigned long phys_addr, unsigned long *size)
 	return 0;
 }
 
-static void __exit
-efivars_exit (void)
+int __init
+efi_uart_console_only(void)
 {
-#ifdef CONFIG_PROC_FS
- 	remove_proc_entry(efi_dir->name, NULL);
-#endif
+	efi_status_t status;
+	char *s, name[] = "ConOut";
+	efi_guid_t guid = EFI_GLOBAL_VARIABLE_GUID;
+	efi_char16_t *utf16, name_utf16[32];
+	unsigned char data[1024];
+	unsigned long size = sizeof(data);
+	struct efi_generic_dev_path *hdr, *end_addr;
+	int uart = 0;
+
+	/* Convert to UTF-16 */
+	utf16 = name_utf16;
+	s = name;
+	while (*s)
+		*utf16++ = *s++ & 0x7f;
+	*utf16 = 0;
+
+	status = efi.get_variable(name_utf16, &guid, NULL, &size, data);
+	if (status != EFI_SUCCESS) {
+		printk(KERN_ERR "No EFI %s variable?\n", name);
+		return 0;
+	}
+
+	hdr = (struct efi_generic_dev_path *) data;
+	end_addr = (struct efi_generic_dev_path *) ((u8 *) data + size);
+	while (hdr < end_addr) {
+		if (hdr->type == EFI_DEV_MSG &&
+		    hdr->sub_type == EFI_DEV_MSG_UART)
+			uart = 1;
+		else if (hdr->type == EFI_DEV_END_PATH ||
+			  hdr->type == EFI_DEV_END_PATH2) {
+			if (!uart)
+				return 0;
+			if (hdr->sub_type == EFI_DEV_END_ENTIRE)
+				return 1;
+			uart = 0;
+		}
+		hdr = (struct efi_generic_dev_path *) ((u8 *) hdr + hdr->length);
+	}
+	printk(KERN_ERR "Malformed %s value\n", name);
+	return 0;
 }

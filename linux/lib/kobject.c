@@ -185,8 +185,8 @@ static void kset_hotplug(const char *action, struct kset *kset,
 		}
 	}
 
-	pr_debug ("%s: %s %s %s %s %s %s\n", __FUNCTION__, argv[0], argv[1],
-		  envp[0], envp[1], envp[2], envp[3]);
+	pr_debug ("%s: %s %s %s %s %s %s %s\n", __FUNCTION__, argv[0], argv[1],
+		  envp[0], envp[1], envp[2], envp[3], envp[4]);
 	retval = call_usermodehelper (argv[0], argv, envp, 0);
 	if (retval)
 		pr_debug ("%s - call_usermodehelper returned %d\n",
@@ -349,16 +349,16 @@ int kobject_set_name(struct kobject * kobj, const char * fmt, ...)
 		/* 
 		 * Need more space? Allocate it and try again 
 		 */
-		name = kmalloc(need,GFP_KERNEL);
+		limit = need + 1;
+		name = kmalloc(limit,GFP_KERNEL);
 		if (!name) {
 			error = -ENOMEM;
 			goto Done;
 		}
-		limit = need;
 		need = vsnprintf(name,limit,fmt,args);
 
 		/* Still? Give up. */
-		if (need > limit) {
+		if (need >= limit) {
 			kfree(name);
 			error = -EFAULT;
 			goto Done;
@@ -425,14 +425,11 @@ void kobject_unregister(struct kobject * kobj)
 
 struct kobject * kobject_get(struct kobject * kobj)
 {
-	struct kobject * ret = kobj;
-
 	if (kobj) {
 		WARN_ON(!atomic_read(&kobj->refcount));
 		atomic_inc(&kobj->refcount);
-	} else
-		ret = NULL;
-	return ret;
+	}
+	return kobj;
 }
 
 /**

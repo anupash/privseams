@@ -872,7 +872,7 @@ int rme96xx_init(rme96xx_info* s)
 	int status;
 	unsigned short rev;
 
-	DBG(printk(__FUNCTION__"\n"));
+	DBG(printk("%s\n", __FUNCTION__));
 	numcards++;
 
 	s->magic = RME96xx_MAGIC; 
@@ -972,7 +972,7 @@ static int __devinit rme96xx_probe(struct pci_dev *pcidev, const struct pci_devi
 	int i;
 	rme96xx_info *s;
 
-	DBG(printk(__FUNCTION__"\n"));
+	DBG(printk("%s\n", __FUNCTION__));
 	
 	if (pcidev->irq == 0) 
 		return -1;
@@ -1320,7 +1320,7 @@ static int rme96xx_ioctl(struct inode *in, struct file *file, unsigned int cmd, 
 		count = rme96xx_getispace(dma,val);
 
 		abinfo.fragsize = (s->fragsize*dma->inchannels)>>dma->formatshift;
-                abinfo.bytes = (count*dma->inchannels)>>dma->formatshift;;
+                abinfo.bytes = (count*dma->inchannels)>>dma->formatshift;
                 abinfo.fragstotal = 2;
                 abinfo.fragments = count > s->fragsize; 
 		return copy_to_user((void *)arg, &abinfo, sizeof(abinfo)) ? -EFAULT : 0;
@@ -1348,7 +1348,7 @@ static int rme96xx_ioctl(struct inode *in, struct file *file, unsigned int cmd, 
 			return -EINVAL;
 		val = rme96xx_gethwptr(dma->s,0);
 		spin_lock_irqsave(&s->lock,flags);
-                cinfo.bytes = s->fragsize<<1;;
+                cinfo.bytes = s->fragsize<<1;
 		count = val - dma->readptr;
 		if (count < 0)
 			count += s->fragsize<<1;
@@ -1368,7 +1368,7 @@ static int rme96xx_ioctl(struct inode *in, struct file *file, unsigned int cmd, 
 			return -EINVAL;
 		val = rme96xx_gethwptr(dma->s,0);
 		spin_lock_irqsave(&s->lock,flags);
-                cinfo.bytes = s->fragsize<<1;;
+                cinfo.bytes = s->fragsize<<1;
 		count = val - dma->writeptr;
 		if (count < 0)
 			count += s->fragsize<<1;
@@ -1501,7 +1501,7 @@ static int rme96xx_release(struct inode *in, struct file *file)
 {
 	struct dmabuf * dma = (struct dmabuf*) file->private_data;
 	/* int hwp;  ... was unused   HP20020201 */
-	DBG(printk(__FUNCTION__"\n"));
+	DBG(printk("%s\n", __FUNCTION__));
 
 	COMM          ("draining")
 	if (dma->open_mode & FMODE_WRITE) {

@@ -512,7 +512,7 @@ static int bcsp_recv(struct hci_uart *hu, void *data, int count)
 	struct bcsp_struct *bcsp = hu->priv;
 	register unsigned char *ptr;
 
-	BT_DBG("hu %p count %d rx_state %ld rx_count %ld", 
+	BT_DBG("hu %p count %d rx_state %d rx_count %ld", 
 		hu, count, bcsp->rx_state, bcsp->rx_count);
 
 	ptr = data;
@@ -617,7 +617,7 @@ static int bcsp_recv(struct hci_uart *hu, void *data, int count)
 					bcsp->rx_count = 0;
 					return 0;
 				}
-				bcsp->rx_skb->dev = (void *) &hu->hdev;
+				bcsp->rx_skb->dev = (void *) hu->hdev;
 				break;
 			}
 			break;

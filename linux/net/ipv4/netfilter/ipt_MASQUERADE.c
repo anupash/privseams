@@ -45,7 +45,7 @@ masquerade_check(const char *tablename,
 	const struct ip_nat_multi_range *mr = targinfo;
 
 	if (strcmp(tablename, "nat") != 0) {
-		DEBUGP("masquerade_check: bad table `%s'.\n", table);
+		DEBUGP("masquerade_check: bad table `%s'.\n", tablename);
 		return 0;
 	}
 	if (targinfosize != IPT_ALIGN(sizeof(*mr))) {
@@ -116,6 +116,7 @@ masquerade_target(struct sk_buff **pskb,
 			if (net_ratelimit())
 				printk("MASQUERADE:"
 				       " Route sent us somewhere else.\n");
+			ip_rt_put(rt);
 			return NF_DROP;
 		}
 	}

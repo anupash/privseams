@@ -44,7 +44,8 @@
 #include <linux/ptrace.h>
 #include <linux/mount.h>
 #include <linux/security.h>
-#include <linux/rmap-locking.h>
+#include <linux/syscalls.h>
+#include <linux/rmap.h>
 
 #include <asm/uaccess.h>
 #include <asm/pgalloc.h>
@@ -341,7 +342,7 @@ out_sig:
 	return;
 }
 
-int setup_arg_pages(struct linux_binprm *bprm)
+int setup_arg_pages(struct linux_binprm *bprm, int executable_stack)
 {
 	unsigned long stack_base;
 	struct vm_area_struct *mpnt;
@@ -424,8 +425,16 @@ int setup_arg_pages(struct linux_binprm *bprm)
 		mpnt->vm_start = PAGE_MASK & (unsigned long) bprm->p;
 		mpnt->vm_end = STACK_TOP;
 #endif
-		mpnt->vm_page_prot = protection_map[VM_STACK_FLAGS & 0x7];
-		mpnt->vm_flags = VM_STACK_FLAGS;
+		/* Adjust stack execute permissions; explicitly enable
+		 * for EXSTACK_ENABLE_X, disable for EXSTACK_DISABLE_X
+		 * and leave alone (arch default) otherwise. */
+		if (unlikely(executable_stack == EXSTACK_ENABLE_X))
+			mpnt->vm_flags = VM_STACK_FLAGS |  VM_EXEC;
+		else if (executable_stack == EXSTACK_DISABLE_X)
+			mpnt->vm_flags = VM_STACK_FLAGS & ~VM_EXEC;
+		else
+			mpnt->vm_flags = VM_STACK_FLAGS;
+		mpnt->vm_page_prot = protection_map[mpnt->vm_flags & 0x7];
 		mpnt->vm_ops = NULL;
 		mpnt->vm_pgoff = 0;
 		mpnt->vm_file = NULL;
@@ -600,6 +609,13 @@ static inline int de_thread(struct task_struct *tsk)
 		newsig->group_stop_count = 0;
 		newsig->curr_target = NULL;
 		init_sigpending(&newsig->shared_pending);
+		INIT_LIST_HEAD(&newsig->posix_timers);
+
+		newsig->tty = oldsig->tty;
+		newsig->pgrp = oldsig->pgrp;
+		newsig->session = oldsig->session;
+		newsig->leader = oldsig->leader;
+		newsig->tty_old_pgrp = oldsig->tty_old_pgrp;
 	}
 
 	if (thread_group_empty(current))
@@ -842,7 +858,6 @@ int flush_old_exec(struct linux_binprm * bprm)
 			
 	flush_signal_handlers(current, 0);
 	flush_old_files(current->files);
-	exit_itimers(current);
 
 	return 0;
 
@@ -854,15 +869,6 @@ out:
 }
 
 EXPORT_SYMBOL(flush_old_exec);
-
-/*
- * We mustn't allow tracing of suid binaries, unless
- * the tracer has the capability to trace anything..
- */
-static inline int must_not_trace_exec(struct task_struct * p)
-{
-	return (p->ptrace & PT_PTRACED) && !(p->ptrace & PT_PTRACE_CAP);
-}
 
 /* 
  * Fill the binprm structure from the inode. 
@@ -913,44 +919,30 @@ int prepare_binprm(struct linux_binprm *bprm)
 
 EXPORT_SYMBOL(prepare_binprm);
 
-/*
- * This function is used to produce the new IDs and capabilities
- * from the old ones and the file's capabilities.
- *
- * The formula used for evolving capabilities is:
- *
- *       pI' = pI
- * (***) pP' = (fP & X) | (fI & pI)
- *       pE' = pP' & fE          [NB. fE is 0 or ~0]
- *
- * I=Inheritable, P=Permitted, E=Effective // p=process, f=file
- * ' indicates post-exec(), and X is the global 'cap_bset'.
- *
- */
+static inline int unsafe_exec(struct task_struct *p)
+{
+	int unsafe = 0;
+	if (p->ptrace & PT_PTRACED) {
+		if (p->ptrace & PT_PTRACE_CAP)
+			unsafe |= LSM_UNSAFE_PTRACE_CAP;
+		else
+			unsafe |= LSM_UNSAFE_PTRACE;
+	}
+	if (atomic_read(&p->fs->count) > 1 ||
+	    atomic_read(&p->files->count) > 1 ||
+	    atomic_read(&p->sighand->count) > 1)
+		unsafe |= LSM_UNSAFE_SHARE;
+
+	return unsafe;
+}
 
 void compute_creds(struct linux_binprm *bprm)
 {
+	int unsafe;
 	task_lock(current);
-	if (bprm->e_uid != current->uid || bprm->e_gid != current->gid) {
-                current->mm->dumpable = 0;
-		
-		if (must_not_trace_exec(current)
-		    || atomic_read(&current->fs->count) > 1
-		    || atomic_read(&current->files->count) > 1
-		    || atomic_read(&current->sighand->count) > 1) {
-			if(!capable(CAP_SETUID)) {
-				bprm->e_uid = current->uid;
-				bprm->e_gid = current->gid;
-			}
-		}
-	}
-
-        current->suid = current->euid = current->fsuid = bprm->e_uid;
-        current->sgid = current->egid = current->fsgid = bprm->e_gid;
-
+	unsafe = unsafe_exec(current);
+	security_bprm_apply_creds(bprm, unsafe);
 	task_unlock(current);
-
-	security_bprm_compute_creds(bprm);
 }
 
 EXPORT_SYMBOL(compute_creds);
@@ -1386,7 +1378,7 @@ int do_coredump(long signr, int exit_code, struct pt_regs * regs)
 		goto fail_unlock;
 
  	format_corename(corename, core_pattern, signr);
-	file = filp_open(corename, O_CREAT | 2 | O_NOFOLLOW, 0600);
+	file = filp_open(corename, O_CREAT | 2 | O_NOFOLLOW | O_LARGEFILE, 0600);
 	if (IS_ERR(file))
 		goto fail_unlock;
 	inode = file->f_dentry->d_inode;

@@ -1,4 +1,3 @@
-
 /*
  * ras.c
  * Copyright (C) 2001 Dave Engebretsen IBM Corporation
@@ -36,7 +35,6 @@
 #include <linux/pci.h>
 #include <linux/delay.h>
 #include <linux/irq.h>
-#include <linux/proc_fs.h>
 #include <linux/random.h>
 #include <linux/sysrq.h>
 
@@ -69,12 +67,19 @@ static int __init init_ras_IRQ(void)
 {
 	struct device_node *np;
 	unsigned int *ireg, len, i;
+	int virq;
 
 	if ((np = of_find_node_by_path("/event-sources/internal-errors")) &&
 	    (ireg = (unsigned int *)get_property(np, "open-pic-interrupt",
 						 &len))) {
 		for (i=0; i<(len / sizeof(*ireg)); i++) {
-			request_irq(virt_irq_create_mapping(*(ireg)) + NUM_8259_INTERRUPTS, 
+			virq = virt_irq_create_mapping(*(ireg));
+			if (virq == NO_IRQ) {
+				printk(KERN_ERR "Unable to allocate interrupt "
+				       "number for %s\n", np->full_name);
+				break;
+			}
+			request_irq(irq_offset_up(virq),
 				    ras_error_interrupt, 0, 
 				    "RAS_ERROR", NULL);
 			ireg++;
@@ -86,7 +91,13 @@ static int __init init_ras_IRQ(void)
 	    (ireg = (unsigned int *)get_property(np, "open-pic-interrupt",
 						 &len))) {
 		for (i=0; i<(len / sizeof(*ireg)); i++) {
-			request_irq(virt_irq_create_mapping(*(ireg)) + NUM_8259_INTERRUPTS, 
+			virq = virt_irq_create_mapping(*(ireg));
+			if (virq == NO_IRQ) {
+				printk(KERN_ERR "Unable to allocate interrupt "
+				       " number for %s\n", np->full_name);
+				break;
+			}
+			request_irq(irq_offset_up(virq),
 				    ras_epow_interrupt, 0, 
 				    "RAS_EPOW", NULL);
 			ireg++;
@@ -97,6 +108,9 @@ static int __init init_ras_IRQ(void)
 	return 1;
 }
 __initcall(init_ras_IRQ);
+
+static struct rtas_error_log log_buf;
+static spinlock_t log_lock = SPIN_LOCK_UNLOCKED;
 
 /*
  * Handle power subsystem events (EPOW).
@@ -112,11 +126,17 @@ ras_epow_interrupt(int irq, void *dev_id, struct pt_regs * regs)
 	unsigned int size = sizeof(log_entry);
 	long status = 0xdeadbeef;
 
+	spin_lock(&log_lock);
+
 	status = rtas_call(rtas_token("check-exception"), 6, 1, NULL, 
 			   0x500, irq, 
 			   RTAS_EPOW_WARNING | RTAS_POWERMGM_EVENTS, 
 			   1,  /* Time Critical */
-			   __pa(&log_entry), size);
+			   __pa(&log_buf), size);
+
+	log_entry = log_buf;
+
+	spin_unlock(&log_lock);
 
 	udbg_printf("EPOW <0x%lx 0x%lx>\n", 
 		    *((unsigned long *)&log_entry), status); 
@@ -145,11 +165,17 @@ ras_error_interrupt(int irq, void *dev_id, struct pt_regs * regs)
 	long status = 0xdeadbeef;
 	int fatal;
 
+	spin_lock(&log_lock);
+
 	status = rtas_call(rtas_token("check-exception"), 6, 1, NULL, 
 			   0x500, irq, 
 			   RTAS_INTERNAL_ERROR, 
 			   1, /* Time Critical */
-			   __pa(&log_entry), size);
+			   __pa(&log_buf), size);
+
+	log_entry = log_buf;
+
+	spin_unlock(&log_lock);
 
 	if ((status == 0) && (log_entry.severity >= SEVERITY_ERROR_SYNC)) 
 		fatal = 1;

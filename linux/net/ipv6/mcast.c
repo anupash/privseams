@@ -152,8 +152,10 @@ int ip6_mc_leave_src(struct sock *sk, struct ipv6_mc_socklist *iml,
 #define IGMP6_UNSOLICITED_IVAL	(10*HZ)
 #define MLD_QRV_DEFAULT		2
 
-#define MLD_V1_SEEN(idev) ((idev)->mc_v1_seen && \
-		time_before(jiffies, (idev)->mc_v1_seen))
+#define MLD_V1_SEEN(idev) (ipv6_devconf.force_mld_version == 1 || \
+		(idev)->cnf.force_mld_version == 1 || \
+		((idev)->mc_v1_seen && \
+		time_before(jiffies, (idev)->mc_v1_seen)))
 
 #define MLDV2_MASK(value, nb) ((nb)>=32 ? (value) : ((1<<(nb))-1) & (value))
 #define MLDV2_EXP(thresh, nbmant, nbexp, value) \
@@ -163,6 +165,10 @@ int ip6_mc_leave_src(struct sock *sk, struct ipv6_mc_socklist *iml,
 
 #define MLDV2_QQIC(value) MLDV2_EXP(0x80, 4, 3, value)
 #define MLDV2_MRC(value) MLDV2_EXP(0x8000, 12, 3, value)
+
+#define IPV6_MLD_MAX_MSF	10
+
+int sysctl_mld_max_msf = IPV6_MLD_MAX_MSF;
 
 /*
  *	socket join on multicast group
@@ -402,6 +408,10 @@ int ip6_mc_source(int add, int omode, struct sock *sk,
 	}
 	/* else, add a new source to the filter */
 
+	if (psl && psl->sl_count >= sysctl_mld_max_msf) {
+		err = -ENOBUFS;
+		goto done;
+	}
 	if (!psl || psl->sl_count == psl->sl_max) {
 		struct ip6_sf_socklist *newpsl;
 		int count = IP6_SFBLOCK;
@@ -901,6 +911,33 @@ int ipv6_dev_mc_dec(struct net_device *dev, struct in6_addr *addr)
 }
 
 /*
+ * identify MLD packets for MLD filter exceptions
+ */
+int ipv6_is_mld(struct sk_buff *skb, int nexthdr)
+{
+	struct icmp6hdr *pic;
+
+	if (nexthdr != IPPROTO_ICMPV6)
+		return 0;
+
+	if (!pskb_may_pull(skb, sizeof(struct icmp6hdr)))
+		return 0;
+
+	pic = (struct icmp6hdr *)skb->h.raw;
+
+	switch (pic->icmp6_type) {
+	case ICMPV6_MGM_QUERY:
+	case ICMPV6_MGM_REPORT:
+	case ICMPV6_MGM_REDUCTION:
+	case ICMPV6_MLD2_REPORT:
+		return 1;
+	default:
+		break;
+	}
+	return 0;
+}
+
+/*
  *	check if the interface/address pair is valid
  */
 int ipv6_chk_mcast_addr(struct net_device *dev, struct in6_addr *group,
@@ -918,7 +955,7 @@ int ipv6_chk_mcast_addr(struct net_device *dev, struct in6_addr *group,
 				break;
 		}
 		if (mc) {
-			if (!ipv6_addr_any(src_addr)) {
+			if (src_addr && !ipv6_addr_any(src_addr)) {
 				struct ip6_sf_list *psf;
 
 				spin_lock_bh(&mc->mca_lock);
@@ -1280,6 +1317,7 @@ static void mld_sendpack(struct sk_buff *skb)
 	struct inet6_dev *idev = in6_dev_get(skb->dev);
 	int err;
 
+	IP6_INC_STATS(Ip6OutRequests);
 	payload_len = skb->tail - (unsigned char *)skb->nh.ipv6h -
 		sizeof(struct ipv6hdr);
 	mldlen = skb->tail - skb->h.raw;
@@ -1289,8 +1327,12 @@ static void mld_sendpack(struct sk_buff *skb)
 		IPPROTO_ICMPV6, csum_partial(skb->h.raw, mldlen, 0));
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, skb->dev,
 		dev_queue_xmit);
-	if (!err)
+	if (!err) {
 		ICMP6_INC_STATS(idev,Icmp6OutMsgs);
+		IP6_INC_STATS(Ip6OutMcastPkts);
+	} else
+		IP6_INC_STATS(Ip6OutDiscards);
+
 	if (likely(idev != NULL))
 		in6_dev_put(idev);
 }
@@ -1571,6 +1613,7 @@ static void igmp6_send(struct in6_addr *addr, struct net_device *dev, int type)
 		     IPV6_TLV_ROUTERALERT, 2, 0, 0,
 		     IPV6_TLV_PADN, 0 };
 
+	IP6_INC_STATS(Ip6OutRequests);
 	snd_addr = addr;
 	if (type == ICMPV6_MGM_REDUCTION) {
 		snd_addr = &all_routers;
@@ -1583,8 +1626,10 @@ static void igmp6_send(struct in6_addr *addr, struct net_device *dev, int type)
 
 	skb = sock_alloc_send_skb(sk, LL_RESERVED_SPACE(dev) + full_len, 1, &err);
 
-	if (skb == NULL)
+	if (skb == NULL) {
+		IP6_INC_STATS(Ip6OutDiscards);
 		return;
+	}
 
 	skb_reserve(skb, LL_RESERVED_SPACE(dev));
 	if (dev->hard_header) {
@@ -1627,13 +1672,16 @@ static void igmp6_send(struct in6_addr *addr, struct net_device *dev, int type)
 		else
 			ICMP6_INC_STATS(idev, Icmp6OutGroupMembResponses);
 		ICMP6_INC_STATS(idev, Icmp6OutMsgs);
-	}
+		IP6_INC_STATS(Ip6OutMcastPkts);
+	} else
+		IP6_INC_STATS(Ip6OutDiscards);
 
 	if (likely(idev != NULL))
 		in6_dev_put(idev);
 	return;
 
 out:
+	IP6_INC_STATS(Ip6OutDiscards);
 	kfree_skb(skb);
 }
 
@@ -2404,7 +2452,7 @@ int __init igmp6_init(struct net_proto_family *ops)
 	struct sock *sk;
 	int err;
 
-	err = sock_create(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6, &igmp6_socket);
+	err = sock_create_kern(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6, &igmp6_socket);
 	if (err < 0) {
 		printk(KERN_ERR
 		       "Failed to initialize the IGMP6 control socket (err %d).\n",

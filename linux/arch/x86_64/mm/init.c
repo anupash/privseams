@@ -37,7 +37,9 @@
 #include <asm/proto.h>
 #include <asm/smp.h>
 
+#ifndef Dprintk
 #define Dprintk(x...)
+#endif
 
 extern char _stext[];
 
@@ -402,6 +404,13 @@ void __init mem_init(void)
 	int codesize, reservedpages, datasize, initsize;
 	int tmp;
 
+#ifdef CONFIG_SWIOTLB
+	if (!iommu_aperture && end_pfn >= 0xffffffff>>PAGE_SHIFT)
+	       swiotlb = 1;
+	if (swiotlb)
+		swiotlb_init();	
+#endif
+
 	/* How many end-of-memory variables you have, grandma! */
 	max_low_pfn = end_pfn;
 	max_pfn = end_pfn;
@@ -540,4 +549,60 @@ int kern_addr_valid(unsigned long addr)
 	if (pte_none(*pte))
 		return 0;
 	return pfn_valid(pte_pfn(*pte));
+}
+
+#ifdef CONFIG_SYSCTL
+#include <linux/sysctl.h>
+
+extern int exception_trace, page_fault_trace;
+
+static ctl_table debug_table2[] = {
+	{ 99, "exception-trace", &exception_trace, sizeof(int), 0644, NULL,
+	  proc_dointvec },
+#ifdef CONFIG_CHECKING
+	{ 100, "page-fault-trace", &page_fault_trace, sizeof(int), 0644, NULL,
+	  proc_dointvec },
+#endif
+	{ 0, }
+}; 
+
+static ctl_table debug_root_table2[] = { 
+	{ .ctl_name = CTL_DEBUG, .procname = "debug", .mode = 0555, 
+	   .child = debug_table2 }, 
+	{ 0 }, 
+}; 
+
+static __init int x8664_sysctl_init(void)
+{ 
+	register_sysctl_table(debug_root_table2, 1);
+	return 0;
+}
+__initcall(x8664_sysctl_init);
+#endif
+
+/* Pseudo VMAs to allow ptrace access for the vsyscall pages.  x86-64 has two
+   different ones: one for 32bit and one for 64bit. Use the appropiate
+   for the target task. */
+
+static struct vm_area_struct gate_vma = {
+	.vm_start = VSYSCALL_START,
+	.vm_end = VSYSCALL_END,
+	.vm_page_prot = PAGE_READONLY
+};
+
+static struct vm_area_struct gate32_vma = {
+	.vm_start = VSYSCALL32_BASE,
+	.vm_end = VSYSCALL32_END,
+	.vm_page_prot = PAGE_READONLY
+};
+
+struct vm_area_struct *get_gate_vma(struct task_struct *tsk)
+{
+	return test_tsk_thread_flag(tsk, TIF_IA32) ? &gate32_vma : &gate_vma;
+}
+
+int in_gate_area(struct task_struct *task, unsigned long addr)
+{
+	struct vm_area_struct *vma = get_gate_vma(task);
+	return (addr >= vma->vm_start) && (addr < vma->vm_end);
 }

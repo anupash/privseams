@@ -1,7 +1,7 @@
 /*
  *  drivers/s390/cio/cio.c
  *   S/390 common I/O routines -- low level i/o calls
- *   $Revision: 1.114 $
+ *   $Revision: 1.121 $
  *
  *    Copyright (C) 1999-2002 IBM Deutschland Entwicklung GmbH,
  *			      IBM Corporation
@@ -51,15 +51,6 @@ cio_setup (char *parm)
 }
 
 __setup ("cio_msg=", cio_setup);
-
-
-#ifdef CONFIG_PROC_FS
-void
-init_irq_proc(void)
-{
-	/* For now, nothing... */
-}
-#endif
 
 /*
  * Function: cio_debug_init
@@ -173,7 +164,7 @@ cio_start_handle_notoper(struct subchannel *sch, __u8 lpm)
 	stsch (sch->irq, &sch->schib);
 
 	CIO_MSG_EVENT(0, "cio_start: 'not oper' status for "
-		      "subchannel %s!\n", sch->dev.bus_id);
+		      "subchannel %04x!\n", sch->irq);
 	sprintf(dbf_text, "no%s", sch->dev.bus_id);
 	CIO_TRACE_EVENT(0, dbf_text);
 	CIO_HEX_EVENT(0, &sch->schib, sizeof (struct schib));
@@ -572,9 +563,9 @@ cio_validate_subchannel (struct subchannel *sch, unsigned int irq)
 		sch->opm;
 
 	CIO_DEBUG(KERN_INFO, 0,
-		  "Detected device %04X on subchannel %s"
+		  "Detected device %04X on subchannel %04X"
 		  " - PIM = %02X, PAM = %02X, POM = %02X\n",
-		  sch->schib.pmcw.dev, sch->dev.bus_id, sch->schib.pmcw.pim,
+		  sch->schib.pmcw.dev, sch->irq, sch->schib.pmcw.pim,
 		  sch->schib.pmcw.pam, sch->schib.pmcw.pom);
 
 	/*
@@ -607,6 +598,7 @@ do_IRQ (struct pt_regs *regs)
 	struct irb *irb;
 
 	irq_enter ();
+	asm volatile ("mc 0,0");
 	if (S390_lowcore.int_clock >= S390_lowcore.jiffy_timer)
 		account_ticks(regs);
 	/*
@@ -782,3 +774,68 @@ cio_get_console_subchannel(void)
 }
 
 #endif
+static inline int
+__disable_subchannel_easy(unsigned int schid, struct schib *schib)
+{
+	int retry, cc;
+
+	cc = 0;
+	for (retry=0;retry<3;retry++) {
+		schib->pmcw.ena = 0;
+		cc = msch(schid, schib);
+		if (cc)
+			return (cc==3?-ENODEV:-EBUSY);
+		stsch(schid, schib);
+		if (!schib->pmcw.ena)
+			return 0;
+	}
+	return -EBUSY; /* uhm... */
+}
+
+static inline int
+__clear_subchannel_easy(unsigned int schid)
+{
+	int retry;
+
+	if (csch(schid))
+		return -ENODEV;
+	for (retry=0;retry<20;retry++) {
+		struct tpi_info ti;
+
+		if (tpi(&ti)) {
+			tsch(schid, (struct irb *)__LC_IRB);
+			return 0;
+		}
+		udelay(100);
+	}
+	return -EBUSY;
+}
+
+extern void do_reipl(unsigned long devno);
+/* Make sure all subchannels are quiet before we re-ipl an lpar. */
+void
+reipl(unsigned long devno)
+{
+	unsigned int schid;
+
+	local_irq_disable();
+	for (schid=0;schid<=highest_subchannel;schid++) {
+		struct schib schib;
+		if (stsch(schid, &schib))
+			goto out;
+		if (!schib.pmcw.ena)
+			continue;
+		switch(__disable_subchannel_easy(schid, &schib)) {
+		case 0:
+		case -ENODEV:
+			break;
+		default: /* -EBUSY */
+			if (__clear_subchannel_easy(schid))
+				break; /* give up... */
+			stsch(schid, &schib);
+			__disable_subchannel_easy(schid, &schib);
+		}
+	}
+out:
+	do_reipl(devno);
+}

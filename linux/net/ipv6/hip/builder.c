@@ -924,7 +924,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 {
 	hip_tlv_type_t type = hip_get_param_type(param);
 	int err = 0;
-
+	
 	switch(type) {
 	case HIP_PARAM_HIP_TRANSFORM:
 	{

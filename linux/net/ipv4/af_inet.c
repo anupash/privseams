@@ -843,11 +843,7 @@ int inet_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 		case SIOCGSTAMP:
-			if (!sk->sk_stamp.tv_sec)
-				err = -ENOENT;
-			else if (copy_to_user((void *)arg, &sk->sk_stamp,
-					      sizeof(struct timeval)))
-				err = -EFAULT;
+			err = sock_get_timestamp(sk, (struct timeval *)arg);
 			break;
 		case SIOCADDRT:
 		case SIOCDELRT:
@@ -1166,16 +1162,6 @@ static int __init inet_init(void)
 	 */
 
 	icmp_init(&inet_family_ops);
-
-	/* I wish inet_add_protocol had no constructor hook...
-	   I had to move IPIP from net/ipv4/protocol.c :-( --ANK
-	 */
-#ifdef CONFIG_NET_IPIP
-	ipip_init();
-#endif
-#ifdef CONFIG_NET_IPGRE
-	ipgre_init();
-#endif
 
 	/*
 	 *	Initialise the multicast router

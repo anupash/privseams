@@ -1183,7 +1183,7 @@ static void csi_m(int currcons)
 	update_attr(currcons);
 }
 
-static void respond_string(const char * p, struct tty_struct * tty)
+static void respond_string(const char *p, struct tty_struct *tty)
 {
 	while (*p) {
 		tty_insert_flip_char(tty, *p, 0);
@@ -1192,7 +1192,7 @@ static void respond_string(const char * p, struct tty_struct * tty)
 	con_schedule_flip(tty);
 }
 
-static void cursor_report(int currcons, struct tty_struct * tty)
+static void cursor_report(int currcons, struct tty_struct *tty)
 {
 	char buf[40];
 
@@ -1200,7 +1200,7 @@ static void cursor_report(int currcons, struct tty_struct * tty)
 	respond_string(buf, tty);
 }
 
-static inline void status_report(struct tty_struct * tty)
+static inline void status_report(struct tty_struct *tty)
 {
 	respond_string("\033[0n", tty);	/* Terminal ok */
 }
@@ -1210,7 +1210,7 @@ static inline void respond_ID(struct tty_struct * tty)
 	respond_string(VT102ID, tty);
 }
 
-void mouse_report(struct tty_struct * tty, int butt, int mrx, int mry)
+void mouse_report(struct tty_struct *tty, int butt, int mrx, int mry)
 {
 	char buf[8];
 
@@ -1868,7 +1868,7 @@ char con_buf[PAGE_SIZE];
 DECLARE_MUTEX(con_buf_sem);
 
 /* acquires console_sem */
-static int do_con_write(struct tty_struct * tty, int from_user,
+static int do_con_write(struct tty_struct *tty, int from_user,
 			const unsigned char *buf, int count)
 {
 #ifdef VT_BUF_VRAM_ONLY
@@ -1883,14 +1883,24 @@ static int do_con_write(struct tty_struct * tty, int from_user,
 	int c, tc, ok, n = 0, draw_x = -1;
 	unsigned int currcons;
 	unsigned long draw_from = 0, draw_to = 0;
-	struct vt_struct *vt = (struct vt_struct *)tty->driver_data;
+	struct vt_struct *vt;
 	u16 himask, charmask;
 	const unsigned char *orig_buf = NULL;
 	int orig_count;
 
 	if (in_interrupt())
 		return count;
-		
+
+	might_sleep();
+
+	acquire_console_sem();
+	vt = tty->driver_data;
+	if (vt == NULL) {
+		printk(KERN_ERR "vt: argh, driver_data is NULL !\n");
+		release_console_sem();
+		return 0;
+	}
+
 	currcons = vt->vc_num;
 	if (!vc_cons_allocated(currcons)) {
 	    /* could this happen? */
@@ -1899,13 +1909,16 @@ static int do_con_write(struct tty_struct * tty, int from_user,
 		error = 1;
 		printk("con_write: tty %d not allocated\n", currcons+1);
 	    }
+	    release_console_sem();
 	    return 0;
 	}
+	release_console_sem();
 
 	orig_buf = buf;
 	orig_count = count;
 
 	if (from_user) {
+
 		down(&con_buf_sem);
 
 again:
@@ -1928,6 +1941,13 @@ again:
 	 */
 
 	acquire_console_sem();
+
+	vt = tty->driver_data;
+	if (vt == NULL) {
+		printk(KERN_ERR "vt: argh, driver_data _became_ NULL !\n");
+		release_console_sem();
+		goto out;
+	}
 
 	himask = hi_font_mask;
 	charmask = himask ? 0x1ff : 0xff;
@@ -2083,7 +2103,8 @@ static void console_callback(void *ignored)
 	acquire_console_sem();
 
 	if (want_console >= 0) {
-		if (want_console != fg_console && vc_cons_allocated(want_console)) {
+		if (want_console != fg_console &&
+		    vc_cons_allocated(want_console)) {
 			hide_cursor(fg_console);
 			change_console(want_console);
 			/* we only changed when the console had already
@@ -2127,7 +2148,7 @@ struct tty_driver *console_driver;
  * The console must be locked when we get here.
  */
 
-void vt_console_print(struct console *co, const char * b, unsigned count)
+void vt_console_print(struct console *co, const char *b, unsigned count)
 {
 	int currcons = fg_console;
 	unsigned char c;
@@ -2257,7 +2278,7 @@ int tioclinux(struct tty_struct *tty, unsigned long arg)
 
 	if (tty->driver->type != TTY_DRIVER_TYPE_CONSOLE)
 		return -EINVAL;
-	if (current->tty != tty && !capable(CAP_SYS_ADMIN))
+	if (current->signal->tty != tty && !capable(CAP_SYS_ADMIN))
 		return -EPERM;
 	if (get_user(type, (char *)arg))
 		return -EFAULT;
@@ -2295,7 +2316,7 @@ int tioclinux(struct tty_struct *tty, unsigned long arg)
 			break;
 		case TIOCL_SETVESABLANK:
 			set_vesa_blanking(arg);
-			break;;
+			break;
 		case TIOCL_SETKMSGREDIRECT:
 			if (!capable(CAP_SYS_ADMIN)) {
 				ret = -EPERM;
@@ -2332,10 +2353,10 @@ int tioclinux(struct tty_struct *tty, unsigned long arg)
 }
 
 /*
- *	/dev/ttyN handling
+ * /dev/ttyN handling
  */
 
-static int con_write(struct tty_struct * tty, int from_user,
+static int con_write(struct tty_struct *tty, int from_user,
 		     const unsigned char *buf, int count)
 {
 	int	retval;
@@ -2350,7 +2371,7 @@ static int con_write(struct tty_struct * tty, int from_user,
 static void con_put_char(struct tty_struct *tty, unsigned char ch)
 {
 	if (in_interrupt())
-		return;		/* n_r3964 calls put_char() from interrupt context */
+		return;	/* n_r3964 calls put_char() from interrupt context */
 	pm_access(pm_con);
 	do_con_write(tty, 0, &ch, 1);
 }
@@ -2378,7 +2399,7 @@ static void con_throttle(struct tty_struct *tty)
 
 static void con_unthrottle(struct tty_struct *tty)
 {
-	struct vt_struct *vt = (struct vt_struct *) tty->driver_data;
+	struct vt_struct *vt = tty->driver_data;
 
 	wake_up_interruptible(&vt->paste_wait);
 }
@@ -2424,7 +2445,7 @@ static void con_flush_chars(struct tty_struct *tty)
 	
 	/* if we race with con_close(), vt may be null */
 	acquire_console_sem();
-	vt = (struct vt_struct *)tty->driver_data;
+	vt = tty->driver_data;
 	if (vt)
 		set_cursor(vt->vc_num);
 	release_console_sem();
@@ -2433,47 +2454,65 @@ static void con_flush_chars(struct tty_struct *tty)
 /*
  * Allocate the console screen memory.
  */
-static int con_open(struct tty_struct *tty, struct file * filp)
+static int con_open(struct tty_struct *tty, struct file *filp)
 {
-	unsigned int	currcons;
-	int i;
-
-	currcons = tty->index;
+	unsigned int currcons = tty->index;
+	int ret = 0;
 
 	acquire_console_sem();
-	i = vc_allocate(currcons);
-	release_console_sem();
-	if (i)
-		return i;
+	if (tty->count == 1) {
+		ret = vc_allocate(currcons);
+		if (ret == 0) {
+			vt_cons[currcons]->vc_num = currcons;
+			tty->driver_data = vt_cons[currcons];
+			vc_cons[currcons].d->vc_tty = tty;
 
-	vt_cons[currcons]->vc_num = currcons;
-	tty->driver_data = vt_cons[currcons];
-	vc_cons[currcons].d->vc_tty = tty;
-
-	if (!tty->winsize.ws_row && !tty->winsize.ws_col) {
-		tty->winsize.ws_row = video_num_lines;
-		tty->winsize.ws_col = video_num_columns;
+			if (!tty->winsize.ws_row && !tty->winsize.ws_col) {
+				tty->winsize.ws_row = video_num_lines;
+				tty->winsize.ws_col = video_num_columns;
+			}
+			release_console_sem();
+			vcs_make_devfs(tty);
+			return ret;
+		}
 	}
-	if (tty->count == 1)
-		vcs_make_devfs(tty);
-	return 0;
+	release_console_sem();
+	return ret;
 }
 
-static void con_close(struct tty_struct *tty, struct file * filp)
+/*
+ * We take tty_sem in here to prevent another thread from coming in via init_dev
+ * and taking a ref against the tty while we're in the process of forgetting
+ * about it and cleaning things up.
+ *
+ * This is because vcs_remove_devfs() can sleep and will drop the BKL.
+ */
+static void con_close(struct tty_struct *tty, struct file *filp)
 {
-	struct vt_struct *vt;
-	
-	if (!tty || tty->count != 1)
-		return;
+	down(&tty_sem);
+	acquire_console_sem();
+	if (tty && tty->count == 1) {
+		struct vt_struct *vt;
 
-	vcs_remove_devfs(tty);
-	vt = (struct vt_struct*)tty->driver_data;
-	if (vt)
-		vc_cons[vt->vc_num].d->vc_tty = NULL;
-	tty->driver_data = 0;
+		vt = tty->driver_data;
+		if (vt)
+			vc_cons[vt->vc_num].d->vc_tty = NULL;
+		tty->driver_data = 0;
+		release_console_sem();
+		vcs_remove_devfs(tty);
+		up(&tty_sem);
+		/*
+		 * tty_sem is released, but we still hold BKL, so there is
+		 * still exclusion against init_dev()
+		 */
+		return;
+	}
+	release_console_sem();
+	up(&tty_sem);
 }
 
-static void vc_init(unsigned int currcons, unsigned int rows, unsigned int cols, int do_clear)
+static void vc_init(unsigned int currcons, unsigned int rows,
+			unsigned int cols, int do_clear)
 {
 	int j, k ;
 
@@ -2578,6 +2617,8 @@ static struct tty_operations con_ops = {
 
 int __init vty_init(void)
 {
+	vcs_init();
+
 	console_driver = alloc_tty_driver(MAX_NR_CONSOLES);
 	if (!console_driver)
 		panic("Couldn't allocate console driver\n");
@@ -2605,7 +2646,6 @@ int __init vty_init(void)
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
 	fb_console_init();
 #endif	
-	vcs_init();
 	return 0;
 }
 
@@ -2719,12 +2759,12 @@ static void vesa_powerdown(void)
      *  Called only if powerdown features are allowed.
      */
     switch (vesa_blank_mode) {
-	case VESA_NO_BLANKING:
-	    c->vc_sw->con_blank(c, VESA_VSYNC_SUSPEND+1);
+    case VESA_NO_BLANKING:
+	    c->vc_sw->con_blank(c, VESA_VSYNC_SUSPEND+1, 0);
 	    break;
-	case VESA_VSYNC_SUSPEND:
-	case VESA_HSYNC_SUSPEND:
-	    c->vc_sw->con_blank(c, VESA_POWERDOWN+1);
+    case VESA_VSYNC_SUSPEND:
+    case VESA_HSYNC_SUSPEND:
+	    c->vc_sw->con_blank(c, VESA_POWERDOWN+1, 0);
 	    break;
     }
 }
@@ -2752,7 +2792,7 @@ void do_blank_screen(int entering_gfx)
 	if (entering_gfx) {
 		hide_cursor(currcons);
 		save_screen(currcons);
-		sw->con_blank(vc_cons[currcons].d, -1);
+		sw->con_blank(vc_cons[currcons].d, -1, 1);
 		console_blanked = fg_console + 1;
 		set_origin(currcons);
 		return;
@@ -2770,7 +2810,7 @@ void do_blank_screen(int entering_gfx)
 
 	save_screen(currcons);
 	/* In case we need to reset origin, blanking hook returns 1 */
-	i = sw->con_blank(vc_cons[currcons].d, 1);
+	i = sw->con_blank(vc_cons[currcons].d, 1, 0);
 	console_blanked = fg_console + 1;
 	if (i)
 		set_origin(currcons);
@@ -2784,14 +2824,14 @@ void do_blank_screen(int entering_gfx)
 	}
 
     	if (vesa_blank_mode)
-		sw->con_blank(vc_cons[currcons].d, vesa_blank_mode + 1);
+		sw->con_blank(vc_cons[currcons].d, vesa_blank_mode + 1, 0);
 }
 
 
 /*
  * Called by timer as well as from vt_console_driver
  */
-void unblank_screen(void)
+void do_unblank_screen(int leaving_gfx)
 {
 	int currcons;
 
@@ -2815,13 +2855,24 @@ void unblank_screen(void)
 	}
 
 	console_blanked = 0;
-	if (sw->con_blank(vc_cons[currcons].d, 0))
+	if (sw->con_blank(vc_cons[currcons].d, 0, leaving_gfx))
 		/* Low-level driver cannot restore -> do it ourselves */
 		update_screen(fg_console);
 	if (console_blank_hook)
 		console_blank_hook(0);
 	set_palette(currcons);
 	set_cursor(fg_console);
+}
+
+/*
+ * This is called by the outside world to cause a forced unblank, mostly for
+ * oopses. Currently, I just call do_unblank_screen(0), but we could eventually
+ * call it with 1 as an argument and so force a mode restore... that may kill
+ * X or at least garbage the screen but would also make the Oops visible...
+ */
+void unblank_screen(void)
+{
+	do_unblank_screen(0);
 }
 
 /*

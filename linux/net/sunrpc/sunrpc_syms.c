@@ -63,6 +63,8 @@ EXPORT_SYMBOL(rpc_mkpipe);
 EXPORT_SYMBOL(xprt_create_proto);
 EXPORT_SYMBOL(xprt_destroy);
 EXPORT_SYMBOL(xprt_set_timeout);
+EXPORT_SYMBOL(xprt_udp_slot_table_entries);
+EXPORT_SYMBOL(xprt_tcp_slot_table_entries);
 
 /* Client credential cache */
 EXPORT_SYMBOL(rpcauth_register);
@@ -85,15 +87,16 @@ EXPORT_SYMBOL(svc_recv);
 EXPORT_SYMBOL(svc_wake_up);
 EXPORT_SYMBOL(svc_makesock);
 EXPORT_SYMBOL(svc_reserve);
+EXPORT_SYMBOL(svc_auth_register);
+EXPORT_SYMBOL(auth_domain_lookup);
 
 /* RPC statistics */
 #ifdef CONFIG_PROC_FS
 EXPORT_SYMBOL(rpc_proc_register);
 EXPORT_SYMBOL(rpc_proc_unregister);
-EXPORT_SYMBOL(rpc_proc_read);
 EXPORT_SYMBOL(svc_proc_register);
 EXPORT_SYMBOL(svc_proc_unregister);
-EXPORT_SYMBOL(svc_proc_read);
+EXPORT_SYMBOL(svc_seq_show);
 #endif
 
 /* caching... */
@@ -117,7 +120,6 @@ EXPORT_SYMBOL(svcauth_unix_purge);
 EXPORT_SYMBOL(unix_domain_find);
 
 /* Generic XDR */
-EXPORT_SYMBOL(xdr_encode_array);
 EXPORT_SYMBOL(xdr_encode_string);
 EXPORT_SYMBOL(xdr_decode_string);
 EXPORT_SYMBOL(xdr_decode_string_inplace);
@@ -126,11 +128,10 @@ EXPORT_SYMBOL(xdr_encode_netobj);
 EXPORT_SYMBOL(xdr_encode_pages);
 EXPORT_SYMBOL(xdr_inline_pages);
 EXPORT_SYMBOL(xdr_shift_buf);
-EXPORT_SYMBOL(xdr_write_pages);
-EXPORT_SYMBOL(xdr_read_pages);
 EXPORT_SYMBOL(xdr_buf_from_iov);
 EXPORT_SYMBOL(xdr_buf_subsegment);
 EXPORT_SYMBOL(xdr_buf_read_netobj);
+EXPORT_SYMBOL(read_bytes_from_xdr_buf);
 
 /* Debugging symbols */
 #ifdef RPC_DEBUG

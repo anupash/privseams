@@ -240,7 +240,8 @@ int sirdev_receive(struct sir_dev *dev, const unsigned char *cp, size_t count)
 	}
 
 	if (!dev->irlap) {
-		WARNING("%s - too early: %p / %d!\n", __FUNCTION__, cp, count);
+		WARNING("%s - too early: %p / %zd!\n",
+			__FUNCTION__, cp, count);
 		return -1;
 	}
 
@@ -250,7 +251,7 @@ int sirdev_receive(struct sir_dev *dev, const unsigned char *cp, size_t count)
 		 */
 		irda_device_set_media_busy(dev->netdev, TRUE);
 		dev->stats.rx_dropped++;
-		IRDA_DEBUG(0, "%s; rx-drop: %d\n", __FUNCTION__, count);
+		IRDA_DEBUG(0, "%s; rx-drop: %zd\n", __FUNCTION__, count);
 		return 0;
 	}
 
@@ -619,8 +620,6 @@ struct sir_dev * sirdev_get_instance(const struct sir_driver *drv, const char *n
 	dev->netdev = ndev;
 
 	SET_MODULE_OWNER(ndev);
-
-	dev->flags = IFF_SIR | IFF_PIO;
 
 	/* Override the network functions we need to use */
 	ndev->hard_start_xmit = sirdev_hard_xmit;

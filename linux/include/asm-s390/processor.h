@@ -82,10 +82,10 @@ typedef struct {
  */
 struct thread_struct {
 	s390_fp_regs fp_regs;
-	unsigned int ar2;		/* kernel access register 2         */
-        unsigned int ar4;               /* kernel access register 4         */
+	unsigned int  acrs[NUM_ACRS];
         unsigned long ksp;              /* kernel stack pointer             */
         unsigned long user_seg;         /* HSTD                             */
+	mm_segment_t mm_segment;
         unsigned long prot_addr;        /* address of protection-excep.     */
         unsigned int error_code;        /* error-code of last prog-excep.   */
         unsigned int trap_no;
@@ -98,6 +98,8 @@ struct thread_struct {
 
 typedef struct thread_struct thread_struct;
 
+#define ARCH_MIN_TASKALIGN	8
+
 #ifndef __s390x__
 # define __SWAPPER_PG_DIR __pa(&swapper_pg_dir[0]) + _SEGMENT_TABLE
 #else /* __s390x__ */
@@ -106,9 +108,10 @@ typedef struct thread_struct thread_struct;
 
 #define INIT_THREAD {{0,{{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},	       \
 			    {0},{0},{0},{0},{0},{0}}},			       \
-		     0, 0,						       \
+		     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},	       \
 		     sizeof(init_stack) + (unsigned long) &init_stack,	       \
 		     __SWAPPER_PG_DIR,					       \
+		     {0},						       \
 		     0,0,0,						       \
 		     (per_struct) {{{{0,}}},0,0,0,0,{{0,}}},		       \
 		     0, 0						       \
@@ -167,7 +170,7 @@ extern void show_trace(struct task_struct *task, unsigned long *sp);
 
 unsigned long get_wchan(struct task_struct *p);
 #define __KSTK_PTREGS(tsk) ((struct pt_regs *) \
-        (((unsigned long) tsk->thread_info + THREAD_SIZE - sizeof(struct pt_regs)) & -8L))
+        ((unsigned long) tsk->thread_info + THREAD_SIZE - sizeof(struct pt_regs)))
 #define KSTK_EIP(tsk)	(__KSTK_PTREGS(tsk)->psw.addr)
 #define KSTK_ESP(tsk)	(__KSTK_PTREGS(tsk)->gprs[15])
 

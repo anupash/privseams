@@ -70,6 +70,7 @@ static const char __module_cat(name,__LINE__)[]				  \
 extern const struct gtype##_id __mod_##gtype##_table		\
   __attribute__ ((unused, alias(__stringify(name))))
 
+extern struct module __this_module;
 #define THIS_MODULE (&__this_module)
 
 #else  /* !MODULE */
@@ -126,6 +127,24 @@ extern const struct gtype##_id __mod_##gtype##_table		\
 
 #define MODULE_DEVICE_TABLE(type,name)		\
   MODULE_GENERIC_TABLE(type##_device,name)
+
+/* Version of form [<epoch>:]<version>[-<extra-version>].
+   Or for CVS/RCS ID version, everything but the number is stripped.
+  <epoch>: A (small) unsigned integer which allows you to start versions
+           anew. If not mentioned, it's zero.  eg. "2:1.0" is after
+	   "1:2.0".
+  <version>: The <version> may contain only alphanumerics and the
+           character `.'.  Ordered by numeric sort for numeric parts,
+	   ascii sort for ascii parts (as per RPM or DEB algorithm).
+  <extraversion>: Like <version>, but inserted for local
+           customizations, eg "rh3" or "rusty1".
+
+  Using this automatically adds a checksum of the .c files and the
+  local headers to the end.  Use MODULE_VERSION("") if you want just
+  this.  Macro includes room for this.
+*/
+#define MODULE_VERSION(_version) \
+  MODULE_INFO(version, _version "\0xxxxxxxxxxxxxxxxxxxxxxxx")
 
 /* Given an address, look for it in the exception tables */
 const struct exception_table_entry *search_exception_tables(unsigned long add);
@@ -282,6 +301,10 @@ struct module *module_get_kallsym(unsigned int symnum,
 				  unsigned long *value,
 				  char *type,
 				  char namebuf[128]);
+
+/* Look for this name: can be of form module:name. */
+unsigned long module_kallsyms_lookup_name(const char *name);
+
 int is_exported(const char *name, const struct module *mod);
 
 extern void __module_put_and_exit(struct module *mod, long code)
@@ -434,6 +457,11 @@ static inline struct module *module_get_kallsym(unsigned int symnum,
 	return NULL;
 }
 
+static inline unsigned long module_kallsyms_lookup_name(const char *name)
+{
+	return 0;
+}
+
 static inline int is_exported(const char *name, const struct module *mod)
 {
 	return 0;
@@ -453,21 +481,6 @@ static inline int unregister_module_notifier(struct notifier_block * nb)
 #define module_put_and_exit(code) do_exit(code)
 
 #endif /* CONFIG_MODULES */
-
-#ifdef MODULE
-extern struct module __this_module;
-#ifdef KBUILD_MODNAME
-/* We make the linker do some of the work. */
-struct module __this_module
-__attribute__((section(".gnu.linkonce.this_module"))) = {
-	.name = __stringify(KBUILD_MODNAME),
-	.init = init_module,
-#ifdef CONFIG_MODULE_UNLOAD
-	.exit = cleanup_module,
-#endif
-};
-#endif /* KBUILD_MODNAME */
-#endif /* MODULE */
 
 #define symbol_request(x) try_then_request_module(symbol_get(x), "symbol:" #x)
 

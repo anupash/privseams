@@ -427,7 +427,7 @@ static u32 twkill_thread_slots;
 static int tcp_do_twkill_work(int slot, unsigned int quota)
 {
 	struct tcp_tw_bucket *tw;
-	struct hlist_node *node, *safe;
+	struct hlist_node *node;
 	unsigned int killed;
 	int ret;
 
@@ -439,8 +439,8 @@ static int tcp_do_twkill_work(int slot, unsigned int quota)
 	 */
 	killed = 0;
 	ret = 0;
-	tw_for_each_inmate(tw, node, safe,
-			   &tcp_tw_death_row[slot]) {
+rescan:
+	tw_for_each_inmate(tw, node, &tcp_tw_death_row[slot]) {
 		__tw_del_dead_node(tw);
 		spin_unlock(&tw_death_lock);
 		tcp_timewait_kill(tw);
@@ -451,6 +451,14 @@ static int tcp_do_twkill_work(int slot, unsigned int quota)
 			ret = 1;
 			break;
 		}
+
+		/* While we dropped tw_death_lock, another cpu may have
+		 * killed off the next TW bucket in the list, therefore
+		 * do a fresh re-read of the hlist head node with the
+		 * lock reacquired.  We still use the hlist traversal
+		 * macro in order to get the prefetches.
+		 */
+		goto rescan;
 	}
 
 	tcp_tw_count -= killed;
@@ -637,7 +645,7 @@ void tcp_twcal_tick(unsigned long dummy)
 			struct hlist_node *node, *safe;
 			struct tcp_tw_bucket *tw;
 
-			tw_for_each_inmate(tw, node, safe,
+			tw_for_each_inmate_safe(tw, node, safe,
 					   &tcp_twcal_row[slot]) {
 				__tw_del_dead_node(tw);
 				tcp_timewait_kill(tw);
@@ -758,10 +766,13 @@ struct sock *tcp_create_openreq_child(struct sock *sk, struct open_request *req,
 		newtp->snd_cwnd = 2;
 		newtp->snd_cwnd_cnt = 0;
 
+		newtp->bictcp.cnt = 0;
+		newtp->bictcp.last_max_cwnd = newtp->bictcp.last_cwnd = 0;
+
 		newtp->frto_counter = 0;
 		newtp->frto_highmark = 0;
 
-		newtp->ca_state = TCP_CA_Open;
+		tcp_set_ca_state(newtp, TCP_CA_Open);
 		tcp_init_xmit_timers(newsk);
 		skb_queue_head_init(&newtp->out_of_order_queue);
 		newtp->send_head = NULL;
@@ -833,6 +844,7 @@ struct sock *tcp_create_openreq_child(struct sock *sk, struct open_request *req,
 		if (newtp->ecn_flags&TCP_ECN_OK)
 			newsk->sk_no_largesend = 1;
 
+		tcp_vegas_init(newtp);
 		TCP_INC_STATS_BH(TcpPassiveOpens);
 	}
 	return newsk;

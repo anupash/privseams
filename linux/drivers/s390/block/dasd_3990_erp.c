@@ -5,7 +5,7 @@
  * Bugreports.to..: <Linux390@de.ibm.com>
  * (C) IBM Corporation, IBM Deutschland Entwicklung GmbH, 2000, 2001
  *
- * $Revision: 1.26 $
+ * $Revision: 1.30 $
  */
 
 #include <linux/timer.h>
@@ -229,7 +229,7 @@ dasd_3990_erp_block_queue(struct dasd_ccw_req * erp, int expires)
 	struct dasd_device *device = erp->device;
 
 	DEV_MESSAGE(KERN_INFO, device,
-		    "blocking request queue for %is", expires);
+		    "blocking request queue for %is", expires/HZ);
 
 	device->stopped |= DASD_STOPPED_PENDING;
 	erp->status = DASD_CQR_QUEUED;
@@ -1763,6 +1763,7 @@ dasd_3990_erp_action_1B_32(struct dasd_ccw_req * default_erp, char *sense)
 	erp->magic = default_erp->magic;
 	erp->expires = 0;
 	erp->retries = 256;
+	cqr->buildclk = get_clock();
 	erp->status = DASD_CQR_FILLED;
 
 	/* remove the default erp */
@@ -2129,13 +2130,10 @@ dasd_3990_erp_inspect_32(struct dasd_ccw_req * erp, char *sense)
 		/* single program action codes (byte25 bit 0 == '0') */
 		switch (sense[25]) {
 
-		case 0x00:	/* success */
-			DEV_MESSAGE(KERN_DEBUG, device,
-				    "ERP called for successful request %p"
-				    " - NO ERP necessary", erp);
-
-			erp = dasd_3990_erp_cleanup(erp, DASD_CQR_DONE);
-
+		case 0x00:	/* success - use default ERP for retries */
+		        DEV_MESSAGE(KERN_DEBUG, device, "%s",
+				    "ERP called for successful request"
+				    " - just retry");
 			break;
 
 		case 0x01:	/* fatal error */
@@ -2626,7 +2624,7 @@ dasd_3990_erp_action(struct dasd_ccw_req * cqr)
 
 #ifdef ERP_DEBUG
 	/* print current erp_chain */
-	DEV_MESSAGE(KERN_DEBUG, device, "%s",
+	DEV_MESSAGE(KERN_ERR, device, "%s",
 		    "ERP chain at BEGINNING of ERP-ACTION");
 	{
 		struct dasd_ccw_req *temp_erp = NULL;
@@ -2634,9 +2632,10 @@ dasd_3990_erp_action(struct dasd_ccw_req * cqr)
 		for (temp_erp = cqr;
 		     temp_erp != NULL; temp_erp = temp_erp->refers) {
 
-			DEV_MESSAGE(KERN_DEBUG, device,
-				    "	   erp %p refers to %p",
-				    temp_erp, temp_erp->refers);
+			DEV_MESSAGE(KERN_ERR, device,
+				    "   erp %p (%02x) refers to %p",
+				    temp_erp, temp_erp->status,
+				    temp_erp->refers);
 		}
 	}
 #endif				/* ERP_DEBUG */
@@ -2678,15 +2677,16 @@ dasd_3990_erp_action(struct dasd_ccw_req * cqr)
 
 #ifdef ERP_DEBUG
 	/* print current erp_chain */
-	DEV_MESSAGE(KERN_DEBUG, device, "%s", "ERP chain at END of ERP-ACTION");
+	DEV_MESSAGE(KERN_ERR, device, "%s", "ERP chain at END of ERP-ACTION");
 	{
 		struct dasd_ccw_req *temp_erp = NULL;
 		for (temp_erp = erp;
 		     temp_erp != NULL; temp_erp = temp_erp->refers) {
 
-			DEV_MESSAGE(KERN_DEBUG, device,
-				    "	   erp %p refers to %p",
-				    temp_erp, temp_erp->refers);
+			DEV_MESSAGE(KERN_ERR, device,
+				    "   erp %p (%02x) refers to %p",
+				    temp_erp, temp_erp->status,
+				    temp_erp->refers);
 		}
 	}
 #endif				/* ERP_DEBUG */

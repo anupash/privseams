@@ -144,7 +144,7 @@ static void		 ip_rt_update_pmtu(struct dst_entry *dst, u32 mtu);
 static int rt_garbage_collect(void);
 
 
-struct dst_ops ipv4_dst_ops = {
+static struct dst_ops ipv4_dst_ops = {
 	.family =		AF_INET,
 	.protocol =		__constant_htons(ETH_P_IP),
 	.gc =			rt_garbage_collect,
@@ -1525,7 +1525,7 @@ e_inval:
  *	2. IP spoofing attempts are filtered with 100% of guarantee.
  */
 
-int ip_route_input_slow(struct sk_buff *skb, u32 daddr, u32 saddr,
+static int ip_route_input_slow(struct sk_buff *skb, u32 daddr, u32 saddr,
 			u8 tos, struct net_device *dev)
 {
 	struct fib_result res;
@@ -1910,7 +1910,7 @@ int ip_route_input(struct sk_buff *skb, u32 daddr, u32 saddr,
  * Major route resolver routine.
  */
 
-int ip_route_output_slow(struct rtable **rp, const struct flowi *oldflp)
+static int ip_route_output_slow(struct rtable **rp, const struct flowi *oldflp)
 {
 	u32 tos	= oldflp->fl4_tos & (IPTOS_RT_MASK | RTO_ONLINK);
 	struct flowi fl = { .nl_u = { .ip4_u =
@@ -2717,6 +2717,16 @@ static int ip_rt_acct_read(char *buffer, char **start, off_t offset,
 #endif /* CONFIG_PROC_FS */
 #endif /* CONFIG_NET_CLS_ROUTE */
 
+static __initdata unsigned long rhash_entries;
+static int __init set_rhash_entries(char *str)
+{
+	if (!str)
+		return 0;
+	rhash_entries = simple_strtoul(str, &str, 0);
+	return 1;
+}
+__setup("rhash_entries=", set_rhash_entries);
+
 int __init ip_rt_init(void)
 {
 	int i, order, goal, rc = 0;
@@ -2743,7 +2753,8 @@ int __init ip_rt_init(void)
 		panic("IP: failed to allocate ip_dst_cache\n");
 
 	goal = num_physpages >> (26 - PAGE_SHIFT);
-
+	if (rhash_entries)
+		goal = (rhash_entries * sizeof(struct rt_hash_bucket)) >> PAGE_SHIFT;
 	for (order = 0; (1UL << order) < goal; order++)
 		/* NOTHING */;
 

@@ -115,6 +115,7 @@ static int romfs_fill_super(struct super_block *s, void *data, int silent)
 {
 	struct buffer_head *bh;
 	struct romfs_super_block *rsb;
+	struct inode *root;
 	int sz;
 
 	/* I would parse the options here, but there are none.. :) */
@@ -154,23 +155,25 @@ static int romfs_fill_super(struct super_block *s, void *data, int silent)
 	      strnlen(rsb->name, ROMFS_MAXFN) + 1 + ROMFH_PAD)
 	     & ROMFH_MASK;
 
-	brelse(bh);
-
 	s->s_op	= &romfs_ops;
+	root = iget(s, sz);
+	if (!root)
+		goto out;
+
 	s->s_root = d_alloc_root(iget(s, sz));
 
 	if (!s->s_root)
-		goto outnobh;
+		goto outiput;
 
-	/* Ehrhm; sorry.. :)  And thanks to Hans-Joachim Widmaier  :) */
-	if (0) {
-out:
-		brelse(bh);
-outnobh:
-		return -EINVAL;
-	}
-
+	brelse(bh);
 	return 0;
+
+outiput:
+	iput(root);
+out:
+	brelse(bh);
+outnobh:
+	return -EINVAL;
 }
 
 /* That's simple too. */
@@ -589,11 +592,18 @@ static void destroy_inodecache(void)
 		printk(KERN_INFO "romfs_inode_cache: not all structures were freed\n");
 }
 
+static int romfs_remount(struct super_block *sb, int *flags, char *data)
+{
+	*flags |= MS_RDONLY;
+	return 0;
+}
+
 static struct super_operations romfs_ops = {
 	.alloc_inode	= romfs_alloc_inode,
 	.destroy_inode	= romfs_destroy_inode,
 	.read_inode	= romfs_read_inode,
 	.statfs		= romfs_statfs,
+	.remount_fs	= romfs_remount,
 };
 
 static struct super_block *romfs_get_sb(struct file_system_type *fs_type,

@@ -134,13 +134,22 @@ struct sysv_sem {
 	struct sem_undo_list *undo_list;
 };
 
-asmlinkage long sys_semget (key_t key, int nsems, int semflg);
-asmlinkage long sys_semop (int semid, struct sembuf __user *sops, unsigned nsops);
-asmlinkage long sys_semctl (int semid, int semnum, int cmd, union semun arg);
-asmlinkage long sys_semtimedop(int semid, struct sembuf __user *sops,
-			unsigned nsops, const struct timespec __user *timeout);
+#ifdef CONFIG_SYSVIPC
 
-void exit_sem(struct task_struct *p);
+extern int copy_semundo(unsigned long clone_flags, struct task_struct *tsk);
+extern void exit_sem(struct task_struct *tsk);
+
+#else
+static inline int copy_semundo(unsigned long clone_flags, struct task_struct *tsk)
+{
+	return 0;
+}
+
+static inline void exit_sem(struct task_struct *tsk)
+{
+	return;
+}
+#endif
 
 #endif /* __KERNEL__ */
 

@@ -15,11 +15,16 @@
 #include <linux/backing-dev.h>
 #include <linux/pagevec.h>
 
+void default_unplug_io_fn(struct backing_dev_info *bdi)
+{
+}
+EXPORT_SYMBOL(default_unplug_io_fn);
+
 struct backing_dev_info default_backing_dev_info = {
 	.ra_pages	= (VM_MAX_READAHEAD * 1024) / PAGE_CACHE_SIZE,
 	.state		= 0,
+	.unplug_io_fn	= default_unplug_io_fn,
 };
-
 EXPORT_SYMBOL_GPL(default_backing_dev_info);
 
 /*
@@ -30,8 +35,8 @@ file_ra_state_init(struct file_ra_state *ra, struct address_space *mapping)
 {
 	memset(ra, 0, sizeof(*ra));
 	ra->ra_pages = mapping->backing_dev_info->ra_pages;
+	ra->average = ra->ra_pages / 2;
 }
-
 EXPORT_SYMBOL(file_ra_state_init);
 
 /*
@@ -47,7 +52,7 @@ static inline unsigned long get_min_readahead(struct file_ra_state *ra)
 	return (VM_MIN_READAHEAD * 1024) / PAGE_CACHE_SIZE;
 }
 
-#define list_to_page(head) (list_entry((head)->prev, struct page, list))
+#define list_to_page(head) (list_entry((head)->prev, struct page, lru))
 
 /**
  * read_cache_pages - populate an address space with some pages, and
@@ -71,7 +76,7 @@ int read_cache_pages(struct address_space *mapping, struct list_head *pages,
 
 	while (!list_empty(pages)) {
 		page = list_to_page(pages);
-		list_del(&page->list);
+		list_del(&page->lru);
 		if (add_to_page_cache(page, mapping, page->index, GFP_KERNEL)) {
 			page_cache_release(page);
 			continue;
@@ -84,7 +89,7 @@ int read_cache_pages(struct address_space *mapping, struct list_head *pages,
 				struct page *victim;
 
 				victim = list_to_page(pages);
-				list_del(&victim->list);
+				list_del(&victim->lru);
 				page_cache_release(victim);
 			}
 			break;
@@ -111,7 +116,7 @@ static int read_pages(struct address_space *mapping, struct file *filp,
 	pagevec_init(&lru_pvec, 0);
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page = list_to_page(pages);
-		list_del(&page->list);
+		list_del(&page->lru);
 		if (!add_to_page_cache(page, mapping,
 					page->index, GFP_KERNEL)) {
 			mapping->a_ops->readpage(filp, page);
@@ -229,7 +234,7 @@ __do_page_cache_readahead(struct address_space *mapping, struct file *filp,
 	/*
 	 * Preallocate as many pages as we will need.
 	 */
-	spin_lock(&mapping->page_lock);
+	spin_lock_irq(&mapping->tree_lock);
 	for (page_idx = 0; page_idx < nr_to_read; page_idx++) {
 		unsigned long page_offset = offset + page_idx;
 		
@@ -240,16 +245,16 @@ __do_page_cache_readahead(struct address_space *mapping, struct file *filp,
 		if (page)
 			continue;
 
-		spin_unlock(&mapping->page_lock);
+		spin_unlock_irq(&mapping->tree_lock);
 		page = page_cache_alloc_cold(mapping);
-		spin_lock(&mapping->page_lock);
+		spin_lock_irq(&mapping->tree_lock);
 		if (!page)
 			break;
 		page->index = page_offset;
-		list_add(&page->list, &page_pool);
+		list_add(&page->lru, &page_pool);
 		ret++;
 	}
-	spin_unlock(&mapping->page_lock);
+	spin_unlock_irq(&mapping->tree_lock);
 
 	/*
 	 * Now start the IO.  We ignore I/O errors - if the page is not
@@ -380,9 +385,18 @@ page_cache_readahead(struct address_space *mapping, struct file_ra_state *ra,
 		 */
 		first_access=1;
 		ra->next_size = max / 2;
+		ra->prev_page = offset;
+		ra->serial_cnt++;
 		goto do_io;
 	}
 
+	if (offset == ra->prev_page + 1) {
+		if (ra->serial_cnt <= (max * 2))
+			ra->serial_cnt++;
+	} else {
+		ra->average = (ra->average + ra->serial_cnt) / 2;
+		ra->serial_cnt = 1;
+	}
 	preoffset = ra->prev_page;
 	ra->prev_page = offset;
 
@@ -449,8 +463,12 @@ do_io:
 			  * accessed in the current window, there
 			  * is a high probability that around 'n' pages
 			  * shall be used in the next current window.
+			  *
+			  * To minimize lazy-readahead triggered
+			  * in the next current window, read in
+			  * an extra page.
 			  */
-			ra->next_size = preoffset - ra->start + 1;
+			ra->next_size = preoffset - ra->start + 2;
 		}
 		ra->start = offset;
 		ra->size = ra->next_size;
@@ -468,17 +486,34 @@ do_io:
 		}
 	} else {
 		/*
-		 * This read request is within the current window.  It is time
-		 * to submit I/O for the ahead window while the application is
-		 * crunching through the current window.
+		 * This read request is within the current window.  It may be
+		 * time to submit I/O for the ahead window while the
+		 * application is about to step into the ahead window.
 		 */
 		if (ra->ahead_start == 0) {
-			ra->ahead_start = ra->start + ra->size;
-			ra->ahead_size = ra->next_size;
-			actual = do_page_cache_readahead(mapping, filp,
+			/*
+			 * if the average io-size is less than maximum
+			 * readahead size of the file the io pattern is
+			 * sequential. Hence  bring in the readahead window
+			 * immediately.
+			 * Else the i/o pattern is random. Bring
+			 * in the readahead window only if the last page of
+			 * the current window is accessed (lazy readahead).
+			 */
+			unsigned long average = ra->average;
+
+			if (ra->serial_cnt > average)
+				average = (ra->serial_cnt + ra->average) / 2;
+
+			if ((average >= max) || (offset == (ra->start +
+							ra->size - 1))) {
+				ra->ahead_start = ra->start + ra->size;
+				ra->ahead_size = ra->next_size;
+				actual = do_page_cache_readahead(mapping, filp,
 					ra->ahead_start, ra->ahead_size);
-			check_ra_success(ra, ra->ahead_size,
-					actual, orig_next_size);
+				check_ra_success(ra, ra->ahead_size,
+						actual, orig_next_size);
+			}
 		}
 	}
 out:

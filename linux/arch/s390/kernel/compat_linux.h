@@ -4,6 +4,7 @@
 #include <linux/config.h>
 #include <linux/compat.h>
 #include <linux/socket.h>
+#include <linux/syscalls.h>
 #include <linux/nfs_fs.h>
 #include <linux/sunrpc/svc.h>
 #include <linux/nfsd/nfsd.h>
@@ -142,6 +143,11 @@ typedef struct
 #define PSW32_USER_BITS	(PSW32_BASE_BITS | PSW32_MASK_DAT | PSW32_ASC_HOME | \
 			 PSW32_MASK_IO | PSW32_MASK_EXT | PSW32_MASK_MCHECK | \
 			 PSW32_MASK_PSTATE)
+
+#define PSW32_MASK_MERGE(CURRENT,NEW) \
+        (((CURRENT) & ~(PSW32_MASK_CC|PSW32_MASK_PM)) | \
+         ((NEW) & (PSW32_MASK_CC|PSW32_MASK_PM)))
+
 
 typedef struct
 {

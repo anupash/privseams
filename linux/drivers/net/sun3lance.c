@@ -332,7 +332,7 @@ static int __init lance_probe( struct net_device *dev)
 		return 0;
 	}
 
-	lp = (struct lance_private *)dev->priv;
+	lp = netdev_priv(dev);
 
 	/* XXX - leak? */
 	MEM = dvma_malloc_align(sizeof(struct lance_memory), 0x10000);
@@ -342,7 +342,7 @@ static int __init lance_probe( struct net_device *dev)
 
 	REGA(CSR0) = CSR0_STOP; 
 
-	request_irq(LANCE_IRQ, lance_interrupt, 0, "SUN3 Lance", dev);
+	request_irq(LANCE_IRQ, lance_interrupt, SA_INTERRUPT, "SUN3 Lance", dev);
 	dev->irq = (unsigned short)LANCE_IRQ;
 
 
@@ -402,7 +402,7 @@ static int __init lance_probe( struct net_device *dev)
 
 static int lance_open( struct net_device *dev )
 {
-	struct lance_private *lp = (struct lance_private *)dev->priv;
+	struct lance_private *lp = netdev_priv(dev);
 	int i;
 
 	DPRINTK( 2, ( "%s: lance_open()\n", dev->name ));
@@ -430,7 +430,6 @@ static int lance_open( struct net_device *dev )
 	netif_start_queue(dev);
 	
 	DPRINTK( 2, ( "%s: LANCE is open, csr0 %04x\n", dev->name, DREG ));
-	MOD_INC_USE_COUNT;
 
 	return( 0 );
 }
@@ -440,7 +439,7 @@ static int lance_open( struct net_device *dev )
 
 static void lance_init_ring( struct net_device *dev )
 {
-	struct lance_private *lp = (struct lance_private *)dev->priv;
+	struct lance_private *lp = netdev_priv(dev);
 	int i;
 
 	lp->lock = 0;
@@ -500,10 +499,13 @@ static void lance_init_ring( struct net_device *dev )
 
 static int lance_start_xmit( struct sk_buff *skb, struct net_device *dev )
 {
-	struct lance_private *lp = (struct lance_private *)dev->priv;
+	struct lance_private *lp = netdev_priv(dev);
 	int entry, len;
 	struct lance_tx_head *head;
 	unsigned long flags;
+
+	DPRINTK( 1, ( "%s: transmit start.\n",
+		      dev->name));
 
 	/* Transmitter timeout, serious problems. */
 	if (netif_queue_stopped(dev)) {
@@ -644,7 +646,7 @@ static int lance_start_xmit( struct sk_buff *skb, struct net_device *dev )
 static irqreturn_t lance_interrupt( int irq, void *dev_id, struct pt_regs *fp)
 {
 	struct net_device *dev = dev_id;
-	struct lance_private *lp = dev->priv;
+	struct lance_private *lp = netdev_priv(dev);
 	int csr0;
 	static int in_interrupt;
 
@@ -770,7 +772,7 @@ static irqreturn_t lance_interrupt( int irq, void *dev_id, struct pt_regs *fp)
 /* get packet, toss into skbuff */
 static int lance_rx( struct net_device *dev )
 {
-	struct lance_private *lp = (struct lance_private *)dev->priv;
+	struct lance_private *lp = netdev_priv(dev);
 	int entry = lp->new_rx;
 
 	/* If we own the next entry, it's a new packet. Send it up. */
@@ -868,7 +870,7 @@ static int lance_rx( struct net_device *dev )
 
 static int lance_close( struct net_device *dev )
 {
-	struct lance_private *lp = (struct lance_private *)dev->priv;
+	struct lance_private *lp = netdev_priv(dev);
 
 	netif_stop_queue(dev);
 
@@ -880,15 +882,13 @@ static int lance_close( struct net_device *dev )
 	/* We stop the LANCE here -- it occasionally polls
 	   memory if we don't. */
 	DREG = CSR0_STOP;
-
-	MOD_DEC_USE_COUNT;
 	return 0;
 }
 
 
 static struct net_device_stats *lance_get_stats( struct net_device *dev )
 {
-	struct lance_private *lp = (struct lance_private *)dev->priv;
+	struct lance_private *lp = netdev_priv(dev);
 
 	return &lp->stats;
 }
@@ -904,7 +904,7 @@ static struct net_device_stats *lance_get_stats( struct net_device *dev )
 /* completely untested on a sun3 */
 static void set_multicast_list( struct net_device *dev )
 {
-	struct lance_private *lp = (struct lance_private *)dev->priv;
+	struct lance_private *lp = netdev_priv(dev);
 
 	if(netif_queue_stopped(dev))
 		/* Only possible if board is already started */

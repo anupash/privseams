@@ -49,6 +49,7 @@
 	.shared_pending	= { 				\
 		.list = LIST_HEAD_INIT(sig.shared_pending.list),	\
 		.signal =  {{0}}}, \
+	.posix_timers	 = LIST_HEAD_INIT(sig.posix_timers),		\
 }
 
 #define INIT_SIGHAND(sighand) {	\
@@ -56,6 +57,8 @@
 	.action		= { {{0,}}, }, 			\
 	.siglock	= SPIN_LOCK_UNLOCKED, 		\
 }
+
+extern struct group_info init_groups;
 
 /*
  *  INIT_TASK is used to set up the first task table, touch at
@@ -88,6 +91,7 @@
 	.real_timer	= {						\
 		.function	= it_real_fn				\
 	},								\
+	.group_info	= &init_groups,					\
 	.cap_effective	= CAP_INIT_EFF_SET,				\
 	.cap_inheritable = CAP_INIT_INH_SET,				\
 	.cap_permitted	= CAP_FULL_SET,					\
@@ -104,7 +108,6 @@
 		.list = LIST_HEAD_INIT(tsk.pending.list),		\
 		.signal = {{0}}},					\
 	.blocked	= {{0}},					\
-	.posix_timers	 = LIST_HEAD_INIT(tsk.posix_timers),		\
 	.alloc_lock	= SPIN_LOCK_UNLOCKED,				\
 	.proc_lock	= SPIN_LOCK_UNLOCKED,				\
 	.switch_lock	= SPIN_LOCK_UNLOCKED,				\

@@ -67,6 +67,7 @@ static struct cpufreq_frequency_table speedstep_freqs[] = {
 /**
  * speedstep_set_state - set the SpeedStep state
  * @state: new processor frequency state (SPEEDSTEP_LOW or SPEEDSTEP_HIGH)
+ * @notify: whether to call cpufreq_notify_transition for CPU speed changes
  *
  *   Tries to change the SpeedStep state. 
  */
@@ -239,8 +240,10 @@ static unsigned int speedstep_detect_chipset (void)
 
 
 /**
- * speedstep_setpolicy - set a new CPUFreq policy
+ * speedstep_target - set a new CPUFreq policy
  * @policy: new policy
+ * @target_freq: the target frequency
+ * @relation: how that frequency relates to achieved frequency (CPUFREQ_RELATION_L or CPUFREQ_RELATION_H)
  *
  * Sets a new CPUFreq policy.
  */
@@ -261,7 +264,7 @@ static int speedstep_target (struct cpufreq_policy *policy,
 
 /**
  * speedstep_verify - verifies a new CPUFreq policy
- * @freq: new policy
+ * @policy: new policy
  *
  * Limit must be within speedstep_low_freq and speedstep_high_freq, with
  * at least one border included.
@@ -303,8 +306,27 @@ static int speedstep_cpu_init(struct cpufreq_policy *policy)
 	policy->cpuinfo.transition_latency = CPUFREQ_ETERNAL;
 	policy->cur = speed;
 
-	return cpufreq_frequency_table_cpuinfo(policy, &speedstep_freqs[0]);
+	result = cpufreq_frequency_table_cpuinfo(policy, speedstep_freqs);
+	if (result)
+		return (result);
+
+        cpufreq_frequency_table_get_attr(speedstep_freqs, policy->cpu);
+
+	return 0;
 }
+
+
+static int speedstep_cpu_exit(struct cpufreq_policy *policy)
+{
+	cpufreq_frequency_table_put_attr(policy->cpu);
+	return 0;
+}
+
+
+static struct freq_attr* speedstep_attr[] = {
+	&cpufreq_freq_attr_scaling_available_freqs,
+	NULL,
+};
 
 
 static struct cpufreq_driver speedstep_driver = {
@@ -312,7 +334,9 @@ static struct cpufreq_driver speedstep_driver = {
 	.verify 	= speedstep_verify,
 	.target 	= speedstep_target,
 	.init		= speedstep_cpu_init,
+	.exit		= speedstep_cpu_exit,
 	.owner		= THIS_MODULE,
+	.attr		= speedstep_attr,
 };
 
 

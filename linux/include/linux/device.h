@@ -17,7 +17,6 @@
 #include <linux/list.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
-#include <linux/ioport.h>
 #include <linux/module.h>
 #include <linux/pm.h>
 #include <asm/semaphore.h>
@@ -285,6 +284,12 @@ struct device {
 					   detached from its driver. */
 
 	u64		*dma_mask;	/* dma mask (if dma'able device) */
+	u64		coherent_dma_mask;/* Like dma_mask, but for
+					     alloc_coherent mappings as
+					     not all hardware supports
+					     64 bit addresses for consistent
+					     allocations such descriptors. */
+
 	struct list_head	dma_pools;	/* dma pools (if dma'ble) */
 
 	void	(*release)(struct device * dev);

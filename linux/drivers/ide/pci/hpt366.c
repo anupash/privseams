@@ -1,7 +1,7 @@
 /*
  * linux/drivers/ide/pci/hpt366.c		Version 0.34	Sept 17, 2002
  *
- * Copyright (C) 1999-2002		Andre Hedrick <andre@linux-ide.org>
+ * Copyright (C) 1999-2003		Andre Hedrick <andre@linux-ide.org>
  * Portions Copyright (C) 2001	        Sun Microsystems, Inc.
  *
  * Thanks to HighPoint Technologies for their assistance, and hardware.
@@ -107,7 +107,7 @@ static int hpt366_get_info (char *buffer, char **addr, off_t offset, int count)
 				"                             %s\n",
 			(c0 & 0x80) ? "no" : "yes",
 			(c1 & 0x80) ? "no" : "yes");
-
+#if 0
 		if (hpt_minimum_revision(dev, 3)) {
 			u8 cbl;
 			cbl = inb(iobase + 0x7b);
@@ -120,7 +120,7 @@ static int hpt366_get_info (char *buffer, char **addr, off_t offset, int count)
 				(cbl & 0x01) ? 33 : 66);
 			p += sprintf(p, "\n");
 		}
-
+#endif
 		p += sprintf(p, "--------------- drive0 --------- drive1 "
 				"------- drive0 ---------- drive1 -------\n");
 		p += sprintf(p, "DMA capable:    %s              %s" 
@@ -641,6 +641,31 @@ static int hpt370_ide_dma_lostirq (ide_drive_t *drive)
 	return __ide_dma_lostirq(drive);
 }
 
+/* returns 1 if DMA IRQ issued, 0 otherwise */
+static int hpt374_ide_dma_test_irq(ide_drive_t *drive)
+{
+	ide_hwif_t *hwif	= HWIF(drive);
+	u16 bfifo		= 0;
+	u8 reginfo		= hwif->channel ? 0x56 : 0x52;
+	u8 dma_stat;
+
+	pci_read_config_word(hwif->pci_dev, reginfo, &bfifo);
+	if (bfifo & 0x1FF) {
+//		printk("%s: %d bytes in FIFO\n", drive->name, bfifo);
+		return 0;
+	}
+
+	dma_stat = hwif->INB(hwif->dma_status);
+	/* return 1 if INTR asserted */
+	if ((dma_stat & 4) == 4)
+		return 1;
+
+	if (!drive->waiting_for_dma)
+		printk(KERN_WARNING "%s: (%s) called while not waiting\n",
+				drive->name, __FUNCTION__);
+	return 0;
+}
+
 static int hpt374_ide_dma_end (ide_drive_t *drive)
 {
 	struct pci_dev *dev	= HWIF(drive)->pci_dev;
@@ -796,7 +821,7 @@ static int __init init_hpt37x(struct pci_dev *dev)
 	 */
 	pci_read_config_word(dev, 0x78, &freq);
 	freq &= 0x1FF;
-	if (freq < 0x9c) {
+	if (freq < 0xa0) {
 		pll = F_LOW_PCI_33;
 		if (hpt_minimum_revision(dev,8))
 			pci_set_drvdata(dev, (void *) thirty_three_base_hpt374);
@@ -872,7 +897,7 @@ static int __init init_hpt37x(struct pci_dev *dev)
 						       pll & ~0x100);
 				pci_write_config_byte(dev, 0x5b, 0x21);
 				if (hpt_minimum_revision(dev,8))
-					return -EOPNOTSUPP;
+					pci_set_drvdata(dev, (void *) fifty_base_hpt370a);
 				else if (hpt_minimum_revision(dev,5))
 					pci_set_drvdata(dev, (void *) fifty_base_hpt372);
 				else if (hpt_minimum_revision(dev,4))
@@ -972,7 +997,7 @@ static unsigned int __init init_chipset_hpt366 (struct pci_dev *dev, const char 
 
 	if (!hpt366_proc) {
 		hpt366_proc = 1;
-		ide_pci_register_host_proc(&hpt366_procs[0]);
+		ide_pci_create_host_proc("hpt366", hpt366_get_info);
 	}
 #endif /* DISPLAY_HPT366_TIMINGS && CONFIG_PROC_FS */
 
@@ -1069,11 +1094,13 @@ static void __init init_hwif_hpt366 (ide_hwif_t *hwif)
 		hwif->udma_four = ((ata66 & regmask) ? 0 : 1);
 	hwif->ide_dma_check = &hpt366_config_drive_xfer_rate;
 
-	if (hpt_minimum_revision(dev,8))
+	if (hpt_minimum_revision(dev,8)) {
+		hwif->ide_dma_test_irq = &hpt374_ide_dma_test_irq;
 		hwif->ide_dma_end = &hpt374_ide_dma_end;
-	else if (hpt_minimum_revision(dev,5))
+	} else if (hpt_minimum_revision(dev,5)) {
+		hwif->ide_dma_test_irq = &hpt374_ide_dma_test_irq;
 		hwif->ide_dma_end = &hpt374_ide_dma_end;
-	else if (hpt_minimum_revision(dev,3)) {
+	} else if (hpt_minimum_revision(dev,3)) {
 		hwif->ide_dma_begin = &hpt370_ide_dma_begin;
 		hwif->ide_dma_end = &hpt370_ide_dma_end;
 		hwif->ide_dma_timeout = &hpt370_ide_dma_timeout;
@@ -1123,9 +1150,6 @@ static void __init init_dma_hpt366 (ide_hwif_t *hwif, unsigned long dmabase)
 
 	ide_setup_dma(hwif, dmabase, 8);
 }
-
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-extern void ide_setup_pci_devices(struct pci_dev *, struct pci_dev *, ide_pci_device_t *);
 
 static void __init init_setup_hpt374 (struct pci_dev *dev, ide_pci_device_t *d)
 {
@@ -1231,6 +1255,7 @@ static struct pci_device_id hpt366_pci_tbl[] = {
 	{ PCI_VENDOR_ID_TTI, PCI_DEVICE_ID_TTI_HPT374, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 4},
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, hpt366_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "HPT366 IDE",

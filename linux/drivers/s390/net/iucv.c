@@ -1,5 +1,5 @@
 /* 
- * $Id: iucv.c,v 1.19 2003/12/18 15:28:49 braunu Exp $
+ * $Id: iucv.c,v 1.28 2004/04/15 06:34:58 braunu Exp $
  *
  * IUCV network driver
  *
@@ -29,10 +29,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * RELEASE-TAG: IUCV lowlevel driver $Revision: 1.19 $
+ * RELEASE-TAG: IUCV lowlevel driver $Revision: 1.28 $
  *
  */
 
+/* #define DEBUG */
+
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/config.h>
@@ -52,8 +54,6 @@
 #include <asm/s390_ext.h>
 #include <asm/ebcdic.h>
 #include <asm/ccwdev.h> //for root device stuff
-
-#define DEBUG
 
 /* FLAGS:
  * All flags are defined in the field IPFLAGS1 of each function
@@ -103,6 +103,8 @@ static iucv_GeneralInterrupt *iucv_external_int_buffer;
 /* Spin Lock declaration */
 
 static spinlock_t iucv_lock = SPIN_LOCK_UNLOCKED;
+
+static int messagesDisabled = 0;
 
 /***************INTERRUPT HANDLING ***************/
 
@@ -349,7 +351,7 @@ do { \
 static void
 iucv_banner(void)
 {
-	char vbuf[] = "$Revision: 1.19 $";
+	char vbuf[] = "$Revision: 1.28 $";
 	char *version = vbuf;
 
 	if ((version = strchr(version, ':'))) {
@@ -372,13 +374,13 @@ iucv_init(void)
 {
 	int ret;
 
+	if (iucv_external_int_buffer)
+		return 0;
+
 	if (!MACHINE_IS_VM) {
 		printk(KERN_ERR "IUCV: IUCV connection needs VM as base\n");
 		return -EPROTONOSUPPORT;
 	}
-
-	if (iucv_external_int_buffer)
-		return 0;
 
 	ret = bus_register(&iucv_bus);
 	if (ret != 0) {
@@ -433,10 +435,13 @@ iucv_init(void)
  *
  * Frees everything allocated from iucv_init.
  */
+static int iucv_retrieve_buffer (void);
+
 static void
 iucv_exit(void)
 {
-	if (iucv_external_int_buffer)
+	iucv_retrieve_buffer();
+      	if (iucv_external_int_buffer)
 		kfree(iucv_external_int_buffer);
 	if (iucv_param_pool)
 		kfree(iucv_param_pool);
@@ -665,10 +670,12 @@ iucv_declare_buffer (void)
 	ulong b2f0_result = 0x0deadbeef;
 
 	iucv_debug(1, "entering");
+	preempt_disable();
 	if (smp_processor_id() == 0)
 		iucv_declare_buffer_cpu0(&b2f0_result);
 	else
 		smp_call_function(iucv_declare_buffer_cpu0, &b2f0_result, 0, 1);
+	preempt_enable();
 	iucv_debug(1, "Address of EIB = %p", iucv_external_int_buffer);
 	if (b2f0_result == 0x0deadbeef)
 	    b2f0_result = 0xaa;
@@ -687,11 +694,13 @@ iucv_retrieve_buffer (void)
 {
 	iucv_debug(1, "entering");
 	if (declare_flag) {
+		preempt_disable();
 		if (smp_processor_id() == 0)
 			iucv_retrieve_buffer_cpu0(0);
 		else
 			smp_call_function(iucv_retrieve_buffer_cpu0, 0, 0, 1);
 		declare_flag = 0;
+		preempt_enable();
 	}
 	iucv_debug(1, "exiting");
 	return 0;
@@ -716,7 +725,6 @@ iucv_remove_handler(handler *handler)
 	spin_lock_irqsave (&iucv_lock, flags);
 	list_del(&handler->list);
 	if (list_empty(&iucv_handler_table)) {
-		iucv_retrieve_buffer();
 		if (register_flag) {
 			unregister_external_interrupt(0x4000, iucv_irq_handler);
 			register_flag = 0;
@@ -792,6 +800,7 @@ iucv_register_program (__u8 pgmname[16],
 		if (iucv_pathid_table == NULL) {
 			printk(KERN_WARNING "%s: iucv_pathid_table storage "
 			       "allocation failed\n", __FUNCTION__);
+			kfree(new_handler);
 			return NULL;
 		}
 		memset (iucv_pathid_table, 0, max_connections * sizeof(handler *));
@@ -822,7 +831,7 @@ iucv_register_program (__u8 pgmname[16],
 			memset (new_handler->id.mask, 0xFF,
 				sizeof (new_handler->id.mask));
 		}
-		memset (new_handler->id.mask, 0x00,
+		memset (new_handler->id.userid, 0x00,
 			sizeof (new_handler->id.userid));
 	}
 	/* fill in the rest of handler */
@@ -1028,6 +1037,8 @@ iucv_accept(__u16 pathid, __u16 msglim_reqstd,
 	b2f0_result = b2f0(ACCEPT, parm);
 
 	if (b2f0_result == 0) {
+		if (msglim)
+			*msglim = parm->ipmsglim;
 		if (pgm_data)
 			h->pgm_data = pgm_data;
 		if (flags1_out)
@@ -1083,6 +1094,7 @@ iucv_connect (__u16 *pathid, __u16 msglim_reqstd,
 	      iucv_handle_t handle, void *pgm_data)
 {
 	iparml_control *parm;
+	iparml_control local_parm;
 	struct list_head *lh;
 	ulong b2f0_result = 0;
 	ulong flags;
@@ -1139,19 +1151,45 @@ iucv_connect (__u16 *pathid, __u16 msglim_reqstd,
 		EBC_TOUPPER(parm->iptarget, sizeof(parm->iptarget));
 	}
 
+	/* In order to establish an IUCV connection, the procedure is:
+         *
+         * b2f0(CONNECT)
+         * take the ippathid from the b2f0 call
+         * register the handler to the ippathid
+         *
+         * Unfortunately, the ConnectionEstablished message gets sent after the
+         * b2f0(CONNECT) call but before the register is handled.
+         *
+         * In order for this race condition to be eliminated, the IUCV Control
+         * Interrupts must be disabled for the above procedure.
+         *
+         * David Kennedy <dkennedy@linuxcare.com>
+         */
+
+	/* Enable everything but IUCV Control messages */
+	iucv_setmask(~(AllInterrupts));
+	messagesDisabled = 1;
+
 	spin_lock_irqsave (&iucv_lock, flags);
 	parm->ipflags1 = (__u8)flags1;
 	b2f0_result = b2f0(CONNECT, parm);
+	memcpy(&local_parm, parm, sizeof(local_parm));
+	release_param(parm);
+	parm = &local_parm;
 	if (b2f0_result == 0)
 		add_pathid_result = __iucv_add_pathid(parm->ippathid, h);
 	spin_unlock_irqrestore (&iucv_lock, flags);
 
 	if (b2f0_result) {
-		release_param(parm);
+		iucv_setmask(~0);
+		messagesDisabled = 0;
 		return b2f0_result;
 	}
 
 	*pathid = parm->ippathid;
+
+	/* Enable everything again */
+	iucv_setmask(IUCVControlInterruptsFlag);
 
 	if (msglim)
 		*msglim = parm->ipmsglim;
@@ -1159,7 +1197,7 @@ iucv_connect (__u16 *pathid, __u16 msglim_reqstd,
 		*flags1_out = (parm->ipflags1 & IPPRTY) ? IPPRTY : 0;
 
 	if (add_pathid_result) {
-		iucv_sever(parm->ippathid, no_memory);
+		iucv_sever(*pathid, no_memory);
 		printk(KERN_WARNING "%s: add_pathid failed with rc ="
 			" %d\n", __FUNCTION__, add_pathid_result);
 		return(add_pathid_result);
@@ -2142,6 +2180,24 @@ iucv_send2way_prmmsg_array (__u16 pathid,
 	return b2f0_result;
 }
 
+void
+iucv_setmask_cpu0 (void *result)
+{
+        iparml_set_mask *parm;
+
+        if (smp_processor_id() != 0)
+                return;
+
+        iucv_debug(1, "entering");
+        parm = (iparml_set_mask *)grab_param();
+        parm->ipmask = *((__u8*)result);
+        *((ulong *)result) = b2f0(SETMASK, parm);
+        release_param(parm);
+
+        iucv_debug(1, "b2f0_result = %ld", *((ulong *)result));
+        iucv_debug(1, "exiting");
+}
+
 /*
  * Name: iucv_setmask
  * Purpose: This function enables or disables the following IUCV
@@ -2152,28 +2208,27 @@ iucv_send2way_prmmsg_array (__u16 pathid,
  *           0x40 - Priority_MessagePendingInterruptsFlag
  *           0x20 - Nonpriority_MessageCompletionInterruptsFlag
  *           0x10 - Priority_MessageCompletionInterruptsFlag
+ *           0x08 - IUCVControlInterruptsFlag
  * Output: NA
  * Return: b2f0_result - return code from CP
 */
 int
 iucv_setmask (int SetMaskFlag)
 {
-	iparml_set_mask *parm;
-	ulong b2f0_result = 0;
+	union {
+		ulong result;
+		__u8  param;
+	} u;
 
-	iucv_debug(1, "entering");
+	u.param = SetMaskFlag;
+	preempt_disable();
+	if (smp_processor_id() == 0)
+		iucv_setmask_cpu0(&u);
+	else
+		smp_call_function(iucv_setmask_cpu0, &u, 0, 1);
+	preempt_enable();
 
-	parm = (iparml_set_mask *)grab_param();
-
-	parm->ipmask = (__u8)SetMaskFlag;
-
-	b2f0_result = b2f0(SETMASK, parm);
-	release_param(parm);
-
-	iucv_debug(1, "b2f0_result = %ld", b2f0_result);
-	iucv_debug(1, "exiting");
-
-	return b2f0_result;
+	return u.result;
 }
 
 /**
@@ -2280,6 +2335,10 @@ iucv_do_int(iucv_GeneralInterrupt * int_buf)
 	/* end of if statement */
 	switch (int_buf->iptype) {
 		case 0x01:		/* connection pending */
+			if (messagesDisabled) {
+			    iucv_setmask(~0);
+			    messagesDisabled = 0;
+			}
 			spin_lock_irqsave(&iucv_lock, flags);
 			list_for_each(lh, &iucv_handler_table) {
 				h = list_entry(lh, handler, list);
@@ -2328,11 +2387,17 @@ iucv_do_int(iucv_GeneralInterrupt * int_buf)
 			break;
 			
 		case 0x02:		/*connection complete */
+			if (messagesDisabled) {
+			    iucv_setmask(~0);
+			    messagesDisabled = 0;
+			}
 			if (h) {
 				if (interrupt->ConnectionComplete)
+				{
 					interrupt->ConnectionComplete(
 						(iucv_ConnectionComplete *)int_buf,
 						h->pgm_data);
+				}
 				else
 					iucv_debug(1,
 						   "ConnectionComplete not called");
@@ -2341,6 +2406,10 @@ iucv_do_int(iucv_GeneralInterrupt * int_buf)
 			break;
 			
 		case 0x03:		/* connection severed */
+			if (messagesDisabled) {
+			    iucv_setmask(~0);
+			    messagesDisabled = 0;
+			}
 			if (h) {
 				if (interrupt->ConnectionSevered)
 					interrupt->ConnectionSevered(
@@ -2354,6 +2423,10 @@ iucv_do_int(iucv_GeneralInterrupt * int_buf)
 			break;
 			
 		case 0x04:		/* connection quiesced */
+			if (messagesDisabled) {
+			    iucv_setmask(~0);
+			    messagesDisabled = 0;
+			}
 			if (h) {
 				if (interrupt->ConnectionQuiesced)
 					interrupt->ConnectionQuiesced(
@@ -2366,6 +2439,10 @@ iucv_do_int(iucv_GeneralInterrupt * int_buf)
 			break;
 			
 		case 0x05:		/* connection resumed */
+			if (messagesDisabled) {
+			    iucv_setmask(~0);
+			    messagesDisabled = 0;
+			}
 			if (h) {
 				if (interrupt->ConnectionResumed)
 					interrupt->ConnectionResumed(
@@ -2449,10 +2526,6 @@ module_exit(iucv_exit);
 
 /**
  * Export all public stuff
- * FIXME: I have commented out all the functions that
- * 	  are not used in netiucv. Is anyone else
- * 	  using them or should some of them be made
- * 	  static / removed? pls review. Arnd
  */
 EXPORT_SYMBOL (iucv_bus);
 EXPORT_SYMBOL (iucv_root);
@@ -2467,7 +2540,9 @@ EXPORT_SYMBOL (iucv_quiesce);
 EXPORT_SYMBOL (iucv_receive);
 #if 0
 EXPORT_SYMBOL (iucv_receive_array);
+#endif
 EXPORT_SYMBOL (iucv_reject);
+#if 0
 EXPORT_SYMBOL (iucv_reply);
 EXPORT_SYMBOL (iucv_reply_array);
 EXPORT_SYMBOL (iucv_reply_prmmsg);

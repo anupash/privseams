@@ -54,8 +54,6 @@ static void __init init_hwif_rz1000 (ide_hwif_t *hwif)
 	}
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
 static int __devinit rz1000_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	ide_pci_device_t *d = &rz1000_chipsets[id->driver_data];
@@ -70,6 +68,7 @@ static struct pci_device_id rz1000_pci_tbl[] = {
 	{ PCI_VENDOR_ID_PCTECH, PCI_DEVICE_ID_PCTECH_RZ1001, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 1},
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, rz1000_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "RZ1000 IDE",

@@ -8,7 +8,7 @@
  * Author: Yoichi Yuasa
  *         yyuasa@mvista.com or source@mvista.com
  *
- * Copyright 2001,2002 MontaVista Software Inc.
+ * Copyright 2001-2003 MontaVista Software Inc.
  *
  *  This program is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License as published by the
@@ -49,9 +49,7 @@
 #include <asm/pci_channel.h>
 #include <asm/vr41xx/vr41xx.h>
 
-#include "pciu.h"
-
-extern unsigned long vr41xx_vtclock;
+#include "pci-vr41xx.h"
 
 static inline int vr41xx_pci_config_access(unsigned char bus,
 					   unsigned int devfn, int where)
@@ -150,6 +148,7 @@ struct pci_ops vr41xx_pci_ops = {
 void __init vr41xx_pciu_init(struct vr41xx_pci_address_map *map)
 {
 	struct vr41xx_pci_address_space *s;
+	unsigned long vtclock;
 	u32 config;
 	int n;
 
@@ -160,7 +159,7 @@ void __init vr41xx_pciu_init(struct vr41xx_pci_address_map *map)
 	writew(0, MPCIINTREG);
 
 	/* Supply VTClock to PCIU */
-	vr41xx_clock_supply(PCIU_CLOCK);
+	vr41xx_supply_clock(PCIU_CLOCK);
 
 	/*
 	 * Sleep for 1us after setting MSKPPCIU bit in CMUCLKMSK
@@ -169,17 +168,18 @@ void __init vr41xx_pciu_init(struct vr41xx_pci_address_map *map)
 	udelay(1);
 
 	/* Select PCI clock */
-	if (vr41xx_vtclock < MAX_PCI_CLOCK)
+	vtclock = vr41xx_get_vtclock_frequency();
+	if (vtclock < MAX_PCI_CLOCK)
 		writel(EQUAL_VTCLOCK, PCICLKSELREG);
-	else if ((vr41xx_vtclock / 2) < MAX_PCI_CLOCK)
+	else if ((vtclock / 2) < MAX_PCI_CLOCK)
 		writel(HALF_VTCLOCK, PCICLKSELREG);
-	else if ((vr41xx_vtclock / 4) < MAX_PCI_CLOCK)
+	else if ((vtclock / 4) < MAX_PCI_CLOCK)
 		writel(QUARTER_VTCLOCK, PCICLKSELREG);
 	else
 		printk(KERN_INFO "Warning: PCI Clock is over 33MHz.\n");
 
 	/* Supply PCI clock by PCI bus */
-	vr41xx_clock_supply(PCI_CLOCK);
+	vr41xx_supply_clock(PCI_CLOCK);
 
 	/*
 	 * Set PCI memory & I/O space address conversion registers

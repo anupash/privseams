@@ -11,7 +11,9 @@
 #include <linux/apm_bios.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
+#include <linux/syscalls.h>
 #include <linux/tty.h>
+#include <linux/ioctl32.h>
 
 #include <asm/semaphore.h>
 #include <asm/processor.h>
@@ -61,10 +63,6 @@ EXPORT_SYMBOL(pm_idle);
 EXPORT_SYMBOL(pm_power_off);
 EXPORT_SYMBOL(get_cmos_time);
 
-#ifdef CONFIG_IO_DEBUG
-EXPORT_SYMBOL(__io_virt_debug);
-#endif
-
 EXPORT_SYMBOL_NOVERS(__down_failed);
 EXPORT_SYMBOL_NOVERS(__down_failed_interruptible);
 EXPORT_SYMBOL_NOVERS(__down_failed_trylock);
@@ -100,8 +98,10 @@ EXPORT_SYMBOL(copy_to_user);
 EXPORT_SYMBOL(copy_in_user);
 EXPORT_SYMBOL(strnlen_user);
 
+#ifdef CONFIG_PCI
 EXPORT_SYMBOL(pci_alloc_consistent);
 EXPORT_SYMBOL(pci_free_consistent);
+#endif
 
 #ifdef CONFIG_PCI
 EXPORT_SYMBOL(pcibios_penalize_isa_irq);
@@ -180,8 +180,6 @@ EXPORT_SYMBOL_NOVERS(memcpy);
 EXPORT_SYMBOL_NOVERS(__memcpy);
 
 /* syscall export needed for misdesigned sound drivers. */
-extern ssize_t sys_read(unsigned int fd, char * buf, size_t count);
-extern off_t sys_lseek(unsigned int fd, off_t offset, unsigned int origin);
 EXPORT_SYMBOL(sys_read);
 EXPORT_SYMBOL(sys_lseek);
 EXPORT_SYMBOL(sys_open);
@@ -194,6 +192,11 @@ EXPORT_SYMBOL(atomic_dec_and_lock);
 
 EXPORT_SYMBOL(die_chain);
 
+#ifdef CONFIG_SMP
+EXPORT_SYMBOL(cpu_sibling_map);
+EXPORT_SYMBOL(smp_num_siblings);
+#endif
+
 extern void do_softirq_thunk(void);
 EXPORT_SYMBOL_NOVERS(do_softirq_thunk);
 
@@ -205,16 +208,14 @@ EXPORT_SYMBOL(init_level4_pgt);
 extern unsigned long __supported_pte_mask;
 EXPORT_SYMBOL(__supported_pte_mask);
 
-#ifdef CONFIG_DISCONTIGMEM
-EXPORT_SYMBOL(memnode_shift);
-EXPORT_SYMBOL(memnodemap);
-EXPORT_SYMBOL(node_data);
-EXPORT_SYMBOL(fake_node);
-#endif
-
 EXPORT_SYMBOL(clear_page);
 
 #ifdef CONFIG_SMP
 EXPORT_SYMBOL(flush_tlb_page);
 EXPORT_SYMBOL_GPL(flush_tlb_all);
 #endif
+
+EXPORT_SYMBOL(sys_ioctl);
+
+EXPORT_SYMBOL(memcpy_toio);
+EXPORT_SYMBOL(memcpy_fromio);

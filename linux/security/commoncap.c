@@ -22,6 +22,7 @@
 #include <linux/netlink.h>
 #include <linux/ptrace.h>
 #include <linux/xattr.h>
+#include <linux/hugetlb.h>
 
 int cap_capable (struct task_struct *tsk, int cap)
 {
@@ -114,13 +115,7 @@ int cap_bprm_set_security (struct linux_binprm *bprm)
 	return 0;
 }
 
-/* Copied from fs/exec.c */
-static inline int must_not_trace_exec (struct task_struct *p)
-{
-	return (p->ptrace & PT_PTRACED) && !(p->ptrace & PT_PTRACE_CAP);
-}
-
-void cap_bprm_compute_creds (struct linux_binprm *bprm)
+void cap_bprm_apply_creds (struct linux_binprm *bprm, int unsafe)
 {
 	/* Derived from fs/exec.c:compute_creds. */
 	kernel_cap_t new_permitted, working;
@@ -130,21 +125,24 @@ void cap_bprm_compute_creds (struct linux_binprm *bprm)
 				 current->cap_inheritable);
 	new_permitted = cap_combine (new_permitted, working);
 
-	task_lock(current);
-	if (!cap_issubset (new_permitted, current->cap_permitted)) {
+	if (bprm->e_uid != current->uid || bprm->e_gid != current->gid ||
+	    !cap_issubset (new_permitted, current->cap_permitted)) {
 		current->mm->dumpable = 0;
 
-		if (must_not_trace_exec (current)
-		    || atomic_read (&current->fs->count) > 1
-		    || atomic_read (&current->files->count) > 1
-		    || atomic_read (&current->sighand->count) > 1) {
+		if (unsafe & ~LSM_UNSAFE_PTRACE_CAP) {
+			if (!capable(CAP_SETUID)) {
+				bprm->e_uid = current->uid;
+				bprm->e_gid = current->gid;
+			}
 			if (!capable (CAP_SETPCAP)) {
 				new_permitted = cap_intersect (new_permitted,
-							       current->
-							       cap_permitted);
+							current->cap_permitted);
 			}
 		}
 	}
+
+	current->suid = current->euid = current->fsuid = bprm->e_uid;
+	current->sgid = current->egid = current->fsgid = bprm->e_gid;
 
 	/* For init, we want to retain the capabilities set
 	 * in the init_task struct. Thus we skip the usual
@@ -156,7 +154,6 @@ void cap_bprm_compute_creds (struct linux_binprm *bprm)
 	}
 
 	/* AUD: Audit candidate if current->cap_effective is set */
-	task_unlock(current);
 
 	current->keep_capabilities = 0;
 }
@@ -303,7 +300,7 @@ int cap_syslog (int type)
  * succeed and -ENOMEM implies there is not.
  *
  * We currently support three overcommit policies, which are set via the
- * vm.overcommit_memory sysctl.  See Documentation/vm/overcommit-acounting
+ * vm.overcommit_memory sysctl.  See Documentation/vm/overcommit-accounting
  *
  * Strict overcommit modes added 2002 Feb 26 by Alan Cox.
  * Additional code 2002 Jul 20 by Robert Love.
@@ -314,7 +311,7 @@ int cap_vm_enough_memory(long pages)
 
 	vm_acct_memory(pages);
 
-        /*
+	/*
 	 * Sometimes we want to use more memory than we have
 	 */
 	if (sysctl_overcommit_memory == 1)
@@ -358,7 +355,8 @@ int cap_vm_enough_memory(long pages)
 		return -ENOMEM;
 	}
 
-	allowed = totalram_pages * sysctl_overcommit_ratio / 100;
+	allowed = (totalram_pages - hugetlb_total_pages())
+	       	* sysctl_overcommit_ratio / 100;
 	allowed += total_swap_pages;
 
 	if (atomic_read(&vm_committed_space) < allowed)
@@ -375,7 +373,7 @@ EXPORT_SYMBOL(cap_capget);
 EXPORT_SYMBOL(cap_capset_check);
 EXPORT_SYMBOL(cap_capset_set);
 EXPORT_SYMBOL(cap_bprm_set_security);
-EXPORT_SYMBOL(cap_bprm_compute_creds);
+EXPORT_SYMBOL(cap_bprm_apply_creds);
 EXPORT_SYMBOL(cap_bprm_secureexec);
 EXPORT_SYMBOL(cap_inode_setxattr);
 EXPORT_SYMBOL(cap_inode_removexattr);

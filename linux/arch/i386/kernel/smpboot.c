@@ -522,7 +522,7 @@ static inline void unmap_cpu_to_node(int cpu)
 	printk("Unmapping cpu %d from all nodes\n", cpu);
 	for (node = 0; node < MAX_NUMNODES; node ++)
 		cpu_clear(cpu, node_2_cpu_mask[node]);
-	cpu_2_node[cpu] = -1;
+	cpu_2_node[cpu] = 0;
 }
 #else /* !CONFIG_NUMA */
 
@@ -815,6 +815,8 @@ static int __init do_boot_cpu(int apicid)
 	/* Stack for startup_32 can be just as for start_secondary onwards */
 	stack_start.esp = (void *) idle->thread.esp;
 
+	irq_ctx_init(cpu);
+
 	/*
 	 * This grunge runs the startup process for
 	 * the targeted processor.
@@ -948,6 +950,7 @@ static void __init smp_boot_cpus(unsigned int max_cpus)
 	printk("CPU%d: ", 0);
 	print_cpu_info(&cpu_data[0]);
 
+	boot_cpu_physical_apicid = GET_APIC_ID(apic_read(APIC_ID));
 	boot_cpu_logical_apicid = logical_smp_processor_id();
 
 	current_thread_info()->cpu = 0;
@@ -1008,8 +1011,6 @@ static void __init smp_boot_cpus(unsigned int max_cpus)
 	setup_local_APIC();
 	map_cpu_to_logical_apicid();
 
-	if (GET_APIC_ID(apic_read(APIC_ID)) != boot_cpu_physical_apicid)
-		BUG();
 
 	setup_portio_remap();
 

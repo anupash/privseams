@@ -49,6 +49,7 @@
 #include <asm/cache.h>
 #include <asm/dma.h>
 #include <asm/machdep.h>
+#include <asm/mc146818rtc.h>
 #include <asm/mk48t59.h>
 #include <asm/prep_nvram.h>
 #include <asm/raven.h>
@@ -133,6 +134,7 @@ EXPORT_SYMBOL(ppc_cs4232_dma2);
 #define PREP_IBM_CAROLINA_IDE_0	0xf0
 #define PREP_IBM_CAROLINA_IDE_1	0xf1
 #define PREP_IBM_CAROLINA_IDE_2	0xf2
+#define PREP_IBM_CAROLINA_IDE_3	0xf3
 /* 7248-43P */
 #define PREP_IBM_CAROLINA_SCSI_0	0xf4
 #define PREP_IBM_CAROLINA_SCSI_1	0xf5
@@ -322,7 +324,7 @@ prep_carolina_cpuinfo(struct seq_file *m)
 		/* L2 size */
 		if ((l2_reg & 0x60) == 0)
 			seq_printf(m, "256KiB");
-		else if ((l2_reg & 0x60) == 1)
+		else if ((l2_reg & 0x60) == 0x20)
 			seq_printf(m, "512KiB");
 		else
 			seq_printf(m, "unknown size");
@@ -724,6 +726,7 @@ prep_setup_arch(void)
 			case PREP_IBM_CAROLINA_IDE_0:
 			case PREP_IBM_CAROLINA_IDE_1:
 			case PREP_IBM_CAROLINA_IDE_2:
+			case PREP_IBM_CAROLINA_IDE_3:
 				is_ide = 1;
 			case PREP_IBM_CAROLINA_SCSI_0:
 			case PREP_IBM_CAROLINA_SCSI_1:
@@ -853,8 +856,12 @@ prep_init_IRQ(void)
 	int i;
 	unsigned int pci_viddid, pci_did;
 
-	if (OpenPIC_Addr != NULL)
+	if (OpenPIC_Addr != NULL) {
 		openpic_init(NUM_8259_INTERRUPTS);
+		/* We have a cascade on OpenPIC IRQ 0, Linux IRQ 16 */
+		openpic_hookup_cascade(NUM_8259_INTERRUPTS, "82c59 cascade",
+				       i8259_irq);
+	}
 	for ( i = 0 ; i < NUM_8259_INTERRUPTS ; i++ )
 		irq_desc[i].handler = &i8259_pic;
 	/* If we have a Raven PCI bridge or a Hawk PCI bridge / Memory
@@ -1023,8 +1030,10 @@ prep_init(unsigned long r3, unsigned long r4, unsigned long r5,
 
 	ppc_md.time_init      = todc_time_init;
 	if (_prep_type == _PREP_IBM) {
-		TODC_INIT(TODC_TYPE_MC146818, PREP_NVRAM_AS0, PREP_NVRAM_AS1,
-				PREP_NVRAM_DATA, 8);
+		ppc_md.rtc_read_val = todc_mc146818_read_val;
+		ppc_md.rtc_write_val = todc_mc146818_write_val;
+		TODC_INIT(TODC_TYPE_MC146818, RTC_PORT(0), NULL, RTC_PORT(1),
+				8);
 	} else {
 		TODC_INIT(TODC_TYPE_MK48T59, PREP_NVRAM_AS0, PREP_NVRAM_AS1,
 				PREP_NVRAM_DATA, 8);

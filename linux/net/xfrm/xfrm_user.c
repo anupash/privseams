@@ -675,6 +675,7 @@ static int copy_to_user_tmpl(struct xfrm_policy *xp, struct sk_buff *skb)
 		struct xfrm_tmpl *kp = &xp->xfrm_vec[i];
 
 		memcpy(&up->id, &kp->id, sizeof(up->id));
+		up->family = xp->family;
 		memcpy(&up->saddr, &kp->saddr, sizeof(up->saddr));
 		up->reqid = kp->reqid;
 		up->mode = kp->mode;
@@ -1055,9 +1056,8 @@ static int xfrm_send_acquire(struct xfrm_state *x, struct xfrm_tmpl *xt,
 	struct sk_buff *skb;
 	size_t len;
 
-	len = RTA_LENGTH(sizeof(struct xfrm_user_tmpl) * xp->xfrm_nr);
-	len = RTA_ALIGN(len);
-	len += NLMSG_ALIGN(NLMSG_LENGTH(sizeof(struct xfrm_user_acquire)));
+	len = RTA_SPACE(sizeof(struct xfrm_user_tmpl) * xp->xfrm_nr);
+	len += NLMSG_SPACE(sizeof(struct xfrm_user_acquire));
 	skb = alloc_skb(len, GFP_ATOMIC);
 	if (skb == NULL)
 		return -ENOMEM;
@@ -1154,9 +1154,8 @@ static int xfrm_send_policy_notify(struct xfrm_policy *xp, int dir, int hard)
 	struct sk_buff *skb;
 	size_t len;
 
-	len = sizeof(struct xfrm_user_tmpl) * xp->xfrm_nr;
-	len = RTA_ALIGN(RTA_LENGTH(len));
-	len += NLMSG_ALIGN(NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info)));
+	len = RTA_SPACE(sizeof(struct xfrm_user_tmpl) * xp->xfrm_nr);
+	len += NLMSG_SPACE(sizeof(struct xfrm_user_polexpire));
 	skb = alloc_skb(len, GFP_ATOMIC);
 	if (skb == NULL)
 		return -ENOMEM;

@@ -60,7 +60,7 @@ struct vt_struct *vt_cons[MAX_NR_CONSOLES];
 unsigned char keyboard_type = KB_101;
 
 #ifdef CONFIG_X86
-asmlinkage long sys_ioperm(unsigned long from, unsigned long num, int on);
+#include <linux/syscalls.h>
 #endif
 
 /*
@@ -382,7 +382,7 @@ int vt_ioctl(struct tty_struct *tty, struct file * file,
 	 * to be the owner of the tty, or have CAP_SYS_TTY_CONFIG.
 	 */
 	perm = 0;
-	if (current->tty == tty || capable(CAP_SYS_TTY_CONFIG))
+	if (current->signal->tty == tty || capable(CAP_SYS_TTY_CONFIG))
 		perm = 1;
  
 	kbd = kbd_table + console;
@@ -497,7 +497,7 @@ int vt_ioctl(struct tty_struct *tty, struct file * file,
 		 */
 		acquire_console_sem();
 		if (arg == KD_TEXT)
-			unblank_screen();
+			do_unblank_screen(1);
 		else
 			do_blank_screen(1);
 		release_console_sem();
@@ -1103,7 +1103,7 @@ void complete_change_console(unsigned int new_console)
 	if (old_vc_mode != vt_cons[new_console]->vc_mode)
 	{
 		if (vt_cons[new_console]->vc_mode == KD_TEXT)
-			unblank_screen();
+			do_unblank_screen(1);
 		else
 			do_blank_screen(1);
 	}
@@ -1138,7 +1138,7 @@ void complete_change_console(unsigned int new_console)
 			if (old_vc_mode != vt_cons[new_console]->vc_mode)
 			{
 				if (vt_cons[new_console]->vc_mode == KD_TEXT)
-					unblank_screen();
+					do_unblank_screen(1);
 				else
 					do_blank_screen(1);
 			}
@@ -1221,4 +1221,3 @@ void change_console(unsigned int new_console)
 
 	complete_change_console(new_console);
 }
-

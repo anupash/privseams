@@ -23,6 +23,7 @@
 #include <linux/config.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/init.h>
 #include <linux/smp_lock.h>
 #include <linux/acct.h>
 #include <linux/blkdev.h>
@@ -33,6 +34,7 @@
 #include <linux/security.h>
 #include <linux/vfs.h>
 #include <linux/writeback.h>		/* for the emergency remount stuff */
+#include <linux/idr.h>
 #include <asm/uaccess.h>
 
 
@@ -75,6 +77,7 @@ static struct super_block *alloc_super(void)
 		sema_init(&s->s_dquot.dqio_sem, 1);
 		sema_init(&s->s_dquot.dqonoff_sem, 1);
 		init_rwsem(&s->s_dquot.dqptr_sem);
+		init_waitqueue_head(&s->s_wait_unfrozen);
 		s->s_maxbytes = MAX_NON_LFS;
 		s->dq_op = sb_dquot_ops;
 		s->s_qcop = sb_quotactl_ops;
@@ -327,7 +330,7 @@ restart:
  * flags again, which will cause process A to resync everything.  Fix that with
  * a local mutex.
  *
- * FIXME: If wait==0, we only really need to call ->sync_fs if s_dirt is true.
+ * (Fabian) Avoid sync_fs with clean fs & wait mode 0
  */
 void sync_filesystems(int wait)
 {
@@ -358,7 +361,7 @@ restart:
 		sb->s_count++;
 		spin_unlock(&sb_lock);
 		down_read(&sb->s_umount);
-		if (sb->s_root)
+		if (sb->s_root && (wait || sb->s_dirt))
 			sb->s_op->sync_fs(sb, wait);
 		drop_super(sb);
 		goto restart;
@@ -448,6 +451,14 @@ out:
 	return err;
 }
 
+/**
+ *	mark_files_ro
+ *	@sb: superblock in question
+ *
+ *	All files are marked read/only.  We don't care about pending
+ *	delete files so this should be used in 'force' mode only
+ */
+
 static void mark_files_ro(struct super_block *sb)
 {
 	struct file *f;
@@ -480,7 +491,8 @@ int do_remount_sb(struct super_block *sb, int flags, void *data, int force)
 	shrink_dcache_sb(sb);
 	fsync_super(sb);
 
-	/* If we are remounting RDONLY, make sure there are no rw files open */
+	/* If we are remounting RDONLY and current sb is read/write,
+	   make sure there are no rw files opened */
 	if ((flags & MS_RDONLY) && !(sb->s_flags & MS_RDONLY)) {
 		if (force)
 			mark_files_ro(sb);
@@ -535,22 +547,28 @@ void emergency_remount(void)
  * filesystems which don't use real block-devices.  -- jrs
  */
 
-enum {Max_anon = 256};
-static unsigned long unnamed_dev_in_use[Max_anon/(8*sizeof(unsigned long))];
+static struct idr unnamed_dev_idr;
 static spinlock_t unnamed_dev_lock = SPIN_LOCK_UNLOCKED;/* protects the above */
 
 int set_anon_super(struct super_block *s, void *data)
 {
 	int dev;
+
 	spin_lock(&unnamed_dev_lock);
-	dev = find_first_zero_bit(unnamed_dev_in_use, Max_anon);
-	if (dev == Max_anon) {
+	if (idr_pre_get(&unnamed_dev_idr, GFP_ATOMIC) == 0) {
+		spin_unlock(&unnamed_dev_lock);
+		return -ENOMEM;
+	}
+	dev = idr_get_new(&unnamed_dev_idr, NULL);
+	spin_unlock(&unnamed_dev_lock);
+
+	if ((dev & MAX_ID_MASK) == (1 << MINORBITS)) {
+		spin_lock(&unnamed_dev_lock);
+		idr_remove(&unnamed_dev_idr, dev);
 		spin_unlock(&unnamed_dev_lock);
 		return -EMFILE;
 	}
-	set_bit(dev, unnamed_dev_in_use);
-	spin_unlock(&unnamed_dev_lock);
-	s->s_dev = MKDEV(0, dev);
+	s->s_dev = MKDEV(0, dev & MINORMASK);
 	return 0;
 }
 
@@ -559,13 +577,19 @@ EXPORT_SYMBOL(set_anon_super);
 void kill_anon_super(struct super_block *sb)
 {
 	int slot = MINOR(sb->s_dev);
+
 	generic_shutdown_super(sb);
 	spin_lock(&unnamed_dev_lock);
-	clear_bit(slot, unnamed_dev_in_use);
+	idr_remove(&unnamed_dev_idr, slot);
 	spin_unlock(&unnamed_dev_lock);
 }
 
 EXPORT_SYMBOL(kill_anon_super);
+
+void __init unnamed_dev_init(void)
+{
+	idr_init(&unnamed_dev_idr);
+}
 
 void kill_litter_super(struct super_block *sb)
 {
@@ -596,11 +620,18 @@ struct super_block *get_sb_bdev(struct file_system_type *fs_type,
 	struct super_block *s;
 	int error = 0;
 
-	bdev = open_bdev_excl(dev_name, flags, BDEV_FS, fs_type);
+	bdev = open_bdev_excl(dev_name, flags, fs_type);
 	if (IS_ERR(bdev))
 		return (struct super_block *)bdev;
 
+	/*
+	 * once the super is inserted into the list by sget, s_umount
+	 * will protect the lockfs code from trying to start a snapshot
+	 * while we are mounting
+	 */
+	down(&bdev->bd_mount_sem);
 	s = sget(fs_type, test_bdev_super, set_bdev_super, bdev);
+	up(&bdev->bd_mount_sem);
 	if (IS_ERR(s))
 		goto out;
 
@@ -615,7 +646,7 @@ struct super_block *get_sb_bdev(struct file_system_type *fs_type,
 		char b[BDEVNAME_SIZE];
 
 		s->s_flags = flags;
-		strncpy(s->s_id, bdevname(bdev, b), sizeof(s->s_id));
+		strlcpy(s->s_id, bdevname(bdev, b), sizeof(s->s_id));
 		s->s_old_blocksize = block_size(bdev);
 		sb_set_blocksize(s, s->s_old_blocksize);
 		error = fill_super(s, data, flags & MS_VERBOSE ? 1 : 0);
@@ -630,7 +661,7 @@ struct super_block *get_sb_bdev(struct file_system_type *fs_type,
 	return s;
 
 out:
-	close_bdev_excl(bdev, BDEV_FS);
+	close_bdev_excl(bdev);
 	return s;
 }
 
@@ -641,7 +672,7 @@ void kill_block_super(struct super_block *sb)
 	struct block_device *bdev = sb->s_bdev;
 	generic_shutdown_super(sb);
 	set_blocksize(bdev, sb->s_old_blocksize);
-	close_bdev_excl(bdev, BDEV_FS);
+	close_bdev_excl(bdev);
 }
 
 EXPORT_SYMBOL(kill_block_super);
@@ -724,7 +755,7 @@ do_kern_mount(const char *fstype, int flags, const char *name, void *data)
 			goto out_mnt;
 		}
 
-		error = security_sb_copy_data(fstype, data, secdata);
+		error = security_sb_copy_data(type, data, secdata);
 		if (error) {
 			sb = ERR_PTR(error);
 			goto out_free_secdata;

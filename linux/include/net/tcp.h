@@ -263,7 +263,10 @@ static __inline__ int tw_del_dead_node(struct tcp_tw_bucket *tw)
 #define tw_for_each(tw, node, head) \
 	hlist_for_each_entry(tw, node, head, tw_node)
 
-#define tw_for_each_inmate(tw, node, safe, jail) \
+#define tw_for_each_inmate(tw, node, jail) \
+	hlist_for_each_entry(tw, node, jail, tw_death_node)
+
+#define tw_for_each_inmate_safe(tw, node, safe, jail) \
 	hlist_for_each_entry_safe(tw, node, safe, jail, tw_death_node)
 
 #define tcptw_sk(__sk)	((struct tcp_tw_bucket *)(__sk))
@@ -506,6 +509,25 @@ static __inline__ int tcp_sk_listen_hashfn(struct sock *sk)
 # define TCP_TW_RECYCLE_TICK (12+2-TCP_TW_RECYCLE_SLOTS_LOG)
 #endif
 
+#define BICTCP_1_OVER_BETA	8	/*
+					 * Fast recovery
+					 * multiplicative decrease factor
+					 */
+#define BICTCP_MAX_INCREMENT 32		/*
+					 * Limit on the amount of
+					 * increment allowed during
+					 * binary search.
+					 */
+#define BICTCP_FUNC_OF_MIN_INCR 11	/*
+					 * log(B/Smin)/log(B/(B-1))+1,
+					 * Smin:min increment
+					 * B:log factor
+					 */
+#define BICTCP_B		4	 /*
+					  * In binary search,
+					  * go to point (max+min)/N
+					  */
+
 /*
  *	TCP option
  */
@@ -580,6 +602,14 @@ extern int sysctl_tcp_tw_reuse;
 extern int sysctl_tcp_frto;
 extern int sysctl_tcp_low_latency;
 extern int sysctl_tcp_westwood;
+extern int sysctl_tcp_vegas_cong_avoid;
+extern int sysctl_tcp_vegas_alpha;
+extern int sysctl_tcp_vegas_beta;
+extern int sysctl_tcp_vegas_gamma;
+extern int sysctl_tcp_nometrics_save;
+extern int sysctl_tcp_bic;
+extern int sysctl_tcp_bic_fast_convergence;
+extern int sysctl_tcp_bic_low_window;
 
 extern atomic_t tcp_memory_allocated;
 extern atomic_t tcp_sockets_allocated;
@@ -921,7 +951,6 @@ extern void tcp_send_fin(struct sock *sk);
 extern void tcp_send_active_reset(struct sock *sk, int priority);
 extern int  tcp_send_synack(struct sock *);
 extern int  tcp_transmit_skb(struct sock *, struct sk_buff *);
-extern void tcp_send_skb(struct sock *, struct sk_buff *, int force_queue, unsigned mss_now);
 extern void tcp_push_one(struct sock *, unsigned mss_now);
 extern void tcp_send_ack(struct sock *sk);
 extern void tcp_send_delayed_ack(struct sock *sk);
@@ -1200,12 +1229,84 @@ static __inline__ unsigned int tcp_packets_in_flight(struct tcp_opt *tp)
 
 /* Recalculate snd_ssthresh, we want to set it to:
  *
+ * Reno:
  * 	one half the current congestion window, but no
  *	less than two segments
+ *
+ * BIC:
+ *	behave like Reno until low_window is reached,
+ *	then increase congestion window slowly
  */
 static inline __u32 tcp_recalc_ssthresh(struct tcp_opt *tp)
 {
+	if (sysctl_tcp_bic) {
+		if (sysctl_tcp_bic_fast_convergence &&
+		    tp->snd_cwnd < tp->bictcp.last_max_cwnd)
+			tp->bictcp.last_max_cwnd
+				= (tp->snd_cwnd * (2*BICTCP_1_OVER_BETA-1))
+				/ (BICTCP_1_OVER_BETA/2);
+		else
+			tp->bictcp.last_max_cwnd = tp->snd_cwnd;
+
+		if (tp->snd_cwnd > sysctl_tcp_bic_low_window)
+			return max(tp->snd_cwnd - (tp->snd_cwnd/BICTCP_1_OVER_BETA),
+				   2U);
+	}
+
 	return max(tp->snd_cwnd >> 1U, 2U);
+}
+
+/* Stop taking Vegas samples for now. */
+#define tcp_vegas_disable(__tp)	((__tp)->vegas.doing_vegas_now = 0)
+
+/* Is this TCP connection using Vegas (regardless of whether it is taking
+ * Vegas measurements at the current time)?
+ */
+#define tcp_is_vegas(__tp)	((__tp)->vegas.do_vegas)
+    
+static inline void tcp_vegas_enable(struct tcp_opt *tp)
+{
+	/* There are several situations when we must "re-start" Vegas:
+	 *
+	 *  o when a connection is established
+	 *  o after an RTO
+	 *  o after fast recovery
+	 *  o when we send a packet and there is no outstanding
+	 *    unacknowledged data (restarting an idle connection)
+	 *
+	 * In these circumstances we cannot do a Vegas calculation at the
+	 * end of the first RTT, because any calculation we do is using
+	 * stale info -- both the saved cwnd and congestion feedback are
+	 * stale.
+	 *
+	 * Instead we must wait until the completion of an RTT during
+	 * which we actually receive ACKs.
+	 */
+    
+	/* Begin taking Vegas samples next time we send something. */
+	tp->vegas.doing_vegas_now = 1;
+     
+	/* Set the beginning of the next send window. */
+	tp->vegas.beg_snd_nxt = tp->snd_nxt;
+
+	tp->vegas.cntRTT = 0;
+	tp->vegas.minRTT = 0x7fffffff;
+}
+
+/* Should we be taking Vegas samples right now? */
+#define tcp_vegas_enabled(__tp)	((__tp)->vegas.doing_vegas_now)
+
+extern void tcp_vegas_init(struct tcp_opt *tp);
+
+static inline void tcp_set_ca_state(struct tcp_opt *tp, u8 ca_state)
+{
+	if (tcp_is_vegas(tp)) {
+		if (ca_state == TCP_CA_Open) 
+			tcp_vegas_enable(tp);
+		else
+			tcp_vegas_disable(tp);
+	}
+	tp->ca_state = ca_state;
 }
 
 /* If cwnd > ssthresh, we may raise ssthresh to be half-way to cwnd.
@@ -1267,7 +1368,7 @@ static inline void tcp_enter_cwr(struct tcp_opt *tp)
 	tp->prior_ssthresh = 0;
 	if (tp->ca_state < TCP_CA_CWR) {
 		__tcp_enter_cwr(tp);
-		tp->ca_state = TCP_CA_CWR;
+		tcp_set_ca_state(tp, TCP_CA_CWR);
 	}
 }
 

@@ -319,7 +319,7 @@ static unsigned int __init init_chipset_slc90e66 (struct pci_dev *dev, const cha
 	if (!slc90e66_proc) {
 		slc90e66_proc = 1;
 		bmide_dev = dev;
-		ide_pci_register_host_proc(&slc90e66_procs[0]);
+		ide_pci_create_host_proc("slc90e66", slc90e66_get_info);
 	}
 #endif /* DISPLAY_SLC90E66_TIMINGS && CONFIG_PROC_FS */
 	return 0;
@@ -364,9 +364,6 @@ static void __init init_hwif_slc90e66 (ide_hwif_t *hwif)
 #endif /* !CONFIG_BLK_DEV_IDEDMA */
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
-
 static int __devinit slc90e66_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	ide_pci_device_t *d = &slc90e66_chipsets[id->driver_data];
@@ -380,6 +377,7 @@ static struct pci_device_id slc90e66_pci_tbl[] = {
 	{ PCI_VENDOR_ID_EFAR, PCI_DEVICE_ID_EFAR_SLC90E66_1, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, slc90e66_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "SLC90e66 IDE",

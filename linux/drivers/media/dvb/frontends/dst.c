@@ -963,7 +963,6 @@ struct lkup {
 	{FE_GET_FRONTEND,            "FE_GET_FRONTEND:" },
 	{FE_SLEEP,                   "FE_SLEEP:" },
 	{FE_INIT,                    "FE_INIT:" },
-	{FE_RESET,                   "FE_RESET:" },
 	{FE_SET_TONE,                "FE_SET_TONE:" },
 	{FE_SET_VOLTAGE,             "FE_SET_VOLTAGE:" },
 	};
@@ -1089,9 +1088,6 @@ static int dst_ioctl (struct dvb_frontend *fe, unsigned int cmd, void *arg)
 
         case FE_INIT:
 		dst_init(dst);
-		break;
-
-	case FE_RESET:
 		break;
 
 	case FE_DISEQC_SEND_MASTER_CMD:

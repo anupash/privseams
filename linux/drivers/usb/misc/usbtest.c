@@ -149,8 +149,6 @@ get_endpoints (struct usbtest_dev *dev, struct usb_interface *intf)
 				if (!out)
 					out = e;
 			}
-			if (in && out)
-				goto found;
 			continue;
 try_iso:
 			if (e->desc.bEndpointAddress & USB_DIR_IN) {
@@ -160,9 +158,9 @@ try_iso:
 				if (!iso_out)
 					iso_out = e;
 			}
-			if (iso_in && iso_out)
-				goto found;
 		}
+		if ((in && out)  ||  (iso_in && iso_out))
+			goto found;
 	}
 	return -EINVAL;
 
@@ -181,7 +179,8 @@ found:
 			in->desc.bEndpointAddress & USB_ENDPOINT_NUMBER_MASK);
 		dev->out_pipe = usb_sndbulkpipe (udev,
 			out->desc.bEndpointAddress & USB_ENDPOINT_NUMBER_MASK);
-	} else if (iso_in) {
+	}
+	if (iso_in) {
 		dev->iso_in = &iso_in->desc;
 		dev->in_iso_pipe = usb_rcvisocpipe (udev,
 				iso_in->desc.bEndpointAddress
@@ -211,7 +210,7 @@ static void simple_callback (struct urb *urb, struct pt_regs *regs)
 static struct urb *simple_alloc_urb (
 	struct usb_device	*udev,
 	int			pipe,
-	long			bytes
+	unsigned long		bytes
 )
 {
 	struct urb		*urb;
@@ -490,7 +489,7 @@ static int set_altsetting (struct usbtest_dev *dev, int alternate)
 	struct usb_interface		*iface = dev->intf;
 	struct usb_device		*udev;
 
-	if (alternate < 0 || alternate >= iface->num_altsetting)
+	if (alternate < 0 || alternate >= 256)
 		return -EINVAL;
 
 	udev = interface_to_usbdev (iface);
@@ -556,23 +555,19 @@ static int ch9_postconfig (struct usbtest_dev *dev)
 {
 	struct usb_interface	*iface = dev->intf;
 	struct usb_device	*udev = interface_to_usbdev (iface);
-	int			i, retval;
+	int			i, alt, retval;
 
 	/* [9.2.3] if there's more than one altsetting, we need to be able to
 	 * set and get each one.  mostly trusts the descriptors from usbcore.
 	 */
 	for (i = 0; i < iface->num_altsetting; i++) {
 
-		/* 9.2.3 constrains the range here, and Linux ensures
-		 * they're ordered meaningfully in this array
-		 */
-		if (iface->altsetting [i].desc.bAlternateSetting != i) {
+		/* 9.2.3 constrains the range here */
+		alt = iface->altsetting [i].desc.bAlternateSetting;
+		if (alt < 0 || alt >= iface->num_altsetting) {
 			dev_dbg (&iface->dev,
 					"invalid alt [%d].bAltSetting = %d\n",
-					i, 
-					iface->altsetting [i].desc
-						.bAlternateSetting);
-			return -EDOM;
+					i, alt);
 		}
 
 		/* [real world] get/set unimplemented if there's only one */
@@ -580,18 +575,18 @@ static int ch9_postconfig (struct usbtest_dev *dev)
 			continue;
 
 		/* [9.4.10] set_interface */
-		retval = set_altsetting (dev, i);
+		retval = set_altsetting (dev, alt);
 		if (retval) {
 			dev_dbg (&iface->dev, "can't set_interface = %d, %d\n",
-					i, retval);
+					alt, retval);
 			return retval;
 		}
 
 		/* [9.4.4] get_interface always works */
 		retval = get_altsetting (dev);
-		if (retval != i) {
+		if (retval != alt) {
 			dev_dbg (&iface->dev, "get alt should be %d, was %d\n",
-					i, retval);
+					alt, retval);
 			return (retval < 0) ? retval : -EDOM;
 		}
 
@@ -724,7 +719,7 @@ struct ctrl_ctx {
 	int			last;
 };
 
-#define NUM_SUBCASES	13		/* how many test subcases here? */
+#define NUM_SUBCASES	15		/* how many test subcases here? */
 
 struct subcase {
 	struct usb_ctrlrequest	setup;
@@ -916,7 +911,7 @@ test_ctrl_queue (struct usbtest_dev *dev, struct usbtest_param *param)
 			req.wValue = cpu_to_le16 (USB_DT_INTERFACE << 8);
 			// interface == 0
 			len = sizeof (struct usb_interface_descriptor);
-			expected = -EPIPE;
+			expected = EPIPE;
 			break;
 		// NOTE: two consecutive stalls in the queue here.
 		// that tests fault recovery a bit more aggressively.
@@ -945,14 +940,31 @@ test_ctrl_queue (struct usbtest_dev *dev, struct usbtest_param *param)
 			req.wValue = cpu_to_le16 (USB_DT_ENDPOINT << 8);
 			// endpoint == 0
 			len = sizeof (struct usb_interface_descriptor);
-			expected = -EPIPE;
+			expected = EPIPE;
 			break;
 		// NOTE: sometimes even a third fault in the queue!
 		case 12:	// get string 0 descriptor (MAY STALL)
 			req.wValue = cpu_to_le16 (USB_DT_STRING << 8);
 			// string == 0, for language IDs
 			len = sizeof (struct usb_interface_descriptor);
+			// may succeed when > 4 languages
 			expected = EREMOTEIO;	// or EPIPE, if no strings
+			break;
+		case 13:	// short read, resembling case 10
+			req.wValue = cpu_to_le16 ((USB_DT_CONFIG << 8) | 0);
+			// last data packet "should" be DATA1, not DATA0
+			len = 1024 - udev->epmaxpacketin [0];
+			expected = -EREMOTEIO;
+			break;
+		case 14:	// short read; try to fill the last packet
+			req.wValue = cpu_to_le16 ((USB_DT_DEVICE << 8) | 0);
+			// device descriptor size == 18 bytes 
+			len = udev->epmaxpacketin [0];
+			switch (len) {
+			case 8:		len = 24; break;
+			case 16:	len = 32; break;
+			}
+			expected = -EREMOTEIO;
 			break;
 		default:
 			err ("bogus number of ctrl queue testcases!");
@@ -1055,7 +1067,7 @@ static int unlink1 (struct usbtest_dev *dev, int pipe, int size, int async)
 	 * due to errors, or is just NAKing requests.
 	 */
 	if ((retval = usb_submit_urb (urb, SLAB_KERNEL)) != 0) {
-		dbg ("submit/unlink fail %d", retval);
+		dev_dbg (&dev->intf->dev, "submit fail %d\n", retval);
 		return retval;
 	}
 
@@ -1070,18 +1082,22 @@ retry:
 		 * "normal" drivers would prevent resubmission, but
 		 * since we're testing unlink paths, we can't.
 		 */
-		dbg ("unlink retry");
+		dev_dbg (&dev->intf->dev, "unlink retry\n");
 		goto retry;
 	}
 	if (!(retval == 0 || retval == -EINPROGRESS)) {
-		dbg ("submit/unlink fail %d", retval);
+		dev_dbg (&dev->intf->dev, "unlink fail %d\n", retval);
 		return retval;
 	}
 
 	wait_for_completion (&completion);
 	retval = urb->status;
 	simple_free_urb (urb);
-	return retval;
+
+	if (async)
+		return (retval != -ECONNRESET) ? -ECONNRESET : 0;
+	else
+		return (retval != -ENOENT) ? -ENOENT : 0;
 }
 
 static int unlink_simple (struct usbtest_dev *dev, int pipe, int len)
@@ -1153,7 +1169,8 @@ static int test_halt (int ep, struct urb *urb)
 
 	/* set halt (protocol test only), verify it worked */
 	retval = usb_control_msg (urb->dev, usb_sndctrlpipe (urb->dev, 0),
-			USB_REQ_SET_FEATURE, USB_RECIP_ENDPOINT, 0, ep,
+			USB_REQ_SET_FEATURE, USB_RECIP_ENDPOINT,
+			USB_ENDPOINT_HALT, ep,
 			NULL, 0, HZ * USB_CTRL_SET_TIMEOUT);
 	if (retval < 0) {
 		dbg ("ep %02x couldn't set halt, %d", ep, retval);
@@ -1706,7 +1723,8 @@ usbtest_ioctl (struct usb_interface *intf, unsigned int code, void *buf)
 			retval = unlink_simple (dev, dev->in_pipe,
 						param->length);
 		if (retval)
-			dbg ("unlink reads failed, iterations left %d", i);
+			dev_dbg (&intf->dev, "unlink reads failed %d, "
+				"iterations left %d\n", retval, i);
 		break;
 	case 12:
 		if (dev->out_pipe == 0 || !param->length)
@@ -1718,7 +1736,8 @@ usbtest_ioctl (struct usb_interface *intf, unsigned int code, void *buf)
 			retval = unlink_simple (dev, dev->out_pipe,
 						param->length);
 		if (retval)
-			dbg ("unlink writes failed, iterations left %d", i);
+			dev_dbg (&intf->dev, "unlink writes failed %d, "
+				"iterations left %d\n", retval, i);
 		break;
 
 	/* ep halt tests */
@@ -1948,7 +1967,10 @@ static struct usbtest_info fw_info = {
 	.name		= "usb test device",
 	.ep_in		= 2,
 	.ep_out		= 2,
-	.alt		= 0,
+	.alt		= 1,
+	.autoconf	= 1,		// iso and ctrl_out need autoconf
+	.ctrl_out	= 1,
+	.iso		= 1,		// iso_ep's are #8 in/out
 };
 
 /* peripheral running Linux and 'zero.c' test firmware, or

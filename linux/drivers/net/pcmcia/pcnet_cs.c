@@ -722,6 +722,10 @@ static void pcnet_config(dev_link_t *link)
     link->dev = &info->node;
     link->state &= ~DEV_CONFIG_PENDING;
 
+#ifdef CONFIG_NET_POLL_CONTROLLER
+    dev->poll_controller = ei_poll;
+#endif
+
     if (register_netdev(dev) != 0) {
 	printk(KERN_NOTICE "pcnet_cs: register_netdev() failed\n");
 	link->dev = NULL;
@@ -1163,10 +1167,11 @@ static irqreturn_t ei_irq_wrapper(int irq, void *dev_id, struct pt_regs *regs)
 {
     struct net_device *dev = dev_id;
     pcnet_dev_t *info = PRIV(dev);
-    info->stale = 0;
-    ei_interrupt(irq, dev_id, regs);
-    /* FIXME! Was it really ours? */
-    return IRQ_HANDLED;
+    irqreturn_t ret = ei_interrupt(irq, dev_id, regs);
+
+    if (ret == IRQ_HANDLED)
+	    info->stale = 0;
+    return ret;
 }
 
 static void ei_watchdog(u_long arg)

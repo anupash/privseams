@@ -103,6 +103,7 @@ static spinlock_t iosapic_lock = SPIN_LOCK_UNLOCKED;
 
 static struct iosapic_intr_info {
 	char		*addr;		/* base address of IOSAPIC */
+	u32		low32;		/* current value of low word of Redirection table entry */
 	unsigned int	gsi_base;	/* first GSI assigned to this IOSAPIC */
 	char		rte_index;	/* IOSAPIC RTE index (-1 => not an IOSAPIC interrupt) */
 	unsigned char	dmode	: 3;	/* delivery mode (see iosapic.h) */
@@ -169,9 +170,9 @@ gsi_to_irq (unsigned int gsi)
 }
 
 static void
-set_rte (unsigned int vector, unsigned int dest)
+set_rte (unsigned int vector, unsigned int dest, int mask)
 {
-	unsigned long pol, trigger, dmode;
+	unsigned long pol, trigger, dmode, flags;
 	u32 low32, high32;
 	char *addr;
 	int rte_index;
@@ -204,15 +205,21 @@ set_rte (unsigned int vector, unsigned int dest)
 	low32 = ((pol << IOSAPIC_POLARITY_SHIFT) |
 		 (trigger << IOSAPIC_TRIGGER_SHIFT) |
 		 (dmode << IOSAPIC_DELIVERY_SHIFT) |
+		 ((mask ? 1 : 0) << IOSAPIC_MASK_SHIFT) |
 		 vector);
 
 	/* dest contains both id and eid */
 	high32 = (dest << IOSAPIC_DEST_SHIFT);
 
-	writel(IOSAPIC_RTE_HIGH(rte_index), addr + IOSAPIC_REG_SELECT);
-	writel(high32, addr + IOSAPIC_WINDOW);
-	writel(IOSAPIC_RTE_LOW(rte_index), addr + IOSAPIC_REG_SELECT);
-	writel(low32, addr + IOSAPIC_WINDOW);
+	spin_lock_irqsave(&iosapic_lock, flags);
+	{
+		writel(IOSAPIC_RTE_HIGH(rte_index), addr + IOSAPIC_REG_SELECT);
+		writel(high32, addr + IOSAPIC_WINDOW);
+		writel(IOSAPIC_RTE_LOW(rte_index), addr + IOSAPIC_REG_SELECT);
+		writel(low32, addr + IOSAPIC_WINDOW);
+		iosapic_intr_info[vector].low32 = low32;
+	}
+	spin_unlock_irqrestore(&iosapic_lock, flags);
 }
 
 static void
@@ -239,9 +246,10 @@ mask_irq (unsigned int irq)
 	spin_lock_irqsave(&iosapic_lock, flags);
 	{
 		writel(IOSAPIC_RTE_LOW(rte_index), addr + IOSAPIC_REG_SELECT);
-		low32 = readl(addr + IOSAPIC_WINDOW);
 
-		low32 |= (1 << IOSAPIC_MASK_SHIFT);    /* set only the mask bit */
+		/* set only the mask bit */
+		low32 = iosapic_intr_info[vec].low32 |= IOSAPIC_MASK;
+
 		writel(low32, addr + IOSAPIC_WINDOW);
 	}
 	spin_unlock_irqrestore(&iosapic_lock, flags);
@@ -264,9 +272,7 @@ unmask_irq (unsigned int irq)
 	spin_lock_irqsave(&iosapic_lock, flags);
 	{
 		writel(IOSAPIC_RTE_LOW(rte_index), addr + IOSAPIC_REG_SELECT);
-		low32 = readl(addr + IOSAPIC_WINDOW);
-
-		low32 &= ~(1 << IOSAPIC_MASK_SHIFT);    /* clear only the mask bit */
+		low32 = iosapic_intr_info[vec].low32 &= ~IOSAPIC_MASK;
 		writel(low32, addr + IOSAPIC_WINDOW);
 	}
 	spin_unlock_irqrestore(&iosapic_lock, flags);
@@ -287,7 +293,7 @@ iosapic_set_affinity (unsigned int irq, cpumask_t mask)
 	irq &= (~IA64_IRQ_REDIRECTED);
 	vec = irq_to_vector(irq);
 
-	if (cpus_empty(mask) || vec >= IA64_NUM_VECTORS)
+	if (cpus_empty(mask))
 		return;
 
 	dest = cpu_physical_id(first_cpu(mask));
@@ -307,9 +313,7 @@ iosapic_set_affinity (unsigned int irq, cpumask_t mask)
 	{
 		/* get current delivery mode by reading the low32 */
 		writel(IOSAPIC_RTE_LOW(rte_index), addr + IOSAPIC_REG_SELECT);
-		low32 = readl(addr + IOSAPIC_WINDOW);
-
-		low32 &= ~(7 << IOSAPIC_DELIVERY_SHIFT);
+		low32 = iosapic_intr_info[vec].low32 & ~(7 << IOSAPIC_DELIVERY_SHIFT);
 		if (redir)
 		        /* change delivery mode to lowest priority */
 			low32 |= (IOSAPIC_LOWEST_PRIORITY << IOSAPIC_DELIVERY_SHIFT);
@@ -317,6 +321,7 @@ iosapic_set_affinity (unsigned int irq, cpumask_t mask)
 		        /* change delivery mode to fixed */
 			low32 |= (IOSAPIC_FIXED << IOSAPIC_DELIVERY_SHIFT);
 
+		iosapic_intr_info[vec].low32 = low32;
 		writel(IOSAPIC_RTE_HIGH(rte_index), addr + IOSAPIC_REG_SELECT);
 		writel(high32, addr + IOSAPIC_WINDOW);
 		writel(IOSAPIC_RTE_LOW(rte_index), addr + IOSAPIC_REG_SELECT);
@@ -434,7 +439,7 @@ iosapic_reassign_vector (int vector)
 	    || iosapic_intr_info[vector].gsi_base || iosapic_intr_info[vector].dmode
 	    || iosapic_intr_info[vector].polarity || iosapic_intr_info[vector].trigger)
 	{
-		new_vector = ia64_alloc_vector();
+		new_vector = assign_irq_vector(AUTO_ASSIGN);
 		printk(KERN_INFO "Reassigning vector %d to %d\n", vector, new_vector);
 		memcpy(&iosapic_intr_info[new_vector], &iosapic_intr_info[vector],
 		       sizeof(struct iosapic_intr_info));
@@ -499,7 +504,7 @@ iosapic_register_intr (unsigned int gsi,
 
 	vector = gsi_to_vector(gsi);
 	if (vector < 0)
-		vector = ia64_alloc_vector();
+		vector = assign_irq_vector(AUTO_ASSIGN);
 
 	register_intr(gsi, vector, IOSAPIC_LOWEST_PRIORITY,
 		      polarity, trigger);
@@ -509,7 +514,7 @@ iosapic_register_intr (unsigned int gsi,
 	       (trigger == IOSAPIC_EDGE ? "edge" : "level"), dest, vector);
 
 	/* program the IOSAPIC routing table */
-	set_rte(vector, dest);
+	set_rte(vector, dest, 0);
 	return vector;
 }
 
@@ -537,7 +542,7 @@ iosapic_register_platform_intr (u32 int_type, unsigned int gsi,
 		delivery = IOSAPIC_PMI;
 		break;
 	      case ACPI_INTERRUPT_INIT:
-		vector = ia64_alloc_vector();
+		vector = assign_irq_vector(AUTO_ASSIGN);
 		delivery = IOSAPIC_INIT;
 		break;
 	      case ACPI_INTERRUPT_CPEI:
@@ -557,7 +562,7 @@ iosapic_register_platform_intr (u32 int_type, unsigned int gsi,
 	       (trigger == IOSAPIC_EDGE ? "edge" : "level"), dest, vector);
 
 	/* program the IOSAPIC routing table */
-	set_rte(vector, dest);
+	set_rte(vector, dest, 0);
 	return vector;
 }
 
@@ -583,7 +588,7 @@ iosapic_override_isa_irq (unsigned int isa_irq, unsigned int gsi,
 	    trigger == IOSAPIC_EDGE ? "edge" : "level", dest, vector);
 
 	/* program the IOSAPIC routing table */
-	set_rte(vector, dest);
+	set_rte(vector, dest, 0);
 }
 
 void __init
@@ -643,6 +648,16 @@ void
 iosapic_enable_intr (unsigned int vector)
 {
 	unsigned int dest;
+	irq_desc_t *desc;
+
+	/*
+	 * In the case of a shared interrupt, do not re-route the vector, and
+	 * especially do not mask a running interrupt (startup will not get
+	 * called for a shared interrupt).
+	 */
+	desc = irq_descp(vector);
+	if (desc->action)
+		return;
 
 #ifdef CONFIG_SMP
 	/*
@@ -669,7 +684,7 @@ iosapic_enable_intr (unsigned int vector)
 	/* direct the interrupt vector to the running cpu id */
 	dest = (ia64_getreg(_IA64_REG_CR_LID) >> 16) & 0xffff;
 #endif
-	set_rte(vector, dest);
+	set_rte(vector, dest, 1);
 
 	printk(KERN_INFO "IOSAPIC: vector %d -> CPU 0x%04x, enabled\n",
 	       vector, dest);
@@ -707,7 +722,7 @@ iosapic_parse_prt (void)
 				vector = isa_irq_to_vector(gsi);
 			else
 				/* new GSI; allocate a vector for it */
-				vector = ia64_alloc_vector();
+				vector = assign_irq_vector(AUTO_ASSIGN);
 
 			register_intr(gsi, vector, IOSAPIC_LOWEST_PRIORITY, IOSAPIC_POL_LOW,
 				      IOSAPIC_LEVEL);

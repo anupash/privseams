@@ -160,6 +160,9 @@ video_fix_command(unsigned int cmd)
 	case VIDIOC_G_AUDOUT_OLD:
 		cmd = VIDIOC_G_AUDOUT;
 		break;
+	case VIDIOC_CROPCAP_OLD:
+		cmd = VIDIOC_CROPCAP;
+		break;
 	}
 	return cmd;
 }
@@ -313,19 +316,19 @@ int video_register_device(struct video_device *vfd, int type, int nr)
 
 	/* pick a minor number */
 	down(&videodev_lock);
-	if (-1 == nr) {
+	if (nr >= 0  &&  nr < end-base) {
+		/* use the one the driver asked for */
+		i = base+nr;
+		if (NULL != video_device[i]) {
+			up(&videodev_lock);
+			return -ENFILE;
+		}
+	} else {
 		/* use first free */
 		for(i=base;i<end;i++)
 			if (NULL == video_device[i])
 				break;
 		if (i == end) {
-			up(&videodev_lock);
-			return -ENFILE;
-		}
-	} else {
-		/* use the one the driver asked for */
-		i = base+nr;
-		if (NULL != video_device[i]) {
 			up(&videodev_lock);
 			return -ENFILE;
 		}

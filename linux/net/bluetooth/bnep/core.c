@@ -5,7 +5,7 @@
 	Clément Moreau <clement.moreau@inventel.fr>
 	David Libault  <david.libault@inventel.fr>
 
-   Copyright (C) 2002 Maxim Krasnyanskiy <maxk@qualcomm.com>
+   Copyright (C) 2002 Maxim Krasnyansky <maxk@qualcomm.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 2 as
@@ -28,8 +28,6 @@
 /*
  * $Id: core.c,v 1.20 2002/08/04 21:23:58 maxk Exp $
  */ 
-
-#define __KERNEL_SYSCALLS__
 
 #include <linux/config.h>
 #include <linux/module.h>
@@ -460,7 +458,7 @@ static int bnep_session(void *arg)
 
         daemonize("kbnepd %s", dev->name);
 	set_user_nice(current, -15);
-	current->flags |= PF_IOTHREAD;
+	current->flags |= PF_NOFREEZE;
 
         set_fs(KERNEL_DS);
 
@@ -501,7 +499,7 @@ static int bnep_session(void *arg)
 	__bnep_unlink_session(s);
 
 	up_write(&bnep_session_sem);
-	kfree(dev);
+	free_netdev(dev);
 	return 0;
 }
 
@@ -588,7 +586,7 @@ int bnep_add_connection(struct bnep_connadd_req *req, struct socket *sock)
 
 failed:
 	up_write(&bnep_session_sem);
-	kfree(dev);
+	free_netdev(dev);
 	return err;
 }
 
@@ -674,7 +672,7 @@ int bnep_get_conninfo(struct bnep_conninfo *ci)
 	return err;
 }
 
-static int  __init bnep_init_module(void)
+static int __init bnep_init(void)
 {	
 	char flt[50] = "";
 
@@ -696,15 +694,16 @@ static int  __init bnep_init_module(void)
 	return 0;
 }
 
-static void __exit bnep_cleanup_module(void)
+static void __exit bnep_exit(void)
 {
 	bnep_sock_cleanup();
 }
 
-module_init(bnep_init_module);
-module_exit(bnep_cleanup_module);
+module_init(bnep_init);
+module_exit(bnep_exit);
 
+MODULE_AUTHOR("David Libault <david.libault@inventel.fr>, Maxim Krasnyansky <maxk@qualcomm.com>");
 MODULE_DESCRIPTION("Bluetooth BNEP ver " VERSION);
-MODULE_AUTHOR("David Libault <david.libault@inventel.fr>, Maxim Krasnyanskiy <maxk@qualcomm.com>");
+MODULE_VERSION(VERSION);
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("bt-proto-4");

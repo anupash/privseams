@@ -35,7 +35,7 @@ extern pgd_t swapper_pg_dir[1024];
 extern kmem_cache_t *pgd_cache;
 extern kmem_cache_t *pmd_cache;
 extern spinlock_t pgd_lock;
-extern struct list_head pgd_list;
+extern struct page *pgd_list;
 
 void pmd_ctor(void *, kmem_cache_t *, unsigned long);
 void pgd_ctor(void *, kmem_cache_t *, unsigned long);
@@ -107,6 +107,9 @@ void paging_init(void);
 #define _PAGE_BIT_DIRTY		6
 #define _PAGE_BIT_PSE		7	/* 4 MB (or 2MB) page, Pentium+, if present.. */
 #define _PAGE_BIT_GLOBAL	8	/* Global TLB entry PPro+ */
+#define _PAGE_BIT_UNUSED1	9	/* available for programmer */
+#define _PAGE_BIT_UNUSED2	10
+#define _PAGE_BIT_UNUSED3	11
 
 #define _PAGE_PRESENT	0x001
 #define _PAGE_RW	0x002
@@ -117,6 +120,9 @@ void paging_init(void);
 #define _PAGE_DIRTY	0x040
 #define _PAGE_PSE	0x080	/* 4 MB (or 2MB) page, Pentium+, if present.. */
 #define _PAGE_GLOBAL	0x100	/* Global TLB entry PPro+ */
+#define _PAGE_UNUSED1	0x200	/* available for programmer */
+#define _PAGE_UNUSED2	0x400
+#define _PAGE_UNUSED3	0x800
 
 #define _PAGE_FILE	0x040	/* set:pagecache unset:swap */
 #define _PAGE_PROTNONE	0x080	/* If not present */
@@ -173,8 +179,8 @@ extern unsigned long __PAGE_KERNEL;
  */
 #undef TEST_VERIFY_AREA
 
-/* page table for 0-4MB for everybody */
-extern unsigned long pg0[1024];
+/* The boot page tables (all created as a single array) */
+extern unsigned long pg0[];
 
 #define pte_present(x)	((x).pte_low & (_PAGE_PRESENT | _PAGE_PROTNONE))
 #define pte_clear(xp)	do { set_pte(xp, __pte(0)); } while (0)

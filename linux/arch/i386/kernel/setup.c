@@ -38,17 +38,22 @@
 #include <linux/module.h>
 #include <linux/efi.h>
 #include <linux/init.h>
+#include <linux/edd.h>
 #include <video/edid.h>
 #include <asm/e820.h>
 #include <asm/mpspec.h>
-#include <asm/edd.h>
 #include <asm/setup.h>
 #include <asm/arch_hooks.h>
 #include <asm/sections.h>
 #include <asm/io_apic.h>
 #include <asm/ist.h>
+#include <asm/std_resources.h>
 #include "setup_arch_pre.h"
-#include "mach_resources.h"
+
+/* This value is set up by the early boot code to point to the value
+   immediately after the boot time page tables.  It contains a *physical*
+   address, and must not be in the .bss segment! */
+unsigned long init_pg_tables_end __initdata = ~0UL;
 
 int disable_pse __initdata = 0;
 
@@ -78,8 +83,8 @@ EXPORT_SYMBOL_GPL(mmu_cr4_features);
 EXPORT_SYMBOL(acpi_disabled);
 
 #ifdef	CONFIG_ACPI_BOOT
-extern int __initdata acpi_ht;
 int __initdata acpi_force = 0;
+extern acpi_interrupt_flags	acpi_sci_flags;
 #endif
 
 int MCA_bus;
@@ -115,7 +120,6 @@ extern void early_cpu_init(void);
 extern void dmi_scan_machine(void);
 extern void generic_apic_probe(char *);
 extern int root_mountflags;
-extern char _end[];
 
 unsigned long saved_videomode;
 
@@ -126,21 +130,10 @@ unsigned long saved_videomode;
 static char command_line[COMMAND_LINE_SIZE];
        char saved_command_line[COMMAND_LINE_SIZE];
 
+unsigned char __initdata boot_params[PARAM_SIZE];
+
 static struct resource code_resource = { "Kernel code", 0x100000, 0 };
 static struct resource data_resource = { "Kernel data", 0, 0 };
-
-static void __init probe_roms(void)
-{
-	int roms = 1;
-
-	request_resource(&iomem_resource, rom_resources+0);
-
-	/* Video ROM is standard at C000:0000 - C7FF:0000, check signature */
-	probe_video_rom(roms);
-
-	/* Extension roms */
-	probe_extension_roms(roms);
-}
 
 static void __init limit_regions(unsigned long long size)
 {
@@ -452,7 +445,7 @@ EXPORT_SYMBOL(edd_disk80_sig);
 #endif
 /**
  * copy_edd() - Copy the BIOS EDD information
- *              from empty_zero_page into a safe place.
+ *              from boot_params into a safe place.
  *
  */
 static inline void copy_edd(void)
@@ -481,12 +474,11 @@ static void __init setup_memory_region(void)
 
 static void __init parse_cmdline_early (char ** cmdline_p)
 {
-	char c = ' ', *to = command_line, *from = COMMAND_LINE;
+	char c = ' ', *to = command_line, *from = saved_command_line;
 	int len = 0;
 	int userdef = 0;
 
 	/* Save unparsed command line copy for /proc/cmdline */
-	memcpy(saved_command_line, COMMAND_LINE, COMMAND_LINE_SIZE);
 	saved_command_line[COMMAND_LINE_SIZE-1] = '\0';
 
 	for (;;) {
@@ -555,30 +547,68 @@ static void __init parse_cmdline_early (char ** cmdline_p)
 			}
 		}
 
+#ifdef  CONFIG_X86_SMP
+		/*
+		 * If the BIOS enumerates physical processors before logical,
+		 * maxcpus=N at enumeration-time can be used to disable HT.
+		 */
+		else if (!memcmp(from, "maxcpus=", 8)) {
+			extern unsigned int maxcpus;
+
+			maxcpus = simple_strtoul(from + 8, NULL, 0);
+		}
+#endif
+
 #ifdef CONFIG_ACPI_BOOT
 		/* "acpi=off" disables both ACPI table parsing and interpreter */
 		else if (!memcmp(from, "acpi=off", 8)) {
-			acpi_ht = 0;
-			acpi_disabled = 1;
+			disable_acpi();
 		}
 
 		/* acpi=force to over-ride black-list */
 		else if (!memcmp(from, "acpi=force", 10)) {
 			acpi_force = 1;
-			acpi_ht=1;
+			acpi_ht = 1;
 			acpi_disabled = 0;
+		}
+
+		/* acpi=strict disables out-of-spec workarounds */
+		else if (!memcmp(from, "acpi=strict", 11)) {
+			acpi_strict = 1;
 		}
 
 		/* Limit ACPI just to boot-time to enable HT */
 		else if (!memcmp(from, "acpi=ht", 7)) {
+			if (!acpi_force)
+				disable_acpi();
 			acpi_ht = 1;
-			if (!acpi_force) acpi_disabled = 1;
 		}
-
-		/* "pci=noacpi" disables ACPI interrupt routing */
+		
+		/* "pci=noacpi" disable ACPI IRQ routing and PCI scan */
 		else if (!memcmp(from, "pci=noacpi", 10)) {
+			acpi_disable_pci();
+		}
+		/* "acpi=noirq" disables ACPI interrupt routing */
+		else if (!memcmp(from, "acpi=noirq", 10)) {
 			acpi_noirq_set();
 		}
+
+		else if (!memcmp(from, "acpi_sci=edge", 13))
+			acpi_sci_flags.trigger =  1;
+
+		else if (!memcmp(from, "acpi_sci=level", 14))
+			acpi_sci_flags.trigger = 3;
+
+		else if (!memcmp(from, "acpi_sci=high", 13))
+			acpi_sci_flags.polarity = 1;
+
+		else if (!memcmp(from, "acpi_sci=low", 12))
+			acpi_sci_flags.polarity = 3;
+
+#ifdef CONFIG_X86_IO_APIC
+		else if (!memcmp(from, "acpi_skip_timer_override", 24))
+			acpi_skip_timer_override = 1;
+#endif
 
 #ifdef CONFIG_X86_LOCAL_APIC
 		/* disable IO-APIC */
@@ -785,7 +815,7 @@ static unsigned long __init setup_memory(void)
 	 * partially used pages are not usable - thus
 	 * we are rounding upwards:
 	 */
-	start_pfn = PFN_UP(__pa(_end));
+	start_pfn = PFN_UP(init_pg_tables_end);
 
 	find_max_pfn();
 
@@ -822,6 +852,13 @@ static unsigned long __init setup_memory(void)
 	 * enabling clean reboots, SMP operation, laptop functions.
 	 */
 	reserve_bootmem(0, PAGE_SIZE);
+
+    /* could be an AMD 768MPX chipset. Reserve a page  before VGA to prevent
+       PCI prefetch into it (errata #56). Usually the page is reserved anyways,
+       unless you have no PS/2 mouse plugged in. */
+	if (boot_cpu_data.x86_vendor == X86_VENDOR_AMD &&
+	    boot_cpu_data.x86 == 6)
+	     reserve_bootmem(0xa0000 - 4096, 4096);
 
 #ifdef CONFIG_SMP
 	/*
@@ -910,19 +947,17 @@ legacy_init_iomem_resources(struct resource *code_resource, struct resource *dat
 static void __init register_memory(unsigned long max_low_pfn)
 {
 	unsigned long low_mem_size;
-	int i;
 
 	if (efi_enabled)
 		efi_initialize_iomem_resources(&code_resource, &data_resource);
 	else
 		legacy_init_iomem_resources(&code_resource, &data_resource);
 
- 	 /* EFI systems may still have VGA */
+	/* EFI systems may still have VGA */
 	request_graphics_resource();
 
 	/* request I/O space for devices used on all i[345]86 PCs */
-	for (i = 0; i < STANDARD_IO_RESOURCES; i++)
-		request_resource(&ioport_resource, standard_io_resources+i);
+	request_standard_io_resources();
 
 	/* Tell the PCI layer not to allocate too close to the RAM area.. */
 	low_mem_size = ((max_low_pfn << PAGE_SHIFT) + 0xfffff) & ~0xfffff;
@@ -1097,7 +1132,7 @@ void __init setup_arch(char **cmdline_p)
 	init_mm.start_code = (unsigned long) _text;
 	init_mm.end_code = (unsigned long) _etext;
 	init_mm.end_data = (unsigned long) _edata;
-	init_mm.brk = (unsigned long) _end;
+	init_mm.brk = init_pg_tables_end + PAGE_OFFSET;
 
 	code_resource.start = virt_to_phys(_text);
 	code_resource.end = virt_to_phys(_etext)-1;
@@ -1117,6 +1152,19 @@ void __init setup_arch(char **cmdline_p)
 	smp_alloc_memory(); /* AP processor realmode stacks in low memory*/
 #endif
 	paging_init();
+
+#ifdef CONFIG_EARLY_PRINTK
+	{
+		char *s = strstr(*cmdline_p, "earlyprintk=");
+		if (s) {
+			extern void setup_early_printk(char *);
+
+			setup_early_printk(s);
+			printk("early console enabled\n");
+		}
+	}
+#endif
+
 
 	dmi_scan_machine();
 

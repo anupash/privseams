@@ -15,6 +15,7 @@
 #include <linux/msg.h>
 #include <linux/shm.h>
 #include <linux/stat.h>
+#include <linux/syscalls.h>
 #include <linux/mman.h>
 #include <linux/file.h>
 #include <linux/utsname.h>
@@ -156,8 +157,6 @@ out:
 }
 #endif
 
-extern asmlinkage int sys_select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
-
 struct sel_arg_struct {
 	unsigned long n;
 	fd_set *inp, *outp, *exp;
@@ -241,7 +240,7 @@ asmlinkage int sys_ipc (uint call, int first, int second,
 			switch (version) {
 			default: {
 				ulong raddr;
-				ret = sys_shmat (first, (char *) ptr,
+				ret = do_shmat (first, (char *) ptr,
 						 second, &raddr);
 				if (ret)
 					return ret;
@@ -261,12 +260,6 @@ asmlinkage int sys_ipc (uint call, int first, int second,
 
 	return -EINVAL;
 }
-
-asmlinkage int sys_ioperm(unsigned long from, unsigned long num, int on)
-{
-  return -ENOSYS;
-}
-
 
 /* Convert virtual (user) address VADDR to physical address PADDR */
 #define virt_to_phys_040(vaddr)						\

@@ -2,6 +2,8 @@
  *
  * Name:	skgepnmi.c
  * Project:	GEnesis, PCI Gigabit Ethernet Adapter
+ * Version:	$Revision: 1.111 $
+ * Date:	$Date: 2003/09/15 13:35:35 $
  * Purpose:	Private Network Management Interface
  *
  ****************************************************************************/
@@ -19,6 +21,7 @@
  *	The information in this file is provided "AS IS" without warranty.
  *
  ******************************************************************************/
+
 
 #ifndef _lint
 static const char SysKonnectFileId[] =
@@ -7681,7 +7684,7 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode allways zero */
 			 to the low-power state.
 			 A miniport driver must always return NDIS_STATUS_SUCCESS
 			 to a query of OID_PNP_QUERY_POWER. */
-			*pLen = sizeof(SK_DEVICE_POWER_STATE);;
+			*pLen = sizeof(SK_DEVICE_POWER_STATE);
             RetCode = SK_PNMI_ERR_OK;
 			break;
 

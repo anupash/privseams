@@ -1128,9 +1128,9 @@ do_sys_sigstack(struct sigstack __user *ssptr, struct sigstack __user *ossptr,
 
 	/* Now see if we want to update the new state. */
 	if (ssptr) {
-		void *ss_sp;
+		char *ss_sp;
 
-		if (get_user((long)ss_sp, &ssptr->the_stack))
+		if (get_user(ss_sp, &ssptr->the_stack))
 			goto out;
 		/* If the current stack was set with sigaltstack, don't
 		   swap stacks while we are on it.  */
@@ -1147,4 +1147,28 @@ do_sys_sigstack(struct sigstack __user *ssptr, struct sigstack __user *ossptr,
 	ret = 0;
 out:
 	return ret;
+}
+
+void ptrace_signal_deliver(struct pt_regs *regs, void *cookie)
+{
+	struct sparc_deliver_cookie *cp = cookie;
+
+	if (cp->restart_syscall &&
+	    (regs->u_regs[UREG_I0] == ERESTARTNOHAND ||
+	     regs->u_regs[UREG_I0] == ERESTARTSYS ||
+	     regs->u_regs[UREG_I0] == ERESTARTNOINTR)) {
+		/* replay the system call when we are done */
+		regs->u_regs[UREG_I0] = cp->orig_i0;
+		regs->pc -= 4;
+		regs->npc -= 4;
+		cp->restart_syscall = 0;
+	}
+
+	if (cp->restart_syscall &&
+	    regs->u_regs[UREG_I0] == ERESTART_RESTARTBLOCK) {
+		regs->u_regs[UREG_G1] = __NR_restart_syscall;
+		regs->pc -= 4;
+		regs->npc -= 4;
+		cp->restart_syscall = 0;
+	}
 }

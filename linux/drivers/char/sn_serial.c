@@ -83,10 +83,9 @@ static unsigned long sn_interrupt_timeout;
 
 extern u64 master_node_bedrock_address;
 
-static int sn_debug_printf(const char *fmt, ...);
-
 #undef DEBUG
 #ifdef DEBUG
+static int sn_debug_printf(const char *fmt, ...);
 #define DPRINTF(x...) sn_debug_printf(x)
 #else
 #define DPRINTF(x...) do { } while (0)
@@ -105,7 +104,6 @@ struct sn_sal_ops {
 static struct sn_sal_ops *sn_func;
 
 /* Prototypes */
-static void __init sn_sal_serial_console_init(void);
 static int snt_hw_puts(const char *, int);
 static int snt_poll_getc(void);
 static int snt_poll_input_pending(void);
@@ -249,6 +247,7 @@ early_printk_sn_sal(const char *s, unsigned count)
 	sn_func->sal_puts(s, count);
 }
 
+#ifdef DEBUG
 /* this is as "close to the metal" as we can get, used when the driver
  * itself may be broken */
 static int
@@ -259,11 +258,12 @@ sn_debug_printf(const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	printed_len = vsnprintf(printk_buf, sizeof(printk_buf), fmt, args);
+	printed_len = vscnprintf(printk_buf, sizeof(printk_buf), fmt, args);
 	early_printk_sn_sal(printk_buf, printed_len);
 	va_end(args);
 	return printed_len;
 }
+#endif /* DEBUG */
 
 /*
  * Interrupt handling routines.
@@ -354,7 +354,7 @@ synch_flush_xmit(void)
 		if (xmit_count > 0) {
 			result = sn_func->sal_puts((char *)start, xmit_count);
 			if (!result)
-				sn_debug_printf("\n*** synch_flush_xmit failed to flush\n");
+				DPRINTF("\n*** synch_flush_xmit failed to flush\n");
 			if (result > 0) {
 				xmit_count -= result;
 				sn_total_tx_count += result;
@@ -391,12 +391,12 @@ sn_poll_transmit_chars(void)
 	xmit_count = (head < tail) ?  (SN_SAL_BUFFER_SIZE - tail) : (head - tail);
 
 	if (xmit_count == 0)
-		sn_debug_printf("\n*** empty xmit_count\n");
+		DPRINTF("\n*** empty xmit_count\n");
 
 	/* use the ops, as we could be on the simulator */
 	result = sn_func->sal_puts((char *)start, xmit_count);
 	if (!result)
-		sn_debug_printf("\n*** error in synchronous sal_puts\n");
+		DPRINTF("\n*** error in synchronous sal_puts\n");
 	/* XXX chadt clean this up */
 	if (result > 0) {
 		xmit_count -= result;
@@ -449,7 +449,7 @@ sn_intr_transmit_chars(void)
 			result = ia64_sn_console_xmit_chars((char *)start, xmit_count);
 #ifdef DEBUG
 			if (!result)
-				sn_debug_printf("`");
+				DPRINTF("`");
 #endif
 			if (result > 0) {
 				xmit_count -= result;
@@ -513,7 +513,7 @@ sn_sal_connect_interrupt(void)
 	if (result >= 0)
 		return console_irq;
 
-	printk(KERN_INFO "sn_serial: console proceeding in polled mode\n");
+	printk(KERN_WARNING "sn_serial: console proceeding in polled mode\n");
 	return 0;
 }
 
@@ -825,7 +825,7 @@ sn_sal_switch_to_asynch(void)
 		return;
 	}
 
-	sn_debug_printf("sn_serial: switch to asynchronous console\n");
+	DPRINTF("sn_serial: switch to asynchronous console\n");
 
 	/* early_printk invocation may have done this for us */
 	if (!sn_func) {
@@ -861,7 +861,7 @@ sn_sal_switch_to_interrupts(void)
 {
 	int irq;
 
-	sn_debug_printf("sn_serial: switching to interrupt driven console\n");
+	DPRINTF("sn_serial: switching to interrupt driven console\n");
 
 	irq = sn_sal_connect_interrupt();
 	if (irq) {
@@ -885,7 +885,7 @@ sn_sal_module_init(void)
 {
 	int retval;
 
-	printk("sn_serial: sn_sal_module_init\n");
+	DPRINTF("sn_serial: sn_sal_module_init\n");
 
 	if (!ia64_platform_is("sn2"))
 		return -ENODEV;
@@ -921,9 +921,6 @@ sn_sal_module_init(void)
 		printk(KERN_ERR "sn_serial: Unable to register tty driver\n");
 		return retval;
 	}
-#ifdef CONFIG_SGI_L1_SERIAL_CONSOLE
-	sn_sal_serial_console_init();
-#endif	/* CONFIG_SGI_L1_SERIAL_CONSOLE */
 	return 0;
 }
 
@@ -952,6 +949,7 @@ static void
 sn_sal_console_write(struct console *co, const char *s, unsigned count)
 {
 	unsigned long flags;
+	const char *s1;
 
 	BUG_ON(!sn_sal_is_asynch);
 
@@ -959,16 +957,38 @@ sn_sal_console_write(struct console *co, const char *s, unsigned count)
 	 * oops, kdb, panic, etc.  make sure they get it. */
 	if (spin_is_locked(&sn_sal_lock)) {
 		synch_flush_xmit();
+		/* Output '\r' before each '\n' */
+		while ((s1 = memchr(s, '\n', count)) != NULL) {
+			sn_func->sal_puts(s, s1 - s);
+			sn_func->sal_puts("\r\n", 2);
+			count -= s1 + 1 - s;
+			s = s1 + 1;
+		}
 		sn_func->sal_puts(s, count);
 	}
 	else if (in_interrupt()) {
 		spin_lock_irqsave(&sn_sal_lock, flags);
 		synch_flush_xmit();
 		spin_unlock_irqrestore(&sn_sal_lock, flags);
+		/* Output '\r' before each '\n' */
+		while ((s1 = memchr(s, '\n', count)) != NULL) {
+			sn_func->sal_puts(s, s1 - s);
+			sn_func->sal_puts("\r\n", 2);
+			count -= s1 + 1 - s;
+			s = s1 + 1;
+		}
 		sn_func->sal_puts(s, count);
 	}
-	else
+	else {
+		/* Output '\r' before each '\n' */
+		while ((s1 = memchr(s, '\n', count)) != NULL) {
+			sn_sal_write(NULL, 0, s, s1 - s);
+			sn_sal_write(NULL, 0, "\r\n", 2);
+			count -= s1 + 1 - s;
+			s = s1 + 1;
+		}
 		sn_sal_write(NULL, 0, s, count);
+	}
 }
 
 static struct tty_driver *
@@ -993,14 +1013,16 @@ static struct console sal_console = {
 	.index = -1
 };
 
-static void __init
+static int __init
 sn_sal_serial_console_init(void)
 {
 	if (ia64_platform_is("sn2")) {
 		sn_sal_switch_to_asynch();
-		sn_debug_printf("sn_sal_serial_console_init : register console\n");
+		DPRINTF("sn_sal_serial_console_init : register console\n");
 		register_console(&sal_console);
 	}
+	return 0;
 }
+console_initcall(sn_sal_serial_console_init);
 
 #endif /* CONFIG_SGI_L1_SERIAL_CONSOLE */

@@ -289,10 +289,17 @@
 #define __NR_io_submit		270
 #define __NR_io_cancel		271
 #define __NR_io_getevents	272
-/* WARNING: You MAY NOT add syscall numbers larger than 272, since
+#define __NR_mq_open		273
+#define __NR_mq_unlink		(__NR_mq_open+1)
+#define __NR_mq_timedsend	(__NR_mq_open+2)
+#define __NR_mq_timedreceive	(__NR_mq_open+3)
+#define __NR_mq_notify		(__NR_mq_open+4)
+#define __NR_mq_getsetattr	(__NR_mq_open+5)
+
+/* WARNING: You MAY NOT add syscall numbers larger than 282, since
  *          all of the syscall tables in the Sparc kernel are
- *          sized to have 273 entries (starting at zero).  Therefore
- *          find a free slot in the 0-272 range.
+ *          sized to have 283 entries (starting at zero).  Therefore
+ *          find a free slot in the 0-282 range.
  */
 
 #define _syscall0(type,name) \
@@ -426,6 +433,9 @@ return -1; \
 }
 #ifdef __KERNEL_SYSCALLS__
 
+#include <linux/compiler.h>
+#include <linux/types.h>
+
 /*
  * we need this inline - forking from kernel space will result
  * in NO COPY ON WRITE (!!!), until an execve is executed. This
@@ -449,6 +459,23 @@ static __inline__ _syscall3(int,open,__const__ char *,file,int,flag,int,mode)
 static __inline__ _syscall1(int,close,int,fd)
 static __inline__ _syscall1(int,_exit,int,exitcode)
 static __inline__ _syscall3(pid_t,waitpid,pid_t,pid,int *,wait_stat,int,options)
+
+#include <linux/linkage.h>
+
+asmlinkage unsigned long sys_mmap(
+				unsigned long addr, unsigned long len,
+				unsigned long prot, unsigned long flags,
+				unsigned long fd, unsigned long off);
+asmlinkage unsigned long sys_mmap2(
+				unsigned long addr, unsigned long len,
+				unsigned long prot, unsigned long flags,
+				unsigned long fd, unsigned long pgoff);
+struct sigaction;
+asmlinkage long sys_rt_sigaction(int sig,
+				const struct sigaction __user *act,
+				struct sigaction __user *oact,
+				void __user *restorer,
+				size_t sigsetsize);
 
 #endif /* __KERNEL_SYSCALLS__ */
 

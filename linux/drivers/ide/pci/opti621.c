@@ -348,8 +348,6 @@ static void __init init_hwif_opti621 (ide_hwif_t *hwif)
 	hwif->drives[1].autodma = hwif->autodma;
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
 static void __init init_setup_opti621 (struct pci_dev *dev, ide_pci_device_t *d)
 {
 	ide_setup_pci_device(dev, d);
@@ -369,6 +367,7 @@ static struct pci_device_id opti621_pci_tbl[] = {
 	{ PCI_VENDOR_ID_OPTI, PCI_DEVICE_ID_OPTI_82C825, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 1},
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, opti621_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "Opti621 IDE",

@@ -20,11 +20,8 @@
 #include <linux/pci.h>
 #include <asm/byteorder.h>
 #include <asm/system.h>
-#include <asm/hdreg.h>
 #include <asm/io.h>
 #include <asm/semaphore.h>
-
-#define DEBUG_PM
 
 /*
  * This is the multiple IDE interface driver, as evolved from hd.c.
@@ -143,16 +140,7 @@ typedef unsigned char	byte;	/* used everywhere */
 #define IDE_FEATURE_OFFSET	IDE_ERROR_OFFSET
 #define IDE_COMMAND_OFFSET	IDE_STATUS_OFFSET
 
-#define IDE_DATA_OFFSET_HOB	(0)
-#define IDE_ERROR_OFFSET_HOB	(1)
-#define IDE_NSECTOR_OFFSET_HOB	(2)
-#define IDE_SECTOR_OFFSET_HOB	(3)
-#define IDE_LCYL_OFFSET_HOB	(4)
-#define IDE_HCYL_OFFSET_HOB	(5)
-#define IDE_SELECT_OFFSET_HOB	(6)
 #define IDE_CONTROL_OFFSET_HOB	(7)
-
-#define IDE_FEATURE_OFFSET_HOB	IDE_ERROR_OFFSET_HOB
 
 #define IDE_DATA_REG		(HWIF(drive)->io_ports[IDE_DATA_OFFSET])
 #define IDE_ERROR_REG		(HWIF(drive)->io_ports[IDE_ERROR_OFFSET])
@@ -164,16 +152,6 @@ typedef unsigned char	byte;	/* used everywhere */
 #define IDE_STATUS_REG		(HWIF(drive)->io_ports[IDE_STATUS_OFFSET])
 #define IDE_CONTROL_REG		(HWIF(drive)->io_ports[IDE_CONTROL_OFFSET])
 #define IDE_IRQ_REG		(HWIF(drive)->io_ports[IDE_IRQ_OFFSET])
-
-#define IDE_DATA_REG_HOB	(HWIF(drive)->io_ports[IDE_DATA_OFFSET])
-#define IDE_ERROR_REG_HOB	(HWIF(drive)->io_ports[IDE_ERROR_OFFSET])
-#define IDE_NSECTOR_REG_HOB	(HWIF(drive)->io_ports[IDE_NSECTOR_OFFSET])
-#define IDE_SECTOR_REG_HOB	(HWIF(drive)->io_ports[IDE_SECTOR_OFFSET])
-#define IDE_LCYL_REG_HOB	(HWIF(drive)->io_ports[IDE_LCYL_OFFSET])
-#define IDE_HCYL_REG_HOB	(HWIF(drive)->io_ports[IDE_HCYL_OFFSET])
-#define IDE_SELECT_REG_HOB	(HWIF(drive)->io_ports[IDE_SELECT_OFFSET])
-#define IDE_STATUS_REG_HOB	(HWIF(drive)->io_ports[IDE_STATUS_OFFSET])
-#define IDE_CONTROL_REG_HOB	(HWIF(drive)->io_ports[IDE_CONTROL_OFFSET])
 
 #define IDE_FEATURE_REG		IDE_ERROR_REG
 #define IDE_COMMAND_REG		IDE_STATUS_REG
@@ -224,7 +202,7 @@ typedef unsigned char	byte;	/* used everywhere */
  * allowing each to have about 256 entries (8 bytes each) from this.
  */
 #define PRD_BYTES       8
-#define PRD_ENTRIES     (PAGE_SIZE / (2 * PRD_BYTES))
+#define PRD_ENTRIES	256
 
 /*
  * Some more useful definitions
@@ -237,8 +215,6 @@ typedef unsigned char	byte;	/* used everywhere */
 #define SECTOR_SIZE	512
 #define SECTOR_WORDS	(SECTOR_SIZE / 4)	/* number of 32bit words per sector */
 #define IDE_LARGE_SEEK(b1,b2,t)	(((b1) > (b2) + (t)) || ((b2) > (b1) + (t)))
-#define IDE_MIN(a,b)	((a)<(b) ? (a):(b))
-#define IDE_MAX(a,b)	((a)>(b) ? (a):(b))
 
 /*
  * Timeouts for various operations:
@@ -315,7 +291,48 @@ void ide_setup_ports(	hw_regs_t *hw,
 #endif
 			int irq);
 
+static inline void ide_std_init_ports(hw_regs_t *hw,
+				      unsigned long io_addr,
+				      unsigned long ctl_addr)
+{
+	unsigned int i;
+
+	for (i = IDE_DATA_OFFSET; i <= IDE_STATUS_OFFSET; i++)
+		hw->io_ports[i] = io_addr++;
+
+	hw->io_ports[IDE_CONTROL_OFFSET] = ctl_addr;
+}
+
 #include <asm/ide.h>
+
+/*
+ * ide_init_hwif_ports() is OBSOLETE and will be removed in 2.7 series.
+ *
+ * arm26, arm, h8300, m68k, m68knommu (broken) and i386-pc9800 (broken)
+ * still have their own versions.
+ */
+#if !defined(CONFIG_ARM) && !defined(CONFIG_H8300) && !defined(CONFIG_M68K)
+static inline void ide_init_hwif_ports(hw_regs_t *hw,
+				       unsigned long io_addr,
+				       unsigned long ctl_addr,
+				       int *irq)
+{
+	if (!ctl_addr)
+		ide_std_init_ports(hw, io_addr, io_addr + 0x206);
+	else
+		ide_std_init_ports(hw, io_addr, ctl_addr);
+
+	if (irq)
+		*irq = 0;
+
+	hw->io_ports[IDE_IRQ_OFFSET] = 0;
+
+#ifdef CONFIG_PPC32
+	if (ppc_ide_md.ide_init_hwif)
+		ppc_ide_md.ide_init_hwif(hw, io_addr, ctl_addr, irq);
+#endif
+}
+#endif /* !ARM && !H8300 && !M68K */
 
 /* Currently only m68k, apus and m8xx need it */
 #ifndef IDE_ARCH_ACK_INTR
@@ -698,7 +715,6 @@ typedef struct ide_drive_s {
 	u8	state;			/* retry state */
 	u8	waiting_for_dma;	/* dma currently in progress */
 	u8	unmask;			/* okay to unmask other irqs */
-	u8	slow;			/* slow data port */
 	u8	bswap;			/* byte swap data */
 	u8	dsc_overlap;		/* DSC overlap */
 	u8	nice1;			/* give potential excess bandwidth */
@@ -713,14 +729,12 @@ typedef struct ide_drive_s {
 	unsigned forced_geom	: 1;	/* 1 if hdx=c,h,s was given at boot */
 	unsigned no_unmask	: 1;	/* disallow setting unmask bit */
 	unsigned no_io_32bit	: 1;	/* disallow enabling 32bit I/O */
-	unsigned nobios		: 1;	/* do not probe bios for drive */
 	unsigned atapi_overlap	: 1;	/* ATAPI overlap (not supported) */
 	unsigned nice0		: 1;	/* give obvious excess bandwidth */
 	unsigned nice2		: 1;	/* give a share in our own bandwidth */
 	unsigned doorlocking	: 1;	/* for removable only: door lock/unlock works */
 	unsigned autotune	: 2;	/* 0=default, 1=autotune, 2=noautotune */
 	unsigned remap_0_to_1	: 1;	/* 0=noremap, 1=remap 0->1 (for EZDrive) */
-	unsigned ata_flash	: 1;	/* 1=present, 0=default */
 	unsigned blocked        : 1;	/* 1=powermanagment told us not to do anything, so sleep nicely */
 	unsigned vdma		: 1;	/* 1=doing PIO over DMA 0=doing normal DMA */
 	unsigned addressing;		/*      : 3;
@@ -764,8 +778,6 @@ typedef struct ide_drive_s {
 
 	u64		capacity64;	/* total number of sectors */
 
-	int		last_lun;	/* last logical unit */
-	int		forced_lun;	/* if hdxlun was given at boot */
 	int		lun;		/* logical unit */
 	int		crc_count;	/* crc counter to reduce drive speed */
 	struct list_head list;
@@ -873,8 +885,6 @@ typedef struct hwif_s {
 
 	struct pci_dev  *pci_dev;	/* for pci chipsets */
 	struct ide_pci_device_s	*cds;	/* chipset device struct */
-	
-	struct pnp_dev  *pnp_dev;	/* for PnP devices */
 
 	ide_startstop_t (*rw_disk)(ide_drive_t *, struct request *, sector_t);
 
@@ -956,10 +966,9 @@ typedef struct hwif_s {
 	int sg_dma_direction;		/* dma transfer direction */
 	int sg_dma_active;		/* is it in use */
 
-	int		mmio;		/* hosts iomio (0), mmio (1) or custom (2) select */
+	int		mmio;		/* hosts iomio (0) or custom (2) select */
 	int		rqsize;		/* max sectors per request */
 	int		irq;		/* our irq number */
-	int		initializing;	/* set while initializing self */
 
 	unsigned long	dma_master;	/* reference base addr dmabase */
 	unsigned long	dma_base;	/* base addr for dma ports */
@@ -1001,7 +1010,6 @@ typedef struct hwif_s {
  */
 typedef ide_startstop_t (ide_pre_handler_t)(ide_drive_t *, struct request *);
 typedef ide_startstop_t (ide_handler_t)(ide_drive_t *);
-typedef ide_startstop_t (ide_post_handler_t)(ide_drive_t *);
 typedef int (ide_expiry_t)(ide_drive_t *);
 
 typedef struct hwgroup_s {
@@ -1090,6 +1098,8 @@ typedef struct {
 } ide_proc_entry_t;
 
 #ifdef CONFIG_PROC_FS
+extern struct proc_dir_entry *proc_ide_root;
+
 extern void proc_ide_create(void);
 extern void proc_ide_destroy(void);
 extern void destroy_proc_ide_device(ide_hwif_t *, ide_drive_t *);
@@ -1099,6 +1109,10 @@ extern void ide_add_proc_entries(struct proc_dir_entry *, ide_proc_entry_t *, vo
 extern void ide_remove_proc_entries(struct proc_dir_entry *, ide_proc_entry_t *);
 read_proc_t proc_ide_read_capacity;
 read_proc_t proc_ide_read_geometry;
+
+#ifdef CONFIG_BLK_DEV_IDEPCI
+void ide_pci_create_host_proc(const char *, get_info_t *);
+#endif
 
 /*
  * Standard exit stuff:
@@ -1116,6 +1130,7 @@ read_proc_t proc_ide_read_geometry;
 	return len;			\
 }
 #else
+static inline void create_proc_ide_interfaces(void) { ; }
 #define PROC_IDE_READ_RETURN(page,start,off,count,eof,len) return 0;
 #endif
 
@@ -1155,8 +1170,6 @@ enum {
 /*
  * Subdrivers support.
  */
-#define IDE_SUBDRIVER_VERSION	1
-
 typedef struct ide_driver_s {
 	struct module			*owner;
 	const char			*name;
@@ -1165,8 +1178,6 @@ typedef struct ide_driver_s {
 	unsigned busy			: 1;
 	unsigned supports_dsc_overlap	: 1;
 	int		(*cleanup)(ide_drive_t *);
-	int		(*shutdown)(ide_drive_t *);
-	int		(*flushcache)(ide_drive_t *);
 	ide_startstop_t	(*do_request)(ide_drive_t *, struct request *, sector_t);
 	int		(*end_request)(ide_drive_t *, int, int);
 	u8		(*sense)(ide_drive_t *, const char *, u8);
@@ -1360,7 +1371,6 @@ typedef struct ide_task_s {
 	int			command_type;
 	ide_pre_handler_t	*prehandler;
 	ide_handler_t		*handler;
-	ide_post_handler_t	*posthandler;
 	struct request		*rq;		/* copy of request */
 	void			*special;	/* valid_t generally */
 } ide_task_t;
@@ -1440,9 +1450,6 @@ extern int wait_for_ready(ide_drive_t *, int /* timeout */);
  */
 extern ide_startstop_t do_rw_taskfile(ide_drive_t *, ide_task_t *);
 
-/* (ide_drive_t *drive, u8 stat, u8 err) */
-extern void ide_end_taskfile(ide_drive_t *, u8, u8);
-
 /*
  * Special Flagged Register Validation Caller
  */
@@ -1458,18 +1465,8 @@ extern ide_startstop_t pre_task_out_intr(ide_drive_t *, struct request *);
 extern ide_startstop_t task_out_intr(ide_drive_t *);
 extern ide_startstop_t pre_task_mulout_intr(ide_drive_t *, struct request *);
 extern ide_startstop_t task_mulout_intr(ide_drive_t *);
-extern void ide_init_drive_taskfile(struct request *);
 
 extern int ide_raw_taskfile(ide_drive_t *, ide_task_t *, u8 *);
-
-extern ide_pre_handler_t * ide_pre_handler_parser(struct hd_drive_task_hdr *, struct hd_drive_hob_hdr *);
-
-extern ide_handler_t * ide_handler_parser(struct hd_drive_task_hdr *, struct hd_drive_hob_hdr *);
-
-extern ide_post_handler_t * ide_post_handler_parser(struct hd_drive_task_hdr *, struct hd_drive_hob_hdr *);
-
-/* Expects args is a full set of TF registers and parses the command type */
-extern int ide_cmd_type_parser(ide_task_t *);
 
 int ide_taskfile_ioctl(ide_drive_t *, unsigned int, unsigned long);
 int ide_cmd_ioctl(ide_drive_t *, unsigned int, unsigned long);
@@ -1528,21 +1525,9 @@ extern void default_hwif_transport(ide_hwif_t *);
 
 int ide_register_driver(ide_driver_t *driver);
 void ide_unregister_driver(ide_driver_t *driver);
-int ide_register_subdriver (ide_drive_t *drive, ide_driver_t *driver, int version);
+int ide_register_subdriver(ide_drive_t *, ide_driver_t *);
 int ide_unregister_subdriver (ide_drive_t *drive);
 int ide_replace_subdriver(ide_drive_t *drive, const char *driver);
-
-#ifdef CONFIG_PROC_FS
-typedef struct ide_pci_host_proc_s {
-	char				*name;
-	u8				set;
-	get_info_t			*get_info;
-	struct proc_dir_entry		*parent;
-	struct ide_pci_host_proc_s	*next;
-} ide_pci_host_proc_t;
-
-void ide_pci_register_host_proc(ide_pci_host_proc_t *);
-#endif /* CONFIG_PROC_FS */
 
 #define ON_BOARD		1
 #define NEVER_BOARD		0
@@ -1658,6 +1643,7 @@ extern int ide_dma_enable(ide_drive_t *drive);
 extern char *ide_xfer_verbose(u8 xfer_rate);
 extern void ide_toggle_bounce(ide_drive_t *drive, int on);
 extern int ide_set_xfer_rate(ide_drive_t *drive, u8 rate);
+extern byte ide_dump_atapi_status(ide_drive_t *drive, const char *msg, byte stat);
 
 typedef struct ide_pio_timings_s {
 	int	setup_time;	/* Address setup (ns) minimum */

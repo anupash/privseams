@@ -143,19 +143,6 @@ config ALIM7101_WDT
 
 	  Most people will say N.
 
-config AMD7XX_TCO
-	tristate "AMD 766/768 TCO Timer/Watchdog"
-	depends on WATCHDOG && X86 && PCI
-	help
-	  This is the driver for the hardware watchdog built in to the
-	  AMD 766/768 chipsets.
-	  This watchdog simply watches your kernel to make sure it doesn't
-	  freeze, and if it does, it reboots your computer after a certain
-	  amount of time.
-
-	  You can compile this driver directly into the kernel, or use
-	  it as a module.  The module will be called amd7xx_tco.
-
 config SC520_WDT
 	tristate "AMD Elan SC520 processor Watchdog"
 	depends on WATCHDOG && X86
@@ -339,6 +326,30 @@ config SH_WDT
 	  To compile this driver as a module, choose M here: the
 	  module will be called shwdt.
 
+# SPARC64 Architecture
+
+config WATCHDOG_CP1XXX
+	tristate "CP1XXX Hardware Watchdog support"
+	depends on WATCHDOG && SPARC64 && PCI
+	---help---
+	  This is the driver for the hardware watchdog timers present on
+	  Sun Microsystems CompactPCI models CP1400 and CP1500.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpwatchdog.
+
+	  If you do not have a CompactPCI model CP1400 or CP1500, or
+	  another UltraSPARC-IIi-cEngine boardset with hardware watchdog,
+	  you should say N to this option.
+
+config WATCHDOG_RIO
+	tristate "RIO Hardware Watchdog support"
+	depends on WATCHDOG && SPARC64 && PCI
+	help
+	  Say Y here to support the hardware watchdog capability on Sun RIO
+	  machines.  The watchdog timeout period is normally one minute but
+	  can be changed with a boot-time parameter.
+
 #
 # ISA-based Watchdog Cards
 #
@@ -350,7 +361,7 @@ config PCWATCHDOG
 	tristate "Berkshire Products ISA-PC Watchdog"
 	depends on WATCHDOG && ISA
 	---help---
-	  This is the driver for the Berkshire Products PC Watchdog card.
+	  This is the driver for the Berkshire Products ISA-PC Watchdog card.
 	  This card simply watches your kernel to make sure it doesn't freeze,
 	  and if it does, it reboots your computer after a certain amount of
 	  time. This driver is like the WDT501 driver but for different
@@ -382,10 +393,8 @@ config WDT
 	---help---
 	  If you have a WDT500P or WDT501P watchdog board, say Y here,
 	  otherwise N. It is not possible to probe for this board, which means
-	  that you have to inform the kernel about the IO port and IRQ using
-	  the "wdt=" kernel option (try "man bootparam" or see the
-	  documentation of your boot loader (lilo or loadlin) about how to
-	  pass options to the kernel at boot time).
+	  that you have to inform the kernel about the IO port and IRQ that
+	  is needed (you can do this via the io and irq parameters)
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called wdt.
@@ -401,11 +410,8 @@ config WDT_501
 	  Fahrenheit. This works only if you have a WDT501P watchdog board
 	  installed.
 
-config WDT_501_FAN
-	bool "Fan Tachometer"
-	depends on WDT_501
-	help
-	  Enable the Fan Tachometer on the WDT501. Only do this if you have a
+	  If you want to enable the Fan Tachometer on the WDT501P, then you
+	  can do this via the tachometer parameter. Only do this if you have a
 	  fan tachometer actually set up.
 
 #
@@ -431,28 +437,49 @@ config PCIPCWATCHDOG
 	  Most people will say N.
 
 config WDTPCI
-	tristate "WDT PCI Watchdog timer"
+	tristate "PCI-WDT500/501 Watchdog timer"
 	depends on WATCHDOG && PCI
 	---help---
-	  If you have a PCI WDT500/501 watchdog board, say Y here, otherwise
-	  N.  It is not possible to probe for this board, which means that you
-	  have to inform the kernel about the IO port and IRQ using the "wdt="
-	  kernel option (try "man bootparam" or see the documentation of your
-	  boot loader (lilo or loadlin) about how to pass options to the
-	  kernel at boot time).
+	  If you have a PCI-WDT500/501 watchdog board, say Y here, otherwise N.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called wdt_pci.
 
 config WDT_501_PCI
-	bool "WDT501-PCI features"
+	bool "PCI-WDT501 features"
 	depends on WDTPCI
 	help
 	  Saying Y here and creating a character special file /dev/temperature
 	  with major number 10 and minor number 131 ("man mknod") will give
 	  you a thermometer inside your computer: reading from
 	  /dev/temperature yields one byte, the temperature in degrees
-	  Fahrenheit. This works only if you have a WDT501P watchdog board
+	  Fahrenheit. This works only if you have a PCI-WDT501 watchdog board
 	  installed.
+
+	  If you want to enable the Fan Tachometer on the PCI-WDT501, then you
+	  can do this via the tachometer parameter. Only do this if you have a
+	  fan tachometer actually set up.
+
+#
+# USB-based Watchdog Cards
+#
+
+comment "USB-based Watchdog Cards"
+	depends on WATCHDOG && USB
+
+config USBPCWATCHDOG
+	tristate "Berkshire Products USB-PC Watchdog"
+	depends on WATCHDOG && USB
+	---help---
+	  This is the driver for the Berkshire Products USB-PC Watchdog card.
+	  This card simply watches your kernel to make sure it doesn't freeze,
+	  and if it does, it reboots your computer after a certain amount of
+	  time. The card can also monitor the internal temperature of the PC.
+	  More info is available at <http://www.berkprod.com/usb_pc_watchdog.htm>.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called pcwd_usb.
+
+	  Most people will say N.
 
 endmenu

@@ -107,7 +107,8 @@ EXPORT_SYMBOL(vfs_fstat);
 
 #if !defined(__alpha__) && !defined(__sparc__) && !defined(__ia64__) \
   && !defined(CONFIG_ARCH_S390) && !defined(__hppa__) \
-  && !defined(__arm__) && !defined(CONFIG_V850) && !defined(__powerpc64__)
+  && !defined(__arm__) && !defined(CONFIG_V850) && !defined(__powerpc64__) \
+  && !defined(__mips__)
 
 /*
  * For backward compatibility?  Maybe this should be moved
@@ -272,7 +273,7 @@ asmlinkage long sys_readlink(const char __user * path, char __user * buf, int bu
 		if (inode->i_op && inode->i_op->readlink) {
 			error = security_inode_readlink(nd.dentry);
 			if (!error) {
-				update_atime(inode);
+				touch_atime(nd.mnt, nd.dentry);
 				error = inode->i_op->readlink(nd.dentry, buf, bufsiz);
 			}
 		}
@@ -283,7 +284,7 @@ asmlinkage long sys_readlink(const char __user * path, char __user * buf, int bu
 
 
 /* ---------- LFS-64 ----------- */
-#if !defined(__alpha__) && !defined(__ia64__) && !defined(__mips64) && !defined(__x86_64__) && !defined(CONFIG_ARCH_S390X)
+#if !defined(__ia64__) && !defined(__mips64) && !defined(__x86_64__) && !defined(CONFIG_ARCH_S390X)
 
 static long cp_new_stat64(struct kstat *stat, struct stat64 __user *statbuf)
 {
@@ -397,6 +398,8 @@ EXPORT_SYMBOL(inode_get_bytes);
 
 void inode_set_bytes(struct inode *inode, loff_t bytes)
 {
+	/* Caller is here responsible for sufficient locking
+	 * (ie. inode->i_lock) */
 	inode->i_blocks = bytes >> 9;
 	inode->i_bytes = bytes & 511;
 }

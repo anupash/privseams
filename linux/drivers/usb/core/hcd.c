@@ -42,6 +42,8 @@
 #include <asm/byteorder.h>
 
 #include <linux/usb.h>
+
+#include "usb.h"
 #include "hcd.h"
 
 
@@ -351,7 +353,7 @@ static int rh_call_control (struct usb_hcd *hcd, struct urb *urb)
 			/* FALLTHROUGH */
 	case DeviceOutRequest | USB_REQ_CLEAR_FEATURE:
 	case DeviceOutRequest | USB_REQ_SET_FEATURE:
-		dev_dbg (hcd->controller, "no device features yet yet\n");
+		dev_dbg (hcd->self.controller, "no device features yet yet\n");
 		break;
 	case DeviceRequest | USB_REQ_GET_CONFIGURATION:
 		ubuf [0] = 1;
@@ -394,7 +396,7 @@ static int rh_call_control (struct usb_hcd *hcd, struct urb *urb)
 		break;
 	case DeviceOutRequest | USB_REQ_SET_ADDRESS:
 		// wValue == urb->dev->devaddr
-		dev_dbg (hcd->controller, "root hub device address %d\n",
+		dev_dbg (hcd->self.controller, "root hub device address %d\n",
 			wValue);
 		break;
 
@@ -409,26 +411,31 @@ static int rh_call_control (struct usb_hcd *hcd, struct urb *urb)
 			/* FALLTHROUGH */
 	case EndpointOutRequest | USB_REQ_CLEAR_FEATURE:
 	case EndpointOutRequest | USB_REQ_SET_FEATURE:
-		dev_dbg (hcd->controller, "no endpoint features yet\n");
+		dev_dbg (hcd->self.controller, "no endpoint features yet\n");
 		break;
 
 	/* CLASS REQUESTS (and errors) */
 
 	default:
 		/* non-generic request */
-		urb->status = hcd->driver->hub_control (hcd,
-			typeReq, wValue, wIndex,
-			ubuf, wLength);
+		if (HCD_IS_SUSPENDED (hcd->state))
+			urb->status = -EAGAIN;
+		else if (!HCD_IS_RUNNING (hcd->state))
+			urb->status = -ENODEV;
+		else
+			urb->status = hcd->driver->hub_control (hcd,
+				typeReq, wValue, wIndex,
+				ubuf, wLength);
 		break;
 error:
 		/* "protocol stall" on error */
 		urb->status = -EPIPE;
-		dev_dbg (hcd->controller, "unsupported hub control message (maxchild %d)\n",
+		dev_dbg (hcd->self.controller, "unsupported hub control message (maxchild %d)\n",
 				urb->dev->maxchild);
 	}
 	if (urb->status) {
 		urb->actual_length = 0;
-		dev_dbg (hcd->controller, "CTRL: TypeReq=0x%x val=0x%x idx=0x%x len=%d ==> %d\n",
+		dev_dbg (hcd->self.controller, "CTRL: TypeReq=0x%x val=0x%x idx=0x%x len=%d ==> %d\n",
 			typeReq, wValue, wIndex, wLength, urb->status);
 	}
 	if (bufp) {
@@ -464,7 +471,7 @@ static int rh_status_urb (struct usb_hcd *hcd, struct urb *urb)
 			|| urb->status != -EINPROGRESS
 			|| urb->transfer_buffer_length < len
 			|| !HCD_IS_RUNNING (hcd->state)) {
-		dev_dbg (hcd->controller,
+		dev_dbg (hcd->self.controller,
 				"not queuing rh status urb, stat %d\n",
 				urb->status);
 		return -EINVAL;
@@ -678,8 +685,10 @@ int usb_register_bus(struct usb_bus *bus)
 	if (busnum < USB_MAXBUS) {
 		set_bit (busnum, busmap.busmap);
 		bus->busnum = busnum;
-	} else
-		warn ("too many buses");
+	} else {
+		printk (KERN_ERR "%s: too many buses\n", usbcore_name);
+		return -E2BIG;
+	}
 
 	snprintf(bus->class_dev.class_id, BUS_ID_SIZE, "usb%d", busnum);
 	bus->class_dev.class = &usb_host_class;
@@ -804,7 +813,7 @@ long usb_calc_bus_time (int speed, int is_input, int isoc, int bytecount)
 			tmp = HS_USECS_ISO (bytecount);
 		return tmp;
 	default:
-		dbg ("bogus device speed!");
+		pr_debug ("%s: bogus device speed!\n", usbcore_name);
 		return -1;
 	}
 }
@@ -1068,18 +1077,18 @@ static int hcd_submit_urb (struct urb *urb, int mem_flags)
 	/* lower level hcd code should use *_dma exclusively,
 	 * unless it uses pio or talks to another transport.
 	 */
-	if (hcd->controller->dma_mask) {
+	if (hcd->self.controller->dma_mask) {
 		if (usb_pipecontrol (urb->pipe)
 			&& !(urb->transfer_flags & URB_NO_SETUP_DMA_MAP))
 			urb->setup_dma = dma_map_single (
-					hcd->controller,
+					hcd->self.controller,
 					urb->setup_packet,
 					sizeof (struct usb_ctrlrequest),
 					DMA_TO_DEVICE);
 		if (urb->transfer_buffer_length != 0
 			&& !(urb->transfer_flags & URB_NO_TRANSFER_DMA_MAP))
 			urb->transfer_dma = dma_map_single (
-					hcd->controller,
+					hcd->self.controller,
 					urb->transfer_buffer,
 					urb->transfer_buffer_length,
 					usb_pipein (urb->pipe)
@@ -1125,7 +1134,7 @@ unlink1 (struct usb_hcd *hcd, struct urb *urb)
 		/* failures "should" be harmless */
 		value = hcd->driver->urb_dequeue (hcd, urb);
 		if (value != 0)
-			dev_dbg (hcd->controller,
+			dev_dbg (hcd->self.controller,
 				"dequeue %p --> %d\n",
 				urb, value);
 	}
@@ -1213,7 +1222,7 @@ static int hcd_unlink_urb (struct urb *urb)
 			break;
 	}
 	if (tmp != &urb->urb_list) {
-		retval = -EINVAL;
+		retval = -EIDRM;
 		goto done;
 	}
 
@@ -1232,7 +1241,7 @@ static int hcd_unlink_urb (struct urb *urb)
 	 * finish unlinking the initial failed usb_set_address().
 	 */
 	if (!hcd->saw_irq) {
-		dev_warn (hcd->controller, "Unlink after no-IRQ?  "
+		dev_warn (hcd->self.controller, "Unlink after no-IRQ?  "
 			"Different ACPI or APIC settings may help."
 			"\n");
 		hcd->saw_irq = 1;
@@ -1244,7 +1253,8 @@ static int hcd_unlink_urb (struct urb *urb)
 	 */
 	if (!(urb->transfer_flags & URB_ASYNC_UNLINK)) {
 		if (in_interrupt ()) {
-			dev_dbg (hcd->controller, "non-async unlink in_interrupt");
+			dev_dbg (hcd->self.controller, 
+				"non-async unlink in_interrupt");
 			retval = -EWOULDBLOCK;
 			goto done;
 		}
@@ -1293,7 +1303,7 @@ done:
 	spin_unlock (&hcd_data_lock);
 	spin_unlock_irqrestore (&urb->lock, flags);
 bye:
-	if (retval && sys && sys->driver)
+	if (retval != -EIDRM && sys && sys->driver)
 		dev_dbg (sys, "hcd_unlink_urb %p fail %d\n", urb, retval);
 	return retval;
 }
@@ -1363,7 +1373,7 @@ rescan:
 		if (tmp == -EINPROGRESS) {
 			tmp = urb->pipe;
 			unlink1 (hcd, urb);
-			dev_dbg (hcd->controller,
+			dev_dbg (hcd->self.controller,
 				"shutdown urb %p pipe %08x ep%d%s%s\n",
 				urb, tmp, usb_pipeendpoint (tmp),
 				(tmp & USB_DIR_IN) ? "in" : "out",
@@ -1417,7 +1427,7 @@ static int hcd_free_dev (struct usb_device *udev)
 
 	/* device driver problem with refcounts? */
 	if (!list_empty (&dev->urb_list)) {
-		dev_dbg (hcd->controller, "free busy dev, %s devnum %d (bug!)\n",
+		dev_dbg (hcd->self.controller, "free busy dev, %s devnum %d (bug!)\n",
 			hcd->self.bus_name, udev->devnum);
 		return -EINVAL;
 	}
@@ -1474,15 +1484,16 @@ void usb_hcd_giveback_urb (struct usb_hcd *hcd, struct urb *urb, struct pt_regs 
 	// It would catch exit/unlink paths for all urbs.
 
 	/* lower level hcd code should use *_dma exclusively */
-	if (hcd->controller->dma_mask) {
+	if (hcd->self.controller->dma_mask) {
 		if (usb_pipecontrol (urb->pipe)
 			&& !(urb->transfer_flags & URB_NO_SETUP_DMA_MAP))
-			dma_unmap_single (hcd->controller, urb->setup_dma,
+			dma_unmap_single (hcd->self.controller, urb->setup_dma,
 					sizeof (struct usb_ctrlrequest),
 					DMA_TO_DEVICE);
 		if (urb->transfer_buffer_length != 0
 			&& !(urb->transfer_flags & URB_NO_TRANSFER_DMA_MAP))
-			dma_unmap_single (hcd->controller, urb->transfer_dma,
+			dma_unmap_single (hcd->self.controller, 
+					urb->transfer_dma,
 					urb->transfer_buffer_length,
 					usb_pipein (urb->pipe)
 					    ? DMA_FROM_DEVICE
@@ -1551,7 +1562,7 @@ static void hcd_panic (void *_hcd)
  */
 void usb_hc_died (struct usb_hcd *hcd)
 {
-	dev_err (hcd->controller, "HC died; cleaning up\n");
+	dev_err (hcd->self.controller, "HC died; cleaning up\n");
 
 	/* clean up old urbs and devices; needs a task context */
 	INIT_WORK (&hcd->work, hcd_panic, hcd);

@@ -132,7 +132,7 @@ _GLOBAL(flush_instruction_cache)
  *   flush all bytes from start through stop-1 inclusive
  */
 
-_GLOBAL(flush_icache_range)
+_GLOBAL(__flush_icache_range)
 
 /*
  * Flush the data cache to memory 
@@ -208,6 +208,48 @@ _GLOBAL(flush_dcache_range)
 	bdnz	0b
 	sync
 	blr
+
+/*
+ * Like above, but works on non-mapped physical addresses.
+ * Use only for non-LPAR setups ! It also assumes real mode
+ * is cacheable. Used for flushing out the DART before using
+ * it as uncacheable memory 
+ *
+ * flush_dcache_phys_range(unsigned long start, unsigned long stop)
+ *
+ *    flush all bytes from start to stop-1 inclusive
+ */
+_GLOBAL(flush_dcache_phys_range)
+	LOADADDR(r10,naca)		/* Get Naca address */
+	ld	r10,0(r10)
+	LOADADDR(r11,systemcfg)		/* Get systemcfg address */
+	ld	r11,0(r11)
+	lwz	r7,DCACHEL1LINESIZE(r11)	/* Get dcache line size */
+	addi	r5,r7,-1
+	andc	r6,r3,r5		/* round low to line bdy */
+	subf	r8,r6,r4		/* compute length */
+	add	r8,r8,r5		/* ensure we get enough */
+	lwz	r9,DCACHEL1LOGLINESIZE(r10)	/* Get log-2 of dcache line size */
+	srw.	r8,r8,r9		/* compute line count */
+	beqlr				/* nothing to do? */
+	mfmsr	r5			/* Disable MMU Data Relocation */
+	ori	r0,r5,MSR_DR
+	xori	r0,r0,MSR_DR
+	sync
+	mtmsr	r0
+	sync
+	isync
+	mtctr	r8
+0:	dcbst	0,r6
+	add	r6,r6,r7
+	bdnz	0b
+	sync
+	isync
+	mtmsr	r5			/* Re-enable MMU Data Relocation */
+	sync
+	isync
+	blr
+
 
 /*
  * Flush a particular page from the data cache to RAM.
@@ -383,10 +425,6 @@ _GLOBAL(abs)
 	neg	r3,r3
 10:	blr
 
-_GLOBAL(_get_SP)
-	mr	r3,r1		/* Close enough */
-	blr
-	
 _GLOBAL(_get_PVR)
 	mfspr	r3,PVR
 	blr
@@ -527,35 +565,6 @@ _GLOBAL(kernel_thread)
 	ld	r30,-16(r1)
 	blr
 
-	.section	".toc","aw"
-.SYSCALL_ERRNO:
-	.tc errno[TC],errno
-
-	.section	".text"
-	.align 3
-	
-#define SYSCALL(name) \
-_GLOBAL(name) \
-	li	r0,__NR_##name; \
-	sc; \
-	bnslr; \
-	ld	r4,.SYSCALL_ERRNO@toc(2); \
-	std	r3,0(r4); \
-	li	r3,-1; \
-	blr
-
-#define __NR__exit __NR_exit
-
-SYSCALL(setsid)
-SYSCALL(open)
-SYSCALL(read)
-SYSCALL(write)
-SYSCALL(lseek)
-SYSCALL(close)
-SYSCALL(dup)
-SYSCALL(execve)
-SYSCALL(waitpid)
-
 #ifdef CONFIG_PPC_ISERIES	/* hack hack hack */
 #define ppc_rtas	sys_ni_syscall
 #endif
@@ -584,7 +593,7 @@ _GLOBAL(sys_call_table32)
 	.llong .sys_ni_syscall		/* old stat syscall */
 	.llong .ppc32_lseek
 	.llong .sys_getpid              /* 20 */
-	.llong .sys32_mount
+	.llong .compat_sys_mount
 	.llong .sys_oldumount
 	.llong .sys_setuid
 	.llong .sys_getuid
@@ -615,7 +624,7 @@ _GLOBAL(sys_call_table32)
 	.llong .sys_geteuid
 	.llong .sys_getegid		/* 50 */
 	.llong .sys_acct
-	.llong .sys32_umount
+	.llong .sys_umount
 	.llong .sys_ni_syscall		/* old lock syscall */
 	.llong .compat_sys_ioctl
 	.llong .compat_sys_fcntl		/* 55 */
@@ -819,6 +828,18 @@ _GLOBAL(sys_call_table32)
 	.llong .compat_fstatfs64
 	.llong .ppc32_fadvise64_64	/* 32bit only fadvise64_64 */
 	.llong .ppc_rtas		/* 255 */
+	.llong .sys_ni_syscall		/* 256 reserved for sys_debug_setcontext */
+	.llong .sys_ni_syscall		/* 257 reserved for vserver */
+	.llong .sys_ni_syscall		/* 258 reserved for new sys_remap_file_pages */
+	.llong .sys_ni_syscall		/* 259 reserved for new sys_mbind */
+	.llong .sys_ni_syscall		/* 260 reserved for new sys_get_mempolicy */
+	.llong .sys_ni_syscall		/* 261 reserved for new sys_set_mempolicy */
+	.llong .compat_sys_mq_open
+	.llong .sys_mq_unlink
+	.llong .compat_sys_mq_timedsend
+	.llong .compat_sys_mq_timedreceive /* 265 */
+	.llong .compat_sys_mq_notify
+	.llong .compat_sys_mq_getsetattr
 
 	.balign 8
 _GLOBAL(sys_call_table)
@@ -1078,3 +1099,15 @@ _GLOBAL(sys_call_table)
 	.llong .sys_fstatfs64
 	.llong .sys_ni_syscall		/* 32bit only fadvise64_64 */
 	.llong .ppc_rtas		/* 255 */
+	.llong .sys_ni_syscall		/* 256 reserved for sys_debug_setcontext */
+	.llong .sys_ni_syscall		/* 257 reserved for vserver */
+	.llong .sys_ni_syscall		/* 258 reserved for new sys_remap_file_pages */
+	.llong .sys_ni_syscall		/* 259 reserved for new sys_mbind */
+	.llong .sys_ni_syscall		/* 260 reserved for new sys_get_mempolicy */
+	.llong .sys_ni_syscall		/* 261 reserved for new sys_set_mempolicy */
+	.llong .sys_mq_open
+	.llong .sys_mq_unlink
+	.llong .sys_mq_timedsend
+	.llong .sys_mq_timedreceive	/* 265 */
+	.llong .sys_mq_notify
+	.llong .sys_mq_getsetattr

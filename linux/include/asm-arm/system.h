@@ -12,7 +12,8 @@
 #define CPU_ARCH_ARMv5		4
 #define CPU_ARCH_ARMv5T		5
 #define CPU_ARCH_ARMv5TE	6
-#define CPU_ARCH_ARMv6		7
+#define CPU_ARCH_ARMv5TEJ	7
+#define CPU_ARCH_ARMv6		8
 
 /*
  * CR1 bits (CP#15 CR1)
@@ -40,6 +41,28 @@
 #define CR_U	(1 << 22)	/* Unaligned access operation		*/
 #define CR_XP	(1 << 23)	/* Extended page tables			*/
 #define CR_VE	(1 << 24)	/* Vectored interrupts			*/
+
+#define CPUID_ID	0
+#define CPUID_CACHETYPE	1
+#define CPUID_TCM	2
+#define CPUID_TLBTYPE	3
+
+#define read_cpuid(reg)							\
+	({								\
+		unsigned int __val;					\
+		asm("mrc%? p15, 0, %0, c0, c0, " __stringify(reg)	\
+		    : "=r" (__val));					\
+		__val;							\
+	})
+
+/*
+ * This is used to ensure the compiler did actually allocate the register we
+ * asked it for some inline assembly sequences.  Apparently we can't trust
+ * the compiler from one version to another so a bit of paranoia won't hurt.
+ * This string is meant to be concatenated with the inline asm string and
+ * will cause compilation to stop on mismatch.
+ */
+#define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
 #ifndef __ASSEMBLY__
 
@@ -92,6 +115,14 @@ extern int cpu_architecture(void);
 extern unsigned long cr_no_alignment;	/* defined in entry-armv.S */
 extern unsigned long cr_alignment;	/* defined in entry-armv.S */
 
+#define UDBG_UNDEFINED	(1 << 0)
+#define UDBG_SYSCALL	(1 << 1)
+#define UDBG_BADABORT	(1 << 2)
+#define UDBG_SEGV	(1 << 3)
+#define UDBG_BUS	(1 << 4)
+
+extern unsigned int user_debug;
+
 #if __LINUX_ARM_ARCH__ >= 4
 #define vectors_base()	((cr_alignment & CR_V) ? 0xffff0000 : 0)
 #else
@@ -122,6 +153,26 @@ extern struct task_struct *__switch_to(struct task_struct *, struct thread_info 
 		last = __switch_to(prev,prev->thread_info,next->thread_info);	\
 		mb();								\
 	} while (0)
+
+/*
+ * CPU interrupt mask handling.
+ */
+#if __LINUX_ARM_ARCH__ >= 6
+
+#define local_irq_save(x)					\
+	({							\
+	__asm__ __volatile__(					\
+	"mrs	%0, cpsr		@ local_irq_save\n"	\
+	"cpsid	i"						\
+	: "=r" (x) : : "memory", "cc");				\
+	})
+
+#define local_irq_enable()  __asm__("cpsie i	@ __sti" : : : "memory", "cc")
+#define local_irq_disable() __asm__("cpsid i	@ __cli" : : : "memory", "cc")
+#define local_fiq_enable()  __asm__("cpsie f	@ __stf" : : : "memory", "cc")
+#define local_fiq_disable() __asm__("cpsid f	@ __clf" : : : "memory", "cc")
+
+#else
 
 /*
  * Save the current interrupt enable state & disable IRQs
@@ -198,6 +249,8 @@ extern struct task_struct *__switch_to(struct task_struct *, struct thread_info 
 	:							\
 	: "memory", "cc");					\
 	})
+
+#endif
 
 /*
  * Save the current interrupt enable state.

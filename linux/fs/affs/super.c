@@ -293,6 +293,7 @@ static int affs_fill_super(struct super_block *sb, void *data, int silent)
 
 	sb->s_magic             = AFFS_SUPER_MAGIC;
 	sb->s_op                = &affs_sops;
+	sb->s_flags |= MS_NODIRATIME;
 
 	sbi = kmalloc(sizeof(struct affs_sb_info), GFP_KERNEL);
 	if (!sbi)
@@ -500,6 +501,8 @@ affs_remount(struct super_block *sb, int *flags, char *data)
 	unsigned long		 read_only = sbi->s_flags & SF_READONLY;
 
 	pr_debug("AFFS: remount(flags=0x%x,opts=\"%s\")\n",*flags,data);
+
+	*flags |= MS_NODIRATIME;
 
 	if (!parse_options(data,&uid,&gid,&mode,&reserved,&root_block,
 	    &blocksize,&sbi->s_prefix,sbi->s_volume,&mount_flags))

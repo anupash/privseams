@@ -200,7 +200,7 @@ static void program_drive_counts (ide_drive_t *drive, int setup_count, int activ
 	 */
 	if (channel) {
 		drive->drive_data = setup_count;
-		setup_count = IDE_MAX(drives[0].drive_data,
+		setup_count = max(drives[0].drive_data,
 					drives[1].drive_data);
 		cmdprintk("Secondary interface, setup_count = %d\n",
 					setup_count);
@@ -667,7 +667,7 @@ static unsigned int __init init_chipset_cmd64x (struct pci_dev *dev, const char 
 
 	if (!cmd64x_proc) {
 		cmd64x_proc = 1;
-		ide_pci_register_host_proc(&cmd64x_procs[0]);
+		ide_pci_create_host_proc("cmd64x", cmd64x_get_info);
 	}
 #endif /* DISPLAY_CMD64X_TIMINGS && CONFIG_PROC_FS */
 
@@ -744,8 +744,6 @@ static void __init init_hwif_cmd64x (ide_hwif_t *hwif)
 	hwif->drives[1].autodma = hwif->autodma;
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
 static int __devinit cmd64x_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	ide_pci_device_t *d = &cmd64x_chipsets[id->driver_data];
@@ -762,6 +760,7 @@ static struct pci_device_id cmd64x_pci_tbl[] = {
 	{ PCI_VENDOR_ID_CMD, PCI_DEVICE_ID_CMD_649, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 3},
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, cmd64x_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "CMD64x IDE",

@@ -27,9 +27,6 @@
 #include <linux/slab.h>
 #include <linux/uio.h>
 #include <linux/nfs_fs.h>
-#include <linux/smb_fs.h>
-#include <linux/smb_mount.h>
-#include <linux/ncp_fs.h>
 #include <linux/quota.h>
 #include <linux/module.h>
 #include <linux/sunrpc/svc.h>
@@ -47,6 +44,7 @@
 #include <linux/ipv6.h>
 #include <linux/in.h>
 #include <linux/icmpv6.h>
+#include <linux/syscalls.h>
 #include <linux/sysctl.h>
 #include <linux/binfmts.h>
 #include <linux/dnotify.h>
@@ -88,17 +86,6 @@
 	__ret;				\
 })
 
-extern asmlinkage long sys_chown(const char *, uid_t,gid_t);
-extern asmlinkage long sys_lchown(const char *, uid_t,gid_t);
-extern asmlinkage long sys_fchown(unsigned int, uid_t,gid_t);
-extern asmlinkage long sys_setregid(gid_t, gid_t);
-extern asmlinkage long sys_setgid(gid_t);
-extern asmlinkage long sys_setreuid(uid_t, uid_t);
-extern asmlinkage long sys_setuid(uid_t);
-extern asmlinkage long sys_setresuid(uid_t, uid_t, uid_t);
-extern asmlinkage long sys_setresgid(gid_t, gid_t, gid_t);
-extern asmlinkage long sys_setfsuid(uid_t);
-extern asmlinkage long sys_setfsgid(gid_t);
  
 asmlinkage long sys32_chown16(const char * filename, u16 user, u16 group)
 {
@@ -179,40 +166,81 @@ asmlinkage long sys32_setfsgid16(u16 gid)
 	return sys_setfsgid((gid_t)gid);
 }
 
+static int groups16_to_user(u16 *grouplist, struct group_info *group_info)
+{
+	int i;
+	u16 group;
+
+	for (i = 0; i < group_info->ngroups; i++) {
+		group = (u16)GROUP_AT(group_info, i);
+		if (put_user(group, grouplist+i))
+			return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int groups16_from_user(struct group_info *group_info, u16 *grouplist)
+{
+	int i;
+	u16 group;
+
+	for (i = 0; i < group_info->ngroups; i++) {
+		if (get_user(group, grouplist+i))
+			return  -EFAULT;
+		GROUP_AT(group_info, i) = (gid_t)group;
+	}
+
+	return 0;
+}
+
 asmlinkage long sys32_getgroups16(int gidsetsize, u16 *grouplist)
 {
-	u16 groups[NGROUPS];
-	int i,j;
+	int i;
 
 	if (gidsetsize < 0)
 		return -EINVAL;
-	i = current->ngroups;
+
+	get_group_info(current->group_info);
+	i = current->group_info->ngroups;
 	if (gidsetsize) {
-		if (i > gidsetsize)
-			return -EINVAL;
-		for(j=0;j<i;j++)
-			groups[j] = current->groups[j];
-		if (copy_to_user(grouplist, groups, sizeof(u16)*i))
-			return -EFAULT;
+		if (i > gidsetsize) {
+			i = -EINVAL;
+			goto out;
+		}
+		if (groups16_to_user(grouplist, current->group_info)) {
+			i = -EFAULT;
+			goto out;
+		}
 	}
+out:
+	put_group_info(current->group_info);
 	return i;
 }
 
 asmlinkage long sys32_setgroups16(int gidsetsize, u16 *grouplist)
 {
-	u16 groups[NGROUPS];
-	int i;
+	struct group_info *group_info;
+	int retval;
 
 	if (!capable(CAP_SETGID))
 		return -EPERM;
-	if ((unsigned) gidsetsize > NGROUPS)
+	if ((unsigned)gidsetsize > NGROUPS_MAX)
 		return -EINVAL;
-	if (copy_from_user(groups, grouplist, gidsetsize * sizeof(u16)))
-		return -EFAULT;
-	for (i = 0 ; i < gidsetsize ; i++)
-		current->groups[i] = (gid_t)groups[i];
-	current->ngroups = gidsetsize;
-	return 0;
+
+	group_info = groups_alloc(gidsetsize);
+	if (!group_info)
+		return -ENOMEM;
+	retval = groups16_from_user(group_info, grouplist);
+	if (retval) {
+		put_group_info(group_info);
+		return retval;
+	}
+
+	retval = set_current_groups(group_info);
+	put_group_info(group_info);
+
+	return retval;
 }
 
 asmlinkage long sys32_getuid16(void)
@@ -249,13 +277,6 @@ static inline long put_tv32(struct compat_timeval *o, struct timeval *i)
 	return (!access_ok(VERIFY_WRITE, o, sizeof(*o)) ||
 		(__put_user(i->tv_sec, &o->tv_sec) |
 		 __put_user(i->tv_usec, &o->tv_usec)));
-}
-
-extern asmlinkage int sys_ioperm(unsigned long from, unsigned long num, int on);
-
-asmlinkage int sys32_ioperm(u32 from, u32 num, int on)
-{
-	return sys_ioperm((unsigned long)from, (unsigned long)num, on);
 }
 
 struct msgbuf32 { s32 mtype; char mtext[1]; };
@@ -601,7 +622,7 @@ static int do_sys32_shmat (int first, int second, int third, int version, void *
 
 	if (version == 1)
 		goto out;
-	err = sys_shmat (first, uptr, second, &raddr);
+	err = do_shmat (first, uptr, second, &raddr);
 	if (err)
 		goto out;
 	err = put_user (raddr, uaddr);
@@ -794,9 +815,6 @@ asmlinkage int sys32_ipc (u32 call, int first, int second, int third, u32 ptr, u
 out:
 	return err;
 }
-
-extern asmlinkage long sys_truncate(const char * path, unsigned long length);
-extern asmlinkage long sys_ftruncate(unsigned int fd, unsigned long length);
 
 asmlinkage int sys32_truncate64(const char * path, unsigned long high, unsigned long low)
 {
@@ -1068,7 +1086,7 @@ static int filldir(void * __buf, const char * name, int namlen, loff_t offset, i
 {
 	struct linux_dirent32 * dirent;
 	struct getdents_callback32 * buf = (struct getdents_callback32 *) __buf;
-	int reclen = ROUND_UP(NAME_OFFSET(dirent) + namlen + 1);
+	int reclen = ROUND_UP(NAME_OFFSET(dirent) + namlen + 2);
 
 	buf->error = -EINVAL;	/* only used if we fail.. */
 	if (reclen > buf->count)
@@ -1082,7 +1100,8 @@ static int filldir(void * __buf, const char * name, int namlen, loff_t offset, i
 	put_user(reclen, &dirent->d_reclen);
 	copy_to_user(dirent->d_name, name, namlen);
 	put_user(0, dirent->d_name + namlen);
-	((char *) dirent) += reclen;
+	put_user(d_type, (char *) dirent + reclen - 1);
+	dirent = (void *) dirent + reclen;
 	buf->current_dir = dirent;
 	buf->count -= reclen;
 	return 0;
@@ -1303,214 +1322,9 @@ int cp_compat_stat(struct kstat *stat, struct compat_stat *statbuf)
 	return err;
 }
 
-extern asmlinkage int sys_sysfs(int option, unsigned long arg1, unsigned long arg2);
-
 asmlinkage int sys32_sysfs(int option, u32 arg1, u32 arg2)
 {
 	return sys_sysfs(option, arg1, arg2);
-}
-
-struct ncp_mount_data32_v3 {
-        int version;
-        unsigned int ncp_fd;
-        compat_uid_t mounted_uid;
-        compat_pid_t wdog_pid;
-        unsigned char mounted_vol[NCP_VOLNAME_LEN + 1];
-        unsigned int time_out;
-        unsigned int retry_count;
-        unsigned int flags;
-        compat_uid_t uid;
-        compat_gid_t gid;
-        compat_mode_t file_mode;
-        compat_mode_t dir_mode;
-};
-
-struct ncp_mount_data32_v4 {
-	int version;
-	/* all members below are "long" in ABI ... i.e. 32bit on sparc32, while 64bits on sparc64 */
-	unsigned int flags;
-	unsigned int mounted_uid;
-	int wdog_pid;
-
-	unsigned int ncp_fd;
-	unsigned int time_out;
-	unsigned int retry_count;
-
-	unsigned int uid;
-	unsigned int gid;
-	unsigned int file_mode;
-	unsigned int dir_mode;
-};
-
-static void *do_ncp_super_data_conv(void *raw_data)
-{
-	switch (*(int*)raw_data) {
-		case NCP_MOUNT_VERSION:
-			{
-				struct ncp_mount_data news, *n = &news; 
-				struct ncp_mount_data32_v3 *n32 = (struct ncp_mount_data32_v3 *)raw_data;
-
-				n->version = n32->version;
-				n->ncp_fd = n32->ncp_fd;
-				n->mounted_uid = low2highuid(n32->mounted_uid);
-				n->wdog_pid = n32->wdog_pid;
-				memmove (n->mounted_vol, n32->mounted_vol, sizeof (n32->mounted_vol));
-				n->time_out = n32->time_out;
-				n->retry_count = n32->retry_count;
-				n->flags = n32->flags;
-				n->uid = low2highuid(n32->uid);
-				n->gid = low2highgid(n32->gid);
-				n->file_mode = n32->file_mode;
-				n->dir_mode = n32->dir_mode;
-				memcpy(raw_data, n, sizeof(*n)); 
-			}
-			break;
-		case NCP_MOUNT_VERSION_V4:
-			{
-				struct ncp_mount_data_v4 news, *n = &news; 
-				struct ncp_mount_data32_v4 *n32 = (struct ncp_mount_data32_v4 *)raw_data;
-
-				n->version = n32->version;
-				n->flags = n32->flags;
-				n->mounted_uid = n32->mounted_uid;
-				n->wdog_pid = n32->wdog_pid;
-				n->ncp_fd = n32->ncp_fd;
-				n->time_out = n32->time_out;
-				n->retry_count = n32->retry_count;
-				n->uid = n32->uid;
-				n->gid = n32->gid;
-				n->file_mode = n32->file_mode;
-				n->dir_mode = n32->dir_mode;
-				memcpy(raw_data, n, sizeof(*n)); 
-			}
-			break;
-		default:
-			/* do not touch unknown structures */
-			break;
-	}
-	return raw_data;
-}
-
-struct smb_mount_data32 {
-        int version;
-        compat_uid_t mounted_uid;
-        compat_uid_t uid;
-        compat_gid_t gid;
-        compat_mode_t file_mode;
-        compat_mode_t dir_mode;
-};
-
-static void *do_smb_super_data_conv(void *raw_data)
-{
-	struct smb_mount_data news, *s = &news;
-	struct smb_mount_data32 *s32 = (struct smb_mount_data32 *)raw_data;
-
-	if (s32->version != SMB_MOUNT_OLDVERSION)
-		goto out;
-	s->version = s32->version;
-	s->mounted_uid = low2highuid(s32->mounted_uid);
-	s->uid = low2highuid(s32->uid);
-	s->gid = low2highgid(s32->gid);
-	s->file_mode = s32->file_mode;
-	s->dir_mode = s32->dir_mode;
-	memcpy(raw_data, s, sizeof(struct smb_mount_data)); 
-out:
-	return raw_data;
-}
-
-static int copy_mount_stuff_to_kernel(const void *user, unsigned long *kernel)
-{
-	int i;
-	unsigned long page;
-	struct vm_area_struct *vma;
-
-	*kernel = 0;
-	if(!user)
-		return 0;
-	vma = find_vma(current->mm, (unsigned long)user);
-	if(!vma || (unsigned long)user < vma->vm_start)
-		return -EFAULT;
-	if(!(vma->vm_flags & VM_READ))
-		return -EFAULT;
-	i = vma->vm_end - (unsigned long) user;
-	if(PAGE_SIZE <= (unsigned long) i)
-		i = PAGE_SIZE - 1;
-	if(!(page = __get_free_page(GFP_KERNEL)))
-		return -ENOMEM;
-	if(copy_from_user((void *) page, user, i)) {
-		free_page(page);
-		return -EFAULT;
-	}
-	*kernel = page;
-	return 0;
-}
-
-#define SMBFS_NAME	"smbfs"
-#define NCPFS_NAME	"ncpfs"
-
-asmlinkage int sys32_mount(char *dev_name, char *dir_name, char *type, unsigned long new_flags, u32 data)
-{
-	unsigned long type_page = 0;
-	unsigned long data_page = 0;
-	unsigned long dev_page = 0;
-	unsigned long dir_page = 0;
-	int err, is_smb, is_ncp;
-
-	is_smb = is_ncp = 0;
-
-	err = copy_mount_stuff_to_kernel((const void *)type, &type_page);
-	if (err)
-		goto out;
-
-	if (!type_page) {
-		err = -EINVAL;
-		goto out;
-	}
-
-	is_smb = !strcmp((char *)type_page, SMBFS_NAME);
-	is_ncp = !strcmp((char *)type_page, NCPFS_NAME);
-
-	err = copy_mount_stuff_to_kernel((const void *)AA(data), &data_page);
-	if (err)
-		goto type_out;
-
-	err = copy_mount_stuff_to_kernel(dev_name, &dev_page);
-	if (err)
-		goto data_out;
-
-	err = copy_mount_stuff_to_kernel(dir_name, &dir_page);
-	if (err)
-		goto dev_out;
-
-	if (!is_smb && !is_ncp) {
-		lock_kernel();
-		err = do_mount((char*)dev_page, (char*)dir_page,
-				(char*)type_page, new_flags, (char*)data_page);
-		unlock_kernel();
-	} else {
-		if (is_ncp)
-			do_ncp_super_data_conv((void *)data_page);
-		else
-			do_smb_super_data_conv((void *)data_page);
-
-		lock_kernel();
-		err = do_mount((char*)dev_page, (char*)dir_page,
-				(char*)type_page, new_flags, (char*)data_page);
-		unlock_kernel();
-	}
-	free_page(dir_page);
-
-dev_out:
-	free_page(dev_page);
-
-data_out:
-	free_page(data_page);
-
-type_out:
-	free_page(type_page);
-
-out:
-	return err;
 }
 
 struct sysinfo32 {
@@ -1529,8 +1343,6 @@ struct sysinfo32 {
 	u32 mem_unit;
 	char _f[20-2*sizeof(int)-sizeof(int)];
 };
-
-extern asmlinkage int sys_sysinfo(struct sysinfo *info);
 
 asmlinkage int sys32_sysinfo(struct sysinfo32 *info)
 {
@@ -1579,8 +1391,6 @@ asmlinkage int sys32_sysinfo(struct sysinfo32 *info)
 	return ret;
 }
 
-extern asmlinkage int sys_sched_rr_get_interval(pid_t pid, struct timespec *interval);
-
 asmlinkage int sys32_sched_rr_get_interval(compat_pid_t pid, struct compat_timespec *interval)
 {
 	struct timespec t;
@@ -1594,8 +1404,6 @@ asmlinkage int sys32_sched_rr_get_interval(compat_pid_t pid, struct compat_times
 		return -EFAULT;
 	return ret;
 }
-
-extern asmlinkage int sys_rt_sigprocmask(int how, sigset_t *set, sigset_t *oset, size_t sigsetsize);
 
 asmlinkage int sys32_rt_sigprocmask(int how, compat_sigset_t *set, compat_sigset_t *oset, compat_size_t sigsetsize)
 {
@@ -1630,8 +1438,6 @@ asmlinkage int sys32_rt_sigprocmask(int how, compat_sigset_t *set, compat_sigset
 	}
 	return 0;
 }
-
-extern asmlinkage int sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
 
 asmlinkage int sys32_rt_sigpending(compat_sigset_t *set, compat_size_t sigsetsize)
 {
@@ -1740,9 +1546,6 @@ sys32_rt_sigtimedwait(compat_sigset_t *uthese, siginfo_t32 *uinfo,
 	return ret;
 }
 
-extern asmlinkage int
-sys_rt_sigqueueinfo(int pid, int sig, siginfo_t *uinfo);
-
 asmlinkage int
 sys32_rt_sigqueueinfo(int pid, int sig, siginfo_t32 *uinfo)
 {
@@ -1773,9 +1576,12 @@ asmlinkage int sys32_sigaction (int sig, struct old_sigaction32 *act, struct old
 
         if (act) {
 		compat_old_sigset_t mask;
+		u32 u_handler, u_restorer;
 		
-		ret = get_user((long)new_ka.sa.sa_handler, &act->sa_handler);
-		ret |= __get_user((long)new_ka.sa.sa_restorer, &act->sa_restorer);
+		ret = get_user(u_handler, &act->sa_handler);
+		new_ka.sa.sa_handler = (void *) (long) u_handler;
+		ret |= __get_user(u_restorer, &act->sa_restorer);
+		new_ka.sa.sa_restorer = (void *) (long) u_restorer;
 		ret |= __get_user(new_ka.sa.sa_flags, &act->sa_flags);
 		ret |= __get_user(mask, &act->sa_mask);
 		if (ret)
@@ -1814,8 +1620,11 @@ sys32_rt_sigaction(int sig, struct sigaction32 *act, struct sigaction32 *oact,
 	set_thread_flag(TIF_NEWSIGNALS);
 
         if (act) {
+		u32 u_handler, u_restorer;
+
 		new_ka.ka_restorer = restorer;
-		ret = get_user((long)new_ka.sa.sa_handler, &act->sa_handler);
+		ret = get_user(u_handler, &act->sa_handler);
+		new_ka.sa.sa_handler = (void *) (long) u_handler;
 		ret |= __copy_from_user(&set32, &act->sa_mask, sizeof(compat_sigset_t));
 		switch (_NSIG_WORDS) {
 		case 4: new_ka.sa.sa_mask.sig[3] = set32.sig[6] | (((long)set32.sig[7]) << 32);
@@ -1824,7 +1633,8 @@ sys32_rt_sigaction(int sig, struct sigaction32 *act, struct sigaction32 *oact,
 		case 1: new_ka.sa.sa_mask.sig[0] = set32.sig[0] | (((long)set32.sig[1]) << 32);
 		}
 		ret |= __get_user(new_ka.sa.sa_flags, &act->sa_flags);
-		ret |= __get_user((long)new_ka.sa.sa_restorer, &act->sa_restorer);
+		ret |= __get_user(u_restorer, &act->sa_restorer);
+		new_ka.sa.sa_restorer = (void *) (long) u_restorer;
                 if (ret)
                 	return -EFAULT;
 	}
@@ -2073,14 +1883,10 @@ out:
 
 #ifdef CONFIG_MODULES
 
-extern asmlinkage long sys_init_module(void *, unsigned long, const char *);
-
 asmlinkage int sys32_init_module(void *umod, u32 len, const char *uargs)
 {
 	return sys_init_module(umod, len, uargs);
 }
-
-extern asmlinkage long sys_delete_module(const char *, unsigned int);
 
 asmlinkage int sys32_delete_module(const char *name_user, unsigned int flags)
 {
@@ -2323,7 +2129,6 @@ done:
 	return err;
 }
 #else /* !NFSD */
-extern asmlinkage long sys_ni_syscall(void);
 int asmlinkage sys32_nfsservctl(int cmd, void *notused, void *notused2)
 {
 	return sys_ni_syscall();
@@ -2416,17 +2221,6 @@ asmlinkage int sys32_pause(void)
 }
 
 /* PCI config space poking. */
-extern asmlinkage int sys_pciconfig_read(unsigned long bus,
-					 unsigned long dfn,
-					 unsigned long off,
-					 unsigned long len,
-					 unsigned char *buf);
-
-extern asmlinkage int sys_pciconfig_write(unsigned long bus,
-					  unsigned long dfn,
-					  unsigned long off,
-					  unsigned long len,
-					  unsigned char *buf);
 
 asmlinkage int sys32_pciconfig_read(u32 bus, u32 dfn, u32 off, u32 len, u32 ubuf)
 {
@@ -2446,9 +2240,6 @@ asmlinkage int sys32_pciconfig_write(u32 bus, u32 dfn, u32 off, u32 len, u32 ubu
 				   (unsigned char *)AA(ubuf));
 }
 
-extern asmlinkage int sys_prctl(int option, unsigned long arg2, unsigned long arg3,
-				unsigned long arg4, unsigned long arg5);
-
 asmlinkage int sys32_prctl(int option, u32 arg2, u32 arg3, u32 arg4, u32 arg5)
 {
 	return sys_prctl(option,
@@ -2458,12 +2249,6 @@ asmlinkage int sys32_prctl(int option, u32 arg2, u32 arg3, u32 arg4, u32 arg5)
 			 (unsigned long) arg5);
 }
 
-
-extern asmlinkage ssize_t sys_pread64(unsigned int fd, char * buf,
-				    size_t count, loff_t pos);
-
-extern asmlinkage ssize_t sys_pwrite64(unsigned int fd, const char * buf,
-				     size_t count, loff_t pos);
 
 asmlinkage compat_ssize_t sys32_pread64(unsigned int fd, char *ubuf,
 				   compat_size_t count, u32 poshi, u32 poslo)
@@ -2476,8 +2261,6 @@ asmlinkage compat_ssize_t sys32_pwrite64(unsigned int fd, char *ubuf,
 {
 	return sys_pwrite64(fd, ubuf, count, ((loff_t)AA(poshi) << 32) | AA(poslo));
 }
-
-extern asmlinkage ssize_t sys_readahead(int fd, loff_t offset, size_t count);
 
 asmlinkage compat_ssize_t sys32_readahead(int fd, u32 offhi, u32 offlo, s32 count)
 {
@@ -2494,8 +2277,6 @@ long sys32_fadvise64_64(int fd, u32 offhi, u32 offlo, u32 lenhi, u32 lenlo, int 
 	return sys_fadvise64_64(fd, ((loff_t)AA(offhi)<<32)|AA(offlo),
 				((loff_t)AA(lenhi)<<32)|AA(lenlo), advice);
 }
-
-extern asmlinkage ssize_t sys_sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
 
 asmlinkage int sys32_sendfile(int out_fd, int in_fd, compat_off_t *offset, s32 count)
 {
@@ -2515,8 +2296,6 @@ asmlinkage int sys32_sendfile(int out_fd, int in_fd, compat_off_t *offset, s32 c
 		
 	return ret;
 }
-
-extern asmlinkage ssize_t sys_sendfile64(int out_fd, int in_fd, loff_t *offset, size_t count);
 
 asmlinkage int sys32_sendfile64(int out_fd, int in_fd, compat_loff_t *offset, s32 count)
 {
@@ -2692,8 +2471,6 @@ out:
 	return ret;       
 }
 
-extern asmlinkage long sys_setpriority(int which, int who, int niceval);
-
 asmlinkage int sys_setpriority32(u32 which, u32 who, u32 niceval)
 {
 	return sys_setpriority((int) which,
@@ -2752,8 +2529,6 @@ asmlinkage long sys32_sysctl(struct __sysctl_args32 *args)
 	return error;
 #endif
 }
-
-extern long sys_lookup_dcookie(u64 cookie64, char *buf, size_t len);
 
 long sys32_lookup_dcookie(u32 cookie_high, u32 cookie_low, char *buf, size_t len)
 {

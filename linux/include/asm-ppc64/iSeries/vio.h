@@ -38,8 +38,8 @@
  * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  *
  */
-#ifndef _VIO_H
-#define _VIO_H
+#ifndef _ISERIES_VIO_H
+#define _ISERIES_VIO_H
 
 #include <asm/iSeries/HvTypes.h>
 #include <asm/iSeries/HvLpEvent.h>
@@ -70,11 +70,6 @@ void vio_free_event_buffer(int subtype, void *buffer);
 extern HvLpIndex viopath_hostLp;
 extern HvLpIndex viopath_ourLp;
 
-#define VIO_MESSAGE "iSeries virtual I/O: "
-#define KERN_DEBUG_VIO KERN_DEBUG VIO_MESSAGE
-#define KERN_INFO_VIO KERN_INFO VIO_MESSAGE
-#define KERN_WARNING_VIO KERN_WARNING VIO_MESSAGE
-
 #define VIOCHAR_MAX_DATA 200
 
 #define VIOMAJOR_SUBTYPE_MASK 0xff00
@@ -84,11 +79,11 @@ extern HvLpIndex viopath_ourLp;
 #define VIOVERSION            0x0101
 
 /*
-This is the general structure for VIO errors; each module should have a table
-of them, and each table should be terminated by an entry of { 0, 0, NULL }.
-Then, to find a specific error message, a module should pass its local table
-and the return code.
-*/
+ * This is the general structure for VIO errors; each module should have
+ * a table of them, and each table should be terminated by an entry of
+ * { 0, 0, NULL }.  Then, to find a specific error message, a module
+ * should pass its local table and the return code.
+ */
 struct vio_error_entry {
 	u16 rc;
 	int errno;
@@ -127,4 +122,8 @@ enum viorc {
 	viorc_openRejected = 0x0301
 };
 
-#endif /* _VIO_H */
+struct device;
+
+extern struct device *iSeries_vio_dev;
+
+#endif /* _ISERIES_VIO_H */

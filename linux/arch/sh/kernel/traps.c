@@ -1,4 +1,4 @@
-/* $Id: traps.c,v 1.14 2003/11/14 18:40:10 lethal Exp $
+/* $Id: traps.c,v 1.16 2004/03/16 00:10:54 lethal Exp $
  *
  *  linux/arch/sh/traps.c
  *
@@ -656,6 +656,10 @@ void show_stack(struct task_struct *tsk, unsigned long *sp)
 	unsigned long module_end = VMALLOC_END;
 	int i = 1;
 
+	if (tsk && !sp) {
+		sp = (unsigned long *)tsk->thread.sp;
+	}
+
 	if (!sp) {
 		__asm__ __volatile__ (
 			"mov r15, %0\n\t"
@@ -701,14 +705,8 @@ void show_task(unsigned long *sp)
 	show_stack(NULL, sp);
 }
 
-void show_trace_task(struct task_struct *tsk)
-{
-	show_task((unsigned long *)tsk->thread.sp);
-}
-
 void dump_stack(void)
 {
 	show_stack(NULL, NULL);
 }
-
 EXPORT_SYMBOL(dump_stack);

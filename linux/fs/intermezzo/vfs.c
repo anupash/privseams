@@ -965,8 +965,6 @@ int presto_do_unlink(struct presto_file_set *fset, struct dentry *dir,
                 do_rcvd = presto_do_rcvd(info, dir);
                 error = iops->unlink(dir->d_inode, dentry);
                 unlock_kernel();
-                if (!error)
-                        d_delete(dentry);
         }
 
         if (linkno > 1) { 
@@ -988,10 +986,6 @@ int presto_do_unlink(struct presto_file_set *fset, struct dentry *dir,
         }
 
         //        up(&dir->d_inode->i_zombie);
-        if (error) {
-                EXIT;
-                goto exit;
-        }
 
         presto_debug_fail_blkdev(fset, KML_OPCODE_UNLINK | 0x10);
         if ( do_kml )
@@ -1048,6 +1042,8 @@ int lento_unlink(const char *pathname, struct lento_vfs_context *info)
                 if (nd.last.name[nd.last.len])
                         goto slashes;
                 error = presto_do_unlink(fset, nd.dentry, dentry, info);
+                if (!error)
+                        d_delete(dentry);
         exit2:
                 EXIT;
                 dput(dentry);
@@ -2153,6 +2149,7 @@ again:  /* look the named file or a parent directory so we can get the cache */
         if ( error && error != -ENOENT ) {
                 EXIT;
                 unlock_kernel();
+		putname(tmp);
                 return error;
         } 
         if (error == -ENOENT)
@@ -2199,7 +2196,7 @@ again:  /* look the named file or a parent directory so we can get the cache */
         fd = get_unused_fd();
         if (fd < 0) {
                 EXIT;
-                goto cleanup_dput;
+                goto exit;
         }
 
         {
@@ -2209,10 +2206,9 @@ again:  /* look the named file or a parent directory so we can get the cache */
                 if (IS_ERR(f)) {
                         put_unused_fd(fd);
                         fd = error;
-                        EXIT;
-                        goto cleanup_dput;
-                }
-                fd_install(fd, f);
+                } else {
+	                fd_install(fd, f);
+		}
         }
         /* end of code that might be replaced by open_dentry */
 
@@ -2222,10 +2218,6 @@ exit:
         path_release(&nd);
         putname(tmp);
         return fd;
-
-cleanup_dput:
-        putname(&nd);
-        goto exit;
 }
 
 #ifdef CONFIG_FS_EXT_ATTR

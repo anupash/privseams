@@ -50,6 +50,7 @@ static int tcpdiag_fill(struct sk_buff *skb, struct sock *sk,
 	struct nlmsghdr  *nlh;
 	struct tcp_info  *info = NULL;
 	struct tcpdiag_meminfo  *minfo = NULL;
+	struct tcpvegas_info *vinfo = NULL;
 	unsigned char	 *b = skb->tail;
 
 	nlh = NLMSG_PUT(skb, pid, seq, TCPDIAG_GETSOCK, sizeof(*r));
@@ -59,6 +60,9 @@ static int tcpdiag_fill(struct sk_buff *skb, struct sock *sk,
 			minfo = TCPDIAG_PUT(skb, TCPDIAG_MEMINFO, sizeof(*minfo));
 		if (ext & (1<<(TCPDIAG_INFO-1)))
 			info = TCPDIAG_PUT(skb, TCPDIAG_INFO, sizeof(*info));
+		
+		if (tcp_is_vegas(tp) && (ext & (1<<(TCPDIAG_VEGASINFO-1))))
+			vinfo = TCPDIAG_PUT(skb, TCPDIAG_VEGASINFO, sizeof(*vinfo));
 	}
 	r->tcpdiag_family = sk->sk_family;
 	r->tcpdiag_state = sk->sk_state;
@@ -167,10 +171,8 @@ static int tcpdiag_fill(struct sk_buff *skb, struct sock *sk,
 			info->tcpi_snd_wscale = 0;
 			info->tcpi_rcv_wscale = 0;
 		}
-#ifdef CONFIG_INET_ECN
 		if (tp->ecn_flags&TCP_ECN_OK)
 			info->tcpi_options |= TCPI_OPT_ECN;
-#endif
 
 		info->tcpi_rto = (1000000*tp->rto)/HZ;
 		info->tcpi_ato = (1000000*tp->ack.ato)/HZ;
@@ -196,6 +198,13 @@ static int tcpdiag_fill(struct sk_buff *skb, struct sock *sk,
 		info->tcpi_snd_cwnd = tp->snd_cwnd;
 		info->tcpi_advmss = tp->advmss;
 		info->tcpi_reordering = tp->reordering;
+	}
+
+	if (vinfo) {
+		vinfo->tcpv_enabled = tp->vegas.doing_vegas_now;
+		vinfo->tcpv_rttcnt = tp->vegas.cntRTT;
+		vinfo->tcpv_rtt = tp->vegas.baseRTT;
+		vinfo->tcpv_minrtt = tp->vegas.minRTT;
 	}
 
 	nlh->nlmsg_len = skb->tail - b;

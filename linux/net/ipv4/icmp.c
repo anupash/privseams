@@ -620,11 +620,11 @@ static void icmp_unreach(struct sk_buff *skb)
 			break;
 		case ICMP_FRAG_NEEDED:
 			if (ipv4_config.no_pmtu_disc) {
-				if (net_ratelimit())
+				LIMIT_NETDEBUG(
 					printk(KERN_INFO "ICMP: %u.%u.%u.%u: "
 							 "fragmentation needed "
 							 "and DF set.\n",
-					       NIPQUAD(iph->daddr));
+					       NIPQUAD(iph->daddr)));
 			} else {
 				info = ip_rt_frag_needed(iph,
 						     ntohs(icmph->un.frag.mtu));
@@ -633,10 +633,10 @@ static void icmp_unreach(struct sk_buff *skb)
 			}
 			break;
 		case ICMP_SR_FAILED:
-			if (net_ratelimit())
+			LIMIT_NETDEBUG(
 				printk(KERN_INFO "ICMP: %u.%u.%u.%u: Source "
 						 "Route Failed.\n",
-				       NIPQUAD(iph->daddr));
+				       NIPQUAD(iph->daddr)));
 			break;
 		default:
 			break;
@@ -1108,14 +1108,20 @@ void __init icmp_init(struct net_proto_family *ops)
 		if (!cpu_possible(i))
 			continue;
 
-		err = sock_create(PF_INET, SOCK_RAW, IPPROTO_ICMP,
-				  &per_cpu(__icmp_socket, i));
+		err = sock_create_kern(PF_INET, SOCK_RAW, IPPROTO_ICMP,
+				       &per_cpu(__icmp_socket, i));
 
 		if (err < 0)
 			panic("Failed to create the ICMP control socket.\n");
 
 		per_cpu(__icmp_socket, i)->sk->sk_allocation = GFP_ATOMIC;
-		per_cpu(__icmp_socket, i)->sk->sk_sndbuf = SK_WMEM_MAX * 2;
+
+		/* Enough space for 2 64K ICMP packets, including
+		 * sk_buff struct overhead.
+		 */
+		per_cpu(__icmp_socket, i)->sk->sk_sndbuf =
+			(2 * ((64 * 1024) + sizeof(struct sk_buff)));
+
 		inet = inet_sk(per_cpu(__icmp_socket, i)->sk);
 		inet->uc_ttl = -1;
 		inet->pmtudisc = IP_PMTUDISC_DONT;

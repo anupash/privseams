@@ -49,6 +49,8 @@
 #include <asm/page.h>
 #include <asm/system.h>
 #include <asm/numa.h>
+#include <asm/sal.h>
+#include <asm/cyclone.h>
 
 
 #define PREFIX			"ACPI: "
@@ -59,8 +61,6 @@ void (*pm_power_off) (void);
 
 unsigned char acpi_kbd_controller_present = 1;
 unsigned char acpi_legacy_devices;
-
-int acpi_disabled;	/* XXX this shouldn't be needed---we can't boot without ACPI! */
 
 const char *
 acpi_get_sysname (void)
@@ -304,6 +304,22 @@ acpi_parse_nmi_src (acpi_table_entry_header *header)
 	return 0;
 }
 
+/* Hook from generic ACPI tables.c */
+void __init acpi_madt_oem_check(char *oem_id, char *oem_table_id)
+{
+	if (!strncmp(oem_id, "IBM", 3) &&
+	    (!strncmp(oem_table_id, "SERMOW", 6))){
+
+		/* Unfortunatly ITC_DRIFT is not yet part of the
+		 * official SAL spec, so the ITC_DRIFT bit is not
+		 * set by the BIOS on this hardware.
+		 */
+		sal_platform_features |= IA64_SAL_PLATFORM_FEATURE_ITC_DRIFT;
+
+		/*Start cyclone clock*/
+		cyclone_setup(0);
+	}
+}
 
 static int __init
 acpi_parse_madt (unsigned long phys_addr, unsigned long size)
@@ -327,6 +343,10 @@ acpi_parse_madt (unsigned long phys_addr, unsigned long size)
 		ipi_base_addr = (unsigned long) ioremap(acpi_madt->lapic_address, 0);
 
 	printk(KERN_INFO PREFIX "Local APIC address 0x%lx\n", ipi_base_addr);
+
+	acpi_madt_oem_check(acpi_madt->header.oem_id,
+		acpi_madt->header.oem_table_id);
+
 	return 0;
 }
 
@@ -435,6 +455,7 @@ acpi_numa_arch_fixup (void)
 	for (i = 0; i < MAX_PXM_DOMAINS; i++) {
 		if (pxm_bit_test(i)) {
 			pxm_to_nid_map[i] = numnodes;
+			node_set_online(numnodes);
 			nid_to_pxm_map[numnodes++] = i;
 		}
 	}
@@ -486,6 +507,13 @@ acpi_numa_arch_fixup (void)
 }
 #endif /* CONFIG_ACPI_NUMA */
 
+unsigned int
+acpi_register_gsi (u32 gsi, int polarity, int trigger)
+{
+	return acpi_register_irq(gsi, polarity, trigger);
+}
+EXPORT_SYMBOL(acpi_register_gsi);
+
 static int __init
 acpi_parse_fadt (unsigned long phys_addr, unsigned long size)
 {
@@ -507,7 +535,7 @@ acpi_parse_fadt (unsigned long phys_addr, unsigned long size)
 	if (fadt->iapc_boot_arch & BAF_LEGACY_DEVICES)
 		acpi_legacy_devices = 1;
 
-	acpi_register_irq(fadt->sci_int, ACPI_ACTIVE_LOW, ACPI_LEVEL_SENSITIVE);
+	acpi_register_gsi(fadt->sci_int, ACPI_ACTIVE_LOW, ACPI_LEVEL_SENSITIVE);
 	return 0;
 }
 
@@ -604,6 +632,7 @@ acpi_boot_init (void)
 	return 0;
 }
 
+/* deprecated in favor of acpi_gsi_to_irq */
 int
 acpi_irq_to_vector (u32 gsi)
 {
@@ -611,6 +640,23 @@ acpi_irq_to_vector (u32 gsi)
 		return isa_irq_to_vector(gsi);
 
 	return gsi_to_vector(gsi);
+}
+
+int
+acpi_gsi_to_irq (u32 gsi, unsigned int *irq)
+{
+	int vector;
+
+	if (has_8259 && gsi < 16)
+		*irq = isa_irq_to_vector(gsi);
+	else {
+		vector = gsi_to_vector(gsi);
+		if (vector == -1)
+			return -1;
+
+		*irq = vector;
+	}
+	return 0;
 }
 
 int

@@ -123,7 +123,7 @@ static void emulate_large_send_offload(struct sk_buff *skb)
  */
 static int loopback_xmit(struct sk_buff *skb, struct net_device *dev)
 {
-	struct net_device_stats *stats = (struct net_device_stats *)dev->priv;
+	struct net_device_stats *stats = dev->priv;
 
 	skb_orphan(skb);
 
@@ -173,7 +173,7 @@ struct net_device loopback_dev = {
 	.rebuild_header		= eth_rebuild_header,
 	.flags			= IFF_LOOPBACK,
 	.features 		= NETIF_F_SG|NETIF_F_FRAGLIST
-				  |NETIF_F_NO_CSUM|NETIF_F_HIGHDMA|NETIF_F_TSO,
+				  |NETIF_F_NO_CSUM|NETIF_F_HIGHDMA,
 };
 
 /* Setup and register the of the LOOPBACK device. */

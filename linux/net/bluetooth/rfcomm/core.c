@@ -31,8 +31,6 @@
  * $Id: core.c,v 1.42 2002/10/01 23:26:25 maxk Exp $
  */
 
-#define __KERNEL_SYSCALLS__
-
 #include <linux/config.h>
 #include <linux/module.h>
 #include <linux/errno.h>
@@ -52,7 +50,7 @@
 #include <net/bluetooth/l2cap.h>
 #include <net/bluetooth/rfcomm.h>
 
-#define VERSION "1.1"
+#define VERSION "1.2"
 
 #ifndef CONFIG_BT_RFCOMM_DEBUG
 #undef  BT_DBG
@@ -160,7 +158,8 @@ static int rfcomm_l2sock_create(struct socket **sock)
 
 	BT_DBG("");
 
-	err = sock_create(PF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP, sock);
+	err = sock_create_kern(PF_BLUETOOTH, SOCK_SEQPACKET,
+			       BTPROTO_L2CAP, sock);
 	if (!err) {
 		struct sock *sk = (*sock)->sk;
 		sk->sk_data_ready   = rfcomm_l2data_ready;
@@ -411,7 +410,7 @@ int rfcomm_dlc_send(struct rfcomm_dlc *d, struct sk_buff *skb)
 	return len;
 }
 
-void __rfcomm_dlc_throttle(struct rfcomm_dlc *d)
+void fastcall __rfcomm_dlc_throttle(struct rfcomm_dlc *d)
 {
 	BT_DBG("dlc %p state %ld", d, d->state);
 
@@ -422,7 +421,7 @@ void __rfcomm_dlc_throttle(struct rfcomm_dlc *d)
 	rfcomm_schedule(RFCOMM_SCHED_TX);
 }
 
-void __rfcomm_dlc_unthrottle(struct rfcomm_dlc *d)
+void fastcall __rfcomm_dlc_unthrottle(struct rfcomm_dlc *d)
 {
 	BT_DBG("dlc %p state %ld", d, d->state);
 
@@ -1643,11 +1642,9 @@ static inline void rfcomm_accept_connection(struct rfcomm_session *s)
 
 	BT_DBG("session %p", s);
 
-	nsock = sock_alloc();
-	if (!nsock)
+	if (sock_create_lite(PF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP, &nsock))
 		return;
-
-	nsock->type = sock->type;
+	
 	nsock->ops  = sock->ops;
 
 	__module_get(nsock->ops->owner);
@@ -1821,7 +1818,7 @@ static int rfcomm_run(void *unused)
 
 	daemonize("krfcommd");
 	set_user_nice(current, -10);
-	current->flags |= PF_IOTHREAD;
+	current->flags |= PF_NOFREEZE;
 
 	set_fs(KERNEL_DS);
 
@@ -1950,7 +1947,7 @@ static void __exit rfcomm_proc_cleanup(void)
 #endif /* CONFIG_PROC_FS */
 
 /* ---- Initialization ---- */
-int  __init rfcomm_init(void)
+static int __init rfcomm_init(void)
 {
 	l2cap_load();
 
@@ -1969,7 +1966,7 @@ int  __init rfcomm_init(void)
 	return 0;
 }
 
-void __exit rfcomm_cleanup(void)
+static void __exit rfcomm_exit(void)
 {
 	/* Terminate working thread.
 	 * ie. Set terminate flag and wake it up */
@@ -1990,9 +1987,10 @@ void __exit rfcomm_cleanup(void)
 }
 
 module_init(rfcomm_init);
-module_exit(rfcomm_cleanup);
+module_exit(rfcomm_exit);
 
 MODULE_AUTHOR("Maxim Krasnyansky <maxk@qualcomm.com>, Marcel Holtmann <marcel@holtmann.org>");
 MODULE_DESCRIPTION("Bluetooth RFCOMM ver " VERSION);
+MODULE_VERSION(VERSION);
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("bt-proto-3");

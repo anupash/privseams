@@ -1659,7 +1659,7 @@ static int atalk_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr 
 	ddp->deh_dport = usat->sat_port;
 	ddp->deh_sport = at->src_port;
 
-	SOCK_DEBUG(sk, "SK %p: Copy user data (%d bytes).\n", sk, len);
+	SOCK_DEBUG(sk, "SK %p: Copy user data (%Zd bytes).\n", sk, len);
 
 	err = memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
 	if (err) {
@@ -1706,7 +1706,7 @@ static int atalk_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr 
 			kfree_skb(skb);
 		/* else queued/sent above in the aarp queue */
 	}
-	SOCK_DEBUG(sk, "SK %p: Done write (%d).\n", sk, len);
+	SOCK_DEBUG(sk, "SK %p: Done write (%Zd).\n", sk, len);
 
 	return len;
 }
@@ -1795,13 +1795,7 @@ static int atalk_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
 			break;
 		}
 		case SIOCGSTAMP:
-			if (!sk)
-				break;
-			rc = -ENOENT;
-			if (!sk->sk_stamp.tv_sec)
-				break;
-			rc = copy_to_user((void *)arg, &sk->sk_stamp,
-					  sizeof(struct timeval)) ? -EFAULT : 0;
+			rc = sock_get_timestamp(sk, (struct timeval *)arg);
 			break;
 		/* Routing */
 		case SIOCADDRT:

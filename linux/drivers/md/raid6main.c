@@ -200,7 +200,7 @@ static int grow_buffers(struct stripe_head *sh, int num)
 
 static void raid6_build_block (struct stripe_head *sh, int i);
 
-static inline void init_stripe(struct stripe_head *sh, unsigned long sector, int pd_idx)
+static inline void init_stripe(struct stripe_head *sh, sector_t sector, int pd_idx)
 {
 	raid6_conf_t *conf = sh->raid_conf;
 	int disks = conf->raid_disks, i;
@@ -237,25 +237,27 @@ static inline void init_stripe(struct stripe_head *sh, unsigned long sector, int
 	insert_hash(conf, sh);
 }
 
-static struct stripe_head *__find_stripe(raid6_conf_t *conf, unsigned long sector)
+static struct stripe_head *__find_stripe(raid6_conf_t *conf, sector_t sector)
 {
 	struct stripe_head *sh;
 
 	CHECK_DEVLOCK();
-	PRINTK("__find_stripe, sector %lu\n", sector);
+	PRINTK("__find_stripe, sector %llu\n", (unsigned long long)sector);
 	for (sh = stripe_hash(conf, sector); sh; sh = sh->hash_next)
 		if (sh->sector == sector)
 			return sh;
-	PRINTK("__stripe %lu not in cache\n", sector);
+	PRINTK("__stripe %llu not in cache\n", (unsigned long long)sector);
 	return NULL;
 }
 
-static struct stripe_head *get_active_stripe(raid6_conf_t *conf, unsigned long sector,
+static void unplug_slaves(mddev_t *mddev);
+
+static struct stripe_head *get_active_stripe(raid6_conf_t *conf, sector_t sector,
 					     int pd_idx, int noblock)
 {
 	struct stripe_head *sh;
 
-	PRINTK("get_stripe, sector %lu\n", sector);
+	PRINTK("get_stripe, sector %llu\n", (unsigned long long)sector);
 
 	spin_lock_irq(&conf->device_lock);
 
@@ -272,7 +274,9 @@ static struct stripe_head *get_active_stripe(raid6_conf_t *conf, unsigned long s
 						    !list_empty(&conf->inactive_list) &&
 						    (atomic_read(&conf->active_stripes) < (NR_STRIPES *3/4)
 						     || !conf->inactive_blocked),
-						    conf->device_lock);
+						    conf->device_lock,
+						    unplug_slaves(conf->mddev);
+					);
 				conf->inactive_blocked = 0;
 			} else
 				init_stripe(sh, sector, pd_idx);
@@ -303,7 +307,7 @@ static int grow_stripes(raid6_conf_t *conf, int num)
 	kmem_cache_t *sc;
 	int devs = conf->raid_disks;
 
-	sprintf(conf->cache_name, "md/raid6-%d", conf->mddev->__minor);
+	sprintf(conf->cache_name, "raid6/%s", mdname(conf->mddev));
 
 	sc = kmem_cache_create(conf->cache_name,
 			       sizeof(struct stripe_head)+(devs-1)*sizeof(struct r5dev),
@@ -516,7 +520,7 @@ static void error(mddev_t *mddev, mdk_rdev_t *rdev)
  * Input: a 'big' sector number,
  * Output: index of the data and parity disk, and the sector # in them.
  */
-static unsigned long raid6_compute_sector(sector_t r_sector, unsigned int raid_disks,
+static sector_t raid6_compute_sector(sector_t r_sector, unsigned int raid_disks,
 			unsigned int data_disks, unsigned int * dd_idx,
 			unsigned int * pd_idx, raid6_conf_t *conf)
 {
@@ -588,7 +592,7 @@ static unsigned long raid6_compute_sector(sector_t r_sector, unsigned int raid_d
 	/*
 	 * Finally, compute the new sector number
 	 */
-	new_sector = stripe * sectors_per_chunk + chunk_offset;
+	new_sector = (sector_t) stripe * sectors_per_chunk + chunk_offset;
 	return new_sector;
 }
 
@@ -599,7 +603,7 @@ static sector_t compute_blocknr(struct stripe_head *sh, int i)
 	int raid_disks = conf->raid_disks, data_disks = raid_disks - 2;
 	sector_t new_sector = sh->sector, check;
 	int sectors_per_chunk = conf->chunk_size >> 9;
-	long stripe;
+	sector_t stripe;
 	int chunk_offset;
 	int chunk_number, dummy1, dummy2, dd_idx = i;
 	sector_t r_sector;
@@ -1454,9 +1458,28 @@ static inline void raid6_activate_delayed(raid6_conf_t *conf)
 		}
 	}
 }
-static void raid6_unplug_device(void *data)
+
+static void unplug_slaves(mddev_t *mddev)
 {
-	request_queue_t *q = data;
+	/* note: this is always called with device_lock held */
+	raid6_conf_t *conf = mddev_to_conf(mddev);
+	int i;
+
+	for (i=0; i<mddev->raid_disks; i++) {
+		mdk_rdev_t *rdev = conf->disks[i].rdev;
+		if (rdev && !rdev->faulty) {
+			struct block_device *bdev = rdev->bdev;
+			if (bdev) {
+				request_queue_t *r_queue = bdev_get_queue(bdev);
+				if (r_queue && r_queue->unplug_fn)
+					r_queue->unplug_fn(r_queue);
+			}
+		}
+	}
+}
+
+static void raid6_unplug_device(request_queue_t *q)
+{
 	mddev_t *mddev = q->queuedata;
 	raid6_conf_t *conf = mddev_to_conf(mddev);
 	unsigned long flags;
@@ -1468,6 +1491,8 @@ static void raid6_unplug_device(void *data)
 	md_wakeup_thread(mddev->thread);
 
 	spin_unlock_irqrestore(&conf->device_lock, flags);
+
+	unplug_slaves(mddev);
 }
 
 static inline void raid6_plug_device(raid6_conf_t *conf)
@@ -1496,7 +1521,7 @@ static int make_request (request_queue_t *q, struct bio * bi)
 		disk_stat_add(mddev->gendisk, read_sectors, bio_sectors(bi));
 	}
 
-	logical_sector = bi->bi_sector & ~(STRIPE_SECTORS-1);
+	logical_sector = bi->bi_sector & ~((sector_t)STRIPE_SECTORS-1);
 	last_sector = bi->bi_sector + (bi->bi_size>>9);
 
 	bi->bi_next = NULL;
@@ -1550,20 +1575,22 @@ static int sync_request (mddev_t *mddev, sector_t sector_nr, int go_faster)
 	unsigned long stripe;
 	int chunk_offset;
 	int dd_idx, pd_idx;
-	unsigned long first_sector;
+	sector_t first_sector;
 	int raid_disks = conf->raid_disks;
 	int data_disks = raid_disks - 2;
 
-	if (sector_nr >= mddev->size <<1)
-		/* just being told to finish up .. nothing to do */
+	if (sector_nr >= mddev->size <<1) {
+		/* just being told to finish up .. nothing much to do */
+		unplug_slaves(mddev);
 		return 0;
+	}
 
 	x = sector_nr;
 	chunk_offset = sector_div(x, sectors_per_chunk);
 	stripe = x;
 	BUG_ON(x != stripe);
 
-	first_sector = raid6_compute_sector(stripe*data_disks*sectors_per_chunk
+	first_sector = raid6_compute_sector((sector_t)stripe*data_disks*sectors_per_chunk
 		+ chunk_offset, raid_disks, data_disks, &dd_idx, &pd_idx, conf);
 	sh = get_active_stripe(conf, sector_nr, pd_idx, 1);
 	if (sh == NULL) {
@@ -1571,7 +1598,8 @@ static int sync_request (mddev_t *mddev, sector_t sector_nr, int go_faster)
 		/* make sure we don't swamp the stripe cache if someone else
 		 * is trying to get access
 		 */
-		yield();
+		set_current_state(TASK_UNINTERRUPTIBLE);
+		schedule_timeout(1);
 	}
 	spin_lock(&sh->lock);
 	set_bit(STRIPE_SYNCING, &sh->state);
@@ -1634,6 +1662,8 @@ static void raid6d (mddev_t *mddev)
 	PRINTK("%d stripes handled\n", handled);
 
 	spin_unlock_irq(&conf->device_lock);
+
+	unplug_slaves(mddev);
 
 	PRINTK("--- raid6d inactive\n");
 }
@@ -1771,14 +1801,14 @@ static int run (mddev_t *mddev)
 
 	print_raid6_conf(conf);
 
-	/* read-ahead size must cover a whole stripe, which is
-	 * (n-2) * chunksize where 'n' is the number of raid devices
+	/* read-ahead size must cover two whole stripes, which is
+	 * 2 * (n-2) * chunksize where 'n' is the number of raid devices
 	 */
 	{
 		int stripe = (mddev->raid_disks-2) * mddev->chunk_size
 			/ PAGE_CACHE_SIZE;
-		if (mddev->queue->backing_dev_info.ra_pages < stripe)
-			mddev->queue->backing_dev_info.ra_pages = stripe;
+		if (mddev->queue->backing_dev_info.ra_pages < 2 * stripe)
+			mddev->queue->backing_dev_info.ra_pages = 2 * stripe;
 	}
 
 	/* Ok, everything is just fine now */

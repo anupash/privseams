@@ -31,5 +31,8 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2);
+
+int hip_hash_hit(void *hit, int range);
+int hip_hash_spi(void *spi, int range);
  
 #endif /* HIP_MISC_H */

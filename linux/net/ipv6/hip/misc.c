@@ -249,6 +249,8 @@ char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
 
 int hip_in6_ntop2(const struct in6_addr *in6, char *buf)
 {
+	if (!buf)
+		return 0;
 	return sprintf(buf,
 		       "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
 		       ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
@@ -260,4 +262,19 @@ int hip_in6_ntop2(const struct in6_addr *in6, char *buf)
 int hip_is_hit(const hip_hit_t *hit) 
 {
 	return ipv6_addr_is_hit((struct in6_addr *)hit);
+}
+
+int hip_hash_spi(void *key, int range)
+{
+	u32 spi = (u32) key;
+	/* SPIs are random, so simple modulo is enough? */
+	return spi % range;
+}
+
+int hip_hash_hit(void *key, int range)
+{
+	hip_hit_t *hit = (hip_hit_t *)key;
+
+	/* HITs are random. (at least the 64 LSBs)  */
+	return (hit->s6_addr32[2] ^ hit->s6_addr32[3]) % range;
 }

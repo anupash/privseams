@@ -881,7 +881,7 @@ static unsigned int __init init_chipset_sis5513 (struct pci_dev *dev, const char
 		if (!sis_proc) {
 			sis_proc = 1;
 			bmide_dev = dev;
-			ide_pci_register_host_proc(&sis_procs[0]);
+			ide_pci_create_host_proc("sis", sis_get_info);
 		}
 #endif
 	}
@@ -944,9 +944,6 @@ static void __init init_hwif_sis5513 (ide_hwif_t *hwif)
 	return;
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
-
 static int __devinit sis5513_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	ide_pci_device_t *d = &sis5513_chipsets[id->driver_data];
@@ -960,6 +957,7 @@ static struct pci_device_id sis5513_pci_tbl[] = {
 	{ PCI_VENDOR_ID_SI, PCI_DEVICE_ID_SI_5513, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, sis5513_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "SIS IDE",

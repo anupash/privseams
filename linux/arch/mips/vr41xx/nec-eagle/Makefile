@@ -7,5 +7,4 @@
 # Copyright 2001,2002 MontaVista Software Inc.
 #
 
-obj-y			+= init.o irq.o setup.o
-obj-$(CONFIG_IDE)	+= ide-eagle.o
+obj-y			+= irq.o setup.o

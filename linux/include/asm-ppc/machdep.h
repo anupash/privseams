@@ -43,6 +43,8 @@ struct machdep_calls {
 	long		(*time_init)(void); /* Optional, may be NULL */
 	int		(*set_rtc_time)(unsigned long nowtime);
 	unsigned long	(*get_rtc_time)(void);
+	unsigned char 	(*rtc_read_val)(int addr);
+	void		(*rtc_write_val)(int addr, unsigned char val);
 	void		(*calibrate_decr)(void);
 
 	void		(*heartbeat)(void);
@@ -104,7 +106,8 @@ struct machdep_calls {
 };
 
 extern struct machdep_calls ppc_md;
-extern char cmd_line[512];
+#define COMMAND_LINE_SIZE 512
+extern char cmd_line[COMMAND_LINE_SIZE];
 
 extern void setup_pci_ptrs(void);
 

@@ -53,6 +53,10 @@
 #define smp_read_barrier_depends()  do { } while(0)
 #endif /* CONFIG_SMP */
 
+#ifdef __KERNEL__
+struct task_struct;
+struct pt_regs;
+
 #ifdef CONFIG_DEBUGGER
 
 extern int (*__debugger)(struct pt_regs *regs);
@@ -82,15 +86,20 @@ extern void xmon_init(void);
 #endif
 
 #else
-#define debugger(regs)			0
-#define debugger_bpt(regs)		0
-#define debugger_sstep(regs)		0
-#define debugger_iabr_match(regs)	0
-#define debugger_dabr_match(regs)	0
-#define debugger_fault_handler(regs)	0
+static inline int debugger(struct pt_regs *regs) { return 0; }
+static inline int debugger_bpt(struct pt_regs *regs) { return 0; }
+static inline int debugger_sstep(struct pt_regs *regs) { return 0; }
+static inline int debugger_iabr_match(struct pt_regs *regs) { return 0; }
+static inline int debugger_dabr_match(struct pt_regs *regs) { return 0; }
+static inline int debugger_fault_handler(struct pt_regs *regs) { return 0; }
 #endif
 
+extern int fix_alignment(struct pt_regs *regs);
+extern void bad_page_fault(struct pt_regs *regs, unsigned long address,
+			   int sig);
 extern void show_regs(struct pt_regs * regs);
+extern int die(const char *str, struct pt_regs *regs, long err);
+
 extern void flush_instruction_cache(void);
 extern int _get_PVR(void);
 extern void giveup_fpu(struct task_struct *);
@@ -103,7 +112,6 @@ extern void cvt_fd(float *from, double *to, unsigned long *fpscr);
 extern void cvt_df(double *from, float *to, unsigned long *fpscr);
 extern int abs(int);
 
-struct task_struct;
 extern struct task_struct *__switch_to(struct task_struct *,
 				       struct task_struct *);
 #define switch_to(prev, next, last)	((last) = __switch_to((prev), (next)))
@@ -111,9 +119,6 @@ extern struct task_struct *__switch_to(struct task_struct *,
 struct thread_struct;
 extern struct task_struct * _switch(struct thread_struct *prev,
 				    struct thread_struct *next);
-
-struct pt_regs;
-extern void dump_regs(struct pt_regs *);
 
 static inline int __is_processor(unsigned long pv)
 {
@@ -265,4 +270,5 @@ __cmpxchg(volatile void *ptr, unsigned long old, unsigned long new, int size)
 				    (unsigned long)_n_, sizeof(*(ptr))); \
   })
 
+#endif /* __KERNEL__ */
 #endif

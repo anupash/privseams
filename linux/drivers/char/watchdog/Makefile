@@ -1,5 +1,5 @@
 #
-# Makefile for the kernel character device drivers.
+# Makefile for the WatchDog device drivers.
 #
 
 # Only one watchdog can succeed. We probe the hardware watchdog
@@ -32,6 +32,6 @@ obj-$(CONFIG_ALIM1535_WDT) += alim1535_wdt.o
 obj-$(CONFIG_SC1200_WDT) += sc1200wdt.o
 obj-$(CONFIG_WAFER_WDT) += wafer5823wdt.o
 obj-$(CONFIG_CPU5_WDT) += cpu5wdt.o
-obj-$(CONFIG_AMD7XX_TCO) += amd7xx_tco.o
 obj-$(CONFIG_INDYDOG) += indydog.o
 obj-$(CONFIG_PCIPCWATCHDOG) += pcwd_pci.o
+obj-$(CONFIG_USBPCWATCHDOG) += pcwd_usb.o
