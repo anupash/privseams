@@ -18,7 +18,6 @@
 #include "hadb.h"
 #include "keymat.h"
 #include "crypto/dsa.h"
-#include "rea.h"
 #include "builder.h"
 #include "hip.h"
 #include "security.h"
@@ -2877,21 +2876,6 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	case HIP_NOTIFY:
 		HIP_DEBUG("Received HIP NOTIFY packet\n");
 		hwo->subtype = HIP_WO_SUBTYPE_RECV_NOTIFY;
-		break;
-	case HIP_REA:
-		/* TODO: REMOVE */
-		HIP_DEBUG("Received HIP REA packet\n");
-		hwo->subtype = HIP_WO_SUBTYPE_RECV_REA;
-		break;
-	case HIP_AC:
-		/* TODO: REMOVE */
-		HIP_DEBUG("Received HIP AC packet\n");
-		hwo->subtype = HIP_WO_SUBTYPE_RECV_AC;
-		break;
-	case HIP_ACR:
-		/* TODO: REMOVE */
-		HIP_DEBUG("Received HIP ACR packet\n");
-		hwo->subtype = HIP_WO_SUBTYPE_RECV_ACR;
 		break;
 	case HIP_BOS:
 		HIP_DEBUG("Received HIP BOS packet\n");

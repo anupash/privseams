@@ -476,7 +476,6 @@ void hip_send_notify(hip_ha_t *entry)
 	return;
 }
 
-/* copied from rea.c */
 struct hip_rea_kludge {
 	hip_ha_t **array;
 	int count;
@@ -503,8 +502,6 @@ static int hip_get_all_valid(hip_ha_t *entry, void *op)
 void hip_send_notify_all(void)
 {
         int err = 0, i;
-
-        /* code ripped from rea.c */
         hip_ha_t *entries[HIP_MAX_HAS] = {0};
         struct hip_rea_kludge rk;
 

@@ -4,12 +4,10 @@
 #ifdef __KERNEL__
 
 #include <linux/skbuff.h>
-
 #include <net/ip.h>
 #include <net/ipv6.h>
 #include <net/sock.h>
 #include <net/flow.h>
-//#include <net/sadb.h>
 
 #define HIP_CALLPROC(X) if(hip_functions.X) hip_functions.X
 #define HIP_CALLFUNC(X,Y) (!hip_functions.X)?(Y):hip_functions.X
@@ -35,8 +33,5 @@ struct hip_callable_functions {
 extern struct hip_callable_functions hip_functions;
 
 #endif /* __KERNEL__ */
-
-/* Returns true if addr is a HIT */
-
 
 #endif /* _NET_HIP_GLUE_H */

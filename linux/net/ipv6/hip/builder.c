@@ -355,9 +355,6 @@ int hip_check_network_msg_type(const struct hip_common *msg) {
 			HIP_R2,
 			HIP_UPDATE,
 			HIP_NOTIFY,
-			HIP_REA,
-			HIP_AC,
-			HIP_ACR,
 			HIP_BOS
 		};
 	hip_hdr_type_t i;
@@ -417,9 +414,6 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_CERT,
 			HIP_PARAM_RVA_REQUEST,
 			HIP_PARAM_RVA_REPLY,
-			HIP_PARAM_REA_INFO,
-			HIP_PARAM_AC_INFO,
-			HIP_PARAM_FA_INFO,
 			HIP_PARAM_NOTIFY,
 			HIP_PARAM_ECHO_REQUEST_SIGN,
 			HIP_PARAM_ECHO_RESPONSE_SIGN,
@@ -1673,63 +1667,6 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  	return 0;
 }
 
-#if 0
-/**
- * hip_build_param_rea_info00 - build HIP REA_INFO parameter
- *
- * @msg:             the message where the rea will be appended
- * @interface_id:    Interface ID
- * @current_spi_rev: Current SPI in reverse direction
- * @current_spi:     Current SPI
- * @new_spi:         New SPI
- * @keymat_index     Keymaterial index
- * @rea_id:          REA ID in host byte order
- * @addresses:       list of addresses
- * @address_count:   number of addresses in @addresses
- *
- * Returns: 0 on success, otherwise < 0.
- */
-int hip_build_param_rea_info00(struct hip_common *msg,
-			       uint32_t interface_id,
-			       uint32_t current_spi_rev,
-			       uint32_t current_spi,
-			       uint32_t new_spi,
-			       uint16_t keymat_index,
-			       uint16_t rea_id,
-			       struct hip_rea_info_addr_item *addresses,
-			       int address_count)
-{
-	int err = 0;
-	struct hip_rea_info rea_info;
-	int addrs_len = address_count *
-		(sizeof(struct hip_rea_info_addr_item));
-
-	hip_set_param_type(&rea_info, HIP_PARAM_REA_INFO);
-	hip_calc_generic_param_len(&rea_info,
-				   sizeof(struct hip_rea_info),
-				   addrs_len);
-	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea_info) -
-		   sizeof(struct hip_tlv_common) +
-		   addrs_len);
-	rea_info.interface_id = interface_id; /* no conversion */
-	rea_info.current_spi_rev = htonl(current_spi_rev);
-	rea_info.current_spi = htonl(current_spi);
-	rea_info.new_spi = htonl(new_spi);
-	rea_info.keymat_index = htons(keymat_index);
-	rea_info.rea_id = htons(rea_id);
-	err = hip_build_param(msg, &rea_info);
-	if (err)
-		return err;
-	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
-		   addrs_len);
-	if (addrs_len > 0)
-		memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
-		       addresses, addrs_len);
-
-	return err;
-}
-#endif
-
 /**
  * hip_build_param_rea - build HIP REA parameter
  *
@@ -1769,34 +1706,6 @@ int hip_build_param_rea(struct hip_common *msg,
 
 	return err;
 }
-
-#if 0
-/**
- * hip_build_param_ac_info - build and append HIP AC parameter
- * @msg:    the message where the parameter will be appended
- * @ac_id:  AC ID in host byte order
- * @rea_id: REA ID in host byter order
- * @rtt:    RTT
- * 
- * Returns: 0 on success, otherwise < 0.
- */
-int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
-			    uint16_t rea_id, uint32_t rtt)
-{
-	int err = 0;
-	struct hip_ac_info ac;
-
-	hip_set_param_type(&ac, HIP_PARAM_AC_INFO);
-	hip_calc_generic_param_len(&ac, sizeof(struct hip_ac_info), 0);
-	ac.ac_id = htons(ac_id);
-	ac.rea_id = htons(rea_id);
-	ac.rtt = rtt; /* no conversion */
-	ac.reserved = htonl(0);
-
-	err = hip_build_param(msg, &ac);
-	return err;
-}
-#endif
 
 /**
  * hip_build_param_nes - build and append HIP NES parameter

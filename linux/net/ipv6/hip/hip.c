@@ -19,7 +19,6 @@
 #include "security.h"
 #include "misc.h"
 #include "output.h"
-#include "rea.h"
 #include "workqueue.h"
 #include "socket.h"
 #include "update.h"
@@ -43,14 +42,12 @@ static atomic_t hip_working = ATOMIC_INIT(0);
 
 time_t load_time;
 
-
 static struct notifier_block hip_netdev_notifier;
 static void hip_uninit_cipher(void); // forward decl.
 static void hip_cleanup(void);
 
 /* All cipher and digest implementations we support. */
 static struct crypto_tfm *impl_3des_cbc = NULL;
-
 
 /* global variables */
 struct socket *hip_output_socket;
@@ -72,9 +69,6 @@ int kmm; // krisu_measurement_mode
 #ifdef CONFIG_PROC_FS
 static struct proc_dir_entry *hip_proc_root = NULL;
 #endif /* CONFIG_PROC_FS */
-
-LIST_HEAD(hip_sent_rea_info_pkts);
-LIST_HEAD(hip_sent_ac_info_pkts);
 
 
 static void hip_err_handler(struct sk_buff *skb,
@@ -1801,26 +1795,22 @@ static int hip_do_work(void)
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i1(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I1");
-			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_R1:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r1(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R1");
-			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_I2:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i2(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I2");
-			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_R2:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r2(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R2");
 			KRISU_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
-			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
 			KRISU_START_TIMER(KMM_PARTIAL);
@@ -1831,21 +1821,6 @@ static int hip_do_work(void)
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_notify(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"NOTIFY");
-			break;
-		case HIP_WO_SUBTYPE_RECV_REA:
-			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_rea(job->arg1);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"REA");
-			break;
-		case HIP_WO_SUBTYPE_RECV_AC:
-			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_ac_or_acr(job->arg1,HIP_AC);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"AC");
-			break;
-		case HIP_WO_SUBTYPE_RECV_ACR:
-			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_ac_or_acr(job->arg1,HIP_ACR);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"ACR");
 			break;
 		case HIP_WO_SUBTYPE_RECV_BOS:
 			KRISU_START_TIMER(KMM_PARTIAL);
@@ -2095,8 +2070,6 @@ static void __exit hip_cleanup(void)
 	hip_uninit_output_socket();
 	hip_uninit_r1();
 
-	hip_rea_delete_sent_list();
-	hip_ac_delete_sent_list();
 	/* update_spi_waitlist_delete_all(); */
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
