@@ -295,11 +295,7 @@ int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 	hip_set_msg_total_len(msg, len);
 
 	_HIP_HEXDUMP("HMACced data", msg, len);
-
-//	HIP_LOCK_HA(entry);
 	memcpy(&tmpkey, &entry->hip_hmac_in, sizeof(tmpkey));
-//	HIP_UNLOCK_HA(entry);
-
 	err = hip_verify_hmac(msg, hmac->hmac_data,
 			      tmpkey.key, HIP_DIGEST_SHA1_HMAC);
 	if (err) {
@@ -448,9 +444,7 @@ int hip_calculate_shared_secret(struct hip_diffie_hellman *dhf, u8* buffer,
         }
 
 	len = hip_get_param_contents_len(dhf) - 1;
-
 	_HIP_HEXDUMP("PEER DH key:",(dhf + 1),len);
-
 	err = hip_gen_dh_shared_key(dh_table[dhf->group_id], (u8*)(dhf+1), len,
 				    buffer, bufsize);
 	if (err < 0) {
@@ -1426,7 +1420,6 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
  	/********** SPI_LSI **********/
 	barrier();
-//	spi_in = entry->spi_in;
 	//HIP_DEBUG("entry should have only one spi_in now, fix\n");
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 
@@ -1475,10 +1468,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 	{
 		struct hip_crypto_key hmac;
 
-		//HIP_LOCK_HA(entry);
 		memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
-		//HIP_UNLOCK_HA(entry);
-
 		err = hip_build_param_hmac_contents(r2, &hmac);
 		if (err) {
 			HIP_ERROR("Building of hmac failed (%d)\n", err);
@@ -1538,8 +1528,10 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  out_err:
 	if (r2)
 		kfree(r2);
-	if (clear && entry)
+	if (clear && entry) {/* Hmm, check */
+		HIP_ERROR("TODO: about to do hip_put_ha, should this happen here ?\n");
 		hip_put_ha(entry);
+	}
 	return err;
 }
 
@@ -1547,7 +1539,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 /**
  * hip_handle_i2 - handle incoming I2 packet
  * @skb: sk_buff where the HIP packet is in
- * @entry: HA
+ * @ha: HIP HA corresponding to the peer
  *
  * This function is the actual point from where the processing of I2
  * is started and corresponding R2 is created.
@@ -1797,7 +1789,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		HIP_DEBUG("INSERTING STATE\n");
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
-//		HIP_UNLOCK_HA(entry);
+		/* entry unlock is done below, ok ? */
+		//HIP_UNLOCK_HA(entry);
 		/* insert automatically holds for the data structure
 		 * references, but since we continue to use the entry,
 		 * we have to hold for our own usage too
@@ -1825,7 +1818,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 			goto out_err;
 		}
 
-		//HIP_LOCK_HA(entry);
 		if (r1cntr)
 			entry->birthday = r1cntr->generation;
 		entry->peer_controls |= ntohs(i2->control);
@@ -1837,12 +1829,10 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		spi_out_data.spi = ntohl(hspi->spi);
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
 		if (err) {
-			//HIP_UNLOCK_HA(entry);
 			goto out_err;
 		}
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		esp_tfm = entry->esp_transform;
-//		HIP_UNLOCK_HA(entry);
 
 		if (esp_tfm == 0) {
 			HIP_ERROR("Could not select proper ESP transform\n");
@@ -1912,7 +1902,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	} else
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 
-//	HIP_LOCK_HA(entry);
 	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
@@ -1923,7 +1912,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
 
 	err = hip_store_base_exchange_keys(entry, ctx, 0);
-//	HIP_UNLOCK_HA(entry);
 	if (err) {
 		HIP_DEBUG("hip_store_base_exchange_keys failed\n");
 		goto out_err;
@@ -2032,27 +2020,20 @@ int hip_receive_i2(struct sk_buff *skb)
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
  		err = hip_handle_i2(skb, entry);
-		//HIP_LOCK_HA(entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
-		//HIP_UNLOCK_HA(entry);
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
  		err = hip_handle_i2(skb, entry);
-		//HIP_LOCK_HA(entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
-		//HIP_UNLOCK_HA(entry);
  		break;
  	case HIP_STATE_REKEYING:
 		HIP_DEBUG("Received I2 in state REKEYING\n");
  		err = hip_handle_i2(skb, entry);
-
-		//HIP_LOCK_HA(entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
-		//HIP_UNLOCK_HA(entry);
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
 		break;
@@ -2100,7 +2081,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
 	if (!ctx) {
 		err = -ENOMEM;
-		goto out_err_no_lock;
+		goto out_err;
 	}
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->skb_in = skb;
@@ -2108,8 +2089,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	r2 = ctx->input;
 
 	sender = &r2->hits;
-
-	//HIP_LOCK_HA(entry);
 
         /* verify HMAC */
 	err = hip_verify_packet_hmac(r2, entry);
@@ -2159,10 +2138,8 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	spi_recvd = ntohl(hspi->spi);
 	memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 	spi_out_data.spi = spi_recvd;
-	//HIP_LOCK_HA(entry); moved above
 	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
 	if (err) {
-		//HIP_UNLOCK_HA(entry);
 		goto out_err;
 	}
 	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
@@ -2202,7 +2179,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
 	HIP_DEBUG("clearing the address used during the bex\n");
 	ipv6_addr_copy(&entry->bex_address, &in6addr_any);
-	//HIP_UNLOCK_HA(entry);
 
 	hip_hadb_insert_state(entry);
 	/* these will change SAs' state from ACQUIRE to VALID, and
@@ -2215,8 +2191,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	//hip_hadb_dump_spis_out(entry);
 
  out_err:
-	//HIP_UNLOCK_HA(entry);
- out_err_no_lock:
 	if (ctx)
 		kfree(ctx);
 	return err;
@@ -2331,6 +2305,8 @@ int hip_receive_i1(struct sk_buff *skb)
 		state = HIP_STATE_NONE;
 	}
 
+	HIP_DEBUG("HIP_LOCK_HA ?\n");
+
 	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_NONE:
@@ -2361,6 +2337,8 @@ int hip_receive_i1(struct sk_buff *skb)
 		err = -EINVAL;
 		break;
 	}
+
+	HIP_DEBUG("HIP_UNLOCK_HA ?\n");
 
  out:
 	return err;
@@ -2420,14 +2398,12 @@ int hip_receive_r2(struct sk_buff *skb)
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
  		err = hip_handle_r2(skb, entry);
-		//HIP_LOCK_HA(entry);
 		if (!err) {
 			entry->state = HIP_STATE_ESTABLISHED;
 			HIP_DEBUG("Reached ESTABLISHED state\n");
 		} else {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
  		}
-		//HIP_UNLOCK_HA(entry);
  		break;
 	case HIP_STATE_R2_SENT:
 		HIP_ERROR("Received R2 in R2_SENT. Dropping\n");
@@ -2490,6 +2466,7 @@ int hip_receive_notify(struct sk_buff *skb)
 		err = -EFAULT;
 		goto out_err;
 	}
+	/* lock here */
 	/* todo: check state */
 
 	/* while (notify_param = hip_get_nth_param(msg, HIP_PARAM_NOTIFY, i)) { .. */
@@ -2501,8 +2478,10 @@ int hip_receive_notify(struct sk_buff *skb)
 	}
 
  out_err:
-	if (entry)
+	if (entry) {
+		/* unlock here */
 		hip_put_ha(entry);
+	}
 	return err;
 }
 

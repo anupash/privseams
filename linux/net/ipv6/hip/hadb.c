@@ -239,7 +239,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
 
-	//HIP_LOCK_HA(ha);
 	st = ha->hastate;
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
@@ -254,25 +253,23 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	}
 
 	ha->hastate = st;
-	//HIP_UNLOCK_HA(ha);
 	return st;
 }
 
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
  */
-/* assume already locked entry */
-int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
+int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 {
 	int err = 0;
 	struct hip_hit_spi *tmp;
 	hip_hit_t hit;
 	struct hip_hit_spi *new_item;
 
-	HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", ha, spi);
-//	HIP_LOCK_HA(ha);
-	ipv6_addr_copy(&hit, &ha->hit_peer);
-//	HIP_UNLOCK_HA(ha);
+	/* assume already locked entry */
+
+	HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", entry, spi);
+	ipv6_addr_copy(&hit, &entry->hit_peer);
 
 	tmp = hip_ht_find(&hadb_spi_list, (void *)spi);
 	if (tmp) {
@@ -456,7 +453,6 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	struct hip_spi_out_item *spi_out;
 
 	/* assume already locked entry */
-	//HIP_LOCK_HA(entry);
 
 	//hip_print_hit("entry def addr", &entry->preferred_address);
 	if (ipv6_addr_any(&entry->preferred_address)) {
@@ -480,8 +476,6 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 
 	/* try to select a peer address among the ones belonging to
 	 * the default outgoing SPI */
-	//err = hip_hadb_select_spi_addr(entry, entry->default_spi_out, addr);
-
 	spi_out = hip_hadb_get_spi_list(entry, entry->default_spi_out);
 	if (!spi_out) {
 		HIP_ERROR("did not find SPI list for default_spi_out 0x%x\n",
@@ -502,7 +496,6 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	HIP_ERROR("Did not find an usable peer address\n");
 #endif
  out:
-	//HIP_UNLOCK_HA(entry);
         return err;
 }
 
@@ -529,7 +522,6 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 	struct hip_spi_out_item *spi_out, *tmp;
 
 	/* assumes already locked entry */
-//	HIP_LOCK_HA(entry);
 
         list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
 		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
@@ -548,15 +540,13 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				}
 				if (spi)
 					*spi = spi_out->spi;
-				//HIP_UNLOCK_HA(entry);
 				return 1;
 			}
 			i++;
 		}
 	}
-//	HIP_UNLOCK_HA(entry);
-	_HIP_DEBUG("not found\n");
 
+	_HIP_DEBUG("not found\n");
 	return 0;
 }
 
@@ -586,7 +576,7 @@ int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 	char addrstr[INET6_ADDRSTRLEN];
 	struct hip_spi_out_item *spi_out, *tmp;
 
-	HIP_ERROR("USELESS ?\n");
+	HIP_ERROR("USELESS/DEPRECATED ?\n");
 
 	HIP_LOCK_HA(entry);
 
@@ -644,7 +634,6 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	int found_spi_list = 0;
 
 	/* assumes already locked entry */
-//	HIP_LOCK_HA(entry);
 
 	/* check if we are adding the peer's address during the base
 	 * exchange */
@@ -708,7 +697,6 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	list_add_tail(&item->list, &spi_out->peer_addr_list);
 
  out_err:
-//	HIP_UNLOCK_HA(entry);
 	return err;
 }
 
@@ -874,7 +862,6 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 
 	spi_out = data->spi;
 
-	//HIP_LOCK_HA(entry);
 	HIP_DEBUG("SPI_out=0x%x\n", spi_out);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 		if (item->spi == spi_out) {
@@ -897,7 +884,6 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 
  out_err:
  out:
-//	HIP_UNLOCK_HA(entry);
 	return err;
 }
 
@@ -922,6 +908,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	struct hip_spi_in_item *item, *tmp;
 
 	/* assumes locked entry */
+
 	HIP_DEBUG("entry=0x%p SPI=0x%x\n", entry, spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		if (item->spi == spi) {
@@ -1485,7 +1472,6 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 }
 
 /* todo: use jiffies instead of timestamp */
-/* assume already locked entry */
 uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 {
 	struct hip_spi_in_item *item, *tmp;
@@ -1493,7 +1479,8 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 	unsigned int now = jiffies;
 	unsigned long t = ULONG_MAX;
 
-//	HIP_LOCK_HA(entry);
+	/* assumes already locked entry */
+
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		if (now - item->timestamp < t) {
 			spi = item->spi;
@@ -1501,7 +1488,6 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 		}
         }
 
-//	HIP_UNLOCK_HA(entry);
 	HIP_DEBUG("newest spi_in is 0x%x\n", spi);
 	return spi;
 }
@@ -1510,7 +1496,9 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_out_item *item, *tmp;
-	/* no locking */
+
+	/* assumes already locked entry */
+
 	HIP_DEBUG("SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 		if (item->spi == spi)
@@ -1525,12 +1513,13 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr)
 {
-	/* no locking */
 	int err = 0;
 	struct hip_spi_out_item *spi_list;
 	struct hip_peer_addr_list_item *new_addr = NULL;
 	struct hip_peer_addr_list_item *a, *tmp;
 	int new = 1;
+
+	/* assumes already locked entry */
 
 	HIP_DEBUG("spi=0x%x is_preferred_addr=%d\n", spi, is_preferred_addr);
 

@@ -1979,8 +1979,6 @@ static int __init hip_init(void)
 		goto out;
 #endif /* CONFIG_PROC_FS */
 
-	/* comment this to disable network device event handler
-	   (crashed sometimes) */
 	if (hip_init_netdev_notifier() < 0)
 		goto out;
 
@@ -2008,7 +2006,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_trigger_bex);
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
-	HIP_SETCALL(hip_update_spi_waitlist_ispending);
+	//HIP_SETCALL(hip_update_spi_waitlist_ispending);
 	HIP_SETCALL(hip_get_default_spi_out);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
@@ -2046,7 +2044,7 @@ static void __exit hip_cleanup(void)
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
 	
 	/* disable hooks to call our code */
-	HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
+	//HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
 	HIP_INVALIDATE(hip_trigger_bex);
@@ -2070,7 +2068,7 @@ static void __exit hip_cleanup(void)
 		}
 	}
 
-	HIP_DEBUG("Thread(s) finished\n");
+	HIP_DEBUG("All HIP threads finished\n");
 
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
@@ -2093,7 +2091,7 @@ static void __exit hip_cleanup(void)
 
 	hip_rea_delete_sent_list();
 	hip_ac_delete_sent_list();
-	hip_update_spi_waitlist_delete_all();
+	/* update_spi_waitlist_delete_all(); */
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

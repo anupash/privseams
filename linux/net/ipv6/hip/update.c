@@ -14,6 +14,10 @@
 #include "output.h"
 
 
+/* SPI waitlist stuff is not currently used */
+
+
+#if 0
 /* List of SPIs which are waiting for data to come through */
 /* See draft's section "Processing an initial UPDATE packet" */
 LIST_HEAD(hip_update_spi_waitlist);
@@ -26,8 +30,10 @@ struct hip_update_spi_waitlist_item {
 	struct in6_addr v6addr_test;
 	/* REA stuff ? address list */
 };
+#endif
 
 
+#if 0
 /**
  * hip_update_spi_waitlist_add - add a SPI to SPI waitlist
  * @spi: the inbound SPI to be added in host byte order
@@ -63,7 +69,9 @@ void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_
 	HIP_DEBUG("End of SPI waitlist\n");
 	return;
 }
+#endif
 
+#if 0
 /**
  * hip_update_spi_waitlist_delete - delete a SPI from SPI waitlist
  * @spi: SPI in host byte order to be deleted
@@ -89,7 +97,9 @@ void hip_update_spi_waitlist_delete(uint32_t spi)
 	}
 	return;
 }
+#endif
 
+#if 0
 /**
  * hip_update_spi_waitlist_delete_all - delete all SPIs from the SPI waitlist
  */
@@ -109,7 +119,9 @@ void hip_update_spi_waitlist_delete_all(void)
 	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
 	return;
 }
+#endif
 
+#if 0
 /**
  * hip_update_spi_waitlist_ispending - test if SPI is on the SPI waitlist
  * @spi: SPI in host byte order
@@ -199,6 +211,9 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 	return found;
 #endif
 }
+#endif
+
+
 
 /* Get keys needed by UPDATE */
 int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
@@ -275,13 +290,14 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 
 int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 {
-	/* assume that caller has the entry lock */
 	int err = 0;
 	uint32_t spi;
 	struct hip_rea_info_addr_item *rea_address_item;
 	int i, n_addrs;
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
+
+	/* assume already locked entry */
 
 	/* ietf-mm-02 7.2 Handling received REAs */
 
@@ -372,7 +388,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 
 		}
 		if (spi_addr_is_in_rea) {
-			//HIP_DEBUG("SPI address was in REA, not deprecating\n");
+			/* HIP_DEBUG("SPI address was in REA, not deprecating\n");*/
 			continue;
 		}
 
@@ -382,7 +398,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 		a->address_state = PEER_ADDR_STATE_DEPRECATED;
 	}
 
-	if (n_addrs == 0)
+	if (n_addrs == 0) /* our own extension, use some other SPI */
 		(void)hip_hadb_relookup_default_out(entry);
 
 	HIP_DEBUG("done\n");
@@ -421,7 +437,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	int need_to_generate_key = 0, dh_key_generated = 0; //, new_keymat_generated;
 	int nes_i = 1;
-	//hip_ha_t *entry = NULL;
 
 	/* assume already locked entry */
 
@@ -430,7 +445,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
 	if (!seq) {
 		HIP_ERROR("No SEQ parameter in packet\n");
-		goto out_err_nolock;
+		goto out_err;
 	}
 
 	/* 8.11.1  Processing an UPDATE packet in state ESTABLISHED */
@@ -461,17 +476,9 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	if (!update_packet) {
 		HIP_ERROR("update_packet alloc failed\n");
 		err = -ENOMEM;
-		goto out_err_nolock;
+		goto out_err;
 	}
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
-
-	//entry = hip_hadb_find_byhit(hits);
-	//if (!entry) {
-	//	HIP_ERROR("Entry not found\n");
-	//	goto out_err_nolock;
-	//}
-
-	//HIP_LOCK_HA(entry);
 
 	/*  3. The system increments its outgoing Update ID by one. */
 	entry->update_id_out++;
@@ -483,7 +490,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		goto out_err;
 	}
 
-	/* test: handle multiple NES */
+	/* test: handle multiple NES, not tested well yet */
  handle_nes:
 	nes = hip_get_nth_param(msg, HIP_PARAM_NES, nes_i);
 	if (!nes) {
@@ -532,7 +539,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	HIP_DEBUG("acquired inbound SPI 0x%x\n", new_spi_in);
 	hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in, ntohl(nes->old_spi));
 
-	/* mm-02 test */
+	/* draft-hip-mm test */
 	if (nes->old_spi == nes->new_spi) {
 		struct hip_spi_out_item spi_out_data;
 
@@ -649,8 +656,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	}
 
  out_err:
-	//HIP_UNLOCK_HA(entry);
- out_err_nolock:
 	if (update_packet)
 		kfree(update_packet);
 	if (err) {
@@ -661,13 +666,13 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 			hip_hadb_delete_inbound_spi(entry, new_spi_in);
 		}
 	}
-//	if (entry)
-//		hip_put_ha(entry);
+
 	return err;
 }
 
 int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				struct in6_addr *src_ip, uint32_t spi);
+
 
 /* 8.11.3 Leaving REKEYING state */
 /* @nes is the NES param to be handled in the received UPDATE in host byte order */
@@ -721,7 +726,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (!new_spi_in) {
 		HIP_ERROR("Did not find related New SPI for peer Update ID %u\n",
 			  ntohl(ack->peer_update_id));
-		goto out_err;		
+		goto out_err;
 	}
 	HIP_DEBUG("prev_spi_in=0x%x new_spi_in=0x%x prev_spi_out=0x%x new_spi_out=0x%x\n",
 		  prev_spi_in, new_spi_in, prev_spi_out, new_spi_out);
@@ -831,7 +836,6 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (prev_spi_in != new_spi_in) {
 		HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
 		err = hip_delete_sa(prev_spi_in, hitr);
-
 		/* remove old HIT-SPI mapping and add a new mapping */
 
 		/* actually should change hip_hadb_delete_inbound_spi
@@ -854,7 +858,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	HIP_DEBUG("start verifing addresses for new spi 0x%x\n", new_spi_out);
 	err = hip_update_send_addr_verify(entry, msg, NULL /* ok ? */, new_spi_out);
 
-	//hip_update_spi_waitlist_add(new_spi_in, hits, NULL /*rea*/);
+	/* hip_update_spi_waitlist_add(new_spi_in, hits, NULL); */
 
  out_err:
 	return err;
@@ -862,6 +866,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 /**
  * hip_handle_update_rekeying - handle incoming UPDATE packet received in REKEYING state
+ * 
  * @msg: the HIP packet
  * @src_ip: source IPv6 address from where the UPDATE was sent
  *
@@ -878,7 +883,6 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	struct hip_nes *nes = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
-//	hip_ha_t *entry = NULL;
 	struct in6_addr daddr;
 	struct hip_host_id *host_id_private;
 	u8 signature[HIP_DSA_SIGNATURE_LEN];
@@ -888,13 +892,6 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	/* 8.11.2  Processing an UPDATE packet in state REKEYING */
 
 	HIP_DEBUG("\n");
-
-//	entry = hip_hadb_find_byhit(hits);
-//	if (!entry) {
-//		HIP_ERROR("Entry not found\n");
-//		goto out_err_nolock;
-//	}
-//	HIP_LOCK_HA(entry);
 
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
 	nes = hip_get_param(msg, HIP_PARAM_NES);
@@ -1008,17 +1005,15 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
                 /* goto out_err; ? */
 	}
 
-	out:
-
+ out:
  out_err:
-	//HIP_UNLOCK_HA(entry);
-// out_err_nolock:
-	/* if (err) move to state = ? */
+	/* if (err)
+	   TODO: REMOVE IPSEC SAs
+	   move to state = ?
+	*/
 	if (update_packet)
 		kfree(update_packet);
-	/* TODO: REMOVE IPSEC SAs */
-	//if (entry)
-	//	hip_put_ha(entry);
+	
 	return err;
 }
 
@@ -1091,8 +1086,6 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			continue;
 		}
 
-		// HIP_LOCK_HA(entry); ?
-
 		/* Add HMAC */
 		err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
 		if (err) {
@@ -1110,7 +1103,6 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
 					  host_id_private, signature)) {
 			HIP_ERROR("Could not sign UPDATE. Failing\n");
-			//err = -EINVAL;
 			continue;
 		}
 
@@ -1150,7 +1142,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
-/* test */
+
 /* handle UPDATE(REA, SEQ) */
 /* reply with ACK and UPDATE(SPI, SEQ, ACK, ECHO_REQUEST) for each addr in REA */
 int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
@@ -1161,7 +1153,6 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	struct hip_seq *seq;
 	struct hip_rea *rea;
-	//hip_ha_t *entry = NULL;
 
 	/* assume already locked entry */
 
@@ -1190,24 +1181,13 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 		HIP_DEBUG("NOT ignored, or should we..\n");
 	}
 
-	//entry = hip_hadb_find_byhit(hits);
-	//if (!entry) {
-	//	HIP_ERROR("Entry not found\n");
-	//	goto out_err_nolock;
-	//}
-
-	//HIP_LOCK_HA(entry);
-
 	rea = hip_get_param(msg, HIP_PARAM_REA);
 	hip_update_handle_rea_parameter(entry, rea);
 	err = hip_update_send_addr_verify(entry, msg, dst_ip, ntohl(rea->spi));
 
-	//HIP_UNLOCK_HA(entry);
  out_err_nolock:
 	if (update_packet)
 		kfree(update_packet);
-	//if (entry)
-	//	hip_put_ha(entry);
 	return err;
 }
 
@@ -1225,7 +1205,6 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_echo_request *echo = NULL;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_host_id *host_id_private;
-	//hip_ha_t *entry = NULL;
 
 	/* assume already locked entry */
 
@@ -1238,7 +1217,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	if (!update_packet) {
 		HIP_ERROR("update_packet alloc failed\n");
 		err = -ENOMEM;
-		goto out_err_nolock;
+		goto out_err;
 	}
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 
@@ -1250,13 +1229,6 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		HIP_ERROR("Building of ACK failed\n");
 		goto out_err;
 	}
-
-//	entry = hip_hadb_find_byhit(hits);
-//	if (!entry) {
-//		HIP_ERROR("Entry not found\n");
-//		goto out_err_nolock;
-//	}
-//	HIP_LOCK_HA(entry);
 
 	/* Add HMAC */
 	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
@@ -1304,10 +1276,6 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	}
 
  out_err:
-	//HIP_UNLOCK_HA(entry);
- out_err_nolock:
-	//if (entry)
-	//	hip_put_ha(entry);
 	if (update_packet)
 		kfree(update_packet);
 	return err;
@@ -1430,7 +1398,7 @@ int hip_receive_update(struct sk_buff *skb)
 		handle_upd = 2;
 	}
 
-//	if (!handle_upd && /* SPI && */ seq && ack && !nes && echo) {
+	//if (!handle_upd && /* SPI && */ seq && ack && !nes && echo) {
 	if (!handle_upd && /* SPI && */ seq && !nes && echo) {
 		/* ACK might have been in a separate packet */
 		HIP_DEBUG("have SEQ,ECHO_REQUEST but no NES, process this UPDATE\n");
@@ -1619,7 +1587,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	int add_nes = 0, add_rea;
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 
-	/* lock here ? */
 	add_rea = flags & SEND_UPDATE_REA;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
 		  addr_list, addr_count, ifindex, flags);
@@ -1638,6 +1605,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		err = -ENOMEM;
 		goto out_err;
 	}
+
+	HIP_LOCK_HA(entry);
 
 	hip_print_hit("sending UPDATE to", &entry->hit_peer);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
@@ -1864,6 +1833,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	/* delete IPsec SA on failure */
 	HIP_ERROR("TODO: delete SA\n");
  out:
+	HIP_UNLOCK_HA(entry);
 	if (update_packet)
 		kfree(update_packet);
 	return err;
@@ -1884,13 +1854,12 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 	if (rk->count >= rk->length)
 		return -1;
 
-//	if ((entry->hastate & HIP_HASTATE_VALID) == HIP_HASTATE_VALID) {
 	if (entry->hastate == HIP_HASTATE_HITOK && entry->state == HIP_STATE_ESTABLISHED) {
 		rk->array[rk->count] = entry;
 		hip_hold_ha(entry);
 		rk->count++;
 	} else
-		HIP_DEBUG("skipping entry %p\n", entry);
+		HIP_DEBUG("skipping HA entry 0x%p\n", entry);
 
 	return 0;
 }
@@ -1921,7 +1890,7 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 	if (!ifindex) {
-		HIP_DEBUG("test: returning, ifindex=0\n");
+		HIP_DEBUG("test: returning, ifindex=0 (fix this for non-mm UPDATE)\n");
 		return;
 	}
 
