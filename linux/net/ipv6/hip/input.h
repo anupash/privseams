@@ -32,7 +32,7 @@
 #ifdef __KERNEL__
 void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr);
 int hip_inbound(struct sk_buff **skb, unsigned int *nhoff);
-#endif /* __KERNEL__ */ 
+#endif /* __KERNEL__ */
 
 int hip_create_signature(void *buffer_start, int buffer_length, 
 			 struct hip_host_id *host_id, u8 *signature);

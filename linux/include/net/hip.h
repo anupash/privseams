@@ -310,6 +310,8 @@ typedef uint32_t  u32;
 #else /* userspace */
 #  define HIP_MALLOC(size, flags)  malloc(size)
 #  define HIP_FREE(obj)            free(obj)
+#  define GFP_ATOMIC               0
+#  define GFP_KERNEL               0
 #endif /* __KERNEL__ */
 
 #define HIP_AH_SHA_LEN                 20
