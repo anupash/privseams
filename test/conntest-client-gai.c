@@ -76,6 +76,7 @@ int main(int argc,char *argv[]) {
   int gai_err;
  
   set_logtype(LOGTYPE_STDERR);
+  set_logfmt(LOGFMT_SHORT);
 
   if (argc != 4) {
     fprintf(stderr, "Usage: %s host tcp|udp port\n", argv[0]);
@@ -114,15 +115,20 @@ int main(int argc,char *argv[]) {
 
   printf("got gai addresses:\n");
   for(ai = res; ai != NULL; ai = ai->ai_next) {
-    struct sockaddr_in6 *s = (struct sockaddr_in6 *)ai->ai_addr;
-    int i = 0;
-
-    s->sin6_port = htons(port);
-    printf("GAI: ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d ai_addrlen=%d ai_canonname=%s\n",
-	   ai->ai_flags, ai->ai_family, ai->ai_socktype, ai->ai_protocol, ai->ai_addrlen, ai->ai_canonname);
-    printf("\tAF_INET6: ship6_port=%d in6_addr=0x", port);
-    for (i = 0; i < 16; i++) printf("%02x", (unsigned char) (s->sin6_addr.in6_u.u6_addr8[i]));
+    if (ai->ai_family == AF_INET6) {
+      struct sockaddr_in6 *s = (struct sockaddr_in6 *)ai->ai_addr;
+      int i = 0;
+      
+      s->sin6_port = htons(port);
+      printf("GAI: ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d ai_addrlen=%d ai_canonname=%s\n",
+	     ai->ai_flags, ai->ai_family, ai->ai_socktype, ai->ai_protocol, ai->ai_addrlen, ai->ai_canonname);
+      printf("\tAF_INET6: ship6_port=%d in6_addr=0x", port);
+      for (i = 0; i < 16; i++) printf("%02x", (unsigned char) (s->sin6_addr.in6_u.u6_addr8[i]));
     printf("\n");
+    res = ai;
+    } else {
+      printf("IPv4, not printing\n");
+    }
   }
   printf("\n\n");
 

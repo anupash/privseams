@@ -68,12 +68,16 @@ OBJS = usagi.o \
 
 # BEGIN HIPL PATCH
 
+# Enable the following option if you want to compile HIP enabled apps without
+# no changes to code (assuming that the code uses only getendpointinfo).
+#CFLAGS += -DHIP_TRANSPARENT_API
+
 # Note: -I.. is included because "tools/debug.h" is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-CFLAGS += -g -DHIP_TRANSPARENT_API -I../linux/include -I../tools -I..
+CFLAGS += -g -I../linux/include -I../tools -I..
 CFLAGS += -I../linux/net/ipv6/hip
-OBJS += debug.o builder.o message.o getendpointinfo.o
+OBJS += debug.o builder.o message.o getendpointinfo.o crypto.o
 
 # END HIPL PATCH
 
@@ -145,13 +149,17 @@ libinet6_p.a: $(POBJS) $(LIBPOBJS)
 # BEGIN HIPL PATCH
 builder.c:
 	$(LN_S) -f ../linux/net/ipv6/hip/builder.c builder.c
-builder.o: builder.c
 debug.c:
 	$(LN_S) -f ../tools/debug.c debug.c
-debug.o: debug.c
 message.c:
 	$(LN_S) -f ../tools/message.c message.c
+crypto.c:
+	$(LN_S) -f ../tools/crypto.c crypto.c
+
+builder.o: builder.c
+debug.o: debug.c
 message.o: message.c
+crypto.o: crypto.c
 getendpointinfo.o: getendpointinfo.c
 # END HIPL PATCH
 

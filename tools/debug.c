@@ -320,3 +320,48 @@ void hexdump(char *file, int line, char *function, char *prefix,
   free(hexdump);
 
 }
+
+/**
+ * print_sockaddr - print a socket address structure
+ * @file:        the file from where the debug call was made        
+ * @line:        the line of the debug call in the source file
+ * @function:    the name of function where the debug call is located
+ * @prefix:      the prefix string will printed before the sockaddr
+ * @family:      the family of the sockaddr
+ * @sockaddr:    pointer to the sockaddr to be printed
+ *
+ * Do not call this function from the outside of the debug module, use the
+ * HIP_DEBUG_SOCKADDR macro instead. Currently this function supports
+ * only INET and INET6 addresses. 
+ */
+void print_sockaddr(char *file, int line, char *function,
+		    char *prefix, sa_family_t family,
+		    struct sockaddr *sockaddr) {
+      char *default_str = "<unknown>";
+      int maxlen;
+      void *addr;
+      char addr_str[INET6_ADDRSTRLEN+1];
+      
+      switch (family) {
+      case AF_INET:
+	maxlen = INET_ADDRSTRLEN;
+	addr = &(((struct sockaddr_in *) sockaddr)->sin_addr);
+	break;
+      case AF_INET6:
+	maxlen = INET6_ADDRSTRLEN;
+	addr = &(((struct sockaddr_in6 *) sockaddr)->sin6_addr);
+	break;
+      default:
+	maxlen = 0;
+      }
+      
+      if (maxlen == 0) {
+	memcpy(addr_str, default_str, strlen(default_str) + 1);
+      } else {
+	if (!inet_ntop(family, addr, addr_str, maxlen)) {
+	  HIP_ERROR("inet_ntop");
+	  return;
+	}
+      }
+      HIP_DEBUG("%s: %s\n", prefix, addr_str);
+}

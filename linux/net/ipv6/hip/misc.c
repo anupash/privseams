@@ -4,6 +4,96 @@
 
 #include "misc.h"
 
+/*
+ * XX TODO: HAA
+ * XX TODO: which one to use: this or the function just below?
+ */
+int hip_host_id_to_hit(const struct hip_host_id *host_id,
+                      struct in6_addr *hit, int hit_type)
+{
+       int err = 0;
+       u8 digest[HIP_AH_SHA_LEN];
+       char *key_rr = (char *) (host_id + 1); /* skip the header */
+       /* hit excludes rdata but it is included in hi_length; subtract rdata */
+       unsigned int key_rr_len = ntohs(host_id->hi_length) -
+	       sizeof(struct hip_host_id_key_rdata);
+
+       if (hit_type != HIP_HIT_TYPE_HASH126) {
+               err = -ENOSYS;
+               goto out_err;
+       }
+
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+
+       err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest);
+       if (err) {
+               HIP_ERROR("Building of digest failed\n");
+               goto out_err;
+       }
+
+       /* hit_126 := concatenate ( 01 , low_order_bits ( digest, 126 ) ) */
+
+       memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
+	      sizeof(struct in6_addr));
+       hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
+       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_126;
+
+ out_err:
+
+       return err;
+}
+
+int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
+			       struct in6_addr *hit, int hit_type)
+{
+	int err = 0;
+	struct hip_host_id *host_id_pub = NULL;
+	int contents_len;
+	int total_len;
+
+	contents_len = hip_get_param_contents_len(host_id);
+	total_len = hip_get_param_total_len(host_id);
+
+	/* XX TODO: add an extra check for the T val */
+
+	if (contents_len <= 20) {
+		err = -EMSGSIZE;
+		HIP_ERROR("Host id too short\n");
+		goto out_err;
+	}
+
+	/* Allocate enough space for host id; there will be 20 bytes extra
+	   to avoid hassle with padding. */
+	host_id_pub = kmalloc(total_len, GFP_KERNEL);
+	if (!host_id_pub) {
+		err = -EFAULT;
+		goto out_err;
+	}
+	memset(host_id_pub, 0, total_len);
+
+	memcpy(host_id_pub, host_id,
+	       sizeof(struct hip_tlv_common) + contents_len - 20);
+
+	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - 20);
+	hip_set_param_contents_len(host_id_pub, contents_len - 20);
+
+	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
+		     hip_get_param_total_len(host_id_pub));
+
+	err = hip_host_id_to_hit(host_id_pub, hit, hit_type);
+	if (err) {
+		HIP_ERROR("Failed to convert HI to HIT.\n");
+		goto out_err;
+	}
+
+ out_err:
+
+	if (host_id_pub)
+		kfree(host_id_pub);
+
+	return err;
+}
+
 /**
  * hip_set_sockaddr - init sockaddr and copy given address to it
  * @addr: IPv6 address to be copied
@@ -69,7 +159,20 @@ int hip_lhi_are_equal(const struct hip_lhi *lhi1,
 	return !memcmp(&lhi1->hit, &lhi2->hit, sizeof(struct in6_addr));
 }
 
-#if 0 // XX REMOVE: NOT USED ANYMORE
+/*
+ * Returns 1 if the host_id contains also the "hidden" private key, else
+ * returns 0.
+ */
+int hip_host_id_contains_private_key(struct hip_host_id *host_id)
+{
+	uint16_t len = hip_get_param_contents_len(host_id);
+	u8 *buf = (u8 *)(host_id + 1);
+	u8 t = *buf;
+	
+	return len >= 3 * (64 + 8 * t) + 2 * 20; /* PQGXY 3*(64+8*t) + 2*20 */
+}
+
+#if 0
 /* Extract only the "public key" part of the local host identify.
  * Enables to store the whole key in one record (secret key).
  * This function should be extended with different functionality depending on
@@ -79,7 +182,7 @@ int hip_lhi_are_equal(const struct hip_lhi *lhi1,
  *
  * Return value is buffer + struct hip_host_id + public key data or NULL if failed
  */
-u8 *host_id_extract_public_key(u8 *buffer, struct hip_host_id *data)
+u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data)
 {
 	u8 *buf;
 	u8 t;
@@ -96,19 +199,18 @@ u8 *host_id_extract_public_key(u8 *buffer, struct hip_host_id *data)
 		return NULL; 
 	}
 
-	len = hip_get_param_contents_len(data);
-	if (len < 3*(64+8*t)+2*20) { /* PQGXY 3*(64+8*t) + 2*20 */
-		/*/ no private key */
-		memcpy(buffer,data,len);
+	if (!hip_host_id_contains_private_key(data)) {
+		/* no private key */
+		memcpy(buffer, data, len);
 		buffer += hip_get_param_total_len(data);
 		HIP_DEBUG("No private key\n");
 	} else {
 		memcpy(buffer, data,
 		       sizeof(struct hip_tlv_common) + 
-		       (len - ));
+		       (len - 20));
 		hip_set_param_contents_len(buffer,
-				(len - HIP_HOST_ID_DSA_PRIV_KEY_DEF_LEN));
-		HIP_HEXDUMP("own hid",data,sizeof(struct hip_tlv_common));
+				(len - 20));
+		HIP_HEXDUMP("own host_id",data,sizeof(struct hip_tlv_common));
 		buffer += hip_get_param_total_len(buffer);
 		HIP_DEBUG("Private key\n");
 	}

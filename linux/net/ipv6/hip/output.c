@@ -348,7 +348,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	
 	lock_sock(hip_socket->sk);
- 	err = ip6_append_data(hip_socket->sk, hip_getfrag, buf, len, 0,
+ 	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, &fl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err)
 		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);

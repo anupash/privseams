@@ -39,7 +39,7 @@ static struct crypto_tfm *impl_3des_cbc = NULL;
 
 
 /* global variables */
-struct socket *hip_socket;
+struct socket *hip_output_socket;
 struct crypto_tfm *impl_null = NULL;
 struct crypto_tfm *impl_sha1 = NULL;
 spinlock_t dh_table_lock = SPIN_LOCK_UNLOCKED;
@@ -802,11 +802,11 @@ void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
  *
  * Returns: 0 if successful, else < 0.
  */
-static int hip_init_sock(void)
+static int hip_init_output_socket(void)
 {
 	int err = 0;
 
-	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_socket);
+	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_output_socket);
 	if (err) {
 		HIP_ERROR("Failed to allocate the HIP control socket\n");
 		return err;
@@ -820,7 +820,7 @@ static int hip_init_sock(void)
  */
 void hip_uninit_sock(void)
 {
-	sock_release(hip_socket);
+	sock_release(hip_output_socket);
 	return;
 }
 
@@ -1585,7 +1585,7 @@ static int hip_do_work(void)
 			break;
 		case HIP_WO_SUBTYPE_ADDMAP:
 			/* arg1 = d-hit, arg2=ipv6 */
-			res = hip_add_peer_info(job->arg1,job->arg2);
+			res = hip_add_peer_info(job->arg1, job->arg2);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
@@ -1683,7 +1683,7 @@ static int __init hip_init(void)
 	if(!hip_init_r1())
 		goto out;
 
-	if (hip_init_sock() < 0)
+	if (hip_init_output_socket() < 0)
 		goto out;
 
 	if (hip_init_cipher() < 0)
@@ -1694,7 +1694,7 @@ static int __init hip_init(void)
 		goto out;
 #endif /* CONFIG_PROC_FS */
 
-	if (hip_init_daemon() < 0)
+	if (hip_init_user() < 0)
 		goto out;
 
 	if (hip_init_ioctl() < 0)
@@ -1706,6 +1706,9 @@ static int __init hip_init(void)
 	/* comment this to disable network device event handler
 	   (crashed sometimes) */
 	if (hip_init_netdev_notifier() < 0)
+		goto out;
+
+	if (hip_init_socket_handler() < 0)
 		goto out;
 
 	for(i=0;i<NR_CPUS;i++) {
@@ -1774,15 +1777,17 @@ static void __exit hip_cleanup(void)
 	hip_uninit_netdev_notifier(); 	/* comment this if network device event */
 	hip_uninit_register_inet6addr_notifier();
 	hip_uninit_ioctl();
-	hip_uninit_daemon();
+	hip_uninit_user();
 
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();
 #endif /* CONFIG_PROC_FS */
 
+	hip_uninit_socket_handler();
 	hip_uninit_host_id_dbs();
 	hip_uninit_hadb();
-	hip_uninit_sock();
+	hip_uninit_all_eid_db();
+	hip_uninit_output_socket();
 	hip_uninit_r1();
 
 	/* XXX: Mika are these in correct place? */

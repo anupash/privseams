@@ -53,7 +53,7 @@ int send_msg(const struct hip_common *msg) {
     goto out;
   }
 
-  err = ioctl(hipfd, HIP_IOCSHIPDASYNCMSG, msg);
+  err = ioctl(hipfd, HIP_IOCSHIPUSERMSG, msg);
   if (err) {
     HIP_ERROR("ioctl failed (%d)\n", err);
     goto out_close;

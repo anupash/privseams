@@ -14,8 +14,8 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lcrypto':
-AC_CHECK_LIB([crypto], [main])
+AC_CHECK_LIB([crypto], [DSA_generate_key])
+#AC_CHECK_LIB([inet6], [getaddrinfo])
 
 # Checks for header files.
 AC_HEADER_DIRENT

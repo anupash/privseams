@@ -20,21 +20,21 @@ bin_PROGRAMS += listifaces
 
 align_SOURCES = align.c
 checksum_SOURCES = checksum.c checksum.h
-conntest_client_SOURCES = conntest-client.c
-conntest_client_gai_LDADD = ../libinet6/libinet6.a
+conntest_client_SOURCES = conntest-client.c debug.c
 conntest_client_gai_SOURCES = conntest-client-gai.c
+conntest_client_gai_LDADD = ../libinet6/libinet6.a
+conntest_client_native_SOURCES = conntest-client-native.c debug.c
 conntest_client_native_LDADD = ../libinet6/libinet6.a
-conntest_client_native_SOURCES = conntest-client-native.c
+conntest_server_native_SOURCES = conntest-server-native.c debug.c
 conntest_server_native_LDADD = ../libinet6/libinet6.a
-conntest_server_native_SOURCES = conntest-server-native.c
-conntest_server_SOURCES = conntest-server.c
-libinet6test_LDADD = ../libinet6/libinet6.a
+conntest_server_SOURCES = conntest-server.c debug.c
 libinet6test_SOURCES = libinet6test.c
+libinet6test_LDADD = ../libinet6/libinet6.a
 listifaces_SOURCES = listifaces.c debug.c
 listifaces_LDADD = ../libinet6/libinet6.a
-unittest_LDADD = -lcrypto
 unittest_SOURCES = unit.c unittest.c unittest.h debug.c hipconf.c \
                    builder.c crypto.c message.c suite.c
+unittest_LDADD = -lcrypto
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built
@@ -55,3 +55,5 @@ message.c:
 unit.c:
 	$(LN_S) -f ../linux/net/ipv6/hip/unit.c .
 	$(LN_S) -f ../linux/net/ipv6/hip/unit.h .
+../libinet6/libinet6.a:
+	$(MAKE) -C ../libinet6

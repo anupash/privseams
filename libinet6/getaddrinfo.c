@@ -125,7 +125,8 @@ struct gaih
   {
     int family;
     int (*gaih)(const char *name, const struct gaih_service *service,
-		const struct addrinfo *req, struct addrinfo **pai);
+		const struct addrinfo *req, struct addrinfo **pai,
+		int hip_transparent_mode);
   };
 
 #if PF_UNSPEC == 0
@@ -157,7 +158,7 @@ static int addrconfig (sa_family_t af)
 
 static int
 gaih_local (const char *name, const struct gaih_service *service,
-	    const struct addrinfo *req, struct addrinfo **pai)
+	    const struct addrinfo *req, struct addrinfo **pai, int unused)
 {
   struct utsname utsname;
 
@@ -384,20 +385,18 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
 									\
   /* TODO: check return values */					\
   fp = fopen(_PATH_HIP_HOSTS, "r");					\
-  if(!fp)                                                               \
-    goto _get_hosts_hit_out;                                            \
 									\
-  while (1) {								\
+  while (fp) {								\
     int c;								\
     int ret;								\
     memset(fqdn_str, 0, sizeof(fqdn_str));				\
     memset(hit_str, 0, sizeof(hit_str));				\
     ret = fscanf(fp, "%46s %255s", hit_str, fqdn_str);			\
     if (ret == 2) {							\
-      _HIP_DEBUG("line %d hit=%s fqdn=%s\n", lineno, hit_str, fqdn_str);	\
+      _HIP_DEBUG("line %d hit=%s fqdn=%s\n", lineno, hit_str, fqdn_str);\
       if (inet_pton(AF_INET6, hit_str, &hit) <= 0) {			\
 	HIP_DEBUG("hiphosts invalid hit\n");			        \
-        goto _get_hosts_hit_out;                                        \
+        break;                                                          \
       }									\
       if ((strlen(_name) == strlen(fqdn_str)) &&			\
 	  strcmp(_name, fqdn_str) == 0) {				\
@@ -414,15 +413,14 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
       }									\
     } else if (ret == EOF) {						\
       _HIP_DEBUG("hiphosts EOF on line %d\n", lineno);			\
-      goto _get_hosts_hit_out;						\
+      break;						                \
     } else {								\
       HIP_DEBUG("hiphosts fscanf ret != 2 on line %d\n", lineno);	\
-      goto _get_hosts_hit_out;				 		\
+      break;		    		 		                \
     }									\
 									\
     lineno++;								\
   }									\
- _get_hosts_hit_out:                                                    \
   if (fp)                                                               \
     fclose(fp);								\
 }
@@ -430,7 +428,8 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
 
 static int
 gaih_inet (const char *name, const struct gaih_service *service,
-	   const struct addrinfo *req, struct addrinfo **pai)
+	   const struct addrinfo *req, struct addrinfo **pai,
+	   int hip_transparent_mode)
 {
   const struct gaih_typeproto *tp = gaih_inet_typeproto;
   struct gaih_servtuple *st = (struct gaih_servtuple *) &nullserv;
@@ -649,22 +648,22 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	  _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
 
 	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6) {
-#ifdef HIP_TRANSPARENT_API
-	  _HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
-	  gethosts_hit(name);
-	  if (req->ai_flags & AI_HIP) {
-	    _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
-	  } else {
-	    _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: get IPv6 addresses too\n");
-	  }
-#else
-	  if (req->ai_flags & AI_HIP) {
-	    _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
-	    gethosts_hit(name);
-	  } else {
-	    _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
-	  }
-#endif
+	    if (hip_transparent_mode) {
+	      _HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
+	      gethosts_hit(name);
+	      if (req->ai_flags & AI_HIP) {
+		_HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
+	      } else {
+		_HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: get IPv6 addresses too\n");
+	      }
+	    } else /* not hip_transparent_mode */ {
+	      if (req->ai_flags & AI_HIP) {
+		_HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
+		gethosts_hit(name);
+	      } else {
+		_HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
+	      }
+	    }
 	  }
 	  /* If we are looking for both IPv4 and IPv6 address we don't
 	     want the lookup functions to automatically promote IPv4
@@ -717,7 +716,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		hip_msg_init(msg);	
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
 		hip_build_param_contents(msg, (void *) at_ipv6->addr, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
-		hip_build_user_hdr(msg, HIP_USER_ADD_MAP_HIT_IP, 0);
+		hip_build_user_hdr(msg, HIP_USER_ADD_PEER_MAP_HIT_IP, 0);
 		send_msg(msg);
 	      }
 	    }
@@ -962,6 +961,7 @@ getaddrinfo (const char *name, const char *service,
   struct addrinfo *p = NULL, **end;
   struct gaih *g = gaih, *pg = NULL;
   struct gaih_service gaih_service, *pservice;
+  int hip_transparent_mode;
 
   _HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
@@ -987,11 +987,22 @@ getaddrinfo (const char *name, const char *service,
   }
 
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
-			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP))
+			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
+			  AI_HIP_NATIVE))
     return EAI_BADFLAGS;
 
   if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
     return EAI_BADFLAGS;
+
+  if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
+    return EAI_BADFLAGS;
+
+#ifdef HIP_TRANSPARENT_MODE
+  /* Transparent mode does not work with HIP native resolver */
+  hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
+#else
+  hip_transparent_mode = 0;
+#endif
 
   if (service && service[0])
     {
@@ -1026,7 +1037,7 @@ getaddrinfo (const char *name, const char *service,
 	  if (pg == NULL || pg->gaih != g->gaih)
 	    {
 	      pg = g;
-	      i = g->gaih (name, pservice, hints, end);
+	      i = g->gaih (name, pservice, hints, end, hip_transparent_mode);
 	      if (i != 0)
 		{
 		  last_i = i;

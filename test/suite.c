@@ -115,6 +115,7 @@ HIP_UNIT_TEST_CASE(test_kernel) {
 
     err = send_msg(msg);
     HIP_UNIT_ASSERT(!err);
+    HIP_UNIT_ASSERT(!hip_get_msg_err(msg));
 }
 
 /*

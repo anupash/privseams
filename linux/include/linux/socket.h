@@ -178,7 +178,8 @@ struct ucred {
 #define AF_WANPIPE	25	/* Wanpipe API Sockets */
 #define AF_LLC		26	/* Linux LLC			*/
 #define AF_BLUETOOTH	31	/* Bluetooth sockets 		*/
-#define AF_MAX		32	/* For now.. */
+#define AF_HIP          32      /* Host Identity Protol         */
+#define AF_MAX		33	/* For now.. */
 
 /* Protocol families, same as address families. */
 #define PF_UNSPEC	AF_UNSPEC
@@ -210,6 +211,7 @@ struct ucred {
 #define PF_WANPIPE	AF_WANPIPE
 #define PF_LLC		AF_LLC
 #define PF_BLUETOOTH	AF_BLUETOOTH
+#define PF_HIP          AF_HIP
 #define PF_MAX		AF_MAX
 
 /* Maximum queue length specifiable by listen.  */

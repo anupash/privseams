@@ -44,6 +44,7 @@
 
 /* BEGIN HIPL PATCH */
 #include <net/if.h>
+#include <net/hip.h>
 /* END HIPL PATCH */
 
 /* Absolute file name for network data base files.  */
@@ -436,6 +437,31 @@ struct gaicb
 				   returned address type.  */
 /* BEGIN HIPL PATCH */
 # define AI_HIP		0x0800  /* Return only HIT addresses */
+# define AI_HIP_NATIVE  0x1000  /* For getaddrinfo internal use only  */
+
+/* Error values for `getendpointinfo' function */
+
+/* XX TODO: Are these really needed (they are the same with getaddrinfo)? */
+
+# define EEI_BADFLAGS	  -1	/* Invalid value for `ai_flags' field.  */
+# define EEI_NONAME	  -2	/* NAME or SERVICE is unknown.  */
+# define EEI_AGAIN	  -3	/* Temporary failure in name resolution.  */
+# define EEI_FAIL	  -4	/* Non-recoverable failure in name res.  */
+# define EEI_NODATA	  -5	/* No address associated with NAME.  */
+# define EEI_FAMILY	  -6	/* `ai_family' not supported.  */
+# define EEI_SOCKTYPE	  -7	/* `ai_socktype' not supported.  */
+# define EEI_SERVICE	  -8	/* SERVICE not supported for `ai_socktype'.  */
+# define EEI_ADDRFAMILY	  -9	/* Address family for NAME not supported.  */
+# define EEI_MEMORY	  -10	/* Memory allocation failure.  */
+# define EEI_SYSTEM	  -11	/* System error returned in `errno'.  */
+# ifdef __USE_GNU
+#  define EEI_INPROGRESS  -100	/* Processing request in progress.  */
+#  define EEI_CANCELED	  -101	/* Request canceled.  */
+#  define EEI_NOTCANCELED -102	/* Request not canceled.  */
+#  define EEI_ALLDONE	  -103	/* All requests done.  */
+#  define EEI_INTR	  -104	/* Interrupted by a signal.  */
+# endif
+
 /* END HIPL PATCH */
 
 /* Error values for `getaddrinfo' function.  */
@@ -470,6 +496,12 @@ struct gaicb
 
 /* BEGIN HIPL PATCH */
 
+/* The terminating \0 is excluded from STR_MAX */
+#define GEPI_HI_STR_MAX       "46"  /* Max number of chars in HI string   */  
+#define GEPI_HI_STR_VAL_MAX     46
+#define GEPI_FQDN_STR_MAX      "255" /* Max number of chars in FQDN string */
+#define GEPI_FQDN_STR_VAL_MAX   255
+
 struct endpointinfo
 {
   int                   ei_flags;       /* Input flags.                     */
@@ -486,19 +518,23 @@ extern int getendpointinfo (__const char *__restrict __nodename,
 			    __const struct endpointinfo *__restrict __req,
 	 	            struct endpointinfo **__restrict __pai) __THROW;
 
-/* Free `endpointinfo' structure AI including associated storage.  */
-extern void free_endpointinfo (struct endpointinfo *__ai) __THROW;
+/* Free `endpointinfo' structure ei including associated storage.  */
+extern void free_endpointinfo (struct endpointinfo *__ei) __THROW;
 
 /* Convert error return from getendpointinfo() to a string.  */
 extern __const char *gepi_strerror (int __ecode) __THROW;
 
 /* Associate an local enpoint and local interface(s) to a socket. */
-extern int setmyeid(int sockfd, struct sockaddr_eid *myeid,
-		    struct endpoint *endpoint, struct if_nameindex *ifaces);
+extern int setmyeid(int sockfd, struct sockaddr_eid *my_eid,
+		    const char *servname,
+		    struct endpoint *endpoint,
+		    struct if_nameindex *ifaces);
 
 /* Associate the endpoint of the peer to the address(es) of the peer. */
-int setpeereid(struct sockaddr_eid *peereid, struct endpoint *endpoint,
-	       struct addrinfo *addrlist);
+int setpeereid(struct sockaddr_eid *peer_eid,
+	       const char *servname,
+	       struct endpoint *endpoint,
+	       struct addrinfo *addrinfo);
 
 /* END HIPL PATCH */
 

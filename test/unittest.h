@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <asm/errno.h>
 #include <net/hip.h>
-#include <linux/hip_ioctl.h>
 
 #include "builder.h"
 #include "unit.h"

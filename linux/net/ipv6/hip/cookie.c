@@ -28,11 +28,7 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 
 	/* base ready */
 
-	do_gettimeofday(&tv);
-
-	offset = ((tv.tv_sec & HIP_COOKIE_LTMASK) + HIP_COOKIE_LIFETIME);
-
-	return (base + offset) % HIP_R1TABLESIZE;
+	return (base) % HIP_R1TABLESIZE;
 }
 
 static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
@@ -41,10 +37,7 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 	int idx;
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r);
-	if (idx == -1) {
-		HIP_ERROR("Failed to find R1\n");
-		return NULL;
-	}
+
 	HIP_DEBUG("Calculated index: %d\n", idx);
 
 	return &hip_r1table[idx];

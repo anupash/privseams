@@ -18,7 +18,6 @@
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 
-#include <linux/hip_ioctl.h>
 #include <net/hip.h>
 #include <sysexits.h>
 

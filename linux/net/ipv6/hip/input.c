@@ -716,8 +716,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
  	hip_set_param_spi_value(spi_lsi, spi_our);
  	hip_set_param_lsi_value(spi_lsi, 0x01000000 |
  		 (ntohl(ctx->input->hitr.in6_u.u6_addr32[3]) & 0x00ffffff));
+
+	HIP_DEBUG("lsi in i2: %.8llx\n", hip_get_param_lsi_value(spi_lsi));
  
-	HIP_DEBUG("lsi in i2: 0x%.8x\n", hip_get_param_lsi_value(spi_lsi));
+	_HIP_DEBUG("lsi in i2: 0x%.8x\n", hip_get_param_lsi_value(spi_lsi));
 
 	/* Do not modify the packet after this point or signature
 	 * will not validate */
@@ -920,18 +922,18 @@ int hip_handle_r1(struct sk_buff *skb)
 		err = -EINVAL;
 		goto out_err;
 	}
-
+	
  	ipv6_addr_copy(&r1->hitr, &tmpaddr);
  	hip_set_msg_total_len(r1, origlen);
-
  	/* the checksum is not restored because it was already checked in
  	   hip_inbound */
 
 	/* signature is ok, now save the host id to db */
  	peer_lhi.anonymous = 0;
 	ipv6_addr_copy(&peer_lhi.hit, &r1->hits);
-
- 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id);
+ 	
+ 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi,
+			      peer_host_id);
  	if (err == -EEXIST) {
  		HIP_INFO("Host id already exists. Ignoring.\n");
  		err = 0;
@@ -1589,7 +1591,8 @@ int hip_receive_i2(struct sk_buff *skb)
 		
 		entry = hip_hadb_access_db(&i2->hits, HIP_ARG_HIT);
 		if (!entry) {
-			err = hip_add_peer_info_nolock(&i2->hits, &skb->nh.ipv6h->saddr);
+			err = hip_add_peer_info_nolock(&i2->hits,
+						       &skb->nh.ipv6h->saddr);
 			if (err) {
 				hip_hadb_release_ex_db_access(flags);
 				HIP_ERROR("Could not create new state\n");

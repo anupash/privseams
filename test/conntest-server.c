@@ -24,14 +24,23 @@
 #include <netinet/ip.h>
 #include <unistd.h>
 #include <netdb.h>
-#include <signal.h>
+/* Kludge: compilation problems on Debian testing 20040202 */
+#if 0
+#  include <signal.h>
+#else
+#  define SIGTERM 15
+#  define SIG_ERR -1
+typedef void (*__sighandler_t)(int);
+#endif
+
+#include "tools/debug.h"
 
 static void sig_handler(int signo) {
   if (signo == SIGTERM) {
     // close socket
-    exit(0);
+    HIP_DIE("Sigterm\n");
   } else {
-    exit(1);
+    HIP_DIE("Signal %d\n", signo);
   }
 }
 

@@ -25,7 +25,6 @@
 #include <linux/sysctl.h>
 
 #include <linux/devfs_fs_kernel.h>
-#include <linux/hip_ioctl.h>
 
 /*
 

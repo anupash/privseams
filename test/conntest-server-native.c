@@ -26,16 +26,17 @@
 #include <netinet/ip.h>
 #include <unistd.h>
 #include <netdb.h>
-#include <signal.h>
 #include <net/if.h>
+#include <signal.h>
+
 #include "tools/debug.h"
 
 static void sig_handler(int signo) {
   if (signo == SIGTERM) {
     // close socket
-    exit(0);
+    HIP_DIE("Sigterm\n");
   } else {
-    exit(1);
+    HIP_DIE("Signal %d\n", signo);
   }
 }
 
@@ -84,9 +85,9 @@ int main(int argc,char *argv[]) {
   }
 
   if (proto == IPPROTO_TCP) {
-    serversock = socket(AF_INET6, SOCK_STREAM, 0);
+    serversock = socket(PF_HIP, SOCK_STREAM, 0);
   } else {
-    serversock = socket(AF_INET6, SOCK_DGRAM, 0);
+    serversock = socket(PF_HIP, SOCK_DGRAM, 0);
   }
   if (serversock < 0) {
     HIP_PERROR("socket");
@@ -108,12 +109,15 @@ int main(int argc,char *argv[]) {
     goto out;
   }
 
-  err = setmyeid(sockfd, &my_eid, res->ei_endpoint, ifaces);
+  err = setmyeid(serversock, &my_eid, port_name, res->ei_endpoint, ifaces);
   if (err) {
-    HIP_ERROR("Failed to set up my EID.\n");
+    HIP_ERROR("Failed to set up my EID (%d)\n", err);
     err = 1;
     goto out;
   }
+
+  HIP_DEBUG("family=%d value=%d\n", my_eid.eid_family,
+	    ntohs(my_eid.eid_val));
 
   if (bind(serversock, (struct sockaddr *) &my_eid,
 	   sizeof(my_eid)) < 0) {

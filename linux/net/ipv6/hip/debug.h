@@ -16,7 +16,7 @@
      printk(KERN_DEBUG "%s: error: " fmt , __FUNCTION__ , ##args)
 #define HIP_ASSERT(s) do {\
      if (!(s)) {                                                 \
-         HIP_ERROR("assertation failed on line %d\n", __LINE__); \
+         HIP_ERROR("assertion failed on line %d\n", __LINE__); \
          BUG();                                                  \
      }                                                           \
 } while(0)

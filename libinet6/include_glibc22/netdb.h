@@ -39,6 +39,7 @@
 
 /* BEGIN HIPL PATCH */
 #include <net/if.h>
+#include <net/hip.h>
 /* END HIPL PATCH */
 
 /* Absolute file name for network data base files.  */
@@ -481,12 +482,12 @@ extern void free_endpointinfo (struct endpointinfo *__ai) __THROW;
 extern __const char *gepi_strerror (int __ecode) __THROW;
 
 /* Associate an local enpoint and local interface(s) to a socket. */
-extern int setmyeid(int sockfd, struct sockaddr_eid *myeid,
+extern int setmyeid(int sockfd, struct sockaddr_eid *my_eid,
 		    struct endpoint *endpoint, struct if_nameindex *ifaces);
 
 /* Associate the endpoint of the peer to the address(es) of the peer. */
-int setpeereid(struct sockaddr_eid *peereid, struct endpoint *endpoint,
-	       struct addrinfo *addrlist);
+int setpeereid(struct sockaddr_eid *peer_eid, struct endpoint *endpoint,
+	       struct addrinfo *addrinfo);
 
 /* END HIPL PATCH */
 

@@ -14,6 +14,7 @@
  *  - hip_local_hi and hip_lhid contain reduntantly the anonymous bit?
  *  - hip_tlv_common should be packed?
  *  - the packing of the structures could be hidden in the builder
+ *  - replace all in6add6 with hip_hit
  *
  *  BUGS:
  *  -
@@ -21,32 +22,49 @@
  */
 
 #ifdef __KERNEL__
+#  include <linux/types.h>
+#  include <linux/config.h>
+#  include <linux/module.h>
+#  include <linux/kernel.h>
+#  include <linux/slab.h>
+#  include <linux/errno.h>
+#  include <linux/skbuff.h>
+#  include <net/ip.h>
+#  include <net/sock.h>
+#  include <asm/string.h>
+#  include <asm/byteorder.h>
+#  include <linux/in6.h>
+#  include <linux/timer.h>
+#  include <linux/time.h>
+#  include <linux/ioctl.h>
 
-#include <linux/types.h>
-#include <linux/config.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/slab.h>
-#include <linux/errno.h>
-#include <linux/skbuff.h>
-#include <net/ip.h>
-#include <net/sock.h>
-#include <asm/string.h>
-#include <linux/hip_ioctl.h>
-#include <asm/byteorder.h>
-#include <linux/in6.h>
-#include <linux/timer.h>
+typedef uint16_t in_port_t;
 
 #else
-
-#include <netinet/in.h>
-
+#  include <sys/ioctl.h>
+#  include <netinet/in.h>
 #endif /* __KERNEL__ */
+
+#define HIP_CHAR_MAJOR 126
+#define HIP_CHAR_NAME "hip"
+#define HIP_DEV_NAME  "/dev/hip"
+
+#define HIP_IOC_MAGIC 'k'
+#define HIP_IOC_MAX   15
+
+#define HIP_IOCSHIPUSERMSG _IOW(HIP_IOC_MAGIC, 1, struct hip_common)
+#define HIP_IOCSTEST _IO(HIP_IOC_MAGIC, 15)
 
 #define HIP_MAX_PACKET 2048
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
+
+#define HIP_HIT_TYPE_MASK_HAA   0x80
+#define HIP_HIT_TYPE_MASK_126   0x40
+
+#define HIP_HIT_TYPE_HASH126    1
+#define HIP_HIT_TYPE_HAA_HASH   2
 
 #define HIP_I1  1
 #define HIP_R1  2
@@ -59,17 +77,28 @@
 #define HIP_AC 9   /* check */
 #define HIP_ACR 10 /* check */
 
-/* Extended message types for the daemon */
+/* Extended message types for the userspace */
 #define HIP_USER_BASE_MIN                  15 /* exclusive */
 #define HIP_USER_NULL_OPERATION            16
-#define HIP_USER_ADD_HI                    17
-#define HIP_USER_DEL_HI                    18
-#define HIP_USER_ADD_MAP_HIT_IP            19
-#define HIP_USER_DEL_MAP_HIT_IP            20
+#define HIP_USER_ADD_LOCAL_HI              17
+#define HIP_USER_DEL_LOCAL_HI              18
+#define HIP_USER_ADD_PEER_MAP_HIT_IP       19
+#define HIP_USER_DEL_PEER_MAP_HIT_IP       20
 #define HIP_USER_UNIT_TEST                 21
 #define HIP_USER_RST                       22
-#define HIP_USER_BASE_MAX                  23 /* exclusive */
-/* End of extended messages for the daemon */
+#define HIP_USER_SET_MY_EID                23
+#define HIP_USER_SET_PEER_EID              24
+#define HIP_USER_BASE_MAX                  25 /* exclusive */
+/* End of extended messages for the userspace */
+
+#define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
+
+#define HIP_SOCK_OPT_SET_MY_EID            1
+/* Other HIP socket options */
+
+#define HIP_ENDPOINT_FLAG_HIT              1
+#define HIP_ENDPOINT_FLAG_ANON             2
+/* Other flags: keep them to the power of two! */
 
 #define HIP_HOST_ID_RR_DSA_MAX_T_VAL           8
 #define HIP_HOST_ID_RR_T_SIZE                  1
@@ -121,6 +150,10 @@
 #define HIP_PARAM_HI                    32771
 #define HIP_PARAM_DH_SHARED_KEY         32772
 #define HIP_PARAM_UNIT_TEST             32773
+#define HIP_PARAM_EID_SOCKADDR          32774
+#define HIP_PARAM_EID_ENDPOINT          32775 /* Pass endpoint_hip structures into kernel */
+#define HIP_PARAM_EID_IFACE             32776
+#define HIP_PARAM_EID_ADDR              32777
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC            65245
@@ -443,6 +476,66 @@ struct hip_cert {
 	/* XX TODO */
 } __attribute__ ((packed));
 
+typedef uint16_t se_family_t;
+typedef uint16_t se_length_t;
+typedef uint16_t se_hip_flags_t;
+typedef uint32_t sa_eid_t;
+
+/* Structure describing an endpoint. This structure is used by the resolver in
+ * the userspace, so it is not length-padded like HIP parameters. All of the
+ * members are in network byte order.
+ */
+struct endpoint {
+	se_family_t   family;    /* PF_HIP, PF_XX */
+	se_length_t   length;    /* length of the whole endpoint in octets */
+};
+
+/*
+ * Note: not padded
+ */
+struct endpoint_hip {
+	se_family_t         family; /* PF_HIP */
+	se_length_t         length; /* length of the whole endpoint in octets */
+	se_hip_flags_t      flags;  /* e.g. ANON or HIT */
+	union {
+		struct hip_host_id host_id;
+		struct in6_addr hit;
+	} id;
+};
+
+struct sockaddr_eid {
+	unsigned short int eid_family;
+	in_port_t eid_port;
+	sa_eid_t eid_val;
+} __attribute__ ((packed));
+
+/*
+ * This structure is by the native API to carry local and peer identities
+ * from libc (setmyeid and setpeereid calls) to the HIP socket handler
+ * (setsockopt). It is almost the same as endpoint_hip, but it is
+ * length-padded like HIP parameters to make it usable with the builder
+ * interface.
+ */
+struct hip_eid_endpoint {
+	hip_tlv_type_t      type;
+	hip_tlv_len_t       length;
+	struct endpoint_hip endpoint;
+} __attribute__ ((packed));
+
+typedef uint16_t hip_eid_iface_type_t;
+
+struct hip_eid_iface {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	hip_eid_iface_type_t if_index;
+} __attribute__ ((packed));
+
+struct hip_eid_sockaddr {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	struct sockaddr sockaddr;
+} __attribute__ ((packed));
+
 #ifdef __KERNEL__
 
 #define HIP_MAX_KEY_LEN 32 /* max. draw: 256 bits! */
@@ -588,7 +681,6 @@ struct hip_sent_ac_info { /* mm-01: to be removed */
 	struct timer_list timer;
 };
 
-
 struct hip_work_order {
 	int type;
 	int subtype;
@@ -614,9 +706,19 @@ struct hip_host_id_entry {
 	struct hip_host_id *host_id; /* allocated dynamically */
 };
 
+struct hip_eid_owner_info {
+	uid_t uid;
+	gid_t gid;
+};
+
+struct hip_eid_db_entry {
+	struct list_head           next;
+	struct hip_eid_owner_info  owner_info;
+	struct sockaddr_eid        eid; /* XX FIXME: the port is unneeded */
+	struct hip_lhi             lhi;
+};
 
 #define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200
-
 #endif /* __KERNEL__ */
 
 /* Some default settings for HIPL */

@@ -11,8 +11,7 @@ AM_CONFIG_HEADER(config.h)
 AC_PROG_CC
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lcrypto':
-AC_CHECK_LIB([crypto], [main])
+AC_CHECK_LIB([crypto], [DSA_generate_key])
 
 # Checks for header files.
 AC_HEADER_STDC

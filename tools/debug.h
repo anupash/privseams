@@ -8,6 +8,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 /* includes filename, line number and max(debug_prefix[]) */
 #define DEBUG_PREFIX_MAX  64
@@ -24,6 +27,7 @@
 #define HIP_ERROR(...) error(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DIE(...)   die(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_HEXDUMP(prefix, str, len) hexdump(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)
+#define HIP_DEBUG_SOCKADDR(prefix, family, sockaddr) print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, family, sockaddr)
 #define HIP_DUMP_MSG(msg) { info(__FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
 #define HIP_PERROR(s) perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
 #define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
@@ -53,5 +57,8 @@ void error(char *file, int line, char *function, char *fmt, ...);
 void perror_wrapper(char *file, int line, char *function, char *s);
 void hexdump(char *file, int line, char *function,
 	     char *prefix, void *str, int len);
+void print_sockaddr(char *file, int line, char *function,
+		    char *prefix, sa_family_t family,
+		    struct sockaddr *sockaddr);
 
 #endif /* DEBUG_H */

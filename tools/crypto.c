@@ -90,7 +90,7 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
   int i;
   BIGNUM *bn, *tmp = NULL;
 
-  /// XX FIXME
+  /// XX FIXME -- WHAT WAS THIS?
   /* if hipd was given a HIT to use from the command line it is used,
      else HIT is calculated from the HI. */
   //if (!IN6_IS_ADDR_UNSPECIFIED(&lhi->hit)) {
@@ -121,6 +121,8 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
     err = -EINVAL;
     goto out_err;
   }
+
+  HIP_HEXDUMP("dsa: ", dsa, pubkey_len);
   
   _HIP_DEBUG("sha_p=%p sha_hash_p=%p\n", sha, &sha_hash);
   HIP_HEXDUMP("hit hash:     ", &sha_hash, SHA_DIGEST_LENGTH);
@@ -128,6 +130,7 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
 	      (unsigned char *)&sha_hash+(SHA_DIGEST_LENGTH-128/8), 128/8);
   _HIP_DEBUG("pos=%d\n", SHA_DIGEST_LENGTH - 128/8);
   
+  /* Take 128 bits from the end of the hash */
   bn = BN_bin2bn((const unsigned char *) &sha_hash + (SHA_DIGEST_LENGTH-128/8),
 		 128/8, NULL);
   if (!bn) {
@@ -224,7 +227,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   _HIP_DEBUG("privkey=%s\n", BN_bn2hex(dsa->priv_key));
 
   /* ***** is use of BN_num_bytes ok ? ***** */
-  t = (BN_num_bytes(dsa->p)-64)/8;
+  t = (BN_num_bytes(dsa->p) - 64) / 8;
   if (t < 0 || t > 8) {
     HIP_ERROR("t=%d < 0 || t > 8\n", t);
     err = -EINVAL;
@@ -241,11 +244,19 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
             P        64 + T*8  octets
             G        64 + T*8  octets
             Y        64 + T*8  octets
-	    X        20  octets (krisu edition) :)
+	  [ X        20 optional octets (private key hack) ]
 	
   */
-  dsa_key_rr_len = 1+20+20+3*(64+t*8);
-  HIP_INFO("dsa key rr len = %d\n", dsa_key_rr_len);
+  dsa_key_rr_len = 1 + 20 + 3 * (64 + t * 8);
+
+  if (dsa->priv_key) {
+    dsa_key_rr_len += 20; /* private key hack */
+    HIP_DEBUG("Private key included\n");
+  } else {
+    HIP_DEBUG("No private key\n");
+  }
+
+  HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
   *dsa_key_rr = malloc(dsa_key_rr_len);
   if (!*dsa_key_rr) {
     HIP_ERROR("malloc\n");
@@ -265,7 +276,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   /* set T */
   memset(p, t, 1);
   p += 1;
-  HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p-*dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
 
   /* minimum number of bytes needed to store P, G or Y */
   bn_buf_len = BN_num_bytes(dsa->p);
@@ -293,35 +304,37 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   HIP_ASSERT(bn2bin_len == 20);
   memcpy(p, bn_buf, bn2bin_len);
   p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p - *dsa_key_rr);
 
   /* add given dsa_param to the *dsa_key_rr */
-#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param)   \
-  bn2bin_len = BN_bn2bin(dsa_param, bn_buf); \
-  _HIP_DEBUG("len=%d\n", bn2bin_len);         \
-  if (!bn2bin_len) {                         \
-    HIP_ERROR("bn2bin\n");                   \
-    err = -ENOMEM;                           \
-    goto out_err_free_rr;                    \
-  }                                          \
-  HIP_ASSERT(bn_buf_len-bn2bin_len >= 0);    \
-  p += bn_buf_len-bn2bin_len; /* skip pad */ \
-  memcpy(p, bn_buf, bn2bin_len);             \
+#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param)     \
+  bn2bin_len = BN_bn2bin(dsa_param, bn_buf);   \
+  _HIP_DEBUG("len=%d\n", bn2bin_len);          \
+  if (!bn2bin_len) {                           \
+    HIP_ERROR("bn2bin\n");                     \
+    err = -ENOMEM;                             \
+    goto out_err_free_rr;                      \
+  }                                            \
+  HIP_ASSERT(bn_buf_len - bn2bin_len >= 0);    \
+  p += bn_buf_len - bn2bin_len; /* skip pad */ \
+  memcpy(p, bn_buf, bn2bin_len);               \
   p += bn2bin_len;
 
   /* padding + P */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->p);
-  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p - *dsa_key_rr);
   /* padding + G */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->g);
-  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p - *dsa_key_rr);
   /* padding + Y */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key);
-  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p - *dsa_key_rr);
   /* padding + X */
 
-  bn2bin_len = BN_bn2bin(dsa->priv_key, bn_buf);
-  memcpy(p,bn_buf,bn2bin_len);
+  if (dsa->priv_key) {
+    bn2bin_len = BN_bn2bin(dsa->priv_key, bn_buf);
+    memcpy(p, bn_buf, bn2bin_len);
+  }
 
   p += bn2bin_len;
   HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
@@ -359,19 +372,19 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
 
 /**
- * save_dsa_keys - save host DSA keys to disk
- * @filename: the filename where DSA key should be saved
+ * save_dsa_private_key - save host DSA keys to disk
+ * @filenamebase: the filename base where DSA key should be saved
  * @dsa:      the DSA key structure
  *
  * The DSA keys from @dsa are saved in PEM format, public key to file
- * filename.pub, private key to file @filename and DSA parameters to
- * file @filename.params. If any of the files cannot be saved, all
+ * filenamebase.pub, private key to file @filenamebase and DSA parameters to
+ * file @filenamebase.params. If any of the files cannot be saved, all
  * files are deleted.
  *
  * Returns: 0 if all files were saved successfully, or non-zero if an error
  * occurred.
  */
-int save_dsa_keys(char *filenamebase, DSA *dsa) {
+int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
   int err = 0;
   char *pubfilename;
   int pubfilename_len;
@@ -384,7 +397,8 @@ int save_dsa_keys(char *filenamebase, DSA *dsa) {
     return 1;
   }
 
-  pubfilename_len = strlen(filenamebase)+strlen(DEFAULT_PUB_FILE_SUFFIX)+1;
+  pubfilename_len =
+    strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
   pubfilename = malloc(pubfilename_len);
   if (!pubfilename) {
     HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
@@ -477,83 +491,229 @@ int save_dsa_keys(char *filenamebase, DSA *dsa) {
 }
 
 /**
- * load_dsa_keys - load host DSA keys from disk
- * @filename: the file name of the host DSA key
+ * load_dsa_private_key - load host DSA private keys from disk
+ * @filenamebase: the file name base of the host DSA key
  *
  * Loads DSA public and private keys from the given files, public key
- * from file @filename.pub and private key from file @filename. DSA
+ * from file @filenamebase.pub and private key from file @filenamebase. DSA
  * struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with DSA_free.
  *
  * Returns: NULL if the key could not be loaded (not in PEM format or file
  * not found, etc).
  */
-DSA *load_dsa_keys(char *filenamebase) {
-  DSA *dsa = NULL, *dsa_tmp = NULL;
-  char *pubfilename;
+int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
+  DSA *dsa_tmp = NULL;
+  char *pubfilename = NULL;
   int pubfilename_len;
-  char *paramsfilename;
+  char *paramsfilename = NULL;
   int paramsfilename_len;
-  FILE *fp;
+  FILE *fp = NULL;
+  int err = 0;
+
+  *dsa = NULL;
 
   if (!filenamebase) {
     HIP_ERROR("NULL filename\n");
-    return NULL;
+    err = -ENOENT;
+    goto out_err;
   }
 
-  dsa = DSA_new();
-  if (!dsa) {
+  *dsa = DSA_new();
+  if (!*dsa) {
     HIP_ERROR("!dsa\n");
+    err = -ENOMEM;
     goto out_err;
   }
   dsa_tmp = DSA_new();
   if (!dsa_tmp) {
     HIP_ERROR("!dsa_tmp\n");
+    err = -ENOMEM;
     goto out_err;
   }
 
   fp = fopen(filenamebase, "rb");
   if (!fp) {
     HIP_ERROR("Couldn't open public key file %s for reading\n", filenamebase);
+    err = -ENOMEM;
     goto out_err;
   }
 
   dsa_tmp = PEM_read_DSAPrivateKey(fp, NULL, NULL, NULL);
   if (!dsa_tmp) {
     HIP_ERROR("Read failed for %s\n", filenamebase);
-    fclose(fp); /* add error check */
+    err = -EINVAL;
     goto out_err;
   }
 
-  dsa->pub_key = BN_dup(dsa_tmp->pub_key);
-  dsa->priv_key = BN_dup(dsa_tmp->priv_key);
-  dsa->p = BN_dup(dsa_tmp->p);
-  dsa->q = BN_dup(dsa_tmp->q);
-  dsa->g = BN_dup(dsa_tmp->g);
-  if (!dsa->p || !dsa->q || !dsa->g || !dsa->pub_key || !dsa->priv_key ) {
+  (*dsa)->pub_key = BN_dup(dsa_tmp->pub_key);
+  (*dsa)->priv_key = BN_dup(dsa_tmp->priv_key);
+  (*dsa)->p = BN_dup(dsa_tmp->p);
+  (*dsa)->q = BN_dup(dsa_tmp->q);
+  (*dsa)->g = BN_dup(dsa_tmp->g);
+  if (!(*dsa)->p || !(*dsa)->q || !(*dsa)->g || !(*dsa)->pub_key ||
+      !(*dsa)->priv_key) {
     HIP_ERROR("BN_copy\n");
-    fclose(fp); /* TODO: add error check */
+    err = -EINVAL;
     goto out_err;
   }
-  fclose(fp); /* TODO: add error check */
-
-
-  HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex(dsa->pub_key));
-  HIP_INFO("Loaded host DSA privkey=%s\n", BN_bn2hex(dsa->priv_key));
-  HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex(dsa->p));
-  HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex(dsa->q));
-  HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex(dsa->g));
-
-  DSA_free(dsa_tmp);
-  return dsa;
+  
+  HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
+  HIP_INFO("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
+  HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
-  if (dsa)
-    DSA_free(dsa);
+
+  if (fp)
+    err = fclose(fp);
   if (dsa_tmp)
     DSA_free(dsa_tmp);
+  if (err && *dsa)
+    DSA_free(*dsa);
 
-  return NULL;
+  return err;
+}
+
+/**
+ * load_dsa_public_key - load host DSA public keys from disk
+ * @filenamebase: the file name base of the host DSA key
+ * @dsa: the DSA 
+ *
+ * Loads DSA public key from the given files, (file @filenamebase.pub).
+ * The DSA struct will be allocated dynamically and it is the responsibility
+ * of the caller to free it with DSA_free.
+ *
+ * Returns: NULL if the key could not be loaded (not in PEM format or file
+ * not found, etc).
+ */
+int load_dsa_public_key(const char *filenamebase, DSA **dsa) {
+  DSA *dsa_tmp = NULL;
+  char *pubfilename = NULL;
+  int pubfilename_len;
+  FILE *fp = NULL;
+  int err = 0;
+
+  *dsa = NULL;
+
+  if (!filenamebase) {
+    HIP_ERROR("NULL filename\n");
+    err = -ENOENT;
+    goto out_err;
+  }
+
+  *dsa = DSA_new();
+  if (!*dsa) {
+    HIP_ERROR("!dsa\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+  dsa_tmp = DSA_new();
+  if (!dsa_tmp) {
+    HIP_ERROR("!dsa_tmp\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  pubfilename_len =
+    strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+  pubfilename = malloc(pubfilename_len);
+  if (!pubfilename) {
+    HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  if (snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
+	       DEFAULT_PUB_FILE_SUFFIX) < 0) {
+    HIP_ERROR("Could not write pubfilename\n");
+    err = -EINVAL;
+    goto out_err;
+  }
+
+  fp = fopen(pubfilename, "rb");
+  if (!fp) {
+    HIP_ERROR("Couldn't open public key file %s for reading\n", filenamebase);
+    err = -ENOENT; // XX FIX: USE ERRNO
+    goto out_err;
+  }
+
+  dsa_tmp = PEM_read_DSA_PUBKEY(fp, NULL, NULL, NULL);
+  if (!dsa_tmp) {
+    HIP_ERROR("Read failed for %s\n", filenamebase);
+    err = -EINVAL; // XX FIX: USE ERRNO
+    goto out_err;
+  }
+
+  (*dsa)->pub_key = BN_dup(dsa_tmp->pub_key);
+  (*dsa)->p = BN_dup(dsa_tmp->p);
+  (*dsa)->q = BN_dup(dsa_tmp->q);
+  (*dsa)->g = BN_dup(dsa_tmp->g);
+  if (!(*dsa)->p || !(*dsa)->q || !(*dsa)->g || !(*dsa)->pub_key) {
+    HIP_ERROR("BN_copy\n");
+    err = -EINVAL; // XX FIX: USE ERRNO
+    goto out_err;
+  }
+
+  HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
+  HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+
+ out_err:
+  if (err && *dsa)
+    DSA_free(*dsa);
+  if (dsa_tmp)
+    DSA_free(dsa_tmp);
+  if (pubfilename)
+    free(pubfilename);
+  if (fp)
+    err = fclose(fp);
+
+  return err;
+}
+
+int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname)
+{
+  int err = 0;
+  unsigned char *dsa_key_rr = NULL;
+  int dsa_key_rr_len;
+  struct endpoint_hip endpoint_hdr;
+
+  dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
+  if (dsa_key_rr_len <= 0) {
+    HIP_ERROR("dsa_key_rr_len <= 0\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  /* build just an endpoint header to see how much memory is needed for the
+     actual endpoint */
+  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
+			 HIP_HI_DSA, dsa_key_rr_len);
+
+  *endpoint = malloc(endpoint_hdr.length);
+  if (!(*endpoint)) {
+    err = -ENOMEM;
+    goto out_err;
+  }
+  memset(*endpoint, 0, endpoint_hdr.length);
+
+  HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+
+  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
+		     dsa_key_rr, dsa_key_rr_len);
+			   
+  HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+
+ out_err:
+
+  if (dsa_key_rr)
+    free(dsa_key_rr);
+
+  return err;
 }
 
 int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,

@@ -6,6 +6,7 @@
  * - Janne Lundberg <jlu@tcs.hut.fi>
  *
  * TODO:
+ * - async messages should have a return message
  * - is the get function really atomic...
  * - optimize: only INPUT_READY is really needed (as Pekka told)
  * - hipd_finish should receive preparsed extentions instead of msg
@@ -27,7 +28,7 @@
  * - hip.c should deny all hip connections until autosetup is finished!
  * - rename this file because it contains also some other functionality
  *   than just the daemon calling mechanism
- * - verify the mem deallocation procedure in hipd_send_response: what if
+ * - verify the mem deallocation procedure in hip_send_response: what if
  *   kernel module is unloaded etc?
  */
 
@@ -35,45 +36,47 @@
 #include "cookie.h"
 #include "workqueue.h"
 
-struct hipd_async_msg hipd_async_msg;
+struct hip_user_msg hip_user_msg;
 
 /* kernel module unit tests */
 struct hip_unit_test_suite_list hip_unit_test_suite_list;
 
 /*
- * Handlers for hipd asynchronous messages from userspace.  These
- * *must* be in same order as in <linux/hip_ioctl.h>. A null message
- * handler indicates that the message type cannot be handled as an
- * asynchronous message. For example, it is not sensible for the
+ * Handlers for messages from userspace.  These *must* be in same order as
+ * in <net/hip.c>. A null message handler indicates that the message
+ * type cannot be handled. For example, it is not sensible for the
  * userspace to command kernel to create a DSA key, since it the job
  * of the HIP daemon in the userspace.
  */
-int (*hipd_async_msg_handlers[])(const struct hip_common *) = {
-	NULL,                             /* HIP_USER_NULL_OPERATION */
-	hipd_handle_async_add_hi,         /* HIP_USER_ADD_HI */
-	hipd_handle_async_del_hi,         /* HIP_USER_DEL_HI */
-	hipd_handle_async_add_map_hit_ip, /* HIP_USER_ADD_MAP_HIT_IP */
-	hipd_handle_async_del_map_hit_ip, /* HIP_USER_DEL_MAP_HIT_IP */
-	hipd_handle_async_unit_test,
-	hipd_handle_async_rst
+int (*hip_user_msg_handler[])(const struct hip_common *,
+			      struct hip_common *) = {
+	NULL,
+	hip_user_handle_add_local_hi,
+	hip_user_handle_del_local_hi,
+	hip_user_handle_add_peer_map_hit_ip,
+	hip_user_handle_del_peer_map_hit_ip,
+	hip_user_handle_unit_test,
+	hip_user_handle_rst,
+	hip_user_handle_set_my_eid,
+	hip_user_handle_set_peer_eid
 };
 
 /**
- * hip_init_daemon - initialize the userspace communication message queues
+ * hip_init_user - initialize the userspace communication message queues
  *
  * Returns: zero on error, or a negative error value on failure
  */
-int hip_init_daemon(void)
+int hip_init_user(void)
 {
 	int err = 0;
 
-	hipd_async_msg.msg = hip_msg_alloc();
-	if (!hipd_async_msg.msg) {
+	hip_user_msg.msg = hip_msg_alloc();
+	if (!hip_user_msg.msg) {
 		err = -ENOMEM;
 		goto out;
 	}
 
-	spin_lock_init(&hipd_async_msg.lock);
+	spin_lock_init(&hip_user_msg.lock);
 
  out:
 	return err;
@@ -85,55 +88,53 @@ int hip_init_daemon(void)
  * hip_uninit_daemon - uninitialize the userspace communication message queues
  *
  */
-void hip_uninit_daemon(void)
+void hip_uninit_user(void)
 {
-	HIP_INFO("kfree %p\n", hipd_async_msg.msg);
-	kfree(hipd_async_msg.msg);
+	HIP_INFO("kfree %p\n", hip_user_msg.msg);
+	kfree(hip_user_msg.msg);
 
 	/* XX TODO: free the linked list (it may be longer than initially) ! */
 
 }
 
 /**
- * hipd_handle_async_add_hi - handle adding of a localhost host identity
+ * hip_user_handle_local_add_hi - handle adding of a localhost host identity
  * @msg: contains the hi parameter in fqdn format (includes private key)
  *       and the corresponding HIT calculated from the HI pubkey
  *
  * Returns: zero on success, or negative error value on failure
  */
-int hipd_handle_async_add_hi(const struct hip_common *msg)
+int hip_user_handle_add_local_hi(const struct hip_common *input,
+				 struct hip_common *output)
 {
 	int err = 0;
 	struct hip_host_id *host_identity = NULL;
-	struct hip_lhi *lhi = NULL;
+	struct hip_lhi lhi;
 
-	_HIP_DEBUG("\n");
+	HIP_DEBUG("\n");
 
-	if ((err = hip_get_msg_err(msg)) != 0) {
+	if ((err = hip_get_msg_err(input)) != 0) {
 		HIP_ERROR("daemon failed (%d)\n", err);
 		goto out_err;
 	}
 
 	_HIP_DUMP_MSG(response);
 
-	/* Note: lhi is not a real TLV structure, it is just wrapped into
-	   TLV format. That is the reason to use get_param_contents() instead
-	   of hip_get_param(). See also get_localhost_info() in hipd.c.*/
-	lhi = hip_get_param_contents(msg, HIP_PARAM_HI);
-        if (!lhi) {
-		HIP_ERROR("no host lhi in response\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-
-	host_identity = hip_get_param(msg, HIP_PARAM_HOST_ID);
+	host_identity = hip_get_param(input, HIP_PARAM_HOST_ID);
         if (!host_identity) {
 		HIP_ERROR("no host identity pubkey in response\n");
 		err = -ENOENT;
 		goto out_err;
 	}
 
-	err = hip_add_localhost_id(lhi, host_identity);
+	err = hip_private_host_id_to_hit(host_identity, &lhi.hit,
+					 HIP_HIT_TYPE_HASH126);
+	if (err) {
+		HIP_ERROR("host id to hit conversion failed\n");
+		goto out_err;
+	}
+
+	err = hip_add_localhost_id(&lhi, host_identity);
 	if (err) {
 		HIP_ERROR("adding of local host identity failed\n");
 		goto out_err;
@@ -141,13 +142,73 @@ int hipd_handle_async_add_hi(const struct hip_common *msg)
 
 	HIP_DEBUG("hip: Generating a new R1 now\n");
 
-	if (!hip_precreate_r1(&lhi->hit)) {
+	if (!hip_precreate_r1(&lhi.hit)) {
 		HIP_ERROR("Unable to precreate R1s... failing\n");
 		err = -ENOENT;
 		goto out_err;
 	}
 
-	HIP_INFO("hip auto setup ok\n");
+	HIP_DEBUG("hip auto setup ok\n");
+
+ out_err:
+
+	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
+
+	return err;
+}
+
+/**
+ * hip_user_handle_del_local_hi - handle deletion of a localhost host identity
+ * @msg: the message containing the lhi to be deleted
+ *
+ * This function is currently unimplemented.
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_user_handle_del_local_hi(const struct hip_common *input,
+				struct hip_common *output)
+{
+	int err = 0;
+
+	HIP_ERROR("Not implemented\n");
+	err = -ENOSYS;
+
+	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
+
+        return err;
+}
+
+int hip_insert_peer_map_work_order(const struct in6_addr *hit,
+				   const struct in6_addr *ip,
+				   int insert)
+{
+	int err = 0;
+	struct hip_work_order *hwo;
+	struct in6_addr *ip_copy;
+
+	hwo = hip_create_job_with_hit(GFP_KERNEL, hit);
+	if (!hwo) {
+		HIP_ERROR("No memory for hit <-> ip mapping\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	
+	ip_copy = kmalloc(sizeof(struct in6_addr), GFP_KERNEL);
+	if (!ip_copy) {
+		HIP_ERROR("No memory to copy IP to work order\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	
+	ipv6_addr_copy(ip_copy,ip);
+	hwo->arg2 = ip_copy;
+	hwo->type = HIP_WO_TYPE_MSG;
+	if (insert)
+		hwo->subtype = HIP_WO_SUBTYPE_ADDMAP;
+	else
+		hwo->subtype = HIP_WO_SUBTYPE_DELMAP;
+
+	hip_insert_work_order(hwo);
 
  out_err:
 
@@ -155,25 +216,7 @@ int hipd_handle_async_add_hi(const struct hip_common *msg)
 }
 
 /**
- * hipd_handle_async_del_hi - handle deletion of a localhost host identity
- * @msg: the message containing the lhi to be deleted
- *
- * This function is currently unimplemented.
- *
- * Returns: zero on success, or negative error value on failure
- */
-int hipd_handle_async_del_hi(const struct hip_common *msg)
-{
-	int err = 0;
-
-	HIP_ERROR("Not implemented\n");
-	err = -ENOSYS;
-
-        return err;
-}
-
-/**
- * hipd_handle_async_add_map_hit_ip - handle adding of a HIT-to-IPv6 mapping
+ * hip_user_handle_add_peer_map_hit_ip - handle adding of a HIT-to-IPv6 mapping
  * @msg: the message containing the mapping to be added to kernel databases
  *
  * Add a HIT-to-IPv6 mapping of peer to the mapping database in the kernel
@@ -181,16 +224,16 @@ int hipd_handle_async_del_hi(const struct hip_common *msg)
  *
  * Returns: zero on success, or negative error value on failure
  */
-int hipd_handle_async_add_map_hit_ip(const struct hip_common *msg)
+int hipd_handle_async_add_map_hit_ip(const struct hip_common *input,
+				     struct hip_common *output)
 {
-	struct in6_addr *hit, *ip, *ip_copy;
-	struct hip_work_order *hwo = NULL;
+	struct in6_addr *hit, *ip;
 	char buf[46];
 	int err = 0;
 
 
 	hit = (struct in6_addr *)
-		hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_get_param_contents(input, HIP_PARAM_HIT);
 	if (!hit) {
 		HIP_ERROR("handle async map: no hit\n");
 		err = -ENODATA;
@@ -198,7 +241,7 @@ int hipd_handle_async_add_map_hit_ip(const struct hip_common *msg)
 	}
 
 	ip = (struct in6_addr *)
-		hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
 	if (!ip) {
 		HIP_ERROR("handle async map: no ipv6 address\n");
 		err = -ENODATA;
@@ -210,33 +253,13 @@ int hipd_handle_async_add_map_hit_ip(const struct hip_common *msg)
 	hip_in6_ntop(ip, buf);
 	HIP_INFO("map IP: %s\n", buf);
 	
-	hwo = hip_create_job_with_hit(GFP_KERNEL,hit); // i think KERNEL is ok here
-	if (!hwo) {
-		HIP_ERROR("No memory for hit <-> ip mapping\n");
-		err = -ENOMEM;
-		goto out;
+ 	err = hip_insert_peer_map_work_order(hit, ip, 1);
+ 	if (err) {
+ 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	}
 
-	ip_copy = kmalloc(sizeof(struct in6_addr),GFP_KERNEL);
-	if (!ip_copy) {
-		HIP_ERROR("No memory to copy IP to work order\n");
-		err = -ENOMEM;
-		goto out;
-	}
-
-	ipv6_addr_copy(ip_copy,ip);
-	hwo->arg2 = ip_copy;
-	hwo->type = HIP_WO_TYPE_MSG;
-	hwo->subtype = HIP_WO_SUBTYPE_ADDMAP;
-
-	hip_insert_work_order(hwo);
-	return err;
  out:
-	if (hwo) {
-		if (hwo->arg1)
-			kfree(hwo->arg1);
-		kfree(hwo);
-	}
+ 	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
 	return err;
 }
 
@@ -248,7 +271,8 @@ int hipd_handle_async_add_map_hit_ip(const struct hip_common *msg)
  *
  * Returns: zero on success, or negative error value on failure
  */
-int hipd_handle_async_del_map_hit_ip(const struct hip_common *msg)
+int hipd_handle_async_del_map_hit_ip(const struct hip_common *input,
+				     struct hip_common *output)
 {
 	struct in6_addr *hit, *ip, *ip_copy;
 	struct hip_work_order *hwo = NULL;
@@ -257,7 +281,7 @@ int hipd_handle_async_del_map_hit_ip(const struct hip_common *msg)
 
 
 	hit = (struct in6_addr *)
-		hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_get_param_contents(input, HIP_PARAM_HIT);
 	if (!hit) {
 		HIP_ERROR("handle async map: no hit\n");
 		err = -ENODATA;
@@ -277,46 +301,26 @@ int hipd_handle_async_del_map_hit_ip(const struct hip_common *msg)
 	hip_in6_ntop(ip, buf);
 	HIP_INFO("map IP: %s\n", buf);
 	
-	hwo = hip_create_job_with_hit(GFP_KERNEL,hit); // i think KERNEL is ok here
-	if (!hwo) {
-		HIP_ERROR("No memory for hit <-> ip mapping\n");
-		err = -ENOMEM;
-		goto out;
+ 	err = hip_insert_peer_map_work_order(hit, ip, 0);
+ 	if (err) {
+ 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	}
-
-	ip_copy = kmalloc(sizeof(struct in6_addr),GFP_KERNEL);
-	if (!ip_copy) {
-		HIP_ERROR("No memory to copy IP to work order\n");
-		err = -ENOMEM;
-		goto out;
-	}
-
-	ipv6_addr_copy(ip_copy,ip);
-	hwo->arg2 = ip_copy;
-	hwo->type = HIP_WO_TYPE_MSG;
-	hwo->subtype = HIP_WO_SUBTYPE_DELMAP;
-
-	hip_insert_work_order(hwo);
-	return err;
 
  out:
-	if (hwo) {
-		if (hwo->arg1)
-			kfree(hwo->arg1);
-		kfree(hwo);
-	}
+ 	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
 	return err;
 }
 
 
-int hipd_handle_async_rst(const struct hip_common *msg)
+int hipd_handle_async_rst(const struct hip_common *input,
+			  struct hip_common *output)
 {
 	struct in6_addr *hit;
 	struct hip_work_order *hwo;
 	int err = 0;
 
 	hit = (struct in6_addr *)
-		hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_get_param_contents(input, HIP_PARAM_HIT);
 	if (!hit) {
 		HIP_ERROR("handle async map: no hit\n");
 		err = -ENODATA;
@@ -348,16 +352,18 @@ int hipd_handle_async_rst(const struct hip_common *msg)
  * Returns: the number of unit tests failed
  */
 
-int hipd_handle_async_unit_test(const struct hip_common *msg)
+int hip_user_handle_unit_test(const struct hip_common *input,
+				struct hip_common *output)
 {
-	uint16_t err = 0;
+	int err = 0;
 #if 0 /* MIIKA CHECK */
+	uint16_t failed_test_cases;
 	uint16_t suiteid, caseid;
 	struct hip_unit_test *test = NULL;
 	char err_log[HIP_UNIT_ERR_LOG_MSG_MAX_LEN] = "";
 
 	test = (struct hip_unit_test *)
-		hip_get_param(msg, HIP_PARAM_UNIT_TEST);
+		hip_get_param(input, HIP_PARAM_UNIT_TEST);
 	if (!test) {
 		HIP_ERROR("No unit test parameter found\n");
 		err = -ENOMSG;
@@ -369,16 +375,146 @@ int hipd_handle_async_unit_test(const struct hip_common *msg)
 
 	HIP_DEBUG("Executing suiteid=%d, caseid=%d\n", suiteid, caseid);
 
-	err = hip_run_unit_test_case(&hip_unit_test_suite_list, suiteid,
-				     caseid, err_log, sizeof(err_log));
-	if (err)
+	failed_test_cases = hip_run_unit_test_case(&hip_unit_test_suite_list,
+						   suiteid, caseid,
+						   err_log, sizeof(err_log));
+	if (failed_test_cases)
 		HIP_ERROR("\n===Unit Test Summary===\nTotal %d errors:\n%s\n",
-			  err, err_log);
+			  failed_test_cases, err_log);
 	else
 		HIP_INFO("\n===Unit Test Summary===\nAll tests passed, no errors!\n");
 
  out:
+	hip_build_user_hdr(output, hip_get_msg_type(input), failed_test_cases);
+	hip_build_unit_test_log();
+
 #endif /* 0 MIIKA CHECK */
 
-	return (int) err;
+	return err;
 }
+
+/*
+ * This function is necessary because there must the constant for
+ * HIP_USER_SET_MY_EID and therefore hip_user_msg_handler needs a dummy
+ * function for it.
+ */
+int hip_user_handle_set_my_eid(const struct hip_common *input,
+			       struct hip_common *output)
+{
+	int err = -ENOSYS;
+	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
+	return err;
+}
+
+int hip_user_handle_set_peer_eid(const struct hip_common *input,
+				 struct hip_common *output)
+{
+	int err = 0;
+	struct sockaddr_eid eid;
+	struct hip_tlv_common *param = NULL;
+	struct hip_eid_endpoint *eid_endpoint;
+	struct hip_lhi lhi;
+	struct hip_eid_owner_info owner_info;
+
+	HIP_DEBUG("\n");
+	
+	/* Extra consistency test */
+	if (hip_get_msg_type(input) != HIP_USER_SET_PEER_EID) {
+		err = -EINVAL;
+		HIP_ERROR("Bad message type\n");
+		goto out_err;
+	}
+	
+	eid_endpoint = hip_get_param(input, HIP_PARAM_EID_ENDPOINT);
+	if (!eid_endpoint) {
+		err = -ENOENT;
+		HIP_ERROR("Could not find eid endpoint\n");
+		goto out_err;
+	}
+	
+	if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
+		memcpy(&lhi.hit, &eid_endpoint->endpoint.id.hit,
+		       sizeof(struct in6_addr));
+		HIP_DEBUG_HIT("Peer HIT: ", &lhi.hit);
+	} else {
+		HIP_DEBUG("host_id len %d\n",
+			 ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
+		err = hip_host_id_to_hit(&eid_endpoint->endpoint.id.host_id,
+					 &lhi.hit, HIP_HIT_TYPE_HASH126);
+		if (err) {
+			HIP_ERROR("Failed to calculate HIT from HI.");
+			goto out_err;
+		}
+	}
+
+	lhi.anonymous =
+	       (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ? 1 : 0;
+
+	/* Fill eid owner information in and assign a peer EID */
+
+	owner_info.uid = current->uid;
+	owner_info.gid = current->gid;
+	
+	/* The eid port information will be filled by the resolver. It is not
+	   really meaningful in the eid db. */
+	eid.eid_port = htons(0);
+
+	err = hip_db_set_peer_eid(&eid, &lhi, &owner_info);
+	if (err) {
+		HIP_ERROR("Could not set my eid into the db\n");
+		goto out_err;
+	}
+	
+	/* Iterate through the interfaces */
+
+	while((param = hip_get_next_param(input, param)) != NULL) {
+		struct sockaddr_in6 *sockaddr;
+
+		HIP_DEBUG("Param type=%d\n", hip_get_param_type(param));
+
+		/* Skip other parameters (only the endpoint should
+		   really be there). */
+		if (hip_get_param_type(param) != HIP_PARAM_EID_SOCKADDR)
+			continue;
+
+		HIP_DEBUG("EID sockaddr found in the msg\n");
+
+		sockaddr =
+		  (struct sockaddr_in6 *) hip_get_param_contents_direct(param);
+		if (sockaddr->sin6_family != AF_INET6) {
+			HIP_INFO("sa_family %d not supported, ignoring\n",
+				 sockaddr->sin6_family);
+			continue;
+		}
+
+		HIP_DEBUG_IN6ADDR("Peer IPv6 address", &sockaddr->sin6_addr);
+
+		/* XX FIX: the mapping should be tagged with an uid */
+
+		err = hip_insert_peer_map_work_order(&lhi.hit,
+						     &sockaddr->sin6_addr);
+		if (err) {
+			HIP_ERROR("Failed to insert map work order (%d)\n",
+				  err);
+			goto out_err;
+		}
+	}
+	
+	/* Finished. Write a return message with the EID. */
+	
+	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
+	err = hip_build_param_eid_sockaddr(output,
+					   (struct sockaddr *) &eid,
+					   sizeof(eid));
+	if (err) {
+		HIP_ERROR("Could not build eid sockaddr\n");
+		goto out_err;
+	}
+
+ out_err:
+	/* XX FIXME: if there were errors, remove eid and hit-ip mappings
+	   if necessary */
+
+	return err;
+}
+

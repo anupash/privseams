@@ -2,9 +2,9 @@
 #define HIP_DAEMON_H
 
 #include <net/hip.h>
-#include <linux/hip_ioctl.h>
 #include <linux/skbuff.h>
 #include <linux/list.h>
+#include <linux/in6.h>
 
 #include "unit.h"
 #include "db.h"
@@ -32,15 +32,22 @@ struct hip_host_id_info {
         struct hip_host_id_entry entry[HIP_HOST_ID_MAX];
 };
 
-int hipd_init(void);
-void hipd_uninit(void);
-int hip_init_daemon(void);
-void hip_uninit_daemon(void);
-int hipd_handle_async_add_hi(const struct hip_common *msg);
-int hipd_handle_async_del_hi(const struct hip_common *msg);
-int hipd_handle_async_add_map_hit_ip(const struct hip_common *msg);
-int hipd_handle_async_del_map_hit_ip(const struct hip_common *msg);
-int hipd_handle_async_unit_test(const struct hip_common *msg);
-int hipd_handle_async_rst(const struct hip_common *msg);
-
+int hip_init_user(void);
+void hip_uninit_user(void);
+int hip_user_handle_add_local_hi(const struct hip_common *input,
+				 struct hip_common *output);
+int hip_user_handle_del_local_hi(const struct hip_common *input,
+				 struct hip_common *output);
+int hip_user_handle_add_peer_map_hit_ip(const struct hip_common *input,
+					struct hip_common *output);
+int hip_user_handle_del_peer_map_hit_ip(const struct hip_common *input,
+					struct hip_common *output);
+int hip_user_handle_unit_test(const struct hip_common *input,
+			      struct hip_common *output);
+int hip_user_handle_rst(const struct hip_common *input,
+			struct hip_common *output);
+int hip_user_handle_set_my_eid(const struct hip_common *input,
+			       struct hip_common *output);
+int hip_user_handle_set_peer_eid(const struct hip_common *input,
+				 struct hip_common *output);
 #endif /* HIP_DAEMON_H */

@@ -24,17 +24,17 @@
 #include "ioctl.h"
 
 /**
- * hipd_output_copy - copy data from the userspace to the kernelspace 
+ * hip_user_output_copy - copy data from the userspace to the kernelspace 
  * @data_from_userspace: address of the userspace data
  * @output_msg:          data from the userspace data will be copied here
  *
- * Copy a synchronous/asynchronous message from the userspace to the
+ * Copy an asynchronous message from the userspace to the
  * kernelspace. Some checking is also done on the integrity of
  * the message.
  *
  * Returns: zero on success, or negative error value on failure
  */
-int hipd_output_copy(unsigned long data_from_userspace,
+int hip_user_output_copy(unsigned long data_from_userspace,
 		     struct hip_common *output_msg) {
           int err = 0;
 
@@ -96,37 +96,55 @@ int hipd_output_copy(unsigned long data_from_userspace,
 int hip_ioctl_handle_async_msg(unsigned long data_from_userspace)
 {
 	int err = 0;
+	struct hip_common *response = NULL;
 
-	spin_lock(&hipd_async_msg.lock);
+	spin_lock(&hip_user_msg.lock);
 	
 	/* pass the async msg pointer */
-	err = hipd_output_copy(data_from_userspace, hipd_async_msg.msg);
+	err = hip_user_output_copy(data_from_userspace, hip_user_msg.msg);
 	if (err) {
 		HIP_ERROR("out copying failed (%d)\n", err);
 		goto out_err;
 	}
 	
-	if (!hip_check_userspace_msg_type(hipd_async_msg.msg) ||
-	    !*hipd_async_msg_handlers[hip_get_msg_type(hipd_async_msg.msg) - HIP_USER_BASE_MIN - 1]) {
+	if (!hip_check_userspace_msg_type(hip_user_msg.msg) ||
+	    !*hip_user_msg_handler[hip_get_msg_type(hip_user_msg.msg) - HIP_USER_BASE_MIN - 1]) {
 		HIP_ERROR("msg handler not implemented (%d)\n",
-			  hip_get_msg_type(hipd_async_msg.msg));
+			  hip_get_msg_type(hip_user_msg.msg));
 		err = -ENOSYS;
 		goto out_err;
 	}
 	
-	_HIP_DUMP_MSG(hipd_async_msg.msg);
+	_HIP_DUMP_MSG(hip_user_msg.msg);
 
-	err = (*hipd_async_msg_handlers[hip_get_msg_type(hipd_async_msg.msg) - HIP_USER_BASE_MIN - 1])(hipd_async_msg.msg);
+	response = hip_msg_alloc();
+	if (!response) {
+		err = -ENOMEM;
+		goto out_err;
+	}
 
+	err = (*hip_user_msg_handler[hip_get_msg_type(hip_user_msg.msg) - HIP_USER_BASE_MIN - 1])(hip_user_msg.msg, response);
 	if (err) {
 		HIP_ERROR("hipd async handler failed\n");
+		goto out_err;
+	}
+
+	HIP_ASSERT(hip_get_msg_total_len(response));
+
+	/* Copy the response msg into the pointer from userspace. */
+	if (copy_to_user((void *) data_from_userspace, response,
+			 hip_get_msg_total_len(response)) != 0) {
+		err = -EINVAL;
 		goto out_err;
 	}
 	
 	_HIP_DEBUG("hipd async message was successful\n");
 	
  out_err:
-	spin_unlock(&hipd_async_msg.lock);
+	if (response)
+	  hip_msg_free(response);
+
+	spin_unlock(&hip_user_msg.lock);
 	return err;
 }
 
@@ -174,7 +192,7 @@ int hip_ioctl(struct inode *in, struct file *file, unsigned int cmd,
 	}
 
 	switch(cmd) {
-	case HIP_IOCSHIPDASYNCMSG:
+	case HIP_IOCSHIPUSERMSG:
 		err = hip_ioctl_handle_async_msg(arg);
 		if (err) {
 			HIP_ERROR("handling of async msg failed\n");
@@ -223,9 +241,9 @@ int hip_release(struct inode *inode, struct file *filp) {
 
 static struct file_operations hip_fops = 
 {
-  ioctl:     hip_ioctl,
-  open:      hip_open,
-  release:   hip_release
+	ioctl:     hip_ioctl,
+	open:      hip_open,
+	release:   hip_release
 };
 
 /**

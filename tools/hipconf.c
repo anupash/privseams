@@ -11,6 +11,7 @@
  * TODO:
  * - add/del map
  * - fix the rst kludges
+ * - read the output message from send_msg?
  *
  * BUGS:
  * - makefile compiles prefix of debug messages wrong for hipconf in "make all"
@@ -106,7 +107,6 @@ int check_and_create_dir(char *dirname, mode_t mode) {
 /**
  * handle_hi - handle the hipconf commands where the type is "hi"
  *
- * XX TODO: under construction
  */
 int handle_hi(struct hip_common *msg,
 	      int action,
@@ -124,7 +124,7 @@ int handle_hi(struct hip_common *msg,
   unsigned char *dsa_key_rr = NULL;
   int dsa_key_rr_len;
   DSA *dsa_key = NULL;
-  const char *hostname = "test.hostname.com";
+  char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
   HIP_INFO("action=%d optc=%d\n", action, optc);
 
@@ -160,6 +160,15 @@ int handle_hi(struct hip_common *msg,
       goto out;
     }
   }
+
+  memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+  err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+  if (err) {
+    HIP_ERROR("gethostname failed (%d)\n", err);
+    goto out;
+  }
+
+  HIP_INFO("Using hostname: %s\n", hostname);
 
   fmt = HIP_KEYFILE_FMT_HIP_DSA_PEM;
   if (!use_default && strcmp(opt[OPT_HI_FMT], "hip-pem-dsa")) {
@@ -216,18 +225,19 @@ int handle_hi(struct hip_common *msg,
       goto out;  
     }
 
-    err = save_dsa_keys(filebasename, dsa_key);
+    err = save_dsa_private_key(filebasename, dsa_key);
     if (err) {
       HIP_ERROR("saving of dsa key failed\n");
       goto out;
     }
     break;
   case ACTION_ADD:
-    numeric_action = HIP_USER_ADD_HI;
+    numeric_action = HIP_USER_ADD_LOCAL_HI;
 
-    dsa_key = load_dsa_keys(filebasename);
-    if (!dsa_key) {
+    err = load_dsa_private_key(filebasename, &dsa_key);
+    if (err) {
       HIP_ERROR("Loading of the DSA key failed\n");
+      goto out;
     }
 
     dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
@@ -240,12 +250,12 @@ int handle_hi(struct hip_common *msg,
     err = dsa_to_hit(dsa_key_rr, HIP_HIT_TYPE_HASH126, &lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
-      err = -EINVAL;
       goto out;
     }
+    HIP_HEXDUMP("Calculated HIT: ", &lhi.hit, sizeof(struct in6_addr));
     break;
   case ACTION_DEL:
-    numeric_action = HIP_USER_DEL_HI;
+    numeric_action = HIP_USER_DEL_LOCAL_HI;
     HIP_ERROR("Deletion of HI not implemented yet\n");
     err = -ENOSYS;
     break;
@@ -253,15 +263,6 @@ int handle_hi(struct hip_common *msg,
 
   if (numeric_action == 0)
     goto skip_msg;
-
-  err = hip_build_param_contents(msg,
-				 &lhi,
-				 HIP_PARAM_HI,
-				 sizeof(struct hip_lhi));
-  if (err) {
-    HIP_ERROR("build param error %d\n", err);
-    goto out;
-  }
 
   /* The host id is not used for deletion for two reasons:
      1) The private key is also <hack>included in the dsa_key_rr</hack>.
@@ -369,14 +370,14 @@ int handle_map(struct hip_common *msg, int action,
 
   switch(action) {
   case ACTION_ADD:
-    err = hip_build_user_hdr(msg, HIP_USER_ADD_MAP_HIT_IP, 0);
+    err = hip_build_user_hdr(msg, HIP_USER_ADD_PEER_MAP_HIT_IP, 0);
     if (err) {
       HIP_ERROR("build hdr failed: %s\n", strerror(err));
       goto out;
     }
     break;
   case ACTION_DEL:
-	  err = hip_build_user_hdr(msg, HIP_USER_DEL_MAP_HIT_IP, 0);
+	  err = hip_build_user_hdr(msg, HIP_USER_DEL_PEER_MAP_HIT_IP, 0);
 	  if (err) {
 		  HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		  goto out;

@@ -3,7 +3,6 @@
 
 #include <linux/spinlock.h>
 #include <linux/crypto.h>
-#include <linux/hip_ioctl.h>
 #include <linux/net.h>
 #include <linux/proc_fs.h>
 
@@ -28,6 +27,7 @@
 #include "crypto/dh.h"
 #include "crypto/dsa.h"
 #include "misc.h"
+#include "socket.h"
 
 #ifdef KRISUS_THESIS
 
@@ -98,7 +98,7 @@ extern struct crypto_tfm *impl_sha1;
 extern struct list_head hip_sent_rea_info_pkts;
 extern struct list_head hip_sent_ac_info_pkts;
 extern struct semaphore hip_work;
-extern struct socket *hip_socket;
+extern struct socket *hip_output_socket;
 extern spinlock_t hip_workqueue_lock;
 extern spinlock_t dh_table_lock;
 

@@ -219,25 +219,6 @@ extern const struct in6_addr in6addr_loopback;   /* ::1 */
 /* Get the definition of the macro to define the common sockaddr members.  */
 #include <bits/socket.h>
 
-/* BEGIN HIPL PATCH */
-
-typedef uint16_t se_family_t;
-typedef uint16_t se_length_t;
-typedef uint32_t sa_eid_t;
-
-/* Structure describing an endpoint. */
-struct endpoint {
-   se_family_t   family;    /* PF_HIP */
-   se_length_t   len;       /* length of the whole endpoint in octets */
-};
-
-struct sockaddr_eid {
-  __SOCKADDR_COMMON (eid_);
-  sa_eid_t eid_val;
-};
-
-/* END HIPL PATCH */
-
 /* Structure describing an Internet socket address.  */
 struct sockaddr_in
   {

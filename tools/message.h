@@ -5,7 +5,8 @@
 #include <config.h>
 #endif
 
-#include <linux/hip_ioctl.h>
+#include <net/hip.h>
+
 #include "debug.h"
 
 int open_hip(void);

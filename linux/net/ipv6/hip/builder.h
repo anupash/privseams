@@ -11,7 +11,6 @@
 
 #ifdef __KERNEL__
 
-#include <linux/hip_ioctl.h>
 #include <net/hip.h>
 #include "debug.h"
 
@@ -21,13 +20,13 @@
 #include <sys/errno.h>
 #include <netinet/ip6.h>
 #include <net/hip.h>
-#include <linux/hip_ioctl.h>
 #include "tools/debug.h"
 
 #endif /* __KERNEL__ */
 
 void hip_msg_init(struct hip_common *msg);
 struct hip_common *hip_msg_alloc(void);
+void hip_msg_free(struct hip_common *msg);
 void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 			   uint16_t control, struct in6_addr *hit_sender,
 			   struct in6_addr *hit_receiver);
@@ -99,18 +98,6 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 				      uint8_t group_id,
 				      void *pubkey,
 				      hip_tlv_len_t pub_len);
-/*
- int hip_build_param_host_id_contents(struct hip_common *msg,
- 				     const void *contents,
- 				     hip_tlv_len_t contents_size,
- 				     uint16_t hi_length,
- 				     uint16_t fqdn_length);
-*/
-int hip_build_param_host_id_contents(struct hip_common *msg,
-				     const void *contents,
-				     hip_tlv_len_t contents_size,
-				     uint16_t hi_length,
-				     uint16_t fqdn_length);
 int hip_build_param_transform(struct hip_common *msg,
 			      const hip_tlv_type_t transform_type,
 			      const hip_transform_suite_t transform_suite[],
@@ -133,4 +120,21 @@ int hip_build_param_spi_lsi(struct hip_common *msg, uint32_t lsi,
 			    uint32_t spi);
 int hip_build_param_encrypted(struct hip_common *msg,
 			      struct hip_host_id *host_id);
+int hip_build_param_eid_endpoint(struct hip_common *msg,
+				 const struct endpoint_hip *endpoint);
+void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
+			    const char *hostname,
+			    se_hip_flags_t endpoint_flags,
+			    uint8_t host_id_algo,
+			    unsigned int rr_data_len);
+void hip_build_endpoint(struct endpoint_hip *endpoint,
+			const struct endpoint_hip *endpoint_hdr,
+			const char *hostname,
+			const unsigned char *key_rr,
+			unsigned int key_rr_len);
+int hip_build_param_eid_iface(struct hip_common *msg,
+			      hip_eid_iface_type_t if_index);
+int hip_build_param_eid_sockaddr(struct hip_common *msg,
+                                 struct sockaddr *sockaddr,
+                                 size_t sockaddr_len);
 #endif /* HIP_BUILDER */

@@ -1,4 +1,3 @@
-#include <linux/hip_ioctl.h>
 #include "tools/debug.h"
 #include "builder.h"
 

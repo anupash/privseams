@@ -75,21 +75,21 @@ bin_PROGRAMS = align checksum conntest-client conntest-server conntest-client-ga
 
 align_SOURCES = align.c
 checksum_SOURCES = checksum.c checksum.h
-conntest_client_SOURCES = conntest-client.c
-conntest_client_gai_LDADD = ../libinet6/libinet6.a
+conntest_client_SOURCES = conntest-client.c debug.c
 conntest_client_gai_SOURCES = conntest-client-gai.c
+conntest_client_gai_LDADD = ../libinet6/libinet6.a
+conntest_client_native_SOURCES = conntest-client-native.c debug.c
 conntest_client_native_LDADD = ../libinet6/libinet6.a
-conntest_client_native_SOURCES = conntest-client-native.c
+conntest_server_native_SOURCES = conntest-server-native.c debug.c
 conntest_server_native_LDADD = ../libinet6/libinet6.a
-conntest_server_native_SOURCES = conntest-server-native.c
-conntest_server_SOURCES = conntest-server.c
-libinet6test_LDADD = ../libinet6/libinet6.a
+conntest_server_SOURCES = conntest-server.c debug.c
 libinet6test_SOURCES = libinet6test.c
+libinet6test_LDADD = ../libinet6/libinet6.a
 listifaces_SOURCES = listifaces.c debug.c
 listifaces_LDADD = ../libinet6/libinet6.a
-unittest_LDADD = -lcrypto
 unittest_SOURCES = unit.c unittest.c unittest.h debug.c hipconf.c                    builder.c crypto.c message.c suite.c
 
+unittest_LDADD = -lcrypto
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = config.h
@@ -109,21 +109,21 @@ checksum_OBJECTS =  checksum.o
 checksum_LDADD = $(LDADD)
 checksum_DEPENDENCIES = 
 checksum_LDFLAGS = 
-conntest_client_OBJECTS =  conntest-client.o
+conntest_client_OBJECTS =  conntest-client.o debug.o
 conntest_client_LDADD = $(LDADD)
 conntest_client_DEPENDENCIES = 
 conntest_client_LDFLAGS = 
-conntest_server_OBJECTS =  conntest-server.o
+conntest_server_OBJECTS =  conntest-server.o debug.o
 conntest_server_LDADD = $(LDADD)
 conntest_server_DEPENDENCIES = 
 conntest_server_LDFLAGS = 
 conntest_client_gai_OBJECTS =  conntest-client-gai.o
 conntest_client_gai_DEPENDENCIES =  ../libinet6/libinet6.a
 conntest_client_gai_LDFLAGS = 
-conntest_client_native_OBJECTS =  conntest-client-native.o
+conntest_client_native_OBJECTS =  conntest-client-native.o debug.o
 conntest_client_native_DEPENDENCIES =  ../libinet6/libinet6.a
 conntest_client_native_LDFLAGS = 
-conntest_server_native_OBJECTS =  conntest-server-native.o
+conntest_server_native_OBJECTS =  conntest-server-native.o debug.o
 conntest_server_native_DEPENDENCIES =  ../libinet6/libinet6.a
 conntest_server_native_LDFLAGS = 
 unittest_OBJECTS =  unit.o unittest.o debug.o hipconf.o builder.o \
@@ -498,6 +498,8 @@ message.c:
 unit.c:
 	$(LN_S) -f ../linux/net/ipv6/hip/unit.c .
 	$(LN_S) -f ../linux/net/ipv6/hip/unit.h .
+../libinet6/libinet6.a:
+	$(MAKE) -C ../libinet6
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

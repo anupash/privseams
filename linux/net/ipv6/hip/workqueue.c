@@ -154,7 +154,7 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 }
 
 struct hip_work_order *hip_create_job_with_hit(int gfp_mask, 
-					       struct in6_addr *hit)
+					       const struct in6_addr *hit)
 {
 	struct hip_work_order *hwo;
 	struct in6_addr *tmp;
