@@ -10,6 +10,8 @@
 
 #define HIP_LOCK_HA(ha) do { spin_lock_bh(&ha->lock); } while(0)
 #define HIP_UNLOCK_HA(ha) do { spin_unlock_bh(&ha->lock); } while(0)
+#define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
+#define HIP_UNLOCK_HS(hs) do { spin_unlock_bh(&hs->lock); } while(0)
 
 
 /*************** BASE FUNCTIONS *******************/
@@ -65,6 +67,9 @@ int hip_for_each_ha(int (func)(hip_ha_t *entry, void *opaq), void *opaque);
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
 
 int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
+
+int hip_hadb_add_inbound_spi(hip_ha_t *entry, uint32_t spi_in);
+void hip_hadb_delete_inbound_spis(hip_ha_t *entry);
 
 int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi);
 struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);

@@ -1756,6 +1756,7 @@ static int hip_do_work(void)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
+#ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
@@ -1763,6 +1764,7 @@ static int hip_do_work(void)
 				res = KHIPD_ERROR;
 			hip_rvs_set_request_flag(job->arg1);
 			break;
+#endif
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
 		case HIP_WO_SUBTYPE_ADDHI:
 		case HIP_WO_SUBTYPE_DELHI:

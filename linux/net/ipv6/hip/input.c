@@ -117,22 +117,14 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	 * No locking will take place since the data
 	 * that we are copying is very static
 	 */
-	HIP_DEBUG("spi=0x%x\n", spi);
+	HIP_DEBUG("SPI=0x%x\n", spi);
 	ha = hip_hadb_find_byspi_list(spi);
 	if (!ha) {
 		HIP_INFO("HT BYSPILIST: NOT found, unknown SPI 0x%x\n",spi);
 		return;
 	}
 
-	HIP_INFO("HT BYSPILIST: found SPI 0x%x\n",spi);
-#if 0
-	/* old code, will be removed */
-	ha = hip_hadb_find_byspi(spi);
-	if (!ha) {
-		HIP_INFO("Unknown SPI: 0x%x\n",spi);
-		return;
-	}
-#endif
+	_HIP_INFO("HT BYSPILIST: found SPI 0x%x\n",spi);
 	/* New in draft-10: If we are responder and in some proper state, then
 	   as soon as we receive ESP packets for a valid SA, we should transition
 	   to ESTABLISHED state.
@@ -1034,6 +1026,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_LOCK_HA(entry);
 	entry->spi_in = spi_in;
+	err = hip_hadb_add_inbound_spi(entry, spi_in);
+	if (err) {
+		HIP_UNLOCK_HA(entry);
+		goto out_err;
+	}
 	entry->esp_transform = transform_esp_suite;
 	/* Store the keys until we receive R2 */
 	err = hip_store_base_exchange_keys(entry,ctx,1);
@@ -1860,6 +1857,11 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	HIP_LOCK_HA(entry);
 	entry->spi_in = spi_in;
+	err = hip_hadb_add_inbound_spi(entry, spi_in);
+	if (err) {
+		HIP_UNLOCK_HA(entry);
+		goto out_err;
+	}
 	ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
 	if (ifindex) {
 		HIP_DEBUG("ifindex=%d\n", ifindex);
@@ -2163,7 +2165,6 @@ int hip_handle_i1(struct sk_buff *skb, hip_ha_t *entry)
 {
 	int err;
 	struct hip_common *i1;
-	struct hip_from *from;
 	struct in6_addr *dst;
 	struct in6_addr *dstip;
 

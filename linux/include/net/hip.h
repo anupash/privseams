@@ -801,7 +801,7 @@ struct hip_ifindex2spi_map {
 struct hip_spi_list_item
 {
 	struct list_head list;
-	int              direction; /* inbound or outbound */
+	int              direction; /* inbound or outbound, useless ? */
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
 	// int update_state_flags; /* TODO: move from hadb_state to here */
@@ -826,8 +826,8 @@ struct hip_hadb_state
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
 
-	uint32_t             spi_out;        /* outbound IPsec SA SPI */
-	uint32_t             spi_in;         /* inbound IPsec SA SPI */
+  //	uint32_t             spi_out;        /* outbound IPsec SA SPI */
+  //	uint32_t             spi_in;         /* inbound IPsec SA SPI */
 	uint32_t             new_spi_out;    /* new outbound IPsec SA SPI received in UPDATE */
 	uint32_t             new_spi_in;     /* new inbound IPsec SA SPI when rekey was initiated */
 
