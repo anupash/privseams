@@ -752,6 +752,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 //	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_spi_in_item spi_in_data;
 	uint16_t mask;
+	struct hip_lhi lhi;
 	
 	HIP_DEBUG("\n");
 
@@ -779,6 +780,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		goto out_err;
 	}
 	
+	/* dig our hit from host association entry and use it later for 
+	   getting the private and public parts for the right HI */
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+        memcpy(&(lhi.hit), &entry->hit_our, sizeof(struct in6_addr));
+
 #if 0 // does not work correctly with DSA-RSA base exhcange -miika
 	{
 		struct hip_host_id *mofo;
@@ -791,24 +797,28 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* Get a localhost identity, allocate memory for the public key part
 	   and extract the public key from the private key. The public key is
 	   needed in the ESP-ENC below. */
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+	host_id_pub = hip_get_localhost_public_key(&lhi);
+		//hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 	if (host_id_pub == NULL) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost public key found\n");
 		goto out_err;
 	}
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi); 
+		//hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
 		goto out_err;
 	}
 
+	algo = hip_get_host_id_algo(host_id_private);
+
 	{
 		int sigsize;
 		
-		if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+		if (algo == HIP_HI_RSA) {
 			sigsize = HIP_RSA_SIGNATURE_LEN;
 		} else {
 			sigsize = HIP_DSA_SIGNATURE_LEN;
@@ -1125,7 +1135,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* Only DSA supported currently */
 //	HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	if (algo == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(i2,signature,
 							 HIP_RSA_SIGNATURE_LEN,
 							 HIP_SIG_RSA);
@@ -1534,7 +1544,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	struct hip_common *r2 = NULL;
 	struct hip_common *i2;
  	int err = 0;
-	//int algo = 0;
+	int algo = 0;
 	int clear = 0;
 	u8 *signature;
 // 	u8 signature[HIP_DSA_SIGNATURE_LEN];
@@ -1643,7 +1653,9 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		goto out_err;
 	}
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	algo = hip_get_host_id_algo(host_id_private);
+
+	if (algo == HIP_HI_RSA) {
 		signature = kmalloc(HIP_RSA_SIGNATURE_LEN, GFP_KERNEL);
 	} else {
 		signature = kmalloc(HIP_DSA_SIGNATURE_LEN, GFP_KERNEL);
@@ -1661,7 +1673,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		goto out_err;
 	}
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	if (algo == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(r2, signature,
 							 HIP_RSA_SIGNATURE_LEN,
 							 HIP_SIG_RSA);
