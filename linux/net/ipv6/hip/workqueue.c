@@ -214,7 +214,7 @@ void hip_stop_khipd()
  * hip_init_job - Allocate and initialize work order
  * @gfp_mask: Mask for memory allocation
  *
- * Returns work order struct, with all fields zeroed. Or NULL in case
+ * Returns work order struct, with all fields zeroed. Or %NULL in case
  * of error.
  */
 struct hip_work_order *hip_init_job(int gfp_mask)
@@ -224,6 +224,7 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 	hwo = kmalloc(sizeof(struct hip_work_order),gfp_mask);
 	if (!hwo) {
 		HIP_ERROR("No memory for work order\n");
+		return NULL;
 	}
 
 	memset(hwo,0,sizeof(struct hip_work_order));
