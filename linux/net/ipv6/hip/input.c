@@ -124,7 +124,6 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 		return;
 	}
 
-	_HIP_INFO("HT BYSPILIST: found SPI 0x%x\n",spi);
 	/* New in draft-10: If we are responder and in some proper state, then
 	   as soon as we receive ESP packets for a valid SA, we should transition
 	   to ESTABLISHED state.
@@ -133,7 +132,7 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	*/
 	if (ha->state == HIP_STATE_R2_SENT) {
 		ha->state = HIP_STATE_ESTABLISHED;
-		HIP_DEBUG("Transition to ESTABLISHED state\n");
+		HIP_DEBUG("Transition to ESTABLISHED state from R2_SENT\n");
 	}
 
 	ipv6_addr_copy(&hdr->daddr, &ha->hit_our);
@@ -1024,9 +1023,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
-//	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr); /* ok ? */
+	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&ctx->skb_in->nh.ipv6h->daddr); /* ok ? */
 	HIP_LOCK_HA(entry);
-//	entry->spi_in = spi_in;
 	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
@@ -1748,8 +1746,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 			goto out_err;
 		}
 
-		ipv6_addr_copy(&entry->hit_peer,&i2->hits);
-		ipv6_addr_copy(&entry->hit_our,&i2->hitr);
+		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+		ipv6_addr_copy(&entry->hit_our, &i2->hitr);
 
 		HIP_DEBUG("INSERTING STATE\n");
 		hip_hadb_insert_state(entry);
@@ -1834,7 +1832,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	}
 
 	barrier();
-	//spi_out = entry->spi_out;
 	spi_out = ntohl(hspi->spi);
 
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_out);
@@ -1863,10 +1860,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 
-	entry->default_spi_out = spi_out;
-	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
-
-//	entry->spi_in = spi_in;
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
@@ -1881,6 +1874,10 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		HIP_UNLOCK_HA(entry);
 		goto out_err;
 	}
+
+	entry->default_spi_out = spi_out;
+	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
+
 	err = hip_store_base_exchange_keys(entry, ctx, 0);
 	HIP_UNLOCK_HA(entry);
 	if (err) {
@@ -2155,6 +2152,9 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		} else
 			HIP_ERROR("Couldn't get device ifindex of address\n");
 		err = 0;
+
+		HIP_DEBUG("clearing the address used during the bex\n");
+		ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 		HIP_UNLOCK_HA(entry);
 
 		hip_hadb_insert_state(entry);

@@ -55,7 +55,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 
 void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
-void hip_hadb_delete_peer_addr_spi(hip_ha_t *entry, uint32_t spi);
+//void hip_hadb_delete_peer_addrs_spi(hip_ha_t *entry, uint32_t spi);
 
 void hip_hadb_delete_peer_addr_not_in_list(hip_ha_t *entry, void *addrlist,
 					   int n_addrs, uint32_t iface);
@@ -76,7 +76,6 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
 void hip_hadb_delete_outbound_spis(hip_ha_t *entry);
 
 int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi);
-//struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
@@ -109,6 +108,7 @@ void hip_hadb_dump_spis_out(hip_ha_t *entry);
 
 #define hip_put_ha(ha) do { \
 	if (atomic_dec_and_test(&ha->refcnt)) { \
+                HIP_DEBUG("HA: deleting %p\n", ha); \
 		hip_hadb_delete_state(ha); \
                 HIP_DEBUG("HA: %p deleted\n", ha); \
 	} else { \

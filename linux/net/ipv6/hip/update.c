@@ -1565,10 +1565,8 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 	if (rk->count >= rk->length)
 		return -1;
 
-	/* should we check the established status also? */
-
 //	if ((entry->hastate & HIP_HASTATE_VALID) == HIP_HASTATE_VALID) {
-	if (entry->hastate == HIP_HASTATE_HITOK) {
+	if (entry->hastate == HIP_HASTATE_HITOK && entry->state == HIP_STATE_ESTABLISHED) {
 		rk->array[rk->count] = entry;
 		hip_hold_ha(entry);
 		rk->count++;

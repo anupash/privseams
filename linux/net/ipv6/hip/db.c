@@ -792,7 +792,16 @@ void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
 void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi)
 {
 	HIP_DEBUG("spi=0x%x\n", spi);
-	HIP_ERROR("TODO: remove SPI from HIT-SPI HT\n");
+	HIP_DEBUG("hip_hadb_delete_inbound_spi does the put_hs\n");
+#if 0
+	struct hip_hit_spi hs;
+
+	HIP_ERROR("remove SPI from HIT-SPI HT\n");
+	hs.spi = spi;
+	ipv6_addr_copy(&hs.hit, &entry->hit_peer);
+
+	hip_hadb_put_hs(hs);
+#endif
 }
 
 int hip_ifindex2spi_get_ifindex(hip_ha_t *entry, uint32_t spi)

@@ -843,7 +843,10 @@ struct hip_hadb_state
 	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
 
 	uint32_t             default_spi_out;
-	struct in6_addr      preferred_address;
+	struct in6_addr      preferred_address; /* preferred dst address to use when
+						 * sending data to peer */
+
+	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;
