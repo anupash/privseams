@@ -364,7 +364,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
 /*
  * Returns true if address is a HIT 
  */
-static inline int ipv6_addr_is_hit(struct in6_addr *addr) 
+/*static inline int ipv6_addr_is_hit(struct in6_addr *addr) 
 {
         int bits;
         bits = addr->s6_addr[0] & 0xC0;
@@ -372,7 +372,7 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
                 return 1;
 
         return 0;
-}
+}*/
 
 
 #define gethosts_hit(_name)						\

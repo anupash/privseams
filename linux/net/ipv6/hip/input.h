@@ -17,7 +17,7 @@
 #include "crypto/dsa.h"
 #include "builder.h"
 #include "hip.h"
-#include "dh.h"
+//#include "dh.h"
 #include "misc.h"
 #include "workqueue.h"
 #include "hidb.h"

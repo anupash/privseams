@@ -70,13 +70,11 @@
 #include "hidb.h"
 #include "cookie.h"
 #include "keymat.h"
-#include "dh.h"
 #include "misc.h"
 #include "output.h"
 #include "workqueue.h"
 #include "socket.h"
 #include "update.h"
-#include "crypto/dh.h"
 #ifdef CONFIG_HIP_RVS
 #include "rvs.h"
 #endif

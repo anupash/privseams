@@ -73,9 +73,11 @@ EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23
 getendpointinfo.c: include/netdb.h
 
 # Some symlink kludges
+list.h:
+	$(LN_S) $(HIPL_HIPD)/list.h .
 builder.h:
 	$(LN_S) $(HIPL_LINUX_MODULE)/builder.h .
 include/netdb.h:
 	$(LN_S) include_glibc$(usagi_libc) include
-builder.c:
+builder.c: builder.h
 	$(LN_S) $(HIPL_LINUX_MODULE)/builder.c .
