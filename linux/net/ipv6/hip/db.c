@@ -170,7 +170,7 @@ void hip_uninit_eid_db(struct hip_db_struct *db)
 {
 	struct list_head *curr, *iter;
 	struct hip_host_id_entry *tmp;
-	int lf;
+	unsigned long lf;
 	
 	HIP_WRITE_LOCK_DB(db);
 	
@@ -2268,7 +2268,8 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 		   int is_local)
 {
 	struct hip_db_struct *db;
-	int err = 0, lf;
+	int err = 0;
+	unsigned long lf;
 	struct hip_eid_db_entry *entry = NULL;
 
 	HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));
@@ -2328,7 +2329,8 @@ int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
 			  int is_local)
 {
 	struct hip_db_struct *db;
-	int err = 0, lf;
+	int err = 0;
+	unsigned long lf;
 	struct hip_eid_db_entry *entry = NULL;
 
 	HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));

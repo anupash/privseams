@@ -179,6 +179,7 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
 	struct sock *sk = sock->sk;
+	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 	struct hip_lhi lhi;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
 
@@ -213,9 +214,9 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 		goto out_err;
 	}
 
-	memcpy(&sk->net_pinfo.af_inet6.rcv_saddr, &lhi.hit,
+	memcpy(&pinfo->rcv_saddr, &lhi.hit,
 	       sizeof(struct in6_addr));
-	memcpy(&sk->net_pinfo.af_inet6.saddr, &lhi.hit,
+	memcpy(&pinfo->saddr, &lhi.hit,
 	       sizeof(struct in6_addr));
 
  out_err:
@@ -305,6 +306,8 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 	struct hip_lhi lhi;
 	struct hip_eid_owner_info owner_info;
 	struct sock *sk = sock->sk;
+	struct ipv6_pinfo *pinfo = inet6_sk(sk);
+	struct inet_opt *inet = inet_sk(sk);
 	struct sockaddr_in6 sockaddr_in6_tmp;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uaddr;
 	int sockaddr_in6_tmp_len;
@@ -315,9 +318,9 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 
 	HIP_DEBUG("getname for %s called\n", (peer ? "peer" : "local"));
 
-	HIP_HEXDUMP("daddr", &sk->net_pinfo.af_inet6.daddr,
+	HIP_HEXDUMP("daddr", &pinfo->daddr,
 		    sizeof(struct in6_addr));
-	HIP_HEXDUMP("rcv_saddr", &sk->net_pinfo.af_inet6.rcv_saddr,
+	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
 		    sizeof(struct in6_addr));
 
 	err = hip_select_socket_handler(sock, &socket_handler);
@@ -326,7 +329,7 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 		goto out_err;
 	}
 
-	HIP_DEBUG("port: %d\n", ntohs((peer ? sk->dport : sk->sport)));
+	HIP_DEBUG("port: %d\n", ntohs((peer ? inet->dport : inet->sport)));
 
 	err = socket_handler->getname(sock,
 				      (struct sockaddr *) &sockaddr_in6_tmp,
@@ -343,7 +346,7 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
 
-	memcpy(&lhi.hit, &sk->net_pinfo.af_inet6.daddr,
+	memcpy(&lhi.hit, &pinfo->daddr,
 	       sizeof(struct in6_addr));
 	lhi.anonymous = 0; /* XX FIXME: should be really set to -1 */
 
@@ -354,7 +357,7 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 		goto out_err;
 	}
 
-	sockaddr_eid->eid_port = (peer) ? sk->dport : sk->sport;
+	sockaddr_eid->eid_port = (peer) ? inet->dport : inet->sport;
 
 	*usockaddr_len = sizeof(struct sockaddr_eid);
 
@@ -595,12 +598,15 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	return err;
 }
 
-int hip_socket_sendmsg(struct socket *sock, struct msghdr *m, int total_len,
-		       struct scm_cookie *scm)
+int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock, 
+		       struct msghdr *m, size_t total_len)
+
 {
 	int err = 0;
 	struct proto_ops *socket_handler;
 	struct sock *sk = sock->sk;
+	struct inet_opt *inet = inet_sk(sk);
+	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 
 	HIP_DEBUG("\n");
 
@@ -609,14 +615,14 @@ int hip_socket_sendmsg(struct socket *sock, struct msghdr *m, int total_len,
 		goto out_err;
 	}
 
-	HIP_DEBUG("sport=%d dport=%d\n", ntohs(sk->sport), ntohs(sk->dport));
+	HIP_DEBUG("sport=%d dport=%d\n", ntohs(inet->sport), ntohs(inet->dport));
 
-	HIP_HEXDUMP("daddr", &sk->net_pinfo.af_inet6.daddr,
+	HIP_HEXDUMP("daddr", &pinfo->daddr,
 		    sizeof(struct in6_addr));
-	HIP_HEXDUMP("rcv_saddr", &sk->net_pinfo.af_inet6.rcv_saddr,
+	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
 		    sizeof(struct in6_addr));
 
-	err = socket_handler->sendmsg(sock, m, total_len, scm);
+	err = socket_handler->sendmsg(iocb, sock, m, total_len);
 	if (err) {
 		/* The socket handler can return EIO or EINTR which are not
 		   "real" errors. */
@@ -629,11 +635,14 @@ int hip_socket_sendmsg(struct socket *sock, struct msghdr *m, int total_len,
 	return err;
 }
 
-int hip_socket_recvmsg(struct socket *sock, struct msghdr *m, int total_len,
-		       int flags, struct scm_cookie *scm)
+int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock, 
+		       struct msghdr *m, size_t total_len,
+		       int flags)
 {
 	int err = 0;
 	struct sock *sk = sock->sk;
+	struct inet_opt *inet = inet_sk(sk);
+	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -643,15 +652,15 @@ int hip_socket_recvmsg(struct socket *sock, struct msghdr *m, int total_len,
 		goto out_err;
 	}
 
-	HIP_DEBUG("sport=%d dport=%d\n", ntohs(sk->sport),
-		  ntohs(sk->dport));
+	HIP_DEBUG("sport=%d dport=%d\n", ntohs(inet->sport),
+		  ntohs(inet->dport));
 
-	HIP_HEXDUMP("daddr", &sk->net_pinfo.af_inet6.daddr,
+	HIP_HEXDUMP("daddr", &pinfo->daddr,
 		    sizeof(struct in6_addr));
-	HIP_HEXDUMP("rcv_saddr", &sk->net_pinfo.af_inet6.rcv_saddr,
+	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
 		    sizeof(struct in6_addr));
 
-	err = socket_handler->recvmsg(sock, m, total_len, flags, scm);
+	err = socket_handler->recvmsg(iocb, sock, m, total_len, flags);
 	if (err) {
 		/* The socket handler can return EIO or EINTR which are not
 		   "real" errors. */

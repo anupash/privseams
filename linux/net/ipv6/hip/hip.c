@@ -818,7 +818,7 @@ static int hip_init_output_socket(void)
 /**
  * hip_uninit_sock - uninitialize HIP control socket
  */
-void hip_uninit_sock(void)
+void hip_uninit_output_socket(void)
 {
 	sock_release(hip_output_socket);
 	return;

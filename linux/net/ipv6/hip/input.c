@@ -652,8 +652,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
  		goto out_err;
  	}
 
- 	enc_in_msg = hip_get_param(i2,
- 				   HIP_PARAM_ENCRYPTED);
+ 	enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
  	HIP_ASSERT(enc_in_msg); /* Builder internal error. */
 
  	host_id_in_enc = (char *) (enc_in_msg + 1);
@@ -670,6 +669,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 		goto out_err;
 	}
 
+	/* it appears as the crypto function overwrites the IV field, which
+	 * definitely breaks our 2.4 responder... Perhaps 2.6 and 2.4 cryptos
+	 * are not interoprable or we screw things pretty well in 2.4 :)
+	 */
+	memset((u8 *)enc_in_msg->iv, 0, 8);
         /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
@@ -717,10 +721,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
  	hip_set_param_lsi_value(spi_lsi, 0x01000000 |
  		 (ntohl(ctx->input->hitr.in6_u.u6_addr32[3]) & 0x00ffffff));
 
-	HIP_DEBUG("lsi in i2: %.8llx\n", hip_get_param_lsi_value(spi_lsi));
+	HIP_DEBUG("lsi in i2: %.8x\n", hip_get_param_lsi_value(spi_lsi));
  
-	_HIP_DEBUG("lsi in i2: 0x%.8x\n", hip_get_param_lsi_value(spi_lsi));
-
 	/* Do not modify the packet after this point or signature
 	 * will not validate */
 

@@ -340,22 +340,22 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	if (buf->checksum == 0)
 		buf->checksum = -1;
 
-	err = ip6_dst_lookup(hip_socket->sk, &dst, &fl);
+	err = ip6_dst_lookup(hip_output_socket->sk, &dst, &fl);
 	if (err) {
 		HIP_ERROR("Unable to route HIP packet\n");
 		goto out_err;
 	}
 
 	
-	lock_sock(hip_socket->sk);
+	lock_sock(hip_output_socket->sk);
  	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, &fl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err)
 		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);
 	else
-		err = ip6_push_pending_frames(hip_socket->sk);
+		err = ip6_push_pending_frames(hip_output_socket->sk);
 
-	release_sock(hip_socket->sk);
+	release_sock(hip_output_socket->sk);
  out_err:
 	return err;
 }

@@ -224,8 +224,8 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
  *
  * Returns: zero on success, or negative error value on failure
  */
-int hipd_handle_async_add_map_hit_ip(const struct hip_common *input,
-				     struct hip_common *output)
+int hip_user_handle_add_peer_map_hit_ip(const struct hip_common *input,
+					  struct hip_common *output)
 {
 	struct in6_addr *hit, *ip;
 	char buf[46];
@@ -271,11 +271,10 @@ int hipd_handle_async_add_map_hit_ip(const struct hip_common *input,
  *
  * Returns: zero on success, or negative error value on failure
  */
-int hipd_handle_async_del_map_hit_ip(const struct hip_common *input,
-				     struct hip_common *output)
+int hip_user_handle_del_peer_map_hit_ip(const struct hip_common *input,
+					struct hip_common *output)
 {
-	struct in6_addr *hit, *ip, *ip_copy;
-	struct hip_work_order *hwo = NULL;
+	struct in6_addr *hit, *ip;
 	char buf[46];
 	int err = 0;
 
@@ -289,7 +288,7 @@ int hipd_handle_async_del_map_hit_ip(const struct hip_common *input,
 	}
 
 	ip = (struct in6_addr *)
-		hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
 	if (!ip) {
 		HIP_ERROR("handle async map: no ipv6 address\n");
 		err = -ENODATA;
@@ -312,8 +311,8 @@ int hipd_handle_async_del_map_hit_ip(const struct hip_common *input,
 }
 
 
-int hipd_handle_async_rst(const struct hip_common *input,
-			  struct hip_common *output)
+int hip_user_handle_rst(const struct hip_common *input,
+			struct hip_common *output)
 {
 	struct in6_addr *hit;
 	struct hip_work_order *hwo;
@@ -492,7 +491,7 @@ int hip_user_handle_set_peer_eid(const struct hip_common *input,
 		/* XX FIX: the mapping should be tagged with an uid */
 
 		err = hip_insert_peer_map_work_order(&lhi.hit,
-						     &sockaddr->sin6_addr);
+						     &sockaddr->sin6_addr,1);
 		if (err) {
 			HIP_ERROR("Failed to insert map work order (%d)\n",
 				  err);

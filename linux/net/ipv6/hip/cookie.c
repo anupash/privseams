@@ -13,8 +13,6 @@ struct hip_r1entry *hip_r1table;
 static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 {
 	register u32 base=0;
-	struct timeval tv;
-	int offset;
 	int i;
 
 	for(i = 0; i < 4; i++) {

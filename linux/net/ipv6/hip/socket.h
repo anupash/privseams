@@ -48,10 +48,10 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 			  char *optval, int optlen);
 int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 			  char *optval, int *optlen);
-int hip_socket_sendmsg(struct socket *sock, struct msghdr *m, int total_len,
-		       struct scm_cookie *scm);
-int hip_socket_recvmsg(struct socket *sock, struct msghdr *m, int total_len,
-		       int flags, struct scm_cookie *scm);
+int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock, 
+		       struct msghdr *m, size_t total_len);
+int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *m, 
+		       size_t total_len, int flags);
 int hip_socket_mmap(struct file *file, struct socket *sock,
 		    struct vm_area_struct * vma);
 ssize_t hip_socket_sendpage(struct socket *sock, struct page *page, int offset,
