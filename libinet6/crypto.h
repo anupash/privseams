@@ -45,7 +45,8 @@ void keygen_callback(int a, int b, void* arg);
 #define KEYGEN_CALLBACK NULL
 #endif
 
-int dsa_to_hit(char *dsa, int type, struct in6_addr *hit);
+int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit);
+int rsa_to_hit(RSA *rsa_key, char *rsa, int type, struct in6_addr *hit);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 
 DSA *create_dsa_key(int bits);
