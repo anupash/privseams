@@ -18,6 +18,7 @@
 #include "daemon.h"
 #include "builder.h"
 #include "misc.h"
+#include "security.h"
 
 int hip_send_i1(struct in6_addr *dsthit);
 int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_hit);
@@ -26,6 +27,7 @@ void hip_send_rea_all(int interface_id,
 		      int rea_info_address_count, int netdev_flags);
 void hip_rea_delete_sent_list(void);
 void hip_ac_delete_sent_list(void);
+void hip_send_update_all(void);
 int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb);
 int hip_csum_verify(struct sk_buff *skb);
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,

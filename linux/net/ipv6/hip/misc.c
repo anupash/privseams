@@ -172,6 +172,19 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 	return len >= 3 * (64 + 8 * t) + 2 * 20; /* PQGXY 3*(64+8*t) + 2*20 */
 }
 
+/**
+ * hip_hit_is_bigger - compare two HITs
+ * @hit1: the first HIT to be compared
+ * @hit2: the second HIT to be compared
+ *
+ * Returns: 1 if @hit1 was bigger than @hit2, or else 0
+ */
+int hip_hit_is_bigger(const struct in6_addr *hit1,
+		      const struct in6_addr *hit2)
+{
+	return (memcmp(hit1, hit2, sizeof(struct in6_addr)) > 0);
+}
+
 #if 0
 /* Extract only the "public key" part of the local host identify.
  * Enables to store the whole key in one record (secret key).

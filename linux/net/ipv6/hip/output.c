@@ -26,13 +26,14 @@
  */
 
 #include "output.h"
+#include "keymat.h"
 
 extern spinlock_t hip_sent_rea_info_lock;
 extern spinlock_t hip_sent_ac_info_lock;
 atomic_t hip_rea_id = ATOMIC_INIT(0);
-atomic_t hip_nes_id = ATOMIC_INIT(0);
+atomic_t hip_update_id = ATOMIC_INIT(0);
 spinlock_t hip_rea_id_lock = SPIN_LOCK_UNLOCKED;
-spinlock_t hip_nes_id_lock = SPIN_LOCK_UNLOCKED;
+spinlock_t hip_update_id_lock = SPIN_LOCK_UNLOCKED;
 
 /**
  * hip_handle_output - handle outgoing IPv6 packets
@@ -72,14 +73,21 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		goto out;
 	}
 
-
 	/* The source address is not yet a HIT, just the dst address. */
 
-	hip_hadb_get_state_by_hit(&hdr->daddr,&state);
-	
-	HIP_DEBUG("sdb entry state is %d\n", state);
+	if (hip_hadb_get_state_by_hit(&hdr->daddr, &state) != 1) {
+		HIP_ERROR("Couldn't get state info\n");
+		err = -EFAULT;
+		goto out;
+	}
+
+       	_HIP_DEBUG("hadb entry state is %s\n", hip_state_str(state));
+
 	switch(state) {
-	case HIP_STATE_START:
+	case HIP_STATE_NONE:
+		HIP_DEBUG("No state with peer\n");
+		break;
+	case HIP_STATE_UNASSOCIATED:
 		HIP_DEBUG("Initiating connection\n");
 
 #ifdef KRISUS_THESIS
@@ -111,7 +119,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		
 		ipv6_addr_copy(hwo->arg2,&hdr->saddr);
 		hwo->type = HIP_WO_TYPE_OUTGOING;
-		hwo->arg.u32[0] = HIP_STATE_INITIATING;
+		hwo->arg.u32[0] = HIP_STATE_I1_SENT;
 		hwo->subtype = HIP_WO_SUBTYPE_NEW_CONN;
 
 		hip_insert_work_order(hwo);
@@ -139,7 +147,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 		err = -1; // drop the TCP/UDP packet
 		break;
-	case HIP_STATE_INITIATING:
+	case HIP_STATE_I1_SENT:
 		HIP_DEBUG("I1 retransmission\n");
 		/* XX TODO: we should have timers on HIP layer and
 		   not depend on transport layer timeouts? In that case
@@ -152,7 +160,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		}
 		err = -1; // just something to drop the TCP packet;
 		break;
-	case HIP_STATE_WAIT_FINISH:
+	case HIP_STATE_I2_SENT:
 		/* XX TODO: Should the packet be buffered instead? */
 		HIP_INFO("Not established yet. Dropping the packet.\n");
 		err = -1;
@@ -169,7 +177,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			goto out;
 		}
 
-		HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
+		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 
 		err = ipv6_get_saddr(NULL, &hdr->daddr, &hdr->saddr);
 		if (err) {
@@ -179,7 +187,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		}
 
 		break;
-	case HIP_STATE_ESTABLISHED_REKEY:
+	case HIP_STATE_REKEYING:
 		/* XX TODO: Should the packet be buffered instead? */
 		HIP_INFO("Rekey pending. Dropping the packet.\n");
 		err = -1;
@@ -496,13 +504,13 @@ static uint16_t hip_get_new_rea_id(void) {
 }
 
 /**
- * hip_get_new_nes_id - Get a new NES ID number
+ * hip_get_new_update_id - Get a new UPDATE ID number
  *
- * Returns: the next NES ID value to use in host byte order
+ * Returns: the next UPDATE ID value to use in host byte order
  */
-static uint16_t hip_get_new_nes_id(void) {
-	uint16_t id = hip_get_next_atomic_val_16(&hip_nes_id, &hip_nes_id_lock);
-	HIP_DEBUG("got NES ID %u\n", id);
+static uint16_t hip_get_new_update_id(void) {
+	uint16_t id = hip_get_next_atomic_val_16(&hip_update_id, &hip_update_id_lock);
+	_HIP_DEBUG("got UPDATE ID %u\n", id);
 	return id;
 }
 
@@ -543,7 +551,6 @@ static void hip_list_sent_rea_packets(char *str)
  * If @delete_all is non-zero all sent REAs are deleted, else
  * only the REA packet identified by @rea_id is deleted.
  */
-#if 1
 static void hip_rea_delete_sent_list_one(int delete_all, uint16_t rea_id) {
 		struct list_head *pos, *n;
 		struct hip_sent_rea_info *sent_rea;
@@ -570,12 +577,6 @@ static void hip_rea_delete_sent_list_one(int delete_all, uint16_t rea_id) {
 		spin_unlock_irqrestore(&hip_sent_rea_info_lock, flags);
 		return;
 }
-#else
-static void hip_rea_delete_sent_list_one(int delete_all, uint16_t rea_id)
-{
-	return;
-}
-#endif
 
 /**
  * hip_rea_delete_sent_list - delete all sent REA packets
@@ -604,14 +605,11 @@ static void hip_rea_sent_id_expired(unsigned long val)
 /**
  * hip_rea_add_to_sent_list - add given REA ID to the list of sent REA ID packets
  * @rea_id: REA ID in host byte order
- * @entry: XXXXXXXXX pointer to the sdb entry of the peer
  * @dst_hit: HIT where REA was sent
  *
  * Returns: 0 if add was successful, else < 0
  */
-#if 1
 static int hip_rea_add_to_sent_list(uint16_t rea_id,
-//				    struct hip_sdb_state *entry)
 				    struct in6_addr *dst_hit)
 {
 	int err = 0;
@@ -652,13 +650,7 @@ static int hip_rea_add_to_sent_list(uint16_t rea_id,
 	spin_unlock_irqrestore(&hip_sent_rea_info_lock, flags);
 	return err;
 }
-#else
-static int hip_rea_add_to_sent_list(uint16_t rea_id,
-				    struct in6_addr *hit)
-{
-	return 0;
-}
-#endif
+
 
 
 #if 0
@@ -689,6 +681,7 @@ void hip_list_sent_ac_packets(char *str)
 }
 #endif
 #endif
+
 
 /**
  * hip_ac_sent_id_expired - timeout handler for the sent AC packets
@@ -736,7 +729,6 @@ static void hip_ac_sent_id_expired(unsigned long val)
  *
  * Returns: 0 if addition was successful, else < 0
  */
-#if 1
 static int hip_ac_add_to_sent_list(uint16_t rea_id, uint16_t ac_id,
 				   struct in6_addr *address,
 				   uint32_t interface_id, uint32_t lifetime,
@@ -788,15 +780,7 @@ static int hip_ac_add_to_sent_list(uint16_t rea_id, uint16_t ac_id,
 	spin_unlock_irqrestore(&hip_sent_ac_info_lock, flags);
 	return err;
 }
-#else
-static int hip_ac_add_to_sent_list(uint16_t rea_id, uint16_t ac_id,
-				   struct in6_addr *address,
-				   uint32_t interface_id, uint32_t lifetime,
-				   uint32_t rtt_sent)
-{
-	return 0;
-}
-#endif
+
 
 /**
  * hip_ac_delete_sent_list_one - delete given AC ID from the list of sent AC packets
@@ -808,7 +792,6 @@ static int hip_ac_add_to_sent_list(uint16_t rea_id, uint16_t ac_id,
  *
  * @rea_id and @ac_id are given in host byte order.
  */
-#if 1
 void hip_ac_delete_sent_list_one(int delete_all, uint16_t rea_id,
 				 uint16_t ac_id)
 {
@@ -838,13 +821,8 @@ void hip_ac_delete_sent_list_one(int delete_all, uint16_t rea_id,
 	spin_unlock_irqrestore(&hip_sent_ac_info_lock, flags);
 	return;
 }
-#else
-void hip_ac_delete_sent_list_one(int delete_all, uint16_t rea_id,
-				 uint16_t ac_id)
-{
-	return;
-}
-#endif
+
+
 /**
  * hip_ac_delete_sent_list - delete all sent AC packets
  */
@@ -854,7 +832,6 @@ void hip_ac_delete_sent_list(void) {
 
 /**
  * hip_send_rea - build a REA packet to be sent to the peer
- * XXXXXXXXXX @entry: pointer to the sdb entry of the peer
  * @dst_hit: peer's HIT
  * @interface_id: the ifindex of the network device which caused the event
  * @addresses: addresses of interface related to @interface_id
@@ -1102,6 +1079,8 @@ static inline int hip_filter_all_established(struct hip_hadb_state *entry)
  * the peer (unless the REA is retransmitted some times, which we
  * currently don't do), due to the unreliable nature of IP we just
  * hope the REA reaches the peer.
+ *
+ * TODO: retransmission timers
  */
 void hip_send_rea_all(int interface_id, struct hip_rea_info_addr_item *addresses,
 		      int rea_info_address_count, int netdev_flags)
@@ -1134,6 +1113,288 @@ void hip_send_rea_all(int interface_id, struct hip_rea_info_addr_item *addresses
 	return;
 }
 
+
+static int hip_send_update(struct hip_hadb_state *entry)
+{
+	int err = 0;
+	uint16_t update_id_out;
+	uint32_t new_spi = 0;
+	struct hip_common *update_packet = NULL;
+	struct in6_addr daddr;
+	struct hip_crypto_key hmac;
+	struct hip_host_id *host_id_private;
+ 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+	//int tmp_list[3];
+	struct hip_crypto_key espkey_new, authkey_new;
+	//uint16_t orig_keymat_index = entry->current_keymat_index;
+	int esp_transform;
+	int esp_transf_length;
+	int auth_transf_length;
+
+	HIP_DEBUG("\n");
+
+	if (!entry) {
+		HIP_ERROR("null entry\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	hip_print_hit("send UPDATE to", &entry->hit_peer);
+
+#if 0
+	/* get new keymat */
+	{
+		/* E X P E R I M E N T A L */
+
+	  //		uint16_t ki = entry->current_keymat_index;
+
+		uint8_t calc_index_new;
+		uint16_t keymat_offset_new;
+		unsigned char Kn[HIP_AH_SHA_LEN];
+
+		esp_transform = entry->esp_transform;
+		HIP_DEBUG("esp_transform=%d\n", esp_transform);
+		esp_transf_length = hip_enc_key_length(esp_transform);
+		auth_transf_length = hip_auth_key_length_esp(esp_transform);
+
+		calc_index_new = entry->keymat_calc_index;
+		keymat_offset_new = entry->current_keymat_index;;
+		memcpy(Kn, entry->current_keymat_K, HIP_AH_SHA_LEN);
+
+		HIP_DEBUG("enckeylen=%d authkeylen=%d calc_index_new=%u keymat_offset_new=%u\n",
+			  esp_transf_length, auth_transf_length, calc_index_new, keymat_offset_new);
+
+		if (esp_transf_length < 0 || auth_transf_length < 0) {
+			err = -EINVAL;
+			HIP_DEBUG("enc_key_length failed\n");
+			goto qwe;
+		}
+
+		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+		  //			keymat_offset_new += esp_transf_length + auth_transf_length;
+			HIP_DEBUG("we are: HITg\n");
+			HIP_DEBUG("skip SA-gl keys, keymat_offset_new=%u\n", keymat_offset_new);
+		} else
+			HIP_DEBUG("we are: HITl\n");
+
+		err = hip_keymat_get_new(entry, &espkey_new.key, esp_transf_length, entry->dh_shared_key,
+					 entry->dh_shared_key_len, &keymat_offset_new, &calc_index_new, Kn);
+		HIP_DEBUG("enckey hip_keymat_get_new ret err=%d keymat_offset_new=%u calc_index_new=%u\n",
+			  err, keymat_offset_new, calc_index_new);
+		if (err)
+			goto qwe;
+
+		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer))
+			HIP_HEXDUMP("new SA-gl outgoing ENC KEY", &espkey_new.key, esp_transf_length);
+		else
+			HIP_HEXDUMP("new SA-lg outgoing ENC KEY", &espkey_new.key, esp_transf_length);
+
+		keymat_offset_new += esp_transf_length;
+		err = hip_keymat_get_new(entry, &authkey_new.key, auth_transf_length, entry->dh_shared_key,
+					 entry->dh_shared_key_len, &keymat_offset_new, &calc_index_new, Kn);
+		HIP_DEBUG("authkey hip_keymat_get_new ret err=%d keymat_offset_new=%u calc_index_new=%u\n",
+			  err, keymat_offset_new, calc_index_new);
+		if (err)
+			goto qwe;
+
+		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer))
+			HIP_HEXDUMP("new SA-lg outgoing AUTH KEY", &authkey_new.key, auth_transf_length);
+		else
+			HIP_HEXDUMP("new SA-gl outgoing AUTH KEY", &authkey_new.key, auth_transf_length);
+
+		err = hip_update_entry_keymat(entry, NULL, keymat_offset_new, calc_index_new, Kn);
+	qwe:
+		if (err)
+			goto out_err;
+	}
+#endif
+	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
+#if 0
+	esp_transform = entry->esp_transform;
+	HIP_DEBUG("esp_transform=%d\n", esp_transform);
+	esp_transf_length = hip_enc_key_length(esp_transform);
+	auth_transf_length = hip_auth_key_length_esp(esp_transform);
+	HIP_DEBUG("enckeylen=%d authkeylen=%d\n", esp_transf_length, auth_transf_length);
+#endif
+	/* we can not know yet from where we should start to draw keys
+	   from the keymat, so we just set the keys to some value and fill in
+	   the keys later */
+	get_random_bytes(&espkey_new.key, HIP_MAX_KEY_LEN);
+	get_random_bytes(&authkey_new.key, HIP_MAX_KEY_LEN);
+	HIP_HEXDUMP("random espkey", &espkey_new.key, HIP_MAX_KEY_LEN);
+	HIP_HEXDUMP("random authkey", &authkey_new.key, HIP_MAX_KEY_LEN);
+
+	/* The specifications does not say that new SA should be done
+	 * here, but it is needed because of the New SPI value */
+	/* get a New SPI to use and prepare IPsec SA */
+	err = hip_setup_spi_and_sa(&entry->hit_our, &entry->hit_peer,
+				   &new_spi, entry->esp_transform,
+				   &espkey_new.key, &authkey_new.key, 0); /* sa state is larval */
+
+	/* todo: if hip_setup_spi_and_sa failed due to
+	   sadb_key_to_auth random keys could be weak, try again a
+	   couple of times ? */
+	if (err) {
+		HIP_ERROR("Error while setting up New SPI (err=%d)\n", err);
+		goto out_err;
+	}
+	HIP_DEBUG("New SPI=0x%x\n", new_spi);
+
+#if 1
+	if (hip_hadb_set_info(&entry->hit_peer, &new_spi,
+			      HIP_HADB_OWN_NEW_SPI|HIP_ARG_HIT) != 1) {
+		HIP_ERROR("Could not set New SPI value to hadb, our_new_spi\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+#endif
+	HIP_DEBUG("stored New SPI for future use\n");
+	HIP_DEBUG("** TODO: update entry keys **\n");
+
+	/* start building UPDATE packet */
+	update_packet = hip_msg_alloc();
+	if (!update_packet) {
+		HIP_ERROR("update_packet alloc failed\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
+
+	update_id_out = hip_get_new_update_id();
+	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
+	if (!update_id_out) {
+		/* todo: handle this case */
+		HIP_ERROR("outgoing UPDATE ID overflowed back to 0, bug ?\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	/* todo: move below */
+	if (hip_hadb_set_info(&entry->hit_peer, &update_id_out,
+			      HIP_HADB_OWN_UPDATE_ID_OUT|HIP_ARG_HIT) != 1) {
+		HIP_ERROR("Could not set outgoing UPDATE ID value (%u) for HIT\n", update_id_out);
+		err = -EINVAL;
+		goto out_err;
+	}
+        HIP_DEBUG("Stored peer's outgoing UPDATE ID %u\n", update_id_out);
+
+	err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index,
+				  update_id_out, entry->spi_our, new_spi); 
+	if (err) {
+		HIP_ERROR("Building of NES param failed\n");
+		goto out_err;
+	}
+
+	/* TODO: hmac/signature to common functions */
+	/* Add HMAC */
+	if (!hip_hadb_get_info(&entry->hit_peer, &hmac,
+			       HIP_HADB_OWN_HMAC|HIP_ARG_HIT)) {
+		HIP_ERROR("could not get own HMAC\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+	err = hip_build_param_hmac_contents(update_packet, &hmac);
+	if (err) {
+		HIP_ERROR("Building of HMAC failed (%d)\n", err);
+		goto out_err;
+	}
+	HIP_DEBUG("HMAC added\n");
+
+	/* Add SIGNATURE */
+	host_id_private = hip_get_any_localhost_host_id();
+	if (!host_id_private) {
+		HIP_ERROR("Could not get own host identity. Can not sign data\n");
+		goto out_err;
+	}
+
+	if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+				  host_id_private, signature)) {
+		HIP_ERROR("Could not sign UPDATE. Failing\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+	    
+	err = hip_build_param_signature_contents(update_packet, signature,
+						 HIP_DSA_SIGNATURE_LEN,
+ 						 HIP_SIG_DSA);
+ 	if (err) {
+ 		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
+ 		goto out_err;
+ 	}
+	HIP_DEBUG("SIGNATURE added\n");
+
+	/* todo: start SA timer, ipsec_sa_mod_timer ? */
+	/* todo: add UPDATE to sent list */
+
+	/* send UPDATE */
+        HIP_DEBUG("Sending UPDATE packet\n");
+        err = hip_hadb_get_peer_address(&entry->hit_peer, &daddr, HIP_ARG_HIT);
+        if (err) {
+                HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
+                goto out_err;
+        }
+
+	entry->state = HIP_STATE_REKEYING;
+	HIP_DEBUG("moved to state REKEYING\n");
+
+	err = hip_csum_send(NULL, &daddr, update_packet);
+	if (err) {
+		HIP_DEBUG("hip_csum_send err=%d\n", err);
+		HIP_DEBUG("NOT ignored, or should we..\n");
+                /* goto out_err; ? */
+		/* fall back to established state ? */
+	}
+
+	/* todo: start retransmission timer */
+	goto out;
+
+ out_err:
+	/* delete IPsec SA on failure */
+	if (new_spi)
+		hip_delete_sa(new_spi, &entry->hit_our, &entry->hit_peer);
+ out:
+	if (update_packet)
+		kfree(update_packet);
+
+	return err;
+}
+
+/**
+ * hip_send_update_all - send UPDATE packet to every peer
+ *
+ * UPDATE is sent to the peer only if the peer is in established
+ * state. Note that we can not guarantee that the UPDATE actually reaches
+ * the peer (unless the UPDATE is retransmitted some times, which we
+ * currently don't do), due to the unreliable nature of IP we just
+ * hope the UPDATE reaches the peer.
+ *
+ * TODO: retransmission timers
+ */
+void hip_send_update_all(void)
+{
+	/******* TEST FUNCTION, MAYBE (?) WE DON'T NEED TO SEND UPDATE
+	 * FOR EVERY PEER SIMULTANEOUSLY .. *******/
+
+	struct hip_hadb_state *entry;
+	int flags = 0;
+
+	HIP_DEBUG("\n");
+
+	hip_hadb_acquire_ex_db_access(&flags);
+	list_for_each_entry(entry, &hip_hadb.db_head, next) {
+		if (entry->state == HIP_STATE_ESTABLISHED) {
+			(void) hip_send_update(entry);
+		} else
+		  HIP_DEBUG("REKEYING and not in ESTABLISHED state with the peer, skipping\n");
+	}
+
+	hip_hadb_release_ex_db_access(flags);
+	return;
+}
+
+
+
 /**
  * hip_send_ac_or_acr - create and send an outgoing AC or ACR packet
  * @pkt_type: HIP_AC for AC packets and HIP_ACR for ACR packets
@@ -1160,7 +1421,6 @@ void hip_send_rea_all(int interface_id, struct hip_rea_info_addr_item *addresses
  *
  * Returns: 0 if successful, else non-zero.
  */
-#if 1
 int hip_send_ac_or_acr(int pkt_type, struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		       struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		       uint16_t ac_id, uint16_t rea_id, uint32_t rtt,
@@ -1168,7 +1428,6 @@ int hip_send_ac_or_acr(int pkt_type, struct in6_addr *src_hit, struct in6_addr *
 	int err = 0;
 	struct hip_common *msg = NULL;
 	char addrstr[INET6_ADDRSTRLEN];
-//	struct hip_hadb_state *entry;
 
 	hip_in6_ntop(dst_addr, addrstr);
 	HIP_DEBUG("dst_addr=%s pkt_type=%d ac_id=%u rea_id=%u rtt=0x%x interface_id=0x%x lifetime=0x%x\n",
@@ -1190,7 +1449,6 @@ int hip_send_ac_or_acr(int pkt_type, struct in6_addr *src_hit, struct in6_addr *
 
 	hip_build_network_hdr(msg, pkt_type, HIP_CONTROL_NONE,
 			      src_hit, dst_hit);
-//			      &entry->hit_our, &entry->hit_peer);
         msg->checksum = htons(0);
 
 	err = hip_build_param_ac_info(msg, ac_id, rea_id, rtt);
@@ -1219,10 +1477,8 @@ int hip_send_ac_or_acr(int pkt_type, struct in6_addr *src_hit, struct in6_addr *
                 hip_set_param_contents_len(hmac, HIP_AH_SHA_LEN);
                 pkt_len = hip_get_msg_total_len(msg);
 
-                //_HIP_HEXDUMP("HMAC key", entry->hmac_our.key, HIP_AH_SHA_LEN);
                 _HIP_HEXDUMP("HMAC key", &hmac_our.key, HIP_AH_SHA_LEN);
 
-                //if (!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, entry->hmac_our.key,
                 if (!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, &hmac_our.key,
                                     msg, pkt_len, hmac->hmac_data))
                 {
@@ -1272,12 +1528,3 @@ int hip_send_ac_or_acr(int pkt_type, struct in6_addr *src_hit, struct in6_addr *
 		kfree(msg);
 	return err;
 }
-#else
-int hip_send_ac_or_acr(int pkt_type,
-		       struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		       uint16_t ac_id, uint16_t rea_id, uint32_t rtt,
-		       uint32_t interface_id, uint32_t lifetime) 
-{
-	return 0;
-}
-#endif

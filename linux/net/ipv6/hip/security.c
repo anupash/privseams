@@ -72,19 +72,25 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
  */
 int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 {
-	uint32_t spi_peer, spi_our;
-	int getlist[2];
-	void *setlist[2];
+	uint32_t spi_peer, spi_our, new_spi_peer, new_spi_our;
+	int getlist[4];
+	void *setlist[4];
 	int k;
 
 	getlist[0] = HIP_HADB_PEER_SPI;
 	getlist[1] = HIP_HADB_OWN_SPI;
+	getlist[2] = HIP_HADB_PEER_NEW_SPI;
+	getlist[3] = HIP_HADB_OWN_NEW_SPI;
 	setlist[0] = &spi_peer;
 	setlist[1] = &spi_our;
-	k = hip_hadb_multiget(peer, 2, getlist, setlist, HIP_ARG_HIT);
-	if (k != 2) {
+	setlist[2] = &new_spi_peer;
+	setlist[3] = &new_spi_our;
+
+
+	k = hip_hadb_multiget(peer, 4, getlist, setlist, HIP_ARG_HIT);
+	if (k != 4) {
 		HIP_ERROR("Could not get SPIs from db\n");
-		return -EINVAL;
+//		return -EINVAL;
 	}
 
 	/* Delete SPDs */
@@ -94,6 +100,10 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 	/* Delete SAs */
 	hip_delete_sa(spi_peer, own);
 	hip_delete_sa(spi_our, peer);
+	if (k > 2) {
+		hip_delete_sa(new_spi_peer, own);
+		hip_delete_sa(new_spi_our, peer);
+	}
 
 	return 0;
 }
@@ -149,6 +159,7 @@ static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
 		kfree(xp);
 		return err;
 	}
+	HIP_DEBUG("sa_entry addr=0x%p\n", sa_entry);
 
 	xfrm_pol_put(xp); // really?
 	return 0;
@@ -157,7 +168,7 @@ static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
 static
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 struct in6_addr *dstip, uint32_t *spi, int alg,
-		 void *enckey, void *authkey)
+		 void *enckey, void *authkey, int is_active)
 {
 	int err;
 	struct xfrm_state *xs;
@@ -237,6 +248,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		HIP_ERROR("Unsupported type: 0x%x\n",alg);
 		HIP_ASSERT(0);
 	}
+	HIP_DEBUG("policy addr=%p\n", policy);
 
 	ekeylen = ead->desc.sadb_alg_maxbits;
 	akeylen = aad->desc.sadb_alg_maxbits;
@@ -259,7 +271,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	xs->props.family = AF_INET6;
 	memcpy(&xs->id.daddr, dsthit, sizeof(struct in6_addr));
 	memcpy(&xs->props.saddr, srchit, sizeof(struct in6_addr));
-//	memcpy(&xs->outeraddr, dstip, sizeof(struct in6_addr));
+
 	xs->props.mode = XFRM_MODE_TRANSPORT; //transport
 	xs->props.reqid = 666; // SP has to know which SA to use
 	
@@ -276,7 +288,10 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	}
 
 	xs->km.seq = 0;
-	xs->km.state = XFRM_STATE_VALID;
+	if (is_active)
+		xs->km.state = XFRM_STATE_VALID;
+	else
+		xs->km.state = XFRM_STATE_VOID;
 
 	/* SA policy ok??? */
 
@@ -296,6 +311,10 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 			kfree(xs->ealg);
 		kfree(xs);
 	}
+
+	HIP_DEBUG("encalg=%d\n", encalg);
+	HIP_HEXDUMP("sa_entry enckey", enckey, sa_entry->esp_algo.key_len);
+	HIP_HEXDUMP("sa_entry authkey", authkey, sa_entry->auth_algo.key_len);
 
 	return err;
 
@@ -322,7 +341,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
  */
 int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 		  struct in6_addr *dstip, uint32_t *spi, int alg, 
-		  void *enckey, void *authkey, int dir)
+		  void *enckey, void *authkey, int dir, int is_active)
 {
 	int err;
 
@@ -353,6 +372,7 @@ int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	return 0;
 }
+
 
 
 
@@ -482,12 +502,10 @@ void hip_regen_dh_keys(u32 bitmask)
 	dhtable_[gid] = tmp;
 	sul;
 	free(oldkey);
-
 	
 	sl;
 	encode_pubkey(buffer,dhtable[gid]);
 	sul;
-
 
 	sl;
 	tmp = dh_clone(dhtable[gid]);
@@ -495,5 +513,3 @@ void hip_regen_dh_keys(u32 bitmask)
 	shared_secret(tmp,peerkey));
 
 */	
-
-

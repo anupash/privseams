@@ -60,12 +60,12 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	unsigned char c;
 
 	if (!data) {
-	  HIP_ERROR("NULL data ptr\n");
-	  return;
+		HIP_ERROR("NULL data ptr\n");
+		return;
 	}
 
-	/* every hexdump line contains offset+":"+32 bytes of data */
-	buflen = 10+2+2*32+((32-1)/4)+1;
+	/* every hexdump line contains offset+": "+32 bytes of data (space every 4 bytes) */
+	buflen = 4+2+2*32+((32-1)/4)+1;
 	_HIP_DEBUG("hdump buflen = %d\n", buflen);
 	buf = kmalloc(buflen, GFP_ATOMIC);
 	if (!buf)
@@ -80,8 +80,8 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	  int j;
 	  bufpos = buf;
 	  memset(buf, 0, buflen);
-	  sprintf(bufpos, "%10d: ", i);
-	  bufpos += 12;
+	  sprintf(bufpos, "%4d: ", i);
+	  bufpos += 4+2;
 	  for (j = 0; i < len && bufpos < buf+buflen-1;
 	       j++, i++, bufpos += 2*sizeof(char)) {
 	    c = (unsigned char)(*(((unsigned char *)data)+i));
@@ -99,3 +99,22 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	return;
 }
 
+
+/**
+ * hip_state_str - get name for a state
+ * @state: state value
+ *
+ * Returns: state name as a string.
+ */
+inline const char *hip_state_str(unsigned int state)
+{
+	const char *str = "UNKNOWN";
+	static const char *states[] =
+		{ "NONE", "UNASSOCIATED", "I1_SENT",
+		  "I2_SENT", "ESTABLISHED", "REKEYING",
+		  "RESYNC" };
+	if (state <= (sizeof(states)/sizeof(states[0])))
+		str = states[state];
+
+	return str;
+}

@@ -59,20 +59,7 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 
 	printk("__xfrm6_state_lookup: hashed=%d\n",h);
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
-//#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-//		struct in6_addr daddr_hit;
-//		if (!HIP_CALLFUNC(hip_is_our_spi,0)(x->id.spi,&daddr_hit)) {
-			/* SPI does not belong to HIP, but might still
-			   belong to IPsec etc... */
-//			if (spi != x->id.spi) 
-//				continue;
-//			res = ipv6_addr_cmp((struct in6_addr *)daddr, 
-//					    (struct in6_addr *)&x->id.daddr);
-//		} else
-//			res = ipv6_addr_cmp(&daddr_hit, (struct in6_addr *)&x->id.daddr);
-//#else
 		res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
-//#endif
 		if (!res)
 			printk("Requested SPI: %x, SA's SPI: %x and protos: %x / %x\n",spi,x->id.spi,proto,x->id.proto);
 		if (x->props.family == AF_INET6 && spi == x->id.spi && !res &&

@@ -429,6 +429,7 @@ int hip_check_network_msg_type(const struct hip_common *msg) {
 			HIP_R1,
 			HIP_I2,
 			HIP_R2,
+			HIP_UPDATE,
 			HIP_REA,
 			HIP_AC,
 			HIP_ACR
@@ -478,7 +479,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_BIRTHDAY_COOKIE_R1,
 			HIP_PARAM_BIRTHDAY_COOKIE_I2,
 			HIP_PARAM_DIFFIE_HELLMAN,
-			HIP_PARAM_NES_INFO,
+			HIP_PARAM_NES,
 			HIP_PARAM_HIP_TRANSFORM,
 			HIP_PARAM_ESP_TRANSFORM,
 			HIP_PARAM_ENCRYPTED,
@@ -1674,6 +1675,39 @@ int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
 	ac.reserved = htonl(0);
 
 	err = hip_build_param(msg, &ac);
+	return err;
+}
+
+/**
+ * hip_build_param_nes - build and append HIP NES parameter
+ * @msg: the message where the parameter will be appended
+ * @is_reply: 1 if this packet is a reply to another UPDATE
+ * @keymat_index: Keymat Index in host byte order
+ * @update_id: UPDATE ID in host byte order
+ * @old_spi: Old SPI value in host byte order
+ * @new_spi: New SPI value in host byte order
+ * 
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_nes(struct hip_common *msg, int is_reply,
+			uint16_t keymat_index, uint16_t update_id,
+			uint32_t old_spi, uint32_t new_spi)
+{
+	int err = 0;
+	struct hip_nes nes;
+
+	hip_set_param_type(&nes, HIP_PARAM_NES);
+	hip_calc_generic_param_len(&nes, sizeof(struct hip_nes), 0);
+	if (is_reply)
+		nes.keymat_index = htons(0x8000 | keymat_index); /* highest bit set */
+	else
+		nes.keymat_index = htons(0x7fff & keymat_index); /* highest bit not set */
+
+	_HIP_DEBUG("nes.keymat_index host=%u\n", ntohs(nes.keymat_index));
+	nes.update_id = htons(update_id);
+	nes.old_spi = htonl(old_spi);
+	nes.new_spi = htonl(new_spi);
+	err = hip_build_param(msg, &nes);
 	return err;
 }
 

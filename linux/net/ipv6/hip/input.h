@@ -22,6 +22,7 @@ int hip_receive_r1(struct sk_buff *skb);
 int hip_receive_i2(struct sk_buff *skb);
 int hip_receive_i1(struct sk_buff *skb);
 int hip_receive_r2(struct sk_buff *skb);
+int hip_receive_update(struct sk_buff *skb);
 int hip_receive_ac_or_acr(struct sk_buff *skb, int pkt_type);
 int hip_receive_rea(struct sk_buff *skb);
 int hip_is_our_spi(uint32_t spi, struct in6_addr *hit);

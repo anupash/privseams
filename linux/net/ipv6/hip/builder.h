@@ -114,6 +114,9 @@ int hip_build_param_rea_info(struct hip_common *msg,
 			     int address_count);
 int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
 			    uint16_t rea_id, uint32_t rtt);
+int hip_build_param_nes(struct hip_common *msg, int is_reply,
+			uint16_t keymat_index, uint16_t update_id,
+			uint32_t old_spi, uint32_t new_spi);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
 int hip_build_param_spi_lsi(struct hip_common *msg, uint32_t lsi,

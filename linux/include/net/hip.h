@@ -40,6 +40,8 @@
 
 typedef uint16_t in_port_t;
 
+//#include <net/keymat.h>
+
 #else
 #  include <sys/ioctl.h>
 #  include <netinet/in.h>
@@ -70,7 +72,7 @@ typedef uint16_t in_port_t;
 #define HIP_R1  2
 #define HIP_I2  3
 #define HIP_R2  4
-#define HIP_NES 5
+#define HIP_UPDATE 5
 #define HIP_REA 6
 #define HIP_BOS 7
 #define HIP_CER 8
@@ -121,18 +123,19 @@ typedef uint16_t in_port_t;
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F 
 
-#define HIP_STATE_NONE                0      /* No state, structure unused */
-#define HIP_STATE_START               1      /* E0 */
-#define HIP_STATE_INITIATING          2      /* E1 */
-#define HIP_STATE_WAIT_FINISH         3      /* E2 */
-#define HIP_STATE_ESTABLISHED         4      /* E3 */
-#define HIP_STATE_ESTABLISHED_REKEY   5      /* E4 */
+#define HIP_STATE_NONE              0      /* No state, structure unused */
+#define HIP_STATE_UNASSOCIATED      1      /* ex-E0 */
+#define HIP_STATE_I1_SENT           2      /* ex-E1 */
+#define HIP_STATE_I2_SENT           3      /* ex-E2 */
+#define HIP_STATE_ESTABLISHED       4      /* ex-E3 */
+#define HIP_STATE_REKEYING          5      /* ex-E4 */
+#define HIP_STATE_RESYNC            6
 
 #define HIP_PARAM_MIN                -1 /* exclusive */
 #define HIP_PARAM_SPI_LSI             1
 #define HIP_PARAM_BIRTHDAY_COOKIE_R1  3
 #define HIP_PARAM_BIRTHDAY_COOKIE_I2  5
-#define HIP_PARAM_NES_INFO            9
+#define HIP_PARAM_NES                9
 #define HIP_PARAM_DIFFIE_HELLMAN     13
 #define HIP_PARAM_HIP_TRANSFORM      17
 #define HIP_PARAM_ESP_TRANSFORM      19
@@ -305,6 +308,13 @@ struct hip_i1 {
 	struct in6_addr hitr;  /* Receiver HIT */
 } __attribute__ ((packed));
 
+struct hip_keymat_keymat
+{
+	size_t offset;      /* Offset into the key material */
+	size_t keymatlen;   /* Length of the key material */
+	
+	void *keymatdst; /* Pointer to beginning of key material */
+};
 
 /*
  * Used in executing a unit test case in a test suite in the kernel module.
@@ -428,11 +438,11 @@ struct hip_sig2 {
 	/* fixed part end */
 } __attribute__ ((packed));
 
-struct hip_nes_info {
+struct hip_nes {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint16_t keymat_index;
-	uint16_t nes_id;
+	uint16_t update_id;
 	uint32_t old_spi;
 	uint32_t new_spi;
 } __attribute__ ((packed));
@@ -575,6 +585,17 @@ struct hip_context
 	struct hip_crypto_key hip_authr;
 	struct hip_crypto_key hip_hmaci;
 	struct hip_crypto_key hip_hmacr;
+
+	char   *dh_shared_key;
+	size_t dh_shared_key_len;
+
+	uint16_t current_keymat_index; /* the byte offset index in draft chapter HIP KEYMAT */
+	unsigned char current_keymat_K[HIP_AH_SHA_LEN];
+	uint8_t keymat_calc_index; /* the one byte index number used
+				    * during the keymat calculation */
+
+	uint16_t keymat_index; /* KEYMAT offset */
+	struct hip_keymat_keymat keymat; /* TEST */
 };
 
 struct hip_context_dh_sig
@@ -614,19 +635,21 @@ struct hip_peer_addr_list_item
 struct hip_hadb_state
 {
 	struct list_head     next;
-//	struct hip_sdb_state *next;
 
 	int                  state;
 
-	/* Controls received from the peer */
-	uint16_t             peer_controls;
+	uint16_t             peer_controls;  /* Controls received from the peer */
 
-	struct in6_addr      hit_our;  /* The HIT we use with this host */
+	struct in6_addr      hit_our;        /* The HIT we use with this host */
 	struct in6_addr      hit_peer;       /* Peer's HIT */
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 
-	uint32_t             spi_peer;
-	uint32_t             spi_our;
+	/* SWAP SPI COMMENTS */
+	uint32_t             spi_peer;       /* outbound IPsec SA SPI */
+	uint32_t             spi_our;        /* inbound IPsec SA SPI */
+	uint32_t             new_spi_peer;   /* new outbound IPsec SA SPI received in UPDATE */
+	uint32_t             new_spi_our;    /* new inbound IPsec SA SPI when rekey was initiated */
+
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;
 
@@ -635,6 +658,9 @@ struct hip_hadb_state
 
 	uint64_t             birthday;
 	
+	char                 *dh_shared_key;
+	size_t               dh_shared_key_len;
+
 	struct hip_kludge    *sk;  /* TCP sock for connection establishment */
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
@@ -647,6 +673,15 @@ struct hip_hadb_state
 	struct hip_crypto_key hmac_our;
 	struct hip_crypto_key hmac_peer;
 
+	uint16_t current_keymat_index; /* the byte offset index in draft chapter HIP KEYMAT */
+	uint8_t keymat_calc_index; /* the one byte index number used
+				    * during the keymat calculation */
+	unsigned char current_keymat_K[HIP_AH_SHA_LEN]; /* last Kn, where n is keymat_calc_index */
+
+	struct hip_keymat_keymat keymat; /* KEYMAT starting from index current_keymat_index */
+
+	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
+	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
 };
 
 struct hip_cookie_entry {

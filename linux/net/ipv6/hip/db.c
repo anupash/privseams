@@ -554,7 +554,6 @@ hip_hadb_delete_peer_addrlist_one(struct hip_hadb_state *entry, struct in6_addr 
 }
 
 
-
 /**
  * hip_hadb_delete_peer_addr_iface - delete peer's addresses belonging to an interface
  * @entry: corresponding hadb entry of the peer
@@ -710,23 +709,26 @@ static void hip_hadb_entry_init(struct hip_hadb_state *entry)
  * hip_hadb_entry_free - free entry's allocated resources including IPsec associations
  * @entry: the entry whose resources are to be freed
  *
+ * Does not free memory used by the structure itself.
  */
 static void hip_hadb_entry_free(struct hip_hadb_state *entry)
 {
-	HIP_DEBUG("entry=%p\n", entry);
+	HIP_DEBUG("freeing entry 0x%p\n", entry);
 	if (!entry)
 		return;
 
 	if (entry->spi_our || entry->spi_peer)
-		hip_delete_esp(&entry->hit_our,&entry->hit_peer);
+		hip_delete_ipsec(&entry->hit_our, &entry->hit_peer);
 
 	hip_hadb_delete_peer_addrlist(entry);
 
+	if (entry->keymat.keymatdst)
+		kfree(entry->keymat.keymatdst);
+	if (entry->dh_shared_key)
+		kfree(entry->dh_shared_key);
+
 	return;
 }
-
-
-
 
 
 /**
@@ -772,6 +774,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi(struct hip_db_struct *db,
 
 static int hip_hadb_reinit_state(struct hip_hadb_state *entry)
 {
+ 	HIP_DEBUG("** TODO: call hip_hadb_entry_free ? **\n");
 	entry->state = HIP_STATE_START;
 	entry->peer_controls = 0;
 	entry->spi_peer = 0;
@@ -904,6 +907,7 @@ void hip_uninit_hadb(void)
 		this = list_entry(iter, struct hip_hadb_state, next);
 
 		list_del(iter);
+/* merge hip_hadb_entry_free */ 
 		hip_delete_hadb_entry(this);
 	}
 
@@ -993,8 +997,6 @@ int hip_hadb_for_each_entry(FILTER_FUNC filter, ACCESS_FUNC accessor,
 
 	return num;
 }
-
-
 
 
 int hip_hadb_flush_states(struct in6_addr *hit)
@@ -1512,7 +1514,7 @@ int hip_add_peer_info_nolock(struct in6_addr *hit, struct in6_addr *addr)
 		}
 		HIP_DEBUG("created a new sdb entry\n");
 
-		entry->state = HIP_STATE_START;
+		entry->state = HIP_STATE_UNASSOCIATED;
 		ipv6_addr_copy(&entry->hit_peer,hit);
 		/* XXX: This is wrong. As soon as we have native socket API, we
 		 * should enter here the correct sender... (currently unknown).
@@ -1523,10 +1525,6 @@ int hip_add_peer_info_nolock(struct in6_addr *hit, struct in6_addr *addr)
 			HIP_ERROR("Could not assign local hit... continuing\n");
 		hip_hadb_insert_entry_nolock(entry);
 	}
-
-	/* note: we can't just simply use hip_sdb_entry_init() here
-	   because this entry might be in the middle of the sdb state
-	   (hip_sdb_entry_init() sets 'next' pointer to NULL). */
 
 	err = hip_hadb_add_peer_addr(entry, addr, 0, 0);
 	if (err) {
@@ -1598,17 +1596,16 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 
 	len = snprintf(page, count,
 		       "state peer_controls hit_our hit_peer "
-		       "spi_peer spi_our lsi_peer lsi_our esp_transform "
-		       "birthday list_of_peer_addrs curr_dst_addr\n");
+		       "spi_our spi_peer new_spi_our new_spi_peer lsi_our lsi_peer esp_transform "
+		       "birthday keymat_len keymat_offset keymat_index keymat_calc_index "
+		       "update_id_in update_id_out dh_len list_of_peer_addrs curr_dst_addr\n");
 	if (len >= count)
 		goto err;
 
 	HIP_READ_LOCK_DB(&hip_hadb);
 
-
 	list_for_each_entry(entry,&hip_hadb.db_head,next) {
 		char addr_str[INET6_ADDRSTRLEN];
-		char *states[] = { "none", "start", "init", "wait", "estab" };
 		char *esp_transforms[] = { "none/reserved", "aes-sha1", "3des-sha1", "3des-md5",
 					   "blowfish-sha1", "null-sha1", "null-md5" };
 		struct list_head *pos;
@@ -1617,8 +1614,7 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 		int i = 0;
 
 		if ( (len += snprintf(page+len, count-len, "%s 0x%x",
-				entry->state <= (sizeof(states)/sizeof(states[0])) ?
-				 states[entry->state] : "UNKNOWN",
+				      hip_state_str(entry->state),
 				      entry->peer_controls)) >= count)
 			break;
 		hip_in6_ntop(&entry->hit_our, addr_str);
@@ -1628,11 +1624,20 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 		if ( (len += snprintf(page+len, count-len, " %s", addr_str)) >= count)
 			break;
 		if ( (len += snprintf(page+len, count-len,
-				      " 0x%08x 0x%08x 0x%08x 0x%08x %s 0x%llx",
-				      entry->spi_peer, entry->spi_our,
-				      entry->lsi_peer, entry->lsi_our,
-				      entry->esp_transform <= (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ? esp_transforms[entry->esp_transform] : "UNKNOWN",
-				      entry->birthday)) >= count)
+				      " 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x %s",
+				      entry->spi_our, entry->spi_peer, entry->new_spi_our,
+				      entry->new_spi_peer, entry->lsi_our, entry->lsi_peer,
+				      entry->esp_transform <=
+				      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
+				      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
+ 			break;
+
+ 		if ( (len += snprintf(page+len, count-len,
+				      " 0x%llx %u %u %u %u %u %u %u",
+				      entry->birthday, entry->keymat.keymatlen,
+				      entry->keymat.offset, entry->current_keymat_index,
+				      entry->keymat_calc_index, entry->update_id_in,
+				      entry->update_id_out, entry->dh_shared_key_len )) >= count)
 			break;
 
 		list_for_each(pos, &entry->peer_addr_list) {
@@ -1692,8 +1697,6 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 int hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
 				  int count, int *eof, void *data)
 {
-	/* XX: Called with sdb lock held ? */
-
         int len = 0;
 	struct hip_hadb_state *entry;
 	struct timeval now, addr_age;
@@ -1809,9 +1812,17 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
         return(len);
 }
 
+int hip_proc_send_update(char *page, char **start, off_t off,
+			 int count, int *eof, void *data)
+{
+	HIP_DEBUG("\n");
+	hip_send_update_all();
+	*eof = 1;
+
+	return 0;
+}
+
 #endif /* CONFIG_PROC_FS */
-
-
 
 
 
@@ -1861,10 +1872,6 @@ int hip_hadb_get_peer_address_info(void *arg, struct in6_addr *addr,
 	HIP_HADB_WRAP_R_CALL_FUNC(0,
         hip_hadb_get_peer_addr_info(entry,addr,interface_id,lifetime,modified_time));
 }
-
-
-
-
 
 /**
  * hip_hadb_set_peer_address_info - set entry's peer address Interface ID and/or address lifetime
@@ -1939,7 +1946,7 @@ int hip_hadb_exists_entry(void *arg, int type)
 
 
 /**
- * hip_hadb_reinitialize_state - Change entry's state back to HIP_STATE_START
+ * hip_hadb_reinitialize_state - Change entry's state back to HIP_STATE_UNASSOCIATED
  * @arg: Database key
  * @type: Type of key
  *
@@ -2043,6 +2050,12 @@ int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int t
 		case HIP_HADB_PEER_SPI:
 			*((uint32_t *)target) = entry->spi_peer;
 			break;
+		case HIP_HADB_OWN_NEW_SPI:
+			*((uint32_t *)target) = entry->new_spi_our;
+			break;
+		case HIP_HADB_PEER_NEW_SPI:
+			*((uint32_t *)target) = entry->new_spi_peer;
+			break;
 		case HIP_HADB_OWN_LSI:
 			*((uint32_t *)target) = entry->lsi_our;
 			break;
@@ -2071,22 +2084,37 @@ int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int t
 			ipv6_addr_copy(target, &entry->hit_peer);
 			break;
 		case HIP_HADB_OWN_ESP:
-			memcpy(target, &entry->esp_our, sizeof(struct hip_crypto_key));
+			memcpy(target,&entry->esp_our, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_PEER_ESP:
-			memcpy(target, &entry->esp_peer, sizeof(struct hip_crypto_key));
+			memcpy(target,&entry->esp_peer, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_OWN_AUTH:
-			memcpy(target, &entry->auth_our, sizeof(struct hip_crypto_key));
+			memcpy(target,&entry->auth_our, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_PEER_AUTH:
-			memcpy(target, &entry->auth_peer, sizeof(struct hip_crypto_key));
+			memcpy(target,&entry->auth_peer, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_OWN_HMAC:
-			memcpy(target, &entry->hmac_our, sizeof(struct hip_crypto_key));
+			memcpy(target,&entry->hmac_our, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_PEER_HMAC:
-			memcpy(target, &entry->hmac_peer, sizeof(struct hip_crypto_key));
+			memcpy(target,&entry->hmac_peer, sizeof(struct hip_crypto_key));
+			break;
+		case HIP_HADB_OWN_UPDATE_ID_IN:
+			*((uint16_t *)target) = entry->update_id_in;
+			break;
+		case HIP_HADB_OWN_UPDATE_ID_OUT:
+			*((uint16_t *)target) = entry->update_id_out;
+			break;
+		case HIP_HADB_KEYMAT_INDEX:
+			*((uint16_t *)target) = entry->current_keymat_index;
+			break;
+		case HIP_HADB_OWN_DH_SHARED:
+			memcpy(target, entry->dh_shared_key, entry->dh_shared_key_len);
+			break;
+		case HIP_HADB_OWN_DH_SHARED_LEN:
+			*((size_t *) target) = entry->dh_shared_key_len;
 			break;
 		default:
 			HIP_ERROR("Unknown request 0x%x at index %d\n", *getlist, num);
@@ -2101,8 +2129,9 @@ int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int t
  out_err:
 	res = err ? err : amount;
 	_HIP_DEBUG("err=%d res=%d amount=%d\n", err, res, amount);
-	HIP_HADB_WRAP_R_END;
+ 	HIP_HADB_WRAP_R_END;
 }
+
 
 /** hip_hadb_get_info - get given information on HIT or SPI
  * @arg: pointer to HIT or SPI depending on @type
@@ -2113,12 +2142,13 @@ int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int t
  */
 int hip_hadb_get_info(void *arg, void *dst, int type)
 {
-	int itype = (type & (~HIP_HADB_ACCESS_ARGS));
-	int res;
+  	int itype = (type & (~HIP_HADB_ACCESS_ARGS));
+  	int res;
 
 	res = hip_hadb_multiget(arg, 1, &itype, &dst, type & HIP_HADB_ACCESS_ARGS);
-	return res;
+  	return res;
 }
+
 
 /** hip_hadb_multiset - set information on given HIT or SPI
  * @arg: pointer to HIT or SPI depending on @type
@@ -2128,7 +2158,7 @@ int hip_hadb_get_info(void *arg, void *dst, int type)
  * @type: HIP_ARG_HIT or HIP_ARG_SPI
  *
  * Returns: On success @amount, on error -EINVAL
-*/
+ */
 int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int type)
 {
 	HIP_HADB_WRAP_BEGIN(int);
@@ -2165,6 +2195,12 @@ int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int t
 			break;
 		case HIP_HADB_PEER_SPI:
 			entry->spi_peer = *((uint32_t *) target);
+			break;
+		case HIP_HADB_OWN_NEW_SPI:
+			entry->new_spi_our = *((uint32_t *) target);
+			break;
+		case HIP_HADB_PEER_NEW_SPI:
+			entry->new_spi_peer = *((uint32_t *) target);
 			break;
 		case HIP_HADB_OWN_LSI:
 			entry->lsi_our = *((uint32_t *) target);
@@ -2211,6 +2247,12 @@ int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int t
 		case HIP_HADB_PEER_HMAC:
 			memcpy(&entry->hmac_peer,target,sizeof(struct hip_crypto_key));
 			break;
+		case HIP_HADB_OWN_UPDATE_ID_IN:
+			entry->update_id_in = *((uint16_t *)target);
+			break;
+		case HIP_HADB_OWN_UPDATE_ID_OUT:
+			entry->update_id_out = *((uint16_t *)target);
+			break;
 		default:
 			HIP_ERROR("Unknown request 0x%x at index %d\n", *getlist, num);
 			err = -EINVAL;
@@ -2224,7 +2266,7 @@ int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int t
  out_err:
 
 	res = err ? err : amount;
-	HIP_DEBUG("err=%d res=%d amount=%d\n", err, res, amount);
+	_HIP_DEBUG("err=%d res=%d amount=%d\n", err, res, amount);
 	HIP_HADB_WRAP_W_END;
 }
 

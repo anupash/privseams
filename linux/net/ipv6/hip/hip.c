@@ -24,6 +24,8 @@
  */
 
 #include "hip.h"
+#include "keymat.h"
+
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -88,7 +90,7 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 	int dh_size[] = { 0, 384, 768, 1536, 3072, 6144, 8192 };
 	uint16_t ret = -1;
 
-	HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
+	_HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
 	if (hip_dh_group_type == 0) 
 		HIP_ERROR("Trying to use reserved DH group type 0\n");
 	else if (hip_dh_group_type == HIP_DH_384)
@@ -323,7 +325,7 @@ struct hip_common *hip_create_r1(struct in6_addr *src_hit)
   	}
 	memset(dh_data, 0, dh_size);
 
-	HIP_DEBUG("dh_size=%d\n", dh_size);
+	_HIP_DEBUG("dh_size=%d\n", dh_size);
  	/* Get a localhost identity, allocate memory for the public key part
  	   and extract the public key from the private key. The public key is
  	   needed for writing the host id parameter in R1. */
@@ -465,7 +467,7 @@ int hip_enc_key_length(int tid)
 		ret = 0;
 		break;
 	default:
-		HIP_ASSERT(0);
+		HIP_ERROR("unknown tid=%d\n", tid);
 		break;
 	}
 	
@@ -550,40 +552,113 @@ int hip_auth_key_length_esp(int tid)
 /**
  * hip_store_base_exchange_keys - store the keys negotiated in base exchange
  * @ctx:             the context inside which the key data will copied around
- * @is_initiator:    true, if the localhost is the initiator, or false if
+ * @is_initiator:    true if the localhost is the initiator, or false if
  *                   the localhost is the responder
+ *
+ * Returns: 0 if everything was stored successfully, otherwise < 0.
  */
-void hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
+int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
 				  struct hip_context *ctx, int is_initiator)
 {
+	int err = 0;
 
-  if (is_initiator) {
-	memcpy(&entry->esp_our.key, &ctx->hip_espi.key,
-	       hip_enc_key_length(entry->esp_transform));
-	memcpy(&entry->esp_peer.key, &ctx->hip_espr.key,
-	       hip_enc_key_length(entry->esp_transform));
-	memcpy(&entry->auth_our.key, &ctx->hip_authi.key,
-	       hip_auth_key_length_esp(entry->esp_transform)); 
-	memcpy(&entry->auth_peer.key, &ctx->hip_authr.key,
-	       hip_auth_key_length_esp(entry->esp_transform));
-	memcpy(&entry->hmac_our, &ctx->hip_hmaci,
-	       hip_hmac_key_length(entry->esp_transform));
-	memcpy(&entry->hmac_peer, &ctx->hip_hmacr,
-	       hip_hmac_key_length(entry->esp_transform));
-  } else {
-	memcpy(&entry->esp_our.key, &ctx->hip_espr.key,
-	       hip_enc_key_length(entry->esp_transform));
-	memcpy(&entry->esp_peer.key, &ctx->hip_espi.key,
-	       hip_enc_key_length(entry->esp_transform));
-	memcpy(&entry->auth_our.key, &ctx->hip_authr.key,
-	       hip_auth_key_length_esp(entry->esp_transform));
-	memcpy(&entry->auth_peer.key, &ctx->hip_authi.key,
-	       hip_auth_key_length_esp(entry->esp_transform));
-	memcpy(&entry->hmac_our, &ctx->hip_hmacr,
-	       hip_hmac_key_length(entry->esp_transform));
-	memcpy(&entry->hmac_peer, &ctx->hip_hmaci,
-	       hip_hmac_key_length(entry->esp_transform));
-  }
+	if (is_initiator) {
+		memcpy(&entry->esp_our.key, &ctx->hip_espi.key,
+		       hip_enc_key_length(entry->esp_transform));
+		memcpy(&entry->esp_peer.key, &ctx->hip_espr.key,
+		       hip_enc_key_length(entry->esp_transform));
+		memcpy(&entry->auth_our.key, &ctx->hip_authi.key,
+		       hip_auth_key_length_esp(entry->esp_transform)); 
+		memcpy(&entry->auth_peer.key, &ctx->hip_authr.key,
+		       hip_auth_key_length_esp(entry->esp_transform));
+		memcpy(&entry->hmac_our, &ctx->hip_hmaci,
+		       hip_hmac_key_length(entry->esp_transform));
+		memcpy(&entry->hmac_peer, &ctx->hip_hmacr,
+		       hip_hmac_key_length(entry->esp_transform));
+	} else {
+		memcpy(&entry->esp_our.key, &ctx->hip_espr.key,
+		       hip_enc_key_length(entry->esp_transform));
+		memcpy(&entry->esp_peer.key, &ctx->hip_espi.key,
+		       hip_enc_key_length(entry->esp_transform));
+		memcpy(&entry->auth_our.key, &ctx->hip_authr.key,
+		       hip_auth_key_length_esp(entry->esp_transform));
+		memcpy(&entry->auth_peer.key, &ctx->hip_authi.key,
+		       hip_auth_key_length_esp(entry->esp_transform));
+		memcpy(&entry->hmac_our, &ctx->hip_hmacr,
+		       hip_hmac_key_length(entry->esp_transform));
+		memcpy(&entry->hmac_peer, &ctx->hip_hmaci,
+		       hip_hmac_key_length(entry->esp_transform));
+	}
+
+	/* TODO: move keymat update code to keymat.c */
+
+	/* store the leftover KEYMAT */
+
+	/* TODO: just reuse the keymatdst pointer, do not kmalloc */
+	err = hip_update_entry_keymat(entry, &ctx->keymat, ctx->current_keymat_index,
+				      ctx->keymat_calc_index, ctx->current_keymat_K);
+	if (err) {
+		HIP_ERROR("entry keymat update failed\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+#if 0
+	entry->current_keymat_index = ctx->current_keymat_index;
+	entry->keymat_calc_index = ctx->keymat_calc_index;
+	HIP_DEBUG("Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
+		  entry->current_keymat_index, entry->keymat_calc_index);
+
+	entry->keymat.offset = ctx->keymat.offset;
+	entry->keymat.keymatlen = ctx->keymat.keymatlen;
+
+	if (entry->keymat.keymatdst) {
+		/* move this to hadb_entry_reinit ? */ 
+		HIP_DEBUG("kfreeing old keymat data at 0x%p\n",
+			  entry->keymat.keymatdst);
+		kfree(entry->keymat.keymatdst);
+	}
+	entry->keymat.keymatdst = NULL;
+
+	if (entry->keymat.keymatlen > 0) {
+		HIP_DEBUG("entry leftover keymat, allocated %u bytes\n", entry->keymat.keymatlen);
+		entry->keymat.keymatdst = kmalloc(entry->keymat.keymatlen, GFP_KERNEL);
+		if (!entry->keymat.keymatdst) {
+			HIP_ERROR("entry leftover keymat kmalloc failed\n");
+			err = -ENOMEM;
+			goto out_err;
+		}
+		memcpy(entry->keymat.keymatdst, ctx->keymat.keymatdst, entry->keymat.keymatlen);
+		HIP_HEXDUMP("Entry leftover KEYMAT", entry->keymat.keymatdst, entry->keymat.keymatlen);
+	} else {
+		HIP_DEBUG("leftover keymat len was 0\n");
+	}
+
+	HIP_DEBUG("Entry keymat: offset=%d keymatlen=%d keymatdst=0x%p\n",
+		  entry->keymat.offset, entry->keymat.keymatlen, entry->keymat.keymatdst);
+#endif
+	
+	entry->dh_shared_key  = kmalloc(ctx->dh_shared_key_len, GFP_KERNEL);
+	if (!ctx->dh_shared_key) {
+		HIP_ERROR("entry dh_shared kmalloc failed\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	entry->dh_shared_key_len = ctx->dh_shared_key_len;
+	memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
+	HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
+
+	memcpy(entry->current_keymat_K, ctx->current_keymat_K, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
+	return err;
+
+ out_err:
+	if (entry->keymat.keymatdst)
+		kfree(entry->keymat.keymatdst);
+	if (entry->dh_shared_key)
+		kfree(entry->dh_shared_key);
+
+	return err;
 }
 
 /**
@@ -686,9 +761,10 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	if(tid == 0)
 		HIP_ERROR("Faulty ESP transform\n");
 
-#if 0 /* IETF58: this did not work with Andrew */
+#if 1
 	return tid;
 #else
+	/* IETF58: only this worked with Andrew */
 	return HIP_ESP_3DES_SHA1;
 #endif
 }
@@ -789,6 +865,9 @@ void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 	   SPI, the Initiator HIT SHOULD be zero. */
 	HIP_DEBUG("Received Unknown SPI: %x\n", ntohl(spi));
 	HIP_INFO("Sending R1 with NULL dst HIT\n");
+
+	HIP_DEBUG("SKIP SENDING OF R1 ON UNKNOWN SPI\n");
+	return;
 
 	/* We cannot know the destination HIT */
 	err = hip_xmit_r1(skb, NULL);
@@ -1417,6 +1496,9 @@ static int hip_init_procfs(void)
 			       hip_proc_read_hadb_state, NULL);
 	create_proc_read_entry("net/hip/sdb_peer_addrs", 0, 0,
 			       hip_proc_read_hadb_peer_addrs, NULL);
+
+	/* a simple way to trigger sending of NES packet to all peers */
+	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
 	return 1;
 }
 
@@ -1525,6 +1607,11 @@ static int hip_do_work(void)
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R2");
 			KRISU_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 			break;
+		case HIP_WO_SUBTYPE_RECV_UPDATE:
+			KRISU_START_TIMER(KMM_PARTIAL);
+			res = hip_receive_update(job->arg1);
+			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
+			break;
 		case HIP_WO_SUBTYPE_RECV_REA:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_rea(job->arg1);
@@ -1568,7 +1655,7 @@ static int hip_do_work(void)
 				HIP_ERROR("Multiset error\n");
 				res = KHIPD_ERROR;
 			}
-			HIP_DEBUG("moved to state %d\n",tmp32);
+			HIP_DEBUG("moved to state %s\n", hip_state_str(tmp32));
 			/* print own hit */
 			break;
 		case HIP_WO_SUBTYPE_DEL_CONN:

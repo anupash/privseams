@@ -19,7 +19,7 @@ linux/include within then installation HIPL directory,
 e.g. -I/somewhere/hipl/linux/include
 
 The rest of the installation proceeds as is written in the tcpdump
-INSTALL file.
+INSTALL file. Remember to give option --enable-ipv6 to configure.
 
 Remember to use long enough snaplen (option -s) to capture the HIP
 packets.

@@ -16,7 +16,7 @@
 
 int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 		  struct in6_addr *dstip, uint32_t *spi, int alg, 
-		  void *enckey, void *authkey, int dir);
+		  void *enckey, void *authkey, int dir, int is_active);
 
 
 int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer);

@@ -46,27 +46,30 @@ struct hip_db_struct {
 #define HIP_ARG_SPI                 0x000002
 #define HIP_HADB_ACCESS_ARGS        (HIP_ARG_HIT | HIP_ARG_SPI)
 
-//#define HIP_HADB_RESERVED       0x000004
-//#define HIP_HADB_RESERVED       0x000008
-#define HIP_HADB_OWN_SPI        0x000010
-#define HIP_HADB_OWN_LSI        0x000020
-#define HIP_HADB_OWN_HIT        0x000040
-//#define HIP_HADB_OWN_RESERVED   0x000080
-#define HIP_HADB_OWN_ESP        0x000100
-#define HIP_HADB_OWN_AUTH       0x000200
-#define HIP_HADB_OWN_HMAC       0x000400
-//#define HIP_HADB_OWN_RESERVED   0x000800
-#define HIP_HADB_MASK_OWN       0x000FF0
+#define HIP_HADB_OWN_UPDATE_ID_OUT  0x000004
+/* #define HIP_HADB_RESERVED         0x000008 */
+#define HIP_HADB_OWN_SPI            0x000010
+#define HIP_HADB_OWN_NEW_SPI        0x000008
+#define HIP_HADB_OWN_LSI            0x000020
+#define HIP_HADB_OWN_HIT            0x000040
+#define HIP_HADB_KEYMAT_INDEX       0x000080
+#define HIP_HADB_OWN_ESP            0x000100
+#define HIP_HADB_OWN_AUTH           0x000200
+#define HIP_HADB_OWN_HMAC           0x000400
+#define HIP_HADB_OWN_UPDATE_ID_IN   0x000800
+#define HIP_HADB_OWN_DH_SHARED      0x000804 /* testing */
+#define HIP_HADB_OWN_DH_SHARED_LEN  0x000808 /* testing */
+#define HIP_HADB_MASK_OWN           0x000FF0
 
 #define HIP_HADB_PEER_SPI       0x001000
 #define HIP_HADB_PEER_LSI       0x002000
+#define HIP_HADB_PEER_NEW_SPI   0x080000
 #define HIP_HADB_PEER_HIT       0x004000
-//#define HIP_HADB_PEER_RESERVED  0x008000
+#define HIP_HADB_PEER_RESERVED  0x008000
 #define HIP_HADB_PEER_ESP       0x010000
 #define HIP_HADB_PEER_AUTH      0x020000
 #define HIP_HADB_PEER_HMAC      0x040000
-//#define HIP_HADB_PEER_RESERVED  0x080000
-#define HIP_HADB_MASK_PEER       0x0FF000
+#define HIP_HADB_MASK_PEER      0x0FF000
 
 #define HIP_HADB_SK             0x100010
 #define HIP_HADB_STATE          0x100000
@@ -78,19 +81,29 @@ struct hip_db_struct {
 #define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
 #define HIP_DB_PEER_HID    (&hip_peer_hostid_db)
 
-// HADB functions (in alphabetical order)
+/* HADB functions */
 #define hip_hadb_get_birthday_by_hit(hit,a) \
             (hip_hadb_get_info(hit,a,HIP_HADB_BIRTHDAY|HIP_ARG_HIT))
-#define hip_hadb_get_peer_spi_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_PEER_SPI|HIP_ARG_HIT))
-#define hip_hadb_get_state_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_STATE|HIP_ARG_HIT))
 #define hip_hadb_get_esp_tfm_by_hit(hit,a) \
             (hip_hadb_get_info(hit,a,HIP_HADB_ESP_TRANSFORM|HIP_ARG_HIT))
 #define hip_hadb_get_own_hit_by_hit(hit,a) \
             (hip_hadb_get_info(hit,a,HIP_HADB_OWN_HIT|HIP_ARG_HIT))
 #define hip_hadb_get_own_hmac_by_hit(hit,a) \
             (hip_hadb_get_info(hit,a,HIP_HADB_OWN_HMAC|HIP_ARG_HIT))
+#define hip_hadb_get_keymat_index_by_hit(hit,a) \
+            (hip_hadb_get_info(hit,a,HIP_HADB_KEYMAT_INDEX|HIP_ARG_HIT))
+#define hip_hadb_get_our_new_spi_by_hit(hit,a) \
+            (hip_hadb_get_info(hit,a,HIP_HADB_OUR_NEW_SPI|HIP_ARG_HIT))
+#define hip_hadb_get_update_id_in_by_hit(hit,a) \
+            (hip_hadb_get_info(hit,a,HIP_HADB_OWN_UPDATE_ID_IN|HIP_ARG_HIT))
+#define hip_hadb_get_update_id_out_by_hit(hit,a) \
+            (hip_hadb_get_info(hit,a,HIP_HADB_OWN_UPDATE_ID_OUT|HIP_ARG_HIT))
+#define hip_hadb_get_peer_spi_by_hit(hit,a) \
+            (hip_hadb_get_info(hit,a,HIP_HADB_PEER_SPI|HIP_ARG_HIT))
+#define hip_hadb_get_peer_new_spi_by_hit(hit,a) \
+            (hip_hadb_get_info(hit,a,HIP_HADB_PEER_NEW_SPI|HIP_ARG_HIT))
+#define hip_hadb_get_state_by_hit(hit,a) \
+            (hip_hadb_get_info(hit,a,HIP_HADB_STATE|HIP_ARG_HIT))
 
 #if 0
 #define hip_hadb_get_spis_by_hit(hit,list,a,b) \
@@ -98,6 +111,12 @@ struct hip_db_struct {
 #define hip_hadb_set_lsis_by_hit(hit,list,a,b) \
             (hip_hadb_multiset(hit,list,2,a,b,NULL,NULL,HIP_ARG_HIT))
 #endif
+
+#define hip_hadb_set_update_id_in_by_hit(hit,list,a) \
+            (hip_hadb_multiset(hit,list,1,a,NULL,NULL,NULL,HIP_ARG_HIT))
+#define hip_hadb_set_update_id_out_by_hit(hit,list,a) \
+            (hip_hadb_multiset(hit,list,1,a,NULL,NULL,NULL,HIP_ARG_HIT))
+
 
 #define HIP_READ_LOCK_DB(db) do { \
 	KRISU_START_TIMER(KMM_SPINLOCK);\
@@ -203,6 +222,11 @@ int        hip_proc_read_hadb_state(char *page, char **start, off_t off,
 				    int count, int *eof, void *data);
 int        hip_proc_read_lhi(char *page, char **start, off_t off,
 			     int count, int *eof, void *data);
+
+/* for update packet testing */
+int hip_proc_send_update(char *page, char **start, off_t off,
+			 int count, int *eof, void *data);
+
 void       hip_uninit_host_id_dbs(void);
 void       hip_uninit_hadb(void);
 void       hip_uninit_all_eid_db(void);

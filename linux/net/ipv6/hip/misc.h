@@ -25,5 +25,7 @@ int hip_lhi_are_equal(const struct hip_lhi *lhi1,
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf);
 int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
-
+int hip_hit_is_bigger(const struct in6_addr *hit1,
+		      const struct in6_addr *hit2);
+ 
 #endif /* HIP_MISC_H */

@@ -138,7 +138,7 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
     err = -EINVAL;
     goto out_err;
   }
-  
+
   HIP_DEBUG("hit hash 128, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
   
   if (!BN_clear_bit(bn, 127) || !BN_set_bit(bn, 126)) {
