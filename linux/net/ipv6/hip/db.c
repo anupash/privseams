@@ -1155,7 +1155,7 @@ void hip_update_handle_nes(hip_ha_t *entry, struct hip_nes *nes, uint32_t peer_u
 	}
 }
 
-
+/* works if update contains only one NES */
 int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
