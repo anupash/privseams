@@ -49,7 +49,7 @@ libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
 libinet6_la_SOURCES += sa_len.c tempname.c
 
 # HIP additions
-libinet6_la_SOURCES += builder.c debug.c message.c getendpointinfo.c crypto.c
+libinet6_la_SOURCES += builder.c debug.c message.c crypto.c getendpointinfo.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_IO_MTSAFE_IO -D_USAGI -D_GNU_SOURCE
@@ -60,7 +60,7 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += -g -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_TOOLS) -I$(HIPL)
 CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE)
 
-include_HEADERS = libc-compat.h debug.h crypto.h message.h
+include_HEADERS = libc-compat.h debug.h crypto.h message.h builder.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23
 
@@ -69,6 +69,8 @@ EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23
 # only getendpointinfo).
 #
 #libinet6_la_CFLAGS += -DHIP_TRANSPARENT_API
+
+getendpointinfo.c: include/netdb.h
 
 # Some symlink kludges
 builder.h:
