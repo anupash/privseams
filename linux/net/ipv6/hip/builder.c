@@ -1225,6 +1225,7 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 	ipv6_addr_copy(&msg->hitr, hit_receiver ? hit_receiver : &in6addr_any);
 }
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE) || defined(CONFIG_HIP_USERSPACE)
 /**
  * hip_build_param_hmac_contents - build and append a HIP hmac parameter
  * @msg:  the message where the hmac parameter will be appended
@@ -1254,68 +1255,6 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 
 	err = hip_build_param(msg, &hmac);
  out_err:
-	return err;
-}
-
-/**
- * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter
- * @msg:     the message where the parameter will be appended
- * @host_id: the host id parameter that will contained in the hip_encrypted
- *           parameter
- * 
- * Note that this function does not actually encrypt anything, it just builds
- * the parameter. The @host_id that will be encapsulated in the hip_encrypted
- * parameter has to be encrypted using a different function call.
- *
- * Returns: zero on success, or negative on failure
- */
-int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
-					struct hip_host_id *host_id)
-{
-	int rem, err = 0;
-	struct hip_encrypted_aes_sha1 enc;
-	int host_id_len = hip_get_param_total_len(host_id);
-	struct hip_host_id *hid = host_id;
-	char *host_id_padded = NULL;
-
-	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
-	enc.reserved = htonl(0);
-	memset(&enc.iv, 0, 16);
-
-	/* copy the IV *IF* needed, and then the encrypted data */
-
-	/* AES block size must be multiple of 16 bytes */
-	rem = host_id_len % 16;
-	if (rem) {
-		HIP_DEBUG("Adjusting host id size to AES block size\n");
-
-		host_id_padded = HIP_MALLOC(host_id_len + rem, GFP_KERNEL);
-		if (!host_id_padded) {
-			err = -ENOMEM;
-			goto out_err;
-		}
-
-		/* this kind of padding works against Ericsson/OpenSSL
-		   (method 4: RFC2630 method) */
-		/* http://www.di-mgt.com.au/cryptopad.html#exampleaes */
-		memcpy(host_id_padded, host_id, host_id_len);
-		memset(host_id_padded + host_id_len, rem, rem);
-
-		hid = (struct hip_host_id *) host_id_padded;
-		host_id_len += rem;
-	}
-
-	hip_calc_param_len(&enc, sizeof(enc) -
-			   sizeof(struct hip_tlv_common) +
-			   host_id_len);
-
-	err = hip_build_generic_param(msg, &enc, sizeof(enc), hid);
-
- out_err:
-
-	if (host_id_padded)
-		HIP_FREE(host_id_padded);
-		
 	return err;
 }
 
@@ -1385,6 +1324,69 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	return err;
 }
 
+#endif /* CONFIG_HIP || CONFIG_HIP_MODULE || CONFIG_HIP_USERSPACE */
+
+/**
+ * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter
+ * @msg:     the message where the parameter will be appended
+ * @host_id: the host id parameter that will contained in the hip_encrypted
+ *           parameter
+ * 
+ * Note that this function does not actually encrypt anything, it just builds
+ * the parameter. The @host_id that will be encapsulated in the hip_encrypted
+ * parameter has to be encrypted using a different function call.
+ *
+ * Returns: zero on success, or negative on failure
+ */
+int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
+					struct hip_host_id *host_id)
+{
+	int rem, err = 0;
+	struct hip_encrypted_aes_sha1 enc;
+	int host_id_len = hip_get_param_total_len(host_id);
+	struct hip_host_id *hid = host_id;
+	char *host_id_padded = NULL;
+
+	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
+	enc.reserved = htonl(0);
+	memset(&enc.iv, 0, 16);
+
+	/* copy the IV *IF* needed, and then the encrypted data */
+
+	/* AES block size must be multiple of 16 bytes */
+	rem = host_id_len % 16;
+	if (rem) {
+		HIP_DEBUG("Adjusting host id size to AES block size\n");
+
+		host_id_padded = HIP_MALLOC(host_id_len + rem, GFP_KERNEL);
+		if (!host_id_padded) {
+			err = -ENOMEM;
+			goto out_err;
+		}
+
+		/* this kind of padding works against Ericsson/OpenSSL
+		   (method 4: RFC2630 method) */
+		/* http://www.di-mgt.com.au/cryptopad.html#exampleaes */
+		memcpy(host_id_padded, host_id, host_id_len);
+		memset(host_id_padded + host_id_len, rem, rem);
+
+		hid = (struct hip_host_id *) host_id_padded;
+		host_id_len += rem;
+	}
+
+	hip_calc_param_len(&enc, sizeof(enc) -
+			   sizeof(struct hip_tlv_common) +
+			   host_id_len);
+
+	err = hip_build_generic_param(msg, &enc, sizeof(enc), hid);
+
+ out_err:
+
+	if (host_id_padded)
+		HIP_FREE(host_id_padded);
+		
+	return err;
+}
 
 /**
  * hip_build_param_signature2_contents - build HIP signature2

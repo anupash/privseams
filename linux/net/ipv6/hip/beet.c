@@ -236,14 +236,32 @@ int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
 	return 0;
 }
 
-struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
+hip_xfrm_t *hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
 {
-	// XX FIXME: search the hashtable 
-	return NULL;
+	return (hip_xfrm_t *)hip_ht_find(&hip_beetdb_hit, (void *)dst_hit);
 }
 
-struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
+/* find HA by inbound SPI */
+struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 {
-        // XX FIXME: 
-	return NULL;
+	struct hip_hit_spi *hs;
+	hip_hit_t hit;
+	hip_xfrm_t *ha;
+
+	hs = (struct hip_hit_spi *) hip_ht_find(&hip_beetdb_spi_list,
+						(void *)spi_in);
+	if (!hs) {
+		HIP_DEBUG("HIT-SPI not found for SPI=0x%x\n", spi_in);
+		return NULL;
+	}
+
+	ipv6_addr_copy(&hit, &hs->hit);
+	hip_beetdb_put_hs(hs);
+
+	ha = hip_xfrm_find_by_hit(&hit);
+	if (!ha) {
+		HIP_DEBUG("HA not found for SPI=0x%x\n", spi_in);
+	}
+
+	return ha;
 }
