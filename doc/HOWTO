@@ -113,8 +113,12 @@ folder. You can compile it as follows:
   ./configure
   make conntest-client-gai conntest-server
 
-It is not necessary to "make install" the applications. You can execute
-them straight from their source directories.
+It is not necessary to "make install" the applications. You can
+execute them straight from their source directories.
+
+If you experience weird problems when executing configure script, try
+invoking "autoreconf". See also that the versions of your automake and
+autoconf tools are up-to-date.
 
 Testing a HIP connection between two hosts
 ==========================================
