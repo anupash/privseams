@@ -251,7 +251,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		log_error("Error parsing RSA private e\n");
 		goto cleanup;
 	}
-	HIP_HEXDUMP("mpi scan", c, len);
+	HIP_HEXDUMP("mpi scan E", c, len);
 	c += len;
 
 	slice = (priv_klen - len) / 6;
@@ -261,7 +261,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		log_error("Error parsing RSA private n\n");
 		goto cleanup;
 	}
-	HIP_HEXDUMP("mpi scan", c, len);
+	HIP_HEXDUMP("mpi scan N", c, len);
 	c += len;
 
 	len = 2 * slice;
@@ -269,7 +269,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		log_error("Error parsing RSA private d\n");
 		goto cleanup;
 	}
-	HIP_HEXDUMP("mpi scan", c, len);
+	HIP_HEXDUMP("mpi scan D", c, len);
 	c += len;
 	
 	len = slice;
@@ -277,7 +277,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		log_error("Error parsing RSA private p\n");
 		goto cleanup;
 	}
-	HIP_HEXDUMP("mpi scan", c, len);
+	HIP_HEXDUMP("mpi scan P", c, len);
 	c += len;
 
 	len = slice;
@@ -285,7 +285,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		log_error("Error parsing RSA private q\n");
 		goto cleanup;
 	}
-	HIP_HEXDUMP("mpi scan", c, len);
+	HIP_HEXDUMP("mpi scan Q", c, len);
 	c += len;
 
 	rsk.u = gcry_mpi_new(mpi_get_nbits(rsk.d));
@@ -293,8 +293,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 
 	buf = kmalloc(mpi_get_nbits(rsk.n) / 8, GFP_KERNEL);
 	if (!buf) {
-		HIP_ERROR("Hajoo homo aamuihis\n");
-		err = -1;
+		HIP_ERROR("\n");
 		goto cleanup;
 	}
 
@@ -317,12 +316,14 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 
 	memcpy(c, digest, HIP_AH_SHA_LEN);
 
+	HIP_HEXDUMP("digest", digest, HIP_AH_SHA_LEN);
+
 	len = mpi_get_nbits(rsk.n) / 8;
 	if (gcry_mpi_scan(&data, GCRYMPI_FMT_USG, buf, &len) != 0) {
 		log_error("Error parsing signature data\n");
 		goto cleanup;
 	}
-	HIP_HEXDUMP("mpi scan", buf, len);
+	HIP_HEXDUMP("Data to be signed", buf, len);
 
 	msig = mpi_alloc(mpi_get_nlimbs(rsk.n));
 	secret(msig, data, &rsk);
@@ -336,26 +337,24 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		log_error("Error encoding RSA signature\n");
 		goto cleanup;
 	}
-	HIP_HEXDUMP("mpi scan", signature, len);
+	HIP_HEXDUMP("calculated signature", signature, len);
 
  cleanup:
-	/* XX TODO: free msig */
+	/* XX FIXME: FREE msig, rsk elements, etc */
 	if (buf)
-	  kfree(buf);
+		kfree(buf);
 	return err;
 	
 }
 
 int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 {
-	int err = 0;
 	MPI result = NULL;
-	MPI data;
-	MPI orig;
+	MPI data, orig;
 	RSA_public_key rpk = {0};
-	int len, slice;
+	int len, slice, err = -1;
 	u8 *c = public_key; /* XX FIXME: IS THIS CORRECT? */
-	u8 *buf = NULL, *debug_signature=NULL;
+	u8 *buf = NULL; //, *debug_signature = NULL;
 	u8 asn_prefix[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B,
 			    0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04,
 			    0x14};
@@ -394,7 +393,6 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	buf = kmalloc(mpi_get_nbits(rpk.n) / 8, GFP_KERNEL);
 	if (!buf) {
 		HIP_ERROR("kmalloc failed\n");
-		err = -1;
 		goto cleanup;
 	}
 
@@ -418,17 +416,23 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	memcpy(c, digest, HIP_AH_SHA_LEN);
 
+	HIP_HEXDUMP("digest", digest, HIP_AH_SHA_LEN);
+
 	len = mpi_get_nbits(rpk.n) / 8;
 	if (gcry_mpi_scan(&data, GCRYMPI_FMT_USG, buf, &len) != 0) {
 		log_error("Error parsing signature data\n");
 		goto cleanup;
 	}
 
-	HIP_HEXDUMP("Signature data", buf, len);
+	HIP_HEXDUMP("Data to be signed", buf, len);
 
 	result = mpi_alloc(mpi_get_nlimbs(rpk.n));
-	/* XX TODO: check return value */
+	if (!result) {
+		log_error("mpi alloc rpk.n\n");
+		goto cleanup;
+	}
 
+#if 0
 	/* added this, is this correct? */
 	len = mpi_get_nbits(rpk.n) / 8;
 	if (gcry_mpi_scan(&result, GCRYMPI_FMT_USG, signature, &len) != 0)
@@ -436,18 +440,25 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 		log_error("Error reading signature data\n");
 		goto cleanup;
 	}
+#endif
 
 	public(result, data, &rpk); 
+	HIP_HEXDUMP("calculated signature", result, len);
 
+#if 0
 	debug_signature = kmalloc(mpi_get_nbits(rpk.n) / 8, GFP_KERNEL);
-        /* XX TODO: check return value and free mem */
-	
+	if (!debug_signature) {
+		log_error("kmalloc failed\n");
+		goto cleanup;
+	}
+		
         if (gcry_mpi_print(GCRYMPI_FMT_USG, debug_signature, 
 			   &len, result) != 0) {
 		log_error("Error encoding RSA signature\n");
 		goto cleanup;
 	}
-	HIP_HEXDUMP("mpi scan", debug_signature, len);
+	HIP_HEXDUMP("calculated signature", debug_signature, len);
+#endif
 
 	len = mpi_get_nbits(rpk.n) / 8;
 	if (gcry_mpi_scan(&orig, GCRYMPI_FMT_USG, signature, &len) != 0)
@@ -455,16 +466,24 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 		log_error("Error reading signature data\n");
 		goto cleanup;
 	}
-	/* XX TODO: free result */
-	if (buf)
-		kfree(buf);
 
-	return (mpi_cmp(orig, result));
+	HIP_HEXDUMP("original signature", signature, len);
+
+	err = mpi_cmp(orig, result);
 
  cleanup:
-	/* XX TODO: free result */
+	/* XX FIX: OTHER MPIs (data, orig, )?!? see the e.g. DSA functions */
+
+	if (result)
+		mpi_free(result);
+	if (rpk.e)
+		mpi_free(rpk.e);
+	if (rpk.n)
+		mpi_free(rpk.n);
+	//if (debug_signature)
+	//kfree(debug_signature);
 	if (buf)
 		kfree(buf);
 	
-	return -1;
+	return err;
 }
