@@ -1,5 +1,108 @@
 #include "xfrmapi.h"
 
+HIP_HASHTABLE hip_xfrmdb_hit;
+HIP_HASHTABLE hip_xfrmdb_spi_list;
+
+static struct list_head hip_xfrmdb_byhit[HIP_HIP_XFRMDB_SIZE];
+static struct list_head hip_xfrmdb_byspi_list[HIP_HIP_XFRMDB_SIZE];
+
+void hip_init_hadb(void)
+{
+	memset(&hip_xfrmdb_hit,0,sizeof(hip_xfrmdb_hit));
+	memset(&hip_xfrmdb_spi_list,0,sizeof(hip_xfrmdb_spi_list));
+
+	hip_xfrmdb_hit.head =      hip_xfrmdb_byhit;
+	hip_xfrmdb_hit.hashsize =  HIP_HIP_XFRMDB_SIZE;
+	hip_xfrmdb_hit.offset =    offsetof(hip_ha_t, next_hit);
+	hip_xfrmdb_hit.hash =      hip_hash_hit;
+	hip_xfrmdb_hit.compare =   hip_match_hit;
+	hip_xfrmdb_hit.hold =      hip_hip_xfrmdb_hold_entry;
+	hip_xfrmdb_hit.put =       hip_hip_xfrmdb_put_entry;
+	hip_xfrmdb_hit.get_key =   hip_hip_xfrmdb_get_key_hit;
+
+	strncpy(hip_xfrmdb_hit.name,"HIP_XFRMDB_BY_HIT", 15);
+	hip_xfrmdb_hit.name[15] = 0;
+
+	hip_xfrmdb_spi_list.head =      hip_xfrmdb_byspi_list;
+	hip_xfrmdb_spi_list.hashsize =  HIP_HIP_XFRMDB_SIZE;
+	hip_xfrmdb_spi_list.offset =    offsetof(struct hip_hit_spi, list);
+	hip_xfrmdb_spi_list.hash =      hip_hash_spi;
+	hip_xfrmdb_spi_list.compare =   hip_hip_xfrmdb_match_spi;
+	hip_xfrmdb_spi_list.hold =      hip_hip_xfrmdb_hold_hs;
+	hip_xfrmdb_spi_list.put =       hip_hip_xfrmdb_put_hs;
+	hip_xfrmdb_spi_list.get_key =   hip_hip_xfrmdb_get_key_spi_list;
+
+	strncpy(hip_xfrmdb_spi_list.name,"HIP_XFRMDB_BY_SPI_LIST", 15);
+	hip_xfrmdb_spi_list.name[15] = 0;
+
+	hip_ht_init(&hip_xfrmdb_hit);
+	hip_ht_init(&hip_xfrmdb_spi_list);
+}
+
+void hip_uninit_hadb()
+{
+	int i;
+	hip_ha_t *ha, *tmp;
+	struct hip_hit_spi *hs, *tmp_hs;
+
+	HIP_DEBUG("\n");
+
+	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
+	hip_hip_xfrmdb_dump_hs_ht();
+
+	/* I think this is not very safe deallocation.
+	 * Locking the hip_xfrmdb_spi and hip_xfrmdb_hit could be one option, but I'm not
+	 * very sure that it will work, as they are locked later in 
+	 * hip_hip_xfrmdb_remove_state() for a while.
+	 *
+	 * The list traversing is not safe in smp way :(
+	 */
+	HIP_DEBUG("DELETING HA HT\n");
+	for(i = 0; i < HIP_HIP_XFRMDB_SIZE; i++) {
+		list_for_each_entry_safe(ha, tmp, &hip_xfrmdb_byhit[i], next_hit) {
+			if (atomic_read(&ha->refcnt) > 2)
+				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
+			hip_hold_ha(ha);
+			hip_hip_xfrmdb_remove_state(ha);
+			hip_put_ha(ha);
+		}
+	}
+
+	/* HIT-SPI mappings should be already deleted by now, but check anyway */
+	HIP_DEBUG("DELETING HS HT\n");
+	for(i = 0; i < HIP_HIP_XFRMDB_SIZE; i++) {
+		_HIP_DEBUG("HS HT [%d]\n", i);
+		list_for_each_entry_safe(hs, tmp_hs, &hip_xfrmdb_byspi_list[i], list) {
+			HIP_ERROR("BUG: HS NOT ALREADY DELETED, DELETING HS %p, HS SPI=0x%x\n",
+				  hs, hs->spi);
+			if (atomic_read(&hs->refcnt) > 1)
+				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
+			hip_hip_xfrmdb_hold_hs(hs);
+			//hip_hip_xfrmdb_delete_hs(hs);
+			hip_hip_xfrmdb_remove_hs2(hs);
+			hip_hip_xfrmdb_put_hs(hs);
+			//} else
+			//	HIP_DEBUG("HS refcnt < 1, BUG ?\n");
+		}
+	}
+	HIP_DEBUG("DONE DELETING HS HT\n");
+}
+
+/**
+ *
+ */
+int hip_xfrm_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
+	return 0;
+}
+
+int hip_xfrm_update(uint32 spi, struct in6_addr * dst_addr, int state) {
+	return 0;
+}
+
+int hip_xfrm_delete(uint32 spi, struct in6_addr * hit) {
+	return 0;
+}
+
 /**
  * hip_delete_spd - delete an SPD entry suitable for HIP
  * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
@@ -40,6 +143,7 @@ extern struct list_head *xfrm_state_byspi;
  *
  * Returns: 0 if successful, else < 0.
  */
+// FIKME: this is basically the same as: xfrm_del_sa(struct sk_buff *skb, struct nlmsghdr *nlh, void **xfrma) (xfrm_user.c)
 int hip_delete_sa(u32 spi, struct in6_addr *dst)
 {
 	struct xfrm_state *xs;
@@ -61,16 +165,6 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 
 	return 0;
 }
-
-/* this probably is not used anymore? */
-// useless function, must be. (tkoponen)
-/*int hip_delete_esp(hip_ha_t *entry)
-{
-// assumes already locked entry 
-	hip_hadb_delete_inbound_spis(entry);
-	hip_hadb_delete_outbound_spis(entry);
-	return 0;
-}*/
 
 /**
  * hip_setup_sp - setup IPsec SPD entries
@@ -148,6 +242,7 @@ int hip_setup_sp(int dir)
 }
 
 /* returns 0 if SPI could not  be allocated, SPI is in host byte order */
+// xfrm_alloc_userspi(struct sk_buff *skb, struct nlmsghdr *nlh, void **xfrma)?
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
 {
 	struct xfrm_state *xs;

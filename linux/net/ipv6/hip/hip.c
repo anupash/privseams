@@ -1394,7 +1394,9 @@ static int __init hip_init(void)
 	if (hip_init_cipher() < 0)
 		goto out;
 
-	hip_init_hadb();
+#ifndef CONFIG_HIP_USERSPACE
+	hip_init_hadb();	
+#endif
 
 #ifdef CONFIG_HIP_RVS
 	hip_init_rvadb();
@@ -1524,11 +1526,13 @@ static void __exit hip_cleanup(void)
 #endif /* CONFIG_PROC_FS */
 
 	hip_uninit_socket_handler();
-	hip_uninit_host_id_dbs();
 #ifdef CONFIG_HIP_RVS
 	hip_uninit_rvadb();
 #endif
+#ifndef CONFIG_HIP_USERSPACE
+	hip_uninit_host_id_dbs();
 	hip_uninit_hadb();
+#endif
 	hip_uninit_all_eid_db();
 	hip_uninit_output_socket();
 	hip_uninit_r1();
