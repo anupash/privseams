@@ -876,6 +876,9 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
  *
  * The result of the encryption/decryption of @data is overwritten to @data.
  *
+ * A NULL IV is not guaranteed to be interoperable with 3DES, so it's
+ * recommended to use a non-NULL iv (even with just all zeroes).
+ *
  * Returns: 0 is encryption/decryption was successful, otherwise < 0.
  */
 int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,

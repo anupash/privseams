@@ -1,7 +1,5 @@
 ###############################################################################
 #
-# $Id: Makefile,v 1.30 2003/10/23 20:48:38 mkomu Exp $
-#
 # TODO:
 # - xx
 #
@@ -103,14 +101,6 @@ $(API).sgml: docproc $(API).tmpl $(APISOURCES)
 	@chmod 755 $(LINUX)/scripts/kernel-doc
 	TOPDIR=$(LINUX) $(LINUX)/scripts/docgen $(APISOURCES) \
 		< $(API).tmpl >$(API).sgml
-
-# Not really needed.
-#api-man: $(APISOURCES)
-#	@rm -rf man
-#	@chmod 755 $(LINUX)/scripts/kernel-doc
-#	@chmod 755 $(LINUX)/scripts/split-man
-#	$(LINUX)/scripts/kernel-doc -man $^ | \
-#		$(PERL) $(LINUX)/scripts/split-man man
 
 docproc: $(LINUX)/scripts/docproc.o
 	${CC} -o $(LINUX)/scripts/docproc $(LINUX)/scripts/docproc.o

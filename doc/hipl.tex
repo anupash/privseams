@@ -2,10 +2,11 @@
 \label{sec:introduction}
 
 
-{\large This document is in process of being rewritten. Many parts contain
-information that is inaccurate and/or wrong. Also some chapters are half-written.
-To get the old document, where the chapters were complete, checkout any
-version below patch-53 from the main archives.}
+{\large This document is in process of being rewritten. Many parts
+contain information that is inaccurate and/or wrong. Also some
+chapters are half-written.  To get the old document, where the
+chapters were complete, checkout any version below patch-53 from the
+main archives. The document will be updated during fall/winter 2004.}
 \vspace{2in}
 
 The lack of security has been one of the main problems with
@@ -249,12 +250,11 @@ explained in the rest of the sections.
 
 The networking stack component (in
 \autoref{sec:networking_stack_architecture}) is used to create, inject
-and remove HIP headers from network traffic. The daemon component is
-needed for handling e.g. cryptographic operations that cannot be done
-in the kernel and it is described in
-\autoref{sec:daemon_architecture}. The resolver component is described
-in \autoref{sec:resolver_architecture}. The network application point
-of view is described in
+and remove HIP headers from network traffic. The stack component
+includes a work queue mechanism that is described separately in
+section \autoref{sec:work_queue_architecture}. The resolver component
+is described in \autoref{sec:resolver_architecture}. The network
+application point of view is described in
 \autoref{sec:application_architecture}. Finally,
 \autoref{sec:collaboration_of_architecture_components} concludes with
 collaboration of all components.
@@ -264,163 +264,150 @@ collaboration of all components.
 
 The HIP functionality, or module, is located in the networking stack of the
 Linux kernel. Since the project was originally based on IPv6 protocol, the
-actual code resides in a \em{hip} subdirectory under the IPv6 directory.
+actual code resides in a \verb|hip| subdirectory under the IPv6 directory.
 
-We had to choose between a Bump-In-The-Stack model and a kernel thread model. We
-chose the latter one. Most of the HIP processing is done by the \em{khipd}
-kernel thread. The HIP thread will sleep in a semaphore waiting for other parts
-of the kernel to give it \em{work orders}. The implementation is a simple queue,
-protected by a semaphore.
+We had to choose between a Bump-In-The-Stack model and a kernel thread
+model. We chose the latter one. Most of the HIP processing is done by
+the \verb|khipd| kernel thread. The HIP thread will sleep in a semaphore
+waiting for other parts of the kernel to give it \verb|work orders|. The
+implementation is a simple queue, protected by a semaphore.
 
-Currently all the HIP packets coming from the network will cause a work order to
-be created and passed to the kernel thread. This way we minimize the time spent
-in the network receive softirq. Also the HIP thread can be easily controlled
-(niced, preempted etc.).
+Currently all the HIP packets coming from the network will cause a
+work order to be created and passed to the kernel thread. This way we
+minimize the time spent in the network receive softirq. Also the HIP
+thread can be easily controlled (niced, preempted etc.).
 
-There are also few other cases where a work order is created. Since user space
-has to have a mean to send mappings into the kernel, we have a block device \em{/dev/hip}.
-We currently use IOCTL calls to send information to the HIP module. All IOCTL
-information is passed to the HIP thread by work orders. Usually that information
-consists of adding/deleting mappings from the Host Association Data Base.
+There are also few other cases where a work order is created. Since
+user space has to have a mean to send mappings into the kernel, we
+have a block device \verb|/dev/hip|.  We currently use IOCTL calls to
+send information to the HIP module. All IOCTL information is passed to
+the HIP thread by work orders. Usually that information consists of
+adding/deleting mappings from the Host Association Data Base.
 
-\subsection{HIPL's place in kernel}
-The HIP's place in the networking stack is between the transport and the network
-layer. One of our goals has been not to affect the transport layer at all. We
-have achieved this goal. A HIP protocol is registered with IPv6 on bootup (or
-when the module is loaded). This enables us to use the kernel's built-in
-functionality of passing the IPv6 packets with a HIP header straight to our
-code.
+\subsection{The Location of HIP in the Kernel}
 
-Since the actual data, that flows after HIP connection setup, does not use HIP
-protocol headers, we have hook to some receiving/transmitting functions of the
-Linux. Currently we have XXX hooks in the underlying IPv6 code:
+% XX TODO Kristian: this stuff is already in Networking Stack chapter!?
+
+The HIP layer is located between the transport and the network layer
+in the networking stack. One of our goals has been not to affect the
+transport layer at all. We have achieved this goal. A HIP protocol is
+registered with IPv6 on bootup (or when the module is loaded). This
+enables us to use the kernel's built-in functionality of passing the
+IPv6 packets with a HIP header straight to our code.
+
+Since the actual data, that flows after HIP connection setup, does not
+use HIP protocol headers, we have hook to some receiving/transmitting
+functions of the Linux. Currently we have XXX hooks in the underlying
+IPv6 code:
 
 \begin{description}
-\item[hip\_handle\_esp] When an incoming ESP packet arrives, we need to rewrite
-  its IPv6 source and destination addresses with the corresponding HITs.  To do
-  IPv6 -> HIT mapping we have to consult our Host Association (HA) database.
-  This function is called just before we look up the Security Association (SA)
-  from SAD.
-\item[hip\_handle\_output] An outgoing ESP packet has HITs in the IPv6 header's
-  source and destination address fields. In this function we do the HIT -> IPv6
-  mapping.  Again, we need to consult our HA databse. This function is called
-  just before we call IPv6's \em{dst\_output}.
+
+\item[hip\_handle\_esp] When an incoming ESP packet arrives, we need to
+  rewrite its IPv6 source and destination addresses with the
+  corresponding HITs.  To do IPv6 -> HIT mapping we have to consult
+  our Host Association (HA) database.  This function is called just
+  before we look up the Security Association (SA) from SAD.
+
+\item[hip\_handle\_output] An outgoing ESP packet has HITs in the IPv6
+  header's source and destination address fields. In this function we
+  do the HIT -> IPv6 mapping.  Again, we need to consult our HA
+  databse. This function is called just before we call IPv6's
+  \verb|dst\_output|.
+
 \item[hip\_get\_addr]
+
 \item[hip\_get\_saddr]
-\item[hip\_unknown\_spi] This hook is related to an ongoing discussion about what
-  to do if an ESP packet with an unknown SPI value arrives at the host.  If
-  enabled, we assume that the peer has rebooted and send R1.
-\item[hip\_trigger\_bex] A hook to trigger the base exchange (connection setup).
+
+\item[hip\_unknown\_spi] This hook is related to an ongoing discussion about
+  what to do if an ESP packet with an unknown SPI value arrives at the
+  host.  If enabled, we assume that the peer has rebooted and send R1.
+
+\item[hip\_trigger\_bex] A hook to trigger the base exchange (connection
+      setup).
+
 \item[hip\_handle\_ipv6\_ifa\_notify] Used when the kernel acquires new IPv6
-  addresses.  When the kernel has performed the Double Address Detection (DAD),
-  we call this hook, and notify active HIP peers.
+  addresses.  When the kernel has performed the Double Address
+  Detection (DAD), we call this hook, and notify active HIP peers.
 \end{description}
 
 \subsection{IPsec Usage}
-When the hip code starts, it registers two Security Policies (SPs): One incoming
-and one outgoing. We use \em{4000::/2} as a source and destination IPv6
-addresses. This is the range that is preallocated for HIP use, although it is
-not yet officially allocated by the Internet Assigned Numbers Authority (IANA).
-Actually there is also a ``type 2'' HIT defined as \em{8000::/2}, but it is not
-in use, and we do not support it currently.
 
-When an ordinary\footnote{destination address belonging to the IPv6 address
-  range approved by the IANA} network connection is being established, the IPsec
-does not match the HIP SP, and thus no HIP action will be performed. When a HIP
-network connection is initiated, the HIP SP will match, and IPsec will query for
-an SA. If there is no ready SA available, as is the case when we first connect
-to the peer, the HIP module will start the HIP base exchange.
+When the hip code starts, it registers two Security Policies (SPs):
+One incoming and one outgoing. We use \verb|4000::/2| as a source and
+destination IPv6 addresses. This is the range that is preallocated for
+HIP use, although it is not yet officially allocated by the Internet
+Assigned Numbers Authority (IANA).  Actually there is also a ``type
+2'' HIT defined as \verb|8000::/2|, but it is not in use, and we do not
+support it currently.
 
-The caller process will be put to sleep until the SA is valid, or has timeouted.
-Default timeout period is 30 seconds\footnote{This is defined by the Linux 2.6 
- IPsec stack.}. The process will sleep even if the socket is a non-blocking one.
+When an ordinary\footnote{destination address belonging to the IPv6
+address range approved by the IANA} network connection is being
+established, the IPsec does not match the HIP SP, and thus no HIP
+action will be performed. When a HIP network connection is initiated,
+the HIP SP will match, and IPsec will query for an SA. If there is no
+ready SA available, as is the case when we first connect to the peer,
+the HIP module will start the HIP base exchange.
+
+The caller process will be put to sleep until the SA is valid, or has
+timeouted.  Default timeout period is 30 seconds\footnote{This is
+defined by the Linux 2.6 IPsec stack.}. The process will sleep even if
+the socket is a non-blocking one.
 \footnote{Perhaps we should do something to alleviate this minor problem?}
 
-If the HIP base exchange procedure is successful, we have 2 valid SAs: one
-outgoing and one incoming. All the sleepers waiting for the outgoing SA, will be
-now waked up. Now the calling process (usually \em{connect()}), can proceed with
-transport layer connection establishment (TCP handshake). This part will no
-longer sleep, if the socket has been set to non-blocking.
-
+If the HIP base exchange procedure is successful, we have 2 valid SAs:
+one outgoing and one incoming. All the sleepers waiting for the
+outgoing SA, will be now waked up. Now the calling process (usually
+\verb|connect()|), can proceed with transport layer connection
+establishment (TCP handshake). This part will no longer sleep, if the
+socket has been set to non-blocking.
 
 \subsection{Internal data structures}
 
-HIPL contains couple of global data structures. In this subchapter we describe
-their intended use and locking policies.
+HIPL contains couple of global data structures. In this section we
+describe their intended use and locking policies.
 
 \subsubsection{Host Association Data Base (HADB)}
 
-The HADB contains information about HIP connection states. For every known peer,
-distinguished by their HIT, we have an entry (HA) in HADB. In practice, every
-time an IPv6 -> HIT mapping is
+The HADB contains information about HIP connection states. For every
+known peer, distinguished by their HIT, we have an entry (HA) in
+HADB. In practice, every time an IPv6 -> HIT mapping is
 
-HIP HAs contain the state of the known connections. HAs are stored in two hash
-tables: one using peer's HIT as a key, the other using our SPI number as a key.
+HIP HAs contain the state of the known connections. HAs are stored in
+two hash tables: one using peer's HIT as a key, the other using our
+SPI number as a key.
 
-The two keys are needed because normally we access the HA database by the peer's
-HIT, but for example, when we receive an ESP packet from the network, we don't
-know which peer has sent the packet. Luckily the ESP packet contains our SPI
-number, and we can find the corresponding HA from the hash table. Now we can do
-the IPv6 -> HIT mapping that is required before we process the ESP packet.
+The two keys are needed because normally we access the HA database by
+the peer's HIT, but for example, when we receive an ESP packet from
+the network, we don't know which peer has sent the packet. Luckily the
+ESP packet contains our SPI number, and we can find the corresponding
+HA from the hash table. Now we can do the IPv6 -> HIT mapping that is
+required before we process the ESP packet.
 
-There is a reference counter in every HA. This counter must be incremented using
-\em{hip\_hold\_ha()} macro whenever we receive a reference to the HA. Obviously
-the reverse holds for decrementing the counter using \em{hip\_put\_ha()}. When the
-reference counter reaches zero, the memory allocates for the HA is automatically
-deleted.
+There is a reference counter in every HA. This counter must be
+incremented using \verb|hip\_hold\_ha()| macro whenever we receive a
+reference to the HA. Obviously the reverse holds for decrementing the
+counter using \verb|hip\_put\_ha()|. When the reference counter reaches
+zero, the memory allocates for the HA is automatically deleted.
 
-The HA is VALID, if and only if it is stored in \bf{both} the SPI and HIT hash
-tables. q This can be verified by checking if \em{hastate field of the HA equals
-  HIP\_HASTATE\_VALID}.
+The HA is VALID, if and only if it is stored in \bf{both} the SPI and
+HIT hash tables. q This can be verified by checking if \verb|hastate|
+field of the HA equals \verb|HIP_HASTATE_VALID|.
 
+\subsubsection{HADB Locking}
 
-{\large BLAH}
+% XX TODO Kristian:
+% - describe how the locks work
+% - explain when we are in user mode, when in interrupt, etc
+% - how does the current mode affect the locking
+% - there was one special case when when use HADB without locks..
+% - copy-paste from thesis?
 
+\subsection{HIP Work Queues}
+\label{sec:work_queue_architecture}
 
-HIP functionality can be implemented using different models. The
-models reflect the decision how to distribute the ``intelligence''
-of the protocol. In one model, the HIP protocol is implemented
-entirely in userspace. In another model, the whole HIP protocol is
-in the operating system kernel. 
-The distribution of the intelligence does not necessarily have to be
-``all in the kernel'' or ``all in the userspace''. A hybrid model is
-also possible. Both the kernel and the userspace co-operate in order
-to process HIP related data in such a model. However, the intelligence
-does not distribute evenly in the hybrid model in practice. It is more
-convenient to store the state of HIP connections in either space and
-the space where the state is stored has to have more intelligence. The
-term ``kernelspace orientated model'' will be used for the case where
-the state is stored in the kernel. Vice versa, ``userspace orientated
-model'' will be used when the userspace is responsible of storing the
-state.
-
-Both of the models consists of two interoperating components. In the
-context of HIPL implementation, the kernel component is called as
-\textit{HIP network module}. The userspace component is called as
-\textit{HIP daemon}. Both of the components exchange information with
-each other, and the network module interoperates also with kernel
-networking stack. \autoref{fig:kernel_model_architecture} represents
-the relationship of the network module and the daemon.
-
-\begin{figure}[hbt]
- \centering
- \includegraphics[scale=0.5]{fig/kernel_model}
- \caption{Kernel model}
- \label{fig:kernel_model_architecture}
-\end{figure}
-
-The distribution of state (and with it also the intelligence) affects
-the architecture of the implementation and it also results some
-practical pros and cons. A comparison of the models is given in
-\autoref{sec:kernel_model_design_choices}.
-
-The HIPL architecture is based on the model where intelligence is
-located mainly in the kernel module. The daemon is mainly responsible
-sending the Host Identity configuration of the localhost to the kernel
-module. The reason for selecting a kernel based approach is not
-obvious: it was selected both by accident and as a consequence of the
-project architect's initial prototype. Consequences of this choice are
-discussed in \autoref{sec:kernel_model_lessons}.
+% XX TODO: Kristian, write a section of this
+% - explain the working queue stuff (copy-paste from thesis?)
+% - how does the locking work in the work queues
 
 \subsection{Networking Stack}
 \label{sec:networking_stack_architecture}
@@ -591,112 +578,15 @@ to the AC packet is not reachable and therefore the address is not
 usable for any communication (unless the address is later contained in
 a new REA received and the AC is replied with ACR).
 
-\subsection{HIP daemon}
-\label{sec:daemon_architecture}
+\subsection{Asymmetric Cryptography Support in the Linux Kernel}
 
-At first, an userspace daemon was needed to handle asymmetric
-cryptography in the kernel because asymmetric cryptography was not
-supported in the kernel. The required asymmetric cryptographical
-functions were later ported to the kernelspace and the need for an
-userspace daemon was reduced to a minimum. Currently, the main purpose
-of the daemon is just to create, store and send Host Identity related
-DSA material to the kernel module.
+% XX TODO: It is not a separate module anymore
 
-The daemon is used by the kernel module to perform many small
-operations on data. The kernel module can send queries such as ``send
-me the Host Identity configuration'' to the daemon. The daemon send a
-response for the given query and the response either contains the
-answer to the query or an error message if something went
-wrong. Generally speaking, messages between the kernel module and the
-daemon are exchanged synchronously in a \textit{request-response}
-scheme.
-
-The request-response scheme is implemented using a unified interface
-in the kernel. When a request is carried out in the kernel, the
-current context of execution will be saved. The contents of the
-context depends on the operation being executed, but a minimal context
-defines at least a reference to a ``callback function''. The callback
-function is called after the request has been served in the daemon and
-the daemon has sent a response message to the kernel module. The
-kernel module can restore its state based on the information stored in
-the context and then continue its execution where it was left off.
-
-The kernel module loses its control of flow while the daemon is
-computing a response for the kernel module. A lock or a semaphore
-could be used to put the kernel module to ``sleep'' while daemon is
-computing a response but there are two reasons why sleeping is not
-used. The first reason is that some daemon requests are executed in
-IRQ context in the kernel and sleeping until a daemon response arrives
-is not possible. The second reason is that even though it is sometimes
-(in user context) possible to sleep until a daemon response arrives,
-this would result a more complex interface for daemon calls.
-
-There are two consequences of the release of control in the kernel
-which affect the implementation design. The first consequence is the
-overhead and complexity of saving and restoring of the state of
-processing of a HIP header in the kernel. This is a bit error prone
-because it requires dynamic memory allocation and deallocation and the
-state structures need to be filled correctly.
-
-The second consequence is called ``chained code'' and it is related to
-the processing model of HIP headers. The the reasoning and naming
-choice for it deserve a bit longer explanation. Processing of one HIP
-header requires multiple requests to the daemon. This results multiple
-releases of control in the kernel. The control is returned back to the
-kernel when the daemon has computed a response. The response from the
-daemon triggers a ``callback'' function in the kernel which restores
-the state of processing of the HIP header and enables the kernel
-module to continue where it was left off. Thus, in order for the
-kernel module to process a whole HIP header, multiple callback
-functions are required. This means splitting up the code that
-processes a HIP header into multiple functions instead of a single
-function. The functions are called in a specific order. One can
-visualize this model of operation with a ``chain'' where the
-individual elements of the chain are the callback functions and the
-chain itself represents the ordering of the elements, since the
-elements of the chain are linked together. Hence, the term ``chained
-code'' has been derived from this visualization and it will be used
-throughout this document to refer to the model of processing of HIP
-headers.
-
-However, the amount of chained code has been minimized in the
-implementation because the asymmetric crypto needed for HIP has been
-ported into kernel. The chained code is required only for commincating
-the Host Identity configuration to the kernelspace.
-
-The implementation of the daemon has some limitations, such as the
-number of requests to be served simultaneously. This limitation has
-significance mainly in the efficiency of a SMP host. Still, the
-limitation has some advantages in the area of simplification: locking,
-multiplexing and ordering of messages between the daemon and the
-kernel remain relatively simple, thus following the project goals
-stated in \autoref{sec:background}. The messaging mechanism is still
-implemented modularly so that SMP support would be relatively simple
-to add if the implementation went for production use later. SMP
-support is not important because the responsibilities of the daemon
-are quite small.
-
-The actual request-response scheme is implemented in a straightforward
-manner: since the implementation can serve only one daemon request at
-a time, subsequent requests are saved into a FIFO queue. An arriving
-response message from the daemon triggers a new daemon request from
-the top of the FIFO queue.
-
-The communication protocol between the kernel module and the daemon is
-based on \textit{ioctl} system calls. The messaging protocol recycles
-the same format as in the HIP protocol \cite{hip} to avoid redundant
-parsing code. The header is interpreted differently so that error
-messages can be carried with the message more conveniently, for
-example. Some extensions have been added to the parameters listed in
-\cite{hip} for internal purposes.
-
-\subsection{Asymmetric Cryptograhic Module}
-
-A generic asymmetric cryptophic module was developed to handle HIP's needs
-of the DSA and Diffie-Hellman algorithms. The main reason for this
-was that the implementation architecture was revised to be more kernel
-orientated. The cryptographic module a ripped off version of the GNU cryptographic
-library (libgcrypt) version 1.12. 
+A generic asymmetric cryptophic module was developed to handle HIP's
+needs of the DSA and Diffie-Hellman algorithms. The main reason for
+this was that the implementation architecture was revised to be more
+kernel orientated. The cryptographic module a ripped off version of
+the GNU cryptographic library (libgcrypt) version 1.12.
 \autoref{tbl:asymmetric_crypto_ops}.
 
 \begin{table}[htb]
@@ -731,8 +621,7 @@ reason is that a hostname query from DNS should result in HITs instead
 of IPv6 addresses or otherwise the kernel module would assume a
 connection without HIP. This is discussed in more detail
 \vpageref[below]{sec:api_architecture}. The second reason is that a HIT
-to
-IPv6 mapping should be sent to the kernel as a side effect of a
+to IPv6 mapping should be sent to the kernel as a side effect of a
 hostname query. Otherwise the kernel knows that it will be using HIP
 but the networking layer does not have a physical address where to
 send packets to. This is further discussed
@@ -752,6 +641,8 @@ limited computing capacity.
 
 \subsubsection{Network Socket API}
 \label{sec:api_architecture}
+
+% XX TODO: Miika, mention about the native HIP API
 
 Traditional UNIX systems have a library called \textit{libc} which
 contains an implementation for the BSD socket interface \cite{stevens}
@@ -996,6 +887,7 @@ establishing connections.
 \subsection{Collaboration of Components}
 \label{sec:collaboration_of_architecture_components}
 
+% XX TODO: we do not have any daemon anymore
 % XX TODO: is responder point of view described in the example?
 
 This section gives a summary of the collaboration of the components
@@ -1173,8 +1065,8 @@ associations can also be set up directly inside the kernel due to the
 kernel based architecture (see
 \autoref{sec:kernel_model_architecture}).
 
-\subsection{Userspace Daemon}
-\label{sec:userspace_daemon_lessons}
+\subsection{Working Queues}
+\label{sec:working_queue_lessons}
 
 The most important ingredient in the design of the daemon architecture
 is kernel orientation. Kernel orientation means a ``master-slave''
@@ -1357,15 +1249,10 @@ A forwarding agent (\cite{hiparch}, \cite{hip-mm}) and related packets
 (FAQ, FAA) must also be implemented for gain a full support for the
 mobility and multihoming features.
 
-\subsection{Userspace Daemon}
-\label{sec:daemon_future_work}
+\subsection{Userspace-Kernelspace Communication Mechanism}
+\label{sec:future_com_mechanism}
 
-Daemon calling mechanism is based on \textit{ioctl} calls. However,
-\textit{ioctl} is considered deprecated in the 2.6 kernel series. When
-the implementation is adopted to the 2.6 kernel series, \textit{sysfs}
-should be used instead of the deprecated \textit{ioctl}. This has been
-noted in advance by using a unified daemon calling mechanism that can
-be later refactored easier.
+\TODO{Miika, write this}
 
 \subsection{Resolver}
 \label{sec:resolver_future_work}
