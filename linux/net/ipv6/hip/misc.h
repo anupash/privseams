@@ -26,6 +26,6 @@ int hip_hit_is_bigger(const struct in6_addr *hit1,
 int hip_hash_hit(void *hit, int range);
 int hip_hash_spi(void *spi, int range);
 int hip_match_hit(void *hitA, void *hitB);
-char* hip_algorithm_to_string(int algo);
+const char *hip_algorithm_to_string(int algo);
 
 #endif /* HIP_MISC_H */

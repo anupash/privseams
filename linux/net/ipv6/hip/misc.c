@@ -361,12 +361,13 @@ int hip_match_hit(void *hitA, void *hitB)
 	return !ipv6_addr_cmp(key_1, key_2);
 }
 
-char* hip_algorithm_to_string(int algo) 
+const char *hip_algorithm_to_string(int algo) 
 {
+	const char *str = "UNKNOWN";
+	static const char *algos[] = { "DSA", "RSA" };
 	if(algo == HIP_HI_DSA)
-		return "dsa";
+		str = algos[0];
 	else if(algo == HIP_HI_RSA)
-		return "rsa";
-	else
-		return "unknown";
+		str = algos[1];
+	return str;
 }
