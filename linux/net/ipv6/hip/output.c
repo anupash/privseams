@@ -176,7 +176,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		break;
 	}
 
-	HIP_DEBUG("entry default spi 0x%x\n", entry->default_spi_out);
+	_HIP_DEBUG("entry default spi 0x%x\n", entry->default_spi_out);
 #ifdef CONFIG_NETFILTER
 	if (skb && entry->skbtest) {
 //		struct rt6_info *rt;

@@ -1135,6 +1135,16 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
 	return ifindex;
 }
 
+/* Returns 1 if address can be added into REA parameter. Currently all
+ * other than link locals are accepted. */
+static inline int hip_rea_addr_ok(struct in6_addr *addr)
+{
+	if (ipv6_addr_type(addr) & IPV6_ADDR_LINKLOCAL)
+		return 0;
+	return 1;
+}
+
+
 /**
  * hip_create_device_addrlist - get interface addresses
  * @event_dev: network device of which addresses are retrieved from
@@ -1176,8 +1186,8 @@ static int hip_create_device_addrlist(struct net_device *event_dev,
 		HIP_DEBUG("addr %d: %s flags=0x%x valid_lft=%u jiffies-ifa_timestamp=%lu\n",
 			  n_addrs+1, addrstr, ifa->flags,
 			  ifa->valid_lft, (jiffies-ifa->tstamp)/HZ);
-		if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL) {
-			HIP_DEBUG("not counting link local address\n");
+		if (!hip_rea_addr_ok(&ifa->addr)) {
+			HIP_DEBUG("address not accepted into REA\n");
 		} else
 			n_addrs++;
 		spin_unlock_bh(&ifa->lock);
@@ -1193,16 +1203,10 @@ static int hip_create_device_addrlist(struct net_device *event_dev,
 			goto out_in6_unlock;
 		}
 
-		/* todo: skip addresses which we don't want/need to include into
-		 * the REA packet, localhost address, multicast addresses etc
-		 *
-		 * this list is maybe better to be created for each of
-		 * the peers, policy ?
-		 */
 		for (i = 0, ifa = idev->addr_list;
 		     ifa && i < n_addrs; ifa = ifa->if_next, i++) {
 			spin_lock_bh(&ifa->lock);
-			if (!(ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL)) {
+			if (hip_rea_addr_ok(&ifa->addr)) {
 				ipv6_addr_copy(&tmp_list[i].address, &ifa->addr);
 				/* lifetime: select prefered_lft or valid_lft ? */
 				tmp_list[i].lifetime = htonl(ifa->valid_lft); /* or: (jiffies-ifp->tstamp)/HZ ? */
