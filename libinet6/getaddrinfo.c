@@ -963,7 +963,6 @@ getaddrinfo (const char *name, const char *service,
   struct gaih_service gaih_service, *pservice;
   int hip_transparent_mode;
 
-  fprintf(stderr, "foo\n");
   _HIP_DEBUG("flags=%d\n", hints->ai_flags);
   _HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
