@@ -246,15 +246,12 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 
 	_HIP_DEBUG("Entering switch\n");
 	hwo->hdr.type = HIP_WO_TYPE_INCOMING;
-        //hwo->arg1 = *skb;
         hwo->msg = hip_common;
 
         /* We need to save the addresses because the actual input handlers
 	   may need them later */
-        memcpy(&hwo->hdr.src_addr, &(*skb)->nh.ipv6h->saddr,
-		sizeof(struct in6_addr));
-        memcpy(&hwo->hdr.dst_addr, &(*skb)->nh.ipv6h->daddr,
-		sizeof(struct in6_addr));
+        ipv6_addr_copy(&hwo->hdr.src_addr, &(*skb)->nh.ipv6h->saddr);
+        ipv6_addr_copy(&hwo->hdr.dst_addr, &(*skb)->nh.ipv6h->daddr);
 
         switch(hip_get_msg_type(hip_common)) {
 	case HIP_I1:
@@ -299,8 +296,6 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 
  out_err:
 	/* We must not use HIP_FREE_skb here... (worker thread releases) */
-	// FIXME: this is a memory leak for now, as the skb is not free-ed anywhere! (tkoponen)
-
 	return 0;
 }
 
