@@ -84,7 +84,7 @@ int logout(const char *line);
 
 #include <netinet/in.h>
 
-#ifdef HIP
+#ifdef HIP_NATIVE
 #include <netdb.h>
 #endif
 
@@ -101,7 +101,7 @@ union sockunion {
 	} su_si;
 	struct	sockaddr		su_sa;
 	struct	sockaddr_in		su_sin;
-#ifdef HIP
+#ifdef HIP_NATIVE
 	struct	sockaddr_eid		su_eid;
 #endif
 #ifdef INET6
@@ -111,8 +111,12 @@ union sockunion {
 #define	su_family	su_sa.sa_family
 #define	su_port		su_si.si_port
 
-#ifdef HIP
-/* FIX ME*/
+#ifdef HIP_NATIVE
+/* an own extension to RFC 2428 :) */
+#define ex_prot2af(p) (p == 1 ? AF_INET : (p == 2 ? AF_INET6 : \
+                        (p == 3 ? AF_HIP : -1)))
+#define ex_af2prot(a) (a == AF_INET ? 1 : (a == AF_INET6 ? 2 : \
+                        (a == AF_HIP ? 3 : 0)))
 #elif INET6
 #define ex_prot2af(p) (p == 1 ? AF_INET : (p == 2 ? AF_INET6 : -1))
 #define ex_af2prot(a) (a == AF_INET ? 1 : (a == AF_INET6 ? 2 : 0))

@@ -333,8 +333,8 @@ main(int argc, char *argv[], char **envp)
 	socklen_t addrlen;
 	char *cp, line[LINE_MAX];
 	FILE *fd;
-#ifdef HIP
-	const char *argstr = "AdDhlMSt:T:u:UvP46H";
+#ifdef HIP_NATIVE
+	const char *argstr = "AdDhlMSt:T:u:UvP46n";
 	int family = PF_HIP;
 	int enable_v4 = 0;
 #elif INET6
@@ -346,11 +346,10 @@ main(int argc, char *argv[], char **envp)
 	int family = AF_INET;
 	int enable_v4 = 1;
 #endif
-#ifdef HIP
-	struct endpointinfo hints, *res;
-#else
-	struct addrinfo hints, *res;
+#ifdef HIP_NATIVE
+	struct endpointinfo epi_hints, *epi_res;
 #endif
+	struct addrinfo hints, *res;
 	int error;
 
 #ifdef __linux__
@@ -451,12 +450,12 @@ main(int argc, char *argv[], char **envp)
 			if (family == AF_UNSPEC)
 				family = AF_INET;
 			break;
-#ifdef HIP
-			/* Note: HIP overrides INET6; both cannot be used */
-		case 'H':
+#ifdef HIP_NATIVE
+		case 'n':
 			family = PF_HIP;
 			break;
-#elif INET6
+#endif
+#ifdef INET6
 		case '6':
 			family = AF_INET6;
 			break;
@@ -491,59 +490,70 @@ main(int argc, char *argv[], char **envp)
 		}
 		(void) signal(SIGCHLD, reapchild);
 		/* init bind_sa */
-#ifdef HIP
-		memset(&hints, 0, sizeof(hints));
-		hints.ei_family = family == AF_UNSPEC ? PF_HIP : family;
-		hints.ei_socktype = SOCK_STREAM;
-		hints.ei_flags = AI_PASSIVE;
-		error = getendpointinfo(0, "ftp", &hints, &res);
-		if (error) {
-			if (family == AF_UNSPEC) {
-				hints.ei_family = AF_UNSPEC;
-				error = getendpointinfo(0, "ftp", &hints,
-							&res);
+                /* XX FIXME: could be also AF_UNSPEC. Use explicitly to avoid
+		   breaking IPv6 code (it uses AF_UNSPEC) */
+		if (family == AF_HIP) {
+			memset(&epi_hints, 0, sizeof(epi_hints));
+			epi_hints.ei_family = family == AF_UNSPEC ?
+				PF_HIP : family;
+			epi_hints.ei_socktype = SOCK_STREAM;
+			epi_hints.ei_flags = AI_PASSIVE;
+			error = getendpointinfo(0, "ftp",
+						&epi_hints, &epi_res);
+			if (error) {
+				if (family == AF_UNSPEC) {
+					epi_hints.ei_family = AF_UNSPEC;
+					error = getendpointinfo(0, "ftp",
+								&epi_hints,
+								&epi_res);
+				}
 			}
-		}
-		if (error) {
-			syslog(LOG_ERR, gepi_strerror(error));
-			if (error == EAI_SYSTEM)
-				syslog(LOG_ERR, strerror(errno));
-			exit(1);
-		}
-		if ((int)sizeof(server_addr) < res->ei_endpointlen) {
-			syslog(LOG_ERR, "struct sockaddr_in* size unmatch.");
-			exit(1);
-		}
-		family = res->ei_family;
-		memcpy(&server_addr, res->ei_endpoint, res->ei_endpointlen);
-		free_endpointinfo(res);
-#else
-		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = family == AF_UNSPEC ? AF_INET : family;
-		hints.ai_socktype = SOCK_STREAM;
-		hints.ai_flags = AI_PASSIVE;
-		error = getaddrinfo(0, "ftp", &hints, &res);
-		if (error) {
-			if (family == AF_UNSPEC) {
-				hints.ai_family = AF_UNSPEC;
-				error = getaddrinfo(0, "ftp", &hints, &res);
+			if (error) {
+				syslog(LOG_ERR, gepi_strerror(error));
+				if (error == EAI_SYSTEM)
+					syslog(LOG_ERR, strerror(errno));
+				exit(1);
 			}
+			if ((int)sizeof(server_addr) <
+			    epi_res->ei_endpointlen) {
+				syslog(LOG_ERR,
+				       "struct sockaddr_in* size unmatch.");
+				exit(1);
+			}
+			family = epi_res->ei_family;
+			memcpy(&server_addr, epi_res->ei_endpoint,
+			       epi_res->ei_endpointlen);
+			free_endpointinfo(epi_res);
+		} else {
+			memset(&hints, 0, sizeof(hints));
+			hints.ai_family = family == AF_UNSPEC ?
+				AF_INET : family;
+			hints.ai_socktype = SOCK_STREAM;
+			hints.ai_flags = AI_PASSIVE;
+			error = getaddrinfo(0, "ftp", &hints, &res);
+			if (error) {
+				if (family == AF_UNSPEC) {
+					hints.ai_family = AF_UNSPEC;
+					error = getaddrinfo(0, "ftp", &hints,
+							    &res);
+				}
+			}
+			
+			if (error) {
+				syslog(LOG_ERR, gai_strerror(error));
+				if (error == EAI_SYSTEM)
+					syslog(LOG_ERR, strerror(errno));
+				exit(1);
+			}
+			if ((int)sizeof(server_addr) < res->ai_addrlen) {
+				syslog(LOG_ERR,
+				       "struct sockaddr_in* size unmatch.");
+				exit(1);
+			}
+			family = res->ai_family;
+			memcpy(&server_addr, res->ai_addr, res->ai_addrlen);
+			freeaddrinfo(res);
 		}
-
-		if (error) {
-			syslog(LOG_ERR, gai_strerror(error));
-			if (error == EAI_SYSTEM)
-				syslog(LOG_ERR, strerror(errno));
-			exit(1);
-		}
-		if ((int)sizeof(server_addr) < res->ai_addrlen) {
-			syslog(LOG_ERR, "struct sockaddr_in* size unmatch.");
-			exit(1);
-		}
-		family = res->ai_family;
-		memcpy(&server_addr, res->ai_addr, res->ai_addrlen);
-		freeaddrinfo(res);
-#endif
 		/*
 		 * Open a socket, bind it to the FTP port, and start
 		 * listening.
@@ -699,23 +709,23 @@ main(int argc, char *argv[], char **envp)
 	}
 	(void) gethostname(hostname, sizeof(hostname));
 
-#if HIP
 	/* Make sure hostname is fully qualified. */
-	memset(&hints, 0, sizeof(hints));
-	hints.ei_flags = EI_CANONNAME;
-	if (getendpointinfo(hostname, NULL, &hints, &res) == 0) {
-		strcpy(hostname, res->ei_canonname);
-		free_endpointinfo(res);
+	if (family == AF_HIP) {
+		memset(&epi_hints, 0, sizeof(epi_hints));
+		epi_hints.ei_flags = EI_CANONNAME;
+		if (getendpointinfo(hostname, NULL, &epi_hints,
+				    &epi_res) == 0) {
+			strcpy(hostname, epi_res->ei_canonname);
+			free_endpointinfo(epi_res);
+		}
+	} else {
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_flags = AI_CANONNAME;
+		if (getaddrinfo(hostname, NULL, &hints, &res) == 0) {
+			strcpy(hostname, res->ai_canonname);
+			freeaddrinfo(res);
+		}
 	}
-#else
-	/* Make sure hostname is fully qualified. */
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_flags = AI_CANONNAME;
-	if (getaddrinfo(hostname, NULL, &hints, &res) == 0) {
-		strcpy(hostname, res->ai_canonname);
-		freeaddrinfo(res);
-	}
-#endif
 
 	if (multihome) {
 		getnameinfo((struct sockaddr *)&ctrl_addr, sizeof(ctrl_addr),
@@ -1425,11 +1435,12 @@ static FILE * dataconn(const char *name, off_t size, const char *mode)
 		if ((from.su_family == AF_INET &&
 			from.su_sin.sin_addr.s_addr !=
 			  his_addr.su_sin.sin_addr.s_addr)
-#ifdef HIP
+#ifdef HIP_NATIVE
 		  || (from.su_family == PF_HIP &&
-			!EID_ARE_EQUAL(&from.su_eid,
-					&his_addr.su_eid))
-#elif INET6
+			!PEER_EID_ARE_EQUAL(&from.su_eid,
+					    &his_addr.su_eid))
+#endif
+#ifdef INET6
 		  || (from.su_family == AF_INET6 &&
 			!IN6_ARE_ADDR_EQUAL(&from.su_sin6.sin6_addr,
 					&his_addr.su_sin6.sin6_addr))
@@ -1491,11 +1502,12 @@ static FILE * dataconn(const char *name, off_t size, const char *mode)
 	if ((data_dest.su_family == AF_INET &&
 		data_dest.su_sin.sin_addr.s_addr !=
 			his_addr.su_sin.sin_addr.s_addr)
-#ifdef HIP
+#ifdef HIP_NATIVE
 	  || (data_dest.su_family == PF_HIP &&
-		!EID_ARE_EQUAL(&data_dest.su_eid,
-					&his_addr.su_eid))
-#elif INET6
+		!PEER_EID_ARE_EQUAL(&data_dest.su_eid,
+				    &his_addr.su_eid))
+#endif
+#ifdef INET6
 	  || (data_dest.su_family == AF_INET6 &&
 		!IN6_ARE_ADDR_EQUAL(&data_dest.su_sin6.sin6_addr,
 					&his_addr.su_sin6.sin6_addr))
@@ -1829,12 +1841,13 @@ printstataddrinfo(void)
 		a = (u_char *) &su->su_sin.sin_addr;
 		alen = sizeof(su->su_sin.sin_addr);
 		af = 4;
-#ifdef HIP
+#ifdef HIP_NATIVE
 	} else if (su->su_family == PF_HIP) {
 		a = (u_char *) &su->su_eid.eid_val;
 		alen = sizeof(su->su_eid.eid_val);
 		af = 8;
-#elif INET6
+#endif
+#ifdef INET6
 	} else if (su->su_family == AF_INET6) {
 		a = (u_char *) &su->su_sin6.sin6_addr;
 		alen = sizeof(su->su_sin6.sin6_addr);
@@ -2310,14 +2323,15 @@ long_passive(const char *cmd, int pf)
 			reply(228,
 		  "Entering Long Passive Mode (%u,%u,%u,%u,%u,%u,%u,%u,%u)",
 				4, 4, a[0], a[1], a[2], a[3], 2, p[0], p[1]);
-#ifdef INET6
+#ifdef HIP_NATIVE
 			/* XX CHECK: IS THIS CORRECT? */
 		} else if (pasv_addr.su_family == AF_HIP) {
 			a = (u_char *) &pasv_addr.su_eid.eid_val;
 			reply(228,
 		  "Entering Long Passive Mode (%u,%u,%u,%u,%u,%u,%u,%u,%u)",
 				4, 4, a[0], a[1], a[2], a[3], 2, p[0], p[1]);
-#elif HIP
+#endif
+#ifdef INET6
 		} else if (pasv_addr.su_family == AF_INET6) {
 			a = (u_char *) &pasv_addr.su_sin6.sin6_addr;
 			reply(228,
@@ -2359,10 +2373,11 @@ extended_port(const char *arg)
 	char *result[3];
 	char *p, *q;
 	char delim;
-#ifdef HIP
-	struct endpointinfo hints;
-	struct endpointinfo *res = NULL;
-#else
+#ifdef HIP_NATIVE
+	struct endpointinfo epi_hints;
+	struct endpointinfo *epi_res = NULL;
+#endif
+#ifdef INET6 
 	struct addrinfo hints;
 	struct addrinfo *res = NULL;
 #endif
@@ -2401,41 +2416,43 @@ extended_port(const char *arg)
 	if (!*result[0] || *p)
 		goto parsefail;	/* not 522, since not numeric */
 
-#ifdef HIP
-	memset(&hints, 0, sizeof(hints));
-	hints.ei_family = ex_prot2af((int)proto);
-	if (hints.ei_family < 0)
-		goto protounsupp;
-	hints.ei_socktype = SOCK_STREAM;
-	hints.ei_flags = AI_NUMERICHOST;	/*no DNS*/
-	if (getendpointinfo(result[1], result[2], &hints, &res))
+	if (proto == 3) {
+		memset(&epi_hints, 0, sizeof(epi_hints));
+		epi_hints.ei_family = ex_prot2af((int)proto);
+		if (epi_hints.ei_family < 0)
+			goto protounsupp;
+		epi_hints.ei_socktype = SOCK_STREAM;
+		epi_hints.ei_flags = AI_NUMERICHOST;	/*no DNS*/
+		if (getendpointinfo(result[1], result[2], &epi_hints,
+				    &epi_res))
 		goto parsefail;
-	if (res->ei_next)
-		goto parsefail;
-	if ((int)sizeof(data_dest) < res->ei_endpointlen) {
-		if (debug)
-			syslog(LOG_DEBUG, "ai_addrlen large");
-		goto parsefail;
+		if (epi_res->ei_next)
+			goto parsefail;
+		if ((int)sizeof(data_dest) < epi_res->ei_endpointlen) {
+			if (debug)
+				syslog(LOG_DEBUG, "ai_addrlen large");
+			goto parsefail;
+		}
+		memcpy(&data_dest, epi_res->ei_endpoint,
+		       epi_res->ei_endpointlen);
+	} else {
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = ex_prot2af((int)proto);
+		if (hints.ai_family < 0)
+			goto protounsupp;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_NUMERICHOST;	/*no DNS*/
+		if (getaddrinfo(result[1], result[2], &hints, &res))
+			goto parsefail;
+		if (res->ai_next)
+			goto parsefail;
+		if ((int)sizeof(data_dest) < res->ai_addrlen) {
+			if (debug)
+				syslog(LOG_DEBUG, "ai_addrlen large");
+			goto parsefail;
+		}
+		memcpy(&data_dest, res->ai_addr, res->ai_addrlen);
 	}
-	memcpy(&data_dest, res->ei_endpoint, res->ei_endpointlen);
-#else
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = ex_prot2af((int)proto);
-	if (hints.ai_family < 0)
-		goto protounsupp;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_NUMERICHOST;	/*no DNS*/
-	if (getaddrinfo(result[1], result[2], &hints, &res))
-		goto parsefail;
-	if (res->ai_next)
-		goto parsefail;
-	if ((int)sizeof(data_dest) < res->ai_addrlen) {
-		if (debug)
-			syslog(LOG_DEBUG, "ai_addrlen large");
-		goto parsefail;
-	}
-	memcpy(&data_dest, res->ai_addr, res->ai_addrlen);
-#endif
 
 #ifdef HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID
 	if (his_addr.su_family == AF_INET6 &&
@@ -2446,9 +2463,10 @@ extended_port(const char *arg)
 	}
 #endif
 	if (port_check("EPRT") == 1) {
-#ifdef HIP
+#ifdef HIP_NATIVE
 	} else if (port_check_hip("EPRT") == 1) {
-#elif INET6
+#endif
+#ifdef INET6
 	} else if (port_check_v6("EPRT") == 1) {
 #endif
 	} else {
@@ -2457,13 +2475,12 @@ extended_port(const char *arg)
 
 	if (tmp)
 		free(tmp);
-#ifdef HIP
-	if (res)
-		free_endpointinfo(res);
-#else
+#ifdef HIP_NATIVE
+	if (epi_res)
+		free_endpointinfo(epi_res);
+#endif
 	if (res)
 		freeaddrinfo(res);
-#endif
 	return 0;
 
 parsefail:
@@ -2471,13 +2488,14 @@ parsefail:
 	usedefault = 1;
 	if (tmp)
 		free(tmp);
-#ifdef HIP
-	if (res)
-		free_endpointinfo(res);
-#else
+#ifdef HIP_NATIVE
+	if (epi_res)
+		free_endpointinfo(epi_res);
+#endif
+
 	if (res)
 		freeaddrinfo(res);
-#endif
+
 	return -1;
 
 protounsupp:
@@ -2486,13 +2504,14 @@ protounsupp:
 	usedefault = 1;
 	if (tmp)
 		free(tmp);
-#ifdef HIP
-	if (res)
-		free_endpointinfo(res);
-#else
+#ifdef HIP_NATIVE
+	if (epi_res)
+		free_endpointinfo(epi_res);
+#endif
+
 	if (res)
 		freeaddrinfo(res);
-#endif
+
 	return -1;
 }
 
@@ -2530,7 +2549,43 @@ port_check(const char *pcmd)
 	return 0;
 }
 
-#if defined(HIP) || defined(INET6)
+#if INET6
+/* Return 1, if port check is done. Return 0, if not yet. */
+int
+port_check_v6(const char *pcmd)
+{
+	if (his_addr.su_family == AF_HIP) {
+		if (data_dest.su_family != AF_HIP) {
+			usedefault = 1;
+			reply(500, "Invalid address rejected.");
+			return 1;
+		}
+		if (portcheck &&
+		    ntohs(data_dest.su_port) < IPPORT_RESERVED) {
+			usedefault = 1;
+			reply(500,
+			    "Illegal PORT rejected (reserved port).");
+		} else if (portcheck && !IN6_ARE_ADDR_EQUAL(
+					&data_dest.su_sin6.sin6_addr,
+					&his_addr.su_sin6.sin6_addr)) {
+			usedefault = 1;
+			reply(500,
+			    "Illegal PORT rejected (address wrong).");
+		} else {
+			usedefault = 0;
+			if (pdata >= 0) {
+				(void) close(pdata);
+				pdata = -1;
+			}
+			reply(200, "%s command successful.", pcmd);
+		}
+		return 1;
+	}
+	return 0;
+}
+#endif
+
+#ifdef HIP_NATIVE
 /* Return 1, if port check is done. Return 0, if not yet. */
 int
 port_check_hip(const char *pcmd)
@@ -2546,21 +2601,12 @@ port_check_hip(const char *pcmd)
 			usedefault = 1;
 			reply(500,
 			    "Illegal PORT rejected (reserved port).");
-#ifdef HIP
-		} else if (portcheck && !EID_ARE_EQUAL(
-					&data_dest.su_eid,
-					&his_addr.su_eid)) {
+		} else if (portcheck &&
+			   !PEER_EID_ARE_EQUAL(&data_dest.su_eid,
+					       &his_addr.su_eid)) {
 			usedefault = 1;
 			reply(500,
 			    "Illegal PORT rejected (address wrong).");
-#elif INET6
-		} else if (portcheck && !IN6_ARE_ADDR_EQUAL(
-					&data_dest.su_sin6.sin6_addr,
-					&his_addr.su_sin6.sin6_addr)) {
-			usedefault = 1;
-			reply(500,
-			    "Illegal PORT rejected (address wrong).");
-#endif
 		} else {
 			usedefault = 0;
 			if (pdata >= 0) {

@@ -189,6 +189,9 @@ cmd
 				reply(501, "LPRT disallowed after EPSV ALL");
 			} else if (!$2) {
 			} else if (port_check("LPRT") == 1) {
+#ifdef HIP_NATIVE
+			} else if (port_check_hip("LPRT") == 1) {
+#endif
 #ifdef INET6
 			} else if (port_check_v6("LPRT") == 1) {
 #endif
@@ -701,9 +704,13 @@ host_long_port
 			    $33 < 0 || $33 > 255 || $35 < 0 || $35 > 255 ||
 			    $39 < 0 || $39 > 255 || $41 < 0 || $41 > 255) {
 			} else {
-#ifdef INET6
+#if defined(INET6) || defined(HIP_NATIVE)
 				char *a, *p;
+#ifdef HIP_NATIVE
+				data_dest.su_family = AF_HIP;
+#else
 				data_dest.su_family = AF_INET6;
+#endif
 				p = (char *)&data_dest.su_port;
 				p[0] = $39; p[1] = $41;
 				a = (char *)&data_dest.su_sin6.sin6_addr;
