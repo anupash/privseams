@@ -100,6 +100,7 @@ void hip_hadb_deactivate_hs_spi(uint32_t spi);
 
 void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
+void hip_hadb_dump_spi_lists(void);
 
 #define hip_hold_ha(ha) do { \
 	atomic_inc(&ha->refcnt); \

@@ -533,6 +533,8 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 
 		hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in, ntohl(nes->old_spi));
 		_HIP_DEBUG("Stored SPI 0x%x to new_spi_in\n", new_spi_in);
+		//hip_finalize_sa(hitr, new_spi_in); /* move below */
+		//hip_update_spi_waitlist_add(new_spi_in, hits, NULL /*rea*/); /* move away ? */
 	}
 
 	/* mm-02 test */
@@ -824,9 +826,9 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		spi_in_data.ifindex = hip_ifindex2spi_get_ifindex(entry, prev_spi_in); /* already set before ? check */
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 		if (err) {
-
 			goto out_err;
 		}
+
 	} else
 		HIP_DEBUG("Old SPI <> New SPI, not adding a new inbound SA\n");
 
