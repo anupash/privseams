@@ -330,10 +330,25 @@ int hip_do_work(struct hip_work_order *job)
 		break;
 	case HIP_WO_TYPE_OUTGOING:
 		switch(job->hdr.subtype) {
+#ifdef __KERNEL__
 		case HIP_WO_SUBTYPE_SEND_PACKET:
 			res = hip_csum_send(&job->hdr.src_addr, &job->hdr.dst_addr, 
 					    job->msg);
 			break;
+		case HIP_WO_SUBTYPE_ACQSPI:
+		{
+			struct hip_work_order * resp;
+			resp = hip_init_job(GFP_KERNEL);
+			if (resp) {
+				res = hip_acquire_spi(&job->hdr.src_addr, &job->hdr.dst_addr);
+				resp->hdr.arg1 = res;
+
+				hip_netlink_send(resp);
+				hip_free_work_order(resp);
+			}
+			break;
+		}
+#endif
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
@@ -341,8 +356,6 @@ int hip_do_work(struct hip_work_order *job)
 		}
 		if (res < 0)
 			res = KHIPD_ERROR;
-		break;
-
 		break;
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
