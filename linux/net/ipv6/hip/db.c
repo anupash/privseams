@@ -933,6 +933,9 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
 {
 	struct hip_spi_in_item *item, *tmp;
+
+	HIP_DEBUG("spi=0x%x set=%d\n", spi, set);
+
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: ifindex=%d spi=0x%x updating=%d\n",
 			  item->ifindex, item->spi, item->updating);

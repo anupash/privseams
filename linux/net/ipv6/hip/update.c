@@ -831,7 +831,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		goto out_err;
 	}
 
-	if (prev_spi_in != new_spi_in) {
+	if (prev_spi_in == new_spi_in) {
 		memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 		spi_in_data.spi = new_spi_in;
 		spi_in_data.ifindex = hip_ifindex2spi_get_ifindex(entry, prev_spi_in); /* already set before ? check */
@@ -843,7 +843,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		}
 		HIP_UNLOCK_HA(entry);
 	} else
-		HIP_DEBUG("Old SPI = New SPI, not adding a new inbound SA\n");
+		HIP_DEBUG("Old SPI <> New SPI, not adding a new inbound SA\n");
 
 	/* activate the new inbound and outbound SAs */
 	HIP_DEBUG("finalizing the new inbound SA, SPI=0x%x\n", new_spi_in);
@@ -1429,9 +1429,28 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			goto out_err;
 		}
 		HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
+
+		if (!mapped_spi) {
+			struct hip_spi_in_item spi_in_data;
+
+			HIP_DEBUG("previously unknown ifindex, creating a new item to inbound spis_in\n");
+			memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
+			spi_in_data.spi = new_spi_in;
+			spi_in_data.ifindex = ifindex;
+			spi_in_data.updating = 1;
+			err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
+			if (err) {
+				HIP_ERROR("add_spi failed\n");
+				goto out_err;
+			}
+		}
+		else {
+			HIP_DEBUG("is previously mapped ifindex\n");
+		}
 	} else
 		HIP_DEBUG("not creating a new SA\n");
 
+#if 0
 	if (!mapped_spi) {
  		struct hip_spi_in_item spi_in_data;
 
@@ -1447,6 +1466,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
  		}
  	} else
  		HIP_DEBUG("is previously mapped ifindex\n");
+#endif
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 
@@ -1498,8 +1518,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			HIP_ERROR("Building of NES param failed\n");
 			goto out_err;
 		}
-	} else
+	} else {
 		HIP_DEBUG("not adding NES\n");
+		nes_old_spi = nes_new_spi = mapped_spi;
+	}
 
 #if 0
 	/* new spi is changed when rekeying finishes */
@@ -1518,9 +1540,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		HIP_DEBUG("not adding SPI 0x%x to ifindex map, SPI already mapped\n", nes_new_spi);
 #endif
 
+//	if (nes_old_spi != nes_new_spi)
 	hip_update_set_new_spi_in(entry, nes_old_spi, nes_new_spi, 0);
 
-	update_id_out = entry->update_id_out + 1;
+	update_id_out = entry->update_id_out + 1; /* + 1 or ++ ? */
 	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
 	if (!update_id_out) { /* todo: handle this case */
 		HIP_ERROR("outgoing UPDATE ID overflowed back to 0, bug ?\n");
@@ -1586,6 +1609,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
 	hip_set_spi_update_status(entry, nes_old_spi, 1);
 
+	/* if UPDATE contains only REA, then do not move state ? */
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");
 
