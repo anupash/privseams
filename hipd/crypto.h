@@ -2,10 +2,15 @@
 #define HIP_CRYPTO_H
 
 #include <gcrypt.h>
+#include <sys/time.h>
+#include <time.h>
 
 struct crypto_tfm {
   /* XX FIXME */
 };
+
+extern struct crypto_tfm impl_sha1;
+extern time_t load_time;
 
 void crypto_digest_digest(struct crypto_tfm *tfm, char *src_buf, int ignore,
 			  char *dst_buf);

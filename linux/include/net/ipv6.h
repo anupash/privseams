@@ -311,21 +311,6 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 		 a->s6_addr32[2] | a->s6_addr32[3] ) == 0); 
 }
 
-
-
-static inline int ipv6_addr_is_hit(const struct in6_addr *a)
-{
-	int t;
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	t = a->s6_addr[0] & 0xC0;
-#else
-	t = 0;
-#endif
-	return ((t == 0x40) ||
-		(t == 0x80));
-}
-
 /*
  *	Prototypes exported by ipv6
  */

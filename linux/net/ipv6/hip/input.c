@@ -2361,7 +2361,7 @@ int hip_handle_i1(struct hip_common *i1,
 	}
 #endif
 
-	err = hip_xmit_r1(i1, dstip, dst);
+	err = hip_xmit_r1(i1_saddr, i1_daddr, dstip, dst);
 	return err;
 }
 

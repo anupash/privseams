@@ -16,8 +16,10 @@ INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c workqueue.c builder.c preoutput.c hadb.c crypto.c
+hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c
+hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
 hipd_SOURCES += input.c output.c
+hipd_SOURCES += dh2.c dsa.c rsa.c
 
 # i3 and KeyNotev2 specific includes/libraries:
 #-Ii3/i3_client -Ii3/utils -Ii3/i3 -Ikeynote
@@ -40,6 +42,8 @@ cookie.c: cookie.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.c .
 cookie.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.h .
+crypto:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto .
 #db.c: db.h
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/db.c .
 #db.h:
@@ -48,6 +52,14 @@ dh.c: dh.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/dh.c .
 dh.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/dh.h .
+dh2.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto/dh.h dh2.h
+dh2.c: dh2.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto/dh.c dh2.c
+dsa.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto/dsa.h
+dsa.c: dsa.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto/dsa.c
 hadb.c: hadb.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.c .
 hadb.h:
@@ -84,6 +96,10 @@ input.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.h .
 preoutput.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/preoutput.h .
+rsa.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto/rsa.h
+rsa.c: rsa.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto/rsa.c
 
 #SUBDIRS = keynote i3
 

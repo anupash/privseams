@@ -7,6 +7,26 @@
 #  include <net/hip.h>
 #else
 #  include "list.h" /* userspace list implementation */
+
+static inline int ipv6_addr_cmp(const struct in6_addr *a1,
+				const struct in6_addr *a2)
+{
+	return memcmp((const void *) a1, (const void *) a2,
+		      sizeof(struct in6_addr));
+}
+
+static inline void ipv6_addr_copy(struct in6_addr *a1,
+				  const struct in6_addr *a2)
+{
+	memcpy((void *) a1, (const void *) a2, sizeof(struct in6_addr));
+}
+
+static inline int ipv6_addr_any(const struct in6_addr *a)
+{
+	return ((a->s6_addr32[0] | a->s6_addr32[1] | 
+		 a->s6_addr32[2] | a->s6_addr32[3] ) == 0); 
+}
+
 #endif /* __KERNEL__ */
 
 #include "debug.h"

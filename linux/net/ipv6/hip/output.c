@@ -12,37 +12,6 @@
 #include "output.h"
 
 /**
- * hip_csum_verify - verify HIP header checksum
- * @skb: the socket buffer which contains the HIP header
- *
- * Returns: the checksum of the HIP header.
- */
-int hip_csum_verify(struct sk_buff *skb)
-{
-	struct hip_common *hip_common;
-	int len;
-	int csum;
-
-	hip_common = (struct hip_common*) skb->h.raw;
-        len = hip_get_msg_total_len(hip_common);
-
-	_HIP_HEXDUMP("hip_csum_verify data", skb->h.raw, len);
-	_HIP_DEBUG("len=%d\n", len);
-	_HIP_HEXDUMP("saddr", &(skb->nh.ipv6h->saddr),
-		     sizeof(struct in6_addr));
-	_HIP_HEXDUMP("daddr", &(skb->nh.ipv6h->daddr),
-		     sizeof(struct in6_addr));
-
-        csum = csum_partial((char *) hip_common, len, 0);
-
-	return csum_ipv6_magic(&(skb->nh.ipv6h->saddr),
-			       &(skb->nh.ipv6h->daddr),
-			       len, IPPROTO_HIP, csum);
-}
-
-
-
-/**
  * hip_send_i1 - send an I1 packet to the responder
  * @entry: the HIP database entry reserved for the peer
  *
@@ -370,8 +339,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  *
  * Returns: zero on success, or negative error value on error.
  */
-int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
-		struct in6_addr *dst_hit)
+int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
+		struct in6_addr *dst_ip, struct in6_addr *dst_hit)
 {
 	struct hip_common *r1pkt;
 	struct in6_addr *own_addr;
@@ -380,9 +349,9 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 
 	HIP_DEBUG("\n");
 
-	own_addr = &skb->nh.ipv6h->daddr;
+	own_addr = i1_daddr;
 	if (!dst_ip || ipv6_addr_any(dst_ip)) {
-		dst_addr = &skb->nh.ipv6h->saddr;
+		dst_addr = i1_saddr;
 	} else {
 		dst_addr = dst_ip;
 	}
@@ -395,7 +364,7 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 		goto out_err;
 	}
 
-	if (dst_hit) 
+	if (dst_hit)
 		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
 	else
 		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
@@ -417,6 +386,7 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 	return err;
 }
 
+#if 0
 /**
  * hip_send_r1 - send an R1 to the peer
  * @skb: the socket buffer for the received I1
@@ -426,7 +396,7 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
  *
  * Returns: zero on success, or a negative error value on failure.
  */
-int hip_send_r1(struct sk_buff *skb) 
+int hip_send_r1(struct sk_buff *skb)
 {
 	int err = 0;
 	struct in6_addr *dst;
@@ -436,7 +406,7 @@ int hip_send_r1(struct sk_buff *skb)
 
 	return err;
 }
-
+#endif
 
 void hip_send_notify(hip_ha_t *entry)
 {

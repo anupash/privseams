@@ -1,6 +1,35 @@
 #include "preinput.h"
 
 /**
+ * hip_csum_verify - verify HIP header checksum
+ * @skb: the socket buffer which contains the HIP header
+ *
+ * Returns: the checksum of the HIP header.
+ */
+int hip_csum_verify(struct sk_buff *skb)
+{
+	struct hip_common *hip_common;
+	int len;
+	int csum;
+
+	hip_common = (struct hip_common*) skb->h.raw;
+        len = hip_get_msg_total_len(hip_common);
+
+	_HIP_HEXDUMP("hip_csum_verify data", skb->h.raw, len);
+	_HIP_DEBUG("len=%d\n", len);
+	_HIP_HEXDUMP("saddr", &(skb->nh.ipv6h->saddr),
+		     sizeof(struct in6_addr));
+	_HIP_HEXDUMP("daddr", &(skb->nh.ipv6h->daddr),
+		     sizeof(struct in6_addr));
+
+        csum = csum_partial((char *) hip_common, len, 0);
+
+	return csum_ipv6_magic(&(skb->nh.ipv6h->saddr),
+			       &(skb->nh.ipv6h->daddr),
+			       len, IPPROTO_HIP, csum);
+}
+
+/**
  * hip_verify_network_header - validate an incoming HIP header
  * @hip_common: pointer to the HIP header
  * @skb: sk_buff in which the HIP packet is in

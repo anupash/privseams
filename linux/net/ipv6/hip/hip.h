@@ -30,12 +30,6 @@
 #define jiffies random()
 #include "list.h"
 
-#define ipv6_addr_cmp(a1, a2) \
-  memcmp((const void *) a1, (const void *) a2, sizeof(struct in6_addr))
-
-#define ipv6_addr_copy(a1, a2) \
-  memcpy((void *) a1, (const void *) a2, sizeof(struct in6_addr));
-
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>
