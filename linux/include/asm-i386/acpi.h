@@ -109,13 +109,14 @@
 #ifdef CONFIG_ACPI_BOOT 
 extern int acpi_lapic;
 extern int acpi_ioapic;
-
+extern int acpi_noirq;
 
 /* Fixmap pages to reserve for ACPI boot-time tables (see fixmap.h) */
 #define FIX_ACPI_PAGES 4
 
 #ifdef CONFIG_X86_IO_APIC
 extern int skip_ioapic_setup;
+extern int acpi_irq_to_vector(u32 irq);
 
 static inline void disable_ioapic_setup(void)
 {
@@ -137,6 +138,14 @@ static inline void disable_ioapic_setup(void)
 #  define acpi_lapic 0
 #  define acpi_ioapic 0
 
+#endif
+
+#ifdef CONFIG_ACPI_PCI
+static inline void acpi_noirq_set(void) { acpi_noirq = 1; }
+extern int acpi_irq_balance_set(char *str);
+#else
+static inline void acpi_noirq_set(void) { }
+static inline int acpi_irq_balance_set(char *str) { return 0; }
 #endif
 
 #ifdef CONFIG_ACPI_SLEEP

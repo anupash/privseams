@@ -35,6 +35,32 @@
 #include <asm/tlbflush.h>
 #include <asm/tlb.h>
 #include <asm/hvcall.h>
+#include <asm/prom.h>
+
+long poll_pending(void)
+{
+	unsigned long dummy;
+	return plpar_hcall(H_POLL_PENDING, 0, 0, 0, 0,
+			   &dummy, &dummy, &dummy);
+}
+
+long prod_processor(void)
+{
+	plpar_hcall_norets(H_PROD);
+	return(0); 
+}
+
+long cede_processor(void)
+{
+	plpar_hcall_norets(H_CEDE);
+	return(0); 
+}
+
+long register_vpa(unsigned long flags, unsigned long proc, unsigned long vpa)
+{
+	plpar_hcall_norets(H_REGISTER_VPA, flags, proc, vpa);
+	return(0); 
+}
 
 long plpar_pte_remove(unsigned long flags,
 		      unsigned long ptex,
@@ -206,6 +232,61 @@ static unsigned char udbg_getcLP(void)
 	}
 }
 
+/* returns 0 if couldn't find or use /chosen/stdout as console */
+static int find_udbg_vterm(void)
+{
+	struct device_node *stdout_node;
+	u32 *termno;
+	char *name;
+	int found = 0;
+
+	/* find the boot console from /chosen/stdout */
+	if (!of_stdout_device) {
+		printk(KERN_WARNING "couldn't get path from /chosen/stdout!\n");
+		return found;
+	}
+	stdout_node = of_find_node_by_path(of_stdout_device);
+	if (!stdout_node) {
+		printk(KERN_WARNING "couldn't find node from /chosen/stdout\n");
+		return found;
+	}
+
+	/* now we have the stdout node; figure out what type of device it is. */
+	name = (char *)get_property(stdout_node, "name", 0);
+	if (!name) {
+		printk(KERN_WARNING "stdout node missing 'name' property!\n");
+		goto out;
+	}
+
+	if (strncmp(name, "vty", 3) == 0) {
+		if (device_is_compatible(stdout_node, "hvterm1")) {
+			termno = (u32 *)get_property(stdout_node, "reg", 0);
+			if (termno) {
+				vtermno = termno[0];
+				ppc_md.udbg_putc = udbg_putcLP;
+				ppc_md.udbg_getc = udbg_getcLP;
+				ppc_md.udbg_getc_poll = udbg_getc_pollLP;
+				found = 1;
+			}
+		} else {
+			/* XXX implement udbg_putcLP_vtty for hvterm-protocol1 case */
+			printk(KERN_WARNING "%s doesn't speak hvterm1; "
+					"can't print udbg messages\n", of_stdout_device);
+		}
+	} else if (strncmp(name, "serial", 6)) {
+		/* XXX fix ISA serial console */
+		printk(KERN_WARNING "serial stdout on LPAR ('%s')! "
+				"can't print udbg messages\n", of_stdout_device);
+	} else {
+		printk(KERN_WARNING "don't know how to print to stdout '%s'\n",
+				of_stdout_device);
+	}
+
+out:
+	of_node_put(stdout_node);
+	return found;
+}
+
 void pSeries_lpar_mm_init(void);
 
 /* This is called early in setup.c.
@@ -213,9 +294,9 @@ void pSeries_lpar_mm_init(void);
  */
 void pSeriesLP_init_early(void)
 {
-	struct device_node *np;
-
 	pSeries_lpar_mm_init();
+
+	tce_init_pSeries();
 
 	ppc_md.tce_build	 = tce_build_pSeriesLP;
 	ppc_md.tce_free_one	 = tce_free_one_pSeriesLP;
@@ -225,83 +306,14 @@ void pSeriesLP_init_early(void)
 #endif
 
 	/* The keyboard is not useful in the LPAR environment.
-	 * Leave all the interfaces NULL.
+	 * Leave all the ppc_md keyboard interfaces NULL.
 	 */
 
-	/* lookup the first virtual terminal number in case we don't have a
-	 * com port. Zero is probably correct in case someone calls udbg
-	 * before the init. The property is a pair of numbers.  The first
-	 * is the starting termno (the one we use) and the second is the
-	 * number of terminals.
-	 */
-	np = find_path_device("/rtas");
-	if (np) {
-		u32 *termno = (u32 *)get_property(np, "ibm,termno", 0);
-		if (termno)
-			vtermno = termno[0];
+	if (0 == find_udbg_vterm()) {
+		printk(KERN_WARNING
+			"can't use stdout; can't print early debug messages.\n");
 	}
-	ppc_md.udbg_putc = udbg_putcLP;
-	ppc_md.udbg_getc = udbg_getcLP;
-	ppc_md.udbg_getc_poll = udbg_getc_pollLP;
 }
-
-int hvc_get_chars(int index, char *buf, int count)
-{
-	unsigned long got;
-
-	if (plpar_hcall(H_GET_TERM_CHAR, index, 0, 0, 0, &got,
-		(unsigned long *)buf, (unsigned long *)buf+1) == H_Success) {
-		/*
-		 * Work around a HV bug where it gives us a null
-		 * after every \r.  -- paulus
-		 */
-		if (got > 0) {
-			int i;
-			for (i = 1; i < got; ++i) {
-				if (buf[i] == 0 && buf[i-1] == '\r') {
-					--got;
-					if (i < got)
-						memmove(&buf[i], &buf[i+1],
-							got - i);
-				}
-			}
-		}
-		return got;
-	}
-	return 0;
-}
-
-int hvc_put_chars(int index, const char *buf, int count)
-{
-	unsigned long *lbuf = (unsigned long *) buf;
-	long ret;
-
-	ret = plpar_hcall_norets(H_PUT_TERM_CHAR, index, count, lbuf[0],
-				 lbuf[1]);
-	if (ret == H_Success)
-		return count;
-	if (ret == H_Busy)
-		return 0;
-	return -1;
-}
-
-int hvc_count(int *start_termno)
-{
-	u32 *termno;
-	struct device_node *dn;
-
-	if ((dn = find_path_device("/rtas")) != NULL) {
-		if ((termno = (u32 *)get_property(dn, "ibm,termno", 0)) != NULL) {
-			if (start_termno)
-				*start_termno = termno[0];
-			return termno[1];
-		}
-	}
-	return 0;
-}
-
-
-
 
 long pSeries_lpar_hpte_insert(unsigned long hpte_group,
 			      unsigned long va, unsigned long prpn,

@@ -2,8 +2,6 @@
  *
  * Name:	xmac_ii.h
  * Project:	Gigabit Ethernet Adapters, Common Modules
- * Version:	$Revision: 1.48 $
- * Date:	$Date: 2003/05/13 17:17:55 $
  * Purpose:	Defines and Macros for Gigabit Ethernet Controller
  *
  ******************************************************************************/
@@ -19,191 +17,6 @@
  *	(at your option) any later version.
  *
  *	The information in this file is provided "AS IS" without warranty.
- *
- ******************************************************************************/
-
-/******************************************************************************
- *
- * History:
- *
- *	$Log: xmac_ii.h,v $
- *	Revision 1.48  2003/05/13 17:17:55  mkarl
- *	Editorial changes.
- *	
- *	Revision 1.47  2003/03/31 07:37:25  mkarl
- *	Corrected Copyright.
- *	Editorial changes.
- *	
- *	Revision 1.46  2003/01/28 09:47:45  rschmidt
- *	Added defines for copper MDI/MDIX configuration
- *	Added defines for LED Control Register
- *	Editorial changes
- *	
- *	Revision 1.45  2002/12/10 14:35:13  rschmidt
- *	Corrected defines for Extended PHY Specific Control
- *	Added defines for Ext. PHY Specific Ctrl 2 Reg. (Fiber specific)
- *	
- *	Revision 1.44  2002/12/09 14:58:41  rschmidt
- *	Added defines for Ext. PHY Specific Ctrl Reg. (downshift feature)
- *	Added 'GMR_FS_UN_SIZE'-Bit to Rx GMAC FIFO Flush Mask
- *	
- *	Revision 1.43  2002/12/05 10:14:45  rschmidt
- *	Added define for GMAC's Half Duplex Burst Mode
- *	Added define for Rx GMAC FIFO Flush Mask (default)
- *	
- *	Revision 1.42  2002/11/12 16:48:19  rschmidt
- *	Added defines for Cable Diagnostic Register (GPHY)
- *	Editorial changes
- *	
- *	Revision 1.41  2002/10/21 11:20:22  rschmidt
- *	Added bit GMR_FS_GOOD_FC to GMR_FS_ANY_ERR
- *	Editorial changes
- *	
- *	Revision 1.40  2002/10/14 14:54:14  rschmidt
- *	Added defines for GPHY Specific Status and GPHY Interrupt Status
- *	Added bits PHY_M_IS_AN_ERROR and PHY_M_IS_FIFO_ERROR to PHY_M_DEF_MSK
- *	Editorial changes
- *	
- *	Revision 1.39  2002/10/10 15:53:44  mkarl
- *	added some bit definitions for link speed status and LED's
- *	
- *	Revision 1.38  2002/08/21 16:23:46  rschmidt
- *	Added defines for PHY Specific Ctrl Reg
- *	Editorial changes
- *	
- *	Revision 1.37  2002/08/16 14:50:33  rschmidt
- *	Added defines for Auto-Neg. Advertisement YUKON Fiber (88E1011S only)
- *	Changed define PHY_M_DEF_MSK for GPHY IRQ Mask
- *	Editorial changes
- *	
- *	Revision 1.36  2002/08/12 13:21:10  rschmidt
- *	Added defines for different Broadcom PHY Ids
- *	
- *	Revision 1.35  2002/08/08 15:58:01  rschmidt
- *	Added defines for Manual LED Override register (YUKON)
- *	Editorial changes
- *	
- *	Revision 1.34  2002/07/31 17:23:36  rwahl
- *	Added define GMR_FS_ANY_ERR (analogous to XMR_FS_ANY_ERR).
- *	
- *	Revision 1.33  2002/07/23 16:03:37  rschmidt
- *	Added defines for GPHY registers
- *	Editorial changes
- *	
- *	Revision 1.32  2002/07/15 18:14:37  rwahl
- *	Added GMAC MIB counters definitions.
- *	Editorial changes.
- *	
- *	Revision 1.31  2002/07/15 15:42:50  rschmidt
- *	Removed defines from PHY specific reg. which are
- *	common to all PHYs
- *	Added defines for GMAC MIB Counters
- *	Editorial changes
- *	
- *	Revision 1.30  2002/06/05 08:22:12  rschmidt
- *	Changed defines for GMAC Rx Control Register and Rx Status
- *	Editorial changes
- *	
- *	Revision 1.29  2002/04/25 11:43:56  rschmidt
- *	Added define PHY_B_AS_PAUSE_MSK for BCom Pause Res.
- *	Added new registers and defines for YUKON (GMAC, GPHY)
- *	Added Receive Frame Status Encoding for YUKON
- *	Editorial changes
- *	
- *	Revision 1.28  2000/11/09 12:32:49  rassmann
- *	Renamed variables.
- *	
- *	Revision 1.27  2000/05/17 11:00:46  malthoff
- *	Add bit for enable/disable power management in BCOM chip.
- *	
- *	Revision 1.26  1999/11/22 14:03:00  cgoos
- *	Changed license header to GPL.
- *	
- *	Revision 1.25  1999/08/12 19:19:38  malthoff
- *	Add PHY_B_AC_TX_TST bit according to BCOM A1 errata sheet.
- *	
- *	Revision 1.24  1999/07/30 11:27:21  cgoos
- *	Fixed a missing end-of-comment.
- *	
- *	Revision 1.23  1999/07/30 07:03:31  malthoff
- *	Cut some long comments.
- *	Correct the XMAC PHY ID definitions.
- *	
- *	Revision 1.22  1999/05/19 07:33:18  cgoos
- *	Changes for 1000Base-T.
- *	
- *	Revision 1.21  1999/03/25 07:46:11  malthoff
- *	Add XM_HW_CFG, XM_TS_READ, and XM_TS_LOAD registers.
- *	
- *	Revision 1.20  1999/03/12 13:36:09  malthoff
- *	Remove __STDC__.
- *
- *	Revision 1.19  1998/12/10 12:22:54  gklug
- *	fix: RX_PAGE must be in interrupt mask
- *
- *	Revision 1.18  1998/12/10 10:36:36  gklug
- *	fix: swap of pause bits
- *
- *	Revision 1.17  1998/11/18 13:21:45  gklug
- *	fix: Default interrupt mask
- *
- *	Revision 1.16  1998/10/29 15:53:21  gklug
- *	fix: Default mask uses ASS (GP0) signal
- *
- *	Revision 1.15  1998/10/28 13:52:52  malthoff
- *	Add new bits in RX_CMD register.
- *
- *	Revision 1.14  1998/10/19 15:34:53  gklug
- *	fix: typos
- *
- *	Revision 1.13  1998/10/14 07:19:03  malthoff
- *	bug fix: Every define which describes bit 31
- *	must be declared as unsigned long 'UL'.
- *	fix bit definitions of PHY_AN_RFB and PHY_AN_PAUSE.
- *	Remove ANP defines. Rework the RFB defines.
- *
- *	Revision 1.12  1998/10/14 06:22:44  cgoos
- *	Changed shifted constant to ULONG.
- *
- *	Revision 1.11  1998/10/14 05:43:26  gklug
- *	add: shift pause coding
- *	fix: PAUSE bits definition
- *
- *	Revision 1.10  1998/10/13 09:19:21  malthoff
- *	Again change XMR_FS_ANY_ERR because of new info from XaQti.
- *
- *	Revision 1.9  1998/10/09 07:58:30  malthoff
- *	Add XMR_FS_FCS_ERR to XMR_FS_ANY_ERR.
- *
- *	Revision 1.8  1998/10/09 07:18:17  malthoff
- *	bug fix of a bug fix: XM_PAUSE_MODE and XM_DEF_MODE
- *	are not inverted! Bug XM_DEF_MSK is inverted.
- *
- *	Revision 1.7  1998/10/05 08:04:32  malthoff
- *	bug fix: XM_PAUSE_MODE and XM_DEF_MODE
- *	must be inverted declarations.
- *
- *	Revision 1.6  1998/09/28 13:38:18  malthoff
- *	Add default modes and masks XM_DEF_MSK,
- *	XM_PAUSE_MODE and XM_DEF_MODE
- *
- *	Revision 1.5  1998/09/16 14:42:04  malthoff
- *	Bug Fix: XM_GP_PORT is a 32 bit (not a 16 bit) register.
- *
- *	Revision 1.4  1998/08/20 14:59:47  malthoff
- *	Rework this file after reading the XaQti data sheet
- *	"Differences between Rev. B2 & Rev. C XMAC II".
- *	This file is now 100% XMAC II Rev. C complained.
- *
- *	Revision 1.3  1998/06/29 12:18:23  malthoff
- *	Correct XMR_FS_ANY_ERR definition.
- *
- *	Revision 1.2  1998/06/29 12:10:56  malthoff
- *	Add define XMR_FS_ANY_ERR.
- *
- *	Revision 1.1  1998/06/19 13:37:17  malthoff
- *	created.
- *
  *
  ******************************************************************************/
 
@@ -676,7 +489,7 @@ extern "C" {
 #define PHY_XMAC_AUNE_LP	0x05	/* 16 bit r/o	Link Partner Abi Reg */
 #define PHY_XMAC_AUNE_EXP	0x06	/* 16 bit r/o	Auto-Neg. Expansion Reg */
 #define PHY_XMAC_NEPG		0x07	/* 16 bit r/w	Next Page Register */
-#define PHY_XMAC_NEPG_LP	0x08	/* 16 bit r/o	Next Page Link P Reg */
+#define PHY_XMAC_NEPG_LP	0x08	/* 16 bit r/o	Next Page Link Partner */
 	/* 0x09 - 0x0e:		reserved */
 #define PHY_XMAC_EXT_STAT	0x0f	/* 16 bit r/o	Ext Status Register */
 #define PHY_XMAC_RES_ABI	0x10	/* 16 bit r/o	PHY Resolved Ability */
@@ -693,7 +506,7 @@ extern "C" {
 #define PHY_BCOM_AUNE_LP	0x05	/* 16 bit r/o	Link Part Ability Reg */
 #define PHY_BCOM_AUNE_EXP	0x06	/* 16 bit r/o	Auto-Neg. Expansion Reg */
 #define PHY_BCOM_NEPG		0x07	/* 16 bit r/w	Next Page Register */
-#define PHY_BCOM_NEPG_LP	0x08	/* 16 bit r/o	Next Page Link P Reg */
+#define PHY_BCOM_NEPG_LP	0x08	/* 16 bit r/o	Next Page Link Partner */
 	/* Broadcom-specific registers */
 #define PHY_BCOM_1000T_CTRL	0x09	/* 16 bit r/w	1000Base-T Ctrl Reg */
 #define PHY_BCOM_1000T_STAT	0x0a	/* 16 bit r/o	1000Base-T Status Reg */
@@ -702,7 +515,7 @@ extern "C" {
 #define PHY_BCOM_P_EXT_CTRL	0x10	/* 16 bit r/w	PHY Extended Ctrl Reg */
 #define PHY_BCOM_P_EXT_STAT	0x11	/* 16 bit r/o	PHY Extended Stat Reg */
 #define PHY_BCOM_RE_CTR		0x12	/* 16 bit r/w	Receive Error Counter */
-#define PHY_BCOM_FC_CTR		0x13	/* 16 bit r/w	False Carr Sense Cnt */
+#define PHY_BCOM_FC_CTR		0x13	/* 16 bit r/w	False Carrier Sense Cnt */
 #define PHY_BCOM_RNO_CTR	0x14	/* 16 bit r/w	Receiver NOT_OK Cnt */
 	/* 0x15 - 0x17:		reserved */
 #define PHY_BCOM_AUX_CTRL	0x18	/* 16 bit r/w	Auxiliary Control Reg */
@@ -724,7 +537,7 @@ extern "C" {
 #define PHY_MARV_AUNE_LP	0x05	/* 16 bit r/o	Link Part Ability Reg */
 #define PHY_MARV_AUNE_EXP	0x06	/* 16 bit r/o	Auto-Neg. Expansion Reg */
 #define PHY_MARV_NEPG		0x07	/* 16 bit r/w	Next Page Register */
-#define PHY_MARV_NEPG_LP	0x08	/* 16 bit r/o	Next Page Link P Reg */
+#define PHY_MARV_NEPG_LP	0x08	/* 16 bit r/o	Next Page Link Partner */
 	/* Marvel-specific registers */
 #define PHY_MARV_1000T_CTRL	0x09	/* 16 bit r/w	1000Base-T Ctrl Reg */
 #define PHY_MARV_1000T_STAT	0x0a	/* 16 bit r/o	1000Base-T Status Reg */
@@ -757,7 +570,7 @@ extern "C" {
 #define PHY_LONE_AUNE_LP	0x05	/* 16 bit r/o	Link Part Ability Reg */
 #define PHY_LONE_AUNE_EXP	0x06	/* 16 bit r/o	Auto-Neg. Expansion Reg */
 #define PHY_LONE_NEPG		0x07	/* 16 bit r/w	Next Page Register */
-#define PHY_LONE_NEPG_LP	0x08	/* 16 bit r/o	Next Page Link Partner*/
+#define PHY_LONE_NEPG_LP	0x08	/* 16 bit r/o	Next Page Link Partner */
 	/* Level One-specific registers */
 #define PHY_LONE_1000T_CTRL	0x09	/* 16 bit r/w	1000Base-T Control Reg*/
 #define PHY_LONE_1000T_STAT	0x0a	/* 16 bit r/o	1000Base-T Status Reg */
@@ -804,12 +617,13 @@ extern "C" {
 /*
  * PHY bit definitions
  * Bits defined as PHY_X_..., PHY_B_..., PHY_L_... or PHY_N_... are
- * Xmac/Broadcom/LevelOne/National-specific.
+ * XMAC/Broadcom/LevelOne/National/Marvell-specific.
  * All other are general.
  */
 
 /*****  PHY_XMAC_CTRL	16 bit r/w	PHY Control Register *****/
 /*****  PHY_BCOM_CTRL	16 bit r/w	PHY Control Register *****/
+/*****  PHY_MARV_CTRL	16 bit r/w	PHY Status Register *****/
 /*****  PHY_LONE_CTRL	16 bit r/w	PHY Control Register *****/
 #define PHY_CT_RESET	(1<<15)	/* Bit 15: (sc)	clear all PHY related regs */
 #define PHY_CT_LOOP		(1<<14)	/* Bit 14:	enable Loopback over PHY */
@@ -909,27 +723,20 @@ extern "C" {
 
 /*****  PHY_XMAC_AUNE_EXP	16 bit r/o	Auto-Negotiation Expansion Reg *****/
 								/* Bit 15..4:	reserved */
-#define PHY_AN_LP_NP	(1<<3)	/* Bit  3:	Link Partner can Next Page */
-#define PHY_AN_LOC_NP	(1<<2)	/* Bit  2:	Local PHY can Next Page */
-#define PHY_AN_RX_PG	(1<<1)	/* Bit  1:	Page Received */
+#define PHY_ANE_LP_NP	(1<<3)	/* Bit  3:	Link Partner can Next Page */
+#define PHY_ANE_LOC_NP	(1<<2)	/* Bit  2:	Local PHY can Next Page */
+#define PHY_ANE_RX_PG	(1<<1)	/* Bit  1:	Page Received */
 								/* Bit  0:	reserved */
 
 /*****  PHY_BCOM_AUNE_EXP	16 bit r/o	Auto-Negotiation Expansion Reg *****/
-								/* Bit 15..5:	reserved */
-#define PHY_B_AN_PDF	(1<<4)	/* Bit  4:	Parallel Detection Fault */
-/*	PHY_AN_LP_NP		(see XMAC) Bit  3:	Link Partner can Next Page */
-/*	PHY_AN_LOC_NP		(see XMAC) Bit  2:	Local PHY can Next Page */
-/*	PHY_AN_RX_PG		(see XMAC) Bit  1:	Page Received */
-#define PHY_B_AN_LP_CAP	(1<<0)	/* Bit  0:	Link Partner Auto-Neg. Cap. */ 	
-
 /*****  PHY_LONE_AUNE_EXP	16 bit r/o	Auto-Negotiation Expansion Reg *****/
-#define PHY_L_AN_BP		(1<<5)	/* Bit  5:	Base Page Indication */
-#define PHY_L_AN_PDF	(1<<4)	/* Bit  4:	Parallel Detection Fault */
-/*	PHY_AN_LP_NP		(see XMAC) Bit  3:	Link Partner can Next Page */
-/*	PHY_AN_LOC_NP		(see XMAC) Bit  2:	Local PHY can Next Page */
-/*	PHY_AN_RX_PG		(see XMAC) Bit  1:	Page Received */
-#define PHY_B_AN_LP_CAP	(1<<0)	/* Bit  0:	Link Partner Auto-Neg. Cap. */ 	
-
+/*****  PHY_MARV_AUNE_EXP	16 bit r/o	Auto-Negotiation Expansion Reg *****/
+								/* Bit 15..5:	reserved */
+#define PHY_ANE_PAR_DF	(1<<4)	/* Bit  4:	Parallel Detection Fault */
+/*	PHY_ANE_LP_NP		(see XMAC) Bit  3:	Link Partner can Next Page */
+/*	PHY_ANE_LOC_NP		(see XMAC) Bit  2:	Local PHY can Next Page */
+/*	PHY_ANE_RX_PG		(see XMAC) Bit  1:	Page Received */
+#define PHY_ANE_LP_CAP	(1<<0)	/* Bit  0:	Link Partner Auto-Neg. Cap. */ 	
 
 /*****  PHY_XMAC_NEPG		16 bit r/w	Next Page Register *****/
 /*****  PHY_BCOM_NEPG		16 bit r/w	Next Page Register *****/
@@ -958,7 +765,7 @@ extern "C" {
 #define PHY_X_RS_HD		(1<<6)	/* Bit  6:	Half Duplex Mode selected */
 #define PHY_X_RS_FD		(1<<5)	/* Bit  5:	Full Duplex Mode selected */
 #define PHY_X_RS_ABLMIS (1<<4)	/* Bit  4:	duplex or pause cap mismatch */
-#define PHY_X_RS_PAUMIS (1<<3)	/* Bit  3:	pause capability missmatch */
+#define PHY_X_RS_PAUMIS (1<<3)	/* Bit  3:	pause capability mismatch */
 								/* Bit  2..0:	reserved */
 /*
  * Remote Fault Bits (PHY_X_AN_RFB) encoding
@@ -990,6 +797,7 @@ extern "C" {
 									/* Bit  7..0:	reserved */
 
 /*****  PHY_BCOM_1000T_STAT	16 bit r/o	1000Base-T Status Reg *****/
+/*****  PHY_MARV_1000T_STAT	16 bit r/o	1000Base-T Status Reg *****/
 #define PHY_B_1000S_MSF		(1<<15)	/* Bit 15:	Master/Slave Fault */
 #define PHY_B_1000S_MSR		(1<<14)	/* Bit 14:	Master/Slave Result */
 #define PHY_B_1000S_LRS		(1<<13)	/* Bit 13:	Local Receiver Status */
@@ -1309,7 +1117,6 @@ extern "C" {
 									/* Bit  7..0:	reserved */
 
 /*****  PHY_MARV_PHY_CTRL	16 bit r/w	PHY Specific Ctrl Reg *****/
-
 #define PHY_M_PC_TX_FFD_MSK	(3<<14)	/* Bit 15..14:	Tx FIFO Depth Mask */
 #define PHY_M_PC_RX_FFD_MSK	(3<<12)	/* Bit 13..12:	Rx FIFO Depth Mask */
 #define PHY_M_PC_ASS_CRS_TX	(1<<11)	/* Bit 11:	Assert CRS on Transmit */
@@ -1322,6 +1129,9 @@ extern "C" {
 #define PHY_M_PC_SQE_T_ENA	(1<<2)	/* Bit  2:	SQE Test Enabled */
 #define PHY_M_PC_POL_R_DIS	(1<<1)	/* Bit  1:	Polarity Reversal Disabled */
 #define PHY_M_PC_DIS_JABBER	(1<<0)	/* Bit  0:	Disable Jabber */
+
+#define PHY_M_PC_EN_DET			SHIFT8(2)	/* Energy Detect (Mode 1) */
+#define PHY_M_PC_EN_DET_PLUS	SHIFT8(3)	/* Energy Detect Plus (Mode 2) */
 
 #define PHY_M_PC_MDI_XMODE(x)	SHIFT5(x)	
 #define PHY_M_PC_MAN_MDI	0    	/* 00 = Manual MDI configuration */
@@ -1373,6 +1183,7 @@ extern "C" {
 #define PHY_M_EC_M_DSC_MSK	(3<<10)	/* Bit 11..10:	Master downshift counter */
 #define PHY_M_EC_S_DSC_MSK	(3<<8)	/* Bit  9.. 8:	Slave  downshift counter */
 #define PHY_M_EC_MAC_S_MSK	(7<<4)	/* Bit  6.. 4:	Def. MAC interface speed */
+#define PHY_M_EC_FIB_AN_ENA	(1<<3)	/* Bit  3:	Fiber Auto-Neg. Enable */
 
 #define PHY_M_EC_M_DSC(x)		SHIFT10(x)	/* 00=1x; 01=2x; 10=3x; 11=4x */
 #define PHY_M_EC_S_DSC(x)		SHIFT8(x)	/* 00=dis; 01=1x; 10=2x; 11=3x */
@@ -1433,6 +1244,18 @@ extern "C" {
 #define PHY_M_EC2_FO_M_CLK	(1<<4)	/* Bit  4:	Fiber Mode Clock Enable */
 #define PHY_M_EC2_FO_BOOST	(1<<3)	/* Bit  3:	Fiber Output Boost */
 #define PHY_M_EC2_FO_AM_MSK	7		/* Bit  2.. 0:	Fiber Output Amplitude */
+
+/*****	PHY_MARV_EXT_P_STAT 16 bit r/w	Ext. PHY Specific Status *****/
+#define PHY_M_FC_AUTO_SEL	(1<<15)	/* Bit 15:	Fiber/Copper Auto Sel. dis. */
+#define PHY_M_FC_AN_REG_ACC (1<<14) /* Bit 14:	Fiber/Copper Autoneg. reg acc */
+#define PHY_M_FC_RESULUTION (1<<13)	/* Bit 13:	Fiber/Copper Resulution */
+#define PHY_M_SER_IF_AN_BP  (1<<12) /* Bit 12:	Ser IF autoneg. bypass enable */
+#define PHY_M_SER_IF_BP_ST	(1<<11) /* Bit 11:	Ser IF autoneg. bypass status */
+#define PHY_M_IRQ_POLARITY	(1<<10) /* Bit 10:	IRQ polarity */
+									/* Bit 9..4: reserved */
+#define PHY_M_UNDOC1		(1<< 7) /* undocumented bit !! */
+#define PHY_M_MODE_MASK		(0xf<<0)/* Bit 3..0: copy of HWCFG MODE[3:0] */
+
 
 /*****  PHY_MARV_CABLE_DIAG	16 bit r/o	Cable Diagnostic Reg *****/
 #define PHY_M_CABD_ENA_TEST	(1<<15)	/* Bit 15:	Enable Test */
@@ -1531,7 +1354,7 @@ extern "C" {
 #define GM_RXF_SHT \
 			(GM_MIB_CNT_BASE + 80)	/* Frames <64 Byte Received OK */
 #define GM_RXE_FRAG \
-			(GM_MIB_CNT_BASE + 88)	/* Frames <64 Byte Receeived with FCS Err */
+			(GM_MIB_CNT_BASE + 88)	/* Frames <64 Byte Received with FCS Err */
 #define GM_RXF_64B \
 			(GM_MIB_CNT_BASE + 96)	/* 64 Byte Rx Frame */
 #define GM_RXF_127B \
@@ -1606,7 +1429,6 @@ extern "C" {
  */
 
 /*	GM_GP_STAT	16 bit r/o	General Purpose Status Register */
-
 #define GM_GPSR_SPEED		(1<<15) /* Bit 15:	Port Speed (1 = 100 Mbps) */
 #define GM_GPSR_DUPLEX		(1<<14) /* Bit 14:	Duplex Mode (1 = Full) */
 #define GM_GPSR_FC_TX_DIS	(1<<13) /* Bit 13:	Tx Flow-Control Mode Disabled */
@@ -1646,11 +1468,14 @@ extern "C" {
 							 GM_GPCR_AU_SPD_DIS)
 	
 /*	GM_TX_CTRL				16 bit r/w	Transmit Control Register */
-
 #define GM_TXCR_FORCE_JAM	(1<<15)	/* Bit 15:	Force Jam / Flow-Control */
 #define GM_TXCR_CRC_DIS		(1<<14)	/* Bit 14:	Disable insertion of CRC */
 #define GM_TXCR_PAD_DIS		(1<<13)	/* Bit 13:	Disable padding of packets */
-#define GM_TXCR_COL_THR		(4<<10)	/* Bit 12..10:	Collision Threshold */
+#define GM_TXCR_COL_THR_MSK	(1<<10)	/* Bit 12..10:	Collision Threshold */
+
+#define TX_COL_THR(x)		(SHIFT10(x) & GM_TXCR_COL_THR_MSK)
+
+#define TX_COL_DEF			0x04
 	
 /*	GM_RX_CTRL				16 bit r/w	Receive Control Register */
 #define GM_RXCR_UCF_ENA		(1<<15)	/* Bit 15:	Enable Unicast filtering */
@@ -1663,35 +1488,41 @@ extern "C" {
 #define GM_TXPA_JAMIPG_MSK	(0x1f<<9)	/* Bit 13..9:	Jam IPG */
 #define GM_TXPA_JAMDAT_MSK	(0x1f<<4)	/* Bit  8..4:	IPG Jam to Data */
 								/* Bit  3..0:	reserved */
-#define JAM_LEN_VAL(x)		SHIFT14(x)
-#define JAM_IPG_VAL(x)		SHIFT9(x)
-#define IPG_JAM_DATA(x)		SHIFT4(x)
+
+#define TX_JAM_LEN_VAL(x)	(SHIFT14(x) & GM_TXPA_JAMLEN_MSK)
+#define TX_JAM_IPG_VAL(x)	(SHIFT9(x) & GM_TXPA_JAMIPG_MSK)
+#define TX_IPG_JAM_DATA(x)	(SHIFT4(x) & GM_TXPA_JAMDAT_MSK)
+
+#define TX_JAM_LEN_DEF		0x03
+#define TX_JAM_IPG_DEF		0x0b
+#define TX_IPG_JAM_DEF		0x1c
 
 /*	GM_SERIAL_MODE			16 bit r/w	Serial Mode Register */
-#define GM_SMOD_DATABL_MSK	(0x1f<<11)	/* Bit 15..11:	Data Blinder */
+#define GM_SMOD_DATABL_MSK	(0x1f<<11)	/* Bit 15..11:	Data Blinder (r/o) */
 #define GM_SMOD_LIMIT_4		(1<<10)	/* Bit 10:	4 consecutive Tx trials */
 #define GM_SMOD_VLAN_ENA	(1<<9)	/* Bit  9:	Enable VLAN  (Max. Frame Len) */
 #define GM_SMOD_JUMBO_ENA	(1<<8)	/* Bit  8:	Enable Jumbo (Max. Frame Len) */
 								/* Bit  7..5:	reserved */
 #define GM_SMOD_IPG_MSK		0x1f	/* Bit 4..0:	Inter-Packet Gap (IPG) */
 	
-#define DATA_BLIND_VAL(x)	SHIFT11(x)
-#define DATA_BLIND_FAST_ETH	0x1c
-#define DATA_BLIND_GIGABIT	4
+#define DATA_BLIND_VAL(x)	(SHIFT11(x) & GM_SMOD_DATABL_MSK)
+#define DATA_BLIND_DEF		0x04
 
-#define IPG_VAL_FAST_ETH	0x1e
-#define IPG_VAL_GIGABIT		6
+#define IPG_DATA_VAL(x)		(x & GM_SMOD_IPG_MSK)
+#define IPG_DATA_DEF		0x1e
 
 /*	GM_SMI_CTRL				16 bit r/w	SMI Control Register */
-
-#define GM_SMI_CT_PHY_AD(x)	SHIFT11(x)
-#define GM_SMI_CT_REG_AD(x)	SHIFT6(x)
+#define GM_SMI_CT_PHY_A_MSK	(0x1f<<11)	/* Bit 15..11:	PHY Device Address */
+#define GM_SMI_CT_REG_A_MSK	(0x1f<<6)	/* Bit 10.. 6:	PHY Register Address */
 #define GM_SMI_CT_OP_RD		(1<<5)	/* Bit  5:	OpCode Read (0=Write)*/
 #define GM_SMI_CT_RD_VAL	(1<<4)	/* Bit  4:	Read Valid (Read completed) */
 #define GM_SMI_CT_BUSY		(1<<3)	/* Bit  3:	Busy (Operation in progress) */
 								/* Bit   2..0:	reserved */
 	
-/*	GM_PHY_ADDR				16 bit r/w	GPHY Address Register */
+#define GM_SMI_CT_PHY_AD(x)	(SHIFT11(x) & GM_SMI_CT_PHY_A_MSK)
+#define GM_SMI_CT_REG_AD(x)	(SHIFT6(x) & GM_SMI_CT_REG_A_MSK)
+
+	/*	GM_PHY_ADDR				16 bit r/w	GPHY Address Register */
 								/* Bit  15..6:	reserved */
 #define GM_PAR_MIB_CLR		(1<<5)	/* Bit  5:	Set MIB Clear Counter Mode */
 #define GM_PAR_MIB_TST		(1<<4)	/* Bit  4:	MIB Load Counter (Test Mode) */

@@ -1,5 +1,4 @@
-/* $Id$
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -9,9 +8,7 @@
 #ifndef _ASM_IA64_SN_PIO_H
 #define _ASM_IA64_SN_PIO_H
 
-#include <linux/types.h>
-#include <asm/sn/sgi.h>
-#include <asm/sn/driver.h>
+#include <asm/sn/types.h>
 
 /*
  * pioaddr_t	- The kernel virtual address that a PIO can be done upon.
@@ -19,7 +16,7 @@
  *		  to long mostly, just cast for other sizes.
  */
 
-typedef volatile ulong*	pioaddr_t;
+typedef volatile unsigned long*	pioaddr_t;
 
 /*
  * iopaddr_t	- the physical io space relative address (e.g. VME A16S 0x0800).
@@ -30,8 +27,8 @@ typedef volatile ulong*	pioaddr_t;
 
 
 typedef struct piomap {
-	uint		pio_bus;
-	uint		pio_adap;
+	unsigned int	pio_bus;
+	unsigned int	pio_adap;
 	int		pio_flag;
 	int		pio_reg;
 	char		pio_name[7];	/* to identify the mapped device */

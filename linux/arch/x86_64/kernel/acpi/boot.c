@@ -46,11 +46,13 @@
 #include <asm/proto.h>
 #include <asm/tlbflush.h>
 
-int acpi_lapic = 0;
-int acpi_ioapic = 0;
-
 #define PREFIX			"ACPI: "
 
+int acpi_noirq __initdata = 0;	/* skip ACPI IRQ initialization */
+int acpi_ht __initdata = 1;	/* enable HT */
+
+int acpi_lapic;
+int acpi_ioapic;
 
 /* --------------------------------------------------------------------------
                               Boot-time Configuration
@@ -117,6 +119,11 @@ acpi_parse_lapic (
 		return -EINVAL;
 
 	acpi_table_print_madt_entry(header);
+
+	/* no utility in registering a disabled processor */
+	if (processor->flags.enabled == 0)
+		return 0;
+
 
 	mp_register_lapic (
 		processor->id,					   /* APIC ID */
@@ -253,29 +260,66 @@ acpi_parse_hpet (
 
 #ifdef CONFIG_ACPI_BUS
 /*
- * Set specified PIC IRQ to level triggered mode.
+ * "acpi_pic_sci=level" (current default)
+ * programs the PIC-mode SCI to Level Trigger.
+ * (NO-OP if the BIOS set Level Trigger already)
+ *
+ * If a PIC-mode SCI is not recogznied or gives spurious IRQ7's
+ * it may require Edge Trigger -- use "acpi_pic_sci=edge"
+ * (NO-OP if the BIOS set Edge Trigger already)
  *
  * Port 0x4d0-4d1 are ECLR1 and ECLR2, the Edge/Level Control Registers
  * for the 8259 PIC.  bit[n] = 1 means irq[n] is Level, otherwise Edge.
  * ECLR1 is IRQ's 0-7 (IRQ 0, 1, 2 must be 0)
  * ECLR2 is IRQ's 8-15 (IRQ 8, 13 must be 0)
- *
- * As the BIOS should have done this for us,
- * print a warning if the IRQ wasn't already set to level.
  */
 
-void acpi_pic_set_level_irq(unsigned int irq)
+static int __initdata	acpi_pic_sci_trigger;	/* 0: level, 1: edge */
+
+void __init
+acpi_pic_sci_set_trigger(unsigned int irq)
 {
 	unsigned char mask = 1 << (irq & 7);
 	unsigned int port = 0x4d0 + (irq >> 3);
 	unsigned char val = inb(port);
 
+	
+	printk(PREFIX "IRQ%d SCI:", irq);
 	if (!(val & mask)) {
-		printk(KERN_WARNING PREFIX "IRQ %d was Edge Triggered, "
-			"setting to Level Triggerd\n", irq);
-		outb(val | mask, port);
+		printk(" Edge");
+
+		if (!acpi_pic_sci_trigger) {
+			printk(" set to Level");
+			outb(val | mask, port);
+		}
+	} else {
+		printk(" Level");
+
+		if (acpi_pic_sci_trigger) {
+			printk(" set to Edge");
+			outb(val | mask, port);
+		}
 	}
+	printk(" Trigger.\n");
 }
+
+int __init
+acpi_pic_sci_setup(char *str)
+{
+	while (str && *str) {
+		if (strncmp(str, "level", 5) == 0)
+			acpi_pic_sci_trigger = 0;	/* force level trigger */
+		if (strncmp(str, "edge", 4) == 0)
+			acpi_pic_sci_trigger = 1;	/* force edge trigger */
+		str = strchr(str, ',');
+		if (str)
+			str += strspn(str, ", \t");
+	}
+	return 1;
+}
+
+__setup("acpi_pic_sci=", acpi_pic_sci_setup);
+
 #endif /* CONFIG_ACPI_BUS */
 
 static unsigned long __init
@@ -354,8 +398,10 @@ acpi_boot_init (void)
 	 * Initialize the ACPI boot-time table parser.
 	 */
 	result = acpi_table_init();
-	if (result)
+	if (result) {
+		acpi_disabled = 1;
 		return result;
+	}
 
 	result = acpi_blacklisted();
 	if (result) {
@@ -398,7 +444,7 @@ acpi_boot_init (void)
 	 * and (optionally) overriden by a LAPIC_ADDR_OVR entry (64-bit value).
 	 */
 
-	result = acpi_table_parse_madt(ACPI_MADT_LAPIC_ADDR_OVR, acpi_parse_lapic_addr_ovr);
+	result = acpi_table_parse_madt(ACPI_MADT_LAPIC_ADDR_OVR, acpi_parse_lapic_addr_ovr, 0);
 	if (result < 0) {
 		printk(KERN_ERR PREFIX "Error parsing LAPIC address override entry\n");
 		return result;
@@ -406,7 +452,8 @@ acpi_boot_init (void)
 
 	mp_register_lapic_address(acpi_lapic_addr);
 
-	result = acpi_table_parse_madt(ACPI_MADT_LAPIC, acpi_parse_lapic);
+	result = acpi_table_parse_madt(ACPI_MADT_LAPIC, acpi_parse_lapic,
+				       MAX_APICS);
 	if (!result) { 
 		printk(KERN_ERR PREFIX "No LAPIC entries present\n");
 		/* TBD: Cleanup to allow fallback to MPS */
@@ -418,7 +465,7 @@ acpi_boot_init (void)
 		return result;
 	}
 
-	result = acpi_table_parse_madt(ACPI_MADT_LAPIC_NMI, acpi_parse_lapic_nmi);
+	result = acpi_table_parse_madt(ACPI_MADT_LAPIC_NMI, acpi_parse_lapic_nmi, 0);
 	if (result < 0) {
 		printk(KERN_ERR PREFIX "Error parsing LAPIC NMI entry\n");
 		/* TBD: Cleanup to allow fallback to MPS */
@@ -442,7 +489,7 @@ acpi_boot_init (void)
         * If MPS is present, it will handle them,
         * otherwise the system will stay in PIC mode
         */
-        if (acpi_disabled) {
+        if (acpi_disabled || acpi_noirq) {
                return 1;
 	}
 
@@ -455,8 +502,8 @@ acpi_boot_init (void)
 		return 1;
 	}
 
-	result = acpi_table_parse_madt(ACPI_MADT_IOAPIC, acpi_parse_ioapic);
-	if (!result) { 
+	result = acpi_table_parse_madt(ACPI_MADT_IOAPIC, acpi_parse_ioapic, MAX_IO_APICS);
+	if (!result) {
 		printk(KERN_ERR PREFIX "No IOAPIC entries present\n");
 		return -ENODEV;
 	}
@@ -468,14 +515,15 @@ acpi_boot_init (void)
 	/* Build a default routing table for legacy (ISA) interrupts. */
 	mp_config_acpi_legacy_irqs();
 
-	result = acpi_table_parse_madt(ACPI_MADT_INT_SRC_OVR, acpi_parse_int_src_ovr);
+	result = acpi_table_parse_madt(ACPI_MADT_INT_SRC_OVR, acpi_parse_int_src_ovr, NR_IRQ_VECTORS);
 	if (result < 0) {
 		printk(KERN_ERR PREFIX "Error parsing interrupt source overrides entry\n");
 		/* TBD: Cleanup to allow fallback to MPS */
 		return result;
 	}
 
-	result = acpi_table_parse_madt(ACPI_MADT_NMI_SRC, acpi_parse_nmi_src);
+	result = acpi_table_parse_madt(ACPI_MADT_NMI_SRC, acpi_parse_nmi_src,
+				       NR_IRQ_VECTORS);
 	if (result < 0) {
 		printk(KERN_ERR PREFIX "Error parsing NMI SRC entry\n");
 		/* TBD: Cleanup to allow fallback to MPS */
@@ -483,6 +531,8 @@ acpi_boot_init (void)
 	}
 
 	acpi_irq_model = ACPI_IRQ_MODEL_IOAPIC;
+
+	acpi_irq_balance_set(NULL);
 
 	acpi_ioapic = 1;
 

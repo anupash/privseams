@@ -46,6 +46,7 @@ struct device;
 struct device_driver;
 struct class;
 struct class_device;
+struct class_simple;
 
 struct bus_type {
 	char			* name;
@@ -155,6 +156,7 @@ struct class {
 			   int num_envp, char *buffer, int buffer_size);
 
 	void	(*release)(struct class_device *dev);
+	void	(*class_release)(struct class *class);
 };
 
 extern int class_register(struct class *);
@@ -246,6 +248,15 @@ struct class_interface {
 extern int class_interface_register(struct class_interface *);
 extern void class_interface_unregister(struct class_interface *);
 
+/* interface for class simple stuff */
+extern struct class_simple *class_simple_create(struct module *owner, char *name);
+extern void class_simple_destroy(struct class_simple *cs);
+extern struct class_device *class_simple_device_add(struct class_simple *cs, dev_t dev, struct device *device, const char *fmt, ...)
+	__attribute__((format(printf,4,5)));
+extern int class_simple_set_hotplug(struct class_simple *, 
+	int (*hotplug)(struct class_device *dev, char **envp, int num_envp, char *buffer, int buffer_size));
+extern void class_simple_device_remove(dev_t dev);
+
 
 struct device {
 	struct list_head node;		/* node in sibling list */
@@ -254,7 +265,6 @@ struct device {
 	struct list_head children;
 	struct device 	* parent;
 
-	struct completion * complete;	/* Notification for freeing device. */
 	struct kobject kobj;
 	char	bus_id[BUS_ID_SIZE];	/* position on parent bus */
 
@@ -275,6 +285,7 @@ struct device {
 					   detached from its driver. */
 
 	u64		*dma_mask;	/* dma mask (if dma'able device) */
+	struct list_head	dma_pools;	/* dma pools (if dma'ble) */
 
 	void	(*release)(struct device * dev);
 };
@@ -302,7 +313,6 @@ dev_set_drvdata (struct device *dev, void *data)
  */
 extern int device_register(struct device * dev);
 extern void device_unregister(struct device * dev);
-extern void device_unregister_wait(struct device * dev);
 extern void device_initialize(struct device * dev);
 extern int device_add(struct device * dev);
 extern void device_del(struct device * dev);
@@ -354,6 +364,7 @@ extern int (*platform_notify_remove)(struct device * dev);
  */
 extern struct device * get_device(struct device * dev);
 extern void put_device(struct device * dev);
+extern struct device *device_find(const char *name, struct bus_type *bus);
 
 
 /* drivers/base/platform.c */

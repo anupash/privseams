@@ -242,10 +242,6 @@ int datagram_recv_ctl(struct sock *sk, struct msghdr *msg, struct sk_buff *skb)
 		struct ipv6_rt_hdr *rthdr = (struct ipv6_rt_hdr *)(skb->nh.raw + opt->srcrt);
 		put_cmsg(msg, SOL_IPV6, IPV6_RTHDR, (rthdr->hdrlen+1) << 3, rthdr);
 	}
-	if (np->rxopt.bits.authhdr && opt->auth) {
-		u8 *ptr = skb->nh.raw + opt->auth;
-		put_cmsg(msg, SOL_IPV6, IPV6_AUTHHDR, (ptr[1]+1)<<2, ptr);
-	}
 	if (np->rxopt.bits.dstopts && opt->dst1) {
 		u8 *ptr = skb->nh.raw + opt->dst1;
 		put_cmsg(msg, SOL_IPV6, IPV6_DSTOPTS, (ptr[1]+1)<<3, ptr);
@@ -265,6 +261,8 @@ int datagram_send_ctl(struct msghdr *msg, struct flowi *fl,
 	int err = 0;
 
 	for (cmsg = CMSG_FIRSTHDR(msg); cmsg; cmsg = CMSG_NXTHDR(msg, cmsg)) {
+		int addr_type;
+		struct net_device *dev = NULL;
 
 		if (cmsg->cmsg_len < sizeof(struct cmsghdr) ||
 		    (unsigned long)(((char*)cmsg - (char*)msg->msg_control)
@@ -291,16 +289,30 @@ int datagram_send_ctl(struct msghdr *msg, struct flowi *fl,
 				fl->oif = src_info->ipi6_ifindex;
 			}
 
-			if (!ipv6_addr_any(&src_info->ipi6_addr)) {
-				if (!ipv6_chk_addr(&src_info->ipi6_addr, NULL)) {
-					err = -EINVAL;
-					goto exit_f;
+			addr_type = ipv6_addr_type(&src_info->ipi6_addr);
+
+			if (addr_type == IPV6_ADDR_ANY)
+				break;
+			
+			if (addr_type & IPV6_ADDR_LINKLOCAL) {
+				if (!src_info->ipi6_ifindex)
+					return -EINVAL;
+				else {
+					dev = dev_get_by_index(src_info->ipi6_ifindex);
+					if (!dev)
+						return -ENODEV;
 				}
-
-				ipv6_addr_copy(&fl->fl6_src,
-					       &src_info->ipi6_addr);
 			}
+			if (!ipv6_chk_addr(&src_info->ipi6_addr, dev, 0)) {
+				if (dev)
+					dev_put(dev);
+				err = -EINVAL;
+				goto exit_f;
+			}
+			if (dev)
+				dev_put(dev);
 
+			ipv6_addr_copy(&fl->fl6_src, &src_info->ipi6_addr);
 			break;
 
 		case IPV6_FLOWINFO:
@@ -360,26 +372,6 @@ int datagram_send_ctl(struct msghdr *msg, struct flowi *fl,
 			}
 			opt->opt_flen += len;
 			opt->dst1opt = hdr;
-			break;
-
-		case IPV6_AUTHHDR:
-                        if (cmsg->cmsg_len < CMSG_LEN(sizeof(struct ipv6_opt_hdr))) {
-				err = -EINVAL;
-				goto exit_f;
-			}
-
-			hdr = (struct ipv6_opt_hdr *)CMSG_DATA(cmsg);
-			len = ((hdr->hdrlen + 2) << 2);
-			if (cmsg->cmsg_len < CMSG_LEN(len)) {
-				err = -EINVAL;
-				goto exit_f;
-			}
-			if (len & ~7) {
-				err = -EINVAL;
-				goto exit_f;
-			}
-			opt->opt_flen += len;
-			opt->auth = hdr;
 			break;
 
 		case IPV6_RTHDR:

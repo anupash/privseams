@@ -20,6 +20,7 @@ extern unsigned int pcibios_assign_all_busses(void);
 #else
 #define pcibios_assign_all_busses()	0
 #endif
+#define pcibios_scan_all_fns(a, b)	0
 
 #define PCIBIOS_MIN_IO		0x1000
 #define PCIBIOS_MIN_MEM		0x10000000
@@ -113,11 +114,14 @@ static inline void pci_dac_dma_sync_single(struct pci_dev *pdev,
 {
 	unsigned long addr;
 
-	if (direction == PCI_DMA_NONE)
-		BUG();
+	BUG_ON(direction == PCI_DMA_NONE);
 
 	addr = baddr_to_bus(pdev->bus, dma_addr) + PAGE_OFFSET;
 	dma_cache_wback_inv(addr, len);
+}
+
+static inline void pcibios_add_platform_entries(struct pci_dev *dev)
+{
 }
 
 #endif /* __KERNEL__ */

@@ -62,14 +62,6 @@ static struct packet_type ipv6_packet_type = {
 	.func = ipv6_rcv,
 };
 
-/*
- *	addrconf module should be notified of a device going up
- */
-static struct notifier_block ipv6_dev_notf = {
-	.notifier_call = addrconf_notify,
-	.priority = 0
-};
-
 struct ip6_ra_chain *ip6_ra_chain;
 rwlock_t ip6_ra_lock = RW_LOCK_UNLOCKED;
 
@@ -235,11 +227,6 @@ int ipv6_setsockopt(struct sock *sk, int level, int optname, char *optval,
 
 	case IPV6_HOPOPTS:
 		np->rxopt.bits.hopopts = valbool;
-		retv = 0;
-		break;
-
-	case IPV6_AUTHHDR:
-		np->rxopt.bits.authhdr = valbool;
 		retv = 0;
 		break;
 
@@ -631,10 +618,6 @@ int ipv6_getsockopt(struct sock *sk, int level, int optname, char *optval,
 		val = np->rxopt.bits.hopopts;
 		break;
 
-	case IPV6_AUTHHDR:
-		val = np->rxopt.bits.authhdr;
-		break;
-
 	case IPV6_DSTOPTS:
 		val = np->rxopt.bits.dstopts;
 		break;
@@ -707,19 +690,9 @@ void __init ipv6_packet_init(void)
 	dev_add_pack(&ipv6_packet_type);
 }
 
-void __init ipv6_netdev_notif_init(void)
-{
-	register_netdevice_notifier(&ipv6_dev_notf);
-}
-
 #ifdef MODULE
 void ipv6_packet_cleanup(void)
 {
 	dev_remove_pack(&ipv6_packet_type);
-}
-
-void ipv6_netdev_notif_cleanup(void)
-{
-	unregister_netdevice_notifier(&ipv6_dev_notf);
 }
 #endif

@@ -39,7 +39,7 @@
 #define _COMPONENT		ACPI_BUS_COMPONENT
 ACPI_MODULE_NAME		("acpi_bus")
 
-extern void acpi_pic_set_level_irq(unsigned int irq);
+extern void __init acpi_pic_sci_set_trigger(unsigned int irq);
 
 FADT_DESCRIPTOR			acpi_fadt;
 struct acpi_device		*acpi_root;
@@ -296,8 +296,8 @@ acpi_bus_generate_event (
 	if (!event)
 		return_VALUE(-ENOMEM);
 
-	sprintf(event->device_class, "%s", device->pnp.device_class);
-	sprintf(event->bus_id, "%s", device->pnp.bus_id);
+	strcpy(event->device_class, device->pnp.device_class);
+	strcpy(event->bus_id, device->pnp.bus_id);
 	event->type = type;
 	event->data = data;
 
@@ -615,7 +615,7 @@ acpi_bus_init (void)
 	if (acpi_ioapic)
 		mp_config_ioapic_for_sci(acpi_fadt.sci_int);
 	else
-		acpi_pic_set_level_irq(acpi_fadt.sci_int);
+		acpi_pic_sci_set_trigger(acpi_fadt.sci_int);
 #endif
 
 	status = acpi_enable_subsystem(ACPI_FULL_INITIALIZATION);

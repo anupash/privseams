@@ -17,11 +17,10 @@
 
 #include <asm/io.h>
 #include <asm/hd64461/hd64461.h>
+#include <asm/hp6xx/io.h>
 #include <asm/irq.h>
 
 struct sh_machine_vector mv_hp680 __initmv = {
-        .mv_name                = "hp680",
-
         .mv_nr_irqs             = HD64461_IRQBASE+HD64461_IRQ_NUM,
 
         .mv_inb                 = hd64461_inb,
@@ -45,16 +44,6 @@ struct sh_machine_vector mv_hp680 __initmv = {
         .mv_outsw               = hd64461_outsw,
         .mv_outsl               = hd64461_outsl,
 
-        .mv_readb               = generic_readb,
-        .mv_readw               = generic_readw,
-        .mv_readl               = generic_readl,
-        .mv_writeb              = generic_writeb,
-        .mv_writew              = generic_writew,
-        .mv_writel              = generic_writel,
-
         .mv_irq_demux           = hd64461_irq_demux,
-
-        .mv_rtc_gettimeofday    = sh_rtc_gettimeofday,
-        .mv_rtc_settimeofday    = sh_rtc_settimeofday,
 };
 ALIAS_MV(hp680)

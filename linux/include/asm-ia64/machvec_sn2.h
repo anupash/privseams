@@ -37,6 +37,7 @@ extern ia64_mv_setup_t sn_setup;
 extern ia64_mv_cpu_init_t sn_cpu_init;
 extern ia64_mv_irq_init_t sn_irq_init;
 extern ia64_mv_send_ipi_t sn2_send_IPI;
+extern ia64_mv_timer_interrupt_t sn_timer_interrupt;
 extern ia64_mv_global_tlb_purge_t sn2_global_tlb_purge;
 extern ia64_mv_irq_desc sn_irq_desc;
 extern ia64_mv_irq_to_vector sn_irq_to_vector;
@@ -51,6 +52,10 @@ extern ia64_mv_readb_t __sn_readb;
 extern ia64_mv_readw_t __sn_readw;
 extern ia64_mv_readl_t __sn_readl;
 extern ia64_mv_readq_t __sn_readq;
+extern ia64_mv_readb_t __sn_readb_relaxed;
+extern ia64_mv_readw_t __sn_readw_relaxed;
+extern ia64_mv_readl_t __sn_readl_relaxed;
+extern ia64_mv_readq_t __sn_readq_relaxed;
 extern ia64_mv_dma_alloc_coherent	sn_dma_alloc_coherent;
 extern ia64_mv_dma_free_coherent	sn_dma_free_coherent;
 extern ia64_mv_dma_map_single		sn_dma_map_single;
@@ -73,6 +78,7 @@ extern ia64_mv_dma_supported		sn_dma_supported;
 #define platform_cpu_init		sn_cpu_init
 #define platform_irq_init		sn_irq_init
 #define platform_send_ipi		sn2_send_IPI
+#define platform_timer_interrupt	sn_timer_interrupt
 #define platform_global_tlb_purge       sn2_global_tlb_purge
 #define platform_pci_fixup		sn_pci_fixup
 #define platform_inb			__sn_inb
@@ -85,6 +91,10 @@ extern ia64_mv_dma_supported		sn_dma_supported;
 #define platform_readw			__sn_readw
 #define platform_readl			__sn_readl
 #define platform_readq			__sn_readq
+#define platform_readb_relaxed		__sn_readb_relaxed
+#define platform_readw_relaxed		__sn_readw_relaxed
+#define platform_readl_relaxed		__sn_readl_relaxed
+#define platform_readq_relaxed		__sn_readq_relaxed
 #define platform_irq_desc		sn_irq_desc
 #define platform_irq_to_vector		sn_irq_to_vector
 #define platform_local_vector_to_irq	sn_local_vector_to_irq

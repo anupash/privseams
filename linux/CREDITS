@@ -818,6 +818,11 @@ S: 1382 Bordeaux Drive
 S: Sunnyvale, CA 94087
 S: USA
 
+N: Bruno Ducrot
+E: ducrot@poupinou.org
+D: CPUFreq and ACPI bugfixes.
+S: Mougin, France
+
 N: Don Dugger
 E: n0ano@valinux.com
 D: Linux/IA-64
@@ -897,8 +902,8 @@ E: bj0rn@blox.se
 W: http://www.pi.se/blox/
 D: Extended support for loadable modules
 D: D-Link pocket adapter drivers
-S: Grevgatan 11
-S: S-114 53 Stockholm
+S: Brevia 1043
+S: S-114 79 Stockholm
 S: Sweden
 
 N: Michael Engel
@@ -1394,7 +1399,9 @@ S: USA
 N: Marcel Holtmann
 E: marcel@holtmann.org
 W: http://www.holtmann.org
+D: Maintainer of the Linux Bluetooth Subsystem
 D: Author and maintainer of the various Bluetooth HCI drivers
+D: Author and maintainer of the CAPI message transport protocol driver
 D: Various other Bluetooth related patches, cleanups and fixes
 S: Germany
 
@@ -2670,9 +2677,9 @@ S: 70110 Kuopio
 S: Finland
 
 N: Luca Risolia
-E: luca_ing@libero.it
-D: V4L driver for W996[87]CF JPEG USB Dual Mode Camera Chip
-S: Via Libertà 41/a
+E: luca.risolia@studio.unibo.it
+D: V4L driver for W996[87]CF JPEG USB Dual Mode Camera Chips
+S: Via Liberta' 41/A
 S: Osio Sotto, 24046, Bergamo
 S: Italy
 

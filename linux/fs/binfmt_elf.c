@@ -123,7 +123,7 @@ static void padzero(unsigned long elf_bss)
 #define STACK_ADD(sp, items) ((elf_addr_t *)(sp) - (items))
 #define STACK_ROUND(sp, items) \
 	(((unsigned long) (sp - items)) &~ 15UL)
-#define STACK_ALLOC(sp, len) sp -= len
+#define STACK_ALLOC(sp, len) ({ sp -= len ; sp; })
 #endif
 
 static void
@@ -168,7 +168,7 @@ create_elf_tables(struct linux_binprm *bprm, struct elfhdr * exec,
 		if (smp_num_siblings > 1)
 			STACK_ALLOC(p, ((current->pid % 64) << 7));
 #endif
-		u_platform = (elf_addr_t *) STACK_ALLOC(p, len);
+		u_platform = (elf_addr_t *)STACK_ALLOC(p, len);
 		__copy_to_user(u_platform, k_platform, len);
 	}
 
@@ -349,6 +349,7 @@ static unsigned long load_elf_interp(struct elfhdr * interp_elf_ex,
 	    	elf_type |= MAP_FIXED;
 
 	    map_addr = elf_map(interpreter, load_addr + vaddr, eppnt, elf_prot, elf_type);
+	    error = map_addr;
 	    if (BAD_ADDR(map_addr))
 	    	goto out_close;
 
@@ -863,7 +864,8 @@ out:
 	/* error cleanup */
 out_free_dentry:
 	allow_write_access(interpreter);
-	fput(interpreter);
+	if (interpreter)
+		fput(interpreter);
 out_free_interp:
 	if (elf_interpreter)
 		kfree(elf_interpreter);
@@ -1446,7 +1448,13 @@ static int elf_core_dump(long signr, struct pt_regs * regs, struct file * file)
 					void *kaddr;
 					flush_cache_page(vma, addr);
 					kaddr = kmap(page);
-					DUMP_WRITE(kaddr, PAGE_SIZE);
+					if ((size += PAGE_SIZE) > limit ||
+					    !dump_write(file, kaddr,
+					    PAGE_SIZE)) {
+						kunmap(page);
+						page_cache_release(page);
+						goto end_coredump;
+					}
 					kunmap(page);
 				}
 				page_cache_release(page);

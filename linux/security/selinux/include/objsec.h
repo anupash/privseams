@@ -63,6 +63,7 @@ struct superblock_security_struct {
 	struct super_block *sb;         /* back pointer to sb object */
 	struct list_head list;          /* list of superblock_security_struct */
 	u32 sid;              /* SID of file system */
+	u32 def_sid;			/* default SID for labeling */
 	unsigned int behavior;          /* labeling behavior */
 	unsigned char initialized;      /* initialization flag */
 	unsigned char proc;             /* proc fs */
@@ -91,6 +92,19 @@ struct bprm_security_struct {
 	struct linux_binprm *bprm;     /* back pointer to bprm object */
 	u32 sid;                       /* SID for transformed process */
 	unsigned char set;
+};
+
+struct netif_security_struct {
+	struct net_device *dev;		/* back pointer */
+	u32 if_sid;			/* SID for this interface */
+	u32 msg_sid;			/* default SID for messages received on this interface */
+	struct avc_entry_ref avcr;	/* reference to permissions */
+};
+
+struct sk_security_struct {
+	unsigned long magic;		/* magic number for this module */
+	struct sock *sk;		/* back pointer to sk object */
+	u32 peer_sid;			/* SID of peer */
 };
 
 extern int inode_security_set_sid(struct inode *inode, u32 sid);

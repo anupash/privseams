@@ -602,14 +602,16 @@ static u8 *fetch_item(__u8 *start, __u8 *end, struct hid_item *item)
 		case 2:
 			if ((end - start) < 2) 
 				return NULL;
-			item->data.u16 = le16_to_cpu(get_unaligned(((__u16*)start)++));
+			item->data.u16 = le16_to_cpu(get_unaligned((__u16*)start));
+			start = (__u8 *)((__u16 *)start + 1);
 			return start;
 
 		case 3:
 			item->size++;
 			if ((end - start) < 4)
 				return NULL;
-			item->data.u32 = le32_to_cpu(get_unaligned(((__u32*)start)++));
+			item->data.u32 = le32_to_cpu(get_unaligned((__u32*)start));
+			start = (__u8 *)((__u32 *)start + 1);
 			return start;
 	}
 
@@ -1357,6 +1359,9 @@ void hid_init_reports(struct hid_device *hid)
 #define USB_VENDOR_ID_BERKSHIRE		0x0c98
 #define USB_DEVICE_ID_BERKSHIRE_PCWD	0x1140
 
+#define USB_VENDOR_ID_ALPS		0x0433
+#define USB_DEVICE_ID_IBM_GAMEPAD	0x1101
+
 struct hid_blacklist {
 	__u16 idVendor;
 	__u16 idProduct;
@@ -1366,6 +1371,7 @@ struct hid_blacklist {
 	{ USB_VENDOR_ID_WACOM, USB_DEVICE_ID_WACOM_GRAPHIRE, HID_QUIRK_IGNORE },
 	{ USB_VENDOR_ID_WACOM, USB_DEVICE_ID_WACOM_GRAPHIRE + 1, HID_QUIRK_IGNORE },
 	{ USB_VENDOR_ID_WACOM, USB_DEVICE_ID_WACOM_GRAPHIRE + 2, HID_QUIRK_IGNORE },
+	{ USB_VENDOR_ID_WACOM, USB_DEVICE_ID_WACOM_GRAPHIRE + 3, HID_QUIRK_IGNORE },
 	{ USB_VENDOR_ID_WACOM, USB_DEVICE_ID_WACOM_INTUOS, HID_QUIRK_IGNORE },
 	{ USB_VENDOR_ID_WACOM, USB_DEVICE_ID_WACOM_INTUOS + 1, HID_QUIRK_IGNORE },
 	{ USB_VENDOR_ID_WACOM, USB_DEVICE_ID_WACOM_INTUOS + 2, HID_QUIRK_IGNORE },
@@ -1407,6 +1413,7 @@ struct hid_blacklist {
 	{ USB_VENDOR_ID_ESSENTIAL_REALITY, USB_DEVICE_ID_ESSENTIAL_REALITY_P5, HID_QUIRK_IGNORE },
 	{ USB_VENDOR_ID_A4TECH, USB_DEVICE_ID_A4TECH_WCP32PU, HID_QUIRK_2WHEEL_MOUSE_HACK },
 	{ USB_VENDOR_ID_BERKSHIRE, USB_DEVICE_ID_BERKSHIRE_PCWD, HID_QUIRK_IGNORE },
+	{ USB_VENDOR_ID_ALPS, USB_DEVICE_ID_IBM_GAMEPAD, HID_QUIRK_BADPAD },
 	{ 0, 0 }
 };
 
@@ -1525,9 +1532,9 @@ static struct hid_device *usb_hid_configure(struct usb_interface *intf)
 				continue;
 			if (!(hid->urbout = usb_alloc_urb(0, GFP_KERNEL)))
 				goto fail;
-			pipe = usb_sndbulkpipe(dev, endpoint->bEndpointAddress);
-			usb_fill_bulk_urb(hid->urbout, dev, pipe, hid->outbuf, 0,
-					  hid_irq_out, hid);
+			pipe = usb_sndintpipe(dev, endpoint->bEndpointAddress);
+			usb_fill_int_urb(hid->urbout, dev, pipe, hid->outbuf, 0,
+					  hid_irq_out, hid, 1);
 			hid->urbout->transfer_dma = hid->outbuf_dma;
 			hid->urbout->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 		}
@@ -1546,6 +1553,7 @@ static struct hid_device *usb_hid_configure(struct usb_interface *intf)
 	hid->version = le16_to_cpu(hdesc->bcdHID);
 	hid->country = hdesc->bCountryCode;
 	hid->dev = dev;
+	hid->intf = intf;
 	hid->ifnum = interface->desc.bInterfaceNumber;
 
 	hid->name[0] = 0;

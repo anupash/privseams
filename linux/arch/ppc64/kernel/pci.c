@@ -34,6 +34,7 @@
 #include <asm/ppcdebug.h>
 #include <asm/naca.h>
 #include <asm/pci_dma.h>
+#include <asm/machdep.h>
 
 #include "pci.h"
 
@@ -58,11 +59,15 @@ void pcibios_name_device(struct pci_dev* dev);
 void pcibios_final_fixup(void);
 static void fixup_broken_pcnet32(struct pci_dev* dev);
 static void fixup_windbond_82c105(struct pci_dev* dev);
+extern void fixup_k2_sata(struct pci_dev* dev);
 
 void iSeries_pcibios_init(void);
 
 struct pci_controller *hose_head;
 struct pci_controller **hose_tail = &hose_head;
+
+struct pci_dma_ops pci_dma_ops;
+EXPORT_SYMBOL(pci_dma_ops);
 
 int global_phb_number;		/* Global phb counter */
 
@@ -70,9 +75,16 @@ int global_phb_number;		/* Global phb counter */
 struct pci_dev *ppc64_isabridge_dev = NULL;
 
 struct pci_fixup pcibios_fixups[] = {
-	{ PCI_FIXUP_HEADER,	PCI_VENDOR_ID_TRIDENT,	PCI_ANY_ID, fixup_broken_pcnet32 },
-	{ PCI_FIXUP_HEADER,	PCI_VENDOR_ID_WINBOND,	PCI_DEVICE_ID_WINBOND_82C105, fixup_windbond_82c105 },
-	{ PCI_FIXUP_HEADER, PCI_ANY_ID,	PCI_ANY_ID, pcibios_name_device },
+	{ PCI_FIXUP_HEADER,	PCI_VENDOR_ID_TRIDENT,		PCI_ANY_ID,
+	  fixup_broken_pcnet32 },
+	{ PCI_FIXUP_HEADER,	PCI_VENDOR_ID_WINBOND,		PCI_DEVICE_ID_WINBOND_82C105,
+	  fixup_windbond_82c105 },
+	{ PCI_FIXUP_HEADER,	PCI_ANY_ID,    			PCI_ANY_ID,
+	  pcibios_name_device },
+#ifdef CONFIG_PPC_PMAC
+	{ PCI_FIXUP_HEADER,	PCI_VENDOR_ID_SERVERWORKS,	0x0240,
+	  fixup_k2_sata },
+#endif
 	{ 0 }
 };
 
@@ -144,7 +156,7 @@ struct pci_dev *pci_find_dev_by_addr(unsigned long addr)
 	return NULL;
 }
 
-void __devinit
+void 
 pcibios_resource_to_bus(struct pci_dev *dev, struct pci_bus_region *region,
 			struct resource *res)
 {
@@ -224,7 +236,11 @@ pci_alloc_pci_controller(enum phb_types controller_type)
         struct pci_controller *hose;
 	char *model;
 
+#ifdef CONFIG_PPC_ISERIES
+        hose = (struct pci_controller *)kmalloc(sizeof(struct pci_controller), GFP_KERNEL);
+#else
         hose = (struct pci_controller *)alloc_bootmem(sizeof(struct pci_controller));
+#endif
         if(hose == NULL) {
                 printk(KERN_ERR "PCI: Allocate pci_controller failed.\n");
                 return NULL;
@@ -232,6 +248,11 @@ pci_alloc_pci_controller(enum phb_types controller_type)
         memset(hose, 0, sizeof(struct pci_controller));
 
 	switch(controller_type) {
+#ifdef CONFIG_PPC_ISERIES
+	case phb_type_hypervisor:
+		model = "PHB HV";
+		break;
+#endif
 	case phb_type_python:
 		model = "PHB PY";
 		break;
@@ -240,6 +261,9 @@ pci_alloc_pci_controller(enum phb_types controller_type)
 		break;
 	case phb_type_winnipeg:
 		model = "PHB WP";
+		break;
+	case phb_type_apple:
+		model = "PHB APPLE";
 		break;
 	default:
 		model = "PHB UK";
@@ -280,6 +304,7 @@ static void __init pcibios_claim_one_bus(struct pci_bus *b)
 		pcibios_claim_one_bus(child_bus);
 }
 
+#ifndef CONFIG_PPC_ISERIES
 static void __init pcibios_claim_of_setup(void)
 {
 	struct list_head *lb;
@@ -289,6 +314,7 @@ static void __init pcibios_claim_of_setup(void)
 		pcibios_claim_one_bus(b);
 	}
 }
+#endif
 
 static int __init pcibios_init(void)
 {
@@ -311,6 +337,7 @@ static int __init pcibios_init(void)
 		hose->last_busno = bus->subordinate;
 	}
 
+#ifndef CONFIG_PPC_ISERIES
 	if (pci_probe_only)
 		pcibios_claim_of_setup();
 	else
@@ -318,9 +345,11 @@ static int __init pcibios_init(void)
 		   pci_assign_unassigned_resources() is able to work
 		   correctly with [partially] allocated PCI tree. */
 		pci_assign_unassigned_resources();
+#endif
 
-	/* Call machine dependent fixup */
-	pcibios_final_fixup();
+	/* Call machine dependent final fixup */
+	if (ppc_md.pcibios_fixup)
+		ppc_md.pcibios_fixup();
 
 	/* Cache the location of the ISA bridge (if we have one) */
 	ppc64_isabridge_dev = pci_find_class(PCI_CLASS_BRIDGE_ISA << 8, NULL);
@@ -375,19 +404,27 @@ int pcibios_enable_device(struct pci_dev *dev, int mask)
  */
 int pci_domain_nr(struct pci_bus *bus)
 {
+#ifdef CONFIG_PPC_ISERIES
+	return 0;
+#else
 	struct pci_controller *hose = PCI_GET_PHB_PTR(bus);
 
 	return hose->global_number;
+#endif
 }
+
+EXPORT_SYMBOL(pci_domain_nr);
 
 /* Set the name of the bus as it appears in /proc/bus/pci */
 int pci_name_bus(char *name, struct pci_bus *bus)
 {
+#ifndef CONFIG_PPC_ISERIES
 	struct pci_controller *hose = PCI_GET_PHB_PTR(bus);
 
 	if (hose->buid)
 		sprintf(name, "%04x:%02x", pci_domain_nr(bus), bus->number);
 	else
+#endif
 		sprintf(name, "%02x", bus->number);
 
 	return 0;
@@ -518,4 +555,26 @@ int pci_mmap_page_range(struct pci_dev *dev, struct vm_area_struct *vma,
 			       vma->vm_end - vma->vm_start, vma->vm_page_prot);
 
 	return ret;
+}
+
+#ifdef CONFIG_PPC_PSERIES
+static ssize_t pci_show_devspec(struct device *dev, char *buf)
+{
+	struct pci_dev *pdev;
+	struct device_node *np;
+
+	pdev = to_pci_dev (dev);
+	np = pci_device_to_OF_node(pdev);
+	if (np == NULL || np->full_name == NULL)
+		return 0;
+	return sprintf(buf, "%s", np->full_name);
+}
+static DEVICE_ATTR(devspec, S_IRUGO, pci_show_devspec, NULL);
+#endif /* CONFIG_PPC_PSERIES */
+
+void pcibios_add_platform_entries(struct pci_dev *pdev)
+{
+#ifdef CONFIG_PPC_PSERIES
+	device_create_file(&pdev->dev, &dev_attr_devspec);
+#endif /* CONFIG_PPC_PSERIES */
 }

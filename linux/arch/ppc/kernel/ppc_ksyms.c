@@ -75,6 +75,7 @@ int abs(int);
 extern unsigned long mm_ptov (unsigned long paddr);
 
 EXPORT_SYMBOL(clear_page);
+EXPORT_SYMBOL(clear_user_page);
 EXPORT_SYMBOL(do_signal);
 EXPORT_SYMBOL(do_syscall_trace);
 EXPORT_SYMBOL(transfer_to_handler);
@@ -92,7 +93,7 @@ EXPORT_SYMBOL(disable_irq_nosync);
 EXPORT_SYMBOL(probe_irq_mask);
 
 EXPORT_SYMBOL(ISA_DMA_THRESHOLD);
-EXPORT_SYMBOL_NOVERS(DMA_MODE_READ);
+EXPORT_SYMBOL(DMA_MODE_READ);
 EXPORT_SYMBOL(DMA_MODE_WRITE);
 #if defined(CONFIG_PPC_PREP)
 EXPORT_SYMBOL(_prep_type);
@@ -167,9 +168,9 @@ EXPORT_SYMBOL(ppc_ide_md);
 #endif
 
 #ifdef CONFIG_PCI
-EXPORT_SYMBOL_NOVERS(isa_io_base);
-EXPORT_SYMBOL_NOVERS(isa_mem_base);
-EXPORT_SYMBOL_NOVERS(pci_dram_offset);
+EXPORT_SYMBOL(isa_io_base);
+EXPORT_SYMBOL(isa_mem_base);
+EXPORT_SYMBOL(pci_dram_offset);
 EXPORT_SYMBOL(pci_alloc_consistent);
 EXPORT_SYMBOL(pci_free_consistent);
 EXPORT_SYMBOL(pci_bus_io_base);
@@ -236,17 +237,11 @@ EXPORT_SYMBOL(adb_try_handler_change);
 EXPORT_SYMBOL(cuda_request);
 EXPORT_SYMBOL(cuda_poll);
 #endif /* CONFIG_ADB_CUDA */
-#ifdef CONFIG_PMAC_BACKLIGHT
-EXPORT_SYMBOL(get_backlight_level);
-EXPORT_SYMBOL(set_backlight_level);
-EXPORT_SYMBOL(set_backlight_enable);
-EXPORT_SYMBOL(register_backlight_controller);
-#endif /* CONFIG_PMAC_BACKLIGHT */
 #ifdef CONFIG_PPC_MULTIPLATFORM
 EXPORT_SYMBOL(_machine);
 #endif
 #ifdef CONFIG_PPC_PMAC
-EXPORT_SYMBOL_NOVERS(sys_ctrler);
+EXPORT_SYMBOL(sys_ctrler);
 EXPORT_SYMBOL(pmac_newworld);
 #endif
 #ifdef CONFIG_PPC_OF
@@ -282,27 +277,19 @@ EXPORT_SYMBOL(note_scsi_host);
 #ifdef CONFIG_VT
 EXPORT_SYMBOL(kd_mksound);
 #endif
-#ifdef CONFIG_NVRAM
-EXPORT_SYMBOL(nvram_read_byte);
-EXPORT_SYMBOL(nvram_write_byte);
-#ifdef CONFIG_PPC_PMAC
-EXPORT_SYMBOL(pmac_xpram_read);
-EXPORT_SYMBOL(pmac_xpram_write);
-#endif
-#endif /* CONFIG_NVRAM */
 EXPORT_SYMBOL(to_tm);
 
 EXPORT_SYMBOL(pm_power_off);
 
-EXPORT_SYMBOL_NOVERS(__ashrdi3);
-EXPORT_SYMBOL_NOVERS(__ashldi3);
-EXPORT_SYMBOL_NOVERS(__lshrdi3);
-EXPORT_SYMBOL_NOVERS(memcpy);
-EXPORT_SYMBOL_NOVERS(memset);
-EXPORT_SYMBOL_NOVERS(memmove);
-EXPORT_SYMBOL_NOVERS(memscan);
-EXPORT_SYMBOL_NOVERS(memcmp);
-EXPORT_SYMBOL_NOVERS(memchr);
+EXPORT_SYMBOL(__ashrdi3);
+EXPORT_SYMBOL(__ashldi3);
+EXPORT_SYMBOL(__lshrdi3);
+EXPORT_SYMBOL(memcpy);
+EXPORT_SYMBOL(memset);
+EXPORT_SYMBOL(memmove);
+EXPORT_SYMBOL(memscan);
+EXPORT_SYMBOL(memcmp);
+EXPORT_SYMBOL(memchr);
 
 EXPORT_SYMBOL(abs);
 
@@ -366,7 +353,7 @@ EXPORT_SYMBOL(request_8xxirq);
 EXPORT_SYMBOL(next_mmu_context);
 EXPORT_SYMBOL(set_context);
 EXPORT_SYMBOL(handle_mm_fault); /* For MOL */
-EXPORT_SYMBOL_NOVERS(disarm_decr);
+EXPORT_SYMBOL(disarm_decr);
 #ifdef CONFIG_PPC_STD_MMU
 extern long mol_trampoline;
 EXPORT_SYMBOL(mol_trampoline); /* For MOL */
@@ -381,5 +368,5 @@ EXPORT_SYMBOL(intercept_table);
 EXPORT_SYMBOL(cur_cpu_spec);
 #ifdef CONFIG_PPC_PMAC
 extern unsigned long agp_special_page;
-EXPORT_SYMBOL_NOVERS(agp_special_page);
+EXPORT_SYMBOL(agp_special_page);
 #endif

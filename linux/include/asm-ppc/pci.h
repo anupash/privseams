@@ -26,6 +26,7 @@ struct pci_dev;
 extern int pci_assign_all_busses;
 
 #define pcibios_assign_all_busses()	(pci_assign_all_busses)
+#define pcibios_scan_all_fns(a, b)	0
 
 #define PCIBIOS_MIN_IO		0x1000
 #define PCIBIOS_MIN_MEM		0x10000000
@@ -105,8 +106,7 @@ static inline dma_addr_t pci_map_single(struct pci_dev *hwdev, void *ptr,
 static inline void pci_unmap_single(struct pci_dev *hwdev, dma_addr_t dma_addr,
 				    size_t size, int direction)
 {
-	if (direction == PCI_DMA_NONE)
-		BUG();
+	BUG_ON(direction == PCI_DMA_NONE);
 	/* nothing to do */
 }
 
@@ -134,8 +134,7 @@ static inline dma_addr_t pci_map_page(struct pci_dev *hwdev, struct page *page,
 static inline void pci_unmap_page(struct pci_dev *hwdev, dma_addr_t dma_address,
 				  size_t size, int direction)
 {
-	if (direction == PCI_DMA_NONE)
-		BUG();
+	BUG_ON(direction == PCI_DMA_NONE);
 	/* Nothing to do */
 }
 
@@ -159,8 +158,7 @@ static inline int pci_map_sg(struct pci_dev *hwdev, struct scatterlist *sg,
 {
 	int i;
 
-	if (direction == PCI_DMA_NONE)
-		BUG();
+	BUG_ON(direction == PCI_DMA_NONE);
 
 	/*
 	 * temporary 2.4 hack
@@ -283,6 +281,8 @@ int pci_mmap_page_range(struct pci_dev *pdev, struct vm_area_struct *vma,
 extern void
 pcibios_resource_to_bus(struct pci_dev *dev, struct pci_bus_region *region,
 			struct resource *res);
+
+extern void pcibios_add_platform_entries(struct pci_dev *dev);
 
 #endif	/* __KERNEL__ */
 

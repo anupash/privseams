@@ -802,9 +802,6 @@ static int irda_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 		if (err < 0)
 			return err;
 
-		self->max_data_size = ULTRA_MAX_DATA - LMP_PID_HEADER;
-		self->max_header_size = IRDA_MAX_HEADER + LMP_PID_HEADER;
-
 		/* Pretend we are connected */
 		sock->state = SS_CONNECTED;
 		sk->sk_state   = TCP_ESTABLISHED;
@@ -1089,7 +1086,7 @@ static int irda_create(struct socket *sock, int protocol)
 		return -ENOMEM;
 
 	/* Allocate IrDA socket */
-	self = irda_sk(sk) = kmalloc(sizeof(struct irda_sock), GFP_ATOMIC);
+	self = sk->sk_protinfo = kmalloc(sizeof(struct irda_sock), GFP_ATOMIC);
 	if (self == NULL) {
 		sk_free(sk);
 		return -ENOMEM;
@@ -1122,6 +1119,10 @@ static int irda_create(struct socket *sock, int protocol)
 #ifdef CONFIG_IRDA_ULTRA
 		case IRDAPROTO_ULTRA:
 			sock->ops = &irda_ultra_ops;
+			/* Initialise now, because we may send on unbound
+			 * sockets. Jean II */
+			self->max_data_size = ULTRA_MAX_DATA - LMP_PID_HEADER;
+			self->max_header_size = IRDA_MAX_HEADER + LMP_PID_HEADER;
 			break;
 #endif /* CONFIG_IRDA_ULTRA */
 		case IRDAPROTO_UNITDATA:
@@ -1208,7 +1209,7 @@ static int irda_release(struct socket *sock)
 	/* Destroy IrDA socket */
 	irda_destroy_socket(irda_sk(sk));
 	/* Prevent sock_def_destruct() to create havoc */
-	irda_sk(sk) = NULL;
+	sk->sk_protinfo = NULL;
 
 	sock_orphan(sk);
 	sock->sk   = NULL;
@@ -1257,7 +1258,7 @@ static int irda_release(struct socket *sock)
  *    fragment the message if necessary
  */
 static int irda_sendmsg(struct kiocb *iocb, struct socket *sock,
-			struct msghdr *msg, int len)
+			struct msghdr *msg, size_t len)
 {
 	struct sock *sk = sock->sk;
 	struct irda_sock *self;
@@ -1307,7 +1308,11 @@ static int irda_sendmsg(struct kiocb *iocb, struct socket *sock,
 	skb_reserve(skb, self->max_header_size + 16);
 
 	asmptr = skb->h.raw = skb_put(skb, len);
-	memcpy_fromiovec(asmptr, msg->msg_iov, len);
+	err = memcpy_fromiovec(asmptr, msg->msg_iov, len);
+	if (err) {
+		kfree_skb(skb);
+		return err;
+	}
 
 	/*
 	 * Just send the message to TinyTP, and let it deal with possible
@@ -1329,12 +1334,13 @@ static int irda_sendmsg(struct kiocb *iocb, struct socket *sock,
  *    after being read, regardless of how much the user actually read
  */
 static int irda_recvmsg_dgram(struct kiocb *iocb, struct socket *sock,
-			      struct msghdr *msg, int size, int flags)
+			      struct msghdr *msg, size_t size, int flags)
 {
 	struct sock *sk = sock->sk;
 	struct irda_sock *self = irda_sk(sk);
 	struct sk_buff *skb;
-	int copied, err;
+	size_t copied;
+	int err;
 
 	IRDA_DEBUG(4, "%s()\n", __FUNCTION__);
 
@@ -1379,12 +1385,12 @@ static int irda_recvmsg_dgram(struct kiocb *iocb, struct socket *sock,
  * Function irda_recvmsg_stream (iocb, sock, msg, size, flags)
  */
 static int irda_recvmsg_stream(struct kiocb *iocb, struct socket *sock,
-			       struct msghdr *msg, int size, int flags)
+			       struct msghdr *msg, size_t size, int flags)
 {
 	struct sock *sk = sock->sk;
 	struct irda_sock *self = irda_sk(sk);
 	int noblock = flags & MSG_DONTWAIT;
-	int copied = 0;
+	size_t copied = 0;
 	int target = 1;
 	DECLARE_WAITQUEUE(waitq, current);
 
@@ -1505,7 +1511,7 @@ static int irda_recvmsg_stream(struct kiocb *iocb, struct socket *sock,
  *
  */
 static int irda_sendmsg_dgram(struct kiocb *iocb, struct socket *sock,
-			      struct msghdr *msg, int len)
+			      struct msghdr *msg, size_t len)
 {
 	struct sock *sk = sock->sk;
 	struct irda_sock *self;
@@ -1549,7 +1555,11 @@ static int irda_sendmsg_dgram(struct kiocb *iocb, struct socket *sock,
 
 	IRDA_DEBUG(4, "%s(), appending user data\n", __FUNCTION__);
 	asmptr = skb->h.raw = skb_put(skb, len);
-	memcpy_fromiovec(asmptr, msg->msg_iov, len);
+	err = memcpy_fromiovec(asmptr, msg->msg_iov, len);
+	if (err) {
+		kfree_skb(skb);
+		return err;
+	}
 
 	/*
 	 * Just send the message to TinyTP, and let it deal with possible
@@ -1571,10 +1581,12 @@ static int irda_sendmsg_dgram(struct kiocb *iocb, struct socket *sock,
  */
 #ifdef CONFIG_IRDA_ULTRA
 static int irda_sendmsg_ultra(struct kiocb *iocb, struct socket *sock,
-			      struct msghdr *msg, int len)
+			      struct msghdr *msg, size_t len)
 {
 	struct sock *sk = sock->sk;
 	struct irda_sock *self;
+	__u8 pid = 0;
+	int bound = 0;
 	struct sk_buff *skb;
 	unsigned char *asmptr;
 	int err;
@@ -1591,6 +1603,33 @@ static int irda_sendmsg_ultra(struct kiocb *iocb, struct socket *sock,
 
 	self = irda_sk(sk);
 	ASSERT(self != NULL, return -1;);
+
+	/* Check if an address was specified with sendto. Jean II */
+	if (msg->msg_name) {
+		struct sockaddr_irda *addr = (struct sockaddr_irda *) msg->msg_name;
+		/* Check address, extract pid. Jean II */
+		if (msg->msg_namelen < sizeof(*addr))
+			return -EINVAL;
+		if (addr->sir_family != AF_IRDA)
+			return -EINVAL;
+
+		pid = addr->sir_lsap_sel;
+		if (pid & 0x80) {
+			IRDA_DEBUG(0, "%s(), extension in PID not supp!\n", __FUNCTION__);
+			return -EOPNOTSUPP;
+		}
+	} else {
+		/* Check that the socket is properly bound to an Ultra
+		 * port. Jean II */
+		if ((self->lsap == NULL) ||
+		    (sk->sk_state != TCP_ESTABLISHED)) {
+			IRDA_DEBUG(0, "%s(), socket not bound to Ultra PID.\n",
+				   __FUNCTION__);
+			return -ENOTCONN;
+		}
+		/* Use PID from socket */
+		bound = 1;
+	}
 
 	/*
 	 * Check that we don't send out to big frames. This is an unreliable
@@ -1612,9 +1651,14 @@ static int irda_sendmsg_ultra(struct kiocb *iocb, struct socket *sock,
 
 	IRDA_DEBUG(4, "%s(), appending user data\n", __FUNCTION__);
 	asmptr = skb->h.raw = skb_put(skb, len);
-	memcpy_fromiovec(asmptr, msg->msg_iov, len);
+	err = memcpy_fromiovec(asmptr, msg->msg_iov, len);
+	if (err) {
+		kfree_skb(skb);
+		return err;
+	}
 
-	err = irlmp_connless_data_request(self->lsap, skb);
+	err = irlmp_connless_data_request((bound ? self->lsap : NULL),
+					  skb, pid);
 	if (err) {
 		IRDA_DEBUG(0, "%s(), err=%d\n", __FUNCTION__, err);
 		return err;
@@ -1890,11 +1934,10 @@ static int irda_setsockopt(struct socket *sock, int level, int optname,
 		case IAS_STRING:
 			/* Should check charset & co */
 			/* Check length */
-			if(ias_opt->attribute.irda_attrib_string.len >
-			   IAS_MAX_STRING) {
-				kfree(ias_opt);
-				return -EINVAL;
-			}
+			/* The length is encoded in a __u8, and
+			 * IAS_MAX_STRING == 256, so there is no way
+			 * userspace can pass us a string too large.
+			 * Jean II */
 			/* NULL terminate the string (avoid troubles) */
 			ias_opt->attribute.irda_attrib_string.string[ias_opt->attribute.irda_attrib_string.len] = '\0';
 			/* Add a string attribute */

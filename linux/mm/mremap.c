@@ -80,8 +80,8 @@ static inline pte_t *alloc_one_pte_map(struct mm_struct *mm, unsigned long addr)
 }
 
 static int
-copy_one_pte(struct mm_struct *mm, pte_t *src, pte_t *dst,
-		struct pte_chain **pte_chainp)
+copy_one_pte(struct vm_area_struct *vma, unsigned long old_addr,
+	     pte_t *src, pte_t *dst, struct pte_chain **pte_chainp)
 {
 	int error = 0;
 	pte_t pte;
@@ -93,7 +93,7 @@ copy_one_pte(struct mm_struct *mm, pte_t *src, pte_t *dst,
 	if (!pte_none(*src)) {
 		if (page)
 			page_remove_rmap(page, src);
-		pte = ptep_get_and_clear(src);
+		pte = ptep_clear_flush(vma, old_addr, src);
 		if (!dst) {
 			/* No dest?  We must put it back. */
 			dst = src;
@@ -135,11 +135,17 @@ move_one_page(struct vm_area_struct *vma, unsigned long old_addr,
 		dst = alloc_one_pte_map(mm, new_addr);
 		if (src == NULL)
 			src = get_one_pte_map_nested(mm, old_addr);
-		error = copy_one_pte(mm, src, dst, &pte_chain);
-		pte_unmap_nested(src);
+		/*
+		 * Since alloc_one_pte_map can drop and re-acquire
+		 * page_table_lock, we should re-check the src entry...
+		 */
+		if (src) {
+			error = copy_one_pte(vma, old_addr, src,
+						dst, &pte_chain);
+			pte_unmap_nested(src);
+		}
 		pte_unmap(dst);
 	}
-	flush_tlb_page(vma, old_addr);
 	spin_unlock(&mm->page_table_lock);
 	pte_chain_free(pte_chain);
 out:
@@ -315,8 +321,12 @@ unsigned long do_mremap(unsigned long addr,
 	old_len = PAGE_ALIGN(old_len);
 	new_len = PAGE_ALIGN(new_len);
 
-	/* Don't allow the degenerate cases */
-	if (!old_len || !new_len)
+	/*
+	 * We allow a zero old-len as a special case
+	 * for DOS-emu "duplicate shm area" thing. But
+	 * a zero new-len is nonsensical.
+	 */
+	if (!new_len)
 		goto out;
 
 	/* new_addr is only valid if MREMAP_FIXED is specified */
@@ -338,7 +348,9 @@ unsigned long do_mremap(unsigned long addr,
 		if ((addr <= new_addr) && (addr+old_len) > new_addr)
 			goto out;
 
-		do_munmap(current->mm, new_addr, new_len);
+		ret = do_munmap(current->mm, new_addr, new_len);
+		if (ret)
+			goto out;
 	}
 
 	/*
@@ -346,9 +358,11 @@ unsigned long do_mremap(unsigned long addr,
 	 * the unnecessary pages..
 	 * do_munmap does all the needed commit accounting
 	 */
-	ret = addr;
 	if (old_len >= new_len) {
-		do_munmap(current->mm, addr+new_len, old_len - new_len);
+		ret = do_munmap(current->mm, addr+new_len, old_len - new_len);
+		if (ret && old_len != new_len)
+			goto out;
+		ret = addr;
 		if (!(flags & MREMAP_FIXED) || (new_addr == addr))
 			goto out;
 		old_len = new_len;

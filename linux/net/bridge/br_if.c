@@ -172,7 +172,7 @@ int br_add_bridge(const char *name)
 
 	ret = register_netdev(br->dev);
 	if (ret)
-		kfree(br->dev);
+		free_netdev(br->dev);
 	return ret;
 }
 
@@ -252,12 +252,12 @@ int br_get_bridge_ifindices(int *indices, int num)
 	struct net_device *dev;
 	int i = 0;
 
-	rtnl_shlock();
+	read_lock(&dev_base_lock);
 	for (dev = dev_base; dev && i < num; dev = dev->next) {
 		if (dev->priv_flags & IFF_EBRIDGE) 
 			indices[i++] = dev->ifindex;
 	}
-	rtnl_shunlock();
+	read_unlock(&dev_base_lock);
 
 	return i;
 }

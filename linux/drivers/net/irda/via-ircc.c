@@ -145,7 +145,7 @@ static struct pci_driver via_driver = {
  *
  *    Initialize chip. Just find out chip type and resource.
  */
-int __init via_ircc_init(void)
+static int __init via_ircc_init(void)
 {
 	int rc;
 
@@ -1394,7 +1394,7 @@ static irqreturn_t via_ircc_interrupt(int irq, void *dev_id,
 
 	}			//Rx Event
 	spin_unlock(&self->lock);
-	return IRQ_HANDLED;
+	return IRQ_RETVAL(iHostIntType);
 }
 
 void hwreset(struct via_ircc_cb *self)

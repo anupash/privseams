@@ -1,5 +1,4 @@
 /*
- * 
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -7,10 +6,8 @@
  * Copyright (C) 2001-2003 Silicon Graphics, Inc. All rights reserved.
  *
  */
-
 #include <linux/module.h>
-#include <asm/cacheflush.h>
-#include <asm/system.h>
+#include <asm/pgalloc.h>
 
 /**
  * sn_flush_all_caches - flush a range of address from all caches (incl. L4)

@@ -141,14 +141,26 @@ new_symbol(const char *name, struct module *module, unsigned int *crc)
 	symbolhash[hash] = new;
 }
 
+#define DOTSYM_PFX "__dot_"
+
 struct symbol *
 find_symbol(const char *name)
 {
 	struct symbol *s;
+	char dotname[64 + sizeof(DOTSYM_PFX)];
 
-	/* For our purposes, .foo matches foo.  PPC64 needs this. */
-	if (name[0] == '.')
+	/* .foo matches foo.  PPC64 needs this. */
+	if (name[0] == '.') {
 		name++;
+		strcpy(dotname, DOTSYM_PFX);
+		strncat(dotname, name, sizeof(dotname) - sizeof(DOTSYM_PFX) - 1);
+		dotname[sizeof(dotname)-1] = 0;
+		/* Sparc32 wants .foo to match __dot_foo, try this first. */
+		for (s = symbolhash[tdb_hash(dotname) % SYMBOL_HASH_SIZE]; s; s=s->next) {
+			if (strcmp(s->name, dotname) == 0)
+				return s;
+		}
+	}
 
 	for (s = symbolhash[tdb_hash(name) % SYMBOL_HASH_SIZE]; s; s=s->next) {
 		if (strcmp(s->name, name) == 0)
@@ -446,6 +458,7 @@ add_versions(struct buffer *b, struct module *mod)
 
 	buf_printf(b, "\n");
 	buf_printf(b, "static const struct modversion_info ____versions[]\n");
+	buf_printf(b, "__attribute_used__\n");
 	buf_printf(b, "__attribute__((section(\"__versions\"))) = {\n");
 
 	for (s = mod->unres; s; s = s->next) {

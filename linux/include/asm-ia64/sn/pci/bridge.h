@@ -1,5 +1,4 @@
-/* $Id$
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -38,7 +37,6 @@
 #include <asm/sn/xtalk/xwidget.h>
 #include <asm/sn/pci/pic.h>
 
-extern int io_get_sh_swapper(nasid_t);
 #define BRIDGE_REG_GET32(reg) \
                 __swab32( *(volatile uint32_t *) (((uint64_t)reg)^4) )
 
@@ -47,11 +45,11 @@ extern int io_get_sh_swapper(nasid_t);
 
 /* I/O page size */
 
-#if _PAGESZ == 4096
+#if PAGE_SIZE == 4096
 #define IOPFNSHIFT		12	/* 4K per mapped page */
 #else
 #define IOPFNSHIFT		14	/* 16K per mapped page */
-#endif				/* _PAGESZ */
+#endif				/* PAGE_SIZE */
 
 #define IOPGSIZE		(1 << IOPFNSHIFT)
 #define IOPG(x)			((x) >> IOPFNSHIFT)
@@ -535,12 +533,12 @@ typedef volatile struct bridge_s {
 
     /* 0x020000-0x027FFF -- PCI Device Configuration Spaces */
     union {				/* make all access sizes available. */
-	uchar_t		    c[0x1000 / 1];	    /* 0x02{0000,,,7FFF} */
+	unsigned char		    c[0x1000 / 1];	    /* 0x02{0000,,,7FFF} */
 	uint16_t	    s[0x1000 / 2];	    /* 0x02{0000,,,7FFF} */
 	uint32_t	    l[0x1000 / 4];	    /* 0x02{0000,,,7FFF} */
 	uint64_t	    d[0x1000 / 8];	    /* 0x02{0000,,,7FFF} */
 	union {
-	    uchar_t	    c[0x100 / 1];
+	    unsigned char	    c[0x100 / 1];
 	    uint16_t	    s[0x100 / 2];
 	    uint32_t	    l[0x100 / 4];
 	    uint64_t	    d[0x100 / 8];
@@ -549,12 +547,12 @@ typedef volatile struct bridge_s {
 
     /* 0x028000-0x028FFF -- PCI Type 1 Configuration Space */
     union {				/* make all access sizes available. */
-	uchar_t		    c[0x1000 / 1];
+	unsigned char		    c[0x1000 / 1];
 	uint16_t	    s[0x1000 / 2];
 	uint32_t	    l[0x1000 / 4];
 	uint64_t	    d[0x1000 / 8];
         union {
-            uchar_t         c[0x100 / 1];
+            unsigned char         c[0x100 / 1];
             uint16_t        s[0x100 / 2];
             uint32_t        l[0x100 / 4];
             uint64_t        d[0x100 / 8];
@@ -565,13 +563,13 @@ typedef volatile struct bridge_s {
 
     /* 0x030000-0x030007 -- PCI Interrupt Acknowledge Cycle */
     union {
-	uchar_t		    c[8 / 1];
+	unsigned char		    c[8 / 1];
 	uint16_t	    s[8 / 2];
 	uint32_t	    l[8 / 4];
 	uint64_t	    d[8 / 8];
     } b_pci_iack;				    /* 0x030000-0x030007 */
 
-    uchar_t		    _pad_030007[0x04fff8];  /* 0x030008-0x07FFFF */
+    unsigned char		    _pad_030007[0x04fff8];  /* 0x030008-0x07FFFF */
 
     /* 0x080000-0x0FFFFF -- External Address Translation Entry RAM */
     bridge_ate_t	    b_ext_ate_ram[0x10000];
@@ -581,7 +579,7 @@ typedef volatile struct bridge_s {
 
     /* 0x200000-0xBFFFFF -- PCI/GIO Device Spaces */
     union {				/* make all access sizes available. */
-	uchar_t		    c[0x100000 / 1];
+	unsigned char		    c[0x100000 / 1];
 	uint16_t	    s[0x100000 / 2];
 	uint32_t	    l[0x100000 / 4];
 	uint64_t	    d[0x100000 / 8];
@@ -595,7 +593,7 @@ typedef volatile struct bridge_s {
 
     /* 0xC00000-0xFFFFFF -- External Flash Proms 1,0 */
     union {				/* make all access sizes available. */
-	uchar_t		    c[0x400000 / 1];	/* read-only */
+	unsigned char		    c[0x400000 / 1];	/* read-only */
 	uint16_t	    s[0x400000 / 2];	/* read-write */
 	uint32_t	    l[0x400000 / 4];	/* read-only */
 	uint64_t	    d[0x400000 / 8];	/* read-only */
@@ -917,12 +915,12 @@ typedef volatile struct bridge_s {
 
 #define PCIBR_TYPE1_CFG(ps)         PCIBRIDGE_TYPE1_CFG((ps)->bs_busnum)
 #define PCIBR_BUS_TYPE0_CFG_DEV0(ps) PCIBR_TYPE0_CFG_DEV(ps, 0)
-#define PCIBR_TYPE0_CFG_DEV(ps, s) \
-    ((IS_PIC_SOFT(ps)) ? PCIBRIDGE_TYPE0_CFG_DEV((ps)->bs_busnum, s+1) : \
-		  	     PCIBRIDGE_TYPE0_CFG_DEV((ps)->bs_busnum, s))
-#define PCIBR_BUS_TYPE0_CFG_DEVF(ps,s,f) \
-    ((IS_PIC_SOFT(ps)) ? PCIBRIDGE_TYPE0_CFG_DEVF((ps)->bs_busnum,(s+1),f) : \
-			     PCIBRIDGE_TYPE0_CFG_DEVF((ps)->bs_busnum,s,f))
+#define PCIBR_TYPE0_CFG_DEV(ps, s) PCIBRIDGE_TYPE0_CFG_DEV((ps)->bs_busnum, s+1)
+#define PCIBR_BUS_TYPE0_CFG_DEVF(ps,s,f) PCIBRIDGE_TYPE0_CFG_DEVF((ps)->bs_busnum,(s+1),f)
+
+/* NOTE: 's' is the internal device number, not the external slot number */
+#define PCIBR_BUS_TYPE0_CFG_DEV(ps, s) \
+		PCIBRIDGE_TYPE0_CFG_DEV((ps)->bs_busnum, s+1)
 
 #endif				/* LANGUAGE_C */
 
@@ -949,10 +947,6 @@ typedef volatile struct bridge_s {
 #define XBRIDGE_REV_B			0x2
 
 /* macros to determine bridge type. 'wid' == widget identification */
-#define IS_BRIDGE(wid) (XWIDGET_PART_NUM(wid) == BRIDGE_WIDGET_PART_NUM && \
-			XWIDGET_MFG_NUM(wid) == BRIDGE_WIDGET_MFGR_NUM)
-#define IS_XBRIDGE(wid) (XWIDGET_PART_NUM(wid) == XBRIDGE_WIDGET_PART_NUM && \
-			XWIDGET_MFG_NUM(wid) == XBRIDGE_WIDGET_MFGR_NUM)
 #define IS_PIC_BUS0(wid) (XWIDGET_PART_NUM(wid) == PIC_WIDGET_PART_NUM_BUS0 && \
 			XWIDGET_MFG_NUM(wid) == PIC_WIDGET_MFGR_NUM)
 #define IS_PIC_BUS1(wid) (XWIDGET_PART_NUM(wid) == PIC_WIDGET_PART_NUM_BUS1 && \

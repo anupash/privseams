@@ -59,7 +59,7 @@ static ide_hwif_t *ide_match_hwif(unsigned long io_base, u8 bootable, const char
 	for (h = 0; h < MAX_HWIFS; ++h) {
 		hwif = &ide_hwifs[h];
 		if (hwif->io_ports[IDE_DATA_OFFSET] == io_base) {
-			if (hwif->chipset == ide_generic)
+			if (hwif->chipset == ide_forced)
 				return hwif; /* a perfect match */
 		}
 	}
@@ -149,6 +149,8 @@ static int ide_setup_pci_baseregs (struct pci_dev *dev, const char *name)
 	}
 	return 0;
 }
+
+#ifdef CONFIG_BLK_DEV_IDEDMA_PCI
 
 #ifdef CONFIG_BLK_DEV_IDEDMA_FORCED
 /*
@@ -279,6 +281,7 @@ second_chance_to_dma:
 	}
 	return dma_base;
 }
+#endif /* CONFIG_BLK_DEV_IDEDMA_PCI */
 
 void ide_setup_pci_noise (struct pci_dev *dev, ide_pci_device_t *d)
 {

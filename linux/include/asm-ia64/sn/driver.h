@@ -1,5 +1,4 @@
-/* $Id$
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -32,7 +31,7 @@ struct eframe_s;
 struct piomap;
 struct dmamap;
 
-typedef __psunsigned_t iobush_t;
+typedef unsigned long iobush_t;
 
 /* interrupt function */
 typedef void	       *intr_arg_t;

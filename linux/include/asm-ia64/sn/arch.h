@@ -1,5 +1,4 @@
-/* $Id$
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -12,12 +11,9 @@
 #ifndef _ASM_IA64_SN_ARCH_H
 #define _ASM_IA64_SN_ARCH_H
 
-#include <linux/config.h>
-#include <linux/threads.h>
-#include <linux/mmzone.h>
+#include <asm/types.h>
 #include <asm/sn/types.h>
-
-#include <asm/sn/sn2/arch.h>
+#include <asm/sn/sn_cpuid.h>
 
 typedef u64	shubreg_t;
 typedef u64	hubreg_t;

@@ -110,7 +110,7 @@ static struct net_device_stats *w83977af_net_get_stats(struct net_device *dev);
  *    Initialize chip. Just try to find out how many chips we are dealing with
  *    and where they are
  */
-int __init w83977af_init(void)
+static int __init w83977af_init(void)
 {
         int i;
 
@@ -129,7 +129,7 @@ int __init w83977af_init(void)
  *    Close all configured chips
  *
  */
-void __exit w83977af_cleanup(void)
+static void __exit w83977af_cleanup(void)
 {
 	int i;
 
@@ -1143,7 +1143,7 @@ static irqreturn_t w83977af_interrupt(int irq, void *dev_id,
 
 	outb(icr, iobase+ICR);    /* Restore (new) interrupts */
 	outb(set, iobase+SSR);    /* Restore bank register */
-	return IRQ_HANDLED;
+	return IRQ_RETVAL(isr);
 }
 
 /*

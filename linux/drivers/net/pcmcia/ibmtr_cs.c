@@ -125,8 +125,7 @@ static void ibmtr_detach(dev_link_t *);
 
 static dev_link_t *dev_list;
 
-extern int ibmtr_probe(struct net_device *dev);
-extern int trdev_init(struct net_device *dev);
+extern int ibmtr_probe_card(struct net_device *dev);
 extern irqreturn_t tok_interrupt (int irq, void *dev_id, struct pt_regs *regs);
 
 /*====================================================================*/
@@ -199,7 +198,6 @@ static dev_link_t *ibmtr_attach(void)
 
     link->irq.Instance = info->dev = dev;
     
-    dev->init = &ibmtr_probe;
     SET_ETHTOOL_OPS(dev, &netdev_ethtool_ops);
 
     /* Register with Card Services */
@@ -214,7 +212,7 @@ static dev_link_t *ibmtr_attach(void)
     client_reg.event_handler = &ibmtr_event;
     client_reg.Version = 0x0210;
     client_reg.event_callback_args.client_data = link;
-    ret = CardServices(RegisterClient, &link->handle, &client_reg);
+    ret = pcmcia_register_client(&link->handle, &client_reg);
     if (ret != 0) {
         cs_error(link->handle, RegisterClient, ret);
 	goto out_detach;
@@ -253,22 +251,22 @@ static void ibmtr_detach(dev_link_t *link)
         return;
 
     dev = info->dev;
+
+    if (link->dev)
+	unregister_netdev(dev);
+
     {
 	struct tok_info *ti = (struct tok_info *)dev->priv;
 	del_timer_sync(&(ti->tr_timer));
     }
-    if (link->state & DEV_CONFIG) {
+    if (link->state & DEV_CONFIG)
         ibmtr_release(link);
-        if (link->state & DEV_STALE_CONFIG)
-            return;
-    }
 
     if (link->handle)
-        CardServices(DeregisterClient, link->handle);
+        pcmcia_deregister_client(link->handle);
 
     /* Unlink device structure, free bits */
     *linkp = link->next;
-    unregister_netdev(dev);
     free_netdev(dev);
     kfree(info); 
 } /* ibmtr_detach */
@@ -281,8 +279,8 @@ static void ibmtr_detach(dev_link_t *link)
 
 ======================================================================*/
 
-#define CS_CHECK(fn, args...) \
-while ((last_ret=CardServices(last_fn=(fn), args))!=0) goto cs_failed
+#define CS_CHECK(fn, ret) \
+do { last_fn = (fn); if ((last_ret = (ret)) != 0) goto cs_failed; } while (0)
 
 static void ibmtr_config(dev_link_t *link)
 {
@@ -304,9 +302,9 @@ static void ibmtr_config(dev_link_t *link)
     tuple.TupleDataMax = 64;
     tuple.TupleOffset = 0;
     tuple.DesiredTuple = CISTPL_CONFIG;
-    CS_CHECK(GetFirstTuple, handle, &tuple);
-    CS_CHECK(GetTupleData, handle, &tuple);
-    CS_CHECK(ParseTuple, handle, &tuple, &parse);
+    CS_CHECK(GetFirstTuple, pcmcia_get_first_tuple(handle, &tuple));
+    CS_CHECK(GetTupleData, pcmcia_get_tuple_data(handle, &tuple));
+    CS_CHECK(ParseTuple, pcmcia_parse_tuple(handle, &tuple, &parse));
     link->conf.ConfigBase = parse.config.base;
 
     /* Configure card */
@@ -318,18 +316,18 @@ static void ibmtr_config(dev_link_t *link)
 
     /* Try PRIMARY card at 0xA20-0xA23 */
     link->io.BasePort1 = 0xA20;
-    i = CardServices(RequestIO, link->handle, &link->io);
+    i = pcmcia_request_io(link->handle, &link->io);
     if (i == CS_SUCCESS) {
 	memcpy(info->node.dev_name, "tr0\0", 4);
     } else {
 	/* Couldn't get 0xA20-0xA23.  Try ALTERNATE at 0xA24-0xA27. */
 	link->io.BasePort1 = 0xA24;
-	CS_CHECK(RequestIO, link->handle, &link->io);
+	CS_CHECK(RequestIO, pcmcia_request_io(link->handle, &link->io));
 	memcpy(info->node.dev_name, "tr1\0", 4);
     }
     dev->base_addr = link->io.BasePort1;
 
-    CS_CHECK(RequestIRQ, link->handle, &link->irq);
+    CS_CHECK(RequestIRQ, pcmcia_request_irq(link->handle, &link->irq));
     dev->irq = link->irq.AssignedIRQ;
     ti->irq = link->irq.AssignedIRQ;
     ti->global_int_enable=GLOBAL_INT_ENABLE+((dev->irq==9) ? 2 : dev->irq);
@@ -340,12 +338,11 @@ static void ibmtr_config(dev_link_t *link)
     req.Base = 0; 
     req.Size = 0x2000;
     req.AccessSpeed = 250;
-    link->win = (window_handle_t)link->handle;
-    CS_CHECK(RequestWindow, &link->win, &req);
+    CS_CHECK(RequestWindow, pcmcia_request_window(&link->handle, &req, &link->win));
 
     mem.CardOffset = mmiobase;
     mem.Page = 0;
-    CS_CHECK(MapMemPage, link->win, &mem);
+    CS_CHECK(MapMemPage, pcmcia_map_mem_page(link->win, &mem));
     ti->mmio = ioremap(req.Base, req.Size);
 
     /* Allocate the SRAM memory window */
@@ -354,24 +351,23 @@ static void ibmtr_config(dev_link_t *link)
     req.Base = 0;
     req.Size = sramsize * 1024;
     req.AccessSpeed = 250;
-    info->sram_win_handle = (window_handle_t)link->handle;
-    CS_CHECK(RequestWindow, &info->sram_win_handle, &req);
+    CS_CHECK(RequestWindow, pcmcia_request_window(&link->handle, &req, &info->sram_win_handle));
 
     mem.CardOffset = srambase;
     mem.Page = 0;
-    CS_CHECK(MapMemPage, info->sram_win_handle, &mem);
+    CS_CHECK(MapMemPage, pcmcia_map_mem_page(info->sram_win_handle, &mem));
 
     ti->sram_base = mem.CardOffset >> 12;
     ti->sram_virt = (u_long)ioremap(req.Base, req.Size);
 
-    CS_CHECK(RequestConfiguration, link->handle, &link->conf);
+    CS_CHECK(RequestConfiguration, pcmcia_request_configuration(link->handle, &link->conf));
 
     /*  Set up the Token-Ring Controller Configuration Register and
         turn on the card.  Check the "Local Area Network Credit Card
         Adapters Technical Reference"  SC30-3585 for this info.  */
     ibmtr_hw_setup(dev, mmiobase);
 
-    i = register_netdev(dev);
+    i = ibmtr_probe_card(dev);
     
     if (i != 0) {
 	printk(KERN_NOTICE "ibmtr_cs: register_netdev() failed\n");
@@ -412,27 +408,17 @@ static void ibmtr_release(dev_link_t *link)
 
     DEBUG(0, "ibmtr_release(0x%p)\n", link);
 
-    if (link->open) {
-	DEBUG(1, "ibmtr_cs: release postponed, '%s' "
-	      "still open\n", info->node.dev_name);
-        link->state |= DEV_STALE_CONFIG;
-        return;
-    }
-
-    CardServices(ReleaseConfiguration, link->handle);
-    CardServices(ReleaseIO, link->handle, &link->io);
-    CardServices(ReleaseIRQ, link->handle, &link->irq);
+    pcmcia_release_configuration(link->handle);
+    pcmcia_release_io(link->handle, &link->io);
+    pcmcia_release_irq(link->handle, &link->irq);
     if (link->win) {
 	struct tok_info *ti = dev->priv;
 	iounmap((void *)ti->mmio);
-	CardServices(ReleaseWindow, link->win);
-	CardServices(ReleaseWindow, info->sram_win_handle);
+	pcmcia_release_window(link->win);
+	pcmcia_release_window(info->sram_win_handle);
     }
 
     link->state &= ~DEV_CONFIG;
-
-    if (link->state & DEV_STALE_CONFIG)
-	    ibmtr_detach(link);
 }
 
 /*======================================================================
@@ -474,7 +460,7 @@ static int ibmtr_event(event_t event, int priority,
         if (link->state & DEV_CONFIG) {
             if (link->open)
 		netif_device_detach(dev);
-            CardServices(ReleaseConfiguration, link->handle);
+            pcmcia_release_configuration(link->handle);
         }
         break;
     case CS_EVENT_PM_RESUME:
@@ -482,9 +468,9 @@ static int ibmtr_event(event_t event, int priority,
         /* Fall through... */
     case CS_EVENT_CARD_RESET:
         if (link->state & DEV_CONFIG) {
-            CardServices(RequestConfiguration, link->handle, &link->conf);
+            pcmcia_request_configuration(link->handle, &link->conf);
             if (link->open) {
-		(dev->init)(dev);
+		ibmtr_probe(dev);	/* really? */
 		netif_device_attach(dev);
             }
         }

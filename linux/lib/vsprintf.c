@@ -234,6 +234,11 @@ static char * number(char * buf, char * end, unsigned long long num, int base, i
 * @fmt: The format string to use
 * @args: Arguments for the format string
 *
+* The return value is the number of characters which would be
+* generated for the given input, excluding the trailing null,
+* as per ISO C99.  If the return is greater than or equal to
+* @size, the resulting string is truncated.
+*
 * Call this function if you are already dealing with a va_list.
 * You probably want snprintf instead.
  */
@@ -253,6 +258,15 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 	int qualifier;		/* 'h', 'l', or 'L' for integer fields */
 				/* 'z' support added 23/7/1999 S.H.    */
 				/* 'z' changed to 'Z' --davidm 1/25/99 */
+
+	/* Reject out-of-range values early */
+	if (unlikely((int) size < 0)) {
+		/* There can be only one.. */
+		static int warn = 1;
+		WARN_ON(warn);
+		warn = 0;
+		return 0;
+	}
 
 	str = buf;
 	end = buf + size - 1;
@@ -473,6 +487,11 @@ EXPORT_SYMBOL(vsnprintf);
  * @size: The size of the buffer, including the trailing null space
  * @fmt: The format string to use
  * @...: Arguments for the format string
+ *
+ * The return value is the number of characters which would be
+ * generated for the given input, excluding the trailing null,
+ * as per ISO C99.  If the return is greater than or equal to
+ * @size, the resulting string is truncated.
  */
 int snprintf(char * buf, size_t size, const char *fmt, ...)
 {
@@ -498,7 +517,7 @@ EXPORT_SYMBOL(snprintf);
  */
 int vsprintf(char *buf, const char *fmt, va_list args)
 {
-	return vsnprintf(buf, 0xFFFFFFFFUL, fmt, args);
+	return vsnprintf(buf, (~0U)>>1, fmt, args);
 }
 
 EXPORT_SYMBOL(vsprintf);
@@ -599,7 +618,7 @@ int vsscanf(const char * buf, const char * fmt, va_list args)
 				field_width = 1;
 			do {
 				*s++ = *str++;
-			} while(field_width-- > 0 && *str);
+			} while (--field_width > 0 && *str);
 			num++;
 		}
 		continue;

@@ -228,7 +228,6 @@ static int __devinit olympic_probe(struct pci_dev *pdev, const struct pci_device
 #endif
 	dev->irq=pdev->irq;
 	dev->base_addr=pci_resource_start(pdev, 0);
-	dev->init=NULL; /* Must be NULL otherwise we get called twice */
 	olympic_priv->olympic_card_name = pci_name(pdev);
 	olympic_priv->pdev = pdev; 
 	olympic_priv->olympic_mmio = ioremap(pci_resource_start(pdev,1),256);
@@ -468,14 +467,7 @@ static int olympic_open(struct net_device *dev)
 	printk("Before the open command \n");
 #endif	
 	do {
-		int i;
-
-		for(i=0;i<SRB_COMMAND_SIZE;i+=4)
-			writel(0,init_srb+i);
-		if(SRB_COMMAND_SIZE & 2)
-			writew(0,init_srb+(SRB_COMMAND_SIZE & ~3));
-		if(SRB_COMMAND_SIZE & 1)
-			writeb(0,init_srb+(SRB_COMMAND_SIZE & ~1));
+		memset_io(init_srb,0,SRB_COMMAND_SIZE);
 
 		writeb(SRB_OPEN_ADAPTER,init_srb) ; 	/* open */
 		writeb(OLYMPIC_CLEAR_RET_CODE,init_srb+2);

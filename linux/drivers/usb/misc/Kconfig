@@ -4,9 +4,24 @@
 comment "USB Miscellaneous drivers"
 	depends on USB
 
+config USB_EMI62
+	tristate "EMI 6|2m USB Audio interface support"
+	depends on USB
+	---help---
+	  This driver loads firmware to Emagic EMI 6|2m low latency USB
+	  Audio and Midi interface.
+
+	  After firmware load the device is handled with standard linux
+	  USB Audio driver.
+
+	  This code is also available as a module ( = code which can be
+	  inserted in and removed from the running kernel whenever you want).
+	  The module will be called audio. If you want to compile it as a
+	  module, say M here and read <file:Documentation/kbuild/modules.txt>.
+
 config USB_EMI26
 	tristate "EMI 2|6 USB Audio interface support"
-	depends on USB_AUDIO
+	depends on USB
 	---help---
 	  This driver loads firmware to Emagic EMI 2|6 low latency USB
 	  Audio interface.
@@ -68,7 +83,8 @@ config USB_LEGOTOWER
 	  This code is also available as a module ( = code which can be
 	  inserted in and removed from the running kernel whenever you want).
 	  The module will be called legousbtower. If you want to compile it as
-	  a module, say M here and read <file:Documentation/modules.txt>.
+	  a module, say M here and read
+	  <file:Documentation/kbuild/modules.txt>.
 
 config USB_BRLVGER
 	tristate "Tieman Voyager USB Braille display support (EXPERIMENTAL)"
@@ -87,11 +103,21 @@ config USB_LCD
 	help
 	  Say Y here if you want to connect an USBLCD to your computer's
 	  USB port. The USBLCD is a small USB interface board for
-	  alphanumeric LCD modules. See <http://www.usblcd.de> for more
+	  alphanumeric LCD modules. See <http://www.usblcd.de/> for more
 	  information.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called usblcd.
+
+config USB_LED
+	tristate "USB LED driver support"
+	depends on USB
+	help
+	  Say Y here if you want to connect an USBLED device to your 
+	  computer's USB port.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called usbled.
 
 config USB_SPEEDTOUCH
 	tristate "Alcatel Speedtouch USB support"
@@ -114,6 +140,6 @@ config USB_TEST
 	  with specialized device firmware for regression and stress testing,
 	  to help prevent problems from cropping up with "real" drivers.
 
-	  See <http://www.linux-usb.org/usbtest> for more information,
+	  See <http://www.linux-usb.org/usbtest/> for more information,
 	  including sample test device firmware and "how to use it".
 

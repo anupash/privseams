@@ -1,5 +1,4 @@
-/* $Id: shubio.h,v 1.1 2002/02/28 17:31:25 marcelo Exp $
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -219,8 +218,6 @@
 #define    IIO_IPCR                  0x00430000    /* IO Performance Control */
 #define    IIO_IPPR                  0x00430008    /* IO Performance Profiling */
 
-
-#ifndef __ASSEMBLY__
 
 /************************************************************************
  *                                                                      *
@@ -2845,8 +2842,6 @@ typedef union ii_ippr_u {
 } ii_ippr_u_t;
 
 
-#endif /* __ASSEMBLY__ */
-
 /**************************************************************************
  *                                                                        *
  * The following defines which were not formed into structures are        *
@@ -3390,8 +3385,6 @@ typedef ii_icrb0_e_u_t icrbe_t;
 #define IO_PERF_SETS	32
 
 #if __KERNEL__
-#ifndef __ASSEMBLY__
-#include <asm/sn/alenlist.h>
 #include <asm/sn/dmamap.h>
 #include <asm/sn/driver.h>
 #include <asm/sn/xtalk/xtalk.h>
@@ -3536,11 +3529,6 @@ hub_dmamap_addr(        hub_dmamap_t dmamap,    /* use mapping resources */
                         paddr_t paddr,          /* map for this address */
                         size_t byte_count);     /* map this many bytes */
 
-extern alenlist_t
-hub_dmamap_list(        hub_dmamap_t dmamap,    /* use mapping resources */
-                        alenlist_t alenlist,    /* map this Addr/Length List */
-                        unsigned flags);
-
 extern void
 hub_dmamap_done(        hub_dmamap_t dmamap);   /* done w/ mapping resources */
 
@@ -3551,12 +3539,6 @@ hub_dmatrans_addr(      vertex_hdl_t dev,       /* translate for this device */
                         size_t byte_count,      /* length */
                         unsigned flags);                /* defined in dma.h */
 
-extern alenlist_t
-hub_dmatrans_list(      vertex_hdl_t dev,       /* translate for this device */
-                        device_desc_t dev_desc, /* device descriptor */
-                        alenlist_t palenlist,   /* system addr/length list */
-                        unsigned flags);                /* defined in dma.h */
-
 extern void
 hub_dmamap_drain(       hub_dmamap_t map);
 
@@ -3564,10 +3546,6 @@ extern void
 hub_dmaaddr_drain(      vertex_hdl_t vhdl,
                         paddr_t addr,
                         size_t bytes);
-
-extern void
-hub_dmalist_drain(      vertex_hdl_t vhdl,
-                        alenlist_t list);
 
 
 /* INTERRUPT MANAGEMENT */
@@ -3626,10 +3604,6 @@ extern int      hub_widget_flags_set(nasid_t            nasid,
 extern int hub_ioerror_handler(vertex_hdl_t, int, int, struct io_error_s *);
 extern int kl_ioerror_handler(cnodeid_t, cnodeid_t, cpuid_t,
                               int, paddr_t, caddr_t, ioerror_mode_t);
-extern int hub_error_devenable(vertex_hdl_t, int, int);
-extern int  hub_dma_enabled(vertex_hdl_t);
-
-#endif /* __ASSEMBLY__ */
 #endif /* _KERNEL */
 #endif /* _ASM_IA64_SN_SN2_SHUBIO_H */
 

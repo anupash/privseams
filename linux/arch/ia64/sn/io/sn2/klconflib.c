@@ -1,5 +1,4 @@
-/* $Id$
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -15,7 +14,6 @@
 #include <asm/sn/io.h>
 #include <asm/sn/sn_cpuid.h>
 #include <asm/sn/iograph.h>
-#include <asm/sn/invent.h>
 #include <asm/sn/hcl.h>
 #include <asm/sn/labelcl.h>
 #include <asm/sn/klconfig.h>
@@ -23,10 +21,8 @@
 #include <asm/sn/module.h>
 #include <asm/sn/router.h>
 #include <asm/sn/xtalk/xbow.h>
+#include <asm/sn/ksys/l1.h>
 
-
-#define LDEBUG 0
-#define NIC_UNKNOWN ((nic_t) -1)
 
 #undef DEBUG_KLGRAPH
 #ifdef DEBUG_KLGRAPH
@@ -35,20 +31,22 @@
 #define DBG(x...)
 #endif /* DEBUG_KLGRAPH */
 
-u64 klgraph_addr[MAX_COMPACT_NODES];
+extern int numionodes;
+
+lboard_t *root_lboard[MAX_COMPACT_NODES];
 static int hasmetarouter;
 
 
-char brick_types[MAX_BRICK_TYPES + 1] = "crikxdpn%#=012345";
+char brick_types[MAX_BRICK_TYPES + 1] = "crikxdpn%#=vo^34567890123456789...";
 
 lboard_t *
-find_lboard(lboard_t *start, unsigned char brd_type)
+find_lboard_any(lboard_t *start, unsigned char brd_type)
 {
 	/* Search all boards stored on this node. */
 	while (start) {
 		if (start->brd_type == brd_type)
 			return start;
-		start = KLCF_NEXT(start);
+		start = KLCF_NEXT_ANY(start);
 	}
 
 	/* Didn't find it. */
@@ -56,18 +54,58 @@ find_lboard(lboard_t *start, unsigned char brd_type)
 }
 
 lboard_t *
-find_lboard_class(lboard_t *start, unsigned char brd_type)
+find_lboard_nasid(lboard_t *start, nasid_t nasid, unsigned char brd_type)
 {
-	/* Search all boards stored on this node. */
+
 	while (start) {
-		if (KLCLASS(start->brd_type) == KLCLASS(brd_type))
+		if ((start->brd_type == brd_type) && 
+		    (start->brd_nasid == nasid))
 			return start;
-		start = KLCF_NEXT(start);
+
+		if (numionodes == numnodes)
+			start = KLCF_NEXT_ANY(start);
+		else
+			start = KLCF_NEXT(start);
 	}
 
 	/* Didn't find it. */
 	return (lboard_t *)NULL;
 }
+
+lboard_t *
+find_lboard_class_any(lboard_t *start, unsigned char brd_type)
+{
+        /* Search all boards stored on this node. */
+	while (start) {
+		if (KLCLASS(start->brd_type) == KLCLASS(brd_type))
+			return start;
+		start = KLCF_NEXT_ANY(start);
+	}
+
+	/* Didn't find it. */
+	return (lboard_t *)NULL;
+}
+
+lboard_t *
+find_lboard_class_nasid(lboard_t *start, nasid_t nasid, unsigned char brd_type)
+{
+	/* Search all boards stored on this node. */
+	while (start) {
+		if (KLCLASS(start->brd_type) == KLCLASS(brd_type) && 
+		    (start->brd_nasid == nasid))
+			return start;
+
+		if (numionodes == numnodes)
+			start = KLCF_NEXT_ANY(start);
+		else
+			start = KLCF_NEXT(start);
+	}
+
+	/* Didn't find it. */
+	return (lboard_t *)NULL;
+}
+
+
 
 klinfo_t *
 find_component(lboard_t *brd, klinfo_t *kli, unsigned char struct_type)
@@ -118,20 +156,6 @@ find_lboard_modslot(lboard_t *start, geoid_t geoid)
 
 	/* Didn't find it. */
 	return (lboard_t *)NULL;
-}
-
-lboard_t *
-find_lboard_module(lboard_t *start, geoid_t geoid)
-{
-        /* Search all boards stored on this node. */
-        while (start) {
-                if (geo_cmp(start->brd_geoid, geoid))
-                        return start;
-                start = KLCF_NEXT(start);
-        }
-
-        /* Didn't find it. */
-        return (lboard_t *)NULL;
 }
 
 /*
@@ -222,7 +246,7 @@ xbow_port_io_enabled(nasid_t nasid, int link)
 	/*
 	 * look for boards that might contain an xbow or xbridge
 	 */
-	brd = find_lboard((lboard_t *)KL_CONFIG_INFO(nasid), KLTYPE_IOBRICK_XBOW);
+	brd = find_lboard_nasid((lboard_t *)KL_CONFIG_INFO(nasid), nasid, KLTYPE_IOBRICK_XBOW);
 	if (brd == NULL) return 0;
 		
 	if ((xbow_p = (klxbow_t *)find_component(brd, NULL, KLSTRUCT_XBOW))
@@ -270,17 +294,11 @@ board_to_path(lboard_t *brd, char *path)
 				board_name = EDGE_LBL_PXBRICK;
 			else if (brd->brd_type == KLTYPE_IXBRICK)
 				board_name = EDGE_LBL_IXBRICK;
-			else if (brd->brd_type == KLTYPE_PBRICK)
-				board_name = EDGE_LBL_PBRICK;
-			else if (brd->brd_type == KLTYPE_IBRICK)
-				board_name = EDGE_LBL_IBRICK;
-			else if (brd->brd_type == KLTYPE_XBRICK)
-				board_name = EDGE_LBL_XBRICK;
-			else if (brd->brd_type == KLTYPE_PEBRICK)
-				board_name = EDGE_LBL_PEBRICK;
+			else if (brd->brd_type == KLTYPE_OPUSBRICK)
+				board_name = EDGE_LBL_OPUSBRICK;
 			else if (brd->brd_type == KLTYPE_CGBRICK)
 				board_name = EDGE_LBL_CGBRICK;
-			else
+			else 
 				board_name = EDGE_LBL_IOBRICK;
 			break;
 		default:
@@ -293,58 +311,7 @@ board_to_path(lboard_t *brd, char *path)
 	sprintf(path, EDGE_LBL_MODULE "/%s/" EDGE_LBL_SLAB "/%d/%s", buffer, geo_slab(brd->brd_geoid), board_name);
 }
 
-/*
- * Get the module number for a NASID.
- */
-moduleid_t
-get_module_id(nasid_t nasid)
-{
-	lboard_t *brd;
-
-	brd = find_lboard((lboard_t *)KL_CONFIG_INFO(nasid), KLTYPE_SNIA);
-
-	if (!brd)
-		return INVALID_MODULE;
-	else
-		return geo_module(brd->brd_geoid);
-}
-
-
 #define MHZ	1000000
-
-
-/* Get the canonical hardware graph name for the given pci component
- * on the given io board.
- */
-void
-device_component_canonical_name_get(lboard_t 	*brd,
-				    klinfo_t 	*component,
-				    char 	*name)
-{
-	slotid_t 	slot;
-	char 		board_name[20];
-
-	ASSERT(brd);
-
-	/* Convert the [ CLASS | TYPE ] kind of slotid
-	 * into a string
-	 */
-	slot = brd->brd_slot;
-
-	/* Get the io board name  */
-	if (!brd || (brd->brd_sversion < 2)) {
-		strcpy(name, EDGE_LBL_XWIDGET);
-	} else {
-		nic_name_convert(brd->brd_name, board_name);
-	}
-
-	/* Give out the canonical  name of the pci device*/
-	sprintf(name,
-		"/dev/hw/"EDGE_LBL_MODULE "/%x/"EDGE_LBL_SLAB"/%d/"
-		EDGE_LBL_SLOT"/%s/"EDGE_LBL_PCI"/%d",
-		geo_module(brd->brd_geoid), geo_slab(brd->brd_geoid), 
-		board_name, KLCF_BRIDGE_W_ID(component));
-}
 
 /*
  * Get the serial number of the main  component of a board
@@ -440,71 +407,24 @@ board_serial_number_get(lboard_t *board,char *serial_number)
 		break;
 	}
 	case KLCLASS_IO: {	/* IO board */
-		if (KLTYPE(board->brd_type) == KLTYPE_TPU) {
-		/* Special case for TPU boards */
-			kltpu_t *tpu;	
+	     	klbri_t	*bridge;
 		
-			/* Get the tpu component information */
-			tpu = (kltpu_t *)find_first_component(board,
-						      KLSTRUCT_TPU);
-			/* If we don't have a tpu component on a tpu board
-			 * then we have a weird klconfig.
-			 */
-			if (!tpu)
-				return(1);
-			/* Get the serial number information from
-			 * the tpu's manufacturing nic info
-			 */
-			if (component_serial_number_get(board,
-						tpu->tpu_mfg_nic,
-						serial_number,
-						""))
-				return(1);
-			break;
-		} else  if ((KLTYPE(board->brd_type) == KLTYPE_GSN_A) ||
-		            (KLTYPE(board->brd_type) == KLTYPE_GSN_B)) {
-		/* Special case for GSN boards */
-			klgsn_t *gsn;	
-		
-			/* Get the gsn component information */
-			gsn = (klgsn_t *)find_first_component(board,
-			      ((KLTYPE(board->brd_type) == KLTYPE_GSN_A) ?
-					KLSTRUCT_GSN_A : KLSTRUCT_GSN_B));
-			/* If we don't have a gsn component on a gsn board
-			 * then we have a weird klconfig.
-			 */
-			if (!gsn)
-				return(1);
-			/* Get the serial number information from
-			 * the gsn's manufacturing nic info
-			 */
-			if (component_serial_number_get(board,
-						gsn->gsn_mfg_nic,
-						serial_number,
-						""))
-				return(1);
-			break;
-		} else {
-		     	klbri_t	*bridge;
-		
-			/* Get the bridge component information */
-			bridge = (klbri_t *)find_first_component(board,
+		/* Get the bridge component information */
+		bridge = (klbri_t *)find_first_component(board,
 							 KLSTRUCT_BRI);
-			/* If we don't have a bridge component on an IO board
-			 * then we have a weird klconfig.
-			 */
-			if (!bridge)
-				return(1);
-			/* Get the serial number information from
-		 	 * the bridge's manufacturing nic info
-			 */
-			if (component_serial_number_get(board,
-						bridge->bri_mfg_nic,
-						serial_number,
-						""))
-				return(1);
-			break;
-		}
+		/* If we don't have a bridge component on an IO board
+		 * then we have a weird klconfig.
+		 */
+		if (!bridge)
+			return(1);
+		/* Get the serial number information from
+	 	 * the bridge's manufacturing nic info
+		 */
+		if (component_serial_number_get(board,
+					bridge->bri_mfg_nic,
+					serial_number, ""))
+			return(1);
+		break;
 	}
 	case KLCLASS_ROUTER: {	/* Router board */
 		klrou_t *router;	
@@ -558,20 +478,53 @@ board_serial_number_get(lboard_t *board,char *serial_number)
 
 /*
  * Format a module id for printing.
+ *
+ * There are three possible formats:
+ *
+ *   MODULE_FORMAT_BRIEF	is the brief 6-character format, including
+ *				the actual brick-type as recorded in the 
+ *				moduleid_t, eg. 002c15 for a C-brick, or
+ *				101#17 for a PX-brick.
+ *
+ *   MODULE_FORMAT_LONG		is the hwgraph format, eg. rack/002/bay/15
+ *				of rack/101/bay/17 (note that the brick
+ *				type does not appear in this format).
+ *
+ *   MODULE_FORMAT_LCD		is like MODULE_FORMAT_BRIEF, except that it
+ *				ensures that the module id provided appears
+ *				exactly as it would on the LCD display of
+ *				the corresponding brick, eg. still 002c15
+ *				for a C-brick, but 101p17 for a PX-brick.
  */
 void
 format_module_id(char *buffer, moduleid_t m, int fmt)
 {
 	int rack, position;
-	char brickchar;
+	unsigned char brickchar;
 
 	rack = MODULE_GET_RACK(m);
 	ASSERT(MODULE_GET_BTYPE(m) < MAX_BRICK_TYPES);
 	brickchar = MODULE_GET_BTCHAR(m);
 
+	if (fmt == MODULE_FORMAT_LCD) {
+	    /* Be sure we use the same brick type character as displayed
+	     * on the brick's LCD
+	     */
+	    switch (brickchar) 
+	    {
+	    case L1_BRICKTYPE_PX:
+		brickchar = L1_BRICKTYPE_P;
+		break;
+
+	    case L1_BRICKTYPE_IX:
+		brickchar = L1_BRICKTYPE_I;
+		break;
+	    }
+	}
+
 	position = MODULE_GET_BPOS(m);
 
-	if (fmt == MODULE_FORMAT_BRIEF) {
+	if ((fmt == MODULE_FORMAT_BRIEF) || (fmt == MODULE_FORMAT_LCD)) {
 	    /* Brief module number format, eg. 002c15 */
 
 	    /* Decompress the rack number */
@@ -601,88 +554,21 @@ format_module_id(char *buffer, moduleid_t m, int fmt)
 
 }
 
-/*
- * Parse a module id, in either brief or long form.
- * Returns < 0 on error.
- * The long form does not include a brick type, so it defaults to 0 (CBrick)
- */
 int
-parse_module_id(char *buffer)
+cbrick_type_get_nasid(nasid_t nasid)
 {
-	unsigned int	v, rack, bay, type, form;
-	moduleid_t	m;
-	char 		c;
+	moduleid_t module;
+	int t;
 
-	if (strstr(buffer, EDGE_LBL_RACK "/") == buffer) {
-		form = MODULE_FORMAT_LONG;
-		buffer += strlen(EDGE_LBL_RACK "/");
-
-		/* A long module ID must be exactly 5 non-template chars. */
-		if (strlen(buffer) != strlen("/" EDGE_LBL_RPOS "/") + 5)
-			return -1;
+	module = iomoduleid_get(nasid);
+	if (module < 0 ) {
+		return MODULE_CBRICK;
 	}
-	else {
-		form = MODULE_FORMAT_BRIEF;
-
-		/* A brief module id must be exactly 6 characters */
-		if (strlen(buffer) != 6)
-			return -2;
+	t = MODULE_GET_BTYPE(module);
+	if ((char)t == 'o') {
+		return MODULE_OPUSBRICK;
+	} else {
+		return MODULE_CBRICK;
 	}
-
-	/* The rack number must be exactly 3 digits */
-	if (!(isdigit(buffer[0]) && isdigit(buffer[1]) && isdigit(buffer[2])))
-		return -3;
-
-	rack = 0;
-	v = *buffer++ - '0';
-	if (v > RACK_CLASS_MASK(rack) >> RACK_CLASS_SHFT(rack))
-		return -4;
-	RACK_ADD_CLASS(rack, v);
-
-	v = *buffer++ - '0';
-	if (v > RACK_GROUP_MASK(rack) >> RACK_GROUP_SHFT(rack))
-		return -5;
-	RACK_ADD_GROUP(rack, v);
-
-	v = *buffer++ - '0';
-	/* rack numbers are 1-based */
-	if (v-1 > RACK_NUM_MASK(rack) >> RACK_NUM_SHFT(rack))
-		return -6;
-	RACK_ADD_NUM(rack, v);
-
-	if (form == MODULE_FORMAT_BRIEF) {
-		/* Next should be a module type character.  Accept ucase or lcase. */
-		c = *buffer++;
-		if (!isalpha(c))
-			return -7;
-
-		/* strchr() returns a pointer into brick_types[], or NULL */
-		type = (unsigned int)(strchr(brick_types, tolower(c)) - brick_types);
-		if (type > MODULE_BTYPE_MASK >> MODULE_BTYPE_SHFT)
-			return -8;
-	}
-	else {
-		/* Hardcode the module type, and skip over the boilerplate */
-		type = MODULE_CBRICK;
-
-		if (strstr(buffer, "/" EDGE_LBL_RPOS "/") != buffer)
-			return -9;
-
-		buffer += strlen("/" EDGE_LBL_RPOS "/");
-	}
-		
-	/* The bay number is last.  Make sure it's exactly two digits */
-
-	if (!(isdigit(buffer[0]) && isdigit(buffer[1]) && !buffer[2]))
-		return -10;
-
-	bay = 10 * (buffer[0] - '0') + (buffer[1] - '0');
-
-	if (bay > MODULE_BPOS_MASK >> MODULE_BPOS_SHFT)
-		return -11;
-
-	m = RBT_TO_MODULE(rack, bay, type);
-
-	/* avoid sign extending the moduleid_t */
-	return (int)(unsigned short)m;
+	return -1;
 }

@@ -2,8 +2,6 @@
  *
  * Name:	skgepnmi.c
  * Project:	GEnesis, PCI Gigabit Ethernet Adapter
- * Version:	$Revision: 1.109 $
- * Date:	$Date: 2003/07/17 14:15:24 $
  * Purpose:	Private Network Management Interface
  *
  ****************************************************************************/
@@ -22,456 +20,9 @@
  *
  ******************************************************************************/
 
-/*****************************************************************************
- *
- * History:
- *
- *	$Log: skgepnmi.c,v $
- *	Revision 1.109  2003/07/17 14:15:24  tschilli
- *	Bug in SkPnmiGenIoctl() fixed.
- *	
- *	Revision 1.108  2003/05/27 07:10:11  tschilli
- *	Bug in SkPnmiGenIoctl() fixed.
- *	
- *	Revision 1.107  2003/05/23 13:01:10  tschilli
- *	Code for DIAG support added (#define SK_DIAG_SUPPORT).
- *	Code for generic PNMI IOCTL support added. The new function
- *	SkPnmiGenIoctl() is used for this purpose.
- *	Handling of OID_SKGE_BOARDLEVEL added.
- *	Incorrect buffer size handling of OID_SKGE_MTU during GET action fixed.
- *	Return code handling in PowerManagement() fixed.
- *	Editorial changes.
- *  
- *	Revision 1.106  2003/04/10 14:47:31  rschmidt
- *	Fixed handling for OID_GEN_RCV_OK and OID_GEN_XMIT_OK for YUKON's GMAC
- *	in GetPhysStatVal().
- *	Replaced macro PHY_READ() with function call SkXmPhyRead().
- *	Made optimisations for readability and code size.
- *	Editorial changes.
- *	
- *	Revision 1.105  2003/04/09 12:51:32  rschmidt
- *	Fixed XMAC only handling for some events in SkPnmiEvent().
- *	Fixed return value for OID_GEN_RCV_OK (SK_PNMI_HRX) in GetPhysStatVal().
- *	Editorial changes.
- *	
- *	Revision 1.104  2003/03/27 11:18:21  tschilli
- *	BRK statements from DEBUG code removed.
- *	OID_GEN_XMIT_OK and OID_GEN_RCV_OK work with Yukon now.
- *	Copyright messages changed.
- *	
- *	Revision 1.103  2002/12/20 09:57:13  tschilli
- *	SK_PNMI_EVT_VCT_RESET event code changed.
- *	Unused variable from Vct() removed.
- *	
- *	Revision 1.102  2002/12/16 14:03:24  tschilli
- *	VCT code in Vct() changed.
- *	
- *	Revision 1.101  2002/12/16 09:04:10  tschilli
- *	Code for VCT handling added.
- *	
- *	Revision 1.100  2002/09/26 14:28:13  tschilli
- *	For XMAC the values in the SK_PNMI_PORT Port struct are copied to
- *	the new SK_PNMI_PORT BufPort struct during a MacUpdate() call.
- *	These values are used when GetPhysStatVal() is called. With this
- *	mechanism you get the best results when software corrections for
- *	counters are needed. Example: RX_LONGFRAMES.
- *	
- *	Revision 1.99  2002/09/17 12:31:19  tschilli
- *	OID_SKGE_TX_HW_ERROR_CTS, OID_SKGE_OUT_ERROR_CTS, OID_GEN_XMIT_ERROR:
- *	Double count of SK_PNMI_HTX_EXCESS_COL in function General() removed.
- *	OID_PNP_CAPABILITIES: sizeof(SK_PM_WAKE_UP_CAPABILITIES) changed to
- *	sizeof(SK_PNP_CAPABILITIES) in function PowerManagement().
- *	
- *	Revision 1.98  2002/09/10 09:00:03  rwahl
- *	Adapted boolean definitions according sktypes.
- *	
- *	Revision 1.97  2002/09/05 15:07:03  rwahl
- *	Editorial changes.
- *	
- *	Revision 1.96  2002/09/05 11:04:14  rwahl
- *	- Rx/Tx packets statistics of virtual port were zero on link down (#10750)
- *	- For GMAC the overflow IRQ for Rx longframe counter was not counted.
- *	- Incorrect calculation for oids OID_SKGE_RX_HW_ERROR_CTS,
- *	  OID_SKGE_IN_ERRORS_CTS,  OID_GEN_RCV_ERROR.
- *	- Moved correction for OID_SKGE_STAT_RX_TOO_LONG to GetPhysStatVal().
- *	- Editorial changes.
- *	
- *	Revision 1.95  2002/09/04 08:53:37  rwahl
- *	- Incorrect statistics for Rx_too_long counter with jumbo frame (#10751)
- *	- StatRxFrameTooLong & StatRxPMaccErr counters were not reset.
- *	- Fixed compiler warning for debug msg arg types.
- *	
- *	Revision 1.94  2002/08/09 15:42:14  rwahl
- *	- Fixed StatAddr table for GMAC.
- *	- VirtualConf(): returned indeterminated status for speed oids if no
- *	  active port.
- *	
- *	Revision 1.93  2002/08/09 11:04:59  rwahl
- *	Added handler for link speed caps.
- *	
- *	Revision 1.92  2002/08/09 09:43:03  rwahl
- *	- Added handler for NDIS OID_PNP_xxx ids.
- *	
- *	Revision 1.91  2002/07/17 19:53:03  rwahl
- *	- Added StatOvrflwBit table for XMAC & GMAC.
- *	- Extended StatAddr table for GMAC. Added check of number of counters
- *	  in enumeration and size of StatAddr table on init level.
- *	- Added use of GIFunc table.
- *	- ChipSet is not static anymore,
- *	- Extended SIRQ event handler for both mac types.
- *	- Fixed rx short counter bug (#10620)
- *	- Added handler for oids SKGE_SPEED_MODE & SKGE_SPEED_STATUS.
- *	- Extended GetPhysStatVal() for GMAC.
- *	- Editorial changes.
- *	
- *	Revision 1.90  2002/05/22 08:56:25  rwahl
- *	- Moved OID table to separate source file.
- *	- Fix: TX_DEFFERAL counter incremented in full-duplex mode.
- *	- Use string definitions for error msgs.
- *	
- *	Revision 1.89  2001/09/18 10:01:30  mkunz
- *	some OID's fixed for dualnetmode
- *	
- *	Revision 1.88  2001/08/02 07:58:08  rwahl
- *	- Fixed NetIndex to csum module at ResetCounter().
- *	
- *	Revision 1.87  2001/04/06 13:35:09  mkunz
- *	-Bugs fixed in handling of OID_SKGE_MTU and the VPD OID's
- *	
- *	Revision 1.86  2001/03/09 09:18:03  mkunz
- *	Changes in SK_DBG_MSG
- *	
- *	Revision 1.85  2001/03/08 09:37:31  mkunz
- *	Bugfix in ResetCounter for Pnmi.Port structure
- *	
- *	Revision 1.84  2001/03/06 09:04:55  mkunz
- *	Made some changes in instance calculation
- *	
- *	Revision 1.83  2001/02/15 09:15:32  mkunz
- *	Necessary changes for dual net mode added
- *	
- *	Revision 1.82  2001/02/07 08:24:19  mkunz
- *	-Made changes in handling of OID_SKGE_MTU
- *	
- *	Revision 1.81  2001/02/06 09:58:00  mkunz
- *	-Vpd bug fixed
- *	-OID_SKGE_MTU added
- *	-pnmi support for dual net mode. Interface function and macros extended
- *	
- *	Revision 1.80  2001/01/22 13:41:35  rassmann
- *	Supporting two nets on dual-port adapters.
- *	
- *	Revision 1.79  2000/12/05 14:57:40  cgoos
- *	SetStruct failed before first Link Up (link mode of virtual
- *	port "INDETERMINATED").
- *	
- *	Revision 1.78  2000/09/12 10:44:58  cgoos
- *	Fixed SK_PNMI_STORE_U32 calls with typecasted argument.
- *	
- *	Revision 1.77  2000/09/07 08:10:19  rwahl
- *	- Modified algorithm for 64bit NDIS statistic counters;
- *	  returns 64bit or 32bit value depending on passed buffer
- *	  size. Indicate capability for 64bit NDIS counter, if passed
- *	  buffer size is zero. OID_GEN_XMIT_ERROR, OID_GEN_RCV_ERROR,
- *	  and OID_GEN_RCV_NO_BUFFER handled as 64bit counter, too.
- *	- corrected OID_SKGE_RLMT_PORT_PREFERRED.
- *	
- *	Revision 1.76  2000/08/03 15:23:39  rwahl
- *	- Correction for FrameTooLong counter has to be moved to OID handling
- *	  routines (instead of statistic counter routine).
- *	- Fix in XMAC Reset Event handling: Only offset counter for hardware
- *	  statistic registers are updated.
- *	
- *	Revision 1.75  2000/08/01 16:46:05  rwahl
- *	- Added StatRxLongFrames counter and correction of FrameTooLong counter.
- *	- Added directive to control width (default = 32bit) of NDIS statistic
- *	  counters (SK_NDIS_64BIT_CTR).
- *	
- *	Revision 1.74  2000/07/04 11:41:53  rwahl
- *	- Added volition connector type.
- *	
- *	Revision 1.73  2000/03/15 16:33:10  rwahl
- *	Fixed bug 10510; wrong reset of virtual port statistic counters.
- *	
- *	Revision 1.72  1999/12/06 16:15:53  rwahl
- *	Fixed problem of instance range for current and factory MAC address.
- *	
- *	Revision 1.71  1999/12/06 10:14:20  rwahl
- *	Fixed bug 10476; set operation for PHY_OPERATION_MODE.
- *	
- *	Revision 1.70  1999/11/22 13:33:34  cgoos
- *	Changed license header to GPL.
- *	
- *	Revision 1.69  1999/10/18 11:42:15  rwahl
- *	Added typecasts for checking event dependent param (debug only).
- *	
- *	Revision 1.68  1999/10/06 09:35:59  cgoos
- *	Added state check to PHY_READ call (hanged if called during startup).
- *	
- *	Revision 1.67  1999/09/22 09:53:20  rwahl
- *	- Read Broadcom register for updating FCS error counter (1000Base-T).
- *
- *	Revision 1.66  1999/08/26 13:47:56  rwahl
- *	Added SK_DRIVER_SENDEVENT when queueing RLMT_CHANGE_THRES trap.
- *	
- *	Revision 1.65  1999/07/26 07:49:35  cgoos
- *	Added two typecasts to avoid compiler warnings.
- *	
- *	Revision 1.64  1999/05/20 09:24:12  cgoos
- *	Changes for 1000Base-T (sensors, Master/Slave).
- *
- *	Revision 1.63  1999/04/13 15:11:58  mhaveman
- *	Moved include of rlmt.h to header skgepnmi.h because some macros
- *	are needed there.
- *	
- *	Revision 1.62  1999/04/13 15:08:07  mhaveman
- *	Replaced again SK_RLMT_CHECK_LINK with SK_PNMI_RLMT_MODE_CHK_LINK
- *	to grant unified interface by only using the PNMI header file.
- *	SK_PNMI_RLMT_MODE_CHK_LINK is defined the same as SK_RLMT_CHECK_LINK.
- *	
- *	Revision 1.61  1999/04/13 15:02:48  mhaveman
- *	Changes caused by review:
- *	-Changed some comments
- *	-Removed redundant check for OID_SKGE_PHYS_FAC_ADDR
- *	-Optimized PRESET check.
- *	-Meaning of error SK_ADDR_DUPLICATE_ADDRESS changed. Set of same
- *	 address will now not cause this error. Removed corresponding check.
- *	
- *	Revision 1.60  1999/03/23 10:41:23  mhaveman
- *	Added comments.
- *	
- *	Revision 1.59  1999/02/19 08:01:28  mhaveman
- *	Fixed bug 10372 that after counter reset all ports were displayed
- *	as inactive.
- *	
- *	Revision 1.58  1999/02/16 18:04:47  mhaveman
- *	Fixed problem of twisted OIDs SENSOR_WAR_TIME and SENSOR_ERR_TIME.
- *	
- *	Revision 1.56  1999/01/27 12:29:11  mhaveman
- *	SkTimerStart was called with time value in milli seconds but needs
- *	micro seconds.
- *	
- *	Revision 1.55  1999/01/25 15:00:38  mhaveman
- *	Added support to allow multiple ports to be active. If this feature in
- *	future will be used, the Management Data Base variables PORT_ACTIVE
- *	and PORT_PREFERED should be moved to the port specific part of RLMT.
- *	Currently they return the values of the first active physical port
- *	found. A set to the virtual port will actually change all active
- *	physical ports. A get returns the melted values of all active physical
- *	ports. If the port values differ a return value INDETERMINATED will
- *	be returned. This effects especially the CONF group.
- *	
- *	Revision 1.54  1999/01/19 10:10:22  mhaveman
- *	-Fixed bug 10354: Counter values of virtual port were wrong after port
- *	 switches
- *	-Added check if a switch to the same port is notified.
- *	
- *	Revision 1.53  1999/01/07 09:25:21  mhaveman
- *	Forgot to initialize a variable.
- *	
- *	Revision 1.52  1999/01/05 10:34:33  mhaveman
- *	Fixed little error in RlmtChangeEstimate calculation.
- *	
- *	Revision 1.51  1999/01/05 09:59:07  mhaveman
- *	-Moved timer start to init level 2
- *	-Redesigned port switch average calculation to avoid 64bit
- *	 arithmetic.
- *	
- *	Revision 1.50  1998/12/10 15:13:59  mhaveman
- *	-Fixed: PHYS_CUR_ADDR returned wrong addresses
- *	-Fixed: RLMT_PORT_PREFERED and RLMT_CHANGE_THRES preset returned
- *	        always BAD_VALUE.
- *	-Fixed: TRAP buffer seemed to sometimes suddenly empty
- *	
- *	Revision 1.49  1998/12/09 16:17:07  mhaveman
- *	Fixed: Couldnot delete VPD keys on UNIX.
- *	
- *	Revision 1.48  1998/12/09 14:11:10  mhaveman
- *	-Add: Debugmessage for XMAC_RESET supressed to minimize output.
- *	-Fixed: RlmtChangeThreshold will now be initialized.
- *	-Fixed: VPD_ENTRIES_LIST extended value with unnecessary space char.
- *	-Fixed: On VPD key creation an invalid key name could be created
- *	        (e.g. A5)
- *	-Some minor changes in comments and code.
- *	
- *	Revision 1.47  1998/12/08 16:00:31  mhaveman
- *	-Fixed: For RLMT_PORT_ACTIVE will now be returned a 0 if no port
- *		is active.
- *	-Fixed: For the RLMT statistics group only the last value was
- *		returned and the rest of the buffer was filled with 0xff
- *	-Fixed: Mysteriously the preset on RLMT_MODE still returned
- *		BAD_VALUE.
- *	Revision 1.46  1998/12/08 10:04:56  mhaveman
- *	-Fixed: Preset on RLMT_MODE returned always BAD_VALUE error.
- *	-Fixed: Alignment error in GetStruct
- *	-Fixed: If for Get/Preset/SetStruct the buffer size is equal or
- *	        larger than SK_PNMI_MIN_STRUCT_SIZE the return value is stored
- *		to the buffer. In this case the caller should always return
- *	        ok to its upper routines. Only if the buffer size is less
- *	        than SK_PNMI_MIN_STRUCT_SIZE and the return value is unequal
- *	        to 0, an error should be returned by the caller.
- *	-Fixed: Wrong number of instances with RLMT statistic.
- *	-Fixed: Return now SK_LMODE_STAT_UNKNOWN if the LinkModeStatus is 0.
- *	
- *	Revision 1.45  1998/12/03 17:17:24  mhaveman
- *	-Removed for VPD create action the buffer size limitation to 4 bytes.
- *	-Pass now physical/active physical port to ADDR for CUR_ADDR set
- *	
- *	Revision 1.44  1998/12/03 15:14:35  mhaveman
- *	Another change to Vpd instance evaluation.
- *
- *	Revision 1.43  1998/12/03 14:18:10  mhaveman
- *	-Fixed problem in PnmiSetStruct. It was impossible to set any value.
- *	-Removed VPD key evaluation for VPD_FREE_BYTES and VPD_ACTION.
- *
- *	Revision 1.42  1998/12/03 11:31:47  mhaveman
- *	Inserted cast to satisfy lint.
- *	
- *	Revision 1.41  1998/12/03 11:28:16  mhaveman
- *	Removed SK_PNMI_CHECKPTR
- *	
- *	Revision 1.40  1998/12/03 11:19:07  mhaveman
- *	Fixed problems
- *	-A set to virtual port will now be ignored. A set with broadcast
- *	 address to any port will be ignored.
- *	-GetStruct function made VPD instance calculation wrong.
- *	-Prefered port returned -1 instead of 0.
- *	
- *	Revision 1.39  1998/11/26 15:30:29  mhaveman
- *	Added sense mode to link mode.
- *	
- *	Revision 1.38  1998/11/23 15:34:00  mhaveman
- *	-Fixed bug for RX counters. On an RX overflow interrupt the high
- *	 words of all RX counters were incremented.
- *	-SET operations on FLOWCTRL_MODE and LINK_MODE accept now the
- *	 value 0, which has no effect. It is usefull for multiple instance
- *	 SETs.
- *	
- *	Revision 1.37  1998/11/20 08:02:04  mhaveman
- *	-Fixed: Ports were compared with MAX_SENSORS
- *	-Fixed: Crash in GetTrapEntry with MEMSET macro
- *	-Fixed: Conversions between physical, logical port index and instance
- *	
- *	Revision 1.36  1998/11/16 07:48:53  mhaveman
- *	Casted SK_DRIVER_SENDEVENT with (void) to eleminate compiler warnings
- *	on Solaris.
- *	
- *	Revision 1.35  1998/11/16 07:45:34  mhaveman
- *	SkAddrOverride now returns value and will be checked.
- *
- *	Revision 1.34  1998/11/10 13:40:37  mhaveman
- *	Needed to change interface, because NT driver needs a return value
- *	of needed buffer space on TOO_SHORT errors. Therefore all
- *	SkPnmiGet/Preset/Set functions now have a pointer to the length
- *	parameter, where the needed space on error is returned.
- *	
- *	Revision 1.33  1998/11/03 13:52:46  mhaveman
- *	Made file lint conform.
- *	
- *	Revision 1.32  1998/11/03 13:19:07  mhaveman
- *	The events SK_HWEV_SET_LMODE and SK_HWEV_SET_FLOWMODE pass now in
- *	Para32[0] the physical MAC index and in Para32[1] the new mode.
- *	
- *	Revision 1.31  1998/11/03 12:30:40  gklug
- *	fix: compiler warning memset
- *
- *	Revision 1.30  1998/11/03 12:04:46  mhaveman
- *	Fixed problem in SENSOR_VALUE, which wrote beyond the buffer end
- *	Fixed alignment problem with CHIPSET.
- *
- *	Revision 1.29  1998/11/02 11:23:54  mhaveman
- *	Corrected SK_ERROR_LOG to SK_ERR_LOG. Sorry.
- *	
- *	Revision 1.28  1998/11/02 10:47:16  mhaveman
- *	Added syslog messages for internal errors.
- *	
- *	Revision 1.27  1998/10/30 15:48:06  mhaveman
- *	Fixed problems after simulation of SK_PNMI_EVT_CHG_EST_TIMER and
- *	RlmtChangeThreshold calculation.
- *	
- *	Revision 1.26  1998/10/29 15:36:55  mhaveman
- *	-Fixed bug in trap buffer handling.
- *	-OID_SKGE_DRIVER_DESCR, OID_SKGE_DRIVER_VERSION, OID_SKGE_HW_DESCR,
- *	 OID_SKGE_HW_VERSION, OID_SKGE_VPD_ENTRIES_LIST, OID_SKGE_VPD_KEY,
- *	 OID_SKGE_VPD_VALUE, and OID_SKGE_SENSOR_DESCR return values with
- *	 a leading octet before each string storing the string length.
- *	-Perform a RlmtUpdate during SK_PNMI_EVT_XMAC_RESET to minimize
- *	 RlmtUpdate calls in GetStatVal.
- *	-Inserted SK_PNMI_CHECKFLAGS macro increase readability.
- *	
- *	Revision 1.25  1998/10/29 08:50:36  mhaveman
- *	Fixed problems after second event simulation.
- *	
- *	Revision 1.24  1998/10/28 08:44:37  mhaveman
- *	-Fixed alignment problem
- *	-Fixed problems during event simulation
- *	-Fixed sequence of error return code (INSTANCE -> ACCESS -> SHORT)
- *	-Changed type of parameter Instance back to SK_U32 because of VPD
- *	-Updated new VPD function calls
- *
- *	Revision 1.23  1998/10/23 10:16:37  mhaveman
- *	Fixed bugs after buffer test simulation.
- *	
- *	Revision 1.22  1998/10/21 13:23:52  mhaveman
- *	-Call syntax of SkOsGetTime() changed to SkOsGetTime(pAc).
- *	-Changed calculation of hundrets of seconds.
- *
- *	Revision 1.20  1998/10/20 07:30:45  mhaveman
- *	Made type changes to unsigned integer where possible.
- *	
- *	Revision 1.19  1998/10/19 10:51:30  mhaveman
- *	-Made Bug fixes after simulation run
- *	-Renamed RlmtMAC... to RlmtPort...
- *	-Marked workarounds with Errata comments
- *	
- *	Revision 1.18  1998/10/14 07:50:08  mhaveman
- *	-For OID_SKGE_LINK_STATUS the link down detection has moved from RLMT
- *	 to HWACCESS.
- *	-Provided all MEMCPY/MEMSET macros with (char *) pointers, because
- *	 Solaris throwed warnings when mapping to bcopy/bset.
- *
- *	Revision 1.17  1998/10/13 07:42:01  mhaveman
- *	-Added OIDs OID_SKGE_TRAP_NUMBER and OID_SKGE_ALL_DATA
- *	-Removed old cvs history entries
- *	-Renamed MacNumber to PortNumber
- *
- *	Revision 1.16  1998/10/07 10:52:49  mhaveman
- *	-Inserted handling of some OID_GEN_ Ids for windows
- *	-Fixed problem with 803.2 statistic.
- *	
- *	Revision 1.15  1998/10/01 09:16:29  mhaveman
- *	Added Debug messages for function call and UpdateFlag tracing.
- *	
- *	Revision 1.14  1998/09/30 13:39:09  mhaveman
- *	-Reduced namings of 'MAC' by replacing them with 'PORT'.
- *	-Completed counting of OID_SKGE_RX_HW_ERROR_CTS,
- *       OID_SKGE_TX_HW_ERROR_CTS,
- *	 OID_SKGE_IN_ERRORS_CTS, and OID_SKGE_OUT_ERROR_CTS.
- *	-SET check for RlmtMode
- *	
- *	Revision 1.13  1998/09/28 13:13:08  mhaveman
- *	Hide strcmp, strlen, and strncpy behind macros SK_STRCMP, SK_STRLEN,
- *	and SK_STRNCPY. (Same reasons as for mem.. and MEM..)
- *	
- *	Revision 1.12  1998/09/16 08:18:36  cgoos
- *	Fix: XM_INxx and XM_OUTxx called with different parameter order:
- *      sometimes IoC,Mac,...  sometimes Mac,IoC,... Now always first variant.
- *	Fix: inserted "Pnmi." into some pAC->pDriverDescription / Version.
- *	Change: memset, memcpy to makros SK_MEMSET, SK_MEMCPY
- *
- *	Revision 1.11  1998/09/04 17:01:45  mhaveman
- *	Added SyncCounter as macro and OID_SKGE_.._NO_DESCR_CTS to
- *	OID_SKGE_RX_NO_BUF_CTS.
- *	
- *	Revision 1.10  1998/09/04 14:35:35  mhaveman
- *	Added macro counters, that are counted by driver.
- *	
- ****************************************************************************/
-
-
 #ifndef _lint
 static const char SysKonnectFileId[] =
-	"@(#) $Id: skgepnmi.c,v 1.109 2003/07/17 14:15:24 tschilli Exp $ (C) Marvell.";
+	"@(#) $Id: skgepnmi.c,v 1.111 2003/09/15 13:35:35 tschilli Exp $ (C) Marvell.";
 #endif /* !_lint */
 
 #include "h/skdrv1st.h"
@@ -4008,14 +3559,6 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 #endif /* SK_NDIS_64BIT_CTR */
 		break;
 
-	case OID_SKGE_BOARDLEVEL:
-		if (*pLen < sizeof(SK_U32)) {
-
-			*pLen = sizeof(SK_U32);
-			return (SK_PNMI_ERR_TOO_SHORT);
-		}
-		break;
-
 	case OID_SKGE_PORT_NUMBER:
 	case OID_SKGE_DEVICE_TYPE:
 	case OID_SKGE_RESULT:
@@ -4023,6 +3566,9 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 	case OID_GEN_TRANSMIT_QUEUE_LENGTH:
 	case OID_SKGE_TRAP_NUMBER:
 	case OID_SKGE_MDB_VERSION:
+	case OID_SKGE_BOARDLEVEL:
+	case OID_SKGE_CHIPID:
+	case OID_SKGE_RAMSIZE:
 		if (*pLen < sizeof(SK_U32)) {
 
 			*pLen = sizeof(SK_U32);
@@ -4043,6 +3589,7 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 	case OID_SKGE_BUS_WIDTH:
 	case OID_SKGE_SENSOR_NUMBER:
 	case OID_SKGE_CHKSM_NUMBER:
+	case OID_SKGE_VAUXAVAIL:
 		if (*pLen < sizeof(SK_U8)) {
 
 			*pLen = sizeof(SK_U8);
@@ -4234,6 +3781,66 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 		*pLen = Len;
 		break;
 
+	case OID_SKGE_DRIVER_RELDATE:
+		if (pAC->Pnmi.pDriverReleaseDate == NULL) {
+
+			SK_ERR_LOG(pAC, SK_ERRCL_SW, SK_PNMI_ERR030,
+				SK_PNMI_ERR053MSG);
+
+			*pLen = 0;
+			return (SK_PNMI_ERR_GENERAL);
+		}
+
+		Len = SK_STRLEN(pAC->Pnmi.pDriverReleaseDate) + 1;
+		if (Len > SK_PNMI_STRINGLEN1) {
+
+			SK_ERR_LOG(pAC, SK_ERRCL_SW, SK_PNMI_ERR031,
+				SK_PNMI_ERR054MSG);
+
+			*pLen = 0;
+			return (SK_PNMI_ERR_GENERAL);
+		}
+
+		if (*pLen < Len) {
+
+			*pLen = Len;
+			return (SK_PNMI_ERR_TOO_SHORT);
+		}
+		*pBuf = (char)(Len - 1);
+		SK_MEMCPY(pBuf + 1, pAC->Pnmi.pDriverReleaseDate, Len - 1);
+		*pLen = Len;
+		break;
+
+	case OID_SKGE_DRIVER_FILENAME:
+		if (pAC->Pnmi.pDriverFileName == NULL) {
+
+			SK_ERR_LOG(pAC, SK_ERRCL_SW, SK_PNMI_ERR030,
+				SK_PNMI_ERR055MSG);
+
+			*pLen = 0;
+			return (SK_PNMI_ERR_GENERAL);
+		}
+
+		Len = SK_STRLEN(pAC->Pnmi.pDriverFileName) + 1;
+		if (Len > SK_PNMI_STRINGLEN1) {
+
+			SK_ERR_LOG(pAC, SK_ERRCL_SW, SK_PNMI_ERR031,
+				SK_PNMI_ERR056MSG);
+
+			*pLen = 0;
+			return (SK_PNMI_ERR_GENERAL);
+		}
+
+		if (*pLen < Len) {
+
+			*pLen = Len;
+			return (SK_PNMI_ERR_TOO_SHORT);
+		}
+		*pBuf = (char)(Len - 1);
+		SK_MEMCPY(pBuf + 1, pAC->Pnmi.pDriverFileName, Len - 1);
+		*pLen = Len;
+		break;
+
 	case OID_SKGE_HW_DESCR:
 		/*
 		 * The hardware description is located in the VPD. This
@@ -4291,8 +3898,25 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 		*pLen = sizeof(SK_U16);
 		break;
 
+	case OID_SKGE_CHIPID:
+		Val32 = pAC->GIni.GIChipId;
+		SK_PNMI_STORE_U32(pBuf, Val32);
+		*pLen = sizeof(SK_U32);
+		break;
+
+	case OID_SKGE_RAMSIZE:
+		Val32 = pAC->GIni.GIRamSize;
+		SK_PNMI_STORE_U32(pBuf, Val32);
+		*pLen = sizeof(SK_U32);
+		break;
+
+	case OID_SKGE_VAUXAVAIL:
+		*pBuf = (char) pAC->GIni.GIVauxAvail;
+		*pLen = sizeof(char);
+		break;
+
 	case OID_SKGE_BUS_TYPE:
-		*pBuf = (char)SK_PNMI_BUS_PCI;
+		*pBuf = (char) SK_PNMI_BUS_PCI;
 		*pLen = sizeof(char);
 		break;
 
@@ -5435,6 +5059,9 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 		case OID_SKGE_SPEED_CAP:
 		case OID_SKGE_SPEED_MODE:
 		case OID_SKGE_SPEED_STATUS:
+#ifdef SK_PHY_LP_MODE
+		case OID_SKGE_PHY_LP_MODE:
+#endif
 			if (*pLen < (Limit - LogPortIndex) * sizeof(SK_U8)) {
 
 				*pLen = (Limit - LogPortIndex) * sizeof(SK_U8);
@@ -5443,6 +5070,7 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 			break;
 
         case OID_SKGE_MTU:
+        case OID_SKGE_PHY_TYPE:
 			if (*pLen < (Limit - LogPortIndex) * sizeof(SK_U32)) {
 
 				*pLen = (Limit - LogPortIndex) * sizeof(SK_U32);
@@ -5487,6 +5115,49 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 				*pBufPtr = pAC->Pnmi.Connector;
 				Offset += sizeof(char);
 				break;
+
+			case OID_SKGE_PHY_TYPE:
+				if (!pAC->Pnmi.DualNetActiveFlag) { /* SingleNetMode */
+					if (LogPortIndex == 0) {
+						continue;
+					}
+					else {
+						/* Get value for physical ports */
+						PhysPortIndex = SK_PNMI_PORT_LOG2PHYS(
+							pAC, LogPortIndex);
+						Val32 = pAC->GIni.GP[PhysPortIndex].PhyType;
+						SK_PNMI_STORE_U32(pBufPtr, Val32);
+					}
+				}
+				else { /* DualNetMode */
+					
+					Val32 = pAC->GIni.GP[NetIndex].PhyType;
+					SK_PNMI_STORE_U32(pBufPtr, Val32);
+				}
+				Offset += sizeof(SK_U32);
+				break;
+
+#ifdef SK_PHY_LP_MODE
+			case OID_SKGE_PHY_LP_MODE:
+				if (!pAC->Pnmi.DualNetActiveFlag) { /* SingleNetMode */
+					if (LogPortIndex == 0) {
+						continue;
+					}
+					else {
+						/* Get value for physical ports */
+						PhysPortIndex = SK_PNMI_PORT_LOG2PHYS(pAC, LogPortIndex);
+						Val8 = (SK_U8) pAC->GIni.GP[PhysPortIndex].PPhyPowerState;
+						*pBufPtr = Val8;
+					}
+				}
+				else { /* DualNetMode */
+					
+					Val8 = (SK_U8) pAC->GIni.GP[PhysPortIndex].PPhyPowerState;
+					*pBufPtr = Val8;
+				}
+				Offset += sizeof(SK_U8);
+				break;
+#endif
 
 			case OID_SKGE_LINK_CAP:
 				if (!pAC->Pnmi.DualNetActiveFlag) { /* SingleNetMode */
@@ -5803,6 +5474,16 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 			return (SK_PNMI_ERR_BAD_VALUE);
 		}
 		break;
+
+#ifdef SK_PHY_LP_MODE
+	case OID_SKGE_PHY_LP_MODE:
+		if (*pLen < Limit - LogPortIndex) {
+
+			*pLen = Limit - LogPortIndex;
+			return (SK_PNMI_ERR_TOO_SHORT);
+		}
+		break;
+#endif
 
 	case OID_SKGE_MTU:
 		if (*pLen < sizeof(SK_U32)) {
@@ -6160,6 +5841,116 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 
 			Offset += sizeof(SK_U32);
 			break;
+		
+#ifdef SK_PHY_LP_MODE
+		case OID_SKGE_PHY_LP_MODE:
+			/* The preset ends here */
+			if (Action == SK_PNMI_PRESET) {
+
+				return (SK_PNMI_ERR_OK);
+			}
+
+			if (!pAC->Pnmi.DualNetActiveFlag) { /* SingleNetMode */
+				if (LogPortIndex == 0) {
+					Offset = 0;
+					continue;
+				}
+				else {
+					/* Set value for physical ports */
+					PhysPortIndex = SK_PNMI_PORT_LOG2PHYS(pAC, LogPortIndex);
+
+					switch (*(pBuf + Offset)) {
+						case 0:
+							/* If LowPowerMode is active, we can leave it. */
+							if (pAC->GIni.GP[PhysPortIndex].PPhyPowerState) {
+
+								Val32 = SkGmLeaveLowPowerMode(pAC, IoC, PhysPortIndex);
+								
+								if (pAC->GIni.GP[PhysPortIndex].PPhyPowerState < 3)	{
+									
+									SkDrvInitAdapter(pAC);
+								}
+								break;
+							}
+							else {
+								*pLen = 0;
+								return (SK_PNMI_ERR_GENERAL);
+							}
+						case 1:
+						case 2:
+						case 3:
+						case 4:
+							/* If no LowPowerMode is active, we can enter it. */
+							if (!pAC->GIni.GP[PhysPortIndex].PPhyPowerState) {
+
+								if ((*(pBuf + Offset)) < 3)	{
+								
+									SkDrvDeInitAdapter(pAC);
+								}
+
+								Val32 = SkGmEnterLowPowerMode(pAC, IoC, PhysPortIndex, *pBuf);
+								break;
+							}
+							else {
+								*pLen = 0;
+								return (SK_PNMI_ERR_GENERAL);
+							}
+						default:
+							*pLen = 0;
+							return (SK_PNMI_ERR_BAD_VALUE);
+					}
+				}
+			}
+			else { /* DualNetMode */
+				
+				switch (*(pBuf + Offset)) {
+					case 0:
+						/* If we are in a LowPowerMode, we can leave it. */
+						if (pAC->GIni.GP[PhysPortIndex].PPhyPowerState) {
+
+							Val32 = SkGmLeaveLowPowerMode(pAC, IoC, PhysPortIndex);
+							
+							if (pAC->GIni.GP[PhysPortIndex].PPhyPowerState < 3)	{
+
+								SkDrvInitAdapter(pAC);
+							}
+							break;
+						}
+						else {
+							*pLen = 0;
+							return (SK_PNMI_ERR_GENERAL);
+						}
+					
+					case 1:
+					case 2:
+					case 3:
+					case 4:
+						/* If we are not already in LowPowerMode, we can enter it. */
+						if (!pAC->GIni.GP[PhysPortIndex].PPhyPowerState) {
+
+							if ((*(pBuf + Offset)) < 3)	{
+
+								SkDrvDeInitAdapter(pAC);
+							}
+							else {
+
+								Val32 = SkGmEnterLowPowerMode(pAC, IoC, PhysPortIndex, *pBuf);
+							}
+							break;
+						}
+						else {
+							*pLen = 0;
+							return (SK_PNMI_ERR_GENERAL);
+						}
+					
+					default:
+						*pLen = 0;
+						return (SK_PNMI_ERR_BAD_VALUE);
+				}
+			}
+			Offset += sizeof(SK_U8);
+			break;
+#endif
 
 		default:
             SK_DBG_MSG(pAC, SK_DBGMOD_PNMI, SK_DBGCAT_ERR,
@@ -6318,6 +6109,7 @@ char *pBuf)		/* Buffer used for the management data transfer */
 	unsigned int	PhysPortMax;
 	unsigned int	PhysPortIndex;
 	SK_U8		Val8;
+	SK_U32		Val32;
 	SK_BOOL		PortActiveFlag;
 	SK_GEPORT	*pPrt;
 
@@ -6339,6 +6131,14 @@ char *pBuf)		/* Buffer used for the management data transfer */
 		PortActiveFlag = SK_TRUE;
 
 		switch (Id) {
+
+		case OID_SKGE_PHY_TYPE:
+			/* Check if it is the first active port */
+			if (*pBuf == 0) {
+				Val32 = pPrt->PhyType;
+				SK_PNMI_STORE_U32(pBuf, Val32);
+				continue;
+			}
 
 		case OID_SKGE_LINK_CAP:
 
@@ -7974,6 +7774,7 @@ unsigned int TableIndex, /* Index to the Id table */
 SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 {
 
+	SK_U32	DiagStatus;
 	SK_U32	RetCode = SK_PNMI_ERR_GENERAL;
 
 	/*
@@ -8012,7 +7813,8 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 		switch (Id) {
 
 		case OID_SKGE_DIAG_MODE:
-			SK_PNMI_STORE_U32(pBuf, pAC->DiagModeActive);
+			DiagStatus = pAC->Pnmi.DiagAttached;
+			SK_PNMI_STORE_U32(pBuf, DiagStatus);
 			*pLen = sizeof(SK_U32);	
 			RetCode = SK_PNMI_ERR_OK;
 			break;
@@ -8022,7 +7824,6 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 			RetCode = SK_PNMI_ERR_GENERAL;
 			break;
 		}
-
 		return (RetCode); 
 	}
 
@@ -8039,23 +7840,84 @@ SK_U32 NetIndex)	/* NetIndex (0..n), in single net mode always zero */
 
 			/* Handle the SET. */
 			switch (*pBuf) {
-		
-				/* Enter the DIAG mode in the driver. */
-				case 1:
-					/* If DiagMode is not active, we can enter it. */
-					if (!pAC->DiagModeActive) {
 
-						RetCode = SkDrvEnterDiagMode(pAC);	
+				/* Attach the DIAG to this adapter. */
+				case SK_DIAG_ATTACHED:
+					/* Check if we come from running */
+					if (pAC->Pnmi.DiagAttached == SK_DIAG_RUNNING) {
+
+						RetCode = SkDrvLeaveDiagMode(pAC);
+
+					}
+					else if (pAC->Pnmi.DiagAttached == SK_DIAG_IDLE) {
+
+						RetCode = SK_PNMI_ERR_OK;
+					}	
+					
+					else {
+
+						RetCode = SK_PNMI_ERR_GENERAL;
+
+					}
+					
+					if (RetCode == SK_PNMI_ERR_OK) {
+
+						pAC->Pnmi.DiagAttached = SK_DIAG_ATTACHED;
+					}
+					break;
+
+				/* Enter the DIAG mode in the driver. */
+				case SK_DIAG_RUNNING:
+					RetCode = SK_PNMI_ERR_OK;
+					
+					/*
+					 * If DiagAttached is set, we can tell the driver
+					 * to enter the DIAG mode.
+					 */
+					if (pAC->Pnmi.DiagAttached == SK_DIAG_ATTACHED) {
+						/* If DiagMode is not active, we can enter it. */
+						if (!pAC->DiagModeActive) {
+
+							RetCode = SkDrvEnterDiagMode(pAC); 
+						}
+						else {
+
+							RetCode = SK_PNMI_ERR_GENERAL;
+						}
 					}
 					else {
 
 						RetCode = SK_PNMI_ERR_GENERAL;
 					}
+					
+					if (RetCode == SK_PNMI_ERR_OK) {
+
+						pAC->Pnmi.DiagAttached = SK_DIAG_RUNNING;
+					}
 					break;
 
-				/* Leave the DIAG mode in the driver. */
-				case 0:
-					RetCode = SkDrvLeaveDiagMode(pAC);	
+				case SK_DIAG_IDLE:
+					/* Check if we come from running */
+					if (pAC->Pnmi.DiagAttached == SK_DIAG_RUNNING) {
+
+						RetCode = SkDrvLeaveDiagMode(pAC);
+
+					}
+					else if (pAC->Pnmi.DiagAttached == SK_DIAG_ATTACHED) {
+
+						RetCode = SK_PNMI_ERR_OK;
+					}	
+					
+					else {
+
+						RetCode = SK_PNMI_ERR_GENERAL;
+
+					}
+
+					if (RetCode == SK_PNMI_ERR_OK) {
+
+						pAC->Pnmi.DiagAttached = SK_DIAG_IDLE;
+					}
 					break;
 
 				default:

@@ -1,7 +1,25 @@
+
 /*
- * linux/arch/parisc/kernel/sys_parisc.c
+ *    PARISC specific syscalls
  *
- * this implements syscalls which are handled per-arch.
+ *    Copyright (C) 1999-2003 Matthew Wilcox <willy at parisc-linux.org>
+ *    Copyright (C) 2000-2003 Paul Bame <bame at parisc-linux.org>
+ *    Copyright (C) 2001 Thomas Bogendoerfer <tsbogend at parisc-linux.org>
+ *
+ *
+ *    This program is free software; you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 2 of the License, or
+ *    (at your option) any later version.
+ *
+ *    This program is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with this program; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <asm/uaccess.h>
@@ -93,17 +111,13 @@ static unsigned long get_shared_area(struct address_space *mapping,
 unsigned long arch_get_unmapped_area(struct file *filp, unsigned long addr,
 		unsigned long len, unsigned long pgoff, unsigned long flags)
 {
-	struct inode *inode;
-
 	if (len > TASK_SIZE)
 		return -ENOMEM;
 	if (!addr)
 		addr = TASK_UNMAPPED_BASE;
 
-	inode = filp ? filp->f_dentry->d_inode : NULL;
-
-	if (inode && (flags & MAP_SHARED)) {
-		addr = get_shared_area(inode->i_mapping, addr, len, pgoff);
+	if (filp && (flags & MAP_SHARED)) {
+		addr = get_shared_area(filp->f_mapping, addr, len, pgoff);
 	} else {
 		addr = get_unshared_area(addr, len);
 	}

@@ -71,11 +71,12 @@ struct hci_dev {
 	__u8	 	type;
 	bdaddr_t	bdaddr;
 	__u8		features[8];
+	__u16		voice_setting;
 
 	__u16		pkt_type;
 	__u16		link_policy;
 	__u16		link_mode;
-	
+
 	atomic_t 	cmd_cnt;
 	unsigned int 	acl_cnt;
 	unsigned int 	sco_cnt;
@@ -88,7 +89,7 @@ struct hci_dev {
 	unsigned long   cmd_last_tx;
 	unsigned long   acl_last_tx;
 	unsigned long   sco_last_tx;
-	
+
 	struct tasklet_struct 	cmd_task;
 	struct tasklet_struct	rx_task;
 	struct tasklet_struct 	tx_task;
@@ -119,7 +120,7 @@ struct hci_dev {
 #endif
 
 	struct module           *owner;
-	
+
 	int (*open)(struct hci_dev *hdev);
 	int (*close)(struct hci_dev *hdev);
 	int (*flush)(struct hci_dev *hdev);
@@ -174,6 +175,12 @@ static inline void inquiry_cache_init(struct hci_dev *hdev)
 	struct inquiry_cache *c = &hdev->inq_cache;
 	spin_lock_init(&c->lock);
 	c->list = NULL;
+}
+
+static inline int inquiry_cache_empty(struct hci_dev *hdev)
+{
+	struct inquiry_cache *c = &hdev->inq_cache;
+	return (c->list == NULL);
 }
 
 static inline long inquiry_cache_age(struct hci_dev *hdev)
@@ -281,10 +288,12 @@ static inline void hci_conn_hold(struct hci_conn *conn)
 static inline void hci_conn_put(struct hci_conn *conn)
 {
 	if (atomic_dec_and_test(&conn->refcnt)) {
-		if (conn->type == SCO_LINK)
+		if (conn->type == ACL_LINK) {
+			unsigned long timeo = (conn->out) ?
+				HCI_DISCONN_TIMEOUT : HCI_DISCONN_TIMEOUT * 2;
+			hci_conn_set_timer(conn, timeo);
+		} else
 			hci_conn_set_timer(conn, HZ / 100);
-		else if (conn->out)
-			hci_conn_set_timer(conn, HCI_DISCONN_TIMEOUT);
 	}
 }
 

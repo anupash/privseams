@@ -60,6 +60,9 @@ static char *acpi_table_signatures[ACPI_TABLE_COUNT] = {
 	[ACPI_HPET]		= "HPET",
 };
 
+static char *mps_inti_flags_polarity[] = { "dfl", "high", "res", "low" };
+static char *mps_inti_flags_trigger[] = { "dfl", "edge", "res", "level" };
+
 /* System Description Table (RSDT/XSDT) */
 struct acpi_table_sdt {
 	unsigned long		pa;
@@ -136,8 +139,14 @@ acpi_table_print_madt_entry (
 	{
 		struct acpi_table_int_src_ovr *p =
 			(struct acpi_table_int_src_ovr*) header;
-		printk(KERN_INFO PREFIX "INT_SRC_OVR (bus[%d] irq[0x%x] global_irq[0x%x] polarity[0x%x] trigger[0x%x])\n",
-			p->bus, p->bus_irq, p->global_irq, p->flags.polarity, p->flags.trigger);
+		printk(KERN_INFO PREFIX "INT_SRC_OVR (bus %d bus_irq %d global_irq %d %s %s)\n",
+			p->bus, p->bus_irq, p->global_irq,
+			mps_inti_flags_polarity[p->flags.polarity],
+			mps_inti_flags_trigger[p->flags.trigger]);
+		if(p->flags.reserved)
+			printk(KERN_INFO PREFIX "INT_SRC_OVR unexpected reserved flags: 0x%x\n",
+				p->flags.reserved);
+
 	}
 		break;
 
@@ -145,8 +154,9 @@ acpi_table_print_madt_entry (
 	{
 		struct acpi_table_nmi_src *p =
 			(struct acpi_table_nmi_src*) header;
-		printk(KERN_INFO PREFIX "NMI_SRC (polarity[0x%x] trigger[0x%x] global_irq[0x%x])\n",
-			p->flags.polarity, p->flags.trigger, p->global_irq);
+		printk(KERN_INFO PREFIX "NMI_SRC (%s %s global_irq %d)\n",
+			mps_inti_flags_polarity[p->flags.polarity],
+			mps_inti_flags_trigger[p->flags.trigger], p->global_irq);
 	}
 		break;
 
@@ -154,8 +164,10 @@ acpi_table_print_madt_entry (
 	{
 		struct acpi_table_lapic_nmi *p =
 			(struct acpi_table_lapic_nmi*) header;
-		printk(KERN_INFO PREFIX "LAPIC_NMI (acpi_id[0x%02x] polarity[0x%x] trigger[0x%x] lint[0x%x])\n",
-			p->acpi_id, p->flags.polarity, p->flags.trigger, p->lint);
+		printk(KERN_INFO PREFIX "LAPIC_NMI (acpi_id[0x%02x] %s %s lint[0x%x])\n",
+			p->acpi_id,
+			mps_inti_flags_polarity[p->flags.polarity],
+			mps_inti_flags_trigger[p->flags.trigger], p->lint);
 	}
 		break;
 
@@ -190,8 +202,10 @@ acpi_table_print_madt_entry (
 	{
 		struct acpi_table_plat_int_src *p =
 			(struct acpi_table_plat_int_src*) header;
-		printk(KERN_INFO PREFIX "PLAT_INT_SRC (polarity[0x%x] trigger[0x%x] type[0x%x] id[0x%04x] eid[0x%x] iosapic_vector[0x%x] global_irq[0x%x]\n",
-			p->flags.polarity, p->flags.trigger, p->type, p->id, p->eid, p->iosapic_vector, p->global_irq);
+		printk(KERN_INFO PREFIX "PLAT_INT_SRC (%s %s type[0x%x] id[0x%04x] eid[0x%x] iosapic_vector[0x%x] global_irq[0x%x]\n",
+			mps_inti_flags_polarity[p->flags.polarity],
+			mps_inti_flags_trigger[p->flags.trigger],
+			p->type, p->id, p->eid, p->iosapic_vector, p->global_irq);
 	}
 		break;
 
@@ -262,10 +276,17 @@ acpi_get_table_header_early (
 
 	/* Map the DSDT header via the pointer in the FADT */
 	if (id == ACPI_DSDT) {
-		struct acpi_table_fadt *fadt = (struct acpi_table_fadt *) *header;
+		struct fadt_descriptor_rev2 *fadt = (struct fadt_descriptor_rev2 *) *header;
 
-		*header = (void *) __acpi_map_table(fadt->dsdt_addr,
-				sizeof(struct acpi_table_header));
+		if (fadt->revision == 3 && fadt->Xdsdt) {
+			*header = (void *) __acpi_map_table(fadt->Xdsdt,
+					sizeof(struct acpi_table_header));
+		} else if (fadt->V1_dsdt) {
+			*header = (void *) __acpi_map_table(fadt->V1_dsdt,
+					sizeof(struct acpi_table_header));
+		} else
+			*header = 0;
+
 		if (!*header) {
 			printk(KERN_WARNING PREFIX "Unable to map DSDT\n");
 			return -ENODEV;
@@ -281,13 +302,14 @@ acpi_table_parse_madt_family (
 	enum acpi_table_id	id,
 	unsigned long		madt_size,
 	int			entry_id,
-	acpi_madt_entry_handler	handler)
+	acpi_madt_entry_handler	handler,
+	unsigned int		max_entries)
 {
 	void			*madt = NULL;
-	acpi_table_entry_header	*entry = NULL;
-	unsigned long		count = 0;
-	unsigned long		madt_end = 0;
-	unsigned int			i = 0;
+	acpi_table_entry_header	*entry;
+	unsigned int		count = 0;
+	unsigned long		madt_end;
+	unsigned int		i;
 
 	if (!handler)
 		return -EINVAL;
@@ -321,12 +343,17 @@ acpi_table_parse_madt_family (
 		((unsigned long) madt + madt_size);
 
 	while (((unsigned long) entry) < madt_end) {
-		if (entry->type == entry_id) {
-			count++;
+		if (entry->type == entry_id &&
+		    (!max_entries || count++ < max_entries))
 			handler(entry);
-		}
+
 		entry = (acpi_table_entry_header *)
 			((unsigned long) entry + entry->length);
+	}
+	if (max_entries && count > max_entries) {
+		printk(KERN_WARNING PREFIX "[%s:0x%02x] ignored %i entries of "
+		       "%i found\n", acpi_table_signatures[id], entry_id,
+		       count - max_entries, count);
 	}
 
 	return count;
@@ -336,10 +363,11 @@ acpi_table_parse_madt_family (
 int __init
 acpi_table_parse_madt (
 	enum acpi_madt_entry_id	id,
-	acpi_madt_entry_handler	handler)
+	acpi_madt_entry_handler	handler,
+	unsigned int max_entries)
 {
 	return acpi_table_parse_madt_family(ACPI_APIC, sizeof(struct acpi_table_madt),
-					    id, handler);
+					    id, handler, max_entries);
 }
 
 
@@ -564,4 +592,3 @@ acpi_table_init (void)
 
 	return 0;
 }
-

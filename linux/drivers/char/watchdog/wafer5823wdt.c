@@ -109,7 +109,7 @@ static ssize_t wafwdt_write(struct file *file, const char *buf, size_t count, lo
 			/* In case it was set long ago */
 			expect_close = 0;
 
-			/* scan to see wether or not we got the magic character */
+			/* scan to see whether or not we got the magic character */
 			for (i = 0; i != count; i++) {
 				char c;
 				if (get_user(c, buf + i))
@@ -182,7 +182,7 @@ static int wafwdt_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 	}
 
 	default:
-		return -ENOTTY;
+		return -ENOIOCTLCMD;
 	}
 	return 0;
 }
@@ -330,5 +330,6 @@ module_exit(wafwdt_exit);
 MODULE_AUTHOR("Justin Cormack");
 MODULE_DESCRIPTION("ICP Wafer 5823 Single Board Computer WDT driver");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS_MISCDEV(WATCHDOG_MINOR);
 
 /* end of wafer5823wdt.c */

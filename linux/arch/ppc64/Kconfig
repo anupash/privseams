@@ -60,7 +60,7 @@ config PPC_ISERIES
 	bool "iSeries"
 
 config PPC_PSERIES
-	bool "pSeries"
+	bool "pSeries / PowerMac G5"
 
 endchoice
 
@@ -71,6 +71,43 @@ config PPC
 config PPC64
 	bool
 	default y
+
+config PPC_OF
+	depends on PPC_PSERIES
+	bool
+	default y
+
+# VMX is pSeries only for now until somebody writes the iSeries
+# exception vectors for it
+config ALTIVEC
+	bool "Support for VMX (Altivec) vector unit"
+	depends on PPC_PSERIES
+	default y
+
+config PPC_PMAC
+	depends on PPC_PSERIES
+	bool "Apple PowerMac G5 support"
+	select ADB_PMU
+
+config PPC_PMAC64
+	bool
+	depends on PPC_PMAC
+	default y
+
+config BOOTX_TEXT
+	bool "Support for early boot text console"
+	depends PPC_OF
+	help
+	  Say Y here to see progress messages from the boot firmware in text
+	  mode. Requires an Open Firmware compatible video card.
+
+config POWER4_ONLY
+	bool "Optimize for POWER4"
+	default n
+	---help---
+	  Cause the compiler to optimize for POWER4 processors. The resulting
+	  binary will not work on POWER3 or RS64 processors when compiled with
+	  binutils 2.15 or later.
 
 config SMP
 	bool "Symmetric multi-processing support"
@@ -97,6 +134,7 @@ config IRQ_ALL_CPUS
 
 config NR_CPUS
 	int "Maximum number of CPUs (2-128)"
+	range 2 128
 	depends on SMP
 	default "32"
 
@@ -130,17 +168,24 @@ config MSCHUNKS
 	depends on PPC_ISERIES
 	default y
 
-config RTAS_FLASH
-	tristate "Firmware flash interface"
-	depends on !PPC_ISERIES
-
-config SCANLOG
-	tristate "Scanlog dump interface"
-	depends on !PPC_ISERIES
 
 config PPC_RTAS
 	bool "Proc interface to RTAS"
 	depends on !PPC_ISERIES
+
+config RTAS_FLASH
+	tristate "Firmware flash interface"
+	depends on PPC_RTAS
+
+config SCANLOG
+	tristate "Scanlog dump interface"
+	depends on PPC_RTAS
+
+config LPARCFG
+	bool "LPAR Configuration Data"
+	help
+	Provide system capacity information via human readable 
+	<key word>=<value> pairs through a /proc/ppc64/lparcfg interface.
 
 endmenu
 
@@ -228,51 +273,9 @@ config CMDLINE
 
 endmenu
 
-source "drivers/base/Kconfig"
-
-source "drivers/mtd/Kconfig"
-
-source "drivers/parport/Kconfig"
-
-source "drivers/pnp/Kconfig"
-
-source "drivers/block/Kconfig"
-
-source "drivers/ide/Kconfig"
-
-source "drivers/scsi/Kconfig"
-
-source "drivers/md/Kconfig"
-
-source "drivers/message/fusion/Kconfig"
-
-source "drivers/ieee1394/Kconfig"
-
-source "drivers/message/i2o/Kconfig"
-
-source "net/Kconfig"
-
-source "drivers/isdn/Kconfig"
-
-source "drivers/telephony/Kconfig"
-
-#
-# input before char - char/joystick depends on it. As does USB.
-#
-source "drivers/input/Kconfig"
-
-source "drivers/char/Kconfig"
-
-source "drivers/media/Kconfig"
+source "drivers/Kconfig"
 
 source "fs/Kconfig"
-
-source "drivers/video/Kconfig"
-
-source "sound/Kconfig"
-
-source "drivers/usb/Kconfig"
-
 
 menu "iSeries device drivers"
 	depends on PPC_ISERIES
@@ -318,7 +321,7 @@ endmenu
 
 config VIOPATH
 	bool
-	depends on PPC_ISERIES
+	depends on VIOCONS || VIODASD || VIOCD || VIOTAPE || VETH
 	default y
 
 source "arch/ppc64/oprofile/Kconfig"
@@ -353,9 +356,16 @@ config MAGIC_SYSRQ
 	  keys are documented in <file:Documentation/sysrq.txt>. Don't say Y
 	  unless you really know what this hack does.
 
+config DEBUGGER
+	bool "Enable debugger hooks"
+	depends on DEBUG_KERNEL
+	help
+	  Include in-kernel hooks for kernel debuggers. Unless you are
+	  intending to debug the kernel, say N here.
+
 config XMON
 	bool "Include xmon kernel debugger"
-	depends on DEBUG_KERNEL
+	depends on DEBUGGER
 	help
 	  Include in-kernel hooks for the xmon kernel monitor/debugger.
 	  Unless you are intending to debug the kernel, say N here.

@@ -375,6 +375,10 @@ struct net_device
 	atomic_t		refcnt;
 	/* delayed register/unregister */
 	struct list_head	todo_list;
+	/* device name hash chain */
+	struct hlist_node	name_hlist;
+	/* device index hash chain */
+	struct hlist_node	index_hlist;
 
 	/* register/unregister state machine */
 	enum { NETREG_UNINITIALIZED=0,
@@ -470,7 +474,14 @@ struct net_device
 	/* class/net/name entry */
 	struct class_device	class_dev;
 	struct net_device_stats* (*last_stats)(struct net_device *);
+	/* how much padding had been added by alloc_netdev() */
+	int padded;
 };
+
+static inline void *netdev_priv(struct net_device *dev)
+{
+	return (char *)dev + ((sizeof(struct net_device) + 31) & ~31);
+}
 
 #define SET_MODULE_OWNER(dev) do { } while (0)
 /* Set the sysfs physical device reference for the network logical device
@@ -496,6 +507,7 @@ extern rwlock_t				dev_base_lock;		/* Device list lock */
 
 extern int			netdev_boot_setup_add(char *name, struct ifmap *map);
 extern int 			netdev_boot_setup_check(struct net_device *dev);
+extern unsigned long		netdev_boot_base(const char *prefix, int unit);
 extern struct net_device    *dev_getbyhwaddr(unsigned short type, char *hwaddr);
 extern struct net_device *__dev_getfirstbyhwtype(unsigned short type);
 extern struct net_device *dev_getfirstbyhwtype(unsigned short type);
@@ -831,7 +843,7 @@ static inline void netif_rx_complete(struct net_device *dev)
 	unsigned long flags;
 
 	local_irq_save(flags);
-	if (!test_bit(__LINK_STATE_RX_SCHED, &dev->state)) BUG();
+	BUG_ON(!test_bit(__LINK_STATE_RX_SCHED, &dev->state));
 	list_del(&dev->poll_list);
 	smp_mb__before_clear_bit();
 	clear_bit(__LINK_STATE_RX_SCHED, &dev->state);
@@ -857,7 +869,7 @@ static inline void netif_poll_enable(struct net_device *dev)
  */
 static inline void __netif_rx_complete(struct net_device *dev)
 {
-	if (!test_bit(__LINK_STATE_RX_SCHED, &dev->state)) BUG();
+	BUG_ON(!test_bit(__LINK_STATE_RX_SCHED, &dev->state));
 	list_del(&dev->poll_list);
 	smp_mb__before_clear_bit();
 	clear_bit(__LINK_STATE_RX_SCHED, &dev->state);

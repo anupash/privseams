@@ -231,18 +231,18 @@ extern void bio_put(struct bio *);
 
 extern void bio_endio(struct bio *, unsigned int, int);
 struct request_queue;
-extern inline int bio_phys_segments(struct request_queue *, struct bio *);
-extern inline int bio_hw_segments(struct request_queue *, struct bio *);
+extern int bio_phys_segments(struct request_queue *, struct bio *);
+extern int bio_hw_segments(struct request_queue *, struct bio *);
 
-extern inline void __bio_clone(struct bio *, struct bio *);
+extern void __bio_clone(struct bio *, struct bio *);
 extern struct bio *bio_clone(struct bio *, int);
 
-extern inline void bio_init(struct bio *);
+extern void bio_init(struct bio *);
 
 extern int bio_add_page(struct bio *, struct page *, unsigned int,unsigned int);
 extern int bio_get_nr_vecs(struct block_device *);
-extern struct bio *bio_map_user(struct block_device *, unsigned long,
-				unsigned int, int);
+extern struct bio *bio_map_user(struct request_queue *, struct block_device *,
+				unsigned long, unsigned int, int);
 extern void bio_unmap_user(struct bio *, int);
 extern void bio_set_pages_dirty(struct bio *bio);
 extern void bio_check_pages_dirty(struct bio *bio);
@@ -266,8 +266,7 @@ extern inline char *bvec_kmap_irq(struct bio_vec *bvec, unsigned long *flags)
 	local_irq_save(*flags);
 	addr = (unsigned long) kmap_atomic(bvec->bv_page, KM_BIO_SRC_IRQ);
 
-	if (addr & ~PAGE_MASK)
-		BUG();
+	BUG_ON(addr & ~PAGE_MASK);
 
 	return (char *) addr + bvec->bv_offset;
 }

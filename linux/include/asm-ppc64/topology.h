@@ -13,14 +13,11 @@ static inline int cpu_to_node(int cpu)
 	node = numa_cpu_lookup_table[cpu];
 
 #ifdef DEBUG_NUMA
-	if (node == -1)
-		BUG();
+	BUG_ON(node == -1);
 #endif
 
 	return node;
 }
-
-#define memblk_to_node(memblk)	(memblk)
 
 #define parent_node(node)	(node)
 
@@ -35,8 +32,6 @@ static inline int node_to_first_cpu(int node)
 	tmp = node_to_cpumask(node);
 	return first_cpu(tmp);
 }
-
-#define node_to_memblk(node)	(node)
 
 #define pcibus_to_cpumask(bus)	(cpu_online_map)
 

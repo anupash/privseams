@@ -155,7 +155,7 @@ struct in_device *inetdev_init(struct net_device *dev)
 	dev_hold(dev);
 #ifdef CONFIG_SYSCTL
 	neigh_sysctl_register(dev, in_dev->arp_parms, NET_IPV4,
-			      NET_IPV4_NEIGH, "ipv4");
+			      NET_IPV4_NEIGH, "ipv4", NULL);
 #endif
 	write_lock_bh(&inetdev_lock);
 	dev->ip_ptr = in_dev;
@@ -910,7 +910,7 @@ static int inetdev_event(struct notifier_block *this, unsigned long event,
 		devinet_sysctl_unregister(&in_dev->cnf);
 		neigh_sysctl_unregister(in_dev->arp_parms);
 		neigh_sysctl_register(dev, in_dev->arp_parms, NET_IPV4,
-				      NET_IPV4_NEIGH, "ipv4");
+				      NET_IPV4_NEIGH, "ipv4", NULL);
 		devinet_sysctl_register(in_dev, &in_dev->cnf);
 #endif
 		break;
@@ -1132,7 +1132,7 @@ int ipv4_doint_and_flush_strategy(ctl_table *table, int *name, int nlen,
 
 static struct devinet_sysctl_table {
 	struct ctl_table_header *sysctl_header;
-	ctl_table		devinet_vars[17];
+	ctl_table		devinet_vars[18];
 	ctl_table		devinet_dev[2];
 	ctl_table		devinet_conf_dir[2];
 	ctl_table		devinet_proto_dir[2];
@@ -1264,6 +1264,15 @@ static struct devinet_sysctl_table {
 			.ctl_name	= NET_IPV4_CONF_NOPOLICY,
 			.procname	= "disable_policy",
 			.data		= &ipv4_devconf.no_policy,
+			.maxlen		= sizeof(int),
+			.mode		= 0644,
+			.proc_handler	= &ipv4_doint_and_flush,
+			.strategy	= &ipv4_doint_and_flush_strategy,
+		},
+		{
+			.ctl_name	= NET_IPV4_CONF_FORCE_IGMP_VERSION,
+			.procname	= "force_igmp_version",
+			.data		= &ipv4_devconf.force_igmp_version,
 			.maxlen		= sizeof(int),
 			.mode		= 0644,
 			.proc_handler	= &ipv4_doint_and_flush,

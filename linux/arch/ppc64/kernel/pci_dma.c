@@ -48,11 +48,13 @@
 /* #define MONITOR_TCE 1 */ /* Turn on to sanity check TCE generation. */
 
 
+#ifdef CONFIG_PPC_PSERIES
 /* Initialize so this guy does not end up in the BSS section.
  * Only used to pass OF initialization data set in prom.c into the main 
  * kernel code -- data ultimately copied into tceTables[].
  */
 extern struct _of_tce_table of_tce_table[];
+#endif
 
 extern struct pci_controller* hose_head;
 extern struct pci_controller** hose_tail;
@@ -553,7 +555,7 @@ inline dma_addr_t get_tces( struct TceTable *tbl, unsigned order, void *page, un
 }
 
 #ifdef CONFIG_PPC_ISERIES
-static void tce_free_one_iSeries( struct TceTable *tbl, long tcenum )
+void tce_free_one_iSeries( struct TceTable *tbl, long tcenum )
 {
 	u64 set_tce_rc;
 	union Tce tce;
@@ -701,6 +703,7 @@ void create_tce_tables_for_buses(struct list_head *bus_list)
 	}
 }
 
+#ifdef CONFIG_PPC_PSERIES
 void create_tce_tables_for_busesLP(struct list_head *bus_list)
 {
 	struct list_head *ln;
@@ -722,15 +725,19 @@ void create_tce_tables_for_busesLP(struct list_head *bus_list)
 		create_tce_tables_for_busesLP(&bus->children);
 	}
 }
+#endif
 
 void create_tce_tables(void) {
 	struct pci_dev *dev = NULL;
 	struct device_node *dn, *mydn;
 
+#ifdef CONFIG_PPC_PSERIES
 	if (systemcfg->platform == PLATFORM_PSERIES_LPAR) {
 		create_tce_tables_for_busesLP(&pci_root_buses);
 	}
-	else {
+	else
+#endif
+	{
 		create_tce_tables_for_buses(&pci_root_buses);
 	}
 	/* Now copy the tce_table ptr from the bus devices down to every
@@ -884,6 +891,7 @@ static void getTceTableParmsiSeries(struct iSeries_Device_Node* DevNode,
 static void getTceTableParmsPSeries(struct pci_controller *phb,
 				    struct device_node *dn,
 				    struct TceTable *newTceTable ) {
+#ifdef CONFIG_PPC_PSERIES
 	phandle node;
 	unsigned long i;
 
@@ -953,6 +961,7 @@ static void getTceTableParmsPSeries(struct pci_controller *phb,
 		}
 		i++;
 	}
+#endif
 }
 
 /*
@@ -970,6 +979,7 @@ static void getTceTableParmsPSeries(struct pci_controller *phb,
 static void getTceTableParmsPSeriesLP(struct pci_controller *phb,
 				    struct device_node *dn,
 				    struct TceTable *newTceTable ) {
+#ifdef CONFIG_PPC_PSERIES
 	u32 *dma_window = (u32 *)get_property(dn, "ibm,dma-window", 0);
 	if (!dma_window) {
 		panic("PCI_DMA: getTceTableParmsPSeriesLP: device %s has no ibm,dma-window property!\n", dn->full_name);
@@ -985,13 +995,14 @@ static void getTceTableParmsPSeriesLP(struct pci_controller *phb,
 	PPCDBG(PPCDBG_TCEINIT, "\tnewTceTable->index       = 0x%lx\n", newTceTable->index);
 	PPCDBG(PPCDBG_TCEINIT, "\tnewTceTable->startOffset = 0x%lx\n", newTceTable->startOffset);
 	PPCDBG(PPCDBG_TCEINIT, "\tnewTceTable->size        = 0x%lx\n", newTceTable->size);
+#endif
 }
 
 /* Allocates a contiguous real buffer and creates TCEs over it.
  * Returns the virtual address of the buffer and sets dma_handle
  * to the dma address (tce) of the first page.
  */
-void *pci_alloc_consistent(struct pci_dev *hwdev, size_t size,
+static void *tce_alloc_consistent(struct pci_dev *hwdev, size_t size,
 			   dma_addr_t *dma_handle)
 {
 	struct TceTable * tbl;
@@ -1044,7 +1055,7 @@ void *pci_alloc_consistent(struct pci_dev *hwdev, size_t size,
 	return ret;
 }
 
-void pci_free_consistent(struct pci_dev *hwdev, size_t size,
+static void tce_free_consistent(struct pci_dev *hwdev, size_t size,
 			 void *vaddr, dma_addr_t dma_handle)
 {
 	struct TceTable * tbl;
@@ -1078,7 +1089,7 @@ void pci_free_consistent(struct pci_dev *hwdev, size_t size,
  * need not be page aligned, the dma_addr_t returned will point to the same
  * byte within the page as vaddr.
  */
-dma_addr_t pci_map_single(struct pci_dev *hwdev, void *vaddr, 
+static dma_addr_t tce_map_single(struct pci_dev *hwdev, void *vaddr, 
 			  size_t size, int direction )
 {
 	struct TceTable * tbl;
@@ -1113,7 +1124,7 @@ dma_addr_t pci_map_single(struct pci_dev *hwdev, void *vaddr,
 	return dma_handle;
 }
 
-void pci_unmap_single( struct pci_dev *hwdev, dma_addr_t dma_handle, size_t size, int direction )
+static void tce_unmap_single( struct pci_dev *hwdev, dma_addr_t dma_handle, size_t size, int direction )
 {
 	struct TceTable * tbl;
 	unsigned order, nPages;
@@ -1343,7 +1354,7 @@ static dma_addr_t create_tces_sg( struct TceTable *tbl, struct scatterlist *sg,
 	return dmaAddr;
 }
 
-int pci_map_sg( struct pci_dev *hwdev, struct scatterlist *sg, int nents, int direction )
+static int tce_map_sg( struct pci_dev *hwdev, struct scatterlist *sg, int nents, int direction )
 {
 	struct TceTable * tbl;
 	unsigned numTces;
@@ -1378,7 +1389,7 @@ int pci_map_sg( struct pci_dev *hwdev, struct scatterlist *sg, int nents, int di
 	return num_dma;
 }
 
-void pci_unmap_sg( struct pci_dev *hwdev, struct scatterlist *sg, int nelms, int direction )
+static void tce_unmap_sg( struct pci_dev *hwdev, struct scatterlist *sg, int nelms, int direction )
 {
 	struct TceTable * tbl;
 	unsigned order, numTces, i;
@@ -1419,7 +1430,7 @@ void pci_unmap_sg( struct pci_dev *hwdev, struct scatterlist *sg, int nelms, int
 
 }
 #else
-int pci_map_sg(struct pci_dev *pdev, struct scatterlist *sglist, int nelems,
+static int tce_map_sg(struct pci_dev *pdev, struct scatterlist *sglist, int nelems,
 	       int direction)
 {
 	int i;
@@ -1437,7 +1448,7 @@ int pci_map_sg(struct pci_dev *pdev, struct scatterlist *sglist, int nelems,
 	return nelems;
 }
 
-void pci_unmap_sg(struct pci_dev *pdev, struct scatterlist *sglist, int nelems,
+static void tce_unmap_sg(struct pci_dev *pdev, struct scatterlist *sglist, int nelems,
 		  int direction)
 {
 	while (nelems--) {
@@ -1454,7 +1465,15 @@ void tce_init_pSeries(void)
 {
 	ppc_md.tce_build = tce_build_pSeries;
 	ppc_md.tce_free_one = tce_free_one_pSeries;
+
+	pci_dma_ops.pci_alloc_consistent = tce_alloc_consistent;
+	pci_dma_ops.pci_free_consistent = tce_free_consistent;
+	pci_dma_ops.pci_map_single = tce_map_single;
+	pci_dma_ops.pci_unmap_single = tce_unmap_single;
+	pci_dma_ops.pci_map_sg = tce_map_sg;
+	pci_dma_ops.pci_unmap_sg = tce_unmap_sg;
 }
+
 #endif
 
 #ifdef CONFIG_PPC_ISERIES
@@ -1462,5 +1481,12 @@ void tce_init_iSeries(void)
 {
 	ppc_md.tce_build = tce_build_iSeries;
 	ppc_md.tce_free_one = tce_free_one_iSeries;
+
+	pci_dma_ops.pci_alloc_consistent = tce_alloc_consistent;
+	pci_dma_ops.pci_free_consistent = tce_free_consistent;
+	pci_dma_ops.pci_map_single = tce_map_single;
+	pci_dma_ops.pci_unmap_single = tce_unmap_single;
+	pci_dma_ops.pci_map_sg = tce_map_sg;
+	pci_dma_ops.pci_unmap_sg = tce_unmap_sg;
 }
 #endif

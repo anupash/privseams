@@ -360,28 +360,16 @@ int show_stat(struct seq_file *p, void *v)
 {
 	int i;
 	extern unsigned long total_forks;
-	u64 jif;
+	unsigned long jif;
 	unsigned int sum = 0, user = 0, nice = 0, system = 0, idle = 0, iowait = 0, irq = 0, softirq = 0;
-	struct timeval now; 
-	unsigned long seq;
 
-	/* Atomically read jiffies and time of day */ 
-	do {
-		seq = read_seqbegin(&xtime_lock);
+	jif = - wall_to_monotonic.tv_sec;
+	if (wall_to_monotonic.tv_nsec)
+		--jif;
 
-		jif = get_jiffies_64();
-		do_gettimeofday(&now);
-	} while (read_seqretry(&xtime_lock, seq));
-
-	/* calc # of seconds since boot time */
-	jif -= INITIAL_JIFFIES;
-	jif = ((u64)now.tv_sec * HZ) + (now.tv_usec/(1000000/HZ)) - jif;
-	do_div(jif, HZ);
-
-	for (i = 0; i < NR_CPUS; i++) {
+	for_each_cpu(i) {
 		int j;
 
-		if (!cpu_online(i)) continue;
 		user += kstat_cpu(i).cpustat.user;
 		nice += kstat_cpu(i).cpustat.nice;
 		system += kstat_cpu(i).cpustat.system;
@@ -401,8 +389,7 @@ int show_stat(struct seq_file *p, void *v)
 		jiffies_to_clock_t(iowait),
 		jiffies_to_clock_t(irq),
 		jiffies_to_clock_t(softirq));
-	for (i = 0; i < NR_CPUS; i++){
-		if (!cpu_online(i)) continue;
+	for_each_online_cpu(i) {
 		seq_printf(p, "cpu%d %u %u %u %u %u %u %u\n",
 			i,
 			jiffies_to_clock_t(kstat_cpu(i).cpustat.user),

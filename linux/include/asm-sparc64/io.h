@@ -19,7 +19,7 @@ extern unsigned long bus_to_virt_not_defined_use_pci_map(volatile void *addr);
 #define bus_to_virt bus_to_virt_not_defined_use_pci_map
 
 /* BIO layer definitions. */
-extern unsigned long phys_base;
+extern unsigned long phys_base, kern_base, kern_size;
 #define page_to_phys(page)	((((page) - mem_map) << PAGE_SHIFT)+phys_base)
 #define BIO_VMERGE_BOUNDARY	8192
 
@@ -176,6 +176,10 @@ static __inline__ void _writeq(u64 q, unsigned long addr)
 #define readw(__addr)		(_readw((unsigned long)(__addr)))
 #define readl(__addr)		(_readl((unsigned long)(__addr)))
 #define readq(__addr)		(_readq((unsigned long)(__addr)))
+#define readb_relaxed(a)	readb(a)
+#define readw_relaxed(a)	readw(a)
+#define readl_relaxed(a)	readl(a)
+#define readq_relaxed(a)	readq(a)
 #define writeb(__b, __addr)	(_writeb((u8)(__b), (unsigned long)(__addr)))
 #define writew(__w, __addr)	(_writew((u16)(__w), (unsigned long)(__addr)))
 #define writel(__l, __addr)	(_writel((u32)(__l), (unsigned long)(__addr)))

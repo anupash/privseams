@@ -26,7 +26,6 @@
 #include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/pagemap.h>
-#include <linux/lockd/bind.h>
 #include <linux/smp_lock.h>
 
 #include <asm/uaccess.h>
@@ -266,7 +265,7 @@ out_swapfile:
 int
 nfs_lock(struct file *filp, int cmd, struct file_lock *fl)
 {
-	struct inode * inode = filp->f_dentry->d_inode;
+	struct inode * inode = filp->f_mapping->host;
 	int	status = 0;
 	int	status2;
 
@@ -278,21 +277,17 @@ nfs_lock(struct file *filp, int cmd, struct file_lock *fl)
 	if (!inode)
 		return -EINVAL;
 
-	/* This will be in a forthcoming patch. */
-	if (NFS_PROTO(inode)->version == 4) {
-		printk(KERN_INFO "NFS: file locking over NFSv4 is not yet supported\n");
-		return -EIO;
-	}
-
 	/* No mandatory locks over NFS */
 	if ((inode->i_mode & (S_ISGID | S_IXGRP)) == S_ISGID)
 		return -ENOLCK;
 
-	/* Fake OK code if mounted without NLM support */
-	if (NFS_SERVER(inode)->flags & NFS_MOUNT_NONLM) {
-		if (IS_GETLK(cmd))
-			status = LOCK_USE_CLNT;
-		goto out_ok;
+	if (NFS_PROTO(inode)->version != 4) {
+		/* Fake OK code if mounted without NLM support */
+		if (NFS_SERVER(inode)->flags & NFS_MOUNT_NONLM) {
+			if (IS_GETLK(cmd))
+				status = LOCK_USE_CLNT;
+			goto out_ok;
+		}
 	}
 
 	/*
@@ -302,27 +297,27 @@ nfs_lock(struct file *filp, int cmd, struct file_lock *fl)
 	 * Not sure whether that would be unique, though, or whether
 	 * that would break in other places.
 	 */
-	if (!fl->fl_owner || (fl->fl_flags & FL_POSIX) != FL_POSIX)
+	if (!fl->fl_owner || !(fl->fl_flags & FL_POSIX))
 		return -ENOLCK;
 
 	/*
 	 * Flush all pending writes before doing anything
 	 * with locks..
 	 */
-	status = filemap_fdatawrite(inode->i_mapping);
+	status = filemap_fdatawrite(filp->f_mapping);
 	down(&inode->i_sem);
 	status2 = nfs_wb_all(inode);
 	if (!status)
 		status = status2;
 	up(&inode->i_sem);
-	status2 = filemap_fdatawait(inode->i_mapping);
+	status2 = filemap_fdatawait(filp->f_mapping);
 	if (!status)
 		status = status2;
 	if (status < 0)
 		return status;
 
 	lock_kernel();
-	status = nlmclnt_proc(inode, cmd, fl);
+	status = NFS_PROTO(inode)->lock(filp, cmd, fl);
 	unlock_kernel();
 	if (status < 0)
 		return status;
@@ -335,11 +330,11 @@ nfs_lock(struct file *filp, int cmd, struct file_lock *fl)
 	 */
  out_ok:
 	if ((IS_SETLK(cmd) || IS_SETLKW(cmd)) && fl->fl_type != F_UNLCK) {
-		filemap_fdatawrite(inode->i_mapping);
+		filemap_fdatawrite(filp->f_mapping);
 		down(&inode->i_sem);
 		nfs_wb_all(inode);      /* we may have slept */
 		up(&inode->i_sem);
-		filemap_fdatawait(inode->i_mapping);
+		filemap_fdatawait(filp->f_mapping);
 		nfs_zap_caches(inode);
 	}
 	return status;

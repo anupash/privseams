@@ -253,6 +253,17 @@ struct hci_cp_write_dev_class {
 	__u8     dev_class[3];
 } __attribute__ ((packed));
 
+#define OCF_READ_VOICE_SETTING	0x0025
+struct hci_rp_read_voice_setting {
+	__u8	status;
+	__u16	voice_setting;
+} __attribute__ ((packed));
+
+#define OCF_WRITE_VOICE_SETTING	0x0026
+struct hci_cp_write_voice_setting {
+	__u16	voice_setting;
+} __attribute__ ((packed));
+
 #define OCF_HOST_BUFFER_SIZE	0x0033
 struct hci_cp_host_buffer_size {
 	__u16    acl_mtu;
@@ -406,6 +417,16 @@ struct inquiry_info {
 	__u8     pscan_mode;
 	__u8     dev_class[3];
 	__u16    clock_offset;
+} __attribute__ ((packed));
+
+#define HCI_EV_INQUIRY_RESULT_WITH_RSSI	0x22
+struct inquiry_info_with_rssi {
+	bdaddr_t bdaddr;
+	__u8     pscan_rep_mode;
+	__u8     pscan_period_mode;
+	__u8     dev_class[3];
+	__u16    clock_offset;
+	__u8     rssi;
 } __attribute__ ((packed));
 
 #define HCI_EV_CONN_COMPLETE 	0x03

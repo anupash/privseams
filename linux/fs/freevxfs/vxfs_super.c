@@ -27,8 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#ident "$Id: vxfs_super.c,v 1.29 2002/01/02 22:02:12 hch Exp hch $"
-
 /*
  * Veritas filesystem driver - superblock related routines.
  */
@@ -52,6 +50,8 @@
 MODULE_AUTHOR("Christoph Hellwig");
 MODULE_DESCRIPTION("Veritas Filesystem (VxFS) driver");
 MODULE_LICENSE("Dual BSD/GPL");
+
+MODULE_ALIAS("vxfs"); /* makes mount -t vxfs autoload the module */
 
 
 static void		vxfs_put_super(struct super_block *);

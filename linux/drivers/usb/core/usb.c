@@ -206,12 +206,15 @@ void usb_deregister(struct usb_driver *driver)
  */
 struct usb_interface *usb_ifnum_to_if(struct usb_device *dev, unsigned ifnum)
 {
+	struct usb_host_config *config = dev->actconfig;
 	int i;
 
-	for (i = 0; i < dev->actconfig->desc.bNumInterfaces; i++)
-		if (dev->actconfig->interface[i]->altsetting[0]
+	if (!config)
+		return NULL;
+	for (i = 0; i < config->desc.bNumInterfaces; i++)
+		if (config->interface[i]->altsetting[0]
 				.desc.bInterfaceNumber == ifnum)
-			return dev->actconfig->interface[i];
+			return config->interface[i];
 
 	return NULL;
 }
@@ -233,14 +236,17 @@ struct usb_interface *usb_ifnum_to_if(struct usb_device *dev, unsigned ifnum)
 struct usb_endpoint_descriptor *
 usb_epnum_to_ep_desc(struct usb_device *dev, unsigned epnum)
 {
+	struct usb_host_config *config = dev->actconfig;
 	int i, k;
 
-	for (i = 0; i < dev->actconfig->desc.bNumInterfaces; i++) {
+	if (!config)
+		return NULL;
+	for (i = 0; i < config->desc.bNumInterfaces; i++) {
 		struct usb_interface		*intf;
 		struct usb_host_interface	*alt;
 
-		/* only endpoints in current altseting are active */
-		intf = dev->actconfig->interface[i];
+		/* only endpoints in current altsetting are active */
+		intf = config->interface[i];
 		alt = intf->altsetting + intf->act_altsetting;
 
 		for (k = 0; k < alt->desc.bNumEndpoints; k++)
@@ -672,17 +678,19 @@ static void usb_release_dev(struct device *dev)
 }
 
 /**
- * usb_alloc_dev - allocate a usb device structure (usbcore-internal)
- * @parent: hub to which device is connected
+ * usb_alloc_dev - usb device constructor (usbcore-internal)
+ * @parent: hub to which device is connected; null to allocate a root hub
  * @bus: bus used to access the device
+ * @port: zero based index of port; ignored for root hubs
  * Context: !in_interrupt ()
  *
  * Only hub drivers (including virtual root hub drivers for host
  * controllers) should ever call this.
  *
- * This call is synchronous, and may not be used in an interrupt context.
+ * This call may not be used in a non-sleeping context.
  */
-struct usb_device *usb_alloc_dev(struct usb_device *parent, struct usb_bus *bus)
+struct usb_device *
+usb_alloc_dev(struct usb_device *parent, struct usb_bus *bus, unsigned port)
 {
 	struct usb_device *dev;
 
@@ -699,11 +707,42 @@ struct usb_device *usb_alloc_dev(struct usb_device *parent, struct usb_bus *bus)
 	}
 
 	device_initialize(&dev->dev);
+	dev->dev.bus = &usb_bus_type;
+	dev->dev.dma_mask = bus->controller->dma_mask;
+	dev->dev.driver_data = &usb_generic_driver_data;
+	dev->dev.driver = &usb_generic_driver;
 	dev->dev.release = usb_release_dev;
 	dev->state = USB_STATE_ATTACHED;
 
-	if (!parent)
+	/* Save readable and stable topology id, distinguishing devices
+	 * by location for diagnostics, tools, driver model, etc.  The
+	 * string is a path along hub ports, from the root.  Each device's
+	 * dev->devpath will be stable until USB is re-cabled, and hubs
+	 * are often labeled with these port numbers.  The bus_id isn't
+	 * as stable:  bus->busnum changes easily from modprobe order,
+	 * cardbus or pci hotplugging, and so on.
+	 */
+	if (unlikely (!parent)) {
 		dev->devpath [0] = '0';
+
+		dev->dev.parent = bus->controller;
+		sprintf (&dev->dev.bus_id[0], "usb%d", bus->busnum);
+	} else {
+		/* match any labeling on the hubs; it's one-based */
+		if (parent->devpath [0] == '0')
+			snprintf (dev->devpath, sizeof dev->devpath,
+				"%d", port + 1);
+		else
+			snprintf (dev->devpath, sizeof dev->devpath,
+				"%s.%d", parent->devpath, port + 1);
+
+		dev->dev.parent = &parent->dev;
+		sprintf (&dev->dev.bus_id[0], "%d-%s",
+			bus->busnum, dev->devpath);
+
+		/* hub driver sets up TT records */
+	}
+
 	dev->bus = bus;
 	dev->parent = parent;
 	INIT_LIST_HEAD(&dev->filelist);
@@ -978,6 +1017,19 @@ int usb_set_address(struct usb_device *dev)
 	return retval;
 }
 
+static inline void usb_show_string(struct usb_device *dev, char *id, int index)
+{
+	char *buf;
+
+	if (!index)
+		return;
+	if (!(buf = kmalloc(256, GFP_KERNEL)))
+		return;
+	if (usb_string(dev, index, buf, 256) > 0)
+		dev_printk(KERN_INFO, &dev->dev, "%s: %s\n", id, buf);
+	kfree(buf);
+}
+
 /*
  * By the time we get here, we chose a new device address
  * and is in the default state. We need to identify the thing and
@@ -992,32 +1044,12 @@ int usb_set_address(struct usb_device *dev)
  */
 #define NEW_DEVICE_RETRYS	2
 #define SET_ADDRESS_RETRYS	2
-int usb_new_device(struct usb_device *dev, struct device *parent)
+int usb_new_device(struct usb_device *dev)
 {
 	int err = -EINVAL;
 	int i;
 	int j;
 	int config;
-
-	/*
-	 * Set the driver for the usb device to point to the "generic" driver.
-	 * This prevents the main usb device from being sent to the usb bus
-	 * probe function.  Yes, it's a hack, but a nice one :)
-	 *
-	 * Do it asap, so more driver model stuff (like the device.h message
-	 * utilities) can be used in hcd submit/unlink code paths.
-	 */
-	usb_generic_driver.bus = &usb_bus_type;
-	dev->dev.parent = parent;
-	dev->dev.driver = &usb_generic_driver;
-	dev->dev.bus = &usb_bus_type;
-	dev->dev.driver_data = &usb_generic_driver_data;
-	if (dev->dev.bus_id[0] == 0)
-		sprintf (&dev->dev.bus_id[0], "%d-%s",
-			 dev->bus->busnum, dev->devpath);
-
-	/* dma masks come from the controller; readonly, except to hcd */
-	dev->dev.dma_mask = parent->dma_mask;
 
 	/* USB 2.0 section 5.5.3 talks about ep0 maxpacket ...
 	 * it's fixed size except for full speed devices.
@@ -1059,7 +1091,7 @@ int usb_new_device(struct usb_device *dev, struct device *parent)
 		wait_ms(10);	/* Let the SET_ADDRESS settle */
 
 		/* high and low speed devices don't need this... */
-		err = usb_get_descriptor(dev, USB_DT_DEVICE, 0, &dev->descriptor, 8);
+		err = usb_get_device_descriptor(dev, 8);
 		if (err >= 8)
 			break;
 		wait_ms(100);
@@ -1079,8 +1111,8 @@ int usb_new_device(struct usb_device *dev, struct device *parent)
 
 	/* USB device state == addressed ... still not usable */
 
-	err = usb_get_device_descriptor(dev);
-	if (err < (signed)sizeof(dev->descriptor)) {
+	err = usb_get_device_descriptor(dev, sizeof(dev->descriptor));
+	if (err != (signed)sizeof(dev->descriptor)) {
 		dev_err(&dev->dev, "device descriptor read/all, error %d\n", err);
 		goto fail;
 	}

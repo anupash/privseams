@@ -76,9 +76,8 @@ static ide_pci_device_t *amd_chipset;
 static unsigned int amd_80w;
 static unsigned int amd_clock;
 
-static unsigned char amd_cyc2udma[] = { 6, 6, 5, 4, 0, 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 7 };
-static unsigned char amd_udma2cyc[] = { 4, 6, 8, 10, 3, 2, 1, 15 };
 static char *amd_dma[] = { "MWDMA16", "UDMA33", "UDMA66", "UDMA100", "UDMA133" };
+static unsigned char amd_cyc2udma[] = { 6, 6, 5, 4, 0, 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 7 };
 
 /*
  * AMD /proc entry.
@@ -89,6 +88,7 @@ static char *amd_dma[] = { "MWDMA16", "UDMA33", "UDMA66", "UDMA100", "UDMA133" }
 #include <linux/stat.h>
 #include <linux/proc_fs.h>
 
+static unsigned char amd_udma2cyc[] = { 4, 6, 8, 10, 3, 2, 1, 15 };
 static unsigned long amd_base;
 static struct pci_dev *bmide_dev;
 extern int (*amd74xx_display_info)(char *, char **, off_t, int); /* ide-proc.c */
@@ -448,7 +448,6 @@ static int __devinit amd74xx_probe(struct pci_dev *dev, const struct pci_device_
 	if (dev->device != amd_chipset->device) BUG();
 	if (dev->device != amd_config->id) BUG();
 	ide_setup_pci_device(dev, amd_chipset);
-	MOD_INC_USE_COUNT;
 	return 0;
 }
 
@@ -480,13 +479,7 @@ static int amd74xx_ide_init(void)
 	return ide_pci_register_driver(&driver);
 }
 
-static void amd74xx_ide_exit(void)
-{
-	ide_pci_unregister_driver(&driver);
-}
-
 module_init(amd74xx_ide_init);
-module_exit(amd74xx_ide_exit);
 
 MODULE_AUTHOR("Vojtech Pavlik");
 MODULE_DESCRIPTION("AMD PCI IDE driver");

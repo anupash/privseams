@@ -1,7 +1,7 @@
 /*
  * Universal Host Controller Interface driver for USB.
  *
- * Maintainer: Johannes Erdfelt <johannes@erdfelt.com>
+ * Maintainer: Alan Stern <stern@rowland.harvard.edu>
  *
  * (C) Copyright 1999 Linus Torvalds
  * (C) Copyright 1999-2002 Johannes Erdfelt, johannes@erdfelt.com
@@ -525,8 +525,12 @@ static void uhci_append_queued_urb(struct uhci_hcd *uhci, struct urb *eurb, stru
 
 	lltd = list_entry(lurbp->td_list.prev, struct uhci_td, list);
 
-	usb_settoggle(urb->dev, usb_pipeendpoint(urb->pipe), usb_pipeout(urb->pipe),
-		uhci_fixup_toggle(urb, uhci_toggle(td_token(lltd)) ^ 1));
+	/* Control transfers always start with toggle 0 */
+	if (!usb_pipecontrol(urb->pipe))
+		usb_settoggle(urb->dev, usb_pipeendpoint(urb->pipe),
+				usb_pipeout(urb->pipe),
+				uhci_fixup_toggle(urb,
+					uhci_toggle(td_token(lltd)) ^ 1));
 
 	/* All qh's in the queue need to link to the next queue */
 	urbp->qh->link = eurbp->qh->link;
@@ -560,38 +564,43 @@ static void uhci_delete_queued_urb(struct uhci_hcd *uhci, struct urb *urb)
 
 	nurbp = list_entry(urbp->queue_list.next, struct urb_priv, queue_list);
 
-	/* Fix up the toggle for the next URB's */
-	if (!urbp->queued)
-		/* We just set the toggle in uhci_unlink_generic */
-		toggle = usb_gettoggle(urb->dev, usb_pipeendpoint(urb->pipe), usb_pipeout(urb->pipe));
-	else {
-		/* If we're in the middle of the queue, grab the toggle */
-		/*  from the TD previous to us */
-		purbp = list_entry(urbp->queue_list.prev, struct urb_priv,
-				queue_list);
+	/*
+	 * Fix up the toggle for the following URBs in the queue.
+	 * Only needed for bulk and interrupt: control and isochronous
+	 * endpoints don't propagate toggles between messages.
+	 */
+	if (usb_pipebulk(urb->pipe) || usb_pipeint(urb->pipe)) {
+		if (!urbp->queued)
+			/* We just set the toggle in uhci_unlink_generic */
+			toggle = usb_gettoggle(urb->dev,
+					usb_pipeendpoint(urb->pipe),
+					usb_pipeout(urb->pipe));
+		else {
+			/* If we're in the middle of the queue, grab the */
+			/* toggle from the TD previous to us */
+			purbp = list_entry(urbp->queue_list.prev,
+					struct urb_priv, queue_list);
+			pltd = list_entry(purbp->td_list.prev,
+					struct uhci_td, list);
+			toggle = uhci_toggle(td_token(pltd)) ^ 1;
+		}
 
-		pltd = list_entry(purbp->td_list.prev, struct uhci_td, list);
+		head = &urbp->queue_list;
+		tmp = head->next;
+		while (head != tmp) {
+			struct urb_priv *turbp;
 
-		toggle = uhci_toggle(td_token(pltd)) ^ 1;
+			turbp = list_entry(tmp, struct urb_priv, queue_list);
+			tmp = tmp->next;
+
+			if (!turbp->queued)
+				break;
+			toggle = uhci_fixup_toggle(turbp->urb, toggle);
+		}
+
+		usb_settoggle(urb->dev, usb_pipeendpoint(urb->pipe),
+				usb_pipeout(urb->pipe), toggle);
 	}
-
-	head = &urbp->queue_list;
-	tmp = head->next;
-	while (head != tmp) {
-		struct urb_priv *turbp;
-
-		turbp = list_entry(tmp, struct urb_priv, queue_list);
-
-		tmp = tmp->next;
-
-		if (!turbp->queued)
-			break;
-
-		toggle = uhci_fixup_toggle(turbp->urb, toggle);
-	}
-
-	usb_settoggle(urb->dev, usb_pipeendpoint(urb->pipe),
-		usb_pipeout(urb->pipe), toggle);
 
 	if (!urbp->queued) {
 		struct uhci_qh *pqh;
@@ -659,7 +668,6 @@ static struct urb_priv *uhci_alloc_urb_priv(struct uhci_hcd *uhci, struct urb *u
 	urbp->inserttime = jiffies;
 	urbp->fsbrtime = jiffies;
 	urbp->urb = urb;
-	urbp->dev = urb->dev;
 	
 	INIT_LIST_HEAD(&urbp->td_list);
 	INIT_LIST_HEAD(&urbp->queue_list);
@@ -1900,7 +1908,7 @@ static void uhci_remove_pending_qhs(struct uhci_hcd *uhci)
 	spin_unlock_irqrestore(&uhci->urb_remove_list_lock, flags);
 }
 
-static void uhci_irq(struct usb_hcd *hcd, struct pt_regs *regs)
+static irqreturn_t uhci_irq(struct usb_hcd *hcd, struct pt_regs *regs)
 {
 	struct uhci_hcd *uhci = hcd_to_uhci(hcd);
 	unsigned int io_addr = uhci->io_addr;
@@ -1913,7 +1921,7 @@ static void uhci_irq(struct usb_hcd *hcd, struct pt_regs *regs)
 	 */
 	status = inw(io_addr + USBSTS);
 	if (!status)	/* shared interrupt, not mine */
-		return;
+		return IRQ_NONE;
 	outw(status, io_addr + USBSTS);		/* Clear it */
 
 	if (status & ~(USBSTS_USBINT | USBSTS_ERROR | USBSTS_RD)) {
@@ -1954,6 +1962,7 @@ static void uhci_irq(struct usb_hcd *hcd, struct pt_regs *regs)
 	spin_unlock(&uhci->urb_list_lock);
 
 	uhci_finish_completion(hcd, regs);
+	return IRQ_HANDLED;
 }
 
 static void reset_hc(struct uhci_hcd *uhci)
@@ -2306,7 +2315,7 @@ static int uhci_start(struct usb_hcd *hcd)
 
 	uhci->rh_numports = port;
 
-	hcd->self.root_hub = udev = usb_alloc_dev(NULL, &hcd->self);
+	hcd->self.root_hub = udev = usb_alloc_dev(NULL, &hcd->self, 0);
 	if (!udev) {
 		err("unable to allocate root hub");
 		goto err_alloc_root_hub;

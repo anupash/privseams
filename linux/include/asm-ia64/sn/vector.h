@@ -1,5 +1,4 @@
-/* $Id$
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -8,8 +7,6 @@
  */
 #ifndef _ASM_IA64_SN_VECTOR_H
 #define _ASM_IA64_SN_VECTOR_H
-
-#include <linux/config.h>
 
 #define NET_VEC_NULL            ((net_vec_t)  0)
 #define NET_VEC_BAD             ((net_vec_t) -1)

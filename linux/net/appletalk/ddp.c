@@ -1051,7 +1051,7 @@ static int atalk_create(struct socket *sock, int protocol)
 	sk = sk_alloc(PF_APPLETALK, GFP_KERNEL, 1, NULL);
 	if (!sk)
 		goto out;
-	at = at_sk(sk) = kmalloc(sizeof(*at), GFP_KERNEL);
+	at = sk->sk_protinfo = kmalloc(sizeof(*at), GFP_KERNEL);
 	if (!at)
 		goto outsk;
 	memset(at, 0, sizeof(*at));
@@ -1552,7 +1552,7 @@ freeit:
 }
 
 static int atalk_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg,
-			 int len)
+			 size_t len)
 {
 	struct sock *sk = sock->sk;
 	struct atalk_sock *at = at_sk(sk);
@@ -1712,7 +1712,7 @@ static int atalk_sendmsg(struct kiocb *iocb, struct socket *sock, struct msghdr 
 }
 
 static int atalk_recvmsg(struct kiocb *iocb, struct socket *sock, struct msghdr *msg,
-			 int size, int flags)
+			 size_t size, int flags)
 {
 	struct sock *sk = sock->sk;
 	struct sockaddr_at *sat = (struct sockaddr_at *)msg->msg_name;

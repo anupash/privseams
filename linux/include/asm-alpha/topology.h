@@ -16,8 +16,7 @@ static inline int cpu_to_node(int cpu)
 	node = alpha_mv.cpuid_to_nid(cpu);
 
 #ifdef DEBUG_NUMA
-	if (node < 0)
-		BUG();
+	BUG_ON(node < 0);
 #endif
 
 	return node;
@@ -39,9 +38,6 @@ static inline int node_to_cpumask(int node)
 
 	return node_cpu_mask;
 }
-
-# define node_to_memblk(node)		(node)
-# define memblk_to_node(memblk)	(memblk)
 
 /* Cross-node load balancing interval. */
 # define NODE_BALANCE_RATE 10

@@ -30,14 +30,14 @@
  *
  */
 
-#include <linux/config.h>
-#include <linux/kernel.h>
+#include <linux/init.h>
 #include <linux/module.h>
+
+#include <linux/kernel.h>
 #include <linux/pci.h>
 #include <linux/slab.h>
 #include <linux/smp.h>
 #include <linux/smp_lock.h>
-#include <linux/init.h>
 #include "pci_hotplug.h"
 #include "acpiphp.h"
 
@@ -71,6 +71,7 @@ static int set_attention_status (struct hotplug_slot *slot, u8 value);
 static int hardware_test	(struct hotplug_slot *slot, u32 value);
 static int get_power_status	(struct hotplug_slot *slot, u8 *value);
 static int get_attention_status	(struct hotplug_slot *slot, u8 *value);
+static int get_address		(struct hotplug_slot *slot, u32 *value);
 static int get_latch_status	(struct hotplug_slot *slot, u8 *value);
 static int get_adapter_status	(struct hotplug_slot *slot, u8 *value);
 static int get_max_bus_speed	(struct hotplug_slot *hotplug_slot, enum pci_bus_speed *value);
@@ -86,6 +87,7 @@ static struct hotplug_slot_ops acpi_hotplug_slot_ops = {
 	.get_attention_status	= get_attention_status,
 	.get_latch_status	= get_latch_status,
 	.get_adapter_status	= get_adapter_status,
+	.get_address		= get_address,
 	.get_max_bus_speed	= get_max_bus_speed,
 	.get_cur_bus_speed	= get_cur_bus_speed,
 };
@@ -322,6 +324,28 @@ static int get_adapter_status (struct hotplug_slot *hotplug_slot, u8 *value)
 }
 
 
+/**
+ * get_address - get pci address of a slot
+ * @hotplug_slot: slot to get status
+ * @busdev: pointer to struct pci_busdev (seg, bus, dev)
+ *
+ */
+static int get_address (struct hotplug_slot *hotplug_slot, u32 *value)
+{
+	struct slot *slot = get_slot(hotplug_slot, __FUNCTION__);
+	int retval = 0;
+
+	if (slot == NULL)
+		return -ENODEV;
+
+	dbg("%s - physical_slot = %s\n", __FUNCTION__, hotplug_slot->name);
+
+	*value = acpiphp_get_address(slot->acpi_slot);
+
+	return retval;
+}
+
+
 /* return dummy value because ACPI doesn't provide any method... */
 static int get_max_bus_speed (struct hotplug_slot *hotplug_slot, enum pci_bus_speed *value)
 {
@@ -350,7 +374,7 @@ static int get_cur_bus_speed (struct hotplug_slot *hotplug_slot, enum pci_bus_sp
 }
 
 
-static int init_acpi (void)
+static int __init init_acpi (void)
 {
 	int retval;
 
@@ -402,7 +426,7 @@ static void release_slot(struct hotplug_slot *hotplug_slot)
  * init_slots - initialize 'struct slot' structures for each slot
  *
  */
-static int init_slots (void)
+static int __init init_slots (void)
 {
 	struct slot *slot;
 	int retval = 0;
@@ -468,7 +492,7 @@ static int init_slots (void)
 }
 
 
-static void cleanup_slots (void)
+static void __exit cleanup_slots (void)
 {
 	struct list_head *tmp, *n;
 	struct slot *slot;

@@ -28,8 +28,13 @@ Offset	Type		Description
 
  0xa0	16 bytes	System description table truncated to 16 bytes.
 			( struct sys_desc_table_struct )
- 0xb0 - 0x1df		Free. Add more parameters here if you really need them.
+ 0xb0 - 0x1c3		Free. Add more parameters here if you really need them.
 
+0x1c4	unsigned long	EFI system table pointer
+0x1c8	unsigned long	EFI memory descriptor size
+0x1cc	unsigned long	EFI memory descriptor version
+0x1d0	unsigned long	EFI memory descriptor map pointer
+0x1d4	unsigned long	EFI memory descriptor map size
 0x1e0	unsigned long	ALT_MEM_K, alternative mem check, in Kb
 0x1e8	char		number of entries in E820MAP (below)
 0x1e9	unsigned char	number of entries in EDDBUF (below)
@@ -67,8 +72,10 @@ Offset	Type		Description
 0x21c	unsigned long	INITRD_SIZE, size in bytes of ramdisk image
 0x220	4 bytes		(setup.S)
 0x224	unsigned short	setup.S heap end pointer
+0x2cc	4 bytes		DISK80_SIG_BUFFER (setup.S)
 0x2d0 - 0x600		E820MAP
-0x600 - 0x7D4		EDDBUF (setup.S)
+0x600 - 0x7ff		EDDBUF (setup.S) for disk signature read sector
+0x600 - 0x7d3		EDDBUF (setup.S) for edd data
 
 0x800	string, 2K max	COMMAND_LINE, the kernel commandline as
 			copied using CL_OFFSET.

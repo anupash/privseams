@@ -483,9 +483,9 @@ static inline void blk_queue_bounce(request_queue_t *q, struct bio **bio)
 }
 #endif /* CONFIG_MMU */
 
-#define rq_for_each_bio(bio, rq)	\
+#define rq_for_each_bio(_bio, rq)	\
 	if ((rq->bio))			\
-		for (bio = (rq)->bio; bio; bio = bio->bi_next)
+		for (_bio = (rq)->bio; _bio; _bio = _bio->bi_next)
 
 struct sec_size {
 	unsigned block_size;
@@ -508,7 +508,7 @@ extern int blk_remove_plug(request_queue_t *);
 extern void blk_recount_segments(request_queue_t *, struct bio *);
 extern inline int blk_phys_contig_segment(request_queue_t *q, struct bio *, struct bio *);
 extern inline int blk_hw_contig_segment(request_queue_t *q, struct bio *, struct bio *);
-extern int scsi_cmd_ioctl(struct block_device *, unsigned int, unsigned long);
+extern int scsi_cmd_ioctl(struct gendisk *, unsigned int, unsigned long);
 extern void blk_start_queue(request_queue_t *q);
 extern void blk_stop_queue(request_queue_t *q);
 extern void __blk_stop_queue(request_queue_t *q);
@@ -541,7 +541,7 @@ static inline void blkdev_dequeue_request(struct request *req)
 
 	list_del_init(&req->queuelist);
 
-	if (req->q)
+	if (req->rl)
 		elv_remove_request(req->q, req);
 }
 

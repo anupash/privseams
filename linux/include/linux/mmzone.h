@@ -160,10 +160,17 @@ struct zone {
 #define ZONE_NORMAL		1
 #define ZONE_HIGHMEM		2
 
-#define MAX_NR_ZONES		3	/* Sync this with MAX_NR_ZONES_SHIFT */
-#define MAX_NR_ZONES_SHIFT	2	/* ceil(log2(MAX_NR_ZONES)) */
+#define MAX_NR_ZONES		3	/* Sync this with ZONES_SHIFT */
+#define ZONES_SHIFT		2	/* ceil(log2(MAX_NR_ZONES)) */
 
 #define GFP_ZONEMASK	0x03
+
+/*
+ * The "priority" of VM scanning is how much of the queues we will scan in one
+ * go. A value of 12 for DEF_PRIORITY implies that we will scan 1/4096th of the
+ * queues ("queue_length >> 12") during an aging round.
+ */
+#define DEF_PRIORITY 12
 
 /*
  * One allocation request operates on a zonelist. A zonelist
@@ -198,7 +205,6 @@ typedef struct pglist_data {
 	struct zonelist node_zonelists[MAX_NR_ZONES];
 	int nr_zones;
 	struct page *node_mem_map;
-	unsigned long *valid_addr_bitmap;
 	struct bootmem_data *bdata;
 	unsigned long node_start_pfn;
 	unsigned long node_present_pages; /* total number of physical pages */
@@ -288,12 +294,6 @@ struct file;
 int min_free_kbytes_sysctl_handler(struct ctl_table *, int, struct file *, 
 					  void *, size_t *);
 
-#ifdef CONFIG_NUMA
-#define MAX_NR_MEMBLKS	BITS_PER_LONG /* Max number of Memory Blocks */
-#else /* !CONFIG_NUMA */
-#define MAX_NR_MEMBLKS	1
-#endif /* CONFIG_NUMA */
-
 #include <linux/topology.h>
 /* Returns the number of the current Node. */
 #define numa_node_id()		(cpu_to_node(smp_processor_id()))
@@ -303,7 +303,7 @@ int min_free_kbytes_sysctl_handler(struct ctl_table *, int, struct file *,
 extern struct pglist_data contig_page_data;
 #define NODE_DATA(nid)		(&contig_page_data)
 #define NODE_MEM_MAP(nid)	mem_map
-#define MAX_NODES_SHIFT		0
+#define MAX_NODES_SHIFT		1
 
 #else /* CONFIG_DISCONTIGMEM */
 
@@ -311,7 +311,7 @@ extern struct pglist_data contig_page_data;
 
 #if BITS_PER_LONG == 32
 /*
- * with 32 bit flags field, page->zone is currently 8 bits.
+ * with 32 bit page->flags field, we reserve 8 bits for node/zone info.
  * there are 3 zones (2 bits) and this leaves 8-2=6 bits for nodes.
  */
 #define MAX_NODES_SHIFT		6
@@ -328,8 +328,14 @@ extern struct pglist_data contig_page_data;
 #error NODES_SHIFT > MAX_NODES_SHIFT
 #endif
 
+/* There are currently 3 zones: DMA, Normal & Highmem, thus we need 2 bits */
+#define MAX_ZONES_SHIFT		2
+
+#if ZONES_SHIFT > MAX_ZONES_SHIFT
+#error ZONES_SHIFT > MAX_ZONES_SHIFT
+#endif
+
 extern DECLARE_BITMAP(node_online_map, MAX_NUMNODES);
-extern DECLARE_BITMAP(memblk_online_map, MAX_NR_MEMBLKS);
 
 #if defined(CONFIG_DISCONTIGMEM) || defined(CONFIG_NUMA)
 
@@ -347,20 +353,6 @@ static inline unsigned int num_online_nodes(void)
 	return num;
 }
 
-#define memblk_online(memblk)		test_bit(memblk, memblk_online_map)
-#define memblk_set_online(memblk)	set_bit(memblk, memblk_online_map)
-#define memblk_set_offline(memblk)	clear_bit(memblk, memblk_online_map)
-static inline unsigned int num_online_memblks(void)
-{
-	int i, num = 0;
-
-	for(i = 0; i < MAX_NR_MEMBLKS; i++){
-		if (memblk_online(i))
-			num++;
-	}
-	return num;
-}
-
 #else /* !CONFIG_DISCONTIGMEM && !CONFIG_NUMA */
 
 #define node_online(node) \
@@ -370,14 +362,6 @@ static inline unsigned int num_online_memblks(void)
 #define node_set_offline(node) \
 	({ BUG_ON((node) != 0); clear_bit(node, node_online_map); })
 #define num_online_nodes()	1
-
-#define memblk_online(memblk) \
-	({ BUG_ON((memblk) != 0); test_bit(memblk, memblk_online_map); })
-#define memblk_set_online(memblk) \
-	({ BUG_ON((memblk) != 0); set_bit(memblk, memblk_online_map); })
-#define memblk_set_offline(memblk) \
-	({ BUG_ON((memblk) != 0); clear_bit(memblk, memblk_online_map); })
-#define num_online_memblks()		1
 
 #endif /* CONFIG_DISCONTIGMEM || CONFIG_NUMA */
 #endif /* !__ASSEMBLY__ */

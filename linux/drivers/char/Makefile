@@ -43,6 +43,7 @@ obj-$(CONFIG_SH_SCI)		+= sh-sci.o generic_serial.o
 obj-$(CONFIG_HVC_CONSOLE)	+= hvc_console.o
 obj-$(CONFIG_RAW_DRIVER)	+= raw.o
 obj-$(CONFIG_SGI_L1_SERIAL)	+= sn_serial.o
+obj-$(CONFIG_VIOCONS) += viocons.o
 
 obj-$(CONFIG_PRINTER) += lp.o
 obj-$(CONFIG_TIPAR) += tipar.o
@@ -56,7 +57,9 @@ obj-$(CONFIG_SONYPI) += sonypi.o
 obj-$(CONFIG_RTC) += rtc.o
 obj-$(CONFIG_GEN_RTC) += genrtc.o
 obj-$(CONFIG_EFI_RTC) += efirtc.o
-ifeq ($(CONFIG_PPC),)
+ifeq ($(CONFIG_GENERIC_NVRAM),y)
+  obj-$(CONFIG_NVRAM) += generic_nvram.o
+else
   obj-$(CONFIG_NVRAM) += nvram.o
 endif
 obj-$(CONFIG_TOSHIBA) += toshiba.o

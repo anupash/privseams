@@ -20,11 +20,11 @@
 #ifdef CONFIG_IA64_DIG /* DIG systems are small */
 # define MAX_PHYSNODE_ID	8
 # define NR_NODES		8
-# define NR_MEMBLKS		(NR_NODES * 32)
+# define NR_NODE_MEMBLKS	(NR_NODES * 8)
 #else /* sn2 is the biggest case, so we use that if !DIG */
 # define MAX_PHYSNODE_ID	2048
 # define NR_NODES		256
-# define NR_MEMBLKS		(NR_NODES)
+# define NR_NODE_MEMBLKS	(NR_NODES * 4)
 #endif
 
 extern unsigned long max_low_pfn;
@@ -33,5 +33,7 @@ extern unsigned long max_low_pfn;
 #define page_to_pfn(page)	((unsigned long) (page - vmem_map))
 #define pfn_to_page(pfn)	(vmem_map + (pfn))
 
+#else /* CONFIG_DISCONTIGMEM */
+# define NR_NODE_MEMBLKS	4
 #endif /* CONFIG_DISCONTIGMEM */
 #endif /* _ASM_IA64_MMZONE_H */

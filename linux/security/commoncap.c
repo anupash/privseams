@@ -21,6 +21,7 @@
 #include <linux/skbuff.h>
 #include <linux/netlink.h>
 #include <linux/ptrace.h>
+#include <linux/xattr.h>
 
 int cap_capable (struct task_struct *tsk, int cap)
 {
@@ -171,6 +172,25 @@ int cap_bprm_secureexec (struct linux_binprm *bprm)
 		current->egid != current->gid);
 }
 
+int cap_inode_setxattr(struct dentry *dentry, char *name, void *value,
+		       size_t size, int flags)
+{
+	if (!strncmp(name, XATTR_SECURITY_PREFIX,
+		     sizeof(XATTR_SECURITY_PREFIX) - 1)  &&
+	    !capable(CAP_SYS_ADMIN))
+		return -EPERM;
+	return 0;
+}
+
+int cap_inode_removexattr(struct dentry *dentry, char *name)
+{
+	if (!strncmp(name, XATTR_SECURITY_PREFIX,
+		     sizeof(XATTR_SECURITY_PREFIX) - 1)  &&
+	    !capable(CAP_SYS_ADMIN))
+		return -EPERM;
+	return 0;
+}
+
 /* moved from kernel/sys.c. */
 /* 
  * cap_emulate_setxuid() fixes the effective / permitted capabilities of
@@ -301,8 +321,9 @@ int cap_vm_enough_memory(long pages)
 		return 0;
 
 	if (sysctl_overcommit_memory == 0) {
+		unsigned long n;
+
 		free = get_page_cache_size();
-		free += nr_free_pages();
 		free += nr_swap_pages;
 
 		/*
@@ -318,6 +339,18 @@ int cap_vm_enough_memory(long pages)
 		 */
 		if (!capable(CAP_SYS_ADMIN))
 			free -= free / 32;
+
+		if (free > pages)
+			return 0;
+
+		/*
+		 * nr_free_pages() is very expensive on large systems,
+		 * only call if we're about to fail.
+		 */
+		n = nr_free_pages();
+		if (!capable(CAP_SYS_ADMIN))
+			n -= n / 32;
+		free += n;
 
 		if (free > pages)
 			return 0;
@@ -344,6 +377,8 @@ EXPORT_SYMBOL(cap_capset_set);
 EXPORT_SYMBOL(cap_bprm_set_security);
 EXPORT_SYMBOL(cap_bprm_compute_creds);
 EXPORT_SYMBOL(cap_bprm_secureexec);
+EXPORT_SYMBOL(cap_inode_setxattr);
+EXPORT_SYMBOL(cap_inode_removexattr);
 EXPORT_SYMBOL(cap_task_post_setuid);
 EXPORT_SYMBOL(cap_task_reparent_to_init);
 EXPORT_SYMBOL(cap_syslog);

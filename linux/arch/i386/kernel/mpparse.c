@@ -634,7 +634,7 @@ void __init get_smp_config (void)
 
 	/*
 	 * ACPI may be used to obtain the entire SMP configuration or just to 
-	 * enumerate/configure processors (CONFIG_ACPI_HT).  Note that 
+	 * enumerate/configure processors (CONFIG_ACPI_BOOT).  Note that 
 	 * ACPI supports both logical (e.g. Hyper-Threading) and physical 
 	 * processors, where MPS only supports physical.
 	 */
@@ -940,7 +940,7 @@ void __init mp_override_legacy_irq (
 	 *      erroneously sets the trigger to level, resulting in a HUGE 
 	 *      increase of timer interrupts!
 	 */
-	if ((bus_irq == 0) && (global_irq == 2) && (trigger == 3))
+	if ((bus_irq == 0) && (trigger == 3))
 		trigger = 1;
 
 	intsrc.mpc_type = MP_INTSRC;
@@ -961,7 +961,7 @@ void __init mp_override_legacy_irq (
 	 * Otherwise create a new entry (e.g. global_irq == 2).
 	 */
 	for (i = 0; i < mp_irq_entries; i++) {
-		if ((mp_irqs[i].mpc_dstapic == intsrc.mpc_dstapic) 
+		if ((mp_irqs[i].mpc_srcbus == intsrc.mpc_srcbus) 
 			&& (mp_irqs[i].mpc_srcbusirq == intsrc.mpc_srcbusirq)) {
 			mp_irqs[i] = intsrc;
 			found = 1;
@@ -1008,9 +1008,10 @@ void __init mp_config_acpi_legacy_irqs (void)
 	 */
 	for (i = 0; i < 16; i++) {
 
-		if (i == 2) continue;			/* Don't connect IRQ2 */
+		if (i == 2)
+			continue;			/* Don't connect IRQ2 */
 
-		intsrc.mpc_irqtype = i ? mp_INT : mp_ExtINT;   /* 8259A to #0 */
+		intsrc.mpc_irqtype = mp_INT;
 		intsrc.mpc_srcbusirq = i;		   /* Identity mapped */
 		intsrc.mpc_dstirq = i;
 
@@ -1081,8 +1082,14 @@ found:
 
 	ioapic_pin = irq - mp_ioapic_routing[ioapic].irq_start;
 
+	/*
+	 * MPS INTI flags:
+	 *  trigger: 0=default, 1=edge, 3=level
+	 *  polarity: 0=default, 1=high, 3=low
+	 * Per ACPI spec, default for SCI means level/low.
+	 */
 	io_apic_set_pci_routing(ioapic, ioapic_pin, irq, 
-				(flags.trigger >> 1) , (flags.polarity >> 1));
+		(flags.trigger == 1 ? 0 : 1), (flags.polarity == 1 ? 0 : 1));
 }
 
 #ifdef CONFIG_ACPI_PCI
@@ -1120,7 +1127,8 @@ void __init mp_parse_prt (void)
 
 		/* Don't set up the ACPI SCI because it's already set up */
                 if (acpi_fadt.sci_int == irq) {
-                        entry->irq = irq; /*we still need to set entry's irq*/
+			irq = acpi_irq_to_vector(irq);
+			entry->irq = irq; /* we still need to set entry's irq */
 			continue;
                 }
 	
@@ -1129,8 +1137,11 @@ void __init mp_parse_prt (void)
 			continue;
 		ioapic_pin = irq - mp_ioapic_routing[ioapic].irq_start;
 
-		if (!ioapic && (irq < 16))
-			irq += 16;
+		if (es7000_plat) {
+			if (!ioapic && (irq < 16))
+				irq += 16;
+		}
+
 		/* 
 		 * Avoid pin reprogramming.  PRTs typically include entries  
 		 * with redundant pin->irq mappings (but unique PCI devices);
@@ -1147,18 +1158,14 @@ void __init mp_parse_prt (void)
 		if ((1<<bit) & mp_ioapic_routing[ioapic].pin_programmed[idx]) {
 			printk(KERN_DEBUG "Pin %d-%d already programmed\n",
 				mp_ioapic_routing[ioapic].apic_id, ioapic_pin);
- 			if (use_pci_vector() && !platform_legacy_irq(irq))
- 				irq = IO_APIC_VECTOR(irq);
- 			entry->irq = irq;
+ 			entry->irq = acpi_irq_to_vector(irq);
 			continue;
 		}
 
 		mp_ioapic_routing[ioapic].pin_programmed[idx] |= (1<<bit);
 
 		if (!io_apic_set_pci_routing(ioapic, ioapic_pin, irq, edge_level, active_high_low)) {
- 			if (use_pci_vector() && !platform_legacy_irq(irq))
- 				irq = IO_APIC_VECTOR(irq);
- 			entry->irq = irq;
+ 			entry->irq = acpi_irq_to_vector(irq);
  		}
 		printk(KERN_DEBUG "%02x:%02x:%02x[%c] -> %d-%d -> IRQ %d\n",
 			entry->id.segment, entry->id.bus, 
@@ -1166,6 +1173,10 @@ void __init mp_parse_prt (void)
 			mp_ioapic_routing[ioapic].apic_id, ioapic_pin, 
 			entry->irq);
 	}
+
+	print_IO_APIC();
+
+	return;
 }
 
 #endif /*CONFIG_ACPI_PCI*/

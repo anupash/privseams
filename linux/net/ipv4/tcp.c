@@ -1029,7 +1029,7 @@ static inline int select_size(struct sock *sk, struct tcp_opt *tp)
 }
 
 int tcp_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
-		int size)
+		size_t size)
 {
 	struct iovec *iov;
 	struct tcp_opt *tp = tcp_sk(sk);
@@ -1498,7 +1498,7 @@ int tcp_read_sock(struct sock *sk, read_descriptor_t *desc,
  */
 
 int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
-		int len, int nonblock, int flags, int *addr_len)
+		size_t len, int nonblock, int flags, int *addr_len)
 {
 	struct tcp_opt *tp = tcp_sk(sk);
 	int copied = 0;
@@ -1536,19 +1536,14 @@ int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		struct sk_buff *skb;
 		u32 offset;
 
-		/* Are we at urgent data? Stop if we have read anything. */
-		if (copied && tp->urg_data && tp->urg_seq == *seq)
-			break;
-
-		/* We need to check signals first, to get correct SIGURG
-		 * handling. FIXME: Need to check this doesn't impact 1003.1g
-		 * and move it down to the bottom of the loop
-		 */
-		if (signal_pending(current)) {
+		/* Are we at urgent data? Stop if we have read anything or have SIGURG pending. */
+		if (tp->urg_data && tp->urg_seq == *seq) {
 			if (copied)
 				break;
-			copied = timeo ? sock_intr_errno(timeo) : -EAGAIN;
-			break;
+			if (signal_pending(current)) {
+				copied = timeo ? sock_intr_errno(timeo) : -EAGAIN;
+				break;
+			}
 		}
 
 		/* Next get a buffer. */
@@ -1587,6 +1582,7 @@ int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 			    sk->sk_state == TCP_CLOSE ||
 			    (sk->sk_shutdown & RCV_SHUTDOWN) ||
 			    !timeo ||
+			    signal_pending(current) ||
 			    (flags & MSG_PEEK))
 				break;
 		} else {
@@ -1614,6 +1610,11 @@ int tcp_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 
 			if (!timeo) {
 				copied = -EAGAIN;
+				break;
+			}
+
+			if (signal_pending(current)) {
+				copied = sock_intr_errno(timeo);
 				break;
 			}
 		}

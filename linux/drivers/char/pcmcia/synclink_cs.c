@@ -244,7 +244,6 @@ typedef struct _mgslpc_info {
 	char netname[10];
 	struct net_device *netdev;
 	struct net_device_stats netstats;
-	struct net_device netdevice;
 #endif
 } MGSLPC_INFO;
 
@@ -592,7 +591,7 @@ static dev_link_t *mgslpc_attach(void)
     client_reg.Version = 0x0210;
     client_reg.event_callback_args.client_data = link;
 
-    ret = CardServices(RegisterClient, &link->handle, &client_reg);
+    ret = pcmcia_register_client(&link->handle, &client_reg);
     if (ret != CS_SUCCESS) {
 	    cs_error(link->handle, RegisterClient, ret);
 	    mgslpc_detach(link);
@@ -607,8 +606,8 @@ static dev_link_t *mgslpc_attach(void)
 /* Card has been inserted.
  */
 
-#define CS_CHECK(fn, args...) \
-while ((last_ret=CardServices(last_fn=(fn),args))!=0) goto cs_failed
+#define CS_CHECK(fn, ret) \
+do { last_fn = (fn); if ((last_ret = (ret)) != 0) goto cs_failed; } while (0)
 
 static void mgslpc_config(dev_link_t *link)
 {
@@ -631,9 +630,9 @@ static void mgslpc_config(dev_link_t *link)
     tuple.TupleData = buf;
     tuple.TupleDataMax = sizeof(buf);
     tuple.TupleOffset = 0;
-    CS_CHECK(GetFirstTuple, handle, &tuple);
-    CS_CHECK(GetTupleData, handle, &tuple);
-    CS_CHECK(ParseTuple, handle, &tuple, &parse);
+    CS_CHECK(GetFirstTuple, pcmcia_get_first_tuple(handle, &tuple));
+    CS_CHECK(GetTupleData, pcmcia_get_tuple_data(handle, &tuple));
+    CS_CHECK(ParseTuple, pcmcia_parse_tuple(handle, &tuple, &parse));
     link->conf.ConfigBase = parse.config.base;
     link->conf.Present = parse.config.rmask[0];
     
@@ -641,17 +640,17 @@ static void mgslpc_config(dev_link_t *link)
     link->state |= DEV_CONFIG;
 
     /* Look up the current Vcc */
-    CS_CHECK(GetConfigurationInfo, handle, &conf);
+    CS_CHECK(GetConfigurationInfo, pcmcia_get_configuration_info(handle, &conf));
     link->conf.Vcc = conf.Vcc;
 
     /* get CIS configuration entry */
 
     tuple.DesiredTuple = CISTPL_CFTABLE_ENTRY;
-    CS_CHECK(GetFirstTuple, handle, &tuple);
+    CS_CHECK(GetFirstTuple, pcmcia_get_first_tuple(handle, &tuple));
 
     cfg = &(parse.cftable_entry);
-    CS_CHECK(GetTupleData, handle, &tuple);
-    CS_CHECK(ParseTuple, handle, &tuple, &parse);
+    CS_CHECK(GetTupleData, pcmcia_get_tuple_data(handle, &tuple));
+    CS_CHECK(ParseTuple, pcmcia_parse_tuple(handle, &tuple, &parse));
 
     if (cfg->flags & CISTPL_CFTABLE_DEFAULT) dflt = *cfg;
     if (cfg->index == 0)
@@ -672,7 +671,7 @@ static void mgslpc_config(dev_link_t *link)
 	    link->io.IOAddrLines = io->flags & CISTPL_IO_LINES_MASK;
 	    link->io.BasePort1 = io->win[0].base;
 	    link->io.NumPorts1 = io->win[0].len;
-	    CS_CHECK(RequestIO, link->handle, &link->io);
+	    CS_CHECK(RequestIO, pcmcia_request_io(link->handle, &link->io));
     }
 
     link->conf.Attributes = CONF_ENABLE_IRQ;
@@ -684,9 +683,9 @@ static void mgslpc_config(dev_link_t *link)
     link->irq.Attributes |= IRQ_HANDLE_PRESENT;
     link->irq.Handler     = mgslpc_isr;
     link->irq.Instance    = info;
-    CS_CHECK(RequestIRQ, link->handle, &link->irq);
+    CS_CHECK(RequestIRQ, pcmcia_request_irq(link->handle, &link->irq));
 
-    CS_CHECK(RequestConfiguration, link->handle, &link->conf);
+    CS_CHECK(RequestConfiguration, pcmcia_request_configuration(link->handle, &link->conf));
 
     info->io_base = link->io.BasePort1;
     info->irq_level = link->irq.AssignedIRQ;
@@ -728,11 +727,11 @@ static void mgslpc_release(u_long arg)
     link->dev = NULL;
     link->state &= ~DEV_CONFIG;
 
-    CardServices(ReleaseConfiguration, link->handle);
+    pcmcia_release_configuration(link->handle);
     if (link->io.NumPorts1)
-	    CardServices(ReleaseIO, link->handle, &link->io);
+	    pcmcia_release_io(link->handle, &link->io);
     if (link->irq.AssignedIRQ)
-	    CardServices(ReleaseIRQ, link->handle, &link->irq);
+	    pcmcia_release_irq(link->handle, &link->irq);
     if (link->state & DEV_STALE_LINK)
 	    mgslpc_detach(link);
 }
@@ -763,7 +762,7 @@ static void mgslpc_detach(dev_link_t *link)
 
     /* Break the link with Card Services */
     if (link->handle)
-	    CardServices(DeregisterClient, link->handle);
+	    pcmcia_deregister_client(link->handle);
     
     /* Unlink device structure, and free it */
     *linkp = link->next;
@@ -798,14 +797,14 @@ static int mgslpc_event(event_t event, int priority,
 	    /* Mark the device as stopped, to block IO until later */
 	    info->stop = 1;
 	    if (link->state & DEV_CONFIG)
-		    CardServices(ReleaseConfiguration, link->handle);
+		    pcmcia_release_configuration(link->handle);
 	    break;
     case CS_EVENT_PM_RESUME:
 	    link->state &= ~DEV_SUSPEND;
 	    /* Fall through... */
     case CS_EVENT_CARD_RESET:
 	    if (link->state & DEV_CONFIG)
-		    CardServices(RequestConfiguration, link->handle, &link->conf);
+		    pcmcia_request_configuration(link->handle, &link->conf);
 	    info->stop = 0;
 	    break;
     }
@@ -4206,35 +4205,46 @@ void tx_timeout(unsigned long context)
 #ifdef CONFIG_SYNCLINK_SYNCPPP
 /* syncppp net device routines
  */
+ 
+static void mgslpc_setup(struct net_device *dev)
+{
+	dev->open = mgslpc_sppp_open;
+	dev->stop = mgslpc_sppp_close;
+	dev->hard_start_xmit = mgslpc_sppp_tx;
+	dev->do_ioctl = mgslpc_sppp_ioctl;
+	dev->get_stats = mgslpc_net_stats;
+	dev->tx_timeout = mgslpc_sppp_tx_timeout;
+	dev->watchdog_timeo = 10*HZ;
+}
 
 void mgslpc_sppp_init(MGSLPC_INFO *info)
 {
 	struct net_device *d;
 
 	sprintf(info->netname,"mgslp%d",info->line);
+ 
+	d = alloc_netdev(0, info->netname, mgslpc_setup);
+	if (!d) {
+		printk(KERN_WARNING "%s: alloc_netdev failed.\n",
+						info->netname);
+		return;
+	}
 
 	info->if_ptr = &info->pppdev;
-	info->netdev = info->pppdev.dev = &info->netdevice;
+	info->netdev = info->pppdev.dev = d;
 
 	sppp_attach(&info->pppdev);
 
-	d = info->netdev;
-	strcpy(d->name,info->netname);
 	d->base_addr = info->io_base;
 	d->irq = info->irq_level;
 	d->priv = info;
-	d->init = NULL;
-	d->open = mgslpc_sppp_open;
-	d->stop = mgslpc_sppp_close;
-	d->hard_start_xmit = mgslpc_sppp_tx;
-	d->do_ioctl = mgslpc_sppp_ioctl;
-	d->get_stats = mgslpc_net_stats;
-	d->tx_timeout = mgslpc_sppp_tx_timeout;
-	d->watchdog_timeo = 10*HZ;
 
 	if (register_netdev(d)) {
 		printk(KERN_WARNING "%s: register_netdev failed.\n", d->name);
 		sppp_detach(info->netdev);
+		info->netdev = NULL;
+		info->pppdev.dev = NULL;
+		free_netdev(d);
 		return;
 	}
 
@@ -4246,8 +4256,11 @@ void mgslpc_sppp_delete(MGSLPC_INFO *info)
 {
 	if (debug_level >= DEBUG_LEVEL_INFO)
 		printk("mgslpc_sppp_delete(%s)\n",info->netname);	
-	sppp_detach(info->netdev);
 	unregister_netdev(info->netdev);
+	sppp_detach(info->netdev);
+	free_netdev(info->netdev);
+	info->netdev = NULL;
+	info->pppdev.dev = NULL;
 }
 
 int mgslpc_sppp_open(struct net_device *d)

@@ -2,15 +2,14 @@
  *
  * Name:	skdrv1st.h
  * Project:	GEnesis, PCI Gigabit Ethernet Adapter
- * Version:	$Revision: 1.1 $
- * Date:	$Date: 2003/07/21 07:22:43 $
  * Purpose:	First header file for driver and all other modules
  *
  ******************************************************************************/
 
 /******************************************************************************
  *
- *	(C)Copyright 1998-2003 SysKonnect GmbH.
+ *	(C)Copyright 1998-2002 SysKonnect GmbH.
+ *	(C)Copyright 2002-2003 Marvell.
  *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -18,78 +17,6 @@
  *	(at your option) any later version.
  *
  *	The information in this file is provided "AS IS" without warranty.
- *
- ******************************************************************************/
-
-/******************************************************************************
- *
- * History:
- *
- *	$Log: skdrv1st.h,v $
- *	Revision 1.1  2003/07/21 07:22:43  rroesler
- *	Fix: Re-Enter after CVS crash
- *	
- *	Revision 1.15  2003/07/17 14:54:09  rroesler
- *	Fix: Corrected SK_PNMI_READ macros to copy right amount of bytes
- *	
- *	Revision 1.14  2003/06/03 14:36:32  mlindner
- *	Add: Additions for SK_SLIM
- *	
- *	Revision 1.13  2003/05/26 14:03:06  mlindner
- *	Add: Support for SLIM skaddr
- *	
- *	Revision 1.12  2003/05/26 12:56:39  mlindner
- *	Add: Support for Kernel 2.5/2.6
- *	Add: New SkOsGetTimeCurrent function
- *	Add: SK_PNMI_HUNDREDS_SEC definition
- *	Fix: SK_TICKS_PER_SEC on Intel Itanium2
- *	
- *	Revision 1.11  2003/02/25 14:16:40  mlindner
- *	Fix: Copyright statement
- *	
- *	Revision 1.10  2002/10/02 12:46:02  mlindner
- *	Add: Support for Yukon
- *	
- *	Revision 1.9.2.2  2001/12/07 12:06:42  mlindner
- *	Fix: malloc -> slab changes
- *	
- *	Revision 1.9.2.1  2001/03/12 16:50:59  mlindner
- *	chg: kernel 2.4 adaption
- *	
- *	Revision 1.9  2001/01/22 14:16:04  mlindner
- *	added ProcFs functionality
- *	Dual Net functionality integrated
- *	Rlmt networks added
- *	
- *	Revision 1.8  2000/02/21 12:19:18  cgoos
- *	Added default for SK_DEBUG_CHKMOD/_CHKCAT
- *	
- *	Revision 1.7  1999/11/22 13:50:00  cgoos
- *	Changed license header to GPL.
- *	Added overwrite for several functions.
- *	Removed linux 2.0.x definitions.
- *	Removed PCI vendor ID definition (now in kernel).
- *	
- *	Revision 1.6  1999/07/27 08:03:33  cgoos
- *	Changed SK_IN/OUT macros to readX/writeX instead of memory
- *	accesses (necessary for ALPHA).
- *	
- *	Revision 1.5  1999/07/23 12:10:21  cgoos
- *	Removed SK_RLMT_SLOW_LOOKAHEAD define.
- *	
- *	Revision 1.4  1999/07/14 12:31:13  cgoos
- *	Added SK_RLMT_SLOW_LOOKAHEAD define.
- *	
- *	Revision 1.3  1999/04/07 10:12:54  cgoos
- *	Added check for KERNEL and OPTIMIZATION defines.
- *	
- *	Revision 1.2  1999/03/01 08:51:47  cgoos
- *	Fixed pcibios_read/write definitions.
- *	
- *	Revision 1.1  1999/02/16 07:40:49  cgoos
- *	First version.
- *	
- *	
  *
  ******************************************************************************/
 
@@ -110,6 +37,9 @@
 #ifndef __INC_SKDRV1ST_H
 #define __INC_SKDRV1ST_H
 
+/* Check kernel version */
+#include <linux/version.h>
+
 typedef struct s_AC	SK_AC;
 
 /* Set card versions */
@@ -124,10 +54,7 @@ typedef struct s_AC	SK_AC;
 #define SK_PNMI_READ_U32(p,v)		memcpy((char*)&(v),(char*)(p),4)
 #define SK_PNMI_READ_U64(p,v)		memcpy((char*)&(v),(char*)(p),8)
 
-#define SkCsCalculateChecksum(p,l)	((~ip_compute_csum(p, l)) & 0xffff)
-
 #define SK_ADDR_EQUAL(a1,a2)		(!memcmp(a1,a2,6))
-
 
 #if !defined(__OPTIMIZE__)  ||  !defined(__KERNEL__)
 #warning  You must compile this file with the correct options!
@@ -135,6 +62,7 @@ typedef struct s_AC	SK_AC;
 #error You must compile this driver with "-O".
 #endif
 
+#include <linux/version.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
@@ -153,6 +81,13 @@ typedef struct s_AC	SK_AC;
 #include <linux/init.h>
 #include <asm/uaccess.h>
 #include <net/checksum.h>
+
+#define SK_CS_CALCULATE_CHECKSUM
+#ifndef CONFIG_X86_64
+#define SkCsCalculateChecksum(p,l)	((~ip_compute_csum(p, l)) & 0xffff)
+#else
+#define SkCsCalculateChecksum(p,l)	((~ip_fast_csum(p, l)) & 0xffff)
+#endif
 
 #include	"h/sktypes.h"
 #include	"h/skerror.h"

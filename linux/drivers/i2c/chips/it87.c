@@ -31,6 +31,11 @@
     type at module load time.
 */
 
+#include <linux/config.h>
+#ifdef CONFIG_I2C_DEBUG_CHIP
+#define DEBUG	1
+#endif
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -121,14 +126,13 @@ static inline u8 FAN_TO_REG(long rpm, int div)
 				205-(val)*5)
 #define ALARMS_FROM_REG(val) (val)
 
-static int log2(int val)
+static int DIV_TO_REG(int val)
 {
 	int answer = 0;
 	while ((val >>= 1))
 		answer++;
 	return answer;
 }
-#define DIV_TO_REG(val) log2(val)
 #define DIV_FROM_REG(val) (1 << (val))
 
 /* Initial limits. Use the config file to set better limits. */
@@ -667,10 +671,10 @@ int it87_detect(struct i2c_adapter *adapter, int address, int kind)
 		}
 		else {
 			if (kind == 0)
-				printk
-				    ("it87.o: Ignoring 'force' parameter for unknown chip at "
-				     "adapter %d, address 0x%02x\n",
-				     i2c_adapter_id(adapter), address);
+				dev_info(&adapter->dev, 
+					"Ignoring 'force' parameter for unknown chip at "
+					"adapter %d, address 0x%02x\n",
+					i2c_adapter_id(adapter), address);
 			goto ERROR1;
 		}
 	}

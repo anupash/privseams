@@ -261,7 +261,7 @@ static int orinoco_pci_init_one(struct pci_dev *pdev,
 		if (dev->irq)
 			free_irq(dev->irq, dev);
 
-		kfree(dev);
+		free_netdev(dev);
 	}
 
 	if (pci_ioaddr)
@@ -360,6 +360,7 @@ static int orinoco_pci_resume(struct pci_dev *pdev)
 }
 
 static struct pci_device_id orinoco_pci_pci_id_table[] = {
+	{0x1260, 0x3872, PCI_ANY_ID, PCI_ANY_ID,},
 	{0x1260, 0x3873, PCI_ANY_ID, PCI_ANY_ID,},
 	{0,},
 };

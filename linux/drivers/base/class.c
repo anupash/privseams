@@ -3,8 +3,8 @@
  *
  * Copyright (c) 2002-3 Patrick Mochel
  * Copyright (c) 2002-3 Open Source Development Labs
- * Copyright (c) 2003 Greg Kroah-Hartman
- * Copyright (c) 2003 IBM Corp.
+ * Copyright (c) 2003-2004 Greg Kroah-Hartman
+ * Copyright (c) 2003-2004 IBM Corp.
  * 
  * This file is released under the GPLv2
  *
@@ -46,6 +46,19 @@ class_attr_store(struct kobject * kobj, struct attribute * attr,
 	return ret;
 }
 
+static void class_release(struct kobject * kobj)
+{
+	struct class *class = to_class(kobj);
+
+	pr_debug("class '%s': release.\n", class->name);
+
+	if (class->class_release)
+		class->class_release(class);
+	else
+		pr_debug("class '%s' does not have a release() function, "
+			 "be careful\n", class->name);
+}
+
 static struct sysfs_ops class_sysfs_ops = {
 	.show	= class_attr_show,
 	.store	= class_attr_store,
@@ -53,6 +66,7 @@ static struct sysfs_ops class_sysfs_ops = {
 
 static struct kobj_type ktype_class = {
 	.sysfs_ops	= &class_sysfs_ops,
+	.release	= class_release,
 };
 
 /* Hotplug events for classes go to the class_obj subsys */
@@ -264,7 +278,6 @@ int class_device_add(struct class_device *class_dev)
 {
 	struct class * parent;
 	struct class_interface * class_intf;
-	struct list_head * entry;
 	int error;
 
 	class_dev = class_device_get(class_dev);
@@ -288,11 +301,9 @@ int class_device_add(struct class_device *class_dev)
 	if (parent) {
 		down_write(&parent->subsys.rwsem);
 		list_add_tail(&class_dev->node, &parent->children);
-		list_for_each(entry, &parent->interfaces) {
-			class_intf = container_of(entry, struct class_interface, node);
+		list_for_each_entry(class_intf, &parent->interfaces, node)
 			if (class_intf->add)
 				class_intf->add(class_dev);
-		}
 		up_write(&parent->subsys.rwsem);
 	}
 
@@ -316,16 +327,13 @@ void class_device_del(struct class_device *class_dev)
 {
 	struct class * parent = class_dev->class;
 	struct class_interface * class_intf;
-	struct list_head * entry;
 
 	if (parent) {
 		down_write(&parent->subsys.rwsem);
 		list_del_init(&class_dev->node);
-		list_for_each(entry, &parent->interfaces) {
-			class_intf = container_of(entry, struct class_interface, node);
+		list_for_each_entry(class_intf, &parent->interfaces, node)
 			if (class_intf->remove)
 				class_intf->remove(class_dev);
-		}
 		up_write(&parent->subsys.rwsem);
 	}
 
@@ -381,7 +389,6 @@ int class_interface_register(struct class_interface *class_intf)
 {
 	struct class * parent;
 	struct class_device * class_dev;
-	struct list_head * entry;
 
 	if (!class_intf || !class_intf->class)
 		return -ENODEV;
@@ -394,10 +401,8 @@ int class_interface_register(struct class_interface *class_intf)
 	list_add_tail(&class_intf->node, &parent->interfaces);
 
 	if (class_intf->add) {
-		list_for_each(entry, &parent->children) {
-			class_dev = container_of(entry, struct class_device, node);
+		list_for_each_entry(class_dev, &parent->children, node)
 			class_intf->add(class_dev);
-		}
 	}
 	up_write(&parent->subsys.rwsem);
 
@@ -407,7 +412,7 @@ int class_interface_register(struct class_interface *class_intf)
 void class_interface_unregister(struct class_interface *class_intf)
 {
 	struct class * parent = class_intf->class;
-	struct list_head * entry;
+	struct class_device *class_dev;
 
 	if (!parent)
 		return;
@@ -416,10 +421,8 @@ void class_interface_unregister(struct class_interface *class_intf)
 	list_del_init(&class_intf->node);
 
 	if (class_intf->remove) {
-		list_for_each(entry, &parent->children) {
-			struct class_device *class_dev = container_of(entry, struct class_device, node);
+		list_for_each_entry(class_dev, &parent->children, node)
 			class_intf->remove(class_dev);
-		}
 	}
 	up_write(&parent->subsys.rwsem);
 

@@ -145,20 +145,6 @@ typedef struct com20020_dev_t {
     dev_node_t          node;
 } com20020_dev_t;
 
-static void com20020_setup(struct net_device *dev)
-{
-	struct arcnet_local *lp = dev->priv;
-
-	lp->timeout = timeout;
-	lp->backplane = backplane;
-	lp->clockp = clockp;
-	lp->clockm = clockm & 3;
-	lp->hw.owner = THIS_MODULE;
-
-	/* fill in our module parameters as defaults */
-	dev->dev_addr[0] = node;
-}
-
 /*======================================================================
 
     com20020_attach() creates an "instance" of the driver, allocating
@@ -187,14 +173,21 @@ static dev_link_t *com20020_attach(void)
     if (!info)
 	goto fail_alloc_info;
 
-    dev = alloc_netdev(sizeof(struct arcnet_local), "arc%d",
-		       com20020_setup);
+    dev = alloc_arcdev("");
     if (!dev)
 	goto fail_alloc_dev;
 
     memset(info, 0, sizeof(struct com20020_dev_t));
     memset(link, 0, sizeof(struct dev_link_t));
     lp = dev->priv;
+    lp->timeout = timeout;
+    lp->backplane = backplane;
+    lp->clockp = clockp;
+    lp->clockm = clockm & 3;
+    lp->hw.owner = THIS_MODULE;
+
+    /* fill in our module parameters as defaults */
+    dev->dev_addr[0] = node;
 
     link->io.Attributes1 = IO_DATA_PATH_WIDTH_8;
     link->io.NumPorts1 = 16;
@@ -227,7 +220,7 @@ static dev_link_t *com20020_attach(void)
     client_reg.event_handler = &com20020_event;
     client_reg.Version = 0x0210;
     client_reg.event_callback_args.client_data = link;
-    ret = CardServices(RegisterClient, &link->handle, &client_reg);
+    ret = pcmcia_register_client(&link->handle, &client_reg);
     if (ret != 0) {
         cs_error(link->handle, RegisterClient, ret);
         com20020_detach(link);
@@ -270,14 +263,11 @@ static void com20020_detach(dev_link_t *link)
 
     dev = info->dev;
 
-    if (link->state & DEV_CONFIG) {
+    if (link->state & DEV_CONFIG)
         com20020_release(link);
-        if (link->state & DEV_STALE_CONFIG)
-            return;
-    }
 
     if (link->handle)
-        CardServices(DeregisterClient, link->handle);
+        pcmcia_deregister_client(link->handle);
 
     /* Unlink device structure, free bits */
     DEBUG(1,"unlinking...\n");
@@ -293,6 +283,8 @@ static void com20020_detach(dev_link_t *link)
 
 		if (netif_running(dev))
 		    dev->stop(dev);
+
+		unregister_netdev(dev);
 	    
 		/*
 		 * this is necessary because we register our IRQ separately
@@ -300,10 +292,7 @@ static void com20020_detach(dev_link_t *link)
 		 */
 		if (dev->irq)
 		    free_irq(dev->irq, dev);
-		
 		/* ...but I/O ports are done automatically by card services */
-		
-		unregister_netdev(dev);
 	    }
 	    
 	    DEBUG(1,"kfree...\n");
@@ -325,8 +314,8 @@ static void com20020_detach(dev_link_t *link)
 
 ======================================================================*/
 
-#define CS_CHECK(fn, args...) \
-while ((last_ret=CardServices(last_fn=(fn), args))!=0) goto cs_failed
+#define CS_CHECK(fn, ret) \
+do { last_fn = (fn); if ((last_ret = (ret)) != 0) goto cs_failed; } while (0)
 
 static void com20020_config(dev_link_t *link)
 {
@@ -353,9 +342,9 @@ static void com20020_config(dev_link_t *link)
     tuple.TupleDataMax = 64;
     tuple.TupleOffset = 0;
     tuple.DesiredTuple = CISTPL_CONFIG;
-    CS_CHECK(GetFirstTuple, handle, &tuple);
-    CS_CHECK(GetTupleData, handle, &tuple);
-    CS_CHECK(ParseTuple, handle, &tuple, &parse);
+    CS_CHECK(GetFirstTuple, pcmcia_get_first_tuple(handle, &tuple));
+    CS_CHECK(GetTupleData, pcmcia_get_tuple_data(handle, &tuple));
+    CS_CHECK(ParseTuple, pcmcia_parse_tuple(handle, &tuple, &parse));
     link->conf.ConfigBase = parse.config.base;
 
     /* Configure card */
@@ -368,13 +357,13 @@ static void com20020_config(dev_link_t *link)
 	for (ioaddr = 0x100; ioaddr < 0x400; ioaddr += 0x10)
 	{
 	    link->io.BasePort1 = ioaddr;
-	    i = CardServices(RequestIO, link->handle, &link->io);
+	    i = pcmcia_request_io(link->handle, &link->io);
 	    if (i == CS_SUCCESS)
 		break;
 	}
     }
     else
-	i = CardServices(RequestIO, link->handle, &link->io);
+	i = pcmcia_request_io(link->handle, &link->io);
     
     if (i != CS_SUCCESS)
     {
@@ -388,7 +377,7 @@ static void com20020_config(dev_link_t *link)
     DEBUG(1,"arcnet: request IRQ %d (%Xh/%Xh)\n",
 	   link->irq.AssignedIRQ,
 	   link->irq.IRQInfo1, link->irq.IRQInfo2);
-    i = CardServices(RequestIRQ, link->handle, &link->irq);
+    i = pcmcia_request_irq(link->handle, &link->irq);
     if (i != CS_SUCCESS)
     {
 	DEBUG(1,"arcnet: requestIRQ failed totally!\n");
@@ -397,7 +386,7 @@ static void com20020_config(dev_link_t *link)
 
     dev->irq = link->irq.AssignedIRQ;
 
-    CS_CHECK(RequestConfiguration, link->handle, &link->conf);
+    CS_CHECK(RequestConfiguration, pcmcia_request_configuration(link->handle, &link->conf));
 
     if (com20020_check(dev))
     {
@@ -447,21 +436,11 @@ static void com20020_release(dev_link_t *link)
 
     DEBUG(0, "com20020_release(0x%p)\n", link);
 
-    if (link->open) {
-	DEBUG(1,"postpone...\n");
-	DEBUG(1, "com20020_cs: release postponed, device stll open\n");
-        link->state |= DEV_STALE_CONFIG;
-        return;
-    }
-
-    CardServices(ReleaseConfiguration, link->handle);
-    CardServices(ReleaseIO, link->handle, &link->io);
-    CardServices(ReleaseIRQ, link->handle, &link->irq);
+    pcmcia_release_configuration(link->handle);
+    pcmcia_release_io(link->handle, &link->io);
+    pcmcia_release_irq(link->handle, &link->irq);
 
     link->state &= ~(DEV_CONFIG | DEV_RELEASE_PENDING);
-
-    if (link->state & DEV_STALE_CONFIG)
-	    com20020_detach(link);
 }
 
 /*======================================================================
@@ -502,7 +481,7 @@ static int com20020_event(event_t event, int priority,
             if (link->open) {
                 netif_device_detach(dev);
             }
-            CardServices(ReleaseConfiguration, link->handle);
+            pcmcia_release_configuration(link->handle);
         }
         break;
     case CS_EVENT_PM_RESUME:
@@ -510,7 +489,7 @@ static int com20020_event(event_t event, int priority,
         /* Fall through... */
     case CS_EVENT_CARD_RESET:
         if (link->state & DEV_CONFIG) {
-            CardServices(RequestConfiguration, link->handle, &link->conf);
+            pcmcia_request_configuration(link->handle, &link->conf);
             if (link->open) {
 		int ioaddr = dev->base_addr;
 		struct arcnet_local *lp = (struct arcnet_local *)dev->priv;

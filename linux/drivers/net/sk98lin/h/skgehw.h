@@ -2,8 +2,6 @@
  *
  * Name:	skgehw.h
  * Project:	Gigabit Ethernet Adapters, Common Modules
- * Version:	$Revision: 1.53 $
- * Date:	$Date: 2003/07/04 12:39:01 $
  * Purpose:	Defines and Macros for the Gigabit Ethernet Adapter Product Family
  *
  ******************************************************************************/
@@ -19,225 +17,6 @@
  *	(at your option) any later version.
  *
  *	The information in this file is provided "AS IS" without warranty.
- *
- ******************************************************************************/
-
-/******************************************************************************
- *
- * History:
- * $Log: skgehw.h,v $
- * Revision 1.53  2003/07/04 12:39:01  rschmidt
- * Added SK_FAR to pointers in XM_IN32() and GM_IN32() macros (for PXE)
- * Editorial changes
- *
- * Revision 1.52  2003/05/13 17:16:36  mkarl
- * Added SK_FAR for PXE.
- * Editorial changes.
- *
- * Revision 1.51  2003/04/08 16:31:50  rschmidt
- * Added defines for new Chip IDs (YUKON-Lite, YUKON-LP)
- * Editorial changes
- *
- * Revision 1.50  2003/03/31 07:29:45  mkarl
- * Corrected Copyright.
- * Editorial changes.
- *
- * Revision 1.49  2003/01/28 09:43:49  rschmidt
- * Added defines for PCI-Spec. 2.3 IRQ
- * Added defines for CLK_RUN (YUKON-Lite)
- * Editorial changes
- *
- * Revision 1.48  2002/12/05 10:25:11  rschmidt
- * Added defines for Half Duplex Burst Mode On/Off
- * Added defines for Rx GMAC FIFO Flush feature
- * Editorial changes
- *
- * Revision 1.47  2002/11/12 17:01:31  rschmidt
- * Added defines for WOL_CTL_DEFAULT
- * Editorial changes
- *
- * Revision 1.46  2002/10/14 14:47:57  rschmidt
- * Corrected bit mask for HW self test results
- * Added defines for WOL Registers
- * Editorial changes
- *
- * Revision 1.45  2002/10/11 09:25:22  mkarl
- * Added bit mask for HW self test results.
- *
- * Revision 1.44  2002/08/16 14:44:36  rschmidt
- * Added define GPC_HWCFG_GMII_FIB for YUKON Fiber
- *
- * Revision 1.43  2002/08/12 13:31:50  rschmidt
- * Corrected macros for GMAC Address Registers: GM_INADDR(),
- * GM_OUTADDR(), GM_INHASH, GM_OUTHASH.
- * Editorial changes
- *
- * Revision 1.42  2002/08/08 15:37:56  rschmidt
- * Added defines for Power Management Capabilities
- * Editorial changes
- *
- * Revision 1.41  2002/07/23 16:02:25  rschmidt
- * Added macro WOL_REG() to access WOL reg. (HW-Bug in YUKON 1st rev.)
- *
- * Revision 1.40  2002/07/15 15:41:37  rschmidt
- * Added new defines for Power Management Cap. & Control
- * Editorial changes
- *
- * Revision 1.39  2002/06/10 09:37:07  rschmidt
- * Added macros for the ADDR-Modul
- *
- * Revision 1.38  2002/06/05 08:15:19  rschmidt
- * Added defines for WOL Registers
- * Editorial changes
- *
- * Revision 1.37  2002/04/25 11:39:23  rschmidt
- * Added new defines for PCI Our Register 1
- * Added new registers and defines for YUKON (Rx FIFO, Tx FIFO,
- * Time Stamp Timer, GMAC Control, GPHY Control,Link Control,
- * GMAC IRQ Source and Mask, Wake-up Frame Pattern Match);
- * Added new defines for Control/Status (VAUX available)
- * Added Chip ID for YUKON
- * Added define for descriptors with UDP ext. for YUKON
- * Added macros to access the GMAC
- * Added new Phy Type for Marvell 88E1011S (GPHY)
- * Editorial changes
- *
- * Revision 1.36  2000/11/09 12:32:49  rassmann
- * Renamed variables.
- *
- * Revision 1.35  2000/05/19 10:17:13  cgoos
- * Added inactivity check in PHY_READ (in DEBUG mode only).
- *
- * Revision 1.34  1999/11/22 13:53:40  cgoos
- * Changed license header to GPL.
- *
- * Revision 1.33  1999/08/27 11:17:10  malthoff
- * It's more savely to put brackets around macro parameters.
- * Brackets added for PHY_READ and PHY_WRITE.
- *
- * Revision 1.32  1999/05/19 07:31:01  cgoos
- * Changes for 1000Base-T.
- * Added HWAC_LINK_LED macro.
- *
- * Revision 1.31  1999/03/12 13:27:40  malthoff
- * Remove __STDC__.
- *
- * Revision 1.30  1999/02/09 09:28:20  malthoff
- * Add PCI_ERRBITS.
- *
- * Revision 1.29  1999/01/26 08:55:48  malthoff
- * Bugfix: The 16 bit field relations inside the descriptor are
- * 	endianess dependend if the descriptor reversal feature
- * 	(PCI_REV_DESC bit in PCI_OUR_REG_2) is enabled.
- * 	Drivers which use this feature has to set the define
- * 	SK_USE_REV_DESC.
- *
- * Revision 1.28  1998/12/10 11:10:22  malthoff
- * bug fix: IS_IRQ_STAT and IS_IRQ_MST_ERR has been twisted.
- *
- * Revision 1.27  1998/11/13 14:19:21  malthoff
- * Bug Fix: The bit definition of B3_PA_CTRL has completely
- * changed from HW Spec v1.3 to v1.5.
- *
- * Revision 1.26  1998/11/04 08:31:48  cgoos
- * Fixed byte ordering in XM_OUTADDR/XM_OUTHASH macros.
- *
- * Revision 1.25  1998/11/04 07:16:25  cgoos
- * Changed byte ordering in XM_INADDR/XM_INHASH again.
- *
- * Revision 1.24  1998/11/02 11:08:43  malthoff
- * RxCtrl and TxCtrl must be volatile.
- *
- * Revision 1.23  1998/10/28 13:50:45  malthoff
- * Fix: Endian support missing in XM_IN/OUT-ADDR/HASH macros.
- *
- * Revision 1.22  1998/10/26 08:01:36  malthoff
- * RX_MFF_CTRL1 is split up into RX_MFF_CTRL1,
- * RX_MFF_STAT_TO, and RX_MFF_TIST_TO.
- * TX_MFF_CTRL1 is split up TX_MFF_CTRL1 and TX_MFF_WAF.
- *
- * Revision 1.21  1998/10/20 07:43:10  malthoff
- * Fix: XM_IN/OUT/ADDR/HASH macros:
- * The pointer must be casted.
- *
- * Revision 1.20  1998/10/19 15:53:59  malthoff
- * Remove ML proto definitions.
- *
- * Revision 1.19  1998/10/16 14:40:17  gklug
- * fix: typo B0_XM_IMSK regs
- *
- * Revision 1.18  1998/10/16 09:46:54  malthoff
- * Remove temp defines for ML diag prototype.
- * Fix register definition for B0_XM1_PHY_DATA, B0_XM1_PHY_DATA
- * B0_XM2_PHY_DATA, B0_XM2_PHY_ADDR, B0_XA1_CSR, B0_XS1_CSR,
- * B0_XS2_CSR, and B0_XA2_CSR.
- *
- * Revision 1.17  1998/10/14 06:03:14  cgoos
- * Changed shifted constant to ULONG.
- *
- * Revision 1.16  1998/10/09 07:05:41  malthoff
- * Rename ALL_PA_ENA_TO to PA_ENA_TO_ALL.
- *
- * Revision 1.15  1998/10/05 07:54:23  malthoff
- * Split up RB_CTRL and it's bit definition into
- * RB_CTRL, RB_TST1, and RB_TST2.
- * Rename RB_RX_HTPP to RB_RX_LTPP.
- * Add ALL_PA_ENA_TO. Modify F_WATER_MARK
- * according to HW Spec. v1.5.
- * Add MFF_TX_CTRL_DEF.
- *
- * Revision 1.14  1998/09/28 13:31:16  malthoff
- * bug fix: B2_MAC_3 is 0x110 not 0x114
- *
- * Revision 1.13  1998/09/24 14:42:56  malthoff
- * Split the RX_MFF_TST into RX_MFF_CTRL2,
- * RX_MFF_TST1, and RX_MFF_TST2.
- * Rename RX_MFF_CTRL to RX_MFF_CTRL1.
- * Add BMU bit CSR_SV_IDLE.
- * Add macros PHY_READ() and PHY_WRITE().
- * Rename macro SK_ADDR() to SK_HW_ADDR()
- * because of conflicts with the Address Module.
- *
- * Revision 1.12  1998/09/16 07:25:33  malthoff
- * Change the parameter order in the XM_INxx and XM_OUTxx macros,
- * to have the IoC as first parameter.
- *
- * Revision 1.11  1998/09/03 09:58:41  malthoff
- * Rework the XM_xxx macros. Use {} instead of () to
- * be compatible with SK_xxx macros which are defined
- * with {}.
- *
- * Revision 1.10  1998/09/02 11:16:39  malthoff
- * Temporary modify B2_I2C_SW to make tests with
- * the GE/ML prototype.
- *
- * Revision 1.9  1998/08/19 09:11:49  gklug
- * fix: struct are removed from c-source (see CCC)
- * add: typedefs for all structs
- *
- * Revision 1.8  1998/08/18 08:27:27  malthoff
- * Add some temporary workarounds to test GE
- * sources with the ML.
- *
- * Revision 1.7  1998/07/03 14:42:26  malthoff
- * bug fix: Correct macro XMA().
- * Add temporary workaround to access the PCI config space over I/O
- *
- * Revision 1.6  1998/06/23 11:30:36  malthoff
- * Remove ';' with ',' in macors.
- *
- * Revision 1.5  1998/06/22 14:20:57  malthoff
- * Add macro SK_ADDR(Base,Addr).
- *
- * Revision 1.4  1998/06/19 13:35:43  malthoff
- * change 'pGec' with 'pAC'
- *
- * Revision 1.3  1998/06/17 14:58:16  cvs
- * Lost keywords reinserted.
- *
- * Revision 1.1  1998/06/17 14:16:36  cvs
- * created
- *
  *
  ******************************************************************************/
 
@@ -628,12 +407,12 @@ extern "C" {
 #define B2_FAR			0x0120	/* 32 bit	Flash-Prom Addr Reg/Cnt */
 #define B2_FDP			0x0124	/*  8 bit	Flash-Prom Data Port */
 	/* 0x0125 - 0x0127:	reserved */
-#define B2_LD_CRTL		0x0128	/*  8 bit	EPROM loader control register */
+#define B2_LD_CTRL		0x0128	/*  8 bit	EPROM loader control register */
 #define B2_LD_TEST		0x0129	/*  8 bit	EPROM loader test register */
 	/* 0x012a - 0x012f:	reserved */
 #define B2_TI_INI		0x0130	/* 32 bit	Timer Init Value */
 #define B2_TI_VAL		0x0134	/* 32 bit	Timer Value */
-#define B2_TI_CRTL		0x0138	/*  8 bit	Timer Control */
+#define B2_TI_CTRL		0x0138	/*  8 bit	Timer Control */
 #define B2_TI_TEST		0x0139	/*  8 Bit	Timer Test */
 	/* 0x013a - 0x013f:	reserved */
 #define B2_IRQM_INI		0x0140	/* 32 bit	IRQ Moderation Timer Init Reg.*/
@@ -1021,7 +800,7 @@ extern "C" {
 								/* Bit 7:	reserved */
 #define RAP_RAP			0x3f	/* Bit 6..0:	0 = block 0,..,6f = block 6f */
 
-/*	B0_CTST		16 bit	Control/Status register */
+/*	B0_CTST			16 bit	Control/Status register */
 								/* Bit 15..14:	reserved */
 #define CS_CLK_RUN_HOT	BIT_13S		/* CLK_RUN hot m. (YUKON-Lite only) */
 #define CS_CLK_RUN_RST	BIT_12S		/* CLK_RUN reset  (YUKON-Lite only) */
@@ -1038,7 +817,7 @@ extern "C" {
 #define CS_RST_CLR		BIT_1S		/* Clear Software reset	*/
 #define CS_RST_SET		BIT_0S		/* Set   Software reset	*/
 
-/*	B0_LED		 8 Bit	LED register */
+/*	B0_LED			 8 Bit	LED register */
 								/* Bit  7.. 2:	reserved */
 #define LED_STAT_ON		BIT_1S		/* Status LED on	*/
 #define LED_STAT_OFF	BIT_0S		/* Status LED off	*/
@@ -1053,9 +832,9 @@ extern "C" {
 #define PC_VCC_ON		BIT_1       /* Switch VCC On  */
 #define PC_VCC_OFF		BIT_0       /* Switch VCC Off */
 
-/*	B0_ISRC		32 bit	Interrupt Source Register */
-/*	B0_IMSK		32 bit	Interrupt Mask Register */
-/*	B0_SP_ISRC	32 bit	Special Interrupt Source Reg */
+/*	B0_ISRC			32 bit	Interrupt Source Register */
+/*	B0_IMSK			32 bit	Interrupt Mask Register */
+/*	B0_SP_ISRC		32 bit	Special Interrupt Source Reg */
 /*	B2_IRQM_MSK 	32 bit	IRQ Moderation Mask */
 #define IS_ALL_MSK		0xbfffffffUL	/* All Interrupt bits */
 #define IS_HW_ERR		BIT_31		/* Interrupt HW Error */
@@ -1099,9 +878,9 @@ extern "C" {
 #define IS_XA2_C		BIT_0		/* Q_XA2 Encoding Error */
 
 
-/*	B0_HWE_ISRC	32 bit	HW Error Interrupt Src Reg */
-/*	B0_HWE_IMSK	32 bit	HW Error Interrupt Mask Reg */
-/*	B2_IRQM_HWE_MSK 32 bit	IRQ Moderation HW Error Mask */
+/*	B0_HWE_ISRC		32 bit	HW Error Interrupt Src Reg */
+/*	B0_HWE_IMSK		32 bit	HW Error Interrupt Mask Reg */
+/*	B2_IRQM_HWE_MSK	32 bit	IRQ Moderation HW Error Mask */
 #define IS_ERR_MSK		0x00000fffL	/* 		All Error bits */
 								/* Bit 31..14:	reserved */
 #define IS_IRQ_TIST_OV	BIT_13	/* Time Stamp Timer Overflow (YUKON only) */
@@ -1119,29 +898,32 @@ extern "C" {
 #define IS_R1_PAR_ERR	BIT_1	/* Queue R1 Parity Error */
 #define IS_R2_PAR_ERR	BIT_0	/* Queue R2 Parity Error */
 
-/*	B2_CONN_TYP	 8 bit	Connector type */
-/*	B2_PMD_TYP	 8 bit	PMD type */
+/*	B2_CONN_TYP		 8 bit	Connector type */
+/*	B2_PMD_TYP		 8 bit	PMD type */
 /*	Values of connector and PMD type comply to SysKonnect internal std */
 
-/*	B2_MAC_CFG	 8 bit	MAC Configuration / Chip Revision */
+/*	B2_MAC_CFG		 8 bit	MAC Configuration / Chip Revision */
 #define CFG_CHIP_R_MSK	(0xf<<4)	/* Bit 7.. 4: Chip Revision */
 									/* Bit 3.. 2:	reserved */
 #define CFG_DIS_M2_CLK	BIT_1S		/* Disable Clock for 2nd MAC */
 #define CFG_SNG_MAC		BIT_0S		/* MAC Config: 0=2 MACs / 1=1 MAC*/
 
-/*	B2_CHIP_ID	 8 bit 	Chip Identification Number */
+/*	B2_CHIP_ID		 8 bit 	Chip Identification Number */
 #define CHIP_ID_GENESIS		0x0a	/* Chip ID for GENESIS */
 #define CHIP_ID_YUKON		0xb0	/* Chip ID for YUKON */
-#define CHIP_ID_YUKON_LITE	0xb1	/* Chip ID for YUKON-Lite (Rev. A1) */
+#define CHIP_ID_YUKON_LITE	0xb1	/* Chip ID for YUKON-Lite (Rev. A1-A3) */
 #define CHIP_ID_YUKON_LP	0xb2	/* Chip ID for YUKON-LP */
 
-/*	B2_FAR		32 bit	Flash-Prom Addr Reg/Cnt */
+#define CHIP_REV_YU_LITE_A1	3		/* Chip Rev. for YUKON-Lite A1,A2 */
+#define CHIP_REV_YU_LITE_A3	7		/* Chip Rev. for YUKON-Lite A3 */
+
+/*	B2_FAR			32 bit	Flash-Prom Addr Reg/Cnt */
 #define FAR_ADDR		0x1ffffL	/* Bit 16.. 0:	FPROM Address mask */
 
-/*	B2_LD_CRTL	 8 bit	EPROM loader control register */
+/*	B2_LD_CTRL		 8 bit	EPROM loader control register */
 /*	Bits are currently reserved */
 
-/*	B2_LD_TEST	 8 bit	EPROM loader test register */
+/*	B2_LD_TEST		 8 bit	EPROM loader test register */
 								/* Bit 7.. 4:	reserved */
 #define LD_T_ON			BIT_3S	/* Loader Test mode on */
 #define LD_T_OFF		BIT_2S	/* Loader Test mode off */
@@ -1151,16 +933,16 @@ extern "C" {
 /*
  *	Timer Section
  */
-/*	B2_TI_CRTL	 8 bit	Timer control */
+/*	B2_TI_CTRL		 8 bit	Timer control */
 /*	B2_IRQM_CTRL	 8 bit	IRQ Moderation Timer Control */
 								/* Bit 7.. 3:	reserved */
 #define TIM_START		BIT_2S	/* Start Timer */
 #define TIM_STOP		BIT_1S	/* Stop  Timer */
 #define TIM_CLR_IRQ		BIT_0S	/* Clear Timer IRQ (!IRQM) */
 
-/*	B2_TI_TEST	 8 Bit	Timer Test */
+/*	B2_TI_TEST		 8 Bit	Timer Test */
 /*	B2_IRQM_TEST	 8 bit	IRQ Moderation Timer Test */
-/*	B28_DPT_TST	 8 bit	Descriptor Poll Timer Test Reg */
+/*	B28_DPT_TST		 8 bit	Descriptor Poll Timer Test Reg */
 								/* Bit 7.. 3:	reserved */
 #define TIM_T_ON		BIT_2S	/* Test mode on */
 #define TIM_T_OFF		BIT_1S	/* Test mode off */
@@ -1197,7 +979,7 @@ extern "C" {
 #define TST_FRC_APERR_1M64	BIT_1S	/* AddrPERR on 1. phase */
 #define TST_FRC_APERR_2M64	BIT_0S	/* AddrPERR on 2. phase */
 
-/*	B2_GP_IO	32 bit	General Purpose I/O Register */
+/*	B2_GP_IO		32 bit	General Purpose I/O Register */
 							/* Bit 31..26:	reserved */
 #define GP_DIR_9	BIT_25	/* IO_9 direct, 0=In/1=Out */
 #define GP_DIR_8	BIT_24	/* IO_8 direct, 0=In/1=Out */
@@ -1221,28 +1003,28 @@ extern "C" {
 #define GP_IO_1		BIT_1	/* IO_1 pin */
 #define GP_IO_0		BIT_0	/* IO_0 pin */
 
-/*	B2_I2C_CTRL	32 bit	I2C HW Control Register */
+/*	B2_I2C_CTRL		32 bit	I2C HW Control Register */
 #define I2C_FLAG		BIT_31		/* Start read/write if WR */
 #define I2C_ADDR		(0x7fffL<<16)	/* Bit 30..16:	Addr to be RD/WR */
 #define I2C_DEV_SEL		(0x7fL<<9)		/* Bit 15.. 9:	I2C Device Select */
 								/* Bit	8.. 5:	reserved	*/
 #define I2C_BURST_LEN	BIT_4		/* Burst Len, 1/4 bytes */
-#define I2C_DEV_SIZE	(7L<<1)		/* Bit	3.. 1:	I2C Device Size	*/
-#define I2C_025K_DEV	(0L<<1)		/*		0: 256 Bytes or smal. */
-#define I2C_05K_DEV		(1L<<1)		/* 		1: 512	Bytes	*/
-#define I2C_1K_DEV		(2L<<1)		/*		2: 1024 Bytes	*/
-#define I2C_2K_DEV		(3L<<1)		/*		3: 2048	Bytes	*/
-#define I2C_4K_DEV		(4L<<1)		/*		4: 4096 Bytes	*/
-#define I2C_8K_DEV		(5L<<1)		/*		5: 8192 Bytes	*/
-#define I2C_16K_DEV		(6L<<1)		/*		6: 16384 Bytes	*/
-#define I2C_32K_DEV		(7L<<1)		/*		7: 32768 Bytes	*/
+#define I2C_DEV_SIZE	(7<<1)		/* Bit	3.. 1:	I2C Device Size	*/
+#define I2C_025K_DEV	(0<<1)		/*		0: 256 Bytes or smal. */
+#define I2C_05K_DEV		(1<<1)		/* 		1: 512	Bytes	*/
+#define I2C_1K_DEV		(2<<1)		/*		2: 1024 Bytes	*/
+#define I2C_2K_DEV		(3<<1)		/*		3: 2048	Bytes	*/
+#define I2C_4K_DEV		(4<<1)		/*		4: 4096 Bytes	*/
+#define I2C_8K_DEV		(5<<1)		/*		5: 8192 Bytes	*/
+#define I2C_16K_DEV		(6<<1)		/*		6: 16384 Bytes	*/
+#define I2C_32K_DEV		(7<<1)		/*		7: 32768 Bytes	*/
 #define I2C_STOP		BIT_0		/* Interrupt I2C transfer */
 
-/*	B2_I2C_IRQ	32 bit	I2C HW IRQ Register */
+/*	B2_I2C_IRQ		32 bit	I2C HW IRQ Register */
 								/* Bit 31.. 1	reserved */
 #define I2C_CLR_IRQ		BIT_0	/* Clear I2C IRQ */
 
-/*	B2_I2C_SW	32 bit (8 bit access)	I2C HW SW Port Register */
+/*	B2_I2C_SW		32 bit (8 bit access)	I2C HW SW Port Register */
 								/* Bit  7.. 3:	reserved */
 #define I2C_DATA_DIR	BIT_2S		/* direction of I2C_DATA */
 #define I2C_DATA		BIT_1S		/* I2C Data Port	*/
@@ -1254,27 +1036,27 @@ extern "C" {
 #define I2C_SENS_ADDR	LM80_ADDR	/* I2C Sensor Address, (Volt and Temp)*/
 
 
-/*	B2_BSC_CTRL	 8 bit	Blink Source Counter Control */
+/*	B2_BSC_CTRL		 8 bit	Blink Source Counter Control */
 							/* Bit  7.. 2:	reserved */
 #define BSC_START	BIT_1S		/* Start Blink Source Counter */
 #define BSC_STOP	BIT_0S		/* Stop  Blink Source Counter */
 
-/*	B2_BSC_STAT	 8 bit	Blink Source Counter Status */
+/*	B2_BSC_STAT		 8 bit	Blink Source Counter Status */
 							/* Bit  7.. 1:	reserved */
 #define BSC_SRC		BIT_0S		/* Blink Source, 0=Off / 1=On */
 
-/*	B2_BSC_TST	16 bit	Blink Source Counter Test Reg */
+/*	B2_BSC_TST		16 bit	Blink Source Counter Test Reg */
 #define BSC_T_ON	BIT_2S		/* Test mode on */
 #define BSC_T_OFF	BIT_1S		/* Test mode off */
 #define BSC_T_STEP	BIT_0S		/* Test step */
 
 
-/*	B3_RAM_ADDR	32 bit	RAM Address, to read or write */
+/*	B3_RAM_ADDR		32 bit	RAM Address, to read or write */
 					/* Bit 31..19:	reserved */
 #define RAM_ADR_RAN	0x0007ffffL	/* Bit 18.. 0:	RAM Address Range */
 
 /* RAM Interface Registers */
-/*	B3_RI_CTRL	16 bit	RAM Iface Control Register */
+/*	B3_RI_CTRL		16 bit	RAM Iface Control Register */
 								/* Bit 15..10:	reserved */
 #define RI_CLR_RD_PERR	BIT_9S	/* Clear IRQ RAM Read Parity Err */
 #define RI_CLR_WR_PERR	BIT_8S	/* Clear IRQ RAM Write Parity Err*/
@@ -1282,7 +1064,7 @@ extern "C" {
 #define RI_RST_CLR		BIT_1S	/* Clear RAM Interface Reset */
 #define RI_RST_SET		BIT_0S	/* Set   RAM Interface Reset */
 
-/*	B3_RI_TEST	 8 bit	RAM Iface Test Register */
+/*	B3_RI_TEST		 8 bit	RAM Iface Test Register */
 								/* Bit 15.. 4:	reserved */
 #define RI_T_EV			BIT_3S	/* Timeout Event occured */
 #define RI_T_ON			BIT_2S	/* Timeout Timer Test On */
@@ -1309,7 +1091,7 @@ extern "C" {
 #define MA_DIS_REC_RX1	BIT_0S	/* Disable Recovery Timer RX1 */
 
 /* Packet Arbiter Registers */
-/*	B3_PA_CTRL	16 bit	Packet Arbiter Ctrl Register */
+/*	B3_PA_CTRL		16 bit	Packet Arbiter Ctrl Register */
 								/* Bit 15..14:	reserved */
 #define PA_CLR_TO_TX2	BIT_13S	/* Clear IRQ Packet Timeout TX2 */
 #define PA_CLR_TO_TX1	BIT_12S	/* Clear IRQ Packet Timeout TX1 */
@@ -1332,7 +1114,7 @@ extern "C" {
 /* Rx/Tx Path related Arbiter Test Registers */
 /*	B3_MA_TO_TEST	16 bit	MAC Arbiter Timeout Test Reg */
 /*	B3_MA_RC_TEST	16 bit	MAC Arbiter Recovery Test Reg */
-/*	B3_PA_TEST	16 bit	Packet Arbiter Test Register */
+/*	B3_PA_TEST		16 bit	Packet Arbiter Test Register */
 /*			Bit 15, 11, 7, and 3 are reserved in B3_PA_TEST */
 #define TX2_T_EV	BIT_15S		/* TX2 Timeout/Recv Event occured */
 #define TX2_T_ON	BIT_14S		/* TX2 Timeout/Recv Timer Test On */
@@ -1353,14 +1135,14 @@ extern "C" {
 
 
 /* Transmit Arbiter Registers MAC 1 and 2, use MR_ADDR() to access */
-/*	TXA_ITI_INI	32 bit	Tx Arb Interval Timer Init Val */
-/*	TXA_ITI_VAL	32 bit	Tx Arb Interval Timer Value */
-/*	TXA_LIM_INI	32 bit	Tx Arb Limit Counter Init Val */
-/*	TXA_LIM_VAL	32 bit	Tx Arb Limit Counter Value */
+/*	TXA_ITI_INI		32 bit	Tx Arb Interval Timer Init Val */
+/*	TXA_ITI_VAL		32 bit	Tx Arb Interval Timer Value */
+/*	TXA_LIM_INI		32 bit	Tx Arb Limit Counter Init Val */
+/*	TXA_LIM_VAL		32 bit	Tx Arb Limit Counter Value */
 								/* Bit 31..24:	reserved */
 #define TXA_MAX_VAL	0x00ffffffUL/* Bit 23.. 0:	Max TXA Timer/Cnt Val */
 
-/*	TXA_CTRL	 8 bit	Tx Arbiter Control Register */
+/*	TXA_CTRL		 8 bit	Tx Arbiter Control Register */
 #define TXA_ENA_FSYNC	BIT_7S	/* Enable  force of sync Tx queue */
 #define TXA_DIS_FSYNC	BIT_6S	/* Disable force of sync Tx queue */
 #define TXA_ENA_ALLOC	BIT_5S	/* Enable  alloc of free bandwidth */
@@ -1370,7 +1152,7 @@ extern "C" {
 #define TXA_ENA_ARB		BIT_1S	/* Enable  Tx Arbiter */
 #define TXA_DIS_ARB		BIT_0S	/* Disable Tx Arbiter */
 
-/*	TXA_TEST	 8 bit	Tx Arbiter Test Register */
+/*	TXA_TEST		 8 bit	Tx Arbiter Test Register */
 								/* Bit 7.. 6:	reserved */
 #define TXA_INT_T_ON	BIT_5S	/* Tx Arb Interval Timer Test On */
 #define TXA_INT_T_OFF	BIT_4S	/* Tx Arb Interval Timer Test Off */
@@ -1379,22 +1161,22 @@ extern "C" {
 #define TXA_LIM_T_OFF	BIT_1S	/* Tx Arb Limit Timer Test Off */
 #define TXA_LIM_T_STEP	BIT_0S	/* Tx Arb Limit Timer Step */
 
-/*	TXA_STAT	 8 bit	Tx Arbiter Status Register */
+/*	TXA_STAT		 8 bit	Tx Arbiter Status Register */
 								/* Bit 7.. 1:	reserved */
 #define TXA_PRIO_XS		BIT_0S	/* sync queue has prio to send */
 
-/*	Q_BC	32 bit	Current Byte Counter */
+/*	Q_BC			32 bit	Current Byte Counter */
 								/* Bit 31..16:	reserved */
 #define BC_MAX			0xffff	/* Bit 15.. 0:	Byte counter */
 
 /* BMU Control Status Registers */
-/*	B0_R1_CSR	32 bit	BMU Ctrl/Stat Rx Queue 1 */
-/*	B0_R2_CSR	32 bit	BMU Ctrl/Stat Rx Queue 2 */
-/*	B0_XA1_CSR	32 bit	BMU Ctrl/Stat Sync Tx Queue 1 */
-/*	B0_XS1_CSR	32 bit	BMU Ctrl/Stat Async Tx Queue 1 */
-/*	B0_XA2_CSR	32 bit	BMU Ctrl/Stat Sync Tx Queue 2 */
-/*	B0_XS2_CSR	32 bit	BMU Ctrl/Stat Async Tx Queue 2 */
-/*	Q_CSR		32 bit	BMU Control/Status Register */
+/*	B0_R1_CSR		32 bit	BMU Ctrl/Stat Rx Queue 1 */
+/*	B0_R2_CSR		32 bit	BMU Ctrl/Stat Rx Queue 2 */
+/*	B0_XA1_CSR		32 bit	BMU Ctrl/Stat Sync Tx Queue 1 */
+/*	B0_XS1_CSR		32 bit	BMU Ctrl/Stat Async Tx Queue 1 */
+/*	B0_XA2_CSR		32 bit	BMU Ctrl/Stat Sync Tx Queue 2 */
+/*	B0_XS2_CSR		32 bit	BMU Ctrl/Stat Async Tx Queue 2 */
+/*	Q_CSR			32 bit	BMU Control/Status Register */
 								/* Bit 31..25:	reserved */
 #define CSR_SV_IDLE		BIT_24		/* BMU SM Idle */
 								/* Bit 23..22:	reserved */
@@ -1428,7 +1210,7 @@ extern "C" {
 						CSR_SV_RUN | CSR_DREAD_RUN | CSR_DWRITE_RUN |\
 						CSR_TRANS_RUN)
 
-/*	Q_F	32 bit	Flag Register */
+/*	Q_F				32 bit	Flag Register */
 									/* Bit 31..28:	reserved */
 #define F_ALM_FULL		BIT_27		/* Rx FIFO: almost full */
 #define F_EMPTY			BIT_27		/* Tx FIFO: empty flag */
@@ -1439,17 +1221,17 @@ extern "C" {
 									/* Bit 15..11: 	reserved */
 #define F_WATER_MARK	0x0007ffL	/* Bit 10.. 0:	Watermark */
 
-/*	Q_T1	32 bit	Test Register 1 */
+/*	Q_T1			32 bit	Test Register 1 */
 /*		Holds four State Machine control Bytes */
-#define SM_CRTL_SV_MSK	(0xffL<<24)	/* Bit 31..24:	Control Supervisor SM */
-#define SM_CRTL_RD_MSK	(0xffL<<16)	/* Bit 23..16:	Control Read Desc SM */
-#define SM_CRTL_WR_MSK	(0xffL<<8)	/* Bit 15.. 8:	Control Write Desc SM */
-#define SM_CRTL_TR_MSK	0xffL		/* Bit	7.. 0:	Control Transfer SM */
+#define SM_CTRL_SV_MSK	(0xffL<<24)	/* Bit 31..24:	Control Supervisor SM */
+#define SM_CTRL_RD_MSK	(0xffL<<16)	/* Bit 23..16:	Control Read Desc SM */
+#define SM_CTRL_WR_MSK	(0xffL<<8)	/* Bit 15.. 8:	Control Write Desc SM */
+#define SM_CTRL_TR_MSK	0xffL		/* Bit	7.. 0:	Control Transfer SM */
 
-/*	Q_T1_TR	 8 bit	Test Register 1 Transfer SM */
-/*	Q_T1_WR	 8 bit	Test Register 1 Write Descriptor SM */
-/*	Q_T1_RD	 8 bit	Test Register 1 Read Descriptor SM */
-/*	Q_T1_SV	 8 bit	Test Register 1 Supervisor SM */
+/*	Q_T1_TR			 8 bit	Test Register 1 Transfer SM */
+/*	Q_T1_WR			 8 bit	Test Register 1 Write Descriptor SM */
+/*	Q_T1_RD			 8 bit	Test Register 1 Read Descriptor SM */
+/*	Q_T1_SV			 8 bit	Test Register 1 Supervisor SM */
 
 /* The control status byte of each machine looks like ... */
 #define SM_STATE		0xf0	/* Bit 7.. 4:	State which shall be loaded */
@@ -1459,7 +1241,7 @@ extern "C" {
 #define SM_STEP			BIT_0S	/* Step the State Machine */
 /* The encoding of the states is not supported by the Diagnostics Tool */
 
-/*	Q_T2	32 bit	Test Register 2	*/
+/*	Q_T2			32 bit	Test Register 2	*/
 								/* Bit 31.. 8:	reserved */
 #define T2_AC_T_ON		BIT_7	/* Address Counter Test Mode on */
 #define T2_AC_T_OFF		BIT_6	/* Address Counter Test Mode off */
@@ -1470,23 +1252,23 @@ extern "C" {
 #define T2_STEP02		BIT_1	/* Inc AC/Dec BC by 2 */
 #define T2_STEP01		BIT_0	/* Inc AC/Dec BC by 1 */
 
-/*	Q_T3	32 bit	Test Register 3	*/
+/*	Q_T3			32 bit	Test Register 3	*/
 								/* Bit 31.. 7:	reserved */
 #define T3_MUX_MSK		(7<<4)	/* Bit  6.. 4:	Mux Position */
 								/* Bit  3:	reserved */
 #define T3_VRAM_MSK		7		/* Bit  2.. 0:	Virtual RAM Buffer Address */
 
 /* RAM Buffer Register Offsets, use RB_ADDR(Queue, Offs) to access */
-/*	RB_START	32 bit	RAM Buffer Start Address */
-/*	RB_END		32 bit	RAM Buffer End Address */
-/*	RB_WP		32 bit	RAM Buffer Write Pointer */
-/*	RB_RP		32 bit	RAM Buffer Read Pointer */
-/*	RB_RX_UTPP	32 bit	Rx Upper Threshold, Pause Pack */
-/*	RB_RX_LTPP	32 bit	Rx Lower Threshold, Pause Pack */
-/*	RB_RX_UTHP	32 bit	Rx Upper Threshold, High Prio */
-/*	RB_RX_LTHP	32 bit	Rx Lower Threshold, High Prio */
-/*	RB_PC		32 bit	RAM Buffer Packet Counter */
-/*	RB_LEV		32 bit	RAM Buffer Level Register */
+/*	RB_START		32 bit	RAM Buffer Start Address */
+/*	RB_END			32 bit	RAM Buffer End Address */
+/*	RB_WP			32 bit	RAM Buffer Write Pointer */
+/*	RB_RP			32 bit	RAM Buffer Read Pointer */
+/*	RB_RX_UTPP		32 bit	Rx Upper Threshold, Pause Pack */
+/*	RB_RX_LTPP		32 bit	Rx Lower Threshold, Pause Pack */
+/*	RB_RX_UTHP		32 bit	Rx Upper Threshold, High Prio */
+/*	RB_RX_LTHP		32 bit	Rx Lower Threshold, High Prio */
+/*	RB_PC			32 bit	RAM Buffer Packet Counter */
+/*	RB_LEV			32 bit	RAM Buffer Level Register */
 				/* Bit 31..19:	reserved */
 #define RB_MSK	0x0007ffff	/* Bit 18.. 0:	RAM Buffer Pointer Bits */
 
@@ -1519,17 +1301,17 @@ extern "C" {
 
 /* Receive and Transmit MAC FIFO Registers (GENESIS only) */
 
-/*	RX_MFF_EA	32 bit	Receive MAC FIFO End Address */
-/*	RX_MFF_WP	32 bit 	Receive MAC FIFO Write Pointer */
-/*	RX_MFF_RP	32 bit	Receive MAC FIFO Read Pointer */
-/*	RX_MFF_PC	32 bit	Receive MAC FIFO Packet Counter */
-/*	RX_MFF_LEV	32 bit	Receive MAC FIFO Level */
-/*	TX_MFF_EA	32 bit	Transmit MAC FIFO End Address */
-/*	TX_MFF_WP	32 bit 	Transmit MAC FIFO Write Pointer */
-/*	TX_MFF_WSP	32 bit	Transmit MAC FIFO WR Shadow Pointer */
-/*	TX_MFF_RP	32 bit	Transmit MAC FIFO Read Pointer */
-/*	TX_MFF_PC	32 bit	Transmit MAC FIFO Packet Cnt */
-/*	TX_MFF_LEV	32 bit	Transmit MAC FIFO Level */
+/*	RX_MFF_EA		32 bit	Receive MAC FIFO End Address */
+/*	RX_MFF_WP		32 bit 	Receive MAC FIFO Write Pointer */
+/*	RX_MFF_RP		32 bit	Receive MAC FIFO Read Pointer */
+/*	RX_MFF_PC		32 bit	Receive MAC FIFO Packet Counter */
+/*	RX_MFF_LEV		32 bit	Receive MAC FIFO Level */
+/*	TX_MFF_EA		32 bit	Transmit MAC FIFO End Address */
+/*	TX_MFF_WP		32 bit 	Transmit MAC FIFO Write Pointer */
+/*	TX_MFF_WSP		32 bit	Transmit MAC FIFO WR Shadow Pointer */
+/*	TX_MFF_RP		32 bit	Transmit MAC FIFO Read Pointer */
+/*	TX_MFF_PC		32 bit	Transmit MAC FIFO Packet Cnt */
+/*	TX_MFF_LEV		32 bit	Transmit MAC FIFO Level */
 								/* Bit 31.. 6:	reserved */
 #define MFF_MSK			0x007fL	/* Bit	5.. 0:	MAC FIFO Address/Ptr Bits */
 
@@ -1682,7 +1464,7 @@ extern "C" {
 
 #define RX_GMF_FL_THR_DEF	0x0a	/* Rx GMAC FIFO Flush Threshold default */
 
-/*	GMAC_TI_ST_CTRL		  8 bit	Time Stamp Timer Ctrl Reg (YUKON only) */
+/*	GMAC_TI_ST_CTRL	 8 bit	Time Stamp Timer Ctrl Reg (YUKON only) */
 								/* Bit 7.. 3:	reserved */
 #define GMT_ST_START	BIT_2S		/* Start Time Stamp Timer */
 #define GMT_ST_STOP		BIT_1S		/* Stop  Time Stamp Timer */
@@ -1766,13 +1548,13 @@ extern "C" {
 #define GMAC_DEF_MSK	(GM_IS_TX_CO_OV | GM_IS_RX_CO_OV | \
 						GM_IS_TX_FF_UR)
 
-/*	GMAC_LINK_CTRL		16 bit	GMAC Link Control Reg (YUKON only) */
+/*	GMAC_LINK_CTRL	16 bit	GMAC Link Control Reg (YUKON only) */
 						/* Bits 15.. 2:	reserved */
 #define GMLC_RST_CLR	BIT_1S		/* Clear GMAC Link Reset */
 #define GMLC_RST_SET	BIT_0S		/* Set   GMAC Link Reset */
 
 
-/*	WOL_CTRL_STAT		16 bit	WOL Control/Status Reg */
+/*	WOL_CTRL_STAT	16 bit	WOL Control/Status Reg */
 #define WOL_CTL_LINK_CHG_OCC			BIT_15S
 #define WOL_CTL_MAGIC_PKT_OCC			BIT_14S
 #define WOL_CTL_PATTERN_OCC				BIT_13S
@@ -1801,7 +1583,7 @@ extern "C" {
 	WOL_CTL_DIS_PATTERN_UNIT |		\
 	WOL_CTL_DIS_MAGIC_PKT_UNIT)
 
-/*	WOL_MATCH_CTL		 8 bit	WOL Match Control Reg */
+/*	WOL_MATCH_CTL	 8 bit	WOL Match Control Reg */
 #define WOL_CTL_PATT_ENA(x)				(BIT_0 << (x))
 
 #define SK_NUM_WOL_PATTERN		7

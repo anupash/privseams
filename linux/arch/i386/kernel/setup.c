@@ -78,12 +78,9 @@ EXPORT_SYMBOL_GPL(mmu_cr4_features);
 EXPORT_SYMBOL(acpi_disabled);
 
 #ifdef	CONFIG_ACPI_BOOT
-	int acpi_irq __initdata = 1;	/* enable IRQ */
-	int acpi_ht __initdata = 1;	/* enable HT */
+extern int __initdata acpi_ht;
+int __initdata acpi_force = 0;
 #endif
-
-int acpi_force __initdata = 0;
-
 
 int MCA_bus;
 /* for MCA, but anyone else can use it if they want */
@@ -447,6 +444,12 @@ static int __init copy_e820_map(struct e820entry * biosmap, int nr_map)
 #if defined(CONFIG_EDD) || defined(CONFIG_EDD_MODULE)
 unsigned char eddnr;
 struct edd_info edd[EDDMAXNR];
+unsigned int edd_disk80_sig;
+#ifdef CONFIG_EDD_MODULE
+EXPORT_SYMBOL(eddnr);
+EXPORT_SYMBOL(edd);
+EXPORT_SYMBOL(edd_disk80_sig);
+#endif
 /**
  * copy_edd() - Copy the BIOS EDD information
  *              from empty_zero_page into a safe place.
@@ -456,6 +459,7 @@ static inline void copy_edd(void)
 {
      eddnr = EDD_NR;
      memcpy(edd, EDD_BUF, sizeof(edd));
+     edd_disk80_sig = DISK80_SIGNATURE;
 }
 #else
 #define copy_edd() do {} while (0)
@@ -573,7 +577,7 @@ static void __init parse_cmdline_early (char ** cmdline_p)
 
 		/* "pci=noacpi" disables ACPI interrupt routing */
 		else if (!memcmp(from, "pci=noacpi", 10)) {
-			acpi_irq = 0;
+			acpi_noirq_set();
 		}
 
 #ifdef CONFIG_X86_LOCAL_APIC

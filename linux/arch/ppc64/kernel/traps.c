@@ -16,6 +16,7 @@
  * This file handles the architecture-dependent parts of hardware exceptions
  */
 
+#include <linux/config.h>
 #include <linux/errno.h>
 #include <linux/sched.h>
 #include <linux/kernel.h>
@@ -26,7 +27,6 @@
 #include <linux/user.h>
 #include <linux/a.out.h>
 #include <linux/interrupt.h>
-#include <linux/config.h>
 #include <linux/init.h>
 #include <linux/module.h>
 
@@ -40,16 +40,25 @@
 extern int fix_alignment(struct pt_regs *);
 extern void bad_page_fault(struct pt_regs *, unsigned long, int);
 
+#ifdef CONFIG_PPC_PSERIES
 /* This is true if we are using the firmware NMI handler (typically LPAR) */
 extern int fwnmi_active;
+#endif
 
-#ifdef CONFIG_DEBUG_KERNEL
-void (*debugger)(struct pt_regs *regs);
-int (*debugger_bpt)(struct pt_regs *regs);
-int (*debugger_sstep)(struct pt_regs *regs);
-int (*debugger_iabr_match)(struct pt_regs *regs);
-int (*debugger_dabr_match)(struct pt_regs *regs);
-void (*debugger_fault_handler)(struct pt_regs *regs);
+#ifdef CONFIG_DEBUGGER
+int (*__debugger)(struct pt_regs *regs);
+int (*__debugger_bpt)(struct pt_regs *regs);
+int (*__debugger_sstep)(struct pt_regs *regs);
+int (*__debugger_iabr_match)(struct pt_regs *regs);
+int (*__debugger_dabr_match)(struct pt_regs *regs);
+int (*__debugger_fault_handler)(struct pt_regs *regs);
+
+EXPORT_SYMBOL(__debugger);
+EXPORT_SYMBOL(__debugger_bpt);
+EXPORT_SYMBOL(__debugger_sstep);
+EXPORT_SYMBOL(__debugger_iabr_match);
+EXPORT_SYMBOL(__debugger_dabr_match);
+EXPORT_SYMBOL(__debugger_fault_handler);
 #endif
 
 /*
@@ -86,16 +95,15 @@ static void
 _exception(int signr, siginfo_t *info, struct pt_regs *regs)
 {
 	if (!user_mode(regs)) {
-#ifdef CONFIG_DEBUG_KERNEL
-		if (debugger)
-			debugger(regs);
-#endif
+		if (debugger(regs))
+			return;
 		die("Exception in kernel mode\n", regs, signr);
 	}
 
 	force_sig_info(signr, info, current);
 }
 
+#ifdef CONFIG_PPC_PSERIES
 /* Get the error information for errors coming through the
  * FWNMI vectors.  The pt_regs' r3 will be updated to reflect
  * the actual r3 if possible, and a ptr to the error log entry
@@ -128,10 +136,12 @@ static void FWNMI_release_errinfo(void)
 	if (ret != 0)
 		printk("FWNMI: nmi-interlock failed: %ld\n", ret);
 }
+#endif
 
 void
 SystemResetException(struct pt_regs *regs)
 {
+#ifdef CONFIG_PPC_PSERIES
 	if (fwnmi_active) {
 		struct rtas_error_log *errhdr = FWNMI_get_errinfo(regs);
 		if (errhdr) {
@@ -139,13 +149,10 @@ SystemResetException(struct pt_regs *regs)
 		}
 		FWNMI_release_errinfo();
 	}
-
-#ifdef CONFIG_DEBUG_KERNEL
-	if (debugger)
-		debugger(regs);
-	else
 #endif
-		panic("System Reset");
+
+	if (!debugger(regs))
+		die("System Reset", regs, 0);
 
 	/* Must die if the interrupt is not recoverable */
 	if (!(regs->msr & MSR_RI))
@@ -154,6 +161,7 @@ SystemResetException(struct pt_regs *regs)
 	/* What should we do here? We could issue a shutdown or hard reset. */
 }
 
+#ifdef CONFIG_PPC_PSERIES
 /* 
  * See if we can recover from a machine check exception.
  * This is only called on power4 (or above) and only via
@@ -190,6 +198,7 @@ static int recover_mce(struct pt_regs *regs, struct rtas_error_log err)
 	}
 	return 0;
 }
+#endif
 
 /*
  * Handle a machine check.
@@ -207,6 +216,7 @@ static int recover_mce(struct pt_regs *regs, struct rtas_error_log err)
 void
 MachineCheckException(struct pt_regs *regs)
 {
+#ifdef CONFIG_PPC_PSERIES
 	struct rtas_error_log err, *errp;
 
 	if (fwnmi_active) {
@@ -217,24 +227,14 @@ MachineCheckException(struct pt_regs *regs)
 		if (errp && recover_mce(regs, err))
 			return;
 	}
-
-#ifdef CONFIG_DEBUG_KERNEL
-	if (debugger_fault_handler) {
-		debugger_fault_handler(regs);
-		return;
-	}
-	if (debugger)
-		debugger(regs);
 #endif
-	console_verbose();
-	spin_lock_irq(&die_lock);
-	bust_spinlocks(1);
-	printk("Machine check in kernel mode.\n");
-	printk("Caused by (from SRR1=%lx): ", regs->msr);
-	show_regs(regs);
-	bust_spinlocks(0);
-	spin_unlock_irq(&die_lock);
-	panic("Unrecoverable Machine Check");
+
+	if (debugger_fault_handler(regs))
+		return;
+	if (debugger(regs))
+		return;
+
+	die("Machine check in kernel mode", regs, 0);
 }
 
 void
@@ -257,10 +257,8 @@ InstructionBreakpointException(struct pt_regs *regs)
 {
 	siginfo_t info;
 
-#ifdef CONFIG_DEBUG_KERNEL
-	if (debugger_iabr_match && debugger_iabr_match(regs))
+	if (debugger_iabr_match(regs))
 		return;
-#endif
 	info.si_signo = SIGTRAP;
 	info.si_errno = 0;
 	info.si_code = TRAP_BRKPT;
@@ -349,7 +347,7 @@ check_bug_trap(struct pt_regs *regs)
 		printk(KERN_ERR "Badness in %s at %s:%d\n",
 		       bug->function, bug->file,
 		      (unsigned int)bug->line & ~BUG_WARNING_TRAP);
-		dump_stack();
+		show_stack(current, (void *)regs->gpr[1]);
 		return 1;
 	}
 	printk(KERN_CRIT "kernel BUG in %s at %s:%d!\n",
@@ -361,6 +359,9 @@ void
 ProgramCheckException(struct pt_regs *regs)
 {
 	siginfo_t info;
+
+	if (debugger_fault_handler(regs))
+		return;
 
 	if (regs->msr & 0x100000) {
 		/* IEEE FP exception */
@@ -377,10 +378,9 @@ ProgramCheckException(struct pt_regs *regs)
 	} else if (regs->msr & 0x20000) {
 		/* trap exception */
 
-#ifdef CONFIG_DEBUG_KERNEL
-		if (debugger_bpt && debugger_bpt(regs))
+		if (debugger_bpt(regs))
 			return;
-#endif
+
 		if (check_bug_trap(regs)) {
 			regs->nip += 4;
 			return;
@@ -404,9 +404,13 @@ ProgramCheckException(struct pt_regs *regs)
 void
 KernelFPUnavailableException(struct pt_regs *regs)
 {
-	printk("Illegal floating point used in kernel (task=0x%p, "
-		"pc=0x%016lx, trap=0x%lx)\n", current, regs->nip, regs->trap);
-	panic("Unrecoverable FP Unavailable Exception in Kernel");
+	die("Unrecoverable FP Unavailable Exception in Kernel", regs, 0);
+}
+
+void
+KernelAltivecUnavailableException(struct pt_regs *regs)
+{
+	die("Unrecoverable VMX/Altivec Unavailable Exception in Kernel", regs, 0);
 }
 
 void
@@ -416,10 +420,9 @@ SingleStepException(struct pt_regs *regs)
 
 	regs->msr &= ~MSR_SE;  /* Turn off 'trace' bit */
 
-#ifdef CONFIG_DEBUG_KERNEL
-	if (debugger_sstep && debugger_sstep(regs))
+	if (debugger_sstep(regs))
 		return;
-#endif
+
 	info.si_signo = SIGTRAP;
 	info.si_errno = 0;
 	info.si_code = TRAP_TRACE;
@@ -477,6 +480,17 @@ AlignmentException(struct pt_regs *regs)
 	info.si_addr = (void *)regs->nip;
 	_exception(SIGBUS, &info, regs);	
 }
+
+#ifdef CONFIG_ALTIVEC
+void
+AltivecAssistException(struct pt_regs *regs)
+{
+	if (regs->msr & MSR_VEC)
+		giveup_altivec(current);
+	/* XXX quick hack for now: set the non-Java bit in the VSCR */
+	current->thread.vscr.u[3] |= 0x10000;
+}
+#endif /* CONFIG_ALTIVEC */
 
 void __init trap_init(void)
 {

@@ -9,6 +9,8 @@
 # define __kernel
 #endif
 
+#ifdef __KERNEL__
+
 #ifndef __ASSEMBLY__
 #if __GNUC__ > 3
 # include <linux/compiler-gcc+.h>	/* catch-all for GCC 4, 5, etc. */
@@ -76,6 +78,24 @@
 # define __attribute_pure__	/* unimplemented */
 #endif
 
+/*
+ * From the GCC manual:
+ *
+ * Many functions do not examine any values except their arguments,
+ * and have no effects except the return value.  Basically this is
+ * just slightly more strict class than the `pure' attribute above,
+ * since function is not allowed to read global memory.
+ *
+ * Note that a function that has pointer arguments and examines the
+ * data pointed to must _not_ be declared `const'.  Likewise, a
+ * function that calls a non-`const' function usually must not be
+ * `const'.  It does not make sense for a `const' function to return
+ * `void'.
+ */
+#ifndef __attribute_const__
+# define __attribute_const__	/* unimplemented */
+#endif
+
 /* Optimization barrier */
 #ifndef barrier
 # define barrier() __memory_barrier()
@@ -87,5 +107,7 @@
      __ptr = (unsigned long) (ptr);				\
     (typeof(ptr)) (__ptr + (off)); })
 #endif
+
+#endif /* __KERNEL__ */
 
 #endif /* __LINUX_COMPILER_H */

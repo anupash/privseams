@@ -161,6 +161,47 @@ static struct timer_list samp_timer = TIMER_INITIALIZER(sample_queue, 0, 0);
 #endif
 
 /*
+ * The @dev_base list is protected by @dev_base_lock and the rtln
+ * semaphore.
+ *
+ * Pure readers hold dev_base_lock for reading.
+ *
+ * Writers must hold the rtnl semaphore while they loop through the
+ * dev_base list, and hold dev_base_lock for writing when they do the
+ * actual updates.  This allows pure readers to access the list even
+ * while a writer is preparing to update it.
+ *
+ * To put it another way, dev_base_lock is held for writing only to
+ * protect against pure readers; the rtnl semaphore provides the
+ * protection against other writers.
+ *
+ * See, for example usages, register_netdevice() and
+ * unregister_netdevice(), which must be called with the rtnl
+ * semaphore held.
+ */
+struct net_device *dev_base;
+struct net_device **dev_tail = &dev_base;
+rwlock_t dev_base_lock = RW_LOCK_UNLOCKED;
+
+EXPORT_SYMBOL(dev_base);
+EXPORT_SYMBOL(dev_base_lock);
+
+#define NETDEV_HASHBITS	8
+static struct hlist_head dev_name_head[1<<NETDEV_HASHBITS];
+static struct hlist_head dev_index_head[1<<NETDEV_HASHBITS];
+
+static inline struct hlist_head *dev_name_hash(const char *name)
+{
+	unsigned hash = full_name_hash(name, strnlen(name, IFNAMSIZ));
+	return &dev_name_head[hash & ((1<<NETDEV_HASHBITS)-1)];
+}
+
+static inline struct hlist_head *dev_index_hash(int ifindex)
+{
+	return &dev_index_head[ifindex & ((1<<NETDEV_HASHBITS)-1)];
+}
+
+/*
  *	Our notifier list
  */
 
@@ -371,6 +412,30 @@ int netdev_boot_setup_check(struct net_device *dev)
 	return 0;
 }
 
+
+/**
+ *	netdev_boot_base	- get address from boot time settings
+ *	@prefix: prefix for network device
+ *	@unit: id for network device
+ *
+ * 	Check boot time settings for the base address of device.
+ *	The found settings are set for the device to be used
+ *	later in the device probing.
+ *	Returns 0 if no settings found.
+ */
+unsigned long netdev_boot_base(const char *prefix, int unit)
+{
+	const struct netdev_boot_setup *s = dev_boot_setup;
+	char name[IFNAMSIZ];
+	int i;
+
+	sprintf(name, "%s%d", prefix, unit);
+	for (i = 0; i < NETDEV_BOOT_SETUP_MAX; i++)
+		if (!strcmp(name, s[i].name))
+			return s[i].map.base_addr;
+	return 0;
+}
+
 /*
  * Saves at boot time configured settings for any netdevice.
  */
@@ -419,12 +484,15 @@ __setup("netdev=", netdev_boot_setup);
 
 struct net_device *__dev_get_by_name(const char *name)
 {
-	struct net_device *dev;
+	struct hlist_node *p;
 
-	for (dev = dev_base; dev; dev = dev->next)
+	hlist_for_each(p, dev_name_hash(name)) {
+		struct net_device *dev
+			= hlist_entry(p, struct net_device, name_hlist);
 		if (!strncmp(dev->name, name, IFNAMSIZ))
-			break;
-	return dev;
+			return dev;
+	}
+	return NULL;
 }
 
 /**
@@ -492,12 +560,15 @@ int __dev_get(const char *name)
 
 struct net_device *__dev_get_by_index(int ifindex)
 {
-	struct net_device *dev;
+	struct hlist_node *p;
 
-	for (dev = dev_base; dev; dev = dev->next)
+	hlist_for_each(p, dev_index_hash(ifindex)) {
+		struct net_device *dev
+			= hlist_entry(p, struct net_device, index_hlist);
 		if (dev->ifindex == ifindex)
-			break;
-	return dev;
+			return dev;
+	}
+	return NULL;
 }
 
 
@@ -621,6 +692,21 @@ struct net_device *__dev_get_by_flags(unsigned short if_flags, unsigned short ma
 }
 
 /**
+ *	dev_valid_name - check if name is okay for network device
+ *	@name: name string
+ *
+ *	Network device names need to be valid file names to
+ *	to allow sysfs to work
+ */
+int dev_valid_name(const char *name)
+{
+	return !(*name == '\0' 
+		 || !strcmp(name, ".")
+		 || !strcmp(name, "..")
+		 || strchr(name, '/'));
+}
+
+/**
  *	dev_alloc_name - allocate a name for a device
  *	@dev: device
  *	@name: name format string
@@ -634,30 +720,93 @@ struct net_device *__dev_get_by_flags(unsigned short if_flags, unsigned short ma
 
 int dev_alloc_name(struct net_device *dev, const char *name)
 {
-	int i;
-	char buf[32];
-	char *p;
+	int i = 0;
+	char buf[IFNAMSIZ];
+	const char *p;
+	const int max_netdevices = 8*PAGE_SIZE;
+	long *inuse;
+	struct net_device *d;
 
-	/*
-	 * Verify the string as this thing may have come from
-	 * the user.  There must be either one "%d" and no other "%"
-	 * characters, or no "%" characters at all.
+	p = strnchr(name, IFNAMSIZ-1, '%');
+	if (p) {
+		/*
+		 * Verify the string as this thing may have come from
+		 * the user.  There must be either one "%d" and no other "%"
+		 * characters.
+		 */
+		if (p[1] != 'd' || strchr(p + 2, '%'))
+			return -EINVAL;
+
+		/* Use one page as a bit array of possible slots */
+		inuse = (long *) get_zeroed_page(GFP_ATOMIC);
+		if (!inuse)
+			return -ENOMEM;
+
+		for (d = dev_base; d; d = d->next) {
+			if (!sscanf(d->name, name, &i))
+				continue;
+			if (i < 0 || i >= max_netdevices)
+				continue;
+
+			/*  avoid cases where sscanf is not exact inverse of printf */
+			snprintf(buf, sizeof(buf), name, i);
+			if (!strncmp(buf, d->name, IFNAMSIZ))
+				set_bit(i, inuse);
+		}
+
+		i = find_first_zero_bit(inuse, max_netdevices);
+		free_page((unsigned long) inuse);
+	}
+
+	snprintf(buf, sizeof(buf), name, i);
+	if (!__dev_get_by_name(buf)) {
+		strlcpy(dev->name, buf, IFNAMSIZ);
+		return i;
+	}
+
+	/* It is possible to run out of possible slots
+	 * when the name is long and there isn't enough space left
+	 * for the digits, or if all bits are used.
 	 */
-	p = strchr(name, '%');
-	if (p && (p[1] != 'd' || strchr(p + 2, '%')))
+	return -ENFILE;
+}
+
+
+/**
+ *	dev_change_name - change name of a device
+ *	@dev: device
+ *	@name: name (or format string) must be at least IFNAMSIZ
+ *
+ *	Change name of a device, can pass format strings "eth%d".
+ *	for wildcarding.
+ */
+int dev_change_name(struct net_device *dev, char *newname)
+{
+	ASSERT_RTNL();
+
+	if (dev->flags & IFF_UP)
+		return -EBUSY;
+
+	if (!dev_valid_name(newname))
 		return -EINVAL;
 
-	/*
-	 * If you need over 100 please also fix the algorithm...
-	 */
-	for (i = 0; i < 100; i++) {
-		snprintf(buf, sizeof(buf), name, i);
-		if (!__dev_get_by_name(buf)) {
-			strcpy(dev->name, buf);
-			return i;
-		}
+	if (strchr(newname, '%')) {
+		int err = dev_alloc_name(dev, newname);
+		if (err < 0)
+			return err;
+		strcpy(newname, dev->name);
 	}
-	return -ENFILE;	/* Over 100 of the things .. bail out! */
+	else if (__dev_get_by_name(newname))
+		return -EEXIST;
+	else
+		strlcpy(dev->name, newname, IFNAMSIZ);
+
+	hlist_del(&dev->name_hlist);
+	hlist_add_head(&dev->name_hlist, dev_name_hash(dev->name));
+
+	class_device_rename(&dev->class_dev, dev->name);
+	notifier_call_chain(&netdev_chain, NETDEV_CHANGENAME, dev);
+	return 0;
 }
 
 /**
@@ -946,11 +1095,29 @@ int dev_close(struct net_device *dev)
  *	The notifier passed is linked into the kernel structures and must
  *	not be reused until it has been unregistered. A negative errno code
  *	is returned on a failure.
+ *
+ * 	When registered all registration and up events are replayed
+ *	to the new notifier to allow device to have a race free 
+ *	view of the network device list.
  */
 
 int register_netdevice_notifier(struct notifier_block *nb)
 {
-	return notifier_chain_register(&netdev_chain, nb);
+	struct net_device *dev;
+	int err;
+
+	rtnl_lock();
+	err = notifier_chain_register(&netdev_chain, nb);
+	if (!err) {
+		for (dev = dev_base; dev; dev = dev->next) {
+			nb->notifier_call(nb, NETDEV_REGISTER, dev);
+
+			if (dev->flags & IFF_UP) 
+				nb->notifier_call(nb, NETDEV_UP, dev);
+		}
+	}
+	rtnl_unlock();
+	return err;
 }
 
 /**
@@ -1872,9 +2039,9 @@ void dev_seq_stop(struct seq_file *seq, void *v)
 
 static void dev_seq_printf_stats(struct seq_file *seq, struct net_device *dev)
 {
-	struct net_device_stats *stats = dev->get_stats ? dev->get_stats(dev) :
-							  NULL;
-	if (stats)
+	if (dev->get_stats) {
+		struct net_device_stats *stats = dev->get_stats(dev);
+
 		seq_printf(seq, "%6s:%8lu %7lu %4lu %4lu %4lu %5lu %10lu %9lu "
 				"%8lu %7lu %4lu %4lu %4lu %5lu %7lu %10lu\n",
 			   dev->name, stats->rx_bytes, stats->rx_packets,
@@ -1892,7 +2059,7 @@ static void dev_seq_printf_stats(struct seq_file *seq, struct net_device *dev)
 			     stats->tx_window_errors +
 			     stats->tx_heartbeat_errors,
 			   stats->tx_compressed);
-	else
+	} else
 		seq_printf(seq, "%6s: No statistics available.\n", dev->name);
 }
 
@@ -2341,20 +2508,8 @@ static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
 			return 0;
 
 		case SIOCSIFNAME:
-			if (dev->flags & IFF_UP)
-				return -EBUSY;
 			ifr->ifr_newname[IFNAMSIZ-1] = '\0';
-			if (__dev_get_by_name(ifr->ifr_newname))
-				return -EEXIST;
-			err = class_device_rename(&dev->class_dev, 
-						  ifr->ifr_newname);
-			if (!err) {
-				strlcpy(dev->name, ifr->ifr_newname, IFNAMSIZ);
-
-				notifier_call_chain(&netdev_chain,
-						    NETDEV_CHANGENAME, dev);
-			}
-			return err;
+			return dev_change_name(dev, ifr->ifr_newname);
 
 		/*
 		 *	Unknown or private ioctl
@@ -2487,6 +2642,7 @@ int dev_ioctl(unsigned int cmd, void *arg)
 		 */
 		case SIOCGMIIPHY:
 		case SIOCGMIIREG:
+		case SIOCSIFNAME:
 			if (!capable(CAP_NET_ADMIN))
 				return -EPERM;
 			dev_load(ifr.ifr_name);
@@ -2518,7 +2674,6 @@ int dev_ioctl(unsigned int cmd, void *arg)
 		case SIOCDELMULTI:
 		case SIOCSIFHWBROADCAST:
 		case SIOCSIFTXQLEN:
-		case SIOCSIFNAME:
 		case SIOCSMIIREG:
 		case SIOCBONDENSLAVE:
 		case SIOCBONDRELEASE:
@@ -2637,7 +2792,8 @@ static inline void net_set_todo(struct net_device *dev)
 
 int register_netdevice(struct net_device *dev)
 {
-	struct net_device *d, **dp;
+	struct hlist_head *head;
+	struct hlist_node *p;
 	int ret;
 
 	BUG_ON(dev_boot_phase);
@@ -2668,18 +2824,27 @@ int register_netdevice(struct net_device *dev)
 			goto out_err;
 		}
 	}
+ 
+	if (!dev_valid_name(dev->name)) {
+		ret = -EINVAL;
+		goto out_err;
+	}
 
 	dev->ifindex = dev_new_index();
 	if (dev->iflink == -1)
 		dev->iflink = dev->ifindex;
 
-	/* Check for existence, and append to tail of chain */
-	ret = -EEXIST;
-	for (dp = &dev_base; (d = *dp) != NULL; dp = &d->next) {
-		if (d == dev || !strcmp(d->name, dev->name))
-			goto out_err;
-	}
-	
+	/* Check for existence of name */
+	head = dev_name_hash(dev->name);
+	hlist_for_each(p, head) {
+		struct net_device *d
+			= hlist_entry(p, struct net_device, name_hlist);
+		if (!strncmp(d->name, dev->name, IFNAMSIZ)) {
+			ret = -EEXIST;
+ 			goto out_err;
+		}
+ 	}
+
 	/* Fix illegal SG+CSUM combinations. */
 	if ((dev->features & NETIF_F_SG) &&
 	    !(dev->features & (NETIF_F_IP_CSUM |
@@ -2708,7 +2873,10 @@ int register_netdevice(struct net_device *dev)
 	dev->next = NULL;
 	dev_init_scheduler(dev);
 	write_lock_bh(&dev_base_lock);
-	*dp = dev;
+	*dev_tail = dev;
+	dev_tail = &dev->next;
+	hlist_add_head(&dev->name_hlist, head);
+	hlist_add_head(&dev->index_hlist, dev_index_hash(dev->ifindex));
 	dev_hold(dev);
 	dev->reg_state = NETREG_REGISTERING;
 	write_unlock_bh(&dev_base_lock);
@@ -2875,7 +3043,7 @@ void free_netdev(struct net_device *dev)
 {
 	/*  Compatiablity with error handling in drivers */
 	if (dev->reg_state == NETREG_UNINITIALIZED) {
-		kfree(dev);
+		kfree((char *)dev - dev->padded);
 		return;
 	}
 
@@ -2930,6 +3098,10 @@ int unregister_netdevice(struct net_device *dev)
 	for (dp = &dev_base; (d = *dp) != NULL; dp = &d->next) {
 		if (d == dev) {
 			write_lock_bh(&dev_base_lock);
+			hlist_del(&dev->name_hlist);
+			hlist_del(&dev->index_hlist);
+			if (dev_tail == &dev->next)
+				dev_tail = dp;
 			*dp = d->next;
 			write_unlock_bh(&dev_base_lock);
 			break;
@@ -3005,6 +3177,12 @@ static int __init net_dev_init(void)
 	INIT_LIST_HEAD(&ptype_all);
 	for (i = 0; i < 16; i++) 
 		INIT_LIST_HEAD(&ptype_base[i]);
+
+	for (i = 0; i < ARRAY_SIZE(dev_name_head); i++)
+		INIT_HLIST_HEAD(&dev_name_head[i]);
+
+	for (i = 0; i < ARRAY_SIZE(dev_index_head); i++)
+		INIT_HLIST_HEAD(&dev_index_head[i]);
 
 	/*
 	 *	Initialise the packet receive queues.

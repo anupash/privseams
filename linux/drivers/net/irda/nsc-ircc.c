@@ -155,7 +155,7 @@ static int nsc_ircc_pmproc(struct pm_dev *dev, pm_request_t rqst, void *data);
  *    Initialize chip. Just try to find out how many chips we are dealing with
  *    and where they are
  */
-int __init nsc_ircc_init(void)
+static int __init nsc_ircc_init(void)
 {
 	chipio_t info;
 	nsc_chip_t *chip;
@@ -1949,7 +1949,7 @@ static irqreturn_t nsc_ircc_interrupt(int irq, void *dev_id,
 	outb(bsr, iobase+BSR);       /* Restore bank register */
 
 	spin_unlock(&self->lock);
-	return IRQ_HANDLED;
+	return IRQ_RETVAL(eir);
 }
 
 /*

@@ -361,16 +361,38 @@ static u8 pdc202xx_old_cable_detect (ide_hwif_t *hwif)
 	return ((u8)(CIS & mask));
 }
 
+/*
+ * Set the control register to use the 66MHz system
+ * clock for UDMA 3/4/5 mode operation when necessary.
+ *
+ * It may also be possible to leave the 66MHz clock on
+ * and readjust the timing parameters.
+ */
+static void pdc_old_enable_66MHz_clock(ide_hwif_t *hwif)
+{
+	unsigned long clock_reg = hwif->dma_master + 0x11;
+	u8 clock = hwif->INB(clock_reg);
+
+	hwif->OUTB(clock | (hwif->channel ? 0x08 : 0x02), clock_reg);
+}
+
+static void pdc_old_disable_66MHz_clock(ide_hwif_t *hwif)
+{
+	unsigned long clock_reg = hwif->dma_master + 0x11;
+	u8 clock = hwif->INB(clock_reg);
+
+	hwif->OUTB(clock & ~(hwif->channel ? 0x08 : 0x02), clock_reg);
+}
+
 static int config_chipset_for_dma (ide_drive_t *drive)
 {
 	struct hd_driveid *id	= drive->id;
 	ide_hwif_t *hwif	= HWIF(drive);
 	struct pci_dev *dev	= hwif->pci_dev;
 	u32 drive_conf		= 0;
-	u8 mask			= hwif->channel ? 0x08 : 0x02;
 	u8 drive_pci		= 0x60 + (drive->dn << 2);
 	u8 test1 = 0, test2 = 0, speed = -1;
-	u8 AP = 0, CLKSPD = 0, cable = 0;
+	u8 AP = 0, cable = 0;
 
 	u8 ultra_66		= ((id->dma_ultra & 0x0010) ||
 				   (id->dma_ultra & 0x0008)) ? 1 : 0;
@@ -394,21 +416,6 @@ static int config_chipset_for_dma (ide_drive_t *drive)
 			BUG();
 	}
 
-	CLKSPD = hwif->INB(hwif->dma_master + 0x11);
-
-	/*
-	 * Set the control register to use the 66Mhz system
-	 * clock for UDMA 3/4 mode operation. If one drive on
-	 * a channel is U66 capable but the other isn't we
-	 * fall back to U33 mode. The BIOS INT 13 hooks turn
-	 * the clock on then off for each read/write issued. I don't
-	 * do that here because it would require modifying the
-	 * kernel, separating the fop routines from the kernel or
-	 * somehow hooking the fops calls. It may also be possible to
-	 * leave the 66Mhz clock on and readjust the timing
-	 * parameters.
-	 */
-
 	if ((ultra_66) && (cable)) {
 #ifdef DEBUG
 		printk(KERN_DEBUG "ULTRA 66/100/133: %s channel of Ultra 66/100/133 "
@@ -416,28 +423,11 @@ static int config_chipset_for_dma (ide_drive_t *drive)
 			hwif->channel ? "Secondary" : "Primary");
 		printk(KERN_DEBUG "         Switching to Ultra33 mode.\n");
 #endif /* DEBUG */
-		/* Primary   : zero out second bit */
-		/* Secondary : zero out fourth bit */
-		hwif->OUTB(CLKSPD & ~mask, (hwif->dma_master + 0x11));
 		printk(KERN_WARNING "Warning: %s channel requires an 80-pin cable for operation.\n", hwif->channel ? "Secondary":"Primary");
 		printk(KERN_WARNING "%s reduced to Ultra33 mode.\n", drive->name);
-	} else {
-		if (ultra_66) {
-			/*
-			 * check to make sure drive on same channel
-			 * is u66 capable
-			 */
-			if (hwif->drives[!(drive->dn%2)].id) {
-				if (hwif->drives[!(drive->dn%2)].id->dma_ultra & 0x0078) {
-					hwif->OUTB(CLKSPD | mask, (hwif->dma_master + 0x11));
-				} else {
-					hwif->OUTB(CLKSPD & ~mask, (hwif->dma_master + 0x11));
-				}
-			} else { /* udma4 drive by itself */
-				hwif->OUTB(CLKSPD | mask, (hwif->dma_master + 0x11));
-			}
-		}
 	}
+
+	pdc_old_disable_66MHz_clock(drive->hwif);
 
 	drive_pci = 0x60 + (drive->dn << 2);
 	pci_read_config_dword(dev, drive_pci, &drive_conf);
@@ -492,7 +482,7 @@ static int pdc202xx_config_drive_xfer_rate (ide_drive_t *drive)
 
 	if (id && (id->capability & 1) && drive->autodma) {
 		/* Consult the list of known "bad" drives */
-		if (hwif->ide_dma_bad_drive(drive))
+		if (__ide_dma_bad_drive(drive))
 			goto fast_ata_pio;
 		if (id->field_valid & 4) {
 			if (id->dma_ultra & hwif->ultra_mask) {
@@ -509,7 +499,7 @@ try_dma_modes:
 				if (!config_chipset_for_dma(drive))
 					goto no_dma_set;
 			}
-		} else if (hwif->ide_dma_good_drive(drive) &&
+		} else if (__ide_dma_good_drive(drive) &&
 			    (id->eide_dma_time < 150)) {
 				goto no_dma_set;
 			/* Consult the list of known "good" drives */
@@ -536,6 +526,8 @@ static int pdc202xx_quirkproc (ide_drive_t *drive)
 
 static int pdc202xx_old_ide_dma_begin(ide_drive_t *drive)
 {
+	if (drive->current_speed > XFER_UDMA_2)
+		pdc_old_enable_66MHz_clock(drive->hwif);
 	if (drive->addressing == 1) {
 		struct request *rq	= HWGROUP(drive)->rq;
 		ide_hwif_t *hwif	= HWIF(drive);
@@ -569,6 +561,8 @@ static int pdc202xx_old_ide_dma_end(ide_drive_t *drive)
 		clock = hwif->INB(high_16 + 0x11);
 		hwif->OUTB(clock & ~(hwif->channel ? 0x08:0x02), high_16+0x11);
 	}
+	if (drive->current_speed > XFER_UDMA_2)
+		pdc_old_disable_66MHz_clock(drive->hwif);
 	return __ide_dma_end(drive);
 }
 
@@ -757,10 +751,7 @@ static void __init init_hwif_pdc202xx (ide_hwif_t *hwif)
 
 	hwif->speedproc = &pdc202xx_tune_chipset;
 
-	if (!hwif->dma_base) {
-		hwif->drives[0].autotune = hwif->drives[1].autotune = 1;
-		return;
-	}
+	hwif->drives[0].autotune = hwif->drives[1].autotune = 1;
 
 	hwif->ultra_mask = 0x3f;
 	hwif->mwdma_mask = 0x07;
@@ -922,7 +913,6 @@ static int __devinit pdc202xx_init_one(struct pci_dev *dev, const struct pci_dev
 	if (dev->device != d->device)
 		BUG();
 	d->init_setup(dev, d);
-	MOD_INC_USE_COUNT;
 	return 0;
 }
 
@@ -946,13 +936,7 @@ static int pdc202xx_ide_init(void)
 	return ide_pci_register_driver(&driver);
 }
 
-static void pdc202xx_ide_exit(void)
-{
-	ide_pci_unregister_driver(&driver);
-}
-
 module_init(pdc202xx_ide_init);
-module_exit(pdc202xx_ide_exit);
 
 MODULE_AUTHOR("Andre Hedrick, Frank Tiernan");
 MODULE_DESCRIPTION("PCI driver module for older Promise IDE");

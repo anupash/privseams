@@ -284,7 +284,7 @@ oom:
  */
  
 static int packet_sendmsg_spkt(struct kiocb *iocb, struct socket *sock,
-			       struct msghdr *msg, int len)
+			       struct msghdr *msg, size_t len)
 {
 	struct sock *sk = sock->sk;
 	struct sockaddr_pkt *saddr=(struct sockaddr_pkt *)msg->msg_name;
@@ -327,7 +327,7 @@ static int packet_sendmsg_spkt(struct kiocb *iocb, struct socket *sock,
 		goto out_unlock;
 
 	err = -ENOBUFS;
-	skb = sock_wmalloc(sk, len+dev->hard_header_len+15, 0, GFP_KERNEL);
+	skb = sock_wmalloc(sk, len + LL_RESERVED_SPACE(dev), 0, GFP_KERNEL);
 
 	/*
 	 *	If the write buffer is full, then tough. At this level the user gets to
@@ -346,7 +346,7 @@ static int packet_sendmsg_spkt(struct kiocb *iocb, struct socket *sock,
 	 * hard header at transmission time by themselves. PPP is the
 	 * notable one here. This should really be fixed at the driver level.
 	 */
-	skb_reserve(skb,(dev->hard_header_len+15)&~15);
+	skb_reserve(skb, LL_RESERVED_SPACE(dev));
 	skb->nh.raw = skb->data;
 
 	/* Try to align data part correctly */
@@ -659,7 +659,7 @@ ring_is_full:
 
 
 static int packet_sendmsg(struct kiocb *iocb, struct socket *sock,
-			  struct msghdr *msg, int len)
+			  struct msghdr *msg, size_t len)
 {
 	struct sock *sk = sock->sk;
 	struct sockaddr_ll *saddr=(struct sockaddr_ll *)msg->msg_name;
@@ -700,12 +700,12 @@ static int packet_sendmsg(struct kiocb *iocb, struct socket *sock,
 	if (len > dev->mtu+reserve)
 		goto out_unlock;
 
-	skb = sock_alloc_send_skb(sk, len+dev->hard_header_len+15, 
+	skb = sock_alloc_send_skb(sk, len + LL_RESERVED_SPACE(dev),
 				msg->msg_flags & MSG_DONTWAIT, &err);
 	if (skb==NULL)
 		goto out_unlock;
 
-	skb_reserve(skb, (dev->hard_header_len+15)&~15);
+	skb_reserve(skb, LL_RESERVED_SPACE(dev));
 	skb->nh.raw = skb->data;
 
 	if (dev->hard_header) {
@@ -961,7 +961,7 @@ static int packet_create(struct socket *sock, int protocol)
 	sock_init_data(sock,sk);
 	sk_set_owner(sk, THIS_MODULE);
 
-	po = pkt_sk(sk) = kmalloc(sizeof(*po), GFP_KERNEL);
+	po = sk->sk_protinfo = kmalloc(sizeof(*po), GFP_KERNEL);
 	if (!po)
 		goto out_free;
 	memset(po, 0, sizeof(*po));
@@ -1007,7 +1007,7 @@ out:
  */
 
 static int packet_recvmsg(struct kiocb *iocb, struct socket *sock,
-			  struct msghdr *msg, int len, int flags)
+			  struct msghdr *msg, size_t len, int flags)
 {
 	struct sock *sk = sock->sk;
 	struct sk_buff *skb;
@@ -1550,7 +1550,7 @@ static int packet_set_ring(struct sock *sk, struct tpacket_req *req, int closing
 	unsigned long *pg_vec = NULL;
 	struct tpacket_hdr **io_vec = NULL;
 	struct packet_opt *po = pkt_sk(sk);
-	int order = 0;
+	int was_running, num, order = 0;
 	int err = 0;
 
 	if (req->tp_block_nr) {
@@ -1623,10 +1623,13 @@ static int packet_set_ring(struct sock *sk, struct tpacket_req *req, int closing
 
 	/* Detach socket from network */
 	spin_lock(&po->bind_lock);
-	if (po->running) {
+	was_running = po->running;
+	num = po->num;
+	if (was_running) {
 		__dev_remove_pack(&po->prot_hook);
 		po->num = 0;
 		po->running = 0;
+		__sock_put(sk);
 	}
 	spin_unlock(&po->bind_lock);
 		
@@ -1657,8 +1660,12 @@ static int packet_set_ring(struct sock *sk, struct tpacket_req *req, int closing
 	}
 
 	spin_lock(&po->bind_lock);
-	if (po->running)
+	if (was_running && !po->running) {
+		sock_hold(sk);
+		po->running = 1;
+		po->num = num;
 		dev_add_pack(&po->prot_hook);
+	}
 	spin_unlock(&po->bind_lock);
 
 	release_sock(sk);

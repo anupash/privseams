@@ -49,6 +49,69 @@
 #include <asm/pcic.h>
 #include <asm/cacheflush.h>
 
+/* Used to protect the IRQ action lists */
+spinlock_t irq_action_lock = SPIN_LOCK_UNLOCKED;
+
+#ifdef CONFIG_SMP
+#define SMP_NOP2 "nop; nop;\n\t"
+#define SMP_NOP3 "nop; nop; nop;\n\t"
+#else
+#define SMP_NOP2
+#define SMP_NOP3
+#endif /* SMP */
+unsigned long __local_irq_save(void)
+{
+	unsigned long retval;
+	unsigned long tmp;
+
+	__asm__ __volatile__(
+		"rd	%%psr, %0\n\t"
+		SMP_NOP3	/* Sun4m + Cypress + SMP bug */
+		"or	%0, %2, %1\n\t"
+		"wr	%1, 0, %%psr\n\t"
+		"nop; nop; nop\n"
+		: "=&r" (retval), "=r" (tmp)
+		: "i" (PSR_PIL)
+		: "memory");
+
+	return retval;
+}
+
+void local_irq_enable(void)
+{
+	unsigned long tmp;
+
+	__asm__ __volatile__(
+		"rd	%%psr, %0\n\t"
+		SMP_NOP3	/* Sun4m + Cypress + SMP bug */
+		"andn	%0, %1, %0\n\t"
+		"wr	%0, 0, %%psr\n\t"
+		"nop; nop; nop\n"
+		: "=&r" (tmp)
+		: "i" (PSR_PIL)
+		: "memory");
+}
+
+void local_irq_restore(unsigned long old_psr)
+{
+	unsigned long tmp;
+
+	__asm__ __volatile__(
+		"rd	%%psr, %0\n\t"
+		"and	%2, %1, %2\n\t"
+		SMP_NOP2	/* Sun4m + Cypress + SMP bug */
+		"andn	%0, %1, %0\n\t"
+		"wr	%0, %2, %%psr\n\t"
+		"nop; nop; nop\n"
+		: "=&r" (tmp)
+		: "i" (PSR_PIL), "r" (old_psr)
+		: "memory");
+}
+
+EXPORT_SYMBOL(__local_irq_save);
+EXPORT_SYMBOL(local_irq_enable);
+EXPORT_SYMBOL(local_irq_restore);
+
 /*
  * Dave Redman (djhr@tadpole.co.uk)
  *
@@ -492,7 +555,7 @@ int request_fast_irq(unsigned int irq,
 		return -EBUSY;
 	}
 
-	save_and_cli(flags);
+	spin_lock_irqsave(&irq_action_lock, flags);
 
 	/* If this is flagged as statically allocated then we use our
 	 * private struct which is never freed.
@@ -507,10 +570,10 @@ int request_fast_irq(unsigned int irq,
 	
 	if (action == NULL)
 	    action = (struct irqaction *)kmalloc(sizeof(struct irqaction),
-						 GFP_KERNEL);
+						 GFP_ATOMIC);
 	
 	if (!action) { 
-		restore_flags(flags);
+		spin_unlock_irqrestore(&irq_action_lock, flags);
 		return -ENOMEM;
 	}
 
@@ -547,7 +610,7 @@ int request_fast_irq(unsigned int irq,
 	*(cpu_irq + irq_action) = action;
 
 	enable_irq(irq);
-	restore_flags(flags);
+	spin_unlock_irqrestore(&irq_action_lock, flags);
 	return 0;
 }
 
@@ -586,7 +649,7 @@ int request_irq(unsigned int irq,
 		action = NULL;		/* Or else! */
 	}
 
-	save_and_cli(flags);
+	spin_lock_irqsave(&irq_action_lock, flags);
 
 	/* If this is flagged as statically allocated then we use our
 	 * private struct which is never freed.
@@ -600,10 +663,10 @@ int request_irq(unsigned int irq,
 	
 	if (action == NULL)
 	    action = (struct irqaction *)kmalloc(sizeof(struct irqaction),
-						 GFP_KERNEL);
+						 GFP_ATOMIC);
 	
 	if (!action) { 
-		restore_flags(flags);
+		spin_unlock_irqrestore(&irq_action_lock, flags);
 		return -ENOMEM;
 	}
 
@@ -620,7 +683,7 @@ int request_irq(unsigned int irq,
 		*(cpu_irq + irq_action) = action;
 
 	enable_irq(irq);
-	restore_flags(flags);
+	spin_unlock_irqrestore(&irq_action_lock, flags);
 	return 0;
 }
 

@@ -117,11 +117,11 @@ static unsigned long alloc_iommu(int size)
 
 static void free_iommu(unsigned long offset, int size)
 { 
+	unsigned long flags;
 	if (size == 1) { 
 		clear_bit(offset, iommu_gart_bitmap); 
 		return;
 	}
-	unsigned long flags;
 	spin_lock_irqsave(&iommu_bitmap_lock, flags);
 	__clear_bit_string(iommu_gart_bitmap, offset, size);
 	spin_unlock_irqrestore(&iommu_bitmap_lock, flags);
@@ -329,6 +329,7 @@ static dma_addr_t pci_map_area(struct pci_dev *dev, unsigned long phys_mem,
 { 
 	unsigned long npages = to_pages(phys_mem, size);
 	unsigned long iommu_page = alloc_iommu(npages);
+	int i;
 	if (iommu_page == -1) {
 		if (!nonforced_iommu(dev, phys_mem, size))
 			return phys_mem; 
@@ -338,7 +339,6 @@ static dma_addr_t pci_map_area(struct pci_dev *dev, unsigned long phys_mem,
 		return bad_dma_address;
 	}
 
-	int i;
 	for (i = 0; i < npages; i++) {
 		iommu_gatt_base[iommu_page + i] = GPTE_ENCODE(phys_mem);
 		SET_LEAK(iommu_page + i);
@@ -382,10 +382,12 @@ static int pci_map_sg_nonforce(struct pci_dev *dev, struct scatterlist *sg,
 				if (i > 0) 
 					pci_unmap_sg(dev, sg, i, dir); 
 				nents = 0; 
+				sg[0].dma_length = 0;
 				break;
 			}
 		}
 		s->dma_address = addr;
+		s->dma_length = s->length;
 	}
 	flush_gart(dev);
 	return nents;
@@ -396,11 +398,11 @@ static int __pci_map_cont(struct scatterlist *sg, int start, int stopat,
 		      struct scatterlist *sout, unsigned long pages)
 {
 	unsigned long iommu_start = alloc_iommu(pages);
-	if (iommu_start == -1)
-		return -1;
-
 	unsigned long iommu_page = iommu_start; 
 	int i;
+
+	if (iommu_start == -1)
+		return -1;
 	
 	for (i = start; i < stopat; i++) {
 		struct scatterlist *s = &sg[i];
@@ -412,8 +414,9 @@ static int __pci_map_cont(struct scatterlist *sg, int start, int stopat,
 			*sout = *s; 
 			sout->dma_address = iommu_bus_base;
 			sout->dma_address += iommu_page*PAGE_SIZE + s->offset;
+			sout->dma_length = s->length;
 		} else { 
-			sout->length += s->length; 
+			sout->dma_length += s->length; 
 		}
 
 		addr = phys_addr;
@@ -436,6 +439,7 @@ static inline int pci_map_cont(struct scatterlist *sg, int start, int stopat,
 	if (!need) { 
 		BUG_ON(stopat - start != 1);
 		*sout = sg[start]; 
+		sout->dma_length = sg[start].length; 
 		return 0;
 	} 
 	return __pci_map_cont(sg, start, stopat, sout, pages);
@@ -453,8 +457,6 @@ int pci_map_sg(struct pci_dev *dev, struct scatterlist *sg, int nents, int dir)
 	unsigned long pages = 0;
 	int need = 0, nextneed;
 
-	unsigned long size = 0; 
-
 	BUG_ON(dir == PCI_DMA_NONE);
 	if (nents == 0) 
 		return 0;
@@ -466,7 +468,6 @@ int pci_map_sg(struct pci_dev *dev, struct scatterlist *sg, int nents, int dir)
 		s->dma_address = addr;
 		BUG_ON(s->length == 0); 
 
-		size += s->length; 
 		nextneed = need_iommu(dev, addr, s->length); 
 
 		/* Handle the previous not yet processed entries */
@@ -493,7 +494,7 @@ int pci_map_sg(struct pci_dev *dev, struct scatterlist *sg, int nents, int dir)
 	out++;
 	flush_gart(dev);
 	if (out < nents) 
-		sg[out].length = 0; 
+		sg[out].dma_length = 0; 
 	return out;
 
 error:
@@ -518,12 +519,12 @@ void pci_unmap_single(struct pci_dev *hwdev, dma_addr_t dma_addr,
 {
 	unsigned long iommu_page; 
 	int npages;
+	int i;
 	if (dma_addr < iommu_bus_base + EMERGENCY_PAGES*PAGE_SIZE || 
-	    dma_addr > iommu_bus_base + iommu_size)
+	    dma_addr >= iommu_bus_base + iommu_size)
 		return;
 	iommu_page = (dma_addr - iommu_bus_base)>>PAGE_SHIFT;	
 	npages = to_pages(dma_addr, size);
-	int i;
 	for (i = 0; i < npages; i++) { 
 		iommu_gatt_base[iommu_page + i] = 0; 
 		CLEAR_LEAK(iommu_page + i);
@@ -540,9 +541,9 @@ void pci_unmap_sg(struct pci_dev *dev, struct scatterlist *sg, int nents,
 	int i;
 	for (i = 0; i < nents; i++) { 
 		struct scatterlist *s = &sg[i];
-		if (!s->length) 
+		if (!s->dma_length || !s->length) 
 			break;
-		pci_unmap_single(dev, s->dma_address, s->length, dir);
+		pci_unmap_single(dev, s->dma_address, s->dma_length, dir);
 	}
 }
 
@@ -800,7 +801,8 @@ fs_initcall(pci_iommu_init);
    merge  Do SG merging. Implies force (experimental)  
    nomerge Don't do SG merging.
    forcesac For SAC mode for masks <40bits  (experimental)
-   fullflush Flush IOMMU on each allocation (for testing)
+   fullflush Flush IOMMU on each allocation (default) 
+   nofullflush Don't use IOMMU fullflush
 */
 __init int iommu_setup(char *opt) 
 { 
@@ -838,6 +840,8 @@ __init int iommu_setup(char *opt)
 		    iommu_sac_force = 1;
 	    if (!memcmp(p, "fullflush", 9))
 		    iommu_fullflush = 1;
+	    if (!memcmp(p, "nofullflush", 11))
+		    iommu_fullflush = 0;
 #ifdef CONFIG_IOMMU_LEAK
 	    if (!memcmp(p,"leak", 4)) { 
 		    leak_trace = 1;

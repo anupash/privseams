@@ -74,7 +74,7 @@ MODULE_AUTHOR("Paul Diefenbaugh");
 MODULE_DESCRIPTION(ACPI_THERMAL_DRIVER_NAME);
 MODULE_LICENSE("GPL");
 
-static int tzp = 0;
+static int tzp;
 MODULE_PARM(tzp, "i");
 MODULE_PARM_DESC(tzp, "Thermal zone polling frequency, in 1/10 seconds.\n");
 
@@ -467,6 +467,7 @@ acpi_thermal_critical (
 	if (result)
 		return_VALUE(result);
 
+	printk(KERN_EMERG "Critical temperature reached (%ld C), shutting down.\n", KELVIN_TO_CELSIUS(tz->temperature));
 	acpi_bus_generate_event(device, ACPI_THERMAL_NOTIFY_CRITICAL, tz->trips.critical.flags.enabled);
 
 	acpi_thermal_call_usermode(ACPI_THERMAL_PATH_POWEROFF);
@@ -765,7 +766,7 @@ acpi_thermal_check (
                               FS Interface (/proc)
    -------------------------------------------------------------------------- */
 
-struct proc_dir_entry		*acpi_thermal_dir = NULL;
+struct proc_dir_entry		*acpi_thermal_dir;
 
 static int acpi_thermal_state_seq_show(struct seq_file *seq, void *offset)
 {
@@ -1245,9 +1246,9 @@ acpi_thermal_add (
 	memset(tz, 0, sizeof(struct acpi_thermal));
 
 	tz->handle = device->handle;
-	sprintf(tz->name, "%s", device->pnp.bus_id);
-	sprintf(acpi_device_name(device), "%s", ACPI_THERMAL_DEVICE_NAME);
-	sprintf(acpi_device_class(device), "%s", ACPI_THERMAL_CLASS);
+	strcpy(tz->name, device->pnp.bus_id);
+	strcpy(acpi_device_name(device), ACPI_THERMAL_DEVICE_NAME);
+	strcpy(acpi_device_class(device), ACPI_THERMAL_CLASS);
 	acpi_driver_data(device) = tz;
 
 	result = acpi_thermal_get_info(tz);

@@ -37,7 +37,9 @@ extern int register_cpu_notifier(struct notifier_block *nb);
 extern void unregister_cpu_notifier(struct notifier_block *nb);
 
 int cpu_up(unsigned int cpu);
+
 #else
+
 static inline int register_cpu_notifier(struct notifier_block *nb)
 {
 	return 0;
@@ -45,9 +47,18 @@ static inline int register_cpu_notifier(struct notifier_block *nb)
 static inline void unregister_cpu_notifier(struct notifier_block *nb)
 {
 }
+
 #endif /* CONFIG_SMP */
 extern struct sysdev_class cpu_sysdev_class;
 
+#ifdef CONFIG_HOTPLUG_CPU
 /* Stop CPUs going up and down. */
 extern struct semaphore cpucontrol;
+#define lock_cpu_hotplug()	down(&cpucontrol)
+#define unlock_cpu_hotplug()	up(&cpucontrol)
+#else
+#define lock_cpu_hotplug()	do { } while (0)
+#define unlock_cpu_hotplug()	do { } while (0)
+#endif
+
 #endif /* _LINUX_CPU_H_ */

@@ -9,15 +9,14 @@
 #define _ASM_IA64_SN_NODEPDA_H
 
 
-#include <linux/config.h>
-#include <asm/sn/sgi.h>
+#include <asm/semaphore.h>
 #include <asm/irq.h>
-#include <asm/topology.h>
 #include <asm/sn/intr.h>
 #include <asm/sn/router.h>
 #include <asm/sn/pda.h>
 #include <asm/sn/module.h>
 #include <asm/sn/bte.h>
+#include <asm/sn/sn2/arch.h>
 
 /*
  * NUMA Node-Specific Data structures are defined in this file.
@@ -65,6 +64,8 @@ struct nodepda_s {
 	nodepda_router_info_t	*npda_rip_first;
 	nodepda_router_info_t	**npda_rip_last;
 
+
+	spinlock_t		bist_lock;
 
 	/*
 	 * The BTEs on this node are shared by the local cpus

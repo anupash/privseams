@@ -1,5 +1,4 @@
 /*
- *
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -8,26 +7,15 @@
  */
 
 #include <linux/types.h>
-#include <linux/slab.h>
-#include <linux/module.h>
+#include <linux/interrupt.h>
 #include <asm/sn/sgi.h>
-#include <asm/sn/sn_cpuid.h>
 #include <asm/sn/addrs.h>
-#include <asm/sn/arch.h>
 #include <asm/sn/iograph.h>
-#include <asm/sn/invent.h>
-#include <asm/sn/hcl.h>
-#include <asm/sn/labelcl.h>
-#include <asm/sn/xtalk/xwidget.h>
-#include <asm/sn/pci/bridge.h>
 #include <asm/sn/pci/pciio.h>
 #include <asm/sn/pci/pcibr.h>
 #include <asm/sn/pci/pcibr_private.h>
 #include <asm/sn/pci/pci_defs.h>
-#include <asm/sn/prio.h>
-#include <asm/sn/xtalk/xbow.h>
-#include <asm/sn/io.h>
-#include <asm/sn/sn_private.h>
+
 
 extern int	hubii_check_widget_disabled(nasid_t, int);
 
@@ -43,12 +31,9 @@ extern int	hubii_check_widget_disabled(nasid_t, int);
 #define BRIDGE_PIOERR_TIMEOUT	40	/* Timeout in debug mode  */
 #endif
 #else
-#define BRIDGE_PIOERR_TIMEOUT	1	/* Timeout in non-debug mode                            */
+#define BRIDGE_PIOERR_TIMEOUT	1	/* Timeout in non-debug mode */
 #endif
 
-/* PIC has 64bit interrupt error registers, but BRIDGE has 32bit registers.
- * Thus 'bridge_errors_to_dump needs' to default to the larger of the two.
- */
 #ifdef  DEBUG
 #ifdef ERROR_DEBUG
 uint64_t bridge_errors_to_dump = ~BRIDGE_ISR_INT_MSK;
@@ -60,9 +45,31 @@ uint64_t bridge_errors_to_dump = BRIDGE_ISR_ERROR_FATAL |
                                    BRIDGE_ISR_PCIBUS_PIOERR;
 #endif
 
-int                     pcibr_llp_control_war_cnt; /* PCIBR_LLP_CONTROL_WAR */
+int pcibr_pioerr_dump = 1;	/* always dump pio errors */
 
-static struct reg_values xio_cmd_pactyp[] =
+/*
+ * register values
+ * map between numeric values and symbolic values
+ */
+struct reg_values {
+	unsigned long long rv_value;
+	char *rv_name;
+};
+
+/*
+ * register descriptors are used for formatted prints of register values
+ * rd_mask and rd_shift must be defined, other entries may be null
+ */
+struct reg_desc {
+	unsigned long long rd_mask;	/* mask to extract field */
+	int rd_shift;		/* shift for extracted value, - >>, + << */
+	char *rd_name;		/* field name */
+	char *rd_format;	/* format to print field */
+	struct reg_values *rd_values;	/* symbolic names of values */
+};
+
+/* Crosstalk Packet Types */
+static struct reg_values xtalk_cmd_pactyp[] =
 {
     {0x0, "RdReq"},
     {0x1, "RdResp"},
@@ -83,11 +90,11 @@ static struct reg_values xio_cmd_pactyp[] =
     {0}
 };
 
-static struct reg_desc   xio_cmd_bits[] =
+static struct reg_desc   xtalk_cmd_bits[] =
 {
     {WIDGET_DIDN, -28, "DIDN", "%x"},
     {WIDGET_SIDN, -24, "SIDN", "%x"},
-    {WIDGET_PACTYP, -20, "PACTYP", 0, xio_cmd_pactyp},
+    {WIDGET_PACTYP, -20, "PACTYP", 0, xtalk_cmd_pactyp},
     {WIDGET_TNUM, -15, "TNUM", "%x"},
     {WIDGET_COHERENT, 0, "COHERENT"},
     {WIDGET_DS, 0, "DS"},
@@ -100,64 +107,27 @@ static struct reg_desc   xio_cmd_bits[] =
 
 #define F(s,n)          { 1l<<(s),-(s), n }
 
-static struct reg_values       space_v[] =
-{
-    {PCIIO_SPACE_NONE, "none"},
-    {PCIIO_SPACE_ROM, "ROM"},
-    {PCIIO_SPACE_IO, "I/O"},
-    {PCIIO_SPACE_MEM, "MEM"},
-    {PCIIO_SPACE_MEM32, "MEM(32)"},
-    {PCIIO_SPACE_MEM64, "MEM(64)"},
-    {PCIIO_SPACE_CFG, "CFG"},
-    {PCIIO_SPACE_WIN(0), "WIN(0)"},
-    {PCIIO_SPACE_WIN(1), "WIN(1)"},
-    {PCIIO_SPACE_WIN(2), "WIN(2)"},
-    {PCIIO_SPACE_WIN(3), "WIN(3)"},
-    {PCIIO_SPACE_WIN(4), "WIN(4)"},
-    {PCIIO_SPACE_WIN(5), "WIN(5)"},
-    {PCIIO_SPACE_BAD, "BAD"},
-    {0}
-};
-static struct reg_desc         space_desc[] =
-{
-    {0xFF, 0, "space", 0, space_v},
-    {0}
-};
-#define	device_desc	device_bits
-static struct reg_desc   device_bits[] =
-{
-    {BRIDGE_DEV_ERR_LOCK_EN, 0, "ERR_LOCK_EN"},
-    {BRIDGE_DEV_PAGE_CHK_DIS, 0, "PAGE_CHK_DIS"},
-    {BRIDGE_DEV_FORCE_PCI_PAR, 0, "FORCE_PCI_PAR"},
-    {BRIDGE_DEV_VIRTUAL_EN, 0, "VIRTUAL_EN"},
-    {BRIDGE_DEV_PMU_WRGA_EN, 0, "PMU_WRGA_EN"},
-    {BRIDGE_DEV_DIR_WRGA_EN, 0, "DIR_WRGA_EN"},
-    {BRIDGE_DEV_DEV_SIZE, 0, "DEV_SIZE"},
-    {BRIDGE_DEV_RT, 0, "RT"},
-    {BRIDGE_DEV_SWAP_PMU, 0, "SWAP_PMU"},
-    {BRIDGE_DEV_SWAP_DIR, 0, "SWAP_DIR"},
-    {BRIDGE_DEV_PREF, 0, "PREF"},
-    {BRIDGE_DEV_PRECISE, 0, "PRECISE"},
-    {BRIDGE_DEV_COH, 0, "COH"},
-    {BRIDGE_DEV_BARRIER, 0, "BARRIER"},
-    {BRIDGE_DEV_GBR, 0, "GBR"},
-    {BRIDGE_DEV_DEV_SWAP, 0, "DEV_SWAP"},
-    {BRIDGE_DEV_DEV_IO_MEM, 0, "DEV_IO_MEM"},
-    {BRIDGE_DEV_OFF_MASK, BRIDGE_DEV_OFF_ADDR_SHFT, "DEV_OFF", "%x"},
-    {0}
-};
-
-static void
-print_bridge_errcmd(uint32_t cmdword, char *errtype)
-{
-    printk("\t    Bridge %s Error Command Word Register ", errtype);
-    print_register(cmdword, xio_cmd_bits);
-}
+char *pci_space[] = {"NONE",
+                     "ROM",
+                     "IO",
+                     "",
+                     "MEM",
+                     "MEM32",
+                     "MEM64",
+                     "CFG",
+                     "WIN0",
+                     "WIN1",
+                     "WIN2",
+                     "WIN3",
+                     "WIN4",
+                     "WIN5",
+                     "",
+                     "BAD"};
 
 static char             *pcibr_isr_errs[] =
 {
     "", "", "", "", "", "", "", "",
-    "08: GIO non-contiguous byte enable in crosstalk packet", /* BRIDGE ONLY */
+    "08: Reserved Bit 08",
     "09: PCI to Crosstalk read request timeout",
     "10: PCI retry operation count exhausted.",
     "11: PCI bus device select timeout",
@@ -165,12 +135,12 @@ static char             *pcibr_isr_errs[] =
     "13: PCI Address/Cmd parity error ",
     "14: PCI Bridge detected parity error",
     "15: PCI abort condition",
-    "16: SSRAM parity error", /* BRIDGE ONLY */
-    "17: LLP Transmitter Retry count wrapped",
-    "18: LLP Transmitter side required Retry",
-    "19: LLP Receiver retry count wrapped",
-    "20: LLP Receiver check bit error",
-    "21: LLP Receiver sequence number error",
+    "16: Reserved Bit 16",
+    "17: LLP Transmitter Retry count wrapped",	/* PIC ONLY */
+    "18: LLP Transmitter side required Retry",	/* PIC ONLY */
+    "19: LLP Receiver retry count wrapped",	/* PIC ONLY */
+    "20: LLP Receiver check bit error",		/* PIC ONLY */
+    "21: LLP Receiver sequence number error",	/* PIC ONLY */
     "22: Request packet overflow",
     "23: Request operation not supported by bridge",
     "24: Request packet has invalid address for bridge widget",
@@ -180,9 +150,7 @@ static char             *pcibr_isr_errs[] =
     "28: Framing error, response cmd data size does not match actual",
     "29: Unexpected response arrived",
     "30: PMU Access Fault",
-    "31: Multiple errors occurred", /* BRIDGE ONLY */
-    
-    /* bits 32-45 are PIC ONLY */
+    "31: Reserved Bit 31",
     "32: PCI-X address or attribute cycle parity error",
     "33: PCI-X data cycle parity error",
     "34: PCI-X master timeout (ie. master abort)",
@@ -199,11 +167,86 @@ static char             *pcibr_isr_errs[] =
     "45: PCI-X split completion message parity error",
 };
 
-#define BEM_ADD_STR(s)  printk("%s", (s))
-#define BEM_ADD_VAR(v)  printk("\t%20s: 0x%llx\n", #v, ((unsigned long long)v))
-#define BEM_ADD_REG(r)  printk("\t%20s: ", #r); print_register((r), r ## _desc)
-#define BEM_ADD_NSPC(n,s)       printk("\t%20s: ", n); print_register(s, space_desc)
-#define BEM_ADD_SPC(s)          BEM_ADD_NSPC(#s, s)
+/*
+ * print_register() allows formatted printing of bit fields.  individual
+ * bit fields are described by a struct reg_desc, multiple bit fields within
+ * a single word can be described by multiple reg_desc structures.
+ * %r outputs a string of the format "<bit field descriptions>"
+ * %R outputs a string of the format "0x%x<bit field descriptions>"
+ *
+ * The fields in a reg_desc are:
+ *	unsigned long long rd_mask; An appropriate mask to isolate the bit field
+ *				within a word, and'ed with val
+ *
+ *	int rd_shift;		A shift amount to be done to the isolated
+ *				bit field.  done before printing the isolate
+ *				bit field with rd_format and before searching
+ *				for symbolic value names in rd_values
+ *
+ *	char *rd_name;		If non-null, a bit field name to label any
+ *				out from rd_format or searching rd_values.
+ *				if neither rd_format or rd_values is non-null
+ *				rd_name is printed only if the isolated
+ *				bit field is non-null.
+ *
+ *	char *rd_format;	If non-null, the shifted bit field value
+ *				is printed using this format.
+ *
+ *	struct reg_values *rd_values;	If non-null, a pointer to a table
+ *				matching numeric values with symbolic names.
+ *				rd_values are searched and the symbolic
+ *				value is printed if a match is found, if no
+ *				match is found "???" is printed.
+ *				
+ */
+
+static void
+print_register(unsigned long long reg, struct reg_desc *addr)
+{
+	register struct reg_desc *rd;
+	register struct reg_values *rv;
+	unsigned long long field;
+	int any;
+
+	printk("<");
+	any = 0;
+	for (rd = addr; rd->rd_mask; rd++) {
+		field = reg & rd->rd_mask;
+		field = (rd->rd_shift > 0) ? field << rd->rd_shift : field >> -rd->rd_shift;
+		if (any && (rd->rd_format || rd->rd_values || (rd->rd_name && field)))
+			printk(",");
+		if (rd->rd_name) {
+			if (rd->rd_format || rd->rd_values || field) {
+				printk("%s", rd->rd_name);
+				any = 1;
+			}
+			if (rd->rd_format || rd->rd_values) {
+				printk("=");
+				any = 1;
+			}
+		}
+		/* You can have any format so long as it is %x */
+		if (rd->rd_format) {
+			printk("%llx", field);
+			any = 1;
+			if (rd->rd_values)
+				printk(":");
+		}
+		if (rd->rd_values) {
+			any = 1;
+			for (rv = rd->rd_values; rv->rv_name; rv++) {
+				if (field == rv->rv_value) {
+					printk("%s", rv->rv_name);
+					break;
+				}
+			}
+			if (rv->rv_name == NULL)
+				printk("???");
+		}
+	}
+	printk(">\n");
+}
+
 
 /*
  * display memory directory state
@@ -211,7 +254,7 @@ static char             *pcibr_isr_errs[] =
 static void
 pcibr_show_dir_state(paddr_t paddr, char *prefix)
 {
-#ifdef LATER
+#ifdef PCIBR_LATER
 	int state;
 	uint64_t vec_ptr;
 	hubreg_t elo;
@@ -220,9 +263,19 @@ pcibr_show_dir_state(paddr_t paddr, char *prefix)
 
 	get_dir_ent(paddr, &state, &vec_ptr, &elo);
 
-	printk("%saddr 0x%lx: state 0x%x owner 0x%lx (%s)\n", 
-		prefix, paddr, state, vec_ptr, dir_state_str[state]);
-#endif
+	printf("%saddr 0x%lx: state 0x%x owner 0x%lx (%s)\n", 
+		prefix, (uint64_t)paddr, state, (uint64_t)vec_ptr, 
+		dir_state_str[state]);
+#endif /* PCIBR_LATER */
+}
+
+
+void
+print_bridge_errcmd(pcibr_soft_t pcibr_soft, uint32_t cmdword, char *errtype)
+{
+    printk(
+	    "\t    Bridge %sError Command Word Register ", errtype);
+    print_register(cmdword, xtalk_cmd_bits);
 }
 
 
@@ -233,32 +286,12 @@ pcibr_show_dir_state(paddr_t paddr, char *prefix)
 void
 pcibr_error_dump(pcibr_soft_t pcibr_soft)
 {
-    bridge_t               *bridge = pcibr_soft->bs_base;
     uint64_t		    int_status;
-    bridgereg_t             int_status_32;
-    picreg_t		    int_status_64;
     uint64_t		    mult_int;
-    bridgereg_t             mult_int_32;
-    picreg_t		    mult_int_64;
     uint64_t		    bit;
-    int			    number_bits;
     int                     i;
-    char		    *reg_desc;
-    paddr_t		    addr = (paddr_t)0;
 
-    /* We read the INT_STATUS register as a 64bit picreg_t for PIC and a
-     * 32bit bridgereg_t for BRIDGE, but always process the result as a
-     * 64bit value so the code can be "common" for both PIC and BRIDGE...
-     */
-    if (IS_PIC_SOFT(pcibr_soft)) {
-	int_status_64 = (bridge->p_int_status_64 & ~BRIDGE_ISR_INT_MSK);
-	int_status = (uint64_t)int_status_64;
-	number_bits = PCIBR_ISR_MAX_ERRS_PIC;
-    } else {
-	int_status_32 = (bridge->b_int_status & ~BRIDGE_ISR_INT_MSK);
-	int_status = ((uint64_t)int_status_32) & 0xffffffff;
-	number_bits = PCIBR_ISR_MAX_ERRS_BRIDGE;
-    }
+    int_status = (pcireg_intr_status_get(pcibr_soft) & ~BRIDGE_ISR_INT_MSK);
 
     if (!int_status) {
 	/* No error bits set */
@@ -273,25 +306,13 @@ pcibr_error_dump(pcibr_soft_t pcibr_soft)
     printk(KERN_ALERT "PCI BRIDGE ERROR: int_status is 0x%lx for %s\n"
 	"    Dumping relevant %s registers for each bit set...\n",
 	    int_status, pcibr_soft->bs_name,
-	    (IS_PIC_SOFT(pcibr_soft) ? "PIC" : 
-	        (IS_BRIDGE_SOFT(pcibr_soft) ? "BRIDGE" : "XBRIDGE")));
+	    "PIC");
 
-    for (i = PCIBR_ISR_ERR_START; i < number_bits; i++) {
+    for (i = PCIBR_ISR_ERR_START; i < 64; i++) {
 	bit = 1ull << i;
 
-	/*
-	 * A number of int_status bits are only defined for Bridge.
-	 * Ignore them in the case of an XBridge or PIC.
-	 */
-	if ((IS_XBRIDGE_SOFT(pcibr_soft) || IS_PIC_SOFT(pcibr_soft)) &&
-	    ((bit == BRIDGE_ISR_MULTI_ERR) ||
-	     (bit == BRIDGE_ISR_SSRAM_PERR) ||
-	     (bit == BRIDGE_ISR_GIO_B_ENBL_ERR))) {
-	    continue;
-	}
-
 	/* A number of int_status bits are only valid for PIC's bus0 */
-	if ((IS_PIC_SOFT(pcibr_soft) && (pcibr_soft->bs_busnum != 0)) && 
+	if ((pcibr_soft->bs_busnum != 0) && 
 	    ((bit == BRIDGE_ISR_UNSUPPORTED_XOP) ||
 	     (bit == BRIDGE_ISR_LLP_REC_SNERR) ||
 	     (bit == BRIDGE_ISR_LLP_REC_CBERR) ||
@@ -308,14 +329,14 @@ pcibr_error_dump(pcibr_soft_t pcibr_soft)
 
 	    case PIC_ISR_INT_RAM_PERR:	    /* bit41	INT_RAM_PERR */
 		/* XXX: should breakdown meaning of bits in reg */
-		printk( "\t	Internal RAM Parity Error: 0x%lx\n",
-		    bridge->p_ate_parity_err_64);
+		printk("\t	Internal RAM Parity Error: 0x%lx\n",
+		    pcireg_parity_err_get(pcibr_soft));
 		break;
 
 	    case PIC_ISR_PCIX_ARB_ERR:	    /* bit40	PCI_X_ARB_ERR */
 		/* XXX: should breakdown meaning of bits in reg */
-		printk( "\t	Arbitration Reg: 0x%x\n",
-		    bridge->b_arb);
+		printk("\t	Arbitration Reg: 0x%lx\n",
+		    pcireg_arbitration_get(pcibr_soft));
 		break;
 
 	    case PIC_ISR_PCIX_REQ_TOUT:	    /* bit39	PCI_X_REQ_TOUT */
@@ -323,8 +344,8 @@ pcibr_error_dump(pcibr_soft_t pcibr_soft)
 		printk(
 		    "\t	   PCI-X DMA Request Error Address Reg: 0x%lx\n"
 		    "\t	   PCI-X DMA Request Error Attribute Reg: 0x%lx\n",
-		    bridge->p_pcix_dma_req_err_addr_64,
-		    bridge->p_pcix_dma_req_err_attr_64);
+		    pcireg_pcix_req_err_addr_get(pcibr_soft),
+		    pcireg_pcix_req_err_attr_get(pcibr_soft));
 		break;
 
 	    case PIC_ISR_PCIX_SPLIT_MSG_PE: /* bit45	PCI_X_SPLIT_MES_PE */
@@ -334,8 +355,8 @@ pcibr_error_dump(pcibr_soft_t pcibr_soft)
 		printk(
 		    "\t	   PCI-X Split Request Address Reg: 0x%lx\n"
 		    "\t	   PCI-X Split Request Attribute Reg: 0x%lx\n",
-		    bridge->p_pcix_pio_split_addr_64,
-		    bridge->p_pcix_pio_split_attr_64);
+		    pcireg_pcix_pio_split_addr_get(pcibr_soft),
+		    pcireg_pcix_pio_split_attr_get(pcibr_soft));
 		/* FALL THRU */
 
 	    case PIC_ISR_PCIX_UNEX_COMP:    /* bit42	PCI_X_UNEX_COMP */
@@ -351,199 +372,123 @@ pcibr_error_dump(pcibr_soft_t pcibr_soft)
 		    "\t	   PCI-X Bus Error Address Reg: 0x%lx\n"
 		    "\t	   PCI-X Bus Error Attribute Reg: 0x%lx\n"
 		    "\t	   PCI-X Bus Error Data Reg: 0x%lx\n",
-		    bridge->p_pcix_bus_err_addr_64,
-		    bridge->p_pcix_bus_err_attr_64,
-		    bridge->p_pcix_bus_err_data_64);
+		    pcireg_pcix_bus_err_addr_get(pcibr_soft),
+		    pcireg_pcix_bus_err_attr_get(pcibr_soft),
+		    pcireg_pcix_bus_err_data_get(pcibr_soft));
 		break;
 
-	    case BRIDGE_ISR_PAGE_FAULT:	    /* bit30	PMU_PAGE_FAULT */
-		if (IS_XBRIDGE_OR_PIC_SOFT(pcibr_soft))
-		    reg_desc = "Map Fault Address";
-		else
-		    reg_desc = "SSRAM Parity Error";
-
-		printk( "\t    %s Register: 0x%x\n", reg_desc,
-		    bridge->b_ram_perr_or_map_fault);
+	    case BRIDGE_ISR_PAGE_FAULT:	/* bit30    PMU_PAGE_FAULT */
+		printk("\t    Map Fault Address Reg: 0x%lx\n",
+		    pcireg_map_fault_get(pcibr_soft));
 		break;
 
-	    case BRIDGE_ISR_UNEXP_RESP:    /* bit29	UNEXPECTED_RESP */
-		print_bridge_errcmd(bridge->b_wid_aux_err, "Aux ");
+	    case BRIDGE_ISR_UNEXP_RESP:		/* bit29    UNEXPECTED_RESP */
+		print_bridge_errcmd(pcibr_soft,
+			    pcireg_linkside_err_get(pcibr_soft), "Aux ");
 
 		/* PIC in PCI-X mode, dump the PCIX DMA Request registers */
-		if (IS_PIC_SOFT(pcibr_soft) && IS_PCIX(pcibr_soft)) {
+		if (IS_PCIX(pcibr_soft)) {
 		    /* XXX: should breakdown meaning of attr bit */
 		    printk( 
 			"\t    PCI-X DMA Request Error Addr Reg: 0x%lx\n"
 			"\t    PCI-X DMA Request Error Attr Reg: 0x%lx\n",
-			bridge->p_pcix_dma_req_err_addr_64,
-			bridge->p_pcix_dma_req_err_attr_64);
+			pcireg_pcix_req_err_addr_get(pcibr_soft),
+			pcireg_pcix_req_err_attr_get(pcibr_soft));
 		}
 		break;
 
-	    case BRIDGE_ISR_BAD_XRESP_PKT:  /* bit28	BAD_RESP_PACKET */
-	    case BRIDGE_ISR_RESP_XTLK_ERR:  /* bit26	RESP_XTALK_ERROR */
-		if (IS_PIC_SOFT(pcibr_soft)) {
-		    print_bridge_errcmd(bridge->b_wid_aux_err, "Aux ");
-		}
+	    case BRIDGE_ISR_BAD_XRESP_PKT:	/* bit28    BAD_RESP_PACKET */
+	    case BRIDGE_ISR_RESP_XTLK_ERR:	/* bit26    RESP_XTALK_ERROR */
+		print_bridge_errcmd(pcibr_soft,
+				pcireg_linkside_err_get(pcibr_soft), "Aux ");
 		 
-		/* If PIC in PCI-X mode, DMA Request Error registers are
-		 * valid.  But PIC in PCI mode, Response Buffer Address 
-		 * register are valid.
+		/* PCI-X mode, DMA Request Error registers are valid.  But
+		 * in PCI mode, Response Buffer Address register are valid.
 		 */
 		if (IS_PCIX(pcibr_soft)) {
 		    /* XXX: should breakdown meaning of attribute bit */
-		    printk( 
+		    printk(
 			"\t    PCI-X DMA Request Error Addr Reg: 0x%lx\n"
 		        "\t    PCI-X DMA Request Error Attribute Reg: 0x%lx\n",
-		        bridge->p_pcix_dma_req_err_addr_64,
-		        bridge->p_pcix_dma_req_err_attr_64);
+			pcireg_pcix_req_err_addr_get(pcibr_soft),
+			pcireg_pcix_req_err_attr_get(pcibr_soft));
 		} else {
-		    addr= (((uint64_t)(bridge->b_wid_resp_upper & 0xFFFF)<<32)
-			   | bridge->b_wid_resp_lower);
-		    printk("\t    Bridge Response Buf Error Upper Addr Reg: 0x%x\n"
-		        "\t    Bridge Response Buf Error Lower Addr Reg: 0x%x\n"
+		    printk(
+		        "\t    Bridge Response Buf Error Addr Reg: 0x%lx\n"
 		        "\t    dev-num %d buff-num %d addr 0x%lx\n",
-		        bridge->b_wid_resp_upper, bridge->b_wid_resp_lower,
-		        ((bridge->b_wid_resp_upper >> 20) & 0x3),
-		        ((bridge->b_wid_resp_upper >> 16) & 0xF),
-		        addr);
-		}
-		if (bit == BRIDGE_ISR_RESP_XTLK_ERR) {
+			pcireg_resp_err_get(pcibr_soft),
+			(int)pcireg_resp_err_dev_get(pcibr_soft),
+			(int)pcireg_resp_err_buf_get(pcibr_soft),
+			pcireg_resp_err_addr_get(pcibr_soft));
+		    if (bit == BRIDGE_ISR_RESP_XTLK_ERR) {
 			/* display memory directory associated with cacheline */
-			pcibr_show_dir_state(addr, "\t    ");
+			pcibr_show_dir_state(
+				    pcireg_resp_err_get(pcibr_soft), "\t    ");
+		    }
 		}
 		break;
 
-	    case BRIDGE_ISR_BAD_XREQ_PKT:   /* bit27	BAD_XREQ_PACKET */
-	    case BRIDGE_ISR_REQ_XTLK_ERR:   /* bit25	REQ_XTALK_ERROR */
-	    case BRIDGE_ISR_INVLD_ADDR:	    /* bit24	INVALID_ADDRESS */
-		print_bridge_errcmd(bridge->b_wid_err_cmdword, "");
-		printk( 
-		    "\t    Bridge Error Upper Address Register: 0x%lx\n"
-		    "\t    Bridge Error Lower Address Register: 0x%lx\n"
-		    "\t    Bridge Error Address: 0x%lx\n",
-		    (uint64_t) bridge->b_wid_err_upper,
-		    (uint64_t) bridge->b_wid_err_lower,
-		    (((uint64_t) bridge->b_wid_err_upper << 32) |
-		    bridge->b_wid_err_lower));
-		break;
-
-	    case BRIDGE_ISR_UNSUPPORTED_XOP:/* bit23	UNSUPPORTED_XOP */
-		if (IS_PIC_SOFT(pcibr_soft)) {
-		    print_bridge_errcmd(bridge->b_wid_aux_err, "Aux ");
-		    printk( 
-			"\t    Address Holding Link Side Error Reg: 0x%lx\n",
-			bridge->p_addr_lkerr_64);
-		} else {
-		    print_bridge_errcmd(bridge->b_wid_err_cmdword, "");
-		    printk( 
-			"\t    Bridge Error Upper Address Register: 0x%lx\n"
-		        "\t    Bridge Error Lower Address Register: 0x%lx\n"
-		        "\t    Bridge Error Address: 0x%lx\n",
-		        (uint64_t) bridge->b_wid_err_upper,
-		        (uint64_t) bridge->b_wid_err_lower,
-		        (((uint64_t) bridge->b_wid_err_upper << 32) |
-		        bridge->b_wid_err_lower));
-		}
-		break;
-
-	    case BRIDGE_ISR_XREQ_FIFO_OFLOW:/* bit22	XREQ_FIFO_OFLOW */
-		/* Link side error registers are only valid for PIC */
-		if (IS_PIC_SOFT(pcibr_soft)) {
-		    print_bridge_errcmd(bridge->b_wid_aux_err, "Aux ");
-		    printk(
-			"\t    Address Holding Link Side Error Reg: 0x%lx\n",
-			bridge->p_addr_lkerr_64);
-		}
-		break;
-
-	    case BRIDGE_ISR_SSRAM_PERR:	    /* bit16	SSRAM_PERR */
-		if (IS_BRIDGE_SOFT(pcibr_soft)) {
-		    printk(
-			"\t    Bridge SSRAM Parity Error Register: 0x%x\n",
-			bridge->b_ram_perr);
-		}
-		break;
-
-	    case BRIDGE_ISR_PCI_ABORT:	    /* bit15	PCI_ABORT */
-	    case BRIDGE_ISR_PCI_PARITY:	    /* bit14	PCI_PARITY */
-	    case BRIDGE_ISR_PCI_SERR:	    /* bit13	PCI_SERR */
-	    case BRIDGE_ISR_PCI_PERR:	    /* bit12	PCI_PERR */
-	    case BRIDGE_ISR_PCI_MST_TIMEOUT:/* bit11	PCI_MASTER_TOUT */
-	    case BRIDGE_ISR_PCI_RETRY_CNT:  /* bit10	PCI_RETRY_CNT */
-	    case BRIDGE_ISR_GIO_B_ENBL_ERR: /* bit08	GIO BENABLE_ERR */
-		printk( 
-		    "\t    PCI Error Upper Address Register: 0x%lx\n"
-		    "\t    PCI Error Lower Address Register: 0x%lx\n"
-		    "\t    PCI Error Address: 0x%lx\n",
-		    (uint64_t) bridge->b_pci_err_upper,
-		    (uint64_t) bridge->b_pci_err_lower,
-		    (((uint64_t) bridge->b_pci_err_upper << 32) |
-		    bridge->b_pci_err_lower));
-		break;
-
-	    case BRIDGE_ISR_XREAD_REQ_TIMEOUT: /* bit09	XREAD_REQ_TOUT */
-		addr = (((uint64_t)(bridge->b_wid_resp_upper & 0xFFFF) << 32)
-		    | bridge->b_wid_resp_lower);
+	    case BRIDGE_ISR_BAD_XREQ_PKT:	/* bit27    BAD_XREQ_PACKET */
+	    case BRIDGE_ISR_REQ_XTLK_ERR:	/* bit25    REQ_XTALK_ERROR */
+	    case BRIDGE_ISR_INVLD_ADDR:		/* bit24    INVALID_ADDRESS */
+		print_bridge_errcmd(pcibr_soft,
+				pcireg_cmdword_err_get(pcibr_soft), "");
 		printk(
-		    "\t    Bridge Response Buf Error Upper Addr Reg: 0x%x\n"
-		    "\t    Bridge Response Buf Error Lower Addr Reg: 0x%x\n"
+		    "\t    Bridge Error Address Register: 0x%lx\n"
+		    "\t    Bridge Error Address: 0x%lx\n",
+		    pcireg_bus_err_get(pcibr_soft),
+		    pcireg_bus_err_get(pcibr_soft));
+		break;
+
+	    case BRIDGE_ISR_UNSUPPORTED_XOP:	/* bit23    UNSUPPORTED_XOP */
+		print_bridge_errcmd(pcibr_soft,
+				pcireg_linkside_err_get(pcibr_soft), "Aux ");
+		printk("\t    Address Holding Link Side Error Reg: 0x%lx\n",
+			pcireg_linkside_err_addr_get(pcibr_soft));
+		break;
+
+	    case BRIDGE_ISR_XREQ_FIFO_OFLOW:	/* bit22    XREQ_FIFO_OFLOW */
+		print_bridge_errcmd(pcibr_soft,
+				pcireg_linkside_err_get(pcibr_soft), "Aux ");
+		printk("\t    Address Holding Link Side Error Reg: 0x%lx\n",
+			pcireg_linkside_err_addr_get(pcibr_soft));
+		break;
+
+	    case BRIDGE_ISR_PCI_ABORT:		/* bit15    PCI_ABORT */
+	    case BRIDGE_ISR_PCI_PARITY:		/* bit14    PCI_PARITY */
+	    case BRIDGE_ISR_PCI_SERR:		/* bit13    PCI_SERR */
+	    case BRIDGE_ISR_PCI_PERR:		/* bit12    PCI_PERR */
+	    case BRIDGE_ISR_PCI_MST_TIMEOUT:	/* bit11    PCI_MASTER_TOUT */
+	    case BRIDGE_ISR_PCI_RETRY_CNT:	/* bit10    PCI_RETRY_CNT */
+		printk("\t    PCI Error Address Register: 0x%lx\n"
+		    "\t    PCI Error Address: 0x%lx\n",
+		    pcireg_pci_bus_addr_get(pcibr_soft),
+		    pcireg_pci_bus_addr_addr_get(pcibr_soft));
+		break;
+
+	    case BRIDGE_ISR_XREAD_REQ_TIMEOUT:	/* bit09    XREAD_REQ_TOUT */
+		printk("\t    Bridge Response Buf Error Addr Reg: 0x%lx\n"
 		    "\t    dev-num %d buff-num %d addr 0x%lx\n",
-		    bridge->b_wid_resp_upper, bridge->b_wid_resp_lower,
-		    ((bridge->b_wid_resp_upper >> 20) & 0x3),
-		    ((bridge->b_wid_resp_upper >> 16) & 0xF),
-		    addr);
+		    pcireg_resp_err_get(pcibr_soft),
+		    (int)pcireg_resp_err_dev_get(pcibr_soft),
+		    (int)pcireg_resp_err_buf_get(pcibr_soft),
+		    pcireg_resp_err_get(pcibr_soft));
 		break;
 	    }
 	}
     }
 
-    /* We read the INT_MULT register as a 64bit picreg_t for PIC and a
-     * 32bit bridgereg_t for BRIDGE, but always process the result as a
-     * 64bit value so the code can be "common" for both PIC and BRIDGE...
-     */
-    if (IS_PIC_SOFT(pcibr_soft)) {
-	mult_int_64 = (bridge->p_mult_int_64 & ~BRIDGE_ISR_INT_MSK);
-	mult_int = (uint64_t)mult_int_64;
-	number_bits = PCIBR_ISR_MAX_ERRS_PIC;
-    } else {
-	mult_int_32 = (bridge->b_mult_int & ~BRIDGE_ISR_INT_MSK);
-	mult_int = ((uint64_t)mult_int_32) & 0xffffffff;
-	number_bits = PCIBR_ISR_MAX_ERRS_BRIDGE;
-    }
+    mult_int = pcireg_intr_multiple_get(pcibr_soft);
 
-    if (IS_XBRIDGE_OR_PIC_SOFT(pcibr_soft)&&(mult_int & ~BRIDGE_ISR_INT_MSK)) {
-	printk( "    %s Multiple Interrupt Register is 0x%lx\n",
-		IS_PIC_SOFT(pcibr_soft) ? "PIC" : "XBridge", mult_int);
-	for (i = PCIBR_ISR_ERR_START; i < number_bits; i++) {
+    if (mult_int & ~BRIDGE_ISR_INT_MSK) {
+	printk("    %s Multiple Interrupt Register is 0x%lx\n",
+		pcibr_soft->bs_asic_name, mult_int);
+	for (i = PCIBR_ISR_ERR_START; i < 64; i++) {
 	    if (mult_int & (1ull << i))
 		printk( "\t%s\n", pcibr_isr_errs[i]);
 	}
     }
 }
-
-static uint32_t
-pcibr_errintr_group(uint32_t error)
-{
-    uint32_t              group = BRIDGE_IRR_MULTI_CLR;
-
-    if (error & BRIDGE_IRR_PCI_GRP)
-	group |= BRIDGE_IRR_PCI_GRP_CLR;
-    if (error & BRIDGE_IRR_SSRAM_GRP)
-	group |= BRIDGE_IRR_SSRAM_GRP_CLR;
-    if (error & BRIDGE_IRR_LLP_GRP)
-	group |= BRIDGE_IRR_LLP_GRP_CLR;
-    if (error & BRIDGE_IRR_REQ_DSP_GRP)
-	group |= BRIDGE_IRR_REQ_DSP_GRP_CLR;
-    if (error & BRIDGE_IRR_RESP_BUF_GRP)
-	group |= BRIDGE_IRR_RESP_BUF_GRP_CLR;
-    if (error & BRIDGE_IRR_CRP_GRP)
-	group |= BRIDGE_IRR_CRP_GRP_CLR;
-
-    return group;
-
-}
-
 
 /* pcibr_pioerr_check():
  *	Check to see if this pcibr has a PCI PIO
@@ -553,12 +498,7 @@ pcibr_errintr_group(uint32_t error)
 static void
 pcibr_pioerr_check(pcibr_soft_t soft)
 {
-    bridge_t		   *bridge;
-    uint64_t              int_status;
-    bridgereg_t             int_status_32;
-    picreg_t                int_status_64;
-    bridgereg_t		    pci_err_lower;
-    bridgereg_t		    pci_err_upper;
+    uint64_t		    int_status;
     iopaddr_t		    pci_addr;
     pciio_slot_t	    slot;
     pcibr_piomap_t	    map;
@@ -567,26 +507,10 @@ pcibr_pioerr_check(pcibr_soft_t soft)
     unsigned		    win;
     int			    func;
 
-    bridge = soft->bs_base;
-
-    /* We read the INT_STATUS register as a 64bit picreg_t for PIC and a
-     * 32bit bridgereg_t for BRIDGE, but always process the result as a
-     * 64bit value so the code can be "common" for both PIC and BRIDGE...
-     */
-    if (IS_PIC_SOFT(soft)) {
-        int_status_64 = (bridge->p_int_status_64 & ~BRIDGE_ISR_INT_MSK);
-        int_status = (uint64_t)int_status_64;
-    } else {
-        int_status_32 = (bridge->b_int_status & ~BRIDGE_ISR_INT_MSK);
-        int_status = ((uint64_t)int_status_32) & 0xffffffff;
-    }
+    int_status = pcireg_intr_status_get(soft);
 
     if (int_status & BRIDGE_ISR_PCIBUS_PIOERR) {
-	pci_err_lower = bridge->b_pci_err_lower;
-	pci_err_upper = bridge->b_pci_err_upper;
-
-	pci_addr = pci_err_upper & BRIDGE_ERRUPPR_ADDRMASK;
-	pci_addr = (pci_addr << 32) | pci_err_lower;
+	pci_addr = pcireg_pci_bus_addr_get(soft);
 
 	slot = PCIBR_NUM_SLOTS(soft);
 	while (slot-- > 0) {
@@ -609,7 +533,7 @@ pcibr_pioerr_check(pcibr_soft_t soft)
 		    else if (map->bp_space == PCIIO_SPACE_ROM)
 			base += pcibr_info->f_rbase;
 		    if ((pci_addr >= base) && (pci_addr < (base + size)))
-			atomic_inc(&map->bp_toc[0]);
+			atomic_inc(&map->bp_toc);
 		}
 	    }
 	}
@@ -636,16 +560,13 @@ pcibr_pioerr_check(pcibr_soft_t soft)
  *                due to read or write error!.
  */
 
-void
+irqreturn_t
 pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
 {
     pcibr_soft_t            pcibr_soft;
-    bridge_t               *bridge;
-    uint64_t              int_status;
-    uint64_t              err_status;
-    bridgereg_t             int_status_32;
-    picreg_t                int_status_64;
-    int			    number_bits;
+    void               *bridge;
+    uint64_t		    int_status;
+    uint64_t		    err_status;
     int                     i;
     uint64_t		    disable_errintr_mask = 0;
     nasid_t		    nasid;
@@ -662,7 +583,9 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
 	entry = pcibr_list;
 	while (1) {
 	    if (entry == NULL) {
-		PRINT_PANIC("pcibr_error_intr_handler:\tmy parameter (0x%p) is not a pcibr_soft!", arg);
+		printk("pcibr_error_intr_handler: (0x%lx) is not a pcibr_soft!",
+	 	      (uint64_t)arg);
+    		return IRQ_NONE;
 	    }
 	    if ((intr_arg_t) entry->bl_soft == arg)
 		break;
@@ -706,33 +629,21 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
 	return(pcibr_error_intr_handler(irq, arg, ep));
     }
 
-    /* We read the INT_STATUS register as a 64bit picreg_t for PIC and a
-     * 32bit bridgereg_t for BRIDGE, but always process the result as a
-     * 64bit value so the code can be "common" for both PIC and BRIDGE...
-     */
-    if (IS_PIC_SOFT(pcibr_soft)) {
-        int_status_64 = (bridge->p_int_status_64 & ~BRIDGE_ISR_INT_MSK);
-        int_status = (uint64_t)int_status_64;
-        number_bits = PCIBR_ISR_MAX_ERRS_PIC;
-    } else {
-        int_status_32 = (bridge->b_int_status & ~BRIDGE_ISR_INT_MSK);
-        int_status = ((uint64_t)int_status_32) & 0xffffffff;
-        number_bits = PCIBR_ISR_MAX_ERRS_BRIDGE;
-    }
+    int_status = pcireg_intr_status_get(pcibr_soft);
 
     PCIBR_DEBUG_ALWAYS((PCIBR_DEBUG_INTR_ERROR, pcibr_soft->bs_conn,
-		"pcibr_error_intr_handler: int_status=0x%x\n", int_status));
+		"pcibr_error_intr_handler: int_status=0x%lx\n", int_status));
 
     /* int_status is which bits we have to clear;
      * err_status is the bits we haven't handled yet.
      */
-    err_status = int_status & ~BRIDGE_ISR_MULTI_ERR;
+    err_status = int_status;
 
     if (!(int_status & ~BRIDGE_ISR_INT_MSK)) {
 	/*
 	 * No error bit set!!.
 	 */
-	return;
+	return IRQ_HANDLED;
     }
     /*
      * If we have a PCIBUS_PIOERR, hand it to the logger.
@@ -742,9 +653,10 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
     }
 
     if (err_status) {
-	struct bs_errintr_stat_s *bs_estat = pcibr_soft->bs_errintr_stat;
+	struct bs_errintr_stat_s *bs_estat ;
+        bs_estat = &pcibr_soft->bs_errintr_stat[PCIBR_ISR_ERR_START];
 
-	for (i = PCIBR_ISR_ERR_START; i < number_bits; i++, bs_estat++) {
+	for (i = PCIBR_ISR_ERR_START; i < 64; i++, bs_estat++) {
 	    if (err_status & (1ull << i)) {
 		uint32_t              errrate = 0;
 		uint32_t              errcount = 0;
@@ -853,8 +765,7 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
 		 * interrupt inorder to clear the DEV_BROKE bits in
 		 * b_arb register to re-enable the device.
 		 */
-		if (IS_PIC_SOFT(pcibr_soft) &&
-				!(err_status & PIC_ISR_PCIX_ARB_ERR) &&
+		if (!(err_status & PIC_ISR_PCIX_ARB_ERR) &&
 				PCIBR_WAR_ENABLED(PV856155, pcibr_soft)) {
 
 		if (bs_estat->bs_errcount_total > PCIBR_ERRINTR_DISABLE_LEVEL) {
@@ -876,17 +787,13 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
     }
 
     if (disable_errintr_mask) {
-	unsigned s;
+	unsigned long s;
 	/*
 	 * Disable some high frequency errors as they
 	 * could eat up too much cpu time.
 	 */
 	s = pcibr_lock(pcibr_soft);
-	if (IS_PIC_SOFT(pcibr_soft)) {
-	    bridge->p_int_enable_64 &= (picreg_t)(~disable_errintr_mask);
-	} else {
-	    bridge->b_int_enable &= (bridgereg_t)(~disable_errintr_mask);
-	}
+	pcireg_intr_enable_bit_clr(pcibr_soft, disable_errintr_mask);
 	pcibr_unlock(pcibr_soft, s);
     }
     /*
@@ -895,30 +802,21 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
      * which will cause a BRIDGE_ISR_INVLD_ADDR.
      */
     if ((err_status & BRIDGE_ISR_INVLD_ADDR) &&
-	(0x00000000 == bridge->b_wid_err_upper) &&
-	(0x00C00000 == (0xFFC00000 & bridge->b_wid_err_lower)) &&
-	(0x00402000 == (0x00F07F00 & bridge->b_wid_err_cmdword))) {
+	(0x00C00000 == (pcireg_bus_err_get(pcibr_soft) & 0xFFFFFFFFFFC00000)) &&
+	(0x00402000 == (0x00F07F00 & pcireg_cmdword_err_get(pcibr_soft)))) {
 	err_status &= ~BRIDGE_ISR_INVLD_ADDR;
     }
     /*
-     * The bridge bug (PCIBR_LLP_CONTROL_WAR), where the llp_config or control registers
-     * need to be read back after being written, affects an MP
-     * system since there could be small windows between writing
-     * the register and reading it back on one cpu while another
-     * cpu is fielding an interrupt. If we run into this scenario,
-     * workaround the problem by ignoring the error. (bug 454474)
-     * pcibr_llp_control_war_cnt keeps an approximate number of
-     * times we saw this problem on a system.
+     * pcibr_pioerr_dump is a systune that make be used to not
+     * print bridge registers for interrupts generated by pio-errors.
+     * Some customers do early probes and expect a lot of failed
+     * pios.
      */
-
-    if ((err_status & BRIDGE_ISR_INVLD_ADDR) &&
-	((((uint64_t) bridge->b_wid_err_upper << 32) | (bridge->b_wid_err_lower))
-	 == (BRIDGE_INT_RST_STAT & 0xff0))) {
-	pcibr_llp_control_war_cnt++;
-	err_status &= ~BRIDGE_ISR_INVLD_ADDR;
+    if (!pcibr_pioerr_dump) {
+	bridge_errors_to_dump &= ~BRIDGE_ISR_PCIBUS_PIOERR;
+    } else {
+	bridge_errors_to_dump |= BRIDGE_ISR_PCIBUS_PIOERR;
     }
-
-    bridge_errors_to_dump |= BRIDGE_ISR_PCIBUS_PIOERR;
 
     /* Dump/Log Bridge error interrupt info */
     if (err_status & bridge_errors_to_dump) {
@@ -931,15 +829,16 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
      * so we know we've hit the problem defined in PV 867308 that we believe
      * has only been seen in simulation
      */
-    if (IS_PIC_SOFT(pcibr_soft) && PCIBR_WAR_ENABLED(PV867308, pcibr_soft) &&
-        (err_status & (BRIDGE_ISR_LLP_REC_SNERR | BRIDGE_ISR_LLP_REC_CBERR))) {
-        printk("BRIDGE ERR_STATUS 0x%lx\n", err_status);
-        pcibr_error_dump(pcibr_soft);
-        PRINT_PANIC("PCI Bridge Error interrupt killed the system");
+    if (PCIBR_WAR_ENABLED(PV867308, pcibr_soft) &&
+	(err_status & (BRIDGE_ISR_LLP_REC_SNERR | BRIDGE_ISR_LLP_REC_CBERR))) {
+	printk("BRIDGE ERR_STATUS 0x%lx\n", err_status);
+	pcibr_error_dump(pcibr_soft);
+	/* machine_error_dump(""); */
+	panic("PCI Bridge Error interrupt killed the system");
     }
 
     if (err_status & BRIDGE_ISR_ERROR_FATAL) {
-	PRINT_PANIC("PCI Bridge Error interrupt killed the system");
+	panic("PCI Bridge Error interrupt killed the system");
 	    /*NOTREACHED */
     }
 
@@ -952,43 +851,212 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *ep)
      * 
      * PIC doesn't require groups of interrupts to be cleared...
      */
-    if (IS_PIC_SOFT(pcibr_soft)) {
-	bridge->p_int_rst_stat_64 = (picreg_t)(int_status | BRIDGE_IRR_MULTI_CLR);
-    } else {
-	bridge->b_int_rst_stat = (bridgereg_t)pcibr_errintr_group(int_status);
-    }
+    pcireg_intr_reset_set(pcibr_soft, (int_status | BRIDGE_IRR_MULTI_CLR));
 
     /* PIC BRINGUP WAR (PV# 856155):
      * On a PCI_X_ARB_ERR error interrupt clear the DEV_BROKE bits from
      * the b_arb register to re-enable the device.
      */
-    if (IS_PIC_SOFT(pcibr_soft) &&
-		(err_status & PIC_ISR_PCIX_ARB_ERR) &&
+    if ((err_status & PIC_ISR_PCIX_ARB_ERR) &&
 		PCIBR_WAR_ENABLED(PV856155, pcibr_soft)) {
-	bridge->b_arb |= (0xf << 20);
+	pcireg_arbitration_bit_set(pcibr_soft, (0xf << 20));
     }
 
     /* Zero out bserr_intstat field */
     pcibr_soft->bs_errinfo.bserr_intstat = 0;
+    return IRQ_HANDLED;
+}
+
+/*
+ * pcibr_addr_toslot
+ *      Given the 'pciaddr' find out which slot this address is
+ *      allocated to, and return the slot number.
+ *      While we have the info handy, construct the
+ *      function number, space code and offset as well.
+ *
+ * NOTE: if this routine is called, we don't know whether
+ * the address is in CFG, MEM, or I/O space. We have to guess.
+ * This will be the case on PIO stores, where the only way
+ * we have of getting the address is to check the Bridge, which
+ * stores the PCI address but not the space and not the xtalk
+ * address (from which we could get it).
+ */
+static int
+pcibr_addr_toslot(pcibr_soft_t pcibr_soft,
+		  iopaddr_t pciaddr,
+		  pciio_space_t *spacep,
+		  iopaddr_t *offsetp,
+		  pciio_function_t *funcp)
+{
+    int                     s, f = 0, w;
+    iopaddr_t               base;
+    size_t                  size;
+    pciio_piospace_t        piosp;
+
+    /*
+     * Check if the address is in config space
+     */
+
+    if ((pciaddr >= BRIDGE_CONFIG_BASE) && (pciaddr < BRIDGE_CONFIG_END)) {
+
+	if (pciaddr >= BRIDGE_CONFIG1_BASE)
+	    pciaddr -= BRIDGE_CONFIG1_BASE;
+	else
+	    pciaddr -= BRIDGE_CONFIG_BASE;
+
+	s = pciaddr / BRIDGE_CONFIG_SLOT_SIZE;
+	pciaddr %= BRIDGE_CONFIG_SLOT_SIZE;
+
+	if (funcp) {
+	    f = pciaddr / 0x100;
+	    pciaddr %= 0x100;
+	}
+	if (spacep)
+	    *spacep = PCIIO_SPACE_CFG;
+	if (offsetp)
+	    *offsetp = pciaddr;
+	if (funcp)
+	    *funcp = f;
+
+	return s;
+    }
+    for (s = pcibr_soft->bs_min_slot; s < PCIBR_NUM_SLOTS(pcibr_soft); ++s) {
+	int                     nf = pcibr_soft->bs_slot[s].bss_ninfo;
+	pcibr_info_h            pcibr_infoh = pcibr_soft->bs_slot[s].bss_infos;
+
+	for (f = 0; f < nf; f++) {
+	    pcibr_info_t            pcibr_info = pcibr_infoh[f];
+
+	    if (!pcibr_info)
+		continue;
+	    for (w = 0; w < 6; w++) {
+		if (pcibr_info->f_window[w].w_space
+		    == PCIIO_SPACE_NONE) {
+		    continue;
+		}
+		base = pcibr_info->f_window[w].w_base;
+		size = pcibr_info->f_window[w].w_size;
+
+		if ((pciaddr >= base) && (pciaddr < (base + size))) {
+		    if (spacep)
+			*spacep = PCIIO_SPACE_WIN(w);
+		    if (offsetp)
+			*offsetp = pciaddr - base;
+		    if (funcp)
+			*funcp = f;
+		    return s;
+		}			/* endif match */
+	    }				/* next window */
+	}				/* next func */
+    }					/* next slot */
+
+    /*
+     * Check if the address was allocated as part of the
+     * pcibr_piospace_alloc calls.
+     */
+    for (s = pcibr_soft->bs_min_slot; s < PCIBR_NUM_SLOTS(pcibr_soft); ++s) {
+	int                     nf = pcibr_soft->bs_slot[s].bss_ninfo;
+	pcibr_info_h            pcibr_infoh = pcibr_soft->bs_slot[s].bss_infos;
+
+	for (f = 0; f < nf; f++) {
+	    pcibr_info_t            pcibr_info = pcibr_infoh[f];
+
+	    if (!pcibr_info)
+		continue;
+	    piosp = pcibr_info->f_piospace;
+	    while (piosp) {
+		if ((piosp->start <= pciaddr) &&
+		    ((piosp->count + piosp->start) > pciaddr)) {
+		    if (spacep)
+			*spacep = piosp->space;
+		    if (offsetp)
+			*offsetp = pciaddr - piosp->start;
+		    return s;
+		}			/* endif match */
+		piosp = piosp->next;
+	    }				/* next piosp */
+	}				/* next func */
+    }					/* next slot */
+
+    /*
+     * Some other random address on the PCI bus ...
+     * we have no way of knowing whether this was
+     * a MEM or I/O access; so, for now, we just
+     * assume that the low 1G is MEM, the next
+     * 3G is I/O, and anything above the 4G limit
+     * is obviously MEM.
+     */
+
+    if (spacep)
+	*spacep = ((pciaddr < (1ul << 30)) ? PCIIO_SPACE_MEM :
+		   (pciaddr < (4ul << 30)) ? PCIIO_SPACE_IO :
+		   PCIIO_SPACE_MEM);
+    if (offsetp)
+	*offsetp = pciaddr;
+
+    return PCIIO_SLOT_NONE;
+
 }
 
 void
 pcibr_error_cleanup(pcibr_soft_t pcibr_soft, int error_code)
 {
-    bridge_t               *bridge = pcibr_soft->bs_base;
+    uint64_t	clr_bits = BRIDGE_IRR_ALL_CLR;
 
     ASSERT(error_code & IOECODE_PIO);
     error_code = error_code;
 
-    if (IS_PIC_SOFT(pcibr_soft)) {
-        bridge->p_int_rst_stat_64 = BRIDGE_IRR_PCI_GRP_CLR |
-				    PIC_PCIX_GRP_CLR |
-				    BRIDGE_IRR_MULTI_CLR;
-    } else {
-        bridge->b_int_rst_stat = BRIDGE_IRR_PCI_GRP_CLR | BRIDGE_IRR_MULTI_CLR;
-    }
+    pcireg_intr_reset_set(pcibr_soft, clr_bits);
 
-    (void) bridge->b_wid_tflush;	/* flushbus */
+    pcireg_tflush_get(pcibr_soft);	/* flushbus */
+}
+
+
+/*
+ * pcibr_error_extract
+ *      Given the 'pcibr vertex handle' find out which slot
+ *      the bridge status error address (from pcibr_soft info
+ *      hanging off the vertex)
+ *      allocated to, and return the slot number.
+ *      While we have the info handy, construct the
+ *      space code and offset as well.
+ *
+ * NOTE: if this routine is called, we don't know whether
+ * the address is in CFG, MEM, or I/O space. We have to guess.
+ * This will be the case on PIO stores, where the only way
+ * we have of getting the address is to check the Bridge, which
+ * stores the PCI address but not the space and not the xtalk
+ * address (from which we could get it).
+ *
+ * XXX- this interface has no way to return the function
+ * number on a multifunction card, even though that data
+ * is available.
+ */
+
+pciio_slot_t
+pcibr_error_extract(vertex_hdl_t pcibr_vhdl,
+		    pciio_space_t *spacep,
+		    iopaddr_t *offsetp)
+{
+    pcibr_soft_t            pcibr_soft = 0;
+    iopaddr_t               bserr_addr;
+    pciio_slot_t            slot = PCIIO_SLOT_NONE;
+    arbitrary_info_t	    rev;
+
+    /* Do a sanity check as to whether we really got a 
+     * bridge vertex handle.
+     */
+    if (hwgraph_info_get_LBL(pcibr_vhdl, INFO_LBL_PCIBR_ASIC_REV, &rev) !=
+	GRAPH_SUCCESS) 
+	return(slot);
+
+    pcibr_soft = pcibr_soft_get(pcibr_vhdl);
+    if (pcibr_soft) {
+	bserr_addr = pcireg_pci_bus_addr_get(pcibr_soft);
+	slot = pcibr_addr_toslot(pcibr_soft, bserr_addr,
+				 spacep, offsetp, NULL);
+    }
+    return slot;
 }
 
 /*ARGSUSED */
@@ -1021,6 +1089,28 @@ pcibr_device_disable(pcibr_soft_t pcibr_soft, int devnum)
  *      to handle the error, it expects the bus-interface to disable that
  *      device, and takes any steps needed here to take away any resources
  *      associated with this device.
+ *
+ * A note about slots:
+ *
+ * 	PIC-based bridges use zero-based device numbering when devices to
+ * 	internal registers.  However, the physical slots are numbered using a
+ *	one-based scheme because in PCI-X, device 0 is reserved (see comments
+ * 	in pcibr_private.h for a better description).
+ *
+ * 	When building up the hwgraph, we use the external (one-based) number
+ *	scheme when numbering slot components so that hwgraph more accuratly
+ * 	reflects what is silkscreened on the bricks.
+ *
+ * 	Since pciio_error_handler() needs to ultimatly be able to do a hwgraph
+ *	lookup, the ioerror that gets built up in pcibr_pioerror() encodes the
+ *	external (one-based) slot number.  However, loops in pcibr_pioerror() 
+ * 	which attempt to translate the virtual address into the correct
+ * 	PCI physical address use the device (zero-based) numbering when 
+ * 	walking through bridge structures.
+ *
+ * 	To that end, pcibr_pioerror() uses device to denote the 
+ *	zero-based device number, and external_slot to denote the corresponding
+ *	one-based slot number.  Loop counters (eg. cs) are always device based.
  */
 
 /* BEM_ADD_IOE doesn't dump the whole ioerror, it just
@@ -1079,15 +1169,14 @@ pcibr_pioerror(
     int                     retval = IOERROR_HANDLED;
 
     vertex_hdl_t            pcibr_vhdl = pcibr_soft->bs_vhdl;
-    bridge_t               *bridge = pcibr_soft->bs_base;
-
     iopaddr_t               bad_xaddr;
 
     pciio_space_t           raw_space;	/* raw PCI space */
     iopaddr_t               raw_paddr;	/* raw PCI address */
 
     pciio_space_t           space;	/* final PCI space */
-    pciio_slot_t            slot;	/* final PCI slot, if appropriate */
+    pciio_slot_t            device;	/* final PCI device if appropriate */
+    pciio_slot_t            external_slot;/* external slot for device */
     pciio_function_t        func;	/* final PCI func, if appropriate */
     iopaddr_t               offset;	/* final PCI offset */
     
@@ -1106,19 +1195,19 @@ pcibr_pioerror(
     IOERROR_GETVALUE(bad_xaddr, ioe, xtalkaddr);
 
     PCIBR_DEBUG_ALWAYS((PCIBR_DEBUG_ERROR_HDLR, pcibr_soft->bs_conn,
-                "pcibr_pioerror: pcibr_soft=0x%x, bad_xaddr=0x%x\n",
+                "pcibr_pioerror: pcibr_soft=0x%lx, bad_xaddr=0x%lx\n",
 		pcibr_soft, bad_xaddr));
 
-    slot = PCIIO_SLOT_NONE;
+    device = PCIIO_SLOT_NONE;
     func = PCIIO_FUNC_NONE;
     raw_space = PCIIO_SPACE_NONE;
     raw_paddr = 0;
 
-    if ((bad_xaddr >= PCIBR_BUS_TYPE0_CFG_DEV0(pcibr_soft)) &&
+    if ((bad_xaddr >= PCIBR_BUS_TYPE0_CFG_DEV(pcibr_soft, 0)) &&
 	(bad_xaddr < PCIBR_TYPE1_CFG(pcibr_soft))) {
-	raw_paddr = bad_xaddr - PCIBR_BUS_TYPE0_CFG_DEV0(pcibr_soft);
-	slot = raw_paddr / BRIDGE_TYPE0_CFG_SLOT_OFF;
-	raw_paddr = raw_paddr % BRIDGE_TYPE0_CFG_SLOT_OFF;
+	raw_paddr = bad_xaddr - PCIBR_BUS_TYPE0_CFG_DEV(pcibr_soft, 0);
+	device = raw_paddr / BRIDGE_CONFIG_SLOT_SIZE;
+	raw_paddr = raw_paddr % BRIDGE_CONFIG_SLOT_SIZE;
 	raw_space = PCIIO_SPACE_CFG;
     }
     if ((bad_xaddr >= PCIBR_TYPE1_CFG(pcibr_soft)) &&
@@ -1130,11 +1219,11 @@ pcibr_pioerror(
 	raw_paddr = bad_xaddr - PCIBR_TYPE1_CFG(pcibr_soft);
 	raw_space = PCIIO_SPACE_CFG;
     }
-    if ((bad_xaddr >= PCIBR_BRIDGE_DEVIO0(pcibr_soft)) &&
+    if ((bad_xaddr >= PCIBR_BRIDGE_DEVIO(pcibr_soft, 0)) &&
 	(bad_xaddr < PCIBR_BRIDGE_DEVIO(pcibr_soft, BRIDGE_DEV_CNT))) {
 	int                     x;
 
-	raw_paddr = bad_xaddr - PCIBR_BRIDGE_DEVIO0(pcibr_soft);
+	raw_paddr = bad_xaddr - PCIBR_BRIDGE_DEVIO(pcibr_soft, 0);
 	x = raw_paddr / BRIDGE_DEVIO_OFF;
 	raw_paddr %= BRIDGE_DEVIO_OFF;
 	/* first two devio windows are double-sized */
@@ -1171,25 +1260,37 @@ pcibr_pioerror(
 	} else
 	    raw_paddr += pcibr_soft->bs_slot[x].bss_devio.bssd_base;
     }
-    if ((bad_xaddr >= BRIDGE_PCI_MEM32_BASE) &&
-	(bad_xaddr <= BRIDGE_PCI_MEM32_LIMIT)) {
-	raw_space = PCIIO_SPACE_MEM32;
-	raw_paddr = bad_xaddr - BRIDGE_PCI_MEM32_BASE;
-    }
-    if ((bad_xaddr >= BRIDGE_PCI_MEM64_BASE) &&
-	(bad_xaddr <= BRIDGE_PCI_MEM64_LIMIT)) {
-	raw_space = PCIIO_SPACE_MEM64;
-	raw_paddr = bad_xaddr - BRIDGE_PCI_MEM64_BASE;
-    }
-    if ((bad_xaddr >= BRIDGE_PCI_IO_BASE) &&
-	(bad_xaddr <= BRIDGE_PCI_IO_LIMIT)) {
-	raw_space = PCIIO_SPACE_IO;
-	raw_paddr = bad_xaddr - BRIDGE_PCI_IO_BASE;
+
+    if (IS_PIC_BUSNUM_SOFT(pcibr_soft, 0)) {
+    	if ((bad_xaddr >= PICBRIDGE0_PCI_MEM32_BASE) &&
+	    (bad_xaddr <= PICBRIDGE0_PCI_MEM32_LIMIT)) {
+	    raw_space = PCIIO_SPACE_MEM32;
+	    raw_paddr = bad_xaddr - PICBRIDGE0_PCI_MEM32_BASE;
+    	}
+    	if ((bad_xaddr >= PICBRIDGE0_PCI_MEM64_BASE) &&
+	    (bad_xaddr <= PICBRIDGE0_PCI_MEM64_LIMIT)) {
+	    raw_space = PCIIO_SPACE_MEM64;
+	    raw_paddr = bad_xaddr - PICBRIDGE0_PCI_MEM64_BASE;
+    	}
+    } else if (IS_PIC_BUSNUM_SOFT(pcibr_soft, 1)) {
+    	if ((bad_xaddr >= PICBRIDGE1_PCI_MEM32_BASE) &&
+	    (bad_xaddr <= PICBRIDGE1_PCI_MEM32_LIMIT)) {
+	    raw_space = PCIIO_SPACE_MEM32;
+	    raw_paddr = bad_xaddr - PICBRIDGE1_PCI_MEM32_BASE;
+    	}
+    	if ((bad_xaddr >= PICBRIDGE1_PCI_MEM64_BASE) &&
+	    (bad_xaddr <= PICBRIDGE1_PCI_MEM64_LIMIT)) {
+	    raw_space = PCIIO_SPACE_MEM64;
+	    raw_paddr = bad_xaddr - PICBRIDGE1_PCI_MEM64_BASE;
+    	}
+    } else {
+	printk("pcibr_pioerror(): unknown bridge type");
+	return IOERROR_UNHANDLED;
     }
     space = raw_space;
     offset = raw_paddr;
 
-    if ((slot == PCIIO_SLOT_NONE) && (space != PCIIO_SPACE_NONE)) {
+    if ((device == PCIIO_SLOT_NONE) && (space != PCIIO_SPACE_NONE)) {
 	/* we've got a space/offset but not which
 	 * PCI slot decodes it. Check through our
 	 * notions of which devices decode where.
@@ -1203,16 +1304,16 @@ pcibr_pioerror(
 
 	for (cs = pcibr_soft->bs_min_slot; 
 		(cs < PCIBR_NUM_SLOTS(pcibr_soft)) && 
-					(slot == PCIIO_SLOT_NONE); cs++) {
+				(device == PCIIO_SLOT_NONE); cs++) {
 	    int                     nf = pcibr_soft->bs_slot[cs].bss_ninfo;
 	    pcibr_info_h            pcibr_infoh = pcibr_soft->bs_slot[cs].bss_infos;
 
-	    for (cf = 0; (cf < nf) && (slot == PCIIO_SLOT_NONE); cf++) {
+	    for (cf = 0; (cf < nf) && (device == PCIIO_SLOT_NONE); cf++) {
 		pcibr_info_t            pcibr_info = pcibr_infoh[cf];
 
 		if (!pcibr_info)
 		    continue;
-		for (cw = 0; (cw < 6) && (slot == PCIIO_SLOT_NONE); ++cw) {
+		for (cw = 0; (cw < 6) && (device == PCIIO_SLOT_NONE); ++cw) {
 		    if (((wx = pcibr_info->f_window[cw].w_space) != PCIIO_SPACE_NONE) &&
 			((wb = pcibr_info->f_window[cw].w_base) != 0) &&
 			((ws = pcibr_info->f_window[cw].w_size) != 0) &&
@@ -1228,7 +1329,7 @@ pcibr_pioerror(
 			     ((space == PCIIO_SPACE_MEM) ||
 			      (space == PCIIO_SPACE_MEM32) ||
 			      (space == PCIIO_SPACE_MEM64)))) {
-			    slot = cs;
+			    device = cs;
 			    func = cf;
 			    space = PCIIO_SPACE_WIN(cw);
 			    offset -= wb;
@@ -1281,7 +1382,7 @@ pcibr_pioerror(
 	    wb = map->bp_pciaddr;
 	    ws = map->bp_mapsz;
 	    cw = wx - PCIIO_SPACE_WIN(0);
-	    if (cw < 6) {
+	    if (cw >= 0 && cw < 6) {
 		wb += pcibr_soft->bs_slot[cs].bss_window[cw].bssw_base;
 		wx = pcibr_soft->bs_slot[cs].bss_window[cw].bssw_space;
 	    }
@@ -1294,32 +1395,35 @@ pcibr_pioerror(
 		wx = PCIIO_SPACE_MEM;
 	    wl = wb + ws;
 	    if ((wx == raw_space) && (raw_paddr >= wb) && (raw_paddr < wl)) {
-		atomic_inc(&map->bp_toc[0]);
-		if (slot == PCIIO_SLOT_NONE) {
-		    slot = cs;
+		atomic_inc(&map->bp_toc);
+		if (device == PCIIO_SLOT_NONE) {
+		    device = cs;
+		    func = cf;
 		    space = map->bp_space;
-		    if (cw < 6)
-			offset -= pcibr_soft->bs_slot[cs].bss_window[cw].bssw_base;
+		    if (cw >= 0 && cw < 6)
+			offset -= pcibr_soft->bs_slot[device].bss_window[cw].bssw_base;
 		}
+
+		break;
 	    }
 	    }
 	}
     }
 
     PCIBR_DEBUG_ALWAYS((PCIBR_DEBUG_ERROR_HDLR, pcibr_soft->bs_conn,
-                "pcibr_pioerror: offset=0x%x, slot=0x%x, func=0x%x\n",
-		offset, slot, func));
+                "pcibr_pioerror: space=%d, offset=0x%lx, dev=0x%x, func=0x%x\n",
+		space, offset, device, func));
 
     if (space != PCIIO_SPACE_NONE) {
-	if (slot != PCIIO_SLOT_NONE) {
-	    if (func != PCIIO_FUNC_NONE) {
+	if (device != PCIIO_SLOT_NONE)  {
+	    external_slot = PCIBR_DEVICE_TO_SLOT(pcibr_soft, device);
+
+	    if (func != PCIIO_FUNC_NONE)
 		IOERROR_SETVALUE(ioe, widgetdev, 
-				 pciio_widgetdev_create(slot,func));
-	    }
-	    else {
+				 pciio_widgetdev_create(external_slot,func));
+	    else
     		IOERROR_SETVALUE(ioe, widgetdev, 
-				 pciio_widgetdev_create(slot,0));
-	    }
+				 pciio_widgetdev_create(external_slot,0));
 	}
 	IOERROR_SETVALUE(ioe, busspace, space);
 	IOERROR_SETVALUE(ioe, busaddr, offset);
@@ -1335,7 +1439,7 @@ pcibr_pioerror(
 	/* if appropriate, give the error handler for this slot
 	 * a shot at this probe access as well.
 	 */
-	return (slot == PCIIO_SLOT_NONE) ? IOERROR_HANDLED :
+	return (device == PCIIO_SLOT_NONE) ? IOERROR_HANDLED :
 	    pciio_error_handler(pcibr_vhdl, error_code, mode, ioe);
     }
     /*
@@ -1405,47 +1509,8 @@ pcibr_pioerror(
 	    printk(KERN_ALERT
 		    "PIO Error on PCI Bus %s",
 		    pcibr_soft->bs_name);
-	    /* this decodes part of the ioe; our caller
-	     * will dump the raw details in DEBUG and
-	     * kdebug kernels.
-	     */
 	    BEM_ADD_IOE(ioe);
 	}
-#if defined(FORCE_ERRORS)
-	if (0) {
-#elif !DEBUG
-	if (kdebug) {
-#endif
-	    /*
-	     * Dump raw data from Bridge/PCI layer.
-	     */
-
-	    BEM_ADD_STR("Raw info from Bridge/PCI layer:\n");
-	    if (IS_PIC_SOFT(pcibr_soft)) {
-		if (bridge->p_int_status_64 & (picreg_t)BRIDGE_ISR_PCIBUS_PIOERR)
-		    pcibr_error_dump(pcibr_soft);
-	    } else {
-		if (bridge->b_int_status & (bridgereg_t)BRIDGE_ISR_PCIBUS_PIOERR)
-		    pcibr_error_dump(pcibr_soft);
-	    }
-	    BEM_ADD_SPC(raw_space);
-	    BEM_ADD_VAR(raw_paddr);
-	    if (IOERROR_FIELDVALID(ioe, widgetdev)) {
-		short widdev;
-		IOERROR_GETVALUE(widdev, ioe, widgetdev);
-		slot = pciio_widgetdev_slot_get(widdev);
-		func = pciio_widgetdev_func_get(widdev);
-		if (slot < PCIBR_NUM_SLOTS(pcibr_soft)) {
-		    bridgereg_t             device = bridge->b_device[slot].reg;
-
-		    BEM_ADD_VAR(slot);
-		    BEM_ADD_VAR(func);
-		    BEM_ADD_REG(device);
-		}
-	    }
-#if !DEBUG || defined(FORCE_ERRORS)
-	}
-#endif
 
 	/*
 	 * Since error could not be handled at lower level,
@@ -1464,10 +1529,11 @@ pcibr_pioerror(
 	 *      other errors.
 	 */
 	if (IOERROR_FIELDVALID(ioe, widgetdev)) {
-		short widdev;
-		IOERROR_GETVALUE(widdev, ioe, widgetdev);
-		pcibr_device_disable(pcibr_soft, 
-				 pciio_widgetdev_slot_get(widdev));
+	    short widdev;
+	    IOERROR_GETVALUE(widdev, ioe, widgetdev);
+	    external_slot = pciio_widgetdev_slot_get(widdev);
+	    device = PCIBR_SLOT_TO_DEVICE(pcibr_soft, external_slot);
+	    pcibr_device_disable(pcibr_soft, device);
 	}
 	if (mode == MODE_DEVUSERERROR)
 	    pcibr_error_cleanup(pcibr_soft, error_code);
@@ -1490,10 +1556,8 @@ pcibr_dmard_error(
 		     ioerror_t *ioe)
 {
     vertex_hdl_t            pcibr_vhdl = pcibr_soft->bs_vhdl;
-    bridge_t               *bridge = pcibr_soft->bs_base;
-    bridgereg_t             bus_lowaddr, bus_uppraddr;
     int                     retval = 0;
-    int                     bufnum;
+    int                     bufnum, device;
 
     /*
      * In case of DMA errors, bridge should have logged the
@@ -1506,24 +1570,14 @@ pcibr_dmard_error(
 	IOERROR_GETVALUE(tmp, ioe, widgetnum);
 	ASSERT(tmp == pcibr_soft->bs_xid);
     }
-    ASSERT(bridge);
 
     /*
      * read error log registers
      */
-    bus_lowaddr = bridge->b_wid_resp_lower;
-    bus_uppraddr = bridge->b_wid_resp_upper;
-
-    bufnum = BRIDGE_RESP_ERRUPPR_BUFNUM(bus_uppraddr);
-    IOERROR_SETVALUE(ioe, widgetdev, 
-		     pciio_widgetdev_create(
-				    BRIDGE_RESP_ERRUPPR_DEVICE(bus_uppraddr),
-				    0));
-    IOERROR_SETVALUE(ioe, busaddr,
-		     (bus_lowaddr |
-		      ((iopaddr_t)
-		       (bus_uppraddr &
-			BRIDGE_ERRUPPR_ADDRMASK) << 32)));
+    bufnum = pcireg_resp_err_buf_get(pcibr_soft);
+    device = pcireg_resp_err_dev_get(pcibr_soft);
+    IOERROR_SETVALUE(ioe, widgetdev, pciio_widgetdev_create(device, 0));
+    IOERROR_SETVALUE(ioe, busaddr, pcireg_resp_err_get(pcibr_soft));
 
     /*
      * need to ensure that the xtalk address in ioe
@@ -1546,7 +1600,7 @@ pcibr_dmard_error(
      * not is dependent on INT_ENABLE register. This write just makes sure
      * that if the interrupt was enabled, we do get the interrupt.
      */
-    bridge->b_int_rst_stat = BRIDGE_IRR_RESP_BUF_GRP_CLR;
+    pcireg_intr_reset_set(pcibr_soft, BRIDGE_IRR_RESP_BUF_GRP_CLR);
 
     /*
      * Also, release the "bufnum" back to buffer pool that could be re-used.
@@ -1555,19 +1609,13 @@ pcibr_dmard_error(
      */
 
     {
-	reg_p                   regp;
-	bridgereg_t             regv;
-	bridgereg_t             mask;
+	uint64_t		rrb_reg;
+	uint64_t		mask;
 
-	regp = (bufnum & 1)
-	    ? &bridge->b_odd_resp
-	    : &bridge->b_even_resp;
-
+	rrb_reg = pcireg_rrb_get(pcibr_soft, (bufnum & 1));
 	mask = 0xF << ((bufnum >> 1) * 4);
-
-	regv = *regp;
-	*regp = regv & ~mask;
-	*regp = regv;
+	pcireg_rrb_set(pcibr_soft, (bufnum & 1), (rrb_reg & ~mask));
+	pcireg_rrb_set(pcibr_soft, (bufnum & 1), rrb_reg);
     }
 
     return retval;
@@ -1637,7 +1685,7 @@ pcibr_error_handler(
     pcibr_soft = (pcibr_soft_t) einfo;
 
     PCIBR_DEBUG_ALWAYS((PCIBR_DEBUG_ERROR_HDLR, pcibr_soft->bs_conn,
-		"pcibr_error_handler: pcibr_soft=0x%x, error_code=0x%x\n",
+		"pcibr_error_handler: pcibr_soft=0x%lx, error_code=0x%x\n",
 		pcibr_soft, error_code));
 
 #if DEBUG && ERROR_DEBUG
@@ -1701,7 +1749,7 @@ pcibr_error_handler_wrapper(
     int		       dma_retval = -1;
 
     PCIBR_DEBUG_ALWAYS((PCIBR_DEBUG_ERROR_HDLR, pcibr_soft->bs_conn,
-                "pcibr_error_handler_wrapper: pcibr_soft=0x%x, "
+                "pcibr_error_handler_wrapper: pcibr_soft=0x%lx, "
 		"error_code=0x%x\n", pcibr_soft, error_code));
 
     /*
@@ -1735,7 +1783,7 @@ pcibr_error_handler_wrapper(
 	    if (!pcibr_soft) {
 #if DEBUG
 		printk(KERN_WARNING "pcibr_error_handler: "
-			"bs_peers_soft==NULL. bad_xaddr= 0x%x mode= 0x%x\n",
+			"bs_peers_soft==NULL. bad_xaddr= 0x%lx mode= 0x%lx\n",
 						bad_xaddr, mode);
 #endif
   		pio_retval = IOERROR_HANDLED;
@@ -1815,9 +1863,9 @@ pcibr_error_handler_wrapper(
      */
     if ((pio_retval == -1) && (dma_retval == -1)) {
     	return IOERROR_BADERRORCODE;
-    } else if (dma_retval != IOERROR_HANDLED) {
+    } else if ((dma_retval != IOERROR_HANDLED) && (dma_retval != -1)) {
 	return dma_retval;
-    } else if (pio_retval != IOERROR_HANDLED) {
+    } else if ((pio_retval != IOERROR_HANDLED) && (pio_retval != -1)) {
 	return pio_retval;
     } else {
 	return IOERROR_HANDLED;

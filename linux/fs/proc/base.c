@@ -425,17 +425,15 @@ static int proc_check_root(struct inode *inode)
 	mnt = vfsmnt;
 
 	while (vfsmnt != our_vfsmnt) {
-		if (vfsmnt == vfsmnt->mnt_parent) {
-			spin_unlock(&vfsmount_lock);
+		if (vfsmnt == vfsmnt->mnt_parent)
 			goto out;
-		}
 		de = vfsmnt->mnt_mountpoint;
 		vfsmnt = vfsmnt->mnt_parent;
 	}
-	spin_unlock(&vfsmount_lock);
 
 	if (!is_subdir(de, base))
 		goto out;
+	spin_unlock(&vfsmount_lock);
 
 exit:
 	dput(base);
@@ -444,6 +442,7 @@ exit:
 	mntput(mnt);
 	return res;
 out:
+	spin_unlock(&vfsmount_lock);
 	res = -EACCES;
 	goto exit;
 }
@@ -1669,14 +1668,26 @@ out:
  * tasklist lock while doing this, and we must release it before
  * we actually do the filldir itself, so we use a temp buffer..
  */
-static int get_tgid_list(int index, unsigned int *tgids)
+static int get_tgid_list(int index, unsigned long version, unsigned int *tgids)
 {
 	struct task_struct *p;
 	int nr_tgids = 0;
 
 	index--;
 	read_lock(&tasklist_lock);
-	for_each_process(p) {
+	p = NULL;
+	if (version) {
+		p = find_task_by_pid(version);
+		if (!thread_group_leader(p))
+			p = NULL;
+	}
+
+	if (p)
+		index = 0;
+	else
+		p = next_task(&init_task);
+
+	for ( ; p != &init_task; p = next_task(p)) {
 		int tgid = p->pid;
 		if (!pid_alive(p))
 			continue;
@@ -1739,7 +1750,10 @@ int proc_pid_readdir(struct file * filp, void * dirent, filldir_t filldir)
 		nr++;
 	}
 
-	nr_tgids = get_tgid_list(nr, tgid_array);
+	/*
+	 * f_version caches the last tgid which was returned from readdir
+	 */
+	nr_tgids = get_tgid_list(nr, filp->f_version, tgid_array);
 
 	for (i = 0; i < nr_tgids; i++) {
 		int tgid = tgid_array[i];
@@ -1748,8 +1762,10 @@ int proc_pid_readdir(struct file * filp, void * dirent, filldir_t filldir)
 
 		do buf[--j] = '0' + (tgid % 10); while (tgid/=10);
 
-		if (filldir(dirent, buf+j, PROC_NUMBUF-j, filp->f_pos, ino, DT_DIR) < 0)
+		if (filldir(dirent, buf+j, PROC_NUMBUF-j, filp->f_pos, ino, DT_DIR) < 0) {
+			filp->f_version = tgid;
 			break;
+		}
 		filp->f_pos++;
 	}
 	return 0;

@@ -1,5 +1,4 @@
-/* $Id: intr.h,v 1.1 2002/02/28 17:31:25 marcelo Exp $
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -20,8 +19,8 @@
 #define SGI_ACPI_SCI_INT		(0x34)
 #define SGI_XPC_NOTIFY			(0xe7)
 
-#define IA64_SN2_FIRST_DEVICE_VECTOR	(0x34)
-#define IA64_SN2_LAST_DEVICE_VECTOR	(0xe7)
+#define IA64_SN2_FIRST_DEVICE_VECTOR	(0x37)
+#define IA64_SN2_LAST_DEVICE_VECTOR	(0xe6)
 
 #define SN2_IRQ_RESERVED        (0x1)
 #define SN2_IRQ_CONNECTED       (0x2)

@@ -1950,6 +1950,8 @@ do_execve32(char * filename, u32 * argv, u32 * envp, struct pt_regs * regs)
 	int retval;
 	int i;
 
+	sched_balance_exec();
+
 	file = open_exec(filename);
 
 	retval = PTR_ERR(file);
@@ -2023,7 +2025,8 @@ out:
 		security_bprm_free(&bprm);
 
 out_mm:
-	mmdrop(bprm.mm);
+	if (bprm.mm)
+		mmdrop(bprm.mm);
 
 out_file:
 	if (bprm.file) {
@@ -2710,6 +2713,9 @@ struct __sysctl_args32 {
 
 asmlinkage long sys32_sysctl(struct __sysctl_args32 *args)
 {
+#ifndef CONFIG_SYSCTL
+	return -ENOSYS;
+#else
 	struct __sysctl_args32 tmp;
 	int error;
 	size_t oldlen, *oldlenp = NULL;
@@ -2744,6 +2750,7 @@ asmlinkage long sys32_sysctl(struct __sysctl_args32 *args)
 		copy_to_user(args->__unused, tmp.__unused, sizeof(tmp.__unused));
 	}
 	return error;
+#endif
 }
 
 extern long sys_lookup_dcookie(u64 cookie64, char *buf, size_t len);

@@ -69,6 +69,9 @@ struct machdep_calls {
 	void		(*init_IRQ)(void);
 	int		(*get_irq)(struct pt_regs *);
 
+	/* PCI stuff */
+	void		(*pcibios_fixup)(void);
+
 	/* Optional, may be NULL. */
 	void		(*init)(void);
 
@@ -89,10 +92,20 @@ struct machdep_calls {
 	unsigned char	(*udbg_getc)(void);
 	int		(*udbg_getc_poll)(void);
 
-#ifdef CONFIG_SMP
-	/* functions for dealing with other cpus */
-	struct smp_ops_t smp_ops;
-#endif /* CONFIG_SMP */
+	/* Interface for platform error logging */
+	void 		(*log_error)(char *buf, unsigned int err_type, int fatal);
+
+	ssize_t		(*nvram_write)(char *buf, size_t count, loff_t *index);
+	ssize_t		(*nvram_read)(char *buf, size_t count, loff_t *index);	
+	ssize_t		(*nvram_size)(void);		
+	int		(*nvram_sync)(void);
+
+	/* Motherboard/chipset features. This is a kind of general purpose
+	 * hook used to control some machine specific features (like reset
+	 * lines, chip power control, etc...).
+	 */
+	long	 	(*feature_call)(unsigned int feature, ...);
+
 };
 
 extern struct machdep_calls ppc_md;
@@ -112,6 +125,12 @@ void ppc64_terminate_msg(unsigned int src, const char *msg);
 void ppc64_attention_msg(unsigned int src, const char *msg);
 /* Print a dump progress message. */
 void ppc64_dump_msg(unsigned int src, const char *msg);
+
+static inline void log_error(char *buf, unsigned int err_type, int fatal)
+{
+	if (ppc_md.log_error)
+		ppc_md.log_error(buf, err_type, fatal);
+}
 
 #endif /* _PPC64_MACHDEP_H */
 #endif /* __KERNEL__ */

@@ -560,19 +560,19 @@ static int smb_filetype_to_mode(u32 filetype)
 
 static u32 smb_filetype_from_mode(int mode)
 {
-	if (mode & S_IFREG)
+	if (S_ISREG(mode))
 		return UNIX_TYPE_FILE;
-	if (mode & S_IFDIR)
+	if (S_ISDIR(mode))
 		return UNIX_TYPE_DIR;
-	if (mode & S_IFLNK)
+	if (S_ISLNK(mode))
 		return UNIX_TYPE_SYMLINK;
-	if (mode & S_IFCHR)
+	if (S_ISCHR(mode))
 		return UNIX_TYPE_CHARDEV;
-	if (mode & S_IFBLK)
+	if (S_ISBLK(mode))
 		return UNIX_TYPE_BLKDEV;
-	if (mode & S_IFIFO)
+	if (S_ISFIFO(mode))
 		return UNIX_TYPE_FIFO;
-	if (mode & S_IFSOCK)
+	if (S_ISSOCK(mode))
 		return UNIX_TYPE_SOCKET;
 	return UNIX_TYPE_UNKNOWN;
 }
@@ -1181,11 +1181,8 @@ smb_open(struct dentry *dentry, int wish)
 		result = 0;
 		if (!smb_is_open(inode))
 			result = smb_proc_open(server, dentry, wish);
-		if (result) {
-			PARANOIA("%s/%s open failed, result=%d\n",
-				 DENTRY_PATH(dentry), result);
+		if (result)
 			goto out;
-		}
 		/*
 		 * A successful open means the path is still valid ...
 		 */

@@ -153,7 +153,6 @@
 #include <linux/cdrom.h>
 #include <linux/seq_file.h>
 #include <linux/device.h>
-#include <linux/kmod.h>
 
 #include <asm/byteorder.h>
 #include <asm/irq.h>
@@ -191,26 +190,12 @@ int noautodma = 1;
 EXPORT_SYMBOL(noautodma);
 EXPORT_SYMBOL(ide_bus_type);
 
-int (*ide_probe)(void);
-
 /*
  * This is declared extern in ide.h, for access by other IDE modules:
  */
 ide_hwif_t ide_hwifs[MAX_HWIFS];	/* master data repository */
 
 EXPORT_SYMBOL(ide_hwifs);
-
-ide_devices_t *idedisk;
-ide_devices_t *idecd;
-ide_devices_t *idefloppy;
-ide_devices_t *idetape;
-ide_devices_t *idescsi;
-
-EXPORT_SYMBOL(idedisk);
-EXPORT_SYMBOL(idecd);
-EXPORT_SYMBOL(idefloppy);
-EXPORT_SYMBOL(idetape);
-EXPORT_SYMBOL(idescsi);
 
 extern ide_driver_t idedefault_driver;
 static void setup_driver_defaults(ide_driver_t *driver);
@@ -314,7 +299,9 @@ static void __init init_ide_data (void)
 		init_hwif_data(index);
 
 	/* Add default hw interfaces */
+	initializing = 1;
 	ide_init_default_hwifs();
+	initializing = 0;
 
 	idebus_parameter = 0;
 	system_bus_speed = 0;
@@ -442,21 +429,6 @@ u8 ide_dump_status (ide_drive_t *drive, const char *msg, u8 stat)
 }
 
 EXPORT_SYMBOL(ide_dump_status);
-
-
-
-void ide_probe_module (void)
-{
-	if (!ide_probe) {
-#if defined(CONFIG_KMOD) && defined(CONFIG_BLK_DEV_IDE_MODULE)
-		(void) request_module("ide-probe-mod");
-#endif /* (CONFIG_KMOD) && (CONFIG_BLK_DEV_IDE_MODULE) */
-	} else {
-		(void)ide_probe();
-	}
-}
-
-EXPORT_SYMBOL(ide_probe_module);
 
 static int ide_open (struct inode * inode, struct file * filp)
 {
@@ -867,25 +839,13 @@ void ide_unregister (unsigned int index)
 	hwif->ide_dma_end		= old_hwif.ide_dma_end;
 	hwif->ide_dma_check		= old_hwif.ide_dma_check;
 	hwif->ide_dma_on		= old_hwif.ide_dma_on;
-	hwif->ide_dma_off		= old_hwif.ide_dma_off;
 	hwif->ide_dma_off_quietly	= old_hwif.ide_dma_off_quietly;
 	hwif->ide_dma_test_irq		= old_hwif.ide_dma_test_irq;
 	hwif->ide_dma_host_on		= old_hwif.ide_dma_host_on;
 	hwif->ide_dma_host_off		= old_hwif.ide_dma_host_off;
-	hwif->ide_dma_bad_drive		= old_hwif.ide_dma_bad_drive;
-	hwif->ide_dma_good_drive	= old_hwif.ide_dma_good_drive;
-	hwif->ide_dma_count		= old_hwif.ide_dma_count;
 	hwif->ide_dma_verbose		= old_hwif.ide_dma_verbose;
-	hwif->ide_dma_retune		= old_hwif.ide_dma_retune;
 	hwif->ide_dma_lostirq		= old_hwif.ide_dma_lostirq;
 	hwif->ide_dma_timeout		= old_hwif.ide_dma_timeout;
-	hwif->ide_dma_queued_on		= old_hwif.ide_dma_queued_on;
-	hwif->ide_dma_queued_off	= old_hwif.ide_dma_queued_off;
-#ifdef CONFIG_BLK_DEV_IDE_TCQ
-	hwif->ide_dma_queued_read	= old_hwif.ide_dma_queued_read;
-	hwif->ide_dma_queued_write	= old_hwif.ide_dma_queued_write;
-	hwif->ide_dma_queued_start	= old_hwif.ide_dma_queued_start;
-#endif
 #endif
 
 #if 0
@@ -1033,7 +993,7 @@ found:
 	hwif->chipset = hw->chipset;
 
 	if (!initializing) {
-		ide_probe_module();
+		probe_hwif_init(hwif);
 #ifdef CONFIG_PROC_FS
 		create_proc_ide_interfaces();
 #endif
@@ -1360,6 +1320,7 @@ static int set_io_32bit(ide_drive_t *drive, int arg)
 
 static int set_using_dma (ide_drive_t *drive, int arg)
 {
+#ifdef CONFIG_BLK_DEV_IDEDMA
 	if (!drive->id || !(drive->id->capability & 1))
 		return -EPERM;
 	if (HWIF(drive)->ide_dma_check == NULL)
@@ -1368,9 +1329,13 @@ static int set_using_dma (ide_drive_t *drive, int arg)
 		if (HWIF(drive)->ide_dma_check(drive)) return -EIO;
 		if (HWIF(drive)->ide_dma_on(drive)) return -EIO;
 	} else {
-		if (HWIF(drive)->ide_dma_off(drive)) return -EIO;
+		if (__ide_dma_off(drive))
+			return -EIO;
 	}
 	return 0;
+#else
+	return -EPERM;
+#endif
 }
 
 static int set_pio_mode (ide_drive_t *drive, int arg)
@@ -1620,12 +1585,6 @@ int generic_ide_ioctl(struct block_device *bdev, unsigned int cmd,
 			switch(drive->media) {
 				case ide_disk:
 					return ide_taskfile_ioctl(drive, cmd, arg);
-#ifdef CONFIG_PKT_TASK_IOCTL
-				case ide_cdrom:
-				case ide_tape:
-				case ide_floppy:
-					return pkt_taskfile_ioctl(drive, cmd, arg);
-#endif /* CONFIG_PKT_TASK_IOCTL */
 				default:
 					return -ENOMSG;
 			}
@@ -1713,7 +1672,7 @@ int generic_ide_ioctl(struct block_device *bdev, unsigned int cmd,
 
 		case CDROMEJECT:
 		case CDROMCLOSETRAY:
-			return scsi_cmd_ioctl(bdev, cmd, arg);
+			return scsi_cmd_ioctl(bdev->bd_disk, cmd, arg);
 
 		case HDIO_GET_BUSSTATE:
 			if (!capable(CAP_SYS_ADMIN))
@@ -2185,7 +2144,7 @@ int __init ide_setup (char *s)
 				memcpy(hwif->io_ports, hwif->hw.io_ports, sizeof(hwif->io_ports));
 				hwif->irq      = vals[2];
 				hwif->noprobe  = 0;
-				hwif->chipset  = ide_generic;
+				hwif->chipset  = ide_forced;
 				goto done;
 
 			case 0: goto bad_option;
@@ -2280,28 +2239,6 @@ static void __init probe_for_hwifs (void)
 		pnpide_init(1);
 	}
 #endif /* CONFIG_BLK_DEV_IDEPNP */
-}
-
-void __init ide_init_builtin_drivers (void)
-{
-	/*
-	 * Probe for special PCI and other "known" interface chipsets
-	 */
-	probe_for_hwifs ();
-
-#ifdef CONFIG_BLK_DEV_IDE
-	if (ide_hwifs[0].io_ports[IDE_DATA_OFFSET])
-		ide_get_lock(NULL, NULL); /* for atari only */
-
-	(void) ideprobe_init();
-
-	if (ide_hwifs[0].io_ports[IDE_DATA_OFFSET])
-		ide_release_lock();	/* for atari only */
-#endif /* CONFIG_BLK_DEV_IDE */
-
-#ifdef CONFIG_PROC_FS
-	proc_ide_create();
-#endif
 }
 
 /*
@@ -2564,7 +2501,6 @@ EXPORT_SYMBOL(ide_fops);
  */
 
 EXPORT_SYMBOL(ide_lock);
-EXPORT_SYMBOL(ide_probe);
 
 struct bus_type ide_bus_type = {
 	.name		= "ide",
@@ -2607,9 +2543,13 @@ int __init ide_init (void)
 #endif
 
 	initializing = 1;
-	ide_init_builtin_drivers();
+	/* Probe for special PCI and other "known" interface chipsets. */
+	probe_for_hwifs();
 	initializing = 0;
 
+#ifdef CONFIG_PROC_FS
+	proc_ide_create();
+#endif
 	return 0;
 }
 

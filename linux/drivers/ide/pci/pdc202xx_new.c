@@ -32,6 +32,11 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
+#ifdef CONFIG_PPC_PMAC
+#include <asm/prom.h>
+#include <asm/pci-bridge.h>
+#endif
+
 #include "pdc202xx_new.h"
 
 #define PDC202_DEBUG_CABLE	0
@@ -388,7 +393,7 @@ static int pdcnew_config_drive_xfer_rate (ide_drive_t *drive)
 
 	if (id && (id->capability & 1) && drive->autodma) {
 		/* Consult the list of known "bad" drives */
-		if (hwif->ide_dma_bad_drive(drive))
+		if (__ide_dma_bad_drive(drive))
 			goto fast_ata_pio;
 		if (id->field_valid & 4) {
 			if (id->dma_ultra & hwif->ultra_mask) {
@@ -405,7 +410,7 @@ try_dma_modes:
 				if (!config_chipset_for_dma(drive))
 					goto no_dma_set;
 			}
-		} else if (hwif->ide_dma_good_drive(drive) &&
+		} else if (__ide_dma_good_drive(drive) &&
 			    (id->eide_dma_time < 150)) {
 				goto no_dma_set;
 			/* Consult the list of known "good" drives */
@@ -513,6 +518,44 @@ void pdcnew_reset (ide_drive_t *drive)
 #endif
 }
 
+#ifdef CONFIG_PPC_PMAC
+static void __devinit apple_kiwi_init(struct pci_dev *pdev)
+{
+	struct device_node *np = pci_device_to_OF_node(pdev);
+	unsigned int class_rev = 0;
+	unsigned long mmio;
+	u8 conf;
+
+	if (np == NULL || !device_is_compatible(np, "kiwi-root"))
+		return;
+
+	pci_read_config_dword(pdev, PCI_CLASS_REVISION, &class_rev);
+	class_rev &= 0xff;
+
+	if (class_rev >= 0x03) {
+		/* Setup chip magic config stuff (from darwin) */
+		pci_read_config_byte(pdev, 0x40, &conf);
+		pci_write_config_byte(pdev, 0x40, conf | 0x01);
+	}
+	mmio = (unsigned long)ioremap(pci_resource_start(pdev, 5),
+				      pci_resource_len(pdev, 5));
+
+	/* Setup some PLL stuffs */
+	switch (pdev->device) {
+	case PCI_DEVICE_ID_PROMISE_20270:
+		writew(0x0d2b, mmio + 0x1202);
+		mdelay(30);
+		break;
+	case PCI_DEVICE_ID_PROMISE_20271:
+		writew(0x0826, mmio + 0x1202);
+		mdelay(30);
+		break;
+	}
+
+	iounmap((void *)mmio);
+}
+#endif /* CONFIG_PPC_PMAC */
+
 static unsigned int __init init_chipset_pdcnew (struct pci_dev *dev, const char *name)
 {
 	if (dev->resource[PCI_ROM_RESOURCE].start) {
@@ -521,6 +564,10 @@ static unsigned int __init init_chipset_pdcnew (struct pci_dev *dev, const char 
 		printk(KERN_INFO "%s: ROM enabled at 0x%08lx\n",
 			name, dev->resource[PCI_ROM_RESOURCE].start);
 	}
+
+#ifdef CONFIG_PPC_PMAC
+	apple_kiwi_init(dev);
+#endif
 
 #if defined(DISPLAY_PDC202XX_TIMINGS) && defined(CONFIG_PROC_FS)
 	pdc202_devs[n_pdc202_devs++] = dev;
@@ -628,7 +675,6 @@ static int __devinit pdc202new_init_one(struct pci_dev *dev, const struct pci_de
 	if (dev->device != d->device)
 		BUG();
 	d->init_setup(dev, d);
-	MOD_INC_USE_COUNT;
 	return 0;
 }
 
@@ -654,13 +700,7 @@ static int pdc202new_ide_init(void)
 	return ide_pci_register_driver(&driver);
 }
 
-static void pdc202new_ide_exit(void)
-{
-	ide_pci_unregister_driver(&driver);
-}
-
 module_init(pdc202new_ide_init);
-module_exit(pdc202new_ide_exit);
 
 MODULE_AUTHOR("Andre Hedrick, Frank Tiernan");
 MODULE_DESCRIPTION("PCI driver module for Promise PDC20268 and higher");

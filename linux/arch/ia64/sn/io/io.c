@@ -1,5 +1,4 @@
-/* $Id: io.c,v 1.2 2001/06/26 14:02:43 pfg Exp $
- *
+/*
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
@@ -7,9 +6,9 @@
  * Copyright (C) 1992-1997, 2000-2003 Silicon Graphics, Inc.  All Rights Reserved.
  */
 
-#include <linux/config.h>
 #include <linux/types.h>
 #include <linux/slab.h>
+#include <linux/sched.h>
 #include <asm/sn/types.h>
 #include <asm/sn/sgi.h>
 #include <asm/sn/driver.h>
@@ -20,7 +19,6 @@
 #include <asm/sn/io.h>
 #include <asm/sn/sn_private.h>
 #include <asm/sn/addrs.h>
-#include <asm/sn/invent.h>
 #include <asm/sn/hcl.h>
 #include <asm/sn/hcl_util.h>
 #include <asm/sn/intr.h>
@@ -29,7 +27,6 @@
 #include <asm/sn/sn_cpuid.h>
 
 extern xtalk_provider_t hub_provider;
-extern void hub_intr_init(vertex_hdl_t hubv);
 
 static int force_fire_and_forget = 1;
 static int ignore_conveyor_override;
@@ -86,7 +83,7 @@ hub_pio_init(vertex_hdl_t hubv)
 	}
 	hub_set_piomode(nasid, HUB_PIO_CONVEYOR);
 
-	mutex_spinlock_init(&hubinfo->h_bwlock);
+	spin_lock_init(&hubinfo->h_bwlock);
 	init_waitqueue_head(&hubinfo->h_bwwait);
 }
 
@@ -119,7 +116,6 @@ hub_piomap_alloc(vertex_hdl_t dev,	/* set up mapping for this device */
 	int bigwin, free_bw_index;
 	nasid_t nasid;
 	volatile hubreg_t junk;
-	unsigned long s;
 	caddr_t kvaddr;
 #ifdef PIOMAP_UNC_ACC_SPACE
 	uint64_t addr;
@@ -127,7 +123,7 @@ hub_piomap_alloc(vertex_hdl_t dev,	/* set up mapping for this device */
 
 	/* sanity check */
 	if (byte_count_max > byte_count)
-		return(NULL);
+		return NULL;
 
 	hubinfo_get(hubv, &hubinfo);
 
@@ -156,7 +152,7 @@ hub_piomap_alloc(vertex_hdl_t dev,	/* set up mapping for this device */
 	 * For now, reject requests that span big windows.
 	 */
 	if ((xtalk_addr % BWIN_SIZE) + byte_count > BWIN_SIZE)
-		return(NULL);
+		return NULL;
 
 
 	/* Round xtalk address down for big window alignement */
@@ -167,7 +163,7 @@ hub_piomap_alloc(vertex_hdl_t dev,	/* set up mapping for this device */
 	 */
 tryagain:
 	free_bw_index = -1;
-	s = mutex_spinlock(&hubinfo->h_bwlock);
+	spin_lock(&hubinfo->h_bwlock);
 	for (bigwin=0; bigwin < HUB_NUM_BIG_WINDOW; bigwin++) {
 		bw_piomap = hubinfo_bwin_piomap_get(hubinfo, bigwin);
 
@@ -187,8 +183,8 @@ tryagain:
 		if ( xtalk_addr == bw_piomap->hpio_xtalk_info.xp_xtalk_addr &&
 		     widget == bw_piomap->hpio_xtalk_info.xp_target) {
 			bw_piomap->hpio_holdcnt++;
-			mutex_spinunlock(&hubinfo->h_bwlock, s);
-			return(bw_piomap);
+			spin_unlock(&hubinfo->h_bwlock);
+			return bw_piomap;
 		}
 	}
 
@@ -267,8 +263,8 @@ tryagain:
 		bw_piomap->hpio_flags |= HUB_PIOMAP_IS_VALID;
 
 done:
-	mutex_spinunlock(&hubinfo->h_bwlock, s);
-	return(bw_piomap);
+	spin_unlock(&hubinfo->h_bwlock);
+	return bw_piomap;
 }
 
 /*
@@ -287,7 +283,6 @@ hub_piomap_free(hub_piomap_t hub_piomap)
 	vertex_hdl_t hubv;
 	hubinfo_t hubinfo;
 	nasid_t nasid;
-	unsigned long s;
 
 	/* 
 	 * Small windows are permanently mapped to corresponding widgets,
@@ -303,7 +298,7 @@ hub_piomap_free(hub_piomap_t hub_piomap)
 	hubinfo_get(hubv, &hubinfo);
 	nasid = hubinfo->h_nasid;
 
-	s = mutex_spinlock(&hubinfo->h_bwlock);
+	spin_lock(&hubinfo->h_bwlock);
 
 	/*
 	 * If this is the last hold on this mapping, free it.
@@ -321,7 +316,7 @@ hub_piomap_free(hub_piomap_t hub_piomap)
 		wake_up(&hubinfo->h_bwwait);
 	}
 
-	mutex_spinunlock(&hubinfo->h_bwlock, s);
+	spin_unlock(&hubinfo->h_bwlock);
 }
 
 /*
@@ -335,18 +330,18 @@ hub_piomap_addr(hub_piomap_t hub_piomap,	/* mapping resources */
 {
 	/* Verify that range can be mapped using the specified piomap */
 	if (xtalk_addr < hub_piomap->hpio_xtalk_info.xp_xtalk_addr)
-		return(0);
+		return 0;
 
 	if (xtalk_addr + byte_count > 
 		( hub_piomap->hpio_xtalk_info.xp_xtalk_addr + 
 			hub_piomap->hpio_xtalk_info.xp_mapsz))
-		return(0);
+		return 0;
 
 	if (hub_piomap->hpio_flags & HUB_PIOMAP_IS_VALID)
-		return(hub_piomap->hpio_xtalk_info.xp_kvaddr + 
-			(xtalk_addr % hub_piomap->hpio_xtalk_info.xp_mapsz));
+		return hub_piomap->hpio_xtalk_info.xp_kvaddr + 
+			(xtalk_addr % hub_piomap->hpio_xtalk_info.xp_mapsz);
 	else
-		return(0);
+		return 0;
 }
 
 
@@ -393,9 +388,9 @@ hub_piotrans_addr(	vertex_hdl_t dev,	/* translate to this device */
 			addr = (caddr_t)iaddr;
 		}
 #endif
-		return(addr);
+		return addr;
 	} else
-		return(0);
+		return 0;
 }
 
 
@@ -430,7 +425,7 @@ hub_dmamap_alloc(	vertex_hdl_t dev,	/* set up mappings for this device */
  	if (flags & XTALK_FIXED)
 		dmamap->hdma_flags |= HUB_DMAMAP_IS_FIXED;
 
-	return(dmamap);
+	return dmamap;
 }
 
 /*
@@ -442,7 +437,7 @@ void
 hub_dmamap_free(hub_dmamap_t hub_dmamap)
 {
 	hub_dmamap->hdma_flags &= ~HUB_DMAMAP_IS_VALID;
-	kern_free(hub_dmamap);
+	kfree(hub_dmamap);
 }
 
 /*
@@ -463,57 +458,21 @@ hub_dmamap_addr(	hub_dmamap_t dmamap,	/* use these mapping resources */
 	if (dmamap->hdma_flags & HUB_DMAMAP_USED) {
 	    /* If the map is FIXED, re-use is OK. */
 	    if (!(dmamap->hdma_flags & HUB_DMAMAP_IS_FIXED)) {
+		char name[MAXDEVNAME];
 		vhdl = dmamap->hdma_xtalk_info.xd_dev;
-#if defined(SUPPORT_PRINTING_V_FORMAT)
-		printk(KERN_WARNING  "%v: hub_dmamap_addr re-uses dmamap.\n",vhdl);
-#else
-		printk(KERN_WARNING  "%p: hub_dmamap_addr re-uses dmamap.\n", (void *)vhdl);
-#endif
+		printk(KERN_WARNING  "%s: hub_dmamap_addr re-uses dmamap.\n", vertex_to_name(vhdl, name, MAXDEVNAME));
 	    }
 	} else {
 		dmamap->hdma_flags |= HUB_DMAMAP_USED;
 	}
 
 	/* There isn't actually any DMA mapping hardware on the hub. */
-        return( (PHYS_TO_DMA(paddr)) );
-}
-
-/*
- * Establish a DMA mapping using the resources allocated in a previous dmamap_alloc.
- * Return an appropriate crosstalk address list that maps to the specified physical 
- * address list.
- */
-/* ARGSUSED */
-alenlist_t
-hub_dmamap_list(hub_dmamap_t hub_dmamap,	/* use these mapping resources */
-		alenlist_t palenlist,		/* map this area of memory */
-		unsigned flags)
-{
-	vertex_hdl_t vhdl;
-
-	ASSERT(hub_dmamap->hdma_flags & HUB_DMAMAP_IS_VALID);
-
-	if (hub_dmamap->hdma_flags & HUB_DMAMAP_USED) {
-	    /* If the map is FIXED, re-use is OK. */
-	    if (!(hub_dmamap->hdma_flags & HUB_DMAMAP_IS_FIXED)) {
-		vhdl = hub_dmamap->hdma_xtalk_info.xd_dev;
-#if defined(SUPPORT_PRINTING_V_FORMAT)
-		printk(KERN_WARNING  "%v: hub_dmamap_list re-uses dmamap\n",vhdl);
-#else
-		printk(KERN_WARNING  "%p: hub_dmamap_list re-uses dmamap\n", (void *)vhdl);
-#endif
-	    }
-	} else {
-		hub_dmamap->hdma_flags |= HUB_DMAMAP_USED;
-	}
-
-	/* There isn't actually any DMA mapping hardware on the hub.  */
-	return(palenlist);
+        return (PHYS_TO_DMA(paddr));
 }
 
 /*
  * Driver indicates that it has completed whatever DMA it may have started
- * after an earlier dmamap_addr or dmamap_list call.
+ * after an earlier dmamap_addr call.
  */
 void
 hub_dmamap_done(hub_dmamap_t hub_dmamap)	/* done with these mapping resources */
@@ -525,12 +484,9 @@ hub_dmamap_done(hub_dmamap_t hub_dmamap)	/* done with these mapping resources */
 	} else {
 	    /* If the map is FIXED, re-done is OK. */
 	    if (!(hub_dmamap->hdma_flags & HUB_DMAMAP_IS_FIXED)) {
+		char name[MAXDEVNAME];
 		vhdl = hub_dmamap->hdma_xtalk_info.xd_dev;
-#if defined(SUPPORT_PRINTING_V_FORMAT)
-		printk(KERN_WARNING  "%v: hub_dmamap_done already done with dmamap\n",vhdl);
-#else
-		printk(KERN_WARNING  "%p: hub_dmamap_done already done with dmamap\n", (void *)vhdl);
-#endif
+		printk(KERN_WARNING  "%s: hub_dmamap_done already done with dmamap\n", vertex_to_name(vhdl, name, MAXDEVNAME));
 	    }
 	}
 }
@@ -546,24 +502,7 @@ hub_dmatrans_addr(	vertex_hdl_t dev,	/* translate for this device */
 			size_t byte_count,	/* length */
 			unsigned flags)		/* defined in dma.h */
 {
-	return( (PHYS_TO_DMA(paddr)) );
-}
-
-/*
- * Translate a list of IP27 addresses and lengths into a list of crosstalk 
- * addresses and lengths.  No actual hardware mapping takes place; the hub 
- * has no DMA mapping registers -- crosstalk addresses map directly.
- */
-/* ARGSUSED */
-alenlist_t
-hub_dmatrans_list(	vertex_hdl_t dev,	/* translate for this device */
-			device_desc_t dev_desc,	/* device descriptor */
-			alenlist_t palenlist,	/* system address/length list */
-			unsigned flags)		/* defined in dma.h */
-{
-	BUG();
-	/* no translation needed */
-	return(palenlist);
+	return (PHYS_TO_DMA(paddr));
 }
 
 /*ARGSUSED*/
@@ -582,15 +521,6 @@ hub_dmaaddr_drain(	vertex_hdl_t vhdl,
     /* XXX- flush caches, if cache coherency WAR is needed */
 }
 
-/*ARGSUSED*/
-void
-hub_dmalist_drain(	vertex_hdl_t vhdl,
-			alenlist_t list)
-{
-    /* XXX- flush caches, if cache coherency WAR is needed */
-}
-
-
 
 /* CONFIGURATION MANAGEMENT */
 
@@ -601,7 +531,6 @@ void
 hub_provider_startup(vertex_hdl_t hubv)
 {
 	hub_pio_init(hubv);
-	hub_intr_init(hubv);
 }
 
 /*
@@ -624,8 +553,8 @@ hub_check_is_widget0(void *addr)
 {
 	nasid_t nasid = NASID_GET(addr);
 
-	if (((__psunsigned_t)addr >= RAW_NODE_SWIN_BASE(nasid, 0)) &&
-	    ((__psunsigned_t)addr < RAW_NODE_SWIN_BASE(nasid, 1)))
+	if (((unsigned long)addr >= RAW_NODE_SWIN_BASE(nasid, 0)) &&
+	    ((unsigned long)addr < RAW_NODE_SWIN_BASE(nasid, 1)))
 		return 1;
 	return 0;
 }
@@ -641,8 +570,8 @@ hub_check_window_equiv(void *addra, void *addrb)
 		return 1;
 
 	/* XXX - Assume this is really a small window address */
-	if (WIDGETID_GET((__psunsigned_t)addra) ==
-	    WIDGETID_GET((__psunsigned_t)addrb))
+	if (WIDGETID_GET((unsigned long)addra) ==
+	    WIDGETID_GET((unsigned long)addrb))
 		return 1;
 
 	return 0;
@@ -783,29 +712,25 @@ hub_widget_flags_set(nasid_t		nasid,
  * crosstalk bus provider.
  */
 xtalk_provider_t hub_provider = {
-	(xtalk_piomap_alloc_f *)	hub_piomap_alloc,
-	(xtalk_piomap_free_f *)		hub_piomap_free,
-	(xtalk_piomap_addr_f *)		hub_piomap_addr,
-	(xtalk_piomap_done_f *)		hub_piomap_done,
-	(xtalk_piotrans_addr_f *)	hub_piotrans_addr,
+	.piomap_alloc	= (xtalk_piomap_alloc_f *) hub_piomap_alloc,
+	.piomap_free	= (xtalk_piomap_free_f *) hub_piomap_free,
+	.piomap_addr	= (xtalk_piomap_addr_f *) hub_piomap_addr,
+	.piomap_done	= (xtalk_piomap_done_f *) hub_piomap_done,
+	.piotrans_addr	= (xtalk_piotrans_addr_f *) hub_piotrans_addr,
 
-	(xtalk_dmamap_alloc_f *)	hub_dmamap_alloc,
-	(xtalk_dmamap_free_f *)		hub_dmamap_free,
-	(xtalk_dmamap_addr_f *)		hub_dmamap_addr,
-	(xtalk_dmamap_list_f *)		hub_dmamap_list,
-	(xtalk_dmamap_done_f *)		hub_dmamap_done,
-	(xtalk_dmatrans_addr_f *)	hub_dmatrans_addr,
-	(xtalk_dmatrans_list_f *)	hub_dmatrans_list,
-	(xtalk_dmamap_drain_f *)	hub_dmamap_drain,
-	(xtalk_dmaaddr_drain_f *)	hub_dmaaddr_drain,
-	(xtalk_dmalist_drain_f *)	hub_dmalist_drain,
+	.dmamap_alloc	= (xtalk_dmamap_alloc_f *) hub_dmamap_alloc,
+	.dmamap_free	= (xtalk_dmamap_free_f *) hub_dmamap_free,
+	.dmamap_addr	= (xtalk_dmamap_addr_f *) hub_dmamap_addr,
+	.dmamap_done	= (xtalk_dmamap_done_f *) hub_dmamap_done,
+	.dmatrans_addr	= (xtalk_dmatrans_addr_f *) hub_dmatrans_addr,
+	.dmamap_drain	= (xtalk_dmamap_drain_f *) hub_dmamap_drain,
+	.dmaaddr_drain	= (xtalk_dmaaddr_drain_f *) hub_dmaaddr_drain,
 
-	(xtalk_intr_alloc_f *)		hub_intr_alloc,
-	(xtalk_intr_alloc_f *)		hub_intr_alloc_nothd,
-	(xtalk_intr_free_f *)		hub_intr_free,
-	(xtalk_intr_connect_f *)	hub_intr_connect,
-	(xtalk_intr_disconnect_f *)	hub_intr_disconnect,
-	(xtalk_provider_startup_f *)	hub_provider_startup,
-	(xtalk_provider_shutdown_f *)	hub_provider_shutdown,
+	.intr_alloc	= (xtalk_intr_alloc_f *) hub_intr_alloc,
+	.intr_alloc_nothd = (xtalk_intr_alloc_f *) hub_intr_alloc_nothd,
+	.intr_free	= (xtalk_intr_free_f *)	hub_intr_free,
+	.intr_connect	= (xtalk_intr_connect_f *) hub_intr_connect,
+	.intr_disconnect = (xtalk_intr_disconnect_f *) hub_intr_disconnect,
+	.provider_startup = (xtalk_provider_startup_f *) hub_provider_startup,
+	.provider_shutdown = (xtalk_provider_shutdown_f *) hub_provider_shutdown,
 };
-

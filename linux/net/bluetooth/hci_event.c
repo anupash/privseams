@@ -123,6 +123,8 @@ static void hci_cc_link_policy(struct hci_dev *hdev, __u16 ocf, struct sk_buff *
 static void hci_cc_host_ctl(struct hci_dev *hdev, __u16 ocf, struct sk_buff *skb)
 {
 	__u8 status, param;
+	__u16 setting;
+	struct hci_rp_read_voice_setting *vs;
 	void *sent;
 
 	BT_DBG("%s ocf 0x%x", hdev->name, ocf);
@@ -198,6 +200,7 @@ static void hci_cc_host_ctl(struct hci_dev *hdev, __u16 ocf, struct sk_buff *skb
 		sent = hci_sent_cmd_data(hdev, OGF_HOST_CTL, OCF_WRITE_SCAN_ENABLE);
 		if (!sent)
 			break;
+
 		status = *((__u8 *) skb->data);
 		param  = *((__u8 *) sent);
 
@@ -211,6 +214,39 @@ static void hci_cc_host_ctl(struct hci_dev *hdev, __u16 ocf, struct sk_buff *skb
 
 			if (param & SCAN_PAGE) 
 				set_bit(HCI_PSCAN, &hdev->flags);
+		}
+		hci_req_complete(hdev, status);
+		break;
+
+	case OCF_READ_VOICE_SETTING:
+		vs = (struct hci_rp_read_voice_setting *) skb->data;
+
+		if (vs->status) {
+			BT_DBG("%s READ_VOICE_SETTING failed %d", hdev->name, vc->status);
+			break;
+		}
+
+		setting = __le16_to_cpu(vs->voice_setting);
+
+		if (hdev->voice_setting != setting ) {
+			hdev->voice_setting = setting;
+
+			BT_DBG("%s: voice setting 0x%04x", hdev->name, setting);
+		}
+		break;
+
+	case OCF_WRITE_VOICE_SETTING:
+		sent = hci_sent_cmd_data(hdev, OGF_HOST_CTL, OCF_WRITE_VOICE_SETTING);
+		if (!sent)
+			break;
+
+		status = *((__u8 *) skb->data);
+		setting = __le16_to_cpu(get_unaligned((__u16 *) sent));
+
+		if (!status && hdev->voice_setting != setting) {
+			hdev->voice_setting = setting;
+
+			BT_DBG("%s: voice setting 0x%04x", hdev->name, setting);
 		}
 		hci_req_complete(hdev, status);
 		break;
@@ -282,7 +318,7 @@ static void hci_cc_info_param(struct hci_dev *hdev, __u16 ocf, struct sk_buff *s
 		hdev->sco_pkts = hdev->sco_cnt = __le16_to_cpu(bs->sco_max_pkt);
 
 		BT_DBG("%s mtu: acl %d, sco %d max_pkt: acl %d, sco %d", hdev->name,
-		    hdev->acl_mtu, hdev->sco_mtu, hdev->acl_pkts, hdev->sco_pkts);
+			    hdev->acl_mtu, hdev->sco_mtu, hdev->acl_pkts, hdev->sco_pkts);
 		break;
 
 	case OCF_READ_BD_ADDR:
@@ -449,6 +485,29 @@ static inline void hci_inquiry_result_evt(struct hci_dev *hdev, struct sk_buff *
 	hci_dev_lock(hdev);
 	for (; num_rsp; num_rsp--)
 		inquiry_cache_update(hdev, info++);
+	hci_dev_unlock(hdev);
+}
+
+/* Inquiry Result With RSSI */
+static inline void hci_inquiry_result_with_rssi_evt(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	struct inquiry_info_with_rssi *info = (struct inquiry_info_with_rssi *) (skb->data + 1);
+	int num_rsp = *((__u8 *) skb->data);
+
+	BT_DBG("%s num_rsp %d", hdev->name, num_rsp);
+
+	hci_dev_lock(hdev);
+	for (; num_rsp; num_rsp--) {
+		struct inquiry_info tmp;
+		bacpy(&tmp.bdaddr, &info->bdaddr);
+		tmp.pscan_rep_mode    = info->pscan_rep_mode;
+		tmp.pscan_period_mode = info->pscan_period_mode;
+		tmp.pscan_mode        = 0x00;
+		memcpy(tmp.dev_class, &info->dev_class, 3);
+		tmp.clock_offset      = info->clock_offset;
+		info++;
+		inquiry_cache_update(hdev, &tmp);
+	}
 	hci_dev_unlock(hdev);
 }
 
@@ -742,6 +801,10 @@ void hci_event_packet(struct hci_dev *hdev, struct sk_buff *skb)
 
 	case HCI_EV_INQUIRY_RESULT:
 		hci_inquiry_result_evt(hdev, skb);
+		break;
+
+	case HCI_EV_INQUIRY_RESULT_WITH_RSSI:
+		hci_inquiry_result_with_rssi_evt(hdev, skb);
 		break;
 
 	case HCI_EV_CONN_REQUEST:

@@ -1176,7 +1176,7 @@ static void unix_attach_fds(struct scm_cookie *scm, struct sk_buff *skb)
  */
 
 static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
-			      struct msghdr *msg, int len)
+			      struct msghdr *msg, size_t len)
 {
 	struct sock_iocb *siocb = kiocb_to_siocb(kiocb);
 	struct sock *sk = sock->sk;
@@ -1217,7 +1217,7 @@ static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 		goto out;
 
 	err = -EMSGSIZE;
-	if ((unsigned)len > sk->sk_sndbuf - 32)
+	if (len > sk->sk_sndbuf - 32)
 		goto out;
 
 	skb = sock_alloc_send_skb(sk, len, msg->msg_flags&MSG_DONTWAIT, &err);
@@ -1324,7 +1324,7 @@ out:
 
 		
 static int unix_stream_sendmsg(struct kiocb *kiocb, struct socket *sock,
-			       struct msghdr *msg, int len)
+			       struct msghdr *msg, size_t len)
 {
 	struct sock_iocb *siocb = kiocb_to_siocb(kiocb);
 	struct sock *sk = sock->sk;
@@ -1447,7 +1447,7 @@ static void unix_copy_addr(struct msghdr *msg, struct sock *sk)
 }
 
 static int unix_dgram_recvmsg(struct kiocb *iocb, struct socket *sock,
-			      struct msghdr *msg, int size,
+			      struct msghdr *msg, size_t size,
 			      int flags)
 {
 	struct sock_iocb *siocb = kiocb_to_siocb(iocb);
@@ -1555,7 +1555,7 @@ static long unix_stream_data_wait(struct sock * sk, long timeo)
 
 
 static int unix_stream_recvmsg(struct kiocb *iocb, struct socket *sock,
-			       struct msghdr *msg, int size,
+			       struct msghdr *msg, size_t size,
 			       int flags)
 {
 	struct sock_iocb *siocb = kiocb_to_siocb(iocb);
@@ -1863,14 +1863,19 @@ static int unix_seq_show(struct seq_file *seq, void *v)
 			sock_i_ino(s));
 
 		if (u->addr) {
-			int i;
+			int i, len;
 			seq_putc(seq, ' ');
-			
-			for (i = 0; i < u->addr->len-sizeof(short); i++)
-				seq_putc(seq, u->addr->name->sun_path[i]);
 
-			if (UNIX_ABSTRACT(s))
+			i = 0;
+			len = u->addr->len - sizeof(short);
+			if (!UNIX_ABSTRACT(s))
+				len--;
+			else {
 				seq_putc(seq, '@');
+				i++;
+			}
+			for ( ; i < len; i++)
+				seq_putc(seq, u->addr->name->sun_path[i]);
 		}
 		unix_state_runlock(s);
 		seq_putc(seq, '\n');

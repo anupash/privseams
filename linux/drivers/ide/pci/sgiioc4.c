@@ -23,7 +23,6 @@
  * http://oss.sgi.com/projects/GenInfo/NoticeExplan
  */
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/pci.h>
@@ -301,14 +300,6 @@ sgiioc4_ide_dma_on(ide_drive_t * drive)
 	drive->using_dma = 1;
 
 	return HWIF(drive)->ide_dma_host_on(drive);
-}
-
-static int
-sgiioc4_ide_dma_off(ide_drive_t * drive)
-{
-	printk(KERN_INFO "%s: DMA disabled\n", drive->name);
-
-	return HWIF(drive)->ide_dma_off_quietly(drive);
 }
 
 static int
@@ -645,16 +636,11 @@ ide_init_sgiioc4(ide_hwif_t * hwif)
 	hwif->ide_dma_end = &sgiioc4_ide_dma_end;
 	hwif->ide_dma_check = &sgiioc4_ide_dma_check;
 	hwif->ide_dma_on = &sgiioc4_ide_dma_on;
-	hwif->ide_dma_off = &sgiioc4_ide_dma_off;
 	hwif->ide_dma_off_quietly = &sgiioc4_ide_dma_off_quietly;
 	hwif->ide_dma_test_irq = &sgiioc4_ide_dma_test_irq;
 	hwif->ide_dma_host_on = &sgiioc4_ide_dma_host_on;
 	hwif->ide_dma_host_off = &sgiioc4_ide_dma_host_off;
-	hwif->ide_dma_bad_drive = &__ide_dma_bad_drive;
-	hwif->ide_dma_good_drive = &__ide_dma_good_drive;
-	hwif->ide_dma_count = &__ide_dma_count;
 	hwif->ide_dma_verbose = &sgiioc4_ide_dma_verbose;
-	hwif->ide_dma_retune = &__ide_dma_retune;
 	hwif->ide_dma_lostirq = &sgiioc4_ide_dma_lostirq;
 	hwif->ide_dma_timeout = &__ide_dma_timeout;
 	hwif->INB = &sgiioc4_INB;
@@ -686,7 +672,7 @@ sgiioc4_ide_setup_pci_device(struct pci_dev *dev, ide_pci_device_t * d)
 			"0x%p to 0x%p ALREADY in use\n",
 		       __FUNCTION__, hwif->name, (void *) base,
 		       (void *) base + IOC4_CMD_CTL_BLK_SIZE);
-		return 1;
+		return -ENOMEM;
 	}
 
 	if (hwif->io_ports[IDE_DATA_OFFSET] != base) {
@@ -726,20 +712,21 @@ typedef enum pciio_endian_e {
 	PCIDMA_ENDIAN_BIG,
 	PCIDMA_ENDIAN_LITTLE
 } pciio_endian_t;
-pciio_endian_t __attribute__ ((weak)) snia_pciio_endian_set(struct pci_dev
-					    *pci_dev, pciio_endian_t device_end,
-					    pciio_endian_t desired_end);
+pciio_endian_t snia_pciio_endian_set(struct pci_dev
+				     *pci_dev, pciio_endian_t device_end,
+				     pciio_endian_t desired_end);
 
 static unsigned int __init
 pci_init_sgiioc4(struct pci_dev *dev, ide_pci_device_t * d)
 {
 	unsigned int class_rev;
+	pciio_endian_t endian_status;
 
 	if (pci_enable_device(dev)) {
 		printk(KERN_ERR
 		       "Failed to enable device %s at slot %s\n",
 		       d->name, dev->slot_name);
-		return 1;
+		return -ENODEV;
 	}
 	pci_set_master(dev);
 
@@ -751,18 +738,17 @@ pci_init_sgiioc4(struct pci_dev *dev, ide_pci_device_t * d)
 		printk(KERN_ERR "Skipping %s IDE controller in slot %s: "
 			"firmware is obsolete - please upgrade to revision"
 			"46 or higher\n", d->name, dev->slot_name);
-		return 1;
+		return -ENODEV;
 	}
 
 	/* Enable Byte Swapping in the PIC... */
-	if (snia_pciio_endian_set) {
-		snia_pciio_endian_set(dev, PCIDMA_ENDIAN_LITTLE,
-				      PCIDMA_ENDIAN_BIG);
-	} else {
+	endian_status = snia_pciio_endian_set(dev, PCIDMA_ENDIAN_LITTLE,
+					      PCIDMA_ENDIAN_BIG);
+	if (endian_status != PCIDMA_ENDIAN_BIG) {
 		printk(KERN_ERR
 		       "Failed to set endianness for device %s at slot %s\n",
 		       d->name, dev->slot_name);
-		return 1;
+		return -ENODEV;
 	}
 
 	return sgiioc4_ide_setup_pci_device(dev, d);
@@ -796,8 +782,6 @@ sgiioc4_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 	if (pci_init_sgiioc4(dev, d))
 		return 0;
 
-	MOD_INC_USE_COUNT;
-
 	return 0;
 }
 
@@ -819,14 +803,7 @@ sgiioc4_ide_init(void)
 	return ide_pci_register_driver(&driver);
 }
 
-static void
-sgiioc4_ide_exit(void)
-{
-	ide_pci_unregister_driver(&driver);
-}
-
 module_init(sgiioc4_ide_init);
-module_exit(sgiioc4_ide_exit);
 
 MODULE_AUTHOR("Aniket Malatpure - Silicon Graphics Inc. (SGI)");
 MODULE_DESCRIPTION("PCI driver module for SGI IOC4 Base-IO Card");

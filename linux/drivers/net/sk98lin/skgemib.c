@@ -2,8 +2,6 @@
  *
  * Name:	skgemib.c
  * Project:	GEnesis, PCI Gigabit Ethernet Adapter
- * Version:	$Revision: 1.9 $
- * Date:	$Date: 2003/05/23 12:55:20 $
  * Purpose:	Private Network Management Interface Management Database
  *
  ****************************************************************************/
@@ -21,41 +19,6 @@
  *	The information in this file is provided "AS IS" without warranty.
  *
  ******************************************************************************/
-
-/*****************************************************************************
- *
- * History:
- *
- *	$Log: skgemib.c,v $
- *	Revision 1.9  2003/05/23 12:55:20  tschilli
- *	OID_SKGE_BOARDLEVEL added.
- *	
- *	Revision 1.8  2003/03/27 11:19:15  tschilli
- *	Copyright messages changed.
- *	
- *	Revision 1.7  2002/12/16 09:04:34  tschilli
- *	Code for VCT handling added.
- *	
- *	Revision 1.6  2002/08/09 15:40:21  rwahl
- *	Editorial change (renamed ConfSpeedCap).
- *	
- *	Revision 1.5  2002/08/09 11:05:34  rwahl
- *	Added oid handling for link speed cap.
- *	
- *	Revision 1.4  2002/08/09 09:40:27  rwahl
- *	Added support for NDIS OID_PNP_xxx.
- *	
- *	Revision 1.3  2002/07/17 19:39:54  rwahl
- *	Added handler for OID_SKGE_SPEED_MODE & OID_SKGE_SPEED_STATUS.
- *	
- *	Revision 1.2  2002/05/22 08:59:00  rwahl
- *	- static functions only for release build.
- *	- Source file must be included.
- *	
- *	Revision 1.1  2002/05/22 08:12:42  rwahl
- *	Initial version.
- *	
- ****************************************************************************/
 
 /*
  * PRIVATE OID handler function prototypes
@@ -356,6 +319,16 @@ PNMI_STATIC const SK_PNMI_TAB_ENTRY IdTable[] = {
 		0,
 		SK_PNMI_MAI_OFF(DriverVersion),
 		SK_PNMI_RO, General, 0},
+	{OID_SKGE_DRIVER_RELDATE,
+		1,
+		0,
+		SK_PNMI_MAI_OFF(DriverReleaseDate),
+		SK_PNMI_RO, General, 0},
+	{OID_SKGE_DRIVER_FILENAME,
+		1,
+		0,
+		SK_PNMI_MAI_OFF(DriverFileName),
+		SK_PNMI_RO, General, 0},
 	{OID_SKGE_HW_DESCR,
 		1,
 		0,
@@ -370,6 +343,21 @@ PNMI_STATIC const SK_PNMI_TAB_ENTRY IdTable[] = {
 		1,
 		0,
 		SK_PNMI_MAI_OFF(Chipset),
+		SK_PNMI_RO, General, 0},
+	{OID_SKGE_CHIPID,
+		1,
+		0,
+		SK_PNMI_MAI_OFF(ChipId),
+		SK_PNMI_RO, General, 0},
+	{OID_SKGE_RAMSIZE,
+		1,
+		0,
+		SK_PNMI_MAI_OFF(RamSize),
+		SK_PNMI_RO, General, 0},
+	{OID_SKGE_VAUXAVAIL,
+		1,
+		0,
+		SK_PNMI_MAI_OFF(VauxAvail),
 		SK_PNMI_RO, General, 0},
 	{OID_SKGE_ACTION,
 		1,
@@ -876,6 +864,18 @@ PNMI_STATIC const SK_PNMI_TAB_ENTRY IdTable[] = {
 		sizeof(SK_PNMI_CONF),
 		SK_PNMI_OFF(Conf) + SK_PNMI_CNF_OFF(ConfConnector),
 		SK_PNMI_RO, MacPrivateConf, 0},
+	{OID_SKGE_PHY_TYPE,
+		SK_PNMI_MAC_ENTRIES,
+		sizeof(SK_PNMI_CONF),
+		SK_PNMI_OFF(Conf) + SK_PNMI_CNF_OFF(ConfPhyType),
+		SK_PNMI_RO, MacPrivateConf, 0},
+#ifdef SK_PHY_LP_MODE
+		{OID_SKGE_PHY_LP_MODE,
+		SK_PNMI_MAC_ENTRIES,
+		sizeof(SK_PNMI_CONF),
+		SK_PNMI_OFF(Conf) + SK_PNMI_CNF_OFF(ConfPhyMode),
+		SK_PNMI_RW, MacPrivateConf, 0},
+#endif	
 	{OID_SKGE_LINK_CAP,
 		SK_PNMI_MAC_ENTRIES,
 		sizeof(SK_PNMI_CONF),

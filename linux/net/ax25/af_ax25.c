@@ -816,7 +816,7 @@ int ax25_create(struct socket *sock, int protocol)
 	if ((sk = sk_alloc(PF_AX25, GFP_ATOMIC, 1, NULL)) == NULL)
 		return -ENOMEM;
 
-	ax25 = ax25_sk(sk) = ax25_create_cb();
+	ax25 = sk->sk_protinfo = ax25_create_cb();
 	if (!ax25) {
 		sk_free(sk);
 		return -ENOMEM;
@@ -901,7 +901,7 @@ struct sock *ax25_make_new(struct sock *osk, struct ax25_dev *ax25_dev)
 		memcpy(ax25->digipeat, oax25->digipeat, sizeof(ax25_digi));
 	}
 
-	ax25_sk(sk) = ax25;
+	sk->sk_protinfo = ax25;
 	ax25->sk    = sk;
 
 	return sk;
@@ -1401,7 +1401,7 @@ out:
 }
 
 static int ax25_sendmsg(struct kiocb *iocb, struct socket *sock,
-			struct msghdr *msg, int len)
+			struct msghdr *msg, size_t len)
 {
 	struct sockaddr_ax25 *usax = (struct sockaddr_ax25 *)msg->msg_name;
 	struct sock *sk = sock->sk;
@@ -1410,7 +1410,8 @@ static int ax25_sendmsg(struct kiocb *iocb, struct socket *sock,
 	ax25_digi dtmp, *dp;
 	unsigned char *asmptr;
 	ax25_cb *ax25;
-	int lv, size, err, addr_len = msg->msg_namelen;
+	size_t size;
+	int lv, err, addr_len = msg->msg_namelen;
 
 	if (msg->msg_flags & ~(MSG_DONTWAIT|MSG_EOR)) {
 		return -EINVAL;
@@ -1435,6 +1436,11 @@ static int ax25_sendmsg(struct kiocb *iocb, struct socket *sock,
 		goto out;
 	}
 
+	if (len > ax25->ax25_dev->dev->mtu) {
+		err = -EMSGSIZE;
+		goto out;
+	}
+		
 	if (usax != NULL) {
 		if (usax->sax25_family != AF_AX25) {
 			err = -EINVAL;
@@ -1520,7 +1526,12 @@ static int ax25_sendmsg(struct kiocb *iocb, struct socket *sock,
 	SOCK_DEBUG(sk, "AX.25: Appending user data\n");
 
 	/* User data follows immediately after the AX.25 data */
-	memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
+	if (memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len)) {
+		err = -EFAULT;
+		kfree_skb(skb);
+		goto out;
+	}
+
 	skb->nh.raw = skb->data;
 
 	/* Add the PID if one is not supplied by the user in the skb */
@@ -1580,7 +1591,7 @@ out:
 }
 
 static int ax25_recvmsg(struct kiocb *iocb, struct socket *sock,
-	struct msghdr *msg, int size, int flags)
+	struct msghdr *msg, size_t size, int flags)
 {
 	struct sock *sk = sock->sk;
 	struct sk_buff *skb;

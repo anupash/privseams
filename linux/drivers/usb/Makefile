@@ -46,7 +46,6 @@ obj-$(CONFIG_USB_DC2XX)		+= image/
 obj-$(CONFIG_USB_HPUSBSCSI)	+= image/
 obj-$(CONFIG_USB_MDC800)	+= image/
 obj-$(CONFIG_USB_MICROTEK)	+= image/
-obj-$(CONFIG_USB_SCANNER)	+= image/
 
 obj-$(CONFIG_USB_SERIAL)	+= serial/
 
@@ -54,6 +53,7 @@ obj-$(CONFIG_USB_AUERSWALD)	+= misc/
 obj-$(CONFIG_USB_BRLVGER)	+= misc/
 obj-$(CONFIG_USB_EMI26)		+= misc/
 obj-$(CONFIG_USB_LCD)		+= misc/
+obj-$(CONFIG_USB_LEGOTOWER)	+= misc/
 obj-$(CONFIG_USB_RIO500)	+= misc/
 obj-$(CONFIG_USB_SPEEDTOUCH)	+= misc/
 obj-$(CONFIG_USB_TEST)		+= misc/

@@ -39,6 +39,7 @@
 #include <asm/hw_irq.h>
 #include <asm/abs_addr.h>
 #include <asm/cacheflush.h>
+#include <asm/proc_fs.h>
 #ifdef CONFIG_PPC_ISERIES
 #include <asm/iSeries/iSeries_pci.h>
 #include <asm/iSeries/iSeries_proc.h>
@@ -82,7 +83,7 @@ EXPORT_SYMBOL(__up);
 EXPORT_SYMBOL(naca);
 EXPORT_SYMBOL(__down);
 
-/* EXPORT_SYMBOL(csum_partial); already in net/netsyms.c */
+EXPORT_SYMBOL(csum_partial);
 EXPORT_SYMBOL(csum_partial_copy_generic);
 EXPORT_SYMBOL(ip_fast_csum);
 EXPORT_SYMBOL(csum_tcpudp_magic);
@@ -91,6 +92,8 @@ EXPORT_SYMBOL(__copy_tofrom_user);
 EXPORT_SYMBOL(__clear_user);
 EXPORT_SYMBOL(__strncpy_from_user);
 EXPORT_SYMBOL(__strnlen_user);
+
+EXPORT_SYMBOL(clear_user_page);
 
 #ifdef CONFIG_MSCHUNKS
 EXPORT_SYMBOL(msChunks);
@@ -163,21 +166,23 @@ EXPORT_SYMBOL(kernel_thread);
 EXPORT_SYMBOL(flush_instruction_cache);
 EXPORT_SYMBOL(_get_PVR);
 EXPORT_SYMBOL(giveup_fpu);
-EXPORT_SYMBOL(enable_kernel_fp);
+#ifdef CONFIG_ALTIVEC
+EXPORT_SYMBOL(giveup_altivec);
+#endif
 EXPORT_SYMBOL(flush_icache_range);
 EXPORT_SYMBOL(flush_icache_user_range);
 EXPORT_SYMBOL(flush_dcache_page);
 #ifdef CONFIG_SMP
 #ifdef CONFIG_PPC_ISERIES
-EXPORT_SYMBOL(__no_use_restore_flags);
-EXPORT_SYMBOL(__no_use_save_flags);
-EXPORT_SYMBOL(__no_use_sti);
-EXPORT_SYMBOL(__no_use_cli);
+EXPORT_SYMBOL(local_get_flags);
+EXPORT_SYMBOL(local_irq_disable);
+EXPORT_SYMBOL(local_irq_restore);
 #endif
 #endif
 
 EXPORT_SYMBOL(ppc_md);
 
+#ifdef CONFIG_PPC_PSERIES
 EXPORT_SYMBOL(find_devices);
 EXPORT_SYMBOL(find_type_devices);
 EXPORT_SYMBOL(find_compatible_devices);
@@ -186,13 +191,14 @@ EXPORT_SYMBOL(device_is_compatible);
 EXPORT_SYMBOL(machine_is_compatible);
 EXPORT_SYMBOL(find_all_nodes);
 EXPORT_SYMBOL(get_property);
-
+#endif
 
 EXPORT_SYMBOL_NOVERS(memcpy);
 EXPORT_SYMBOL_NOVERS(memset);
 EXPORT_SYMBOL_NOVERS(memmove);
 EXPORT_SYMBOL_NOVERS(memscan);
 EXPORT_SYMBOL_NOVERS(memcmp);
+EXPORT_SYMBOL_NOVERS(memchr);
 
 EXPORT_SYMBOL(abs);
 
@@ -200,25 +206,7 @@ EXPORT_SYMBOL(timer_interrupt);
 EXPORT_SYMBOL(irq_desc);
 EXPORT_SYMBOL(get_wchan);
 EXPORT_SYMBOL(console_drivers);
-#ifdef CONFIG_XMON
-EXPORT_SYMBOL(xmon);
-#endif
-
-#ifdef CONFIG_DEBUG_KERNEL
-extern void (*debugger)(struct pt_regs *regs);
-extern int (*debugger_bpt)(struct pt_regs *regs);
-extern int (*debugger_sstep)(struct pt_regs *regs);
-extern int (*debugger_iabr_match)(struct pt_regs *regs);
-extern int (*debugger_dabr_match)(struct pt_regs *regs);
-extern void (*debugger_fault_handler)(struct pt_regs *regs);
-
-EXPORT_SYMBOL(debugger);
-EXPORT_SYMBOL(debugger_bpt);
-EXPORT_SYMBOL(debugger_sstep);
-EXPORT_SYMBOL(debugger_iabr_match);
-EXPORT_SYMBOL(debugger_dabr_match);
-EXPORT_SYMBOL(debugger_fault_handler);
-#endif
 
 EXPORT_SYMBOL(tb_ticks_per_usec);
 EXPORT_SYMBOL(paca);
+EXPORT_SYMBOL(proc_ppc64);

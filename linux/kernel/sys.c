@@ -249,8 +249,11 @@ cond_syscall(compat_sys_futex)
 cond_syscall(sys_epoll_create)
 cond_syscall(sys_epoll_ctl)
 cond_syscall(sys_epoll_wait)
+
+/* arch-specific weak syscall entries */
 cond_syscall(sys_pciconfig_read)
 cond_syscall(sys_pciconfig_write)
+cond_syscall(sys_pciconfig_iobase)
 
 static int set_one_prio(struct task_struct *p, int niceval, int error)
 {
@@ -472,13 +475,11 @@ asmlinkage long sys_reboot(int magic1, int magic2, unsigned int cmd, void __user
 
 #ifdef CONFIG_SOFTWARE_SUSPEND
 	case LINUX_REBOOT_CMD_SW_SUSPEND:
-		if (!software_suspend_enabled) {
+		{
+			int ret = software_suspend();
 			unlock_kernel();
-			return -EAGAIN;
+			return ret;
 		}
-		software_suspend();
-		do_exit(0);
-		break;
 #endif
 
 	default:
