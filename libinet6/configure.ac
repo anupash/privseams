@@ -4,7 +4,7 @@
 AC_PREREQ(2.53)
 AC_INIT(USAGI-libinet6, s20041011, usagi-users@linux-ipv6.org)
 AC_CONFIG_SRCDIR([cmsg_nxthdr.c])
-AM_CONFIG_HEADER([config.h])
+AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE
 AC_PREFIX_DEFAULT(/usr/local/v6)
 

@@ -6,7 +6,6 @@
 #  include <net/ipv6.h>
 #endif /* __KERNEL__ */
 
-
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;
 

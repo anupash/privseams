@@ -30,6 +30,18 @@
 #define jiffies random()
 #include "list.h"
 
+#define atomic_inc(x) \
+         (++(*x).counter)
+
+#define atomic_read(x) \
+         ((*x).counter)
+
+#define atomic_dec_and_test(x) \
+         (--((*x).counter) == 0)
+
+#define atomic_set(x, v) \
+         ((*x).counter = v)
+
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>

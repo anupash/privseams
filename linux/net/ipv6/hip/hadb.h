@@ -16,6 +16,11 @@
 #define HIP_UNLOCK_HA(ha) do { spin_unlock_bh(&ha->lock); } while(0)
 #define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
 #define HIP_UNLOCK_HS(hs) do { spin_unlock_bh(&hs->lock); } while(0)
+#else
+#define HIP_LOCK_HA(ha) 
+#define HIP_UNLOCK_HA(ha)
+#define HIP_LOCK_HS(hs) 
+#define HIP_UNLOCK_HS(hs)
 #endif
 
 #define HIP_HADB_SIZE 53
@@ -125,7 +130,6 @@ void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
 
-#ifdef __KERNEL__
 #define hip_hold_ha(ha) do { \
 	atomic_inc(&ha->refcnt); \
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
@@ -140,7 +144,6 @@ void hip_hadb_dump_hs_ht(void);
                 _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, atomic_read(&ha->refcnt)); \
         } \
 } while(0)
-#endif
 
 //#endif /* __KERNEL__ */
 #endif /* HIP_HADB_H */
