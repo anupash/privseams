@@ -42,7 +42,11 @@
 #define atomic_set(x, v) \
          ((*x).counter = v)
 
-#define read_lock_irqsave
+/* XX FIX: implement the locking for userspace properly */
+#define read_lock_irqsave(a,b) do {} while(0)
+#define spin_unlock_irqrestore(a,b) do {} while(0)
+#define write_lock_irqsave(a,b) do {} while(0)
+#define read_unlock_irqrestore(a,b) do {} while(0)
 
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))
@@ -54,6 +58,7 @@
 
 /* XX FIXME: implement in libinet6/debug.c and libinet6/debug.h */
 #define HIP_DEBUG_HIT(str, hit) do {} while(0)
+#define _HIP_DEBUG_HIT(str, hit) do {} while(0)
 
 /* XX FIXME: implement with a userspace semaphore etc? */
 #define wmb() do {} while(0)

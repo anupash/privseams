@@ -6,6 +6,7 @@
 #  include <linux/spinlock.h>
 #  include <net/ipv6.h>
 #  include <net/hip.h>
+#  include "hip.h"
 #else
 
 typedef struct { } rwlock_t;

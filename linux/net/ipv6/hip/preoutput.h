@@ -5,6 +5,7 @@
 #include <linux/ipv6.h> /* struct ipv6hdr */
 #include <linux/skbuff.h> /* struct sk_buff */
 #include <linux/types.h>
+#include "netlink.h"
 #endif
 
 #include <net/hip.h>
@@ -13,7 +14,6 @@
 #include "debug.h"
 
 #ifndef __KERNEL__
-#include "netlink.h"
 #endif
 
 // FIXME: hip_csum_send should be moved into its own file to make this
