@@ -1424,26 +1424,6 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 	return err;
 }
 
-
-
-int hip_build_param_rea(struct hip_common *msg, uint32_t spi, uint32_t lifetime,
-			struct in6_addr *addrs, int cnt)
-{
-	struct hip_rea rea;
-	int err;
-
-#ifdef HIP_CONFIG_RVS
-	hip_set_param_type(&rea, HIP_PARAM_REA);
-	hip_calc_generic_param_len(&rea, sizeof(struct hip_rea), cnt*4); 
-        /* 4 = sizeof ipv6 address */
-
-	err = hip_build_generic_param(msg, &rea, sizeof(struct hip_rea), addrs);
-#endif
-	return err;
-
-}
-
-
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 {
 	struct hip_r1_counter r1gen;
