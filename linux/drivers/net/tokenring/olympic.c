@@ -99,12 +99,12 @@
 #include <linux/init.h>
 #include <linux/pci.h>
 #include <linux/spinlock.h>
+#include <linux/bitops.h>
 
 #include <net/checksum.h>
 
 #include <asm/io.h>
 #include <asm/system.h>
-#include <asm/bitops.h>
 
 #include "olympic.h"
 
@@ -1401,7 +1401,6 @@ static void olympic_arb_cmd(struct net_device *dev)
 	u16 lan_status = 0, lan_status_diff  ; /* Initialize to stop compiler warning */
 	u8 fdx_prot_error ; 
 	u16 next_ptr;
-	int i ; 
 
 	arb_block = (olympic_priv->olympic_lap + olympic_priv->arb) ; 
 	asb_block = (olympic_priv->olympic_lap + olympic_priv->asb) ; 

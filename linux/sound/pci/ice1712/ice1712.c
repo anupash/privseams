@@ -86,19 +86,18 @@ static int enable[SNDRV_CARDS] = SNDRV_DEFAULT_ENABLE_PNP;		/* Enable this card 
 static char *model[SNDRV_CARDS];
 static int omni[SNDRV_CARDS];	/* Delta44 & 66 Omni I/O support */
 static int cs8427_timeout[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS-1)] = 500}; /* CS8427 S/PDIF transciever reset timeout value in msec */
-static int boot_devs;
 
-module_param_array(index, int, boot_devs, 0444);
+module_param_array(index, int, NULL, 0444);
 MODULE_PARM_DESC(index, "Index value for ICE1712 soundcard.");
-module_param_array(id, charp, boot_devs, 0444);
+module_param_array(id, charp, NULL, 0444);
 MODULE_PARM_DESC(id, "ID string for ICE1712 soundcard.");
-module_param_array(enable, bool, boot_devs, 0444);
+module_param_array(enable, bool, NULL, 0444);
 MODULE_PARM_DESC(enable, "Enable ICE1712 soundcard.");
-module_param_array(omni, bool, boot_devs, 0444);
+module_param_array(omni, bool, NULL, 0444);
 MODULE_PARM_DESC(omni, "Enable Midiman M-Audio Delta Omni I/O support.");
-module_param_array(cs8427_timeout, int, boot_devs, 0444);
+module_param_array(cs8427_timeout, int, NULL, 0444);
 MODULE_PARM_DESC(cs8427_timeout, "Define reset timeout for cs8427 chip in msec resolution.");
-module_param_array(model, charp, boot_devs, 0444);
+module_param_array(model, charp, NULL, 0444);
 MODULE_PARM_DESC(model, "Use the given board model.");
 
 #ifndef PCI_VENDOR_ID_ICE
@@ -2308,28 +2307,47 @@ static int __devinit snd_ice1712_read_eeprom(ice1712_t *ice, const char *modelna
 {
 	int dev = 0xa0;		/* EEPROM device address */
 	unsigned int i, size;
+	struct snd_ice1712_card_info **tbl, *c;
 
-	if ((inb(ICEREG(ice, I2C_CTRL)) & ICE1712_I2C_EEPROM) == 0) {
-		snd_printk("ICE1712 has not detected EEPROM\n");
-		return -EIO;
-	}
-	if (modelname && *modelname) {
-		struct snd_ice1712_card_info **tbl, *c;
-		for (tbl = card_tables; *tbl; tbl++) {
-			for (c = *tbl; c->subvendor; c++) {
-				if (c->model && !strcmp(modelname, c->model)) {
-					/* use the given subvendor */
-					printk(KERN_INFO "ice1712: Using board model %s\n", c->name);
-					ice->eeprom.subvendor = c->subvendor;
-					break;
-				}
+	if (! modelname || ! *modelname) {
+		ice->eeprom.subvendor = 0;
+		if ((inb(ICEREG(ice, I2C_CTRL)) & ICE1712_I2C_EEPROM) != 0)
+			ice->eeprom.subvendor = (snd_ice1712_read_i2c(ice, dev, 0x00) << 0) |
+				(snd_ice1712_read_i2c(ice, dev, 0x01) << 8) | 
+				(snd_ice1712_read_i2c(ice, dev, 0x02) << 16) | 
+				(snd_ice1712_read_i2c(ice, dev, 0x03) << 24);
+		if (ice->eeprom.subvendor == 0 || ice->eeprom.subvendor == (unsigned int)-1) {
+			/* invalid subvendor from EEPROM, try the PCI subststem ID instead */
+			u16 vendor, device;
+			pci_read_config_word(ice->pci, PCI_SUBSYSTEM_VENDOR_ID, &vendor);
+			pci_read_config_word(ice->pci, PCI_SUBSYSTEM_ID, &device);
+			ice->eeprom.subvendor = ((unsigned int)swab16(vendor) << 16) | swab16(device);
+			if (ice->eeprom.subvendor == 0 || ice->eeprom.subvendor == (unsigned int)-1) {
+				printk(KERN_ERR "ice1712: No valid ID is found\n");
+				return -ENXIO;
 			}
 		}
-	} else
-		ice->eeprom.subvendor = (snd_ice1712_read_i2c(ice, dev, 0x00) << 0) |
-			(snd_ice1712_read_i2c(ice, dev, 0x01) << 8) | 
-			(snd_ice1712_read_i2c(ice, dev, 0x02) << 16) | 
-			(snd_ice1712_read_i2c(ice, dev, 0x03) << 24);
+	}
+	for (tbl = card_tables; *tbl; tbl++) {
+		for (c = *tbl; c->subvendor; c++) {
+			if (modelname && c->model && ! strcmp(modelname, c->model)) {
+				printk(KERN_INFO "ice1712: Using board model %s\n", c->name);
+				ice->eeprom.subvendor = c->subvendor;
+			} else if (c->subvendor != ice->eeprom.subvendor)
+				continue;
+			if (! c->eeprom_size || ! c->eeprom_data)
+				goto found;
+			/* if the EEPROM is given by the driver, use it */
+			snd_printdd("using the defined eeprom..\n");
+			ice->eeprom.version = 1;
+			ice->eeprom.size = c->eeprom_size + 6;
+			memcpy(ice->eeprom.data, c->eeprom_data, c->eeprom_size);
+			goto read_skipped;
+		}
+	}
+	printk(KERN_WARNING "ice1712: No matching model found for ID 0x%x\n", ice->eeprom.subvendor);
+
+ found:
 	ice->eeprom.size = snd_ice1712_read_i2c(ice, dev, 0x04);
 	if (ice->eeprom.size < 6)
 		ice->eeprom.size = 32; /* FIXME: any cards without the correct size? */
@@ -2346,6 +2364,7 @@ static int __devinit snd_ice1712_read_eeprom(ice1712_t *ice, const char *modelna
 	for (i = 0; i < size; i++)
 		ice->eeprom.data[i] = snd_ice1712_read_i2c(ice, dev, i + 6);
 
+ read_skipped:
 	ice->eeprom.gpiomask = ice->eeprom.data[ICE_EEP1_GPIO_MASK];
 	ice->eeprom.gpiostate = ice->eeprom.data[ICE_EEP1_GPIO_STATE];
 	ice->eeprom.gpiodir = ice->eeprom.data[ICE_EEP1_GPIO_DIR];
@@ -2476,6 +2495,7 @@ static int snd_ice1712_free(ice1712_t *ice)
 	if (ice->port)
 		pci_release_regions(ice->pci);
 	snd_ice1712_akm4xxx_free(ice);
+	pci_disable_device(ice->pci);
 	kfree(ice);
 	return 0;
 }
@@ -2508,12 +2528,15 @@ static int __devinit snd_ice1712_create(snd_card_t * card,
 	if (pci_set_dma_mask(pci, 0x0fffffff) < 0 ||
 	    pci_set_consistent_dma_mask(pci, 0x0fffffff) < 0) {
 		snd_printk("architecture does not support 28bit PCI busmaster DMA\n");
+		pci_disable_device(pci);
 		return -ENXIO;
 	}
 
 	ice = kcalloc(1, sizeof(*ice), GFP_KERNEL);
-	if (ice == NULL)
+	if (ice == NULL) {
+		pci_disable_device(pci);
 		return -ENOMEM;
+	}
 	ice->omni = omni ? 1 : 0;
 	if (cs8427_timeout < 1)
 		cs8427_timeout = 1;
@@ -2543,6 +2566,7 @@ static int __devinit snd_ice1712_create(snd_card_t * card,
 
 	if ((err = pci_request_regions(pci, "ICE1712")) < 0) {
 		kfree(ice);
+		pci_disable_device(pci);
 		return err;
 	}
 	ice->port = pci_resource_start(pci, 0);

@@ -394,6 +394,8 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	new->tc_index	= old->tc_index;
 #endif
 	atomic_set(&new->users, 1);
+	skb_shinfo(new)->tso_size = skb_shinfo(old)->tso_size;
+	skb_shinfo(new)->tso_segs = skb_shinfo(old)->tso_segs;
 }
 
 /**
@@ -483,8 +485,6 @@ struct sk_buff *pskb_copy(struct sk_buff *skb, int gfp_mask)
 		}
 		skb_shinfo(n)->nr_frags = i;
 	}
-	skb_shinfo(n)->tso_size = skb_shinfo(skb)->tso_size;
-	skb_shinfo(n)->tso_segs = skb_shinfo(skb)->tso_segs;
 
 	if (skb_shinfo(skb)->frag_list) {
 		skb_shinfo(n)->frag_list = skb_shinfo(skb)->frag_list;
@@ -631,8 +631,6 @@ struct sk_buff *skb_copy_expand(const struct sk_buff *skb,
 		BUG();
 
 	copy_skb_header(n, skb);
-	skb_shinfo(n)->tso_size = skb_shinfo(skb)->tso_size;
-	skb_shinfo(n)->tso_segs = skb_shinfo(skb)->tso_segs;
 
 	return n;
 }
@@ -1352,7 +1350,7 @@ void skb_add_mtu(int mtu)
 }
 #endif
 
-static void inline skb_split_inside_header(struct sk_buff *skb,
+static inline void skb_split_inside_header(struct sk_buff *skb,
 					   struct sk_buff* skb1,
 					   const u32 len, const int pos)
 {
@@ -1373,7 +1371,7 @@ static void inline skb_split_inside_header(struct sk_buff *skb,
 	skb->tail		   = skb->data + len;
 }
 
-static void inline skb_split_no_header(struct sk_buff *skb,
+static inline void skb_split_no_header(struct sk_buff *skb,
 				       struct sk_buff* skb1,
 				       const u32 len, int pos)
 {

@@ -62,7 +62,6 @@ DECLARE_RWLOCK(ip_conntrack_expect_tuple_lock);
 
 /* ip_conntrack_standalone needs this */
 atomic_t ip_conntrack_count = ATOMIC_INIT(0);
-EXPORT_SYMBOL(ip_conntrack_count);
 
 void (*ip_conntrack_destroyed)(struct ip_conntrack *conntrack) = NULL;
 LIST_HEAD(ip_conntrack_expect_list);
@@ -313,6 +312,7 @@ destroy_conntrack(struct nf_conntrack *nfct)
 		}
 		kmem_cache_free(ip_conntrack_expect_cachep, ct->master);
 	}
+	CONNTRACK_STAT_INC(delete);
 	WRITE_UNLOCK(&ip_conntrack_lock);
 
 	if (master)
@@ -321,16 +321,16 @@ destroy_conntrack(struct nf_conntrack *nfct)
 	DEBUGP("destroy_conntrack: returning ct=%p to slab\n", ct);
 	kmem_cache_free(ip_conntrack_cachep, ct);
 	atomic_dec(&ip_conntrack_count);
-	CONNTRACK_STAT_INC(delete);
 }
 
 static void death_by_timeout(unsigned long ul_conntrack)
 {
 	struct ip_conntrack *ct = (void *)ul_conntrack;
 
-	CONNTRACK_STAT_INC(delete_list);
-
 	WRITE_LOCK(&ip_conntrack_lock);
+	/* Inside lock so preempt is disabled on module removal path.
+	 * Otherwise we can get spurious warnings. */
+	CONNTRACK_STAT_INC(delete_list);
 	clean_from_lists(ct);
 	WRITE_UNLOCK(&ip_conntrack_lock);
 	ip_conntrack_put(ct);
@@ -352,16 +352,14 @@ __ip_conntrack_find(const struct ip_conntrack_tuple *tuple,
 {
 	struct ip_conntrack_tuple_hash *h;
 	unsigned int hash = hash_conntrack(tuple);
-	/* use per_cpu() to avoid multiple calls to smp_processor_id() */
-	unsigned int cpu = smp_processor_id();
 
 	MUST_BE_READ_LOCKED(&ip_conntrack_lock);
 	list_for_each_entry(h, &ip_conntrack_hash[hash], list) {
 		if (conntrack_tuple_cmp(h, tuple, ignored_conntrack)) {
-			per_cpu(ip_conntrack_stat, cpu).found++;
+			CONNTRACK_STAT_INC(found);
 			return h;
 		}
-		per_cpu(ip_conntrack_stat, cpu).searched++;
+		CONNTRACK_STAT_INC(searched);
 	}
 
 	return NULL;
@@ -436,13 +434,14 @@ __ip_conntrack_confirm(struct sk_buff *skb)
 		add_timer(&ct->timeout);
 		atomic_inc(&ct->ct_general.use);
 		set_bit(IPS_CONFIRMED_BIT, &ct->status);
-		WRITE_UNLOCK(&ip_conntrack_lock);
 		CONNTRACK_STAT_INC(insert);
+		WRITE_UNLOCK(&ip_conntrack_lock);
 		return NF_ACCEPT;
 	}
 
-	WRITE_UNLOCK(&ip_conntrack_lock);
 	CONNTRACK_STAT_INC(insert_failed);
+	WRITE_UNLOCK(&ip_conntrack_lock);
+
 	return NF_DROP;
 }
 
@@ -595,6 +594,9 @@ init_conntrack(const struct ip_conntrack_tuple *tuple,
 		__set_bit(IPS_EXPECTED_BIT, &conntrack->status);
 		conntrack->master = expected;
 		expected->sibling = conntrack;
+#if CONFIG_IP_NF_CONNTRACK_MARK
+		conntrack->mark = expected->expectant->mark;
+#endif
 		LIST_DELETE(&ip_conntrack_expect_list, expected);
 		expected->expectant->expecting--;
 		nf_conntrack_get(&master_ct(conntrack)->ct_general);

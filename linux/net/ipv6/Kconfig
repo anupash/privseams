@@ -44,18 +44,6 @@ config INET6_ESP
 
 	  If unsure, say Y.
 
-config ESPBEET
-	bool "Bound End-to-End Tunnel (BEET) mode for ESP"
-	depends on INET6_ESP
-	---help---
-	  The BEET mode augments the existing ESP tunnel and transport modes.  
-	  For end-to-end tunnels, the BEET mode provides limited tunnel mode semantics 
-	  without the regular tunnel mode overhead.  The mode is intended to support 
-	  new uses of ESP, including Host Identity Protocol (HIP), mobility and 
-	  multi-address multi-homing.
-
-	  If unsure, say N.
-
 config INET6_IPCOMP
 	tristate "IPv6: IPComp transformation"
 	depends on IPV6
@@ -64,8 +52,8 @@ config INET6_IPCOMP
 	select CRYPTO
 	select CRYPTO_DEFLATE
 	---help---
-	  Support for IP Paylod Compression (RFC3173), typically needed
-	  for IPsec.
+	  Support for IP Payload Compression Protocol (IPComp) (RFC3173),
+	  typically needed for IPsec.
 
 	  If unsure, say Y.
 
@@ -94,7 +82,6 @@ config HIP
 	depends on IPV6
 	default m
 	select INET6_ESP
-#	select ESPBEET
 	select CRYPTO_NULL
 	---help---
 	  Support for Host Identity Protocol. HIP creates an additional layer

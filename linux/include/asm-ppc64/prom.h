@@ -56,6 +56,8 @@ struct boot_param_header
 	u32	off_mem_rsvmap;		/* offset to memory reserve map */
 	u32	version;		/* format version */
 	u32	last_comp_version;	/* last compatible version */
+	/* version 2 fields below */
+	u32	boot_cpuid_phys;	/* Which physical CPU id we're booting on */
 };
 
 
@@ -91,33 +93,6 @@ struct isa_range {
 	struct isa_address isa_addr;
 	struct pci_address pci_addr;
 	unsigned int size;
-};
-
-struct pci_range32 {
-	struct pci_address child_addr;
-	unsigned int  parent_addr;
-  	unsigned long size; 
-};
-
-struct pci_range64 {
-	struct pci_address child_addr;
-  	unsigned long parent_addr;
-        unsigned long size; 
-};
-
-union pci_range {
-	struct {
-		struct pci_address addr;
-		u32 phys;
-		u32 size_hi;
-	} pci32;
-	struct {
-		struct pci_address addr;
-		u32 phys_hi;
-		u32 phys_lo;
-		u32 size_hi;
-		u32 size_lo;
-	} pci64;
 };
 
 struct of_tce_table {

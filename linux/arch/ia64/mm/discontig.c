@@ -16,6 +16,7 @@
 #include <linux/bootmem.h>
 #include <linux/acpi.h>
 #include <linux/efi.h>
+#include <linux/nodemask.h>
 #include <asm/pgalloc.h>
 #include <asm/tlb.h>
 #include <asm/meminit.h>
@@ -601,7 +602,7 @@ void call_pernode_memory(unsigned long start, unsigned long len, void *arg)
  * for each piece of usable memory and will setup these values for each node.
  * Very similar to build_maps().
  */
-static int count_node_pages(unsigned long start, unsigned long len, int node)
+static __init int count_node_pages(unsigned long start, unsigned long len, int node)
 {
 	unsigned long end = start + len;
 
@@ -626,7 +627,7 @@ static int count_node_pages(unsigned long start, unsigned long len, int node)
  * paging_init() sets up the page tables for each node of the system and frees
  * the bootmem allocator memory for general use.
  */
-void paging_init(void)
+void __init paging_init(void)
 {
 	unsigned long max_dma;
 	unsigned long zones_size[MAX_NR_ZONES];
@@ -680,7 +681,7 @@ void paging_init(void)
 				PAGE_ALIGN(max_low_pfn * sizeof(struct page));
 			vmem_map = (struct page *) vmalloc_end;
 
-			efi_memmap_walk(create_mem_map_page_table, 0);
+			efi_memmap_walk(create_mem_map_page_table, NULL);
 			printk("Virtual mem_map starts at 0x%p\n", vmem_map);
 		}
 

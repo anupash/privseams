@@ -182,7 +182,7 @@ int sys_ptrace(long request, long pid, long addr, long data)
 	 */
 	case PTRACE_KILL: {
 		ret = 0;
-		if (child->state == TASK_ZOMBIE)	/* already dead */
+		if (child->exit_state == EXIT_ZOMBIE)	/* already dead */
 			break;
 		child->exit_code = SIGKILL;
 		/* make sure the single step bit is not set. */
@@ -318,7 +318,8 @@ void do_syscall_trace_leave(void)
 	if (unlikely(current->audit_context))
 		audit_syscall_exit(current, 0);	/* FIXME: pass pt_regs */
 
-	if (test_thread_flag(TIF_SYSCALL_TRACE)
+	if ((test_thread_flag(TIF_SYSCALL_TRACE)
+	     || test_thread_flag(TIF_SINGLESTEP))
 	    && (current->ptrace & PT_PTRACED))
 		do_syscall_trace();
 }

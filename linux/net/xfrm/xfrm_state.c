@@ -59,6 +59,9 @@ static spinlock_t xfrm_state_gc_lock = SPIN_LOCK_UNLOCKED;
 
 static void __xfrm_state_delete(struct xfrm_state *x);
 
+static struct xfrm_state_afinfo *xfrm_state_get_afinfo(unsigned short family);
+static void xfrm_state_put_afinfo(struct xfrm_state_afinfo *afinfo);
+
 static void xfrm_state_gc_destroy(struct xfrm_state *x)
 {
 	if (del_timer(&x->timer))
@@ -193,7 +196,7 @@ struct xfrm_state *xfrm_state_alloc(void)
 		x->lft.soft_packet_limit = XFRM_INF;
 		x->lft.hard_byte_limit = XFRM_INF;
 		x->lft.hard_packet_limit = XFRM_INF;
-		x->lock = SPIN_LOCK_UNLOCKED;
+		spin_lock_init(&x->lock);
 	}
 	return x;
 }
@@ -536,7 +539,7 @@ int xfrm_state_check_expire(struct xfrm_state *x)
 	return 0;
 }
 
-int xfrm_state_check_space(struct xfrm_state *x, struct sk_buff *skb)
+static int xfrm_state_check_space(struct xfrm_state *x, struct sk_buff *skb)
 {
 	int nhead = x->props.header_len + LL_RESERVED_SPACE(skb->dst->dev)
 		- skb_headroom(skb);
@@ -750,19 +753,6 @@ void xfrm_replay_advance(struct xfrm_state *x, u32 seq)
 	}
 }
 
-int xfrm_check_selectors(struct xfrm_state **x, int n, struct flowi *fl)
-{
-	int i;
-
-	for (i=0; i<n; i++) {
-		int match;
-		match = xfrm_selector_match(&x[i]->sel, fl, x[i]->props.family);
-		if (!match)
-			return -EINVAL;
-	}
-	return 0;
-}
-
 static struct list_head xfrm_km_list = LIST_HEAD_INIT(xfrm_km_list);
 static rwlock_t		xfrm_km_lock = RW_LOCK_UNLOCKED;
 
@@ -925,7 +915,7 @@ int xfrm_state_unregister_afinfo(struct xfrm_state_afinfo *afinfo)
 	return err;
 }
 
-struct xfrm_state_afinfo *xfrm_state_get_afinfo(unsigned short family)
+static struct xfrm_state_afinfo *xfrm_state_get_afinfo(unsigned short family)
 {
 	struct xfrm_state_afinfo *afinfo;
 	if (unlikely(family >= NPROTO))
@@ -938,7 +928,7 @@ struct xfrm_state_afinfo *xfrm_state_get_afinfo(unsigned short family)
 	return afinfo;
 }
 
-void xfrm_state_put_afinfo(struct xfrm_state_afinfo *afinfo)
+static void xfrm_state_put_afinfo(struct xfrm_state_afinfo *afinfo)
 {
 	if (unlikely(afinfo == NULL))
 		return;

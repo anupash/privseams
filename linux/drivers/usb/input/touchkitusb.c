@@ -59,6 +59,10 @@
 #define DRIVER_AUTHOR			"Daniel Ritz <daniel.ritz@gmx.ch>"
 #define DRIVER_DESC			"eGalax TouchKit USB HID Touchscreen Driver"
 
+static int swap_xy;
+module_param(swap_xy, bool, 0644);
+MODULE_PARM_DESC(swap_xy, "If set X and Y axes are swapped.");
+
 struct touchkit_usb {
 	unsigned char *data;
 	dma_addr_t data_dma;
@@ -80,6 +84,7 @@ static void touchkit_irq(struct urb *urb, struct pt_regs *regs)
 {
 	struct touchkit_usb *touchkit = urb->context;
 	int retval;
+	int x, y;
 
 	switch (urb->status) {
 	case 0:
@@ -103,13 +108,19 @@ static void touchkit_irq(struct urb *urb, struct pt_regs *regs)
 		goto exit;
 	}
 
+	if (swap_xy) {
+		y = TOUCHKIT_GET_X(touchkit->data);
+		x = TOUCHKIT_GET_Y(touchkit->data);
+	} else {
+		x = TOUCHKIT_GET_X(touchkit->data);
+		y = TOUCHKIT_GET_Y(touchkit->data);
+	}
+
 	input_regs(&touchkit->input, regs);
 	input_report_key(&touchkit->input, BTN_TOUCH,
 	                 TOUCHKIT_GET_TOUCHED(touchkit->data));
-	input_report_abs(&touchkit->input, ABS_X,
-	                 TOUCHKIT_GET_X(touchkit->data));
-	input_report_abs(&touchkit->input, ABS_Y,
-	                 TOUCHKIT_GET_Y(touchkit->data));
+	input_report_abs(&touchkit->input, ABS_X, x);
+	input_report_abs(&touchkit->input, ABS_Y, y);
 	input_sync(&touchkit->input);
 
 exit:
@@ -141,7 +152,7 @@ static void touchkit_close(struct input_dev *input)
 	struct touchkit_usb *touchkit = input->private;
 
 	if (!--touchkit->open)
-		usb_unlink_urb(touchkit->irq);
+		usb_kill_urb(touchkit->irq);
 }
 
 static int touchkit_alloc_buffers(struct usb_device *udev,
@@ -276,7 +287,7 @@ static void touchkit_disconnect(struct usb_interface *intf)
 	dbg("%s - touchkit is initialized, cleaning up", __FUNCTION__);
 	usb_set_intfdata(intf, NULL);
 	input_unregister_device(&touchkit->input);
-	usb_unlink_urb(touchkit->irq);
+	usb_kill_urb(touchkit->irq);
 	usb_free_urb(touchkit->irq);
 	touchkit_free_buffers(interface_to_usbdev(intf), touchkit);
 	kfree(touchkit);

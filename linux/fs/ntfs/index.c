@@ -19,9 +19,11 @@
  * Foundation,Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "ntfs.h"
+#include "aops.h"
 #include "collate.h"
+#include "debug.h"
 #include "index.h"
+#include "ntfs.h"
 
 /**
  * ntfs_index_ctx_get - allocate and initialize a new index context
@@ -261,7 +263,6 @@ done:
 		ntfs_error(sb, "No index allocation attribute but index entry "
 				"requires one.  Inode 0x%lx is corrupt or "
 				"driver bug.", idx_ni->mft_no);
-		err = -EIO;
 		goto err_out;
 	}
 	/* Get the starting vcn of the index_block holding the child node. */
@@ -299,7 +300,13 @@ fast_descend_into_child_node:
 	if ((u8*)ia < kaddr || (u8*)ia > kaddr + PAGE_CACHE_SIZE) {
 		ntfs_error(sb, "Out of bounds check failed.  Corrupt inode "
 				"0x%lx or driver bug.", idx_ni->mft_no);
-		err = -EIO;
+		goto unm_err_out;
+	}
+	/* Catch multi sector transfer fixup errors. */
+	if (unlikely(!ntfs_is_indx_record(ia->magic))) {
+		ntfs_error(sb, "Index record with vcn 0x%llx is corrupt.  "
+				"Corrupt inode 0x%lx.  Run chkdsk.",
+				(long long)vcn, idx_ni->mft_no);
 		goto unm_err_out;
 	}
 	if (sle64_to_cpu(ia->index_block_vcn) != vcn) {
@@ -309,7 +316,6 @@ fast_descend_into_child_node:
 				(unsigned long long)
 				sle64_to_cpu(ia->index_block_vcn),
 				(unsigned long long)vcn, idx_ni->mft_no);
-		err = -EIO;
 		goto unm_err_out;
 	}
 	if (le32_to_cpu(ia->index.allocated_size) + 0x18 !=
@@ -321,7 +327,6 @@ fast_descend_into_child_node:
 				idx_ni->mft_no,
 				le32_to_cpu(ia->index.allocated_size) + 0x18,
 				idx_ni->itype.index.block_size);
-		err = -EIO;
 		goto unm_err_out;
 	}
 	index_end = (u8*)ia + idx_ni->itype.index.block_size;
@@ -331,7 +336,6 @@ fast_descend_into_child_node:
 				"access!  This is probably a bug in the "
 				"driver.", (unsigned long long)vcn,
 				idx_ni->mft_no);
-		err = -EIO;
 		goto unm_err_out;
 	}
 	index_end = (u8*)&ia->index + le32_to_cpu(ia->index.index_length);
@@ -339,7 +343,6 @@ fast_descend_into_child_node:
 		ntfs_error(sb, "Size of index buffer (VCN 0x%llx) of inode "
 				"0x%lx exceeds maximum size.",
 				(unsigned long long)vcn, idx_ni->mft_no);
-		err = -EIO;
 		goto unm_err_out;
 	}
 	/* The first index entry. */
@@ -357,11 +360,10 @@ fast_descend_into_child_node:
 				(u8*)ie + le16_to_cpu(ie->length) > index_end) {
 			ntfs_error(sb, "Index entry out of bounds in inode "
 					"0x%lx.", idx_ni->mft_no);
-			err = -EIO;
 			goto unm_err_out;
 		}
 		/*
-		 * The last entry cannot contain a ket.  It can however contain
+		 * The last entry cannot contain a key.  It can however contain
 		 * a pointer to a child node in the B+tree so we just break out.
 		 */
 		if (ie->flags & INDEX_ENTRY_END)
@@ -375,7 +377,6 @@ fast_descend_into_child_node:
 				le16_to_cpu(ie->length)) {
 			ntfs_error(sb, "Index entry out of bounds in inode "
 					"0x%lx.", idx_ni->mft_no);
-			err = -EIO;
 			goto unm_err_out;
 		}
 		/* If the keys match perfectly, we setup @ictx and return 0. */
@@ -422,7 +423,6 @@ ia_done:
 	if ((ia->index.flags & NODE_MASK) == LEAF_NODE) {
 		ntfs_error(sb, "Index entry with child node found in a leaf "
 				"node in inode 0x%lx.", idx_ni->mft_no);
-		err = -EIO;
 		goto unm_err_out;
 	}
 	/* Child node present, descend into it. */
@@ -444,11 +444,12 @@ ia_done:
 	}
 	ntfs_error(sb, "Negative child node vcn in inode 0x%lx.",
 			idx_ni->mft_no);
-	err = -EIO;
 unm_err_out:
 	unlock_page(page);
 	ntfs_unmap_page(page);
 err_out:
+	if (!err)
+		err = -EIO;
 	if (actx)
 		ntfs_attr_put_search_ctx(actx);
 	if (m)
@@ -456,61 +457,5 @@ err_out:
 	return err;
 idx_err_out:
 	ntfs_error(sb, "Corrupt index.  Aborting lookup.");
-	err = -EIO;
 	goto err_out;
 }
-
-#ifdef NTFS_RW
-
-/**
- * __ntfs_index_entry_mark_dirty - mark an index allocation entry dirty
- * @ictx:	ntfs index context describing the index entry
- *
- * NOTE: You want to use fs/ntfs/index.h::ntfs_index_entry_mark_dirty() instead!
- * 
- * Mark the index allocation entry described by the index entry context @ictx
- * dirty.
- *
- * The index entry must be in an index block belonging to the index allocation
- * attribute.  Mark the buffers belonging to the index record as well as the
- * page cache page the index block is in dirty.  This automatically marks the
- * VFS inode of the ntfs index inode to which the index entry belongs dirty,
- * too (I_DIRTY_PAGES) and this in turn ensures the page buffers, and hence the
- * dirty index block, will be written out to disk later.
- */
-void __ntfs_index_entry_mark_dirty(ntfs_index_context *ictx)
-{
-	ntfs_inode *ni;
-	struct page *page;
-	struct buffer_head *bh, *head;
-	unsigned int rec_start, rec_end, bh_size, bh_start, bh_end;
-
-	BUG_ON(ictx->is_in_root);
-	ni = ictx->idx_ni;
-	page = ictx->page;
-	BUG_ON(!page_has_buffers(page));
-	/*
-	 * If the index block is the same size as the page cache page, set all
-	 * the buffers in the page, as well as the page itself, dirty.
-	 */
-	if (ni->itype.index.block_size == PAGE_CACHE_SIZE) {
-		__set_page_dirty_buffers(page);
-		return;
-	}
-	/* Set only the buffers in which the index block is located dirty. */
-	rec_start = (unsigned int)((u8*)ictx->ia - (u8*)page_address(page));
-	rec_end = rec_start + ni->itype.index.block_size;
-	bh_size = ni->vol->sb->s_blocksize;
-	bh_start = 0;
-	bh = head = page_buffers(page);
-	do {
-		bh_end = bh_start + bh_size;
-		if ((bh_start >= rec_start) && (bh_end <= rec_end))
-			set_buffer_dirty(bh);
-		bh_start = bh_end;
-	} while ((bh = bh->b_this_page) != head);
-	/* Finally, set the page itself dirty, too. */
-	__set_page_dirty_nobuffers(page);
-}
-
-#endif /* NTFS_RW */

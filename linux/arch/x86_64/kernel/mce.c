@@ -191,6 +191,8 @@ void do_machine_check(struct pt_regs * regs, long error_code)
 			panicm = m;
 			panicm_found = 1;
 		}
+
+		tainted |= TAINT_MACHINE_CHECK;
 	}
 
 	/* Never do anything final in the polling timer */
@@ -359,8 +361,7 @@ static ssize_t mce_read(struct file *filp, char __user *ubuf, size_t usize, loff
 
 	memset(mcelog.entry, 0, next * sizeof(struct mce));
 	mcelog.next = 0;
-	smp_wmb(); 
-	
+
 	synchronize_kernel();	
 
 	/* Collect entries that were still getting written before the synchronize. */

@@ -25,11 +25,15 @@
 #include <linux/i2c.h>
 #include "dvbdev.h"
 #include "dvb_net.h"
+#include "bttv.h"
+#include "mt352.h"
+#include "sp887x.h"
+#include "dst.h"
+#include "nxt6000.h"
 
 struct dvb_bt8xx_card {
-
-	struct list_head list;
-	u8 active;
+	struct semaphore lock;
+	int nfeeds;
 	char card_name[32];
 	struct dvb_adapter *dvb_adapter;
 	struct bt878 *bt;
@@ -44,4 +48,5 @@ struct dvb_bt8xx_card {
 	struct i2c_adapter *i2c_adapter;
 	struct dvb_net dvbnet;
 				
+	struct dvb_frontend* fe;
 };

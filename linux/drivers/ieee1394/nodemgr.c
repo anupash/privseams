@@ -70,8 +70,7 @@ static int nodemgr_bus_read(struct csr1212_csr *csr, u64 addr, u16 length,
 		if (!ret)
 			break;
 
-		set_current_state(TASK_INTERRUPTIBLE);
-		if (schedule_timeout (HZ/3))
+		if (msleep_interruptible(334))
 			return -EINTR;
 	}
 
@@ -1489,14 +1488,16 @@ static int nodemgr_host_thread(void *__hi)
 			break;
 		}
 
-		if (hi->kill_me)
+		if (hi->kill_me) {
+			up(&nodemgr_serialize);
 			break;
+		}
 
 		/* Pause for 1/4 second in 1/16 second intervals,
 		 * to make sure things settle down. */
 		for (i = 0; i < 4 ; i++) {
 			set_current_state(TASK_INTERRUPTIBLE);
-			if (schedule_timeout(HZ/16)) {
+			if (msleep_interruptible(63)) {
 				up(&nodemgr_serialize);
 				goto caught_signal;
 			}
@@ -1514,8 +1515,10 @@ static int nodemgr_host_thread(void *__hi)
 				i = 0;
 
 			/* Check the kill_me again */
-			if (hi->kill_me)
+			if (hi->kill_me) {
+				up(&nodemgr_serialize);
 				goto caught_signal;
+			}
 		}
 
 		if (!nodemgr_check_irm_capability(host, reset_cycles)) {

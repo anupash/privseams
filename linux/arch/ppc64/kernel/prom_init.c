@@ -31,6 +31,7 @@
 #include <linux/stringify.h>
 #include <linux/delay.h>
 #include <linux/initrd.h>
+#include <linux/bitops.h>
 #include <asm/prom.h>
 #include <asm/rtas.h>
 #include <asm/abs_addr.h>
@@ -42,7 +43,6 @@
 #include <asm/system.h>
 #include <asm/mmu.h>
 #include <asm/pgtable.h>
-#include <asm/bitops.h>
 #include <asm/naca.h>
 #include <asm/pci.h>
 #include <asm/iommu.h>
@@ -51,7 +51,6 @@
 #include <asm/btext.h>
 #include <asm/sections.h>
 #include <asm/machdep.h>
-#include "open_pic.h"
 
 #ifdef CONFIG_LOGO_LINUX_CLUT224
 #include <linux/linux_logo.h>
@@ -160,8 +159,6 @@ extern void copy_and_flush(unsigned long dest, unsigned long src,
 
 extern unsigned long klimit;
 
-//int global_width = 640, global_height = 480, global_depth = 8, global_pitch;
-//unsigned global_address;
 /* prom structure */
 static struct prom_t __initdata prom;
 
@@ -675,7 +672,7 @@ static void __init prom_init_mem(void)
 	if ( RELOC(of_platform) == PLATFORM_PSERIES_LPAR )
 		RELOC(alloc_top) = RELOC(rmo_top);
 	else
-		RELOC(alloc_top) = min(0x40000000ul, RELOC(ram_top));
+		RELOC(alloc_top) = RELOC(rmo_top) = min(0x40000000ul, RELOC(ram_top));
 	RELOC(alloc_bottom) = PAGE_ALIGN(RELOC(klimit) - offset + 0x4000);
 	RELOC(alloc_top_high) = RELOC(ram_top);
 
@@ -704,48 +701,51 @@ static void __init prom_instantiate_rtas(void)
 {
 	unsigned long offset = reloc_offset();
 	struct prom_t *_prom = PTRRELOC(&prom);
-	phandle prom_rtas;
-	u64 base, entry = 0;
-        u32 size;
+	phandle prom_rtas, rtas_node;
+	u32 base, entry = 0;
+	u32 size = 0;
 
 	prom_debug("prom_instantiate_rtas: start...\n");
 
 	prom_rtas = call_prom("finddevice", 1, 1, ADDR("/rtas"));
-	if (prom_rtas != (phandle) -1) {
-		prom_getprop(prom_rtas, "rtas-size", &size, sizeof(size));
-		if (size != 0) {
-			base = alloc_down(size, PAGE_SIZE, 0);
-			if (base == 0) {
-				prom_printf("RTAS allocation failed !\n");
-				return;
-			}
-			prom_printf("instantiating rtas at 0x%x", base);
+	prom_debug("prom_rtas: %x\n", prom_rtas);
+	if (prom_rtas == (phandle) -1)
+		return;
 
-			prom_rtas = call_prom("open", 1, 1, ADDR("/rtas"));
-			prom_printf("...");
+	prom_getprop(prom_rtas, "rtas-size", &size, sizeof(size));
+	if (size == 0)
+		return;
 
-			if (call_prom("call-method", 3, 2,
-				      ADDR("instantiate-rtas"),
-				      prom_rtas, base) != PROM_ERROR) {
-				entry = (long)_prom->args.rets[1];
-			}
-			if (entry == 0) {
-				prom_printf(" failed\n");
-				return;
-			}
-			prom_printf(" done\n");
-
-	       		reserve_mem(base, size);
-		}
-
-		prom_setprop(_prom->chosen, "linux,rtas-base", &base, sizeof(base));
-		prom_setprop(_prom->chosen, "linux,rtas-entry", &entry, sizeof(entry));
-		prom_setprop(_prom->chosen, "linux,rtas-size", &size, sizeof(size));
-
-		prom_debug("rtas base     = 0x%x\n", base);
-		prom_debug("rtas entry    = 0x%x\n", entry);
-		prom_debug("rtas size     = 0x%x\n", (long)size);
+	base = alloc_down(size, PAGE_SIZE, 0);
+	if (base == 0) {
+		prom_printf("RTAS allocation failed !\n");
+		return;
 	}
+	prom_printf("instantiating rtas at 0x%x", base);
+
+	rtas_node = call_prom("open", 1, 1, ADDR("/rtas"));
+	prom_printf("...");
+
+	if (call_prom("call-method", 3, 2,
+		      ADDR("instantiate-rtas"),
+		      rtas_node, base) != PROM_ERROR) {
+		entry = (long)_prom->args.rets[1];
+	}
+	if (entry == 0) {
+		prom_printf(" failed\n");
+		return;
+	}
+	prom_printf(" done\n");
+
+	reserve_mem(base, size);
+
+	prom_setprop(prom_rtas, "linux,rtas-base", &base, sizeof(base));
+	prom_setprop(prom_rtas, "linux,rtas-entry", &entry, sizeof(entry));
+
+	prom_debug("rtas base     = 0x%x\n", base);
+	prom_debug("rtas entry    = 0x%x\n", entry);
+	prom_debug("rtas size     = 0x%x\n", (long)size);
+
 	prom_debug("prom_instantiate_rtas: end...\n");
 }
 
@@ -760,7 +760,7 @@ static void __init prom_initialize_tce_table(void)
 	unsigned long offset = reloc_offset();
 	char compatible[64], type[64], model[64];
 	char *path = RELOC(prom_scratch);
-	u64 base, vbase, align;
+	u64 base, align;
 	u32 minalign, minsize;
 	u64 tce_entry, *tce_entryp;
 	u64 local_alloc_top, local_alloc_bottom;
@@ -832,12 +832,9 @@ static void __init prom_initialize_tce_table(void)
 		if (base < local_alloc_bottom)
 			local_alloc_bottom = base;
 
-		vbase = (unsigned long)abs_to_virt(base);
-
 		/* Save away the TCE table attributes for later use. */
-		prom_setprop(node, "linux,tce-base", &vbase, sizeof(vbase));
+		prom_setprop(node, "linux,tce-base", &base, sizeof(base));
 		prom_setprop(node, "linux,tce-size", &minsize, sizeof(minsize));
-		prom_setprop(node, "linux,has-tce-table", NULL, 0);
 
 		/* It seems OF doesn't null-terminate the path :-( */
 		memset(path, 0, sizeof(path));
@@ -952,9 +949,9 @@ static void __init prom_hold_cpus(void)
 			continue;
 
 		/* Skip non-configured cpus. */
-		prom_getprop(node, "status", type, sizeof(type));
-		if (strcmp(type, RELOC("okay")) != 0)
-			continue;
+		if (prom_getprop(node, "status", type, sizeof(type)) > 0)
+			if (strcmp(type, RELOC("okay")) != 0)
+				continue;
 
 		reg = -1;
 		prom_getprop(node, "reg", &reg, sizeof(reg));
@@ -991,12 +988,13 @@ static void __init prom_hold_cpus(void)
 			/* Primary Thread of non-boot cpu */
 			prom_printf("%x : starting cpu hw idx %x... ", cpuid, reg);
 			call_prom("start-cpu", 3, 0, node,
-				  secondary_hold, cpuid);
+				  secondary_hold, reg);
 
 			for ( i = 0 ; (i < 100000000) && 
-			      (*acknowledge == ((unsigned long)-1)); i++ ) ;
+			      (*acknowledge == ((unsigned long)-1)); i++ )
+				mb();
 
-			if (*acknowledge == cpuid) {
+			if (*acknowledge == reg) {
 				prom_printf("done\n");
 				/* We have to get every CPU out of OF,
 				 * even if we never start it. */
@@ -1110,6 +1108,16 @@ static void __init prom_init_stdout(void)
 	}
 }
 
+static void __init prom_close_stdin(void)
+{
+	unsigned long offset = reloc_offset();
+	struct prom_t *_prom = PTRRELOC(&prom);
+	ihandle val;
+
+	if (prom_getprop(_prom->chosen, "stdin", &val, sizeof(val)) > 0)
+		call_prom("close", 1, 0, val);
+}
+
 static int __init prom_find_machine_type(void)
 {
 	unsigned long offset = reloc_offset();
@@ -1130,6 +1138,8 @@ static int __init prom_find_machine_type(void)
 			if (strstr(p, RELOC("Power Macintosh")) ||
 			    strstr(p, RELOC("MacRISC4")))
 				return PLATFORM_POWERMAC;
+			if (strstr(p, RELOC("Momentum,Maple")))
+				return PLATFORM_MAPLE;
 			i += sl + 1;
 		}
 	}
@@ -1161,7 +1171,7 @@ static int __init prom_set_color(ihandle ih, int i, int r, int g, int b)
  * So we check whether we will need to open the display,
  * and if so, open it now.
  */
-static unsigned long __init prom_check_displays(void)
+static void __init prom_check_displays(void)
 {
 	unsigned long offset = reloc_offset();
 	struct prom_t *_prom = PTRRELOC(&prom);
@@ -1603,11 +1613,6 @@ unsigned long __init prom_init(unsigned long r3, unsigned long r4, unsigned long
 	prom_debug("offset=0x%x\n", offset);
 
 	/*
-	 * Reserve kernel in reserve map
-	 */
-	reserve_mem(0, __pa(RELOC(klimit)));
-
-	/*
 	 * Check for an initrd
 	 */
 	prom_check_initrd(r3, r4);
@@ -1690,6 +1695,9 @@ unsigned long __init prom_init(unsigned long r3, unsigned long r4, unsigned long
 	 */
        	prom_printf("copying OF device tree ...\n");
        	flatten_device_tree();
+
+	/* in case stdin is USB and still active on IBM machines... */
+	prom_close_stdin();
 
 	/*
 	 * Call OF "quiesce" method to shut down pending DMA's from

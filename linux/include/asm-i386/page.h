@@ -39,9 +39,9 @@
 /*
  * These are used to make use of C type-checking..
  */
+extern int nx_enabled;
 #ifdef CONFIG_X86_PAE
 extern unsigned long long __supported_pte_mask;
-extern int nx_enabled;
 typedef struct { unsigned long pte_low, pte_high; } pte_t;
 typedef struct { unsigned long long pmd; } pmd_t;
 typedef struct { unsigned long long pgd; } pgd_t;
@@ -49,7 +49,6 @@ typedef struct { unsigned long long pgprot; } pgprot_t;
 #define pte_val(x)	((x).pte_low | ((unsigned long long)(x).pte_high << 32))
 #define HPAGE_SHIFT	21
 #else
-#define nx_enabled 0
 typedef struct { unsigned long pte_low; } pte_t;
 typedef struct { unsigned long pmd; } pmd_t;
 typedef struct { unsigned long pgd; } pgd_t;
@@ -64,6 +63,7 @@ typedef struct { unsigned long pgprot; } pgprot_t;
 #define HPAGE_SIZE	((1UL) << HPAGE_SHIFT)
 #define HPAGE_MASK	(~(HPAGE_SIZE - 1))
 #define HUGETLB_PAGE_ORDER	(HPAGE_SHIFT - PAGE_SHIFT)
+#define HAVE_ARCH_HUGETLB_UNMAPPED_AREA
 #endif
 
 

@@ -2,7 +2,7 @@
 
 static int max_memory = 32;
 
-MODULE_PARM(max_memory,"i");
+module_param(max_memory, int, 0644);
 MODULE_PARM_DESC(max_memory, "maximum memory usage for capture buffers (default: 32Mb)");
 
 #define IS_CAPTURE_ACTIVE(fh) \
@@ -37,6 +37,13 @@ static struct saa7146_format formats[] = {
 		.trans 		= RGB32_COMPOSED,
 		.depth		= 32,
 		.flags		= 0,
+	}, {
+		.name 		= "RGB-32 (R-G-B)",
+		.pixelformat	= V4L2_PIX_FMT_RGB32,
+		.trans 		= RGB32_COMPOSED,
+		.depth		= 32,
+		.flags		= 0,
+		.swap		= 0x2,
 	}, {
 		.name 		= "Greyscale-8",
 		.pixelformat	= V4L2_PIX_FMT_GREY,
@@ -634,7 +641,7 @@ static int saa7146_pgtable_build(struct saa7146_dev *dev, struct saa7146_buf *bu
 		/* walk all pages, copy all page addresses to ptr1 */
 		for (i = 0; i < length; i++, list++) {
 			for (p = 0; p * 4096 < list->length; p++, ptr1++) {
-				*ptr1 = sg_dma_address(list) - list->offset;
+				*ptr1 = cpu_to_le32(sg_dma_address(list) - list->offset);
 			}
 		}
 /*
@@ -753,7 +760,7 @@ static int video_begin(struct saa7146_fh *fh)
 	saa7146_write(dev, MC2, MASK_27 );
 
 	/* enable rps0 irqs */
-	IER_ENABLE(dev, MASK_27);
+	SAA7146_IER_ENABLE(dev, MASK_27);
 
 	vv->video_fh = fh;
 	vv->video_status = STATUS_CAPTURE;
@@ -798,7 +805,7 @@ static int video_end(struct saa7146_fh *fh, struct file *file)
 	saa7146_write(dev, MC1, MASK_28);
 
 	/* disable rps0 irqs */
-	IER_DISABLE(dev, MASK_27);
+	SAA7146_IER_DISABLE(dev, MASK_27);
 
 	/* shut down all used video dma transfers */
 	saa7146_write(dev, MC1, dmas);
@@ -1130,7 +1137,7 @@ int saa7146_video_do_ioctl(struct inode *inode, struct file *file, unsigned int 
 	case VIDIOC_REQBUFS: {
 		struct v4l2_requestbuffers *req = arg;
 		DEB_D(("VIDIOC_REQBUFS, type:%d\n",req->type));
-		return videobuf_reqbufs(file,q,req);
+		return videobuf_reqbufs(q,req);
 	}
 	case VIDIOC_QUERYBUF: {
 		struct v4l2_buffer *buf = arg;
@@ -1140,14 +1147,14 @@ int saa7146_video_do_ioctl(struct inode *inode, struct file *file, unsigned int 
 	case VIDIOC_QBUF: {
 		struct v4l2_buffer *buf = arg;
 		int ret = 0;
-		ret = videobuf_qbuf(file,q,buf);
+		ret = videobuf_qbuf(q,buf);
 		DEB_D(("VIDIOC_QBUF: ret:%d, index:%d\n",ret,buf->index));
 		return ret;
 	}
 	case VIDIOC_DQBUF: {
 		struct v4l2_buffer *buf = arg;
 		int ret = 0;
-		ret = videobuf_dqbuf(file,q,buf);
+		ret = videobuf_dqbuf(q,buf,file->f_flags & O_NONBLOCK);
 		DEB_D(("VIDIOC_DQBUF: ret:%d, index:%d\n",ret,buf->index));
 		return ret;
 	}
@@ -1159,7 +1166,7 @@ int saa7146_video_do_ioctl(struct inode *inode, struct file *file, unsigned int 
 		if( 0 != err) {
 				return err;
 			}
-		err = videobuf_streamon(file,q);
+		err = videobuf_streamon(q);
 		return err;
 	}
 	case VIDIOC_STREAMOFF: {
@@ -1180,7 +1187,7 @@ int saa7146_video_do_ioctl(struct inode *inode, struct file *file, unsigned int 
 			return -EBUSY;
 		}
 
-		err = videobuf_streamoff(file,q);
+		err = videobuf_streamoff(q);
 		if (0 != err) {
 			DEB_D(("warning: videobuf_streamoff() failed.\n"));
 		video_end(fh, file);
@@ -1203,7 +1210,7 @@ int saa7146_video_do_ioctl(struct inode *inode, struct file *file, unsigned int 
 
 		q = &fh->video_q;
 		down(&q->lock);
-		err = videobuf_mmap_setup(file,q,gbuffers,gbufsize,
+		err = videobuf_mmap_setup(q,gbuffers,gbufsize,
 					  V4L2_MEMORY_MMAP);
 		if (err < 0) {
 			up(&q->lock);
@@ -1240,8 +1247,10 @@ static int buffer_activate (struct saa7146_dev *dev,
 	return 0;
 }
 
-static int buffer_prepare(struct file *file, struct videobuf_buffer *vb, enum v4l2_field field)
+static int buffer_prepare(struct videobuf_queue *q,
+			  struct videobuf_buffer *vb, enum v4l2_field field)
 {
+	struct file *file = q->priv_data;
 	struct saa7146_fh *fh = file->private_data;
 	struct saa7146_dev *dev = fh->dev;
 	struct saa7146_vv *vv = dev->vv_data;
@@ -1322,8 +1331,9 @@ static int buffer_prepare(struct file *file, struct videobuf_buffer *vb, enum v4
 	return err;
 }
 
-static int buffer_setup(struct file *file, unsigned int *count, unsigned int *size)
+static int buffer_setup(struct videobuf_queue *q, unsigned int *count, unsigned int *size)
 {
+	struct file *file = q->priv_data;
 	struct saa7146_fh *fh = file->private_data;
 
 	if (0 == *count || *count > MAX_SAA7146_CAPTURE_BUFFERS)
@@ -1341,8 +1351,9 @@ static int buffer_setup(struct file *file, unsigned int *count, unsigned int *si
 	return 0;
 }
 
-static void buffer_queue(struct file *file, struct videobuf_buffer *vb)
+static void buffer_queue(struct videobuf_queue *q, struct videobuf_buffer *vb)
 {
+	struct file *file = q->priv_data;
 	struct saa7146_fh *fh = file->private_data;
 	struct saa7146_dev *dev = fh->dev;
 	struct saa7146_vv *vv = dev->vv_data;
@@ -1353,8 +1364,9 @@ static void buffer_queue(struct file *file, struct videobuf_buffer *vb)
 }
 
 
-static void buffer_release(struct file *file, struct videobuf_buffer *vb)
+static void buffer_release(struct videobuf_queue *q, struct videobuf_buffer *vb)
 {
+	struct file *file = q->priv_data;
 	struct saa7146_fh *fh = file->private_data;
 	struct saa7146_dev *dev = fh->dev;
 	struct saa7146_buf *buf = (struct saa7146_buf *)vb;
@@ -1408,7 +1420,8 @@ static int video_open(struct saa7146_dev *dev, struct file *file)
 			    dev->pci, &dev->slock,
 			    V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			    V4L2_FIELD_INTERLACED,
-			    sizeof(struct saa7146_buf));
+			    sizeof(struct saa7146_buf),
+			    file);
 
 	init_MUTEX(&fh->video_q.lock);
 
@@ -1474,7 +1487,8 @@ static ssize_t video_read(struct file *file, char __user *data, size_t count, lo
 		goto out;
 	}
 
-	ret = videobuf_read_one(file,&fh->video_q , data, count, ppos);
+	ret = videobuf_read_one(&fh->video_q, data, count, ppos,
+				file->f_flags & O_NONBLOCK);
 	if (ret != 0) {
 	video_end(fh, file);
 	} else {

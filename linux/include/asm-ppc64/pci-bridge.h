@@ -18,39 +18,31 @@ struct pci_controller;
 extern struct pci_controller*
 pci_find_hose_for_OF_device(struct device_node* node);
 
-enum phb_types { 
-	phb_type_unknown    = 0x0,
-	phb_type_hypervisor = 0x1,
-	phb_type_python     = 0x10,
-	phb_type_speedwagon = 0x11,
-	phb_type_winnipeg   = 0x12,
-	phb_type_apple      = 0xff
-};
-
 /*
  * Structure of a PCI controller (host bridge)
  */
 struct pci_controller {
 	char what[8];                     /* Eye catcher      */
-	enum phb_types type;              /* Type of hardware */
 	struct pci_bus *bus;
+	char is_dynamic;
 	void *arch_data;
 	struct list_head list_node;
 
 	int first_busno;
 	int last_busno;
 
-	void *io_base_virt;
+	void __iomem *io_base_virt;
 	unsigned long io_base_phys;
 
 	/* Some machines have a non 1:1 mapping of
 	 * the PCI memory space in the CPU bus space
 	 */
 	unsigned long pci_mem_offset;
+	unsigned long pci_io_size;
 
 	struct pci_ops *ops;
-	volatile unsigned int *cfg_addr;
-	volatile unsigned char *cfg_data;
+	volatile unsigned int __iomem *cfg_addr;
+	volatile unsigned char __iomem *cfg_data;
 
 	/* Currently, we limit ourselves to 1 IO range and 3 mem
 	 * ranges since the common pci_bus structure can't handle more
@@ -88,12 +80,20 @@ static inline struct device_node *pci_device_to_OF_node(struct pci_dev *dev)
 }
 
 extern void pci_process_bridge_OF_ranges(struct pci_controller *hose,
-					 struct device_node *dev, int primary);
+					 struct device_node *dev);
 
-/* Use this macro after the PCI bus walk for max performance when it
- * is known that sysdata is correct.
- */
-#define PCI_GET_DN(dev) ((struct device_node *)((dev)->sysdata))
+extern int pcibios_remove_root_bus(struct pci_controller *phb);
+
+extern void phbs_remap_io(void);
+
+static inline struct pci_controller *pci_bus_to_host(struct pci_bus *bus)
+{
+	struct device_node *busdn = bus->sysdata;
+
+	BUG_ON(busdn == NULL);
+	return busdn->phb;
+}
+
 
 #endif
 #endif /* __KERNEL__ */

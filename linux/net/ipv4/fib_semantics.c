@@ -18,7 +18,7 @@
 #include <linux/config.h>
 #include <asm/uaccess.h>
 #include <asm/system.h>
-#include <asm/bitops.h>
+#include <linux/bitops.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/jiffies.h>
@@ -163,6 +163,8 @@ void fib_release_info(struct fib_info *fi)
 		if (fi->fib_prefsrc)
 			hlist_del(&fi->fib_lhash);
 		change_nexthops(fi) {
+			if (!nh->nh_dev)
+				continue;
 			hlist_del(&nh->nh_hash);
 		} endfor_nexthops(fi)
 		fi->fib_dead = 1;

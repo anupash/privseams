@@ -1436,6 +1436,7 @@
 #define  NIC_SRAM_DATA_CFG_EEPROM_WP		 0x00000100
 #define  NIC_SRAM_DATA_CFG_MINI_PCI		 0x00001000
 #define  NIC_SRAM_DATA_CFG_FIBER_WOL		 0x00004000
+#define  NIC_SRAM_DATA_CFG_NO_GPIO2		 0x00100000
 
 #define NIC_SRAM_DATA_PHY_ID		0x00000b74
 #define  NIC_SRAM_DATA_PHY_ID1_MASK	 0xffff0000
@@ -2120,7 +2121,6 @@ struct tg3 {
 	u8				pci_lat_timer;
 	u8				pci_hdr_type;
 	u8				pci_bist;
-	u32				pci_cfg_state[64 / sizeof(u32)];
 
 	int				pm_cap;
 

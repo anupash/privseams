@@ -5,7 +5,8 @@
 
 ARCH_DIR = arch/um
 OS := $(shell uname -s)
-#We require it or things break.
+# We require bash because the vmlinux link and loader script cpp use bash
+# features.
 SHELL := /bin/bash
 
 filechk_gen_header = $<
@@ -28,14 +29,14 @@ MAKEFILE-$(CONFIG_MODE_TT) += Makefile-tt
 MAKEFILE-$(CONFIG_MODE_SKAS) += Makefile-skas
 
 ifneq ($(MAKEFILE-y),)
-  include $(addprefix $(ARCH_DIR)/,$(MAKEFILE-y))
+  include $(addprefix $(srctree)/$(ARCH_DIR)/,$(MAKEFILE-y))
 endif
 
 ARCH_INCLUDE	:= -I$(ARCH_DIR)/include
 SYS_DIR		:= $(ARCH_DIR)/include/sysdep-$(SUBARCH)
 
-include $(ARCH_DIR)/Makefile-$(SUBARCH)
-include $(ARCH_DIR)/Makefile-os-$(OS)
+include $(srctree)/$(ARCH_DIR)/Makefile-$(SUBARCH)
+include $(srctree)/$(ARCH_DIR)/Makefile-os-$(OS)
 
 # -Derrno=kernel_errno - This turns all kernel references to errno into
 # kernel_errno to separate them from the libc errno.  This allows -fno-common
@@ -61,6 +62,20 @@ SIZE = (($(CONFIG_NEST_LEVEL) + $(CONFIG_KERNEL_HALF_GIGS)) * 0x20000000)
 ifeq ($(CONFIG_MODE_SKAS), y)
 $(SYS_HEADERS) : $(ARCH_DIR)/include/skas_ptregs.h
 endif
+
+.PHONY: linux
+
+all: linux
+
+linux: vmlinux
+	ln -f $< $@
+
+define archhelp
+  echo '* linux		- Binary kernel image (./linux) - for backward'
+  echo '		   compatibility only, this creates a hard link to the'
+  echo '		   real kernel binary, the the "vmlinux" binary you'
+  echo '		   find in the kernel root.'
+endef
 
 prepare: $(ARCH_SYMLINKS) $(SYS_HEADERS) $(GEN_HEADERS) \
 	$(ARCH_DIR)/kernel/vmlinux.lds.S
@@ -105,7 +120,8 @@ define cmd_vmlinux__
 	-Wl,-T,$(vmlinux-lds) $(vmlinux-init) \
 	-Wl,--start-group $(vmlinux-main) -Wl,--end-group \
 	-L/usr/lib -lutil \
-	$(filter-out $(vmlinux-lds) $(vmlinux-init) $(vmlinux-main) FORCE ,$^)
+	$(filter-out $(vmlinux-lds) $(vmlinux-init) $(vmlinux-main) \
+	FORCE ,$^) ; rm -f linux
 endef
 
 USER_CFLAGS := $(patsubst -I%,,$(CFLAGS))
@@ -113,6 +129,7 @@ USER_CFLAGS := $(patsubst -Derrno=kernel_errno,,$(USER_CFLAGS))
 USER_CFLAGS := $(patsubst -Dsigprocmask=kernel_sigprocmask,,$(USER_CFLAGS))
 USER_CFLAGS := $(patsubst -D__KERNEL__,,$(USER_CFLAGS)) $(ARCH_INCLUDE) \
 	$(MODE_INCLUDE)
+USER_CFLAGS += $(ARCH_USER_CFLAGS)
 
 # To get a definition of F_SETSIG
 USER_CFLAGS += -D_GNU_SOURCE

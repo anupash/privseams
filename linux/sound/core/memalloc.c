@@ -49,8 +49,7 @@ MODULE_LICENSE("GPL");
 /* FIXME: so far only some PCI devices have the preallocation table */
 #ifdef CONFIG_PCI
 static int enable[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS-1)] = 1};
-static int boot_devs;
-module_param_array(enable, bool, boot_devs, 0444);
+module_param_array(enable, bool, NULL, 0444);
 MODULE_PARM_DESC(enable, "Enable cards to allocate buffers.");
 #endif
 
@@ -246,9 +245,9 @@ static void *snd_malloc_dev_pages(struct device *dev, size_t size, dma_addr_t *d
 	snd_assert(size > 0, return NULL);
 	snd_assert(dma != NULL, return NULL);
 	pg = get_order(size);
-	gfp_flags = GFP_KERNEL;
-	if (pg > 0)
-		gfp_flags |= __GFP_NOWARN;
+	gfp_flags = GFP_KERNEL
+		| __GFP_NORETRY /* don't trigger OOM-killer */
+		| __GFP_NOWARN; /* no stack trace print - this call is non-critical */
 	res = dma_alloc_coherent(dev, PAGE_SIZE << pg, dma, gfp_flags);
 	if (res != NULL) {
 #ifdef NEED_RESERVE_PAGES

@@ -42,8 +42,7 @@ $(error Sorry, your compiler is too old.  GCC v2.96 is known to generate bad cod
 endif
 
 ifeq ($(GCC_VERSION),0304)
-# Workaround Itanium 1 bugs in gcc 3.4.
-#	cflags-$(CONFIG_ITANIUM)	+= -mtune=merced
+	cflags-$(CONFIG_ITANIUM)	+= -mtune=merced
 	cflags-$(CONFIG_MCKINLEY)	+= -mtune=mckinley
 endif
 
@@ -83,7 +82,9 @@ unwcheck: vmlinux
 archclean:
 	$(Q)$(MAKE) $(clean)=$(boot)
 
-CLEAN_FILES += include/asm-ia64/.offsets.h.stamp include/asm-ia64/offsets.h vmlinux.gz bootloader
+CLEAN_FILES += include/asm-ia64/.offsets.h.stamp vmlinux.gz bootloader
+
+MRPROPER_FILES += include/asm-ia64/offsets.h
 
 prepare: include/asm-ia64/offsets.h
 

@@ -66,8 +66,8 @@ struct cfb_info {
 	struct display_switch	*dispsw;
 	struct display		*display;
 	struct pci_dev		*dev;
-	unsigned char 		*region;
-	unsigned char		*regs;
+	unsigned char 		__iomem *region;
+	unsigned char		__iomem *regs;
 	u_int			id;
 	int			func_use_count;
 	u_long			ref_ps;
@@ -1003,16 +1003,16 @@ static int cyber2000fb_blank(int blank, struct fb_info *info)
 	int i;
 
 	switch (blank) {
-	case 4:	/* powerdown - both sync lines down */
+	case FB_BLANK_POWERDOWN:	/* powerdown - both sync lines down */
 		sync = EXT_SYNC_CTL_VS_0 | EXT_SYNC_CTL_HS_0;
 		break;	
-	case 3:	/* hsync off */
+	case FB_BLANK_HSYNC_SUSPEND:	/* hsync off */
 		sync = EXT_SYNC_CTL_VS_NORMAL | EXT_SYNC_CTL_HS_0;
 		break;	
-	case 2:	/* vsync off */
+	case FB_BLANK_VSYNC_SUSPEND:	/* vsync off */
 		sync = EXT_SYNC_CTL_VS_0 | EXT_SYNC_CTL_HS_NORMAL;
 		break;
-	case 1:	/* soft blank */
+	case FB_BLANK_NORMAL:	        /* soft blank */
 	default: /* unblank */
 		break;
 	}
@@ -1399,6 +1399,8 @@ static int __devinit cyberpro_common_probe(struct cfb_info *cfb)
 		cfb->fb.var.xres, cfb->fb.var.yres,
 		h_sync / 1000, h_sync % 1000, v_sync);
 
+	if (cfb->dev)
+		cfb->fb.device = &cfb->dev->dev;
 	err = register_framebuffer(&cfb->fb);
 
 failed:
@@ -1722,7 +1724,7 @@ int __init cyber2000fb_init(void)
 #ifndef MODULE
 	char *option = NULL;
 
-	if (fb_get_options("cyber2000fb", NULL))
+	if (fb_get_options("cyber2000fb", &option))
 		return -ENODEV;
 	cyber2000fb_setup(option);
 #endif

@@ -39,6 +39,7 @@
 #include <linux/workqueue.h>
 #include <scsi/scsi.h>
 #include "scsi.h"
+#include "scsi_priv.h"
 #include <scsi/scsi_host.h>
 #include <linux/libata.h>
 #include <asm/io.h>
@@ -58,6 +59,7 @@ static int ata_choose_xfer_mode(struct ata_port *ap,
 				u8 *xfer_mode_out,
 				unsigned int *xfer_shift_out);
 static int ata_qc_complete_noop(struct ata_queued_cmd *qc, u8 drv_stat);
+static void __ata_qc_complete(struct ata_queued_cmd *qc);
 
 static unsigned int ata_unique_id = 1;
 static struct workqueue_struct *ata_wq;
@@ -65,6 +67,7 @@ static struct workqueue_struct *ata_wq;
 MODULE_AUTHOR("Jeff Garzik");
 MODULE_DESCRIPTION("Library module for ATA devices");
 MODULE_LICENSE("GPL");
+MODULE_VERSION(DRV_VERSION);
 
 /**
  *	ata_tf_load - send taskfile registers to host controller
@@ -579,7 +582,7 @@ static const char * xfer_mode_str[] = {
 
 /**
  *	ata_udma_string - convert UDMA bit offset to string
- *	@udma_mask: mask of bits supported; only highest bit counts.
+ *	@mask: mask of bits supported; only highest bit counts.
  *
  *	Determine string which represents the highest speed
  *	(highest bit in @udma_mask).
@@ -816,7 +819,7 @@ static u8 ata_dev_try_classify(struct ata_port *ap, unsigned int device)
 
 /**
  *	ata_dev_id_string - Convert IDENTIFY DEVICE page into string
- *	@dev: Device whose IDENTIFY DEVICE results we will examine
+ *	@id: IDENTIFY DEVICE results we will examine
  *	@s: string into which data is output
  *	@ofs: offset into identify device page
  *	@len: length of string to return. must be an even number.
@@ -829,17 +832,17 @@ static u8 ata_dev_try_classify(struct ata_port *ap, unsigned int device)
  *	caller.
  */
 
-void ata_dev_id_string(struct ata_device *dev, unsigned char *s,
+void ata_dev_id_string(u16 *id, unsigned char *s,
 		       unsigned int ofs, unsigned int len)
 {
 	unsigned int c;
 
 	while (len > 0) {
-		c = dev->id[ofs] >> 8;
+		c = id[ofs] >> 8;
 		*s = c;
 		s++;
 
-		c = dev->id[ofs] & 0xff;
+		c = id[ofs] & 0xff;
 		*s = c;
 		s++;
 
@@ -1015,7 +1018,7 @@ static void ata_dev_identify(struct ata_port *ap, unsigned int device)
 	BUG_ON(qc == NULL);
 
 	ata_sg_init_one(qc, dev->id, sizeof(dev->id));
-	qc->pci_dma_dir = PCI_DMA_FROMDEVICE;
+	qc->dma_dir = DMA_FROM_DEVICE;
 	qc->tf.protocol = ATA_PROT_PIO;
 	qc->nsect = 1;
 
@@ -1082,7 +1085,7 @@ retry:
 	 */
 
 	/* we require LBA and DMA support (bits 8 & 9 of word 49) */
-	if (!ata_id_has_dma(dev) || !ata_id_has_lba(dev)) {
+	if (!ata_id_has_dma(dev->id) || !ata_id_has_lba(dev->id)) {
 		printk(KERN_DEBUG "ata%u: no dma/lba\n", ap->id);
 		goto err_out_nosup;
 	}
@@ -1100,7 +1103,7 @@ retry:
 
 	/* ATA-specific feature tests */
 	if (dev->class == ATA_DEV_ATA) {
-		if (!ata_id_is_ata(dev))	/* sanity check */
+		if (!ata_id_is_ata(dev->id))	/* sanity check */
 			goto err_out_nosup;
 
 		tmp = dev->id[ATA_ID_MAJOR_VER];
@@ -1114,11 +1117,11 @@ retry:
 			goto err_out_nosup;
 		}
 
-		if (ata_id_has_lba48(dev)) {
+		if (ata_id_has_lba48(dev->id)) {
 			dev->flags |= ATA_DFLAG_LBA48;
-			dev->n_sectors = ata_id_u64(dev, 100);
+			dev->n_sectors = ata_id_u64(dev->id, 100);
 		} else {
-			dev->n_sectors = ata_id_u32(dev, 60);
+			dev->n_sectors = ata_id_u32(dev->id, 60);
 		}
 
 		ap->host->max_cmd_len = 16;
@@ -1133,7 +1136,7 @@ retry:
 
 	/* ATAPI-specific feature tests */
 	else {
-		if (ata_id_is_ata(dev))		/* sanity check */
+		if (ata_id_is_ata(dev->id))		/* sanity check */
 			goto err_out_nosup;
 
 		rc = atapi_cdb_len(dev->id);
@@ -1763,8 +1766,10 @@ static int fgb(u32 bitmap)
 }
 
 /**
- *	ata_choose_xfer_mode -
- *	@ap:
+ *	ata_choose_xfer_mode - attempt to find best transfer mode
+ *	@ap: Port for which an xfer mode will be selected
+ *	@xfer_mode_out: (output) SET FEATURES - XFER MODE code
+ *	@xfer_shift_out: (output) bit shift that selects this mode
  *
  *	LOCKING:
  *
@@ -1847,7 +1852,7 @@ static void ata_sg_clean(struct ata_queued_cmd *qc)
 {
 	struct ata_port *ap = qc->ap;
 	struct scatterlist *sg = qc->sg;
-	int dir = qc->pci_dma_dir;
+	int dir = qc->dma_dir;
 
 	assert(qc->flags & ATA_QCFLAG_DMAMAP);
 	assert(sg != NULL);
@@ -1858,9 +1863,9 @@ static void ata_sg_clean(struct ata_queued_cmd *qc)
 	DPRINTK("unmapping %u sg elements\n", qc->n_elem);
 
 	if (qc->flags & ATA_QCFLAG_SG)
-		pci_unmap_sg(ap->host_set->pdev, sg, qc->n_elem, dir);
+		dma_unmap_sg(ap->host_set->dev, sg, qc->n_elem, dir);
 	else
-		pci_unmap_single(ap->host_set->pdev, sg_dma_address(&sg[0]),
+		dma_unmap_single(ap->host_set->dev, sg_dma_address(&sg[0]),
 				 sg_dma_len(&sg[0]), dir);
 
 	qc->flags &= ~ATA_QCFLAG_DMAMAP;
@@ -1945,8 +1950,6 @@ void ata_sg_init_one(struct ata_queued_cmd *qc, void *buf, unsigned int buflen)
 	sg->page = virt_to_page(buf);
 	sg->offset = (unsigned long) buf & ~PAGE_MASK;
 	sg_dma_len(sg) = buflen;
-
-	WARN_ON(buflen > PAGE_SIZE);
 }
 
 void ata_sg_init(struct ata_queued_cmd *qc, struct scatterlist *sg,
@@ -1971,13 +1974,13 @@ void ata_sg_init(struct ata_queued_cmd *qc, struct scatterlist *sg,
 static int ata_sg_setup_one(struct ata_queued_cmd *qc)
 {
 	struct ata_port *ap = qc->ap;
-	int dir = qc->pci_dma_dir;
+	int dir = qc->dma_dir;
 	struct scatterlist *sg = qc->sg;
 	dma_addr_t dma_address;
 
-	dma_address = pci_map_single(ap->host_set->pdev, qc->buf_virt,
+	dma_address = dma_map_single(ap->host_set->dev, qc->buf_virt,
 				     sg_dma_len(sg), dir);
-	if (pci_dma_mapping_error(dma_address))
+	if (dma_mapping_error(dma_address))
 		return -1;
 
 	sg_dma_address(sg) = dma_address;
@@ -2008,8 +2011,8 @@ static int ata_sg_setup(struct ata_queued_cmd *qc)
 	VPRINTK("ENTER, ata%u\n", ap->id);
 	assert(qc->flags & ATA_QCFLAG_SG);
 
-	dir = qc->pci_dma_dir;
-	n_elem = pci_map_sg(ap->host_set->pdev, sg, qc->n_elem, dir);
+	dir = qc->dma_dir;
+	n_elem = dma_map_sg(ap->host_set->dev, sg, qc->n_elem, dir);
 	if (n_elem < 1)
 		return -1;
 
@@ -2167,14 +2170,20 @@ static void ata_pio_sector(struct ata_queued_cmd *qc)
 	struct scatterlist *sg = qc->sg;
 	struct ata_port *ap = qc->ap;
 	struct page *page;
+	unsigned int offset;
 	unsigned char *buf;
 
 	if (qc->cursect == (qc->nsect - 1))
 		ap->pio_task_state = PIO_ST_LAST;
 
 	page = sg[qc->cursg].page;
-	buf = kmap(page) +
-	      sg[qc->cursg].offset + (qc->cursg_ofs * ATA_SECT_SIZE);
+	offset = sg[qc->cursg].offset + qc->cursg_ofs * ATA_SECT_SIZE;
+
+	/* get the current page and offset */
+	page = nth_page(page, (offset >> PAGE_SHIFT));
+	offset %= PAGE_SIZE;
+
+	buf = kmap(page) + offset;
 
 	qc->cursect++;
 	qc->cursg_ofs++;
@@ -2193,11 +2202,64 @@ static void ata_pio_sector(struct ata_queued_cmd *qc)
 	kunmap(page);
 }
 
-static void atapi_pio_sector(struct ata_queued_cmd *qc)
+static void __atapi_pio_bytes(struct ata_queued_cmd *qc, unsigned int bytes)
+{
+	int do_write = (qc->tf.flags & ATA_TFLAG_WRITE);
+	struct scatterlist *sg = qc->sg;
+	struct ata_port *ap = qc->ap;
+	struct page *page;
+	unsigned char *buf;
+	unsigned int offset, count;
+
+	if (qc->curbytes == qc->nbytes - bytes)
+		ap->pio_task_state = PIO_ST_LAST;
+
+next_sg:
+	sg = &qc->sg[qc->cursg];
+
+next_page:
+	page = sg->page;
+	offset = sg->offset + qc->cursg_ofs;
+
+	/* get the current page and offset */
+	page = nth_page(page, (offset >> PAGE_SHIFT));
+	offset %= PAGE_SIZE;
+
+	count = min(sg_dma_len(sg) - qc->cursg_ofs, bytes);
+
+	/* don't cross page boundaries */
+	count = min(count, (unsigned int)PAGE_SIZE - offset);
+
+	buf = kmap(page) + offset;
+
+	bytes -= count;
+	qc->curbytes += count;
+	qc->cursg_ofs += count;
+
+	if (qc->cursg_ofs == sg_dma_len(sg)) {
+		qc->cursg++;
+		qc->cursg_ofs = 0;
+	}
+
+	DPRINTK("data %s\n", qc->tf.flags & ATA_TFLAG_WRITE ? "write" : "read");
+
+	/* do the actual data transfer */
+	ata_data_xfer(ap, buf, count, do_write);
+
+	kunmap(page);
+
+	if (bytes) {
+		if (qc->cursg_ofs < sg_dma_len(sg))
+			goto next_page;
+		goto next_sg;
+	}
+}
+
+static void atapi_pio_bytes(struct ata_queued_cmd *qc)
 {
 	struct ata_port *ap = qc->ap;
 	struct ata_device *dev = qc->dev;
-	unsigned int i, ireason, bc_lo, bc_hi, bytes;
+	unsigned int ireason, bc_lo, bc_hi, bytes;
 	int i_write, do_write = (qc->tf.flags & ATA_TFLAG_WRITE) ? 1 : 0;
 
 	ap->ops->tf_read(ap, &qc->tf);
@@ -2215,16 +2277,7 @@ static void atapi_pio_sector(struct ata_queued_cmd *qc)
 	if (do_write != i_write)
 		goto err_out;
 
-	/* make sure byte count is multiple of sector size; not
-	* required by standard (warning! warning!), but IDE driver
-	* does this to simplify things a bit.  We are lazy, and
-	* follow suit.
-	*/
-	if (bytes & (ATA_SECT_SIZE - 1))
-		goto err_out;
-
-	for (i = 0; i < (bytes >> 9); i++)
-		ata_pio_sector(qc);
+	__atapi_pio_bytes(qc, bytes);
 
 	return;
 
@@ -2265,19 +2318,30 @@ static void ata_pio_block(struct ata_port *ap)
 		}
 	}
 
-	/* handle BSY=0, DRQ=0 as error */
-	if ((status & ATA_DRQ) == 0) {
-		ap->pio_task_state = PIO_ST_ERR;
-		return;
-	}
-
 	qc = ata_qc_from_tag(ap, ap->active_tag);
 	assert(qc != NULL);
 
-	if (is_atapi_taskfile(&qc->tf))
-		atapi_pio_sector(qc);
-	else
+	if (is_atapi_taskfile(&qc->tf)) {
+		/* no more data to transfer or unsupported ATAPI command */
+		if ((status & ATA_DRQ) == 0) {
+			ap->pio_task_state = PIO_ST_IDLE;
+
+			ata_irq_on(ap);
+
+			ata_qc_complete(qc, status);
+			return;
+		}
+
+		atapi_pio_bytes(qc);
+	} else {
+		/* handle BSY=0, DRQ=0 as error */
+		if ((status & ATA_DRQ) == 0) {
+			ap->pio_task_state = PIO_ST_ERR;
+			return;
+		}
+
 		ata_pio_sector(qc);
+	}
 }
 
 static void ata_pio_error(struct ata_port *ap)
@@ -2335,6 +2399,59 @@ static void ata_pio_task(void *_data)
 	}
 }
 
+static void atapi_request_sense(struct ata_port *ap, struct ata_device *dev,
+				struct scsi_cmnd *cmd)
+{
+	DECLARE_COMPLETION(wait);
+	struct ata_queued_cmd *qc;
+	unsigned long flags;
+	int using_pio = dev->flags & ATA_DFLAG_PIO;
+	int rc;
+
+	DPRINTK("ATAPI request sense\n");
+
+	qc = ata_qc_new_init(ap, dev);
+	BUG_ON(qc == NULL);
+
+	/* FIXME: is this needed? */
+	memset(cmd->sense_buffer, 0, sizeof(cmd->sense_buffer));
+
+	ata_sg_init_one(qc, cmd->sense_buffer, sizeof(cmd->sense_buffer));
+	qc->dma_dir = DMA_FROM_DEVICE;
+
+	memset(&qc->cdb, 0, sizeof(ap->cdb_len));
+	qc->cdb[0] = REQUEST_SENSE;
+	qc->cdb[4] = SCSI_SENSE_BUFFERSIZE;
+
+	qc->tf.flags |= ATA_TFLAG_ISADDR | ATA_TFLAG_DEVICE;
+	qc->tf.command = ATA_CMD_PACKET;
+
+	if (using_pio) {
+		qc->tf.protocol = ATA_PROT_ATAPI;
+		qc->tf.lbam = (8 * 1024) & 0xff;
+		qc->tf.lbah = (8 * 1024) >> 8;
+
+		qc->nbytes = SCSI_SENSE_BUFFERSIZE;
+	} else {
+		qc->tf.protocol = ATA_PROT_ATAPI_DMA;
+		qc->tf.feature |= ATAPI_PKT_DMA;
+	}
+
+	qc->waiting = &wait;
+	qc->complete_fn = ata_qc_complete_noop;
+
+	spin_lock_irqsave(&ap->host_set->lock, flags);
+	rc = ata_qc_issue(qc);
+	spin_unlock_irqrestore(&ap->host_set->lock, flags);
+
+	if (rc)
+		ata_port_disable(ap);
+	else
+		wait_for_completion(&wait);
+
+	DPRINTK("EXIT\n");
+}
+
 /**
  *	ata_qc_timeout - Handle timeout of queued command
  *	@qc: Command that timed out
@@ -2356,9 +2473,28 @@ static void ata_pio_task(void *_data)
 static void ata_qc_timeout(struct ata_queued_cmd *qc)
 {
 	struct ata_port *ap = qc->ap;
+	struct ata_device *dev = qc->dev;
 	u8 host_stat = 0, drv_stat;
 
 	DPRINTK("ENTER\n");
+
+	/* FIXME: doesn't this conflict with timeout handling? */
+	if (qc->dev->class == ATA_DEV_ATAPI && qc->scsicmd) {
+		struct scsi_cmnd *cmd = qc->scsicmd;
+
+		if (!scsi_eh_eflags_chk(cmd, SCSI_EH_CANCEL_CMD)) {
+
+			/* finish completing original command */
+			__ata_qc_complete(qc);
+
+			atapi_request_sense(ap, dev, cmd);
+
+			cmd->result = (CHECK_CONDITION << 1) | (DID_OK << 16);
+			scsi_finish_command(cmd);
+
+			goto out;
+		}
+	}
 
 	/* hack alert!  We cannot use the supplied completion
 	 * function from inside the ->eh_strategy_handler() thread.
@@ -2393,7 +2529,7 @@ static void ata_qc_timeout(struct ata_queued_cmd *qc)
 		ata_qc_complete(qc, drv_stat);
 		break;
 	}
-
+out:
 	DPRINTK("EXIT\n");
 }
 
@@ -2482,6 +2618,7 @@ struct ata_queued_cmd *ata_qc_new_init(struct ata_port *ap,
 		qc->dev = dev;
 		qc->cursect = qc->cursg = qc->cursg_ofs = 0;
 		qc->nsect = 0;
+		qc->nbytes = qc->curbytes = 0;
 
 		ata_tf_init(ap, &qc->tf, dev->devno);
 
@@ -2497,35 +2634,10 @@ static int ata_qc_complete_noop(struct ata_queued_cmd *qc, u8 drv_stat)
 	return 0;
 }
 
-/**
- *	ata_qc_complete - Complete an active ATA command
- *	@qc: Command to complete
- *	@drv_stat: ATA status register contents
- *
- *	LOCKING:
- *
- */
-
-void ata_qc_complete(struct ata_queued_cmd *qc, u8 drv_stat)
+static void __ata_qc_complete(struct ata_queued_cmd *qc)
 {
 	struct ata_port *ap = qc->ap;
 	unsigned int tag, do_clear = 0;
-	int rc;
-
-	assert(qc != NULL);	/* ata_qc_from_tag _might_ return NULL */
-	assert(qc->flags & ATA_QCFLAG_ACTIVE);
-
-	if (likely(qc->flags & ATA_QCFLAG_DMAMAP))
-		ata_sg_clean(qc);
-
-	/* call completion callback */
-	rc = qc->complete_fn(qc, drv_stat);
-
-	/* if callback indicates not to complete command (non-zero),
-	 * return immediately
-	 */
-	if (rc != 0)
-		return;
 
 	qc->flags = 0;
 	tag = qc->tag;
@@ -2544,8 +2656,63 @@ void ata_qc_complete(struct ata_queued_cmd *qc, u8 drv_stat)
 
 	if (likely(do_clear))
 		clear_bit(tag, &ap->qactive);
+}
+
+/**
+ *	ata_qc_complete - Complete an active ATA command
+ *	@qc: Command to complete
+ *	@drv_stat: ATA status register contents
+ *
+ *	LOCKING:
+ *
+ */
+
+void ata_qc_complete(struct ata_queued_cmd *qc, u8 drv_stat)
+{
+	int rc;
+
+	assert(qc != NULL);	/* ata_qc_from_tag _might_ return NULL */
+	assert(qc->flags & ATA_QCFLAG_ACTIVE);
+
+	if (likely(qc->flags & ATA_QCFLAG_DMAMAP))
+		ata_sg_clean(qc);
+
+	/* call completion callback */
+	rc = qc->complete_fn(qc, drv_stat);
+
+	/* if callback indicates not to complete command (non-zero),
+	 * return immediately
+	 */
+	if (rc != 0)
+		return;
+
+	__ata_qc_complete(qc);
 
 	VPRINTK("EXIT\n");
+}
+
+static inline int ata_should_dma_map(struct ata_queued_cmd *qc)
+{
+	struct ata_port *ap = qc->ap;
+
+	switch (qc->tf.protocol) {
+	case ATA_PROT_DMA:
+	case ATA_PROT_ATAPI_DMA:
+		return 1;
+
+	case ATA_PROT_ATAPI:
+	case ATA_PROT_PIO:
+	case ATA_PROT_PIO_MULT:
+		if (ap->flags & ATA_FLAG_PIO_DMA)
+			return 1;
+
+		/* fall through */
+	
+	default:
+		return 0;
+	}
+
+	/* never reached */
 }
 
 /**
@@ -2568,12 +2735,16 @@ int ata_qc_issue(struct ata_queued_cmd *qc)
 {
 	struct ata_port *ap = qc->ap;
 
-	if (qc->flags & ATA_QCFLAG_SG) {
-		if (ata_sg_setup(qc))
-			goto err_out;
-	} else if (qc->flags & ATA_QCFLAG_SINGLE) {
-		if (ata_sg_setup_one(qc))
-			goto err_out;
+	if (ata_should_dma_map(qc)) {
+		if (qc->flags & ATA_QCFLAG_SG) {
+			if (ata_sg_setup(qc))
+				goto err_out;
+		} else if (qc->flags & ATA_QCFLAG_SINGLE) {
+			if (ata_sg_setup_one(qc))
+				goto err_out;
+		}
+	} else {
+		qc->flags &= ~ATA_QCFLAG_DMAMAP;
 	}
 
 	ap->ops->qc_prep(qc);
@@ -2962,9 +3133,9 @@ err_out:
 
 int ata_port_start (struct ata_port *ap)
 {
-	struct pci_dev *pdev = ap->host_set->pdev;
+	struct device *dev = ap->host_set->dev;
 
-	ap->prd = pci_alloc_consistent(pdev, ATA_PRD_TBL_SZ, &ap->prd_dma);
+	ap->prd = dma_alloc_coherent(dev, ATA_PRD_TBL_SZ, &ap->prd_dma, GFP_KERNEL);
 	if (!ap->prd)
 		return -ENOMEM;
 
@@ -2975,9 +3146,9 @@ int ata_port_start (struct ata_port *ap)
 
 void ata_port_stop (struct ata_port *ap)
 {
-	struct pci_dev *pdev = ap->host_set->pdev;
+	struct device *dev = ap->host_set->dev;
 
-	pci_free_consistent(pdev, ATA_PRD_TBL_SZ, ap->prd, ap->prd_dma);
+	dma_free_coherent(dev, ATA_PRD_TBL_SZ, ap->prd, ap->prd_dma);
 }
 
 /**
@@ -3023,7 +3194,7 @@ static void ata_host_init(struct ata_port *ap, struct Scsi_Host *host,
 	host->max_channel = 1;
 	host->unique_id = ata_unique_id++;
 	host->max_cmd_len = 12;
-	scsi_set_device(host, &ent->pdev->dev);
+	scsi_set_device(host, ent->dev);
 	scsi_assign_lock(host, &host_set->lock);
 
 	ap->flags = ATA_FLAG_PORT_DISABLED;
@@ -3032,6 +3203,8 @@ static void ata_host_init(struct ata_port *ap, struct Scsi_Host *host,
 	ap->ctl = ATA_DEVCTL_OBS;
 	ap->host_set = host_set;
 	ap->port_no = port_no;
+	ap->hard_port_no =
+		ent->legacy_mode ? ent->hard_port_no : port_no;
 	ap->pio_mask = ent->pio_mask;
 	ap->mwdma_mask = ent->mwdma_mask;
 	ap->udma_mask = ent->udma_mask;
@@ -3108,7 +3281,7 @@ err_out:
 int ata_device_add(struct ata_probe_ent *ent)
 {
 	unsigned int count = 0, i;
-	struct pci_dev *pdev = ent->pdev;
+	struct device *dev = ent->dev;
 	struct ata_host_set *host_set;
 
 	DPRINTK("ENTER\n");
@@ -3120,7 +3293,7 @@ int ata_device_add(struct ata_probe_ent *ent)
 	memset(host_set, 0, sizeof(struct ata_host_set) + (ent->n_ports * sizeof(void *)));
 	spin_lock_init(&host_set->lock);
 
-	host_set->pdev = pdev;
+	host_set->dev = dev;
 	host_set->n_ports = ent->n_ports;
 	host_set->irq = ent->irq;
 	host_set->mmio_base = ent->mmio_base;
@@ -3188,7 +3361,7 @@ int ata_device_add(struct ata_probe_ent *ent)
 			 */
 		}
 
-		rc = scsi_add_host(ap->host, &pdev->dev);
+		rc = scsi_add_host(ap->host, dev);
 		if (rc) {
 			printk(KERN_ERR "ata%u: scsi_add_host failed\n",
 			       ap->id);
@@ -3208,7 +3381,7 @@ int ata_device_add(struct ata_probe_ent *ent)
 		scsi_scan_host(ap->host);
 	}
 
-	pci_set_drvdata(pdev, host_set);
+	dev_set_drvdata(dev, host_set);
 
 	VPRINTK("EXIT, returning %u\n", ent->n_ports);
 	return ent->n_ports; /* success */
@@ -3269,7 +3442,7 @@ void ata_std_ports(struct ata_ioports *ioaddr)
 }
 
 static struct ata_probe_ent *
-ata_probe_ent_alloc(int n, struct pci_dev *pdev, struct ata_port_info **port)
+ata_probe_ent_alloc(int n, struct device *dev, struct ata_port_info **port)
 {
 	struct ata_probe_ent *probe_ent;
 	int i;
@@ -3277,7 +3450,7 @@ ata_probe_ent_alloc(int n, struct pci_dev *pdev, struct ata_port_info **port)
 	probe_ent = kmalloc(sizeof(*probe_ent) * n, GFP_KERNEL);
 	if (!probe_ent) {
 		printk(KERN_ERR DRV_NAME "(%s): out of memory\n",
-		       pci_name(pdev));
+		       kobject_name(&(dev->kobj)));
 		return NULL;
 	}
 
@@ -3285,7 +3458,7 @@ ata_probe_ent_alloc(int n, struct pci_dev *pdev, struct ata_port_info **port)
 
 	for (i = 0; i < n; i++) {
 		INIT_LIST_HEAD(&probe_ent[i].node);
-		probe_ent[i].pdev = pdev;
+		probe_ent[i].dev = dev;
 
 		probe_ent[i].sht = port[i]->sht;
 		probe_ent[i].host_flags = port[i]->host_flags;
@@ -3299,10 +3472,12 @@ ata_probe_ent_alloc(int n, struct pci_dev *pdev, struct ata_port_info **port)
 	return probe_ent;
 }
 
+#ifdef CONFIG_PCI
 struct ata_probe_ent *
 ata_pci_init_native_mode(struct pci_dev *pdev, struct ata_port_info **port)
 {
-	struct ata_probe_ent *probe_ent = ata_probe_ent_alloc(1, pdev, port);
+	struct ata_probe_ent *probe_ent =
+		ata_probe_ent_alloc(1, pci_dev_to_dev(pdev), port);
 	if (!probe_ent)
 		return NULL;
 
@@ -3331,15 +3506,22 @@ ata_pci_init_native_mode(struct pci_dev *pdev, struct ata_port_info **port)
 struct ata_probe_ent *
 ata_pci_init_legacy_mode(struct pci_dev *pdev, struct ata_port_info **port)
 {
-	struct ata_probe_ent *probe_ent = ata_probe_ent_alloc(2, pdev, port);
+	struct ata_probe_ent *probe_ent =
+		ata_probe_ent_alloc(2, pci_dev_to_dev(pdev), port);
 	if (!probe_ent)
 		return NULL;
 
 	probe_ent[0].n_ports = 1;
 	probe_ent[0].irq = 14;
 
+	probe_ent[0].hard_port_no = 0;
+	probe_ent[0].legacy_mode = 1;
+
 	probe_ent[1].n_ports = 1;
 	probe_ent[1].irq = 15;
+
+	probe_ent[1].hard_port_no = 1;
+	probe_ent[1].legacy_mode = 1;
 
 	probe_ent[0].port[0].cmd_addr = 0x1f0;
 	probe_ent[0].port[0].altstatus_addr =
@@ -3501,7 +3683,8 @@ err_out:
 
 void ata_pci_remove_one (struct pci_dev *pdev)
 {
-	struct ata_host_set *host_set = pci_get_drvdata(pdev);
+	struct device *dev = pci_dev_to_dev(pdev);
+	struct ata_host_set *host_set = dev_get_drvdata(dev);
 	struct ata_port *ap;
 	unsigned int i;
 
@@ -3542,7 +3725,7 @@ void ata_pci_remove_one (struct pci_dev *pdev)
 
 	kfree(host_set);
 	pci_disable_device(pdev);
-	pci_set_drvdata(pdev, NULL);
+	dev_set_drvdata(dev, NULL);
 }
 
 /* move to PCI subsystem */
@@ -3578,6 +3761,7 @@ int pci_test_config_bits(struct pci_dev *pdev, struct pci_bits *bits)
 
 	return (tmp == bits->val) ? 1 : 0;
 }
+#endif /* CONFIG_PCI */
 
 
 /**
@@ -3614,7 +3798,6 @@ module_exit(ata_exit);
  * Do not depend on ABI/API stability.
  */
 
-EXPORT_SYMBOL_GPL(pci_test_config_bits);
 EXPORT_SYMBOL_GPL(ata_std_bios_param);
 EXPORT_SYMBOL_GPL(ata_std_ports);
 EXPORT_SYMBOL_GPL(ata_device_add);
@@ -3629,8 +3812,6 @@ EXPORT_SYMBOL_GPL(ata_noop_dev_select);
 EXPORT_SYMBOL_GPL(ata_std_dev_select);
 EXPORT_SYMBOL_GPL(ata_tf_to_fis);
 EXPORT_SYMBOL_GPL(ata_tf_from_fis);
-EXPORT_SYMBOL_GPL(ata_pci_init_legacy_mode);
-EXPORT_SYMBOL_GPL(ata_pci_init_native_mode);
 EXPORT_SYMBOL_GPL(ata_check_status);
 EXPORT_SYMBOL_GPL(ata_exec_command);
 EXPORT_SYMBOL_GPL(ata_port_start);
@@ -3645,8 +3826,6 @@ EXPORT_SYMBOL_GPL(sata_phy_reset);
 EXPORT_SYMBOL_GPL(__sata_phy_reset);
 EXPORT_SYMBOL_GPL(ata_bus_reset);
 EXPORT_SYMBOL_GPL(ata_port_disable);
-EXPORT_SYMBOL_GPL(ata_pci_init_one);
-EXPORT_SYMBOL_GPL(ata_pci_remove_one);
 EXPORT_SYMBOL_GPL(ata_scsi_ioctl);
 EXPORT_SYMBOL_GPL(ata_scsi_queuecmd);
 EXPORT_SYMBOL_GPL(ata_scsi_error);
@@ -3655,3 +3834,12 @@ EXPORT_SYMBOL_GPL(ata_scsi_release);
 EXPORT_SYMBOL_GPL(ata_host_intr);
 EXPORT_SYMBOL_GPL(ata_dev_classify);
 EXPORT_SYMBOL_GPL(ata_dev_id_string);
+EXPORT_SYMBOL_GPL(ata_scsi_simulate);
+
+#ifdef CONFIG_PCI
+EXPORT_SYMBOL_GPL(pci_test_config_bits);
+EXPORT_SYMBOL_GPL(ata_pci_init_legacy_mode);
+EXPORT_SYMBOL_GPL(ata_pci_init_native_mode);
+EXPORT_SYMBOL_GPL(ata_pci_init_one);
+EXPORT_SYMBOL_GPL(ata_pci_remove_one);
+#endif /* CONFIG_PCI */

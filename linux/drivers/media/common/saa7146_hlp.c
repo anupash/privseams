@@ -9,11 +9,6 @@ static void calculate_output_format_register(struct saa7146_dev* saa, u32 palett
 	*clip_format |=  (( ((palette&0xf00)>>8) << 30) | ((palette&0x00f) << 24) | (((palette&0x0f0)>>4) << 16));
 }
 
-static void calculate_bcs_ctrl_register(struct saa7146_dev *dev, int brightness, int contrast, int colour, u32 *bcs_ctrl)
-{
-	*bcs_ctrl = ((brightness << 24) | (contrast << 16) | (colour <<  0));
-}
-
 static void calculate_hps_source_and_sync(struct saa7146_dev *dev, int source, int sync, u32* hps_ctrl)
 {
 	*hps_ctrl &= ~(MASK_30 | MASK_31 | MASK_28);
@@ -62,7 +57,7 @@ static struct {
 };
 
 /* table of attenuation values for horizontal scaling */
-u8 h_attenuation[] = { 1, 2, 4, 8, 2, 4, 8, 16, 0};
+static u8 h_attenuation[] = { 1, 2, 4, 8, 2, 4, 8, 16, 0};
 
 /* calculate horizontal scale registers */
 static int calculate_h_scale_registers(struct saa7146_dev *dev,
@@ -208,7 +203,7 @@ static struct {
 };
 
 /* table of attenuation values for vertical scaling */
-u16 v_attenuation[] = { 2, 4, 8, 16, 32, 64, 128, 256, 0};
+static u16 v_attenuation[] = { 2, 4, 8, 16, 32, 64, 128, 256, 0};
 
 /* calculate vertical scale registers */
 static int calculate_v_scale_registers(struct saa7146_dev *dev, enum v4l2_field field,
@@ -413,10 +408,10 @@ static void calculate_clipping_registers_rect(struct saa7146_dev *dev, struct sa
 
 	/* fill up cliptable */
 	for(i = 0; i < cnt_pixel; i++) {
-		clipping[2*i] |= (pixel_list[i] << 16);
+		clipping[2*i] |= cpu_to_le32(pixel_list[i] << 16);
 	}
 	for(i = 0; i < cnt_line; i++) {
-		clipping[(2*i)+1] |= (line_list[i] << 16);
+		clipping[(2*i)+1] |= cpu_to_le32(line_list[i] << 16);
 	}
 
 	/* fill up cliptable with the display infos */
@@ -430,7 +425,7 @@ static void calculate_clipping_registers_rect(struct saa7146_dev *dev, struct sa
 			if( pixel_list[i] < (x[j] + w[j])) {
 			
 				if ( pixel_list[i] >= x[j] ) {
-					clipping[2*i] |= (1 << j);			
+					clipping[2*i] |= cpu_to_le32(1 << j);
 				}
 			}
 		}
@@ -442,7 +437,7 @@ static void calculate_clipping_registers_rect(struct saa7146_dev *dev, struct sa
 			if( line_list[i] < (y[j] + h[j]) ) {
 
 				if( line_list[i] >= y[j] ) {
-					clipping[(2*i)+1] |= (1 << j);			
+					clipping[(2*i)+1] |= cpu_to_le32(1 << j);
 				}
 			}
 		}
@@ -560,9 +555,10 @@ static void saa7146_set_window(struct saa7146_dev *dev, int width, int height, e
 }
 
 /* calculate the new memory offsets for a desired position */
-static void saa7146_set_position(struct saa7146_dev *dev, int w_x, int w_y, int w_height, enum v4l2_field field)
+static void saa7146_set_position(struct saa7146_dev *dev, int w_x, int w_y, int w_height, enum v4l2_field field, u32 pixelformat)
 {	
 	struct saa7146_vv *vv = dev->vv_data;
+	struct saa7146_format *sfmt = format_by_fourcc(dev, pixelformat);
 
 	int b_depth = vv->ov_fmt->depth;
 	int b_bpl = vv->ov_fb.fmt.bytesperline;
@@ -601,7 +597,7 @@ static void saa7146_set_position(struct saa7146_dev *dev, int w_x, int w_y, int 
 		vdma1.pitch *= -1;
 	}
 		
-	vdma1.base_page = 0;
+	vdma1.base_page = sfmt->swap;
 	vdma1.num_line_byte = (vv->standard->v_field<<16)+vv->standard->h_pixels;
 
 	saa7146_write_out_dma(dev, 1, &vdma1);
@@ -618,18 +614,6 @@ static void saa7146_set_output_format(struct saa7146_dev *dev, unsigned long pal
 	saa7146_write(dev, CLIP_FORMAT_CTRL, clip_format);
       	saa7146_write(dev, MC2, (MASK_05 | MASK_21));
 }
-
-void saa7146_set_picture_prop(struct saa7146_dev *dev, int brightness, int contrast, int colour)
-{
-	u32	bcs_ctrl = 0;
-	
-	calculate_bcs_ctrl_register(dev, brightness, contrast, colour, &bcs_ctrl);
-	saa7146_write(dev, BCS_CTRL, bcs_ctrl);
-	
-	/* update the bcs register */
-      	saa7146_write(dev, MC2, (MASK_06 | MASK_22));
-}
-
 
 /* select input-source */
 void saa7146_set_hps_source_and_sync(struct saa7146_dev *dev, int source, int sync)
@@ -657,7 +641,7 @@ int saa7146_enable_overlay(struct saa7146_fh *fh)
 	struct saa7146_vv *vv = dev->vv_data;
 
 	saa7146_set_window(dev, fh->ov.win.w.width, fh->ov.win.w.height, fh->ov.win.field);
-	saa7146_set_position(dev, fh->ov.win.w.left, fh->ov.win.w.top, fh->ov.win.w.height, fh->ov.win.field);
+	saa7146_set_position(dev, fh->ov.win.w.left, fh->ov.win.w.top, fh->ov.win.w.height, fh->ov.win.field, vv->ov_fmt->pixelformat);
 	saa7146_set_output_format(dev, vv->ov_fmt->trans);
 	saa7146_set_clipping_rect(fh);
 
@@ -727,7 +711,7 @@ static int calculate_video_dma_grab_packed(struct saa7146_dev* dev, struct saa71
 	vdma1.pitch		= (width*depth*2)/8;
 	}
 	vdma1.num_line_byte	= ((vv->standard->v_field<<16) + vv->standard->h_pixels);
-	vdma1.base_page		= buf->pt[0].dma | ME1;
+	vdma1.base_page		= buf->pt[0].dma | ME1 | sfmt->swap;
 	
 	if( 0 != vv->vflip ) {
 		vdma1.prot_addr	= buf->pt[0].offset;

@@ -572,8 +572,8 @@ static void free_entropy_store(struct entropy_store *r)
  * it's cheap to do so and helps slightly in the expected case where
  * the entropy is concentrated in the low-order bits.
  */
-static void add_entropy_words(struct entropy_store *r, const __u32 *in,
-			      int nwords)
+static void __add_entropy_words(struct entropy_store *r, const __u32 *in,
+				int nwords, __u32 out[16])
 {
 	static __u32 const twist_table[8] = {
 		         0, 0x3b6e20c8, 0x76dc4190, 0x4db26158,
@@ -626,8 +626,22 @@ static void add_entropy_words(struct entropy_store *r, const __u32 *in,
 	r->input_rotate = input_rotate;
 	r->add_ptr = add_ptr;
 
+	if (out) {
+		for (i = 0; i < 16; i++) {
+			out[i] = r->pool[add_ptr];
+			add_ptr = (add_ptr - 1) & wordmask;
+		}
+	}
+
 	spin_unlock_irqrestore(&r->lock, flags);
 }
+
+static inline void add_entropy_words(struct entropy_store *r, const __u32 *in,
+				     int nwords)
+{
+	__add_entropy_words(r, in, nwords, NULL);
+}
+
 
 /*
  * Credit (or debit) the entropy store with n bits of entropy
@@ -698,7 +712,7 @@ static int __init batch_entropy_init(int size, struct entropy_store *r)
  * hashing calculations during an interrupt in add_timer_randomness().
  * Instead, the entropy is only added to the pool by keventd.
  */
-void batch_entropy_store(u32 a, u32 b, int num)
+static void batch_entropy_store(u32 a, u32 b, int num)
 {
 	int new;
 	unsigned long flags;
@@ -728,8 +742,6 @@ void batch_entropy_store(u32 a, u32 b, int num)
 
 	spin_unlock_irqrestore(&batch_lock, flags);
 }
-
-EXPORT_SYMBOL(batch_entropy_store);
 
 /*
  * Flush out the accumulated entropy operations, adding entropy to the passed
@@ -818,12 +830,10 @@ static void add_timer_randomness(struct timer_rand_state *state, unsigned num)
 	 * jiffies.
 	 */
 	time = get_cycles();
-	if (time != 0) {
-		if (sizeof(time) > 4)
-			num ^= (u32)(time >> 32);
-	} else {
+	if (time)
+		num ^= (u32)((time >> 31) >> 1);
+	else
 		time = jiffies;
-	}
 
 	/*
 	 * Calculate number of bits of randomness we probably added.
@@ -876,8 +886,6 @@ void add_keyboard_randomness(unsigned char scancode)
 	}
 }
 
-EXPORT_SYMBOL(add_keyboard_randomness);
-
 void add_mouse_randomness(__u32 mouse_data)
 {
 	add_timer_randomness(&mouse_timer_state, mouse_data);
@@ -892,8 +900,6 @@ void add_interrupt_randomness(int irq)
 
 	add_timer_randomness(irq_timer_state[irq], 0x100+irq);
 }
-
-EXPORT_SYMBOL(add_interrupt_randomness);
 
 void add_disk_randomness(struct gendisk *disk)
 {
@@ -1350,7 +1356,7 @@ static ssize_t extract_entropy(struct entropy_store *r, void * buf,
 			       size_t nbytes, int flags)
 {
 	ssize_t ret, i;
-	__u32 tmp[TMP_BUF_SIZE];
+	__u32 tmp[TMP_BUF_SIZE], data[16];
 	__u32 x;
 	unsigned long cpuflags;
 
@@ -1430,7 +1436,15 @@ static ssize_t extract_entropy(struct entropy_store *r, void * buf,
 			HASH_TRANSFORM(tmp, r->pool+i);
 			add_entropy_words(r, &tmp[x%HASH_BUFFER_SIZE], 1);
 		}
-		
+
+		/*
+		 * To avoid duplicates, we atomically extract a
+		 * portion of the pool while mixing, and hash one
+		 * final time.
+		 */
+		__add_entropy_words(r, &tmp[x%HASH_BUFFER_SIZE], 1, data);
+		HASH_TRANSFORM(tmp, data);
+
 		/*
 		 * In case the hash function has some recognizable
 		 * output pattern, we fold it in half.
@@ -2054,6 +2068,7 @@ static void sysctl_init_random(struct entropy_store *random_state)
  *
  ********************************************************************/
 
+#ifdef CONFIG_INET
 /*
  * TCP initial sequence number picking.  This uses the random number
  * generator to pick an initial secret value.  This value is hashed
@@ -2453,3 +2468,4 @@ __u32 check_tcp_syn_cookie(__u32 cookie, __u32 saddr, __u32 daddr, __u16 sport,
 	return (cookie - tmp[17]) & COOKIEMASK;	/* Leaving the data behind */
 }
 #endif
+#endif /* CONFIG_INET */

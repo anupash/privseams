@@ -137,7 +137,7 @@ static struct dmi_system_id __initdata reboot_dmi_table[] = {
 	{ }
 };
 
-static int reboot_init(void)
+static int __init reboot_init(void)
 {
 	dmi_check_system(reboot_dmi_table);
 	return 0;
@@ -331,13 +331,10 @@ void machine_restart(char * __unused)
 	 * other OSs see a clean IRQ state.
 	 */
 	smp_send_stop();
-#elif defined(CONFIG_X86_LOCAL_APIC)
-	if (cpu_has_apic) {
-		local_irq_disable();
-		disable_local_APIC();
-		local_irq_enable();
-	}
-#endif
+#endif /* CONFIG_SMP */
+
+	lapic_shutdown();
+
 #ifdef CONFIG_X86_IO_APIC
 	disable_IO_APIC();
 #endif
@@ -373,6 +370,8 @@ EXPORT_SYMBOL(machine_halt);
 
 void machine_power_off(void)
 {
+	lapic_shutdown();
+
 	if (efi_enabled)
 		efi.reset_system(EFI_RESET_SHUTDOWN, EFI_SUCCESS, 0, NULL);
 	if (pm_power_off)

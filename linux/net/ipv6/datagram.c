@@ -190,7 +190,7 @@ ipv4_connected:
 	}
 
 	ip6_dst_store(sk, dst,
-		      !ipv6_addr_cmp(&fl.fl6_dst, &np->daddr) ?
+		      ipv6_addr_equal(&fl.fl6_dst, &np->daddr) ?
 		      &np->daddr : NULL);
 
 	sk->sk_state = TCP_ESTABLISHED;
@@ -427,9 +427,7 @@ int datagram_send_ctl(struct msghdr *msg, struct flowi *fl,
 		int addr_type;
 		struct net_device *dev = NULL;
 
-		if (cmsg->cmsg_len < sizeof(struct cmsghdr) ||
-		    (unsigned long)(((char*)cmsg - (char*)msg->msg_control)
-				    + cmsg->cmsg_len) > msg->msg_controllen) {
+		if (!CMSG_OK(msg, cmsg)) {
 			err = -EINVAL;
 			goto exit_f;
 		}

@@ -36,9 +36,12 @@
 #include <asm/semaphore.h>
 #include <asm/segment.h>
 #include <asm/uaccess.h>
-#include <asm-ia64/sal.h>
-#include <asm-ia64/sn/sn_sal.h>
-#include <asm-ia64/sn/sn2/sn_hwperf.h>
+#include <asm/sal.h>
+#include <asm/sn/io.h>
+#include <asm/sn/sn_sal.h>
+#include <asm/sn/module.h>
+#include <asm/sn/geo.h>
+#include <asm/sn/sn2/sn_hwperf.h>
 
 static void *sn_hwperf_salheap = NULL;
 static int sn_hwperf_obj_cnt = 0;
@@ -80,21 +83,26 @@ out:
 static int sn_hwperf_geoid_to_cnode(char *location)
 {
 	int cnode;
-	int mod, slot, slab;
-	int cmod, cslot, cslab;
+	geoid_t geoid;
+	moduleid_t module_id;
+	char type;
+	int rack, slot, slab;
+	int this_rack, this_slot, this_slab;
 
-	if (sscanf(location, "%03dc%02d#%d", &mod, &slot, &slab) != 3)
+	if (sscanf(location, "%03d%c%02d#%d", &rack, &type, &slot, &slab) != 4)
 		return -1;
-	for (cnode = 0; cnode < numnodes; cnode++) {
-		/* XXX: need a better way than this ... */
-		if (sscanf(NODEPDA(cnode)->hwg_node_name,
-		   "hw/module/%03dc%02d/slab/%d", &cmod, &cslot, &cslab) == 3) {
-			if (mod == cmod && slot == cslot && slab == cslab)
-				break;
-		}
+
+	for (cnode = 0; cnode < numionodes; cnode++) {
+		geoid = cnodeid_get_geoid(cnode);
+		module_id = geo_module(geoid);
+		this_rack = MODULE_GET_RACK(module_id);
+		this_slot = MODULE_GET_BPOS(module_id);
+		this_slab = geo_slab(geoid);
+		if (rack == this_rack && slot == this_slot && slab == this_slab)
+			break;
 	}
 
-	return cnode < numnodes ? cnode : -1;
+	return cnode < numionodes ? cnode : -1;
 }
 
 static int sn_hwperf_obj_to_cnode(struct sn_hwperf_object_info * obj)
@@ -113,52 +121,35 @@ static int sn_hwperf_generic_ordinal(struct sn_hwperf_object_info *obj,
 	for (ordinal=0, p=objs; p != obj; p++) {
 		if (SN_HWPERF_FOREIGN(p))
 			continue;
-		if (p->location[3] == obj->location[3])
+		if (SN_HWPERF_SAME_OBJTYPE(p, obj))
 			ordinal++;
 	}
 
 	return ordinal;
 }
 
-#ifndef MODULE_IOBRICK 
-/* this will be available when ioif TIO support is added */
-#define MODULE_IOBRICK (MODULE_OPUSBRICK+1)
-#endif
+static const char *slabname_node =	"node"; /* SHub asic */
+static const char *slabname_ionode =	"ionode"; /* TIO asic */
+static const char *slabname_router =	"router"; /* NL3R or NL4R */
+static const char *slabname_other =	"other"; /* unknown asic */
 
-static const char *sn_hwperf_get_brickname(struct sn_hwperf_object_info *obj,
-				struct sn_hwperf_object_info *objs, int *ordinal)
+static const char *sn_hwperf_get_slabname(struct sn_hwperf_object_info *obj,
+			struct sn_hwperf_object_info *objs, int *ordinal)
 {
-	int i;
-	const char *objtype = NULL;
+	int isnode;
+	const char *slabname = slabname_other;
 
-	for (i=0; i < MAX_BRICK_TYPES; i++) {
-		if (brick_types[i] != obj->location[3])
-			continue;
-		switch (i) {
-		case MODULE_CBRICK:
-		    objtype = "node";
-		    *ordinal = sn_hwperf_obj_to_cnode(obj); /* cnodeid */
-		    break;
-
-		case MODULE_RBRICK:
-		    objtype = "router";
-		    *ordinal = sn_hwperf_generic_ordinal(obj, objs);
-		    break;
-
-		case MODULE_IOBRICK:
-		    objtype = "ionode";
-		    *ordinal = sn_hwperf_generic_ordinal(obj, objs);
-		    break;
-		}
-		break;
+	if ((isnode = SN_HWPERF_IS_NODE(obj)) || SN_HWPERF_IS_IONODE(obj)) {
+	    	slabname = isnode ? slabname_node : slabname_ionode;
+		*ordinal = sn_hwperf_obj_to_cnode(obj);
 	}
-
-	if (i == MAX_BRICK_TYPES) {
-		objtype = "other";
+	else {
 		*ordinal = sn_hwperf_generic_ordinal(obj, objs);
+		if (SN_HWPERF_IS_ROUTER(obj))
+			slabname = slabname_router;
 	}
 
-	return objtype;
+	return slabname;
 }
 
 static int sn_topology_show(struct seq_file *s, void *d)
@@ -168,7 +159,7 @@ static int sn_topology_show(struct seq_file *s, void *d)
 	int e;
 	int i;
 	int j;
-	const char *brickname;
+	const char *slabname;
 	int ordinal;
 	cpumask_t cpumask;
 	char slice;
@@ -194,22 +185,22 @@ static int sn_topology_show(struct seq_file *s, void *d)
 			obj->name[i] = '_';
 	}
 
-	brickname = sn_hwperf_get_brickname(obj, objs, &ordinal);
-	seq_printf(s, "%s %d %s %s asic %s", brickname, ordinal, obj->location,
+	slabname = sn_hwperf_get_slabname(obj, objs, &ordinal);
+	seq_printf(s, "%s %d %s %s asic %s", slabname, ordinal, obj->location,
 		obj->sn_hwp_this_part ? "local" : "shared", obj->name);
 
-	if (obj->location[3] != 'c')
+	if (!SN_HWPERF_IS_NODE(obj) && !SN_HWPERF_IS_IONODE(obj))
 		seq_putc(s, '\n');
 	else {
 		seq_printf(s, ", nasid 0x%x", cnodeid_to_nasid(ordinal));
-		for (i=0; i < numnodes; i++) {
+		for (i=0; i < numionodes; i++) {
 			seq_printf(s, i ? ":%d" : ", dist %d",
 				node_distance(ordinal, i));
 		}
 		seq_putc(s, '\n');
 
 		/*
-		 * CPUs on this node
+		 * CPUs on this node, if any
 		 */
 		cpumask = node_to_cpumask(ordinal);
 		for_each_online_cpu(i) {
@@ -253,10 +244,15 @@ static int sn_topology_show(struct seq_file *s, void *d)
 					break;
 				}
 			}
-			if (i >= sn_hwperf_obj_cnt)
-				continue;
 			seq_printf(s, "numalink %d %s-%d",
 			    ordinal+pt, obj->location, ptdata[pt].port);
+
+			if (i >= sn_hwperf_obj_cnt) {
+				/* no connection */
+				seq_puts(s, " local endpoint disconnected"
+					    ", protocol unknown\n");
+				continue;
+			}
 
 			if (obj->sn_hwp_this_part && p->sn_hwp_this_part)
 				/* both ends local to this partition */
@@ -276,9 +272,8 @@ static int sn_topology_show(struct seq_file *s, void *d)
 			 */
 			seq_printf(s, " endpoint %s-%d, protocol %s\n",
 				p->location, ptdata[pt].conn_port,
-				strcmp(obj->name, "NL3Router") == 0 ||
-				strcmp(p->name, "NL3Router") == 0 ?
-				"LLP3" : "LLP4");
+				(SN_HWPERF_IS_NL3ROUTER(obj) ||
+				SN_HWPERF_IS_NL3ROUTER(p)) ?  "LLP3" : "LLP4");
 		}
 		vfree(ptdata);
 	}
@@ -405,7 +400,7 @@ sn_hwperf_ioctl(struct inode *in, struct file *fp, u32 op, u64 arg)
 		r = -EINVAL;
 		goto error;
 	}
-	r = copy_from_user(&a, (const void *)arg,
+	r = copy_from_user(&a, (const void __user *)arg,
 		sizeof(struct sn_hwperf_ioctl_args));
 	if (r != 0) {
 		r = -EFAULT;
@@ -426,7 +421,7 @@ sn_hwperf_ioctl(struct inode *in, struct file *fp, u32 op, u64 arg)
 	}
 
 	if (op & SN_HWPERF_OP_MEM_COPYIN) {
-		r = copy_from_user(p, (const void *)a.ptr, a.sz);
+		r = copy_from_user(p, (const void __user *)a.ptr, a.sz);
 		if (r != 0) {
 			r = -EFAULT;
 			goto error;
@@ -473,7 +468,7 @@ sn_hwperf_ioctl(struct inode *in, struct file *fp, u32 op, u64 arg)
 
 	case SN_HWPERF_GET_NODE_NASID:
 		if (a.sz != sizeof(u64) ||
-		   (node = a.arg) < 0 || node >= numnodes) {
+		   (node = a.arg) < 0 || node >= numionodes) {
 			r = -EINVAL;
 			goto error;
 		}
@@ -526,7 +521,7 @@ sn_hwperf_ioctl(struct inode *in, struct file *fp, u32 op, u64 arg)
 	}
 
 	if (op & SN_HWPERF_OP_MEM_COPYOUT) {
-		r = copy_to_user((void *)a.ptr, p, a.sz);
+		r = copy_to_user((void __user *)a.ptr, p, a.sz);
 		if (r != 0) {
 			r = -EFAULT;
 			goto error;

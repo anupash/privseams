@@ -1935,7 +1935,7 @@ void s2io_reset(nic_t * sp)
 	schedule_timeout(HZ / 4);
 
 	/* Restore the PCI state saved during initializarion. */
-	pci_restore_state(sp->pdev, sp->config_space);
+	pci_restore_state(sp->pdev);
 	s2io_init_pci(sp);
 
 	set_current_state(TASK_UNINTERRUPTIBLE);
@@ -3983,14 +3983,14 @@ static void s2io_init_pci(nic_t * sp)
 
 MODULE_AUTHOR("Raghavendra Koushik <raghavendra.koushik@s2io.com>");
 MODULE_LICENSE("GPL");
-MODULE_PARM(ring_num, "1-" __MODULE_STRING(1) "i");
-MODULE_PARM(frame_len, "1-" __MODULE_STRING(8) "i");
-MODULE_PARM(ring_len, "1-" __MODULE_STRING(8) "i");
-MODULE_PARM(fifo_num, "1-" __MODULE_STRING(1) "i");
-MODULE_PARM(fifo_len, "1-" __MODULE_STRING(8) "i");
-MODULE_PARM(rx_prio, "1-" __MODULE_STRING(1) "i");
-MODULE_PARM(tx_prio, "1-" __MODULE_STRING(1) "i");
-MODULE_PARM(latency_timer, "1-" __MODULE_STRING(1) "i");
+module_param(ring_num, uint, 0);
+module_param_array(frame_len, uint, NULL, 0);
+module_param_array(ring_len, uint, NULL, 0);
+module_param(fifo_num, uint, 0);
+module_param_array(fifo_len, uint, NULL, 0);
+module_param(rx_prio, uint, 0);
+module_param(tx_prio, uint, 0);
+module_param(latency_timer, byte, 0);
 
 /*
 *  Input Argument/s: 
@@ -4238,7 +4238,7 @@ s2io_init_nic(struct pci_dev *pdev, const struct pci_device_id *pre)
 		goto register_failed;
 	}
 
-	pci_save_state(sp->pdev, sp->config_space);
+	pci_save_state(sp->pdev);
 
 	/* Setting swapper control on the NIC, for proper reset operation */
 	if (s2io_set_swapper(sp)) {

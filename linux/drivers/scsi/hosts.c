@@ -50,11 +50,6 @@ static struct class shost_class = {
 	.release	= scsi_host_cls_release,
 };
 
-static int scsi_device_cancel_cb(struct device *dev, void *data)
-{
-	return scsi_device_cancel(to_scsi_device(dev), *(int *)data);
-}
-
 /**
  * scsi_host_cancel - cancel outstanding IO to this host
  * @shost:	pointer to struct Scsi_Host
@@ -62,9 +57,12 @@ static int scsi_device_cancel_cb(struct device *dev, void *data)
  **/
 void scsi_host_cancel(struct Scsi_Host *shost, int recovery)
 {
+	struct scsi_device *sdev;
+
 	set_bit(SHOST_CANCEL, &shost->shost_state);
-	device_for_each_child(&shost->shost_gendev, &recovery,
-			      scsi_device_cancel_cb);
+	shost_for_each_device(sdev, shost) {
+		scsi_device_cancel(sdev, recovery);
+	}
 	wait_event(shost->host_wait, (!test_bit(SHOST_RECOVERY,
 						&shost->shost_state)));
 }
@@ -82,6 +80,8 @@ void scsi_remove_host(struct Scsi_Host *shost)
 	set_bit(SHOST_DEL, &shost->shost_state);
 
 	class_device_unregister(&shost->shost_classdev);
+	if (shost->transport_classdev.class)
+		class_device_unregister(&shost->transport_classdev);
 	device_del(&shost->shost_gendev);
 }
 
@@ -96,7 +96,7 @@ void scsi_remove_host(struct Scsi_Host *shost)
 int scsi_add_host(struct Scsi_Host *shost, struct device *dev)
 {
 	struct scsi_host_template *sht = shost->hostt;
-	int error;
+	int error = -EINVAL;
 
 	printk(KERN_INFO "scsi%d : %s\n", shost->host_no,
 			sht->info ? sht->info(shost) : sht->name);
@@ -104,7 +104,7 @@ int scsi_add_host(struct Scsi_Host *shost, struct device *dev)
 	if (!shost->can_queue) {
 		printk(KERN_ERR "%s: can_queue = 0 no longer supported\n",
 				sht->name);
-		return -EINVAL;
+		goto out;
 	}
 
 	if (!shost->shost_gendev.parent)
@@ -122,6 +122,14 @@ int scsi_add_host(struct Scsi_Host *shost, struct device *dev)
 		goto out_del_gendev;
 
 	get_device(&shost->shost_gendev);
+
+	if (shost->transportt->host_size &&
+	    (shost->shost_data = kmalloc(shost->transportt->host_size,
+					 GFP_KERNEL)) == NULL)
+		goto out_del_classdev;
+
+	if (shost->transportt->host_setup)
+		shost->transportt->host_setup(shost);
 
 	error = scsi_sysfs_add_host(shost);
 	if (error)
@@ -154,6 +162,7 @@ static void scsi_host_dev_release(struct device *dev)
 
 	scsi_proc_hostdir_rm(shost->hostt);
 	scsi_destroy_command_freelist(shost);
+	kfree(shost->shost_data);
 
 	/*
 	 * Some drivers (eg aha1542) do scsi_register()/scsi_unregister()
@@ -221,10 +230,8 @@ struct Scsi_Host *scsi_host_alloc(struct scsi_host_template *sht, int privsize)
 	shost->max_id = 8;
 	shost->max_lun = 8;
 
-	/* Give each shost a default transportt if the driver
-	 * doesn't yet support Transport Attributes */
-	if (!shost->transportt) 
-		shost->transportt = &blank_transport_template;
+	/* Give each shost a default transportt */
+	shost->transportt = &blank_transport_template;
 
 	/*
 	 * All drivers right now should be able to handle 12 byte
@@ -284,6 +291,7 @@ struct Scsi_Host *scsi_host_alloc(struct scsi_host_template *sht, int privsize)
 		goto fail_destroy_freelist;
 	wait_for_completion(&complete);
 	shost->eh_notify = NULL;
+
 	scsi_proc_hostdir_add(shost->hostt);
 	return shost;
 

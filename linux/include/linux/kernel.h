@@ -66,9 +66,10 @@ void __might_sleep(char *file, int line);
 	})
 
 extern struct notifier_block *panic_notifier_list;
+extern long (*panic_blink)(long time);
 NORET_TYPE void panic(const char * fmt, ...)
 	__attribute__ ((NORET_AND format (printf, 1, 2)));
-asmlinkage NORET_TYPE void do_exit(long error_code)
+fastcall NORET_TYPE void do_exit(long error_code)
 	ATTRIB_NORET;
 NORET_TYPE void complete_and_exit(struct completion *, long)
 	ATTRIB_NORET;
@@ -136,6 +137,7 @@ extern int oops_in_progress;		/* If set, an oops, panic(), BUG() or die() is in 
 extern int panic_on_oops;
 extern int tainted;
 extern const char *print_tainted(void);
+extern void add_taint(unsigned);
 
 /* Values used for system_state */
 extern enum system_states {
@@ -150,6 +152,8 @@ extern enum system_states {
 #define TAINT_FORCED_MODULE		(1<<1)
 #define TAINT_UNSAFE_SMP		(1<<2)
 #define TAINT_FORCED_RMMOD		(1<<3)
+#define TAINT_MACHINE_CHECK		(1<<4)
+#define TAINT_BAD_PAGE			(1<<5)
 
 extern void dump_stack(void);
 

@@ -41,6 +41,8 @@ extern int sysctl_legacy_va_layout;
 #define MM_VM_SIZE(mm)	TASK_SIZE
 #endif
 
+#define nth_page(page,n) pfn_to_page(page_to_pfn((page)) + (n))
+
 /*
  * Linux kernel virtual memory manager primitives.
  * The idea being to have a "virtual" mm in the same way
@@ -540,7 +542,7 @@ static inline int can_do_mlock(void)
 {
 	if (capable(CAP_IPC_LOCK))
 		return 1;
-	if (current->rlim[RLIMIT_MEMLOCK].rlim_cur != 0)
+	if (current->signal->rlim[RLIMIT_MEMLOCK].rlim_cur != 0)
 		return 1;
 	return 0;
 }
@@ -673,7 +675,7 @@ extern struct vm_area_struct *vma_merge(struct mm_struct *,
 extern struct anon_vma *find_mergeable_anon_vma(struct vm_area_struct *);
 extern int split_vma(struct mm_struct *,
 	struct vm_area_struct *, unsigned long addr, int new_below);
-extern void insert_vm_struct(struct mm_struct *, struct vm_area_struct *);
+extern int insert_vm_struct(struct mm_struct *, struct vm_area_struct *);
 extern void __vma_link_rb(struct mm_struct *, struct vm_area_struct *,
 	struct rb_node **, struct rb_node *);
 extern struct vm_area_struct *copy_vma(struct vm_area_struct **,
@@ -756,10 +758,18 @@ static inline unsigned long vma_pages(struct vm_area_struct *vma)
 extern struct vm_area_struct *find_extend_vma(struct mm_struct *mm, unsigned long addr);
 
 extern struct page * vmalloc_to_page(void *addr);
+extern unsigned long vmalloc_to_pfn(void *addr);
 extern struct page * follow_page(struct mm_struct *mm, unsigned long address,
 		int write);
-extern int remap_page_range(struct vm_area_struct *vma, unsigned long from,
-		unsigned long to, unsigned long size, pgprot_t prot);
+int remap_pfn_range(struct vm_area_struct *, unsigned long,
+		unsigned long, unsigned long, pgprot_t);
+
+static inline __deprecated /* since 25 Sept 2004 -- wli */
+int remap_page_range(struct vm_area_struct *vma, unsigned long uvaddr,
+			unsigned long paddr, unsigned long size, pgprot_t prot)
+{
+	return remap_pfn_range(vma, uvaddr, paddr >> PAGE_SHIFT, size, prot);
+}
 
 #ifdef CONFIG_PROC_FS
 void __vm_stat_account(struct mm_struct *, unsigned long, struct file *, long);

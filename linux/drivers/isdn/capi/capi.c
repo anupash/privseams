@@ -38,6 +38,7 @@
 #include <linux/kernelcapi.h>
 #include <linux/init.h>
 #include <linux/device.h>
+#include <linux/moduleparam.h>
 #include <linux/devfs_fs_kernel.h>
 #include <linux/isdn/capiutil.h>
 #include <linux/isdn/capicmd.h>
@@ -67,10 +68,10 @@ int capi_ttymajor = 191;
 int capi_ttyminors = CAPINC_NR_PORTS;
 #endif /* CONFIG_ISDN_CAPI_MIDDLEWARE */
 
-MODULE_PARM(capi_major, "i");
+module_param_named(major, capi_major, uint, 0);
 #ifdef CONFIG_ISDN_CAPI_MIDDLEWARE
-MODULE_PARM(capi_ttymajor, "i");
-MODULE_PARM(capi_ttyminors, "i");
+module_param_named(ttymajor, capi_ttymajor, uint, 0);
+module_param_named(ttyminors, capi_ttyminors, uint, 0);
 #endif /* CONFIG_ISDN_CAPI_MIDDLEWARE */
 
 /* -------- defines ------------------------------------------------- */
@@ -1044,16 +1045,14 @@ static void capinc_tty_close(struct tty_struct * tty, struct file * file)
 #endif
 }
 
-static int capinc_tty_write(struct tty_struct * tty, int from_user,
+static int capinc_tty_write(struct tty_struct * tty,
 			    const unsigned char *buf, int count)
 {
 	struct capiminor *mp = (struct capiminor *)tty->driver_data;
 	struct sk_buff *skb;
-	int retval;
 
 #ifdef _DEBUG_TTYFUNCS
-	printk(KERN_DEBUG "capinc_tty_write(from_user=%d,count=%d)\n",
-				from_user, count);
+	printk(KERN_DEBUG "capinc_tty_write(count=%d)\n", count);
 #endif
 
 	if (!mp || !mp->nccip) {
@@ -1077,18 +1076,7 @@ static int capinc_tty_write(struct tty_struct * tty, int from_user,
 	}
 
 	skb_reserve(skb, CAPI_DATA_B3_REQ_LEN);
-	if (from_user) {
-		retval = copy_from_user(skb_put(skb, count), buf, count);
-		if (retval) {
-			kfree_skb(skb);
-#ifdef _DEBUG_TTYFUNCS
-			printk(KERN_DEBUG "capinc_tty_write: copy_from_user=%d\n", retval);
-#endif
-			return -EFAULT;
-		}
-	} else {
-		memcpy(skb_put(skb, count), buf, count);
-	}
+	memcpy(skb_put(skb, count), buf, count);
 
 	skb_queue_tail(&mp->outqueue, skb);
 	mp->outbytes += skb->len;

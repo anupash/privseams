@@ -15,12 +15,12 @@
 #include <linux/delay.h>
 #include <linux/hdreg.h>
 #include <linux/ide.h>
+#include <linux/bitops.h>
 
 #include <asm/byteorder.h>
 #include <asm/irq.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
-#include <asm/bitops.h>
 
 /*
  *	IDE library routines. These are plug in code that most 
@@ -420,8 +420,6 @@ void ide_toggle_bounce(ide_drive_t *drive, int on)
 	if (drive->queue)
 		blk_queue_bounce_limit(drive->queue, addr);
 }
-
-EXPORT_SYMBOL(ide_toggle_bounce);
 
 /**
  *	ide_set_xfer_rate	-	set transfer rate

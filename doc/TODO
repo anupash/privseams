@@ -71,32 +71,6 @@ diff 09 -> base-00
 
   E-FAILED <- check
 
-[DONE] 6.1.1 HIP Controls
-
-  Resync flag was removed
-
-[DONE] 6.2 HIP parameters
-
-  SPI_LSI: renamed to SPI with length *4*
-  NOTIFY            256
-  BIRTHDAY was removed and replaced with R1_COUNTER
-  R1_COUNTER        2     12
-  PUZZLE            5     12
-  SOLUTION          7     20
-  NES               9     12 
-  SEQ               11    4
-  ACK               13    4
-  DIFFIE_HELLMAN    15    variable   public key
-  HMAC              65245 20
-  ECHO_REQUEST      1022  variable
-  ECHO_RESPONSE     1024  variable 
-  ECHO_REQUEST      65281 variable 
-  ECHO_RESPONSE     65283 variable 
-
-[DONE] 6.2.3 SPI
-
-  Renamed from SPI to SPI_LSI. Fields "reserved" and "LSI" removed.
-
 [DONE/NOT_IN_USE] 6.2.4 R1_COUNTER
 
    R1_COUNTER is now its own TLV and is separated
@@ -110,107 +84,6 @@ diff 09 -> base-00
  ** have to be able to sign/recreate all R1s after the generation changes.
  ** Currently, impossible.
 
-[DONE] 6.2.5 PUZZLE
-
-   New opaque field that must be included by the responder. The Opaque and
-   Random #I field are not covered by the HIP_SIGNATURE_2 parameter.
-
-   Check the sending and receiving side.
-
-[DONE] 6.2.7 DIFFIE_HELLMAN
-
-  New 384-bit group (1). Add it from the appendix.
-
-[DONE] 6.2.10 HOST_ID
-
-  Format has changed (DI-type, DI-length, FQDN, Domain Identifier).
-
-  Add the different DI types.
-
-  If there is no Domain Identifier, i.e. the DI-type field is zero,
-  also the DI Length field is set to zero.
-
-[DONE] 6.2.15 NES
-
-  - R flag removed
-  - update id removed (a separate parameter)
-
-[DONE] 6.2.16 SEQ (former UPDATE_ID)
-
-  - new TLV, separated from the NES
-
-[DONE] 6.2.17  ACK
-
-  - new TLV, response to SEQ
-
-[DONE] 6.2.18 ENCRYPTED
-
-  - check changes?
-  - similar to the -09
-
-[DONE] 6.2.19 NOTIFY
-
-   - completely new
-   - add types
-   - sending
-   - recv handling (= HIP_DEBUG/HEXDUMP)
-
-Someone check builder function.
-
-[DONE] 7.2 R1 - the HIP responder packet
-
-  See also 6.2.14  HIP_SIGNATURE_2
-    - signature does not include parameters after the signature tlv
-    - initiator's HIT, checksum field, and the Opaque and Random #I
-      fields in the PUZZLE TLV MUST be set to zero while
-      computing the HIP_SIGNATURE_2 signature.
-
-  See also 6.2.20 ECHO_REQUEST and 6.2.21 ECHO_RESPONSE (new parameters).
-
-  - R1_COUNTER (former BIRTHDAY) is included as a separate parameter and it
-    is _optional_
-  - echo request/response is optional
-
-   The random #I is not covered by the signature and must be
-   zeroed during the signature calculation, allowing the sender to
-   select and set the #I into a pre-computed R1 just prior sending it to
-   the peer.
-
-   The ECHO_REQUEST contains data that the sender wants to receive
-   unmodified in the corresponding response packet in the ECHO_RESPONSE
-   parameter.  The ECHO_REQUEST can be either covered by the signature,
-   or it can be left out from it.  In the first case, the ECHO_REQUEST
-   gets Type number 1022 and in the latter case 65281.
-
-   The signature is calculated over the whole HIP envelope, after
-   setting the initiator HIT, header checksum as well as the Opaque
-   field and the Random #I in the PUZZLE parameter temporarily to zero.
-
-[DONE] 7.3 I2 - the second HIP initiator packet
-
-  See also 6.2.20 ECHO_REQUEST and 6.2.21 ECHO_RESPONSE (new parameters).
-
-  - R1_COUNTER is included as a separate parameter and it is optional
-  - signature does not include parameters after the signature tlv
-
-[DONE] 7.4  R2 - the second HIP responder packet
-
-  - signature does not include parameters after the signature tlv
-  
-[MIKA] 7.5 "UPDATE" packet
-
-  - Mika is working on this.
-
-[DONE/SOMEBODY COULD CHECK ANYWAY] 9. HIP KEYMAT
-
-  - The key naming convention (SA-gl, etc) has changed. Apply to code too.
-
-IETF 59 action items
-====================
-
-[DONE] Host ID
-[DONE] Type constants for parameters.
-
 IETF 58 action items
 ====================
 
@@ -223,27 +96,13 @@ RECOMMENDED to explicitly learn and record the binding between the
 Host Identifier and the HIT, as it may not be able generate such HITs
 from Host Identifiers.
 
-[DONE] 3.3 Security Parameter Index (draft-07)
-The SPI selection SHOULD be random.  A different SPI SHOULD be used
-for each HIP exchange with a particular host; this is to avoid a
-replay attack.  Additionally, when a host rekeys, the SPI MUST change.
-Furthermore, if a host changes over to use a different IP address, it
-MAY change the SPI used.
--random SPI in I2 and R2
-
-[MIKA] 3.5 TCP and UDP pseudoheader computation (draft-07)
+[MIKA/DONE ?] 3.5 TCP and UDP pseudoheader computation (draft-07)
 When computing TCP and UDP checksums on sockets bound to HITs or LSIs,
 the IPv6 pseudo-header format [10] is used.  Additionally, the HITs
 MUST be used in the place of the IPv6 addresses in the IPv6
 pseudoheader.  Note that the pseudo-header for actual HIP payloads is
 computed differently; see Section 6.1.2.
 -HIP payload checksum should be ok
-
-[DONE] 4.1.1 HIP Cookie Mechanism (draft-07)
-Note, however, that the implementations MUST NOT use the exact
-implementation given in the appendix, and SHOULD include sufficient
-randomness to the algorithm so that algorithm complexity attacks
-become impossible
 
 [MIKA] 4.1.3 HIP Birthday (draft-08)
 The Birthday also has to be increased in accordance with the system's
@@ -255,88 +114,8 @@ Birthday.
 - The OPTIONAL PAYLOAD packet (see Section 7.8) MAY be used to transfer
   data.
 
-[LATER] 4.3 Rekey (draft-08)
-- All conforming HIP implementations MUST support rekeying.
-
 [LATER] 5.1 HIP Scenarios (draft-08)
 - Verify this.
-
-[DONE] 5.4.1 HIP States (draft-08)
-- E4 HIP SA established, rekeying
-- without NES
-
-[DONE] 5.4.2 HIP State Processes (draft-08)
-E0, E2: retransmissions
-E3: Receive R1, process with SA and Birthday check
- if successful, send I2 with last datagram, drop old SA if successful,
- send I2, prepare to drop old SA and cycle at E3
-E4: add this state WITHOUT NES
-
-[DONE] 5.3 Reboot and SA timeout restart of HIP (draft-07)
-If a host reboots or times out, it has lost its HIP state.  If the
-system that lost state has a datagram to deliver to its peer, it
-simply restarts the HIP exchange.  The peer sends an R1 HIP packet,
-but does not reset its state until it receives the I2 HIP packet.  The
-I2 packet MUST have a Birthday greater than the current SA's
--birthday is checked but it is ignored
-
-The system receiving the R1 packet first checks to see if it has an
-established and recently used SA with the party sending the R1. If
-such an SA exists, the system checks the Birthday, if the Birthday is
-greater than the current SA's Birthday, it processes the R1 packet and
-resends the ESP packet (along with or) after the I2 packet.  The peer
-system processes the I2 in the normal manner, and replies with an R2.
-This will reestablish state between the two peers.
--check
-
-[MIIKA] 6.2 HIP parameters (draft-08)
-- Lengths have been changed, check the header files. Validate lengths.
-
-[DONE] 6.2.1 TLV format (draft-08)
-- The C-bit has been added.
-
-[DONE] 6.2.2 Defining new parameters (draft-08)
-- Check.
-
-[DONE] 6.2.3 SPI_LSI (draft-08)
-- type number has changed (DONE)
-- check the format (DONE)
-- IETF57:
-  - LSI was all zeroes. Should have been 1.X.X.X where X.X.X is 24
-    lowest bit of the HIT. (DONE, but we don't support LSIs yet)
-
-[DONE] 6.2.4 BIRTHDAY_COOKIE (draft-08)
-- type number has changed
-- remove hash target
-- check the format of the parameter
-- cookie database
-
-[DONE] 6.2.9 HOST_ID_FQDN ()
-- type number has been changed
-- is this really supported in the implementation?
-  o nope
-
-[DONE] 6.3.3 DIFFIE_HELLMAN (draft-07)
-- check the format
-
-[DONE] 6.3.6 HOST_ID (draft-07)
-- check the format
-
-[DONE] 6.2.11 HMAC (draft-08)
-- check the "HMAC calculation and verification process"
-
-[DONE] 6.3.9 HIP_SIGNATURE (draft-07)
-- Signature calculation and verification process
-
-[DONE] 6.2.13 HIP_SIGNATURE_2 (draft-08)
-- type number has been changed
-
-[LATER] 6.2.14 NES_INFO (draft-08)
-- the type number and the format has been changed
-
-[DONE] 6.2.15 ENCRYPTED (draft-08)
-- IETF56
-  -initialization vector was all zeroes, check and fix it
 
 [LATER] 7. HIP Packets (draft-07)
 An OPTIONAL upper layer payload MAY follow the HIP header. The payload
@@ -344,29 +123,6 @@ proto field in the header indicates if there is additional data
 following the HIP header. The P-bit in the control field of the HIP
 packet header indicates whether the sender is capable of sending and
 receiving this additional data.
-
-[MIIKA] 7.1 I1 - the HIP Initiator packet (draft-07)
-- Valid control bits: None
-
-[MIIKA] 7.2 R1 - the HIP Responder packet (draft-07)
-- Valid control bits: C, A
-
-[MIIKA] 7.3 I2 - the HIP Second Initiator packet (draft-07)
-- Valid control bits: C, E, A
-
-[MIIKA] 7.4 R2 - the HIP Second Responder packet (draft-07)
-- Valid control bits: E
-
-[DONE] 7.4 R2 (draft-08)
-- add the HMAC parameter
-- Initiator MUST validate both the HMAC and the signature.
-
-[LATER] 7.5 NES - the HIP New SPI Packet (draft-08)
-- The NES packet is MANDATORY.
-- add the HMAC
-
-[LATER] 7.6 BOS - the HIP Bootstrap Packet (draft-08)
-- The BOS packet is OPTIONAL.
 
 [LATER] 7.7 CER - the HIP Certificate Packet (draft-08)
 - The CER packet is OPTIONAL.
@@ -377,9 +133,6 @@ receiving this additional data.
 [LATER] 8. Packet processing (draft-08)
 - this is a totally new chapter
 
-[DONE] 9. HIP KEYMAT (draft-08)
-- check and update making and drawing keymaterial if needed
-
 [LATER] 12. HIP Policies (draft-07)
 - All HIP implementations MUST support more than one simultaneous HIs,
   at least one one of which SHOULD be reserved for anonymous usage
@@ -388,17 +141,9 @@ receiving this additional data.
 
 diff 08-pre-Oct01 08:
 
-[DONE] 3.3 Security Parameter Index (SPI)
-
-- The SPI selection SHOULD be random; the rules of Section 2.1 of the
-ESP specification [15] must be followed.
-
 6.2 HIP parameters
 - Any added padding bytes MUST be set zero by the sender, but their
 content SHOULD NOT be checked on the receiving end.
-
-6.2.6 HIP_TRANSFORM
-- There MUST NOT be more than six (6) HIP Suite-IDs
 
 6.2.11 HMAC
 - 160 low order bits of the HMAC computed over the HIP packet,
@@ -415,7 +160,6 @@ checksum field MUST be set to zero and the HIP header length in the
 HIP common header MUST be calculated to the beginning of the
 HIP_SIGNATURE TLV when the signature is calculated.
 
-
 6.2.13 HIP_SIGNATURE_2
 - the signature is calculated over the R1 packet, excluding the
 HIP_SIGNATURE_2 TLV field, but including the HMAC field, if
@@ -427,13 +171,8 @@ beginning of the HIP_SIGNATURE_2 TLV when the signature is calculated.
 6.2.15 ENCRYPTED
 - see the whole section
 
-7.5 NES - the HIP New SPI Packet
-- It also contains a NES ID and HMAC to provide DoS and replay
-protection.  Each system must have a NES ID counter, initialized to
-zero and incremented on each NES.
-
 8.3.2 Processing incoming ICMP Protocol Unreachable messages
-- currently received, but not handled
+- currently received, but not handled (except debugging)
 
 8.5 Processing incoming R1 packets
 - 14.  The system initialized the remaining variables in the
@@ -442,36 +181,6 @@ associated state, including NES ID counters.
 8.6 Processing incoming I2 packets
 - 18.  The system initialized the remaining variables in the
 associated state, including NES ID counters.
-
-8.8 Initiating rekeying
-- 3.  The system creates a NES packet, which SHOULD contain a
-Diffie-Hellman parameter.  If the NES packet contains the
-Diffie-Hellman parameter, the Keymat Index in the NES_INFO parameter
-MUST be zero.
-
-8.9 Processing NES packets
-- 4.  If the received NES contains a Diffie-Hellman parameter, the
-received Keymat Index MUST zero.  If this test fails, the packet
-SHOULD be dropped and the system SHOULD log an error message.
-
-8.9.1 Processing an initial NES packet
-- 3. If the system generated new KEYMAT in the previous step, it sets
-Keymat Index to zero, independent on whether the received NES included
-a Diffie-Hellman key or not.
-
-8.9.2 Processing a reply NES packet
-- 2.  If the system generated new KEYMAT in the previous step, it sets
-Keymat Index to zero, independent on whether the received NES included
-a Diffie-Hellman key or not.
-- 5.  If the system has no data to send for 500ms, it SHOULD send an
-ESP packet anyway.  The purpose of this packet is to acknowledge the
-other party that the NES reply came through, and to allow the other
-party to switch over to the new outgoing SA.  It is RECOMMENDED that
-the system sends an empty ESP packet, i.e., one where the Next Header
-field is IPPROTO_NONE (decimal 59).
-
-11. ESP with HIP
-- see chapter
 
 11.1 Security Association Management
 - REMOVED: The SA MUST include the random # I that was used when the
@@ -486,13 +195,9 @@ Feb 20 07:54:26 crash kernel: hip_solve_puzzle: *** Puzzle solved ***:
 ae6a19d2d1d939cb
 Feb 20 07:54:26 crash kernel: hip_handle_r1: R1 Successfully received
    
-Feb
-20 07:52:00 oops kernel: hip_fetch_cookie_entry:
-Calculated index:
-9 Feb 20 07:52:00 oops kernel: hip_verify_cookie:error: WARNING: Unknown
-cookie
-Feb 20 07:52:00 oops kernel: hip_handle_i2:error: Birthday cookie checks
-failed
+Feb 20 07:52:00 oops kernel: hip_fetch_cookie_entry:Calculated index:9
+Feb 20 07:52:00 oops kernel: hip_verify_cookie:error: WARNING: Unknown cookie
+Feb 20 07:52:00 oops kernel: hip_handle_i2:error: Birthday cookie checks failed
 Feb 20 07:52:00 oops kernel: hip_worker: Recoverable error occured
 
 
@@ -532,6 +237,8 @@ Date: Mon, 09 Feb 2004 11:54:20 +0200
 Bug: hip_socket->sk does not have locks.
 Solution: add a semaphore or spinlock to hip_socket->sk.
 
+lock_sock ?
+
 Date: Thu, 26 Feb 2004 14:41:23 +0200 (EET)
 
 * check that the dst hit of an incoming packet belongs to the localhost
@@ -546,41 +253,22 @@ action items:
 =============
 
 * Mika
-  * UPDATE parameter
-  * transition to draft-mm-01 or draft-mm-02
   * /proc/net/hip/sdb_peer_addr: list addresses so that the first one is the
     one that will be "active"
   * multihoming: try multiple addresses of the peer if xmit fails?
   * check TODO entries from hip.c, input.c etc (the file was split and TODO
     entries may be in wrong files.
-  * hipd setuid ? (man 2 setuid, not just chmod +s hipd)
   * test signature when p = q = null 
     - p=q=null not tested yet
-  * libinet6 (usagi): read and learn resolver code, write API documentation
-    - HITs as AAAA to /etc/hosts:iin (RFC3363 chapter 2)
-  * refactor (Pekka's comments)
-  * document to crypto.txt, who does and when
-    - e.g. dsa-create-key(): send(i1) (which side of the connection and
-      which packet)
-  * autoloading (kmod) support (not planned)
-    - when/how to decide need to load hip module
-  * devfs support to hip module ? (most probably not)
-  * confirm /proc support, (LDD 106 multiple pages of data)
-  * khexdump locking ?
-  * set up BIND and a few HITs to the virtual machines
-  * remove sha1 code from keymat.c!
-  * global Makefile
-  * random seed to files using OpenSSL (RAND_seed)
 
 * Miika
   * a generic NOTIFY mechanism
   * convert ioctl to hip socket
   * remove warnings from tla commit
-  * hipd_handle_async_unit_test is broken
-  * remove include/net/keymat.h
   * Checks in the kernel that the HIT matches to the HI to prevent HI ownership
     forging. I will need this anyway in the Native API...
   * remove include/net/keymat.h
+  * include/net/keymat.h: this should be elsewhere
   * remove hip_get_any_localhost_any and replace with select_any_id
   * clean up the state machine handling
     * xmit should be done in the uppermost handling function for better support
@@ -591,9 +279,6 @@ action items:
     surrounding them? Replace them with regular function calls?
    - regular: no, because ip6_*put.c will not compile if HIP is not to be compiled
   * rename lhi to something else
-  * daemon is not really needed; consider removing synch messages altogether
-  * include/net/keymat.h: this should be elsewhere
-  * check if hipd_msg_exchange_queue is really emptied on rmmod
   * hip.c contains still too many unrelated functions: separate to different
     files! This is also needed to clarify the docbook doc.
   * webpages
@@ -636,16 +321,10 @@ action items:
   *  O_TARGET := hipmod.o
   * module dependencies
   * Configure.help
-  * upgrade kernel to 2.6.x
   * update debug.c
     * port debug.c for kernel
     * common unit testing environment to kernel and userspace
-  * check possible crash situations of hipd and hipd crash recovery in kernel
-    * if hipd crashed when it has a lock down() -> error recovery
-      -> up() ja down() wrappers for locks which can handle also HIP_RESTART
-  * ioctl(HIP_RESTART)
   * set up BIND and a few HITs to the virtual machines
-  * /etc/hip/hipd.conf and parsers
   * parsers for hipd messages (both for kernel and userspace)
     - hip_parse_msg() / hip_check_msg()
       - an idea for hip_parse_msg(): parses the message into an pointer
@@ -660,8 +339,6 @@ action items:
   * write a draft about HIP API issues?
 
 * Kristian
-  * transition to the 2.6 kernel series
-  * rendezvous server
   * unit test suite for the ported crypto
 
 * Janne:
@@ -669,14 +346,11 @@ action items:
 
 * unassigned/all:
   * handle ESP code is almost the same for initiator and responder; unifify
-  * check: HIP_DEBUG must not expand to empty string if debugging is disabled
-    (if (x) HIP_DEBUG(..) may be erroneous), expand to do { } while (0);
-    instead
   * we should have different kind of dh keys (one for each group because
     the responder effectively decides the group number)
   * the dh keys should be recreated at some time points
-  * timers for base exchange and rea
-  * the first packet sent is always dropped: implement one packet buffer
+  * retransmission timers for base exchange and rea
+  * the first packet sent is always dropped: implement one packet buffer (old ?)
   * Validate state transitions and whether to send a reply or not according
     to the state
   * hip_sdb -> hip_hadb (hip host association database)
@@ -733,18 +407,10 @@ action items:
  * - check buffer overflow (ctx->htpr) issues in building of R1
  * - convert building of r1 to use only builder functions
  * - later on everything should be built/parsed using builder
- * - No hip packets should be sent or received before autosetup
- *   is finished:
- *     if (hipd_get_auto_setup_state() != HIPD_AUTO_SETUP_STATE_FINISHED)
- *       fail_somehow();
- * - verify signatures in base exchange handlers
  * - separate the tlv checking code into an own function from handle_r1?
- * - LOCKING TO REA
- * - AC/ACR: more accurate RTT timing than jiffies ?
- * - cancel sent rea timer when ACR is received
  *
  * BUGS:
- * - possible kernel panic if module is rmmod'd and REA timer
+ * - old: possible kernel panic if module is rmmod'd and REA timer
  *   expires after that
  * - It should be signalled somehow when building of R1 is 100 %
  *   complete. Otherwise an incomplete packet could be sent for
@@ -758,12 +424,7 @@ action items:
  * - make null-cipher optional, so that the module can be loaded without it
  * - timeouts to cookies
  * - LOCKING TO REA/AC sent lists
- * - AC/ACR: more accurate RTT timing than jiffies ?
- * - hip_send_rea_all: test with multiple REA_INFO payloads (mm-00 sec 6.1.1)
  * - document hip_getfrag using docbook
- * - rename hip_rea_delete_sent_list_one -> hip_rea_delete_sent_list
- * - remove duplicate code, REA/AC list
- * - adding of HMAC/signature to the packet: own functions
  *
  * BUGS:
  * - It should be signalled somehow when building of R1 is 100 % 
@@ -793,7 +454,6 @@ action items:
  * - uncomment commented assertions and test them
  * - Can {daemon|network} header be built before other headers?
  * - fix: get/set msg type err network byte order
- * - a new header for hipd messages? hip_daemon_msg etc.
  * - some of the builder functions could be named better
  *
 
@@ -823,8 +483,6 @@ action items:
  *   this is not a problem, but may cause bugs later?
  * - locking to hip_proc_read_lhi and others
  * - EEXIST -> ENOMSG ?
- * - hip_inet6addr_event_handler and hip_netdev_event_handler
- *   share a lot of same looking code
  */
 
  * socket.c Todo:

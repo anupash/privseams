@@ -1,23 +1,16 @@
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/input.h>
 #include <linux/proc_fs.h>
 #include <asm/bitops.h>
 
 #include "av7110.h"
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0))
-#include "input_fake.h"
-#endif
-
-
 #define UP_TIMEOUT (HZ/4)
 
-static int av7110_ir_debug = 0;
-
-#define dprintk(x...)  do { if (av7110_ir_debug) printk (x); } while (0)
-
+/* enable ir debugging by or'ing av7110_debug with 16 */
 
 static struct input_dev input_dev;
 
@@ -80,7 +73,7 @@ static void av7110_emit_key (u32 ircom)
 
 	keycode = key_map[data];
 	
-	dprintk ("#########%08x######### addr %i data 0x%02x (keycode %i)\n",
+	dprintk(16, "#########%08x######### addr %i data 0x%02x (keycode %i)\n",
 		 ircom, addr, data, keycode);
 
 	/* check device address (if selected) */
@@ -205,6 +198,7 @@ int __init av7110_ir_init (void)
 
 void __exit av7110_ir_exit (void)
 {
+	del_timer_sync(&keyup_timer);
 	remove_proc_entry ("av7110_ir", NULL);
 	av7110_unregister_irc_handler (av7110_emit_key);
 	input_unregister_device(&input_dev);
@@ -212,7 +206,4 @@ void __exit av7110_ir_exit (void)
 
 //MODULE_AUTHOR("Holger Waechtler <holger@convergence.de>");
 //MODULE_LICENSE("GPL");
-
-MODULE_PARM(av7110_ir_debug,"i");
-MODULE_PARM_DESC(av7110_ir_debug, "enable AV7110 IR receiver debug messages");
 

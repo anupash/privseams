@@ -363,18 +363,13 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 		return 0;
 	}
 
-	_HIP_DEBUG("Mapping virtual to pages\n");
-
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1) {
 		HIP_ERROR("Mapping failed\n");
 		return 0;
 	}
 
-	_HIP_DEBUG("Mapping virtual to pages successful\n");
-
 	crypto_hmac(impl, key, &keylen, sg, nsg, out);
-
 	return 1;
 }
 
@@ -515,7 +510,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	}
 
  	/********** HIP transform. **********/
-
  	err = hip_build_param_transform(msg,
  					HIP_PARAM_HIP_TRANSFORM,
  					transform_hip_suite,
@@ -527,7 +521,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	}
 
  	/********** ESP-ENC transform. **********/
-
  	err = hip_build_param_transform(msg,
  					HIP_PARAM_ESP_TRANSFORM,
  					transform_esp_suite,
@@ -550,10 +543,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
-	while(0);
-
  	/********** Signature 2 **********/
-
  	if (!hip_create_signature(msg,
  				  hip_get_msg_total_len(msg),
  				  host_id_private,
@@ -581,14 +571,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		goto out_err;
  	}
 
-
 	/********** ECHO_REQUEST (OPTIONAL) *********/
 
-	while(0);
-
-
 	/* Fill puzzle parameters */
-
 	{
 		struct hip_puzzle *pz;
 		uint64_t random_i;
@@ -606,7 +591,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 		pz->opaque[0] = 'H';
 		pz->opaque[1] = 'I';
 		pz->opaque[2] = 'P';
-
 		get_random_bytes(&random_i,sizeof(random_i));
 		pz->I = random_i;
 	}
@@ -864,10 +848,8 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	hip_transform_suite_t *suggestion;
 
 	length = hip_get_param_contents_len(ht);
-	//length = ntohs(ht->length);
 	suggestion = (uint16_t*) &ht->suite_id[0];
 
-	//if ( (length >> 1) > 6) {
 	if (length > sizeof(struct hip_esp_transform) -
 	    sizeof(struct hip_common)) {
 		HIP_ERROR("Too many transforms\n");
@@ -900,12 +882,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	if(tid == 0)
 		HIP_ERROR("Faulty ESP transform\n");
 
-#if 1
 	return tid;
-#else
-	/* IETF58: only this worked with Andrew */
-	return HIP_ESP_3DES_SHA1;
-#endif
 }
 
 /**
@@ -986,7 +963,6 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 	_HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	/* we will write over the source */
-
 	err = crypto_cipher_setkey(impl, enc_key, key_len);
 	if (err) {
 		if (impl->crt_flags & CRYPTO_TFM_RES_BAD_KEY_SCHED) {
@@ -1957,7 +1933,6 @@ static int hip_do_work(void)
 			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
 			if (res < 0)
 				res = KHIPD_ERROR;
-			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */

@@ -1,5 +1,5 @@
 /*
-    mxb.c - v4l2 driver for the Multimedia eXtension Board
+    mxb - v4l2 driver for the Multimedia eXtension Board
     
     Copyright (C) 1998-2003 Michael Hunold <michael@mihu.de>
 
@@ -43,12 +43,12 @@ static int mxb_num = 0;
    in verden (lower saxony, germany) 4148 is a
    channel called "phoenix" */
 static int freq = 4148;
-MODULE_PARM(freq,"i");
+module_param(freq, int, 0644);
 MODULE_PARM_DESC(freq, "initial frequency the tuner will be tuned to while setup");
 
 static int debug = 0;
-MODULE_PARM(debug,"i");
-MODULE_PARM_DESC(debug, "debug verbosity");
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "Turn on/off device debugging (default:off).");
 
 #define MXB_INPUTS 4
 enum { TUNER, AUX1, AUX3, AUX3_YC };
@@ -128,8 +128,8 @@ static struct saa7146_extension_ioctls ioctls[] = {
 
 struct mxb
 {
-	struct video_device	video_dev;
-	struct video_device	vbi_dev;
+	struct video_device	*video_dev;
+	struct video_device	*vbi_dev;
 
 	struct i2c_adapter	i2c_adapter;	
 
@@ -183,7 +183,12 @@ static int mxb_probe(struct saa7146_dev* dev)
 	}
 	memset(mxb, 0x0, sizeof(struct mxb));	
 
-	saa7146_i2c_adapter_prepare(dev, &mxb->i2c_adapter, I2C_CLASS_TV_ANALOG, SAA7146_I2C_BUS_BIT_RATE_480);
+	mxb->i2c_adapter = (struct i2c_adapter) {
+		.class = I2C_CLASS_TV_ANALOG,
+		.name = "mxb",
+	};
+
+	saa7146_i2c_adapter_prepare(dev, &mxb->i2c_adapter, SAA7146_I2C_BUS_BIT_RATE_480);
 	if(i2c_add_adapter(&mxb->i2c_adapter) < 0) {
 		DEB_S(("cannot register i2c-device. skipping.\n"));
 		kfree(mxb);

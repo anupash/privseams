@@ -69,13 +69,12 @@
 #include <linux/ioport.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
-#include <linux/pci.h>
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/inet.h>
 #include <linux/rcupdate.h>
+#include <linux/bitops.h>
 #include <asm/byteorder.h>
-#include <asm/bitops.h>
 #include <asm/io.h>
 #include <asm/dma.h>
 #include <asm/uaccess.h>
@@ -603,8 +602,10 @@ static void show_results(struct pktgen_info* info, int nr_frags)
 	do_div(idle, cpu_speed);
 
 	p += sprintf(p, "OK: %llu(c%llu+d%lu) usec, %llu (%dbyte,%dfrags)\n",
-		     total, total - idle, idle,
-		     info->sofar, size, nr_frags);
+		     (unsigned long long) total,
+		     (unsigned long long) (total - idle), idle,
+		     (unsigned long long) info->sofar,
+		     size, nr_frags);
 
 	pps = info->sofar * USEC_PER_SEC;
 	
@@ -620,7 +621,10 @@ static void show_results(struct pktgen_info* info, int nr_frags)
 	mbps = bps;
 	do_div(mbps, 1000000);
 	p += sprintf(p, "  %llupps %lluMb/sec (%llubps) errors: %llu",
-		     pps, mbps, bps, info->errors);
+		     (unsigned long long) pps,
+		     (unsigned long long) mbps,
+		     (unsigned long long) bps,
+		     (unsigned long long) info->errors);
 }
 
 static void inject(struct pktgen_info* info)
@@ -643,6 +647,7 @@ static void inject(struct pktgen_info* info)
 	info->do_run_run = 1; /* Cranke yeself! */
 	info->idle_acc = 0;
 	info->sofar = 0;
+	info->errors = 0;
 	lcount = info->count;
 
 

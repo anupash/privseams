@@ -368,5 +368,8 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 	  return;
 	}
       }
-      HIP_DEBUG("%s: %s\n", prefix, addr_str);
+      if (prefix)
+	HIP_DEBUG("%s: %s\n", prefix, addr_str);
+      else
+	HIP_DEBUG("%s\n", addr_str);
 }

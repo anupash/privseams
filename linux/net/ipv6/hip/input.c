@@ -748,7 +748,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   function. Now, begin to build I2 piece by piece. */
 
 	/* Delete old SPDs and SAs, if present */
-	//hip_delete_esp(&ctx->input->hitr,&ctx->input->hits);
 	hip_delete_esp(entry);
 
 	/* create I2 */
@@ -757,7 +756,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			      &(ctx->input->hits));
 
 	/********** SPI **********/
-
 	/* SPI and LSI are set below where IPsec is set up */
 	err = hip_build_param_spi(i2, 0);
 	if (err) {
@@ -934,7 +932,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 		/* let the setup routine give us a SPI. */
 		spi_in = 0;
-
 		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
 				   &spi_in, transform_esp_suite, 
 				   &ctx->esp_in.key, &ctx->auth_in.key, 
@@ -957,7 +954,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 #ifdef CONFIG_HIP_RVS
 	/************ RVA_REQUEST (OPTIONAL) ***************/
-	
 	{
 		/* we've requested RVS, and the peer is rvs capable */
 		int type = HIP_RVA_RELAY_I1;
@@ -1028,7 +1024,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	/********** ECHO_RESPONSE (OPTIONAL) ************/
-
 	/* must reply */
 	{
 		struct hip_echo_request *ping;
@@ -1050,7 +1045,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
-	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&ctx->skb_in->nh.ipv6h->daddr); /* ok ? */
+	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&ctx->skb_in->nh.ipv6h->daddr);
 	HIP_LOCK_HA(entry);
 	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
@@ -1426,7 +1421,6 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 	HIP_DEBUG("\n");
 
 	/* assume already locked entry */
-
 	i2 = ctx->input;
 
 	/* Build and send R2
@@ -1790,7 +1784,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	 */
 
 	/* validate signature */
-	_HIP_DEBUG("validate signature\n");
 
 	// XX CHECK: is the host_id_in_enc correct??! it points to the temp
 	err = hip_verify_packet_signature(ctx->input, host_id_in_enc);
@@ -2010,9 +2003,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	}
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
-
-	//hip_hadb_dump_spis_in(entry);
-	//hip_hadb_dump_spis_out(entry);
 
  out_err:
 	/* ha is not NULL if hip_receive_i2() fetched the HA for us.
@@ -2240,7 +2230,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 	_HIP_DEBUG("add spi err ret=%d\n", err);
-	//hip_hadb_dump_spi_list(entry, NULL);
 
 	err = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
 	if (err != 0) {
@@ -2260,8 +2249,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	hip_finalize_sa(&r2->hitr, spi_in);
 
 	//HIP_DEBUG("Reached ESTABLISHED state\n"); moved to receive_r2
-	//hip_hadb_dump_spis_in(entry);
-	//hip_hadb_dump_spis_out(entry);
 
  out_err:
 	if (ctx)
@@ -2654,7 +2641,7 @@ int hip_handle_bos(struct sk_buff *skb, hip_ha_t *entry)
 			HIP_HEXDUMP("Received", dstip, 16);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
 			HIP_ERROR("assuming we are doing base exchange\n");
-			hip_hadb_add_peer_addr(entry, dstip, 0 /* SPI */, 0, 0);
+			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0);
 		}
 	} else {
 		HIP_DEBUG("Adding new peer entry\n");

@@ -138,6 +138,28 @@ static unsigned long getreg(struct task_struct *child,
 	return retval;
 }
 
+static void set_singlestep(struct task_struct *child)
+{
+	long eflags;
+
+	set_tsk_thread_flag(child, TIF_SINGLESTEP);
+	eflags = get_stack_long(child, EFL_OFFSET);
+	put_stack_long(child, EFL_OFFSET, eflags | TRAP_FLAG);
+	child->ptrace |= PT_DTRACE;
+}
+
+static void clear_singlestep(struct task_struct *child)
+{
+	if (child->ptrace & PT_DTRACE) {
+		long eflags;
+
+		clear_tsk_thread_flag(child, TIF_SINGLESTEP);
+		eflags = get_stack_long(child, EFL_OFFSET);
+		put_stack_long(child, EFL_OFFSET, eflags & ~TRAP_FLAG);
+		child->ptrace &= ~PT_DTRACE;
+	}
+}
+
 /*
  * Called by kernel/ptrace.c when detaching..
  *
@@ -145,11 +167,7 @@ static unsigned long getreg(struct task_struct *child,
  */
 void ptrace_disable(struct task_struct *child)
 { 
-	long tmp;
-
-	clear_tsk_thread_flag(child, TIF_SINGLESTEP);
-	tmp = get_stack_long(child, EFL_OFFSET) & ~TRAP_FLAG;
-	put_stack_long(child, EFL_OFFSET, tmp);
+	clear_singlestep(child);
 }
 
 /*
@@ -344,6 +362,36 @@ asmlinkage int sys_ptrace(long request, long pid, long addr, long data)
 			  if(addr < (long) &dummy->u_debugreg[4] &&
 			     ((unsigned long) data) >= TASK_SIZE-3) break;
 			  
+			  /* Sanity-check data. Take one half-byte at once with
+			   * check = (val >> (16 + 4*i)) & 0xf. It contains the
+			   * R/Wi and LENi bits; bits 0 and 1 are R/Wi, and bits
+			   * 2 and 3 are LENi. Given a list of invalid values,
+			   * we do mask |= 1 << invalid_value, so that
+			   * (mask >> check) & 1 is a correct test for invalid
+			   * values.
+			   *
+			   * R/Wi contains the type of the breakpoint /
+			   * watchpoint, LENi contains the length of the watched
+			   * data in the watchpoint case.
+			   *
+			   * The invalid values are:
+			   * - LENi == 0x10 (undefined), so mask |= 0x0f00.
+			   * - R/Wi == 0x10 (break on I/O reads or writes), so
+			   *   mask |= 0x4444.
+			   * - R/Wi == 0x00 && LENi != 0x00, so we have mask |=
+			   *   0x1110.
+			   *
+			   * Finally, mask = 0x0f00 | 0x4444 | 0x1110 == 0x5f54.
+			   *
+			   * See the Intel Manual "System Programming Guide",
+			   * 15.2.4
+			   *
+			   * Note that LENi == 0x10 is defined on x86_64 in long
+			   * mode (i.e. even for 32-bit userspace software, but
+			   * 64-bit kernel), so the x86_64 mask value is 0x5454.
+			   * See the AMD manual no. 24593 (AMD64 System
+			   * Programming)*/
+
 			  if(addr == (long) &dummy->u_debugreg[7]) {
 				  data &= ~DR_CONTROL_RESERVED;
 				  for(i=0; i<4; i++)
@@ -358,10 +406,8 @@ asmlinkage int sys_ptrace(long request, long pid, long addr, long data)
 		  }
 		  break;
 
-	case PTRACE_SYSCALL: /* continue and stop at next (return from) syscall */
-	case PTRACE_CONT: { /* restart after signal. */
-		long tmp;
-
+	case PTRACE_SYSCALL:	/* continue and stop at next (return from) syscall */
+	case PTRACE_CONT:	/* restart after signal. */
 		ret = -EIO;
 		if ((unsigned long) data > _NSIG)
 			break;
@@ -371,56 +417,39 @@ asmlinkage int sys_ptrace(long request, long pid, long addr, long data)
 		else {
 			clear_tsk_thread_flag(child, TIF_SYSCALL_TRACE);
 		}
-		clear_tsk_thread_flag(child, TIF_SINGLESTEP);
 		child->exit_code = data;
-	/* make sure the single step bit is not set. */
-		tmp = get_stack_long(child, EFL_OFFSET) & ~TRAP_FLAG;
-		put_stack_long(child, EFL_OFFSET,tmp);
+		/* make sure the single step bit is not set. */
+		clear_singlestep(child);
 		wake_up_process(child);
 		ret = 0;
 		break;
-	}
 
 /*
  * make the child exit.  Best I can do is send it a sigkill. 
  * perhaps it should be put in the status that it wants to 
  * exit.
  */
-	case PTRACE_KILL: {
-		long tmp;
-
+	case PTRACE_KILL:
 		ret = 0;
-		if (child->state == TASK_ZOMBIE)	/* already dead */
+		if (child->exit_state == EXIT_ZOMBIE)	/* already dead */
 			break;
 		child->exit_code = SIGKILL;
-		clear_tsk_thread_flag(child, TIF_SINGLESTEP);
 		/* make sure the single step bit is not set. */
-		tmp = get_stack_long(child, EFL_OFFSET) & ~TRAP_FLAG;
-		put_stack_long(child, EFL_OFFSET, tmp);
+		clear_singlestep(child);
 		wake_up_process(child);
 		break;
-	}
 
-	case PTRACE_SINGLESTEP: {  /* set the trap flag. */
-		long tmp;
-
+	case PTRACE_SINGLESTEP:	/* set the trap flag. */
 		ret = -EIO;
 		if ((unsigned long) data > _NSIG)
 			break;
 		clear_tsk_thread_flag(child, TIF_SYSCALL_TRACE);
-		if ((child->ptrace & PT_DTRACE) == 0) {
-			/* Spurious delayed TF traps may occur */
-			child->ptrace |= PT_DTRACE;
-		}
-		tmp = get_stack_long(child, EFL_OFFSET) | TRAP_FLAG;
-		put_stack_long(child, EFL_OFFSET, tmp);
-		set_tsk_thread_flag(child, TIF_SINGLESTEP);
+		set_singlestep(child);
 		child->exit_code = data;
 		/* give it a chance to run. */
 		wake_up_process(child);
 		ret = 0;
 		break;
-	}
 
 	case PTRACE_DETACH:
 		/* detach a process that was attached. */

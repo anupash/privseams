@@ -1,7 +1,7 @@
 #include <linux/version.h>
 #include <media/saa7146_vv.h>
 
-u32 saa7146_i2c_func(struct i2c_adapter *adapter)
+static u32 saa7146_i2c_func(struct i2c_adapter *adapter)
 {
 //fm	DEB_I2C(("'%s'.\n", adapter->name));
 
@@ -190,7 +190,7 @@ static int saa7146_i2c_writeout(struct saa7146_dev *dev, u32* dword, int short_d
 		saa7146_write(dev, I2C_TRANSFER, *dword);
 
 		dev->i2c_op = 1;
-		IER_ENABLE(dev, MASK_16|MASK_17);
+		SAA7146_IER_ENABLE(dev, MASK_16|MASK_17);
 		saa7146_write(dev, MC2, (MASK_00 | MASK_16));
 
 		wait_event_interruptible(dev->i2c_wq, dev->i2c_op == 0);
@@ -393,7 +393,7 @@ static struct i2c_algorithm saa7146_algo = {
 	.functionality	= saa7146_i2c_func,
 };
 
-int saa7146_i2c_adapter_prepare(struct saa7146_dev *dev, struct i2c_adapter *i2c_adapter, unsigned int class, u32 bitrate)
+int saa7146_i2c_adapter_prepare(struct saa7146_dev *dev, struct i2c_adapter *i2c_adapter, u32 bitrate)
 {
 	DEB_EE(("bitrate: 0x%08x\n",bitrate));
 	
@@ -404,13 +404,11 @@ int saa7146_i2c_adapter_prepare(struct saa7146_dev *dev, struct i2c_adapter *i2c
 	saa7146_i2c_reset(dev);
 
 	if( NULL != i2c_adapter ) {
-		memset(i2c_adapter,0,sizeof(struct i2c_adapter));
-		strcpy(i2c_adapter->name, dev->name);	
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0))
 		i2c_adapter->data = dev;
 #else
+		BUG_ON(!i2c_adapter->class);
 		i2c_set_adapdata(i2c_adapter,dev);
-		i2c_adapter->class = class;
 #endif
 		i2c_adapter->algo	   = &saa7146_algo;
 		i2c_adapter->algo_data     = NULL;

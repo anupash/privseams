@@ -12,7 +12,8 @@
 #include <linux/errno.h>
 #include <linux/netdevice.h>
 #include <net/ip.h>
-#include <net/pkt_sched.h>
+#include <net/act_api.h>
+#include <net/pkt_cls.h>
 #include <net/route.h>
 
 
@@ -159,12 +160,12 @@ static int tcindex_init(struct tcf_proto *tp)
 }
 
 
-static int tcindex_delete(struct tcf_proto *tp, unsigned long arg)
+static int
+__tcindex_delete(struct tcf_proto *tp, unsigned long arg, int lock)
 {
 	struct tcindex_data *p = PRIV(tp);
 	struct tcindex_filter_result *r = (struct tcindex_filter_result *) arg;
 	struct tcindex_filter *f = NULL;
-	unsigned long cl;
 
 	DPRINTK("tcindex_delete(tp %p,arg 0x%lx),p %p,f %p\n",tp,arg,p,f);
 	if (p->perfect) {
@@ -182,13 +183,13 @@ static int tcindex_delete(struct tcf_proto *tp, unsigned long arg)
 
 found:
 		f = *walk;
-		tcf_tree_lock(tp); 
+		if (lock)
+			tcf_tree_lock(tp);
 		*walk = f->next;
-		tcf_tree_unlock(tp);
+		if (lock)
+			tcf_tree_unlock(tp);
 	}
-	cl = __cls_set_class(&r->res.class,0);
-	if (cl)
-		tp->q->ops->cl_ops->unbind_tcf(tp->q,cl);
+	tcf_unbind_filter(tp, &r->res);
 #ifdef CONFIG_NET_CLS_POLICE
 	tcf_police_release(r->police, TCA_ACT_UNBIND);
 #endif
@@ -197,6 +198,10 @@ found:
 	return 0;
 }
 
+static int tcindex_delete(struct tcf_proto *tp, unsigned long arg)
+{
+	return __tcindex_delete(tp, arg, 1);
+}
 
 /*
  * There are no parameters for tcindex_init, so we overload tcindex_change
@@ -312,28 +317,19 @@ static int tcindex_change(struct tcf_proto *tp,unsigned long base,u32 handle,
 	}
 	DPRINTK("r=%p\n",r);
 	if (tb[TCA_TCINDEX_CLASSID-1]) {
-		unsigned long cl = cls_set_class(tp,&r->res.class,0);
-
-		if (cl)
-			tp->q->ops->cl_ops->unbind_tcf(tp->q,cl);
 		r->res.classid = *(__u32 *) RTA_DATA(tb[TCA_TCINDEX_CLASSID-1]);
-		r->res.class = tp->q->ops->cl_ops->bind_tcf(tp->q,base,
-							    r->res.classid);
+		tcf_bind_filter(tp, &r->res, base);
+
 		if (!r->res.class) {
 			r->res.classid = 0;
 			return -ENOENT;
 		}
-        }
+	}
 #ifdef CONFIG_NET_CLS_POLICE
-	{
-		struct tcf_police *police;
-
-		police = tb[TCA_TCINDEX_POLICE-1] ?
-		    tcf_police_locate(tb[TCA_TCINDEX_POLICE-1],NULL) : NULL;
-		tcf_tree_lock(tp);
-		police = xchg(&r->police,police);
-		tcf_tree_unlock(tp);
-		tcf_police_release(police,TCA_ACT_UNBIND);
+	if (tb[TCA_TCINDEX_POLICE-1]) {
+		int err = tcf_change_police(tp, &r->police, tb[TCA_TCINDEX_POLICE-1], NULL);
+		if (err < 0)
+			return err;
 	}
 #endif
 	if (r != &new_filter_result)
@@ -395,7 +391,7 @@ static void tcindex_walk(struct tcf_proto *tp, struct tcf_walker *walker)
 static int tcindex_destroy_element(struct tcf_proto *tp,
     unsigned long arg, struct tcf_walker *walker)
 {
-	return tcindex_delete(tp,arg);
+	return __tcindex_delete(tp, arg, 0);
 }
 
 
@@ -458,14 +454,8 @@ static int tcindex_dump(struct tcf_proto *tp, unsigned long fh,
 		if (r->res.class)
 			RTA_PUT(skb, TCA_TCINDEX_CLASSID, 4, &r->res.classid);
 #ifdef CONFIG_NET_CLS_POLICE
-		if (r->police) {
-			struct rtattr *p_rta = (struct rtattr *) skb->tail;
-
-			RTA_PUT(skb,TCA_TCINDEX_POLICE,0,NULL);
-			if (tcf_police_dump(skb,r->police) < 0)
-				goto rtattr_failure;
-			p_rta->rta_len = skb->tail-(u8 *) p_rta;
-		}
+		if (tcf_dump_police(skb, r->police, TCA_TCINDEX_POLICE) < 0)
+			goto rtattr_failure;
 #endif
 	}
 	rta->rta_len = skb->tail-b;
