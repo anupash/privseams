@@ -1817,8 +1817,7 @@ int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
  * 
  * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_nes(struct hip_common *msg, int is_reply,
-			uint16_t keymat_index,
+int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
 			uint32_t old_spi, uint32_t new_spi)
 {
 	int err = 0;
@@ -1826,12 +1825,7 @@ int hip_build_param_nes(struct hip_common *msg, int is_reply,
 
 	hip_set_param_type(&nes, HIP_PARAM_NES);
 	hip_calc_generic_param_len(&nes, sizeof(struct hip_nes), 0);
-	if (is_reply)
-		nes.keymat_index = htons(0x8000 | keymat_index); /* highest bit set */
-	else
-		nes.keymat_index = htons(0x7fff & keymat_index); /* highest bit not set */
-
-	_HIP_DEBUG("nes.keymat_index host=%u\n", ntohs(nes.keymat_index));
+	nes.keymat_index = htons(keymat_index);
 	nes.old_spi = htonl(old_spi);
 	nes.new_spi = htonl(new_spi);
 	err = hip_build_param(msg, &nes);
@@ -1853,9 +1847,27 @@ int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
 	hip_set_param_type(&seq, HIP_PARAM_SEQ);
 	hip_calc_generic_param_len(&seq, sizeof(struct hip_seq), 0);
 	seq.update_id = htonl(update_id);
-	HIP_DEBUG("update_id=%u\n", update_id);
 	err = hip_build_param(msg, &seq);
 	return err;
+}
+
+/**
+ * hip_build_param_ack - build and append HIP ACK parameter
+ * @msg: the message where the parameter will be appended
+ * @peer_update_id: peer Update ID
+ * 
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
+{
+        int err = 0;
+        struct hip_ack ack;
+
+        hip_set_param_type(&ack, HIP_PARAM_ACK);
+        hip_calc_generic_param_len(&ack, sizeof(struct hip_ack), 0);
+        ack.peer_update_id = htonl(peer_update_id);
+        err = hip_build_param(msg, &ack);
+        return err;
 }
 
 /**
