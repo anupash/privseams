@@ -27,5 +27,8 @@ int hip_receive_ac_or_acr(struct sk_buff *skb, int pkt_type);
 int hip_receive_rea(struct sk_buff *skb);
 int hip_is_our_spi(uint32_t spi, struct in6_addr *hit);
 
+int hip_verify_packet_hmac(struct hip_common *msg);
+int hip_verify_packet_signature(struct hip_common *msg,
+				struct hip_host_id *hid);
 
 #endif /* HIP_INPUT_H */
