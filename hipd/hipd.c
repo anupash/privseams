@@ -29,91 +29,90 @@ void usage() {
  * resource allocations.
  */
 void hip_exit(int signal) {
-     exit(signal);
+	hip_uninit_workqueue();
+	hip_netlink_close();
+	exit(signal);
 }
 
 int main(int argc, char *argv[]) {
-     char ch;
-     char buff[HIP_MAX_NETLINK_PACKET];
-     fd_set read_fdset;
-     int foreground = 0;
-     int highest_descriptor;
-     int s_net;
-     int err;
-     struct timeval timeout;
+	char ch;
+	char buff[HIP_MAX_NETLINK_PACKET];
+	fd_set read_fdset;
+	int foreground = 0;
+	int highest_descriptor;
+	int s_net;
+	int err;
+	struct timeval timeout;
+	
+	/* Parse command-line options */
+	while ((ch = getopt(argc, argv, "f")) != -1) {
+		switch (ch) {
+		case 'f':
+			foreground = 1;
+			break;
+		case '?':
+		default:
+			usage();
+			return(0);
+		}
+	}
+	
+	/* Configuration is valid! Fork a daemon, if so configured */
+	if (!foreground) {
+		if (fork() > 0)
+			return(0);
+	}
+	
+	/* Register signal handlers */
+	signal(SIGINT, hip_exit);
+	signal(SIGTERM, hip_exit);
+	signal(SIGSEGV, hip_exit);
+	
+	/* Open the netlink socket for kernel communication */
+	if (hip_netlink_open(&s_net) < 0) {
+		HIP_ERROR("Netlink socket error: %s\n", strerror(errno));
+		return(1);
+	}
+	/* For now useless, but keep record of the highest fd for
+	 * future purposes (multiple sockets to select from) */
+	highest_descriptor = s_net;
+	
+	/* Workqueue relies on an open netlink connection */
+	hip_init_workqueue();
+	
+	/* Enter to the select-loop */
+	for (;;) { 
+		/* prepare file descriptor sets */
+		FD_ZERO(&read_fdset);
+		FD_SET(s_net, &read_fdset);
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		
+		/* wait for socket activity */
+		if ((err = select((highest_descriptor + 1), &read_fdset, 
+				  NULL, NULL, &timeout)) < 0) {
+			HIP_INFO("select() error: %s.\n", strerror(errno));
+			
+		} else if (err == 0) { 
+			/* idle cycle - select() timeout */               
+			
+		} else if (FD_ISSET(s_net, &read_fdset)) {
+			/* Something on Netlink socket */
+			struct hip_work_order *job;
+			
+			job = hip_get_work_order();
+			if (!job) {
+				/* The queue logged the error */
+				continue;
+			}
+			
+			hip_do_work(job);
+			hip_free_work_order(job);
+		} else {
+			HIP_INFO("unknown socket activity.");
+		} /* select */
+	}
 
-     /* Parse command-line options */
-     while ((ch = getopt(argc, argv, "f")) != -1) {
-          switch (ch) {
-          case 'f':
-               foreground = 1;
-               break;
-          case '?':
-          default:
-               usage();
-               return(0);
-          }
-     }
-
-     /* Configuration is valid, fork a daemon, if so configured */
-     if (!foreground) {
-          if (fork() > 0)
-               return(0);
-     }
-
-     /* Register signal handlers */
-     signal(SIGINT, hip_exit);
-     signal(SIGTERM, hip_exit);
-     signal(SIGSEGV, hip_exit);
-
-     /* Open the netlink socket for kernel communication */
-     if (hip_netlink_open() < 0) {
-          HIP_ERROR("Netlink socket error: %s\n", strerror(errno));
-          //unlink(HIP_LOCK_FILENAME);
-          return(1);
-     }
-
-     /* Workqueue stores a reference to the socket handle to provide a
-      * simple interface its callers */
-     hip_init_workqueue(s_net);
-
-     highest_descriptor = s_net;
-
-     /* Enter to the select-loop */
-     for (;;) { 
-          /* prepare file descriptor sets */
-          FD_ZERO(&read_fdset);
-          FD_SET(s_net, &read_fdset);
-          timeout.tv_sec = 1;
-          timeout.tv_usec = 0;
-
-          /* wait for socket activity */
-          if ((err = select((highest_descriptor + 1), &read_fdset, 
-                            NULL, NULL, &timeout)) < 0) {
-		  HIP_INFO("select() error: %s.\n", strerror(errno));
-
-          } else if (err == 0) { 
-		  /* idle cycle - select() timeout */               
-		  
-          } else if (FD_ISSET(s_net, &read_fdset)) {
-		  /* Something on Netlink socket */
-		  hip_get_work_order();
-		  
-
-		  /*err = read(s_net, buff, sizeof(buff));
-               if (err < 0) {
-	       HIP_INFO("Netlink read() error - %d %s\n", 
-	       errno, strerror(errno));
-	       }*/
-		  
-		  // FIXME: process the message kernel HIPL sent
-		  // transform the netlink msg to a work order
-		  
-               // hip_handle_netlink(buff, err);
-          } else {
-              HIP_INFO("unknown socket activity.");
-          } /* select */
-     }
-
-     return(0);
+	/* Never enters here...*/
+	return(0);
 }

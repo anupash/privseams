@@ -78,7 +78,7 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
 extern struct crypto_tfm *impl_sha1;
 extern struct crypto_tfm *impl_sha1;
-extern struct semaphore hip_work;
+//extern struct semaphore hip_work;
 extern struct socket *hip_output_socket;
 //extern spinlock_t hip_workqueue_lock;
 extern spinlock_t dh_table_lock;

@@ -43,10 +43,12 @@ builder.c: builder.h
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/db.c .
 #db.h:
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/db.h .
-#hadb.c: hadb.h
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.c .
-#hadb.h:
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.h .
+hadb.c: hadb.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.c .
+hadb.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.h .
+netlink.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/netlink.h .
 #hashtable.c: hashtable.h
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.c .
 #hashtable.h:

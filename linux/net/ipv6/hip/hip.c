@@ -2043,6 +2043,7 @@ static int hip_worker(void *t)
 
 	/* set up thread */
 	thr->pid = pid = current->pid;
+     hip_netlink_open();
 	hip_init_workqueue();
 	atomic_inc(&hip_working);
 	daemonize("khipd/%d", cpu);
@@ -2097,6 +2098,8 @@ static int hip_worker(void *t)
 
 	/* cleanup and finish thread */
 	hip_uninit_workqueue();
+     hip_netlink_close();
+
 	atomic_dec(&hip_working);
 	HIP_DEBUG("HIP kernel thread %d exiting on cpu %d\n", pid, cpu);
 
