@@ -100,7 +100,7 @@ int main(int argc,char *argv[]) {
     printf("GAI ERROR %d: %s\n", gai_err, gai_strerror(gai_err));
     return(1);
   }
-  
+
   /* data from stdin to buffer */
   bzero(receiveddata, IP_MAXPACKET);
   bzero(mylovemostdata, IP_MAXPACKET);
@@ -115,7 +115,7 @@ int main(int argc,char *argv[]) {
 
   gettimeofday(&stats_before, NULL);
 
-  /* connect */
+   /* connect */
 
   for(ai = res; ai != NULL; ai = ai->ai_next) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ai->ai_addr;
@@ -130,13 +130,13 @@ int main(int argc,char *argv[]) {
     }
 
     if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
-		   sizeof(addr_str))) {
+ 		   sizeof(addr_str))) {
       perror("inet_ntop\n");
       goto out_err;
     }
 
     printf("Trying to connect to %s\n", addr_str);
-    
+
     if (connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6)) < 0) {
       close(sock);
       sock = 0;
@@ -154,32 +154,32 @@ int main(int argc,char *argv[]) {
   gettimeofday(&stats_after, NULL);
   stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
   stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-  
+
   printf("connect took %.3f sec\n",
-	 (stats_diff_sec+stats_diff_usec) / 1000000.0);
-  
+ 	 (stats_diff_sec+stats_diff_usec) / 1000000.0);
+
   /* send and receive data */
-  
+
   while((datasent < datalen) || (datareceived < datalen)) {
 
     if (datasent < datalen) {
       sendnum = send(sock, mylovemostdata+datasent, datalen-datasent, 0);
-      
+
       if (sendnum < 0) {
-	perror("send");
-	printf("FAIL\n");
-	goto out_err;
-      }
+ 	perror("send");
+ 	printf("FAIL\n");
+ 	goto out_err;
+       }
       datasent += sendnum;
     }
-    
+
     if (datareceived < datalen) {
       recvnum = recv(sock, receiveddata+datareceived, datalen-datareceived, 0);
       if (recvnum <= 0) {
-	perror("recv");
-	goto out_err;
+ 	perror("recv");
+ 	goto out_err;
       }
-      datareceived += recvnum;
+       datareceived += recvnum;
     }
   }
 

@@ -67,7 +67,7 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			 *
 			 * This could lead to DoSes... if birthday check is omitted.
 			 */
-			//HIP_CALLPROC(hip_unknown_spi)(skb,spi);
+			HIP_CALLPROC(hip_unknown_spi)(skb, spi);
 #endif
 			goto drop;
 		}

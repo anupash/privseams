@@ -1017,13 +1017,13 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
  */
 void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 {
+	if (!hip_is_hit(&(skb->nh.ipv6h->saddr)))
+		return;
+
 	/* draft: If the R1 is a response to an ESP packet with an unknown
 	   SPI, the Initiator HIT SHOULD be zero. */
 	HIP_DEBUG("Received Unknown SPI: 0x%x\n", ntohl(spi));
-	HIP_INFO("Sending R1 with NULL dst HIT\n");
-
-	HIP_DEBUG("SKIP SENDING OF R1 ON UNKNOWN SPI\n");
-	/* TODO: send NOTIFY */
+	HIP_DEBUG("TODO: rekey old SA ?\n");  /* and/or TODO: send NOTIFY ? */
 	return;
 #if 0
 	/* We cannot know the destination HIT */
@@ -1607,9 +1607,12 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
 		goto out;
 	}
 
-	err = 0;
 	ipv6_addr_copy(&hdr.daddr, (struct in6_addr *) &(xs->id.daddr));
-	hip_handle_output(&hdr, NULL);
+	err = hip_handle_output(&hdr, NULL);
+	if (err)
+		HIP_ERROR("TODO: handle err=%d\n", err);
+	err = 0; /* tell XFRM that we handle this SA acquiring even
+		  * if the previous failed */
 	
 out:
 	HIP_DEBUG("returning, err=%d\n", err);

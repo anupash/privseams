@@ -132,7 +132,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 		if (!skb) {
-			HIP_ERROR("Established state and no SKB!\n");
+			HIP_ERROR("ESTABLISHED state and no skb!\n");
 			HIP_ERROR("Called by xfrm state re-acquire ? do BEX again ?\n");
 			err = -EADDRNOTAVAIL;
 			goto out;
