@@ -3,8 +3,8 @@
 
 #include <linux/ipv6.h>
 #include <linux/skbuff.h>
-#include <linux/inet.h>
-#include <linux/netdevice.h>
+//#include <linux/inet.h>
+//#include <linux/netdevice.h>
 
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46

@@ -10,7 +10,6 @@
 #include <stdint.h>
 #endif /* __KERNEL__ */
 
-#include "debug.h"
 
 /*
  * A maximum amount of test spaces, suites and cases have be fixed because they

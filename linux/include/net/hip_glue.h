@@ -35,17 +35,6 @@ extern struct hip_callable_functions hip_functions;
 #endif /* __KERNEL__ */
 
 /* Returns true if addr is a HIT */
-static inline int hip_is_hit(struct in6_addr *addr) 
-{
-	int bits;
-
-	bits = addr->s6_addr[0] & 0xC0;
-
-	if (bits == 0x80 || bits == 0x40)
-		return 1;
-
-	return 0;
-}
 
 
 #endif /* _NET_HIP_GLUE_H */

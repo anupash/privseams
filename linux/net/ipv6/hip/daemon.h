@@ -1,24 +1,8 @@
 #ifndef HIP_DAEMON_H
 #define HIP_DAEMON_H
 
+#include <linux/spinlock.h>
 #include <net/hip.h>
-#include <linux/skbuff.h>
-#include <linux/list.h>
-#include <linux/in6.h>
-
-#include "unit.h"
-#include "db.h"
-#include "debug.h"
-#include "ioctl.h"
-#include "daemon.h"
-
-#ifndef __KERNEL__
-#  define __KERNEL__
-#endif
-
-#ifndef MODULE
-#  define MODULE
-#endif
 
 #define HIPD_MSG_EXCHANGE_QUEUE_MAX 64
 

@@ -162,7 +162,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC  	= gcc
 HOSTCXX  	= g++
-HOSTCFLAGS	= -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer
+HOSTCFLAGS	= -Wall -Wstrict-prototypes -O2 
+#-fomit-frame-pointer
 HOSTCXXFLAGS	= -O2
 
 # 	Decide whether to build built-in, modular, or both.
@@ -438,9 +439,9 @@ else
 CFLAGS		+= -O2
 endif
 
-ifndef CONFIG_FRAME_POINTER
-CFLAGS		+= -fomit-frame-pointer
-endif
+#ifndef CONFIG_FRAME_POINTER
+#CFLAGS		+= -fomit-frame-pointer
+#endif
 
 ifdef CONFIG_DEBUG_INFO
 CFLAGS		+= -g

@@ -3,6 +3,9 @@
  */
 
 #include "misc.h"
+#include "debug.h"
+#include "builder.h"
+#include "hip.h"
 
 /*
  * XX TODO: HAA
@@ -242,4 +245,19 @@ char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
                 ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
                 ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
         return buf;
+}
+
+int hip_in6_ntop2(const struct in6_addr *in6, char *buf)
+{
+	return sprintf(buf,
+		       "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+		       ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
+		       ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
+		       ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
+		       ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
+}
+
+int hip_is_hit(const hip_hit_t *hit) 
+{
+	return ipv6_addr_is_hit((struct in6_addr *)hit);
 }

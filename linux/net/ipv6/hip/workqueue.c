@@ -3,8 +3,13 @@
  * Authors: Kristian Slavov <ksl@iki.fi>
  *
  */
+#include <asm/semaphore.h>
+#include <asm/percpu.h>
+#include <asm/system.h>
+#include <linux/list.h>
 
 #include "workqueue.h"
+#include "debug.h"
 
 struct hip_pc_wq {
 	struct semaphore *worklock;
@@ -169,5 +174,16 @@ struct hip_work_order *hip_create_job_with_hit(int gfp_mask,
 
 	ipv6_addr_copy(tmp,hit);
 	hwo->arg1 = tmp;
+	hwo->destructor = hwo_default_destructor;
 	return hwo;
+}
+
+void hwo_default_destructor(struct hip_work_order *hwo)
+{
+	if (hwo) {
+		if (hwo->arg1)
+			kfree(hwo->arg1);
+		if (hwo->arg2)
+			kfree(hwo->arg2);
+	}
 }

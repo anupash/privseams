@@ -6,7 +6,14 @@
  *
  */
 
+#include <linux/types.h>
+#include <linux/random.h>
+#include <asm/scatterlist.h>
+
 #include "cookie.h"
+#include "debug.h"
+#include "hip.h"
+#include "builder.h"
 
 struct hip_r1entry *hip_r1table;
 

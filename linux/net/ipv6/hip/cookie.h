@@ -1,15 +1,9 @@
 #ifndef HIP_COOKIE_H
 #define HIP_COOKIE_H
 
-#include "db.h"
-#include "debug.h"
-#include "hip.h"
-#include "linux/spinlock.h"
-#include "workqueue.h"
-
-#ifndef MODULE
-# define MODULE
-#endif
+#include <linux/types.h>
+#include <net/ipv6.h>
+#include <net/hip.h>
 
 struct hip_r1entry {
 	struct hip_common *r1;
@@ -32,7 +26,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 		      struct hip_common *hdr,
 		      struct hip_birthday_cookie *cookie);
 int hip_solve_puzzle(struct hip_birthday_cookie *puzzle, 
-		     struct hip_common *hdr,uint64_t *param, int mode);
+		     struct hip_common *hdr, uint64_t *param, int mode);
 
 
 #endif /* HIP_COOKIE_H */
