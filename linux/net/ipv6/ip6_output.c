@@ -355,8 +355,10 @@ if ((err = xfrm_lookup(dst_tmp, fl, sk, 0 /*? !in_atomic()*/)) < 0) {
 	skb->dev = dst->dev;
 	icmpv6_send(skb, ICMPV6_PKT_TOOBIG, 0, mtu, skb->dev);
 	IP6_INC_STATS(IPSTATS_MIB_FRAGFAILS);
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
  end_hip:
 	kfree_skb(skb);
+#endif
 	return -EMSGSIZE;
 }
 
