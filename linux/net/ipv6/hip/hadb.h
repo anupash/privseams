@@ -65,8 +65,10 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
 
 int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 
-int hip_hadb_add_spi_addr(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr_list_item *addr);
-void hip_hadb_dump_spi_list(hip_ha_t *entry);
+int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr_list_item *addr);
+int hip_hadb_dump_spi_list(hip_ha_t *entry, void *unused);
+void hip_hadb_dump_spi_list_all(void);
+void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi);
 
 /***********************************************/
 int hip_proc_read_hadb_state(char *page, char **start, off_t off,

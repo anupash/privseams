@@ -83,6 +83,7 @@ static inline void hip_hadb_rem_state_spi(void *entry)
 
 	ha->hastate &= ~HIP_HASTATE_SPIOK;
 	hip_ht_delete(&hadb_spi, entry);
+	hip_hadb_delete_spi_list(ha, ha->spi_in); // check
 }
 
 /*
@@ -131,7 +132,7 @@ void hip_hadb_remove_state_spi(hip_ha_t *ha)
 	HIP_LOCK_HA(ha);
 	if ((ha->hastate & HIP_HASTATE_SPIOK) == HIP_HASTATE_SPIOK) {
 		hip_hadb_rem_state_spi(ha);
-	} 
+	}
 	HIP_UNLOCK_HA(ha);
 }
 
@@ -816,7 +817,6 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 }
 
 
-
 /* mm-02 test */
 
 /* create a new SPI list with no peer addresses */
@@ -835,7 +835,7 @@ int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi)
 		i++;
 		HIP_DEBUG("spi %d=0x%x\n", i, item->spi);
 		if (item->spi == spi) {
-			HIP_DEBUG("not adding duplicate SPI\n");
+			_HIP_DEBUG("not adding duplicate SPI\n");
 			goto out;
 		}
         }
@@ -878,7 +878,7 @@ struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t s
 }
 
 /* add an address belonging to the SPI list */
-int hip_hadb_add_spi_addr(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr_list_item *addr)
+int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr_list_item *addr)
 {
 	/* no locking (?) */
 	int err = 0;
@@ -905,7 +905,8 @@ int hip_hadb_add_spi_addr(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr_li
 			HIP_ERROR("weird, couldn't find created SPI list\n");
 			goto out_err;
 		}
-	}
+	} else
+		HIP_DEBUG("SPI list found\n");
 
 	/* check if addr already exists
 	 * if yes, then just update values */
@@ -936,8 +937,10 @@ int hip_hadb_add_spi_addr(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr_li
 	new_addr->address_state = addr->address_state;
 	do_gettimeofday(&new_addr->modified_time);
 
-	if (!new)
+	if (new) {
+		HIP_DEBUG("adding new addr to list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
+	}
 
  out_err:
 //	HIP_UNLOCK_HA(entry);
@@ -946,7 +949,7 @@ int hip_hadb_add_spi_addr(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr_li
 }
 
 
-void hip_hadb_dump_spi_list(hip_ha_t *entry)
+int hip_hadb_dump_spi_list(hip_ha_t *entry, void *unused)
 {
 	struct hip_peer_spi_list_item *spi_list, *tmp;
 	struct hip_peer_addr_list_item *addr, *tmp2;
@@ -957,7 +960,7 @@ void hip_hadb_dump_spi_list(hip_ha_t *entry)
 
 	if (!entry || !&entry->peer_spi_list) {
 		HIP_ERROR("invals\n");
-		return;
+		return 0;
 	}
 
 	/* no locking */
@@ -974,10 +977,48 @@ void hip_hadb_dump_spi_list(hip_ha_t *entry)
 		}
         }
 	HIP_DEBUG("end\n");
+	return 0;
 }
 
+void hip_hadb_dump_spi_list_all(void)
+{
+	(void) hip_for_each_ha(hip_hadb_dump_spi_list, NULL);
+}
 
-/* TODO: DELETE SPI AND ADDRESS LISTS */
+void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_peer_spi_list_item *spi_list, *tmp;
+	struct hip_peer_addr_list_item *addr, *tmp2;
+	char str[INET6_ADDRSTRLEN];
+	int i = 1;
+
+	HIP_DEBUG("\n");
+
+	if (!entry || !&entry->peer_spi_list) {
+		HIP_ERROR("invals\n");
+		return;
+	}
+
+	/* no locking */
+        list_for_each_entry_safe(spi_list, tmp, &entry->peer_spi_list, list) {
+		HIP_DEBUG("SPI 0x%x\n", spi_list->spi);
+		if (spi_list->spi == spi) {
+			HIP_DEBUG("deleting SPI list 0x%x\n", spi_list->spi);
+			list_for_each_entry_safe(addr, tmp2, &spi_list->peer_addr_list, list) {
+				hip_in6_ntop(&addr->address, str);
+				HIP_DEBUG(" address %d: %s\n", i, str);
+				i++;
+				list_del(&addr->list);
+				kfree(addr);
+			}
+			/* todo: call delete_sa here */
+			list_del(&spi_list->list);
+			kfree(spi_list);
+			break;
+		}
+        }
+}
+
 
 int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 {

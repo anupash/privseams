@@ -1359,14 +1359,14 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		do_gettimeofday(&addr.modified_time);
 
 		HIP_LOCK_HA(entry);
-		hip_hadb_dump_spi_list(entry);
-		ret = hip_hadb_add_spi_addr(entry, spi_out, &addr);
+		hip_hadb_dump_spi_list(entry, NULL);
+		ret = hip_hadb_add_addr_to_spi(entry, spi_out, &addr);
 		HIP_DEBUG("add spi ret=%d\n", ret);
-		hip_hadb_dump_spi_list(entry);
-		ret = hip_hadb_add_spi_addr(entry, spi_out, &addr);
+		hip_hadb_dump_spi_list(entry, NULL);
+		ret = hip_hadb_add_addr_to_spi(entry, spi_out, &addr);
 
 		HIP_DEBUG("add spi ret=%d\n", ret);
-		hip_hadb_dump_spi_list(entry);
+		hip_hadb_dump_spi_list(entry, NULL);
 		HIP_UNLOCK_HA(entry);
 	}
 
