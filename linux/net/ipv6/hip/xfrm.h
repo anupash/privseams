@@ -1,3 +1,6 @@
+#ifndef HIP_XFRM_H
+#define HIP_XFRM_H
+
 int hip_delete_sp(int dir);
 int hip_delete_sa(u32 spi, struct in6_addr *dst);
 int hip_setup_sp(int dir);
@@ -27,6 +30,7 @@ struct hip_xfrm_state * hip_xfrm_find(uint32_t spi);
 /* For outbound packet processing (HITd->(SPI, IP) mapping */
 struct hip_xfrm_state * hip_xfrm_find(struct in6_addr *dst_hit);
 
-#endif
+#endif /* __KERNEL__ */
 
+#endif /* HIP_XFRM_H */
 
