@@ -52,7 +52,6 @@ int main(int argc,char *argv[]) {
   int recvnum, sendnum;
   int serversock = 0, sockfd = 0;
   int err = 0;
-  int port;
   int socktype;
   socklen_t peer_eid_len;
   int endpoint_family = PF_HIP;
@@ -81,12 +80,6 @@ int main(int argc,char *argv[]) {
   }
   
   port_name = argv[2];
-  port = atoi(port_name);
-  if (port <= 0 || port >= 65535) {
-    HIP_ERROR("error: port < 0 || port > 65535\n");
-    err = 1;
-    goto out;
-  }
 
   serversock = socket(endpoint_family, socktype, 0);
   if (serversock < 0) {

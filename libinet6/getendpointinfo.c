@@ -97,10 +97,6 @@ int convert_port_string_to_number(const char *servname, in_port_t *port)
       HIP_PERROR("strtol failed:");
       err = EEI_NONAME;
       goto out_err;
-    } else if (*port <= 0) {
-      HIP_ERROR("Invalid port: %d\n", *port);
-      err = EEI_NONAME;
-      goto out_err;
     }
     *port = strtol_port;
   }

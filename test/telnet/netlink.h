@@ -9,7 +9,7 @@ class netlink {
 
 #ifdef USE_HIP
     int connect(int debug, struct endpointinfo *endpointinfo,
-		const char *service, char *srcroute, int srlen, int tos);
+		char *srcroute, int srlen, int tos);
 #else /* !USE_HIP */
     int connect(int debug, struct addrinfo *hostaddr, 
 		char *srcroute, int srlen,
