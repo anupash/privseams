@@ -251,24 +251,36 @@ int hip_csum_verify(struct sk_buff *skb)
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* buf)
 {
+	return hip_csum_send_fl(src_addr, peer_addr, buf, (struct flowi *) NULL);
+}
+
+int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+		     struct hip_common* buf, struct flowi *out_fl)
+{
+
 	int err = 0;
 	struct dst_entry *dst = NULL;
-	struct flowi fl;
+
+	struct flowi fl, *ofl;
 	unsigned int csum;
 	unsigned int len;
 #ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
 #endif
 
-	fl.proto = IPPROTO_HIP;
-	fl.fl6_dst = *peer_addr;
-	fl.oif = 0;
-	fl.fl6_flowlabel = 0;
-
-	if (src_addr)
-		fl.fl6_src = *src_addr;
-	else
-		memset(&fl.fl6_src, 0, sizeof(*src_addr));
+	if (out_fl == NULL) {
+		fl.proto = IPPROTO_HIP;
+		fl.oif = 0;
+		fl.fl6_flowlabel = 0;
+		fl.fl6_dst = *peer_addr;
+		if (src_addr)
+			fl.fl6_src = *src_addr;
+		else
+			memset(&fl.fl6_src, 0, sizeof(*src_addr));
+		ofl = &fl;
+	} else {
+		ofl = out_fl;
+	}
 
 	buf->checksum = htons(0);
 	len = (buf->payload_len + 1) << 3;
@@ -276,7 +288,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	lock_sock(hip_output_socket->sk);
 
-	err = ip6_dst_lookup(hip_output_socket->sk, &dst, &fl);
+	err = ip6_dst_lookup(hip_output_socket->sk, &dst, ofl);
 	if (err) {
 		HIP_ERROR("Unable to route HIP packet\n");
 		release_sock(hip_output_socket->sk);
@@ -285,15 +297,15 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 #ifdef CONFIG_HIP_DEBUG
 	_HIP_DUMP_MSG(buf);
-	HIP_DEBUG("pkt out: len=%d proto=%d\n", len, fl.proto);
-	hip_in6_ntop(&fl.fl6_src, addrstr);
+	HIP_DEBUG("pkt out: len=%d proto=%d\n", len, ofl->proto);
+	hip_in6_ntop(&(ofl->fl6_src), addrstr);
 	HIP_DEBUG("pkt out: src IPv6 addr: %s\n", addrstr);
-	hip_in6_ntop(&fl.fl6_dst, addrstr);
+	hip_in6_ntop(&(ofl->fl6_dst), addrstr);
 	HIP_DEBUG("pkt out: dst IPv6 addr: %s\n", addrstr);
 #endif
 
-	buf->checksum = csum_ipv6_magic(&fl.fl6_src, &fl.fl6_dst, len,
-					fl.proto, csum);
+	buf->checksum = csum_ipv6_magic(&(ofl->fl6_src), &(ofl->fl6_dst), len,
+					ofl->proto, csum);
 	HIP_DEBUG("pkt out: checksum value (host order): 0x%x\n",
 		  ntohs(buf->checksum));
 
@@ -301,7 +313,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		buf->checksum = -1;
 
  	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
-			      0xFF, NULL, &fl, (struct rt6_info *)dst, MSG_DONTWAIT);
+			      0xFF, NULL, ofl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err) {
  		HIP_ERROR("ip6_append_data failed (err=%d)\n", err);
 		ip6_flush_pending_frames(hip_output_socket->sk);

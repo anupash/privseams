@@ -439,6 +439,8 @@ struct gaicb
 # define AI_HIP		0x0800  /* Return only HIT addresses */
 # define AI_HIP_NATIVE  0x1000  /* For getaddrinfo internal use only  */
 # define AI_RENDEZVOUS  XX_FIX_ME /* The address belongs to rendezvous */
+# define AI_KERNEL_LIST 0x2000  /* Return the list of kernel addresses */
+# define AI_CHK_KERNEL  0x4000  /* Check kernel list of addresses  */
 
 /* XX TODO: begin these flags from where the AI_XX ends */
 # define EI_PASSIVE	0x0001	/* Socket address is intended for `bind'.  */

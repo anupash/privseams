@@ -1,7 +1,9 @@
 /*
  * getendpointinfo: native HIP API resolver
  *
- * Author:    Miika Komu <miika@iki.fi>
+ * Authors:
+ * - Miika Komu <miika@iki.fi>
+ * - Anthony D. Joseph <adj@hiit.fi>
  * Copyright: Miika Komu 2004, The Inner Net License v2.00.
  * Notes:     This file uses the code in this directory from Craig Metz.
  *
@@ -282,7 +284,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     HIP_DEBUG("setpeereid addr family=%d len=%d\n",
 	      addrinfo->ai_family,
 	      addrinfo->ai_addrlen);
-    _HIP_HEXDUMP("setpeereid addr: ", addrinfo->ai_addr, addrinfo->ai_addrlen);
+    HIP_HEXDUMP("setpeereid addr: ", addrinfo->ai_addr, addrinfo->ai_addrlen);
     err = hip_build_param_eid_sockaddr(msg, addrinfo->ai_addr,
 				       addrinfo->ai_addrlen);
     if (err) {
@@ -537,6 +539,337 @@ int get_localhost_endpointinfo(const char *basename,
   return err;
 }
 
+static char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
+{
+        if (!buf)
+                return NULL;
+        sprintf(buf,
+                "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
+                ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
+                ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
+                ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
+        return buf;
+}
+
+/**
+ * get_kernel_peer_list - query kernel for list of known peers
+ * @nodename:  the name of the peer to be resolved
+ * @servname:  the service port name (e.g. "http" or "12345")
+ * @hints:    selects which type of endpoints is going to be resolved
+ * @res:       the result of the query
+ * @alt_flag:  flag for an alternate query (after a file query has been done)
+ *             This flag will add entries (if found) to an existing result
+ *
+ * This function is for libinet6 internal purposes only.
+ *
+ * Returns: zero on success, or negative error value on failure
+ *
+ */
+int get_kernel_peer_list(const char *nodename, const char *servname,
+			 const struct endpointinfo *hints, 
+			 struct endpointinfo **res, int alt_flag)
+{
+  int err = 0;
+  struct hip_common *msg = NULL;
+  unsigned int *count, *acount;
+  struct hip_host_id *host_id;
+  hip_hit_t *hit;
+  struct in6_addr *addr;
+  int i, j;
+  struct endpointinfo *einfo = NULL;
+  char *fqdn_str;
+  int nodename_str_len = 0;
+  int fqdn_str_len = 0;
+  struct endpointinfo *previous_einfo = NULL;
+  /* Only HITs are supported, so endpoint_hip is statically allocated */
+  struct endpoint_hip endpoint_hip;
+  in_port_t port = 0;
+  struct addrinfo ai_hints, *ai_tail, *ai_res = NULL;
+  char hit_str[46];
+
+  if (!alt_flag)
+    *res = NULL; /* The NULL value is used in the loop below. */
+  
+  HIP_DEBUG("\n");
+  HIP_ASSERT(hints);
+
+  if (nodename != NULL)
+    nodename_str_len = strlen(nodename);
+
+  memset(&ai_hints, 0, sizeof(struct addrinfo));
+  /* ai_hints.ai_flags = hints->ei_flags; */
+  /* Family should be AF_ANY but currently the HIP module supports only IPv6.
+     In any case, the family cannot be copied directly from hints, because
+     it contains PF_HIP. */
+  ai_hints.ai_family = AF_INET6;
+  ai_hints.ai_socktype = hints->ei_socktype;
+  ai_hints.ai_protocol = hints->ei_protocol;
+
+  /* The getaddrinfo is called only once and the results are copied in each
+     element of the endpointinfo linked lists. */
+  err = getaddrinfo(NULL, servname, &ai_hints, &ai_res);
+  if (err) {
+    HIP_ERROR("getaddrinfo failed: %s", gai_strerror(err));
+    goto out_err;
+  }
+
+  /* Call the kernel to get the list of known peer addresses */
+  msg = hip_msg_alloc();
+  if (!msg) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+
+  /* Build the message header */
+  err = hip_build_user_hdr(msg, SO_HIP_GET_PEER_LIST, 0);
+  if (err) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+  
+  /* Call the kernel */
+  err = hip_get_global_option(msg);
+  if (err) {
+    err = EEI_SYSTEM;
+    HIP_ERROR("Failed to send msg\n");
+    goto out_err;
+  }
+
+  /* getsockopt wrote the peer list into the message, now process it
+   * Format is:
+     <unsigned integer> - Number of entries
+     [<host id> - Host identifier
+      <hit> - HIT
+      <unsigned integer> - Number of addresses
+      [<ipv6 address> - IPv6 address
+       ...]
+     ...]
+  */
+  err = hip_get_msg_err(msg);
+  if (err) {
+    err = EEI_SYSTEM;
+    goto out_err;
+  }
+
+  /* Get count of entries in peer list */
+  count = hip_get_param_contents(msg, HIP_PARAM_UINT);
+  if (!count) {
+    err = EEI_SYSTEM;
+    goto out_err;
+  }
+
+  for (i = 0; i < *count; i++) {
+    /* Get the next peer HOST ID */
+    host_id = hip_get_param(msg, HIP_PARAM_HOST_ID);
+    if (!host_id) {
+      HIP_ERROR("no host identity pubkey in response\n");
+      err = EEI_SYSTEM;
+      goto out_err;
+    }
+
+    /* Extract the peer hostname, and determine its length */
+    fqdn_str = hip_get_param_host_id_hostname(host_id);
+    fqdn_str_len = strlen(fqdn_str);
+
+    /* Get the peer HIT */
+    hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+    if (!hit) {
+      HIP_ERROR("no hit in response\n");
+      err = EEI_SYSTEM;
+      goto out_err;
+    }
+
+    /* Get the number of addresses */
+    acount = hip_get_param_contents(msg, HIP_PARAM_UINT);
+    if (!acount) {
+      err = EEI_SYSTEM;
+      goto out_err;
+    }
+
+    /* Parse the hit into text form for comparison below */
+    hip_in6_ntop((const struct in6_addr *)&hit, hit_str);
+
+    /* Check if the nodename or the endpoint in the hints matches the
+       scanned entries. */
+    if (nodename_str_len && (fqdn_str_len == nodename_str_len) &&
+	(strcmp(fqdn_str, nodename) == 0)) {
+      /* XX FIX: foobar should match to foobar.org, depending on resolv.conf */
+      HIP_DEBUG("Nodename match\n");
+    } else if(hints->ei_endpointlen && hints->ei_endpoint &&
+	      (strlen(hit_str) == hints->ei_endpointlen) &&
+	      (strcmp(hit_str, (char *) hints->ei_endpoint) == 0)) {
+      HIP_DEBUG("Endpoint match\n");
+    } else if (!nodename_str_len) {
+      HIP_DEBUG("Null nodename, returning as matched\n");
+    } else {
+      /* Not matched, so skip the addresses in the kernel response */
+      for (j = 0; j < *acount; j++) {
+	addr = (struct in6_addr *)hip_get_param_contents(msg,
+							 HIP_PARAM_IPV6_ADDR);
+	if (!addr) {
+	  HIP_ERROR("no ip addr in response\n");
+	  err = EEI_SYSTEM;
+	  goto out_err;
+	}
+      }
+      continue;
+    }
+      
+    /* Allocate a new endpointinfo */
+    einfo = calloc(1, sizeof(struct endpointinfo));
+    if (!einfo) {
+      err = EEI_MEMORY;
+      goto out_err;
+    }
+
+    /* Allocate a new endpoint */
+    einfo->ei_endpoint = calloc(1, sizeof(struct sockaddr_eid));
+    if (!einfo->ei_endpoint) {
+      err = EEI_MEMORY;
+      goto out_err;
+    }
+    
+    /* Copy the name if the flag is set */
+    if (hints->ei_flags & EI_CANONNAME) {
+      einfo->ei_canonname = malloc(fqdn_str_len + 1);
+      if (!(einfo->ei_canonname)) {
+	err = EEI_MEMORY;
+	goto out_err;
+      }
+      HIP_ASSERT(strlen(fqdn_str) == fqdn_str_len);
+      strcpy(einfo->ei_canonname, fqdn_str);
+      /* XX FIX: we should append the domain name if it does not exist */
+    }
+
+    _HIP_DEBUG("*** %p %p\n", einfo, previous_einfo);
+    
+    HIP_ASSERT(einfo); /* Assertion 1 */
+    
+    /* Allocate and fill the HI. Note that here we are assuming that the
+       endpoint is really a HIT. The following assertion checks that we are
+       dealing with a HIT. Change the memory allocations and other code when
+       HIs are really supported. */
+    
+    memset(&endpoint_hip, 0, sizeof(struct endpoint_hip));
+    endpoint_hip.family = PF_HIP;
+
+    /* Only HITs are supported, so endpoint_hip is not dynamically allocated
+       and sizeof(endpoint_hip) is enough */
+    endpoint_hip.length = sizeof(struct endpoint_hip);
+    endpoint_hip.flags = HIP_ENDPOINT_FLAG_HIT;
+    memcpy(&endpoint_hip.id.hit, hit, sizeof(struct in6_addr));
+    
+    HIP_HEXDUMP("peer HIT: ", &endpoint_hip.id.hit, sizeof(struct in6_addr));
+    
+    HIP_ASSERT(einfo && einfo->ei_endpoint); /* Assertion 2 */
+
+    /* Now replace the addresses that we got from getaddrinfo in the ai_res
+       structure, with the entries from the kernel. If there are not enough
+       entries already present, allocate and fill new ones */
+    ai_tail = ai_res;
+    for (j = 0; j < *acount; j++, ai_tail = ai_tail->ai_next) {
+      addr = (struct in6_addr *) hip_get_param_contents(msg,
+							HIP_PARAM_IPV6_ADDR);
+      if (!addr) {
+	HIP_ERROR("no ip addr in response\n");
+	err = EEI_SYSTEM;
+	goto out_err;
+      }
+
+      /* Should we always include our entries, even if there are none? */
+      if (!ai_res) continue;
+
+      if (!ai_tail) { 
+	/* We ran out of entries, so copy the first one so we get the
+	   flags and other info*/
+	ai_tail = malloc(sizeof(struct addrinfo));
+	memcpy(ai_tail, ai_res, sizeof(struct addrinfo));
+	ai_tail->ai_addr = malloc(sizeof(struct sockaddr_in6));
+	memcpy(ai_tail->ai_addr, ai_res->ai_addr,sizeof(struct sockaddr_in6));
+	ai_tail->ai_canonname = malloc(strlen(ai_res->ai_canonname)+1);
+	strcpy(ai_tail->ai_canonname, ai_res->ai_canonname);
+      }
+
+      /* Now, save the address from the kernel */
+      memcpy(&(((struct sockaddr_in6 *)ai_tail->ai_addr)->sin6_addr), addr, 
+	       sizeof(struct in6_addr));
+    }
+
+    /* Call the kernel for the peer eid */
+    err = setpeereid((struct sockaddr_eid *) einfo->ei_endpoint, servname,
+		     (struct endpoint *) &endpoint_hip, ai_res);
+    if (err) {
+      HIP_ERROR("association failed (%d): %s\n", err);
+      goto out_err;
+    }
+    
+    /* Fill the rest of the fields in the einfo */
+    einfo->ei_flags = hints->ei_flags;
+    einfo->ei_family = PF_HIP;
+    einfo->ei_socktype = hints->ei_socktype;
+    einfo->ei_protocol = hints->ei_protocol;
+    einfo->ei_endpointlen = sizeof(struct sockaddr_eid);
+    
+    /* The einfo structure has been filled now. Now, append it to the linked
+       list. */
+    
+    /* Set res point to the first memory allocation, so that the starting
+       point of the linked list will not be forgotten. The res will be set
+       only once because on the next iteration of the loop it will non-null. */
+    if (!*res)
+      *res = einfo;
+    
+    HIP_ASSERT(einfo && einfo->ei_endpoint && *res); /* 3 */
+    
+    /* Link the previous endpoint info structure to this new one. */
+    if (previous_einfo) {
+      previous_einfo->ei_next = einfo;
+    }
+    
+    /* Store a pointer to this einfo so that we can link this einfo to the
+       following einfo on the next iteration. */
+    previous_einfo = einfo;
+    
+    HIP_ASSERT(einfo && einfo->ei_endpoint && *res &&
+	       previous_einfo == einfo); /* 4 */
+  }
+  
+  HIP_DEBUG("Kernel list scanning ended\n");
+  
+ out_err:
+  
+  if (ai_res)
+    freeaddrinfo(ai_res);
+  
+  if (msg)
+    hip_msg_free(msg);
+
+  /* Free all of the reserved memory on error */
+  if (err) {
+    /* Assertions 1, 2 and 3: einfo has not been linked to *res and
+       it has to be freed separately. In English: free only einfo
+       if it has not been linked into the *res list */
+    if (einfo && previous_einfo != einfo) {
+      if (einfo->ei_endpoint)
+	free(einfo->ei_endpoint);
+      if (einfo->ei_canonname)
+	free(einfo->ei_canonname);
+      free(einfo);
+    }
+    
+    /* Assertion 4: einfo has been linked into the *res. Free all of the
+     *res list elements (einfo does not need be freed separately). */
+    if (*res) {
+      free_endpointinfo(*res);
+      /* In case the caller of tries to free the res again */
+      *res = NULL;
+    }
+  }
+  
+  return err;
+}
+
 /**
  * get_peer_endpointinfo - query endpoint info about a peer
  * @hostsfile: the filename where the endpoint information is stored
@@ -594,7 +927,8 @@ int get_peer_endpointinfo(const char *hostsfile,
   err = getaddrinfo(nodename, servname, &ai_hints, &ai_res);
   if (err) {
     HIP_ERROR("getaddrinfo failed: %s", gai_strerror(err));
-    goto out_err;
+    /* goto out_err; */
+    goto fallback;
   }
 
   /* XX TODO: check and handle flags here */
@@ -717,6 +1051,14 @@ int get_peer_endpointinfo(const char *hostsfile,
   }
   
   HIP_DEBUG("Scanning ended\n");
+
+ fallback:
+  /* If no entries are found, fallback on the kernel's list */
+  if (!*res) {
+    HIP_DEBUG("No entries found, calling kernel for entries\n");
+    err = get_kernel_peer_list(nodename, servname, hints, res, 1);
+    HIP_DEBUG("Done with kernel entries\n");
+  }
   
  out_err:
   
@@ -784,6 +1126,12 @@ int getendpointinfo(const char *nodename, const char *servname,
      can survive the overloaded flags. The AI_XX and EI_XX in netdb.h have
      distinct values, so this should be ok. */
 
+  /* Check for kernel list request */
+  if (modified_hints.ei_flags & AI_KERNEL_LIST) {
+    err = get_kernel_peer_list(nodename, servname, &modified_hints, res, 0);
+    goto err_out;
+  }
+
   if (nodename == NULL) {
     char *basename = DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_DSA_KEY_FILE_BASE;
     err = get_localhost_endpointinfo(basename, servname, &modified_hints, res);
@@ -791,7 +1139,7 @@ int getendpointinfo(const char *nodename, const char *servname,
     err = get_peer_endpointinfo(_PATH_HIP_HOSTS, nodename, servname,
 				&modified_hints, res);
   }
-
+  
  err_out:
 
   return err;

@@ -648,6 +648,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 		goto out_err;
 	}
 
+	/* todo: replace following with hip_hadb_get_spi_list */
         list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
 		if (spi_out->spi == spi) {
 			found_spi_list = 1;
@@ -712,6 +713,8 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 	int i = 1;
 	char addrstr[INET6_ADDRSTRLEN];
 	struct hip_spi_out_item *spi_out, *spi_tmp;
+
+	/* possibly deprecated function .. */
 
 	HIP_LOCK_HA(entry);
 

@@ -93,6 +93,8 @@ typedef uint16_t in_port_t;
 #define SO_HIP_SET_PEER_EID                     12
 #define SO_HIP_NULL_OP                          13
 #define SO_HIP_UNIT_TEST                        14
+#define SO_HIP_BOS                              15
+#define SO_HIP_GET_PEER_LIST                    16
 
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 
@@ -169,6 +171,7 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_EID_ENDPOINT          32775 /* Pass endpoint_hip structures into kernel */
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
+#define HIP_PARAM_UINT                  32778 /* Unsigned integer */
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100
