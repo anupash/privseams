@@ -43,6 +43,26 @@ static void invalidate_bh_lrus(void);
 
 #define BH_ENTRY(list) list_entry((list), struct buffer_head, b_assoc_buffers)
 
+struct bh_wait_queue {
+	struct buffer_head *bh;
+	wait_queue_t wait;
+};
+
+#define __DEFINE_BH_WAIT(name, b, f)					\
+	struct bh_wait_queue name = {					\
+		.bh	= b,						\
+		.wait	= {						\
+				.task	= current,			\
+				.flags	= f,				\
+				.func	= bh_wake_function,		\
+				.task_list =				\
+					LIST_HEAD_INIT(name.wait.task_list),\
+			},						\
+	}
+#define DEFINE_BH_WAIT(name, bh)	__DEFINE_BH_WAIT(name, bh, 0)
+#define DEFINE_BH_WAIT_EXCLUSIVE(name, bh) \
+		__DEFINE_BH_WAIT(name, bh, WQ_FLAG_EXCLUSIVE)
+
 /*
  * Hashed waitqueue_head's for wait_on_buffer()
  */
@@ -74,9 +94,49 @@ void wake_up_buffer(struct buffer_head *bh)
 
 	smp_mb();
 	if (waitqueue_active(wq))
-		wake_up_all(wq);
+		__wake_up(wq, TASK_INTERRUPTIBLE|TASK_UNINTERRUPTIBLE, 1, bh);
 }
 EXPORT_SYMBOL(wake_up_buffer);
+
+static int bh_wake_function(wait_queue_t *wait, unsigned mode,
+				int sync, void *key)
+{
+	struct buffer_head *bh = key;
+	struct bh_wait_queue *wq;
+
+	wq = container_of(wait, struct bh_wait_queue, wait);
+	if (wq->bh != bh || buffer_locked(bh))
+		return 0;
+	else
+		return autoremove_wake_function(wait, mode, sync, key);
+}
+
+static void sync_buffer(struct buffer_head *bh)
+{
+	struct block_device *bd;
+
+	smp_mb();
+	bd = bh->b_bdev;
+	if (bd)
+		blk_run_address_space(bd->bd_inode->i_mapping);
+}
+
+void fastcall __lock_buffer(struct buffer_head *bh)
+{
+	wait_queue_head_t *wqh = bh_waitq_head(bh);
+	DEFINE_BH_WAIT_EXCLUSIVE(wait, bh);
+
+	do {
+		prepare_to_wait_exclusive(wqh, &wait.wait,
+					TASK_UNINTERRUPTIBLE);
+		if (buffer_locked(bh)) {
+			sync_buffer(bh);
+			io_schedule();
+		}
+	} while (test_set_buffer_locked(bh));
+	finish_wait(wqh, &wait.wait);
+}
+EXPORT_SYMBOL(__lock_buffer);
 
 void fastcall unlock_buffer(struct buffer_head *bh)
 {
@@ -93,20 +153,16 @@ void fastcall unlock_buffer(struct buffer_head *bh)
 void __wait_on_buffer(struct buffer_head * bh)
 {
 	wait_queue_head_t *wqh = bh_waitq_head(bh);
-	DEFINE_WAIT(wait);
+	DEFINE_BH_WAIT(wait, bh);
 
 	do {
-		prepare_to_wait(wqh, &wait, TASK_UNINTERRUPTIBLE);
+		prepare_to_wait(wqh, &wait.wait, TASK_UNINTERRUPTIBLE);
 		if (buffer_locked(bh)) {
-			struct block_device *bd;
-			smp_mb();
-			bd = bh->b_bdev;
-			if (bd)
-				blk_run_address_space(bd->bd_inode->i_mapping);
+			sync_buffer(bh);
 			io_schedule();
 		}
 	} while (buffer_locked(bh));
-	finish_wait(wqh, &wait);
+	finish_wait(wqh, &wait.wait);
 }
 
 static void
@@ -895,7 +951,8 @@ int __set_page_dirty_buffers(struct page *page)
 		if (page->mapping) {	/* Race with truncate? */
 			if (!mapping->backing_dev_info->memory_backed)
 				inc_page_state(nr_dirty);
-			radix_tree_tag_set(&mapping->page_tree, page->index,
+			radix_tree_tag_set(&mapping->page_tree,
+						page_index(page),
 						PAGECACHE_TAG_DIRTY);
 		}
 		spin_unlock_irq(&mapping->tree_lock);
@@ -1207,12 +1264,6 @@ grow_buffers(struct block_device *bdev, sector_t block, int size)
 	pgoff_t index;
 	int sizebits;
 
-	/* Size must be multiple of hard sectorsize */
-	if (size & (bdev_hardsect_size(bdev)-1))
-		BUG();
-	if (size < 512 || size > PAGE_SIZE)
-		BUG();
-
 	sizebits = -1;
 	do {
 		sizebits++;
@@ -1233,6 +1284,18 @@ grow_buffers(struct block_device *bdev, sector_t block, int size)
 struct buffer_head *
 __getblk_slow(struct block_device *bdev, sector_t block, int size)
 {
+	/* Size must be multiple of hard sectorsize */
+	if (unlikely(size & (bdev_hardsect_size(bdev)-1) ||
+			(size < 512 || size > PAGE_SIZE))) {
+		printk(KERN_ERR "getblk(): invalid block size %d requested\n",
+					size);
+		printk(KERN_ERR "hardsect size: %d\n",
+					bdev_hardsect_size(bdev));
+
+		dump_stack();
+		return NULL;
+	}
+
 	for (;;) {
 		struct buffer_head * bh;
 
@@ -1357,7 +1420,7 @@ struct bh_lru {
 	struct buffer_head *bhs[BH_LRU_SIZE];
 };
 
-static DEFINE_PER_CPU(struct bh_lru, bh_lrus) = {{0}};
+static DEFINE_PER_CPU(struct bh_lru, bh_lrus) = {{ NULL }};
 
 #ifdef CONFIG_SMP
 #define bh_lru_lock()	local_irq_disable()
@@ -1525,10 +1588,9 @@ __bread(struct block_device *bdev, sector_t block, int size)
 EXPORT_SYMBOL(__bread);
 
 /*
- * invalidate_bh_lrus() is called rarely - at unmount.  Because it is only for
- * unmount it only needs to ensure that all buffers from the target device are
- * invalidated on return and it doesn't need to worry about new buffers from
- * that device being added - the unmount code has to prevent that.
+ * invalidate_bh_lrus() is called rarely - but not only at unmount.
+ * This doesn't race because it runs in each cpu either in irq
+ * or with preempt disabled.
  */
 static void invalidate_bh_lru(void *arg)
 {
@@ -1744,10 +1806,10 @@ EXPORT_SYMBOL(unmap_underlying_metadata);
  * state inside lock_buffer().
  *
  * If block_write_full_page() is called for regular writeback
- * (called_for_sync() is false) then it will redirty a page which has a locked
- * buffer.   This only can happen if someone has written the buffer directly,
- * with submit_bh().  At the address_space level PageWriteback prevents this
- * contention from occurring.
+ * (wbc->sync_mode == WB_SYNC_NONE) then it will redirty a page which has a
+ * locked buffer.   This only can happen if someone has written the buffer
+ * directly, with submit_bh().  At the address_space level PageWriteback
+ * prevents this contention from occurring.
  */
 static int __block_write_full_page(struct inode *inode, struct page *page,
 			get_block_t *get_block, struct writeback_control *wbc)
@@ -1836,14 +1898,14 @@ static int __block_write_full_page(struct inode *inode, struct page *page,
 		}
 	} while ((bh = bh->b_this_page) != head);
 
+	/*
+	 * The page and its buffers are protected by PageWriteback(), so we can
+	 * drop the bh refcounts early.
+	 */
 	BUG_ON(PageWriteback(page));
-	set_page_writeback(page);	/* Keeps try_to_free_buffers() away */
+	set_page_writeback(page);
 	unlock_page(page);
 
-	/*
-	 * The page may come unlocked any time after the *first* submit_bh()
-	 * call.  Be careful with its buffers.
-	 */
 	do {
 		struct buffer_head *next = bh->b_this_page;
 		if (buffer_async_write(bh)) {
@@ -1873,6 +1935,10 @@ done:
 		if (uptodate)
 			SetPageUptodate(page);
 		end_page_writeback(page);
+		/*
+		 * The page and buffer_heads can be released at any time from
+		 * here on.
+		 */
 		wbc->pages_skipped++;	/* We didn't write this page */
 	}
 	return err;
@@ -2424,7 +2490,7 @@ int nobh_prepare_write(struct page *page, unsigned from, unsigned to,
 			}
 			bh->b_state = map_bh.b_state;
 			atomic_set(&bh->b_count, 0);
-			bh->b_this_page = 0;
+			bh->b_this_page = NULL;
 			bh->b_page = page;
 			bh->b_blocknr = map_bh.b_blocknr;
 			bh->b_size = blocksize;
@@ -2660,7 +2726,7 @@ int block_write_full_page(struct page *page, get_block_t *get_block,
 
 	/*
 	 * The page straddles i_size.  It must be zeroed out on each and every
-	 * writepage invocation because it may be mmapped.  "A file is mapped
+	 * writepage invokation because it may be mmapped.  "A file is mapped
 	 * in multiples of the page size.  For a file that is not a multiple of
 	 * the  page size, the remaining memory is zeroed when mapped, and
 	 * writes to that region are not written out to the file."
@@ -2832,7 +2898,6 @@ drop_buffers(struct page *page, struct buffer_head **buffers_to_free)
 {
 	struct buffer_head *head = page_buffers(page);
 	struct buffer_head *bh;
-	int was_uptodate = 1;
 
 	bh = head;
 	do {
@@ -2840,8 +2905,6 @@ drop_buffers(struct page *page, struct buffer_head **buffers_to_free)
 			set_bit(AS_EIO, &page->mapping->flags);
 		if (buffer_busy(bh))
 			goto failed;
-		if (!buffer_uptodate(bh) && !buffer_req(bh))
-			was_uptodate = 0;
 		bh = bh->b_this_page;
 	} while (bh != head);
 
@@ -2905,9 +2968,11 @@ EXPORT_SYMBOL(try_to_free_buffers);
 int block_sync_page(struct page *page)
 {
 	struct address_space *mapping;
+
 	smp_mb();
-	mapping = page->mapping;
-	blk_run_address_space(mapping);
+	mapping = page_mapping(page);
+	if (mapping)
+		blk_run_backing_dev(mapping->backing_dev_info, page);
 	return 0;
 }
 
@@ -3035,7 +3100,7 @@ void __init buffer_init(void)
 
 	bh_cachep = kmem_cache_create("buffer_head",
 			sizeof(struct buffer_head), 0,
-			0, init_buffer_head, NULL);
+			SLAB_PANIC, init_buffer_head, NULL);
 	for (i = 0; i < ARRAY_SIZE(bh_wait_queue_heads); i++)
 		init_waitqueue_head(&bh_wait_queue_heads[i].wqh);
 

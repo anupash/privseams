@@ -320,7 +320,7 @@ int journal_extend(handle_t *handle, int nblocks)
 
 	result = -EIO;
 	if (is_handle_aborted(handle))
-		goto error_out;
+		goto out;
 
 	result = 1;
 
@@ -357,6 +357,7 @@ unlock:
 	spin_unlock(&transaction->t_handle_lock);
 error_out:
 	spin_unlock(&journal->j_state_lock);
+out:
 	return result;
 }
 
@@ -633,12 +634,20 @@ repeat:
 
 		if (jh->b_jlist == BJ_Shadow) {
 			wait_queue_head_t *wqh;
+			DEFINE_WAIT(wait);
 
 			JBUFFER_TRACE(jh, "on shadow: sleep");
 			jbd_unlock_bh_state(bh);
 			/* commit wakes up all shadow buffers after IO */
-			wqh = bh_waitq_head(jh2bh(jh));
-			wait_event(*wqh, (jh->b_jlist != BJ_Shadow));
+			wqh = bh_waitq_head(bh);
+			for ( ; ; ) {
+				prepare_to_wait(wqh, &wait,
+						TASK_UNINTERRUPTIBLE);
+				if (jh->b_jlist != BJ_Shadow)
+					break;
+				schedule();
+			}
+			finish_wait(wqh, &wait);
 			goto repeat;
 		}
 
@@ -1472,7 +1481,7 @@ __blist_del_buffer(struct journal_head **list, struct journal_head *jh)
 	if (*list == jh) {
 		*list = jh->b_tnext;
 		if (*list == jh)
-			*list = 0;
+			*list = NULL;
 	}
 	jh->b_tprev->b_tnext = jh->b_tnext;
 	jh->b_tnext->b_tprev = jh->b_tprev;
@@ -1491,7 +1500,7 @@ __blist_del_buffer(struct journal_head **list, struct journal_head *jh)
  */
 void __journal_unfile_buffer(struct journal_head *jh)
 {
-	struct journal_head **list = 0;
+	struct journal_head **list = NULL;
 	transaction_t *transaction;
 	struct buffer_head *bh = jh2bh(jh);
 
@@ -1764,14 +1773,10 @@ static int journal_unmap_buffer(journal_t *journal, struct buffer_head *bh)
 	jbd_lock_bh_state(bh);
 	spin_lock(&journal->j_list_lock);
 
-	/*
-	 * Now we have the locks, check again to see whether kjournald has
-	 * taken the buffer off the transaction.
-	 */
-	if (!buffer_jbd(bh))
-		goto zap_buffer;
+	jh = journal_grab_journal_head(bh);
+	if (!jh)
+		goto zap_buffer_no_jh;
 
-	jh = bh2jh(bh);
 	transaction = jh->b_transaction;
 	if (transaction == NULL) {
 		/* First case: not on any transaction.  If it
@@ -1802,6 +1807,7 @@ static int journal_unmap_buffer(journal_t *journal, struct buffer_head *bh)
 			spin_unlock(&journal->j_list_lock);
 			jbd_unlock_bh_state(bh);
 			spin_unlock(&journal->j_state_lock);
+			journal_put_journal_head(jh);
 			return ret;
 		} else {
 			/* There is no currently-running transaction. So the
@@ -1815,6 +1821,7 @@ static int journal_unmap_buffer(journal_t *journal, struct buffer_head *bh)
 				spin_unlock(&journal->j_list_lock);
 				jbd_unlock_bh_state(bh);
 				spin_unlock(&journal->j_state_lock);
+				journal_put_journal_head(jh);
 				return ret;
 			} else {
 				/* The orphan record's transaction has
@@ -1838,6 +1845,7 @@ static int journal_unmap_buffer(journal_t *journal, struct buffer_head *bh)
 		spin_unlock(&journal->j_list_lock);
 		jbd_unlock_bh_state(bh);
 		spin_unlock(&journal->j_state_lock);
+		journal_put_journal_head(jh);
 		return 0;
 	} else {
 		/* Good, the buffer belongs to the running transaction.
@@ -1851,6 +1859,8 @@ static int journal_unmap_buffer(journal_t *journal, struct buffer_head *bh)
 	}
 
 zap_buffer:
+	journal_put_journal_head(jh);
+zap_buffer_no_jh:
 	spin_unlock(&journal->j_list_lock);
 	jbd_unlock_bh_state(bh);
 	spin_unlock(&journal->j_state_lock);
@@ -1922,7 +1932,7 @@ int journal_invalidatepage(journal_t *journal,
 void __journal_file_buffer(struct journal_head *jh,
 			transaction_t *transaction, int jlist)
 {
-	struct journal_head **list = 0;
+	struct journal_head **list = NULL;
 	int was_dirty = 0;
 	struct buffer_head *bh = jh2bh(jh);
 

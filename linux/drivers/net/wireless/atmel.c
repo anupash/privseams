@@ -1599,7 +1599,7 @@ struct net_device *init_atmel_card( unsigned short irq, int port, char *firmware
 	
 	netif_carrier_off(dev);
 	
-	create_proc_read_entry ("driver/atmel", 0, 0, atmel_read_proc, priv);	
+	create_proc_read_entry ("driver/atmel", 0, NULL, atmel_read_proc, priv);	
 	
 	printk(KERN_INFO "%s: Atmel at76c50x wireless. Version %d.%d simon@thekelleys.org.uk\n",
 	       dev->name, DRIVER_MAJOR, DRIVER_MINOR);
@@ -2360,7 +2360,7 @@ static const iw_handler		atmel_private_handler[] =
 
 typedef struct atmel_priv_ioctl {
 	char id[32];
-	unsigned char *data;		
+	unsigned char __user *data;		
 	unsigned short len;		
 } atmel_priv_ioctl;
 
@@ -2647,12 +2647,12 @@ static void send_authentication_request(struct atmel_private *priv, u8 *challeng
 	memcpy(header.addr3, priv->CurrentBSSID, 6);
 	
 	if (priv->wep_is_on) {
-		auth.alg = C80211_MGMT_AAN_SHAREDKEY; 
+		auth.alg = cpu_to_le16(C80211_MGMT_AAN_SHAREDKEY); 
 		/* no WEP for authentication frames with TrSeqNo 1 */
 		if (priv->CurrentAuthentTransactionSeqNum != 1)
 			header.frame_ctl |=  cpu_to_le16(IEEE802_11_FCTL_WEP); 
 	} else {
-		auth.alg = C80211_MGMT_AAN_OPENSYSTEM;
+		auth.alg = cpu_to_le16(C80211_MGMT_AAN_OPENSYSTEM);
 	}
 
 	auth.status = 0;

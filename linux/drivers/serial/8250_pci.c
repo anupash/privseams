@@ -28,7 +28,6 @@
 
 #include <asm/bitops.h>
 #include <asm/byteorder.h>
-#include <asm/serial.h>
 #include <asm/io.h>
 
 #include "8250.h"
@@ -498,7 +497,7 @@ static struct timedia_struct {
 	{ 2, timedia_dual_port },
 	{ 4, timedia_quad_port },
 	{ 8, timedia_eight_port },
-	{ 0, 0 }
+	{ 0, NULL }
 };
 
 static int __devinit pci_timedia_init(struct pci_dev *dev)
@@ -575,8 +574,7 @@ titan_400l_800l_setup(struct pci_dev *dev, struct pci_board *board,
 
 static int __devinit pci_xircom_init(struct pci_dev *dev)
 {
-	__set_current_state(TASK_UNINTERRUPTIBLE);
-	schedule_timeout(HZ/10);
+	msleep(100);
 	return 0;
 }
 
@@ -704,7 +702,7 @@ static struct pci_serial_quirk pci_serial_quirks[] = {
 		.subdevice	= PCI_SUBDEVICE_ID_OCTPRO232,
 		.init		= sbs_init,
 		.setup		= sbs_setup,
-		.exit		= sbs_exit
+		.exit		= __devexit_p(sbs_exit),
 	},
 	/*
 	 * SBS Technologies, Inc., PMC-OCTALPRO 422
@@ -716,7 +714,7 @@ static struct pci_serial_quirk pci_serial_quirks[] = {
 		.subdevice	= PCI_SUBDEVICE_ID_OCTPRO422,
 		.init		= sbs_init,
 		.setup		= sbs_setup,
-		.exit		= sbs_exit
+		.exit		= __devexit_p(sbs_exit),
 	},
 	/*
 	 * SBS Technologies, Inc., P-Octal 232
@@ -728,7 +726,7 @@ static struct pci_serial_quirk pci_serial_quirks[] = {
 		.subdevice	= PCI_SUBDEVICE_ID_POCTAL232,
 		.init		= sbs_init,
 		.setup		= sbs_setup,
-		.exit		= sbs_exit
+		.exit		= __devexit_p(sbs_exit),
 	},
 	/*
 	 * SBS Technologies, Inc., P-Octal 422
@@ -740,7 +738,7 @@ static struct pci_serial_quirk pci_serial_quirks[] = {
 		.subdevice	= PCI_SUBDEVICE_ID_POCTAL422,
 		.init		= sbs_init,
 		.setup		= sbs_setup,
-		.exit		= sbs_exit
+		.exit		= __devexit_p(sbs_exit),
 	},
 
 	/*
@@ -1585,7 +1583,7 @@ pciserial_init_one(struct pci_dev *dev, const struct pci_device_id *ent)
 	struct pci_board *board, tmp;
 	struct pci_serial_quirk *quirk;
 	struct serial_struct serial_req;
-	int base_baud, rc, nr_ports, i;
+	int rc, nr_ports, i;
 
 	if (ent->driver_data >= ARRAY_SIZE(pci_boards)) {
 		printk(KERN_ERR "pci_init_one: invalid driver_data: %ld\n",
@@ -1663,16 +1661,11 @@ pciserial_init_one(struct pci_dev *dev, const struct pci_device_id *ent)
 	priv->quirk = quirk;
 	pci_set_drvdata(dev, priv);
 
-	base_baud = board->base_baud;
-	if (!base_baud) {
-		moan_device("Board entry does not specify baud rate.", dev);
-		base_baud = BASE_BAUD;
-	}
 	for (i = 0; i < nr_ports; i++) {
 		memset(&serial_req, 0, sizeof(serial_req));
 		serial_req.flags = UPF_SKIP_TEST | UPF_AUTOPROBE |
-				   UPF_RESOURCES | UPF_SHARE_IRQ;
-		serial_req.baud_base = base_baud;
+				   UPF_SHARE_IRQ;
+		serial_req.baud_base = board->base_baud;
 		serial_req.irq = get_pci_irq(dev, board, i);
 		if (quirk->setup(dev, board, &serial_req, i))
 			break;

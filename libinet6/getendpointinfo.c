@@ -166,7 +166,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
   HIP_DEBUG("port=%d\n", port);
   
-  hip_build_user_hdr(msg, HIP_USER_SET_MY_EID, 0);
+  hip_build_user_hdr(msg, SO_HIP_SET_MY_EID, 0);
   
   err = hip_build_param_eid_endpoint(msg, ep_hip);
   if (err) {
@@ -183,7 +183,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     }
   }
 
-  err = send_msg(msg);
+  err = hip_get_global_option(msg);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Failed to send msg\n");
@@ -270,7 +270,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 
   HIP_DEBUG("port=%d\n", port);
 
-  hip_build_user_hdr(msg, HIP_USER_SET_PEER_EID, 0);
+  hip_build_user_hdr(msg, SO_HIP_SET_PEER_EID, 0);
 
   err = hip_build_param_eid_endpoint(msg, (struct endpoint_hip *) endpoint);
   if (err) {
@@ -291,7 +291,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     }
   }
 
-  err = send_msg(msg);
+  err = hip_get_global_option(msg);
   if (err) {
     err = EEI_SYSTEM;
     goto out_err;
@@ -380,7 +380,6 @@ void free_endpointinfo(struct endpointinfo *res)
     free(tmp);
   }
 
- out:
 }
 
 /**

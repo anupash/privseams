@@ -166,7 +166,7 @@ int jfs_mount(struct super_block *sb)
 		}
 	} else
 		/* Secondary aggregate inode table is not valid */
-		sbi->ipaimap2 = 0;
+		sbi->ipaimap2 = NULL;
 
 	/*
 	 *      mount (the only/single) fileset
@@ -287,6 +287,11 @@ int jfs_mount_rw(struct super_block *sb, int remount)
 	 * write MOUNT log record of the file system
 	 */
 	logMOUNT(sb);
+
+	/*
+	 * Set page cache allocation policy
+	 */
+	mapping_set_gfp_mask(sb->s_bdev->bd_inode->i_mapping, GFP_NOFS);
 
 	return rc;
 }

@@ -28,6 +28,8 @@
 #include "unit.h"
 #include "debug.h"
 
+#if 0 /* Commented until the test suite can be really triggered with hipconf */
+
 /*************** internal test cases ************************************/
 
 HIP_UNIT_TEST_CASE(hip_test_internal) {
@@ -51,3 +53,5 @@ static struct hip_unit_test_suite_list hip_unit_test_suite_list = {
     &hip_unit_test_suite_internal
   }
 };
+
+#endif /* 0 */

@@ -49,6 +49,54 @@ static unsigned int normal_isa_range[] = { I2C_CLIENT_ISA_END };
 /* Insmod parameters */
 SENSORS_INSMOD_1(it87);
 
+#define	REG	0x2e	/* The register to read/write */
+#define	DEV	0x07	/* Register: Logical device select */
+#define	VAL	0x2f	/* The value to read/write */
+#define PME	0x04	/* The device with the fan registers in it */
+#define	DEVID	0x20	/* Register: Device ID */
+
+static inline void
+superio_outb(int reg, int val)
+{
+	outb(reg, REG);
+	outb(val, VAL);
+}
+
+static inline int
+superio_inb(int reg)
+{
+	outb(reg, REG);
+	return inb(VAL);
+}
+
+static inline void
+superio_select(void)
+{
+	outb(DEV, REG);
+	outb(PME, VAL);
+}
+
+static inline void
+superio_enter(void)
+{
+	outb(0x87, REG);
+	outb(0x01, REG);
+	outb(0x55, REG);
+	outb(0x55, REG);
+}
+
+static inline void
+superio_exit(void)
+{
+	outb(0x02, REG);
+	outb(0x02, VAL);
+}
+
+/* just IT8712F for now - this should be extended to support the other
+   chips as well */
+#define IT8712F_DEVID 0x8712
+#define IT87_ACT_REG  0x30
+#define IT87_BASE_REG 0x60
 
 /* Update battery voltage after every reading if true */
 static int update_vbat;
@@ -80,15 +128,15 @@ static int reset;
 
 #define IT87_REG_FAN(nr)       (0x0d + (nr))
 #define IT87_REG_FAN_MIN(nr)   (0x10 + (nr))
-#define IT87_REG_FAN_CTRL      0x13
+#define IT87_REG_FAN_MAIN_CTRL 0x13
 
 #define IT87_REG_VIN(nr)       (0x20 + (nr))
 #define IT87_REG_TEMP(nr)      (0x29 + (nr))
 
 #define IT87_REG_VIN_MAX(nr)   (0x30 + (nr) * 2)
 #define IT87_REG_VIN_MIN(nr)   (0x31 + (nr) * 2)
-#define IT87_REG_TEMP_HIGH(nr) (0x40 + ((nr) * 2))
-#define IT87_REG_TEMP_LOW(nr)  (0x41 + ((nr) * 2))
+#define IT87_REG_TEMP_HIGH(nr) (0x40 + (nr) * 2)
+#define IT87_REG_TEMP_LOW(nr)  (0x41 + (nr) * 2)
 
 #define IT87_REG_I2C_ADDR      0x48
 
@@ -97,8 +145,8 @@ static int reset;
 
 #define IT87_REG_CHIPID        0x58
 
-#define IN_TO_REG(val)  (SENSORS_LIMIT((((val) * 10 + 8)/16),0,255))
-#define IN_FROM_REG(val) (((val) *  16) / 10)
+#define IN_TO_REG(val)  (SENSORS_LIMIT((((val) + 8)/16),0,255))
+#define IN_FROM_REG(val) ((val) * 16)
 
 static inline u8 FAN_TO_REG(long rpm, int div)
 {
@@ -111,9 +159,9 @@ static inline u8 FAN_TO_REG(long rpm, int div)
 
 #define FAN_FROM_REG(val,div) ((val)==0?-1:(val)==255?0:1350000/((val)*(div)))
 
-#define TEMP_TO_REG(val) (SENSORS_LIMIT(((val)<0?(((val)-5)/10):\
-					((val)+5)/10),0,255))
-#define TEMP_FROM_REG(val) (((val)>0x80?(val)-0x100:(val))*10)
+#define TEMP_TO_REG(val) (SENSORS_LIMIT(((val)<0?(((val)-500)/1000):\
+					((val)+500)/1000),-128,127))
+#define TEMP_FROM_REG(val) (((val)>0x80?(val)-0x100:(val))*1000)
 
 #define VID_FROM_REG(val) ((val)==0x1f?0:(val)>=0x10?510-(val)*10:\
 				205-(val)*5)
@@ -122,7 +170,7 @@ static inline u8 FAN_TO_REG(long rpm, int div)
 static int DIV_TO_REG(int val)
 {
 	int answer = 0;
-	while ((val >>= 1))
+	while ((val >>= 1) != 0)
 		answer++;
 	return answer;
 }
@@ -158,6 +206,7 @@ struct it87_data {
 
 
 static int it87_attach_adapter(struct i2c_adapter *adapter);
+static int it87_find(int *address);
 static int it87_detect(struct i2c_adapter *adapter, int address, int kind);
 static int it87_detach_client(struct i2c_client *client);
 
@@ -182,19 +231,19 @@ static int it87_id = 0;
 static ssize_t show_in(struct device *dev, char *buf, int nr)
 {
 	struct it87_data *data = it87_update_device(dev);
-	return sprintf(buf, "%d\n", IN_FROM_REG(data->in[nr])*10 );
+	return sprintf(buf, "%d\n", IN_FROM_REG(data->in[nr]));
 }
 
 static ssize_t show_in_min(struct device *dev, char *buf, int nr)
 {
 	struct it87_data *data = it87_update_device(dev);
-	return sprintf(buf, "%d\n", IN_FROM_REG(data->in_min[nr])*10 );
+	return sprintf(buf, "%d\n", IN_FROM_REG(data->in_min[nr]));
 }
 
 static ssize_t show_in_max(struct device *dev, char *buf, int nr)
 {
 	struct it87_data *data = it87_update_device(dev);
-	return sprintf(buf, "%d\n", IN_FROM_REG(data->in_max[nr])*10 );
+	return sprintf(buf, "%d\n", IN_FROM_REG(data->in_max[nr]));
 }
 
 static ssize_t set_in_min(struct device *dev, const char *buf, 
@@ -202,7 +251,7 @@ static ssize_t set_in_min(struct device *dev, const char *buf,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct it87_data *data = i2c_get_clientdata(client);
-	unsigned long val = simple_strtoul(buf, NULL, 10)/10;
+	unsigned long val = simple_strtoul(buf, NULL, 10);
 	data->in_min[nr] = IN_TO_REG(val);
 	it87_write_value(client, IT87_REG_VIN_MIN(nr), 
 			data->in_min[nr]);
@@ -213,7 +262,7 @@ static ssize_t set_in_max(struct device *dev, const char *buf,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct it87_data *data = i2c_get_clientdata(client);
-	unsigned long val = simple_strtoul(buf, NULL, 10)/10;
+	unsigned long val = simple_strtoul(buf, NULL, 10);
 	data->in_max[nr] = IN_TO_REG(val);
 	it87_write_value(client, IT87_REG_VIN_MAX(nr), 
 			data->in_max[nr]);
@@ -226,7 +275,7 @@ static ssize_t							\
 {								\
 	return show_in(dev, buf, 0x##offset);			\
 }								\
-static DEVICE_ATTR(in##offset##_input, S_IRUGO, show_in##offset, NULL)
+static DEVICE_ATTR(in##offset##_input, S_IRUGO, show_in##offset, NULL);
 
 #define limit_in_offset(offset)					\
 static ssize_t							\
@@ -250,9 +299,9 @@ static ssize_t set_in##offset##_max (struct device *dev,	\
 	return set_in_max(dev, buf, count, 0x##offset);		\
 }								\
 static DEVICE_ATTR(in##offset##_min, S_IRUGO | S_IWUSR, 	\
-		show_in##offset##_min, set_in##offset##_min)	\
+		show_in##offset##_min, set_in##offset##_min);	\
 static DEVICE_ATTR(in##offset##_max, S_IRUGO | S_IWUSR, 	\
-		show_in##offset##_max, set_in##offset##_max)
+		show_in##offset##_max, set_in##offset##_max);
 
 show_in_offset(0);
 limit_in_offset(0);
@@ -276,24 +325,24 @@ show_in_offset(8);
 static ssize_t show_temp(struct device *dev, char *buf, int nr)
 {
 	struct it87_data *data = it87_update_device(dev);
-	return sprintf(buf, "%d\n", TEMP_FROM_REG(data->temp[nr])*100 );
+	return sprintf(buf, "%d\n", TEMP_FROM_REG(data->temp[nr]));
 }
 static ssize_t show_temp_max(struct device *dev, char *buf, int nr)
 {
 	struct it87_data *data = it87_update_device(dev);
-	return sprintf(buf, "%d\n", TEMP_FROM_REG(data->temp_high[nr])*100);
+	return sprintf(buf, "%d\n", TEMP_FROM_REG(data->temp_high[nr]));
 }
 static ssize_t show_temp_min(struct device *dev, char *buf, int nr)
 {
 	struct it87_data *data = it87_update_device(dev);
-	return sprintf(buf, "%d\n", TEMP_FROM_REG(data->temp_low[nr])*100);
+	return sprintf(buf, "%d\n", TEMP_FROM_REG(data->temp_low[nr]));
 }
 static ssize_t set_temp_max(struct device *dev, const char *buf, 
 		size_t count, int nr)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct it87_data *data = i2c_get_clientdata(client);
-	int val = simple_strtol(buf, NULL, 10)/100;
+	int val = simple_strtol(buf, NULL, 10);
 	data->temp_high[nr] = TEMP_TO_REG(val);
 	it87_write_value(client, IT87_REG_TEMP_HIGH(nr), data->temp_high[nr]);
 	return count;
@@ -303,7 +352,7 @@ static ssize_t set_temp_min(struct device *dev, const char *buf,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct it87_data *data = i2c_get_clientdata(client);
-	int val = simple_strtol(buf, NULL, 10)/100;
+	int val = simple_strtol(buf, NULL, 10);
 	data->temp_low[nr] = TEMP_TO_REG(val);
 	it87_write_value(client, IT87_REG_TEMP_LOW(nr), data->temp_low[nr]);
 	return count;
@@ -333,11 +382,11 @@ static ssize_t set_temp_##offset##_min (struct device *dev, 		\
 {									\
 	return set_temp_min(dev, buf, count, 0x##offset - 1);		\
 }									\
-static DEVICE_ATTR(temp##offset##_input, S_IRUGO, show_temp_##offset, NULL) \
+static DEVICE_ATTR(temp##offset##_input, S_IRUGO, show_temp_##offset, NULL); \
 static DEVICE_ATTR(temp##offset##_max, S_IRUGO | S_IWUSR, 		\
-		show_temp_##offset##_max, set_temp_##offset##_max) 	\
+		show_temp_##offset##_max, set_temp_##offset##_max); 	\
 static DEVICE_ATTR(temp##offset##_min, S_IRUGO | S_IWUSR, 		\
-		show_temp_##offset##_min, set_temp_##offset##_min)	
+		show_temp_##offset##_min, set_temp_##offset##_min);	
 
 show_temp_offset(1);
 show_temp_offset(2);
@@ -381,8 +430,8 @@ static ssize_t set_sensor_##offset (struct device *dev, 		\
 {									\
 	return set_sensor(dev, buf, count, 0x##offset - 1);		\
 }									\
-static DEVICE_ATTR(temp##offset##_type, S_IRUGO | S_IWUSR,	 		\
-		show_sensor_##offset, set_sensor_##offset)
+static DEVICE_ATTR(temp##offset##_type, S_IRUGO | S_IWUSR, 		\
+		show_sensor_##offset, set_sensor_##offset);
 
 show_sensor_offset(1);
 show_sensor_offset(2);
@@ -476,11 +525,11 @@ static ssize_t set_fan_##offset##_div (struct device *dev, 		\
 {									\
 	return set_fan_div(dev, buf, count, 0x##offset - 1);		\
 }									\
-static DEVICE_ATTR(fan##offset##_input, S_IRUGO, show_fan_##offset, NULL) \
+static DEVICE_ATTR(fan##offset##_input, S_IRUGO, show_fan_##offset, NULL); \
 static DEVICE_ATTR(fan##offset##_min, S_IRUGO | S_IWUSR, 		\
-		show_fan_##offset##_min, set_fan_##offset##_min) 	\
+		show_fan_##offset##_min, set_fan_##offset##_min); 	\
 static DEVICE_ATTR(fan##offset##_div, S_IRUGO | S_IWUSR, 		\
-		show_fan_##offset##_div, set_fan_##offset##_div)
+		show_fan_##offset##_div, set_fan_##offset##_div);
 
 show_fan_offset(1);
 show_fan_offset(2);
@@ -500,9 +549,33 @@ static DEVICE_ATTR(alarms, S_IRUGO | S_IWUSR, show_alarms, NULL);
      * when a new adapter is inserted (and it87_driver is still present) */
 static int it87_attach_adapter(struct i2c_adapter *adapter)
 {
-	if (!(adapter->class & I2C_ADAP_CLASS_SMBUS))
+	if (!(adapter->class & I2C_CLASS_HWMON))
 		return 0;
 	return i2c_detect(adapter, &addr_data, it87_detect);
+}
+
+/* SuperIO detection - will change normal_isa[0] if a chip is found */
+static int it87_find(int *address)
+{
+	u16 val;
+
+	superio_enter();
+	val = (superio_inb(DEVID) << 8) |
+	       superio_inb(DEVID + 1);
+	if (val != IT8712F_DEVID) {
+		superio_exit();
+		return -ENODEV;
+	}
+
+	superio_select();
+	val = (superio_inb(IT87_BASE_REG) << 8) |
+	       superio_inb(IT87_BASE_REG + 1);
+	superio_exit();
+	*address = val & ~(IT87_EXTENT - 1);
+	if (*address == 0) {
+		return -ENODEV;
+	}
+	return 0;
 }
 
 /* This function is called by i2c_detect */
@@ -700,9 +773,7 @@ static int it87_detach_client(struct i2c_client *client)
    We don't want to lock the whole ISA bus, so we lock each client
    separately.
    We ignore the IT87 BUSY flag at this moment - it could lead to deadlocks,
-   would slow down the IT87 access and should not be necessary. 
-   There are some ugly typecasts here, but the good new is - they should
-   nowhere else be necessary! */
+   would slow down the IT87 access and should not be necessary. */
 static int it87_read_value(struct i2c_client *client, u8 reg)
 {
 	struct it87_data *data = i2c_get_clientdata(client);
@@ -722,9 +793,7 @@ static int it87_read_value(struct i2c_client *client, u8 reg)
    We don't want to lock the whole ISA bus, so we lock each client
    separately.
    We ignore the IT87 BUSY flag at this moment - it could lead to deadlocks,
-   would slow down the IT87 access and should not be necessary. 
-   There are some ugly typecasts here, but the good new is - they should
-   nowhere else be necessary! */
+   would slow down the IT87 access and should not be necessary. */
 static int it87_write_value(struct i2c_client *client, u8 reg, u8 value)
 {
 	struct it87_data *data = i2c_get_clientdata(client);
@@ -767,11 +836,11 @@ static void it87_init_client(struct i2c_client *client, struct it87_data *data)
 	}
 
 	/* Check if tachometers are reset manually or by some reason */
-	tmp = it87_read_value(client, IT87_REG_FAN_CTRL);
+	tmp = it87_read_value(client, IT87_REG_FAN_MAIN_CTRL);
 	if ((tmp & 0x70) == 0) {
 		/* Enable all fan tachometers */
 		tmp = (tmp & 0x8f) | 0x70;
-		it87_write_value(client, IT87_REG_FAN_CTRL, tmp);
+		it87_write_value(client, IT87_REG_FAN_MAIN_CTRL, tmp);
 	}
 
 	/* Start monitoring */
@@ -853,6 +922,11 @@ static struct it87_data *it87_update_device(struct device *dev)
 
 static int __init sm_it87_init(void)
 {
+	int addr;
+
+	if (!it87_find(&addr)) {
+		normal_isa[0] = addr;
+	}
 	return i2c_add_driver(&it87_driver);
 }
 

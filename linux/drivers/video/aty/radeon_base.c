@@ -242,8 +242,6 @@ static int force_measure_pll = 0;
 static int nomtrr = 0;
 #endif
 
-int radeonfb_noaccel = 0;
-
 /*
  * prototypes
  */
@@ -388,7 +386,7 @@ static int __devinit radeon_map_ROM(struct radeonfb_info *rinfo, struct pci_dev 
 	return -ENXIO;
 }
 
-#ifdef __i386__
+#ifdef CONFIG_X86
 static int  __devinit radeon_find_mem_vbios(struct radeonfb_info *rinfo)
 {
 	/* I simplified this code as we used to miss the signatures in
@@ -417,7 +415,7 @@ static int  __devinit radeon_find_mem_vbios(struct radeonfb_info *rinfo)
 
 	return 0;
 }
-#endif /* __i386__ */
+#endif
 
 #ifdef CONFIG_PPC_OF
 /*
@@ -434,7 +432,7 @@ static int __devinit radeon_read_xtal_OF (struct radeonfb_info *rinfo)
 		printk(KERN_WARNING "radeonfb: Cannot match card to OF node !\n");
 		return -ENODEV;
 	}
-	val = (u32 *) get_property(dp, "ATY,RefCLK", 0);
+	val = (u32 *) get_property(dp, "ATY,RefCLK", NULL);
 	if (!val || !*val) {
 		printk(KERN_WARNING "radeonfb: No ATY,RefCLK property !\n");
 		return -EINVAL;
@@ -442,11 +440,11 @@ static int __devinit radeon_read_xtal_OF (struct radeonfb_info *rinfo)
 
 	rinfo->pll.ref_clk = (*val) / 10;
 
-	val = (u32 *) get_property(dp, "ATY,SCLK", 0);
+	val = (u32 *) get_property(dp, "ATY,SCLK", NULL);
 	if (val && *val)
 		rinfo->pll.sclk = (*val) / 10;
 
-	val = (u32 *) get_property(dp, "ATY,MCLK", 0);
+	val = (u32 *) get_property(dp, "ATY,MCLK", NULL);
 	if (val && *val)
 		rinfo->pll.mclk = (*val) / 10;
 
@@ -810,9 +808,8 @@ static int radeonfb_check_var (struct fb_var_screeninfo *var, struct fb_info *in
 	/* XXX I'm adjusting xres_virtual to the pitch, that may help XFree
 	 * with some panels, though I don't quite like this solution
 	 */
-  	if (radeon_accel_disabled()) {
+  	if (rinfo->info->flags & FBINFO_HWACCEL_DISABLED) {
 		v.xres_virtual = v.xres_virtual & ~7ul;
-		v.accel_flags = 0;
 	} else {
 		pitch = ((v.xres_virtual * ((v.bits_per_pixel + 1) / 8) + 0x3f)
  				& ~(0x3f)) >> 6;
@@ -858,6 +855,7 @@ static int radeonfb_pan_display (struct fb_var_screeninfo *var,
         if (rinfo->asleep)
         	return 0;
 
+	radeon_fifo_wait(2);
         OUTREG(CRTC_OFFSET, ((var->yoffset * var->xres_virtual + var->xoffset)
 			     * var->bits_per_pixel / 8) & ~7);
         return 0;
@@ -882,11 +880,12 @@ static int radeonfb_ioctl (struct inode *inode, struct file *file, unsigned int 
 			if (!rinfo->is_mobility)
 				return -EINVAL;
 
-			rc = get_user(value, (__u32*)arg);
+			rc = get_user(value, (__u32 __user *)arg);
 
 			if (rc)
 				return rc;
 
+			radeon_fifo_wait(2);
 			if (value & 0x01) {
 				tmp = INREG(LVDS_GEN_CNTL);
 
@@ -926,7 +925,7 @@ static int radeonfb_ioctl (struct inode *inode, struct file *file, unsigned int 
 			if (CRTC_CRT_ON & tmp)
 				value |= 0x02;
 
-			return put_user(value, (__u32*)arg);
+			return put_user(value, (__u32 __user *)arg);
 		default:
 			return -EINVAL;
 	}
@@ -963,6 +962,7 @@ static int radeon_screen_blank (struct radeonfb_info *rinfo, int blank)
                         break;
         }
 
+	radeon_fifo_wait(1);
 	switch (rinfo->mon1_type) {
 		case MT_LCD:
 			OUTREG(LVDS_GEN_CNTL, val2);
@@ -1021,6 +1021,7 @@ static int radeonfb_setcolreg (unsigned regno, unsigned red, unsigned green,
         if (!rinfo->asleep) {
         	u32 dac_cntl2, vclk_cntl = 0;
         	
+		radeon_fifo_wait(9);
 		if (rinfo->is_mobility) {
 			vclk_cntl = INPLL(VCLK_ECP_CNTL);
 			OUTPLL(VCLK_ECP_CNTL, vclk_cntl & ~PIXCLK_DAC_ALWAYS_ONb);
@@ -1112,6 +1113,8 @@ static void radeon_write_pll_regs(struct radeonfb_info *rinfo, struct radeon_reg
 {
 	int i;
 
+	radeon_fifo_wait(20);
+
 	/* Workaround from XFree */
 	if (rinfo->is_mobility) {
 	        /* A temporal workaround for the occational blanking on certain laptop panels. 
@@ -1144,6 +1147,7 @@ static void radeon_write_pll_regs(struct radeonfb_info *rinfo, struct radeon_reg
 
 	/* Set PPLL ref. div */
 	if (rinfo->family == CHIP_FAMILY_R300 ||
+	    rinfo->family == CHIP_FAMILY_RS300 ||
 	    rinfo->family == CHIP_FAMILY_R350 ||
 	    rinfo->family == CHIP_FAMILY_RV350) {
 		if (mode->ppll_ref_div & R300_PPLL_REF_DIV_ACC_MASK) {
@@ -1184,7 +1188,7 @@ static void radeon_write_pll_regs(struct radeonfb_info *rinfo, struct radeon_reg
 		~(PPLL_RESET | PPLL_SLEEP | PPLL_ATOMIC_UPDATE_EN | PPLL_VGA_ATOMIC_UPDATE_EN));
 
 	/* We may want some locking ... oh well */
-       	wait_ms(5);
+       	msleep(5);
 
 	/* Switch back VCLK source to PPLL */
 	OUTPLLP(VCLK_ECP_CNTL, VCLK_SRC_SEL_PPLLCLK, ~VCLK_SRC_SEL_MASK);
@@ -1196,6 +1200,8 @@ static void radeon_write_pll_regs(struct radeonfb_info *rinfo, struct radeon_reg
 static void radeon_lvds_timer_func(unsigned long data)
 {
 	struct radeonfb_info *rinfo = (struct radeonfb_info *)data;
+
+	radeon_fifo_wait(3);
 
 	OUTREG(LVDS_GEN_CNTL, rinfo->pending_lvds_gen_cntl);
 	if (rinfo->pending_pixclks_cntl) {
@@ -1221,6 +1227,7 @@ static void radeon_write_mode (struct radeonfb_info *rinfo,
 
 	radeon_screen_blank(rinfo, VESA_POWERDOWN);
 
+	radeon_fifo_wait(31);
 	for (i=0; i<10; i++)
 		OUTREG(common_regs[i].reg, common_regs[i].val);
 
@@ -1248,6 +1255,7 @@ static void radeon_write_mode (struct radeonfb_info *rinfo,
 	radeon_write_pll_regs(rinfo, mode);
 
 	if ((primary_mon == MT_DFP) || (primary_mon == MT_LCD)) {
+		radeon_fifo_wait(10);
 		OUTREG(FP_CRTC_H_TOTAL_DISP, mode->fp_crtc_h_total_disp);
 		OUTREG(FP_CRTC_V_TOTAL_DISP, mode->fp_crtc_v_total_disp);
 		OUTREG(FP_H_SYNC_STRT_WID, mode->fp_h_sync_strt_wid);
@@ -1287,6 +1295,7 @@ static void radeon_write_mode (struct radeonfb_info *rinfo,
 
 	radeon_screen_blank(rinfo, VESA_NO_BLANKING);
 
+	radeon_fifo_wait(2);
 	OUTPLL(VCLK_ECP_CNTL, mode->vclk_ecp_cntl);
 	
 	return;
@@ -1523,7 +1532,7 @@ int radeonfb_set_par(struct fb_info *info)
 	newmode.crtc_v_sync_strt_wid = (((vSyncStart - 1) & 0xfff) |
 					 (vsync_wid << 16) | (v_sync_pol  << 23));
 
-	if (!radeon_accel_disabled()) {
+	if (!(info->flags & FBINFO_HWACCEL_DISABLED)) {
 		/* We first calculate the engine pitch */
 		rinfo->pitch = ((mode->xres_virtual * ((mode->bits_per_pixel + 1) / 8) + 0x3f)
  				& ~(0x3f)) >> 6;
@@ -1671,12 +1680,11 @@ int radeonfb_set_par(struct fb_info *info)
 	if (!rinfo->asleep) {
 		radeon_write_mode (rinfo, &newmode);
 		/* (re)initialize the engine */
-		if (!radeon_accel_disabled())
+		if (!(info->flags & FBINFO_HWACCEL_DISABLED))
 			radeonfb_engine_init (rinfo);
-	
 	}
 	/* Update fix */
-	if (!radeon_accel_disabled())
+	if (!(info->flags & FBINFO_HWACCEL_DISABLED))
         	info->fix.line_length = rinfo->pitch*64;
         else
 		info->fix.line_length = mode->xres_virtual
@@ -1695,7 +1703,7 @@ int radeonfb_set_par(struct fb_info *info)
 
 
 
-static ssize_t radeonfb_read(struct file *file, char *buf, size_t count, loff_t *ppos)
+static ssize_t radeonfb_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 {
 	unsigned long p = *ppos;
 	struct inode *inode = file->f_dentry->d_inode;
@@ -1722,7 +1730,7 @@ static ssize_t radeonfb_read(struct file *file, char *buf, size_t count, loff_t 
 	return count;
 }
 
-static ssize_t radeonfb_write(struct file *file, const char *buf, size_t count,
+static ssize_t radeonfb_write(struct file *file, const char __user *buf, size_t count,
 			      loff_t *ppos)
 {
 	unsigned long p = *ppos;
@@ -1781,10 +1789,13 @@ static int __devinit radeon_set_fbinfo (struct radeonfb_info *rinfo)
 	info->currcon = -1;
 	info->par = rinfo;
 	info->pseudo_palette = rinfo->pseudo_palette;
-        info->flags = FBINFO_FLAG_DEFAULT;
-        info->fbops = &radeonfb_ops;
-        info->display_fg = NULL;
-        info->screen_base = (char *)rinfo->fb_base;
+	info->flags = FBINFO_DEFAULT
+		    | FBINFO_HWACCEL_COPYAREA
+		    | FBINFO_HWACCEL_FILLRECT
+		    | FBINFO_HWACCEL_XPAN
+		    | FBINFO_HWACCEL_YPAN;
+	info->fbops = &radeonfb_ops;
+	info->screen_base = (char *)rinfo->fb_base;
 
 	/* Fill fix common fields */
 	strlcpy(info->fix.id, rinfo->name, sizeof(info->fix.id));
@@ -1798,17 +1809,11 @@ static int __devinit radeon_set_fbinfo (struct radeonfb_info *rinfo)
         info->fix.type_aux = 0;
         info->fix.mmio_start = rinfo->mmio_base_phys;
         info->fix.mmio_len = RADEON_REGSIZE;
-	if (radeon_accel_disabled())
-	        info->fix.accel = FB_ACCEL_NONE;
-	else
-		info->fix.accel = FB_ACCEL_ATI_RADEON;
 
 	fb_alloc_cmap(&info->cmap, 256, 0);
 
-	if (radeon_accel_disabled())
-		info->var.accel_flags &= ~FB_ACCELF_TEXT;
-	else
-		info->var.accel_flags |= FB_ACCELF_TEXT;
+	if (noaccel)
+		info->flags |= FBINFO_HWACCEL_DISABLED;
 
         return 0;
 }
@@ -1855,7 +1860,8 @@ static int radeon_set_backlight_enable(int on, int level, void *data)
 	     rinfo->family == CHIP_FAMILY_RV280 ||
 	     rinfo->family == CHIP_FAMILY_RV350) &&
 	    !machine_is_compatible("PowerBook4,3") &&
-	    !machine_is_compatible("PowerBook6,3"))
+	    !machine_is_compatible("PowerBook6,3") &&
+	    !machine_is_compatible("PowerBook6,5"))
 		conv_table = backlight_conv_m7;
 	else
 		conv_table = backlight_conv_m6;
@@ -1863,9 +1869,10 @@ static int radeon_set_backlight_enable(int on, int level, void *data)
 	del_timer_sync(&rinfo->lvds_timer);
 
 	lvds_gen_cntl |= (LVDS_BL_MOD_EN | LVDS_BLON);
+	radeon_fifo_wait(3);
 	if (on && (level > BACKLIGHT_OFF)) {
 		lvds_gen_cntl |= LVDS_DIGON;
-		if (!lvds_gen_cntl & LVDS_ON) {
+		if (!(lvds_gen_cntl & LVDS_ON)) {
 			lvds_gen_cntl &= ~LVDS_BLON;
 			OUTREG(LVDS_GEN_CNTL, lvds_gen_cntl);
 			(void)INREG(LVDS_GEN_CNTL);
@@ -2129,7 +2136,32 @@ static int radeonfb_pci_register (struct pci_dev *pdev,
 #endif /* CONFIG_PPC_OF */
 
 	/* framebuffer size */
-	tmp = INREG(CONFIG_MEMSIZE);
+        if ((rinfo->family == CHIP_FAMILY_RS100) ||
+            (rinfo->family == CHIP_FAMILY_RS200) ||
+            (rinfo->family == CHIP_FAMILY_RS300)) {
+          u32 tom = INREG(NB_TOM);
+          tmp = ((((tom >> 16) - (tom & 0xffff) + 1) << 6) * 1024);
+ 
+ 		radeon_fifo_wait(6);
+          OUTREG(MC_FB_LOCATION, tom);
+          OUTREG(DISPLAY_BASE_ADDR, (tom & 0xffff) << 16);
+          OUTREG(CRTC2_DISPLAY_BASE_ADDR, (tom & 0xffff) << 16);
+          OUTREG(OV0_BASE_ADDR, (tom & 0xffff) << 16);
+ 
+          /* This is supposed to fix the crtc2 noise problem. */
+          OUTREG(GRPH2_BUFFER_CNTL, INREG(GRPH2_BUFFER_CNTL) & ~0x7f0000);
+ 
+          if ((rinfo->family == CHIP_FAMILY_RS100) ||
+              (rinfo->family == CHIP_FAMILY_RS200)) {
+             /* This is to workaround the asic bug for RMX, some versions
+                of BIOS dosen't have this register initialized correctly.
+             */
+             OUTREGP(CRTC_MORE_CNTL, CRTC_H_CUTOFF_ACTIVE_EN,
+                     ~CRTC_H_CUTOFF_ACTIVE_EN);
+          }
+        } else {
+          tmp = INREG(CONFIG_MEMSIZE);
+        }
 
 	/* mem size is bits [28:0], mask off the rest */
 	rinfo->video_ram = tmp & CONFIG_MEMSIZE_MASK;
@@ -2204,6 +2236,7 @@ static int radeonfb_pci_register (struct pci_dev *pdev,
 			rinfo->mapped_vram /= 2;
 			continue;
 		}
+		memset_io(rinfo->fb_base, 0, rinfo->mapped_vram);
 		break;
 	}
 
@@ -2229,20 +2262,34 @@ static int radeonfb_pci_register (struct pci_dev *pdev,
 
 	/*
 	 * Map the BIOS ROM if any and retreive PLL parameters from
-	 * either BIOS or Open Firmware
+	 * the BIOS. We skip that on mobility chips as the real panel
+	 * values we need aren't in the ROM but in the BIOS image in
+	 * memory. This is definitely not the best meacnism though,
+	 * we really need the arch code to tell us which is the "primary"
+	 * video adapter to use the memory image (or better, the arch
+	 * should provide us a copy of the BIOS image to shield us from
+	 * archs who would store that elsewhere and/or could initialize
+	 * more than one adapter during boot).
 	 */
-	radeon_map_ROM(rinfo, pdev);
+	if (!rinfo->is_mobility)
+		radeon_map_ROM(rinfo, pdev);
 
 	/*
 	 * On x86, the primary display on laptop may have it's BIOS
 	 * ROM elsewhere, try to locate it at the legacy memory hole.
-	 * We probably need to make sure this is the primary dispay,
+	 * We probably need to make sure this is the primary display,
 	 * but that is difficult without some arch support.
 	 */
-#ifdef __i386__
+#ifdef CONFIG_X86
 	if (rinfo->bios_seg == NULL)
 		radeon_find_mem_vbios(rinfo);
-#endif /* __i386__ */
+#endif
+
+	/* If both above failed, try the BIOS ROM again for mobility
+	 * chips
+	 */
+	if (rinfo->bios_seg == NULL && rinfo->is_mobility)
+		radeon_map_ROM(rinfo, pdev);
 
 	/* Get informations about the board's PLL */
 	radeon_get_pllinfo(rinfo);
@@ -2398,7 +2445,6 @@ static struct pci_driver radeonfb_driver = {
 
 int __init radeonfb_init (void)
 {
-	radeonfb_noaccel = noaccel;
 	return pci_module_init (&radeonfb_driver);
 }
 
@@ -2420,7 +2466,7 @@ int __init radeonfb_setup (char *options)
 			continue;
 
 		if (!strncmp(this_opt, "noaccel", 7)) {
-			noaccel = radeonfb_noaccel = 1;
+			noaccel = 1;
 		} else if (!strncmp(this_opt, "mirror", 6)) {
 			mirror = 1;
 		} else if (!strncmp(this_opt, "force_dfp", 9)) {

@@ -898,7 +898,7 @@ static int ll_do_qic_cmd(int cmd, time_t timeout)
 		printk(TPQIC02_NAME ": ll_do_qic_cmd(%x, %ld) failed\n", cmd, (long) timeout);
 		return -EIO;
 	}
-#if OBSOLETE
+#ifdef OBSOLETE
 	/* wait for ready since it may not be active immediately after reading status */
 	while ((inb_p(QIC02_STAT_PORT) & QIC02_STAT_READY) != 0)
 		cpu_relax();
@@ -1419,7 +1419,7 @@ static int start_dma(short mode, unsigned long bytes_todo)
 		if (stat != TE_OK)
 			return stat;
 
-#if OBSOLETE
+#ifdef OBSOLETE
 		/************* not needed iff rd_status() would wait for ready!!!!!! **********/
 		if (wait_for_ready(TIM_S) != TE_OK) {	/*** not sure this is needed ***/
 			tpqputs(TPQD_ALWAYS, "wait_for_ready failed in start_dma");
@@ -1727,7 +1727,7 @@ static irqreturn_t qic02_tape_interrupt(int irq, void *dev_id,
  * request would return the EOF flag for the previous file.
  */
 
-static ssize_t qic02_tape_read(struct file *filp, char *buf, size_t count, loff_t * ppos)
+static ssize_t qic02_tape_read(struct file *filp, char __user *buf, size_t count, loff_t * ppos)
 {
 	int type = iminor(filp->f_dentry->d_inode);
 	unsigned short flags = filp->f_flags;
@@ -1905,7 +1905,7 @@ static ssize_t qic02_tape_read(struct file *filp, char *buf, size_t count, loff_
  * tape device again. The driver will detect an exception status in (No Cartridge)
  * and force a rewind. After that tar may continue writing.
  */
-static ssize_t qic02_tape_write(struct file *filp, const char *buf, size_t count, loff_t * ppos)
+static ssize_t qic02_tape_write(struct file *filp, const char __user *buf, size_t count, loff_t * ppos)
 {
 	int type = iminor(filp->f_dentry->d_inode);
 	unsigned short flags = filp->f_flags;
@@ -2400,6 +2400,7 @@ static int qic02_tape_ioctl(struct inode *inode, struct file *filp, unsigned int
 	struct mtop operation;
 	unsigned char blk_addr[6];
 	struct mtpos ioctl_tell;
+	void __user *argp = (void __user *)ioarg;
 
 
 	if (TP_DIAGS(current_type))
@@ -2416,7 +2417,7 @@ static int qic02_tape_ioctl(struct inode *inode, struct file *filp, unsigned int
 	if (c == _IOC_NR(MTIOCGETCONFIG)) {
 		CHECK_IOC_SIZE(mtconfiginfo);
 
-		if (copy_to_user((char *) ioarg, (char *) &qic02_tape_dynconf, sizeof(qic02_tape_dynconf)))
+		if (copy_to_user(argp, &qic02_tape_dynconf, sizeof(qic02_tape_dynconf)))
 			return -EFAULT;
 		return 0;
 	} else if (c == _IOC_NR(MTIOCSETCONFIG)) {
@@ -2438,7 +2439,7 @@ static int qic02_tape_ioctl(struct inode *inode, struct file *filp, unsigned int
 			qic02_release_resources();	/* and go zombie */
 
 		/* copy struct from user space to kernel space */
-		if (copy_from_user((char *) &qic02_tape_dynconf, (char *) ioarg, sizeof(qic02_tape_dynconf)))
+		if (copy_from_user(&qic02_tape_dynconf, argp, sizeof(qic02_tape_dynconf)))
 			return -EFAULT;
 		
 		return update_ifc_masks(qic02_tape_dynconf.ifc_type);
@@ -2452,7 +2453,7 @@ static int qic02_tape_ioctl(struct inode *inode, struct file *filp, unsigned int
 		CHECK_IOC_SIZE(mtop);
 
 		/* copy mtop struct from user space to kernel space */
-		if (copy_from_user((char *) &operation, (char *) ioarg, sizeof(operation)))
+		if (copy_from_user(&operation, argp, sizeof(operation)))
 			return -EFAULT;
 
 		/* ---note: mt_count is signed, negative seeks must be
@@ -2507,7 +2508,7 @@ static int qic02_tape_ioctl(struct inode *inode, struct file *filp, unsigned int
 		 */
 
 		/* copy results to user space */
-		if (copy_to_user((char *) ioarg, (char *) &ioctl_status, sizeof(ioctl_status)))
+		if (copy_to_user(argp, &ioctl_status, sizeof(ioctl_status)))
 			return -EFAULT;
 		return 0;
 	} else if (TP_HAVE_TELL && (c == _IOC_NR(MTIOCPOS))) {
@@ -2527,7 +2528,7 @@ static int qic02_tape_ioctl(struct inode *inode, struct file *filp, unsigned int
 		ioctl_tell.mt_blkno = (blk_addr[3] << 16) | (blk_addr[4] << 8) | blk_addr[5];
 
 		/* copy results to user space */
-		if (copy_to_user((char *) ioarg, (char *) &ioctl_tell, sizeof(ioctl_tell)))
+		if (copy_to_user(argp, &ioctl_tell, sizeof(ioctl_tell)))
 			return -EFAULT;
 		return 0;
 
@@ -2536,7 +2537,7 @@ static int qic02_tape_ioctl(struct inode *inode, struct file *filp, unsigned int
 }				/* qic02_tape_ioctl */
 
 
-static ssize_t qic02_do_tape_read(struct file *filp, char *buf, size_t count, loff_t * ppos)
+static ssize_t qic02_do_tape_read(struct file *filp, char __user *buf, size_t count, loff_t * ppos)
 {
 	int err;
 	
@@ -2547,7 +2548,7 @@ static ssize_t qic02_do_tape_read(struct file *filp, char *buf, size_t count, lo
 	return err;
 }
 
-static ssize_t qic02_do_tape_write(struct file *filp, const char *buf, size_t count, loff_t * ppos)
+static ssize_t qic02_do_tape_write(struct file *filp, const char __user *buf, size_t count, loff_t * ppos)
 {
 	int err;
 
@@ -2588,7 +2589,7 @@ static void qic02_release_resources(void)
 	release_region(QIC02_TAPE_PORT, QIC02_TAPE_PORT_RANGE);
 	if (buffaddr)
 		free_pages((unsigned long) buffaddr, get_order(TPQBUF_SIZE));
-	buffaddr = 0;		/* Better to cause a panic than overwite someone else */
+	buffaddr = NULL;	/* Better to cause a panic than overwite someone else */
 	status_zombie = YES;
 }				/* qic02_release_resources */
 

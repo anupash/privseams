@@ -77,7 +77,7 @@
 #include <net/icmp.h>
 
 #include <net/flow.h>
-#include <net/checksum.h>
+#include <net/ip6_checksum.h>
 #include <linux/proc_fs.h>
 
 #include <linux/netfilter.h>
@@ -395,7 +395,7 @@ static void ndisc_send_na(struct net_device *dev, struct neighbour *neigh,
 
 	ndisc_flow_init(&fl, NDISC_NEIGHBOUR_ADVERTISEMENT, src_addr, daddr);
 
-	dst = ndisc_dst_alloc(dev, neigh, daddr, ip6_output2);
+	dst = ndisc_dst_alloc(dev, neigh, daddr, ip6_output);
 	if (!dst)
 		return;
 
@@ -452,11 +452,11 @@ static void ndisc_send_na(struct net_device *dev, struct neighbour *neigh,
 
 	skb->dst = dst;
 	idev = in6_dev_get(dst->dev);
-	IP6_INC_STATS(Ip6OutRequests);
+	IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, dst->dev, dst_output);
 	if (!err) {
-		ICMP6_INC_STATS(idev, Icmp6OutNeighborAdvertisements);
-		ICMP6_INC_STATS(idev, Icmp6OutMsgs);
+		ICMP6_INC_STATS(idev, ICMP6_MIB_OUTNEIGHBORADVERTISEMENTS);
+		ICMP6_INC_STATS(idev, ICMP6_MIB_OUTMSGS);
 	}
 
 	if (likely(idev != NULL))
@@ -486,7 +486,7 @@ void ndisc_send_ns(struct net_device *dev, struct neighbour *neigh,
 
 	ndisc_flow_init(&fl, NDISC_NEIGHBOUR_SOLICITATION, saddr, daddr);
 
-	dst = ndisc_dst_alloc(dev, neigh, daddr, ip6_output2);
+	dst = ndisc_dst_alloc(dev, neigh, daddr, ip6_output);
 	if (!dst)
 		return;
 
@@ -536,11 +536,11 @@ void ndisc_send_ns(struct net_device *dev, struct neighbour *neigh,
 	/* send it! */
 	skb->dst = dst;
 	idev = in6_dev_get(dst->dev);
-	IP6_INC_STATS(Ip6OutRequests);
+	IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, dst->dev, dst_output);
 	if (!err) {
-		ICMP6_INC_STATS(idev, Icmp6OutNeighborSolicits);
-		ICMP6_INC_STATS(idev, Icmp6OutMsgs);
+		ICMP6_INC_STATS(idev, ICMP6_MIB_OUTNEIGHBORSOLICITS);
+		ICMP6_INC_STATS(idev, ICMP6_MIB_OUTMSGS);
 	}
 
 	if (likely(idev != NULL))
@@ -562,7 +562,7 @@ void ndisc_send_rs(struct net_device *dev, struct in6_addr *saddr,
 
 	ndisc_flow_init(&fl, NDISC_ROUTER_SOLICITATION, saddr, daddr);
 
-	dst = ndisc_dst_alloc(dev, NULL, daddr, ip6_output2);
+	dst = ndisc_dst_alloc(dev, NULL, daddr, ip6_output);
 	if (!dst)
 		return;
 
@@ -609,11 +609,11 @@ void ndisc_send_rs(struct net_device *dev, struct in6_addr *saddr,
 	/* send it! */
 	skb->dst = dst;
 	idev = in6_dev_get(dst->dev);
-	IP6_INC_STATS(Ip6OutRequests);	
+	IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);	
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, dst->dev, dst_output);
 	if (!err) {
-		ICMP6_INC_STATS(idev, Icmp6OutRouterSolicits);
-		ICMP6_INC_STATS(idev, Icmp6OutMsgs);
+		ICMP6_INC_STATS(idev, ICMP6_MIB_OUTROUTERSOLICITS);
+		ICMP6_INC_STATS(idev, ICMP6_MIB_OUTMSGS);
 	}
 
 	if (likely(idev != NULL))
@@ -1335,11 +1335,11 @@ void ndisc_send_redirect(struct sk_buff *skb, struct neighbour *neigh,
 
 	buff->dst = dst;
 	idev = in6_dev_get(dst->dev);
-	IP6_INC_STATS(Ip6OutRequests);
+	IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, buff, NULL, dst->dev, dst_output);
 	if (!err) {
-		ICMP6_INC_STATS(idev, Icmp6OutRedirects);
-		ICMP6_INC_STATS(idev, Icmp6OutMsgs);
+		ICMP6_INC_STATS(idev, ICMP6_MIB_OUTREDIRECTS);
+		ICMP6_INC_STATS(idev, ICMP6_MIB_OUTMSGS);
 	}
 
 	if (likely(idev != NULL))
@@ -1423,7 +1423,7 @@ static struct notifier_block ndisc_netdev_notifier = {
 };
 
 #ifdef CONFIG_SYSCTL
-int ndisc_ifinfo_sysctl_change(struct ctl_table *ctl, int write, struct file * filp, void __user *buffer, size_t *lenp)
+int ndisc_ifinfo_sysctl_change(struct ctl_table *ctl, int write, struct file * filp, void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct net_device *dev = ctl->extra1;
 	struct inet6_dev *idev;
@@ -1433,7 +1433,7 @@ int ndisc_ifinfo_sysctl_change(struct ctl_table *ctl, int write, struct file * f
 		inet6_ifinfo_notify(RTM_NEWLINK, idev);
 		in6_dev_put(idev);
 	}
-	return proc_dointvec(ctl, write, filp, buffer, lenp);
+	return proc_dointvec(ctl, write, filp, buffer, lenp, ppos);
 }
 #endif
 

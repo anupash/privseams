@@ -716,7 +716,7 @@ rtl8169_init_board(struct pci_dev *pdev, struct net_device **dev_out,
 		goto err_out_disable;
 	}
 
-	rc = pci_request_regions(pdev, dev->name);
+	rc = pci_request_regions(pdev, MODULENAME);
 	if (rc) {
 		printk(KERN_ERR PFX "%s: Could not request regions.\n", pdev->slot_name);
 		goto err_out_disable;
@@ -1156,7 +1156,7 @@ rtl8169_hw_start(struct net_device *dev)
 
 static inline void rtl8169_make_unusable_by_asic(struct RxDesc *desc)
 {
-	desc->addr = 0x0badbadbadbadbad;
+	desc->addr = 0x0badbadbadbadbadull;
 	desc->status &= ~cpu_to_le32(OWNbit | RsvdMask);
 }
 

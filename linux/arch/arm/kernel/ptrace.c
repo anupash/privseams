@@ -485,7 +485,7 @@ void ptrace_break(struct task_struct *tsk, struct pt_regs *regs)
 	info.si_signo = SIGTRAP;
 	info.si_errno = 0;
 	info.si_code  = TRAP_BRKPT;
-	info.si_addr  = (void *)instruction_pointer(regs);
+	info.si_addr  = (void __user *)instruction_pointer(regs);
 
 	force_sig_info(SIGTRAP, &info, tsk);
 }
@@ -622,7 +622,7 @@ static int do_ptrace(int request, struct task_struct *child, long addr, long dat
 			ret = access_process_vm(child, addr, &tmp,
 						sizeof(unsigned long), 0);
 			if (ret == sizeof(unsigned long))
-				ret = put_user(tmp, (unsigned long *) data);
+				ret = put_user(tmp, (unsigned long __user *) data);
 			else
 				ret = -EIO;
 			break;

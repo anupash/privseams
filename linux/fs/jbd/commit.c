@@ -362,7 +362,7 @@ write_out_data:
 	 */
 	commit_transaction->t_state = T_COMMIT;
 
-	descriptor = 0;
+	descriptor = NULL;
 	bufs = 0;
 	while (commit_transaction->t_buffers) {
 
@@ -412,7 +412,8 @@ write_out_data:
 			tagp = &bh->b_data[sizeof(journal_header_t)];
 			space_left = bh->b_size - sizeof(journal_header_t);
 			first_tag = 1;
-			set_bit(BH_JWrite, &bh->b_state);
+			set_buffer_jwrite(bh);
+			set_buffer_dirty(bh);
 			wbuf[bufs++] = bh;
 
 			/* Record it so that we can wait for IO
@@ -502,7 +503,7 @@ write_out_data:
 start_journal_io:
 			for (i = 0; i < bufs; i++) {
 				struct buffer_head *bh = wbuf[i];
-				set_buffer_locked(bh);
+				lock_buffer(bh);
 				clear_buffer_dirty(bh);
 				set_buffer_uptodate(bh);
 				bh->b_end_io = journal_end_buffer_io_sync;
@@ -638,7 +639,8 @@ wait_for_iobuf:
 	JBUFFER_TRACE(descriptor, "write commit block");
 	{
 		struct buffer_head *bh = jh2bh(descriptor);
-		set_buffer_uptodate(bh);
+
+		set_buffer_dirty(bh);
 		sync_dirty_buffer(bh);
 		if (unlikely(!buffer_uptodate(bh)))
 			err = -EIO;

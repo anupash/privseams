@@ -248,7 +248,7 @@ static int uhci_show_sc(int port, unsigned short status, char *buf, int len)
 static int uhci_show_status(struct uhci_hcd *uhci, char *buf, int len)
 {
 	char *out = buf;
-	unsigned int io_addr = uhci->io_addr;
+	unsigned long io_addr = uhci->io_addr;
 	unsigned short usbcmd, usbstat, usbint, usbfrnum;
 	unsigned int flbaseadd;
 	unsigned char sof;
@@ -567,31 +567,11 @@ static loff_t uhci_proc_lseek(struct file *file, loff_t off, int whence)
 	return (file->f_pos = new);
 }
 
-static ssize_t uhci_proc_read(struct file *file, char *buf, size_t nbytes,
-			loff_t *ppos)
+static ssize_t uhci_proc_read(struct file *file, char __user *buf,
+				size_t nbytes, loff_t *ppos)
 {
 	struct uhci_proc *up = file->private_data;
-	unsigned int pos;
-	unsigned int size;
-
-	pos = *ppos;
-	size = up->size;
-	if (pos >= size)
-		return 0;
-	if (nbytes >= size)
-		nbytes = size;
-	if (pos + nbytes > size)
-		nbytes = size - pos;
-
-	if (!access_ok(VERIFY_WRITE, buf, nbytes))
-		return -EINVAL;
-
-	if (copy_to_user(buf, up->data + pos, nbytes))
-		return -EFAULT;
-
-	*ppos += nbytes;
-
-	return nbytes;
+	return simple_read_from_buffer(buf, nbytes, ppos, up->data, up->size);
 }
 
 static int uhci_proc_release(struct inode *inode, struct file *file)

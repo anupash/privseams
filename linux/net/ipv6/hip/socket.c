@@ -15,9 +15,15 @@
 #include "db.h"
 #include "builder.h"
 #include "misc.h"
+#include "workqueue.h"
+#include "misc.h"
+#include "cookie.h"
+#include "unit.h"
 
 #include <linux/net.h>
 
+/* kernel module unit tests */
+extern struct hip_unit_test_suite_list hip_unit_test_suite_list;
 
 /*
  * The eid db lock (local or peer) must be obtained before accessing these
@@ -68,7 +74,7 @@ int hip_create_socket(struct socket *sock, int protocol)
 {
 	int err = 0;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("protocol=%d\n", protocol);
 
 	// XX TODO: REPLACE WITH A SELECTOR
 	err = inet6_family_ops.create(sock, protocol);
@@ -515,57 +521,6 @@ int hip_socket_shutdown(struct socket *sock, int flags)
 	return err;
 }
 
-/*
- * Currently we just fall back to IPv6.
- */
-int hip_socket_setsockopt(struct socket *sock, int level, int optname,
-			  char *optval, int optlen)
-{
-	int err = 0;
-	struct proto_ops *socket_handler;
-
-	HIP_DEBUG("\n");
-
-	err = hip_select_socket_handler(sock, &socket_handler);
-	if (err) {
-		goto out_err;
-	}
-
-	err = socket_handler->setsockopt(sock, level, optname, optval, optlen);
-	if (err) {
-		HIP_ERROR("Inet socket handler failed (%d)\n", err);
-		goto out_err;
-	}
-
- out_err:
-
-	return err;
-}
-
-int hip_socket_getsockopt(struct socket *sock, int level, int optname,
-			  char *optval, int *optlen)
-{
-	int err = 0;
-	struct proto_ops *socket_handler;
-
-	HIP_DEBUG("\n");
-
-	err = hip_select_socket_handler(sock, &socket_handler);
-	if (err) {
-		goto out_err;
-	}
-
-	err = socket_handler->getsockopt(sock, level, optname, optval, optlen);
-	if (err) {
-		HIP_ERROR("Inet socket handler failed (%d)\n", err);
-		goto out_err;
-	}
-
- out_err:
-
-	return err;
-}
-
 int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock, 
 		       struct msghdr *m, size_t total_len)
 
@@ -688,3 +643,659 @@ ssize_t hip_socket_sendpage(struct socket *sock, struct page *page, int offset,
 
 	return err;
 }
+
+/*
+ * note this function is called by two other functions below.
+ */
+int hip_socket_add_local_hi(const struct hip_host_id *host_identity,
+			  const struct hip_lhi *lhi)
+{
+	int err = 0;
+
+	err = hip_add_localhost_id(lhi, host_identity);
+	if (err) {
+		HIP_ERROR("adding of local host identity failed\n");
+		goto out_err;
+	}
+
+	/* If adding localhost id failed because there was a duplicate, we
+	   won't precreate anything (and void causing dagling memory
+	   pointers) */
+
+	HIP_DEBUG("hip: Generating a new R1 now\n");
+
+	if (!hip_precreate_r1(&lhi->hit)) {
+		HIP_ERROR("Unable to precreate R1s... failing\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+
+ out_err:
+	return err;
+}
+
+/**
+ * hip_socket_handle_local_add_hi - handle adding of a localhost host identity
+ * @input: contains the hi parameter in fqdn format (includes private key)
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_socket_handle_add_local_hi(const struct hip_common *input)
+{
+	int err = 0;
+	struct hip_host_id *host_identity = NULL;
+	struct hip_lhi lhi;
+
+	HIP_DEBUG("\n");
+
+	if ((err = hip_get_msg_err(input)) != 0) {
+		HIP_ERROR("daemon failed (%d)\n", err);
+		goto out_err;
+	}
+
+	_HIP_DUMP_MSG(response);
+
+	host_identity = hip_get_param(input, HIP_PARAM_HOST_ID);
+        if (!host_identity) {
+		HIP_ERROR("no host identity pubkey in response\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+
+	err = hip_private_host_id_to_hit(host_identity, &lhi.hit,
+					 HIP_HIT_TYPE_HASH126);
+	if (err) {
+		HIP_ERROR("host id to hit conversion failed\n");
+		goto out_err;
+	}
+
+	err = hip_socket_add_local_hi(host_identity, &lhi);
+	if (err) {
+		HIP_ERROR("Failed to add HIP localhost identity\n");
+		goto out_err;
+	}
+
+	HIP_DEBUG("Adding of HIP localhost identity was successful\n");
+
+ out_err:
+
+	return err;
+}
+
+/**
+ * hip_socket_handle_del_local_hi - handle deletion of a localhost host identity
+ * @msg: the message containing the lhi to be deleted
+ *
+ * This function is currently unimplemented.
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_socket_handle_del_local_hi(const struct hip_common *input)
+{
+	int err = 0;
+
+	HIP_ERROR("Not implemented\n");
+	err = -ENOSYS;
+
+        return err;
+}
+
+static int hip_insert_peer_map_work_order(const struct in6_addr *hit,
+					  const struct in6_addr *ip,
+					  int insert, int rvs)
+{
+	int err = 0;
+	struct hip_work_order *hwo;
+	struct in6_addr *ip_copy;
+
+	hwo = hip_create_job_with_hit(GFP_ATOMIC, hit);
+	if (!hwo) {
+		HIP_ERROR("No memory for hit <-> ip mapping\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	
+	ip_copy = kmalloc(sizeof(struct in6_addr), GFP_ATOMIC);
+	if (!ip_copy) {
+		HIP_ERROR("No memory to copy IP to work order\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	
+	ipv6_addr_copy(ip_copy,ip);
+	hwo->arg2 = ip_copy;
+	hwo->type = HIP_WO_TYPE_MSG;
+	if (rvs)
+		hwo->subtype = HIP_WO_SUBTYPE_ADDRVS;
+	else {
+		if (insert)
+			hwo->subtype = HIP_WO_SUBTYPE_ADDMAP;
+		else
+			hwo->subtype = HIP_WO_SUBTYPE_DELMAP;
+	}
+
+	hip_insert_work_order(hwo);
+
+ out_err:
+
+	return err;
+}
+
+static int hip_do_work(const struct hip_common *input, int rvs)
+{
+	struct in6_addr *hit, *ip;
+	char buf[46];
+	int err = 0;
+
+
+	hit = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_HIT);
+	if (!hit) {
+		HIP_ERROR("handle async map: no hit\n");
+		err = -ENODATA;
+		goto out;
+	}
+
+	ip = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
+	if (!ip) {
+		HIP_ERROR("handle async map: no ipv6 address\n");
+		err = -ENODATA;
+		goto out;
+	}
+
+	hip_in6_ntop(hit, buf);
+	HIP_INFO("map HIT: %s\n", buf);
+	hip_in6_ntop(ip, buf);
+	HIP_INFO("map IP: %s\n", buf);
+	
+ 	err = hip_insert_peer_map_work_order(hit, ip, 1, rvs);
+ 	if (err) {
+ 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
+	}
+
+ out:
+
+	return err;
+
+}
+
+
+/**
+ * hip_socket_handle_rvs - Handle a case where we want our host to register
+ * with rendezvous server.
+ * Use this instead off "add map" functionality since we set the special
+ * flag... (rvs)
+ */
+int hip_socket_handle_rvs(const struct hip_common *input)
+{
+	return hip_do_work(input, 1);
+}
+
+
+/**
+ * hip_socket_handle_add_peer_map_hit_ip - handle adding of a HIT-to-IPv6 mapping
+ * @msg: the message containing the mapping to be added to kernel databases
+ *
+ * Add a HIT-to-IPv6 mapping of peer to the mapping database in the kernel
+ * module.
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_socket_handle_add_peer_map_hit_ip(const struct hip_common *input)
+{
+	return hip_do_work(input, 0);
+}
+
+/**
+ * hipd_handle_async_del_map_hit_ip - handle deletion of a mapping
+ * @msg: the message containing the mapping to be deleted
+ *
+ * Currently this function is unimplemented.
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_socket_handle_del_peer_map_hit_ip(const struct hip_common *input)
+{
+	struct in6_addr *hit, *ip;
+	char buf[46];
+	int err = 0;
+
+
+	hit = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_HIT);
+	if (!hit) {
+		HIP_ERROR("handle async map: no hit\n");
+		err = -ENODATA;
+		goto out;
+	}
+
+	ip = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
+	if (!ip) {
+		HIP_ERROR("handle async map: no ipv6 address\n");
+		err = -ENODATA;
+		goto out;
+	}
+
+	hip_in6_ntop(hit, buf);
+	HIP_INFO("map HIT: %s\n", buf);
+	hip_in6_ntop(ip, buf);
+	HIP_INFO("map IP: %s\n", buf);
+	
+ 	err = hip_insert_peer_map_work_order(hit, ip, 0, 0);
+ 	if (err) {
+ 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
+	}
+
+ out:
+
+	return err;
+}
+
+
+int hip_socket_handle_rst(const struct hip_common *input)
+{
+	return -ENOSYS;
+}
+
+/**
+ * hipd_handle_async_unit_test - handle unit test message
+ * @msg: message containing information about which unit tests to execute
+ *
+ * Execute unit tests in the kernelspace and return the number of unit tests
+ * failed.
+ *
+ * Returns: the number of unit tests failed
+ */
+int hip_socket_handle_unit_test(const struct hip_common *msg)
+{
+	int err = 0;
+#if 0 /* XX TODO */
+	uint16_t failed_test_cases;
+	uint16_t suiteid, caseid;
+	struct hip_unit_test *test = NULL;
+	char err_log[HIP_UNIT_ERR_LOG_MSG_MAX_LEN] = "";
+
+	test = (struct hip_unit_test *)
+		hip_get_param(msg, HIP_PARAM_UNIT_TEST);
+	if (!test) {
+		HIP_ERROR("No unit test parameter found\n");
+		err = -ENOMSG;
+		goto out;
+	}
+
+	suiteid = hip_get_unit_test_suite_param_id(test);
+	caseid = hip_get_unit_test_case_param_id(test);
+
+	HIP_DEBUG("Executing suiteid=%d, caseid=%d\n", suiteid, caseid);
+
+	failed_test_cases = hip_run_unit_test_case(&hip_unit_test_suite_list,
+						   suiteid, caseid,
+						   err_log, sizeof(err_log));
+	if (failed_test_cases)
+		HIP_ERROR("\n===Unit Test Summary===\nTotal %d errors:\n%s\n",
+			  failed_test_cases, err_log);
+	else
+		HIP_INFO("\n===Unit Test Summary===\nAll tests passed, no errors!\n");
+
+ out:
+	hip_msg_init(msg); /* reuse the same input msg for results */
+	hip_build_user_hdr(msg, SO_HIP_RUN_UNIT_TEST, failed_test_cases);
+	hip_build_unit_test_log();
+#endif
+
+	return err;
+}
+
+/*
+ * This function is similar to hip_socket_handle_add_local_hi but there are three
+ * major differences:
+ * - this function is used by native HIP sockets (not hipconf)
+ * - HIP sockets require EID handling which is done here
+ * - this function DOES NOT call hip_precreate_r1, so you need launch
+ */
+int hip_socket_handle_set_my_eid(struct hip_common *msg)
+{
+	int err = 0;
+	struct sockaddr_eid eid;
+	struct hip_tlv_common *param = NULL;
+	struct hip_eid_iface *iface;
+	struct hip_eid_endpoint *eid_endpoint;
+	struct hip_lhi lhi;
+	struct hip_eid_owner_info owner_info;
+	struct hip_host_id *host_id;
+	
+	HIP_DEBUG("\n");
+	
+	/* Extra consistency test */
+	if (hip_get_msg_type(msg) != SO_HIP_SET_MY_EID) {
+		err = -EINVAL;
+		HIP_ERROR("Bad message type\n");
+		goto out_err;
+	}
+	
+	eid_endpoint = hip_get_param(msg, HIP_PARAM_EID_ENDPOINT);
+	if (!eid_endpoint) {
+		err = -ENOENT;
+		HIP_ERROR("Could not find eid endpoint\n");
+		goto out_err;
+	}
+
+	if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
+		err = -EAFNOSUPPORT;
+		HIP_ERROR("setmyeid does not support HITs, only HIs\n");
+		goto out_err;
+	}
+	
+	HIP_DEBUG("hi len %d\n",
+		  ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
+
+	HIP_HEXDUMP("eid endpoint", eid_endpoint,
+		    hip_get_param_total_len(eid_endpoint));
+
+	host_id = &eid_endpoint->endpoint.id.host_id;
+
+	owner_info.uid = current->uid;
+	owner_info.gid = current->gid;
+	
+	if (hip_host_id_contains_private_key(host_id)) {
+		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
+						 HIP_HIT_TYPE_HASH126);
+		if (err) {
+			HIP_ERROR("Failed to calculate HIT from HI.");
+			goto out_err;
+		}
+	
+		/* XX TODO: check UID/GID permissions before adding */
+		err = hip_socket_add_local_hi(host_id, &lhi);
+		if (err == -EEXIST) {
+			HIP_INFO("Host id exists already, ignoring\n");
+			err = 0;
+		} else if (err) {
+			HIP_ERROR("Adding of localhost id failed");
+			goto out_err;
+		}
+	} else {
+		/* Only public key */
+		err = hip_host_id_to_hit(host_id,
+					 &lhi.hit, HIP_HIT_TYPE_HASH126);
+	}
+	
+	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
+	
+	/* Iterate through the interfaces */
+	while((param = hip_get_next_param(msg, param)) != NULL) {
+		/* Skip other parameters (only the endpoint should
+		   really be there). */
+		if (hip_get_param_type(param) != HIP_PARAM_EID_IFACE)
+			continue;
+		iface = (struct hip_eid_iface *) param;
+		/* XX TODO: convert and store the iface somewhere?? */
+		/* XX TODO: check also the UID permissions for storing
+		   the ifaces before actually storing them */
+	}
+	
+	/* The eid port information will be filled by the resolver. It is not
+	   really meaningful in the eid db. */
+	eid.eid_port = htons(0);
+	
+	lhi.anonymous =
+	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
+		1 : 0;
+	
+	/* XX TODO: check UID/GID permissions before adding ? */
+	err = hip_db_set_my_eid(&eid, &lhi, &owner_info);
+	if (err) {
+		HIP_ERROR("Could not set my eid into the db\n");
+		goto out_err;
+	}
+
+	HIP_DEBUG("EID value was set to %d\n", ntohs(eid.eid_val));
+
+	/* Clear the msg and reuse it for the result */
+	
+	hip_msg_init(msg);
+	hip_build_user_hdr(msg, SO_HIP_SET_MY_EID, err);
+	err = hip_build_param_eid_sockaddr(msg, (struct sockaddr *) &eid,
+					   sizeof(struct sockaddr_eid));
+	if (err) {
+		HIP_ERROR("Could not build eid sockaddr\n");
+		goto out_err;
+	}
+	
+ out_err:
+	return err;
+}
+
+
+int hip_socket_handle_set_peer_eid(struct hip_common *msg)
+{
+	int err = 0;
+	struct sockaddr_eid eid;
+	struct hip_tlv_common *param = NULL;
+	struct hip_eid_endpoint *eid_endpoint;
+	struct hip_lhi lhi;
+	struct hip_eid_owner_info owner_info;
+
+	HIP_DEBUG("\n");
+	
+	/* Extra consistency test */
+	if (hip_get_msg_type(msg) != SO_HIP_SET_PEER_EID) {
+		err = -EINVAL;
+		HIP_ERROR("Bad message type\n");
+		goto out_err;
+	}
+	
+	eid_endpoint = hip_get_param(msg, HIP_PARAM_EID_ENDPOINT);
+	if (!eid_endpoint) {
+		err = -ENOENT;
+		HIP_ERROR("Could not find eid endpoint\n");
+		goto out_err;
+	}
+	
+	if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
+		memcpy(&lhi.hit, &eid_endpoint->endpoint.id.hit,
+		       sizeof(struct in6_addr));
+		HIP_DEBUG_HIT("Peer HIT: ", &lhi.hit);
+	} else {
+		HIP_DEBUG("host_id len %d\n",
+			 ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
+		err = hip_host_id_to_hit(&eid_endpoint->endpoint.id.host_id,
+					 &lhi.hit, HIP_HIT_TYPE_HASH126);
+		if (err) {
+			HIP_ERROR("Failed to calculate HIT from HI.");
+			goto out_err;
+		}
+	}
+
+	lhi.anonymous =
+	       (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ? 1 : 0;
+
+	/* Fill eid owner information in and assign a peer EID */
+
+	owner_info.uid = current->uid;
+	owner_info.gid = current->gid;
+	
+	/* The eid port information will be filled by the resolver. It is not
+	   really meaningful in the eid db. */
+	eid.eid_port = htons(0);
+
+	err = hip_db_set_peer_eid(&eid, &lhi, &owner_info);
+	if (err) {
+		HIP_ERROR("Could not set my eid into the db\n");
+		goto out_err;
+	}
+	
+	/* Iterate through the addresses */
+
+	while((param = hip_get_next_param(msg, param)) != NULL) {
+		struct sockaddr_in6 *sockaddr;
+
+		HIP_DEBUG("Param type=%d\n", hip_get_param_type(param));
+
+		/* Skip other parameters (only the endpoint should
+		   really be there). */
+		if (hip_get_param_type(param) != HIP_PARAM_EID_SOCKADDR)
+			continue;
+
+		HIP_DEBUG("EID sockaddr found in the msg\n");
+
+		sockaddr =
+		  (struct sockaddr_in6 *) hip_get_param_contents_direct(param);
+		if (sockaddr->sin6_family != AF_INET6) {
+			HIP_INFO("sa_family %d not supported, ignoring\n",
+				 sockaddr->sin6_family);
+			continue;
+		}
+
+		HIP_DEBUG_IN6ADDR("Peer IPv6 address", &sockaddr->sin6_addr);
+
+		/* XX FIX: the mapping should be tagged with an uid */
+
+		err = hip_insert_peer_map_work_order(&lhi.hit,
+						     &sockaddr->sin6_addr,1,0);
+		if (err) {
+			HIP_ERROR("Failed to insert map work order (%d)\n",
+				  err);
+			goto out_err;
+		}
+	}
+
+	/* Finished. Write a return message with the EID (reuse the msg for
+	   result). */
+
+	hip_msg_init(msg);
+	hip_build_user_hdr(msg, SO_HIP_SET_PEER_EID, -err);
+	err = hip_build_param_eid_sockaddr(msg,
+					   (struct sockaddr *) &eid,
+					   sizeof(eid));
+	if (err) {
+		HIP_ERROR("Could not build eid sockaddr\n");
+		goto out_err;
+	}
+
+ out_err:
+	/* XX FIXME: if there were errors, remove eid and hit-ip mappings
+	   if necessary */
+
+	return err;
+}
+
+/*
+ * The socket options that do not need a return value.
+ */
+int hip_socket_setsockopt(struct socket *sock, int level, int optname,
+			  char *optval, int optlen)
+{
+	int err = 0;
+	struct proto_ops *socket_handler;
+	struct hip_common *msg = (struct hip_common *) optval;
+	int msg_type;
+
+	HIP_DEBUG("\n");
+
+	err = hip_select_socket_handler(sock, &socket_handler);
+	if (err) {
+		goto out_err;
+	}
+
+	if (!(optname == SO_HIP_GLOBAL_OPT || optname == SO_HIP_SOCKET_OPT)) {
+		err = -ESOCKTNOSUPPORT;
+		HIP_ERROR("optname (%d) was incorrect\n", optname);
+		goto out_err;
+	}
+
+	err = hip_check_userspace_msg(msg);
+	if (err) {
+		HIP_ERROR("HIP socket option was invalid\n");
+		goto out_err;
+	}
+
+	msg_type = hip_get_msg_type(msg);
+	switch(msg_type) {
+	case SO_HIP_ADD_LOCAL_HI:
+		err = hip_socket_handle_add_local_hi(msg);
+		break;
+	case SO_HIP_DEL_LOCAL_HI:
+		err = hip_socket_handle_del_local_hi(msg);
+		break;
+	case SO_HIP_ADD_PEER_MAP_HIT_IP:
+		err = hip_socket_handle_add_peer_map_hit_ip(msg);
+		break;
+	case SO_HIP_DEL_PEER_MAP_HIT_IP:
+		err = hip_socket_handle_del_peer_map_hit_ip(msg);
+		break;
+	case SO_HIP_RST:
+		err = hip_socket_handle_rst(msg);
+		break;
+	case SO_HIP_ADD_RVS:
+		err = hip_socket_handle_rvs(msg);
+		break;
+	default:
+		HIP_ERROR("Unkown socket option (%d)\n", msg_type);
+		err = -ESOCKTNOSUPPORT;
+	}
+
+ out_err:
+
+	return err;
+}
+
+/*
+ * The socket options that need a return value.
+ */
+int hip_socket_getsockopt(struct socket *sock, int level, int optname,
+			  char *optval, int *optlen)
+{
+	int err = 0;
+	struct proto_ops *socket_handler;
+	struct hip_common *msg = (struct hip_common *) optval;
+
+	HIP_DEBUG("\n");
+
+	err = hip_select_socket_handler(sock, &socket_handler);
+	if (err) {
+		goto out_err;
+	}
+
+	if (!(optname == SO_HIP_GLOBAL_OPT || optname == SO_HIP_SOCKET_OPT)) {
+		err = -ESOCKTNOSUPPORT;
+		goto out_err;
+	}
+
+	err = hip_check_userspace_msg(msg);
+	if (err) {
+		HIP_ERROR("HIP socket option was malformed\n");
+		goto out_err;
+	}
+
+	if (hip_get_msg_total_len(msg) != *optlen) {
+		HIP_ERROR("HIP socket option length was incorrect\n");
+		err = -EMSGSIZE;
+		goto out_err;		
+	}
+
+	/* XX FIX: we make the assumtion here that the socket option return
+	   value has enough space... */
+
+	switch(hip_get_msg_type(msg)) {
+	case SO_HIP_RUN_UNIT_TEST:
+		err = hip_socket_handle_unit_test(msg);
+		break;
+	case SO_HIP_SET_MY_EID:
+		err = hip_socket_handle_set_my_eid(msg);
+		break;
+	case SO_HIP_SET_PEER_EID:
+		err = hip_socket_handle_set_peer_eid(msg);
+		break;
+	default:
+		err = -ESOCKTNOSUPPORT;
+	}
+
+
+ out_err:
+
+	return err;
+}
+

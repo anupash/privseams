@@ -326,6 +326,22 @@ static struct sa1100fb_mach_info brutus_info __initdata = {
 };
 #endif
 
+#ifdef CONFIG_SA1100_COLLIE
+static struct sa1100fb_mach_info collie_info __initdata = {
+	.pixclock	= 171521,	.bpp		= 16,
+	.xres		= 320,		.yres		= 240,
+
+	.hsync_len	= 5,		.vsync_len	= 1,
+	.left_margin	= 11,		.upper_margin	= 2,
+	.right_margin	= 30,		.lower_margin	= 0,
+
+	.sync		= FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+
+	.lccr0		= LCCR0_Color | LCCR0_Sngl | LCCR0_Act,
+	.lccr3		= LCCR3_OutEnH | LCCR3_PixRsEdg | LCCR3_ACBsDiv(2),
+};
+#endif
+
 #ifdef CONFIG_SA1100_FREEBIRD
 #warning Please check this carefully
 static struct sa1100fb_mach_info freebird_info __initdata = {
@@ -633,6 +649,11 @@ sa1100fb_get_machine_info(struct sa1100fb_info *fbi)
 #ifdef CONFIG_SA1100_BRUTUS
 	if (machine_is_brutus()) {
 		inf = &brutus_info;
+	}
+#endif
+#ifdef CONFIG_SA1100_COLLIE
+	if (machine_is_collie()) {
+		inf = &collie_info;
 	}
 #endif
 #ifdef CONFIG_SA1100_FREEBIRD
@@ -1053,7 +1074,7 @@ static int sa1100fb_blank(int blank, struct fb_info *info)
 	case VESA_NO_BLANKING:
 		if (fbi->fb.fix.visual == FB_VISUAL_PSEUDOCOLOR ||
 		    fbi->fb.fix.visual == FB_VISUAL_STATIC_PSEUDOCOLOR)
-			fb_set_cmap(&fbi->fb.cmap, 1, info);
+			fb_set_cmap(&fbi->fb.cmap, info);
 		sa1100fb_schedule_work(fbi, C_ENABLE);
 	}
 	return 0;
@@ -1270,8 +1291,7 @@ static void sa1100fb_enable_controller(struct sa1100fb_info *fbi)
 #error Where is GPIO24 set as an output?  Can we fit this in somewhere else?
 	if (machine_is_graphicsclient()) {
 		// From ADS doc again...same as disable
-		set_current_state(TASK_UNINTERRUPTIBLE);
-		schedule_timeout(20 * HZ / 1000);
+		msleep(20);
 		GPSR |= GPIO_GPIO24;
 	}
 #endif
@@ -1306,8 +1326,7 @@ static void sa1100fb_disable_controller(struct sa1100fb_info *fbi)
 		 * We'll wait 20msec.
 		 */
 		GPCR |= GPIO_GPIO24;
-		set_current_state(TASK_UNINTERRUPTIBLE);
-		schedule_timeout(20 * HZ / 1000);
+		msleep(20);
 	}
 #endif
 #ifdef CONFIG_SA1100_HUW_WEBPANEL
@@ -1765,8 +1784,6 @@ static int __init sa1100fb_probe(struct device *dev)
 #endif
 
 	/* This driver cannot be unloaded at the moment */
-	MOD_INC_USE_COUNT;
-
 	return 0;
 
 failed:

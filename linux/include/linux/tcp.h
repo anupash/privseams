@@ -183,6 +183,9 @@ struct tcp_info
 	__u32	tcpi_snd_cwnd;
 	__u32	tcpi_advmss;
 	__u32	tcpi_reordering;
+
+	__u32	tcpi_rcv_rtt;
+	__u32	tcpi_rcv_space;
 };
 
 #ifdef __KERNEL__
@@ -259,8 +262,8 @@ struct tcp_opt {
 	__u32	frto_highmark;	/* snd_nxt when RTO occurred */
 
 	__u8	unused_pad;
-	__u8	queue_shrunk;	/* Write queue has been shrunk recently.*/
 	__u8	defer_accept;	/* User waits for some data after accept() */
+	/* one byte hole, try to pack */
 
 /* RTT measurement */
 	__u8	backoff;	/* backoff				*/
@@ -294,7 +297,6 @@ struct tcp_opt {
 	struct sk_buff_head	out_of_order_queue; /* Out of order segments go here */
 
 	struct tcp_func		*af_specific;	/* Operations which are AF_INET{4,6} specific	*/
-	struct sk_buff		*send_head;	/* Front of stuff to transmit			*/
 
  	__u32	rcv_wnd;	/* Current receiver window		*/
 	__u32	rcv_wup;	/* rcv_nxt on last window update sent	*/
@@ -351,11 +353,11 @@ struct tcp_opt {
 	__u8	urg_mode;	/* In urgent mode		*/
 	__u32	snd_up;		/* Urgent pointer		*/
 
-	/* The syn_wait_lock is necessary only to avoid tcp_get_info having
+	/* The syn_wait_lock is necessary only to avoid proc interface having
 	 * to grab the main lock sock while browsing the listening hash
 	 * (otherwise it's deadlock prone).
-	 * This lock is acquired in read mode only from tcp_get_info() and
-	 * it's acquired in write mode _only_ from code that is actively
+	 * This lock is acquired in read mode only from listening_get_next()
+	 * and it's acquired in write mode _only_ from code that is actively
 	 * changing the syn_wait_queue. All readers that are holding
 	 * the master sock lock don't need to grab this lock in read mode
 	 * too as the syn_wait_queue writes are always protected from
@@ -368,13 +370,25 @@ struct tcp_opt {
 	struct open_request	*accept_queue;
 	struct open_request	*accept_queue_tail;
 
-	int			write_pending;	/* A write to socket waits to start. */
-
 	unsigned int		keepalive_time;	  /* time before keep alive takes place */
 	unsigned int		keepalive_intvl;  /* time interval between keep alive probes */
 	int			linger2;
 
 	unsigned long last_synq_overflow; 
+
+/* Receiver side RTT estimation */
+	struct {
+		__u32	rtt;
+		__u32	seq;
+		__u32	time;
+	} rcv_rtt_est;
+
+/* Receiver queue space */
+	struct {
+		int	space;
+		__u32	seq;
+		__u32	time;
+	} rcvq_space;
 
 /* TCP Westwood structure */
         struct {
@@ -406,6 +420,7 @@ struct tcp_opt {
 		__u32	cnt;		/* increase cwnd by 1 after this number of ACKs */
 		__u32 	last_max_cwnd;	/* last maximium snd_cwnd */
 		__u32	last_cwnd;	/* the last snd_cwnd */
+		__u32   last_stamp;     /* time when updated last_cwnd */
 	} bictcp;
 };
 

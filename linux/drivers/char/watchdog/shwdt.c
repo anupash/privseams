@@ -64,7 +64,6 @@
  */
 static int clock_division_ratio = WTCSR_CKS_4096;
 
-#define msecs_to_jiffies(msecs)	(jiffies + (HZ * msecs + 9999) / 10000)
 #define next_ping_period(cks)	msecs_to_jiffies(cks - 4)
 
 static unsigned long shwdt_is_open;
@@ -210,7 +209,7 @@ static int sh_wdt_open(struct inode *inode, struct file *file)
 
 	sh_wdt_start();
 
-	return 0;
+	return nonseekable_open(inode, file);
 }
 
 /**
@@ -249,10 +248,6 @@ static int sh_wdt_close(struct inode *inode, struct file *file)
 static ssize_t sh_wdt_write(struct file *file, const char *buf,
 			    size_t count, loff_t *ppos)
 {
-	/* Can't seek (pwrite) on this device */
-	if (ppos != &file->f_pos)
-		return -ESPIPE;
-
 	if (count) {
 		if (!nowayout) {
 			size_t i;

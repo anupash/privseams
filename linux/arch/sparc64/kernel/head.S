@@ -50,7 +50,6 @@ bootup_user_stack:
  */
         .global root_flags, ram_flags, root_dev
         .global sparc_ramdisk_image, sparc_ramdisk_size
-	.globl	silo_args
 
         .ascii  "HdrS"
         .word   LINUX_VERSION_CODE
@@ -522,8 +521,6 @@ cheetah_tlb_fixup:
 
 	/* Patch copy/page operations to cheetah optimized versions. */
 	call	cheetah_patch_copyops
-	 nop
-	call	cheetah_patch_pgcopyops
 	 nop
 	call	cheetah_patch_cachetlbops
 	 nop

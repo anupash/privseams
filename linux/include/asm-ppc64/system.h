@@ -29,22 +29,26 @@
  * read_barrier_depends() prevents data-dependent loads being reordered
  *	across this point (nop on PPC).
  *
- * We can use the eieio instruction for wmb, but since it doesn't
- * give any ordering guarantees about loads, we have to use the
- * stronger but slower sync instruction for mb and rmb.
+ * We have to use the sync instructions for mb(), since lwsync doesn't
+ * order loads with respect to previous stores.  Lwsync is fine for
+ * rmb(), though.
+ * For wmb(), we use sync since wmb is used in drivers to order
+ * stores to system memory with respect to writes to the device.
+ * However, smp_wmb() can be a lighter-weight eieio barrier on
+ * SMP since it is only used to order updates to system memory.
  */
 #define mb()   __asm__ __volatile__ ("sync" : : : "memory")
 #define rmb()  __asm__ __volatile__ ("lwsync" : : : "memory")
-#define wmb()  __asm__ __volatile__ ("eieio" : : : "memory")
+#define wmb()  __asm__ __volatile__ ("sync" : : : "memory")
 #define read_barrier_depends()  do { } while(0)
 
-#define set_mb(var, value)	do { var = value; mb(); } while (0)
-#define set_wmb(var, value)	do { var = value; wmb(); } while (0)
+#define set_mb(var, value)	do { var = value; smp_mb(); } while (0)
+#define set_wmb(var, value)	do { var = value; smp_wmb(); } while (0)
 
 #ifdef CONFIG_SMP
 #define smp_mb()	mb()
 #define smp_rmb()	rmb()
-#define smp_wmb()	wmb()
+#define smp_wmb()	__asm__ __volatile__ ("eieio" : : : "memory")
 #define smp_read_barrier_depends()  read_barrier_depends()
 #else
 #define smp_mb()	__asm__ __volatile__("": : :"memory")
@@ -60,6 +64,7 @@ struct pt_regs;
 #ifdef CONFIG_DEBUGGER
 
 extern int (*__debugger)(struct pt_regs *regs);
+extern int (*__debugger_ipi)(struct pt_regs *regs);
 extern int (*__debugger_bpt)(struct pt_regs *regs);
 extern int (*__debugger_sstep)(struct pt_regs *regs);
 extern int (*__debugger_iabr_match)(struct pt_regs *regs);
@@ -75,6 +80,7 @@ static inline int __NAME(struct pt_regs *regs) \
 }
 
 DEBUGGER_BOILERPLATE(debugger)
+DEBUGGER_BOILERPLATE(debugger_ipi)
 DEBUGGER_BOILERPLATE(debugger_bpt)
 DEBUGGER_BOILERPLATE(debugger_sstep)
 DEBUGGER_BOILERPLATE(debugger_iabr_match)
@@ -87,6 +93,7 @@ extern void xmon_init(void);
 
 #else
 static inline int debugger(struct pt_regs *regs) { return 0; }
+static inline int debugger_ipi(struct pt_regs *regs) { return 0; }
 static inline int debugger_bpt(struct pt_regs *regs) { return 0; }
 static inline int debugger_sstep(struct pt_regs *regs) { return 0; }
 static inline int debugger_iabr_match(struct pt_regs *regs) { return 0; }
@@ -104,13 +111,25 @@ extern void flush_instruction_cache(void);
 extern int _get_PVR(void);
 extern void giveup_fpu(struct task_struct *);
 extern void disable_kernel_fp(void);
+extern void flush_fp_to_thread(struct task_struct *);
 extern void enable_kernel_fp(void);
 extern void giveup_altivec(struct task_struct *);
 extern void disable_kernel_altivec(void);
 extern void enable_kernel_altivec(void);
+extern int emulate_altivec(struct pt_regs *);
 extern void cvt_fd(float *from, double *to, unsigned long *fpscr);
 extern void cvt_df(double *from, float *to, unsigned long *fpscr);
-extern int abs(int);
+
+#ifdef CONFIG_ALTIVEC
+extern void flush_altivec_to_thread(struct task_struct *);
+#else
+static inline void flush_altivec_to_thread(struct task_struct *t)
+{
+}
+#endif
+
+/* EBCDIC -> ASCII conversion for [0-9A-Z] on iSeries */
+extern unsigned char e2a(unsigned char);
 
 extern struct task_struct *__switch_to(struct task_struct *,
 				       struct task_struct *);
@@ -269,6 +288,15 @@ __cmpxchg(volatile void *ptr, unsigned long old, unsigned long new, int size)
      (__typeof__(*(ptr))) __cmpxchg((ptr), (unsigned long)_o_,		 \
 				    (unsigned long)_n_, sizeof(*(ptr))); \
   })
+
+/*
+ * We handle most unaligned accesses in hardware. On the other hand 
+ * unaligned DMA can be very expensive on some ppc64 IO chips (it does
+ * powers of 2 writes until it reaches sufficient alignment).
+ *
+ * Based on this we disable the IP header alignment in network drivers.
+ */
+#define NET_IP_ALIGN   0
 
 #endif /* __KERNEL__ */
 #endif

@@ -17,6 +17,7 @@
 #ifndef __SOUND_AU88X0_H
 #define __SOUND_AU88X0_H
 
+#ifdef __KERNEL__
 #include <sound/driver.h>
 #include <linux/init.h>
 #include <linux/pci.h>
@@ -27,6 +28,8 @@
 #include <sound/mpu401.h>
 #include <sound/hwdep.h>
 #include <sound/ac97_codec.h>
+
+#endif
 
 #ifndef CHIP_AU8820
 #include "au88x0_eq.h"
@@ -69,20 +72,19 @@
 #define IRQ_MODEM	0x4000
 
 /* ADB Resource */
-#define VORTEX_RESOURCE_DMA		0x00000000
-#define VORTEX_RESOURCE_SRC		0x00000001
+#define VORTEX_RESOURCE_DMA	0x00000000
+#define VORTEX_RESOURCE_SRC	0x00000001
 #define VORTEX_RESOURCE_MIXIN	0x00000002
 #define VORTEX_RESOURCE_MIXOUT	0x00000003
-#define VORTEX_RESOURCE_A3D		0x00000004
+#define VORTEX_RESOURCE_A3D	0x00000004
 #define VORTEX_RESOURCE_LAST	0x00000005
 
 /* Check for SDAC bit in "Extended audio ID" AC97 register */
-#define VORTEX_IS_QUAD(x) ((x->codec == NULL) ?  0 : (x->codec->ext_id|0x80))
+#define VORTEX_IS_QUAD(x) ((x->codec == NULL) ?  0 : (x->codec->ext_id&0x80))
 /* Check if chip has bug. */
 #define IS_BAD_CHIP(x) (\
-	(x->rev < 3 && x->device == PCI_DEVICE_ID_AUREAL_VORTEX) || \
-	(x->rev < 0xfe && x->device == PCI_DEVICE_ID_AUREAL_VORTEX2) || \
-	(x->rev < 0xfe && x->device == PCI_DEVICE_ID_AUREAL_ADVANTAGE))
+	(x->rev == 0xfe && x->device == PCI_DEVICE_ID_AUREAL_VORTEX_2) || \
+	(x->rev == 0xfe && x->device == PCI_DEVICE_ID_AUREAL_ADVANTAGE))
 
 
 /* PCM devices */
@@ -144,12 +146,12 @@ struct snd_vortex {
 #endif
 
 	/* Global resources */
-	char mixcapt[2];
-	char mixplayb[4];
+	s8 mixcapt[2];
+	s8 mixplayb[4];
 #ifndef CHIP_AU8820
-	char mixspdif[2];
-	char mixa3d[2];		/* mixers which collect all a3d streams. */
-	char mixxtlk[2];	/* crosstalk canceler mixer inputs. */
+	s8 mixspdif[2];
+	s8 mixa3d[2];	/* mixers which collect all a3d streams. */
+	s8 mixxtlk[2];	/* crosstalk canceler mixer inputs. */
 #endif
 	u32 fixed_res[5];
 

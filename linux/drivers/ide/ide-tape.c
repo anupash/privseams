@@ -2674,7 +2674,7 @@ static idetape_stage_t *idetape_kmalloc_stage (idetape_tape_t *tape)
 	return __idetape_kmalloc_stage(tape, 0, 0);
 }
 
-static void idetape_copy_stage_from_user (idetape_tape_t *tape, idetape_stage_t *stage, const char *buf, int n)
+static void idetape_copy_stage_from_user (idetape_tape_t *tape, idetape_stage_t *stage, const char __user *buf, int n)
 {
 	struct idetape_bh *bh = tape->bh;
 	int count;
@@ -2701,7 +2701,7 @@ static void idetape_copy_stage_from_user (idetape_tape_t *tape, idetape_stage_t 
 	tape->bh = bh;
 }
 
-static void idetape_copy_stage_to_user (idetape_tape_t *tape, char *buf, idetape_stage_t *stage, int n)
+static void idetape_copy_stage_to_user (idetape_tape_t *tape, char __user *buf, idetape_stage_t *stage, int n)
 {
 	struct idetape_bh *bh = tape->bh;
 	int count;
@@ -3610,6 +3610,7 @@ static int idetape_blkdev_ioctl(ide_drive_t *drive, unsigned int cmd, unsigned l
 {
 	idetape_tape_t *tape = drive->driver_data;
 	idetape_config_t config;
+	void __user *argp = (void __user *)arg;
 
 #if IDETAPE_DEBUG_LOG	
 	if (tape->debug_level >= 4)
@@ -3617,7 +3618,7 @@ static int idetape_blkdev_ioctl(ide_drive_t *drive, unsigned int cmd, unsigned l
 #endif /* IDETAPE_DEBUG_LOG */
 	switch (cmd) {
 		case 0x0340:
-			if (copy_from_user ((char *) &config, (char *) arg, sizeof (idetape_config_t)))
+			if (copy_from_user(&config, argp, sizeof (idetape_config_t)))
 				return -EFAULT;
 			tape->best_dsc_rw_frequency = config.dsc_rw_frequency;
 			tape->max_stages = config.nr_stages;
@@ -3625,7 +3626,7 @@ static int idetape_blkdev_ioctl(ide_drive_t *drive, unsigned int cmd, unsigned l
 		case 0x0350:
 			config.dsc_rw_frequency = (int) tape->best_dsc_rw_frequency;
 			config.nr_stages = tape->max_stages; 
-			if (copy_to_user((char *) arg, (char *) &config, sizeof (idetape_config_t)))
+			if (copy_to_user(argp, &config, sizeof (idetape_config_t)))
 				return -EFAULT;
 			break;
 		default:
@@ -3747,17 +3748,13 @@ static int idetape_space_over_filemarks (ide_drive_t *drive,short mt_op,int mt_c
  *	will no longer hit performance.
  *      This is not applicable to Onstream.
  */
-static ssize_t idetape_chrdev_read (struct file *file, char *buf,
+static ssize_t idetape_chrdev_read (struct file *file, char __user *buf,
 				    size_t count, loff_t *ppos)
 {
 	ide_drive_t *drive = file->private_data;
 	idetape_tape_t *tape = drive->driver_data;
 	ssize_t bytes_read,temp, actually_read = 0, rc;
 
-	if (ppos != &file->f_pos) {
-		/* "A request was outside the capabilities of the device." */
-		return -ENXIO;
-	}
 #if IDETAPE_DEBUG_LOG
 	if (tape->debug_level >= 3)
 		printk(KERN_INFO "ide-tape: Reached idetape_chrdev_read, count %Zd\n", count);
@@ -3810,17 +3807,12 @@ finish:
 	return actually_read;
 }
 
-static ssize_t idetape_chrdev_write (struct file *file, const char *buf,
+static ssize_t idetape_chrdev_write (struct file *file, const char __user *buf,
 				     size_t count, loff_t *ppos)
 {
 	ide_drive_t *drive = file->private_data;
 	idetape_tape_t *tape = drive->driver_data;
 	ssize_t retval, actually_written = 0;
-
-	if (ppos != &file->f_pos) {
-		/* "A request was outside the capabilities of the device." */
-		return -ENXIO;
-	}
 
 	/* The drive is write protected. */
 	if (tape->write_prot)
@@ -4127,6 +4119,7 @@ static int idetape_chrdev_ioctl (struct inode *inode, struct file *file, unsigne
 	struct mtget mtget;
 	struct mtpos mtpos;
 	int block_offset = 0, position = tape->first_frame_position;
+	void __user *argp = (void __user *)arg;
 
 #if IDETAPE_DEBUG_LOG
 	if (tape->debug_level >= 3)
@@ -4146,7 +4139,7 @@ static int idetape_chrdev_ioctl (struct inode *inode, struct file *file, unsigne
 	}
 	switch (cmd) {
 		case MTIOCTOP:
-			if (copy_from_user((char *) &mtop, (char *) arg, sizeof (struct mtop)))
+			if (copy_from_user(&mtop, argp, sizeof (struct mtop)))
 				return -EFAULT;
 			return (idetape_mtioctop(drive,mtop.mt_op,mtop.mt_count));
 		case MTIOCGET:
@@ -4157,12 +4150,12 @@ static int idetape_chrdev_ioctl (struct inode *inode, struct file *file, unsigne
 			if (tape->drv_write_prot) {
 				mtget.mt_gstat |= GMT_WR_PROT(0xffffffff);
 			}
-			if (copy_to_user((char *) arg,(char *) &mtget, sizeof(struct mtget)))
+			if (copy_to_user(argp, &mtget, sizeof(struct mtget)))
 				return -EFAULT;
 			return 0;
 		case MTIOCPOS:
 			mtpos.mt_blkno = position / tape->user_bs_factor - block_offset;
-			if (copy_to_user((char *) arg,(char *) &mtpos, sizeof(struct mtpos)))
+			if (copy_to_user(argp, &mtpos, sizeof(struct mtpos)))
 				return -EFAULT;
 			return 0;
 		default:
@@ -4185,6 +4178,7 @@ static int idetape_chrdev_open (struct inode *inode, struct file *filp)
 	idetape_pc_t pc;
 	int retval;
 
+	nonseekable_open(inode, filp);
 #if IDETAPE_DEBUG_LOG
 	printk(KERN_INFO "ide-tape: Reached idetape_chrdev_open\n");
 #endif /* IDETAPE_DEBUG_LOG */
@@ -4813,7 +4807,7 @@ static int idetape_ioctl(struct inode *inode, struct file *file,
 {
 	struct block_device *bdev = inode->i_bdev;
 	ide_drive_t *drive = bdev->bd_disk->private_data;
-	int err = generic_ide_ioctl(bdev, cmd, arg);
+	int err = generic_ide_ioctl(file, bdev, cmd, arg);
 	if (err == -EINVAL)
 		err = idetape_blkdev_ioctl(drive, cmd, arg);
 	return err;

@@ -24,6 +24,7 @@
 #include <linux/init.h>
 
 struct pci_dev;
+struct device_node;
 
 /* I/O addresses are converted to EEH "tokens" such that a driver will cause
  * a bad page fault if the address is used directly (i.e. these addresses are
@@ -47,16 +48,17 @@ void *eeh_ioremap(unsigned long addr, void *vaddr);
 void __init pci_addr_cache_build(void);
 
 /**
- * eeh_add_device - perform EEH initialization for the indicated pci device
- * @dev: pci device for which to set up EEH
+ * eeh_add_device_early
+ * eeh_add_device_late
  *
- * This routine can be used to perform EEH initialization for PCI
- * devices that were added after system boot (e.g. hotplug, dlpar).
- * Whether this actually enables EEH or not for this device depends
- * on the type of the device, on earlier boot command-line
- * arguments & etc.
+ * Perform eeh initialization for devices added after boot.
+ * Call eeh_add_device_early before doing any i/o to the
+ * device (including config space i/o).  Call eeh_add_device_late
+ * to finish the eeh setup for this device.
  */
-void eeh_add_device(struct pci_dev *);
+struct device_node;
+void eeh_add_device_early(struct device_node *);
+void eeh_add_device_late(struct pci_dev *);
 
 /**
  * eeh_remove_device - undo EEH setup for the indicated pci device
@@ -178,26 +180,95 @@ static inline void eeh_raw_writeq(u64 val, void *addr) {
 	out_be64(vaddr, val);
 }
 
+#define EEH_CHECK_ALIGN(v,a) \
+	((((unsigned long)(v)) & ((a) - 1)) == 0)
+
 static inline void eeh_memset_io(void *addr, int c, unsigned long n) {
 	void *vaddr = (void *)IO_TOKEN_TO_ADDR(addr);
-	memset(vaddr, c, n);
+	u32 lc = c;
+	lc |= lc << 8;
+	lc |= lc << 16;
+
+	while(n && !EEH_CHECK_ALIGN(vaddr, 4)) {
+		*((volatile u8 *)vaddr) = c;
+		vaddr = (void *)((unsigned long)vaddr + 1);
+		n--;
+	}
+	while(n >= 4) {
+		*((volatile u32 *)vaddr) = lc;
+		vaddr = (void *)((unsigned long)vaddr + 4);
+		n -= 4;
+	}
+	while(n) {
+		*((volatile u8 *)vaddr) = c;
+		vaddr = (void *)((unsigned long)vaddr + 1);
+		n--;
+	}
+	__asm__ __volatile__ ("sync" : : : "memory");
 }
 static inline void eeh_memcpy_fromio(void *dest, void *src, unsigned long n) {
 	void *vsrc = (void *)IO_TOKEN_TO_ADDR(src);
-	memcpy(dest, vsrc, n);
+	void *vsrcsave = vsrc, *destsave = dest, *srcsave = src;
+	unsigned long nsave = n;
+
+	while(n && (!EEH_CHECK_ALIGN(vsrc, 4) || !EEH_CHECK_ALIGN(dest, 4))) {
+		*((u8 *)dest) = *((volatile u8 *)vsrc);
+		__asm__ __volatile__ ("eieio" : : : "memory");
+		vsrc = (void *)((unsigned long)vsrc + 1);
+		dest = (void *)((unsigned long)dest + 1);			
+		n--;
+	}
+	while(n > 4) {
+		*((u32 *)dest) = *((volatile u32 *)vsrc);
+		__asm__ __volatile__ ("eieio" : : : "memory");
+		vsrc = (void *)((unsigned long)vsrc + 4);
+		dest = (void *)((unsigned long)dest + 4);			
+		n -= 4;
+	}
+	while(n) {
+		*((u8 *)dest) = *((volatile u8 *)vsrc);
+		__asm__ __volatile__ ("eieio" : : : "memory");
+		vsrc = (void *)((unsigned long)vsrc + 1);
+		dest = (void *)((unsigned long)dest + 1);			
+		n--;
+	}
+	__asm__ __volatile__ ("sync" : : : "memory");
+
 	/* Look for ffff's here at dest[n].  Assume that at least 4 bytes
 	 * were copied. Check all four bytes.
 	 */
-	if ((n >= 4) &&
-		(EEH_POSSIBLE_ERROR(src, vsrc, (*((u32 *) dest+n-4)), u32))) {
-		eeh_check_failure(src, (*((u32 *) dest+n-4)));
+	if ((nsave >= 4) &&
+		(EEH_POSSIBLE_ERROR(srcsave, vsrcsave, (*((u32 *) destsave+nsave-4)),
+				    u32))) {
+		eeh_check_failure(srcsave, (*((u32 *) destsave+nsave-4)));
 	}
 }
 
 static inline void eeh_memcpy_toio(void *dest, void *src, unsigned long n) {
 	void *vdest = (void *)IO_TOKEN_TO_ADDR(dest);
-	memcpy(vdest, src, n);
+
+	while(n && (!EEH_CHECK_ALIGN(vdest, 4) || !EEH_CHECK_ALIGN(src, 4))) {
+		*((volatile u8 *)vdest) = *((u8 *)src);
+		src = (void *)((unsigned long)src + 1);
+		vdest = (void *)((unsigned long)vdest + 1);			
+		n--;
+	}
+	while(n > 4) {
+		*((volatile u32 *)vdest) = *((volatile u32 *)src);
+		src = (void *)((unsigned long)src + 4);
+		vdest = (void *)((unsigned long)vdest + 4);			
+		n-=4;
+	}
+	while(n) {
+		*((volatile u8 *)vdest) = *((u8 *)src);
+		src = (void *)((unsigned long)src + 1);
+		vdest = (void *)((unsigned long)vdest + 1);			
+		n--;
+	}
+	__asm__ __volatile__ ("sync" : : : "memory");
 }
+
+#undef EEH_CHECK_ALIGN
 
 #define MAX_ISA_PORT 0x10000
 extern unsigned long io_page_mask;
@@ -215,7 +286,7 @@ static inline u8 eeh_inb(unsigned long port) {
 
 static inline void eeh_outb(u8 val, unsigned long port) {
 	if (_IO_IS_VALID(port))
-		return out_8((u8 *)(port+pci_io_base), val);
+		out_8((u8 *)(port+pci_io_base), val);
 }
 
 static inline u16 eeh_inw(unsigned long port) {
@@ -230,7 +301,7 @@ static inline u16 eeh_inw(unsigned long port) {
 
 static inline void eeh_outw(u16 val, unsigned long port) {
 	if (_IO_IS_VALID(port))
-		return out_le16((u16 *)(port+pci_io_base), val);
+		out_le16((u16 *)(port+pci_io_base), val);
 }
 
 static inline u32 eeh_inl(unsigned long port) {
@@ -245,7 +316,7 @@ static inline u32 eeh_inl(unsigned long port) {
 
 static inline void eeh_outl(u32 val, unsigned long port) {
 	if (_IO_IS_VALID(port))
-		return out_le32((u32 *)(port+pci_io_base), val);
+		out_le32((u32 *)(port+pci_io_base), val);
 }
 
 /* in-string eeh macros */

@@ -99,7 +99,7 @@ static int dummy_quota_on (struct file *f)
 
 static int dummy_syslog (int type)
 {
-	if ((type != 3) && current->euid)
+	if ((type != 3 && type != 10) && current->euid)
 		return -EPERM;
 	return 0;
 }
@@ -688,7 +688,7 @@ static int dummy_shm_shmctl (struct shmid_kernel *shp, int cmd)
 	return 0;
 }
 
-static int dummy_shm_shmat (struct shmid_kernel *shp, char *shmaddr,
+static int dummy_shm_shmat (struct shmid_kernel *shp, char __user *shmaddr,
 			    int shmflg)
 {
 	return 0;
@@ -720,7 +720,7 @@ static int dummy_sem_semop (struct sem_array *sma,
 	return 0;
 }
 
-static int dummy_netlink_send (struct sk_buff *skb)
+static int dummy_netlink_send (struct sock *sk, struct sk_buff *skb)
 {
 	if (current->euid == 0)
 		cap_raise (NETLINK_CB (skb).eff_cap, CAP_NET_ADMIN);

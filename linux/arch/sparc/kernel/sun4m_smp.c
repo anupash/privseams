@@ -40,7 +40,6 @@ extern ctxd_t *srmmu_ctx_table_phys;
 extern void calibrate_delay(void);
 
 extern volatile int smp_processors_ready;
-extern unsigned long cpu_present_map;
 extern int smp_num_cpus;
 extern int smp_threads_ready;
 extern volatile unsigned long cpu_callin_map[NR_CPUS];
@@ -96,8 +95,6 @@ void __init smp4m_callin(void)
 	 * the SMP initialization the master will be just allowed
 	 * to call the scheduler code.
 	 */
-	init_idle();
-
 	/* Allow master to continue. */
 	swap((unsigned long *)&cpu_callin_map[cpuid], 1);
 
@@ -127,7 +124,6 @@ void __init smp4m_callin(void)
 extern int cpu_idle(void *unused);
 extern void init_IRQ(void);
 extern void cpu_panic(void);
-extern int start_secondary(void *unused);
 
 /*
  *	Cycle through the processors asking the PROM to start each one.
@@ -146,10 +142,10 @@ void __init smp4m_boot_cpus(void)
 	printk("Entering SMP Mode...\n");
 
 	local_irq_enable();
-	cpu_present_map = 0;
+	cpus_clear(cpu_present_map);
 
 	for (i = 0; !cpu_find_by_instance(i, NULL, &mid); i++)
-		cpu_present_map |= (1<<mid);
+		cpu_set(mid, cpu_present_map);
 
 	for(i=0; i < NR_CPUS; i++) {
 		__cpu_number_map[i] = -1;
@@ -170,7 +166,7 @@ void __init smp4m_boot_cpus(void)
 		if(i == boot_cpu_id)
 			continue;
 
-		if(cpu_present_map & (1 << i)) {
+		if (cpu_isset(i, cpu_present_map)) {
 			extern unsigned long sun4m_cpu_startup;
 			unsigned long *entry = &sun4m_cpu_startup;
 			struct task_struct *p;
@@ -223,18 +219,18 @@ void __init smp4m_boot_cpus(void)
 			}
 		}
 		if(!(cpu_callin_map[i])) {
-			cpu_present_map &= ~(1 << i);
+			cpu_clear(i, cpu_present_map);
 			__cpu_number_map[i] = -1;
 		}
 	}
 	local_flush_cache_all();
 	if(cpucount == 0) {
 		printk("Error: only one Processor found.\n");
-		cpu_present_map = (1 << smp_processor_id());
+		cpu_present_map = cpumask_of_cpu(smp_processor_id());
 	} else {
 		unsigned long bogosum = 0;
 		for(i = 0; i < NR_CPUS; i++) {
-			if(cpu_present_map & (1 << i))
+			if (cpu_isset(i, cpu_present_map))
 				bogosum += cpu_data(i).udelay_val;
 		}
 		printk("Total of %d Processors activated (%lu.%02lu BogoMIPS).\n",
@@ -246,21 +242,21 @@ void __init smp4m_boot_cpus(void)
 	}
 
 	/* Free unneeded trap tables */
-	if (!(cpu_present_map & (1 << 1))) {
+	if (!cpu_isset(i, cpu_present_map)) {
 		ClearPageReserved(virt_to_page(trapbase_cpu1));
 		set_page_count(virt_to_page(trapbase_cpu1), 1);
 		free_page((unsigned long)trapbase_cpu1);
 		totalram_pages++;
 		num_physpages++;
 	}
-	if (!(cpu_present_map & (1 << 2))) {
+	if (!cpu_isset(2, cpu_present_map)) {
 		ClearPageReserved(virt_to_page(trapbase_cpu2));
 		set_page_count(virt_to_page(trapbase_cpu2), 1);
 		free_page((unsigned long)trapbase_cpu2);
 		totalram_pages++;
 		num_physpages++;
 	}
-	if (!(cpu_present_map & (1 << 3))) {
+	if (!cpu_isset(3, cpu_present_map)) {
 		ClearPageReserved(virt_to_page(trapbase_cpu3));
 		set_page_count(virt_to_page(trapbase_cpu3), 1);
 		free_page((unsigned long)trapbase_cpu3);
@@ -289,7 +285,7 @@ void smp4m_irq_rotate(int cpu)
 void smp4m_message_pass(int target, int msg, unsigned long data, int wait)
 {
 	static unsigned long smp_cpu_in_msg[NR_CPUS];
-	unsigned long mask;
+	cpumask_t mask;
 	int me = smp_processor_id();
 	int irq, i;
 
@@ -308,9 +304,9 @@ void smp4m_message_pass(int target, int msg, unsigned long data, int wait)
 	if(target == MSG_ALL_BUT_SELF || target == MSG_ALL) {
 		mask = cpu_present_map;
 		if(target == MSG_ALL_BUT_SELF)
-			mask &= ~(1 << me);
+			cpu_clear(me, mask);
 		for(i = 0; i < 4; i++) {
-			if(mask & (1 << i))
+			if (cpu_isset(i, mask))
 				set_cpu_int(i, irq);
 		}
 	} else {
@@ -357,12 +353,12 @@ void smp4m_cross_call(smpfunc_t func, unsigned long arg1, unsigned long arg2,
 
 		/* Init receive/complete mapping, plus fire the IPI's off. */
 		{
-			register unsigned long mask;
+			cpumask_t mask = cpu_present_map;
 			register int i;
 
-			mask = (cpu_present_map & ~(1 << smp_processor_id()));
+			cpu_clear(smp_processor_id(), mask);
 			for(i = 0; i < ncpus; i++) {
-				if(mask & (1 << i)) {
+				if (cpu_isset(i, mask)) {
 					ccall_info.processors_in[i] = 0;
 					ccall_info.processors_out[i] = 0;
 					set_cpu_int(i, IRQ_CROSS_CALL);
@@ -461,9 +457,9 @@ void __init smp4m_blackbox_current(unsigned *addr)
 
 void __init sun4m_init_smp(void)
 {
-	BTFIXUPSET_BLACKBOX(smp_processor_id, smp4m_blackbox_id);
+	BTFIXUPSET_BLACKBOX(hard_smp_processor_id, smp4m_blackbox_id);
 	BTFIXUPSET_BLACKBOX(load_current, smp4m_blackbox_current);
 	BTFIXUPSET_CALL(smp_cross_call, smp4m_cross_call, BTFIXUPCALL_NORM);
 	BTFIXUPSET_CALL(smp_message_pass, smp4m_message_pass, BTFIXUPCALL_NORM);
-	BTFIXUPSET_CALL(__smp_processor_id, __smp4m_processor_id, BTFIXUPCALL_NORM);
+	BTFIXUPSET_CALL(__hard_smp_processor_id, __smp4m_processor_id, BTFIXUPCALL_NORM);
 }

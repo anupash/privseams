@@ -108,7 +108,7 @@ typedef struct {
 #endif
 } efi_memory_desc_t;
 
-typedef int efi_freemem_callback_t (unsigned long start, unsigned long end, void *arg);
+typedef int (*efi_freemem_callback_t) (unsigned long start, unsigned long end, void *arg);
 
 /*
  * Types and defines for Time Services
@@ -305,6 +305,10 @@ extern unsigned long __init efi_get_time(void);
 extern int __init efi_set_rtc_mmss(unsigned long nowtime);
 extern struct efi_memory_map memmap;
 
+#ifdef CONFIG_EFI_PCDP
+extern void __init efi_setup_pcdp_console(char *);
+#endif
+
 /*
  * We play games with efi_enabled so that the compiler will, if possible, remove
  * EFI-related code altogether.
@@ -369,12 +373,5 @@ struct efi_generic_dev_path {
 	u8 sub_type;
 	u16 length;
 } __attribute ((packed));
-
-/*
- * efi_dir is allocated in arch/ia64/kernel/efi.c.
- */
-#ifdef CONFIG_PROC_FS
-extern struct proc_dir_entry *efi_dir;
-#endif
 
 #endif /* _LINUX_EFI_H */

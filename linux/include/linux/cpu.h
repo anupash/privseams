@@ -27,6 +27,7 @@
 
 struct cpu {
 	int node_id;		/* The node which contains the CPU */
+	int no_control;		/* Should the sysfs control file be created? */
 	struct sys_device sysdev;
 };
 
@@ -60,7 +61,8 @@ extern struct semaphore cpucontrol;
 #define unlock_cpu_hotplug()	up(&cpucontrol)
 #define lock_cpu_hotplug_interruptible() down_interruptible(&cpucontrol)
 #define hotcpu_notifier(fn, pri) {				\
-	static struct notifier_block fn##_nb = { fn, pri };	\
+	static struct notifier_block fn##_nb =			\
+		{ .notifier_call = fn, .priority = pri };	\
 	register_cpu_notifier(&fn##_nb);			\
 }
 int cpu_down(unsigned int cpu);

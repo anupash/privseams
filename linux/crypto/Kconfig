@@ -120,7 +120,7 @@ config CRYPTO_SERPENT
 
 config CRYPTO_AES
 	tristate "AES cipher algorithms"
-	depends on CRYPTO
+	depends on CRYPTO && !(X86 && !X86_64)
 	help
 	  AES cipher algorithms (FIPS-197). AES uses the Rijndael 
 	  algorithm.
@@ -138,6 +138,26 @@ config CRYPTO_AES
 
 	  See http://csrc.nist.gov/CryptoToolkit/aes/ for more information.
 
+config CRYPTO_AES_586
+	tristate "AES cipher algorithms (i586)"
+	depends on CRYPTO && (X86 && !X86_64)
+	help
+	  AES cipher algorithms (FIPS-197). AES uses the Rijndael 
+	  algorithm.
+
+	  Rijndael appears to be consistently a very good performer in
+	  both hardware and software across a wide range of computing 
+	  environments regardless of its use in feedback or non-feedback 
+	  modes. Its key setup time is excellent, and its key agility is 
+	  good. Rijndael's very low memory requirements make it very well 
+	  suited for restricted-space environments, in which it also 
+	  demonstrates excellent performance. Rijndael's operations are 
+	  among the easiest to defend against power and timing attacks.	
+
+	  The AES specifies three key sizes: 128, 192 and 256 bits	  
+
+	  See http://csrc.nist.gov/encryption/aes/ for more information.
+
 config CRYPTO_CAST5
 	tristate "CAST5 (CAST-128) cipher algorithm"
 	depends on CRYPTO
@@ -152,6 +172,20 @@ config CRYPTO_CAST6
 	  The CAST6 encryption algorithm (synonymous with CAST-256) is
 	  described in RFC2612.
 
+config CRYPTO_TEA
+	tristate "TEA and XTEA cipher algorithms"
+	depends on CRYPTO
+	help
+	  TEA cipher algorithm.
+
+	  Tiny Encryption Algorithm is a simple cipher that uses
+	  many rounds for security.  It is very fast and uses
+	  little memory.
+
+	  Xtendend Tiny Encryption Algorithm is a modifcation to
+	  the TEA algorithm to address a potential key weakness
+	  in the TEA algorithm.
+
 config CRYPTO_ARC4
 	tristate "ARC4 cipher algorithm"
 	depends on CRYPTO
@@ -162,6 +196,19 @@ config CRYPTO_ARC4
 	  bits in length.  This algorithm is required for driver-based 
 	  WEP, but it should not be for other purposes because of the
 	  weakness of the algorithm.
+
+config CRYPTO_KHAZAD
+	tristate "Khazad cipher algorithm"
+	depends on CRYPTO
+	help
+	  Khazad cipher algorithm.
+
+	  Khazad was a finalist in the initial NESSIE competition.  It is
+	  an algorithm optimized for 64-bit processors with good performance
+	  on 32-bit processors.  Khazad uses an 128 bit key size.
+
+	  See also:
+	  http://planeta.terra.com.br/informatica/paulobarreto/KhazadPage.html
 
 config CRYPTO_DEFLATE
 	tristate "Deflate compression algorithm"

@@ -170,8 +170,6 @@ running once the system is up.
 	aic79xx=	[HW,SCSI]
 			See Documentation/scsi/aic79xx.txt.
 
-	allowdma0	[ISAPNP]
-
 	AM53C974=	[HW,SCSI]
 			Format: <host-scsi-id>,<target-scsi-id>,<max-rate>,<max-offset>
 			See also header of drivers/scsi/AM53C974.c.
@@ -715,6 +713,10 @@ running once the system is up.
 
 	noexec		[IA-64]
 
+	noexec		[i386]
+			noexec=on: enable non-executable mappings (default)
+			noexec=off: disable nn-executable mappings
+
 	nofxsr		[BUGS=IA-32]
 
 	nohighio	[BUGS=IA-32] Disable highmem block I/O.
@@ -896,8 +898,8 @@ running once the system is up.
 	psmouse.rate=	[HW,MOUSE] Set desired mouse report rate, in reports
 			per second.
 	psmouse.resetafter=
-			[HW,MOUSE] Try to reset Synaptics Touchpad after so many
-			bad packets (0 = never).
+			[HW,MOUSE] Try to reset the device after so many bad packets
+			(0 = never).
 	psmouse.resolution=
 			[HW,MOUSE] Set desired mouse resolution, in dpi.
 	psmouse.smartscroll=

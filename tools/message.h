@@ -12,8 +12,7 @@
 
 int open_hip(void);
 int close_hip(int hipfd);
-int recv_hipd_request(int hipfd, struct hip_common *msg);
-int send_hipd_response(int hipfd, const struct hip_common *msg);
-int send_msg(const struct hip_common *msg);
+int hip_get_global_option(struct hip_common *msg);
+int hip_set_global_option(const struct hip_common *msg);
 
 #endif /* HIP_MESSAGE_H */

@@ -2,8 +2,8 @@
  * volume.h - Defines for volume structures in NTFS Linux kernel driver. Part
  *	      of the Linux-NTFS project.
  *
- * Copyright (c) 2001-2004 Anton Altaparmakov.
- * Copyright (c) 2002 Richard Russon.
+ * Copyright (c) 2001-2004 Anton Altaparmakov
+ * Copyright (c) 2002 Richard Russon
  *
  * This program/include file is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as published
@@ -72,7 +72,7 @@ typedef struct {
 	u64 serial_no;			/* The volume serial number. */
 	/* Mount specific NTFS information. */
 	u32 upcase_len;			/* Number of entries in upcase[]. */
-	uchar_t *upcase;		/* The upcase table. */
+	ntfschar *upcase;		/* The upcase table. */
 	LCN mft_zone_start;		/* First cluster of the mft zone. */
 	LCN mft_zone_end;		/* First cluster beyond the mft zone. */
 	struct inode *mft_ino;		/* The VFS inode of $MFT. */
@@ -103,6 +103,13 @@ typedef struct {
 					   directory. */
 	struct inode *secure_ino;	/* The VFS inode of $Secure (NTFS3.0+
 					   only, otherwise NULL). */
+	struct inode *extend_ino;	/* The VFS inode of $Extend (NTFS3.0+
+					   only, otherwise NULL). */
+#ifdef NTFS_RW
+	/* $Quota stuff is NTFS3.0+ specific.  Unused/NULL otherwise. */
+	struct inode *quota_ino;	/* The VFS inode of $Quota. */
+	struct inode *quota_q_ino;	/* Attribute inode for $Quota/$Q. */
+#endif /* NTFS_RW */
 	struct nls_table *nls_map;
 } ntfs_volume;
 
@@ -117,6 +124,7 @@ typedef enum {
 				      Otherwise be case insensitive and create
 				      file names in WIN32 namespace. */
 	NV_LogFileEmpty,	/* 1: $LogFile journal is empty. */
+	NV_QuotaOutOfDate,	/* 1: $Quota is out of date. */
 } ntfs_volume_flags;
 
 /*
@@ -142,5 +150,6 @@ NVOL_FNS(Errors)
 NVOL_FNS(ShowSystemFiles)
 NVOL_FNS(CaseSensitive)
 NVOL_FNS(LogFileEmpty)
+NVOL_FNS(QuotaOutOfDate)
 
 #endif /* _LINUX_NTFS_VOLUME_H */

@@ -44,18 +44,20 @@
 #include <linux/errno.h>
 #include <linux/interrupt.h>
 #include <linux/init.h>
-#include <linux/reboot.h>
-#include <linux/vmalloc.h>
 #include <linux/blkdev.h>
 #include <linux/blkpg.h>
 #include <linux/kref.h>
 #include <asm/uaccess.h>
 
-#include "scsi.h"
-#include "hosts.h"
-
+#include <scsi/scsi.h>
+#include <scsi/scsi_cmnd.h>
+#include <scsi/scsi_dbg.h>
+#include <scsi/scsi_device.h>
 #include <scsi/scsi_driver.h>
+#include <scsi/scsi_eh.h>
+#include <scsi/scsi_host.h>
 #include <scsi/scsi_ioctl.h>
+#include <scsi/scsi_request.h>
 #include <scsi/scsicam.h>
 
 #include "scsi_logging.h"
@@ -179,7 +181,16 @@ static struct scsi_disk *scsi_disk_get(struct gendisk *disk)
 		goto out;
 	sdkp = scsi_disk(disk);
 	if (!kref_get(&sdkp->kref))
-		sdkp = NULL;
+		goto out_sdkp;
+	if (scsi_device_get(sdkp->device))
+		goto out_put;
+	up(&sd_ref_sem);
+	return sdkp;
+
+ out_put:
+	kref_put(&sdkp->kref);
+ out_sdkp:
+	sdkp = NULL;
  out:
 	up(&sd_ref_sem);
 	return sdkp;
@@ -188,6 +199,7 @@ static struct scsi_disk *scsi_disk_get(struct gendisk *disk)
 static void scsi_disk_put(struct scsi_disk *sdkp)
 {
 	down(&sd_ref_sem);
+	scsi_device_put(sdkp->device);
 	kref_put(&sdkp->kref);
 	up(&sd_ref_sem);
 }
@@ -207,9 +219,7 @@ static int sd_init_command(struct scsi_cmnd * SCpnt)
 	sector_t block;
 	struct scsi_device *sdp = SCpnt->device;
 
-	timeout = SD_TIMEOUT;
-	if (SCpnt->device->type != TYPE_DISK)
-		timeout = SD_MOD_TIMEOUT;
+	timeout = sdp->timeout;
 
 	/*
 	 * these are already setup, just copy cdb basically
@@ -503,7 +513,7 @@ static int sd_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static int sd_hdio_getgeo(struct block_device *bdev, struct hd_geometry *loc)
+static int sd_hdio_getgeo(struct block_device *bdev, struct hd_geometry __user *loc)
 {
 	struct scsi_disk *sdkp = scsi_disk(bdev->bd_disk);
 	struct scsi_device *sdp = sdkp->device;
@@ -528,7 +538,7 @@ static int sd_hdio_getgeo(struct block_device *bdev, struct hd_geometry *loc)
 	if (put_user(diskinfo[2], &loc->cylinders))
 		return -EFAULT;
 	if (put_user((unsigned)get_start_sect(bdev),
-	             (unsigned long *)&loc->start))
+	             (unsigned long __user *)&loc->start))
 		return -EFAULT;
 	return 0;
 }
@@ -553,6 +563,7 @@ static int sd_ioctl(struct inode * inode, struct file * filp,
 	struct block_device *bdev = inode->i_bdev;
 	struct gendisk *disk = bdev->bd_disk;
 	struct scsi_device *sdp = scsi_disk(disk)->device;
+	void __user *p = (void __user *)arg;
 	int error;
     
 	SCSI_LOG_IOCTL(1, printk("sd_ioctl: disk=%s, cmd=0x%x\n",
@@ -570,7 +581,7 @@ static int sd_ioctl(struct inode * inode, struct file * filp,
 	if (cmd == HDIO_GETGEO) {
 		if (!arg)
 			return -EINVAL;
-		return sd_hdio_getgeo(bdev, (struct hd_geometry *)arg);
+		return sd_hdio_getgeo(bdev, p);
 	}
 
 	/*
@@ -581,13 +592,13 @@ static int sd_ioctl(struct inode * inode, struct file * filp,
 	switch (cmd) {
 		case SCSI_IOCTL_GET_IDLUN:
 		case SCSI_IOCTL_GET_BUS_NUMBER:
-			return scsi_ioctl(sdp, cmd, (void *)arg);
+			return scsi_ioctl(sdp, cmd, p);
 		default:
-			error = scsi_cmd_ioctl(disk, cmd, arg);
+			error = scsi_cmd_ioctl(filp, disk, cmd, p);
 			if (error != -ENOTTY)
 				return error;
 	}
-	return scsi_ioctl(sdp, cmd, (void *)arg);
+	return scsi_ioctl(sdp, cmd, p);
 }
 
 static void set_media_not_present(struct scsi_disk *sdkp)
@@ -754,13 +765,13 @@ static void sd_rw_intr(struct scsi_cmnd * SCpnt)
 				good_bytes = 0;
 			break;
 
-		case RECOVERED_ERROR:
+		case RECOVERED_ERROR: /* an error occurred, but it recovered */
+		case NO_SENSE: /* LLDD got sense data */
 			/*
-			 * An error occurred, but it recovered.  Inform the
-			 * user, but make sure that it's not treated as a
-			 * hard error.
+			 * Inform the user, but make sure that it's not treated
+			 * as a hard error.
 			 */
-			print_sense("sd", SCpnt);
+			scsi_print_sense("sd", SCpnt);
 			SCpnt->result = 0;
 			SCpnt->sense_buffer[0] = 0x0;
 			good_bytes = this_count;
@@ -909,7 +920,7 @@ sd_spinup_disk(struct scsi_disk *sdkp, char *diskname,
 			 * probably pointless to loop */
 			if(!spintime) {
 				printk(KERN_NOTICE "%s: Unit Not Ready, sense:\n", diskname);
-				print_req_sense("", SRpnt);
+				scsi_print_req_sense("", SRpnt);
 			}
 			break;
 		}
@@ -978,7 +989,7 @@ repeat:
 		       driver_byte(the_result));
 
 		if (driver_byte(the_result) & DRIVER_SENSE)
-			print_req_sense("sd", SRpnt);
+			scsi_print_req_sense("sd", SRpnt);
 		else
 			printk("%s : sense not available. \n", diskname);
 
@@ -1342,16 +1353,13 @@ static int sd_probe(struct device *dev)
 	if ((sdp->type != TYPE_DISK) && (sdp->type != TYPE_MOD))
 		goto out;
 
-	if ((error = scsi_device_get(sdp)) != 0)
-		goto out;
-
 	SCSI_LOG_HLQUEUE(3, printk("sd_attach: scsi device: <%d,%d,%d,%d>\n", 
 			 sdp->host->host_no, sdp->channel, sdp->id, sdp->lun));
 
 	error = -ENOMEM;
 	sdkp = kmalloc(sizeof(*sdkp), GFP_KERNEL);
 	if (!sdkp)
-		goto out_put_sdev;
+		goto out;
 
 	memset (sdkp, 0, sizeof(*sdkp));
 	kref_init(&sdkp->kref, scsi_disk_release);
@@ -1381,6 +1389,13 @@ static int sd_probe(struct device *dev)
 	sdkp->disk = gd;
 	sdkp->index = index;
 	sdkp->openers = 0;
+
+	if (!sdp->timeout) {
+		if (sdp->type == TYPE_DISK)
+			sdp->timeout = SD_TIMEOUT;
+		else
+			sdp->timeout = SD_MOD_TIMEOUT;
+	}
 
 	devno = make_sd_dev(index, 0);
 	gd->major = MAJOR(devno);
@@ -1427,8 +1442,6 @@ out_put:
 	put_disk(gd);
 out_free:
 	kfree(sdkp);
-out_put_sdev:
-	scsi_device_put(sdp);
 out:
 	return error;
 }
@@ -1450,7 +1463,9 @@ static int sd_remove(struct device *dev)
 
 	del_gendisk(sdkp->disk);
 	sd_shutdown(dev);
-	scsi_disk_put(sdkp);
+	down(&sd_ref_sem);
+	kref_put(&sdkp->kref);
+	up(&sd_ref_sem);
 
 	return 0;
 }
@@ -1467,7 +1482,6 @@ static int sd_remove(struct device *dev)
 static void scsi_disk_release(struct kref *kref)
 {
 	struct scsi_disk *sdkp = to_scsi_disk(kref);
-	struct scsi_device *sdev = sdkp->device;
 	struct gendisk *disk = sdkp->disk;
 	
 	spin_lock(&sd_index_lock);
@@ -1479,8 +1493,6 @@ static void scsi_disk_release(struct kref *kref)
 	put_disk(disk);
 
 	kfree(sdkp);
-
-	scsi_device_put(sdev);
 }
 
 /*
@@ -1532,7 +1544,7 @@ static void sd_shutdown(struct device *dev)
 				    status_byte(res), msg_byte(res),
 				    host_byte(res), driver_byte(res));
 			if (driver_byte(res) & DRIVER_SENSE)
-				print_req_sense("sd", sreq);
+				scsi_print_req_sense("sd", sreq);
 	}
 	
 	scsi_release_request(sreq);

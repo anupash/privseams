@@ -44,7 +44,9 @@
 #include <asm/sections.h>
 #include <asm/btext.h>
 #include <asm/nvram.h>
+#include <asm/setup.h>
 #include <asm/system.h>
+#include <asm/rtas.h>
 
 extern unsigned long klimit;
 /* extern void *stab; */
@@ -82,7 +84,6 @@ unsigned long decr_overclock_proc0_set = 0;
 
 int powersave_nap;
 
-char saved_command_line[COMMAND_LINE_SIZE];
 unsigned char aux_device_present;
 
 void parse_cmd_line(unsigned long r3, unsigned long r4, unsigned long r5,
@@ -165,7 +166,7 @@ void setup_system(unsigned long r3, unsigned long r4, unsigned long r5,
 		  unsigned long r6, unsigned long r7)
 {
 #if defined(CONFIG_SMP) && defined(CONFIG_PPC_PSERIES)
-	unsigned int ret, i;
+	int ret, i;
 #endif
 
 #ifdef CONFIG_XMON_DEFAULT
@@ -233,12 +234,11 @@ void setup_system(unsigned long r3, unsigned long r4, unsigned long r5,
 #ifdef CONFIG_SMP
 		/* Start secondary threads on SMT systems */
 		for (i = 0; i < NR_CPUS; i++) {
-			if(cpu_available(i)  && !cpu_possible(i)) {
+			if (cpu_available(i) && !cpu_possible(i)) {
 				printk("%16.16x : starting thread\n", i);
-				rtas_call(rtas_token("start-cpu"), 3, 1, 
-					  (void *)&ret,
+				rtas_call(rtas_token("start-cpu"), 3, 1, &ret,
 					  get_hard_smp_processor_id(i), 
-					  *((unsigned long *)pseries_secondary_smp_init),
+					  (u32)*((unsigned long *)pseries_secondary_smp_init),
 					  i);
 				cpu_set(i, cpu_possible_map);
 				systemcfg->processorCount++;
@@ -254,6 +254,10 @@ void setup_system(unsigned long r3, unsigned long r4, unsigned long r5,
 		pmac_init(r3, r4, r5, r6, r7);
 	}
 #endif /* CONFIG_PPC_PMAC */
+
+#if defined(CONFIG_HOTPLUG_CPU) &&  !defined(CONFIG_PPC_PMAC)
+	rtas_stop_self_args.token = rtas_token("stop-self");
+#endif /* CONFIG_HOTPLUG_CPU && !CONFIG_PPC_PMAC */
 
 	/* Finish initializing the hash table (do the dynamic
 	 * patching for the fast-path hashtable.S code)
@@ -476,6 +480,7 @@ static int __init set_preferred_console(void)
 {
 	struct device_node *prom_stdout;
 	char *name;
+	int offset;
 
 	/* The user has requested a console so this is already set up. */
 	if (strstr(saved_command_line, "console="))
@@ -493,7 +498,6 @@ static int __init set_preferred_console(void)
 		int i;
 		u32 *reg = (u32 *)get_property(prom_stdout, "reg", &i);
 		if (i > 8) {
-			int offset;
 			switch (reg[1]) {
 				case 0x3f8:
 					offset = 0;
@@ -511,15 +515,19 @@ static int __init set_preferred_console(void)
 					/* We dont recognise the serial port */
 					return -ENODEV;
 			}
-
-			return add_preferred_console("ttyS", offset, NULL);
 		}
-	} else if (strcmp(name, "vty") == 0) {
+	} else if (strcmp(name, "vty") == 0)
 		/* pSeries LPAR virtual console */
 		return add_preferred_console("hvc", 0, NULL);
-	}
+	else if (strcmp(name, "ch-a") == 0)
+		offset = 0;
+	else if (strcmp(name, "ch-b") == 0)
+		offset = 1;
+	else
+		return -ENODEV;
 
-	return -ENODEV;
+	return add_preferred_console("ttyS", offset, NULL);
+
 }
 console_initcall(set_preferred_console);
 
@@ -568,6 +576,23 @@ void __init ppc64_calibrate_delay(void)
 
 extern void (*calibrate_delay)(void);
 
+#ifdef CONFIG_IRQSTACKS
+static void __init irqstack_early_init(void)
+{
+	int i;
+
+	/* interrupt stacks must be under 256MB, we cannot afford to take SLB misses on them */
+	for (i = 0; i < NR_CPUS; i++) {
+		softirq_ctx[i] = (struct thread_info *)__va(lmb_alloc_base(THREAD_SIZE,
+					THREAD_SIZE, 0x10000000));
+		hardirq_ctx[i] = (struct thread_info *)__va(lmb_alloc_base(THREAD_SIZE,
+					THREAD_SIZE, 0x10000000));
+	}
+}
+#else
+#define irqstack_early_init()
+#endif
+
 /*
  * Called into from start_kernel, after lock_kernel has been called.
  * Initializes bootmem, which is unsed to manage page allocation until
@@ -610,8 +635,10 @@ void __init setup_arch(char **cmdline_p)
 	init_mm.brk = klimit;
 	
 	/* Save unparsed command line copy for /proc/cmdline */
-	strlcpy(saved_command_line, cmd_line, sizeof(saved_command_line));
+	strlcpy(saved_command_line, cmd_line, COMMAND_LINE_SIZE);
 	*cmdline_p = cmd_line;
+
+	irqstack_early_init();
 
 	/* set up the bootmem stuff with available memory */
 	do_init_bootmem();
@@ -676,7 +703,7 @@ int set_spread_lpevents( char * str )
 	unsigned long val = simple_strtoul( str, NULL, 0 );
 	if ( ( val > 0 ) && ( val <= NR_CPUS ) ) {
 		for ( i=1; i<val; ++i )
-			paca[i].lpQueuePtr = paca[0].lpQueuePtr;
+			paca[i].lpqueue_ptr = paca[0].lpqueue_ptr;
 		printk("lpevent processing spread over %ld processors\n", val);
 	}
 	else

@@ -35,8 +35,6 @@
 #include "output.h"
 #include "rea.h"
 #include "workqueue.h"
-#include "ioctl.h"
-#include "daemon.h"
 #include "socket.h"
 #include "update.h"
 #ifdef CONFIG_HIP_RVS
@@ -1384,7 +1382,9 @@ void hip_handle_inet6_addr_del(int ifindex) {
 		goto out;
   	}
 	hip_insert_work_order(hwo);
+
  out:
+	return;
 }
 
 
@@ -1872,12 +1872,6 @@ static int __init hip_init(void)
 		goto out;
 #endif /* CONFIG_PROC_FS */
 
-	if (hip_init_user() < 0)
-		goto out;
-
-	if (hip_init_ioctl() < 0)
-		goto out;
-
 	/* comment this to disable network device event handler
 	   (crashed sometimes) */
 	if (hip_init_netdev_notifier() < 0)
@@ -1966,8 +1960,6 @@ static void __exit hip_cleanup(void)
 	hip_delete_sp(XFRM_POLICY_OUT);
 
 	hip_uninit_netdev_notifier(); 	/* comment this if network device event causes troubles */
-	hip_uninit_ioctl();
-	hip_uninit_user();
 
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();

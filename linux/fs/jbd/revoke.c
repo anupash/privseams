@@ -187,9 +187,9 @@ int __init journal_init_revoke_caches(void)
 void journal_destroy_revoke_caches(void)
 {
 	kmem_cache_destroy(revoke_record_cache);
-	revoke_record_cache = 0;
+	revoke_record_cache = NULL;
 	kmem_cache_destroy(revoke_table_cache);
-	revoke_table_cache = 0;
+	revoke_table_cache = NULL;
 }
 
 /* Initialise the revoke table for a given journal to a given size. */
@@ -522,7 +522,7 @@ void journal_write_revoke_records(journal_t *journal,
 			kmem_cache_free(revoke_record_cache, record);
 		}
 	}
-	if (descriptor) 
+	if (descriptor)
 		flush_descriptor(journal, descriptor, offset);
 	jbd_debug(1, "Wrote %d revoke records\n", count);
 }
@@ -606,7 +606,7 @@ static void flush_descriptor(journal_t *journal,
 	header->r_count = htonl(offset);
 	set_buffer_jwrite(bh);
 	BUFFER_TRACE(bh, "write");
-	set_buffer_uptodate(bh);
+	set_buffer_dirty(bh);
 	ll_rw_block(WRITE, 1, &bh);
 }
 #endif

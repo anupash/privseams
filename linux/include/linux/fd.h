@@ -2,6 +2,7 @@
 #define _LINUX_FD_H
 
 #include <linux/ioctl.h>
+#include <linux/compiler.h>
 
 /* New file layout: Now the ioctl definitions immediately follow the
  * definitions of the structures that they use */
@@ -339,7 +340,7 @@ struct floppy_raw_cmd {
 #define FD_RAW_FAILURE 0x10000 /* command sent to fdc, fdc returned error */
 #define FD_RAW_HARDFAILURE 0x20000 /* fdc had to be reset, or timed out */
 
-	void *data;
+	void __user *data;
 	char *kernel_data; /* location of data buffer in the kernel */
 	struct floppy_raw_cmd *next; /* used for chaining of raw cmd's 
 				      * within the kernel */

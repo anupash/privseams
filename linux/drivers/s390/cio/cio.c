@@ -1,7 +1,7 @@
 /*
  *  drivers/s390/cio/cio.c
  *   S/390 common I/O routines -- low level i/o calls
- *   $Revision: 1.121 $
+ *   $Revision: 1.123 $
  *
  *    Copyright (C) 1999-2002 IBM Deutschland Entwicklung GmbH,
  *			      IBM Corporation
@@ -67,17 +67,17 @@ cio_debug_init (void)
 	if (!cio_debug_msg_id)
 		goto out_unregister;
 	debug_register_view (cio_debug_msg_id, &debug_sprintf_view);
-	debug_set_level (cio_debug_msg_id, 6);
+	debug_set_level (cio_debug_msg_id, 2);
 	cio_debug_trace_id = debug_register ("cio_trace", 4, 4, 8);
 	if (!cio_debug_trace_id)
 		goto out_unregister;
 	debug_register_view (cio_debug_trace_id, &debug_hex_ascii_view);
-	debug_set_level (cio_debug_trace_id, 6);
+	debug_set_level (cio_debug_trace_id, 2);
 	cio_debug_crw_id = debug_register ("cio_crw", 2, 4, 16*sizeof (long));
 	if (!cio_debug_crw_id)
 		goto out_unregister;
 	debug_register_view (cio_debug_crw_id, &debug_sprintf_view);
-	debug_set_level (cio_debug_crw_id, 6);
+	debug_set_level (cio_debug_crw_id, 2);
 	pr_debug("debugging initialized\n");
 	return 0;
 
@@ -688,15 +688,15 @@ cio_console_irq(void)
 		if (stsch(console_irq, &console_subchannel.schib) != 0 ||
 		    !console_subchannel.schib.pmcw.dnv)
 			return -1;
-		console_device = console_subchannel.schib.pmcw.dev;
-	} else if (console_device != -1) {
+		console_devno = console_subchannel.schib.pmcw.dev;
+	} else if (console_devno != -1) {
 		/* At least the console device number is known. */
 		for (irq = 0; irq < __MAX_SUBCHANNELS; irq++) {
 			if (stsch(irq, &console_subchannel.schib) != 0)
 				break;
 			if (console_subchannel.schib.pmcw.dnv &&
 			    console_subchannel.schib.pmcw.dev ==
-			    console_device) {
+			    console_devno) {
 				console_irq = irq;
 				break;
 			}

@@ -55,7 +55,7 @@
  */
 #define RAID5_DEBUG	0
 #define RAID5_PARANOIA	1
-#if RAID5_PARANOIA && CONFIG_SMP
+#if RAID5_PARANOIA && defined(CONFIG_SMP)
 # define CHECK_DEVLOCK() if (!spin_is_locked(&conf->device_lock)) BUG()
 #else
 # define CHECK_DEVLOCK()
@@ -395,7 +395,7 @@ static int raid5_end_read_request (struct bio * bi, unsigned int bytes_done,
 		md_error(conf->mddev, conf->disks[i].rdev);
 		clear_bit(R5_UPTODATE, &sh->dev[i].flags);
 	}
-	atomic_dec(&conf->disks[i].rdev->nr_pending);
+	rdev_dec_pending(conf->disks[i].rdev, conf->mddev);
 #if 0
 	/* must restore b_page before unlocking buffer... */
 	if (sh->bh_page[i] != bh->b_page) {
@@ -438,7 +438,7 @@ static int raid5_end_write_request (struct bio *bi, unsigned int bytes_done,
 	if (!uptodate)
 		md_error(conf->mddev, conf->disks[i].rdev);
 
-	atomic_dec(&conf->disks[i].rdev->nr_pending);
+	rdev_dec_pending(conf->disks[i].rdev, conf->mddev);
 	
 	clear_bit(R5_LOCKED, &sh->dev[i].flags);
 	set_bit(STRIPE_HANDLE, &sh->state);
@@ -1037,7 +1037,7 @@ static void handle_stripe(struct stripe_head *sh)
 	 * parity, or to satisfy requests
 	 * or to load a block that is being partially written.
 	 */
-	if (to_read || non_overwrite || (syncing && (uptodate+failed < disks))) {
+	if (to_read || non_overwrite || (syncing && (uptodate < disks))) {
 		for (i=disks; i--;) {
 			dev = &sh->dev[i];
 			if (!test_bit(R5_LOCKED, &dev->flags) && !test_bit(R5_UPTODATE, &dev->flags) &&
@@ -1301,18 +1301,25 @@ static void unplug_slaves(mddev_t *mddev)
 {
 	raid5_conf_t *conf = mddev_to_conf(mddev);
 	int i;
+	unsigned long flags;
 
+	spin_lock_irqsave(&conf->device_lock, flags);
 	for (i=0; i<mddev->raid_disks; i++) {
 		mdk_rdev_t *rdev = conf->disks[i].rdev;
-		if (rdev && !rdev->faulty) {
-			struct block_device *bdev = rdev->bdev;
-			if (bdev) {
-				request_queue_t *r_queue = bdev_get_queue(bdev);
-				if (r_queue && r_queue->unplug_fn)
-					r_queue->unplug_fn(r_queue);
-			}
+		if (rdev && atomic_read(&rdev->nr_pending)) {
+			request_queue_t *r_queue = bdev_get_queue(rdev->bdev);
+
+			atomic_inc(&rdev->nr_pending);
+			spin_unlock_irqrestore(&conf->device_lock, flags);
+
+			if (r_queue && r_queue->unplug_fn)
+				r_queue->unplug_fn(r_queue);
+
+			spin_lock_irqsave(&conf->device_lock, flags);
+			atomic_dec(&rdev->nr_pending);
 		}
 	}
+	spin_unlock_irqrestore(&conf->device_lock, flags);
 }
 
 static void raid5_unplug_device(request_queue_t *q)
@@ -1570,6 +1577,9 @@ static int run (mddev_t *mddev)
 	conf->algorithm = mddev->layout;
 	conf->max_nr_stripes = NR_STRIPES;
 
+	/* device size must be a multiple of chunk size */
+	mddev->size &= ~(mddev->chunk_size/1024 -1);
+
 	if (!conf->chunk_size || conf->chunk_size % 4) {
 		printk(KERN_ERR "raid5: invalid chunk size %d for %s\n",
 			conf->chunk_size, mdname(mddev));
@@ -1821,6 +1831,27 @@ static int raid5_add_disk(mddev_t *mddev, mdk_rdev_t *rdev)
 	return found;
 }
 
+static int raid5_resize(mddev_t *mddev, sector_t sectors)
+{
+	/* no resync is happening, and there is enough space
+	 * on all devices, so we can resize.
+	 * We need to make sure resync covers any new space.
+	 * If the array is shrinking we should possibly wait until
+	 * any io in the removed space completes, but it hardly seems
+	 * worth it.
+	 */
+	sectors &= ~((sector_t)mddev->chunk_size/512 - 1);
+	mddev->array_size = (sectors * (mddev->raid_disks-1))>>1;
+	set_capacity(mddev->gendisk, mddev->array_size << 1);
+	mddev->changed = 1;
+	if (sectors/2  > mddev->size && mddev->recovery_cp == MaxSector) {
+		mddev->recovery_cp = mddev->size << 1;
+		set_bit(MD_RECOVERY_NEEDED, &mddev->recovery);
+	}
+	mddev->size = sectors /2;
+	return 0;
+}
+
 static mdk_personality_t raid5_personality=
 {
 	.name		= "raid5",
@@ -1834,6 +1865,7 @@ static mdk_personality_t raid5_personality=
 	.hot_remove_disk= raid5_remove_disk,
 	.spare_active	= raid5_spare_active,
 	.sync_request	= sync_request,
+	.resize		= raid5_resize,
 };
 
 static int __init raid5_init (void)

@@ -301,7 +301,7 @@ static int get_ctl_value(usb_mixer_elem_info_t *cval, int request, int validx, i
 	int timeout = 10;
  
 	while (timeout-- > 0) {
-		if (usb_control_msg(cval->chip->dev, usb_rcvctrlpipe(cval->chip->dev, 0),
+		if (snd_usb_ctl_msg(cval->chip->dev, usb_rcvctrlpipe(cval->chip->dev, 0),
 				    request,
 				    USB_RECIP_INTERFACE | USB_TYPE_CLASS | USB_DIR_IN,
 				    validx, cval->ctrlif | (cval->id << 8),
@@ -339,7 +339,7 @@ static int set_ctl_value(usb_mixer_elem_info_t *cval, int request, int validx, i
 	buf[0] = value_set & 0xff;
 	buf[1] = (value_set >> 8) & 0xff;
 	while (timeout -- > 0)
-		if (usb_control_msg(cval->chip->dev, usb_sndctrlpipe(cval->chip->dev, 0),
+		if (snd_usb_ctl_msg(cval->chip->dev, usb_sndctrlpipe(cval->chip->dev, 0),
 				    request,
 				    USB_RECIP_INTERFACE | USB_TYPE_CLASS | USB_DIR_OUT,
 				    validx, cval->ctrlif | (cval->id << 8),
@@ -574,7 +574,7 @@ static void usb_mixer_elem_free(snd_kcontrol_t *kctl)
 {
 	if (kctl->private_data) {
 		snd_magic_kfree((void *)kctl->private_data);
-		kctl->private_data = 0;
+		kctl->private_data = NULL;
 	}
 }
 
@@ -1318,7 +1318,7 @@ static void usb_mixer_selector_elem_free(snd_kcontrol_t *kctl)
 		usb_mixer_elem_info_t *cval = snd_magic_cast(usb_mixer_elem_info_t, kctl->private_data,);
 		num_ins = cval->max;
 		snd_magic_kfree(cval);
-		kctl->private_data = 0;
+		kctl->private_data = NULL;
 	}
 	if (kctl->private_value) {
 		char **itemlist = (char **)kctl->private_value;

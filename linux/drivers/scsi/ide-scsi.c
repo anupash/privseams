@@ -51,7 +51,7 @@
 #include <asm/uaccess.h>
 
 #include "scsi.h"
-#include "hosts.h"
+#include <scsi/scsi_host.h>
 #include <scsi/sg.h>
 
 #define IDESCSI_DEBUG_LOG		0
@@ -318,6 +318,13 @@ ide_startstop_t idescsi_atapi_error (ide_drive_t *drive, const char *msg, byte s
 	if (drive == NULL || (rq = HWGROUP(drive)->rq) == NULL)
 		return ide_stopped;
 
+	/* retry only "normal" I/O: */
+	if (rq->flags & (REQ_DRIVE_CMD | REQ_DRIVE_TASK | REQ_DRIVE_TASKFILE)) {
+		rq->errors = 1;
+		ide_end_drive_cmd(drive, stat, err);
+		return ide_stopped;
+	}
+
 	if (HWIF(drive)->INB(IDE_STATUS_REG) & (BUSY_STAT|DRQ_STAT))
 		/* force an abort */
 		HWIF(drive)->OUTB(WIN_IDLEIMMEDIATE,IDE_COMMAND_REG);
@@ -333,6 +340,13 @@ ide_startstop_t idescsi_atapi_abort (ide_drive_t *drive, const char *msg)
 
 	if (drive == NULL || (rq = HWGROUP(drive)->rq) == NULL)
 	       return ide_stopped;
+
+	/* retry only "normal" I/O: */
+	if (rq->flags & (REQ_DRIVE_CMD | REQ_DRIVE_TASK | REQ_DRIVE_TASKFILE)) {
+		rq->errors = 1;
+		ide_end_drive_cmd(drive, BUSY_STAT, 0);
+		return ide_stopped;
+	}
 
 #if IDESCSI_DEBUG_LOG
 	printk(KERN_WARNING "idescsi_atapi_abort called for %lu\n",
@@ -721,7 +735,7 @@ static int idescsi_ide_ioctl(struct inode *inode, struct file *file,
 			unsigned int cmd, unsigned long arg)
 {
 	struct block_device *bdev = inode->i_bdev;
-	return generic_ide_ioctl(bdev, cmd, arg);
+	return generic_ide_ioctl(file, bdev, cmd, arg);
 }
 
 static struct block_device_operations idescsi_ops = {
@@ -745,7 +759,7 @@ static const char *idescsi_info (struct Scsi_Host *host)
 	return "SCSI host adapter emulation for IDE ATAPI devices";
 }
 
-static int idescsi_ioctl (Scsi_Device *dev, int cmd, void *arg)
+static int idescsi_ioctl (Scsi_Device *dev, int cmd, void __user *arg)
 {
 	idescsi_scsi_t *scsi = scsihost_to_idescsi(dev->host);
 
@@ -756,7 +770,7 @@ static int idescsi_ioctl (Scsi_Device *dev, int cmd, void *arg)
 			clear_bit(IDESCSI_SG_TRANSFORM, &scsi->transform);
 		return 0;
 	} else if (cmd == SG_GET_TRANSFORM)
-		return put_user(test_bit(IDESCSI_SG_TRANSFORM, &scsi->transform), (int *) arg);
+		return put_user(test_bit(IDESCSI_SG_TRANSFORM, &scsi->transform), (int __user *) arg);
 	return -EINVAL;
 }
 

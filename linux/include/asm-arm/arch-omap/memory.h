@@ -30,25 +30,12 @@
  * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __ASM_ARCH_MMU_H
-#define __ASM_ARCH_MMU_H
+#ifndef __ASM_ARCH_MEMORY_H
+#define __ASM_ARCH_MEMORY_H
 
 /*
- * Task size: 3GB
+ * Physical DRAM offset.
  */
-#define TASK_SIZE		(0xbf000000UL)
-#define TASK_SIZE_26		(0x04000000UL)
-
-/*
- * This decides where the kernel will search for a free chunk of vm
- * space during mmap's.
- */
-#define TASK_UNMAPPED_BASE	(0x40000000)
-
-/*
- * Page offset: 3GB
- */
-#define PAGE_OFFSET		(0xC0000000UL)
 #define PHYS_OFFSET		(0x10000000UL)
 
 /*
@@ -57,20 +44,10 @@
 #define OMAP1510_LB_OFFSET	(0x30000000UL)
 
 /*
- * The DRAM is contiguous.
- */
-#define __virt_to_phys__is_a_macro
-#define __virt_to_phys(vpage) ((vpage) - PAGE_OFFSET + PHYS_OFFSET)
-#define __phys_to_virt__is_a_macro
-#define __phys_to_virt(ppage) ((ppage) + PAGE_OFFSET - PHYS_OFFSET)
-
-/*
  * Conversion between SDRAM and fake PCI bus, used by USB
  * NOTE: Physical address must be converted to Local Bus address
  *	 on OMAP-1510 only
  */
-#define __virt_to_bus__is_a_macro
-#define __bus_to_virt__is_a_macro
 
 /*
  * Bus address is physical address, except for OMAP-1510 Local Bus.
@@ -80,12 +57,28 @@
 
 /*
  * OMAP-1510 bus address is translated into a Local Bus address if the
- * OMAP bus type is lbus. See dmadev_uses_omap_lbus().
+ * OMAP bus type is lbus. We do the address translation based on the
+ * device overriding the defaults used in the dma-mapping API.
  */
 #ifdef CONFIG_ARCH_OMAP1510
-#define bus_to_lbus(x)	((x) + (OMAP1510_LB_OFFSET - PHYS_OFFSET))
-#define lbus_to_bus(x)	((x) - (OMAP1510_LB_OFFSET - PHYS_OFFSET))
-#endif
+
+#define virt_to_lbus(x)		((x) - PAGE_OFFSET + OMAP1510_LB_OFFSET)
+#define lbus_to_virt(x)		((x) - OMAP1510_LB_OFFSET + PAGE_OFFSET)
+#define is_lbus_device(dev)	(cpu_is_omap1510() && dev->coherent_dma_mask == 0x0fffffff)
+
+#define __arch_page_to_dma(dev, page)	({is_lbus_device(dev) ? \
+					(dma_addr_t)virt_to_lbus(page_address(page)) : \
+					(dma_addr_t)__virt_to_bus(page_address(page));})
+
+#define __arch_dma_to_virt(dev, addr)	({is_lbus_device(dev) ? \
+					lbus_to_virt(addr) : \
+					__bus_to_virt(addr);})
+
+#define __arch_virt_to_dma(dev, addr)	({is_lbus_device(dev) ? \
+					virt_to_lbus(addr) : \
+					__virt_to_bus(addr);})
+
+#endif	/* CONFIG_ARCH_OMAP1510 */
 
 #define PHYS_TO_NID(addr) (0)
 #endif

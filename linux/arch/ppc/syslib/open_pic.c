@@ -28,7 +28,7 @@
 
 #include "open_pic_defs.h"
 
-#ifdef CONFIG_PRPMC800
+#if defined(CONFIG_PRPMC800) || defined(CONFIG_85xx)
 #define OPENPIC_BIG_ENDIAN
 #endif
 
@@ -64,14 +64,14 @@ static irqreturn_t openpic_ipi_action(int cpl, void *dev_id, struct pt_regs *);
 
 /* Timer Interrupts */
 static void openpic_inittimer(u_int timer, u_int pri, u_int vector);
-static void openpic_maptimer(u_int timer, u_int cpumask);
+static void openpic_maptimer(u_int timer, cpumask_t cpumask);
 
 /* Interrupt Sources */
 static void openpic_enable_irq(u_int irq);
 static void openpic_disable_irq(u_int irq);
 static void openpic_initirq(u_int irq, u_int pri, u_int vector, int polarity,
 			    int is_level);
-static void openpic_mapirq(u_int irq, u_int cpumask, u_int keepmask);
+static void openpic_mapirq(u_int irq, cpumask_t cpumask, cpumask_t keepmask);
 
 /*
  * These functions are not used but the code is kept here
@@ -89,17 +89,15 @@ static void openpic_set_sense(u_int irq, int sense);
  */
 static void openpic_end_irq(unsigned int irq_nr);
 static void openpic_ack_irq(unsigned int irq_nr);
-static void openpic_set_affinity(unsigned int irq_nr, unsigned long cpumask);
+static void openpic_set_affinity(unsigned int irq_nr, cpumask_t cpumask);
 
 struct hw_interrupt_type open_pic = {
-	" OpenPIC  ",
-	NULL,
-	NULL,
-	openpic_enable_irq,
-	openpic_disable_irq,
-	openpic_ack_irq,
-	openpic_end_irq,
-	openpic_set_affinity
+	.typename	= " OpenPIC  ",
+	.enable		= openpic_enable_irq,
+	.disable	= openpic_disable_irq,
+	.ack		= openpic_ack_irq,
+	.end		= openpic_end_irq,
+	.set_affinity	= openpic_set_affinity,
 };
 
 #ifdef CONFIG_SMP
@@ -109,14 +107,11 @@ static void openpic_enable_ipi(unsigned int irq_nr);
 static void openpic_disable_ipi(unsigned int irq_nr);
 
 struct hw_interrupt_type open_pic_ipi = {
-	" OpenPIC  ",
-	NULL,
-	NULL,
-	openpic_enable_ipi,
-	openpic_disable_ipi,
-	openpic_ack_ipi,
-	openpic_end_ipi,
-	0
+	.typename	= " OpenPIC  ",
+	.enable		= openpic_enable_ipi,
+	.disable	= openpic_disable_ipi,
+	.ack		= openpic_ack_ipi,
+	.end		= openpic_end_ipi,
 };
 #endif /* CONFIG_SMP */
 
@@ -368,7 +363,7 @@ void __init openpic_init(int offset)
 		/* Disabled, Priority 0 */
 		openpic_inittimer(i, 0, OPENPIC_VEC_TIMER+i+offset);
 		/* No processor */
-		openpic_maptimer(i, 0);
+		openpic_maptimer(i, CPU_MASK_NONE);
 	}
 
 #ifdef CONFIG_SMP
@@ -408,7 +403,7 @@ void __init openpic_init(int offset)
 		openpic_initirq(i, 8, i+offset, (sense & IRQ_POLARITY_MASK),
 				(sense & IRQ_SENSE_MASK));
 		/* Processor 0 */
-		openpic_mapirq(i, 1<<0, 0);
+		openpic_mapirq(i, CPU_MASK_CPU0, CPU_MASK_NONE);
 	}
 
 	/* Init descriptors */
@@ -509,14 +504,17 @@ static void openpic_set_spurious(u_int vec)
 /*
  * Convert a cpu mask from logical to physical cpu numbers.
  */
-static inline u32 physmask(u32 cpumask)
+static inline cpumask_t physmask(cpumask_t cpumask)
 {
 	int i;
-	u32 mask = 0;
+	cpumask_t mask = CPU_MASK_NONE;
 
-	for (i = 0; i < NR_CPUS; ++i, cpumask >>= 1)
-		if (cpu_online(i))
-			mask |= (cpumask & 1) << smp_hw_index[i];
+	cpus_and(cpumask, cpu_online_map, cpumask);
+
+	for (i = 0; i < NR_CPUS; i++)
+		if (cpu_isset(i, cpumask))
+			cpu_set(smp_hw_index[i], mask);
+
 	return mask;
 }
 #else
@@ -556,14 +554,16 @@ static void __init openpic_initipi(u_int ipi, u_int pri, u_int vec)
  *  Externally called, however, it takes an IPI number (0...OPENPIC_NUM_IPI)
  *  and not a system-wide interrupt number
  */
-void openpic_cause_IPI(u_int ipi, u_int cpumask)
+void openpic_cause_IPI(u_int ipi, cpumask_t cpumask)
 {
+	cpumask_t phys;
 	DECL_THIS_CPU;
 
 	CHECK_THIS_CPU;
 	check_arg_ipi(ipi);
+	phys = physmask(cpumask);
 	openpic_write(&OpenPIC->THIS_CPU.IPI_Dispatch(ipi),
-		      physmask(cpumask));
+		      cpus_addr(physmask(cpumask))[0]);
 }
 
 void openpic_request_IPIs(void)
@@ -581,16 +581,16 @@ void openpic_request_IPIs(void)
 	/* IPIs are marked SA_INTERRUPT as they must run with irqs disabled */
 	request_irq(OPENPIC_VEC_IPI+open_pic_irq_offset,
 		    openpic_ipi_action, SA_INTERRUPT,
-		    "IPI0 (call function)", 0);
+		    "IPI0 (call function)", NULL);
 	request_irq(OPENPIC_VEC_IPI+open_pic_irq_offset+1,
 		    openpic_ipi_action, SA_INTERRUPT,
-		    "IPI1 (reschedule)", 0);
+		    "IPI1 (reschedule)", NULL);
 	request_irq(OPENPIC_VEC_IPI+open_pic_irq_offset+2,
 		    openpic_ipi_action, SA_INTERRUPT,
-		    "IPI2 (invalidate tlb)", 0);
+		    "IPI2 (invalidate tlb)", NULL);
 	request_irq(OPENPIC_VEC_IPI+open_pic_irq_offset+3,
 		    openpic_ipi_action, SA_INTERRUPT,
-		    "IPI3 (xmon break)", 0);
+		    "IPI3 (xmon break)", NULL);
 
 	for ( i = 0; i < OPENPIC_NUM_IPI ; i++ )
 		openpic_enable_ipi(OPENPIC_VEC_IPI+open_pic_irq_offset+i);
@@ -607,12 +607,12 @@ void __devinit do_openpic_setup_cpu(void)
 {
 #ifdef CONFIG_IRQ_ALL_CPUS
  	int i;
-	u32 msk;
+	cpumask_t msk = CPU_MASK_NONE;
 #endif
 	spin_lock(&openpic_setup_lock);
 
 #ifdef CONFIG_IRQ_ALL_CPUS
-	msk = 1 << smp_hw_index[smp_processor_id()];
+	cpu_set(smp_hw_index[smp_processor_id()], msk);
 
  	/* let the openpic know we want intrs. default affinity
  	 * is 0xffffffff until changed via /proc
@@ -621,7 +621,7 @@ void __devinit do_openpic_setup_cpu(void)
  	 * in irq.c.
  	 */
  	for (i = 0; i < NumSources; i++)
-		openpic_mapirq(i, msk, ~0U);
+		openpic_mapirq(i, msk, CPU_MASK_ALL);
 #endif /* CONFIG_IRQ_ALL_CPUS */
  	openpic_set_priority(0);
 
@@ -649,11 +649,12 @@ static void __init openpic_inittimer(u_int timer, u_int pri, u_int vec)
 /*
  *  Map a timer interrupt to one or more CPUs
  */
-static void __init openpic_maptimer(u_int timer, u_int cpumask)
+static void __init openpic_maptimer(u_int timer, cpumask_t cpumask)
 {
+	cpumask_t phys = physmask(cpumask);
 	check_arg_timer(timer);
 	openpic_write(&OpenPIC->Global.Timer[timer].Destination,
-		      physmask(cpumask));
+		      cpus_addr(phys)[0]);
 }
 
 /*
@@ -770,13 +771,16 @@ openpic_initirq(u_int irq, u_int pri, u_int vec, int pol, int sense)
 /*
  *  Map an interrupt source to one or more CPUs
  */
-static void openpic_mapirq(u_int irq, u_int physmask, u_int keepmask)
+static void openpic_mapirq(u_int irq, cpumask_t physmask, cpumask_t keepmask)
 {
 	if (ISR[irq] == 0)
 		return;
-	if (keepmask != 0)
-		physmask |= openpic_read(&ISR[irq]->Destination) & keepmask;
-	openpic_write(&ISR[irq]->Destination, physmask);
+	if (!cpus_empty(keepmask)) {
+		cpumask_t irqdest = { .bits[0] = openpic_read(&ISR[irq]->Destination) };
+		cpus_and(irqdest, irqdest, keepmask);
+		cpus_or(physmask, physmask, irqdest);
+	}
+	openpic_write(&ISR[irq]->Destination, cpus_addr(physmask)[0]);
 }
 
 #ifdef notused
@@ -820,9 +824,9 @@ static void openpic_end_irq(unsigned int irq_nr)
 #endif
 }
 
-static void openpic_set_affinity(unsigned int irq_nr, unsigned long cpumask)
+static void openpic_set_affinity(unsigned int irq_nr, cpumask_t cpumask)
 {
-	openpic_mapirq(irq_nr - open_pic_irq_offset, physmask(cpumask), 0);
+	openpic_mapirq(irq_nr - open_pic_irq_offset, physmask(cpumask), CPU_MASK_NONE);
 }
 
 #ifdef CONFIG_SMP
@@ -870,6 +874,7 @@ openpic_get_irq(struct pt_regs *regs)
 void
 smp_openpic_message_pass(int target, int msg, unsigned long data, int wait)
 {
+	cpumask_t mask = CPU_MASK_ALL;
 	/* make sure we're sending something that translates to an IPI */
 	if (msg > 0x3) {
 		printk("SMP %d: smp_message_pass: unknown msg %d\n",
@@ -878,14 +883,14 @@ smp_openpic_message_pass(int target, int msg, unsigned long data, int wait)
 	}
 	switch (target) {
 	case MSG_ALL:
-		openpic_cause_IPI(msg, 0xffffffff);
+		openpic_cause_IPI(msg, mask);
 		break;
 	case MSG_ALL_BUT_SELF:
-		openpic_cause_IPI(msg,
-				  0xffffffff & ~(1 << smp_processor_id()));
+		cpu_clear(smp_processor_id(), mask);
+		openpic_cause_IPI(msg, mask);
 		break;
 	default:
-		openpic_cause_IPI(msg, 1<<target);
+		openpic_cause_IPI(msg, cpumask_of_cpu(target));
 		break;
 	}
 }

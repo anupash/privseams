@@ -54,7 +54,7 @@
 	(((segment).seg & (addr | size )) == 0)
 
 #define access_ok(type,addr,size) \
-	__access_ok(((unsigned long)(addr)),(size),get_fs())
+	__access_ok(((__force unsigned long)(addr)),(size),get_fs())
 
 static inline int verify_area(int type, const void __user *addr, unsigned long size)
 {
@@ -116,6 +116,7 @@ extern long __put_user_bad(void);
 #define __put_user_nocheck(x,ptr,size)				\
 ({								\
 	long __pu_err;						\
+	__chk_user_ptr(ptr);					\
 	__put_user_size((x),(ptr),(size),__pu_err,-EFAULT);	\
 	__pu_err;						\
 })
@@ -123,7 +124,7 @@ extern long __put_user_bad(void);
 #define __put_user_check(x,ptr,size)					\
 ({									\
 	long __pu_err = -EFAULT;					\
-	__typeof__(*(ptr)) *__pu_addr = (ptr);				\
+	void __user *__pu_addr = (ptr);					\
 	if (access_ok(VERIFY_WRITE,__pu_addr,size))			\
 		__put_user_size((x),__pu_addr,(size),__pu_err,-EFAULT);	\
 	__pu_err;							\
@@ -174,7 +175,7 @@ do {									\
 #define __get_user_check(x,ptr,size)					\
 ({									\
 	long __gu_err = -EFAULT, __gu_val = 0;				\
-	const __typeof__(*(ptr)) *__gu_addr = (ptr);			\
+	const __typeof__(*(ptr)) __user *__gu_addr = (ptr);		\
 	if (access_ok(VERIFY_READ,__gu_addr,size))			\
 		__get_user_size(__gu_val,__gu_addr,(size),__gu_err,-EFAULT);\
 	(x) = (__typeof__(*(ptr)))__gu_val;				\
@@ -187,6 +188,7 @@ extern long __get_user_bad(void);
 do {									\
 	might_sleep();							\
 	retval = 0;							\
+	__chk_user_ptr(ptr);						\
 	switch (size) {							\
 	  case 1: __get_user_asm(x,ptr,retval,"lbz",errret); break;	\
 	  case 2: __get_user_asm(x,ptr,retval,"lhz",errret); break;	\
@@ -270,33 +272,12 @@ __copy_to_user(void __user *to, const void *from, unsigned long n)
 #define __copy_in_user(to, from, size) \
 	__copy_tofrom_user((to), (from), (size))
 
-static inline unsigned long
-copy_from_user(void *to, const void __user *from, unsigned long n)
-{
-	if (likely(access_ok(VERIFY_READ, from, n)))
-		n = __copy_from_user(to, from, n);
-	else
-		memset(to, 0, n);
-	return n;
-}
-
-static inline unsigned long
-copy_to_user(void __user *to, const void *from, unsigned long n)
-{
-	if (likely(access_ok(VERIFY_WRITE, to, n)))
-		n = __copy_to_user(to, from, n);
-	return n;
-}
-
-static inline unsigned long
-copy_in_user(void __user *to, const void __user *from, unsigned long n)
-{
-	might_sleep();
-	if (likely(access_ok(VERIFY_READ, from, n) &&
-	    access_ok(VERIFY_WRITE, to, n)))
-		n =__copy_tofrom_user(to, from, n);
-	return n;
-}
+extern unsigned long copy_from_user(void *to, const void __user *from,
+				    unsigned long n);
+extern unsigned long copy_to_user(void __user *to, const void *from,
+				  unsigned long n);
+extern unsigned long copy_in_user(void __user *to, const void __user *from,
+				  unsigned long n);
 
 extern unsigned long __clear_user(void __user *addr, unsigned long size);
 

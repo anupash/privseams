@@ -15,14 +15,11 @@ obj-y               :=	setup.o entry.o traps.o irq.o idle.o dma.o \
 
 obj-$(CONFIG_PPC_OF) +=	of_device.o
 
-obj-$(CONFIG_PCI)	+= pci.o pci_dn.o pci_iommu.o
+pci-obj-$(CONFIG_PPC_ISERIES)	+= iSeries_pci.o iSeries_pci_reset.o \
+				     iSeries_IoMmTable.o
+pci-obj-$(CONFIG_PPC_PSERIES)	+= pci_dn.o pci_dma_direct.o
 
-ifdef CONFIG_PPC_ISERIES
-obj-$(CONFIG_PCI)	+= iSeries_pci.o iSeries_pci_reset.o \
-			     iSeries_IoMmTable.o 
-else
-obj-$(CONFIG_PCI)	+= pci_dma_direct.o
-endif
+obj-$(CONFIG_PCI)	+= pci.o pci_iommu.o $(pci-obj-y)
 
 obj-$(CONFIG_PPC_ISERIES) += iSeries_irq.o \
 			     iSeries_VpdInfo.o XmPciLpEvent.o \
@@ -46,6 +43,7 @@ obj-$(CONFIG_VIOPATH)		+= viopath.o
 obj-$(CONFIG_LPARCFG)		+= lparcfg.o
 obj-$(CONFIG_HVC_CONSOLE)	+= hvconsole.o
 obj-$(CONFIG_BOOTX_TEXT)	+= btext.o
+obj-$(CONFIG_HVCS)		+= hvcserver.o
 
 obj-$(CONFIG_PPC_PMAC)		+= pmac_setup.o pmac_feature.o pmac_pci.o \
 				   pmac_time.o pmac_nvram.o pmac_low_i2c.o \
@@ -55,5 +53,7 @@ obj-$(CONFIG_PMAC_DART)		+= pmac_iommu.o
 ifdef CONFIG_SMP
 obj-$(CONFIG_PPC_PMAC)		+= pmac_smp.o smp-tbsync.o
 endif
+
+obj-$(CONFIG_ALTIVEC)		+= vecemu.o vector.o
 
 CFLAGS_ioctl32.o += -Ifs/

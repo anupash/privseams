@@ -1,7 +1,8 @@
 /*
  * Version 2.13
  *
- * AMD 755/756/766/8111 and nVidia nForce/2/2s/3/3s IDE driver for Linux.
+ * AMD 755/756/766/8111 and nVidia nForce/2/2s/3/3s/CK804/MCP04
+ * IDE driver for Linux.
  *
  * Copyright (c) 2000-2002 Vojtech Pavlik
  *
@@ -26,7 +27,8 @@
 #include <asm/io.h>
 
 #include "ide-timing.h"
-#include "amd74xx.h"
+
+#define DISPLAY_AMD_TIMINGS
 
 #define AMD_IDE_ENABLE		(0x00 + amd_config->base)
 #define AMD_IDE_CONFIG		(0x01 + amd_config->base)
@@ -68,6 +70,8 @@ static struct amd_ide_chip {
 	{ PCI_DEVICE_ID_NVIDIA_NFORCE3S_IDE,	0x50, AMD_UDMA_133 },
 	{ PCI_DEVICE_ID_NVIDIA_NFORCE3S_SATA,	0x50, AMD_UDMA_133 },
 	{ PCI_DEVICE_ID_NVIDIA_NFORCE3S_SATA2,	0x50, AMD_UDMA_133 },
+	{ PCI_DEVICE_ID_NVIDIA_NFORCE_CK804_IDE,	0x50, AMD_UDMA_133 },
+	{ PCI_DEVICE_ID_NVIDIA_NFORCE_MCP04_IDE,	0x50, AMD_UDMA_133 },
 	{ 0 }
 };
 
@@ -441,11 +445,51 @@ static void __init init_hwif_amd74xx(ide_hwif_t *hwif)
         hwif->drives[1].autodma = hwif->autodma;
 }
 
+#define DECLARE_AMD_DEV(name_str)					\
+	{								\
+		.name		= name_str,				\
+		.init_chipset	= init_chipset_amd74xx,			\
+		.init_hwif	= init_hwif_amd74xx,			\
+		.channels	= 2,					\
+		.autodma	= AUTODMA,				\
+		.enablebits	= {{0x40,0x02,0x02}, {0x40,0x01,0x01}},	\
+		.bootable	= ON_BOARD,				\
+	}
+
+#define DECLARE_NV_DEV(name_str)					\
+	{								\
+		.name		= name_str,				\
+		.init_chipset	= init_chipset_amd74xx,			\
+		.init_hwif	= init_hwif_amd74xx,			\
+		.channels	= 2,					\
+		.autodma	= AUTODMA,				\
+		.enablebits	= {{0x50,0x02,0x02}, {0x50,0x01,0x01}},	\
+		.bootable	= ON_BOARD,				\
+	}
+
+static ide_pci_device_t amd74xx_chipsets[] __devinitdata = {
+	/*  0 */ DECLARE_AMD_DEV("AMD7401"),
+	/*  1 */ DECLARE_AMD_DEV("AMD7409"),
+	/*  2 */ DECLARE_AMD_DEV("AMD7411"),
+	/*  3 */ DECLARE_AMD_DEV("AMD7441"),
+	/*  4 */ DECLARE_AMD_DEV("AMD8111"),
+
+	/*  5 */ DECLARE_NV_DEV("NFORCE"),
+	/*  6 */ DECLARE_NV_DEV("NFORCE2"),
+	/*  7 */ DECLARE_NV_DEV("NFORCE2-U400R"),
+	/*  8 */ DECLARE_NV_DEV("NFORCE2-U400R-SATA"),
+	/*  9 */ DECLARE_NV_DEV("NFORCE3-150"),
+	/* 10 */ DECLARE_NV_DEV("NFORCE3-250"),
+	/* 11 */ DECLARE_NV_DEV("NFORCE3-250-SATA"),
+	/* 12 */ DECLARE_NV_DEV("NFORCE3-250-SATA2"),
+	/* 13 */ DECLARE_NV_DEV("NFORCE-CK804"),
+	/* 14 */ DECLARE_NV_DEV("NFORCE-MCP04"),
+};
+
 static int __devinit amd74xx_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	amd_chipset = amd74xx_chipsets + id->driver_data;
 	amd_config = amd_ide_chips + id->driver_data;
-	if (dev->device != amd_chipset->device) BUG();
 	if (dev->device != amd_config->id) BUG();
 	ide_setup_pci_device(dev, amd_chipset);
 	return 0;
@@ -460,11 +504,17 @@ static struct pci_device_id amd74xx_pci_tbl[] = {
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE_IDE,	PCI_ANY_ID, PCI_ANY_ID, 0, 0,  5 },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE2_IDE,	PCI_ANY_ID, PCI_ANY_ID, 0, 0,  6 },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE2S_IDE,	PCI_ANY_ID, PCI_ANY_ID, 0, 0,  7 },
+#ifdef CONFIG_BLK_DEV_IDE_SATA
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE2S_SATA,	PCI_ANY_ID, PCI_ANY_ID, 0, 0,  8 },
+#endif
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE3_IDE,	PCI_ANY_ID, PCI_ANY_ID, 0, 0,  9 },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE3S_IDE,	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 10 },
+#ifdef CONFIG_BLK_DEV_IDE_SATA
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE3S_SATA,	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 11 },
 	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE3S_SATA2,	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 12 },
+#endif
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE_CK804_IDE,	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 13 },
+	{ PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE_MCP04_IDE,	PCI_ANY_ID, PCI_ANY_ID, 0, 0, 14 },
 	{ 0, },
 };
 MODULE_DEVICE_TABLE(pci, amd74xx_pci_tbl);

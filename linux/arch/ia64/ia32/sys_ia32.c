@@ -8,6 +8,7 @@
  * Copyright (C) 1997		David S. Miller (davem@caip.rutgers.edu)
  * Copyright (C) 2000-2003 Hewlett-Packard Co
  *	David Mosberger-Tang <davidm@hpl.hp.com>
+ * Copyright (C) 2004		Gordon Jin <gordon.jin@intel.com>
  *
  * These routines maintain argument size conversion between 32bit and 64bit
  * environment.
@@ -48,6 +49,7 @@
 #include <linux/ipc.h>
 #include <linux/compat.h>
 #include <linux/vfs.h>
+#include <linux/mman.h>
 
 #include <asm/intrinsics.h>
 #include <asm/semaphore.h>
@@ -90,58 +92,17 @@ extern unsigned long arch_get_unmapped_area (struct file *, unsigned long, unsig
 /* XXX make per-mm: */
 static DECLARE_MUTEX(ia32_mmap_sem);
 
-static int
-nargs (unsigned int arg, char **ap)
-{
-	unsigned int addr;
-	int n, err;
-
-	if (!arg)
-		return 0;
-
-	n = 0;
-	do {
-		err = get_user(addr, (unsigned int *)A(arg));
-		if (err)
-			return err;
-		if (ap)
-			*ap++ = (char *) A(addr);
-		arg += sizeof(unsigned int);
-		n++;
-	} while (addr);
-	return n - 1;
-}
-
 asmlinkage long
-sys32_execve (char *filename, unsigned int argv, unsigned int envp,
-	      struct pt_regs *regs)
+sys32_execve (char *name, compat_uptr_t __user *argv, compat_uptr_t __user *envp, struct pt_regs *regs)
 {
+	long error;
+	char *filename;
 	unsigned long old_map_base, old_task_size, tssd;
-	char **av, **ae;
-	int na, ne, len;
-	long r;
 
-	na = nargs(argv, NULL);
-	if (na < 0)
-		return na;
-	ne = nargs(envp, NULL);
-	if (ne < 0)
-		return ne;
-	len = (na + ne + 2) * sizeof(*av);
-	av = kmalloc(len, GFP_KERNEL);
-	if (!av)
-		return -ENOMEM;
-
-	ae = av + na + 1;
-	av[na] = NULL;
-	ae[ne] = NULL;
-
-	r = nargs(argv, av);
-	if (r < 0)
-		goto out;
-	r = nargs(envp, ae);
-	if (r < 0)
-		goto out;
+	filename = getname(name);
+	error = PTR_ERR(filename);
+	if (IS_ERR(filename))
+		return error;
 
 	old_map_base  = current->thread.map_base;
 	old_task_size = current->thread.task_size;
@@ -153,19 +114,18 @@ sys32_execve (char *filename, unsigned int argv, unsigned int envp,
 	ia64_set_kr(IA64_KR_IO_BASE, current->thread.old_iob);
 	ia64_set_kr(IA64_KR_TSSD, current->thread.old_k1);
 
-	set_fs(KERNEL_DS);
-	r = sys_execve(filename, av, ae, regs);
-	if (r < 0) {
+	error = compat_do_execve(filename, argv, envp, regs);
+	putname(filename);
+
+	if (error < 0) {
 		/* oops, execve failed, switch back to old values... */
 		ia64_set_kr(IA64_KR_IO_BASE, IA32_IOBASE);
 		ia64_set_kr(IA64_KR_TSSD, tssd);
 		current->thread.map_base  = old_map_base;
 		current->thread.task_size = old_task_size;
-		set_fs(USER_DS);	/* establish new task-size as the address-limit */
 	}
-  out:
-	kfree(av);
-	return r;
+
+	return error;
 }
 
 int cp_compat_stat(struct kstat *stat, struct compat_stat *ubuf)
@@ -292,6 +252,508 @@ mmap_subpage (struct file *file, unsigned long start, unsigned long end, int pro
 	return ret;
 }
 
+/* SLAB cache for partial_page structures */
+kmem_cache_t *partial_page_cachep;
+
+/*
+ * init partial_page_list.
+ * return 0 means kmalloc fail.
+ */
+struct partial_page_list*
+ia32_init_pp_list(void)
+{
+	struct partial_page_list *p;
+
+	if ((p = kmalloc(sizeof(*p), GFP_KERNEL)) == NULL)
+		return p;
+	p->pp_head = 0;
+	p->ppl_rb = RB_ROOT;
+	p->pp_hint = 0;
+	atomic_set(&p->pp_count, 1);
+	return p;
+}
+
+/*
+ * Search for the partial page with @start in partial page list @ppl.
+ * If finds the partial page, return the found partial page.
+ * Else, return 0 and provide @pprev, @rb_link, @rb_parent to
+ * be used by later __ia32_insert_pp().
+ */
+static struct partial_page *
+__ia32_find_pp(struct partial_page_list *ppl, unsigned int start,
+	struct partial_page **pprev, struct rb_node ***rb_link,
+	struct rb_node **rb_parent)
+{
+	struct partial_page *pp;
+	struct rb_node **__rb_link, *__rb_parent, *rb_prev;
+
+	pp = ppl->pp_hint;
+	if (pp && pp->base == start)
+		return pp;
+
+	__rb_link = &ppl->ppl_rb.rb_node;
+	rb_prev = __rb_parent = NULL;
+
+	while (*__rb_link) {
+		__rb_parent = *__rb_link;
+		pp = rb_entry(__rb_parent, struct partial_page, pp_rb);
+
+		if (pp->base == start) {
+			ppl->pp_hint = pp;
+			return pp;
+		} else if (pp->base < start) {
+			rb_prev = __rb_parent;
+			__rb_link = &__rb_parent->rb_right;
+		} else {
+			__rb_link = &__rb_parent->rb_left;
+		}
+	}
+
+	*rb_link = __rb_link;
+	*rb_parent = __rb_parent;
+	*pprev = NULL;
+	if (rb_prev)
+		*pprev = rb_entry(rb_prev, struct partial_page, pp_rb);
+	return NULL;
+}
+
+/*
+ * insert @pp into @ppl.
+ */
+static void
+__ia32_insert_pp(struct partial_page_list *ppl, struct partial_page *pp,
+	 struct partial_page *prev, struct rb_node **rb_link,
+	struct rb_node *rb_parent)
+{
+	/* link list */
+	if (prev) {
+		pp->next = prev->next;
+		prev->next = pp;
+	} else {
+		ppl->pp_head = pp;
+		if (rb_parent)
+			pp->next = rb_entry(rb_parent,
+				struct partial_page, pp_rb);
+		else
+			pp->next = NULL;
+	}
+
+	/* link rb */
+	rb_link_node(&pp->pp_rb, rb_parent, rb_link);
+	rb_insert_color(&pp->pp_rb, &ppl->ppl_rb);
+
+	ppl->pp_hint = pp;
+}
+
+/*
+ * delete @pp from partial page list @ppl.
+ */
+static void
+__ia32_delete_pp(struct partial_page_list *ppl, struct partial_page *pp,
+	struct partial_page *prev)
+{
+	if (prev) {
+		prev->next = pp->next;
+		if (ppl->pp_hint == pp)
+			ppl->pp_hint = prev;
+	} else {
+		ppl->pp_head = pp->next;
+		if (ppl->pp_hint == pp)
+			ppl->pp_hint = pp->next;
+	}
+	rb_erase(&pp->pp_rb, &ppl->ppl_rb);
+	kmem_cache_free(partial_page_cachep, pp);
+}
+
+static struct partial_page *
+__pp_prev(struct partial_page *pp)
+{
+	struct rb_node *prev = rb_prev(&pp->pp_rb);
+	if (prev)
+		return rb_entry(prev, struct partial_page, pp_rb);
+	else
+		return NULL;
+}
+
+/*
+ * Delete partial pages with address between @start and @end.
+ * @start and @end are page aligned.
+ */
+static void
+__ia32_delete_pp_range(unsigned int start, unsigned int end)
+{
+	struct partial_page *pp, *prev;
+	struct rb_node **rb_link, *rb_parent;
+
+	if (start >= end)
+		return;
+
+	pp = __ia32_find_pp(current->thread.ppl, start, &prev,
+					&rb_link, &rb_parent);
+	if (pp)
+		prev = __pp_prev(pp);
+	else {
+		if (prev)
+			pp = prev->next;
+		else
+			pp = current->thread.ppl->pp_head;
+	}
+
+	while (pp && pp->base < end) {
+		struct partial_page *tmp = pp->next;
+		__ia32_delete_pp(current->thread.ppl, pp, prev);
+		pp = tmp;
+	}
+}
+
+/*
+ * Set the range between @start and @end in bitmap.
+ * @start and @end should be IA32 page aligned and in the same IA64 page.
+ */
+static int
+__ia32_set_pp(unsigned int start, unsigned int end, int flags)
+{
+	struct partial_page *pp, *prev;
+	struct rb_node ** rb_link, *rb_parent;
+	unsigned int pstart, start_bit, end_bit, i;
+
+	pstart = PAGE_START(start);
+	start_bit = (start % PAGE_SIZE) / IA32_PAGE_SIZE;
+	end_bit = (end % PAGE_SIZE) / IA32_PAGE_SIZE;
+	if (end_bit == 0)
+		end_bit = PAGE_SIZE / IA32_PAGE_SIZE;
+	pp = __ia32_find_pp(current->thread.ppl, pstart, &prev,
+					&rb_link, &rb_parent);
+	if (pp) {
+		for (i = start_bit; i < end_bit; i++)
+			set_bit(i, &pp->bitmap);
+		/*
+		 * Check: if this partial page has been set to a full page,
+		 * then delete it.
+		 */
+		if (find_first_zero_bit(&pp->bitmap, sizeof(pp->bitmap)*8) >=
+				PAGE_SIZE/IA32_PAGE_SIZE) {
+			__ia32_delete_pp(current->thread.ppl, pp, __pp_prev(pp));
+		}
+		return 0;
+	}
+
+	/*
+	 * MAP_FIXED may lead to overlapping mmap.
+	 * In this case, the requested mmap area may already mmaped as a full
+	 * page. So check vma before adding a new partial page.
+	 */
+	if (flags & MAP_FIXED) {
+		struct vm_area_struct *vma = find_vma(current->mm, pstart);
+		if (vma && vma->vm_start <= pstart)
+			return 0;
+	}
+
+	/* new a partial_page */
+	pp = kmem_cache_alloc(partial_page_cachep, GFP_KERNEL);
+	if (!pp)
+		return -ENOMEM;
+	pp->base = pstart;
+	pp->bitmap = 0;
+	for (i=start_bit; i<end_bit; i++)
+		set_bit(i, &(pp->bitmap));
+	pp->next = NULL;
+	__ia32_insert_pp(current->thread.ppl, pp, prev, rb_link, rb_parent);
+	return 0;
+}
+
+/*
+ * @start and @end should be IA32 page aligned, but don't need to be in the
+ * same IA64 page. Split @start and @end to make sure they're in the same IA64
+ * page, then call __ia32_set_pp().
+ */
+static void
+ia32_set_pp(unsigned int start, unsigned int end, int flags)
+{
+	down_write(&current->mm->mmap_sem);
+	if (flags & MAP_FIXED) {
+		/*
+		 * MAP_FIXED may lead to overlapping mmap. When this happens,
+		 * a series of complete IA64 pages results in deletion of
+		 * old partial pages in that range.
+		 */
+		__ia32_delete_pp_range(PAGE_ALIGN(start), PAGE_START(end));
+	}
+
+	if (end < PAGE_ALIGN(start)) {
+		__ia32_set_pp(start, end, flags);
+	} else {
+		if (offset_in_page(start))
+			__ia32_set_pp(start, PAGE_ALIGN(start), flags);
+		if (offset_in_page(end))
+			__ia32_set_pp(PAGE_START(end), end, flags);
+	}
+	up_write(&current->mm->mmap_sem);
+}
+
+/*
+ * Unset the range between @start and @end in bitmap.
+ * @start and @end should be IA32 page aligned and in the same IA64 page.
+ * After doing that, if the bitmap is 0, then free the page and return 1,
+ * 	else return 0;
+ * If not find the partial page in the list, then
+ * 	If the vma exists, then the full page is set to a partial page;
+ *	Else return -ENOMEM.
+ */
+static int
+__ia32_unset_pp(unsigned int start, unsigned int end)
+{
+	struct partial_page *pp, *prev;
+	struct rb_node ** rb_link, *rb_parent;
+	unsigned int pstart, start_bit, end_bit, i;
+	struct vm_area_struct *vma;
+
+	pstart = PAGE_START(start);
+	start_bit = (start % PAGE_SIZE) / IA32_PAGE_SIZE;
+	end_bit = (end % PAGE_SIZE) / IA32_PAGE_SIZE;
+	if (end_bit == 0)
+		end_bit = PAGE_SIZE / IA32_PAGE_SIZE;
+
+	pp = __ia32_find_pp(current->thread.ppl, pstart, &prev,
+					&rb_link, &rb_parent);
+	if (pp) {
+		for (i = start_bit; i < end_bit; i++)
+			clear_bit(i, &pp->bitmap);
+		if (pp->bitmap == 0) {
+			__ia32_delete_pp(current->thread.ppl, pp, __pp_prev(pp));
+			return 1;
+		}
+		return 0;
+	}
+
+	vma = find_vma(current->mm, pstart);
+	if (!vma || vma->vm_start > pstart) {
+		return -ENOMEM;
+	}
+
+	/* new a partial_page */
+	pp = kmem_cache_alloc(partial_page_cachep, GFP_KERNEL);
+	if (!pp)
+		return -ENOMEM;
+	pp->base = pstart;
+	pp->bitmap = 0;
+	for (i = 0; i < start_bit; i++)
+		set_bit(i, &(pp->bitmap));
+	for (i = end_bit; i < PAGE_SIZE / IA32_PAGE_SIZE; i++)
+		set_bit(i, &(pp->bitmap));
+	pp->next = NULL;
+	__ia32_insert_pp(current->thread.ppl, pp, prev, rb_link, rb_parent);
+	return 0;
+}
+
+/*
+ * Delete pp between PAGE_ALIGN(start) and PAGE_START(end) by calling
+ * __ia32_delete_pp_range(). Unset possible partial pages by calling
+ * __ia32_unset_pp().
+ * The returned value see __ia32_unset_pp().
+ */
+static int
+ia32_unset_pp(unsigned int *startp, unsigned int *endp)
+{
+	unsigned int start = *startp, end = *endp;
+	int ret = 0;
+
+	down_write(&current->mm->mmap_sem);
+
+	__ia32_delete_pp_range(PAGE_ALIGN(start), PAGE_START(end));
+
+	if (end < PAGE_ALIGN(start)) {
+		ret = __ia32_unset_pp(start, end);
+		if (ret == 1) {
+			*startp = PAGE_START(start);
+			*endp = PAGE_ALIGN(end);
+		}
+		if (ret == 0) {
+			/* to shortcut sys_munmap() in sys32_munmap() */
+			*startp = PAGE_START(start);
+			*endp = PAGE_START(end);
+		}
+	} else {
+		if (offset_in_page(start)) {
+			ret = __ia32_unset_pp(start, PAGE_ALIGN(start));
+			if (ret == 1)
+				*startp = PAGE_START(start);
+			if (ret == 0)
+				*startp = PAGE_ALIGN(start);
+			if (ret < 0)
+				goto out;
+		}
+		if (offset_in_page(end)) {
+			ret = __ia32_unset_pp(PAGE_START(end), end);
+			if (ret == 1)
+				*endp = PAGE_ALIGN(end);
+			if (ret == 0)
+				*endp = PAGE_START(end);
+		}
+	}
+
+ out:
+	up_write(&current->mm->mmap_sem);
+	return ret;
+}
+
+/*
+ * Compare the range between @start and @end with bitmap in partial page.
+ * @start and @end should be IA32 page aligned and in the same IA64 page.
+ */
+static int
+__ia32_compare_pp(unsigned int start, unsigned int end)
+{
+	struct partial_page *pp, *prev;
+	struct rb_node ** rb_link, *rb_parent;
+	unsigned int pstart, start_bit, end_bit, size;
+	unsigned int first_bit, next_zero_bit;	/* the first range in bitmap */
+
+	pstart = PAGE_START(start);
+
+	pp = __ia32_find_pp(current->thread.ppl, pstart, &prev,
+					&rb_link, &rb_parent);
+	if (!pp)
+		return 1;
+
+	start_bit = (start % PAGE_SIZE) / IA32_PAGE_SIZE;
+	end_bit = (end % PAGE_SIZE) / IA32_PAGE_SIZE;
+	size = sizeof(pp->bitmap) * 8;
+	first_bit = find_first_bit(&pp->bitmap, size);
+	next_zero_bit = find_next_zero_bit(&pp->bitmap, size, first_bit);
+	if ((start_bit < first_bit) || (end_bit > next_zero_bit)) {
+		/* exceeds the first range in bitmap */
+		return -ENOMEM;
+	} else if ((start_bit == first_bit) && (end_bit == next_zero_bit)) {
+		first_bit = find_next_bit(&pp->bitmap, size, next_zero_bit);
+		if ((next_zero_bit < first_bit) && (first_bit < size))
+			return 1;	/* has next range */
+		else
+			return 0; 	/* no next range */
+	} else
+		return 1;
+}
+
+/*
+ * @start and @end should be IA32 page aligned, but don't need to be in the
+ * same IA64 page. Split @start and @end to make sure they're in the same IA64
+ * page, then call __ia32_compare_pp().
+ *
+ * Take this as example: the range is the 1st and 2nd 4K page.
+ * Return 0 if they fit bitmap exactly, i.e. bitmap = 00000011;
+ * Return 1 if the range doesn't cover whole bitmap, e.g. bitmap = 00001111;
+ * Return -ENOMEM if the range exceeds the bitmap, e.g. bitmap = 00000001 or
+ * 	bitmap = 00000101.
+ */
+static int
+ia32_compare_pp(unsigned int *startp, unsigned int *endp)
+{
+	unsigned int start = *startp, end = *endp;
+	int retval = 0;
+
+	down_write(&current->mm->mmap_sem);
+
+	if (end < PAGE_ALIGN(start)) {
+		retval = __ia32_compare_pp(start, end);
+		if (retval == 0) {
+			*startp = PAGE_START(start);
+			*endp = PAGE_ALIGN(end);
+		}
+	} else {
+		if (offset_in_page(start)) {
+			retval = __ia32_compare_pp(start,
+						   PAGE_ALIGN(start));
+			if (retval == 0)
+				*startp = PAGE_START(start);
+			if (retval < 0)
+				goto out;
+		}
+		if (offset_in_page(end)) {
+			retval = __ia32_compare_pp(PAGE_START(end), end);
+			if (retval == 0)
+				*endp = PAGE_ALIGN(end);
+		}
+	}
+
+ out:
+	up_write(&current->mm->mmap_sem);
+	return retval;
+}
+
+static void
+__ia32_drop_pp_list(struct partial_page_list *ppl)
+{
+	struct partial_page *pp = ppl->pp_head;
+
+	while (pp) {
+		struct partial_page *next = pp->next;
+		kmem_cache_free(partial_page_cachep, pp);
+		pp = next;
+	}
+
+	kfree(ppl);
+}
+
+void
+ia32_drop_partial_page_list(struct task_struct *task)
+{
+	struct partial_page_list* ppl = task->thread.ppl;
+
+	if (ppl && atomic_dec_and_test(&ppl->pp_count))
+		__ia32_drop_pp_list(ppl);
+}
+
+/*
+ * Copy current->thread.ppl to ppl (already initialized).
+ */
+static int
+__ia32_copy_pp_list(struct partial_page_list *ppl)
+{
+	struct partial_page *pp, *tmp, *prev;
+	struct rb_node **rb_link, *rb_parent;
+
+	ppl->pp_head = NULL;
+	ppl->pp_hint = NULL;
+	ppl->ppl_rb = RB_ROOT;
+	rb_link = &ppl->ppl_rb.rb_node;
+	rb_parent = NULL;
+	prev = NULL;
+
+	for (pp = current->thread.ppl->pp_head; pp; pp = pp->next) {
+		tmp = kmem_cache_alloc(partial_page_cachep, GFP_KERNEL);
+		if (!tmp)
+			return -ENOMEM;
+		*tmp = *pp;
+		__ia32_insert_pp(ppl, tmp, prev, rb_link, rb_parent);
+		prev = tmp;
+		rb_link = &tmp->pp_rb.rb_right;
+		rb_parent = &tmp->pp_rb;
+	}
+	return 0;
+}
+
+int
+ia32_copy_partial_page_list(struct task_struct *p, unsigned long clone_flags)
+{
+	int retval = 0;
+
+	if (clone_flags & CLONE_VM) {
+		atomic_inc(&current->thread.ppl->pp_count);
+		p->thread.ppl = current->thread.ppl;
+	} else {
+		p->thread.ppl = ia32_init_pp_list();
+		if (!p->thread.ppl)
+			return -ENOMEM;
+		down_write(&current->mm->mmap_sem);
+		{
+			retval = __ia32_copy_pp_list(p->thread.ppl);
+		}
+		up_write(&current->mm->mmap_sem);
+	}
+
+	return retval;
+}
+
 static unsigned long
 emulate_mmap (struct file *file, unsigned long start, unsigned long len, int prot, int flags,
 	      loff_t off)
@@ -305,6 +767,7 @@ emulate_mmap (struct file *file, unsigned long start, unsigned long len, int pro
 	pend = PAGE_ALIGN(end);
 
 	if (flags & MAP_FIXED) {
+		ia32_set_pp((unsigned int)start, (unsigned int)end, flags);
 		if (start > pstart) {
 			if (flags & MAP_SHARED)
 				printk(KERN_INFO
@@ -316,7 +779,7 @@ emulate_mmap (struct file *file, unsigned long start, unsigned long len, int pro
 				return ret;
 			pstart += PAGE_SIZE;
 			if (pstart >= pend)
-				return start;	/* done */
+				goto out;	/* done */
 		}
 		if (end < pend) {
 			if (flags & MAP_SHARED)
@@ -329,7 +792,7 @@ emulate_mmap (struct file *file, unsigned long start, unsigned long len, int pro
 				return ret;
 			pend -= PAGE_SIZE;
 			if (pstart >= pend)
-				return start;	/* done */
+				goto out;	/* done */
 		}
 	} else {
 		/*
@@ -383,6 +846,10 @@ emulate_mmap (struct file *file, unsigned long start, unsigned long len, int pro
 		if (!(prot & PROT_WRITE) && sys_mprotect(pstart, pend - pstart, prot) < 0)
 			return -EINVAL;
 	}
+
+	if (!(flags & MAP_FIXED))
+		ia32_set_pp((unsigned int)start, (unsigned int)end, flags);
+out:
 	return start;
 }
 
@@ -520,11 +987,16 @@ sys32_munmap (unsigned int start, unsigned int len)
 #if PAGE_SHIFT <= IA32_PAGE_SHIFT
 	ret = sys_munmap(start, end - start);
 #else
+	if (OFFSET4K(start))
+		return -EINVAL;
+
+	end = IA32_PAGE_ALIGN(end);
 	if (start >= end)
 		return -EINVAL;
 
-	start = PAGE_ALIGN(start);
-	end = PAGE_START(end);
+	ret = ia32_unset_pp(&start, &end);
+	if (ret < 0)
+		return ret;
 
 	if (start >= end)
 		return 0;
@@ -563,7 +1035,7 @@ mprotect_subpage (unsigned long address, int new_prot)
 asmlinkage long
 sys32_mprotect (unsigned int start, unsigned int len, int prot)
 {
-	unsigned long end = start + len;
+	unsigned int end = start + len;
 #if PAGE_SHIFT > IA32_PAGE_SHIFT
 	long retval = 0;
 #endif
@@ -579,6 +1051,11 @@ sys32_mprotect (unsigned int start, unsigned int len, int prot)
 	end = IA32_PAGE_ALIGN(end);
 	if (end < start)
 		return -EINVAL;
+
+	retval = ia32_compare_pp(&start, &end);
+
+	if (retval < 0)
+		return retval;
 
 	down(&ia32_mmap_sem);
 	{
@@ -607,6 +1084,59 @@ sys32_mprotect (unsigned int start, unsigned int len, int prot)
 	up(&ia32_mmap_sem);
 	return retval;
 #endif
+}
+
+asmlinkage long
+sys32_mremap (unsigned int addr, unsigned int old_len, unsigned int new_len,
+		unsigned int flags, unsigned int new_addr)
+{
+	long ret;
+
+#if PAGE_SHIFT <= IA32_PAGE_SHIFT
+	ret = sys_mremap(addr, old_len, new_len, flags, new_addr);
+#else
+	unsigned int old_end, new_end;
+
+	if (OFFSET4K(addr))
+		return -EINVAL;
+
+	old_len = IA32_PAGE_ALIGN(old_len);
+	new_len = IA32_PAGE_ALIGN(new_len);
+	old_end = addr + old_len;
+	new_end = addr + new_len;
+
+	if (!new_len)
+		return -EINVAL;
+
+	if ((flags & MREMAP_FIXED) && (OFFSET4K(new_addr)))
+		return -EINVAL;
+
+	if (old_len >= new_len) {
+		ret = sys32_munmap(addr + new_len, old_len - new_len);
+		if (ret && old_len != new_len)
+			return ret;
+		ret = addr;
+		if (!(flags & MREMAP_FIXED) || (new_addr == addr))
+			return ret;
+		old_len = new_len;
+	}
+
+	addr = PAGE_START(addr);
+	old_len = PAGE_ALIGN(old_end) - addr;
+	new_len = PAGE_ALIGN(new_end) - addr;
+
+	down(&ia32_mmap_sem);
+	{
+		ret = sys_mremap(addr, old_len, new_len, flags, new_addr);
+	}
+	up(&ia32_mmap_sem);
+
+	if ((ret >= 0) && (old_len < new_len)) {
+		/* mremap expanded successfully */
+		ia32_set_pp(old_end, new_end, flags);
+	}
+#endif
+	return ret;
 }
 
 asmlinkage long
@@ -818,110 +1348,6 @@ out:
 	return error;
 }
 
-/*
- * We can actually return ERESTARTSYS instead of EINTR, but I'd
- * like to be certain this leads to no problems. So I return
- * EINTR just for safety.
- *
- * Update: ERESTARTSYS breaks at least the xview clock binary, so
- * I'm trying ERESTARTNOHAND which restart only when you want to.
- */
-#define MAX_SELECT_SECONDS \
-	((unsigned long) (MAX_SCHEDULE_TIMEOUT / HZ)-1)
-#define ROUND_UP_TIME(x,y) (((x)+(y)-1)/(y))
-
-asmlinkage long
-sys32_select (int n, fd_set *inp, fd_set *outp, fd_set *exp, struct compat_timeval *tvp32)
-{
-	fd_set_bits fds;
-	char *bits;
-	long timeout;
-	int ret, size;
-
-	timeout = MAX_SCHEDULE_TIMEOUT;
-	if (tvp32) {
-		time_t sec, usec;
-
-		ret = -EFAULT;
-		if (get_user(sec, &tvp32->tv_sec) || get_user(usec, &tvp32->tv_usec))
-			goto out_nofds;
-
-		ret = -EINVAL;
-		if (sec < 0 || usec < 0)
-			goto out_nofds;
-
-		if ((unsigned long) sec < MAX_SELECT_SECONDS) {
-			timeout = ROUND_UP_TIME(usec, 1000000/HZ);
-			timeout += sec * (unsigned long) HZ;
-		}
-	}
-
-	ret = -EINVAL;
-	if (n < 0)
-		goto out_nofds;
-
-	if (n > current->files->max_fdset)
-		n = current->files->max_fdset;
-
-	/*
-	 * We need 6 bitmaps (in/out/ex for both incoming and outgoing),
-	 * since we used fdset we need to allocate memory in units of
-	 * long-words.
-	 */
-	ret = -ENOMEM;
-	size = FDS_BYTES(n);
-	bits = kmalloc(6 * size, GFP_KERNEL);
-	if (!bits)
-		goto out_nofds;
-	fds.in      = (unsigned long *)  bits;
-	fds.out     = (unsigned long *) (bits +   size);
-	fds.ex      = (unsigned long *) (bits + 2*size);
-	fds.res_in  = (unsigned long *) (bits + 3*size);
-	fds.res_out = (unsigned long *) (bits + 4*size);
-	fds.res_ex  = (unsigned long *) (bits + 5*size);
-
-	if ((ret = get_fd_set(n, inp, fds.in)) ||
-	    (ret = get_fd_set(n, outp, fds.out)) ||
-	    (ret = get_fd_set(n, exp, fds.ex)))
-		goto out;
-	zero_fd_set(n, fds.res_in);
-	zero_fd_set(n, fds.res_out);
-	zero_fd_set(n, fds.res_ex);
-
-	ret = do_select(n, &fds, &timeout);
-
-	if (tvp32 && !(current->personality & STICKY_TIMEOUTS)) {
-		time_t sec = 0, usec = 0;
-		if (timeout) {
-			sec = timeout / HZ;
-			usec = timeout % HZ;
-			usec *= (1000000/HZ);
-		}
-		if (put_user(sec, &tvp32->tv_sec) || put_user(usec, &tvp32->tv_usec)) {
-			ret = -EFAULT;
-			goto out;
-		}
-	}
-
-	if (ret < 0)
-		goto out;
-	if (!ret) {
-		ret = -ERESTARTNOHAND;
-		if (signal_pending(current))
-			goto out;
-		ret = 0;
-	}
-
-	set_fd_set(n, inp, fds.res_in);
-	set_fd_set(n, outp, fds.res_out);
-	set_fd_set(n, exp, fds.res_ex);
-
-out:
-	kfree(bits);
-out_nofds:
-	return ret;
-}
-
 struct sel_arg_struct {
 	unsigned int n;
 	unsigned int inp;
@@ -937,87 +1363,8 @@ sys32_old_select (struct sel_arg_struct *arg)
 
 	if (copy_from_user(&a, arg, sizeof(a)))
 		return -EFAULT;
-	return sys32_select(a.n, (fd_set *) A(a.inp), (fd_set *) A(a.outp), (fd_set *) A(a.exp),
-			    (struct compat_timeval *) A(a.tvp));
-}
-
-static struct iovec *
-get_compat_iovec (struct compat_iovec *iov32, struct iovec *iov_buf, u32 count, int type)
-{
-	u32 i, buf, len;
-	struct iovec *ivp, *iov;
-
-	/* Get the "struct iovec" from user memory */
-
-	if (!count)
-		return 0;
-	if (verify_area(VERIFY_READ, iov32, sizeof(struct compat_iovec)*count))
-		return NULL;
-	if (count > UIO_MAXIOV)
-		return NULL;
-	if (count > UIO_FASTIOV) {
-		iov = kmalloc(count*sizeof(struct iovec), GFP_KERNEL);
-		if (!iov)
-			return NULL;
-	} else
-		iov = iov_buf;
-
-	ivp = iov;
-	for (i = 0; i < count; i++) {
-		if (__get_user(len, &iov32->iov_len) || __get_user(buf, &iov32->iov_base)) {
-			if (iov != iov_buf)
-				kfree(iov);
-			return NULL;
-		}
-		if (verify_area(type, (void *)A(buf), len)) {
-			if (iov != iov_buf)
-				kfree(iov);
-			return((struct iovec *)0);
-		}
-		ivp->iov_base = (void *)A(buf);
-		ivp->iov_len = (__kernel_size_t) len;
-		iov32++;
-		ivp++;
-	}
-	return iov;
-}
-
-asmlinkage long
-sys32_readv (int fd, struct compat_iovec *vector, u32 count)
-{
-	struct iovec iovstack[UIO_FASTIOV];
-	struct iovec *iov;
-	long ret;
-	mm_segment_t old_fs = get_fs();
-
-	iov = get_compat_iovec(vector, iovstack, count, VERIFY_WRITE);
-	if (!iov)
-		return -EFAULT;
-	set_fs(KERNEL_DS);
-	ret = sys_readv(fd, iov, count);
-	set_fs(old_fs);
-	if (iov != iovstack)
-		kfree(iov);
-	return ret;
-}
-
-asmlinkage long
-sys32_writev (int fd, struct compat_iovec *vector, u32 count)
-{
-	struct iovec iovstack[UIO_FASTIOV];
-	struct iovec *iov;
-	long ret;
-	mm_segment_t old_fs = get_fs();
-
-	iov = get_compat_iovec(vector, iovstack, count, VERIFY_READ);
-	if (!iov)
-		return -EFAULT;
-	set_fs(KERNEL_DS);
-	ret = sys_writev(fd, iov, count);
-	set_fs(old_fs);
-	if (iov != iovstack)
-		kfree(iov);
-	return ret;
+	return compat_sys_select(a.n, compat_ptr(a.inp), compat_ptr(a.outp),
+				 compat_ptr(a.exp), compat_ptr(a.tvp));
 }
 
 #define SEMOP		 1
@@ -1649,18 +1996,19 @@ sys32_sigaltstack (ia32_stack_t *uss32, ia32_stack_t *uoss32,
 	int ret;
 	mm_segment_t old_fs = get_fs();
 
-	if (uss32)
+	if (uss32) {
 		if (copy_from_user(&buf32, uss32, sizeof(ia32_stack_t)))
 			return -EFAULT;
-	uss.ss_sp = (void *) (long) buf32.ss_sp;
-	uss.ss_flags = buf32.ss_flags;
-	/* MINSIGSTKSZ is different for ia32 vs ia64. We lie here to pass the 
-           check and set it to the user requested value later */
-	if ((buf32.ss_flags != SS_DISABLE) && (buf32.ss_size < MINSIGSTKSZ_IA32)) {
-		ret = -ENOMEM;
-		goto out;
+		uss.ss_sp = (void *) (long) buf32.ss_sp;
+		uss.ss_flags = buf32.ss_flags;
+		/* MINSIGSTKSZ is different for ia32 vs ia64. We lie here to pass the 
+	           check and set it to the user requested value later */
+		if ((buf32.ss_flags != SS_DISABLE) && (buf32.ss_size < MINSIGSTKSZ_IA32)) {
+			ret = -ENOMEM;
+			goto out;
+		}
+		uss.ss_size = MINSIGSTKSZ;
 	}
-	uss.ss_size = MINSIGSTKSZ;
 	set_fs(KERNEL_DS);
 	ret = do_sigaltstack(uss32 ? &uss : NULL, &uoss, pt->r12);
  	current->sas_ss_size = buf32.ss_size;	
@@ -2298,7 +2646,7 @@ sys32_set_thread_area (struct ia32_user_desc *u_info)
 	((desc)->a & 0x0ffff) |			\
 	 ((desc)->b & 0xf0000) )
 
-#define GET_32BIT(desc)		(((desc)->b >> 23) & 1)
+#define GET_32BIT(desc)		(((desc)->b >> 22) & 1)
 #define GET_CONTENTS(desc)	(((desc)->b >> 10) & 3)
 #define GET_WRITABLE(desc)	(((desc)->b >>  9) & 1)
 #define GET_LIMIT_PAGES(desc)	(((desc)->b >> 23) & 1)
@@ -2423,176 +2771,6 @@ sys32_setresgid(compat_gid_t rgid, compat_gid_t egid,
 	segid = (egid == (compat_gid_t)-1) ? ((gid_t)-1) : ((gid_t)egid);
 	ssgid = (sgid == (compat_gid_t)-1) ? ((gid_t)-1) : ((gid_t)sgid);
 	return sys_setresgid(srgid, segid, ssgid);
-}
-
-/* Stuff for NFS server syscalls... */
-struct nfsctl_svc32 {
-	u16			svc32_port;
-	s32			svc32_nthreads;
-};
-
-struct nfsctl_client32 {
-	s8			cl32_ident[NFSCLNT_IDMAX+1];
-	s32			cl32_naddr;
-	struct in_addr		cl32_addrlist[NFSCLNT_ADDRMAX];
-	s32			cl32_fhkeytype;
-	s32			cl32_fhkeylen;
-	u8			cl32_fhkey[NFSCLNT_KEYMAX];
-};
-
-struct nfsctl_export32 {
-	s8			ex32_client[NFSCLNT_IDMAX+1];
-	s8			ex32_path[NFS_MAXPATHLEN+1];
-	compat_dev_t	ex32_dev;
-	compat_ino_t	ex32_ino;
-	s32			ex32_flags;
-	compat_uid_t	ex32_anon_uid;
-	compat_gid_t	ex32_anon_gid;
-};
-
-struct nfsctl_arg32 {
-	s32			ca32_version;	/* safeguard */
-	union {
-		struct nfsctl_svc32	u32_svc;
-		struct nfsctl_client32	u32_client;
-		struct nfsctl_export32	u32_export;
-		u32			u32_debug;
-	} u;
-#define ca32_svc	u.u32_svc
-#define ca32_client	u.u32_client
-#define ca32_export	u.u32_export
-#define ca32_debug	u.u32_debug
-};
-
-union nfsctl_res32 {
-	struct knfs_fh		cr32_getfh;
-	u32			cr32_debug;
-};
-
-static int
-nfs_svc32_trans(struct nfsctl_arg *karg, struct nfsctl_arg32 *arg32)
-{
-	int err;
-
-	err = __get_user(karg->ca_version, &arg32->ca32_version);
-	err |= __get_user(karg->ca_svc.svc_port, &arg32->ca32_svc.svc32_port);
-	err |= __get_user(karg->ca_svc.svc_nthreads,
-			  &arg32->ca32_svc.svc32_nthreads);
-	return err;
-}
-
-static int
-nfs_clnt32_trans(struct nfsctl_arg *karg, struct nfsctl_arg32 *arg32)
-{
-	int err;
-
-	err = __get_user(karg->ca_version, &arg32->ca32_version);
-	err |= copy_from_user(&karg->ca_client.cl_ident[0],
-			  &arg32->ca32_client.cl32_ident[0],
-			  NFSCLNT_IDMAX);
-	err |= __get_user(karg->ca_client.cl_naddr,
-			  &arg32->ca32_client.cl32_naddr);
-	err |= copy_from_user(&karg->ca_client.cl_addrlist[0],
-			  &arg32->ca32_client.cl32_addrlist[0],
-			  (sizeof(struct in_addr) * NFSCLNT_ADDRMAX));
-	err |= __get_user(karg->ca_client.cl_fhkeytype,
-		      &arg32->ca32_client.cl32_fhkeytype);
-	err |= __get_user(karg->ca_client.cl_fhkeylen,
-		      &arg32->ca32_client.cl32_fhkeylen);
-	err |= copy_from_user(&karg->ca_client.cl_fhkey[0],
-			  &arg32->ca32_client.cl32_fhkey[0],
-			  NFSCLNT_KEYMAX);
-	return err;
-}
-
-static int
-nfs_exp32_trans(struct nfsctl_arg *karg, struct nfsctl_arg32 *arg32)
-{
-	int err;
-
-	err = __get_user(karg->ca_version, &arg32->ca32_version);
-	err |= copy_from_user(&karg->ca_export.ex_client[0],
-			  &arg32->ca32_export.ex32_client[0],
-			  NFSCLNT_IDMAX);
-	err |= copy_from_user(&karg->ca_export.ex_path[0],
-			  &arg32->ca32_export.ex32_path[0],
-			  NFS_MAXPATHLEN);
-	err |= __get_user(karg->ca_export.ex_dev,
-		      &arg32->ca32_export.ex32_dev);
-	err |= __get_user(karg->ca_export.ex_ino,
-		      &arg32->ca32_export.ex32_ino);
-	err |= __get_user(karg->ca_export.ex_flags,
-		      &arg32->ca32_export.ex32_flags);
-	err |= __get_user(karg->ca_export.ex_anon_uid,
-		      &arg32->ca32_export.ex32_anon_uid);
-	err |= __get_user(karg->ca_export.ex_anon_gid,
-		      &arg32->ca32_export.ex32_anon_gid);
-	return err;
-}
-
-static int
-nfs_getfh32_res_trans(union nfsctl_res *kres, union nfsctl_res32 *res32)
-{
-	int err;
-
-	err = copy_to_user(&res32->cr32_getfh,
-			&kres->cr_getfh,
-			sizeof(res32->cr32_getfh));
-	err |= __put_user(kres->cr_debug, &res32->cr32_debug);
-	return err;
-}
-
-int asmlinkage
-sys32_nfsservctl(int cmd, struct nfsctl_arg32 *arg32, union nfsctl_res32 *res32)
-{
-	struct nfsctl_arg *karg = NULL;
-	union nfsctl_res *kres = NULL;
-	mm_segment_t oldfs;
-	int err;
-
-	karg = kmalloc(sizeof(*karg), GFP_USER);
-	if(!karg)
-		return -ENOMEM;
-	if(res32) {
-		kres = kmalloc(sizeof(*kres), GFP_USER);
-		if(!kres) {
-			kfree(karg);
-			return -ENOMEM;
-		}
-	}
-	switch(cmd) {
-	case NFSCTL_SVC:
-		err = nfs_svc32_trans(karg, arg32);
-		break;
-	case NFSCTL_ADDCLIENT:
-		err = nfs_clnt32_trans(karg, arg32);
-		break;
-	case NFSCTL_DELCLIENT:
-		err = nfs_clnt32_trans(karg, arg32);
-		break;
-	case NFSCTL_EXPORT:
-		err = nfs_exp32_trans(karg, arg32);
-		break;
-	default:
-		err = -EINVAL;
-		break;
-	}
-	if(err)
-		goto done;
-	oldfs = get_fs();
-	set_fs(KERNEL_DS);
-	err = sys_nfsservctl(cmd, karg, kres);
-	set_fs(oldfs);
-
-	if(!err && cmd == NFSCTL_GETFS)
-		err = nfs_getfh32_res_trans(kres, res32);
-
-done:
-	if(karg)
-		kfree(karg);
-	if(kres)
-		kfree(kres);
-	return err;
 }
 
 /* Handle adjtimex compatibility. */

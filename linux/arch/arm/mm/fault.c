@@ -66,9 +66,7 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 		/* We must not map this if we have highmem enabled */
 		pte = pte_offset_map(pmd, addr);
 		printk(", *pte=%08lx", pte_val(*pte));
-#ifdef CONFIG_CPU_32
 		printk(", *ppte=%08lx", pte_val(pte[-PTRS_PER_PTE]));
-#endif
 		pte_unmap(pte);
 #endif
 	} while(0);
@@ -129,7 +127,7 @@ __do_user_fault(struct task_struct *tsk, unsigned long addr,
 	si.si_signo = SIGSEGV;
 	si.si_errno = 0;
 	si.si_code = code;
-	si.si_addr = (void *)addr;
+	si.si_addr = (void __user *)addr;
 	force_sig_info(SIGSEGV, &si, tsk);
 }
 
@@ -348,7 +346,7 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
 	if (pmd_none(*pmd_k))
 		goto bad_area;
 
-	set_pmd(pmd, *pmd_k);
+	copy_pmd(pmd, pmd_k);
 	return 0;
 
 bad_area:

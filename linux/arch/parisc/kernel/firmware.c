@@ -10,6 +10,7 @@
  * Copyright 1999 SuSE GmbH Nuernberg (Philipp Rumpf, prumpf@tux.org)
  * Copyright 1999 The Puffin Group, (Alex deVries, David Kennedy)
  * Copyright 2003 Grant Grundler <grundler parisc-linux org>
+ * Copyright 2003,2004 Ryan Bradetich <rbrad@parisc-linux.org>
  *
  *    This program is free software; you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -64,12 +65,22 @@
 
 #include <asm/page.h>
 #include <asm/pdc.h>
+#include <asm/pdcpat.h>
 #include <asm/system.h>
 #include <asm/processor.h>	/* for boot_cpu_data */
 
 static spinlock_t pdc_lock = SPIN_LOCK_UNLOCKED;
 static unsigned long pdc_result[32] __attribute__ ((aligned (8)));
 static unsigned long pdc_result2[32] __attribute__ ((aligned (8)));
+
+#ifdef __LP64__
+#define WIDE_FIRMWARE 0x1
+#define NARROW_FIRMWARE 0x2
+
+/* Firmware needs to be initially set to narrow to determine the 
+ * actual firmware width. */
+int parisc_narrow_firmware = 1;
+#endif
 
 /* on all currently-supported platforms, IODC I/O calls are always
  * 32-bit calls, and MEM_PDC calls are always the same width as the OS.
@@ -87,11 +98,11 @@ long real64_call(unsigned long function, ...);
 #endif
 long real32_call(unsigned long function, ...);
 
-#if defined(__LP64__) && ! defined(CONFIG_PDC_NARROW)
-#define MEM_PDC (unsigned long)(PAGE0->mem_pdc_hi) << 32 | PAGE0->mem_pdc
-#   define mem_pdc_call(args...) real64_call(MEM_PDC, args)
+#ifdef __LP64__
+#   define MEM_PDC (unsigned long)(PAGE0->mem_pdc_hi) << 32 | PAGE0->mem_pdc
+#   define mem_pdc_call(args...) unlikely(parisc_narrow_firmware) ? real32_call(MEM_PDC, args) : real64_call(MEM_PDC, args)
 #else
-#define MEM_PDC (unsigned long)PAGE0->mem_pdc
+#   define MEM_PDC (unsigned long)PAGE0->mem_pdc
 #   define mem_pdc_call(args...) real32_call(MEM_PDC, args)
 #endif
 
@@ -105,12 +116,14 @@ long real32_call(unsigned long function, ...);
  */
 static unsigned long f_extend(unsigned long address)
 {
-#ifdef CONFIG_PDC_NARROW
-	if((address & 0xff000000) == 0xf0000000)
-		return 0xf0f0f0f000000000 | (u32)address;
+#ifdef __LP64__
+	if(unlikely(parisc_narrow_firmware)) {
+		if((address & 0xff000000) == 0xf0000000)
+			return 0xf0f0f0f000000000 | (u32)address;
 
-	if((address & 0xf0000000) == 0xf0000000)
-		return 0xffffffff00000000 | (u32)address;
+		if((address & 0xf0000000) == 0xf0000000)
+			return 0xffffffff00000000 | (u32)address;
+	}
 #endif
 	return address;
 }
@@ -125,11 +138,34 @@ static unsigned long f_extend(unsigned long address)
  */
 static void convert_to_wide(unsigned long *addr)
 {
-#ifdef CONFIG_PDC_NARROW
+#ifdef __LP64__
 	int i;
-	unsigned *p = (unsigned int *)addr;
-	for(i = 31; i >= 0; --i)
-		addr[i] = p[i];
+	unsigned int *p = (unsigned int *)addr;
+
+	if(unlikely(parisc_narrow_firmware)) {
+		for(i = 31; i >= 0; --i)
+			addr[i] = p[i];
+	}
+#endif
+}
+
+/**
+ * set_firmware_width - Determine if the firmware is wide or narrow.
+ * 
+ * This function must be called before any pdc_* function that uses the convert_to_wide
+ * function.
+ */
+void __init set_firmware_width(void)
+{
+#ifdef __LP64__
+	int retval;
+
+        spin_lock_irq(&pdc_lock);
+	retval = mem_pdc_call(PDC_MODEL, PDC_MODEL_CAPABILITIES, __pa(pdc_result), 0);
+	convert_to_wide(pdc_result);
+	if(pdc_result[0] != NARROW_FIRMWARE)
+		parisc_narrow_firmware = 0;
+        spin_unlock_irq(&pdc_lock);
 #endif
 }
 
@@ -141,7 +177,9 @@ static void convert_to_wide(unsigned long *addr)
  */
 void pdc_emergency_unlock(void)
 {
-        spin_unlock(&pdc_lock);
+ 	/* Spinlock DEBUG code freaks out if we unconditionally unlock */
+        if (spin_is_locked(&pdc_lock))
+		spin_unlock(&pdc_lock);
 }
 
 
@@ -199,10 +237,10 @@ int __init pdc_chassis_info(struct pdc_chassis_info *chassis_info, void *led_inf
 #ifdef __LP64__
 int pdc_pat_chassis_send_log(unsigned long state, unsigned long data)
 {
+	int retval = 0;
+        
 	if (!is_pdc_pat())
 		return -1;
-
-	int retval = 0;
 
 	spin_lock_irq(&pdc_lock);
 	retval = mem_pdc_call(PDC_PAT_CHASSIS_LOG, PDC_PAT_CHASSIS_WRITE_LOG, __pa(&state), __pa(&data));
@@ -582,6 +620,7 @@ int pdc_get_initiator(struct hardware_path *hwpath, unsigned char *scsi_id,
 		case 10:  *period = 1000; break;
 		case 20:  *period = 500; break;
 		case 40:  *period = 250; break;
+		case 80:  *period = 125; break;
 		default: /* Do nothing */ break;
 	}
 
@@ -1110,6 +1149,49 @@ int pdc_pat_pd_get_addr_map(unsigned long *actual_len, void *mem_addr,
 
 	return retval;
 }
+
+/**
+ * pdc_pat_io_pci_cfg_read - Read PCI configuration space.
+ * @pci_addr: PCI configuration space address for which the read request is being made.
+ * @pci_size: Size of read in bytes. Valid values are 1, 2, and 4. 
+ * @mem_addr: Pointer to return memory buffer.
+ *
+ */
+int pdc_pat_io_pci_cfg_read(unsigned long pci_addr, int pci_size, u32 *mem_addr)
+{
+	int retval;
+	spin_lock_irq(&pdc_lock);
+	retval = mem_pdc_call(PDC_PAT_IO, PDC_PAT_IO_PCI_CONFIG_READ,
+					__pa(pdc_result), pci_addr, pci_size);
+	switch(pci_size) {
+		case 1: *(u8 *) mem_addr =  (u8)  pdc_result[0];
+		case 2: *(u16 *)mem_addr =  (u16) pdc_result[0];
+		case 4: *(u32 *)mem_addr =  (u32) pdc_result[0];
+	}
+	spin_unlock_irq(&pdc_lock);
+
+	return retval;
+}
+
+/**
+ * pdc_pat_io_pci_cfg_write - Retrieve information about memory address ranges.
+ * @pci_addr: PCI configuration space address for which the write  request is being made.
+ * @pci_size: Size of write in bytes. Valid values are 1, 2, and 4. 
+ * @value: Pointer to 1, 2, or 4 byte value in low order end of argument to be 
+ *         written to PCI Config space.
+ *
+ */
+int pdc_pat_io_pci_cfg_write(unsigned long pci_addr, int pci_size, u32 val)
+{
+	int retval;
+
+	spin_lock_irq(&pdc_lock);
+	retval = mem_pdc_call(PDC_PAT_IO, PDC_PAT_IO_PCI_CONFIG_WRITE,
+				pci_addr, pci_size, val);
+	spin_unlock_irq(&pdc_lock);
+
+	return retval;
+}
 #endif /* __LP64__ */
 
 
@@ -1194,29 +1276,29 @@ struct wide_stack {
 long real64_call(unsigned long fn, ...)
 {
 	va_list args;
-	extern struct wide_stack real_stack;
+	extern struct wide_stack real64_stack __attribute__ ((alias ("real_stack")));
 	extern unsigned long real64_call_asm(unsigned long *,
 					     unsigned long *, 
 					     unsigned long);
     
 	va_start(args, fn);
-	real_stack.arg0 = va_arg(args, unsigned long);
-	real_stack.arg1 = va_arg(args, unsigned long);
-	real_stack.arg2 = va_arg(args, unsigned long);
-	real_stack.arg3 = va_arg(args, unsigned long);
-	real_stack.arg4 = va_arg(args, unsigned long);
-	real_stack.arg5 = va_arg(args, unsigned long);
-	real_stack.arg6 = va_arg(args, unsigned long);
-	real_stack.arg7 = va_arg(args, unsigned long);
-	real_stack.arg8 = va_arg(args, unsigned long);
-	real_stack.arg9 = va_arg(args, unsigned long);
-	real_stack.arg10 = va_arg(args, unsigned long);
-	real_stack.arg11 = va_arg(args, unsigned long);
-	real_stack.arg12 = va_arg(args, unsigned long);
-	real_stack.arg13 = va_arg(args, unsigned long);
+	real64_stack.arg0 = va_arg(args, unsigned long);
+	real64_stack.arg1 = va_arg(args, unsigned long);
+	real64_stack.arg2 = va_arg(args, unsigned long);
+	real64_stack.arg3 = va_arg(args, unsigned long);
+	real64_stack.arg4 = va_arg(args, unsigned long);
+	real64_stack.arg5 = va_arg(args, unsigned long);
+	real64_stack.arg6 = va_arg(args, unsigned long);
+	real64_stack.arg7 = va_arg(args, unsigned long);
+	real64_stack.arg8 = va_arg(args, unsigned long);
+	real64_stack.arg9 = va_arg(args, unsigned long);
+	real64_stack.arg10 = va_arg(args, unsigned long);
+	real64_stack.arg11 = va_arg(args, unsigned long);
+	real64_stack.arg12 = va_arg(args, unsigned long);
+	real64_stack.arg13 = va_arg(args, unsigned long);
 	va_end(args);
 	
-	return real64_call_asm(&real_stack.sp, &real_stack.arg0, fn);
+	return real64_call_asm(&real64_stack.sp, &real64_stack.arg0, fn);
 }
 
 #endif /* __LP64__ */

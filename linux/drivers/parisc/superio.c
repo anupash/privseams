@@ -63,7 +63,6 @@
 #include <linux/ioport.h>
 #include <linux/serial.h>
 #include <linux/pci.h>
-#include <linux/ioport.h>
 #include <linux/parport.h>
 #include <linux/parport_pc.h>
 #include <linux/termios.h>
@@ -71,6 +70,7 @@
 #include <linux/serial_core.h>
 #include <linux/delay.h>
 #include <linux/ide.h>
+
 #include <asm/io.h>
 #include <asm/hardware.h>
 #include <asm/irq.h>
@@ -419,8 +419,10 @@ superio_serial_init(void)
 {
 #ifdef CONFIG_SERIAL_8250
 	int retval;
+#ifdef CONFIG_SERIAL_8250_CONSOLE
 	extern void serial8250_console_init(void); /* drivers/serial/8250.c */
-	
+#endif        
+        
 	if (!sio_dev.irq_region)
 		return; /* superio not present */
 
@@ -438,8 +440,10 @@ superio_serial_init(void)
 		return;
 	}
 
+#ifdef CONFIG_SERIAL_8250_CONSOLE
 	serial8250_console_init();
-
+#endif
+        
 	serial[1].iobase = sio_dev.sp2_base;
 	serial[1].irq = sio_dev.irq_region->data.irqbase + SP2_IRQ;
 	retval = early_serial_setup(&serial[1]);

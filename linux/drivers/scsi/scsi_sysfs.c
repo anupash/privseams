@@ -12,9 +12,10 @@
 #include <linux/blkdev.h>
 #include <linux/device.h>
 
+#include <scsi/scsi.h>
+#include <scsi/scsi_device.h>
 #include <scsi/scsi_host.h>
 #include <scsi/scsi_transport.h>
-#include "scsi.h"
 
 #include "scsi_priv.h"
 #include "scsi_logging.h"
@@ -99,7 +100,7 @@ show_##name (struct class_device *class_dev, char *buf)			\
  */
 #define shost_rd_attr2(name, field, format_string)			\
 	shost_show_function(name, field, format_string)			\
-static CLASS_DEVICE_ATTR(name, S_IRUGO, show_##name, NULL)
+static CLASS_DEVICE_ATTR(name, S_IRUGO, show_##name, NULL);
 
 #define shost_rd_attr(field, format_string) \
 shost_rd_attr2(field, field, format_string)
@@ -181,7 +182,8 @@ struct class sdev_class = {
 /* all probing is done in the individual ->probe routines */
 static int scsi_bus_match(struct device *dev, struct device_driver *gendrv)
 {
-	return 1;
+	struct scsi_device *sdp = to_scsi_device(dev);
+	return (sdp->inq_periph_qual == SCSI_INQ_PQ_CON)? 1: 0;
 }
 
 struct bus_type scsi_bus_type = {
@@ -227,8 +229,8 @@ sdev_show_##field (struct device *dev, char *buf)				\
  * read only field.
  */
 #define sdev_rd_attr(field, format_string)				\
-	sdev_show_function(field, format_string)				\
-static DEVICE_ATTR(field, S_IRUGO, sdev_show_##field, NULL)
+	sdev_show_function(field, format_string)			\
+static DEVICE_ATTR(field, S_IRUGO, sdev_show_##field, NULL);
 
 
 /*
@@ -246,7 +248,7 @@ sdev_store_##field (struct device *dev, const char *buf, size_t count)	\
 	snscanf (buf, 20, format_string, &sdev->field);			\
 	return count;							\
 }									\
-static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, sdev_show_##field, sdev_store_##field)
+static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, sdev_show_##field, sdev_store_##field);
 
 /* Currently we don't export bit fields, but we might in future,
  * so leave this code in */
@@ -271,7 +273,7 @@ sdev_store_##field (struct device *dev, const char *buf, size_t count)	\
 	}								\
 	return ret;							\
 }									\
-static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, sdev_show_##field, sdev_store_##field)
+static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, sdev_show_##field, sdev_store_##field);
 
 /*
  * scsi_sdev_check_buf_bit: return 0 if buf is "0", return 1 if buf is "1",
@@ -302,12 +304,32 @@ sdev_rd_attr (model, "%.16s\n");
 sdev_rd_attr (rev, "%.4s\n");
 
 static ssize_t
+sdev_show_timeout (struct device *dev, char *buf)
+{
+	struct scsi_device *sdev;
+	sdev = to_scsi_device(dev);
+	return snprintf (buf, 20, "%d\n", sdev->timeout / HZ);
+}
+
+static ssize_t
+sdev_store_timeout (struct device *dev, const char *buf, size_t count)
+{
+	struct scsi_device *sdev;
+	int timeout;
+	sdev = to_scsi_device(dev);
+	sscanf (buf, "%d\n", &timeout);
+	sdev->timeout = timeout * HZ;
+	return count;
+}
+static DEVICE_ATTR(timeout, S_IRUGO | S_IWUSR, sdev_show_timeout, sdev_store_timeout);
+
+static ssize_t
 store_rescan_field (struct device *dev, const char *buf, size_t count) 
 {
 	scsi_rescan_device(dev);
 	return count;
 }
-static DEVICE_ATTR(rescan, S_IWUSR, NULL, store_rescan_field)
+static DEVICE_ATTR(rescan, S_IWUSR, NULL, store_rescan_field);
 
 static ssize_t sdev_store_delete(struct device *dev, const char *buf,
 				 size_t count)
@@ -367,6 +389,7 @@ static struct device_attribute *scsi_sysfs_sdev_attrs[] = {
 	&dev_attr_rescan,
 	&dev_attr_delete,
 	&dev_attr_state,
+	&dev_attr_timeout,
 	NULL
 };
 
@@ -602,4 +625,4 @@ int scsi_sysfs_add_host(struct Scsi_Host *shost)
 
 /* A blank transport template that is used in drivers that don't
  * yet implement Transport Attributes */
-struct scsi_transport_template blank_transport_template = { 0, };
+struct scsi_transport_template blank_transport_template = { NULL, };

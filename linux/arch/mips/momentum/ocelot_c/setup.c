@@ -67,7 +67,7 @@
 #include <asm/mv64340.h>
 #include "ocelot_c_fpga.h"
 
-unsigned long mv64340_base;
+unsigned long marvell_base;
 extern unsigned long mv64340_sram_base;
 unsigned long cpu_clock;
 
@@ -117,7 +117,7 @@ void PMON_v2_setup(void)
 	/* m-sys and internal SRAM */
 	add_wired_entry(ENTRYLO(0xfe000000), ENTRYLO(0xff000000), 0xfffffffffe000000, PM_16M);
 
-	mv64340_base = 0xfffffffff4000000;
+	marvell_base = 0xfffffffff4000000;
 	mv64340_sram_base = 0xfffffffffe000000;
 #else
 	/* marvell and extra space */
@@ -127,7 +127,7 @@ void PMON_v2_setup(void)
 	/* m-sys and internal SRAM */
 	add_wired_entry(ENTRYLO(0xfe000000), ENTRYLO(0xff000000), 0xfe000000, PM_16M);
 
-	mv64340_base = 0xf4000000;
+	marvell_base = 0xf4000000;
 	mv64340_sram_base = 0xfe000000;
 #endif
 }
@@ -193,7 +193,7 @@ int m48t37y_set_time(unsigned long sec)
 	rtc_base[0x7ff9] = BIN2BCD(tm.tm_sec);
 
 	/* day of week -- not really used, but let's keep it up-to-date */
-	rtc_base[0x7ffc] = CONV_BIN2BCD(tm.tm_wday + 1);
+	rtc_base[0x7ffc] = BIN2BCD(tm.tm_wday + 1);
 
 	/* disable writing */
 	rtc_base[0x7ff8] = 0x00;

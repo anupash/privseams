@@ -47,7 +47,7 @@ static struct workqueue_struct *khelper_wq;
 /*
 	modprobe_path is set via /proc/sys.
 */
-char modprobe_path[256] = "/sbin/modprobe";
+char modprobe_path[KMOD_PATH_LEN] = "/sbin/modprobe";
 
 /**
  * request_module - try to load a kernel module
@@ -132,7 +132,7 @@ EXPORT_SYMBOL(request_module);
 	events.  the command is expected to load drivers when
 	necessary, and may perform additional system setup.
 */
-char hotplug_path[256] = "/sbin/hotplug";
+char hotplug_path[KMOD_PATH_LEN] = "/sbin/hotplug";
 
 EXPORT_SYMBOL(hotplug_path);
 
@@ -154,7 +154,6 @@ static int ____call_usermodehelper(void *data)
 {
 	struct subprocess_info *sub_info = data;
 	int retval;
-	cpumask_t mask = CPU_MASK_ALL;
 
 	/* Unblock all signals. */
 	flush_signals(current);
@@ -165,7 +164,7 @@ static int ____call_usermodehelper(void *data)
 	spin_unlock_irq(&current->sighand->siglock);
 
 	/* We can run anywhere, unlike our parent keventd(). */
-	set_cpus_allowed(current, mask);
+	set_cpus_allowed(current, CPU_MASK_ALL);
 
 	retval = -EPERM;
 	if (current->fs->root)
@@ -192,10 +191,20 @@ static int wait_for_helper(void *data)
 	allow_signal(SIGCHLD);
 
 	pid = kernel_thread(____call_usermodehelper, sub_info, SIGCHLD);
-	if (pid < 0)
+	if (pid < 0) {
 		sub_info->retval = pid;
-	else
-		sys_wait4(pid, &sub_info->retval, 0, NULL);
+	} else {
+		/*
+		 * Normally it is bogus to call wait4() from in-kernel because
+		 * wait4() wants to write the exit code to a userspace address.
+		 * But wait_for_helper() always runs as keventd, and put_user()
+		 * to a kernel address works OK for kernel threads, due to their
+		 * having an mm_segment_t which spans the entire address space.
+		 *
+		 * Thus the __user pointer cast is valid here.
+		 */
+		sys_wait4(pid, (int __user *) &sub_info->retval, 0, NULL);
+	}
 
 	complete(sub_info->complete);
 	return 0;
@@ -269,4 +278,4 @@ static __init int usermodehelper_init(void)
 	BUG_ON(!khelper_wq);
 	return 0;
 }
-__initcall(usermodehelper_init);
+core_initcall(usermodehelper_init);

@@ -24,6 +24,8 @@
 #ifndef _DVBVIDEO_H_
 #define _DVBVIDEO_H_
 
+#include <linux/compiler.h>
+
 #ifdef __KERNEL__
 #include <linux/types.h>
 #else
@@ -100,7 +102,7 @@ struct video_status {
 
 
 struct video_still_picture {
-        char *iFrame;        /* pointer to a single iframe in memory */
+        char __user *iFrame;        /* pointer to a single iframe in memory */
         int32_t size; 
 };
 

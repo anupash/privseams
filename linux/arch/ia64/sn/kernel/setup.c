@@ -54,7 +54,6 @@ DEFINE_PER_CPU(struct pda_s, pda_percpu);
 #define MAX_PHYS_MEMORY		(1UL << 49)     /* 1 TB */
 
 extern void bte_init_node (nodepda_t *, cnodeid_t);
-extern void bte_init_cpu (void);
 extern void sn_timer_init(void);
 extern unsigned long last_time_offset;
 extern void init_platform_hubinfo(nodepda_t **nodepdaindr);
@@ -226,7 +225,25 @@ sn_check_for_wars(void)
 			shub_1_1_found = 1;
 }
 
-
+/**
+ * sn_set_error_handling_features - Tell the SN prom how to handle certain
+ * error types.
+ */
+static void __init
+sn_set_error_handling_features(void)
+{
+	u64 ret;
+	u64 sn_ehf_bits[7];	/* see ia64_sn_set_error_handling_features */
+	memset(sn_ehf_bits, 0, sizeof(sn_ehf_bits));
+#define EHF(x) __set_bit(SN_SAL_EHF_ ## x, sn_ehf_bits)
+	EHF(MCA_SLV_TO_OS_INIT_SLV);
+	EHF(NO_RZ_TLBC);
+	// Uncomment once Jesse's code goes in - EHF(NO_RZ_IO_READ); 
+#undef	EHF
+	ret = ia64_sn_set_error_handling_features(sn_ehf_bits);
+	if (ret)
+		printk(KERN_ERR "%s: failed, return code %ld\n", __FUNCTION__, ret);
+}
 
 /**
  * sn_setup - SN platform setup routine
@@ -317,6 +334,9 @@ sn_setup(char **cmdline_p)
 		printk(KERN_DEBUG "sn_setup: setting master_node_bedrock_address to 0x%lx\n",
 		       master_node_bedrock_address);
 	}
+
+	/* Tell the prom how to handle certain error types */
+	sn_set_error_handling_features();
 
 	/*
 	 * we set the default root device to /dev/hda
@@ -451,10 +471,6 @@ sn_cpu_init(void)
 	}
 	pda->shub_1_1_found = shub_1_1_found;
 	
-	if (local_node_data->active_cpu_count == 1)
-		nodepda->node_first_cpu = cpuid;
-
-
 
 	/*
 	 * We must use different memory allocators for first cpu (bootmem 
@@ -474,13 +490,11 @@ sn_cpu_init(void)
 	pda->mem_write_status_addr = (volatile u64 *)
 			LOCAL_MMR_ADDR((slice < 2 ? SH_MEMORY_WRITE_STATUS_0 : SH_MEMORY_WRITE_STATUS_1 ) );
 
-	if (nodepda->node_first_cpu == cpuid) {
+	if (local_node_data->active_cpu_count++ == 0) {
 		int	buddy_nasid;
 		buddy_nasid = cnodeid_to_nasid(numa_node_id() == numnodes-1 ? 0 : numa_node_id()+ 1);
 		pda->pio_shub_war_cam_addr = (volatile unsigned long*)GLOBAL_MMR_ADDR(nasid, SH_PI_CAM_CONTROL);
 	}
-
-	bte_init_cpu();
 }
 
 /*

@@ -355,7 +355,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r)
 int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			  uint64_t birthday)
 {
-	/* uint64_t generation; */
+#if 0
+	uint64_t generation;
+#endif
 	struct hip_r1entry *r1e;
 
 	r1e = hip_fetch_cookie_entry(ip_i, ip_r);

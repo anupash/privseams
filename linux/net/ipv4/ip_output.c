@@ -223,8 +223,9 @@ int ip_finish_output(struct sk_buff *skb)
 		       ip_finish_output2);
 }
 
-int ip_mc_output(struct sk_buff *skb)
+int ip_mc_output(struct sk_buff **pskb)
 {
+	struct sk_buff *skb = *pskb;
 	struct sock *sk = skb->sk;
 	struct rtable *rt = (struct rtable*)skb->dst;
 	struct net_device *dev = rt->u.dst.dev;
@@ -232,7 +233,7 @@ int ip_mc_output(struct sk_buff *skb)
 	/*
 	 *	If the indicated interface is up and running, send the packet.
 	 */
-	IP_INC_STATS(IpOutRequests);
+	IP_INC_STATS(IPSTATS_MIB_OUTREQUESTS);
 
 	skb->dev = dev;
 	skb->protocol = htons(ETH_P_IP);
@@ -283,9 +284,11 @@ int ip_mc_output(struct sk_buff *skb)
 		return ip_finish_output(skb);
 }
 
-int ip_output(struct sk_buff *skb)
+int ip_output(struct sk_buff **pskb)
 {
-	IP_INC_STATS(IpOutRequests);
+	struct sk_buff *skb = *pskb;
+
+	IP_INC_STATS(IPSTATS_MIB_OUTREQUESTS);
 
 	if ((skb->len > dst_pmtu(skb->dst) || skb_shinfo(skb)->frag_list) &&
 	    !skb_shinfo(skb)->tso_size)
@@ -390,7 +393,7 @@ packet_routed:
 		       dst_output);
 
 no_route:
-	IP_INC_STATS(IpOutNoRoutes);
+	IP_INC_STATS(IPSTATS_MIB_OUTNOROUTES);
 	kfree_skb(skb);
 	return -EHOSTUNREACH;
 }
@@ -495,10 +498,6 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff*))
 			    skb_headroom(frag) < hlen)
 			    goto slow_path;
 
-			/* Correct socket ownership. */
-			if (frag->sk == NULL && skb->sk)
-				goto slow_path;
-
 			/* Partially cloned skb? */
 			if (skb_shared(frag))
 				goto slow_path;
@@ -509,7 +508,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff*))
 		err = 0;
 		offset = 0;
 		frag = skb_shinfo(skb)->frag_list;
-		skb_shinfo(skb)->frag_list = 0;
+		skb_shinfo(skb)->frag_list = NULL;
 		skb->data_len = first_len - skb_headlen(skb);
 		skb->len = first_len;
 		iph->tot_len = htons(first_len);
@@ -547,7 +546,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff*))
 		}
 
 		if (err == 0) {
-			IP_INC_STATS(IpFragOKs);
+			IP_INC_STATS(IPSTATS_MIB_FRAGOKS);
 			return 0;
 		}
 
@@ -556,7 +555,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff*))
 			kfree_skb(frag);
 			frag = skb;
 		}
-		IP_INC_STATS(IpFragFails);
+		IP_INC_STATS(IPSTATS_MIB_FRAGFAILS);
 		return err;
 	}
 
@@ -567,7 +566,7 @@ slow_path:
 #ifdef CONFIG_BRIDGE_NETFILTER
 	/* for bridged IP traffic encapsulated inside f.e. a vlan header,
 	 * we need to make room for the encapsulating header */
-	ll_rs = LL_RESERVED_SPACE(rt->u.dst.dev + nf_bridge_pad(skb));
+	ll_rs = LL_RESERVED_SPACE_EXTRA(rt->u.dst.dev, nf_bridge_pad(skb));
 	mtu -= nf_bridge_pad(skb);
 #else
 	ll_rs = LL_RESERVED_SPACE(rt->u.dst.dev);
@@ -662,7 +661,7 @@ slow_path:
 		 *	Put this fragment into the sending queue.
 		 */
 
-		IP_INC_STATS(IpFragCreates);
+		IP_INC_STATS(IPSTATS_MIB_FRAGCREATES);
 
 		iph->tot_len = htons(len + hlen);
 
@@ -673,12 +672,12 @@ slow_path:
 			goto fail;
 	}
 	kfree_skb(skb);
-	IP_INC_STATS(IpFragOKs);
+	IP_INC_STATS(IPSTATS_MIB_FRAGOKS);
 	return err;
 
 fail:
 	kfree_skb(skb); 
-	IP_INC_STATS(IpFragFails);
+	IP_INC_STATS(IPSTATS_MIB_FRAGFAILS);
 	return err;
 }
 
@@ -695,17 +694,6 @@ ip_generic_getfrag(void *from, char *to, int offset, int len, int odd, struct sk
 		if (csum_partial_copy_fromiovecend(to, iov, offset, len, &csum) < 0)
 			return -EFAULT;
 		skb->csum = csum_block_add(skb->csum, csum, odd);
-	}
-	return 0;
-}
-
-static inline int
-skb_can_coalesce(struct sk_buff *skb, int i, struct page *page, int off)
-{
-	if (i) {
-		skb_frag_t *frag = &skb_shinfo(skb)->frags[i-1];
-		return page == frag->page &&
-			off == frag->page_offset+frag->size;
 	}
 	return 0;
 }
@@ -774,8 +762,8 @@ int ip_append_data(struct sock *sk,
 		inet->cork.fragsize = mtu = dst_pmtu(&rt->u.dst);
 		inet->cork.rt = rt;
 		inet->cork.length = 0;
-		inet->sndmsg_page = NULL;
-		inet->sndmsg_off = 0;
+		sk->sk_sndmsg_page = NULL;
+		sk->sk_sndmsg_off = 0;
 		if ((exthdrlen = rt->u.dst.header_len) != 0) {
 			length += exthdrlen;
 			transhdrlen += exthdrlen;
@@ -923,8 +911,8 @@ alloc_new_skb:
 		} else {
 			int i = skb_shinfo(skb)->nr_frags;
 			skb_frag_t *frag = &skb_shinfo(skb)->frags[i-1];
-			struct page *page = inet->sndmsg_page;
-			int off = inet->sndmsg_off;
+			struct page *page = sk->sk_sndmsg_page;
+			int off = sk->sk_sndmsg_off;
 			unsigned int left;
 
 			if (page && (left = PAGE_SIZE - off) > 0) {
@@ -936,7 +924,7 @@ alloc_new_skb:
 						goto error;
 					}
 					get_page(page);
-	 				skb_fill_page_desc(skb, i, page, inet->sndmsg_off, 0);
+	 				skb_fill_page_desc(skb, i, page, sk->sk_sndmsg_off, 0);
 					frag = &skb_shinfo(skb)->frags[i];
 				}
 			} else if (i < MAX_SKB_FRAGS) {
@@ -947,8 +935,8 @@ alloc_new_skb:
 					err = -ENOMEM;
 					goto error;
 				}
-				inet->sndmsg_page = page;
-				inet->sndmsg_off = 0;
+				sk->sk_sndmsg_page = page;
+				sk->sk_sndmsg_off = 0;
 
 				skb_fill_page_desc(skb, i, page, 0, 0);
 				frag = &skb_shinfo(skb)->frags[i];
@@ -962,7 +950,7 @@ alloc_new_skb:
 				err = -EFAULT;
 				goto error;
 			}
-			inet->sndmsg_off += copy;
+			sk->sk_sndmsg_off += copy;
 			frag->size += copy;
 			skb->len += copy;
 			skb->data_len += copy;
@@ -975,7 +963,7 @@ alloc_new_skb:
 
 error:
 	inet->cork.length -= length;
-	IP_INC_STATS(IpOutDiscards);
+	IP_INC_STATS(IPSTATS_MIB_OUTDISCARDS);
 	return err; 
 }
 
@@ -1088,7 +1076,7 @@ ssize_t	ip_append_page(struct sock *sk, struct page *page,
 
 error:
 	inet->cork.length -= size;
-	IP_INC_STATS(IpOutDiscards);
+	IP_INC_STATS(IPSTATS_MIB_OUTDISCARDS);
 	return err;
 }
 
@@ -1121,12 +1109,10 @@ int ip_push_pending_frames(struct sock *sk)
 		tail_skb = &(tmp_skb->next);
 		skb->len += tmp_skb->len;
 		skb->data_len += tmp_skb->len;
-#if 0 /* Logically correct, but useless work, ip_fragment() will have to undo */
 		skb->truesize += tmp_skb->truesize;
 		__sock_put(tmp_skb->sk);
 		tmp_skb->destructor = NULL;
 		tmp_skb->sk = NULL;
-#endif
 	}
 
 	/* Unless user demanded real pmtu discovery (IP_PMTUDISC_DO), we allow
@@ -1198,7 +1184,7 @@ out:
 	return err;
 
 error:
-	IP_INC_STATS(IpOutDiscards);
+	IP_INC_STATS(IPSTATS_MIB_OUTDISCARDS);
 	goto out;
 }
 

@@ -23,6 +23,7 @@
 #include <linux/ptrace.h>
 #include <asm/param.h>
 #include <asm/uaccess.h>
+#include <asm/unistd.h>
 #include <asm/siginfo.h>
 
 /*
@@ -30,9 +31,6 @@
  */
 
 static kmem_cache_t *sigqueue_cachep;
-
-atomic_t nr_queued_signals;
-int max_queued_signals = 1024;
 
 /*
  * In POSIX a signal is sent either to a specific thread (Linux task)
@@ -159,7 +157,7 @@ int max_queued_signals = 1024;
 
 static int sig_ignored(struct task_struct *t, int sig)
 {
-	void * handler;
+	void __user * handler;
 
 	/*
 	 * Tracers always want to know about signals..
@@ -264,17 +262,19 @@ next_signal(struct sigpending *pending, sigset_t *mask)
 	return sig;
 }
 
-struct sigqueue *__sigqueue_alloc(void)
+static struct sigqueue *__sigqueue_alloc(void)
 {
-	struct sigqueue *q = 0;
+	struct sigqueue *q = NULL;
 
-	if (atomic_read(&nr_queued_signals) < max_queued_signals)
+	if (atomic_read(&current->user->sigpending) <
+			current->rlim[RLIMIT_SIGPENDING].rlim_cur)
 		q = kmem_cache_alloc(sigqueue_cachep, GFP_ATOMIC);
 	if (q) {
-		atomic_inc(&nr_queued_signals);
 		INIT_LIST_HEAD(&q->list);
 		q->flags = 0;
-		q->lock = 0;
+		q->lock = NULL;
+		q->user = get_uid(current->user);
+		atomic_inc(&q->user->sigpending);
 	}
 	return(q);
 }
@@ -283,8 +283,9 @@ static inline void __sigqueue_free(struct sigqueue *q)
 {
 	if (q->flags & SIGQUEUE_PREALLOC)
 		return;
+	atomic_dec(&q->user->sigpending);
+	free_uid(q->user);
 	kmem_cache_free(sigqueue_cachep, q);
-	atomic_dec(&nr_queued_signals);
 }
 
 static void flush_sigqueue(struct sigpending *queue)
@@ -453,7 +454,7 @@ unblock_all_signals(void)
 
 static inline int collect_signal(int sig, struct sigpending *list, siginfo_t *info)
 {
-	struct sigqueue *q, *first = 0;
+	struct sigqueue *q, *first = NULL;
 	int still_pending = 0;
 
 	if (unlikely(!sigismember(&list->signal, sig)))
@@ -698,7 +699,8 @@ static void handle_stop_signal(int sig, struct task_struct *p)
 	}
 }
 
-static int send_signal(int sig, struct siginfo *info, struct sigpending *signals)
+static int send_signal(int sig, struct siginfo *info, struct task_struct *t,
+			struct sigpending *signals)
 {
 	struct sigqueue * q = NULL;
 	int ret = 0;
@@ -718,12 +720,14 @@ static int send_signal(int sig, struct siginfo *info, struct sigpending *signals
 	   make sure at least one signal gets delivered and don't
 	   pass on the info struct.  */
 
-	if (atomic_read(&nr_queued_signals) < max_queued_signals)
+	if (atomic_read(&t->user->sigpending) <
+			t->rlim[RLIMIT_SIGPENDING].rlim_cur)
 		q = kmem_cache_alloc(sigqueue_cachep, GFP_ATOMIC);
 
 	if (q) {
-		atomic_inc(&nr_queued_signals);
 		q->flags = 0;
+		q->user = get_uid(t->user);
+		atomic_inc(&q->user->sigpending);
 		list_add_tail(&q->list, &signals->list);
 		switch ((unsigned long) info) {
 		case 0:
@@ -797,7 +801,7 @@ specific_send_sig_info(int sig, struct siginfo *info, struct task_struct *t)
 	if (LEGACY_QUEUE(&t->pending, sig))
 		goto out;
 
-	ret = send_signal(sig, info, &t->pending);
+	ret = send_signal(sig, info, t, &t->pending);
 	if (!ret && !sigismember(&t->blocked, sig))
 		signal_wake_up(t, sig == SIGKILL);
 out:
@@ -998,7 +1002,7 @@ __group_send_sig_info(int sig, struct siginfo *info, struct task_struct *p)
 	 * We always use the shared queue for process-wide signals,
 	 * to avoid several races.
 	 */
-	ret = send_signal(sig, info, &p->signal->shared_pending);
+	ret = send_signal(sig, info, p, &p->signal->shared_pending);
 	if (unlikely(ret))
 		return ret;
 
@@ -1070,23 +1074,19 @@ int __kill_pg_info(int sig, struct siginfo *info, pid_t pgrp)
 	struct task_struct *p;
 	struct list_head *l;
 	struct pid *pid;
-	int retval;
-	int found;
+	int retval, success;
 
 	if (pgrp <= 0)
 		return -EINVAL;
 
-	found = 0;
-	retval = 0;
+	success = 0;
+	retval = -ESRCH;
 	for_each_task_pid(pgrp, PIDTYPE_PGID, p, l, pid) {
-		int err;
-
-		found = 1;
-		err = group_send_sig_info(sig, info, p);
-		if (!retval)
-			retval = err;
+		int err = group_send_sig_info(sig, info, p);
+		success |= !err;
+		retval = err;
 	}
-	return found ? retval : -ESRCH;
+	return success ? 0 : retval;
 }
 
 int
@@ -1195,6 +1195,13 @@ send_sig_info(int sig, struct siginfo *info, struct task_struct *p)
 {
 	int ret;
 	unsigned long flags;
+
+	/*
+	 * Make sure legacy kernel users don't send in bad values
+	 * (normal paths check this in check_kill_permission).
+	 */
+	if (sig < 0 || sig > _NSIG)
+		return -EINVAL;
 
 	/*
 	 * We need the tasklist lock even for the specific
@@ -1403,12 +1410,12 @@ static void __wake_up_parent(struct task_struct *p,
 	 * Fortunately this is not necessary for thread groups:
 	 */
 	if (p->tgid == tsk->tgid) {
-		wake_up_interruptible(&tsk->wait_chldexit);
+		wake_up_interruptible_sync(&tsk->wait_chldexit);
 		return;
 	}
 
 	do {
-		wake_up_interruptible(&tsk->wait_chldexit);
+		wake_up_interruptible_sync(&tsk->wait_chldexit);
 		tsk = next_thread(tsk);
 		if (tsk->signal != parent->signal)
 			BUG();
@@ -2174,7 +2181,7 @@ sys_kill(int pid, int sig)
 }
 
 /**
- *  sys_tkill - send signal to one specific thread
+ *  sys_tgkill - send signal to one specific thread
  *  @tgid: the thread group ID of the thread
  *  @pid: the PID of the thread
  *  @sig: signal to be sent
@@ -2355,13 +2362,13 @@ do_sigaltstack (const stack_t __user *uss, stack_t __user *uoss, unsigned long s
 	int error;
 
 	if (uoss) {
-		oss.ss_sp = (void *) current->sas_ss_sp;
+		oss.ss_sp = (void __user *) current->sas_ss_sp;
 		oss.ss_size = current->sas_ss_size;
 		oss.ss_flags = sas_ss_flags(sp);
 	}
 
 	if (uss) {
-		void *ss_sp;
+		void __user *ss_sp;
 		size_t ss_size;
 		int ss_flags;
 
@@ -2412,14 +2419,19 @@ out:
 	return error;
 }
 
+#ifdef __ARCH_WANT_SYS_SIGPENDING
+
 asmlinkage long
 sys_sigpending(old_sigset_t __user *set)
 {
 	return do_sigpending(set, sizeof(*set));
 }
 
-#if !defined(__alpha__)
-/* Alpha has its own versions with special arguments.  */
+#endif
+
+#ifdef __ARCH_WANT_SYS_SIGPROCMASK
+/* Some platforms have their own version with special arguments others
+   support only sys_rt_sigprocmask.  */
 
 asmlinkage long
 sys_sigprocmask(int how, old_sigset_t __user *set, old_sigset_t __user *oset)
@@ -2469,8 +2481,9 @@ sys_sigprocmask(int how, old_sigset_t __user *set, old_sigset_t __user *oset)
 out:
 	return error;
 }
+#endif /* __ARCH_WANT_SYS_SIGPROCMASK */
 
-#ifndef __sparc__
+#ifdef __ARCH_WANT_SYS_RT_SIGACTION
 asmlinkage long
 sys_rt_sigaction(int sig,
 		 const struct sigaction __user *act,
@@ -2498,11 +2511,10 @@ sys_rt_sigaction(int sig,
 out:
 	return ret;
 }
-#endif /* __sparc__ */
-#endif
+#endif /* __ARCH_WANT_SYS_RT_SIGACTION */
 
-#if !defined(__alpha__) && !defined(__ia64__) && \
-    !defined(__arm__) && !defined(__s390__)
+#ifdef __ARCH_WANT_SYS_SGETMASK
+
 /*
  * For backwards compatibility.  Functionality superseded by sigprocmask.
  */
@@ -2528,10 +2540,9 @@ sys_ssetmask(int newmask)
 
 	return old;
 }
-#endif /* !defined(__alpha__) */
+#endif /* __ARCH_WANT_SGETMASK */
 
-#if !defined(__alpha__) && !defined(__ia64__) && !defined(__mips__) && \
-    !defined(__arm__)
+#ifdef __ARCH_WANT_SYS_SIGNAL
 /*
  * For backwards compatibility.  Functionality superseded by sigaction.
  */
@@ -2548,9 +2559,9 @@ sys_signal(int sig, __sighandler_t handler)
 
 	return ret ? ret : (unsigned long)old_sa.sa.sa_handler;
 }
-#endif /* !alpha && !__ia64__ && !defined(__mips__) && !defined(__arm__) */
+#endif /* __ARCH_WANT_SYS_SIGNAL */
 
-#ifndef HAVE_ARCH_SYS_PAUSE
+#ifdef __ARCH_WANT_SYS_PAUSE
 
 asmlinkage long
 sys_pause(void)
@@ -2560,7 +2571,7 @@ sys_pause(void)
 	return -ERESTARTNOHAND;
 }
 
-#endif /* HAVE_ARCH_SYS_PAUSE */
+#endif
 
 void __init signals_init(void)
 {
@@ -2568,7 +2579,5 @@ void __init signals_init(void)
 		kmem_cache_create("sigqueue",
 				  sizeof(struct sigqueue),
 				  __alignof__(struct sigqueue),
-				  0, NULL, NULL);
-	if (!sigqueue_cachep)
-		panic("signals_init(): cannot create sigqueue SLAB cache");
+				  SLAB_PANIC, NULL, NULL);
 }

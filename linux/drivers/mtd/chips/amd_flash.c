@@ -3,7 +3,7 @@
  *
  * Author: Jonas Holmberg <jonas.holmberg@axis.com>
  *
- * $Id: amd_flash.c,v 1.23 2003/06/12 09:24:13 dwmw2 Exp $
+ * $Id: amd_flash.c,v 1.25 2004/08/09 13:19:43 dwmw2 Exp $
  *
  * Copyright (c) 2001 Axis Communications AB
  *
@@ -718,7 +718,7 @@ static struct mtd_info *amd_flash_probe(struct map_info *map)
 		       "memory for MTD erase region info\n", map->name);
 		kfree(mtd);
 		map->fldrv_priv = NULL;
-		return 0;
+		return NULL;
 	}
 
 	reg_idx = 0;
@@ -780,8 +780,8 @@ static struct mtd_info *amd_flash_probe(struct map_info *map)
 	map->fldrv_priv = private;
 
 	map->fldrv = &amd_flash_chipdrv;
-	MOD_INC_USE_COUNT;
 
+	__module_get(THIS_MODULE);
 	return mtd;
 }
 
@@ -1307,9 +1307,7 @@ static int amd_flash_erase(struct mtd_info *mtd, struct erase_info *instr)
 	}
 		
 	instr->state = MTD_ERASE_DONE;
-	if (instr->callback) {
-		instr->callback(instr);
-	}
+	mtd_erase_callback(instr);
 	
 	return 0;
 }

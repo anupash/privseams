@@ -406,6 +406,13 @@ core-$(CONFIG_MOMENCO_OCELOT_C)	+= arch/mips/momentum/ocelot_c/
 load-$(CONFIG_MOMENCO_OCELOT_C)	+= 0x80100000
 
 #
+# PMC-Sierra Yosemite
+#
+core-$(CONFIG_PMC_YOSEMITE)	+= arch/mips/pmc-sierra/yosemite/
+cflags-$(CONFIG_PMC_YOSEMITE)	+= -Iinclude/asm-mips/mach-yosemite
+load-$(CONFIG_PMC_YOSEMITE)	+= 0x80100000
+
+#
 # Momentum Jaguar ATX
 #
 core-$(CONFIG_MOMENCO_JAGUAR_ATX)	+= arch/mips/momentum/jaguar_atx/
@@ -455,12 +462,6 @@ load-$(CONFIG_NEC_OSPREY)	+= 0x80002000
 #
 core-$(CONFIG_MACH_VR41XX)	+= arch/mips/vr41xx/common/
 cflags-$(CONFIG_MACH_VR41XX)	+= -Iinclude/asm-mips/mach-vr41xx
-
-#
-# NEC Eagle/Hawk (VR4122/VR4131) board
-#
-core-$(CONFIG_NEC_EAGLE)	+= arch/mips/vr41xx/nec-eagle/
-load-$(CONFIG_NEC_EAGLE)	+= 0x80000000
 
 #
 # ZAO Networks Capcella (VR4131)
@@ -659,8 +660,6 @@ libs-$(CONFIG_MIPS32)	+= arch/mips/lib-32/
 libs-$(CONFIG_MIPS64)	+= arch/mips/lib-64/
 
 core-y			+= arch/mips/kernel/ arch/mips/mm/ arch/mips/math-emu/
-core-$(CONFIG_MIPS32)	+= arch/mips/mm-32/
-core-$(CONFIG_MIPS64)	+= arch/mips/mm-64/
 
 ifdef CONFIG_BAGET_MIPS
 
@@ -686,7 +685,7 @@ vmlinux.64: vmlinux
 		--change-addresses=0xa800000080000000 $< $@
 endif
 
-makeboot =$(Q)$(MAKE) -f scripts/Makefile.build obj=arch/mips/boot $(1)
+makeboot =$(Q)$(MAKE) $(build)=arch/mips/boot $(1)
 
 ifdef CONFIG_SGI_IP27
 all:	vmlinux.64
@@ -708,9 +707,9 @@ CLEAN_FILES += vmlinux.ecoff \
 	       vmlinux.rm200
 
 archclean:
-	@$(MAKE) -f scripts/Makefile.clean obj=arch/mips/boot
-	@$(MAKE) -f scripts/Makefile.clean obj=arch/mips/baget
-	@$(MAKE) -f scripts/Makefile.clean obj=arch/mips/lasat
+	@$(MAKE) $(clean)=arch/mips/boot
+	@$(MAKE) $(clean)=arch/mips/baget
+	@$(MAKE) $(clean)=arch/mips/lasat
 
 # Generate <asm/offset.h 
 #

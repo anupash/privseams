@@ -411,6 +411,9 @@ static void smc91c92_detach(dev_link_t *link)
     if (*linkp == NULL)
 	return;
 
+    if (link->dev)
+	unregister_netdev(dev);
+
     if (link->state & DEV_CONFIG)
 	smc91c92_release(link);
 
@@ -419,8 +422,6 @@ static void smc91c92_detach(dev_link_t *link)
 
     /* Unlink device structure, free bits */
     *linkp = link->next;
-    if (link->dev)
-	unregister_netdev(dev);
     free_netdev(dev);
 } /* smc91c92_detach */
 
@@ -1112,10 +1113,8 @@ static int smc91c92_event(event_t event, int priority,
     switch (event) {
     case CS_EVENT_CARD_REMOVAL:
 	link->state &= ~DEV_PRESENT;
-	if (link->state & DEV_CONFIG) {
+	if (link->state & DEV_CONFIG)
 	    netif_device_detach(dev);
-	    smc91c92_release(link);
-	}
 	break;
     case CS_EVENT_CARD_INSERTION:
 	link->state |= DEV_PRESENT | DEV_CONFIG_PENDING;
@@ -1273,7 +1272,7 @@ static int smc_open(struct net_device *dev)
     link->open++;
 
     netif_start_queue(dev);
-    smc->saved_skb = 0;
+    smc->saved_skb = NULL;
     smc->packets_waiting = 0;
 
     smc_reset(dev);
@@ -2119,12 +2118,12 @@ static int smc_netdev_set_ecmd(struct net_device *dev, struct ethtool_cmd *ecmd)
     return 0;
 }
 
-static int smc_ethtool_ioctl (struct net_device *dev, void *useraddr)
+static int smc_ethtool_ioctl (struct net_device *dev, void __user *useraddr)
 {
     u32 ethcmd;
     struct smc_private *smc = netdev_priv(dev);
 
-    if (get_user(ethcmd, (u32 *)useraddr))
+    if (get_user(ethcmd, (u32 __user *)useraddr))
 	return -EFAULT;
 
     switch (ethcmd) {
@@ -2221,7 +2220,7 @@ static int smc_ioctl (struct net_device *dev, struct ifreq *rq, int cmd)
     u_short saved_bank;
     ioaddr_t ioaddr = dev->base_addr;
 
-    mii = (struct mii_ioctl_data *) &rq->ifr_data;
+    mii = if_mii(rq);
     if (!netif_running(dev))
     	return -EINVAL;
 
@@ -2229,7 +2228,7 @@ static int smc_ioctl (struct net_device *dev, struct ifreq *rq, int cmd)
     case SIOCETHTOOL:
 	saved_bank = inw(ioaddr + BANK_SELECT);
 	SMC_SELECT_BANK(3);
-	rc = smc_ethtool_ioctl(dev, (void *) rq->ifr_data);
+	rc = smc_ethtool_ioctl(dev, rq->ifr_data);
 	SMC_SELECT_BANK(saved_bank);
 	break;
 

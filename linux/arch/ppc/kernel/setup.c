@@ -16,6 +16,7 @@
 #include <linux/seq_file.h>
 #include <linux/root_dev.h>
 #include <linux/cpu.h>
+#include <linux/console.h>
 
 #include <asm/residual.h>
 #include <asm/io.h>
@@ -37,6 +38,7 @@
 #include <asm/sections.h>
 #include <asm/nvram.h>
 #include <asm/xmon.h>
+#include <asm/ocp.h>
 
 #if defined CONFIG_KGDB
 #include <asm/kgdb.h>
@@ -53,7 +55,6 @@ extern void ppc6xx_idle(void);
 extern void power4_idle(void);
 
 extern boot_infos_t *boot_infos;
-char saved_command_line[COMMAND_LINE_SIZE];
 unsigned char aux_device_present;
 struct ide_machdep_calls ppc_ide_md;
 char *sysmap;
@@ -473,6 +474,60 @@ platform_init(unsigned long r3, unsigned long r4, unsigned long r5,
 		break;
 	}
 }
+
+#ifdef CONFIG_SERIAL_CORE_CONSOLE
+extern char *of_stdout_device;
+
+static int __init set_preferred_console(void)
+{
+	struct device_node *prom_stdout;
+	char *name;
+	int offset;
+
+	/* The user has requested a console so this is already set up. */
+	if (strstr(saved_command_line, "console="))
+		return -EBUSY;
+
+	prom_stdout = find_path_device(of_stdout_device);
+	if (!prom_stdout)
+		return -ENODEV;
+
+	name = (char *)get_property(prom_stdout, "name", NULL);
+	if (!name)
+		return -ENODEV;
+
+	if (strcmp(name, "serial") == 0) {
+		int i;
+		u32 *reg = (u32 *)get_property(prom_stdout, "reg", &i);
+		if (i > 8) {
+			switch (reg[1]) {
+				case 0x3f8:
+					offset = 0;
+					break;
+				case 0x2f8:
+					offset = 1;
+					break;
+				case 0x898:
+					offset = 2;
+					break;
+				case 0x890:
+					offset = 3;
+					break;
+				default:
+					/* We dont recognise the serial port */
+					return -ENODEV;
+			}
+		}
+	} else if (strcmp(name, "ch-a") == 0)
+		offset = 0;
+	else if (strcmp(name, "ch-b") == 0)
+		offset = 1;
+	else
+		return -ENODEV;
+	return add_preferred_console("ttyS", offset, NULL);
+}
+console_initcall(set_preferred_console);
+#endif /* CONFIG_SERIAL_CORE_CONSOLE */
 #endif /* CONFIG_PPC_MULTIPLATFORM */
 
 struct bi_record *find_bootinfo(void)
@@ -567,7 +622,7 @@ int __init ppc_setup_l2cr(char *str)
 }
 __setup("l2cr=", ppc_setup_l2cr);
 
-#ifdef CONFIG_NVRAM
+#ifdef CONFIG_GENERIC_NVRAM
 
 /* Generic nvram hooks used by drivers/char/gen_nvram.c */
 unsigned char nvram_read_byte(int addr)
@@ -638,7 +693,7 @@ void __init setup_arch(char **cmdline_p)
 #ifdef CONFIG_XMON
 	xmon_map_scc();
 	if (strstr(cmd_line, "xmon"))
-		xmon(0);
+		xmon(NULL);
 #endif /* CONFIG_XMON */
 	if ( ppc_md.progress ) ppc_md.progress("setup_arch: enter", 0x3eab);
 
@@ -676,12 +731,18 @@ void __init setup_arch(char **cmdline_p)
 	init_mm.brk = (unsigned long) klimit;
 
 	/* Save unparsed command line copy for /proc/cmdline */
-	strlcpy(saved_command_line, cmd_line, sizeof(saved_command_line));
+	strlcpy(saved_command_line, cmd_line, COMMAND_LINE_SIZE);
 	*cmdline_p = cmd_line;
 
 	/* set up the bootmem stuff with available memory */
 	do_init_bootmem();
 	if ( ppc_md.progress ) ppc_md.progress("setup_arch: bootmem", 0x3eab);
+
+#ifdef CONFIG_PPC_OCP
+	/* Initialize OCP device list */
+	ocp_early_init();
+	if ( ppc_md.progress ) ppc_md.progress("ocp: exit", 0x3eab);
+#endif
 
 	ppc_md.setup_arch();
 	if ( ppc_md.progress ) ppc_md.progress("arch: exit", 0x3eab);

@@ -18,46 +18,26 @@
 #include <linux/pci.h>
 #include <asm/pci-bridge.h>
 #include <asm/semaphore.h>
+#include <asm/rtas.h>
 #include "../pci.h"
 #include "rpaphp.h"
 #include "rpadlpar.h"
 
 static DECLARE_MUTEX(rpadlpar_sem);
 
-static inline int is_hotplug_capable(struct device_node *dn)
-{
-	unsigned char *ptr = get_property(dn, "ibm,fw-pci-hot-plug-ctrl", NULL);
-
-	return (int) (ptr != NULL);
-}
-
-static char *get_node_drc_name(struct device_node *dn)
-{
-	char *ptr = NULL;
-	int *drc_names;
-
-	drc_names = (int *) get_property(dn, "ibm,drc-names", NULL);
-	if (drc_names)
-		ptr = (char *) &drc_names[1];
-
-	return ptr;
-}
-
 static struct device_node *find_php_slot_vio_node(char *drc_name)
 {
 	struct device_node *child;
 	struct device_node *parent = of_find_node_by_name(NULL, "vdevice");
+	char *loc_code;
 
 	if (!parent)
 		return NULL;
 
-	for (child = of_get_next_child(parent, NULL);	
-	     child; child = of_get_next_child(parent, child)) {
-	
-		char *loc_code;
-	
+	for (child = of_get_next_child(parent, NULL);
+		child; child = of_get_next_child(parent, child)) {
 		loc_code = get_property(child, "ibm,loc-code", NULL);
-		if (loc_code && !strcmp(loc_code, drc_name))
+		if (loc_code && !strncmp(loc_code, drc_name, strlen(drc_name)))
 			return child;
 	}
 
@@ -71,7 +51,7 @@ static struct device_node *find_php_slot_pci_node(char *drc_name)
 
 	while ((np = of_find_node_by_type(np, "pci")))
 		if (is_hotplug_capable(np)) {
-			name = get_node_drc_name(np);
+			name = rpaphp_get_drc_name(np);
 			if (name && (!strcmp(drc_name, name)))
 				break;
 		}
@@ -309,11 +289,7 @@ int dlpar_remove_vio_slot(struct slot *slot, char *drc_name)
  */
 int dlpar_remove_pci_slot(struct slot *slot, char *drc_name)
 {
-	struct device_node *dn = find_php_slot_pci_node(drc_name);
 	struct pci_dev *bridge_dev;
-
-	if (!dn)
-		return -ENODEV;
 
 	bridge_dev = slot->bridge;
 	if (!bridge_dev) {
@@ -330,6 +306,7 @@ int dlpar_remove_pci_slot(struct slot *slot, char *drc_name)
 	}
 
 	/* Remove pci bus */
+
 	if (dlpar_pci_remove_bus(bridge_dev)) {
 		printk(KERN_ERR "%s: unable to remove pci bus %s\n",
 			__FUNCTION__, drc_name);
@@ -358,7 +335,13 @@ int dlpar_remove_slot(char *drc_name)
 
 	if (down_interruptible(&rpadlpar_sem))
 		return -ERESTARTSYS;
-	
+
+	if (!find_php_slot_vio_node(drc_name) &&
+	    !find_php_slot_pci_node(drc_name)) {
+		rc = -ENODEV;
+		goto exit;
+	}
+
 	slot = find_slot(drc_name);
 	if (!slot) {
 		rc = -EINVAL;

@@ -33,7 +33,7 @@
 #define DEBUG(A...)
 #endif
 
-static spinlock_t log_lock = SPIN_LOCK_UNLOCKED;
+static spinlock_t rtasd_log_lock = SPIN_LOCK_UNLOCKED;
 
 DECLARE_WAIT_QUEUE_HEAD(rtas_log_wait);
 
@@ -152,7 +152,7 @@ void pSeries_log_error(char *buf, unsigned int err_type, int fatal)
 	if (buf == NULL)
 		return;
 
-	spin_lock_irqsave(&log_lock, s);
+	spin_lock_irqsave(&rtasd_log_lock, s);
 
 	/* get length and increase count */
 	switch (err_type & ERR_TYPE_MASK) {
@@ -163,7 +163,7 @@ void pSeries_log_error(char *buf, unsigned int err_type, int fatal)
 		break;
 	case ERR_TYPE_KERNEL_PANIC:
 	default:
-		spin_unlock_irqrestore(&log_lock, s);
+		spin_unlock_irqrestore(&rtasd_log_lock, s);
 		return;
 	}
 
@@ -174,7 +174,7 @@ void pSeries_log_error(char *buf, unsigned int err_type, int fatal)
 	/* Check to see if we need to or have stopped logging */
 	if (fatal || no_more_logging) {
 		no_more_logging = 1;
-		spin_unlock_irqrestore(&log_lock, s);
+		spin_unlock_irqrestore(&rtasd_log_lock, s);
 		return;
 	}
 
@@ -199,12 +199,12 @@ void pSeries_log_error(char *buf, unsigned int err_type, int fatal)
 		else
 			rtas_log_start += 1;
 
-		spin_unlock_irqrestore(&log_lock, s);
+		spin_unlock_irqrestore(&rtasd_log_lock, s);
 		wake_up_interruptible(&rtas_log_wait);
 		break;
 	case ERR_TYPE_KERNEL_PANIC:
 	default:
-		spin_unlock_irqrestore(&log_lock, s);
+		spin_unlock_irqrestore(&rtasd_log_lock, s);
 		return;
 	}
 
@@ -247,24 +247,24 @@ static ssize_t rtas_log_read(struct file * file, char * buf,
 		return -ENOMEM;
 
 
-	spin_lock_irqsave(&log_lock, s);
+	spin_lock_irqsave(&rtasd_log_lock, s);
 	/* if it's 0, then we know we got the last one (the one in NVRAM) */
 	if (rtas_log_size == 0 && !no_more_logging)
 		nvram_clear_error_log();
-	spin_unlock_irqrestore(&log_lock, s);
+	spin_unlock_irqrestore(&rtasd_log_lock, s);
 
 
 	error = wait_event_interruptible(rtas_log_wait, rtas_log_size);
 	if (error)
 		goto out;
 
-	spin_lock_irqsave(&log_lock, s);
+	spin_lock_irqsave(&rtasd_log_lock, s);
 	offset = rtas_error_log_buffer_max * (rtas_log_start & LOG_NUMBER_MASK);
 	memcpy(tmp, &rtas_log_buf[offset], count);
 
 	rtas_log_start += 1;
 	rtas_log_size -= 1;
-	spin_unlock_irqrestore(&log_lock, s);
+	spin_unlock_irqrestore(&rtasd_log_lock, s);
 
 	error = copy_to_user(buf, tmp, count) ? -EFAULT : count;
 out:
@@ -364,7 +364,6 @@ static int rtasd(void *unused)
 	unsigned int err_type;
 	int cpu = 0;
 	int event_scan = rtas_token("event-scan");
-	cpumask_t all = CPU_MASK_ALL;
 	int rc;
 
 	daemonize("rtasd");
@@ -372,7 +371,7 @@ static int rtasd(void *unused)
 	if (event_scan == RTAS_UNKNOWN_SERVICE || get_eventscan_parms() == -1)
 		goto error;
 
-	rtas_log_buf = vmalloc(rtas_error_log_max*LOG_NUMBER);
+	rtas_log_buf = vmalloc(rtas_error_log_buffer_max*LOG_NUMBER);
 	if (!rtas_log_buf) {
 		printk(KERN_ERR "rtasd: no memory\n");
 		goto error;
@@ -415,11 +414,11 @@ static int rtasd(void *unused)
 	}
 
 	lock_cpu_hotplug();
-	cpu = first_cpu_const(mk_cpumask_const(cpu_online_map));
+	cpu = first_cpu(cpu_online_map);
 	for (;;) {
 		set_cpus_allowed(current, cpumask_of_cpu(cpu));
 		do_event_scan(event_scan);
-		set_cpus_allowed(current, all);
+		set_cpus_allowed(current, CPU_MASK_ALL);
 
 		/* Drop hotplug lock, and sleep for a bit (at least
 		 * one second since some machines have problems if we
@@ -429,9 +428,9 @@ static int rtasd(void *unused)
 		schedule_timeout((HZ*60/rtas_event_scan_rate) / 2);
 		lock_cpu_hotplug();
 
-		cpu = next_cpu_const(cpu, mk_cpumask_const(cpu_online_map));
+		cpu = next_cpu(cpu, cpu_online_map);
 		if (cpu == NR_CPUS)
-			cpu = first_cpu_const(mk_cpumask_const(cpu_online_map));
+			cpu = first_cpu(cpu_online_map);
 	}
 
 error:
@@ -450,13 +449,13 @@ static int __init rtas_init(void)
 		return 1;
 	}
 
-	entry = create_proc_entry("ppc64/error_log", S_IRUSR, NULL);
+	entry = create_proc_entry("ppc64/rtas/error_log", S_IRUSR, NULL);
 	if (entry)
 		entry->proc_fops = &proc_rtas_log_operations;
 	else
 		printk(KERN_ERR "Failed to create error_log proc entry\n");
 
-	if (kernel_thread(rtasd, 0, CLONE_FS) < 0)
+	if (kernel_thread(rtasd, NULL, CLONE_FS) < 0)
 		printk(KERN_ERR "Failed to start RTAS daemon\n");
 
 	return 0;

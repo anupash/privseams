@@ -822,6 +822,11 @@ static void add_timer_randomness(struct timer_rand_state *state, unsigned num)
 	} else {
 		time = jiffies;
 	}
+#elif defined (__sparc_v9__)
+	unsigned long tick = tick_ops->get_tick();
+
+	time = (unsigned int) tick;
+	num ^= (tick >> 32UL);
 #else
 	time = jiffies;
 #endif
@@ -1586,7 +1591,7 @@ void rand_initialize_disk(struct gendisk *disk)
 }
 
 static ssize_t
-random_read(struct file * file, char * buf, size_t nbytes, loff_t *ppos)
+random_read(struct file * file, char __user * buf, size_t nbytes, loff_t *ppos)
 {
 	DECLARE_WAITQUEUE(wait, current);
 	ssize_t			n, retval = 0, count = 0;
@@ -1666,7 +1671,7 @@ random_read(struct file * file, char * buf, size_t nbytes, loff_t *ppos)
 }
 
 static ssize_t
-urandom_read(struct file * file, char * buf,
+urandom_read(struct file * file, char __user * buf,
 		      size_t nbytes, loff_t *ppos)
 {
 	return extract_entropy(sec_random_state, buf, nbytes,
@@ -1690,13 +1695,13 @@ random_poll(struct file *file, poll_table * wait)
 }
 
 static ssize_t
-random_write(struct file * file, const char * buffer,
+random_write(struct file * file, const char __user * buffer,
 	     size_t count, loff_t *ppos)
 {
 	int		ret = 0;
 	size_t		bytes;
 	__u32 		buf[16];
-	const char 	*p = buffer;
+	const char 	__user *p = buffer;
 	size_t		c = count;
 
 	while (c > 0) {
@@ -1725,20 +1730,21 @@ static int
 random_ioctl(struct inode * inode, struct file * file,
 	     unsigned int cmd, unsigned long arg)
 {
-	int *p, *tmp, size, ent_count;
+	int *tmp, size, ent_count;
+	int __user *p = (int __user *)arg;
 	int retval;
 	unsigned long flags;
 	
 	switch (cmd) {
 	case RNDGETENTCNT:
 		ent_count = random_state->entropy_count;
-		if (put_user(ent_count, (int *) arg))
+		if (put_user(ent_count, p))
 			return -EFAULT;
 		return 0;
 	case RNDADDTOENTCNT:
 		if (!capable(CAP_SYS_ADMIN))
 			return -EPERM;
-		if (get_user(ent_count, (int *) arg))
+		if (get_user(ent_count, p))
 			return -EFAULT;
 		credit_entropy_store(random_state, ent_count);
 		/*
@@ -1751,7 +1757,6 @@ random_ioctl(struct inode * inode, struct file * file,
 	case RNDGETPOOL:
 		if (!capable(CAP_SYS_ADMIN))
 			return -EPERM;
-		p = (int *) arg;
 		if (get_user(size, p) ||
 		    put_user(random_state->poolinfo.poolwords, p++))
 			return -EFAULT;
@@ -1786,14 +1791,13 @@ random_ioctl(struct inode * inode, struct file * file,
 	case RNDADDENTROPY:
 		if (!capable(CAP_SYS_ADMIN))
 			return -EPERM;
-		p = (int *) arg;
 		if (get_user(ent_count, p++))
 			return -EFAULT;
 		if (ent_count < 0)
 			return -EINVAL;
 		if (get_user(size, p++))
 			return -EFAULT;
-		retval = random_write(file, (const char *) p,
+		retval = random_write(file, (const char __user *) p,
 				      size, &file->f_pos);
 		if (retval < 0)
 			return retval;
@@ -1895,13 +1899,13 @@ static int change_poolsize(int poolsize)
 }
 
 static int proc_do_poolsize(ctl_table *table, int write, struct file *filp,
-			    void *buffer, size_t *lenp)
+			    void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	int	ret;
 
 	sysctl_poolsize = random_state->poolinfo.POOLBYTES;
 
-	ret = proc_dointvec(table, write, filp, buffer, lenp);
+	ret = proc_dointvec(table, write, filp, buffer, lenp, ppos);
 	if (ret || !write ||
 	    (sysctl_poolsize == random_state->poolinfo.POOLBYTES))
 		return ret;
@@ -1909,9 +1913,9 @@ static int proc_do_poolsize(ctl_table *table, int write, struct file *filp,
 	return change_poolsize(sysctl_poolsize);
 }
 
-static int poolsize_strategy(ctl_table *table, int *name, int nlen,
-			     void *oldval, size_t *oldlenp,
-			     void *newval, size_t newlen, void **context)
+static int poolsize_strategy(ctl_table *table, int __user *name, int nlen,
+			     void __user *oldval, size_t __user *oldlenp,
+			     void __user *newval, size_t newlen, void **context)
 {
 	int	len;
 	
@@ -1946,7 +1950,7 @@ static int poolsize_strategy(ctl_table *table, int *name, int nlen,
  * sysctl system call, it is returned as 16 bytes of binary data.
  */
 static int proc_do_uuid(ctl_table *table, int write, struct file *filp,
-			void *buffer, size_t *lenp)
+			void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	ctl_table	fake_table;
 	unsigned char	buf[64], tmp_uuid[16], *uuid;
@@ -1968,12 +1972,12 @@ static int proc_do_uuid(ctl_table *table, int write, struct file *filp,
 	fake_table.data = buf;
 	fake_table.maxlen = sizeof(buf);
 
-	return proc_dostring(&fake_table, write, filp, buffer, lenp);
+	return proc_dostring(&fake_table, write, filp, buffer, lenp, ppos);
 }
 
-static int uuid_strategy(ctl_table *table, int *name, int nlen,
-			 void *oldval, size_t *oldlenp,
-			 void *newval, size_t newlen, void **context)
+static int uuid_strategy(ctl_table *table, int __user *name, int nlen,
+			 void __user *oldval, size_t __user *oldlenp,
+			 void __user *newval, size_t newlen, void **context)
 {
 	unsigned char	tmp_uuid[16], *uuid;
 	unsigned int	len;

@@ -55,17 +55,20 @@
 /*
  * Lock ordering:
  *
- *  ->i_shared_sem		(vmtruncate)
+ *  ->i_mmap_lock		(vmtruncate)
  *    ->private_lock		(__free_pte->__set_page_dirty_buffers)
  *      ->swap_list_lock
  *        ->swap_device_lock	(exclusive_swap_page, others)
  *          ->mapping->tree_lock
+ *    ->page_map_lock()		(try_to_unmap_file)
  *
  *  ->i_sem
- *    ->i_shared_sem		(truncate->unmap_mapping_range)
+ *    ->i_mmap_lock		(truncate->unmap_mapping_range)
  *
  *  ->mmap_sem
- *    ->i_shared_sem		(various places)
+ *    ->i_mmap_lock
+ *      ->page_table_lock	(various places, mainly in mmap.c)
+ *        ->mapping->tree_lock	(arch-dependent flush_dcache_mmap_lock)
  *
  *  ->mmap_sem
  *    ->lock_page		(access_process_vm)
@@ -85,6 +88,13 @@
  *    ->private_lock		(try_to_unmap_one)
  *    ->tree_lock		(try_to_unmap_one)
  *    ->zone.lru_lock		(follow_page->mark_page_accessed)
+ *    ->page_map_lock()		(page_add_anon_rmap)
+ *      ->tree_lock		(page_remove_rmap->set_page_dirty)
+ *      ->private_lock		(page_remove_rmap->set_page_dirty)
+ *      ->inode_lock		(page_remove_rmap->set_page_dirty)
+ *    ->anon_vma.lock		(anon_vma_prepare)
+ *    ->inode_lock		(zap_pte_range->set_page_dirty)
+ *    ->private_lock		(zap_pte_range->__set_page_dirty_buffers)
  *
  *  ->task->proc_lock
  *    ->dcache_lock		(proc_pid_lookup)
@@ -121,14 +131,13 @@ static inline int sync_page(struct page *page)
 {
 	struct address_space *mapping;
 
+	/*
+	 * FIXME, fercrissake.  What is this barrier here for?
+	 */
 	smp_mb();
 	mapping = page_mapping(page);
-	if (mapping) {
-		if (mapping->a_ops && mapping->a_ops->sync_page)
-			return mapping->a_ops->sync_page(page);
-	} else if (PageSwapCache(page)) {
-		swap_unplug_io_fn(page);
-	}
+	if (mapping && mapping->a_ops && mapping->a_ops->sync_page)
+		return mapping->a_ops->sync_page(page);
 	return 0;
 }
 
@@ -191,7 +200,7 @@ static int wait_on_page_writeback_range(struct address_space *mapping,
 	index = start;
 	while ((nr_pages = pagevec_lookup_tag(&pvec, mapping, &index,
 			PAGECACHE_TAG_WRITEBACK,
-			min(end - index, (pgoff_t)PAGEVEC_SIZE-1) + 1))) {
+			min(end - index, (pgoff_t)PAGEVEC_SIZE-1) + 1)) != 0) {
 		unsigned i;
 
 		for (i = 0; i < nr_pages; i++) {
@@ -252,17 +261,15 @@ int add_to_page_cache(struct page *page, struct address_space *mapping,
 	int error = radix_tree_preload(gfp_mask & ~__GFP_HIGHMEM);
 
 	if (error == 0) {
-		page_cache_get(page);
 		spin_lock_irq(&mapping->tree_lock);
 		error = radix_tree_insert(&mapping->page_tree, offset, page);
 		if (!error) {
+			page_cache_get(page);
 			SetPageLocked(page);
 			page->mapping = mapping;
 			page->index = offset;
 			mapping->nrpages++;
 			pagecache_acct(1);
-		} else {
-			page_cache_release(page);
 		}
 		spin_unlock_irq(&mapping->tree_lock);
 		radix_tree_preload_end();
@@ -291,6 +298,40 @@ int add_to_page_cache_lru(struct page *page, struct address_space *mapping,
  * at a cost of "thundering herd" phenomena during rare hash
  * collisions.
  */
+struct page_wait_queue {
+	struct page *page;
+	int bit;
+	wait_queue_t wait;
+};
+
+static int page_wake_function(wait_queue_t *wait, unsigned mode, int sync, void *key)
+{
+	struct page *page = key;
+	struct page_wait_queue *wq;
+
+	wq = container_of(wait, struct page_wait_queue, wait);
+	if (wq->page != page || test_bit(wq->bit, &page->flags))
+		return 0;
+	else
+		return autoremove_wake_function(wait, mode, sync, NULL);
+}
+
+#define __DEFINE_PAGE_WAIT(name, p, b, f)				\
+	struct page_wait_queue name = {					\
+		.page	= p,						\
+		.bit	= b,						\
+		.wait	= {						\
+			.task	= current,				\
+			.func	= page_wake_function,			\
+			.flags	= f,					\
+			.task_list = LIST_HEAD_INIT(name.wait.task_list),\
+		},							\
+	}
+
+#define DEFINE_PAGE_WAIT(name, p, b)	__DEFINE_PAGE_WAIT(name, p, b, 0)
+#define DEFINE_PAGE_WAIT_EXCLUSIVE(name, p, b)				\
+		__DEFINE_PAGE_WAIT(name, p, b, WQ_FLAG_EXCLUSIVE)
+
 static wait_queue_head_t *page_waitqueue(struct page *page)
 {
 	const struct zone *zone = page_zone(page);
@@ -298,19 +339,28 @@ static wait_queue_head_t *page_waitqueue(struct page *page)
 	return &zone->wait_table[hash_ptr(page, zone->wait_table_bits)];
 }
 
+static void wake_up_page(struct page *page)
+{
+	const unsigned int mode = TASK_UNINTERRUPTIBLE | TASK_INTERRUPTIBLE;
+	wait_queue_head_t *waitqueue = page_waitqueue(page);
+
+	if (waitqueue_active(waitqueue))
+		__wake_up(waitqueue, mode, 1, page);
+}
+
 void fastcall wait_on_page_bit(struct page *page, int bit_nr)
 {
 	wait_queue_head_t *waitqueue = page_waitqueue(page);
-	DEFINE_WAIT(wait);
+	DEFINE_PAGE_WAIT(wait, page, bit_nr);
 
 	do {
-		prepare_to_wait(waitqueue, &wait, TASK_UNINTERRUPTIBLE);
+		prepare_to_wait(waitqueue, &wait.wait, TASK_UNINTERRUPTIBLE);
 		if (test_bit(bit_nr, &page->flags)) {
 			sync_page(page);
 			io_schedule();
 		}
 	} while (test_bit(bit_nr, &page->flags));
-	finish_wait(waitqueue, &wait);
+	finish_wait(waitqueue, &wait.wait);
 }
 
 EXPORT_SYMBOL(wait_on_page_bit);
@@ -332,13 +382,11 @@ EXPORT_SYMBOL(wait_on_page_bit);
  */
 void fastcall unlock_page(struct page *page)
 {
-	wait_queue_head_t *waitqueue = page_waitqueue(page);
 	smp_mb__before_clear_bit();
 	if (!TestClearPageLocked(page))
 		BUG();
 	smp_mb__after_clear_bit(); 
-	if (waitqueue_active(waitqueue))
-		wake_up_all(waitqueue);
+	wake_up_page(page);
 }
 
 EXPORT_SYMBOL(unlock_page);
@@ -349,15 +397,12 @@ EXPORT_SYMBOL(lock_page);
  */
 void end_page_writeback(struct page *page)
 {
-	wait_queue_head_t *waitqueue = page_waitqueue(page);
-
 	if (!TestClearPageReclaim(page) || rotate_reclaimable_page(page)) {
 		if (!test_clear_page_writeback(page))
 			BUG();
 		smp_mb__after_clear_bit();
 	}
-	if (waitqueue_active(waitqueue))
-		wake_up_all(waitqueue);
+	wake_up_page(page);
 }
 
 EXPORT_SYMBOL(end_page_writeback);
@@ -373,16 +418,16 @@ EXPORT_SYMBOL(end_page_writeback);
 void fastcall __lock_page(struct page *page)
 {
 	wait_queue_head_t *wqh = page_waitqueue(page);
-	DEFINE_WAIT(wait);
+	DEFINE_PAGE_WAIT_EXCLUSIVE(wait, page, PG_locked);
 
 	while (TestSetPageLocked(page)) {
-		prepare_to_wait(wqh, &wait, TASK_UNINTERRUPTIBLE);
+		prepare_to_wait_exclusive(wqh, &wait.wait, TASK_UNINTERRUPTIBLE);
 		if (PageLocked(page)) {
 			sync_page(page);
 			io_schedule();
 		}
 	}
-	finish_wait(wqh, &wait);
+	finish_wait(wqh, &wait.wait);
 }
 
 EXPORT_SYMBOL(__lock_page);
@@ -395,10 +440,6 @@ struct page * find_get_page(struct address_space *mapping, unsigned long offset)
 {
 	struct page *page;
 
-	/*
-	 * We scan the hash list read-only. Addition to and removal from
-	 * the hash-list needs a held write-lock.
-	 */
 	spin_lock_irq(&mapping->tree_lock);
 	page = radix_tree_lookup(&mapping->page_tree, offset);
 	if (page)
@@ -606,50 +647,55 @@ EXPORT_SYMBOL(grab_cache_page_nowait);
  * - note the struct file * is only passed for the use of readpage
  */
 void do_generic_mapping_read(struct address_space *mapping,
-			     struct file_ra_state *ra,
+			     struct file_ra_state *_ra,
 			     struct file * filp,
 			     loff_t *ppos,
 			     read_descriptor_t * desc,
 			     read_actor_t actor)
 {
 	struct inode *inode = mapping->host;
-	unsigned long index, offset;
+	unsigned long index, end_index, offset;
+	loff_t isize;
 	struct page *cached_page;
 	int error;
+	struct file_ra_state ra = *_ra;
 
 	cached_page = NULL;
 	index = *ppos >> PAGE_CACHE_SHIFT;
 	offset = *ppos & ~PAGE_CACHE_MASK;
 
+	isize = i_size_read(inode);
+	end_index = isize >> PAGE_CACHE_SHIFT;
+	if (index > end_index)
+		goto out;
+
 	for (;;) {
 		struct page *page;
-		unsigned long end_index, nr, ret;
-		loff_t isize = i_size_read(inode);
-
-		end_index = isize >> PAGE_CACHE_SHIFT;
-			
-		if (index > end_index)
-			break;
-		nr = PAGE_CACHE_SIZE;
-		if (index == end_index) {
-			nr = isize & ~PAGE_CACHE_MASK;
-			if (nr <= offset)
-				break;
-		}
+		unsigned long nr, ret;
 
 		cond_resched();
-		page_cache_readahead(mapping, ra, filp, index);
+		page_cache_readahead(mapping, &ra, filp, index);
 
-		nr = nr - offset;
 find_page:
 		page = find_get_page(mapping, index);
 		if (unlikely(page == NULL)) {
-			handle_ra_miss(mapping, ra, index);
+			handle_ra_miss(mapping, &ra, index);
 			goto no_cached_page;
 		}
 		if (!PageUptodate(page))
 			goto page_not_up_to_date;
 page_ok:
+		/* nr is the maximum number of bytes to copy from this page */
+		nr = PAGE_CACHE_SIZE;
+		if (index == end_index) {
+			nr = isize & ~PAGE_CACHE_MASK;
+			if (nr <= offset) {
+				page_cache_release(page);
+				goto out;
+			}
+		}
+		nr = nr - offset;
+
 		/* If users can be writing to this page using arbitrary
 		 * virtual addresses, take care about potential aliasing
 		 * before reading the page on the kernel side.
@@ -681,12 +727,9 @@ page_ok:
 		page_cache_release(page);
 		if (ret == nr && desc->count)
 			continue;
-		break;
+		goto out;
 
 page_not_up_to_date:
-		if (PageUptodate(page))
-			goto page_ok;
-
 		/* Get exclusive access to the page ... */
 		lock_page(page);
 
@@ -704,22 +747,41 @@ page_not_up_to_date:
 		}
 
 readpage:
-		/* ... and start the actual read. The read will unlock the page. */
+		/* Start the actual read. The read will unlock the page. */
 		error = mapping->a_ops->readpage(filp, page);
 
-		if (!error) {
-			if (PageUptodate(page))
-				goto page_ok;
+		if (unlikely(error))
+			goto readpage_error;
+
+		if (!PageUptodate(page)) {
 			wait_on_page_locked(page);
-			if (PageUptodate(page))
-				goto page_ok;
-			error = -EIO;
+			if (!PageUptodate(page)) {
+				error = -EIO;
+				goto readpage_error;
+			}
 		}
 
+		/*
+		 * i_size must be checked after we have done ->readpage.
+		 *
+		 * Checking i_size after the readpage allows us to calculate
+		 * the correct value for "nr", which means the zero-filled
+		 * part of the page is not copied back to userspace (unless
+		 * another truncate extends the file - this is desired though).
+		 */
+		isize = i_size_read(inode);
+		end_index = isize >> PAGE_CACHE_SHIFT;
+		if (index > end_index) {
+			page_cache_release(page);
+			goto out;
+		}
+		goto page_ok;
+
+readpage_error:
 		/* UHHUH! A synchronous read error occurred. Report it */
 		desc->error = error;
 		page_cache_release(page);
-		break;
+		goto out;
 
 no_cached_page:
 		/*
@@ -730,7 +792,7 @@ no_cached_page:
 			cached_page = page_cache_alloc_cold(mapping);
 			if (!cached_page) {
 				desc->error = -ENOMEM;
-				break;
+				goto out;
 			}
 		}
 		error = add_to_page_cache_lru(cached_page, mapping,
@@ -739,12 +801,15 @@ no_cached_page:
 			if (error == -EEXIST)
 				goto find_page;
 			desc->error = error;
-			break;
+			goto out;
 		}
 		page = cached_page;
 		cached_page = NULL;
 		goto readpage;
 	}
+
+out:
+	*_ra = ra;
 
 	*ppos = ((loff_t) index << PAGE_CACHE_SHIFT) + offset;
 	if (cached_page)
@@ -767,9 +832,9 @@ int file_read_actor(read_descriptor_t *desc, struct page *page,
 	 * Faults on the destination of a read are common, so do it before
 	 * taking the kmap.
 	 */
-	if (!fault_in_pages_writeable(desc->buf, size)) {
+	if (!fault_in_pages_writeable(desc->arg.buf, size)) {
 		kaddr = kmap_atomic(page, KM_USER0);
-		left = __copy_to_user(desc->buf, kaddr + offset, size);
+		left = __copy_to_user(desc->arg.buf, kaddr + offset, size);
 		kunmap_atomic(kaddr, KM_USER0);
 		if (left == 0)
 			goto success;
@@ -777,7 +842,7 @@ int file_read_actor(read_descriptor_t *desc, struct page *page,
 
 	/* Do it the slow way */
 	kaddr = kmap(page);
-	left = __copy_to_user(desc->buf, kaddr + offset, size);
+	left = __copy_to_user(desc->arg.buf, kaddr + offset, size);
 	kunmap(page);
 
 	if (left) {
@@ -787,7 +852,7 @@ int file_read_actor(read_descriptor_t *desc, struct page *page,
 success:
 	desc->count = count - size;
 	desc->written += size;
-	desc->buf += size;
+	desc->arg.buf += size;
 	return size;
 }
 
@@ -854,7 +919,7 @@ __generic_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 			read_descriptor_t desc;
 
 			desc.written = 0;
-			desc.buf = iov[seg].iov_base;
+			desc.arg.buf = iov[seg].iov_base;
 			desc.count = iov[seg].iov_len;
 			if (desc.count == 0)
 				continue;
@@ -904,7 +969,7 @@ int file_send_actor(read_descriptor_t * desc, struct page *page, unsigned long o
 {
 	ssize_t written;
 	unsigned long count = desc->count;
-	struct file *file = (struct file *) desc->buf;
+	struct file *file = desc->arg.data;
 
 	if (size > count)
 		size = count;
@@ -921,7 +986,7 @@ int file_send_actor(read_descriptor_t * desc, struct page *page, unsigned long o
 }
 
 ssize_t generic_file_sendfile(struct file *in_file, loff_t *ppos,
-			 size_t count, read_actor_t actor, void __user *target)
+			 size_t count, read_actor_t actor, void *target)
 {
 	read_descriptor_t desc;
 
@@ -930,7 +995,7 @@ ssize_t generic_file_sendfile(struct file *in_file, loff_t *ppos,
 
 	desc.written = 0;
 	desc.count = count;
-	desc.buf = target;
+	desc.arg.data = target;
 	desc.error = 0;
 
 	do_generic_file_read(in_file, ppos, &desc, actor);
@@ -1086,12 +1151,11 @@ retry_find:
 		did_readaround = 1;
 		ra_pages = max_sane_readahead(file->f_ra.ra_pages);
 		if (ra_pages) {
-			long start;
+			pgoff_t start = 0;
 
-			start = pgoff - ra_pages / 2;
-			if (pgoff < 0)
-				pgoff = 0;
-			do_page_cache_readahead(mapping, file, pgoff, ra_pages);
+			if (pgoff > ra_pages / 2)
+				start = pgoff - ra_pages / 2;
+			do_page_cache_readahead(mapping, file, start, ra_pages);
 		}
 		page = find_get_page(mapping, pgoff);
 		if (!page)
@@ -1353,15 +1417,9 @@ repeat:
 			return err;
 		}
 	} else {
-	    	/*
-		 * If a nonlinear mapping then store the file page offset
-		 * in the pte.
-		 */
-		if (pgoff != linear_page_index(vma, addr)) {
-	    		err = install_file_pte(mm, vma, addr, pgoff, prot);
-			if (err)
-		    		return err;
-		}
+		err = install_file_pte(mm, vma, addr, pgoff, prot);
+		if (err)
+			return err;
 	}
 
 	len -= PAGE_SIZE;
@@ -1854,7 +1912,7 @@ generic_file_aio_write_nolock(struct kiocb *iocb, const struct iovec *iov,
 		count -= written;
 	}
 
-	buf = iov->iov_base;
+	buf = iov->iov_base + written;	/* handle partial DIO write */
 	do {
 		unsigned long index;
 		unsigned long offset;
@@ -1952,7 +2010,7 @@ out_status:
 	err = written ? written : status;
 out:
 	pagevec_lru_add(&lru_pvec);
-	current->backing_dev_info = 0;
+	current->backing_dev_info = NULL;
 	return err;
 }
 

@@ -374,7 +374,7 @@ typedef int (*acpi_table_handler) (unsigned long phys_addr, unsigned long size);
 
 extern acpi_table_handler acpi_table_ops[ACPI_TABLE_COUNT];
 
-typedef int (*acpi_madt_entry_handler) (acpi_table_entry_header *header);
+typedef int (*acpi_madt_entry_handler) (acpi_table_entry_header *header, const unsigned long end);
 
 char * __acpi_map_table (unsigned long phys_addr, unsigned long size);
 unsigned long acpi_find_rsdp (void);
@@ -413,6 +413,8 @@ static inline int acpi_boot_init(void)
 
 #endif 	/*!CONFIG_ACPI_BOOT*/
 
+unsigned int acpi_register_gsi (u32 gsi, int edge_level, int active_high_low);
+int acpi_gsi_to_irq (u32 gsi, unsigned int *irq);
 
 #ifdef CONFIG_ACPI_PCI
 
@@ -437,8 +439,6 @@ extern struct acpi_prt_list	acpi_prt;
 struct pci_dev;
 
 int acpi_pci_irq_enable (struct pci_dev *dev);
-int acpi_pci_irq_init (void);
-int acpi_gsi_to_irq (u32 gsi, unsigned int *irq);
 
 struct acpi_pci_driver {
 	struct acpi_pci_driver *next;

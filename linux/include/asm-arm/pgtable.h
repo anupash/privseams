@@ -312,6 +312,13 @@ PTE_BIT_FUNC(mkyoung,   |= L_PTE_YOUNG);
 		flush_pmd_entry(pmdp);	\
 	} while (0)
 
+#define copy_pmd(pmdpd,pmdps)		\
+	do {				\
+		pmdpd[0] = pmdps[0];	\
+		pmdpd[1] = pmdps[1];	\
+		flush_pmd_entry(pmdpd);	\
+	} while (0)
+
 #define pmd_clear(pmdp)			\
 	do {				\
 		pmdp[0] = __pmd(0);	\
@@ -406,8 +413,6 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
  */
 #define io_remap_page_range(vma,from,phys,size,prot) \
 		remap_page_range(vma,from,phys,size,prot)
-
-typedef pte_t *pte_addr_t;
 
 #define pgtable_cache_init() do { } while (0)
 

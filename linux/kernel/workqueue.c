@@ -201,20 +201,48 @@ static int worker_thread(void *__cwq)
 	siginitset(&sa.sa.sa_mask, sigmask(SIGCHLD));
 	do_sigaction(SIGCHLD, &sa, (struct k_sigaction *)0);
 
+	set_current_state(TASK_INTERRUPTIBLE);
 	while (!kthread_should_stop()) {
-		set_task_state(current, TASK_INTERRUPTIBLE);
-
 		add_wait_queue(&cwq->more_work, &wait);
 		if (list_empty(&cwq->worklist))
 			schedule();
 		else
-			set_task_state(current, TASK_RUNNING);
+			__set_current_state(TASK_RUNNING);
 		remove_wait_queue(&cwq->more_work, &wait);
 
 		if (!list_empty(&cwq->worklist))
 			run_workqueue(cwq);
+		set_current_state(TASK_INTERRUPTIBLE);
 	}
+	__set_current_state(TASK_RUNNING);
 	return 0;
+}
+
+static void flush_cpu_workqueue(struct cpu_workqueue_struct *cwq)
+{
+	if (cwq->thread == current) {
+		/*
+		 * Probably keventd trying to flush its own queue. So simply run
+		 * it by hand rather than deadlocking.
+		 */
+		run_workqueue(cwq);
+	} else {
+		DEFINE_WAIT(wait);
+		long sequence_needed;
+
+		spin_lock_irq(&cwq->lock);
+		sequence_needed = cwq->insert_sequence;
+
+		while (sequence_needed - cwq->remove_sequence > 0) {
+			prepare_to_wait(&cwq->work_done, &wait,
+					TASK_UNINTERRUPTIBLE);
+			spin_unlock_irq(&cwq->lock);
+			schedule();
+			spin_lock_irq(&cwq->lock);
+		}
+		finish_wait(&cwq->work_done, &wait);
+		spin_unlock_irq(&cwq->lock);
+	}
 }
 
 /*
@@ -233,43 +261,19 @@ static int worker_thread(void *__cwq)
  */
 void fastcall flush_workqueue(struct workqueue_struct *wq)
 {
-	struct cpu_workqueue_struct *cwq;
-	int cpu;
-
 	might_sleep();
 
-	lock_cpu_hotplug();
-	for_each_online_cpu(cpu) {
-		DEFINE_WAIT(wait);
-		long sequence_needed;
+	if (is_single_threaded(wq)) {
+		/* Always use cpu 0's area. */
+		flush_cpu_workqueue(wq->cpu_wq + 0);
+	} else {
+		int cpu;
 
-		if (is_single_threaded(wq))
-			cwq = wq->cpu_wq + 0; /* Always use cpu 0's area. */
-		else
-			cwq = wq->cpu_wq + cpu;
-
-		if (cwq->thread == current) {
-			/*
-			 * Probably keventd trying to flush its own queue.
-			 * So simply run it by hand rather than deadlocking.
-			 */
-			run_workqueue(cwq);
-			continue;
-		}
-		spin_lock_irq(&cwq->lock);
-		sequence_needed = cwq->insert_sequence;
-
-		while (sequence_needed - cwq->remove_sequence > 0) {
-			prepare_to_wait(&cwq->work_done, &wait,
-					TASK_UNINTERRUPTIBLE);
-			spin_unlock_irq(&cwq->lock);
-			schedule();
-			spin_lock_irq(&cwq->lock);
-		}
-		finish_wait(&cwq->work_done, &wait);
-		spin_unlock_irq(&cwq->lock);
+		lock_cpu_hotplug();
+		for_each_online_cpu(cpu)
+			flush_cpu_workqueue(wq->cpu_wq + cpu);
+		unlock_cpu_hotplug();
 	}
-	unlock_cpu_hotplug();
 }
 
 static struct task_struct *create_workqueue_thread(struct workqueue_struct *wq,
@@ -324,7 +328,7 @@ struct workqueue_struct *__create_workqueue(const char *name,
 	} else {
 		spin_lock(&workqueue_lock);
 		list_add(&wq->list, &workqueues);
-		spin_unlock_irq(&workqueue_lock);
+		spin_unlock(&workqueue_lock);
 		for_each_online_cpu(cpu) {
 			p = create_workqueue_thread(wq, cpu);
 			if (p) {
@@ -334,6 +338,7 @@ struct workqueue_struct *__create_workqueue(const char *name,
 				destroy = 1;
 		}
 	}
+	unlock_cpu_hotplug();
 
 	/*
 	 * Was there any error during startup? If yes then clean up:
@@ -342,7 +347,6 @@ struct workqueue_struct *__create_workqueue(const char *name,
 		destroy_workqueue(wq);
 		wq = NULL;
 	}
-	unlock_cpu_hotplug();
 	return wq;
 }
 
@@ -376,7 +380,7 @@ void destroy_workqueue(struct workqueue_struct *wq)
 			cleanup_workqueue_thread(wq, cpu);
 		spin_lock(&workqueue_lock);
 		list_del(&wq->list);
-		spin_unlock_irq(&workqueue_lock);
+		spin_unlock(&workqueue_lock);
 	}
 	unlock_cpu_hotplug();
 	kfree(wq);

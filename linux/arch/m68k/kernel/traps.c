@@ -116,7 +116,7 @@ void __init base_trap_init(void)
 
 		__asm__ volatile ("movec %%vbr, %0" : "=r" ((void*)sun3x_prom_vbr));
 	}
-	
+
 	/* setup the exception vector table */
 	__asm__ volatile ("movec %0,%%vbr" : : "r" ((void*)vectors));
 
@@ -329,7 +329,8 @@ static inline void access_error060 (struct frame *fp)
 		 * fault during mem_read/mem_write in ifpsp060/os.S
 		 */
 		send_fault_sig(&fp->ptregs);
-	} else {
+	} else if (!(fslw & (MMU060_RE|MMU060_WE)) ||
+		   send_fault_sig(&fp->ptregs) > 0) {
 		printk("pc=%#lx, fa=%#lx\n", fp->ptregs.pc, fp->un.fmt4.effaddr);
 		printk( "68060 access error, fslw=%lx\n", fslw );
 		trap_c( fp );
@@ -352,7 +353,7 @@ static inline unsigned long probe040(int iswrite, unsigned long addr, int wbs)
 
 	asm volatile (".chip 68040; movec %%mmusr,%0; .chip 68k" : "=r" (mmusr));
 
-	set_fs(old_fs); 
+	set_fs(old_fs);
 
 	return mmusr;
 }
@@ -379,8 +380,8 @@ static inline int do_040writeback1(unsigned short wbs, unsigned long wba,
 	}
 
 	/* set_fs can not be moved, otherwise put_user() may oops */
-	set_fs(old_fs); 
-	
+	set_fs(old_fs);
+
 
 #ifdef DEBUG
 	printk("do_040writeback1, res=%d\n",res);
@@ -390,7 +391,7 @@ static inline int do_040writeback1(unsigned short wbs, unsigned long wba,
 }
 
 /* after an exception in a writeback the stack frame corresponding
- * to that exception is discarded, set a few bits in the old frame 
+ * to that exception is discarded, set a few bits in the old frame
  * to simulate what it should look like
  */
 static inline void fix_xframe040(struct frame *fp, unsigned long wba, unsigned short wbs)
@@ -415,7 +416,7 @@ static inline void do_040writebacks(struct frame *fp)
 				       fp->un.fmt7.wb2d);
 		if (res)
 			fix_xframe040(fp, fp->un.fmt7.wb2a, fp->un.fmt7.wb2s);
-		else 
+		else
 			fp->un.fmt7.wb2s = 0;
 	}
 
@@ -461,9 +462,9 @@ static inline void access_error040(struct frame *fp)
 
 #ifdef DEBUG
 	printk("ssw=%#x, fa=%#lx\n", ssw, fp->un.fmt7.faddr);
-        printk("wb1s=%#x, wb2s=%#x, wb3s=%#x\n", fp->un.fmt7.wb1s,  
+        printk("wb1s=%#x, wb2s=%#x, wb3s=%#x\n", fp->un.fmt7.wb1s,
 		fp->un.fmt7.wb2s, fp->un.fmt7.wb3s);
-	printk ("wb2a=%lx, wb3a=%lx, wb2d=%lx, wb3d=%lx\n", 
+	printk ("wb2a=%lx, wb3a=%lx, wb2d=%lx, wb3d=%lx\n",
 		fp->un.fmt7.wb2a, fp->un.fmt7.wb3a,
 		fp->un.fmt7.wb2d, fp->un.fmt7.wb3d);
 #endif
@@ -491,7 +492,7 @@ static inline void access_error040(struct frame *fp)
 			errorcode = 0;
 		}
 
-		/* despite what documentation seems to say, RMW 
+		/* despite what documentation seems to say, RMW
 		 * accesses have always both the LK and RW bits set */
 		if (!(ssw & RW_040) || (ssw & LK_040))
 			errorcode |= 2;
@@ -517,7 +518,7 @@ static inline void access_error040(struct frame *fp)
 			if (fp->un.fmt7.wb2a == fp->un.fmt7.faddr)
 				fp->un.fmt7.wb2s &= ~WBV_040;
 		}
-	} else {
+	} else if (send_fault_sig(&fp->ptregs) > 0) {
 		printk("68040 access error, ssw=%x\n", ssw);
 		trap_c(fp);
 	}
@@ -540,14 +541,14 @@ static inline void bus_error030 (struct frame *fp)
 	unsigned short ssw = fp->un.fmtb.ssw;
 	extern unsigned long _sun3_map_test_start, _sun3_map_test_end;
 
-#if DEBUG
+#ifdef DEBUG
 	if (ssw & (FC | FB))
 		printk ("Instruction fault at %#010lx\n",
 			ssw & FC ?
 			fp->ptregs.format == 0xa ? fp->ptregs.pc + 2 : fp->un.fmtb.baddr - 2
 			:
 			fp->ptregs.format == 0xa ? fp->ptregs.pc + 4 : fp->un.fmtb.baddr);
-	if (ssw & DF) 
+	if (ssw & DF)
 		printk ("Data %s fault at %#010lx in %s (pc=%#lx)\n",
 			ssw & RW ? "read" : "write",
 			fp->un.fmtb.daddr,
@@ -559,7 +560,7 @@ static inline void bus_error030 (struct frame *fp)
 	 * the testing for a bad kernel-space access (demand-mapping applies
 	 * to kernel accesses too).
 	 */
-	
+
 	if ((ssw & DF)
 	    && (buserr_type & (SUN3_BUSERR_PROTERR | SUN3_BUSERR_INVALID))) {
 		if (mmu_emu_handle_fault (fp->un.fmtb.daddr, ssw & RW, 0))
@@ -659,7 +660,7 @@ static inline void bus_error030 (struct frame *fp)
 		printk ("protection fault on insn access (segv).\n");
 #endif
 		force_sig (SIGSEGV, current);
-       }	
+       }
 }
 #else
 #if defined(CPU_M68020_OR_M68030)
@@ -669,7 +670,7 @@ static inline void bus_error030 (struct frame *fp)
 	unsigned short mmusr;
 	unsigned long addr, errorcode;
 	unsigned short ssw = fp->un.fmtb.ssw;
-#if DEBUG
+#ifdef DEBUG
 	unsigned long desc;
 
 	printk ("pid = %x  ", current->pid);
@@ -695,7 +696,7 @@ static inline void bus_error030 (struct frame *fp)
 	if (ssw & DF) {
 		addr = fp->un.fmtb.daddr;
 
-#if DEBUG
+#ifdef DEBUG
 		asm volatile ("ptestr %3,%2@,#7,%0\n\t"
 			      "pmove %%psr,%1@"
 			      : "=a&" (desc)
@@ -707,7 +708,7 @@ static inline void bus_error030 (struct frame *fp)
 #endif
 		mmusr = temp;
 
-#if DEBUG
+#ifdef DEBUG
 		printk("mmusr is %#x for addr %#lx in task %p\n",
 		       mmusr, addr, current);
 		printk("descriptor address is %#lx, contents %#lx\n",
@@ -732,7 +733,7 @@ static inline void bus_error030 (struct frame *fp)
 				return;
 		} else if (!(mmusr & MMU_I)) {
 			/* probably a 020 cas fault */
-			if (!(ssw & RM))
+			if (!(ssw & RM) && send_fault_sig(&fp->ptregs) > 0)
 				printk("unexpected bus error (%#x,%#x)\n", ssw, mmusr);
 		} else if (mmusr & (MMU_B|MMU_L|MMU_S)) {
 			printk("invalid %s access at %#lx from pc %#lx\n",
@@ -766,7 +767,7 @@ static inline void bus_error030 (struct frame *fp)
 				      : "a" (&tlong));
 			printk("tt1 is %#lx\n", tlong);
 #endif
-#if DEBUG
+#ifdef DEBUG
 			printk("Unknown SIGSEGV - 1\n");
 #endif
 			die_if_kernel("Oops",&fp->ptregs,mmusr);
@@ -811,7 +812,7 @@ static inline void bus_error030 (struct frame *fp)
 		   should still create the ATC entry.  */
 		goto create_atc_entry;
 
-#if DEBUG
+#ifdef DEBUG
 	asm volatile ("ptestr #1,%2@,#7,%0\n\t"
 		      "pmove %%psr,%1@"
 		      : "=a&" (desc)
@@ -835,7 +836,7 @@ static inline void bus_error030 (struct frame *fp)
 	else if (mmusr & (MMU_B|MMU_L|MMU_S)) {
 		printk ("invalid insn access at %#lx from pc %#lx\n",
 			addr, fp->ptregs.pc);
-#if DEBUG
+#ifdef DEBUG
 		printk("Unknown SIGSEGV - 2\n");
 #endif
 		die_if_kernel("Oops",&fp->ptregs,mmusr);
@@ -857,7 +858,7 @@ asmlinkage void buserr_c(struct frame *fp)
 	if (user_mode(&fp->ptregs))
 		current->thread.esp0 = (unsigned long) fp;
 
-#if DEBUG
+#ifdef DEBUG
 	printk ("*** Bus Error *** Format is %x\n", fp->ptregs.format);
 #endif
 
@@ -880,7 +881,7 @@ asmlinkage void buserr_c(struct frame *fp)
 #endif
 	default:
 	  die_if_kernel("bad frame format",&fp->ptregs,0);
-#if DEBUG
+#ifdef DEBUG
 	  printk("Unknown SIGSEGV - 4\n");
 #endif
 	  force_sig(SIGSEGV, current);
@@ -910,7 +911,7 @@ void show_trace(unsigned long *stack)
 		 * down the cause of the crash will be able to figure
 		 * out the call path that was taken.
 		 */
-		if (kernel_text_address(addr)) {
+		if (__kernel_text_address(addr)) {
 #ifndef CONFIG_KALLSYMS
 			if (i % 5 == 0)
 				printk("\n       ");
@@ -989,7 +990,7 @@ void show_registers(struct pt_regs *regs)
 	printk ("\n");
 }
 
-extern void show_stack(struct task_struct *task, unsigned long *stack)
+void show_stack(struct task_struct *task, unsigned long *stack)
 {
 	unsigned long *endstack;
 	int i;
@@ -1035,7 +1036,7 @@ void bad_super_trap (struct frame *fp)
 			fp->ptregs.format);
 	else
 		printk ("*** Exception %d ***   FORMAT=%X\n",
-			(fp->ptregs.vector) >> 2, 
+			(fp->ptregs.vector) >> 2,
 			fp->ptregs.format);
 	if (fp->ptregs.vector >> 2 == VEC_ADDRERR && CPU_IS_020_OR_030) {
 		unsigned short ssw = fp->un.fmtb.ssw;
@@ -1187,6 +1188,7 @@ void die_if_kernel (char *str, struct pt_regs *fp, int nr)
 
 	console_verbose();
 	printk("%s: %08x\n",str,nr);
+	print_modules();
 	printk("PC: [<%08lx>]",fp->pc);
 	print_symbol(" %s\n", fp->pc);
 	printk("\nSR: %04x  SP: %p  a2: %08lx\n",
