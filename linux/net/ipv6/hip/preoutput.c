@@ -28,7 +28,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	int err = 0;
 	int state = 0;
 	//hip_ha_t *entry;
-	hip_xfrm_state *xs;
+	struct hip_xfrm_state *xs;
 
 	if (!ipv6_addr_is_hit(&hdr->daddr)) {
 		/* The address was an IPv6 address, ignore. */
@@ -37,7 +37,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 	/* The source address is not yet a HIT, just the dst address. */
 	//entry = hip_hadb_find_byhit(&hdr->daddr);
-	xs = hip_xfrm_find(&hdr->daddr);
+	xs = hip_xfrm_find_by_hit(&hdr->daddr);
      
 	if (!xs) {
 		HIP_ERROR("Unknown HA\n");
@@ -117,7 +117,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			err = -EADDRNOTAVAIL;
 			goto out;
 		}
-		ipv6_addr_copy(&hdr->daddr, &entry->preferred_address);
+		ipv6_addr_copy(&hdr->daddr, &xs->preferred_address);
 		    
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 		if (!skb) {
@@ -197,14 +197,11 @@ static int hip_getfrag(void *from, char *to, int offset, int len, int odd, struc
  *
  * Returns: 0 if packet was delivered to lower layer, < 0 otherwise.
  */
-#if 0
-// FIXME: tkoponen, this is useless sugar...
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* buf)
 {
 	return hip_csum_send_fl(src_addr, peer_addr, buf, (struct flowi *) NULL);
 }
-#endif
 
 /**
  * hip_csum_send_fl - send a HIP packet to given address
@@ -289,5 +286,3 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  out_err:
 	return err;
 }
-
-

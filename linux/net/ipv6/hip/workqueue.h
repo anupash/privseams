@@ -9,7 +9,6 @@
 #  include <linux/interrupt.h>
 #  include <net/ipv6.h>
 #  include <net/hip.h>
-#  include "list.h"
 #endif
 
 #include "netlink.h" /* hip_netlink_* functions */

@@ -1311,8 +1311,8 @@ struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
 	if (!hwo)
 		return NULL;
 
-	hwo->type = HIP_WO_TYPE_MSG;
-	hwo->subtype = subtype;
+	hwo->hdr.type = HIP_WO_TYPE_MSG;
+	hwo->hdr.subtype = subtype;
 	hwo->arg1 = (void *)ifindex;
 	hwo->arg2 = (void *)event;
 	hwo->destructor = NULL;
@@ -1856,9 +1856,9 @@ void hip_uninit_netdev_notifier(void)
 static int hip_do_work(struct hip_work_order *job)
 {
 	int res = 0;
-	switch (job->type) {
+	switch (job->hdr.type) {
 	case HIP_WO_TYPE_INCOMING:
-		switch(job->subtype) {
+		switch(job->hdr.subtype) {
 		case HIP_WO_SUBTYPE_RECV_I1:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i1(job->msg, &job->hdr.src_addr,
@@ -1914,7 +1914,7 @@ static int hip_do_work(struct hip_work_order *job)
 		HIP_INFO("Nothing for outgoing stuff\n");
 		break;
 	case HIP_WO_TYPE_MSG:
-		switch(job->subtype) {
+		switch(job->hdr.subtype) {
 		case HIP_WO_SUBTYPE_IN6_EVENT:
 			hip_net_event((int)job->arg1, 0, (uint32_t) job->arg2);
 			res = KHIPD_OK;
@@ -1960,7 +1960,7 @@ static int hip_do_work(struct hip_work_order *job)
 			res = KHIPD_ERROR;
 			goto out_err;
 		default:
-			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->subtype,job->type);
+			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);
 			res = KHIPD_ERROR;
 			goto out_err;
 		}
@@ -2019,7 +2019,7 @@ static int hip_worker(void *t)
                HIP_DEBUG("Did not get anything from the work queue\n");
                result = KHIPD_ERROR;
           } else {         
-               HIP_DEBUG("New job: type=%d subtype=%d\n", job->type, job->subtype);
+               HIP_DEBUG("New job: type=%d subtype=%d\n", job->hdr.type, job->hdr.subtype);
                result = hip_do_work(job);
           }
 		if (result < 0) {

@@ -11,7 +11,7 @@
 #include <net/hip.h>
 #include "workqueue.h"
 #include "debug.h"
-#include "xfrm.h"
+#include "xfrmapi.h"
 #include "hadb.h"
 #include "keymat.h"
 #include "crypto/dsa.h"
