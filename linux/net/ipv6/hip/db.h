@@ -200,6 +200,7 @@ int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int t
 int hip_hadb_get_info(void *arg, void *dst, int type);
 int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int type);
 int hip_hadb_set_info(void *arg, void *dst, int type);
+int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk);
 
 // host id functions
 int hip_get_any_local_hit(struct in6_addr *dst);

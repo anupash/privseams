@@ -717,12 +717,13 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 							     np->daddr.s6_addr32,
 							     inet->sport,
 							     inet->dport);
+
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	if (HIP_CALLFUNC(hip_save_sk,0)(&fl,sk)) {
-		printk("SAVEDSAVED %p\n",sk);
+	err = HIP_CALLPROC(hip_add_sk_to_waitlist)(&fl->fl6_dst,sk);
+	if (!err) 
 		return 0;
-	}
-	printk("NOT SAVED\n");
+	else if (err != -EISCONN)
+		goto late_failure;
 #endif
 	err = tcp_connect(sk);
 	if (err)

@@ -1014,67 +1014,26 @@ static void hip_get_load_time(void)
 	return;
 }
 
-/*
- * returns 0 if error, positive (2) if ok
+/* returns 0, if ok.
  */
-static int hip_save_sk(struct flowi *fl, struct sock *sk)
+int hip_add_sk_to_waitlist(struct in6_addr *hit, struct sock *sk)
 {
-	int err; 
-	struct ipv6hdr hdr = {0};
-	struct hip_kludge *kg;
-	int state;
-	int tlist[2] = { HIP_HADB_STATE, HIP_HADB_SK };
-	void *setlist[2] = { &state, kg };
+	struct hip_work_order *hwo;
 
-	if (!ipv6_addr_is_hit(&fl->fl6_dst))
-		return 0;
+	if (!ipv6_addr_is_hit(hit))
+		return -ENOTHIT;
 
-	if (!hip_hadb_multiget(&fl->fl6_dst, 2, tlist, setlist, HIP_ARG_HIT))
-	{
-			HIP_ERROR("Trying to connect to unknown HIT. Failed\n");
-			HIP_DEBUG_HIT("Unknown HIT", &fl->fl6_dst);
-			return 0;
+	hwo = hip_create_job_with_hit(GFP_KERNEL,hit);
+	if (!hwo) {
+		HIP_ERROR("No memory\n");
+		return -ENOMEM;
 	}
 
-	if (state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("HIP state already established\n");
-		return 0;
-	}
+	hwo->type = HIP_WO_TYPE_OUTGOING;
+	hwo->subtype = HIP_WO_SUBTYPE_SKWAIT;
+	hwo->arg2 = sk;
 
-	if (kg) {
-		if (kg->sk) {
-			HIP_DEBUG("packet already stored\n");
-			return 0;
-		}
-		HIP_ERROR("Kludge structure exists without a sock!\n");
-		kfree(kg);
-	}
-
-	kg = kmalloc(sizeof(*kg), GFP_KERNEL);
-	if (!kg) {
-		HIP_ERROR("No memory for kludge\n");
-		return 0;
-	}
-
-	kg->sk = sk;
-	memcpy(&kg->fl, fl, sizeof(*fl));
-
-	tlist[0] = HIP_HADB_SK;
-	setlist[0] = kg;
-
-	sock_hold(kg->sk);
-	err = hip_hadb_multiset(&fl->fl6_dst, 1, tlist, setlist, HIP_ARG_HIT);
-	if (err < 1) {
-		sock_put(kg->sk);
-		HIP_ERROR("Error saving SK\n");
-		kfree(kg);
-	} else {
-		HIP_INFO("SK saved\n");
-		ipv6_addr_copy(&hdr.daddr, &fl->fl6_dst);
-		hip_handle_output(&hdr, NULL); // trigger I1
-	}
-
-	return err;
+	return (hip_insert_work_order(hwo) - 1);
 }
 
 /**
@@ -1664,8 +1623,20 @@ static int hip_do_work(void)
 			if (res < 0) {
 				HIP_ERROR("Unable to reinitialize state\n");
 				res = KHIPD_ERROR;
-			}
-			HIP_DEBUG("State reverted to start\n");
+			} else 
+				HIP_DEBUG("State reverted to start\n");
+			break;
+		case HIP_WO_SUBTYPE_SKWAIT:
+			/* arg1 = d-hit, arg2 = sk */
+			res = hip_hadb_save_sk(job->arg1, job->arg2);
+			if (res < 0) {
+				HIP_ERROR("Unable to save socket: %d\n", res);
+				res = KHIPD_ERROR;
+			} else 
+				HIP_DEBUG("Socket saved\n");
+			job->arg2 = NULL; 
+			/* have to clear the arg2 by ourselves, otherwise it would be kfree'd
+			   and would panic */
 			break;
 		}
 		break;
@@ -1810,7 +1781,7 @@ static int __init hip_init(void)
 
  	HIP_SETCALL(hip_bypass_ipsec);
 	HIP_SETCALL(hip_handle_output);
-	HIP_SETCALL(hip_save_sk);
+	HIP_SETCALL(hip_add_sk_to_waitlist);
 	HIP_SETCALL(hip_handle_esp);
 	HIP_SETCALL(hip_get_addr);
 	HIP_SETCALL(hip_get_hits);

@@ -215,6 +215,8 @@ typedef uint16_t in_port_t;
 
 #define HIP_DSA_SIGNATURE_LEN         41
 
+#define ENOHIT                       666
+
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
@@ -256,18 +258,6 @@ struct hip_common {
 	struct in6_addr hits;  /* Sender HIT   */
 	struct in6_addr hitr;  /* Receiver HIT */
 } __attribute__ ((packed));
-
-#if 0
-struct hip_built_r1 {
-	struct hip_built_r1    *next;      // Next in list 
-	struct hip_common      *r1;         // Pointer to the kmalloced packet
-
-	/* uint32_t last_send; Time after which this R1-data must
-	   not be sent. */
-	/* timer    del_timer; Timer which releases this
-	   structure on expiry. */
-};
-#endif /* 0 */
 
 typedef uint8_t hip_hdr_type_t;
 typedef uint8_t hip_hdr_len_t;
@@ -567,8 +557,9 @@ struct hip_packet_dh_sig
 
 struct hip_kludge
 {
+	struct list_head socklist;
 	struct sock *sk;
-	struct flowi fl;
+
 };
 
 struct hip_context
@@ -654,14 +645,13 @@ struct hip_hadb_state
 	uint32_t             lsi_our;
 
 	int                  esp_transform;
-//	int                  auth_transform;
 
 	uint64_t             birthday;
 	
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
 
-	struct hip_kludge    *sk;  /* TCP sock for connection establishment */
+	struct hip_kludge    kg;  /* TCP sock for connection establishment */
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.

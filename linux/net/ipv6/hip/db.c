@@ -835,6 +835,49 @@ void hip_hadb_free_kludge(struct in6_addr *arg)
  */
 
 
+/*
+ * returns 0 if error, positive (2) if ok
+ */
+int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
+{
+	HIP_HADB_WRAP_BEGIN(int);
+	struct hip_kludge *kg;
+	struct hip_hadb_state *entry;
+	int state;
+	struct ipv6hdr hdr = {0};
+
+	kg = kmalloc(sizeof(*kg), GFP_KERNEL);
+	if (!kg) {
+		HIP_ERROR("No memory for kludge\n");
+		return -ENOMEM;
+	}
+
+	kg->sk = sk;
+
+	HIP_HADB_WRAP_W_ACCESS(-EINVAL);
+
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+		HIP_DEBUG("Already connected\n");
+		res = -EISCONN;
+		HIP_HADB_WRAP_W_END;
+	}
+
+	sock_hold(kg->sk);
+	list_add(&kg->socklist, &entry->socklist);
+
+	state = entry->state;
+
+	HIP_WRITE_UNLOCK_DB(&hip_hadb);
+
+	if (state == HIP_STATE_UNASSOCIATED) {
+		ipv6_addr_copy(&ip.daddr, hit);
+		hip_handle_output(&ip, NULL); // trigger I1
+	}
+
+	return 0;
+}
+
+
 /**
  * hip_hadb_access_db - Find a host association entry using @type key
  * @arg: a pointer to a HIT or an SPI
