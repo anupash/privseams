@@ -58,71 +58,10 @@ CODING CONVENTIONS
   userspace code. This rule may be relaxed in the kernel code because
   the space is very limited due to the 8 character indentation.
 
-QUICK-AND-DIRTY ARCH INSTRUCTIONS FOR DEVELOPERS
-================================================
-
-These instructions assume that you want to access the HIPL source code
-using ssh. Also, the tla usage is optimized using hard-linked revision
-libraries.
-
-# Register an account:
-#
-tla register-archive hipl-dev@freelists.org--hipl \
-       sftp://mkomu@hipl.hiit.fi/var/archive/hipl
-tla my-default-archive hipl-dev@freelists.org--hipl
-
-# Make a revision library (otherwise e.g. commit and changes take up to
-# 15 mins!)
-#
-mkdir ~/.tla-rev-lib
-tla my-revision-library ~/.tla-rev-lib/
-tla library-config --greedy --sparse ~/.tla-rev-lib/
-
-# Get a working copy from the main branch:
-#
-tla get --link hipl--main--2.6 hipl--main--2.6
-
-# Copy the tla hook if you want to get your commit logs to the mailing list:
-#
-cp hipl--main--2.6/test/tla-hook ~/.arch-params/hook
-
-# Different ways to commit code:
-#
-a) tla commit # Open's your default editor and commits.
-b) emacs `tla make-log`; tla commit
-c) tla commit -s "Explanation jaada jaada"
-
-# How to check what your have modified in the tree
-#
-tla changes
-
-# How to make a branch from the current version of the main branch
-#
-tla my-default archive # Make sure that you are accessing the HIPL archive
-tla archive setup hipl--mybranch--2.6
-tla tag hipl--main--2.6 hipl--mybranch--2.6
-
-# Get the new branch
-#
-tla get --link hipl--mybranch--2.6 hipl--mybranch--2.6
-
-# How to synchronize branches... remember to make clean commits, i.e. do
-# NOT commit a merge and local modifications in the same commit!
-#
-cd hipl--mybranch--2.6
-tla changes # Check that the tree is unmodified
-tla star-merge hipl--main--2.6
-
-# Run the command below in your working copy (e.g. monthly) if you
-# experience a serious slow-down in the commit speed:
-#
-cd hipl--main--2.6
-tla changes --link
-
 ARCH POLICY
-===========
+==========
 
-*** Important: see that your umask is 0002 before you make any commits ***
+*** Important: see that your umask is 0022 before you make any commits ***
 
 hipl--main--2.6 is the "stable" branch for HIPL code. Do not put any
 experimental code in there because other people are relying on that
@@ -131,14 +70,14 @@ branch, and use/create other branches to develop experimental
 code. When you have tested and are sure that code works, you can merge
 it into the stable branch.
 
-Some points in the branch quality assurance:
+* Some points in the branch quality assurance
 
-- the code must compile as it is without errors
+- the code should compile as it is without errors
 - compiler warning messages must be taken seriously and must not be ignored
   unless you really know what the message means. And we REALLY mean really.
 - the base exchange should be manually tested between two hosts
-- UPDATE packet exchange should work
-- the code should not leak memory or do bad locking
+- update protocol should work too
+- the code should leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
 
 DEBUGGING
