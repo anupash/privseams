@@ -2176,6 +2176,9 @@ int hip_handle_i1(struct sk_buff *skb, hip_ha_t *entry)
 {
 	int err;
 	struct hip_common *i1;
+#ifdef CONFIG_HIP_RVS
+  	struct hip_from *from;
+#endif
 	struct in6_addr *dst;
 	struct in6_addr *dstip;
 
