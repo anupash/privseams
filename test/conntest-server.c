@@ -41,7 +41,7 @@ static void sig_handler(int signo) {
 }
 
 int create_serversocket(int proto, int port) {
-  int fd;
+  int fd, on = 1;
   struct sockaddr_in6 addr;
   
   if (proto == IPPROTO_TCP) {
@@ -53,6 +53,8 @@ int create_serversocket(int proto, int port) {
     perror("socket");
     exit(1);
   }
+
+  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
   bzero(&addr, sizeof(addr));
   addr.sin6_family = AF_INET6;

@@ -58,11 +58,11 @@
 
 /* Forward declarations */
 
-extern inline void hip_khexdump(const char *tag, const void *data, const int len);
-extern inline void hip_print_hit(const char *str, const struct in6_addr *hit);
-extern inline void hip_debug_skb(const struct ipv6hdr *hdr,
+extern void hip_khexdump(const char *tag, const void *data, const int len);
+extern void hip_print_hit(const char *str, const struct in6_addr *hit);
+extern void hip_debug_skb(const struct ipv6hdr *hdr,
 			  const struct sk_buff *skb);
-extern inline const char *hip_state_str(unsigned int state);
+extern const char *hip_state_str(unsigned int state);
 
 #endif /* HIP_KERNEL_DEBUG_H */
 
