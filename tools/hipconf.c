@@ -23,7 +23,10 @@
 const char *usage = "new|add|del hi default\n"
                     "new|add|del hi anon|pub|default format filebasename\n"
                     "add|del map hit ipv6\n"
-                    "rst all|hit\n";
+                    "rst all|hit\n"
+                    "rvs hit ipv6\n"
+;
+
 
 /*
  * Handler functions.
@@ -33,7 +36,8 @@ int (*action_handler[])(struct hip_common *, int action,
   NULL, /* reserved */
   handle_hi,
   handle_map,
-  handle_rst
+  handle_rst,
+  handle_rvs
 };
 
 /**
@@ -54,7 +58,8 @@ int get_action(char *text) {
     ret = ACTION_RST;
   else if (!strcmp("new", text))
     ret = ACTION_NEW;
-
+  else if (!strcmp("rvs", text))
+	  ret = ACTION_RVS;
   return ret;
 }
 
@@ -96,7 +101,8 @@ int get_type(char *text) {
     ret = TYPE_MAP;
   else if (!strcmp("rst", text))
     ret = TYPE_RST;
-
+  else if (!strcmp("rvs", text))
+	  ret = TYPE_RVS;
   return ret;
 }
 
@@ -127,6 +133,70 @@ int check_and_create_dir(char *dirname, mode_t mode) {
   return err;
 }
 
+/**
+ * handle_rvs - ...
+ */
+
+int handle_rvs(struct hip_common *msg, int action, const char *opt[], 
+	       int optc)
+{
+	int err;
+	int ret;
+	struct in6_addr hit, ip6;
+	
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+
+	if (optc != 2) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+	
+	ret = inet_pton(AF_INET6, opt[0], &hit);
+	if (ret < 0 && errno == EAFNOSUPPORT) {
+		HIP_PERROR("inet_pton: not a valid address family\n");
+		err = -EAFNOSUPPORT;
+		goto out;
+	} else if (ret == 0) {
+		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+		err = -EINVAL;
+		goto out;
+	}
+
+	ret = inet_pton(AF_INET6, opt[1], &ip6);
+	if (ret < 0 && errno == EAFNOSUPPORT) {
+		HIP_PERROR("inet_pton: not a valid address family\n");
+		err = -EAFNOSUPPORT;
+		goto out;
+	} else if (ret == 0) {
+		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[1]);
+		err = -EINVAL;
+		goto out;
+	}
+	
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+	
+	err = hip_build_param_contents(msg, (void *) &ip6, HIP_PARAM_IPV6_ADDR,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_user_hdr(msg, HIP_USER_ADD_RVS, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+ out:
+	return err;
+
+}
 /**
  * handle_hi - handle the hipconf commands where the type is "hi"
  *
@@ -489,7 +559,9 @@ int main(int argc, char *argv[]) {
     goto out;
   }
 
-  if (action != ACTION_RST) {
+  if (action != ACTION_RST &&
+      action != ACTION_RVS) 
+  {
 
 	  type = get_type(argv[2]);
 	  if (type <= 0 || type >= TYPE_MAX) {
@@ -507,12 +579,17 @@ int main(int argc, char *argv[]) {
   }
   hip_msg_init(msg);
 
-  if (action != ACTION_RST) {
-	  err = (*action_handler[type])(msg, action, (const char **) &argv[3],
-					argc - 3);
-  } else {
-	  err = (*action_handler[TYPE_RST])(msg, ACTION_RST, (const char **) &argv[2],
+  if (action == ACTION_RVS) {
+	  err = (*action_handler[TYPE_RVS])(msg, ACTION_RST, (const char **) &argv[2],
 					    argc - 2);
+  } else {
+	  if (action != ACTION_RST) {
+		  err = (*action_handler[type])(msg, action, (const char **) &argv[3],
+						argc - 3);
+	  } else {
+		  err = (*action_handler[TYPE_RST])(msg, ACTION_RST, (const char **) &argv[2],
+						    argc - 2);
+	  }
   }
 
   if (err) {

@@ -439,6 +439,9 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
+#ifdef CONFIG_HIP_RVS
+			HIP_PARAM_REA,
+#endif
 			HIP_PARAM_SPI,
 			HIP_PARAM_R1_COUNTER,
 			HIP_PARAM_PUZZLE,
@@ -1390,22 +1393,54 @@ int hip_build_param_signature_contents(struct hip_common *msg,
 	return err;
 }
 
-int hip_build_param_echo_response(struct hip_common *msg,
-				  struct hip_echo_request *ping, int sign)
+int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr, int sign)
 {
-	struct hip_echo_response pong;
-	int len, err;
+	struct hip_from from;
+	int err;
+	
+	hip_set_param_type(&from, sign ? HIP_PARAM_FROM_SIGN : HIP_PARAM_FROM);
+	memcpy((struct in6_addr *)&from.address, addr, 16);
 
-	hip_set_param_type(&pong, sign ? HIP_PARAM_ECHO_RESPONSE_SIGN :
-			   HIP_PARAM_ECHO_RESPONSE);
-
-	len = hip_get_param_contents_len(ping);
-	hip_set_param_contents_len(&pong, len);
-
-	err = hip_build_generic_param(msg, &pong,
-				      sizeof(struct hip_echo_response), 
-				      ping);
+	hip_calc_generic_param_len(&from, sizeof(struct hip_from), 0);
+	err = hip_build_param(msg, &from);
 	return err;
+}
+
+
+int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
+			 int sign, int request)
+{
+	struct hip_echo_request ping;
+	int err;
+
+	if (request)
+		hip_set_param_type(&ping, sign ? HIP_PARAM_ECHO_REQUEST_SIGN : HIP_PARAM_ECHO_REQUEST);
+	else
+		hip_set_param_type(&ping, sign ? HIP_PARAM_ECHO_RESPONSE_SIGN : HIP_PARAM_ECHO_RESPONSE);
+
+	hip_set_param_contents_len(&ping, len);
+	err = hip_build_generic_param(msg, &ping, sizeof(struct hip_echo_request),
+				      opaque);
+	return err;
+}
+
+
+
+int hip_build_param_rea(struct hip_common *msg, uint32_t spi, uint32_t lifetime,
+			struct in6_addr *addrs, int cnt)
+{
+	struct hip_rea rea;
+	int err;
+
+#ifdef HIP_CONFIG_RVS
+	hip_set_param_type(&rea, HIP_PARAM_REA);
+	hip_calc_generic_param_len(&rea, sizeof(struct hip_rea), cnt*4); 
+        /* 4 = sizeof ipv6 address */
+
+	err = hip_build_generic_param(msg, &rea, sizeof(struct hip_rea), addrs);
+#endif
+	return err;
+
 }
 
 
@@ -1426,6 +1461,27 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 
 	err = hip_build_param(msg, &r1gen);
 	return err;
+}
+
+int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
+			int *type_list, int cnt, int request)
+{
+	int err = 0;
+	int i;
+	struct hip_rva_reply rrep;
+
+	hip_set_param_type(&rrep, (request ? HIP_PARAM_RVA_REQUEST : HIP_PARAM_RVA_REPLY));
+	hip_calc_generic_param_len(&rrep, sizeof(struct hip_rva_reply),
+				   cnt * sizeof(uint16_t));
+
+	for(i=0;i<cnt;i++)
+		type_list[i] = htons(type_list[i]);
+
+	rrep.lifetime = htonl(lifetime);
+	err = hip_build_generic_param(msg, &rrep, sizeof(struct hip_rva_reply),
+				      (void *)type_list);
+	return err;
+
 }
 
 /**

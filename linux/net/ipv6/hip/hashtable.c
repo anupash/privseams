@@ -106,10 +106,15 @@ int hip_ht_init(HIP_HASHTABLE *ht)
 {
 	int i;
 
+	if (ht->name)
+		HIP_DEBUG("Initializing hash table: %s\n",ht->name);
+	else
+		HIP_DEBUG("Initializing hash table\n");
+
 	HIP_ASSERT(ht);
 	HIP_ASSERT(ht->head);
 	HIP_ASSERT(ht->hashsize);
-	HIP_ASSERT(ht->offset);
+	//HIP_ASSERT(ht->offset);
 	HIP_ASSERT(ht->hash);
 	HIP_ASSERT(ht->compare);
 	HIP_ASSERT(ht->hold);
@@ -121,6 +126,7 @@ int hip_ht_init(HIP_HASHTABLE *ht)
 	for(i=0; i<ht->hashsize; i++)
 		INIT_LIST_HEAD(&ht->head[i]);
 
+	HIP_DEBUG("Initialization of hash table complete\n");
 	return 0;
 }
 

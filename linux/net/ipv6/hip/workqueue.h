@@ -41,7 +41,7 @@
 #define HIP_WO_SUBTYPE_NEWDH      208 // request new DH-key (implies UPDATE)
 #define HIP_WO_SUBTYPE_IN6_EVENT  209
 #define HIP_WO_SUBTYPE_DEV_EVENT  210
-#define HIP_WO_SUBTYPE_UNIT_TEST  211
+#define HIP_WO_SUBTYPE_ADDRVS     211
 
 extern struct semaphore hip_work;
 

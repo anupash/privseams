@@ -34,4 +34,6 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 			       struct hip_common *output);
 int hip_user_handle_set_peer_eid(const struct hip_common *input,
 				 struct hip_common *output);
+int hip_user_handle_rvs(const struct hip_common *input,
+			struct hip_common *output);
 #endif /* HIP_DAEMON_H */

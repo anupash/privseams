@@ -15,17 +15,6 @@ static struct list_head hadb_byhit[HIP_HADB_SIZE];
 static struct list_head hadb_byspi[HIP_HADB_SIZE];
 
 
-static int hip_hadb_match_hit(void *key_1, void *key_2)
-{
-	hip_hit_t *key1, *key2;
-
-	key1 = (hip_hit_t *)key_1;
-	key2 = (hip_hit_t *)key_2;
-
-	return !ipv6_addr_cmp(key_1, key_2);
-	/* true when keys are equal */
-}
-
 static int hip_hadb_match_spi(void *key_1, void *key_2)
 {
 	uint32_t spi1,spi2;
@@ -1149,7 +1138,7 @@ void hip_init_hadb(void)
 	hadb_hit.hashsize =  HIP_HADB_SIZE;
 	hadb_hit.offset =    offsetof(hip_ha_t, next_hit);
 	hadb_hit.hash =      hip_hash_hit;
-	hadb_hit.compare =   hip_hadb_match_hit;
+	hadb_hit.compare =   hip_match_hit;
 	hadb_hit.hold =      hip_hadb_hold_entry;
 	hadb_hit.put =       hip_hadb_put_entry;
 	hadb_hit.get_key =   hip_hadb_get_key_hit;

@@ -135,13 +135,14 @@ int esp6_output(struct sk_buff *skb)
 			       (struct in6_addr *)&x->id.daddr);
 	} else { 
 		/* TRANSPORT & BEET */
+#ifdef CONFIG_ESPBEET
 		if (x->props.mode == XFRM_MODE_BEET) {
 			ipv6_addr_copy(&iph->daddr, (struct in6_addr *)&x->outeraddr);
 			/* hopefully the source address is overwritten later...
 			   if not, we might have to call get_saddr() here?
 			*/
 		}
-
+#endif
 		esph = (struct ipv6_esp_hdr*)skb_push(skb, x->props.header_len);
 		skb->h.raw = (unsigned char*)esph;
 		top_iph = (struct ipv6hdr*)skb_push(skb, hdr_len);

@@ -65,7 +65,8 @@ int (*hip_user_msg_handler[])(const struct hip_common *,
 	hip_user_handle_unit_test,
 	hip_user_handle_rst,
 	hip_user_handle_set_my_eid,
-	hip_user_handle_set_peer_eid
+	hip_user_handle_set_peer_eid,
+	hip_user_handle_rvs,
 };
 
 /**
@@ -207,9 +208,9 @@ int hip_user_handle_del_local_hi(const struct hip_common *input,
         return err;
 }
 
-int hip_insert_peer_map_work_order(const struct in6_addr *hit,
-				   const struct in6_addr *ip,
-				   int insert)
+static int hip_insert_peer_map_work_order(const struct in6_addr *hit,
+					  const struct in6_addr *ip,
+					  int insert, int rvs)
 {
 	int err = 0;
 	struct hip_work_order *hwo;
@@ -232,10 +233,14 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 	ipv6_addr_copy(ip_copy,ip);
 	hwo->arg2 = ip_copy;
 	hwo->type = HIP_WO_TYPE_MSG;
-	if (insert)
-		hwo->subtype = HIP_WO_SUBTYPE_ADDMAP;
-	else
-		hwo->subtype = HIP_WO_SUBTYPE_DELMAP;
+	if (rvs)
+		hwo->subtype = HIP_WO_SUBTYPE_ADDRVS;
+	else {
+		if (insert)
+			hwo->subtype = HIP_WO_SUBTYPE_ADDMAP;
+		else
+			hwo->subtype = HIP_WO_SUBTYPE_DELMAP;
+	}
 
 	hip_insert_work_order(hwo);
 
@@ -244,17 +249,8 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 	return err;
 }
 
-/**
- * hip_user_handle_add_peer_map_hit_ip - handle adding of a HIT-to-IPv6 mapping
- * @msg: the message containing the mapping to be added to kernel databases
- *
- * Add a HIT-to-IPv6 mapping of peer to the mapping database in the kernel
- * module.
- *
- * Returns: zero on success, or negative error value on failure
- */
-int hip_user_handle_add_peer_map_hit_ip(const struct hip_common *input,
-					  struct hip_common *output)
+static int hip_do_dummkopf_work(const struct hip_common *input,
+				struct hip_common *output, int rvs)
 {
 	struct in6_addr *hit, *ip;
 	char buf[46];
@@ -282,7 +278,7 @@ int hip_user_handle_add_peer_map_hit_ip(const struct hip_common *input,
 	hip_in6_ntop(ip, buf);
 	HIP_INFO("map IP: %s\n", buf);
 	
- 	err = hip_insert_peer_map_work_order(hit, ip, 1);
+ 	err = hip_insert_peer_map_work_order(hit, ip, 1, rvs);
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	}
@@ -290,6 +286,36 @@ int hip_user_handle_add_peer_map_hit_ip(const struct hip_common *input,
  out:
  	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
 	return err;
+
+}
+
+
+/**
+ * hip_user_handle_rvs - Handle a case where we want our host to register
+ * with rendezvous server.
+ * Use this instead off "add map" functionality since we set the special
+ * flag... (rvs)
+ */
+int hip_user_handle_rvs(const struct hip_common *input,
+			struct hip_common *output)
+{
+	return hip_do_dummkopf_work(input,output,1);
+}
+
+
+/**
+ * hip_user_handle_add_peer_map_hit_ip - handle adding of a HIT-to-IPv6 mapping
+ * @msg: the message containing the mapping to be added to kernel databases
+ *
+ * Add a HIT-to-IPv6 mapping of peer to the mapping database in the kernel
+ * module.
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_user_handle_add_peer_map_hit_ip(const struct hip_common *input,
+					  struct hip_common *output)
+{
+	return hip_do_dummkopf_work(input,output,0);
 }
 
 /**
@@ -329,7 +355,7 @@ int hip_user_handle_del_peer_map_hit_ip(const struct hip_common *input,
 	hip_in6_ntop(ip, buf);
 	HIP_INFO("map IP: %s\n", buf);
 	
- 	err = hip_insert_peer_map_work_order(hit, ip, 0);
+ 	err = hip_insert_peer_map_work_order(hit, ip, 0, 0);
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	}
@@ -606,7 +632,7 @@ int hip_user_handle_set_peer_eid(const struct hip_common *input,
 		/* XX FIX: the mapping should be tagged with an uid */
 
 		err = hip_insert_peer_map_work_order(&lhi.hit,
-						     &sockaddr->sin6_addr,1);
+						     &sockaddr->sin6_addr,1,0);
 		if (err) {
 			HIP_ERROR("Failed to insert map work order (%d)\n",
 				  err);

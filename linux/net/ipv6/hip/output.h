@@ -7,7 +7,8 @@
 #include <linux/skbuff.h>
 #include <net/hip.h>
 
-int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_hit);
+int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
+		struct in6_addr *dst_hit);
 int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb);
 int hip_csum_verify(struct sk_buff *skb);
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,

@@ -309,3 +309,51 @@ oops  # telnetd/telnetd -debug 12345
 crash # telnet/telnet -l username oops 12345
 
 Note: the username must be non-root.
+
+
+Testing HIP Rendezvous Server/Mechanism
+=======================================
+
+Prerequisites:
+Kernel must be compiled with the following extra option(s) included.
+[*]  HIP: Rendezvous Mechanism 
+
+The hipconf tool must support rvs option:
+hipconf rvs <hit> <ip>
+
+For now it is best if all the hosts involved in communications
+have the Rendezvous Mechanism option enabled. Although, for initiator
+this should not be a requirement.
+
+The participants:
+I = Initiator
+RVS = The Rendezvous server
+R = Responder
+
+The idea is that I wants to connect to R, but only knows RVS's IP address (and
+that RVS is representing R).
+
+Steps:
+-----
+1. R has to tell the RVS that it would like to use RVS's services.
+> hipconf rvs <RVS-hit> <RVS-ip>
+
+2. Send a TCP packet to the RVS-hit (to run the base exchange):
+> nc6 <RVS-hit> 12345 
+The port number does not matter. There need not be anything listening to that
+port.
+
+Now the Rendezvous Association is established.
+
+3. Now the I will have to do the IP-HIT mapping:
+> hipconf add map <R-hit> <RVS-ip>
+
+4. Put some server listening at R:
+> nc6 -l -p 5000
+
+5. Start a connection at I:
+> nc6 <R-hit> 5000
+
+6. Type some text...
+
+

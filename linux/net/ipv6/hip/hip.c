@@ -38,6 +38,9 @@
 #include "ioctl.h"
 #include "daemon.h"
 #include "socket.h"
+#ifdef CONFIG_HIP_RVS
+# include "rvs.h"
+#endif
 
 #include <linux/proc_fs.h>
 #include <linux/notifier.h>
@@ -357,7 +360,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	struct in6_addr dst_hit;
  	int err = 0;
  	u8 *dh_data = NULL;
- 	int dh_size,written;
+ 	int dh_size,written, mask;
  	/* Supported HIP and ESP transforms */
  	hip_transform_suite_t transform_hip_suite[] = {HIP_TRANSFORM_3DES,
  						       HIP_TRANSFORM_NULL };
@@ -420,7 +423,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
 
  	memset(&dst_hit, 0, sizeof(struct in6_addr));
- 	hip_build_network_hdr(msg, HIP_R1, HIP_CONTROL_NONE, src_hit,
+
+	mask = HIP_CONTROL_NONE;
+#ifdef CONFIG_HIP_RVS
+	mask |= HIP_CONTROL_RVS_CAPABLE;
+#endif
+
+ 	hip_build_network_hdr(msg, HIP_R1, mask, src_hit,
  			      &dst_hit);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
@@ -1779,6 +1788,13 @@ static int hip_do_work(void)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
+		case HIP_WO_SUBTYPE_ADDRVS:
+			/* arg1 = d-hit, arg2=ipv6 */
+			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
+			if (res < 0)
+				res = KHIPD_ERROR;
+			hip_rvs_set_request_flag(job->arg1);
+			break;
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
 		case HIP_WO_SUBTYPE_ADDHI:
 		case HIP_WO_SUBTYPE_DELHI:
@@ -1860,7 +1876,7 @@ static int __init hip_init(void)
 	hip_init_hadb();
 
 #ifdef CONFIG_HIP_RVS
-	hip_init_rvdb();
+	hip_init_rvadb();
 #endif
 
 #ifdef CONFIG_PROC_FS
@@ -1964,7 +1980,7 @@ static void __exit hip_cleanup(void)
 	hip_uninit_socket_handler();
 	hip_uninit_host_id_dbs();
 #ifdef CONFIG_HIP_RVS
-	hip_uninit_rvdb();
+	hip_uninit_rvadb();
 #endif
 	hip_uninit_hadb();
 	hip_uninit_all_eid_db();
