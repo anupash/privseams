@@ -151,9 +151,6 @@ int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 			 int sign, int request);
 
-int hip_build_param_rea(struct hip_common *msg, uint32_t spi, uint32_t lifetime,
-			struct in6_addr *addrs, int cnt);
-
 int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr, int sign);
 
 int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len);
