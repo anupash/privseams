@@ -1,3 +1,6 @@
+#ifndef _GCRYPT_H
+#define _GCRYPT_H
+
 /* gcrypt.h -  GNU cryptographic library interface
  * Copyright (C) 1998,1999,2000,2001,2002 Free Software Foundation, Inc.
  *
@@ -18,8 +21,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#ifndef _GCRYPT_H
-#define _GCRYPT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -950,4 +951,5 @@ int gcry_is_secure (const void *a) _GCRY_GCC_ATTR_PURE;
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* _GCRYPT_H */

@@ -43,16 +43,14 @@
 
 typedef uint16_t in_port_t;
 
-#define HIP_LIST_HEAD(name)  LIST_HEAD(name)
-#define HIP_LIST_ENTRY       struct list_head
-#define HIP_LIST_INIT(head)  INIT_LIST_HEAD(head)
-
 #else
 
 #  include <sys/ioctl.h>
 #  include <stdint.h>
 #  include <netinet/in.h>
 #  include <sys/queue.h>
+
+#  include "list.h"
 
 typedef uint8_t   u8;
 typedef uint16_t  u16;
@@ -62,10 +60,6 @@ typedef struct { volatile int counter; } atomic_t;
 typedef struct {
 	/* XX FIXME */
 } spinlock_t;
-
-#define HIP_LIST_HEAD(name) TAILQ_HEAD(name, list_head)
-#define HIP_LIST_ENTRY      TAILQ_ENTRY(list_head)
-#define HIP_LIST_INIT(head) TAILQ_INIT(head)
 
 #endif /* __KERNEL__ */
 
@@ -782,7 +776,7 @@ struct hip_context_dh_sig
 
 struct hip_peer_addr_list_item
 {
-	HIP_LIST_ENTRY list;
+	struct list_head list;
 
 	struct in6_addr  address;
 	int              address_state; /* current state of the
@@ -799,7 +793,7 @@ struct hip_peer_addr_list_item
 
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
-	HIP_LIST_ENTRY list;
+	struct list_head list;
 	spinlock_t       lock;
 	atomic_t         refcnt;
 	hip_hit_t        hit;
@@ -808,7 +802,7 @@ struct hip_hit_spi {
 
 struct hip_spi_in_item
 {
-	HIP_LIST_ENTRY list;
+	struct list_head list;
 	uint32_t         spi;
 	uint32_t         new_spi; /* SPI is changed to this when rekeying */
 	int              ifindex; /* ifindex if the netdev to which this is related to */
@@ -829,21 +823,20 @@ struct hip_spi_in_item
 
 struct hip_spi_out_item
 {
-	HIP_LIST_ENTRY list;
+	struct list_head list;
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
 	uint32_t         seq_update_id; /* USELESS, IF SEQ ID WILL BE RELATED TO ADDRESS ITEMS,
 					 * NOT OUTBOUND SPIS *//* the Update ID in SEQ parameter these SPI are related to */
 
-	HIP_LIST_ENTRY peer_addr_list; /* Peer's IPv6 addresses */
+	struct list_head peer_addr_list; /* Peer's IPv6 addresses */
 	struct in6_addr  preferred_address; /* check */
 };
 //#endif /* __KERNEL__ */
 
 struct hip_hadb_state
 {
-	//	HIP_LIST_ENTRY     next_hit;
-	HIP_LIST_ENTRY       next_hit;
+	struct list_head       next_hit;
 	spinlock_t           lock;
 	atomic_t             refcnt;
 
@@ -853,8 +846,8 @@ struct hip_hadb_state
 	uint16_t             peer_controls;
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
-	HIP_LIST_ENTRY     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
-	HIP_LIST_ENTRY     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
+	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
+	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address; /* preferred dst address to use when
 						 * sending data to peer */
@@ -911,7 +904,7 @@ struct hip_work_order {
 	struct hip_common *msg;
 //#ifdef __KERNEL__
 #ifndef CONFIG_HIP_USERSPACE
-	HIP_LIST_ENTRY queue;
+	struct list_head queue;
 #endif
 //#endif
 	void (*destructor)(struct hip_work_order *hwo);
@@ -921,7 +914,7 @@ struct hip_work_order {
 struct hip_host_id_entry {
 /* this needs to be first (list_for_each_entry, list 
    head being of different type) */
-	HIP_LIST_ENTRY next; 
+	struct list_head next; 
 
 	struct hip_lhi lhi;
 	/* struct in_addr lsi; */
@@ -935,7 +928,7 @@ struct hip_eid_owner_info {
 };
 
 struct hip_eid_db_entry {
-	HIP_LIST_ENTRY           next;
+	struct list_head           next;
 	struct hip_eid_owner_info  owner_info;
 	struct sockaddr_eid        eid; /* XX FIXME: the port is unneeded */
 	struct hip_lhi             lhi;
