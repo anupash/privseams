@@ -1904,6 +1904,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_handle_dst_unreachable);
 	HIP_SETCALL(hip_trigger_bex);
 	HIP_SETCALL(hip_handle_ipv6_ifa_notify);
+	HIP_SETCALL(hip_update_spi_waitlist_ispending);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
 		HIP_ERROR("Could not add HIP protocol\n");
@@ -1929,6 +1930,7 @@ static void __exit hip_cleanup(void)
 
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
 
+	HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_ifa_notify);
 	HIP_INVALIDATE(hip_trigger_bex);
 	HIP_INVALIDATE(hip_handle_dst_unreachable);
@@ -1972,6 +1974,7 @@ static void __exit hip_cleanup(void)
 	/* XXX: Mika are these in correct place? */
 	hip_rea_delete_sent_list();
 	hip_ac_delete_sent_list();
+	HIP_ERROR("TODO: UPDATE SPI waitlist delete\n");
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

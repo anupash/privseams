@@ -28,6 +28,7 @@
 #include "crypto/dsa.h"
 #include "misc.h"
 #include "socket.h"
+#include "update.h"
 
 #ifdef KRISUS_THESIS
 

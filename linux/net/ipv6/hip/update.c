@@ -8,6 +8,111 @@
 atomic_t hip_update_id = ATOMIC_INIT(0);
 spinlock_t hip_update_id_lock = SPIN_LOCK_UNLOCKED;
 
+/* List of SPIs which are waiting for data to come through */
+LIST_HEAD(hip_update_spi_waitlist);
+spinlock_t hip_update_spi_waitlist_lock = SPIN_LOCK_UNLOCKED;
+
+struct hip_update_spi_waitlist_item {
+	struct list_head list;
+	uint32_t spi;
+};
+
+
+/*
+ * Used in UPDATE R=0: incoming SA -> activate outgoing SA
+ *
+ * SPI is given in host byte order
+ */
+void hip_update_spi_waitlist_add(uint32_t spi)
+{
+	struct hip_update_spi_waitlist_item *s;
+	unsigned long flags = 0;
+
+	struct list_head *pos, *n;
+	int i = 1;
+
+	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
+	HIP_DEBUG("spi=0x%x\n", spi);
+
+	s = kmalloc(sizeof(struct hip_update_spi_waitlist_item), GFP_ATOMIC);
+	if (!s) {
+		HIP_ERROR("kmalloc failed\n");
+		goto out_err;
+	}
+	HIP_DEBUG("kmalloced s=0x%p\n", s);
+
+	s->spi = spi;
+	list_add(&s->list, &hip_update_spi_waitlist);
+
+	/* debug */
+	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
+		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
+		HIP_DEBUG("SPI waitlist %d: SPI=0x%x\n", i, s->spi);
+		i++;
+	}
+
+ out_err:
+	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
+}
+
+/*
+ * SPI is given in host byte order
+ */
+void hip_update_spi_waitlist_delete(uint32_t spi)
+{
+	struct list_head *pos, *n;
+	struct hip_update_spi_waitlist_item *s = NULL;
+	unsigned long flags = 0;
+	int i = 1;
+
+	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
+	HIP_DEBUG("spi=0x%x\n", spi);
+
+	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
+		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
+		if (s->spi == spi) {
+			HIP_DEBUG("found, delete item %d\n", i);
+			list_del(&s->list);
+			kfree(s);
+			break;
+		}
+		i++;
+	}
+
+	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
+	return;
+}
+
+/* returns 1 if @spi is in the SPI waitlist
+ * SPI is given in host byte order
+ */
+int hip_update_spi_waitlist_ispending(uint32_t spi)
+{
+	int found = 0;
+	struct hip_update_spi_waitlist_item *s;
+	unsigned long flags = 0;
+
+	struct list_head *pos, *n;
+	int i = 1;
+
+	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
+	HIP_DEBUG("spi=0x%x\n", spi);
+
+	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
+		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
+		HIP_DEBUG("SPI waitlist %d: SPI=0x%x\n", i, s->spi);
+		if (s->spi == spi) {
+			HIP_DEBUG("found match\n");
+			found = 1;
+			break;
+		}
+		i++;
+	}
+
+	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
+	return found;
+}
+
 
 /**
  * hip_get_new_update_id - Get a new UPDATE ID number
@@ -249,7 +354,16 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	}
 	HIP_DEBUG("Stored SPI 0x%x to new_spi_out for future use\n", new_spi_out);
 
-	hip_finalize_sa(hits, new_spi_out); /* move below */
+#if 1
+	/* todo: add new_spi_out to SPI waitlist and when receiving
+	 * data on the new incoming SPI set new_spi_out to SPI_OUT in
+	 * hadb */
+	hip_update_spi_waitlist_add(new_spi_out);
+
+	/* shouldn't do this yet */
+	hip_finalize_sa(hits, new_spi_out);
+#endif
+
 	{
 		uint32_t our_spi, peer_spi, new_spi_in, new_spi_out;
  		int getlist[4] = { HIP_HADB_SPI_IN, HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_IN, HIP_HADB_NEW_SPI_OUT };
@@ -283,22 +397,20 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 
 	if (hip_hadb_set_info(hits, &new_spi_in,
 			      HIP_HADB_SPI_IN|HIP_ARG_HIT) != 1) {
-	  //			      HIP_HADB_NEW_SPI_IN|HIP_ARG_HIT) != 1) {
-	  //		HIP_ERROR("Could not store New SPI value to hadb (new_spi_in)\n");
-		HIP_ERROR("Could not store New SPI value 0x%x to hadb (spi_in)\n", new_spi_in);
+		/* restore old SPI ? */
+		HIP_ERROR("Could not store New SPI value new_spi_in=0x%x to hadb (SPI_IN)\n", new_spi_in);
 		err = -EINVAL;
 		goto out_err;
 	}
-	//	HIP_DEBUG("Stored SPI 0x%x to new_spi_in for future use\n", new_spi_in);
 	HIP_DEBUG("Stored SPI 0x%x to spi_in\n", new_spi_in);
 
 	hip_finalize_sa(hitr, new_spi_in); /* move below */
 
 	/* delete old incoming SA */
 	/* todo: set to dying/drop old IPsec SA ? */
-	HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
+	HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", prev_spi_in);
 	err = hip_delete_sa(prev_spi_in, hitr);
-	HIP_DEBUG("delete_sa retval=%d\n", err );
+	HIP_DEBUG("delete_sa retval=%d\n", err ); /* ignore error ? */
 	err = 0;
 
 	{
@@ -656,7 +768,7 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	err = 0;
 
 	HIP_DEBUG("switching to new updated inbound SPI=0x%x, new_spi_in\n", new_spi_in);
-	if (1 && hip_hadb_set_info(hits, &new_spi_in,
+	if (hip_hadb_set_info(hits, &new_spi_in,
 			      HIP_HADB_SPI_IN|HIP_ARG_HIT) != 1) {
 		HIP_ERROR("Could not set our SPI value to hadb\n");
 		err = -EINVAL;
@@ -833,9 +945,9 @@ int hip_receive_update(struct sk_buff *skb)
 			goto out_err;
 		}
 
-		if (keymat_index < current_keymat_index) {
-			HIP_DEBUG("Received UPDATE KEYMAT Index (%u) < stored KEYMAT Index (%u). Dropping\n",
-				  keymat_index, current_keymat_index);
+		if (keymat_index < current_keymat_index+1) {
+			HIP_DEBUG("Received UPDATE KEYMAT Index (%u) < stored KEYMAT Index +1 (%u). Dropping\n",
+				  keymat_index, current_keymat_index+1);
 			err = -EINVAL;
 			goto out_err;
 		}
@@ -950,19 +1062,19 @@ int hip_send_update(struct hip_hadb_state *entry)
 	/* The specifications does not say that new incoming SA should be done
 	 * here, but it is needed because of the New SPI value */
 
-	/* get a New SPI to use and prepare a new incoming IPsec SA */
+	/* get a New SPI to use in the UPDATE packet and prepare a new
+	 * incoming IPsec SA */
 	new_spi_in = 0;
 	err = hip_setup_sa(&entry->hit_peer, &entry->hit_our,
 			   &new_spi_in, entry->esp_transform,
 			   &espkey_new.key, &authkey_new.key, 0); /* sa state is inactive */
 	/* todo: if failed try again a couple of times ? */
 	if (err) {
-		HIP_ERROR("Error while setting up New SPI (err=%d)\n", err);
+		HIP_ERROR("Error while setting up new IPsec SA (err=%d)\n", err);
 		goto out_err;
 	}
 
-	//hip_finalize_sa(&entry->hit_our, new_spi_in); /* MOVE THIS TO hip_handle_update_reply ? */
-	HIP_DEBUG("New SPI (in)=0x%x\n", new_spi_in);
+	HIP_DEBUG("New SA created with New SPI (in)=0x%x\n", new_spi_in);
 
 	if (hip_hadb_set_info(&entry->hit_peer, &new_spi_in,
 			      HIP_HADB_NEW_SPI_IN|HIP_ARG_HIT) != 1) {
@@ -971,7 +1083,7 @@ int hip_send_update(struct hip_hadb_state *entry)
 		goto out_err;
 	}
 
-	HIP_DEBUG("stored New SPI for future use (NEW_SPI_IN=0x%x)\n", new_spi_in);
+	HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
 
 	/* start building UPDATE packet */
 	update_packet = hip_msg_alloc();
@@ -992,17 +1104,8 @@ int hip_send_update(struct hip_hadb_state *entry)
 		goto out_err;
 	}
 
-	/* todo: move below */
-	if (hip_hadb_set_info(&entry->hit_peer, &update_id_out,
-			      HIP_HADB_OWN_UPDATE_ID_OUT|HIP_ARG_HIT) != 1) {
-		HIP_ERROR("Could not set outgoing UPDATE ID value (%u) for HIT\n", update_id_out);
-		err = -EINVAL;
-		goto out_err;
-	}
-        HIP_DEBUG("Stored peer's outgoing UPDATE ID %u\n", update_id_out);
-
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
-	err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index,
+	err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
 				  update_id_out, entry->spi_in, new_spi_in); 
 	if (err) {
 		HIP_ERROR("Building of NES param failed\n");
@@ -1052,6 +1155,7 @@ int hip_send_update(struct hip_hadb_state *entry)
 
 	HIP_DEBUG("spi values when sending update: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 		  entry->spi_in, entry->spi_out, entry->new_spi_in, entry->new_spi_out);
+
 	/* send UPDATE */
         HIP_DEBUG("Sending UPDATE packet\n");
         err = hip_hadb_get_peer_address(&entry->hit_peer, &daddr, HIP_ARG_HIT);
@@ -1059,6 +1163,15 @@ int hip_send_update(struct hip_hadb_state *entry)
                 HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
                 goto out_err;
         }
+
+	/* Store the last UPDATE ID value sent from us */
+	if (hip_hadb_set_info(&entry->hit_peer, &update_id_out,
+			      HIP_HADB_OWN_UPDATE_ID_OUT|HIP_ARG_HIT) != 1) {
+		HIP_ERROR("Could not set outgoing UPDATE ID value (%u) for HIT\n", update_id_out);
+		err = -EINVAL;
+		goto out_err;
+	}
+        HIP_DEBUG("Stored peer's outgoing UPDATE ID %u\n", update_id_out);
 
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");

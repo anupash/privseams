@@ -67,6 +67,12 @@ int xfrm6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 #endif
 			goto drop;
 		}
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		if (HIP_CALLFUNC(hip_update_spi_waitlist_ispending, 0)(ntohl(spi)) != 0) {
+			printk(KERN_DEBUG "SPI 0x%x is on pending list\n", ntohl(spi));
+		}
+#endif
 		spin_lock(&x->lock);
 		if (unlikely(x->km.state != XFRM_STATE_VALID))
 			goto drop_unlock;
