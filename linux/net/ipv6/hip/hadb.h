@@ -111,8 +111,8 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 			     int count, int *eof, void *data);
 int hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
 				  int count, int *eof, void *data);
-int hip_proc_read_hadb_peer_spi_list(char *page, char **start, off_t off,
-				     int count, int *eof, void *data);
+//int hip_proc_read_hadb_peer_spi_list(char *page, char **start, off_t off,
+//				     int count, int *eof, void *data);
 /**************** other useful ******************/
 void hip_hadb_delete_state(hip_ha_t *ha);
 hip_ha_t *hip_hadb_create_state(int gfpmask);

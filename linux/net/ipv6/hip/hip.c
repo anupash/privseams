@@ -1607,13 +1607,14 @@ static int hip_init_procfs(void)
 	if (!create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
 			       hip_proc_read_hadb_peer_addrs, NULL))
 		goto out_err_sdb_state;
-	if (!create_proc_read_entry("sdb_peer_spi_list", 0, hip_proc_root,
-			       hip_proc_read_hadb_peer_spi_list, NULL))
-		goto out_err_peer_addrs;
+	//	if (!create_proc_read_entry("sdb_peer_spi_list", 0, hip_proc_root,
+	//		       hip_proc_read_hadb_peer_spi_list, NULL))
+	//	goto out_err_peer_addrs;
 	/* a simple way to trigger sending of UPDATE packet to all peers */
 	if (!create_proc_read_entry("send_update", 0, hip_proc_root,
 			       hip_proc_send_update, NULL))
-		goto out_err_spi_list;
+		goto out_err_peer_addrs;
+	//		goto out_err_spi_list;
 	/* for testing dummy NOTIFY packets */
 	if (!create_proc_read_entry("send_notify", 0, hip_proc_root,
 			       hip_proc_send_notify, NULL))
@@ -1624,8 +1625,8 @@ static int hip_init_procfs(void)
 
  out_err_send_update:
 	remove_proc_entry("send_update", hip_proc_root);
- out_err_spi_list:
-	remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
+	//out_err_spi_list:
+	//remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
  out_err_peer_addrs:
 	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
  out_err_sdb_state:
@@ -1650,7 +1651,7 @@ static void hip_uninit_procfs(void)
 	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
 	remove_proc_entry("send_update", hip_proc_root);
 	remove_proc_entry("send_notify", hip_proc_root);
-	remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
+	//remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
 	remove_proc_entry("hip", proc_net);
 }
 #endif /* CONFIG_PROC_FS */

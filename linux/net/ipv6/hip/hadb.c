@@ -1949,6 +1949,7 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 	int len = op->len;
 	int count = op->count;
 	struct hip_spi_out_item *spi_out, *spi_tmp;
+	const char *state_name[] = { "NONE", "UNVERIFIED", "ACTIVE", "DEPRECATED" };
 
 	do_gettimeofday(&now);
 
@@ -1964,18 +1965,28 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 		if ( (len += snprintf(page+len, count-len,
 				      "\n SPI 0x%x", spi_out->spi)) >= count)
 			goto error;
+
+		if (spi_out->spi == entry->default_spi_out &&
+		    (len += snprintf(page+len, count-len, " preferred")) >= count)
+			goto error;
+
 		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
 			n_addrs++;
 			hip_in6_ntop(&s->address, addr_str);
 			hip_timeval_diff(&now, &s->modified_time, &addr_age);
 			if ( (len += snprintf(page+len, count-len,
-					      "\n  %s state=0x%x lifetime=0x%x "
+					      "\n  %s state=%s lifetime=0x%x "
 					      "age=%ld.%01ld",
-					      addr_str, s->address_state,
+					      addr_str, state_name[s->address_state],
 					      s->lifetime, addr_age.tv_sec,
 					      addr_age.tv_usec / 100000 /* show 1/10th sec */)
 				     ) >= count)
 				goto error;
+
+		if (!ipv6_addr_cmp(&s->address, &spi_out->preferred_address) &&
+		    (len += snprintf(page+len, count-len, " preferred")) >= count)
+			goto error;
+
 			i++;
 		}
 
@@ -2081,6 +2092,7 @@ int hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
 	return ps.len;
 }
 
+#if 0
 static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
 {
 	hip_proc_opaque_t *op = (hip_proc_opaque_t *)opaque;
@@ -2102,13 +2114,11 @@ static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
 		goto error;
 
         list_for_each_entry_safe(spi_out, spi_tmp, &entry->spis_out, list) {
-		//list_for_each_entry(spi_list, &entry->peer_spi_list, list) {
 		hip_in6_ntop(&spi_out->preferred_address, addr_str);
 		if ( (len += snprintf(page+len, count-len, "\n SPI=0x%x preferred_address=%s",
 				      spi_out->spi, addr_str)
 			     ) >= count)
 			goto error;
-//		list_for_each_entry(spi_list, &spi_out->peer_spi_list, list) {
 		list_for_each_entry(a, &spi_out->peer_addr_list, list) {
 			hip_in6_ntop(&a->address, addr_str);
 			if ( (len += snprintf(page+len, count-len, "\n  addr=%s state=%s lifetime=0x%x mod=%ld/%06ld",
@@ -2174,6 +2184,7 @@ int hip_proc_read_hadb_peer_spi_list(char *page, char **start, off_t off,
 
 	return ps.len;
 }
+#endif
 
 #endif /* CONFIG_PROC_FS */
 
