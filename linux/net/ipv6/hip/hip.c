@@ -355,16 +355,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	int err = 0;
  	u8 *dh_data = NULL;
  	int dh_size,written, mask;
- 	/* Supported HIP and ESP transforms */
-#if 1
- 	hip_transform_suite_t transform_hip_suite[] = {HIP_TRANSFORM_3DES,
- 						       HIP_TRANSFORM_NULL };
+ 	/* Supported HIP and ESP transforms. */
+ 	hip_transform_suite_t transform_hip_suite[] = {HIP_HIP_3DES_SHA1,
+ 						       HIP_HIP_NULL_SHA1 };
  	hip_transform_suite_t transform_esp_suite[] = {HIP_ESP_3DES_SHA1,
  						       HIP_ESP_NULL_SHA1 };
-#else /* XX FIXME: does not work */
- 	hip_transform_suite_t transform_hip_suite[] = {HIP_TRANSFORM_NULL};
- 	hip_transform_suite_t transform_esp_suite[] = {HIP_ESP_NULL_SHA1 };
-#endif
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
@@ -569,8 +564,8 @@ int hip_enc_key_length(int tid)
 	case HIP_ESP_3DES_SHA1:
 		ret = 24;
 		break;
-	case HIP_ESP_NULL_NULL:
 	case HIP_ESP_NULL_SHA1:
+	case HIP_ESP_NULL_NULL:
 		ret = 0;
 		break;
 	default:
@@ -588,10 +583,10 @@ int hip_hmac_key_length(int tid)
 	int ret = -1;
 	switch(tid) {
 	case HIP_ESP_3DES_SHA1:
+	case HIP_ESP_NULL_SHA1:
 		ret = 20;
 		break;
 	case HIP_ESP_NULL_NULL:
-	case HIP_ESP_NULL_SHA1:
 		ret = 0;
 		break;
 	default:
@@ -615,10 +610,10 @@ int hip_transform_key_length(int tid)
 	int ret = -1;
 
 	switch(tid) {
-	case HIP_TRANSFORM_3DES:
+	case HIP_HIP_3DES_SHA1:
 		ret = 24;
 		break;
-	case HIP_TRANSFORM_NULL:
+	case HIP_HIP_NULL_SHA1: // XX FIXME: SHOULD BE NULL_SHA1? 
 		ret = 0;
 		break;
 	default:
@@ -741,8 +736,8 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 	for (i=0; i<length; i++) {
 		switch(ntohs(*suggestion)) {
 
-		case HIP_TRANSFORM_3DES:
-		case HIP_TRANSFORM_NULL:
+		case HIP_HIP_3DES_SHA1:
+		case HIP_HIP_NULL_SHA1:
 			tid = ntohs(*suggestion);
 			goto out;
 			break;
@@ -841,12 +836,9 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
  *
  * The result of the encryption/decryption of @data is overwritten to @data.
  *
- * A NULL IV is not guaranteed to be interoperable with 3DES, so it's
- * recommended to use a non-NULL iv (even with just all zeroes).
- *
  * Returns: 0 is encryption/decryption was successful, otherwise < 0.
  */
-int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
+int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 			 void* enc_key, int direction)
 {
 	int err = 0;
@@ -854,9 +846,13 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 	struct crypto_tfm *impl = NULL;
 	struct scatterlist src_sg[HIP_MAX_SCATTERLISTS];
 	unsigned int src_nsg = HIP_MAX_SCATTERLISTS;
+	/* crypto_cipher_encrypt_iv writes a new iv on top of the old when
+	   encrypting, so we need to preserve the the original. Also, we
+	   encrypt only once in HIP, so we can discard the new iv. */
+	char *iv_copy = NULL;
 
-	/* I haven't tested if this works with 3DES + NULL iv. The
-	   NULL transform + NULL iv combination works, though. */
+	/* I haven't tested if the function works with 3DES + NULL iv. The
+	   NULL transform + NULL iv combination works, though. -miika */
 
 	/* We cannot use the same memory are for en/decryption? */
 	void *result = NULL;
@@ -870,16 +866,24 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 
 	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, enc_len);
 	switch(enc_alg) {
-	case HIP_TRANSFORM_3DES:
+	case HIP_HIP_3DES_SHA1:
 		impl = impl_3des_cbc;
 		key_len = ESP_3DES_KEY_BITS >> 3;
+		iv_copy = kmalloc(8, GFP_KERNEL);
+		if (!iv_copy) {
+			err = -ENOMEM;
+			goto out_err;
+		}
+		memcpy(iv_copy, iv, 8);
 		break;
-	case HIP_TRANSFORM_NULL:
+	case HIP_HIP_NULL_SHA1:
 		impl = impl_null;
 		key_len = 0;
+		iv_copy = NULL;
 		break;
 	default:
-		HIP_ERROR("Attempted to use unknown CI (enc_alg=%d)\n", enc_alg);
+		HIP_ERROR("Attempted to use unknown CI (enc_alg=%d)\n",
+			  enc_alg);
 		err = -EFAULT;
 		goto out_err;
 	}
@@ -911,11 +915,11 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 	_HIP_DEBUG("enc_len=%d\n", enc_len);
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
-		if (iv) {
+		if (iv_copy) {
 			err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg,
-						       enc_len, iv);
+						       enc_len, iv_copy);
 			/* The encrypt function writes crap on iv */
-			memset(iv, 0, 8);
+			//memset(iv, 0, 8);
 		} else {
 			err = crypto_cipher_encrypt(impl, src_sg, src_sg,
 						    enc_len);
@@ -928,9 +932,9 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 
 		break;
 	case HIP_DIRECTION_DECRYPT:
-		if (iv) {
+		if (iv_copy) {
 			err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg,
-						       enc_len, iv);
+						       enc_len, iv_copy);
 		} else {
 			err = crypto_cipher_decrypt(impl, src_sg, src_sg,
 						    enc_len);
@@ -949,8 +953,9 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 
 	memcpy(data, result, enc_len);
 
-
  out_err:
+	if (iv_copy)
+		kfree(iv_copy);
 	if (result)
 		kfree(result);
 	return err;

@@ -183,15 +183,13 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_MAX             65536 /* exclusive */
 
 
-/*
- * XX FIXME: SHOULD BE SIMILAR TO THE ESP TRANSFORMS!!!
- */
-#define HIP_TRANSFORM_RESERVED          0
-#define HIP_TRANSFORM_AES_128           1
-#define HIP_TRANSFORM_3DES              2
-#define HIP_TRANSFORM_NULL              5
+#define HIP_HIP_RESERVED                0
+#define HIP_HIP_AES_SHA1                1
+#define HIP_HIP_3DES_SHA1               2
+#define HIP_HIP_3DES_MD5                3
+#define HIP_HIP_NULL_SHA1               5
+#define HIP_HIP_NULL_SHA1               5
 
-/* XX FIX ME */
 #define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6
 

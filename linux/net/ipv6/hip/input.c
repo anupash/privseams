@@ -521,9 +521,9 @@ int hip_produce_keying_material(struct hip_common *msg,
 	/* Create only minumum amount of KEYMAT for now. From draft
 	 * chapter HIP KEYMAT we know how many bytes we need for all
 	 * keys used in the base exchange. */
-	keymat_len_min = hip_transf_length + hmac_transf_length + hip_transf_length +
-		hmac_transf_length + esp_transf_length + auth_transf_length +
-		esp_transf_length + auth_transf_length;
+	keymat_len_min = hip_transf_length + hmac_transf_length +
+		hip_transf_length + hmac_transf_length + esp_transf_length +
+		auth_transf_length + esp_transf_length + auth_transf_length;
 
 	keymat_len = keymat_len_min;
 	if (keymat_len % HIP_AH_SHA_LEN)
@@ -867,15 +867,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	_HIP_HEXDUMP("enc(host_id)", host_id_pub,
 		    hip_get_param_total_len(host_id_pub));
 
- 	if (transform_hip_suite == HIP_TRANSFORM_3DES) {
+	if (transform_hip_suite == HIP_HIP_3DES_SHA1) {
  		err = hip_build_param_encrypted_3des_sha1(i2, host_id_pub);
 		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
 		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
  		iv = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
+		get_random_bytes(iv, 8);
  		host_id_in_enc = enc_in_msg +
  			sizeof(struct hip_encrypted_3des_sha1);
- 
- 	} else if (transform_hip_suite == HIP_TRANSFORM_NULL) {
+	} else if (transform_hip_suite == HIP_HIP_NULL_SHA1) {
  		err = hip_build_param_encrypted_null_sha1(i2, host_id_pub);
 		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
 		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
@@ -901,7 +901,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		    hip_get_param_total_len(enc_in_msg));
 	_HIP_HEXDUMP("enc key", &ctx->hip_enc_out.key, HIP_MAX_KEY_LEN);
 	_HIP_HEXDUMP("IV", enc_in_msg->iv, 8);
- 	err = hip_crypto_encrypted(host_id_in_enc, iv, transform_hip_suite,
+ 	err = hip_crypto_encrypted(host_id_in_enc, iv,
+				   transform_hip_suite,
 				   hip_get_param_total_len(host_id_in_enc),
 				   &ctx->hip_enc_out.key,
 				   HIP_DIRECTION_ENCRYPT);
@@ -1677,13 +1678,13 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
  		goto out_err;
  	}
 
- 	if (hip_tfm == HIP_TRANSFORM_3DES) {
+	if (hip_tfm == HIP_HIP_3DES_SHA1) {
  		host_id_in_enc = (struct hip_host_id *)
 		  (tmp_enc + sizeof(struct hip_encrypted_3des_sha1));
  		iv = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
  		/* 4 = reserved, 8 = iv */
  		crypto_len = hip_get_param_contents_len(enc) - 4 - 8;
- 	} else if (hip_tfm == HIP_TRANSFORM_NULL) {
+ 	} else if (hip_tfm == HIP_HIP_NULL_SHA1) {
 		host_id_in_enc = (struct hip_host_id *)
 			(tmp_enc + sizeof(struct hip_encrypted_null_sha1));
  		iv = NULL;
