@@ -855,7 +855,7 @@ struct hip_spi_out_item
 
 struct hip_hadb_state
 {
-	struct list_head       next_hit;
+	struct list_head     next_hit;
 	spinlock_t           lock;
 	atomic_t             refcnt;
 

@@ -35,6 +35,8 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		return 0;
 	}
 
+        /* XX FIX: the following call breaks kernel-only HIP */
+
 	/* The source address is not yet a HIT, just the dst address. */
 	//entry = hip_hadb_find_byhit(&hdr->daddr);
 	xs = hip_xfrm_find_by_hit(&hdr->daddr);

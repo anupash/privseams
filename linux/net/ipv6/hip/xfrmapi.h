@@ -34,15 +34,15 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst);
 #ifdef __KERNEL__
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
-	uint32_t             spi;
-	hip_hit_t            hit_our;           /* The HIT we use with
-						 * this host */
-	hip_hit_t            hit_peer;          /* Peer's HIT */    
-	struct in6_addr      preferred_address; /* preferred dst
-						 * address to use when
-						 * sending data to
-						 * peer */
-	int                  state;             /* state */
+        struct               spi_in;
+	hip_hit_t            hit_our;             /* The HIT we use with
+						   * this host */
+	hip_hit_t            hit_peer;            /* Peer's HIT */    
+	struct in6_addr      preferred_peer_addr; /* preferred dst
+						   * address to use when
+						   * sending data to
+						   * peer */
+	int                  state;               /* state */
 };
 
 /* For inbound packet processing (SPI->(HITd,HITs) mapping) */

@@ -142,6 +142,8 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 {
         struct hip_xfrm_state *xs;
 
+        /* XX FIX: the following call breaks kernel-only HIP */
+
 	/* We are called only from bh.
 	 * No locking will take place since the data
 	 * that we are copying is very static
