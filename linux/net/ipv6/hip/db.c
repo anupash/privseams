@@ -739,7 +739,7 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
 	_HIP_DEBUG("off=%d count=%d eof=%d\n", (int) off, count, *eof);
 
 
-	len += snprintf(page, count, "# used type HIT\n");
+	len += snprintf(page, count, "# used type algo HIT\n");
 	if (len >= count)
 		goto err;
 
@@ -748,10 +748,12 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
 	i=0;
 	list_for_each_entry(item,&hip_local_hostid_db.db_head,next) {
 		hip_in6_ntop(&item->lhi.hit, in6buf);
-		len += snprintf(page+len, count-len, "%d %d %s %s\n",
+		len += snprintf(page+len, count-len, "%d %d %s %s %s\n",
 				++i,
 				1,
 				item->lhi.anonymous?"anon":"public",
+				hip_algorithm_to_string
+				(hip_get_host_id_algo(item->host_id)),
 				in6buf);
 		if (len >= count)
 			break;
