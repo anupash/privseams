@@ -36,6 +36,7 @@ struct hip_callable_functions {
 	void (*hip_unknown_spi) (struct sk_buff *skb, uint32_t spi);
 	void (*hip_handle_dst_unreachable) (struct sk_buff *skb);
 	int (*hip_is_our_spi) (uint32_t spi, struct in6_addr *hit);
+	int (*hip_trigger_bex) (struct in6_addr *dsthit);
 };
 
 extern struct hip_callable_functions hip_functions;

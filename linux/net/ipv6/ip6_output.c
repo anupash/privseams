@@ -861,7 +861,8 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 	 */
 #endif
 
-	if ((err = xfrm_lookup(dst, fl, sk, 0)) < 0) {
+	/* flags changed to 1, to enable waiting for an SA */
+	if ((err = xfrm_lookup(dst, fl, sk, 1)) < 0) {
 		err = -ENETUNREACH;
 		goto out_err_release;
         }

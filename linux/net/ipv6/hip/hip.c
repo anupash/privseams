@@ -909,6 +909,20 @@ int hip_get_addr(struct in6_addr *hit, struct in6_addr *addr)
 	return 1;
 }
 
+/*
+ * We trigger base exchange. Currently we don't check whether it was successful
+ * or not. 
+ */
+int hip_trigger_bex(struct in6_addr *dsthit)
+{
+	struct ipv6hdr hdr = {0};
+
+	ipv6_addr_copy(&hdr.daddr, dsthit);
+	hip_handle_output(&hdr, NULL);
+	return 0;
+}
+
+
 /**
  * hip_get_hits - get this host's HIT to be used in source HIT
  * @hitd: destination HIT
@@ -1782,6 +1796,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_unknown_spi);
 	HIP_SETCALL(hip_handle_dst_unreachable);
 	HIP_SETCALL(hip_is_our_spi);
+	HIP_SETCALL(hip_trigger_bex);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
 		HIP_ERROR("Could not add HIP protocol\n");
@@ -1807,6 +1822,7 @@ static void __exit hip_cleanup(void)
 
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
 
+	HIP_INVALIDATE(hip_trigger_bex);
 	HIP_INVALIDATE(hip_handle_dst_unreachable);
 	HIP_INVALIDATE(hip_unknown_spi);
 	HIP_INVALIDATE(hip_get_saddr);

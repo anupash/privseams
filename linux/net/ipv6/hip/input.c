@@ -891,8 +891,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 		}
 		/* XXX: -EAGAIN */
 
-		spi_our = ntohl(spi_our);
-
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_our);
 	}
 
@@ -943,7 +941,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 	{
 		struct hip_hadb_state *entry;
 		struct hip_birthday_cookie *bc;
-		unsigned long int fl;
+		unsigned long fl;
 
 		bc = hip_get_param(ctx->input, HIP_PARAM_BIRTHDAY_COOKIE_R1);
 		if (!bc) {
@@ -1333,7 +1331,7 @@ int hip_create_r2(struct hip_context *ctx)
 		struct hip_hadb_state *entry;
 		struct hip_spi_lsi *spi_lsi;
 		struct hip_esp_transform *esp_tf;
-		unsigned long int flags;
+		unsigned long flags;
 
 		esp_tf = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM);
 		if (!esp_tf) {
@@ -1402,7 +1400,6 @@ int hip_create_r2(struct hip_context *ctx)
 		}
 		/* XXX: Check -EAGAIN */
 
-		spi_our = ntohl(spi_our);
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_our);
 		/* ok, found an unused SPI to use */
 	}
@@ -1412,7 +1409,6 @@ int hip_create_r2(struct hip_context *ctx)
 	
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_peer);
 
-	spi_peer = htonl(spi_peer);
 	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_peer, esptfm, 
 			   &ctx->hip_espr.key, &ctx->hip_authr.key, 1);
 
@@ -1432,7 +1428,7 @@ int hip_create_r2(struct hip_context *ctx)
 
 	{
 		struct hip_hadb_state *entry;
-		unsigned long int fl;
+		unsigned long fl;
 
 		hip_hadb_acquire_ex_db_access(&fl);
 
@@ -1760,7 +1756,7 @@ int hip_receive_i2(struct sk_buff *skb)
 	state = 0;
 
 	{
-		unsigned long int flags;
+		unsigned long flags;
 		struct hip_hadb_state *entry;
 
 		hip_hadb_acquire_ex_db_access(&flags);
@@ -1915,11 +1911,11 @@ int hip_handle_r2(struct sk_buff *skb)
 	{
 		int tfm;
 		int tmp_lsi;
-		uint32_t spi_recvd;
+		uint32_t spi_recvd, spi_our;
 		int state;
 
- 		int getlist[3] = { HIP_HADB_PEER_SPI, HIP_HADB_PEER_LSI };
- 		void *setlist[3] = { &spi_recvd, &tmp_lsi };
+ 		int getlist[4] = { HIP_HADB_PEER_SPI, HIP_HADB_PEER_LSI };
+ 		void *setlist[4] = { &spi_recvd, &tmp_lsi };
 
 		spi_recvd = ntohl(spi_lsi->spi);
 		tmp_lsi = ntohl(spi_lsi->lsi);
@@ -1931,17 +1927,16 @@ int hip_handle_r2(struct sk_buff *skb)
 		getlist[0] = HIP_HADB_ESP_TRANSFORM;
 		getlist[1] = HIP_HADB_OWN_ESP;
 		getlist[2] = HIP_HADB_OWN_AUTH;
+		getlist[3] = HIP_HADB_OWN_SPI;
 
 		setlist[0] = &tfm;
 		setlist[1] = &ctx->hip_espi;
 		setlist[2] = &ctx->hip_authi;
+		setlist[3] = &spi_our;
 
-		hip_hadb_multiget(sender, 3, getlist, setlist, HIP_ARG_HIT);
+		hip_hadb_multiget(sender, 4, getlist, setlist, HIP_ARG_HIT);
 
 		_HIP_DEBUG("Setting out-policy SPI=0x%x (host)\n",spi_recvd);
-
-		spi_recvd = htonl(spi_recvd); // apparently XFRM wants in big endian
-
 
 		err = hip_setup_sa(&r2->hitr, sender, &spi_recvd, tfm, 
 				   &ctx->hip_espi.key, &ctx->hip_authi.key, 1);
@@ -1957,68 +1952,15 @@ int hip_handle_r2(struct sk_buff *skb)
 		state = HIP_STATE_ESTABLISHED;
 		hip_hadb_set_info(sender, &state, HIP_HADB_STATE|HIP_ARG_HIT);
 		HIP_DEBUG("Reached ESTABLISHED state\n");
-	}
 
-	/* Now, if we have cached SK, use it */
-	{
-		int val;
-		struct hip_kludge *kg_curr, *kg_iter;
-		struct hip_kludge *kg;
-		struct hip_hadb_state *entry;
-		unsigned long fl;
-
-		hip_hadb_acquire_db_access(&fl);
-		entry = hip_hadb_access_db(&r2->hits, HIP_ARG_HIT);
-		hip_hadb_release_db_access(fl);
-
-		/* this is problematic operation:
-		 * 1) Somebody might fiddle with the socketlist while we go through it.
-		 * 2) NONBLOCKING sockets have released the sock. We lock the socket
-		 *    just to be sure, but the locking is not nested, so we can only
-		 *    release the socket once. How do we know, if it's ok to release the
-		 *    sock?
+		/* these will change SAs' state from ACQUIRE to VALID, and
+		 * wake up any transport sockets waiting for a SA
 		 */
-		
-		if (!entry) {
-			HIP_ERROR("No entry\n");
-			err = -EINVAL;
-			goto out_err;
-		}
+		hip_finalize_sa(&r2->hits, spi_recvd);
+		hip_finalize_sa(&r2->hitr, spi_our);
 
-		kg = &entry->kg;
-		list_for_each_entry_safe(kg_curr, kg_iter, &kg->socklist, socklist) {
-			/* make sure that the sock is locked */
-			HIP_DEBUG("Current KG: %p, socket: %p\n",kg_curr, kg_curr->sk);
-
-			if (kg_curr->sk == NULL) {
-				HIP_ERROR("Socket = NULL!\n");
-				continue;
-			}
-
-			lock_sock(kg_curr->sk);
-
-			if (tcp_connect(kg_curr->sk)) {
-				HIP_ERROR("Error while connecting TCP socket\n");
-				tcp_set_state(kg_curr->sk, TCP_CLOSE);
-				__sk_dst_reset(kg_curr->sk);
-				kg_curr->sk->sk_route_caps = 0;
-				/* we should set dport to 0 too... */
-			}
-
-			if (kg_curr->sk->sk_socket && 
-			    kg_curr->sk->sk_socket->file->f_flags & O_NONBLOCK) {
-				/* if our socket is nonblocking, then it most probably
-				 * has already released the lock and we just acquired it,
-				 * so we will release it.
-				 * How can we be sure?
-				 * What about interrupts?
-				 */
-				release_sock(kg_curr->sk);
-			}
-		}
-		hip_hadb_free_socks(&ctx->input->hits,0);
 	}
-			
+
  out_err:
 	if (ctx)
 		kfree(ctx);

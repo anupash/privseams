@@ -718,6 +718,7 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 							     inet->sport,
 							     inet->dport);
 
+/*
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	err = HIP_CALLFUNC(hip_add_sk_to_waitlist,-EISCONN)(&fl.fl6_dst,sk);
 	if (!err) 
@@ -725,6 +726,7 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 	else if (err != -EISCONN)
 		goto late_failure;
 #endif
+*/
 	err = tcp_connect(sk);
 	if (err)
 		goto late_failure;

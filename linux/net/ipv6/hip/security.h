@@ -32,5 +32,6 @@ void hip_regen_dh_keys(u32 bitmask);
 int hip_delete_sa(u32 spi, struct in6_addr *dst);
 int hip_delete_sp(int dir);
 int hip_setup_sp(int dir);
+void hip_finalize_sa(struct in6_addr *hit, u32 spi);
 
 #endif /* HIP_SECURITY_H */

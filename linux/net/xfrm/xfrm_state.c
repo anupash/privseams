@@ -19,6 +19,10 @@
 #include <linux/ipsec.h>
 #include <asm/uaccess.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 /* Each xfrm_state may be linked to two tables:
 
    1. Hash table by (spi,daddr,ah/esp) to find SA by SPI. (input,ctl)
@@ -767,6 +771,16 @@ int km_query(struct xfrm_state *x, struct xfrm_tmpl *t, struct xfrm_policy *pol)
 	int err = -EINVAL;
 	struct xfrm_mgr *km;
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	printk(KERN_DEBUG "Querying SA\n");
+	if (pol->selector.daddr.a6[0] == htonl(0x40000000) &&
+	    pol->selector.prefixlen_d == 2) {
+		/* this must trigger Base Exchange */
+		err = HIP_CALLFUNC(hip_trigger_bex,0)((struct in6_addr *)x->id.daddr.a6);
+		if (!err)
+			return 0;
+	}
+#endif
 	read_lock(&xfrm_km_lock);
 	list_for_each_entry(km, &xfrm_km_list, list) {
 		err = km->acquire(x, t, pol, XFRM_POLICY_OUT);
@@ -784,8 +798,9 @@ int km_new_mapping(struct xfrm_state *x, xfrm_address_t *ipaddr, u16 sport)
 
 	read_lock(&xfrm_km_lock);
 	list_for_each_entry(km, &xfrm_km_list, list) {
-		if (km->new_mapping)
+		if (km->new_mapping) {
 			err = km->new_mapping(x, ipaddr, sport);
+		}
 		if (!err)
 			break;
 	}

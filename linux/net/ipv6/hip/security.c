@@ -55,10 +55,10 @@ static void hip_hirmu_kludge(int byspi)
 	HIP_DEBUG("DUMPING SPI TABLE\n");
 	for(i = 0; i < 1024; i++) {
 		if (!list_empty(&xfrm_state_byspi[i])) {
-			sprintf(meep, "%d: -> ", i);
+			sprintf(meep, "%d: ", i);
 			strcat(str, meep);
 			list_for_each_entry(xs, &xfrm_state_byspi[i], byspi) {
-				sprintf(meep, "0x%x [%s] -> ", xs->id.spi, xs->km.state == XFRM_STATE_VALID ? " OK" : "NOK");
+				sprintf(meep, "-> 0x%x [%s] ", xs->id.spi, xs->km.state == XFRM_STATE_VALID ? " OK" : "NOK");
 				strcat(str, meep);
 			}
 			HIP_DEBUG("%s\n",str);
@@ -84,7 +84,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	hip_print_hit("dst address", dst);
 	/* todo: return if spi == 0 ? (first time use of hadb_entry) */
 	if (spi == 0) {
-		HIP_DEBUG("SPI is 0, should return now\n");
+		return -EINVAL;
 	}
 	xaddr = (xfrm_address_t *)dst;
 
@@ -128,20 +128,18 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 	}
 
 	/* Delete SAs */
-	if (k > 0)
-		hip_delete_sa(spi_peer, own);
-	if (k > 1)
-		hip_delete_sa(spi_our, peer);
-	if (k > 2)
-		hip_delete_sa(new_spi_peer, own);
-	if (k > 3)
-		hip_delete_sa(new_spi_our, peer);
+	hip_delete_sa(spi_peer, peer);
+	hip_delete_sa(spi_our, own);
+	hip_delete_sa(new_spi_peer, own);
+	hip_delete_sa(new_spi_our, peer);
 
 	k = 0;
 	setlist[0] = &k;
 	setlist[1] = &k;
 	setlist[2] = &k;
 	setlist[3] = &k;
+
+	hip_hadb_multiset(peer, 4, getlist, setlist, HIP_ARG_HIT);
 
 	return 0;
 }
@@ -195,10 +193,10 @@ int hip_setup_sp(int dir)
 
 	tmpl->id.proto = IPPROTO_ESP;
 
-	tmpl->reqid = 1;
+	tmpl->reqid = 0;
 	tmpl->mode = XFRM_MODE_TRANSPORT;
 	tmpl->share = 0; // unique. Is this the correct number?
-	tmpl->optional = 1; /* check: is 0 ok ? */
+	tmpl->optional = 0; /* check: is 0 ok ? */
 	tmpl->aalgos = ~0;
 	tmpl->ealgos = ~0;
 	tmpl->calgos = ~0;
@@ -222,7 +220,7 @@ int hip_setup_sp(int dir)
  * @srcit: source HIT
  * @dsthit: destination HIT
  * @dstip: destination IPv6 address USELESS ?
- * @spi: SPI value
+ * @spi: SPI value in HOST BYTE ORDER!!!
  * @alg: ESP algorithm to use
  * @enckey: ESP encryption key
  * @authkey: authentication key
@@ -237,7 +235,8 @@ int hip_setup_sp(int dir)
  * Returns: 0 if successful, else < 0.
  */
 
-/* dstip IS USELESS ? */
+/* problems: The SA can be in acquire state, or it can already have timeouted.
+ */
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 uint32_t *spi, int alg, void *enckey, void *authkey, 
 		 int is_active)
@@ -252,22 +251,34 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	akeylen = ekeylen = 0;
 	err = -ENOMEM;
 
-	xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 1, IPPROTO_ESP,
+	xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
 			   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
 			   1, AF_INET6);
 	if (!xs) {
 		HIP_ERROR("Error while acquiring an SA: %d\n", err);
 		return err;
 	}
-	
-	xfrm_state_hold(xs);
 
-	if (*spi != 0) 
+	/* xs is either newly-created or an old one */
+
+	/* allocation of SPI, will wake up possibly sleeping transport layer, but
+	 * this is not a problem since it will retry acquiring of an SA, fail and
+	 * sleep again.
+	 * Allocation of SPI is, however, very important at this stage, so we
+	 * either do it like this, or create our own version of xfrm_alloc_spi()
+	 * which would do all the same stuff, without waking up.
+	 */
+
+	/* should we lock the state? */
+
+	if (*spi != 0) {
+		*spi = htonl(*spi);
 		xfrm_alloc_spi(xs, *spi, *spi);
-	else
+	} else {
 		/* Try to find a suitable random SPI within the range
 		 * in RFC 2406 section 2.1 */
-		xfrm_alloc_spi(xs, 256, 0xFFFFFFFF);
+		xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
+	}
 
 	if (xs->id.spi == 0) {
 		HIP_ERROR("Could not get SPI value for the SA\n");
@@ -280,10 +291,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		}
 	}
 
-	*spi = xs->id.spi; 
-	// is this needed ?
-	xs->props.replay_window = 32; // XXX: Is this the size of the replay window in bits? 
-
+	*spi = ntohl(xs->id.spi);
 
 	HIP_DEBUG("SPI setup ok, trying to setup enc/auth algos\n");
 
@@ -346,6 +354,8 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	xs->aalg->alg_key_len = akeylen;
 	xs->ealg->alg_key_len = ekeylen;
 
+	xs->props.replay_window = 32; // XXX: Is this the size of the replay window in bits? 
+
 	err = -ENOENT;
 	xs->type = xfrm_get_type(IPPROTO_ESP, AF_INET6);
 	if (xs->type == NULL) {
@@ -357,9 +367,6 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		HIP_ERROR("Could not initialize XFRM type\n");
 		goto out;
 	}
-
-	xs->km.state = XFRM_STATE_VALID;
-	xs->lft.hard_add_expires_seconds = LONG_MAX;
 
 	xfrm_state_put(xs);
 	HIP_DEBUG("New SA added successfully\n");
@@ -378,6 +385,31 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	return err;
 }
 
+/* spi in HOST BYTE ORDER!
+ */
+void hip_finalize_sa(struct in6_addr *hit, u32 spi)
+{
+	struct xfrm_state *xs;
+
+	HIP_DEBUG("Searching for spi: %x (%x)\n",spi, htonl(spi));
+
+	xs = xfrm_state_lookup((xfrm_address_t *)hit, htonl(spi),
+			       IPPROTO_ESP, AF_INET6);
+	if (!xs) {
+		HIP_ERROR("Could not finalize SA\n");
+		/* do what? */
+		return;
+	}
+	
+	spin_lock_bh(&xs->lock);
+	xs->km.state = XFRM_STATE_VALID;
+	xs->lft.hard_add_expires_seconds = 0;
+	spin_unlock_bh(&xs->lock);
+
+	xfrm_state_put(xs);
+	wake_up(&km_waitq);
+}
+      
 
 /**
  * hip_setup_esp - setup IPsec SPD and SA entries having given parameters
