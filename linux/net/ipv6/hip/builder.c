@@ -389,7 +389,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 
 	/* XX TODO: check the lengths of the parameters */
 
-	for (i = 0; i < sizeof(valid) / sizeof(valid[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(valid); i++) {
 		if (type == valid[i]) {
 			ok = 1;
 			break;
@@ -1348,8 +1348,8 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		/* Search for one supported transform */
 		hip_transform_suite_t suite;
 
- 		HIP_DEBUG("Checking %s transform\n",
- 			  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
+ 		_HIP_DEBUG("Checking %s transform\n",
+			   type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
 		suite = hip_get_param_transform_suite_id(param, 0);
 		if (suite == 0) {
 			HIP_ERROR("Could not find suitable %s transform\n",
@@ -1928,7 +1928,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  	uint16_t *tfm;
  	int table_n = 0, pkt_tfms = 0, i;
 
- 	HIP_DEBUG("tfm len = %d\n", hip_get_param_contents_len(transform_tlv));
+ 	_HIP_DEBUG("tfm len = %d\n", hip_get_param_contents_len(transform_tlv));
 
  	type = hip_get_param_type(transform_tlv);
  	if (type == HIP_PARAM_HIP_TRANSFORM) {
@@ -1948,10 +1948,10 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 
  	for (i = 0; i < pkt_tfms; i++, tfm++) {
  		int j;
- 		HIP_DEBUG("testing pkt tfm=%u\n", ntohs(*tfm));
+ 		_HIP_DEBUG("testing pkt tfm=%u\n", ntohs(*tfm));
  		for (j = 0; j < table_n; j++) {
  			if (ntohs(*tfm) == table[j]) {
- 				HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
+ 				_HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
  					  table[j], i);
  				return table[j];
  			}

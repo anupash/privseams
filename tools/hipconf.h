@@ -27,9 +27,9 @@
 #include <openssl/dsa.h>
 #include <openssl/pem.h>
 
-#include "tools/debug.h"
-#include "../linux/net/ipv6/hip/builder.h"
-#include "crypto.h"
+#include "libinet6/debug.h"
+#include "libinet6/crypto.h"
+#include "builder.h"
 
 /* 0 is reserved */
 #define ACTION_ADD 1

@@ -32,7 +32,6 @@
 #define _HIP_DEBUG_IN6ADDR(str, in6)
 #define _HIP_DEBUG_HIT(str, hit)
 #define _HIP_DEBUG_SKB(hdr, skb)
-#define _HIP_DEBUG_STATE_STR(state)
 
 /* Debugging messages are only printed in development code */
 #ifdef CONFIG_HIP_DEBUG
@@ -45,7 +44,6 @@
 #  define HIP_DEBUG_SKB(hdr, skb) hip_debug_skb(hdr, skb)
 #  define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
 #  define HIP_DEBUG_HIT(str, hit) hip_print_hit(str, hit)
-#  define HIP_DEBUG_STATE_STR(state) hip_state_str(state)
 
 #else
 
@@ -55,17 +53,16 @@
   #define HIP_DEBUG_SKB(hdr, skb) do { } while(0)
   #define HIP_DEBUG_IN6ADDR(str, in6) do { } while(0)
   #define HIP_DEBUG_HIT(str, hit) do { } while(0)
-  #define HIP_DEBUG_STATE_STR(state) do { } while(0)
 
 #endif /* CONFIG_HIP_DEBUG  */
 
 /* Forward declarations */
 
-extern inline void hip_khexdump(const char *tag, const void *data, const int len);
-extern inline void hip_print_hit(const char *str, const struct in6_addr *hit);
-extern inline void hip_debug_skb(const struct ipv6hdr *hdr,
+extern void hip_khexdump(const char *tag, const void *data, const int len);
+extern void hip_print_hit(const char *str, const struct in6_addr *hit);
+extern void hip_debug_skb(const struct ipv6hdr *hdr,
 			  const struct sk_buff *skb);
-extern inline const char *hip_state_str(unsigned int state);
+extern const char *hip_state_str(unsigned int state);
 
 #endif /* HIP_KERNEL_DEBUG_H */
 

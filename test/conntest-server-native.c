@@ -33,7 +33,7 @@
 #endif
 #include <signal.h>
 
-#include "tools/debug.h"
+#include "libinet6/debug.h"
 
 static void sig_handler(int signo) {
   if (signo == SIGTERM) {
@@ -87,6 +87,8 @@ int main(int argc,char *argv[]) {
     err = 1;
     goto out;
   }
+
+  setsockopt(serversock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
   memset(&hints, 0, sizeof(struct endpointinfo));
   hints.ei_family = endpoint_family;

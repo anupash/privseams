@@ -23,7 +23,7 @@
 #include "socket.h"
 #include "update.h"
 #ifdef CONFIG_HIP_RVS
-# include "rvs.h"
+#include "rvs.h"
 #endif
 
 #include <linux/proc_fs.h>
@@ -37,6 +37,12 @@
 #include <net/hip_glue.h>
 #include <net/addrconf.h>
 #include <net/xfrm.h>
+#include <linux/suspend.h>
+#include <linux/completion.h>
+#include <linux/cpumask.h>
+#ifdef CONFIG_SYSCTL
+#include <linux/sysctl.h>
+#endif
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -65,6 +71,14 @@ int kmm; // krisu_measurement_mode
 #endif
 
 //spinlock_t hip_workqueue_lock = SPIN_LOCK_UNLOCKED;
+struct hip_kthread_data {
+	int cpu;
+	pid_t pid;
+	struct completion kthread_work;
+	int killed;
+};
+
+struct hip_kthread_data hip_kthreads[NR_CPUS];
 
 #ifdef CONFIG_PROC_FS
 static struct proc_dir_entry *hip_proc_root = NULL;
@@ -81,6 +95,73 @@ static struct inet6_protocol hip_protocol = {
 	.err_handler = hip_err_handler,
 	.flags       = INET6_PROTO_NOPOLICY,
 };
+
+#ifdef CONFIG_SYSCTL
+/* /proc/sys/net/hip */
+int sysctl_hip_test = 0;
+static struct ctl_table_header *hip_sysctl_header = NULL;
+
+static int zero = 0, max_k = 64;  /* sysctl table wants pointers to ranges */
+
+struct hip_sys_config hip_sys_config;
+
+static ctl_table hip_table[] = {
+	{
+		.ctl_name	= NET_HIP_COOKIE_MAX_K_R1,
+		.procname	= "cookie_max_k_r1",
+		.data		= &hip_sys_config.hip_cookie_max_k_r1,
+		.maxlen		= sizeof (int),
+		.mode		= 0600,
+		.proc_handler	= &proc_dointvec_minmax,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &zero,
+		.extra2		= &max_k
+	},
+	{ .ctl_name = 0 }
+};
+
+static ctl_table hip_net_table[] = {
+	{
+		.ctl_name	= NET_HIP,
+		.procname	= "hip",
+		.mode		= 0555,
+		.child		= hip_table
+	},
+        { .ctl_name = 0 }
+};
+
+static ctl_table hip_root_table[] = {
+	{
+		.ctl_name	= CTL_NET,
+		.procname	= "net",
+		.mode		= 0555,
+		.child		= hip_net_table
+	},
+        { .ctl_name = 0 }
+};
+
+int hip_register_sysctl(void)
+{
+	HIP_DEBUG("\n");
+	hip_sysctl_header = register_sysctl_table(hip_root_table, 0);
+	return (hip_sysctl_header ? 1 : 0);
+}
+
+void hip_unregister_sysctl(void)
+{
+	HIP_DEBUG("\n");
+	if (hip_sysctl_header)
+		unregister_sysctl_table(hip_sysctl_header);
+}
+
+/**
+ * hip_init_sys_config - Initialize HIP related sysctl variables to default values
+ */
+void hip_init_sys_config(void)
+{
+	hip_sys_config.hip_cookie_max_k_r1 = 20;
+}
+#endif
 
 /**
  * hip_get_dh_size - determine the size for required to store DH shared secret
@@ -99,7 +180,7 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 		HIP_ERROR("Trying to use reserved DH group type 0\n");
 	else if (hip_dh_group_type == HIP_DH_384)
 		HIP_ERROR("draft-09: Group ID 1 does not exist yet\n");
-	else if (hip_dh_group_type > (sizeof(dh_size) / sizeof(dh_size[0])))
+	else if (hip_dh_group_type > ARRAY_SIZE(dh_size))
 		HIP_ERROR("Unknown/unsupported MODP group %d\n", hip_dh_group_type);
 	else
 		ret = dh_size[hip_dh_group_type] / 8;
@@ -733,7 +814,7 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 	if(tid == 0)
 		HIP_ERROR("None HIP transforms accepted\n");
 	else
-		HIP_DEBUG("Chose HIP transform: %d\n", tid);
+		_HIP_DEBUG("Chose HIP transform: %d\n", tid);
 
 	return tid;
 }
@@ -785,7 +866,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	}
 
  out:
-	HIP_DEBUG("Took ESP transform %d\n", tid);
+	_HIP_DEBUG("Took ESP transform %d\n", tid);
 
 	if(tid == 0)
 		HIP_ERROR("Faulty ESP transform\n");
@@ -951,13 +1032,13 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
  */
 void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 {
+	if (!hip_is_hit(&(skb->nh.ipv6h->saddr)))
+		return;
+
 	/* draft: If the R1 is a response to an ESP packet with an unknown
 	   SPI, the Initiator HIT SHOULD be zero. */
 	HIP_DEBUG("Received Unknown SPI: 0x%x\n", ntohl(spi));
-	HIP_INFO("Sending R1 with NULL dst HIT\n");
-
-	HIP_DEBUG("SKIP SENDING OF R1 ON UNKNOWN SPI\n");
-	/* TODO: send NOTIFY */
+	HIP_DEBUG("TODO: rekey old SA ?\n");  /* and/or TODO: send NOTIFY ? */
 	return;
 #if 0
 	/* We cannot know the destination HIT */
@@ -979,19 +1060,22 @@ static int hip_init_output_socket(void)
 	struct ipv6_pinfo *np;
 
 	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_output_socket);
-	if (err)
+	if (err) {
 		HIP_ERROR("Failed to allocate the HIP control socket (err=%d)\n", err);
+		goto out;
+	}
 
-	/* this is needed to prevent multicast packets sent out coming back to us */
+	/* prevent multicast packets sent out coming back to us */
 	np = inet6_sk(hip_output_socket->sk);
 	if (!np) {
 		HIP_ERROR("Could not get inet6 sock of HIP control socket\n");
 		err = -EFAULT;
+		goto out;
+	} else {
+		np->mc_loop = 0;
 	}
-
-	np->mc_loop = 0;
 	/* TODO: same for IPv4 ? */
-
+ out:
 	return err;
 }
 
@@ -1040,23 +1124,6 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 	return 1;
 }
 
-/**
- * hip_trigger_bex - Trigger HIP base exchange
- * @dsthit: Destination HIT
- *
- * Returns 0
- */
-int hip_trigger_bex(struct in6_addr *dsthit)
-{
-	struct ipv6hdr hdr = {0};
-
-	HIP_ERROR("TODO: MOVE THIS TO XFRM KM HANDLER AND REMOVE STUFF FROM xfrm_state.c/km_query\n");
-
-	ipv6_addr_copy(&hdr.daddr, dsthit);
-	hip_handle_output(&hdr, NULL);
-	return 0;
-}
-
 
 /**
  * hip_get_hits - get this host's HIT to be used in source HIT
@@ -1099,7 +1166,7 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 
 	entry = hip_hadb_find_byhit((hip_hit_t *)&fl->fl6_dst);
 	if (!entry) {
-		HIP_ERROR("Unknown HIT\n");
+		HIP_ERROR("Unknown destination HIT\n");
 		return 0;
 	}
 
@@ -1118,7 +1185,7 @@ static void hip_get_load_time(void)
 
 	do_gettimeofday(&tv);
 	load_time =  tv.tv_sec;
-	HIP_DEBUG("load_time=0x%lx\n", load_time);
+	_HIP_DEBUG("load_time=0x%lx\n", load_time);
 	return;
 }
 
@@ -1268,6 +1335,7 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
 		HIP_ERROR("no ifindex\n");
 		return;
 	}
+
 	hwo = hip_net_event_prepare_hwo(HIP_WO_SUBTYPE_IN6_EVENT,
 					ifindex, NETDEV_UP);
   	if (!hwo) {
@@ -1413,28 +1481,60 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 }
 
 
-/* ICMP errors caused by HIP packets are handled by this function */
+/**
+ * hip_err_handler - ICMPv6 handler
+ * @skb: received ICMPv6 packet
+ * @opt: todo
+ * @type: ICMP type
+ * @code: ICMP code
+ * @offset: offset from the start of the IPv6 header (?)
+ * @info: information related to type and code
+ *
+ * ICMP errors caused by HIP packets are handled by this function.
+ */
 static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt, 
 			    int type, int code, int offset, __u32 info)
 {
 	struct icmp6hdr *hdr;
 	struct ipv6hdr *invoking_hdr; /* RFC 2463 sec 3.1 */
         struct in6_addr *saddr, *daddr;
-	char strs[INET6_ADDRSTRLEN];
-	char strd[INET6_ADDRSTRLEN];
+	char str[INET6_ADDRSTRLEN];
+
+	/* todo: option to allow/disallow icmpv6 handling */
+	if (!pskb_may_pull(skb, 4+sizeof(struct ipv6hdr))) {
+		/* already checked in icmpv6_rcv/icmpv6_notify ? */
+		/* RFC 2463 sec 3.1 */
+		HIP_DEBUG("Too short an ICMP packet (skb len=%d)\n", skb->len);
+		return;
+	}
 
 	hdr = (struct icmp6hdr *) skb->h.raw;
 	invoking_hdr = (struct ipv6hdr *) (hdr+1); /* check */
 
 	saddr = &skb->nh.ipv6h->saddr;
         daddr = &skb->nh.ipv6h->daddr;
-	hip_in6_ntop(saddr, strs);
-	hip_in6_ntop(daddr, strd);
-	HIP_DEBUG("icmp6: src=%s dst=%s type=%d code=%d offset=%d info=%u skb->len=%d\n",
-		  strs, strd, type, code,  offset, info, skb->len);
-	hip_in6_ntop(&invoking_hdr->saddr, strs);
-	hip_in6_ntop(&invoking_hdr->daddr, strd);
-	HIP_DEBUG("invoking_hdr ip6: src=%s dst=%s\n", strs, strd);
+	hip_in6_ntop(saddr, str);
+	HIP_DEBUG("icmp6: outer hdr src=%s\n", str);
+	hip_in6_ntop(daddr, str);
+	HIP_DEBUG("icmp6: outer hdr dst=%s\n", str);
+	HIP_DEBUG("icmp6: type=%d code=%d offset=%d info=%u skb->len=%d\n",
+		  type, code,  offset, info, skb->len);
+	HIP_DEBUG("dev=%s input_dev=%s real_dev=%s\n",
+		  skb->dev ? skb->dev->name : "null",
+		  skb->input_dev ? skb->input_dev->name : "null",
+		  skb->real_dev ? skb->real_dev->name : "null");
+	hip_in6_ntop(&invoking_hdr->saddr, str);
+	HIP_DEBUG("invoking ip6 hdr: src=%s\n", str);
+	hip_in6_ntop(&invoking_hdr->daddr, str);
+	HIP_DEBUG("invoking ip6 hdr: dst=%s\n", str);
+
+	HIP_DEBUG("invoking pkt remaining len=%d\n", skb->len-offset);
+	HIP_DEBUG("invoking pkt nexthdr=%d\n", invoking_hdr->nexthdr);
+
+	if (invoking_hdr->nexthdr != IPPROTO_HIP) {
+		HIP_ERROR("invoking pkt hext header is not a HIP packet, not handling\n");
+		return;
+	}
 
 	switch (type) {
 	case ICMPV6_DEST_UNREACH:
@@ -1453,89 +1553,30 @@ static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt,
 		}
 		break;
 	case ICMPV6_PARAMPROB:
-		HIP_DEBUG("got PARAMPROB\n");
+		HIP_DEBUG("got PARAMPROB code=%d\n", code);
 		break;
 	case ICMPV6_TIME_EXCEED:
-		HIP_DEBUG("got TIME_EXCEED\n");
+		HIP_DEBUG("got TIME_EXCEED code=%d\n", code);
 		break;
 	default:
-		HIP_DEBUG("unhandled type %d\n", type);
+		HIP_DEBUG("unhandled type %d code=%d\n", type, code);
 	}
 
 	return;
 }
 
-#if 0
-/**
- * hip_handle_icmp - ICMPv6 handler
- * @skb: sk_buff containing the received ICMPv6 packet
- *
- * This function does currently nothing useful. Later we should mark
- * peer addresses as unusable if we receive ICMPv6 Destination
- * Unreachable caused by a packet which was sent to some of the peer
- * addresses we know of.
- */
-void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
-{
-	HIP_DEBUG("icmp6: type=%d code=%d skb->len=%d\n",
-		  type, code, skb->len);
-	HIP_DEBUG("RETURNING, hip_err_handler should handle this ICMP\n");
-	return;
-#if 0
-	struct icmp6hdr *hdr;
-	struct ipv6hdr *invoking_hdr; /* RFC 2463 sec 3.1 */
-        struct in6_addr *saddr, *daddr;
-	char strs[INET6_ADDRSTRLEN];
-	char strd[INET6_ADDRSTRLEN];
-
-	/* todo: option to allow/disallow icmpv6 handling */
-	if (!pskb_may_pull(skb, 4+sizeof(struct ipv6hdr))) { /* already checked in icmpv6_rcv/icmpv6_notify ? */
-		/* RFC 2463 sec 3.1 */
-		HIP_DEBUG("Too short an ICMP packet\n");
-		return;
-	}
-
-	hdr = (struct icmp6hdr *) skb->h.raw;
-	invoking_hdr = (struct ipv6hdr *) (hdr+1); /* check */
-	saddr = &skb->nh.ipv6h->saddr;
-        daddr = &skb->nh.ipv6h->daddr;
-	hip_in6_ntop(saddr, strs);
-	hip_in6_ntop(daddr, strd);
-	HIP_DEBUG("icmp6: src=%s dst=%s type=%d code=%d skb->len=%d\n",
-		  strs, strd, hdr->icmp6_type, hdr->icmp6_code, skb->len);
-	_HIP_HEXDUMP("received icmp6 Dest Unreachable", hdr, skb->len);
-	hip_in6_ntop(&invoking_hdr->saddr, strs);
-	hip_in6_ntop(&invoking_hdr->daddr, strd);
-	HIP_DEBUG("invoking_hdr ip6: src=%s dst=%s\n", strs, strd);
-
-	switch(hdr->icmp6_code) {
-	case ICMPV6_NOROUTE:
-	case ICMPV6_ADM_PROHIBITED:
-	case ICMPV6_ADDR_UNREACH:
-		HIP_DEBUG("TODO: handle ICMP DU code %d\n", hdr->icmp6_code);
-		/* todo: deactivate invoking_hdr->daddr from every sdb
-		 * entry peer addr list */
-		break;
-	default:
-		HIP_DEBUG("ICMP DU code %d not handled, returning\n", hdr->icmp6_code);
-		break;
-	}
-
-	return;
-#endif
-}
-#endif
-
-/* Handler which is notified when SA state has changes.
-   TODO: send UPDATE when SA lifetime has expired. */
+/* Handler which is notified when SA state has changed.
+   TODO: send UPDATE when SA lifetime has expired or is about to expire. */
 static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
 {
-	HIP_DEBUG("x=0x%p hard=%d\n", x, hard);
-	HIP_DEBUG("x: SPI=0x%x state=%d\n", ntohl(x->id.spi), x->km.state);
-	HIP_DEBUG("TODO..\n");
+	HIP_DEBUG("SPI=0x%x hard expiration=%d state=%d\n",
+		  ntohl(x->id.spi), hard, x->km.state);
+	HIP_DEBUG("TODO..send UPDATE ?\n");
 #if 0
 	if (SA is HIP SA) {
 		hip_ha_t *entry;
+
+		/* todo: zero the spi from hadb */
 		/* was this event caused by inbound SA ?*/
 		entry = hip_hadb_find_byspi(ntohl(x->id.spi));
 		if (entry) {
@@ -1550,45 +1591,76 @@ static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
 	return 0;
 }
 
-#if 0
-/* TODO: remove kludge from km_query and use this as the handler when HITs are acquired */
-static int hip_xfrm_handler_acquire(struct xfrm_state *xs, struct xfrm_tmpl *xtmpl,
-			     struct xfrm_policy *pol, int dir)
+/* This function is called when XFRM key manager does not know SA for
+ * given destination address. If the destination address is a HIT we
+ * must trigger base exchange to that HIT.
+ *
+ * Also it seems that we get here if the IPsec SA has expired and we
+ * are trying to send HIP traffic to that SA.
+ */
+static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
+				    struct xfrm_tmpl *xtmpl,
+				    struct xfrm_policy *pol, int dir)
 {
-	int err = -EINVAL; /* ? */
+	int err = -EINVAL;
+	char str[INET6_ADDRSTRLEN];
+	struct ipv6hdr hdr = {0};
 
-	if (pol->selector.daddr == htonl(0x40000000) &&
-	    pol->selector.prefixlen_d == 2) {
-		/* this must trigger Base Exchange */
-		err = hip_trigger_bex((struct in6_addr *)&(xs->id.daddr));
+	hip_in6_ntop((struct in6_addr *) &(xs->id.daddr), str);
+	HIP_DEBUG("daddr=%s dir=%d\n", str, dir);
+
+	if (! (pol->selector.daddr.a6[0] == htonl(0x40000000) &&
+	       pol->selector.prefixlen_d == 2)) {
+		hip_in6_ntop((struct in6_addr *) &(pol->selector.daddr), str);
+		HIP_ERROR("Policy (pol daddr=%s) is not for HIP, returning\n",
+			  str);
+		goto out;
 	}
-	HIP_DEBUG("err=%d\n", err);
+
+	if (!hip_is_hit((struct in6_addr *) &(xs->id.daddr))) {
+		HIP_ERROR("%s not a HIT\n", str);
+		goto out;
+	}
+
+	ipv6_addr_copy(&hdr.daddr, (struct in6_addr *) &(xs->id.daddr));
+	err = hip_handle_output(&hdr, NULL);
+	if (err)
+		HIP_ERROR("TODO: handle err=%d\n", err);
+	err = 0; /* tell XFRM that we handle this SA acquiring even
+		  * if the previous failed */
+	
+out:
+	HIP_DEBUG("returning, err=%d\n", err);
 	return err;
 }
-#endif
 
-static int hip_xfrm_handler_policy_notify(struct xfrm_policy *xp, int dir, int hard)
+/* Called when policy is expired */
+static int hip_xfrm_handler_policy_notify(struct xfrm_policy *xp,
+					  int dir, int hard)
 {
-	HIP_DEBUG("xp=0x%p dir=%d hard=%d\n", xp, dir, hard);
+	HIP_DEBUG("xp=0x%p dir=%d hard expiration=%d\n", xp, dir, hard);
 	HIP_DEBUG("TODO..\n");
 	return 0;
 }
 
+/* Callbacks for HIP related IPsec SA management functions */
 static struct xfrm_mgr hip_xfrm_km_mgr = {
 	.id		= "HIP",
 	.notify		= hip_xfrm_handler_notify,
-	/* .acquire	= hip_xfrm_handler_acquire, fix this when km_query is fixed */
-	/* .compile_policy = hip_xfrm_handler_compile_policy, */
-	.notify_policy	= hip_xfrm_handler_policy_notify,
+	.acquire	= hip_xfrm_handler_acquire,
+	.notify_policy	= hip_xfrm_handler_policy_notify
+	/* .compile_policy = hip_xfrm_handler_compile_policy, not needed ? */
 };
 
-/* Handler for XFRM key management calls */
-/* TODO */
+/* Register handler for XFRM key management calls */
 int hip_register_xfrm_km_handler(void)
 {
 	int err;
+
 	HIP_DEBUG("registering XFRM key management handler\n");
 	err = xfrm_register_km(&hip_xfrm_km_mgr);
+	if (err)
+		HIP_DEBUG("Registration of XFRM km handler failed, err=%d\n", err);
 	return err;
 }
 
@@ -1759,6 +1831,9 @@ static void hip_uninit_procfs(void)
 }
 #endif /* CONFIG_PROC_FS */
 
+/* Init/uninit network interface event notifier. When a network event
+   causes an event (e.g. it goes up or down, or is unregistered from
+   the system), hip_netdev_event_handler is called. */
 int hip_init_netdev_notifier(void)
 {
 	HIP_DEBUG("\n");
@@ -1781,8 +1856,8 @@ static int hip_do_work(void)
 
 	job = hip_get_work_order();
 	if (!job) {
-		HIP_ERROR("Unable to fetch from work queue\n");
-		res = -2;
+		HIP_DEBUG("Did not get anything from the work queue\n");
+		res = KHIPD_ERROR;
 		goto out_err;
 	}
 
@@ -1828,7 +1903,8 @@ static int hip_do_work(void)
 			KRISU_STOP_TIMER(KMM_PARTIAL,"BOS");
 			break;
 		default:
-			HIP_ERROR("Unknown subtype: %d\n",job->subtype);
+			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
+				  job->subtype, job->type);
 			break;
 		}
 		if (res < 0)
@@ -1839,9 +1915,6 @@ static int hip_do_work(void)
 		break;
 	case HIP_WO_TYPE_MSG:
 		switch(job->subtype) {
-		case HIP_WO_SUBTYPE_STOP:
-			res = KHIPD_QUIT;
-			break;
 		case HIP_WO_SUBTYPE_IN6_EVENT:
 			hip_net_event((int)job->arg1, 0, (uint32_t) job->arg2);
 			res = KHIPD_OK;
@@ -1870,9 +1943,12 @@ static int hip_do_work(void)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			hip_rvs_set_request_flag(job->arg1);
-			res = hip_trigger_bex(job->arg1);
-			if (res < 0)
-				res = KHIPD_ERROR;
+			{
+				struct ipv6hdr hdr = {0};
+				ipv6_addr_copy(&hdr.daddr, job->arg1);
+				hip_handle_output(&hdr, NULL);
+			}
+			res = 0;
 			break;
 #endif
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
@@ -1880,7 +1956,8 @@ static int hip_do_work(void)
 		case HIP_WO_SUBTYPE_DELHI:
 		case HIP_WO_SUBTYPE_FLUSHHIS:
 		case HIP_WO_SUBTYPE_NEWDH:
-			HIP_INFO("Not implemented subtype: %d\n",job->subtype);
+			HIP_INFO("Not implemented subtype: %d (type=%d)\n",
+				 job->subtype, job->type);
 			res = KHIPD_ERROR;
 			goto out_err;
 		default:
@@ -1891,57 +1968,83 @@ static int hip_do_work(void)
 	}
 
  out_err:
-	hip_free_work_order(job);
+	if (job)
+		hip_free_work_order(job);
 	return res;
 }
 
-static int hip_worker(void *cpu_id)
+/* HIP kernel thread, arg t is per-cpu thread data */
+static int hip_worker(void *t)
 {
 	int result = 0;
-	int cid = (int) cpu_id;
+	struct hip_kthread_data *thr = (struct hip_kthread_data *) t;
+	int cpu = thr->cpu;
+	pid_t pid;
 
 	/* set up thread */
-	daemonize("khipd/%d",cid);
-	set_cpus_allowed(current, cpumask_of_cpu(cid));
-
-	//set_user_nice(current, 0); //XXX: Set this as you please
-
-	/* initialize */
+	thr->pid = pid = current->pid;
 	hip_init_workqueue();
 	atomic_inc(&hip_working);
-	/* work loop */
+	daemonize("khipd/%d", cpu);
+	allow_signal(SIGKILL);
+	flush_signals(current);
+	set_cpus_allowed(current, cpumask_of_cpu(cpu));/* TODO: check return value */
+	//set_user_nice(current, 0); //XXX: Set this as you please
 
+	HIP_DEBUG("HIP kernel thread %s pid=%d started\n", current->comm, pid);
+
+	/* work loop */
 	while(1) {
+		if (signal_pending(current)) {
+			HIP_INFO("HIP thread pid %d got SIGKILL, cleaning up\n", pid);
+			/* zero thread pid so we do not kill other
+			 * process having the same pid later by accident */
+			thr->pid = 0;
+			thr->killed = 1;
+			_HIP_DEBUG("signalled, flushing signals\n");
+			flush_signals(current);
+			break;
+		}
+
+		/* swsuspend,  see eg. drivers/net/irda/sir_kthread.c */
+		if (current->flags & PF_FREEZE) {
+			HIP_DEBUG("handle swsuspend\n");
+			refrigerator(PF_FREEZE);
+		}
+
 		result = hip_do_work();
 		if (result < 0) {
-			if (result == KHIPD_QUIT) {
-				HIP_INFO("Stop requested. Cleaning up\n");
-				break;
-			} 
-			else if (result == KHIPD_ERROR)
-				HIP_INFO("Recoverable error occured\n");
+			if (result == KHIPD_ERROR)
+				HIP_INFO("Recoverable error occured (%d)\n", result);
 			else {
-				HIP_INFO("Unrecoverable error occured. Cleaning up\n");
+				/* maybe we should just recover and continue ? */
+				HIP_INFO("Unrecoverable error occured (%d). Cleaning up\n",
+					 result);
 				break;
 			}
 		}
-		HIP_DEBUG("Work done\n");
+		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 
-	/* cleanup */
+	/* cleanup and finish thread */
 	hip_uninit_workqueue();
 	atomic_dec(&hip_working);
+	HIP_DEBUG("HIP kernel thread %d exiting on cpu %d\n", pid, cpu);
 
-	return 0;
+	/* plain complete and return seemed to cause random oopses */
+	complete_and_exit(&thr->kthread_work, 0);
 }
 
 
 static int __init hip_init(void)
 {
-	int i,pid;
+	int cpu, pid;
 
 	HIP_INFO("Initializing HIP module\n");
 	hip_get_load_time();
+	hip_init_sys_config();
+
+	memset(&hip_kthreads, 0, sizeof(hip_kthreads));
 
 	if(!hip_init_r1())
 		goto out;
@@ -1963,22 +2066,24 @@ static int __init hip_init(void)
 		goto out;
 #endif /* CONFIG_PROC_FS */
 
-	if (hip_init_netdev_notifier() < 0)
-		goto out;
-
-	if (hip_init_socket_handler() < 0)
-		goto out;
-
 	if (hip_setup_sp(XFRM_POLICY_OUT) < 0)
 		goto out;
 
 	if (hip_setup_sp(XFRM_POLICY_IN) < 0)
 		goto out;
 
-	for(i=0;i<NR_CPUS;i++) {
-		pid = kernel_thread(hip_worker, (void *) i, CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD);
-		if (IS_ERR(ERR_PTR(pid)))
+	for(cpu = 0; cpu < num_possible_cpus(); cpu++) {
+		hip_kthreads[cpu].cpu = cpu;
+		init_completion(&hip_kthreads[cpu].kthread_work);
+		hip_kthreads[cpu].killed = 0;
+		pid = kernel_thread(hip_worker, &hip_kthreads[cpu],
+				    CLONE_KERNEL | SIGCHLD);
+		if (IS_ERR(ERR_PTR(pid))) {
+			hip_kthreads[cpu].pid = 0;
+			HIP_ERROR("Failed to set up a kernel thread for HIP "
+				  "(cpu=%d, ret=%d)\n", cpu, pid);
 			goto out;
+		}
 	}
 
 	HIP_SETCALL(hip_handle_output);
@@ -1986,11 +2091,9 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_get_addr);
 	HIP_SETCALL(hip_get_saddr);
 	HIP_SETCALL(hip_unknown_spi);
-	//HIP_SETCALL(hip_handle_icmp);
-	HIP_SETCALL(hip_trigger_bex);
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
-	//HIP_SETCALL(hip_update_spi_waitlist_ispending);
+	/* HIP_SETCALL(hip_update_spi_waitlist_ispending); */
 	HIP_SETCALL(hip_get_default_spi_out);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
@@ -1998,13 +2101,23 @@ static int __init hip_init(void)
 		goto out;
 	}
 
-#if 0
+	if (hip_init_socket_handler() < 0)
+		goto out;
+
+
+	if (hip_init_netdev_notifier() < 0)
+		goto out;
+
 	if (hip_register_xfrm_km_handler()) {
 		HIP_ERROR("Could not register XFRM key manager for HIP\n");
 		goto out;
 	}
+#ifdef CONFIG_SYSCTL
+	if (!hip_register_sysctl()) {
+		HIP_ERROR("Could not register sysctl for HIP\n");
+		goto out;
+	}
 #endif
-
 	HIP_INFO("HIP module initialized successfully\n");
 	return 0;
 
@@ -2019,20 +2132,24 @@ static int __init hip_init(void)
  */
 static void __exit hip_cleanup(void)
 {
-	HIP_INFO("uninitializing HIP module\n");
+	int i, pid, cpu;
 
+	HIP_INFO("Uninitializing HIP module\n");
+
+#ifdef CONFIG_SYSCTL
+	hip_unregister_sysctl();
+#endif
 	/* unregister XFRM km handler */
-	//xfrm_unregister_km(&hip_xfrm_km_mgr);
+	xfrm_unregister_km(&hip_xfrm_km_mgr);
 
-	/* disable callback for HIP packets */
+	/* disable callbacks for HIP packets and notifier chains */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
-	
+	hip_uninit_netdev_notifier();
+
 	/* disable hooks to call our code */
 	//HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
-	HIP_INVALIDATE(hip_trigger_bex);
-	//HIP_INVALIDATE(hip_handle_icmp);
 	HIP_INVALIDATE(hip_unknown_spi);
 	HIP_INVALIDATE(hip_get_saddr);
 	HIP_INVALIDATE(hip_get_addr);
@@ -2040,24 +2157,28 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_output);
 	HIP_INVALIDATE(hip_get_default_spi_out);
 
-	/* kill threads */
-	if (atomic_read(&hip_working) != 0) {
-		hip_stop_khipd(); /* tell the hip kernel thread(s) to stop */
-
-		while(atomic_read(&hip_working)) {
-			if (net_ratelimit())
-				HIP_DEBUG("%d HIP threads left\n",
-					  atomic_read(&hip_working));
-			schedule(); /* wait until stopped */
-		}
+	/* kill kernel threads and wait for them to complete */
+	for(i = 0; i < num_possible_cpus(); i++) {
+		pid = hip_kthreads[i].pid;
+		cpu = hip_kthreads[i].cpu;
+		if (pid > 0) {
+			HIP_INFO("Stopping HIP kernel thread pid=%d on cpu=%d\n", pid, cpu);
+			kill_proc(pid, SIGKILL, 1);
+			schedule();
+			wait_for_completion(&hip_kthreads[i].kthread_work);
+		} else if (pid == 0) {
+			_HIP_DEBUG("Already killed HIP kernel thread on cpu=%d ?\n", cpu);
+			if (hip_kthreads[i].killed) {
+				HIP_DEBUG("Waiting killed thread to complete on cpu=%d\n", cpu);
+				wait_for_completion(&hip_kthreads[i].kthread_work);
+			}
+		} else
+			HIP_DEBUG("Invalid HIP kernel thread pid=%d on cpu=%d\n", pid, cpu);
 	}
-
 	HIP_DEBUG("All HIP threads finished\n");
 
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
-
-	hip_uninit_netdev_notifier();
 
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();

@@ -53,16 +53,20 @@ void hip_set_logfmt(int logfmt);
 /* Don't use the functions below directly; use the corresponding macros
    instead */
 void hip_handle_log_error(int logtype);
-void hip_vlog(int debug_level, char *file, int line, char *function,
-	  char *fmt, va_list args);
-void hip_info(char *file, int line, char *function, char *fmt, ...);
-void hip_die(char *file, int line, char *function, char *fmt, ...);
-void hip_error(char *file, int line, char *function, char *fmt, ...);
-void hip_perror_wrapper(char *file, int line, char *function, char *s);
-void hip_hexdump(char *file, int line, char *function,
-		 char *prefix, void *str, int len);
-void hip_print_sockaddr(char *file, int line, char *function,
-			char *prefix, sa_family_t family,
-			struct sockaddr *sockaddr);
+void hip_vlog(int debug_level, const char *file, int line,
+	      const char *function, const char *fmt, va_list args);
+void hip_info(const char *file, int line, const char *function,
+	      const char *fmt, ...);
+void hip_die(const char *file, int line, const char *function,
+	     const char *fmt, ...);
+void hip_error(const char *file, int line, const char *function,
+	       const char *fmt, ...);
+void hip_perror_wrapper(const char *file, int line, const char *function,
+			const char *s);
+void hip_hexdump(const char *file, int line, const char *function,
+		 const char *prefix, const void *str, int len);
+void hip_print_sockaddr(const char *file, int line, const char *function,
+			const char *prefix, sa_family_t family,
+			const struct sockaddr *sockaddr);
 
 #endif /* DEBUG_H */

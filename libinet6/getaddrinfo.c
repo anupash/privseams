@@ -66,8 +66,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ctype.h>
 #include "builder.h"
-#include "tools/debug.h"
-#include "tools/message.h"
+#include "debug.h"
+#include "message.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
@@ -694,25 +694,25 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next) {
 	      int i;
 	      struct sockaddr_in6 *s = (struct sockaddr_in6 *)at_hit->addr;
-	      printf("test hit:");
-	      for (i = 0; i < 16; i++)
-		printf("%02x", (unsigned char)at_hit->addr[i]);
+	      //printf("test hit:");
+	      //for (i = 0; i < 16; i++)
+	      //printf("%02x", (unsigned char)at_hit->addr[i]);
 
 	      if (!ipv6_addr_is_hit((struct in6_addr *) at_hit->addr)) {
-		printf(" is not HIT\n");
+		//printf(" is not HIT\n");
 		continue;
 	      }
-	      printf(" is HIT -> map\n");
+	      //printf(" is HIT -> map\n");
 	      for(at_ipv6 = orig_at; at_ipv6 != NULL; at_ipv6 = at_ipv6->next) {
-		printf("\ttest ipv6:");
-		for (i = 0; i < 16; i++)
-		  printf("%02x", (unsigned char)at_ipv6->addr[i]);
+		//printf("\ttest ipv6:");
+		//for (i = 0; i < 16; i++)
+		//  printf("%02x", (unsigned char)at_ipv6->addr[i]);
 		if ((at_ipv6 == at_hit) ||
 		    ipv6_addr_is_hit((struct in6_addr *) at_ipv6->addr)) {
-		  printf(": skip, is hit or same\n");
+		  //printf(": skip, is hit or same\n");
 		  continue;
 		}
-		printf(": MAP\n");
+		//printf(": MAP\n");
 		hip_msg_init(msg);	
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
 		hip_build_param_contents(msg, (void *) at_ipv6->addr, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));

@@ -84,7 +84,7 @@ static int esp6_output(struct sk_buff *skb)
 		x_tmp = xfrm_state_lookup((xfrm_address_t *)&x->dst_hit, htonl(default_spi),
 					  IPPROTO_ESP, AF_INET6);
 		if (!x_tmp) {
-			printk(KERN_DEBUG "spi 0x%x not found\n", default_spi);
+			printk(KERN_DEBUG "SPI 0x%x not found\n", default_spi);
 			err = -EINVAL;
 			goto error;
 		}
@@ -143,7 +143,6 @@ static int esp6_output(struct sk_buff *skb)
 #endif
 
 	esph->spi = x->id.spi;
-//printk(KERN_DEBUG "esp6_output esph spi 0x%x\n", ntohl(esph->spi));
 	esph->seq_no = htonl(++x->replay.oseq);
 
 	if (esp->conf.ivlen)
@@ -206,12 +205,12 @@ static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, stru
 		ret = -EINVAL;
 		goto out_nofree;
 	}
-	//printk(KERN_DEBUG "maypull ok\n");
+
 	if (elen <= 0 || (elen & (blksize-1))) {
 		ret = -EINVAL;
 		goto out_nofree;
 	}
-	//printk(KERN_DEBUG "elen ok\n");
+
 	tmp_hdr = kmalloc(hdr_len, GFP_ATOMIC);
 	if (!tmp_hdr) {
 		ret = -ENOMEM;
@@ -223,7 +222,6 @@ static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, stru
         if (esp->auth.icv_full_len) {
 		u8 sum[esp->auth.icv_full_len];
 		u8 sum1[alen];
-//printk(KERN_DEBUG "test icv alen=%d\n", alen);
 
 		esp->auth.icv(esp, skb, 0, skb->len-alen, sum);
 
@@ -237,12 +235,11 @@ static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, stru
 		}
 	}
 
-//printk(KERN_DEBUG "pre skb cow\n");
 	if ((nfrags = skb_cow_data(skb, 0, &trailer)) < 0) {
 		ret = -EINVAL;
 		goto out;
 	}
-//printk(KERN_DEBUG "skb cow ok\n");
+
 	skb->ip_summed = CHECKSUM_NONE;
 
 	esph = (struct ipv6_esp_hdr*)skb->data;
@@ -276,7 +273,6 @@ static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, stru
 		if (padlen+2 >= elen) {
 			LIMIT_NETDEBUG(
 				printk(KERN_WARNING "ipsec esp packet is garbage padlen=%d, elen=%d\n", padlen+2, elen));
-printk(KERN_DEBUG "padlen ok\n");
 			ret = -EINVAL;
 			goto out;
 		}

@@ -146,7 +146,6 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 	}
 
 	_HIP_HEXDUMP("create digest", sha1_digest, HIP_AH_SHA_LEN);
-
 	_HIP_HEXDUMP("dsa key", (u8 *)(host_id + 1), ntohs(host_id->hi_length));
 
 	err = hip_dsa_sign(sha1_digest,(u8 *)(host_id + 1),signature);
@@ -214,10 +213,10 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 
 	switch(tmp) {
 	case 0:
-		HIP_INFO("Signature: [CORRECT]\n");
+		HIP_DEBUG("Signature: [CORRECT]\n");
 		break;
 	case 1:
-		HIP_INFO("Signature: [INCORRECT]\n");
+		HIP_ERROR("Signature: [INCORRECT]\n");
 		HIP_HEXDUMP("digest",sha1_digest,20);
 		HIP_HEXDUMP("signature",signature,41);
 		HIP_HEXDUMP("public key",public_key,public_key_len);
@@ -490,7 +489,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	if (keymat_len % HIP_AH_SHA_LEN)
 		keymat_len += HIP_AH_SHA_LEN - (keymat_len % HIP_AH_SHA_LEN);
 
-	HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min, keymat_len);
+	_HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min, keymat_len);
 
 	keymat = kmalloc(keymat_len, GFP_KERNEL);
 	if (!keymat) {
@@ -531,26 +530,6 @@ int hip_produce_keying_material(struct hip_common *msg,
 	hip_make_keymat(dh_shared_key, dh_shared_len,
 			&km, keymat, keymat_len,
 			&msg->hits, &msg->hitr, &ctx->keymat_calc_index);
-
-	/* for testing KEYMAT creation, set to 1 to dump 1000 bytes of
-	   KEYMAT */
-#if 0
-	{
-		struct hip_keymat_keymat km2;
-		uint8_t ci;
-		void *d = kmalloc(1000, GFP_KERNEL);
-		if (!d) {
-			HIP_ERROR("No memory for test KEYMAT\n");
-			err = -ENOMEM;
-			goto out_err;
-		}
-		memset(d, 0, 1000);
-		hip_make_keymat(dh_shared_key, dh_shared_len,
-				&km2, d, 1000, &msg->hits, &msg->hitr, &ci);
-		HIP_HEXDUMP("test KEYMAT", d, 1000);
-		kfree(d);
-	}
-#endif
 
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */
@@ -606,7 +585,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	memcpy(ctx->current_keymat_K, keymat+(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
-	HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
+	_HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
 		   ctx->keymat_calc_index, ctx->current_keymat_index);
 	_HIP_HEXDUMP("CTX CURRENT KEYMAT", ctx->current_keymat_K, HIP_AH_SHA_LEN);
 
@@ -871,8 +850,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_ERROR("Building of param encrypted failed %d\n", err);
 		goto out_err;
 	}
-	HIP_HEXDUMP("encinmsg 2", enc_in_msg,
- 		    hip_get_param_total_len(enc_in_msg));
+	_HIP_HEXDUMP("encinmsg 2", enc_in_msg,
+		     hip_get_param_total_len(enc_in_msg));
 	_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 
 	/* it appears as the crypto function overwrites the IV field, which
@@ -1213,7 +1192,7 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 
 	entry->peer_controls = ntohs(r1->control);
 	
-	HIP_INFO("R1 Successfully received\n");
+	HIP_DEBUG("R1 Successfully received\n");
 
  	err = hip_create_i2(ctx, solved_puzzle, entry);
  	if (err) {
@@ -1305,7 +1284,7 @@ int hip_receive_r1(struct sk_buff *skb)
 	wmb();
 	state = entry->state;
 
-	HIP_DEBUG("entry->state is %s\n", HIP_DEBUG_STATE_STR(state));
+	HIP_DEBUG("entry->state is %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
@@ -1464,10 +1443,8 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  		goto out_err;
  	}
 
-	HIP_DEBUG("I2 created successfully\n");
  	/* Send the packet */
-
-	HIP_DEBUG("sending R2\n");
+	HIP_DEBUG("R2 created successfully, sending\n");
 	err = hip_csum_send(NULL, &(ctx->skb_in->nh.ipv6h->saddr), r2);
 	if (err) {
 		HIP_ERROR("csum_send failed\n");
@@ -1676,8 +1653,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 
-	HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
-		    hip_get_param_total_len(host_id_in_enc));
+	_HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
+		     hip_get_param_total_len(host_id_in_enc));
 
 	/* Verify sender HIT */
  	if (hip_host_id_to_hit(host_id_in_enc, &hit,
@@ -1699,7 +1676,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	 */
 
 	/* validate signature */
-	HIP_DEBUG("validate signature\n");
+	_HIP_DEBUG("validate signature\n");
 
 	// XX CHECK: is the host_id_in_enc correct??! it points to the temp
 	err = hip_verify_packet_signature(ctx->input, host_id_in_enc);
@@ -1708,7 +1685,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		err = -EINVAL;
 		goto out_err;
 	}
-	HIP_DEBUG("SIGNATURE in I2 ok\n");
+	_HIP_DEBUG("SIGNATURE in I2 ok\n");
 
 	/* do the rest */
   	/* Add peer's host id to peer_id database (is there need to
@@ -1754,7 +1731,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		ipv6_addr_copy(&entry->hit_our, &i2->hitr);
-		HIP_DEBUG("INSERTING STATE\n");
+		HIP_DEBUG("Inserting state\n");
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
 		/* entry unlock is done below, ok ? */
@@ -1825,7 +1802,9 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
-			HIP_DEBUG("TODO: check if SA already exists\n");
+			if (err == -EEXIST)
+				HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
+					  spi_in);
 			hip_delete_esp(entry);
 		 	goto out_err;
 		}
@@ -1838,10 +1817,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	barrier();
 	spi_out = ntohl(hspi->spi);
-
-	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n",
-		  spi_out);
-
+	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_out, esp_tfm, 
 			   &ctx->esp_out.key, &ctx->auth_out.key, 0,
 			   HIP_SPI_DIRECTION_OUT);
@@ -1862,7 +1838,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	err = hip_hadb_add_addr_to_spi(entry, spi_out,
 				       &ctx->skb_in->nh.ipv6h->saddr,
 				       1, 0, 1);
-	HIP_DEBUG("add spi err ret=%d\n", err);
+	_HIP_DEBUG("add spi err ret=%d\n", err);
 	if (err) {
 		HIP_ERROR("failed to add an address to SPI list\n");
 		goto out_err;
@@ -1891,7 +1867,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 
-	HIP_DEBUG("INSERTING STATE\n");
+	HIP_DEBUG("Inserting state\n");
 	hip_hadb_insert_state(entry);
 
 	err = hip_create_r2(ctx, entry);
@@ -1919,7 +1895,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 #endif /* CONFIG_HIP_RVS */
 	}
 
-	HIP_DEBUG("Reached %s state\n", HIP_DEBUG_STATE_STR(entry->state));
+	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 
 	//hip_hadb_dump_spis_in(entry);
 	//hip_hadb_dump_spis_out(entry);
@@ -2059,7 +2035,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
 	HIP_DEBUG("Entering handle_r2\n");
 
-	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
+	ctx = kmalloc(sizeof(struct hip_context), GFP_ATOMIC);
 	if (!ctx) {
 		err = -ENOMEM;
 		goto out_err;
@@ -2145,9 +2121,11 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	 * address after the base exchange */
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,
 				       1, 0, 1);
+	if (err)
+		HIP_ERROR("hip_hadb_add_addr_to_spi err=%d not handled\n", err);
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
-	HIP_DEBUG("add spi err ret=%d\n", err);
+	_HIP_DEBUG("add spi err ret=%d\n", err);
 	//hip_hadb_dump_spi_list(entry, NULL);
 
 	err = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
@@ -2288,7 +2266,7 @@ int hip_receive_i1(struct sk_buff *skb)
 
 	HIP_DEBUG("HIP_LOCK_HA ?\n");
 
-	HIP_DEBUG("Received I1 in state %s\n", HIP_DEBUG_STATE_STR(state));
+	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_NONE:
  		err = hip_handle_i1(skb, NULL);
@@ -2624,7 +2602,7 @@ int hip_receive_bos(struct sk_buff *skb)
 		/* TODO: should return right now */
 		state = entry->state;
 	}
-	HIP_DEBUG("Received BOS packet in state %s\n", HIP_DEBUG_STATE_STR(state));
+	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
 
 	if (entry)
 		HIP_DEBUG("---LOCKING---\n");
@@ -2639,7 +2617,7 @@ int hip_receive_bos(struct sk_buff *skb)
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
  	case HIP_STATE_REKEYING:
-		HIP_DEBUG("BOS not handled in state %s\n", HIP_DEBUG_STATE_STR(state));
+		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -2673,7 +2651,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	int err = 0;
 	u8 *hmac_res = NULL;
 
-	hmac_res = kmalloc(HIP_AH_SHA_LEN, GFP_KERNEL);
+	hmac_res = kmalloc(HIP_AH_SHA_LEN, GFP_ATOMIC);
 	if (!hmac_res) {
 		HIP_ERROR("kmalloc failed\n");
 		err = -ENOMEM;
@@ -2719,7 +2697,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	int err = 0;
 	uint16_t csum;
 
-	HIP_DEBUG("skb len=%d, skb data_len=%d, v6hdr payload_len=%d mgtotlen=%d\n",
+	HIP_DEBUG("skb len=%d, skb data_len=%d, v6hdr payload_len=%d msgtotlen=%d\n",
 		  (*skb)->len, (*skb)->data_len,
 		  ntohs((*skb)->nh.ipv6h->payload_len),
 		  hip_get_msg_total_len(hip_common));
@@ -2781,7 +2759,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 		err = -EFAULT;
 		goto out_err;
 	} else
-		HIP_DEBUG("Receiver HIT is ours\n");
+		_HIP_DEBUG("Receiver HIT is ours\n");
 #endif
 
 	if (!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr)) {
@@ -2834,7 +2812,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	}
 
         hip_common = (struct hip_common*) (*skb)->h.raw;
-        /* TODO: use HIP_DEBUG_STATE_STR */
+        /* TODO: use hip_state_str */
 	HIP_DEBUG("Received HIP packet type %d\n", hip_common->type_hdr);
 	_HIP_DEBUG_SKB((*skb)->nh.ipv6h, skb);
 	_HIP_HEXDUMP("HIP PACKET", hip_common,

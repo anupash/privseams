@@ -116,8 +116,8 @@ inline const char *hip_state_str(unsigned int state)
 		  "FAILED" };
 	if (state <= ARRAY_SIZE(states))
 		str = states[state];
-	else
+        else
 		HIP_ERROR("invalid state %u\n", state);
-	
+
 	return str;
 }

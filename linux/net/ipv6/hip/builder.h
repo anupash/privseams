@@ -21,9 +21,15 @@
 #include <sys/errno.h>
 #include <netinet/ip6.h>
 #include <net/hip.h>
-#include "tools/debug.h"
+#include "libinet6/debug.h"
+
+/* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 #endif /* __KERNEL__ */
+
 
 void hip_msg_init(struct hip_common *msg);
 struct hip_common *hip_msg_alloc(void);

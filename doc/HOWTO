@@ -18,7 +18,7 @@ software bundle:
   * Linux Operating System
   * OpenSSL-library and developer headers
   * GNU make
-  * the latest versions of autoconf and automake
+  * the latest versions of autoconf, automake, autoreconf and libtool
   * perl, lorder
 
 * Optional
@@ -129,35 +129,26 @@ loading! You can find it from here:
   Processor type and features
   -> Use register arguments (EXPERIMENTAL)
 
-Compiling Userland Applications
+Compiling Userspace Applications
 =================================
 
 After you have successfully compiled and installed the HIP kernel and
-rebooted both of the hosts, you need to compile the HIP command line
-configurator (hipconf). Hipconf is located in hipl/tools folder and it
-is compiled simply as follows:
+rebooted both of the hosts, you need to compile the userspace
+applications in order to use HIP. Start by invoking the autogen.sh at
+the top level directory:
 
-  cd hipl/tools
-  ./configure
-  make
+  cd hipl
+  ./autogen.sh
 
-You should have an IPv6 application for creating a connection between
-hosts. There is also a very simple application in hipl/test
-folder. You can compile it as follows:
+Next, build the libinet6, tools and test directory as follows:
 
-  cd hipl/libinet6
-  ./configure
-  make
-  cd ../test
-  ./configure
-  make conntest-client-gai conntest-server
+  ./configure && make
 
 It is not necessary to "make install" the applications. You can
-execute them straight from their source directories.
-
-If you experience weird problems when executing configure script, try
-invoking "autoreconf". See also that the versions of your automake and
-autoconf tools are up-to-date.
+execute them straight from their source directories. Note that making
+from the top directory does not currently build e.g. java libraries or
+telnet. Follow the instructions presented later in this document to
+build them.
 
 Testing a HIP connection between two hosts
 ==========================================

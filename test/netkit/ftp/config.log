@@ -1,0 +1,15 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:533: checking for gcc
+configure:646: checking whether the C compiler (gcc  ) works
+configure:662: gcc -o conftest    conftest.c  1>&5
+configure:688: checking whether the C compiler (gcc  ) is a cross-compiler
+configure:693: checking whether we are using GNU C
+configure:721: checking whether gcc accepts -g
+configure:753: checking how to run the C preprocessor
+configure:863: checking for a BSD compatible install
+configure:920: checking whether ln -s works
+configure:945: checking for readline/readline.h
+configure:945: checking for readline/tilde.h
+configure:983: checking whether to enable readline support

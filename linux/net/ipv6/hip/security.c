@@ -65,22 +65,18 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	struct xfrm_state *xs;
 	xfrm_address_t *xaddr;
 
-	/* todo: move SPI multiget code from delete_esp here */
-	HIP_DEBUG("spi=0x%x\n", spi);
-	hip_print_hit("dst address", dst);
-	/* todo: return if spi == 0 ? (first time use of hadb_entry) */
 	if (spi == 0) {
 		return -EINVAL;
 	}
-	xaddr = (xfrm_address_t *)dst;
 
+	HIP_DEBUG("SPI=0x%x\n", spi);
+	xaddr = (xfrm_address_t *)dst;
 	xs = xfrm_state_lookup(xaddr, htonl(spi), IPPROTO_ESP, AF_INET6);
 	if (!xs) {
-		HIP_ERROR("Could not find SA for SPI 0x%x!\n", spi);
+		HIP_ERROR("Could not find SA for SPI 0x%x (already expired ?)\n", spi);
 		return -ENOENT;
 	}
-	
-	xfrm_state_put(xs); /* as in xfrm_user.c, xfrm_del_sa xfrm_state_lookup incs xs's refcount */
+	xfrm_state_put(xs);
 	xfrm_state_delete(xs);
 
 	return 0;
@@ -90,10 +86,8 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 int hip_delete_esp(hip_ha_t *entry)
 {
 	/* assumes already locked entry */
-
 	hip_hadb_delete_inbound_spis(entry);
 	hip_hadb_delete_outbound_spis(entry);
-
 	return 0;
 }
 
@@ -130,10 +124,16 @@ int hip_setup_sp(int dir)
 	xp->selector.sport = xp->selector.dport = 0;
 	xp->selector.sport_mask = xp->selector.dport_mask = 0;
 
+	/* set policy to never expire */
 	xp->lft.soft_byte_limit = XFRM_INF;
 	xp->lft.hard_byte_limit = XFRM_INF;
 	xp->lft.soft_packet_limit = XFRM_INF;
 	xp->lft.hard_packet_limit = XFRM_INF;
+	xp->lft.soft_add_expires_seconds = 0;
+	xp->lft.hard_add_expires_seconds = 0;
+	xp->lft.soft_use_expires_seconds = 0;
+	xp->lft.hard_use_expires_seconds = 0;
+
 	/* xp->curlft. add_time and use_time are set in xfrm_policy_insert */
 
 	xp->family = AF_INET6; /* ? */
@@ -156,15 +156,14 @@ int hip_setup_sp(int dir)
 	err = xfrm_policy_insert(dir, xp, 1);
 	if (err) {
 		if (err == -EEXIST)
-			HIP_DEBUG("SP policy already exists\n");
+			HIP_ERROR("SP policy already exists, ignore ?\n");
 		else
-			HIP_ERROR("Could not insert new SP policy, err=%d\n", err);
+			HIP_ERROR("Could not insert new SP, err=%d\n", err);
 		// xfrm_policy_delete(xp); ?
 		xfrm_pol_put(xp);
-		return err;
 	}
 
-	return 0;
+	return err;
 }
 
 /* returns 0 if SPI could not  be allocated, SPI is in host byte order */
@@ -230,7 +229,8 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	size_t akeylen, ekeylen; /* in bits */
 
 	HIP_DEBUG("SPI=0x%x alg=%d already_acquired=%d direction=%s\n",
-		  *spi, alg, already_acquired, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
+		  *spi, alg, already_acquired,
+		  direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
 	akeylen = ekeylen = 0;
 	err = -EEXIST;
 
@@ -273,10 +273,10 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	/* should we lock the state? */
 
-	HIP_DEBUG("xs->id.spi=0x%x\n", ntohl(xs->id.spi));
+	_HIP_DEBUG("xs->id.spi=0x%x\n", ntohl(xs->id.spi));
 
 	if (!already_acquired) {
-		HIP_DEBUG("allocate SPI\n");
+		_HIP_DEBUG("allocate SPI\n");
 		if (*spi) {
 			*spi = htonl(*spi);
 			xfrm_alloc_spi(xs, *spi, *spi);
@@ -286,7 +286,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 			xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
 		}
 
-		HIP_DEBUG("allocated xs->id.spi=0x%x\n", ntohl(xs->id.spi));
+		_HIP_DEBUG("allocated xs->id.spi=0x%x\n", ntohl(xs->id.spi));
 		if (xs->id.spi == 0) {
 			HIP_ERROR("Could not allocate SPI value for the SA\n");
 			if (*spi != 0) {
@@ -347,10 +347,10 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	akeylen = aad->desc.sadb_alg_maxbits;
 
 	err = -ENOMEM;
-	xs->ealg = kmalloc(sizeof(struct xfrm_algo) + (ekeylen + 7)/8, GFP_KERNEL);
+	xs->ealg = kmalloc(sizeof(struct xfrm_algo) + (ekeylen + 7)/8, GFP_ATOMIC);
 	if (!xs->ealg)
 		goto out;
-	xs->aalg = kmalloc(sizeof(struct xfrm_algo) + (akeylen + 7)/8, GFP_KERNEL);
+	xs->aalg = kmalloc(sizeof(struct xfrm_algo) + (akeylen + 7)/8, GFP_ATOMIC);
 	if (!xs->aalg)
 		goto out;
 
@@ -382,7 +382,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	}
 
 	xfrm_state_put(xs);
-	HIP_DEBUG("New SA added successfully\n");
+	_HIP_DEBUG("New SA added successfully\n");
 	return 0;
  out:
 	if (xs) {
@@ -394,7 +394,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		xfrm_state_put(xs);
 	}
 
-	HIP_DEBUG("returning, err=%d\n", err);
+	HIP_DEBUG("returning on error, err=%d\n", err);
 	return err;
 }
 
@@ -411,12 +411,12 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 {
 	struct xfrm_state *xs;
 
-	HIP_DEBUG("Searching for spi: 0x%x (net 0x%x)\n", spi, htonl(spi));
+	_HIP_DEBUG("Searching for spi: 0x%x (net 0x%x)\n", spi, htonl(spi));
 
 	xs = xfrm_state_lookup((xfrm_address_t *)hit, htonl(spi),
 			       IPPROTO_ESP, AF_INET6);
 	if (!xs) {
-		HIP_ERROR("Could not finalize SA\n");
+		HIP_ERROR("Could not finalize SA for SPI 0x%x\n", spi);
 		/* do what? */
 		return;
 	}
@@ -427,7 +427,7 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 	spin_unlock_bh(&xs->lock);
 
 	xfrm_state_put(xs);
-	wake_up(&km_waitq);
+	wake_up_all(&km_waitq);
 }
 
 
@@ -447,8 +447,7 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
  * Then encode it into the buffer
  */
 
-	if (dh_table[group_id] == NULL) 
-	{
+	if (dh_table[group_id] == NULL) {
 		tmp = hip_generate_dh_key(group_id);
 
 		spin_lock(&dh_table_lock);

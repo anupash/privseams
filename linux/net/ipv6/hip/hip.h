@@ -80,7 +80,15 @@ extern struct crypto_tfm *impl_sha1;
 extern struct crypto_tfm *impl_sha1;
 extern struct semaphore hip_work;
 extern struct socket *hip_output_socket;
-extern spinlock_t hip_workqueue_lock;
+//extern spinlock_t hip_workqueue_lock;
 extern spinlock_t dh_table_lock;
 extern time_t load_time;
+
+#ifdef CONFIG_SYSCTL
+struct hip_sys_config {
+	int hip_cookie_max_k_r1;
+};
+extern struct hip_sys_config hip_sys_config;
+#endif
+
 #endif /* HIP_HIP_H */
