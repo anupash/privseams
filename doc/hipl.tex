@@ -394,9 +394,9 @@ Althogh there are two hash tables, there are only one set of HAs. This entity,
 that holds HAs in one or two hash tables, is called the HADB.
 
 There is a reference counter in every HA. This counter must be
-incremented using \verb|hip\_hold\_ha()| macro whenever we receive a
+incremented using \verb|hip_hold_ha()| macro whenever we receive a
 reference to the HA. Obviously the reverse holds for decrementing the
-counter using \verb|hip\_put\_ha()|. When the reference counter reaches
+counter using \verb|hip_put_ha()|. When the reference counter reaches
 zero, the memory allocates for the HA is automatically deleted.
 
 \subsubsection{HADB Locking}
@@ -404,11 +404,11 @@ zero, the memory allocates for the HA is automatically deleted.
 To maintain integrity across the operations involving the HADB or the HAs
 added to the HADB, we use a couple of techniques.
 
-First, we guanrantee that no HA can be deleted accidentally while some other
+First, we guarantee that no HA can be deleted accidentally while some other
 thread/process uses it. This is accomplished by having reference counters in
-each HA. This counter must be incremented using \verb|hip\_hold\_ha()| macro 
+each HA. This counter must be incremented using \verb|hip_hold_ha()| macro 
 whenever we receive a reference to the HA. Obviously the reverse holds for 
-decrementing the counter using \verb|hip\_put\_ha()|. When the reference 
+decrementing the counter using \verb|hip_put_ha()|. When the reference 
 counter reaches zero, the memory allocated for the HA is automatically deleted.
 A reference to a HA can only be acquired through certain HADB functions. These
 guarantee that there cannot be a situation where we would be deleting the
@@ -428,7 +428,7 @@ functions use these to isolate the critical sections. The basic policy is to
 use these locks only when operating (reading or writing) on the hash table 
 itself. The macros that do the job are: \verb|HIP_LOCK_HT| and \verb|HIP_UNLOCK_HT|.
 
-Miika: mihinköhän tämän laittaisi?
+% Miika: mihinköhän tämän laittaisi?
 
 Due to the architecture of HIPL, there are 3 different contexts, in which the
 HIP code is executed: bottom handler/softirq, kernel thread and user context.
@@ -477,7 +477,7 @@ use the working queue.
 
 
 
-XXX Miika: Etsi tälle parempi paikka
+% XXX Miika: Etsi tälle parempi paikka
 
 Due to the architecture of HIPL, there are theree different contexts, 
 in which the
@@ -494,7 +494,7 @@ Userspace HIP configuration tools, HIP socket API etc. run in the user context.
 \subsection{Rendezvous Mechanism/Server}
 \label{sec:rendezvous_server}
 
-XXX Miika: Ei kai tähän tarvita introa reiskasta?
+% XXX Miika: Ei kai tähän tarvita introa reiskasta?
 
 For the rendezvous server functionality, we had to add a new hash table,
 where we store the RendezVous Associations (RVA). The hash table
@@ -509,14 +509,14 @@ Reponder, but does not have its real IP-address, but the IP-address of
 the Server instead.
 
 First, the Responder needs to inform the Server, and ask for rendezvous
-service. This is accomplished by adding a special control bit (RVS_CAPABLE)
+service. This is accomplished by adding a special control bit (RVS\_CAPABLE)
 in I1 packet, as specified in \cite{RVS}.
-To the I2 packet, we add an optional RVA_REQUEST parameter, \textbf{if} and
-only if, the Server also used the RVS_CAPABLE bit in R1 packet.
+To the I2 packet, we add an optional RVA\_REQUEST parameter, \textbf{if} and
+only if, the Server also used the RVS\_CAPABLE bit in R1 packet.
 Otherwise, the Server signals that is not capable of providing the rendezvous
 service we asked for. We then end the base exchange.
 
-Having added the RVA_REQUEST parameter to the I2, we proceed with the rest
+Having added the RVA\_REQUEST parameter to the I2, we proceed with the rest
 steps of building the I2 packet, and send it. Then rest goes as in the normal
 base exchange procedure.
 
