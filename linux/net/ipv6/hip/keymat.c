@@ -74,8 +74,10 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 	struct in6_addr *smaller_hit, *bigger_hit;
 	int hit1_is_bigger;
 	u8 *shabuffer;
+#ifdef __KERNEL__
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
+#endif
 
 	if (dstbuflen < HIP_AH_SHA_LEN) {
 		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
@@ -102,11 +104,16 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 		return;
 	}
 
+#ifdef __KERNEL__
 	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, 
 				       kij_len+2*sizeof(struct in6_addr)+1);
 	HIP_ASSERT(!err);
 
 	crypto_digest_digest(sha, sg, nsg, dstbuf);
+#else
+	// FIXME: is this correct
+	crypto_digest_digest(sha, shabuffer, 0, dstbuf);
+#endif
 
 	dstoffset = HIP_AH_SHA_LEN;
 	index_nbr++;
@@ -119,13 +126,19 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 	seedkey = dstbuf;
 	hip_update_keymat_buffer(shabuffer, seedkey, HIP_AH_SHA_LEN,
 				 kij_len, index_nbr);
+#ifdef __KERNEL__
 	nsg = HIP_MAX_SCATTERLISTS;
 
 	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, kij_len + HIP_AH_SHA_LEN + 1);
 	HIP_ASSERT(!err);
+#endif
 
 	while (dstoffset < dstbuflen) {
+#ifdef __KERNELL
 		crypto_digest_digest(sha, sg, nsg, dstbuf + dstoffset);
+#else
+		crypto_digest_digest(sha, shabuffer, 0, dstbuf + dstoffset);
+#endif
 		seedkey = dstbuf + dstoffset;
 		dstoffset += HIP_AH_SHA_LEN;
 		index_nbr++;
@@ -343,3 +356,4 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 		_HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);
 	}
 }
+

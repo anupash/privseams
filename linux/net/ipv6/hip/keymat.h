@@ -3,11 +3,11 @@
 
 #ifdef __KERNEL__
 #  include <linux/types.h>
-#  include <net/hip.h>
 #  include <linux/crypto.h>
 #  include <asm/scatterlist.h>
 #endif /* __KERNEL__ */
 
+#include <net/hip.h>
 #include "misc.h"
 #include "debug.h"
 #include "hip.h"

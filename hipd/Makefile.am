@@ -16,7 +16,7 @@ INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = dh.c hipd.c netlink.c workqueue.c builder.c preoutput.c hadb.c
+hipd_SOURCES = keymat.c cookie.c misc.c dh.c hipd.c netlink.c workqueue.c builder.c preoutput.c hadb.c
 hipd_SOURCES += input.c
 
 # i3 and KeyNotev2 specific includes/libraries:
@@ -36,10 +36,10 @@ builder.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
 builder.c: builder.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
-#cookie.c: cookie.h
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.c .
-#cookie.h:
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.h .
+cookie.c: cookie.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.c .
+cookie.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.h .
 #db.c: db.h
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/db.c .
 #db.h:
@@ -62,10 +62,14 @@ netlink.h:
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/hip.c .
 #hip.h:
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/hip.h .
-#keymat.c: keymat.h
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/keymat.c .
-#keymat.h:
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/keymat.h .
+keymat.c: keymat.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/keymat.c .
+keymat.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/keymat.h .
+misc.c: misc.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/misc.c .
+misc.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/misc.h .
 workqueue.c: workqueue.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/workqueue.c .
 workqueue.h:

@@ -151,8 +151,11 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	uint64_t maxtries = 0;
 	uint64_t digest;
 	u8 cookie[48];
+	u8 max_k;
+#ifdef __KERNEL__
 	struct scatterlist sg[2];
 	unsigned int nsg = 2;
+#endif
 	int err;
 	union {
 		struct hip_puzzle pz;
@@ -163,12 +166,16 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	/* pre-create cookie */
 	u = puzzle_or_solution;
 
-	HIP_DEBUG("current hip_cookie_max_k_r1=%d\n",
-		  hip_sys_config.hip_cookie_max_k_r1);
-	if (u->pz.K > hip_sys_config.hip_cookie_max_k_r1) {
+#ifndef CONFIG_SYSCTL
+	max_k = 20;
+#else
+	max_k = hip_sys_config.hip_cookie_max_k_r1;
+#endif
+	HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
+	if (u->pz.K > max_k) {
 		HIP_ERROR("Cookie K %u is higher than we are willing to calculate"
 			  " (current max K=%d)\n",
-			  u->pz.K, hip_sys_config.hip_cookie_max_k_r1);
+			  u->pz.K, max_k);
 		return 0;
 	}
 
@@ -192,12 +199,14 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		goto out_err;
 	}
 
+#ifdef __KERNEL__
 	/* pre map the memory region (for SHA) */
 	err = hip_map_virtual_to_pages(sg, &nsg, cookie, 48);
 	if (err || nsg < 1 ) {
 		HIP_ERROR("Error mapping virtual addresses to physical pages\n");
 		return 0; // !ok
 	}
+#endif
 
 	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
 	/* while loops should work even if the maxtries is unsigned
@@ -209,7 +218,12 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 
 		/* must be 8 */
 		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
+#ifdef __KERNEL__
 		hip_build_digest_repeat(impl_sha1, sg, nsg, sha_digest);
+#else
+		// FIXME: is this ok, use the same func. header.
+		hip_build_digest_repeat(impl_sha1, cookie, 0, sha_digest);
+#endif
                 /* copy the last 8 bytes for checking */
 		memcpy(&digest, sha_digest + 12, 8);
 

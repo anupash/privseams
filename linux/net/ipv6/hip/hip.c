@@ -2050,7 +2050,7 @@ static int hip_worker(void *t)
 
 	/* cleanup and finish thread */
 	hip_uninit_workqueue();
-     hip_netlink_close();
+	hip_netlink_close();
 
 	atomic_dec(&hip_working);
 	HIP_DEBUG("HIP kernel thread %d exiting on cpu %d\n", pid, cpu);
