@@ -61,8 +61,6 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 	if (hwo->type < 0 || hwo->type > HIP_MAX_WO_TYPES)
 		return -1;
 
-	HIP_ERROR("Inserting a nakki\n");
-
 	wq = &__get_cpu_var(hip_workqueue);
 
 

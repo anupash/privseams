@@ -107,9 +107,21 @@ sign(MPI r, MPI s, MPI hash, DSA_secret_key *skey )
     gcry_mpi_powm( r, skey->g, k, skey->p );
     mpi_fdiv_r( r, r, skey->q );
 
+    if (!(mpi_cmp( r, skey->q ) < 0)) {
+	    log_error("DSA Signing created odd results\n");
+	    HIP_HEXDUMP("R", r->d, r->nlimbs*4);
+	    HIP_DEBUG("R is signed: %d\n",r->sign);
+	    HIP_HEXDUMP("Q", skey->q->d, skey->q->nlimbs*4);
+	    HIP_DEBUG("Q is signed: %d\n",r->sign);
+    }
+
     /* kinv = k^(-1) mod q */
     kinv = mpi_alloc( mpi_get_nlimbs(k) );
     mpi_invm(kinv, k, skey->q );
+
+/* XXX: krisu? 
+   mpi_mulm( z, k, kinv, skey->q)
+ */
 
     /* s = (kinv * ( hash + x * r)) mod q */
     tmp = mpi_alloc( mpi_get_nlimbs(skey->p) );

@@ -353,6 +353,9 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	xs->ealg->alg_key_len = ekeylen;
 
 	xs->props.replay_window = 32; // XXX: Is this the size of the replay window in bits? 
+	xs->sel.dport_mask = 0;
+	xs->sel.sport_mask = 0;
+	/* XXX: sel.ifindex... could we fail because of this? */
 
 	err = -ENOENT;
 	xs->type = xfrm_get_type(IPPROTO_ESP, AF_INET6);
