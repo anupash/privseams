@@ -18,7 +18,7 @@ software bundle:
   * Linux Operating System
   * OpenSSL-library and developer headers
   * GNU make
-  * the latest versions of autoconf and automake
+  * the latest versions of autoconf, automake, autoreconf and libtool
   * perl, lorder
 
 * Optional
