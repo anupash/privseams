@@ -511,7 +511,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min, 
 		  keymat_len);
 
-	keymat = kmalloc(keymat_len, GFP_KERNEL);
+	keymat = HIP_MALLOC(keymat_len, GFP_KERNEL);
 	if (!keymat) {
 		HIP_ERROR("No memory for KEYMAT\n");
 		err = -ENOMEM;
@@ -522,7 +522,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	 * shared secret actually depends on the DH Group. */
 
 	/* TODO: 1024 -> hip_get_dh_size ? */
-	dh_shared_key = kmalloc(dh_shared_len, GFP_KERNEL);
+	dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL);
 	if (!dh_shared_key) {
 		HIP_ERROR("No memory for DH shared key\n");
 		err = -ENOMEM;
@@ -680,7 +680,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		err = -EINVAL;
 		goto out_err;
 	}
-	dh_data = kmalloc(dh_size, GFP_KERNEL);
+	dh_data = HIP_MALLOC(dh_size, GFP_KERNEL);
 	if (!dh_data) {
 		HIP_ERROR("Failed to alloc memory for dh_data\n");
 		err = -ENOMEM;
@@ -722,7 +722,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			sigsize = HIP_DSA_SIGNATURE_LEN;
 		}
 
-		signature = kmalloc(sigsize,GFP_KERNEL);
+		signature = HIP_MALLOC(sigsize,GFP_KERNEL);
 		if (!signature) {
 			HIP_ERROR("No memory for signature\n");
 			err = -ENOMEM;
@@ -1150,7 +1150,7 @@ int hip_handle_r1(struct hip_common *r1,
 
 	HIP_DEBUG("\n");
 
-	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
+	ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL);
 	if (!ctx) {
 		HIP_ERROR("Could not allocate memory for context\n");
 		err = -ENOMEM;
@@ -1545,9 +1545,9 @@ int hip_create_r2(struct hip_context *ctx,
 	}
 
 	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		signature = kmalloc(HIP_RSA_SIGNATURE_LEN, GFP_KERNEL);
+		signature = HIP_MALLOC(HIP_RSA_SIGNATURE_LEN, GFP_KERNEL);
 	} else {
-		signature = kmalloc(HIP_DSA_SIGNATURE_LEN, GFP_KERNEL);
+		signature = HIP_MALLOC(HIP_DSA_SIGNATURE_LEN, GFP_KERNEL);
 	}
 
 	if (!signature) {
@@ -1652,7 +1652,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	/* assume already locked ha, if ha is not NULL */
 
-	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
+	ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL);
 	if (!ctx) {
 		err = -ENOMEM;
 		goto out_err;
@@ -1730,7 +1730,7 @@ int hip_handle_i2(struct hip_common *i2,
 		goto out_err;
 	}
 
-	tmp_enc = kmalloc(hip_get_param_total_len(enc), GFP_KERNEL);
+	tmp_enc = HIP_MALLOC(hip_get_param_total_len(enc), GFP_KERNEL);
 	if (!tmp_enc) {
 		HIP_ERROR("No memory for temporary host_id\n");
 		err = -ENOMEM;
@@ -2201,7 +2201,7 @@ int hip_handle_r2(struct hip_common *r2,
 
 	HIP_DEBUG("Entering handle_r2\n");
 
-	ctx = kmalloc(sizeof(struct hip_context), GFP_ATOMIC);
+	ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_ATOMIC);
 	if (!ctx) {
 		err = -ENOMEM;
 		goto out_err;
@@ -2828,9 +2828,9 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	int err = 0;
 	u8 *hmac_res = NULL;
 
-	hmac_res = kmalloc(HIP_AH_SHA_LEN, GFP_ATOMIC);
+	hmac_res = HIP_MALLOC(HIP_AH_SHA_LEN, GFP_ATOMIC);
 	if (!hmac_res) {
-		HIP_ERROR("kmalloc failed\n");
+		HIP_ERROR("HIP_MALLOC failed\n");
 		err = -ENOMEM;
 		goto out_err;
 	}

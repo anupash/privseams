@@ -40,9 +40,10 @@ void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_
 
 	HIP_DEBUG("spi=0x%x\n", spi);
 
-	s = kmalloc(sizeof(struct hip_update_spi_waitlist_item), GFP_ATOMIC);
+	s = HIP_MALLOC(sizeof(struct hip_update_spi_waitlist_item),
+		       GFP_ATOMIC);
 	if (!s) {
-		HIP_ERROR("kmalloc failed\n");
+		HIP_ERROR("HIP_MALLOC failed\n");
 		return;
 	}
 

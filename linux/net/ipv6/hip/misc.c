@@ -99,7 +99,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
 	/* Allocate enough space for host id; there will be 20 bytes extra
 	   to avoid hassle with padding. */
-	host_id_pub = kmalloc(total_len, GFP_KERNEL);
+	host_id_pub = HIP_MALLOC(total_len, GFP_KERNEL);
 	if (!host_id_pub) {
 		err = -EFAULT;
 		goto out_err;
@@ -143,7 +143,7 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	/* XX FIX: REMOVE PRIVATE KEY? */
 
 	/* Allocate space for public key */
-	host_id_pub = kmalloc(total_len, GFP_KERNEL);
+	host_id_pub = HIP_MALLOC(total_len, GFP_KERNEL);
 	if (!host_id_pub) {
 		err = -EFAULT;
 		goto out_err;

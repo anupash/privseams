@@ -32,7 +32,7 @@ void * gcry_malloc (size_t n)
 	u8 *ptr;
 	u32 *kludge;
 
-	ptr = kmalloc(n+sizeof(u32),GFP_KERNEL);
+	ptr = HIP_MALLOC(n+sizeof(u32),GFP_KERNEL);
 	if (!ptr) {
 		HIP_DEBUG("No memory\n");
 	}

@@ -72,7 +72,7 @@ struct hip_common *hip_msg_alloc(void)
         struct hip_common *ptr;
 
 #ifdef __KERNEL__
-        ptr = (struct hip_common *) kmalloc(HIP_MAX_PACKET, GFP_ATOMIC);
+        ptr = (struct hip_common *) HIP_MALLOC(HIP_MAX_PACKET, GFP_ATOMIC);
 #else
         ptr = (struct hip_common *) malloc(HIP_MAX_PACKET);
 #endif /* __KERNEL__ */
@@ -1294,7 +1294,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 	if (rem) {
 		HIP_DEBUG("Adjusting host id size to AES block size\n");
 
-		host_id_padded = kmalloc(host_id_len + rem, GFP_KERNEL);
+		host_id_padded = HIP_MALLOC(host_id_len + rem, GFP_KERNEL);
 		if (!host_id_padded) {
 			err = -ENOMEM;
 			goto out_err;

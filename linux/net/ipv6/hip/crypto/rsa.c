@@ -290,7 +290,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	rsk.u = gcry_mpi_new(mpi_get_nbits(rsk.d));
 	mpi_invm(rsk.u,rsk.p,rsk.q);
 
-	buf = kmalloc(keylen, GFP_KERNEL);
+	buf = HIP_MALLOC(keylen, GFP_KERNEL);
 	if (!buf) {
 		HIP_ERROR("\n");
 		goto cleanup;
@@ -422,9 +422,9 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	keylen = (mpi_get_nbits(rpk.n) / 8);
 
-	buf = kmalloc(keylen, GFP_KERNEL);
+	buf = HIP_MALLOC(keylen, GFP_KERNEL);
 	if (!buf) {
-		HIP_ERROR("kmalloc failed\n");
+		HIP_ERROR("HIP_MALLOC failed\n");
 		goto cleanup;
 	}
 

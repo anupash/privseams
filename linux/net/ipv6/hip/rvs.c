@@ -15,7 +15,7 @@ static struct list_head rvadb[HIP_RVA_SIZE];
 
 /**
  * hip_rva_allocate - Allocate and initialize Rendezvous Association
- * @gfpmask: Mask for kmalloc() that is used to allocate  the memory.
+ * @gfpmask: Mask for HIP_MALLOC() that is used to allocate  the memory.
  *
  * Returns NULL if failure, or a pointer to newly allocated and initialized
  * RVA atructure
@@ -24,7 +24,7 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 {
 	HIP_RVA *res;
 
-	res = kmalloc(sizeof(*res), gfpmask);
+	res = HIP_MALLOC(sizeof(*res), gfpmask);
 	if (!res)
 		return NULL;
 
@@ -38,7 +38,7 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 /**
  * hip_ha_to_rva - Create a Rendezvous Association from Host Association
   * @ha: HA
-  * @gfpmask: Mask for kmalloc(). Used to allocate memory for the RVA.
+  * @gfpmask: Mask for HIP_MALLOC(). Used to allocate memory for the RVA.
   *
   * Returns the newly created RVA, with information from HA copied to it.
   * NULL if there was an error (out of memory).
@@ -222,7 +222,7 @@ struct in6_addr *hip_rva_get_ip_n(HIP_RVA *rva, int gfpmask, unsigned int n)
 
 	HIP_ASSERT(n < HIP_RVA_MAX_IPS);
 
-	hit = kmalloc(sizeof(struct in6_addr), gfpmask);
+	hit = HIP_MALLOC(sizeof(struct in6_addr), gfpmask);
 	if (!hit)
 		return NULL;
 

@@ -812,7 +812,7 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 		goto out_err;
 	}
 	
-	ip_copy = kmalloc(sizeof(struct in6_addr), GFP_ATOMIC);
+	ip_copy = HIP_MALLOC(sizeof(struct in6_addr), GFP_ATOMIC);
 	if (!ip_copy) {
 		HIP_ERROR("No memory to copy IP to work order\n");
 		err = -ENOMEM;
@@ -1493,7 +1493,7 @@ static int hip_list_peers_add(struct in6_addr *address,
 	HIP_DEBUG_IN6ADDR("## SPI is 0, found bex address:", address);
 	
 	/* Allocate an entry for the address */
-	addr = kmalloc(sizeof(hip_peer_addr_opaque_t), GFP_ATOMIC);
+	addr = HIP_MALLOC(sizeof(hip_peer_addr_opaque_t), GFP_ATOMIC);
 	if (!addr) {
 		HIP_ERROR("No memory to create peer addr entry\n");
 		return -ENOMEM;
@@ -1544,7 +1544,7 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	memcpy(&(lhi.hit),&(entry->hit_peer),sizeof(struct in6_addr));
 
 	/* Create a new peer list entry */
-	peer_entry = kmalloc(sizeof(hip_peer_entry_opaque_t),GFP_ATOMIC);
+	peer_entry = HIP_MALLOC(sizeof(hip_peer_entry_opaque_t),GFP_ATOMIC);
 	if (!peer_entry) {
 		HIP_ERROR("No memory to create peer list entry\n");
 		err = -ENOMEM;
@@ -1600,7 +1600,7 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	op->count++; /* increment count on error also so err handling works */
 		
  error:
-	//HIP_DEBUG("*** TODO: on error, kfree kmalloced addresses here ? ***\n");
+	//HIP_DEBUG("*** TODO: on error, kfree HIP_MALLOCed addresses here ? ***\n");
 	_HIP_DEBUG("op->end->next=0x%p\n", op->end->next);
 	_HIP_DEBUG("op->end=0x%p\n", op->end);
 

@@ -386,7 +386,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		goto out_err;
  	}
 
- 	dh_data = kmalloc(dh_size, GFP_ATOMIC);
+ 	dh_data = HIP_MALLOC(dh_size, GFP_ATOMIC);
  	if (!dh_data) {
  		HIP_ERROR("Failed to alloc memory for dh_data\n");
   		goto out_err;
@@ -428,7 +428,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 			goto out_err;
 	}
 
-	signature = kmalloc(MAX(HIP_DSA_SIGNATURE_LEN,
+	signature = HIP_MALLOC(MAX(HIP_DSA_SIGNATURE_LEN,
 				HIP_RSA_SIGNATURE_LEN), 
 			    GFP_KERNEL);
 	if(!signature) {
@@ -742,10 +742,10 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	}
 
 	entry->dh_shared_key_len = 0;
-	/* todo: reuse pointer, no kmalloc */
-	entry->dh_shared_key = kmalloc(ctx->dh_shared_key_len, GFP_ATOMIC);
+	/* todo: reuse pointer, no HIP_MALLOC */
+	entry->dh_shared_key = HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
 	if (!entry->dh_shared_key) {
-		HIP_ERROR("entry dh_shared kmalloc failed\n");
+		HIP_ERROR("entry dh_shared HIP_MALLOC failed\n");
 		err = -ENOMEM;
 		goto out_err;
 	}
@@ -903,7 +903,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 
 	/* We cannot use the same memory are for en/decryption? */
 	void *result = NULL;
-	result = kmalloc(enc_len, GFP_KERNEL);
+	result = HIP_MALLOC(enc_len, GFP_KERNEL);
 	if (!result) {
 		err = -ENOMEM;
 		goto out_err;
@@ -916,7 +916,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 	case HIP_HIP_AES_SHA1:
 		impl = impl_aes_cbc;
 		key_len = ESP_AES_KEY_BITS >> 3;
-		iv_copy = kmalloc(16, GFP_KERNEL);
+		iv_copy = HIP_MALLOC(16, GFP_KERNEL);
 		if (!iv_copy) {
 			err = -ENOMEM;
 			goto out_err;
@@ -926,7 +926,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 	case HIP_HIP_3DES_SHA1:
 		impl = impl_3des_cbc;
 		key_len = ESP_3DES_KEY_BITS >> 3;
-		iv_copy = kmalloc(8, GFP_KERNEL);
+		iv_copy = HIP_MALLOC(8, GFP_KERNEL);
 		if (!iv_copy) {
 			err = -ENOMEM;
 			goto out_err;
@@ -1264,7 +1264,7 @@ static int hip_create_device_addrlist(struct net_device *event_dev,
 
 	if (n_addrs > 0) {
 		/* create address list for building of REA */
-		tmp_list = kmalloc(n_addrs * sizeof(struct hip_rea_info_addr_item), GFP_ATOMIC);
+		tmp_list = HIP_MALLOC(n_addrs * sizeof(struct hip_rea_info_addr_item), GFP_ATOMIC);
 		if (!tmp_list) {
 			HIP_DEBUG("addr_list creation failed\n");
 			err = -ENOMEM;

@@ -351,10 +351,12 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	HIP_DEBUG("ekeylen=%d, akeylen=%d\n", ekeylen, akeylen);
 
 	err = -ENOMEM;
-	xs->ealg = kmalloc(sizeof(struct xfrm_algo) + (ekeylen + 7)/8, GFP_ATOMIC);
+	xs->ealg = HIP_MALLOC(sizeof(struct xfrm_algo) + (ekeylen + 7)/8,
+			      GFP_ATOMIC);
 	if (!xs->ealg)
 		goto out;
-	xs->aalg = kmalloc(sizeof(struct xfrm_algo) + (akeylen + 7)/8, GFP_ATOMIC);
+	xs->aalg = HIP_MALLOC(sizeof(struct xfrm_algo) + (akeylen + 7)/8,
+			      GFP_ATOMIC);
 	if (!xs->aalg)
 		goto out;
 

@@ -187,14 +187,14 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	HIP_ASSERT(lhi != NULL);
 
-	id_entry = kmalloc(sizeof(id_entry),GFP_KERNEL);
+	id_entry = HIP_MALLOC(sizeof(id_entry),GFP_KERNEL);
 	if (id_entry == NULL) {
 		HIP_ERROR("No memory available for host id\n");
 		err = -ENOMEM;
 		goto out_err;
 	}
 
-	id_entry->host_id = kmalloc(hip_get_param_total_len(host_id),
+	id_entry->host_id = HIP_MALLOC(hip_get_param_total_len(host_id),
 				    GFP_KERNEL);
 	if (!id_entry->host_id) {
 		HIP_ERROR("lhost_id mem alloc failed\n");
@@ -456,7 +456,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	unsigned long lf;
 	int t;
 
-	result = kmalloc(1024, GFP_ATOMIC);
+	result = HIP_MALLOC(1024, GFP_ATOMIC);
 	if (!result) {
 		HIP_ERROR("no memory\n");
 		return NULL;
@@ -496,7 +496,7 @@ struct hip_host_id *hip_get_host_id_by_algo(struct hip_db_struct *db,
 	unsigned long lf;
 	int t;
 
-	result = kmalloc(1024, GFP_ATOMIC);
+	result = HIP_MALLOC(1024, GFP_ATOMIC);
 	if (!result) {
 		HIP_ERROR("no memory\n");
 		return NULL;
@@ -841,7 +841,8 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 
 	entry = hip_db_find_eid_entry_by_hit_no_lock(db, lhi);
 	if (!entry) {
-		entry = kmalloc(sizeof(struct hip_eid_db_entry), GFP_KERNEL);
+		entry = HIP_MALLOC(sizeof(struct hip_eid_db_entry),
+				   GFP_KERNEL);
 		if (!entry) {
 			err = -ENOMEM;
 			goto out_err;

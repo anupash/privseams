@@ -67,7 +67,7 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 
 	/* every hexdump line contains offset+": "+32 bytes of data (space every 4 bytes) */
 	buflen = 4+2+2*32+((32-1)/4)+1;
-	buf = kmalloc(buflen, GFP_ATOMIC);
+	buf = HIP_MALLOC(buflen, GFP_ATOMIC);
 	if (!buf)
 		return;
 
