@@ -254,7 +254,6 @@ int hip_add_localhost_id(const struct hip_lhi *lhi,
 	return hip_add_host_id(&hip_local_hostid_db, lhi, host_id);
 }
 
-
 /**
  * hip_del_host_id - delete the given HI (network byte order) from the database.
  * @db: Database from which to delete
@@ -294,6 +293,16 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 	return err;
 }
 
+/**
+ * hip_del_localhost_id - removes a localhost id from the database
+ * @lhi: the HIT of the host
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_del_localhost_id(struct hip_lhi *lhi)
+{
+	return hip_del_host_id(&hip_local_hostid_db, lhi);
+}
 
 /**
  * hip_copy_any_locahost_hit - Copy to the the @target the first 

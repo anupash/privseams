@@ -794,10 +794,34 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 int hip_socket_handle_del_local_hi(const struct hip_common *input)
 {
 	int err = 0;
-
-	HIP_ERROR("Not implemented\n");
-	err = -ENOSYS;
-
+	struct in6_addr *hit;
+	struct hip_lhi lhi;
+	
+	if (hip_get_msg_type(input) != SO_HIP_DEL_LOCAL_HI) {
+		err = -EINVAL;
+		HIP_ERROR("Bad message type\n");
+		goto out_err;
+	}
+	
+	hit = (struct in6_addr *) hip_get_param_contents(input, HIP_PARAM_HIT);
+	if (!hit) {
+		err = -ENOENT;
+		HIP_ERROR("Could not find hit from message.\n");
+		goto out_err;
+	}
+	
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+        memcpy(&(lhi.hit), &hit ,sizeof(struct in6_addr));
+	
+	err = hip_del_localhost_id(&lhi);
+	if (err) {
+		HIP_ERROR("deleting of local host identity failed\n");
+		goto out_err;
+	}
+	
+	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
+	
+ out_err:
         return err;
 }
 

@@ -79,6 +79,7 @@ int        hip_add_host_id(struct hip_db_struct *db,const struct hip_lhi *lhi,
 			   const struct hip_host_id *host_id);
 int        hip_add_localhost_id(const struct hip_lhi *lhi,
 				const struct hip_host_id *host_id);
+int        hip_del_localhost_id(struct hip_lhi *lhi);
 int        hip_add_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 int        hip_copy_any_localhost_hit(struct in6_addr *target);
 int        hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo);
