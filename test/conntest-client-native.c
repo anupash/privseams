@@ -142,6 +142,8 @@ int main(int argc,char *argv[]) {
   /* Send the data read from stdin to the server and read the response.
      The server should echo all the data received back to here. */
   while((datasent < datalen) || (datareceived < datalen)) {
+
+    HIP_DEBUG("sending data\n");
     
     if (datasent < datalen) {
       sendnum = send(sockfd, mylovemostdata + datasent, datalen - datasent, 0);
@@ -154,6 +156,8 @@ int main(int argc,char *argv[]) {
       datasent += sendnum;
     }
     
+    HIP_DEBUG("receiving data\n");
+
     if (datareceived < datalen) {
       recvnum = recv(sockfd, receiveddata + datareceived,
 		     datalen-datareceived, 0);

@@ -1550,6 +1550,13 @@ asmlinkage long sys_send(int fd, void __user * buff, size_t len, unsigned flags)
 	return sys_sendto(fd, buff, len, flags, NULL, 0);
 }
 
+// XX REMOVE ME
+struct sockaddr_eid {
+	unsigned short int eid_family;
+	uint16_t eid_port;
+	uint32_t eid_val;
+} __attribute__ ((packed));
+
 /*
  *	Receive a frame from the socket and optionally record the address of the 
  *	sender. We verify the buffers are writable and if needed move the

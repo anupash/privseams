@@ -684,12 +684,12 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 		}
 
 		entry->eid.eid_val = ((is_local) ?
-			htons(hip_create_unique_local_eid()) :
-			htons(hip_create_unique_peer_eid()));
+			ntohs(hip_create_unique_local_eid()) :
+			ntohs(hip_create_unique_peer_eid()));
 		entry->eid.eid_family = PF_HIP;
 		memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
 
-		HIP_DEBUG("Generated eid val %d\n", entry->eid.eid_val);
+		HIP_DEBUG("Generated eid val %d\n", htons(entry->eid.eid_val));
 
 		memcpy(&entry->lhi, lhi, sizeof(struct hip_lhi));
 		memcpy(&entry->owner_info, owner_info,

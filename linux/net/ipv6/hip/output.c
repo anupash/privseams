@@ -329,7 +329,7 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 	HIP_DEBUG("\n");
 
 	if (hip_copy_any_localhost_hit(&hit_our) < 0) {
-		HIP_ERROR("Out HIT not found\n");
+		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
 	}

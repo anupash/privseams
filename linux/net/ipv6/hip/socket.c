@@ -177,37 +177,6 @@ int hip_select_socket_handler(struct socket *sock,
 	return err;
 }
 
-int hip_socket_get_eid_info(struct socket *sock,
-			    struct proto_ops **socket_handler,
-			    const struct sockaddr_eid *eid,
-			    int eid_is_local,
-			    struct hip_lhi *lhi)
-{
-	struct hip_eid_owner_info owner_info;
-	int err = 0;
-
-	err = hip_select_socket_handler(sock, socket_handler);
-	if (err) {
-		HIP_ERROR("Failed to select a socket handler\n");
-		goto out_err;
-	}
-
-	HIP_DEBUG("Querying for eid value %d\n", ntohs(eid->eid_val));
-
-	err = hip_db_get_lhi_by_eid(eid, lhi, &owner_info, eid_is_local);
-	if (err) {
-		HIP_ERROR("Failed to map %s EID to HIT\n",
-			  (eid_is_local ? "local" : "peer"));
-		goto out_err;
-	}
-
-	/* XX FIXME: CHECK ACCESS RIGHTS FROM OWNER_INFO */
-
- out_err:
-
-	return err;
-}
-
 int hip_socket_release(struct socket *sock)
 {
 	int err = 0;
@@ -248,13 +217,19 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 	struct hip_lhi lhi;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
+	struct hip_eid_owner_info owner_info;
 
 	HIP_DEBUG("\n");
 
-	err = hip_socket_get_eid_info(sock, &socket_handler, sockaddr_eid,
-				      1, &lhi);
+	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
-		HIP_ERROR("Failed to get socket eid info.\n");
+		HIP_ERROR("Failed to select a socket handler\n");
+		goto out_err;
+	}
+
+	err = hip_db_get_lhi_by_eid(sockaddr_eid, &lhi, &owner_info, 1);
+	if (err) {
+		HIP_ERROR("Failed to get lhi info\n");
 		goto out_err;
 	}
 
@@ -280,10 +255,8 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 		goto out_err;
 	}
 
-	memcpy(&pinfo->rcv_saddr, &lhi.hit,
-	       sizeof(struct in6_addr));
-	memcpy(&pinfo->saddr, &lhi.hit,
-	       sizeof(struct in6_addr));
+	ipv6_addr_copy(&pinfo->rcv_saddr, &lhi.hit);
+	ipv6_addr_copy(&pinfo->saddr, &lhi.hit);
 
  out_err:
 
@@ -298,19 +271,25 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 	struct proto_ops *socket_handler;
 	struct hip_lhi lhi;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uservaddr;
+	struct hip_eid_owner_info owner_info;
 
 	HIP_DEBUG("\n");
 
-	err = hip_socket_get_eid_info(sock, &socket_handler, sockaddr_eid,
-				      0, &lhi);
+	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
-		HIP_ERROR("Failed to get socket eid info.\n");
+		HIP_ERROR("Failed to select a socket handler\n");
+		goto out_err;
+	}
+
+	err = hip_db_get_lhi_by_eid(sockaddr_eid, &lhi, &owner_info, 0);
+	if (err) {
+		HIP_ERROR("Failed to get lhi info\n");
 		goto out_err;
 	}
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
-	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
+	ipv6_addr_copy(&sockaddr_in6.sin6_addr, &lhi.hit);
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 
 	/* Note: connect calls autobind if the application has not already
@@ -407,10 +386,8 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 
 	HIP_DEBUG("getname for %s called\n", (peer ? "peer" : "local"));
 
-	HIP_HEXDUMP("daddr", &pinfo->daddr,
-		    sizeof(struct in6_addr));
-	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
-		    sizeof(struct in6_addr));
+	HIP_DEBUG_IN6ADDR("daddr", &pinfo->daddr);
+	HIP_DEBUG_IN6ADDR("rcv_saddr", &pinfo->rcv_saddr);
 
 	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
@@ -435,8 +412,7 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
 
-	memcpy(&lhi.hit, &pinfo->daddr,
-	       sizeof(struct in6_addr));
+	ipv6_addr_copy(&lhi.hit, &pinfo->daddr);
 	lhi.anonymous = 0; /* XX FIXME: should be really set to -1 */
 
 	err = hip_db_set_eid(sockaddr_eid, &lhi, &owner_info, !peer);
@@ -554,25 +530,58 @@ int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock,
 		       struct msghdr *m, size_t total_len)
 
 {
-	int err = 0;
+	struct hip_eid_owner_info owner_info;
 	struct proto_ops *socket_handler;
 	struct sock *sk = sock->sk;
 	struct inet_opt *inet = inet_sk(sk);
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
+	struct sockaddr_eid *eid = m->msg_name;
+	struct sockaddr_in6 sin6;
+	struct hip_lhi lhi;
+	int err = 0;
 
 	HIP_DEBUG("\n");
 
+	HIP_DEBUG("total lenght of data to be sent: %d\n", total_len);
+
 	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
+		HIP_ERROR("Failed to select a socket handler\n");
 		goto out_err;
 	}
 
-	HIP_DEBUG("sport=%d dport=%d\n", ntohs(inet->sport), ntohs(inet->dport));
+	HIP_ASSERT(eid == m->msg_name);
 
-	HIP_HEXDUMP("daddr", &pinfo->daddr,
-		    sizeof(struct in6_addr));
-	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
-		    sizeof(struct in6_addr));
+	if (eid) {
+		err = hip_db_get_lhi_by_eid(eid, &lhi, &owner_info, 0);
+		if (err) {
+			HIP_ERROR("Failed to get lhi info\n");
+			goto out_err;
+		}
+	}
+
+	/* Convert the EID to a HIT */
+	if (m->msg_name) {
+		struct sockaddr_in6 * s6_msg =
+			(struct sockaddr_in6 *) m->msg_name;
+		HIP_DEBUG("replacing EID with a HIT\n");
+		HIP_DEBUG("port=%d\n", ntohs(eid->eid_port));
+		sin6.sin6_family = AF_INET6;
+		sin6.sin6_port = eid->eid_port;
+		sin6.sin6_flowinfo = 0;
+		sin6.sin6_scope_id = 0;
+		ipv6_addr_copy(&sin6.sin6_addr, &lhi.hit);
+		memcpy(s6_msg, &sin6, sizeof(sin6));
+		m->msg_namelen = sizeof(sin6);
+		//ipv6_addr_copy(&pinfo->daddr, &lhi.hit);
+		//inet->dport = eid->eid_port;
+	}
+
+	HIP_DEBUG("sport=%d dport=%d\n", ntohs(inet->sport),
+		  ntohs(inet->dport));
+
+	HIP_DEBUG_IN6ADDR("daddr", &pinfo->daddr);
+	HIP_DEBUG_IN6ADDR("rcv_saddr", &pinfo->rcv_saddr);
 
 	err = socket_handler->sendmsg(iocb, sock, m, total_len);
 	if (err) {
@@ -596,8 +605,15 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 	struct inet_opt *inet = inet_sk(sk);
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 	struct proto_ops *socket_handler;
+	struct sockaddr_eid peer_eid;
+	struct hip_eid_owner_info owner_info;
+	struct hip_lhi lhi;
+	struct sockaddr_in6 *sin6 =
+		(struct sockaddr_in6 *) m->msg_name;
 
 	HIP_DEBUG("\n");
+
+	HIP_DEBUG("total lenght of data to be recv: %d\n", total_len);
 
 	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
@@ -607,18 +623,55 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 	HIP_DEBUG("sport=%d dport=%d\n", ntohs(inet->sport),
 		  ntohs(inet->dport));
 
-	HIP_HEXDUMP("daddr", &pinfo->daddr,
-		    sizeof(struct in6_addr));
-	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
-		    sizeof(struct in6_addr));
+	HIP_DEBUG_IN6ADDR("daddr", &pinfo->daddr);
+	HIP_DEBUG_IN6ADDR("saddr", &pinfo->saddr);
+	HIP_DEBUG_IN6ADDR("rcv_saddr", &pinfo->rcv_saddr);
 
 	err = socket_handler->recvmsg(iocb, sock, m, total_len, flags);
 	if (err) {
 		/* The socket handler can return EIO or EINTR which are not
 		   "real" errors. */
 		HIP_DEBUG("Socket socket handler returned (%d)\n", err);
-		goto out_err;
+		/* note: there must be no goto out_err here */
 	}
+
+	HIP_ASSERT(sin6 == m->msg_name);
+
+	/* Replace the peer HIT with an EID */
+	if (m->msg_name) {
+		HIP_DEBUG("Replacing HIT with an EID\n");
+		owner_info.uid = current->uid;
+		owner_info.gid = current->gid;
+		
+		ipv6_addr_copy(&lhi.hit, &sin6->sin6_addr);
+		lhi.anonymous = 0; /* XX FIXME: should be really set to -1 */
+		
+		/*
+		 * XX FIXME: it is bad to create a new eid for each new
+		 * recvmsg. We should really reuse old EIDs if they exist.
+		 */
+		err = hip_db_set_eid(&peer_eid, &lhi, &owner_info, 0);
+		if (err) {
+			HIP_ERROR("Setting of eid failed\n");
+			goto out_err;
+		}
+		
+		peer_eid.eid_port = sin6->sin6_port;
+
+		memcpy(m->msg_name, &peer_eid, sizeof(peer_eid));
+		m->msg_namelen = sizeof(struct sockaddr_eid);
+
+		HIP_DEBUG("eid port=%d val=%d family=%d len=%d\n",
+			  ntohs(peer_eid.eid_port),
+			  ntohs(peer_eid.eid_val),
+			  peer_eid.eid_family,
+			  m->msg_namelen);
+	}
+
+	HIP_DEBUG("sin6 port=%d family=%d\n",
+		  htons(sin6->sin6_port),
+		  sin6->sin6_family);
+	HIP_DEBUG_HIT("sin6 hit", &sin6->sin6_addr);
 
  out_err:
 
@@ -1253,8 +1306,8 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	HIP_DEBUG("hi len %d\n",
 		  ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
 
-	HIP_HEXDUMP("eid endpoint", eid_endpoint,
-		    hip_get_param_total_len(eid_endpoint));
+	_HIP_HEXDUMP("eid endpoint", eid_endpoint,
+		     hip_get_param_total_len(eid_endpoint));
 
 	host_id = &eid_endpoint->endpoint.id.host_id;
 
@@ -1357,8 +1410,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 	}
 	
 	if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
-		memcpy(&lhi.hit, &eid_endpoint->endpoint.id.hit,
-		       sizeof(struct in6_addr));
+		ipv6_addr_copy(&lhi.hit, &eid_endpoint->endpoint.id.hit);
 		HIP_DEBUG_HIT("Peer HIT: ", &lhi.hit);
 	} else {
 		HIP_DEBUG("host_id len %d\n",
@@ -1512,7 +1564,7 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	hip_in6_ntop(&(entry->hit_peer), buf);
 	HIP_DEBUG("## Got an entry for peer HIT: %s\n", buf);
 	memset(&lhi, 0, sizeof(struct hip_lhi));
-	memcpy(&(lhi.hit),&(entry->hit_peer),sizeof(struct in6_addr));
+	ipv6_addr_copy(&(lhi.hit),&(entry->hit_peer));
 
 	/* Create a new peer list entry */
 	peer_entry = kmalloc(sizeof(hip_peer_entry_opaque_t),GFP_ATOMIC);
@@ -1631,7 +1683,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 	memset(&lhi, 0, sizeof(struct hip_lhi)); /* Zero flags, etc. */
 	for (i = 0, entry = pr.head; i < pr.count; i++, entry = entry->next) {
 	        /* Get the HIT */
-	        memcpy(&(lhi.hit),&(entry->hit),sizeof(struct in6_addr));
+	        ipv6_addr_copy(&(lhi.hit),&(entry->hit));
 
 		/* Look up HOST ID */
 		peer_host_id = hip_get_host_id(HIP_DB_PEER_HID, &lhi);

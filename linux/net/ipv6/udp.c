@@ -258,6 +258,8 @@ try_again:
 
 	sock_recv_timestamp(msg, sk, skb);
 
+	printk(KERN_INFO "UDP recvmsg called\n");
+		
 	/* Copy the address. */
 	if (msg->msg_name) {
 		struct sockaddr_in6 *sin6;

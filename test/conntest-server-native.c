@@ -53,7 +53,7 @@ int main(int argc,char *argv[]) {
   int serversock = 0, sockfd = 0;
   int err = 0;
   int socktype;
-  socklen_t peer_eid_len;
+  socklen_t peer_eid_len = sizeof(struct sockaddr_eid);
   int endpoint_family = PF_HIP;
 
   hip_set_logtype(LOGTYPE_STDERR);
@@ -139,28 +139,42 @@ int main(int argc,char *argv[]) {
       }
     } else { /* UDP */
       sockfd = serversock;
-      while(recvnum = recvfrom(sockfd, mylovemostdata,
+
+      HIP_DEBUG("receiving data\n");
+
+      while((recvnum = recvfrom(sockfd, mylovemostdata,
 			       sizeof(mylovemostdata), 0,
-			       (struct sockaddr *)& peer_eid,
-			       &peer_eid_len) > 0) {
+			       (struct sockaddr *) &peer_eid,
+			       &peer_eid_len)) > 0) {
 	mylovemostdata[recvnum] = '\0';
 	printf("%s", mylovemostdata);
 	fflush(stdout);
-	if (recvnum == 0) {
-	  break;
-	}
+	//if (recvnum == 0) {
+	//  break;
+	//}
+
+	HIP_DEBUG("port was %d\n", ntohs(peer_eid.eid_port));
+	HIP_DEBUG("family was %d\n", peer_eid.eid_family);
+	HIP_DEBUG("value was %d\n", ntohs(peer_eid.eid_val));
+	HIP_DEBUG("received %d bytes\n", recvnum);
 	
-	/* send reply */
+	HIP_DEBUG("sending data\n");
+
 	sendnum = sendto(sockfd, mylovemostdata, recvnum, 0,
 			 (struct sockaddr *) &peer_eid, peer_eid_len);
 	if (sendnum < 0) {
-	  HIP_PERROR("send");
+	  HIP_PERROR("sendto");
 	  err = 1;
 	  goto out;
 	}
       }
+
+      HIP_DEBUG("port was %d\n", ntohs(peer_eid.eid_port));
+      HIP_DEBUG("family was %d\n", peer_eid.eid_family);
+      HIP_DEBUG("value was %d\n", ntohs(peer_eid.eid_val));
+      HIP_DEBUG("received %d bytes\n", recvnum);
     }
-}
+  }
 
  out:
 
