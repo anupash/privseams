@@ -1974,7 +1974,7 @@ void hip_hadb_dump_hits(void)
 				hip_hold_ha(entry);
 				if (cnt > 3900) {
 					string[cnt] = '\0';
-					printk(KERN_ALERT "%s\n", string);
+					HIP_ERROR("%s\n", string);
 					cnt = 0;
 				}
 
@@ -1983,7 +1983,7 @@ void hip_hadb_dump_hits(void)
 				hip_put_ha(entry);
 			}
 			string[cnt] = '\0';
-			printk(KERN_ALERT "%s\n", string);
+			HIP_ERROR("%s\n", string);
 		}
 	}
 

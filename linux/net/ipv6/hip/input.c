@@ -1392,7 +1392,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* E1. The normal case. Process, send I2, goto E2. */
-		err = hip_handle_r1(hip_common, r1_saddr, r1_addr, entry);
+		err = hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
@@ -1948,7 +1948,7 @@ int hip_handle_i2(struct hip_common *i2,
 		}
 	}
 
-	err = hip_hadb_add_peer_addr(entry, i2_saddr),
+	err = hip_hadb_add_peer_addr(entry, i2_saddr,
 				     0, 0, PEER_ADDR_STATE_ACTIVE);
 	if (err) {
 		HIP_ERROR("error while adding a new peer address\n");
@@ -2033,7 +2033,7 @@ int hip_handle_i2(struct hip_common *i2,
 	HIP_DEBUG("Inserting state\n");
 	hip_hadb_insert_state(entry);
 
-	err = hip_create_r2(ctx, entry);
+	err = hip_create_r2(ctx, i2_saddr, i2_daddr, entry);
 	HIP_DEBUG("hip_create_r2 returned %d\n", err);
 	if (err) {
 		HIP_ERROR("Creation of R2 failed\n");

@@ -24,6 +24,11 @@
 #  ifdef CONFIG_SYSCTL
 #    include <linux/sysctl.h>
 #  endif
+#else
+
+#include <stdlib.h>
+#define jiffies random()
+
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>
