@@ -336,6 +336,7 @@ int hip_do_work(struct hip_work_order *job)
 	case HIP_WO_TYPE_OUTGOING:
 	{			
 		struct hip_work_order * resp = NULL;
+		struct hip_keys *keys;
 
 		switch(job->hdr.subtype) {
 #ifdef __KERNEL__
@@ -354,6 +355,20 @@ int hip_do_work(struct hip_work_order *job)
 			
 			break;
 
+		case HIP_WO_SUBTYPE_ADDSA:
+			resp = hip_init_job(GFP_KERNEL);
+			if (!resp) 
+				break;
+			keys = hip_get_param(job->msg, HIP_PARAM_KEYS); 
+			if (!keys)
+				break;
+
+			res = resp->hdr.arg1 = hip_add_sa(&job->hdr.src_addr, &job->hdr.dst_addr,
+							  &keys->spi, keys->alg,
+							  &keys->enc, &keys->auth,
+							  keys->acquired, keys->direction);
+			break;
+
 		case HIP_WO_SUBTYPE_DELSA:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
@@ -367,8 +382,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
-			hip_finalize_sa(&job->hdr.dst_addr, job->hdr.arg1);
-			res = 0;			
+			res = resp->hdr.arg1 = hip_finalize_sa(&job->hdr.dst_addr, job->hdr.arg1);
 			break;
 
 		case HIP_WO_SUBTYPE_XFRM_INIT:

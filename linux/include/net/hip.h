@@ -218,6 +218,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
+#define HIP_PARAM_KEYS                  32779 
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100
@@ -751,6 +752,17 @@ struct hip_eid_sockaddr {
 struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
 };
+
+struct hip_keys {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	struct hip_crypto_key enc;	
+	struct hip_crypto_key auth;       
+	uint32_t spi;
+	int alg;
+	int acquired;
+	int direction;
+} __attribute__ ((packed));
 
 struct hip_context
 {

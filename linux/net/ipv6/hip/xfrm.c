@@ -172,7 +172,7 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
 
 
 /**
- * hip_setup_sa - set up a new IPsec SA
+ * hip_add_sa - set up a new IPsec SA
  * @srcit: source HIT
  * @dsthit: destination HIT
  * @spi: SPI value in host byte order
@@ -193,9 +193,9 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  *
  * Returns: 0 if successful, else < 0.
  */
-int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
-		 uint32_t *spi, int alg, void *enckey, void *authkey,
-		 int already_acquired, int direction)
+int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
+	       uint32_t *spi, int alg, struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
+	       int already_acquired, int direction)
 {
 	int err;
 	struct xfrm_state *xs = NULL;
@@ -407,7 +407,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
  * sleeper that are waiting for the SA to become VALID.
  *
  */
-void hip_finalize_sa(struct in6_addr *hit, u32 spi)
+int hip_finalize_sa(struct in6_addr *hit, u32 spi)
 {
 	struct xfrm_state *xs;
 
@@ -418,7 +418,7 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 	if (!xs) {
 		HIP_ERROR("Could not finalize SA for SPI 0x%x\n", spi);
 		/* do what? */
-		return;
+		return -1;
 	}
 
 	spin_lock_bh(&xs->lock);
@@ -428,5 +428,6 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 
 	xfrm_state_put(xs);
 	wake_up_all(&km_waitq);
+	return 0;
 }
 

@@ -83,6 +83,9 @@ int hip_build_param_contents(struct hip_common *msg, const void *contents,
 int hip_build_param(struct hip_common *msg, const void *tlv_common);
 int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 	hip_hdr_err_t err_val);
+int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
+			 struct hip_crypto_key *auth, uint32_t spi, int alg, 
+			 int already_acquired, int direction);
 
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_build_param_hmac2_contents(struct hip_common *msg,

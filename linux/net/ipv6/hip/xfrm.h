@@ -24,12 +24,12 @@ int hip_delete_sp(int dir);
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 
 /* Setups the SA (with a given SPI if so said) */
-int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
-                 uint32_t *spi, int alg, void *enckey, void *authkey,
-                 int already_acquired, int direction);
+int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
+	       uint32_t *spi, int alg, struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
+	       int already_acquired, int direction);
 
 /* Changes the state to a VALID state, transport layer is woken up. */
-void hip_finalize_sa(struct in6_addr *hit, u32 spi);
+int hip_finalize_sa(struct in6_addr *hit, u32 spi);
 
 int hip_delete_sa(u32 spi, struct in6_addr *dst);
 

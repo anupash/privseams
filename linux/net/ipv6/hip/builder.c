@@ -1868,27 +1868,30 @@ int hip_build_param_rea(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_nes - build and append HIP NES parameter
+ * hip_build_param_keys - build and append crypto keys parameter
  * @msg: the message where the parameter will be appended
- * @is_reply: 1 if this packet is a reply to another UPDATE
- * @keymat_index: Keymat Index in host byte order
- * @old_spi: Old SPI value in host byte order
- * @new_spi: New SPI value in host byte order
+ * @enc: encryption key
+ * @auth: authentication key
  * 
  * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
-			uint32_t old_spi, uint32_t new_spi)
+int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
+			 struct hip_crypto_key *auth,
+			 uint32_t spi, int alg, 
+			 int already_acquired, int direction) 
 {
 	int err = 0;
-	struct hip_nes nes;
+	struct hip_keys keys;
 
-	hip_set_param_type(&nes, HIP_PARAM_NES);
-	hip_calc_generic_param_len(&nes, sizeof(struct hip_nes), 0);
-	nes.keymat_index = htons(keymat_index);
-	nes.old_spi = htonl(old_spi);
-	nes.new_spi = htonl(new_spi);
-	err = hip_build_param(msg, &nes);
+	hip_set_param_type(&keys, HIP_PARAM_KEYS);
+	hip_calc_generic_param_len(&keys, sizeof(struct hip_keys), 0);
+	memcpy(&keys.enc, enc, sizeof(struct hip_crypto_key));
+	memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
+	keys.spi = spi;
+	keys.alg = alg;
+	keys.acquired = already_acquired;
+	keys.direction = direction;
+	err = hip_build_param(msg, &keys);
 	return err;
 }
 
