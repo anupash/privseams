@@ -391,6 +391,7 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 	struct in6_addr *own_addr;
 	struct in6_addr *dst_addr;
 	int err = 0;
+	struct in6_addr *rcv_hit;
 
 	HIP_DEBUG("\n");
 
@@ -401,8 +402,11 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 		dst_addr = dst_ip;
 	}
 
+	rcv_hit = &(((struct hip_common *)skb->h.raw)->hitr);
+	HIP_DEBUG_HIT("XMITR1, receiver_hit: ", rcv_hit);
+
 	/* dst_addr is the IP address of the Initiator... */
-	r1pkt = hip_get_r1(dst_addr, own_addr);
+	r1pkt = hip_get_r1(dst_addr, own_addr, rcv_hit);
 	if (!r1pkt) {
 		HIP_ERROR("No precreated R1\n");
 		err = -ENOENT;

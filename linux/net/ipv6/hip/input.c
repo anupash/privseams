@@ -1630,6 +1630,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	uint16_t crypto_len;
  	char *iv;
  	struct in6_addr hit;
+	struct in6_addr *rcv_hit;
 	struct hip_spi_in_item spi_in_data;
  	HIP_DEBUG("\n");
 
@@ -1645,6 +1646,9 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	ctx->skb_in = skb;
 	i2 = (struct hip_common*) skb->h.raw;
 	ctx->input = (struct hip_common*) skb->h.raw;
+
+	rcv_hit = &(((struct hip_common *)skb->h.raw)->hitr);
+	HIP_DEBUG_HIT("HANDLE I2, receiver_hit: ", rcv_hit);
 
 	/* Check packet validity */
 	/* We MUST check that the responder HIT is one of ours. */
@@ -1662,7 +1666,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	err = hip_verify_generation(&skb->nh.ipv6h->saddr, 
 				    &skb->nh.ipv6h->daddr, 
-				    r1cntr->generation);
+				    r1cntr->generation, 
+				    rcv_hit);
 	if (err) {
 		HIP_ERROR("Birthday check failed\n");
 		goto out_err;
@@ -1683,7 +1688,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 		if (!hip_verify_cookie(&skb->nh.ipv6h->saddr,
 				       &skb->nh.ipv6h->daddr, 
-				       i2, sol)) {
+				       i2, sol, rcv_hit)) {
 			HIP_ERROR("Cookie solution rejected\n");
 			err = -ENOMSG;
 			goto out_err;

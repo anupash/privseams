@@ -15,8 +15,120 @@
 #include "debug.h"
 #include "hip.h"
 #include "builder.h"
+#include "hashtable.h"
+#include "misc.h"
 
-struct hip_r1entry *hip_r1table;
+HIP_HASHTABLE r1db_hit;
+static struct list_head r1db_byhit[HIP_R1DB_SIZE];
+
+
+static void hip_r1db_hold_entry(void *entry)
+{
+	HIP_R1E *r1e = entry;
+
+	HIP_ASSERT(entry);
+	atomic_inc(&r1e->refcnt);
+	HIP_DEBUG("R1DB: %p, refcnt incremented to: %d\n", r1e, atomic_read(&r1e->refcnt));
+}
+
+static void hip_r1db_put_entry(void *entry)
+{
+	HIP_R1E *r1e = entry;
+
+	HIP_ASSERT(entry);
+	if (atomic_dec_and_test(&r1e->refcnt)) {
+                HIP_DEBUG("R1DB: %p, refcnt reached zero. Deleting...\n",r1e);
+		hip_r1_delete(r1e);
+	} else {
+                HIP_DEBUG("R1DB: %p, refcnt decremented to: %d\n", r1e, 
+			  atomic_read(&r1e->refcnt));
+	}
+}
+
+static void *hip_r1db_get_key(void *entry)
+{
+	return (void *)&(((HIP_R1E *)entry)->hit);
+}
+
+void hip_init_r1db()
+{
+	memset(&r1db_hit,0,sizeof(r1db_hit));
+
+	r1db_hit.head = r1db_byhit;
+	r1db_hit.hashsize = HIP_R1DB_SIZE;
+	r1db_hit.offset = offsetof(HIP_R1E, next_hit);
+	r1db_hit.hash = hip_hash_hit;
+	r1db_hit.compare = hip_match_hit;
+	r1db_hit.hold = hip_r1db_hold_entry;
+	r1db_hit.put = hip_r1db_put_entry;
+	r1db_hit.get_key = hip_r1db_get_key;
+
+	strncpy(r1db_hit.name, "R1 HASH TABLE", 15);
+	r1db_hit.name[15] = 0;
+
+	hip_ht_init(&r1db_hit);
+}
+
+void hip_r1_delete(HIP_R1E *entry)
+{
+	HIP_DEBUG("r1 delete\n");
+
+}
+
+/**
+ * hip_r1_find - Get R1E entry corresponding to the argument hit.
+ * @hit: Key
+ * 
+ * If a R1E is found, it is automatically holded (refcnt incremented).
+ *
+ * Returns the R1E or NULL if R1E was not found.
+ */
+HIP_R1E *hip_r1_find(struct in6_addr *hit)
+{
+	HIP_R1E *r1e;
+
+	r1e = hip_ht_find(&r1db_hit, hit);
+ 	return r1e;
+}
+
+int hip_r1_insert(HIP_R1E *r1e)
+{
+	HIP_R1E *tmp;
+	int err;
+
+	/* if assertation holds, then we don't need locking */
+	HIP_ASSERT(atomic_read(&r1e->refcnt) <= 1); 
+
+	if (ipv6_addr_any(&r1e->hit)) {
+		HIP_ERROR("Cannot insert RVA entry with NULL hit\n");
+		return -EINVAL;
+	}
+
+	tmp = hip_ht_find(&r1db_hit, &r1e->hit);
+	if (tmp) {
+		HIP_INFO("Duplicate entry... not adding to RVA table\n");
+		return -EEXIST;
+	}
+
+	err = hip_ht_add(&r1db_hit, r1e);
+	if (!err)
+		r1e->r1estate |= HIP_R1ESTATE_VALID;
+
+	return err;
+}
+
+HIP_R1E *hip_allocate_r1db_entry()
+{
+	HIP_R1E *r1e;
+	r1e = kmalloc(sizeof(*r1e), GFP_KERNEL);
+	if(!r1e)
+		return NULL;
+	atomic_set(&r1e->refcnt, 0);
+	spin_lock_init(&r1e->r1e_lock);
+	memset(r1e->r1table, 0, HIP_R1TABLESIZE*sizeof(struct hip_r1entry));
+
+	return r1e;
+}
 
 /**
  * hip_calc_cookie_idx - get an index
@@ -83,7 +195,8 @@ static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
  * Returns NULL if error.
  */
 static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
-						  struct in6_addr *ip_r)
+						  struct in6_addr *ip_r,
+						  struct in6_addr *hit)
 {
 #if 0
 	struct timeval tv;
@@ -91,12 +204,14 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 	int diff, ts;
 #endif
 	struct hip_r1entry *r1;
+	HIP_R1E *entry;
 	int idx;	
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r);
 	_HIP_DEBUG("Calculated index: %d\n", idx);
-	r1 = &hip_r1table[idx];
 
+	entry = hip_r1_find(hit);
+	r1 = &(entry->r1table[idx]);
 	/* the code under #if 0 periodically changes the puzzle. It is not included
 	   in compilation as there is currently no easy way of signing the R1 packet
 	   after having changed its puzzle.
@@ -257,25 +372,24 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 
 int hip_init_r1(void)
 {
+	/* XX TODO: some error handling..*/
 	int res=0;
-
-	hip_r1table = kmalloc(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE,
-			      GFP_KERNEL);
-	if (!hip_r1table) {
-		HIP_ERROR("Could not allocate memory for R1 table\n");
-		goto err_out;
-	}
-
-	memset(hip_r1table, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
+	
+    	hip_init_r1db();
+	
 	res = 1;
- err_out:
+	//err_out:
 	return res;
 }
 
 int hip_precreate_r1(const struct in6_addr *src_hit)
 {
-	int i=0;
+	int i=0, err=0;
+	HIP_R1E *entry;
 	struct hip_common *pkt;
+
+	entry = hip_allocate_r1db_entry();
+	ipv6_addr_copy(&entry->hit, src_hit);
 
 	for(i = 0; i < HIP_R1TABLESIZE; i++) {
 		pkt = hip_create_r1(src_hit);
@@ -283,23 +397,27 @@ int hip_precreate_r1(const struct in6_addr *src_hit)
 			HIP_ERROR("Unable to precreate R1s\n");
 			goto err_out;
 		}
-		hip_r1table[i].r1 = pkt;
+			
+		entry->r1table[i].r1 = pkt; 
+		
 		HIP_DEBUG("Packet %d created\n",i);
 	}
+	err = hip_r1_insert(entry);
 
 	return 1;
 
  err_out:
-	if (hip_r1table) {
-		hip_uninit_r1();
-		hip_r1table = NULL;
-	}
+	//if (hip_r1table1) {
+	//	hip_uninit_r1();
+	//}
 	return 0;
 }
 
 void hip_uninit_r1(void)
 {
-	int i;
+	//int i;
+	
+	/* XX TODO: do something;) */
 
 	/* The R1 packet consist of 2 memory blocks. One contains the actual
 	 * buffer where the packet is formed, while the other contains
@@ -307,14 +425,14 @@ void hip_uninit_r1(void)
 	 * The r1->common is the actual buffer, and r1 is the structure
 	 * holding only pointers to the TLVs.
 	 */
-	if (hip_r1table) {
-		for(i=0; i < HIP_R1TABLESIZE; i++) {
-			if (hip_r1table[i].r1) {
-				kfree(hip_r1table[i].r1);
-			}
-		}
-		kfree(hip_r1table);
-	}
+	/*if (hip_r1table1) {
+	  for(i=0; i < HIP_R1TABLESIZE; i++) {
+	  if (hip_r1table1[i].r1) {
+	  kfree(hip_r1table1[i].r1);
+	  }
+	  }
+	  kfree(hip_r1table1);
+	  }*/
 }
 
 
@@ -324,11 +442,12 @@ void hip_uninit_r1(void)
  * @ip_r: Responder's IPv6 address
  * 
  */
-struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r)
+struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, 
+			      struct in6_addr *hit)
 {
 	struct hip_r1entry *r1e;
 
-	r1e = hip_fetch_cookie_entry(ip_i, ip_r);
+	r1e = hip_fetch_cookie_entry(ip_i, ip_r, hit);
 	if (r1e == NULL)
 		return NULL;
 
@@ -336,14 +455,14 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r)
 }
 
 int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
-			  uint64_t birthday)
+			  uint64_t birthday, struct in6_addr *hit)
 {
 #if 0
 	uint64_t generation;
 #endif
 	struct hip_r1entry *r1e;
 
-	r1e = hip_fetch_cookie_entry(ip_i, ip_r);
+	r1e = hip_fetch_cookie_entry(ip_i, ip_r, hit);
 	if (r1e == NULL)
 		return -ENOENT;
 
@@ -381,13 +500,14 @@ int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
  */ 
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
 		      struct hip_common *hdr,
-		      struct hip_solution *solution)
+		      struct hip_solution *solution, 
+		      struct in6_addr *hit)
 {
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
 	int res;
 
-	result = hip_fetch_cookie_entry(ip_i, ip_r);
+	result = hip_fetch_cookie_entry(ip_i, ip_r, hit);
 	if (result == NULL) {
 		HIP_ERROR("No matching entry\n");
 		return 0;
@@ -462,3 +582,5 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	return res;
 }
+
+

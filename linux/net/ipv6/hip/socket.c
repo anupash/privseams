@@ -715,7 +715,7 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 	int err = 0;
 	struct hip_host_id *dsa_host_identity, *rsa_host_identity = NULL;
 	struct hip_lhi dsa_lhi, rsa_lhi;
-	struct in6_addr hit_our;
+	//struct in6_addr hit_our;
 	
 	HIP_DEBUG("\n");
 
@@ -777,13 +777,18 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 	HIP_DEBUG("hip: Generating a new R1 now\n");
 	
         /* XX TODO: precreate R1s for both algorithms, not just the default */ 
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
+	/*if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
 		HIP_ERROR("Didn't find HIT for R1 precreation\n");
 		err = -EINVAL;
 		goto out_err;
+		}*/
+       	if (!hip_precreate_r1(&dsa_lhi.hit)) {
+		HIP_ERROR("Unable to precreate R1s for dsa... failing\n");
+		err = -ENOENT;
+		goto out_err;
 	}
-       	if (!hip_precreate_r1(&hit_our)) {
-		HIP_ERROR("Unable to precreate R1s... failing\n");
+       	if (!hip_precreate_r1(&rsa_lhi.hit)) {
+		HIP_ERROR("Unable to precreate R1s for rsa... failing\n");
 		err = -ENOENT;
 		goto out_err;
 	}
