@@ -61,8 +61,8 @@ Compiling the Kernel
 The 2.6 kernel series should be compilable with both gcc 2.9x and 3.x
 series.
 
-HIPL kernel is in hipl/linux folder. Compile the kernel with the
-following options:
+HIPL kernel is in hipl/linux folder. Compile the kernel with
+at least the following options:
 
   Legend: [*] built-in  [ ] excluded  <M> module  < > module capable
 
@@ -72,12 +72,11 @@ following options:
   Device Drivers ---> Networking support ---> Networking options
   [*] TCP/IP networking
   <*> The IPv6 protocol (EXPERIMENTAL)
-  <*> Host Identity Protocol
+  <M> Host Identity Protocol
   [*]   HIP: debugging (NEW)
 
 IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
-dependencies. Currently, it is only possible to compile HIP support as
-built-in. Module capability is not supported yet.
+dependencies. We recommend that you compile HIP as a kernel module.
 
 HIP debugging is not mandatory, but use of it is highly recommended in
 order to get more information when problems arise. HIP debugging
@@ -136,7 +135,7 @@ oops:
 
   ifconfig eth0 inet6 add 3ffe::2/64
   mknod /dev/hip c 126 0
-  (modprobe hipmod)
+  modprobe hipmod
   cd somewhere/hipl
   tools/hipconf new hi default # only the first time when you run hip
   tools/hipconf add hi default
@@ -146,10 +145,10 @@ crash:
 
   ifconfig eth0 inet6 add 3ffe::1/64
   mknod /dev/hip c 126 0
-  (modprobe hipmod)
+  modprobe hipmod
   cd somewhere/hipl
   tools/hipconf new hi default # only the first time when you run hip
-  tools/hipconf add hi default &
+  tools/hipconf add hi default
   test/conntest-client-gai oops tcp 1111
   <type some text in crash, press enter and ctrl+d and you
    should see some text appearing in the output of the hosts>
@@ -159,7 +158,7 @@ replace HIT_OF_XXX with the HIT of the host XXX. The host default HI
 is generated with the command "hipconf new hi default" (only needed on
 the first run) and sent to the kernel module with ".hipconf add hi
 default" The value of the HIT can be found from file
-/proc/net/hip/lhi.  You can see information on current HIP connections
+/proc/net/hip/lhi. You can see information on current HIP connections
 from file /proc/net/hip/sdb_state. Support for both of these /proc
 files require that you select HIP debugging option during the kernel
 compilation process. mknod command can be omitted if you already have
