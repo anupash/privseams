@@ -1038,6 +1038,26 @@ void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi)
 	HIP_DEBUG("returning\n");
 }
 
+/* switch from Old SPI to New SPI */
+/* caller must delete the Old SPI */
+void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi)
+{
+	struct hip_spi_out_item *item, *tmp;
+
+	HIP_DEBUG("old_spi=0x%x\n", old_spi);
+        list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
+		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x seq_id=%u\n",
+			  item->spi, item->new_spi, item->seq_update_id);
+		if (item->spi == old_spi) {
+			HIP_DEBUG("switching\n");
+			item->spi = item->new_spi;
+			item->new_spi = 0;
+			break;
+		}
+        }
+	HIP_DEBUG("returning\n");
+}
+
 
 
 

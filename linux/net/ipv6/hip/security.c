@@ -112,18 +112,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 /* this probably is not used anymore? */
 int hip_delete_esp(hip_ha_t *entry)
 {
-//	uint32_t spi_out, spi_in, new_spi_out, new_spi_in;
 	HIP_LOCK_HA(entry);
-//	spi_out = entry->spi_out;
-//	spi_in = entry->spi_in;
-//	new_spi_out = entry->new_spi_out;
-//	new_spi_in = entry->new_spi_in;
-//	HIP_UNLOCK_HA(entry);
-
-	//hip_delete_sa(entry->spi_out, &entry->hit_peer);
-	//hip_delete_sa(entry->spi_in, &entry->hit_our);
-	//hip_delete_sa(entry->new_spi_out, &entry->hit_peer);
-	//hip_delete_sa(entry->new_spi_in, &entry->hit_our);
 
 	// hip_hadb_deactivate_hs_spi(entry->spi_in);
 	// hip_hadb_deactivate_hs_spi(entry->new_spi_in);
@@ -144,12 +133,6 @@ int hip_delete_esp(hip_ha_t *entry)
 		//hip_hadb_remove_hs(hs);
 	}
 #endif
-
-//	HIP_LOCK_HA(entry);
-//	entry->spi_out = 0;
-	// entry->spi_in = 0;
-	//	entry->new_spi_out = 0;
-	// entry->new_spi_in = 0;
 
 	HIP_UNLOCK_HA(entry);
 	return 0;
