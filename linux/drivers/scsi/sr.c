@@ -59,9 +59,6 @@
 #include "sr.h"
 
 
-MODULE_PARM(xa_test, "i");	/* see sr_ioctl.c */
-
-
 #define SR_DISKS	256
 
 #define MAX_RETRIES	3
@@ -88,7 +85,7 @@ static struct scsi_driver sr_template = {
 };
 
 static unsigned long sr_index_bits[SR_DISKS / BITS_PER_LONG];
-static spinlock_t sr_index_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(sr_index_lock);
 
 /* This semaphore is used to mediate the 0->1 reference get in the
  * face of object destruction (i.e. we can't allow a get on an
@@ -155,9 +152,11 @@ static inline struct scsi_cd *scsi_cd_get(struct gendisk *disk)
 
 static inline void scsi_cd_put(struct scsi_cd *cd)
 {
+	struct scsi_device *sdev = cd->device;
+
 	down(&sr_ref_sem);
 	kref_put(&cd->kref, sr_kref_release);
-	scsi_device_put(cd->device);
+	scsi_device_put(sdev);
 	up(&sr_ref_sem);
 }
 
@@ -545,7 +544,6 @@ static int sr_open(struct cdrom_device_info *cdi, int purpose)
 	return 0;
 
 error_out:
-	scsi_cd_put(cd);
 	return retval;	
 }
 

@@ -590,7 +590,7 @@ static int siimage_reset_poll (ide_drive_t *drive)
 		if ((hwif->INL(SATA_STATUS_REG) & 0x03) != 0x03) {
 			printk(KERN_WARNING "%s: reset phy dead, status=0x%08x\n",
 				hwif->name, hwif->INL(SATA_STATUS_REG));
-			HWGROUP(drive)->poll_timeout = 0;
+			HWGROUP(drive)->polling = 0;
 			return ide_started;
 		}
 		return 0;
@@ -1102,8 +1102,7 @@ static ide_pci_device_t siimage_chipsets[] __devinitdata = {
  
 static int __devinit siimage_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 {
-	ide_setup_pci_device(dev, &siimage_chipsets[id->driver_data]);
-	return 0;
+	return ide_setup_pci_device(dev, &siimage_chipsets[id->driver_data]);
 }
 
 static struct pci_device_id siimage_pci_tbl[] = {

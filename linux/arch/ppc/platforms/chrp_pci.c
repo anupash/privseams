@@ -23,7 +23,7 @@
 #include <asm/open_pic.h>
 
 /* LongTrail */
-unsigned long gg2_pci_config_base;
+void __iomem *gg2_pci_config_base;
 
 /*
  * The VLSI Golden Gate II has only 512K of PCI configuration space, so we
@@ -33,7 +33,7 @@ unsigned long gg2_pci_config_base;
 int __chrp gg2_read_config(struct pci_bus *bus, unsigned int devfn, int off,
 			   int len, u32 *val)
 {
-	volatile unsigned char *cfg_data;
+	volatile void __iomem *cfg_data;
 	struct pci_controller *hose = bus->sysdata;
 
 	if (bus->number > 7)
@@ -45,13 +45,13 @@ int __chrp gg2_read_config(struct pci_bus *bus, unsigned int devfn, int off,
 	cfg_data = hose->cfg_data + ((bus->number<<16) | (devfn<<8) | off);
 	switch (len) {
 	case 1:
-		*val =  in_8((u8 *)cfg_data);
+		*val =  in_8(cfg_data);
 		break;
 	case 2:
-		*val = in_le16((u16 *)cfg_data);
+		*val = in_le16(cfg_data);
 		break;
 	default:
-		*val = in_le32((u32 *)cfg_data);
+		*val = in_le32(cfg_data);
 		break;
 	}
 	return PCIBIOS_SUCCESSFUL;
@@ -60,7 +60,7 @@ int __chrp gg2_read_config(struct pci_bus *bus, unsigned int devfn, int off,
 int __chrp gg2_write_config(struct pci_bus *bus, unsigned int devfn, int off,
 			    int len, u32 val)
 {
-	volatile unsigned char *cfg_data;
+	volatile void __iomem *cfg_data;
 	struct pci_controller *hose = bus->sysdata;
 
 	if (bus->number > 7)
@@ -72,13 +72,13 @@ int __chrp gg2_write_config(struct pci_bus *bus, unsigned int devfn, int off,
 	cfg_data = hose->cfg_data + ((bus->number<<16) | (devfn<<8) | off);
 	switch (len) {
 	case 1:
-		out_8((u8 *)cfg_data, val);
+		out_8(cfg_data, val);
 		break;
 	case 2:
-		out_le16((u16 *)cfg_data, val);
+		out_le16(cfg_data, val);
 		break;
 	default:
-		out_le32((u32 *)cfg_data, val);
+		out_le32(cfg_data, val);
 		break;
 	}
 	return PCIBIOS_SUCCESSFUL;
@@ -97,8 +97,10 @@ int __chrp
 rtas_read_config(struct pci_bus *bus, unsigned int devfn, int offset,
 		 int len, u32 *val)
 {
+	struct pci_controller *hose = bus->sysdata;
 	unsigned long addr = (offset & 0xff) | ((devfn & 0xff) << 8)
-		| ((bus->number & 0xff) << 16);
+		| (((bus->number - hose->first_busno) & 0xff) << 16)
+		| (hose->index << 24);
         unsigned long ret = ~0UL;
 	int rval;
 
@@ -111,8 +113,10 @@ int __chrp
 rtas_write_config(struct pci_bus *bus, unsigned int devfn, int offset,
 		  int len, u32 val)
 {
+	struct pci_controller *hose = bus->sysdata;
 	unsigned long addr = (offset & 0xff) | ((devfn & 0xff) << 8)
-		| ((bus->number & 0xff) << 16);
+		| (((bus->number - hose->first_busno) & 0xff) << 16)
+		| (hose->index << 24);
 	int rval;
 
 	rval = call_rtas("write-pci-config", 3, 1, NULL, addr, len, val);
@@ -186,6 +190,22 @@ setup_python(struct pci_controller *hose, struct device_node *dev)
 	iounmap(reg);
 }
 
+/* Marvell Discovery II based Pegasos 2 */
+static void __init setup_peg2(struct pci_controller *hose, struct device_node *dev)
+{
+	struct device_node *root = find_path_device("/");
+	struct device_node *rtas;
+
+	rtas = of_find_node_by_name (root, "rtas");
+	if (rtas) {
+		hose->ops = &rtas_pci_ops;
+	} else {
+		printk ("RTAS supporting Pegasos OF not found, please upgrade"
+			" your firmware\n");
+	}
+	pci_assign_all_busses = 1;
+}
+
 void __init
 chrp_find_bridges(void)
 {
@@ -195,7 +215,7 @@ chrp_find_bridges(void)
 	struct pci_controller *hose;
 	unsigned int *dma;
 	char *model, *machine;
-	int is_longtrail = 0, is_mot = 0;
+	int is_longtrail = 0, is_mot = 0, is_pegasos = 0;
 	struct device_node *root = find_path_device("/");
 
 	/*
@@ -207,6 +227,10 @@ chrp_find_bridges(void)
 	if (machine != NULL) {
 		is_longtrail = strncmp(machine, "IBM,LongTrail", 13) == 0;
 		is_mot = strncmp(machine, "MOT", 3) == 0;
+		if (strncmp(machine, "Pegasos2", 8) == 0)
+			is_pegasos = 2;
+		else if (strncmp(machine, "Pegasos", 7) == 0)
+			is_pegasos = 1;
 	}
 	for (dev = root->child; dev != NULL; dev = dev->sibling) {
 		if (dev->type == NULL || strcmp(dev->type, "pci") != 0)
@@ -253,10 +277,14 @@ chrp_find_bridges(void)
 			   || strncmp(model, "Motorola, Grackle", 17) == 0) {
 			setup_grackle(hose);
 		} else if (is_longtrail) {
+			void __iomem *p = ioremap(GG2_PCI_CONFIG_BASE, 0x80000);
 			hose->ops = &gg2_pci_ops;
-			hose->cfg_data = (unsigned char *)
-				ioremap(GG2_PCI_CONFIG_BASE, 0x80000);
-			gg2_pci_config_base = (unsigned long) hose->cfg_data;
+			hose->cfg_data = p;
+			gg2_pci_config_base = p;
+		} else if (is_pegasos == 1) {
+			setup_indirect_pci(hose, 0xfec00cf8, 0xfee00cfc);
+		} else if (is_pegasos == 2) {
+			setup_peg2(hose, dev);
 		} else {
 			printk("No methods for %s (model %s), using RTAS\n",
 			       dev->full_name, model);
@@ -275,5 +303,7 @@ chrp_find_bridges(void)
 		}
 	}
 
-	ppc_md.pcibios_fixup = chrp_pcibios_fixup;
+	/* Do not fixup interrupts from OF tree on pegasos */
+	if (is_pegasos == 0)
+		ppc_md.pcibios_fixup = chrp_pcibios_fixup;
 }

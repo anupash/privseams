@@ -224,7 +224,6 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/byteorder.h>
-#include <linux/version.h>
 #include <linux/string.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>
@@ -1838,7 +1837,7 @@ aic7xxx_print_sequencer(struct aic7xxx_host *p, int downloaded)
  * Description:
  *   Return a string describing the driver.
  *-F*************************************************************************/
-const char *
+static const char *
 aic7xxx_info(struct Scsi_Host *dooh)
 {
   static char buffer[256];
@@ -10564,8 +10563,7 @@ static void
 aic7xxx_panic_abort(struct aic7xxx_host *p, Scsi_Cmnd *cmd)
 {
 
-  printk("aic7xxx driver version %s/%s\n", AIC7XXX_C_VERSION,
-         UTS_RELEASE);
+  printk("aic7xxx driver version %s\n", AIC7XXX_C_VERSION);
   printk("Controller type:\n    %s\n", board_names[p->board_name_index]);
   printk("p->flags=0x%lx, p->chip=0x%x, p->features=0x%x, "
          "sequencer %s paused\n",

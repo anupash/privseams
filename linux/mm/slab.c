@@ -128,7 +128,26 @@
 #endif
 
 #ifndef ARCH_KMALLOC_MINALIGN
+/*
+ * Enforce a minimum alignment for the kmalloc caches.
+ * Usually, the kmalloc caches are cache_line_size() aligned, except when
+ * DEBUG and FORCED_DEBUG are enabled, then they are BYTES_PER_WORD aligned.
+ * Some archs want to perform DMA into kmalloc caches and need a guaranteed
+ * alignment larger than BYTES_PER_WORD. ARCH_KMALLOC_MINALIGN allows that.
+ * Note that this flag disables some debug features.
+ */
 #define ARCH_KMALLOC_MINALIGN 0
+#endif
+
+#ifndef ARCH_SLAB_MINALIGN
+/*
+ * Enforce a minimum alignment for all caches.
+ * Intended for archs that get misalignment faults even for BYTES_PER_WORD
+ * aligned buffers. Includes ARCH_KMALLOC_MINALIGN.
+ * If possible: Do not enable this flag for CONFIG_DEBUG_SLAB, it disables
+ * some debug features.
+ */
+#define ARCH_SLAB_MINALIGN 0
 #endif
 
 #ifndef ARCH_KMALLOC_FLAGS
@@ -875,16 +894,13 @@ static void *kmem_getpages(kmem_cache_t *cachep, int flags, int nodeid)
 
 	flags |= cachep->gfpflags;
 	if (likely(nodeid == -1)) {
-		addr = (void*)__get_free_pages(flags, cachep->gfporder);
-		if (!addr)
-			return NULL;
-		page = virt_to_page(addr);
+		page = alloc_pages(flags, cachep->gfporder);
 	} else {
 		page = alloc_pages_node(nodeid, flags, cachep->gfporder);
-		if (!page)
-			return NULL;
-		addr = page_address(page);
 	}
+	if (!page)
+		return NULL;
+	addr = page_address(page);
 
 	i = (1 << cachep->gfporder);
 	if (cachep->flags & SLAB_RECLAIM_ACCOUNT)
@@ -1172,7 +1188,7 @@ kmem_cache_create (const char *name, size_t size, size_t align,
 	unsigned long flags, void (*ctor)(void*, kmem_cache_t *, unsigned long),
 	void (*dtor)(void*, kmem_cache_t *, unsigned long))
 {
-	size_t left_over, slab_size;
+	size_t left_over, slab_size, ralign;
 	kmem_cache_t *cachep = NULL;
 
 	/*
@@ -1222,31 +1238,6 @@ kmem_cache_create (const char *name, size_t size, size_t align,
 	if (flags & ~CREATE_MASK)
 		BUG();
 
-	if (align) {
-		/* combinations of forced alignment and advanced debugging is
-		 * not yet implemented.
-		 */
-		flags &= ~(SLAB_RED_ZONE|SLAB_STORE_USER);
-	} else {
-		if (flags & SLAB_HWCACHE_ALIGN) {
-			/* Default alignment: as specified by the arch code.
-			 * Except if an object is really small, then squeeze multiple
-			 * into one cacheline.
-			 */
-			align = cache_line_size();
-			while (size <= align/2)
-				align /= 2;
-		} else {
-			align = BYTES_PER_WORD;
-		}
-	}
-
-	/* Get cache's description obj. */
-	cachep = (kmem_cache_t *) kmem_cache_alloc(&cache_cache, SLAB_KERNEL);
-	if (!cachep)
-		goto opps;
-	memset(cachep, 0, sizeof(kmem_cache_t));
-
 	/* Check that size is in terms of words.  This is needed to avoid
 	 * unaligned accesses for some archs when redzoning is used, and makes
 	 * sure any on-slab bufctl's are also correctly aligned.
@@ -1255,7 +1246,43 @@ kmem_cache_create (const char *name, size_t size, size_t align,
 		size += (BYTES_PER_WORD-1);
 		size &= ~(BYTES_PER_WORD-1);
 	}
-	
+
+	/* calculate out the final buffer alignment: */
+	/* 1) arch recommendation: can be overridden for debug */
+	if (flags & SLAB_HWCACHE_ALIGN) {
+		/* Default alignment: as specified by the arch code.
+		 * Except if an object is really small, then squeeze multiple
+		 * objects into one cacheline.
+		 */
+		ralign = cache_line_size();
+		while (size <= ralign/2)
+			ralign /= 2;
+	} else {
+		ralign = BYTES_PER_WORD;
+	}
+	/* 2) arch mandated alignment: disables debug if necessary */
+	if (ralign < ARCH_SLAB_MINALIGN) {
+		ralign = ARCH_SLAB_MINALIGN;
+		if (ralign > BYTES_PER_WORD)
+			flags &= ~(SLAB_RED_ZONE|SLAB_STORE_USER);
+	}
+	/* 3) caller mandated alignment: disables debug if necessary */
+	if (ralign < align) {
+		ralign = align;
+		if (ralign > BYTES_PER_WORD)
+			flags &= ~(SLAB_RED_ZONE|SLAB_STORE_USER);
+	}
+	/* 4) Store it. Note that the debug code below can reduce
+	 *    the alignment to BYTES_PER_WORD.
+	 */
+	align = ralign;
+
+	/* Get cache's description obj. */
+	cachep = (kmem_cache_t *) kmem_cache_alloc(&cache_cache, SLAB_KERNEL);
+	if (!cachep)
+		goto opps;
+	memset(cachep, 0, sizeof(kmem_cache_t));
+
 #if DEBUG
 	cachep->reallen = size;
 
@@ -2806,7 +2833,7 @@ static void cache_reap(void *unused)
 next_unlock:
 		spin_unlock_irq(&searchp->spinlock);
 next:
-		;
+		cond_resched();
 	}
 	check_irq_on();
 	up(&cache_chain_sem);
@@ -2833,7 +2860,7 @@ static void *s_start(struct seq_file *m, loff_t *pos)
 		seq_puts(m, "slabinfo - version: 2.1\n");
 #endif
 		seq_puts(m, "# name            <active_objs> <num_objs> <objsize> <objperslab> <pagesperslab>");
-		seq_puts(m, " : tunables <batchcount> <limit> <sharedfactor>");
+		seq_puts(m, " : tunables <limit> <batchcount> <sharedfactor>");
 		seq_puts(m, " : slabdata <active_slabs> <num_slabs> <sharedavail>");
 #if STATS
 		seq_puts(m, " : globalstat <listallocs> <maxobjs> <grown> <reaped>"

@@ -36,7 +36,7 @@
 static int sb_initialized;
 #endif
 
-static spinlock_t lock=SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(lock);
 
 static unsigned char opl3sa_read(int addr)
 {
@@ -245,12 +245,12 @@ static int __initdata dma2	= -1;
 static int __initdata mpu_io	= -1;
 static int __initdata mpu_irq	= -1;
 
-MODULE_PARM(io,"i");
-MODULE_PARM(irq,"i");
-MODULE_PARM(dma,"i");
-MODULE_PARM(dma2,"i");
-MODULE_PARM(mpu_io,"i");
-MODULE_PARM(mpu_irq,"i");
+module_param(io, int, 0);
+module_param(irq, int, 0);
+module_param(dma, int, 0);
+module_param(dma2, int, 0);
+module_param(mpu_io, int, 0);
+module_param(mpu_irq, int, 0);
 
 static int __init init_opl3sa(void)
 {

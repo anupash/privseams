@@ -64,7 +64,7 @@ sys32_chdir_wrapper:
 	.globl  sys32_time_wrapper 
 sys32_time_wrapper:
 	llgtr	%r2,%r2			# int *
-	jg	sys_time		# branch to system call
+	jg	compat_sys_time		# branch to system call
 
 	.globl  sys32_mknod_wrapper 
 sys32_mknod_wrapper:
@@ -391,7 +391,7 @@ old32_readdir_wrapper:
 	llgfr	%r2,%r2			# unsigned int
 	llgtr	%r3,%r3			# void *
 	llgfr	%r4,%r4			# unsigned int
-	jg	old32_readdir		# branch to system call
+	jg	compat_sys_old_readdir	# branch to system call
 
 	.globl  old32_mmap_wrapper 
 old32_mmap_wrapper:
@@ -639,7 +639,7 @@ sys32_getdents_wrapper:
 	llgfr	%r2,%r2			# unsigned int
 	llgtr	%r3,%r3			# void *
 	llgfr	%r4,%r4			# unsigned int
-	jg	sys32_getdents		# branch to system call
+	jg	compat_sys_getdents	# branch to system call
 
 	.globl  compat_sys_select_wrapper
 compat_sys_select_wrapper:
@@ -840,13 +840,13 @@ sys32_rt_sigpending_wrapper:
 	llgfr	%r3,%r3			# size_t
 	jg	sys32_rt_sigpending	# branch to system call
 
-	.globl  sys32_rt_sigtimedwait_wrapper 
-sys32_rt_sigtimedwait_wrapper:
+	.globl  compat_sys_rt_sigtimedwait_wrapper
+compat_sys_rt_sigtimedwait_wrapper:
 	llgtr	%r2,%r2			# const sigset_emu31_t *
 	llgtr	%r3,%r3			# siginfo_emu31_t *
 	llgtr	%r4,%r4			# const struct compat_timespec *
 	llgfr	%r5,%r5			# size_t
-	jg	sys32_rt_sigtimedwait	# branch to system call
+	jg	compat_sys_rt_sigtimedwait	# branch to system call
 
 	.globl  sys32_rt_sigqueueinfo_wrapper 
 sys32_rt_sigqueueinfo_wrapper:
@@ -1076,8 +1076,8 @@ sys32_lstat64_wrapper:
 
 	.globl	sys32_stime_wrapper
 sys32_stime_wrapper:
-	llgtr	%r2,%r2			# int *
-	jg	sys_stime		# branch to system call
+	llgtr	%r2,%r2			# long *
+	jg	compat_sys_stime	# branch to system call
 
 	.globl  sys32_sysctl_wrapper
 sys32_sysctl_wrapper:

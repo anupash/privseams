@@ -89,7 +89,8 @@ static struct rt6_info * ip6_rt_copy(struct rt6_info *ort);
 static struct dst_entry	*ip6_dst_check(struct dst_entry *dst, u32 cookie);
 static struct dst_entry *ip6_negative_advice(struct dst_entry *);
 static void		ip6_dst_destroy(struct dst_entry *);
-static void		ip6_dst_ifdown(struct dst_entry *, int how);
+static void		ip6_dst_ifdown(struct dst_entry *,
+				       struct net_device *dev, int how);
 static int		 ip6_dst_gc(void);
 
 static int		ip6_pkt_discard(struct sk_buff *skb);
@@ -138,7 +139,7 @@ struct fib6_node ip6_routing_table = {
 
 /* Protects all the ip6 fib */
 
-rwlock_t rt6_lock = RW_LOCK_UNLOCKED;
+DEFINE_RWLOCK(rt6_lock);
 
 
 /* allocate dst with ip6_dst_ops */
@@ -158,18 +159,25 @@ static void ip6_dst_destroy(struct dst_entry *dst)
 	}	
 }
 
-static void ip6_dst_ifdown(struct dst_entry *dst, int how)
+static void ip6_dst_ifdown(struct dst_entry *dst, struct net_device *dev,
+			   int how)
 {
 	struct rt6_info *rt = (struct rt6_info *)dst;
 	struct inet6_dev *idev = rt->rt6i_idev;
 
-	if (idev != NULL && idev->dev != &loopback_dev) {
+	if (dev != &loopback_dev && idev != NULL && idev->dev == dev) {
 		struct inet6_dev *loopback_idev = in6_dev_get(&loopback_dev);
 		if (loopback_idev != NULL) {
 			rt->rt6i_idev = loopback_idev;
 			in6_dev_put(idev);
 		}
 	}
+}
+
+static __inline__ int rt6_check_expired(const struct rt6_info *rt)
+{
+	return (rt->rt6i_flags & RTF_EXPIRES &&
+		time_after(jiffies, rt->rt6i_expires));
 }
 
 /*
@@ -213,8 +221,8 @@ static __inline__ struct rt6_info *rt6_device_match(struct rt6_info *rt,
 /*
  *	pointer to the last default router chosen. BH is disabled locally.
  */
-struct rt6_info *rt6_dflt_pointer;
-spinlock_t rt6_dflt_lock = SPIN_LOCK_UNLOCKED;
+static struct rt6_info *rt6_dflt_pointer;
+static DEFINE_SPINLOCK(rt6_dflt_lock);
 
 void rt6_reset_dflt_pointer(struct rt6_info *rt)
 {
@@ -242,8 +250,7 @@ static struct rt6_info *rt6_best_dflt(struct rt6_info *rt, int oif)
 		     sprt->rt6i_dev->ifindex == oif))
 			m += 8;
 
-		if ((sprt->rt6i_flags & RTF_EXPIRES) &&
-		    time_after(jiffies, sprt->rt6i_expires))
+		if (rt6_check_expired(sprt))
 			continue;
 
 		if (sprt == rt6_dflt_pointer)
@@ -301,7 +308,8 @@ static struct rt6_info *rt6_best_dflt(struct rt6_info *rt, int oif)
 			for (sprt = rt6_dflt_pointer->u.next;
 			     sprt; sprt = sprt->u.next) {
 				if (sprt->u.dst.obsolete <= 0 &&
-				    sprt->u.dst.error == 0) {
+				    sprt->u.dst.error == 0 &&
+				    !rt6_check_expired(sprt)) {
 					match = sprt;
 					break;
 				}
@@ -310,7 +318,8 @@ static struct rt6_info *rt6_best_dflt(struct rt6_info *rt, int oif)
 			     !match && sprt;
 			     sprt = sprt->u.next) {
 				if (sprt->u.dst.obsolete <= 0 &&
-				    sprt->u.dst.error == 0) {
+				    sprt->u.dst.error == 0 &&
+				    !rt6_check_expired(sprt)) {
 					match = sprt;
 					break;
 				}
@@ -336,7 +345,8 @@ static struct rt6_info *rt6_best_dflt(struct rt6_info *rt, int oif)
 		 */
 		for (sprt = ip6_routing_table.leaf;
 		     sprt; sprt = sprt->u.next) {
-			if ((sprt->rt6i_flags & RTF_DEFAULT) &&
+			if (!rt6_check_expired(sprt) &&
+			    (sprt->rt6i_flags & RTF_DEFAULT) &&
 			    (!oif ||
 			     (sprt->rt6i_dev &&
 			      sprt->rt6i_dev->ifindex == oif))) {

@@ -54,7 +54,7 @@ struct agp_kern_info {
 	struct pci_dev *device;
 	enum chipset_type chipset;
 	unsigned long mode;
-	off_t aper_base;
+	unsigned long aper_base;
 	size_t aper_size;
 	int max_memory;		/* In pages */
 	int current_memory;
@@ -95,24 +95,6 @@ extern int agp_unbind_memory(struct agp_memory *);
 extern void agp_enable(u32);
 extern int agp_backend_acquire(void);
 extern void agp_backend_release(void);
-
-/*
- * Interface between drm and agp code.  When agp initializes, it makes
- * the below structure available via inter_module_register(), drm might
- * use it.  Keith Owens <kaos@ocs.com.au> 28 Oct 2000.
- */
-typedef struct {
-	void			(*free_memory)(struct agp_memory *);
-	struct agp_memory *	(*allocate_memory)(size_t, u32);
-	int			(*bind_memory)(struct agp_memory *, off_t);
-	int			(*unbind_memory)(struct agp_memory *);
-	void			(*enable)(u32);
-	int			(*acquire)(void);
-	void			(*release)(void);
-	int			(*copy_info)(struct agp_kern_info *);
-} drm_agp_t;
-
-extern const drm_agp_t *drm_agp_p;
 
 #endif				/* __KERNEL__ */
 #endif				/* _AGP_BACKEND_H */

@@ -6,6 +6,7 @@
 #include <asm/errno.h>
 #include <asm/hardware.h>
 #include <asm/arch/irqs.h>
+#include <asm/arch/entry-macro.S>
 
 #ifndef MODE_SVC
 #define MODE_SVC 0x13
@@ -138,13 +139,6 @@
 	.macro	get_thread_info, rd
 	mov	\rd, sp, lsr #13
 	mov	\rd, \rd, lsl #13
-	.endm
-
-/*
- * Like adr, but force SVC mode (if required)
- */
-	.macro	adrsvc, cond, reg, label
-	adr\cond	\reg, \label
 	.endm
 
 	.macro	alignment_trap, rbase, rtemp, sym

@@ -16,7 +16,7 @@ obj-y               :=	setup.o entry.o traps.o irq.o idle.o dma.o \
 obj-$(CONFIG_PPC_OF) +=	of_device.o
 
 pci-obj-$(CONFIG_PPC_ISERIES)	+= iSeries_pci.o iSeries_pci_reset.o
-pci-obj-$(CONFIG_PPC_MULTIPLATFORM)	+= pci_dn.o pci_dma_direct.o
+pci-obj-$(CONFIG_PPC_MULTIPLATFORM)	+= pci_dn.o pci_direct_iommu.o
 
 obj-$(CONFIG_PCI)	+= pci.o pci_iommu.o iomap.o $(pci-obj-y)
 
@@ -30,9 +30,10 @@ obj-$(CONFIG_PPC_ISERIES) += iSeries_irq.o \
 obj-$(CONFIG_PPC_MULTIPLATFORM) += nvram.o i8259.o prom_init.o prom.o mpic.o
 
 obj-$(CONFIG_PPC_PSERIES) += pSeries_pci.o pSeries_lpar.o pSeries_hvCall.o \
-			     eeh.o pSeries_nvram.o rtasd.o ras.o \
+			     pSeries_nvram.o rtasd.o ras.o \
 			     xics.o rtas.o pSeries_setup.o pSeries_iommu.o
 
+obj-$(CONFIG_EEH)		+= eeh.o
 obj-$(CONFIG_PROC_FS)		+= proc_ppc64.o
 obj-$(CONFIG_RTAS_FLASH)	+= rtas_flash.o
 obj-$(CONFIG_SMP)		+= smp.o
@@ -61,5 +62,6 @@ obj-$(CONFIG_PPC_MAPLE)		+= smp-tbsync.o
 endif
 
 obj-$(CONFIG_ALTIVEC)		+= vecemu.o vector.o
+obj-$(CONFIG_KPROBES)		+= kprobes.o
 
 CFLAGS_ioctl32.o += -Ifs/

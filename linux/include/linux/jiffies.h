@@ -70,13 +70,19 @@
 /* a value TUSEC for TICK_USEC (can be set bij adjtimex)		*/
 #define TICK_USEC_TO_NSEC(TUSEC) (SH_DIV (TUSEC * USER_HZ * 1000, ACTHZ, 8))
 
+/* some arch's have a small-data section that can be accessed register-relative
+ * but that can only take up to, say, 4-byte variables. jiffies being part of
+ * an 8-byte variable may not be correctly accessed unless we force the issue
+ */
+#define __jiffy_data  __attribute__((section(".data")))
+
 /*
  * The 64-bit value is not volatile - you MUST NOT read it
  * without sampling the sequence number in xtime_lock.
  * get_jiffies_64() will do this for you as appropriate.
  */
-extern u64 jiffies_64;
-extern unsigned long volatile jiffies;
+extern u64 __jiffy_data jiffies_64;
+extern unsigned long volatile __jiffy_data jiffies;
 
 #if (BITS_PER_LONG < 64)
 u64 get_jiffies_64(void);
@@ -259,10 +265,10 @@ static inline unsigned int jiffies_to_msecs(const unsigned long j)
 
 static inline unsigned int jiffies_to_usecs(const unsigned long j)
 {
-#if HZ <= 1000 && !(1000 % HZ)
+#if HZ <= 1000000 && !(1000000 % HZ)
 	return (1000000 / HZ) * j;
-#elif HZ > 1000 && !(HZ % 1000)
-	return (j*1000 + (HZ - 1000))/(HZ / 1000);
+#elif HZ > 1000000 && !(HZ % 1000000)
+	return (j + (HZ / 1000000) - 1)/(HZ / 1000000);
 #else
 	return (j * 1000000) / HZ;
 #endif
@@ -278,6 +284,19 @@ static inline unsigned long msecs_to_jiffies(const unsigned int m)
 	return m * (HZ / 1000);
 #else
 	return (m * HZ + 999) / 1000;
+#endif
+}
+
+static inline unsigned long usecs_to_jiffies(const unsigned int u)
+{
+	if (u > jiffies_to_usecs(MAX_JIFFY_OFFSET))
+		return MAX_JIFFY_OFFSET;
+#if HZ <= 1000000 && !(1000000 % HZ)
+	return (u + (1000000 / HZ) - 1) / (1000000 / HZ);
+#elif HZ > 1000000 && !(HZ % 1000000)
+	return u * (HZ / 1000000);
+#else
+	return (u * HZ + 999999) / 1000000;
 #endif
 }
 

@@ -53,6 +53,7 @@
 #include <linux/delay.h>  
 #include <linux/uio.h>  
 #include <linux/init.h>  
+#include <linux/wait.h>
 #include <asm/system.h>  
 #include <asm/io.h>  
 #include <asm/atomic.h>  
@@ -72,13 +73,13 @@ struct suni_priv {
 #define PRIV(dev) ((struct suni_priv *) dev->phy_data)
 
 static unsigned char ia_phy_get(struct atm_dev *dev, unsigned long addr);
+static void desc_dbg(IADEV *iadev);
 
 static IADEV *ia_dev[8];
 static struct atm_dev *_ia_dev[8];
 static int iadev_count;
 static void ia_led_timer(unsigned long arg);
 static struct timer_list ia_timer = TIMER_INITIALIZER(ia_led_timer, 0, 0);
-struct atm_vcc *vcc_close_que[100];
 static int IA_TX_BUF = DFL_TX_BUFFERS, IA_TX_BUF_SZ = DFL_TX_BUF_SZ;
 static int IA_RX_BUF = DFL_RX_BUFFERS, IA_RX_BUF_SZ = DFL_RX_BUF_SZ;
 static uint IADebugFlag = /* IF_IADBG_ERR | IF_IADBG_CBR| IF_IADBG_INIT_ADAPTER
@@ -147,7 +148,6 @@ static void ia_hack_tcq(IADEV *dev) {
   u_short 		desc1;
   u_short		tcq_wr;
   struct ia_vcc         *iavcc_r = NULL; 
-  extern void desc_dbg(IADEV *iadev);
 
   tcq_wr = readl(dev->seg_reg+TCQ_WR_PTR) & 0xffff;
   while (dev->host_tcq_wr != tcq_wr) {
@@ -187,7 +187,6 @@ static u16 get_desc (IADEV *dev, struct ia_vcc *iavcc) {
   unsigned long delta;
   static unsigned long timer = 0;
   int ltimeout;
-  extern void desc_dbg(IADEV *iadev);
 
   ia_hack_tcq (dev);
   if(((jiffies - timer)>50)||((dev->ffL.tcq_rd==dev->host_tcq_wr))){      
@@ -644,7 +643,7 @@ static int ia_que_tx (IADEV *iadev) {
    return 0;
 }
 
-void ia_tx_poll (IADEV *iadev) {
+static void ia_tx_poll (IADEV *iadev) {
    struct atm_vcc *vcc = NULL;
    struct sk_buff *skb = NULL, *skb1 = NULL;
    struct ia_vcc *iavcc;
@@ -861,7 +860,7 @@ static void IaFrontEndIntr(IADEV *iadev) {
   return;
 }
 
-void ia_mb25_init (IADEV *iadev)
+static void ia_mb25_init (IADEV *iadev)
 {
    volatile ia_mb25_t  *mb25 = (ia_mb25_t*)iadev->phy;
 #if 0
@@ -876,7 +875,7 @@ void ia_mb25_init (IADEV *iadev)
    return;
 }                   
 
-void ia_suni_pm7345_init (IADEV *iadev)
+static void ia_suni_pm7345_init (IADEV *iadev)
 {
    volatile suni_pm7345_t *suni_pm7345 = (suni_pm7345_t *)iadev->phy;
    if (iadev->phy_type & FE_DS3_PHY)
@@ -959,9 +958,8 @@ void ia_suni_pm7345_init (IADEV *iadev)
 
 /***************************** IA_LIB END *****************************/
     
-/* pwang_test debug utility */
-int tcnter = 0, rcnter = 0;
-void xdump( u_char*  cp, int  length, char*  prefix )
+static int tcnter = 0;
+static void xdump( u_char*  cp, int  length, char*  prefix )
 {
     int col, count;
     u_char prntBuf[120];
@@ -1008,7 +1006,7 @@ static struct atm_dev *ia_boards = NULL;
   
 /*-- some utilities and memory allocation stuff will come here -------------*/  
   
-void desc_dbg(IADEV *iadev) {
+static void desc_dbg(IADEV *iadev) {
 
   u_short tcq_wr_ptr, tcq_st_ptr, tcq_ed_ptr;
   u32 i;
@@ -2589,14 +2587,14 @@ err_out:
 }  
   
 static void ia_close(struct atm_vcc *vcc)  
-{  
+{
+	DEFINE_WAIT(wait);
         u16 *vc_table;
         IADEV *iadev;
         struct ia_vcc *ia_vcc;
         struct sk_buff *skb = NULL;
         struct sk_buff_head tmp_tx_backlog, tmp_vcc_backlog;
         unsigned long closetime, flags;
-        int ctimeout;
 
         iadev = INPH_IA_DEV(vcc->dev);
         ia_vcc = INPH_IA_VCC(vcc);
@@ -2609,7 +2607,9 @@ static void ia_close(struct atm_vcc *vcc)
         skb_queue_head_init (&tmp_vcc_backlog); 
         if (vcc->qos.txtp.traffic_class != ATM_NONE) {
            iadev->close_pending++;
-           sleep_on_timeout(&iadev->timeout_wait, 50);
+	   prepare_to_wait(&iadev->timeout_wait, &wait, TASK_UNINTERRUPTIBLE);
+	   schedule_timeout(50);
+	   finish_wait(&iadev->timeout_wait, &wait);
            spin_lock_irqsave(&iadev->tx_lock, flags); 
            while((skb = skb_dequeue(&iadev->tx_backlog))) {
               if (ATM_SKB(skb)->vcc == vcc){ 
@@ -2622,17 +2622,12 @@ static void ia_close(struct atm_vcc *vcc)
            while((skb = skb_dequeue(&tmp_tx_backlog))) 
              skb_queue_tail(&iadev->tx_backlog, skb);
            IF_EVENT(printk("IA TX Done decs_cnt = %d\n", ia_vcc->vc_desc_cnt);) 
-           closetime = jiffies;
-           ctimeout = 300000 / ia_vcc->pcr;
-           if (ctimeout == 0)
-              ctimeout = 1;
-           while (ia_vcc->vc_desc_cnt > 0){
-              if ((jiffies - closetime) >= ctimeout) 
-                 break;
-              spin_unlock_irqrestore(&iadev->tx_lock, flags);
-              sleep_on(&iadev->close_wait);
-              spin_lock_irqsave(&iadev->tx_lock, flags);
-           }    
+           closetime = 300000 / ia_vcc->pcr;
+           if (closetime == 0)
+              closetime = 1;
+           spin_unlock_irqrestore(&iadev->tx_lock, flags);
+           wait_event_timeout(iadev->close_wait, (ia_vcc->vc_desc_cnt <= 0), closetime);
+           spin_lock_irqsave(&iadev->tx_lock, flags);
            iadev->close_pending--;
            iadev->testTable[vcc->vci]->lastTime = 0;
            iadev->testTable[vcc->vci]->fract = 0; 

@@ -5,7 +5,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2004, R. Byron Moore
+ * Copyright (C) 2000 - 2005, R. Byron Moore
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -190,7 +190,7 @@ acpi_tb_init_generic_address (
 	new_gas_struct->address_space_id = ACPI_ADR_SPACE_SYSTEM_IO;
 	new_gas_struct->register_bit_width = register_bit_width;
 	new_gas_struct->register_bit_offset = 0;
-	new_gas_struct->reserved        = 0;
+	new_gas_struct->access_width    = 0;
 }
 
 
@@ -269,8 +269,8 @@ acpi_tb_convert_fadt1 (
 		 * that immediately follows.
 		 */
 		ACPI_MEMCPY (&local_fadt->reset_register,
-			&((struct fadt_descriptor_rev2_minus *) original_fadt)->reset_register,
-			sizeof (struct acpi_generic_address) + 1);
+			&(ACPI_CAST_PTR (struct fadt_descriptor_rev2_minus, original_fadt))->reset_register,
+  			sizeof (struct acpi_generic_address) + 1);
 	}
 	else {
 		/*
@@ -510,7 +510,7 @@ acpi_tb_convert_table_fadt (void)
  *
  * FUNCTION:    acpi_tb_convert_table_facs
  *
- * PARAMETERS:  table_info      - Info for currently installad FACS
+ * PARAMETERS:  table_info      - Info for currently installed FACS
  *
  * RETURN:      Status
  *

@@ -304,6 +304,8 @@ nfsd_setattr(struct svc_rqst *rqstp, struct svc_fh *fhp, struct iattr *iap,
 		 * we need to break all leases.
 		 */
 		err = break_lease(inode, FMODE_WRITE | O_NONBLOCK);
+		if (err == -EWOULDBLOCK)
+			err = -ETIMEDOUT;
 		if (err) /* ENOMEM or EWOULDBLOCK */
 			goto out_nfserr;
 
@@ -654,12 +656,15 @@ nfsd_open(struct svc_rqst *rqstp, struct svc_fh *fhp, int type,
 	dentry = fhp->fh_dentry;
 	inode = dentry->d_inode;
 
-	/* Disallow access to files with the append-only bit set or
-	 * with mandatory locking enabled
+	/* Disallow write access to files with the append-only bit set
+	 * or any access when mandatory locking enabled
 	 */
 	err = nfserr_perm;
-	if (IS_APPEND(inode) || IS_ISMNDLK(inode))
+	if (IS_APPEND(inode) && (access & MAY_WRITE))
 		goto out;
+	if (IS_ISMNDLK(inode))
+		goto out;
+
 	if (!inode->i_fop)
 		goto out;
 
@@ -668,6 +673,8 @@ nfsd_open(struct svc_rqst *rqstp, struct svc_fh *fhp, int type,
 	 * This may block while leases are broken.
 	 */
 	err = break_lease(inode, O_NONBLOCK | ((access & MAY_WRITE) ? FMODE_WRITE : 0));
+	if (err == -EWOULDBLOCK)
+		err = -ETIMEDOUT;
 	if (err) /* NOMEM or WOULDBLOCK */
 		goto out_nfserr;
 
@@ -733,7 +740,7 @@ nfsd_sync_dir(struct dentry *dp)
  * Obtain the readahead parameters for the file
  * specified by (dev, ino).
  */
-static spinlock_t ra_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(ra_lock);
 
 static inline struct raparms *
 nfsd_get_raparms(dev_t dev, ino_t ino)

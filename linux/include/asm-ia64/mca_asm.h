@@ -46,6 +46,10 @@
 	mov	temp	= 0x7	;;							\
 	dep	addr	= temp, addr, 61, 3
 
+#define GET_THIS_PADDR(reg, var)		\
+	mov	reg = IA64_KR(PER_CPU_DATA);;	\
+        addl	reg = THIS_CPU(var), reg
+
 /*
  * This macro jumps to the instruction at the given virtual address
  * and starts execution in physical mode with all the address

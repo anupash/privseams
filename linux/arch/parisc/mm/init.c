@@ -269,8 +269,6 @@ static void __init setup_bootmem(void)
 	}
 	memset(pfnnid_map, 0xff, sizeof(pfnnid_map));
 
-	numnodes = npmem_ranges;
-
 	for (i = 0; i < npmem_ranges; i++)
 		node_set_online(i);
 #endif
@@ -855,7 +853,7 @@ static unsigned long space_id_index;
 static unsigned long free_space_ids = NR_SPACE_IDS - 1;
 static unsigned long dirty_space_ids = 0;
 
-static spinlock_t sid_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(sid_lock);
 
 unsigned long alloc_sid(void)
 {

@@ -3,7 +3,6 @@
                              -------------------
     begin                : Thu Sep 7 2000
     copyright            : (C) 2000 by Adaptec
-    email                : deanna_bonds@adaptec.com
 
 			   July 30, 2001 First version being submitted
 			   for inclusion in the kernel.  V2.4
@@ -146,7 +145,7 @@ struct adpt_i2o_post_wait_data
 
 static struct adpt_i2o_post_wait_data *adpt_post_wait_queue = NULL;
 static u32 adpt_post_wait_id = 0;
-static spinlock_t adpt_post_wait_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(adpt_post_wait_lock);
 
 
 /*============================================================================
@@ -1179,7 +1178,6 @@ static int adpt_i2o_post_wait(adpt_hba* pHba, u32* msg, int len, int timeout)
 				// dangerous.
 				status = -ETIME;
 			}
-			schedule_timeout(timeout*HZ);
 		}
 		if(pHba->host)
 			spin_lock_irq(pHba->host->host_lock);

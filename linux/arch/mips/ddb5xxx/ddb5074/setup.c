@@ -4,7 +4,6 @@
  *  Copyright (C) 2000 Geert Uytterhoeven <geert@sonycom.com>
  *                     Sony Software Development Center Europe (SDCE), Brussels
  */
-#include <linux/config.h>
 #include <linux/init.h>
 #include <linux/kbd_ll.h>
 #include <linux/kernel.h>
@@ -88,8 +87,6 @@ static void __init ddb_time_init(void)
 
 static void __init ddb5074_setup(void)
 {
-	extern int panic_timeout;
-
 	set_io_port_base(NILE4_PCI_IO_BASE);
 	isa_slot_offset = NILE4_PCI_MEM_BASE;
 	board_timer_setup = ddb_timer_init;

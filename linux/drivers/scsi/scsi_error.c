@@ -125,6 +125,7 @@ void scsi_add_timer(struct scsi_cmnd *scmd, int timeout,
 
 	add_timer(&scmd->eh_timeout);
 }
+EXPORT_SYMBOL(scsi_add_timer);
 
 /**
  * scsi_delete_timer - Delete/cancel timer for a given function.
@@ -152,6 +153,7 @@ int scsi_delete_timer(struct scsi_cmnd *scmd)
 
 	return rtn;
 }
+EXPORT_SYMBOL(scsi_delete_timer);
 
 /**
  * scsi_times_out - Timeout function for normal scsi commands.
@@ -214,6 +216,7 @@ int scsi_block_when_processing_errors(struct scsi_device *sdev)
 
 	return online;
 }
+EXPORT_SYMBOL(scsi_block_when_processing_errors);
 
 #ifdef CONFIG_SCSI_LOGGING
 /**
@@ -268,16 +271,42 @@ static inline void scsi_eh_prt_fail_stats(struct Scsi_Host *shost,
  *
  * Return value:
  * 	SUCCESS or FAILED or NEEDS_RETRY
+ *
+ * Notes:
+ *	When a deferred error is detected the current command has
+ *	not been executed and needs retrying.
  **/
 static int scsi_check_sense(struct scsi_cmnd *scmd)
 {
-	if (!SCSI_SENSE_VALID(scmd))
-		return FAILED;
+	struct scsi_sense_hdr sshdr;
 
-	if (scmd->sense_buffer[2] & 0xe0)
-		return SUCCESS;
+	if (! scsi_command_normalize_sense(scmd, &sshdr))
+		return FAILED;	/* no valid sense data */
 
-	switch (scmd->sense_buffer[2] & 0xf) {
+	if (scsi_sense_is_deferred(&sshdr))
+		return NEEDS_RETRY;
+
+	/*
+	 * Previous logic looked for FILEMARK, EOM or ILI which are
+	 * mainly associated with tapes and returned SUCCESS.
+	 */
+	if (sshdr.response_code == 0x70) {
+		/* fixed format */
+		if (scmd->sense_buffer[2] & 0xe0)
+			return SUCCESS;
+	} else {
+		/*
+		 * descriptor format: look for "stream commands sense data
+		 * descriptor" (see SSC-3). Assume single sense data
+		 * descriptor. Ignore ILI from SBC-2 READ LONG and WRITE LONG.
+		 */
+		if ((sshdr.additional_length > 3) &&
+		    (scmd->sense_buffer[8] == 0x4) &&
+		    (scmd->sense_buffer[11] & 0xe0))
+			return SUCCESS;
+	}
+
+	switch (sshdr.sense_key) {
 	case NO_SENSE:
 		return SUCCESS;
 	case RECOVERED_ERROR:
@@ -301,19 +330,15 @@ static int scsi_check_sense(struct scsi_cmnd *scmd)
 		 * if the device is in the process of becoming ready, we 
 		 * should retry.
 		 */
-		if ((scmd->sense_buffer[12] == 0x04) &&
-			(scmd->sense_buffer[13] == 0x01)) {
+		if ((sshdr.asc == 0x04) && (sshdr.ascq == 0x01))
 			return NEEDS_RETRY;
-		}
 		/*
 		 * if the device is not started, we need to wake
 		 * the error handler to start the motor
 		 */
 		if (scmd->device->allow_restart &&
-		    (scmd->sense_buffer[12] == 0x04) &&
-		    (scmd->sense_buffer[13] == 0x02)) {
+		    (sshdr.asc == 0x04) && (sshdr.ascq == 0x02))
 			return FAILED;
-		}
 		return SUCCESS;
 
 		/* these three are not supported */
@@ -1358,7 +1383,8 @@ int scsi_decide_disposition(struct scsi_cmnd *scmd)
 		return SUCCESS;
 
 	case RESERVATION_CONFLICT:
-		printk("scsi%d (%d,%d,%d) : reservation conflict\n",
+		printk(KERN_INFO "scsi: reservation conflict: host"
+                                " %d channel %d id %d lun %d\n",
 		       scmd->device->host->host_no, scmd->device->channel,
 		       scmd->device->id, scmd->device->lun);
 		return SUCCESS; /* causes immediate i/o error */
@@ -1729,6 +1755,7 @@ void scsi_report_bus_reset(struct Scsi_Host *shost, int channel)
 		}
 	}
 }
+EXPORT_SYMBOL(scsi_report_bus_reset);
 
 /*
  * Function:    scsi_report_device_reset()
@@ -1764,6 +1791,7 @@ void scsi_report_device_reset(struct Scsi_Host *shost, int channel, int target)
 		}
 	}
 }
+EXPORT_SYMBOL(scsi_report_device_reset);
 
 static void
 scsi_reset_provider_done_command(struct scsi_cmnd *scmd)
@@ -1843,6 +1871,7 @@ scsi_reset_provider(struct scsi_device *dev, int flag)
 	scsi_next_command(scmd);
 	return rtn;
 }
+EXPORT_SYMBOL(scsi_reset_provider);
 
 /**
  * scsi_normalize_sense - normalize main elements from either fixed or
@@ -1919,3 +1948,96 @@ int scsi_command_normalize_sense(struct scsi_cmnd *cmd,
 			sizeof(cmd->sense_buffer), sshdr);
 }
 EXPORT_SYMBOL(scsi_command_normalize_sense);
+
+/**
+ * scsi_sense_desc_find - search for a given descriptor type in
+ *			descriptor sense data format.
+ *
+ * @sense_buffer:	byte array of descriptor format sense data
+ * @sb_len:		number of valid bytes in sense_buffer
+ * @desc_type:		value of descriptor type to find
+ *			(e.g. 0 -> information)
+ *
+ * Notes:
+ *	only valid when sense data is in descriptor format
+ *
+ * Return value:
+ *	pointer to start of (first) descriptor if found else NULL
+ **/
+const u8 * scsi_sense_desc_find(const u8 * sense_buffer, int sb_len,
+				int desc_type)
+{
+	int add_sen_len, add_len, desc_len, k;
+	const u8 * descp;
+
+	if ((sb_len < 8) || (0 == (add_sen_len = sense_buffer[7])))
+		return NULL;
+	if ((sense_buffer[0] < 0x72) || (sense_buffer[0] > 0x73))
+		return NULL;
+	add_sen_len = (add_sen_len < (sb_len - 8)) ?
+			add_sen_len : (sb_len - 8);
+	descp = &sense_buffer[8];
+	for (desc_len = 0, k = 0; k < add_sen_len; k += desc_len) {
+		descp += desc_len;
+		add_len = (k < (add_sen_len - 1)) ? descp[1]: -1;
+		desc_len = add_len + 2;
+		if (descp[0] == desc_type)
+			return descp;
+		if (add_len < 0) // short descriptor ??
+			break;
+	}
+	return NULL;
+}
+EXPORT_SYMBOL(scsi_sense_desc_find);
+
+/**
+ * scsi_get_sense_info_fld - attempts to get information field from
+ *			sense data (either fixed or descriptor format)
+ *
+ * @sense_buffer:	byte array of sense data
+ * @sb_len:		number of valid bytes in sense_buffer
+ * @info_out:		pointer to 64 integer where 8 or 4 byte information
+ *			field will be placed if found.
+ *
+ * Return value:
+ *	1 if information field found, 0 if not found.
+ **/
+int scsi_get_sense_info_fld(const u8 * sense_buffer, int sb_len,
+			    u64 * info_out)
+{
+	int j;
+	const u8 * ucp;
+	u64 ull;
+
+	if (sb_len < 7)
+		return 0;
+	switch (sense_buffer[0] & 0x7f) {
+	case 0x70:
+	case 0x71:
+		if (sense_buffer[0] & 0x80) {
+			*info_out = (sense_buffer[3] << 24) +
+				    (sense_buffer[4] << 16) +
+				    (sense_buffer[5] << 8) + sense_buffer[6];
+			return 1;
+		} else
+			return 0;
+	case 0x72:
+	case 0x73:
+		ucp = scsi_sense_desc_find(sense_buffer, sb_len,
+					   0 /* info desc */);
+		if (ucp && (0xa == ucp[1])) {
+			ull = 0;
+			for (j = 0; j < 8; ++j) {
+				if (j > 0)
+					ull <<= 8;
+				ull |= ucp[4 + j];
+			}
+			*info_out = ull;
+			return 1;
+		} else
+			return 0;
+	default:
+		return 0;
+	}
+}
+EXPORT_SYMBOL(scsi_get_sense_info_fld);

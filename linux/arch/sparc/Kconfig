@@ -207,6 +207,10 @@ config RWSEM_GENERIC_SPINLOCK
 config RWSEM_XCHGADD_ALGORITHM
 	bool
 
+config GENERIC_CALIBRATE_DELAY
+	bool
+	default y
+
 config SUN_PM
 	bool
 	default y
@@ -375,6 +379,8 @@ source "fs/Kconfig"
 source "sound/Kconfig"
 
 source "drivers/usb/Kconfig"
+
+source "drivers/infiniband/Kconfig"
 
 source "drivers/char/watchdog/Kconfig"
 

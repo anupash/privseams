@@ -959,7 +959,7 @@ MODULE_PARM_DESC(regshifts, "The amount to shift the data read from the."
 #define IPMI_MEM_ADDR_SPACE 1
 #define IPMI_IO_ADDR_SPACE  2
 
-#if defined(CONFIG_ACPI_INTERPETER) || defined(CONFIG_X86) || defined(CONFIG_PCI)
+#if defined(CONFIG_ACPI_INTERPRETER) || defined(CONFIG_X86) || defined(CONFIG_PCI)
 static int is_new_interface(int intf, u8 addr_space, unsigned long base_addr)
 {
 	int i;
@@ -1299,7 +1299,7 @@ static int try_init_mem(int intf_num, struct smi_info **new_info)
 	memset(info, 0, sizeof(*info));
 
 	info->io_setup = mem_setup;
-	info->io.info = (void *) addrs[intf_num];
+	info->io.info = &addrs[intf_num];
 	info->io.addr = NULL;
 	info->io.regspacing = regspacings[intf_num];
 	if (!info->io.regspacing)
@@ -1331,7 +1331,7 @@ static int try_init_mem(int intf_num, struct smi_info **new_info)
 static int acpi_failure = 0;
 
 /* For GPE-type interrupts. */
-u32 ipmi_acpi_gpe(void *context)
+static u32 ipmi_acpi_gpe(void *context)
 {
 	struct smi_info *smi_info = context;
 	unsigned long   flags;
@@ -1564,47 +1564,54 @@ static int decode_dmi(dmi_header_t *dm, dmi_ipmi_data_t *ipmi_data)
 	u8		*data = (u8 *)dm;
 	unsigned long  	base_addr;
 	u8		reg_spacing;
+	u8              len = dm->length;
 
-	ipmi_data->type = data[0x04];
+	ipmi_data->type = data[4];
 
-	memcpy(&base_addr,&data[0x08],sizeof(unsigned long));
-	if (base_addr & 1) {
-		/* I/O */
-		base_addr &= 0xFFFE;
+	memcpy(&base_addr, data+8, sizeof(unsigned long));
+	if (len >= 0x11) {
+		if (base_addr & 1) {
+			/* I/O */
+			base_addr &= 0xFFFE;
+			ipmi_data->addr_space = IPMI_IO_ADDR_SPACE;
+		}
+		else {
+			/* Memory */
+			ipmi_data->addr_space = IPMI_MEM_ADDR_SPACE;
+		}
+		/* If bit 4 of byte 0x10 is set, then the lsb for the address
+		   is odd. */
+		ipmi_data->base_addr = base_addr | ((data[0x10] & 0x10) >> 4);
+
+		ipmi_data->irq = data[0x11];
+
+		/* The top two bits of byte 0x10 hold the register spacing. */
+		reg_spacing = (data[0x10] & 0xC0) >> 6;
+		switch(reg_spacing){
+		case 0x00: /* Byte boundaries */
+		    ipmi_data->offset = 1;
+		    break;
+		case 0x01: /* 32-bit boundaries */
+		    ipmi_data->offset = 4;
+		    break;
+		case 0x02: /* 16-byte boundaries */
+		    ipmi_data->offset = 16;
+		    break;
+		default:
+		    /* Some other interface, just ignore it. */
+		    return -EIO;
+		}
+	} else {
+		/* Old DMI spec. */
+		ipmi_data->base_addr = base_addr;
 		ipmi_data->addr_space = IPMI_IO_ADDR_SPACE;
-	}
-	else {
-		/* Memory */
-		ipmi_data->addr_space = IPMI_MEM_ADDR_SPACE;
-	}
-
-	/* The top two bits of byte 0x10 hold the register spacing. */
-	reg_spacing = (data[0x10] & 0xC0) >> 6;
-	switch(reg_spacing){
-	case 0x00: /* Byte boundaries */
 		ipmi_data->offset = 1;
-		break;
-	case 0x01: /* 32-bit boundaries */
-		ipmi_data->offset = 4;
-		break;
-	case 0x02: /* 16-bit boundaries */
-		ipmi_data->offset = 2;
-	default:
-		printk("ipmi_si: Unknown SMBIOS IPMI Base Addr"
-		       " Modifier: 0x%x\n", reg_spacing);
-		return -EIO;
 	}
-
-	/* If bit 4 of byte 0x10 is set, then the lsb for the address
-	   is odd. */
-	ipmi_data->base_addr = base_addr | ((data[0x10] & 0x10) >> 4);
-
-	ipmi_data->irq = data[0x11];
 
 	if (is_new_interface(-1, ipmi_data->addr_space,ipmi_data->base_addr))
-	    return 0;
+		return 0;
 
-	memset(ipmi_data,0,sizeof(dmi_ipmi_data_t));
+	memset(ipmi_data, 0, sizeof(dmi_ipmi_data_t));
 
 	return -1;
 }
@@ -2253,7 +2260,7 @@ static __init int init_ipmi_si(void)
 }
 module_init(init_ipmi_si);
 
-void __exit cleanup_one_si(struct smi_info *to_clean)
+static void __exit cleanup_one_si(struct smi_info *to_clean)
 {
 	int           rv;
 	unsigned long flags;

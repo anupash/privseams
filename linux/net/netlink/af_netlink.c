@@ -91,21 +91,17 @@ struct nl_pid_hash {
 struct netlink_table {
 	struct nl_pid_hash hash;
 	struct hlist_head mc_list;
+	unsigned int nl_nonroot;
 };
 
 static struct netlink_table *nl_table;
 
 static DECLARE_WAIT_QUEUE_HEAD(nl_table_wait);
-static unsigned int nl_nonroot[MAX_LINKS];
-
-#ifdef NL_EMULATE_DEV
-static struct socket *netlink_kernel[MAX_LINKS];
-#endif
 
 static int netlink_dump(struct sock *sk);
 static void netlink_destroy_callback(struct netlink_callback *cb);
 
-static rwlock_t nl_table_lock = RW_LOCK_UNLOCKED;
+static DEFINE_RWLOCK(nl_table_lock);
 static atomic_t nl_table_users = ATOMIC_INIT(0);
 
 static struct notifier_block *netlink_chain;
@@ -442,7 +438,7 @@ retry:
 
 static inline int netlink_capable(struct socket *sock, unsigned int flag) 
 { 
-	return (nl_nonroot[sock->sk->sk_protocol] & flag) ||
+	return (nl_table[sock->sk->sk_protocol].nl_nonroot & flag) ||
 	       capable(CAP_NET_ADMIN);
 } 
 
@@ -546,7 +542,7 @@ static void netlink_overrun(struct sock *sk)
 	}
 }
 
-struct sock *netlink_getsockbypid(struct sock *ssk, u32 pid)
+static struct sock *netlink_getsockbypid(struct sock *ssk, u32 pid)
 {
 	int protocol = ssk->sk_protocol;
 	struct sock *sock;
@@ -633,7 +629,6 @@ int netlink_attachskb(struct sock *sk, struct sk_buff *skb, int nonblock, long t
 		}
 		return 1;
 	}
-	skb_orphan(skb);
 	skb_set_owner_r(skb, sk);
 	return 0;
 }
@@ -665,21 +660,28 @@ void netlink_detachskb(struct sock *sk, struct sk_buff *skb)
 	sock_put(sk);
 }
 
-static inline void netlink_trim(struct sk_buff *skb, int allocation)
+static inline struct sk_buff *netlink_trim(struct sk_buff *skb, int allocation)
 {
-	int delta = skb->end - skb->tail;
+	int delta;
 
-	/* If the packet is charged to a socket, the modification
-	 * of truesize below is illegal and will corrupt socket
-	 * buffer accounting state.
-	 */
-	BUG_ON(skb->list != NULL);
+	skb_orphan(skb);
 
+	delta = skb->end - skb->tail;
 	if (delta * 2 < skb->truesize)
-		return;
-	if (pskb_expand_head(skb, 0, -delta, allocation))
-		return;
-	skb->truesize -= delta;
+		return skb;
+
+	if (skb_shared(skb)) {
+		struct sk_buff *nskb = skb_clone(skb, allocation);
+		if (!nskb)
+			return skb;
+		kfree_skb(skb);
+		skb = nskb;
+	}
+
+	if (!pskb_expand_head(skb, 0, -delta, allocation))
+		skb->truesize -= delta;
+
+	return skb;
 }
 
 int netlink_unicast(struct sock *ssk, struct sk_buff *skb, u32 pid, int nonblock)
@@ -688,7 +690,7 @@ int netlink_unicast(struct sock *ssk, struct sk_buff *skb, u32 pid, int nonblock
 	int err;
 	long timeo;
 
-	netlink_trim(skb, gfp_any());
+	skb = netlink_trim(skb, gfp_any());
 
 	timeo = sock_sndtimeo(ssk, nonblock);
 retry:
@@ -711,14 +713,12 @@ static __inline__ int netlink_broadcast_deliver(struct sock *sk, struct sk_buff 
 	struct netlink_opt *nlk = nlk_sk(sk);
 #ifdef NL_EMULATE_DEV
 	if (nlk->handler) {
-		skb_orphan(skb);
 		nlk->handler(sk->sk_protocol, skb);
 		return 0;
 	} else
 #endif
 	if (atomic_read(&sk->sk_rmem_alloc) <= sk->sk_rcvbuf &&
 	    !test_bit(0, &nlk->state)) {
-                skb_orphan(skb);
 		skb_set_owner_r(skb, sk);
 		skb_queue_tail(&sk->sk_receive_queue, skb);
 		sk->sk_data_ready(sk, skb->len);
@@ -788,6 +788,8 @@ int netlink_broadcast(struct sock *ssk, struct sk_buff *skb, u32 pid,
 	struct hlist_node *node;
 	struct sock *sk;
 
+	skb = netlink_trim(skb, allocation);
+
 	info.exclude_sk = ssk;
 	info.pid = pid;
 	info.group = group;
@@ -797,8 +799,6 @@ int netlink_broadcast(struct sock *ssk, struct sk_buff *skb, u32 pid,
 	info.allocation = allocation;
 	info.skb = skb;
 	info.skb2 = NULL;
-
-	netlink_trim(skb, allocation);
 
 	/* While we sleep in clone, do not allow to change socket list */
 
@@ -1066,7 +1066,7 @@ netlink_kernel_create(int unit, void (*input)(struct sock *sk, int len))
 void netlink_set_nonroot(int protocol, unsigned int flags)
 { 
 	if ((unsigned int)protocol < MAX_LINKS) 
-		nl_nonroot[protocol] = flags;
+		nl_table[protocol].nl_nonroot = flags;
 } 
 
 static void netlink_destroy_callback(struct netlink_callback *cb)
@@ -1201,61 +1201,6 @@ void netlink_ack(struct sk_buff *in_skb, struct nlmsghdr *nlh, int err)
 	netlink_unicast(in_skb->sk, skb, NETLINK_CB(in_skb).pid, MSG_DONTWAIT);
 }
 
-
-#ifdef NL_EMULATE_DEV
-
-static rwlock_t nl_emu_lock = RW_LOCK_UNLOCKED;
-
-/*
- *	Backward compatibility.
- */	
- 
-int netlink_attach(int unit, int (*function)(int, struct sk_buff *skb))
-{
-	struct sock *sk = netlink_kernel_create(unit, NULL);
-	if (sk == NULL)
-		return -ENOBUFS;
-	nlk_sk(sk)->handler = function;
-	write_lock_bh(&nl_emu_lock);
-	netlink_kernel[unit] = sk->sk_socket;
-	write_unlock_bh(&nl_emu_lock);
-	return 0;
-}
-
-void netlink_detach(int unit)
-{
-	struct socket *sock;
-
-	write_lock_bh(&nl_emu_lock);
-	sock = netlink_kernel[unit];
-	netlink_kernel[unit] = NULL;
-	write_unlock_bh(&nl_emu_lock);
-
-	sock_release(sock);
-}
-
-int netlink_post(int unit, struct sk_buff *skb)
-{
-	struct socket *sock;
-
-	read_lock(&nl_emu_lock);
-	sock = netlink_kernel[unit];
-	if (sock) {
-		struct sock *sk = sock->sk;
-		memset(skb->cb, 0, sizeof(skb->cb));
-		sock_hold(sk);
-		read_unlock(&nl_emu_lock);
-
-		netlink_broadcast(sk, skb, 0, ~0, GFP_ATOMIC);
-
-		sock_put(sk);
-		return 0;
-	}
-	read_unlock(&nl_emu_lock);
-	return -EUNATCH;
-}
-
-#endif
 
 #ifdef CONFIG_PROC_FS
 struct nl_seq_iter {
@@ -1521,8 +1466,3 @@ EXPORT_SYMBOL(netlink_set_nonroot);
 EXPORT_SYMBOL(netlink_unicast);
 EXPORT_SYMBOL(netlink_unregister_notifier);
 
-#if defined(CONFIG_NETLINK_DEV) || defined(CONFIG_NETLINK_DEV_MODULE)
-EXPORT_SYMBOL(netlink_attach);
-EXPORT_SYMBOL(netlink_detach);
-EXPORT_SYMBOL(netlink_post);
-#endif

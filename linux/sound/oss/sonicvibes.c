@@ -2453,7 +2453,7 @@ static int wavetable[NR_DEVICE];
 
 static unsigned int devindex;
 
-MODULE_PARM(reverb, "1-" __MODULE_STRING(NR_DEVICE) "i");
+module_param_array(reverb, bool, NULL, 0);
 MODULE_PARM_DESC(reverb, "if 1 enables the reverb circuitry. NOTE: your card must have the reverb RAM");
 #if 0
 MODULE_PARM(wavetable, "1-" __MODULE_STRING(NR_DEVICE) "i");
@@ -2470,7 +2470,7 @@ MODULE_LICENSE("GPL");
 static struct initvol {
 	int mixch;
 	int vol;
-} initvol[] __initdata = {
+} initvol[] __devinitdata = {
 	{ SOUND_MIXER_WRITE_RECLEV, 0x4040 },
 	{ SOUND_MIXER_WRITE_LINE1, 0x4040 },
 	{ SOUND_MIXER_WRITE_CD, 0x4040 },
@@ -2487,7 +2487,7 @@ static struct initvol {
 
 static int __devinit sv_probe(struct pci_dev *pcidev, const struct pci_device_id *pciid)
 {
-	static char __initdata sv_ddma_name[] = "S3 Inc. SonicVibes DDMA Controller";
+	static char __devinitdata sv_ddma_name[] = "S3 Inc. SonicVibes DDMA Controller";
        	struct sv_state *s;
 	mm_segment_t fs;
 	int i, val, ret;

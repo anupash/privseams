@@ -4,7 +4,7 @@
 /*
  * IA-64 Linux syscall numbers and inline-functions.
  *
- * Copyright (C) 1998-2004 Hewlett-Packard Co
+ * Copyright (C) 1998-2005 Hewlett-Packard Co
  *	David Mosberger-Tang <davidm@hpl.hp.com>
  */
 
@@ -281,6 +281,7 @@
 # define __ARCH_WANT_SYS_OLDUMOUNT
 # define __ARCH_WANT_SYS_SIGPENDING
 # define __ARCH_WANT_SYS_SIGPROCMASK
+# define __ARCH_WANT_COMPAT_SYS_TIME
 #endif
 
 #if !defined(__ASSEMBLY__) && !defined(ASSEMBLER)
@@ -373,17 +374,15 @@ asmlinkage unsigned long sys_mmap2(
 				int fd, long pgoff);
 struct pt_regs;
 struct sigaction;
-asmlinkage long sys_execve(char __user *filename, char __user * __user *argv,
+long sys_execve(char __user *filename, char __user * __user *argv,
 			   char __user * __user *envp, struct pt_regs *regs);
-asmlinkage long sys_pipe(long arg0, long arg1, long arg2, long arg3,
-			long arg4, long arg5, long arg6, long arg7, long stack);
+asmlinkage long sys_pipe(void);
 asmlinkage long sys_ptrace(long request, pid_t pid,
-			unsigned long addr, unsigned long data,
-			long arg4, long arg5, long arg6, long arg7, long stack);
+			   unsigned long addr, unsigned long data);
 asmlinkage long sys_rt_sigaction(int sig,
-				const struct sigaction __user *act,
-				struct sigaction __user *oact,
-				size_t sigsetsize);
+				 const struct sigaction __user *act,
+				 struct sigaction __user *oact,
+				 size_t sigsetsize);
 
 /*
  * "Conditional" syscalls

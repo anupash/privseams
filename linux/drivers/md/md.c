@@ -61,7 +61,7 @@ static void autostart_arrays (int part);
 #endif
 
 static mdk_personality_t *pers[MAX_PERSONALITY];
-static spinlock_t pers_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(pers_lock);
 
 /*
  * Current RAID-1,4,5 parallel reconstruction 'guaranteed speed limit'
@@ -129,7 +129,7 @@ static struct block_device_operations md_fops;
  * all_mddevs_lock protects this list.
  */
 static LIST_HEAD(all_mddevs);
-static spinlock_t all_mddevs_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(all_mddevs_lock);
 
 
 /*
@@ -332,29 +332,24 @@ static int bi_complete(struct bio *bio, unsigned int bytes_done, int error)
 static int sync_page_io(struct block_device *bdev, sector_t sector, int size,
 		   struct page *page, int rw)
 {
-	struct bio bio;
-	struct bio_vec vec;
+	struct bio *bio = bio_alloc(GFP_KERNEL, 1);
 	struct completion event;
+	int ret;
 
 	rw |= (1 << BIO_RW_SYNC);
 
-	bio_init(&bio);
-	bio.bi_io_vec = &vec;
-	vec.bv_page = page;
-	vec.bv_len = size;
-	vec.bv_offset = 0;
-	bio.bi_vcnt = 1;
-	bio.bi_idx = 0;
-	bio.bi_size = size;
-	bio.bi_bdev = bdev;
-	bio.bi_sector = sector;
+	bio->bi_bdev = bdev;
+	bio->bi_sector = sector;
+	bio_add_page(bio, page, size, 0);
 	init_completion(&event);
-	bio.bi_private = &event;
-	bio.bi_end_io = bi_complete;
-	submit_bio(rw, &bio);
+	bio->bi_private = &event;
+	bio->bi_end_io = bi_complete;
+	submit_bio(rw, bio);
 	wait_for_completion(&event);
 
-	return test_bit(BIO_UPTODATE, &bio.bi_flags);
+	ret = test_bit(BIO_UPTODATE, &bio->bi_flags);
+	bio_put(bio);
+	return ret;
 }
 
 static int read_disk_sb(mdk_rdev_t * rdev)
@@ -940,8 +935,8 @@ static void super_1_sync(mddev_t *mddev, mdk_rdev_t *rdev)
 
 	max_dev = 0;
 	ITERATE_RDEV(mddev,rdev2,tmp)
-		if (rdev2->desc_nr > max_dev)
-			max_dev = rdev2->desc_nr;
+		if (rdev2->desc_nr+1 > max_dev)
+			max_dev = rdev2->desc_nr+1;
 	
 	sb->max_dev = cpu_to_le32(max_dev);
 	for (i=0; i<max_dev;i++)
@@ -958,6 +953,7 @@ static void super_1_sync(mddev_t *mddev, mdk_rdev_t *rdev)
 	}
 
 	sb->recovery_offset = cpu_to_le64(0); /* not supported yet */
+	sb->sb_csum = calc_sb_1_csum(sb);
 }
 
 
@@ -1477,10 +1473,13 @@ static struct kobject *md_probe(dev_t dev, int *part, void *data)
 	}
 	disk->major = MAJOR(dev);
 	disk->first_minor = unit << shift;
-	if (partitioned)
+	if (partitioned) {
 		sprintf(disk->disk_name, "md_d%d", unit);
-	else
+		sprintf(disk->devfs_name, "md/d%d", unit);
+	} else {
 		sprintf(disk->disk_name, "md%d", unit);
+		sprintf(disk->devfs_name, "md/%d", unit);
+	}
 	disk->fops = &md_fops;
 	disk->private_data = mddev;
 	disk->queue = mddev->queue;
@@ -2445,6 +2444,9 @@ static int set_disk_faulty(mddev_t *mddev, dev_t dev)
 {
 	mdk_rdev_t *rdev;
 
+	if (mddev->pers == NULL)
+		return -ENODEV;
+
 	rdev = find_rdev(mddev, dev);
 	if (!rdev)
 		return -ENODEV;
@@ -3367,10 +3369,12 @@ static void md_do_sync(mddev_t *mddev)
 	init_waitqueue_head(&mddev->recovery_wait);
 	last_check = 0;
 
-	if (j)
+	if (j>2) {
 		printk(KERN_INFO 
 			"md: resuming recovery of %s from checkpoint.\n",
 			mdname(mddev));
+		mddev->curr_resync = j;
+	}
 
 	while (j < max_sectors) {
 		int sectors;
@@ -3452,7 +3456,7 @@ static void md_do_sync(mddev_t *mddev)
 
 	if (!test_bit(MD_RECOVERY_ERR, &mddev->recovery) &&
 	    mddev->curr_resync > 2 &&
-	    mddev->curr_resync > mddev->recovery_cp) {
+	    mddev->curr_resync >= mddev->recovery_cp) {
 		if (test_bit(MD_RECOVERY_INTR, &mddev->recovery)) {
 			printk(KERN_INFO 
 				"md: checkpointing recovery of %s.\n",
@@ -3660,7 +3664,7 @@ int __init md_init(void)
 	for (minor=0; minor < MAX_MD_DEVS; ++minor)
 		devfs_mk_bdev(MKDEV(mdp_major, minor<<MdpMinorShift),
 			      S_IFBLK|S_IRUSR|S_IWUSR,
-			      "md/d%d", minor);
+			      "md/mdp%d", minor);
 
 
 	register_reboot_notifier(&md_notifier);

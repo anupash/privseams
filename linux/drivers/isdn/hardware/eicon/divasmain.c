@@ -1,4 +1,4 @@
-/* $Id: divasmain.c,v 1.55.4.1 2004/05/21 12:15:00 armin Exp $
+/* $Id: divasmain.c,v 1.55.4.6 2005/02/09 19:28:20 armin Exp $
  *
  * Low level driver for Eicon DIVA Server ISDN cards.
  *
@@ -41,7 +41,7 @@
 #include "diva_dma.h"
 #include "diva_pci.h"
 
-static char *main_revision = "$Revision: 1.55.4.1 $";
+static char *main_revision = "$Revision: 1.55.4.6 $";
 
 static int major;
 
@@ -51,7 +51,7 @@ MODULE_DESCRIPTION("Kernel driver for Eicon DIVA Server cards");
 MODULE_AUTHOR("Cytronics & Melware, Eicon Networks");
 MODULE_LICENSE("GPL");
 
-MODULE_PARM(dbgmask, "i");
+module_param(dbgmask, int, 0);
 MODULE_PARM_DESC(dbgmask, "initial debug mask");
 
 static char *DRIVERNAME =
@@ -823,7 +823,7 @@ static int DIVA_INIT_FUNCTION divas_init(void)
 		goto out;
 	}
 
-	if ((ret = pci_module_init(&diva_pci_driver))) {
+	if ((ret = pci_register_driver(&diva_pci_driver))) {
 #ifdef MODULE
 		remove_divas_proc();
 		divas_unregister_chrdev();

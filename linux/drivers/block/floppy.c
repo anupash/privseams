@@ -155,7 +155,6 @@ static int print_unex = 1;
 #include <linux/kernel.h>
 #include <linux/timer.h>
 #include <linux/workqueue.h>
-#include <linux/version.h>
 #define FDPATCHES
 #include <linux/fdreg.h>
 
@@ -217,7 +216,7 @@ static int use_virtual_dma;
  * record each buffers capabilities
  */
 
-static spinlock_t floppy_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(floppy_lock);
 static struct completion device_release;
 
 static unsigned short virtual_dma_port = 0x3f0;
@@ -1073,7 +1072,7 @@ static int fd_wait_for_completion(unsigned long delay, timeout_fn function)
 	return 0;
 }
 
-static spinlock_t floppy_hlt_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(floppy_hlt_lock);
 static int hlt_disabled;
 static void floppy_disable_hlt(void)
 {
@@ -3319,11 +3318,6 @@ static int invalidate_drive(struct block_device *bdev)
 	return 0;
 }
 
-static inline void clear_write_error(int drive)
-{
-	CLEARSTRUCT(UDRWE);
-}
-
 static inline int set_geometry(unsigned int cmd, struct floppy_struct *g,
 			       int drive, int type, struct block_device *bdev)
 {
@@ -4421,7 +4415,7 @@ out_put_disk:
 	return err;
 }
 
-static spinlock_t floppy_usage_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(floppy_usage_lock);
 
 static int floppy_grab_irq_and_dma(void)
 {
@@ -4596,8 +4590,6 @@ static void __init parse_floppy_cfg_string(char *cfg)
 
 int init_module(void)
 {
-	printk(KERN_INFO "inserting floppy driver for " UTS_RELEASE "\n");
-
 	if (floppy)
 		parse_floppy_cfg_string(floppy);
 	return floppy_init();

@@ -304,7 +304,7 @@ struct slow_subchannel {
 };
 
 static LIST_HEAD(slow_subchannels_head);
-static spinlock_t slow_subchannel_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(slow_subchannel_lock);
 
 static void
 css_trigger_slow_path(void)
@@ -527,7 +527,7 @@ css_enqueue_subchannel_slow(unsigned long schid)
 	new_slow_sch = kmalloc(sizeof(struct slow_subchannel), GFP_ATOMIC);
 	if (!new_slow_sch)
 		return -ENOMEM;
-	memset(new_slow_sch, sizeof(struct slow_subchannel), 0);
+	memset(new_slow_sch, 0, sizeof(struct slow_subchannel));
 	new_slow_sch->schid = schid;
 	spin_lock_irqsave(&slow_subchannel_lock, flags);
 	list_add_tail(&new_slow_sch->slow_list, &slow_subchannels_head);

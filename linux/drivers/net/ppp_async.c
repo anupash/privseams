@@ -84,7 +84,7 @@ struct asyncppp {
 #define SC_RCV_BITS	(SC_RCV_B7_1|SC_RCV_B7_0|SC_RCV_ODDP|SC_RCV_EVNP)
 
 static int flag_time = HZ;
-MODULE_PARM(flag_time, "i");
+module_param(flag_time, int, 0);
 MODULE_PARM_DESC(flag_time, "ppp_async: interval between flagged packets (in clock ticks)");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS_LDISC(N_PPP);
@@ -126,7 +126,7 @@ static struct ppp_channel_ops async_ops = {
  * FIXME: this is no longer true. The _close path for the ldisc is 
  * now guaranteed to be sane. 
  */
-static rwlock_t disc_data_lock = RW_LOCK_UNLOCKED;
+static DEFINE_RWLOCK(disc_data_lock);
 
 static struct asyncppp *ap_get(struct tty_struct *tty)
 {

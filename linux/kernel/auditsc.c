@@ -250,8 +250,6 @@ int audit_receive_filter(int type, int pid, int uid, int seq, void *data)
 		audit_send_reply(pid, seq, AUDIT_LIST, 1, 1, NULL, 0);
 		break;
 	case AUDIT_ADD:
-		if (!capable(CAP_SYS_ADMIN))
-			return -EPERM;
 		if (!(entry = kmalloc(sizeof(*entry), GFP_KERNEL)))
 			return -ENOMEM;
 		if (audit_copy_rule(&entry->rule, data)) {
@@ -360,7 +358,7 @@ static int audit_filter_rules(struct task_struct *tsk,
 		case AUDIT_INODE:
 			if (ctx) {
 				for (j = 0; j < ctx->name_count; j++) {
-					if (MINOR(ctx->names[j].ino)==value) {
+					if (ctx->names[j].ino == value) {
 						++result;
 						break;
 					}
@@ -549,8 +547,8 @@ int audit_alloc(struct task_struct *tsk)
 
 				/* Preserve login uid */
 	context->loginuid = -1;
-	if (tsk->audit_context)
-		context->loginuid = tsk->audit_context->loginuid;
+	if (current->audit_context)
+		context->loginuid = current->audit_context->loginuid;
 
 	tsk->audit_context  = context;
 	set_tsk_thread_flag(tsk, TIF_SYSCALL_AUDIT);
@@ -591,7 +589,7 @@ static void audit_log_exit(struct audit_context *context)
 	if (context->personality != PER_LINUX)
 		audit_log_format(ab, " per=%lx", context->personality);
 	if (context->return_valid)
-		audit_log_format(ab, " exit=%u", context->return_code);
+		audit_log_format(ab, " exit=%d", context->return_code);
 	audit_log_format(ab,
 		  " a0=%lx a1=%lx a2=%lx a3=%lx items=%d"
 		  " pid=%d loginuid=%d uid=%d gid=%d"
@@ -905,12 +903,27 @@ void audit_get_stamp(struct audit_context *ctx,
 	}
 }
 
+extern int audit_set_type(struct audit_buffer *ab, int type);
+
 int audit_set_loginuid(struct audit_context *ctx, uid_t loginuid)
 {
 	if (ctx) {
-		if (loginuid < 0)
-			return -EINVAL;
+		struct audit_buffer *ab;
+
+		ab = audit_log_start(NULL);
+		if (ab) {
+			audit_log_format(ab, "login pid=%d uid=%u "
+				"old loginuid=%u new loginuid=%u",
+				ctx->pid, ctx->uid, ctx->loginuid, loginuid);
+			audit_set_type(ab, AUDIT_LOGIN);
+			audit_log_end(ab);
+		}
 		ctx->loginuid = loginuid;
 	}
 	return 0;
+}
+
+uid_t audit_get_loginuid(struct audit_context *ctx)
+{
+	return ctx ? ctx->loginuid : -1;
 }

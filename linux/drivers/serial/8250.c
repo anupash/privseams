@@ -31,6 +31,7 @@
 #include <linux/init.h>
 #include <linux/console.h>
 #include <linux/sysrq.h>
+#include <linux/mca.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/tty.h>
@@ -449,9 +450,11 @@ static void disable_rsa(struct uart_8250_port *up)
  */
 static int size_fifo(struct uart_8250_port *up)
 {
-	unsigned char old_fcr, old_mcr, old_dll, old_dlm;
+	unsigned char old_fcr, old_mcr, old_dll, old_dlm, old_lcr;
 	int count;
 
+	old_lcr = serial_inp(up, UART_LCR);
+	serial_outp(up, UART_LCR, 0);
 	old_fcr = serial_inp(up, UART_FCR);
 	old_mcr = serial_inp(up, UART_MCR);
 	serial_outp(up, UART_FCR, UART_FCR_ENABLE_FIFO |
@@ -474,8 +477,37 @@ static int size_fifo(struct uart_8250_port *up)
 	serial_outp(up, UART_LCR, UART_LCR_DLAB);
 	serial_outp(up, UART_DLL, old_dll);
 	serial_outp(up, UART_DLM, old_dlm);
+	serial_outp(up, UART_LCR, old_lcr);
 
 	return count;
+}
+
+/*
+ * Read UART ID using the divisor method - set DLL and DLM to zero
+ * and the revision will be in DLL and device type in DLM.  We
+ * preserve the device state across this.
+ */
+static unsigned int autoconfig_read_divisor_id(struct uart_8250_port *p)
+{
+	unsigned char old_dll, old_dlm, old_lcr;
+	unsigned int id;
+
+	old_lcr = serial_inp(p, UART_LCR);
+	serial_outp(p, UART_LCR, UART_LCR_DLAB);
+
+	old_dll = serial_inp(p, UART_DLL);
+	old_dlm = serial_inp(p, UART_DLM);
+
+	serial_outp(p, UART_DLL, 0);
+	serial_outp(p, UART_DLM, 0);
+
+	id = serial_inp(p, UART_DLL) | serial_inp(p, UART_DLM) << 8;
+
+	serial_outp(p, UART_DLL, old_dll);
+	serial_outp(p, UART_DLM, old_dlm);
+	serial_outp(p, UART_LCR, old_lcr);
+
+	return id;
 }
 
 /*
@@ -490,7 +522,7 @@ static int size_fifo(struct uart_8250_port *up)
  */
 static void autoconfig_has_efr(struct uart_8250_port *up)
 {
-	unsigned char id1, id2, id3, rev, saved_dll, saved_dlm;
+	unsigned int id1, id2, id3, rev;
 
 	/*
 	 * Everything with an EFR has SLEEP
@@ -540,21 +572,13 @@ static void autoconfig_has_efr(struct uart_8250_port *up)
 	 *  0x12 - XR16C2850.
 	 *  0x14 - XR16C854.
 	 */
-	serial_outp(up, UART_LCR, UART_LCR_DLAB);
-	saved_dll = serial_inp(up, UART_DLL);
-	saved_dlm = serial_inp(up, UART_DLM);
-	serial_outp(up, UART_DLL, 0);
-	serial_outp(up, UART_DLM, 0);
-	id2 = serial_inp(up, UART_DLL);
-	id1 = serial_inp(up, UART_DLM);
-	serial_outp(up, UART_DLL, saved_dll);
-	serial_outp(up, UART_DLM, saved_dlm);
+	id1 = autoconfig_read_divisor_id(up);
+	DEBUG_AUTOCONF("850id=%04x ", id1);
 
-	DEBUG_AUTOCONF("850id=%02x:%02x ", id1, id2);
-
-	if (id1 == 0x10 || id1 == 0x12 || id1 == 0x14) {
-		if (id1 == 0x10)
-			up->rev = id2;
+	id2 = id1 >> 8;
+	if (id2 == 0x10 || id2 == 0x12 || id2 == 0x14) {
+		if (id2 == 0x10)
+			up->rev = id1 & 255;
 		up->port.type = PORT_16850;
 		return;
 	}
@@ -596,6 +620,19 @@ static void autoconfig_8250(struct uart_8250_port *up)
 		up->port.type = PORT_16450;
 }
 
+static int broken_efr(struct uart_8250_port *up)
+{
+	/*
+	 * Exar ST16C2550 "A2" devices incorrectly detect as
+	 * having an EFR, and report an ID of 0x0201.  See
+	 * http://www.exar.com/info.php?pdf=dan180_oct2004.pdf
+	 */
+	if (autoconfig_read_divisor_id(up) == 0x0201 && size_fifo(up) == 16)
+		return 1;
+
+	return 0;
+}
+
 /*
  * We know that the chip has FIFOs.  Does it have an EFR?  The
  * EFR is located in the same register position as the IIR and
@@ -632,7 +669,7 @@ static void autoconfig_16550a(struct uart_8250_port *up)
 	 * (other ST16C650V2 UARTs, TI16C752A, etc)
 	 */
 	serial_outp(up, UART_LCR, 0xBF);
-	if (serial_in(up, UART_EFR) == 0) {
+	if (serial_in(up, UART_EFR) == 0 && !broken_efr(up)) {
 		DEBUG_AUTOCONF("EFRv2 ");
 		autoconfig_has_efr(up);
 		return;
@@ -986,8 +1023,11 @@ receive_chars(struct uart_8250_port *up, int *status, struct pt_regs *regs)
 		/* The following is not allowed by the tty layer and
 		   unsafe. It should be fixed ASAP */
 		if (unlikely(tty->flip.count >= TTY_FLIPBUF_SIZE)) {
-			if(tty->low_latency)
+			if (tty->low_latency) {
+				spin_unlock(&up->port.lock);
 				tty_flip_buffer_push(tty);
+				spin_lock(&up->port.lock);
+			}
 			/* If this failed then we will throw away the
 			   bytes but must do so to clear interrupts */
 		}
@@ -1058,7 +1098,9 @@ receive_chars(struct uart_8250_port *up, int *status, struct pt_regs *regs)
 	ignore_char:
 		lsr = serial_inp(up, UART_LSR);
 	} while ((lsr & UART_LSR_DR) && (max_count-- > 0));
+	spin_unlock(&up->port.lock);
 	tty_flip_buffer_push(tty);
+	spin_lock(&up->port.lock);
 	*status = lsr;
 }
 
@@ -1861,13 +1903,11 @@ static void serial8250_config_port(struct uart_port *port, int flags)
 	int probeflags = PROBE_ANY;
 	int ret;
 
-#ifdef CONFIG_MCA
 	/*
 	 * Don't probe for MCA ports on non-MCA machines.
 	 */
 	if (up->port.flags & UPF_BOOT_ONLYMCA && !MCA_bus)
 		return;
-#endif
 
 	/*
 	 * Find the region that we can probe for.  This in turn

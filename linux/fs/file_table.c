@@ -25,9 +25,9 @@ struct files_stat_struct files_stat = {
 EXPORT_SYMBOL(files_stat); /* Needed by unix.o */
 
 /* public. Not pretty! */
-spinlock_t __cacheline_aligned_in_smp files_lock = SPIN_LOCK_UNLOCKED;
+ __cacheline_aligned_in_smp DEFINE_SPINLOCK(files_lock);
 
-static spinlock_t filp_count_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(filp_count_lock);
 
 /* slab constructors and destructors are called from arbitrary
  * context and must be fully threaded - use a local spinlock
@@ -82,9 +82,10 @@ static int old_max;
 			atomic_set(&f->f_count, 1);
 			f->f_uid = current->fsuid;
 			f->f_gid = current->fsgid;
-			f->f_owner.lock = RW_LOCK_UNLOCKED;
+			rwlock_init(&f->f_owner.lock);
 			/* f->f_version: 0 */
 			INIT_LIST_HEAD(&f->f_list);
+			f->f_maxcount = INT_MAX;
 			return f;
 		}
 	}

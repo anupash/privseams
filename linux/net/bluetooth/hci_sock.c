@@ -179,6 +179,9 @@ static inline int hci_sock_bound_ioctl(struct sock *sk, unsigned int cmd, unsign
 		if (!capable(CAP_NET_ADMIN))
 			return -EACCES;
 
+		if (test_bit(HCI_QUIRK_RAW_DEVICE, &hdev->quirks))
+			return -EPERM;
+
 		if (arg)
 			set_bit(HCI_RAW, &hdev->flags);
 		else
@@ -447,7 +450,7 @@ drop:
 	goto done;
 }
 
-int hci_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, int len)
+static int hci_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, int len)
 {
 	struct hci_ufilter uf = { .opcode = 0 };
 	struct sock *sk = sock->sk;
@@ -514,7 +517,7 @@ int hci_sock_setsockopt(struct socket *sock, int level, int optname, char __user
 	return err;
 }
 
-int hci_sock_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen)
+static int hci_sock_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen)
 {
 	struct hci_ufilter uf;
 	struct sock *sk = sock->sk;
@@ -567,7 +570,7 @@ int hci_sock_getsockopt(struct socket *sock, int level, int optname, char __user
 	return 0;
 }
 
-struct proto_ops hci_sock_ops = {
+static struct proto_ops hci_sock_ops = {
 	.family		= PF_BLUETOOTH,
 	.owner		= THIS_MODULE,
 	.release	= hci_sock_release,
@@ -647,13 +650,13 @@ static int hci_sock_dev_event(struct notifier_block *this, unsigned long event, 
 	return NOTIFY_DONE;
 }
 
-struct net_proto_family hci_sock_family_ops = {
+static struct net_proto_family hci_sock_family_ops = {
 	.family	= PF_BLUETOOTH,
 	.owner	= THIS_MODULE,
 	.create	= hci_sock_create,
 };
 
-struct notifier_block hci_sock_nblock = {
+static struct notifier_block hci_sock_nblock = {
 	.notifier_call = hci_sock_dev_event
 };
 

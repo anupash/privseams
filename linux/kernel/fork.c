@@ -39,6 +39,7 @@
 #include <linux/audit.h>
 #include <linux/profile.h>
 #include <linux/rmap.h>
+#include <linux/acct.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -47,17 +48,17 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
 
-/* The idle threads do not count..
- * Protected by write_lock_irq(&tasklist_lock)
+/*
+ * Protected counters by write_lock_irq(&tasklist_lock)
  */
-int nr_threads;
-
-int max_threads;
 unsigned long total_forks;	/* Handle normal Linux uptimes. */
+int nr_threads; 		/* The idle threads do not count.. */
+
+int max_threads;		/* tunable limit on nr_threads */
 
 DEFINE_PER_CPU(unsigned long, process_counts) = 0;
 
-rwlock_t tasklist_lock __cacheline_aligned = RW_LOCK_UNLOCKED;  /* outer */
+ __cacheline_aligned DEFINE_RWLOCK(tasklist_lock);  /* outer */
 
 EXPORT_SYMBOL(tasklist_lock);
 
@@ -218,6 +219,7 @@ static inline int dup_mmap(struct mm_struct * mm, struct mm_struct * oldmm)
       
 			/* insert tmp into the share list, just after mpnt */
 			spin_lock(&file->f_mapping->i_mmap_lock);
+			tmp->vm_truncate_count = mpnt->vm_truncate_count;
 			flush_dcache_mmap_lock(file->f_mapping);
 			vma_prio_tree_add(tmp, mpnt);
 			flush_dcache_mmap_unlock(file->f_mapping);
@@ -279,7 +281,7 @@ static inline void mm_free_pgd(struct mm_struct * mm)
 #define mm_free_pgd(mm)
 #endif /* CONFIG_MMU */
 
-spinlock_t mmlist_lock __cacheline_aligned_in_smp = SPIN_LOCK_UNLOCKED;
+ __cacheline_aligned_in_smp DEFINE_SPINLOCK(mmlist_lock);
 
 #define allocate_mm()	(kmem_cache_alloc(mm_cachep, SLAB_KERNEL))
 #define free_mm(mm)	(kmem_cache_free(mm_cachep, (mm)))
@@ -469,6 +471,9 @@ static int copy_mm(unsigned long clone_flags, struct task_struct * tsk)
 	if (retval)
 		goto free_pt;
 
+	mm->hiwater_rss = mm->rss;
+	mm->hiwater_vm = mm->total_vm;
+
 good_mm:
 	tsk->mm = mm;
 	tsk->active_mm = mm;
@@ -550,7 +555,7 @@ static int copy_files(unsigned long clone_flags, struct task_struct * tsk)
 {
 	struct files_struct *oldf, *newf;
 	struct file **old_fds, **new_fds;
-	int open_files, nfds, size, i, error = 0;
+	int open_files, size, i, error = 0, expand;
 
 	/*
 	 * A background process may not have any files ...
@@ -585,36 +590,32 @@ static int copy_files(unsigned long clone_flags, struct task_struct * tsk)
 	newf->open_fds	    = &newf->open_fds_init;
 	newf->fd	    = &newf->fd_array[0];
 
-	/* We don't yet have the oldf readlock, but even if the old
-           fdset gets grown now, we'll only copy up to "size" fds */
-	size = oldf->max_fdset;
-	if (size > __FD_SETSIZE) {
-		newf->max_fdset = 0;
-		spin_lock(&newf->file_lock);
-		error = expand_fdset(newf, size-1);
-		spin_unlock(&newf->file_lock);
-		if (error)
-			goto out_release;
-	}
 	spin_lock(&oldf->file_lock);
 
-	open_files = count_open_files(oldf, size);
+	open_files = count_open_files(oldf, oldf->max_fdset);
+	expand = 0;
 
 	/*
-	 * Check whether we need to allocate a larger fd array.
-	 * Note: we're not a clone task, so the open count won't
-	 * change.
+	 * Check whether we need to allocate a larger fd array or fd set.
+	 * Note: we're not a clone task, so the open count won't  change.
 	 */
-	nfds = NR_OPEN_DEFAULT;
-	if (open_files > nfds) {
-		spin_unlock(&oldf->file_lock);
+	if (open_files > newf->max_fdset) {
+		newf->max_fdset = 0;
+		expand = 1;
+	}
+	if (open_files > newf->max_fds) {
 		newf->max_fds = 0;
+		expand = 1;
+	}
+
+	/* if the old fdset gets grown now, we'll only copy up to "size" fds */
+	if (expand) {
+		spin_unlock(&oldf->file_lock);
 		spin_lock(&newf->file_lock);
-		error = expand_fd_array(newf, open_files-1);
+		error = expand_files(newf, open_files-1);
 		spin_unlock(&newf->file_lock);
-		if (error) 
+		if (error < 0)
 			goto out_release;
-		nfds = newf->max_fds;
 		spin_lock(&oldf->file_lock);
 	}
 
@@ -663,6 +664,7 @@ out:
 out_release:
 	free_fdset (newf->close_on_exec, newf->max_fdset);
 	free_fdset (newf->open_fds, newf->max_fdset);
+	free_fd_array(newf->fd, newf->max_fds);
 	kmem_cache_free(files_cachep, newf);
 	goto out;
 }
@@ -729,11 +731,11 @@ static inline int copy_signal(unsigned long clone_flags, struct task_struct * ts
 		return -ENOMEM;
 	atomic_set(&sig->count, 1);
 	atomic_set(&sig->live, 1);
-	sig->group_exit = 0;
+	init_waitqueue_head(&sig->wait_chldexit);
+	sig->flags = 0;
 	sig->group_exit_code = 0;
 	sig->group_exit_task = NULL;
 	sig->group_stop_count = 0;
-	sig->stop_state = 0;
 	sig->curr_target = NULL;
 	init_sigpending(&sig->shared_pending);
 	INIT_LIST_HEAD(&sig->posix_timers);
@@ -744,7 +746,7 @@ static inline int copy_signal(unsigned long clone_flags, struct task_struct * ts
 	sig->leader = 0;	/* session leadership doesn't inherit */
 	sig->tty_old_pgrp = 0;
 
-	sig->utime = sig->stime = sig->cutime = sig->cstime = 0;
+	sig->utime = sig->stime = sig->cutime = sig->cstime = cputime_zero;
 	sig->nvcsw = sig->nivcsw = sig->cnvcsw = sig->cnivcsw = 0;
 	sig->min_flt = sig->maj_flt = sig->cmin_flt = sig->cmaj_flt = 0;
 
@@ -857,7 +859,6 @@ static task_t *copy_process(unsigned long clone_flags,
 
 	INIT_LIST_HEAD(&p->children);
 	INIT_LIST_HEAD(&p->sibling);
-	init_waitqueue_head(&p->wait_chldexit);
 	p->vfork_done = NULL;
 	spin_lock_init(&p->alloc_lock);
 	spin_lock_init(&p->proc_lock);
@@ -865,12 +866,23 @@ static task_t *copy_process(unsigned long clone_flags,
 	clear_tsk_thread_flag(p, TIF_SIGPENDING);
 	init_sigpending(&p->pending);
 
-	p->it_real_value = p->it_virt_value = p->it_prof_value = 0;
-	p->it_real_incr = p->it_virt_incr = p->it_prof_incr = 0;
+	p->it_real_value = 0;
+	p->it_real_incr = 0;
+	p->it_virt_value = cputime_zero;
+	p->it_virt_incr = cputime_zero;
+	p->it_prof_value = cputime_zero;
+	p->it_prof_incr = cputime_zero;
 	init_timer(&p->real_timer);
 	p->real_timer.data = (unsigned long) p;
 
-	p->utime = p->stime = 0;
+	p->utime = cputime_zero;
+	p->stime = cputime_zero;
+	p->rchar = 0;		/* I/O counter: bytes read */
+	p->wchar = 0;		/* I/O counter: bytes written */
+	p->syscr = 0;		/* I/O counter: read syscalls */
+	p->syscw = 0;		/* I/O counter: write syscalls */
+	acct_clear_integrals(p);
+
 	p->lock_depth = -1;		/* -1 = no lock */
 	do_posix_clock_monotonic_gettime(&p->start_time);
 	p->security = NULL;
@@ -985,7 +997,7 @@ static task_t *copy_process(unsigned long clone_flags,
 		 * do not create this new thread - the whole thread
 		 * group is supposed to exit anyway.
 		 */
-		if (current->signal->group_exit) {
+		if (current->signal->flags & SIGNAL_GROUP_EXIT) {
 			spin_unlock(&current->sighand->siglock);
 			write_unlock_irq(&tasklist_lock);
 			retval = -EAGAIN;
@@ -1020,6 +1032,7 @@ static task_t *copy_process(unsigned long clone_flags,
 	}
 
 	nr_threads++;
+	total_forks++;
 	write_unlock_irq(&tasklist_lock);
 	retval = 0;
 
@@ -1152,7 +1165,6 @@ long do_fork(unsigned long clone_flags,
 			wake_up_new_task(p, clone_flags);
 		else
 			p->state = TASK_STOPPED;
-		++total_forks;
 
 		if (unlikely (trace)) {
 			current->ptrace_message = pid;

@@ -236,8 +236,7 @@
 #include <linux/spinlock.h>
 #include <linux/string.h>
 #include <linux/suspend.h>
-#include <linux/uts.h>
-#include <linux/version.h>
+#include <linux/utsname.h>
 #include <linux/wait.h>
 
 #include <linux/usb_ch9.h>
@@ -3132,7 +3131,7 @@ reset:
 	if ((rc = enable_endpoint(fsg, fsg->bulk_out, d)) != 0)
 		goto reset;
 	fsg->bulk_out_enabled = 1;
-	fsg->bulk_out_maxpacket = d->wMaxPacketSize;
+	fsg->bulk_out_maxpacket = le16_to_cpu(d->wMaxPacketSize);
 
 	if (transport_is_cbi()) {
 		d = ep_desc(fsg->gadget, &fs_intr_in_desc, &hs_intr_in_desc);
@@ -3954,8 +3953,8 @@ static int __init fsg_bind(struct usb_gadget *gadget)
 	/* This should reflect the actual gadget power source */
 	usb_gadget_set_selfpowered(gadget);
 
-	snprintf(manufacturer, sizeof manufacturer,
-			UTS_SYSNAME " " UTS_RELEASE " with %s",
+	snprintf(manufacturer, sizeof manufacturer, "%s %s with %s",
+			system_utsname.sysname, system_utsname.release,
 			gadget->name);
 
 	/* On a real device, serial[] would be loaded from permanent

@@ -8,7 +8,7 @@
  *
  * Derived from the taskqueue/keventd code by:
  *
- *   David Woodhouse <dwmw2@redhat.com>
+ *   David Woodhouse <dwmw2@infradead.org>
  *   Andrew Morton <andrewm@uow.edu.au>
  *   Kai Petzke <wpp@marie.physik.tu-berlin.de>
  *   Theodore Ts'o <tytso@mit.edu>
@@ -64,7 +64,7 @@ struct workqueue_struct {
 
 /* All the per-cpu workqueues on the system, for hotplug cpu to add/remove
    threads to each one as cpus come/go. */
-static spinlock_t workqueue_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(workqueue_lock);
 static LIST_HEAD(workqueues);
 
 /* If it's single threaded, it isn't in the list of workqueues. */
@@ -188,7 +188,7 @@ static int worker_thread(void *__cwq)
 
 	current->flags |= PF_NOFREEZE;
 
-	set_user_nice(current, -10);
+	set_user_nice(current, -5);
 
 	/* Block and flush all signals */
 	sigfillset(&blocked);
@@ -485,8 +485,10 @@ static int __devinit workqueue_cpu_callback(struct notifier_block *nfb,
 
 	case CPU_ONLINE:
 		/* Kick off worker threads. */
-		list_for_each_entry(wq, &workqueues, list)
+		list_for_each_entry(wq, &workqueues, list) {
+			kthread_bind(wq->cpu_wq[hotcpu].thread, hotcpu);
 			wake_up_process(wq->cpu_wq[hotcpu].thread);
+		}
 		break;
 
 	case CPU_UP_CANCELED:

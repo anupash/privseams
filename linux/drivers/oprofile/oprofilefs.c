@@ -21,7 +21,7 @@
 
 #define OPROFILEFS_MAGIC 0x6f70726f
 
-spinlock_t oprofilefs_lock = SPIN_LOCK_UNLOCKED;
+DEFINE_SPINLOCK(oprofilefs_lock);
 
 static struct inode * oprofilefs_get_inode(struct super_block * sb, int mode)
 {
@@ -250,6 +250,7 @@ static int oprofilefs_fill_super(struct super_block * sb, void * data, int silen
 	sb->s_blocksize_bits = PAGE_CACHE_SHIFT;
 	sb->s_magic = OPROFILEFS_MAGIC;
 	sb->s_op = &s_ops;
+	sb->s_time_gran = 1;
 
 	root_inode = oprofilefs_get_inode(sb, S_IFDIR | 0755);
 	if (!root_inode)

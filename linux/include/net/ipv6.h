@@ -149,6 +149,8 @@ extern atomic_t			inet6_sock_nr;
 
 int snmp6_register_dev(struct inet6_dev *idev);
 int snmp6_unregister_dev(struct inet6_dev *idev);
+int snmp6_alloc_dev(struct inet6_dev *idev);
+int snmp6_free_dev(struct inet6_dev *idev);
 int snmp6_mib_init(void *ptr[2], size_t mibsize, size_t mibalign);
 void snmp6_mib_free(void *ptr[2]);
 
@@ -228,8 +230,6 @@ static inline void fl6_sock_release(struct ip6_flowlabel *fl)
 extern int 			ip6_ra_control(struct sock *sk, int sel,
 					       void (*destructor)(struct sock *));
 
-
-extern int			ip6_call_ra_chain(struct sk_buff *skb, int sel);
 
 extern int			ipv6_parse_hopopts(struct sk_buff *skb, int);
 

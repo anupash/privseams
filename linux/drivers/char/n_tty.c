@@ -152,7 +152,7 @@ static void reset_buffer_flags(struct tty_struct *tty)
  *	lock_kernel() still.
  */
  
-void n_tty_flush_buffer(struct tty_struct * tty)
+static void n_tty_flush_buffer(struct tty_struct * tty)
 {
 	/* clear everything and unthrottle the driver */
 	reset_buffer_flags(tty);
@@ -174,7 +174,7 @@ void n_tty_flush_buffer(struct tty_struct * tty)
  *	at this instant in time. 
  */
  
-ssize_t n_tty_chars_in_buffer(struct tty_struct *tty)
+static ssize_t n_tty_chars_in_buffer(struct tty_struct *tty)
 {
 	unsigned long flags;
 	ssize_t n = 0;
@@ -317,8 +317,6 @@ static ssize_t opost_block(struct tty_struct * tty,
 		return 0;
 	if (nr > space)
 		nr = space;
-	if (nr > sizeof(buf))
-	    nr = sizeof(buf);
 
 	for (i = 0, cp = buf; i < nr; i++, cp++) {
 		switch (*cp) {
@@ -1143,13 +1141,13 @@ static inline int copy_from_read_buf(struct tty_struct *tty,
 
 {
 	int retval;
-	ssize_t n;
+	size_t n;
 	unsigned long flags;
 
 	retval = 0;
 	spin_lock_irqsave(&tty->read_lock, flags);
 	n = min(tty->read_cnt, N_TTY_BUF_SIZE - tty->read_tail);
-	n = min((ssize_t)*nr, n);
+	n = min(*nr, n);
 	spin_unlock_irqrestore(&tty->read_lock, flags);
 	if (n) {
 		mb();

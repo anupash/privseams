@@ -52,13 +52,15 @@ iounit_init(int sbi_node, int io_node, struct sbus_bus *sbus)
 	iounit->rotor[1] = IOUNIT_BMAP2_START;
 	iounit->rotor[2] = IOUNIT_BMAPM_START;
 
-	prom_getproperty(sbi_node, "reg", (void *) iommu_promregs,
-			 sizeof(iommu_promregs));
-	prom_apply_generic_ranges(io_node, 0, iommu_promregs, 3);
-	memset(&r, 0, sizeof(r));
-	r.flags = iommu_promregs[2].which_io;
-	r.start = iommu_promregs[2].phys_addr;
-	xpt = (iopte_t *) sbus_ioremap(&r, 0, PAGE_SIZE * 16, "XPT");
+	xpt = NULL;
+	if(prom_getproperty(sbi_node, "reg", (void *) iommu_promregs,
+			    sizeof(iommu_promregs)) != -1) {
+		prom_apply_generic_ranges(io_node, 0, iommu_promregs, 3);
+		memset(&r, 0, sizeof(r));
+		r.flags = iommu_promregs[2].which_io;
+		r.start = iommu_promregs[2].phys_addr;
+		xpt = (iopte_t *) sbus_ioremap(&r, 0, PAGE_SIZE * 16, "XPT");
+	}
 	if(!xpt) panic("Cannot map External Page Table.");
 	
 	sbus->iommu = (struct iommu_struct *)iounit;
@@ -196,7 +198,7 @@ static int iounit_map_dma_area(dma_addr_t *pba, unsigned long va, __u32 addr, in
 			pte_t *ptep;
 			long i;
 
-			pgdp = pgd_offset(init_task.mm, addr);
+			pgdp = pgd_offset(&init_mm, addr);
 			pmdp = pmd_offset(pgdp, addr);
 			ptep = pte_offset_map(pmdp, addr);
 

@@ -622,8 +622,10 @@ static void cfq_requeue_request(request_queue_t *q, struct request *rq)
 			cfq_sort_rr_list(cfqq, 0);
 		}
 
-		crq->accounted = 0;
-		cfqq->cfqd->rq_in_driver--;
+		if (crq->accounted) {
+			crq->accounted = 0;
+			cfqq->cfqd->rq_in_driver--;
+		}
 	}
 	list_add(&rq->queuelist, &q->queue_head);
 }
@@ -1283,19 +1285,19 @@ static int cfq_queue_empty(request_queue_t *q)
 static void cfq_completed_request(request_queue_t *q, struct request *rq)
 {
 	struct cfq_rq *crq = RQ_DATA(rq);
+	struct cfq_queue *cfqq;
 
 	if (unlikely(!blk_fs_request(rq)))
 		return;
 
-	if (crq->in_flight) {
-		struct cfq_queue *cfqq = crq->cfq_queue;
+	cfqq = crq->cfq_queue;
 
+	if (crq->in_flight) {
 		WARN_ON(!cfqq->in_flight);
 		cfqq->in_flight--;
-
-		cfq_account_completion(cfqq, crq);
 	}
 
+	cfq_account_completion(cfqq, crq);
 }
 
 static struct request *
@@ -1817,7 +1819,7 @@ static struct elevator_type iosched_cfq = {
 	.elevator_owner =	THIS_MODULE,
 };
 
-int cfq_init(void)
+static int __init cfq_init(void)
 {
 	int ret;
 

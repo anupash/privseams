@@ -15,7 +15,6 @@
 #include <linux/pagemap.h>
 #include <linux/blkdev.h>
 #include <linux/list.h>
-#include <linux/buffer_head.h>
 #include <linux/root_dev.h>
 #include <linux/statfs.h>
 #include <linux/kdev_t.h>
@@ -393,6 +392,11 @@ int hostfs_fsync(struct file *file, struct dentry *dentry, int datasync)
 static struct file_operations hostfs_file_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= generic_file_read,
+	.sendfile	= generic_file_sendfile,
+	.aio_read	= generic_file_aio_read,
+	.aio_write	= generic_file_aio_write,
+	.readv		= generic_file_readv,
+	.writev		= generic_file_writev,
 	.write		= generic_file_write,
 	.mmap		= generic_file_mmap,
 	.open		= hostfs_file_open,
@@ -401,6 +405,7 @@ static struct file_operations hostfs_file_fops = {
 };
 
 static struct file_operations hostfs_dir_fops = {
+	.llseek		= generic_file_llseek,
 	.readdir	= hostfs_readdir,
 	.read		= generic_read_dir,
 };
@@ -817,6 +822,10 @@ int hostfs_setattr(struct dentry *dentry, struct iattr *attr)
 	struct hostfs_iattr attrs;
 	char *name;
 	int err;
+
+	err = inode_change_ok(dentry->d_inode, attr);
+	if (err)
+		return err;
 
 	if(append)
 		attr->ia_valid &= ~ATTR_SIZE;

@@ -73,10 +73,7 @@
 #include <net/sock.h>
 #include <asm/ia32.h>
 
-#define A(__x)		((unsigned long)(__x))
 #define AA(__x)		((unsigned long)(__x))
-#define ROUND_UP(x,a)	((__typeof__(x))(((unsigned long)(x) + ((a) - 1)) & ~((a) - 1)))
-#define NAME_OFFSET(de) ((int) ((de)->d_name - (char __user *) (de)))
 
 int cp_compat_stat(struct kstat *kbuf, struct compat_stat __user *ubuf)
 {
@@ -305,8 +302,8 @@ sys32_rt_sigaction(int sig, struct sigaction32 __user *act,
 			set32.sig[0] = old_ka.sa.sa_mask.sig[0];
 		}
 		if (verify_area(VERIFY_WRITE, oact, sizeof(*oact)) ||
-		    __put_user((long)old_ka.sa.sa_handler, &oact->sa_handler) ||
-		    __put_user((long)old_ka.sa.sa_restorer, &oact->sa_restorer) ||
+		    __put_user(ptr_to_compat(old_ka.sa.sa_handler), &oact->sa_handler) ||
+		    __put_user(ptr_to_compat(old_ka.sa.sa_restorer), &oact->sa_restorer) ||
 		    __put_user(old_ka.sa.sa_flags, &oact->sa_flags) ||
 		    __copy_to_user(&oact->sa_mask, &set32, sizeof(compat_sigset_t)))
 			return -EFAULT;
@@ -342,8 +339,8 @@ sys32_sigaction (int sig, struct old_sigaction32 __user *act, struct old_sigacti
 
 	if (!ret && oact) {
 		if (verify_area(VERIFY_WRITE, oact, sizeof(*oact)) ||
-		    __put_user((long)old_ka.sa.sa_handler, &oact->sa_handler) ||
-		    __put_user((long)old_ka.sa.sa_restorer, &oact->sa_restorer) ||
+		    __put_user(ptr_to_compat(old_ka.sa.sa_handler), &oact->sa_handler) ||
+		    __put_user(ptr_to_compat(old_ka.sa.sa_restorer), &oact->sa_restorer) ||
 		    __put_user(old_ka.sa.sa_flags, &oact->sa_flags) ||
 		    __put_user(old_ka.sa.sa_mask.sig[0], &oact->sa_mask))
 			return -EFAULT;
@@ -492,26 +489,6 @@ sys32_old_select(struct sel_arg_struct __user *arg)
 				 compat_ptr(a.exp), compat_ptr(a.tvp));
 }
 
-/*
- * sys_time() can be implemented in user-level using
- * sys_gettimeofday().  x86-64 did this but i386 Linux did not
- * so we have to implement this system call here.
- */
-asmlinkage long sys32_time(int __user * tloc)
-{
-	int i;
-	struct timeval tv;
-
-	do_gettimeofday(&tv);
-	i = tv.tv_sec;
-
-	if (tloc) {
-		if (put_user(i,tloc))
-			i = -EFAULT;
-	}
-	return i;
-}
-
 extern asmlinkage long
 compat_sys_wait4(compat_pid_t pid, compat_uint_t * stat_addr, int options,
 		 struct compat_rusage *ru);
@@ -648,53 +625,14 @@ sys32_rt_sigpending(compat_sigset_t __user *set, compat_size_t sigsetsize)
 	return ret;
 }
 
-
 asmlinkage long
-sys32_rt_sigtimedwait(compat_sigset_t __user *uthese, siginfo_t32 __user *uinfo,
-		      struct compat_timespec __user *uts, compat_size_t sigsetsize)
-{
-	sigset_t s;
-	compat_sigset_t s32;
-	struct timespec t;
-	int ret;
-	mm_segment_t old_fs = get_fs();
-	siginfo_t info;
-		
-	if (copy_from_user (&s32, uthese, sizeof(compat_sigset_t)))
-		return -EFAULT;
-	switch (_NSIG_WORDS) {
-	case 4: s.sig[3] = s32.sig[6] | (((long)s32.sig[7]) << 32);
-	case 3: s.sig[2] = s32.sig[4] | (((long)s32.sig[5]) << 32);
-	case 2: s.sig[1] = s32.sig[2] | (((long)s32.sig[3]) << 32);
-	case 1: s.sig[0] = s32.sig[0] | (((long)s32.sig[1]) << 32);
-	}
-	if (uts && get_compat_timespec(&t, uts))
-		return -EFAULT;
-	if (uinfo) {
-		/* stop data leak to user space in case of structure fill mismatch
-		 * between sys_rt_sigtimedwait & ia32_copy_siginfo_to_user.
-		 */
-		memset(&info, 0, sizeof(info));
-	}
-	set_fs (KERNEL_DS);
-	ret = sys_rt_sigtimedwait(&s, uinfo ? &info : NULL, uts ? &t : NULL,
-			sigsetsize);
-	set_fs (old_fs);
-	if (ret >= 0 && uinfo) {
-		if (ia32_copy_siginfo_to_user(uinfo, &info))
-			return -EFAULT;
-	}
-	return ret;
-}
-
-asmlinkage long
-sys32_rt_sigqueueinfo(int pid, int sig, siginfo_t32 __user *uinfo)
+sys32_rt_sigqueueinfo(int pid, int sig, compat_siginfo_t __user *uinfo)
 {
 	siginfo_t info;
 	int ret;
 	mm_segment_t old_fs = get_fs();
 	
-	if (ia32_copy_siginfo_from_user(&info, uinfo))
+	if (copy_siginfo_from_user32(&info, uinfo))
 		return -EFAULT;
 	set_fs (KERNEL_DS);
 	ret = sys_rt_sigqueueinfo(pid, sig, &info);
@@ -712,6 +650,7 @@ sys32_pause(void)
 }
 
 
+#ifdef CONFIG_SYSCTL
 struct sysctl_ia32 {
 	unsigned int	name;
 	int		nlen;
@@ -726,14 +665,11 @@ struct sysctl_ia32 {
 asmlinkage long
 sys32_sysctl(struct sysctl_ia32 __user *args32)
 {
-#ifndef CONFIG_SYSCTL
-	return -ENOSYS; 
-#else
 	struct sysctl_ia32 a32;
 	mm_segment_t old_fs = get_fs ();
-	void *oldvalp, *newvalp;
+	void __user *oldvalp, *newvalp;
 	size_t oldlen;
-	int *namep;
+	int __user *namep;
 	long ret;
 	extern int do_sysctl(int *name, int nlen, void *oldval, size_t *oldlenp,
 		     void *newval, size_t newlen);
@@ -749,9 +685,9 @@ sys32_sysctl(struct sysctl_ia32 __user *args32)
 	 * addresses, we KNOW that access_ok() will always succeed, so this is an
 	 * expensive NOP, but so what...
 	 */
-	namep = (int *) A(a32.name);
-	oldvalp = (void *) A(a32.oldval);
-	newvalp = (void *) A(a32.newval);
+	namep = compat_ptr(a32.name);
+	oldvalp = compat_ptr(a32.oldval);
+	newvalp =  compat_ptr(a32.newval);
 
 	if ((oldvalp && get_user(oldlen, (int __user *)compat_ptr(a32.oldlenp)))
 	    || !access_ok(VERIFY_WRITE, namep, 0)
@@ -769,8 +705,8 @@ sys32_sysctl(struct sysctl_ia32 __user *args32)
 		return -EFAULT;
 
 	return ret;
-#endif
 }
+#endif
 
 /* warning: next two assume little endian */ 
 asmlinkage long
@@ -1020,7 +956,7 @@ asmlinkage long sys32_clone(unsigned int clone_flags, unsigned int newsp,
 }
 
 asmlinkage long sys32_waitid(int which, compat_pid_t pid,
-			     siginfo_t32 __user *uinfo, int options,
+			     compat_siginfo_t __user *uinfo, int options,
 			     struct compat_rusage __user *uru)
 {
 	siginfo_t info;
@@ -1042,7 +978,7 @@ asmlinkage long sys32_waitid(int which, compat_pid_t pid,
 
 	BUG_ON(info.si_code & __SI_MASK);
 	info.si_code |= __SI_CHLD;
-	return ia32_copy_siginfo_to_user(uinfo, &info);
+	return copy_siginfo_to_user32(uinfo, &info);
 }
 
 /*
@@ -1140,8 +1076,6 @@ long sys32_lookup_dcookie(u32 addr_low, u32 addr_high,
 {
 	return sys_lookup_dcookie(((u64)addr_high << 32) | addr_low, buf, len);
 }
-
-cond_syscall(sys32_ipc)
 
 static int __init ia32_init (void)
 {

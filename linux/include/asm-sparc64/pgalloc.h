@@ -73,10 +73,9 @@ static __inline__ pgd_t *get_pgd_fast(void)
 		struct page *page;
 
 		preempt_enable();
-		page = alloc_page(GFP_KERNEL|__GFP_REPEAT);
+		page = alloc_page(GFP_KERNEL|__GFP_REPEAT|__GFP_ZERO);
 		if (page) {
 			ret = (struct page *)page_address(page);
-			clear_page(ret);
 			page->lru.prev = (void *) 2UL;
 
 			preempt_disable();
@@ -134,7 +133,7 @@ static __inline__ void free_pgd_slow(pgd_t *pgd)
 #define DCACHE_COLOR(address)		0
 #endif
 
-#define pgd_populate(MM, PGD, PMD)	pgd_set(PGD, PMD)
+#define pud_populate(MM, PUD, PMD)	pud_set(PUD, PMD)
 
 static __inline__ pmd_t *pmd_alloc_one_fast(struct mm_struct *mm, unsigned long address)
 {

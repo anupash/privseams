@@ -24,7 +24,11 @@ struct arch_thread {
  * instruction pointer ("program counter"). Stolen
  * from asm-i386/processor.h
  */
-#define current_text_addr() ({ void *pc; __asm__("movl $1f,%0\n1:":"=g" (pc)); pc; })
+#define current_text_addr() \
+	({ void *pc; __asm__("movl $1f,%0\n1:":"=g" (pc)); pc; })
+
+#define ARCH_IS_STACKGROW(address) \
+       (address + 32 >= UPT_SP(&current->thread.regs.regs))
 
 #include "asm/processor-generic.h"
 

@@ -103,8 +103,6 @@
 
 #include <asm/io.h>
 
-#include "piix.h"
-
 static int no_piix_dma;
 
 /**
@@ -129,11 +127,13 @@ static u8 piix_ratemask (ide_drive_t *drive)
 		case PCI_DEVICE_ID_INTEL_82801CA_10:
 		case PCI_DEVICE_ID_INTEL_82801CA_11:
 		case PCI_DEVICE_ID_INTEL_82801E_11:
+		case PCI_DEVICE_ID_INTEL_82801DB_1:
 		case PCI_DEVICE_ID_INTEL_82801DB_10:
 		case PCI_DEVICE_ID_INTEL_82801DB_11:
 		case PCI_DEVICE_ID_INTEL_82801EB_11:
 		case PCI_DEVICE_ID_INTEL_ESB_2:
 		case PCI_DEVICE_ID_INTEL_ICH6_19:
+		case PCI_DEVICE_ID_INTEL_ICH7_21:
 			mode = 3;
 			break;
 		/* UDMA 66 capable */
@@ -439,12 +439,14 @@ static unsigned int __devinit init_chipset_piix (struct pci_dev *dev, const char
 		case PCI_DEVICE_ID_INTEL_82801BA_9:
 		case PCI_DEVICE_ID_INTEL_82801CA_10:
 		case PCI_DEVICE_ID_INTEL_82801CA_11:
+		case PCI_DEVICE_ID_INTEL_82801DB_1:
 		case PCI_DEVICE_ID_INTEL_82801DB_10:
 		case PCI_DEVICE_ID_INTEL_82801DB_11:
 		case PCI_DEVICE_ID_INTEL_82801EB_11:
 		case PCI_DEVICE_ID_INTEL_82801E_11:
 		case PCI_DEVICE_ID_INTEL_ESB_2:
 		case PCI_DEVICE_ID_INTEL_ICH6_19:
+		case PCI_DEVICE_ID_INTEL_ICH7_21:
 		{
 			unsigned int extra = 0;
 			pci_read_config_dword(dev, 0x54, &extra);
@@ -526,19 +528,51 @@ static void __devinit init_hwif_piix(ide_hwif_t *hwif)
 	hwif->drives[0].autodma = hwif->autodma;
 }
 
-/**
- *	init_setup_piix		-	callback for IDE initialize
- *	@dev: PIIX PCI device
- *	@d: IDE pci info
- *
- *	Enable the xp fixup for the PIIX controller and then perform
- *	a standard ide PCI setup
- */
+#define DECLARE_PIIX_DEV(name_str) \
+	{						\
+		.name		= name_str,		\
+		.init_chipset	= init_chipset_piix,	\
+		.init_hwif	= init_hwif_piix,	\
+		.channels	= 2,			\
+		.autodma	= AUTODMA,		\
+		.enablebits	= {{0x41,0x80,0x80}, {0x43,0x80,0x80}}, \
+		.bootable	= ON_BOARD,		\
+	}
 
-static void __devinit init_setup_piix(struct pci_dev *dev, ide_pci_device_t *d)
-{
-	ide_setup_pci_device(dev, d);
-}
+static ide_pci_device_t piix_pci_info[] __devinitdata = {
+	/*  0 */ DECLARE_PIIX_DEV("PIIXa"),
+	/*  1 */ DECLARE_PIIX_DEV("PIIXb"),
+
+	{	/* 2 */
+		.name		= "MPIIX",
+		.init_hwif	= init_hwif_piix,
+		.channels	= 2,
+		.autodma	= NODMA,
+		.enablebits	= {{0x6D,0x80,0x80}, {0x6F,0x80,0x80}},
+		.bootable	= ON_BOARD,
+	},
+
+	/*  3 */ DECLARE_PIIX_DEV("PIIX3"),
+	/*  4 */ DECLARE_PIIX_DEV("PIIX4"),
+	/*  5 */ DECLARE_PIIX_DEV("ICH0"),
+	/*  6 */ DECLARE_PIIX_DEV("PIIX4"),
+	/*  7 */ DECLARE_PIIX_DEV("ICH"),
+	/*  8 */ DECLARE_PIIX_DEV("PIIX4"),
+	/*  9 */ DECLARE_PIIX_DEV("PIIX4"),
+	/* 10 */ DECLARE_PIIX_DEV("ICH2"),
+	/* 11 */ DECLARE_PIIX_DEV("ICH2M"),
+	/* 12 */ DECLARE_PIIX_DEV("ICH3M"),
+	/* 13 */ DECLARE_PIIX_DEV("ICH3"),
+	/* 14 */ DECLARE_PIIX_DEV("ICH4"),
+	/* 15 */ DECLARE_PIIX_DEV("ICH5"),
+	/* 16 */ DECLARE_PIIX_DEV("C-ICH"),
+	/* 17 */ DECLARE_PIIX_DEV("ICH4"),
+	/* 18 */ DECLARE_PIIX_DEV("ICH5-SATA"),
+	/* 19 */ DECLARE_PIIX_DEV("ICH5"),
+	/* 20 */ DECLARE_PIIX_DEV("ICH6"),
+	/* 21 */ DECLARE_PIIX_DEV("ICH7"),
+	/* 22 */ DECLARE_PIIX_DEV("ICH4"),
+};
 
 /**
  *	piix_init_one	-	called when a PIIX is found
@@ -553,8 +587,7 @@ static int __devinit piix_init_one(struct pci_dev *dev, const struct pci_device_
 {
 	ide_pci_device_t *d = &piix_pci_info[id->driver_data];
 
-	d->init_setup(dev, d);
-	return 0;
+	return ide_setup_pci_device(dev, d);
 }
 
 /**
@@ -612,6 +645,8 @@ static struct pci_device_id piix_pci_tbl[] = {
 #endif
 	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_ESB_2, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 19},
 	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_ICH6_19, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 20},
+	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_ICH7_21, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 21},
+	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82801DB_1, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 22},
 	{ 0, },
 };
 MODULE_DEVICE_TABLE(pci, piix_pci_tbl);

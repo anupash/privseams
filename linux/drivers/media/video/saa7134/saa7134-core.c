@@ -21,6 +21,7 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/config.h>
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/module.h>
@@ -222,10 +223,61 @@ static void dump_statusregs(struct saa7134_dev *dev)
 }
 #endif
 
+/* ----------------------------------------------------------- */
+/* delayed request_module                                      */
+
+#ifdef CONFIG_MODULES
+
+static int need_empress;
+static int need_dvb;
+
+static int pending_call(struct notifier_block *self, unsigned long state,
+			void *module)
+{
+	if (module != THIS_MODULE || state != MODULE_STATE_LIVE)
+		return NOTIFY_DONE;
+
+        if (need_empress)
+                request_module("saa7134-empress");
+        if (need_dvb)
+                request_module("saa7134-dvb");
+	return NOTIFY_DONE;
+}
+
+static int pending_registered;
+static struct notifier_block pending_notifier = {
+	.notifier_call = pending_call,
+};
+
+static void request_module_depend(char *name, int *flag)
+{
+	switch (THIS_MODULE->state) {
+	case MODULE_STATE_COMING:
+		if (!pending_registered) {
+			register_module_notifier(&pending_notifier);
+			pending_registered = 1;
+		}
+		*flag = 1;
+		break;
+	case MODULE_STATE_LIVE:
+		request_module(name);
+		break;
+	default:
+		/* nothing */;
+		break;
+	}
+}
+
+#else
+
+#define request_module_depend(name,flag)
+
+#endif /* CONFIG_MODULES */
+
 /* ------------------------------------------------------------------ */
 
 /* nr of (saa7134-)pages for the given buffer size */
-int saa7134_buffer_pages(int size)
+static int saa7134_buffer_pages(int size)
 {
 	size  = PAGE_ALIGN(size);
 	size += PAGE_SIZE; /* for non-page-aligned buffers */
@@ -319,10 +371,8 @@ int saa7134_buffer_queue(struct saa7134_dev *dev,
 			 struct saa7134_buf *buf)
 {
 	struct saa7134_buf *next = NULL;
-#ifdef DEBUG_SPINLOCKS
-	BUG_ON(!spin_is_locked(&dev->slock));
-#endif
 
+	assert_spin_locked(&dev->slock);
 	dprintk("buffer_queue %p\n",buf);
 	if (NULL == q->curr) {
 		if (!q->need_two) {
@@ -348,9 +398,7 @@ void saa7134_buffer_finish(struct saa7134_dev *dev,
 			   struct saa7134_dmaqueue *q,
 			   unsigned int state)
 {
-#ifdef DEBUG_SPINLOCKS
-	BUG_ON(!spin_is_locked(&dev->slock));
-#endif
+	assert_spin_locked(&dev->slock);
 	dprintk("buffer_finish %p\n",q->curr);
 
 	/* finish current buffer */
@@ -365,9 +413,7 @@ void saa7134_buffer_next(struct saa7134_dev *dev,
 {
 	struct saa7134_buf *buf,*next = NULL;
 
-#ifdef DEBUG_SPINLOCKS
-	BUG_ON(!spin_is_locked(&dev->slock));
-#endif
+	assert_spin_locked(&dev->slock);
 	BUG_ON(NULL != q->curr);
 
 	if (!list_empty(&q->queue)) {
@@ -422,9 +468,7 @@ int saa7134_set_dmabits(struct saa7134_dev *dev)
 	enum v4l2_field cap = V4L2_FIELD_ANY;
 	enum v4l2_field ov  = V4L2_FIELD_ANY;
 
-#ifdef DEBUG_SPINLOCKS
-	BUG_ON(!spin_is_locked(&dev->slock));
-#endif
+	assert_spin_locked(&dev->slock);
 
 	/* video capture -- dma 0 + video task A */
 	if (dev->video_q.curr) {
@@ -630,7 +674,7 @@ static int saa7134_hwinit1(struct saa7134_dev *dev)
 	saa_writel(SAA7134_IRQ1, 0);
 	saa_writel(SAA7134_IRQ2, 0);
         init_MUTEX(&dev->lock);
-	dev->slock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dev->slock);
 
 	saa7134_track_gpio(dev,"pre-init");
 	saa7134_video_init1(dev);
@@ -941,11 +985,11 @@ static int __devinit saa7134_initdev(struct pci_dev *pci_dev,
 	if (dev->tda9887_conf)
 		request_module("tda9887");
   	if (card_is_empress(dev)) {
-		request_module("saa7134-empress");
 		request_module("saa6752hs");
+		request_module_depend("saa7134-empress",&need_empress);
 	}
   	if (card_is_dvb(dev))
-		request_module("saa7134-dvb");
+		request_module_depend("saa7134-dvb",&need_dvb);
 
 	v4l2_prio_init(&dev->prio);
 

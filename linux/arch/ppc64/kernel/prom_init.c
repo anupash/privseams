@@ -43,7 +43,6 @@
 #include <asm/system.h>
 #include <asm/mmu.h>
 #include <asm/pgtable.h>
-#include <asm/naca.h>
 #include <asm/pci.h>
 #include <asm/iommu.h>
 #include <asm/bootinfo.h>
@@ -846,7 +845,7 @@ static void __init prom_initialize_tce_table(void)
 
 		prom_debug("TCE table: %s\n", path);
 		prom_debug("\tnode = 0x%x\n", node);
-		prom_debug("\tbase = 0x%x\n", vbase);
+		prom_debug("\tbase = 0x%x\n", base);
 		prom_debug("\tsize = 0x%x\n", minsize);
 
 		/* Initialize the table to have a one-to-one mapping

@@ -7,7 +7,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2004, R. Byron Moore
+ * Copyright (C) 2000 - 2005, R. Byron Moore
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -278,6 +278,7 @@
 #define ARGI_COMPLEXOBJ             0x13    /* Buffer, String, or package (Used by INDEX op only) */
 #define ARGI_REF_OR_STRING          0x14    /* Reference or String (Used by DEREFOF op only) */
 #define ARGI_REGION_OR_FIELD        0x15    /* Used by LOAD op only */
+#define ARGI_DATAREFOBJ             0x16
 
 /* Note: types above can expand to 0x1F maximum */
 
@@ -320,6 +321,7 @@
 #define AML_HAS_TARGET              0x0800
 #define AML_HAS_ARGS                0x1000
 #define AML_CONSTANT                0x2000
+#define AML_NO_OPERAND_RESOLVE      0x4000
 
 /* Convenient flag groupings */
 
