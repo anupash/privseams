@@ -15,15 +15,19 @@ spinlock_t hip_update_spi_waitlist_lock = SPIN_LOCK_UNLOCKED;
 struct hip_update_spi_waitlist_item {
 	struct list_head list;
 	uint32_t spi;
+	int direction;
+	struct in6_addr hit;
 };
 
 
 /*
- * Used in UPDATE R=0: incoming SA -> activate outgoing SA
+ * Used in UPDATE R=0: receive data on incoming SA -> activate outgoing SA
+ *
+ * direction: true in, false out
  *
  * SPI is given in host byte order
  */
-void hip_update_spi_waitlist_add(uint32_t spi)
+void hip_update_spi_waitlist_add(uint32_t spi, int direction, struct in6_addr *hit)
 {
 	struct hip_update_spi_waitlist_item *s;
 	unsigned long flags = 0;
@@ -31,23 +35,26 @@ void hip_update_spi_waitlist_add(uint32_t spi)
 	struct list_head *pos, *n;
 	int i = 1;
 
-	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
-	HIP_DEBUG("spi=0x%x\n", spi);
+
+	HIP_DEBUG("spi=0x%x direction=%s\n", spi, direction ? "in" : "out");
 
 	s = kmalloc(sizeof(struct hip_update_spi_waitlist_item), GFP_ATOMIC);
 	if (!s) {
 		HIP_ERROR("kmalloc failed\n");
 		goto out_err;
 	}
-	HIP_DEBUG("kmalloced s=0x%p\n", s);
 
 	s->spi = spi;
+	s->direction = direction;
+	ipv6_addr_copy(&s->hit, hit);
+
+	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 	list_add(&s->list, &hip_update_spi_waitlist);
 
 	/* debug */
 	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
 		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
-		HIP_DEBUG("SPI waitlist %d: SPI=0x%x\n", i, s->spi);
+		HIP_DEBUG("SPI waitlist %d: SPI=0x%x direction=%s\n", i, s->spi, s->direction ? "in" : "out");
 		i++;
 	}
 
@@ -84,25 +91,26 @@ void hip_update_spi_waitlist_delete(uint32_t spi)
 }
 
 /* returns 1 if @spi is in the SPI waitlist
+ *
+ * direction: true in, false out
+ *
  * SPI is given in host byte order
  */
 int hip_update_spi_waitlist_ispending(uint32_t spi)
 {
 	int found = 0;
-	struct hip_update_spi_waitlist_item *s;
+	struct hip_update_spi_waitlist_item *s = NULL;
 	unsigned long flags = 0;
 
 	struct list_head *pos, *n;
 	int i = 1;
 
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
-	HIP_DEBUG("spi=0x%x\n", spi);
 
 	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
 		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
 		HIP_DEBUG("SPI waitlist %d: SPI=0x%x\n", i, s->spi);
 		if (s->spi == spi) {
-			HIP_DEBUG("found match\n");
 			found = 1;
 			break;
 		}
@@ -110,6 +118,41 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 	}
 
 	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
+	HIP_DEBUG("spi=0x%x : pending=%s\n", spi, found ? "yes" : "no");
+
+	/* If the SPI was in pending list, switch the NEW_SPI to be
+	 * the current active SPI. Delete also the old SA and remove
+	 * the SPI from the pending list.*/
+	if (found) {
+		uint32_t spi_out, new_spi_out;
+ 		int getlist[2] = { HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_OUT };
+ 		void *setlist[2] = { &spi_out, &new_spi_out };
+
+		if (hip_hadb_multiget(&s->hit, 2, getlist, setlist, HIP_ARG_HIT) != 2) {
+			HIP_ERROR("Couldn't find SPI values\n");
+			goto out;
+		}
+
+		HIP_DEBUG("Switching from SPI_OUT=0x%x to NEW_SPI_OUT=0x%x\n", spi_out, new_spi_out);
+		if (hip_hadb_set_info(&s->hit, &new_spi_out, HIP_HADB_SPI_OUT|HIP_ARG_HIT) != 1)
+			HIP_ERROR("Couldn't set SPI_OUT\n");
+		else {
+			int err, tmp = 0;
+			hip_print_hit("finalizing", &s->hit);
+			hip_finalize_sa(&s->hit, new_spi_out);
+			HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", spi_out);
+			err = hip_delete_sa(spi_out, &s->hit);
+			HIP_DEBUG("delete_sa ret err=%d\n", err);
+			/* clear out the new spi value from hadb */
+			if (hip_hadb_set_info(&s->hit, &tmp, HIP_HADB_NEW_SPI_OUT|HIP_ARG_HIT) != 1) {
+				HIP_ERROR("Updating hadb entry failed (NEW_SPI_OUT)\n");
+			}
+		}
+		HIP_DEBUG("deleting SPI from waitlist\n");
+		hip_update_spi_waitlist_delete(spi);
+	}
+
+ out:
 	return found;
 }
 
@@ -149,14 +192,14 @@ int hip_update_get_sa_keys(struct hip_hadb_state *entry, uint16_t *keymat_offset
 	memcpy(Kn, Kn_out, HIP_AH_SHA_LEN);
 
 	/* SA-gl */
-	err = hip_keymat_get_new(entry, espkey_gl->key, esp_transf_length, entry->dh_shared_key,
+	err = hip_keymat_get_new(espkey_gl->key, esp_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn);
 	HIP_DEBUG("enckey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
 	HIP_HEXDUMP("ENC KEY gl", espkey_gl->key, esp_transf_length);
 	k += esp_transf_length;
-	err = hip_keymat_get_new(entry, authkey_gl->key, auth_transf_length, entry->dh_shared_key,
+	err = hip_keymat_get_new(authkey_gl->key, auth_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn);
 	HIP_DEBUG("authkey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
@@ -165,14 +208,14 @@ int hip_update_get_sa_keys(struct hip_hadb_state *entry, uint16_t *keymat_offset
 	k += auth_transf_length;
 
 	/* SA-lg */
-	err = hip_keymat_get_new(entry, espkey_lg->key, esp_transf_length, entry->dh_shared_key,
+	err = hip_keymat_get_new(espkey_lg->key, esp_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn);
 	HIP_DEBUG("enckey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
 	HIP_HEXDUMP("ENC KEY lg", espkey_lg->key, esp_transf_length);
 	k += esp_transf_length;
-	err = hip_keymat_get_new(entry, authkey_lg->key, auth_transf_length, entry->dh_shared_key,
+	err = hip_keymat_get_new(authkey_lg->key, auth_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn);
 	HIP_DEBUG("authkey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
@@ -263,25 +306,19 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 
 	_HIP_DEBUG("new_keymat_generated=%d\n", new_keymat_generated);
 
-	/* 3. If the system generated new KEYMAT in the previous step,
-	 * it sets Keymat Index to zero, independent on whether the
-	 * received UPDATE included a Diffie-Hellman key or not. */
-	if (new_keymat_generated) {
-		our_current_keymat_index = 0;
-	} else {
-		/* check */
-		if (!hip_hadb_get_keymat_index_by_hit(hits, &our_current_keymat_index)) {
-			HIP_ERROR("Could not get our_current_keymat_index\n");
-			err = -EINVAL;
-			goto out_err;
-		}
-	}
-
 	if (!hip_hadb_get_keymat_index_by_hit(hits, &our_current_keymat_index)) {
 		HIP_ERROR("Could not get our_current_keymat_index\n");
 		err = -EINVAL;
 		goto out_err;
 	}
+
+	/* 3. If the system generated new KEYMAT in the previous step,
+	 * it sets Keymat Index to zero, independent on whether the
+	 * received UPDATE included a Diffie-Hellman key or not. */
+	if (new_keymat_generated) {
+		our_current_keymat_index = 0;
+	}
+
 	HIP_DEBUG("our_current_keymat_index=%d\n", our_current_keymat_index);
 
 	/* 4. The system draws keys for new incoming and outgoing ESP
@@ -312,6 +349,12 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		esp_transform = entry->esp_transform; /* needed below */
 		calc_index_new = entry->keymat_calc_index;
 		keymat_offset_new = 0x7fff & ntohs(nes->keymat_index);
+
+		/* check */
+		if (our_current_keymat_index != 0 &&
+		    keymat_offset_new > our_current_keymat_index)
+			our_current_keymat_index = keymat_offset_new;
+
 		/* todo: if testing keymat_offset_new += random */
 		memcpy(Kn, entry->current_keymat_K, HIP_AH_SHA_LEN);
 
@@ -354,23 +397,16 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	}
 	HIP_DEBUG("Stored SPI 0x%x to new_spi_out for future use\n", new_spi_out);
 
-#if 1
-	/* todo: add new_spi_out to SPI waitlist and when receiving
-	 * data on the new incoming SPI set new_spi_out to SPI_OUT in
-	 * hadb */
-	hip_update_spi_waitlist_add(new_spi_out);
-
-	/* shouldn't do this yet */
-	hip_finalize_sa(hits, new_spi_out);
-#endif
+/* activate when receving data on newspiout*/
+//	hip_finalize_sa(hits, new_spi_out); /* shouldn't do this yet */
 
 	{
-		uint32_t our_spi, peer_spi, new_spi_in, new_spi_out;
+		uint32_t spi_in, spi_out, new_spi_in, new_spi_out;
  		int getlist[4] = { HIP_HADB_SPI_IN, HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_IN, HIP_HADB_NEW_SPI_OUT };
- 		void *setlist[4] = { &our_spi, &peer_spi, &new_spi_in, &new_spi_out };
+ 		void *setlist[4] = { &spi_in, &spi_out, &new_spi_in, &new_spi_out };
 		hip_hadb_multiget(hits, 4, getlist, setlist, HIP_ARG_HIT);
-		HIP_DEBUG("after new_spi_out: our=0x%08x peer=0x%08x ournew=0x%08x peernew=0x%08x\n",
-			  our_spi, peer_spi, new_spi_in, new_spi_out);
+		HIP_DEBUG("after new_spi_out: out=0x%08x in=0x%08x new_in=0x%08x new_out=0x%08x\n",
+			  spi_in, spi_out, new_spi_in, new_spi_out);
 	}
 
 	/* Set up new incoming IPsec SA */
@@ -406,6 +442,15 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 
 	hip_finalize_sa(hitr, new_spi_in); /* move below */
 
+#if 1
+	/* todo: add new_spi_out to SPI waitlist and when receiving
+	 * data on the new incoming SPI set new_spi_out to SPI_OUT in
+	 * hadb */
+	hip_update_spi_waitlist_add(new_spi_in, 0, hits);
+
+#endif
+
+
 	/* delete old incoming SA */
 	/* todo: set to dying/drop old IPsec SA ? */
 	HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", prev_spi_in);
@@ -414,12 +459,12 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	err = 0;
 
 	{
-		uint32_t our_spi, peer_spi, new_spi_in, new_spi_out;
+		uint32_t spi_in, spi_out, new_spi_in, new_spi_out;
  		int getlist[4] = { HIP_HADB_SPI_IN, HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_IN, HIP_HADB_NEW_SPI_OUT };
- 		void *setlist[4] = { &our_spi, &peer_spi, &new_spi_in, &new_spi_out };
+ 		void *setlist[4] = { &spi_in, &spi_out, &new_spi_in, &new_spi_out };
 		hip_hadb_multiget(hits, 4, getlist, setlist, HIP_ARG_HIT);
-		HIP_DEBUG("after new_spi_in: our=0x%08x peer=0x%08x ournew=0x%08x peernew=0x%08x\n",
-			  our_spi, peer_spi, new_spi_in, new_spi_out);
+		HIP_DEBUG("after new_spi_out: out=0x%08x in=0x%08x new_in=0x%08x new_out=0x%08x\n",
+			  spi_in, spi_out, new_spi_in, new_spi_out);
 	}
 
 #if 0

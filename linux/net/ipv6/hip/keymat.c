@@ -198,7 +198,7 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
  *
  * Returns: 0 on success, < 0 otherwise.
 */
-int hip_keymat_get_new(struct hip_hadb_state *entry, void *key, size_t key_len,
+int hip_keymat_get_new(/*struct hip_hadb_state *entry,*/ void *key, size_t key_len,
 		       char *kij, size_t kij_len, uint16_t *keymat_offset,
 		       uint8_t *calc_index, unsigned char *calc_index_keymat)
 {
@@ -221,7 +221,7 @@ int hip_keymat_get_new(struct hip_hadb_state *entry, void *key, size_t key_len,
  	/* memset(key, 0, key_len); during testing only */
 
 	/* test if we already have needed amount of ready keymat */
-	HIP_DEBUG("Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
+	_HIP_DEBUG("Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
 		  entry->current_keymat_index, entry->keymat_calc_index);
 
 	HIP_DEBUG("byte index: keymat_offset / HIP_AH_SHA_LEN + 1 = %d\n",
