@@ -16,7 +16,7 @@ INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c workqueue.c builder.c preoutput.c hadb.c
+hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c workqueue.c builder.c preoutput.c hadb.c crypto.c
 hipd_SOURCES += input.c
 
 # i3 and KeyNotev2 specific includes/libraries:

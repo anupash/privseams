@@ -48,7 +48,6 @@ typedef uint16_t in_port_t;
 #  include <sys/ioctl.h>
 #  include <stdint.h>
 #  include <netinet/in.h>
-#  include "list.h"
 
 typedef uint8_t   u8;
 typedef uint16_t  u16;
@@ -58,6 +57,10 @@ typedef struct { volatile int counter; } atomic_t;
 typedef struct {
 	/* XX FIXME */
 } spinlock_t;
+
+struct list_head {
+	struct list_head *next, *prev;
+};
 
 #endif /* __KERNEL__ */
 

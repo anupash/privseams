@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #define jiffies random()
+#include "list.h"
 
 #endif /* __KERNEL__ */
 

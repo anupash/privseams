@@ -2,6 +2,7 @@
 #define HIP_LIST_H
 
 #include <linux/stddef.h>
+#include <net/hip.h>
 
 static inline void prefetch(const void *x) {;}
 
@@ -24,20 +25,6 @@ static inline void prefetch(const void *x) {;}
  */
 #define LIST_POISON1  ((void *) 0x00100100)
 #define LIST_POISON2  ((void *) 0x00200200)
-
-/*
- * Simple doubly linked list implementation.
- *
- * Some of the internal functions ("__xxx") are useful when
- * manipulating whole lists rather than single entries, as
- * sometimes we already know the next/prev entries and we can
- * generate better code by using them directly rather than
- * using the generic single-entry routines.
- */
-
-struct list_head {
-	struct list_head *next, *prev;
-};
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
 

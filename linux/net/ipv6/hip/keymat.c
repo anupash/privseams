@@ -62,12 +62,17 @@ void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
  * @calc_index: where the one byte index is stored (n of Kn)
  *
  */
-void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat, 
+void hip_make_keymat(char *kij, size_t kij_len,
+		     struct hip_keymat_keymat *keymat, 
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
 		     struct in6_addr *hit2, u8 *calc_index)
 {
 	int err;
+#ifdef __KERNEL__
 	struct crypto_tfm *sha = impl_sha1;
+#else
+	struct crypto_tfm *sha = impl_sha1;
+#endif /* __KERNEL__ */
 	uint8_t index_nbr = 1;
 	int dstoffset = 0;
 	void *seedkey;
@@ -134,7 +139,7 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 #endif
 
 	while (dstoffset < dstbuflen) {
-#ifdef __KERNELL
+#ifdef __KERNEL__
 		crypto_digest_digest(sha, sg, nsg, dstbuf + dstoffset);
 #else
 		crypto_digest_digest(sha, shabuffer, 0, dstbuf + dstoffset);
