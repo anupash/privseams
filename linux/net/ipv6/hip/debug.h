@@ -55,7 +55,7 @@
   #define HIP_DEBUG_SKB(hdr, skb) do { } while(0)
   #define HIP_DEBUG_IN6ADDR(str, in6) do { } while(0)
   #define HIP_DEBUG_HIT(str, hit) do { } while(0)
-  #define HIP_DEBUG_STATE_STR(state) do { } while(0)
+  #define HIP_DEBUG_STATE_STR(state) ""
 
 #endif /* CONFIG_HIP_DEBUG  */
 
