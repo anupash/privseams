@@ -55,9 +55,9 @@ static int hip_rcv_skb(struct sk_buff *skb)
 		if (hip_rcv_msg(skb, nlh, &err) < 0) {
 			if (err == 0)
 				return -1;
-			netlink_ack(skb, nlh, err);
+//			netlink_ack(skb, nlh, err);
 		} else if (nlh->nlmsg_flags & NLM_F_ACK)
-			netlink_ack(skb, nlh, 0);
+//			netlink_ack(skb, nlh, 0);
 		skb_pull(skb, rlen);
 	}
 
@@ -170,6 +170,8 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	NETLINK_CB(skb).dst_groups = 0; /* unicast */
 	netlink_unicast(nl_sk, skb, hipd_pid, MSG_DONTWAIT);
 	/* FIXME: errors of unicast */
+
+	// FIXME: ack processing...
 
 	kfree_skb(skb);
 	return 1;
