@@ -215,23 +215,12 @@ static struct hip_hadb_state *hip_hadb_find_by_hit(struct in6_addr *hit)
 
 }
 
-static void hip_delete_hadb_entry(struct hip_hadb_state *entry)
+static void hip_hadb_delete_entry(struct hip_hadb_state *entry)
 {
 	struct hip_peer_addr_list_item *pali;
 	struct list_head *iter2,*tmp2;
 
-	if (entry->kg.sk != NULL) {
-		HIP_DEBUG("entry->kg.sk not NULL while deleting it... 0x%p\n", entry->kg.sk);
-		sock_put(entry->kg.sk);
-		kfree(entry->kg.sk);
-	}
-
-	list_for_each_safe(iter2,tmp2,&entry->peer_addr_list) {
-		pali = list_entry(iter2, struct hip_peer_addr_list_item,
-				  list);
-		kfree(pali);
-	}
-
+	
 	kfree(entry);
 }
 
@@ -700,9 +689,32 @@ static void hip_hadb_entry_init(struct hip_hadb_state *entry)
 
 	INIT_LIST_HEAD(&entry->next);
 	INIT_LIST_HEAD(&entry->peer_addr_list);
+	INIT_LIST_HEAD(&entry->kg.socklist);
+	entry->kg.sk = NULL;
 
-	entry->state = HIP_STATE_NONE;
+	entry->state = HIP_STATE_UNASSOCIATED;
 	return;
+}
+
+static void hip_hadb_free_socks_nolock(struct hip_hadb_state *entry, int error)
+{
+	struct hip_kludge *kg, *kg_iter;
+
+	/* TCP sockets */
+	list_for_each_entry_safe(kg, kg_iter, &entry->kg.socklist, socklist) {
+		/* XXX: What should we do with sleeping socks? 
+		 * Now: call error_report callback.. is this ok? 
+		 * Locking problems?
+		 */
+		if (kg->sk) {
+			if (error) 
+				kg->sk->sk_error_report(ks->sk);
+			sock_put(kg->sk);
+		}
+		list_del(&kg->socklist)
+		kfree(kg);
+	}
+
 }
 
 /**
@@ -713,15 +725,33 @@ static void hip_hadb_entry_init(struct hip_hadb_state *entry)
  */
 static void hip_hadb_entry_free(struct hip_hadb_state *entry)
 {
-	HIP_DEBUG("freeing entry 0x%p\n", entry);
-	if (!entry)
-		return;
+	struct hip_kludge *kg, *kg_iter;
+	/* IPsec */
+	if (likely(entry->spi_peer)) {
+		hip_delete_spd(&entry->hit_our, &entry->hit_peer, XFRM_POLICY_OUT);
+		hip_delete_sa(spi_peer, &entry->hit_our);
+	}
+	if (likely(entry->spi_our)) {
+		hip_delete_spd(&entry->hit_peer, &entry->hit_our, XFRM_POLICY_IN);
+		hip_delete_sa(spi_our, &entry->hit_peer);
+	}
+	if (unlikely(entry->new_spi_peer))
+		hip_delete_sa(new_spi_peer, &entry->new_spi_peer);
+	if (unlikely(entry->new_spi_our))
+		hip_delete_sa(new_spi_our, &entry->new_spi_our);
 
-	if (entry->spi_our || entry->spi_peer)
-		hip_delete_ipsec(&entry->hit_our, &entry->hit_peer);
+	entry->spi_peer = 0;
+	entry->spi_our = 0;
+	entry->new_spi_peer = 0;
+	entry->new_spi_our = 0;
 
+	/* peer addr list */
 	hip_hadb_delete_peer_addrlist(entry);
 
+	/* TCP sockets */
+	hip_hadb_free_socks_nolock(entry,1);
+
+	/* keymat & mm-01 stuff */
 	if (entry->keymat.keymatdst)
 		kfree(entry->keymat.keymatdst);
 	if (entry->dh_shared_key)
@@ -774,6 +804,11 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi(struct hip_db_struct *db,
 
 static int hip_hadb_reinit_state(struct hip_hadb_state *entry)
 {
+	HIP_ERROR("Don't call this function!\n");
+	HIP_ASSERT(0);
+/* we need to define what "reinitialization" means in this
+ * context.
+ *
  	HIP_DEBUG("** TODO: call hip_hadb_entry_free ? **\n");
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->peer_controls = 0;
@@ -786,7 +821,7 @@ static int hip_hadb_reinit_state(struct hip_hadb_state *entry)
 	entry->kg.sk = NULL;
 
 	memset(&entry->hit_our,0,sizeof(struct in6_addr));
-
+*/
 	return 0;
 }
 
@@ -843,7 +878,7 @@ int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
 	HIP_HADB_WRAP_BEGIN(int);
 	struct hip_kludge *kg;
 	int state;
-	struct ipv6hdr hdr = {0};
+	struct ipv6hdr ip = {0};
 
 	HIP_HADB_WRAP_W_ACCESS(-EINVAL);
 
@@ -870,7 +905,6 @@ int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
 
 	if (state == HIP_STATE_UNASSOCIATED) {
 		ipv6_addr_copy(&ip.daddr, hit);
-		/* ipv6_addr_copy(&hdr.daddr, hit); ? */
 		hip_handle_output(&ip, NULL); // trigger I1
 	}
 
@@ -939,19 +973,13 @@ void hip_hadb_delete_entry_nolock(struct hip_hadb_state *entry)
  */
 void hip_uninit_hadb(void)
 {
-	struct hip_hadb_state *this;
-	struct list_head *iter;
-	struct list_head *tmp;
+	struct hip_hadb_state *this, *iter;
 	unsigned long lf; // lock flags
 
 	HIP_WRITE_LOCK_DB(&hip_hadb);
 
-	list_for_each_safe(iter,tmp,&hip_hadb.db_head) {
-		this = list_entry(iter, struct hip_hadb_state, next);
-
-		list_del(iter);
-/* merge hip_hadb_entry_free */ 
-		hip_delete_hadb_entry(this);
+	list_for_each_entry_safe(this,iter,&hip_hadb.db_head, next) {
+		hip_hadb_eentry_ntry(this);
 	}
 
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
@@ -2048,6 +2076,17 @@ void hip_hadb_free_entry(void *arg, int type)
 		hip_hadb_entry_free(entry));
 }
 
+
+void hip_hadb_free_socks(struct in6_addr *arg, int error)
+{
+	HIP_HADB_WRAP_BEGIN_VOID;
+	int type = HIP_ARG_HIT;
+
+	HIP_HADB_WRAP_W_CALL_FUNC_VOID(
+		hip_hadb_free_socks_nolock(entry, error));
+
+}
+
 /** hip_hadb_multiget - get information on given HIT or SPI
  * @arg: pointer to HIT or SPI depending on @type
  * @amount: number of elements to be fetched
@@ -2109,7 +2148,7 @@ int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int t
 			*((int *)target) = entry->esp_transform;
 			break;
 		case HIP_HADB_SK:
-			*((struct hip_kludge **)target) = entry->kg.sk;
+			memcpy(target, &entry->kg, sizeof(struct hip_kludge));
 			break;
 		case HIP_HADB_STATE:
 			*((int *)target) = entry->state;
@@ -2255,7 +2294,7 @@ int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int t
 			entry->esp_transform = *((int *) target);
 			break;
 		case HIP_HADB_SK:
-			entry->kg.sk = (struct hip_kludge *)target;
+			memcpy(&entry->kg, target, sizeof(struct hip_kludge));
 			break;
 		case HIP_HADB_STATE:
 			entry->state = *((int *) target);

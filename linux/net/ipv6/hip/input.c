@@ -1964,32 +1964,47 @@ int hip_handle_r2(struct sk_buff *skb)
 
 	/* Now, if we have cached SK, use it */
 	{
+		int val;
+		struct hip_kludge *kg, *kg_curr, *kg_iter;
 		int tlist[1] = { HIP_HADB_SK };
-		struct hip_kludge *kg = NULL;
-		struct dst_entry *dst;
-		void *setlist[1] = { &kg };
+		void *setlist[1] = { kg };
 
-		if (hip_hadb_multiget(&ctx->input->hits, 1, tlist, setlist, 
-				      HIP_ARG_HIT)) 
-		{
-			HIP_INFO("SK found %p!\n",kg->sk);
-			_HIP_HEXDUMP("FL", &kg->fl, sizeof(struct flowi));
+		val = hip_hadb_multiget(&ctx->input->hits, 1, tlist, setlist, 
+					HIP_ARG_HIT);
+		if (val == 0) 
+			goto out_err;
 
-			lock_sock(kg->sk);
+		/* this is problematic operation:
+		 * 1) Somebody might fiddle with the socketlist while we go through it.
+		 * 2) NONBLOCKING sockets have released the sock. We lock the socket
+		 *    just to be sure, but the locking is not nested, so we can only
+		 *    release the socket once. How do we know, if it's ok to release the
+		 *    sock?
+		 */
+		list_for_each_entry_safe(kg_curr, kg_iter, &kg->socklist, socklist) {
+			/* make sure that the sock is locked */
+			lock_sock(kg_curr->sk);
 
-			__sk_dst_reset(kg->sk);
-			ip6_dst_lookup(kg->sk, &dst, &kg->fl); // route
-			__sk_dst_set(kg->sk, dst);
-
-			release_sock(kg->sk);
-
-			if (tcp_connect(kg->sk)) {
+			if (tcp_connect(kg_curr->sk)) {
 				HIP_ERROR("Error while connecting TCP socket\n");
-				tcp_set_state(kg->sk, TCP_CLOSE);
-				sk_dst_reset(kg->sk);
+				tcp_set_state(kg_curr->sk, TCP_CLOSE);
+				__sk_dst_reset(kg_curr->sk);
+				kg_curr->sk_route_caps = 0;
+				/* we should set dport to 0 too... */
 			}
-			hip_hadb_free_kludge(&ctx->input->hits);
+
+			if (kg_curr->sk->sk_socket && 
+			    kg_curr->sk->sk_socket->file->flags & O_NONBLOCKING) {
+				/* if our socket is nonblocking, then it most probably
+				 * has already released the lock and we just acquired it,
+				 * so we will release it.
+				 * How can we be sure?
+				 * What about interrupts?
+				 */
+				release_sock(kg_curr->sk);
+			}
 		}
+		hip_hadb_free_socks(&ctx->input->hits,0);
 	}
 			
  out_err:
