@@ -1473,7 +1473,9 @@ void hip_handle_inet6_addr_del(int ifindex) {
 		goto out;
   	}
 	hip_insert_work_order(hwo);
+
  out:
+	return;
 }
 
 /**
