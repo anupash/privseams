@@ -11,6 +11,7 @@
 #  include <net/hip.h>
 #endif
 
+#include "timer.h"
 #include "netlink.h" /* hip_netlink_* functions */
 #include "debug.h"
 #include "builder.h"

@@ -67,17 +67,17 @@ struct hip_hadb_multi {
 #define HIP_DB_PEER_HID    (&hip_peer_hostid_db)
 
 #define HIP_READ_LOCK_DB(db) do { \
-	KRISU_START_TIMER(KMM_SPINLOCK);\
+	HIP_START_TIMER(KMM_SPINLOCK);\
         read_lock_irqsave(&(db)->db_lock,lf); \
 	} while(0)
 
 #define HIP_WRITE_LOCK_DB(db) do { \
-        KRISU_START_TIMER(KMM_SPINLOCK);\
+        HIP_START_TIMER(KMM_SPINLOCK);\
 	write_lock_irqsave(&(db)->db_lock,lf); \
 	} while(0)
 
 #define HIP_READ_UNLOCK_DB(db) do { \
-        KRISU_STOP_TIMER(KMM_SPINLOCK,"read lock "__FUNCTION__);\
+        HIP_STOP_TIMER(KMM_SPINLOCK,"read lock "__FUNCTION__);\
 	read_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
 

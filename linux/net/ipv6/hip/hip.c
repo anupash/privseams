@@ -28,14 +28,6 @@ struct socket *hip_output_socket;
 struct crypto_tfm *impl_null = NULL;
 struct crypto_tfm *impl_sha1 = NULL;
 
-#ifdef KRISUS_THESIS
-struct timeval gtv_start;
-struct timeval gtv_stop;
-struct timeval gtv_result;
-int gtv_inuse;
-int kmm; // krisu_measurement_mode
-#endif
-
 struct hip_kthread_data {
 	int cpu;
 	pid_t pid;
@@ -1479,9 +1471,5 @@ static void __exit hip_cleanup(void)
 MODULE_AUTHOR("HIPL <hipl-dev@freelists.org>");
 MODULE_DESCRIPTION("HIP development module");
 MODULE_LICENSE("GPL");
-#ifdef KRISUS_THESIS
-MODULE_PARM(kmm,"i");
-MODULE_PARM_DESC(kmm, "Measuring mode: 1 = Global timing, 2 = {I,R}{1,2} timing, 3 = spinlock timing");
-#endif
 module_init(hip_init);
 module_exit(hip_cleanup);

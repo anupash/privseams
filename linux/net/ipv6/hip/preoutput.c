@@ -58,9 +58,9 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		break;
 	case HIP_STATE_UNASSOCIATED:
 		HIP_DEBUG("Initiating connection\n");
-#ifdef KRISUS_THESIS
+#ifdef HIP_TIMING
 		if (!gtv_inuse) {
-			KRISU_START_TIMER(KMM_GLOBAL);
+			HIP_START_TIMER(KMM_GLOBAL);
 			gtv_inuse = 1;
 			do_gettimeofday(&gtv_start);
 		}

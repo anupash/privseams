@@ -280,50 +280,50 @@ int hip_do_work(struct hip_work_order *job)
 	case HIP_WO_TYPE_INCOMING:
 		switch(job->hdr.subtype) {
 		case HIP_WO_SUBTYPE_RECV_I1:
-			KRISU_START_TIMER(KMM_PARTIAL);
+			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i1(job->msg, &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"I1");
+			HIP_STOP_TIMER(KMM_PARTIAL,"I1");
 			break;
 		case HIP_WO_SUBTYPE_RECV_R1:
-			KRISU_START_TIMER(KMM_PARTIAL);
+			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r1(job->msg, &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"R1");
+			HIP_STOP_TIMER(KMM_PARTIAL,"R1");
 			break;
 		case HIP_WO_SUBTYPE_RECV_I2:
-			KRISU_START_TIMER(KMM_PARTIAL);
+			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i2(job->msg, 
 					     &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"I2");
+			HIP_STOP_TIMER(KMM_PARTIAL,"I2");
 			break;
 		case HIP_WO_SUBTYPE_RECV_R2:
-			KRISU_START_TIMER(KMM_PARTIAL);
+			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r2(job->msg, &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"R2");
-			KRISU_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
+			HIP_STOP_TIMER(KMM_PARTIAL,"R2");
+			HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 			break;
 #ifdef __KERNEL__ /* XX FIXME: not supported yet... */
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
-			KRISU_START_TIMER(KMM_PARTIAL);
+			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_update(job->msg, &job->hdr.src_addr,
 						 &job->hdr.dst_addr);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
+			HIP_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
 #endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_RECV_NOTIFY:
-			KRISU_START_TIMER(KMM_PARTIAL);
+			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_notify(job->msg, &job->hdr.src_addr,
 						 &job->hdr.dst_addr);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"NOTIFY");
+			HIP_STOP_TIMER(KMM_PARTIAL,"NOTIFY");
 			break;
 		case HIP_WO_SUBTYPE_RECV_BOS:
-			KRISU_START_TIMER(KMM_PARTIAL);
+			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_bos(job->msg, &job->hdr.src_addr,
 					      &job->hdr.dst_addr);
-			KRISU_STOP_TIMER(KMM_PARTIAL,"BOS");
+			HIP_STOP_TIMER(KMM_PARTIAL,"BOS");
 			break;
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",

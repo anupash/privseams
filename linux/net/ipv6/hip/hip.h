@@ -84,40 +84,6 @@
 #define KHIPD_UNRECOVERABLE_ERROR -3
 #define HIP_MAX_SCATTERLISTS       5 // is this enough?
 
-#ifdef KRISUS_THESIS
-
-#define KMM_GLOBAL 1
-#define KMM_PARTIAL 2
-#define KMM_SPINLOCK 3
-
-#define KRISU_START_TIMER(mod) do {\
-   if (mod == kmm) {\
-      gtv_inuse = 1;\
-      do_gettimeofday(&gtv_start);\
-   }\
- } while(0)
-
-#define KRISU_STOP_TIMER(mod,msg) do {\
-   if (mod == kmm) {\
-      do_gettimeofday(&gtv_stop);\
-      gtv_inuse = 0;\
-      hip_timeval_diff(&gtv_start,&gtv_stop,&gtv_result);\
-      HIP_INFO("%s: %ld usec\n", msg, \
-               gtv_result.tv_usec + gtv_result.tv_sec * 1000000);\
-   }\
- } while(0)
-
-#else
-
-#define KRISU_START_TIMER(x)
-#define KRISU_STOP_TIMER(x,y)
-
-#endif /* KRISUS_THESIS */
-
-extern int kmm; // hip.c
-extern struct timeval gtv_start, gtv_stop, gtv_result;
-extern int gtv_inuse;
-
 #ifdef __KERNEL__
 int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
 			    int nsg, void *out);
