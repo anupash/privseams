@@ -850,9 +850,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	{
 		int err;
 
-		/* let the setup routine give us a spi. */
-		spi_in = 0;
-
+		/* let the setup routine give us a SPI. */
 		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
 				    &spi_in, transform_esp_suite, 
 				    &ctx->hip_espr.key, &ctx->hip_authr.key, 1);
@@ -864,13 +862,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 		/* XXX: -EAGAIN */
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
-		err = hip_ipv6_devaddr2ifindex(&ctx->skb_in->nh.ipv6h->daddr);
-		if (err != 0) {
-			HIP_DEBUG("ifindex=%d\n", err);
-			hip_ifindex2spi_map_add(&i2->hits, spi_in, err);
-		} else
-			HIP_ERROR("Couldn't get device ifindex of address\n");
-		err = 0;
 	}
 
 	/* update SPI_LSI parameter because it has not been filled with SPI

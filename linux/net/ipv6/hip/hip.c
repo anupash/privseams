@@ -1050,32 +1050,44 @@ void hip_ifindex2spi_map_add(struct in6_addr *peer_hit, uint32_t spi, int ifinde
 {
 	struct hip_ifindex2spi_map *m;
 	unsigned long flags = 0;
-	struct list_head *pos, *n;
+	struct list_head *pos, *tmp;
 	int i = 1;
 
 	HIP_DEBUG("spi=0x%x ifindex=%d\n", spi, ifindex);
+
+	spin_lock_irqsave(&hip_ifindex2spi_map_list_lock, flags);
+
+	list_for_each_safe(pos, tmp, &hip_ifindex2spi_map_list) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		if (m->spi == spi && !ipv6_addr_cmp(&m->peer_hit, peer_hit)) {
+			HIP_DEBUG("not adding a duplicate entry\n");
+			goto out;
+		}
+	}
+
 	m = kmalloc(sizeof(struct hip_ifindex2spi_map), GFP_ATOMIC);
 	if (!m) {
 		HIP_ERROR("kmalloc failed\n");
-		return;
+		goto out;
 	}
 
 	ipv6_addr_copy(&m->peer_hit, peer_hit);
 	m->spi = spi;
 	m->ifindex = ifindex;
 
-	spin_lock_irqsave(&hip_ifindex2spi_map_list_lock, flags);
 	list_add(&m->list, &hip_ifindex2spi_map_list);
 	HIP_DEBUG("Current ifindex->SPI mapping:\n");
-	list_for_each_safe(pos, n, &hip_ifindex2spi_map_list) {
+	list_for_each_safe(pos, tmp, &hip_ifindex2spi_map_list) {
 		char str[INET6_ADDRSTRLEN];
 		m = list_entry(pos, struct hip_ifindex2spi_map, list);
 		hip_in6_ntop(&m->peer_hit, str);
 		HIP_DEBUG("%d: HIT %s SPI=0x%x ifindex=%d\n", i, str, m->spi, m->ifindex);
 		i++;
 	}
-	spin_unlock_irqrestore(&hip_ifindex2spi_map_list_lock, flags);
 	HIP_DEBUG("End of mapping list\n");
+
+ out:
+	spin_unlock_irqrestore(&hip_ifindex2spi_map_list_lock, flags);
 	return;
 }
 
@@ -1092,6 +1104,7 @@ uint32_t hip_ifindex2spi_get_spi(struct in6_addr *peer_hit, int ifindex)
 		m = list_entry(pos, struct hip_ifindex2spi_map, list);
 		if (m->ifindex == ifindex && !ipv6_addr_cmp(&m->peer_hit, peer_hit)) {
 			HIP_DEBUG("found\n");
+			spi = m->spi;
 			break;
 		}
 	}
@@ -1170,7 +1183,9 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
 	for (ifa = idev->addr_list; ifa; (*idev_addr_count)++, ifa = ifa->if_next) {
 		spin_lock_bh(&ifa->lock);
 		hip_in6_ntop(&ifa->addr, addrstr);
-		HIP_DEBUG("addr %d: %s flags=0x%x\n", *idev_addr_count+1, addrstr, ifa->flags);
+		HIP_DEBUG("addr %d: %s flags=0x%x valid_lft=%u j-ts=%lu\n",
+			  *idev_addr_count+1, addrstr, ifa->flags,
+			  ifa->valid_lft, (jiffies-ifa->tstamp)/HZ);
 		if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL) {
 			HIP_DEBUG("not counting link local address\n");
 			(*idev_addr_count)--;
@@ -1197,18 +1212,20 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
 		 * the peers, policy ?
 		 */
 		for (i = 0, ifa = idev->addr_list;
-		     ifa && i < *idev_addr_count; ifa = ifa->if_next) {
+		     ifa && i < *idev_addr_count; ifa = ifa->if_next, i++) {
 			spin_lock_bh(&ifa->lock);
 			if (!(ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL)) {
 				ipv6_addr_copy(&tmp_list[i].address, &ifa->addr);
-				tmp_list[i].lifetime = htonl(0);
-				tmp_list[i].reserved = 0;
-				i++;
+				/* lifetime: select prefered_lft or valid_lft ? */
+				tmp_list[i].lifetime = htonl(ifa->valid_lft); /* or: (jiffies-ifp->tstamp)/HZ ? */
+				if (i == 0)
+					tmp_list[i].reserved = htonl(1 << 31); /* for testing preferred address */
+				else
+					tmp_list[i].reserved = 0;
 			} else {
 				HIP_DEBUG("not adding link local address\n");
 			}
 			spin_unlock_bh(&ifa->lock);
-			/* todo: how to calculate address lifetime */
 		}
 	}
 
@@ -1283,11 +1300,10 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
 		}
 	}
 
-//	if (idev_addr_count > 0)
+	if (idev_addr_count > 0)
 		hip_send_update_all(addr_list, idev_addr_count, event_dev->ifindex); /* move this to hip_net_event */
-
-//	else
-//		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+	else
+		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
 
  out_err:
 	read_unlock(&idev->lock);
