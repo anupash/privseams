@@ -755,13 +755,16 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 		goto out_err;
 	}
 
-	err = hip_socket_add_local_hi(dsa_host_identity, &dsa_lhi);
+	/* XX FIX: Note: currently the order of insertion of host ids makes a
+	   difference. */
+
+	err = hip_socket_add_local_hi(rsa_host_identity, &rsa_lhi);
 	if (err) {
 		HIP_ERROR("Failed to add HIP localhost identity\n");
 		goto out_err;
 	}
 
-	err = hip_socket_add_local_hi(rsa_host_identity, &rsa_lhi);
+	err = hip_socket_add_local_hi(dsa_host_identity, &dsa_lhi);
 	if (err) {
 		HIP_ERROR("Failed to add HIP localhost identity\n");
 		goto out_err;
