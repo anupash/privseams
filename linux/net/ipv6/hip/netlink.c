@@ -38,7 +38,7 @@ struct hip_work_order *hip_netlink_receive(void)
 	result = HIP_MALLOC(sizeof(struct hip_work_order), GFP_KERNEL);
 	if (!result) {
 		HIP_ERROR("Out of memory.\n");
-		HIP_FREE_skb(skb);
+		kfree_skb(skb);
 		result = NULL;
 		goto err;
 	}
@@ -50,7 +50,7 @@ struct hip_work_order *hip_netlink_receive(void)
 	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
 	if (!result->msg) {
 		HIP_ERROR("Out of memory.\n");
-		HIP_FREE_skb(skb);
+		kfree_skb(skb);
 		HIP_FREE(hwo);
 		result = NULL;
 		goto err;
@@ -58,7 +58,7 @@ struct hip_work_order *hip_netlink_receive(void)
 	
 	memcpy(result->msg, &hwoh->msg, msg_len);
 	result = hwo;
-	HIP_FREE_skb(skb);
+	kfree_skb(skb);
 	
  err:
 	return result;
@@ -95,7 +95,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	netlink_unicast(nl_sk, skb, hipd_pid, MSG_DONTWAIT);
 	/* FIXME: errors of unicast */
 
-	HIP_FREE_skb(skb);
+	kfree_skb(skb);
 	return 1;
 }
 

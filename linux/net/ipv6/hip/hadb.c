@@ -113,7 +113,6 @@ void hip_hadb_remove_hs(uint32_t spi)
 }
 
 /* test */
-#if 0
 // FIXME: tkoponen, what is this?
 void hip_hadb_remove_hs2(struct hip_hit_spi *hs)
 {
@@ -128,7 +127,6 @@ void hip_hadb_remove_hs2(struct hip_hit_spi *hs)
 	HIP_ERROR("TODO: CALL HS_PUT ?\n");
 	HIP_UNLOCK_HS(hs);
 }
-#endif
 
 static void *hip_hadb_get_key_hit(void *entry)
 {

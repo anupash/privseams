@@ -916,6 +916,7 @@ struct hip_work_order_hdr {
 	int type;
 	int subtype;
 	struct in6_addr src_addr, dst_addr;
+	int arg1, arg2;
 };
 
 struct hip_work_order {

@@ -758,8 +758,9 @@ struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
 
 	hwo->hdr.type = HIP_WO_TYPE_MSG;
 	hwo->hdr.subtype = subtype;
-	hwo->arg1 = (void *)ifindex;
-	hwo->arg2 = (void *)event;
+	hwo->hdr.arg1 = ifindex;
+	hwo->hdr.arg2 = event;
+	hwo->msg = NULL;
 	hwo->destructor = NULL;
 	return hwo;
 }
@@ -1189,7 +1190,6 @@ static int hip_init_cipher(void)
  */
 static void hip_uninit_cipher(void)
 {
-	int i;
         /* 
 	 * jlu XXX: If I understand correctly, the implementations do
 	 * not require freeing, although it seems possible to unregister them...
@@ -1308,7 +1308,7 @@ static int hip_worker(void *t)
 
 	/* set up thread */
 	thr->pid = pid = current->pid;
-     hip_netlink_open();
+	hip_netlink_open(0);
 	hip_init_workqueue();
 	atomic_inc(&hip_working);
 	daemonize("khipd/%d", cpu);

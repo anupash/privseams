@@ -1389,7 +1389,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 
 /**
  * hip_receive_update - receive UPDATE packet
- * @skb: sk_buff where the HIP packet is in
+ * @msg: buffer where the HIP packet is in
  * @hip_common: pointer to HIP header
  *
  * This is the initial function which is called when an UPDATE packet
@@ -1400,10 +1400,11 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
  * validated, and the rest of the packet is handled if current state
  * allows it), otherwise < 0.
  */
-int hip_receive_update(struct sk_buff *skb)
+int hip_receive_update(struct hip_common *msg,
+		       struct in6_addr *update_saddr,
+		       struct in6_addr *update_daddr)
 {
 	int err = 0;
-	struct hip_common *msg;
 	struct in6_addr *hits;
 	struct hip_nes *nes = NULL;
 	struct hip_seq *seq = NULL;
@@ -1426,11 +1427,10 @@ int hip_receive_update(struct sk_buff *skb)
 	hip_ha_t *entry = NULL;
 
 	HIP_DEBUG("\n");
-	msg = (struct hip_common *) skb->h.raw;
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
 
-	src_ip = &(skb->nh.ipv6h->saddr);
-	dst_ip = &(skb->nh.ipv6h->daddr);
+	src_ip = update_saddr;
+	dst_ip = update_daddr;
 	hits = &msg->hits;
 
 	entry = hip_hadb_find_byhit(hits);

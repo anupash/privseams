@@ -288,7 +288,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	default:
 		HIP_ERROR("Received HIP packet of unknown/unimplemented type %d\n",
 			  hip_common->type_hdr);
-		HIP_FREE_skb(*skb);  /* sic */
+		kfree_skb(*skb);  /* sic */
 		HIP_FREE(hwo);
 		/*  KRISUXXX: return value? */
 		return -1;
