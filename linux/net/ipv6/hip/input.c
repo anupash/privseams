@@ -110,6 +110,14 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	 * No locking will take place since the data
 	 * that we are copying is very static
 	 */
+	HIP_DEBUG("spi=0x%x\n", spi);
+	ha = hip_hadb_find_byspi_list(spi);
+	if (!ha) {
+		HIP_INFO("HT BYSPILIST: NOT found SPI 0x%x\n",spi);
+	} else {
+		HIP_INFO("HT BYSPILIST: found SPI 0x%x\n",spi);
+		hip_put_ha(ha);
+	}
 
 	ha = hip_hadb_find_byspi(spi);
 	if (!ha) {
@@ -1752,6 +1760,12 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	HIP_DEBUG("INSERTING STATE\n");
 	hip_hadb_insert_state(entry);
+	HIP_DEBUG("INSERTING STATE TO SPI LIST\n");
+	err = hip_hadb_insert_state_spi_list(entry, spi_in);
+	if (err) {
+		HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
+		goto out_err;
+	}
 
 	err = hip_create_r2(ctx, entry);
 	HIP_DEBUG("hip_handle_r2 returned %d\n", err);
@@ -1990,6 +2004,12 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		/* XXX: Check for -EAGAIN */
 		HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
 
+		HIP_DEBUG("INSERTING STATE TO SPI LIST\n");
+		err = hip_hadb_insert_state_spi_list(entry, spi_in);
+		if (err) {
+			HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
+			goto out_err;
+		}
 		/* source IPv6 address is implicitly the preferred
 		 * address after the base exchange */
 		err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,

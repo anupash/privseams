@@ -766,11 +766,20 @@ struct hip_ifindex2spi_map {
 	uint32_t spi;
 };
 
+struct hip_spi_list_item
+{
+	struct list_head list;
+	int              direction; /* inbound or outbound */
+	uint32_t         spi;
+	uint32_t         new_spi;   /* spi is changed to this when rekeying */
+};
+
 struct hip_hadb_state
 {
 	uint8_t              type;         /* RVAs and HAs are stored in the same hash table */
 	struct list_head     next_hit;
 	struct list_head     next_spi;
+	struct list_head     next_spi_list;
 
 
 	spinlock_t           lock;
@@ -786,10 +795,14 @@ struct hip_hadb_state
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
 
-	uint32_t             spi_out;       /* outbound IPsec SA SPI */
-	uint32_t             spi_in;        /* inbound IPsec SA SPI */
-	uint32_t             new_spi_out;   /* new outbound IPsec SA SPI received in UPDATE */
-	uint32_t             new_spi_in;    /* new inbound IPsec SA SPI when rekey was initiated */
+	uint32_t             spi_out;        /* outbound IPsec SA SPI */
+	uint32_t             spi_in;         /* inbound IPsec SA SPI */
+	uint32_t             new_spi_out;    /* new outbound IPsec SA SPI received in UPDATE */
+	uint32_t             new_spi_in;     /* new inbound IPsec SA SPI when rekey was initiated */
+
+	/* test code for multiple SA support, will replace spi_in and spi_out */
+	struct list_head     spis_in;        /* SPIs for inbound and outbound SAs */
+	struct list_head     spis_out;
 
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address;

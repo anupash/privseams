@@ -20,10 +20,12 @@ void hip_uninit_hadb(void);
 
 /* Accessors */
 hip_ha_t *hip_hadb_find_byspi(u32 spi);
+hip_ha_t *hip_hadb_find_byspi_list(u32 spi);
 hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
+int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi);
 void hip_hadb_remove_state(hip_ha_t *ha);
 void hip_hadb_remove_state_spi(hip_ha_t *ha);
 void hip_hadb_remove_state_hit(hip_ha_t *ha);
