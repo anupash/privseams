@@ -376,6 +376,8 @@ static void disconnect(struct AdapterCtlBlk *acb);
 static void reselect(struct AdapterCtlBlk *acb);
 static u8 start_scsi(struct AdapterCtlBlk *acb, struct DeviceCtlBlk *dcb,
 		struct ScsiReqBlk *srb);
+static inline void enable_msgout_abort(struct AdapterCtlBlk *acb,
+		struct ScsiReqBlk *srb);
 static void build_srb(struct scsi_cmnd *cmd, struct DeviceCtlBlk *dcb,
 		struct ScsiReqBlk *srb);
 static void doing_srb_done(struct AdapterCtlBlk *acb, u8 did_code,
@@ -384,13 +386,11 @@ static void scsi_reset_detect(struct AdapterCtlBlk *acb);
 static void pci_unmap_srb(struct AdapterCtlBlk *acb, struct ScsiReqBlk *srb);
 static void pci_unmap_srb_sense(struct AdapterCtlBlk *acb,
 		struct ScsiReqBlk *srb);
-static inline void enable_msgout_abort(struct AdapterCtlBlk *acb,
-		struct ScsiReqBlk *srb);
 static void srb_done(struct AdapterCtlBlk *acb, struct DeviceCtlBlk *dcb,
 		struct ScsiReqBlk *srb);
 static void request_sense(struct AdapterCtlBlk *acb, struct DeviceCtlBlk *dcb,
 		struct ScsiReqBlk *srb);
-static inline void set_xfer_rate(struct AdapterCtlBlk *acb,
+static void set_xfer_rate(struct AdapterCtlBlk *acb,
 		struct DeviceCtlBlk *dcb);
 static void waiting_timeout(unsigned long ptr);
 
@@ -989,7 +989,7 @@ static void build_srb(struct scsi_cmnd *cmd, struct DeviceCtlBlk *dcb,
 	srb->sg_count = 0;
 	srb->total_xfer_length = 0;
 	srb->sg_bus_addr = 0;
-	srb->virt_addr = 0;
+	srb->virt_addr = NULL;
 	srb->sg_index = 0;
 	srb->adapter_status = 0;
 	srb->target_status = 0;
@@ -1676,6 +1676,23 @@ static u8 start_scsi(struct AdapterCtlBlk* acb, struct DeviceCtlBlk* dcb,
 }
 
 
+#define DC395x_ENABLE_MSGOUT \
+ DC395x_write16 (acb, TRM_S1040_SCSI_CONTROL, DO_SETATN); \
+ srb->state |= SRB_MSGOUT
+
+
+/* abort command */
+static inline void enable_msgout_abort(struct AdapterCtlBlk *acb,
+		struct ScsiReqBlk *srb)
+{
+	srb->msgout_buf[0] = ABORT;
+	srb->msg_count = 1;
+	DC395x_ENABLE_MSGOUT;
+	srb->state &= ~SRB_MSGIN;
+	srb->state |= SRB_MSGOUT;
+}
+
+
 /**
  * dc395x_handle_interrupt - Handle an interrupt that has been confirmed to
  *                           have been triggered for this card.
@@ -1999,7 +2016,7 @@ static void sg_update_list(struct ScsiReqBlk *srb, u32 left)
 	}
 
 	dprintkl(KERN_ERR, "sg_update_list: sg_to_virt failed\n");
-	srb->virt_addr = 0;
+	srb->virt_addr = NULL;
 }
 
 
@@ -2583,11 +2600,6 @@ static inline u8 msgin_completed(u8 * msgbuf, u32 len)
 	return 1;
 }
 
-#define DC395x_ENABLE_MSGOUT \
- DC395x_write16 (acb, TRM_S1040_SCSI_CONTROL, DO_SETATN); \
- srb->state |= SRB_MSGOUT
-
-
 /* reject_msg */
 static inline void msgin_reject(struct AdapterCtlBlk *acb,
 		struct ScsiReqBlk *srb)
@@ -2600,18 +2612,6 @@ static inline void msgin_reject(struct AdapterCtlBlk *acb,
 	dprintkl(KERN_INFO, "msgin_reject: 0x%02x <%02i-%i>\n",
 		srb->msgin_buf[0],
 		srb->dcb->target_id, srb->dcb->target_lun);
-}
-
-
-/* abort command */
-static inline void enable_msgout_abort(struct AdapterCtlBlk *acb,
-		struct ScsiReqBlk *srb)
-{
-	srb->msgout_buf[0] = ABORT;
-	srb->msg_count = 1;
-	DC395x_ENABLE_MSGOUT;
-	srb->state &= ~SRB_MSGIN;
-	srb->state |= SRB_MSGOUT;
 }
 
 
@@ -3656,7 +3656,7 @@ static void scsi_reset_detect(struct AdapterCtlBlk *acb)
 	} else {
 		acb->acb_flag |= RESET_DETECT;
 		reset_dev_param(acb);
-		doing_srb_done(acb, DID_RESET, 0, 1);
+		doing_srb_done(acb, DID_RESET, NULL, 1);
 		/*DC395x_RecoverSRB( acb ); */
 		acb->active_dcb = NULL;
 		acb->acb_flag = 0;

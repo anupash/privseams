@@ -388,7 +388,7 @@ static int ufs_parse_options (char * options, unsigned * mount_options)
 /*
  * Read on-disk structures associated with cylinder groups
  */
-int ufs_read_cylinder_structures (struct super_block * sb) {
+static int ufs_read_cylinder_structures (struct super_block *sb) {
 	struct ufs_sb_info * sbi = UFS_SB(sb);
 	struct ufs_sb_private_info * uspi;
 	struct ufs_super_block *usb;
@@ -488,7 +488,7 @@ failed:
  * Put on-disk structures associated with cylinder groups and 
  * write them back to disk
  */
-void ufs_put_cylinder_structures (struct super_block * sb) {
+static void ufs_put_cylinder_structures (struct super_block *sb) {
 	struct ufs_sb_info * sbi = UFS_SB(sb);
 	struct ufs_sb_private_info * uspi;
 	struct ufs_buffer_head * ubh;
@@ -743,22 +743,22 @@ again:
 	/*
 	 * Check ufs magic number
 	 */
-	switch ((uspi->fs_magic = __constant_le32_to_cpu(usb3->fs_magic))) {
+	sbi->s_bytesex = BYTESEX_LE;
+	switch ((uspi->fs_magic = fs32_to_cpu(sb, usb3->fs_magic))) {
 		case UFS_MAGIC:
 		case UFS2_MAGIC:
 		case UFS_MAGIC_LFN:
 	        case UFS_MAGIC_FEA:
 	        case UFS_MAGIC_4GB:
-			sbi->s_bytesex = BYTESEX_LE;
 			goto magic_found;
 	}
-	switch ((uspi->fs_magic = __constant_be32_to_cpu(usb3->fs_magic))) {
+	sbi->s_bytesex = BYTESEX_BE;
+	switch ((uspi->fs_magic = fs32_to_cpu(sb, usb3->fs_magic))) {
 		case UFS_MAGIC:
 		case UFS2_MAGIC:
 		case UFS_MAGIC_LFN:
 	        case UFS_MAGIC_FEA:
 	        case UFS_MAGIC_4GB:
-			sbi->s_bytesex = BYTESEX_BE;
 			goto magic_found;
 	}
 
@@ -993,7 +993,7 @@ failed_nomem:
 	return -ENOMEM;
 }
 
-void ufs_write_super (struct super_block * sb) {
+static void ufs_write_super (struct super_block *sb) {
 	struct ufs_sb_private_info * uspi;
 	struct ufs_super_block_first * usb1;
 	struct ufs_super_block_third * usb3;
@@ -1020,7 +1020,7 @@ void ufs_write_super (struct super_block * sb) {
 	unlock_kernel();
 }
 
-void ufs_put_super (struct super_block * sb)
+static void ufs_put_super (struct super_block *sb)
 {
 	struct ufs_sb_info * sbi = UFS_SB(sb);
 		
@@ -1037,7 +1037,7 @@ void ufs_put_super (struct super_block * sb)
 }
 
 
-int ufs_remount (struct super_block * sb, int * mount_flags, char * data)
+static int ufs_remount (struct super_block *sb, int *mount_flags, char *data)
 {
 	struct ufs_sb_private_info * uspi;
 	struct ufs_super_block_first * usb1;
@@ -1112,7 +1112,7 @@ int ufs_remount (struct super_block * sb, int * mount_flags, char * data)
 	return 0;
 }
 
-int ufs_statfs (struct super_block * sb, struct kstatfs * buf)
+static int ufs_statfs (struct super_block *sb, struct kstatfs *buf)
 {
 	struct ufs_sb_private_info * uspi;
 	struct ufs_super_block_first * usb1;
@@ -1129,7 +1129,7 @@ int ufs_statfs (struct super_block * sb, struct kstatfs * buf)
 	flags = UFS_SB(sb)->s_flags;
 	if ((flags & UFS_TYPE_MASK) == UFS_TYPE_UFS2) {
 		buf->f_type = UFS2_MAGIC;
-		buf->f_blocks = usb->fs_u11.fs_u2.fs_dsize;
+		buf->f_blocks = fs64_to_cpu(sb, usb->fs_u11.fs_u2.fs_dsize);
 		buf->f_bfree = ufs_blkstofrags(fs64_to_cpu(sb, usb->fs_u11.fs_u2.fs_cstotal.cs_nbfree)) +
 			fs64_to_cpu(sb, usb->fs_u11.fs_u2.fs_cstotal.cs_nffree);
 		buf->f_ffree = fs64_to_cpu(sb,
@@ -1183,7 +1183,7 @@ static int init_inodecache(void)
 {
 	ufs_inode_cachep = kmem_cache_create("ufs_inode_cache",
 					     sizeof(struct ufs_inode_info),
-					     0, SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT,
+					     0, SLAB_RECLAIM_ACCOUNT,
 					     init_once, NULL);
 	if (ufs_inode_cachep == NULL)
 		return -ENOMEM;

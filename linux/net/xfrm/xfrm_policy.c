@@ -715,32 +715,17 @@ int xfrm_lookup(struct dst_entry **dst_p, struct flowi *fl,
 {
 	struct xfrm_policy *policy;
 	struct xfrm_state *xfrm[XFRM_MAX_DEPTH];
-	struct rtable *rt = (struct rtable*)*dst_p;
-	struct dst_entry *dst;
+	struct dst_entry *dst, *dst_orig = *dst_p;
 	int nx = 0;
 	int err;
 	u32 genid;
-	u16 family = (*dst_p)->ops->family;
-
-	switch (family) {
-	case AF_INET:
-		if (!fl->fl4_src)
-			fl->fl4_src = rt->rt_src;
-		if (!fl->fl4_dst)
-			fl->fl4_dst = rt->rt_dst;
-	case AF_INET6:
-		/* Still not clear... */
-	default:
-		/* nothing */;
-	}
+	u16 family = dst_orig->ops->family;
 
 	//	printk(KERN_DEBUG "xfrm_lookup\n");
-
 if (family == AF_INET6 && (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst))) {
 //printk(KERN_DEBUG "xfrm_lookup: fl6_src=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_src));
 //printk(KERN_DEBUG "xfrm_lookup: fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
 }
-
 
 restart:
 	genid = atomic_read(&flow_cache_genid);
@@ -751,7 +736,7 @@ restart:
 	//	printk(KERN_DEBUG "xfrm_lookup sk_policy_lookup found %p\n", policy);
 	if (!policy) {
 		/* To accelerate a bit...  */
-		if ((rt->u.dst.flags & DST_NOXFRM) || !xfrm_policy_list[XFRM_POLICY_OUT])
+		if ((dst_orig->flags & DST_NOXFRM) || !xfrm_policy_list[XFRM_POLICY_OUT])
 			return 0;
 
 		policy = flow_cache_lookup(fl, family,
@@ -860,7 +845,7 @@ if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
 				printk(KERN_DEBUG "HIT not in ok state, SPI not changed\n"); /* other states ? */
 		}
 #endif
-		dst = &rt->u.dst;
+		dst = dst_orig;
 		err = xfrm_bundle_create(policy, xfrm, nx, fl, &dst, family);
 
 		if (unlikely(err)) {
@@ -891,13 +876,13 @@ if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
 	}
 //printk(KERN_DEBUG "xfrm_lookup end, dst %p\n", dst);
 	*dst_p = dst;
-	ip_rt_put(rt);
+	dst_release(dst_orig);
 	xfrm_pol_put(policy);
 	return 0;
 
 error:
 	//printk(KERN_DEBUG "xfrm_lookup label error\n");
-	ip_rt_put(rt);
+	dst_release(dst_orig);
 	xfrm_pol_put(policy);
 	*dst_p = NULL;
 	return err;

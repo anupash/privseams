@@ -67,9 +67,9 @@ check_pgt_cache (void)
 	if (pgtable_cache_size > (u64) high) {
 		do {
 			if (pgd_quicklist)
-				free_page((unsigned long)pgd_alloc_one_fast(0));
+				free_page((unsigned long)pgd_alloc_one_fast(NULL));
 			if (pmd_quicklist)
-				free_page((unsigned long)pmd_alloc_one_fast(0, 0));
+				free_page((unsigned long)pmd_alloc_one_fast(NULL, 0));
 		} while (pgtable_cache_size > (u64) low);
 	}
 	preempt_enable();
@@ -429,20 +429,22 @@ virtual_memmap_init (u64 start, u64 end, void *arg)
 		    / sizeof(struct page));
 
 	if (map_start < map_end)
-		memmap_init_zone(map_start, (unsigned long) (map_end - map_start),
+		memmap_init_zone((unsigned long)(map_end - map_start),
 				 args->nid, args->zone, page_to_pfn(map_start));
 	return 0;
 }
 
 void
-memmap_init (struct page *start, unsigned long size, int nid,
-	     unsigned long zone, unsigned long start_pfn)
+memmap_init (unsigned long size, int nid, unsigned long zone,
+	     unsigned long start_pfn)
 {
 	if (!vmem_map)
-		memmap_init_zone(start, size, nid, zone, start_pfn);
+		memmap_init_zone(size, nid, zone, start_pfn);
 	else {
+		struct page *start;
 		struct memmap_init_callback_data args;
 
+		start = pfn_to_page(start_pfn);
 		args.start = start;
 		args.end = start + size;
 		args.nid = nid;
@@ -458,9 +460,9 @@ ia64_pfn_valid (unsigned long pfn)
 	char byte;
 	struct page *pg = pfn_to_page(pfn);
 
-	return     (__get_user(byte, (char *) pg) == 0)
+	return     (__get_user(byte, (char __user *) pg) == 0)
 		&& ((((u64)pg & PAGE_MASK) == (((u64)(pg + 1) - 1) & PAGE_MASK))
-			|| (__get_user(byte, (char *) (pg + 1) - 1) == 0));
+			|| (__get_user(byte, (char __user *) (pg + 1) - 1) == 0));
 }
 EXPORT_SYMBOL(ia64_pfn_valid);
 
@@ -585,6 +587,6 @@ mem_init (void)
 	setup_gate();
 
 #ifdef CONFIG_IA32_SUPPORT
-	ia32_boot_gdt_init();
+	ia32_mem_init();
 #endif
 }

@@ -37,24 +37,26 @@ static int tas5130d1b_init(struct sn9c102_device* cam)
 	err += sn9c102_write_reg(cam, 0x00, 0x14);
 	err += sn9c102_write_reg(cam, 0x60, 0x17);
 	err += sn9c102_write_reg(cam, 0x07, 0x18);
-	err += sn9c102_write_reg(cam, 0x33, 0x19);
 
 	err += sn9c102_i2c_try_raw_write(cam, &tas5130d1b, 4, 0x11, 0x00, 0x40,
 	                                 0x47, 0, 0);
-	err += sn9c102_i2c_try_raw_write(cam, &tas5130d1b, 4, 0x11, 0x02, 0x20,
-	                                 0xa9, 0, 0);
-	err += sn9c102_i2c_try_raw_write(cam, &tas5130d1b, 4, 0x11, 0x00, 0xc0,
-	                                 0x49, 0, 0);
-	err += sn9c102_i2c_try_raw_write(cam, &tas5130d1b, 4, 0x11, 0x02, 0x20,
-	                                 0x6c, 0, 0);
-	err += sn9c102_i2c_try_raw_write(cam, &tas5130d1b, 4, 0x11, 0x00, 0xc0,
-	                                 0x08, 0, 0);
-	err += sn9c102_i2c_try_raw_write(cam, &tas5130d1b, 4, 0x11, 0x00, 0x20,
-	                                 0x00, 0, 0);
-
-	err += sn9c102_write_reg(cam, 0x63, 0x19);
 
 	return err;
+}
+
+
+static int tas5130d1b_set_ctrl(struct sn9c102_device* cam, 
+                               const struct v4l2_control* ctrl)
+{
+	switch (ctrl->id) {
+	case V4L2_CID_GAIN:
+		return sn9c102_i2c_try_raw_write(cam, &tas5130d1b, 4, 0x11,
+		                                 0x02, 0x20,
+		                                 0xff - (ctrl->value & 0xff),
+		                                 0, 0);
+	default:
+		return -EINVAL;
+	}
 }
 
 
@@ -62,12 +64,17 @@ static int tas5130d1b_set_crop(struct sn9c102_device* cam,
                                const struct v4l2_rect* rect)
 {
 	struct sn9c102_sensor* s = &tas5130d1b;
-	int err = 0;
 	u8 h_start = (u8)(rect->left - s->cropcap.bounds.left) + 104,
 	   v_start = (u8)(rect->top - s->cropcap.bounds.top) + 12;
+	int err = 0;
 
 	err += sn9c102_write_reg(cam, h_start, 0x12);
 	err += sn9c102_write_reg(cam, v_start, 0x13);
+
+	/* Do NOT change! */
+	err += sn9c102_write_reg(cam, 0x1d, 0x1a);
+	err += sn9c102_write_reg(cam, 0x10, 0x1b);
+	err += sn9c102_write_reg(cam, 0xf3, 0x19);
 
 	return err;
 }
@@ -79,6 +86,19 @@ static struct sn9c102_sensor tas5130d1b = {
 	.frequency = SN9C102_I2C_100KHZ,
 	.interface = SN9C102_I2C_3WIRES,
 	.init = &tas5130d1b_init,
+	.qctrl = {
+		{
+			.id = V4L2_CID_GAIN,
+			.type = V4L2_CTRL_TYPE_INTEGER,
+			.name = "global gain",
+			.minimum = 0x00,
+			.maximum = 0xff,
+			.step = 0x01,
+			.default_value = 0x00,
+			.flags = 0,
+		},
+	},
+	.set_ctrl = &tas5130d1b_set_ctrl,
 	.cropcap = {
 		.bounds = {
 			.left = 0,
@@ -108,13 +128,9 @@ int sn9c102_probe_tas5130d1b(struct sn9c102_device* cam)
 	/* This sensor has no identifiers, so let's attach it anyway */
 	sn9c102_attach_sensor(cam, &tas5130d1b);
 
-	/* At the moment, only devices whose PID is 0x6025 have this sensor */
+	/* At the moment, sensor detection is based on USB pid/vid */
 	if (tas5130d1b.usbdev->descriptor.idProduct != 0x6025)
 		return -ENODEV;
 
-	dev_info(tas5130d1b.dev, "TAS5130D1B detected, but the support for it "
-	                         "is disabled at the moment - needs further "
-	                         "testing -\n");
-
-	return -ENODEV;
+	return 0;
 }

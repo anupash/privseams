@@ -322,6 +322,11 @@ int __init valkyriefb_init(void)
 	struct fb_info_valkyrie	*p;
 	unsigned long frame_buffer_phys, cmap_regs_phys, flags;
 	int err;
+	char *option = NULL;
+
+	if (fb_get_options("valkyriefb", &option))
+		return -ENODEV;
+	valkyriefb_setup(option);
 
 #ifdef CONFIG_MAC
 	if (!MACH_IS_MAC)
@@ -540,7 +545,7 @@ static void __init valkyrie_init_info(struct fb_info *info, struct fb_info_valky
 {
 	info->fbops = &valkyriefb_ops;
 	info->screen_base = (char *) p->frame_buffer + 0x1000;
-	info->flags = FBINFO_FLAG_DEFAULT;
+	info->flags = FBINFO_DEFAULT;
 	info->pseudo_palette = p->pseudo_palette;
 	fb_alloc_cmap(&info->cmap, 256, 0);
 	info->par = &p->par;
@@ -579,4 +584,5 @@ int __init valkyriefb_setup(char *options)
 	return 0;
 }
 
+module_init(valkyriefb_init);
 MODULE_LICENSE("GPL");

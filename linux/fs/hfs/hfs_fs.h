@@ -90,7 +90,7 @@ struct hfs_sb_info {
 	struct buffer_head *alt_mdb_bh;		/* The hfs_buffer holding
 						   the alternate superblock */
 	struct hfs_mdb *alt_mdb;
-	u32 *bitmap;				/* The page holding the
+	__be32 *bitmap;				/* The page holding the
 						   allocation bitmap */
 	struct hfs_btree *ext_tree;			/* Information about
 						   the extents b-tree */
@@ -129,8 +129,8 @@ struct hfs_sb_info {
 						   "allocation block" */
 	int s_quiet;				/* Silent failure when
 						   changing owner or mode? */
-	u32 s_type;				/* Type for new files */
-	u32 s_creator;				/* Creator for new files */
+	__be32 s_type;				/* Type for new files */
+	__be32 s_creator;			/* Creator for new files */
 	umode_t s_file_umask;			/* The umask applied to the
 						   permissions on all files */
 	umode_t s_dir_umask;			/* The umask applied to the
@@ -197,11 +197,11 @@ extern struct address_space_operations hfs_aops;
 extern struct address_space_operations hfs_btree_aops;
 
 extern struct inode *hfs_new_inode(struct inode *, struct qstr *, int);
-extern void hfs_inode_write_fork(struct inode *, struct hfs_extent *, u32 *, u32 *);
-extern void hfs_write_inode(struct inode *, int);
+extern void hfs_inode_write_fork(struct inode *, struct hfs_extent *, __be32 *, __be32 *);
+extern int hfs_write_inode(struct inode *, int);
 extern int hfs_inode_setattr(struct dentry *, struct iattr *);
 extern void hfs_inode_read_fork(struct inode *inode, struct hfs_extent *ext,
-				u32 log_size, u32 phys_size, u32 clump_size);
+			__be32 log_size, __be32 phys_size, u32 clump_size);
 extern struct inode *hfs_iget(struct super_block *, struct hfs_cat_key *, hfs_cat_rec *);
 extern void hfs_clear_inode(struct inode *);
 extern void hfs_delete_inode(struct inode *);
@@ -222,9 +222,6 @@ extern int hfs_hash_dentry(struct dentry *, struct qstr *);
 extern int hfs_strcmp(const unsigned char *, unsigned int,
 		      const unsigned char *, unsigned int);
 extern int hfs_compare_dentry(struct dentry *, struct qstr *, struct qstr *);
-
-/* super.c */
-extern struct super_block *hfs_read_super(struct super_block *,void *,int);
 
 /* trans.c */
 extern void hfs_triv2mac(struct hfs_name *, struct qstr *);

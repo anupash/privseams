@@ -650,7 +650,8 @@ sys_timer_create(clockid_t which_clock,
 				list_add(&new_timer->list,
 					 &process->signal->posix_timers);
 				spin_unlock_irqrestore(&process->sighand->siglock, flags);
-				get_task_struct(process);
+				if (new_timer->it_sigev_notify == (SIGEV_SIGNAL|SIGEV_THREAD_ID))
+					get_task_struct(process);
 			} else {
 				spin_unlock_irqrestore(&process->sighand->siglock, flags);
 				process = NULL;
@@ -1102,7 +1103,7 @@ retry_delete:
 	if (timer->it_process) {
 		if (timer->it_sigev_notify == (SIGEV_SIGNAL|SIGEV_THREAD_ID))
 			put_task_struct(timer->it_process);
-	timer->it_process = NULL;
+		timer->it_process = NULL;
 	}
 	unlock_timer(timer, flags);
 	release_posix_timer(timer, IT_ID_SET);
@@ -1168,15 +1169,10 @@ void exit_itimers(struct signal_struct *sig)
  */
 static int do_posix_gettime(struct k_clock *clock, struct timespec *tp)
 {
-	struct timeval tv;
-
 	if (clock->clock_get)
 		return clock->clock_get(tp);
 
-	do_gettimeofday(&tv);
-	tp->tv_sec = tv.tv_sec;
-	tp->tv_nsec = tv.tv_usec * NSEC_PER_USEC;
-
+	getnstimeofday(tp);
 	return 0;
 }
 
@@ -1192,23 +1188,15 @@ static u64 do_posix_clock_monotonic_gettime_parts(
 	struct timespec *tp, struct timespec *mo)
 {
 	u64 jiff;
-	struct timeval tpv;
 	unsigned int seq;
 
 	do {
 		seq = read_seqbegin(&xtime_lock);
-		do_gettimeofday(&tpv);
+		getnstimeofday(tp);
 		*mo = wall_to_monotonic;
 		jiff = jiffies_64;
 
 	} while(read_seqretry(&xtime_lock, seq));
-
-	/*
-	 * Love to get this before it is converted to usec.
-	 * It would save a div AND a mpy.
-	 */
-	tp->tv_sec = tpv.tv_sec;
-	tp->tv_nsec = tpv.tv_usec * NSEC_PER_USEC;
 
 	return jiff;
 }

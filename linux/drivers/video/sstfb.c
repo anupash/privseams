@@ -1473,7 +1473,7 @@ static int __devinit sstfb_probe(struct pci_dev *pdev,
 	f_ddprintk("membase_phys: %#lx\n", fix->smem_start);
 	f_ddprintk("fbbase_virt: %p\n", info->screen_base);
 
-	info->flags	= FBINFO_FLAG_DEFAULT;
+	info->flags	= FBINFO_DEFAULT;
 	info->fbops	= &sstfb_ops;
 	info->currcon	= -1;
 	info->pseudo_palette = &all->pseudo_palette;
@@ -1571,6 +1571,13 @@ static struct pci_driver sstfb_driver = {
 
 int __devinit sstfb_init(void)
 {
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("sstfb", &option))
+		return -ENODEV;
+	sstfb_setup(option);
+#endif
 	return pci_module_init(&sstfb_driver);
 }
 
@@ -1693,9 +1700,9 @@ static void sstfb_drawdebugimage(struct fb_info *info)
 	sstfb_drawrect_XY(info, 250, 250, 120, 100, 0xf800, idx);
 }
 
+module_init(sstfb_init);
 
 #ifdef MODULE
-module_init(sstfb_init);
 module_exit(sstfb_exit);
 #endif
 

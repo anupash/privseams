@@ -129,8 +129,8 @@ typedef struct _snd_seq_queue queue_t;
 
 typedef struct {
 	void *private_data;
-	int allow_input: 1,
-	    allow_output: 1;
+	unsigned allow_input: 1,
+		 allow_output: 1;
 	/*...*/
 } snd_seq_client_callback_t;
 
@@ -167,6 +167,9 @@ extern int snd_seq_kernel_client_ctl(int client, unsigned int cmd, void *arg);
 typedef int (*snd_seq_dump_func_t)(void *ptr, void *buf, int count);
 int snd_seq_expand_var_event(const snd_seq_event_t *event, int count, char *buf, int in_kernel, int size_aligned);
 int snd_seq_dump_var_event(const snd_seq_event_t *event, snd_seq_dump_func_t func, void *private_data);
+
+/* interface for OSS emulation */
+int snd_seq_set_queue_tempo(int client, snd_seq_queue_tempo_t *tempo);
 
 /* port callback routines */
 void snd_port_init_callback(snd_seq_port_callback_t *p);

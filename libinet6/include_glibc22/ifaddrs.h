@@ -1,4 +1,4 @@
-/* $USAGI: ifaddrs.h,v 1.1 2001/01/26 07:11:49 yoshfuji Exp $ */
+/* $USAGI: ifaddrs.h,v 1.2 2004/03/03 01:11:11 yoshfuji Exp $ */
 
 /*
  * Copyright (c) 1995, 1999
@@ -39,6 +39,7 @@ struct ifaddrs {
 	    struct sockaddr *ifu_dstaddr;
 	} ifa_ifu;
 	void		*ifa_data;
+	socklen_t	ifa_addrlen;
 };
 
 /*

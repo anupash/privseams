@@ -67,6 +67,7 @@ quirk_isa_bridge(struct pci_dev *dev)
 {
 	dev->class = PCI_CLASS_BRIDGE_ISA << 8;
 }
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82378, quirk_isa_bridge);
 
 static void __init
 quirk_cypress(struct pci_dev *dev)
@@ -100,6 +101,7 @@ quirk_cypress(struct pci_dev *dev)
 		}
 	}
 }
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_CONTAQ, PCI_DEVICE_ID_CONTAQ_82C693, quirk_cypress);
 
 /* Called for each device after PCI setup is done. */
 static void __init
@@ -112,17 +114,10 @@ pcibios_fixup_final(struct pci_dev *dev)
 		isa_bridge = dev;
 	}
 }
+DECLARE_PCI_FIXUP_FINAL(PCI_ANY_ID, PCI_ANY_ID, pcibios_fixup_final);
 
-struct pci_fixup pcibios_fixups[] __initdata = {
-	{ PCI_FIXUP_HEADER, PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82378,
-	  quirk_isa_bridge },
-	{ PCI_FIXUP_HEADER, PCI_VENDOR_ID_CONTAQ, PCI_DEVICE_ID_CONTAQ_82C693,
-	  quirk_cypress },
-	{ PCI_FIXUP_FINAL,  PCI_ANY_ID,	PCI_ANY_ID,
-	  pcibios_fixup_final },
-	{ 0 }
-};
-
+/* Just declaring that the power-of-ten prefixes are actually the
+   power-of-two ones doesn't make it true :) */
 #define KB			1024
 #define MB			(1024*KB)
 #define GB			(1024*MB)
@@ -536,3 +531,37 @@ sys_pciconfig_iobase(long which, unsigned long bus, unsigned long dfn)
 
 	return -EOPNOTSUPP;
 }
+
+/* Create an __iomem token from a PCI BAR.  Copied from lib/iomap.c with
+   no changes, since we don't want the other things in that object file.  */
+
+void __iomem *pci_iomap(struct pci_dev *dev, int bar, unsigned long maxlen)
+{
+	unsigned long start = pci_resource_start(dev, bar);
+	unsigned long len = pci_resource_len(dev, bar);
+	unsigned long flags = pci_resource_flags(dev, bar);
+
+	if (!len || !start)
+		return NULL;
+	if (maxlen && len > maxlen)
+		len = maxlen;
+	if (flags & IORESOURCE_IO)
+		return ioport_map(start, len);
+	if (flags & IORESOURCE_MEM) {
+		/* Not checking IORESOURCE_CACHEABLE because alpha does
+		   not distinguish between ioremap and ioremap_nocache.  */
+		return ioremap(start, len);
+	}
+	return NULL;
+}
+
+/* Destroy that token.  Not copied from lib/iomap.c.  */
+
+void pci_iounmap(struct pci_dev *dev, void __iomem * addr)
+{
+	if (__is_mmio(addr))
+		iounmap(addr);
+}
+
+EXPORT_SYMBOL(pci_iomap);
+EXPORT_SYMBOL(pci_iounmap);

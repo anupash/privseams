@@ -299,10 +299,23 @@ static int pci_device_suspend(struct device * dev, u32 state)
 {
 	struct pci_dev * pci_dev = to_pci_dev(dev);
 	struct pci_driver * drv = pci_dev->driver;
+	u32 dev_state;
 	int i = 0;
 
+	/* Translate PM_SUSPEND_xx states to PCI device states */
+	static u32 state_conversion[] = {
+		[PM_SUSPEND_ON] = 0,
+		[PM_SUSPEND_STANDBY] = 1,
+		[PM_SUSPEND_MEM] = 3,
+		[PM_SUSPEND_DISK] = 3,
+	};
+
+	if (state >= sizeof(state_conversion) / sizeof(state_conversion[1]))
+		return -EINVAL;
+
+	dev_state = state_conversion[state];
 	if (drv && drv->suspend)
-		i = drv->suspend(pci_dev,state);
+		i = drv->suspend(pci_dev, dev_state);
 		
 	pci_save_state(pci_dev, pci_dev->saved_config_space);
 	return i;
@@ -390,10 +403,9 @@ pci_populate_driver_dir(struct pci_driver *drv)
  * pci_register_driver - register a new pci driver
  * @drv: the driver structure to register
  * 
- * Adds the driver structure to the list of registered drivers
- * Returns the number of pci devices which were claimed by the driver
- * during registration.  The driver remains registered even if the
- * return value is zero.
+ * Adds the driver structure to the list of registered drivers.
+ * Returns a negative value on error. The driver remains registered
+ * even if no device was claimed during registration.
  */
 int
 pci_register_driver(struct pci_driver *drv)

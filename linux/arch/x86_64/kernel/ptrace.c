@@ -88,6 +88,7 @@ void ptrace_disable(struct task_struct *child)
 { 
 	long tmp;
 
+	clear_tsk_thread_flag(child, TIF_SINGLESTEP);
 	tmp = get_stack_long(child, EFL_OFFSET) & ~TRAP_FLAG;
 	put_stack_long(child, EFL_OFFSET, tmp);
 }
@@ -344,6 +345,7 @@ asmlinkage long sys_ptrace(long request, long pid, unsigned long addr, long data
 			set_tsk_thread_flag(child,TIF_SYSCALL_TRACE);
 		else
 			clear_tsk_thread_flag(child,TIF_SYSCALL_TRACE);
+		clear_tsk_thread_flag(child, TIF_SINGLESTEP);
 		child->exit_code = data;
 	/* make sure the single step bit is not set. */
 		tmp = get_stack_long(child, EFL_OFFSET);
@@ -395,6 +397,7 @@ asmlinkage long sys_ptrace(long request, long pid, unsigned long addr, long data
 		ret = 0;
 		if (child->state == TASK_ZOMBIE)	/* already dead */
 			break;
+		clear_tsk_thread_flag(child, TIF_SINGLESTEP);
 		child->exit_code = SIGKILL;
 		/* make sure the single step bit is not set. */
 		tmp = get_stack_long(child, EFL_OFFSET) & ~TRAP_FLAG;
@@ -416,6 +419,7 @@ asmlinkage long sys_ptrace(long request, long pid, unsigned long addr, long data
 		}
 		tmp = get_stack_long(child, EFL_OFFSET) | TRAP_FLAG;
 		put_stack_long(child, EFL_OFFSET, tmp);
+		set_tsk_thread_flag(child, TIF_SINGLESTEP);
 		child->exit_code = data;
 		/* give it a chance to run. */
 		wake_up_process(child);
@@ -429,30 +433,32 @@ asmlinkage long sys_ptrace(long request, long pid, unsigned long addr, long data
 		break;
 
 	case PTRACE_GETREGS: { /* Get all gp regs from the child. */
-	  	if (!access_ok(VERIFY_WRITE, (unsigned __user *)data, FRAME_SIZE)) {
+	  	if (!access_ok(VERIFY_WRITE, (unsigned __user *)data,
+			       sizeof(struct user_regs_struct))) {
 			ret = -EIO;
 			break;
 		}
+		ret = 0;
 		for (ui = 0; ui < sizeof(struct user_regs_struct); ui += sizeof(long)) {
-			__put_user(getreg(child, ui),(unsigned long __user *) data);
+			ret |= __put_user(getreg(child, ui),(unsigned long __user *) data);
 			data += sizeof(long);
 		}
-		ret = 0;
 		break;
 	}
 
 	case PTRACE_SETREGS: { /* Set all gp regs in the child. */
 		unsigned long tmp;
-	  	if (!access_ok(VERIFY_READ, (unsigned __user *)data, FRAME_SIZE)) {
+	  	if (!access_ok(VERIFY_READ, (unsigned __user *)data,
+			       sizeof(struct user_regs_struct))) {
 			ret = -EIO;
 			break;
 		}
+		ret = 0;
 		for (ui = 0; ui < sizeof(struct user_regs_struct); ui += sizeof(long)) {
-			__get_user(tmp, (unsigned long __user *) data);
+			ret |= __get_user(tmp, (unsigned long __user *) data);
 			putreg(child, ui, tmp);
 			data += sizeof(long);
 		}
-		ret = 0;
 		break;
 	}
 
@@ -528,7 +534,8 @@ asmlinkage void syscall_trace_leave(struct pt_regs *regs)
 	if (unlikely(current->audit_context))
 		audit_syscall_exit(current, regs->rax);
 
-	if (test_thread_flag(TIF_SYSCALL_TRACE)
+	if ((test_thread_flag(TIF_SYSCALL_TRACE)
+	     || test_thread_flag(TIF_SINGLESTEP))
 	    && (current->ptrace & PT_PTRACED))
 		syscall_trace(regs);
 }

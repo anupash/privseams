@@ -1171,7 +1171,7 @@ static void __init tomatillo_register_error_handlers(struct pci_controller_info 
 		prom_halt();
 	}
 	bucket = __bucket(irq);
-	tmp = readl(bucket->imap);
+	tmp = upa_readl(bucket->imap);
 	upa_writel(tmp, (pbm->pbm_regs +
 			 schizo_imap_offset(SCHIZO_UE_INO) + 4));
 
@@ -1309,7 +1309,7 @@ static void __init schizo_register_error_handlers(struct pci_controller_info *p)
 		prom_halt();
 	}
 	bucket = __bucket(irq);
-	tmp = readl(bucket->imap);
+	tmp = upa_readl(bucket->imap);
 	upa_writel(tmp, (pbm->pbm_regs + schizo_imap_offset(SCHIZO_UE_INO) + 4));
 
 	pbm = pbm_for_ino(p, SCHIZO_CE_INO);
@@ -1372,10 +1372,10 @@ static void __init schizo_register_error_handlers(struct pci_controller_info *p)
 		    SCHIZO_PCICTRL_RTRY_ERR |
 		    SCHIZO_PCICTRL_SBH_ERR |
 		    SCHIZO_PCICTRL_SERR |
-		    SCHIZO_PCICTRL_SBH_INT |
 		    SCHIZO_PCICTRL_EEN);
 
-	err_no_mask = SCHIZO_PCICTRL_DTO_ERR;
+	err_no_mask = (SCHIZO_PCICTRL_DTO_ERR |
+		       SCHIZO_PCICTRL_SBH_INT);
 
 	/* Enable PCI Error interrupts and clear error
 	 * bits for each PBM.
@@ -1766,6 +1766,14 @@ static void schizo_pbm_iommu_init(struct pci_pbm_info *pbm)
 	 * in pci_iommu.c
 	 */
 
+	iommu->dummy_page = __get_free_pages(GFP_KERNEL, 0);
+	if (!iommu->dummy_page) {
+		prom_printf("PSYCHO_IOMMU: Error, gfp(dummy_page) failed.\n");
+		prom_halt();
+	}
+	memset((void *)iommu->dummy_page, 0, PAGE_SIZE);
+	iommu->dummy_page_pa = (unsigned long) __pa(iommu->dummy_page);
+
 	/* Using assumed page size 8K with 128K entries we need 1MB iommu page
 	 * table (128K ioptes * 8 bytes per iopte).  This is
 	 * page order 7 on UltraSparc.
@@ -1780,7 +1788,7 @@ static void schizo_pbm_iommu_init(struct pci_pbm_info *pbm)
 	iommu->page_table = (iopte_t *)tsbbase;
 	iommu->page_table_map_base = vdma[0];
 	iommu->dma_addr_mask = dma_mask;
-	memset((char *)tsbbase, 0, PAGE_SIZE << order);
+	pci_iommu_table_init(iommu, PAGE_SIZE << order);
 
 	switch (tsbsize) {
 	case 64:
@@ -2073,13 +2081,11 @@ static void __init __schizo_init(int node, char *model_name, int chip_type)
 {
 	struct pci_controller_info *p;
 	struct pci_iommu *iommu;
-	unsigned long flags;
 	int is_pbm_a;
 	u32 portid;
 
 	portid = prom_getintdefault(node, "portid", 0xff);
 
-	spin_lock_irqsave(&pci_controller_lock, flags);
 	for(p = pci_controller_root; p; p = p->next) {
 		struct pci_pbm_info *pbm;
 
@@ -2091,13 +2097,11 @@ static void __init __schizo_init(int node, char *model_name, int chip_type)
 		       &p->pbm_B);
 
 		if (portid_compare(pbm->portid, portid, chip_type)) {
-			spin_unlock_irqrestore(&pci_controller_lock, flags);
 			is_pbm_a = (p->pbm_A.prom_node == 0);
 			schizo_pbm_init(p, node, portid, chip_type);
 			return;
 		}
 	}
-	spin_unlock_irqrestore(&pci_controller_lock, flags);
 
 	p = kmalloc(sizeof(struct pci_controller_info), GFP_ATOMIC);
 	if (!p) {
@@ -2122,10 +2126,8 @@ static void __init __schizo_init(int node, char *model_name, int chip_type)
 	memset(iommu, 0, sizeof(*iommu));
 	p->pbm_B.iommu = iommu;
 
-	spin_lock_irqsave(&pci_controller_lock, flags);
 	p->next = pci_controller_root;
 	pci_controller_root = p;
-	spin_unlock_irqrestore(&pci_controller_lock, flags);
 
 	p->index = pci_num_controllers++;
 	p->pbms_same_domain = 0;

@@ -35,7 +35,7 @@
 int reboot_smp = 0;
 
 /* TLB state -- visible externally, indexed physically */
-struct tlb_state cpu_tlbstate[NR_CPUS] __cacheline_aligned = {[0 ... NR_CPUS-1] = { &init_mm, 0 }};
+DEFINE_PER_CPU(struct tlb_state, cpu_tlbstate) ____cacheline_aligned = { &init_mm, 0 };
 
 /* CPU IRQ affinity -- set to all ones initially */
 static unsigned long cpu_irq_affinity[NR_CPUS] __cacheline_aligned = { [0 ... NR_CPUS-1]  = ~0UL };
@@ -523,15 +523,6 @@ start_secondary(void *unused)
 	return cpu_idle();
 }
 
-static struct task_struct * __init
-fork_by_hand(void)
-{
-	struct pt_regs regs;
-	/* don't care about the eip and regs settings since we'll
-	 * never reschedule the forked task. */
-	return copy_process(CLONE_VM|CLONE_IDLETASK, 0, &regs, 0, NULL, NULL);
-}
-
 
 /* Routine to kick start the given CPU and wait for it to report ready
  * (or timeout in startup).  When this routine returns, the requested
@@ -587,16 +578,10 @@ do_boot_cpu(__u8 cpu)
 	hijack_source.idt.Segment = (start_phys_address >> 4) & 0xFFFF;
 
 	cpucount++;
-	idle = fork_by_hand();
+	idle = fork_idle(cpu);
 	if(IS_ERR(idle))
 		panic("failed fork for CPU%d", cpu);
-
-	wake_up_forked_process(idle);
-
-	init_idle(idle, cpu);
-
 	idle->thread.eip = (unsigned long) start_secondary;
-	unhash_process(idle);
 	/* init_tasks (in sched.c) is indexed logically */
 	stack_start.esp = (void *) idle->thread.esp;
 
@@ -860,9 +845,9 @@ static spinlock_t tlbstate_lock = SPIN_LOCK_UNLOCKED;
 static inline void
 leave_mm (unsigned long cpu)
 {
-	if (cpu_tlbstate[cpu].state == TLBSTATE_OK)
+	if (per_cpu(cpu_tlbstate, cpu).state == TLBSTATE_OK)
 		BUG();
-	cpu_clear(cpu,  cpu_tlbstate[cpu].active_mm->cpu_vm_mask);
+	cpu_clear(cpu, per_cpu(cpu_tlbstate, cpu).active_mm->cpu_vm_mask);
 	load_cr3(swapper_pg_dir);
 }
 
@@ -883,8 +868,8 @@ smp_invalidate_interrupt(void)
 		smp_processor_id()));
 	*/
 
-	if (flush_mm == cpu_tlbstate[cpu].active_mm) {
-		if (cpu_tlbstate[cpu].state == TLBSTATE_OK) {
+	if (flush_mm == per_cpu(cpu_tlbstate, cpu).active_mm) {
+		if (per_cpu(cpu_tlbstate, cpu).state == TLBSTATE_OK) {
 			if (flush_va == FLUSH_ALL)
 				local_flush_tlb();
 			else
@@ -1218,7 +1203,7 @@ do_flush_tlb_all(void* info)
 	unsigned long cpu = smp_processor_id();
 
 	__flush_tlb_all();
-	if (cpu_tlbstate[cpu].state == TLBSTATE_LAZY)
+	if (per_cpu(cpu_tlbstate, cpu).state == TLBSTATE_LAZY)
 		leave_mm(cpu);
 }
 
@@ -1302,8 +1287,7 @@ smp_local_timer_interrupt(struct pt_regs * regs)
 	int cpu = smp_processor_id();
 	long weight;
 
-	x86_do_profile(regs);
-
+	profile_tick(CPU_PROFILING, regs);
 	if (--per_cpu(prof_counter, cpu) <= 0) {
 		/*
 		 * The multiplier may have changed since the last time we got

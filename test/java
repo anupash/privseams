@@ -46,4 +46,4 @@ while echo "$1" | grep -q "^--" ; do
     shift
 done
 
-exec java -classpath $HIPL_HOME/jip/jip.jar:$HIPL_HOME/test $opts "$@"
+exec java -classpath $HIPL_HOME/jip/jip.jar:$HIPL_HOME/test:. $opts "$@"

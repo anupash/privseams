@@ -6,8 +6,8 @@
 #ifndef __UM_PROCESSOR_I386_H
 #define __UM_PROCESSOR_I386_H
 
-extern int cpu_has_xmm;
-extern int cpu_has_cmov;
+extern int host_has_xmm;
+extern int host_has_cmov;
 
 struct arch_thread {
 	unsigned long debugregs[8];
@@ -18,6 +18,13 @@ struct arch_thread {
                            .debugregs_seq	= 0 }
 
 #include "asm/arch/user.h"
+
+/*
+ * Default implementation of macro that returns current
+ * instruction pointer ("program counter"). Stolen
+ * from asm-i386/processor.h
+ */
+#define current_text_addr() ({ void *pc; __asm__("movl $1f,%0\n1:":"=g" (pc)); pc; })
 
 #include "asm/processor-generic.h"
 

@@ -343,7 +343,6 @@ handle_modversions(struct module *mod, struct elf_info *info,
 			crc = (unsigned int) sym->st_value;
 			add_exported_symbol(symname + strlen(CRC_PFX),
 					    mod, &crc);
-			modversions = 1;
 		}
 		break;
 	case SHN_UNDEF:
@@ -377,6 +376,10 @@ handle_modversions(struct module *mod, struct elf_info *info,
 			add_exported_symbol(symname + strlen(KSYMTAB_PFX),
 					    mod, NULL);
 		}
+		if (strcmp(symname, MODULE_SYMBOL_PREFIX "init_module") == 0)
+			mod->has_init = 1;
+		if (strcmp(symname, MODULE_SYMBOL_PREFIX "cleanup_module") == 0)
+			mod->has_cleanup = 1;
 		break;
 	}
 }
@@ -411,9 +414,6 @@ read_symbols(char *modname)
 	if (is_vmlinux(modname)) {
 		unsigned int fake_crc = 0;
 		have_vmlinux = 1;
-		/* May not have this if !CONFIG_MODULE_UNLOAD: fake it.
-		   If it appears, we'll get the real CRC. */
-		add_exported_symbol("cleanup_module", mod, &fake_crc);
 		add_exported_symbol("struct_module", mod, &fake_crc);
 		mod->skip = 1;
 	}
@@ -432,14 +432,8 @@ read_symbols(char *modname)
 	 * never passed as an argument to an exported function, so
 	 * the automatic versioning doesn't pick it up, but it's really
 	 * important anyhow */
-	if (modversions) {
+	if (modversions)
 		mod->unres = alloc_symbol("struct_module", mod->unres);
-
-		/* Always version init_module and cleanup_module, in
-		 * case module doesn't have its own. */
-		mod->unres = alloc_symbol("init_module", mod->unres);
-		mod->unres = alloc_symbol("cleanup_module", mod->unres);
-	}
 }
 
 #define SZ 500
@@ -480,7 +474,7 @@ buf_write(struct buffer *buf, const char *s, int len)
 /* Header for the generated file */
 
 void
-add_header(struct buffer *b)
+add_header(struct buffer *b, struct module *mod)
 {
 	buf_printf(b, "#include <linux/module.h>\n");
 	buf_printf(b, "#include <linux/vermagic.h>\n");
@@ -492,10 +486,12 @@ add_header(struct buffer *b)
 	buf_printf(b, "struct module __this_module\n");
 	buf_printf(b, "__attribute__((section(\".gnu.linkonce.this_module\"))) = {\n");
 	buf_printf(b, " .name = __stringify(KBUILD_MODNAME),\n");
-	buf_printf(b, " .init = init_module,\n");
-	buf_printf(b, "#ifdef CONFIG_MODULE_UNLOAD\n");
-	buf_printf(b, " .exit = cleanup_module,\n");
-	buf_printf(b, "#endif\n");
+	if (mod->has_init)
+		buf_printf(b, " .init = init_module,\n");
+	if (mod->has_cleanup)
+		buf_printf(b, "#ifdef CONFIG_MODULE_UNLOAD\n"
+			      " .exit = cleanup_module,\n"
+			      "#endif\n");
 	buf_printf(b, "};\n");
 }
 
@@ -649,7 +645,6 @@ read_dump(const char *fname)
 
 		if (!(mod = find_module(modname))) {
 			if (is_vmlinux(modname)) {
-				modversions = 1;
 				have_vmlinux = 1;
 			}
 			mod = new_module(NOFAIL(strdup(modname)));
@@ -696,10 +691,13 @@ main(int argc, char **argv)
 	char *dump_read = NULL, *dump_write = NULL;
 	int opt;
 
-	while ((opt = getopt(argc, argv, "i:o:")) != -1) {
+	while ((opt = getopt(argc, argv, "i:mo:")) != -1) {
 		switch(opt) {
 			case 'i':
 				dump_read = optarg;
+				break;
+			case 'm':
+				modversions = 1;
 				break;
 			case 'o':
 				dump_write = optarg;
@@ -722,7 +720,7 @@ main(int argc, char **argv)
 
 		buf.pos = 0;
 
-		add_header(&buf);
+		add_header(&buf, mod);
 		add_versions(&buf, mod);
 		add_depends(&buf, mod, modules);
 		add_moddevtable(&buf, mod);

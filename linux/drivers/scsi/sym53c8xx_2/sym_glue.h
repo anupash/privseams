@@ -90,7 +90,6 @@
 #define SYM_OPT_HANDLE_DIR_UNKNOWN
 #define SYM_OPT_HANDLE_DEVICE_QUEUEING
 #define SYM_OPT_NVRAM_PRE_READ
-#define SYM_OPT_SNIFF_INQUIRY
 #define SYM_OPT_LIMIT_COMMAND_REORDERING
 #define	SYM_OPT_ANNOUNCE_TRANSFER_RATE
 
@@ -289,32 +288,32 @@ typedef struct scsi_cmnd *cam_scsiio_p;/* SCSI I/O */
  *  MEMORY mapped IO input / output
  */
 
-#define INB_OFF(o)        readb((char *)np->s.mmio_va + sym_offb(o))
-#define OUTB_OFF(o, val)  writeb((val), (char *)np->s.mmio_va + sym_offb(o))
+#define INB_OFF(o)        readb(np->s.mmio_va + sym_offb(o))
+#define OUTB_OFF(o, val)  writeb((val), np->s.mmio_va + sym_offb(o))
 
 #if	defined(__BIG_ENDIAN) && !defined(SYM_CONF_CHIP_BIG_ENDIAN)
 
-#define INW_OFF(o)        readw_l2b((char *)np->s.mmio_va + sym_offw(o))
-#define INL_OFF(o)        readl_l2b((char *)np->s.mmio_va + (o))
+#define INW_OFF(o)        readw_l2b(np->s.mmio_va + sym_offw(o))
+#define INL_OFF(o)        readl_l2b(np->s.mmio_va + (o))
 
-#define OUTW_OFF(o, val)  writew_b2l((val), (char *)np->s.mmio_va + sym_offw(o))
-#define OUTL_OFF(o, val)  writel_b2l((val), (char *)np->s.mmio_va + (o))
+#define OUTW_OFF(o, val)  writew_b2l((val), np->s.mmio_va + sym_offw(o))
+#define OUTL_OFF(o, val)  writel_b2l((val), np->s.mmio_va + (o))
 
 #elif	defined(__LITTLE_ENDIAN) && defined(SYM_CONF_CHIP_BIG_ENDIAN)
 
-#define INW_OFF(o)        readw_b2l((char *)np->s.mmio_va + sym_offw(o))
-#define INL_OFF(o)        readl_b2l((char *)np->s.mmio_va + (o))
+#define INW_OFF(o)        readw_b2l(np->s.mmio_va + sym_offw(o))
+#define INL_OFF(o)        readl_b2l(np->s.mmio_va + (o))
 
-#define OUTW_OFF(o, val)  writew_l2b((val), (char *)np->s.mmio_va + sym_offw(o))
-#define OUTL_OFF(o, val)  writel_l2b((val), (char *)np->s.mmio_va + (o))
+#define OUTW_OFF(o, val)  writew_l2b((val), np->s.mmio_va + sym_offw(o))
+#define OUTL_OFF(o, val)  writel_l2b((val), np->s.mmio_va + (o))
 
 #else
 
-#define INW_OFF(o)        readw_raw((char *)np->s.mmio_va + sym_offw(o))
-#define INL_OFF(o)        readl_raw((char *)np->s.mmio_va + (o))
+#define INW_OFF(o)        readw_raw(np->s.mmio_va + sym_offw(o))
+#define INL_OFF(o)        readl_raw(np->s.mmio_va + (o))
 
-#define OUTW_OFF(o, val)  writew_raw((val), (char *)np->s.mmio_va + sym_offw(o))
-#define OUTL_OFF(o, val)  writel_raw((val), (char *)np->s.mmio_va + (o))
+#define OUTW_OFF(o, val)  writew_raw((val), np->s.mmio_va + sym_offw(o))
+#define OUTL_OFF(o, val)  writel_raw((val), np->s.mmio_va + (o))
 
 #endif
 
@@ -391,8 +390,8 @@ struct sym_shcb {
 
 	struct Scsi_Host *host;
 
-	void *		mmio_va;	/* MMIO kernel virtual address	*/
-	void *		ram_va;		/* RAM  kernel virtual address	*/
+	void __iomem *	mmio_va;	/* MMIO kernel virtual address	*/
+	void __iomem *	ram_va;		/* RAM  kernel virtual address	*/
 	u_long		io_port;	/* IO port address cookie	*/
 	u_short		io_ws;		/* IO window size		*/
 	int		irq;		/* IRQ number			*/
@@ -424,7 +423,7 @@ struct sym_slot {
 	int	irq;
 /* port and address fields to fit INB, OUTB macros */
 	u_long	io_port;
-	void *	mmio_va;
+	void __iomem *	mmio_va;
 	char	inst_name[16];
 };
 
@@ -437,6 +436,13 @@ struct sym_device {
 	struct sym_nvram *nvram;
 	u_short device_id;
 	u_char host_id;
+};
+
+/*
+ *  Driver host data structure.
+ */
+struct host_data {
+	struct sym_hcb *ncb;
 };
 
 /*

@@ -299,6 +299,13 @@
 #define __NR_pciconfig_iobase		(__NR_SYSCALL_BASE+271)
 #define __NR_pciconfig_read		(__NR_SYSCALL_BASE+272)
 #define __NR_pciconfig_write		(__NR_SYSCALL_BASE+273)
+#define __NR_mq_open			(__NR_SYSCALL_BASE+274)
+#define __NR_mq_unlink			(__NR_SYSCALL_BASE+275)
+#define __NR_mq_timedsend		(__NR_SYSCALL_BASE+276)
+#define __NR_mq_timedreceive		(__NR_SYSCALL_BASE+277)
+#define __NR_mq_notify			(__NR_SYSCALL_BASE+278)
+#define __NR_mq_getsetattr		(__NR_SYSCALL_BASE+279)
+#define __NR_waitid			(__NR_SYSCALL_BASE+280)
 
 /*
  * The following SWIs are ARM private.
@@ -474,51 +481,6 @@ type name(type1 arg1, type2 arg2, type3 arg3, type4 arg4, type5 arg5, type6 arg6
 #include <linux/compiler.h>
 #include <linux/types.h>
 #include <linux/syscalls.h>
-
-static inline pid_t setsid(void)
-{
-	return sys_setsid();
-}
-
-static inline long write(int fd, const char *buf, off_t count)
-{
-	return sys_write(fd, buf, count);
-}
-
-static inline long read(int fd, char *buf, off_t count)
-{
-	return sys_read(fd, buf, count);
-}
-
-static inline off_t lseek(int fd, off_t offset, int count)
-{
-	return sys_lseek(fd, offset, count);
-}
-
-static inline long dup(int fd)
-{
-	return sys_dup(fd);
-}
-
-static inline long open(const char *file, int flag, int mode)
-{
-	return sys_open(file, flag, mode);
-}
-
-static inline long close(int fd)
-{
-	return sys_close(fd);
-}
-
-static inline long _exit(int exitcode)
-{
-	return sys_exit(exitcode);
-}
-
-static inline pid_t waitpid(pid_t pid, int *wait_stat, int options)
-{
-	return sys_wait4((int)pid, wait_stat, options, NULL);
-}
 
 extern long execve(const char *file, char **argv, char **envp);
 

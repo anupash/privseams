@@ -1442,7 +1442,10 @@ init_imstt(struct fb_info *info)
 	info->var.pixclock = 1000000 / getclkMHz(par);
 
 	info->fbops = &imsttfb_ops;
-	info->flags = FBINFO_FLAG_DEFAULT;
+	info->flags = FBINFO_DEFAULT |
+                      FBINFO_HWACCEL_COPYAREA |
+	              FBINFO_HWACCEL_FILLRECT |
+	              FBINFO_HWACCEL_YPAN;
 
 	fb_alloc_cmap(&info->cmap, 0, 0);
 
@@ -1599,6 +1602,14 @@ imsttfb_setup(char *options)
 
 int __init imsttfb_init(void)
 {
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("imsttfb", &option))
+		return -ENODEV;
+
+	imsttfb_setup(option);
+#endif
 	return pci_module_init(&imsttfb_pci_driver);
 }
  
@@ -1609,7 +1620,7 @@ static void __exit imsttfb_exit(void)
 
 #ifdef MODULE
 MODULE_LICENSE("GPL");
-module_init(imsttfb_init);
 #endif
+module_init(imsttfb_init);
 module_exit(imsttfb_exit);
 

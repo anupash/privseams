@@ -39,6 +39,12 @@
 
 #include "io_ports.h"
 
+/*
+ * Debug level
+ */
+int apic_verbosity;
+
+
 static void apic_pm_activate(void);
 
 void __init apic_intr_init(void)
@@ -85,7 +91,7 @@ int get_physical_broadcast(void)
 	unsigned int lvr, version;
 	lvr = apic_read(APIC_LVR);
 	version = GET_APIC_VERSION(lvr);
-	if (version >= 0x14)
+	if (!APIC_INTEGRATED(version) || version >= 0x14)
 		return 0xff;
 	else
 		return 0xf;
@@ -173,7 +179,8 @@ void __init connect_bsp_APIC(void)
 		 * PIC mode, enable APIC mode in the IMCR, i.e.
 		 * connect BSP's local APIC to INT and NMI lines.
 		 */
-		printk("leaving PIC mode, enabling APIC mode.\n");
+		apic_printk(APIC_VERBOSE, "leaving PIC mode, "
+				"enabling APIC mode.\n");
 		outb(0x70, 0x22);
 		outb(0x01, 0x23);
 	}
@@ -189,7 +196,8 @@ void disconnect_bsp_APIC(void)
 		 * interrupts, including IPIs, won't work beyond
 		 * this point!  The only exception are INIT IPIs.
 		 */
-		printk("disabling APIC mode, entering PIC mode.\n");
+		apic_printk(APIC_VERBOSE, "disabling APIC mode, "
+				"entering PIC mode.\n");
 		outb(0x70, 0x22);
 		outb(0x00, 0x23);
 	}
@@ -230,10 +238,10 @@ int __init verify_local_APIC(void)
 	 * The version register is read-only in a real APIC.
 	 */
 	reg0 = apic_read(APIC_LVR);
-	Dprintk("Getting VERSION: %x\n", reg0);
+	apic_printk(APIC_DEBUG, "Getting VERSION: %x\n", reg0);
 	apic_write(APIC_LVR, reg0 ^ APIC_LVR_MASK);
 	reg1 = apic_read(APIC_LVR);
-	Dprintk("Getting VERSION: %x\n", reg1);
+	apic_printk(APIC_DEBUG, "Getting VERSION: %x\n", reg1);
 
 	/*
 	 * The two version reads above should print the same
@@ -257,7 +265,7 @@ int __init verify_local_APIC(void)
 	 * The ID register is read/write in a real APIC.
 	 */
 	reg0 = apic_read(APIC_ID);
-	Dprintk("Getting ID: %x\n", reg0);
+	apic_printk(APIC_DEBUG, "Getting ID: %x\n", reg0);
 
 	/*
 	 * The next two are just to see if we have sane values.
@@ -265,9 +273,9 @@ int __init verify_local_APIC(void)
 	 * compatibility mode, but most boxes are anymore.
 	 */
 	reg0 = apic_read(APIC_LVT0);
-	Dprintk("Getting LVT0: %x\n", reg0);
+	apic_printk(APIC_DEBUG, "Getting LVT0: %x\n", reg0);
 	reg1 = apic_read(APIC_LVT1);
-	Dprintk("Getting LVT1: %x\n", reg1);
+	apic_printk(APIC_DEBUG, "Getting LVT1: %x\n", reg1);
 
 	return 1;
 }
@@ -279,7 +287,7 @@ void __init sync_Arb_IDs(void)
 	 */
 	apic_wait_icr_idle();
 
-	Dprintk("Synchronizing Arb IDs.\n");
+	apic_printk(APIC_DEBUG, "Synchronizing Arb IDs.\n");
 	apic_write_around(APIC_ICR, APIC_DEST_ALLINC | APIC_INT_LEVELTRIG
 				| APIC_DM_INIT);
 }
@@ -335,7 +343,7 @@ void __init init_bsp_APIC(void)
 
 void __init setup_local_APIC (void)
 {
-	unsigned long value, ver, maxlvt;
+	unsigned long oldvalue, value, ver, maxlvt;
 
 	/* Pound the ESR really hard over the head with a big hammer - mbligh */
 	if (esr_disable) {
@@ -427,10 +435,12 @@ void __init setup_local_APIC (void)
 	value = apic_read(APIC_LVT0) & APIC_LVT_MASKED;
 	if (!smp_processor_id() && (pic_mode || !value)) {
 		value = APIC_DM_EXTINT;
-		printk("enabled ExtINT on CPU#%d\n", smp_processor_id());
+		apic_printk(APIC_VERBOSE, "enabled ExtINT on CPU#%d\n",
+				smp_processor_id());
 	} else {
 		value = APIC_DM_EXTINT | APIC_LVT_MASKED;
-		printk("masked ExtINT on CPU#%d\n", smp_processor_id());
+		apic_printk(APIC_VERBOSE, "masked ExtINT on CPU#%d\n",
+				smp_processor_id());
 	}
 	apic_write_around(APIC_LVT0, value);
 
@@ -449,8 +459,7 @@ void __init setup_local_APIC (void)
 		maxlvt = get_maxlvt();
 		if (maxlvt > 3)		/* Due to the Pentium erratum 3AP. */
 			apic_write(APIC_ESR, 0);
-		value = apic_read(APIC_ESR);
-		printk("ESR value before enabling vector: %08lx\n", value);
+		oldvalue = apic_read(APIC_ESR);
 
 		value = ERROR_APIC_VECTOR;      // enables sending errors
 		apic_write_around(APIC_LVTERR, value);
@@ -460,7 +469,10 @@ void __init setup_local_APIC (void)
 		if (maxlvt > 3)
 			apic_write(APIC_ESR, 0);
 		value = apic_read(APIC_ESR);
-		printk("ESR value after enabling vector: %08lx\n", value);
+		if (value != oldvalue)
+			apic_printk(APIC_VERBOSE, "ESR value before enabling "
+				"vector: 0x%08lx  after: 0x%08lx\n",
+				oldvalue, value);
 	} else {
 		if (esr_disable)	
 			/* 
@@ -635,6 +647,21 @@ static int __init lapic_enable(char *str)
 }
 __setup("lapic", lapic_enable);
 
+static int __init apic_set_verbosity(char *str)
+{
+	if (strcmp("debug", str) == 0)
+		apic_verbosity = APIC_DEBUG;
+	else if (strcmp("verbose", str) == 0)
+		apic_verbosity = APIC_VERBOSE;
+	else
+		printk(KERN_WARNING "APIC Verbosity level %s not recognised"
+				" use apic=verbose or apic=debug", str);
+
+	return 0;
+}
+
+__setup("apic=", apic_set_verbosity);
+
 static int __init detect_init_APIC (void)
 {
 	u32 h, l, features;
@@ -665,13 +692,20 @@ static int __init detect_init_APIC (void)
 
 	if (!cpu_has_apic) {
 		/*
+		 * Over-ride BIOS and try to enable LAPIC
+		 * only if "lapic" specified
+		 */
+		if (enable_local_apic != 1)
+			goto no_apic;
+		/*
 		 * Some BIOSes disable the local APIC in the
 		 * APIC_BASE MSR. This can only be done in
 		 * software for Intel P6 and AMD K7 (Model > 1).
 		 */
 		rdmsr(MSR_IA32_APICBASE, l, h);
 		if (!(l & MSR_IA32_APICBASE_ENABLE)) {
-			printk("Local APIC disabled by BIOS -- reenabling.\n");
+			apic_printk(APIC_VERBOSE, "Local APIC disabled "
+					"by BIOS -- reenabling.\n");
 			l &= ~MSR_IA32_APICBASE_BASE;
 			l |= MSR_IA32_APICBASE_ENABLE | APIC_DEFAULT_PHYS_BASE;
 			wrmsr(MSR_IA32_APICBASE, l, h);
@@ -698,7 +732,7 @@ static int __init detect_init_APIC (void)
 	if (nmi_watchdog != NMI_NONE)
 		nmi_watchdog = NMI_LOCAL_APIC;
 
-	printk("Found and enabled local APIC!\n");
+	apic_printk(APIC_VERBOSE, "Found and enabled local APIC!\n");
 
 	apic_pm_activate();
 
@@ -725,7 +759,8 @@ void __init init_apic_mappings(void)
 		apic_phys = mp_lapic_addr;
 
 	set_fixmap_nocache(FIX_APIC_BASE, apic_phys);
-	Dprintk("mapped APIC to %08lx (%08lx)\n", APIC_BASE, apic_phys);
+	apic_printk(APIC_DEBUG, "mapped APIC to %08lx (%08lx)\n", APIC_BASE,
+			apic_phys);
 
 	/*
 	 * Fetch the APIC ID of the BSP in case we have a
@@ -755,7 +790,8 @@ fake_ioapic_page:
 				ioapic_phys = __pa(ioapic_phys);
 			}
 			set_fixmap_nocache(idx, ioapic_phys);
-			Dprintk("mapped IOAPIC to %08lx (%08lx)\n",
+			apic_printk(APIC_DEBUG, "mapped IOAPIC to "
+					"%08lx (%08lx)\n",
 					__fix_to_virt(idx), ioapic_phys);
 			idx++;
 		}
@@ -894,7 +930,7 @@ int __init calibrate_APIC_clock(void)
 	int i;
 	const int LOOPS = HZ/10;
 
-	printk("calibrating APIC timer ...\n");
+	apic_printk(APIC_VERBOSE, "calibrating APIC timer ...\n");
 
 	/*
 	 * Put whatever arbitrary (but long enough) timeout
@@ -939,11 +975,13 @@ int __init calibrate_APIC_clock(void)
 	result = (tt1-tt2)*APIC_DIVISOR/LOOPS;
 
 	if (cpu_has_tsc)
-		printk("..... CPU clock speed is %ld.%04ld MHz.\n",
+		apic_printk(APIC_VERBOSE, "..... CPU clock speed is "
+			"%ld.%04ld MHz.\n",
 			((long)(t2-t1)/LOOPS)/(1000000/HZ),
 			((long)(t2-t1)/LOOPS)%(1000000/HZ));
 
-	printk("..... host bus clock speed is %ld.%04ld MHz.\n",
+	apic_printk(APIC_VERBOSE, "..... host bus clock speed is "
+		"%ld.%04ld MHz.\n",
 		result/(1000000/HZ),
 		result%(1000000/HZ));
 
@@ -954,7 +992,7 @@ static unsigned int calibration_result;
 
 void __init setup_boot_APIC_clock(void)
 {
-	printk("Using local APIC timer interrupts.\n");
+	apic_printk(APIC_VERBOSE, "Using local APIC timer interrupts.\n");
 	using_apic_timer = 1;
 
 	local_irq_disable();
@@ -1039,8 +1077,7 @@ inline void smp_local_timer_interrupt(struct pt_regs * regs)
 {
 	int cpu = smp_processor_id();
 
-	x86_do_profile(regs);
-
+	profile_tick(CPU_PROFILING, regs);
 	if (--per_cpu(prof_counter, cpu) <= 0) {
 		/*
 		 * The multiplier may have changed since the last time we got
@@ -1159,7 +1196,7 @@ asmlinkage void smp_error_interrupt(void)
 	   6: Received illegal vector
 	   7: Illegal register address
 	*/
-	printk (KERN_INFO "APIC error on CPU%d: %02lx(%02lx)\n",
+	printk (KERN_DEBUG "APIC error on CPU%d: %02lx(%02lx)\n",
 	        smp_processor_id(), v , v1);
 	irq_exit();
 }

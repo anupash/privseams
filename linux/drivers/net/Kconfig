@@ -200,7 +200,7 @@ source "drivers/net/arm/Kconfig"
 
 config MACE
 	tristate "MACE (Power Mac ethernet) support"
-	depends on NET_ETHERNET && PPC_PMAC
+	depends on NET_ETHERNET && PPC_PMAC && PPC32
 	select CRC32
 	help
 	  Power Macintoshes and clones with Ethernet built-in on the
@@ -223,7 +223,7 @@ config MACE_AAUI_PORT
 
 config BMAC
 	tristate "BMAC (G3 ethernet) support"
-	depends on NET_ETHERNET && PPC_PMAC
+	depends on NET_ETHERNET && PPC_PMAC && PPC32
 	select CRC32
 	help
 	  Say Y for support of BMAC Ethernet interfaces. These are used on G3
@@ -817,7 +817,7 @@ config SMC91X
 	tristate "SMC 91C9x/91C1xxx support"
 	select CRC32
 	select MII
-	depends on NET_ETHERNET && (ARM || REDWOOD_5 || REDWOOD_6)
+	depends on NET_ETHERNET && (ARM || REDWOOD_5 || REDWOOD_6 || M32R)
 	help
 	  This is a driver for SMC's 91x series of Ethernet chipsets,
 	  including the SMC91C94 and the SMC91C111. Say Y if you want it
@@ -1075,7 +1075,7 @@ config ETH16I
 
 config NE2000
 	tristate "NE2000/NE1000 support"
-	depends on NET_ISA || (Q40 && m)
+	depends on NET_ISA || (Q40 && m) || M32R
 	select CRC32
 	---help---
 	  If you have a network (Ethernet) card of this type, say Y and read
@@ -1353,7 +1353,7 @@ config FORCEDETH
 
 config CS89x0
 	tristate "CS89x0 support"
-	depends on NET_PCI && ISA
+	depends on NET_PCI && (ISA || ARCH_IXDP2X01)
 	---help---
 	  Support for CS89x0 chipset based Ethernet cards. If you have a
 	  network (Ethernet) card of this type, say Y and read the
@@ -1746,12 +1746,13 @@ config VIA_VELOCITY
 	tristate "VIA Velocity support"
 	depends on NET_PCI && PCI
 	select CRC32
+	select CRC_CCITT
 	select MII
 	help
 	  If you have a VIA "Velocity" based network card say Y here.
 
 	  To compile this driver as a module, choose M here. The module
-	  will be called via-rhine.
+	  will be called via-velocity.
 
 config LAN_SAA9730
 	bool "Philips SAA9730 Ethernet support (EXPERIMENTAL)"
@@ -2043,6 +2044,23 @@ config R8169
 	  To compile this driver as a module, choose M here: the module
 	  will be called r8169.  This is recommended.
 
+config R8169_NAPI
+	bool "Use Rx and Tx Polling (NAPI) (EXPERIMENTAL)"
+	depends on R8169 && EXPERIMENTAL
+	help
+	  NAPI is a new driver API designed to reduce CPU and interrupt load
+	  when the driver is receiving lots of packets from the card. It is
+	  still somewhat experimental and thus not yet enabled by default.
+
+	  If your estimated Rx load is 10kpps or more, or if the card will be
+	  deployed on potentially unfriendly networks (e.g. in a firewall),
+	  then say Y here.
+
+	  See <file:Documentation/networking/NAPI_HOWTO.txt> for more
+	  information.
+
+	  If in doubt, say N.
+
 config SK98LIN
 	tristate "Marvell Yukon Chipset / SysKonnect SK-98xx Support"
 	depends on PCI
@@ -2130,6 +2148,45 @@ config TIGON3
 
 	  To compile this driver as a module, choose M here: the module
 	  will be called tg3.  This is recommended.
+
+config GIANFAR
+	tristate "Gianfar Ethernet"
+	depends on 85xx
+	help
+	  This driver supports the Gigabit TSEC on the MPC85xx 
+	  family of chips, and the FEC on the 8540
+
+config GFAR_NAPI
+	bool "NAPI Support"
+	depends on GIANFAR
+
+config MV643XX_ETH
+	tristate "MV-643XX Ethernet support"
+	depends on MOMENCO_OCELOT_C || MOMENCO_JAGUAR_ATX
+	help
+	  This driver supports the gigabit Ethernet on the Marvell MV643XX
+	  chipset which is used in the Momenco Ocelot C and Jaguar ATX.
+
+config MV643XX_ETH_0
+	bool "MV-643XX Port 0"
+	depends on MV643XX_ETH
+	help
+	  This enables support for Port 0 of the Marvell MV643XX Gigabit
+	  Ethernet.
+
+config MV643XX_ETH_1
+	bool "MV-643XX Port 1"
+	depends on MV643XX_ETH
+	help
+	  This enables support for Port 1 of the Marvell MV643XX Gigabit
+	  Ethernet.
+
+config MV643XX_ETH_2
+	bool "MV-643XX Port 2"
+	depends on MV643XX_ETH
+	help
+	  This enables support for Port 2 of the Marvell MV643XX Gigabit
+	  Ethernet.
 
 endmenu
 

@@ -250,13 +250,6 @@ chrp_setup_arch(void)
 	 */
 	sio_init();
 
-	/*
-	 *  Setup the console operations
-	 */
-#ifdef CONFIG_DUMMY_CONSOLE
-	conswitchp = &dummy_con;
-#endif
-
 	/* Get the event scan rate for the rtas so we know how
 	 * often it expects a heartbeat. -- Cort
 	 */
@@ -382,7 +375,7 @@ void __init chrp_init_IRQ(void)
 {
 	struct device_node *np;
 	int i;
-	unsigned long chrp_int_ack;
+	unsigned long chrp_int_ack = 0;
 	unsigned char init_senses[NR_IRQS - NUM_8259_INTERRUPTS];
 #if defined(CONFIG_VT) && defined(CONFIG_INPUT_ADBHID) && defined(XMON)
 	struct device_node *kbd;

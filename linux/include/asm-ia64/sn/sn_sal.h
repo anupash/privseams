@@ -8,7 +8,7 @@
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
  *
- * Copyright (c) 2000-2003 Silicon Graphics, Inc.  All rights reserved.
+ * Copyright (c) 2000-2004 Silicon Graphics, Inc.  All rights reserved.
  */
 
 
@@ -34,6 +34,7 @@
 #define  SN_SAL_NO_FAULT_ZONE_PHYSICAL		   0x02000011
 #define  SN_SAL_PRINT_ERROR			   0x02000012
 #define  SN_SAL_SET_ERROR_HANDLING_FEATURES	   0x0200001a	// reentrant
+#define  SN_SAL_GET_FIT_COMPT			   0x0200001b	// reentrant
 #define  SN_SAL_CONSOLE_PUTC                       0x02000021
 #define  SN_SAL_CONSOLE_GETC                       0x02000022
 #define  SN_SAL_CONSOLE_PUTS                       0x02000023
@@ -60,6 +61,8 @@
 #define  SN_SAL_SYSCTL_FRU_CAPTURE		   0x0200003f
 
 #define  SN_SAL_SYSCTL_IOBRICK_PCI_OP		   0x02000042	// reentrant
+#define	 SN_SAL_IROUTER_OP			   0x02000043
+#define  SN_SAL_HWPERF_OP			   0x02000050   // lock
 
 /*
  * Service-specific constants
@@ -86,12 +89,32 @@
 #endif	/* CONFIG_HOTPLUG_PCI_SGI */
 
 /*
- * SN_SAL_GET_PARTITION_ADDR return constants
+ * IRouter (i.e. generalized system controller) operations
+ */
+#define SAL_IROUTER_OPEN	0	/* open a subchannel */
+#define SAL_IROUTER_CLOSE	1	/* close a subchannel */
+#define SAL_IROUTER_SEND	2	/* send part of an IRouter packet */
+#define SAL_IROUTER_RECV	3	/* receive part of an IRouter packet */
+#define SAL_IROUTER_INTR_STATUS	4	/* check the interrupt status for
+					 * an open subchannel
+					 */
+#define SAL_IROUTER_INTR_ON	5	/* enable an interrupt */
+#define SAL_IROUTER_INTR_OFF	6	/* disable an interrupt */
+#define SAL_IROUTER_INIT	7	/* initialize IRouter driver */
+
+/* IRouter interrupt mask bits */
+#define SAL_IROUTER_INTR_XMIT	SAL_CONSOLE_INTR_XMIT
+#define SAL_IROUTER_INTR_RECV	SAL_CONSOLE_INTR_RECV
+
+
+/*
+ * SAL Error Codes
  */
 #define SALRET_MORE_PASSES	1
 #define SALRET_OK		0
-#define SALRET_INVALID_ARG	-2
-#define SALRET_ERROR		-3
+#define SALRET_NOT_IMPLEMENTED	(-1)
+#define SALRET_INVALID_ARG	(-2)
+#define SALRET_ERROR		(-3)
 
 /*
  * SN_SAL_SET_ERROR_HANDLING_FEATURES bit settings
@@ -702,6 +725,171 @@ ia64_sn_set_error_handling_features(const u64 *feature_bits)
 			feature_bits[5],
 			feature_bits[6]);
 	return rv.status;
+}
+
+
+/*
+ * Open a subchannel for sending arbitrary data to the system
+ * controller network via the system controller device associated with
+ * 'nasid'.  Return the subchannel number or a negative error code.
+ */
+static inline int
+ia64_sn_irtr_open(nasid_t nasid)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_REENTRANT(rv, SN_SAL_IROUTER_OP, SAL_IROUTER_OPEN, nasid,
+			   0, 0, 0, 0, 0);
+	return (int) rv.v0;
+}
+
+/*
+ * Close system controller subchannel 'subch' previously opened on 'nasid'.
+ */
+static inline int
+ia64_sn_irtr_close(nasid_t nasid, int subch)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_REENTRANT(rv, SN_SAL_IROUTER_OP, SAL_IROUTER_CLOSE,
+			   (u64) nasid, (u64) subch, 0, 0, 0, 0);
+	return (int) rv.status;
+}
+
+/*
+ * Read data from system controller associated with 'nasid' on
+ * subchannel 'subch'.  The buffer to be filled is pointed to by
+ * 'buf', and its capacity is in the integer pointed to by 'len'.  The
+ * referent of 'len' is set to the number of bytes read by the SAL
+ * call.  The return value is either SALRET_OK (for bytes read) or
+ * SALRET_ERROR (for error or "no data available").
+ */
+static inline int
+ia64_sn_irtr_recv(nasid_t nasid, int subch, char *buf, int *len)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_REENTRANT(rv, SN_SAL_IROUTER_OP, SAL_IROUTER_RECV,
+			   (u64) nasid, (u64) subch, (u64) buf, (u64) len,
+			   0, 0);
+	return (int) rv.status;
+}
+
+/*
+ * Write data to the system controller network via the system
+ * controller associated with 'nasid' on suchannel 'subch'.  The
+ * buffer to be written out is pointed to by 'buf', and 'len' is the
+ * number of bytes to be written.  The return value is either the
+ * number of bytes written (which could be zero) or a negative error
+ * code.
+ */
+static inline int
+ia64_sn_irtr_send(nasid_t nasid, int subch, char *buf, int len)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_REENTRANT(rv, SN_SAL_IROUTER_OP, SAL_IROUTER_SEND,
+			   (u64) nasid, (u64) subch, (u64) buf, (u64) len,
+			   0, 0);
+	return (int) rv.v0;
+}
+
+/*
+ * Check whether any interrupts are pending for the system controller
+ * associated with 'nasid' and its subchannel 'subch'.  The return
+ * value is a mask of pending interrupts (SAL_IROUTER_INTR_XMIT and/or
+ * SAL_IROUTER_INTR_RECV).
+ */
+static inline int
+ia64_sn_irtr_intr(nasid_t nasid, int subch)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_REENTRANT(rv, SN_SAL_IROUTER_OP, SAL_IROUTER_INTR_STATUS,
+			   (u64) nasid, (u64) subch, 0, 0, 0, 0);
+	return (int) rv.v0;
+}
+
+/*
+ * Enable the interrupt indicated by the intr parameter (either
+ * SAL_IROUTER_INTR_XMIT or SAL_IROUTER_INTR_RECV).
+ */
+static inline int
+ia64_sn_irtr_intr_enable(nasid_t nasid, int subch, u64 intr)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_REENTRANT(rv, SN_SAL_IROUTER_OP, SAL_IROUTER_INTR_ON,
+			   (u64) nasid, (u64) subch, intr, 0, 0, 0);
+	return (int) rv.v0;
+}
+
+/*
+ * Disable the interrupt indicated by the intr parameter (either
+ * SAL_IROUTER_INTR_XMIT or SAL_IROUTER_INTR_RECV).
+ */
+static inline int
+ia64_sn_irtr_intr_disable(nasid_t nasid, int subch, u64 intr)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_REENTRANT(rv, SN_SAL_IROUTER_OP, SAL_IROUTER_INTR_OFF,
+			   (u64) nasid, (u64) subch, intr, 0, 0, 0);
+	return (int) rv.v0;
+}
+
+/**
+ * ia64_sn_get_fit_compt - read a FIT entry from the PROM header
+ * @nasid: NASID of node to read
+ * @index: FIT entry index to be retrieved (0..n)
+ * @fitentry: 16 byte buffer where FIT entry will be stored.
+ * @banbuf: optional buffer for retrieving banner
+ * @banlen: length of banner buffer
+ *
+ * Access to the physical PROM chips needs to be serialized since reads and
+ * writes can't occur at the same time, so we need to call into the SAL when
+ * we want to look at the FIT entries on the chips.
+ *
+ * Returns:
+ *	%SALRET_OK if ok
+ *	%SALRET_INVALID_ARG if index too big
+ *	%SALRET_NOT_IMPLEMENTED if running on older PROM
+ *	??? if nasid invalid OR banner buffer not large enough
+ */
+static inline int
+ia64_sn_get_fit_compt(u64 nasid, u64 index, void *fitentry, void *banbuf,
+		      u64 banlen)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_NOLOCK(rv, SN_SAL_GET_FIT_COMPT, nasid, index, fitentry,
+			banbuf, banlen, 0, 0);
+	return (int) rv.status;
+}
+
+/*
+ * Initialize the SAL components of the system controller
+ * communication driver; specifically pass in a sizable buffer that
+ * can be used for allocation of subchannel queues as new subchannels
+ * are opened.  "buf" points to the buffer, and "len" specifies its
+ * length.
+ */
+static inline int
+ia64_sn_irtr_init(nasid_t nasid, void *buf, int len)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_REENTRANT(rv, SN_SAL_IROUTER_OP, SAL_IROUTER_INIT,
+			   (u64) nasid, (u64) buf, (u64) len, 0, 0, 0);
+	return (int) rv.status;
+}
+
+/*
+ * This is the access point to the Altix PROM hardware performance
+ * and status monitoring interface. For info on using this, see
+ * include/asm-ia64/sn/sn2/sn_hwperf.h
+ */
+static inline int
+ia64_sn_hwperf_op(nasid_t nasid, u64 opcode, u64 a0, u64 a1, u64 a2,
+                  u64 a3, u64 a4, int *v0)
+{
+	struct ia64_sal_retval rv;
+	SAL_CALL_NOLOCK(rv, SN_SAL_HWPERF_OP, (u64)nasid,
+		opcode, a0, a1, a2, a3, a4);
+	if (v0)
+		*v0 = (int) rv.v0;
+	return (int) rv.status;
 }
 
 #endif /* _ASM_IA64_SN_SN_SAL_H */

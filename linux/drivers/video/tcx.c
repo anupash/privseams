@@ -412,7 +412,7 @@ static void tcx_init_one(struct sbus_dev *sdev)
 		all->par.mmap_map[i].poff = sdev->reg_addrs[j].phys_addr;
 	}
 
-	all->info.flags = FBINFO_FLAG_DEFAULT;
+	all->info.flags = FBINFO_DEFAULT;
 	all->info.fbops = &tcx_ops;
 #ifdef CONFIG_SPARC32
 	all->info.screen_base = (char *)
@@ -468,6 +468,9 @@ int __init tcx_init(void)
 	struct sbus_bus *sbus;
 	struct sbus_dev *sdev;
 
+	if (fb_get_options("tcxfb", NULL))
+		return -ENODEV;
+
 	for_all_sbusdev(sdev, sbus) {
 		if (!strcmp(sdev->prom_name, "tcx"))
 			tcx_init_one(sdev);
@@ -496,8 +499,9 @@ tcx_setup(char *arg)
 	return 0;
 }
 
-#ifdef MODULE
 module_init(tcx_init);
+
+#ifdef MODULE
 module_exit(tcx_exit);
 #endif
 

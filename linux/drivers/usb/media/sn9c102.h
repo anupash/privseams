@@ -31,6 +31,7 @@
 #include <linux/types.h>
 #include <linux/param.h>
 #include <linux/rwsem.h>
+#include <asm/semaphore.h>
 
 #include "sn9c102_sensor.h"
 
@@ -39,6 +40,7 @@
 #define SN9C102_DEBUG
 #define SN9C102_DEBUG_LEVEL       2
 #define SN9C102_MAX_DEVICES       64
+#define SN9C102_PRESERVE_IMGSCALE 0
 #define SN9C102_MAX_FRAMES        32
 #define SN9C102_URBS              2
 #define SN9C102_ISO_PACKETS       7
@@ -51,8 +53,8 @@
 #define SN9C102_MODULE_AUTHOR   "(C) 2004 Luca Risolia"
 #define SN9C102_AUTHOR_EMAIL    "<luca.risolia@studio.unibo.it>"
 #define SN9C102_MODULE_LICENSE  "GPL"
-#define SN9C102_MODULE_VERSION  "1:1.01-beta"
-#define SN9C102_MODULE_VERSION_CODE  KERNEL_VERSION(1, 0, 1)
+#define SN9C102_MODULE_VERSION  "1:1.08"
+#define SN9C102_MODULE_VERSION_CODE  KERNEL_VERSION(1, 0, 8)
 
 SN9C102_ID_TABLE;
 SN9C102_SENSOR_TABLE;

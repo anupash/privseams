@@ -28,7 +28,7 @@
 
 struct tridentfb_par {
 	int vclk;		//in MHz
-	unsigned long io_virt;	//iospace virtual memory address
+	void __iomem * io_virt;	//iospace virtual memory address
 };
 
 unsigned char eng_oper;		//engine operation...
@@ -1107,7 +1107,7 @@ static int __devinit trident_pci_probe(struct pci_dev * dev, const struct pci_de
 		return -1;
 	}
 
-	default_par.io_virt = (unsigned long)ioremap_nocache(tridentfb_fix.mmio_start, tridentfb_fix.mmio_len);
+	default_par.io_virt = ioremap_nocache(tridentfb_fix.mmio_start, tridentfb_fix.mmio_len);
 
 	if (!default_par.io_virt) {
 		release_region(tridentfb_fix.mmio_start, tridentfb_fix.mmio_len);
@@ -1149,7 +1149,10 @@ static int __devinit trident_pci_probe(struct pci_dev * dev, const struct pci_de
 	fb_info.fbops = &tridentfb_ops;
 
 
-	fb_info.flags = FBINFO_FLAG_DEFAULT;
+	fb_info.flags = FBINFO_DEFAULT | FBINFO_HWACCEL_YPAN;
+#ifdef CONFIG_FB_TRIDENT_ACCEL
+	fb_info.flags |= FBINFO_HWACCEL_COPYAREA | FBINFO_HWACCEL_FILLRECT;
+#endif
 	fb_info.pseudo_palette = pseudo_pal;
 
 	if (!fb_find_mode(&default_var,&fb_info,mode,NULL,0,NULL,bpp))
@@ -1175,8 +1178,8 @@ static void __devexit trident_pci_remove(struct pci_dev * dev)
 {
 	struct tridentfb_par *par = (struct tridentfb_par*)fb_info.par;
 	unregister_framebuffer(&fb_info);
-	iounmap((void *)par->io_virt);
-	iounmap((void*)fb_info.screen_base);
+	iounmap(par->io_virt);
+	iounmap(fb_info.screen_base);
 	release_mem_region(tridentfb_fix.smem_start, tridentfb_fix.smem_len);
 	release_region(tridentfb_fix.mmio_start, tridentfb_fix.mmio_len);
 }
@@ -1215,8 +1218,17 @@ static struct pci_driver tridentfb_pci_driver = {
 	.remove		= __devexit_p(trident_pci_remove)
 };
 
+int tridentfb_setup(char *options);
+
 int __init tridentfb_init(void)
 {
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("tridentfb", &option))
+		return -ENODEV;
+	tridentfb_setup(option);
+#endif
 	output("Trident framebuffer %s initializing\n", VERSION);
 	return pci_module_init(&tridentfb_pci_driver);
 }
@@ -1276,9 +1288,7 @@ static struct fb_ops tridentfb_ops = {
 	.fb_cursor = soft_cursor,
 };
 
-#ifdef MODULE
 module_init(tridentfb_init);
-#endif
 module_exit(tridentfb_exit);
 
 MODULE_AUTHOR("Jani Monoses <jani@iv.ro>");

@@ -51,10 +51,13 @@ ACPI_MODULE_NAME	("osl")
 
 struct acpi_os_dpc
 {
-    OSD_EXECUTION_CALLBACK  function;
+    acpi_osd_exec_callback  function;
     void		    *context;
 };
 
+#ifdef CONFIG_ACPI_CUSTOM_DSDT
+#include CONFIG_ACPI_CUSTOM_DSDT_FILE
+#endif
 
 #ifdef ENABLE_DEBUGGER
 #include <linux/kdb.h>
@@ -64,12 +67,18 @@ extern char line_buf[80];
 #endif /*ENABLE_DEBUGGER*/
 
 static unsigned int acpi_irq_irq;
-static OSD_HANDLER acpi_irq_handler;
+static acpi_osd_handler acpi_irq_handler;
 static void *acpi_irq_context;
 static struct workqueue_struct *kacpid_wq;
 
 acpi_status
 acpi_os_initialize(void)
+{
+	return AE_OK;
+}
+
+acpi_status
+acpi_os_initialize1(void)
 {
 	/*
 	 * Initialize PCI configuration space access, as we'll need to access
@@ -165,11 +174,11 @@ acpi_os_get_root_pointer(u32 flags, struct acpi_pointer *addr)
 }
 
 acpi_status
-acpi_os_map_memory(acpi_physical_address phys, acpi_size size, void **virt)
+acpi_os_map_memory(acpi_physical_address phys, acpi_size size, void __iomem **virt)
 {
 	if (efi_enabled) {
 		if (EFI_MEMORY_WB & efi_mem_attributes(phys)) {
-			*virt = phys_to_virt(phys);
+			*virt = (void __iomem *) phys_to_virt(phys);
 		} else {
 			*virt = ioremap(phys, size);
 		}
@@ -191,7 +200,7 @@ acpi_os_map_memory(acpi_physical_address phys, acpi_size size, void **virt)
 }
 
 void
-acpi_os_unmap_memory(void *virt, acpi_size size)
+acpi_os_unmap_memory(void __iomem *virt, acpi_size size)
 {
 	iounmap(virt);
 }
@@ -235,7 +244,14 @@ acpi_os_table_override (struct acpi_table_header *existing_table,
 	if (!existing_table || !new_table)
 		return AE_BAD_PARAMETER;
 
+#ifdef CONFIG_ACPI_CUSTOM_DSDT
+	if (strncmp(existing_table->signature, "DSDT", 4) == 0)
+		*new_table = (struct acpi_table_header*)AmlCode;
+	else
+		*new_table = NULL;
+#else
 	*new_table = NULL;
+#endif
 	return AE_OK;
 }
 
@@ -246,7 +262,7 @@ acpi_irq(int irq, void *dev_id, struct pt_regs *regs)
 }
 
 acpi_status
-acpi_os_install_interrupt_handler(u32 gsi, OSD_HANDLER handler, void *context)
+acpi_os_install_interrupt_handler(u32 gsi, acpi_osd_handler handler, void *context)
 {
 	unsigned int irq;
 
@@ -274,7 +290,7 @@ acpi_os_install_interrupt_handler(u32 gsi, OSD_HANDLER handler, void *context)
 }
 
 acpi_status
-acpi_os_remove_interrupt_handler(u32 irq, OSD_HANDLER handler)
+acpi_os_remove_interrupt_handler(u32 irq, acpi_osd_handler handler)
 {
 	if (irq) {
 		free_irq(irq, acpi_irq);
@@ -370,30 +386,31 @@ acpi_os_read_memory(
 	u32			width)
 {
 	u32			dummy;
-	void			*virt_addr;
+	void __iomem		*virt_addr;
 	int			iomem = 0;
 
 	if (efi_enabled) {
 		if (EFI_MEMORY_WB & efi_mem_attributes(phys_addr)) {
-			virt_addr = phys_to_virt(phys_addr);
+			/* HACK ALERT! We can use readb/w/l on real memory too.. */
+			virt_addr = (void __iomem *) phys_to_virt(phys_addr);
 		} else {
 			iomem = 1;
 			virt_addr = ioremap(phys_addr, width);
 		}
 	} else
-		virt_addr = phys_to_virt(phys_addr);
+		virt_addr = (void __iomem *) phys_to_virt(phys_addr);
 	if (!value)
 		value = &dummy;
 
 	switch (width) {
 	case 8:
-		*(u8*) value = *(u8*) virt_addr;
+		*(u8*) value = readb(virt_addr);
 		break;
 	case 16:
-		*(u16*) value = *(u16*) virt_addr;
+		*(u16*) value = readw(virt_addr);
 		break;
 	case 32:
-		*(u32*) value = *(u32*) virt_addr;
+		*(u32*) value = readl(virt_addr);
 		break;
 	default:
 		BUG();
@@ -413,28 +430,29 @@ acpi_os_write_memory(
 	u32			value,
 	u32			width)
 {
-	void			*virt_addr;
+	void __iomem		*virt_addr;
 	int			iomem = 0;
 
 	if (efi_enabled) {
 		if (EFI_MEMORY_WB & efi_mem_attributes(phys_addr)) {
-			virt_addr = phys_to_virt(phys_addr);
+			/* HACK ALERT! We can use writeb/w/l on real memory too */
+			virt_addr = (void __iomem *) phys_to_virt(phys_addr);
 		} else {
 			iomem = 1;
 			virt_addr = ioremap(phys_addr, width);
 		}
 	} else
-		virt_addr = phys_to_virt(phys_addr);
+		virt_addr = (void __iomem *) phys_to_virt(phys_addr);
 
 	switch (width) {
 	case 8:
-		*(u8*) virt_addr = value;
+		writeb(value, virt_addr);
 		break;
 	case 16:
-		*(u16*) virt_addr = value;
+		writew(value, virt_addr);
 		break;
 	case 32:
-		*(u32*) virt_addr = value;
+		writel(value, virt_addr);
 		break;
 	default:
 		BUG();
@@ -470,6 +488,8 @@ acpi_os_read_pci_configuration (struct acpi_pci_id *pci_id, u32 reg, void *value
 		return AE_ERROR;
 	}
 
+	BUG_ON(!raw_pci_ops);
+
 	result = raw_pci_ops->read(pci_id->segment, pci_id->bus,
 				PCI_DEVFN(pci_id->device, pci_id->function),
 				reg, size, value);
@@ -495,6 +515,8 @@ acpi_os_write_pci_configuration (struct acpi_pci_id *pci_id, u32 reg, acpi_integ
 	default:
 		return AE_ERROR;
 	}
+
+	BUG_ON(!raw_pci_ops);
 
 	result = raw_pci_ops->write(pci_id->segment, pci_id->bus,
 				PCI_DEVFN(pci_id->device, pci_id->function),
@@ -624,7 +646,7 @@ acpi_os_execute_deferred (
 acpi_status
 acpi_os_queue_for_execution(
 	u32			priority,
-	OSD_EXECUTION_CALLBACK	function,
+	acpi_osd_exec_callback	function,
 	void			*context)
 {
 	acpi_status 		status = AE_OK;
@@ -952,7 +974,7 @@ acpi_os_readable(void *ptr, acpi_size len)
 {
 #if defined(__i386__) || defined(__x86_64__) 
 	char tmp;
-	return !__get_user(tmp, (char *)ptr) && !__get_user(tmp, (char *)ptr + len - 1);
+	return !__get_user(tmp, (char __user *)ptr) && !__get_user(tmp, (char __user *)ptr + len - 1);
 #endif
 	return 1;
 }
@@ -1066,15 +1088,15 @@ __setup("acpi_serialize", acpi_serialize_setup);
  * Run-time events on the same GPE this flag is available
  * to tell Linux to keep the wake-time GPEs enabled at run-time.
  */
-static int __init
-acpi_leave_gpes_disabled_setup(char *str)
+int __init
+acpi_wake_gpes_always_on_setup(char *str)
 {
-	printk(KERN_INFO PREFIX "leave wake GPEs disabled\n");
+	printk(KERN_INFO PREFIX "wake GPEs not disabled\n");
 
-	acpi_gbl_leave_wake_gpes_disabled = TRUE;
+	acpi_gbl_leave_wake_gpes_disabled = FALSE;
 
 	return 1;
 }
 
-__setup("acpi_leave_gpes_disabled", acpi_leave_gpes_disabled_setup);
+__setup("acpi_wake_gpes_always_on", acpi_wake_gpes_always_on_setup);
 

@@ -132,7 +132,7 @@ struct eth1394_node_info {
 };
 
 /* Our ieee1394 highlevel driver */
-#define ETH1394_DRIVER_NAME "ip1394"
+#define ETH1394_DRIVER_NAME "eth1394"
 static const char driver_name[] = ETH1394_DRIVER_NAME;
 
 static kmem_cache_t *packet_task_cache;
@@ -850,7 +850,7 @@ static inline u16 ether1394_type_trans(struct sk_buff *skb,
 
 	skb->mac.raw = skb->data;
 	skb_pull (skb, ETH1394_HLEN);
-	eth = (struct eth1394hdr*)skb->mac.raw;
+	eth = eth1394_hdr(skb);
 
 	if (*eth->h_dest & 1) {
 		if (memcmp(eth->h_dest, dev->broadcast, dev->addr_len)==0)

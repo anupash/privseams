@@ -26,10 +26,9 @@ MODULE_LICENSE(DRIVER_LICENSE);
 
 #define USB_VENDOR_ID_KBGEAR	0x084e
 
-static int       kb_pressure_click = 0x10;
-MODULE_PARM     (kb_pressure_click,"i");
-MODULE_PARM_DESC(kb_pressure_click,
-		 "pressure threshold for clicks");
+static int kb_pressure_click = 0x10;
+module_param(kb_pressure_click, int, 0);
+MODULE_PARM_DESC(kb_pressure_click, "pressure threshold for clicks");
 
 struct kbtab {
 	signed char *data;
@@ -67,8 +66,8 @@ static void kbtab_irq(struct urb *urb, struct pt_regs *regs)
 		goto exit;
 	}
 
-	kbtab->x = le16_to_cpu(get_unaligned((u16 *) &data[1]));
-	kbtab->y = le16_to_cpu(get_unaligned((u16 *) &data[3]));
+	kbtab->x = le16_to_cpu(get_unaligned((__le16 *) &data[1]));
+	kbtab->y = le16_to_cpu(get_unaligned((__le16 *) &data[3]));
 
 	kbtab->pressure = (data[5]);
 

@@ -547,6 +547,9 @@ static struct fb_ops hgafb_ops = {
 
 int __init hgafb_init(void)
 {
+	if (fb_get_options("hgafb", NULL))
+		return -ENODEV;
+
 	if (! hga_card_detect()) {
 		printk(KERN_INFO "hgafb: HGA card not detected.\n");
 		return -EINVAL;
@@ -558,7 +561,7 @@ int __init hgafb_init(void)
 	hga_fix.smem_start = VGA_MAP_MEM(hga_vram_base);
 	hga_fix.smem_len = hga_vram_len;
 
-	fb_info.flags = FBINFO_FLAG_DEFAULT;
+	fb_info.flags = FBINFO_DEFAULT | FBINFO_HWACCEL_YPAN;
 	fb_info.var = hga_default_var;
 	fb_info.fix = hga_fix;
 	fb_info.monspecs.hfmin = 0;
@@ -609,8 +612,8 @@ MODULE_LICENSE("GPL");
 
 MODULE_PARM(nologo, "i");
 MODULE_PARM_DESC(nologo, "Disables startup logo if != 0 (default=0)");
+module_init(hgafb_init);
 
 #ifdef MODULE
-module_init(hgafb_init);
 module_exit(hgafb_exit);
 #endif

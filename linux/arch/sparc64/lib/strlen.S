@@ -9,9 +9,9 @@
 #define HI_MAGIC 0x80808080
 
 	.align	32
-	.global strlen, __strlen
+	.globl	strlen
+	.type	strlen,#function
 strlen:
-__strlen:
 	mov	%o0, %o1
 	andcc	%o0, 3, %g0
 	be,pt	%icc, 9f
@@ -76,3 +76,5 @@ __strlen:
 13:
 	retl
 	 mov	2, %o0
+
+	.size	strlen, .-strlen

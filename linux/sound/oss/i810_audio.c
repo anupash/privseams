@@ -101,7 +101,6 @@
 #include <linux/ac97_codec.h>
 #include <linux/bitops.h>
 #include <asm/uaccess.h>
-#include <asm/hardirq.h>
 
 #define DRIVER_VERSION "1.01"
 
@@ -3216,8 +3215,14 @@ static int __devinit i810_probe(struct pci_dev *pci_dev, const struct pci_device
 	}
 
 	/* claim our iospace and irq */
-	request_region(card->iobase, 64, card_names[pci_id->driver_data]);
-	request_region(card->ac97base, 256, card_names[pci_id->driver_data]);
+	if (!request_region(card->iobase, 64, card_names[pci_id->driver_data])) {
+		printk(KERN_ERR "i810_audio: unable to allocate region %lx\n", card->iobase);
+		goto out_region1;
+	}
+	if (!request_region(card->ac97base, 256, card_names[pci_id->driver_data])) {
+		printk(KERN_ERR "i810_audio: unable to allocate region %lx\n", card->ac97base);
+		goto out_region2;
+	}
 
 	if (request_irq(card->irq, &i810_interrupt, SA_SHIRQ,
 			card_names[pci_id->driver_data], card)) {
@@ -3291,7 +3296,9 @@ out_iospace:
 	}
 out_pio:	
 	release_region(card->iobase, 64);
+out_region2:
 	release_region(card->ac97base, 256);
+out_region1:
 	pci_free_consistent(pci_dev, sizeof(struct i810_channel)*NR_HW_CH,
 	    card->channel, card->chandma);
 out_mem:

@@ -1342,7 +1342,14 @@ int __init vga16fb_init(void)
 {
 	int i;
 	int ret;
+#ifndef MODULE
+	char *option = NULL;
 
+	if (fb_get_options("vga16fb", &option))
+		return -ENODEV;
+
+	vga16fb_setup(option);
+#endif
 	printk(KERN_DEBUG "vga16fb: initializing\n");
 
 	/* XXX share VGA_FB_PHYS and I/O region with vgacon and others */
@@ -1418,8 +1425,8 @@ static void __exit vga16fb_exit(void)
 
 #ifdef MODULE
 MODULE_LICENSE("GPL");
-module_init(vga16fb_init);
 #endif
+module_init(vga16fb_init);
 module_exit(vga16fb_exit);
 
 

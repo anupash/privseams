@@ -1083,6 +1083,14 @@ int __init gbefb_init(void)
 {
 	int i, ret = 0;
 
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("gbefb", &option))
+		return -ENODEV;
+	gbefb_setup(options);
+#endif
+
 	if (!request_mem_region(GBE_BASE, sizeof(struct sgi_gbe), "GBE")) {
 		printk(KERN_ERR "gbefb: couldn't reserve mmio region\n");
 		return -EBUSY;
@@ -1135,7 +1143,7 @@ int __init gbefb_init(void)
 	fb_info.currcon = -1;
 	fb_info.fbops = &gbefb_ops;
 	fb_info.pseudo_palette = pseudo_palette;
-	fb_info.flags = FBINFO_FLAG_DEFAULT;
+	fb_info.flags = FBINFO_DEFAULT;
 	fb_info.screen_base = gbe_mem;
 	fb_alloc_cmap(&fb_info.cmap, 256, 0);
 
@@ -1192,8 +1200,9 @@ void __exit gbefb_exit(void)
 	iounmap(gbe);
 }
 
-#ifdef MODULE
 module_init(gbefb_init);
+
+#ifdef MODULE
 module_exit(gbefb_exit);
 #endif
 

@@ -61,6 +61,7 @@
  * RETURN:      none
  *
  * DESCRIPTION: Clears all fixed and general purpose status bits
+ *              THIS FUNCTION MUST BE CALLED WITH INTERRUPTS DISABLED
  *
  ******************************************************************************/
 
@@ -103,7 +104,7 @@ acpi_hw_clear_acpi_status (
 
 	/* Clear the GPE Bits in all GPE registers in all GPE blocks */
 
-	status = acpi_ev_walk_gpe_list (acpi_hw_clear_gpe_block);
+	status = acpi_ev_walk_gpe_list (acpi_hw_clear_gpe_block, ACPI_ISR);
 
 unlock_and_exit:
 	if (flags & ACPI_MTX_LOCK) {
@@ -135,7 +136,7 @@ acpi_get_sleep_type_data (
 	u8                              *sleep_type_b)
 {
 	acpi_status                     status = AE_OK;
-	union acpi_operand_object       *obj_desc;
+	struct acpi_parameter_info      info;
 
 
 	ACPI_FUNCTION_TRACE ("acpi_get_sleep_type_data");
@@ -152,8 +153,9 @@ acpi_get_sleep_type_data (
 	/*
 	 * Evaluate the namespace object containing the values for this state
 	 */
+	info.parameters = NULL;
 	status = acpi_ns_evaluate_by_name ((char *) acpi_gbl_sleep_state_names[sleep_state],
-			  NULL, &obj_desc);
+			  &info);
 	if (ACPI_FAILURE (status)) {
 		ACPI_DEBUG_PRINT ((ACPI_DB_EXEC, "%s while evaluating sleep_state [%s]\n",
 			acpi_format_exception (status), acpi_gbl_sleep_state_names[sleep_state]));
@@ -163,48 +165,50 @@ acpi_get_sleep_type_data (
 
 	/* Must have a return object */
 
-	if (!obj_desc) {
+	if (!info.return_object) {
 		ACPI_REPORT_ERROR (("Missing Sleep State object\n"));
 		status = AE_NOT_EXIST;
 	}
 
 	/* It must be of type Package */
 
-	else if (ACPI_GET_OBJECT_TYPE (obj_desc) != ACPI_TYPE_PACKAGE) {
+	else if (ACPI_GET_OBJECT_TYPE (info.return_object) != ACPI_TYPE_PACKAGE) {
 		ACPI_REPORT_ERROR (("Sleep State object not a Package\n"));
 		status = AE_AML_OPERAND_TYPE;
 	}
 
 	/* The package must have at least two elements */
 
-	else if (obj_desc->package.count < 2) {
+	else if (info.return_object->package.count < 2) {
 		ACPI_REPORT_ERROR (("Sleep State package does not have at least two elements\n"));
 		status = AE_AML_NO_OPERAND;
 	}
 
 	/* The first two elements must both be of type Integer */
 
-	else if ((ACPI_GET_OBJECT_TYPE (obj_desc->package.elements[0]) != ACPI_TYPE_INTEGER) ||
-			 (ACPI_GET_OBJECT_TYPE (obj_desc->package.elements[1]) != ACPI_TYPE_INTEGER)) {
+	else if ((ACPI_GET_OBJECT_TYPE (info.return_object->package.elements[0]) != ACPI_TYPE_INTEGER) ||
+			 (ACPI_GET_OBJECT_TYPE (info.return_object->package.elements[1]) != ACPI_TYPE_INTEGER)) {
 		ACPI_REPORT_ERROR (("Sleep State package elements are not both Integers (%s, %s)\n",
-			acpi_ut_get_object_type_name (obj_desc->package.elements[0]),
-			acpi_ut_get_object_type_name (obj_desc->package.elements[1])));
+			acpi_ut_get_object_type_name (info.return_object->package.elements[0]),
+			acpi_ut_get_object_type_name (info.return_object->package.elements[1])));
 		status = AE_AML_OPERAND_TYPE;
 	}
 	else {
 		/*
 		 * Valid _Sx_ package size, type, and value
 		 */
-		*sleep_type_a = (u8) (obj_desc->package.elements[0])->integer.value;
-		*sleep_type_b = (u8) (obj_desc->package.elements[1])->integer.value;
+		*sleep_type_a = (u8) (info.return_object->package.elements[0])->integer.value;
+		*sleep_type_b = (u8) (info.return_object->package.elements[1])->integer.value;
 	}
 
 	if (ACPI_FAILURE (status)) {
-		ACPI_DEBUG_PRINT ((ACPI_DB_ERROR, "While evaluating sleep_state [%s], bad Sleep object %p type %s\n",
-			acpi_gbl_sleep_state_names[sleep_state], obj_desc, acpi_ut_get_object_type_name (obj_desc)));
+		ACPI_DEBUG_PRINT ((ACPI_DB_ERROR,
+			"While evaluating sleep_state [%s], bad Sleep object %p type %s\n",
+			acpi_gbl_sleep_state_names[sleep_state], info.return_object,
+			acpi_ut_get_object_type_name (info.return_object)));
 	}
 
-	acpi_ut_remove_reference (obj_desc);
+	acpi_ut_remove_reference (info.return_object);
 	return_ACPI_STATUS (status);
 }
 
@@ -245,8 +249,8 @@ acpi_hw_get_bit_register_info (
  *              return_value    - Value that was read from the register
  *              Flags           - Lock the hardware or not
  *
- * RETURN:      Value is read from specified Register.  Value returned is
- *              normalized to bit0 (is shifted all the way right)
+ * RETURN:      Status and the value read from specified Register.  Value
+ *              returned is normalized to bit0 (is shifted all the way right)
  *
  * DESCRIPTION: ACPI bit_register read function.
  *
@@ -280,6 +284,8 @@ acpi_get_register (
 		}
 	}
 
+	/* Read from the register */
+
 	status = acpi_hw_register_read (ACPI_MTX_DO_NOT_LOCK,
 			  bit_reg_info->parent_register, &register_value);
 
@@ -309,10 +315,10 @@ acpi_get_register (
  *
  * PARAMETERS:  register_id     - ID of ACPI bit_register to access
  *              Value           - (only used on write) value to write to the
- *                                Register, NOT pre-normalized to the bit pos.
+ *                                Register, NOT pre-normalized to the bit pos
  *              Flags           - Lock the hardware or not
  *
- * RETURN:      None
+ * RETURN:      Status
  *
  * DESCRIPTION: ACPI Bit Register write function.
  *
@@ -457,10 +463,11 @@ unlock_and_exit:
  *
  * FUNCTION:    acpi_hw_register_read
  *
- * PARAMETERS:  use_lock               - Mutex hw access.
- *              register_id            - register_iD + Offset.
+ * PARAMETERS:  use_lock            - Mutex hw access
+ *              register_id         - register_iD + Offset
+ *              return_value        - Value that was read from the register
  *
- * RETURN:      Value read or written.
+ * RETURN:      Status and the value read.
  *
  * DESCRIPTION: Acpi register read function.  Registers are read at the
  *              given offset.
@@ -568,10 +575,11 @@ unlock_and_exit:
  *
  * FUNCTION:    acpi_hw_register_write
  *
- * PARAMETERS:  use_lock               - Mutex hw access.
- *              register_id            - register_iD + Offset.
+ * PARAMETERS:  use_lock            - Mutex hw access
+ *              register_id         - register_iD + Offset
+ *              Value               - The value to write
  *
- * RETURN:      Value read or written.
+ * RETURN:      Status
  *
  * DESCRIPTION: Acpi register Write function.  Registers are written at the
  *              given offset.
@@ -687,11 +695,11 @@ unlock_and_exit:
  *
  * PARAMETERS:  Width               - 8, 16, or 32
  *              Value               - Where the value is returned
- *              Register            - GAS register structure
+ *              Reg                 - GAS register structure
  *
  * RETURN:      Status
  *
- * DESCRIPTION: Read from either memory, IO, or PCI config space.
+ * DESCRIPTION: Read from either memory or IO space.
  *
  ******************************************************************************/
 
@@ -701,8 +709,6 @@ acpi_hw_low_level_read (
 	u32                             *value,
 	struct acpi_generic_address     *reg)
 {
-	struct acpi_pci_id              pci_id;
-	u16                             pci_register;
 	acpi_status                     status;
 
 
@@ -721,8 +727,8 @@ acpi_hw_low_level_read (
 	*value = 0;
 
 	/*
-	 * Three address spaces supported:
-	 * Memory, IO, or PCI_Config.
+	 * Two address spaces supported: Memory or IO.
+	 * PCI_Config is not supported here because the GAS struct is insufficient
 	 */
 	switch (reg->address_space_id) {
 	case ACPI_ADR_SPACE_SYSTEM_MEMORY:
@@ -736,19 +742,6 @@ acpi_hw_low_level_read (
 	case ACPI_ADR_SPACE_SYSTEM_IO:
 
 		status = acpi_os_read_port ((acpi_io_address) reg->address,
-				 value, width);
-		break;
-
-
-	case ACPI_ADR_SPACE_PCI_CONFIG:
-
-		pci_id.segment = 0;
-		pci_id.bus     = 0;
-		pci_id.device  = ACPI_PCI_DEVICE (reg->address);
-		pci_id.function = ACPI_PCI_FUNCTION (reg->address);
-		pci_register   = (u16) ACPI_PCI_REGISTER (reg->address);
-
-		status = acpi_os_read_pci_configuration (&pci_id, pci_register,
 				 value, width);
 		break;
 
@@ -774,11 +767,11 @@ acpi_hw_low_level_read (
  *
  * PARAMETERS:  Width               - 8, 16, or 32
  *              Value               - To be written
- *              Register            - GAS register structure
+ *              Reg                 - GAS register structure
  *
  * RETURN:      Status
  *
- * DESCRIPTION: Write to either memory, IO, or PCI config space.
+ * DESCRIPTION: Write to either memory or IO space.
  *
  ******************************************************************************/
 
@@ -788,8 +781,6 @@ acpi_hw_low_level_write (
 	u32                             value,
 	struct acpi_generic_address     *reg)
 {
-	struct acpi_pci_id              pci_id;
-	u16                             pci_register;
 	acpi_status                     status;
 
 
@@ -807,8 +798,8 @@ acpi_hw_low_level_write (
 	}
 
 	/*
-	 * Three address spaces supported:
-	 * Memory, IO, or PCI_Config.
+	 * Two address spaces supported: Memory or IO.
+	 * PCI_Config is not supported here because the GAS struct is insufficient
 	 */
 	switch (reg->address_space_id) {
 	case ACPI_ADR_SPACE_SYSTEM_MEMORY:
@@ -823,19 +814,6 @@ acpi_hw_low_level_write (
 
 		status = acpi_os_write_port ((acpi_io_address) reg->address,
 				 value, width);
-		break;
-
-
-	case ACPI_ADR_SPACE_PCI_CONFIG:
-
-		pci_id.segment = 0;
-		pci_id.bus     = 0;
-		pci_id.device  = ACPI_PCI_DEVICE (reg->address);
-		pci_id.function = ACPI_PCI_FUNCTION (reg->address);
-		pci_register   = (u16) ACPI_PCI_REGISTER (reg->address);
-
-		status = acpi_os_write_pci_configuration (&pci_id, pci_register,
-				 (acpi_integer) value, width);
 		break;
 
 

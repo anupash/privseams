@@ -15,6 +15,9 @@
 #include <linux/buffer_head.h>
 #include <linux/vfs.h>
 
+static int efs_statfs(struct super_block *s, struct kstatfs *buf);
+static int efs_fill_super(struct super_block *s, void *d, int silent);
+
 static struct super_block *efs_get_sb(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data)
 {
@@ -58,7 +61,7 @@ static int init_inodecache(void)
 {
 	efs_inode_cachep = kmem_cache_create("efs_inode_cache",
 				sizeof(struct efs_inode_info),
-				0, SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT,
+				0, SLAB_RECLAIM_ACCOUNT,
 				init_once, NULL);
 	if (efs_inode_cachep == NULL)
 		return -ENOMEM;
@@ -71,7 +74,7 @@ static void destroy_inodecache(void)
 		printk(KERN_INFO "efs_inode_cache: not all structures were freed\n");
 }
 
-void efs_put_super(struct super_block *s)
+static void efs_put_super(struct super_block *s)
 {
 	kfree(s->s_fs_info);
 	s->s_fs_info = NULL;
@@ -118,7 +121,8 @@ module_exit(exit_efs_fs)
 
 static efs_block_t efs_validate_vh(struct volume_header *vh) {
 	int		i;
-	unsigned int	cs, csum, *ui;
+	__be32		cs, *ui;
+	int		csum;
 	efs_block_t	sblock = 0; /* shuts up gcc */
 	struct pt_types	*pt_entry;
 	int		pt_type, slice = -1;
@@ -132,8 +136,8 @@ static efs_block_t efs_validate_vh(struct volume_header *vh) {
 		return 0;
 	}
 
-	ui = ((unsigned int *) (vh + 1)) - 1;
-	for(csum = 0; ui >= ((unsigned int *) vh);) {
+	ui = ((__be32 *) (vh + 1)) - 1;
+	for(csum = 0; ui >= ((__be32 *) vh);) {
 		cs = *ui--;
 		csum += be32_to_cpu(cs);
 	}
@@ -213,7 +217,7 @@ static int efs_validate_super(struct efs_sb_info *sb, struct efs_super *super) {
 	return 0;    
 }
 
-int efs_fill_super(struct super_block *s, void *d, int silent)
+static int efs_fill_super(struct super_block *s, void *d, int silent)
 {
 	struct efs_sb_info *sb;
 	struct buffer_head *bh;
@@ -292,7 +296,7 @@ out_no_fs:
 	return -EINVAL;
 }
 
-int efs_statfs(struct super_block *s, struct kstatfs *buf) {
+static int efs_statfs(struct super_block *s, struct kstatfs *buf) {
 	struct efs_sb_info *sb = SUPER_INFO(s);
 
 	buf->f_type    = EFS_SUPER_MAGIC;	/* efs magic number */

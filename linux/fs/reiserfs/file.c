@@ -89,15 +89,16 @@ static int reiserfs_sync_file(
 			      ) {
   struct inode * p_s_inode = p_s_dentry->d_inode;
   int n_err;
-
-  reiserfs_write_lock(p_s_inode->i_sb);
+  int barrier_done;
 
   if (!S_ISREG(p_s_inode->i_mode))
       BUG ();
-
   n_err = sync_mapping_buffers(p_s_inode->i_mapping) ;
-  reiserfs_commit_for_inode(p_s_inode) ;
+  reiserfs_write_lock(p_s_inode->i_sb);
+  barrier_done = reiserfs_commit_for_inode(p_s_inode);
   reiserfs_write_unlock(p_s_inode->i_sb);
+  if (barrier_done != 1)
+      blkdev_issue_flush(p_s_inode->i_sb->s_bdev, NULL);
   return ( n_err < 0 ) ? -EIO : 0;
 }
 
@@ -1098,7 +1099,7 @@ ssize_t reiserfs_file_write( struct file *file, /* the file we are going to writ
 {
     size_t already_written = 0; // Number of bytes already written to the file.
     loff_t pos; // Current position in the file.
-    size_t res; // return value of various functions that we call.
+    ssize_t res; // return value of various functions that we call.
     struct inode *inode = file->f_dentry->d_inode; // Inode of the file that we are writing to.
 				/* To simplify coding at this time, we store
 				   locked pages in array for now */
@@ -1107,7 +1108,7 @@ ssize_t reiserfs_file_write( struct file *file, /* the file we are going to writ
     th.t_trans_id = 0;
 
     if ( file->f_flags & O_DIRECT) { // Direct IO needs treatment
-	int result, after_file_end = 0;
+	ssize_t result, after_file_end = 0;
 	if ( (*ppos + count >= inode->i_size) || (file->f_flags & O_APPEND) ) {
 	    /* If we are appending a file, we need to put this savelink in here.
 	       If we will crash while doing direct io, finish_unfinished will

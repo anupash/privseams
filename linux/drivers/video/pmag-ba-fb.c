@@ -142,7 +142,7 @@ int __init pmagbafb_init_one(int slot)
 	info->var = pmagbafb_defined;
 	info->fix = pmagbafb_fix; 
 	info->screen_base = pmagbafb_fix.smem_start;
-	info->flags = FBINFO_FLAG_DEFAULT;
+	info->flags = FBINFO_DEFAULT;
 
 	fb_alloc_cmap(&fb_info.cmap, 256, 0);
 	
@@ -160,6 +160,9 @@ int __init pmagbafb_init(void)
 	int sid;
 	int found = 0;
 
+	if (fb_get_options("pmagbafb", NULL))
+		return -ENODEV;
+
 	if (TURBOCHANNEL) {
 		while ((sid = search_tc_card("PMAG-BA")) >= 0) {
 			found = 1;
@@ -172,4 +175,5 @@ int __init pmagbafb_init(void)
 	}
 }
 
+module_init(pmagbafb_init);
 MODULE_LICENSE("GPL");

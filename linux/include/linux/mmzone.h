@@ -20,18 +20,6 @@
 #define MAX_ORDER CONFIG_FORCE_MAX_ZONEORDER
 #endif
 
-/*
- * system hash table size limits
- * - on large memory machines, we may want to allocate a bigger hash than that
- *   permitted by MAX_ORDER, so we allocate with the bootmem allocator, and are
- *   limited to this size
- */
-#if MAX_ORDER > 14
-#define MAX_SYS_HASH_TABLE_ORDER MAX_ORDER
-#else
-#define MAX_SYS_HASH_TABLE_ORDER 14
-#endif
-
 struct free_area {
 	struct list_head	free_list;
 	unsigned long		*map;
@@ -284,6 +272,8 @@ typedef struct pglist_data {
 extern int numnodes;
 extern struct pglist_data *pgdat_list;
 
+void __get_zone_counts(unsigned long *active, unsigned long *inactive,
+			unsigned long *free, struct pglist_data *pgdat);
 void get_zone_counts(unsigned long *active, unsigned long *inactive,
 			unsigned long *free);
 void build_all_zonelists(void);

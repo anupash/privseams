@@ -1196,7 +1196,7 @@ static ssize_t dvb_ca_en50221_io_write(struct file *file, const char __user *buf
         int status;
         char fragbuf[HOST_LINK_BUF_SIZE];
         int fragpos = 0;
-        int fraglen;
+        size_t fraglen;
         unsigned long timeout;
         int written;
 
@@ -1257,7 +1257,7 @@ static int dvb_ca_en50221_io_read_condition(struct dvb_ca_private* ca, int* resu
         int slot;
         int slot_count = 0;
         int idx;
-        int fraglen;
+        size_t fraglen;
         int connection_id = -1;
         int found = 0;
         u8 hdr[2];
@@ -1484,21 +1484,20 @@ static unsigned int dvb_ca_en50221_io_poll(struct file *file, poll_table *wait)
 
 
 static struct file_operations dvb_ca_fops = {
-        owner: THIS_MODULE,
-        read: dvb_ca_en50221_io_read,
-        write: dvb_ca_en50221_io_write,
-        ioctl: dvb_ca_en50221_io_ioctl,
-        open: dvb_ca_en50221_io_open,
-        release: dvb_ca_en50221_io_release,
-        poll: dvb_ca_en50221_io_poll,
+        .owner = THIS_MODULE,
+        .read = dvb_ca_en50221_io_read,
+        .write = dvb_ca_en50221_io_write,
+        .ioctl = dvb_ca_en50221_io_ioctl,
+        .open = dvb_ca_en50221_io_open,
+        .release = dvb_ca_en50221_io_release,
+        .poll = dvb_ca_en50221_io_poll,
 };
 
 static struct dvb_device dvbdev_ca = {
-        priv: NULL,
-        users: 1,
-        readers: 1,
-        writers: 1,
-        fops: &dvb_ca_fops,
+        .users = 1,
+        .readers = 1,
+        .writers = 1,
+        .fops = &dvb_ca_fops,
 };
 
 

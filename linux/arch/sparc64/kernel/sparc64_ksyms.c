@@ -34,7 +34,6 @@
 #include <asm/pgtable.h>
 #include <asm/io.h>
 #include <asm/irq.h>
-#include <asm/hardirq.h>
 #include <asm/idprom.h>
 #include <asm/svr4.h>
 #include <asm/elf.h>
@@ -74,8 +73,6 @@ extern void *__bzero(void *, size_t);
 extern void *__memscan_zero(void *, size_t);
 extern void *__memscan_generic(void *, int, size_t);
 extern int __memcmp(const void *, const void *, __kernel_size_t);
-extern int __strncmp(const char *, const char *, __kernel_size_t);
-extern __kernel_size_t __strlen(const char *);
 extern __kernel_size_t strlen(const char *);
 extern void linux_sparc_syscall(void);
 extern void rtrap(void);
@@ -144,7 +141,7 @@ EXPORT_SYMBOL(synchronize_irq);
 
 #if defined(CONFIG_MCOUNT)
 extern void _mcount(void);
-EXPORT_SYMBOL_NOVERS(_mcount);
+EXPORT_SYMBOL(_mcount);
 #endif
 
 /* CPU online map and active count.  */
@@ -187,8 +184,6 @@ EXPORT_SYMBOL(atomic_dec_and_lock);
 EXPORT_SYMBOL(___test_and_set_bit);
 EXPORT_SYMBOL(___test_and_clear_bit);
 EXPORT_SYMBOL(___test_and_change_bit);
-EXPORT_SYMBOL(___test_and_set_le_bit);
-EXPORT_SYMBOL(___test_and_clear_le_bit);
 
 /* Bit searching */
 EXPORT_SYMBOL(find_next_bit);
@@ -295,7 +290,6 @@ EXPORT_SYMBOL(__prom_getchild);
 EXPORT_SYMBOL(__prom_getsibling);
 
 /* sparc library symbols */
-EXPORT_SYMBOL(__strlen);
 EXPORT_SYMBOL(strlen);
 EXPORT_SYMBOL(strnlen);
 EXPORT_SYMBOL(__strlen_user);
@@ -334,7 +328,6 @@ EXPORT_SYMBOL(sys_close);
 #endif
 
 /* Special internal versions of library functions. */
-EXPORT_SYMBOL(__memset);
 EXPORT_SYMBOL(_clear_page);
 EXPORT_SYMBOL(clear_user_page);
 EXPORT_SYMBOL(copy_user_page);
@@ -342,8 +335,7 @@ EXPORT_SYMBOL(__bzero);
 EXPORT_SYMBOL(__memscan_zero);
 EXPORT_SYMBOL(__memscan_generic);
 EXPORT_SYMBOL(__memcmp);
-EXPORT_SYMBOL(__strncmp);
-EXPORT_SYMBOL(__memmove);
+EXPORT_SYMBOL(__memset);
 EXPORT_SYMBOL(memchr);
 
 EXPORT_SYMBOL(csum_partial);
@@ -351,9 +343,12 @@ EXPORT_SYMBOL(csum_partial_copy_sparc64);
 EXPORT_SYMBOL(ip_fast_csum);
 
 /* Moving data to/from/in userspace. */
-EXPORT_SYMBOL(__copy_to_user);
-EXPORT_SYMBOL(__copy_from_user);
-EXPORT_SYMBOL(__copy_in_user);
+EXPORT_SYMBOL(___copy_to_user);
+EXPORT_SYMBOL(___copy_from_user);
+EXPORT_SYMBOL(___copy_in_user);
+EXPORT_SYMBOL(copy_to_user_fixup);
+EXPORT_SYMBOL(copy_from_user_fixup);
+EXPORT_SYMBOL(copy_in_user_fixup);
 EXPORT_SYMBOL(__strncpy_from_user);
 EXPORT_SYMBOL(__bzero_noasi);
 
@@ -367,17 +362,24 @@ EXPORT_SYMBOL(pfn_to_page);
 /* No version information on this, heavily used in inline asm,
  * and will always be 'void __ret_efault(void)'.
  */
-EXPORT_SYMBOL_NOVERS(__ret_efault);
+EXPORT_SYMBOL(__ret_efault);
 
 /* No version information on these, as gcc produces such symbols. */
-EXPORT_SYMBOL_NOVERS(memcmp);
-EXPORT_SYMBOL_NOVERS(memcpy);
-EXPORT_SYMBOL_NOVERS(memset);
-EXPORT_SYMBOL_NOVERS(memmove);
+EXPORT_SYMBOL(memcmp);
+EXPORT_SYMBOL(memcpy);
+EXPORT_SYMBOL(memset);
+EXPORT_SYMBOL(memmove);
+EXPORT_SYMBOL(strncmp);
+
+/* Delay routines. */
+EXPORT_SYMBOL(__udelay);
+EXPORT_SYMBOL(__ndelay);
+EXPORT_SYMBOL(__const_udelay);
+EXPORT_SYMBOL(__delay);
 
 void VISenter(void);
 /* RAID code needs this */
-EXPORT_SYMBOL_NOVERS(VISenter);
+EXPORT_SYMBOL(VISenter);
 
 /* for input/keybdev */
 EXPORT_SYMBOL(sun_do_break);

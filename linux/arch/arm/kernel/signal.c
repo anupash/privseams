@@ -145,6 +145,100 @@ struct rt_sigframe
 	unsigned long retcode;
 };
 
+#ifdef CONFIG_IWMMXT
+
+/* iwmmxt_area is 0x98 bytes long, preceeded by 8 bytes of signature */
+#define IWMMXT_STORAGE_SIZE	(0x98 + 8)
+#define IWMMXT_MAGIC0		0x12ef842a
+#define IWMMXT_MAGIC1		0x1c07ca71
+
+static int page_present(struct mm_struct *mm, unsigned long addr, int wr)
+{
+	pgd_t *pgd = pgd_offset(mm, addr);
+	if (pgd_present(*pgd)) {
+		pmd_t *pmd = pmd_offset(pgd, addr);
+		if (pmd_present(*pmd)) {
+			pte_t *pte = pte_offset_map(pmd, addr);
+			return (pte_present(*pte) && (!wr || pte_write(*pte)));
+		}
+	}
+	return 0;
+}
+
+static int
+preserve_iwmmxt_context(void *iwmmxt_save_area)
+{
+	int err = 0;
+
+	/* the iWMMXt context must be 64 bit aligned */
+	long *iwmmxt_storage = (long *)(((long)iwmmxt_save_area + 4) & ~7);
+
+again:
+	__put_user_error(IWMMXT_MAGIC0, iwmmxt_storage+0, err);
+	__put_user_error(IWMMXT_MAGIC1, iwmmxt_storage+1, err);
+	/*
+	 * iwmmxt_task_copy() doesn't check user permissions.
+	 * Let's do a dummy write on the upper boundary to ensure
+	 * access to user mem is OK all way up.
+	 */
+	__put_user_error(0, iwmmxt_storage+IWMMXT_STORAGE_SIZE/4-1, err);
+	if (!err) {
+		/* Let's make sure the user mapping won't disappear under us */
+		struct mm_struct *mm = current->mm;
+		unsigned long addr = (unsigned long)iwmmxt_storage;
+		spin_lock(&mm->page_table_lock);
+		if ( !page_present(mm, addr, 1) ||
+		     !page_present(mm, addr+IWMMXT_STORAGE_SIZE-1, 1) ) {
+			/* our user area has gone before grabbing the lock */
+			spin_unlock(&mm->page_table_lock);
+			goto again;
+		}
+		iwmmxt_task_copy(current_thread_info(), iwmmxt_storage+2);
+		spin_unlock(&mm->page_table_lock);
+		return 0;
+	}
+	return err;
+}
+
+static int
+restore_iwmmxt_context(void *iwmmxt_save_area)
+{
+	int err = 0;
+	long *iwmmxt_storage, magic0, magic1, dummy;
+
+	/* the iWMMXt context is 64 bit aligned */
+	iwmmxt_storage = (long *)(((long)iwmmxt_save_area + 4) & ~7);
+
+	/*
+	 * Validate iWMMXt context signature.
+	 * Also, iwmmxt_task_restore() doesn't check user permissions.
+	 * Let's do a dummy write on the upper boundary to ensure
+	 * access to user mem is OK all way up.
+	 */
+again:
+	__get_user_error(magic0, iwmmxt_storage+0, err);
+	__get_user_error(magic1, iwmmxt_storage+1, err);
+	if (!err && magic0 == IWMMXT_MAGIC0 && magic1 == IWMMXT_MAGIC1 &&
+	    !__get_user(dummy, iwmmxt_storage+IWMMXT_STORAGE_SIZE/4-1)) {
+		/* Let's make sure the user mapping won't disappear under us */
+		struct mm_struct *mm = current->mm;
+		unsigned long addr = (unsigned long)iwmmxt_storage;
+		spin_lock(&mm->page_table_lock);
+		if ( !page_present(mm, addr, 0) ||
+		     !page_present(mm, addr+IWMMXT_STORAGE_SIZE-1, 0) ) {
+			/* our user area has gone before grabbing the lock */
+			spin_unlock(&mm->page_table_lock);
+			goto again;
+		}
+		iwmmxt_task_restore(current_thread_info(), iwmmxt_storage+2);
+		spin_unlock(&mm->page_table_lock);
+		return 0;
+	}
+	return -1;
+}
+
+#endif
+
 static int
 restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc)
 {
@@ -208,6 +302,11 @@ asmlinkage int sys_sigreturn(struct pt_regs *regs)
 	if (restore_sigcontext(regs, &frame->sc))
 		goto badframe;
 
+#ifdef CONFIG_IWMMXT
+	if (test_thread_flag(TIF_USING_IWMMXT) && restore_iwmmxt_context(frame+1))
+		goto badframe;
+#endif
+
 	/* Send SIGTRAP if we're single-stepping */
 	if (current->ptrace & PT_SINGLESTEP) {
 		ptrace_cancel_bpt(current);
@@ -255,6 +354,11 @@ asmlinkage int sys_rt_sigreturn(struct pt_regs *regs)
 
 	if (do_sigaltstack(&frame->uc.uc_stack, NULL, regs->ARM_sp) == -EFAULT)
 		goto badframe;
+
+#ifdef CONFIG_IWMMXT
+	if (test_thread_flag(TIF_USING_IWMMXT) && restore_iwmmxt_context(frame+1))
+		goto badframe;
+#endif
 
 	/* Send SIGTRAP if we're single-stepping */
 	if (current->ptrace & PT_SINGLESTEP) {
@@ -305,6 +409,12 @@ static inline void __user *
 get_sigframe(struct k_sigaction *ka, struct pt_regs *regs, int framesize)
 {
 	unsigned long sp = regs->ARM_sp;
+	void __user *frame;
+
+#ifdef CONFIG_IWMMXT
+	if (test_thread_flag(TIF_USING_IWMMXT))
+		framesize = (framesize + 4 + IWMMXT_STORAGE_SIZE) & ~7;
+#endif
 
 	/*
 	 * This is the X/Open sanctioned signal stack switching.
@@ -315,7 +425,15 @@ get_sigframe(struct k_sigaction *ka, struct pt_regs *regs, int framesize)
 	/*
 	 * ATPCS B01 mandates 8-byte alignment
 	 */
-	return (void __user *)((sp - framesize) & ~7);
+	frame = (void __user *)((sp - framesize) & ~7);
+
+	/*
+	 * Check that we can actually write to the signal frame.
+	 */
+	if (!access_ok(VERIFY_WRITE, frame, framesize))
+		frame = NULL;
+
+	return frame;
 }
 
 static int
@@ -384,7 +502,7 @@ setup_frame(int usig, struct k_sigaction *ka, sigset_t *set, struct pt_regs *reg
 	struct sigframe __user *frame = get_sigframe(ka, regs, sizeof(*frame));
 	int err = 0;
 
-	if (!access_ok(VERIFY_WRITE, frame, sizeof (*frame)))
+	if (!frame)
 		return 1;
 
 	err |= setup_sigcontext(&frame->sc, /*&frame->fpstate,*/ regs, set->sig[0]);
@@ -393,6 +511,11 @@ setup_frame(int usig, struct k_sigaction *ka, sigset_t *set, struct pt_regs *reg
 		err |= __copy_to_user(frame->extramask, &set->sig[1],
 				      sizeof(frame->extramask));
 	}
+
+#ifdef CONFIG_IWMMXT
+	if (test_thread_flag(TIF_USING_IWMMXT))
+		err |= preserve_iwmmxt_context(frame+1);
+#endif
 
 	if (err == 0)
 		err = setup_return(regs, ka, &frame->retcode, frame, usig);
@@ -408,7 +531,7 @@ setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
 	stack_t stack;
 	int err = 0;
 
-	if (!access_ok(VERIFY_WRITE, frame, sizeof (*frame)))
+	if (!frame)
 		return 1;
 
 	__put_user_error(&frame->info, &frame->pinfo, err);
@@ -427,6 +550,11 @@ setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
 	err |= setup_sigcontext(&frame->uc.uc_mcontext, /*&frame->fpstate,*/
 				regs, set->sig[0]);
 	err |= __copy_to_user(&frame->uc.uc_sigmask, set, sizeof(*set));
+
+#ifdef CONFIG_IWMMXT
+	if (test_thread_flag(TIF_USING_IWMMXT))
+		err |= preserve_iwmmxt_context(frame+1);
+#endif
 
 	if (err == 0)
 		err = setup_return(regs, ka, &frame->retcode, frame, usig);
@@ -454,12 +582,12 @@ static inline void restart_syscall(struct pt_regs *regs)
  * OK, we're invoking a handler
  */	
 static void
-handle_signal(unsigned long sig, siginfo_t *info, sigset_t *oldset,
+handle_signal(unsigned long sig, struct k_sigaction *ka,
+	      siginfo_t *info, sigset_t *oldset,
 	      struct pt_regs * regs, int syscall)
 {
 	struct thread_info *thread = current_thread_info();
 	struct task_struct *tsk = current;
-	struct k_sigaction *ka = &tsk->sighand->action[sig-1];
 	int usig = sig;
 	int ret;
 
@@ -514,15 +642,10 @@ handle_signal(unsigned long sig, siginfo_t *info, sigset_t *oldset,
 		spin_unlock_irq(&tsk->sighand->siglock);
 	}
 
-	if (ret == 0) {
-		if (ka->sa.sa_flags & SA_ONESHOT)
-			ka->sa.sa_handler = SIG_DFL;
+	if (ret == 0)
 		return;
-	}
 
-	if (sig == SIGSEGV)
-		ka->sa.sa_handler = SIG_DFL;
-	force_sig(SIGSEGV, tsk);
+	force_sigsegv(sig, tsk);
 }
 
 /*
@@ -536,6 +659,7 @@ handle_signal(unsigned long sig, siginfo_t *info, sigset_t *oldset,
  */
 static int do_signal(sigset_t *oldset, struct pt_regs *regs, int syscall)
 {
+	struct k_sigaction ka;
 	siginfo_t info;
 	int signr;
 
@@ -556,9 +680,9 @@ static int do_signal(sigset_t *oldset, struct pt_regs *regs, int syscall)
 	if (current->ptrace & PT_SINGLESTEP)
 		ptrace_cancel_bpt(current);
 
-	signr = get_signal_to_deliver(&info, regs, NULL);
+	signr = get_signal_to_deliver(&info, &ka, regs, NULL);
 	if (signr > 0) {
-		handle_signal(signr, &info, oldset, regs, syscall);
+		handle_signal(signr, &ka, &info, oldset, regs, syscall);
 		if (current->ptrace & PT_SINGLESTEP)
 			ptrace_set_bpt(current);
 		return 1;

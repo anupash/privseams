@@ -61,7 +61,7 @@ static struct vm_operations_struct linvfs_file_vm_ops;
 STATIC inline ssize_t
 __linvfs_read(
 	struct kiocb		*iocb,
-	char __user		*buf,
+	char			__user *buf,
 	int			ioflags,
 	size_t			count,
 	loff_t			pos)
@@ -83,7 +83,7 @@ __linvfs_read(
 STATIC ssize_t
 linvfs_read(
 	struct kiocb		*iocb,
-	char __user		*buf,
+	char			__user *buf,
 	size_t			count,
 	loff_t			pos)
 {
@@ -93,7 +93,7 @@ linvfs_read(
 STATIC ssize_t
 linvfs_read_invis(
 	struct kiocb		*iocb,
-	char __user		*buf,
+	char			__user *buf,
 	size_t			count,
 	loff_t			pos)
 {
@@ -104,29 +104,22 @@ linvfs_read_invis(
 STATIC inline ssize_t
 __linvfs_write(
 	struct kiocb	*iocb,
-	const char 	*buf,
+	const char	__user *buf,
 	int		ioflags,
 	size_t		count,
 	loff_t		pos)
 {
-	struct iovec	iov = {(void *)buf, count};
+	struct iovec	iov = {(void __user *)buf, count};
 	struct file	*file = iocb->ki_filp;
 	struct inode	*inode = file->f_mapping->host;
 	vnode_t		*vp = LINVFS_GET_VP(inode);
 	ssize_t		rval;
 
 	BUG_ON(iocb->ki_pos != pos);
-	if (unlikely(file->f_flags & O_DIRECT)) {
+	if (unlikely(file->f_flags & O_DIRECT))
 		ioflags |= IO_ISDIRECT;
-		VOP_WRITE(vp, iocb, &iov, 1, &iocb->ki_pos,
-				ioflags, NULL, rval);
-	} else {
-		down(&inode->i_sem);
-		VOP_WRITE(vp, iocb, &iov, 1, &iocb->ki_pos,
-				ioflags, NULL, rval);
-		up(&inode->i_sem);
-	}
 
+	VOP_WRITE(vp, iocb, &iov, 1, &iocb->ki_pos, ioflags, NULL, rval);
 	return rval;
 }
 
@@ -134,7 +127,7 @@ __linvfs_write(
 STATIC ssize_t
 linvfs_write(
 	struct kiocb		*iocb,
-	const char __user	*buf,
+	const char		__user *buf,
 	size_t			count,
 	loff_t			pos)
 {
@@ -144,7 +137,7 @@ linvfs_write(
 STATIC ssize_t
 linvfs_write_invis(
 	struct kiocb		*iocb,
-	const char __user	*buf,
+	const char		__user *buf,
 	size_t			count,
 	loff_t			pos)
 {
@@ -171,8 +164,6 @@ __linvfs_readv(
 	if (unlikely(file->f_flags & O_DIRECT))
 		ioflags |= IO_ISDIRECT;
 	VOP_READ(vp, &kiocb, iov, nr_segs, &kiocb.ki_pos, ioflags, NULL, rval);
-	if (rval == -EIOCBQUEUED)
-		rval = wait_on_sync_kiocb(&kiocb);
 
 	*ppos = kiocb.ki_pos;
 	return rval;
@@ -214,19 +205,10 @@ __linvfs_writev(
 
 	init_sync_kiocb(&kiocb, file);
 	kiocb.ki_pos = *ppos;
-	if (unlikely(file->f_flags & O_DIRECT)) {
+	if (unlikely(file->f_flags & O_DIRECT))
 		ioflags |= IO_ISDIRECT;
-		VOP_WRITE(vp, &kiocb, iov, nr_segs, &kiocb.ki_pos,
-				ioflags, NULL, rval);
-	} else {
-		down(&inode->i_sem);
-		VOP_WRITE(vp, &kiocb, iov, nr_segs, &kiocb.ki_pos,
-				ioflags, NULL, rval);
-		up(&inode->i_sem);
-	}
 
-	if (rval == -EIOCBQUEUED)
-		rval = wait_on_sync_kiocb(&kiocb);
+	VOP_WRITE(vp, &kiocb, iov, nr_segs, &kiocb.ki_pos, ioflags, NULL, rval);
 
 	*ppos = kiocb.ki_pos;
 	return rval;
@@ -427,6 +409,8 @@ linvfs_file_mmap(
 	vma->vm_ops = &linvfs_file_vm_ops;
 
 	VOP_SETATTR(vp, &va, XFS_AT_UPDATIME, NULL, error);
+	if (!error)
+		vn_revalidate(vp);	/* update Linux inode flags */
 	return 0;
 }
 
@@ -442,7 +426,7 @@ linvfs_ioctl(
 	vnode_t		*vp = LINVFS_GET_VP(inode);
 
 	unlock_kernel();
-	VOP_IOCTL(vp, inode, filp, 0, cmd, arg, error);
+	VOP_IOCTL(vp, inode, filp, 0, cmd, (void __user *)arg, error);
 	VMODIFY(vp);
 	lock_kernel();
 
@@ -467,7 +451,7 @@ linvfs_ioctl_invis(
 
 	unlock_kernel();
 	ASSERT(vp);
-	VOP_IOCTL(vp, inode, filp, IO_INVIS, cmd, arg, error);
+	VOP_IOCTL(vp, inode, filp, IO_INVIS, cmd, (void __user *)arg, error);
 	VMODIFY(vp);
 	lock_kernel();
 

@@ -284,7 +284,7 @@ static void copy_to_high_bio_irq(struct bio *to, struct bio *from)
 	struct bio_vec *tovec, *fromvec;
 	int i;
 
-	bio_for_each_segment(tovec, to, i) {
+	__bio_for_each_segment(tovec, to, i, 0) {
 		fromvec = from->bi_io_vec + i;
 
 		/*
@@ -300,6 +300,7 @@ static void copy_to_high_bio_irq(struct bio *to, struct bio *from)
 		 */
 		vfrom = page_address(fromvec->bv_page) + tovec->bv_offset;
 
+		flush_dcache_page(tovec->bv_page);
 		bounce_copy_vec(tovec, vfrom);
 	}
 }
@@ -316,7 +317,7 @@ static void bounce_end_io(struct bio *bio, mempool_t *pool)
 	/*
 	 * free up bounce indirect pages used
 	 */
-	bio_for_each_segment(bvec, bio, i) {
+	__bio_for_each_segment(bvec, bio, i, 0) {
 		org_vec = bio_orig->bi_io_vec + i;
 		if (bvec->bv_page == org_vec->bv_page)
 			continue;
@@ -406,6 +407,7 @@ static void __blk_queue_bounce(request_queue_t *q, struct bio **bio_orig,
 		if (rw == WRITE) {
 			char *vto, *vfrom;
 
+			flush_dcache_page(from->bv_page);
 			vto = page_address(to->bv_page) + to->bv_offset;
 			vfrom = kmap(from->bv_page) + from->bv_offset;
 			memcpy(vto, vfrom, to->bv_len);

@@ -288,12 +288,17 @@ static boolean DAC960_CreateAuxiliaryStructures(DAC960_Controller_T *Controller)
 		Controller->PCIDevice,
 	DAC960_V2_ScatterGatherLimit * sizeof(DAC960_V2_ScatterGatherSegment_T),
 	sizeof(DAC960_V2_ScatterGatherSegment_T), 0);
+      if (ScatterGatherPool == NULL)
+	    return DAC960_Failure(Controller,
+			"AUXILIARY STRUCTURE CREATION (SG)");
       RequestSensePool = pci_pool_create("DAC960_V2_RequestSense",
 		Controller->PCIDevice, sizeof(DAC960_SCSI_RequestSense_T),
 		sizeof(int), 0);
-      if (ScatterGatherPool == NULL || RequestSensePool == NULL)
+      if (RequestSensePool == NULL) {
+	    pci_pool_destroy(ScatterGatherPool);
 	    return DAC960_Failure(Controller,
 			"AUXILIARY STRUCTURE CREATION (SG)");
+      }
       Controller->ScatterGatherPool = ScatterGatherPool;
       Controller->V2.RequestSensePool = RequestSensePool;
     }
@@ -535,7 +540,7 @@ static void DAC960_WaitForCommand(DAC960_Controller_T *Controller)
 static void DAC960_BA_QueueCommand(DAC960_Command_T *Command)
 {
   DAC960_Controller_T *Controller = Command->Controller;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V2_CommandMailbox_T *CommandMailbox = &Command->V2.CommandMailbox;
   DAC960_V2_CommandMailbox_T *NextCommandMailbox =
     Controller->V2.NextCommandMailbox;
@@ -560,7 +565,7 @@ static void DAC960_BA_QueueCommand(DAC960_Command_T *Command)
 static void DAC960_LP_QueueCommand(DAC960_Command_T *Command)
 {
   DAC960_Controller_T *Controller = Command->Controller;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V2_CommandMailbox_T *CommandMailbox = &Command->V2.CommandMailbox;
   DAC960_V2_CommandMailbox_T *NextCommandMailbox =
     Controller->V2.NextCommandMailbox;
@@ -586,7 +591,7 @@ static void DAC960_LP_QueueCommand(DAC960_Command_T *Command)
 static void DAC960_LA_QueueCommandDualMode(DAC960_Command_T *Command)
 {
   DAC960_Controller_T *Controller = Command->Controller;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V1_CommandMailbox_T *CommandMailbox = &Command->V1.CommandMailbox;
   DAC960_V1_CommandMailbox_T *NextCommandMailbox =
     Controller->V1.NextCommandMailbox;
@@ -612,7 +617,7 @@ static void DAC960_LA_QueueCommandDualMode(DAC960_Command_T *Command)
 static void DAC960_LA_QueueCommandSingleMode(DAC960_Command_T *Command)
 {
   DAC960_Controller_T *Controller = Command->Controller;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V1_CommandMailbox_T *CommandMailbox = &Command->V1.CommandMailbox;
   DAC960_V1_CommandMailbox_T *NextCommandMailbox =
     Controller->V1.NextCommandMailbox;
@@ -638,7 +643,7 @@ static void DAC960_LA_QueueCommandSingleMode(DAC960_Command_T *Command)
 static void DAC960_PG_QueueCommandDualMode(DAC960_Command_T *Command)
 {
   DAC960_Controller_T *Controller = Command->Controller;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V1_CommandMailbox_T *CommandMailbox = &Command->V1.CommandMailbox;
   DAC960_V1_CommandMailbox_T *NextCommandMailbox =
     Controller->V1.NextCommandMailbox;
@@ -664,7 +669,7 @@ static void DAC960_PG_QueueCommandDualMode(DAC960_Command_T *Command)
 static void DAC960_PG_QueueCommandSingleMode(DAC960_Command_T *Command)
 {
   DAC960_Controller_T *Controller = Command->Controller;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V1_CommandMailbox_T *CommandMailbox = &Command->V1.CommandMailbox;
   DAC960_V1_CommandMailbox_T *NextCommandMailbox =
     Controller->V1.NextCommandMailbox;
@@ -689,7 +694,7 @@ static void DAC960_PG_QueueCommandSingleMode(DAC960_Command_T *Command)
 static void DAC960_PD_QueueCommand(DAC960_Command_T *Command)
 {
   DAC960_Controller_T *Controller = Command->Controller;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V1_CommandMailbox_T *CommandMailbox = &Command->V1.CommandMailbox;
   CommandMailbox->Common.CommandIdentifier = Command->CommandIdentifier;
   while (DAC960_PD_MailboxFullP(ControllerBaseAddress))
@@ -706,7 +711,7 @@ static void DAC960_PD_QueueCommand(DAC960_Command_T *Command)
 static void DAC960_P_QueueCommand(DAC960_Command_T *Command)
 {
   DAC960_Controller_T *Controller = Command->Controller;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V1_CommandMailbox_T *CommandMailbox = &Command->V1.CommandMailbox;
   CommandMailbox->Common.CommandIdentifier = Command->CommandIdentifier;
   switch (CommandMailbox->Common.CommandOpcode)
@@ -1127,7 +1132,7 @@ static boolean DAC960_V2_DeviceOperation(DAC960_Controller_T *Controller,
 static boolean DAC960_V1_EnableMemoryMailboxInterface(DAC960_Controller_T
 						      *Controller)
 {
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_HardwareType_T hw_type = Controller->HardwareType;
   struct pci_dev *PCI_Device = Controller->PCIDevice;
   struct dma_loaf *DmaPages = &Controller->DmaPages;
@@ -1333,7 +1338,7 @@ skip_mailboxes:
 static boolean DAC960_V2_EnableMemoryMailboxInterface(DAC960_Controller_T
 						      *Controller)
 {
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   struct pci_dev *PCI_Device = Controller->PCIDevice;
   struct dma_loaf *DmaPages = &Controller->DmaPages;
   size_t DmaPagesSize;
@@ -2674,7 +2679,7 @@ DAC960_DetectController(struct pci_dev *PCI_Device,
   unsigned char DeviceFunction = PCI_Device->devfn;
   unsigned char ErrorStatus, Parameter0, Parameter1;
   unsigned int IRQ_Channel = PCI_Device->irq;
-  void *BaseAddress;
+  void __iomem *BaseAddress;
   int i;
 
   Controller = (DAC960_Controller_T *)
@@ -5196,7 +5201,7 @@ static irqreturn_t DAC960_BA_InterruptHandler(int IRQ_Channel,
 				       struct pt_regs *InterruptRegisters)
 {
   DAC960_Controller_T *Controller = (DAC960_Controller_T *) DeviceIdentifier;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V2_StatusMailbox_T *NextStatusMailbox;
   unsigned long flags;
 
@@ -5239,7 +5244,7 @@ static irqreturn_t DAC960_LP_InterruptHandler(int IRQ_Channel,
 				       struct pt_regs *InterruptRegisters)
 {
   DAC960_Controller_T *Controller = (DAC960_Controller_T *) DeviceIdentifier;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V2_StatusMailbox_T *NextStatusMailbox;
   unsigned long flags;
 
@@ -5282,7 +5287,7 @@ static irqreturn_t DAC960_LA_InterruptHandler(int IRQ_Channel,
 				       struct pt_regs *InterruptRegisters)
 {
   DAC960_Controller_T *Controller = (DAC960_Controller_T *) DeviceIdentifier;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V1_StatusMailbox_T *NextStatusMailbox;
   unsigned long flags;
 
@@ -5321,7 +5326,7 @@ static irqreturn_t DAC960_PG_InterruptHandler(int IRQ_Channel,
 				       struct pt_regs *InterruptRegisters)
 {
   DAC960_Controller_T *Controller = (DAC960_Controller_T *) DeviceIdentifier;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   DAC960_V1_StatusMailbox_T *NextStatusMailbox;
   unsigned long flags;
 
@@ -5360,7 +5365,7 @@ static irqreturn_t DAC960_PD_InterruptHandler(int IRQ_Channel,
 				       struct pt_regs *InterruptRegisters)
 {
   DAC960_Controller_T *Controller = (DAC960_Controller_T *) DeviceIdentifier;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   unsigned long flags;
 
   spin_lock_irqsave(&Controller->queue_lock, flags);
@@ -5399,7 +5404,7 @@ static irqreturn_t DAC960_P_InterruptHandler(int IRQ_Channel,
 				      struct pt_regs *InterruptRegisters)
 {
   DAC960_Controller_T *Controller = (DAC960_Controller_T *) DeviceIdentifier;
-  void *ControllerBaseAddress = Controller->BaseAddress;
+  void __iomem *ControllerBaseAddress = Controller->BaseAddress;
   unsigned long flags;
 
   spin_lock_irqsave(&Controller->queue_lock, flags);

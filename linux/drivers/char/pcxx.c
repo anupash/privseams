@@ -130,7 +130,6 @@ static struct channel    *digi_channels;
 int pcxx_ncook=sizeof(pcxx_cook);
 int pcxx_nbios=sizeof(pcxx_bios);
 
-#define MIN(a,b)	((a) < (b) ? (a) : (b))
 #define pcxxassert(x, msg)  if(!(x)) pcxx_error(__LINE__, msg)
 
 #define FEPTIMEOUT 200000  
@@ -206,7 +205,7 @@ static void __exit pcxe_cleanup(void)
 {
 
 	unsigned long	flags;
-	int e1, e2;
+	int e1;
 
 	printk(KERN_NOTICE "Unloading PC/Xx version %s\n", VERSION);
 
@@ -222,12 +221,6 @@ static void __exit pcxe_cleanup(void)
 	kfree(digi_channels);
 	restore_flags(flags);
 }
-
-/*
- * pcxe_init() is our init_module():
- */
-module_init(pcxe_init);
-module_cleanup(pcxe_cleanup);
 
 static inline struct channel *chan(register struct tty_struct *tty)
 {
@@ -538,28 +531,11 @@ static void pcxe_close(struct tty_struct * tty, struct file * filp)
 	
 		if(tty->driver->flush_buffer)
 			tty->driver->flush_buffer(tty);
-		if(tty->ldisc.flush_buffer)
-			tty->ldisc.flush_buffer(tty);
+		tty_ldisc_flush(tty);
 		shutdown(info);
 		tty->closing = 0;
 		info->event = 0;
 		info->tty = NULL;
-#ifndef MODULE
-/* ldiscs[] is not available in a MODULE
-** worth noting that while I'm not sure what this hunk of code is supposed
-** to do, it is not present in the serial.c driver.  Hmmm.  If you know,
-** please send me a note.  brian@ilinx.com
-** Don't know either what this is supposed to do christoph@lameter.com.
-*/
-		if(tty->ldisc.num != ldiscs[N_TTY].num) {
-			if(tty->ldisc.close)
-				(tty->ldisc.close)(tty);
-			tty->ldisc = ldiscs[N_TTY];
-			tty->termios->c_line = N_TTY;
-			if(tty->ldisc.open)
-				(tty->ldisc.open)(tty);
-		}
-#endif
 		if(info->blocked_open) {
 			if(info->close_delay) {
 				current->state = TASK_INTERRUPTIBLE;
@@ -626,7 +602,7 @@ static int pcxe_write(struct tty_struct * tty, int from_user, const unsigned cha
 		
 		tail &= (size - 1);
 		stlen = (head >= tail) ? (size - (head - tail) - 1) : (tail - head - 1);
-		count = MIN(stlen, count);
+		count = min(stlen, count);
 		memoff(ch);
 		restore_flags(flags);
 
@@ -658,11 +634,11 @@ static int pcxe_write(struct tty_struct * tty, int from_user, const unsigned cha
 		remain = tail - head - 1;
 		stlen = remain;
 	}
-	count = MIN(remain, count);
+	count = min(remain, count);
 
 	txwinon(ch);
 	while (count > 0) {
-		stlen = MIN(count, stlen);
+		stlen = min(count, stlen);
 		memcpy(ch->txptr + head, buf, stlen);
 		buf += stlen;
 		count -= stlen;
@@ -800,9 +776,7 @@ static void pcxe_flush_buffer(struct tty_struct *tty)
 	memoff(ch);
 	restore_flags(flags);
 
-	wake_up_interruptible(&tty->write_wait);
-	if((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup)
-		(tty->ldisc.write_wakeup)(tty);
+	tty_wakeup(tty);
 }
 
 static void pcxe_flush_chars(struct tty_struct *tty)
@@ -1012,9 +986,6 @@ void __init pcxx_setup(char *str, int *ints)
 	numcards++;
 }
 #endif
-
-module_init(pcxe_init)
-module_exit(pcxe_exit)
 
 static struct tty_operations pcxe_ops = {
 	.open = pcxe_open,
@@ -1561,6 +1532,8 @@ cleanup_boards:
 	return ret;
 }
 
+module_init(pcxe_init)
+module_exit(pcxe_cleanup)
 
 static void pcxxpoll(unsigned long dummy)
 {
@@ -1675,10 +1648,7 @@ static void doevent(int crd)
 			if (event & LOWTX_IND) {
 				if (ch->statusflags & LOWWAIT) {
 					ch->statusflags &= ~LOWWAIT;
-					if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-						tty->ldisc.write_wakeup)
-						(tty->ldisc.write_wakeup)(tty);
-					wake_up_interruptible(&tty->write_wait);
+					tty_wakeup(tty);
 				}
 			}
 
@@ -1686,10 +1656,7 @@ static void doevent(int crd)
 				ch->statusflags &= ~TXBUSY;
 				if (ch->statusflags & EMPTYWAIT) {
 					ch->statusflags &= ~EMPTYWAIT;
-					if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-						tty->ldisc.write_wakeup)
-						(tty->ldisc.write_wakeup)(tty);
-					wake_up_interruptible(&tty->write_wait);
+					tty_wakeup(tty);
 				}
 			}
 		}
@@ -1995,6 +1962,7 @@ static int pcxe_tiocmget(struct tty_struct *tty, struct file *file)
 	volatile struct board_chan *bc;
 	unsigned long flags;
 	int mflag = 0;
+	int mstat;
 
 	if(ch)
 		bc = ch->brdchan;
@@ -2069,6 +2037,7 @@ static int pcxe_tiocmset(struct tty_struct *tty, struct file *file,
 	pcxxparam(tty,ch);
 	memoff(ch);
 	restore_flags(flags);
+	return 0;
 }
 
 
@@ -2165,8 +2134,7 @@ static int pcxe_ioctl(struct tty_struct *tty, struct file * file,
 				tty_wait_until_sent(tty, 0);
 			}
 			else {
-				if(tty->ldisc.flush_buffer)
-					tty->ldisc.flush_buffer(tty);
+				tty_ldisc_flush(tty);
 			}
 
 			/* Fall Thru */

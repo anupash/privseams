@@ -71,7 +71,7 @@ EXPORT_SYMBOL(acpi_disabled);
 #ifdef	CONFIG_ACPI_BOOT
 extern int __initdata acpi_ht;
 extern acpi_interrupt_flags	acpi_sci_flags;
-/* int __initdata acpi_force = 0; */
+int __initdata acpi_force = 0;
 #endif
 
 /* For PCI or other memory-mapped resources */
@@ -79,8 +79,10 @@ unsigned long pci_mem_start = 0x10000000;
 
 unsigned long saved_video_mode;
 
+#ifdef CONFIG_SWIOTLB
 int swiotlb;
 EXPORT_SYMBOL(swiotlb);
+#endif
 
 /*
  * Setup options
@@ -105,7 +107,8 @@ char command_line[COMMAND_LINE_SIZE];
 struct resource standard_io_resources[] = {
 	{ "dma1", 0x00, 0x1f, IORESOURCE_BUSY | IORESOURCE_IO },
 	{ "pic1", 0x20, 0x21, IORESOURCE_BUSY | IORESOURCE_IO },
-	{ "timer", 0x40, 0x5f, IORESOURCE_BUSY | IORESOURCE_IO },
+	{ "timer0", 0x40, 0x43, IORESOURCE_BUSY | IORESOURCE_IO },
+	{ "timer1", 0x50, 0x53, IORESOURCE_BUSY | IORESOURCE_IO },
 	{ "keyboard", 0x60, 0x6f, IORESOURCE_BUSY | IORESOURCE_IO },
 	{ "dma page reg", 0x80, 0x8f, IORESOURCE_BUSY | IORESOURCE_IO },
 	{ "pic2", 0xa0, 0xa1, IORESOURCE_BUSY | IORESOURCE_IO },
@@ -248,14 +251,14 @@ static __init void parse_cmdline_early (char ** cmdline_p)
 
 		if (!memcmp(from, "acpi=force", 10)) { 
 			/* add later when we do DMI horrors: */
-			/* acpi_force = 1; */	
+			acpi_force = 1;
 			acpi_disabled = 0;
 		}
 
 		/* acpi=ht just means: do ACPI MADT parsing 
 		   at bootup, but don't enable the full ACPI interpreter */
 		if (!memcmp(from, "acpi=ht", 7)) { 
-			/* if (!acpi_force) */
+			if (!acpi_force)
 				disable_acpi();
 			acpi_ht = 1; 
 		}
@@ -423,6 +426,20 @@ static inline void copy_edd(void)
 }
 #endif
 
+#define EBDA_ADDR_POINTER 0x40E
+static void __init reserve_ebda_region(void)
+{
+	unsigned int addr;
+	/** 
+	 * there is a real-mode segmented pointer pointing to the 
+	 * 4K EBDA area at 0x40E
+	 */
+	addr = *(unsigned short *)phys_to_virt(EBDA_ADDR_POINTER);
+	addr <<= 4;
+	if (addr)
+		reserve_bootmem_generic(addr, PAGE_SIZE);
+}
+
 void __init setup_arch(char **cmdline_p)
 {
 	unsigned long low_mem_size;
@@ -486,6 +503,9 @@ void __init setup_arch(char **cmdline_p)
 	 * enabling clean reboots, SMP operation, laptop functions.
 	 */
 	reserve_bootmem_generic(0, PAGE_SIZE);
+
+	/* reserve ebda region */
+	reserve_ebda_region();
 
 #ifdef CONFIG_SMP
 	/*
@@ -662,6 +682,26 @@ static int __init init_amd(struct cpuinfo_x86 *c)
 		} 
 	} 
 	display_cacheinfo(c);
+
+	if (c->cpuid_level >= 0x80000008) {
+		c->x86_num_cores = (cpuid_ecx(0x80000008) & 0xff) + 1;
+		if (c->x86_num_cores & (c->x86_num_cores - 1))
+			c->x86_num_cores = 1;
+
+#ifdef CONFIG_NUMA
+		/* On a dual core setup the lower bits of apic id
+		   distingush the cores. Fix up the CPU<->node mappings
+		   here based on that.
+		   Assumes number of cores is a power of two. */
+		if (c->x86_num_cores > 1) {
+			int cpu = c->x86_apicid;
+			cpu_to_node[cpu] = cpu >> hweight32(c->x86_num_cores - 1);
+			printk(KERN_INFO "CPU %d -> Node %d\n",
+			       cpu, cpu_to_node[cpu]);
+		}
+#endif
+	}
+
 	return r;
 }
 
@@ -705,7 +745,7 @@ static void __init detect_ht(struct cpuinfo_x86 *c)
 		}
 		if (index_lsb != index_msb )
 			index_msb++;
-		initial_apic_id = ebx >> 24 & 0xff;
+		initial_apic_id = hard_smp_processor_id();
 		phys_proc_id[cpu] = initial_apic_id >> index_msb;
 		
 		printk(KERN_INFO  "CPU: Physical Processor ID: %d\n",
@@ -748,6 +788,7 @@ static struct _cache_table cache_table[] __initdata =
 	{ 0x43, LVL_2,      512 },
 	{ 0x44, LVL_2,      1024 },
 	{ 0x45, LVL_2,      2048 },
+	{ 0x60, LVL_1_DATA, 16 },
 	{ 0x66, LVL_1_DATA, 8 },
 	{ 0x67, LVL_1_DATA, 16 },
 	{ 0x68, LVL_1_DATA, 32 },
@@ -885,6 +926,8 @@ void __init early_identify_cpu(struct cpuinfo_x86 *c)
 	c->x86_model_id[0] = '\0';  /* Unset */
 	c->x86_clflush_size = 64;
 	c->x86_cache_alignment = c->x86_clflush_size;
+	c->x86_num_cores = 1;
+	c->x86_apicid = c == &boot_cpu_data ? 0 : c - cpu_data;
 	memset(&c->x86_capability, 0, sizeof c->x86_capability);
 
 	/* Get vendor name */
@@ -912,6 +955,7 @@ void __init early_identify_cpu(struct cpuinfo_x86 *c)
 		} 
 		if (c->x86_capability[0] & (1<<19)) 
 			c->x86_clflush_size = ((misc >> 8) & 0xff) * 8;
+		c->x86_apicid = misc >> 24;
 	} else {
 		/* Have CPUID level 0 only - unheard of */
 		c->x86 = 4;
@@ -931,8 +975,10 @@ void __init identify_cpu(struct cpuinfo_x86 *c)
 	/* AMD-defined flags: level 0x80000001 */
 	xlvl = cpuid_eax(0x80000000);
 	if ( (xlvl & 0xffff0000) == 0x80000000 ) {
-		if ( xlvl >= 0x80000001 )
+		if ( xlvl >= 0x80000001 ) {
 			c->x86_capability[1] = cpuid_edx(0x80000001);
+			c->x86_capability[5] = cpuid_ecx(0x80000001);
+		}
 		if ( xlvl >= 0x80000004 )
 			get_model_name(c); /* Default name */
 	}
@@ -1042,8 +1088,8 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 
 		/* Intel-defined (#2) */
-		"pni", NULL, NULL, "monitor", "ds_cpl", NULL, NULL, "tm2",
-		"est", NULL, "cid", NULL, NULL, "cmpxchg16b", NULL, NULL,
+		"pni", NULL, NULL, "monitor", "ds_cpl", NULL, NULL, "est",
+		"tm2", NULL, "cid", NULL, NULL, "cx16", "xtpr", NULL,
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 	};
@@ -1131,6 +1177,9 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 					seq_printf(m, " [%d]", i);
 			}
 	}
+
+	if (c->x86_num_cores > 1)
+		seq_printf(m, "cpu cores\t: %d\n", c->x86_num_cores);
 
 	seq_printf(m, "\n\n"); 
 

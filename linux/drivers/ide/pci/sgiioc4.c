@@ -570,7 +570,6 @@ sgiioc4_build_dma_table(ide_drive_t * drive, struct request *rq, int ddir)
 use_pio_instead:
 	pci_unmap_sg(hwif->pci_dev, hwif->sg_table, hwif->sg_nents,
 		     hwif->sg_dma_direction);
-	hwif->sg_dma_active = 0;
 
 	return 0;		/* revert to PIO for this request */
 }
@@ -702,6 +701,10 @@ sgiioc4_ide_setup_pci_device(struct pci_dev *dev, ide_pci_device_t * d)
 		       hwif->name, d->name);
 
 	probe_hwif_init(hwif);
+
+	/* Create /proc/ide entries */
+	create_proc_ide_interfaces(); 
+
 	return 0;
 }
 
@@ -782,7 +785,7 @@ static struct pci_device_id sgiioc4_pci_tbl[] = {
 MODULE_DEVICE_TABLE(pci, sgiioc4_pci_tbl);
 
 static struct pci_driver driver = {
-	.name = "SGI-IOC4 IDE",
+	.name = "SGI-IOC4_IDE",
 	.id_table = sgiioc4_pci_tbl,
 	.probe = sgiioc4_init_one,
 };

@@ -99,11 +99,13 @@ ip_nat_fn(unsigned int hooknum,
                    hash table yet).  We must not let this through, in
                    case we're doing NAT to the same network. */
 		if ((*pskb)->nh.iph->protocol == IPPROTO_ICMP) {
-			struct icmphdr hdr;
+			struct icmphdr _hdr, *hp;
 
-			if (skb_copy_bits(*pskb, (*pskb)->nh.iph->ihl*4,
-					  &hdr, sizeof(hdr)) == 0
-			    && hdr.type == ICMP_REDIRECT)
+			hp = skb_header_pointer(*pskb,
+						(*pskb)->nh.iph->ihl*4,
+						sizeof(_hdr), &_hdr);
+			if (hp != NULL &&
+			    hp->type == ICMP_REDIRECT)
 				return NF_DROP;
 		}
 		return NF_ACCEPT;
@@ -281,18 +283,13 @@ static struct nf_hook_ops ip_nat_local_in_ops = {
 int ip_nat_protocol_register(struct ip_nat_protocol *proto)
 {
 	int ret = 0;
-	struct list_head *i;
 
 	WRITE_LOCK(&ip_nat_lock);
-	list_for_each(i, &protos) {
-		if (((struct ip_nat_protocol *)i)->protonum
-		    == proto->protonum) {
-			ret = -EBUSY;
-			goto out;
-		}
+	if (ip_nat_protos[proto->protonum] != &ip_nat_unknown_protocol) {
+		ret = -EBUSY;
+		goto out;
 	}
-
-	list_prepend(&protos, proto);
+	ip_nat_protos[proto->protonum] = proto;
  out:
 	WRITE_UNLOCK(&ip_nat_lock);
 	return ret;
@@ -302,7 +299,7 @@ int ip_nat_protocol_register(struct ip_nat_protocol *proto)
 void ip_nat_protocol_unregister(struct ip_nat_protocol *proto)
 {
 	WRITE_LOCK(&ip_nat_lock);
-	LIST_DELETE(&protos, proto);
+	ip_nat_protos[proto->protonum] = &ip_nat_unknown_protocol;
 	WRITE_UNLOCK(&ip_nat_lock);
 
 	/* Someone could be still looking at the proto in a bh. */
@@ -392,4 +389,6 @@ EXPORT_SYMBOL(ip_nat_cheat_check);
 EXPORT_SYMBOL(ip_nat_mangle_tcp_packet);
 EXPORT_SYMBOL(ip_nat_mangle_udp_packet);
 EXPORT_SYMBOL(ip_nat_used_tuple);
+EXPORT_SYMBOL(ip_nat_find_helper);
+EXPORT_SYMBOL(__ip_nat_find_helper);
 MODULE_LICENSE("GPL");

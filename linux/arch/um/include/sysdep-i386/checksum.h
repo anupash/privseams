@@ -5,6 +5,7 @@
 #ifndef __UM_SYSDEP_CHECKSUM_H
 #define __UM_SYSDEP_CHECKSUM_H
 
+#include "linux/in6.h"
 #include "linux/string.h"
 
 /*
@@ -102,7 +103,8 @@ static inline unsigned short ip_fast_csum(unsigned char * iph,
 	   are modified, we must also specify them as outputs, or gcc
 	   will assume they contain their original values. */
 	: "=r" (sum), "=r" (iph), "=r" (ihl)
-	: "1" (iph), "2" (ihl));
+	: "1" (iph), "2" (ihl)
+	: "memory");
 	return(sum);
 }
 

@@ -250,12 +250,16 @@ static void rp_do_receive(struct r_port *info,
 			  CHANNEL_t * cp, unsigned int ChanStatus)
 {
 	unsigned int CharNStat;
-	int ToRecv, wRecv, space, count;
+	int ToRecv, wRecv, space = 0, count;
 	unsigned char *cbuf;
 	char *fbuf;
+	struct tty_ldisc *ld;
+
+	ld = tty_ldisc_ref(tty);
 
 	ToRecv = sGetRxCnt(cp);
-	space = tty->ldisc.receive_room(tty);
+	if (ld)
+		space = ld->receive_room(tty);
 	if (space > 2 * TTY_FLIPBUF_SIZE)
 		space = 2 * TTY_FLIPBUF_SIZE;
 	cbuf = tty->flip.char_buf;
@@ -354,7 +358,8 @@ static void rp_do_receive(struct r_port *info,
 		count += ToRecv;
 	}
 	/*  Push the data up to the tty layer */
-	tty->ldisc.receive_buf(tty, tty->flip.char_buf, tty->flip.flag_buf, count);
+	ld->receive_buf(tty, tty->flip.char_buf, tty->flip.flag_buf, count);
+	tty_ldisc_deref(ld);
 }
 
 /*
@@ -389,7 +394,7 @@ static void rp_do_transmit(struct r_port *info)
 	while (1) {
 		if (tty->stopped || tty->hw_stopped)
 			break;
-		c = MIN(info->xmit_fifo_room, MIN(info->xmit_cnt, XMIT_BUF_SIZE - info->xmit_tail));
+		c = min(info->xmit_fifo_room, min(info->xmit_cnt, XMIT_BUF_SIZE - info->xmit_tail));
 		if (c <= 0 || info->xmit_fifo_room <= 0)
 			break;
 		sOutStrW(sGetTxRxDataIO(cp), (unsigned short *) (info->xmit_buf + info->xmit_tail), c / 2);
@@ -408,8 +413,7 @@ static void rp_do_transmit(struct r_port *info)
 		clear_bit((info->aiop * 8) + info->chan, (void *) &xmit_flags[info->board]);
 
 	if (info->xmit_cnt < WAKEUP_CHARS) {
-		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup)
-			(tty->ldisc.write_wakeup) (tty);
+		tty_wakeup(tty);
 		wake_up_interruptible(&tty->write_wait);
 #ifdef ROCKETPORT_HAVE_POLL_WAIT
 		wake_up_interruptible(&tty->poll_wait);
@@ -1022,7 +1026,7 @@ static void rp_close(struct tty_struct *tty, struct file *filp)
 	unsigned long flags;
 	int timeout;
 	CHANNEL_t *cp;
-
+	
 	if (rocket_paranoia_check(info, "rp_close"))
 		return;
 
@@ -1101,8 +1105,8 @@ static void rp_close(struct tty_struct *tty, struct file *filp)
 
 	if (TTY_DRIVER_FLUSH_BUFFER_EXISTS(tty))
 		TTY_DRIVER_FLUSH_BUFFER(tty);
-	if (tty->ldisc.flush_buffer)
-		tty->ldisc.flush_buffer(tty);
+		
+	tty_ldisc_flush(tty);
 
 	clear_bit((info->aiop * 8) + info->chan, (void *) &xmit_flags[info->board]);
 
@@ -1283,11 +1287,7 @@ static int set_config(struct r_port *info, struct rocket_config __user *new_info
 	if (copy_from_user(&new_serial, new_info, sizeof (new_serial)))
 		return -EFAULT;
 
-#ifdef CAP_SYS_ADMIN
 	if (!capable(CAP_SYS_ADMIN))
-#else
-	if (!suser())
-#endif
 	{
 		if ((new_serial.flags & ~ROCKET_USR_MASK) != (info->flags & ~ROCKET_USR_MASK))
 			return -EPERM;
@@ -1662,7 +1662,7 @@ static int rp_write(struct tty_struct *tty, int from_user,
 	 *  into FIFO.  Use the write queue for temp storage.
          */
 	if (!tty->stopped && !tty->hw_stopped && info->xmit_cnt == 0 && info->xmit_fifo_room > 0) {
-		c = MIN(count, info->xmit_fifo_room);
+		c = min(count, info->xmit_fifo_room);
 		b = buf;
 		if (from_user) {
 			if (copy_from_user(info->xmit_buf, buf, c)) {
@@ -1672,7 +1672,7 @@ static int rp_write(struct tty_struct *tty, int from_user,
 			if (info->tty == 0)
 				goto end;
 			b = info->xmit_buf;
-			c = MIN(c, info->xmit_fifo_room);
+			c = min(c, info->xmit_fifo_room);
 		}
 
 		/*  Push data into FIFO, 2 bytes at a time */
@@ -1700,7 +1700,7 @@ static int rp_write(struct tty_struct *tty, int from_user,
 		if (info->tty == 0)	/*   Seemingly obligatory check... */
 			goto end;
 
-		c = MIN(count, MIN(XMIT_BUF_SIZE - info->xmit_cnt - 1, XMIT_BUF_SIZE - info->xmit_head));
+		c = min(count, min(XMIT_BUF_SIZE - info->xmit_cnt - 1, XMIT_BUF_SIZE - info->xmit_head));
 		if (c <= 0)
 			break;
 
@@ -1731,8 +1731,7 @@ end_intr:
 	
 end:
  	if (info->xmit_cnt < WAKEUP_CHARS) {
-		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP))  && tty->ldisc.write_wakeup)
-			(tty->ldisc.write_wakeup) (tty);
+ 		tty_wakeup(tty);
 		wake_up_interruptible(&tty->write_wait);
 #ifdef ROCKETPORT_HAVE_POLL_WAIT
 		wake_up_interruptible(&tty->poll_wait);
@@ -1806,8 +1805,7 @@ static void rp_flush_buffer(struct tty_struct *tty)
 #ifdef ROCKETPORT_HAVE_POLL_WAIT
 	wake_up_interruptible(&tty->poll_wait);
 #endif
-	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup)
-		(tty->ldisc.write_wakeup) (tty);
+	tty_wakeup(tty);
 
 	cp = &info->channel;
 	sFlushTxFIFO(cp);

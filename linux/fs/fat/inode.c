@@ -59,7 +59,7 @@ static char fat_default_iocharset[] = CONFIG_FAT_DEFAULT_IOCHARSET;
 #define FAT_HASH_SIZE	(1UL << FAT_HASH_BITS)
 #define FAT_HASH_MASK	(FAT_HASH_SIZE-1)
 static struct list_head fat_inode_hashtable[FAT_HASH_SIZE];
-spinlock_t fat_inode_lock = SPIN_LOCK_UNLOCKED;
+static spinlock_t fat_inode_lock = SPIN_LOCK_UNLOCKED;
 
 void fat_hash_init(void)
 {
@@ -579,12 +579,11 @@ static int fat_read_root(struct inode *inode)
  * of i_logstart is used to store the directory entry offset.
  */
 
-struct dentry *fat_decode_fh(struct super_block *sb, __u32 *fh,
-			     int len, int fhtype, 
-			     int (*acceptable)(void *context, struct dentry *de),
-			     void *context)
+static struct dentry *
+fat_decode_fh(struct super_block *sb, __u32 *fh, int len, int fhtype, 
+	      int (*acceptable)(void *context, struct dentry *de),
+	      void *context)
 {
-
 	if (fhtype != 3)
 		return ERR_PTR(-ESTALE);
 	if (len < 5)
@@ -593,7 +592,7 @@ struct dentry *fat_decode_fh(struct super_block *sb, __u32 *fh,
 	return sb->s_export_op->find_exported_dentry(sb, fh, NULL, acceptable, context);
 }
 
-struct dentry *fat_get_dentry(struct super_block *sb, void *inump)
+static struct dentry *fat_get_dentry(struct super_block *sb, void *inump)
 {
 	struct inode *inode = NULL;
 	struct dentry *result;
@@ -653,7 +652,8 @@ struct dentry *fat_get_dentry(struct super_block *sb, void *inump)
 	return result;
 }
 
-int fat_encode_fh(struct dentry *de, __u32 *fh, int *lenp, int connectable)
+static int
+fat_encode_fh(struct dentry *de, __u32 *fh, int *lenp, int connectable)
 {
 	int len = *lenp;
 	struct inode *inode =  de->d_inode;
@@ -676,7 +676,7 @@ int fat_encode_fh(struct dentry *de, __u32 *fh, int *lenp, int connectable)
 	return 3;
 }
 
-struct dentry *fat_get_parent(struct dentry *child)
+static struct dentry *fat_get_parent(struct dentry *child)
 {
 	struct buffer_head *bh=NULL;
 	struct msdos_dir_entry *de = NULL;
@@ -744,7 +744,7 @@ int __init fat_init_inodecache(void)
 {
 	fat_inode_cachep = kmem_cache_create("fat_inode_cache",
 					     sizeof(struct msdos_inode_info),
-					     0, SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT,
+					     0, SLAB_RECLAIM_ACCOUNT,
 					     init_once, NULL);
 	if (fat_inode_cachep == NULL)
 		return -ENOMEM;
@@ -857,7 +857,7 @@ int fat_fill_super(struct super_block *sb, void *data, int silent,
 		brelse(bh);
 		goto out_invalid;
 	}
-	logical_sector_size = CF_LE_W(get_unaligned((u16 *)&b->sector_size));
+	logical_sector_size = CF_LE_W(get_unaligned((__le16 *)&b->sector_size));
 	if (!logical_sector_size
 	    || (logical_sector_size & (logical_sector_size - 1))
 	    || (logical_sector_size < 512)
@@ -957,7 +957,7 @@ int fat_fill_super(struct super_block *sb, void *data, int silent,
 	sbi->dir_per_block_bits = ffs(sbi->dir_per_block) - 1;
 
 	sbi->dir_start = sbi->fat_start + sbi->fats * sbi->fat_length;
-	sbi->dir_entries = CF_LE_W(get_unaligned((u16 *)&b->dir_entries));
+	sbi->dir_entries = CF_LE_W(get_unaligned((__le16 *)&b->dir_entries));
 	if (sbi->dir_entries & (sbi->dir_per_block - 1)) {
 		if (!silent)
 			printk(KERN_ERR "FAT: bogus directroy-entries per block"
@@ -969,7 +969,7 @@ int fat_fill_super(struct super_block *sb, void *data, int silent,
 	rootdir_sectors = sbi->dir_entries
 		* sizeof(struct msdos_dir_entry) / sb->s_blocksize;
 	sbi->data_start = sbi->dir_start + rootdir_sectors;
-	total_sectors = CF_LE_W(get_unaligned((u16 *)&b->sectors));
+	total_sectors = CF_LE_W(get_unaligned((__le16 *)&b->sectors));
 	if (total_sectors == 0)
 		total_sectors = CF_LE_L(b->total_sect);
 
@@ -1227,7 +1227,7 @@ static int fat_fill_inode(struct inode *inode, struct msdos_dir_entry *de)
 	return 0;
 }
 
-void fat_write_inode(struct inode *inode, int wait)
+int fat_write_inode(struct inode *inode, int wait)
 {
 	struct super_block *sb = inode->i_sb;
 	struct buffer_head *bh;
@@ -1237,14 +1237,14 @@ void fat_write_inode(struct inode *inode, int wait)
 retry:
 	i_pos = MSDOS_I(inode)->i_pos;
 	if (inode->i_ino == MSDOS_ROOT_INO || !i_pos) {
-		return;
+		return 0;
 	}
 	lock_kernel();
 	if (!(bh = sb_bread(sb, i_pos >> MSDOS_SB(sb)->dir_per_block_bits))) {
 		printk(KERN_ERR "FAT: unable to read inode block "
 		       "for updating (i_pos %lld)\n", i_pos);
 		unlock_kernel();
-		return /* -EIO */;
+		return -EIO;
 	}
 	spin_lock(&fat_inode_lock);
 	if (i_pos != MSDOS_I(inode)->i_pos) {
@@ -1268,19 +1268,16 @@ retry:
 	    MSDOS_I(inode)->i_attrs;
 	raw_entry->start = CT_LE_W(MSDOS_I(inode)->i_logstart);
 	raw_entry->starthi = CT_LE_W(MSDOS_I(inode)->i_logstart >> 16);
-	fat_date_unix2dos(inode->i_mtime.tv_sec,&raw_entry->time,&raw_entry->date);
-	raw_entry->time = CT_LE_W(raw_entry->time);
-	raw_entry->date = CT_LE_W(raw_entry->date);
+	fat_date_unix2dos(inode->i_mtime.tv_sec, &raw_entry->time, &raw_entry->date);
 	if (MSDOS_SB(sb)->options.isvfat) {
 		fat_date_unix2dos(inode->i_ctime.tv_sec,&raw_entry->ctime,&raw_entry->cdate);
 		raw_entry->ctime_ms = MSDOS_I(inode)->i_ctime_ms; /* use i_ctime.tv_nsec? */
-		raw_entry->ctime = CT_LE_W(raw_entry->ctime);
-		raw_entry->cdate = CT_LE_W(raw_entry->cdate);
 	}
 	spin_unlock(&fat_inode_lock);
 	mark_buffer_dirty(bh);
 	brelse(bh);
 	unlock_kernel();
+	return 0;
 }
 
 

@@ -61,6 +61,7 @@
 #endif
 
 #include <linux/mm.h>		/* For fetching system memory size */
+#include <linux/delay.h>	/* For ssleep/msleep */
 
 /*
  * Lock protecting manipulation of the ahd softc list.
@@ -415,7 +416,6 @@ uint32_t aic79xx_periodic_otag;
 /*
  * Module information and settable options.
  */
-#ifdef MODULE
 static char *aic79xx = NULL;
 /*
  * Just in case someone uses commas to separate items on the insmod
@@ -426,9 +426,8 @@ static char dummy_buffer[60] = "Please don't trounce on me insmod!!\n";
 
 MODULE_AUTHOR("Maintainer: Justin T. Gibbs <gibbs@scsiguy.com>");
 MODULE_DESCRIPTION("Adaptec Aic790X U320 SCSI Host Bus Adapter driver");
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("Dual BSD/GPL");
-#endif
+MODULE_VERSION(AIC79XX_DRIVER_VERSION);
 MODULE_PARM(aic79xx, "s");
 MODULE_PARM_DESC(aic79xx,
 "period delimited, options string.\n"
@@ -463,7 +462,6 @@ MODULE_PARM_DESC(aic79xx,
 "		Change Read Streaming for Controller's 2 and 3\n"
 "\n"
 "	options aic79xx 'aic79xx=rd_strm:{..0xFFF0.0xC0F0}'");
-#endif
 
 static void ahd_linux_handle_scsi_status(struct ahd_softc *,
 					 struct ahd_linux_device *,
@@ -513,9 +511,6 @@ static void ahd_linux_dv_su(struct ahd_softc *ahd,
 			    struct scsi_cmnd *cmd,
 			    struct ahd_devinfo *devinfo,
 			    struct ahd_linux_target *targ);
-static __inline int
-	   ahd_linux_dv_fallback(struct ahd_softc *ahd,
-				 struct ahd_devinfo *devinfo);
 static int ahd_linux_fallback(struct ahd_softc *ahd,
 			      struct ahd_devinfo *devinfo);
 static __inline int ahd_linux_dv_fallback(struct ahd_softc *ahd,
@@ -2915,6 +2910,19 @@ out:
 	ahd_unlock(ahd, &s);
 }
 
+static __inline int
+ahd_linux_dv_fallback(struct ahd_softc *ahd, struct ahd_devinfo *devinfo)
+{
+	u_long s;
+	int retval;
+
+	ahd_lock(ahd, &s);
+	retval = ahd_linux_fallback(ahd, devinfo);
+	ahd_unlock(ahd, &s);
+
+	return (retval);
+}
+
 static void
 ahd_linux_dv_transition(struct ahd_softc *ahd, struct scsi_cmnd *cmd,
 			struct ahd_devinfo *devinfo,
@@ -3163,7 +3171,7 @@ ahd_linux_dv_transition(struct ahd_softc *ahd, struct scsi_cmnd *cmd,
 				break;
 			}
 			if (status & SSQ_DELAY)
-				scsi_sleep(1 * HZ);
+				ssleep(1);
 
 			break;
 		case SS_START:
@@ -3323,7 +3331,7 @@ ahd_linux_dv_transition(struct ahd_softc *ahd, struct scsi_cmnd *cmd,
 			}
 			if (targ->dv_state_retry <= 10) {
 				if ((status & (SSQ_DELAY_RANDOM|SSQ_DELAY))!= 0)
-					scsi_sleep(ahd->our_id*HZ/10);
+					msleep(ahd->our_id*1000/10);
 				break;
 			}
 #ifdef AHD_DEBUG
@@ -3367,7 +3375,7 @@ ahd_linux_dv_transition(struct ahd_softc *ahd, struct scsi_cmnd *cmd,
 				targ->dv_state_retry--;
 			} else if (targ->dv_state_retry < 60) {
 				if ((status & SSQ_DELAY) != 0)
-					scsi_sleep(1 * HZ);
+					ssleep(1);
 			} else {
 #ifdef AHD_DEBUG
 				if (ahd_debug & AHD_SHOW_DV) {
@@ -3549,19 +3557,6 @@ ahd_linux_dv_su(struct ahd_softc *ahd, struct scsi_cmnd *cmd,
 	cmd->cmd_len = 6;
 	cmd->cmnd[0] = START_STOP_UNIT;
 	cmd->cmnd[4] = le | SSS_START;
-}
-
-static __inline int
-ahd_linux_dv_fallback(struct ahd_softc *ahd, struct ahd_devinfo *devinfo)
-{
-	u_long s;
-	int retval;
-
-	ahd_lock(ahd, &s);
-	retval = ahd_linux_fallback(ahd, devinfo);
-	ahd_unlock(ahd, &s);
-
-	return (retval);
 }
 
 static int

@@ -155,7 +155,7 @@ MODULE_PARM_DESC (log2_irq_thresh, "log2 IRQ latency, 1-64 microframes");
  * before driver shutdown. But it also seems to be caused by bugs in cardbus
  * bridge shutdown:  shutting down the bridge before the devices using it.
  */
-static int handshake (u32 *ptr, u32 mask, u32 done, int usec)
+static int handshake (u32 __iomem *ptr, u32 mask, u32 done, int usec)
 {
 	u32	result;
 
@@ -289,7 +289,7 @@ static void ehci_watchdog (unsigned long param)
 static int bios_handoff (struct ehci_hcd *ehci, int where, u32 cap)
 {
 	if (cap & (1 << 16)) {
-		int msec = 500;
+		int msec = 5000;
 		struct pci_dev *pdev = to_pci_dev(ehci->hcd.self.controller);
 
 		/* request handoff to OS */
@@ -305,7 +305,10 @@ static int bios_handoff (struct ehci_hcd *ehci, int where, u32 cap)
 		if (cap & (1 << 16)) {
 			ehci_err (ehci, "BIOS handoff failed (%d, %04x)\n",
 				where, cap);
-			return 1;
+			// some BIOS versions seem buggy...
+			// return 1;
+			ehci_warn (ehci, "continuing after BIOS bug...\n");
+			return 0;
 		} 
 		ehci_dbg (ehci, "BIOS handoff succeeded\n");
 	}
@@ -337,8 +340,8 @@ static int ehci_hc_reset (struct usb_hcd *hcd)
 
 	spin_lock_init (&ehci->lock);
 
-	ehci->caps = (struct ehci_caps *) hcd->regs;
-	ehci->regs = (struct ehci_regs *) (hcd->regs + 
+	ehci->caps = hcd->regs;
+	ehci->regs = (hcd->regs + 
 				HC_LENGTH (readl (&ehci->caps->hc_capbase)));
 	dbg_hcs_params (ehci, "reset");
 	dbg_hcc_params (ehci, "reset");
@@ -692,9 +695,18 @@ static void ehci_work (struct ehci_hcd *ehci, struct pt_regs *regs)
 	timer_action_done (ehci, TIMER_IO_WATCHDOG);
 	if (ehci->reclaim_ready)
 		end_unlink_async (ehci, regs);
+
+	/* another CPU may drop ehci->lock during a schedule scan while
+	 * it reports urb completions.  this flag guards against bogus
+	 * attempts at re-entrant schedule scanning.
+	 */
+	if (ehci->scanning)
+		return;
+	ehci->scanning = 1;
 	scan_async (ehci, regs);
 	if (ehci->next_uframe != -1)
 		scan_periodic (ehci, regs);
+	ehci->scanning = 0;
 
 	/* the IO watchdog guards against hardware or driver bugs that
 	 * misplace IRQs, and should let us run completely without IRQs.

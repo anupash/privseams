@@ -1,4 +1,4 @@
-/* $USAGI: rthdr.c,v 1.3 2002/05/15 05:45:20 yoshfuji Exp $ */
+/* $USAGI: rthdr.c,v 1.4 2004/10/07 17:46:27 yoshfuji Exp $ */
 
 /*
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -414,7 +414,7 @@ inet6_rth_add(void *bp, const struct in6_addr *addr)
 	switch(rth->ip6r_type) {
 	case IPV6_RTHDR_TYPE_0:
 		rth0 = (struct ip6_rthdr0 *)rth;
-		nextaddr = (struct in6_addr *)(rth0 + 1) + rth0->ip6r0_segleft;
+		nextaddr = &rth0->ip6r0_addr[rth0->ip6r0_segleft];
 		*nextaddr = *addr;
 		rth0->ip6r0_segleft++;
 		break;

@@ -15,6 +15,8 @@
  *      2 of the License, or (at your option) any later version.
  */
 
+#undef DEBUG
+
 #include <linux/config.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -36,7 +38,6 @@
 #include <asm/irq.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
-#include <asm/hardirq.h>
 #include <asm/io.h>
 #include <asm/prom.h>
 #include <asm/smp.h>
@@ -53,14 +54,20 @@
 #include <asm/cputable.h>
 #include <asm/system.h>
 #include <asm/rtas.h>
+#include <asm/plpar_wrappers.h>
+
+#ifdef DEBUG
+#define DBG(fmt...) udbg_printf(fmt)
+#else
+#define DBG(fmt...)
+#endif
 
 int smp_threads_ready;
 unsigned long cache_decay_ticks;
 
 cpumask_t cpu_possible_map = CPU_MASK_NONE;
 cpumask_t cpu_online_map = CPU_MASK_NONE;
-cpumask_t cpu_available_map = CPU_MASK_NONE;
-cpumask_t cpu_present_at_boot = CPU_MASK_NONE;
+cpumask_t cpu_sibling_map[NR_CPUS] = { [0 ... NR_CPUS-1] = CPU_MASK_NONE };
 
 EXPORT_SYMBOL(cpu_online_map);
 EXPORT_SYMBOL(cpu_possible_map);
@@ -76,8 +83,12 @@ void smp_call_function_interrupt(void);
 extern long register_vpa(unsigned long flags, unsigned long proc,
 			 unsigned long vpa);
 
+int smt_enabled_at_boot = 1;
+
 /* Low level assembly function used to backup CPU 0 state */
 extern void __save_cpu_setup(void);
+
+extern void pseries_secondary_smp_init(unsigned long); 
 
 #ifdef CONFIG_PPC_ISERIES
 static unsigned long iSeries_smp_message[NR_CPUS];
@@ -124,9 +135,8 @@ static int smp_iSeries_numProcs(void)
 	np = 0;
         for (i=0; i < NR_CPUS; ++i) {
                 if (paca[i].lppaca.xDynProcStatus < 2) {
-			cpu_set(i, cpu_available_map);
 			cpu_set(i, cpu_possible_map);
-			cpu_set(i, cpu_present_at_boot);
+			cpu_set(i, cpu_present_map);
                         ++np;
                 }
         }
@@ -183,7 +193,7 @@ void __init smp_init_iSeries(void)
 }
 #endif
 
-#ifdef CONFIG_PPC_PSERIES
+#ifdef CONFIG_PPC_MULTIPLATFORM
 void smp_openpic_message_pass(int target, int msg)
 {
 	/* make sure we're sending something that translates to an IPI */
@@ -224,7 +234,10 @@ static void __devinit smp_openpic_setup_cpu(int cpu)
 	do_openpic_setup_cpu();
 }
 
-#ifdef CONFIG_HOTPLUG_CPU
+#endif /* CONFIG_PPC_MULTIPLATFORM */
+
+#ifdef CONFIG_PPC_PSERIES
+
 /* Get state of physical CPU.
  * Return codes:
  *	0	- The processor is in the RTAS stopped state
@@ -233,13 +246,15 @@ static void __devinit smp_openpic_setup_cpu(int cpu)
  *	-1	- Hardware Error
  *	-2	- Hardware Busy, Try again later.
  */
-static int query_cpu_stopped(unsigned int pcpu)
+int query_cpu_stopped(unsigned int pcpu)
 {
 	int cpu_status;
 	int status, qcss_tok;
 
+	DBG(" -> query_cpu_stopped(%d)\n", pcpu);
 	qcss_tok = rtas_token("query-cpu-stopped-state");
-	BUG_ON(qcss_tok == RTAS_UNKNOWN_SERVICE);
+	if (qcss_tok == RTAS_UNKNOWN_SERVICE)
+		return -1;
 	status = rtas_call(qcss_tok, 1, 2, &cpu_status, pcpu);
 	if (status != 0) {
 		printk(KERN_ERR
@@ -247,8 +262,12 @@ static int query_cpu_stopped(unsigned int pcpu)
 		return status;
 	}
 
+	DBG(" <- query_cpu_stopped(), status: %d\n", cpu_status);
+
 	return cpu_status;
 }
+
+#ifdef CONFIG_HOTPLUG_CPU
 
 int __cpu_disable(void)
 {
@@ -272,13 +291,12 @@ void __cpu_die(unsigned int cpu)
 	int cpu_status;
 	unsigned int pcpu = get_hard_smp_processor_id(cpu);
 
-	for (tries = 0; tries < 5; tries++) {
+	for (tries = 0; tries < 25; tries++) {
 		cpu_status = query_cpu_stopped(pcpu);
-
-		if (cpu_status == 0)
+		if (cpu_status == 0 || cpu_status == -1)
 			break;
 		set_current_state(TASK_UNINTERRUPTIBLE);
-		schedule_timeout(HZ);
+		schedule_timeout(HZ/5);
 	}
 	if (cpu_status != 0) {
 		printk("Querying DEAD? cpu %i (%i) shows %i\n",
@@ -372,13 +390,13 @@ out:
 static inline int __devinit smp_startup_cpu(unsigned int lcpu)
 {
 	int status;
-	extern void (*pseries_secondary_smp_init)(unsigned int cpu);
-	unsigned long start_here = __pa(pseries_secondary_smp_init);
+	unsigned long start_here = __pa((u32)*((unsigned long *)
+					       pseries_secondary_smp_init));
 	unsigned int pcpu;
 
 	/* At boot time the cpus are already spinning in hold
 	 * loops, so nothing to do. */
- 	if (system_state == SYSTEM_BOOTING)
+ 	if (system_state < SYSTEM_RUNNING)
 		return 1;
 
 	pcpu = find_physical_cpu_to_start(get_hard_smp_processor_id(lcpu));
@@ -401,55 +419,10 @@ static inline int __devinit smp_startup_cpu(unsigned int lcpu)
 	}
 	return 1;
 }
-
-static inline void look_for_more_cpus(void)
-{
-	int num_addr_cell, num_size_cell, len, i, maxcpus;
-	struct device_node *np;
-	unsigned int *ireg;
-
-	/* Find the property which will tell us about how many CPUs
-	 * we're allowed to have. */
-	if ((np = find_path_device("/rtas")) == NULL) {
-		printk(KERN_ERR "Could not find /rtas in device tree!");
-		return;
-	}
-	num_addr_cell = prom_n_addr_cells(np);
-	num_size_cell = prom_n_size_cells(np);
-
-	ireg = (unsigned int *)get_property(np, "ibm,lrdr-capacity", &len);
-	if (ireg == NULL) {
-		/* FIXME: make sure not marked as lrdr_capable() */
-		return;
-	}
-
-	maxcpus = ireg[num_addr_cell + num_size_cell];
-
-	/* Double maxcpus for processors which have SMT capability */
-	if (cur_cpu_spec->cpu_features & CPU_FTR_SMT)
-		maxcpus *= 2;
-
-
-	if (maxcpus > NR_CPUS) {
-		printk(KERN_WARNING
-		       "Partition configured for %d cpus, "
-		       "operating system maximum is %d.\n", maxcpus, NR_CPUS);
-		maxcpus = NR_CPUS;
-	} else
-		printk(KERN_INFO "Partition configured for %d cpus.\n",
-		       maxcpus);
-
-	/* Make those cpus (which might appear later) possible too. */
-	for (i = 0; i < maxcpus; i++)
-		cpu_set(i, cpu_possible_map);
-}
 #else /* ... CONFIG_HOTPLUG_CPU */
 static inline int __devinit smp_startup_cpu(unsigned int lcpu)
 {
 	return 1;
-}
-static inline void look_for_more_cpus(void)
-{
 }
 #endif /* CONFIG_HOTPLUG_CPU */
 
@@ -485,13 +458,13 @@ static void __init smp_space_timers(unsigned int max_cpus)
 }
 
 #ifdef CONFIG_PPC_PSERIES
-void vpa_init(int cpu)
+static void vpa_init(int cpu)
 {
-	unsigned long flags;
+	unsigned long flags, pcpu = get_hard_smp_processor_id(cpu);
 
 	/* Register the Virtual Processor Area (VPA) */
 	flags = 1UL << (63 - 18);
-	register_vpa(flags, cpu, __pa((unsigned long)&(paca[cpu].lppaca)));
+	register_vpa(flags, pcpu, __pa((unsigned long)&(paca[cpu].lppaca)));
 }
 
 static inline void smp_xics_do_message(int cpu, int msg)
@@ -576,26 +549,47 @@ static struct smp_ops_t pSeries_xics_smp_ops = {
 /* This is called very early */
 void __init smp_init_pSeries(void)
 {
+	int ret, i;
+
+	DBG(" -> smp_init_pSeries()\n");
 
 	if (naca->interrupt_controller == IC_OPEN_PIC)
 		smp_ops = &pSeries_openpic_smp_ops;
 	else
 		smp_ops = &pSeries_xics_smp_ops;
 
+	/* Start secondary threads on SMT systems; primary threads
+	 * are already in the running state.
+	 */
+	for_each_present_cpu(i) {
+		if (query_cpu_stopped(get_hard_smp_processor_id(i)) == 0) {
+			printk("%16.16x : starting thread\n", i);
+			DBG("%16.16x : starting thread\n", i);
+			rtas_call(rtas_token("start-cpu"), 3, 1, &ret,
+				  get_hard_smp_processor_id(i),
+				  __pa((u32)*((unsigned long *)
+					      pseries_secondary_smp_init)),
+				  i);
+		}
+	}
+
+	if (cur_cpu_spec->firmware_features & FW_FEATURE_SPLPAR)
+		vpa_init(boot_cpuid);
+
 	/* Non-lpar has additional take/give timebase */
 	if (systemcfg->platform == PLATFORM_PSERIES) {
 		smp_ops->give_timebase = pSeries_give_timebase;
 		smp_ops->take_timebase = pSeries_take_timebase;
 	}
+
+
+	DBG(" <- smp_init_pSeries()\n");
 }
-#endif
+#endif /* CONFIG_PPC_PSERIES */
 
 void smp_local_timer_interrupt(struct pt_regs * regs)
 {
-	if (!--(get_paca()->prof_counter)) {
-		update_process_times(user_mode(regs));
-		(get_paca()->prof_counter)=get_paca()->prof_multiplier;
-	}
+	update_process_times(user_mode(regs));
 }
 
 void smp_message_recv(int msg, struct pt_regs *regs)
@@ -751,6 +745,8 @@ out:
 	return ret;
 }
 
+EXPORT_SYMBOL(smp_call_function);
+
 void smp_call_function_interrupt(void)
 {
 	void (*func) (void *info);
@@ -794,26 +790,17 @@ DECLARE_PER_CPU(unsigned int, pvr);
 
 static void __devinit smp_store_cpu_info(int id)
 {
-	per_cpu(pvr, id) = _get_PVR();
+	per_cpu(pvr, id) = mfspr(SPRN_PVR);
 }
 
 static void __init smp_create_idle(unsigned int cpu)
 {
-	struct pt_regs regs;
 	struct task_struct *p;
 
 	/* create a process for the processor */
-	/* only regs.msr is actually used, and 0 is OK for it */
-	memset(&regs, 0, sizeof(struct pt_regs));
-	p = copy_process(CLONE_VM | CLONE_IDLETASK,
-			 0, &regs, 0, NULL, NULL);
+	p = fork_idle(cpu);
 	if (IS_ERR(p))
 		panic("failed fork for CPU %u: %li", cpu, PTR_ERR(p));
-
-	wake_up_forked_process(p);
-	init_idle(p, cpu);
-	unhash_process(p);
-
 	paca[cpu].__current = p;
 	current_set[cpu] = p->thread_info;
 }
@@ -831,8 +818,6 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 	/* Fixup boot cpu */
 	smp_store_cpu_info(boot_cpuid);
 	cpu_callin_map[boot_cpuid] = 1;
-	paca[boot_cpuid].prof_counter = 1;
-	paca[boot_cpuid].prof_multiplier = 1;
 
 #ifndef CONFIG_PPC_ISERIES
 	paca[boot_cpuid].next_jiffy_update_tb = tb_last_stamp = get_tb();
@@ -843,8 +828,7 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 	 * number of msecs off until someone does a settimeofday()
 	 */
 	do_gtod.tb_orig_stamp = tb_last_stamp;
-
-	look_for_more_cpus();
+	systemcfg->tb_orig_stamp = tb_last_stamp;
 #endif
 
 	max_cpus = smp_ops->probe();
@@ -863,7 +847,6 @@ void __devinit smp_prepare_boot_cpu(void)
 {
 	BUG_ON(smp_processor_id() != boot_cpuid);
 
-	/* cpu_possible is set up in prom.c */
 	cpu_set(boot_cpuid, cpu_online_map);
 
 	paca[boot_cpuid].__current = current;
@@ -875,11 +858,9 @@ int __devinit __cpu_up(unsigned int cpu)
 	int c;
 
 	/* At boot, don't bother with non-present cpus -JSCHOPP */
-	if (system_state == SYSTEM_BOOTING && !cpu_present_at_boot(cpu))
+	if (system_state < SYSTEM_RUNNING && !cpu_present(cpu))
 		return -ENOENT;
 
-	paca[cpu].prof_counter = 1;
-	paca[cpu].prof_multiplier = 1;
 	paca[cpu].default_decr = tb_ticks_per_jiffy / decr_overclock;
 
 	if (!(cur_cpu_spec->cpu_features & CPU_FTR_SLB)) {
@@ -909,7 +890,7 @@ int __devinit __cpu_up(unsigned int cpu)
 	 * use this value that I found through experimentation.
 	 * -- Cort
 	 */
-	if (system_state == SYSTEM_BOOTING)
+	if (system_state < SYSTEM_RUNNING)
 		for (c = 5000; c && !cpu_callin_map[cpu]; c--)
 			udelay(100);
 #ifdef CONFIG_HOTPLUG_CPU
@@ -1004,219 +985,12 @@ void __init smp_cpus_done(unsigned int max_cpus)
 	smp_threads_ready = 1;
 
 	set_cpus_allowed(current, old_mask);
+
+	/*
+	 * We know at boot the maximum number of cpus we can add to
+	 * a partition and set cpu_possible_map accordingly. cpu_present_map
+	 * needs to match for the hotplug code to allow us to hot add
+	 * any offline cpus.
+	 */
+	cpu_present_map = cpu_possible_map;
 }
-
-#ifdef CONFIG_SCHED_SMT
-#ifdef CONFIG_NUMA
-static struct sched_group sched_group_cpus[NR_CPUS];
-static struct sched_group sched_group_phys[NR_CPUS];
-static struct sched_group sched_group_nodes[MAX_NUMNODES];
-static DEFINE_PER_CPU(struct sched_domain, cpu_domains);
-static DEFINE_PER_CPU(struct sched_domain, phys_domains);
-static DEFINE_PER_CPU(struct sched_domain, node_domains);
-__init void arch_init_sched_domains(void)
-{
-	int i;
-	struct sched_group *first = NULL, *last = NULL;
-
-	/* Set up domains */
-	for_each_cpu(i) {
-		struct sched_domain *cpu_domain = &per_cpu(cpu_domains, i);
-		struct sched_domain *phys_domain = &per_cpu(phys_domains, i);
-		struct sched_domain *node_domain = &per_cpu(node_domains, i);
-		int node = cpu_to_node(i);
-		cpumask_t nodemask = node_to_cpumask(node);
-		cpumask_t my_cpumask = cpumask_of_cpu(i);
-		cpumask_t sibling_cpumask = cpumask_of_cpu(i ^ 0x1);
-
-		*cpu_domain = SD_SIBLING_INIT;
-		if (cur_cpu_spec->cpu_features & CPU_FTR_SMT)
-			cpus_or(cpu_domain->span, my_cpumask, sibling_cpumask);
-		else
-			cpu_domain->span = my_cpumask;
-		cpu_domain->parent = phys_domain;
-		cpu_domain->groups = &sched_group_cpus[i];
-
-		*phys_domain = SD_CPU_INIT;
-		phys_domain->span = nodemask;
-		phys_domain->parent = node_domain;
-		phys_domain->groups = &sched_group_phys[first_cpu(cpu_domain->span)];
-
-		*node_domain = SD_NODE_INIT;
-		node_domain->span = cpu_possible_map;
-		node_domain->groups = &sched_group_nodes[node];
-	}
-
-	/* Set up CPU (sibling) groups */
-	for_each_cpu(i) {
-		struct sched_domain *cpu_domain = &per_cpu(cpu_domains, i);
-		int j;
-		first = last = NULL;
-
-		if (i != first_cpu(cpu_domain->span))
-			continue;
-
-		for_each_cpu_mask(j, cpu_domain->span) {
-			struct sched_group *cpu = &sched_group_cpus[j];
-
-			cpus_clear(cpu->cpumask);
-			cpu_set(j, cpu->cpumask);
-			cpu->cpu_power = SCHED_LOAD_SCALE;
-
-			if (!first)
-				first = cpu;
-			if (last)
-				last->next = cpu;
-			last = cpu;
-		}
-		last->next = first;
-	}
-
-	for (i = 0; i < MAX_NUMNODES; i++) {
-		int j;
-		cpumask_t nodemask;
-		struct sched_group *node = &sched_group_nodes[i];
-		cpumask_t node_cpumask = node_to_cpumask(i);
-		cpus_and(nodemask, node_cpumask, cpu_possible_map);
-
-		if (cpus_empty(nodemask))
-			continue;
-
-		first = last = NULL;
-		/* Set up physical groups */
-		for_each_cpu_mask(j, nodemask) {
-			struct sched_domain *cpu_domain = &per_cpu(cpu_domains, j);
-			struct sched_group *cpu = &sched_group_phys[j];
-
-			if (j != first_cpu(cpu_domain->span))
-				continue;
-
-			cpu->cpumask = cpu_domain->span;
-			/*
-			 * Make each extra sibling increase power by 10% of
-			 * the basic CPU. This is very arbitrary.
-			 */
-			cpu->cpu_power = SCHED_LOAD_SCALE + SCHED_LOAD_SCALE*(cpus_weight(cpu->cpumask)-1) / 10;
-			node->cpu_power += cpu->cpu_power;
-
-			if (!first)
-				first = cpu;
-			if (last)
-				last->next = cpu;
-			last = cpu;
-		}
-		last->next = first;
-	}
-
-	/* Set up nodes */
-	first = last = NULL;
-	for (i = 0; i < MAX_NUMNODES; i++) {
-		struct sched_group *cpu = &sched_group_nodes[i];
-		cpumask_t nodemask;
-		cpumask_t node_cpumask = node_to_cpumask(i);
-		cpus_and(nodemask, node_cpumask, cpu_possible_map);
-
-		if (cpus_empty(nodemask))
-			continue;
-
-		cpu->cpumask = nodemask;
-		/* ->cpu_power already setup */
-
-		if (!first)
-			first = cpu;
-		if (last)
-			last->next = cpu;
-		last = cpu;
-	}
-	last->next = first;
-
-	mb();
-	for_each_cpu(i) {
-		struct sched_domain *cpu_domain = &per_cpu(cpu_domains, i);
-		cpu_attach_domain(cpu_domain, i);
-	}
-}
-#else /* !CONFIG_NUMA */
-static struct sched_group sched_group_cpus[NR_CPUS];
-static struct sched_group sched_group_phys[NR_CPUS];
-static DEFINE_PER_CPU(struct sched_domain, cpu_domains);
-static DEFINE_PER_CPU(struct sched_domain, phys_domains);
-__init void arch_init_sched_domains(void)
-{
-	int i;
-	struct sched_group *first = NULL, *last = NULL;
-
-	/* Set up domains */
-	for_each_cpu(i) {
-		struct sched_domain *cpu_domain = &per_cpu(cpu_domains, i);
-		struct sched_domain *phys_domain = &per_cpu(phys_domains, i);
-		cpumask_t my_cpumask = cpumask_of_cpu(i);
-		cpumask_t sibling_cpumask = cpumask_of_cpu(i ^ 0x1);
-
-		*cpu_domain = SD_SIBLING_INIT;
-		if (cur_cpu_spec->cpu_features & CPU_FTR_SMT)
-			cpus_or(cpu_domain->span, my_cpumask, sibling_cpumask);
-		else
-			cpu_domain->span = my_cpumask;
-		cpu_domain->parent = phys_domain;
-		cpu_domain->groups = &sched_group_cpus[i];
-
-		*phys_domain = SD_CPU_INIT;
-		phys_domain->span = cpu_possible_map;
-		phys_domain->groups = &sched_group_phys[first_cpu(cpu_domain->span)];
-	}
-
-	/* Set up CPU (sibling) groups */
-	for_each_cpu(i) {
-		struct sched_domain *cpu_domain = &per_cpu(cpu_domains, i);
-		int j;
-		first = last = NULL;
-
-		if (i != first_cpu(cpu_domain->span))
-			continue;
-
-		for_each_cpu_mask(j, cpu_domain->span) {
-			struct sched_group *cpu = &sched_group_cpus[j];
-
-			cpus_clear(cpu->cpumask);
-			cpu_set(j, cpu->cpumask);
-			cpu->cpu_power = SCHED_LOAD_SCALE;
-
-			if (!first)
-				first = cpu;
-			if (last)
-				last->next = cpu;
-			last = cpu;
-		}
-		last->next = first;
-	}
-
-	first = last = NULL;
-	/* Set up physical groups */
-	for_each_cpu(i) {
-		struct sched_domain *cpu_domain = &per_cpu(cpu_domains, i);
-		struct sched_group *cpu = &sched_group_phys[i];
-
-		if (i != first_cpu(cpu_domain->span))
-			continue;
-
-		cpu->cpumask = cpu_domain->span;
-		/* See SMT+NUMA setup for comment */
-		cpu->cpu_power = SCHED_LOAD_SCALE + SCHED_LOAD_SCALE*(cpus_weight(cpu->cpumask)-1) / 10;
-
-		if (!first)
-			first = cpu;
-		if (last)
-			last->next = cpu;
-		last = cpu;
-	}
-	last->next = first;
-
-	mb();
-	for_each_cpu(i) {
-		struct sched_domain *cpu_domain = &per_cpu(cpu_domains, i);
-		cpu_attach_domain(cpu_domain, i);
-	}
-}
-#endif /* CONFIG_NUMA */
-#endif /* CONFIG_SCHED_SMT */

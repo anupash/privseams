@@ -99,12 +99,12 @@ static void multipath_reschedule_retry (struct multipath_bh *mp_bh)
  * operation and are ready to return a success/failure code to the buffer
  * cache layer.
  */
-static void multipath_end_bh_io (struct multipath_bh *mp_bh, int uptodate)
+static void multipath_end_bh_io (struct multipath_bh *mp_bh, int err)
 {
 	struct bio *bio = mp_bh->master_bio;
 	multipath_conf_t *conf = mddev_to_conf(mp_bh->mddev);
 
-	bio_endio(bio, bio->bi_size, uptodate ? 0 : -EIO);
+	bio_endio(bio, bio->bi_size, err);
 	mempool_free(mp_bh, conf->pool);
 }
 
@@ -119,8 +119,8 @@ int multipath_end_request(struct bio *bio, unsigned int bytes_done, int error)
 		return 1;
 
 	if (uptodate)
-		multipath_end_bh_io(mp_bh, uptodate);
-	else if ((bio->bi_rw & (1 << BIO_RW_AHEAD)) == 0) {
+		multipath_end_bh_io(mp_bh, 0);
+	else if (!bio_rw_ahead(bio)) {
 		/*
 		 * oops, IO error:
 		 */
@@ -131,7 +131,7 @@ int multipath_end_request(struct bio *bio, unsigned int bytes_done, int error)
 		       (unsigned long long)bio->bi_sector);
 		multipath_reschedule_retry(mp_bh);
 	} else
-		multipath_end_bh_io(mp_bh, 0);
+		multipath_end_bh_io(mp_bh, error);
 	rdev_dec_pending(rdev, conf->mddev);
 	return 0;
 }
@@ -217,6 +217,31 @@ static void multipath_status (struct seq_file *seq, mddev_t *mddev)
 	seq_printf (seq, "]");
 }
 
+static int multipath_issue_flush(request_queue_t *q, struct gendisk *disk,
+				 sector_t *error_sector)
+{
+	mddev_t *mddev = q->queuedata;
+	multipath_conf_t *conf = mddev_to_conf(mddev);
+	int i, ret = 0;
+
+	for (i=0; i<mddev->raid_disks; i++) {
+		mdk_rdev_t *rdev = conf->multipaths[i].rdev;
+		if (rdev && !rdev->faulty) {
+			struct block_device *bdev = rdev->bdev;
+			request_queue_t *r_queue = bdev_get_queue(bdev);
+
+			if (!r_queue->issue_flush_fn) {
+				ret = -EOPNOTSUPP;
+				break;
+			}
+
+			ret = r_queue->issue_flush_fn(r_queue, bdev->bd_disk, error_sector);
+			if (ret)
+				break;
+		}
+	}
+	return ret;
+}
 
 /*
  * Careful, this can execute in IRQ contexts as well!
@@ -300,7 +325,7 @@ static int multipath_add_disk(mddev_t *mddev, mdk_rdev_t *rdev)
 		 */
 			if (rdev->bdev->bd_disk->queue->merge_bvec_fn &&
 			    mddev->queue->max_sectors > (PAGE_SIZE>>9))
-				mddev->queue->max_sectors = (PAGE_SIZE>>9);
+				blk_queue_max_sectors(mddev->queue, PAGE_SIZE>>9);
 
 			conf->working_disks++;
 			rdev->raid_disk = path;
@@ -377,7 +402,7 @@ static void multipathd (mddev_t *mddev)
 				" error for block %llu\n",
 				bdevname(bio->bi_bdev,b),
 				(unsigned long long)bio->bi_sector);
-			multipath_end_bh_io(mp_bh, 0);
+			multipath_end_bh_io(mp_bh, -EIO);
 		} else {
 			printk(KERN_ERR "multipath: %s: redirecting sector %llu"
 				" to another IO path\n",
@@ -435,6 +460,8 @@ static int multipath_run (mddev_t *mddev)
 
 	mddev->queue->unplug_fn = multipath_unplug;
 
+	mddev->queue->issue_flush_fn = multipath_issue_flush;
+
 	conf->working_disks = 0;
 	ITERATE_RDEV(mddev,rdev,tmp) {
 		disk_idx = rdev->raid_disk;
@@ -452,7 +479,7 @@ static int multipath_run (mddev_t *mddev)
 		 * a merge_bvec_fn to be involved in multipath */
 		if (rdev->bdev->bd_disk->queue->merge_bvec_fn &&
 		    mddev->queue->max_sectors > (PAGE_SIZE>>9))
-			mddev->queue->max_sectors = (PAGE_SIZE>>9);
+			blk_queue_max_sectors(mddev->queue, PAGE_SIZE>>9);
 
 		if (!rdev->faulty) 
 			conf->working_disks++;

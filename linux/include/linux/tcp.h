@@ -201,6 +201,17 @@ struct tcp_sack_block {
 	__u32	end_seq;
 };
 
+typedef struct tcp_pcount {
+	__u32	val;
+} tcp_pcount_t;
+
+enum tcp_congestion_algo {
+	TCP_RENO=0,
+	TCP_VEGAS,
+	TCP_WESTWOOD,
+	TCP_BIC,
+};
+
 struct tcp_opt {
 	int	tcp_header_len;	/* Bytes of tcp header to send		*/
 
@@ -261,22 +272,22 @@ struct tcp_opt {
 	__u8	frto_counter;	/* Number of new acks after RTO */
 	__u32	frto_highmark;	/* snd_nxt when RTO occurred */
 
-	__u8	unused_pad;
+	__u8	adv_cong;	/* Using Vegas, Westwood, or BIC */
 	__u8	defer_accept;	/* User waits for some data after accept() */
 	/* one byte hole, try to pack */
 
 /* RTT measurement */
 	__u8	backoff;	/* backoff				*/
-	__u32	srtt;		/* smothed round trip time << 3		*/
+	__u32	srtt;		/* smoothed round trip time << 3	*/
 	__u32	mdev;		/* medium deviation			*/
 	__u32	mdev_max;	/* maximal mdev for the last rtt period	*/
 	__u32	rttvar;		/* smoothed mdev_max			*/
 	__u32	rtt_seq;	/* sequence number to update rttvar	*/
 	__u32	rto;		/* retransmit timeout			*/
 
-	__u32	packets_out;	/* Packets which are "in flight"	*/
-	__u32	left_out;	/* Packets which leaved network		*/
-	__u32	retrans_out;	/* Retransmitted packets out		*/
+	tcp_pcount_t packets_out; /* Packets which are "in flight"	*/
+	tcp_pcount_t left_out;	  /* Packets which leaved network	*/
+	tcp_pcount_t retrans_out; /* Retransmitted packets out		*/
 
 
 /*
@@ -337,9 +348,9 @@ struct tcp_opt {
 	__u8	syn_retries;	/* num of allowed syn retries */
 	__u8	ecn_flags;	/* ECN status bits.			*/
 	__u16	prior_ssthresh; /* ssthresh saved at recovery start	*/
-	__u32	lost_out;	/* Lost packets				*/
-	__u32	sacked_out;	/* SACK'd packets			*/
-	__u32	fackets_out;	/* FACK'd packets			*/
+	tcp_pcount_t lost_out;	/* Lost packets			*/
+	tcp_pcount_t sacked_out;/* SACK'd packets			*/
+	tcp_pcount_t fackets_out;/* FACK'd packets			*/
 	__u32	high_seq;	/* snd_nxt at onset of congestion	*/
 
 	__u32	retrans_stamp;	/* Timestamp of the last retransmit,
@@ -408,7 +419,6 @@ struct tcp_opt {
 		__u32	beg_snd_nxt;	/* right edge during last RTT */
 		__u32	beg_snd_una;	/* left edge  during last RTT */
 		__u32	beg_snd_cwnd;	/* saves the size of the cwnd */
-		__u8	do_vegas;	/* do vegas for this connection */
 		__u8	doing_vegas_now;/* if true, do vegas for this RTT */
 		__u16	cntRTT;		/* # of RTTs measured within last RTT */
 		__u32	minRTT;		/* min of RTTs measured within last RTT (in usec) */

@@ -77,7 +77,7 @@ struct usb_hcd {	/* usb_bus.hcpriv points to this */
 	unsigned		can_wakeup:1;	/* hw supports wakeup? */
 	unsigned		remote_wakeup:1;/* sw should use wakeup? */
 	int			irq;		/* irq allocated */
-	void			*regs;		/* device memory/io */
+	void __iomem		*regs;		/* device memory/io */
 
 #ifdef	CONFIG_PCI
 	int			region;		/* pci region for regs */
@@ -212,6 +212,7 @@ struct hc_driver {
 				char *buf, u16 wLength);
 	int		(*hub_suspend)(struct usb_hcd *);
 	int		(*hub_resume)(struct usb_hcd *);
+	int		(*start_port_reset)(struct usb_hcd *, unsigned port_num);
 };
 
 extern void usb_hcd_giveback_urb (struct usb_hcd *hcd, struct urb *urb, struct pt_regs *regs);
@@ -375,8 +376,6 @@ extern void usb_bus_put (struct usb_bus *bus);
 
 extern int usb_find_interface_driver (struct usb_device *dev,
 	struct usb_interface *interface);
-
-#define usb_endpoint_halt(dev, ep, out) ((dev)->halted[out] |= (1 << (ep)))
 
 #define usb_endpoint_out(ep_dir)	(!((ep_dir) & USB_DIR_IN))
 

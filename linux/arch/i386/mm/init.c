@@ -40,10 +40,12 @@
 #include <asm/tlbflush.h>
 #include <asm/sections.h>
 
+unsigned int __VMALLOC_RESERVE = 128 << 20;
+
 DEFINE_PER_CPU(struct mmu_gather, mmu_gathers);
 unsigned long highstart_pfn, highend_pfn;
 
-static int do_test_wp_bit(void);
+static int noinline do_test_wp_bit(void);
 
 /*
  * Creates a middle page table and puts a pointer to it in the
@@ -671,7 +673,7 @@ void __init pgtable_cache_init(void)
  * This function cannot be __init, since exceptions don't work in that
  * section.  Put this after the callers, so that it cannot be inlined.
  */
-static int do_test_wp_bit(void)
+static int noinline do_test_wp_bit(void)
 {
 	char tmp_reg;
 	int flag;

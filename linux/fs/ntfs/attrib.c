@@ -27,11 +27,11 @@
 /* Temporary helper functions -- might become macros */
 
 /**
- * ntfs_rl_mm - run_list memmove
+ * ntfs_rl_mm - runlist memmove
  *
- * It is up to the caller to serialize access to the run list @base.
+ * It is up to the caller to serialize access to the runlist @base.
  */
-static inline void ntfs_rl_mm(run_list_element *base, int dst, int src,
+static inline void ntfs_rl_mm(runlist_element *base, int dst, int src,
 		int size)
 {
 	if (likely((dst != src) && (size > 0)))
@@ -39,42 +39,42 @@ static inline void ntfs_rl_mm(run_list_element *base, int dst, int src,
 }
 
 /**
- * ntfs_rl_mc - run_list memory copy
+ * ntfs_rl_mc - runlist memory copy
  *
- * It is up to the caller to serialize access to the run lists @dstbase and
+ * It is up to the caller to serialize access to the runlists @dstbase and
  * @srcbase.
  */
-static inline void ntfs_rl_mc(run_list_element *dstbase, int dst,
-		run_list_element *srcbase, int src, int size)
+static inline void ntfs_rl_mc(runlist_element *dstbase, int dst,
+		runlist_element *srcbase, int src, int size)
 {
 	if (likely(size > 0))
 		memcpy(dstbase + dst, srcbase + src, size * sizeof(*dstbase));
 }
 
 /**
- * ntfs_rl_realloc - Reallocate memory for run_lists
- * @rl:		original run list
- * @old_size:	number of run list elements in the original run list @rl
- * @new_size:	number of run list elements we need space for
+ * ntfs_rl_realloc - Reallocate memory for runlists
+ * @rl:		original runlist
+ * @old_size:	number of runlist elements in the original runlist @rl
+ * @new_size:	number of runlist elements we need space for
  *
- * As the run_lists grow, more memory will be required.  To prevent the
+ * As the runlists grow, more memory will be required.  To prevent the
  * kernel having to allocate and reallocate large numbers of small bits of
  * memory, this function returns and entire page of memory.
  *
- * It is up to the caller to serialize access to the run list @rl.
+ * It is up to the caller to serialize access to the runlist @rl.
  *
  * N.B.  If the new allocation doesn't require a different number of pages in
  *       memory, the function will return the original pointer.
  *
  * On success, return a pointer to the newly allocated, or recycled, memory.
  * On error, return -errno. The following error codes are defined:
- *	-ENOMEM	- Not enough memory to allocate run list array.
+ *	-ENOMEM	- Not enough memory to allocate runlist array.
  *	-EINVAL	- Invalid parameters were passed in.
  */
-static inline run_list_element *ntfs_rl_realloc(run_list_element *rl,
+static inline runlist_element *ntfs_rl_realloc(runlist_element *rl,
 		int old_size, int new_size)
 {
-	run_list_element *new_rl;
+	runlist_element *new_rl;
 
 	old_size = PAGE_ALIGN(old_size * sizeof(*rl));
 	new_size = PAGE_ALIGN(new_size * sizeof(*rl));
@@ -95,20 +95,20 @@ static inline run_list_element *ntfs_rl_realloc(run_list_element *rl,
 }
 
 /**
- * ntfs_are_rl_mergeable - test if two run lists can be joined together
- * @dst:	original run list
- * @src:	new run list to test for mergeability with @dst
+ * ntfs_are_rl_mergeable - test if two runlists can be joined together
+ * @dst:	original runlist
+ * @src:	new runlist to test for mergeability with @dst
  *
- * Test if two run lists can be joined together. For this, their VCNs and LCNs
+ * Test if two runlists can be joined together. For this, their VCNs and LCNs
  * must be adjacent.
  *
- * It is up to the caller to serialize access to the run lists @dst and @src.
+ * It is up to the caller to serialize access to the runlists @dst and @src.
  *
- * Return: TRUE   Success, the run lists can be merged.
- *	   FALSE  Failure, the run lists cannot be merged.
+ * Return: TRUE   Success, the runlists can be merged.
+ *	   FALSE  Failure, the runlists cannot be merged.
  */
-static inline BOOL ntfs_are_rl_mergeable(run_list_element *dst,
-		run_list_element *src)
+static inline BOOL ntfs_are_rl_mergeable(runlist_element *dst,
+		runlist_element *src)
 {
 	BUG_ON(!dst);
 	BUG_ON(!src);
@@ -124,37 +124,37 @@ static inline BOOL ntfs_are_rl_mergeable(run_list_element *dst,
 }
 
 /**
- * __ntfs_rl_merge - merge two run lists without testing if they can be merged
- * @dst:	original, destination run list
- * @src:	new run list to merge with @dst
+ * __ntfs_rl_merge - merge two runlists without testing if they can be merged
+ * @dst:	original, destination runlist
+ * @src:	new runlist to merge with @dst
  *
- * Merge the two run lists, writing into the destination run list @dst. The
- * caller must make sure the run lists can be merged or this will corrupt the
- * destination run list.
+ * Merge the two runlists, writing into the destination runlist @dst. The
+ * caller must make sure the runlists can be merged or this will corrupt the
+ * destination runlist.
  *
- * It is up to the caller to serialize access to the run lists @dst and @src.
+ * It is up to the caller to serialize access to the runlists @dst and @src.
  */
-static inline void __ntfs_rl_merge(run_list_element *dst, run_list_element *src)
+static inline void __ntfs_rl_merge(runlist_element *dst, runlist_element *src)
 {
 	dst->length += src->length;
 }
 
 /**
- * ntfs_rl_merge - test if two run lists can be joined together and merge them
- * @dst:	original, destination run list
- * @src:	new run list to merge with @dst
+ * ntfs_rl_merge - test if two runlists can be joined together and merge them
+ * @dst:	original, destination runlist
+ * @src:	new runlist to merge with @dst
  *
- * Test if two run lists can be joined together. For this, their VCNs and LCNs
+ * Test if two runlists can be joined together. For this, their VCNs and LCNs
  * must be adjacent. If they can be merged, perform the merge, writing into
- * the destination run list @dst.
+ * the destination runlist @dst.
  *
- * It is up to the caller to serialize access to the run lists @dst and @src.
+ * It is up to the caller to serialize access to the runlists @dst and @src.
  *
- * Return: TRUE   Success, the run lists have been merged.
- *	   FALSE  Failure, the run lists cannot be merged and have not been
+ * Return: TRUE   Success, the runlists have been merged.
+ *	   FALSE  Failure, the runlists cannot be merged and have not been
  *		  modified.
  */
-static inline BOOL ntfs_rl_merge(run_list_element *dst, run_list_element *src)
+static inline BOOL ntfs_rl_merge(runlist_element *dst, runlist_element *src)
 {
 	BOOL merge = ntfs_are_rl_mergeable(dst, src);
 
@@ -164,31 +164,31 @@ static inline BOOL ntfs_rl_merge(run_list_element *dst, run_list_element *src)
 }
 
 /**
- * ntfs_rl_append - append a run list after a given element
- * @dst:	original run list to be worked on
+ * ntfs_rl_append - append a runlist after a given element
+ * @dst:	original runlist to be worked on
  * @dsize:	number of elements in @dst (including end marker)
- * @src:	run list to be inserted into @dst
+ * @src:	runlist to be inserted into @dst
  * @ssize:	number of elements in @src (excluding end marker)
- * @loc:	append the new run list @src after this element in @dst
+ * @loc:	append the new runlist @src after this element in @dst
  *
- * Append the run list @src after element @loc in @dst.  Merge the right end of
- * the new run list, if necessary. Adjust the size of the hole before the
- * appended run list.
+ * Append the runlist @src after element @loc in @dst.  Merge the right end of
+ * the new runlist, if necessary. Adjust the size of the hole before the
+ * appended runlist.
  *
- * It is up to the caller to serialize access to the run lists @dst and @src.
+ * It is up to the caller to serialize access to the runlists @dst and @src.
  *
- * On success, return a pointer to the new, combined, run list. Note, both
- * run lists @dst and @src are deallocated before returning so you cannot use
- * the pointers for anything any more. (Strictly speaking the returned run list
+ * On success, return a pointer to the new, combined, runlist. Note, both
+ * runlists @dst and @src are deallocated before returning so you cannot use
+ * the pointers for anything any more. (Strictly speaking the returned runlist
  * may be the same as @dst but this is irrelevant.)
  *
- * On error, return -errno. Both run lists are left unmodified. The following
+ * On error, return -errno. Both runlists are left unmodified. The following
  * error codes are defined:
- *	-ENOMEM	- Not enough memory to allocate run list array.
+ *	-ENOMEM	- Not enough memory to allocate runlist array.
  *	-EINVAL	- Invalid parameters were passed in.
  */
-static inline run_list_element *ntfs_rl_append(run_list_element *dst,
-		int dsize, run_list_element *src, int ssize, int loc)
+static inline runlist_element *ntfs_rl_append(runlist_element *dst,
+		int dsize, runlist_element *src, int ssize, int loc)
 {
 	BOOL right;
 	int magic;
@@ -205,7 +205,7 @@ static inline run_list_element *ntfs_rl_append(run_list_element *dst,
 		return dst;
 	/*
 	 * We are guaranteed to succeed from here so can start modifying the
-	 * original run lists.
+	 * original runlists.
 	 */
 
 	/* First, merge the right hand end, if necessary. */
@@ -229,31 +229,31 @@ static inline run_list_element *ntfs_rl_append(run_list_element *dst,
 }
 
 /**
- * ntfs_rl_insert - insert a run list into another
- * @dst:	original run list to be worked on
+ * ntfs_rl_insert - insert a runlist into another
+ * @dst:	original runlist to be worked on
  * @dsize:	number of elements in @dst (including end marker)
- * @src:	new run list to be inserted
+ * @src:	new runlist to be inserted
  * @ssize:	number of elements in @src (excluding end marker)
- * @loc:	insert the new run list @src before this element in @dst
+ * @loc:	insert the new runlist @src before this element in @dst
  *
- * Insert the run list @src before element @loc in the run list @dst. Merge the
- * left end of the new run list, if necessary. Adjust the size of the hole
- * after the inserted run list.
+ * Insert the runlist @src before element @loc in the runlist @dst. Merge the
+ * left end of the new runlist, if necessary. Adjust the size of the hole
+ * after the inserted runlist.
  *
- * It is up to the caller to serialize access to the run lists @dst and @src.
+ * It is up to the caller to serialize access to the runlists @dst and @src.
  *
- * On success, return a pointer to the new, combined, run list. Note, both
- * run lists @dst and @src are deallocated before returning so you cannot use
- * the pointers for anything any more. (Strictly speaking the returned run list
+ * On success, return a pointer to the new, combined, runlist. Note, both
+ * runlists @dst and @src are deallocated before returning so you cannot use
+ * the pointers for anything any more. (Strictly speaking the returned runlist
  * may be the same as @dst but this is irrelevant.)
  *
- * On error, return -errno. Both run lists are left unmodified. The following
+ * On error, return -errno. Both runlists are left unmodified. The following
  * error codes are defined:
- *	-ENOMEM	- Not enough memory to allocate run list array.
+ *	-ENOMEM	- Not enough memory to allocate runlist array.
  *	-EINVAL	- Invalid parameters were passed in.
  */
-static inline run_list_element *ntfs_rl_insert(run_list_element *dst,
-		int dsize, run_list_element *src, int ssize, int loc)
+static inline runlist_element *ntfs_rl_insert(runlist_element *dst,
+		int dsize, runlist_element *src, int ssize, int loc)
 {
 	BOOL left = FALSE;
 	BOOL disc = FALSE;	/* Discontinuity */
@@ -290,7 +290,7 @@ static inline run_list_element *ntfs_rl_insert(run_list_element *dst,
 		return dst;
 	/*
 	 * We are guaranteed to succeed from here so can start modifying the
-	 * original run list.
+	 * original runlist.
 	 */
 
 	if (left)
@@ -336,30 +336,30 @@ static inline run_list_element *ntfs_rl_insert(run_list_element *dst,
 }
 
 /**
- * ntfs_rl_replace - overwrite a run_list element with another run list
- * @dst:	original run list to be worked on
+ * ntfs_rl_replace - overwrite a runlist element with another runlist
+ * @dst:	original runlist to be worked on
  * @dsize:	number of elements in @dst (including end marker)
- * @src:	new run list to be inserted
+ * @src:	new runlist to be inserted
  * @ssize:	number of elements in @src (excluding end marker)
- * @loc:	index in run list @dst to overwrite with @src
+ * @loc:	index in runlist @dst to overwrite with @src
  *
- * Replace the run list element @dst at @loc with @src. Merge the left and
- * right ends of the inserted run list, if necessary.
+ * Replace the runlist element @dst at @loc with @src. Merge the left and
+ * right ends of the inserted runlist, if necessary.
  *
- * It is up to the caller to serialize access to the run lists @dst and @src.
+ * It is up to the caller to serialize access to the runlists @dst and @src.
  *
- * On success, return a pointer to the new, combined, run list. Note, both
- * run lists @dst and @src are deallocated before returning so you cannot use
- * the pointers for anything any more. (Strictly speaking the returned run list
+ * On success, return a pointer to the new, combined, runlist. Note, both
+ * runlists @dst and @src are deallocated before returning so you cannot use
+ * the pointers for anything any more. (Strictly speaking the returned runlist
  * may be the same as @dst but this is irrelevant.)
  *
- * On error, return -errno. Both run lists are left unmodified. The following
+ * On error, return -errno. Both runlists are left unmodified. The following
  * error codes are defined:
- *	-ENOMEM	- Not enough memory to allocate run list array.
+ *	-ENOMEM	- Not enough memory to allocate runlist array.
  *	-EINVAL	- Invalid parameters were passed in.
  */
-static inline run_list_element *ntfs_rl_replace(run_list_element *dst,
-		int dsize, run_list_element *src, int ssize, int loc)
+static inline runlist_element *ntfs_rl_replace(runlist_element *dst,
+		int dsize, runlist_element *src, int ssize, int loc)
 {
 	BOOL left = FALSE;
 	BOOL right;
@@ -380,7 +380,7 @@ static inline run_list_element *ntfs_rl_replace(run_list_element *dst,
 		return dst;
 	/*
 	 * We are guaranteed to succeed from here so can start modifying the
-	 * original run lists.
+	 * original runlists.
 	 */
 	if (right)
 		__ntfs_rl_merge(src + ssize - 1, dst + loc + 1);
@@ -401,31 +401,31 @@ static inline run_list_element *ntfs_rl_replace(run_list_element *dst,
 }
 
 /**
- * ntfs_rl_split - insert a run list into the centre of a hole
- * @dst:	original run list to be worked on
+ * ntfs_rl_split - insert a runlist into the centre of a hole
+ * @dst:	original runlist to be worked on
  * @dsize:	number of elements in @dst (including end marker)
- * @src:	new run list to be inserted
+ * @src:	new runlist to be inserted
  * @ssize:	number of elements in @src (excluding end marker)
- * @loc:	index in run list @dst at which to split and insert @src
+ * @loc:	index in runlist @dst at which to split and insert @src
  *
- * Split the run list @dst at @loc into two and insert @new in between the two
- * fragments. No merging of run lists is necessary. Adjust the size of the
+ * Split the runlist @dst at @loc into two and insert @new in between the two
+ * fragments. No merging of runlists is necessary. Adjust the size of the
  * holes either side.
  *
- * It is up to the caller to serialize access to the run lists @dst and @src.
+ * It is up to the caller to serialize access to the runlists @dst and @src.
  *
- * On success, return a pointer to the new, combined, run list. Note, both
- * run lists @dst and @src are deallocated before returning so you cannot use
- * the pointers for anything any more. (Strictly speaking the returned run list
+ * On success, return a pointer to the new, combined, runlist. Note, both
+ * runlists @dst and @src are deallocated before returning so you cannot use
+ * the pointers for anything any more. (Strictly speaking the returned runlist
  * may be the same as @dst but this is irrelevant.)
  *
- * On error, return -errno. Both run lists are left unmodified. The following
+ * On error, return -errno. Both runlists are left unmodified. The following
  * error codes are defined:
- *	-ENOMEM	- Not enough memory to allocate run list array.
+ *	-ENOMEM	- Not enough memory to allocate runlist array.
  *	-EINVAL	- Invalid parameters were passed in.
  */
-static inline run_list_element *ntfs_rl_split(run_list_element *dst, int dsize,
-		run_list_element *src, int ssize, int loc)
+static inline runlist_element *ntfs_rl_split(runlist_element *dst, int dsize,
+		runlist_element *src, int ssize, int loc)
 {
 	BUG_ON(!dst);
 	BUG_ON(!src);
@@ -436,7 +436,7 @@ static inline run_list_element *ntfs_rl_split(run_list_element *dst, int dsize,
 		return dst;
 	/*
 	 * We are guaranteed to succeed from here so can start modifying the
-	 * original run lists.
+	 * original runlists.
 	 */
 
 	/* Move the tail of @dst out of the way, then copy in @src. */
@@ -452,17 +452,17 @@ static inline run_list_element *ntfs_rl_split(run_list_element *dst, int dsize,
 }
 
 /**
- * ntfs_merge_run_lists - merge two run_lists into one
- * @drl:	original run list to be worked on
- * @srl:	new run list to be merged into @drl
+ * ntfs_merge_runlists - merge two runlists into one
+ * @drl:	original runlist to be worked on
+ * @srl:	new runlist to be merged into @drl
  *
- * First we sanity check the two run lists @srl and @drl to make sure that they
- * are sensible and can be merged. The run list @srl must be either after the
- * run list @drl or completely within a hole (or unmapped region) in @drl.
+ * First we sanity check the two runlists @srl and @drl to make sure that they
+ * are sensible and can be merged. The runlist @srl must be either after the
+ * runlist @drl or completely within a hole (or unmapped region) in @drl.
  *
- * It is up to the caller to serialize access to the run lists @drl and @srl.
+ * It is up to the caller to serialize access to the runlists @drl and @srl.
  *
- * Merging of run lists is necessary in two cases:
+ * Merging of runlists is necessary in two cases:
  *   1. When attribute lists are used and a further extent is being mapped.
  *   2. When new clusters are allocated to fill a hole or extend a file.
  *
@@ -471,22 +471,22 @@ static inline run_list_element *ntfs_rl_split(run_list_element *dst, int dsize,
  *	- split the hole in two and be inserted between the two fragments,
  *	- be appended at the end of a hole, or it can
  *	- replace the whole hole.
- * It can also be appended to the end of the run list, which is just a variant
+ * It can also be appended to the end of the runlist, which is just a variant
  * of the insert case.
  *
- * On success, return a pointer to the new, combined, run list. Note, both
- * run lists @drl and @srl are deallocated before returning so you cannot use
- * the pointers for anything any more. (Strictly speaking the returned run list
+ * On success, return a pointer to the new, combined, runlist. Note, both
+ * runlists @drl and @srl are deallocated before returning so you cannot use
+ * the pointers for anything any more. (Strictly speaking the returned runlist
  * may be the same as @dst but this is irrelevant.)
  *
- * On error, return -errno. Both run lists are left unmodified. The following
+ * On error, return -errno. Both runlists are left unmodified. The following
  * error codes are defined:
- *	-ENOMEM	- Not enough memory to allocate run list array.
+ *	-ENOMEM	- Not enough memory to allocate runlist array.
  *	-EINVAL	- Invalid parameters were passed in.
- *	-ERANGE	- The run lists overlap and cannot be merged.
+ *	-ERANGE	- The runlists overlap and cannot be merged.
  */
-run_list_element *ntfs_merge_run_lists(run_list_element *drl,
-		run_list_element *srl)
+runlist_element *ntfs_merge_runlists(runlist_element *drl,
+		runlist_element *srl)
 {
 	int di, si;		/* Current index into @[ds]rl. */
 	int sstart;		/* First index with lcn > LCN_RL_NOT_MAPPED. */
@@ -507,21 +507,21 @@ run_list_element *ntfs_merge_run_lists(run_list_element *drl,
 	/* Check for silly calling... */
 	if (unlikely(!srl))
 		return drl;
-	if (unlikely(IS_ERR(srl) || IS_ERR(drl)))
+	if (IS_ERR(srl) || IS_ERR(drl))
 		return ERR_PTR(-EINVAL);
 
 	/* Check for the case where the first mapping is being done now. */
 	if (unlikely(!drl)) {
 		drl = srl;
-		/* Complete the source run list if necessary. */
+		/* Complete the source runlist if necessary. */
 		if (unlikely(drl[0].vcn)) {
-			/* Scan to the end of the source run list. */
+			/* Scan to the end of the source runlist. */
 			for (dend = 0; likely(drl[dend].length); dend++)
 				;
 			drl = ntfs_rl_realloc(drl, dend, dend + 1);
 			if (IS_ERR(drl))
 				return drl;
-			/* Insert start element at the front of the run list. */
+			/* Insert start element at the front of the runlist. */
 			ntfs_rl_mm(drl, 1, 0, dend);
 			drl[0].vcn = 0;
 			drl[0].lcn = LCN_RL_NOT_MAPPED;
@@ -532,11 +532,11 @@ run_list_element *ntfs_merge_run_lists(run_list_element *drl,
 
 	si = di = 0;
 
-	/* Skip any unmapped start element(s) in the source run_list. */
+	/* Skip any unmapped start element(s) in the source runlist. */
 	while (srl[si].length && srl[si].lcn < (LCN)LCN_HOLE)
 		si++;
 
-	/* Can't have an entirely unmapped source run list. */
+	/* Can't have an entirely unmapped source runlist. */
 	BUG_ON(!srl[si].length);
 
 	/* Record the starting points. */
@@ -560,7 +560,7 @@ run_list_element *ntfs_merge_run_lists(run_list_element *drl,
 		return ERR_PTR(-ERANGE);
 	}
 
-	/* Scan to the end of both run lists in order to know their sizes. */
+	/* Scan to the end of both runlists in order to know their sizes. */
 	for (send = si; srl[send].length; send++)
 		;
 	for (dend = di; drl[dend].length; dend++)
@@ -631,7 +631,7 @@ run_list_element *ntfs_merge_run_lists(run_list_element *drl,
 				goto finished;
 			}
 			/*
-			 * We need to create an unmapped run list element in
+			 * We need to create an unmapped runlist element in
 			 * @drl or extend an existing one before adding the
 			 * ENOENT terminator.
 			 */
@@ -640,7 +640,7 @@ run_list_element *ntfs_merge_run_lists(run_list_element *drl,
 				slots = 1;
 			}
 			if (drl[ds].lcn != (LCN)LCN_RL_NOT_MAPPED) {
-				/* Add an unmapped run list element. */
+				/* Add an unmapped runlist element. */
 				if (!slots) {
 					/* FIXME/TODO: We need to have the
 					 * extra memory already! (AIA) */
@@ -677,7 +677,7 @@ run_list_element *ntfs_merge_run_lists(run_list_element *drl,
 
 finished:
 	/* The merge was completed successfully. */
-	ntfs_debug("Merged run list:");
+	ntfs_debug("Merged runlist:");
 	ntfs_debug_dump_runlist(drl);
 	return drl;
 
@@ -688,45 +688,45 @@ critical_error:
 }
 
 /**
- * decompress_mapping_pairs - convert mapping pairs array to run list
+ * decompress_mapping_pairs - convert mapping pairs array to runlist
  * @vol:	ntfs volume on which the attribute resides
  * @attr:	attribute record whose mapping pairs array to decompress
- * @old_rl:	optional run list in which to insert @attr's run list
+ * @old_rl:	optional runlist in which to insert @attr's runlist
  *
- * It is up to the caller to serialize access to the run list @old_rl.
+ * It is up to the caller to serialize access to the runlist @old_rl.
  *
- * Decompress the attribute @attr's mapping pairs array into a run list. On
- * success, return the decompressed run list.
+ * Decompress the attribute @attr's mapping pairs array into a runlist. On
+ * success, return the decompressed runlist.
  *
- * If @old_rl is not NULL, decompressed run list is inserted into the
- * appropriate place in @old_rl and the resultant, combined run list is
+ * If @old_rl is not NULL, decompressed runlist is inserted into the
+ * appropriate place in @old_rl and the resultant, combined runlist is
  * returned. The original @old_rl is deallocated.
  *
  * On error, return -errno. @old_rl is left unmodified in that case.
  *
  * The following error codes are defined:
- *	-ENOMEM	- Not enough memory to allocate run list array.
- *	-EIO	- Corrupt run list.
+ *	-ENOMEM	- Not enough memory to allocate runlist array.
+ *	-EIO	- Corrupt runlist.
  *	-EINVAL	- Invalid parameters were passed in.
- *	-ERANGE	- The two run lists overlap.
+ *	-ERANGE	- The two runlists overlap.
  *
  * FIXME: For now we take the conceptionally simplest approach of creating the
- * new run list disregarding the already existing one and then splicing the
+ * new runlist disregarding the already existing one and then splicing the
  * two into one, if that is possible (we check for overlap and discard the new
- * run list if overlap present before returning ERR_PTR(-ERANGE)).
+ * runlist if overlap present before returning ERR_PTR(-ERANGE)).
  */
-run_list_element *decompress_mapping_pairs(const ntfs_volume *vol,
-		const ATTR_RECORD *attr, run_list_element *old_rl)
+runlist_element *decompress_mapping_pairs(const ntfs_volume *vol,
+		const ATTR_RECORD *attr, runlist_element *old_rl)
 {
 	VCN vcn;		/* Current vcn. */
 	LCN lcn;		/* Current lcn. */
 	s64 deltaxcn;		/* Change in [vl]cn. */
-	run_list_element *rl;	/* The output run list. */
+	runlist_element *rl;	/* The output runlist. */
 	u8 *buf;		/* Current position in mapping pairs array. */
 	u8 *attr_end;		/* End of attribute. */
-	int rlsize;		/* Size of run list buffer. */
-	u16 rlpos;		/* Current run list position in units of
-				   run_list_elements. */
+	int rlsize;		/* Size of runlist buffer. */
+	u16 rlpos;		/* Current runlist position in units of
+				   runlist_elements. */
 	u8 b;			/* Current byte offset in buf. */
 
 #ifdef DEBUG
@@ -748,9 +748,9 @@ run_list_element *decompress_mapping_pairs(const ntfs_volume *vol,
 		ntfs_error(vol->sb, "Corrupt attribute.");
 		return ERR_PTR(-EIO);
 	}
-	/* Current position in run list array. */
+	/* Current position in runlist array. */
 	rlpos = 0;
-	/* Allocate first page and set current run list size to one page. */
+	/* Allocate first page and set current runlist size to one page. */
 	rl = ntfs_malloc_nofs(rlsize = PAGE_SIZE);
 	if (unlikely(!rl))
 		return ERR_PTR(-ENOMEM);
@@ -768,7 +768,7 @@ run_list_element *decompress_mapping_pairs(const ntfs_volume *vol,
 		 * operates on whole pages only.
 		 */
 		if (((rlpos + 3) * sizeof(*old_rl)) > rlsize) {
-			run_list_element *rl2;
+			runlist_element *rl2;
 
 			rl2 = ntfs_malloc_nofs(rlsize + (int)PAGE_SIZE);
 			if (unlikely(!rl2)) {
@@ -780,7 +780,7 @@ run_list_element *decompress_mapping_pairs(const ntfs_volume *vol,
 			rl = rl2;
 			rlsize += PAGE_SIZE;
 		}
-		/* Enter the current vcn into the current run_list element. */
+		/* Enter the current vcn into the current runlist element. */
 		rl[rlpos].vcn = vcn;
 		/*
 		 * Get the change in vcn, i.e. the run length in clusters.
@@ -810,7 +810,7 @@ run_list_element *decompress_mapping_pairs(const ntfs_volume *vol,
 			goto err_out;
 		}
 		/*
-		 * Enter the current run length into the current run list
+		 * Enter the current run length into the current runlist
 		 * element.
 		 */
 		rl[rlpos].length = deltaxcn;
@@ -854,10 +854,10 @@ run_list_element *decompress_mapping_pairs(const ntfs_volume *vol,
 						"mapping pairs array.");
 				goto err_out;
 			}
-			/* Enter the current lcn into the run_list element. */
+			/* Enter the current lcn into the runlist element. */
 			rl[rlpos].lcn = lcn;
 		}
-		/* Get to the next run_list element. */
+		/* Get to the next runlist element. */
 		rlpos++;
 		/* Increment the buffer position to the next mapping pair. */
 		buf += (*buf & 0xf) + ((*buf >> 4) & 0xf) + 1;
@@ -866,7 +866,7 @@ run_list_element *decompress_mapping_pairs(const ntfs_volume *vol,
 		goto io_error;
 	/*
 	 * If there is a highest_vcn specified, it must be equal to the final
-	 * vcn in the run list - 1, or something has gone badly wrong.
+	 * vcn in the runlist - 1, or something has gone badly wrong.
 	 */
 	deltaxcn = sle64_to_cpu(attr->data.non_resident.highest_vcn);
 	if (unlikely(deltaxcn && vcn - 1 != deltaxcn)) {
@@ -875,7 +875,7 @@ mpa_err:
 				"non-resident attribute.");
 		goto err_out;
 	}
-	/* Setup not mapped run list element if this is the base extent. */
+	/* Setup not mapped runlist element if this is the base extent. */
 	if (!attr->data.non_resident.lowest_vcn) {
 		VCN max_cluster;
 
@@ -885,7 +885,7 @@ mpa_err:
 				vol->cluster_size_bits;
 		/*
 		 * If there is a difference between the highest_vcn and the
-		 * highest cluster, the run list is either corrupt or, more
+		 * highest cluster, the runlist is either corrupt or, more
 		 * likely, there are more extents following this one.
 		 */
 		if (deltaxcn < --max_cluster) {
@@ -908,21 +908,21 @@ mpa_err:
 	} else /* Not the base extent. There may be more extents to follow. */
 		rl[rlpos].lcn = (LCN)LCN_RL_NOT_MAPPED;
 
-	/* Setup terminating run_list element. */
+	/* Setup terminating runlist element. */
 	rl[rlpos].vcn = vcn;
 	rl[rlpos].length = (s64)0;
-	/* If no existing run list was specified, we are done. */
+	/* If no existing runlist was specified, we are done. */
 	if (!old_rl) {
 		ntfs_debug("Mapping pairs array successfully decompressed:");
 		ntfs_debug_dump_runlist(rl);
 		return rl;
 	}
-	/* Now combine the new and old run lists checking for overlaps. */
-	old_rl = ntfs_merge_run_lists(old_rl, rl);
+	/* Now combine the new and old runlists checking for overlaps. */
+	old_rl = ntfs_merge_runlists(old_rl, rl);
 	if (likely(!IS_ERR(old_rl)))
 		return old_rl;
 	ntfs_free(rl);
-	ntfs_error(vol->sb, "Failed to merge run lists.");
+	ntfs_error(vol->sb, "Failed to merge runlists.");
 	return old_rl;
 io_error:
 	ntfs_error(vol->sb, "Corrupt attribute.");
@@ -932,22 +932,25 @@ err_out:
 }
 
 /**
- * map_run_list - map (a part of) a run list of an ntfs inode
- * @ni:		ntfs inode for which to map (part of) a run list
- * @vcn:	map run list part containing this vcn
+ * ntfs_map_runlist - map (a part of) a runlist of an ntfs inode
+ * @ni:		ntfs inode for which to map (part of) a runlist
+ * @vcn:	map runlist part containing this vcn
  *
- * Map the part of a run list containing the @vcn of an the ntfs inode @ni.
+ * Map the part of a runlist containing the @vcn of the ntfs inode @ni.
  *
  * Return 0 on success and -errno on error.
+ *
+ * Locking: - The runlist must be unlocked on entry and is unlocked on return.
+ *	    - This function takes the lock for writing and modifies the runlist.
  */
-int map_run_list(ntfs_inode *ni, VCN vcn)
+int ntfs_map_runlist(ntfs_inode *ni, VCN vcn)
 {
 	ntfs_inode *base_ni;
-	attr_search_context *ctx;
+	ntfs_attr_search_ctx *ctx;
 	MFT_RECORD *mrec;
 	int err = 0;
 
-	ntfs_debug("Mapping run list part containing vcn 0x%llx.",
+	ntfs_debug("Mapping runlist part containing vcn 0x%llx.",
 			(unsigned long long)vcn);
 
 	if (!NInoAttr(ni))
@@ -958,69 +961,67 @@ int map_run_list(ntfs_inode *ni, VCN vcn)
 	mrec = map_mft_record(base_ni);
 	if (IS_ERR(mrec))
 		return PTR_ERR(mrec);
-	ctx = get_attr_search_ctx(base_ni, mrec);
-	if (!ctx) {
+	ctx = ntfs_attr_get_search_ctx(base_ni, mrec);
+	if (unlikely(!ctx)) {
 		err = -ENOMEM;
 		goto err_out;
 	}
-	if (!lookup_attr(ni->type, ni->name, ni->name_len, CASE_SENSITIVE, vcn,
-			NULL, 0, ctx)) {
-		put_attr_search_ctx(ctx);
-		err = -ENOENT;
-		goto err_out;
-	}
+	err = ntfs_attr_lookup(ni->type, ni->name, ni->name_len,
+			CASE_SENSITIVE, vcn, NULL, 0, ctx);
+	if (unlikely(err))
+		goto put_err_out;
 
-	down_write(&ni->run_list.lock);
+	down_write(&ni->runlist.lock);
 	/* Make sure someone else didn't do the work while we were sleeping. */
-	if (likely(vcn_to_lcn(ni->run_list.rl, vcn) <= LCN_RL_NOT_MAPPED)) {
-		run_list_element *rl;
+	if (likely(ntfs_vcn_to_lcn(ni->runlist.rl, vcn) <= LCN_RL_NOT_MAPPED)) {
+		runlist_element *rl;
 
 		rl = decompress_mapping_pairs(ni->vol, ctx->attr,
-				ni->run_list.rl);
-		if (unlikely(IS_ERR(rl)))
+				ni->runlist.rl);
+		if (IS_ERR(rl))
 			err = PTR_ERR(rl);
 		else
-			ni->run_list.rl = rl;
+			ni->runlist.rl = rl;
 	}
-	up_write(&ni->run_list.lock);
+	up_write(&ni->runlist.lock);
 
-	put_attr_search_ctx(ctx);
+put_err_out:
+	ntfs_attr_put_search_ctx(ctx);
 err_out:
 	unmap_mft_record(base_ni);
 	return err;
 }
 
 /**
- * vcn_to_lcn - convert a vcn into a lcn given a run list
- * @rl:		run list to use for conversion
+ * ntfs_vcn_to_lcn - convert a vcn into a lcn given a runlist
+ * @rl:		runlist to use for conversion
  * @vcn:	vcn to convert
  *
  * Convert the virtual cluster number @vcn of an attribute into a logical
- * cluster number (lcn) of a device using the run list @rl to map vcns to their
+ * cluster number (lcn) of a device using the runlist @rl to map vcns to their
  * corresponding lcns.
  *
- * It is up to the caller to serialize access to the run list @rl.
+ * It is up to the caller to serialize access to the runlist @rl.
  *
  * Since lcns must be >= 0, we use negative return values with special meaning:
  *
  * Return value			Meaning / Description
  * ==================================================
  *  -1 = LCN_HOLE		Hole / not allocated on disk.
- *  -2 = LCN_RL_NOT_MAPPED	This is part of the run list which has not been
- *				inserted into the run list yet.
+ *  -2 = LCN_RL_NOT_MAPPED	This is part of the runlist which has not been
+ *				inserted into the runlist yet.
  *  -3 = LCN_ENOENT		There is no such vcn in the attribute.
- *  -4 = LCN_EINVAL		Input parameter error (if debug enabled).
+ *
+ * Locking: - The caller must have locked the runlist (for reading or writing).
+ *	    - This function does not touch the lock.
  */
-LCN vcn_to_lcn(const run_list_element *rl, const VCN vcn)
+LCN ntfs_vcn_to_lcn(const runlist_element *rl, const VCN vcn)
 {
 	int i;
 
-#ifdef DEBUG
-	if (vcn < (VCN)0)
-		return (LCN)LCN_EINVAL;
-#endif
+	BUG_ON(vcn < 0);
 	/*
-	 * If rl is NULL, assume that we have found an unmapped run list. The
+	 * If rl is NULL, assume that we have found an unmapped runlist. The
 	 * caller can then attempt to map it and fail appropriately if
 	 * necessary.
 	 */
@@ -1049,7 +1050,104 @@ LCN vcn_to_lcn(const run_list_element *rl, const VCN vcn)
 }
 
 /**
- * find_attr - find (next) attribute in mft record
+ * ntfs_find_vcn - find a vcn in the runlist described by an ntfs inode
+ * @ni:		ntfs inode describing the runlist to search
+ * @vcn:	vcn to find
+ * @need_write:	if false, lock for reading and if true, lock for writing
+ *
+ * Find the virtual cluster number @vcn in the runlist described by the ntfs
+ * inode @ni and return the address of the runlist element containing the @vcn.
+ * The runlist is left locked and the caller has to unlock it.  If @need_write
+ * is true, the runlist is locked for writing and if @need_write is false, the
+ * runlist is locked for reading.  In the error case, the runlist is not left
+ * locked.
+ *
+ * Note you need to distinguish between the lcn of the returned runlist element
+ * being >= 0 and LCN_HOLE.  In the later case you have to return zeroes on
+ * read and allocate clusters on write.
+ *
+ * Return the runlist element containing the @vcn on success and
+ * ERR_PTR(-errno) on error.  You need to test the return value with IS_ERR()
+ * to decide if the return is success or failure and PTR_ERR() to get to the
+ * error code if IS_ERR() is true.
+ *
+ * The possible error return codes are:
+ *	-ENOENT - No such vcn in the runlist, i.e. @vcn is out of bounds.
+ *	-ENOMEM - Not enough memory to map runlist.
+ *	-EIO	- Critical error (runlist/file is corrupt, i/o error, etc).
+ *
+ * Locking: - The runlist must be unlocked on entry.
+ *	    - On failing return, the runlist is unlocked.
+ *	    - On successful return, the runlist is locked.  If @need_write us
+ *	      true, it is locked for writing.  Otherwise is is locked for
+ *	      reading.
+ */
+runlist_element *ntfs_find_vcn(ntfs_inode *ni, const VCN vcn,
+		const BOOL need_write)
+{
+	runlist_element *rl;
+	int err = 0;
+	BOOL is_retry = FALSE;
+
+	ntfs_debug("Entering for i_ino 0x%lx, vcn 0x%llx, lock for %sing.",
+			ni->mft_no, (unsigned long long)vcn,
+			!need_write ? "read" : "writ");
+	BUG_ON(!ni);
+	BUG_ON(!NInoNonResident(ni));
+	BUG_ON(vcn < 0);
+lock_retry_remap:
+	if (!need_write)
+		down_read(&ni->runlist.lock);
+	else
+		down_write(&ni->runlist.lock);
+	rl = ni->runlist.rl;
+	if (likely(rl && vcn >= rl[0].vcn)) {
+		while (likely(rl->length)) {
+			if (likely(vcn < rl[1].vcn)) {
+				if (likely(rl->lcn >= (LCN)LCN_HOLE)) {
+					ntfs_debug("Done.");
+					return rl;
+				}
+				break;
+			}
+			rl++;
+		}
+		if (likely(rl->lcn != (LCN)LCN_RL_NOT_MAPPED)) {
+			if (likely(rl->lcn == (LCN)LCN_ENOENT))
+				err = -ENOENT;
+			else
+				err = -EIO;
+		}
+	}
+	if (!need_write)
+		up_read(&ni->runlist.lock);
+	else
+		up_write(&ni->runlist.lock);
+	if (!err && !is_retry) {
+		/*
+		 * The @vcn is in an unmapped region, map the runlist and
+		 * retry.
+		 */
+		err = ntfs_map_runlist(ni, vcn);
+		if (likely(!err)) {
+			is_retry = TRUE;
+			goto lock_retry_remap;
+		}
+		/*
+		 * -EINVAL and -ENOENT coming from a failed mapping attempt are
+		 * equivalent to i/o errors for us as they should not happen in
+		 * our code paths.
+		 */
+		if (err == -EINVAL || err == -ENOENT)
+			err = -EIO;
+	} else if (!err)
+		err = -EIO;
+	ntfs_error(ni->vol->sb, "Failed with error code %i.", err);
+	return ERR_PTR(err);
+}
+
+/**
+ * ntfs_attr_find - find (next) attribute in mft record
  * @type:	attribute type to find
  * @name:	attribute name to find (optional, i.e. NULL means don't care)
  * @name_len:	attribute name length (only needed if @name present)
@@ -1058,47 +1156,56 @@ LCN vcn_to_lcn(const run_list_element *rl, const VCN vcn)
  * @val_len:	attribute value length
  * @ctx:	search context with mft record and attribute to search from
  *
- * You shouldn't need to call this function directly. Use lookup_attr() instead.
+ * You should not need to call this function directly.  Use ntfs_attr_lookup()
+ * instead.
  *
- * find_attr() takes a search context @ctx as parameter and searches the mft
- * record specified by @ctx->mrec, beginning at @ctx->attr, for an attribute of
- * @type, optionally @name and @val. If found, find_attr() returns TRUE and
- * @ctx->attr will point to the found attribute. If not found, find_attr()
- * returns FALSE and @ctx->attr is undefined (i.e. do not rely on it not
- * changing).
+ * ntfs_attr_find() takes a search context @ctx as parameter and searches the
+ * mft record specified by @ctx->mrec, beginning at @ctx->attr, for an
+ * attribute of @type, optionally @name and @val.
  *
- * If @ctx->is_first is TRUE, the search begins with @ctx->attr itself. If it
+ * If the attribute is found, ntfs_attr_find() returns 0 and @ctx->attr will
+ * point to the found attribute.
+ *
+ * If the attribute is not found, ntfs_attr_find() returns -ENOENT and
+ * @ctx->attr will point to the attribute before which the attribute being
+ * searched for would need to be inserted if such an action were to be desired.
+ *
+ * On actual error, ntfs_attr_find() returns -EIO.  In this case @ctx->attr is
+ * undefined and in particular do not rely on it not changing.
+ *
+ * If @ctx->is_first is TRUE, the search begins with @ctx->attr itself.  If it
  * is FALSE, the search begins after @ctx->attr.
  *
  * If @ic is IGNORE_CASE, the @name comparisson is not case sensitive and
  * @ctx->ntfs_ino must be set to the ntfs inode to which the mft record
- * @ctx->mrec belongs. This is so we can get at the ntfs volume and hence at
- * the upcase table. If @ic is CASE_SENSITIVE, the comparison is case
- * sensitive. When @name is present, @name_len is the @name length in Unicode
+ * @ctx->mrec belongs.  This is so we can get at the ntfs volume and hence at
+ * the upcase table.  If @ic is CASE_SENSITIVE, the comparison is case
+ * sensitive.  When @name is present, @name_len is the @name length in Unicode
  * characters.
  *
  * If @name is not present (NULL), we assume that the unnamed attribute is
  * being searched for.
  *
- * Finally, the resident attribute value @val is looked for, if present. If @val
- * is not present (NULL), @val_len is ignored.
+ * Finally, the resident attribute value @val is looked for, if present.  If
+ * @val is not present (NULL), @val_len is ignored.
  *
- * find_attr() only searches the specified mft record and it ignores the
+ * ntfs_attr_find() only searches the specified mft record and it ignores the
  * presence of an attribute list attribute (unless it is the one being searched
- * for, obviously). If you need to take attribute lists into consideration, use
- * lookup_attr() instead (see below). This also means that you cannot use
- * find_attr() to search for extent records of non-resident attributes, as
- * extents with lowest_vcn != 0 are usually described by the attribute list
- * attribute only. - Note that it is possible that the first extent is only in
- * the attribute list while the last extent is in the base mft record, so don't
- * rely on being able to find the first extent in the base mft record.
+ * for, obviously).  If you need to take attribute lists into consideration,
+ * use ntfs_attr_lookup() instead (see below).  This also means that you cannot
+ * use ntfs_attr_find() to search for extent records of non-resident
+ * attributes, as extents with lowest_vcn != 0 are usually described by the
+ * attribute list attribute only. - Note that it is possible that the first
+ * extent is only in the attribute list while the last extent is in the base
+ * mft record, so do not rely on being able to find the first extent in the
+ * base mft record.
  *
  * Warning: Never use @val when looking for attribute types which can be
  *	    non-resident as this most likely will result in a crash!
  */
-BOOL find_attr(const ATTR_TYPES type, const ntfschar *name, const u32 name_len,
-		const IGNORE_CASE_BOOL ic, const u8 *val, const u32 val_len,
-		attr_search_context *ctx)
+static int ntfs_attr_find(const ATTR_TYPE type, const ntfschar *name,
+		const u32 name_len, const IGNORE_CASE_BOOL ic,
+		const u8 *val, const u32 val_len, ntfs_attr_search_ctx *ctx)
 {
 	ATTR_RECORD *a;
 	ntfs_volume *vol;
@@ -1129,21 +1236,21 @@ BOOL find_attr(const ATTR_TYPES type, const ntfschar *name, const u32 name_len,
 				le32_to_cpu(ctx->mrec->bytes_allocated))
 			break;
 		ctx->attr = a;
-		/* We catch $END with this more general check, too... */
-		if (le32_to_cpu(a->type) > le32_to_cpu(type))
-			return FALSE;
+		if (unlikely(le32_to_cpu(a->type) > le32_to_cpu(type) ||
+				a->type == AT_END))
+			return -ENOENT;
 		if (unlikely(!a->length))
 			break;
 		if (a->type != type)
 			continue;
 		/*
-		 * If @name is present, compare the two names. If @name is
+		 * If @name is present, compare the two names.  If @name is
 		 * missing, assume we want an unnamed attribute.
 		 */
 		if (!name) {
 			/* The search failed if the found attribute is named. */
 			if (a->name_length)
-				return FALSE;
+				return -ENOENT;
 		} else if (!ntfs_are_names_equal(name, name_len,
 			    (ntfschar*)((u8*)a + le16_to_cpu(a->name_offset)),
 			    a->name_length, ic, upcase, upcase_len)) {
@@ -1151,7 +1258,7 @@ BOOL find_attr(const ATTR_TYPES type, const ntfschar *name, const u32 name_len,
 
 			rc = ntfs_collate_names(name, name_len,
 					(ntfschar*)((u8*)a +
-						le16_to_cpu(a->name_offset)),
+					le16_to_cpu(a->name_offset)),
 					a->name_length, 1, IGNORE_CASE,
 					upcase, upcase_len);
 			/*
@@ -1159,67 +1266,66 @@ BOOL find_attr(const ATTR_TYPES type, const ntfschar *name, const u32 name_len,
 			 * matching attribute.
 			 */
 			if (rc == -1)
-				return FALSE;
+				return -ENOENT;
 			/* If the strings are not equal, continue search. */
 			if (rc)
 				continue;
 			rc = ntfs_collate_names(name, name_len,
 					(ntfschar*)((u8*)a +
-						le16_to_cpu(a->name_offset)),
+					le16_to_cpu(a->name_offset)),
 					a->name_length, 1, CASE_SENSITIVE,
 					upcase, upcase_len);
 			if (rc == -1)
-				return FALSE;
+				return -ENOENT;
 			if (rc)
 				continue;
 		}
 		/*
 		 * The names match or @name not present and attribute is
-		 * unnamed. If no @val specified, we have found the attribute
+		 * unnamed.  If no @val specified, we have found the attribute
 		 * and are done.
 		 */
 		if (!val)
-			return TRUE;
+			return 0;
 		/* @val is present; compare values. */
 		else {
-			u32 vl;
 			register int rc;
 
-			vl = le32_to_cpu(a->data.resident.value_length);
-			if (vl > val_len)
-				vl = val_len;
-
 			rc = memcmp(val, (u8*)a + le16_to_cpu(
-					a->data.resident.value_offset), vl);
+					a->data.resident.value_offset),
+					min_t(u32, val_len, le32_to_cpu(
+					a->data.resident.value_length)));
 			/*
 			 * If @val collates before the current attribute's
 			 * value, there is no matching attribute.
 			 */
 			if (!rc) {
 				register u32 avl;
+
 				avl = le32_to_cpu(
 						a->data.resident.value_length);
 				if (val_len == avl)
-					return TRUE;
+					return 0;
 				if (val_len < avl)
-					return FALSE;
+					return -ENOENT;
 			} else if (rc < 0)
-				return FALSE;
+				return -ENOENT;
 		}
 	}
-	ntfs_error(NULL, "Inode is corrupt. Run chkdsk.");
-	return FALSE;
+	ntfs_error(NULL, "Inode is corrupt.  Run chkdsk.");
+	NVolSetErrors(vol);
+	return -EIO;
 }
 
 /**
  * load_attribute_list - load an attribute list into memory
  * @vol:		ntfs volume from which to read
- * @run_list:		run list of the attribute list
+ * @runlist:		runlist of the attribute list
  * @al_start:		destination buffer
  * @size:		size of the destination buffer in bytes
  * @initialized_size:	initialized size of the attribute list
  *
- * Walk the run list @run_list and load all clusters from it copying them into
+ * Walk the runlist @runlist and load all clusters from it copying them into
  * the linear buffer @al. The maximum number of bytes copied to @al is @size
  * bytes. Note, @size does not need to be a multiple of the cluster size. If
  * @initialized_size is less than @size, the region in @al between
@@ -1227,13 +1333,13 @@ BOOL find_attr(const ATTR_TYPES type, const ntfschar *name, const u32 name_len,
  *
  * Return 0 on success or -errno on error.
  */
-int load_attribute_list(ntfs_volume *vol, run_list *run_list, u8 *al_start,
+int load_attribute_list(ntfs_volume *vol, runlist *runlist, u8 *al_start,
 		const s64 size, const s64 initialized_size)
 {
 	LCN lcn;
 	u8 *al = al_start;
 	u8 *al_end = al + initialized_size;
-	run_list_element *rl;
+	runlist_element *rl;
 	struct buffer_head *bh;
 	struct super_block *sb;
 	unsigned long block_size;
@@ -1242,7 +1348,7 @@ int load_attribute_list(ntfs_volume *vol, run_list *run_list, u8 *al_start,
 	unsigned char block_size_bits;
 
 	ntfs_debug("Entering.");
-	if (!vol || !run_list || !al || size <= 0 || initialized_size < 0 ||
+	if (!vol || !runlist || !al || size <= 0 || initialized_size < 0 ||
 			initialized_size > size)
 		return -EINVAL;
 	if (!initialized_size) {
@@ -1252,17 +1358,17 @@ int load_attribute_list(ntfs_volume *vol, run_list *run_list, u8 *al_start,
 	sb = vol->sb;
 	block_size = sb->s_blocksize;
 	block_size_bits = sb->s_blocksize_bits;
-	down_read(&run_list->lock);
-	rl = run_list->rl;
-	/* Read all clusters specified by the run list one run at a time. */
+	down_read(&runlist->lock);
+	rl = runlist->rl;
+	/* Read all clusters specified by the runlist one run at a time. */
 	while (rl->length) {
-		lcn = vcn_to_lcn(rl, rl->vcn);
+		lcn = ntfs_vcn_to_lcn(rl, rl->vcn);
 		ntfs_debug("Reading vcn = 0x%llx, lcn = 0x%llx.",
 				(unsigned long long)rl->vcn,
 				(unsigned long long)lcn);
 		/* The attribute list cannot be sparse. */
 		if (lcn < 0) {
-			ntfs_error(sb, "vcn_to_lcn() failed. Cannot read "
+			ntfs_error(sb, "ntfs_vcn_to_lcn() failed. Cannot read "
 					"attribute list.");
 			goto err_out;
 		}
@@ -1292,7 +1398,7 @@ initialize:
 		memset(al_start + initialized_size, 0, size - initialized_size);
 	}
 done:
-	up_read(&run_list->lock);
+	up_read(&runlist->lock);
 	return err;
 do_final:
 	if (al < al_end) {
@@ -1320,7 +1426,7 @@ err_out:
 }
 
 /**
- * find_external_attr - find an attribute in the attribute list of an ntfs inode
+ * ntfs_external_attr_find - find an attribute in the attribute list of an inode
  * @type:	attribute type to find
  * @name:	attribute name to find (optional, i.e. NULL means don't care)
  * @name_len:	attribute name length (only needed if @name present)
@@ -1330,34 +1436,49 @@ err_out:
  * @val_len:	attribute value length
  * @ctx:	search context with mft record and attribute to search from
  *
- * You shouldn't need to call this function directly. Use lookup_attr() instead.
+ * You should not need to call this function directly.  Use ntfs_attr_lookup()
+ * instead.
  *
  * Find an attribute by searching the attribute list for the corresponding
- * attribute list entry. Having found the entry, map the mft record for read
- * if the attribute is in a different mft record/inode, find_attr the attribute
+ * attribute list entry.  Having found the entry, map the mft record if the
+ * attribute is in a different mft record/inode, ntfs_attr_find() the attribute
  * in there and return it.
  *
  * On first search @ctx->ntfs_ino must be the base mft record and @ctx must
- * have been obtained from a call to get_attr_search_ctx(). On subsequent calls
- * @ctx->ntfs_ino can be any extent inode, too (@ctx->base_ntfs_ino is then the
- * base inode).
+ * have been obtained from a call to ntfs_attr_get_search_ctx().  On subsequent
+ * calls @ctx->ntfs_ino can be any extent inode, too (@ctx->base_ntfs_ino is
+ * then the base inode).
  *
  * After finishing with the attribute/mft record you need to call
- * put_attr_search_ctx() to cleanup the search context (unmapping any mapped
- * inodes, etc).
+ * ntfs_attr_put_search_ctx() to cleanup the search context (unmapping any
+ * mapped inodes, etc).
  *
- * Return TRUE if the search was successful and FALSE if not. When TRUE,
- * @ctx->attr is the found attribute and it is in mft record @ctx->mrec. When
- * FALSE, @ctx->attr is the attribute which collates just after the attribute
- * being searched for in the base ntfs inode, i.e. if one wants to add the
- * attribute to the mft record this is the correct place to insert it into
- * and if there is not enough space, the attribute should be placed in an
- * extent mft record.
+ * If the attribute is found, ntfs_external_attr_find() returns 0 and
+ * @ctx->attr will point to the found attribute.  @ctx->mrec will point to the
+ * mft record in which @ctx->attr is located and @ctx->al_entry will point to
+ * the attribute list entry for the attribute.
+ *
+ * If the attribute is not found, ntfs_external_attr_find() returns -ENOENT and
+ * @ctx->attr will point to the attribute in the base mft record before which
+ * the attribute being searched for would need to be inserted if such an action
+ * were to be desired.  @ctx->mrec will point to the mft record in which
+ * @ctx->attr is located and @ctx->al_entry will point to the attribute list
+ * entry of the attribute before which the attribute being searched for would
+ * need to be inserted if such an action were to be desired.
+ *
+ * Thus to insert the not found attribute, one wants to add the attribute to
+ * @ctx->mrec (the base mft record) and if there is not enough space, the
+ * attribute should be placed in a newly allocated extent mft record.  The
+ * attribute list entry for the inserted attribute should be inserted in the
+ * attribute list attribute at @ctx->al_entry.
+ *
+ * On actual error, ntfs_external_attr_find() returns -EIO.  In this case
+ * @ctx->attr is undefined and in particular do not rely on it not changing.
  */
-static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
-		const u32 name_len, const IGNORE_CASE_BOOL ic,
-		const VCN lowest_vcn, const u8 *val, const u32 val_len,
-		attr_search_context *ctx)
+static int ntfs_external_attr_find(const ATTR_TYPE type,
+		const ntfschar *name, const u32 name_len,
+		const IGNORE_CASE_BOOL ic, const VCN lowest_vcn,
+		const u8 *val, const u32 val_len, ntfs_attr_search_ctx *ctx)
 {
 	ntfs_inode *base_ni, *ni;
 	ntfs_volume *vol;
@@ -1366,6 +1487,8 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 	ATTR_RECORD *a;
 	ntfschar *al_name;
 	u32 al_name_len;
+	int err = 0;
+	static const char *es = " Unmount and run chkdsk.";
 
 	ni = ctx->ntfs_ino;
 	base_ni = ctx->base_ntfs_ino;
@@ -1377,6 +1500,8 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 	}
 	if (ni == base_ni)
 		ctx->base_attr = ctx->attr;
+	if (type == AT_END)
+		goto not_found;
 	vol = base_ni->vol;
 	al_start = base_ni->attr_list;
 	al_end = al_start + base_ni->attr_list_size;
@@ -1413,7 +1538,7 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 		if (type != al_entry->type)
 			continue;
 		/*
-		 * If @name is present, compare the two names. If @name is
+		 * If @name is present, compare the two names.  If @name is
 		 * missing, assume we want an unnamed attribute.
 		 */
 		al_name_len = al_entry->name_length;
@@ -1439,10 +1564,11 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 				continue;
 			/*
 			 * FIXME: Reverse engineering showed 0, IGNORE_CASE but
-			 * that is inconsistent with find_attr(). The subsequent
-			 * rc checks were also different. Perhaps I made a
-			 * mistake in one of the two. Need to recheck which is
-			 * correct or at least see what is going on... (AIA)
+			 * that is inconsistent with ntfs_attr_find().  The
+			 * subsequent rc checks were also different.  Perhaps I
+			 * made a mistake in one of the two.  Need to recheck
+			 * which is correct or at least see what is going on...
+			 * (AIA)
 			 */
 			rc = ntfs_collate_names(name, name_len, al_name,
 					al_name_len, 1, CASE_SENSITIVE,
@@ -1454,8 +1580,8 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 		}
 		/*
 		 * The names match or @name not present and attribute is
-		 * unnamed. Now check @lowest_vcn. Continue search if the
-		 * next attribute list entry still fits @lowest_vcn. Otherwise
+		 * unnamed.  Now check @lowest_vcn.  Continue search if the
+		 * next attribute list entry still fits @lowest_vcn.  Otherwise
 		 * we have reached the right one or the search has failed.
 		 */
 		if (lowest_vcn && (u8*)next_al_entry >= al_start	    &&
@@ -1463,7 +1589,7 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 				(u8*)next_al_entry + le16_to_cpu(
 					next_al_entry->length) <= al_end    &&
 				sle64_to_cpu(next_al_entry->lowest_vcn) <=
-					sle64_to_cpu(lowest_vcn)	    &&
+					lowest_vcn			    &&
 				next_al_entry->type == al_entry->type	    &&
 				next_al_entry->name_length == al_name_len   &&
 				ntfs_are_names_equal((ntfschar*)((u8*)
@@ -1476,7 +1602,10 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 		if (MREF_LE(al_entry->mft_reference) == ni->mft_no) {
 			if (MSEQNO_LE(al_entry->mft_reference) != ni->seq_no) {
 				ntfs_error(vol->sb, "Found stale mft "
-						"reference in attribute list!");
+						"reference in attribute list "
+						"of base inode 0x%lx.%s",
+						base_ni->mft_no, es);
+				err = -EIO;
 				break;
 			}
 		} else { /* Mft references do not match. */
@@ -1491,13 +1620,20 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 			} else {
 				/* We want an extent record. */
 				ctx->mrec = map_extent_mft_record(base_ni,
-						al_entry->mft_reference, &ni);
+						le64_to_cpu(
+						al_entry->mft_reference), &ni);
 				ctx->ntfs_ino = ni;
 				if (IS_ERR(ctx->mrec)) {
-					ntfs_error(vol->sb, "Failed to map mft "
-							"record, error code "
-							"%ld.",
-							-PTR_ERR(ctx->mrec));
+					ntfs_error(vol->sb, "Failed to map "
+							"extent mft record "
+							"0x%lx of base inode "
+							"0x%lx.%s",
+							MREF_LE(al_entry->
+							mft_reference),
+							base_ni->mft_no, es);
+					err = PTR_ERR(ctx->mrec);
+					if (err == -ENOENT)
+						err = -EIO;
 					break;
 				}
 			}
@@ -1510,14 +1646,14 @@ static BOOL find_external_attr(const ATTR_TYPES type, const ntfschar *name,
 		 * current al_entry.
 		 */
 		/*
-		 * We could call into find_attr() to find the right attribute
-		 * in this mft record but this would be less efficient and not
-		 * quite accurate as find_attr() ignores the attribute instance
-		 * numbers for example which become important when one plays
-		 * with attribute lists. Also, because a proper match has been
-		 * found in the attribute list entry above, the comparison can
-		 * now be optimized. So it is worth re-implementing a
-		 * simplified find_attr() here.
+		 * We could call into ntfs_attr_find() to find the right
+		 * attribute in this mft record but this would be less
+		 * efficient and not quite accurate as ntfs_attr_find() ignores
+		 * the attribute instance numbers for example which become
+		 * important when one plays with attribute lists.  Also,
+		 * because a proper match has been found in the attribute list
+		 * entry above, the comparison can now be optimized.  So it is
+		 * worth re-implementing a simplified ntfs_attr_find() here.
 		 */
 		a = ctx->attr;
 		/*
@@ -1534,18 +1670,18 @@ do_next_attr_loop:
 			break;
 		if (al_entry->instance != a->instance)
 			goto do_next_attr;
+		/*
+		 * If the type and/or the name are mismatched between the
+		 * attribute list entry and the attribute record, there is
+		 * corruption so we break and return error EIO.
+		 */
 		if (al_entry->type != a->type)
-			continue;
-		if (name) {
-			if (a->name_length != al_name_len)
-				continue;
-			if (!ntfs_are_names_equal((ntfschar*)((u8*)a +
-					le16_to_cpu(a->name_offset)),
-					a->name_length, al_name, al_name_len,
-					CASE_SENSITIVE, vol->upcase,
-					vol->upcase_len))
-				continue;
-		}
+			break;
+		if (!ntfs_are_names_equal((ntfschar*)((u8*)a +
+				le16_to_cpu(a->name_offset)), a->name_length,
+				al_name, al_name_len, CASE_SENSITIVE,
+				vol->upcase, vol->upcase_len))
+			break;
 		ctx->attr = a;
 		/*
 		 * If no @val specified or @val specified and it matches, we
@@ -1557,46 +1693,78 @@ do_next_attr_loop:
 				le16_to_cpu(a->data.resident.value_offset),
 				val, val_len))) {
 			ntfs_debug("Done, found.");
-			return TRUE;
+			return 0;
 		}
 do_next_attr:
 		/* Proceed to the next attribute in the current mft record. */
 		a = (ATTR_RECORD*)((u8*)a + le32_to_cpu(a->length));
 		goto do_next_attr_loop;
 	}
-	ntfs_error(base_ni->vol->sb, "Inode contains corrupt attribute list "
-			"attribute.");
+	if (!err) {
+		ntfs_error(vol->sb, "Base inode 0x%lx contains corrupt "
+				"attribute list attribute.%s", base_ni->mft_no,
+				es);
+		err = -EIO;
+	}
 	if (ni != base_ni) {
 		unmap_extent_mft_record(ni);
 		ctx->ntfs_ino = base_ni;
 		ctx->mrec = ctx->base_mrec;
 		ctx->attr = ctx->base_attr;
 	}
-	/*
-	 * FIXME: We absolutely have to return ERROR status instead of just
-	 * false or we will blow up or even worse cause corruption when we add
-	 * write support and we reach this code path!
-	 */
-	printk(KERN_CRIT "NTFS: FIXME: Hit unfinished error code path!!!\n");
-	return FALSE;
+	if (err != -ENOMEM)
+		NVolSetErrors(vol);
+	return err;
 not_found:
 	/*
-	 * Seek to the end of the base mft record, i.e. when we return false,
-	 * ctx->mrec and ctx->attr indicate where the attribute should be
-	 * inserted into the attribute record.
-	 * And of course ctx->al_entry points to the end of the attribute
-	 * list inside NTFS_I(ctx->base_vfs_ino)->attr_list.
-	 *
-	 * FIXME: Do we really want to do this here? Think about it... (AIA)
+	 * If we were looking for AT_END, we reset the search context @ctx and
+	 * use ntfs_attr_find() to seek to the end of the base mft record.
 	 */
-	reinit_attr_search_ctx(ctx);
-	find_attr(type, name, name_len, ic, val, val_len, ctx);
+	if (type == AT_END) {
+		ntfs_attr_reinit_search_ctx(ctx);
+		return ntfs_attr_find(AT_END, name, name_len, ic, val, val_len,
+				ctx);
+	}
+	/*
+	 * The attribute was not found.  Before we return, we want to ensure
+	 * @ctx->mrec and @ctx->attr indicate the position at which the
+	 * attribute should be inserted in the base mft record.  Since we also
+	 * want to preserve @ctx->al_entry we cannot reinitialize the search
+	 * context using ntfs_attr_reinit_search_ctx() as this would set
+	 * @ctx->al_entry to NULL.  Thus we do the necessary bits manually (see
+	 * ntfs_attr_init_search_ctx() below).  Note, we _only_ preserve
+	 * @ctx->al_entry as the remaining fields (base_*) are identical to
+	 * their non base_ counterparts and we cannot set @ctx->base_attr
+	 * correctly yet as we do not know what @ctx->attr will be set to by
+	 * the call to ntfs_attr_find() below.
+	 */
+	if (ni != base_ni)
+		unmap_extent_mft_record(ni);
+	ctx->mrec = ctx->base_mrec;
+	ctx->attr = (ATTR_RECORD*)((u8*)ctx->mrec +
+			le16_to_cpu(ctx->mrec->attrs_offset));
+	ctx->is_first = TRUE;
+	ctx->ntfs_ino = base_ni;
+	ctx->base_ntfs_ino = NULL;
+	ctx->base_mrec = NULL;
+	ctx->base_attr = NULL;
+	/*
+	 * In case there are multiple matches in the base mft record, need to
+	 * keep enumerating until we get an attribute not found response (or
+	 * another error), otherwise we would keep returning the same attribute
+	 * over and over again and all programs using us for enumeration would
+	 * lock up in a tight loop.
+	 */
+	do {
+		err = ntfs_attr_find(type, name, name_len, ic, val, val_len,
+				ctx);
+	} while (!err);
 	ntfs_debug("Done, not found.");
-	return FALSE;
+	return err;
 }
 
 /**
- * lookup_attr - find an attribute in an ntfs inode
+ * ntfs_attr_lookup - find an attribute in an ntfs inode
  * @type:	attribute type to find
  * @name:	attribute name to find (optional, i.e. NULL means don't care)
  * @name_len:	attribute name length (only needed if @name present)
@@ -1606,27 +1774,38 @@ not_found:
  * @val_len:	attribute value length
  * @ctx:	search context with mft record and attribute to search from
  *
- * Find an attribute in an ntfs inode. On first search @ctx->ntfs_ino must
+ * Find an attribute in an ntfs inode.  On first search @ctx->ntfs_ino must
  * be the base mft record and @ctx must have been obtained from a call to
- * get_attr_search_ctx().
+ * ntfs_attr_get_search_ctx().
  *
  * This function transparently handles attribute lists and @ctx is used to
  * continue searches where they were left off at.
  *
  * After finishing with the attribute/mft record you need to call
- * put_attr_search_ctx() to cleanup the search context (unmapping any mapped
- * inodes, etc).
+ * ntfs_attr_put_search_ctx() to cleanup the search context (unmapping any
+ * mapped inodes, etc).
  *
- * Return TRUE if the search was successful and FALSE if not. When TRUE,
- * @ctx->attr is the found attribute and it is in mft record @ctx->mrec. When
- * FALSE, @ctx->attr is the attribute which collates just after the attribute
- * being searched for, i.e. if one wants to add the attribute to the mft
- * record this is the correct place to insert it into.
+ * Return 0 if the search was successful and -errno if not.
+ *
+ * When 0, @ctx->attr is the found attribute and it is in mft record
+ * @ctx->mrec.  If an attribute list attribute is present, @ctx->al_entry is
+ * the attribute list entry of the found attribute.
+ *
+ * When -ENOENT, @ctx->attr is the attribute which collates just after the
+ * attribute being searched for, i.e. if one wants to add the attribute to the
+ * mft record this is the correct place to insert it into.  If an attribute
+ * list attribute is present, @ctx->al_entry is the attribute list entry which
+ * collates just after the attribute list entry of the attribute being searched
+ * for, i.e. if one wants to add the attribute to the mft record this is the
+ * correct place to insert its attribute list entry into.
+ *
+ * When -errno != -ENOENT, an error occured during the lookup.  @ctx->attr is
+ * then undefined and in particular you should not rely on it not changing.
  */
-BOOL lookup_attr(const ATTR_TYPES type, const ntfschar *name,
+int ntfs_attr_lookup(const ATTR_TYPE type, const ntfschar *name,
 		const u32 name_len, const IGNORE_CASE_BOOL ic,
 		const VCN lowest_vcn, const u8 *val, const u32 val_len,
-		attr_search_context *ctx)
+		ntfs_attr_search_ctx *ctx)
 {
 	ntfs_inode *base_ni;
 
@@ -1637,21 +1816,22 @@ BOOL lookup_attr(const ATTR_TYPES type, const ntfschar *name,
 		base_ni = ctx->ntfs_ino;
 	/* Sanity check, just for debugging really. */
 	BUG_ON(!base_ni);
-	if (!NInoAttrList(base_ni))
-		return find_attr(type, name, name_len, ic, val, val_len, ctx);
-	return find_external_attr(type, name, name_len, ic, lowest_vcn, val,
-			val_len, ctx);
+	if (!NInoAttrList(base_ni) || type == AT_ATTRIBUTE_LIST)
+		return ntfs_attr_find(type, name, name_len, ic, val, val_len,
+				ctx);
+	return ntfs_external_attr_find(type, name, name_len, ic, lowest_vcn,
+			val, val_len, ctx);
 }
 
 /**
- * init_attr_search_ctx - initialize an attribute search context
+ * ntfs_attr_init_search_ctx - initialize an attribute search context
  * @ctx:	attribute search context to initialize
  * @ni:		ntfs inode with which to initialize the search context
  * @mrec:	mft record with which to initialize the search context
  *
  * Initialize the attribute search context @ctx with @ni and @mrec.
  */
-static inline void init_attr_search_ctx(attr_search_context *ctx,
+static inline void ntfs_attr_init_search_ctx(ntfs_attr_search_ctx *ctx,
 		ntfs_inode *ni, MFT_RECORD *mrec)
 {
 	ctx->mrec = mrec;
@@ -1666,7 +1846,7 @@ static inline void init_attr_search_ctx(attr_search_context *ctx,
 }
 
 /**
- * reinit_attr_search_ctx - reinitialize an attribute search context
+ * ntfs_attr_reinit_search_ctx - reinitialize an attribute search context
  * @ctx:	attribute search context to reinitialize
  *
  * Reinitialize the attribute search context @ctx, unmapping an associated
@@ -1675,7 +1855,7 @@ static inline void init_attr_search_ctx(attr_search_context *ctx,
  * This is used when a search for a new attribute is being started to reset
  * the search context to the beginning.
  */
-void reinit_attr_search_ctx(attr_search_context *ctx)
+void ntfs_attr_reinit_search_ctx(ntfs_attr_search_ctx *ctx)
 {
 	if (likely(!ctx->base_ntfs_ino)) {
 		/* No attribute list. */
@@ -1683,44 +1863,48 @@ void reinit_attr_search_ctx(attr_search_context *ctx)
 		/* Sanity checks are performed elsewhere. */
 		ctx->attr = (ATTR_RECORD*)((u8*)ctx->mrec +
 				le16_to_cpu(ctx->mrec->attrs_offset));
+		/*
+		 * This needs resetting due to ntfs_external_attr_find() which
+		 * can leave it set despite having zeroed ctx->base_ntfs_ino.
+		 */
+		ctx->al_entry = NULL;
 		return;
 	} /* Attribute list. */
 	if (ctx->ntfs_ino != ctx->base_ntfs_ino)
 		unmap_extent_mft_record(ctx->ntfs_ino);
-	init_attr_search_ctx(ctx, ctx->base_ntfs_ino, ctx->base_mrec);
+	ntfs_attr_init_search_ctx(ctx, ctx->base_ntfs_ino, ctx->base_mrec);
 	return;
 }
 
 /**
- * get_attr_search_ctx - allocate and initialize a new attribute search context
+ * ntfs_attr_get_search_ctx - allocate/initialize a new attribute search context
  * @ni:		ntfs inode with which to initialize the search context
  * @mrec:	mft record with which to initialize the search context
  *
  * Allocate a new attribute search context, initialize it with @ni and @mrec,
  * and return it. Return NULL if allocation failed.
  */
-attr_search_context *get_attr_search_ctx(ntfs_inode *ni, MFT_RECORD *mrec)
+ntfs_attr_search_ctx *ntfs_attr_get_search_ctx(ntfs_inode *ni, MFT_RECORD *mrec)
 {
-	attr_search_context *ctx;
+	ntfs_attr_search_ctx *ctx;
 
 	ctx = kmem_cache_alloc(ntfs_attr_ctx_cache, SLAB_NOFS);
 	if (ctx)
-		init_attr_search_ctx(ctx, ni, mrec);
+		ntfs_attr_init_search_ctx(ctx, ni, mrec);
 	return ctx;
 }
 
 /**
- * put_attr_search_ctx - release an attribute search context
+ * ntfs_attr_put_search_ctx - release an attribute search context
  * @ctx:	attribute search context to free
  *
  * Release the attribute search context @ctx, unmapping an associated extent
  * mft record if present.
  */
-void put_attr_search_ctx(attr_search_context *ctx)
+void ntfs_attr_put_search_ctx(ntfs_attr_search_ctx *ctx)
 {
 	if (ctx->base_ntfs_ino && ctx->ntfs_ino != ctx->base_ntfs_ino)
 		unmap_extent_mft_record(ctx->ntfs_ino);
 	kmem_cache_free(ntfs_attr_ctx_cache, ctx);
 	return;
 }
-

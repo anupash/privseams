@@ -752,6 +752,12 @@ int cirrusfb_check_var(struct fb_var_screeninfo *var,
 
 	switch (var->bits_per_pixel) {
 	case 1:
+		var->red.offset = 0;
+		var->red.length = 1;
+		var->green.offset = 0;
+		var->green.length = 1;
+		var->blue.offset = 0;
+		var->blue.length = 1;
 		break;
 
 	case 8:
@@ -2600,6 +2606,14 @@ int __init cirrusfb_init(void)
 {
 	int error = 0;
 
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("cirrusfb", &option))
+		return -ENODEV;
+	cirrusfb_setup(option);
+#endif
+
 #ifdef CONFIG_ZORRO
 	error |= zorro_module_init(&cirrusfb_zorro_driver);
 #endif
@@ -2657,8 +2671,9 @@ void __exit cirrusfb_exit (void)
 #endif
 }
 
-#ifdef MODULE
 module_init(cirrusfb_init);
+
+#ifdef MODULE
 module_exit(cirrusfb_exit);
 #endif
 

@@ -550,7 +550,7 @@ static void cg14_init_one(struct sbus_dev *sdev, int node, int parent_node)
 	all->par.mode = MDI_8_PIX;
 	all->par.ramsize = (is_8mb ? 0x800000 : 0x400000);
 
-	all->info.flags = FBINFO_FLAG_DEFAULT;
+	all->info.flags = FBINFO_DEFAULT | FBINFO_HWACCEL_YPAN;
 	all->info.fbops = &cg14_ops;
 	all->info.currcon = -1;
 	all->info.par = &all->par;
@@ -583,6 +583,9 @@ int __init cg14_init(void)
 {
 	struct sbus_bus *sbus;
 	struct sbus_dev *sdev;
+
+	if (fb_get_options("cg14fb", NULL))
+		return -ENODEV;
 
 #ifdef CONFIG_SPARC32
 	{
@@ -626,8 +629,9 @@ cg14_setup(char *arg)
 	return 0;
 }
 
-#ifdef MODULE
 module_init(cg14_init);
+
+#ifdef MODULE
 module_exit(cg14_exit);
 #endif
 

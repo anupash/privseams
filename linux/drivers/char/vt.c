@@ -136,9 +136,6 @@ extern void prom_con_init(void);
 #ifdef CONFIG_MDA_CONSOLE
 extern int mda_console_init(void);
 #endif
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
-extern int fb_console_init(void);
-#endif
 
 struct vc vc_cons [MAX_NR_CONSOLES];
 
@@ -600,6 +597,17 @@ static inline void save_screen(int currcons)
  *	Redrawing of screen
  */
 
+static void clear_buffer_attributes(int currcons)
+{
+	unsigned short *p = (unsigned short *) origin;
+	int count = screenbuf_size/2;
+	int mask = hi_font_mask | 0xff;
+
+	for (; count > 0; count--, p++) {
+		scr_writew((scr_readw(p)&mask) | (video_erase_char&~mask), p);
+	}
+}
+
 void redraw_screen(int new_console, int is_switch)
 {
 	int redraw = 1;
@@ -637,9 +645,21 @@ void redraw_screen(int new_console, int is_switch)
 
 	if (redraw) {
 		int update;
+		int old_was_color = vc_cons[currcons].d->vc_can_do_color;
+
 		set_origin(currcons);
 		update = sw->con_switch(vc_cons[currcons].d);
 		set_palette(currcons);
+		/*
+		 * If console changed from mono<->color, the best we can do
+		 * is to clear the buffer attributes. As it currently stands,
+		 * rebuilding new attributes from the old buffer is not doable
+		 * without overly complex code.
+		 */
+		if (old_was_color != vc_cons[currcons].d->vc_can_do_color) {
+			update_attr(currcons);
+			clear_buffer_attributes(currcons);
+		}
 		if (update && vcmode != KD_GRAPHICS)
 			do_update_region(currcons, origin, screenbuf_size/2);
 	}
@@ -1865,7 +1885,7 @@ static void do_con_trol(struct tty_struct *tty, unsigned int currcons, int c)
  * since console_init (and thus con_init) are called before any
  * kernel memory allocation is available.
  */
-char con_buf[PAGE_SIZE];
+char con_buf[CON_BUF_SIZE];
 DECLARE_MUTEX(con_buf_sem);
 
 /* acquires console_sem */
@@ -1958,12 +1978,16 @@ again:
 		hide_cursor(currcons);
 
 	while (!tty->stopped && count) {
-		c = *buf;
+		int orig = *buf;
+		c = orig;
 		buf++;
 		n++;
 		count--;
 
-		if (utf) {
+		/* Do no translation at all in control states */
+		if (vc_state != ESnormal) {
+			tc = c;
+		} else if (utf) {
 		    /* Combine UTF-8 into Unicode */
 		    /* Incomplete characters silently ignored */
 		    if(c > 0x7f) {
@@ -2063,7 +2087,7 @@ again:
 			continue;
 		}
 		FLUSH
-		do_con_trol(tty, currcons, c);
+		do_con_trol(tty, currcons, orig);
 	}
 	FLUSH
 	console_conditional_schedule();
@@ -2645,24 +2669,10 @@ int __init vty_init(void)
 #ifdef CONFIG_MDA_CONSOLE
 	mda_console_init();
 #endif
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
-	fb_console_init();
-#endif	
 	return 0;
 }
 
 #ifndef VT_SINGLE_DRIVER
-
-static void clear_buffer_attributes(int currcons)
-{
-	unsigned short *p = (unsigned short *) origin;
-	int count = screenbuf_size/2;
-	int mask = hi_font_mask | 0xff;
-
-	for (; count > 0; count--, p++) {
-		scr_writew((scr_readw(p)&mask) | (video_erase_char&~mask), p);
-	}
-}
 
 /*
  *	If we support more console drivers, this function is used

@@ -28,6 +28,8 @@
 #include <linux/backing-dev.h>
 #include <linux/buffer_head.h>
 #include <linux/vfs.h>
+#include <linux/moduleparam.h>
+#include <linux/smp_lock.h>
 
 #include "ntfs.h"
 #include "sysctl.h"
@@ -143,7 +145,7 @@ static BOOL parse_options(ntfs_volume *vol, char *opt)
 	ntfs_debug("Entering with mount options string: %s", opt);
 	while ((p = strsep(&opt, ","))) {
 		if ((v = strchr(p, '=')))
-			*v++ = '\0';
+			*v++ = 0;
 		NTFS_GETOPT("uid", uid)
 		else NTFS_GETOPT("gid", gid)
 		else NTFS_GETOPT("umask", fmask = dmask)
@@ -316,11 +318,11 @@ static int ntfs_write_volume_flags(ntfs_volume *vol, const VOLUME_FLAGS flags)
 	ntfs_inode *ni = NTFS_I(vol->vol_ino);
 	MFT_RECORD *m;
 	VOLUME_INFORMATION *vi;
-	attr_search_context *ctx;
+	ntfs_attr_search_ctx *ctx;
 	int err;
 
 	ntfs_debug("Entering, old flags = 0x%x, new flags = 0x%x.",
-			vol->vol_flags, flags);
+			le16_to_cpu(vol->vol_flags), le16_to_cpu(flags));
 	if (vol->vol_flags == flags)
 		goto done;
 	BUG_ON(!ni);
@@ -329,28 +331,28 @@ static int ntfs_write_volume_flags(ntfs_volume *vol, const VOLUME_FLAGS flags)
 		err = PTR_ERR(m);
 		goto err_out;
 	}
-	ctx = get_attr_search_ctx(ni, m);
+	ctx = ntfs_attr_get_search_ctx(ni, m);
 	if (!ctx) {
 		err = -ENOMEM;
 		goto put_unm_err_out;
 	}
-	if (!lookup_attr(AT_VOLUME_INFORMATION, NULL, 0, 0, 0, NULL, 0, ctx)) {
-		err = -EIO;
+	err = ntfs_attr_lookup(AT_VOLUME_INFORMATION, NULL, 0, 0, 0, NULL, 0,
+			ctx);
+	if (err)
 		goto put_unm_err_out;
-	}
 	vi = (VOLUME_INFORMATION*)((u8*)ctx->attr +
 			le16_to_cpu(ctx->attr->data.resident.value_offset));
 	vol->vol_flags = vi->flags = flags;
 	flush_dcache_mft_record_page(ctx->ntfs_ino);
 	mark_mft_record_dirty(ctx->ntfs_ino);
-	put_attr_search_ctx(ctx);
+	ntfs_attr_put_search_ctx(ctx);
 	unmap_mft_record(ni);
 done:
 	ntfs_debug("Done.");
 	return 0;
 put_unm_err_out:
 	if (ctx)
-		put_attr_search_ctx(ctx);
+		ntfs_attr_put_search_ctx(ctx);
 	unmap_mft_record(ni);
 err_out:
 	ntfs_error(vol->sb, "Failed with error code %i.", -err);
@@ -384,7 +386,8 @@ static inline int ntfs_set_volume_flags(ntfs_volume *vol, VOLUME_FLAGS flags)
 static inline int ntfs_clear_volume_flags(ntfs_volume *vol, VOLUME_FLAGS flags)
 {
 	flags &= VOLUME_FLAGS_MASK;
-	return ntfs_write_volume_flags(vol, vol->vol_flags & ~flags);
+	flags = vol->vol_flags & cpu_to_le16(~le16_to_cpu(flags));
+	return ntfs_write_volume_flags(vol, flags);
 }
 
 #endif /* NTFS_RW */
@@ -409,7 +412,7 @@ static int ntfs_remount(struct super_block *sb, int *flags, char *opt)
 #ifndef NTFS_RW
 	/* For read-only compiled driver, enforce all read-only flags. */
 	*flags |= MS_RDONLY | MS_NOATIME | MS_NODIRATIME;
-#else /* ! NTFS_RW */
+#else /* NTFS_RW */
 	/*
 	 * For the read-write compiled driver, if we are remounting read-write,
 	 * make sure there are no volume errors and that no unsupported volume
@@ -479,28 +482,7 @@ static int ntfs_remount(struct super_block *sb, int *flags, char *opt)
 						"flags.  Run chkdsk.");
 		}
 	}
-	// TODO:  For now we enforce no atime and dir atime updates as they are
-	// not implemented.
-	if ((sb->s_flags & MS_NOATIME) && !(*flags & MS_NOATIME))
-		ntfs_warning(sb, "Atime updates are not implemented yet.  "
-				"Leaving them disabled.");
-	else if ((sb->s_flags & MS_NODIRATIME) && !(*flags & MS_NODIRATIME))
-		ntfs_warning(sb, "Directory atime updates are not implemented "
-				"yet.  Leaving them disabled.");
-	*flags |= MS_NOATIME | MS_NODIRATIME;
-#endif /* ! NTFS_RW */
-
-	// FIXME/TODO: If left like this we will have problems with rw->ro and
-	// ro->rw, as well as with sync->async and vice versa remounts.
-	// Note: The VFS already checks that there are no pending deletes and
-	// no open files for writing. So we only need to worry about dirty
-	// inode pages and dirty system files (which include dirty inodes).
-	// Either handle by flushing the whole volume NOW or by having the
-	// write routines work on MS_RDONLY fs and guarantee we don't mark
-	// anything as dirty if MS_RDONLY is set. That way the dirty data
-	// would get flushed but no new dirty data would appear. This is
-	// probably best but we need to be careful not to mark anything dirty
-	// or the MS_RDONLY will be leaking writes.
+#endif /* NTFS_RW */
 
 	// TODO: Deal with *flags.
 
@@ -530,8 +512,10 @@ static BOOL is_boot_sector_ntfs(const struct super_block *sb,
 	 * field. If checksum is zero, no checking is done.
 	 */
 	if ((void*)b < (void*)&b->checksum && b->checksum) {
-		u32 i, *u;
-		for (i = 0, u = (u32*)b; u < (u32*)(&b->checksum); ++u)
+		le32 *u;
+		u32 i;
+
+		for (i = 0, u = (le32*)b; u < (le32*)(&b->checksum); ++u)
 			i += le32_to_cpup(u);
 		if (le32_to_cpu(b->checksum) != i)
 			goto not_ntfs;
@@ -540,7 +524,7 @@ static BOOL is_boot_sector_ntfs(const struct super_block *sb,
 	if (b->oem_id != magicNTFS)
 		goto not_ntfs;
 	/* Check bytes per sector value is between 256 and 4096. */
-	if (le16_to_cpu(b->bpb.bytes_per_sector) <  0x100 ||
+	if (le16_to_cpu(b->bpb.bytes_per_sector) < 0x100 ||
 			le16_to_cpu(b->bpb.bytes_per_sector) > 0x1000)
 		goto not_ntfs;
 	/* Check sectors per cluster value is valid. */
@@ -839,37 +823,86 @@ static BOOL parse_ntfs_boot_sector(ntfs_volume *vol, const NTFS_BOOT_SECTOR *b)
 	vol->serial_no = le64_to_cpu(b->volume_serial_number);
 	ntfs_debug("vol->serial_no = 0x%llx",
 			(unsigned long long)vol->serial_no);
-	/*
-	 * Determine MFT zone size. This is not strictly the right place to do
-	 * this, but I am too lazy to create a function especially for it...
-	 */
-	vol->mft_zone_end = vol->nr_clusters;
-	switch (vol->mft_zone_multiplier) {  /* % of volume size in clusters */
-	case 4:
-		vol->mft_zone_end = vol->mft_zone_end >> 1;	/* 50%   */
-		break;
-	case 3:
-		vol->mft_zone_end = (vol->mft_zone_end +
-				(vol->mft_zone_end >> 1)) >> 2;	/* 37.5% */
-		break;
-	case 2:
-		vol->mft_zone_end = vol->mft_zone_end >> 2;	/* 25%   */
-		break;
-	default:
-		vol->mft_zone_multiplier = 1;
-		/* Fall through into case 1. */
-	case 1:
-		vol->mft_zone_end = vol->mft_zone_end >> 3;	/* 12.5% */
-		break;
-	}
+	return TRUE;
+}
+
+/**
+ * setup_lcn_allocator - initialize the cluster allocator
+ * @vol:	volume structure for which to setup the lcn allocator
+ *
+ * Setup the cluster (lcn) allocator to the starting values.
+ */
+static void setup_lcn_allocator(ntfs_volume *vol)
+{
+#ifdef NTFS_RW
+	LCN mft_zone_size, mft_lcn;
+#endif /* NTFS_RW */
+
 	ntfs_debug("vol->mft_zone_multiplier = 0x%x",
 			vol->mft_zone_multiplier);
-	vol->mft_zone_start = vol->mft_lcn;
-	vol->mft_zone_end += vol->mft_lcn;
+#ifdef NTFS_RW
+	/* Determine the size of the MFT zone. */
+	mft_zone_size = vol->nr_clusters;
+	switch (vol->mft_zone_multiplier) {  /* % of volume size in clusters */
+	case 4:
+		mft_zone_size >>= 1;			/* 50%   */
+		break;
+	case 3:
+		mft_zone_size = (mft_zone_size +
+				(mft_zone_size >> 1)) >> 2;	/* 37.5% */
+		break;
+	case 2:
+		mft_zone_size >>= 2;			/* 25%   */
+		break;
+	/* case 1: */
+	default:
+		mft_zone_size >>= 3;			/* 12.5% */
+		break;
+	}
+	/* Setup the mft zone. */
+	vol->mft_zone_start = vol->mft_zone_pos = vol->mft_lcn;
+	ntfs_debug("vol->mft_zone_pos = 0x%llx",
+			(unsigned long long)vol->mft_zone_pos);
+	/*
+	 * Calculate the mft_lcn for an unmodified NTFS volume (see mkntfs
+	 * source) and if the actual mft_lcn is in the expected place or even
+	 * further to the front of the volume, extend the mft_zone to cover the
+	 * beginning of the volume as well.  This is in order to protect the
+	 * area reserved for the mft bitmap as well within the mft_zone itself.
+	 * On non-standard volumes we do not protect it as the overhead would
+	 * be higher than the speed increase we would get by doing it.
+	 */
+	mft_lcn = (8192 + 2 * vol->cluster_size - 1) / vol->cluster_size;
+	if (mft_lcn * vol->cluster_size < 16 * 1024)
+		mft_lcn = (16 * 1024 + vol->cluster_size - 1) /
+				vol->cluster_size;
+	if (vol->mft_zone_start <= mft_lcn)
+		vol->mft_zone_start = 0;
 	ntfs_debug("vol->mft_zone_start = 0x%llx",
-			(long long)vol->mft_zone_start);
-	ntfs_debug("vol->mft_zone_end = 0x%llx", (long long)vol->mft_zone_end);
-	return TRUE;
+			(unsigned long long)vol->mft_zone_start);
+	/*
+	 * Need to cap the mft zone on non-standard volumes so that it does
+	 * not point outside the boundaries of the volume.  We do this by
+	 * halving the zone size until we are inside the volume.
+	 */
+	vol->mft_zone_end = vol->mft_lcn + mft_zone_size;
+	while (vol->mft_zone_end >= vol->nr_clusters) {
+		mft_zone_size >>= 1;
+		vol->mft_zone_end = vol->mft_lcn + mft_zone_size;
+	}
+	ntfs_debug("vol->mft_zone_end = 0x%llx",
+			(unsigned long long)vol->mft_zone_end);
+	/*
+	 * Set the current position within each data zone to the start of the
+	 * respective zone.
+	 */
+	vol->data1_zone_pos = vol->mft_zone_end;
+	ntfs_debug("vol->data1_zone_pos = 0x%llx",
+			(unsigned long long)vol->data1_zone_pos);
+	vol->data2_zone_pos = 0;
+	ntfs_debug("vol->data2_zone_pos = 0x%llx",
+			(unsigned long long)vol->data2_zone_pos);
+#endif /* NTFS_RW */
 }
 
 #ifdef NTFS_RW
@@ -934,7 +967,7 @@ static BOOL check_mft_mirror(ntfs_volume *vol)
 	ntfs_inode *mirr_ni;
 	struct page *mft_page, *mirr_page;
 	u8 *kmft, *kmirr;
-	run_list_element *rl, rl2[2];
+	runlist_element *rl, rl2[2];
 	int mrecs_per_page, i;
 
 	ntfs_debug("Entering.");
@@ -973,7 +1006,7 @@ static BOOL check_mft_mirror(ntfs_volume *vol)
 			++index;
 		}
 		/* Make sure the record is ok. */
-		if (ntfs_is_baad_recordp(kmft)) {
+		if (ntfs_is_baad_recordp((le32*)kmft)) {
 			ntfs_error(sb, "Incomplete multi sector transfer "
 					"detected in mft record %i.", i);
 mm_unmap_out:
@@ -982,7 +1015,7 @@ mft_unmap_out:
 			ntfs_unmap_page(mft_page);
 			return FALSE;
 		}
-		if (ntfs_is_baad_recordp(kmirr)) {
+		if (ntfs_is_baad_recordp((le32*)kmirr)) {
 			ntfs_error(sb, "Incomplete multi sector transfer "
 					"detected in mft mirror record %i.", i);
 			goto mm_unmap_out;
@@ -1007,7 +1040,7 @@ mft_unmap_out:
 	ntfs_unmap_page(mft_page);
 	ntfs_unmap_page(mirr_page);
 
-	/* Construct the mft mirror run list by hand. */
+	/* Construct the mft mirror runlist by hand. */
 	rl2[0].vcn = 0;
 	rl2[0].lcn = vol->mftmirr_lcn;
 	rl2[0].length = (vol->mftmirr_size * vol->mft_record_size +
@@ -1017,23 +1050,23 @@ mft_unmap_out:
 	rl2[1].length = 0;
 	/*
 	 * Because we have just read all of the mft mirror, we know we have
-	 * mapped the full run list for it.
+	 * mapped the full runlist for it.
 	 */
 	mirr_ni = NTFS_I(vol->mftmirr_ino);
-	down_read(&mirr_ni->run_list.lock);
-	rl = mirr_ni->run_list.rl;
-	/* Compare the two run lists.  They must be identical. */
+	down_read(&mirr_ni->runlist.lock);
+	rl = mirr_ni->runlist.rl;
+	/* Compare the two runlists.  They must be identical. */
 	i = 0;
 	do {
 		if (rl2[i].vcn != rl[i].vcn || rl2[i].lcn != rl[i].lcn ||
 				rl2[i].length != rl[i].length) {
 			ntfs_error(sb, "$MFTMirr location mismatch.  "
 					"Run chkdsk.");
-			up_read(&mirr_ni->run_list.lock);
+			up_read(&mirr_ni->runlist.lock);
 			return FALSE;
 		}
 	} while (rl2[i++].length);
-	up_read(&mirr_ni->run_list.lock);
+	up_read(&mirr_ni->runlist.lock);
 	ntfs_debug("Done.");
 	return TRUE;
 }
@@ -1081,9 +1114,9 @@ static BOOL load_and_init_quota(ntfs_volume *vol)
 	static const ntfschar Quota[7] = { const_cpu_to_le16('$'),
 			const_cpu_to_le16('Q'), const_cpu_to_le16('u'),
 			const_cpu_to_le16('o'), const_cpu_to_le16('t'),
-			const_cpu_to_le16('a'), const_cpu_to_le16(0) };
+			const_cpu_to_le16('a'), 0 };
 	static ntfschar Q[3] = { const_cpu_to_le16('$'),
-			const_cpu_to_le16('Q'), const_cpu_to_le16(0) };
+			const_cpu_to_le16('Q'), 0 };
 
 	ntfs_debug("Entering.");
 	/*
@@ -1134,6 +1167,66 @@ static BOOL load_and_init_quota(ntfs_volume *vol)
 	vol->quota_q_ino = tmp_ino;
 	ntfs_debug("Done.");
 	return TRUE;
+}
+
+/**
+ * load_and_init_attrdef - load the attribute definitions table for a volume
+ * @vol:	ntfs super block describing device whose attrdef to load
+ *
+ * Return TRUE on success or FALSE on error.
+ */
+static BOOL load_and_init_attrdef(ntfs_volume *vol)
+{
+	struct super_block *sb = vol->sb;
+	struct inode *ino;
+	struct page *page;
+	unsigned long index, max_index;
+	unsigned int size;
+
+	ntfs_debug("Entering.");
+	/* Read attrdef table and setup vol->attrdef and vol->attrdef_size. */
+	ino = ntfs_iget(sb, FILE_AttrDef);
+	if (IS_ERR(ino) || is_bad_inode(ino)) {
+		if (!IS_ERR(ino))
+			iput(ino);
+		goto failed;
+	}
+	/* The size of FILE_AttrDef must be above 0 and fit inside 31 bits. */
+	if (!ino->i_size || ino->i_size > 0x7fffffff)
+		goto iput_failed;
+	vol->attrdef = (ATTR_DEF*)ntfs_malloc_nofs(ino->i_size);
+	if (!vol->attrdef)
+		goto iput_failed;
+	index = 0;
+	max_index = ino->i_size >> PAGE_CACHE_SHIFT;
+	size = PAGE_CACHE_SIZE;
+	while (index < max_index) {
+		/* Read the attrdef table and copy it into the linear buffer. */
+read_partial_attrdef_page:
+		page = ntfs_map_page(ino->i_mapping, index);
+		if (IS_ERR(page))
+			goto free_iput_failed;
+		memcpy((u8*)vol->attrdef + (index++ << PAGE_CACHE_SHIFT),
+				page_address(page), size);
+		ntfs_unmap_page(page);
+	};
+	if (size == PAGE_CACHE_SIZE) {
+		size = ino->i_size & ~PAGE_CACHE_MASK;
+		if (size)
+			goto read_partial_attrdef_page;
+	}
+	vol->attrdef_size = ino->i_size;
+	ntfs_debug("Read %llu bytes from $AttrDef.", ino->i_size);
+	iput(ino);
+	return TRUE;
+free_iput_failed:
+	ntfs_free(vol->attrdef);
+	vol->attrdef = NULL;
+iput_failed:
+	iput(ino);
+failed:
+	ntfs_error(sb, "Failed to initialize attribute definition table.");
+	return FALSE;
 }
 
 #endif /* NTFS_RW */
@@ -1236,7 +1329,7 @@ upcase_failed:
 		return TRUE;
 	}
 	up(&ntfs_lock);
-	ntfs_error(sb, "Failed to initialized upcase table.");
+	ntfs_error(sb, "Failed to initialize upcase table.");
 	return FALSE;
 }
 
@@ -1252,10 +1345,9 @@ upcase_failed:
 static BOOL load_system_files(ntfs_volume *vol)
 {
 	struct super_block *sb = vol->sb;
-	struct inode *tmp_ino;
 	MFT_RECORD *m;
 	VOLUME_INFORMATION *vi;
-	attr_search_context *ctx;
+	ntfs_attr_search_ctx *ctx;
 
 	ntfs_debug("Entering.");
 #ifdef NTFS_RW
@@ -1296,6 +1388,14 @@ static BOOL load_system_files(ntfs_volume *vol)
 	/* Read upcase table and setup @vol->upcase and @vol->upcase_len. */
 	if (!load_and_init_upcase(vol))
 		goto iput_mftbmp_err_out;
+#ifdef NTFS_RW
+	/*
+	 * Read attribute definitions table and setup @vol->attrdef and
+	 * @vol->attrdef_size.
+	 */
+	if (!load_and_init_attrdef(vol))
+		goto iput_upcase_err_out;
+#endif /* NTFS_RW */
 	/*
 	 * Get the cluster allocation bitmap inode and verify the size, no
 	 * need for any locking at this stage as we are already running
@@ -1311,7 +1411,7 @@ static BOOL load_system_files(ntfs_volume *vol)
 		iput(vol->lcnbmp_ino);
 bitmap_failed:
 		ntfs_error(sb, "Failed to load $Bitmap.");
-		goto iput_mirr_err_out;
+		goto iput_attrdef_err_out;
 	}
 	/*
 	 * Get the volume inode and setup our cache of the volume flags and
@@ -1331,14 +1431,14 @@ iput_volume_failed:
 		iput(vol->vol_ino);
 		goto volume_failed;
 	}
-	if (!(ctx = get_attr_search_ctx(NTFS_I(vol->vol_ino), m))) {
+	if (!(ctx = ntfs_attr_get_search_ctx(NTFS_I(vol->vol_ino), m))) {
 		ntfs_error(sb, "Failed to get attribute search context.");
 		goto get_ctx_vol_failed;
 	}
-	if (!lookup_attr(AT_VOLUME_INFORMATION, NULL, 0, 0, 0, NULL, 0, ctx) ||
-			ctx->attr->non_resident || ctx->attr->flags) {
+	if (ntfs_attr_lookup(AT_VOLUME_INFORMATION, NULL, 0, 0, 0, NULL, 0,
+			ctx) || ctx->attr->non_resident || ctx->attr->flags) {
 err_put_vol:
-		put_attr_search_ctx(ctx);
+		ntfs_attr_put_search_ctx(ctx);
 get_ctx_vol_failed:
 		unmap_mft_record(NTFS_I(vol->vol_ino));
 		goto iput_volume_failed;
@@ -1354,7 +1454,7 @@ get_ctx_vol_failed:
 	vol->vol_flags = vi->flags;
 	vol->major_ver = vi->major_ver;
 	vol->minor_ver = vi->minor_ver;
-	put_attr_search_ctx(ctx);
+	ntfs_attr_put_search_ctx(ctx);
 	unmap_mft_record(NTFS_I(vol->vol_ino));
 	printk(KERN_INFO "NTFS volume version %i.%i.\n", vol->major_ver,
 			vol->minor_ver);
@@ -1483,19 +1583,6 @@ get_ctx_vol_failed:
 		NVolSetErrors(vol);
 	}
 #endif /* NTFS_RW */
-	/*
-	 * Get the inode for the attribute definitions file and parse the
-	 * attribute definitions.
-	 */
-	tmp_ino = ntfs_iget(sb, FILE_AttrDef);
-	if (IS_ERR(tmp_ino) || is_bad_inode(tmp_ino)) {
-		if (!IS_ERR(tmp_ino))
-			iput(tmp_ino);
-		ntfs_error(sb, "Failed to load $AttrDef.");
-		goto iput_logfile_err_out;
-	}
-	// FIXME: Parse the attribute definitions.
-	iput(tmp_ino);
 	/* Get the root directory inode. */
 	vol->root_ino = ntfs_iget(sb, FILE_root);
 	if (IS_ERR(vol->root_ino) || is_bad_inode(vol->root_ino)) {
@@ -1591,6 +1678,26 @@ iput_vol_err_out:
 	iput(vol->vol_ino);
 iput_lcnbmp_err_out:
 	iput(vol->lcnbmp_ino);
+iput_attrdef_err_out:
+	vol->attrdef_size = 0;
+	if (vol->attrdef) {
+		ntfs_free(vol->attrdef);
+		vol->attrdef = NULL;
+	}
+#ifdef NTFS_RW
+iput_upcase_err_out:
+#endif /* NTFS_RW */
+	vol->upcase_len = 0;
+	down(&ntfs_lock);
+	if (vol->upcase == default_upcase) {
+		ntfs_nr_upcase_users--;
+		vol->upcase = NULL;
+	}
+	up(&ntfs_lock);
+	if (vol->upcase) {
+		ntfs_free(vol->upcase);
+		vol->upcase = NULL;
+	}
 iput_mftbmp_err_out:
 	iput(vol->mftbmp_ino);
 iput_mirr_err_out:
@@ -1762,14 +1869,18 @@ static void ntfs_put_super(struct super_block *sb)
 	iput(vol->mft_ino);
 	vol->mft_ino = NULL;
 
+	/* Throw away the table of attribute definitions. */
+	vol->attrdef_size = 0;
+	if (vol->attrdef) {
+		ntfs_free(vol->attrdef);
+		vol->attrdef = NULL;
+	}
 	vol->upcase_len = 0;
 	/*
-	 * Decrease the number of mounts and destroy the global default upcase
-	 * table if necessary.  Also decrease the number of upcase users if we
-	 * are a user.
+	 * Destroy the global default upcase table if necessary.  Also decrease
+	 * the number of upcase users if we are a user.
 	 */
 	down(&ntfs_lock);
-	ntfs_nr_mounts--;
 	if (vol->upcase == default_upcase) {
 		ntfs_nr_upcase_users--;
 		vol->upcase = NULL;
@@ -1906,7 +2017,7 @@ static s64 get_nr_free_clusters(ntfs_volume *vol)
  */
 static unsigned long __get_nr_free_mft_records(ntfs_volume *vol)
 {
-	s64 nr_free = vol->nr_mft_records;
+	s64 nr_free;
 	u32 *kaddr;
 	struct address_space *mapping = vol->mftbmp_ino->i_mapping;
 	filler_t *readpage = (filler_t*)mapping->a_ops->readpage;
@@ -1915,13 +2026,16 @@ static unsigned long __get_nr_free_mft_records(ntfs_volume *vol)
 	unsigned int max_size;
 
 	ntfs_debug("Entering.");
+	/* Number of mft records in file system (at this point in time). */
+	nr_free = vol->mft_ino->i_size >> vol->mft_record_size_bits;
 	/*
-	 * Convert the number of bits into bytes rounded up, then convert into
-	 * multiples of PAGE_CACHE_SIZE, rounding up so that if we have one
-	 * full and one partial page max_index = 2.
+	 * Convert the maximum number of set bits into bytes rounded up, then
+	 * convert into multiples of PAGE_CACHE_SIZE, rounding up so that if we
+	 * have one full and one partial page max_index = 2.
 	 */
-	max_index = (((vol->nr_mft_records + 7) >> 3) + PAGE_CACHE_SIZE - 1) >>
-			PAGE_CACHE_SHIFT;
+	max_index = ((((NTFS_I(vol->mft_ino)->initialized_size >>
+			vol->mft_record_size_bits) + 7) >> 3) +
+			PAGE_CACHE_SIZE - 1) >> PAGE_CACHE_SHIFT;
 	/* Use multiples of 4 bytes. */
 	max_size = PAGE_CACHE_SIZE >> 2;
 	ntfs_debug("Reading $MFT/$BITMAP, max_index = 0x%lx, max_size = "
@@ -2016,9 +2130,9 @@ static int ntfs_statfs(struct super_block *sb, struct kstatfs *sfs)
 	sfs->f_bavail = sfs->f_bfree = size;
 	/* Serialize accesses to the inode bitmap. */
 	down_read(&vol->mftbmp_lock);
-	/* Total file nodes in file system (at this moment in time). */
-	sfs->f_files  = vol->mft_ino->i_size >> vol->mft_record_size_bits;
-	/* Free file nodes in fs (based on current total count). */
+	/* Number of inodes in file system (at this point in time). */
+	sfs->f_files = vol->mft_ino->i_size >> vol->mft_record_size_bits;
+	/* Free inodes in fs (based on current total count). */
 	sfs->f_ffree = __get_nr_free_mft_records(vol);
 	up_read(&vol->mftbmp_lock);
 	/*
@@ -2139,15 +2253,7 @@ static int ntfs_fill_super(struct super_block *sb, void *opt, const int silent)
 	ntfs_debug("Entering.");
 #ifndef NTFS_RW
 	sb->s_flags |= MS_RDONLY | MS_NOATIME | MS_NODIRATIME;
-#else
-	if (!(sb->s_flags & MS_NOATIME))
-		ntfs_warning(sb, "Atime updates are not implemented yet.  "
-				"Disabling them.");
-	else if (!(sb->s_flags & MS_NODIRATIME))
-		ntfs_warning(sb, "Directory atime updates are not implemented "
-				"yet.  Disabling them.");
-	sb->s_flags |= MS_NOATIME | MS_NODIRATIME;
-#endif
+#endif /* ! NTFS_RW */
 	/* Allocate a new ntfs_volume and place it in sb->s_fs_info. */
 	sb->s_fs_info = kmalloc(sizeof(ntfs_volume), GFP_NOFS);
 	vol = NTFS_SB(sb);
@@ -2161,6 +2267,7 @@ static int ntfs_fill_super(struct super_block *sb, void *opt, const int silent)
 	memset(vol, 0, sizeof(ntfs_volume));
 	vol->sb = sb;
 	vol->upcase = NULL;
+	vol->attrdef = NULL;
 	vol->mft_ino = NULL;
 	vol->mftbmp_ino = NULL;
 	init_rwsem(&vol->mftbmp_lock);
@@ -2187,6 +2294,8 @@ static int ntfs_fill_super(struct super_block *sb, void *opt, const int silent)
 	 */
 	vol->fmask = 0177;
 	vol->dmask = 0077;
+
+	unlock_kernel();
 
 	/* Important to get the mount options dealt with now. */
 	if (!parse_options(vol, (char*)opt))
@@ -2224,6 +2333,9 @@ static int ntfs_fill_super(struct super_block *sb, void *opt, const int silent)
 	 * using it.
 	 */
 	result = parse_ntfs_boot_sector(vol, (NTFS_BOOT_SECTOR*)bh->b_data);
+
+	/* Initialize the cluster allocator. */
+	setup_lcn_allocator(vol);
 
 	brelse(bh);
 
@@ -2289,14 +2401,13 @@ static int ntfs_fill_super(struct super_block *sb, void *opt, const int silent)
 		}
 	}
 	/*
-	 * Increment the number of mounts and generate the global default
-	 * upcase table if necessary. Also temporarily increment the number of
-	 * upcase users to avoid race conditions with concurrent (u)mounts.
+	 * Generate the global default upcase table if necessary.  Also
+	 * temporarily increment the number of upcase users to avoid race
+	 * conditions with concurrent (u)mounts.
 	 */
-	if (!ntfs_nr_mounts++)
+	if (!default_upcase)
 		default_upcase = generate_default_upcase();
 	ntfs_nr_upcase_users++;
-
 	up(&ntfs_lock);
 	/*
 	 * From now on, ignore @silent parameter. If we fail below this line,
@@ -2322,6 +2433,7 @@ static int ntfs_fill_super(struct super_block *sb, void *opt, const int silent)
 		}
 		up(&ntfs_lock);
 		sb->s_export_op = &ntfs_export_ops;
+		lock_kernel();
 		return 0;
 	}
 	ntfs_error(sb, "Failed to allocate root directory.");
@@ -2368,10 +2480,23 @@ static int ntfs_fill_super(struct super_block *sb, void *opt, const int silent)
 		vol->mftmirr_ino = NULL;
 	}
 #endif /* NTFS_RW */
+	/* Throw away the table of attribute definitions. */
+	vol->attrdef_size = 0;
+	if (vol->attrdef) {
+		ntfs_free(vol->attrdef);
+		vol->attrdef = NULL;
+	}
 	vol->upcase_len = 0;
-	if (vol->upcase != default_upcase)
+	down(&ntfs_lock);
+	if (vol->upcase == default_upcase) {
+		ntfs_nr_upcase_users--;
+		vol->upcase = NULL;
+	}
+	up(&ntfs_lock);
+	if (vol->upcase) {
 		ntfs_free(vol->upcase);
-	vol->upcase = NULL;
+		vol->upcase = NULL;
+	}
 	if (vol->nls_map) {
 		unload_nls(vol->nls_map);
 		vol->nls_map = NULL;
@@ -2379,11 +2504,10 @@ static int ntfs_fill_super(struct super_block *sb, void *opt, const int silent)
 	/* Error exit code path. */
 unl_upcase_iput_tmp_ino_err_out_now:
 	/*
-	 * Decrease the number of mounts and destroy the global default upcase
-	 * table if necessary.
+	 * Decrease the number of upcase users and destroy the global default
+	 * upcase table if necessary.
 	 */
 	down(&ntfs_lock);
-	ntfs_nr_mounts--;
 	if (!--ntfs_nr_upcase_users && default_upcase) {
 		ntfs_free(default_upcase);
 		default_upcase = NULL;
@@ -2413,6 +2537,7 @@ iput_tmp_ino_err_out_now:
 	}
 	/* Errors at this stage are irrelevant. */
 err_out_now:
+	lock_kernel();
 	sb->s_fs_info = NULL;
 	kfree(vol);
 	ntfs_debug("Failed, returning -EINVAL.");
@@ -2449,11 +2574,8 @@ kmem_cache_t *ntfs_attr_ctx_cache;
 kmem_cache_t *ntfs_index_ctx_cache;
 
 /* A global default upcase table and a corresponding reference count. */
-wchar_t *default_upcase = NULL;
+ntfschar *default_upcase = NULL;
 unsigned long ntfs_nr_upcase_users = 0;
-
-/* The number of mounted filesystems. */
-unsigned long ntfs_nr_mounts = 0;
 
 /* Driver wide semaphore. */
 DECLARE_MUTEX(ntfs_lock);
@@ -2509,7 +2631,7 @@ static int __init init_ntfs_fs(void)
 		goto ictx_err_out;
 	}
 	ntfs_attr_ctx_cache = kmem_cache_create(ntfs_attr_ctx_cache_name,
-			sizeof(attr_search_context), 0 /* offset */,
+			sizeof(ntfs_attr_search_ctx), 0 /* offset */,
 			SLAB_HWCACHE_ALIGN, NULL /* ctor */, NULL /* dtor */);
 	if (!ntfs_attr_ctx_cache) {
 		printk(KERN_CRIT "NTFS: Failed to create %s!\n",
@@ -2528,7 +2650,7 @@ static int __init init_ntfs_fs(void)
 
 	ntfs_inode_cache = kmem_cache_create(ntfs_inode_cache_name,
 			sizeof(ntfs_inode), 0,
-			SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT, NULL, NULL);
+			SLAB_RECLAIM_ACCOUNT, NULL, NULL);
 	if (!ntfs_inode_cache) {
 		printk(KERN_CRIT "NTFS: Failed to create %s!\n",
 				ntfs_inode_cache_name);
@@ -2614,7 +2736,7 @@ MODULE_AUTHOR("Anton Altaparmakov <aia21@cantab.net>");
 MODULE_DESCRIPTION("NTFS 1.2/3.x driver - Copyright (c) 2001-2004 Anton Altaparmakov");
 MODULE_LICENSE("GPL");
 #ifdef DEBUG
-MODULE_PARM(debug_msgs, "i");
+module_param(debug_msgs, bool, 0);
 MODULE_PARM_DESC(debug_msgs, "Enable debug messages.");
 #endif
 

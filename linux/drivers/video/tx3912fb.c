@@ -60,6 +60,9 @@ static struct fb_var_screeninfo tx3912fb_var = {
 	.blue =		{ 0, 2, 0 },
 #else
 	.bits_per_pixel =4,
+	.red =		{ 0, 4, 0 },	/* ??? */
+	.green =	{ 0, 4, 0 },
+	.blue =		{ 0, 4, 0 },
 #endif
 	.activate =	FB_ACTIVATE_NOW,
 	.width =	-1,
@@ -205,6 +208,8 @@ static int tx3912fb_setcolreg(u_int regno, u_int red, u_int green,
 	return 0;
 }
 
+int __init tx3912fb_setup(char *options);
+
 /*
  * Initialization of the framebuffer
  */
@@ -212,6 +217,11 @@ int __init tx3912fb_init(void)
 {
 	u_long tx3912fb_paddr = 0;
 	int size = (info->var.bits_per_pixel == 8) ? 256 : 16;
+	char *option = NULL;
+
+	if (fb_get_options("tx3912fb", &option))
+		return -ENODEV;
+	tx3912fb_setup(option);
 
 	/* Disable the video logic */
 	outl(inl(TX3912_VIDEO_CTRL1) &
@@ -296,7 +306,7 @@ int __init tx3912fb_init(void)
 	fb_info.var = tx3912fb_var;
 	fb_info.fix = tx3912fb_fix;
 	fb_info.pseudo_palette = pseudo_palette;
-	fb_info.flags = FBINFO_FLAG_DEFAULT;
+	fb_info.flags = FBINFO_DEFAULT;
 
 	/* Clear the framebuffer */
 	memset((void *) fb_info.fix.smem_start, 0xff, fb_info.fix.smem_len);
@@ -326,4 +336,5 @@ int __init tx3912fb_setup(char *options)
 	return 0;
 }
 
+module_init(tx3912fb_init);
 MODULE_LICENSE("GPL");

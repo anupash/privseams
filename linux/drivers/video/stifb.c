@@ -1298,6 +1298,7 @@ stifb_init_fb(struct sti_struct *sti, int force_bpp)
 	    case 1:
 		fix->type = FB_TYPE_PLANES;	/* well, sort of */
 		fix->visual = FB_VISUAL_MONO10;
+		var->red.length = var->green.length = var->blue.length = 1;
 		break;
 	    case 8:
 		fix->type = FB_TYPE_PACKED_PIXELS;
@@ -1324,7 +1325,7 @@ stifb_init_fb(struct sti_struct *sti, int force_bpp)
 	strcpy(fix->id, "stifb");
 	info->fbops = &stifb_ops;
 	info->screen_base = (void*) REGION_BASE(fb,1);
-	info->flags = FBINFO_FLAG_DEFAULT;
+	info->flags = FBINFO_DEFAULT;
 	info->currcon = -1;
 
 	/* This has to been done !!! */
@@ -1376,11 +1377,21 @@ out_err0:
 static int stifb_disabled __initdata;
 
 int __init
+stifb_setup(char *options);
+
+int __init
 stifb_init(void)
 {
 	struct sti_struct *sti;
 	int i;
 	
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("stifb", &option))
+		return -ENODEV;
+	stifb_setup(option);
+#endif
 	if (stifb_disabled) {
 		printk(KERN_INFO "stifb: disabled by \"stifb=off\" kernel parameter\n");
 		return -ENXIO;
@@ -1451,9 +1462,7 @@ stifb_setup(char *options)
 
 __setup("stifb=", stifb_setup);
 
-#ifdef MODULE
 module_init(stifb_init);
-#endif
 module_exit(stifb_cleanup);
 
 MODULE_AUTHOR("Helge Deller <deller@gmx.de>, Thomas Bogendoerfer <tsbogend@alpha.franken.de>");

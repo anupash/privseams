@@ -70,6 +70,7 @@ extern void __show_regs(struct pt_regs * regs);
 extern void show_regs(struct pt_regs * regs);
 
 extern int map_syscall32(struct mm_struct *mm, unsigned long address);
+extern int __map_syscall32(struct mm_struct *mm, unsigned long address);
 extern char *syscall32_page;
 extern void syscall32_cpu_init(void);
 
@@ -82,7 +83,6 @@ extern int unhandled_signal(struct task_struct *tsk, int sig);
 
 extern void select_idle_routine(const struct cpuinfo_x86 *c);
 extern void swiotlb_init(void);
-extern int swiotlb;
 
 extern unsigned long max_mapnr;
 extern unsigned long end_pfn; 
@@ -103,6 +103,8 @@ extern int fallback_aper_force;
 extern int iommu_aperture;
 extern int iommu_aperture_disabled;
 extern int iommu_aperture_allowed;
+extern int fix_aperture;
+extern int force_iommu;
 
 extern void smp_local_timer_interrupt(struct pt_regs * regs);
 

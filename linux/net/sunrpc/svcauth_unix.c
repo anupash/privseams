@@ -55,12 +55,10 @@ struct auth_domain *unix_domain_find(char *name)
 	if (new == NULL)
 		return NULL;
 	cache_init(&new->h.h);
-	atomic_inc(&new->h.h.refcnt);
 	new->h.name = strdup(name);
 	new->h.flavour = RPC_AUTH_UNIX;
 	new->addr_changes = 0;
 	new->h.h.expiry_time = NEVER;
-	new->h.h.flags = 0;
 
 	rv = auth_domain_lookup(&new->h, 2);
 	if (rv == &new->h) {
@@ -92,7 +90,7 @@ static void svcauth_unix_domain_release(struct auth_domain *dom)
 
 struct ip_map {
 	struct cache_head	h;
-	char			*m_class; /* e.g. "nfsd" */
+	char			m_class[8]; /* e.g. "nfsd" */
 	struct in_addr		m_addr;
 	struct unix_domain	*m_client;
 	int			m_add_change;
@@ -122,8 +120,7 @@ static inline int ip_map_match(struct ip_map *item, struct ip_map *tmp)
 }
 static inline void ip_map_init(struct ip_map *new, struct ip_map *item)
 {
-	new->m_class = item->m_class;
-	item->m_class = NULL;
+	strcpy(new->m_class, item->m_class);
 	new->m_addr.s_addr = item->m_addr.s_addr;
 }
 static inline void ip_map_update(struct ip_map *new, struct ip_map *item)
@@ -172,6 +169,8 @@ static int ip_map_parse(struct cache_detail *cd,
 	/* class */
 	len = qword_get(&mesg, class, 50);
 	if (len <= 0) return -EINVAL;
+	if (len >= sizeof(ipm.m_class))
+		return -EINVAL;
 
 	/* ip address */
 	len = qword_get(&mesg, buf, 50);
@@ -195,9 +194,7 @@ static int ip_map_parse(struct cache_detail *cd,
 	} else
 		dom = NULL;
 
-	ipm.m_class = strdup(class);
-	if (ipm.m_class == NULL)
-		return -ENOMEM;
+	strcpy(ipm.m_class, class);
 	ipm.m_addr.s_addr =
 		htonl((((((b1<<8)|b2)<<8)|b3)<<8)|b4);
 	ipm.h.flags = 0;
@@ -213,7 +210,6 @@ static int ip_map_parse(struct cache_detail *cd,
 		ip_map_put(&ipmp->h, &ip_map_cache);
 	if (dom)
 		auth_domain_put(dom);
-	if (ipm.m_class) kfree(ipm.m_class);
 	if (!ipmp)
 		return -ENOMEM;
 	cache_flush();
@@ -273,9 +269,7 @@ int auth_unix_add_addr(struct in_addr addr, struct auth_domain *dom)
 	if (dom->flavour != RPC_AUTH_UNIX)
 		return -EINVAL;
 	udom = container_of(dom, struct unix_domain, h);
-	ip.m_class = strdup("nfsd");
-	if (!ip.m_class)
-		return -ENOMEM;
+	strcpy(ip.m_class, "nfsd");
 	ip.m_addr = addr;
 	ip.m_client = udom;
 	ip.m_add_change = udom->addr_changes+1;
@@ -283,7 +277,7 @@ int auth_unix_add_addr(struct in_addr addr, struct auth_domain *dom)
 	ip.h.expiry_time = NEVER;
 	
 	ipmp = ip_map_lookup(&ip, 1);
-	if (ip.m_class) kfree(ip.m_class);
+
 	if (ipmp) {
 		ip_map_put(&ipmp->h, &ip_map_cache);
 		return 0;
@@ -307,7 +301,7 @@ struct auth_domain *auth_unix_lookup(struct in_addr addr)
 	struct ip_map key, *ipm;
 	struct auth_domain *rv;
 
-	key.m_class = "nfsd";
+	strcpy(key.m_class, "nfsd");
 	key.m_addr = addr;
 
 	ipm = ip_map_lookup(&key, 0);
@@ -318,7 +312,8 @@ struct auth_domain *auth_unix_lookup(struct in_addr addr)
 		return NULL;
 
 	if ((ipm->m_client->addr_changes - ipm->m_add_change) >0) {
-		set_bit(CACHE_NEGATIVE, &ipm->h.flags);
+		if (test_and_set_bit(CACHE_NEGATIVE, &ipm->h.flags) == 0)
+			auth_domain_put(&ipm->m_client->h);
 		rv = NULL;
 	} else {
 		rv = &ipm->m_client->h;
@@ -368,7 +363,7 @@ svcauth_null_accept(struct svc_rqst *rqstp, u32 *authp)
 	svc_putu32(resv, RPC_AUTH_NULL);
 	svc_putu32(resv, 0);
 
-	key.m_class = rqstp->rq_server->sv_program->pg_class;
+	strcpy(key.m_class, rqstp->rq_server->sv_program->pg_class);
 	key.m_addr = rqstp->rq_addr.sin_addr;
 
 	ipm = ip_map_lookup(&key, 0);
@@ -405,6 +400,9 @@ svcauth_null_release(struct svc_rqst *rqstp)
 	if (rqstp->rq_client)
 		auth_domain_put(rqstp->rq_client);
 	rqstp->rq_client = NULL;
+	if (rqstp->rq_cred.cr_group_info)
+		put_group_info(rqstp->rq_cred.cr_group_info);
+	rqstp->rq_cred.cr_group_info = NULL;
 
 	return 0; /* don't drop */
 }
@@ -461,7 +459,7 @@ svcauth_unix_accept(struct svc_rqst *rqstp, u32 *authp)
 	}
 
 
-	key.m_class = rqstp->rq_server->sv_program->pg_class;
+	strcpy(key.m_class, rqstp->rq_server->sv_program->pg_class);
 	key.m_addr = rqstp->rq_addr.sin_addr;
 
 

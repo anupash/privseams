@@ -712,7 +712,8 @@ static void cg6_init_one(struct sbus_dev *sdev)
 		sbus_ioremap(&sdev->resource[0], CG6_FHC_OFFSET,
 			     sizeof(u32), "cgsix fhc");
 
-	all->info.flags = FBINFO_FLAG_DEFAULT;
+	all->info.flags = FBINFO_DEFAULT | FBINFO_HWACCEL_IMAGEBLIT |
+                          FBINFO_HWACCEL_COPYAREA | FBINFO_HWACCEL_FILLRECT;
 	all->info.fbops = &cg6_ops;
 #ifdef CONFIG_SPARC32
 	all->info.screen_base = (char *)
@@ -759,6 +760,9 @@ int __init cg6_init(void)
 	struct sbus_bus *sbus;
 	struct sbus_dev *sdev;
 
+	if (fb_get_options("cg6fb", NULL))
+		return -ENODEV;
+
 	for_all_sbusdev(sdev, sbus) {
 		if (!strcmp(sdev->prom_name, "cgsix") ||
 		    !strcmp(sdev->prom_name, "cgthree+"))
@@ -788,8 +792,9 @@ cg6_setup(char *arg)
 	return 0;
 }
 
-#ifdef MODULE
 module_init(cg6_init);
+
+#ifdef MODULE
 module_exit(cg6_exit);
 #endif
 

@@ -234,6 +234,7 @@ xfs_map_at_offset(
 	sector_shift = block_bits - BBSHIFT;
 	bn = iomapp->iomap_bn >> sector_shift;
 	bn += delta;
+	BUG_ON(!bn && !(iomapp->iomap_flags & IOMAP_REALTIME));
 	ASSERT((bn << sector_shift) >= iomapp->iomap_bn);
 
 	lock_buffer(bh);
@@ -264,7 +265,7 @@ xfs_probe_unwritten_page(
 
 	page = find_trylock_page(mapping, index);
 	if (!page)
-		return 0;
+		return NULL;
 	if (PageWriteback(page))
 		goto out;
 
@@ -549,19 +550,23 @@ enough:
 STATIC void
 xfs_submit_page(
 	struct page		*page,
+	struct writeback_control *wbc,
 	struct buffer_head	*bh_arr[],
-	int			cnt)
+	int			bh_count,
+	int			probed_page,
+	int			clear_dirty)
 {
 	struct buffer_head	*bh;
 	int			i;
 
 	BUG_ON(PageWriteback(page));
 	set_page_writeback(page);
-	clear_page_dirty(page);
+	if (clear_dirty)
+		clear_page_dirty(page);
 	unlock_page(page);
 
-	if (cnt) {
-		for (i = 0; i < cnt; i++) {
+	if (bh_count) {
+		for (i = 0; i < bh_count; i++) {
 			bh = bh_arr[i];
 			mark_buffer_async_write(bh);
 			if (buffer_unwritten(bh))
@@ -570,10 +575,15 @@ xfs_submit_page(
 			clear_buffer_dirty(bh);
 		}
 
-		for (i = 0; i < cnt; i++)
+		for (i = 0; i < bh_count; i++)
 			submit_bh(WRITE, bh_arr[i]);
-	} else
+
+		if (probed_page && clear_dirty)
+			wbc->nr_to_write--;	/* Wrote an "extra" page */
+	} else {
 		end_page_writeback(page);
+		wbc->pages_skipped++;	/* We didn't write this page */
+	}
 }
 
 /*
@@ -608,11 +618,13 @@ xfs_convert_page(
 	bh = head = page_buffers(page);
 	do {
 		offset = i << bbits;
+		if (offset >= end)
+			break;
 		if (!(PageUptodate(page) || buffer_uptodate(bh)))
 			continue;
 		if (buffer_mapped(bh) && all_bh &&
-		    !buffer_unwritten(bh) && !buffer_delay(bh)) {
-			if (startio && (offset < end)) {
+		    !(buffer_unwritten(bh) || buffer_delay(bh))) {
+			if (startio) {
 				lock_buffer(bh);
 				bh_arr[index++] = bh;
 			}
@@ -640,7 +652,7 @@ xfs_convert_page(
 				ASSERT(private);
 			}
 		}
-		if (startio && (offset < end)) {
+		if (startio) {
 			bh_arr[index++] = bh;
 		} else {
 			set_buffer_dirty(bh);
@@ -650,8 +662,7 @@ xfs_convert_page(
 	} while (i++, (bh = bh->b_this_page) != head);
 
 	if (startio) {
-		wbc->nr_to_write--;
-		xfs_submit_page(page, bh_arr, index);
+		xfs_submit_page(page, wbc, bh_arr, index, 1, index == i);
 	} else {
 		unlock_page(page);
 	}
@@ -863,7 +874,7 @@ xfs_page_state_convert(
 		SetPageUptodate(page);
 
 	if (startio)
-		xfs_submit_page(page, bh_arr, cnt);
+		xfs_submit_page(page, wbc, bh_arr, cnt, 0, 1);
 
 	if (iomp) {
 		tlast = (iomp->iomap_offset + iomp->iomap_bsize - 1) >>
@@ -938,9 +949,8 @@ linvfs_get_block_core(
 
 			bn = iomap.iomap_bn >> (inode->i_blkbits - BBSHIFT);
 			bn += delta;
-
+			BUG_ON(!bn && !(iomap.iomap_flags & IOMAP_REALTIME));
 			bh_result->b_blocknr = bn;
-			bh_result->b_bdev = iomap.iomap_target->pbr_bdev;
 			set_buffer_mapped(bh_result);
 		}
 		if (create && (iomap.iomap_flags & IOMAP_UNWRITTEN)) {
@@ -965,21 +975,18 @@ linvfs_get_block_core(
 	}
 
 	if (iomap.iomap_flags & IOMAP_DELAY) {
-		if (unlikely(direct))
-			BUG();
+		BUG_ON(direct);
 		if (create) {
 			set_buffer_mapped(bh_result);
 			set_buffer_uptodate(bh_result);
 		}
-		bh_result->b_bdev = iomap.iomap_target->pbr_bdev;
 		set_buffer_delay(bh_result);
 	}
 
 	if (blocks) {
-		loff_t iosize;
-		iosize = (iomap.iomap_bsize - iomap.iomap_delta);
-		bh_result->b_size =
-		    (ssize_t)min(iosize, (loff_t)(blocks << inode->i_blkbits));
+		bh_result->b_size = (ssize_t)min(
+			(loff_t)(iomap.iomap_bsize - iomap.iomap_delta),
+			(loff_t)(blocks << inode->i_blkbits));
 	}
 
 	return 0;
@@ -994,17 +1001,6 @@ linvfs_get_block(
 {
 	return linvfs_get_block_core(inode, iblock, 0, bh_result,
 					create, 0, BMAPI_WRITE);
-}
-
-STATIC int
-linvfs_get_block_sync(
-	struct inode		*inode,
-	sector_t		iblock,
-	struct buffer_head	*bh_result,
-	int			create)
-{
-	return linvfs_get_block_core(inode, iblock, 0, bh_result,
-					create, 0, BMAPI_SYNC|BMAPI_WRITE);
 }
 
 STATIC int
@@ -1038,7 +1034,7 @@ linvfs_direct_IO(
 	if (error)
 		return -error;
 
-	return blockdev_direct_IO_no_locking(rw, iocb, inode,
+	return blockdev_direct_IO_own_locking(rw, iocb, inode,
 		iomap.iomap_target->pbr_bdev,
 		iov, offset, nr_segs,
 		linvfs_get_blocks_direct,
@@ -1185,7 +1181,7 @@ linvfs_writepage(
 	return 0;
 
 out_fail:
-	set_page_dirty(page);
+	redirty_page_for_writepage(wbc, page);
 	unlock_page(page);
 	return 0;
 out_unlock:
@@ -1261,13 +1257,7 @@ linvfs_prepare_write(
 	unsigned int		from,
 	unsigned int		to)
 {
-	if (file && (file->f_flags & O_SYNC)) {
-		return block_prepare_write(page, from, to,
-						linvfs_get_block_sync);
-	} else {
-		return block_prepare_write(page, from, to,
-						linvfs_get_block);
-	}
+	return block_prepare_write(page, from, to, linvfs_get_block);
 }
 
 struct address_space_operations linvfs_aops = {

@@ -41,14 +41,14 @@ MODULE_DESCRIPTION("iptables REJECT target module");
 /* If the original packet is part of a connection, but the connection
    is not confirmed, our manufactured reply will not be associated
    with it, so we need to do this manually. */
-static void connection_attach(struct sk_buff *new_skb, struct nf_ct_info *nfct)
+static void connection_attach(struct sk_buff *new_skb, struct sk_buff *skb)
 {
-	void (*attach)(struct sk_buff *, struct nf_ct_info *);
+	void (*attach)(struct sk_buff *, struct sk_buff *);
 
 	/* Avoid module unload race with ip_ct_attach being NULLed out */
-	if (nfct && (attach = ip_ct_attach) != NULL) {
+	if (skb->nfct && (attach = ip_ct_attach) != NULL) {
 		mb(); /* Just to be sure: must be read before executing this */
-		attach(new_skb, nfct);
+		attach(new_skb, skb);
 	}
 }
 
@@ -103,7 +103,7 @@ static inline struct rtable *route_reverse(struct sk_buff *skb, int hook)
 static void send_reset(struct sk_buff *oldskb, int hook)
 {
 	struct sk_buff *nskb;
-	struct tcphdr otcph, *tcph;
+	struct tcphdr _otcph, *oth, *tcph;
 	struct rtable *rt;
 	u_int16_t tmp_port;
 	u_int32_t tmp_addr;
@@ -114,12 +114,13 @@ static void send_reset(struct sk_buff *oldskb, int hook)
 	if (oldskb->nh.iph->frag_off & htons(IP_OFFSET))
 		return;
 
-	if (skb_copy_bits(oldskb, oldskb->nh.iph->ihl*4,
-			  &otcph, sizeof(otcph)) < 0)
+	oth = skb_header_pointer(oldskb, oldskb->nh.iph->ihl * 4,
+				 sizeof(_otcph), &_otcph);
+	if (oth == NULL)
  		return;
 
 	/* No RST for RST. */
-	if (otcph.rst)
+	if (oth->rst)
 		return;
 
 	/* FIXME: Check checksum --RR */
@@ -167,13 +168,13 @@ static void send_reset(struct sk_buff *oldskb, int hook)
 
 	if (tcph->ack) {
 		needs_ack = 0;
-		tcph->seq = otcph.ack_seq;
+		tcph->seq = oth->ack_seq;
 		tcph->ack_seq = 0;
 	} else {
 		needs_ack = 1;
-		tcph->ack_seq = htonl(ntohl(otcph.seq) + otcph.syn + otcph.fin
+		tcph->ack_seq = htonl(ntohl(oth->seq) + oth->syn + oth->fin
 				      + oldskb->len - oldskb->nh.iph->ihl*4
-				      - (otcph.doff<<2));
+				      - (oth->doff<<2));
 		tcph->seq = 0;
 	}
 
@@ -208,7 +209,7 @@ static void send_reset(struct sk_buff *oldskb, int hook)
 	if (nskb->len > dst_pmtu(nskb->dst))
 		goto free_nskb;
 
-	connection_attach(nskb, oldskb->nfct);
+	connection_attach(nskb, oldskb);
 
 	NF_HOOK(PF_INET, NF_IP_LOCAL_OUT, nskb, NULL, nskb->dst->dev,
 		ip_finish_output);
@@ -359,7 +360,7 @@ static void send_unreach(struct sk_buff *skb_in, int code)
 	icmph->checksum = ip_compute_csum((unsigned char *)icmph,
 					  length - sizeof(struct iphdr));
 
-	connection_attach(nskb, skb_in->nfct);
+	connection_attach(nskb, skb_in);
 
 	NF_HOOK(PF_INET, NF_IP_LOCAL_OUT, nskb, NULL, nskb->dst->dev,
 		ip_finish_output);

@@ -1513,7 +1513,7 @@ exit_pfm_fs(void)
 }
 
 static ssize_t
-pfm_read(struct file *filp, char *buf, size_t size, loff_t *ppos)
+pfm_read(struct file *filp, char __user *buf, size_t size, loff_t *ppos)
 {
 	pfm_context_t *ctx;
 	pfm_msg_t *msg;
@@ -1606,7 +1606,7 @@ abort:
 }
 
 static ssize_t
-pfm_write(struct file *file, const char *ubuf,
+pfm_write(struct file *file, const char __user *ubuf,
 			  size_t size, loff_t *ppos)
 {
 	DPRINT(("pfm_write called\n"));
@@ -1678,7 +1678,6 @@ static int
 pfm_fasync(int fd, struct file *filp, int on)
 {
 	pfm_context_t *ctx;
-	unsigned long flags;
 	int ret;
 
 	if (PFM_IS_FILE(filp) == 0) {
@@ -1691,18 +1690,20 @@ pfm_fasync(int fd, struct file *filp, int on)
 		printk(KERN_ERR "perfmon: pfm_fasync NULL ctx [%d]\n", current->pid);
 		return -EBADF;
 	}
-
-
-	PROTECT_CTX(ctx, flags);
-
+	/*
+	 * we cannot mask interrupts during this call because this may
+	 * may go to sleep if memory is not readily avalaible.
+	 *
+	 * We are protected from the conetxt disappearing by the get_fd()/put_fd()
+	 * done in caller. Serialization of this function is ensured by caller.
+	 */
 	ret = pfm_do_fasync(fd, filp, ctx, on);
+
 
 	DPRINT(("pfm_fasync called on ctx_fd=%d on=%d async_queue=%p ret=%d\n",
 		fd,
 		on,
 		ctx->ctx_async_queue, ret));
-
-	UNPROTECT_CTX(ctx, flags);
 
 	return ret;
 }
@@ -2227,6 +2228,15 @@ out:
 static void
 pfm_free_fd(int fd, struct file *file)
 {
+	struct files_struct *files = current->files;
+
+	/* 
+	 * there ie no fd_uninstall(), so we do it here
+	 */
+	spin_lock(&files->file_lock);
+        files->fd[fd] = NULL;
+	spin_unlock(&files->file_lock);
+
 	if (file) put_filp(file);
 	put_unused_fd(fd);
 }
@@ -2277,7 +2287,7 @@ pfm_smpl_buffer_alloc(struct task_struct *task, pfm_context_t *ctx, unsigned lon
 	 * if ((mm->total_vm << PAGE_SHIFT) + len> task->rlim[RLIMIT_AS].rlim_cur)
 	 * 	return -ENOMEM;
 	 */
-	if (size > task->rlim[RLIMIT_MEMLOCK].rlim_cur) return -EAGAIN;
+	if (size > task->rlim[RLIMIT_MEMLOCK].rlim_cur) return -ENOMEM;
 
 	/*
 	 * We do the easy to undo allocations first.
@@ -2352,7 +2362,7 @@ pfm_smpl_buffer_alloc(struct task_struct *task, pfm_context_t *ctx, unsigned lon
 	insert_vm_struct(mm, vma);
 
 	mm->total_vm  += size >> PAGE_SHIFT;
-
+	vm_stat_account(vma);
 	up_write(&task->mm->mmap_sem);
 
 	/*
@@ -2592,7 +2602,7 @@ pfm_task_incompatible(pfm_context_t *ctx, struct task_struct *task)
 	 */
 	if (task == current) return 0;
 
-	if (task->state != TASK_STOPPED) {
+	if ((task->state != TASK_STOPPED) && (task->state != TASK_TRACED)) {
 		DPRINT(("cannot attach to non-stopped task [%d] state=%ld\n", task->pid, task->state));
 		return -EBUSY;
 	}
@@ -2659,8 +2669,10 @@ pfm_context_create(pfm_context_t *ctx, void *arg, int count, struct pt_regs *reg
 	ctx = pfm_context_alloc();
 	if (!ctx) goto error;
 
-	req->ctx_fd = ctx->ctx_fd = pfm_alloc_fd(&filp);
-	if (req->ctx_fd < 0) goto error_file;
+	ret = pfm_alloc_fd(&filp);
+	if (ret < 0) goto error_file;
+
+	req->ctx_fd = ctx->ctx_fd = ret;
 
 	/*
 	 * attach context to file
@@ -3985,7 +3997,10 @@ pfm_stop(pfm_context_t *ctx, void *arg, int count, struct pt_regs *regs)
 	state     = ctx->ctx_state;
 	is_system = ctx->ctx_fl_system;
 
-	if (state != PFM_CTX_LOADED && state != PFM_CTX_MASKED) return -EINVAL;
+	/*
+	 * context must be attached to issue the stop command (includes LOADED,MASKED,ZOMBIE)
+	 */
+	if (state == PFM_CTX_UNLOADED) return -EINVAL;
 
 	/*
  	 * In system wide and when the context is loaded, access can only happen
@@ -4741,7 +4756,7 @@ recheck:
 	 * the task must be stopped.
 	 */
 	if (PFM_CMD_STOPPED(cmd)) {
-		if (task->state != TASK_STOPPED) {
+		if ((task->state != TASK_STOPPED) && (task->state != TASK_TRACED)) {
 			DPRINT(("[%d] task not in stopped state\n", task->pid));
 			return -EBUSY;
 		}
@@ -4782,7 +4797,7 @@ recheck:
  * system-call entry point (must return long)
  */
 asmlinkage long
-sys_perfmonctl (int fd, int cmd, void *arg, int count, long arg5, long arg6, long arg7,
+sys_perfmonctl (int fd, int cmd, void __user *arg, int count, long arg5, long arg6, long arg7,
 		long arg8, long stack)
 {
 	struct pt_regs *regs = (struct pt_regs *)&stack;
@@ -6312,15 +6327,15 @@ pfm_flush_pmds(struct task_struct *task, pfm_context_t *ctx)
 	 */
 	is_self = ctx->ctx_task == task ? 1 : 0;
 
-#ifdef CONFIG_SMP
-	if (task == current) {
-#else
 	/*
-	 * in UP, the state can still be in the registers
+	 * can access PMU is task is the owner of the PMU state on the current CPU
+	 * or if we are running on the CPU bound to the context in system-wide mode
+	 * (that is not necessarily the task the context is attached to in this mode).
+	 * In system-wide we always have can_access_pmu true because a task running on an
+	 * invalid processor is flagged earlier in the call stack (see pfm_stop).
 	 */
-	if (task == current || GET_PMU_OWNER() == task) {
-#endif
-		can_access_pmu = 1;
+	can_access_pmu = (GET_PMU_OWNER() == task) || (ctx->ctx_fl_system && ctx->ctx_cpu == smp_processor_id());
+	if (can_access_pmu) {
 		/*
 		 * Mark the PMU as not owned
 		 * This will cause the interrupt handler to do nothing in case an overflow
@@ -6330,6 +6345,7 @@ pfm_flush_pmds(struct task_struct *task, pfm_context_t *ctx)
 		 * on.
 		 */
 		SET_PMU_OWNER(NULL, NULL);
+		DPRINT(("releasing ownership\n"));
 
 		/*
 		 * read current overflow status:

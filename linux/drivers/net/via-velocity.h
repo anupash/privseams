@@ -37,7 +37,6 @@
 #define OPTION_DEFAULT      { [0 ... MAX_UNITS-1] = -1}
 
 #define REV_ID_VT6110       (0)
-#define DEVICE_ID           (0x3119)
 
 #define BYTE_REG_BITS_ON(x,p)       do { writeb(readb((p))|(x),(p));} while (0)
 #define WORD_REG_BITS_ON(x,p)       do { writew(readw((p))|(x),(p));} while (0)
@@ -1320,7 +1319,7 @@ static inline void mac_set_cam_mask(struct mac_regs * regs, u8 * mask, enum velo
 	/* disable CAMEN */
 	writeb(0, &regs->CAMADDR);
 
-	/* Select CAM mask */
+	/* Select mar */
 	BYTE_REG_BITS_SET(CAMCR_PS_MAR, CAMCR_PS1 | CAMCR_PS0, &regs->CAMCR);
 }
 
@@ -1361,7 +1360,7 @@ static inline void mac_set_cam(struct mac_regs * regs, int idx, u8 *addr, enum v
 
 	writeb(0, &regs->CAMADDR);
 
-	/* Select CAM mask */
+	/* Select mar */
 	BYTE_REG_BITS_SET(CAMCR_PS_MAR, CAMCR_PS1 | CAMCR_PS0, &regs->CAMCR);
 }
 
@@ -1402,7 +1401,7 @@ static inline void mac_get_cam(struct mac_regs * regs, int idx, u8 *addr, enum v
 
 	writeb(0, &regs->CAMADDR);
 
-	/* Select CAM mask */
+	/* Select mar */
 	BYTE_REG_BITS_SET(CAMCR_PS_MAR, CAMCR_PS1 | CAMCR_PS0, &regs->CAMCR);
 }
 
@@ -1734,14 +1733,13 @@ struct velocity_opt {
 };
 
 struct velocity_info {
-	struct velocity_info *next;
-	struct velocity_info *prev;
+	struct list_head list;
 
 	struct pci_dev *pdev;
 	struct net_device *dev;
 	struct net_device_stats stats;
 
-#if CONFIG_PM
+#ifdef CONFIG_PM
 	u32 pci_state[16];
 #endif
 
@@ -1772,7 +1770,8 @@ struct velocity_info {
 	struct velocity_td_info *td_infos[TX_QUEUE_NO];
 
 	int rd_curr;
-	int rd_used;
+	int rd_dirty;
+	u32 rd_filled;
 	struct rx_desc *rd_ring;
 	struct velocity_rd_info *rd_info;	/* It's an array */
 
@@ -1793,7 +1792,6 @@ struct velocity_info {
 	u8 mCAMmask[(MCAM_SIZE / 8)];
 
 	spinlock_t lock;
-	spinlock_t xmit_lock;
 
 	int wol_opts;
 	u8 wol_passwd[6];

@@ -105,6 +105,7 @@ extern int fix_alignment(struct pt_regs *regs);
 extern void bad_page_fault(struct pt_regs *regs, unsigned long address,
 			   int sig);
 extern void show_regs(struct pt_regs * regs);
+extern void low_hash_fault(struct pt_regs *regs, unsigned long address);
 extern int die(const char *str, struct pt_regs *regs, long err);
 
 extern void flush_instruction_cache(void);
@@ -127,6 +128,8 @@ static inline void flush_altivec_to_thread(struct task_struct *t)
 {
 }
 #endif
+
+extern int mem_init_done;	/* set on boot once kmalloc can be called */
 
 /* EBCDIC -> ASCII conversion for [0-9A-Z] on iSeries */
 extern unsigned char e2a(unsigned char);

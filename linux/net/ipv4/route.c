@@ -226,26 +226,25 @@ static struct rtable *rt_cache_get_first(struct seq_file *seq)
 	struct rt_cache_iter_state *st = seq->private;
 
 	for (st->bucket = rt_hash_mask; st->bucket >= 0; --st->bucket) {
-		rcu_read_lock();
+		rcu_read_lock_bh();
 		r = rt_hash_table[st->bucket].chain;
 		if (r)
 			break;
-		rcu_read_unlock();
+		rcu_read_unlock_bh();
 	}
 	return r;
 }
 
 static struct rtable *rt_cache_get_next(struct seq_file *seq, struct rtable *r)
 {
-	struct rt_cache_iter_state *st = seq->private;
+	struct rt_cache_iter_state *st = rcu_dereference(seq->private);
 
-	smp_read_barrier_depends();
 	r = r->u.rt_next;
 	while (!r) {
-		rcu_read_unlock();
+		rcu_read_unlock_bh();
 		if (--st->bucket < 0)
 			break;
-		rcu_read_lock();
+		rcu_read_lock_bh();
 		r = rt_hash_table[st->bucket].chain;
 	}
 	return r;
@@ -281,7 +280,7 @@ static void *rt_cache_seq_next(struct seq_file *seq, void *v, loff_t *pos)
 static void rt_cache_seq_stop(struct seq_file *seq, void *v)
 {
 	if (v && v != SEQ_START_TOKEN)
-		rcu_read_unlock();
+		rcu_read_unlock_bh();
 }
 
 static int rt_cache_seq_show(struct seq_file *seq, void *v)
@@ -357,10 +356,13 @@ static void *rt_cpu_seq_start(struct seq_file *seq, loff_t *pos)
 {
 	int cpu;
 
-	for (cpu = *pos; cpu < NR_CPUS; ++cpu) {
+	if (*pos == 0)
+		return SEQ_START_TOKEN;
+
+	for (cpu = *pos-1; cpu < NR_CPUS; ++cpu) {
 		if (!cpu_possible(cpu))
 			continue;
-		*pos = cpu;
+		*pos = cpu+1;
 		return per_cpu_ptr(rt_cache_stat, cpu);
 	}
 	return NULL;
@@ -370,10 +372,10 @@ static void *rt_cpu_seq_next(struct seq_file *seq, void *v, loff_t *pos)
 {
 	int cpu;
 
-	for (cpu = *pos + 1; cpu < NR_CPUS; ++cpu) {
+	for (cpu = *pos; cpu < NR_CPUS; ++cpu) {
 		if (!cpu_possible(cpu))
 			continue;
-		*pos = cpu;
+		*pos = cpu+1;
 		return per_cpu_ptr(rt_cache_stat, cpu);
 	}
 	return NULL;
@@ -388,6 +390,11 @@ static void rt_cpu_seq_stop(struct seq_file *seq, void *v)
 static int rt_cpu_seq_show(struct seq_file *seq, void *v)
 {
 	struct rt_cache_stat *st = v;
+
+	if (v == SEQ_START_TOKEN) {
+		seq_printf(seq, "entries  in_hit in_slow_tot in_no_route in_brd in_martian_dst in_martian_src  out_hit out_slow_tot out_slow_mc  gc_total gc_ignored gc_goal_miss gc_dst_overflow in_hlist_search out_hlist_search\n");
+		return 0;
+	}
 	
 	seq_printf(seq,"%08x  %08x %08x %08x %08x %08x %08x %08x "
 		   " %08x %08x %08x %08x %08x %08x %08x %08x %08x \n",
@@ -439,13 +446,13 @@ static struct file_operations rt_cpu_seq_fops = {
   
 static __inline__ void rt_free(struct rtable *rt)
 {
-	call_rcu(&rt->u.dst.rcu_head, dst_rcu_free);
+	call_rcu_bh(&rt->u.dst.rcu_head, dst_rcu_free);
 }
 
 static __inline__ void rt_drop(struct rtable *rt)
 {
 	ip_rt_put(rt);
-	call_rcu(&rt->u.dst.rcu_head, dst_rcu_free);
+	call_rcu_bh(&rt->u.dst.rcu_head, dst_rcu_free);
 }
 
 static __inline__ int rt_fast_clean(struct rtable *rth)
@@ -1004,10 +1011,9 @@ void ip_rt_redirect(u32 old_gw, u32 daddr, u32 new_gw,
 			rthp=&rt_hash_table[hash].chain;
 
 			rcu_read_lock();
-			while ((rth = *rthp) != NULL) {
+			while ((rth = rcu_dereference(*rthp)) != NULL) {
 				struct rtable *rt;
 
-				smp_read_barrier_depends();
 				if (rth->fl.fl4_dst != daddr ||
 				    rth->fl.fl4_src != skeys[i] ||
 				    rth->fl.fl4_tos != tos ||
@@ -1259,9 +1265,8 @@ unsigned short ip_rt_frag_needed(struct iphdr *iph, unsigned short new_mtu)
 		unsigned hash = rt_hash_code(daddr, skeys[i], tos);
 
 		rcu_read_lock();
-		for (rth = rt_hash_table[hash].chain; rth;
-		     rth = rth->u.rt_next) {
-			smp_read_barrier_depends();
+		for (rth = rcu_dereference(rt_hash_table[hash].chain); rth;
+		     rth = rcu_dereference(rth->u.rt_next)) {
 			if (rth->fl.fl4_dst == daddr &&
 			    rth->fl.fl4_src == skeys[i] &&
 			    rth->rt_dst  == daddr &&
@@ -1342,9 +1347,12 @@ static void ipv4_dst_ifdown(struct dst_entry *dst, int how)
 {
 	struct rtable *rt = (struct rtable *) dst;
 	struct in_device *idev = rt->idev;
-	if (idev) {
-		rt->idev = NULL;
-		in_dev_put(idev);
+	if (idev && idev->dev != &loopback_dev) {
+		struct in_device *loopback_idev = in_dev_get(&loopback_dev);
+		if (loopback_idev) {
+			rt->idev = loopback_idev;
+			in_dev_put(idev);
+		}
 	}
 }
 
@@ -1387,13 +1395,7 @@ void ip_rt_get_source(u8 *addr, struct rtable *rt)
 	if (rt->fl.iif == 0)
 		src = rt->rt_src;
 	else if (fib_lookup(&rt->fl, &res) == 0) {
-#ifdef CONFIG_IP_ROUTE_NAT
-		if (res.type == RTN_NAT)
-			src = inet_select_addr(rt->u.dst.dev, rt->rt_gateway,
-						RT_SCOPE_UNIVERSE);
-		else
-#endif
-			src = FIB_RES_PREFSRC(res);
+		src = FIB_RES_PREFSRC(res);
 		fib_res_put(&res);
 	} else
 		src = inet_select_addr(rt->u.dst.dev, rt->rt_gateway,
@@ -1497,10 +1499,6 @@ static int ip_route_input_mc(struct sk_buff *skb, u32 daddr, u32 saddr,
 #endif
 	rth->fl.fl4_src	= saddr;
 	rth->rt_src	= saddr;
-#ifdef CONFIG_IP_ROUTE_NAT
-	rth->rt_dst_map	= daddr;
-	rth->rt_src_map	= saddr;
-#endif
 #ifdef CONFIG_NET_CLS_ROUTE
 	rth->u.dst.tclassid = itag;
 #endif
@@ -1610,31 +1608,6 @@ static int ip_route_input_slow(struct sk_buff *skb, u32 daddr, u32 saddr,
 
 	RT_CACHE_STAT_INC(in_slow_tot);
 
-#ifdef CONFIG_IP_ROUTE_NAT
-	/* Policy is applied before mapping destination,
-	   but rerouting after map should be made with old source.
-	 */
-
-	if (1) {
-		u32 src_map = saddr;
-		if (res.r)
-			src_map = fib_rules_policy(saddr, &res, &flags);
-
-		if (res.type == RTN_NAT) {
-			fl.fl4_dst = fib_rules_map_destination(daddr, &res);
-			fib_res_put(&res);
-			free_res = 0;
-			if (fib_lookup(&fl, &res))
-				goto e_inval;
-			free_res = 1;
-			if (res.type != RTN_UNICAST)
-				goto e_inval;
-			flags |= RTCF_DNAT;
-		}
-		fl.fl4_src = src_map;
-	}
-#endif
-
 	if (res.type == RTN_BROADCAST)
 		goto brd_input;
 
@@ -1708,12 +1681,6 @@ static int ip_route_input_slow(struct sk_buff *skb, u32 daddr, u32 saddr,
 	rth->fl.fl4_src	= saddr;
 	rth->rt_src	= saddr;
 	rth->rt_gateway	= daddr;
-#ifdef CONFIG_IP_ROUTE_NAT
-	rth->rt_src_map	= fl.fl4_src;
-	rth->rt_dst_map	= fl.fl4_dst;
-	if (flags&RTCF_DNAT)
-		rth->rt_gateway	= fl.fl4_dst;
-#endif
 	rth->rt_iif 	=
 	rth->fl.iif	= dev->ifindex;
 	rth->u.dst.dev	= out_dev->dev;
@@ -1776,10 +1743,6 @@ local_input:
 #endif
 	rth->fl.fl4_src	= saddr;
 	rth->rt_src	= saddr;
-#ifdef CONFIG_IP_ROUTE_NAT
-	rth->rt_dst_map	= fl.fl4_dst;
-	rth->rt_src_map	= fl.fl4_src;
-#endif
 #ifdef CONFIG_NET_CLS_ROUTE
 	rth->u.dst.tclassid = itag;
 #endif
@@ -1864,8 +1827,8 @@ int ip_route_input(struct sk_buff *skb, u32 daddr, u32 saddr,
 	hash = rt_hash_code(daddr, saddr ^ (iif << 5), tos);
 
 	rcu_read_lock();
-	for (rth = rt_hash_table[hash].chain; rth; rth = rth->u.rt_next) {
-		smp_read_barrier_depends();
+	for (rth = rcu_dereference(rt_hash_table[hash].chain); rth;
+	     rth = rcu_dereference(rth->u.rt_next)) {
 		if (rth->fl.fl4_dst == daddr &&
 		    rth->fl.fl4_src == saddr &&
 		    rth->fl.iif == iif &&
@@ -1900,7 +1863,7 @@ int ip_route_input(struct sk_buff *skb, u32 daddr, u32 saddr,
 	if (MULTICAST(daddr)) {
 		struct in_device *in_dev;
 
-		read_lock(&inetdev_lock);
+		rcu_read_lock();
 		if ((in_dev = __in_dev_get(dev)) != NULL) {
 			int our = ip_check_mc(in_dev, daddr, saddr,
 				skb->nh.iph->protocol);
@@ -1909,12 +1872,12 @@ int ip_route_input(struct sk_buff *skb, u32 daddr, u32 saddr,
 			    || (!LOCAL_MCAST(daddr) && IN_DEV_MFORWARD(in_dev))
 #endif
 			    ) {
-				read_unlock(&inetdev_lock);
+				rcu_read_unlock();
 				return ip_route_input_mc(skb, daddr, saddr,
 							 tos, dev, our);
 			}
 		}
-		read_unlock(&inetdev_lock);
+		rcu_read_unlock();
 		return -EINVAL;
 	}
 	return ip_route_input_slow(skb, daddr, saddr, tos, dev);
@@ -2072,9 +2035,6 @@ static int ip_route_output_slow(struct rtable **rp, const struct flowi *oldflp)
 	}
 	free_res = 1;
 
-	if (res.type == RTN_NAT)
-		goto e_inval;
-
 	if (res.type == RTN_LOCAL) {
 		if (!fl.fl4_src)
 			fl.fl4_src = fl.fl4_dst;
@@ -2164,10 +2124,6 @@ make_route:
 #endif
 	rth->rt_dst	= fl.fl4_dst;
 	rth->rt_src	= fl.fl4_src;
-#ifdef CONFIG_IP_ROUTE_NAT
-	rth->rt_dst_map	= fl.fl4_dst;
-	rth->rt_src_map	= fl.fl4_src;
-#endif
 	rth->rt_iif	= oldflp->oif ? : dev_out->ifindex;
 	rth->u.dst.dev	= dev_out;
 	dev_hold(dev_out);
@@ -2231,9 +2187,9 @@ int __ip_route_output_key(struct rtable **rp, const struct flowi *flp)
 
 	hash = rt_hash_code(flp->fl4_dst, flp->fl4_src ^ (flp->oif << 5), flp->fl4_tos);
 
-	rcu_read_lock();
-	for (rth = rt_hash_table[hash].chain; rth; rth = rth->u.rt_next) {
-		smp_read_barrier_depends();
+	rcu_read_lock_bh();
+	for (rth = rcu_dereference(rt_hash_table[hash].chain); rth;
+		rth = rcu_dereference(rth->u.rt_next)) {
 		if (rth->fl.fl4_dst == flp->fl4_dst &&
 		    rth->fl.fl4_src == flp->fl4_src &&
 		    rth->fl.iif == 0 &&
@@ -2247,24 +2203,15 @@ int __ip_route_output_key(struct rtable **rp, const struct flowi *flp)
 			dst_hold(&rth->u.dst);
 			rth->u.dst.__use++;
 			RT_CACHE_STAT_INC(out_hit);
-			rcu_read_unlock();
+			rcu_read_unlock_bh();
 			*rp = rth;
 			return 0;
 		}
 		RT_CACHE_STAT_INC(out_hlist_search);
 	}
-	rcu_read_unlock();
+	rcu_read_unlock_bh();
 
 	return ip_route_output_slow(rp, flp);
-}
-
-int ip_route_output_key(struct rtable **rp, struct flowi *flp)
-{
-	int err;
-
-	if ((err = __ip_route_output_key(rp, flp)) != 0)
-		return err;
-	return flp->proto ? xfrm_lookup((struct dst_entry**)rp, flp, NULL, 0) : 0;
 }
 
 int ip_route_output_flow(struct rtable **rp, struct flowi *flp, struct sock *sk, int flags)
@@ -2273,7 +2220,21 @@ int ip_route_output_flow(struct rtable **rp, struct flowi *flp, struct sock *sk,
 
 	if ((err = __ip_route_output_key(rp, flp)) != 0)
 		return err;
-	return flp->proto ? xfrm_lookup((struct dst_entry**)rp, flp, sk, flags) : 0;
+
+	if (flp->proto) {
+		if (!flp->fl4_src)
+			flp->fl4_src = (*rp)->rt_src;
+		if (!flp->fl4_dst)
+			flp->fl4_dst = (*rp)->rt_dst;
+		return xfrm_lookup((struct dst_entry **)rp, flp, sk, flags);
+	}
+
+	return 0;
+}
+
+int ip_route_output_key(struct rtable **rp, struct flowi *flp)
+{
+	return ip_route_output_flow(rp, flp, NULL, 0);
 }
 
 static int rt_fill_info(struct sk_buff *skb, u32 pid, u32 seq, int event,
@@ -2463,10 +2424,9 @@ int ip_rt_dump(struct sk_buff *skb,  struct netlink_callback *cb)
 		if (h < s_h) continue;
 		if (h > s_h)
 			s_idx = 0;
-		rcu_read_lock();
-		for (rt = rt_hash_table[h].chain, idx = 0; rt;
-		     rt = rt->u.rt_next, idx++) {
-			smp_read_barrier_depends();
+		rcu_read_lock_bh();
+		for (rt = rcu_dereference(rt_hash_table[h].chain), idx = 0; rt;
+		     rt = rcu_dereference(rt->u.rt_next), idx++) {
 			if (idx < s_idx)
 				continue;
 			skb->dst = dst_clone(&rt->u.dst);
@@ -2474,12 +2434,12 @@ int ip_rt_dump(struct sk_buff *skb,  struct netlink_callback *cb)
 					 cb->nlh->nlmsg_seq,
 					 RTM_NEWROUTE, 1) <= 0) {
 				dst_release(xchg(&skb->dst, NULL));
-				rcu_read_unlock();
+				rcu_read_unlock_bh();
 				goto done;
 			}
 			dst_release(xchg(&skb->dst, NULL));
 		}
-		rcu_read_unlock();
+		rcu_read_unlock_bh();
 	}
 
 done:
@@ -2831,12 +2791,16 @@ int __init ip_rt_init(void)
 	add_timer(&rt_secret_timer);
 
 #ifdef CONFIG_PROC_FS
+	{
+	struct proc_dir_entry *rtstat_pde = NULL; /* keep gcc happy */
 	if (!proc_net_fops_create("rt_cache", S_IRUGO, &rt_cache_seq_fops) ||
-	    !proc_net_fops_create("rt_cache_stat", S_IRUGO, &rt_cpu_seq_fops)) {
+	    !(rtstat_pde = create_proc_entry("rt_cache", S_IRUGO, 
+			    		     proc_net_stat))) {
 		free_percpu(rt_cache_stat);
 		return -ENOMEM;
 	}
-
+	rtstat_pde->proc_fops = &rt_cpu_seq_fops;
+	}
 #ifdef CONFIG_NET_CLS_ROUTE
 	create_proc_read_entry("rt_acct", 0, proc_net, ip_rt_acct_read, NULL);
 #endif

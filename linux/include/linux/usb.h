@@ -294,8 +294,6 @@ struct usb_device {
 	struct semaphore serialize;
 
 	unsigned int toggle[2];		/* one bit for each endpoint ([0] = IN, [1] = OUT) */
-	unsigned int halted[2];		/* endpoint halts; one bit per endpoint # & direction; */
-					/* [0] = IN, [1] = OUT */
 	int epmaxpacketin[16];		/* INput endpoint specific maximums */
 	int epmaxpacketout[16];		/* OUTput endpoint specific maximums */
 
@@ -653,8 +651,6 @@ typedef void (*usb_complete_t)(struct urb *, struct pt_regs *);
  *	it likes with the URB, including resubmitting or freeing it.
  * @iso_frame_desc: Used to provide arrays of ISO transfer buffers and to 
  *	collect the transfer status for each buffer.
- * @timeout: If set to zero, the urb will never timeout.  Otherwise this is
- *	the time in jiffies that this urb will timeout in.
  *
  * This structure identifies USB transfer requests.  URBs must be allocated by
  * calling usb_alloc_urb() and freed with a call to usb_free_urb().
@@ -684,8 +680,8 @@ typedef void (*usb_complete_t)(struct urb *, struct pt_regs *);
  *
  * Initialization:
  *
- * All URBs submitted must initialize dev, pipe,
- * transfer_flags (may be zero), complete, timeout (may be zero).
+ * All URBs submitted must initialize the dev, pipe, transfer_flags (may be
+ * zero), and complete fields.
  * The URB_ASYNC_UNLINK transfer flag affects later invocations of
  * the usb_unlink_urb() routine.  Note: Failure to set URB_ASYNC_UNLINK
  * with usb_unlink_urb() is deprecated.  For synchronous unlinks use
@@ -785,7 +781,6 @@ struct urb
 	int number_of_packets;		/* (in) number of ISO packets */
 	int interval;			/* (modify) transfer interval (INT/ISO) */
 	int error_count;		/* (return) number of ISO errors */
-	int timeout;			/* (in) timeout, in jiffies */
 	void *context;			/* (in) context for completion */
 	usb_complete_t complete;	/* (in) completion routine */
 	struct usb_iso_packet_descriptor iso_frame_desc[0];	/* (in) ISO ONLY */
@@ -1083,10 +1078,6 @@ void usb_sg_wait (struct usb_sg_request *io);
 #define usb_gettoggle(dev, ep, out) (((dev)->toggle[out] >> (ep)) & 1)
 #define	usb_dotoggle(dev, ep, out)  ((dev)->toggle[out] ^= (1 << (ep)))
 #define usb_settoggle(dev, ep, out, bit) ((dev)->toggle[out] = ((dev)->toggle[out] & ~(1 << (ep))) | ((bit) << (ep)))
-
-/* Endpoint halt control/status ... likewise USE WITH CAUTION */
-#define usb_endpoint_running(dev, ep, out) ((dev)->halted[out] &= ~(1 << (ep)))
-#define usb_endpoint_halted(dev, ep, out) ((dev)->halted[out] & (1 << (ep)))
 
 
 static inline unsigned int __create_pipe(struct usb_device *dev, unsigned int endpoint)

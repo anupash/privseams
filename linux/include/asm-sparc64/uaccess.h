@@ -14,6 +14,7 @@
 #include <asm/asi.h>
 #include <asm/system.h>
 #include <asm/spitfire.h>
+#include <asm-generic/uaccess.h>
 #endif
 
 #ifndef __ASSEMBLY__
@@ -252,18 +253,50 @@ __asm__ __volatile__(							\
 
 extern int __get_user_bad(void);
 
-extern unsigned long __copy_from_user(void *to, const void __user *from,
-				      unsigned long size);
+extern unsigned long ___copy_from_user(void *to, const void __user *from,
+				       unsigned long size);
+extern unsigned long copy_from_user_fixup(void *to, const void __user *from,
+					  unsigned long size);
+static inline unsigned long copy_from_user(void *to, const void __user *from,
+					   unsigned long size)
+{
+	unsigned long ret = ___copy_from_user(to, from, size);
 
-extern unsigned long __copy_to_user(void __user *to, const void *from,
-				    unsigned long size);
+	if (ret)
+		ret = copy_from_user_fixup(to, from, size);
+	return ret;
+}
+#define __copy_from_user copy_from_user
 
-extern unsigned long __copy_in_user(void __user *to, const void __user *from,
-				    unsigned long size);
+extern unsigned long ___copy_to_user(void __user *to, const void *from,
+				     unsigned long size);
+extern unsigned long copy_to_user_fixup(void __user *to, const void *from,
+					unsigned long size);
+static inline unsigned long copy_to_user(void __user *to, const void *from,
+					 unsigned long size)
+{
+	unsigned long ret = ___copy_to_user(to, from, size);
 
-#define copy_from_user __copy_from_user
-#define copy_to_user __copy_to_user
-#define copy_in_user __copy_in_user
+	if (ret)
+		ret = copy_to_user_fixup(to, from, size);
+	return ret;
+}
+#define __copy_to_user copy_to_user
+
+extern unsigned long ___copy_in_user(void __user *to, const void __user *from,
+				     unsigned long size);
+extern unsigned long copy_in_user_fixup(void __user *to, void __user *from,
+					unsigned long size);
+static inline unsigned long copy_in_user(void __user *to, void __user *from,
+					 unsigned long size)
+{
+	unsigned long ret = ___copy_in_user(to, from, size);
+
+	if (ret)
+		ret = copy_in_user_fixup(to, from, size);
+	return ret;
+}
+#define __copy_in_user copy_in_user
 
 extern unsigned long __bzero_noasi(void __user *, unsigned long);
 
@@ -284,6 +317,8 @@ extern long __strnlen_user(const char __user *, long len);
 
 #define strlen_user __strlen_user
 #define strnlen_user __strnlen_user
+#define __copy_to_user_inatomic __copy_to_user
+#define __copy_from_user_inatomic __copy_from_user
 
 #endif  /* __ASSEMBLY__ */
 

@@ -626,11 +626,8 @@ pagebuf_get(				/* allocate a buffer		*/
 	pb = _pagebuf_find(target, ioff, isize, flags, new_pb);
 	if (pb == new_pb) {
 		error = _pagebuf_lookup_pages(pb, flags);
-		if (unlikely(error)) {
-			printk(KERN_WARNING
-			       "pagebuf_get: failed to lookup pages\n");
+		if (error)
 			goto no_buffer;
-		}
 	} else {
 		pagebuf_deallocate(new_pb);
 		if (unlikely(pb == NULL))
@@ -1484,6 +1481,7 @@ xfs_free_buftarg(
 	xfs_flush_buftarg(btp, 1);
 	if (external)
 		xfs_blkdev_put(btp->pbr_bdev);
+	iput(btp->pbr_mapping->host);
 	kmem_free(btp, sizeof(*btp));
 }
 
@@ -1497,7 +1495,7 @@ xfs_incore_relse(
 	truncate_inode_pages(btp->pbr_mapping, 0LL);
 }
 
-void
+int
 xfs_setsize_buftarg(
 	xfs_buftarg_t		*btp,
 	unsigned int		blocksize,
@@ -1511,7 +1509,42 @@ xfs_setsize_buftarg(
 		printk(KERN_WARNING
 			"XFS: Cannot set_blocksize to %u on device %s\n",
 			sectorsize, XFS_BUFTARG_NAME(btp));
+		return EINVAL;
 	}
+	return 0;
+}
+
+STATIC int
+xfs_mapping_buftarg(
+	xfs_buftarg_t		*btp,
+	struct block_device	*bdev)
+{
+	struct backing_dev_info	*bdi;
+	struct inode		*inode;
+	struct address_space	*mapping;
+	static struct address_space_operations mapping_aops = {
+		.sync_page = block_sync_page,
+	};
+
+	inode = new_inode(bdev->bd_inode->i_sb);
+	if (!inode) {
+		printk(KERN_WARNING
+			"XFS: Cannot allocate mapping inode for device %s\n",
+			XFS_BUFTARG_NAME(btp));
+		return ENOMEM;
+	}
+	inode->i_mode = S_IFBLK;
+	inode->i_bdev = bdev;
+	inode->i_rdev = bdev->bd_dev;
+	bdi = blk_get_backing_dev_info(bdev);
+	if (!bdi)
+		bdi = &default_backing_dev_info;
+	mapping = &inode->i_data;
+	mapping->a_ops = &mapping_aops;
+	mapping->backing_dev_info = bdi;
+	mapping_set_gfp_mask(mapping, GFP_KERNEL);
+	btp->pbr_mapping = mapping;
+	return 0;
 }
 
 xfs_buftarg_t *
@@ -1524,10 +1557,15 @@ xfs_alloc_buftarg(
 
 	btp->pbr_dev =  bdev->bd_dev;
 	btp->pbr_bdev = bdev;
-	btp->pbr_mapping = bdev->bd_inode->i_mapping;
-	xfs_setsize_buftarg(btp, PAGE_CACHE_SIZE, bdev_hardsect_size(bdev));
-
+	if (xfs_setsize_buftarg(btp, PAGE_CACHE_SIZE, bdev_hardsect_size(bdev)))
+		goto error;
+	if (xfs_mapping_buftarg(btp, bdev))
+		goto error;
 	return btp;
+
+error:
+	kmem_free(btp, sizeof(*btp));
+	return NULL;
 }
 
 

@@ -450,12 +450,12 @@ int divert_ioctl(unsigned int cmd, struct divert_cf __user *arg)
  */
 
 #define	ETH_DIVERT_FRAME(skb) \
-	memcpy(skb->mac.ethernet, skb->dev->dev_addr, ETH_ALEN); \
+	memcpy(eth_hdr(skb), skb->dev->dev_addr, ETH_ALEN); \
 	skb->pkt_type=PACKET_HOST
 		
 void divert_frame(struct sk_buff *skb)
 {
-	struct ethhdr			*eth = skb->mac.ethernet;
+	struct ethhdr			*eth = eth_hdr(skb);
 	struct iphdr			*iph;
 	struct tcphdr			*tcph;
 	struct udphdr			*udph;
@@ -553,6 +553,3 @@ void divert_frame(struct sk_buff *skb)
 		break;
 	}
 }
-
-EXPORT_SYMBOL(alloc_divert_blk);
-EXPORT_SYMBOL(free_divert_blk);

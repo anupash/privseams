@@ -333,7 +333,7 @@ extern struct address_space_operations hfsplus_btree_aops;
 void hfsplus_inode_read_fork(struct inode *, struct hfsplus_fork_raw *);
 void hfsplus_inode_write_fork(struct inode *, struct hfsplus_fork_raw *);
 int hfsplus_cat_read_inode(struct inode *, struct hfs_find_data *);
-void hfsplus_cat_write_inode(struct inode *);
+int hfsplus_cat_write_inode(struct inode *);
 struct inode *hfsplus_new_inode(struct super_block *, int);
 void hfsplus_delete_inode(struct inode *);
 
@@ -344,7 +344,6 @@ int hfsplus_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 /* options.c */
 int parse_options(char *, struct hfsplus_sb_info *);
 void fill_defaults(struct hfsplus_sb_info *);
-void fill_current(struct hfsplus_sb_info *, struct hfsplus_sb_info *);
 
 /* tables.c */
 extern u16 case_fold_table[];

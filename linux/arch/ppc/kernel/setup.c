@@ -418,7 +418,6 @@ platform_init(unsigned long r3, unsigned long r4, unsigned long r5,
 	 * are used for initrd_start and initrd_size,
 	 * otherwise they contain 0xdeadbeef.
 	 */
-	cmd_line[0] = 0;
 	if (r3 >= 0x4000 && r3 < 0x800000 && r4 == 0) {
 		strlcpy(cmd_line, (char *)r3 + KERNELBASE,
 			sizeof(cmd_line));
@@ -483,6 +482,9 @@ static int __init set_preferred_console(void)
 	struct device_node *prom_stdout;
 	char *name;
 	int offset;
+
+	if (of_stdout_device == NULL)
+		return -ENODEV;
 
 	/* The user has requested a console so this is already set up. */
 	if (strstr(saved_command_line, "console="))
@@ -742,6 +744,10 @@ void __init setup_arch(char **cmdline_p)
 	/* Initialize OCP device list */
 	ocp_early_init();
 	if ( ppc_md.progress ) ppc_md.progress("ocp: exit", 0x3eab);
+#endif
+
+#ifdef CONFIG_DUMMY_CONSOLE
+	conswitchp = &dummy_con;
 #endif
 
 	ppc_md.setup_arch();

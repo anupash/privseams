@@ -1671,7 +1671,7 @@ static struct sa1100fb_info * __init sa1100fb_init_fbinfo(struct device *dev)
 	fbi->fb.var.vmode	= FB_VMODE_NONINTERLACED;
 
 	fbi->fb.fbops		= &sa1100fb_ops;
-	fbi->fb.flags		= FBINFO_FLAG_DEFAULT;
+	fbi->fb.flags		= FBINFO_DEFAULT;
 	fbi->fb.monspecs	= monspecs;
 	fbi->fb.currcon		= -1;
 	fbi->fb.pseudo_palette	= (fbi + 1);
@@ -1804,6 +1804,9 @@ static struct device_driver sa1100fb_driver = {
 
 int __init sa1100fb_init(void)
 {
+	if (fb_get_options("sa1100fb", NULL))
+		return -ENODEV;
+
 	return driver_register(&sa1100fb_driver);
 }
 
@@ -1848,5 +1851,6 @@ int __init sa1100fb_setup(char *options)
 	return 0;
 }
 
+module_init(sa1100fb_init);
 MODULE_DESCRIPTION("StrongARM-1100/1110 framebuffer driver");
 MODULE_LICENSE("GPL");

@@ -60,12 +60,12 @@ noforce (default) Don't enable by default for heap/stack/data,
 */ 
 static int __init nonx_setup(char *str)
 {
-	if (!strncmp(str, "on",3)) { 
+	if (!strcmp(str, "on")) {
                 __supported_pte_mask |= _PAGE_NX; 
  		do_not_nx = 0; 
  		vm_data_default_flags &= ~VM_EXEC; 
  		vm_stack_flags &= ~VM_EXEC;  
-	} else if (!strncmp(str, "noforce",7) || !strncmp(str,"off",3)) { 
+	} else if (!strcmp(str, "noforce") || !strcmp(str, "off")) {
 		do_not_nx = (str[0] == 'o');
 		if (do_not_nx)
 			__supported_pte_mask &= ~_PAGE_NX; 
@@ -91,26 +91,28 @@ Valid options:
    compat    (default) Imply PROT_EXEC for PROT_READ
 
 */
- static int __init nonx32_setup(char *str)
+ static int __init nonx32_setup(char *s)
  {
-	char *s;
-	while ((s = strsep(&str, ",")) != NULL) { 
-		if (!strcmp(s, "all") || !strcmp(s,"on")) {
+	 while (*s) {
+		if (!strncmp(s, "all", 3) || !strncmp(s,"on",2)) {
 			vm_data_default_flags32 &= ~VM_EXEC; 
 			vm_stack_flags32 &= ~VM_EXEC;  
-		} else if (!strcmp(s, "off")) { 
+		} else if (!strncmp(s, "off",3)) {
 			vm_data_default_flags32 |= VM_EXEC; 
 			vm_stack_flags32 |= VM_EXEC;  
-		} else if (!strcmp(s, "stack")) { 
+		} else if (!strncmp(s, "stack", 5)) {
 			vm_data_default_flags32 |= VM_EXEC; 
 			vm_stack_flags32 &= ~VM_EXEC;  		
-		} else if (!strcmp(s, "force")) { 
+		} else if (!strncmp(s, "force",5)) {
 			vm_force_exec32 = 0; 
-		} else if (!strcmp(s, "compat")) { 
+		} else if (!strncmp(s, "compat",5)) {
 			vm_force_exec32 = PROT_EXEC;
 		} 
-	} 
- 	return 1;
+		s += strcspn(s, ",");
+		if (*s == ',')
+			++s;
+	 }
+	 return 1;
 } 
 
 __setup("noexec32=", nonx32_setup); 
@@ -193,7 +195,8 @@ void pda_init(int cpu)
 char boot_exception_stacks[N_EXCEPTION_STACKS * EXCEPTION_STKSZ] 
 __attribute__((section(".bss.page_aligned")));
 
-void __init syscall_init(void)
+/* May not be marked __init: used by software suspend */
+void syscall_init(void)
 {
 	/* 
 	 * LSTAR and STAR live in a bit strange symbiosis.
@@ -235,10 +238,11 @@ void __init cpu_init (void)
 #else
 	int cpu = smp_processor_id();
 #endif
-	struct tss_struct * t = &init_tss[cpu];
+	struct tss_struct *t = &per_cpu(init_tss, cpu);
 	unsigned long v; 
 	char *estacks = NULL; 
 	struct task_struct *me;
+	int i;
 
 	/* CPU 0 is initialised in head64.c */
 	if (cpu != 0) {
@@ -302,12 +306,13 @@ void __init cpu_init (void)
 		t->ist[v] = (unsigned long)estacks;
 	}
 
-	t->io_bitmap_base = INVALID_IO_BITMAP_OFFSET;
+	t->io_bitmap_base = offsetof(struct tss_struct, io_bitmap);
 	/*
-	 * This is required because the CPU will access up to
+	 * <= is required because the CPU will access up to
 	 * 8 bits beyond the end of the IO permission bitmap.
 	 */
-	t->io_bitmap[IO_BITMAP_LONGS] = ~0UL;
+	for (i = 0; i <= IO_BITMAP_LONGS; i++)
+		t->io_bitmap[i] = ~0UL;
 
 	atomic_inc(&init_mm.mm_count);
 	me->active_mm = &init_mm;

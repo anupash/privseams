@@ -418,11 +418,10 @@ int get_localhost_endpointinfo(const char *basename,
 
   *res = NULL;
 
-  HIP_DEBUG("\n");
+  HIP_DEBUG("glhepi\n");
   HIP_ASSERT(hints);
 
   // XX TODO: check flags?
-
   memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
   err = gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
   if (err) {
@@ -452,12 +451,14 @@ int get_localhost_endpointinfo(const char *basename,
 
   HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
+#if 0 /* XX FIXME */
   ifaces = if_nameindex();
   if (ifaces == NULL || (ifaces->if_index == 0)) {
     HIP_ERROR("%s\n", (ifaces == NULL) ? "Iface error" : "No ifaces.");
     err = 1;
     goto out_err;
   }
+#endif
 
   *res = calloc(1, sizeof(struct endpointinfo));
   if (!*res) {

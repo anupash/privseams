@@ -1051,11 +1051,6 @@ static void init_bt848(struct bttv *btv)
 	btwrite(whitecrush_upper, BT848_WC_UP);
 	btwrite(whitecrush_lower, BT848_WC_DOWN);
 
-	bt848_bright(btv,   btv->bright);
-	bt848_hue(btv,      btv->hue);
-	bt848_contrast(btv, btv->contrast);
-	bt848_sat(btv,      btv->saturation);
-
 	if (btv->opt_lumafilter) {
 		btwrite(0, BT848_E_CONTROL);
 		btwrite(0, BT848_O_CONTROL);
@@ -1063,6 +1058,11 @@ static void init_bt848(struct bttv *btv)
 		btwrite(BT848_CONTROL_LDEC, BT848_E_CONTROL);
 		btwrite(BT848_CONTROL_LDEC, BT848_O_CONTROL);
 	}
+
+	bt848_bright(btv,   btv->bright);
+	bt848_hue(btv,      btv->hue);
+	bt848_contrast(btv, btv->contrast);
+	bt848_sat(btv,      btv->saturation);
 
         /* interrupt */
 	init_irqreg(btv);
@@ -1861,6 +1861,8 @@ static int setup_window(struct bttv_fh *fh, struct bttv *btv,
 
 	if (NULL == fh->ovfmt)
 		return -EINVAL;
+	if (!(fh->ovfmt->flags & FORMAT_FLAGS_PACKED))
+		return -EINVAL;
 	retval = verify_window(&bttv_tvnorms[btv->tvnorm],win,fixup);
 	if (0 != retval)
 		return retval;
@@ -2052,6 +2054,7 @@ static int bttv_try_fmt(struct bttv_fh *fh, struct bttv *btv,
 			f->fmt.pix.width = maxw;
 		if (f->fmt.pix.height > maxh)
 			f->fmt.pix.height = maxh;
+		f->fmt.pix.width &= ~0x03;
 		f->fmt.pix.bytesperline =
 			(f->fmt.pix.width * fmt->depth) >> 3;
 		f->fmt.pix.sizeimage =

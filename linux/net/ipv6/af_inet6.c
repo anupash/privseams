@@ -90,12 +90,6 @@ int sysctl_ipv6_bindv6only;
 atomic_t inet6_sock_nr;
 #endif
 
-/* Per protocol sock slabcache */
-kmem_cache_t *tcp6_sk_cachep;
-kmem_cache_t *udp6_sk_cachep;
-kmem_cache_t *raw6_sk_cachep;
-
-
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 #include <net/hip_glue.h>
 /* Placeholder for HIP hooks */
@@ -118,37 +112,11 @@ static void inet6_sock_destruct(struct sock *sk)
 #endif
 }
 
-static __inline__ kmem_cache_t *inet6_sk_slab(int protocol)
-{
-        kmem_cache_t* rc = tcp6_sk_cachep;
-
-        if (protocol == IPPROTO_UDP)
-                rc = udp6_sk_cachep;
-        else if (protocol == IPPROTO_RAW)
-                rc = raw6_sk_cachep;
-        return rc;
-}
-
-static __inline__ int inet6_sk_size(int protocol)
-{
-        int rc = sizeof(struct tcp6_sock);
-
-        if (protocol == IPPROTO_UDP)
-                rc = sizeof(struct udp6_sock);
-        else if (protocol == IPPROTO_RAW)
-                rc = sizeof(struct raw6_sock);
-        return rc;
-}
-
 static __inline__ struct ipv6_pinfo *inet6_sk_generic(struct sock *sk)
 {
-	struct ipv6_pinfo *rc = (&((struct tcp6_sock *)sk)->inet6);
+	const int offset = sk->sk_prot->slab_obj_size - sizeof(struct ipv6_pinfo);
 
-        if (sk->sk_protocol == IPPROTO_UDP)
-                rc = (&((struct udp6_sock *)sk)->inet6);
-        else if (sk->sk_protocol == IPPROTO_RAW)
-                rc = (&((struct raw6_sock *)sk)->inet6);
-        return rc;
+	return (struct ipv6_pinfo *)(((u8 *)sk) + offset);
 }
 
 static int inet6_create(struct socket *sock, int protocol)
@@ -159,11 +127,10 @@ static int inet6_create(struct socket *sock, int protocol)
 	struct tcp6_sock* tcp6sk;
 	struct list_head *p;
 	struct inet_protosw *answer;
-
-	sk = sk_alloc(PF_INET6, GFP_KERNEL, inet6_sk_size(protocol),
-		      inet6_sk_slab(protocol));
-	if (sk == NULL) 
-		goto do_oom;
+	struct proto *answer_prot;
+	unsigned char answer_flags;
+	char answer_no_check;
+	int rc;
 
 	/* Look for the requested type/protocol pair. */
 	answer = NULL;
@@ -187,22 +154,40 @@ static int inet6_create(struct socket *sock, int protocol)
 		answer = NULL;
 	}
 
+	rc = -ESOCKTNOSUPPORT;
 	if (!answer)
-		goto free_and_badtype;
+		goto out_rcu_unlock;
+	rc = -EPERM;
 	if (answer->capability > 0 && !capable(answer->capability))
-		goto free_and_badperm;
+		goto out_rcu_unlock;
+	rc = -EPROTONOSUPPORT;
 	if (!protocol)
-		goto free_and_noproto;
+		goto out_rcu_unlock;
 
 	sock->ops = answer->ops;
+
+	answer_prot = answer->prot;
+	answer_no_check = answer->no_check;
+	answer_flags = answer->flags;
+	rcu_read_unlock();
+
+	BUG_TRAP(answer_prot->slab != NULL);
+
+	rc = -ENOBUFS;
+	sk = sk_alloc(PF_INET6, GFP_KERNEL,
+		      answer_prot->slab_obj_size,
+		      answer_prot->slab);
+	if (sk == NULL)
+		goto out;
+
 	sock_init_data(sock, sk);
 	sk_set_owner(sk, THIS_MODULE);
 
-	sk->sk_prot = answer->prot;
-	sk->sk_no_check = answer->no_check;
-	if (INET_PROTOSW_REUSE & answer->flags)
+	rc = 0;
+	sk->sk_prot = answer_prot;
+	sk->sk_no_check = answer_no_check;
+	if (INET_PROTOSW_REUSE & answer_flags)
 		sk->sk_reuse = 1;
-	rcu_read_unlock();
 
 	inet = inet_sk(sk);
 
@@ -213,7 +198,6 @@ static int inet6_create(struct socket *sock, int protocol)
 	}
 
 	sk->sk_destruct		= inet6_sock_destruct;
-	sk->sk_zapped		= 0;
 	sk->sk_family		= PF_INET6;
 	sk->sk_protocol		= protocol;
 
@@ -256,28 +240,17 @@ static int inet6_create(struct socket *sock, int protocol)
 		sk->sk_prot->hash(sk);
 	}
 	if (sk->sk_prot->init) {
-		int err = sk->sk_prot->init(sk);
-		if (err != 0) {
+		rc = sk->sk_prot->init(sk);
+		if (rc) {
 			sk_common_release(sk);
-			return err;
+			goto out;
 		}
 	}
-	return 0;
-
-free_and_badtype:
+out:
+	return rc;
+out_rcu_unlock:
 	rcu_read_unlock();
-	sk_free(sk);
-	return -ESOCKTNOSUPPORT;
-free_and_badperm:
-	rcu_read_unlock();
-	sk_free(sk);
-	return -EPERM;
-free_and_noproto:
-	rcu_read_unlock();
-	sk_free(sk);
-	return -EPROTONOSUPPORT;
-do_oom:
-	return -ENOBUFS;
+	goto out;
 }
 
 
@@ -525,7 +498,6 @@ struct proto_ops inet6_stream_ops = {
 	.mmap =		sock_no_mmap,
 	.sendpage =	tcp_sendpage
 };
-EXPORT_SYMBOL(inet6_stream_ops);
 
 struct proto_ops inet6_dgram_ops = {
 	.family =	PF_INET6,
@@ -547,14 +519,18 @@ struct proto_ops inet6_dgram_ops = {
 	.mmap =		sock_no_mmap,
 	.sendpage =	sock_no_sendpage,
 };
-EXPORT_SYMBOL(inet6_dgram_ops);
 
-struct net_proto_family inet6_family_ops = {
+static struct net_proto_family inet6_family_ops = {
 	.family = PF_INET6,
 	.create = inet6_create,
 	.owner	= THIS_MODULE,
 };
+
+/* BEGIN HIPL PATCH */
+EXPORT_SYMBOL(inet6_stream_ops);
+EXPORT_SYMBOL(inet6_dgram_ops);
 EXPORT_SYMBOL(inet6_family_ops);
+/* END HIPL PATCH */
 
 #ifdef CONFIG_SYSCTL
 extern void ipv6_sysctl_register(void);
@@ -720,24 +696,26 @@ static int __init inet6_init(void)
 #endif
 #endif
 
-	if (sizeof(struct inet6_skb_parm) > sizeof(dummy_skb->cb))
-	{
+	if (sizeof(struct inet6_skb_parm) > sizeof(dummy_skb->cb)) {
 		printk(KERN_CRIT "inet6_proto_init: size fault\n");
 		return -EINVAL;
 	}
-	/* allocate our sock slab caches */
-        tcp6_sk_cachep = kmem_cache_create("tcp6_sock",
-					   sizeof(struct tcp6_sock), 0,
-                                           SLAB_HWCACHE_ALIGN, NULL, NULL);
-        udp6_sk_cachep = kmem_cache_create("udp6_sock",
-					   sizeof(struct udp6_sock), 0,
-                                           SLAB_HWCACHE_ALIGN, NULL, NULL);
-        raw6_sk_cachep = kmem_cache_create("raw6_sock",
-					   sizeof(struct raw6_sock), 0,
-                                           SLAB_HWCACHE_ALIGN, NULL, NULL);
-        if (!tcp6_sk_cachep || !udp6_sk_cachep || !raw6_sk_cachep)
-                printk(KERN_CRIT "%s: Can't create protocol sock SLAB "
-		       "caches!\n", __FUNCTION__);
+
+	err = sk_alloc_slab(&tcpv6_prot, "tcpv6_sock");
+	if (err) {
+		sk_alloc_slab_error(&tcpv6_prot);
+		goto out;
+	}
+	err = sk_alloc_slab(&udpv6_prot, "udpv6_sock");
+	if (err) {
+		sk_alloc_slab_error(&udpv6_prot);
+		goto out_tcp_free_slab;
+	}
+	err = sk_alloc_slab(&rawv6_prot, "rawv6_sock");
+	if (err) {
+		sk_alloc_slab_error(&rawv6_prot);
+		goto out_udp_free_slab;
+	}
 
 	/* Register the socket-side information for inet6_create.  */
 	for(r = &inetsw6[0]; r < &inetsw6[SOCK_MAX]; ++r)
@@ -756,7 +734,7 @@ static int __init inet6_init(void)
 	/* Initialise ipv6 mibs */
 	err = init_ipv6_mibs();
 	if (err)
-		goto init_mib_fail;
+		goto out_raw_free_slab;
 	
 	/*
 	 *	ipngwg API draft makes clear that the correct semantics
@@ -809,8 +787,9 @@ static int __init inet6_init(void)
 	/* Init v6 transport protocols. */
 	udpv6_init();
 	tcpv6_init();
-
-	return 0;
+	err = 0;
+out:
+	return err;
 
 #ifdef CONFIG_PROC_FS
 proc_if6_fail:
@@ -835,8 +814,13 @@ icmp_fail:
 	ipv6_sysctl_unregister();
 #endif
 	cleanup_ipv6_mibs();
-init_mib_fail:
-	return err;
+out_raw_free_slab:
+	sk_free_slab(&rawv6_prot);
+out_udp_free_slab:
+	sk_free_slab(&udpv6_prot);
+out_tcp_free_slab:
+	sk_free_slab(&tcpv6_prot);
+	goto out;
 }
 module_init(inet6_init);
 
@@ -865,9 +849,9 @@ static void __exit inet6_exit(void)
 	ipv6_sysctl_unregister();	
 #endif
 	cleanup_ipv6_mibs();
-	kmem_cache_destroy(tcp6_sk_cachep);
-	kmem_cache_destroy(udp6_sk_cachep);
-	kmem_cache_destroy(raw6_sk_cachep);
+	sk_free_slab(&rawv6_prot);
+	sk_free_slab(&udpv6_prot);
+	sk_free_slab(&tcpv6_prot);
 }
 module_exit(inet6_exit);
 

@@ -11,6 +11,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/skbuff.h>
 #include <linux/ip.h>
 #include <linux/spinlock.h>
@@ -26,7 +27,7 @@ MODULE_DESCRIPTION("IP6 tables LOG target module");
 MODULE_LICENSE("GPL");
 
 static unsigned int nflog = 1;
-MODULE_PARM(nflog, "i");
+module_param(nflog, int, 0400);
 MODULE_PARM_DESC(nflog, "register as internal netfilter logging module");
  
 struct in_device;
@@ -60,7 +61,7 @@ static u_int8_t ip6_nexthdr(u_int8_t currenthdr, u_int8_t **hdrptr)
 		repeatedly...with a large stick...no, an even LARGER
 		stick...no, you're still not thinking big enough */
 			nexthdr = **hdrptr;
-			hdrlen = *hdrptr[1] * 4 + 8;
+			hdrlen = (*hdrptr)[1] * 4 + 8;
 			*hdrptr = *hdrptr + hdrlen;
 			break;
 		/*stupid rfc2402 */
@@ -68,7 +69,7 @@ static u_int8_t ip6_nexthdr(u_int8_t currenthdr, u_int8_t **hdrptr)
 		case IPPROTO_ROUTING:
 		case IPPROTO_HOPOPTS:
 			nexthdr = **hdrptr;
-			hdrlen = *hdrptr[1] * 8 + 8;
+			hdrlen = (*hdrptr)[1] * 8 + 8;
 			*hdrptr = *hdrptr + hdrlen;
 			break;
 		case IPPROTO_FRAGMENT:

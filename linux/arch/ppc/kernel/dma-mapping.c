@@ -41,11 +41,11 @@
 #include <linux/bootmem.h>
 #include <linux/highmem.h>
 #include <linux/dma-mapping.h>
+#include <linux/hardirq.h>
 
 #include <asm/pgalloc.h>
 #include <asm/prom.h>
 #include <asm/io.h>
-#include <asm/hardirq.h>
 #include <asm/mmu_context.h>
 #include <asm/pgtable.h>
 #include <asm/mmu.h>
@@ -381,6 +381,7 @@ void __dma_sync(void *vaddr, size_t size, int direction)
 		break;
 	}
 }
+EXPORT_SYMBOL(__dma_sync);
 
 #ifdef CONFIG_HIGHMEM
 /*
@@ -438,3 +439,4 @@ void __dma_sync_page(struct page *page, unsigned long offset,
 	__dma_sync((void *)start, size, direction);
 #endif
 }
+EXPORT_SYMBOL(__dma_sync_page);

@@ -27,6 +27,10 @@
 #include <linux/watchdog.h>
 #include <linux/init.h>
 
+#ifdef CONFIG_ARCH_PXA
+#include <asm/arch/pxa-regs.h>
+#endif
+
 #include <asm/hardware.h>
 #include <asm/bitops.h>
 #include <asm/uaccess.h>
@@ -162,6 +166,7 @@ static int sa1100dog_ioctl(struct inode *inode, struct file *file,
 static struct file_operations sa1100dog_fops =
 {
 	.owner		= THIS_MODULE,
+	.llseek		= no_llseek,
 	.write		= sa1100dog_write,
 	.ioctl		= sa1100dog_ioctl,
 	.open		= sa1100dog_open,

@@ -712,7 +712,7 @@ static int __devinit kyrofb_probe(struct pci_dev *pdev,
 	info->fix		= kyro_fix;
 	info->par		= currentpar;
 	info->pseudo_palette	= (void *)(currentpar + 1);
-	info->flags		= FBINFO_FLAG_DEFAULT;
+	info->flags		= FBINFO_DEFAULT;
 
 	SetCoreClockPLL(deviceInfo.pSTGReg, pdev);
 
@@ -787,6 +787,13 @@ static void __devexit kyrofb_remove(struct pci_dev *pdev)
 
 int __init kyrofb_init(void)
 {
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("kyrofb", &option))
+		return -ENODEV;
+	kyrofb_setup(option);
+#endif
 	return pci_module_init(&kyrofb_pci_driver);
 }
 
@@ -795,8 +802,9 @@ static void __exit kyrofb_exit(void)
 	pci_unregister_driver(&kyrofb_pci_driver);
 }
 
-#ifdef MODULE
 module_init(kyrofb_init);
+
+#ifdef MODULE
 module_exit(kyrofb_exit);
 #endif
 

@@ -110,9 +110,10 @@ unsigned long *in_exception_stack(int cpu, unsigned long stack)
 { 
 	int k;
 	for (k = 0; k < N_EXCEPTION_STACKS; k++) {
-		unsigned long end = init_tss[cpu].ist[k] + EXCEPTION_STKSZ; 
+		struct tss_struct *tss = &per_cpu(init_tss, cpu);
+		unsigned long end = tss->ist[k] + EXCEPTION_STKSZ;
 
-		if (stack >= init_tss[cpu].ist[k]  && stack <= end) 
+		if (stack >= tss->ist[k]  && stack <= end)
 			return (unsigned long *)end;
 	}
 	return NULL;
@@ -352,7 +353,7 @@ void __die(const char * str, struct pt_regs * regs, long err)
 #ifdef CONFIG_DEBUG_PAGEALLOC
 	printk("DEBUG_PAGEALLOC");
 #endif
-		printk("\n");
+	printk("\n");
 	notify_die(DIE_OOPS, (char *)str, regs, err, 255, SIGSEGV);
 	show_registers(regs);
 	/* Executive summary in case the oops scrolled away */
@@ -436,7 +437,8 @@ static void do_trap(int trapnr, int signr, char *str,
 #define DO_ERROR(trapnr, signr, str, name) \
 asmlinkage void do_##name(struct pt_regs * regs, long error_code) \
 { \
-	if (notify_die(DIE_TRAP, str, regs, error_code, trapnr, signr) == NOTIFY_BAD) \
+	if (notify_die(DIE_TRAP, str, regs, error_code, trapnr, signr) \
+							== NOTIFY_STOP) \
 		return; \
 	do_trap(trapnr, signr, str, regs, error_code, NULL); \
 }
@@ -449,7 +451,8 @@ asmlinkage void do_##name(struct pt_regs * regs, long error_code) \
 	info.si_errno = 0; \
 	info.si_code = sicode; \
 	info.si_addr = (void __user *)siaddr; \
-	if (notify_die(DIE_TRAP, str, regs, error_code, trapnr, signr) == NOTIFY_BAD) \
+	if (notify_die(DIE_TRAP, str, regs, error_code, trapnr, signr) \
+							== NOTIFY_STOP) \
 		return; \
 	do_trap(trapnr, signr, str, regs, error_code, &info); \
 }
@@ -463,14 +466,15 @@ DO_ERROR( 7, SIGSEGV, "device not available", device_not_available)
 DO_ERROR( 9, SIGFPE,  "coprocessor segment overrun", coprocessor_segment_overrun)
 DO_ERROR(10, SIGSEGV, "invalid TSS", invalid_TSS)
 DO_ERROR(11, SIGBUS,  "segment not present", segment_not_present)
-DO_ERROR_INFO(17, SIGBUS, "alignment check", alignment_check, BUS_ADRALN, get_cr2())
+DO_ERROR_INFO(17, SIGBUS, "alignment check", alignment_check, BUS_ADRALN, 0)
 DO_ERROR(18, SIGSEGV, "reserved", reserved)
 
 #define DO_ERROR_STACK(trapnr, signr, str, name) \
 asmlinkage void *do_##name(struct pt_regs * regs, long error_code) \
 { \
 	struct pt_regs *pr = ((struct pt_regs *)(current->thread.rsp0))-1; \
-	if (notify_die(DIE_TRAP, str, regs, error_code, trapnr, signr) == NOTIFY_BAD) \
+	if (notify_die(DIE_TRAP, str, regs, error_code, trapnr, signr) \
+							== NOTIFY_STOP) \
 		return regs; \
 	if (regs->cs & 3) { \
 		memcpy(pr, regs, sizeof(struct pt_regs)); \
@@ -513,7 +517,7 @@ asmlinkage void do_general_protection(struct pt_regs * regs, long error_code)
 		tsk->thread.error_code = error_code;
 		tsk->thread.trap_no = 13;
 		force_sig(SIGSEGV, tsk);
-	return;
+		return;
 	} 
 
 	/* kernel gp */
@@ -564,7 +568,8 @@ asmlinkage void default_do_nmi(struct pt_regs * regs)
 	unsigned char reason = inb(0x61);
 
 	if (!(reason & 0xc0)) {
-		if (notify_die(DIE_NMI_IPI, "nmi_ipi", regs, reason, 0, SIGINT) == NOTIFY_BAD)
+		if (notify_die(DIE_NMI_IPI, "nmi_ipi", regs, reason, 0, SIGINT)
+								== NOTIFY_STOP)
 			return;
 #ifdef CONFIG_X86_LOCAL_APIC
 		/*
@@ -579,7 +584,7 @@ asmlinkage void default_do_nmi(struct pt_regs * regs)
 		unknown_nmi_error(reason, regs);
 		return;
 	}
-	if (notify_die(DIE_NMI, "nmi", regs, reason, 0, SIGINT) == NOTIFY_BAD)
+	if (notify_die(DIE_NMI, "nmi", regs, reason, 0, SIGINT) == NOTIFY_STOP)
 		return; 
 	if (reason & 0x80)
 		mem_parity_error(reason, regs);
@@ -670,15 +675,34 @@ clear_dr7:
 	return regs;
 
 clear_TF_reenable:
-	printk("clear_tf_reenable\n");
 	set_tsk_thread_flag(tsk, TIF_SINGLESTEP);
 
 clear_TF:
 	/* RED-PEN could cause spurious errors */
 	if (notify_die(DIE_DEBUG, "debug2", regs, condition, 1, SIGTRAP) 
-	    != NOTIFY_BAD)
+								!= NOTIFY_STOP)
 	regs->eflags &= ~TF_MASK;
 	return regs;	
+}
+
+static int kernel_math_error(struct pt_regs *regs, char *str)
+{
+	const struct exception_table_entry *fixup;
+	fixup = search_exception_tables(regs->rip);
+	if (fixup) {
+		regs->rip = fixup->fixup;
+		return 1;
+	}
+	notify_die(DIE_GPF, str, regs, 0, 16, SIGFPE);
+#if 0
+	/* This should be a die, but warn only for now */
+	die(str, regs, 0);
+#else
+	printk(KERN_DEBUG "%s: %s at ", current->comm, str);
+	printk_address(regs->rip);
+	printk("\n");
+#endif
+	return 0;
 }
 
 /*
@@ -686,11 +710,18 @@ clear_TF:
  * the correct behaviour even in the presence of the asynchronous
  * IRQ13 behaviour
  */
-void math_error(void __user *rip)
+asmlinkage void do_coprocessor_error(struct pt_regs *regs)
 {
+	void __user *rip = (void __user *)(regs->rip);
 	struct task_struct * task;
 	siginfo_t info;
 	unsigned short cwd, swd;
+
+	conditional_sti(regs);
+	if ((regs->cs & 3) == 0 &&
+	    kernel_math_error(regs, "kernel x87 math error"))
+		return;
+
 	/*
 	 * Save the info for the exception handler and clear the error.
 	 */
@@ -740,22 +771,22 @@ void math_error(void __user *rip)
 	force_sig_info(SIGFPE, &info, task);
 }
 
-asmlinkage void do_coprocessor_error(struct pt_regs * regs)
-{
-	conditional_sti(regs);
-	math_error((void __user *)regs->rip);
-}
-
 asmlinkage void bad_intr(void)
 {
 	printk("bad interrupt"); 
 }
 
-static inline void simd_math_error(void __user *rip)
+asmlinkage void do_simd_coprocessor_error(struct pt_regs *regs)
 {
+	void __user *rip = (void __user *)(regs->rip);
 	struct task_struct * task;
 	siginfo_t info;
 	unsigned short mxcsr;
+
+	conditional_sti(regs);
+	if ((regs->cs & 3) == 0 &&
+        	kernel_math_error(regs, "simd math error"))
+		return;
 
 	/*
 	 * Save the info for the exception handler and clear the error.
@@ -797,12 +828,6 @@ static inline void simd_math_error(void __user *rip)
 			break;
 	}
 	force_sig_info(SIGFPE, &info, task);
-}
-
-asmlinkage void do_simd_coprocessor_error(struct pt_regs * regs)
-{
-	conditional_sti(regs);
-		simd_math_error((void __user *)regs->rip);
 }
 
 asmlinkage void do_spurious_interrupt_bug(struct pt_regs * regs)

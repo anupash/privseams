@@ -39,7 +39,7 @@ void usb_init_urb(struct urb *urb)
 {
 	if (urb) {
 		memset(urb, 0, sizeof(*urb));
-		kref_init(&urb->kref, urb_destroy);
+		kref_init(&urb->kref);
 		spin_lock_init(&urb->lock);
 	}
 }
@@ -88,7 +88,7 @@ struct urb *usb_alloc_urb(int iso_packets, int mem_flags)
 void usb_free_urb(struct urb *urb)
 {
 	if (urb)
-		kref_put(&urb->kref);
+		kref_put(&urb->kref, urb_destroy);
 }
 
 /**
@@ -255,13 +255,6 @@ int usb_submit_urb(struct urb *urb, int mem_flags)
 
 	if (!usb_pipecontrol (pipe) && dev->state < USB_STATE_CONFIGURED)
 		return -ENODEV;
-
-	/* (actually HCDs may need to duplicate this, endpoint might yet
-	 * stall due to queued bulk/intr transactions that complete after
-	 * we check)
-	 */
-	if (usb_endpoint_halted (dev, usb_pipeendpoint (pipe), is_out))
-		return -EPIPE;
 
 	/* FIXME there should be a sharable lock protecting us against
 	 * config/altsetting changes and disconnects, kicking in here.

@@ -136,9 +136,14 @@ typedef struct xfs_quotainfo {
 	xfs_qwarncnt_t	 qi_bwarnlimit;	 /* limit for num warnings */
 	xfs_qwarncnt_t	 qi_iwarnlimit;	 /* limit for num warnings */
 	mutex_t		 qi_quotaofflock;/* to serialize quotaoff */
-	/* Some useful precalculated constants */
 	xfs_filblks_t	 qi_dqchunklen;	 /* # BBs in a chunk of dqs */
 	uint		 qi_dqperchunk;	 /* # ondisk dqs in above chunk */
+	xfs_qcnt_t	 qi_bhardlimit;	 /* default data blk hard limit */
+	xfs_qcnt_t	 qi_bsoftlimit;	 /* default data blk soft limit */
+	xfs_qcnt_t	 qi_ihardlimit;	 /* default inode count hard limit */
+	xfs_qcnt_t	 qi_isoftlimit;	 /* default inode count soft limit */
+	xfs_qcnt_t	 qi_rtbhardlimit;/* default realtime blk hard limit */
+	xfs_qcnt_t	 qi_rtbsoftlimit;/* default realtime blk soft limit */
 } xfs_quotainfo_t;
 
 
@@ -187,7 +192,6 @@ extern int		xfs_qm_write_sb_changes(xfs_mount_t *, __int64_t);
 extern int		xfs_qm_sync(xfs_mount_t *, short);
 
 /* dquot stuff */
-extern void		xfs_qm_dqunlink(xfs_dquot_t *);
 extern boolean_t	xfs_qm_dqalloc_incore(xfs_dquot_t **);
 extern int		xfs_qm_dqattach(xfs_inode_t *, uint);
 extern void		xfs_qm_dqdetach(xfs_inode_t *);

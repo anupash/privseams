@@ -1200,6 +1200,13 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 		goto out_err;
 	}
 
+	/* The message was destined to TCP or IP - forward */
+	if (level != IPPROTO_HIP) {
+		err = socket_handler->setsockopt(sock, level, optname, optval,
+						 optlen);
+		goto out_err;
+	}
+
 	if (!(optname == SO_HIP_GLOBAL_OPT || optname == SO_HIP_SOCKET_OPT)) {
 		err = -ESOCKTNOSUPPORT;
 		HIP_ERROR("optname (%d) was incorrect\n", optname);
@@ -1233,7 +1240,7 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 		err = hip_socket_handle_rvs(msg);
 		break;
 	default:
-		HIP_ERROR("Unkown socket option (%d)\n", msg_type);
+		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}
 
@@ -1252,10 +1259,17 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	struct proto_ops *socket_handler;
 	struct hip_common *msg = (struct hip_common *) optval;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("%d\n", level);
 
 	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
+		goto out_err;
+	}
+
+	/* The message was destined to TCP or IP - forward */
+	if (level != IPPROTO_HIP) {
+		err = socket_handler->getsockopt(sock, level, optname, optval,
+						 optlen);
 		goto out_err;
 	}
 

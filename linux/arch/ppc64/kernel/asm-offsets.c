@@ -22,18 +22,17 @@
 #include <linux/types.h>
 #include <linux/mman.h>
 #include <linux/mm.h>
+#include <linux/hardirq.h>
 #include <asm/io.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/processor.h>
-#include <asm/hardirq.h>
 
 #include <asm/naca.h>
 #include <asm/paca.h>
 #include <asm/iSeries/ItLpPaca.h>
 #include <asm/iSeries/ItLpQueue.h>
 #include <asm/iSeries/HvLpEvent.h>
-#include <asm/prom.h>
 #include <asm/rtas.h>
 #include <asm/cputable.h>
 
@@ -58,6 +57,7 @@ int main(void)
 	DEFINE(THREAD_FPR0, offsetof(struct thread_struct, fpr[0]));
 	DEFINE(THREAD_FPSCR, offsetof(struct thread_struct, fpscr));
 	DEFINE(KSP, offsetof(struct thread_struct, ksp));
+	DEFINE(KSP_VSID, offsetof(struct thread_struct, ksp_vsid));
 
 #ifdef CONFIG_ALTIVEC
 	DEFINE(THREAD_VR0, offsetof(struct thread_struct, vr[0]));
@@ -93,16 +93,10 @@ int main(void)
 	DEFINE(PACASLBCACHE, offsetof(struct paca_struct, slb_cache));
 	DEFINE(PACASLBCACHEPTR, offsetof(struct paca_struct, slb_cache_ptr));
 	DEFINE(PACACONTEXTID, offsetof(struct paca_struct, context.id));
-	DEFINE(PACASLBR3, offsetof(struct paca_struct, slb_r3));
 #ifdef CONFIG_HUGETLB_PAGE
 	DEFINE(PACAHTLBSEGS, offsetof(struct paca_struct, context.htlb_segs));
 #endif /* CONFIG_HUGETLB_PAGE */
 	DEFINE(PACADEFAULTDECR, offsetof(struct paca_struct, default_decr));
-	DEFINE(PACAPROFENABLED, offsetof(struct paca_struct, prof_enabled));
-	DEFINE(PACAPROFLEN, offsetof(struct paca_struct, prof_len));
-	DEFINE(PACAPROFSHIFT, offsetof(struct paca_struct, prof_shift));
-	DEFINE(PACAPROFBUFFER, offsetof(struct paca_struct, prof_buffer));
-	DEFINE(PACAPROFSTEXT, offsetof(struct paca_struct, prof_stext));
         DEFINE(PACA_EXGEN, offsetof(struct paca_struct, exgen));
         DEFINE(PACA_EXMC, offsetof(struct paca_struct, exmc));
         DEFINE(PACA_EXSLB, offsetof(struct paca_struct, exslb));
@@ -113,15 +107,10 @@ int main(void)
         DEFINE(LPPACASRR1, offsetof(struct ItLpPaca, xSavedSrr1));
 	DEFINE(LPPACAANYINT, offsetof(struct ItLpPaca, xIntDword.xAnyInt));
 	DEFINE(LPPACADECRINT, offsetof(struct ItLpPaca, xIntDword.xFields.xDecrInt));
-        DEFINE(LPQCUREVENTPTR, offsetof(struct ItLpQueue, xSlicCurEventPtr));
-        DEFINE(LPQOVERFLOW, offsetof(struct ItLpQueue, xPlicOverflowIntPending));
-        DEFINE(LPEVENTFLAGS, offsetof(struct HvLpEvent, xFlags));
-	DEFINE(PROMENTRY, offsetof(struct prom_t, entry));
 
 	/* RTAS */
 	DEFINE(RTASBASE, offsetof(struct rtas_t, base));
 	DEFINE(RTASENTRY, offsetof(struct rtas_t, entry));
-	DEFINE(RTASSIZE, offsetof(struct rtas_t, size));
 
 	/* Interrupt register frame */
 	DEFINE(STACK_FRAME_OVERHEAD, STACK_FRAME_OVERHEAD);
@@ -148,10 +137,6 @@ int main(void)
 	DEFINE(GPR11, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, gpr[11]));
 	DEFINE(GPR12, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, gpr[12]));
 	DEFINE(GPR13, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, gpr[13]));
-	DEFINE(GPR20, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, gpr[20]));
-	DEFINE(GPR21, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, gpr[21]));
-	DEFINE(GPR22, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, gpr[22]));
-	DEFINE(GPR23, STACK_FRAME_OVERHEAD+offsetof(struct pt_regs, gpr[23]));
 	/*
 	 * Note: these symbols include _ because they overlap with special
 	 * register names

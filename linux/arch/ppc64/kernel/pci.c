@@ -23,6 +23,7 @@
 #include <linux/bootmem.h>
 #include <linux/module.h>
 #include <linux/mm.h>
+#include <linux/list.h>
 
 #include <asm/processor.h>
 #include <asm/io.h>
@@ -41,6 +42,13 @@
 unsigned long pci_probe_only = 1;
 unsigned long pci_assign_all_buses = 0;
 
+/* legal IO pages under MAX_ISA_PORT.  This is to ensure we don't touch
+   devices we don't have access to. */
+unsigned long io_page_mask;
+
+EXPORT_SYMBOL(io_page_mask);
+
+
 unsigned int pcibios_assign_all_busses(void)
 {
 	return pci_assign_all_buses;
@@ -55,16 +63,9 @@ unsigned int pcibios_assign_all_busses(void)
 unsigned long isa_io_base;	/* NULL if no ISA bus */
 unsigned long pci_io_base;
 
-void pcibios_name_device(struct pci_dev* dev);
-void pcibios_final_fixup(void);
-static void fixup_broken_pcnet32(struct pci_dev* dev);
-static void fixup_windbond_82c105(struct pci_dev* dev);
-extern void fixup_k2_sata(struct pci_dev* dev);
-
 void iSeries_pcibios_init(void);
 
-struct pci_controller *hose_head;
-struct pci_controller **hose_tail = &hose_head;
+LIST_HEAD(hose_list);
 
 struct pci_dma_ops pci_dma_ops;
 EXPORT_SYMBOL(pci_dma_ops);
@@ -74,20 +75,6 @@ int global_phb_number;		/* Global phb counter */
 /* Cached ISA bridge dev. */
 struct pci_dev *ppc64_isabridge_dev = NULL;
 
-struct pci_fixup pcibios_fixups[] = {
-	{ PCI_FIXUP_HEADER,	PCI_VENDOR_ID_TRIDENT,		PCI_ANY_ID,
-	  fixup_broken_pcnet32 },
-	{ PCI_FIXUP_HEADER,	PCI_VENDOR_ID_WINBOND,		PCI_DEVICE_ID_WINBOND_82C105,
-	  fixup_windbond_82c105 },
-	{ PCI_FIXUP_HEADER,	PCI_ANY_ID,    			PCI_ANY_ID,
-	  pcibios_name_device },
-#ifdef CONFIG_PPC_PMAC
-	{ PCI_FIXUP_HEADER,	PCI_VENDOR_ID_SERVERWORKS,	0x0240,
-	  fixup_k2_sata },
-#endif
-	{ 0 }
-};
-
 static void fixup_broken_pcnet32(struct pci_dev* dev)
 {
 	if ((dev->class>>8 == PCI_CLASS_NETWORK_ETHERNET)) {
@@ -96,6 +83,7 @@ static void fixup_broken_pcnet32(struct pci_dev* dev)
 		pci_name_device(dev);
 	}
 }
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_TRIDENT, PCI_ANY_ID, fixup_broken_pcnet32);
 
 static void fixup_windbond_82c105(struct pci_dev* dev)
 {
@@ -118,6 +106,7 @@ static void fixup_windbond_82c105(struct pci_dev* dev)
 			dev->resource[i].flags &= ~IORESOURCE_IO;
 	}
 }
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_WINBOND, PCI_DEVICE_ID_WINBOND_82C105, fixup_windbond_82c105);
 
 void 
 pcibios_resource_to_bus(struct pci_dev *dev, struct pci_bus_region *region,
@@ -239,9 +228,9 @@ pci_alloc_pci_controller(enum phb_types controller_type)
 		memcpy(hose->what,model,7);
         hose->type = controller_type;
         hose->global_number = global_phb_number++;
-        
-        *hose_tail = hose;
-        hose_tail = &hose->next;
+
+	list_add_tail(&hose->list_node, &hose_list);
+
         return hose;
 }
 
@@ -281,18 +270,17 @@ static void __init pcibios_claim_of_setup(void)
 
 static int __init pcibios_init(void)
 {
-	struct pci_controller *hose;
+	struct pci_controller *hose, *tmp;
 	struct pci_bus *bus;
 
 #ifdef CONFIG_PPC_ISERIES
 	iSeries_pcibios_init(); 
 #endif
 
-	//ppc64_boot_msg(0x40, "PCI Probe");
 	printk("PCI: Probing PCI hardware\n");
 
 	/* Scan all of the recorded PCI controllers.  */
-	for (hose = hose_head; hose; hose = hose->next) {
+	list_for_each_entry_safe(hose, tmp, &hose_list, list_node) {
 		hose->last_busno = 0xff;
 		bus = pci_scan_bus(hose->first_busno, hose->ops,
 				   hose->arch_data);
@@ -308,7 +296,7 @@ static int __init pcibios_init(void)
 		   pci_assign_unassigned_resources() is able to work
 		   correctly with [partially] allocated PCI tree. */
 		pci_assign_unassigned_resources();
-#endif
+#endif /* !CONFIG_PPC_ISERIES */
 
 	/* Call machine dependent final fixup */
 	if (ppc_md.pcibios_fixup)
@@ -320,11 +308,6 @@ static int __init pcibios_init(void)
 		printk("ISA bridge at %s\n", pci_name(ppc64_isabridge_dev));
 
 	printk("PCI: Probing PCI hardware done\n");
-	//ppc64_boot_msg(0x41, "PCI Done");
-
-#ifdef CONFIG_PPC_PSERIES
-	pci_addr_cache_build();
-#endif
 
 	return 0;
 }
@@ -524,7 +507,7 @@ int pci_mmap_page_range(struct pci_dev *dev, struct vm_area_struct *vma,
 	return ret;
 }
 
-#ifdef CONFIG_PPC_PSERIES
+#ifdef CONFIG_PPC_MULTIPLATFORM
 static ssize_t pci_show_devspec(struct device *dev, char *buf)
 {
 	struct pci_dev *pdev;
@@ -537,11 +520,329 @@ static ssize_t pci_show_devspec(struct device *dev, char *buf)
 	return sprintf(buf, "%s", np->full_name);
 }
 static DEVICE_ATTR(devspec, S_IRUGO, pci_show_devspec, NULL);
-#endif /* CONFIG_PPC_PSERIES */
+#endif /* CONFIG_PPC_MULTIPLATFORM */
 
 void pcibios_add_platform_entries(struct pci_dev *pdev)
 {
-#ifdef CONFIG_PPC_PSERIES
+#ifdef CONFIG_PPC_MULTIPLATFORM
 	device_create_file(&pdev->dev, &dev_attr_devspec);
-#endif /* CONFIG_PPC_PSERIES */
+#endif /* CONFIG_PPC_MULTIPLATFORM */
 }
+
+#ifdef CONFIG_PPC_MULTIPLATFORM
+
+#define ISA_SPACE_MASK 0x1
+#define ISA_SPACE_IO 0x1
+
+static void pci_process_ISA_OF_ranges(struct device_node *isa_node,
+				      unsigned long phb_io_base_phys,
+				      void * phb_io_base_virt)
+{
+	struct isa_range *range;
+	unsigned long pci_addr;
+	unsigned int isa_addr;
+	unsigned int size;
+	int rlen = 0;
+
+	range = (struct isa_range *) get_property(isa_node, "ranges", &rlen);
+	if (rlen < sizeof(struct isa_range)) {
+		printk(KERN_ERR "unexpected isa range size: %s\n", 
+				__FUNCTION__);
+		return;	
+	}
+	
+	/* From "ISA Binding to 1275"
+	 * The ranges property is laid out as an array of elements,
+	 * each of which comprises:
+	 *   cells 0 - 1:	an ISA address
+	 *   cells 2 - 4:	a PCI address 
+	 *			(size depending on dev->n_addr_cells)
+	 *   cell 5:		the size of the range
+	 */
+	if ((range->isa_addr.a_hi && ISA_SPACE_MASK) == ISA_SPACE_IO) {
+		isa_addr = range->isa_addr.a_lo;
+		pci_addr = (unsigned long) range->pci_addr.a_mid << 32 | 
+			range->pci_addr.a_lo;
+
+		/* Assume these are both zero */
+		if ((pci_addr != 0) || (isa_addr != 0)) {
+			printk(KERN_ERR "unexpected isa to pci mapping: %s\n",
+					__FUNCTION__);
+			return;
+		}
+		
+		size = PAGE_ALIGN(range->size);
+
+		__ioremap_explicit(phb_io_base_phys, 
+				   (unsigned long) phb_io_base_virt, 
+				   size, _PAGE_NO_CACHE);
+	}
+}
+
+void __init pci_process_bridge_OF_ranges(struct pci_controller *hose,
+					 struct device_node *dev, int primary)
+{
+	unsigned int *ranges;
+	unsigned long size;
+	int rlen = 0;
+	int memno = 0;
+	struct resource *res;
+	int np, na = prom_n_addr_cells(dev);
+	unsigned long pci_addr, cpu_phys_addr;
+	struct device_node *isa_dn;
+
+	np = na + 5;
+
+	/* From "PCI Binding to 1275"
+	 * The ranges property is laid out as an array of elements,
+	 * each of which comprises:
+	 *   cells 0 - 2:	a PCI address
+	 *   cells 3 or 3+4:	a CPU physical address
+	 *			(size depending on dev->n_addr_cells)
+	 *   cells 4+5 or 5+6:	the size of the range
+	 */
+	rlen = 0;
+	hose->io_base_phys = 0;
+	ranges = (unsigned int *) get_property(dev, "ranges", &rlen);
+	while ((rlen -= np * sizeof(unsigned int)) >= 0) {
+		res = NULL;
+		pci_addr = (unsigned long)ranges[1] << 32 | ranges[2];
+
+		cpu_phys_addr = ranges[3];
+		if (na == 2)
+			cpu_phys_addr = cpu_phys_addr << 32 | ranges[4];
+
+		size = (unsigned long)ranges[na+3] << 32 | ranges[na+4];
+
+		switch (ranges[0] >> 24) {
+		case 1:		/* I/O space */
+			hose->io_base_phys = cpu_phys_addr;
+			hose->io_base_virt = reserve_phb_iospace(size);
+			PPCDBG(PPCDBG_PHBINIT, 
+			       "phb%d io_base_phys 0x%lx io_base_virt 0x%lx\n", 
+			       hose->global_number, hose->io_base_phys, 
+			       (unsigned long) hose->io_base_virt);
+
+			if (primary) {
+				pci_io_base = (unsigned long)hose->io_base_virt;
+				isa_dn = of_find_node_by_type(NULL, "isa");
+				if (isa_dn) {
+					isa_io_base = pci_io_base;
+					pci_process_ISA_OF_ranges(isa_dn,
+						hose->io_base_phys,
+						hose->io_base_virt);
+					of_node_put(isa_dn);
+                                        /* Allow all IO */
+                                        io_page_mask = -1;
+				}
+			}
+
+			res = &hose->io_resource;
+			res->flags = IORESOURCE_IO;
+			res->start = pci_addr;
+			res->start += (unsigned long)hose->io_base_virt -
+				pci_io_base;
+			break;
+		case 2:		/* memory space */
+			memno = 0;
+			while (memno < 3 && hose->mem_resources[memno].flags)
+				++memno;
+
+			if (memno == 0)
+				hose->pci_mem_offset = cpu_phys_addr - pci_addr;
+			if (memno < 3) {
+				res = &hose->mem_resources[memno];
+				res->flags = IORESOURCE_MEM;
+				res->start = cpu_phys_addr;
+			}
+			break;
+		}
+		if (res != NULL) {
+			res->name = dev->full_name;
+			res->end = res->start + size - 1;
+			res->parent = NULL;
+			res->sibling = NULL;
+			res->child = NULL;
+		}
+		ranges += np;
+	}
+}
+
+/*********************************************************************** 
+ * pci_find_hose_for_OF_device
+ *
+ * This function finds the PHB that matching device_node in the 
+ * OpenFirmware by scanning all the pci_controllers.
+ * 
+ ***********************************************************************/
+struct pci_controller* pci_find_hose_for_OF_device(struct device_node *node)
+{
+	while (node) {
+		struct pci_controller *hose, *tmp;
+		list_for_each_entry_safe(hose, tmp, &hose_list, list_node)
+			if (hose->arch_data == node)
+				return hose;
+		node=node->parent;
+	}
+	return NULL;
+}
+
+/*
+ * ppc64 can have multifunction devices that do not respond to function 0.
+ * In this case we must scan all functions.
+ */
+int pcibios_scan_all_fns(struct pci_bus *bus, int devfn)
+{
+       struct device_node *busdn, *dn;
+
+       if (bus->self)
+               busdn = pci_device_to_OF_node(bus->self);
+       else
+               busdn = bus->sysdata;   /* must be a phb */
+
+       /*
+        * Check to see if there is any of the 8 functions are in the
+        * device tree.  If they are then we need to scan all the
+        * functions of this slot.
+        */
+       for (dn = busdn->child; dn; dn = dn->sibling)
+               if ((dn->devfn >> 3) == (devfn >> 3))
+                       return 1;
+
+       return 0;
+}
+
+
+void __devinit pcibios_fixup_device_resources(struct pci_dev *dev,
+					   struct pci_bus *bus)
+{
+	/* Update device resources.  */
+	struct pci_controller *hose = PCI_GET_PHB_PTR(bus);
+	int i;
+
+	for (i = 0; i < PCI_NUM_RESOURCES; i++) {
+		if (dev->resource[i].flags & IORESOURCE_IO) {
+			unsigned long offset = (unsigned long)hose->io_base_virt - pci_io_base;
+                        unsigned long start, end, mask;
+
+                        start = dev->resource[i].start += offset;
+                        end = dev->resource[i].end += offset;
+
+                        /* Need to allow IO access to pages that are in the
+                           ISA range */
+                        if (start < MAX_ISA_PORT) {
+                                if (end > MAX_ISA_PORT)
+                                        end = MAX_ISA_PORT;
+
+                                start >>= PAGE_SHIFT;
+                                end >>= PAGE_SHIFT;
+
+                                /* get the range of pages for the map */
+                                mask = ((1 << (end+1))-1) ^ ((1 << start)-1);
+                                io_page_mask |= mask;
+                        }
+		}
+                else if (dev->resource[i].flags & IORESOURCE_MEM) {
+			dev->resource[i].start += hose->pci_mem_offset;
+			dev->resource[i].end += hose->pci_mem_offset;
+		}
+        }
+}
+EXPORT_SYMBOL(pcibios_fixup_device_resources);
+
+void __devinit pcibios_fixup_bus(struct pci_bus *bus)
+{
+	struct pci_controller *hose = PCI_GET_PHB_PTR(bus);
+	struct list_head *ln;
+
+	/* XXX or bus->parent? */
+	struct pci_dev *dev = bus->self;
+	struct resource *res;
+	int i;
+
+	if (!dev) {
+		/* Root bus. */
+
+		hose->bus = bus;
+		bus->resource[0] = res = &hose->io_resource;
+		if (!res->flags)
+			BUG();	/* No I/O resource for this PHB? */
+
+		if (request_resource(&ioport_resource, res))
+			printk(KERN_ERR "Failed to request IO on "
+					"PCI domain %d\n", pci_domain_nr(bus));
+
+
+		for (i = 0; i < 3; ++i) {
+			res = &hose->mem_resources[i];
+			if (!res->flags && i == 0)
+				BUG();	/* No memory resource for this PHB? */
+			bus->resource[i+1] = res;
+			if (res->flags && request_resource(&iomem_resource, res))
+				printk(KERN_ERR "Failed to request MEM on "
+						"PCI domain %d\n",
+						pci_domain_nr(bus));
+		}
+	} else if (pci_probe_only &&
+		   (dev->class >> 8) == PCI_CLASS_BRIDGE_PCI) {
+		/* This is a subordinate bridge */
+
+		pci_read_bridge_bases(bus);
+		pcibios_fixup_device_resources(dev, bus);
+	}
+
+	/* XXX Need to check why Alpha doesnt do this - Anton */
+	if (!pci_probe_only)
+		return;
+
+	for (ln = bus->devices.next; ln != &bus->devices; ln = ln->next) {
+		struct pci_dev *dev = pci_dev_b(ln);
+		if ((dev->class >> 8) != PCI_CLASS_BRIDGE_PCI)
+			pcibios_fixup_device_resources(dev, bus);
+	}
+}
+EXPORT_SYMBOL(pcibios_fixup_bus);
+
+/******************************************************************
+ * pci_read_irq_line
+ *
+ * Reads the Interrupt Pin to determine if interrupt is use by card.
+ * If the interrupt is used, then gets the interrupt line from the 
+ * openfirmware and sets it in the pci_dev and pci_config line.
+ *
+ ******************************************************************/
+int pci_read_irq_line(struct pci_dev *pci_dev)
+{
+	u8 intpin;
+	struct device_node *node;
+
+    	pci_read_config_byte(pci_dev, PCI_INTERRUPT_PIN, &intpin);
+
+	if (intpin == 0) {
+		PPCDBG(PPCDBG_BUSWALK,"\tDevice: %s No Interrupt used by device.\n",
+		       pci_name(pci_dev));
+		return 0;	
+	}
+
+	node = pci_device_to_OF_node(pci_dev);
+	if (node == NULL) { 
+		PPCDBG(PPCDBG_BUSWALK,"\tDevice: %s Device Node not found.\n",
+		       pci_name(pci_dev));
+		return -1;	
+	}
+	if (node->n_intrs == 0) 	{
+		PPCDBG(PPCDBG_BUSWALK,"\tDevice: %s No Device OF interrupts defined.\n",
+		       pci_name(pci_dev));
+		return -1;	
+	}
+	pci_dev->irq = node->intrs[0].line;
+
+	pci_write_config_byte(pci_dev, PCI_INTERRUPT_LINE, pci_dev->irq);
+	
+	PPCDBG(PPCDBG_BUSWALK,"\tDevice: %s pci_dev->irq = 0x%02X\n",
+	       pci_name(pci_dev), pci_dev->irq);
+	return 0;
+}
+EXPORT_SYMBOL(pci_read_irq_line);
+
+#endif /* CONFIG_PPC_MULTIPLATFORM */
