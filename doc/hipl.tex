@@ -322,28 +322,27 @@ section, we describe their intended use and locking policies.
 
 The \ac{HADB} is a container for \acp{HA}. A \ac{HA} holds the
 necessary information to establish and maintain a \ac{HIP} association
-between the localhost and a peer. It consist of both parties'
-\acp{HIT}, \ac{SPI} values required for \ac{ESP} traffic, IPv6
-addresses, security keys, keying material to derive new keys and some
-state information. It is needed when sending or receiving \ac{IPsec}
-data, or due to \ac{HIP} control messages (base exchange, readdressing
-etc).
+between two hosts. It consists of both parties' \acp{HIT}, \acp{SPI}
+values required for \ac{ESP} traffic, IPv6 addresses, security keys,
+keying material to derive new keys and some state information. It is
+needed when sending or receiving \ac{IPsec} data in \ac{ESP}, or due
+to \ac{HIP} control messages (base exchange, readdressing etc).
 
 The \ac{HA} has internal state. This state varies between
 \verb|HIP_HASTATE_INVALID| and \verb|HIP_HASTATE_HITOK|, meaning that
 \ac{HA} is not fully usable yet or it is inserted in the HIT hash
 table, respectively.
 
-The \acp{HA} is implemented as hash table to support fast
+The \ac{HADB} is implemented as a hash table to support fast
 searching. The hash table is indexed by \ac{HIT}. However, the support
-for multiple \ac{IPsec} \ac{SA} support cannot be supported
-efficiently just by indexing using \acp{HIT}. Therefore, the HIP
-module as an auxiliary hash table that maps inbound \ac{SPI} numbers
-to peer \acp{HIT}. It is used only when an incoming \ac{ESP} envelope
-arrives and the HIP module need to map it to a certain \ac{HIP}
-\ac{SA}. At that moment, the module is not aware of the \acp{HIT}
-involved, but knows only the \ac{SPI} value from \ac{ESP} packet. The
-host looks up the corresponding \ac{HIT} from auxiliary hash table,
+for multiple \ac{IPsec} \acp{SA} cannot be implemented
+efficiently just by indexing using \acp{HIT}. Therefore, the \ac{HIP}
+module has an auxiliary hash table that maps inbound \ac{SPI} values
+to peer \acp{HIT}. It is used only when an incoming \ac{ESP} packet
+arrives and the \ac{HIP} module needs to map it to a certain \ac{HA}.
+At that moment, the module is not aware of the \acp{HIT}
+involved, but knows only the \ac{SPI} value from the \ac{ESP} packet. The
+host looks up the corresponding \ac{HIT} from the auxiliary hash table,
 and after that the host can get the correct \ac{HA} by using the
 retrieved \ac{HIT} as the hash key.
 
@@ -528,7 +527,8 @@ c & \verb|hip_handle_output| &
 An IPv6 packet is being sent out that has a HIT as the destination
 address. An IPv6 address corresponding to the HIT is searched from the
 kernel database. The HIT will be replaced with the corresponding IPv6
-address in the IPv6 header. The hook is both in the TCP and IPv6 code. \\
+address in the IPv6 header. The hook is called from two points of the
+IPv6 code to guarantee that both the TCP and UDP code reach this hook. \\
 
 d & \verb|hip_trigger_bex| &
 
@@ -577,23 +577,22 @@ the \ac{HIP} \ac{SP}, and thus no \ac{HIP} action will be
 performed. When a \ac{HIP} network connection is initiated, the
 \ac{HIP} \ac{SP} will match, and \ac{IPsec} will query for a
 \ac{SA}. If there is no ready \ac{SA} available, as is the case when
-we first connect to the peer, the \ac{HIP} module will start the
-\ac{HIP} base exchange.
+we first connect to the peer, the \ac{HIP} module starts the \ac{HIP}
+base exchange.
 
 The caller process will be put to sleep until the \ac{SA} is valid, or
-has timeouted.  Default timeout period is 30 seconds\footnote{This is
-defined by the Linux 2.6 IPsec stack.}. The process will sleep even if
-the socket is a non-blocking one.
-\footnote{Perhaps we should do something to alleviate this minor
-problem?}
+has timeouted.  Default timeout period is 30 seconds as defined by the
+Linux 2.6 IPsec stack. The process will sleep even if the socket is
+a non-blocking one.
+
 % timeout .. in ACQ state ?
 
-If the \ac{HIP} base exchange procedure is successful, we have 2 valid
-SAs: one outgoing and one incoming. All the sleepers waiting for the
-outgoing \ac{SA} will be now waked up. Now the calling process
-(usually \verb|connect()|), can proceed with transport layer
-connection establishment (\ac{TCP} handshake). This part will no
-longer sleep, if the socket has been set to non-blocking.
+If the \ac{HIP} base exchange procedure is successful, we have two
+valid \acp{SA}: one for outgoing and one for incoming network
+traffic. All the sleeping processes waiting for the outgoing \ac{SA}
+will be now waked up. Now the calling process (usually
+\verb|connect()|), can proceed with e.g. \ac{TCP} handshake. This part
+will no longer sleep, if the socket has been set to non-blocking.
 
 \subsection{Mobility and Multihoming}
 \label{sec:mobility_and_multihoming_architecture}
@@ -644,39 +643,31 @@ addresses within the interface and proceeds as described in
 \subsection{Rendezvous Mechanism/Server}
 \label{sec:rendezvous_server}
 
-% XXX Miika: Ei kai tähän tarvita introa reiskasta?
-
 For the rendezvous server functionality, we had to add a new hash
-table, where we store the RendezVous Associations (RVA). The hash
-table uses peer's HIT as a key, just like one of the HADB hash tables.
+table, where we store the \ac{RVA}. The hash table uses peer's HIT as
+the indexing key, just like the other \ac{HADB} hash tables.
 
-We define few terms to lessen the readibility and comprehensivity of
-the rest of the subchapter.  Responder means the host that asks the
-rendezvous server for the rendezvous service. Server means the
-Rendezvous Server. Initiator means the host that tries to contact the
-Reponder, but does not have its real IP address, but the IP address of
-the Server instead.
-
-First, the Responder needs to inform the Server, and ask for
+The responder needs to inform the rendezvous erver, and ask for
 rendezvous service. This is accomplished by adding a special control
 bit (RVS\_CAPABLE) in I1 packet, as specified in \cite{rvs-00}.  To
-the I2 packet, we add an optional RVA\_REQUEST parameter, \textbf{if}
-and only if, the Server also used the RVS\_CAPABLE bit in R1 packet.
-Otherwise, the Server signals that is not capable of providing the
-rendezvous service we asked for. We then end the base exchange.
+the I2 packet, we add an optional RVA\_REQUEST parameter if, and only
+if, the rendezvous server also used the RVS\_CAPABLE bit in R1 packet.
+Otherwise, the rendezvous erver signals that is not capable of
+providing the rendezvous service the responder asked for. We then end
+the base exchange.
 
-Having added the RVA\_REQUEST parameter to the I2, we proceed with the
-rest steps of building the I2 packet, and send it. Then rest goes as
-in the normal base exchange procedure.
+Having added the RVA\_REQUEST parameter to the I2, the initiator
+proceeds with the rest steps of building the I2 packet, and sends
+it. Then rest goes as in the normal base exchange procedure.
 
-On the Server's side, the process is slightly different. Always when a
-Server receives I1 packet, it has to check if it is destined for
-itself, or if it belongs to a \ac{HIP} node, that it is serving.
+On the rendezvous server side, the process is slightly
+different. Always when the rendezvous server receives I1 packet, it
+has to check if it is destined for itself, or if it belongs to a
+\ac{HIP} node, that it is serving.
 
-\subsection{HIP Bootstrap Support}
-\label{sec:bos_architecture}
-
-% XX FIX: MIIKA
+%\subsection{HIP Bootstrap Support}
+%\label{sec:bos_architecture}
+% XX FIX
 
 \subsection{Sockets API}
 \label{sec:api_architecture}
@@ -712,8 +703,6 @@ a limited computing capacity.
 
 \subsubsection{Legacy Sockets API}
 \label{sec:legacy_api_architecture}
-
-% XX TODO: Miika, mention about the native HIP API
 
 Traditional UNIX systems have a library called \verb|libc| which
 contains an implementation for the BSD socket interface~\cite{stevens}
@@ -876,18 +865,14 @@ The security problem is solved by tagging each mapping with the
 mapping upon connection attempt, valid mappings and connection
 initiator's mappings are preferred first. The worst thing the intruder
 could then do is to poison his own mapping tables. The preference of
-\acp{UID} is listed in \autoref{tbl:preference_of_mappings}.
+\acp{UID} is listed below:
 
-\begin{table}[htb]
 \begin{enumerate}
 \item Valid mappings
 \item User
 \item Root
 \item Other users
 \end{enumerate}
-\caption{Preference of mappings}
-\label{tbl:preference_of_mappings}
-\end{table}
 
 A valid mapping means that a \ac{HIP} security association has once
 been successfully created using the specified mapping. Therefore valid
@@ -911,7 +896,30 @@ performed using a command line tool.
 \subsubsection{Native Sockets API}
 \label{sec:native_api_architecture}
 
-% XX FIX MIIKA
+The native HIP sockets API increases the application's control over
+the HIP \acp{SA}. The advanced applications can control also \ac{HI}
+and locator bindings explicitly. Typical applications just use the new
+endpoint resolver to hide the details of \acp{HI} and locators.
+
+The \ac{ED} concept provides the means to conceal details of the
+\acp{HI}s and ephemeral locators. An \ac{ED} is an opaque handle to a
+\ac{HI} and it can be used directly in the sockets API function
+calls. The ED needs support in the networking stack.
+
+The API allows the application to fall back to plain TCP/IP networking
+if the peer host does not support HIP. It is also possible to
+explicitly request for ``opportunistic HIP mode'' if the application
+is willing to establish a connection without a prior knowledge of the
+HI of the peer. The application can also specify its own HI and
+delegate the right to use the key to the host.
+
+The most important kernelspace component of the implementation is the
+HIP socket handler, which was built on top of an existing kernel based
+HIP implementation.  The socket handler is isolated from the rest of
+the networking stack by introducing the HIP specific protocol family,
+\verb|PF_HIP|. The isolation is necessary to avoid breaking the
+backwards compatibility with the existing sockets API. The details can
+be found from \cite{hipapithesis}.
 
 \subsubsection{Interaction Between the Components}
 
@@ -1078,9 +1086,7 @@ application to read the data from the socket.
 
 \ac{HIPL} is still a work in progress and all features described in
 this document are not yet fully implemented. The most important future
-work areas in the implementation is described in this section. A more
-detailed and comprehensive list of future work can be found from the
-project \verb|TODO| file~\cite{hipl}.
+work areas in the implementation is described in this section.
 
 \subsection{Kernel Model}
 \label{sec:kernel_model_future_work}
@@ -1131,42 +1137,38 @@ most of the code is so dependent of the standard Linux networking
 stack code that the \ac{HIP} part of the code is quite difficult to
 test in isolation. Black box testing has been used instead.
 
-% uusi ?
 IPv4 support has been excluded from the project goals but it would be
 an appealing feature in \ac{HIPL}. IPv4 support requires its own
 hooking mechanism because IPv4 and IPv6 layer code are separated in
-the kernel.
+the kernel. The development of IPv4 support is in progress.
 
 \subsection{Mobility and Multihoming}
 \label{sec:future_mobility_and_multihoming}
 
-% XX TODO MIKA:
-% - update this section
-% - QoS stuff could be done with RTT estimation
-% - optimization of the ESP output (?) traffic (skb cache)
-% - our demo apps sometimes stall (pressing enter on nc6)
-% - better integration to TCP (timeouts)
-% - what else?
-
 The general problem of selecting ``the best'' destination address for
-a peer is also present in the implementation. Currently, we try to use
-the address which peer has advertised us to be the preferred
-address. If that becomes unreachable, an another available address
-belonging to the same \ac{SA} is used. When a \ac{SA} has no usable
-addresses, we try to use some address from an another outbound
-\ac{SA}.
+a peer is also present in the current implementation. Currently, we
+try to use the address which peer has advertised us to be the
+preferred address. If that becomes unreachable, an another available
+address belonging to the same \ac{SA} is used. When a \ac{SA} has no
+usable addresses, we try to use some address from an another outbound
+\ac{SA}. While this approach seems to work most of the time, bad destination
+address selection might result in degraded performance if an address
+with low \ac{QoS} characteristics is selected for the destination
+address. However, the \ac{QoS} service issues are out of the scope.
 
+More experience is needed for mobility testings. Test areas include
+hosts having multiple addresses and network interfaces, interfaces
+with different characteristics, and hosts that are distant from each
+other (that is, there are many hops between them).
 
-%any reachable
-%address is selected non-deterministically and used as the destination
-%address. %This approach might result in degraded performance if an
-address with low \ac{QoS} characteristics is selected for the
-destination address. However, the \ac{QoS} service is issues are out
-of the scope.
-
-A forwarding agent~\cite{hiparch,hip-mm} and related packets (FAQ,
-FAA) must also be implemented for gain a full support for the mobility
-and multihoming features.
+HIPL has already experimented with its own small extensions to the
+mobility draft, but they have not been merged into the draft, because
+we are expecting more comments on it from the mailing list. This
+proposal was made when we noticed that in the current draft there is
+no way for telling the peer that it should immediately stop using some
+addresses. Current draft assumes only that addresses timeout or the
+peer notices some problems later on, possible when there are already
+problems.
 
 \subsection{Sockets API}
 
@@ -1235,14 +1237,10 @@ are used merely for routing purposes.
 The purpose of the \ac{HIP} base exchange is to perform end-to-end
 authentication and to establish \ac{IPsec} \acp{SA}.
 
-% XX FIX MIKA:
-% - add to this paragraph something about the mm stuff
-
 HIP mobility draft shows that it is possible to extend the basic HIP
 functionality by introducing new parameters and adding related changes
 to the packet handling without breaking the base specifications. Our
 working implementation proves that HIP mobility is feasible to implement.
-
 
 As part of this document, we presented our IPv6 based implementation
 of \ac{HIP} for Linux. Our implementation is the only completely
