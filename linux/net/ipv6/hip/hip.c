@@ -1564,13 +1564,14 @@ static int hip_init_procfs(void)
 	if (!hip_proc_root)
 		return -1;
 
+	/* todo: use hip_proc_root */
 	create_proc_read_entry("net/hip/lhi", 0, 0, hip_proc_read_lhi, NULL);
 	create_proc_read_entry("net/hip/sdb_state", 0, 0,
 			       hip_proc_read_hadb_state, NULL);
 	create_proc_read_entry("net/hip/sdb_peer_addrs", 0, 0,
 			       hip_proc_read_hadb_peer_addrs, NULL);
 
-/* a simple way to trigger sending of UPDATE packet to all peers */
+	/* a simple way to trigger sending of UPDATE packet to all peers */
 	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
 	return 1;
 
@@ -1688,7 +1689,6 @@ static int hip_do_work(void)
 			KRISU_START_TIMER(KMM_PARTIAL);
 			//res = 0;
 			res = hip_receive_update(job->arg1);
-			kfree_skb(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
 		case HIP_WO_SUBTYPE_RECV_REA:

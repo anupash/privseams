@@ -433,7 +433,6 @@ int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 		  uint32_t *spi, int alg, void *enckey, void *authkey, 
 		  int is_active)
 {
-/* dstip is useless ? */
 	int err;
 
 	err = hip_setup_sa(srchit, dsthit, spi, alg, enckey,
