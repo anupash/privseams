@@ -823,7 +823,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (prev_spi_in == new_spi_in) {
 		memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 		spi_in_data.spi = new_spi_in;
-		spi_in_data.ifindex = hip_ifindex2spi_get_ifindex(entry, prev_spi_in); /* already set before ? check */
+		spi_in_data.ifindex = hip_hadb_get_spi_ifindex(entry, prev_spi_in); /* already set before ? check */
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 		if (err) {
 			goto out_err;
@@ -1349,7 +1349,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	if (addr_list) {
 		/* mm stuff, per-ifindex SA */
 		/* reuse old SA if we have one, else create a new SA */
-		mapped_spi = hip_ifindex2spi_get_spi(entry, ifindex);
+		mapped_spi = hip_hadb_get_spi(entry, ifindex);
 		HIP_DEBUG("mapped_spi=0x%x\n", mapped_spi);
 		if (mapped_spi) {
 			/* NES not needed */
@@ -1443,7 +1443,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			HIP_DEBUG("adding NES, Old SPI <> New SPI\n");
 			/* plain UPDATE or readdress with rekeying */
 			/* update the SA of the interface which caused the event */
-			nes_old_spi = hip_ifindex2spi_get_spi(entry, ifindex);
+			nes_old_spi = hip_hadb_get_spi(entry, ifindex);
 			if (!nes_old_spi) {
 				HIP_ERROR("Could not find SPI to use in Old SPI\n");
 				goto out_err;

@@ -2148,7 +2148,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		err = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
 		if (err != 0) {
 			HIP_DEBUG("ifindex=%d\n", err);
-			hip_ifindex2spi_map_add(entry, spi_in, err);
+			hip_hadb_set_spi_ifindex(entry, spi_in, err);
 		} else
 			HIP_ERROR("Couldn't get device ifindex of address\n");
 		err = 0;

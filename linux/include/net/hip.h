@@ -784,7 +784,6 @@ struct hip_hit_spi {
 	atomic_t         refcnt;
 	hip_hit_t        hit;
 	uint32_t         spi; /* this SPI spi belongs to the HIT hit */
-	int              is_active; /* maybe useless */
 };
 
 struct hip_spi_in_item

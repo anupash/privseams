@@ -87,27 +87,10 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 int hip_delete_esp(hip_ha_t *entry)
 {
 	HIP_LOCK_HA(entry);
-
-	// hip_hadb_deactivate_hs_spi(entry->spi_in);
-	// hip_hadb_deactivate_hs_spi(entry->new_spi_in);
-
 	hip_hadb_delete_inbound_spis(entry);
 	hip_hadb_delete_outbound_spis(entry);
-
-	/* unlinks entry from our HIT-SPI table */
-#if 0
-	{
-		struct hip_hit_spi hs;
-		hs.spi = entry->spi_in;
-		ipv6_addr_copy(&hs.hit, &entry->hit_peer);
-		/* actually can't do this here, because hs does not
-		 * refer to valid mapping */
-		/* -> todo: how to delete HIT-SPI mapping */
-		//hip_hadb_remove_hs(hs);
-	}
-#endif
-
 	HIP_UNLOCK_HA(entry);
+
 	return 0;
 }
 

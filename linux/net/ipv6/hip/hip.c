@@ -1682,6 +1682,8 @@ static int hip_do_work(void)
 		goto out_err;
 	}
 
+	HIP_DEBUG("New job: type=%d subtype=%d\n", job->type, job->subtype);
+
 	switch (job->type) {
 	case HIP_WO_TYPE_INCOMING:
 		switch(job->subtype) {

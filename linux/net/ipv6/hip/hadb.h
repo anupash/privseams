@@ -55,8 +55,6 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 
 void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
-//void hip_hadb_delete_peer_addrs_spi(hip_ha_t *entry, uint32_t spi);
-
 void hip_hadb_delete_peer_addr_not_in_list(hip_ha_t *entry, void *addrlist,
 					   int n_addrs, uint32_t iface);
 
@@ -69,11 +67,35 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
 int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
-uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry);
 void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi);
 void hip_hadb_delete_inbound_spis(hip_ha_t *entry);
 void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
 void hip_hadb_delete_outbound_spis(hip_ha_t *entry);
+
+uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry);
+
+void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex);
+uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex);
+int hip_hadb_get_spi_ifindex(hip_ha_t *entry, uint32_t spi);
+uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi_out);
+uint32_t hip_get_spi_to_update(hip_ha_t *entry);
+uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *dev_addr);
+void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set);
+void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi, uint32_t spi_out);
+void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi);
+uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t spi);
+void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi);
+void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi);
+void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
+			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
+			   uint16_t keymat_index);
+void hip_update_clear_status(hip_ha_t *entry, uint32_t spi);
+int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
+			  int direction, int test_new_spi);
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes);
+void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id);
+int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t spi);
+
 
 int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi);
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
@@ -82,8 +104,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			     int is_preferred_addr);
 int hip_hadb_dump_spi_list(hip_ha_t *entry, void *unused);
 void hip_hadb_dump_spi_list_all(void);
-void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi);
-void hip_hadb_delete_spi_list_all(hip_ha_t *entry);
 uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
 
 /***********************************************/
