@@ -32,7 +32,7 @@ jip.jar: $(JAVA_SOURCES)
 	cd ..; jar cf jip/jip.jar $(JAVA_CLASSES)
 
 libjip.so: $(C_SOURCES) $(JAVA_HEADERS) ../libinet6/libinet6.so
-	gcc $(CFLAGS) $(LDFLAGS) -shared $(C_SOURCES) -linet6 -o $@
+	gcc $(CFLAGS) $(LDFLAGS) -shared $(C_SOURCES) -linet6 -lcrypto -o $@
 
 $(JAVA_HEADERS): jip_%.h: jip.jar %.class
 	javah -classpath jip.jar jip.$*

@@ -213,7 +213,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		keymat_offset_new += auth_transf_length;
 
 		/* update entry keymat later */
-		err = hip_update_entry_keymat(entry, NULL, keymat_offset_new, calc_index_new, Kn);
+		hip_update_entry_keymat(entry, keymat_offset_new, calc_index_new, Kn);
 HIP_DEBUG("km, spi values curr new: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 	  entry->spi_our, entry->spi_peer, entry->new_spi_our, entry->new_spi_peer);
 	qwe:
@@ -593,7 +593,7 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 		keymat_offset_new += auth_transf_length;
 
 		/* update entry keymat later */
-		err = hip_update_entry_keymat(entry, NULL, keymat_offset_new, calc_index_new, Kn);
+		hip_update_entry_keymat(entry, keymat_offset_new, calc_index_new, Kn);
 	qwe:
 		//HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 		hip_hadb_release_ex_db_access(flags);

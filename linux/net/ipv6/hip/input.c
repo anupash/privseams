@@ -602,32 +602,9 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 #undef KEYMAT_DRAW_AND_COPY
 
-	ctx->current_keymat_index = keymat_len_min; //testing, remove assignment from make_keymat ?
+	ctx->current_keymat_index = keymat_len_min; /* test: remove assignment from make_keymat ? */
+	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
 
-	/* store the rest of the unused keymat data */
-	if (km.keymatlen - km.offset > 0) {
-		size_t leftover_len = km.keymatlen - km.offset;
-		ctx->keymat.keymatlen = leftover_len;
-		ctx->keymat.offset = 0;
-		ctx->keymat.keymatdst = kmalloc(leftover_len, GFP_KERNEL);
-		/* handle_r1/i2 kfrees ctx->keymat.keymatdst */
-		if (!ctx->keymat.keymatdst) {
-			HIP_ERROR("ctx keymat kmalloc failed\n");
-			err = -ENOMEM;
-			goto out_err;
-		}
-		HIP_DEBUG("after keymat drawing, allocated keymat leftover_len=%u\n", leftover_len);
-		memcpy(ctx->keymat.keymatdst, km.keymatdst + km.offset, leftover_len);
-		HIP_HEXDUMP("leftover keymat data", ctx->keymat.keymatdst, ctx->keymat.keymatlen);
-	} else {
-		HIP_DEBUG("no bytes left over after drawing keymat, nothing allocated\n");
-		ctx->keymat.keymatlen = 0;
-		ctx->keymat.offset = 0;
-		ctx->keymat.keymatdst = NULL;
-	}
-
-	HIP_DEBUG("ctx keymat: offset=%d keymatlen=%d dst=0x%p\n",
-		  ctx->keymat.offset, ctx->keymat.keymatlen, ctx->keymat.keymatdst);
 	HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
 		  ctx->keymat_calc_index, ctx->current_keymat_index);
 	HIP_HEXDUMP("CTX CURRENT KEYMAT", ctx->current_keymat_K, HIP_AH_SHA_LEN);
@@ -636,12 +613,9 @@ int hip_produce_keying_material(struct hip_common *msg,
 	ctx->dh_shared_key = dh_shared_key;
 	ctx->dh_shared_key_len = dh_shared_len;
 
-	/* on success kfree for ctx->keymat.keymatdst and
-	 * dh_shared_key is called by caller */
+	/* on success kfree for dh_shared_key is called by caller */
  out_err:
 	if (err) {
-		if (ctx->keymat.keymatdst)
-			kfree(ctx->keymat.keymatdst);
 		if (dh_shared_key)
 			kfree(dh_shared_key);
 	}
@@ -1145,7 +1119,6 @@ int hip_handle_r1(struct sk_buff *skb)
   	}
 
 	/* calculate shared secret and create keying material */
-	ctx->keymat.keymatdst = NULL;
 	ctx->dh_shared_key = NULL;
 	err = hip_produce_keying_material(r1, ctx);
 	if (err) {
@@ -1176,8 +1149,6 @@ int hip_handle_r1(struct sk_buff *skb)
  out_err:
 	if (ctx->dh_shared_key)
 		kfree(ctx->dh_shared_key);
-	if (ctx->keymat.keymatdst)
-		kfree(ctx->keymat.keymatdst);
 	if (ctx)
 		kfree(ctx);
 	return err;
@@ -1634,7 +1605,6 @@ int hip_handle_i2(struct sk_buff *skb)
 	}
 
 	/* produce keying material */
-	ctx->keymat.keymatdst = NULL;
 	ctx->dh_shared_key = NULL;
  	err = hip_produce_keying_material(ctx->input, ctx);
  	if (err) {
@@ -1723,8 +1693,6 @@ int hip_handle_i2(struct sk_buff *skb)
 		kfree(tmp_host_id);
 	if (ctx->dh_shared_key)
 		kfree(ctx->dh_shared_key);
-	if (ctx->keymat.keymatdst)
-		kfree(ctx->keymat.keymatdst);
 	if (ctx)
 		kfree(ctx);
 
