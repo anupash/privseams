@@ -976,12 +976,12 @@ static int hip_send_rea(hip_ha_t *entry, int interface_id,
 			      &hit_our, &dst_hit);
 	rea_id = hip_get_new_rea_id();
 
-	err = hip_build_param_rea_info(rea_packet, interface_id,
-				       spi_in, spi_out, 
-				       0x11223344, /* todo: new spi */
-				       0x5566, /* todo: keymat index */
-				       rea_id,
-				       addresses, address_count);
+	err = hip_build_param_rea_info00(rea_packet, interface_id,
+					 spi_in, spi_out, 
+					 0x11223344, /* todo: new spi */
+					 0x5566, /* todo: keymat index */
+					 rea_id,
+					 addresses, address_count);
 	if (err) {
 		HIP_ERROR("Building of REA_INFO failed\n");
 		goto out_err;

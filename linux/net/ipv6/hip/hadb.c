@@ -36,7 +36,6 @@ static int hip_hadb_match_spi(void *key_1, void *key_2)
 
 	spi1 = (uint32_t)key_1;
 	spi2 = (uint32_t)key_2;
-	_HIP_DEBUG("spi1=0x%x spi2=0x%x\n", spi1, spi2);
 	return (spi1 == spi2);
 }
 
@@ -59,7 +58,7 @@ static void hip_hadb_put_entry(void *entry)
 		return;
 
 	if (atomic_dec_and_test(&ha->refcnt)) {
-                HIP_DEBUG("HA: deleting %p\n", ha);
+                HIP_DEBUG("HA: refcnt decremented to 0, deleting %p\n", ha);
 		hip_hadb_delete_state(ha);
                 HIP_DEBUG("HA: %p deleted\n", ha);
 	} else {

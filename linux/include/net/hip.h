@@ -143,9 +143,7 @@ typedef uint16_t in_port_t;
 
 #define HIP_PARAM_SPI                  1
 #define HIP_PARAM_R1_COUNTER           2
-#ifdef CONFIG_HIP_RVS
-# define HIP_PARAM_REA                  3
-#endif
+#define HIP_PARAM_REA                  3
 #define HIP_PARAM_PUZZLE               5
 #define HIP_PARAM_SOLUTION             7
 #define HIP_PARAM_NES                  9
@@ -523,6 +521,7 @@ struct hip_rea_info_addr_item {
 	struct in6_addr address;
 }  __attribute__ ((packed));
 
+#if 0
 struct hip_rea {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
@@ -531,8 +530,9 @@ struct hip_rea {
 	uint32_t reserved; /* MSB is used for "the first address is the preferred one */
 	/* fixed part ends */
 } __attribute__ ((packed));
+#endif
 
-struct hip_rea_info {
+struct hip_rea_info00 {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint32_t interface_id;
@@ -543,7 +543,7 @@ struct hip_rea_info {
 	uint16_t rea_id;
 } __attribute__ ((packed));
 
-struct hip_rea_info_mm02 {
+struct hip_rea_mm02 {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint32_t spi;
@@ -741,8 +741,8 @@ struct hip_context_rea_sig
 };
 
 /* flags for struct hip_context_rea_sig */
-#define REA_OUT_NETDEV_ANY 0   /* REA can be sent out from any interface */
-#define REA_OUT_NETDEV_GIVEN 1 /* REA must be sent out from given interface */
+//#define REA_OUT_NETDEV_ANY 0   /* REA can be sent out from any interface */
+//#define REA_OUT_NETDEV_GIVEN 1 /* REA must be sent out from given interface */
 
 struct hip_peer_addr_list_item
 {
@@ -889,6 +889,7 @@ struct hip_cookie_entry {
 	struct in6_addr responder;
 };
 
+#if 0
 struct hip_sent_rea_info {
 	struct list_head list;
 	uint16_t rea_id; /* sent REA ID in network byte order */
@@ -909,6 +910,7 @@ struct hip_sent_ac_info { /* mm-01: to be removed */
 	//unsigned long rtt_sent; /* jiffies value when this packet was sent out */
 	struct timer_list timer;
 };
+#endif
 
 struct hip_work_order {
 	int type;
