@@ -735,6 +735,8 @@ int hip_produce_keying_material(struct hip_common *msg,
  * Returns: zero on success, non-negative on error.
  */
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
+		  struct in6_addr *r1_saddr,
+		  struct in6_addr *r1_daddr,
 		  hip_ha_t *entry)
 {
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
@@ -1165,7 +1167,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
-	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&ctx->skb_in->nh.ipv6h->daddr);
+	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(r1_daddr);
 	HIP_LOCK_HA(entry);
 	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
@@ -1228,7 +1230,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  * On success (R1 payloads are checked and daemon is called) 0 is
  * returned, otherwise < 0.
  */
-int hip_handle_r1(struct hip_common *r1, hip_ha_t *entry)
+int hip_handle_r1(struct hip_common *r1,
+		  struct in6_addr *r1_saddr,
+		  struct in6_addr *r1_daddr,
+		  hip_ha_t *entry)
 {
 	int err = 0;
 	uint64_t solved_puzzle;
@@ -1249,7 +1254,7 @@ int hip_handle_r1(struct hip_common *r1, hip_ha_t *entry)
 	memset(ctx, 0, sizeof(struct hip_context));
 
 	ctx->input = r1;
-	ctx->skb_in = skb;
+	//ctx->skb_in = skb;
 
 	/* according to the section 8.6 of the base draft,
 	 * we must first check signature
@@ -1411,7 +1416,9 @@ int hip_handle_r1(struct hip_common *r1, hip_ha_t *entry)
  *
  * Always frees the skb
  */
-int hip_receive_r1(struct hip_common *hip_common)
+int hip_receive_r1(struct hip_common *hip_common,
+		   struct in6_addr *r1_saddr,
+		   struct in6_addr *r1_daddr)
 {
 	hip_ha_t *entry;
 	int state, mask;
@@ -1454,15 +1461,13 @@ int hip_receive_r1(struct hip_common *hip_common)
 		struct in6_addr daddr;
 		
 		hip_hadb_get_peer_addr(entry, &daddr);
-		if (ipv6_addr_cmp(&daddr, &skb->nh.ipv6h->saddr) != 0) {
+		if (ipv6_addr_cmp(&daddr, r1_saddr) != 0) {
 			HIP_DEBUG("Mapped address didn't match received address\n");
 			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
 			HIP_HEXDUMP("Mapping", &daddr, 16);
-			HIP_HEXDUMP("Received", &skb->nh.ipv6h->saddr, 16);
+			HIP_HEXDUMP("Received", r1_saddr, 16);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			hip_hadb_add_peer_addr(entry, &skb->nh.ipv6h->saddr, 
-					       0, 
-					       0,
+			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
 					       PEER_ADDR_STATE_ACTIVE);
 		}
 		
@@ -1482,7 +1487,7 @@ int hip_receive_r1(struct hip_common *hip_common)
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* E1. The normal case. Process, send I2, goto E2. */
-		err = hip_handle_r1(skb, entry);
+		err = hip_handle_r1(hip_common, r1_saddr, r1_addr, entry);
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
@@ -1523,7 +1528,10 @@ int hip_receive_r1(struct hip_common *hip_common)
  *
  * Returns: 0 on success, < 0 on error.
  */
-int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
+int hip_create_r2(struct hip_context *ctx,
+		  struct in6_addr *i2_saddr,
+		  struct in6_addr *i2_daddr,
+		  hip_ha_t *entry)
 {
 	uint32_t spi_in;
  	struct hip_host_id *host_id_private = NULL, *host_id_public = NULL;
@@ -1666,7 +1674,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
  	/* Send the packet */
 	HIP_DEBUG("R2 created successfully, sending\n");
-	err = hip_csum_send(NULL, &(ctx->skb_in->nh.ipv6h->saddr), r2);
+	err = hip_csum_send(NULL, i2_saddr, r2);
 	if (err) {
 		HIP_ERROR("csum_send failed\n");
 	}
@@ -1715,7 +1723,10 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  * On success (I2 payloads are checked and R2 is created and sent) 0 is
  * returned, otherwise < 0.
  */
-int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
+int hip_handle_i2(struct hip_common *i2,
+		  struct in6_addr *i2_saddr,
+		  struct in6_addr *i2_daddr,		  
+		  hip_ha_t *ha)
 {
 	int err = 0;
 	struct hip_context *ctx = NULL;
@@ -1743,8 +1754,7 @@ int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
 	}
 	memset(ctx, 0, sizeof(struct hip_context));
 
-	ctx->skb_in = skb;
-	ctx->input = (struct hip_common*) skb->h.raw;
+	ctx->input = i2;
 
 	/* Check packet validity */
 	/* We MUST check that the responder HIT is one of ours. */
@@ -1760,8 +1770,8 @@ int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
 		goto out_err;
 	}
 
-	err = hip_verify_generation(&skb->nh.ipv6h->saddr, 
-				    &skb->nh.ipv6h->daddr, 
+	err = hip_verify_generation(i2_saddr, 
+				    i2_daddr, 
 				    r1cntr->generation);
 	if (err) {
 		HIP_ERROR("Birthday check failed\n");
@@ -1781,8 +1791,8 @@ int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
 			goto out_err;
 		}
 
-		if (!hip_verify_cookie(&skb->nh.ipv6h->saddr,
-				       &skb->nh.ipv6h->daddr, 
+		if (!hip_verify_cookie(i2_saddr,
+				       i2_daddr, 
 				       i2, sol)) {
 			HIP_ERROR("Cookie solution rejected\n");
 			err = -ENOMSG;
@@ -2032,7 +2042,7 @@ int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
 		}
 	}
 
-	err = hip_hadb_add_peer_addr(entry, &(ctx->skb_in->nh.ipv6h->saddr),
+	err = hip_hadb_add_peer_addr(entry, i2_saddr),
 				     0, 0, PEER_ADDR_STATE_ACTIVE);
 	if (err) {
 		HIP_ERROR("error while adding a new peer address\n");
@@ -2082,9 +2092,7 @@ int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
 
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
-	err = hip_hadb_add_addr_to_spi(entry, spi_out,
-				       &ctx->skb_in->nh.ipv6h->saddr,
-				       1, 0, 1);
+	err = hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1);
 	_HIP_DEBUG("add spi err ret=%d\n", err);
 	if (err) {
 		HIP_ERROR("failed to add an address to SPI list\n");
@@ -2093,7 +2101,7 @@ int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
-	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
+	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(i2_daddr);
 	if (spi_in_data.ifindex) {
 		HIP_DEBUG("ifindex=%d\n", spi_in_data.ifindex);
 	} else
@@ -2179,7 +2187,9 @@ int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
  *
  * TODO: check if it is correct to return always 0 
  */
-int hip_receive_i2(struct hip_common *i2) 
+int hip_receive_i2(struct hip_common *i2,
+		   struct in6_addr *i2_saddr,
+		   struct in6_addr *i2_daddr)
 {
 	int state = 0;
 	int err = 0;
@@ -2217,24 +2227,24 @@ int hip_receive_i2(struct hip_common *i2)
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet */
-		err = hip_handle_i2(skb, NULL);
+		err = hip_handle_i2(i2, i2_saddr, i2_daddr, NULL);
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
- 		err = hip_handle_i2(skb, entry);
+ 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
- 		err = hip_handle_i2(skb, entry);
+ 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
  		break;
  	case HIP_STATE_REKEYING:
 		HIP_DEBUG("Received I2 in state REKEYING\n");
- 		err = hip_handle_i2(skb, entry);
+ 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
 	default:
@@ -2262,7 +2272,10 @@ int hip_receive_i2(struct hip_common *i2)
  * On success (payloads are created and IPsec is set up) 0 is
  * returned, otherwise < 0.
  */
-int hip_handle_r2(struct hip_common *r2, hip_ha_t *entry)
+int hip_handle_r2(struct hip_common *r2,
+		  struct in6_addr *r2_saddr,
+		  struct in6_addr *r2_daddr,
+		  hip_ha_t *entry)
 {
 	int err = 0;
 	uint16_t len;
@@ -2286,8 +2299,7 @@ int hip_handle_r2(struct hip_common *r2, hip_ha_t *entry)
 		goto out_err;
 	}
 	memset(ctx, 0, sizeof(struct hip_context));
-	ctx->skb_in = skb;
-        ctx->input = (struct hip_common *) skb->h.raw;
+        ctx->input = r2;
 
 	sender = &r2->hits;
 
@@ -2369,7 +2381,7 @@ int hip_handle_r2(struct hip_common *r2, hip_ha_t *entry)
 
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
-	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,
+	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr,
 				       1, 0, 1);
 	if (err)
 		HIP_ERROR("hip_hadb_add_addr_to_spi err=%d not handled\n", err);
@@ -2377,7 +2389,7 @@ int hip_handle_r2(struct hip_common *r2, hip_ha_t *entry)
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 	_HIP_DEBUG("add spi err ret=%d\n", err);
 
-	err = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
+	err = hip_ipv6_devaddr2ifindex(r2_daddr);
 	if (err != 0) {
 		HIP_DEBUG("ifindex=%d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);
@@ -2404,7 +2416,10 @@ int hip_handle_r2(struct hip_common *r2, hip_ha_t *entry)
 	return err;
 }
 
-int hip_handle_i1(struct hip_common *i1, hip_ha_t *entry)
+int hip_handle_i1(struct hip_common *i1,
+		  struct in6_addr *i1_saddr,
+		  struct in6_addr *i1_daddr,
+		  hip_ha_t *entry)
 {
 	int err;
 #ifdef CONFIG_HIP_RVS
@@ -2438,7 +2453,7 @@ int hip_handle_i1(struct hip_common *i1, hip_ha_t *entry)
 	}
 #endif
 
-	err = hip_xmit_r1(skb, dstip, dst);
+	err = hip_xmit_r1(i1, dstip, dst);
 	return err;
 }
 
@@ -2454,7 +2469,9 @@ int hip_handle_i1(struct hip_common *i1, hip_ha_t *entry)
  *
  * Returns: zero on success, or negative error value on error.
  */
-int hip_receive_i1(struct hip_common *hip_i1) 
+int hip_receive_i1(struct hip_common *hip_i1
+		   struct in6_addr *i1_saddr,
+		   struct in6_addr *i1_daddr)
 {
 	int err = 0;
 	int state;
@@ -2501,7 +2518,7 @@ int hip_receive_i1(struct hip_common *hip_i1)
  			   cases.
  			*/
 
- 			err = hip_relay_i1(skb, rva);
+ 			err = hip_relay_i1(hip_i1, rva);
  			if (err)
  				HIP_ERROR("Relaying I1 failed\n");
  			else
@@ -2517,26 +2534,26 @@ int hip_receive_i1(struct hip_common *hip_i1)
 	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_NONE:
- 		err = hip_handle_i1(skb, NULL);
+ 		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, NULL);
 		break;
 	case HIP_STATE_UNASSOCIATED:
-		err = hip_handle_i1(skb, entry);
+		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
 		break;
 	case HIP_STATE_I1_SENT:
-		err = hip_handle_i1(skb, entry);
+		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
 		break;
 	case HIP_STATE_I2_SENT:
-		err = hip_handle_i1(skb, entry);
+		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
 		break;
 	case HIP_STATE_R2_SENT:
-		err = hip_handle_i1(skb, entry);
+		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
 		HIP_DEBUG("Received I1 in state R2_SENT. Sent R1\n");
 		break;
 	case HIP_STATE_ESTABLISHED:
-		err = hip_handle_i1(skb, entry);
+		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
 		break;
 	case HIP_STATE_REKEYING:
-		err = hip_handle_i1(skb, entry);
+		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
 		break;
 	default:
 		/* should not happen */
@@ -2561,7 +2578,9 @@ int hip_receive_i1(struct hip_common *hip_i1)
  *
  * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
  */
-int hip_receive_r2(struct hip_common *hip_common) 
+int hip_receive_r2(struct hip_common *hip_common,
+		   struct in6_addr *r2_saddr,
+		   struct in6_addr *r2_daddr)
 {
 	hip_ha_t *entry = NULL;
 	int err = 0;
@@ -2606,7 +2625,7 @@ int hip_receive_r2(struct hip_common *hip_common)
  		break;
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
- 		err = hip_handle_r2(skb, entry);
+ 		err = hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
 		if (!err) {
 			entry->state = HIP_STATE_ESTABLISHED;
 			HIP_DEBUG("Reached ESTABLISHED state\n");
@@ -2651,7 +2670,9 @@ int hip_receive_r2(struct hip_common *hip_common)
  *
  * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
  */
-int hip_receive_notify(struct hip_common *hip_common) 
+int hip_receive_notify(struct hip_common *hip_common,
+		       struct in6_addr *notify_saddr,
+		       struct in6_addr *notity_daddr)
 {
 	hip_ha_t *entry = NULL;
 	int err = 0;
@@ -2704,7 +2725,10 @@ int hip_receive_notify(struct hip_common *hip_common)
  *
  * On success (BOS payloads are checked) 0 is returned, otherwise < 0.
  */
-int hip_handle_bos(struct hip_common *bos, hip_ha_t *entry)
+int hip_handle_bos(struct hip_common *bos,
+		   struct in6_addr *bos_saddr,
+		   struct in6_addr *bos_daddr,
+		   hip_ha_t *entry)
 {
 	int err = 0;
 	struct hip_host_id *peer_host_id;
@@ -2712,7 +2736,7 @@ int hip_handle_bos(struct hip_common *bos, hip_ha_t *entry)
 	struct in6_addr peer_hit;
 	char *str;
 	int len;
-  	struct ipv6hdr *ip6hdr;
+  	//struct ipv6hdr *ip6hdr;
 	struct in6_addr *dstip;
 	char src[INET6_ADDRSTRLEN];
 
@@ -2766,8 +2790,7 @@ int hip_handle_bos(struct hip_common *bos, hip_ha_t *entry)
   	}
 
 	/* Now save the peer IP address */
-	ip6hdr = skb->nh.ipv6h;
-	dstip = (struct in6_addr *)&ip6hdr->saddr;
+	dstip = bos_saddr;
 	hip_in6_ntop(dstip, src);
 	HIP_DEBUG("BOS sender IP: saddr %s\n", src);
 
@@ -2819,7 +2842,9 @@ int hip_handle_bos(struct hip_common *bos, hip_ha_t *entry)
  *
  * TODO: check if it is correct to return always 0 
  */
-int hip_receive_bos(struct hip_common *bos) 
+int hip_receive_bos(struct hip_common *bos,
+		   struct in6_addr *bos_saddr,
+		   struct in6_addr *bos_daddr)
 {
 	int err = 0;
 	hip_ha_t *entry;
@@ -2855,12 +2880,13 @@ int hip_receive_bos(struct hip_common *bos)
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* possibly no state created yet */
-		err = hip_handle_bos(skb, entry);
+		err = hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
  	case HIP_STATE_REKEYING:
-		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
+		HIP_DEBUG("BOS not handled in state %s\n",
+			  hip_state_str(state));
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -2924,7 +2950,6 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 	return err;
 }
-
 
 /**
  * hip_verify_network_header - validate an incoming HIP header
@@ -3019,7 +3044,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
         if (hip_csum_verify(*skb) != csum) {
 	       HIP_ERROR("HIP checksum failed (0x%x). Should have been: 0x%x\n", 
 			 csum, ntohs(hip_csum_verify(*skb)) );
-		err = -EBADMSG;
+	       err = -EBADMSG;
 	}
 
   out_err:
@@ -3049,7 +3074,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	int err = 0;
 
 	/* See if there is at least the HIP header in the packet */
-	if (!pskb_may_pull(*skb, sizeof(struct hip_common))) {
+        if (!pskb_may_pull(*skb, sizeof(struct hip_common))) {
 		HIP_ERROR("Received packet too small. Dropping\n");
 		goto out_err;
         }
@@ -3092,7 +3117,14 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
         //hwo->arg1 = *skb;
         hwo->msg = hip_common;
 
-	switch(hip_get_msg_type(hip_common)) {
+        /* We need to save the addresses because the actual input handlers
+	   may need them later */
+        memcpy(&hwo->hdr.src_addr, (*skb)->nh.ipv6h->saddr,
+		sizeof(struct in6_addr));
+        memcpy(&hwo->hdr.dst_addr, (*skb)->nh.ipv6h->daddr,
+		sizeof(struct in6_addr));
+
+        switch(hip_get_msg_type(hip_common)) {
 	case HIP_I1:
 		HIP_DEBUG("Received HIP I1 packet\n");
 		hwo->subtype = HIP_WO_SUBTYPE_RECV_I1;
@@ -3128,10 +3160,10 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 		kfree(hwo);
 		/*  KRISUXXX: return value? */
 		return -1;
-		break;
-	}
+                break;
+        }
 
-	hip_insert_work_order(hwo);
+        hip_insert_work_order(hwo);
 
  out_err:
 	/* We must not use kfree_skb here... (worker thread releases) */
@@ -3148,8 +3180,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
  */
 void hip_hwo_input_destructor(struct hip_work_order *hwo)
 {
-	if (hwo) {
-		if (hwo->msg)
-			kfree(msg);
+	if (hwo && hwo->msg) {
+		kfree(msg);
 	}
 }

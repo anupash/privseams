@@ -13,11 +13,11 @@ CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE
 
 include_HEADERS = hipd.h
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
-INCLUDES += -I$(HIPL_LIBINET6)
+INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = hipd.c netlink.c debug.c workqueue.c builder.c
-hipd_SOURCES += input.c
+hipd_SOURCES = input.c hipd.c netlink.c debug.c workqueue.c builder.c
+#hipd_SOURCES += input.c
 
 # i3 and KeyNotev2 specific includes/libraries:
 #-Ii3/i3_client -Ii3/utils -Ii3/i3 -Ikeynote

@@ -1,5 +1,7 @@
 #ifndef HIP_KERNEL_DEBUG_H
 #define HIP_KERNEL_DEBUG_H
+#ifndef __KERNEL__
+#else
 
 #include <linux/ipv6.h>
 #include <linux/skbuff.h>
@@ -64,5 +66,6 @@ extern void hip_debug_skb(const struct ipv6hdr *hdr,
 			  const struct sk_buff *skb);
 extern const char *hip_state_str(unsigned int state);
 
+#endif /* __KERNEL__ */
 #endif /* HIP_KERNEL_DEBUG_H */
 

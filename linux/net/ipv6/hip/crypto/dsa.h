@@ -20,7 +20,9 @@
 #ifndef G10_DSA_H
 #define G10_DSA_H
 
+#ifdef __KERNEL__
 #include "kernel-interface.h"
+#endif /* __KERNEL__ */
 
 int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature);
 int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);

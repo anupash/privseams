@@ -26,7 +26,10 @@
 
 #include <net/hip.h>
 
+#ifdef __KERNEL__
 #include "kernel-interface.h"
+#endif /* __KERNEL__ */
+
 #include "gcrypt.h"
 #include "rsa.h"
 

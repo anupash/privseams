@@ -44,7 +44,12 @@
 typedef uint16_t in_port_t;
 
 #else
-#include <sys/ioctl.h>
+
+#  include <sys/ioctl.h>
+#  include <stdint.h>
+
+typedef uint8_t  u8;
+
 #include <netinet/in.h>
 
 #endif /* __KERNEL__ */
@@ -702,16 +707,15 @@ struct hip_eid_sockaddr {
 	struct sockaddr sockaddr;
 } __attribute__ ((packed));
 
-#ifdef __KERNEL__
-
-#define HIP_MAX_KEY_LEN 32 /* max. draw: 256 bits! */
-
 /* Both for storing peer host ids and localhost host ids */
 #define HIP_HOST_ID_MAX                16
+#define HIP_MAX_KEY_LEN 32 /* max. draw: 256 bits! */
 
 struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
 };
+
+#ifdef __KERNEL__
 
 struct hip_packet_dh_sig
 {
