@@ -2281,6 +2281,31 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
 }
 
 /**
+ * hip_build_param_nes - build and append HIP NES parameter
+ * @msg: the message where the parameter will be appended
+ * @is_reply: 1 if this packet is a reply to another UPDATE
+ * @keymat_index: Keymat Index in host byte order
+ * @old_spi: Old SPI value in host byte order
+ * @new_spi: New SPI value in host byte order
+ * 
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
+                        uint32_t old_spi, uint32_t new_spi)
+{
+        int err = 0;
+        struct hip_nes nes;
+
+        hip_set_param_type(&nes, HIP_PARAM_NES);
+        hip_calc_generic_param_len(&nes, sizeof(struct hip_nes), 0);
+        nes.keymat_index = htons(keymat_index);
+        nes.old_spi = htonl(old_spi);
+        nes.new_spi = htonl(new_spi);
+        err = hip_build_param(msg, &nes);
+        return err;
+}
+
+/**
  * hip_build_param_notify - build the HIP NOTIFY parameter
  * @msg:     the message where the parameter will be appended
  * @msgtype: Notify Message Type
