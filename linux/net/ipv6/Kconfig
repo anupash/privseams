@@ -81,6 +81,7 @@ config IPV6_TUNNEL
 config HIP
 	tristate "Host Identity Protocol"
 	depends on IPV6
+	default m
 	select INET6_ESP
 	select ESPBEET
 	select CRYPTO_NULL
@@ -104,6 +105,7 @@ config HIP
 
 config HIP_DEBUG
 	bool "HIP: Debugging code"
+	default y
 	depends on HIP
 	---help---
 	  This option adds debugging code to the HIP. It should only be used to

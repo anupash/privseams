@@ -61,7 +61,7 @@ Compiling the Kernel
 ====================
 
 The 2.6 kernel series should be compilable with both gcc 2.9x and 3.x
-series.
+series. We recommend the latter.
 
 HIPL kernel is in hipl/linux folder. Compile the kernel with
 at least the following options:
@@ -79,6 +79,10 @@ at least the following options:
 
 IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
 dependencies. We recommend that you compile HIP as a kernel module.
+
+Currently, there is bug in the HIP module compilation. IPv6 must
+compiled as built in or otherwise the compilation of the HIP module
+fails (undefined reference to `hip_functions').
 
 HIP debugging is not mandatory, but use of it is highly recommended in
 order to get more information when problems arise. HIP debugging
@@ -109,8 +113,12 @@ folder. You can compile it as follows:
   ./configure
   make conntest-client-gai conntest-server
 
-It is not necessary to "make install" the applications. You can execute
-them straight from their source directories.
+It is not necessary to "make install" the applications. You can
+execute them straight from their source directories.
+
+If you experience weird problems when executing configure script, try
+invoking "autoreconf". See also that the versions of your automake and
+autoconf tools are up-to-date.
 
 Testing a HIP connection between two hosts
 ==========================================
