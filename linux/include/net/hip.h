@@ -48,8 +48,6 @@ typedef uint16_t in_port_t;
 #  include <sys/ioctl.h>
 #  include <stdint.h>
 #  include <netinet/in.h>
-#  include <sys/queue.h>
-
 #  include "list.h"
 
 typedef uint8_t   u8;
