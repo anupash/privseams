@@ -1872,7 +1872,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
 	if (spi_in_data.ifindex) {
 		HIP_DEBUG("ifindex=%d\n", spi_in_data.ifindex);
-//		hip_ifindex2spi_map_add(entry, spi_in, ifindex);
 	} else
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 
@@ -1891,14 +1890,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	HIP_DEBUG("INSERTING STATE\n");
 	hip_hadb_insert_state(entry);
-#if 0
-	HIP_DEBUG("INSERTING STATE TO SPI LIST\n");
-	err = hip_hadb_insert_state_spi_list(entry, spi_in);
-	if (err && err != -EEXIST) {
-		HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
-		goto out_err;
-	}
-#endif
+
 	err = hip_create_r2(ctx, entry);
 	HIP_DEBUG("hip_handle_r2 returned %d\n", err);
 	if (err) {
@@ -2120,11 +2112,9 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		uint32_t spi_recvd, spi_in;
 
 		spi_recvd = ntohl(hspi->spi);
-
-		HIP_LOCK_HA(entry);
-//		entry->spi_out = spi_recvd;
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = spi_recvd;
+		HIP_LOCK_HA(entry);
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
 		if (err) {
 			HIP_UNLOCK_HA(entry);
@@ -2132,7 +2122,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		}
 		memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
 		memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
-		//spi_in = entry->spi_in;
 		HIP_ERROR("entry should have only one spi_in now, fix\n");
 		spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		tfm = entry->esp_transform;
@@ -2149,15 +2138,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		}
 		/* XXX: Check for -EAGAIN */
 		HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
-#if 0
-		HIP_DEBUG("INSERTING STATE TO SPI LIST\n");
-		err = hip_hadb_insert_state_spi_list(entry, spi_in);
-		if (err && err != -EEXIST) {
-			HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
-			HIP_UNLOCK_HA(entry);
-			goto out_err;
-		}
-#endif
+
 		/* source IPv6 address is implicitly the preferred
 		 * address after the base exchange */
 		err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,

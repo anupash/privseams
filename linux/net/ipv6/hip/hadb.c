@@ -371,7 +371,7 @@ void hip_hadb_remove_state(hip_ha_t *ha)
 
 	r = atomic_read(&ha->refcnt);
 
-	HIP_DEBUG("TODO: FIX SPI LIST DELETE ?\n");
+	HIP_ERROR("TODO: FIX SPI LIST DELETE ?\n");
 #if 0
 	if (!list_empty(&ha->spis_in))
 		hip_hadb_rem_state_spi_list(ha);
@@ -1435,7 +1435,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	fail = 0;
 
 	HIP_LOCK_HT(&hadb_hit);
-	for(i=0; i<HIP_HADB_SIZE; i++) {
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
 			hip_hold_ha(this);
 
@@ -1499,17 +1499,6 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 			      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
 		goto error;
 
-#if 0
-	if ( (len += snprintf(page+len, count-len,
-			      " 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x %s",
-			      entry->spi_in, entry->spi_out, entry->new_spi_in,
-			      entry->new_spi_out, entry->default_spi_out, entry->lsi_our, entry->lsi_peer,
-			      entry->esp_transform <=
-			      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
-			      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
-		goto error;
-#endif
-
 	if ( (len += snprintf(page+len, count-len,
 			      " 0x%llx %u %u %u %u %u\n",
 			      entry->birthday, 
@@ -1518,26 +1507,10 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 			      entry->update_id_out, entry->dh_shared_key_len )) >= count)
 		goto error;
 
-#if 0
-	list_for_each_entry(s, &entry->peer_addr_list, list) {
-		hip_in6_ntop(&s->address, addr_str);
-		if ( (len += snprintf(page+len, count-len,
-				      i>0 ? ",%d=%s" : " %d=%s", i+1, addr_str)) >= count)
-			goto error;
-		i++;
-	}
-
-	if (hip_hadb_get_peer_addr(entry, &addr) == 0) {
-		hip_in6_ntop(&addr, addr_str);
-		len += snprintf(page+len, count-len, " %s", addr_str);
-	} else
-		len += snprintf(page+len, count-len, " (no addr)");
-#endif
-
-	HIP_UNLOCK_HA(entry);
-
 	if (len >= count)
 		goto error;
+
+	HIP_UNLOCK_HA(entry);
 
 	op->len = len;
 	op->count = count;
@@ -1584,13 +1557,13 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 		i++;
 	}
 
-	HIP_UNLOCK_HA(entry);
-
 	if (i == 0 && (len += snprintf(page+len, count-len, "\n no addresses")) >= count)
 		goto error;
 
 	if ( (len += snprintf(page+len, count-len, "\n")) >= count)
 		goto error;
+
+	HIP_UNLOCK_HA(entry);
 
 	op->len = len;
 	op->count = count;
@@ -1626,12 +1599,9 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 
 	ps.len = snprintf(page, count,
 		       "state hastate refcnt peer_controls hit_our hit_peer "
-//		       "spi_in spi_out new_spi_in new_spi_out default_spi_out lsi_our lsi_peer esp_transform "
 		       "default_spi_out lsi_our lsi_peer esp_transform "
 		       "birthday keymat_index keymat_calc_index "
 		       "update_id_in update_id_out dh_len\n");
-
-	/* "update_id_in update_id_out dh_len [list_of_peer_addrs curr_dst_addr]\n"); */
 
 	if (ps.len >= count) {
 		fail = 1;
@@ -1639,7 +1609,6 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 	}
 
 	*eof = 1;
-
 	fail = hip_for_each_ha(hip_proc_hadb_state_func, &ps);
 
  err:
@@ -1651,7 +1620,6 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 
 	return ps.len;
 }
-
 
 
 /**
@@ -1701,7 +1669,7 @@ static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
 	int len = op->len;
 	int count = op->count;
 	const char *state_name[] = { "NONE", "UNVERIFIED", "ACTIVE", "DEPRECATED" };
-	i = 0; // test
+	i = 0; /* hmm */
 
 	HIP_LOCK_HA(entry);
 
@@ -1721,19 +1689,19 @@ static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
 					      addr_str, state_name[a->address_state], a->lifetime,
 					      a->modified_time.tv_sec, a->modified_time.tv_usec)
 				     ) >= count)
-			goto error;
-		i++;
-	}
+				goto error;
+			i++;
+		}
 
 	}
-
-	HIP_UNLOCK_HA(entry);
 
 	if (i == 0 && (len += snprintf(page+len, count-len, "\n no SPIs")) >= count)
 		goto error;
 
 	if ( (len += snprintf(page+len, count-len, "\n")) >= count)
 		goto error;
+
+	HIP_UNLOCK_HA(entry);
 
 	op->len = len;
 	op->count = count;
@@ -1778,11 +1746,10 @@ int hip_proc_read_hadb_peer_spi_list(char *page, char **start, off_t off,
 	} else
 		page[ps.len] = '\0';
 
-//	hip_hadb_dump_spis();
 	return ps.len;
 }
 
-#endif
+#endif /* CONFIG_PROC_FS */
 
 
 /**
@@ -1806,7 +1773,7 @@ void hip_hadb_dump_hits(void)
 
 	HIP_LOCK_HT(&hadb_hit);
 
-	for(i=0;i<HIP_HADB_SIZE;i++) {
+	for(i = 0; i <HIP_HADB_SIZE; i++) {
 		if (!list_empty(&hadb_byhit[i])) {
 			cnt = sprintf(string, "[%d]: ", i);
 
@@ -1943,7 +1910,7 @@ void hip_uninit_hadb()
 	 *
 	 * The list traversing is not safe in smp way :(
 	 */
-	for(i=0;i<HIP_HADB_SIZE;i++) {
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
 			if (atomic_read(&ha->refcnt) > 2)
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);

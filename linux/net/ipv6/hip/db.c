@@ -537,55 +537,6 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 	return tmp;
 }
 
-#if 0
-/**
- * hip_insert_any_localhost_public_key - Copy any localhost public key into 
- * the @target.
- * @target: Where to copy the public key
- *
- * Returns 0 if ok. Negative if errors.
- */
-
-int hip_insert_any_localhost_public_key(u8 *target)
-{
-	struct hip_host_id *tmp = NULL;
-	hip_tlv_len_t len;
-	u8 *buf;
-	int err = 0;
-
-	tmp = hip_get_host_id(&hip_local_hostid_db,NULL);
-	if (!tmp) {
-		HIP_ERROR("No host id for localhost\n");
-		err=-ENOENT;
-		goto end_err;
-	}
-
-	buf = (u8 *)(tmp + 1); // skip header
-
-	if (*buf > 8) { /* T is over 8... error */
-		HIP_ERROR("Invalid T-value in DSA key (%x)\n",*buf);
-		err=-EBADMSG;
-		goto end_err;
-	}
-
-	if (*buf != 8) {
-		HIP_DEBUG("T-value in DSA-key something else than 8!\n");
-	}
-
-	len = hip_get_param_contents_len(tmp);
-	memcpy(target, tmp, sizeof(struct hip_tlv_common) + (len - 20));
-	hip_set_param_contents_len(target,(len - 20));
-
-	// XX BUG: set also host_id->hi_length
-
- end_err:
-	if (tmp)
-		kfree(tmp);
-	return err;
-}
-#endif
-
-
 
 /* PROC_FS FUNCTIONS */
 
@@ -815,6 +766,7 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 
 
 /* MOVE TO HADB.C */
+/* assumes locked HA */
 void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
 {
 	struct hip_spi_in_item *item, *tmp;
@@ -1001,11 +953,6 @@ void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi)
 			  item->spi, item->new_spi);
 		if (item->spi == spi) {
 			HIP_DEBUG("setting new_spi\n");
-#if 0
-			if (!item->updating) {
-				HIP_ERROR("SA update not in progress, continuing anyway\n");
-			}
-#endif
 			if (item->new_spi) {
 				HIP_ERROR("previous new_spi is not zero: 0x%x\n", item->new_spi);
 				HIP_ERROR("todo: delete previous new_spi\n");
@@ -1079,9 +1026,6 @@ void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi)
 }
 
 
-
-
-
 void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
 			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
 			   uint16_t keymat_index)
@@ -1117,22 +1061,6 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set
 	HIP_ERROR("SPI not found\n");
 }
 
-int hip_update_get_spi_status(hip_ha_t *entry, uint32_t spi)
-{
-	struct hip_spi_in_item *item, *tmp;
-
-	HIP_DEBUG("spi=0x%x\n", spi);
-	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x status=%d\n",
-			  item->spi, item->new_spi, item->update_state_flags);
-		if (item->spi == spi) {
-			HIP_DEBUG("status=%d\n", item->update_state_flags);
-			return item->update_state_flags;
-		}
-	}
-	HIP_DEBUG("return 0\n");
-	return 0;
-}
 
 int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			       int direction, int test_new_spi)
@@ -1240,141 +1168,6 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 	}
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-#if 0
-/* inbound IPsec SA mappings to devices, each netdev has its own SA */
-
-/* assumes locked HA */
-void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
-{
-	struct hip_ifindex2spi_map *m;
-	struct list_head *pos, *tmp;
-	char str[INET6_ADDRSTRLEN];
-
-	HIP_DEBUG("spi=0x%x ifindex=%d\n", spi, ifindex);
-
-	m = kmalloc(sizeof(struct hip_ifindex2spi_map), GFP_ATOMIC);
-	if (!m) {
-		HIP_ERROR("kmalloc failed\n");
-		goto out;
-	}
-
-	m->spi = spi;
-	m->ifindex = ifindex;
-	/* todo: check for duplicates */
-	list_add(&m->list, &entry->ifindex2spi_map);
-
-	hip_in6_ntop(&entry->hit_peer, str);
-	HIP_DEBUG("Current ifindex->SPI mappings for %s:\n", str);
-	list_for_each_safe(pos, tmp, &entry->ifindex2spi_map) {
-		m = list_entry(pos, struct hip_ifindex2spi_map, list);
-		HIP_DEBUG("SPI=0x%x ifindex=%d\n", m->spi, m->ifindex);
-	}
-	HIP_DEBUG("End of mapping list\n");
-
- out:
-	return;
-}
-
-/* assumes locked HA */
-void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi)
-{
-	struct hip_ifindex2spi_map *m;
-	struct list_head *pos, *tmp;
-	char str[INET6_ADDRSTRLEN];
-
-	HIP_DEBUG("spi=0x%x\n", spi);
-
-	list_for_each_safe(pos, tmp, &entry->ifindex2spi_map) {
-		m = list_entry(pos, struct hip_ifindex2spi_map, list);
-		if (m->spi == spi) {
-			HIP_DEBUG("found\n");
-			list_del(&m->list);
-			kfree(m);
-			goto out;
-		}
-	}
-
- out:
-	hip_in6_ntop(&entry->hit_peer, str);
-	HIP_DEBUG("Current ifindex->SPI mappings for %s:\n", str);
-	list_for_each_safe(pos, tmp, &entry->ifindex2spi_map) {
-		m = list_entry(pos, struct hip_ifindex2spi_map, list);
-		HIP_DEBUG("SPI=0x%x ifindex=%d\n", m->spi, m->ifindex);
-	}
-	HIP_DEBUG("End of mapping list\n");
-
-	return;
-}
-
-
-/* assumes locked HA */
-uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex)
-{
-	struct list_head *pos, *n;
-	struct hip_ifindex2spi_map *m = NULL;
-	uint32_t spi = 0;
-
-	HIP_DEBUG("ifindex=%d\n", ifindex);
-	list_for_each_safe(pos, n, &entry->ifindex2spi_map) {
-		m = list_entry(pos, struct hip_ifindex2spi_map, list);
-		if (m->ifindex == ifindex) {
-			_HIP_DEBUG("found\n");
-			spi = m->spi;
-			break;
-		}
-	}
-	if (!spi)
-		HIP_DEBUG("not found\n");
-	return spi;
-}
-
-/* assumes locked HA */
-int hip_ifindex2spi_get_ifindex(hip_ha_t *entry, uint32_t spi)
-{
-	struct list_head *pos, *n;
-	struct hip_ifindex2spi_map *m = NULL;
-	int ifindex = 0;
-
-	HIP_DEBUG("spi=0x%x\n", spi);
-	list_for_each_safe(pos, n, &entry->ifindex2spi_map) {
-		m = list_entry(pos, struct hip_ifindex2spi_map, list);
-		if (m->spi == spi) {
-			_HIP_DEBUG("found\n");
-			ifindex = m->ifindex;
-			break;
-		}
-	}
-	if (!ifindex)
-		HIP_DEBUG("not found\n");
-	return ifindex;
-}
-
-/* assumes locked HA */
-void hip_ifindex2spi_map_delete_all(hip_ha_t *entry)
-{
-	struct list_head *pos, *n;
-	struct hip_ifindex2spi_map *m = NULL;
-
-	HIP_DEBUG("\n");
-	list_for_each_safe(pos, n, &entry->ifindex2spi_map) {
-		m = list_entry(pos, struct hip_ifindex2spi_map, list);
-		list_del(&m->list);
-		kfree(m);
-	}
-	return;
-}
-#endif
 
 #undef HIP_READ_LOCK_DB
 #undef HIP_WRITE_LOCK_DB

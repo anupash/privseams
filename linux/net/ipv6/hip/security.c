@@ -51,32 +51,6 @@ int hip_delete_sp(int dir)
 extern struct list_head *xfrm_state_bydst;
 extern struct list_head *xfrm_state_byspi;
 
-#if 0
-/* don't use this... probably will crash */
-void hip_hirmu_kludge(int byspi)
-{
-	int i;
-	char str[256] = {0};
-	char meep[64] = {0};
-	struct xfrm_state *xs;
-
-	HIP_DEBUG("DUMPING SPI TABLE\n");
-	for(i = 0; i < 1024; i++) {
-		if (!list_empty(&xfrm_state_byspi[i])) {
-			sprintf(meep, "%d: ", i);
-			strcat(str, meep);
-			list_for_each_entry(xs, &xfrm_state_byspi[i], byspi) {
-				sprintf(meep, "-> 0x%x [%s] ", xs->id.spi, xs->km.state == XFRM_STATE_VALID ? " OK" : "NOK");
-				strcat(str, meep);
-			}
-			HIP_DEBUG("%s\n",str);
-			memset(str,0,256);
-		}
-	}
-	HIP_DEBUG("END-OF-DUMP\n");
-}
-#endif
-
 /**
  * hip_delete_sa - delete a SA
  * @spi: SPI value of SA
@@ -122,7 +96,6 @@ int hip_delete_esp(hip_ha_t *entry)
 
 	/* unlinks entry from our HIT-SPI table */
 #if 0
-	//	hip_hadb_remove_state_spi(entry);
 	{
 		struct hip_hit_spi hs;
 		hs.spi = entry->spi_in;
