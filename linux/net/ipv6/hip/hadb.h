@@ -21,7 +21,6 @@ void hip_init_hadb(void);
 void hip_uninit_hadb(void);
 
 /* Accessors */
-hip_ha_t *hip_hadb_find_byspi(u32 spi);
 hip_ha_t *hip_hadb_find_byspi_list(u32 spi);
 hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
 
@@ -30,6 +29,7 @@ int hip_hadb_insert_state(hip_ha_t *ha);
 int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi);
 void hip_hadb_remove_state(hip_ha_t *ha);
 void hip_hadb_remove_state_hit(hip_ha_t *ha);
+void hip_hadb_remove_hs(uint32_t spi);
 
 /* existence */
 int hip_hadb_exists_entry(void *key, int type);
@@ -100,7 +100,7 @@ void hip_hadb_deactivate_hs_spi(uint32_t spi);
 
 void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
-void hip_hadb_dump_spi_lists(void);
+void hip_hadb_dump_hs_ht(void);
 
 #define hip_hold_ha(ha) do { \
 	atomic_inc(&ha->refcnt); \

@@ -126,6 +126,7 @@ void hip_hadb_remove_hs2(struct hip_hit_spi *hs)
 	HIP_LOCK_HS(hs);
 	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
 	hip_ht_delete(&hadb_spi_list, hs);
+	HIP_ERROR("TODO: CALL HS_PUT ?\n");
 	HIP_UNLOCK_HS(hs);
 }
 
@@ -313,7 +314,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
 	hip_ht_add(&hadb_spi_list, new_item);
 	HIP_DEBUG("SPI added to HT spi_list, HS=%p\n", new_item);
 	HIP_DEBUG("HS TABLE:\n");
-	hip_hadb_dump_spi_lists();
+	hip_hadb_dump_hs_ht();
  out_err:
 	return err;
 }
@@ -1909,13 +1910,13 @@ void hip_hadb_dump_hits(void)
 }
 
 
-void hip_hadb_dump_spi_lists(void)
+void hip_hadb_dump_hs_ht(void)
 {
 	int i;
 	struct hip_hit_spi *hs, *tmp_hs;
 	char str[INET6_ADDRSTRLEN];
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("start\n");
 	HIP_LOCK_HT(&hadb_spi_list);
 
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
@@ -2015,7 +2016,7 @@ void hip_uninit_hadb()
 	HIP_DEBUG("\n");
 
 	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
-	hip_hadb_dump_spi_lists();
+	hip_hadb_dump_hs_ht();
 
 	/* I think this is not very safe deallocation.
 	 * Locking the hadb_spi and hadb_hit could be one option, but I'm not
@@ -2034,11 +2035,14 @@ void hip_uninit_hadb()
 			hip_put_ha(ha);
 		}
 	}
+
+	/* HIT-SPI mappings should be already deleted by now, but check anyway */
 	HIP_DEBUG("DELETING HS HT\n");
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		_HIP_DEBUG("HS HT [%d]\n", i);
 		list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
-			HIP_ERROR("HS NOT ALREADY DELETED, DELETING HS %p\n", hs);
+			HIP_ERROR("BUG: HS NOT ALREADY DELETED, DELETING HS %p, HS SPI=0x%x\n",
+				  hs, hs->spi);
 			if (atomic_read(&hs->refcnt) > 1)
 				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
 			hip_hadb_hold_hs(hs);
@@ -2049,5 +2053,5 @@ void hip_uninit_hadb()
 			//	HIP_DEBUG("HS refcnt < 1, BUG ?\n");
 		}
 	}
-
+	HIP_DEBUG("DONE DELETING HS HT\n");
 }

@@ -867,16 +867,28 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		HIP_DEBUG("delete_sa out retval=%d\n", err);
 		err = 0;
 	} else
-		HIP_DEBUG("prev SPI = new SPI, not deleting the outbound SA\n");
+		HIP_DEBUG("prev SPI_out = new SPI_out, not deleting the outbound SA\n");
 
 	if (prev_spi_in != new_spi_in) {
 		HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
 		err = hip_delete_sa(prev_spi_in, hitr);
-		hip_print_hit("map_del", hits);
-		hip_ifindex2spi_map_del(entry, prev_spi_in);
-		err = 0;
+
+		/* remove old HIT-SPI mapping and add a new mapping */
+
+		/* actually should change hip_hadb_delete_inbound_spi
+		 * somehow, but we do this or else delete_inbound_spi
+		 * would delete both old and new SPIs */
+		hip_hadb_remove_hs(prev_spi_in);
+		err = hip_hadb_insert_state_spi_list(entry, new_spi_in);
+		if (err == -EEXIST) {
+			HIP_DEBUG("HIT-SPI mapping already exists, hmm ..\n");
+			err = 0;
+		} else if (err) {
+			HIP_ERROR("Could not add a HIT-SPI mapping for SPI 0x%x (err=%d)\n",
+				  new_spi_in, err);
+		}
 	} else
-		HIP_DEBUG("prev SPI = new SPI, not deleting the inbound SA\n");
+		HIP_DEBUG("prev SPI_in = new SPI_in, not deleting the inbound SA\n");
 
 	//hip_update_spi_waitlist_add(new_spi_in, hits, NULL /*rea*/);
 
@@ -1263,6 +1275,7 @@ int hip_receive_update(struct sk_buff *skb)
 
 	hip_hadb_dump_spis_in(entry);
 	hip_hadb_dump_spis_out(entry);
+	hip_hadb_dump_hs_ht();
 
 	if (err) {
 		HIP_ERROR("UPDATE handler failed, err=%d\n", err);
