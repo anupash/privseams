@@ -815,7 +815,12 @@ struct hip_spi_in_item
 	uint32_t         nes_spi_out; /* UPDATE, the stored outbound
 				       * SPI related to the inbound
 				       * SPI we sent in reply (?) */
-	// int update_state_flags; /* TODO: move from hadb_state to here */
+
+	int update_state_flags; /* 0x1=received ack for sent SEQ
+				   0x2=received peer's NES
+				   both=0x3=can move back to established */
+	uint32_t seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
+	struct hip_nes stored_received_nes; /* the corresponding NES of peer */
 };
 
 struct hip_spi_out_item
@@ -846,10 +851,10 @@ struct hip_hadb_state
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
 
-  	uint32_t             spi_out;        /* outbound IPsec SA SPI */
-  //	uint32_t             spi_in;         /* inbound IPsec SA SPI */
-  	uint32_t             new_spi_out;    /* new outbound IPsec SA SPI received in UPDATE */
-  //	uint32_t             new_spi_in;     /* new inbound IPsec SA SPI when rekey was initiated */
+//  	uint32_t             spi_out;        /* outbound IPsec SA SPI */
+//	uint32_t             spi_in;         /* inbound IPsec SA SPI */
+//      uint32_t             new_spi_out;    /* new outbound IPsec SA SPI received in UPDATE */
+//	uint32_t             new_spi_in;     /* new inbound IPsec SA SPI when rekey was initiated */
 
 	/* test code for multiple SA support, will replace (new)spi_in and (new)spi_out */
 	struct list_head     spis_in;        /* SPIs for inbound and outbound SAs */

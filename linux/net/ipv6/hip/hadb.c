@@ -314,14 +314,15 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 {
 	HIP_DEBUG("ha=0x%p\n", ha);
 	/* Delete SAs */
-	hip_delete_sa(ha->spi_out, &ha->hit_peer);
+//	hip_delete_sa(ha->spi_out, &ha->hit_peer);
 //	hip_delete_sa(ha->spi_in, &ha->hit_our);
-	hip_delete_sa(ha->new_spi_out, &ha->hit_peer);
+//	hip_delete_sa(ha->new_spi_out, &ha->hit_peer);
 //	hip_delete_sa(ha->new_spi_in, &ha->hit_our);
 	/* todo: foreach spis_in spis_out: delete_sa */
 
 //	HIP_ERROR("hip_hadb_delete_inbound_spis(ha);\n");
 	hip_hadb_delete_inbound_spis(ha);
+	hip_hadb_delete_outbound_spis(ha);
 
 	hip_hadb_delete_peer_addrlist(ha);
 //	hip_ifindex2spi_map_delete_all(ha);
@@ -955,7 +956,6 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 
 	spi_in = data->spi;
 
-	HIP_DEBUG("SPI=0x%x\n", spi_in);
 	/* no locking (?) */
 	HIP_LOCK_HA(entry);
 	HIP_DEBUG("SPI_in=0x%x\n", spi_in);
@@ -991,13 +991,34 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 {
 	int err = 0;
-	//struct hip_spi_out_item *item, *tmp;
+	struct hip_spi_out_item *item, *tmp;
 	uint32_t spi_out;
 
 	spi_out = data->spi;
 
-	HIP_DEBUG("SPI=0x%x\n", spi_out);
-	err = -ENOSYS;
+	HIP_LOCK_HA(entry);
+	HIP_DEBUG("SPI_out=0x%x\n", spi_out);
+        list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
+		if (item->spi == spi_out) {
+			HIP_DEBUG("not adding duplicate SPI\n");
+			goto out;
+		}
+        }
+
+	item = kmalloc(sizeof(struct hip_spi_out_item), GFP_ATOMIC);
+	if (!item) {
+		HIP_ERROR("item kmalloc failed\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	memcpy(item, data, sizeof(struct hip_spi_out_item));
+	//item->timestamp = jiffies;
+	list_add(&item->list, &entry->spis_out);
+	HIP_DEBUG("added SPI 0x%x to the outbound SPI list, item=0x%p\n", spi_out, item);
+
+ out_err:
+ out:
+	HIP_UNLOCK_HA(entry);
 	return err;
 }
 
@@ -1020,7 +1041,7 @@ int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data)
 }
 
 
-void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
+void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_in_item *item, *tmp;
 
@@ -1028,6 +1049,30 @@ void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
 
 	HIP_LOCK_HA(entry);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		if (item->spi == spi) {
+			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
+				  item->spi, item->new_spi, item);
+			HIP_ERROR("TODO: REMOVE SPI FROM HIT-SPI HT\n");
+			hip_delete_sa(item->spi, &entry->hit_our);
+			hip_delete_sa(item->new_spi, &entry->hit_our);
+			list_del(&item->list);
+			kfree(item);
+		}
+        }
+	HIP_UNLOCK_HA(entry);
+}
+
+void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
+{
+	struct hip_spi_in_item *item, *tmp;
+
+	HIP_DEBUG("entry=0x%p\n", entry);
+
+	/* assume locked entry ? */
+//	HIP_LOCK_HA(entry);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		hip_hadb_delete_inbound_spi(entry, item->spi);
+#if 0
 		HIP_DEBUG("deleting SPI_in=0x%x from inbound list, item=0x%p\n", item->spi, item);
 		HIP_ERROR("TODO: REMOVE SPI FROM HIT-SPI HT\n");
 		hip_delete_sa(item->spi, &entry->hit_our);
@@ -1035,9 +1080,48 @@ void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
 		list_del(&item->list);
 		kfree(item);
 		// hip_put_ha(entry); ?
+#endif
+        }
+//	HIP_UNLOCK_HA(entry);
+}
+
+void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_spi_out_item *item, *tmp;
+
+	HIP_DEBUG("entry=0x%p\n", entry);
+	HIP_LOCK_HA(entry);
+        list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
+		if (item->spi == spi) {
+			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
+				  item->spi, item->new_spi, item);
+			HIP_ERROR("TODO: REMOVE SPI FROM HIT-SPI HT\n");
+			hip_delete_sa(item->spi, &entry->hit_peer);
+			hip_delete_sa(item->new_spi, &entry->hit_peer);
+			list_del(&item->list);
+			kfree(item);
+		}
         }
 	HIP_UNLOCK_HA(entry);
 }
+
+void hip_hadb_delete_outbound_spis(hip_ha_t *entry)
+{
+	struct hip_spi_out_item *item, *tmp;
+
+	HIP_DEBUG("entry=0x%p\n", entry);
+
+	/* assume locked entry ? */
+        list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
+		hip_hadb_delete_outbound_spi(entry, item->spi);
+        }
+
+}
+
+
+
+
+
 
 /* kludge for removing old entry->spi_in code to the new code */
 uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
@@ -1419,9 +1503,8 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 		goto error;
 
 	if ( (len += snprintf(page+len, count-len,
-			      " 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x %s",
-			      entry->spi_out,
-			      entry->new_spi_out, entry->default_spi_out, entry->lsi_our, entry->lsi_peer,
+			      " 0x%08x 0x%08x 0x%08x %s",
+			      entry->default_spi_out, entry->lsi_our, entry->lsi_peer,
 			      entry->esp_transform <=
 			      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
 			      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
@@ -1555,7 +1638,7 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 	ps.len = snprintf(page, count,
 		       "state hastate refcnt peer_controls hit_our hit_peer "
 //		       "spi_in spi_out new_spi_in new_spi_out default_spi_out lsi_our lsi_peer esp_transform "
-		       "spi_out new_spi_out default_spi_out lsi_our lsi_peer esp_transform "
+		       "default_spi_out lsi_our lsi_peer esp_transform "
 		       "birthday keymat_index keymat_calc_index "
 		       "update_id_in update_id_out dh_len\n");
 

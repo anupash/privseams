@@ -984,6 +984,8 @@ void hip_update_set_new_spi(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
         }
 }
 
+
+
 uint32_t hip_update_get_new_spi(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_in_item *item, *tmp;
@@ -999,6 +1001,69 @@ uint32_t hip_update_get_new_spi(hip_ha_t *entry, uint32_t spi)
 		}
         }
 	return new_spi;
+}
+
+void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
+			   uint32_t update_id, int update_flags, struct hip_nes *nes)
+{
+	HIP_DEBUG("spi=0x%x direction=%d update_id=%u flags=0x%x\n",
+		  spi, direction, update_id, update_flags);
+
+	if (direction == HIP_SPI_DIRECTION_IN) {
+		struct hip_spi_in_item *item, *tmp;
+		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+			HIP_DEBUG("item: spi_in=0x%x new_spi=0x%x\n",
+				  item->spi, item->new_spi);
+			if (item->spi == spi) {
+				HIP_DEBUG("setting new values\n");
+				if (set_flags & 0x1)
+					item->seq_update_id = update_id;
+				if (set_flags & 0x2)
+					item->update_state_flags = update_flags;
+				if (nes && (set_flags & 0x4)) {
+					item->stored_received_nes.old_spi = nes->old_spi;
+					item->stored_received_nes.new_spi = nes->new_spi;
+					item->stored_received_nes.keymat_index = nes->keymat_index;
+				}
+				break;
+			}
+		}
+	}
+
+}
+
+int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
+			       int direction, int test_new_spi)
+{
+	int found = 0;
+	HIP_DEBUG("spi=0x%x direction=%d test_new_spi=%d\n",
+		  spi, direction, test_new_spi);
+	/* lock or not ? */
+	if (direction == HIP_SPI_DIRECTION_IN) {
+		struct hip_spi_in_item *item, *tmp;
+		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+			HIP_DEBUG("item: spi_in=0x%x new_spi=0x%x\n",
+				  item->spi, item->new_spi);
+			if ( (item->spi == spi && !test_new_spi) ||
+			     (item->new_spi == spi && test_new_spi) ) {
+				found = 1;
+				break;
+			}
+		}
+        } else {
+		struct hip_spi_out_item *item, *tmp;
+		list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
+			HIP_DEBUG("item: spi_out=0x%x new_spi=0x%x\n",
+				  item->spi, item->new_spi);
+			if ( (item->spi == spi && !test_new_spi) ||
+			     (item->new_spi == spi && test_new_spi) ) {
+				found = 1;
+				break;
+			}
+		}
+	}
+	HIP_DEBUG("found=%d\n", found);
+	return found;
 }
 
 

@@ -235,6 +235,10 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set);
 void hip_update_set_new_spi(hip_ha_t *entry, uint32_t spi, uint32_t new_spi, uint32_t spi_out);
 uint32_t hip_update_get_new_spi(hip_ha_t *entry, uint32_t spi);
+void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
+			   uint32_t update_id, int update_flags, struct hip_nes *nes);
+int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
+			  int direction, int test_new_spi);
 
 extern struct hip_db_struct hip_peer_hostid_db;
 extern struct hip_db_struct hip_local_hostid_db;

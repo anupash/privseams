@@ -1548,10 +1548,10 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	struct hip_r1_counter *r1cntr;
  	struct hip_lhi lhi;
  	struct hip_host_id *host_id_in_enc = NULL;
+	struct hip_spi *hspi = NULL;
 	hip_ha_t *entry = ha;
 	int esptfm;
 	uint32_t spi_in, spi_out;
-	//int ifindex = 0;
 	struct hip_spi_in_item spi_in_data;
  	HIP_DEBUG("\n");
 
@@ -1766,8 +1766,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	hip_delete_esp(entry);
 
 	{
-		struct hip_spi *hspi;
 		struct hip_esp_transform *esp_tf;
+		struct hip_spi_out_item spi_out_data;
 
 		esp_tf = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM);
 		if (!esp_tf) {
@@ -1789,7 +1789,14 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		entry->peer_controls |= ntohs(i2->control);
 		ipv6_addr_copy(&entry->hit_our, &i2->hitr);
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		entry->spi_out = ntohl(hspi->spi);
+		//entry->spi_out = ntohl(hspi->spi);
+		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
+		spi_out_data.spi = ntohl(hspi->spi);
+		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
+		if (err) {
+			HIP_UNLOCK_HA(entry);
+			goto out_err;
+		}
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		esptfm = entry->esp_transform;
 		HIP_UNLOCK_HA(entry);
@@ -1829,7 +1836,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	}
 
 	barrier();
-	spi_out = entry->spi_out;
+	//spi_out = entry->spi_out;
+	spi_out = ntohl(hspi->spi);
 
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_out);
 
@@ -1876,7 +1884,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		HIP_UNLOCK_HA(entry);
 		goto out_err;
 	}
-	/* todo: move to hadb_add_inbound_spi */
 	err = hip_store_base_exchange_keys(entry, ctx, 0);
 	HIP_UNLOCK_HA(entry);
 	if (err) {
@@ -2045,6 +2052,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
  	struct hip_spi *hspi = NULL;
  	struct hip_sig *sig = NULL;
 	struct hip_common *r2 = NULL;
+	struct hip_spi_out_item spi_out_data;
 
 	HIP_DEBUG("Entering handle_r2\n");
 
@@ -2113,7 +2121,14 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		spi_recvd = ntohl(hspi->spi);
 
 		HIP_LOCK_HA(entry);
-		entry->spi_out = spi_recvd;
+//		entry->spi_out = spi_recvd;
+		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
+		spi_out_data.spi = spi_recvd;
+		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
+		if (err) {
+			HIP_UNLOCK_HA(entry);
+			goto out_err;
+		}
 		memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
 		memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 		//spi_in = entry->spi_in;
@@ -2137,6 +2152,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		err = hip_hadb_insert_state_spi_list(entry, spi_in);
 		if (err && err != -EEXIST) {
 			HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
+			HIP_UNLOCK_HA(entry);
 			goto out_err;
 		}
 #endif

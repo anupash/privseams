@@ -1,3 +1,5 @@
+#if 0
+
 #include "rea.h"
 #include "debug.h"
 #include "output.h"
@@ -1334,3 +1336,5 @@ int hip_send_ac_or_acr(int pkt_type, hip_ha_t *entry,
 		kfree(msg);
 	return err;
 }
+
+#endif

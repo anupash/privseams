@@ -70,7 +70,10 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
 uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry);
+void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi);
 void hip_hadb_delete_inbound_spis(hip_ha_t *entry);
+void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
+void hip_hadb_delete_outbound_spis(hip_ha_t *entry);
 
 int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi);
 struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);

@@ -123,15 +123,17 @@ void hip_update_spi_waitlist_delete_all(void)
  */
 int hip_update_spi_waitlist_ispending(uint32_t spi)
 {
+#if 0
 	int err = 0, found = 0;
 	struct hip_update_spi_waitlist_item *s = NULL;
 	unsigned long flags = 0;
 	struct list_head *pos, *n;
 	int i = 1;
+#endif
 
 	HIP_DEBUG("skipping test, not needed anymore ?\n");
 	return 0;
-
+#if 0
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 
 	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
@@ -193,6 +195,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
  out:
 	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
 	return found;
+#endif
 }
 
 /* Get keys needed by UPDATE */
@@ -1248,9 +1251,10 @@ int hip_receive_update(struct sk_buff *skb)
 	/* check that Old SPI value exists */
 	if (nes &&
 	    (nes->old_spi != nes->new_spi) && /* mm-02 check */
-	    (ntohl(nes->old_spi) != entry->spi_out)) {
-		HIP_ERROR("Old SPI value 0x%x in NES parameter does not belong to the current SPI 0x%x in HA\n",
-			  ntohl(nes->old_spi), entry->spi_out);
+	    !hip_update_exists_spi(entry, ntohl(nes->old_spi), HIP_SPI_DIRECTION_OUT, 0)) {
+//	    (ntohl(nes->old_spi) != entry->spi_out)) {
+		HIP_ERROR("Old SPI value 0x%x in NES parameter does not belong to the current list of outbound SPIs in HA\n",
+			  ntohl(nes->old_spi));
 		goto out_err;
 	}
 
@@ -1386,8 +1390,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		HIP_DEBUG("not creating a new SA\n");
 
 	/* this might break something */
-	memset(&entry->stored_received_nes, 0, sizeof(struct hip_nes));
-	entry->update_state_flags = 0;
+//	memset(&entry->stored_received_nes, 0, sizeof(struct hip_nes));
+//	entry->update_state_flags = 0;
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 
@@ -1403,7 +1407,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			HIP_ERROR("Building of REA param failed\n");
 			goto out_err;
 		}
-	}
+	} else
+		HIP_DEBUG("not adding REA\n");
 
 	if (add_nes) {
 		if (addr_list) {
@@ -1422,7 +1427,14 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			HIP_DEBUG("adding NES, Old SPI <> New SPI\n");
 			/* plain UPDATE or readdress with rekeying */
 			//	nes_old_spi = entry->spi_in;
-			nes_old_spi = hip_get_spi_to_update(entry);
+			//nes_old_spi = hip_get_spi_to_update(entry);
+			/* update the SA of the interface which caused the event */
+			nes_old_spi = hip_ifindex2spi_get_spi(entry, ifindex);
+			if (!nes_old_spi) {
+				HIP_ERROR("Could not find SPI to use in Old SPI\n");
+				goto out_err;
+			}
+			hip_set_spi_update_status(entry, nes_old_spi, 1); /* here or later ? */
 			nes_new_spi = new_spi_in;
 		}
 
@@ -1465,8 +1477,11 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
-
-
+	if (add_nes) {
+		/* remember the update id of this update */
+		hip_update_set_status(entry, nes_old_spi, HIP_SPI_DIRECTION_IN,
+				      0x1 | 0x2, update_id_out, 0, NULL);
+	}
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
