@@ -1595,6 +1595,7 @@ static struct xfrm_mgr hip_xfrm_km_mgr = {
 };
 
 /* Handler for XFRM key management calls */
+/* TODO */
 int hip_register_xfrm_km_handler(void)
 {
 	int err;

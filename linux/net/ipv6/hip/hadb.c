@@ -97,7 +97,7 @@ static void hip_hadb_hold_hs(void *entry)
 	_HIP_DEBUG("HS: %p, refcnt incremented to: %d\n", hs, atomic_read(&hs->refcnt));
 }
 
-//void hip_hadb_remove_hs(struct hip_hit_spi *hs)
+
 void hip_hadb_remove_hs(uint32_t spi)
 {
 	struct hip_hit_spi *hs;
@@ -212,6 +212,8 @@ void hip_hadb_remove_state_hit(hip_ha_t *ha)
 /**
  * hip_hadb_insert_state - Insert state to hash tables.
  *
+ * *** TODO: SPI STUFF IS DEPRECATED ***
+ *
  * Adds @ha to either SPI or HIT hash table, or _BOTH_.
  * As a side effect updates the hastate of the @ha.
  *
@@ -233,9 +235,11 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	hip_hastate_t st;
 	hip_ha_t *tmp;
 
+	/* assume already locked ha */
+
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
 
-	HIP_LOCK_HA(ha);
+	//HIP_LOCK_HA(ha);
 	st = ha->hastate;
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
@@ -250,7 +254,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	}
 
 	ha->hastate = st;
-	HIP_UNLOCK_HA(ha);
+	//HIP_UNLOCK_HA(ha);
 	return st;
 }
 
@@ -451,7 +455,8 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	int err = 0;
 	struct hip_spi_out_item *spi_out;
 
-	HIP_LOCK_HA(entry);
+	/* assume already locked entry */
+	//HIP_LOCK_HA(entry);
 
 	//hip_print_hit("entry def addr", &entry->preferred_address);
 	if (ipv6_addr_any(&entry->preferred_address)) {
@@ -497,7 +502,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	HIP_ERROR("Did not find an usable peer address\n");
 #endif
  out:
-	HIP_UNLOCK_HA(entry);
+	//HIP_UNLOCK_HA(entry);
         return err;
 }
 
@@ -523,7 +528,8 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 	int i = 1;
 	struct hip_spi_out_item *spi_out, *tmp;
 
-	HIP_LOCK_HA(entry);
+	/* assumes already locked entry */
+//	HIP_LOCK_HA(entry);
 
         list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
 		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
@@ -542,13 +548,13 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				}
 				if (spi)
 					*spi = spi_out->spi;
-				HIP_UNLOCK_HA(entry);
+				//HIP_UNLOCK_HA(entry);
 				return 1;
 			}
 			i++;
 		}
 	}
-	HIP_UNLOCK_HA(entry);
+//	HIP_UNLOCK_HA(entry);
 	_HIP_DEBUG("not found\n");
 
 	return 0;
@@ -637,7 +643,8 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	struct hip_spi_out_item *spi_out, *tmp;
 	int found_spi_list = 0;
 
-	HIP_LOCK_HA(entry);
+	/* assumes already locked entry */
+//	HIP_LOCK_HA(entry);
 
 	/* check if we are adding the peer's address during the base
 	 * exchange */
@@ -701,7 +708,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	list_add_tail(&item->list, &spi_out->peer_addr_list);
 
  out_err:
-	HIP_UNLOCK_HA(entry);
+//	HIP_UNLOCK_HA(entry);
 	return err;
 }
 
@@ -1413,7 +1420,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 				struct hip_peer_addr_list_item *addr, *addr_tmp;
 
 				list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
-					HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
+					_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
 					if (addr->seq_update_id == puid) {
 						if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
 							HIP_ERROR("echo data len mismatch\n");

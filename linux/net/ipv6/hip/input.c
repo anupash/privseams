@@ -1406,6 +1406,8 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
 	HIP_DEBUG("\n");
 
+	/* assume already locked entry */
+
 	i2 = ctx->input;
 
 	/* Build and send R2
@@ -1473,9 +1475,9 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 	{
 		struct hip_crypto_key hmac;
 
-		HIP_LOCK_HA(entry);
+		//HIP_LOCK_HA(entry);
 		memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
-		HIP_UNLOCK_HA(entry);
+		//HIP_UNLOCK_HA(entry);
 
 		err = hip_build_param_hmac_contents(r2, &hmac);
 		if (err) {
@@ -1572,6 +1574,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
  	struct in6_addr hit;
 	struct hip_spi_in_item spi_in_data;
  	HIP_DEBUG("\n");
+
+	/* assume already locked ha, if ha is not NULL */
 
 	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
 	if (!ctx) {
@@ -1784,12 +1788,16 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 			goto out_err;
 		}
 
+		/* the rest of the code assume already locked entry,
+		 * so lock the newly created entry as well */
+		HIP_LOCK_HA(entry);
+
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		ipv6_addr_copy(&entry->hit_our, &i2->hitr);
-
 		HIP_DEBUG("INSERTING STATE\n");
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
+//		HIP_UNLOCK_HA(entry);
 		/* insert automatically holds for the data structure
 		 * references, but since we continue to use the entry,
 		 * we have to hold for our own usage too
@@ -1817,7 +1825,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 			goto out_err;
 		}
 
-		HIP_LOCK_HA(entry);
+		//HIP_LOCK_HA(entry);
 		if (r1cntr)
 			entry->birthday = r1cntr->generation;
 		entry->peer_controls |= ntohs(i2->control);
@@ -1829,12 +1837,12 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		spi_out_data.spi = ntohl(hspi->spi);
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
 		if (err) {
-			HIP_UNLOCK_HA(entry);
+			//HIP_UNLOCK_HA(entry);
 			goto out_err;
 		}
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		esp_tfm = entry->esp_transform;
-		HIP_UNLOCK_HA(entry);
+//		HIP_UNLOCK_HA(entry);
 
 		if (esp_tfm == 0) {
 			HIP_ERROR("Could not select proper ESP transform\n");
@@ -1904,7 +1912,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	} else
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 
-	HIP_LOCK_HA(entry);
+//	HIP_LOCK_HA(entry);
 	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
@@ -1915,7 +1923,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
 
 	err = hip_store_base_exchange_keys(entry, ctx, 0);
-	HIP_UNLOCK_HA(entry);
+//	HIP_UNLOCK_HA(entry);
 	if (err) {
 		HIP_DEBUG("hip_store_base_exchange_keys failed\n");
 		goto out_err;
@@ -1925,7 +1933,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	hip_hadb_insert_state(entry);
 
 	err = hip_create_r2(ctx, entry);
-	HIP_DEBUG("hip_handle_r2 returned %d\n", err);
+	HIP_DEBUG("hip_create_r2 returned %d\n", err);
 	if (err) {
 		HIP_ERROR("Creation of R2 failed\n");
 		goto out_err;
@@ -1956,6 +1964,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	 */
 	if (!ha) {
 		if (entry) {
+			HIP_UNLOCK_HA(entry); /* unlock the entry created in this function */
 			hip_put_ha(entry);
 		}
 	}
@@ -2010,6 +2019,7 @@ int hip_receive_i2(struct sk_buff *skb)
 		state = HIP_STATE_UNASSOCIATED;
 	} else {
 		barrier();
+		HIP_LOCK_HA(entry);
 		state = entry->state;
 	}
 
@@ -2022,36 +2032,36 @@ int hip_receive_i2(struct sk_buff *skb)
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
  		err = hip_handle_i2(skb, entry);
-
-		HIP_LOCK_HA(entry);
+		//HIP_LOCK_HA(entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
-		HIP_UNLOCK_HA(entry);
+		//HIP_UNLOCK_HA(entry);
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
  		err = hip_handle_i2(skb, entry);
-
-		HIP_LOCK_HA(entry);
+		//HIP_LOCK_HA(entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
-		HIP_UNLOCK_HA(entry);
+		//HIP_UNLOCK_HA(entry);
  		break;
  	case HIP_STATE_REKEYING:
 		HIP_DEBUG("Received I2 in state REKEYING\n");
  		err = hip_handle_i2(skb, entry);
 
-		HIP_LOCK_HA(entry);
+		//HIP_LOCK_HA(entry);
 		if (!err)
 			entry->state = HIP_STATE_R2_SENT;
-		HIP_UNLOCK_HA(entry);
+		//HIP_UNLOCK_HA(entry);
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
 		break;
 	}
 
-	if (entry)
+	if (entry) {
+		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
+	}
  out:
 	return err;
 }
@@ -2083,6 +2093,8 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	int tfm;
 	uint32_t spi_recvd, spi_in;
 
+	/* assume already locked entry */
+
 	HIP_DEBUG("Entering handle_r2\n");
 
 	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
@@ -2097,10 +2109,10 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
 	sender = &r2->hits;
 
-	HIP_LOCK_HA(entry);
+	//HIP_LOCK_HA(entry);
 
         /* verify HMAC */
-	err = hip_verify_packet_hmac(r2,entry);
+	err = hip_verify_packet_hmac(r2, entry);
 	if (err) {
 		HIP_ERROR("HMAC validation on R2 failed\n");
 		goto out_err;
@@ -2155,7 +2167,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	}
 	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
 	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
-	HIP_ERROR("entry should have only one spi_in now, fix\n");
+	HIP_DEBUG("entry should have only one spi_in now, test\n");
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
 
@@ -2203,7 +2215,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	//hip_hadb_dump_spis_out(entry);
 
  out_err:
-	HIP_UNLOCK_HA(entry);
+	//HIP_UNLOCK_HA(entry);
  out_err_no_lock:
 	if (ctx)
 		kfree(ctx);
@@ -2392,6 +2404,7 @@ int hip_receive_r2(struct sk_buff *skb)
 		err = -EFAULT;
 		goto out_err;
 	}
+	HIP_LOCK_HA(entry);
 
 	state = entry->state;
 
@@ -2407,15 +2420,14 @@ int hip_receive_r2(struct sk_buff *skb)
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
  		err = hip_handle_r2(skb, entry);
-		/* MOVE LOCK_HA ABOVE handle_r2 (and remove lock from handle_r2) ? */
-		HIP_LOCK_HA(entry);
+		//HIP_LOCK_HA(entry);
 		if (!err) {
 			entry->state = HIP_STATE_ESTABLISHED;
 			HIP_DEBUG("Reached ESTABLISHED state\n");
 		} else {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
  		}
-		HIP_UNLOCK_HA(entry);
+		//HIP_UNLOCK_HA(entry);
  		break;
 	case HIP_STATE_R2_SENT:
 		HIP_ERROR("Received R2 in R2_SENT. Dropping\n");
@@ -2437,8 +2449,10 @@ int hip_receive_r2(struct sk_buff *skb)
  	}
 
  out_err:
-	if (entry)
+	if (entry) {
+		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
+	}
 	return err;
 }
 

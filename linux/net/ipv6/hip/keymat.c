@@ -218,8 +218,8 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	u8 *tmp_data = NULL;
 	size_t tmp_data_len;
 
-	HIP_DEBUG("key_len=%d, requested keymat_index=%u calc_index=%u Kn_is_at=%u\n",
-		  key_len, *keymat_index, *calc_index, *Kn_is_at);
+	_HIP_DEBUG("key_len=%d, requested keymat_index=%u calc_index=%u Kn_is_at=%u\n",
+		   key_len, *keymat_index, *calc_index, *Kn_is_at);
 	_HIP_HEXDUMP("calc_index_keymat", calc_index_keymat, HIP_AH_SHA_LEN);
 
  	if (key_len == 0 || kij_len == 0) {

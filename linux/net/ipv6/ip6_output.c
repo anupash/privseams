@@ -286,6 +286,14 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 		if (ret < 0)
 			goto end_hip;
 #if 0
+		/* netfilter.c ip_route, test this:
+		   if (ip_route_output_key(&rt, &fl) != 0)
+		     return -1;
+		     // Drop old route.
+		     dst_release((*pskb)->dst);
+		     (*pskb)->dst = &rt->u.dst;
+		*/
+
 		if (ret == 5) {  /* THIS IS NOT WORKING well */
 			struct dst_entry **dst_tmp;
 			int err2;

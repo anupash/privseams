@@ -87,10 +87,11 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 /* this probably is not used anymore? */
 int hip_delete_esp(hip_ha_t *entry)
 {
-	HIP_LOCK_HA(entry);
+	/* assume already locked entry */
+        //HIP_LOCK_HA(entry);
 	hip_hadb_delete_inbound_spis(entry);
 	hip_hadb_delete_outbound_spis(entry);
-	HIP_UNLOCK_HA(entry);
+	//HIP_UNLOCK_HA(entry);
 
 	return 0;
 }
