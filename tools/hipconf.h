@@ -25,6 +25,7 @@
 
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
+#include <openssl/rsa.h>
 #include <openssl/pem.h>
 
 #include "tools/debug.h"

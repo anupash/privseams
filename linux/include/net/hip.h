@@ -219,6 +219,8 @@ typedef uint16_t in_port_t;
 
 #define HIP_HI_DSA                    3
 #define HIP_SIG_DSA                   3
+#define HIP_HI_RSA                    5
+#define HIP_SIG_RSA                   5
 
 #define HIP_DIGEST_MD5                1
 #define HIP_DIGEST_SHA1               2

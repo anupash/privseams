@@ -369,13 +369,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	   and extract the public key from the private key. The public key is
  	   needed for writing the host id parameter in R1. */
 
-	host_id_private = hip_get_any_localhost_host_id();
+	host_id_private = hip_get_any_localhost_host_id(0);
  	if (!host_id_private) {
  		HIP_ERROR("Could not acquire localhost host id\n");
  		goto out_err;
  	}
 
-	host_id_pub = hip_get_any_localhost_public_key();
+	host_id_pub = hip_get_any_localhost_public_key(0);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;

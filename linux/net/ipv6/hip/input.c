@@ -30,6 +30,7 @@
 #ifdef CONFIG_HIP_RVS
 #include "rvs.h"
 #endif
+#include "crypto/rsa.h"
 
 static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac, 
 			   void *hmac_key, int hmac_type);
@@ -124,13 +125,16 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 			 struct hip_host_id *host_id, u8 *signature)
 {
 	int err = 0;
+	int use_rsa = 0;
 	u8 sha1_digest[HIP_AH_SHA_LEN];
-
+	
 	/* this has to be modified so that other signature algorithms
 	   are accepted
 	*/
 
-	if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
+	if (hip_get_host_id_algo(host_id) == HIP_HI_RSA)
+		use_rsa = 1;
+	else if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
 		HIP_ERROR("Unsupported algorithm:%d\n", hip_get_host_id_algo(host_id));
 		goto out_err;
 	}
@@ -149,7 +153,12 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 
 	_HIP_HEXDUMP("dsa key", (u8 *)(host_id + 1), ntohs(host_id->hi_length));
 
-	err = hip_dsa_sign(sha1_digest,(u8 *)(host_id + 1),signature);
+	if (use_rsa) {
+		err = hip_rsa_sign(sha1_digest, (u8 *)(host_id + 1), signature, 1 + 3 + 128 * 3 );
+	} else {
+		err = hip_dsa_sign(sha1_digest,(u8 *)(host_id + 1), signature);
+	}
+
 	if (err) {
 		HIP_ERROR("DSA Signing error\n");
 		return 0;
@@ -182,12 +191,15 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 	int tmp, err;
 	unsigned char sha1_digest[HIP_AH_SHA_LEN];
 	size_t public_key_len;
+	int use_rsa = 0;
 
 	err = 0;
 
 	/* check for all algorithms */
 
-	if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
+	if (hip_get_host_id_algo(host_id) == HIP_HI_RSA) {
+		use_rsa = 1;
+	} else if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
 		HIP_ERROR("Unsupported algorithm:%d\n", hip_get_host_id_algo(host_id));
 		return 0;
 	}
@@ -210,7 +222,11 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 
 	_HIP_HEXDUMP("Verify hexdump sig **", signature, 42);
 
-	tmp = hip_dsa_verify(sha1_digest, public_key, signature);
+	if (use_rsa) {
+		tmp = hip_rsa_verify(sha1_digest, public_key, signature, public_key_len);
+	} else {
+		tmp = hip_dsa_verify(sha1_digest, public_key, signature);
+	}
 
 	switch(tmp) {
 	case 0:
@@ -654,7 +670,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_common *i2 = NULL;
 	struct hip_param *param;
 	struct hip_diffie_hellman *dh_req;
-	u8 signature[HIP_DSA_SIGNATURE_LEN];
+	int algo;
+	u8 *signature = NULL;
+//	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_spi_in_item spi_in_data;
 	HIP_DEBUG("\n");
 
@@ -681,24 +699,53 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		err = -ENOMEM;
 		goto out_err;
 	}
-
+	
+	{
+		struct hip_host_id *mofo;
+		mofo = hip_get_param(ctx->input, HIP_PARAM_HOST_ID);
+		
+		algo = hip_get_host_id_algo(mofo);
+	}
+	
 	/* Get a localhost identity, allocate memory for the public key part
 	   and extract the public key from the private key. The public key is
 	   needed in the ESP-ENC below. */
-	host_id_pub = hip_get_any_localhost_public_key();
+	host_id_pub = hip_get_any_localhost_public_key(algo);
 	if (host_id_pub == NULL) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost public key found\n");
 		goto out_err;
 	}
 
-	host_id_private = hip_get_any_localhost_host_id();
+	host_id_private = hip_get_any_localhost_host_id(algo);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
 		goto out_err;
 	}
 
+	{
+		int sigsize;
+		
+		switch(algo) {
+		case HIP_HI_RSA:
+			sigsize = 128;
+			break;
+		case HIP_HI_DSA:
+			sigsize = 42;
+			break;
+		default:
+			HIP_ERROR("Unknown HI algo: %d\n",algo);
+			err = -EINVAL;
+			goto out_err;
+		}
+		signature = kmalloc(sigsize,GFP_KERNEL);
+		if (!signature) {
+			HIP_ERROR("No memory for signature\n");
+			err = -ENOMEM;
+			goto out_err;
+		}
+	}
 	/* TLV sanity checks are are already done by the caller of this
 	   function. Now, begin to build I2 piece by piece. */
 
@@ -964,12 +1011,18 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	/* Only DSA supported currently */
-	HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
+//	HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
 
-	err = hip_build_param_signature_contents(i2,
-					signature,
-					HIP_DSA_SIGNATURE_LEN,
-					HIP_SIG_DSA);
+	if (algo == HIP_HI_RSA) {
+		err = hip_build_param_signature_contents(i2,signature,
+							 128, HIP_SIG_RSA);
+	} else {
+		err = hip_build_param_signature_contents(i2,
+							 signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+	}
+
 	if (err) {
 		HIP_ERROR("Building of signature failed (%d)\n", err);
 		goto out_err;
@@ -1036,6 +1089,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_DEBUG("moving to state I2_SENT\n");
 
  out_err:
+	if (signature)
+		kfree(signature);
 	if (host_id_private)
 		kfree(host_id_private);
 	if (host_id_pub)
@@ -1358,8 +1413,10 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	struct hip_common *r2 = NULL;
 	struct hip_common *i2;
  	int err = 0;
+	int algo = 0;
 	int clear = 0;
- 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+	u8 *signature;
+// 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
@@ -1443,12 +1500,40 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 	}
 
 	/********** SIGNATURE *********/
-	host_id_private = hip_get_any_localhost_host_id();
+	{
+		struct hip_host_id *hitmp;
+
+		hitmp = hip_get_param(ctx->input, HIP_PARAM_HOST_ID);
+		if (!hitmp) {
+			HIP_ERROR("Voihan jojo\n");
+			err = -EINVAL;
+			goto out_err;
+		}
+	
+		algo = hip_get_host_id_algo(hitmp);
+	}
+
+	host_id_private = hip_get_any_localhost_host_id(algo);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
 	}
 
+	if (algo == HIP_HI_RSA) {
+		signature = kmalloc(128,GFP_KERNEL);
+	} else if (algo == HIP_HI_DSA) {
+		signature = kmalloc(42,GFP_KERNEL);
+	} else {
+		HIP_ERROR("Unknown algo\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	if (!signature) {
+		HIP_ERROR("No mem\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
 	if (!hip_create_signature(r2, hip_get_msg_total_len(r2),
 				  host_id_private, signature)) {
 		HIP_ERROR("Could not sign R2. Failing\n");
@@ -1456,9 +1541,15 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		goto out_err;
 	}
 
-	err = hip_build_param_signature_contents(r2, signature,
-						 HIP_DSA_SIGNATURE_LEN,
- 						 HIP_SIG_DSA);
+	if (algo == HIP_HI_RSA) {
+		err = hip_build_param_signature_contents(r2, signature,
+							 128, HIP_SIG_RSA);
+	} else {
+		err = hip_build_param_signature_contents(r2, signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+	}
+
  	if (err) {
  		HIP_ERROR("Building of signature failed (%d)\n", err);
  		goto out_err;

@@ -81,9 +81,9 @@ int        hip_add_localhost_id(const struct hip_lhi *lhi,
 				const struct hip_host_id *host_id);
 int        hip_add_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 int        hip_copy_any_localhost_hit(struct in6_addr *target);
-HIP_HID   *hip_get_any_localhost_host_id(void);
+HIP_HID   *hip_get_any_localhost_host_id(int);
 int        hip_insert_any_localhost_public_key(uint8_t *target);
-struct hip_host_id *hip_get_any_localhost_public_key(void);
+struct hip_host_id *hip_get_any_localhost_public_key(int);
 int hip_hit_is_our(struct in6_addr *hit);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
 				    struct hip_lhi *lhi);

@@ -461,7 +461,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
  * Returns pointer to newly allocated area that contains a localhost
  * HI. %NULL is returned is problems are encountered. 
  */
-struct hip_host_id *hip_get_any_localhost_host_id(void)
+struct hip_host_id *hip_get_any_localhost_host_id(int algo)
 {
 	struct hip_host_id *result;
 
@@ -477,7 +477,7 @@ struct hip_host_id *hip_get_any_localhost_host_id(void)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-struct hip_host_id *hip_get_any_localhost_public_key()
+struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 {
 	struct hip_host_id *tmp;
 	hip_tlv_len_t len;
