@@ -24,11 +24,11 @@ Identity, to the IP protocol.  Each host (or more specifically, its
 networking kernel or stack) is assigned at least one \ac{HI}, which
 can be either public or anonymous. The \ac{HI} can be used for
 authentication purposes to support trust between systems, enhance
-mobility and dynamic IP renumbering, aid in protocol
-translation/transition and reduce denial-of-service
-attacks. Furthermore, as all of the higher protocols are bound to the
-\ac{HI} instead of the IP address, the IP address can now be used
-solely for routing purposes.
+mobility and dynamic IP renumbering, aid in protocol translation and
+transition, and reduce denial-of-service attacks. Furthermore, as all
+of the upper layer protocols are bound to the \ac{HI} instead of the
+IP address, the IP address can now be used solely for routing
+purposes.
 
 This document describes the implementation effort of the \ac{HIPL}
 project~\cite{hipl}. The implementation is based on the standard Linux
@@ -59,15 +59,21 @@ Mobile IPv6 tries to make mobility transparent to applications using
 higher level protocols. Mobile IPv6~\cite{rfc2002} addresses also
 security issues.
 
-\ac{HIP} is being developed in four independent projects. \ac{HIPL}
-implementation is described in this document. Andrew McGregor is
-developing a cross-platform version~\cite{pyhip} with Python
-programming language, Ericsson Research~\cite{ericsson} is working on
-a FreeBSD implementation~\cite{netbsd} and Boeing~\cite{boeing} is
-developing an Linux IPv4 implementation.
+\ac{HIP} is being developed actively in four known independent
+projects. \ac{HIPL} implementation is described in this document.
+Ericsson Research~\cite{ericsson} is working on a FreeBSD
+implementation~\cite{netbsd} and Julien Laganier (SUN) is developing a
+Linux based implementation. Boeing~\cite{boeing} is developing both a
+Linux and Windows implementation Andrew McGregor has an outdated
+implementation~\cite{pyhip} that was developed with Python programming
+language.
 
 \section{Background}
 \label{sec:background}
+
+In this section, we provide some background information of the HIP
+architecture. We introduce briefly the base exchange, and mobility and
+multihoming extensions.
 
 \subsection{HIP Architecture}
 
@@ -95,7 +101,7 @@ link layer, the hardware address of the network interface is used. In
 \ac{HIP}, the transport layer is modified so that the connections are
 identified using the source and destination \acp{HI} as well as the
 source and destination ports. \ac{HIP} then provides a binding between
-the \acp{HI} and the IP addresses, e.g. using \ac{DNS}~\cite{rfc1034}.
+the \acp{HI} and the IP addresses, e.g., using \ac{DNS}~\cite{rfc1034}.
 
 \begin{figure}[htb]
 \begin{center}
@@ -105,44 +111,45 @@ the \acp{HI} and the IP addresses, e.g. using \ac{DNS}~\cite{rfc1034}.
 \label{fig:stack_model}
 \end{figure}
 
-The \ac{HI} is typically a cryptographic public key, which serves as
-the endpoint identifier of the node. Each host will have at least one
-\ac{HI} assigned to its networking kernel or stack. The \ac{HI} can be
-either public or anonymous. Public \acp{HI} may be stored in
-directories, such as \ac{DNS}, in order to allow the host to be
-contacted by other hosts. A host may have several \acp{HI}, and it may
-also generate temporary (anonymous) \acp{HI} on the fly for
-establishing connections to other hosts. The main purpose of anonymous
-\acp{HI} is to provide privacy protection to the host, should the host
-not wish to use its public \acp{HI}.
+Basically, a \ac{HI} is a public key, which serves as the endpoint
+identifier of the node. Each host will have at least one \ac{HI}
+assigned to its networking kernel or stack. The \ac{HI} can be either
+public or anonymous. Public \acp{HI} may be stored in directories,
+such as \ac{DNS}, in order to allow the host to be contacted by other
+hosts. A host may have several \acp{HI}, and it may also generate
+temporary (anonymous) \acp{HI} on the fly for establishing connections
+to other hosts. The main purpose of anonymous \acp{HI} is to provide
+privacy protection to the host, should the host not wish to use its
+public \acp{HI}.
 
-The \ac{HI} is never directly used in any Internet protocol. It is
-stored in a repository, and is passed in \ac{HIP}. Protocols use a
-128-bit \ac{HIT}, which is a hash of the \ac{HI}.  Another
-representation of the\ac{HI} is the \ac{LSI}, which has a size of 32
-bits, but is local to the host. Its main purpose is to support
-backwards compatibility with the IPv4 \ac{API}.
+Public keys tend to be rather long, and we need shorter presentations
+of \acp{HI}. A \ac{HIT} is a 128-bit hash of the \ac{HI}. Another
+representation of the \ac{HI} is the \ac{LSI}, which has a size of 32
+bits, and it is used only internally in the host. Its main purpose is
+to support backwards compatibility with the IPv4 \ac{API}.
 
-The main advantages of using \ac{HIT} in protocols instead of the
-\ac{HI} is that its fixed length makes protocol coding easier and also
-does not add as much overhead to the data packets as a public key
-would. It also presents a consistent format to the protocol regardless
-of the underlying identity technology used. \ac{HIT} functions much
-like the \ac{SPI} does in \ac{IPsec}, but instead of being an
-arbitrary 32-bit value that identifies the \ac{SA} for a datagram
-(together with the destination IP address and security protocol),
-\ac{HIT} identifies the public key that can validate the packet
-authentication.
+The main advantage of using \ac{HIT} in protocols instead of the
+\ac{HI} is that its fixed length makes protocol coding easier. It does
+not add as much overhead to the data packets as a public key would. It
+also presents a consistent format to the protocol regardless of the
+underlying identity technology used. \ac{HIT} functions much like the
+\ac{SPI} does in \ac{IPsec}, but instead of being an arbitrary 32-bit
+value that identifies the \ac{SA} for a datagram (together with the
+destination IP address and security protocol), \ac{HIT} identifies the
+public key that can validate the packet authentication.
 
-The probability that a collision will occur is extremely
-small. However, should there be two public keys for one \ac{HIT}, the
-\ac{HIT} acts as a hint for the correct public key to use.
+The probability that a collision will occur is extremely small. To
+ensure that the number of collision is even smaller, a 256 bit version
+of the \ac{HIT} has been specified. The 128 bit version can still be
+used internally for IPv6 API calls in the implementations. Should
+there be two public keys for one \ac{HIT}, the \ac{HIT} acts as a hint
+for the correct public key to use.
 
 The \ac{HIP} architecture basically solves the problems of dynamic
 readdressing, anonymity, and authentication. As the IP address no
 longer functions as an endpoint identifier, the problem of mobility
-becomes trivial, as the node may easily change its HI and IP address
-bindings as it moves. Anonymity is provided by temporary and anonymous
+becomes trivial, as a node may easily change its HI and IP address
+bindings as it moves. Anonymity is provided by anonymous
 \acp{HI}. Furthermore, as the namespace is cryptographically based, it
 becomes possible to perform authentication based on the \acp{HI}. In
 \cite{ndss-inthip}, the concept of integrating security, mobility, and
@@ -157,20 +164,16 @@ end-to-end authentication and to create \ac{IPsec}
 and possibly also encryption. Furthermore, the protocol performs
 reachability verification using a simple challenge-response scheme.
 
-% todo: bex 4 + update = 5
-% + cer + notify + close + close_ack = 9
-
-\ac{HIP} provides nine message types, of which four are dedicated to
-the base exchange. In \autoref{fig:base_exchange}, the base exchange
-is depicted. In the first message, I1, the initiator I sends its own
-\ac{HIT} and the \ac{HIT} of the responder to the responder. The
-responder R replies with message R1, which contains the \acp{HI} of I
-and itself as well as a puzzle based challenge for I to solve. The
-purpose of the challenge is to make the protocol resistant to
-denial-of-service attacks. (Puzzle based schemes have been previously
-used for providing \ac{DoS} protection to both
+The base exchange is depicted in \autoref{fig:base_exchange}. In the
+first message, I1, the initiator I sends its own \ac{HIT} and the
+\ac{HIT} of the responder to the responder. The responder R replies
+with message R1, which contains the \acp{HI} of I and itself as well
+as a puzzle based challenge for I to solve. The purpose of the
+challenge is to make the protocol resistant to denial-of-service
+attacks \footnote{Puzzle based schemes have been previously used for
+providing \ac{DoS} protection to both
 authentication~\cite{clientpuzzle} and encryption~\cite{opportkey}
-protocols.) I solves the puzzle and sends in I2 the \acp{HIT} of
+protocols}. I solves the puzzle and sends in I2 the \acp{HIT} of
 itself and R as well as the solution to the puzzle, and performs the
 authentication. R2 now commits itself to the communication, and
 responds with the \acp{HIT} of I and itself, and performs the
@@ -192,19 +195,8 @@ information from a repository, such as \ac{DNS}. I sends a lookup
 query to the \ac{DNS} server, which replies with R's address, \ac{HI},
 and \ac{HIT}.
 
-% XX FIX: move BOS here ?
-
 \subsection{Mobility and Multihoming Extentension}
 \label{sec:mm-ext}
-
-% XX FIX Mika:
-
-% - update the text to cover the new mm mechism and remove old stuff
-% on jo
-
-%   - tell also the reason why there is now one SA pair / interface;
-%     the reason is replay window
-% menee kai impl-sektioon
 
 There are some other message types in the \ac{HIP}. One of them is the
 UPDATE packet which provides the peer system a new \ac{SPI} to use
@@ -221,19 +213,11 @@ the packet contains a NES parameter, rekeying is also performed. The
 existence of these parameters depends on the desired mobility scenario
 described in \cite{hip-ietf-mm-00}.
 
-% - move the ``theory'' stuff from 3.8 to here
-%   - picture
-%   - explanation of the readdressing mechanism
-
-% jaa tämä tänne vai:
-
-A typical mobility exchange is quite simple. 
-
-First the HIP module selects the addresses to be included in a REA
-parameter. The REA parameter and a sequence number in a SEQ parameter
-are added to the UPDATE packet. Then the UPDATE packet is sent to
-all of the peers with which there is an existing HIP security
-association.
+A typical mobility exchange is quite simple. First the HIP module
+selects the addresses to be included in a REA parameter. The REA
+parameter and a sequence number in a SEQ parameter are added to the
+UPDATE packet. Then the UPDATE packet is sent to all of the peers with
+which there is an existing HIP security association.
 
 When a peer host receives the initial UPDATE packet, it must validate
 all addresses listed in the REA parameter. This is achieved by sending
@@ -262,8 +246,6 @@ An example mobility exchange is depicted in figure
  \label{fig:mm-readdress}
 \end{figure}
 
-
-
 \subsection{About the HIPL Project}
 
 Linux was selected as the platform for implementing \ac{HIP}. It was a
@@ -272,35 +254,24 @@ Linux. Documentation about kernel development was also needed because
 all of the project members were unfamiliar with kernel development in
 the beginning of the project. There was enough documentation about
 Linux kernel development (for example
-\url{http://www.kernelhacking.org/}, \cite{kernelarch},
-\cite{kernellinks}, \cite{kmodguide}) that made Linux platform a
-reasonable choice.
+\url{http://www.kernelhacking.org/},
+\cite{kernelarch,kernellinks,kmodguide,linuxtcpipstack,ldd}) that made
+Linux platform a reasonable choice.
 
-When the \ac{HIPL} project was started, the standard Linux kernel
-series 2.4 did not include \ac{IPsec} functionality which is needed
-for \ac{HIP}. There were two projects providing \ac{IPsec} support for
-the Linux kernel: USAGI Linux~\cite{usagi} and
+When the \ac{HIPL} project begun, the standard Linux kernel series 2.4
+did not include \ac{IPsec} functionality which is needed for
+\ac{HIP}. There were two projects providing \ac{IPsec} support for the
+Linux kernel: USAGI Linux~\cite{usagi} and
 FreeS/WAN~\cite{freeswan}. USAGI Linux was selected because FreeS/WAN
 did not support IPv6 and project members wanted to concentrate on
 developing an IPv6 implementation of \ac{HIP}. Now that the
-implementation was moved to kernel series 2.6, the \ac{IPsec} support is
-built-in into the kernel.
+implementation was moved to kernel series 2.6, the \ac{IPsec} support
+is built-in into the kernel.
 
 The main goal of the project is to develop a \ac{HIP}
-drafts~\cite{hip,hiparch,hipimpl,hip-ietf-mm-00} compliant implementation of
-\ac{HIP}. The implementation does not implement IPv4 support for
-\ac{HIP}. Modularity was emphasized in the design because \ac{HIP}
-specifications were prone to change and hardcoding might have later
-rebound on during the project. To achieve modularity, code was kept
-clear and simple. Both unit testing and interoperability testing has
-been used throughout the project.
-
-% IPv4-tuen tila ?
-% unit testing .. none
-
-This project is a research project and thereby the non-goals of the
-project are related to production quality code. Usability and high
-performance are not in the main focus of the project.
+drafts~\cite{hip,hiparch,hipimpl,hip-ietf-mm-00,rvs-00} compliant
+implementation of \ac{HIP}. We also participate in the \ac{IETF}
+standardization effort for \ac{HIP}.
 
 \section{Implementation Architecture}
 \label{sec:implementation_architecture}
@@ -315,30 +286,31 @@ other.
 \subsection{HIP module}
 \label{sec:kernel_model_architecture}
 
-The \ac{HIP} functionality, or module, is located in the networking
-stack of the Linux kernel. Since the project was originally based on
-IPv6 protocol, the actual code resides in a \verb|hip| subdirectory
-under the IPv6 directory.
+The HIP layer is located conceptually between the transport and the
+network layer in the networking stack. One of our goals has been not
+to affect the transport layer with minimum amount of changes.
 
-We had to choose between a Bump-In-The-Stack model and a kernel thread
-model. We chose the latter one. Most of the \ac{HIP} processing is
-done by the \verb|khipd| kernel thread. The \ac{HIP} thread will sleep
-in a semaphore waiting for other parts of the kernel to give it
-\verb|work orders|. The implementation is a simple queue, protected by
-a semaphore.
+The HIP protocol handler is registered with IPv6 on bootup (or when
+the module is loaded into the kernel). This enables us to use the
+kernel's built-in functionality of passing the IPv6 packets with a HIP
+header straight to our code.
+
+Most of the \ac{HIP} processing is done by the \verb|khipd| kernel
+thread. The \ac{HIP} thread will sleep in a semaphore waiting for
+other parts of the kernel to give it work orders. The implementation
+is a simple queue, protected by a semaphore.
 
 Currently all the \ac{HIP} packets coming from the network will cause
-a work order to be created and passed to the kernel thread. This way
-we minimize the time spent in the network receive softirq. Also the
-\ac{HIP} thread can be easily controlled (niced, preempted etc.).
+a work order to be created and passed to the kernel thread. The reason
+for passing the work orders is that the network packets are received
+in soft irq, and we want to minimize the time spent in soft irq locks.
+Also, the \ac{HIP} thread can be easily controlled (niced, preempted
+etc.).
 
-There are also few other cases where a work order is created. Since
-user space has to have a mean to send mappings into the kernel, we
-have a block device \verb|/dev/hip|.  We currently use \verb|ioctl|
-calls to send information to the \ac{HIP} module. All \verb|ioctl|
-information is passed to the \ac{HIP} thread by work orders. Usually
-that information consists of adding/deleting mappings from the
-\ac{HADB}.
+There are also few other cases where a work order is
+created. Userspace communicates with the kernel module using \ac{HIP}
+specific sockets. Usually the userspace applications request adding or
+deleting mappings from the \ac{HADB}.
 
 \subsection{Internal data structures}
 
@@ -525,14 +497,14 @@ in more detail in this section.
 
 Some of the hooks were placed in the IPv6 part of the networking
 stack. Originally the hooks were bound to the \verb|connect| system
-call in \ac{TCP} layer, but they were refactored into IPv6 layer so
-that \ac{UDP} and other transport layer protocols would work
+call in \ac{TCP} code, but they were refactored into IPv6 related code
+so that \ac{UDP} and other transport layer protocols would work
 transparently.
 
 Only a single packet will be queued in the output side of the IPv6
 stack during base exchange. This means that \ac{TCP} retransmissions
 will be dropped during a slow \ac{HIP} base exchange, for example. A
-more closer view of the implementation of the hooks is provided in the
+more closer view on the implementation of the hooks is provided in the
 following paragraphs.
 
 The hooks in the output side of the IPv6 stack intercept packets that
@@ -554,11 +526,11 @@ packets in the base exchange. When a \ac{HIP} connection is
 established, a hook in the input handler of \ac{ESP} is
 triggered. This hook checks the \ac{SPI} of the incoming packet. If
 the incoming packet is not associated with a \ac{HIT}, the packet is
-returned as normally. If the SPI belongs to a \ac{HIP} connection, the
-source and destination \acp{HIT} corresponding to the \ac{SPI} are searched
-from kernel database and they are copied over source and destination
-IPv6 addresses. Finally control of flow returns to normal \ac{ESP}
-handler.
+returned as normally. If the \ac{SPI} belongs to a \ac{HIP}
+connection, the source and destination \acp{HIT} corresponding to the
+\ac{SPI} are searched from kernel database and they are copied over
+source and destination IPv6 addresses. Finally control of flow returns
+to normal \ac{ESP} handler.
 
 Additional functions not directly related to sending or receiving
 packets were also needed for effective \ac{HIP}. Address events are
