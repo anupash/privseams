@@ -928,7 +928,8 @@ static int hip_send_rea(hip_ha_t *entry, int interface_id,
 	HIP_LOCK_HA(entry);
 	ipv6_addr_copy(&hit_our, &entry->hit_our);
 	ipv6_addr_copy(&dst_hit, &entry->hit_peer);
-	memcpy(&hmac_our, &entry->hmac_our, sizeof(hmac_our));
+	// memcpy(&hmac_our, &entry->hmac_our, sizeof(hmac_our));
+	memcpy(&hmac_our, &entry->hip_hmac_out, sizeof(hmac_our));
 	spi_in = entry->spi_in;
 	spi_out = entry->spi_out;
 	HIP_UNLOCK_HA(entry);
@@ -1251,7 +1252,8 @@ int hip_send_ac_or_acr(int pkt_type, hip_ha_t *entry,
 		struct hip_crypto_key hmac_our;
 
 		HIP_LOCK_HA(entry);
-		memcpy(&hmac_our, &entry->hmac_our, sizeof(hmac_our));
+		// memcpy(&hmac_our, &entry->hmac_our, sizeof(hmac_our));
+		memcpy(&hmac_our, &entry->hip_hmac_out, sizeof(hmac_our));
 		HIP_UNLOCK_HA(entry);
 
 		hmac = (struct hip_hmac *) (((void *) msg) + hip_get_msg_total_len(msg));

@@ -11,71 +11,199 @@ for the strings "XX" or "TODO" to locate the file specific TODO items.
 IETF 60 action items
 ====================
 
---- diff 09 - 10pre1 ---
-
-[TODO] During IETF58, Thomas said that birthday count is quite huge. It should
-       be incremental from zero?
-
-[TODO] (LSI collision)
+diff 09 -> base-00
 
 [TODO] 5.4.2 HIP State Processes
 
+   See also: 8.6  Processing incoming R1 packets
+
+     6.   If the HIP association state is I2-SENT, the system MAY reenter
+          state I1-SENT and process the received R1 if it has a larger R1
+          generation counter than the R1 responded to previously.
+
+   See also: 8.7 Processing incoming I2 packets
+
+    4. If the system is in any other state, it SHOULD check that the
+       birthday value in I2 is larger than the currently stored peer
+       birthday value, if there is a stored value. If the newly
+       received I2 has a lower or equal birthday value than the stored
+       one, the I2 is stale (perhaps replayed) and SHOULD be dropped.
+
+    20. Upon transitioning to R2-SENT, start a timer.  Leave R2-SENT if
+        either the timer expires (allowing for maximal retransmission of
+        I2s), some data has been received on the incoming SA, or an
+        UPDATE packet has been received (or some other packet that
+        indicates that the peer has moved to ESTABLISHED).
+
   UNASSOCIATED
   Receive I2, process
-        if successful, send R2 and go to *R2-SENT* <- changed
+        if successful, send R2 and go to *R2-SENT*
         if fail, stay at UNASSOCIATED
+  Receive ESP for unknown SA, optionally send ICMP..
+  Receive ANYOTHER, drop and stay at UNASSOCIATED
 
   I1-SENT
   Receive I2, process
-        if successful, send R2 and go to *R2-SENT* <- changed
+        if successful, send R2 and go to *R2-SENT*
         if fail, stay at I1-SENT
 
   I2-SENT
+  Receive R1, process
+        if successful, send I2 and cycle at I2-SENT
+        if fail, stay at I2-SENT
   Receive I2, process
-        if successful, send R2 and go to *R2-SENT* <- changed
+        if successful, send R2 and go to *R2-SENT*
         if fail, stay at I2-SENT
 
   R2-SENT
-  Receive I2 ... <- changed
-  if failed, stay at R2-SENT <- changed
-  Should not ever need rekey <- changed
+  Receive I1, send R1 and stay at R2-SENT
+  Receive I2, process
+    if failed, stay at R2-SENT
+  Receive UPDATE (check)
 
-  ESTABLISHED <- changed
+  Move to ESTABLISHED after an implementation specific time.
+
+  ESTABLISHED -> check
+
+  s/REKEYING/UPDATING/
 
   REKEYING <- check
 
-6.2 HIP parameters
+  E-FAILED <- check
 
-  SPI_LSI: renamed to SPI
+[DONE] 6.1.1 HIP Controls
 
+  Resync flag was removed
+
+[DONE] 6.2 HIP parameters
+
+  SPI_LSI: renamed to SPI with length *4*
   NOTIFY            256
+  BIRTHDAY was removed and replaced with R1_COUNTER
+  R1_COUNTER        2     12
+  PUZZLE            5     12
+  SOLUTION          7     20
+  NES               9     12 
+  SEQ               11    4
+  ACK               13    4
+  DIFFIE_HELLMAN    15    variable   public key
+  HMAC              65245 20
+  ECHO_REQUEST      1022  variable
+  ECHO_RESPONSE     1024  variable 
+  ECHO_REQUEST      65281 variable 
+  ECHO_RESPONSE     65283 variable 
 
-6.2.3 SPI
+[DONE] 6.2.3 SPI
 
-  Reserved and LSI fields removed from the earlier SPI_LSI name
+  Renamed from SPI to SPI_LSI. Fields "reserved" and "LSI" removed.
 
-6.2.5 DIFFIE_HELLMAN
+[DONE/NOT_IN_USE] 6.2.4 R1_COUNTER
 
-  384-bit group                    1
+   R1_COUNTER is now its own TLV and is separated
+   from  puzzle. It was previously called BIRTHDAY.
 
-6.2.8 HOST_ID
+   The R1_COUNTER parameter is optional.  It SHOULD be included in the
+   R1 (in which case it is covered by the signature), and if present in
+   the R1, it MAY be echoed (including the Reserved field) by the
+   Initiator in the I2.
 
-  format changed (DI-type, DI-length, FQDN, Domain Identifier)
+ ** have to be able to sign/recreate all R1s after the generation changes.
+ ** Currently, impossible.
 
-  Add the DI types
+[DONE] 6.2.5 PUZZLE
+
+   New opaque field that must be included by the responder. The Opaque and
+   Random #I field are not covered by the HIP_SIGNATURE_2 parameter.
+
+   Check the sending and receiving side.
+
+[DONE] 6.2.7 DIFFIE_HELLMAN
+
+  New 384-bit group (1). Add it from the appendix.
+
+[DONE] 6.2.10 HOST_ID
+
+  Format has changed (DI-type, DI-length, FQDN, Domain Identifier).
+
+  Add the different DI types.
 
   If there is no Domain Identifier, i.e. the DI-type field is zero,
-   also the DI Length field is set to zero.
+  also the DI Length field is set to zero.
 
-6.2.15 NOTIFY
+[DONE] 6.2.15 NES
+
+  - R flag removed
+  - update id removed (a separate parameter)
+
+[DONE] 6.2.16 SEQ (former UPDATE_ID)
+
+  - new TLV, separated from the NES
+
+[DONE] 6.2.17  ACK
+
+  - new TLV, response to SEQ
+
+[DONE] 6.2.18 ENCRYPTED
+
+  - check changes?
+  - similar to the -09
+
+[DONE] 6.2.19 NOTIFY
 
    - completely new
-   - add types, handling and sending?
-7.5
-  - "UPDATE" packet
+   - add types
+   - sending
+   - recv handling (= HIP_DEBUG/HEXDUMP)
 
-<<<<< CONTNUE 8. Packet processing >>>>
+Someone check builder function.
 
+[DONE] 7.2 R1 - the HIP responder packet
+
+  See also 6.2.14  HIP_SIGNATURE_2
+    - signature does not include parameters after the signature tlv
+    - initiator's HIT, checksum field, and the Opaque and Random #I
+      fields in the PUZZLE TLV MUST be set to zero while
+      computing the HIP_SIGNATURE_2 signature.
+
+  See also 6.2.20 ECHO_REQUEST and 6.2.21 ECHO_RESPONSE (new parameters).
+
+  - R1_COUNTER (former BIRTHDAY) is included as a separate parameter and it
+    is _optional_
+  - echo request/response is optional
+
+   The random #I is not covered by the signature and must be
+   zeroed during the signature calculation, allowing the sender to
+   select and set the #I into a pre-computed R1 just prior sending it to
+   the peer.
+
+   The ECHO_REQUEST contains data that the sender wants to receive
+   unmodified in the corresponding response packet in the ECHO_RESPONSE
+   parameter.  The ECHO_REQUEST can be either covered by the signature,
+   or it can be left out from it.  In the first case, the ECHO_REQUEST
+   gets Type number 1022 and in the latter case 65281.
+
+   The signature is calculated over the whole HIP envelope, after
+   setting the initiator HIT, header checksum as well as the Opaque
+   field and the Random #I in the PUZZLE parameter temporarily to zero.
+
+[DONE] 7.3 I2 - the second HIP initiator packet
+
+  See also 6.2.20 ECHO_REQUEST and 6.2.21 ECHO_RESPONSE (new parameters).
+
+  - R1_COUNTER is included as a separate parameter and it is optional
+  - signature does not include parameters after the signature tlv
+
+[DONE] 7.4  R2 - the second HIP responder packet
+
+  - signature does not include parameters after the signature tlv
+  
+[MIKA] 7.5 "UPDATE" packet
+
+  - Mika is working on this.
+
+[DONE/SOMEBODY COULD CHECK ANYWAY] 9. HIP KEYMAT
+
+  - The key naming convention (SA-gl, etc) has changed. Apply to code too.
 
 IETF 59 action items
 ====================

@@ -19,9 +19,7 @@
 #include "debug.h"
 
 /**
- * hip_delete_spd - delete an SPD entry
- * @hitd: destination HIT (peer's)
- * @hits: source HIT (own)
+ * hip_delete_spd - delete an SPD entry suitable for HIP
  * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  *
  * Returns: 0 if successful, else < 0.
@@ -54,6 +52,7 @@ extern struct list_head *xfrm_state_bydst;
 extern struct list_head *xfrm_state_byspi;
 
 #if 0
+/* don't use this... probably will crash */
 void hip_hirmu_kludge(int byspi)
 {
 	int i;
@@ -79,7 +78,7 @@ void hip_hirmu_kludge(int byspi)
 #endif
 
 /**
- * hip_delete_sa - delete HIP SA which has SPI of @spi
+ * hip_delete_sa - delete a SA
  * @spi: SPI value of SA
  * @dst: destination HIT of SA
  *
@@ -110,6 +109,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	return 0;
 }
 
+/* this probably is not used anymore? */
 int hip_delete_esp(hip_ha_t *entry)
 {
 	uint32_t spi_out, spi_in, new_spi_out, new_spi_in;
@@ -382,7 +382,14 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	return err;
 }
 
-/* spi in HOST BYTE ORDER!
+/**
+ * hip_finalize_sa - Finalize SA (change state to VALID).
+ * @hit: Destination HIT of the SA
+ * @spi: SPI of the SA in host byte order.
+ *
+ * As a part of changing the state, we also wake up every
+ * sleeper that are waiting for the SA to become VALID.
+ *
  */
 void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 {
@@ -439,10 +446,8 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 		}
 	}
 
-/* argh... dh_clone does kmalloc(GFP_KERNEL) :( */
-//	spin_lock(&dh_table_lock);
+	/* race condition problem... */
 	tmp = hip_dh_clone(dh_table[group_id]);
-//	spin_unlock(&dh_table_lock);
 
 	if (!tmp) {
 		HIP_ERROR("Could not clone DH-key\n");
@@ -460,6 +465,16 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 	return res;
 }
 
+/**
+ * hip_generate_shared_secret - Generate Diffie-Hellman shared secret
+ * @group_id: DH group id
+ * @peerkey: Peer's DH public key
+ * @peer_len: Length of the peer's DH public key
+ * @out: Shared secret buffer
+ * @outlen: Length of the output buffer
+ *
+ * Returns 0, if ok, <0 if error occurs.
+ */
 int hip_generate_shared_secret(int group_id, u8* peerkey, size_t peer_len, u8 *out, size_t outlen)
 {
 	DH *tmp;
@@ -470,9 +485,8 @@ int hip_generate_shared_secret(int group_id, u8* peerkey, size_t peer_len, u8 *o
 		return -1;
 	}
 
-	spin_lock(&dh_table_lock);
+	/* race */
 	tmp = hip_dh_clone(dh_table[group_id]);
-	spin_unlock(&dh_table_lock);
 
 	if (!tmp) {
 		HIP_ERROR("Error cloning DH key\n");
@@ -490,9 +504,11 @@ int hip_generate_shared_secret(int group_id, u8* peerkey, size_t peer_len, u8 *o
 	return k;
 }       
 
-/*
- * Use only this function to generate DH keys.
+/**
+ * hip_regen_dh_keys - Regenerate Diffie-Hellman keys for HIP
+ * @bitmask: Mask of groups to generate.
  *
+ * Use only this function to generate DH keys.
  */
 void hip_regen_dh_keys(u32 bitmask)
 {
@@ -526,22 +542,3 @@ void hip_regen_dh_keys(u32 bitmask)
 	}
 	HIP_DEBUG("%d keys generated\n",cnt);
 }
-
-/*
-	tmp = gen_key();
-	oldkey = dhtable[gid];
-	sl;
-	dhtable_[gid] = tmp;
-	sul;
-	free(oldkey);
-	
-	sl;
-	encode_pubkey(buffer,dhtable[gid]);
-	sul;
-
-	sl;
-	tmp = dh_clone(dhtable[gid]);
-	sul;
-	shared_secret(tmp,peerkey));
-
-*/	

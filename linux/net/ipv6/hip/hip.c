@@ -44,6 +44,7 @@
 #include <linux/notifier.h>
 #include <linux/spinlock.h>
 #include <linux/xfrm.h>
+#include <linux/crypto.h>
 #include <net/protocol.h>
 #include <net/hip.h>
 #include <net/checksum.h>
@@ -127,6 +128,23 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 	return ret + 1;
 }
 
+/**
+ * hip_map_virtual_to_pages - Maps virtual addresses to physical page addresses
+ * @slist: Pointer to an array of scatterlists that contain the phycical page information
+ * @slistcnt: Number of elements in @slist array
+ * @addr: Virtual address
+ * @size: Size of the block that is beeing transformed (from @addr in bytes)
+ *
+ * Cryptoapi requires that all addresses are given in physical pages rather than
+ * virtual addresses. Thus, we need to convert the virtual addresses seen by the
+ * HIPL code to pages. 
+ * We will fill at most @slitcnt scatterlists. If more are required, an error is
+ * returned.
+ *
+ * Returns 0, if ok. <0 if an error occured. As a side effect @slist will be filled
+ * with @slistcnt entries. At the exit, the @slistcnt variable will hold the actual
+ * number of scatterlist entries that were written.
+ */
 int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
 			     const u8 *addr, const u32 size)
 {
@@ -228,10 +246,21 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 
 /**
  * hip_build_digest_repeat - Calculate digest repeatedly
+ * @dgst: Digest transform
+ * @sg: Valid scatterlist array
+ * @nsg: Number of scatterlists in the @sg array.
+ * @out: Output buffer. Should contain enough bytes for the digest.
  * 
  * Use this function instead of the one above when you need to do repeated
  * calculations *IN THE SAME MEMORY SPACE (SIZE _AND_ ADDRESS)*
- */
+ * This is an optimization for cookie solving. There we do a lots of digests
+ * in the same memory block and its size is constant.
+ * So instead of calling N times hip_map_virtual_to_pages() the caller maps
+ * once and all the digest iterations use the same pages.
+ * This improves the speed greatly.
+ *
+ * Returns 0 always. The digest is written to @out.
+*/
 int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
 			    int nsg, void *out)
 {
@@ -391,10 +420,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	/********** PUZZLE ************/
 
 	{
-		uint64_t random_i;
-
-		get_random_bytes(&random_i,sizeof(uint64_t));
-		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K, 0x1337, random_i);
+		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K, 0, 0);
 		if (err) {
 			HIP_ERROR("Cookies were burned. Bummer!\n");
 			goto out_err;
@@ -463,6 +489,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		HIP_ERROR("Signing of R1 failed.\n");
  		goto out_err;
  	}		
+
+	HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
+
  	err = hip_build_param_signature2_contents(msg,
  						 signature,
  						 HIP_DSA_SIGNATURE_LEN,
@@ -476,6 +505,27 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	/********** ECHO_REQUEST (OPTIONAL) *********/
 
 	while(0);
+
+
+	/* Fill puzzle parameters */
+
+	{
+		struct hip_puzzle *pz;
+		uint64_t random_i;
+
+		pz = hip_get_param(msg, HIP_PARAM_PUZZLE);
+		if (!pz) {
+			HIP_ERROR("Internal error\n");
+			goto out_err;
+		}
+
+		pz->opaque[0] = '.';
+		pz->opaque[1] = '!';
+		pz->opaque[2] = '.';
+
+		get_random_bytes(&random_i,sizeof(random_i));
+		pz->I = random_i;
+	}
 
  	/************** Packet ready ***************/
 
@@ -616,9 +666,24 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 				  struct hip_context *ctx, int is_initiator)
 {
 	int err = 0;
+	int hmac_key_len, enc_key_len, auth_key_len;
 
+	hmac_key_len = hip_hmac_key_length(entry->esp_transform);
+	enc_key_len = hip_enc_key_length(entry->esp_transform);
+	auth_key_len = hip_auth_key_length_esp(entry->esp_transform);
+
+	memcpy(&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
+	memcpy(&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
+
+	memcpy(&entry->esp_in.key, &ctx->esp_in.key, enc_key_len);
+	memcpy(&entry->auth_in.key, &ctx->auth_in.key, auth_key_len);
+
+	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
+	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
+
+#if 0
 	if (is_initiator) {
-		memcpy(&entry->esp_our.key, &ctx->hip_espi.key,
+		memcpy(&entry->esp_our.key, &ctx->espi.key,
 		       hip_enc_key_length(entry->esp_transform));
 		memcpy(&entry->esp_peer.key, &ctx->hip_espr.key,
 		       hip_enc_key_length(entry->esp_transform));
@@ -644,6 +709,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 		memcpy(&entry->hmac_peer, &ctx->hip_hmaci,
 		       hip_hmac_key_length(entry->esp_transform));
 	}
+#endif
 
 	hip_update_entry_keymat(entry, ctx->current_keymat_index,
 				ctx->keymat_calc_index, ctx->current_keymat_K);
@@ -834,6 +900,10 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 
 	err = crypto_cipher_setkey(impl, enc_key, key_len);
 	if (err) {
+		if (impl->crt_flags & CRYPTO_TFM_RES_BAD_KEY_SCHED) {
+			HIP_ERROR("3DES key is weak.\n");
+			HIP_HEXDUMP("3DES key", enc_key, key_len);
+		}
 		HIP_ERROR("Could not set encryption/decryption key\n");
 		return -EFAULT;
 	}
@@ -961,9 +1031,11 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 	return 1;
 }
 
-/*
- * We trigger base exchange. Currently we don't check whether it was successful
- * or not. 
+/**
+ * hip_trigger_bex - Trigger HIP base exchange
+ * @dsthit: Destination HIT
+ *
+ * Returns 0
  */
 int hip_trigger_bex(struct in6_addr *dsthit)
 {
@@ -980,12 +1052,7 @@ int hip_trigger_bex(struct in6_addr *dsthit)
  * @hitd: destination HIT
  * @hits: where the selected source HIT is to be stored
  *
- * This function is called in two different contexts.
- * 1: Outgoing packet. The hitd is then a real destination IPv6.
- *    This function obviously does not do any processing at that time
- * 2: <fill this>
- *
- * Returns: 0 if source HIT was copied successfully, otherwise < 0.
+ * Returns: 1 if source HIT was copied successfully, otherwise 0.
  */
 int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
 {
@@ -1025,25 +1092,10 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 		return 0;
 	}
 
-	HIP_LOCK_HA(entry);
 	ipv6_addr_copy(hit_storage, &entry->hit_our);
-	HIP_UNLOCK_HA(entry);
 
 	hip_put_ha(entry);
 
-	return 1;
-}
-
-/**
- * hip_bypass_ipsec
- *
- * This function is used by IPsec function ipsec6_input_check() to
- * skip further packet processing if the packet was a HIP packet.
- *
- * Returns: always 1.
- */
-int hip_bypass_ipsec(void)
-{
 	return 1;
 }
 
@@ -1554,6 +1606,9 @@ static int hip_init_cipher(void)
 	int err = 0;
 	u32 supported_groups;
 
+	/* instruct the "IPsec" to check for available algorithms */
+	xfrm_probe_algs();
+
 	/* Get implementations for all the ciphers we support */
 	impl_3des_cbc = crypto_alloc_tfm("des3_ede", CRYPTO_TFM_MODE_CBC);
 	if (!impl_3des_cbc) {
@@ -1577,17 +1632,14 @@ static int hip_init_cipher(void)
 	}
 
 	supported_groups = (1 << HIP_DH_OAKLEY_1 | 
-			    1 << HIP_DH_OAKLEY_5);
-//			    1 << HIP_DH_384);
+			    1 << HIP_DH_OAKLEY_5 |
+			    1 << HIP_DH_384);
 
 	/* Does not return errors. Should it?
 	   the code will try to regenerate the key if it is
 	   missing...
 	*/
 	hip_regen_dh_keys(supported_groups);	
-
-	/* instruct the "IPsec" to check for available algorithms */
-	xfrm_probe_algs();
 
 	return 0;
 
@@ -1652,6 +1704,8 @@ static int hip_init_procfs(void)
 
 	/* a simple way to trigger sending of UPDATE packet to all peers */
 	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
+	/* for testing dummy NOTIFY packets */
+	create_proc_read_entry("net/hip/send_notify", 0, 0, hip_proc_send_notify, NULL);
 	return 1;
 
 }
@@ -1666,6 +1720,7 @@ static void hip_uninit_procfs(void)
 	remove_proc_entry("net/hip/sdb_state", hip_proc_root);
 	remove_proc_entry("net/hip/sdb_peer_addrs", hip_proc_root);
 	remove_proc_entry("net/hip/send_update", hip_proc_root);
+	remove_proc_entry("net/hip/send_notify", hip_proc_root);
 	remove_proc_entry("net/hip/sdb_peer_spi_list", hip_proc_root);
 	remove_proc_entry("net/hip", NULL);
 	return;
@@ -1731,6 +1786,11 @@ static int hip_do_work(void)
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_update(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
+			break;
+		case HIP_WO_SUBTYPE_RECV_NOTIFY:
+			KRISU_START_TIMER(KMM_PARTIAL);
+			res = hip_receive_notify(job->arg1);
+			KRISU_STOP_TIMER(KMM_PARTIAL,"NOTIFY");
 			break;
 		case HIP_WO_SUBTYPE_RECV_REA:
 			KRISU_START_TIMER(KMM_PARTIAL);
@@ -1799,11 +1859,7 @@ static int hip_do_work(void)
 	}
 		
  out_err:
-	if (job) {
-		if (job->destructor)
-			job->destructor(job);
-		kfree(job);
-	}
+	hip_free_work_order(job);
 	return res;
 }
 
@@ -1815,6 +1871,7 @@ static int hip_worker(void *cpu_id)
 	/* set up thread */
 	daemonize("khipd/%d",cid);
 	set_cpus_allowed(current, cpumask_of_cpu(cid));
+
 	//set_user_nice(current, 0); //XXX: Set this as you please
 
 	/* initialize */
@@ -1935,8 +1992,10 @@ static void __exit hip_cleanup(void)
 {
 	HIP_INFO("uninitializing HIP module\n");
 
+	/* disable callback for HIP packets */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
 
+	/* disable hooks to call our code */
 	HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
@@ -1949,6 +2008,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_output);
 	HIP_INVALIDATE(hip_get_default_spi_out);
 
+	/* kill threads */
 	if (atomic_read(&hip_working) != 0) {
 		hip_stop_khipd(); /* tell the hip kernel thread(s) to stop */
 

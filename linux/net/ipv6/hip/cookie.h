@@ -14,7 +14,7 @@ struct hip_r1entry {
 };
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
-#define HIP_R1TABLESIZE 10
+#define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
 #define HIP_DEFAULT_COOKIE_K 10ULL
 
 struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r);

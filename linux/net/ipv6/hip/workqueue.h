@@ -17,10 +17,11 @@
 #define HIP_WO_SUBTYPE_RECV_R1      2
 #define HIP_WO_SUBTYPE_RECV_I2      3
 #define HIP_WO_SUBTYPE_RECV_R2      4
-#define HIP_WO_SUBTYPE_RECV_UPDATE     5
-#define HIP_WO_SUBTYPE_RECV_REA     6
-#define HIP_WO_SUBTYPE_RECV_AC      7
-#define HIP_WO_SUBTYPE_RECV_ACR     8
+#define HIP_WO_SUBTYPE_RECV_UPDATE  5
+#define HIP_WO_SUBTYPE_RECV_NOTIFY  6
+#define HIP_WO_SUBTYPE_RECV_REA     7
+#define HIP_WO_SUBTYPE_RECV_AC      8
+#define HIP_WO_SUBTYPE_RECV_ACR     9
 
 /* subtypes from 101 to 200 reserved for HIP_WO_TYPE_OUTGOING */
 
@@ -51,6 +52,7 @@ struct hip_work_order *hip_get_work_order(void);
 struct hip_work_order *hip_create_job_with_hit(int mask,
 					       const struct in6_addr *hit);
 struct hip_work_order *hip_init_job(int mask);
+void hip_free_work_order(struct hip_work_order *hwo);
 
 void hwo_default_destructor(struct hip_work_order *hwo);
 #endif /* HIP_WORKQUEUE */

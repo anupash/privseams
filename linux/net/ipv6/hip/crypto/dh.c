@@ -9,8 +9,9 @@ struct dh_params_str {
 static const struct dh_params_str dh_params[] = {
  /*** group 0 (invalid) ***/
 	{"",0},
-/*** group 1 (384-bit group) ***/
-	{"",0},
+/*** group 1 (384-bit group) from base draft appendix ***/
+	{"FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"\
+	 "29024E088A67CC74020BBEA63B13B202FFFFFFFFFFFFFFFF",2},
 /*** group 2 (OAKLEY well defined group 1) ****/
 	{"FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD12"\
 	 "9024E088A67CC74020BBEA63B139B22514A08798E3404DDEF"\

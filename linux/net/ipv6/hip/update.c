@@ -620,7 +620,8 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
-	err = hip_build_param_hmac_contents(update_packet, &entry->hmac_our);
+//	err = hip_build_param_hmac_contents(update_packet, &entry->hmac_our);
+	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
 	if (err) {
 		HIP_ERROR("Building of HMAC failed (%d)\n", err);
 		goto out_err;
@@ -993,7 +994,8 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
-	err = hip_build_param_hmac_contents(update_packet, &entry->hmac_our);
+//	err = hip_build_param_hmac_contents(update_packet, &entry->hmac_our);
+	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
 	if (err) {
 		HIP_ERROR("Building of HMAC failed (%d)\n", err);
 		goto out_err;
@@ -1417,7 +1419,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
-	err = hip_build_param_hmac_contents(update_packet, &entry->hmac_our);
+//	err = hip_build_param_hmac_contents(update_packet, &entry->hmac_our);
+	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
 	if (err) {
 		HIP_ERROR("Building of HMAC failed (%d)\n", err);
 		goto out_err;

@@ -154,6 +154,8 @@ int hip_build_param_echo_response(struct hip_common *msg,
 
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
 
+int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len);
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
-
+int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
+			   void *notification_data, size_t notification_data_len);
 #endif /* HIP_BUILDER */
