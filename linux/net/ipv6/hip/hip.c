@@ -118,7 +118,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 	}
 
 
-	HIP_DEBUG("Virtual addresses: %x, size: %d\n",addr,size);
+	HIP_DEBUG("Virtual addresses: %p, size: %d\n",addr,size);
 
 	offset = 0;
 	while(offset < size) {
@@ -132,7 +132,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 		pleft = PAGE_SIZE - slist[elt].offset;
 		HIP_ASSERT(pleft > 0 && pleft <= PAGE_SIZE);
 
-		HIP_DEBUG("offset: %d, space on current page: %d\n",offset,pleft);
+		HIP_DEBUG("offset: %ld, space on current page: %ld\n",offset,pleft);
 		if (pleft + offset >= size) {
 			slist[elt].length = size - offset;
 			break;
@@ -901,6 +901,7 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 
 	if (!hip_hadb_get_own_hit_by_hit(&fl->fl6_dst, hit_storage)) {
 		HIP_ERROR("Could not get own hit, corresponding to the peer hit\n");
+		HIP_DEBUG_HIT("Etsitty osoite", &fl->fl6_dst);
 		return 0;
 	}
 
@@ -932,6 +933,69 @@ static void hip_get_load_time(void)
 	load_time =  tv.tv_sec;
 	HIP_DEBUG("load_time=0x%lx\n", load_time);
 	return;
+}
+
+/*
+ * returns 0 if error, positive (2) if ok
+ */
+static int hip_save_sk(struct flowi *fl, struct sock *sk)
+{
+	int tlist[2];
+	int err; 
+	struct ipv6hdr hdr = {0};
+	struct hip_kludge *kg;
+	int state;
+
+	if (!ipv6_addr_is_hit(&fl->fl6_dst))
+		return 0;
+
+	tlist[0] = HIP_HADB_STATE;
+	tlist[1] = HIP_HADB_SK;
+
+	if (!hip_hadb_multiget(&fl->fl6_dst, tlist, 2, &state, &kg, NULL, NULL, 
+			       HIP_ARG_HIT)) 
+	{
+			HIP_ERROR("Trying to connect to unknown HIT. Failed\n");
+			HIP_DEBUG_HIT("Unknown HIT", &fl->fl6_dst);
+			return 0;
+	}
+
+	if (state == HIP_STATE_ESTABLISHED) {
+		HIP_DEBUG("HIP state already established\n");
+		return 0;
+	}
+
+	if (kg) {
+		if (kg->sk) {
+			HIP_DEBUG("packet already stored\n");
+			return 0;
+		}
+		HIP_ERROR("Kludge structure exists without a sock!\n");
+		kfree(kg);
+	}
+
+	kg = kmalloc(sizeof(*kg), GFP_KERNEL);
+	if (!kg) {
+		HIP_ERROR("No memory for kludge\n");
+		return 0;
+	}
+
+	kg->sk = sk;
+	memcpy(&kg->fl, fl, sizeof(*fl));
+
+	tlist[0] = HIP_HADB_SK;
+	err = hip_hadb_multiset(&fl->fl6_dst, tlist, 1, kg, NULL, NULL, NULL, HIP_ARG_HIT);
+	if (err < 1) {
+		HIP_ERROR("Error saving SK\n");
+		kfree(kg);
+	} else {
+		sock_hold(kg->sk);
+		HIP_INFO("SK saved\n");
+		ipv6_addr_copy(&hdr.daddr, &fl->fl6_dst);
+		hip_handle_output(&hdr, NULL); // trigger I1
+	}
+
+	return err;
 }
 
 /**
@@ -1652,7 +1716,7 @@ static int __init hip_init(void)
 
  	HIP_SETCALL(hip_bypass_ipsec);
 	HIP_SETCALL(hip_handle_output);
-
+	HIP_SETCALL(hip_save_sk);
 	HIP_SETCALL(hip_handle_esp);
 	HIP_SETCALL(hip_get_addr);
 	HIP_SETCALL(hip_get_hits);

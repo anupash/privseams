@@ -3,6 +3,7 @@
 
 #include <linux/sched.h>
 #include <net/ipv6.h>
+#include <net/tcp.h>
 
 #include "db.h"
 #include "debug.h"

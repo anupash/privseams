@@ -462,6 +462,12 @@ struct hip_packet_dh_sig
 	struct hip_sig2 *hsig2;
 };
 
+struct hip_kludge
+{
+	struct sock *sk;
+	struct flowi fl;
+};
+
 struct hip_context
 {
 	struct sk_buff *skb_in;         /* received skbuff */
@@ -535,7 +541,8 @@ struct hip_hadb_state
 //	int                  auth_transform;
 
 	uint64_t             birthday;
-
+	
+	struct hip_kludge    *sk;  /* TCP sock for connection establishment */
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.

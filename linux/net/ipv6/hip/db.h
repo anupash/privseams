@@ -67,6 +67,7 @@ struct hip_db_struct {
 //#define HIP_HADB_PEER_RESERVED  0x080000
 #define HIP_HADB_MASK_PEER       0x0FF000
 
+#define HIP_HADB_SK             0x100010
 #define HIP_HADB_STATE          0x100000
 #define HIP_HADB_BIRTHDAY       0x200000
 #define HIP_HADB_PEER_CONTROLS  0x300000
@@ -134,6 +135,7 @@ typedef void (*ACCESS_FUNC)(struct hip_hadb_state *, struct hip_entry_list *);
 typedef struct hip_hadb_state HIP_STATE;
 typedef struct hip_host_id HIP_HID;
 
+void hip_hadb_free_kludge(struct in6_addr *hit);
 int hip_hadb_flush_states(struct in6_addr *hit);
 void hip_hadb_acquire_ex_db_access(int *flags);
 void hip_hadb_release_ex_db_access(int flags);

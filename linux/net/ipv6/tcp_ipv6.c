@@ -60,6 +60,10 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 static void	tcp_v6_send_reset(struct sk_buff *skb);
 static void	tcp_v6_or_send_ack(struct sk_buff *skb, struct open_request *req);
 static void	tcp_v6_send_check(struct sock *sk, struct tcphdr *th, int len, 
@@ -713,7 +717,13 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 							     np->daddr.s6_addr32,
 							     inet->sport,
 							     inet->dport);
-
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	if (HIP_CALLFUNC(hip_save_sk,0)(&fl,sk)) {
+		printk("SAVEDSAVED %p\n",sk);
+		return 0;
+	}
+	printk("NOT SAVED\n");
+#endif
 	err = tcp_connect(sk);
 	if (err)
 		goto late_failure;

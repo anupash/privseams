@@ -1808,6 +1808,31 @@ int hip_handle_r2(struct sk_buff *skb)
 		HIP_DEBUG("Reached ESTABLISHED state\n");
 	}
 
+	/* Now, if we have cached SK, use it */
+	{
+		int tlist[1];
+		struct hip_kludge *kg = NULL;
+		struct dst_entry *dst;
+
+		tlist[0] = HIP_HADB_SK;
+		if (hip_hadb_multiget(&ctx->input->hits, tlist, 1, &kg, NULL, NULL, 
+				      NULL, HIP_ARG_HIT)) 
+		{
+			HIP_INFO("SK found %p!\n",kg->sk);
+			HIP_HEXDUMP("FL", &kg->fl, sizeof(struct flowi));
+
+			ip6_dst_lookup(kg->sk, &dst, &kg->fl); // route
+			sk_dst_reset(kg->sk);
+			sk_dst_set(kg->sk, dst);
+			if (tcp_connect(kg->sk)) {
+				HIP_ERROR("Error while connecting TCP socket\n");
+				tcp_set_state(kg->sk, TCP_CLOSE);
+				sk_dst_reset(kg->sk);
+			}
+			hip_hadb_free_kludge(&ctx->input->hits);
+		}
+	}
+			
  out_err:
 	if (ctx)
 		kfree(ctx);

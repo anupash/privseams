@@ -22,6 +22,7 @@ struct hip_callable_functions {
 
 	void (*hip_handle_esp) (uint32_t spi, struct ipv6hdr *ipv6);
 	int (*hip_handle_output) (struct ipv6hdr *hdr, struct sk_buff *skb);
+	int (*hip_save_sk) (struct flowi *fl, struct sock *sk);
 
 	int (*hip_bypass_ipsec) (void);
 	int (*hip_get_addr) (struct in6_addr *hit, struct in6_addr *addr);

@@ -186,6 +186,27 @@ static struct hip_hadb_state *hip_hadb_find_by_hit(struct in6_addr *hit)
 
 }
 
+static void hip_delete_hadb_entry(struct hip_hadb_state *entry)
+{
+	struct hip_peer_addr_list_item *pali;
+	struct list_head *iter2,*tmp2;
+
+	if (entry->sk != NULL) {
+		HIP_DEBUG("entry->sk not NULL while deleting it... %p\n",entry->sk->sk);
+		sock_put(entry->sk->sk);
+		kfree(entry->sk);
+	}
+
+	list_for_each_safe(iter2,tmp2,&entry->peer_addr_list) {
+		pali = list_entry(iter2, struct hip_peer_addr_list_item,
+				  list);
+		kfree(pali);
+	}
+
+	kfree(entry);
+}
+
+
 static int hip_hadb_delete_by_hit(struct in6_addr *hit)
 {
 	struct hip_hadb_state *tmp, *entry;
@@ -196,7 +217,7 @@ static int hip_hadb_delete_by_hit(struct in6_addr *hit)
 	list_for_each_entry_safe(entry, tmp, &hip_hadb.db_head, next) {
 		if (!ipv6_addr_cmp(&entry->hit_peer, hit)) {
 			list_del(&entry->next);
-			kfree(entry);
+			hip_delete_hadb_entry(entry);
 			return 0;
 		}
 	}
@@ -646,23 +667,12 @@ static void hip_hadb_delete_peer_addrlist(struct hip_hadb_state *entry) {
  */
 static void hip_hadb_entry_init(struct hip_hadb_state *entry)
 {
-	INIT_LIST_HEAD(&entry->next);
-	entry->state = HIP_STATE_NONE;
-	entry->peer_controls = 0;
+	memset(entry,0,sizeof(*entry));
 
-	memset(&entry->hit_our, 0, sizeof(struct in6_addr));
-	memset(&entry->hit_peer, 0, sizeof(struct in6_addr));
+	INIT_LIST_HEAD(&entry->next);
 	INIT_LIST_HEAD(&entry->peer_addr_list);
 
-	entry->spi_our = 0;
-	entry->spi_peer = 0;
-	entry->lsi_our = 0;
-	entry->lsi_peer = 0;
-
-	entry->esp_transform = 0;
-	/* entry->auth_transform = 0; */
-	entry->birthday = 0;
-	/* todo: memset 0: *_key ?*/
+	entry->state = HIP_STATE_NONE;
 	return;
 }
 
@@ -740,20 +750,33 @@ static int hip_hadb_reinit_state(struct hip_hadb_state *entry)
 	entry->lsi_our = 0;
 	entry->esp_transform = 0;
 	entry->birthday = 0;
-	
+	entry->sk = NULL;
+
 	memset(&entry->hit_our,0,sizeof(struct in6_addr));
 
-/*  Are these necessary?
-	memset(&entry->esp_our,0,sizeof(struct hip_crypto_key));
-	memset(&entry->esp_peer,0,sizeof(struct hip_crypto_key));
-	memset(&entry->auth_our,0,sizeof(struct hip_crypto_key));
-	memset(&entry->auth_peer,0,sizeof(struct hip_crypto_key));
-	memset(&entry->hmac_our,0,sizeof(struct hip_crypto_key));
-	memset(&entry->hmac_peer,0,sizeof(struct hip_crypto_key));
-*/
 	return 0;
 }
 
+void hip_hadb_free_kludge(struct in6_addr *arg)
+{
+	HIP_HADB_WRAP_BEGIN_VOID;
+	struct sock *oldsk = NULL;
+	int type = HIP_ARG_HIT; // used by the next macro
+
+	HIP_HADB_WRAP_W_ACCESS_VOID;
+
+	if (entry->sk) {
+		oldsk = entry->sk->sk;
+		kfree(entry->sk);
+		entry->sk = NULL;
+	}
+
+	HIP_WRITE_UNLOCK_DB(&hip_hadb);
+
+	if (oldsk)
+		sock_put(oldsk);
+	return;
+}
 
 
 /*
@@ -833,8 +856,6 @@ void hip_hadb_delete_entry_nolock(struct hip_hadb_state *entry)
 }
 
 
-
-
 /**
  * hip_uninit_hadb - uninit the Host Association database
  *
@@ -843,9 +864,8 @@ void hip_hadb_delete_entry_nolock(struct hip_hadb_state *entry)
 void hip_uninit_hadb(void)
 {
 	struct hip_hadb_state *this;
-	struct hip_peer_addr_list_item *pali;
-	struct list_head *iter,*iter2;
-	struct list_head *tmp,*tmp2;
+	struct list_head *iter;
+	struct list_head *tmp;
 	unsigned long lf; // lock flags
 
 	HIP_WRITE_LOCK_DB(&hip_hadb);
@@ -853,12 +873,8 @@ void hip_uninit_hadb(void)
 	list_for_each_safe(iter,tmp,&hip_hadb.db_head) {
 		this = list_entry(iter, struct hip_hadb_state, next);
 
-		list_for_each_safe(iter2,tmp2,&this->peer_addr_list) {
-			pali = list_entry(iter2, struct hip_peer_addr_list_item,
-					  list);
-			kfree(pali);
-		}
-		kfree(this);
+		list_del(iter);
+		hip_delete_hadb_entry(this);
 	}
 
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
@@ -2004,6 +2020,9 @@ int hip_hadb_multiget(void *arg, int *getlist, int amount, void *arg1,
 		case HIP_HADB_ESP_TRANSFORM:
 			*((int *)target) = entry->esp_transform;
 			break;
+		case HIP_HADB_SK:
+			*((struct hip_kludge **)target) = entry->sk;
+			break;
 		case HIP_HADB_STATE:
 			*((int *)target) = entry->state;
 			break;
@@ -2103,6 +2122,9 @@ int hip_hadb_multiset(void *arg, int *getlist, int amount, void *arg1,
 			break;
 		case HIP_HADB_ESP_TRANSFORM:
 			entry->esp_transform = *((int *) target);
+			break;
+		case HIP_HADB_SK:
+			entry->sk = (struct hip_kludge *)target;
 			break;
 		case HIP_HADB_STATE:
 			entry->state = *((int *) target);

@@ -260,12 +260,12 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 	ipv6_addr_copy(&hdr->saddr, &fl->fl6_src);
 	ipv6_addr_copy(&hdr->daddr, first_hop);
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0)
-		goto end_hip;
-#endif
 	mtu = dst_pmtu(dst);
 	if ((skb->len <= mtu) || ipfragok) {
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0)
+			goto end_hip;
+#endif
 		IP6_INC_STATS(Ip6OutRequests);
 		return NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, dst->dev, ip6_maybe_reroute);
 	}
@@ -1112,6 +1112,12 @@ int ip6_push_pending_frames(struct sock *sk)
 	ipv6_addr_copy(&hdr->daddr, final_dst);
 
 	skb->dst = dst_clone(&rt->u.dst);
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0) {
+		kfree_skb(skb);
+		goto error;
+	}
+#endif
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, skb->dst->dev, dst_output);
 	if (err) {
 		if (err > 0)
