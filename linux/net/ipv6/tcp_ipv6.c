@@ -531,7 +531,6 @@ static int tcp_v6_hash_connect(struct sock *sk)
 
 	head = &tcp_bhash[tcp_bhashfn(inet_sk(sk)->num)];
 
-	printk("jotain... hash_connect: %p\n",head);
 	tb = tb_head(head);
 
 	spin_lock_bh(&head->lock);
@@ -684,7 +683,6 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 	if (err)
 		goto failure;
 
-	printk("saddr in tcp6: %p\n",saddr);
 	if (saddr == NULL) {
 		saddr = &fl.fl6_src;
 		ipv6_addr_copy(&np->rcv_saddr, saddr);
@@ -718,13 +716,6 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 							     inet->sport,
 							     inet->dport);
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	err = HIP_CALLFUNC(hip_add_sk_to_waitlist,-EISCONN)(&fl.fl6_dst,sk);
-	if (!err) 
-		return 0;
-	else if (err != -EISCONN)
-		goto late_failure;
-#endif
 	err = tcp_connect(sk);
 	if (err)
 		goto late_failure;

@@ -257,6 +257,8 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		goto out_err;
 	}
 
+	hip_finalize_sa(hits, peer_new_spi);
+
 	_HIP_DEBUG("Set up new outgoing HITg->HITl SA SPI=0x%x\n", our_new_spi);
 	if (we_are_HITg)
 		HIP_DEBUG("Set up new incoming HITg->HITl SA SPI=0x%x\n", peer_new_spi);
@@ -1046,6 +1048,8 @@ int hip_send_update(struct hip_hadb_state *entry)
 		HIP_ERROR("Error while setting up New SPI (err=%d)\n", err);
 		goto out_err;
 	}
+
+	hip_finalize_sa(&entry->hit_peer, new_spi);
 	HIP_DEBUG("New SPI=0x%x\n", new_spi);
 
 #if 1

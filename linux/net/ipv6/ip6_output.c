@@ -812,22 +812,10 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 		 */
 		ipv6_addr_copy(&daddr,&fl->fl6_dst);
 		if (ipv6_addr_is_hit(&fl->fl6_dst)) {
-			printk("homohomo\n");
-			if (!hip_functions.hip_get_saddr) {
-				printk("no can do\n");
+			if (!(HIP_CALLFUNC(hip_get_saddr,0) (fl, &fl->fl6_src))) {
 				err = -ENETUNREACH;
 				goto out_err_release;
-			} else {
-				if (!hip_functions.hip_get_saddr(fl,&fl->fl6_src)) {
-					printk("kyrpä\n");
-					err = -ENETUNREACH;
-					goto out_err_release;
-				} else {
-					printk("hip_get_saddr onnistu :-o\n");
-				}
 			}
-		} else {
-			printk("VITUNVITTU\n");
 		}
 #endif
 		*dst = ip6_route_output(sk, fl);
@@ -861,17 +849,15 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 	 */
 #endif
 
-	if ((err = xfrm_lookup(dst, fl, sk, 0)) < 0) {
+	/* flags changed to 1, to enable waiting for an SA */
+	if ((err = xfrm_lookup(dst, fl, sk, !in_atomic())) < 0) {
 		err = -ENETUNREACH;
 		goto out_err_release;
         }
 
-	printk("Eihän: %x\n",fl->fl6_src.s6_addr32[3]);
-
 	return 0;
 
 out_err_release:
-	printk("Jahas.. pahasti kävi\n");
 	dst_release(*dst);
 	*dst = NULL;
 	return err;

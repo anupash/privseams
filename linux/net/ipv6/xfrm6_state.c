@@ -16,10 +16,6 @@
 #include <linux/ipsec.h>
 #include <net/ipv6.h>
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#endif
-
 extern struct xfrm_state_afinfo xfrm6_state_afinfo;
 
 static void
@@ -59,18 +55,16 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
 		res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
-#if 1
-		if (!res)
-			printk("Requested SPI: %x, SA's SPI: %x and protos: %x / %x\n",spi,x->id.spi,proto,x->id.proto);
-#endif
 		if (x->props.family == AF_INET6 && spi == x->id.spi && !res &&
 		    proto == x->id.proto)
 		{
 			xfrm_state_hold(x);
-			printk("SA policy found!\n");
 			return x;
 		}
 	}
+#ifdef CONFIG_HIP_DEBUG
+	printk(KERN_DEBUG "SA lookup (spi: %x) failed\n", spi);
+#endif
 	return NULL;
 }
 
