@@ -197,7 +197,7 @@ Someone check builder function.
 
   - signature does not include parameters after the signature tlv
   
-[MIKA] 7.5 "UPDATE" packet
+[DONE] 7.5 "UPDATE" packet
 
   - Mika is working on this.
 
@@ -255,7 +255,7 @@ Birthday.
 - The OPTIONAL PAYLOAD packet (see Section 7.8) MAY be used to transfer
   data.
 
-[LATER] 4.3 Rekey (draft-08)
+[DONE] 4.3 Rekey (draft-08)
 - All conforming HIP implementations MUST support rekeying.
 
 [LATER] 5.1 HIP Scenarios (draft-08)
@@ -289,7 +289,7 @@ system processes the I2 in the normal manner, and replies with an R2.
 This will reestablish state between the two peers.
 -check
 
-[MIIKA] 6.2 HIP parameters (draft-08)
+[DONE] 6.2 HIP parameters (draft-08)
 - Lengths have been changed, check the header files. Validate lengths.
 
 [DONE] 6.2.1 TLV format (draft-08)
@@ -331,7 +331,7 @@ This will reestablish state between the two peers.
 [DONE] 6.2.13 HIP_SIGNATURE_2 (draft-08)
 - type number has been changed
 
-[LATER] 6.2.14 NES_INFO (draft-08)
+[DONE] 6.2.14 NES_INFO (draft-08)
 - the type number and the format has been changed
 
 [DONE] 6.2.15 ENCRYPTED (draft-08)
@@ -345,27 +345,27 @@ following the HIP header. The P-bit in the control field of the HIP
 packet header indicates whether the sender is capable of sending and
 receiving this additional data.
 
-[MIIKA] 7.1 I1 - the HIP Initiator packet (draft-07)
+[DONE] 7.1 I1 - the HIP Initiator packet (draft-07)
 - Valid control bits: None
 
-[MIIKA] 7.2 R1 - the HIP Responder packet (draft-07)
+[DONE] 7.2 R1 - the HIP Responder packet (draft-07)
 - Valid control bits: C, A
 
-[MIIKA] 7.3 I2 - the HIP Second Initiator packet (draft-07)
+[DONE] 7.3 I2 - the HIP Second Initiator packet (draft-07)
 - Valid control bits: C, E, A
 
-[MIIKA] 7.4 R2 - the HIP Second Responder packet (draft-07)
+[DONE] 7.4 R2 - the HIP Second Responder packet (draft-07)
 - Valid control bits: E
 
 [DONE] 7.4 R2 (draft-08)
 - add the HMAC parameter
 - Initiator MUST validate both the HMAC and the signature.
 
-[LATER] 7.5 NES - the HIP New SPI Packet (draft-08)
+[DONE] 7.5 NES - the HIP New SPI Packet (draft-08)
 - The NES packet is MANDATORY.
 - add the HMAC
 
-[LATER] 7.6 BOS - the HIP Bootstrap Packet (draft-08)
+[DONE] 7.6 BOS - the HIP Bootstrap Packet (draft-08)
 - The BOS packet is OPTIONAL.
 
 [LATER] 7.7 CER - the HIP Certificate Packet (draft-08)
