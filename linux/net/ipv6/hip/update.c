@@ -158,7 +158,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 		HIP_LOCK_HA(entry);
 
 		HIP_DEBUG("Switching from SPI_OUT=0x%x to NEW_SPI_OUT=0x%x\n",
-			  old_spi_out, entry->new_spi_out);
+			  entry->spi_out, entry->new_spi_out);
 		old_spi_out = entry->spi_out;
 		hip_hadb_remove_state_spi(entry);
 		entry->spi_out = entry->new_spi_out;

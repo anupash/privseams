@@ -663,6 +663,36 @@ void *hip_get_param_contents_direct(const void *tlv_common) {
 	return ((void *)tlv_common) + sizeof(struct hip_tlv_common);
 }
 
+
+/* hip_get_nth_param - get nth parameter of given type from the message
+ * @msg:        pointer to the beginning of the message header
+ * @param_type: the type of the parameter to be searched from @msg
+ *              (in host byte order)
+ * @n: index number to be get
+ *
+ * Returns: the nth parameter from the message if found, else %NULL.
+ */
+void *hip_get_nth_param(const struct hip_common *msg,
+			hip_tlv_type_t param_type, int n)
+{
+	struct hip_tlv_common *param = NULL;
+	int i = 0;
+
+	if (n < 1) {
+		HIP_ERROR("n < 1 (n=%d)\n", n);
+		return NULL;
+	}
+
+	while((param = hip_get_next_param(msg, param))) {
+		if (hip_get_param_type(param) == param_type) {
+			i++;
+			if (i == n)
+				return param;
+		}
+	}
+	return NULL;
+}
+
 /**
  * hip_find_free_param - find the first free position in message
  * @msg: pointer to the beginning of the message header

@@ -1809,6 +1809,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
  	spi_lsi = hip_get_param(r2, HIP_PARAM_SPI_LSI);
  	if (!spi_lsi) {
+		HIP_ERROR("Parameter SPI_LSI not found\n");
  		err = -EINVAL;
  		goto out_err;
  	}

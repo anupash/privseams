@@ -67,6 +67,8 @@ void *hip_get_param_contents(const struct hip_common *msg,
 void *hip_get_param_contents_direct(const void *tlv_common);
 void *hip_get_param(const struct hip_common *msg,
 			      hip_tlv_type_t param_type);
+void *hip_get_nth_param(const struct hip_common *msg,
+			hip_tlv_type_t param_type, int n);
 void *hip_find_free_param(const struct hip_common *msg);
 void hip_calc_hdr_len(struct hip_common *msg);
 void hip_dump_msg(const struct hip_common *msg);
