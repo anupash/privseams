@@ -982,10 +982,6 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 
 	if (len >= count)
 		goto error;
-	
-	if ( (len += snprintf(page+len, count-len, "\n")) >= count)
-		goto error;
-
 
 	op->len = len;
 	op->count = count;
@@ -1059,7 +1055,7 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
  * @eof: pointer where end of file flag is stored, always set to 1
  * @data: ignored
  *
- * hip_hadb_state can be dumped from from file /proc/net/hip/sdb_state
+ * hip_hadb_state can be dumped from file /proc/net/hip/sdb_state
  *
  * Returns: number of bytes written to @page.
  */
@@ -1076,7 +1072,9 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 		       "state hastate refcnt peer_controls hit_our hit_peer "
 		       "spi_in spi_out new_spi_in new_spi_out lsi_our lsi_peer esp_transform "
 		       "birthday keymat_index keymat_calc_index "
-		       "update_id_in update_id_out dh_len [list_of_peer_addrs curr_dst_addr]\n");
+		       "update_id_in update_id_out dh_len\n");
+
+	/* "update_id_in update_id_out dh_len [list_of_peer_addrs curr_dst_addr]\n"); */
 
 	if (ps.len >= count) {
 		fail = 1;
