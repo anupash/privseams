@@ -175,6 +175,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
  out:
 	if (entry)
 		hip_put_ha(entry);
+	_HIP_DEBUG("err=%d\n", err);
 	return err;
 }
 

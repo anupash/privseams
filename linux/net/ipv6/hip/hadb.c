@@ -79,11 +79,11 @@ static void hip_hadb_put_hs(void *entry)
 		return;
 
 	if (atomic_dec_and_test(&hs->refcnt)) {
-                HIP_DEBUG("HS: refcnt is 0, deleting %p\n", hs);
+                HIP_DEBUG("HS: refcnt decremented to 0, deleting %p\n", hs);
 		hip_hadb_delete_hs(hs);
                 HIP_DEBUG("HS: %p deleted\n", hs);
 	} else {
-		HIP_DEBUG("HS: %p, refcnt decremented to: %d\n", hs, atomic_read(&hs->refcnt));
+		_HIP_DEBUG("HS: %p, refcnt decremented to: %d\n", hs, atomic_read(&hs->refcnt));
         }
 }
 
@@ -94,7 +94,7 @@ static void hip_hadb_hold_hs(void *entry)
 		return;
 
 	atomic_inc(&hs->refcnt);
-	HIP_DEBUG("HS: %p, refcnt incremented to: %d\n", hs, atomic_read(&hs->refcnt));
+	_HIP_DEBUG("HS: %p, refcnt incremented to: %d\n", hs, atomic_read(&hs->refcnt));
 }
 
 //void hip_hadb_remove_hs(struct hip_hit_spi *hs)
@@ -263,7 +263,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
 	hip_hit_t hit;
 	struct hip_hit_spi *new_item;
 
-	_HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", ha, spi);
+	HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", ha, spi);
 	HIP_LOCK_HA(ha);
 	ipv6_addr_copy(&hit, &ha->hit_peer);
 	HIP_UNLOCK_HA(ha);
@@ -271,7 +271,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
 	tmp = hip_ht_find(&hadb_spi_list, (void *)spi);
 	if (tmp) {
 		hip_hadb_put_hs(tmp);
-		HIP_DEBUG("SPI already taken (list)\n");
+		HIP_ERROR("BUG, SPI already inserted\n");
 		err = -EEXIST;
 		goto out_err;
 	}
@@ -288,7 +288,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
 	ipv6_addr_copy(&new_item->hit, &hit);
 
 	hip_ht_add(&hadb_spi_list, new_item);
-	HIP_DEBUG("SPI added to HT spi_list, HS=%p\n", new_item);
+	HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item);
 	HIP_DEBUG("HS TABLE:\n");
 	hip_hadb_dump_hs_ht();
  out_err:
@@ -374,82 +374,17 @@ void hip_hadb_remove_state(hip_ha_t *ha)
 
 /************** END OF PRIMITIVE FUNCTIONS **************/
 
-
-/**
- * hip_hadb_get_peer_addr - Get some of the peer's usable IPv6 address
- * @entry: corresponding hadb entry of the peer
- * @addr: where the selected IPv6 address of the peer is copied to
- *
- * Current destination address selection algorithm:
- * 1. use preferred address of the HA, if any (should be set)
- *
- * 2. use preferred address of the default outbound SPI, if any
- * (should be set, suspect bug if we get this far)
- *
- * 3. select among the active addresses of the default outbound SPI
- * (select the address which was added/updated last)
- *
- * Returns: 0 if some of the addresses was copied successfully, else < 0.
- */
-int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
+#if 1
+/* select the preferred address within the addresses of the given SPI */
+/* selected address is copied to @addr, it is is non-NULL */
+int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, struct in6_addr *addr)
 {
 	int err = 0;
         struct hip_peer_addr_list_item *s, *candidate = NULL;
 	struct timeval latest, dt;
-	struct hip_spi_out_item *spi_out, *tmp;
-	int found_spi_list = 0;
-#ifdef CONFIG_HIP_DEBUG
+//	struct hip_spi_out_item *spi_out;//, *tmp;
 	char addrstr[INET6_ADDRSTRLEN];
-#endif
 
-	HIP_LOCK_HA(entry);
-
-	hip_print_hit("entry def addr", &entry->preferred_address);
-	if (ipv6_addr_any(&entry->preferred_address)) {
-		HIP_DEBUG("no preferred address\n");
-	} else {
-		ipv6_addr_copy(addr, &entry->preferred_address);
-		_HIP_DEBUG("found preferred address\n");
-		goto out;
-	}
-
-	if (entry->default_spi_out == 0) {
-		HIP_DEBUG("default SPI out is 0, use the bex address\n");
-		if (ipv6_addr_any(&entry->bex_address)) {
-			HIP_DEBUG("no bex address\n");
-			err = -EINVAL;
-		} else
-			ipv6_addr_copy(addr, &entry->bex_address);
-		goto out;
-	}
-
-	/* select peer address among the ones belonging to the default
-	 * outgoing SPI */
-        list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
-		if (spi_out->spi == entry->default_spi_out) {
-			found_spi_list = 1;
-			break;
-		}
-        }
-
-	if (!found_spi_list) {
-		HIP_ERROR("did not find SPI list for default_spi_out 0x%x\n",
-			  entry->default_spi_out);
-		err = -EEXIST;
-		goto out;
-	}
-
-	/* not tested yet */
-	if (!ipv6_addr_any(&spi_out->preferred_address)) {
-		HIP_DEBUG("TEST CODE\n");
-		HIP_DEBUG("found preferred address for SPI 0x%x\n",
-			  spi_out->spi);
-		ipv6_addr_copy(addr, &spi_out->preferred_address);
-		goto out;		
-	}
-
-	/* todo: this is ineffecient, optimize (e.g. insert addresses
-	 * always in sorted order so we can break out of the loop earlier) */
         list_for_each_entry(s, &spi_out->peer_addr_list, list) {
 #ifdef CONFIG_HIP_DEBUG
 		hip_in6_ntop(&s->address, addrstr);
@@ -472,24 +407,114 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 				candidate = s;
 			}
 		} else {
-			/* this way we get always some address to use
-			 * if peer address list contains at least one
-			 * reachable address */
 			candidate = s;
 			memcpy(&latest, &s->modified_time, sizeof(struct timeval));
 		}
         }
 
-
-        if (!candidate)
+        if (!candidate) {
+		HIP_ERROR("did not find usable peer address\n");
+		HIP_DEBUG("todo: select from other SPIs ?\n");
+		/* todo: select other SPI as the default SPI out */
 		err = -ENOMSG;
-	else {
+	} else {
 		ipv6_addr_copy(addr, &candidate->address);
 #ifdef CONFIG_HIP_DEBUG
 		hip_in6_ntop(addr, addrstr);
 		_HIP_DEBUG("select %s from if=0x%x\n", addrstr, s->interface_id);
 #endif
 	}
+
+	return err;
+}
+#endif
+
+/**
+ * hip_hadb_get_peer_addr - Get some of the peer's usable IPv6 address
+ * @entry: corresponding hadb entry of the peer
+ * @addr: where the selected IPv6 address of the peer is copied to
+ *
+ * Current destination address selection algorithm:
+ * 1. use preferred address of the HA, if any (should be set)
+ *
+ * 2. use preferred address of the default outbound SPI, if any
+ * (should be set, suspect bug if we get this far)
+ *
+ * 3. select among the active addresses of the default outbound SPI
+ * (select the address which was added/updated last)
+ *
+ * Returns: 0 if some of the addresses was copied successfully, else < 0.
+ */
+int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
+{
+	int err = 0;
+        struct hip_peer_addr_list_item *s, *candidate = NULL;
+	struct timeval latest, dt;
+	struct hip_spi_out_item *spi_out;//, *tmp;
+#ifdef CONFIG_HIP_DEBUG
+	char addrstr[INET6_ADDRSTRLEN];
+#endif
+
+	HIP_LOCK_HA(entry);
+
+	//hip_print_hit("entry def addr", &entry->preferred_address);
+	if (ipv6_addr_any(&entry->preferred_address)) {
+		HIP_DEBUG("no preferred address\n");
+	} else {
+		ipv6_addr_copy(addr, &entry->preferred_address);
+		_HIP_DEBUG("found preferred address\n");
+		goto out;
+	}
+
+	if (entry->default_spi_out == 0) {
+		HIP_DEBUG("default SPI out is 0, use the bex address\n");
+		if (ipv6_addr_any(&entry->bex_address)) {
+			HIP_DEBUG("no bex address\n");
+			err = -EINVAL;
+		} else
+			ipv6_addr_copy(addr, &entry->bex_address);
+		goto out;
+	}
+
+	/* try to select a peer address among the ones belonging to
+	 * the default outgoing SPI */
+//	err = hip_hadb_select_spi_addr(entry, entry->default_spi_out, addr);
+
+#if 1
+	spi_out = hip_hadb_get_spi_list(entry, entry->default_spi_out);
+	if (!spi_out) {
+		HIP_ERROR("did not find SPI list for default_spi_out 0x%x\n",
+			  entry->default_spi_out);
+		err = -EEXIST;
+		goto out;
+	}
+#if 0
+        list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
+		if (spi_out->spi == entry->default_spi_out) {
+			found_spi_list = 1;
+			break;
+		}
+        }
+
+	if (!found_spi_list) {
+		HIP_ERROR("did not find SPI list for default_spi_out 0x%x\n",
+			  entry->default_spi_out);
+		err = -EEXIST;
+		goto out;
+	}
+
+	/* not tested yet */
+	if (!ipv6_addr_any(&spi_out->preferred_address)) {
+		HIP_DEBUG("TEST CODE\n");
+		HIP_DEBUG("found preferred address for SPI 0x%x\n",
+			  spi_out->spi);
+		ipv6_addr_copy(addr, &spi_out->preferred_address);
+		goto out;		
+	}
+#endif
+
+#endif
+
 
  out:
 	HIP_UNLOCK_HA(entry);
@@ -1301,11 +1326,27 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
 				   struct hip_peer_addr_list_item *addr)
 {
-	HIP_DEBUG("testing kludge, setting address as default out addr\n");
-	ipv6_addr_copy(&spi_out->preferred_address, &addr->address);
+	if (!spi_out) {
+		HIP_ERROR("NULL spi_out\n");
+		return;
+	}
+
+	if (addr) {
+		HIP_DEBUG("testing kludge, setting given address as default out addr\n");
+		ipv6_addr_copy(&spi_out->preferred_address, &addr->address);
+		ipv6_addr_copy(&entry->preferred_address, &addr->address);
+	} else {
+		struct in6_addr a;
+		int err = hip_hadb_select_spi_addr(entry, spi_out, &a);
+		HIP_DEBUG("selected setting address as default out addr\n");
+		if (!err) {
+			ipv6_addr_copy(&spi_out->preferred_address, &a);
+			ipv6_addr_copy(&entry->preferred_address, &a);
+		} else
+			HIP_ERROR("couldn't select and set preferred address\n");
+	}
 	HIP_DEBUG("setting default SPI out to 0x%x\n", spi_out->spi);
 	entry->default_spi_out = spi_out->spi;
-	ipv6_addr_copy(&entry->preferred_address, &addr->address);
 }
 
 /* have_nes is 1, if there is NES in the same packet as the ACK was */
@@ -1374,13 +1415,6 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 
 					if (addr->is_preferred) {
 						hip_hadb_set_default_out_addr(entry, out_item, addr);
-#if 0
-						HIP_DEBUG("testing kludge, setting address as default out addr\n");
-						ipv6_addr_copy(&out_item->preferred_address, &addr->address);
-						HIP_DEBUG("setting default SPI out to 0x%x\n", out_item->spi);
-						entry->default_spi_out = out_item->spi;
-						ipv6_addr_copy(&entry->preferred_address, &addr->address);
-#endif
 					} else
 						HIP_DEBUG("address was not set as preferred address in REA\n");
 				}

@@ -74,10 +74,11 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 
 	xs = xfrm_state_lookup(xaddr, htonl(spi), IPPROTO_ESP, AF_INET6);
 	if (!xs) {
-		HIP_ERROR("Could not find SA!\n");
+		HIP_ERROR("Could not find SA for SPI 0x%x!\n", spi);
 		return -ENOENT;
 	}
-	/* xfrm_state_put ? (xfrm_state_lookup incs xs's refcount) */
+	
+	xfrm_state_put(xs); /* as in xfrm_user.c, xfrm_del_sa xfrm_state_lookup incs xs's refcount */
 	xfrm_state_delete(xs);
 
 	return 0;
@@ -172,6 +173,8 @@ int hip_setup_sp(int dir)
  * @alg: ESP algorithm to use
  * @enckey: ESP encryption key
  * @authkey: authentication key
+ * @already_acquired: true if @spi was already acquired
+ * @direction: direction of SA
  *
  * @spi is a value-result parameter. If @spi is 0 the kernel gets a
  * free SPI value for us. If @spi is non-zero we try to get the new SA
@@ -186,7 +189,7 @@ int hip_setup_sp(int dir)
  */
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 uint32_t *spi, int alg, void *enckey, void *authkey, 
-		 int is_active)
+		 int already_acquired, int direction)
 {
 	int err;
 	struct xfrm_state *xs;
@@ -194,16 +197,35 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	struct xfrm_algo_desc *aad;
 	size_t akeylen, ekeylen; /* in bits */
 
-	HIP_DEBUG("*spi=0x%x alg=%d is_active=%d\n", *spi, alg, is_active);
+	HIP_DEBUG("SPI=0x%x alg=%d already_acquired=%d direction=%s\n",
+		  *spi, alg, already_acquired, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
 	akeylen = ekeylen = 0;
 	err = -ENOMEM;
 
-	xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
-			   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
-			   1, AF_INET6);
-	if (!xs) {
-		HIP_ERROR("Error while acquiring an SA: %d\n", err);
-		return err;
+	//hip_print_hit("srchit", srchit);
+	//hip_print_hit("dsthit", dsthit);
+	if (already_acquired) {
+		/* should be found */
+		if (direction == HIP_SPI_DIRECTION_IN)
+			xs = xfrm_state_lookup((xfrm_address_t *)dsthit, htonl(*spi),
+					       IPPROTO_ESP, AF_INET6);
+		else
+			xs = xfrm_state_lookup((xfrm_address_t *)srchit, htonl(*spi),
+					       IPPROTO_ESP, AF_INET6);
+		if (!xs) {
+			HIP_DEBUG("SA for SPI does not exist for ACQuired SPI\n");
+			err = -EEXIST;
+			return err;
+		}
+	} else {
+		xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
+				   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
+				   1, AF_INET6);
+		if (!xs) {
+			HIP_ERROR("Error while acquiring an SA: %d\n", err);
+			err = -EEXIST;
+			return err;
+		}
 	}
 
 	/* xs is either newly-created or an old one */
@@ -218,15 +240,21 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	/* should we lock the state? */
 
-	if (*spi != 0) {
-		*spi = htonl(*spi);
-		xfrm_alloc_spi(xs, *spi, *spi);
-	} else {
-		/* Try to find a suitable random SPI within the range
-		 * in RFC 2406 section 2.1 */
-		xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
+	HIP_DEBUG("xs->id.spi=0x%x\n", ntohl(xs->id.spi));
+
+	if (!already_acquired) {
+		HIP_DEBUG("allocate SPI\n");
+		if (*spi) {
+			*spi = htonl(*spi);
+			xfrm_alloc_spi(xs, *spi, *spi);
+		} else {
+			/* Try to find a suitable random SPI within the range
+			 * in RFC 2406 section 2.1 */
+			xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
+		}
 	}
 
+	HIP_DEBUG("xs->id.spi 2=0x%x\n", ntohl(xs->id.spi));
 	if (xs->id.spi == 0) {
 		HIP_ERROR("Could not get SPI value for the SA\n");
 		if (*spi != 0) {

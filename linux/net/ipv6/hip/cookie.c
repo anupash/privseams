@@ -169,8 +169,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 
 	HIP_DEBUG("\n");
 
-	HIP_DEBUG("\n");
-
 	/* pre-create cookie */
 
 	u = puzzle_or_solution;

@@ -1035,7 +1035,7 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 	hip_put_ha(entry);
 
 	hip_in6_ntop(addr, str);
-	HIP_DEBUG("selected dst addr: %s\n", str);
+	_HIP_DEBUG("selected dst addr: %s\n", str);
 
 	return 1;
 }

@@ -117,7 +117,7 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	 * No locking will take place since the data
 	 * that we are copying is very static
 	 */
-	HIP_DEBUG("SPI=0x%x\n", spi);
+	_HIP_DEBUG("SPI=0x%x\n", spi);
 	ha = hip_hadb_find_byspi_list(spi);
 	if (!ha) {
 		HIP_INFO("HT BYSPILIST: NOT found, unknown SPI 0x%x\n",spi);
@@ -917,7 +917,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		/* let the setup routine give us a SPI. */
 		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
 				    &spi_in, transform_esp_suite, 
-				    &ctx->esp_in.key, &ctx->auth_in.key, 1);
+				    &ctx->esp_in.key, &ctx->auth_in.key, 0, HIP_SPI_DIRECTION_IN);
 
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
@@ -1406,7 +1406,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	/********** SPI_LSI **********/
 	barrier();
 //	spi_in = entry->spi_in;
-	HIP_ERROR("entry should have only one spi_in now, fix\n");
+	HIP_DEBUG("entry should have only one spi_in now, fix\n");
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 
 	err = hip_build_param_spi(r2, spi_in);
@@ -1786,7 +1786,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		entry->peer_controls |= ntohs(i2->control);
 		ipv6_addr_copy(&entry->hit_our, &i2->hitr);
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		//entry->spi_out = ntohl(hspi->spi);
+
+		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(hspi->spi);
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
@@ -1804,9 +1805,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		}
 	}
 
-	/* todo: what are the default values for initial address ?
-	   some flags to indicate that this address if the initial
-	   address ? */
 	err = hip_hadb_add_peer_addr(entry, &(ctx->skb_in->nh.ipv6h->saddr), 0, 0,
 				     PEER_ADDR_STATE_ACTIVE);
 	if (err) {
@@ -1818,7 +1816,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	{
 		spi_in = 0;
 		err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_in, esptfm, 
-				   &ctx->esp_in.key, &ctx->auth_in.key, 1);
+				   &ctx->esp_in.key, &ctx->auth_in.key, 0, HIP_SPI_DIRECTION_IN);
 
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
@@ -1838,7 +1836,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_out);
 
 	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_out, esptfm, 
-			   &ctx->esp_out.key, &ctx->auth_out.key, 1);
+			   &ctx->esp_out.key, &ctx->auth_out.key, 0, HIP_SPI_DIRECTION_OUT);
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
 		HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -2126,7 +2124,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
 		HIP_DEBUG("TODO: move HIP_UNLOCK_HA here ?\n");
 		err = hip_setup_sa(&r2->hitr, sender, &spi_recvd, tfm,
-				   &ctx->esp_out.key, &ctx->auth_out.key, 1);
+				   &ctx->esp_out.key, &ctx->auth_out.key, 0, HIP_SPI_DIRECTION_OUT);
 		if (err == -EEXIST) {
 			HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 			HIP_DEBUG("TODO: what to do ? currently ignored\n");

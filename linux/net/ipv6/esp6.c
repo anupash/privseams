@@ -158,12 +158,12 @@ int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_b
 		ret = -EINVAL;
 		goto out_nofree;
 	}
-
+printk(KERN_DEBUG "maypull ok\n");
 	if (elen <= 0 || (elen & (blksize-1))) {
 		ret = -EINVAL;
 		goto out_nofree;
 	}
-
+printk(KERN_DEBUG "elen ok\n");
 	tmp_hdr = kmalloc(hdr_len, GFP_ATOMIC);
 	if (!tmp_hdr) {
 		ret = -ENOMEM;
@@ -175,6 +175,7 @@ int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_b
         if (esp->auth.icv_full_len) {
 		u8 sum[esp->auth.icv_full_len];
 		u8 sum1[alen];
+printk(KERN_DEBUG "test icv\n");
 
 		esp->auth.icv(esp, skb, 0, skb->len-alen, sum);
 
@@ -188,11 +189,12 @@ int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_b
 		}
 	}
 
+printk(KERN_DEBUG "pre skb cow\n");
 	if ((nfrags = skb_cow_data(skb, 0, &trailer)) < 0) {
 		ret = -EINVAL;
 		goto out;
 	}
-
+printk(KERN_DEBUG "skb cow ok\n");
 	skb->ip_summed = CHECKSUM_NONE;
 
 	esph = (struct ipv6_esp_hdr*)skb->data;
@@ -226,6 +228,7 @@ int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_b
 		if (padlen+2 >= elen) {
 			LIMIT_NETDEBUG(
 				printk(KERN_WARNING "ipsec esp packet is garbage padlen=%d, elen=%d\n", padlen+2, elen));
+printk(KERN_DEBUG "padlen ok\n");
 			ret = -EINVAL;
 			goto out;
 		}
