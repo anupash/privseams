@@ -625,7 +625,7 @@ int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
  * @lifetime: address lifetime of the address
  * @state: address state
  *
- * Returns: íf @new_addr already exists, 0 is returned. If address was
+ * Returns: if @new_addr already exists, 0 is returned. If address was
  * added successfully 0 is returned, else < 0.
  *
 */

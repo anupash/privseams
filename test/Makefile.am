@@ -47,11 +47,13 @@ unittest_SOURCES = unit.c unittest.c unittest.h hipconf.c suite.c
 # the probably the best way to access it because the object must be built
 # on this directory and we do't want to make reduntant copies.
 #
-hipconf.c:
-	$(LN_S) -f $(HIPL_TOOLS)/hipconf.c .
+hipconf.h:
 	$(LN_S) -f $(HIPL_TOOLS)/hipconf.h .
-unit.c:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.c .
+hipconf.c: hipconf.h
+	$(LN_S) -f $(HIPL_TOOLS)/hipconf.c .
+unit.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.h .
+unit.c: unit.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6

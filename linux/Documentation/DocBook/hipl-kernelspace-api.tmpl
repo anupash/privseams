@@ -258,14 +258,14 @@
 
      </sect1>
 
-     <sect1><title>Readdressing</title>
+     <sect1><title>UPDATE</title>
 
      <para>
-     File <filename>rea.c</filename> contains the code needed for readdressing
-     signalling in HIP.
+     File <filename>update.c</filename> contains the code needed for UPDATE
+     packet handling.
      </para>
 
-!Inet/ipv6/hip/rea.c
+!Inet/ipv6/hip/update.c
 
      </sect1>
 
@@ -380,33 +380,6 @@
      is implemented in <filename>ioctl.c</filename>. HIP socket handler
      is defined in <filename>socket.c</filename>.
      </para>
-
-     <sect1><title>Daemon</title>
-
-     <para>
-     File <filename>daemon.c</filename> provides an "higher" level interface
-     to handle the manual configuration of the HIP module (the filename is a
-     bit misleading for historical reasons). The actual bits and pieces are
-     handled in the <filename>ioctl.c</filename>.
-     </para>
-
-!Inet/ipv6/hip/daemon.c
-
-     </sect1>
-
-     <sect1><title>IOCTL</title>
-
-     <para>
-     <filename>ioctl.c</filename> handles the details of the actual
-     message copying between userspace and kernelspace. It is
-     implemented using <function>ioctl</function> calls. At some point in
-     the future, the <function>ioctl</function> mechanism will be replaced
-     with a better mechanism.
-     </para>
-
-!Inet/ipv6/hip/ioctl.c
-
-     </sect1>
 
      <sect1><title>Socket</title>
 

@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.53)
-AC_INIT
+AC_INIT(hipl-tools, main)
 AC_CONFIG_SRCDIR([hipconf.c])
-AM_INIT_AUTOMAKE(hipconf, 0.1)
+AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
 # Checks for programs.

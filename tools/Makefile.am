@@ -14,6 +14,8 @@ CFLAGS  += -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_LINUX_INCLUDE)
 CFLAGS  += -I$(HIPL_LINUX_MODULE) -I$(HIPL) -DCONFIG_HIP_DEBUG
 CFLAGS  += -DHIP_LOGFMT_LONG -g -L$(HIPL_LIBINET6_LIB)
 
+include_HEADERS = hipconf.h
+
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD    = ../libinet6/.libs/libinet6.a
 
@@ -26,9 +28,9 @@ hipconf_SOURCES = hipconf.c
 # the best way to access it because the object must be built on this
 # directory and we don't want to make reduntant copies.
 #
-builder.c:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
 builder.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
+builder.c: builder.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)
