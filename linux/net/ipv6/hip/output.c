@@ -25,7 +25,6 @@
  *
  */
 
-#include "update.h"
 #include "output.h"
 #include "keymat.h"
 

@@ -40,7 +40,6 @@
 
 #include "input.h"
 #include "keymat.h"
-#include "update.h"
 #include "crypto/dsa.h"
 
 #ifdef MAX

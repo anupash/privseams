@@ -1853,7 +1853,9 @@ int hip_proc_send_update(char *page, char **start, off_t off,
 			 int count, int *eof, void *data)
 {
 	HIP_DEBUG("\n");
+#if 0
 	hip_send_update_all();
+#endif
 	*eof = 1;
 
 	return 0;
