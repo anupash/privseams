@@ -166,10 +166,11 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	/* pre-create cookie */
 	u = puzzle_or_solution;
 
-#ifndef CONFIG_SYSCTL
+
+#if defined(CONFIG_SYSCTL) || defined(CONFIG_SYSCTL_MODULE)
 	max_k = 20;
 #else
-	max_k = hip_sys_config.hip_cookie_max_k_r1;
+	max_k = hip_sysconfig_get_max_k();
 #endif
 	HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
 	if (u->pz.K > max_k) {

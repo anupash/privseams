@@ -1,13 +1,13 @@
 #include "sysctl.h"
 
-#ifdef CONFIG_SYSCTL
+#if defined(CONFIG_SYSCTL) || defined(CONFIG_SYSCTL_MODULE)
 /* /proc/sys/net/hip */
 int sysctl_hip_test = 0;
 static struct ctl_table_header *hip_sysctl_header = NULL;
 
 static int zero = 0, max_k = 64;  /* sysctl table wants pointers to ranges */
 
-struct hip_sys_config hip_sys_config;
+static struct hip_sys_config hip_sys_config;
 
 static ctl_table hip_table[] = {
 	{
@@ -56,6 +56,10 @@ void hip_unregister_sysctl(void)
 	HIP_DEBUG("\n");
 	if (hip_sysctl_header)
 		unregister_sysctl_table(hip_sysctl_header);
+}
+
+u8 hip_sysconfig_get_max_k(void) {
+	return hip_sys_config.hip_cookie_max_k_r1;
 }
 
 /**

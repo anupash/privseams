@@ -390,7 +390,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
-			res = resp->hdr.arg1 = hip_xfrm_init(&job->hdr.src_addr, &job->hdr.dst_addr);
+			res = resp->hdr.arg1 = hip_xfrm_dst_init(&job->hdr.src_addr, &job->hdr.dst_addr);
 			break;
 
 		case HIP_WO_SUBTYPE_XFRM_UPD:

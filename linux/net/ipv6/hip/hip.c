@@ -1313,7 +1313,9 @@ static int __init hip_init(void)
 
 	HIP_INFO("Initializing HIP module\n");
 	hip_get_load_time();
+#if defined(CONFIG_SYSCTL) || defined(CONFIG_SYSCTL_MODULE)
 	hip_init_sys_config();
+#endif
 
 	memset(&hip_kthreads, 0, sizeof(hip_kthreads));
 
@@ -1385,7 +1387,7 @@ static int __init hip_init(void)
 		HIP_ERROR("Could not register XFRM key manager for HIP\n");
 		goto out;
 	}
-#ifdef CONFIG_SYSCTL
+#if defined(CONFIG_SYSCTL) || defined(CONFIG_SYSCTL_MODULE)
 	if (!hip_register_sysctl()) {
 		HIP_ERROR("Could not register sysctl for HIP\n");
 		goto out;
@@ -1409,7 +1411,7 @@ static void __exit hip_cleanup(void)
 
 	HIP_INFO("Uninitializing HIP module\n");
 
-#ifdef CONFIG_SYSCTL
+#if defined(CONFIG_SYSCTL) || defined(CONFIG_SYSCTL_MODULE)
 	hip_unregister_sysctl();
 #endif
 	/* unregister XFRM km handler */

@@ -118,8 +118,6 @@ extern int kmm; // hip.c
 extern struct timeval gtv_start, gtv_stop, gtv_result;
 extern int gtv_inuse;
 
-extern spinlock_t dh_table_lock;
-
 #ifdef __KERNEL__
 int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
 			    int nsg, void *out);
@@ -132,18 +130,8 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
 void hip_net_event(int ifindex, uint32_t event_src, uint32_t event);
 
-//extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
 extern struct crypto_tfm *impl_sha1;
-//extern struct semaphore hip_work;
 extern struct socket *hip_output_socket;
-//extern spinlock_t hip_workqueue_lock;
 extern time_t load_time;
-
-#ifdef CONFIG_SYSCTL
-struct hip_sys_config {
-	int hip_cookie_max_k_r1;
-};
-extern struct hip_sys_config hip_sys_config;
-#endif
 
 #endif /* HIP_HIP_H */

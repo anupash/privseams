@@ -134,7 +134,7 @@ void hip_uninit_beetdb(void)
 /**
  *
  */
-int hip_xfrm_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
+int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
 	return 0;
 }
 

@@ -6,6 +6,7 @@
 #  include <linux/random.h>
 #  include <asm/scatterlist.h>
 #  include <net/ipv6.h>
+#  include "sysctl.h"
 #else
 #include "list.h"
 #endif /* __KERNEL__ */
