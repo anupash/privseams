@@ -971,7 +971,7 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
 }
 
 /**
- * hip_get_saddr_udp - get source HIT
+ * hip_get_saddr - get source HIT
  * @fl: flow containing the destination HIT
  * @hit_storage: where the source address is to be stored
  *
@@ -1870,6 +1870,7 @@ static void __exit hip_cleanup(void)
 	hip_rea_delete_sent_list();
 	hip_ac_delete_sent_list();
 	hip_update_spi_waitlist_delete_all();
+	HIP_DEBUG("TODO: delete SPI lists\n");
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

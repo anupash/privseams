@@ -11,6 +11,8 @@
  *  - Kristian Slavov <kslavov@hiit.fi>
  *
  *  TODO:
+ *  - split this file into net/hip.h (packet structs etc) and linux/hip.h
+ *    (implementation specific stuff)
  *  - hip_local_hi and hip_lhid contain reduntantly the anonymous bit?
  *  - hip_tlv_common should be packed?
  *  - the packing of the structures could be hidden in the builder
@@ -684,6 +686,14 @@ struct hip_peer_addr_list_item
 					   added or updated */
 };
 
+/* mm-02 test */
+struct hip_peer_spi_list_item
+{
+	struct list_head list;
+	uint32_t         spi;
+	struct list_head peer_addr_list; /* Peer's IPv6 addresses belonging to the SPI */
+};
+
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3
@@ -712,6 +722,7 @@ struct hip_hadb_state
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
+	struct list_head     peer_spi_list;  /* Peer's SPI values, mm-02 */
 
 	uint32_t             spi_out;       /* outbound IPsec SA SPI */
 	uint32_t             spi_in;        /* inbound IPsec SA SPI */

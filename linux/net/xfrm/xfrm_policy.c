@@ -772,13 +772,7 @@ restart:
 			break;
 
 		nx = xfrm_tmpl_resolve(policy, fl, xfrm, family);
-		if (nx > 0) {
-		  int i = 0;
-		  printk(KERN_DEBUG "xfrm_lookup: nx=%d\n", nx);
-		  for (i = 0; i < nx; i++) {
-		    printk(KERN_DEBUG "xfrm_lookup: SPI %d=0x%x\n", i, ntohl(xfrm[i]->id.spi));
-		  }
-		}
+
 		if (unlikely(nx<0)) {
 			err = nx;
 			if (err == -EAGAIN && flags) {
@@ -810,6 +804,15 @@ restart:
 			/* Flow passes not transformed. */
 			xfrm_pol_put(policy);
 			return 0;
+		}
+
+		if (nx > 0) {
+		  int i = 0;
+		  printk(KERN_DEBUG "xfrm_lookup: nx=%d\n", nx);
+		  printk(KERN_DEBUG "fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
+		  for (i = 0; i < nx; i++) {
+		    printk(KERN_DEBUG "xfrm_lookup: SPI %d=0x%x\n", i, ntohl(xfrm[i]->id.spi));
+		  }
 		}
 
 		dst = &rt->u.dst;

@@ -1348,6 +1348,28 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	/* jlu XXX: WRITE: Entry not touched after this */
 
+	{
+		int ret;
+		struct hip_peer_addr_list_item addr;
+
+		addr.interface_id = 0x9876;
+		addr.lifetime = 0x12345678;
+		ipv6_addr_copy(&addr.address, &ctx->skb_in->nh.ipv6h->saddr);
+		addr.address_state = PEER_ADDR_STATE_ACTIVE;
+		do_gettimeofday(&addr.modified_time);
+
+		HIP_LOCK_HA(entry);
+		hip_hadb_dump_spi_list(entry);
+		ret = hip_hadb_add_spi_addr(entry, spi_out, &addr);
+		HIP_DEBUG("add spi ret=%d\n", ret);
+		hip_hadb_dump_spi_list(entry);
+		ret = hip_hadb_add_spi_addr(entry, spi_out, &addr);
+
+		HIP_DEBUG("add spi ret=%d\n", ret);
+		hip_hadb_dump_spi_list(entry);
+		HIP_UNLOCK_HA(entry);
+	}
+
 	/* Build and send R2 */
 	r2 =  hip_msg_alloc();
 	if (!r2) {

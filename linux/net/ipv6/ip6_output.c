@@ -832,11 +832,11 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 				err = -ENETUNREACH;
 				goto out_err_release;
 			}
+			/* daddr is now destination HIT */
+			/* fl->fl6_dst and fl->fl6_dst are HITs */
 		}
 #endif
 		*dst = ip6_route_output(sk, fl);
-		/* daddr is now destination HIT */
-		/* fl->fl6_dst is now IPv6 address */
 	}
 	
 	
