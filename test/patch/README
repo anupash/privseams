@@ -51,6 +51,16 @@ The rest of the installation proceeds as is written in the Ethereal
 INSTALL file.
 
 
+UML patches exist for the 2.4.20 HIP kernel
+and the 2.6.3 HIP kernel.
+For 2.4.20 we have two patches. First one (hip-uml-2.4.20.patch) is
+intended for Debian Woody. The second one for Debian Sarge that has
+2.6 kernel headers installed).
+
+For tutorial and help on how to use UML, please check their website
+http://user-mode-linux.sourceforge.net.
+
+
 UML patch for 2.4.20 with HIP support
 -------------------------------------
 
@@ -92,8 +102,10 @@ Try to compile everything into the kernel (not modules). This way
 alternative 2 can be used.
 
 
-UML patch for 2.4.20 with HIP support in Debian unstable
+UML patch for 2.4.20 with HIP support in Debian Sarge
+(with 2.6 kernel header includes)
 --------------------------------------------------------
 
 Same as above apply. There will be lots of errors during
 the compilation of the UML kernel, but just ignore them.
+
