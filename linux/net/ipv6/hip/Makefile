@@ -4,7 +4,7 @@
 
 obj-$(CONFIG_HIP) += hipmod.o
 
-hipmod-objs := preinput.o preoutput.o hip.o builder.o keymat.o unit.o test.o input.o output.o \
+hipmod-objs := sysctl.o preinput.o preoutput.o hip.o builder.o keymat.o unit.o test.o input.o output.o \
 	       hidb.o hadb.o debug.o cookie.o workqueue.o misc.o dh.o \
                socket.o hashtable.o rvs.o update.o netlink.o xfrm.o beet.o \
                preinput.o preoutput.o

@@ -21,9 +21,7 @@
 #  include <linux/suspend.h>
 #  include <linux/completion.h>
 #  include <linux/cpumask.h>
-#  ifdef CONFIG_SYSCTL
-#    include <linux/sysctl.h>
-#  endif
+#  include "sysctl.h"
 #else
 
 #include <stdlib.h>
