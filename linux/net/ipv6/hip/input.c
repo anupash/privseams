@@ -1962,14 +1962,14 @@ int hip_handle_r2(struct sk_buff *skb)
 	/* Now, if we have cached SK, use it */
 	{
 		int val;
-		struct hip_kludge *kg = NULL, *kg_curr, *kg_iter;
-		int tlist[1] = { HIP_HADB_SK };
-		void *setlist[1] = { kg };
+		struct hip_kludge *kg_curr, *kg_iter;
+		struct hip_kludge *kg;
+		struct hip_hadb_state *entry;
+		unsigned long fl;
 
-		val = hip_hadb_multiget(&ctx->input->hits, 1, tlist, setlist, 
-					HIP_ARG_HIT);
-		if (val == 0) 
-			goto out_err;
+		hip_hadb_acquire_db_access(&fl);
+		entry = hip_hadb_access_db(&r2->hits, HIP_ARG_HIT);
+		hip_hadb_release_db_access(fl);
 
 		/* this is problematic operation:
 		 * 1) Somebody might fiddle with the socketlist while we go through it.
@@ -1978,8 +1978,23 @@ int hip_handle_r2(struct sk_buff *skb)
 		 *    release the socket once. How do we know, if it's ok to release the
 		 *    sock?
 		 */
+		
+		if (!entry) {
+			HIP_ERROR("No entry\n");
+			err = -EINVAL;
+			goto out_err;
+		}
+
+		kg = &entry->kg;
 		list_for_each_entry_safe(kg_curr, kg_iter, &kg->socklist, socklist) {
 			/* make sure that the sock is locked */
+			HIP_DEBUG("Current KG: %p, socket: %p\n",kg_curr, kg_curr->sk);
+
+			if (kg_curr->sk == NULL) {
+				HIP_ERROR("Socket = NULL!\n");
+				continue;
+			}
+
 			lock_sock(kg_curr->sk);
 
 			if (tcp_connect(kg_curr->sk)) {

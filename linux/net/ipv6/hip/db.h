@@ -160,10 +160,10 @@ typedef struct hip_host_id HIP_HID;
 
 void hip_hadb_free_kludge(struct in6_addr *hit);
 int hip_hadb_flush_states(struct in6_addr *hit);
-void hip_hadb_acquire_ex_db_access(int *flags);
-void hip_hadb_release_ex_db_access(int flags);
-void hip_hadb_acquire_db_access(int *flags);
-void hip_hadb_release_db_access(int flags);
+void hip_hadb_acquire_ex_db_access(unsigned long *flags);
+void hip_hadb_release_ex_db_access(unsigned long flags);
+void hip_hadb_acquire_db_access(unsigned long *flags);
+void hip_hadb_release_db_access(unsigned long flags);
 struct hip_hadb_state *hip_hadb_access_db(void *arg, int type);
 int hip_hadb_reinitialize_state(void *arg, int type);
 
