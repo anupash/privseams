@@ -945,7 +945,6 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 	int err = 0;
 	struct hip_common *bos = NULL;
 	struct in6_addr hit_our;
- 	struct in6_addr dst_hit;
 	struct in6_addr daddr;
  	int i, mask;
  	struct hip_host_id  *host_id_pub = NULL;
@@ -1003,10 +1002,9 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 	    IP ( HIP ( HOST_ID,
               HIP_SIGNATURE ) )
 	 */
- 	memset(&dst_hit, 0, sizeof(struct in6_addr));
 	mask = HIP_CONTROL_NONE;
 
- 	hip_build_network_hdr(bos, HIP_BOS, mask, &hit_our, &dst_hit);
+ 	hip_build_network_hdr(bos, HIP_BOS, mask, &hit_our, NULL);
 
 	/********** HOST_ID *********/
 

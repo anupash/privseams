@@ -331,7 +331,6 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 {
  	struct hip_common *msg;
- 	struct in6_addr dst_hit;
  	int err = 0;
  	u8 *dh_data = NULL;
  	int dh_size,written, mask;
@@ -383,15 +382,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	}
 
  	/* Ready to begin building of the R1 packet */
- 	memset(&dst_hit, 0, sizeof(struct in6_addr));
-
 	mask = HIP_CONTROL_NONE;
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 
- 	hip_build_network_hdr(msg, HIP_R1, mask, src_hit,
- 			      &dst_hit);
+ 	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 

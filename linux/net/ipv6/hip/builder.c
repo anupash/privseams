@@ -1220,8 +1220,8 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 	msg->control = htons(control);
 	msg->checksum = htons(0); /* this will be written by xmit */
 
-	memcpy(&msg->hits, hit_sender, sizeof(struct in6_addr));
-	memcpy(&msg->hitr, hit_receiver, sizeof(struct in6_addr));
+	ipv6_addr_copy(&msg->hits, hit_sender ? hit_sender : &in6addr_any);
+	ipv6_addr_copy(&msg->hitr, hit_receiver ? hit_receiver : &in6addr_any);
 }
 
 #ifdef __KERNEL__
