@@ -116,9 +116,8 @@ int main(int argc, char *argv[]) {
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}
-		
-		hwo = hip_get_work_order();
-		if (hwo) {
+
+		while (hwo = hip_get_work_order()) {
 			hip_do_work(hwo);
 			HIP_DEBUG("Work done\n");
 		}
