@@ -27,55 +27,33 @@ public class HipAddress {
 
     static {
 	System.loadLibrary("jip");
+	nativeInit();
     }
+
+    private short value;
 
     /*
      * At this point we have no use for HipAddress objects, so we
      * don't want anybody instantiating them.
      */
-    private HipAddress () {
+    private HipAddress (short value) {
+	this.value = value;
     }
 
-    private native static byte[][] getAddresses (String host);
+    private native static void nativeInit ();
 
-    /**
-     * Returns all HIP addresses of a host based on its name.  The
-     * returned addresses can be used in conjunction with the {@link
-     * HipSocket} socket implementation.
-     *
-     * @param host the name of the host, either DNS name or literal
-     * IPv6 address
-     * @return all known HIP addresses of <code>host</code>
-     */
-    public static InetAddress[] getAllByName (String host) {
-	byte[][] addrs = getAddresses(host);
-	InetAddress[] result = new InetAddress[addrs.length];
-	try {
-	    for (int i = 0; i < addrs.length; i++) {
-		result[i] = InetAddress.getByAddress(addrs[i]);
-	    }
-	} catch (UnknownHostException ex) {
-	    /*
-	     * This exception cannot happen, since we know that
-	     * getAddresses only returns proper arrays.  But print
-	     * stack trace for debugging anyway.
-	     */
-	    ex.printStackTrace();
-	}
-	return result;
-    }
+    public native static HipAddress[] getAllByName (String host);
 
-    /**
-     * Returns the primary HIP address of a host based on its name.
-     * The returned address can be used in conjunction with the {@link
-     * HipSocket} socket implementation.
-     *
-     * @param host the name of the host, either DNS name or literal
-     * IPv6 address
-     * @return the primary HIP address of <code>host</code>
-     */
-    public static InetAddress getByName (String host) {
+    public static HipAddress getByName (String host) {
 	return getAllByName(host)[0];
+    }
+
+    public static HipAddress[] getAllByAddress (InetAddress addr) {
+	return getAllByName(addr.getHostName());
+    }
+
+    public static HipAddress getByAddress (InetAddress addr) {
+	return getAllByAddress(addr)[0];
     }
 
 }

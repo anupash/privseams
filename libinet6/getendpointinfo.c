@@ -97,8 +97,8 @@ int convert_port_string_to_number(const char *servname, in_port_t *port)
       HIP_PERROR("strtol failed:");
       err = EEI_NONAME;
       goto out_err;
-    } else if (port <= 0) {
-      HIP_ERROR("Invalid port: %d\n", port);
+    } else if (*port <= 0) {
+      HIP_ERROR("Invalid port: %d\n", *port);
       err = EEI_NONAME;
       goto out_err;
     }
@@ -149,7 +149,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     goto out_err;
   }
 
-  if (strlen(servname) == 0) {
+  if (servname == NULL || strlen(servname) == 0) {
     port = 0; /* Ephemeral port */
     goto skip_port_conversion;
   }
@@ -235,7 +235,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   struct hip_common *msg = NULL;
   struct addrinfo *addr;
   struct sockaddr_eid *sa_eid;
-  in_port_t port;
+  in_port_t port = 0;
 
   HIP_DEBUG("\n");
 
@@ -264,10 +264,12 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     goto out_err;
   }
 
-  err = convert_port_string_to_number(servname, &port);
-  if (err) {
-    HIP_ERROR("Port conversion failed (%d)\n", err);
-    goto out_err;
+  if (servname != NULL) {
+    err = convert_port_string_to_number(servname, &port);
+    if (err) {
+      HIP_ERROR("Port conversion failed (%d)\n", err);
+      goto out_err;
+    }
   }
 
   HIP_DEBUG("port=%d\n", port);
@@ -402,6 +404,9 @@ void free_endpointinfo(struct endpointinfo *res)
  * Only one identity at a time can be resolved with this function. If multiple
  * identities are needed, one needs to call this function multiple times
  * with different @basename arguments and link the results together.
+ *
+ * XX FIX: LOCAL RESOLVER SHOULD RESOLVE PUBLIC KEYS, NOT
+ * PRIVATE. CHECK THAT IT WORKS WITH THE USER-KEY TEST PROGRAM.
  *
  * Returns: zero on success, or negative error value on failure
  */

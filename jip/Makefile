@@ -12,11 +12,11 @@ ifndef JAVA_HOME
 JAVA_HOME=/usr/lib/j2se/1.4
 endif
 
-JAVA_SOURCES=HipAddress.java HipSocket.java HipSocketFactory.java NativeInputStream.java NativeOutputStream.java
-C_SOURCES=hip-address.c hip-socket.c native-stream.c
+JAVA_SOURCES=HipAddress.java HipSocketImpl.java HipSocketImplFactory.java NativeInputStream.java NativeOutputStream.java
+C_SOURCES=hip-address.c hip-socket-impl.c native-stream.c
 JAVA_CLASSES=$(patsubst %.java,jip/%.class,$(JAVA_SOURCES))
-JAVA_HEADERS=jip_HipAddress.h jip_HipSocket.h jip_NativeInputStream.h jip_NativeOutputStream.h
-CFLAGS+=-I../tools -I../libinet6/include -I.. -I../linux/include -I../linux/net/ipv6/hip -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux
+JAVA_HEADERS=jip_HipAddress.h jip_HipSocketImpl.h jip_NativeInputStream.h jip_NativeOutputStream.h
+CFLAGS+=-Wall -W -I../tools -I../libinet6/include -I.. -I../linux/include -I../linux/net/ipv6/hip -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux
 
 LDFLAGS+=-L../libinet6
 

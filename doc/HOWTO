@@ -250,12 +250,12 @@ resolver methods in the HipAddress class as is done in the example.
 Run the example applications as follows:
 
 crash # cd path-to-hipl/test
-crash # (modprobe hipmod)
+crash # modprobe hipmod
 crash # ../tools/hipconf add hi default
 crash # ./java HipServer crash 12345
 
 oops # cd test
-oops # (modprobe hipmod)
+oops # modprobe hipmod
 oops # ../tools/hipconf add hi default
 oops # ./java HipClient crash 12345 oops 54321
 <wait for the prompt, type some text and press enter>
@@ -263,6 +263,24 @@ oops # ./java HipClient crash 12345 oops 54321
 The shell script "test/java" contains some LD_PRELOAD, library and
 class path information necessary for executing the HIP enabled java
 applications.
+
+HIP Enabled Telnet
+=========================
+
+# cd libinet
+# ./configure
+# make
+# cd ../test/telnetd
+# ./configure
+# make
+# cd ../telnet
+# ./configure
+# make
+
+oops  # telnetd/telnetd -debug 12345
+crash # telnet/telnet -l username oops 12345
+
+Note: the username must be non-root.
 
 HIP Enabled Telnet
 =========================

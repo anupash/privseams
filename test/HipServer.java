@@ -1,26 +1,26 @@
 import java.net.Socket;
 import java.net.ServerSocket;
+import java.net.InetSocketAddress;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.io.InputStreamReader;
-import jip.HipAddress;
-import jip.HipSocketFactory;
+import jip.HipSocketImplFactory;
 
 public class HipServer {
 
     public static void main (String[] args) {
 	try {
-	    ServerSocket.setSocketFactory(new HipSocketFactory());
-	    Socket.setSocketImplFactory(new HipSocketFactory());
-	    if (args.length < 2) {
-		System.err.println("Usage: HipServer <host> <port>");
+	    ServerSocket.setSocketFactory(new HipSocketImplFactory());
+	    Socket.setSocketImplFactory(new HipSocketImplFactory());
+	    if (args.length != 1) {
+		System.err.println("Usage: HipServer <port>");
 		System.exit(1);
 	    }
-	    int port = Integer.parseInt(args[1]);
-	    ServerSocket ss =
-		new ServerSocket(port, 5, HipAddress.getByName(args[0]));
+	    int port = Integer.parseInt(args[0]);
+	    ServerSocket ss = new ServerSocket();
+	    ss.bind(new InetSocketAddress("", port));
 	    System.out.println(ss.toString());
 	    Socket s = ss.accept();
 	    System.out.println(s.toString());

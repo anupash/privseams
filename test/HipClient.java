@@ -6,31 +6,24 @@ import java.io.OutputStream;
 import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.io.InputStreamReader;
-import jip.HipAddress;
-import jip.HipSocketFactory;
+import jip.HipSocketImplFactory;
 
 public class HipClient {
 
     public static void main (String[] args) {
 	try {
-	    Socket.setSocketImplFactory(new HipSocketFactory());
-	    if (args.length < 4) {
-		System.err.println("Usage: HipClient <host> <port> <local> "
+	    Socket.setSocketImplFactory(new HipSocketImplFactory());
+	    if (args.length != 3) {
+		System.err.println("Usage: HipClient <host> <port> "
 				   + "<localport>");
 		System.exit(1);
 	    }
 	    String host = args[0];
 	    int port = Integer.parseInt(args[1]);
-	    String local = args[2];
-	    int localport = Integer.parseInt(args[3]);
-	    Socket s = new Socket(HipAddress.getByName(host), port,
-				  HipAddress.getByName(local), localport);
-	    /*
-	    System.out.println(s.toString());
-	    s.bind(new InetSocketAddress(local, localport));
-	    System.out.println(s.toString());
+	    int localport = Integer.parseInt(args[2]);
+	    Socket s = new Socket();
+	    s.bind(new InetSocketAddress("", localport));
 	    s.connect(new InetSocketAddress(host, port));
-	    */
 	    System.out.println(s.toString());
 	    InputStream is = s.getInputStream();
 	    System.out.println(is.toString());
