@@ -377,6 +377,17 @@ Steps:
 
 Notes:
 
-  * "double jump" scenario does not work yet with the implementation
-  * the rendezvous mechanism is not yet guaranteed to be interoperable with
-    other implementations than HIPL
+  * The implemented mechanism is simple forwarding of I1 packet with 
+    source and  destination IPv6 addresses rewritten.
+  * No changes were  made to the REA / mm-code,  which means that, for 
+    example, the double jump scenario does not work.
+    * Changes will be made when upgrade from mm-00 to mm-02 is finished.
+  * The mechanism  does not comply 100% with the RVS draft.
+    * We don't use REA TLV in R1 (from responder to initiator). The same 
+      functionality is achieved by using the sender's IP address of 
+      the R1 packet.
+    * The VIA_RVS TLV is also left out, since it is meant only for 
+      diagnostic purposes, and doesn't really add anything to the
+      implementation, except for bugs. :)
+    * The rendezvous mechanism is not yet guaranteed to be interoperable 
+      with other implementations than HIPL
