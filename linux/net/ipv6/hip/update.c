@@ -162,7 +162,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 		HIP_DEBUG("Switching from SPI_OUT=0x%x to NEW_SPI_OUT=0x%x\n",
 			  entry->spi_out, entry->new_spi_out);
 		old_spi_out = entry->spi_out;
-		hip_hadb_remove_state_spi(entry);
+//		hip_hadb_remove_state_spi(entry);
 		entry->spi_out = entry->new_spi_out;
 		hip_hadb_insert_state(entry);
 
@@ -783,9 +783,10 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 
 	HIP_DEBUG("switching to new updated inbound SPI=0x%x, new_spi_in\n", new_spi_in);
 
-	hip_hadb_remove_state_spi(entry);
+	//hip_hadb_remove_state_spi(entry); /* todo */
 	entry->spi_in = new_spi_in;
-	hip_hadb_insert_state(entry);
+	//hip_hadb_insert_state(entry);
+	hip_hadb_insert_state_spi_list(entry, entry->spi_in);
 
 	_HIP_DEBUG("switch ok\n");
 

@@ -113,35 +113,34 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	HIP_DEBUG("spi=0x%x\n", spi);
 	ha = hip_hadb_find_byspi_list(spi);
 	if (!ha) {
-		HIP_INFO("HT BYSPILIST: NOT found SPI 0x%x\n",spi);
-	} else {
-		HIP_INFO("HT BYSPILIST: found SPI 0x%x\n",spi);
-		hip_put_ha(ha);
+		HIP_INFO("HT BYSPILIST: NOT found, unknown SPI 0x%x\n",spi);
+		return;
 	}
 
+	HIP_INFO("HT BYSPILIST: found SPI 0x%x\n",spi);
+#if 0
+	/* old code, will be removed */
 	ha = hip_hadb_find_byspi(spi);
 	if (!ha) {
 		HIP_INFO("Unknown SPI: 0x%x\n",spi);
 		return;
 	}
-
-	ipv6_addr_copy(&hdr->daddr, &ha->hit_our);
-	ipv6_addr_copy(&hdr->saddr, &ha->hit_peer);
-
+#endif
 	/* New in draft-10: If we are responder and in some proper state, then
 	   as soon as we receive ESP packets for a valid SA, we should transition
 	   to ESTABLISHED state.
 	   Since we want to avoid excessive hooks, we will do it here, although the
 	   SA check is done later... (and the SA might be invalid).
 	*/
-
 	if (ha->state == HIP_STATE_R2_SENT) {
 		ha->state = HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("Transition to ESTABLISHED state\n");
 	}
 
-	hip_put_ha(ha);
+	ipv6_addr_copy(&hdr->daddr, &ha->hit_our);
+	ipv6_addr_copy(&hdr->saddr, &ha->hit_peer);
 
+	hip_put_ha(ha);
 	return;
 }
 
@@ -1762,7 +1761,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("INSERTING STATE TO SPI LIST\n");
 	err = hip_hadb_insert_state_spi_list(entry, spi_in);
-	if (err) {
+	if (err && err != -EEXIST) {
 		HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
 		goto out_err;
 	}
@@ -2006,7 +2005,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
 		HIP_DEBUG("INSERTING STATE TO SPI LIST\n");
 		err = hip_hadb_insert_state_spi_list(entry, spi_in);
-		if (err) {
+		if (err && err != -EEXIST) {
 			HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
 			goto out_err;
 		}

@@ -112,30 +112,43 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 /* this probably is not used anymore? */
 int hip_delete_esp(hip_ha_t *entry)
 {
-	uint32_t spi_out, spi_in, new_spi_out, new_spi_in;
-
+//	uint32_t spi_out, spi_in, new_spi_out, new_spi_in;
 	HIP_LOCK_HA(entry);
-	spi_out = entry->spi_out;
-	spi_in = entry->spi_in;
-	new_spi_out = entry->new_spi_out;
-	new_spi_in = entry->new_spi_in;
-	HIP_UNLOCK_HA(entry);
+//	spi_out = entry->spi_out;
+//	spi_in = entry->spi_in;
+//	new_spi_out = entry->new_spi_out;
+//	new_spi_in = entry->new_spi_in;
+//	HIP_UNLOCK_HA(entry);
 
-	hip_delete_sa(spi_out, &entry->hit_peer);
-	hip_delete_sa(spi_in, &entry->hit_our);
-	hip_delete_sa(new_spi_out, &entry->hit_peer);
-	hip_delete_sa(new_spi_in, &entry->hit_our);
+	hip_delete_sa(entry->spi_out, &entry->hit_peer);
+	hip_delete_sa(entry->spi_in, &entry->hit_our);
+	hip_delete_sa(entry->new_spi_out, &entry->hit_peer);
+	hip_delete_sa(entry->new_spi_in, &entry->hit_our);
 
-	/* unlinks entry from our SPI table */
-	hip_hadb_remove_state_spi(entry);
+	hip_hadb_deactivate_hs_spi(entry->spi_in);
+	hip_hadb_deactivate_hs_spi(entry->new_spi_in);
 
-	HIP_LOCK_HA(entry);
+	/* unlinks entry from our HIT-SPI table */
+#if 0
+	//	hip_hadb_remove_state_spi(entry);
+	{
+		struct hip_hit_spi hs;
+		hs.spi = entry->spi_in;
+		ipv6_addr_copy(&hs.hit, &entry->hit_peer);
+		/* actually can't do this here, because hs does not
+		 * refer to valid mapping */
+		/* -> todo: how to delete HIT-SPI mapping */
+		//hip_hadb_remove_hs(hs);
+	}
+#endif
+
+//	HIP_LOCK_HA(entry);
 	entry->spi_out = 0;
 	entry->spi_in = 0;
 	entry->new_spi_out = 0;
 	entry->new_spi_in = 0;
-	HIP_UNLOCK_HA(entry);
 
+	HIP_UNLOCK_HA(entry);
 	return 0;
 }
 

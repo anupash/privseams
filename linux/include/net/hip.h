@@ -759,6 +759,15 @@ struct hip_peer_spi_list_item
 #define HIP_TYPE_HA    1
 #define HIP_TYPE_RVA   2
 
+struct hip_hit_spi {
+	struct list_head list;
+	spinlock_t       lock;
+	atomic_t         refcnt;
+	hip_hit_t        hit;
+	uint32_t         spi; /* this SPI spi belongs to the HIT hit */
+	int              is_active;
+};
+
 /* inbound IPsec SA SPI mappings */
 struct hip_ifindex2spi_map {
 	struct list_head list;
@@ -778,7 +787,7 @@ struct hip_hadb_state
 {
 	uint8_t              type;         /* RVAs and HAs are stored in the same hash table */
 	struct list_head     next_hit;
-	struct list_head     next_spi;
+//	struct list_head     next_spi;
 	struct list_head     next_spi_list;
 
 
@@ -800,7 +809,7 @@ struct hip_hadb_state
 	uint32_t             new_spi_out;    /* new outbound IPsec SA SPI received in UPDATE */
 	uint32_t             new_spi_in;     /* new inbound IPsec SA SPI when rekey was initiated */
 
-	/* test code for multiple SA support, will replace spi_in and spi_out */
+	/* test code for multiple SA support, will replace (new)spi_in and (new)spi_out */
 	struct list_head     spis_in;        /* SPIs for inbound and outbound SAs */
 	struct list_head     spis_out;
 

@@ -106,7 +106,7 @@ int hip_ht_init(HIP_HASHTABLE *ht)
 	HIP_ASSERT(ht);
 	HIP_ASSERT(ht->head);
 	HIP_ASSERT(ht->hashsize);
-	HIP_ASSERT(ht->offset);
+	// HIP_ASSERT(ht->offset); will fail if list_head field is first in the struct */
 	HIP_ASSERT(ht->hash);
 	HIP_ASSERT(ht->compare);
 	HIP_ASSERT(ht->hold);
