@@ -716,7 +716,8 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 	struct hip_host_id *host_identity = NULL;
 	struct hip_lhi lhi;
 	struct hip_tlv_common *param = NULL;
-	
+	struct hip_eid_endpoint *eid_endpoint = NULL;
+
 	HIP_DEBUG("\n");
 	
 	if ((err = hip_get_msg_err(input)) != 0) {
@@ -729,13 +730,15 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
         /* Iterate through all host identities in the input */
 	while((param = hip_get_next_param(input, param)) != NULL) {
 		
-		if (hip_get_param_type(param) != HIP_PARAM_HOST_ID)
+		/* NOTE: changed to use hip_eid_endpoint structs instead of 
+		   hip_host_id:s when passing IDs from user space to kernel */
+		if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
                         continue;
 		HIP_DEBUG("host id found in the msg\n");
 		
-		host_identity = (struct hip_host_id *)param;
+		eid_endpoint = (struct hip_eid_endpoint *)param;
 		
-		if (!host_identity) {
+		if (!eid_endpoint) {
 			HIP_ERROR("no host identity pubkey(s) in response\n");
 			err = -ENOENT;
 			goto out_err;
@@ -744,6 +747,8 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 		_HIP_HEXDUMP("host id\n", host_identity,
 			     hip_get_param_total_len(host_identity));
 		
+		host_identity = &eid_endpoint->endpoint.id.host_id;
+
 		err = hip_private_host_id_to_hit(host_identity, 
 						 &lhi.hit,
 						 HIP_HIT_TYPE_HASH126);
@@ -751,6 +756,10 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 			HIP_ERROR("host id to hit conversion failed\n");
 			goto out_err;
 		}
+
+		lhi.anonymous =
+			(eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
+			1 : 0;
 		
 		err = hip_socket_add_local_hi(host_identity, &lhi);
 		if (err) {
@@ -759,7 +768,7 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 		}
 		
 		HIP_DEBUG("Adding of HIP localhost identity was successful\n");
-
+		
 		HIP_DEBUG("hip: Generating a new R1 now\n");
 	
 		if (!hip_precreate_r1(&lhi.hit)) {

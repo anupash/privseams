@@ -1088,17 +1088,59 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
   }
   memset(*endpoint, 0, endpoint_hdr.length);
 
-  HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
 
   hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
 		     dsa_key_rr, dsa_key_rr_len);
 			   
-  HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
 
  out_err:
 
   if (dsa_key_rr)
     free(dsa_key_rr);
+
+  return err;
+}
+
+int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname)
+{
+  int err = 0;
+  unsigned char *rsa_key_rr = NULL;
+  int rsa_key_rr_len;
+  struct endpoint_hip endpoint_hdr;
+
+  rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
+  if (rsa_key_rr_len <= 0) {
+    HIP_ERROR("rsa_key_rr_len <= 0\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  /* build just an endpoint header to see how much memory is needed for the
+     actual endpoint */
+  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
+			 HIP_HI_RSA, rsa_key_rr_len);
+
+  *endpoint = malloc(endpoint_hdr.length);
+  if (!(*endpoint)) {
+    err = -ENOMEM;
+    goto out_err;
+  }
+  memset(*endpoint, 0, endpoint_hdr.length);
+
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+
+  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
+		     rsa_key_rr, rsa_key_rr_len);
+			   
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+
+ out_err:
+
+  if (rsa_key_rr)
+    free(rsa_key_rr);
 
   return err;
 }

@@ -229,6 +229,8 @@ int handle_hi(struct hip_common *msg,
   RSA *rsa_key = NULL;
   char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
   int fmt;
+  struct endpoint_hip *endpoint_dsa_hip = NULL;
+  struct endpoint_hip *endpoint_rsa_hip = NULL;
 
   _HIP_INFO("action=%d optc=%d\n", action, optc);
 
@@ -406,6 +408,22 @@ int handle_hi(struct hip_common *msg,
       err = -EFAULT;
       goto out;
     }
+    
+    err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip, 
+			      HIP_ENDPOINT_FLAG_ANON, /*TODO:FLAG?*/
+			      hostname);
+    if (err) {
+      HIP_ERROR("Failed to allocate and build DSA endpoint.\n");
+      goto out;
+    }
+    
+    err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip, 
+			      HIP_ENDPOINT_FLAG_ANON, /*TODO:FLAG?*/
+			      hostname);
+    if (err) {
+      HIP_ERROR("Failed to allocate and build RSA endpoint.\n");
+      goto out;
+    }
 
     err = dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH126, &dsa_lhi.hit);
     if (err) {
@@ -438,7 +456,7 @@ int handle_hi(struct hip_common *msg,
      2) Lhi should be enough to do the deletion. */
   if (numeric_action == ACTION_DEL)
     goto skip_host_id;
-
+  /*
   err = alloc_and_set_host_id_param_hdr(&dsa_host_id, dsa_key_rr_len,
 					HIP_HI_DSA, hostname);
   if (err) {
@@ -450,14 +468,16 @@ int handle_hi(struct hip_common *msg,
   if (err) {
     goto out;
   }
-
-  err = hip_build_param_host_id(msg, dsa_host_id, dsa_key_rr, hostname);
+  */
+  err = hip_build_param_eid_endpoint(msg, endpoint_dsa_hip);
+  //err = hip_build_param_host_id(msg, dsa_host_id, dsa_key_rr, hostname);
   if (err) {
     HIP_ERROR("Building of host id failed\n");
     goto out;
   }
 
-  err = hip_build_param_host_id(msg, rsa_host_id, rsa_key_rr, hostname);
+  err = hip_build_param_eid_endpoint(msg, endpoint_rsa_hip);
+  //err = hip_build_param_host_id(msg, rsa_host_id, rsa_key_rr, hostname);
   if (err) {
     HIP_ERROR("Building of host id failed\n");
     goto out;
