@@ -566,9 +566,9 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 	struct dst_entry *dst;
 	int addr_type;
 	int err;
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	/* BEGIN HIPL PATCH */
 	int hip_xfrm_lookup_flags = 0;
-#endif /* CONFIG_HIP */		
+	/* END HIPL PATCH */
 
 	if (addr_len < SIN6_LEN_RFC2133) 
 		return -EINVAL;
