@@ -58,7 +58,7 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 
 # HIP additions to the flags.
 CFLAGS += -g -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_TOOLS) -I$(HIPL)
-CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE) -Iinclude_glibc
+CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE)
 
 include_HEADERS = libc-compat.h debug.h crypto.h message.h builder.h
 

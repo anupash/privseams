@@ -1,13 +1,10 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
-#ifdef __KERNEL__
-#  include <linux/list.h>
-#  include <linux/spinlock.h>
-#  include <net/ipv6.h>
-#  include <net/hip.h>
-#endif /* __KERNEL__ */
-
+#include <linux/list.h>
+#include <linux/spinlock.h>
+#include <net/ipv6.h>
+#include <net/hip.h>
 #include "hip.h"
 
 #define HIP_MAX_COOKIE_INFO 10

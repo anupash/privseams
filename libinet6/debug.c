@@ -44,7 +44,7 @@
  *
  */
 
-#include "debug.h"
+#include "libinet6/debug.h"
 
 /* differentiate between die(), error() and debug() error levels */
 enum debug_level { DEBUG_LEVEL_DIE,

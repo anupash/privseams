@@ -110,6 +110,5 @@ AC_SUBST(usagi_libc)
 AC_CONFIG_FILES([Makefile
                 libinet6/Makefile
                 tools/Makefile
-                hipd/Makefile
                 test/Makefile])
 AC_OUTPUT

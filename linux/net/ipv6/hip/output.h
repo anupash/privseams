@@ -1,14 +1,11 @@
 #ifndef HIP_OUTPUT_H
 #define HIP_OUTPUT_H
 
-#ifdef __KERNEL__
-#  include <linux/ipv6.h>
-#  include <linux/skbuff.h>
-#endif /* __KERNEL__ */
-
-#include <net/hip.h>
 #include "hadb.h"
 
+#include <linux/ipv6.h>
+#include <linux/skbuff.h>
+#include <net/hip.h>
 
 int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 		struct in6_addr *dst_hit);

@@ -1,8 +1,9 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
 
-#include <net/hip.h>
 #include "debug.h"
+
+#include <net/hip.h>
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100

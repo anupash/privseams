@@ -19,7 +19,6 @@
 #define NETLINK_DNRTMSG		14	/* DECnet routing messages */
 #define NETLINK_KOBJECT_UEVENT	15	/* Kernel messages to userspace */
 #define NETLINK_TAPBASE		16	/* 16 to 31 are ethertap */
-#define NETLINK_HIP           99   /* Host Identity Protocol signalling messages */
 
 #define MAX_LINKS 32		
 

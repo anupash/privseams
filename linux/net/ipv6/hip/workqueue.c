@@ -12,21 +12,16 @@
  * adding to. This is ensured by local_irq_save().
  *
  */
-#ifdef __KERNEL__
+
+#include "workqueue.h"
+#include "debug.h"
+
 #include <asm/semaphore.h>
 #include <asm/percpu.h>
 #include <asm/system.h>
 #include <linux/list.h>
 #include <linux/interrupt.h>
-#endif
 
-#include "list.h"
-#include "workqueue.h"
-#include "debug.h"
-#include "builder.h"
-
-#ifdef __KERNEL__
-#ifndef CONFIG_HIP_USERSPACE 
 /* HIP Per Cpu WorkQueue */
 struct hip_pc_wq {
 	struct semaphore worklock;
@@ -34,24 +29,11 @@ struct hip_pc_wq {
 };
 
 static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
-#else
-static sock *nl_sk = NULL;
-u32 hipd_pid;
-
-void nl_data_ready (struct sock *sk, int len)
-{
-	wake_up_interruptible(sk->sleep);
-}
-
-#endif
-#else
-static int netlink_fd;
-#endif
 
 /**
  * hip_get_work_order - Get one work order from workqueue
  * 
- * HIP daemons call this function when waiting for
+ * HIP kernel daemons call this function when waiting for
  * work. They will sleep until a work order is received, which
  * is signalled by up()ing semaphore.
  * The received work order is removed from the workqueue and
@@ -61,11 +43,9 @@ static int netlink_fd;
  */
 struct hip_work_order *hip_get_work_order(void)
 {
-	struct hip_work_order *result;
-#ifdef __KERNEL__
-#ifndef CONFIG_HIP_USERSPACE
 	unsigned long eflags;
 	struct hip_pc_wq *wq;
+	struct hip_work_order *result;
 	int locked;
 
 	/* get_cpu_var / put_cpu_var ? */
@@ -100,54 +80,8 @@ struct hip_work_order *hip_get_work_order(void)
 
  err:	
 	local_irq_restore(eflags);
-
-#else 
-     char *payload = NULL;
-	struct sk_buff *skb = NULL;
-	struct nlmsghdr *nlh = NULL;
-     struct hip_work_order_hdr *hwoh = NULL;
-     uint16_t msg_len;
-	int err;
-
-	/* wait for message coming down from user-space */
-	skb = skb_recv_datagram(nl_sk, 0, 0, &err);     
-     /** FIXME: error check */
-     nlh = (struct nlmsghdr *)skb->data;
-     hipd_pid = nlh->nlmsg_pid;
-     
-     result = HIP_MALLOC(sizeof(hip_work_order), GFP_KERNEL);
-     if (!result) {
-          HIP_ERROR("Out of memory.\n");
-          kfree_skb(skb);
-          result = NULL;
-          goto err;
-     }
-     
-     hwoh = (struct hip_work_order_hdr *)NLMSG_DATA(nlh);
-     result->type = hwoh->type;
-     result->subtype = hwoh->subtype;
-     msg_len = hip_get_msg_total_len(&hwoh->msg);
-     
-     result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
-     if (!result->msg) {
-          HIP_ERROR("Out of memory.\n");
-          kfree_skb(skb);
-          HIP_FREE(hwo);
-          result = NULL;
-          goto err;
-     }
-
-     memcpy(result->msg, &hwoh->msg, msg_len);
-     result = hwo;
-     kfree_skb(skb);
-
- err:
-#endif
-#else
-// get from the netlink in userspace
-	HIP_ERROR("Not implemented!");	// FIXME (tkoponen)
-#endif
 	return result;
+
 }
 
 /**
@@ -162,8 +96,6 @@ struct hip_work_order *hip_get_work_order(void)
  *
  * Returns 1, if ok. -1 if error
  */
-#ifdef __KERNEL__
-#ifndef CONFIG_HIP_USERSPACE
 static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	unsigned long eflags;
@@ -194,34 +126,9 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 	local_irq_restore(eflags);
 	return 1;
 }
-#endif
-#endif
-
-#ifdef CONFIG_HIP_USERSPACE
-static int hip_insert_work_order_netlink(struct hip_work_order *hwo) 
-{
-	struct hip_work_order_hdr hdr;
-
-	hdr.type = hwo->type;
-	hdr.subtype = hwo->subtype;
-
-#ifdef __KERNEL__
-	NETLINK_CB(skb).groups = 0; /* not in mcast group */
-	NETLINK_CB(skb).pid = 0; /* from kernel */
-	NETLINK_CB(skb).dst_pid = daemon_pid;
-	NETLINK_CB(skb).dst_groups = 0;  /* unicast */
-	netlink_unicast(nl_sk, skb, pid, MSG_DONTWAIT);
-#else
-#endif	
-
-	// Store: type, subtype, first argument
-
-	return -1;
-}
-#endif
 
 /**
- * hip_insert_work_order - Insert work order into the HIP working queue.
+ * hip_insert_work_order - Insert work order into the HIP working queue of the current CPU.
  * @hwo: Work order
  *
  * Returns 1 if ok, < 0 if error
@@ -236,17 +143,12 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 	if (hwo->type < 0 || hwo->type > HIP_MAX_WO_TYPES)
 		return -1;
 
-#ifndef CONFIG_HIP_USERSPACE
 	return hip_insert_work_order_cpu(hwo, smp_processor_id());
-#else
-	return hip_insert_work_order_netlink(hwo);
-#endif
 }
 
-#ifdef __KERNEL__
+
 int hip_init_workqueue()
 {
-#ifndef CONFIG_HIP_USERSPACE
 	struct hip_pc_wq *wq;
 	unsigned long eflags;
 
@@ -257,24 +159,12 @@ int hip_init_workqueue()
  	init_MUTEX_LOCKED(&wq->worklock);
  	put_cpu_var(hip_workqueue);
  	local_irq_restore(eflags);
-#else
-	nl_sk = netlink_kernel_create(NETLINK_HIP, 
-				      nl_data_ready);
-#endif
+
 	return 0;
 }
-#else
-int hip_init_workqueue(int fd)
-{
-	netlink_fd = fd;
-	return 0;
-}
-#endif
 
 void hip_uninit_workqueue()
 {
-#ifdef __KERNEL__
-#ifndef CONFIG_HIP_USERSPACE
 	struct list_head *pos,*iter;
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
@@ -292,12 +182,6 @@ void hip_uninit_workqueue()
 	}
  	put_cpu_var(hip_workqueue); // test
 	local_irq_restore(eflags);
-#else
-	HIP_ERROR("Kernel uninit netlink connection, not implemented!");	// FIXME (tkoponen)
-#endif
-#else
-	HIP_ERROR("Userspace uninit netlink connection, not implemented!");	// FIXME (tkoponen)
-#endif
 }
 
 /**
@@ -311,7 +195,7 @@ void hip_free_work_order(struct hip_work_order *hwo)
 	if (hwo) {
 		if (hwo->destructor)
 			hwo->destructor(hwo);
-		HIP_FREE(hwo);
+		kfree(hwo);
 	}
 }
 
@@ -326,7 +210,7 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 {
 	struct hip_work_order *hwo;
 
-	hwo = HIP_MALLOC(sizeof(struct hip_work_order), gfp_mask);
+	hwo = kmalloc(sizeof(struct hip_work_order), gfp_mask);
 	if (hwo)
 		memset(hwo, 0, sizeof(struct hip_work_order));		
 	else
@@ -353,9 +237,9 @@ struct hip_work_order *hip_create_job_with_hit(int gfp_mask,
 	if (!hwo)
 		return NULL;
 
-	tmp = HIP_MALLOC(sizeof(struct in6_addr), gfp_mask);
+	tmp = kmalloc(sizeof(struct in6_addr), gfp_mask);
 	if (!tmp) {
-		HIP_FREE(hwo);
+		kfree(hwo);
 		return NULL;
 	}
 
@@ -376,8 +260,8 @@ void hwo_default_destructor(struct hip_work_order *hwo)
 {
 	if (hwo) {
 		if (hwo->arg1)
-			HIP_FREE(hwo->arg1);
+			kfree(hwo->arg1);
 		if (hwo->arg2)
-			HIP_FREE(hwo->arg2);
+			kfree(hwo->arg2);
 	}
 }

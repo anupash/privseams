@@ -7,9 +7,7 @@
  * - Mika Kousa <mkousa@cc.hut.fi>
  */
 
-#ifdef __KERNEL__
-#  include <net/ipv6.h>
-#endif /* __KERNEL__ */
+#include <net/ipv6.h>
 
 #include "misc.h"
 #include "debug.h"

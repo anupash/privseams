@@ -4,12 +4,10 @@
 #include "hadb.h"
 #include "hashtable.h"
 
-#ifdef __KERNEL__
-#  include <linux/spinlock.h>
-#  include <linux/types.h>
-#  include <asm/atomic.h>
-#  include <net/ipv6.h>
-#endif /* __KERNEL__ */
+#include <linux/spinlock.h>
+#include <linux/types.h>
+#include <asm/atomic.h>
+#include <net/ipv6.h>
 
 #define HIP_RVA_MAX_IPS 2
 #define HIP_RVA_SIZE 7  /* small hash table = less wasted memory :) */

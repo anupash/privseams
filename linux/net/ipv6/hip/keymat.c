@@ -8,10 +8,8 @@
  *
  */
 
-#ifdef __KERNEL__
-#  include <linux/crypto.h>
-#  include <asm/scatterlist.h>
-#endif /* __KERNEL__ */
+#include <linux/crypto.h>
+#include <asm/scatterlist.h>
 
 
 #include "keymat.h"

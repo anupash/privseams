@@ -125,16 +125,5 @@ config HIP_DEBUG
 	  This option adds debugging code to the HIP. It should only be used to
 	  develop and debug the HIP.
 
-	  Unless you are going to develop HIP and/or gather debugging
-          information to report bugs, you should say N.
-
-config HIP_USERSPACE
-	bool "HIP: Userspace daemon"
-	default y
-	depends on HIP
-	---help---
-          HIP for Linux implementation runs both in the kernelspace and
-          in the userspace. If you want to use the use the userspace
-          implementation, say Y.
-
-          Say N if you are unsure.
+	  Unless you are going to develop HIP and/or gather debugging information to
+	  report bugs, you should say N.

@@ -7,11 +7,9 @@
  *
  */
 
-#ifdef __KERNEL__
-#  include <linux/types.h>
-#  include <linux/random.h>
-#  include <asm/scatterlist.h>
-#endif /* __KERNEL__ */
+#include <linux/types.h>
+#include <linux/random.h>
+#include <asm/scatterlist.h>
 
 #include "cookie.h"
 #include "debug.h"

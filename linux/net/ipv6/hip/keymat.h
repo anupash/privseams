@@ -1,10 +1,8 @@
 #ifndef HIP_KEYMAT_H
 #define HIP_KEYMAT_H
 
-#ifdef __KERNEL__
-#  include <linux/types.h>
-#  include <net/hip.h>
-#endif /* __KERNEL__ */
+#include <linux/types.h>
+#include <net/hip.h>
 
 void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat,
 		    void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
