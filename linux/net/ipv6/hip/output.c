@@ -204,7 +204,7 @@ int hip_csum_verify(struct sk_buff *skb)
 	int csum;
 
 	hip_common = (struct hip_common*) skb->h.raw;
-	len = hip_common->payload_len;
+        len = hip_get_msg_total_len(hip_common);
 
 	_HIP_HEXDUMP("hip_csum_verify data", skb->h.raw, (len + 1) << 3);
 	_HIP_DEBUG("len=%d\n", len);
@@ -212,13 +212,12 @@ int hip_csum_verify(struct sk_buff *skb)
 		     sizeof(struct in6_addr));
 	_HIP_HEXDUMP("daddr", &(skb->nh.ipv6h->daddr),
 		     sizeof(struct in6_addr));
-	csum = csum_partial(skb->h.raw, (len + 1) << 3, 0);
+
+        csum = csum_partial((char *) hip_common, len, 0);
 
 	return csum_ipv6_magic(&(skb->nh.ipv6h->saddr),
 			       &(skb->nh.ipv6h->daddr),
-			       (len + 1) << 3,
-			       IPPROTO_HIP,
-			       csum);
+			       len, IPPROTO_HIP, csum);
 }
 
 /**
@@ -267,7 +266,7 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	}
 
 	buf->checksum = htons(0);
-	len = (buf->payload_len + 1) << 3;
+        len = hip_get_msg_total_len(buf);
 	csum = csum_partial((char*) buf, len, 0);
 
 	lock_sock(hip_output_socket->sk);
