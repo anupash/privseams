@@ -70,6 +70,7 @@
  */
 
 #include "builder.h"
+#include "debug.h"
 
 /**
  * hip_msg_init - initialize a network/daemon message

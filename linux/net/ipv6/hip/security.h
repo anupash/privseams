@@ -1,27 +1,15 @@
 #ifndef HIP_SECURITY_H
 #define HIP_SECURITY_H
 
-#include <linux/pfkeyv2.h>
-#include <linux/in6.h>
-#include <net/hip.h>
+#include <linux/types.h>
 #include <net/ipv6.h>
-#include <net/xfrm.h>
 
-#include "debug.h"
-#include "db.h"
-
+#include "hadb.h"
 
 /* move out from here */
 #define ESP_3DES_KEY_BITS 192
 
-
-#if 0
-int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
-		  struct in6_addr *dstip, uint32_t *spi, int alg, 
-		  void *enckey, void *authkey, int dir, int is_active);
-#endif
-
-int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer);
+int hip_delete_esp(hip_ha_t *entry);
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 uint32_t *spi, int alg,
 		 void *enckey, void *authkey, int is_active);

@@ -11,6 +11,13 @@
  */
 
 #include "socket.h"
+#include "debug.h"
+#include "db.h"
+#include "builder.h"
+#include "misc.h"
+
+#include <linux/net.h>
+
 
 /*
  * The eid db lock (local or peer) must be obtained before accessing these

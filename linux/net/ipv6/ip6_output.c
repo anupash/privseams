@@ -730,7 +730,6 @@ slow_path:
 	IP6_INC_STATS(Ip6FragFails);
 	return err;
 }
-EXPORT_SYMBOL(ip6_dst_lookup);
 
 /* Searching for route to destination and applying IPsec.
  * With HIP there are 4 cases (all related to the fl):
@@ -1074,7 +1073,6 @@ error:
 	IP6_INC_STATS(Ip6OutDiscards);
 	return err;
 }
-EXPORT_SYMBOL(ip6_dst_lookup);
 
 int ip6_push_pending_frames(struct sock *sk)
 {

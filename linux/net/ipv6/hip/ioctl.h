@@ -1,30 +1,8 @@
 #ifndef HIP_KERNEL_IOCTL
 #define HIP_KERNEL_IOCTL
 
-#include <net/ip.h>
-#include <net/ipv6.h>
-#include <net/sock.h>
-#include <net/addrconf.h>
-#include <net/flow.h>
+#include <linux/spinlock.h>
 #include <net/hip.h>
-#include <asm/string.h>
-#include <asm/uaccess.h>
-#include <asm/errno.h>
-#include <linux/ioctl.h>
-#include <linux/fs.h>
-#include <linux/config.h>
-#include <linux/module.h>
-#include <linux/kernel.h>   
-#include <linux/slab.h>   
-#include <linux/sched.h>
-#include <linux/errno.h>    
-#include <linux/types.h>    
-#include <linux/skbuff.h>
-
-#include "db.h"
-#include "debug.h"
-#include "daemon.h"
-#include "builder.h"
 
 /*
  * Async message is sent from userspace to kernel. The response is created

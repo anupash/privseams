@@ -1,11 +1,11 @@
 #ifndef HIP_WORKQUEUE
 #define HIP_WORKQUEUE
 
-#include <net/hip.h>
 #include <linux/spinlock.h>
 #include <net/ipv6.h>
+#include <net/hip.h>
 
-#include "debug.h"
+//#include "debug.h"
 
 #define HIP_WO_TYPE_INCOMING 1
 #define HIP_WO_TYPE_OUTGOING 2
@@ -38,6 +38,8 @@
 #define HIP_WO_SUBTYPE_DELHI      206
 #define HIP_WO_SUBTYPE_FLUSHHIS   207
 #define HIP_WO_SUBTYPE_NEWDH      208 // request new DH-key (implies UPDATE)
+#define HIP_WO_SUBTYPE_IN6_EVENT  209
+#define HIP_WO_SUBTYPE_DEV_EVENT  210
 
 extern struct semaphore hip_work;
 
@@ -50,4 +52,5 @@ struct hip_work_order *hip_create_job_with_hit(int mask,
 					       const struct in6_addr *hit);
 struct hip_work_order *hip_init_job(int mask);
 
+void hwo_default_destructor(struct hip_work_order *hwo);
 #endif /* HIP_WORKQUEUE */

@@ -11,8 +11,10 @@
 
 #ifdef __KERNEL__
 
+#include <linux/types.h>
+#include <net/ipv6.h>
 #include <net/hip.h>
-#include "debug.h"
+
 
 #else /* not __KERNEL__ */
 

@@ -1,6 +1,13 @@
 \section{Introduction}
 \label{sec:introduction}
 
+
+{\large This document is in process of being rewritten. Many parts contain
+information that is inaccurate and/or wrong. Also some chapters are half-written.
+To get the old document, where the chapters were complete, checkout any
+version below patch-53 from the main archives.}
+\vspace{2in}
+
 The lack of security has been one of the main problems with
 IP. Although IPSec \cite{rfc2401} and DNSSec \cite{rfc3008} have
 provided some level of security to IP, such as data origin
@@ -252,15 +259,129 @@ of view is described in
 \autoref{sec:collaboration_of_architecture_components} concludes with
 collaboration of all components.
 
-\subsection{Kernel Model}
+\subsection{HIP module}
 \label{sec:kernel_model_architecture}
 
-HIP functionality can be implemented using two different models. The
-two models reflect the decision how to distribute the ``intelligence''
-of the protocol. In the first model, the HIP protocol is implemented
-entirely in userspace. In the second model, the whole HIP protocol is
-in the operating system kernel.
+The HIP functionality, or module, is located in the networking stack of the
+Linux kernel. Since the project was originally based on IPv6 protocol, the
+actual code resides in a \em{hip} subdirectory under the IPv6 directory.
 
+We had to choose between a Bump-In-The-Stack model and a kernel thread model. We
+chose the latter one. Most of the HIP processing is done by the \em{khipd}
+kernel thread. The HIP thread will sleep in a semaphore waiting for other parts
+of the kernel to give it \em{work orders}. The implementation is a simple queue,
+protected by a semaphore.
+
+Currently all the HIP packets coming from the network will cause a work order to
+be created and passed to the kernel thread. This way we minimize the time spent
+in the network receive softirq. Also the HIP thread can be easily controlled
+(niced, preempted etc.).
+
+There are also few other cases where a work order is created. Since user space
+has to have a mean to send mappings into the kernel, we have a block device \em{/dev/hip}.
+We currently use IOCTL calls to send information to the HIP module. All IOCTL
+information is passed to the HIP thread by work orders. Usually that information
+consists of adding/deleting mappings from the Host Association Data Base.
+
+\subsection{HIPL's place in kernel}
+The HIP's place in the networking stack is between the transport and the network
+layer. One of our goals has been not to affect the transport layer at all. We
+have achieved this goal. A HIP protocol is registered with IPv6 on bootup (or
+when the module is loaded). This enables us to use the kernel's built-in
+functionality of passing the IPv6 packets with a HIP header straight to our
+code.
+
+Since the actual data, that flows after HIP connection setup, does not use HIP
+protocol headers, we have hook to some receiving/transmitting functions of the
+Linux. Currently we have XXX hooks in the underlying IPv6 code:
+
+\begin{description}
+\item[hip\_handle\_esp] When an incoming ESP packet arrives, we need to rewrite
+  its IPv6 source and destination addresses with the corresponding HITs.  To do
+  IPv6 -> HIT mapping we have to consult our Host Association (HA) database.
+  This function is called just before we look up the Security Association (SA)
+  from SAD.
+\item[hip\_handle\_output] An outgoing ESP packet has HITs in the IPv6 header's
+  source and destination address fields. In this function we do the HIT -> IPv6
+  mapping.  Again, we need to consult our HA databse. This function is called
+  just before we call IPv6's \em{dst\_output}.
+\item[hip\_get\_addr]
+\item[hip\_get\_saddr]
+\item[hip\_unknown\_spi] This hook is related to an ongoing discussion about what
+  to do if an ESP packet with an unknown SPI value arrives at the host.  If
+  enabled, we assume that the peer has rebooted and send R1.
+\item[hip\_trigger\_bex] A hook to trigger the base exchange (connection setup).
+\item[hip\_handle\_ipv6\_ifa\_notify] Used when the kernel acquires new IPv6
+  addresses.  When the kernel has performed the Double Address Detection (DAD),
+  we call this hook, and notify active HIP peers.
+\end{description}
+
+\subsection{IPsec Usage}
+When the hip code starts, it registers two Security Policies (SPs): One incoming
+and one outgoing. We use \em{4000::/2} as a source and destination IPv6
+addresses. This is the range that is preallocated for HIP use, although it is
+not yet officially allocated by the Internet Assigned Numbers Authority (IANA).
+Actually there is also a ``type 2'' HIT defined as \em{8000::/2}, but it is not
+in use, and we do not support it currently.
+
+When an ordinary\footnote{destination address belonging to the IPv6 address
+  range approved by the IANA} network connection is being established, the IPsec
+does not match the HIP SP, and thus no HIP action will be performed. When a HIP
+network connection is initiated, the HIP SP will match, and IPsec will query for
+an SA. If there is no ready SA available, as is the case when we first connect
+to the peer, the HIP module will start the HIP base exchange.
+
+The caller process will be put to sleep until the SA is valid, or has timeouted.
+Default timeout period is 30 seconds\footnote{This is defined by the Linux 2.6 
+ IPsec stack.}. The process will sleep even if the socket is a non-blocking one.
+\footnote{Perhaps we should do something to alleviate this minor problem?}
+
+If the HIP base exchange procedure is successful, we have 2 valid SAs: one
+outgoing and one incoming. All the sleepers waiting for the outgoing SA, will be
+now waked up. Now the calling process (usually \em{connect()}), can proceed with
+transport layer connection establishment (TCP handshake). This part will no
+longer sleep, if the socket has been set to non-blocking.
+
+
+\subsection{Internal data structures}
+
+HIPL contains couple of global data structures. In this subchapter we describe
+their intended use and locking policies.
+
+\subsubsection{Host Association Data Base (HADB)}
+
+The HADB contains information about HIP connection states. For every known peer,
+distinguished by their HIT, we have an entry (HA) in HADB. In practice, every
+time an IPv6 -> HIT mapping is
+
+HIP HAs contain the state of the known connections. HAs are stored in two hash
+tables: one using peer's HIT as a key, the other using our SPI number as a key.
+
+The two keys are needed because normally we access the HA database by the peer's
+HIT, but for example, when we receive an ESP packet from the network, we don't
+know which peer has sent the packet. Luckily the ESP packet contains our SPI
+number, and we can find the corresponding HA from the hash table. Now we can do
+the IPv6 -> HIT mapping that is required before we process the ESP packet.
+
+There is a reference counter in every HA. This counter must be incremented using
+\em{hip\_hold\_ha()} macro whenever we receive a reference to the HA. Obviously
+the reverse holds for decrementing the counter using \em{hip\_put\_ha()}. When the
+reference counter reaches zero, the memory allocates for the HA is automatically
+deleted.
+
+The HA is VALID, if and only if it is stored in \bf{both} the SPI and HIT hash
+tables. q This can be verified by checking if \em{hastate field of the HA equals
+  HIP\_HASTATE\_VALID}.
+
+
+{\large BLAH}
+
+
+HIP functionality can be implemented using different models. The
+models reflect the decision how to distribute the ``intelligence''
+of the protocol. In one model, the HIP protocol is implemented
+entirely in userspace. In another model, the whole HIP protocol is
+in the operating system kernel. 
 The distribution of the intelligence does not necessarily have to be
 ``all in the kernel'' or ``all in the userspace''. A hybrid model is
 also possible. Both the kernel and the userspace co-operate in order
@@ -571,11 +692,11 @@ example. Some extensions have been added to the parameters listed in
 
 \subsection{Asymmetric Cryptograhic Module}
 
-A generic asymmetric cryptophic module was developed for handling some
-of the DSA and Diffie-Hellman functionality. The main reason for this
+A generic asymmetric cryptophic module was developed to handle HIP's needs
+of the DSA and Diffie-Hellman algorithms. The main reason for this
 was that the implementation architecture was revised to be more kernel
-orientated. The cryptographic module is heavily based on the OpenSSL
-library and it supports the operations listed in
+orientated. The cryptographic module a ripped off version of the GNU cryptographic
+library (libgcrypt) version 1.12. 
 \autoref{tbl:asymmetric_crypto_ops}.
 
 \begin{table}[htb]

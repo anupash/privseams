@@ -1,16 +1,8 @@
 #ifndef HIP_KEYMAT_H
 #define HIP_KEYMAT_H
 
-#include <linux/kernel.h>
-#include <linux/string.h>
-#include <asm/byteorder.h>
-
+#include <linux/types.h>
 #include <net/hip.h>
-
-#include "hip.h"
-#include "debug.h"
-#include "misc.h"
-
 
 void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat,
 		    void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,

@@ -24,9 +24,32 @@
  */
 
 #include "hip.h"
+#include "hadb.h"
+#include "input.h"
+#include "builder.h"
+#include "db.h"
+#include "cookie.h"
 #include "keymat.h"
 #include "security.h"
+#include "misc.h"
+#include "output.h"
+#include "rea.h"
+#include "workqueue.h"
+#include "ioctl.h"
+#include "daemon.h"
+#include "socket.h"
 #include "update.h"
+
+#include <linux/proc_fs.h>
+#include <linux/notifier.h>
+#include <linux/spinlock.h>
+#include <linux/xfrm.h>
+#include <net/protocol.h>
+#include <net/hip.h>
+#include <net/checksum.h>
+#include <net/hip_glue.h>
+#include <net/addrconf.h>
+#include <net/xfrm.h>
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -876,8 +899,10 @@ void hip_uninit_output_socket(void)
  * Returns: 1 if successful (a peer address was copied to @addr),
  * else 0.
  */
-int hip_get_addr(struct in6_addr *hit, struct in6_addr *addr)
+int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 {
+	hip_ha_t *entry;
+
 #ifdef CONFIG_HIP_DEBUG
 	char str[INET6_ADDRSTRLEN];
 #endif
@@ -887,9 +912,18 @@ int hip_get_addr(struct in6_addr *hit, struct in6_addr *addr)
 #ifdef CONFIG_HIP_DEBUG
 	hip_in6_ntop(hit,str);
 #endif
-	if (hip_hadb_get_peer_address(hit,addr,HIP_ARG_HIT) < 0) {
+	
+	entry = hip_hadb_find_byhit(hit);
+	if (!entry) {
+		HIP_ERROR("Unknown HIT: %s\n", str);
 		return 0;
 	}
+
+	if (hip_hadb_get_peer_addr(entry, addr) < 0) {
+		hip_put_ha(entry);
+		return 0;
+	}
+	hip_put_ha(entry);
 
 #ifdef CONFIG_HIP_DEBUG
 	hip_in6_ntop(addr, str);
@@ -927,7 +961,7 @@ int hip_trigger_bex(struct in6_addr *dsthit)
  */
 int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
 {
-	if (!hip_is_hit(hitd))
+	if (!ipv6_addr_is_hit(hitd))
 		goto out;
 
 	if (hip_copy_any_localhost_hit(hits) < 0)
@@ -950,20 +984,25 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
  */
 int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
-	HIP_DEBUG("\n");
+	hip_ha_t *entry;
 
 	if (!ipv6_addr_is_hit(&fl->fl6_dst)) {
 		HIP_ERROR("dst not a HIT\n");
 		return 0;
 	}
 
-	if (!hip_hadb_get_own_hit_by_hit(&fl->fl6_dst, hit_storage)) {
-		HIP_ERROR("Could not get own hit, corresponding to the peer hit\n");
-		HIP_DEBUG_HIT("Etsitty osoite", &fl->fl6_dst);
+	entry = hip_hadb_find_byhit((hip_hit_t *)&fl->fl6_dst);
+	if (!entry) {
+		HIP_ERROR("Unknown HIT\n");
 		return 0;
 	}
 
-	HIP_DEBUG_HIT("source osoite", hit_storage);
+	HIP_LOCK_HA(entry);
+	ipv6_addr_copy(hit_storage, &entry->hit_our);
+	HIP_UNLOCK_HA(entry);
+
+	hip_put_ha(entry);
+
 	return 1;
 }
 
@@ -991,34 +1030,6 @@ static void hip_get_load_time(void)
 	load_time =  tv.tv_sec;
 	HIP_DEBUG("load_time=0x%lx\n", load_time);
 	return;
-}
-
-/* returns 0, if ok.
- */
-int hip_add_sk_to_waitlist(struct in6_addr *hit, struct sock *sk)
-{
-	struct hip_work_order *hwo;
-	int state = 0;
-
-	if (!ipv6_addr_is_hit(hit))
-		return -ENOTHIT;
-
-	hip_hadb_get_info(hit, &state, HIP_HADB_STATE|HIP_ARG_HIT);
-
-	if (state == HIP_STATE_ESTABLISHED)
-		return -EISCONN;
-
-	hwo = hip_create_job_with_hit(GFP_KERNEL,hit);
-	if (!hwo) {
-		HIP_ERROR("No memory\n");
-		return -ENOMEM;
-	}
-
-	hwo->type = HIP_WO_TYPE_OUTGOING;
-	hwo->subtype = HIP_WO_SUBTYPE_SKWAIT;
-	hwo->arg2 = sk;
-
-	return (hip_insert_work_order(hwo) - 1);
 }
 
 /**
@@ -1076,15 +1087,20 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
 		 * the peers, policy ?
 		 */
 		for (i = 0, ifa = idev->addr_list;
-		     ifa && i < *idev_addr_count; i++, ifa = ifa->if_next) {
+		     ifa && i < *idev_addr_count; ifa = ifa->if_next) {
 			/* todo: continue only if address flag has
 			 * IFA_F_PERMANENT ? */
 			spin_lock_bh(&ifa->lock);
-			ipv6_addr_copy(&tmp_list[i].address, &ifa->addr);
+			if (!(ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL)) {
+				ipv6_addr_copy(&tmp_list[i].address, &ifa->addr);
+				tmp_list[i].lifetime = htonl(0);
+				tmp_list[i].reserved = 0;
+				i++;
+			} else {
+				*idev_addr_count -= 1;
+			}
 			spin_unlock_bh(&ifa->lock);
 			/* todo: how to calculate address lifetime */
-			tmp_list[i].lifetime = htonl(0);
-			tmp_list[i].reserved = 0;
 		}
 	}
 
@@ -1166,8 +1182,8 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
 		 * else (an IPv6 address was added or deleted or
 		 * network device came up) send "all addresses REA" */
                 if (event_src == 1 && dev->ifindex == event_dev->ifindex) {
-                                idev_addr_count = 0;
-                                addr_list = NULL;
+			idev_addr_count = 0;
+			addr_list = NULL;
 		} else {
 			err = hip_create_device_addrlist(idev, &addr_list,
 							 &idev_addr_count);
@@ -1175,6 +1191,12 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
 				HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
 				goto out_err;
 			}
+			HIP_ASSERT(idev_addr_count >= 0);
+#if 0
+			/* we don't want to send REA with 0 entries, do we? */
+			if (idev_addr_count == 0)
+				goto out_err;
+#endif
 		}
 		/* Now we have the addresses to be included in the REA, send REAs */
 
@@ -1218,6 +1240,8 @@ void hip_handle_ipv6_ifa_notify(struct inet6_ifaddr *ifa, int event) {
 	struct inet6_dev *idev = NULL;
 
 	HIP_DEBUG("ifa=0x%p event=%d\n", ifa, event);
+
+	HIP_ERROR("TODO: HWO\n");
 
 	if (!ifa) {
 		HIP_ERROR("ifa is NULL\n");
@@ -1282,6 +1306,13 @@ void hip_handle_ipv6_ifa_notify(struct inet6_ifaddr *ifa, int event) {
 	HIP_DEBUG("returning\n");
 }
 
+static void hip_net_event(struct net_device *event_dev, uint32_t event_src,
+ 			  uint32_t event)
+{
+	hip_net_event_handle(event_src, event_dev, event);
+	dev_put(event_dev);
+}
+
 
 /**
  * hip_netdev_event_handler - handle network device events
@@ -1298,6 +1329,7 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
                                     void *ptr)
 {
         struct net_device *event_dev;
+	struct hip_work_order *hwo;
 
         if (! (event == NETDEV_DOWN || event == NETDEV_UNREGISTER)) {
                 HIP_DEBUG("Ignoring event %lu\n", event);
@@ -1310,10 +1342,22 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
                 return NOTIFY_DONE;
         }
 
-	/* event_dev -> event_dev->ifindex ? */
-	dev_hold(event_dev); /* ok ? */
-        hip_net_event_handle(1, event_dev, event);
-	dev_put(event_dev);
+	dev_hold(event_dev);
+
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (!hwo) {
+		HIP_ERROR("No memory to handle net event\n");
+		return NOTIFY_DONE;
+	}
+
+	hwo->type = HIP_WO_TYPE_MSG;
+	hwo->subtype = HIP_WO_SUBTYPE_DEV_EVENT;
+	hwo->arg1 = event_dev;
+	hwo->arg2 = (void *)event;
+	hwo->destructor = NULL;
+
+	hip_insert_work_order(hwo);
+
 	return NOTIFY_DONE;
 }
 
@@ -1532,8 +1576,6 @@ static int hip_do_work(void)
 {
 	int res = 0;
 	struct hip_work_order *job;
-	uint32_t tmp32;
-	//uint64_t tmp64;
 
 	job = hip_get_work_order();
 	if (!job) {
@@ -1549,26 +1591,29 @@ static int hip_do_work(void)
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i1(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I1");
+			hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_R1:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r1(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R1");
+			hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_I2:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i2(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I2");
+			hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_R2:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r2(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R2");
 			KRISU_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
+			hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			//res = 0;
 			res = hip_receive_update(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
@@ -1591,66 +1636,33 @@ static int hip_do_work(void)
 			HIP_ERROR("Unknown subtype: %d\n",job->subtype);
 			break;
 		}
-		job->arg1 = NULL; /* to skip double kfree() */
 		if (res < 0)
 			res = KHIPD_ERROR;
 		break;
 	case HIP_WO_TYPE_OUTGOING:
-		switch(job->subtype) {
-		  int getlist[2];
-		  void *setlist[2];
-
-		case HIP_WO_SUBTYPE_NEW_CONN:
-			/* arg1 = d-hit, arg.u32[0] = new state, 
-			   arg2 = own hit */
-			tmp32 = job->arg.u32[0];
-			getlist[0] = HIP_HADB_STATE;
-			getlist[1] = HIP_HADB_OWN_HIT;
-			setlist[0] = &tmp32;
-			setlist[1] = job->arg2;
-			//res = hip_hadb_multiset(job->arg1,tlist,2,&tmp32,job->arg2,
-			//			NULL,NULL,HIP_ARG_HIT);
-			res = hip_hadb_multiset(job->arg1, 2, getlist, setlist, HIP_ARG_HIT);
-			if (res != 2) {
-				HIP_ERROR("Multiset error\n");
-				res = KHIPD_ERROR;
-			}
-			HIP_DEBUG("moved to state %s\n", hip_state_str(tmp32));
-			/* print own hit */
-			break;
-		case HIP_WO_SUBTYPE_DEL_CONN:
-			/* arg1 = d-hit */
-			res = hip_hadb_reinitialize_state(job->arg1,HIP_ARG_HIT);
-			if (res < 0) {
-				HIP_ERROR("Unable to reinitialize state\n");
-				res = KHIPD_ERROR;
-			} else 
-				HIP_DEBUG("State reverted to start\n");
-			break;
-		case HIP_WO_SUBTYPE_SKWAIT:
-			/* arg1 = d-hit, arg2 = sk */
-			res = hip_hadb_save_sk(job->arg1, job->arg2);
-			if (res < 0) {
-				HIP_ERROR("Unable to save socket: %d\n", res);
-				res = KHIPD_ERROR;
-			} else 
-				HIP_DEBUG("Socket saved\n");
-			job->arg2 = NULL; 
-			/* have to clear the arg2 by ourselves, otherwise it would be kfree'd
-			   and would panic */
-			break;
-		}
+		HIP_INFO("Nothing for outgoing stuff\n");
 		break;
 	case HIP_WO_TYPE_MSG:
 		switch(job->subtype) {
 		case HIP_WO_SUBTYPE_STOP:
 			res = KHIPD_QUIT;
 			break;
+		case HIP_WO_SUBTYPE_IN6_EVENT:
+			hip_net_event((struct net_device *)job->arg1, 0, 
+				      (uint32_t) job->arg2);
+			res = KHIPD_OK;
+			break;
+		case HIP_WO_SUBTYPE_DEV_EVENT:
+			hip_net_event((struct net_device *)job->arg1, 1, 
+				      (uint32_t) job->arg2);
+			res = KHIPD_OK;
+			break;
 		case HIP_WO_SUBTYPE_ADDMAP:
 			/* arg1 = d-hit, arg2=ipv6 */
-			res = hip_add_peer_info(job->arg1, job->arg2);
+			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
 			if (res < 0)
 				res = KHIPD_ERROR;
+			hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
@@ -1659,11 +1671,6 @@ static int hip_do_work(void)
 				res = KHIPD_ERROR;
 			break;
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
-			/* arg1 = dhit, or :: for all entries */
-			res = hip_hadb_flush_states(job->arg1);
-			if (res < 0)
-				res = KHIPD_ERROR;
-			break;
 		case HIP_WO_SUBTYPE_ADDHI:
 		case HIP_WO_SUBTYPE_DELHI:
 		case HIP_WO_SUBTYPE_FLUSHHIS:
@@ -1680,11 +1687,9 @@ static int hip_do_work(void)
 		
  out_err:
 	if (job) {
-		if (job->arg1)
-			kfree(job->arg1);
-		if (job->arg2)
-			kfree(job->arg2);
-		kfree(job); // implies dynamically allocated structures
+		if (job->destructor)
+			job->destructor(job);
+		kfree(job);
 	}
 	return res;
 }
@@ -1750,6 +1755,8 @@ static int __init hip_init(void)
 
 	if (hip_init_cipher() < 0)
 		goto out;
+
+	hip_init_hadb();
 
 #ifdef CONFIG_PROC_FS
 	if (hip_init_procfs() < 0)

@@ -5,7 +5,7 @@
 obj-$(CONFIG_HIP) += hipmod.o
 
 hipmod-objs := hip.o daemon.o ioctl.o builder.o keymat.o unit.o test.o input.o output.o \
-	       db.o debug.o cookie.o workqueue.o misc.o security.o socket.o update.o
+	       db.o hadb.o debug.o cookie.o workqueue.o misc.o security.o socket.o rea.o update.o
 
 CRYPTOOBJS := mpi-bit.o mpi-div.o mpi-inline.o mpi-mpow.o mpi-pow.o \
 mpicoder.o mpih-mul.o mpi-add.o mpi-cmp.o mpi-gcd.o mpi-inv.o \

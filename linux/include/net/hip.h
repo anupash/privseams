@@ -40,11 +40,10 @@
 
 typedef uint16_t in_port_t;
 
-//#include <net/keymat.h>
-
 #else
-#  include <sys/ioctl.h>
-#  include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+
 #endif /* __KERNEL__ */
 
 #define HIP_CHAR_MAJOR 126
@@ -218,6 +217,7 @@ typedef uint16_t in_port_t;
 
 #define ENOTHIT                     666
 
+
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
@@ -243,6 +243,19 @@ typedef uint16_t in_port_t;
 
 #define HIP_AH_SHA_LEN                 20
 
+typedef struct in6_addr hip_hit_t;
+typedef uint16_t se_family_t;
+typedef uint16_t se_length_t;
+typedef uint16_t se_hip_flags_t;
+typedef uint32_t sa_eid_t;
+typedef uint8_t hip_hdr_type_t;
+typedef uint8_t hip_hdr_len_t;
+typedef uint16_t hip_hdr_err_t;
+typedef uint16_t hip_tlv_type_t;
+typedef uint16_t hip_tlv_len_t;
+typedef struct hip_hadb_state hip_ha_t;
+typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
+	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
 /*
  * Use accessor functions defined in hip_build.h, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
@@ -260,9 +273,6 @@ struct hip_common {
 	struct in6_addr hitr;  /* Receiver HIT */
 } __attribute__ ((packed));
 
-typedef uint8_t hip_hdr_type_t;
-typedef uint8_t hip_hdr_len_t;
-typedef uint16_t hip_hdr_err_t;
 
 /*
  * Localhost Host Identity. Used only internally in the implementation.
@@ -274,8 +284,6 @@ struct hip_lhi
 	struct in6_addr    hit;
 } __attribute__ ((packed));
 
-typedef uint16_t hip_tlv_type_t;
-typedef uint16_t hip_tlv_len_t;
 
 /*
  * Use accessor functions defined in hip_build.h, do not access members
@@ -477,10 +485,6 @@ struct hip_cert {
 	/* XX TODO */
 } __attribute__ ((packed));
 
-typedef uint16_t se_family_t;
-typedef uint16_t se_length_t;
-typedef uint16_t se_hip_flags_t;
-typedef uint32_t sa_eid_t;
 
 /* Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
@@ -626,14 +630,19 @@ struct hip_peer_addr_list_item
 
 struct hip_hadb_state
 {
-	struct list_head     next;
+	struct list_head     next_spi;
+	struct list_head     next_hit;
+
+	spinlock_t           lock;
+	atomic_t             refcnt;
+	hip_hastate_t        hastate;
 
 	int                  state;
 
 	uint16_t             peer_controls;  /* Controls received from the peer */
 
-	struct in6_addr      hit_our;        /* The HIT we use with this host */
-	struct in6_addr      hit_peer;       /* Peer's HIT */
+	hip_hit_t            hit_our;        /* The HIT we use with this host */
+	hip_hit_t            hit_peer;       /* Peer's HIT */
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 
 	uint32_t             spi_out;       /* outbound IPsec SA SPI */
@@ -651,7 +660,6 @@ struct hip_hadb_state
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
 
-	struct hip_kludge    kg;  /* TCP sock for connection establishment */
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.
@@ -717,6 +725,7 @@ struct hip_work_order {
 		uint64_t u64;
 	} arg;
 	struct list_head queue;
+	void (*destructor)(struct hip_work_order *hwo);
 };
 
 
@@ -742,6 +751,10 @@ struct hip_eid_db_entry {
 	struct sockaddr_eid        eid; /* XX FIXME: the port is unneeded */
 	struct hip_lhi             lhi;
 };
+
+
+
+
 
 #define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200
 #endif /* __KERNEL__ */

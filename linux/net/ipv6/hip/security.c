@@ -6,9 +6,17 @@
  * - Kristian Slavov <ksl@iki.fi>
  */ 
 
+
 #include <linux/in6.h>
+#include <linux/xfrm.h>
+#include <net/xfrm.h>
+#include <net/ipv6.h>
+
+
 #include "security.h"
 #include "crypto/dh.h"
+#include "hip.h"
+#include "debug.h"
 
 /**
  * hip_delete_spd - delete an SPD entry
@@ -45,7 +53,7 @@ int hip_delete_sp(int dir)
 extern struct list_head *xfrm_state_bydst;
 extern struct list_head *xfrm_state_byspi;
 
-static void hip_hirmu_kludge(int byspi)
+void hip_hirmu_kludge(int byspi)
 {
 	int i;
 	char str[256] = {0};
@@ -98,48 +106,32 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	
 	return 0;
 }
-/**
- * hip_delete_esp - delete entry's IPsec SPD and SA
- * @entry: the entry whose SPD and SA are to be deleted
- *
- * Returns: 0 if successful, else < 0.
- */
-int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
+
+int hip_delete_esp(hip_ha_t *entry)
 {
-	uint32_t spi_peer, spi_our, new_spi_peer, new_spi_our;
-	int getlist[4];
-	void *setlist[4];
-	int k;
+	uint32_t spi_out, spi_in, new_spi_out, new_spi_in;
 
-//	hip_hirmu_kludge(1);
+	HIP_LOCK_HA(entry);
+	spi_out = entry->spi_out;
+	spi_in = entry->spi_in;
+	new_spi_out = entry->new_spi_out;
+	new_spi_in = entry->new_spi_in;
+	HIP_UNLOCK_HA(entry);
 
-	getlist[0] = HIP_HADB_SPI_OUT;
-	getlist[1] = HIP_HADB_SPI_IN;
-	getlist[2] = HIP_HADB_NEW_SPI_OUT;
-	getlist[3] = HIP_HADB_NEW_SPI_IN;
-	setlist[0] = &spi_peer;
-	setlist[1] = &spi_our;
-	setlist[2] = &new_spi_peer;
-	setlist[3] = &new_spi_our;
+	hip_delete_sa(spi_out, &entry->hit_peer);
+	hip_delete_sa(spi_in, &entry->hit_our);
+	hip_delete_sa(new_spi_out, &entry->hit_peer);
+	hip_delete_sa(new_spi_in, &entry->hit_our);
 
-	k = hip_hadb_multiget(peer, 4, getlist, setlist, HIP_ARG_HIT);
-	if (k != 4) {
-		HIP_ERROR("Could not get all SPIs from db (got only %d out of 4)\n", k);
-	}
+	/* unlinks entry from our SPI table */
+	hip_hadb_remove_state_spi(entry);
 
-	/* Delete SAs */
-	hip_delete_sa(spi_peer, peer);
-	hip_delete_sa(spi_our, own);
-	hip_delete_sa(new_spi_peer, own);
-	hip_delete_sa(new_spi_our, peer);
-
-	k = 0;
-	setlist[0] = &k;
-	setlist[1] = &k;
-	setlist[2] = &k;
-	setlist[3] = &k;
-
-	hip_hadb_multiset(peer, 4, getlist, setlist, HIP_ARG_HIT);
+	HIP_LOCK_HA(entry);
+	entry->spi_out = 0;
+	entry->spi_in = 0;
+	entry->new_spi_out = 0;
+	entry->new_spi_in = 0;
+	HIP_UNLOCK_HA(entry);
 
 	return 0;
 }

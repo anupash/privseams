@@ -33,8 +33,14 @@
  */
 
 #include "daemon.h"
-#include "cookie.h"
+#include "builder.h"
+#include "debug.h"
+#include "ioctl.h"
+#include "db.h"
 #include "workqueue.h"
+#include "misc.h"
+#include "cookie.h"
+#include "unit.h"
 
 struct hip_user_msg hip_user_msg;
 
@@ -186,14 +192,14 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 	struct hip_work_order *hwo;
 	struct in6_addr *ip_copy;
 
-	hwo = hip_create_job_with_hit(GFP_KERNEL, hit);
+	hwo = hip_create_job_with_hit(GFP_ATOMIC, hit);
 	if (!hwo) {
 		HIP_ERROR("No memory for hit <-> ip mapping\n");
 		err = -ENOMEM;
 		goto out_err;
 	}
 	
-	ip_copy = kmalloc(sizeof(struct in6_addr), GFP_KERNEL);
+	ip_copy = kmalloc(sizeof(struct in6_addr), GFP_ATOMIC);
 	if (!ip_copy) {
 		HIP_ERROR("No memory to copy IP to work order\n");
 		err = -ENOMEM;
@@ -314,31 +320,8 @@ int hip_user_handle_del_peer_map_hit_ip(const struct hip_common *input,
 int hip_user_handle_rst(const struct hip_common *input,
 			struct hip_common *output)
 {
-	struct in6_addr *hit;
-	struct hip_work_order *hwo;
-	int err = 0;
-
-	hit = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_HIT);
-	if (!hit) {
-		HIP_ERROR("handle async map: no hit\n");
-		err = -ENODATA;
-		goto out;
-	}
-
-	hwo = hip_create_job_with_hit(GFP_KERNEL,hit);
-	if (!hwo) {
-		HIP_ERROR("No memory to complete RST\n");
-		err = -ENOMEM;
-		goto out;
-	}
-
-	hwo->type = HIP_WO_TYPE_MSG;
-	hwo->subtype = HIP_WO_SUBTYPE_FLUSHMAPS;
-
-	hip_insert_work_order(hwo);
- out:
-	return err;
+	hip_build_user_hdr(output, hip_get_msg_type(input), -ENOSYS);
+	return -ENOSYS;
 }
 
 /**

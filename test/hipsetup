@@ -27,7 +27,7 @@ fi
 CHECK_HIPL_DIRS=". linux tools test"
 CHECK_HIPL_APPS="tools/hipconf test/conntest-client-gai"
 CHECK_HIPL_HOSTS="/etc/hosts /etc/hip/hosts"
-CHECK_PATH_DEP="nc6 make pidof sleep rmmod modprobe kill grep ssh perl echo\
+CHECK_PATH_DEP="nc6 make pidof sleep rmmod modprobe grep ssh perl echo\
                 ping6 awk"
 INSTALL_MODULES="0"
 LOCALHOST=`hostname`
@@ -72,7 +72,7 @@ EOF
 #
 die() {
     echo "hipsetup: $@"
-    kill $$
+    exit 1
 }
 
 # Purpose: Set the mode to the given mode if no mode was defined before
@@ -82,7 +82,7 @@ die() {
 set_and_check_mode() {
     if [ "$MODE" = "undefined" ]
     then
-	MODE=$1
+	MODE="$1"
     else
 	help
 	die "Only one mode of operation is allowed at once."
@@ -102,10 +102,10 @@ parse_args() {
 	case $NAME in
 	    h) help; exit 0                                  ;;
 	    m) INSTALL_MODULES=1                             ;;
-	    d) HIPL_DIR=$OPTARG                              ;;
-	    i) PEER_NAME=$OPTARG
+	    d) HIPL_DIR="$OPTARG"                              ;;
+	    i) PEER_NAME="$OPTARG"
 	       set_and_check_mode "base-exchange-initiator"  ;;
-	    s) PEER_NAME=$OPTARG
+	    s) PEER_NAME="$OPTARG"
 	       set_and_check_mode "base-exchange-ssh"        ;;
 	    r) set_and_check_mode "base-exchange-responder"  ;;
 	    *) help
@@ -193,8 +193,8 @@ check_setup() {
 # Params:  The Linux kernel source directory
 #
 install_modules() {
-    local LINUX_DIR=$1
-    echo "Installing modules"
+    local LINUX_DIR="$1"
+    echo "Installing modules in directory $LINUX_DIR"
     make -C $LINUX_DIR modules_install
 }
 

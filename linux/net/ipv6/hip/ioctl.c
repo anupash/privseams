@@ -22,6 +22,8 @@
  */
 
 #include "ioctl.h"
+#include "debug.h"
+#include "builder.h"
 
 /**
  * hip_user_output_copy - copy data from the userspace to the kernelspace 

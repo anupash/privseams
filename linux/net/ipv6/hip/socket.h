@@ -1,15 +1,12 @@
 #ifndef HIP_SOCKET_H
 #define HIP_SOCKET_H
 
+#include <linux/types.h>
 #include <linux/net.h>
 #include <linux/socket.h>
+#include <linux/mm.h>
+#include <net/sock.h>
 #include <net/hip.h>
-#include <asm/poll.h>
-#include <linux/random.h>
-#include "debug.h"
-#include "builder.h"
-#include "db.h"
-#include "misc.h"
 
 extern struct net_proto_family hip_family_ops;
 

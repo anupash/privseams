@@ -9,8 +9,14 @@
  *  - include copyright information here
  */
 
+#include <linux/crypto.h>
+#include <asm/scatterlist.h>
+
+
 #include "keymat.h"
 #include "misc.h"
+#include "debug.h"
+#include "hip.h"
 
 
 u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len, 
@@ -311,7 +317,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	return err;
 }
 
-
+ 
 /** hip_update_entry_keymat - update HADB's KEYMAT related information
  * @entry: HADB entry to be update
  * @new_keymat_index: new Keymat Index value
@@ -319,16 +325,15 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
  * @new_current_keymat: Kn related to @new_calc_index
  *
  */
-void hip_update_entry_keymat(struct hip_hadb_state *entry,
-			    uint16_t new_keymat_index, uint8_t new_calc_index,
-			    unsigned char *new_current_keymat)
+void hip_update_entry_keymat(struct hip_hadb_state *entry, 
+			     uint16_t new_keymat_index, uint8_t new_calc_index,
+			     unsigned char *new_current_keymat)
 {
 	/* must have the hadb lock when calling this function */
 	entry->current_keymat_index = new_keymat_index;
 	entry->keymat_calc_index = new_calc_index;
-	HIP_DEBUG("New entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
+	HIP_DEBUG("New Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
 		  entry->current_keymat_index, entry->keymat_calc_index);
-
 	if (new_current_keymat) {
 		memcpy(entry->current_keymat_K, new_current_keymat, HIP_AH_SHA_LEN);
 		HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);
