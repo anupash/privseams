@@ -1045,24 +1045,11 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 	}
 
  	/************** BOS packet ready ***************/
-
 	HIP_DEBUG("sending BOS\n");
 
-	/* Use Global Scope All Nodes Addr [RFC2373] FF0E:0:0:0:0:0:0:1 */
- 	memset(&daddr, 0, sizeof(struct in6_addr));
-
-	/* This is dropped on the receiver */
-	//ipv6_addr_set(&daddr, htonl(0xFF0E0000), htonl(0x00000000),
-	//	      htonl(0x00000000), htonl(0x00000001));
-
-	/* This gets through but the receiver complains about msg size.
-	   Also, the message is echoed back... */
-	ipv6_addr_set(&daddr, htonl(0xFF020000), htonl(0x00000000),
-		      htonl(0x00000000), htonl(0x00000001));
-
-	/* This works */
-	//ipv6_addr_set(&daddr, htonl(0x3ffe0000), htonl(0x00000000),
-	//	      htonl(0x00000000), htonl(0x00000001));
+	/* Use All Nodes Addresses (link-local) RFC2373
+	   FF02:0:0:0:0:0:0:1 as the destination multicast address */
+	ipv6_addr_all_nodes(&daddr);
 
 	/* Iterate through all the network devices, recording source
 	 * addresses for BOS packets */
@@ -1123,8 +1110,8 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 				HIP_DEBUG("not counting link local address\n");
 			} else {
 				if_idx[addr_count] = saddr_dev->ifindex;
-			        ipv6_addr_copy(&(saddr[addr_count++]), 
-					       &ifa->addr);
+			        ipv6_addr_copy(&(saddr[addr_count]), &ifa->addr);
+				addr_count++;
 			}
 			spin_unlock_bh(&ifa->lock);
 		}
@@ -1140,7 +1127,7 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 
 	HIP_DEBUG("final address list count=%d\n", addr_count);
 
-	HIP_DEBUG_IN6ADDR("dest address", &daddr);
+	HIP_DEBUG_IN6ADDR("dest mc address", &daddr);
 
 	/* Loop through the saved addresses, sending the BOS packets 
 	   out the correct interface */
@@ -1158,7 +1145,7 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 
 		/* Send it! */
 		err = hip_csum_send_fl(&(saddr[i]), &daddr, bos, &fl);
-		if (err) 
+		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
 	

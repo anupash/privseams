@@ -131,6 +131,7 @@ typedef uint16_t in_port_t;
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
 #define HIP_STATE_REKEYING          6      /* ex-E4 */
+/* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */

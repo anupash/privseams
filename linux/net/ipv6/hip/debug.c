@@ -19,8 +19,8 @@ inline void hip_debug_skb(const struct ipv6hdr *hdr, const struct sk_buff *skb)
 	if (hdr && skb) {
 		ip6hdr = skb->nh.ipv6h;
 		_HIP_DEBUG("ip6hdr=%p src %p dst %p skbdev %p\n",
-			  ip6hdr, &ip6hdr->saddr, &ip6hdr->daddr,
-			  skb->dev);
+			   ip6hdr, &ip6hdr->saddr, &ip6hdr->daddr,
+			   skb->dev);
 		hip_in6_ntop(&ip6hdr->saddr, src);
 		hip_in6_ntop(&ip6hdr->daddr, dst);
 		HIP_DEBUG("pkt out: saddr %s daddr %s\n", src, dst);
@@ -39,6 +39,7 @@ inline void hip_debug_skb(const struct ipv6hdr *hdr, const struct sk_buff *skb)
 inline void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
 	char dst[INET6_ADDRSTRLEN];
+
 	hip_in6_ntop(hit, dst);
 	HIP_DEBUG("%s: %s\n", str, dst);
 	return;
@@ -60,39 +61,38 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	int buflen, i;
 	unsigned char c;
 
-	if (!data) {
-		HIP_ERROR("NULL data ptr\n");
+	if (!data || len < 0) {
+		HIP_ERROR("NULL data or len < 0 (len=%d)\n", len);
 		return;
 	}
 
 	/* every hexdump line contains offset+": "+32 bytes of data (space every 4 bytes) */
 	buflen = 4+2+2*32+((32-1)/4)+1;
-	_HIP_DEBUG("hdump buflen = %d\n", buflen);
 	buf = kmalloc(buflen, GFP_ATOMIC);
 	if (!buf)
 		return;
 
 	HIP_DEBUG("%s: begin dump %d bytes from 0x%p\n", tag, len, data);
-
 	datapos = data;
 
 	i = 0;
 	while (i < len) {
-	  int j;
-	  bufpos = buf;
-	  memset(buf, 0, buflen);
-	  sprintf(bufpos, "%4d: ", i);
-	  bufpos += 4+2;
-	  for (j = 0; i < len && bufpos < buf+buflen-1;
-	       j++, i++, bufpos += 2*sizeof(char)) {
-	    c = (unsigned char)(*(((unsigned char *)data)+i));
-	    if (j && !(j%4)) {
-	      sprintf(bufpos, " ");
-	      bufpos += sizeof(char);
-	    }
-	    sprintf(bufpos, "%02x", c);
-	  }
-	  printk(KERN_DEBUG "%s\n", buf);
+		int j;
+
+		bufpos = buf;
+		memset(buf, 0, buflen);
+		sprintf(bufpos, "%4d: ", i);
+		bufpos += 4+2;
+		for (j = 0; i < len && bufpos < buf+buflen-1;
+		     j++, i++, bufpos += 2*sizeof(char)) {
+			c = (unsigned char)(*(((unsigned char *)data)+i));
+			if (j && !(j%4)) {
+				sprintf(bufpos, " ");
+				bufpos += sizeof(char);
+			}
+			sprintf(bufpos, "%02x", c);
+		}
+		printk(KERN_DEBUG "%s\n", buf);
 	}
 
 	HIP_DEBUG("end of dump (0x%p)\n", data+len);
@@ -114,8 +114,10 @@ inline const char *hip_state_str(unsigned int state)
 		{ "NONE", "UNASSOCIATED", "I1_SENT",
 		  "I2_SENT", "R2_SENT", "ESTABLISHED", "REKEYING",
 		  "FAILED" };
-	if (state <= (sizeof(states)/sizeof(states[0])))
+	if (state <= ARRAY_SIZE(states))
 		str = states[state];
-
+	else
+		HIP_ERROR("invalid state %u\n", state);
+	
 	return str;
 }

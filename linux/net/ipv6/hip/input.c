@@ -2520,7 +2520,7 @@ int hip_handle_bos(struct sk_buff *skb, hip_ha_t *entry)
  	
  	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id);
  	if (err == -EEXIST) {
- 		HIP_INFO("Host id already exists. Ignoring.\n");
+ 		HIP_INFO("Host ID already exists. Ignoring.\n");
  		err = 0;
  	} else if (err) {
  		HIP_ERROR("Failed to add peer host id to the database\n");
@@ -2536,6 +2536,8 @@ int hip_handle_bos(struct sk_buff *skb, hip_ha_t *entry)
 	if (entry) {
 		struct in6_addr daddr;
 
+		HIP_DEBUG("I guess we should not even get here ..\n");
+
 		/* The entry may contain the wrong address mapping... */
 		HIP_DEBUG("Updating existing entry\n");
 		hip_hadb_get_peer_addr(entry, &daddr);
@@ -2544,11 +2546,9 @@ int hip_handle_bos(struct sk_buff *skb, hip_ha_t *entry)
 			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
 			HIP_HEXDUMP("Mapping", &daddr, 16);
 			HIP_HEXDUMP("Received", dstip, 16);
-			/* BOS and mm with multiple SA support, problems: to which SA this BOS is related to ? */
-			/* or..check why this addr del/add code is here */
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			HIP_ERROR("UNTESTED CODE, ASSUMING WE ARE DOING BEX\n");
-			hip_hadb_add_peer_addr(entry, dstip, 0 /* SPI */, 0, 0); /* this is surely wrong */
+			HIP_ERROR("assuming we are doing base exchange\n");
+			hip_hadb_add_peer_addr(entry, dstip, 0 /* SPI */, 0, 0);
 		}
 	} else {
 		HIP_DEBUG("Adding new peer entry\n");
@@ -2586,7 +2586,7 @@ int hip_receive_bos(struct sk_buff *skb)
 	struct hip_common *bos;
 	int err = 0;
 	hip_ha_t *entry;
-	int state;
+	int state = 0;
 
 	bos = (struct hip_common*) (skb)->h.raw;
 
@@ -2606,24 +2606,27 @@ int hip_receive_bos(struct sk_buff *skb)
 	if (!entry) {
 		state = HIP_STATE_UNASSOCIATED;
 	} else {
-		HIP_DEBUG("Received BOS packet from already known sender\n");
+		/* Received BOS packet from already known sender */
+		/* TODO: should return right now */
 		state = entry->state;
 	}
+	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
 
 	if (entry)
 		HIP_DEBUG("---LOCKING---\n");
 
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
-		/* possibly no state created yet */
-		err = hip_handle_bos(skb, NULL);
-		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
+		/* possibly no state created yet */
+		err = hip_handle_bos(skb, entry);
+		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
  	case HIP_STATE_REKEYING:
- 		err = hip_handle_bos(skb, entry);
+		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
+		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
 		break;
@@ -2810,12 +2813,10 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	}
 
 	hip_common = (struct hip_common*) (*skb)->h.raw;
-	HIP_DEBUG("Received HIP packet type %d\n", hip_common->type_hdr);
-
+	HIP_DEBUG("Received HIP packet type %d\n", hip_common->type_hdr); /* TODO: use hip_state_str */
 	_HIP_DEBUG_SKB((*skb)->nh.ipv6h, skb);
-
-	HIP_HEXDUMP("HIP PACKET", hip_common,
-		    hip_get_msg_total_len(hip_common));
+	_HIP_HEXDUMP("HIP PACKET", hip_common,
+		     hip_get_msg_total_len(hip_common));
 
 	err = hip_verify_network_header(hip_common, skb);
 	if (err) {
@@ -2873,14 +2874,17 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 		hwo->subtype = HIP_WO_SUBTYPE_RECV_NOTIFY;
 		break;
 	case HIP_REA:
+		/* TODO: REMOVE */
 		HIP_DEBUG("Received HIP REA packet\n");
 		hwo->subtype = HIP_WO_SUBTYPE_RECV_REA;
 		break;
 	case HIP_AC:
+		/* TODO: REMOVE */
 		HIP_DEBUG("Received HIP AC packet\n");
 		hwo->subtype = HIP_WO_SUBTYPE_RECV_AC;
 		break;
 	case HIP_ACR:
+		/* TODO: REMOVE */
 		HIP_DEBUG("Received HIP ACR packet\n");
 		hwo->subtype = HIP_WO_SUBTYPE_RECV_ACR;
 		break;
