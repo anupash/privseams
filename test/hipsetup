@@ -275,7 +275,7 @@ convert_ssh_remote_command() {
 check_hip_state_established () {
     local HIP_PROC_SDB="/proc/net/hip/sdb_state"
     local PEER_NAME=$1
-    local PEER_HIT=`awk -F '[\ \t]' -v peer=$PEER_NAME '{m=split($0, l);if (m == 2 && l[2] == peer) print l[1];exit}' /etc/hip/hosts`
+    local PEER_HIT=`awk -F '[ \t]' -v peer=$PEER_NAME '{m=split($0, l);if (m == 2 && l[2] == peer) print l[1];exit}' /etc/hip/hosts`
 
     if test -r $HIP_PROC_SDB
     then
