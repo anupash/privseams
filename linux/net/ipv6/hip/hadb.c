@@ -24,9 +24,12 @@ static int hip_hadb_hash_hit(hip_hit_t *hit)
 	return (hit->s6_addr32[2] ^ hit->s6_addr32[3]) % HIP_HADB_SIZE;
 }
 
-/* ASSERT: HA must already be removed from the hash tables.
- * Used only by hip_ha_put(). Otherwise we would have to play with
- * the refcnt(?).
+/** 
+ * hip_hadb_delete_state - Delete HA state (and deallocate memory)
+ * 
+ * ASSERT: @ha must be unlinked from the global hadb hash tables.
+ * This function should only be called when absolutely sure that
+ * nobody else has a reference to it.
  */
 void hip_hadb_delete_state(hip_ha_t *ha)
 {
@@ -41,20 +44,25 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 }
 
 
-inline void hip_hadb_rem_state_spi(hip_ha_t *ha)
+static inline void hip_hadb_rem_state_spi(hip_ha_t *ha)
 {
 	list_del(&ha->next_spi);
 	ha->hastate &= ~HIP_HASTATE_SPIOK;
 	hip_put_ha(ha);
 }
 
-inline void hip_hadb_rem_state_hit(hip_ha_t *ha)
+static inline void hip_hadb_rem_state_hit(hip_ha_t *ha)
 {
 	list_del(&ha->next_hit);
 	ha->hastate &= ~HIP_HASTATE_HITOK;
 	hip_put_ha(ha);
 }
 
+/**
+ * hip_hadb_remove_state_spi - Remove HA from SPI hash table.
+ *
+ * @ha should be unlocked.
+ */
 void hip_hadb_remove_state_spi(hip_ha_t *ha)
 {
 	HIP_LOCK_HA(ha);
@@ -66,6 +74,11 @@ void hip_hadb_remove_state_spi(hip_ha_t *ha)
 	HIP_UNLOCK_HA(ha);
 }
 
+/**
+ * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
+ *
+ * @ha should be unlocked.
+ */
 void hip_hadb_remove_state_hit(hip_ha_t *ha)
 {
 	HIP_LOCK_HA(ha);
@@ -77,6 +90,12 @@ void hip_hadb_remove_state_hit(hip_ha_t *ha)
 	HIP_UNLOCK_HA(ha);
 }
 
+
+/**
+ * hip_hadb_dump_hits - Dump the contents of the HIT hash table.
+ *
+ * Should be safe to call from any context.
+ */
 void hip_hadb_dump_hits(void)
 {
 	int i;
@@ -118,6 +137,9 @@ void hip_hadb_dump_hits(void)
 }
 
 
+/**
+ * hip_init_hadb - Initialize the hash tables 
+ */
 int hip_init_hadb(void)
 {
 	int i;
@@ -130,6 +152,9 @@ int hip_init_hadb(void)
 	return 1;
 }
 
+/**
+ * hip_uninit_hadb - Uninitialize the hash tables 
+ */
 
 void hip_uninit_hadb(void)
 {
@@ -150,6 +175,12 @@ void hip_uninit_hadb(void)
 	HIP_UNLOCK_HADB;
 }
 
+/**
+ * hip_hadb_find_byspi - Find HA from the SPI hash table.
+ * @spi - Key
+ *
+ * Returns NULL if the entry is not found.
+ */
 hip_ha_t *hip_hadb_find_byspi(u32 spi)
 {
 	int h;
@@ -171,6 +202,12 @@ hip_ha_t *hip_hadb_find_byspi(u32 spi)
 	return NULL;
 }
 
+/**
+ * hip_hadb_find_byhit - Find HA from the HIT hash table.
+ * @hit - Key
+ *
+ * Returns NULL if the entry is not found.
+ */
 hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
 {
 	int h;
@@ -193,6 +230,13 @@ hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
 	return NULL;
 }
 
+/**
+ * hip_hadb_create_state - Allocates and initializes a new HA structure
+ *
+ * @gfpmask - passed directly to kmalloc().
+ *
+ * Return NULL if memory allocation failed, otherwise the HA.
+ */
 hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
 	hip_ha_t *entry = NULL;
@@ -217,11 +261,24 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 }
 
-/* Adds @ha to either spi or hit hash table, or both.
+/**
+ * hip_hadb_insert_state - Insert state to hash tables.
+ *
+ * Adds @ha to either SPI or HIT hash table, or _BOTH_.
  * As a side effect updates the hastate of the @ha.
- * Can be called for already inserted @ha. This will cause
- * addition to a hash table in which the @ha was not previously
- * added. Also the side effect holds.
+ *
+ * Function can be called even if the HA is in either or
+ * both hash tables already.
+ *
+ * PRECONDITIONS: To add to the SPI hash table the @ha->spi_in
+ * must be non-zero. To add to the HIT hash table the @ha->hit_peer
+ * must be non-zero (tested with ipv6_addr_any).
+ *
+ * Returns the hastate of the HA:
+ * HIP_HASTATE_VALID = HA added to (or is in) both hash tables
+ * HIP_HASTATE_SPIOK = HA added to (or is in) SPI hash table
+ * HIP_HASTATE_HITOK = HA added to (or is in) HIT hash table
+ * HIP_HASTATE_INVALID = HA was not added, nor is in either of the hash tables.
  */
 int hip_hadb_insert_state(hip_ha_t *ha)
 {
@@ -268,7 +325,19 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
-
+/**
+ * hip_hadb_remove_state - Removes the HA from the hash tables.
+ *
+ * After calling this function, the refcnt should be 1, and when
+ * the called calls hip_put_ha(), the HA will be freed.
+ * Alternatively the caller can hip_put_ha() just before calling this
+ * function. This will result in the HA freed in this function.
+ * The precondition for above is, of course, that nobody else holds
+ * references to this HA.
+ * Otherwise the HA will be deleted as soon as the other user 
+ * hip_ha_put()s the HA.
+ *
+ */
 void hip_hadb_remove_state(hip_ha_t *ha)
 {
 
