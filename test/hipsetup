@@ -218,10 +218,13 @@ setup_hip() {
     fi
     sleep 1
 
-    # Insert hip module and give some time for it to initialize itself.
+    # Insert hip module (if found) and give some time for it to initialize
+    # itself.
     #
+    set +e
     modprobe -v hipmod
     sleep 3
+    set -e
 
     $HIPL_DIR/tools/hipconf add hi default
     sleep 2
