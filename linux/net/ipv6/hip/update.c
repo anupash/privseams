@@ -221,7 +221,20 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 
 
 
-/* Get keys needed by UPDATE */
+/** hip_update_get_sa_keys - Get keys needed by UPDATE
+ * @entry: corresponding hadb entry of the peer
+ * @keymat_offset_new: value-result parameter for keymat index used
+ * @calc_index_new: value-result parameter for the one byte index used
+ * @Kn_out: value-result parameter for keymat 
+ * @espkey_gl: HIP-gl encryption key
+ * @authkey_gl: HIP-gl integrity (HMAC)
+ * @espkey_lg: HIP-lg encryption key
+ * @authkey_lg: HIP-lg integrity (HMAC)
+ *
+ * Returns: 0 on success (all encryption and integrity keys are
+ * successfully stored and @keymat_offset_new, @calc_index_new, and
+ * @Kn_out contain updated values). On error < 0 is returned.
+ */
 int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 			   uint8_t *calc_index_new, uint8_t *Kn_out,
 			   struct hip_crypto_key *espkey_gl, struct hip_crypto_key *authkey_gl,
@@ -294,7 +307,15 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	return err;
 }
 
-/* Returns 1 if address is ok to be used as a peer address, otherwise 0. */
+/** hip_update_test_rea_addr - test if IPv6 address is to be added into REA.
+ * @addr: the IPv6 address to be tested
+ *
+ * Currently the following address types are ignored: unspecified
+ * (any), loopback, link local, site local, and other not unicast
+ * addresses.
+ *
+ * Returns 1 if address is ok to be used as a peer address, otherwise 0.
+*/
 int hip_update_test_rea_addr(struct in6_addr *addr)
 {
 	int addr_type = ipv6_addr_type(addr);
@@ -323,9 +344,16 @@ int hip_update_test_rea_addr(struct in6_addr *addr)
 	return 1;
 }
 
+/** hip_update_handle_rea_parameter - Process REA parameters in the UPDATE
+ * @entry: corresponding hadb entry of the peer
+ * @rea: the REA parameter in the packet
+ *
+ * Returns: 0 if the REA parameter was processed successfully,
+ * otherwise < 0.
+ */
 int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 {
-	int err = 0;
+	int err = 0; /* set to -Esomething ?*/
 	uint32_t spi;
 	struct hip_rea_info_addr_item *rea_address_item;
 	int i, n_addrs;
@@ -489,7 +517,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	}
 
 	_HIP_DEBUG("dh_key_generated=%d\n", dh_key_generated);
-
 
 	/* 4. The system creates a UPDATE packet, which contains an SEQ
 	   parameter (with the current value of Update ID), NES parameter
