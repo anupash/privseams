@@ -85,6 +85,10 @@
 #include <net/hip_glue.h>
 #endif
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 /* Set to 3 to get tracing... */
 #define ACONF_DEBUG 2
 
@@ -3310,6 +3314,10 @@ static void addrconf_sysctl_unregister(struct ipv6_devconf *p)
 		kfree(t->addrconf_dev[0].procname);
 		kfree(t);
 	}
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	HIP_CALLFUNC(hip_handle_ipv6_ifa_notify, 0)(ifp, event);
+#endif
 }
 
 

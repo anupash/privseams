@@ -1297,6 +1297,87 @@ void hip_handle_ipv6_ifa_notify(struct inet6_ifaddr *ifa, int event) {
 
 #if 0
 /**
+ * hip_handle_ipv6_ifa_notify - handle IPv6 address events
+ * @ifa: IPv6 address of an interface which caused the event
+ * @event: the event
+ *
+ * This function gets the same event as ipv6_ifa_notify. Because
+ * ipv6_ifa_notify seems to use netlink and we do not have a netlink
+ * socket, we just change ipv6_ifa_notify to call this function when
+ * an address is added or deleted.
+ *
+ */
+void hip_handle_ipv6_ifa_notify(struct inet6_ifaddr *ifa, int event) {
+	struct net_device *event_dev = NULL;
+	struct inet6_dev *idev = NULL;
+
+	HIP_DEBUG("ifa=0x%p event=%d\n", ifa, event);
+
+	if (!ifa) {
+		HIP_ERROR("ifa is NULL\n");
+		goto out_no_ifa_put;
+	}
+
+        if (! (event == RTM_NEWADDR || event == RTM_DELADDR) ) {
+                HIP_DEBUG("Ignore ipv6_ifa event %d\n", event);
+		goto out_no_ifa_put;
+        }
+
+	in6_ifa_hold(ifa);
+
+	idev = ifa->idev;
+        if (!idev) {
+                HIP_DEBUG("NULL idev\n");
+		goto out;
+        }
+	in6_dev_hold(idev);
+	event_dev = idev->dev;
+        if (!event_dev) {
+                HIP_ERROR("NULL event_dev, shouldn't happen ?\n");
+		goto out;
+        }
+	dev_hold(event_dev);
+
+	hip_print_hit("ifa address", &ifa->addr);
+
+	if (event == RTM_NEWADDR) {
+		event = NETDEV_UP;
+	} else if (event == RTM_DELADDR) {
+		event = NETDEV_DOWN;
+#if 0
+		/* this seems not to work as expected */
+
+		/* if interface is going down the addresses are
+		 * deleted before the interface is down. To prevent
+		 * sending of many REAs/UPDATEs we do not send them if
+		 * the interface is going down,
+		 * hip_netdev_event_handler sends the REA/UPDATE when
+		 * it receives NETDEV_DOWN. */
+		HIP_DEBUG("idev->dead=%d\n", idev->dead);
+		if (idev->dead) {
+			HIP_DEBUG("dev is dead, not sending rea\n");
+			goto out;
+		}
+#endif
+	} else {
+		HIP_ERROR("unknown event %d", event);
+		goto out;
+	}
+
+	/* event_dev -> event_dev->ifindex ? */
+        hip_net_event_handle(0, event_dev, event);
+ out:
+	in6_ifa_put(ifa);
+ out_no_ifa_put:
+	if (idev)
+		in6_dev_put(idev);
+	if (event_dev)
+		dev_put(event_dev);
+	HIP_DEBUG("returning\n");
+}
+
+#if 0
+/**
  * hip_inet6addr_event_handler - handle IPv6 address events
  * @notifier_block: device notifier chain
  * @event: the event
@@ -1404,6 +1485,7 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 	dev_put(event_dev);
 	return NOTIFY_DONE;
 }
+#endif
 
 /**
  * hip_handle_dst_unreachable - ICMPv6 Destination Unreachable message handler
@@ -1619,6 +1701,7 @@ int hip_init_register_inet6addr_notifier(void)
 	return register_inet6addr_notifier(&hip_notifier_block);
 }
 
+#if 0
 /**
  * hip_uninit_register_inet6addr_notifier - uninitialize IPv6 address event handler
  *
@@ -1644,6 +1727,7 @@ void hip_uninit_netdev_notifier(void)
 	HIP_DEBUG("\n");
         unregister_netdevice_notifier(&hip_netdev_notifier);
 }
+#endif
 
 static int hip_do_work(void)
 {
