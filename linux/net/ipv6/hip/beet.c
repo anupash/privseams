@@ -1,3 +1,10 @@
+/*
+ * XX FIX: integrate the BEET db into the standard xfrm code when this works.
+ * The information stored in this database is actually a partial replica of
+ * the information stored in the hadb.
+ *
+ */
+
 #include "beet.h"
 
 HIP_HASHTABLE hip_beetdb_hit;
@@ -93,10 +100,10 @@ void hip_uninit_beetdb(void)
 	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
 	//hip_beetdb_dump_hs_ht();
 
-	/* I think this is not very safe deallocation.
-	 * Locking the hip_beetdb_spi and hip_beetdb_hit could be one option, but I'm not
-	 * very sure that it will work, as they are locked later in 
-	 * hip_beetdb_remove_state() for a while.
+	/* I think this is not very safe deallocation. Locking the
+	 * hip_beetdb_spi and hip_beetdb_hit could be one option,
+	 * but I'm not very sure that it will work, as they are locked later
+	 * in hip_beetdb_remove_state() for a while.
 	 *
 	 * The list traversing is not safe in smp way :(
 	 */
@@ -111,11 +118,13 @@ void hip_uninit_beetdb(void)
 		}
 	}
 
-	/* HIT-SPI mappings should be already deleted by now, but check anyway */
+	/* HIT-SPI mappings should be already deleted by now, but check
+	   anyway */
 	HIP_DEBUG("DELETING HS HT\n");
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
 		_HIP_DEBUG("HS HT [%d]\n", i);
-		list_for_each_entry_safe(hs, tmp_hs, &hip_beetdb_byspi_list[i], list) {
+		list_for_each_entry_safe(hs, tmp_hs,
+					 &hip_beetdb_byspi_list[i], list) {
 			HIP_ERROR("BUG: HS NOT ALREADY DELETED, DELETING HS %p, HS SPI=0x%x\n",
 				  hs, hs->spi);
 			if (atomic_read(&hs->refcnt) > 1)
@@ -132,10 +141,85 @@ void hip_uninit_beetdb(void)
 }
 
 /**
+ * hip_beetdb_create_state - Allocates and initializes a new HA structure
+ * @gfpmask - passed directly to HIP_MALLOC().
  *
+ * Return NULL if memory allocation failed, otherwise the HA.
  */
-int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
-	return 0;
+hip_xfrm_t *hip_beetdb_create_state(int gfpmask)
+{
+	hip_xfrm_t *entry = NULL;
+
+	entry = HIP_MALLOC(sizeof(struct hip_xfrm_state), gfpmask);
+	if (!entry)
+		return NULL;
+
+	memset(entry, 0, sizeof(*entry));
+
+	INIT_LIST_HEAD(&entry->next);
+
+	spin_lock_init(&entry->lock);
+	atomic_set(&entry->refcnt, 0);
+
+	entry->state = HIP_STATE_UNASSOCIATED;
+
+	return entry;
+}
+
+int hip_beetdb_insert_state(hip_xfrm_t *x)
+{
+	hip_xfrm_t *tmp = NULL;
+	int err = 0;
+
+	/* assume already locked */
+
+	HIP_ASSERT(!(ipv6_addr_any(&x->hit_peer)));
+
+	if (!ipv6_addr_any(&x->hit_peer)) {
+		tmp = hip_ht_find(&hip_beetdb_hit, (void *)&(x->hit_peer));
+		if (!tmp) {
+			err = hip_ht_add(&hip_beetdb_hit, x);
+		} else {
+			hip_put_xfrm(tmp);
+			HIP_DEBUG("HIT already taken\n");
+		}
+	}
+
+	return err;
+}
+
+int hip_xfrm_dst_init(struct in6_addr *dst_hit, struct in6_addr *dst_addr) {
+	int err = 0;
+	hip_xfrm_t *entry;
+	
+	entry = hip_xfrm_find_by_hit(dst_hit);
+	if (entry) {
+		/* initialized already */
+		goto out_err;
+	}
+
+	entry = hip_beetdb_create_state(GFP_KERNEL);
+	if (!entry) {
+		HIP_ERROR("Unable to create a new entry\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	
+	/* insert IP address before dst HIT to avoid silly locking */
+	ipv6_addr_copy(&entry->preferred_peer_addr, dst_addr);
+	ipv6_addr_copy(&entry->hit_peer, dst_hit);
+
+	/* experimenting here: no source HIT selected at this 
+	   point of time (contrary to hip_hadb_add_peer_info) */
+	
+	err = hip_beetdb_insert_state(entry);
+	if (err) {
+		goto out_err;
+	}
+
+ out_err:
+	
+	return err;
 }
 
 int hip_xfrm_update(uint32_t spi, struct in6_addr *dst_addr, int state,
@@ -144,16 +228,21 @@ int hip_xfrm_update(uint32_t spi, struct in6_addr *dst_addr, int state,
 }
 
 int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
+//	if (dir == HIP_FLOW_DIR_IN) {
+//	} else if (dir == HIP_FLOW_DIR_OUT){
+//	} else {
+//           return -EFAULT;
+//      }
 	return 0;
 }
 
-struct hip_xfrm_state * hip_xfrm_find_by_spi(uint32_t spi)
+struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 {
 	// XX FIXME: search the hashtable 
 	return NULL;
 }
 
-struct hip_xfrm_state * hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
+struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
 {
         // XX FIXME: 
 	return NULL;

@@ -390,7 +390,9 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
-			res = resp->hdr.arg1 = hip_xfrm_dst_init(&job->hdr.src_addr, &job->hdr.dst_addr);
+			res = resp->hdr.arg1 =
+				hip_xfrm_dst_init(&job->hdr.src_addr,
+						  &job->hdr.dst_addr);
 			break;
 
 		case HIP_WO_SUBTYPE_XFRM_UPD:
@@ -441,7 +443,15 @@ int hip_do_work(struct hip_work_order *job)
 #endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_ADDMAP:
 			/* arg1 = d-hit, arg2=ipv6 */
-			res = hip_hadb_add_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
+			res = hip_hadb_add_peer_info(&job->hdr.dst_addr,
+						     &job->hdr.src_addr);
+			if (res < 0) {
+				res = KHIPD_ERROR;
+				break;
+			}
+			/* Synchronize the kernel BEET database */
+			res = hip_xfrm_dst_init(&job->hdr.dst_addr,
+						&job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;

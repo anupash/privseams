@@ -816,6 +816,8 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 		err = -ENOMEM;
 		goto out_err;
 
+	/* a slight kludge: the hit is carried in the dst IP address
+	   field since it is not needed for anything */
 	ipv6_addr_copy(&hwo->hdr.dst_addr, hit);
 	hwo->destructor = hwo_default_destructor;
 	
@@ -916,7 +918,6 @@ int hip_socket_handle_del_peer_map_hit_ip(const struct hip_common *input)
 	struct in6_addr *hit, *ip;
 	char buf[46];
 	int err = 0;
-
 
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);

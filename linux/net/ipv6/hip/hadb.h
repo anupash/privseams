@@ -186,6 +186,5 @@ void hip_hadb_remove_hs2(struct hip_hit_spi *hs);
 #define hip_put_ha(ha) hip_db_put_ha(ha, hip_hadb_delete_state)
 #define hip_put_xfrm(ha) hip_db_put_ha(ha, hip_beetdb_delete_state)
 
-
 //#endif /* __KERNEL__ */
 #endif /* HIP_HADB_H */

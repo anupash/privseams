@@ -350,6 +350,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_AH_SHA_LEN                 20
 
+#define HIP_FLOW_DIR_IN	               0
+#define HIP_FLOW_DIR_OUT	       1
+
 typedef struct in6_addr hip_hit_t;
 typedef uint16_t se_family_t;
 typedef uint16_t se_length_t;

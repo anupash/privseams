@@ -13,7 +13,7 @@ CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE
 
 include_HEADERS = hipd.h crypto.h netlink.h
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
-INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
+INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL_HIPD)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c
