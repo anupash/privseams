@@ -427,7 +427,7 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 	spin_unlock_bh(&xs->lock);
 
 	xfrm_state_put(xs);
-	wake_up(&km_waitq);
+	wake_up_all(&km_waitq);
 }
 
 
