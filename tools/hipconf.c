@@ -59,6 +59,29 @@ int get_action(char *text) {
 }
 
 /**
+ * check_action_argc - get minimum amount of arguments needed to be given to the action
+ * @action: action type
+ *
+ * Returns: how many arguments needs to be given ta least
+ */
+int check_action_argc(int action) {
+  int count = -1;
+
+  switch (action) {
+  case ACTION_ADD:
+  case ACTION_DEL:
+  case ACTION_NEW:
+    count = 2;
+    break;
+  case ACTION_RST:
+    count = 1;
+    break;
+  }
+
+  return count;
+}
+
+/**
  * get_type - map symbolic hipconf type (=lhi/map) names to numeric types
  * @text: the type as a string
  *
@@ -429,7 +452,7 @@ int handle_rst(struct hip_common *msg, int action,
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out;
 	}
-	
+
  out:
 	return err;
 }
@@ -459,6 +482,12 @@ int main(int argc, char *argv[]) {
     goto out;
   }
   HIP_INFO("action=%d\n", action);
+
+  if (argc-2 < check_action_argc(action)) {
+    err = -EINVAL;
+    HIP_ERROR("Not enough arguments given for the action '%s'\n", argv[1]);
+    goto out;
+  }
 
   if (action != ACTION_RST) {
 
@@ -506,6 +535,7 @@ int main(int argc, char *argv[]) {
  out_malloc:
   free(msg);
  out:
+
   return err;
 }
 #endif /* HIP_UNITTEST_MODE */

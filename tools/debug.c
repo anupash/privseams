@@ -266,7 +266,7 @@ void hip_error(char *file, int line, char *function, char *fmt, ...) {
  * debug module, use the HIP_PERROR macro instead.
  */
 void hip_perror_wrapper(char *file, int line, char *function, char *s) {
-  error(file, line, function, "%s %s\n", s, strerror(errno));
+  hip_error(file, line, function, "%s %s\n", s, strerror(errno));
 }
 
 /**

@@ -5,6 +5,7 @@
 #include <config.h>
 #endif
 
+#include <errno.h>
 #include <net/hip.h>
 
 #include "debug.h"
