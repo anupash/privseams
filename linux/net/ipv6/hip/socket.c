@@ -956,7 +956,6 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 	struct in6_addr saddr[MAX_SRC_ADDRS];
 	int if_idx[MAX_SRC_ADDRS];
 	int addr_count = 0;
-	char addrstr[INET6_ADDRSTRLEN];
 	struct flowi fl;
 	struct inet6_ifaddr *ifa = NULL;
 
@@ -1049,10 +1048,16 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 
 	HIP_DEBUG("sending BOS\n");
 
-
 	/* Use Global Scope All Nodes Addr [RFC2373] FF0E:0:0:0:0:0:0:1 */
  	memset(&daddr, 0, sizeof(struct in6_addr));
-	ipv6_addr_set(&daddr, htonl(0xFF0E0000), htonl(0x00000000),
+
+	/* This is dropped on the receiver */
+	//ipv6_addr_set(&daddr, htonl(0xFF0E0000), htonl(0x00000000),
+	//	      htonl(0x00000000), htonl(0x00000001));
+
+	/* This gets through but the receiver complains about msg size.
+	   Also, the message is echoed back... */
+	ipv6_addr_set(&daddr, htonl(0xFF020000), htonl(0x00000000),
 		      htonl(0x00000000), htonl(0x00000001));
 
 	/* Iterate through all the network devices, recording source
@@ -1109,8 +1114,7 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 				goto out_idev_unlock;
 			}
 		        spin_lock_bh(&ifa->lock);
-			hip_in6_ntop(&ifa->addr, addrstr);
-			HIP_DEBUG("addr %d: %s\n", i, addrstr);
+			HIP_DEBUG_IN6ADDR("addr", &ifa->addr);
 			if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL){
 			       HIP_DEBUG("not counting link local address\n");
 			} else {
@@ -1132,15 +1136,13 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 
 	HIP_DEBUG("final address list count=%d\n", addr_count);
 
-	hip_in6_ntop(&daddr, addrstr);
-	HIP_DEBUG("dest address=%s\n", addrstr);
+	HIP_DEBUG_IN6ADDR("dest address", &daddr);
 
 	/* Loop through the saved addresses, sending the BOS packets 
 	   out the correct interface */
 	for (i = 0; i < addr_count; i++) {
 	        /* got a source addresses, send BOS */
-	        hip_in6_ntop(&(saddr[i]), addrstr);
-		HIP_DEBUG("selected source address: %s\n", addrstr);
+	        HIP_DEBUG_IN6ADDR("selected source address", &(saddr[i]));
 
 		/* Set up the routing structure to use the correct
 		   interface, source addr, and destination addr */

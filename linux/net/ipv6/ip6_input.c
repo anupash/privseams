@@ -264,5 +264,7 @@ int ip6_mc_input(struct sk_buff *skb)
 	/* discard */
 	kfree_skb(skb);
 
+	printk(KERN_DEBUG "Dropping multicast packet\n");
+
 	return 0;
 }

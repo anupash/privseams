@@ -2706,10 +2706,10 @@ int hip_verify_network_header(struct hip_common *hip_common,
 		  (hip_common->payload_len+1)*8);
 
 	if ( ntohs((*skb)->nh.ipv6h->payload_len) !=
-	     (hip_common->payload_len+1)*8 ) {
+	     (hip_get_msg_total_len(hip_common))) {
 		HIP_ERROR("Invalid HIP packet length (IPv6 hdr payload_len=%d/HIP pkt len=%d). Dropping\n",
 			  ntohs((*skb)->nh.ipv6h->payload_len),
-			  (hip_common->payload_len+1)*8);
+			  hip_get_msg_total_len(hip_common));
 		err = -EINVAL;
 		goto out_err;
 	}
