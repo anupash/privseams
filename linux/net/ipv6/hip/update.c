@@ -1614,6 +1614,9 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	add_rea = flags & SEND_UPDATE_REA;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
 		  addr_list, addr_count, ifindex, flags);
+	if (!ifindex)
+		HIP_DEBUG("base draft UPDATE\n");
+
 	if (add_rea)
 		HIP_DEBUG("mm UPDATE, %d addresses in REA\n", addr_count);
 	else
@@ -1653,9 +1656,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		make_new_sa = 1;
 	}
 
-	/* avoid sending empty REAs to the peer if we have not sent
-	 * previous information on this SPI yet */
-	if (!mapped_spi && addr_count == 0) {
+	/* If this is mm-UPDATE (ifindex should be then != 0) avoid
+	 * sending empty REAs to the peer if we have not sent previous
+	 * information on this SPI yet */
+	if (ifindex != 0 && mapped_spi != 0 && addr_count == 0) {
 		HIP_DEBUG("NETDEV_DOWN and ifindex SPI not advertised yet, returning\n");
 		goto out;
 	}

@@ -28,7 +28,7 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
                goto out_err;
        }
 
-       HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
        err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest);
        if (err) {

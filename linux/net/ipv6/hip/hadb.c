@@ -166,6 +166,7 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 
 /*********************** PRIMITIVES ***************************/
 
+/* find HA by inbound SPI */
 hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 {
 	struct hip_hit_spi *hs;

@@ -1062,6 +1062,8 @@ int hip_trigger_bex(struct in6_addr *dsthit)
 {
 	struct ipv6hdr hdr = {0};
 
+	HIP_ERROR("TODO: MOVE THIS TO XFRM KM HANDLER AND REMOVE STUFF FROM xfrm_state.c/km_query\n");
+
 	ipv6_addr_copy(&hdr.daddr, dsthit);
 	hip_handle_output(&hdr, NULL);
 	return 0;
@@ -1398,7 +1400,7 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 
         if (event == NETDEV_UNREGISTER) {
 		/* avoid sending rapidly consecutive UPDATEs */
-                HIP_DEBUG("not handling UNREGISTER event, wait for DOWN\n");
+                HIP_DEBUG("not handling UNREGISTER event, assuming already handled DOWN\n");
                 return NOTIFY_DONE;
         }
 
@@ -1493,11 +1495,9 @@ void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 #if 0
 	struct icmp6hdr *hdr;
 	struct ipv6hdr *invoking_hdr; /* RFC 2463 sec 3.1 */
-#ifdef CONFIG_HIP_DEBUG
         struct in6_addr *saddr, *daddr;
 	char strs[INET6_ADDRSTRLEN];
 	char strd[INET6_ADDRSTRLEN];
-#endif
 
 	/* todo: option to allow/disallow icmpv6 handling */
 	if (!pskb_may_pull(skb, 4+sizeof(struct ipv6hdr))) { /* already checked in icmpv6_rcv/icmpv6_notify ? */
@@ -1508,7 +1508,6 @@ void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 
 	hdr = (struct icmp6hdr *) skb->h.raw;
 	invoking_hdr = (struct ipv6hdr *) (hdr+1); /* check */
-#ifdef CONFIG_HIP_DEBUG
 	saddr = &skb->nh.ipv6h->saddr;
         daddr = &skb->nh.ipv6h->daddr;
 	hip_in6_ntop(saddr, strs);
@@ -1519,7 +1518,6 @@ void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 	hip_in6_ntop(&invoking_hdr->saddr, strs);
 	hip_in6_ntop(&invoking_hdr->daddr, strd);
 	HIP_DEBUG("invoking_hdr ip6: src=%s dst=%s\n", strs, strd);
-#endif
 
 	switch(hdr->icmp6_code) {
 	case ICMPV6_NOROUTE:
@@ -1536,6 +1534,85 @@ void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 
 	return;
 #endif
+}
+
+/* Handler which is notified when SA state has changes.
+   TODO: send UPDATE when SA lifetime has expired. */
+static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
+{
+	HIP_DEBUG("x=0x%p hard=%d\n", x, hard);
+	HIP_DEBUG("x: SPI=0x%x state=%d\n", ntohl(x->id.spi), x->km.state);
+#if 0
+	if (SA is HIP SA) {
+		hip_ha_t *entry;
+		/* was this event caused by inbound SA ?*/
+		entry = hip_hadb_find_byspi(ntohl(x->id.spi));
+		if (entry) {
+			hip_send_update(entry, NULL, 0, 0, 0); /* non-mm UPDATE */
+			hip_ha_put(entry);
+		} else {
+			/* check if SA was outbound .. */
+		}
+	}
+#endif
+
+	return 0;
+}
+
+//static int xfrm_send_acquire(struct xfrm_state *x, struct xfrm_tmpl *xt,
+//			     struct xfrm_policy *xp, int dir)
+//{
+//	HIP_DEBUG("dir=%d\n", dir);
+//	HIP_DEBUG("x SPI=0x%x\n", ntohl(x->id.spi));
+//	return 0;
+//}
+
+//struct xfrm_policy *hip_xfrm_handler_compile_policy(u16 family, int opt,
+//						    u8 *data, int len, int *dir)
+//{
+//	HIP_DEBUG("dir=%d\n", dir);
+//}
+
+#if 0
+/* TODO: remove kludge from km_query and use this as the handler when HITs are acquired */
+static int hip_xfrm_handler_acquire(struct xfrm_state *xs, struct xfrm_tmpl *xtmpl,
+			     struct xfrm_policy *pol, int dir)
+{
+	int err = -EINVAL; /* ? */
+
+	if (pol->selector.daddr == htonl(0x40000000) &&
+	    pol->selector.prefixlen_d == 2) {
+		/* this must trigger Base Exchange */
+		err = hip_trigger_bex((struct in6_addr *)&(xs->id.daddr));
+	}
+	HIP_DEBUG("err=%d\n", err);
+	return err;
+}
+#endif
+
+static int hip_xfrm_handler_policy_notify(struct xfrm_policy *xp, int dir, int hard)
+{
+	HIP_DEBUG("xp=0x%p dir=%d hard=%d\n", xp, dir, hard);
+	return 0;
+}
+
+static struct xfrm_mgr hip_xfrm_km_mgr = {
+	.id		= "HIP",
+	.notify		= hip_xfrm_handler_notify,
+//	.acquire	= hip_xfrm_handler_acquire, /* when km_query is fixed */
+//	.compile_policy	= hip_xfrm_handler_compile_policy,
+	.notify_policy	= hip_xfrm_handler_policy_notify,
+};
+
+/* Handler for XFRM key management calls */
+int hip_register_xfrm_km_handler(void)
+{
+	int err;
+	HIP_DEBUG("registering\n");
+
+	err = xfrm_register_km(&hip_xfrm_km_mgr);
+
+	return err;
 }
 
 /**
@@ -1741,26 +1818,26 @@ static int hip_do_work(void)
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i1(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I1");
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_R1:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r1(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R1");
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_I2:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i2(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I2");
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_R2:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r2(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R2");
 			KRISU_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
 			KRISU_START_TIMER(KMM_PARTIAL);
@@ -1815,7 +1892,7 @@ static int hip_do_work(void)
 			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
 			if (res < 0)
 				res = KHIPD_ERROR;
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
@@ -1958,9 +2035,13 @@ static int __init hip_init(void)
 		goto out;
 	}
 
+	if (hip_register_xfrm_km_handler()) {
+		HIP_ERROR("Could not register XFRM key manager for HIP\n");
+		goto out;
+	}
+
 	HIP_INFO("HIP module initialized successfully\n");
 	return 0;
-
 
  out:
 	hip_cleanup();
@@ -1974,6 +2055,9 @@ static int __init hip_init(void)
 static void __exit hip_cleanup(void)
 {
 	HIP_INFO("uninitializing HIP module\n");
+
+	/* unregister XFRM km handler */
+	xfrm_unregister_km(&hip_xfrm_km_mgr);
 
 	/* disable callback for HIP packets */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);

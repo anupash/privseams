@@ -792,6 +792,7 @@ int km_query(struct xfrm_state *x, struct xfrm_tmpl *t, struct xfrm_policy *pol)
 	struct xfrm_mgr *km;
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	printk(KERN_DEBUG "TODO: remove this from km_query\n");
 	if (pol->selector.daddr.a6[0] == htonl(0x40000000) &&
 	    pol->selector.prefixlen_d == 2) {
 		/* this must trigger Base Exchange */
