@@ -16,8 +16,6 @@
 
 HIP_INIT_DB(hip_peer_hostid_db, "peer_hid");
 HIP_INIT_DB(hip_local_hostid_db, "local_hid");
-HIP_INIT_DB(hip_local_eid_db, "local_eid");
-HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
 
 /*
  *
@@ -55,34 +53,6 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 	}
 
 	HIP_WRITE_UNLOCK_DB(db);
-}
-
-/**
- * hip_uninit_eid_db - uninitialize local/peer eid db
- * @db: Database structure to delete. 
- *
- * All elements of the @db are deleted.
- */
-void hip_uninit_eid_db(struct hip_db_struct *db)
-{
-	struct list_head *curr, *iter;
-	struct hip_host_id_entry *tmp;
-	unsigned long lf;
-
-	HIP_WRITE_LOCK_DB(db);
-
-	list_for_each_safe(curr,iter,&db->db_head) {
-		tmp = list_entry(curr, struct hip_host_id_entry, next);
-		HIP_FREE(tmp);
-	}
-
-	HIP_WRITE_UNLOCK_DB(db);
-}
-
-void hip_uninit_all_eid_db(void)
-{
-	hip_uninit_eid_db(&hip_peer_eid_db);
-	hip_uninit_eid_db(&hip_local_eid_db);
 }
 
 
@@ -789,150 +759,6 @@ int hip_proc_send_notify(char *page, char **start, off_t off,
 }
 
 #endif /* CONFIG_PROC_FS */
-
-
-struct hip_eid_db_entry *hip_db_find_eid_entry_by_hit_no_lock(struct hip_db_struct *db,
-						     const struct hip_lhi *lhi)
-{
-	struct hip_eid_db_entry *entry;
-
-	HIP_DEBUG("\n");
-
-	list_for_each_entry(entry, &db->db_head, next) {
-		/* XX TODO: Skip the anonymous bit. Is it ok? */
-		if (!ipv6_addr_cmp(&entry->lhi.hit,
-				   (struct in6_addr *) &lhi->hit))
-			return entry;
-	}
-
-	return NULL;
-}
-
-struct hip_eid_db_entry *hip_db_find_eid_entry_by_eid_no_lock(struct hip_db_struct *db,
-						const struct sockaddr_eid *eid)
-{
-	struct hip_eid_db_entry *entry;
-
-	list_for_each_entry(entry, &db->db_head, next) {
-		HIP_DEBUG("comparing %d with %d\n",
-			  ntohs(entry->eid.eid_val), ntohs(eid->eid_val));
-		if (entry->eid.eid_val == eid->eid_val)
-			    return entry;
-	}
-
-	return NULL;
-}
-
-int hip_db_set_eid(struct sockaddr_eid *eid,
-		   const struct hip_lhi *lhi,
-		   const struct hip_eid_owner_info *owner_info,
-		   int is_local)
-{
-	struct hip_db_struct *db;
-	int err = 0;
-	unsigned long lf;
-	struct hip_eid_db_entry *entry = NULL;
-
-	HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));
-
-	db = (is_local) ? &hip_local_eid_db : &hip_peer_eid_db;
-
-	HIP_WRITE_LOCK_DB(db);
-
-	entry = hip_db_find_eid_entry_by_hit_no_lock(db, lhi);
-	if (!entry) {
-		entry = HIP_MALLOC(sizeof(struct hip_eid_db_entry),
-				   GFP_KERNEL);
-		if (!entry) {
-			err = -ENOMEM;
-			goto out_err;
-		}
-
-		entry->eid.eid_val = ((is_local) ?
-			htons(hip_create_unique_local_eid()) :
-			htons(hip_create_unique_peer_eid()));
-		entry->eid.eid_family = PF_HIP;
-		memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
-
-		HIP_DEBUG("Generated eid val %d\n", entry->eid.eid_val);
-
-		memcpy(&entry->lhi, lhi, sizeof(struct hip_lhi));
-		memcpy(&entry->owner_info, owner_info,
-		       sizeof(struct hip_eid_owner_info));
-
-		/* Finished. Add the entry to the list. */
-		list_add(&entry->next, &db->db_head);
-	} else {
-		/* XX TODO: Ownership is not changed here; should it? */
-		memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
-	}
-
- out_err:
-	HIP_WRITE_UNLOCK_DB(db);
-
-	return err;
-}
-
-int hip_db_set_my_eid(struct sockaddr_eid *eid,
-		      const struct hip_lhi *lhi,
-		      const struct hip_eid_owner_info *owner_info)
-{
-	return hip_db_set_eid(eid, lhi, owner_info, 1);
-}
-
-int hip_db_set_peer_eid(struct sockaddr_eid *eid,
-			const struct hip_lhi *lhi,
-			const struct hip_eid_owner_info *owner_info)
-{
-	return hip_db_set_eid(eid, lhi, owner_info, 0);
-}
-
-int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
-			  struct hip_lhi *lhi,
-			  struct hip_eid_owner_info *owner_info,
-			  int is_local)
-{
-	struct hip_db_struct *db;
-	int err = 0;
-	unsigned long lf;
-	struct hip_eid_db_entry *entry = NULL;
-
-	HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));
-
-	db = (is_local) ? &hip_local_eid_db : &hip_peer_eid_db;
-
-	HIP_READ_LOCK_DB(db);
-
-	entry = hip_db_find_eid_entry_by_eid_no_lock(db, eid);
-	if (!entry) {
-		err = -ENOENT;
-		goto out_err;
-	}
-
-	memcpy(lhi, &entry->lhi, sizeof(struct hip_lhi));
-	memcpy(owner_info, &entry->owner_info,
-	       sizeof(struct hip_eid_owner_info));
-
- out_err:
-	HIP_READ_UNLOCK_DB(db);
-
-	return err;
-
-}
-
-int hip_db_get_peer_lhi_by_eid(const struct sockaddr_eid *eid,
-			  struct hip_lhi *lhi,
-			  struct hip_eid_owner_info *owner_info)
-{
-	return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 0);
-}
-
-int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
-			     struct hip_lhi *lhi,
-			     struct hip_eid_owner_info *owner_info)
-{
-	return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
-}
 
 #undef HIP_READ_LOCK_DB
 #undef HIP_WRITE_LOCK_DB

@@ -21,6 +21,12 @@ extern int inet6_create(struct socket *sock, int protocol);
 extern struct hip_unit_test_suite_list hip_unit_test_suite_list;
 
 /*
+ * Do not access these databases directly: use the accessors.
+ */
+HIP_INIT_DB(hip_local_eid_db, "local_eid");
+HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
+
+/*
  * The eid db lock (local or peer) must be obtained before accessing these
  * variables.
  */
