@@ -51,12 +51,36 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 {
 	unsigned h = __xfrm6_spi_hash(daddr, spi, proto);
 	struct xfrm_state *x;
+	int res,conv;
+
+	conv = 0; // keep compiler happy
+
+	/* This is the HIP case. Sets conv, if the daddr is IPv6.
+	 * This happens only on packets incoming from the network.
+	 */
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	if (!hip_is_hit(daddr)) {
+		conv = 1;
+	}
+#endif
+
+	/* BEET mode checks: If SA has to be looked up by the other
+	 * (inner or outer, depending on the implementation) address, then
+	 * set the conv to true.
+	 */
 
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
-		if (x->props.family == AF_INET6 &&
-		    spi == x->id.spi &&
-		    !ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)x->id.daddr.a6) &&
-		    proto == x->id.proto) {
+#if defined(CONFIG_ESPBEET)
+		if (conv && x->props.mode == XFRM_MODE_BEET)
+			res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->outeraddr);
+		else
+#endif
+			res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
+		
+		if (x->props.family == AF_INET6 && spi == x->id.spi && !res &&
+		    proto == x->id.proto) 
+		{
 			xfrm_state_hold(x);
 			return x;
 		}

@@ -865,6 +865,7 @@ xfrm_state_ok(struct xfrm_tmpl *tmpl, struct xfrm_state *x,
 		x->props.mode == tmpl->mode &&
 		(tmpl->aalgos & (1<<x->props.aalgo)) &&
 		!(x->props.mode && xfrm_state_addr_cmp(tmpl, x, family));
+/* XXX:Krisu - Something should be done about the last check */
 }
 
 static inline int
@@ -881,6 +882,7 @@ xfrm_policy_ok(struct xfrm_tmpl *tmpl, struct sec_path *sp, int start,
 	for (; idx < sp->len; idx++) {
 		if (xfrm_state_ok(tmpl, sp->x[idx].xvec, family))
 			return ++idx;
+/* XXX:Krisu - BEET mode? */
 		if (sp->x[idx].xvec->props.mode)
 			break;
 	}
@@ -961,6 +963,7 @@ int __xfrm_policy_check(struct sock *sk, int dir, struct sk_buff *skb,
 				goto reject;
 		}
 
+/* XXX:Krisu - BEET checks? */
 		for (; k < sp->len; k++) {
 			if (sp->x[k].xvec->props.mode)
 				goto reject;

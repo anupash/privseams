@@ -733,6 +733,9 @@ fail:
 
 int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 {
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	struct in6_addr daddr;
+#endif
 	int err = 0;
 
 	*dst = NULL;
@@ -772,43 +775,52 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 		}
 	}
 
-	if (*dst == NULL)
+	if (*dst == NULL) {
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		/* if we are dealing with a HIT and cannot find a source HIT
+		 * then we have an error situation and the sooner we bail out
+		 * the better.
+		 */
+		ipv6_addr_copy(&daddr,&fl->fl6_dst);
+		if (ipv6_addr_is_hit(&fl->fl6_dst)) {
+			if (!HIP_CALLPROC(hip_get_saddr)(&fl, &fl->fl6src)) {
+				err = -ENETUNREACH;
+				goto out_err_release;
+			}
+
+		}
+#endif
 		*dst = ip6_route_output(sk, fl);
+	}
+
 
 	if ((err = (*dst)->error))
 		goto out_err_release;
 
 	if (ipv6_addr_any(&fl->fl6_src)) {
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		if(HIP_CALLFUNC(hip_get_hits, 0)(&fl->fl6_dst, &fl->fl6_src)) {
-			/* we'll skip the ipv6_get_addr() as we do not
-			   need the source address yet... [perhaps we're
-			   missing an important thing here? Other than
-			   optimization?]
-			*/
-			
-		} else {
-			/* HITS get failed. Reasons:
-			   1. daddr not a HIT
-			   2. no local HIT availbale
-			   We'll assume that the case is #1
-			*/
-#endif
-			err = ipv6_get_saddr(*dst, &fl->fl6_dst, &fl->fl6_src);
+		err = ipv6_get_saddr(*dst, &fl->fl6_dst, &fl->fl6_src);
 
-			if (err) {
+		if (err) {
 #if IP6_DEBUG >= 2
-				printk(KERN_DEBUG "ip6_dst_lookup: "
-				       "no available source address\n");
+			printk(KERN_DEBUG "ip6_dst_lookup: "
+			       "no available source address\n");
 #endif
-				goto out_err_release;
-			}
-
+			goto out_err_release;
 		}
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		
 	}
+
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	if (ipv6_addr_is_hit(&daddr))
+		ipv6_addr_copy(&fl->fl6_dst,&daddr);
+	/* We need to have both HITs (src & dst) in fl
+	 * so that we can match the correct IPsec policy
+	 * The src addr is set few lines above.
+	 */
 #endif
+
 	if ((err = xfrm_lookup(dst, fl, sk, 0)) < 0) {
 		err = -ENETUNREACH;
 		goto out_err_release;

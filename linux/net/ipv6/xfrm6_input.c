@@ -54,15 +54,8 @@ int xfrm6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 		x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nexthdr, AF_INET6);
 		if (x == NULL) {
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-			/* try HITs */
-			HIP_CALLPROC(hip_handle_esp)(skb->nh.ipv6h);
-			x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nexthdr, AF_INET6);
-			if (x == NULL) {
-				/* Try to send R1 */
-				HIP_CALLPROC(hip_unknown_spi)(skb);
-				kfree_skb(skb);
-				return 0; /* Packet delivered */
-			}
+			/* Try to send R1 */
+			HIP_CALLPROC(hip_unknown_spi)(skb);
 #else
 			goto drop;
 #endif
@@ -91,7 +84,7 @@ int xfrm6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 
 		xfrm_vec[xfrm_nr++].xvec = x;
 
-		if (x->props.mode) { /* XXX */
+		if (x->props.mode == XFRM_MODE_TUNNEL) { 
 			if (nexthdr != IPPROTO_IPV6)
 				goto drop;
 			skb->nh.raw = skb->data;
@@ -100,6 +93,11 @@ int xfrm6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 			iph = skb->nh.ipv6h;
 			decaps = 1;
 			break;
+		} else if (x->props.mode == XFRM_MODE_BEET) {
+			/* this should be us */
+			ipv6_addr_copy(&iph->daddr, (struct in6_addr *)&x->id.daddr);
+			/* the original sender */
+			ipv6_addr_copy(&iph->saddr, (struct in6_addr *)&x->props.saddr);
 		}
 
 		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)

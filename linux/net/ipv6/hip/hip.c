@@ -855,16 +855,16 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
  * a HIT and destination address which is a HIT. If that is true, we
  * make he source a HIT too.
  */
-void hip_get_saddr_udp(struct flowi *fl, struct in6_addr *hit_storage)
+int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
 	if (!hip_is_hit(&fl->fl6_dst))
-		goto out;
+		return 0;
 
 	if (!hip_hadb_get_own_hit_by_hit(&fl->fl6_dst, hit_storage)) {
 		HIP_ERROR("Could not get own hit, corresponding to the peer hit\n");
+		return 0;
 	}
- out:
-	return;
+	return 1;
 }
 
 /**
@@ -1688,3 +1688,17 @@ MODULE_PARM_DESC(kmm, "Measuring mode: 1 = Global timing, 2 = {I,R}{1,2} timing,
 #endif
 module_init(hip_init);
 module_exit(hip_cleanup);
+
+/*
+	int	(*handler)(struct sk_buff **skb, unsigned int *nhoffp);
+
+	void	(*err_handler)(struct sk_buff *skb,
+			       struct inet6_skb_parm *opt,
+			       int type, int code, int offset,
+			       __u32 info);
+*/
+static struct inet6_protocol hip_protocol = {
+	.handler     = hip_inbound,
+	.err_handler = hip_errhand,
+	.flags       = INET6_PROTO_NOPOLICY, // posssibly also INET6_PROTO_FINAL
+}

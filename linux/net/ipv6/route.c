@@ -458,14 +458,14 @@ struct dst_entry * ip6_route_output(struct sock *sk, struct flowi *fl)
 	int strict;
 	int attempts = 3;
 
-
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	struct in6_addr *fl_store_dst;
-	struct in6_addr dst_addr; 
-	
-	fl_store_dst = &fl->fl6_dst;
-	if (HIP_CALLFUNC(hip_get_addr, 0)(&fl->fl6_dst, &dst_addr) == 1)
-		fl->fl6_dst = dst_addr;
+
+	if (ipv6_addr_is_hit(&fl->fl6_dst))
+		HIP_CALLFUNC(hip_get_addr, 0)(&fl->fl6_dst, &fl->fl6_dst);
+
+	/* HIT is now replaced with IPv6, that is not necessarily the
+	 * same IPv6 address that is in the BEET SA :(
+	 */
 #endif
 
 	strict = ipv6_addr_type(&fl->fl6_dst) & (IPV6_ADDR_MULTICAST|IPV6_ADDR_LINKLOCAL);
@@ -511,9 +511,6 @@ restart:
 out:
 	read_unlock_bh(&rt6_lock);
 out2:
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	fl->fl6_dst = *fl_store_dst;
-#endif
 	rt->u.dst.lastuse = jiffies;
 	rt->u.dst.__use++;
 	return &rt->u.dst;

@@ -72,7 +72,9 @@ int esp6_output(struct sk_buff *skb)
 
 	/* Strip IP header in transport mode. Save it. */
 
-	if (!x->props.mode) {
+	if (x->props.mode == XFRM_MODE_TRANSPORT ||
+	    x->props.mode == XFRM_MODE_BEET) 
+	{
 		hdr_len = ip6_find_1stfragopt(skb, &prevhdr);
 		nexthdr = *prevhdr;
 		*prevhdr = IPPROTO_ESP;
@@ -112,7 +114,7 @@ int esp6_output(struct sk_buff *skb)
 	*(u8*)(trailer->tail + clen-skb->len - 2) = (clen - skb->len)-2;
 	pskb_put(skb, trailer, clen - skb->len);
 
-	if (x->props.mode) {
+	if (x->props.mode == XFRM_MODE_TUNNEL) {
 		iph = skb->nh.ipv6h;
 		top_iph = (struct ipv6hdr*)skb_push(skb, x->props.header_len);
 		esph = (struct ipv6_esp_hdr*)(top_iph+1);
@@ -132,6 +134,14 @@ int esp6_output(struct sk_buff *skb)
 		ipv6_addr_copy(&top_iph->daddr,
 			       (struct in6_addr *)&x->id.daddr);
 	} else { 
+		/* TRANSPORT & BEET */
+		if (x->props.mode == XFRM_MODE_BEET) {
+			ipv6_addr_copy(&iph->daddr, (struct in6_addr *)&x->outeraddr);
+			/* hopefully the source address is overwritten later...
+			   if not, we might have to call get_saddr() here?
+			*/
+		}
+
 		esph = (struct ipv6_esp_hdr*)skb_push(skb, x->props.header_len);
 		skb->h.raw = (unsigned char*)esph;
 		top_iph = (struct ipv6hdr*)skb_push(skb, hdr_len);

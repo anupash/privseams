@@ -126,7 +126,7 @@ __xfrm6_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 			dst_clone(dst1);
 		}
 		dst_prev = dst1;
-		if (xfrm[i]->props.mode) {
+		if (xfrm[i]->props.mode == XFRM_MODE_TUNNEL) {
 			remote = (struct in6_addr*)&xfrm[i]->id.daddr;
 			local  = (struct in6_addr*)&xfrm[i]->props.saddr;
 		}

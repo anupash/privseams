@@ -301,6 +301,15 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 		 a->s6_addr32[2] | a->s6_addr32[3] ) == 0); 
 }
 
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+static inline int ipv6_addr_is_hit(const struct in6_addr *a)
+{
+	return ((a->s6_addr[0] & 0x40 == 0x40) ||
+		(a->s6_addr[0] & 0x80 == 0x80));
+}
+#endif
+
 /*
  *	Prototypes exported by ipv6
  */
