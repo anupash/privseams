@@ -99,11 +99,12 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
 
- 	if (dstbuflen < HIP_AH_SHA_LEN) {
- 		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
- 		return;
- 	}
- 
+	if (dstbuflen < HIP_AH_SHA_LEN) {
+		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
+		return;
+	}
+
+	_HIP_ASSERT(dstbuflen % 32 == 0);
 	HIP_ASSERT(sizeof(index_nbr) == HIP_KEYMAT_INDEX_NBR_SIZE);
 
 	hit1_is_bigger = hip_hit_is_bigger(hit1, hit2);
