@@ -159,7 +159,6 @@ static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
 		kfree(xp);
 		return err;
 	}
-	HIP_DEBUG("sa_entry addr=0x%p\n", sa_entry);
 
 	xfrm_pol_put(xp); // really?
 	return 0;
@@ -248,7 +247,6 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		HIP_ERROR("Unsupported type: 0x%x\n",alg);
 		HIP_ASSERT(0);
 	}
-	HIP_DEBUG("policy addr=%p\n", policy);
 
 	ekeylen = ead->desc.sadb_alg_maxbits;
 	akeylen = aad->desc.sadb_alg_maxbits;
@@ -312,14 +310,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		kfree(xs);
 	}
 
-	HIP_DEBUG("encalg=%d\n", encalg);
-	HIP_HEXDUMP("sa_entry enckey", enckey, sa_entry->esp_algo.key_len);
-	HIP_HEXDUMP("sa_entry authkey", authkey, sa_entry->auth_algo.key_len);
-
 	return err;
-
-
-
 }
 
 

@@ -1965,11 +1965,9 @@ int hip_handle_r2(struct sk_buff *skb)
 	/* Now, if we have cached SK, use it */
 	{
 		int val;
-		struct hip_kludge *kg, *kg_curr, *kg_iter;
+		struct hip_kludge *kg = NULL, *kg_curr, *kg_iter;
 		int tlist[1] = { HIP_HADB_SK };
 		void *setlist[1] = { kg };
-
-		kg = NULL;
 
 		val = hip_hadb_multiget(&ctx->input->hits, 1, tlist, setlist, 
 					HIP_ARG_HIT);
@@ -2567,7 +2565,7 @@ int hip_handle_update_initial(struct hip_common *msg, int state /*, int is_reply
 		kfree(update_packet);
 	/* TODO: REMOVE IPSEC SAs */
 	if (err && our_new_spi)
-		hip_delete_sa(our_new_spi, hits, hitr);
+		hip_delete_sa(our_new_spi, hits);
 	return err;
 }
 

@@ -1350,8 +1350,9 @@ static int hip_send_update(struct hip_hadb_state *entry)
 
  out_err:
 	/* delete IPsec SA on failure */
-	if (new_spi)
+/*	if (new_spi)
 		hip_delete_sa(new_spi, &entry->hit_our, &entry->hit_peer);
+*/
  out:
 	if (update_packet)
 		kfree(update_packet);

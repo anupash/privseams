@@ -133,7 +133,7 @@ HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
         res = func; \
         HIP_HADB_WRAP_W_END
 
-
+static void hip_hadb_delete_entry_nolock(struct hip_hadb_state *entry);
 
 /**
  * hip_uninit_hostid_db - uninitialize local/peer Host Id table
@@ -215,16 +215,6 @@ static struct hip_hadb_state *hip_hadb_find_by_hit(struct in6_addr *hit)
 
 }
 
-static void hip_hadb_delete_entry(struct hip_hadb_state *entry)
-{
-	struct hip_peer_addr_list_item *pali;
-	struct list_head *iter2,*tmp2;
-
-	
-	kfree(entry);
-}
-
-
 static int hip_hadb_delete_by_hit(struct in6_addr *hit)
 {
 	struct hip_hadb_state *tmp, *entry;
@@ -235,7 +225,7 @@ static int hip_hadb_delete_by_hit(struct in6_addr *hit)
 	list_for_each_entry_safe(entry, tmp, &hip_hadb.db_head, next) {
 		if (!ipv6_addr_cmp(&entry->hit_peer, hit)) {
 			list_del(&entry->next);
-			hip_delete_hadb_entry(entry);
+			hip_hadb_delete_entry_nolock(entry);
 			return 0;
 		}
 	}
@@ -708,10 +698,10 @@ static void hip_hadb_free_socks_nolock(struct hip_hadb_state *entry, int error)
 		 */
 		if (kg->sk) {
 			if (error) 
-				kg->sk->sk_error_report(ks->sk);
+				kg->sk->sk_error_report(kg->sk);
 			sock_put(kg->sk);
 		}
-		list_del(&kg->socklist)
+		list_del(&kg->socklist);
 		kfree(kg);
 	}
 
@@ -725,20 +715,19 @@ static void hip_hadb_free_socks_nolock(struct hip_hadb_state *entry, int error)
  */
 static void hip_hadb_entry_free(struct hip_hadb_state *entry)
 {
-	struct hip_kludge *kg, *kg_iter;
 	/* IPsec */
 	if (likely(entry->spi_peer)) {
 		hip_delete_spd(&entry->hit_our, &entry->hit_peer, XFRM_POLICY_OUT);
-		hip_delete_sa(spi_peer, &entry->hit_our);
+		hip_delete_sa(entry->spi_peer, &entry->hit_our);
 	}
 	if (likely(entry->spi_our)) {
 		hip_delete_spd(&entry->hit_peer, &entry->hit_our, XFRM_POLICY_IN);
-		hip_delete_sa(spi_our, &entry->hit_peer);
+		hip_delete_sa(entry->spi_our, &entry->hit_peer);
 	}
 	if (unlikely(entry->new_spi_peer))
-		hip_delete_sa(new_spi_peer, &entry->new_spi_peer);
+		hip_delete_sa(entry->new_spi_peer, &entry->hit_our);
 	if (unlikely(entry->new_spi_our))
-		hip_delete_sa(new_spi_our, &entry->new_spi_our);
+		hip_delete_sa(entry->new_spi_our, &entry->hit_peer);
 
 	entry->spi_peer = 0;
 	entry->spi_our = 0;
@@ -825,27 +814,6 @@ static int hip_hadb_reinit_state(struct hip_hadb_state *entry)
 	return 0;
 }
 
-void hip_hadb_free_kludge(struct in6_addr *arg)
-{
-	HIP_HADB_WRAP_BEGIN_VOID;
-	struct sock *oldsk = NULL;
-	int type = HIP_ARG_HIT; // used by the next macro
-
-	HIP_HADB_WRAP_W_ACCESS_VOID;
-
-	if (entry->kg.sk) {
-		oldsk = entry->kg.sk->sk;
-		kfree(entry->kg.sk);
-		entry->kg.sk = NULL;
-	}
-
-	HIP_WRITE_UNLOCK_DB(&hip_hadb);
-
-	if (oldsk)
-		sock_put(oldsk);
-	return;
-}
-
 
 /*
  *
@@ -873,11 +841,12 @@ void hip_hadb_free_kludge(struct in6_addr *arg)
 /*
  * returns 0 if error, positive (2) if ok
  */
-int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
+int hip_hadb_save_sk(struct in6_addr *arg, struct sock *sk)
 {
 	HIP_HADB_WRAP_BEGIN(int);
 	struct hip_kludge *kg;
 	int state;
+	int type = HIP_ARG_HIT;
 	struct ipv6hdr ip = {0};
 
 	HIP_HADB_WRAP_W_ACCESS(-EINVAL);
@@ -896,7 +865,7 @@ int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
 
 	kg->sk = sk;
 
-	sock_hold(kg->sk);C
+	sock_hold(kg->sk);
 	list_add(&kg->socklist, &entry->kg.socklist);
 
 	state = entry->state;
@@ -904,7 +873,7 @@ int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
 
 	if (state == HIP_STATE_UNASSOCIATED) {
-		ipv6_addr_copy(&ip.daddr, hit);
+		ipv6_addr_copy(&ip.daddr, arg);
 		hip_handle_output(&ip, NULL); // trigger I1
 	}
 
@@ -956,12 +925,14 @@ struct hip_hadb_state *hip_hadb_create_entry(void)
 }
 
 
-void hip_hadb_delete_entry_nolock(struct hip_hadb_state *entry)
+static void hip_hadb_delete_entry_nolock(struct hip_hadb_state *entry)
 {
 	if ((--hip_hadb.db_cnt) < 0)
 		HIP_ERROR("Database corrupted!\n");
 	list_del(&entry->next);
 	/* XXX: Should we free the memory, also? */
+	hip_hadb_entry_free(entry);
+
 	kfree(entry);
 }
 
@@ -979,7 +950,7 @@ void hip_uninit_hadb(void)
 	HIP_WRITE_LOCK_DB(&hip_hadb);
 
 	list_for_each_entry_safe(this,iter,&hip_hadb.db_head, next) {
-		hip_hadb_eentry_ntry(this);
+		hip_hadb_delete_entry_nolock(this);
 	}
 
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
