@@ -32,7 +32,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#include "tools/debug.h"
+#include "libinet6/debug.h"
 
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *epinfo, *res = NULL;
@@ -53,7 +53,7 @@ int main(int argc,char *argv[]) {
 
   hip_set_logtype(LOGTYPE_STDERR);
   hip_set_logfmt(LOGFMT_SHORT);
- 
+
   if (argc != 4) {
     HIP_ERROR("Usage: %s host tcp|udp port\n", argv[0]);
     err = 1;

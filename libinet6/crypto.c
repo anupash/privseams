@@ -1,5 +1,5 @@
 /*
- * Crypto functions for HIP daemon.
+ * HIP userspace crypto functions.
  *
  * Authors:
  * - Mika Kousa <mkousa@cc.hut.fi>

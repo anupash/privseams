@@ -80,7 +80,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/hip.h>
 
 #include "builder.h"
-#include "tools/crypto.h"
+#include "libinet6/crypto.h"
 
 int convert_port_string_to_number(const char *servname, in_port_t *port)
 {

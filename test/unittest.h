@@ -10,7 +10,7 @@
 
 #include "builder.h"
 #include "unit.h"
-#include "tools/debug.h"
+#include "libinet6/debug.h"
 
 #define TEST_SPACE         0
 #define TEST_SUITE         1

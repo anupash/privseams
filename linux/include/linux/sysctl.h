@@ -645,9 +645,10 @@ enum {
 	NET_BRIDGE_NF_FILTER_VLAN_TAGGED = 4,
 };
 
+/* /proc/sys/net/hip */
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 enum {
-	NET_HIP_TEST = 1,
+	NET_HIP_COOKIE_MAX_K_R1 = 1, /* max value of K to calculate received cookie */
 };
 #endif
 

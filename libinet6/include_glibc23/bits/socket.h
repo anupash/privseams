@@ -262,8 +262,9 @@ extern struct cmsghdr *__cmsg_nxthdr (struct msghdr *__mhdr,
 # ifndef _EXTERN_INLINE
 #  define _EXTERN_INLINE extern __inline
 # endif
+/* HIPL note: I commented the __THROW to make this compile on FC3 -miika*/
 _EXTERN_INLINE struct cmsghdr *
-__cmsg_nxthdr (struct msghdr *__mhdr, struct cmsghdr *__cmsg) __THROW
+__cmsg_nxthdr (struct msghdr *__mhdr, struct cmsghdr *__cmsg) //__THROW
 {
   if (__cmsg == NULL)
     return CMSG_FIRSTHDR(__mhdr);

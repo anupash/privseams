@@ -19,7 +19,7 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 
-#include "debug.h"
+#include "libinet6/debug.h"
 
 // wrapper functions for -lcrypto
 

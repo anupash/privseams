@@ -56,16 +56,11 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 		if (x->props.family == AF_INET6 && spi == x->id.spi &&
 		    !ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr) &&
 		    proto == x->id.proto) {
-		        /* printk(KERN_DEBUG "SPI 0x%x found\n", ntohl(spi)); */
 			xfrm_state_hold(x);
 			return x;
 		}
 	}
 
-#ifdef CONFIG_HIP_DEBUG
-	if (ipv6_addr_is_hit((struct in6_addr *) daddr))
-		printk(KERN_DEBUG "SA lookup (SPI 0x%x) failed\n", ntohl(spi));
-#endif
 	return NULL;
 }
 

@@ -101,14 +101,21 @@ static struct inet6_protocol hip_protocol = {
 int sysctl_hip_test = 0;
 static struct ctl_table_header *hip_sysctl_header = NULL;
 
+static int zero = 0, max_k = 64;  /* sysctl table wants pointers to ranges */
+
+struct hip_sys_config hip_sys_config;
+
 static ctl_table hip_table[] = {
 	{
-		.ctl_name	= NET_HIP_TEST,
-		.procname	= "test",
-		.data		= &sysctl_hip_test,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec
+		.ctl_name	= NET_HIP_COOKIE_MAX_K_R1,
+		.procname	= "cookie_max_k_r1",
+		.data		= &hip_sys_config.hip_cookie_max_k_r1,
+		.maxlen		= sizeof (int),
+		.mode		= 0600,
+		.proc_handler	= &proc_dointvec_minmax,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &zero,
+		.extra2		= &max_k
 	},
 	{ .ctl_name = 0 }
 };
@@ -146,6 +153,14 @@ void hip_unregister_sysctl(void)
 	if (hip_sysctl_header)
 		unregister_sysctl_table(hip_sysctl_header);
 }
+
+/**
+ * hip_init_sys_config - Initialize HIP related sysctl variables to default values
+ */
+void hip_init_sys_config(void)
+{
+	hip_sys_config.hip_cookie_max_k_r1 = 20;
+}
 #endif
 
 /**
@@ -165,7 +180,7 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 		HIP_ERROR("Trying to use reserved DH group type 0\n");
 	else if (hip_dh_group_type == HIP_DH_384)
 		HIP_ERROR("draft-09: Group ID 1 does not exist yet\n");
-	else if (hip_dh_group_type > (sizeof(dh_size) / sizeof(dh_size[0])))
+	else if (hip_dh_group_type > ARRAY_SIZE(dh_size))
 		HIP_ERROR("Unknown/unsupported MODP group %d\n", hip_dh_group_type);
 	else
 		ret = dh_size[hip_dh_group_type] / 8;
@@ -1046,13 +1061,13 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
  */
 void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 {
+	if (!hip_is_hit(&(skb->nh.ipv6h->saddr)))
+		return;
+
 	/* draft: If the R1 is a response to an ESP packet with an unknown
 	   SPI, the Initiator HIT SHOULD be zero. */
 	HIP_DEBUG("Received Unknown SPI: 0x%x\n", ntohl(spi));
-	HIP_INFO("Sending R1 with NULL dst HIT\n");
-
-	HIP_DEBUG("SKIP SENDING OF R1 ON UNKNOWN SPI\n");
-	/* TODO: send NOTIFY */
+	HIP_DEBUG("TODO: rekey old SA ?\n");  /* and/or TODO: send NOTIFY ? */
 	return;
 #if 0
 	/* We cannot know the destination HIT */
@@ -1636,9 +1651,12 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
 		goto out;
 	}
 
-	err = 0;
 	ipv6_addr_copy(&hdr.daddr, (struct in6_addr *) &(xs->id.daddr));
-	hip_handle_output(&hdr, NULL);
+	err = hip_handle_output(&hdr, NULL);
+	if (err)
+		HIP_ERROR("TODO: handle err=%d\n", err);
+	err = 0; /* tell XFRM that we handle this SA acquiring even
+		  * if the previous failed */
 	
 out:
 	HIP_DEBUG("returning, err=%d\n", err);
@@ -2053,6 +2071,7 @@ static int __init hip_init(void)
 
 	HIP_INFO("Initializing HIP module\n");
 	hip_get_load_time();
+	hip_init_sys_config();
 
 	memset(&hip_kthreads, 0, sizeof(hip_kthreads));
 

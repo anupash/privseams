@@ -433,7 +433,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 
 	/* XX TODO: check the lengths of the parameters */
 
-	for (i = 0; i < sizeof(valid) / sizeof(valid[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(valid); i++) {
 		if (type == valid[i]) {
 			ok = 1;
 			break;
