@@ -21,6 +21,9 @@
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 #include <net/hip_glue.h>
+/* Placeholder for HIP hooks */
+struct hip_callable_functions hip_functions;
+EXPORT_SYMBOL(hip_functions);
 #endif
 
 /* Each xfrm_state may be linked to two tables:
