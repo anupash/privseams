@@ -596,17 +596,9 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 		       hip_hmac_key_length(entry->esp_transform));
 	}
 
-	/* TODO: move keymat update code to keymat.c */
-
-	/* store the leftover KEYMAT */
-
 	/* TODO: just reuse the keymatdst pointer, do not kmalloc */
-	err = hip_update_entry_keymat(entry, &ctx->keymat, ctx->current_keymat_index,
-				      ctx->keymat_calc_index, ctx->current_keymat_K);
-	if (err) {
-		HIP_ERROR("entry keymat update failed\n");
-		goto out_err;
-	}
+	hip_update_entry_keymat(entry, ctx->current_keymat_index,
+				ctx->keymat_calc_index, ctx->current_keymat_K);
 
 	if (entry->dh_shared_key) {
 		HIP_DEBUG("kfreeing old dh_shared_key\n");
@@ -620,17 +612,15 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 		err = -ENOMEM;
 		goto out_err;
 	}
+
 	entry->dh_shared_key_len = ctx->dh_shared_key_len;
 	memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
 	HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
 
-	memcpy(entry->current_keymat_K, ctx->current_keymat_K, HIP_AH_SHA_LEN);
-	HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
+	_HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
 	return err;
 
  out_err:
-	if (entry->keymat.keymatdst)
-		kfree(entry->keymat.keymatdst);
 	if (entry->dh_shared_key)
 		kfree(entry->dh_shared_key);
 

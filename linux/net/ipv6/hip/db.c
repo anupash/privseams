@@ -721,9 +721,7 @@ static void hip_hadb_entry_free(struct hip_hadb_state *entry)
 	/* TCP sockets */
 	hip_hadb_free_socks_nolock(entry,1);
 
-	/* keymat & mm-01 stuff */
-	if (entry->keymat.keymatdst)
-		kfree(entry->keymat.keymatdst);
+	/* keymat */
 	if (entry->dh_shared_key)
 		kfree(entry->dh_shared_key);
 
@@ -1624,7 +1622,7 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 	len = snprintf(page, count,
 		       "state peer_controls hit_our hit_peer "
 		       "spi_our spi_peer new_spi_our new_spi_peer lsi_our lsi_peer esp_transform "
-		       "birthday keymat_len keymat_offset keymat_index keymat_calc_index "
+		       "birthday keymat_index keymat_calc_index "
 		       "update_id_in update_id_out dh_len list_of_peer_addrs curr_dst_addr\n");
 	if (len >= count)
 		goto err;
@@ -1660,9 +1658,8 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
  			break;
 
  		if ( (len += snprintf(page+len, count-len,
-				      " 0x%llx %u %u %u %u %u %u %u",
-				      entry->birthday, entry->keymat.keymatlen,
-				      entry->keymat.offset, entry->current_keymat_index,
+				      " 0x%llx %u %u %u %u %u",
+				      entry->birthday, entry->current_keymat_index,
 				      entry->keymat_calc_index, entry->update_id_in,
 				      entry->update_id_out, entry->dh_shared_key_len )) >= count)
 			break;

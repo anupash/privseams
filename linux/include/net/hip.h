@@ -587,7 +587,7 @@ struct hip_context
 				    * during the keymat calculation */
 
 	uint16_t keymat_index; /* KEYMAT offset */
-	struct hip_keymat_keymat keymat; /* TEST */
+  //	struct hip_keymat_keymat keymat; /* TEST */
 };
 
 struct hip_context_dh_sig
@@ -669,7 +669,7 @@ struct hip_hadb_state
 				    * during the keymat calculation */
 	unsigned char current_keymat_K[HIP_AH_SHA_LEN]; /* last Kn, where n is keymat_calc_index */
 
-	struct hip_keymat_keymat keymat; /* KEYMAT starting from index current_keymat_index */
+  //	struct hip_keymat_keymat keymat; /* KEYMAT starting from index current_keymat_index */
 
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
