@@ -18,7 +18,7 @@
 #include "misc.h"
 #include "hip.h"
 #include "hadb.h"
-#include "db.h"
+#include "hidb.h"
 #include "builder.h"
 #include "cookie.h"
 #include "builder.h"

@@ -13,7 +13,7 @@
 #include <net/addrconf.h>
 
 #include "debug.h"
-#include "db.h"
+#include "hidb.h"
 #include "builder.h"
 #include "misc.h"
 #include "workqueue.h"

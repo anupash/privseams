@@ -18,8 +18,7 @@ INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 sbin_PROGRAMS = hipd
 hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c
 hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
-hipd_SOURCES += input.c output.c xfrmapi.c preoutput.c
-#hipd_SOURCES += dh2.c dsa.c rsa.c
+hipd_SOURCES += input.c output.c xfrmapi.c preoutput.c hidb.c
 
 # i3 and KeyNotev2 specific includes/libraries:
 #-Ii3/i3_client -Ii3/utils -Ii3/i3 -Ikeynote
@@ -44,10 +43,10 @@ cookie.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.h .
 crypto:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto .
-#db.c: db.h
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/db.c .
-#db.h:
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/db.h .
+hidb.c: hidb.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.c .
+hidb.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.h .
 dh.c: dh.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/dh.c .
 dh.h:

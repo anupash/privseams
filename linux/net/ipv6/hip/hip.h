@@ -63,7 +63,7 @@
 #include "hadb.h"
 #include "input.h"
 #include "builder.h"
-#include "db.h"
+#include "hidb.h"
 #include "cookie.h"
 #include "keymat.h"
 #include "dh.h"

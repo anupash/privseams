@@ -8,7 +8,7 @@
  *
  */
 
-#include "db.h"
+#include "hidb.h"
 
 /*
  * Do not access these databases directly: use the accessors in this file.

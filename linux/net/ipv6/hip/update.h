@@ -12,7 +12,7 @@
 #include "dh.h"
 #include "input.h"
 #include "hadb.h"
-#include "db.h"
+#include "hidb.h"
 #include "keymat.h"
 #include "builder.h"
 #include "misc.h"

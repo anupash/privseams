@@ -7,7 +7,7 @@
 #include <net/hip.h>
 #include "debug.h"
 #include "misc.h"
-#include "db.h"
+#include "hidb.h"
 #include "hashtable.h"
 #include "builder.h"
 

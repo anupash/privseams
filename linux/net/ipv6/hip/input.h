@@ -20,7 +20,7 @@
 #include "dh.h"
 #include "misc.h"
 #include "workqueue.h"
-#include "db.h"
+#include "hidb.h"
 #include "cookie.h"
 #include "output.h"
 #include "socket.h"
