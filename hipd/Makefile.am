@@ -16,7 +16,7 @@ INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = keymat.c cookie.c misc.c dh.c hipd.c netlink.c workqueue.c builder.c preoutput.c hadb.c
+hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c workqueue.c builder.c preoutput.c hadb.c
 hipd_SOURCES += input.c
 
 # i3 and KeyNotev2 specific includes/libraries:
@@ -54,10 +54,10 @@ hadb.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.h .
 netlink.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/netlink.h .
-#hashtable.c: hashtable.h
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.c .
-#hashtable.h:
-#	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.h .
+hashtable.c: hashtable.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.c .
+hashtable.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.h .
 #hip.c: hip.h
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/hip.c .
 #hip.h:

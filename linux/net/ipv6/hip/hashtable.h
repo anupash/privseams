@@ -7,12 +7,17 @@
 #  include <linux/list.h>
 #  include <linux/interrupt.h>
 #  include <linux/list.h>
+#else
+#  include "list.h"
+#  include <net/hip.h>
 #endif /* __KERNEL__ */
 
 struct hip_ht_common {
 	struct list_head *head;
+#ifdef __KERNEL__
 	spinlock_t lock;
-	size_t hashsize;
+#endif
+	int hashsize;
 	int offset;
 	int (*hash)(void *key, int range);
 	int (*compare)(void *key_to_match, void *key_to_be_matched);
@@ -33,6 +38,7 @@ void *hip_ht_find(HIP_HASHTABLE *ht, void *key);
 int hip_ht_add(HIP_HASHTABLE *ht, void *entry);
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
 
+#ifdef __KERNEL__
 #define HIP_LOCK_HT(hash) do { \
 	spin_lock_bh(&(hash)->lock); \
 } while(0)
@@ -40,6 +46,10 @@ void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
 #define HIP_UNLOCK_HT(hash) do { \
 	spin_unlock_bh(&(hash)->lock); \
 } while(0)
+#else
+#define HIP_LOCK_HT(hash)
+#define HIP_UNLOCK_HT(hash)
+#endif
 
 #endif
 
