@@ -229,7 +229,8 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 	_HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
 	_HIP_DEBUG("buffer_length=%d\n", buffer_length);
 
-	if (hip_build_digest(HIP_DIGEST_SHA1,buffer_start,buffer_length,sha1_digest)) {
+	if (hip_build_digest(HIP_DIGEST_SHA1, buffer_start,
+			     buffer_length,sha1_digest)) {
 		HIP_ERROR("Could not calculate SHA1 digest\n");
 		goto out_err;
 	}
@@ -254,7 +255,7 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 		HIP_HEXDUMP("digest",sha1_digest,20);
 		HIP_HEXDUMP("signature",signature,41);
 		HIP_HEXDUMP("public key",public_key,public_key_len);
-		//break; // uncomment if you don't care about the correctness of the DSA signature
+		break;
 	default:
 		HIP_ERROR("Signature verification failed: %d\n", tmp);
 		goto out_err;
@@ -680,15 +681,12 @@ int hip_produce_keying_material(struct hip_common *msg,
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
 		  hip_ha_t *entry)
 {
-	int err = 0;
+	int err = 0, dh_size = 0, written, x;
 	uint32_t spi_in = 0;
-	int dh_size = 0;
-	int written;
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
 	struct hip_host_id *host_id_pub = NULL;
 	struct hip_host_id *host_id_private = NULL;
-	char *host_id_in_enc = NULL;
-	struct hip_encrypted *enc_in_msg = NULL;
+	char *enc_in_msg = NULL, *host_id_in_enc = NULL, *iv = NULL;
 	struct in6_addr daddr;
 	u8 *dh_data = NULL;
 	struct hip_spi *hspi;
@@ -696,7 +694,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_param *param;
 	struct hip_diffie_hellman *dh_req;
 	u8 signature[HIP_DSA_SIGNATURE_LEN];
-	int x;
 	struct hip_spi_in_item spi_in_data;
 	HIP_DEBUG("\n");
 
@@ -870,17 +867,32 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	_HIP_HEXDUMP("enc(host_id)", host_id_pub,
 		    hip_get_param_total_len(host_id_pub));
 
-	err = hip_build_param_encrypted(i2, host_id_pub);
+ 	if (transform_hip_suite == HIP_TRANSFORM_3DES) {
+ 		err = hip_build_param_encrypted_3des_sha1(i2, host_id_pub);
+		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
+		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
+ 		iv = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
+ 		host_id_in_enc = enc_in_msg +
+ 			sizeof(struct hip_encrypted_3des_sha1);
+ 
+ 	} else if (transform_hip_suite == HIP_TRANSFORM_NULL) {
+ 		err = hip_build_param_encrypted_null_sha1(i2, host_id_pub);
+		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
+		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
+ 		iv = NULL;
+ 		host_id_in_enc = enc_in_msg +
+ 			sizeof(struct hip_encrypted_null_sha1);
+  	} else {
+ 		HIP_ERROR("HIP transform not supported (%d)\n",
+ 			  transform_hip_suite);
+ 		err = -ENOSYS;
+ 	}
+ 
  	if (err) {
  		HIP_ERROR("Building of param encrypted failed (%d)\n",
  			  err);
  		goto out_err;
  	}
-
- 	enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
- 	HIP_ASSERT(enc_in_msg); /* Builder internal error. */
-
- 	host_id_in_enc = (char *) (enc_in_msg + 1);
 
 	_HIP_HEXDUMP("hostidinmsg", host_id_in_enc,
 		    hip_get_param_total_len(host_id_in_enc));
@@ -889,9 +901,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		    hip_get_param_total_len(enc_in_msg));
 	_HIP_HEXDUMP("enc key", &ctx->hip_enc_out.key, HIP_MAX_KEY_LEN);
 	_HIP_HEXDUMP("IV", enc_in_msg->iv, 8);
-	err = hip_crypto_encrypted(host_id_in_enc,
-				   enc_in_msg->iv, /* IV: This is algorithm dependant, but we suck */
-				   transform_hip_suite,
+ 	err = hip_crypto_encrypted(host_id_in_enc, iv, transform_hip_suite,
 				   hip_get_param_total_len(host_id_in_enc),
 				   &ctx->hip_enc_out.key,
 				   HIP_DIRECTION_ENCRYPT);
@@ -899,7 +909,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_ERROR("Building of param encrypted failed %d\n", err);
 		goto out_err;
 	}
-	_HIP_HEXDUMP("encinmsg 2", enc_in_msg, hip_get_param_total_len(enc_in_msg));
+	HIP_HEXDUMP("encinmsg 2", enc_in_msg,
+ 		    hip_get_param_total_len(enc_in_msg));
 	_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 
 	/* it appears as the crypto function overwrites the IV field, which
@@ -915,6 +926,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		int err;
 
 		/* let the setup routine give us a SPI. */
+		spi_in = 0;
+
 		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
 				    &spi_in, transform_esp_suite, 
 				    &ctx->esp_in.key, &ctx->auth_in.key, 0, HIP_SPI_DIRECTION_IN);
@@ -1159,9 +1172,13 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 	{
 		struct in6_addr tmphit;
 
-		hip_host_id_to_hit(peer_host_id, &tmphit, HIP_HIT_TYPE_HASH126);
+		hip_host_id_to_hit(peer_host_id, &tmphit,
+				   HIP_HIT_TYPE_HASH126);
+
 		if (ipv6_addr_cmp(&tmphit, &r1->hits) != 0) {
 			HIP_ERROR("Sender HIT does not match the advertised host_id\n");
+			HIP_DEBUG_HIT("received", &r1->hits);
+ 			HIP_DEBUG_HIT("calculated", &tmphit);
 			err = -EINVAL;
 			goto out_err;
 		}
@@ -1539,16 +1556,18 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	int err = 0;
 	struct hip_common *i2 = NULL;
 	struct hip_context *ctx = NULL;
-	struct hip_encrypted *tmp_enc = NULL;
  	struct hip_tlv_common *param;
- 	struct hip_encrypted *enc = NULL;
+	char *tmp_enc = NULL, *enc = NULL;
+	struct hip_host_id *host_id_in_enc = NULL;
 	struct hip_r1_counter *r1cntr;
  	struct hip_lhi lhi;
- 	struct hip_host_id *host_id_in_enc = NULL;
 	struct hip_spi *hspi = NULL;
 	hip_ha_t *entry = ha;
-	hip_transform_suite_t esptfm, hiptfm;
+	hip_transform_suite_t esp_tfm, hip_tfm;
 	uint32_t spi_in, spi_out;
+	uint16_t crypto_len;
+ 	char *iv;
+ 	struct in6_addr hit;
 	struct hip_spi_in_item spi_in_data;
  	HIP_DEBUG("\n");
 
@@ -1651,23 +1670,35 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 
-	/* Get the encapsulated host id in the encrypted parameter */
-	host_id_in_enc = (struct hip_host_id *) (tmp_enc + 1);
-
- 	hiptfm = hip_get_param_transform_suite_id(param, 0);
- 	if (hiptfm == 0) {
+	hip_tfm = hip_get_param_transform_suite_id(param, 0);
+ 	if (hip_tfm == 0) {
 		HIP_ERROR("Bad HIP transform\n");
  		err = -EFAULT;
  		goto out_err;
  	}
 
+ 	if (hip_tfm == HIP_TRANSFORM_3DES) {
+ 		host_id_in_enc = (struct hip_host_id *)
+		  (tmp_enc + sizeof(struct hip_encrypted_3des_sha1));
+ 		iv = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
+ 		/* 4 = reserved, 8 = iv */
+ 		crypto_len = hip_get_param_contents_len(enc) - 4 - 8;
+ 	} else if (hip_tfm == HIP_TRANSFORM_NULL) {
+		host_id_in_enc = (struct hip_host_id *)
+			(tmp_enc + sizeof(struct hip_encrypted_null_sha1));
+ 		iv = NULL;
+ 		/* 4 = reserved */
+ 		crypto_len = hip_get_param_contents_len(enc) - 4;
+ 	} else {
+ 		HIP_ERROR("HIP transform (%d) not supported\n", hip_tfm);
+ 		err = -ENOSYS;
+ 		goto out_err;
+ 	}
+
 	HIP_DEBUG("\n");
-	err = hip_crypto_encrypted(host_id_in_enc,
-				   tmp_enc->iv, /* IV */
-				   hiptfm,
-				   /* 4 = reserved, 8 = iv */
-				   hip_get_param_contents_len(enc) - 4 - 8,
-				   &ctx->hip_enc_in.key, HIP_DIRECTION_DECRYPT);
+	err = hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm,
+ 				   crypto_len, &ctx->hip_enc_in.key,
+ 				   HIP_DIRECTION_DECRYPT);
 	if (err) {
 		err = -EINVAL;
 		HIP_ERROR("Decryption of Host ID failed\n");
@@ -1684,22 +1715,17 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		    hip_get_param_total_len(host_id_in_enc));
 
 	/* Verify sender HIT */
-	{
-		hip_hit_t hit;
-
-		if (hip_host_id_to_hit(host_id_in_enc, &hit, HIP_HIT_TYPE_HASH126)) {
-			HIP_ERROR("Unable to verify sender's HOST_ID\n");
-			err = -1;
-			goto out_err;
-		}
-
-		hip_print_hit("id to hit", &hit);
-
-		if (ipv6_addr_cmp(&hit, &i2->hits) != 0) {
-			HIP_ERROR("Sender's HIT does not match advertised public key\n");
-			err = -EINVAL;
-			goto out_err;
-		}
+ 	if (hip_host_id_to_hit(host_id_in_enc, &hit,
+			       HIP_HIT_TYPE_HASH126)) {
+ 		HIP_ERROR("Unable to verify sender's HOST_ID\n");
+ 		err = -1;
+ 		goto out_err;
+ 	}
+ 	
+ 	if (ipv6_addr_cmp(&hit, &i2->hits) != 0) {
+ 		HIP_ERROR("Sender's HIT does not match advertised public key\n");
+ 		err = -EINVAL;
+ 		goto out_err;
 	}
 
 	/* NOTE! The original packet has the data still encrypted. But this is
@@ -1805,10 +1831,10 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 			goto out_err;
 		}
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
-		esptfm = entry->esp_transform;
+		esp_tfm = entry->esp_transform;
 		HIP_UNLOCK_HA(entry);
 
-		if (esptfm == 0) {
+		if (esp_tfm == 0) {
 			HIP_ERROR("Could not select proper ESP transform\n");
 			goto out_err;
 		}
@@ -1824,7 +1850,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	/* Set up IPsec associations */
 	{
 		spi_in = 0;
-		err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_in, esptfm, 
+		err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_in, esp_tfm, 
 				   &ctx->esp_in.key, &ctx->auth_in.key, 0, HIP_SPI_DIRECTION_IN);
 
 		if (err) {
@@ -1844,7 +1870,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_out);
 
-	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_out, esptfm, 
+	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_out, esp_tfm, 
 			   &ctx->esp_out.key, &ctx->auth_out.key, 0, HIP_SPI_DIRECTION_OUT);
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);

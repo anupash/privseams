@@ -895,7 +895,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 	case HIP_PARAM_ESP_TRANSFORM:
 	{
 		/* Search for one supported transform */
-		uint16_t i;
+		//uint16_t i;
 		hip_transform_suite_t suite;
 
  		HIP_DEBUG("Checking %s transform\n",
@@ -1698,12 +1698,12 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 	/* XX FIXME: WHY DO WE HAVE HIP_SELECT_ESP_TRANSFORM SEPARATELY??? */
 	hip_transform_suite_t suite = 0;
 	hip_tlv_type_t type;
-	uint16_t transform_max;
- 	const struct hip_hip_transform *hip_tf =
- 		(const struct hip_hip_transform *) transform_tlv;
- 	const struct hip_esp_transform *esp_tf =
- 		(const struct hip_esp_transform *) transform_tlv;
- 	uint16_t actual;
+	//uint16_t transform_max;
+ 	//const struct hip_hip_transform *hip_tf =
+ 	//	(const struct hip_hip_transform *) transform_tlv;
+ 	//const struct hip_esp_transform *esp_tf =
+ 	//	(const struct hip_esp_transform *) transform_tlv;
+ 	//uint16_t actual;
 
  	uint16_t supported_hip_tf[] = { HIP_TRANSFORM_NULL,
  					HIP_TRANSFORM_3DES,
@@ -2033,7 +2033,7 @@ int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
 }
 
 /**
- * hip_build_param_encrypted - build the hip_encrypted parameter
+ * hip_build_param_encrypted_with_iv - build the hip_encrypted parameter
  * @msg:     the message where the parameter will be appended
  * @host_id: the host id parameter that will contained in the hip_encrypted
  *           parameter
@@ -2044,14 +2044,14 @@ int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
  *
  * Returns: zero on success, or negative on failure
  */
-int hip_build_param_encrypted(struct hip_common *msg,
-			      struct hip_host_id *host_id)
+int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
+					struct hip_host_id *host_id)
 {
 	int err = 0;
-	struct hip_encrypted enc;
+	struct hip_encrypted_3des_sha1 enc;
 
 	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
-	hip_calc_param_len(&enc, sizeof(struct hip_encrypted) -
+	hip_calc_param_len(&enc, sizeof(enc) -
 			   sizeof(struct hip_tlv_common) +
 			   hip_get_param_total_len(host_id));
 	enc.reserved = htonl(0);
@@ -2059,10 +2059,40 @@ int hip_build_param_encrypted(struct hip_common *msg,
 
 	/* copy the IV *IF* needed, and then the encrypted data */
 
-	err = hip_build_generic_param(msg, &enc,
-				      sizeof(struct hip_encrypted),
-				      host_id);
+	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
+
 	return err;
+}
+
+/**
+ * hip_build_param_encrypted_XX - build the hip_encrypted parameter
+ * @msg:     the message where the parameter will be appended
+ * @host_id: the host id parameter that will contained in the hip_encrypted
+ *           parameter
+ * 
+ * Note that this function does not actually encrypt anything, it just builds
+ * the parameter. The @host_id that will be encapsulated in the hip_encrypted
+ * parameter has to be encrypted using a different function call.
+ *
+ * Returns: zero on success, or negative on failure
+ */
+int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
+ 					struct hip_host_id *host_id)
+{
+	int err = 0;
+ 	struct hip_encrypted_null_sha1 enc;
+
+ 	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
+ 	hip_calc_param_len(&enc, sizeof(enc) -
+ 			   sizeof(struct hip_tlv_common) +
+ 			   hip_get_param_total_len(host_id));
+ 	enc.reserved = htonl(0);
+
+ 	/* copy the IV *IF* needed, and then the encrypted data */
+
+ 	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
+
+ 	return err;
 }
 
 void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,

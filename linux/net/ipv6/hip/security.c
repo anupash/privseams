@@ -331,7 +331,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 			goto out;
 		}
 
-		xs->props.ealgo = SADB_EALG_NONE;
+		xs->props.ealgo = SADB_EALG_NULL;
 		xs->props.aalgo = SADB_AALG_SHA1HMAC;
 		break;
 	default:

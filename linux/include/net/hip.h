@@ -182,20 +182,14 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_VIA_RVS         65500
 #define HIP_PARAM_MAX             65536 /* exclusive */
 
-#if 0
-#define HIP_TRANSFORM_RESERVED          0
-#define HIP_TRANSFORM_NULL              1
-#define HIP_TRANSFORM_3DES              2
-#define HIP_TRANSFORM_AES_128           3
-#endif
 
 /*
  * XX FIXME: SHOULD BE SIMILAR TO THE ESP TRANSFORMS!!!
  */
 #define HIP_TRANSFORM_RESERVED          0
-#define HIP_TRANSFORM_NULL              5
-#define HIP_TRANSFORM_3DES              2
 #define HIP_TRANSFORM_AES_128           1
+#define HIP_TRANSFORM_3DES              2
+#define HIP_TRANSFORM_NULL              5
 
 /* XX FIX ME */
 #define HIP_TRANSFORM_HIP_MAX           6
@@ -459,12 +453,20 @@ struct hip_host_id {
 	/* fixed part ends */
 } __attribute__ ((packed));
 
-struct hip_encrypted {
+struct hip_encrypted_3des_sha1 {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
 
         uint32_t     reserved;
-	uint8_t      iv[8]; /* XX FIX: kludge works only for 3DES-CBC */
+	uint8_t      iv[8];
+	/* fixed part ends */
+} __attribute__ ((packed));
+
+struct hip_encrypted_null_sha1 {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t     length;
+
+        uint32_t     reserved;
 	/* fixed part ends */
 } __attribute__ ((packed));
 

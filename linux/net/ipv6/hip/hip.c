@@ -855,6 +855,9 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 	struct scatterlist src_sg[HIP_MAX_SCATTERLISTS];
 	unsigned int src_nsg = HIP_MAX_SCATTERLISTS;
 
+	/* I haven't tested if this works with 3DES + NULL iv. The
+	   NULL transform + NULL iv combination works, though. */
+
 	/* We cannot use the same memory are for en/decryption? */
 	void *result = NULL;
 	result = kmalloc(enc_len, GFP_KERNEL);
@@ -926,9 +929,11 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		break;
 	case HIP_DIRECTION_DECRYPT:
 		if (iv) {
-			err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg, enc_len, iv);
+			err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg,
+						       enc_len, iv);
 		} else {
-			err = crypto_cipher_decrypt(impl, src_sg, src_sg, enc_len);
+			err = crypto_cipher_decrypt(impl, src_sg, src_sg,
+						    enc_len);
 		}
 		if (err) {
 			HIP_ERROR("Decryption failed\n");
@@ -942,11 +947,8 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		break;
 	}
 
-	if (iv) {
-		memcpy(data, result, enc_len);
-	} else {
-		HIP_ASSERT(iv); /* Not tested/interoperated without iv */
-	}
+	memcpy(data, result, enc_len);
+
 
  out_err:
 	if (result)
@@ -1388,6 +1390,11 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
         }
 
 	HIP_DEBUG("got event NETDEV_%s\n", event == NETDEV_DOWN ? "DOWN" : "UNREGISTER");
+
+        if (event == NETDEV_UNREGISTER) {
+                HIP_DEBUG("not handling UNREGISTER event, wait for DOWN\n");
+                return NOTIFY_DONE;
+        }
 
         event_dev = (struct net_device *) ptr;
         if (!event_dev) {

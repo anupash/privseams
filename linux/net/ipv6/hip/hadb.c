@@ -1307,7 +1307,7 @@ uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry)
 {
 	uint32_t spi = 0;
 	struct hip_spi_out_item *spi_out, *spi_out_tmp;
-	struct hip_peer_addr_list_item *addr, *addr_tmp;
+	//struct hip_peer_addr_list_item *addr, *addr_tmp;
 
 	HIP_DEBUG("\n");
 

@@ -1180,6 +1180,9 @@ int hip_handle_update_addr_verify(struct hip_common *msg, struct in6_addr *src_i
 	struct hip_common *update_packet = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_echo_request *echo = NULL;
+ 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+	struct hip_host_id *host_id_private;
+	hip_ha_t *entry = NULL;
 
 	HIP_DEBUG("\n");
 
@@ -1203,6 +1206,45 @@ int hip_handle_update_addr_verify(struct hip_common *msg, struct in6_addr *src_i
 		goto out_err;
 	}
 
+	entry = hip_hadb_find_byhit(hits);
+	if (!entry) {
+		HIP_ERROR("Entry not found\n");
+		goto out_err_nolock;
+	}
+
+	HIP_LOCK_HA(entry);
+
+	/* Add HMAC */
+	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
+	if (err) {
+		HIP_ERROR("Building of HMAC failed (%d)\n", err);
+		goto out_err;
+	}
+
+	/* Add SIGNATURE */
+	host_id_private = hip_get_any_localhost_host_id();
+	if (!host_id_private) {
+		HIP_ERROR("Could not get own host identity. Can not sign data\n");
+		goto out_err;
+	}
+
+	if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+				  host_id_private, signature)) {
+		HIP_ERROR("Could not sign UPDATE. Failing\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	err = hip_build_param_signature_contents(update_packet, signature,
+						 HIP_DSA_SIGNATURE_LEN,
+ 						 HIP_SIG_DSA);
+ 	if (err) {
+ 		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
+ 		goto out_err;
+ 	}
+
+
+	/* ECHO_RESPONSE (no sign) */
 	HIP_DEBUG("echo opaque data len=%d\n", hip_get_param_contents_len(echo));
 	err = hip_build_param_echo(update_packet, (void *)echo+sizeof(struct hip_tlv_common),
 				   hip_get_param_contents_len(echo), 0, 0);
@@ -1219,8 +1261,10 @@ int hip_handle_update_addr_verify(struct hip_common *msg, struct in6_addr *src_i
 	}
 
  out_err:
-
+	HIP_UNLOCK_HA(entry);
  out_err_nolock:
+	if (entry)
+		hip_put_ha(entry);
 	if (update_packet)
 		kfree(update_packet);
 	return err;
