@@ -64,8 +64,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	int err = 0;
 	struct hip_work_order *hwo = NULL;
 	struct hip_work_order *reverse = NULL;
-	int state = 0; 
-	
+	int state = 0;
 
 	if (!ipv6_addr_is_hit(&hdr->daddr)) {
 		/* The address was an IPv6 address, ignore. */

@@ -83,8 +83,8 @@ void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
  *
  * Dstbuflen must be a multiple of 32.
  */
-void hip_make_keymat(char *kij, int kij_len, struct keymat_keymat *keymat, 
-		     void *dstbuf, int dstbuflen, struct in6_addr *hit1,
+void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat, 
+		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
 		     struct in6_addr *hit2)
 {
 	int err;
@@ -165,12 +165,11 @@ void hip_make_keymat(char *kij, int kij_len, struct keymat_keymat *keymat,
  * hip_keymat_draw - draw keying material
  * @keymat: pointer to the keymat structure which contains information
  *          about the actual
- * @data:   currently not used
  * @length: size of keymat structure
  *
  * Returns: pointer the next point where one can draw the next keymaterial
  */
-void* hip_keymat_draw(struct keymat_keymat* keymat, void* data, int length)
+void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 {
 	void *ret = NULL;
 
@@ -201,16 +200,10 @@ int hip_keymat_get_new(struct hip_hadb_state *entry, void *key, size_t key_len,
 {
 	/* must have the hadb lock when calling this function */
 	int err = 0;
-	void *p;
 	int copied = 0;
 	int tmp;
-//	uint8_t calc_index;
-//	uint16_t k_offset;
-//	u8 last_keymat[HIP_AH_SHA_LEN];
 	u8 *tmp_data = NULL;
 	size_t tmp_data_len;
-//	char *kij;
-//	size_t kij_len;
 
 	HIP_DEBUG("key_len=%d, requested keymat_offset=%u calc_index=%u\n",
 		  key_len, *keymat_offset, *calc_index);

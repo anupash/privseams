@@ -538,14 +538,9 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
 	HIP_HEXDUMP("DH SHARED KEY", dh_shared_key, dh_shared_len);
 
-	err = hip_make_keymat(dh_shared_key, dh_shared_len,
-			      &km, keymat, keymat_len,
-			      &msg->hits, &msg->hitr, &ctx->keymat_calc_index,
-			      &ctx->current_keymat_index, ctx->current_keymat_K);
-	if (err) {
-		HIP_ERROR("make_keymat failed\n");
-		goto out_err;
-	}
+	hip_make_keymat(dh_shared_key, dh_shared_len,
+			&km, keymat, keymat_len,
+			&msg->hits, &msg->hitr);
 
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */

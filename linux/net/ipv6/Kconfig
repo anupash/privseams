@@ -79,7 +79,7 @@ config IPV6_TUNNEL
 	  If unsure, say N.
 
 config HIP
-	bool "Host Identity Protocol"
+	tristate "Host Identity Protocol"
 	depends on IPV6
 	select INET6_ESP
 	select ESPBEET

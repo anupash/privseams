@@ -719,7 +719,10 @@ static int tcp_v6_connect(struct sock *sk, struct sockaddr *uaddr,
 							     inet->dport);
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	err = HIP_CALLPROC(hip_add_sk_to_waitlist)(&fl->fl6_dst,sk);
+	//	err = HIP_CALLPROC(hip_add_sk_to_waitlist)(&fl->fl6_dst,sk);
+	err = hip_functions.hip_add_sk_to_waitlist ?
+		hip_functions.hip_add_sk_to_waitlist(&fl.fl6_dst, sk) :
+		0;
 	if (!err) 
 		return 0;
 	else if (err != -EISCONN)

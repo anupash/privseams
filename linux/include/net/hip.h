@@ -213,9 +213,9 @@ typedef uint16_t in_port_t;
 
 #define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
-#define HIP_DSA_SIGNATURE_LEN         41
+#define HIP_DSA_SIGNATURE_LEN        41
 
-#define ENOHIT                       666
+#define ENOTHIT                     666
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
@@ -598,7 +598,7 @@ struct hip_context_dh_sig
 struct hip_context_rea_sig
 {
 	struct hip_common *out_packet;                 /* kmalloced */
-	struct hip_sdb_state *entry;
+	struct hip_hadb_state *entry;
 	int netdev_flags;   /* indicates how REA is sent, see #defines below */
 };
 
@@ -635,7 +635,7 @@ struct hip_hadb_state
 	struct in6_addr      hit_peer;       /* Peer's HIT */
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 
-	/* SWAP SPI COMMENTS */
+	/* SWAP SPI COMMENTS ? */
 	uint32_t             spi_peer;       /* outbound IPsec SA SPI */
 	uint32_t             spi_our;        /* inbound IPsec SA SPI */
 	uint32_t             new_spi_peer;   /* new outbound IPsec SA SPI received in UPDATE */

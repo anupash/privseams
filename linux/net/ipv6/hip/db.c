@@ -220,10 +220,10 @@ static void hip_delete_hadb_entry(struct hip_hadb_state *entry)
 	struct hip_peer_addr_list_item *pali;
 	struct list_head *iter2,*tmp2;
 
-	if (entry->sk != NULL) {
-		HIP_DEBUG("entry->sk not NULL while deleting it... %p\n",entry->sk->sk);
-		sock_put(entry->sk->sk);
-		kfree(entry->sk);
+	if (entry->kg.sk != NULL) {
+		HIP_DEBUG("entry->kg.sk not NULL while deleting it... 0x%p\n", entry->kg.sk);
+		sock_put(entry->kg.sk);
+		kfree(entry->kg.sk);
 	}
 
 	list_for_each_safe(iter2,tmp2,&entry->peer_addr_list) {
@@ -775,7 +775,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi(struct hip_db_struct *db,
 static int hip_hadb_reinit_state(struct hip_hadb_state *entry)
 {
  	HIP_DEBUG("** TODO: call hip_hadb_entry_free ? **\n");
-	entry->state = HIP_STATE_START;
+	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->peer_controls = 0;
 	entry->spi_peer = 0;
 	entry->spi_our = 0;
@@ -783,7 +783,7 @@ static int hip_hadb_reinit_state(struct hip_hadb_state *entry)
 	entry->lsi_our = 0;
 	entry->esp_transform = 0;
 	entry->birthday = 0;
-	entry->sk = NULL;
+	entry->kg.sk = NULL;
 
 	memset(&entry->hit_our,0,sizeof(struct in6_addr));
 
@@ -798,10 +798,10 @@ void hip_hadb_free_kludge(struct in6_addr *arg)
 
 	HIP_HADB_WRAP_W_ACCESS_VOID;
 
-	if (entry->sk) {
-		oldsk = entry->sk->sk;
-		kfree(entry->sk);
-		entry->sk = NULL;
+	if (entry->kg.sk) {
+		oldsk = entry->kg.sk->sk;
+		kfree(entry->kg.sk);
+		entry->kg.sk = NULL;
 	}
 
 	HIP_WRITE_UNLOCK_DB(&hip_hadb);
@@ -842,17 +842,8 @@ int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
 {
 	HIP_HADB_WRAP_BEGIN(int);
 	struct hip_kludge *kg;
-	struct hip_hadb_state *entry;
 	int state;
 	struct ipv6hdr hdr = {0};
-
-	kg = kmalloc(sizeof(*kg), GFP_KERNEL);
-	if (!kg) {
-		HIP_ERROR("No memory for kludge\n");
-		return -ENOMEM;
-	}
-
-	kg->sk = sk;
 
 	HIP_HADB_WRAP_W_ACCESS(-EINVAL);
 
@@ -862,8 +853,16 @@ int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
 		HIP_HADB_WRAP_W_END;
 	}
 
-	sock_hold(kg->sk);
-	list_add(&kg->socklist, &entry->socklist);
+	kg = kmalloc(sizeof(*kg), GFP_KERNEL);
+	if (!kg) {
+		HIP_ERROR("No memory for kludge\n");
+		return -ENOMEM;
+	}
+
+	kg->sk = sk;
+
+	sock_hold(kg->sk);C
+	list_add(&kg->socklist, &entry->kg.socklist);
 
 	state = entry->state;
 
@@ -871,6 +870,7 @@ int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk)
 
 	if (state == HIP_STATE_UNASSOCIATED) {
 		ipv6_addr_copy(&ip.daddr, hit);
+		/* ipv6_addr_copy(&hdr.daddr, hit); ? */
 		hip_handle_output(&ip, NULL); // trigger I1
 	}
 
@@ -2109,7 +2109,7 @@ int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int t
 			*((int *)target) = entry->esp_transform;
 			break;
 		case HIP_HADB_SK:
-			*((struct hip_kludge **)target) = entry->sk;
+			*((struct hip_kludge **)target) = entry->kg.sk;
 			break;
 		case HIP_HADB_STATE:
 			*((int *)target) = entry->state;
@@ -2255,7 +2255,7 @@ int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int t
 			entry->esp_transform = *((int *) target);
 			break;
 		case HIP_HADB_SK:
-			entry->sk = (struct hip_kludge *)target;
+			entry->kg.sk = (struct hip_kludge *)target;
 			break;
 		case HIP_HADB_STATE:
 			entry->state = *((int *) target);
