@@ -23,7 +23,7 @@
  * - sender of "add mapping", i.e. the hip module in kernel
  *   - struct hip_common *msg = k/malloc(HIP_MAX_PACKET);
  *   - hip_msg_init(msg);
- *   - err = hip_build_user_hdr(msg, HIP_USER_ADD_MAP_HIT_IP, 0);
+ *   - err = hip_build_user_hdr(msg, SO_HIP_ADD_MAP_HIT_IP, 0);
  *   - err = hip_build_param_contents(msg, &hit,
  *             HIP_PARAM_HIT, sizeof(struct in6_addr));
  *   - err = hip_build_param_contents(msg, &ip,
@@ -363,18 +363,6 @@ int hip_check_msg_len(const struct hip_common *msg) {
 	} else {
 		return 1;
 	}
-}
-
-/**
- * hip_check_userspace_msg_type - check the userspace message type
- * @msg: pointer to the message
- *
- * Returns: 1 if the message type is valid, or 0 if the message type is
- *          invalid
- */
-int hip_check_userspace_msg_type(const struct hip_common *msg) {
-
-	return (hip_get_msg_type(msg) >= HIP_USER_BASE_MAX) ? 0 : 1;
 }
 
 /**
@@ -831,12 +819,6 @@ int hip_check_userspace_msg(const struct hip_common *msg) {
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0;
 
-	if (!hip_check_userspace_msg_type(msg)) {
-		err = -EINVAL;
-		HIP_ERROR("bad msg type (%d)\n", hip_get_msg_type(msg));
-		goto out;
-	}
-
 	if (!hip_check_msg_len(msg)) {
 		err = -EMSGSIZE;
 		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
@@ -1200,12 +1182,6 @@ int hip_build_user_hdr(struct hip_common *msg,
 	}
 
 	/* some error checking on types and for null values */
-
-	if (!hip_check_userspace_msg_type(msg)) {
-		HIP_ERROR("bad msg type (%d)\n", hip_get_msg_type(msg));
-		err = -EINVAL;
-		goto out;
-	}
 
 	if (!msg) {
 		err = -EINVAL;

@@ -46,16 +46,6 @@ typedef uint16_t in_port_t;
 
 #endif /* __KERNEL__ */
 
-#define HIP_CHAR_MAJOR 126
-#define HIP_CHAR_NAME "hip"
-#define HIP_DEV_NAME  "/dev/hip"
-
-#define HIP_IOC_MAGIC 'k'
-#define HIP_IOC_MAX   15
-
-#define HIP_IOCSHIPUSERMSG _IOW(HIP_IOC_MAGIC, 1, struct hip_common)
-#define HIP_IOCSTEST _IO(HIP_IOC_MAGIC, 15)
-
 #define HIP_MAX_PACKET 2048
 
 #define HIP_HIT_KNOWN 1
@@ -80,26 +70,24 @@ typedef uint16_t in_port_t;
 #define HIP_ACR 16 /* moved from 10 -> 16 */
 #define HIP_PAYLOAD 64 /* xxx */
 
-/* Extended message types for the userspace */
-#define HIP_USER_BASE_MIN                  15 /* exclusive */
-#define HIP_USER_NULL_OPERATION            16
-#define HIP_USER_ADD_LOCAL_HI              17
-#define HIP_USER_DEL_LOCAL_HI              18
-#define HIP_USER_ADD_PEER_MAP_HIT_IP       19
-#define HIP_USER_DEL_PEER_MAP_HIT_IP       20
-#define HIP_USER_UNIT_TEST                 21
-#define HIP_USER_RST                       22
-#define HIP_USER_SET_MY_EID                23
-#define HIP_USER_SET_PEER_EID              24
-#define HIP_USER_ADD_RVS                   25
-#define HIP_USER_BASE_MAX                  26 /* exclusive */
-/* End of extended messages for the userspace */
+#define SO_HIP_GLOBAL_OPT 1
+#define SO_HIP_SOCKET_OPT 2
+
+/* HIP socket options */
+#define SO_HIP_ADD_LOCAL_HI                     1
+#define SO_HIP_DEL_LOCAL_HI                     2
+#define SO_HIP_ADD_PEER_MAP_HIT_IP              3
+#define SO_HIP_DEL_PEER_MAP_HIT_IP              4
+#define SO_HIP_RUN_UNIT_TEST                    5
+#define SO_HIP_RST                              6
+#define SO_HIP_ADD_RVS                          7
+#define SO_HIP_DEL_RVS                          8
+#define SO_HIP_GET_MY_EID                       9
+#define SO_HIP_SET_MY_EID                       10
+#define SO_HIP_GET_PEER_EID                     11
+#define SO_HIP_SET_PEER_EID                     12
 
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
-
-/* Begin from a high number to avoid collisions with existing socket opts */
-#define SO_HIP_SET_MY_EID            200
-/* Other HIP socket options */
 
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2

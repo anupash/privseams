@@ -22,7 +22,9 @@
  *
  */
 int open_hip(void) {
-  return open(HIP_DEV_NAME, 0); // sets also errno
+  /* we're using the socket only for setting socket options, so the stream
+     option could be anything */
+  return socket(PF_HIP, SOCK_STREAM, 0);
 }
 
 /**
@@ -36,26 +38,46 @@ int close_hip(int hipfd) {
   return close(hipfd);
 }
 
-/**
- * send_msg - send an asynchronous message to the kernel (without open/close!)
- * @msg: the message to be sent to the HIP kernel module (maximum size is
- *       HIP_MAX_PACKET)
- *
- * Returns: zero on successful operation, or negative on error
- */
-int send_msg(const struct hip_common *msg) {
+int hip_set_global_option(const struct hip_common *msg) {
   int err = 0, hipfd = -1;
 
   hipfd = open_hip(); // sets also errno
   if (hipfd < 0) {
-    HIP_PERROR("hip device " HIP_DEV_NAME ":");
+    HIP_ERROR("Failed to open HIP configuration channel\n");
     err = -errno;
     goto out;
   }
 
-  err = ioctl(hipfd, HIP_IOCSHIPUSERMSG, msg);
+  err = setsockopt(hipfd, PF_HIP, SO_HIP_GLOBAL_OPT, msg,
+		   hip_get_msg_total_len(msg));
   if (err) {
-    HIP_ERROR("ioctl failed (%d)\n", err);
+    HIP_ERROR("setsockopt failed (%d)\n", err);
+    goto out_close;
+  }
+
+  _HIP_DUMP_MSG(msg);
+
+ out_close:
+  close(hipfd);
+ out:
+  return err;
+}
+
+int hip_get_global_option(struct hip_common *msg) {
+  int err = 0, hipfd = -1;
+  int msg_len = hip_get_msg_total_len(msg);
+
+  hipfd = open_hip(); // sets also errno
+  if (hipfd < 0) {
+    HIP_ERROR("Failed to open HIP configuration channel\n");
+    err = -errno;
+    goto out;
+  }
+
+  /* The return value SHOULD fit into the msg */
+  err = getsockopt(hipfd, PF_HIP, SO_HIP_GLOBAL_OPT, msg, &msg_len);
+  if (err) {
+    HIP_ERROR("getsockopt failed (%d)\n", err);
     goto out_close;
   }
 

@@ -716,8 +716,8 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		hip_msg_init(msg);	
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
 		hip_build_param_contents(msg, (void *) at_ipv6->addr, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
-		hip_build_user_hdr(msg, HIP_USER_ADD_PEER_MAP_HIT_IP, 0);
-		send_msg(msg);
+		hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+		hip_set_global_option(msg);
 	      }
 	    }
 

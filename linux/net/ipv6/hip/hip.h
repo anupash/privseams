@@ -19,12 +19,10 @@
 
 
 #include "workqueue.h"
-#include "daemon.h"
 #include "debug.h"
 #include "cookie.h"
 #include "input.h"
 #include "output.h"
-#include "ioctl.h"
 #include "builder.h"
 #include "crypto/dh.h"
 #include "crypto/dsa.h"

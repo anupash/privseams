@@ -188,7 +188,7 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 		goto out;
 	}
 
-	err = hip_build_user_hdr(msg, HIP_USER_ADD_RVS, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out;
@@ -325,7 +325,7 @@ int handle_hi(struct hip_common *msg,
     }
     break;
   case ACTION_ADD:
-    numeric_action = HIP_USER_ADD_LOCAL_HI;
+    numeric_action = SO_HIP_ADD_LOCAL_HI;
 
     err = load_dsa_private_key(filebasename, &dsa_key);
     if (err) {
@@ -348,7 +348,7 @@ int handle_hi(struct hip_common *msg,
     HIP_HEXDUMP("Calculated HIT: ", &lhi.hit, sizeof(struct in6_addr));
     break;
   case ACTION_DEL:
-    numeric_action = HIP_USER_DEL_LOCAL_HI;
+    numeric_action = SO_HIP_DEL_LOCAL_HI;
     HIP_ERROR("Deletion of HI not implemented yet\n");
     err = -ENOSYS;
     break;
@@ -463,14 +463,14 @@ int handle_map(struct hip_common *msg, int action,
 
   switch(action) {
   case ACTION_ADD:
-    err = hip_build_user_hdr(msg, HIP_USER_ADD_PEER_MAP_HIT_IP, 0);
+    err = hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
     if (err) {
       HIP_ERROR("build hdr failed: %s\n", strerror(err));
       goto out;
     }
     break;
   case ACTION_DEL:
-	  err = hip_build_user_hdr(msg, HIP_USER_DEL_PEER_MAP_HIT_IP, 0);
+	  err = hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP, 0);
 	  if (err) {
 		  HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		  goto out;
@@ -517,7 +517,7 @@ int handle_rst(struct hip_common *msg, int action,
 		goto out;
 	}
 
-	err = hip_build_user_hdr(msg, HIP_USER_RST, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_RST, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out;
@@ -601,7 +601,7 @@ int main(int argc, char *argv[]) {
   if (hip_get_msg_type(msg) == 0)
     goto skip_msg;
 
-  err = send_msg(msg);
+  err = hip_set_global_option(msg);
   if (err) {
      HIP_ERROR("sending msg failed\n");
      goto out_malloc;
