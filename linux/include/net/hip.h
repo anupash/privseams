@@ -692,6 +692,7 @@ struct hip_peer_spi_list_item
 	struct list_head list;
 	uint32_t         spi;
 	struct list_head peer_addr_list; /* Peer's IPv6 addresses belonging to the SPI */
+	struct in6_addr  preferred_address;
 };
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
@@ -728,6 +729,8 @@ struct hip_hadb_state
 	uint32_t             spi_in;        /* inbound IPsec SA SPI */
 	uint32_t             new_spi_out;   /* new outbound IPsec SA SPI received in UPDATE */
 	uint32_t             new_spi_in;    /* new inbound IPsec SA SPI when rekey was initiated */
+
+	uint32_t             default_spi_out;
 
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;

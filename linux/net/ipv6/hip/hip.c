@@ -1540,6 +1540,8 @@ static int hip_init_procfs(void)
 			       hip_proc_read_hadb_state, NULL);
 	create_proc_read_entry("net/hip/sdb_peer_addrs", 0, 0,
 			       hip_proc_read_hadb_peer_addrs, NULL);
+	create_proc_read_entry("net/hip/sdb_peer_spi_list", 0, 0,
+			       hip_proc_read_hadb_peer_spi_list, NULL);
 
 	/* a simple way to trigger sending of UPDATE packet to all peers */
 	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
@@ -1557,6 +1559,7 @@ static void hip_uninit_procfs(void)
 	remove_proc_entry("net/hip/sdb_state", hip_proc_root);
 	remove_proc_entry("net/hip/sdb_peer_addrs", hip_proc_root);
 	remove_proc_entry("net/hip/send_update", hip_proc_root);
+	remove_proc_entry("net/hip/sdb_peer_spi_list", hip_proc_root);
 	remove_proc_entry("net/hip", NULL);
 	return;
 }

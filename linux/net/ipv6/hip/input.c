@@ -1324,6 +1324,18 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
+	/* source IPv6 address is implicitly the preferred
+	 * address after the base exchange */
+	err = hip_hadb_add_addr_to_spi(entry, spi_out, &ctx->skb_in->nh.ipv6h->saddr,
+				       0, PEER_ADDR_STATE_ACTIVE, 0, 1);
+	HIP_DEBUG("add spi err ret=%d\n", err);
+	if (err) {
+		HIP_ERROR("failed to add an address to SPI list\n");
+		goto out_err;
+	}
+	entry->default_spi_out = spi_out;
+	hip_hadb_dump_spi_list(entry, NULL);
+
 	{
 		/* this is a delayed "insertion" from some 20 lines above */
 		HIP_LOCK_HA(entry);
@@ -1347,28 +1359,6 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	/* jlu XXX: WRITE: Entry not touched after this */
-
-	{
-		int ret;
-		struct hip_peer_addr_list_item addr;
-
-		addr.interface_id = 0x9876;
-		addr.lifetime = 0x12345678;
-		ipv6_addr_copy(&addr.address, &ctx->skb_in->nh.ipv6h->saddr);
-		addr.address_state = PEER_ADDR_STATE_ACTIVE;
-		do_gettimeofday(&addr.modified_time);
-
-		HIP_LOCK_HA(entry);
-		hip_hadb_dump_spi_list(entry, NULL);
-		ret = hip_hadb_add_addr_to_spi(entry, spi_out, &addr);
-		HIP_DEBUG("add spi ret=%d\n", ret);
-		hip_hadb_dump_spi_list(entry, NULL);
-		ret = hip_hadb_add_addr_to_spi(entry, spi_out, &addr);
-
-		HIP_DEBUG("add spi ret=%d\n", ret);
-		hip_hadb_dump_spi_list(entry, NULL);
-		HIP_UNLOCK_HA(entry);
-	}
 
 	/* Build and send R2 */
 	r2 =  hip_msg_alloc();
@@ -1853,7 +1843,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		memcpy(&ctx->hip_authi, &entry->auth_our, sizeof(ctx->hip_authi));
 		spi_in = entry->spi_in;
 		tfm = entry->esp_transform;
-		HIP_UNLOCK_HA(entry);
 
 		err = hip_setup_sa(&r2->hitr, sender, &spi_recvd, tfm, 
 				   &ctx->hip_espi.key, &ctx->hip_authi.key, 1);
@@ -1865,6 +1854,15 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 			HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
 		}
 		/* XXX: Check for -EAGAIN */
+
+		/* source IPv6 address is implicitly the preferred
+		 * address after the base exchange */
+		err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,
+					       0, PEER_ADDR_STATE_ACTIVE, 0, 1);
+		entry->default_spi_out = spi_recvd;
+		HIP_DEBUG("add spi err ret=%d\n", err);
+		hip_hadb_dump_spi_list(entry, NULL);
+		HIP_UNLOCK_HA(entry);
 
 		smp_rmb();
 		entry->state = HIP_STATE_ESTABLISHED;
@@ -1878,7 +1876,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		 */
 		hip_finalize_sa(&r2->hits, spi_recvd);
 		hip_finalize_sa(&r2->hitr, spi_in);
-
 	}
 
  out_err:

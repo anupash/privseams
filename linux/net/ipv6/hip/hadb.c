@@ -326,6 +326,8 @@ int hip_hadb_exists_entry(void *arg, int type)
 /************** END OF PRIMITIVE FUNCTIONS **************/
 
 
+// tmp
+struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 
 /**
  * hip_hadb_get_peer_addr - Get some of the peer's usable IPv6 address
@@ -342,12 +344,44 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	int err = 0;
         struct hip_peer_addr_list_item *s, *candidate = NULL;
 	struct timeval latest, dt;
+	struct hip_peer_spi_list_item *spi_list;
 
 #ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
 #endif
 
+#if 1
 	HIP_LOCK_HA(entry);
+
+	if (entry->default_spi_out) {
+		HIP_DEBUG("default spi = 0x%x\n", entry->default_spi_out);
+		/* we get here after the base exchange */
+		spi_list = hip_hadb_get_spi_list(entry, entry->default_spi_out);
+		if (!spi_list) {
+			HIP_DEBUG("SPI not found\n");
+			err = -ENOMSG;
+		} else {
+			if (ipv6_addr_any(&spi_list->preferred_address)) {
+				HIP_DEBUG("no preferred address\n");
+				err = -ENOMSG;
+			} else {
+				ipv6_addr_copy(addr, &spi_list->preferred_address);
+				_HIP_DEBUG("found preferred address\n");
+				HIP_UNLOCK_HA(entry);
+				goto out;
+			}
+		}
+	}
+
+//	HIP_UNLOCK_HA(entry);
+
+//#else
+//	HIP_LOCK_HA(entry);
+
+	/* we get here if we do not know the default outbound SPI to use */
+	/* later peer_addr_list will be removed */
+
+	HIP_DEBUG("fallbacked to old address selection code\n");
 
 	/* todo: this is ineffecient, optimize (e.g. insert addresses
 	 * always in sorted order so we can break out of the loop earlier) */
@@ -393,6 +427,8 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 #endif
 	}
 
+#endif // 0
+ out:
         return err;
 }
 
@@ -849,7 +885,7 @@ int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi)
 
 	item->spi = spi;
 	INIT_LIST_HEAD(&item->peer_addr_list);
-
+	ipv6_addr_copy(&item->preferred_address, &in6addr_any);
 	list_add_tail(&item->list, &entry->peer_spi_list);
 
  out_err:
@@ -878,7 +914,9 @@ struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t s
 }
 
 /* add an address belonging to the SPI list */
-int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr_list_item *addr)
+int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
+			     uint32_t interface_id, int address_state, uint32_t lifetime,
+			     int is_preferred_addr)
 {
 	/* no locking (?) */
 	int err = 0;
@@ -887,7 +925,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr
 	struct hip_peer_addr_list_item *a, *tmp;
 	int new = 1;
 
-	HIP_DEBUG("spi=0x%x\n", spi);
+	HIP_DEBUG("spi=0x%x is_preferred_addr=%d\n", spi, is_preferred_addr);
 
 //	HIP_LOCK_HA(entry);
 
@@ -911,7 +949,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr
 	/* check if addr already exists
 	 * if yes, then just update values */
 	list_for_each_entry_safe(a, tmp, &spi_list->peer_addr_list, list) {
-		if (!ipv6_addr_cmp(&a->address, &addr->address)) {
+		if (!ipv6_addr_cmp(&a->address, addr)) {
 			new_addr = a;
 			new = 0;
 			break;
@@ -931,11 +969,14 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct hip_peer_addr
 	} else
 		HIP_DEBUG("update old addr item\n");
 
-	new_addr->interface_id = addr->interface_id;
-	new_addr->lifetime = addr->lifetime;
-	ipv6_addr_copy(&new_addr->address, &addr->address);
-	new_addr->address_state = addr->address_state;
+	new_addr->interface_id = interface_id;
+	new_addr->lifetime = lifetime;
+	ipv6_addr_copy(&new_addr->address, addr);
+	new_addr->address_state = address_state;
 	do_gettimeofday(&new_addr->modified_time);
+
+	if (is_preferred_addr)
+		ipv6_addr_copy(&spi_list->preferred_address, addr);
 
 	if (new) {
 		HIP_DEBUG("adding new addr to list\n");
@@ -966,7 +1007,8 @@ int hip_hadb_dump_spi_list(hip_ha_t *entry, void *unused)
 	/* no locking */
         list_for_each_entry_safe(spi_list, tmp, &entry->peer_spi_list, list) {
 		_HIP_DEBUG("SPI list=0x%p\n", spi_list);
-		HIP_DEBUG("SPI=0x%x\n", spi_list->spi);
+		hip_in6_ntop(&spi_list->preferred_address, str);
+		HIP_DEBUG("SPI=0x%x preferred address=%s\n", spi_list->spi, str);
 		i = 1;
 		list_for_each_entry_safe(addr, tmp2, &spi_list->peer_addr_list, list) {
 			hip_in6_ntop(&addr->address, str);
@@ -990,9 +1032,9 @@ void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi)
 	struct hip_peer_spi_list_item *spi_list, *tmp;
 	struct hip_peer_addr_list_item *addr, *tmp2;
 	char str[INET6_ADDRSTRLEN];
-	int i = 1;
+	int i = 0;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("spi=0x%x\n", spi);
 
 	if (!entry || !&entry->peer_spi_list) {
 		HIP_ERROR("invals\n");
@@ -1001,22 +1043,24 @@ void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi)
 
 	/* no locking */
         list_for_each_entry_safe(spi_list, tmp, &entry->peer_spi_list, list) {
-		HIP_DEBUG("SPI 0x%x\n", spi_list->spi);
+		_HIP_DEBUG("SPI 0x%x\n", spi_list->spi);
 		if (spi_list->spi == spi) {
 			HIP_DEBUG("deleting SPI list 0x%x\n", spi_list->spi);
 			list_for_each_entry_safe(addr, tmp2, &spi_list->peer_addr_list, list) {
 				hip_in6_ntop(&addr->address, str);
-				HIP_DEBUG(" address %d: %s\n", i, str);
 				i++;
+				HIP_DEBUG(" address %d: %s\n", i, str);
 				list_del(&addr->list);
 				kfree(addr);
 			}
-			/* todo: call delete_sa here */
+			/* todo: call delete_sa here ? */
 			list_del(&spi_list->list);
 			kfree(spi_list);
 			break;
 		}
         }
+	if (!i)
+		HIP_DEBUG("SPI not found\n");
 }
 
 
@@ -1277,7 +1321,99 @@ int hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
 	return ps.len;
 }
 
+static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
+{
+	hip_proc_opaque_t *op = (hip_proc_opaque_t *)opaque;
+	char addr_str[INET6_ADDRSTRLEN];
+	struct hip_peer_addr_list_item *a;
+	struct hip_peer_spi_list_item *spi_list;
+	int i = op->i;
+	char *page = op->page;
+	int len = op->len;
+	int count = op->count;
+
+	i = 0; // test
+
+	HIP_LOCK_HA(entry);
+
+	hip_in6_ntop(&entry->hit_peer, addr_str);
+	if ( (len += snprintf(page+len, count-len, "HIT %s", addr_str)) >= count)
+		goto error;
+
+	list_for_each_entry(spi_list, &entry->peer_spi_list, list) {
+		hip_in6_ntop(&spi_list->preferred_address, addr_str);
+		if ( (len += snprintf(page+len, count-len, "\n SPI=0x%x preferred_address=%s",
+				      spi_list->spi, addr_str)
+			     ) >= count)
+			goto error;
+		list_for_each_entry(a, &spi_list->peer_addr_list, list) {
+			hip_in6_ntop(&a->address, addr_str);
+			if ( (len += snprintf(page+len, count-len, "\n  addr=%s state=0x%x lifetime=0x%x modified sec=%ld,usec=%ld",
+					      addr_str, a->address_state, a->lifetime,
+					      a->modified_time.tv_sec, a->modified_time.tv_usec)
+				     ) >= count)
+			goto error;
+		i++;
+	}
+
+	}
+
+	HIP_UNLOCK_HA(entry);
+
+	if (i == 0 && (len += snprintf(page+len, count-len, "\n no SPIs")) >= count)
+		goto error;
+
+	if ( (len += snprintf(page+len, count-len, "\n")) >= count)
+		goto error;
+
+	op->len = len;
+	op->count = count;
+	op->i = i;
+	return 0;
+ error:
+	HIP_UNLOCK_HA(entry);
+	HIP_DEBUG("PROC read SPI list buffer exceeded\n");
+	return -1;
+}
+
+/**
+ * hip_proc_read_hadb_peer_spi_list - dump SPI list of every peer
+ * @page: where dumped data is written to
+ * @start: ignored
+ * @off: ignored
+ * @count: how many bytes to read
+ * @eof: pointer where end of file flag is stored, always set to 1
+ * @data: ignored
+ *
+ * This debug function lists every SPI and their IPv6 addresses and their properties
+ * for every peer. The list can be dumped from from file
+ * /proc/net/hip/sdb_peer_spi_list
+ *
+ * Returns: number of bytes written to @page.
+ */
+int hip_proc_read_hadb_peer_spi_list(char *page, char **start, off_t off,
+				  int count, int *eof, void *data)
+{
+	hip_proc_opaque_t ps;
+	int fail;
+
+	ps.page = page;
+	ps.count = count;
+	ps.len = 0;
+	*eof = 1;
+
+	fail = hip_for_each_ha(hip_proc_read_hadb_spi_list_func, &ps);
+	if (fail) {
+		page[ps.count-1] = '\0';
+		ps.len = ps.count;
+	} else
+		page[ps.len] = '\0';
+
+	return ps.len;
+}
+
 #endif
+
 
 /**
  * hip_hadb_dump_hits - Dump the contents of the HIT hash table.
