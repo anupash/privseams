@@ -2691,7 +2691,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 
 /**
- * hip_check_network_header - validate an incoming HIP header
+ * hip_verify_network_header - validate an incoming HIP header
  * @hip_common: pointer to the HIP header
  * @skb: sk_buff in which the HIP packet is in
  *
@@ -2705,11 +2705,10 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	uint16_t csum;
 	struct in6_addr our_hit, opportunistic_hit;
 
-	HIP_DEBUG("skb len=%d, skb data_len=%d, v6hdr payload_len=%d/hip_common payloadlen=%d mgtotlen=%d\n",
-		  (*skb)->len, (*skb)->data_len, ntohs((*skb)->nh.ipv6h->payload_len),
-		  (hip_common->payload_len+1)*8,
-		  hip_get_msg_total_len(hip_common)
-		  );
+	HIP_DEBUG("skb len=%d, skb data_len=%d, v6hdr payload_len=%d mgtotlen=%d\n",
+		  (*skb)->len, (*skb)->data_len,
+		  ntohs((*skb)->nh.ipv6h->payload_len),
+		  hip_get_msg_total_len(hip_common));
 
 	if (ntohs((*skb)->nh.ipv6h->payload_len) !=
 	     hip_get_msg_total_len(hip_common)) {

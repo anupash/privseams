@@ -976,7 +976,6 @@ void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 static int hip_init_output_socket(void)
 {
 	int err = 0;
-	int mc_loop_prev = 0;
 	struct ipv6_pinfo *np;
 
 	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_output_socket);
@@ -987,7 +986,6 @@ static int hip_init_output_socket(void)
 	   coming back from loopback */
 	np = inet6_sk(hip_output_socket->sk);
 	if (np) {
-		mc_loop_prev = np->mc_loop;
 		_HIP_DEBUG("mc_loop_prev=%d\n", mc_loop_prev);
 		np->mc_loop = 0;
 	} else {

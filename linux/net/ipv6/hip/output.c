@@ -296,8 +296,12 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	if (err) {
  		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);
 		ip6_flush_pending_frames(hip_output_socket->sk);
-	} else
+	} else {
 		err = ip6_push_pending_frames(hip_output_socket->sk);
+		if (err)
+			HIP_ERROR("Pushing of pending frames failed (%d)\n",
+				  err);
+	}
 
 	release_sock(hip_output_socket->sk);
 
