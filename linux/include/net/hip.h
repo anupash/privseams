@@ -130,9 +130,7 @@ typedef uint16_t in_port_t;
 
 #define HIP_PARAM_SPI                  1
 #define HIP_PARAM_R1_COUNTER           2
-#ifdef CONFIG_HIP_RVS
-# define HIP_PARAM_REA                  3
-#endif
+#define HIP_PARAM_REA                  3
 #define HIP_PARAM_PUZZLE               5
 #define HIP_PARAM_SOLUTION             7
 #define HIP_PARAM_NES                  9
