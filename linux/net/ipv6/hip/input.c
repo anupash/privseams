@@ -571,6 +571,27 @@ int hip_produce_keying_material(struct hip_common *msg,
 			&km, keymat, keymat_len,
 			&msg->hits, &msg->hitr, &ctx->keymat_calc_index);
 
+
+/* set to 1 to dump 1000 bytes of KEYMAT */
+#if 0
+	{
+		void *d;
+		struct hip_keymat_keymat km2;
+		uint8_t ci;
+		d = kmalloc(1000, GFP_KERNEL);
+		if (!d) {
+			HIP_ERROR("No memory for test KEYMAT\n");
+			err = -ENOMEM;
+			goto out_err;
+		}
+		memset(d, 0, 1000);
+		hip_make_keymat(dh_shared_key, dh_shared_len,
+			&km2, d, 1000, &msg->hits, &msg->hitr, &ci);
+		HIP_HEXDUMP("test KEYMAT", d, 1000);
+		kfree(d);
+	}
+#endif
+
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */
 #define KEYMAT_DRAW_AND_COPY(dst, len)				\
@@ -664,7 +685,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 #undef KEYMAT_DRAW_AND_COPY
 
 	/* the next byte when creating new keymat */
-	ctx->current_keymat_index = keymat_len_min+1;
+	ctx->current_keymat_index = keymat_len_min; /* offset value, so no +1 ? */
 	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
 
 	memcpy(ctx->current_keymat_K, keymat+(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);

@@ -232,15 +232,14 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	/* SA-gl */
 	Kn_pos = entry->current_keymat_index - (entry->current_keymat_index % HIP_AH_SHA_LEN);
 	err = hip_keymat_get_new(espkey_gl->key, esp_transf_length, entry->dh_shared_key,
-				 entry->dh_shared_key_len, &k, &c, Kn, Kn_pos);
+				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
 	_HIP_DEBUG("enckey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
-	goto out_err;
+		goto out_err;
 	_HIP_HEXDUMP("ENC KEY gl", espkey_gl->key, esp_transf_length);
 	k += esp_transf_length;
-	Kn_pos = (k / HIP_AH_SHA_LEN) * HIP_AH_SHA_LEN;
 	err = hip_keymat_get_new(authkey_gl->key, auth_transf_length, entry->dh_shared_key,
-				 entry->dh_shared_key_len, &k, &c, Kn, Kn_pos);
+				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
 	_HIP_DEBUG("authkey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
@@ -248,17 +247,15 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	k += auth_transf_length;
 
 	/* SA-lg */
-	Kn_pos = (k / HIP_AH_SHA_LEN) * HIP_AH_SHA_LEN;
 	err = hip_keymat_get_new(espkey_lg->key, esp_transf_length, entry->dh_shared_key,
-				 entry->dh_shared_key_len, &k, &c, Kn, Kn_pos);
+				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
 	_HIP_DEBUG("enckey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
 	_HIP_HEXDUMP("ENC KEY lg", espkey_lg->key, esp_transf_length);
 	k += esp_transf_length;
-	Kn_pos = (k / HIP_AH_SHA_LEN) * HIP_AH_SHA_LEN;
 	err = hip_keymat_get_new(authkey_lg->key, auth_transf_length, entry->dh_shared_key,
-				 entry->dh_shared_key_len, &k, &c, Kn, Kn_pos);
+				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
 	_HIP_DEBUG("authkey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
