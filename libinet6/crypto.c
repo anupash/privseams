@@ -220,9 +220,113 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
   return err;
 }
 
+/**
+ * rsa_to_hit - create HIT from RSA parameters
+ * XX TODO: similar to the dsa_to_hit except from the pubkey_len,
+ *          this is not very elegant...
+ */
 int rsa_to_hit(char *rsa, int type, struct in6_addr *hit) {
-  return dsa_to_hit(rsa, type, hit); 
+  int err = 0, pubkey_len = 132; // XX FIX
+  //unsigned char *pubkey = NULL;
+  char addrstr[INET6_ADDRSTRLEN];
+  unsigned char *sha, sha_hash[SHA_DIGEST_LENGTH];
+  int i;
+  BIGNUM *bn, *tmp = NULL;
+  
+  /// XX FIXME -- WHAT WAS THIS?
+  /* if hipd was given a HIT to use from the command line it is used,
+     else HIT is calculated from the HI. */
+  //if (!IN6_IS_ADDR_UNSPECIFIED(&lhi->hit)) {
+  //  HIP_INFO("Use given HIT\n");
+  //  goto out_err
+  
+  _HIP_INFO("Create HIT from HI\n");
+  
+  if (type == HIP_HIT_TYPE_HASH126) {
+    _HIP_DEBUG("HIT type is HASH126\n");
+  } else if (type == HIP_HIT_TYPE_HAA_HASH) {
+    HIP_ERROR("HIT type HAA hash not implemented\n");
+    err = -ENOSYS;
+    goto out_err;
+  } else {
+    HIP_ERROR("Unknown HIT type (%d)\n", type);
+    err = -EINVAL;
+    goto out_err;
+  }
+  
+  /* If Bit 0 is zero and Bit 1 is one, then the rest of HIT is a 126
+     bits of a Hash of the key. For example, if the Identity is DSA, these
+     bits MUST be the least significant 126 bits of the SHA-1 [FIPS-180-1]
+     hash of the DSA public key Host Identity.  */
+  sha = SHA1(rsa, pubkey_len, (unsigned char *) &sha_hash);
+  if (!sha) {
+    HIP_ERROR("sha hash failed\n");
+    err = -EINVAL;
+    goto out_err;
+  }
+  
+  _HIP_HEXDUMP("rsa: ", rsa, pubkey_len);
+  
+  _HIP_DEBUG("sha_p=%p sha_hash_p=%p\n", sha, &sha_hash);
+  _HIP_HEXDUMP("hit hash:     ", &sha_hash, SHA_DIGEST_LENGTH);
+  _HIP_HEXDUMP("hit trunc hash:       ",
+	       (unsigned char *)&sha_hash+(SHA_DIGEST_LENGTH-128/8), 128/8);
+  _HIP_DEBUG("pos=%d\n", SHA_DIGEST_LENGTH - 128/8);
+  
+  /* Take 128 bits from the end of the hash */
+  bn = BN_bin2bn((const unsigned char *) &sha_hash + (SHA_DIGEST_LENGTH-128/8),
+		 128/8, NULL);
+  if (!bn) {
+    HIP_ERROR("!bn\n");
+    err = -EINVAL;
+    goto out_err;
+  }
+  
+  _HIP_DEBUG("hit hash 128, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
+  
+  if (!BN_clear_bit(bn, 127) || !BN_set_bit(bn, 126)) {
+    HIP_ERROR("bn set/clear bit failed\n");
+    err = -EINVAL;
+    goto out_err;
+  }
+  _HIP_DEBUG("hit hash 126, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
+  
+  tmp = BN_new();
+  /* store result to parameter hit */
+  for (i = 0; i < 4; i++) {
+    unsigned long l;
+    
+    BN_copy(tmp, bn); /* todo: if null ..*/
+    _HIP_DEBUG("i=%d tmp=%s", i, BN_bn2hex(tmp));
+    
+    BN_rshift(tmp, tmp, (3-i)*32);
+    _HIP_DEBUG("->%s", BN_bn2hex(tmp));
+    
+    BN_mask_bits(tmp, 32);
+    _HIP_DEBUG("->mask32=%s\n", BN_bn2hex(tmp));
+    
+    l = BN_get_word(tmp);
+    if (l == 0xffffffffL)
+      HIP_ERROR("l == 0xffffffffL\n"); /* can this happen normally ? */
+    
+    _HIP_DEBUG("SET l=%lx ", l);
+    l = ntohl(l);
+    _HIP_DEBUG("ntohl(l)=%lx\n", l);
+    hit->s6_addr32[i] = l;
+    _HIP_DEBUG("\n");
+  }
+
+  inet_ntop(AF_INET6, hit, addrstr, sizeof(addrstr));
+  HIP_DEBUG("HIT is %s\n", addrstr);
+  
+ out_err:
+  
+  if (tmp)
+    BN_free(tmp);
+  
+  return err;
 }
+
 
 /**
  * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
