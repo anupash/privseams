@@ -1,4 +1,4 @@
-/* $USAGI: ifaddrs.c,v 1.21 2002/12/08 08:22:19 yoshfuji Exp $ */
+/* $USAGI: ifaddrs.c,v 1.24 2004/03/03 01:11:11 yoshfuji Exp $ */
 
 /* 
  * Copyright (C)2000 YOSHIFUJI Hideaki
@@ -57,18 +57,12 @@ struct rtmaddr_ifamap
 {
   void *address;
   void *local;
-#ifdef IFA_NETMASK
-  void *netmask;
-#endif
   void *broadcast;
 #ifdef HAVE_IFADDRS_IFA_ANYCAST
   void *anycast;
 #endif
   int address_len;
   int local_len;
-#ifdef IFA_NETMASK
-  int netmask_len;
-#endif
   int broadcast_len;
 #ifdef HAVE_IFADDRS_IFA_ANYCAST
   int anycast_len;
@@ -523,10 +517,8 @@ getifaddrs (struct ifaddrs **ifap)
 	      size_t nlm_struct_size = 0;
 	      sa_family_t nlm_family = 0;
 	      uint32_t nlm_scope = 0, nlm_index = 0;
-#ifndef IFA_NETMASK
 	      size_t sockaddr_size = 0;
 	      uint32_t nlm_prefixlen = 0;
-#endif
 	      size_t rtasize;
 
 	      memset (&ifamap, 0, sizeof (ifamap));
@@ -618,6 +610,8 @@ getifaddrs (struct ifaddrs **ifap)
 				nlm_index;
 			      ((struct sockaddr_ll *) *sap)->sll_hatype =
 				ifim->ifi_type;
+			      if (rta->rta_type == IFLA_ADDRESS)
+				ifa->ifa_addrlen = sa_len;
 			      data += NLMSG_ALIGN (sa_len);
 			    }
 			  break;
@@ -652,7 +646,6 @@ getifaddrs (struct ifaddrs **ifap)
 			  break;
 			case IFLA_QDISC:
 			  break;
-			default:
 			}
 		      break;
 		    case RTM_NEWADDR:
@@ -695,7 +688,6 @@ getifaddrs (struct ifaddrs **ifap)
 			  break;
 			case IFA_CACHEINFO:
 			  break;
-			default:
 			}
 		    }
 		}
@@ -724,11 +716,9 @@ getifaddrs (struct ifaddrs **ifap)
 		    }
 		  if (ifamap.address)
 		    {
-#ifndef IFA_NETMASK
 		      sockaddr_size =
 			NLMSG_ALIGN (ifa_sa_len
 				     (nlm_family, ifamap.address_len));
-#endif
 		      if (!build)
 			dlen +=
 			  NLMSG_ALIGN (ifa_sa_len
@@ -745,26 +735,6 @@ getifaddrs (struct ifaddrs **ifap)
 					 (nlm_family, ifamap.address_len));
 			}
 		    }
-#ifdef IFA_NETMASK
-		  if (ifamap.netmask)
-		    {
-		      if (!build)
-			dlen +=
-			  NLMSG_ALIGN (ifa_sa_len
-				       (nlm_family, ifamap.netmask_len));
-		      else
-			{
-			  ifa->ifa_netmask = (struct sockaddr *) data;
-			  ifa_make_sockaddr (nlm_family, ifa->ifa_netmask,
-					     ifamap.netmask,
-					     ifamap.netmask_len, nlm_scope,
-					     nlm_index);
-			  data +=
-			    NLMSG_ALIGN (ifa_sa_len
-					 (nlm_family, ifamap.netmask_len));
-			}
-		    }
-#endif
 		  if (ifamap.broadcast)
 		    {
 		      if (!build)
@@ -806,16 +776,13 @@ getifaddrs (struct ifaddrs **ifap)
 		}
 	      if (!build)
 		{
-#ifndef IFA_NETMASK
 		  dlen += sockaddr_size;
-#endif
 		  icnt++;
 		}
 	      else
 		{
 		  if (ifa->ifa_name == NULL)
 		    ifa->ifa_name = iflist[nlm_index];
-#ifndef IFA_NETMASK
 		  if (ifa->ifa_addr &&
 		      ifa->ifa_addr->sa_family != AF_UNSPEC &&
 		      ifa->ifa_addr->sa_family != AF_PACKET)
@@ -826,7 +793,6 @@ getifaddrs (struct ifaddrs **ifap)
 					      nlm_prefixlen);
 		    }
 		  data += sockaddr_size;
-#endif
 		  ifl = ifa++;
 		}
 	    }

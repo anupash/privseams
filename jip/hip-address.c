@@ -55,8 +55,10 @@ Java_jip_HipAddress_getAllByName (JNIEnv *env, jclass cls, jstring host)
     } else {
 	khost = s;
     }
+    printf("flags: %d\n", hints.ei_flags);
+    fflush(stdout);
     error = getendpointinfo(khost, kport, &hints, &res);
-    puts("Called");
+    printf("Called, error=%d\n", error);
     fflush(stdout);
     if (error) {
 	char buffer[256];

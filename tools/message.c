@@ -48,7 +48,7 @@ int hip_set_global_option(const struct hip_common *msg) {
     goto out;
   }
 
-  err = setsockopt(hipfd, PF_HIP, SO_HIP_GLOBAL_OPT, msg,
+  err = setsockopt(hipfd, IPPROTO_HIP, SO_HIP_GLOBAL_OPT, msg,
 		   hip_get_msg_total_len(msg));
   if (err) {
     HIP_ERROR("setsockopt failed (%d)\n", err);
@@ -75,7 +75,7 @@ int hip_get_global_option(struct hip_common *msg) {
   }
 
   /* The return value SHOULD fit into the msg */
-  err = getsockopt(hipfd, PF_HIP, SO_HIP_GLOBAL_OPT, msg, &msg_len);
+  err = getsockopt(hipfd, IPPROTO_HIP, SO_HIP_GLOBAL_OPT, msg, &msg_len);
   if (err) {
     HIP_ERROR("getsockopt failed (%d)\n", err);
     goto out_close;

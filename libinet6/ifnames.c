@@ -99,6 +99,7 @@ nl_recvmsg (int sd, int request, int seq,
       msg.msg_control = NULL;
       msg.msg_controllen = 0;
       msg.msg_flags = 0;
+      /* XX MIIKA FIX: HANGS AFTER BEING CALLED MULTIPLE TIMES */
       read_len = recvmsg (sd, &msg, 0);
       if ((read_len < 0 && errno == EINTR) || (msg.msg_flags & MSG_TRUNC))
 	continue;

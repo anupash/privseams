@@ -257,7 +257,7 @@ apidoc" to build the Javadoc documentation into the directory
 path-to-hipl/doc/jip-api.
 
 There are three example java applications in "test" directory that you
-can compile with the following procedure:
+must compile manually with the following procedure:
 
 # cd ../test
 # javac -classpath ../jip/jip.jar HipClient.java
@@ -282,12 +282,12 @@ Run the example applications as follows:
 crash # cd path-to-hipl/test
 crash # modprobe hipmod
 crash # ../tools/hipconf add hi default
-crash # ./java HipServer crash 12345
+crash # ./java HipServer 12345
 
 oops # cd test
 oops # modprobe hipmod
 oops # ../tools/hipconf add hi default
-oops # ./java HipClient crash 12345 oops 54321
+oops # ./java HipClient crash 12345 54321
 <wait for the prompt, type some text and press enter>
 
 The shell script "test/java" contains some LD_PRELOAD, library and
