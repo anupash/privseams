@@ -18,7 +18,7 @@ typically been used both to identify the host and to provide routing
 information. This has led to the misuse of IP addresses for
 identification purposes in many security schemes. To overcome the
 problems related to the current use of IP addresses, the Host Identity
-Payload/Protocol (HIP) architecture adds a cryptographically based
+Protocol (HIP) architecture adds a cryptographically based
 name space, the Host Identity, to the IP protocol.  Each host (or more
 specifically, its networking kernel or stack) is assigned at least one
 Host Identity, which can be either public or anonymous. The Host
@@ -89,11 +89,11 @@ transport layer connections to other hosts (or to the host itself),
 and the transport layer connection is then identified using the source
 and destination IP addresses as well as the source and destination
 ports. On the IP layer, the IP address is used as the endpoint
-identifier, and on the MAC layer, the hardware address is used. In
-HIP, the transport layer is modified so that the connections are
-identified using the source and destination HIs as well as the source
-and destination ports.  HIP then provides a binding between the HIs
-and the IP addresses, e.g. using DNS \cite{rfc1034}.
+identifier, and on the link layer, the hardware address of the network
+interface is used. In HIP, the transport layer is modified so that the
+connections are identified using the source and destination HIs as
+well as the source and destination ports.  HIP then provides a binding
+between the HIs and the IP addresses, e.g. using DNS \cite{rfc1034}.
 
 \begin{figure}[htb]
 \begin{center}
@@ -155,6 +155,8 @@ protection and possibly also encryption. Furthermore, the protocol
 performs reachability verification using a simple challenge-response
 scheme.
 
+% todo: bex 4 + update = 5
+% + cer + notify + close + close_ack = 9
 The HLP protocol provides seven message types, of which four are
 dedicated to the base exchange. In \autoref{fig:base_exchange}, the
 base exchange is depicted. In the first message, I1, the initiator I
@@ -186,15 +188,28 @@ If I does not have any prior information of R, it may retrieve the
 information from a repository, such as DNS. I sends a lookup query to
 the DNS server, which replies with R's address, HI, and HIT.
 
-There are some other message types in the HLP. The HIP New SPI Packet
-(NES) provides the peer system with its new SPI, provides a new
+% move BOS here ?
+
+There are some other message types in the HLP. The UPDATE Packet
+provides the peer system with its new SPI, provides possibly a new
 Diffie-Hellman key to produce new keying material, and provides any
-intermediate system with the mapping of the old SPI to the new.  The
-intermediate system with the mapping of the old SPI to the new. The
-HIP Readdress Packet (REA) allows a hos t to notify its partners of a
-change of the IP address (e.g. as a result of mobility). HIP Address
-Check (AC) and Address Check Reply (ACR) packets are used both as an
-address probe and as an implicit acknowledgement to a REA packet
+intermediate system with the mapping of the old SPI to the
+new.
+
+\cite{hip-mm} \textbf{cite must be IETF-HIP-MM} provides a way
+for supporting mobility and multihoming using UPDATE packets. UPDATE
+packets include then REA (contains a list of addresses of the host),
+SEQ, and ACK parameters, and possibly DIFFIE\_HELLMAN parameter. If the
+packet contains a NES parameter, rekeying is performed. The existence
+of these parameters depend on desired mobility scenario described in
+\cite{hip-mm}.
+
+% The HIP Readdress Packet (REA) allows a hos t to notify its partners
+% of a change of the IP address (e.g. as a result of mobility). HIP
+% Address Check (AC) and Address Check Reply (ACR) packets are used
+% both as an address probe and as an implicit acknowledgement to a REA
+% packet
+
 \cite{hip-mm}. The HIP Bootstrap Packet (BOS) is used when the
 initiator is unable to learn a responder's information from a
 repository.
@@ -211,12 +226,16 @@ Linux kernel development (for example
 \cite{kernellinks}, \cite{kmodguide}) that made Linux platform a
 reasonable choice.
 
+% current mainline based on 2.6 ..
+
 When the HIPL project was started, the standard Linux kernel did not
 include IPSec functionality which is needed for HIP. There were two
 projects providing IPSec support for the Linux kernel: USAGI Linux
 \cite{usagi} and FreeS/WAN \cite{freeswan}. USAGI Linux was selected
 because FreeS/WAN did not support IPv6 and project members wanted to
 concentrate on developing an IPv6 implementation of HIP.
+
+% 2.6 has builtin IPsec
 
 The main goal of the project is to develop a HIP drafts \cite{hip},
 \cite{hiparch}, \cite{hipimpl}, \cite{hip-mm} compliant implementation
@@ -226,6 +245,9 @@ specifications were prone to change and hardcoding might have later
 rebound on during the project. To achieve modularity, code was kept
 clear and simple. Both unit testing and interoperability testing has
 been used throughout the project.
+
+% IPv4-tuen tila
+% unit testing .. none
 
 This project is a research project and thereby the non-goals of the
 project are related to production quality code. Usability and
@@ -288,51 +310,67 @@ adding/deleting mappings from the Host Association Data Base.
 
 % XX TODO Kristian: this stuff is already in Networking Stack chapter!?
 
-The HIP layer is located between the transport and the network layer
-in the networking stack. One of our goals has been not to affect the
-transport layer at all. We have achieved this goal. A HIP protocol is
-registered with IPv6 on bootup (or when the module is loaded). This
-enables us to use the kernel's built-in functionality of passing the
-IPv6 packets with a HIP header straight to our code.
+The HIP layer is located conceptually between the transport and the
+network layer in the networking stack. One of our goals has been not
+to affect the transport layer at all. We have achieved this goal.
+% .. transport layer with minimum amount of changes.
+% ``We have achieved this goal.'' .. or not
+The HIP protocol handler is registered with IPv6 on bootup (or when
+the module is loaded into the kernel). This enables us to use the
+kernel's built-in functionality of passing the IPv6 packets with a HIP
+header straight to our code.
 
 Since the actual data, that flows after HIP connection setup, does not
-use HIP protocol headers, we have hook to some receiving/transmitting
-functions of the Linux. Currently we have XXX hooks in the underlying
-IPv6 code:
+use HIP protocol headers, we have added hooks to some
+receiving/transmitting functions in the Linux network stack. Currently
+we have XXX hooks in the underlying IPv6 code:
 
 \begin{description}
 
 \item[hip\_handle\_esp] When an incoming ESP packet arrives, we need to
   rewrite its IPv6 source and destination addresses with the
-  corresponding HITs.  To do IPv6 -> HIT mapping we have to consult
-  our Host Association (HA) database.  This function is called just
-  before we look up the Security Association (SA) from SAD.
+  corresponding HITs. To do IPv6 -> HIT mapping we have to consult our
+  Host Association (HA) database. Correct HA is found by using the SPI
+  value in the ESP packet as the search key.
+% .. ? .. This function is called just
+% before we look up the Security Association (SA) from SAD.
 
 \item[hip\_handle\_output] An outgoing ESP packet has HITs in the IPv6
   header's source and destination address fields. In this function we
   do the HIT -> IPv6 mapping.  Again, we need to consult our HA
-  databse. This function is called just before we call IPv6's
+  database. This function is called just before we call IPv6's
   \verb|dst\_output|.
+% dst_output / maybe_reroute, depends..change
+% --> right before the packet is passed to lower layer.
 
 \item[hip\_get\_addr]
+% ?
 
 \item[hip\_get\_saddr]
+% ?
 
 \item[hip\_unknown\_spi] This hook is related to an ongoing discussion about
   what to do if an ESP packet with an unknown SPI value arrives at the
-  host.  If enabled, we assume that the peer has rebooted and send R1.
+  host. If enabled, we assume that the peer has rebooted and send R1.
+% proposed: send notify
+% current impl: do nothing
 
 \item[hip\_trigger\_bex] A hook to trigger the base exchange (connection
       setup).
 
-\item[hip\_handle\_ipv6\_ifa\_notify] Used when the kernel acquires new IPv6
-  addresses.  When the kernel has performed the Double Address
-  Detection (DAD), we call this hook, and notify active HIP peers.
+% to be removed and moved to xfrm code (register xfrm key manager and set
+% callback function for .acquire)
+
+\item[hip\_handle\_ipv6\_dad\_completed] Used when a new IPv6 address
+is added. When the kernel has performed the Duplicate Address
+Detection procedure (DAD), we call this hook and notify active HIP
+peers about the new address. Events caused by link local addresses are
+ignored.
 \end{description}
 
 \subsection{IPsec Usage}
 
-When the hip code starts, it registers two Security Policies (SPs):
+When the HIP code starts, it registers two Security Policies (SPs):
 One incoming and one outgoing. We use \verb|4000::/2| as a source and
 destination IPv6 addresses. This is the range that is preallocated for
 HIP use, although it is not yet officially allocated by the Internet
@@ -350,13 +388,14 @@ the HIP module will start the HIP base exchange.
 
 The caller process will be put to sleep until the SA is valid, or has
 timeouted.  Default timeout period is 30 seconds\footnote{This is
+% timeout .. in ACQ state ?
 defined by the Linux 2.6 IPsec stack.}. The process will sleep even if
 the socket is a non-blocking one.
 \footnote{Perhaps we should do something to alleviate this minor problem?}
 
 If the HIP base exchange procedure is successful, we have 2 valid SAs:
 one outgoing and one incoming. All the sleepers waiting for the
-outgoing SA, will be now waked up. Now the calling process (usually
+outgoing SA will be now waked up. Now the calling process (usually
 \verb|connect()|), can proceed with transport layer connection
 establishment (TCP handshake). This part will no longer sleep, if the
 socket has been set to non-blocking.
@@ -384,6 +423,7 @@ used only when an incoming ESP encapsulated arrives. We need to map it to a
 certain HIP connection. At that time, we are not aware of the HITs involved,
 but only the SPI number.
 
+% OLD, SPIOK not used
 The HA consists of 
 The HA has internal state. This state varies between \verb|HIP_HASTATE_VALID|,
 \verb|HIP_HASTATE_SPIOK| and \verb|HIP_HASTATE_HITOK|, meaning that the HA
@@ -398,6 +438,8 @@ incremented using \verb|hip_hold_ha()| macro whenever we receive a
 reference to the HA. Obviously the reverse holds for decrementing the
 counter using \verb|hip_put_ha()|. When the reference counter reaches
 zero, the memory allocates for the HA is automatically deleted.
+
+% SPI-HIT hashtable, needed for multiple SA support
 
 \subsubsection{HADB Locking}
 
@@ -615,6 +657,7 @@ c & \textit{hip\_unknown\_spi} &
 
 A packet from an unknown SPI is received and an R1 packet must be sent
 as a response.\\
+% must..
 
 d & \textit{hip\_inbound} &
 
@@ -660,17 +703,31 @@ HIT.\\
 \subsection{Mobility and Multihoming}
 \label{sec:mobility_and_multihoming_architecture}
 
-The implementation supports the mobility and multihoming features of
-HIP: REA, AC and ACR packets can be sent and received. The mobility
-and multihoming part of the code is at a very experimental level at
-the current moment.
+The implementation has some level of support for the mobility and
+multihoming features defined in draft \cite{hip-mm}. Scenarios
+``Mobility with single SA pair'' and ``Host multihoming'' were the
+main targets of the current implementation.
+
+Old style support for REA, AC, and ACR packets is removed. Current
+implementation uses UPDATE packets for mobility and multihoming.
+
+%HIP: REA, AC and ACR packets can be sent and received. The mobility
+%and multihoming part of the code is at a very experimental level at
+%the current moment.
+
 
 \autoref{fig:rea} depicts HIP mobility and multihoming. The HIP
 network module is notified when an IPv6 address is added to or removed
-from some of its network interface(s). When a change occurs in the
-interfaces, all of the addresses of the interface, which caused the
-event, are received in the kernel modules. The addresses are then sent
-in a REA packet to all of the peers of the host that have an existing
+from some of its network interface(s). Another type of events are
+network device events. The HIP module is notified when a network
+device goes down or comes up. Actually, the event when network comes
+up is ignored, because at that time the interface usually has no
+usable addresses, so the modle waits for IPv6 address addition events.
+
+When a change occurs in an interface, the HIP module selects the
+addresses within the interface. The selected addresses are then
+included in a REA parameter. The REA parameter is then sent in a
+UPDATE packet to all of the peers of the host that have an existing
 HIP security association with the host.
 
 \begin{figure}[hbt]
@@ -680,19 +737,21 @@ HIP security association with the host.
  \label{fig:rea}
 \end{figure}
 
-When a peer host receives the REA packet, it must validate all
-addresses listed in the REA packet. This is achieved by sending an AC
-(Address Check) packet to each of the addresses listed in the REA
-packet. When an AC packet is received, it must be acknowledged with an
-ACR (Address Check Reply) packet to verify that there really is a host
-at the address where the AC was sent to. Finally when the ACR is
-received, the host which originally received the REA now knows that
-the peer is reachable from the address corresponding to the AC packet.
+When a peer host receives the initial UPDATE packet, it must validate all
+addresses listed in the REA parameter. This is achieved by sending a
+reply UPDATE packet to each of the addresses listed in the initial UPDATE
+packet. This reply UPDATE packet contains ECHO\_REQUEST and SEQ parameters.
 
-If the AC packet is not replied with a ACR, the address corresponding
-to the AC packet is not reachable and therefore the address is not
-usable for any communication (unless the address is later contained in
-a new REA received and the AC is replied with ACR).
+When a reply UPDATE packet is received, it must be acknowledged with
+an UPDATE packet which contains ECHO\_REPLY and ACK parameter. This is
+needed to verify that there really is a host at the address where the
+UPDATE was sent from. When a host receives these addres verification
+UPDATE packets, it can start using them when sending data to its peer.
+
+If the reply UPDATE packet is not replied, the address corresponding
+to the address tested in the REA parameter of the initial UPDATE
+packet is not reachable and therefore the address is not usable for
+any communication until next readdressing of the peer.
 
 \subsection{Asymmetric Cryptography Support in the Linux Kernel}
 
