@@ -1,0 +1,64 @@
+##
+## settings
+##
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+sbindir=@sbindir@
+bindir=@bindir@
+mandir=@mandir@
+
+##
+## autoconf
+##
+CPP=@CPP@
+CXXCPP=@CXXCPP@
+CC=@CC@
+CXX=@CXX@
+DEFS=-D_USAGI -DINET6 @DEFS@
+CFLAGS=@CFLAGS@ $(DEFS)
+CXXFLAGS=@CXXFLAGS@ $(DEFS)
+
+OBJS=
+LIBOBJS=@LIBOBJS@
+LDFLAGS=@LDFLAGS@
+LIBS=@LIBS@
+
+INSTALL=@INSTALL@
+INSTALL_PROG=@INSTALL_PROGRAM@
+INSTALL_DATA=@INSTALL_DATA@
+INSTALL_DIR=@INSTALL_DIR@
+
+LN_S=@LN_S@
+YACC=@YACC@
+
+##
+## targets
+##
+TARGET = ftpd
+
+all:	$(TARGET)
+
+clean:
+	-rm -f *.o ftpcmd.c y.tab.h $(TARGET)
+distclean: clean
+	-rm -f config.*
+	-rm -f Makefile
+
+install: all
+	$(INSTALL_DIR) $(sbindir)
+	$(INSTALL_PROG) -s ftpd $(sbindir)/in.ftpd
+	$(INSTALL_DIR) $(mandir)/man5
+	$(INSTALL_DATA) ftpusers.5 $(mandir)/man5
+	$(INSTALL_DIR) $(mandir)/man8
+	$(INSTALL_DATA) ftpd.8 $(mandir)/man8/in.ftpd.8
+
+##
+## dependencies
+##
+ftpd: ftpd.o ftpcmd.o logutmp.o logwtmp.o popen.o $(LIBOBJS)
+	$(CC) $(LDFLAGS) $^ $(LIBS) -o $@
+
+ftpcmd.c: %.c: %.y
+	$(YACC) $<
+	-mv -f y.tab.c $@
+
