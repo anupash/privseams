@@ -90,8 +90,9 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
 void hip_update_clear_status(hip_ha_t *entry, uint32_t spi);
 int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			  int direction, int test_new_spi);
+uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry);
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
-				   struct hip_peer_addr_list_item *addr);
+				   struct in6_addr *addr);
 void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 			   struct hip_echo_response *echo_esp);
 void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id);

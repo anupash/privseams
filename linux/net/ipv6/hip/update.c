@@ -298,8 +298,8 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 		sizeof(struct hip_rea_info_addr_item);
 	HIP_DEBUG("REA has %d address(es), rea param len=%d\n",
 		  n_addrs, hip_get_param_total_len(rea));
-	if (n_addrs <= 0) {
-		HIP_DEBUG("BUG: n_addrs=%d <= 0\n", n_addrs);
+	if (n_addrs < 0) {
+		HIP_DEBUG("BUG: n_addrs=%d < 0\n", n_addrs);
 		goto out_err;
 	}
 
@@ -313,6 +313,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 		goto out_err;
 	}
 
+	/* is this right, maybe not ? */
 	HIP_DEBUG("Clearing old preferred flags of the SPI\n");
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
 		a->is_preferred = 0;
@@ -381,8 +382,11 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 		/* deprecate the address */
 		a->address_state = PEER_ADDR_STATE_DEPRECATED;
 	}
-	HIP_DEBUG("done\n");
 
+	if (n_addrs == 0)
+		(void)hip_hadb_relookup_default_out(entry);
+
+	HIP_DEBUG("done\n");
  out_err:
 	return err;
 }
@@ -1054,7 +1058,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			HIP_DEBUG("not verifying already active address\n"); 
 			if (addr->is_preferred) {
 				HIP_DEBUG("TEST: setting already active address and set as preferred to default addr\n");
-				hip_hadb_set_default_out_addr(entry, spi_out, addr);
+				hip_hadb_set_default_out_addr(entry, spi_out, &addr->address);
 			}
 			continue;
 		}
@@ -1461,7 +1465,6 @@ int hip_receive_update(struct sk_buff *skb)
 			  ntohl(nes->old_spi));
 		goto out_err;
 	}
-
 	
 	if (handle_upd == 2) {
 		/* REA, SEQ */
@@ -1504,10 +1507,8 @@ int hip_receive_update(struct sk_buff *skb)
 }
 
 
-/* flags: (to be removed)
-0x1 include NES
-0x2 include hmac and sig ?
-*/
+#define SEND_UPDATE_NES (1 << 0)
+#define SEND_UPDATE_REA (1 << 1)
 
 /** hip_send_update - send initial UPDATE packet to the peer
  * @addr_list: if non-NULL, REA parameter is added to the UPDATE
@@ -1529,20 +1530,22 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	struct hip_host_id *host_id_private;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	int make_new_sa = 0;
-	int add_nes;
+	int add_nes = 0, add_rea;
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 
 	/* lock here ? */
 
-	add_nes = flags & 0x1;
+//	add_nes = flags & SEND_UPDATE_NES;
+	add_rea = flags & SEND_UPDATE_REA;
 
-	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d\n",
-		  addr_list, addr_count, ifindex);
+	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
+		  addr_list, addr_count, ifindex, flags);
+	HIP_DEBUG("add_rea=%d\n", add_rea);
 
-	if (!addr_list)
-		HIP_DEBUG("Plain UPDATE\n");
+	if (add_rea)
+		HIP_DEBUG("mm-02 UPDATE, %d addresses in REA\n", addr_count);
 	else
-		HIP_DEBUG("mm-02 UPDATE\n");
+		HIP_DEBUG("Plain UPDATE\n");
 
 	/* start building UPDATE packet */
 	update_packet = hip_msg_alloc();
@@ -1555,7 +1558,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	hip_print_hit("sending UPDATE to", &entry->hit_peer);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
 
-	if (addr_list) {
+//	if (addr_list) {
+	if (add_rea) {
 		/* mm stuff, per-ifindex SA */
 		/* reuse old SA if we have one, else create a new SA */
 		mapped_spi = hip_hadb_get_spi(entry, ifindex);
@@ -1576,6 +1580,11 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		/* base draft UPDATE, create a new SA anyway */
 		HIP_DEBUG("base draft UPDATE, create a new SA\n");
 		make_new_sa = 1;
+	}
+
+	if (make_new_sa) {
+		HIP_DEBUG("make_new_sa=1 -> add_nes=1\n");
+		add_nes = 1;
 	}
 
 	HIP_DEBUG("add_nes=%d make_new_sa=%d\n", add_nes, make_new_sa);
@@ -1611,7 +1620,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 
-	if (addr_list) {
+//	if (addr_list) {
+	if (add_rea) {
 		/* REA is the first parameter of the UPDATE */
 		if (mapped_spi)
 			err = hip_build_param_rea_mm02(update_packet, mapped_spi,
@@ -1837,7 +1847,7 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
-			hip_send_update(rk.array[i], addr_list, addr_count, ifindex, 1);
+			hip_send_update(rk.array[i], addr_list, addr_count, ifindex, flags);
 			hip_put_ha(rk.array[i]);
 		}
 	}

@@ -1754,7 +1754,7 @@ int hip_build_param_rea_info00(struct hip_common *msg,
 /**
  * hip_build_param_rea_mm02 - build HIP REA_INFO parameter
  *
- * @msg:             the message where the rea will be appended
+ * @msg:             the message where the REA will be appended
  * @spi:             SPI
  * @addresses:       list of addresses
  * @address_count:   number of addresses in @addresses

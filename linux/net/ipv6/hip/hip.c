@@ -1248,7 +1248,6 @@ struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
 	return hwo;
 }
 
-
 /**
  * hip_handle_ipv6_dad_completed - handle IPv6 address events
  * @ifindex: the ifindex of the interface which caused the event
@@ -1275,6 +1274,9 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
 
 #define EVENTSRC_INET6 0
 #define EVENTSRC_NETDEV 1
+
+#define SEND_UPDATE_NES (1 << 0)
+#define SEND_UPDATE_REA (1 << 1)
 
 /** hip_net_event - start handling the network device event
  * @ifindex: the device which caused the event
@@ -1325,10 +1327,10 @@ static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 		HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
 	} else {
 		/* send UPDATEs if there are addresses to be informed to the peers */
-		if (idev_addr_count > 0 && addr_list)
-			hip_send_update_all(addr_list, idev_addr_count, ifindex, 0x0);
-		else
-			HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+		//if (idev_addr_count > 0 && addr_list)
+		hip_send_update_all(addr_list, idev_addr_count, ifindex, SEND_UPDATE_REA);
+		//else
+		//HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
 	}
 
 	if (addr_list)

@@ -382,7 +382,6 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 	int err = 0;
         struct hip_peer_addr_list_item *s, *candidate = NULL;
 	struct timeval latest, dt;
-//	struct hip_spi_out_item *spi_out;//, *tmp;
 	char addrstr[INET6_ADDRSTRLEN];
 
         list_for_each_entry(s, &spi_out->peer_addr_list, list) {
@@ -1302,8 +1301,40 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 	return 0;
 }
 
+/* Get an usable outbound SPI, SPI must contain ACTIVE addresses */
+/* todo: return void instead of spi */
+uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry)
+{
+	uint32_t spi = 0;
+	struct hip_spi_out_item *spi_out, *spi_out_tmp;
+	struct hip_peer_addr_list_item *addr, *addr_tmp;
+
+	HIP_DEBUG("\n");
+
+	/* latest outbound SPIs are in the beginning of the list */
+	list_for_each_entry_safe(spi_out, spi_out_tmp, &entry->spis_out, list) {
+		int ret;
+		struct in6_addr addr;
+
+		HIP_DEBUG("checking SPI 0x%x\n", spi_out->spi);
+		ret = hip_hadb_select_spi_addr(entry, spi_out, &addr);
+		if (ret == 0) {
+			hip_hadb_set_default_out_addr(entry, spi_out, &addr);
+			spi = spi_out->spi;
+			goto out;
+		}
+	}
+
+	if (spi)
+		HIP_DEBUG("Set SPI 0x%x as the default outbound SPI\n", spi);
+	else
+		HIP_DEBUG("Did not find an usable outbound SPI\n");
+ out:
+	return spi;
+}
+
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
-				   struct hip_peer_addr_list_item *addr)
+				   struct in6_addr *addr)
 {
 	if (!spi_out) {
 		HIP_ERROR("NULL spi_out\n");
@@ -1312,9 +1343,10 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 
 	if (addr) {
 		HIP_DEBUG("testing kludge, setting given address as default out addr\n");
-		ipv6_addr_copy(&spi_out->preferred_address, &addr->address);
-		ipv6_addr_copy(&entry->preferred_address, &addr->address);
+		ipv6_addr_copy(&spi_out->preferred_address, addr);
+		ipv6_addr_copy(&entry->preferred_address, addr);
 	} else {
+		/* useless ? */
 		struct in6_addr a;
 		int err = hip_hadb_select_spi_addr(entry, spi_out, &a);
 		HIP_DEBUG("selected setting address as default out addr\n");
@@ -1393,7 +1425,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 						do_gettimeofday(&addr->modified_time);
 
 						if (addr->is_preferred) {
-							hip_hadb_set_default_out_addr(entry, out_item, addr);
+							hip_hadb_set_default_out_addr(entry, out_item, &addr->address);
 						} else
 							HIP_DEBUG("address was not set as preferred address in REA\n");
 					}
