@@ -803,7 +803,7 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
  * Workqueue runs this function when it is assigned a job related to
  * networking events.
  */
-static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
+void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 {
 	int err = 0;
 	struct net_device *event_dev;

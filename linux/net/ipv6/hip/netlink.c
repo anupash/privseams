@@ -1,28 +1,29 @@
 #include "netlink.h"
 
-static sock *nl_sk = NULL;
-u32 hipd_pid;
+static struct sock *nl_sk = NULL;
+static u32 hipd_pid;
 
 /* Signal handler to wakeup the blocking datagram receiver */
 void nl_data_ready (struct sock *sk, int len)
 {
-	wake_up_interruptible(sk->sleep);
+	wake_up_interruptible(sk->sk_sleep);
 }
 
 int hip_netlink_open(int *fd) {
 	nl_sk = netlink_kernel_create(NETLINK_HIP, 
 				      nl_data_ready);
+	/** FIXME: error processing */
+	return 0;
 }
 
 void hip_netlink_close() {
 	if (!nl_sk) 
-		sock_release(nl_sk->socket);
+		sock_release(nl_sk->sk_socket);
 }
 
 struct hip_work_order *hip_netlink_receive(void)
 {
 	struct hip_work_order *result;
-	char *payload = NULL;
 	struct sk_buff *skb = NULL;
 	struct nlmsghdr *nlh = NULL;
 	struct hip_work_order *hwo = NULL;
@@ -46,7 +47,7 @@ struct hip_work_order *hip_netlink_receive(void)
 	hwo = (struct hip_work_order *)NLMSG_DATA(nlh);
 	memcpy(result, hwo, sizeof(struct hip_work_order_hdr));
 
-	msg_len = hip_get_msg_total_len(&hwoh->msg);	
+	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);	
 	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
 	if (!result->msg) {
 		HIP_ERROR("Out of memory.\n");
@@ -56,7 +57,7 @@ struct hip_work_order *hip_netlink_receive(void)
 		goto err;
 	}
 	
-	memcpy(result->msg, &hwoh->msg, msg_len);
+	memcpy(result->msg, &hwo->msg, msg_len);
 	result = hwo;
 	kfree_skb(skb);
 	
@@ -72,7 +73,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	int msg_len;
 
 	msg_len = hip_get_msg_total_len(&hwo->msg);
-	skb = alloc_skb(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr), GFP_KERNEL));	
+	skb = alloc_skb(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)), GFP_KERNEL);	
 	if (!skb) {
 		HIP_ERROR("Out of memory.\n");
 		return -1;

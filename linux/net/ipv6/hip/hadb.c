@@ -375,7 +375,6 @@ void hip_hadb_remove_state(hip_ha_t *ha)
 
 /************** END OF PRIMITIVE FUNCTIONS **************/
 
-#if 1
 /* select the preferred address within the addresses of the given SPI */
 /* selected address is copied to @addr, it is is non-NULL */
 int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, struct in6_addr *addr)

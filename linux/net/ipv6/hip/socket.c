@@ -803,13 +803,57 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
         return err;
 }
 
+/**
+ * hwo_default_destructor - Default destructor for work order
+ *
+ * Simple... if you don't understand, then you shouldn't be
+ * dealing with the kernel.
+ */
+void hwo_default_destructor(struct hip_work_order *hwo)
+{
+	if (hwo && hwo->msg)
+          HIP_FREE(hwo->msg);
+}
+
+/* FIXME (tkoponen): this kind of functionality duplication seems stupid, remove? */
+/**
+ * hip_create_job_with_hit - Create work order and add HIT as a first argument
+ * @gfp_mask: Mask for memory allocation
+ * @hit: HIT to be added
+ *
+ * Allocates and initializes work order with HIT as the first argument.
+ * The memory for HIT is also allocated and the HIT is copied.
+ */
+static struct hip_work_order *hip_create_job_with_hit(int gfp_mask, 
+						      const struct in6_addr *hit)
+{
+	struct hip_work_order *hwo;
+	//	struct in6_addr *tmp;
+
+	hwo = hip_init_job(gfp_mask);
+	if (!hwo)
+		return NULL;
+
+	//tmp = HIP_MALLOC(sizeof(struct in6_addr), gfp_mask);
+	//if (!tmp) {
+	//	HIP_FREE(hwo);
+	//	return NULL;
+	//}
+
+	//ipv6_addr_copy(tmp, hit);
+	//hwo->arg1 = tmp;
+	//hwo->arg2 = NULL;
+	ipv6_addr_copy(&hwo->hdr.dst_addr, hit);
+	hwo->destructor = hwo_default_destructor;
+	return hwo;
+}
+
 int hip_insert_peer_map_work_order(const struct in6_addr *hit,
-					  const struct in6_addr *ip,
-					  int insert, int rvs)
+				   const struct in6_addr *ip,
+				   int insert, int rvs)
 {
 	int err = 0;
 	struct hip_work_order *hwo;
-	struct in6_addr *ip_copy;
 
 	hwo = hip_create_job_with_hit(GFP_ATOMIC, hit);
 	if (!hwo) {
@@ -818,23 +862,22 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 		goto out_err;
 	}
 	
-	ip_copy = HIP_MALLOC(sizeof(struct in6_addr), GFP_ATOMIC);
-	if (!ip_copy) {
-		HIP_ERROR("No memory to copy IP to work order\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
+	//	ip_copy = HIP_MALLOC(sizeof(struct in6_addr), GFP_ATOMIC);
+	//if (!ip_copy) {
+	//	HIP_ERROR("No memory to copy IP to work order\n");
+	//	err = -ENOMEM;
+	//	goto out_err;
+	//}
 	
-	ipv6_addr_copy(ip_copy,ip);
-	hwo->arg2 = ip_copy;
-	hwo->type = HIP_WO_TYPE_MSG;
+	ipv6_addr_copy(&hwo->hdr.src_addr, ip);
+	hwo->hdr.type = HIP_WO_TYPE_MSG;
 	if (rvs)
-		hwo->subtype = HIP_WO_SUBTYPE_ADDRVS;
+		hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDRVS;
 	else {
 		if (insert)
-			hwo->subtype = HIP_WO_SUBTYPE_ADDMAP;
+			hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDMAP;
 		else
-			hwo->subtype = HIP_WO_SUBTYPE_DELMAP;
+			hwo->hdr.subtype = HIP_WO_SUBTYPE_DELMAP;
 	}
 
 	hip_insert_work_order(hwo);
@@ -844,7 +887,7 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 	return err;
 }
 
-static int hip_do_work(const struct hip_common *input, int rvs)
+static int do_work(const struct hip_common *input, int rvs)
 {
 	struct in6_addr *hit, *ip;
 	char buf[46];
@@ -892,7 +935,7 @@ static int hip_do_work(const struct hip_common *input, int rvs)
  */
 int hip_socket_handle_rvs(const struct hip_common *input)
 {
-	return hip_do_work(input, 1);
+	return do_work(input, 1);
 }
 
 
@@ -907,7 +950,7 @@ int hip_socket_handle_rvs(const struct hip_common *input)
  */
 int hip_socket_handle_add_peer_map_hit_ip(const struct hip_common *input)
 {
-	return hip_do_work(input, 0);
+	return do_work(input, 0);
 }
 
 /**

@@ -320,39 +320,36 @@ int hip_do_work(struct hip_work_order *job)
 		break;
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
-#if 0
-		  // FIXME
 		case HIP_WO_SUBTYPE_IN6_EVENT:
-			hip_net_event((int)job->arg1, 0, (uint32_t) job->arg2);
+			hip_net_event((int)job->hdr.arg1, 0, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
 			break;
 		case HIP_WO_SUBTYPE_DEV_EVENT:
-			hip_net_event((int)job->arg1, 1, (uint32_t) job->arg2);
+			hip_net_event((int)job->hdr.arg1, 1, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
 			break;
 		case HIP_WO_SUBTYPE_ADDMAP:
 			/* arg1 = d-hit, arg2=ipv6 */
-			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
+			res = hip_hadb_add_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
-			res = hip_del_peer_info(job->arg1, job->arg2);
+			res = hip_del_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
-#endif
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */
-			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
+			res = hip_hadb_add_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;
-			hip_rvs_set_request_flag(job->arg1);
+			hip_rvs_set_request_flag(&job->hdr.dst_addr);
 			{
 				struct ipv6hdr hdr = {0};
-				ipv6_addr_copy(&hdr.daddr, job->arg1);
+				ipv6_addr_copy(&hdr.daddr, &job->hdr.dst_addr);
 				hip_handle_output(&hdr, NULL);
 			}
 			res = 0;
@@ -380,51 +377,6 @@ int hip_do_work(struct hip_work_order *job)
 	return res;
 }
 
-#if 0
-/* tkoponen: this kind of functionality duplication seems stupid, remove? */
-/**
- * hip_create_job_with_hit - Create work order and add HIT as a first argument
- * @gfp_mask: Mask for memory allocation
- * @hit: HIT to be added
- *
- * Allocates and initializes work order with HIT as the first argument.
- * The memory for HIT is also allocated and the HIT is copied.
- */
-struct hip_work_order *hip_create_job_with_hit(int gfp_mask, 
-                                               const struct in6_addr *hit)
-{
-	struct hip_work_order *hwo;
-	struct in6_addr *tmp;
-
-	hwo = hip_init_job(gfp_mask);
-	if (!hwo)
-		return NULL;
-
-	tmp = HIP_MALLOC(sizeof(struct in6_addr), gfp_mask);
-	if (!tmp) {
-		HIP_FREE(hwo);
-		return NULL;
-	}
-
-	ipv6_addr_copy(tmp, hit);
-	hwo->arg1 = tmp;
-	hwo->arg2 = NULL;
-	hwo->destructor = hwo_default_destructor;
-	return hwo;
-}
-
-/**
- * hwo_default_destructor - Default destructor for work order
- *
- * Simple... if you don't understand, then you shouldn't be
- * dealing with the kernel.
- */
-void hwo_default_destructor(struct hip_work_order *hwo)
-{
-	if (hwo && hwo->msg)
-          HIP_FREE(hwo->msg);
-}
-#endif
 
 
 
