@@ -165,6 +165,36 @@ int hip_setup_sp(int dir)
 	return 0;
 }
 
+/* returns 0 if SPI could not  be allocated, SPI is in host byte order */
+uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
+{
+	struct xfrm_state *xs;
+	uint32_t spi = 0;
+
+	HIP_DEBUG("acquiring a new SPI\n");
+	xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
+			   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
+			   1, AF_INET6);
+	if (!xs) {
+		HIP_ERROR("Error while acquiring an SA\n");
+		goto out_err_noput;
+	}
+
+	xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
+	spi = ntohl(xs->id.spi);
+	if (!spi) {
+		HIP_ERROR("Could not get SPI value for the SA\n");
+		goto out_err;
+	}
+	_HIP_DEBUG("Got SPI value for the SA 0x%x\n", spi);
+	
+ out_err:
+	xfrm_state_put(xs);
+ out_err_noput:
+	return spi;
+}
+
+
 /**
  * hip_setup_sa - set up a new IPsec SA
  * @srcit: source HIT
@@ -192,7 +222,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 int already_acquired, int direction)
 {
 	int err;
-	struct xfrm_state *xs;
+	struct xfrm_state *xs = NULL;
 	struct xfrm_algo_desc *ead;
 	struct xfrm_algo_desc *aad;
 	size_t akeylen, ekeylen; /* in bits */
@@ -200,34 +230,35 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	HIP_DEBUG("SPI=0x%x alg=%d already_acquired=%d direction=%s\n",
 		  *spi, alg, already_acquired, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
 	akeylen = ekeylen = 0;
-	err = -ENOMEM;
+	err = -EEXIST;
 
 	//hip_print_hit("srchit", srchit);
 	//hip_print_hit("dsthit", dsthit);
 	if (already_acquired) {
-		/* should be found */
-		if (direction == HIP_SPI_DIRECTION_IN)
-			xs = xfrm_state_lookup((xfrm_address_t *)dsthit, htonl(*spi),
-					       IPPROTO_ESP, AF_INET6);
-		else
-			xs = xfrm_state_lookup((xfrm_address_t *)srchit, htonl(*spi),
-					       IPPROTO_ESP, AF_INET6);
-		if (!xs) {
-			HIP_DEBUG("SA for SPI does not exist for ACQuired SPI\n");
-			err = -EEXIST;
-			return err;
+		if (!*spi) {
+			HIP_ERROR("No SPI for already acquired SA\n");
+			err = -EINVAL;
+			goto out;
 		}
+		/* should be found (unless expired) */
+		xs = xfrm_state_lookup(direction == HIP_SPI_DIRECTION_IN ?
+				       (xfrm_address_t *)dsthit : (xfrm_address_t *)srchit,
+				       htonl(*spi), IPPROTO_ESP, AF_INET6);
 	} else {
 		xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
 				   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
 				   1, AF_INET6);
-		if (!xs) {
-			HIP_ERROR("Error while acquiring an SA: %d\n", err);
-			err = -EEXIST;
-			return err;
-		}
 	}
 
+	if (!xs) {
+		HIP_ERROR("Error while acquiring xfrm state: err=%d\n", err);
+		err = -EEXIST;
+		return err;
+	}
+
+	err = 0;
+
+	/* old comments, todo */
 	/* xs is either newly-created or an old one */
 
 	/* allocation of SPI, will wake up possibly sleeping transport layer, but
@@ -252,21 +283,21 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 			 * in RFC 2406 section 2.1 */
 			xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
 		}
-	}
 
-	HIP_DEBUG("xs->id.spi 2=0x%x\n", ntohl(xs->id.spi));
-	if (xs->id.spi == 0) {
-		HIP_ERROR("Could not get SPI value for the SA\n");
-		if (*spi != 0) {
-			err = -EEXIST;
-			goto out;
-		} else {
-			err = -EAGAIN;
-			goto out;
+		HIP_DEBUG("allocated xs->id.spi=0x%x\n", ntohl(xs->id.spi));
+		if (xs->id.spi == 0) {
+			HIP_ERROR("Could not allocate SPI value for the SA\n");
+			if (*spi != 0) {
+				err = -EEXIST;
+				goto out;
+			} else {
+				err = -EAGAIN;
+				goto out;
+			}
 		}
+		*spi = ntohl(xs->id.spi);
 	}
 
-	*spi = ntohl(xs->id.spi);
 	_HIP_DEBUG("SPI setup ok, trying to setup enc/auth algos\n");
 
 	err = -ENOENT;
