@@ -879,7 +879,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 	{
 		uint8_t algo = 
 			hip_get_host_id_algo((struct hip_host_id *) param);
-		if (algo != HIP_HI_DSA) {
+		if (algo != HIP_HI_DSA && algo != HIP_HI_RSA) {
 			err = -EPROTONOSUPPORT;
 			HIP_ERROR("Host id algo %d not supported\n", algo);
 		}

@@ -334,7 +334,8 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	HIP_HEXDUMP("mpi scan", signature, len);
 	
  cleanup:
-	kfree(buf);
+	if (buf)
+	  kfree(buf);
 	return err;
 	
 }
@@ -347,13 +348,13 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	MPI orig;
 	RSA_public_key rpk = {0};
 	int len, slice;
-	u8 *c = NULL;
-	u8 *buf;
+	u8 *c = public_key; /* XX FIXME: IS THIS CORRECT? */
+	u8 *buf = NULL;
 	u8 asn_prefix[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B,
 			    0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04,
 			    0x14};
 
-	if (*c == 0)
+	if (*c == 0) /* XX FIXME: WHAT'S THIS? */
 		len = 3;
 	else
 		len = 1;
@@ -362,6 +363,7 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 		log_error("Error parsing RSA public e\n");
 		goto cleanup;
 	}
+
 	HIP_HEXDUMP("RSA public E", c, len);
 	c += len;
 
@@ -375,7 +377,7 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	buf = kmalloc(mpi_get_nbits(rpk.n) / 8, GFP_KERNEL);
 	if (buf) {
-		HIP_ERROR("Hajoo homo aamuihis 2\n");
+		HIP_ERROR("kmalloc failed\n");
 		err = -1;
 		goto cleanup;
 	}
@@ -415,9 +417,14 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 		goto cleanup;
 	}
 
-	kfree(buf);
+	if (buf)
+	  kfree(buf);
+
 	return (mpi_cmp(orig, result));
 
  cleanup:
+	if (buf)
+	  kfree(buf);
+
 	return -1;
 }
