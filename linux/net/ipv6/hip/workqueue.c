@@ -365,6 +365,16 @@ int hip_do_work(struct hip_work_order *job)
 			hip_finalize_sa(&job->hdr.dst_addr, job->hdr.arg1);
 			res = 0;			
 			break;
+
+		case HIP_WO_SUBTYPE_XFRM_INIT:
+//			hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
+			break;
+
+		case HIP_WO_SUBTYPE_XFRM_UPD:
+			break;
+
+		case HIP_WO_SUBTYPE_XFRM_DEL:
+			break;
 #endif
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",

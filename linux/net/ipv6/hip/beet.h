@@ -9,8 +9,10 @@
 #ifdef __KERNEL__
 #  include <linux/in6.h>  /* struct in6_addr */
 #  include <linux/list.h> /* struct list */
-#  include "debug.h"
 #endif /* __KERNEL__ */
+#include <net/hip.h>
+#include "workqueue.h"
+#include "debug.h"
 
 #define HIP_BEETDB_SIZE 53
 
