@@ -1,8 +1,9 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
-#ifndef __KERNEL__
-#else
 
+//#ifndef __KERNEL__
+//#include "hashtable.h"
+//#else
 #include <net/hip.h>
 #include "debug.h"
 #include "misc.h"
@@ -10,15 +11,15 @@
 #include "hashtable.h"
 #include "builder.h"
 
-#define HIP_HADB_SIZE 53
-#define HIP_MAX_HAS 100
-
 #ifdef __KERNEL__
 #define HIP_LOCK_HA(ha) do { spin_lock_bh(&ha->lock); } while(0)
 #define HIP_UNLOCK_HA(ha) do { spin_unlock_bh(&ha->lock); } while(0)
 #define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
 #define HIP_UNLOCK_HS(hs) do { spin_unlock_bh(&hs->lock); } while(0)
 #endif
+
+#define HIP_HADB_SIZE 53
+#define HIP_MAX_HAS 100
 
 /*************** BASE FUNCTIONS *******************/
 
@@ -141,5 +142,5 @@ void hip_hadb_dump_hs_ht(void);
 } while(0)
 #endif
 
-#endif /* __KERNEL__ */
+//#endif /* __KERNEL__ */
 #endif /* HIP_HADB_H */

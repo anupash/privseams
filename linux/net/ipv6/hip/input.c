@@ -733,8 +733,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   function. Now, begin to build I2 piece by piece. */
 
 	/* Delete old SPDs and SAs, if present */
-     hip_hadb_delete_inbound_spis(entry);
-     hip_hadb_delete_outbound_spis(entry);
+	hip_hadb_delete_inbound_spis(entry);
+	hip_hadb_delete_outbound_spis(entry);
 
 	/* create I2 */
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,

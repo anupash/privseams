@@ -26,7 +26,7 @@
 #include "kernel-interface.h"
 #endif /* __KERNEL__ */
 
-#include "gcrypt.h"
+//#include "gcrypt.h"
 
 int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		 int priv_klen);
