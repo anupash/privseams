@@ -643,6 +643,10 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	entry->update_state_flags |= 0x2;
 	HIP_DEBUG("saved NES\n");
 
+	/* associate Old SPI with Update ID */
+	hip_update_set_status(entry, prev_spi_in, HIP_SPI_DIRECTION_IN, 0x1 | 0x8,
+			      update_id_out, 0, NULL, keymat_index);
+
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");
 
@@ -691,19 +695,35 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 	int auth_transf_length = 0;
 	struct xfrm_state *xs;
 	struct hip_spi_in_item spi_in_data;
+	struct hip_nes *nes;
+	struct hip_ack *ack;
+	uint16_t kmindex_saved;
 
 	HIP_DEBUG("\n");
-	HIP_DEBUG("stored NES: Keymat Index: %u\n", entry->stored_received_nes.keymat_index);
-	HIP_DEBUG("stored NES: Old SPI: 0x%x\n", entry->stored_received_nes.old_spi);
-	HIP_DEBUG("stored NES: New SPI: 0x%x\n", entry->stored_received_nes.new_spi);
+	ack = hip_get_param(msg, HIP_PARAM_ACK);
+	nes = hip_get_param(msg, HIP_PARAM_NES);
+
+	_HIP_DEBUG("stored NES: Keymat Index: %u\n", entry->stored_received_nes.keymat_index);
+	_HIP_DEBUG("stored NES: Old SPI: 0x%x\n", entry->stored_received_nes.old_spi);
+	_HIP_DEBUG("stored NES: New SPI: 0x%x\n", entry->stored_received_nes.new_spi);
+
+	kmindex_saved = hip_update_get_spi_keymat_index(entry, ntohl(ack->peer_update_id));
+	if (!kmindex_saved) {
+		HIP_ERROR("saved kmindex is 0\n");
+		goto out_err;
+	}
 
 	/* 2. .. If the system did not generate new KEYMAT, it uses
 	   the lowest Keymat Index of the two NES parameters. */
 	HIP_DEBUG("entry keymat index=%u\n", entry->current_keymat_index);
-	if (entry->current_keymat_index < entry->stored_received_nes.keymat_index)
-		keymat_index = entry->current_keymat_index;
+//	if (entry->current_keymat_index < entry->stored_received_nes.keymat_index)
+//		keymat_index = entry->current_keymat_index;
+//	else
+//		keymat_index = entry->stored_received_nes.keymat_index;
+	if (kmindex_saved < ntohs(nes->keymat_index))
+		keymat_index = kmindex_saved;
 	else
-		keymat_index = entry->stored_received_nes.keymat_index;
+		keymat_index = ntohs(nes->keymat_index);
 	HIP_DEBUG("lowest keymat_index=%u\n", keymat_index);
 
 	/* 3. The system draws keys for new incoming and outgoing ESP
@@ -728,9 +748,10 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 	hip_update_entry_keymat(entry, keymat_index, calc_index_new, Kn);
 
 	/* set up new outbound IPsec SA */
-	new_spi_out = entry->stored_received_nes.new_spi;
+//	new_spi_out = entry->stored_received_nes.new_spi;
+	new_spi_out = ntohl(nes->new_spi);
 	if (new_spi_out == 0) {
-		HIP_ERROR("bug: stored New SPI in HA is 0\n");
+		HIP_ERROR("bug: New SPI is 0\n");
 		goto out_err;
 	}
 	err = hip_setup_sa(hitr, hits,
@@ -744,23 +765,28 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 	}
 	HIP_DEBUG("Set up new outbound IPsec SA, SPI=0x%x\n", new_spi_out);
 
-	prev_spi_out = entry->spi_out;
+//	prev_spi_out = entry->spi_out;
+	prev_spi_out = ntohl(nes->old_spi);
 //	prev_spi_in = entry->spi_in;
 	prev_spi_in = hip_update_get_prev_spi_in(entry,
-						 entry->stored_received_nes.old_spi); /* CHECK */
+						 ntohl(nes->old_spi)); /* CHECK */
 
-	entry->spi_out = new_spi_out;
+//	entry->spi_out = new_spi_out;
+	hip_update_set_new_spi_out(entry, prev_spi_out, new_spi_out);
+
 	HIP_DEBUG("updated outbound SPI (SPI_OUT), new_spi_out=0x%x\n", new_spi_out);
-	entry->default_spi_out = entry->spi_out;
+//	entry->default_spi_out = entry->spi_out;
+	entry->default_spi_out = new_spi_out;
 	HIP_DEBUG("set default SPI out=0x%x\n", entry->default_spi_out);
 #if 0
 	hip_hadb_add_addr_to_spi(entry, entry->spi_out, src_ip, PEER_ADDR_STATE_ACTIVE, 0, 1);
 #endif
 //	entry->new_spi_out = 0;
-	hip_update_set_new_spi(entry, prev_spi_in /* correct spi to use ? */, 0, 0); /* CHECK */
+//	hip_update_set_new_spi(entry, prev_spi_in /* correct spi to use ? */, 0, 0); /* CHECK */
+
 	/* use the new inbound IPsec SA created when rekeying started */
 	//new_spi_in = entry->new_spi_in;
-	new_spi_in = hip_update_get_new_spi(entry, new_spi_in);
+	new_spi_in = hip_update_get_new_spi(entry, ntohl(ack->peer_update_id));
 	if (!new_spi_in) {
 		HIP_ERROR("Did not find related New SPI for Old SPI 0x%x\n", new_spi_in);
 		goto out_err;		
@@ -909,8 +935,6 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 			HIP_ERROR("Building of ACK param failed\n");
 			goto out_err;
 		}
-		_HIP_DEBUG("ack+\n");
-		_HIP_DUMP_MSG(update_packet);
 	}
 
 	/* .. Additionally, if the UPDATE packet contained an ACK of the
@@ -933,21 +957,25 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 			goto out_err;
 		}
 
-		HIP_DEBUG("stored Update ID=%u\n", entry->stored_sent_update_id);
+		_HIP_DEBUG("stored Update ID=%u\n", entry->stored_sent_update_id);
 		n = hip_get_param_contents_len(ack) / sizeof(uint32_t);
 		peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
 		for (i = 0; i < n; i++, peer_update_id++) {
 			uint32_t puid = ntohl(*peer_update_id);
 
 			HIP_DEBUG("ACK: peer Update ID=%u\n", puid);
+			hip_update_handle_ack(entry, puid);
+#if 0
 			if (puid == entry->stored_sent_update_id) {
 				HIP_DEBUG("this UPDATE is ACK to sent UPDATE\n");
 				entry->update_state_flags |= 0x1;
 				break;
 			}
+#endif
 		}
 	}
 
+	/* useless .. ? */
 	if (nes && (entry->update_state_flags & 0x1)) {
 		HIP_DEBUG("store NES and DH\n");
 		/* todo: store DH here */
@@ -957,8 +985,10 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		entry->update_state_flags |= 0x2;
 	}
 
-	HIP_DEBUG("update_state_flags=%d\n", entry->update_state_flags);
-	if (entry->update_state_flags == 0x3) {
+//	HIP_DEBUG("update_state_flags=%d\n", entry->update_state_flags);
+//	if (entry->update_state_flags == 0x3) {
+	/* if (ack && seq && nes) ? */
+	if (nes && hip_update_get_spi_status(entry, ntohl(nes->old_spi)) == 0x1) {
 		/* our SEQ is now ACKed and peer's NES is stored */
 		err = hip_update_finish_rekeying(msg, entry);
 	}
@@ -991,8 +1021,6 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		err = -EINVAL;
 		goto out_err;
 	}
-	_HIP_DEBUG("up=%p s=%p\n", update_packet, signature);
-	_HIP_DUMP_MSG(update_packet);
 
 	err = hip_build_param_signature_contents(update_packet, signature,
 						 HIP_DSA_SIGNATURE_LEN,
@@ -1002,8 +1030,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
  		goto out_err;
  	}
 	_HIP_DEBUG("SIGNATURE added\n");
-	_HIP_DEBUG("sig+\n");
-	_HIP_DUMP_MSG(update_packet);
+
 
         err = hip_hadb_get_peer_addr(entry, &daddr);
         if (err) {
@@ -1133,6 +1160,7 @@ int hip_receive_update(struct sk_buff *skb)
 		pkt_update_id = ntohl(seq->update_id);
 		HIP_DEBUG("SEQ: UPDATE ID: %u\n", pkt_update_id);
 	}
+#if 0
 	if (ack) {
 		size_t n, i;
 		uint32_t *peer_update_id;
@@ -1147,14 +1175,16 @@ int hip_receive_update(struct sk_buff *skb)
 			uint32_t puid = ntohl(*peer_update_id);
 
 			HIP_DEBUG("ACK: peer Update ID=%u\n", puid);
-#if 1
+#if 0
 			if (puid == entry->stored_sent_update_id) {
 				HIP_DEBUG("is ack to sent seq\n");
 				entry->update_state_flags |= 0x1;
 			}
 #endif
 		}
+
 	}
+#endif
 
 	/* 8.11 Processing UPDATE packets checks */
 	if (seq && nes) {
@@ -1480,7 +1510,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	if (add_nes) {
 		/* remember the update id of this update */
 		hip_update_set_status(entry, nes_old_spi, HIP_SPI_DIRECTION_IN,
-				      0x1 | 0x2, update_id_out, 0, NULL);
+				      0x1 | 0x2 | 0x8, update_id_out, 0, NULL, entry->current_keymat_index);
 	}
 
 	/* TODO: hmac/signature to common functions */
@@ -1551,9 +1581,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
  out_err:
 	entry->state = HIP_STATE_ESTABLISHED;
-	HIP_DEBUG("fallbacked to state REKEYING (ok ?)\n");
+	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
 	hip_set_spi_update_status(entry, nes_old_spi, 0);
 	/* delete IPsec SA on failure */
+	HIP_ERROR("TODO: delete SA\n");
 //	if (new_spi_in)
 //		hip_delete_sa(new_spi_in, &entry->hit_our);
 //	entry->new_spi_in = 0;
@@ -1582,7 +1613,8 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 
 	/* should we check the established status also? */
 
-	if ((entry->hastate & HIP_HASTATE_VALID) == HIP_HASTATE_VALID) {
+//	if ((entry->hastate & HIP_HASTATE_VALID) == HIP_HASTATE_VALID) {
+	if (entry->hastate == HIP_HASTATE_HITOK) {
 		rk->array[rk->count] = entry;
 		hip_hold_ha(entry);
 		rk->count++;
@@ -1615,7 +1647,7 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("ifindex=%d\n", ifindex);
 	if (!ifindex) {
 		HIP_DEBUG("test: returning, ifindex=0\n");
 		return;

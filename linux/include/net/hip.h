@@ -815,10 +815,12 @@ struct hip_spi_in_item
 	uint32_t         nes_spi_out; /* UPDATE, the stored outbound
 				       * SPI related to the inbound
 				       * SPI we sent in reply (?) */
-
-	int update_state_flags; /* 0x1=received ack for sent SEQ
-				   0x2=received peer's NES
-				   both=0x3=can move back to established */
+	uint16_t         keymat_index; /* advertized keymat index */
+	int              update_state_flags; /* 0x1=received ack for
+						sent SEQ, 0x2=received
+						peer's NES,
+						both=0x3=can move back
+						to established */
 	uint32_t seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
 	struct hip_nes stored_received_nes; /* the corresponding NES of peer */
 };
@@ -828,6 +830,7 @@ struct hip_spi_out_item
 	struct list_head list;
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
+	uint32_t         seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
 	// int update_state_flags; /* TODO: move from hadb_state to here */
 	// peer addresses
 };

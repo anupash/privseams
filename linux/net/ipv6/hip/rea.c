@@ -1,4 +1,24 @@
-#if 0
+#if 1
+#include <linux/skbuff.h>
+
+int hip_receive_rea(struct sk_buff *skb)
+{
+  return -1;
+}
+
+int hip_receive_ac_or_acr(struct sk_buff *skb, int pkt_type)
+{
+  return -1;
+}
+
+void hip_rea_delete_sent_list(void)
+{
+}
+
+void hip_ac_delete_sent_list(void)
+{
+}
+#else
 
 #include "rea.h"
 #include "debug.h"
@@ -527,7 +547,7 @@ int hip_handle_rea(struct sk_buff *skb, hip_ha_t *entry)
  *
  * Returns 0 is successful, otherwise < 0.
  */
-int hip_receive_rea(struct sk_buff *skb) 
+int hip_receive_rea(struct sk_buff *skb)
 {
 	struct hip_common *hip_common;
 	int state = 0;
@@ -658,7 +678,8 @@ static void hip_rea_delete_sent_list_one(int delete_all, uint16_t rea_id)
 /**
  * hip_rea_delete_sent_list - delete all sent REA packets
  */
-void hip_rea_delete_sent_list(void) {
+void hip_rea_delete_sent_list(void)
+{
 	hip_rea_delete_sent_list_one(1, 0);
 	HIP_DEBUG("deleted all sent REAs\n");
 	return;
