@@ -22,7 +22,8 @@ static int hip_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err)
 	hwo = (struct hip_work_order *)NLMSG_DATA(nlh);
 	memcpy(result, hwo, sizeof(struct hip_work_order_hdr));
 
-	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);	
+	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);		
+	result->seq = nlh->nlmsg_seq;
 	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
 	if (!result->msg) {
 		HIP_ERROR("Out of memory.\n");
@@ -31,7 +32,7 @@ static int hip_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err)
 	}
 	
 	memcpy(result->msg, &hwo->msg, msg_len);
-	hip_insert_work_order_kthread(result);
+	hip_insert_work_order_cpu(result, smp_processor_id());
 
 	*err = 0;
 	return 0;

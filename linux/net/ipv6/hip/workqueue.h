@@ -11,6 +11,17 @@
 #  include <net/hip.h>
 #else
 #  include <stdio.h>
+
+#define INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_src, hwo_dst, hwo_arg1, hwo_arg2) \
+	do { \
+		work_order_hdr.type = hwo_type; \
+		work_order_hdr.subtype = hwo_subtype; \
+		if (!hwo_dst) ipv6_addr_copy(&work_order_hdr.dst_addr, hwo_dst); \
+		if (!hwo_src) ipv6_addr_copy(&work_order_hdr.src_addr, hwo_src); \
+		work_order_hdr.arg1 = hwo_arg1; \
+		work_order_hdr.arg2 = hwo_arg2; \
+		} while(0)
+
 #endif
 
 #include "timer.h"
@@ -65,7 +76,7 @@ void hwo_default_destructor(struct hip_work_order *hwo);
 int hip_init_workqueue(void);
 void hip_uninit_workqueue(void);
 int hip_insert_work_order(struct hip_work_order *hwo);
-int hip_insert_work_order_kthread(struct hip_work_order *hwo);
+int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu);
 struct hip_work_order *hip_get_work_order(void);
 struct hip_work_order *hip_init_job(int mask);
 void hip_free_work_order(struct hip_work_order *hwo);

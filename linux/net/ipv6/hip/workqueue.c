@@ -14,14 +14,18 @@
  */
 #include "workqueue.h"
 
-#ifdef __KERNEL__
 /* HIP Per Cpu WorkQueue */
 struct hip_pc_wq {
+#ifdef __KERNEL__
 	struct semaphore worklock;
+#endif
 	struct list_head workqueue;
 };
 
+#ifdef __KERNEL__
 static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
+#else
+static struct hip_pc_wq hip_workqueue;
 #endif
 
 /**
@@ -47,12 +51,13 @@ void hwo_default_destructor(struct hip_work_order *hwo)
  * 
  * Returns work order or NULL, if an error occurs.
  */
-#ifdef __KERNEL__
 static inline struct hip_work_order *hip_get_work_order_cpu(void)
 {
 	struct hip_work_order *result;
-	unsigned long eflags;
 	struct hip_pc_wq *wq;
+
+#ifdef __KERNEL__
+	unsigned long eflags;
 	int locked;
 
 	/* get_cpu_var / put_cpu_var ? */
@@ -69,9 +74,9 @@ static inline struct hip_work_order *hip_get_work_order_cpu(void)
 	/* every processor has its own worker thread, so
 	   spin lock is not needed. Only local irq disabling */
 	local_irq_save(eflags);
+#endif
 
 	if (list_empty(&wq->workqueue)) {
-		HIP_ERROR("Work queue empty?\n");
 		result = NULL;
 		goto err;
 	}
@@ -86,10 +91,11 @@ static inline struct hip_work_order *hip_get_work_order_cpu(void)
 	list_del((&wq->workqueue)->next);
 
  err:	
+#ifdef __KERNEL__
 	local_irq_restore(eflags);
+#endif
 	return result;
 }
-#endif
 
 /**
  * hip_get_work_order - Get one work order from workqueue
@@ -102,12 +108,11 @@ static inline struct hip_work_order *hip_get_work_order_cpu(void)
  * 
  * Returns work order or NULL, if an error occurs.
  */
-#ifdef __KERNEL__
 struct hip_work_order *hip_get_work_order(void)
 {
      return hip_get_work_order_cpu();
 }
-#endif
+
 /**
  * hip_insert_work_order_cpu - Insert a work order on a particular CPU's workqueue
  * @hwo: Work order to be inserted
@@ -120,19 +125,19 @@ struct hip_work_order *hip_get_work_order(void)
  *
  * Returns 1, if ok. -1 if error
  */
-#ifdef __KERNEL__
-static inline int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
+int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	unsigned long eflags;
 	struct hip_pc_wq *wq;
 
-	if (cpu >= NR_CPUS) {
-		HIP_ERROR("Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
+	if (!hwo) {
+		HIP_ERROR("NULL hwo\n");
 		return -1;
 	}
 
-	if (!hwo) {
-		HIP_ERROR("NULL hwo\n");
+#ifdef __KERNEL__
+	if (cpu >= NR_CPUS) {
+		HIP_ERROR("Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
 		return -1;
 	}
 
@@ -141,17 +146,23 @@ static inline int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 
 	/* get_cpu_var / put_cpu_var ? */
 	wq = &per_cpu(hip_workqueue, cpu);
+#else
+	wq = &hip_workqueue;
+#endif
 	if (wq) {
 		list_add_tail(&hwo->queue, &wq->workqueue);
 		/* what is the correct order of these two, l_i_r and up ? */
+#ifdef __KERNEL__
 		up(&wq->worklock);
+#endif
 	} else
 		HIP_ERROR("NULL wq, aieee!\n");
 
+#ifdef __KERNEL__
 	local_irq_restore(eflags);
+#endif
 	return 1;
 }
-#endif
 
 /**
  * hip_insert_work_order - Insert work order into the HIP working queue.
@@ -180,20 +191,6 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 	return ret;
 #endif
 }
-
-#ifdef __KERNEL__
-int hip_insert_work_order_kthread(struct hip_work_order *hwo) 
-{
-	if (!hwo) {
-		HIP_ERROR("NULL hwo\n");
-		return -1;
-	}
-
-	if (hwo->hdr.type < 0 || hwo->hdr.type > HIP_MAX_WO_TYPES)
-		return -1;
-	return hip_insert_work_order_cpu(hwo, smp_processor_id());
-}
-#endif
 
 int hip_init_workqueue()
 {
@@ -348,6 +345,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
+			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_acquire_spi(&job->hdr.src_addr, &job->hdr.dst_addr);
 			
 			break;
@@ -360,6 +358,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!keys)
 				break;
 
+			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_add_sa(&job->hdr.src_addr, &job->hdr.dst_addr,
 							  &keys->spi, keys->alg,
 							  &keys->enc, &keys->auth,
@@ -371,6 +370,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
+			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_delete_sa(job->hdr.arg1, &job->hdr.dst_addr);
 			break;
 
@@ -379,6 +379,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
+			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_finalize_sa(&job->hdr.dst_addr, job->hdr.arg1);
 			break;
 
@@ -387,6 +388,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
+			resp->seq = job->seq;
 			res = resp->hdr.arg1 =
 				hip_xfrm_dst_init(&job->hdr.src_addr,
 						  &job->hdr.dst_addr);
@@ -397,6 +399,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
+			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_xfrm_update(job->hdr.arg1, &job->hdr.dst_addr, 
 							       *((int *)(&job->hdr.src_addr)),
 							       job->hdr.arg2);
@@ -407,6 +410,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!resp) 
 				break;
 
+			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_xfrm_delete(job->hdr.arg1, &job->hdr.src_addr, job->hdr.arg2);
 			break;
 #endif

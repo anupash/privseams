@@ -17,8 +17,8 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
 }
 
 /* Processes a received netlink message */
-static int accept_msg(const struct sockaddr_nl *who,
-		      const struct nlmsghdr *n, void *arg)
+static int receive_work_order(const struct sockaddr_nl *who,
+			      const struct nlmsghdr *n, void *arg)
 {
 	struct hip_work_order *hwo;
 	int msg_len;
@@ -39,8 +39,9 @@ static int accept_msg(const struct sockaddr_nl *who,
 	}
 	
 	memcpy(hwo->msg, &((struct hip_work_order *)NLMSG_DATA(n))->msg, msg_len);
-
-	return hip_do_work(hwo);
+	
+	/* Do not process the message here, but store it to the queue */
+	return hip_insert_work_order_cpu(hwo, 0);
 }
 
 /* 
@@ -103,7 +104,7 @@ int hip_netlink_receive() {
                                 exit(1);
                         }
 
-                        err = accept_msg(&nladdr, h, NULL);
+                        err = receive_work_order(&nladdr, h, NULL);
                         if (err < 0)
                                 return err;
 
@@ -125,6 +126,46 @@ int hip_netlink_receive() {
 	}
 }
 
+int hip_netlink_talk(struct hip_work_order *req, 
+		     struct hip_work_order *resp) 
+{
+	struct {
+                struct nlmsghdr n;
+                struct hip_work_order_hdr hdr;
+                char msg[HIP_MAX_NETLINK_PACKET];
+        } tx, rx;
+	int msg_len;
+
+        /* Fill in the netlink message payload */
+	msg_len = hip_get_msg_total_len((const struct hip_common *)&req->msg);
+	memcpy(&tx.hdr, &req->hdr, sizeof(struct hip_work_order_hdr));
+	memcpy(tx.msg, req->msg, msg_len);
+
+	/* Fill the header */
+	tx.n.nlmsg_len = NLMSG_LENGTH(msg_len + sizeof(struct hip_work_order_hdr));
+        tx.n.nlmsg_pid = getpid(); /* self pid */
+        tx.n.nlmsg_flags = 0;
+
+	/* Let the talk insert any non-responses to our queue so that
+           they will be processed later */
+	if (rtnl_talk(rtnl, &tx.n, 0, 0, &rx.n, receive_work_order, NULL) < 0) {
+		HIP_ERROR("Unable to talk over netlink.\n");
+		return -1;
+	}
+	
+	msg_len = hip_get_msg_total_len((const struct hip_common *)rx.msg);
+	resp->msg = (struct hip_common *)malloc(msg_len);
+	if (!resp->msg) {
+		HIP_ERROR("Out of memory!\n");
+		return -1;
+	}
+
+	/* Copy the response payload */
+	memcpy(&resp->hdr, &rx.hdr, sizeof(struct hip_work_order_hdr));
+	memcpy(resp->msg, rx.msg, msg_len);
+	return 0;
+}
+
 int hip_netlink_send(struct hip_work_order *hwo) 
 {
 	struct hip_work_order *h;
@@ -132,7 +173,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	int msg_len, ret;
 
 	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
-	nlh = (struct nlmsghdr *)HIP_MALLOC(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)), 0);
+	nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)));
 	if (!nlh) {
 		HIP_ERROR("Out of memory.\n");
 		return -1;
@@ -152,3 +193,6 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	HIP_FREE(nlh);
 	return ret;
 }
+
+
+

@@ -944,10 +944,8 @@ struct hip_work_order_hdr {
 struct hip_work_order {
 	struct hip_work_order_hdr hdr;
 	struct hip_common *msg;
-#ifdef __KERNEL__
-	
+	uint32_t seq;
 	struct list_head queue;
-#endif
 	void (*destructor)(struct hip_work_order *hwo);
 };
 

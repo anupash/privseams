@@ -91,7 +91,9 @@ int main(int argc, char *argv[]) {
 	hip_init_workqueue();
 	
 	/* Enter to the select-loop */
-	for (;;) { 
+	for (;;) {
+		struct hip_work_order *hwo;
+
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
 		FD_SET(s_net, &read_fdset);
@@ -107,11 +109,18 @@ int main(int argc, char *argv[]) {
 			/* idle cycle - select() timeout */               
 			
 		} else if (FD_ISSET(s_net, &read_fdset)) {
-			/* Something on Netlink socket */
+			/* Something on Netlink socket, fetch it to
+                           the queue */
 			hip_netlink_receive();
 
 		} else {
 			HIP_INFO("Unknown socket activity.");
+		}
+		
+		hwo = hip_get_work_order();
+		if (hwo) {
+			hip_do_work(hwo);
+			HIP_DEBUG("Work done\n");
 		}
 	}
 
