@@ -457,7 +457,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	uint32_t prev_spi_in = 0, new_spi_in = 0;
 	uint16_t keymat_index = 0;
 	struct hip_common *update_packet = NULL;
-	struct in6_addr daddr;
+	//struct in6_addr daddr;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	int need_to_generate_key = 0, dh_key_generated = 0; //, new_keymat_generated;
 	int nes_i = 1;
@@ -659,19 +659,21 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
  	}
 	_HIP_DEBUG("SIGNATURE added\n");
 
+#if 0
         err = hip_hadb_get_peer_addr(entry, &daddr);
         if (err) {
                 HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
                 goto out_err;
         }
-
+#endif
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");
 
         HIP_DEBUG("Sending reply UPDATE packet\n");
-	err = hip_csum_send(NULL, &daddr, update_packet);
+	//err = hip_csum_send(NULL, &daddr, update_packet);
+	err = hip_csum_send(NULL, src_ip, update_packet);
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
