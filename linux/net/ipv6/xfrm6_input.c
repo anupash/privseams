@@ -48,8 +48,21 @@ int xfrm6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 			goto drop;
 
 		x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nexthdr, AF_INET6);
-		if (x == NULL)
+		if (x == NULL) {
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+			/* try HITs */
+			HIP_CALLPROC(hip_handle_esp)(skb->nh.ipv6h);
+			x = xfdm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nextdr, AF_INET6);
+			if (x == NULL) {
+				/* Try to send R1 */
+				HIP_CALLPROC(hip_unknown_spi)(skb);
+				kfree_skb(skb);
+				return 0; /* Packet delivered */
+			}
+#else
 			goto drop;
+#endif
+		}
 		spin_lock(&x->lock);
 		if (unlikely(x->km.state != XFRM_STATE_VALID))
 			goto drop_unlock;

@@ -255,6 +255,9 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 	ipv6_addr_copy(&hdr->saddr, &fl->fl6_src);
 	ipv6_addr_copy(&hdr->daddr, first_hop);
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0)
+#endif
 	mtu = dst_pmtu(dst);
 	if ((skb->len <= mtu) || ipfragok) {
 		IP6_INC_STATS(Ip6OutRequests);
@@ -265,6 +268,7 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 		printk(KERN_DEBUG "IPv6: sending pkt_too_big to self\n");
 	skb->dev = dst->dev;
 	icmpv6_send(skb, ICMPV6_PKT_TOOBIG, 0, mtu, skb->dev);
+ end_hip:
 	kfree_skb(skb);
 	return -EMSGSIZE;
 }
@@ -768,16 +772,36 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 		goto out_err_release;
 
 	if (ipv6_addr_any(&fl->fl6_src)) {
-		err = ipv6_get_saddr(*dst, &fl->fl6_dst, &fl->fl6_src);
 
-		if (err) {
-#if IP6_DEBUG >= 2
-			printk(KERN_DEBUG "ip6_dst_lookup: "
-			       "no available source address\n");
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		if(HIP_CALLFUNC(hip_get_hits, 0)(daddr, saddr)) {
+			/* we'll skip the ipv6_get_addr() as we do not
+			   need the source address yet... [perhaps we're
+			   missing an important thing here? Other than
+			   optimization?]
+			*/
+			
+		} else {
+			/* HITS get failed. Reasons:
+			   1. daddr not a HIT
+			   2. no local HIT availbale
+			   We'll assume that the case is #1
+			*/
 #endif
-			goto out_err_release;
+			err = ipv6_get_saddr(*dst, &fl->fl6_dst, &fl->fl6_src);
+
+			if (err) {
+#if IP6_DEBUG >= 2
+				printk(KERN_DEBUG "ip6_dst_lookup: "
+				       "no available source address\n");
+#endif
+				goto out_err_release;
+			}
+
 		}
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	}
+#endif
 	if ((err = xfrm_lookup(dst, fl, sk, 0)) < 0) {
 		err = -ENETUNREACH;
 		goto out_err_release;
