@@ -810,6 +810,9 @@ struct hip_hadb_state
 
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
+
+	uint32_t stored_sent_update_id; /* new update specs testing */
+	struct hip_nes stored_received_nes;
 };
 
 struct hip_cookie_entry {

@@ -194,7 +194,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 	return found;
 }
 
-
+#if 0
 /**
  * hip_get_new_update_id - Get a new UPDATE ID number
  *
@@ -210,6 +210,7 @@ static uint32_t hip_get_new_update_id(void) {
 	spin_unlock_bh(&hip_update_id_lock);
 	return id;
 }
+#endif
 
 /* Get keys needed by UPDATE */
 int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
@@ -380,9 +381,6 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	return err;
 }
 
-/* testing */
-uint32_t stored_sent_update_id;
-struct hip_nes stored_received_nes;
 
 /**
  * hip_handle_update_established - handle incoming UPDATE packet received in ESTABLISHED state
@@ -578,15 +576,17 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 
 	/*  3. The system increments its outgoing Update ID by one. */
-	HIP_ERROR("remove hip_get_new_update_id, Update ID is per HA\n");
-	update_id_out = hip_get_new_update_id();
+	_HIP_ERROR("remove hip_get_new_update_id, Update ID is per HA\n");
+//	update_id_out = hip_get_new_update_id();
+	entry->update_id_out++;
+	update_id_out = entry->update_id_out;
 	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
 	if (!update_id_out) { /* todo: handle this case */
 		HIP_ERROR("outgoing UPDATE ID overflowed back to 0, bug ?\n");
 		err = -EINVAL;
 		goto out_err;
 	}
-	stored_sent_update_id = update_id_out;
+	entry->stored_sent_update_id = update_id_out;
 
 	/* 4. The system creates a UPDATE packet, which contains an SEQ
 	   parameter (with the current value of Update ID), NES parameter
@@ -658,9 +658,9 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING.  The system stores any received NES and DIFFIE_HELLMAN
 	   parameters. */
-	stored_received_nes.keymat_index =  ntohs(nes->keymat_index);
-	stored_received_nes.old_spi = ntohl(nes->old_spi);
-	stored_received_nes.new_spi = ntohl(nes->new_spi);
+	entry->stored_received_nes.keymat_index =  ntohs(nes->keymat_index);
+	entry->stored_received_nes.old_spi = ntohl(nes->old_spi);
+	entry->stored_received_nes.new_spi = ntohl(nes->new_spi);
 
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");
@@ -723,6 +723,9 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 	struct xfrm_state *xs;
 	hip_ha_t *entry = NULL;
 	int is_ack_to_sent_nes = 0;
+	struct in6_addr daddr;
+	struct hip_host_id *host_id_private;
+	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	/* 8.11.2  Processing an UPDATE packet in state REKEYING */
 
 #if 0
@@ -750,7 +753,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 	}
 	HIP_LOCK_HA(entry);
 
-#if 0
+#if 1
 	/* 2. If the system generated new KEYMAT in the previous step,
 	 * it sets Keymat Index to zero, independent on whether the
 	 * received UPDATE included a Diffie-Hellman key or not. */
@@ -770,6 +773,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		err = -ENOMEM;
 		goto out_err;
 	}
+	HIP_DEBUG("update_packet=%p\n\n", update_packet);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
@@ -784,7 +788,8 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 			HIP_ERROR("Building of ACK param failed\n");
 			goto out_err;
 		}
-
+		HIP_DEBUG("ack+\n");
+		HIP_DUMP_MSG(update_packet);
 	}
 
 	/* Additionally, if the UPDATE packet contained an ACK of the
@@ -798,28 +803,28 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 	ack = hip_get_param(msg, HIP_PARAM_ACK);
 	if (ack) {
 		HIP_DEBUG("UPDATE contains ACK\n");
-		HIP_DEBUG("stored Update ID=%u\n", stored_sent_update_id);
+		HIP_DEBUG("stored Update ID=%u\n", entry->stored_sent_update_id);
 		/* todo: handle multiple acks */
-		if (ntohl(ack->peer_update_id) == stored_sent_update_id) {
+		if (ntohl(ack->peer_update_id) == entry->stored_sent_update_id) {
 			is_ack_to_sent_nes = 1;
 			HIP_DEBUG("this UPDATE is ACK to sent UPDATE\n");
 		} else {
 			/* stay in rekeying */
 		}
 		/* store NES and DH here */
-		stored_received_nes.keymat_index = ntohs(nes->keymat_index);
-		stored_received_nes.old_spi = ntohl(nes->old_spi);
-		stored_received_nes.new_spi = ntohl(nes->new_spi);
+		entry->stored_received_nes.keymat_index = ntohs(nes->keymat_index);
+		entry->stored_received_nes.old_spi = ntohl(nes->old_spi);
+		entry->stored_received_nes.new_spi = ntohl(nes->new_spi);
 	}
 
 
 
-	goto test;
-#if 0
+//	goto test;
+//#if 0
 
 	/* test code, not in specs*/
-	if (nes->old_spi != nes->new_spi)
-	{
+//	if (nes->old_spi != nes->new_spi)
+//	{
 
 
 	/* 3. The system draws keys for new incoming and outgoing ESP
@@ -968,12 +973,12 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 	HIP_DEBUG("finalizing the new outbound SA, SPI=0x%x\n", new_spi_out);
 	hip_finalize_sa(hits, new_spi_out);
 
-	} /* if (nes->old_spi != nes->new_spi) */
-	else {
-		HIP_DEBUG("UPDATE was ack to REA UPDATE\n");
-	}
+//	} /* if (nes->old_spi != nes->new_spi) */
+//	else {
+//		HIP_DEBUG("UPDATE was ack to REA UPDATE\n");
+//	}
 
-#endif
+//#endif
 
  test:
 		
@@ -983,6 +988,63 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		HIP_DEBUG("Went back to ESTABLISHED state\n");
 	} else
 		HIP_DEBUG("Staying in REKEYING state\n");
+
+/* send ACK */
+
+	/* TODO: hmac/signature to common functions */
+	/* Add HMAC */
+	err = hip_build_param_hmac_contents(update_packet, &entry->hmac_our);
+	if (err) {
+		HIP_ERROR("Building of HMAC failed (%d)\n", err);
+		goto out_err;
+	}
+	HIP_DEBUG("hmac+\n");
+	HIP_DUMP_MSG(update_packet);
+
+	/* Add SIGNATURE */
+	host_id_private = hip_get_any_localhost_host_id();
+	if (!host_id_private) {
+		HIP_ERROR("Could not get our host identity. Can not sign data\n");
+		goto out_err;
+	}
+
+
+	if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+				  host_id_private, signature)) {
+		HIP_ERROR("Could not sign UPDATE. Failing\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+	HIP_DEBUG("up=%p s=%p\n", update_packet, signature);
+	HIP_DUMP_MSG(update_packet);
+#if 0
+	err = hip_build_param_signature_contents(update_packet, signature,
+						 HIP_DSA_SIGNATURE_LEN,
+ 						 HIP_SIG_DSA);
+ 	if (err) {
+ 		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
+ 		goto out_err;
+ 	}
+	HIP_DEBUG("SIGNATURE added\n");
+	HIP_DEBUG("sig+\n");
+	HIP_DUMP_MSG(update_packet);
+
+#endif
+        err = hip_hadb_get_peer_addr(entry, &daddr);
+        if (err) {
+                HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
+                goto out_err;
+        }
+
+	HIP_DEBUG("Sending reply UPDATE packet (only ACK)\n");
+	err = hip_csum_send(NULL, &daddr, update_packet);
+	if (err) {
+		HIP_DEBUG("hip_csum_send err=%d\n", err);
+		HIP_DEBUG("NOT ignored, or should we..\n");
+		/* fallback to established ? */
+                /* goto out_err; ? */
+	}
+
 
  out_err:
 	HIP_UNLOCK_HA(entry);
@@ -1323,15 +1385,17 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		}
 	}
 
-	HIP_ERROR("remove hip_get_new_update_id, Update ID is per HA\n");
-	update_id_out = hip_get_new_update_id();
+	_HIP_ERROR("remove hip_get_new_update_id, Update ID is per HA\n");
+//	update_id_out = hip_get_new_update_id();
+	entry->update_id_out++;
+	update_id_out = entry->update_id_out;
 	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
 	if (!update_id_out) { /* todo: handle this case */
 		HIP_ERROR("outgoing UPDATE ID overflowed back to 0, bug ?\n");
 		err = -EINVAL;
 		goto out_err;
 	}
-	stored_sent_update_id = update_id_out;
+	entry->stored_sent_update_id = update_id_out;
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 	if (addr_list && addr_count > 0) /* mm02-pre3 5.2 Host multihoming */

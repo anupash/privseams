@@ -831,13 +831,13 @@ void hip_dump_msg(const struct hip_common *msg)
 	struct hip_tlv_common *current_param = NULL;
 	void *contents = NULL;
 
-	_HIP_DEBUG("msg: type=%d, len=%d, err=%d\n",
+	HIP_DEBUG("msg: type=%d, len=%d, err=%d\n",
 		 hip_get_msg_type(msg), hip_get_msg_total_len(msg),
 		 hip_get_msg_err(msg));
 
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		_HIP_DEBUG("param: type=%d, len=%d\n",
+		HIP_DEBUG("param: type=%d, len=%d\n",
 			 hip_get_param_type(current_param),
 			 hip_get_param_contents_len(current_param));
 		contents = hip_get_param_contents_direct(current_param);
