@@ -265,7 +265,7 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	buf->checksum = htons(0);
         len = hip_get_msg_total_len(buf);
 	csum = csum_partial((char*) buf, len, 0);
-	HIP_DEBUG("csum test=0x%x\n", csum);
+	_HIP_DEBUG("csum test=0x%x\n", csum);
 
 	lock_sock(hip_output_socket->sk);
 

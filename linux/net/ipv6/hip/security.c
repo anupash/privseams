@@ -347,10 +347,10 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	akeylen = aad->desc.sadb_alg_maxbits;
 
 	err = -ENOMEM;
-	xs->ealg = kmalloc(sizeof(struct xfrm_algo) + (ekeylen + 7)/8, GFP_KERNEL);
+	xs->ealg = kmalloc(sizeof(struct xfrm_algo) + (ekeylen + 7)/8, GFP_ATOMIC);
 	if (!xs->ealg)
 		goto out;
-	xs->aalg = kmalloc(sizeof(struct xfrm_algo) + (akeylen + 7)/8, GFP_KERNEL);
+	xs->aalg = kmalloc(sizeof(struct xfrm_algo) + (akeylen + 7)/8, GFP_ATOMIC);
 	if (!xs->aalg)
 		goto out;
 

@@ -46,11 +46,17 @@ struct hip_work_order *hip_get_work_order(void)
 	unsigned long eflags;
 	struct hip_pc_wq *wq;
 	struct hip_work_order *result;
+	int locked;
 
 	wq = &__get_cpu_var(hip_workqueue);
 
 	/* Wait for job */
-	down(wq->worklock);
+	locked = down_interruptible(wq->worklock);
+	if (locked) {
+		HIP_DEBUG("couldn't get work lock semaphore, interrupted=%s (locked=%d)\n",
+			  locked == -EINTR ? "yes" : "no", locked);
+		return NULL;
+	}
 
 	/* every processor has its own worker thread, so
 	   spin lock is not needed. Only local irq disabling
@@ -94,21 +100,41 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	unsigned long eflags;
 	struct hip_pc_wq *wq;
+	int warn = 0;
 
 	if (cpu >= NR_CPUS) {
-		HIP_ERROR("Invalid CPU number: %d (max cpus: %d)\n",cpu, NR_CPUS);
+		HIP_ERROR("Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
 		return -1;
 	}
 
+	if (!hwo) {
+		HIP_ERROR("NULL hwo\n");
+		return -1;
+	}
+
+	HIP_DEBUG("hwo=0x%p cpu=%d\n", hwo, cpu);
 	local_irq_save(eflags);
 
 	wq = &per_cpu(hip_workqueue, cpu);
-	list_add_tail(&hwo->queue, wq->workqueue);
+	if (wq->workqueue)
+		list_add_tail(&hwo->queue, wq->workqueue);
+	else
+		warn++;
 
 	local_irq_restore(eflags);
-	up(wq->worklock);
-	/* what is the correct order of these two? */
-	return 1;
+	/* what is the correct order of these two, l_i_r and up ? */
+	if (wq->worklock)
+		up(wq->worklock);
+	else {
+		HIP_ERROR("wq has no lock\n");
+		warn++;
+	}
+	if (!warn)
+		return 1;
+	else
+		HIP_ERROR("warn=%d > 0, has khipd/%d died ?\n",
+			  warn, smp_processor_id());
+	return -1;
 }
 
 /**
@@ -119,7 +145,10 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
  */
 int hip_insert_work_order(struct hip_work_order *hwo)
 {
-	/* sanity check? */
+	if (!hwo) {
+		HIP_ERROR("NULL hwo\n");
+		return -1;
+	}
 
 	if (hwo->type < 0 || hwo->type > HIP_MAX_WO_TYPES)
 		return -1;
@@ -132,9 +161,9 @@ int hip_init_workqueue()
 {
 	struct list_head *lh;
 	struct semaphore *sem;
-	struct hip_pc_wq *data;
+	struct hip_pc_wq *wq;
 
-	lh = kmalloc(sizeof(struct list_head),GFP_KERNEL);
+	lh = kmalloc(sizeof(struct list_head), GFP_KERNEL);
 	if (!lh)
 		return -ENOBUFS;
 
@@ -147,9 +176,9 @@ int hip_init_workqueue()
 	INIT_LIST_HEAD(lh);
 	init_MUTEX_LOCKED(sem);
 
-	data = &__get_cpu_var(hip_workqueue);
-	data->worklock = sem;
-	data->workqueue = lh;
+	wq = &__get_cpu_var(hip_workqueue);
+	wq->worklock = sem;
+	wq->workqueue = lh;
 	return 0;
 }
 
@@ -168,7 +197,9 @@ void hip_uninit_workqueue()
 		list_del(pos);
 	}
 	kfree(wq->workqueue);
+	wq->workqueue = NULL;
 	kfree(wq->worklock);
+	wq->worklock = NULL;
 	local_bh_enable();
 }
 
@@ -188,38 +219,6 @@ void hip_free_work_order(struct hip_work_order *hwo)
 }
 
 /**
- * hip_stop_khipd - Kill all khipd threads.
- *
- * Sends a kill message to all khipd threads. They will process them as soon as they
- * have the time. Another option would be to store all pids of khids and send them
- * a signal.
- */
-void hip_stop_khipd()
-{
-	struct hip_work_order *hwo;
-	int i;
-
-
- 	/* XX FIXME: this does not work on a SMP machine. Use the other
- 	   method; store all pids of khids and send them a signal (reported
- 	   by Anthony Joseph). */
-
-	for(i=0; i<NR_CPUS; i++) {
-		hwo = hip_init_job(GFP_KERNEL);
-		if (!hwo) {
-			HIP_ERROR("Could not allocate memory to send kill message to kernel thread. Reboot\n");
-			BUG();
-			return;
-		}
-
-		hwo->type = HIP_WO_TYPE_MSG;
-		hwo->subtype = HIP_WO_SUBTYPE_STOP;
-
-		hip_insert_work_order_cpu(hwo,i);
-	}
-}
-
-/**
  * hip_init_job - Allocate and initialize work order
  * @gfp_mask: Mask for memory allocation
  *
@@ -230,13 +229,12 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 {
 	struct hip_work_order *hwo;
 
-	hwo = kmalloc(sizeof(struct hip_work_order),gfp_mask);
-	if (!hwo) {
+	hwo = kmalloc(sizeof(struct hip_work_order), gfp_mask);
+	if (hwo)
+		memset(hwo, 0, sizeof(struct hip_work_order));		
+	else
 		HIP_ERROR("No memory for work order\n");
-		return NULL;
-	}
 
-	memset(hwo,0,sizeof(struct hip_work_order));
 	return hwo;
 }
 
@@ -258,14 +256,15 @@ struct hip_work_order *hip_create_job_with_hit(int gfp_mask,
 	if (!hwo)
 		return NULL;
 
-	tmp = kmalloc(sizeof(struct in6_addr),gfp_mask);
+	tmp = kmalloc(sizeof(struct in6_addr), gfp_mask);
 	if (!tmp) {
 		kfree(hwo);
 		return NULL;
 	}
 
-	ipv6_addr_copy(tmp,hit);
+	ipv6_addr_copy(tmp, hit);
 	hwo->arg1 = tmp;
+	hwo->arg2 = NULL;
 	hwo->destructor = hwo_default_destructor;
 	return hwo;
 }

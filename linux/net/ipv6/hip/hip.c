@@ -37,6 +37,8 @@
 #include <net/hip_glue.h>
 #include <net/addrconf.h>
 #include <net/xfrm.h>
+#include <linux/suspend.h>
+#include <linux/completion.h>
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -65,6 +67,13 @@ int kmm; // krisu_measurement_mode
 #endif
 
 //spinlock_t hip_workqueue_lock = SPIN_LOCK_UNLOCKED;
+struct hip_kthread_data {
+	int cpu;
+	pid_t pid;
+	struct completion kthread_work;
+};
+
+struct hip_kthread_data hip_kthreads[NR_CPUS];
 
 #ifdef CONFIG_PROC_FS
 static struct proc_dir_entry *hip_proc_root = NULL;
@@ -979,19 +988,22 @@ static int hip_init_output_socket(void)
 	struct ipv6_pinfo *np;
 
 	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_output_socket);
-	if (err)
+	if (err) {
 		HIP_ERROR("Failed to allocate the HIP control socket (err=%d)\n", err);
+		goto out;
+	}
 
-	/* this is needed to prevent multicast packets sent out coming back to us */
+	/* prevent multicast packets sent out coming back to us */
 	np = inet6_sk(hip_output_socket->sk);
 	if (!np) {
 		HIP_ERROR("Could not get inet6 sock of HIP control socket\n");
 		err = -EFAULT;
+		goto out;
 	}
 
 	np->mc_loop = 0;
 	/* TODO: same for IPv4 ? */
-
+ out:
 	return err;
 }
 
@@ -1781,8 +1793,8 @@ static int hip_do_work(void)
 
 	job = hip_get_work_order();
 	if (!job) {
-		HIP_ERROR("Unable to fetch from work queue\n");
-		res = -2;
+		HIP_DEBUG("Did not get anything from the work queue\n");
+		res = KHIPD_ERROR;
 		goto out_err;
 	}
 
@@ -1828,7 +1840,8 @@ static int hip_do_work(void)
 			KRISU_STOP_TIMER(KMM_PARTIAL,"BOS");
 			break;
 		default:
-			HIP_ERROR("Unknown subtype: %d\n",job->subtype);
+			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
+				  job->subtype, job->type);
 			break;
 		}
 		if (res < 0)
@@ -1839,9 +1852,6 @@ static int hip_do_work(void)
 		break;
 	case HIP_WO_TYPE_MSG:
 		switch(job->subtype) {
-		case HIP_WO_SUBTYPE_STOP:
-			res = KHIPD_QUIT;
-			break;
 		case HIP_WO_SUBTYPE_IN6_EVENT:
 			hip_net_event((int)job->arg1, 0, (uint32_t) job->arg2);
 			res = KHIPD_OK;
@@ -1880,7 +1890,8 @@ static int hip_do_work(void)
 		case HIP_WO_SUBTYPE_DELHI:
 		case HIP_WO_SUBTYPE_FLUSHHIS:
 		case HIP_WO_SUBTYPE_NEWDH:
-			HIP_INFO("Not implemented subtype: %d\n",job->subtype);
+			HIP_INFO("Not implemented subtype: %d (type=%d)\n",
+				 job->subtype, job->type);
 			res = KHIPD_ERROR;
 			goto out_err;
 		default:
@@ -1891,18 +1902,22 @@ static int hip_do_work(void)
 	}
 
  out_err:
-	hip_free_work_order(job);
+	if (job)
+		hip_free_work_order(job);
 	return res;
 }
 
-static int hip_worker(void *cpu_id)
+static int hip_worker(void *t)
 {
 	int result = 0;
-	int cid = (int) cpu_id;
+	struct hip_kthread_data *thr = (struct hip_kthread_data *) t;
+	int cpu = thr->cpu;
+	pid_t pid = current->pid;
 
-	/* set up thread */
-	daemonize("khipd/%d",cid);
-	set_cpus_allowed(current, cpumask_of_cpu(cid));
+	/* set up this kernel thread */
+	daemonize("khipd/%d", cpu);
+	allow_signal(SIGKILL);
+	set_cpus_allowed(current, cpumask_of_cpu(cpu));
 
 	//set_user_nice(current, 0); //XXX: Set this as you please
 
@@ -1912,25 +1927,40 @@ static int hip_worker(void *cpu_id)
 	/* work loop */
 
 	while(1) {
+		if (signal_pending(current)) {
+			HIP_INFO("HIP thread pid %d on cpu %d got SIGKILL\n", pid, cpu);
+			/* zero thread pid so we do not kill other
+			 * process having the same pid later by accident */
+			thr->pid = 0;
+			_HIP_DEBUG("signalled, flushing signals\n");
+			flush_signals(current);
+			break;
+		}
+
+		/* swsuspend,  see eg. drivers/net/irda/sir_kthread.c */
+		if (current->flags & PF_FREEZE) {
+			HIP_DEBUG("handle swsuspend\n");
+			refrigerator(PF_FREEZE);
+		}
+
 		result = hip_do_work();
 		if (result < 0) {
-			if (result == KHIPD_QUIT) {
-				HIP_INFO("Stop requested. Cleaning up\n");
-				break;
-			} 
-			else if (result == KHIPD_ERROR)
-				HIP_INFO("Recoverable error occured\n");
+			if (result == KHIPD_ERROR)
+				HIP_INFO("Recoverable error occured (%d)\n", result);
 			else {
-				HIP_INFO("Unrecoverable error occured. Cleaning up\n");
+				HIP_INFO("Unrecoverable error occured (%d). Cleaning up\n",
+					result);
 				break;
 			}
 		}
-		HIP_DEBUG("Work done\n");
+		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 
 	/* cleanup */
 	hip_uninit_workqueue();
 	atomic_dec(&hip_working);
+	HIP_DEBUG("HIP kernel thread %d exiting on cpu %d\n", pid, cpu);
+	complete(&thr->kthread_work);
 
 	return 0;
 }
@@ -1938,7 +1968,7 @@ static int hip_worker(void *cpu_id)
 
 static int __init hip_init(void)
 {
-	int i,pid;
+  int cpu, pid;
 
 	HIP_INFO("Initializing HIP module\n");
 	hip_get_load_time();
@@ -1963,22 +1993,25 @@ static int __init hip_init(void)
 		goto out;
 #endif /* CONFIG_PROC_FS */
 
-	if (hip_init_netdev_notifier() < 0)
-		goto out;
-
-	if (hip_init_socket_handler() < 0)
-		goto out;
-
 	if (hip_setup_sp(XFRM_POLICY_OUT) < 0)
 		goto out;
 
 	if (hip_setup_sp(XFRM_POLICY_IN) < 0)
 		goto out;
 
-	for(i=0;i<NR_CPUS;i++) {
-		pid = kernel_thread(hip_worker, (void *) i, CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD);
-		if (IS_ERR(ERR_PTR(pid)))
+	for(cpu = 0; cpu < NR_CPUS; cpu++) {
+		hip_kthreads[cpu].cpu = cpu;
+		init_completion(&hip_kthreads[cpu].kthread_work);
+		pid = kernel_thread(hip_worker, (void *) &hip_kthreads[cpu], CLONE_KERNEL | SIGCHLD);
+		if (IS_ERR(ERR_PTR(pid))) {
+			hip_kthreads[cpu].pid = 0;
+			HIP_ERROR("Failed to set up a kernel thread for HIP "
+				  "(cpu=%d, ret=%d)\n", cpu, pid);
 			goto out;
+		}
+		hip_kthreads[cpu].pid = pid;
+		HIP_INFO("Set up a kernel thread for HIP (cpu=%d,pid=%d)\n",
+			 cpu, pid);
 	}
 
 	HIP_SETCALL(hip_handle_output);
@@ -1997,6 +2030,13 @@ static int __init hip_init(void)
 		HIP_ERROR("Could not add HIP protocol\n");
 		goto out;
 	}
+
+	if (hip_init_netdev_notifier() < 0)
+		goto out;
+
+
+	if (hip_init_socket_handler() < 0)
+		goto out;
 
 #if 0
 	if (hip_register_xfrm_km_handler()) {
@@ -2019,6 +2059,8 @@ static int __init hip_init(void)
  */
 static void __exit hip_cleanup(void)
 {
+	int i, pid, cpu;
+
 	HIP_INFO("uninitializing HIP module\n");
 
 	/* unregister XFRM km handler */
@@ -2026,6 +2068,7 @@ static void __exit hip_cleanup(void)
 
 	/* disable callback for HIP packets */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
+	hip_uninit_netdev_notifier();
 	
 	/* disable hooks to call our code */
 	//HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
@@ -2040,24 +2083,24 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_output);
 	HIP_INVALIDATE(hip_get_default_spi_out);
 
-	/* kill threads */
-	if (atomic_read(&hip_working) != 0) {
-		hip_stop_khipd(); /* tell the hip kernel thread(s) to stop */
-
-		while(atomic_read(&hip_working)) {
-			if (net_ratelimit())
-				HIP_DEBUG("%d HIP threads left\n",
-					  atomic_read(&hip_working));
-			schedule(); /* wait until stopped */
-		}
+	/* kill kernel threads */
+	for(i = 0; i < ARRAY_SIZE(hip_kthreads); i++) {
+		pid = hip_kthreads[i].pid;
+		cpu = hip_kthreads[i].cpu;
+		if (pid > 0) {
+			HIP_INFO("Stopping HIP kernel thread pid=%d on cpu=%d\n", pid, cpu);
+			kill_proc(pid, SIGKILL, 1);
+			wait_for_completion(&hip_kthreads[i].kthread_work);
+		} else if (pid == 0) {
+			HIP_DEBUG("Already killed HIP kernel thread on cpu=%d ?\n", cpu);
+		} else
+			HIP_DEBUG("Invalid HIP kernel thread pid=%d on cpu=%d\n", pid, cpu);
 	}
 
 	HIP_DEBUG("All HIP threads finished\n");
 
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
-
-	hip_uninit_netdev_notifier();
 
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();

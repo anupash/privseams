@@ -2719,7 +2719,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	int err = 0;
 	uint16_t csum;
 
-	HIP_DEBUG("skb len=%d, skb data_len=%d, v6hdr payload_len=%d mgtotlen=%d\n",
+	HIP_DEBUG("skb len=%d, skb data_len=%d, v6hdr payload_len=%d msgtotlen=%d\n",
 		  (*skb)->len, (*skb)->data_len,
 		  ntohs((*skb)->nh.ipv6h->payload_len),
 		  hip_get_msg_total_len(hip_common));
