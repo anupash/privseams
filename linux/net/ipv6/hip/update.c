@@ -135,7 +135,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		/* E X P E R I M E N T A L */
 
 //		uint16_t ki;
-		int flags = 0;
+		unsigned long int flags = 0;
 		struct hip_hadb_state *entry;
 		int esp_transf_length;
 		int auth_transf_length;
@@ -225,7 +225,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	/* The system MUST NOT start using the new outgoing SA
 	   before it receives traffic on the new incoming SA. */
 	HIP_DEBUG("Try to set up new incoming SA\n");
-	err = hip_setup_sa(hitr /*src*/, hits /*dst*/, src_ip,
+	err = hip_setup_sa(hitr /*src*/, hits /*dst*/,
 			   &peer_new_spi, esp_transform,
 			   we_are_HITg ? &espkey_lg : &espkey_gl,
 			   we_are_HITg ? &authkey_lg : &authkey_gl,
@@ -276,7 +276,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	/* oikein: set up new outgoing IPsec SA */
 	/* check: shouldn't do this yet, but this is just a test */
 	our_new_spi = ntohl(nes->new_spi);
-	err = hip_setup_sa(hits /*dst*/, hitr /*src*/, src_ip,
+	err = hip_setup_sa(hits /*dst*/, hitr /*src*/,
 			   &our_new_spi, esp_transform,
 			   we_are_HITg ? &espkey_gl : &espkey_lg,
 			   we_are_HITg ? &authkey_gl : &authkey_lg,
@@ -521,7 +521,7 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	{
 		/* E X P E R I M E N T A L */
 		//uint16_t ki = 0x7fff & ntohs(nes->keymat_index);
-		int flags = 0;
+		unsigned long int flags = 0;
 		struct hip_hadb_state *entry;
 		int esp_transf_length;
 		int auth_transf_length;
@@ -610,7 +610,7 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 
 	/* set up new outbound IPsec SA */
 	peer_new_spi = ntohl(nes->new_spi);
-	err = hip_setup_sa(hits /*dst*/, hitr /*src*/, src_ip,
+	err = hip_setup_sa(hits /*dst*/, hitr /*src*/,
 			   &peer_new_spi, esp_transform,
 			   we_are_HITg ? &espkey_gl : &espkey_lg,
 			   we_are_HITg ? &authkey_gl : &authkey_lg,
@@ -1030,7 +1030,7 @@ int hip_send_update(struct hip_hadb_state *entry)
 	 * here, but it is needed because of the New SPI value */
 	/* get a New SPI to use and prepare IPsec SA */
 	new_spi = 0;
-	err = hip_setup_sa(&entry->hit_our, &entry->hit_peer, NULL,
+	err = hip_setup_sa(&entry->hit_our, &entry->hit_peer,
 			   &new_spi, entry->esp_transform,
 			   &espkey_new.key, &authkey_new.key, 0); /* sa state is larval */
 
@@ -1186,7 +1186,7 @@ void hip_send_update_all(void)
 	 * FOR EVERY PEER SIMULTANEOUSLY .. *******/
 
 	struct hip_hadb_state *entry;
-	int flags = 0;
+	unsigned long int flags = 0;
 
 	HIP_DEBUG("\n");
 

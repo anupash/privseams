@@ -26,6 +26,7 @@
 #include "hip.h"
 #include "keymat.h"
 #include "security.h"
+#include "update.h"
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -1552,9 +1553,9 @@ static int hip_do_work(void)
 			break;
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
 			KRISU_START_TIMER(KMM_PARTIAL);
+			//res = 0;
+			res = hip_receive_update(job->arg1);
 			kfree_skb(job->arg1);
-			res = 0;
-//			res = hip_receive_update(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
 		case HIP_WO_SUBTYPE_RECV_REA:

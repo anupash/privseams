@@ -541,7 +541,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	hip_make_keymat(dh_shared_key, dh_shared_len,
 			&km, keymat, keymat_len,
-			&msg->hits, &msg->hitr);
+			&msg->hits, &msg->hitr, &ctx->keymat_calc_index);
 
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */
@@ -943,7 +943,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 	{
 		struct hip_hadb_state *entry;
 		struct hip_birthday_cookie *bc;
-		int fl;
+		unsigned long int fl;
 
 		bc = hip_get_param(ctx->input, HIP_PARAM_BIRTHDAY_COOKIE_R1);
 		if (!bc) {
@@ -1333,7 +1333,7 @@ int hip_create_r2(struct hip_context *ctx)
 		struct hip_hadb_state *entry;
 		struct hip_spi_lsi *spi_lsi;
 		struct hip_esp_transform *esp_tf;
-		int flags;
+		unsigned long int flags;
 
 		esp_tf = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM);
 		if (!esp_tf) {
@@ -1432,7 +1432,7 @@ int hip_create_r2(struct hip_context *ctx)
 
 	{
 		struct hip_hadb_state *entry;
-		int fl;
+		unsigned long int fl;
 
 		hip_hadb_acquire_ex_db_access(&fl);
 
@@ -1760,7 +1760,7 @@ int hip_receive_i2(struct sk_buff *skb)
 	state = 0;
 
 	{
-		int flags;
+		unsigned long int flags;
 		struct hip_hadb_state *entry;
 
 		hip_hadb_acquire_ex_db_access(&flags);

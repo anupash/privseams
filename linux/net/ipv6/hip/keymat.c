@@ -82,11 +82,12 @@ void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
  * @dstbuf:  the generated keymaterial will be written here
  * @hit1:    source HIT
  * @hit2:    destination HIT
+ * @calc_index: where the one byte index is stored (n of Kn)
  *
  */
 void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat, 
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
-		     struct in6_addr *hit2)
+		     struct in6_addr *hit2, u8 *calc_index)
 {
 	int err;
 	struct crypto_tfm *sha = impl_sha1;
@@ -99,11 +100,12 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
 
- 	if (dstbuflen < HIP_AH_SHA_LEN) {
- 		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
- 		return;
- 	}
- 
+	if (dstbuflen < HIP_AH_SHA_LEN) {
+		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
+		return;
+	}
+
+	_HIP_ASSERT(dstbuflen % 32 == 0);
 	HIP_ASSERT(sizeof(index_nbr) == HIP_KEYMAT_INDEX_NBR_SIZE);
 
 	hit1_is_bigger = hip_hit_is_bigger(hit1, hit2);
@@ -159,6 +161,11 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 	keymat->offset = 0;
 	keymat->keymatlen = dstoffset;
 	keymat->keymatdst = dstbuf;
+
+	if (calc_index)
+		*calc_index = index_nbr;
+	else
+		HIP_ERROR("NULL calc_index\n");
 
 	_HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
 

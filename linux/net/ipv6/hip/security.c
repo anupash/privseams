@@ -58,7 +58,7 @@ static void hip_hirmu_kludge(int byspi)
 			sprintf(meep, "%d: -> ", i);
 			strcat(str, meep);
 			list_for_each_entry(xs, &xfrm_state_byspi[i], byspi) {
-				sprintf(meep, "%lx [%s] -> ", xs->id.spi, xs->km.state == XFRM_STATE_VALID ? " OK" : "NOK");
+				sprintf(meep, "0x%x [%s] -> ", xs->id.spi, xs->km.state == XFRM_STATE_VALID ? " OK" : "NOK");
 				strcat(str, meep);
 			}
 			HIP_DEBUG("%s\n",str);
@@ -221,7 +221,6 @@ int hip_setup_sp(int dir)
  * hip_setup_sa - set up a new IPsec SA
  * @srcit: source HIT
  * @dsthit: destination HIT
- * @dstip: destination IPv6 address USELESS ?
  * @spi: SPI value
  * @alg: ESP algorithm to use
  * @enckey: ESP encryption key
@@ -236,8 +235,6 @@ int hip_setup_sp(int dir)
  *
  * Returns: 0 if successful, else < 0.
  */
-
-/* dstip IS USELESS ? */
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 uint32_t *spi, int alg, void *enckey, void *authkey, 
 		 int is_active)
