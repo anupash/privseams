@@ -1047,6 +1047,9 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
+		u8 signature[HIP_DSA_SIGNATURE_LEN];
+		struct hip_host_id *host_id_private;
+
 		hip_print_hit("new addr to check", &addr->address);
 
 		if (addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
@@ -1082,6 +1085,37 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			continue;
 		}
 
+		// HIP_LOCK_HA(entry); ?
+
+		/* Add HMAC */
+		err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
+		if (err) {
+			HIP_ERROR("Building of HMAC failed (%d)\n", err);
+			continue;
+		}
+
+		/* Add SIGNATURE */
+		host_id_private = hip_get_any_localhost_host_id();
+		if (!host_id_private) {
+			HIP_ERROR("Could not get own host identity. Can not sign data\n");
+			continue;
+		}
+
+		if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+					  host_id_private, signature)) {
+			HIP_ERROR("Could not sign UPDATE. Failing\n");
+			//err = -EINVAL;
+			continue;
+		}
+
+		err = hip_build_param_signature_contents(update_packet, signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+		if (err) {
+			HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
+			continue;
+		}
+
 		get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 		HIP_HEXDUMP("ECHO_REQUEST in REA addr check",
 			    addr->echo_data, sizeof(addr->echo_data));
@@ -1091,6 +1125,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			HIP_ERROR("Building of ECHO_REQUEST failed\n");
 			continue;
 		}
+
 
 		HIP_DEBUG("Sending reply UPDATE packet (for REA)\n");
 		/* test: send all addr check from same address */
@@ -1535,9 +1570,9 @@ int hip_receive_update(struct sk_buff *skb)
 		}
 	}
 
-	hip_hadb_dump_spis_in(entry);
-	hip_hadb_dump_spis_out(entry);
-	hip_hadb_dump_hs_ht();
+	//hip_hadb_dump_spis_in(entry);
+	//hip_hadb_dump_spis_out(entry);
+	//hip_hadb_dump_hs_ht();
 
  out_err:
 	if (err)
@@ -1805,8 +1840,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
-	hip_hadb_dump_spis_in(entry);
-	hip_hadb_dump_spis_out(entry);
+	//hip_hadb_dump_spis_in(entry);
+	//hip_hadb_dump_spis_out(entry);
 
 	/* todo: 5. The system SHOULD start a timer whose timeout value should be ..*/
 	goto out;

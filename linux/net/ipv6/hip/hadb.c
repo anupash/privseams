@@ -1040,9 +1040,9 @@ uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex)
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		_HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->ifindex == ifindex) {
-			HIP_DEBUG("found\n");
+			HIP_DEBUG("found SPI 0x%x\n", item->spi);
 			return item->spi;
 		}
         }
@@ -1056,10 +1056,10 @@ uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 
 	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x nes_spi_out=0x%x seq_id=%u\n",
+		_HIP_DEBUG("test item: ifindex=%d spi=0x%x nes_spi_out=0x%x seq_id=%u\n",
 			  item->ifindex, item->spi, item->nes_spi_out, item->seq_update_id);
 		if (item->seq_update_id == peer_update_id) {
-			HIP_DEBUG("found\n");
+			HIP_DEBUG("found SPI 0x%x\n", item->spi);
 			return item->spi;
 		}
         }
@@ -1392,10 +1392,10 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 
 		/* see if your NES is acked and maybe if corresponging NES was received */
 		list_for_each_entry_safe(in_item, in_tmp, &entry->spis_in, list) {
-			HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
-				  in_item->spi, in_item->seq_update_id);
+			_HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
+				   in_item->spi, in_item->seq_update_id);
 			if (in_item->seq_update_id == puid) {
-				HIP_DEBUG("SEQ and ACK match\n");
+				_HIP_DEBUG("SEQ and ACK match\n");
 				in_item->update_state_flags |= 0x1; /* recv'd ACK */
 				if (have_nes)
 					in_item->update_state_flags |= 0x2; /* recv'd also NES */
@@ -1446,8 +1446,8 @@ void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id)
 
 	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
-			  item->spi, item->seq_update_id);
+		_HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
+			   item->spi, item->seq_update_id);
 		if (item->seq_update_id == peer_update_id) {
 			HIP_DEBUG("received peer's NES\n");
 			item->update_state_flags |= 0x2; /* recv'd NES */

@@ -1238,6 +1238,7 @@ static int hip_create_device_addrlist(struct net_device *event_dev,
 
  out_in6_unlock:
 	read_unlock(&idev->lock);
+	in6_dev_put(idev);
  out:
 	read_unlock(&addrconf_lock);
 	return err;
@@ -1291,7 +1292,6 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
 
 #define SEND_UPDATE_NES (1 << 0)
 #define SEND_UPDATE_REA (1 << 1)
-
 /** hip_net_event - start handling the network device event
  * @ifindex: the device which caused the event
  * @event_src: 0 for IPv6 address events and 1 for network device related events
@@ -1397,6 +1397,7 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 	HIP_DEBUG("got event NETDEV_%s\n", event == NETDEV_DOWN ? "DOWN" : "UNREGISTER");
 
         if (event == NETDEV_UNREGISTER) {
+		/* avoid sending rapidly consecutive UPDATEs */
                 HIP_DEBUG("not handling UNREGISTER event, wait for DOWN\n");
                 return NOTIFY_DONE;
         }
@@ -1425,7 +1426,8 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt, 
 			    int type, int code, int offset, __u32 info)
 {
-	HIP_DEBUG("type=%d code=%d offset=%d, info=%u\n", type, code, offset, info);
+	/* hip_handle_icmp is useless if this works */
+	HIP_ERROR("type=%d code=%d offset=%d, info=%u\n", type, code, offset, info);
 }
 
 /**
