@@ -803,6 +803,40 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
         return err;
 }
 
+int hip_insert_peer_map_work_order(const struct in6_addr *hit,
+				   const struct in6_addr *ip,
+				   int insert, int rvs)
+{
+	int err = 0;
+	struct hip_work_order *hwo;
+
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (!hwo)
+		HIP_ERROR("No memory for hit <-> ip mapping\n");
+		err = -ENOMEM;
+		goto out_err;
+
+	ipv6_addr_copy(&hwo->hdr.dst_addr, hit);
+	hwo->destructor = hwo_default_destructor;
+	
+	ipv6_addr_copy(&hwo->hdr.src_addr, ip);
+	hwo->hdr.type = HIP_WO_TYPE_MSG;
+	if (rvs)
+		hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDRVS;
+	else {
+		if (insert)
+			hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDMAP;
+		else
+			hwo->hdr.subtype = HIP_WO_SUBTYPE_DELMAP;
+	}
+
+	hip_insert_work_order(hwo);
+
+ out_err:
+
+	return err;
+}
+
 static int do_work(const struct hip_common *input, int rvs)
 {
 	struct in6_addr *hit, *ip;

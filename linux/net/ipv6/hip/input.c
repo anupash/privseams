@@ -2720,17 +2720,26 @@ int hip_handle_bos(struct hip_common *bos,
 			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0);
 		}
 	} else {
+		struct hip_work_order * hwo;
 		HIP_DEBUG("Adding new peer entry\n");
                 hip_in6_ntop(&bos->hits, src);
 		HIP_DEBUG("map HIT: %s\n", src);
 		hip_in6_ntop(dstip, src);
 		HIP_DEBUG("map IP: %s\n", src);
 
-		err = hip_insert_peer_map_work_order(&bos->hits, dstip, 1, 0);
-		if (err) {
+		hwo = hip_init_job(GFP_ATOMIC);
+		if (!hwo) {
 		        HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 			goto out_err;
-		}
+		}			   
+		
+		ipv6_addr_copy(&hwo->hdr.dst_addr, &bos->hits);
+		ipv6_addr_copy(&hwo->hdr.src_addr, dstip);
+		hwo->destructor = hwo_default_destructor;
+
+		hwo->hdr.type = HIP_WO_TYPE_MSG;		
+		hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDMAP;
+		hip_insert_work_order(hwo);
 	}
 
 	HIP_INFO("BOS Successfully received\n");

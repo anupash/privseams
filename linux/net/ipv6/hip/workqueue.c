@@ -164,6 +164,9 @@ static inline int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
  */
 int hip_insert_work_order(struct hip_work_order *hwo)
 {
+#ifdef CONFIG_HIP_USERSPACE
+	int ret;
+#endif
 	if (!hwo) {
 		HIP_ERROR("NULL hwo\n");
 		return -1;
@@ -175,7 +178,9 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 #ifndef CONFIG_HIP_USERSPACE
 	return hip_insert_work_order_cpu(hwo, smp_processor_id());
 #else
-	return hip_netlink_send(hwo);
+	ret = hip_netlink_send(hwo);
+	hip_free_work_order(hwo);
+	return ret;
 #endif
 }
 
@@ -468,9 +473,6 @@ int hip_do_work(struct hip_work_order *job)
 		hip_free_work_order(job);
 	return res;
 }
-
-
-
 
 
 
