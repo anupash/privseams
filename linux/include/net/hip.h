@@ -188,7 +188,6 @@ typedef uint16_t in_port_t;
 #define HIP_HIP_3DES_SHA1               2
 #define HIP_HIP_3DES_MD5                3
 #define HIP_HIP_NULL_SHA1               5
-#define HIP_HIP_NULL_SHA1               5
 
 #define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6

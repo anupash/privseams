@@ -49,6 +49,15 @@ extern struct proto_ops inet6_stream_ops;
 extern struct proto_ops inet6_dgram_ops;
 extern int inet6_create(struct socket *sock, int protocol);
 
+extern struct net_proto_family hip_family_ops;
+//extern struct net_proto_family inet_family_ops;
+extern struct proto_ops inet_stream_ops;
+extern struct proto_ops inet_dgram_ops;
+//extern struct net_proto_family inet6_family_ops;
+extern struct proto_ops inet6_stream_ops;
+extern struct proto_ops inet6_dgram_ops;
+extern int inet6_create(struct socket *sock, int protocol);
+
 /* kernel module unit tests */
 extern struct hip_unit_test_suite_list hip_unit_test_suite_list;
 

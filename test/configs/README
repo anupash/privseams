@@ -27,3 +27,10 @@ that are not HIP related, please consult the linux/README first before
 asking any questions on the HIPL mailing list. There are also many
 user forums out there in the Internet that may be helpful for
 general questions about linux kernel configuration.
+
+There is also a configuration derived from that used by Knoppix,
+i.e. it is the 2.6 .config from Knoppix 3.6 with the addition that
+IPv6 is compiled in and HIP is included.  This is provided since it is
+expected that the Knoppix config would work out of the box on many
+different kinds of systems.  This configuration has been tested with a
+remastered Knoppix on a couple of systems.
