@@ -529,9 +529,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 			goto out_err;
 		}
 
-		pz->opaque[0] = '.';
-		pz->opaque[1] = '!';
-		pz->opaque[2] = '.';
+		get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
 
 		get_random_bytes(&random_i,sizeof(random_i));
 		pz->I = random_i;
@@ -690,36 +688,6 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
 	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
-
-#if 0
-	if (is_initiator) {
-		memcpy(&entry->esp_our.key, &ctx->espi.key,
-		       hip_enc_key_length(entry->esp_transform));
-		memcpy(&entry->esp_peer.key, &ctx->hip_espr.key,
-		       hip_enc_key_length(entry->esp_transform));
-		memcpy(&entry->auth_our.key, &ctx->hip_authi.key,
-		       hip_auth_key_length_esp(entry->esp_transform)); 
-		memcpy(&entry->auth_peer.key, &ctx->hip_authr.key,
-		       hip_auth_key_length_esp(entry->esp_transform));
-		memcpy(&entry->hmac_our, &ctx->hip_hmaci,
-		       hip_hmac_key_length(entry->esp_transform));
-		memcpy(&entry->hmac_peer, &ctx->hip_hmacr,
-		       hip_hmac_key_length(entry->esp_transform));
-	} else {
-		memcpy(&entry->esp_our.key, &ctx->hip_espr.key,
-		       hip_enc_key_length(entry->esp_transform));
-		memcpy(&entry->esp_peer.key, &ctx->hip_espi.key,
-		       hip_enc_key_length(entry->esp_transform));
-		memcpy(&entry->auth_our.key, &ctx->hip_authr.key,
-		       hip_auth_key_length_esp(entry->esp_transform));
-		memcpy(&entry->auth_peer.key, &ctx->hip_authi.key,
-		       hip_auth_key_length_esp(entry->esp_transform));
-		memcpy(&entry->hmac_our, &ctx->hip_hmacr,
-		       hip_hmac_key_length(entry->esp_transform));
-		memcpy(&entry->hmac_peer, &ctx->hip_hmaci,
-		       hip_hmac_key_length(entry->esp_transform));
-	}
-#endif
 
 	/* TODO: just reuse the keymatdst pointer, do not kmalloc */
 
@@ -918,7 +886,6 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 
 	HIP_DEBUG("Mapping virtual to pages\n");
 
-//	err = hip_map_virtual_to_pages(src_sg, &src_nsg, data, enc_len);
 	err = hip_map_virtual_to_pages(src_sg, &src_nsg, result, enc_len);
 	if (err || src_nsg < 1) {
 		HIP_ERROR("Error mapping source data\n");
@@ -945,11 +912,13 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
 		if (iv) {
-			err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg, enc_len, iv);
-			memset(iv,0,8);
-			//err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg, enc_len, iv);		
+			err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg,
+						       enc_len, iv);
+			/* The encrypt function writes crap on iv */
+			memset(iv, 0, 8);
 		} else {
-			err = crypto_cipher_encrypt(impl, src_sg, src_sg, enc_len);
+			err = crypto_cipher_encrypt(impl, src_sg, src_sg,
+						    enc_len);
 		}
 		if (err) {
 			HIP_ERROR("Encryption failed\n");
@@ -976,15 +945,12 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		break;
 	}
 
-	HIP_ASSERT(iv);
-	//	memcpy(data, result, enc_len);
-	//if (direction == HIP_DIRECTION_ENCRYPT)
-	memcpy(data, result, enc_len); // XX DOES NOT WORK IF IV IS NULL
+	if (iv) {
+		memcpy(data, result, enc_len);
+	} else {
+		HIP_ASSERT(iv); /* Not tested/interoperated without iv */
+	}
 
-		//else
-		//	memcpy(iv+8, result, enc_len); // XX DOES NOT WORK IF IV IS NULL
-
-	//memset(iv, 0, 8);
 
  out_err:
 	if (result)
@@ -2011,7 +1977,7 @@ static void __exit hip_cleanup(void)
 	return;
 }
 
-MODULE_AUTHOR("HIPL <hipl@gaijin.tky.hut.fi>");
+MODULE_AUTHOR("HIPL <hipl-dev@freelists.org>");
 MODULE_DESCRIPTION("HIP development module");
 MODULE_LICENSE("GPL");
 #ifdef KRISUS_THESIS

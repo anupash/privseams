@@ -227,6 +227,7 @@ typedef uint16_t in_port_t;
 
 #define HIP_VERIFY_PUZZLE             0
 #define HIP_SOLVE_PUZZLE              1
+#define HIP_PUZZLE_OPAQUE_LEN         3
 
 #define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
@@ -369,7 +370,7 @@ struct hip_puzzle {
 	hip_tlv_len_t     length;
 
 	uint8_t           K;
-	uint8_t           opaque[3];
+	uint8_t           opaque[HIP_PUZZLE_OPAQUE_LEN];
 	uint64_t          I;
 } __attribute__ ((packed));
 

@@ -1,5 +1,5 @@
 /*
- * HIP database handling functions.
+ * HIP host id database and accessors.
  *
  * Authors: Janne Lundberg <jlu@tcs.hut.fi>
  *          Miika Komu <miika@iki.fi>

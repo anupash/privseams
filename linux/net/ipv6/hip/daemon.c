@@ -356,12 +356,11 @@ int hip_user_handle_rst(const struct hip_common *input,
  *
  * Returns: the number of unit tests failed
  */
-
 int hip_user_handle_unit_test(const struct hip_common *input,
 				struct hip_common *output)
 {
 	int err = 0;
-#if 0 /* MIIKA CHECK */
+#if 0 /* XX TODO */
 	uint16_t failed_test_cases;
 	uint16_t suiteid, caseid;
 	struct hip_unit_test *test = NULL;
@@ -392,8 +391,7 @@ int hip_user_handle_unit_test(const struct hip_common *input,
  out:
 	hip_build_user_hdr(output, hip_get_msg_type(input), failed_test_cases);
 	hip_build_unit_test_log();
-
-#endif /* 0 MIIKA CHECK */
+#endif
 
 	return err;
 }

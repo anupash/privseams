@@ -1189,15 +1189,18 @@ void hip_uninit_hadb()
 		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
 			if (atomic_read(&ha->refcnt) > 2)
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
-			
+			hip_hold_ha(ha);
 			hip_hadb_remove_state(ha);
+			hip_put_ha(ha);
 		}
 
 		list_for_each_entry_safe(ha, tmp, &hadb_byspi[i], next_spi) {
 			if (atomic_read(&ha->refcnt) > 1)
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
 			
+			hip_hold_ha(ha);
 			hip_hadb_remove_state(ha);
+			hip_put_ha(ha);
 		}
 	}
 }
