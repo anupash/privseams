@@ -229,7 +229,7 @@ described in \cite{hip-ietf-mm-00}.
 
 A typical mobility exchange is quite simple. 
 
-First the HIP module selectes the addresses to be included in a REA
+First the HIP module selects the addresses to be included in a REA
 parameter. The REA parameter and a sequence number in a SEQ parameter
 are added to the UPDATE packet. Then the UPDATE packet is sent to
 all of the peers with which there is an existing HIP security
@@ -244,7 +244,7 @@ parameters.
 When a reply UPDATE packet is received, it must be acknowledged with
 an UPDATE packet which contains ECHO\_REPLY and ACK parameter. This is
 needed to verify that there really is a host at the address where the
-UPDATE was sent from. When a host receives these addres verification
+UPDATE was sent from. When a host receives these address verification
 UPDATE packets, it can start using them when sending data to its peer.
 
 If the reply UPDATE packet is not replied, the address corresponding
@@ -555,7 +555,7 @@ established, a hook in the input handler of \ac{ESP} is
 triggered. This hook checks the \ac{SPI} of the incoming packet. If
 the incoming packet is not associated with a \ac{HIT}, the packet is
 returned as normally. If the SPI belongs to a \ac{HIP} connection, the
-source and destination HITs corresponding to the \ac{SPI} are searched
+source and destination \acp{HIT} corresponding to the \ac{SPI} are searched
 from kernel database and they are copied over source and destination
 IPv6 addresses. Finally control of flow returns to normal \ac{ESP}
 handler.
@@ -610,12 +610,12 @@ Point & Function Name & Operation \\\hline
 
 a & \verb|hip_bypass_ipsec| &
 
-A packet with a \ac{HIP} header is received. IPSec processing is skipped. \\
+A packet with a \ac{HIP} header is received. \ac{IPSec} processing is skipped. \\
 
 b & \verb|hip_handle_esp| &
 
 The packet has a SPI that belongs to \ac{HIP}. The IPv6 addresses are
-replaced with the corresponding HITs before the packet is delivered to
+replaced with the corresponding \acp{HIT} before the packet is delivered to
 ESP. \\
 
 c & \verb|hip_unknown_spi| &
@@ -649,7 +649,7 @@ address in the IPv6 header. \\
 
 h & \verb|hip_get_addr| &
   
-A small modification in routing and neighbour discovery is needed
+A small modification in routing and neighbor discovery is needed
 because they behave in a rather odd way in Linux: transport protocols
 select the routes to be used even though it should really be selected
 by network layer protocols. This hook would not be needed if the
@@ -707,7 +707,7 @@ multihoming features defined in the draft
 \cite{hip-ietf-mm-00}. Scenarios ``Mobility with single SA pair'' and
 ``Host multihoming'' were the main targets of the current
 implementation. The rest of the scenarios are not planned to be
-implemented in the nar future.
+implemented in the near future.
 
 %Old style support for REA, AC, and ACR packets is removed. Current
 %implementation uses UPDATE packets for mobility and multihoming.
@@ -794,7 +794,7 @@ commonly known as the \verb|resolver|.
 Network applications need additional support in the network socket
 interface for two different reasons if \ac{HIP} is to be used. The
 first reason is that a hostname query from \ac{DNS} should result in
-HITs instead of IPv6 addresses or otherwise the kernel module would
+\acp{HIT} instead of IPv6 addresses or otherwise the kernel module would
 assume a connection without \ac{HIP}. This is discussed in more detail
 \vpageref[below]{sec:api_architecture}. The second reason is that a
 \ac{HIT} to IPv6 mapping should be sent to the kernel as a side effect
@@ -866,7 +866,7 @@ of application specific. Transparent mode is enabled by default.
 The other flag is concerned about enforcing the use of \ac{HIP}
 independently of transparent mode. The name of the flag is
 \verb|AI_HIP| and it is passed as a parameter to the resolver
-routine. If the flag is set, the resolver returns only HITs as the
+routine. If the flag is set, the resolver returns only \acp{HIT} as the
 result for query of the hostname. Effectively, this means that
 connections will be established with \ac{HIP} or not at all.
 
@@ -1190,14 +1190,14 @@ Once all the cryptographic functions are ported to kernel, major
 changes to the kernel model are required. Firstly, the idea is to
 isolate the \ac{HIP} working thread out of the other contexts and
 events. This is probably done by creating working queues for incoming,
-outgoing and daemon messages.  The worker thread continiously polls
+outgoing and daemon messages.  The worker thread continuously polls
 (by some means) all the queues.  The working thread's running cycle
 completes when it has performed the action that the message
 requires. And then the cycle begins again.
 
 Since there will be more than one message queue, it will be
 interesting to find out, how to prioritize different queues. Is
-incoming packet more important than outgoging ones? Or should the
+incoming packet more important than outgoing ones? Or should the
 daemon messages be always handled first? What happens then if some
 malicious user succeeds in constantly sending daemon messages to the
 \ac{HIP} module?  We could also consider if there is a way to make
@@ -1205,7 +1205,7 @@ sure that the \ac{HIP} module does not consume too much processing
 time.
 
 What happens in multiprocessor machine? The initial plan is to add one
-worker per processor. All workers would have sepparate working queues.
+worker per processor. All workers would have separate working queues.
 This way they are isolated from each other as much as possible.
 Naturally there are common data structures that need to be protected.
 That protection should be quite straight forward, as the worker
