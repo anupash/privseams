@@ -1936,7 +1936,7 @@ static void __exit hip_cleanup(void)
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
 
-	hip_uninit_netdev_notifier(); 	/* comment this if network device event causes troubles */
+	hip_uninit_netdev_notifier();
 
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();

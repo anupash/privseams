@@ -287,18 +287,37 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 			goto end_hip;
 #if 1
 		if (ret == 5) {  /* THIS IS NOT WORKING well */
-			struct dst_entry *dst_tmp;
-			struct dst_entry **dst_tmp2;
+			//struct dst_entry *dst_tmp;
+			struct dst_entry **dst_tmp2 = NULL;
 			int err2;
 			struct flowi fl_tmp;
 
  			printk(KERN_DEBUG "sk_state=%d, is established=%s\n", sk->sk_state,
 			       sk->sk_state == TCP_ESTABLISHED ? "yes" : "no");
  			printk(KERN_DEBUG "ip6_xmit, skb->dst 1 %p\n", skb->dst);
+
  			/* fl must be HITs ? */
  			memcpy(&fl_tmp, fl, sizeof(struct flowi));
  			ipv6_addr_copy(&fl_tmp.fl6_src, &src_hit);
  			ipv6_addr_copy(&fl_tmp.fl6_dst, &dst_hit);
+
+//			dst_release(dst); // try sk_dt_reset instead
+//			skb->dst->obsolete++; ?
+
+// xfrm_sk_policy_insert:
+// old_pol = xfrm_sk_policy_lookup(sk, XFRM_POLICY_OUT, &fl_tmp)
+// xfrm_policy_delete(old_pol, XFRM_POLICY_OUT);
+// xfrm_pol_put(old); drop sk lookup ref
+
+// = (
+// write_lock_bh(&xfrm_policy_lock);
+// __xfrm_policy_unlink(old_pol, XFRM_POLICY_MAX+dir);
+// write_unlock_bh(&xfrm_policy_lock);
+// xfrm_policy_kill(old_pol);
+// )
+
+// xfrm_flush_bundles(); ?
+
 			err2 = ip6_dst_lookup(sk, dst_tmp2, &fl_tmp);
 			if (err2) {
 				printk(KERN_DEBUG "ip6_dst_lookup failed, err2=%d\n", err2);

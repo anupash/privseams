@@ -629,10 +629,25 @@ xfrm_tmpl_resolve(struct xfrm_policy *policy, struct flowi *fl,
 
 		x = xfrm_state_find(remote, local, fl, tmpl, policy, &error, family);
 
+		// todo: for IPPROTO_ESP:
+printk(KERN_DEBUG "xfrm_tmpl_resolve: policy->xfrm_nr=%d\n", policy->xfrm_nr);
+printk(KERN_DEBUG "xfrm_tmpl_resolve: x = xfrm_state_lookup for defalt spi and break for HITs ?\n");
+if (ipv6_addr_is_hit(&fl->fl6_dst)) {
+	 uint32_t default_spi;
+	 int state_ok = 0;
+
+	 default_spi = HIP_CALLFUNC(hip_get_default_spi_out, 0)(&fl->fl6_dst, &state_ok);
+	 if (!default_spi || !state_ok)
+		 printk(KERN_DEBUG "xfrm_tmpl_resolve: default_spi not found or SPI state not ok\n");
+	 else
+		 printk(KERN_DEBUG "xfrm_tmpl_resolve: default spi 0x%x not found\n", default_spi);
+ }
+
 		if (x && x->km.state == XFRM_STATE_VALID) {
 			xfrm[nx++] = x;
 			daddr = remote;
 			saddr = local;
+// for HIT & ESP: check following test for x and break ?
 			continue;
 		}
 		if (x) {

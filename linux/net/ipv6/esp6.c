@@ -47,10 +47,12 @@ static int esp6_output(struct sk_buff *skb)
 	int hdr_len;
 	struct dst_entry *dst = skb->dst;
 	struct xfrm_state *x  = dst->xfrm;
+#if 0
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	struct xfrm_state *x_tmp = NULL, *x_orig = x;
 	uint32_t default_spi;
 	int state_ok = 0;
+#endif
 #endif
 	struct ipv6hdr *top_iph;
 	struct ipv6_esp_hdr *esph;
@@ -61,7 +63,7 @@ static int esp6_output(struct sk_buff *skb)
 	int clen;
 	int alen;
 	int nfrags;
-
+#if 0
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	/* Because the SAs are cached somewhere deep in
 	   skb/skb->dst/skb->dst->xfrm and currently I do not know how
@@ -88,6 +90,7 @@ static int esp6_output(struct sk_buff *skb)
 		}
 		x = x_tmp;
 	}
+#endif
 #endif
 
 	esp = x->data;
@@ -174,10 +177,12 @@ static int esp6_output(struct sk_buff *skb)
 	err = 0;
 
 error:
+#if 0
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	if (x_tmp)
 		xfrm_state_put(x_tmp);
 	dst->xfrm = x_orig;
+#endif
 #endif
 	return err;
 }
