@@ -336,6 +336,6 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 		  entry->current_keymat_index, entry->keymat_calc_index);
 	if (new_current_keymat) {
 		memcpy(entry->current_keymat_K, new_current_keymat, HIP_AH_SHA_LEN);
-		HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);
+		_HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);
 	}
 }

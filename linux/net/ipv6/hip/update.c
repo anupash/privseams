@@ -132,6 +132,8 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 	struct list_head *pos, *n;
 	int i = 1;
 
+	return 0;
+
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 
 	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
@@ -674,7 +676,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 {
 	int err = 0;
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
-	struct hip_nes *nes;
+//	struct hip_nes *nes;
 	uint8_t calc_index_new;
 	//uint16_t keymat_offset_new;
 	unsigned char Kn[HIP_AH_SHA_LEN];
@@ -695,11 +697,10 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 	HIP_DEBUG("stored NES: Old SPI: 0x%x\n", entry->stored_received_nes.old_spi);
 	HIP_DEBUG("stored NES: New SPI: 0x%x\n", entry->stored_received_nes.new_spi);
 
-
 	/* 2. .. If the system did not generate new KEYMAT, it uses
 	   the lowest Keymat Index of the two NES parameters. */
-	if (entry->current_keymat_index < entry->stored_received_nes.keymat_index)
-		keymat_index = entry->current_keymat_index;
+	if (entry->current_keymat_index+1 < entry->stored_received_nes.keymat_index)
+		keymat_index = entry->current_keymat_index+1;
 	else
 		keymat_index = entry->stored_received_nes.keymat_index;
 
@@ -725,9 +726,12 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 	if (err)
 		goto out_err;
 
-	nes = hip_get_param(msg, HIP_PARAM_NES);
 	/* set up new outbound IPsec SA */
-	new_spi_out = ntohl(nes->new_spi);
+	new_spi_out = entry->stored_received_nes.new_spi;
+	if (new_spi_out == 0) {
+		HIP_ERROR("bug: stored New SPI in HA is 0\n");
+		goto out_err;
+	}
 	err = hip_setup_sa(hitr, hits,
 			   &new_spi_out, esp_transform,
 			   we_are_HITg ? &espkey_gl.key : &espkey_lg.key,
@@ -738,9 +742,10 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 		goto out_err;
 	}
 	HIP_DEBUG("Set up new outbound IPsec SA, SPI=0x%x\n", new_spi_out);
-	/* remember the current outbound SPI so we can delete it after
-	   we have changed to use the new outbound SPI */
+
 	prev_spi_out = entry->spi_out;
+	prev_spi_in = entry->spi_in;
+
 	entry->spi_out = new_spi_out;
 	HIP_DEBUG("updated outbound SPI (SPI_OUT), new_spi_out=0x%x\n", new_spi_out);
 	entry->default_spi_out = entry->spi_out;
@@ -787,7 +792,6 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 	spin_unlock_bh(&xs->lock);
 	xfrm_state_put(xs);
 
-	prev_spi_in = entry->spi_in;
 	HIP_DEBUG("switching to new updated inbound SPI=0x%x, new_spi_in\n", new_spi_in);
 
 	hip_hadb_remove_state_spi(entry);
@@ -809,6 +813,16 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 	   transitions to ESTABLISHED. */
 	entry->state = HIP_STATE_ESTABLISHED;
 	HIP_DEBUG("Went back to ESTABLISHED state\n");
+
+	/* delete old SAs */
+	/* todo: set SA state to dying */
+	HIP_DEBUG("REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", prev_spi_out);
+	err = hip_delete_sa(prev_spi_out, hits);
+	HIP_DEBUG("delete_sa out retval=%d\n", err);
+
+	HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
+	err = hip_delete_sa(prev_spi_in, hitr);
+	HIP_DEBUG("delete_sa in retval=%d\n", err);
 
  out_err:
 	entry->update_state_flags = 0;
@@ -924,21 +938,21 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		}
 	}
 
-	if (entry->update_state_flags & 0x1) {
+	if (nes && (entry->update_state_flags & 0x1)) {
 		HIP_DEBUG("store NES and DH\n");
 		/* store NES and DH here */
 		entry->stored_received_nes.keymat_index = ntohs(nes->keymat_index);
 		entry->stored_received_nes.old_spi = ntohl(nes->old_spi);
 		entry->stored_received_nes.new_spi = ntohl(nes->new_spi);
-		entry->update_state_flags |= 0x2;
+		entry->update_state_flags |= 0x2; /* can be removed */
+
 	}
 
-
+	HIP_DEBUG("update_state_flags=%d\n", entry->update_state_flags);
 	if (entry->update_state_flags == 0x3) {
+		/* our SEQ is now ACKed and peer's NES is stored */
 		err = hip_update_finish_rekeying(msg, entry);
 	}
-
-
 #if 0
 	/* 1. If either the received UPDATE contains a new
 	 * Diffie-Hellman key, the system has a new Diffie-Hellman key
@@ -1133,10 +1147,12 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		HIP_DEBUG("Staying in REKEYING state\n");
 #endif
 
-	if (!update_packet)
+	if (!update_packet) {
+		HIP_DEBUG("not sending ACK\n");
 		goto out;
+	}
 
-		/* send ACK */
+	/* send ACK */
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
@@ -1164,7 +1180,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 	}
 	HIP_DEBUG("up=%p s=%p\n", update_packet, signature);
 	HIP_DUMP_MSG(update_packet);
-#if 0
+
 	err = hip_build_param_signature_contents(update_packet, signature,
 						 HIP_DSA_SIGNATURE_LEN,
  						 HIP_SIG_DSA);
@@ -1176,7 +1192,6 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 	HIP_DEBUG("sig+\n");
 	HIP_DUMP_MSG(update_packet);
 
-#endif
         err = hip_hadb_get_peer_addr(entry, &daddr);
         if (err) {
                 HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);

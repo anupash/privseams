@@ -396,7 +396,7 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_hit)
 
 	/* set cookie state to used (more or less temporary solution ?) */
 
-	HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
+	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
 	err = hip_csum_send(NULL, src_addr, r1pkt);	
 	if (err) {

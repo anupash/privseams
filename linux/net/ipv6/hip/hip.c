@@ -490,7 +490,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		goto out_err;
  	}		
 
-	HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
+	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
  	err = hip_build_param_signature2_contents(msg,
  						 signature,
