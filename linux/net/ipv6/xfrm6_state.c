@@ -16,6 +16,10 @@
 #include <linux/ipsec.h>
 #include <net/ipv6.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 extern struct xfrm_state_afinfo xfrm6_state_afinfo;
 
 static void
@@ -52,41 +56,24 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 	unsigned h = __xfrm6_spi_hash(daddr, spi, proto);
 	struct xfrm_state *x;
 	int res;
-#ifdef CONFIG_ESPBEET
-	int conv;
-
-	conv = 0; // keep compiler happy
-
-	/* This is the HIP case. Sets conv, if the daddr is IPv6.
-	 * This happens only on packets incoming from the network.
-	 */
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	if (!ipv6_addr_is_hit((struct in6_addr *)daddr)) {
-		conv = 1;
-	}
-#endif
-
-	/* add other cases */
-
-
-#endif /* CONFIG_ESPBEET */
-
-	/* BEET mode checks: If SA has to be looked up by the other
-	 * (inner or outer, depending on the implementation) address, then
-	 * set the conv to true.
-	 */
 
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
-#if defined(CONFIG_ESPBEET)
-		if (conv && x->props.mode == XFRM_MODE_BEET)
-			res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->outeraddr);
-		else
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		struct in6_addr daddr_hit;
+		if (!HIP_CALLFUNC(hip_is_our_spi,0)(x->id.spi,&daddr_hit)) {
+			/* SPI does not belong to HIP, but might still
+			   belong to IPsec etc... */
+			if (spi != x->id.spi) 
+				continue;
+			res = ipv6_addr_cmp((struct in6_addr *)daddr, 
+					    (struct in6_addr *)&x->id.daddr);
+		} else
+			res = ipv6_addr_cmp(&daddr_hit, (struct in6_addr *)&x->id.daddr);
+#else
+		res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
 #endif
-			res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
-		
 		if (x->props.family == AF_INET6 && spi == x->id.spi && !res &&
-		    proto == x->id.proto) 
+		    proto == x->id.proto)
 		{
 			xfrm_state_hold(x);
 			return x;

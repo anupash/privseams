@@ -53,7 +53,7 @@ int gtv_inuse;
 int kmm; // krisu_measurement_mode
 #endif
 
-spinlock_t hip_workqueue_lock = SPIN_LOCK_UNLOCKED;
+//spinlock_t hip_workqueue_lock = SPIN_LOCK_UNLOCKED;
 
 #ifdef CONFIG_PROC_FS
 static struct proc_dir_entry *hip_proc_root = NULL;
@@ -891,7 +891,9 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
  */
 int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
-	if (!hip_is_hit(&fl->fl6_dst))
+	HIP_DEBUG("PASKA!\n");
+
+	if (!ipv6_addr_is_hit(&fl->fl6_dst))
 		return 0;
 
 	if (!hip_hadb_get_own_hit_by_hit(&fl->fl6_dst, hit_storage)) {
@@ -1638,15 +1640,17 @@ static int __init hip_init(void)
 			goto out;
 	}
 
- 	HIP_SETCALL(hip_bypass_ipsec, hip_bypass_ipsec);   
-	HIP_SETCALL(hip_handle_output, hip_handle_output); 
-	HIP_SETCALL(hip_handle_esp, hip_handle_esp);       
-	HIP_SETCALL(hip_get_addr, hip_get_addr);           
-	HIP_SETCALL(hip_get_hits, hip_get_hits);           
-	HIP_SETCALL(hip_inbound, hip_inbound);             
-	HIP_SETCALL(hip_get_saddr, hip_get_saddr);       
-	HIP_SETCALL(hip_unknown_spi, hip_unknown_spi);   
-	HIP_SETCALL(hip_handle_dst_unreachable, hip_handle_dst_unreachable); 
+ 	HIP_SETCALL(hip_bypass_ipsec);
+	HIP_SETCALL(hip_handle_output);
+
+	HIP_SETCALL(hip_handle_esp);
+	HIP_SETCALL(hip_get_addr);
+	HIP_SETCALL(hip_get_hits);
+	HIP_SETCALL(hip_inbound);
+	HIP_SETCALL(hip_get_saddr);
+	HIP_SETCALL(hip_unknown_spi);
+	HIP_SETCALL(hip_handle_dst_unreachable);
+	HIP_SETCALL(hip_is_our_spi);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
 		HIP_ERROR("Could not add HIP protocol\n");

@@ -13,9 +13,11 @@
 
 #define ESP_3DES_KEY_BITS 192
 
-int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
-		  uint32_t *spi, int encalg, void *enckey,
-		  void *authkey);
+
+int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
+		  struct in6_addr *dstip, uint32_t *spi, int alg, 
+		  void *enckey, void *authkey, int dir);
+
 
 int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer);
 

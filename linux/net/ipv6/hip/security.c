@@ -100,10 +100,12 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 
 
 
-static int hip_setup_sp(struct in6_addr *dst, struct in6_addr *src)
+static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
+			int dir)
 {
 	int err = 0;
 	struct xfrm_policy *xp;
+	struct xfrm_tmpl *tmpl;
 
 	/* SP... */
 
@@ -129,9 +131,17 @@ static int hip_setup_sp(struct in6_addr *dst, struct in6_addr *src)
 	xp->lft.soft_packet_limit = XFRM_INF;	 
 	xp->lft.hard_packet_limit = XFRM_INF;	 
 
-	xp->xfrm_nr = 0;
+	xp->xfrm_nr = 1; // one transform?
 	
-	err = xfrm_policy_insert(XFRM_POLICY_OUT, xp, 1);
+	tmpl = &xp->xfrm_vec[0];
+
+	tmpl->reqid = 666;
+	tmpl->mode = XFRM_MODE_TRANSPORT;
+	tmpl->share = 0; // unique. Is this the correct number?
+	tmpl->aalgos = ~0;
+	tmpl->ealgos = ~0;
+
+	err = xfrm_policy_insert(dir, xp, 1);
 	if (err) {
 		kfree(xp);
 		return err;
@@ -139,6 +149,155 @@ static int hip_setup_sp(struct in6_addr *dst, struct in6_addr *src)
 
 	xfrm_pol_put(xp); // really?
 	return 0;
+}
+
+static
+int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
+		 struct in6_addr *dstip, uint32_t *spi, int alg,
+		 void *enckey, void *authkey)
+{
+	int err;
+	struct xfrm_state *xs;
+	struct xfrm_algo_desc *ead;
+	struct xfrm_algo_desc *aad;
+	size_t 	akeylen,ekeylen;
+
+	akeylen = ekeylen = 0;
+	err = -ENOMEM;
+
+	xs = xfrm_state_alloc();
+	if (!xs) {
+		HIP_ERROR("No memory\n");
+		return err;
+	}
+	
+	/* will fill like a pfkey_add would fill */
+
+	xs->id.proto = IPPROTO_ESP;
+	if (*spi != 0) 
+		xfrm_alloc_spi(xs, *spi, *spi);
+	else
+		xfrm_alloc_spi(xs, 256, 0xFFFFFFFF); // XXX: ok spi values?
+
+	if (xs->id.spi == 0) {
+		if (*spi != 0) {
+			err = -EEXIST;
+			goto out;
+		} else {
+			err = -EAGAIN;
+			goto out;
+		}
+	}
+		
+	*spi = xs->id.spi; 
+	xs->props.replay_window = 0; // XXX: Is this the size of the replay window in bits? 
+	
+
+	switch (alg) {
+	case HIP_ESP_3DES_SHA1:
+		err = -ENOENT;
+
+		ead = xfrm_ealg_get_byid(SADB_EALG_3DESCBC);
+		if (!ead) {
+			HIP_ERROR("3DES not supported\n");
+			goto out;
+		}
+
+		aad = xfrm_aalg_get_byid(SADB_AALG_SHA1HMAC);
+		if (!aad) {
+			HIP_ERROR("SHA1 not supported\n");
+			goto out;
+		}
+
+		xs->props.ealgo = SADB_EALG_3DESCBC;
+		xs->props.aalgo = SADB_AALG_SHA1HMAC;
+		break;
+	case HIP_ESP_NULL_SHA1:
+		err = -ENOENT;
+		ead = xfrm_ealg_get_byid(SADB_EALG_NULL);
+		if (!ead) {
+			HIP_ERROR("NULL not supported\n");
+			goto out;
+		}
+
+		aad = xfrm_aalg_get_byid(SADB_AALG_SHA1HMAC);
+		if (!aad) {
+			HIP_ERROR("SHA1 not supported\n");
+			goto out;
+		}
+
+		xs->props.ealgo = SADB_EALG_NONE;
+		xs->props.aalgo = SADB_AALG_SHA1HMAC;
+
+	default:
+		ead = aad = NULL;
+		HIP_ERROR("Unsupported type: 0x%x\n",alg);
+		HIP_ASSERT(0);
+	}
+
+	ekeylen = ead->desc.sadb_alg_maxbits;
+	akeylen = aad->desc.sadb_alg_maxbits;
+
+	err = -ENOMEM;
+	xs->ealg = kmalloc(sizeof(struct xfrm_algo) + (ekeylen + 7)/8, GFP_KERNEL);
+	if (!xs->ealg)
+		goto out;
+	xs->aalg = kmalloc(sizeof(struct xfrm_algo) + (akeylen + 7)/8, GFP_KERNEL);
+	if (!xs->aalg)
+		goto out;
+
+	strcpy(xs->aalg->alg_name, aad->name);
+	strcpy(xs->ealg->alg_name, ead->name);
+	memcpy(xs->aalg->alg_key, authkey, (akeylen + 7)/8);
+	memcpy(xs->ealg->alg_key, enckey, (ekeylen + 7)/8);
+	xs->aalg->alg_key_len = akeylen;
+	xs->ealg->alg_key_len = ekeylen;	
+
+	xs->props.family = AF_INET6;
+	memcpy(&xs->id.daddr, dsthit, sizeof(struct in6_addr));
+	memcpy(&xs->props.saddr, srchit, sizeof(struct in6_addr));
+//	memcpy(&xs->outeraddr, dstip, sizeof(struct in6_addr));
+	xs->props.mode = XFRM_MODE_TRANSPORT; //transport
+	xs->props.reqid = 666; // SP has to know which SA to use
+	
+	err = -ENOENT;
+	xs->type = xfrm_get_type(IPPROTO_ESP, AF_INET6);
+	if (xs->type == NULL) {
+		HIP_ERROR("COuld not get XFRM type\n");
+		goto out;
+	}
+
+	if (xs->type->init_state(xs, NULL)) {
+		HIP_ERROR("Could not initialize XFRM type\n");
+		goto out;
+	}
+
+	xs->km.seq = 0;
+	xs->km.state = XFRM_STATE_VALID;
+
+	/* SA policy ok??? */
+
+	err = xfrm_state_add(xs);
+	if (err) {
+		xs->km.state = XFRM_STATE_DEAD;
+		HIP_ERROR("Adding SA failed\n");
+		goto out;
+	}
+
+	return 0;
+ out:
+	if (xs) {
+		if (xs->aalg)
+			kfree(xs->aalg);
+		if (xs->ealg)
+			kfree(xs->ealg);
+		kfree(xs);
+	}
+
+	return err;
+
+
+
 }
 
 
@@ -158,162 +317,38 @@ static int hip_setup_sp(struct in6_addr *dst, struct in6_addr *src)
  * -EAGAIN   = Couldn't assign any SPI. Try again?
  * -ENOENT   = Could find requested element (transform states etc.)
  */
-int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
-		   uint32_t *spi, int encalg, void *enckey,
-		   void *authkey)
+int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
+		  struct in6_addr *dstip, uint32_t *spi, int alg, 
+		  void *enckey, void *authkey, int dir)
 {
 	int err;
-	struct xfrm_state *xs;
-	struct xfrm_algo_desc *ead;
-	struct xfrm_algo_desc *aad;
-	size_t 	akeylen,ekeylen;
 
-	akeylen = ekeylen = 0;
-	err = -ENOMEM;
-
-	xs = xfrm_state_alloc();
-	if (!xs) {
-		HIP_ERROR("No memory\n");
-	}
-	
-	/* will fill like a pfkey_add would fill */
-
-	xs->id.proto = IPPROTO_ESP;
-	if (*spi != 0) 
-		xfrm_alloc_spi(xs, *spi, *spi);
-	else
-		xfrm_alloc_spi(xs, 256, 0xFFFFFFFF); // XXX: ok spi values?
-
-	if (xs->id.spi == 0) {
-		if (*spi != 0) {
-			err = -EEXIST;
-			goto out_free;
-		} else {
-			err = -EAGAIN;
-			goto out_free;
-		}
-	}
-		
-	*spi = xs->id.spi; 
-	xs->props.replay_window = 0; // XXX: Is this the size of the replay window in bits? 
-	
-
-	switch (encalg) {
-	case HIP_ESP_3DES_SHA1:
-		err = -ENOENT;
-
-		ead = xfrm_ealg_get_byid(SADB_EALG_3DESCBC);
-		if (!ead) {
-			HIP_ERROR("3DES not supported\n");
-			goto out_free;
-		}
-
-		aad = xfrm_ealg_get_byid(SADB_AALG_SHA1HMAC);
-		if (!aad) {
-			HIP_ERROR("SHA1 not supported\n");
-			goto out_free;
-		}
-
-		err = -ENOMEM;
-		xs->ealg = kmalloc(sizeof(struct xfrm_algo) + 192/8, GFP_KERNEL);
-		if (!xs->ealg)
-			goto out_free;
-		xs->aalg = kmalloc(sizeof(struct xfrm_algo) + 160/8, GFP_KERNEL);
-		if (!xs->aalg)
-			goto out_free;
-
-		xs->ealg->alg_key_len = ekeylen = 192;
-		xs->aalg->alg_key_len = akeylen = 160;
-		xs->props.ealgo = SADB_EALG_3DESCBC;
-		xs->props.aalgo = SADB_AALG_SHA1HMAC;
-
-		break;
-	case HIP_ESP_NULL_SHA1:
-		err = -ENOENT;
-		ead = xfrm_ealg_get_byid(SADB_EALG_NULL);
-		if (!ead) {
-			HIP_ERROR("NULL not supported\n");
-			goto out_free;
-		}
-
-		aad = xfrm_ealg_get_byid(SADB_AALG_SHA1HMAC);
-		if (!aad) {
-			HIP_ERROR("SHA1 not supported\n");
-			goto out_free;
-		}
-
-		err = -ENOMEM;
-		xs->ealg = kmalloc(sizeof(struct xfrm_algo),GFP_KERNEL);
-		if (!xs->ealg)
-			goto out_free;
-		xs->aalg = kmalloc(sizeof(struct xfrm_algo) + 160/8, GFP_KERNEL);
-		if (!xs->aalg)
-			goto out_free;
-
-		xs->ealg->alg_key_len = ekeylen = 0;
-		xs->aalg->alg_key_len = akeylen = 160;
-		xs->props.ealgo = SADB_EALG_NONE;
-		xs->props.aalgo = SADB_AALG_SHA1HMAC;
-
-	default:
-		ead = aad = NULL;
-		HIP_ERROR("Unsupported type: 0x%x\n",encalg);
-		HIP_ASSERT(0);
-	}
-
-	strcpy(xs->aalg->alg_name, aad->name);
-	strcpy(xs->ealg->alg_name, ead->name);
-	memcpy(xs->aalg->alg_key, authkey, (akeylen + 7)/8);
-	memcpy(xs->ealg->alg_key, enckey, (ekeylen + 7)/8);
-
-
-	xs->props.family = AF_INET6;
-	memcpy(&xs->id.daddr, dst, sizeof(struct in6_addr));
-	memcpy(&xs->props.saddr, src, sizeof(struct in6_addr));
-	xs->props.mode = 0; //transport
-
-	err = -ENOENT;
-	xs->type = xfrm_get_type(IPPROTO_ESP, AF_INET6);
-	if (xs->type == NULL) {
-		HIP_ERROR("COuld not get XFRM type\n");
-		goto out_free;
-	}
-
-	if (xs->type->init_state(xs, NULL)) {
-		HIP_ERROR("COuld not initialize XFRM type\n");
-		goto out_free;
-	}
-
-	xs->km.seq = 0;
-	xs->km.state = XFRM_STATE_VALID;
-
-	/* SA policy ok??? */
-
-	err = xfrm_state_add(xs);
+	err = hip_setup_sa(srchit, dsthit, dstip, spi, alg, enckey,
+			   authkey);
 	if (err) {
-		xs->km.state = XFRM_STATE_DEAD;
-		xfrm_state_put(xs);
-		HIP_ERROR("Adding SA failed\n");
-		goto out_free;
+		HIP_DEBUG("Setting up %s SA: [FAILED] (err=%d)",
+			  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", 
+			  err);
+		return err;
 	}
 
-	err = hip_setup_sp(dst,src);
-	if (!err) {
-		HIP_DEBUG("ESP setup: [OK]\n");
-		return 0;
+	HIP_DEBUG("Setting up %s SA: [OK] (SPI=%x)\n",
+		  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", *spi);
+
+	err = hip_setup_sp(srchit, dsthit, dir);
+	if (err) {
+		HIP_DEBUG("Setting up %s SA: [FAILED] (err=%d)",
+			  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", 
+			  err);
+		/* delete SA */
+		hip_delete_sa(*spi, dsthit);
+		return err;
 	}
 
- out_free:
-	if (xs) {
-		if (xs->aalg)
-			kfree(xs->aalg);
-		if (xs->ealg)
-			kfree(xs->ealg);
-		kfree(xs);
-	}
+	HIP_DEBUG("Setting up %s SA: [OK] (SPI=%x)\n",
+		  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", *spi);
 
-	HIP_DEBUG("Esp setup: [FAILED]\n");
-	return err;
+	return 0;
 }
 
 

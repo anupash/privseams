@@ -234,7 +234,11 @@ config DEBUG_INFO
         bugs back to the UML developers, say N, otherwise say Y.
 
 config FRAME_POINTER
-	bool
+	bool "Frame pointer..."
+	default y if DEBUG_INFO
+
+config DEBUG_KERNEL
+	bool "debug kernel"
 	default y if DEBUG_INFO
 
 config PT_PROXY

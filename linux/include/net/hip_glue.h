@@ -13,8 +13,8 @@
 
 #define HIP_CALLPROC(X) if(hip_functions.X) hip_functions.X
 #define HIP_CALLFUNC(X,Y) (!hip_functions.X)?(Y):hip_functions.X
-#define HIP_SETCALL(X,Y) if(hip_functions.X) printk("hip: Warning, function assigned twice!\n"); \
-                           hip_functions.X = Y
+#define HIP_SETCALL(X) if(hip_functions.X) printk("hip: Warning, function assigned twice!\n"); \
+                           hip_functions.X = X
 #define HIP_INVALIDATE(X) hip_functions.X = NULL
 
 struct hip_callable_functions {
@@ -34,6 +34,7 @@ struct hip_callable_functions {
 	
 	void (*hip_unknown_spi) (struct sk_buff *skb);
 	void (*hip_handle_dst_unreachable) (struct sk_buff *skb);
+	int (*hip_is_our_spi) (uint32_t spi, struct in6_addr *hit);
 };
 
 extern struct hip_callable_functions hip_functions;

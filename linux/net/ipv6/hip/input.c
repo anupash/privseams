@@ -96,9 +96,19 @@ int hip_controls_sane(u16 controls, u16 legal)
  */
 int hip_is_supported_tlv(hip_tlv_type_t tlv)
 {
-
-
 	return 0;
+}
+
+/**
+ * Return >0 if SPI belongs to us. Writes our own HIT into the hit...
+ * (All your SPI belong to us)
+ */
+int hip_is_our_spi(uint32_t spi, struct in6_addr *hit)
+{
+	int res = hip_hadb_get_info(spi, hit, HIP_HADB_OWN_HIT|HIP_ARG_SPI);
+
+	HIP_DEBUG("SPI check: %d\n",res);
+	return res;
 }
 
 /**
@@ -677,12 +687,18 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 		/* let the setup routine give us a spi. */
 		spi_our = 0;
 
+/*
 		err = hip_setup_esp(&ctx->input->hitr, 
 				    &ctx->input->hits,
 				    &spi_our,
 				    transform_esp_suite,
 				    &ctx->hip_espr.key,
 				    &ctx->hip_authr.key);
+*/
+		err = hip_setup_esp(&ctx->input->hits, &ctx->input->hitr,
+				    &ctx->skb_in->nh.ipv6h->saddr, &spi_our,
+				    transform_esp_suite, &ctx->hip_espr.key,
+				    &ctx->hip_authr.key, XFRM_POLICY_IN);
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
 			/* hip_delete_spd/hip_delete_sa ? */
@@ -845,6 +861,7 @@ int hip_handle_r1(struct sk_buff *skb)
 
 	r1 = (struct hip_common*) skb->h.raw;
 	ctx->input = r1;
+	ctx->skb_in = skb;
 
 	/* If R1 was sent without our HIT as a receiver, we'll dig
 	 * our HIT now
@@ -949,7 +966,6 @@ int hip_handle_r1(struct sk_buff *skb)
  	err = hip_create_i2(ctx, solved_puzzle);
  	if (err) {
  		HIP_ERROR("Creation of I2 failed (%d)\n", err);
- 		goto out_err;
  	}
  	
  out_err:
@@ -1168,11 +1184,17 @@ int hip_create_r2(struct hip_context *ctx)
 	{
 		spi_our = 0;
 
-		err = hip_setup_esp(&i2->hitr, &i2->hits,
+/*		err = hip_setup_esp(&i2->hitr, &i2->hits,
 				    &spi_our,
 				    esptfm,
 				    &ctx->hip_espi.key,
 				    &ctx->hip_authi.key);
+*/
+		err = hip_setup_esp(&i2->hits, &i2->hitr, 
+				    &ctx->skb_in->nh.ipv6h->saddr, &spi_our,
+				    esptfm, &ctx->hip_espi.key, &ctx->hip_authi.key,
+				    XFRM_POLICY_IN);
+
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
 			hip_delete_esp(&i2->hitr,&i2->hits);
@@ -1188,11 +1210,17 @@ int hip_create_r2(struct hip_context *ctx)
 	hip_hadb_get_peer_spi_by_hit(&i2->hits, &spi_peer);
 	
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x\n", spi_peer);
+/*
 	err = hip_setup_esp(&i2->hits, &i2->hitr,
 			    &spi_peer,
 			    esptfm,
 			    &ctx->hip_espr.key,
 			    &ctx->hip_authr.key);
+*/
+	err = hip_setup_esp(&i2->hitr, &i2->hits, &ctx->skb_in->nh.ipv6h->saddr,
+			    &spi_peer, esptfm, &ctx->hip_espr.key,
+			    &ctx->hip_authr.key, XFRM_POLICY_OUT);
+
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_peer);
 		HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -1754,9 +1782,14 @@ int hip_handle_r2(struct sk_buff *skb)
 		hip_hadb_multiget(sender,tmp_list,3,&tfm,&ctx->hip_espi,
 				  &ctx->hip_authi,NULL,HIP_ARG_HIT);
 
+/*
 		err = hip_setup_esp(sender, &r2->hitr, &spi_recvd, tfm,
 				    &ctx->hip_espi.key,
 				    &ctx->hip_authi.key);
+*/
+		err = hip_setup_esp(&r2->hitr, sender, &ctx->skb_in->nh.ipv6h->saddr,
+				    &spi_recvd, tfm, &ctx->hip_espi.key,
+				    &ctx->hip_authi.key, XFRM_POLICY_OUT);
 		if (err == -EEXIST) {
 			HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 			HIP_DEBUG("TODO: what to do ? currently ignored\n");
