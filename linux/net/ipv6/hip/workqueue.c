@@ -195,6 +195,11 @@ void hip_stop_khipd()
 	struct hip_work_order *hwo;
 	int i;
 
+
+ 	/* XX FIXME: this does not work on a SMP machine. Use the other
+ 	   method; store all pids of khids and send them a signal (reported
+ 	   by Anthony Joseph). */
+
 	for(i=0; i<NR_CPUS; i++) {
 		hwo = hip_init_job(GFP_KERNEL);
 		if (!hwo) {
