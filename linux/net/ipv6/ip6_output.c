@@ -275,15 +275,15 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 		int ret;
 #if 0
-		struct in6_addr src_hit, dst_hit;
-		ipv6_addr_copy(&src_hit, &hdr->saddr);
-		ipv6_addr_copy(&dst_hit, &hdr->daddr);
+ 		struct in6_addr src_hit, dst_hit;
+ 		ipv6_addr_copy(&src_hit, &hdr->saddr);
+ 		ipv6_addr_copy(&dst_hit, &hdr->daddr);
 #endif
 		if (dst && dst->xfrm) { /* store HITs for later use in esp6.c */
-			ipv6_addr_copy(&dst->xfrm->src_hit, &hdr->saddr);
-			ipv6_addr_copy(&dst->xfrm->dst_hit, &hdr->daddr);
-		}
-		ret = HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb);
+ 			ipv6_addr_copy(&dst->xfrm->src_hit, &hdr->saddr);
+ 			ipv6_addr_copy(&dst->xfrm->dst_hit, &hdr->daddr);
+ 		}
+ 		ret = HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb);
 		if (ret < 0)
 			goto end_hip;
 #if 0
@@ -293,31 +293,28 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 			int err2;
 			struct flowi fl_tmp;
 
-			printk(KERN_DEBUG "sk_state=%d, is established=%s\n", sk->sk_state,
+ 			printk(KERN_DEBUG "sk_state=%d, is established=%s\n", sk->sk_state,
 			       sk->sk_state == TCP_ESTABLISHED ? "yes" : "no");
-			printk(KERN_DEBUG "ip6_xmit, skb->dst 1 %p\n", skb->dst);
-			/* fl must be HITs ? */
-			memcpy(&fl_tmp, fl, sizeof(struct flowi));
-			ipv6_addr_copy(&fl_tmp.fl6_src, &src_hit);
-			ipv6_addr_copy(&fl_tmp.fl6_dst, &dst_hit);
+ 			printk(KERN_DEBUG "ip6_xmit, skb->dst 1 %p\n", skb->dst);
+ 			/* fl must be HITs ? */
+ 			memcpy(&fl_tmp, fl, sizeof(struct flowi));
+ 			ipv6_addr_copy(&fl_tmp.fl6_src, &src_hit);
+ 			ipv6_addr_copy(&fl_tmp.fl6_dst, &dst_hit);
 			err2 = ip6_dst_lookup(sk, dst_tmp2, &fl_tmp);
 			if (err2) {
 				printk(KERN_DEBUG "ip6_dst_lookup failed, err2=%d\n", err2);
 			} else {
-				printk(KERN_DEBUG "ip6_xmit dst_tmp2 post xfrm_lookup=%p\n", *dst_tmp2);
+ 				printk(KERN_DEBUG "ip6_xmit dst_tmp2 post xfrm_lookup=%p\n", *dst_tmp2);
 				printk(KERN_DEBUG "do ip6_dst_store\n");
-				//sk_dst_reset(sk); ?
-				ip6_dst_store(sk, *dst_tmp2, NULL /* ? */);
-				printk(KERN_DEBUG "ip6_xmit skb dst 0=%p\n", skb->dst);
-				//dst_release(skb->dst); ?
-				printk(KERN_DEBUG "ip6_xmit skb dst release=%p\n", skb->dst);
-				skb->dst = dst_clone(*dst_tmp2);
-				dst = skb->dst;
-				//dst = *dst_tmp2;
-				printk(KERN_DEBUG "ip6_xmit, skb->dst 2 %p\n", skb->dst);
-			}
+ 				//sk_dst_reset(sk); ?
+ 				ip6_dst_store(sk, *dst_tmp2, NULL /* ? */);
+ 				printk(KERN_DEBUG "ip6_xmit skb dst 0=%p\n", skb->dst);
+ 				//dst_release(skb->dst); ?
+ 				printk(KERN_DEBUG "ip6_xmit skb dst release=%p\n", skb->dst);
+ 				dst = skb->dst = dst_clone(*dst_tmp2);
+ 				printk(KERN_DEBUG "ip6_xmit, skb->dst 2 %p\n", skb->dst);
+ 			}
 		}
-		//printk(KERN_DEBUG "ip6_xmit, skb->dst post %p\n", skb->dst);
 #endif /* 0 */
 #endif /* CONFIG_HIP */
 		IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);

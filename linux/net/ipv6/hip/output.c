@@ -59,7 +59,6 @@
  *          "drop the packet".
  *          Zero if the destination address
  *          was an ordinary IPv6 address or the state was already established.
- *
  */
 int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 {
@@ -78,7 +77,6 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	}
 
 	/* The source address is not yet a HIT, just the dst address. */
-
 	entry = hip_hadb_find_byhit(&hdr->daddr);
 	if (!entry) {
 		HIP_ERROR("Unknown HA\n");
@@ -97,7 +95,6 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		break;
 	case HIP_STATE_UNASSOCIATED:
 		HIP_DEBUG("Initiating connection\n");
-
 #ifdef KRISUS_THESIS
 		if (!gtv_inuse) {
 			KRISU_START_TIMER(KMM_GLOBAL);
@@ -150,7 +147,6 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		}
 
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
-
 		if (!skb) {
 			HIP_ERROR("Established state and no SKB!");
 			err = -EADDRNOTAVAIL;
@@ -176,155 +172,12 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		break;
 	}
 
-	_HIP_DEBUG("entry default spi 0x%x\n", entry->default_spi_out);
-#ifdef CONFIG_NETFILTER
-	if (0 && skb && entry->skbtest) {
-		HIP_DEBUG("skbtest is 1\n");
-		hip_print_hit("hdr->saddr", &(hdr->saddr));
-		hip_print_hit("hdr->daddr", &(hdr->daddr));
-		hip_print_hit("skb->nh.ipv6h.saddr", &(skb->nh.ipv6h->saddr));
-		hip_print_hit("skb->nh.ipv6h.daddr", &(skb->nh.ipv6h->daddr));
-		HIP_DEBUG("skb->dst %p\n", skb->dst);
+	if (entry->skbtest) {
+		/* sock needs to relookup its dst, todo */
+		HIP_DEBUG("skbtest is 1, setting back to 0\n");
 		entry->skbtest = 0;
-		err = 5;
-		goto out;
-
-		if (skb->dst) {
-			int err;
-			struct flowi fl;
-
-			struct dst_entry *child = skb->dst;
-			int t = 0;
-			while (child) {
-				if (child->obsolete > 0 ||
-				    (child->dev && !netif_running(child->dev)) ||
-				    (child->xfrm && child->xfrm->km.state != XFRM_STATE_VALID)) {
-					t = 1;
-					break;
-				}
-				child = child->child;
-			}
-
-			if (skb->dst->xfrm) {
-				xfrm_state_put(skb->dst->xfrm);
-				//skb->dst->xfrm = NULL;
-			}
-
-			if (t) {
-				dst_release(skb->dst);
-				skb->dst = NULL;
-			}
-#if 1
-			HIP_DEBUG("skb->dst %p\n", skb->dst);
-//			dst_release(skb->dst);
-//			skb->dst = NULL;
-			memset(&fl, 0 , sizeof(struct flowi));
-			fl.oif = 0;
-			fl.fl6_flowlabel = 0;
-//			ipv6_addr_copy(&fl.fl6_src, &(hdr->saddr));
-//			ipv6_addr_copy(&fl.fl6_dst, &(hdr->daddr));
-			ipv6_addr_copy(&fl.fl6_src, &entry->hit_our);
-			ipv6_addr_copy(&fl.fl6_dst, &entry->hit_peer);
-			err = ip6_dst_lookup(skb->sk, &skb->dst, &fl);
-			if (err) {
-				HIP_ERROR("ip6_dst_lookup err=%d\n", err);
-			}
-			HIP_DEBUG("skb->dst 2 %p\n", skb->dst);
-#endif
-#if 0
-			int err;
-			struct dst_entry *dst_tmp;
-			struct flowi fl;
-
-			fl.proto = IPPROTO_HIP;
-			fl.fl6_dst = r;
-			fl.oif = 0;
-			fl.fl6_flowlabel = 0;
-			/* copypaste from tcp_v6_xmit, might be very wrong */
-			sk_dst_reset(skb->sk);
-			err = ip6_dst_lookup(skb->sk, &dst_tmp, &fl);
-			if (err) {
-				HIP_ERROR("dst_lookup err=%d\n", err);
-				sk->sk_err_soft = -err;
-			}
-			ip6_dst_store(skb->sk, dst_tmp, NULL);
-			skb->sk->sk_route_caps = dst_tmp->dev->features &
-				~(NETIF_F_IP_CSUM | NETIF_F_TSO);
-			tcp_sk(sk)->ext2_header_len = dst_tmp->header_len;
-			skb->dst = dst_clone(dst_tmp);
-#endif
-		} else
-			HIP_DEBUG("no ops\n");
-#if 0
-		rt = rt6_lookup(&hdr->daddr, &hdr->saddr, 0, 0);
-		if (rt) {
-			HIP_DEBUG("got rt\n");
-			
-		} else
-			HIP_ERROR("NULL rt\n");
-#endif
-
-#if 0
-		if (ip6_route_me_harder(skb))
-			HIP_ERROR("rmh failed\n");
-		else
-			HIP_DEBUG("skb rmh ok\n");
-#endif
-		entry->skbtest = 0;
-	} else
-		_HIP_DEBUG("skb null | skbtest 0\n");
-#endif
-
-#if 0
-	if (skb) {
-//#ifdef CONFIG_NETFILTER
-//		HIP_DEBUG("setting skb NFC_ALTERED\n");
-//		skb->nfcache |= NFC_ALTERED;
-//#else
-		if (skb->dst) {
-			/* ip6_route_me_harder */
-			struct dst_entry *dst;
-			struct flowi fl = {
-				.oif = skb->sk ? skb->sk->sk_bound_dev_if : 0,
-				.nl_u =
-				{ .ip6_u =
-				  { .daddr = hdr->daddr,
-				    .saddr = hdr->saddr, } },
-				.proto = hdr->nexthdr,
-			};
-			HIP_DEBUG("call ip6_route_output\n");
-			dst = ip6_route_output(skb->sk, &fl);
-			if (dst->error) {
-				//IP6_INC_STATS(IPSTATS_MIB_OUTNOROUTES);
-				LIMIT_NETDEBUG(
-					HIP_DEBUG("No more route.\n"));
-				dst_release(dst);
-				err = -EINVAL;
-				goto out;
-			}
-			dst_release(skb->dst);
-			skb->dst = dst;
-			
-		} else
-			HIP_DEBUG("no dst\n");
-//#endif
+		// err = 5;
 	}
-#endif
-
-#if 0
-	if (skb && skb->dst) {
-		if (skb->dst->xfrm) {
-			struct xfrm_state *x = skb->dst->xfrm;
-			struct xfrm_id *id = &x->id;
-			//HIP_DEBUG("xfrm->id.spi=0x%x\n", ntohl(((dst->xfrm)->id).spi));
-			HIP_DEBUG("xfrm->id.spi=0x%x\n", ntohl(id->spi));
-			id->spi = htonl(entry->default_spi_out);
-		} else
-			HIP_ERROR("no dst->xfrm\n");
-	} else
-		HIP_ERROR("no dst\n");
-#endif
-
  out:
 	if (entry)
 		hip_put_ha(entry);
@@ -344,16 +197,13 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
  */
 static int hip_getfrag(void *from, char *to, int offset, int len, int odd, struct sk_buff *skb)
 {
-
 	memcpy(to, ((u8 *)from)+offset, len);	
-
 	if (skb->ip_summed != CHECKSUM_HW) {
 		unsigned int csum;
 
 		csum = csum_partial((u8 *)from+offset, len, 0);
 		skb->csum = csum_block_add(skb->csum, csum, odd);
 	}
-
 	return 0;
 }
 
@@ -378,7 +228,6 @@ int hip_csum_verify(struct sk_buff *skb)
 		     sizeof(struct in6_addr));
 	_HIP_HEXDUMP("daddr", &(skb->nh.ipv6h->daddr),
 		     sizeof(struct in6_addr));
-
 	csum = csum_partial(skb->h.raw, (len + 1) << 3, 0);
 
 	return csum_ipv6_magic(&(skb->nh.ipv6h->saddr),
@@ -404,7 +253,6 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 {
 	int err = 0;
 	struct dst_entry *dst = NULL;
-
 	struct flowi fl;
 	unsigned int csum;
 	unsigned int len;
@@ -421,7 +269,6 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		fl.fl6_src = *src_addr;
 	else
 		memset(&fl.fl6_src, 0, sizeof(*src_addr));
-
 
 	buf->checksum = htons(0);
 	len = (buf->payload_len + 1) << 3;
@@ -516,7 +363,6 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 	}
 
 	_HIP_DEBUG("hip: send I1 packet\n");	
-
 	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);
 
  out_err:
@@ -551,8 +397,7 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 
 	/* dst_addr is the IP address of the Initiator... */
 	r1pkt = hip_get_r1(dst_addr, own_addr);
-	if (!r1pkt)
-	{
+	if (!r1pkt) {
 		HIP_ERROR("No precreated R1\n");
 		err = -ENOENT;
 		goto out_err;
@@ -564,7 +409,6 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
 
 	/* set cookie state to used (more or less temporary solution ?) */
-
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
 	err = hip_csum_send(NULL, dst_addr, r1pkt);	
@@ -655,7 +499,6 @@ static int hip_get_all_valid(hip_ha_t *entry, void *op)
 		return -1;
 
 	/* should we check the established status also? */
-
 	if ((entry->hastate & HIP_HASTATE_VALID) == HIP_HASTATE_VALID) {
 		rk->array[rk->count] = entry;
 		hip_hold_ha(entry);

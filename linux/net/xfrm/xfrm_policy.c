@@ -721,19 +721,12 @@ int xfrm_lookup(struct dst_entry **dst_p, struct flowi *fl,
 	u32 genid;
 	u16 family = dst_orig->ops->family;
 
-	//	printk(KERN_DEBUG "xfrm_lookup\n");
-if (family == AF_INET6 && (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst))) {
-//printk(KERN_DEBUG "xfrm_lookup: fl6_src=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_src));
-//printk(KERN_DEBUG "xfrm_lookup: fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
-}
-
 restart:
 	genid = atomic_read(&flow_cache_genid);
 	policy = NULL;
 	if (sk && sk->sk_policy[1])
 		policy = xfrm_sk_policy_lookup(sk, XFRM_POLICY_OUT, fl);
-	//if (policy)
-	//	printk(KERN_DEBUG "xfrm_lookup sk_policy_lookup found %p\n", policy);
+
 	if (!policy) {
 		/* To accelerate a bit...  */
 		if ((dst_orig->flags & DST_NOXFRM) || !xfrm_policy_list[XFRM_POLICY_OUT])
@@ -742,9 +735,8 @@ restart:
 		policy = flow_cache_lookup(fl, family,
 					   policy_to_flow_dir(XFRM_POLICY_OUT),
 					   xfrm_policy_lookup);
-		//	printk(KERN_DEBUG "xfrm_lookup flow cache lookup %p\n", policy);
 	}
-	//printk(KERN_DEBUG "xfrm_lookup 3 policy=%p\n", policy);
+
 	if (!policy)
 		return 0;
 
@@ -763,11 +755,12 @@ restart:
 			return 0;
 		}
 
-		//printk(KERN_DEBUG "xfrm_lookup ALLOW\n");
-if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
-//printk(KERN_DEBUG "xfrm_lookup ALLOW: fl6_src=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_src));
-//printk(KERN_DEBUG "xfrm_lookup ALLOW: fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
-}
+		if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
+			//printk(KERN_DEBUG "xfrm_lookup ALLOW:"
+			//"fl6_src=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_src));
+			//printk(KERN_DEBUG "xfrm_lookup ALLOW:"
+			//"fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
+		}
 
 		/* Try to find matching bundle.
 		 *
@@ -780,7 +773,6 @@ if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
 			return PTR_ERR(dst);
 		}
 
-		//printk(KERN_DEBUG "xfrm_lookup xfrm_find_bundle dst=%p\n", dst);
 		if (dst)
 			break;
 
@@ -813,42 +805,13 @@ if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
 			if (err < 0)
 				goto error;
 		}
-		// printk(KERN_DEBUG "tmpl_resolve ret nx=%d\n", nx);
+
 		if (nx == 0) {
 			/* Flow passes not transformed. */
 			xfrm_pol_put(policy);
 			return 0;
 		}
 
-#if 0
-/* if 0'd due to lookup in esp6.c */
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		/* this is not ok, but until this is fixed .. */
-
-		/* set default outbound SPI to packets belonging to
-		 * established HIP state */
-		if (nx == 1 && ipv6_addr_is_hit(&fl->fl6_dst)) {
-			/* with HIP nx is always 1 ? */
-			uint32_t spi;
-			int hip_state_ok = 0;
-
-			//printk(KERN_DEBUG "xfrm_lookup nx==1: fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x SPI=0x%x\n",
-//			       NIP6(fl->fl6_dst), ntohl(xfrm[0]->id.spi));
-			spi = HIP_CALLFUNC(hip_get_default_spi_out, 0) (&fl->fl6_dst, &hip_state_ok);
-			if (hip_state_ok) {
-				if (!spi) {
-					printk(KERN_DEBUG "outbound SPI not found\n");
-					err = -ENOMSG;
-					goto error;
-				}
-				//printk(KERN_DEBUG "xfrm_lookup: changing outbound SPI 0x%x to 0x%x\n",
-				//      ntohl(xfrm[0]->id.spi), spi);
-				xfrm[0]->id.spi = htonl(spi);
-			} else
-				printk(KERN_DEBUG "HIT not in ok state, SPI not changed\n"); /* other states ? */
-		}
-#endif
-#endif
 		dst = dst_orig;
 		err = xfrm_bundle_create(policy, xfrm, nx, fl, &dst, family);
 
@@ -878,14 +841,13 @@ if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
 		dst_hold(dst);
 		write_unlock_bh(&policy->lock);
 	}
-//printk(KERN_DEBUG "xfrm_lookup end, dst %p\n", dst);
+
 	*dst_p = dst;
 	dst_release(dst_orig);
 	xfrm_pol_put(policy);
 	return 0;
 
 error:
-	//printk(KERN_DEBUG "xfrm_lookup label error\n");
 	dst_release(dst_orig);
 	xfrm_pol_put(policy);
 	*dst_p = NULL;
