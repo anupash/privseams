@@ -90,13 +90,6 @@ int sysctl_ipv6_bindv6only;
 atomic_t inet6_sock_nr;
 #endif
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-/* Placeholder for HIP hooks */
-struct hip_callable_functions hip_functions;
-EXPORT_SYMBOL(hip_functions);
-#endif
-
 /* The inetsw table contains everything that inet_create needs to
  * build a new socket.
  */
@@ -119,7 +112,11 @@ static __inline__ struct ipv6_pinfo *inet6_sk_generic(struct sock *sk)
 	return (struct ipv6_pinfo *)(((u8 *)sk) + offset);
 }
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+int inet6_create(struct socket *sock, int protocol)
+#else
 static int inet6_create(struct socket *sock, int protocol)
+#endif /* CONFIG_HIP */
 {
 	struct inet_opt *inet;
 	struct ipv6_pinfo *np;
@@ -526,11 +523,12 @@ static struct net_proto_family inet6_family_ops = {
 	.owner	= THIS_MODULE,
 };
 
-/* BEGIN HIPL PATCH */
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+EXPORT_SYMBOL(inet6_family_ops);
 EXPORT_SYMBOL(inet6_stream_ops);
 EXPORT_SYMBOL(inet6_dgram_ops);
-EXPORT_SYMBOL(inet6_family_ops);
-/* END HIPL PATCH */
+EXPORT_SYMBOL(inet6_create);
+#endif /* CONFIG_HIP */
 
 #ifdef CONFIG_SYSCTL
 extern void ipv6_sysctl_register(void);

@@ -8,15 +8,6 @@
 #include <net/sock.h>
 #include <net/hip.h>
 
-extern struct net_proto_family hip_family_ops;
-
-extern struct proto_ops inet_stream_ops;
-extern struct proto_ops inet_dgram_ops;
-extern struct proto_ops inet6_stream_ops;
-extern struct proto_ops inet6_dgram_ops;
-extern struct net_proto_family inet_family_ops;
-extern struct net_proto_family inet6_family_ops;
-
 int hip_init_socket_handler(void);
 void hip_uninit_socket_handler(void);
 

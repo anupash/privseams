@@ -60,7 +60,6 @@
 #include <net/hip_glue.h>
 #endif
 
-
 static int ip6_fragment(struct sk_buff **pskb, int (*output)(struct sk_buff**));
 
 static __inline__ void ipv6_select_ident(struct sk_buff *skb, struct frag_hdr *fhdr)
