@@ -72,18 +72,26 @@ at least the following options:
   Code maturity level options
   [*] Prompt for development and/or incomplete code/drivers
 
+  Processor type and features
+  [*] Preemptible Kernel
+
   Device Drivers ---> Networking support ---> Networking options
   [*] TCP/IP networking
   <*> The IPv6 protocol (EXPERIMENTAL)
   <M> Host Identity Protocol
   [*]   HIP: debugging (NEW)
 
-IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
-dependencies. We recommend that you compile HIP as a kernel module.
+We urge you to enable the preemptive kernel option. You can run HIP
+without this, but you will experience losses of interaction with
+underlying host. This typically happens when you load the HIP module,
+or when the module sends HIP messages to the network.
 
-Currently, there is bug in the HIP module compilation. IPv6 must
-compiled as built in or otherwise the compilation of the HIP module
-fails (undefined reference to `hip_functions').
+IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
+dependencies after you have selected HIP. We recommend that you
+compile HIP as a kernel module. Currently, there is bug in the HIP
+module compilation. IPv6 must compiled as built in. Otherwise, the
+compilation of the HIP module fails (with an error message "undefined
+reference to hip_functions").
 
 HIP debugging is not mandatory, but use of it is highly recommended in
 order to get more information when problems arise. HIP debugging
