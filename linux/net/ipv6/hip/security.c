@@ -1,14 +1,20 @@
 /*
- * security related functions
+ * HIPL security related functions
+ *
+ * Authors:
+ * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Kristian Slavov <ksl@iki.fi>
  */ 
 
+#include <linux/in6.h>
 #include "security.h"
+#include "crypto/dh.h"
 
 /**
  * hip_delete_spd - delete an SPD entry
  * @hitd: destination HIT (peer's)
  * @hits: source HIT (own)
- *
+ * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  *
  * Returns: 0 if successful, else < 0.
  */
@@ -17,18 +23,21 @@ int hip_delete_spd(struct in6_addr *hitd, struct in6_addr *hits, int dir)
 	int err = 0;
 	struct xfrm_selector sel;
 
+	HIP_DEBUG("dir=%d\n", dir);
 	memset(&sel, 0, sizeof(sel));
 
 	sel.family = AF_INET6;
 	sel.prefixlen_d = 128;
 	sel.prefixlen_s = 128;
-	sel.proto = 0; // what here?
+	sel.proto = IPPROTO_ESP;
 
 	ipv6_addr_copy((struct in6_addr *)&sel.saddr, hits);
 	ipv6_addr_copy((struct in6_addr *)&sel.daddr, hitd);
+	hip_print_hit("sel.saddr", (struct in6_addr *)&sel.saddr);
+	hip_print_hit("sel.daddr", (struct in6_addr *)&sel.daddr);
 
 	if (xfrm_policy_bysel(dir, &sel, 1)) { 
-		HIP_DEBUG("spd_remove was successful\n");
+		HIP_DEBUG("SPD removed successfully\n");
 	} else {
 		HIP_DEBUG("No SPD entry found\n");
 		err = -ENOENT;
@@ -40,7 +49,6 @@ int hip_delete_spd(struct in6_addr *hitd, struct in6_addr *hits, int dir)
  * hip_delete_sa - delete HIP SA which has SPI of @spi
  * @spi: SPI value of SA
  * @dst: destination HIT of SA
- * @src: destination HIT of SA
  *
  * Returns: 0 if successful, else < 0.
  */
@@ -49,9 +57,13 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	struct xfrm_state *xs;
 	xfrm_address_t *xaddr;
 
-
-	/* todo: return if spi == 0 ? (first time use of sdb_entry) */
-
+	/* todo: move SPI multiget code from delete_esp here */
+	HIP_DEBUG("spi=0x%x\n", spi);
+	hip_print_hit("dst address", dst);
+	/* todo: return if spi == 0 ? (first time use of hadb_entry) */
+	if (spi == 0) {
+		HIP_DEBUG("SPI is 0, should return now\n");
+	}
 	xaddr = (xfrm_address_t *)dst;
 
 	xs = xfrm_state_lookup(xaddr, spi, IPPROTO_ESP, AF_INET6);
@@ -59,7 +71,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 		HIP_ERROR("Could not find SA!\n");
 		return -ENOENT;
 	}
-
+	/* xfrm_state_put ? (xfrm_state_lookup incs xs's refcount) */
 	xfrm_state_delete(xs);
 	
 	return 0;
@@ -86,30 +98,39 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 	setlist[2] = &new_spi_peer;
 	setlist[3] = &new_spi_our;
 
-
 	k = hip_hadb_multiget(peer, 4, getlist, setlist, HIP_ARG_HIT);
 	if (k != 4) {
-		HIP_ERROR("Could not get SPIs from db\n");
-//		return -EINVAL;
+		HIP_ERROR("Could not get all SPIs from db (got only %d out of 4)\n", k);
 	}
 
 	/* Delete SPDs */
 	hip_delete_spd(peer, own, XFRM_POLICY_OUT);
 	hip_delete_spd(own, peer, XFRM_POLICY_IN);
 
+	/* todo: move SPI multiget code to delete_esp */
+
 	/* Delete SAs */
-	hip_delete_sa(spi_peer, own);
-	hip_delete_sa(spi_our, peer);
-	if (k > 2) {
+	if (k > 0)
+		hip_delete_sa(spi_peer, own);
+	if (k > 1)
+		hip_delete_sa(spi_our, peer);
+	if (k > 2)
 		hip_delete_sa(new_spi_peer, own);
+	if (k > 3)
 		hip_delete_sa(new_spi_our, peer);
-	}
 
 	return 0;
 }
 
-
-
+/**
+ * hip_setup_sp - setup IPsec SPD entries
+ * @src: source HIT
+ * @dst: destination HIT
+ * @spi: SPI value
+ * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
+ *
+ * Returns: 0 if successful, else < 0.
+ */
 static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
 			int spi, int dir)
 {
@@ -117,45 +138,64 @@ static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
 	struct xfrm_policy *xp;
 	struct xfrm_tmpl *tmpl;
 
-	/* SP... */
+	HIP_DEBUG("spi=0x%x dir=%d\n", spi, dir);
+	hip_print_hit("src", src);
+	hip_print_hit("dst", dst);
 
+	/* SP */
 	xp = xfrm_policy_alloc(GFP_KERNEL);
 	if (!xp) {
-		HIP_ERROR("Failed ipsec_sa_kmalloc\n");
-		return -ENOBUFS;
+		HIP_ERROR("Failed to allocate memory for new SP\n");
+		return -ENOMEM;
 	}
 
-	xp->action = XFRM_POLICY_ALLOW;
-
+	/* xfrm_policy_alloc memset sets most of the values in xp to
+	 * default values, but let's set them for clarity and
+	 * completeness */
 	memcpy(&xp->selector.daddr, dst, sizeof(struct in6_addr));
 	memcpy(&xp->selector.saddr, src, sizeof(struct in6_addr));
 	xp->selector.family = xp->family = AF_INET6;
 	xp->selector.prefixlen_d = 128;
 	xp->selector.prefixlen_s = 128;
-	xp->selector.proto = 0; // any?
-	xp->selector.sport = xp->selector.dport = xp->selector.sport_mask = 0;
-	xp->selector.dport_mask = 0;
+	xp->selector.proto = IPPROTO_ESP;
+	xp->selector.sport = xp->selector.dport = 0;
+	xp->selector.sport_mask = xp->selector.dport_mask = 0;
 
 	xp->lft.soft_byte_limit = XFRM_INF;
 	xp->lft.hard_byte_limit = XFRM_INF;
-	xp->lft.soft_packet_limit = XFRM_INF;	 
-	xp->lft.hard_packet_limit = XFRM_INF;	 
+	xp->lft.soft_packet_limit = XFRM_INF;
+	xp->lft.hard_packet_limit = XFRM_INF;
+	/* xp->curlft. add_time and use_time are set in xfrm_policy_insert */
 
-	xp->xfrm_nr = 1; // one transform?
+	xp->family = AF_INET6; /* ? */
+	xp->action = XFRM_POLICY_ALLOW;
+	xp->flags = 0;
+	xp->dead = 0;
+	xp->xfrm_nr = 1; // one transform? /* check: see include/net/xfrm.h */
 	
 	tmpl = &xp->xfrm_vec[0];
 
 	ipv6_addr_copy((struct in6_addr *)&tmpl->id.daddr, dst);
 	tmpl->id.spi = spi;
 	tmpl->id.proto = IPPROTO_ESP;
+
+	ipv6_addr_copy((struct in6_addr *)&tmpl->saddr, &in6addr_any);
+
 	tmpl->reqid = 666;
 	tmpl->mode = XFRM_MODE_TRANSPORT;
 	tmpl->share = 0; // unique. Is this the correct number?
+	tmpl->optional = 0; /* check: is 0 ok ? */
 	tmpl->aalgos = ~0;
 	tmpl->ealgos = ~0;
+	tmpl->calgos = ~0;
 
 	err = xfrm_policy_insert(dir, xp, 1);
 	if (err) {
+		if (err == -EEXIST)
+			HIP_DEBUG("SP policy already exists\n");
+		else
+			HIP_ERROR("Could not insert new SP policy, err=%d\n", err);
+		// xfrm_policy_delete(xp); ?
 		kfree(xp);
 		return err;
 	}
@@ -164,7 +204,27 @@ static int hip_setup_sp(struct in6_addr *src, struct in6_addr *dst,
 	return 0;
 }
 
-static
+/**
+ * hip_setup_sa - set up a new IPsec SA
+ * @srcit: source HIT
+ * @dsthit: destination HIT
+ * @dstip: destination IPv6 address USELESS ?
+ * @spi: SPI value
+ * @alg: ESP algorithm to use
+ * @enckey: ESP encryption key
+ * @authkey: authentication key
+ *
+ * @spi is a value-result parameter. If @spi is 0 the kernel gets a
+ * free SPI value for us. If @spi is non-zero we try to get the new SA
+ * having @spi as its SPI.
+ *
+ * On success IPsec security association is set up @spi contains the
+ * SPI.
+ *
+ * Returns: 0 if successful, else < 0.
+ */
+
+/* dstip IS USELESS ? */
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 struct in6_addr *dstip, uint32_t *spi, int alg,
 		 void *enckey, void *authkey, int is_active)
@@ -173,26 +233,35 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	struct xfrm_state *xs;
 	struct xfrm_algo_desc *ead;
 	struct xfrm_algo_desc *aad;
-	size_t 	akeylen,ekeylen;
+	size_t akeylen, ekeylen; /* in bits */
 
+	HIP_DEBUG("*spi=0x%x alg=%d is_active=%d\n", *spi, alg, is_active);
 	akeylen = ekeylen = 0;
 	err = -ENOMEM;
 
 	xs = xfrm_state_alloc();
 	if (!xs) {
-		HIP_ERROR("No memory\n");
+		HIP_ERROR("No memory for xfrm_state\n");
 		return err;
 	}
 	
 	/* will fill like a pfkey_add would fill */
 
-	xs->id.proto = IPPROTO_ESP;
+	/* fill values used by xfrm_alloc_spi */
+	ipv6_addr_copy((struct in6_addr *)&xs->id.daddr, dsthit); /* ok ? */
+	xs->id.spi = 0;
+	xs->id.proto = IPPROTO_ESP;  /* ok ? */
+
+	xs->props.family = AF_INET6;
 	if (*spi != 0) 
 		xfrm_alloc_spi(xs, *spi, *spi);
 	else
-		xfrm_alloc_spi(xs, 256, 0xFFFFFFFF); // XXX: ok spi values?
+		/* Try to find a suitable random SPI within the range
+		 * in RFC 2406 section 2.1 */
+		xfrm_alloc_spi(xs, 256, 0xFFFFFFFF);
 
 	if (xs->id.spi == 0) {
+		HIP_ERROR("Could not get SPI value for the SA\n");
 		if (*spi != 0) {
 			err = -EEXIST;
 			goto out;
@@ -201,15 +270,17 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 			goto out;
 		}
 	}
-		
-	*spi = xs->id.spi; 
-	xs->props.replay_window = 0; // XXX: Is this the size of the replay window in bits? 
-	
 
+	*spi = xs->id.spi; 
+	// is this needed ?
+	xs->props.replay_window = 0; // XXX: Is this the size of the replay window in bits? 
+
+
+	HIP_DEBUG("SPI setup ok, trying to setup enc/auth algos\n");
+
+	err = -ENOENT;
 	switch (alg) {
 	case HIP_ESP_3DES_SHA1:
-		err = -ENOENT;
-
 		ead = xfrm_ealg_get_byid(SADB_EALG_3DESCBC);
 		if (!ead) {
 			HIP_ERROR("3DES not supported\n");
@@ -226,7 +297,6 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		xs->props.aalgo = SADB_AALG_SHA1HMAC;
 		break;
 	case HIP_ESP_NULL_SHA1:
-		err = -ENOENT;
 		ead = xfrm_ealg_get_byid(SADB_EALG_NULL);
 		if (!ead) {
 			HIP_ERROR("NULL not supported\n");
@@ -241,10 +311,11 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 		xs->props.ealgo = SADB_EALG_NONE;
 		xs->props.aalgo = SADB_AALG_SHA1HMAC;
-
+		break;
 	default:
+		err = -EINVAL;
 		ead = aad = NULL;
-		HIP_ERROR("Unsupported type: 0x%x\n",alg);
+		HIP_ERROR("Unsupported algo type: 0x%x\n", alg);
 		HIP_ASSERT(0);
 	}
 
@@ -264,19 +335,19 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	memcpy(xs->aalg->alg_key, authkey, (akeylen + 7)/8);
 	memcpy(xs->ealg->alg_key, enckey, (ekeylen + 7)/8);
 	xs->aalg->alg_key_len = akeylen;
-	xs->ealg->alg_key_len = ekeylen;	
+	xs->ealg->alg_key_len = ekeylen;
 
-	xs->props.family = AF_INET6;
-	memcpy(&xs->id.daddr, dsthit, sizeof(struct in6_addr));
+	xs->props.family = AF_INET6; //not needed anymore ?
+	memcpy(&xs->id.daddr, dsthit, sizeof(struct in6_addr)); //not needed anymore ?
 	memcpy(&xs->props.saddr, srchit, sizeof(struct in6_addr));
 
 	xs->props.mode = XFRM_MODE_TRANSPORT; //transport
 	xs->props.reqid = 666; // SP has to know which SA to use
-	
+
 	err = -ENOENT;
 	xs->type = xfrm_get_type(IPPROTO_ESP, AF_INET6);
 	if (xs->type == NULL) {
-		HIP_ERROR("COuld not get XFRM type\n");
+		HIP_ERROR("Could not get XFRM type\n");
 		goto out;
 	}
 
@@ -295,11 +366,12 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	err = xfrm_state_add(xs);
 	if (err) {
-		xs->km.state = XFRM_STATE_DEAD;
+		xs->km.state = XFRM_STATE_DEAD; /* todo: comment out and call xfrm_state_delete(xs) below */
 		HIP_ERROR("Adding SA failed\n");
 		goto out;
 	}
 
+	HIP_DEBUG("New SA added successfully\n");
 	return 0;
  out:
 	if (xs) {
@@ -307,9 +379,11 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 			kfree(xs->aalg);
 		if (xs->ealg)
 			kfree(xs->ealg);
+		// xfrm_state_delete(xs) ? see above
 		kfree(xs);
 	}
 
+	HIP_DEBUG("returning, err=%d\n", err);
 	return err;
 }
 
@@ -334,6 +408,7 @@ int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 		  struct in6_addr *dstip, uint32_t *spi, int alg, 
 		  void *enckey, void *authkey, int dir, int is_active)
 {
+/* dstip is useless ? */
 	int err;
 
 	err = hip_setup_sa(srchit, dsthit, dstip, spi, alg, enckey,
@@ -367,12 +442,11 @@ int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 
 
-
-
 /**
- * Inserts the current DH-key into the buffer. If a DH-key does not exist, we will create
- * one.
- * returns >0 if ok, -1 if errorz
+ * hip_insert_dh - Insert the current DH-key into the buffer
+ *
+ * If a DH-key does not exist, we will create one.
+ * Returns: >0 if ok, -1 if errors
  */
 int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 {

@@ -431,7 +431,7 @@ retry:
 	if (sk == NULL)
 		goto no_dst;
 	nlk = nlk_sk(sk);
-
+	printk(KERN_DEBUG "netlink_unicast len=%d nlk->data_ready=0x%p\n", len, nlk->data_ready);
 	/* Don't bother queuing skb if kernel socket has no input function */
         if (nlk->pid == 0 && !nlk->data_ready)
         	goto no_dst;
@@ -517,7 +517,7 @@ int netlink_broadcast(struct sock *ssk, struct sk_buff *skb, u32 pid,
 	int failure = 0, delivered = 0;
 
 	/* While we sleep in clone, do not allow to change socket list */
-
+	printk(KERN_DEBUG "netlink_broadcast protocol=%d pid=%u group=%u\n", protocol, pid, group);
 	netlink_lock_table();
 
 	sk_for_each(sk, node, &nl_table[protocol]) {
@@ -744,7 +744,7 @@ out:
 void netlink_data_ready(struct sock *sk, int len)
 {
 	struct netlink_opt *nlk = nlk_sk(sk);
-
+	printk(KERN_DEBUG "netlink_data_ready len=%d nlk->data_ready=0x%p\n", len, nlk->data_ready);
 	if (nlk->data_ready)
 		nlk->data_ready(sk, len);
 	netlink_rcv_wake(sk);
