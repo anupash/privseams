@@ -81,6 +81,10 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 /* Set to 3 to get tracing... */
 #define ACONF_DEBUG 2
 
@@ -2956,6 +2960,10 @@ static void ipv6_ifa_notify(int event, struct inet6_ifaddr *ifp)
 			ip6_rt_addr_del(&ifp->addr, ifp->idev->dev);
 		break;
 	}
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	HIP_CALLFUNC(hip_handle_ipv6_ifa_notify, 0)(ifp, event);
+#endif
 }
 
 #ifdef CONFIG_SYSCTL
