@@ -1029,6 +1029,94 @@ static void hip_get_load_time(void)
 	return;
 }
 
+
+/* inbound IPsec SA SPI mapping data */
+/* when a network device causes an event, check if we already have a
+ * mapping from the ifindex to spi, else create a new SA and create a
+ * mapping (mm draft: Each physical interface SHOULD have a separate
+ * SA) */
+/* todo: move to hip_sa entry ? */
+struct hip_ifindex2spi_map {
+	struct list_head list;
+	struct in6_addr peer_hit;
+	int ifindex;
+	uint32_t spi;
+};
+
+LIST_HEAD(hip_ifindex2spi_map_list);
+spinlock_t hip_ifindex2spi_map_list_lock = SPIN_LOCK_UNLOCKED;
+
+void hip_ifindex2spi_map_add(struct in6_addr *peer_hit, uint32_t spi, int ifindex)
+{
+	struct hip_ifindex2spi_map *m;
+	unsigned long flags = 0;
+	struct list_head *pos, *n;
+	int i = 1;
+
+	HIP_DEBUG("spi=0x%x ifindex=%d\n", spi, ifindex);
+	m = kmalloc(sizeof(struct hip_ifindex2spi_map), GFP_ATOMIC);
+	if (!m) {
+		HIP_ERROR("kmalloc failed\n");
+		return;
+	}
+
+	ipv6_addr_copy(&m->peer_hit, peer_hit);
+	m->spi = spi;
+	m->ifindex = ifindex;
+
+	spin_lock_irqsave(&hip_ifindex2spi_map_list_lock, flags);
+	list_add(&m->list, &hip_ifindex2spi_map_list);
+	HIP_DEBUG("Current ifindex->SPI mapping:\n");
+	list_for_each_safe(pos, n, &hip_ifindex2spi_map_list) {
+		char str[INET6_ADDRSTRLEN];
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		hip_in6_ntop(&m->peer_hit, str);
+		HIP_DEBUG("%d: HIT %s SPI=0x%x ifindex=%d\n", i, str, m->spi, m->ifindex);
+		i++;
+	}
+	spin_unlock_irqrestore(&hip_ifindex2spi_map_list_lock, flags);
+	HIP_DEBUG("End of mapping list\n");
+	return;
+}
+
+uint32_t hip_ifindex2spi_get_spi(struct in6_addr *peer_hit, int ifindex)
+{
+	struct list_head *pos, *n;
+	struct hip_ifindex2spi_map *m = NULL;
+	unsigned long flags = 0;
+	uint32_t spi = 0;
+
+	HIP_DEBUG("ifindex=%d\n", ifindex);
+	spin_lock_irqsave(&hip_ifindex2spi_map_list_lock, flags);
+	list_for_each_safe(pos, n, &hip_ifindex2spi_map_list) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		if (m->ifindex == ifindex && !ipv6_addr_cmp(&m->peer_hit, peer_hit)) {
+			HIP_DEBUG("found\n");
+			break;
+		}
+	}
+	spin_unlock_irqrestore(&hip_ifindex2spi_map_list_lock, flags);
+	return spi;
+}
+
+void hip_ifindex2spi_map_delete_all(void)
+{
+	struct list_head *pos, *n;
+	struct hip_ifindex2spi_map *m = NULL;
+	unsigned long flags = 0;
+
+	HIP_DEBUG("\n");
+	spin_lock_irqsave(&hip_ifindex2spi_map_list_lock, flags);
+	list_for_each_safe(pos, n, &hip_ifindex2spi_map_list) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		list_del(&m->list);
+		kfree(m);
+	}
+	spin_unlock_irqrestore(&hip_ifindex2spi_map_list_lock, flags);
+	return;
+}
+
+
 /**
  * hip_create_device_addrlist - get interface addresses
  * @idev: inet6 device of which addresses are retrieved
@@ -1183,7 +1271,8 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
 	}
 
 //	if (idev_addr_count > 0)
-		hip_send_update_all(addr_list, idev_addr_count);
+		hip_send_update_all(addr_list, idev_addr_count, event_dev->ifindex); /* move this to hip_net_event */
+
 //	else
 //		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
 
@@ -1835,6 +1924,7 @@ static void __exit hip_cleanup(void)
 	hip_rea_delete_sent_list();
 	hip_ac_delete_sent_list();
 	hip_update_spi_waitlist_delete_all();
+	hip_ifindex2spi_map_delete_all();
 	hip_hadb_dump_spi_list_all();
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;

@@ -52,17 +52,6 @@ void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_
 
 	s->spi = spi;
 	ipv6_addr_copy(&s->hit, hit);
-#if 0
-	if (rea)
-		ipv6_addr_copy(&s->v6addr_test, (struct in6_addr *)&(
-
-((struct hip_rea_info_addr_item*)
- ((void *)rea+sizeof(struct hip_rea_info_mm02))
- )
-->address)
-
-);
-#endif
 
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 	list_add(&s->list, &hip_update_spi_waitlist);
@@ -73,6 +62,7 @@ void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_
 		i++;
 	}
 	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
+	HIP_DEBUG("End of SPI waitlist\n");
 	return;
 }
 
@@ -299,9 +289,13 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea_info_mm02)) /
 		sizeof(struct hip_rea_info_addr_item);
 	HIP_DEBUG(" REA has %d addresses, rea param len=%d\n", n_addrs, hip_get_param_total_len(rea));
+	if (n_addrs < 0) {
+		HIP_DEBUG("BUG: n_addrs=%d < 0\n", n_addrs);
+		goto out_err;
+	}
 	if (n_addrs == 0) {
 		HIP_DEBUG("REA (SPI=0x%x) contains no addresses\n", spi);
-		HIP_DEBUG("TODO: DEPRECATE all addresses ?\n");
+		_HIP_DEBUG("TODO: DEPRECATE all addresses ?\n");
 		/* err is 0, no error */
 
 		/* comment out goto if deprecate all current addresses */
@@ -414,7 +408,6 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	int rea_i = 1;
 
 	HIP_DEBUG("state=%s\n", hip_state_str(state));
-	nes = hip_get_param(msg, HIP_PARAM_NES);
 
 	/* draft-09 8.10.1 Processing an initial UPDATE packet */
 
@@ -477,8 +470,10 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		rea_i++;
 	}
 
+	nes = hip_get_param(msg, HIP_PARAM_NES);
+
 	/* test code, not in specs*/
-	if (nes->old_spi != nes->new_spi) {
+	if (nes && nes->old_spi != nes->new_spi) {
 		uint8_t calc_index_new;
 		uint16_t keymat_offset_new;
 		unsigned char Kn[HIP_AH_SHA_LEN];
@@ -1153,12 +1148,17 @@ int hip_receive_update(struct sk_buff *skb)
 	return err;
 }
 
+/* hip_send_update - send initial UPDATE packet to the peer */
+
+/* if addr_list is non-NULL (netdev initiated sending of UPDATE), perform
+   readdress without rekeying as in mm02-pre3 */
+/* REA: addrlist items belong to the spi */
 int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item *addr_list,
-		    int addr_count /*, int flags*/)
+		    int addr_count, int ifindex)
 {
-	/* todo: add flags: create_sa, add_rea_param */
 	int err = 0;
 	uint16_t update_id_out;
+	uint32_t spi = 0;
 	uint32_t new_spi_in = 0;
 	struct hip_common *update_packet = NULL;
 	struct in6_addr daddr;
@@ -1166,13 +1166,18 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_crypto_key null_key;
 
-	HIP_DEBUG("addr_count=%d\n", addr_count);
+	HIP_DEBUG("addr_list=%p addr_count=%d ifindex=%d\n", addr_list, addr_count, ifindex);
 
 	if (!entry) {
 		HIP_ERROR("null entry\n");
 		err = -EINVAL;
 		goto out_err;
 	}
+
+	if (!addr_list)
+		HIP_DEBUG("Plain UPDATE\n");
+	else
+		HIP_DEBUG("mm UPDATE\n");
 
 	/* start building UPDATE packet */
 	update_packet = hip_msg_alloc();
@@ -1182,64 +1187,74 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
+	hip_print_hit("sending UPDATE to", &entry->hit_peer);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
 
-	hip_print_hit("sending UPDATE to", &entry->hit_peer);
+	/* mm stuff */
+	if (addr_list && addr_count > 0) {
+		spi = hip_ifindex2spi_get_spi(&entry->hit_peer, ifindex);
+		HIP_DEBUG("mapped spi=0x%x\n", spi);
+		if (spi) {
+			HIP_DEBUG("5.1 Mobility with single SA pair, readdress with no rekeying\n");
+			/* 5.1 Mobility with single SA pair */
+			err = hip_build_param_rea_info_mm02(update_packet, spi, addr_list, addr_count);
+			if (err) {
+				HIP_ERROR("Building of REA param failed\n");
+				goto out_err;
+			}
+			goto plain_rea_out;
+		}
+	}
 
 	/* we can not know yet from where we should start to draw keys
-	   from the keymat, so we just zero a key and fill in
-	   the keys later */
+	   from the keymat, so we just zero a key and fill in the keys later */
 	memset(&null_key.key, 0, HIP_MAX_KEY_LEN);
-
-	/* The specifications does not say that new incoming SA should be done
-	 * here, but it is needed because of the New SPI value */
-
-	/* get a New SPI to use in the UPDATE packet and prepare a new
-	 * incoming IPsec SA */
+	/* get a New SPI, prepare a new incoming IPsec SA */
 	new_spi_in = 0;
 	err = hip_setup_sa(&entry->hit_peer, &entry->hit_our,
 			   &new_spi_in, entry->esp_transform,
 			   &null_key.key, &null_key.key, 0);
-	/* todo: if failed try again a couple of times ? */
 	if (err) {
 		HIP_ERROR("Error while setting up new IPsec SA (err=%d)\n", err);
 		goto out_err;
 	}
-	HIP_DEBUG("New SA created with New SPI (in)=0x%x\n", new_spi_in);
+	HIP_DEBUG("New inbound SA created with New SPI (in)=0x%x\n", new_spi_in);
+	entry->new_spi_in = new_spi_in;
+	HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
+
+	hip_ifindex2spi_map_add(&entry->hit_peer, new_spi_in, ifindex);
 
 	if (addr_list && addr_count > 0) {
-		/* mm02 rea test */
-//		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, addr_list, addr_count);
-		err = hip_build_param_rea_info_mm02(update_packet, entry->spi_in, addr_list, addr_count);
+		/* tell the peer about additional interface */
+		/* mm02-pre3 5.2 Host multihoming */
+		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, addr_list, addr_count);
 		if (err) {
 			HIP_ERROR("Building of REA param failed\n");
 			goto out_err;
 		}
 	}
 
-	entry->new_spi_in = new_spi_in;
-	HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
-
 	update_id_out = hip_get_new_update_id();
 	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
-	if (!update_id_out) {
-		/* todo: handle this case */
+	if (!update_id_out) { /* todo: handle this case */
 		HIP_ERROR("outgoing UPDATE ID overflowed back to 0, bug ?\n");
 		err = -EINVAL;
 		goto out_err;
 	}
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
-	if (addr_list && addr_count > 0) /* net event initiated update, needs still ifindex2spi map */
+
+	if (addr_list && addr_count > 0) /* mm02-pre3 5.2 Host multihoming */
 		err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
-					  update_id_out, entry->spi_in, entry->spi_in); 
-	else
+					  update_id_out, new_spi_in, new_spi_in); 
+	else /* plain UPDATE */
 		err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
 					  update_id_out, entry->spi_in, new_spi_in); 
 	if (err) {
 		HIP_ERROR("Building of NES param failed\n");
 		goto out_err;
 	}
+
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
@@ -1273,9 +1288,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
  	}
 	HIP_DEBUG("SIGNATURE added\n");
 
+	entry->state = HIP_STATE_REKEYING;
+	HIP_DEBUG("moved to state REKEYING\n");
 
-	HIP_DEBUG("spi values when sending update: 0x%08x 0x%08x 0x%08x 0x%08x\n",
-		  entry->spi_in, entry->spi_out, entry->new_spi_in, entry->new_spi_out);
+ plain_rea_out:
 
 	/* send UPDATE */
         HIP_DEBUG("Sending UPDATE packet\n");
@@ -1287,11 +1303,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
 	/* Store the last UPDATE ID value sent from us */
 	entry->update_id_out = update_id_out;
-
         HIP_DEBUG("Stored peer's outgoing UPDATE ID %u\n", update_id_out);
-
-	entry->state = HIP_STATE_REKEYING;
-	HIP_DEBUG("moved to state REKEYING\n");
 
 	err = hip_csum_send(NULL, &daddr, update_packet);
 	if (err) {
@@ -1303,11 +1315,11 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
-	/* todo: add UPDATE to sent list */
-	/* todo: start retransmission timer */
 	goto out;
 
  out_err:
+	entry->state = HIP_STATE_ESTABLISHED;
+	HIP_DEBUG("fallbacked to state REKEYING (ok ?)\n");
 	/* delete IPsec SA on failure */
 	if (new_spi_in)
 		hip_delete_sa(new_spi_in, &entry->hit_our);
@@ -1350,15 +1362,14 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
  * hip_send_update_all - send UPDATE packet to every peer
  *
  * UPDATE is sent to the peer only if the peer is in established
- * state. Note that we can not guarantee that the UPDATE actually reaches
- * the peer (unless the UPDATE is retransmitted some times, which we
- * currently don't do), due to the unreliable nature of IP we just
- * hope the UPDATE reaches the peer.
+ * state.
+ *
+ * Add REA parameter if @addr_list is non-null. @ifindex tells which
+ * device caused the network device event.
  *
  * TODO: retransmission timers
  */
-//void hip_send_update_all(void)
-void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_count)
+void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_count, int ifindex)
 {
 	int err = 0, i;
 
@@ -1380,7 +1391,7 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
-			hip_send_update(rk.array[i], addr_list, addr_count);
+			hip_send_update(rk.array[i], addr_list, addr_count, ifindex);
 			hip_put_ha(rk.array[i]);
 		}
 	}
