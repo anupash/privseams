@@ -110,7 +110,7 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 		HIP_ERROR("No memory for keymat\n");
 		return;
 	}
-	
+
 	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, 
 				       kij_len+2*sizeof(struct in6_addr)+1);
 	HIP_ASSERT(!err);
@@ -129,6 +129,7 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 	hip_update_keymat_buffer(shabuffer, seedkey, HIP_AH_SHA_LEN,
 				 kij_len, index_nbr);
 	nsg = HIP_MAX_SCATTERLISTS;
+
 	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, kij_len + HIP_AH_SHA_LEN + 1);
 	HIP_ASSERT(!err);
 	

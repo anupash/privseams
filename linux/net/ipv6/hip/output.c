@@ -278,7 +278,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	}
 
 #ifdef CONFIG_HIP_DEBUG
-	_HIP_HEXDUMP("***CHECKSUM DATA", buf, len);
+	HIP_DUMP_MSG(buf);
 	HIP_DEBUG("pkt out: len=%d proto=%d\n", len, fl.proto);
 	hip_in6_ntop(&fl.fl6_src, addrstr);
 	HIP_DEBUG("pkt out: src IPv6 addr: %s\n", addrstr);

@@ -223,6 +223,8 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 
 	_HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
 
+	HIP_DEBUG("buffer_length=%d\n", buffer_length);
+
 	if (hip_build_digest(HIP_DIGEST_SHA1,buffer_start,buffer_length,sha1_digest)) 
 	{
 		HIP_ERROR("Could not calculate SHA1 digest\n");
@@ -588,6 +590,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_DEBUG("we are HIT%c\n", we_are_HITg ? 'g' : 'l');
 
 	if (we_are_HITg) {
+
 		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
@@ -609,7 +612,8 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_HEXDUMP("HIP-gl encryption", &ctx->hip_enc_out.key, hip_transf_length);
 	HIP_HEXDUMP("HIP-gl integrity (HMAC) key", &ctx->hip_hmac_out.key,
 		    hmac_transf_length);
-	HIP_DEBUG("skipping HIP-lg encryption key, %u bytes\n", hip_transf_length);
+	_HIP_DEBUG("skipping HIP-lg encryption key, %u bytes\n", hip_transf_length);
+	HIP_HEXDUMP("HIP-lg encryption", &ctx->hip_enc_in.key, hip_transf_length);
 	HIP_HEXDUMP("HIP-lg integrity (HMAC) key", &ctx->hip_hmac_in.key, hmac_transf_length);
 	HIP_HEXDUMP("SA-gl ESP encryption key", &ctx->esp_out.key, esp_transf_length);
 	HIP_HEXDUMP("SA-gl ESP authentication key", &ctx->auth_out.key, auth_transf_length);
@@ -675,7 +679,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_param *param;
 	struct hip_diffie_hellman *dh_req;
 	u8 signature[HIP_DSA_SIGNATURE_LEN];
-
+	int x;
 	HIP_DEBUG("\n");
 
 	HIP_ASSERT(entry);
@@ -719,6 +723,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_ERROR("No localhost private key found\n");
 		goto out_err;
 	}
+
 
 	/* TLV sanity checks are are already done by the caller of this
 	   function. Now, begin to build I2 piece by piece. */
@@ -776,7 +781,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 	}
 
-
 	/********** SOLUTION **********/
 
 	{
@@ -789,7 +793,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			goto out_err;
 		}
 
-		err = hip_build_param_solution(i2, pz, solved_puzzle);
+		err = hip_build_param_solution(i2, pz, ntoh64(solved_puzzle));
 		if (err) {
 			HIP_ERROR("Building of solution failed (%d)\n", err);
 			goto out_err;
@@ -811,7 +815,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_ERROR("Error while extracting DH key\n");
 		goto out_err;
 	}
-	
+
 	_HIP_HEXDUMP("Own DH key", dh_data, n);
 	
 	err = hip_build_param_diffie_hellman_contents(i2,dh_req->group_id,
@@ -852,7 +856,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		err = -ENOENT;
 		goto out_err;
 	}
-	
+
 	/* Select only one transform */
 	transform_esp_suite =
 		hip_select_esp_transform((struct hip_esp_transform *) param);
@@ -868,6 +872,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	/************ Encrypted ***********/
+
+	HIP_HEXDUMP("enc(host_id)", host_id_pub,
+		    hip_get_param_total_len(host_id_pub));
 	
 	err = hip_build_param_encrypted(i2, host_id_pub);
  	if (err) {
@@ -881,17 +888,25 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
  	host_id_in_enc = (char *) (enc_in_msg + 1);
 
+	HIP_HEXDUMP("hostidinmsg", host_id_in_enc,
+		    hip_get_param_total_len(host_id_in_enc));
+	x = hip_get_param_total_len(host_id_in_enc);
+	HIP_HEXDUMP("encinmsg", enc_in_msg,
+		    hip_get_param_total_len(enc_in_msg));
+	HIP_HEXDUMP("enc key", &ctx->hip_enc_out.key, HIP_MAX_KEY_LEN);
+	HIP_HEXDUMP("IV", enc_in_msg->iv, 8);
 	err = hip_crypto_encrypted(host_id_in_enc,
-				   NULL, /* IV: This is algorithm dependant, but we suck */
+				   enc_in_msg->iv, /* IV: This is algorithm dependant, but we suck */
 				   transform_hip_suite,
 				   hip_get_param_total_len(host_id_in_enc),
 				   &ctx->hip_enc_out.key,
-//				   &ctx->hip_i.key,
 				   HIP_DIRECTION_ENCRYPT);
 	if (err) {
 		HIP_ERROR("Building of param encrypted failed %d\n", err);
 		goto out_err;
 	}
+	HIP_HEXDUMP("encinmsg 2", enc_in_msg, hip_get_param_total_len(enc_in_msg));
+	HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 
 	/* it appears as the crypto function overwrites the IV field, which
 	 * definitely breaks our 2.4 responder... Perhaps 2.6 and 2.4 cryptos
@@ -943,8 +958,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			}
 		}
 	}
-			
-			
+
 	/********** Signature **********/
 
         /* Should have been fetched during making of hip_encrypted */
@@ -972,7 +986,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		goto out_err;
 	}
 
-
 	/********** ECHO_RESPONSE (OPTIONAL) ************/
 
 	/* must reply */
@@ -988,7 +1001,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			}
 		}
 	}
-
 
       	/********** I2 packet complete **********/
 
@@ -1061,6 +1073,7 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 	struct hip_r1_counter *r1cntr;
 	struct hip_lhi peer_lhi;
 
+	HIP_DEBUG("\n");
 
 	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
 	if (!ctx) {
@@ -1092,7 +1105,7 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
  		goto out_err;
 	}
 
-	_HIP_DEBUG("SIGNATURE in R1 ok\n");
+	HIP_DEBUG("SIGNATURE in R1 ok\n");
 	
 	/* R1 generation check */
 	
@@ -1140,15 +1153,14 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 
 	}
 
-
 	/* We must store the R1 generation counter, _IF_ it exists */
 
 	if (r1cntr) {
+		HIP_DEBUG("Storing R1 generation counter\n");
 		HIP_LOCK_HA(entry);
 		entry->birthday = r1cntr->generation;
 		HIP_UNLOCK_HA(entry);
 	}
-
 
 	/* solve puzzle */
 
@@ -1173,6 +1185,8 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 		}
 	}
 
+	HIP_DEBUG("Puzzle solved successfully\n");
+
 	/* calculate shared secret and create keying material */
 
 	ctx->dh_shared_key = NULL;
@@ -1182,7 +1196,6 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 		err = -EINVAL;
 		goto out_err;
 	}
-
 
 	/* Everything ok, save host id to db */
 
@@ -1216,6 +1229,8 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
  	if (err) {
  		HIP_ERROR("Creation of I2 failed (%d)\n", err);
  	}
+
+	HIP_DEBUG("Created I2 successfully\n");
  	
  out_err:
 	if (ctx->dh_shared_key)
@@ -1436,7 +1451,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	int err = 0;
 	struct hip_common *i2 = NULL;
 	struct hip_context *ctx = NULL;
-	struct hip_encrypted *tmp_host_id = NULL;
+	struct hip_encrypted *tmp_enc = NULL;
  	struct hip_tlv_common *param;
  	struct hip_encrypted *enc = NULL;
 	struct hip_r1_counter *r1cntr;
@@ -1540,8 +1555,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 	
-	tmp_host_id = kmalloc(hip_get_param_total_len(enc), GFP_KERNEL);
-	if (!tmp_host_id) {
+	tmp_enc = kmalloc(hip_get_param_total_len(enc), GFP_KERNEL);
+	if (!tmp_enc) {
 		HIP_ERROR("No memory for temporary host_id\n");
 		err = -ENOMEM;
 		goto out_err;
@@ -1557,11 +1572,11 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	 * usual and feed it to signature verifier. 
 	 */
 	
-	memcpy(tmp_host_id, enc, hip_get_param_total_len(enc));
+	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
 	
 	/* Decrypt ENCRYPTED field*/
-	
-	_HIP_HEXDUMP("Recv. Key", &ctx->hip_i.key, 24);
+
+	HIP_HEXDUMP("Recv. Key", &ctx->hip_enc_in.key, 24);
 	
 	param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM);
 	if (!param) {
@@ -1571,25 +1586,33 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	}
 	
 	/* Get the encapsulated host id in the encrypted parameter */
-	host_id_in_enc = (struct hip_host_id *) (tmp_host_id + 1);
-	
-	err = hip_crypto_encrypted(host_id_in_enc, 
-				   NULL, /* IV */
+	host_id_in_enc = (struct hip_host_id *) (tmp_enc + 1);
+
+	HIP_DEBUG("\n");
+	err = hip_crypto_encrypted(host_id_in_enc,
+//				   enc->iv, /* IV */
+				   tmp_enc->iv, /* IV */
 				   hip_get_param_transform_suite_id(param, 0),
-				   hip_get_param_contents_len(enc) - 4,
-//				   &ctx->hip_i.key, HIP_DIRECTION_DECRYPT);
+				   /* 4 = reserved, 8 = iv */
+				   hip_get_param_contents_len(enc) - 4 - 8,
 				   &ctx->hip_enc_in.key, HIP_DIRECTION_DECRYPT);
+	
 	if (err) {
 		err = -EINVAL;
 		HIP_ERROR("Decryption of Host ID failed\n");
 		goto out_err;
 	}
 
-	_HIP_HEXDUMP("Encrypted after decrypt", tmp_host_id,
-		     hip_get_param_total_len(enc));
+	if (hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID) {
+		err = -EINVAL;
+		HIP_ERROR("The decrypted parameter is not a host id\n");
+		goto out_err;
+	}
 
-/* Verify sender HIT */
-	
+	HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
+		    hip_get_param_total_len(host_id_in_enc));
+
+	/* Verify sender HIT */
 	{
 		hip_hit_t hit;
 
@@ -1613,7 +1636,9 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	 */
 
 /* validate signature */
+	HIP_DEBUG("validate signature\n");
 
+	// XX CHECK: is the host_id_in_enc correct??! it points to the temp
 	err = hip_verify_packet_signature(ctx->input, host_id_in_enc);
 	if (err) {
 		HIP_ERROR("Verification of I2 signature failed\n");
@@ -1811,8 +1836,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 			hip_put_ha(entry);
 		}
 	}
-	if (tmp_host_id)
-		kfree(tmp_host_id);
+	if (tmp_enc)
+		kfree(tmp_enc);
 	if (ctx->dh_shared_key)
 		kfree(ctx->dh_shared_key);
 	if (ctx)

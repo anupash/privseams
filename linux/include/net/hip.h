@@ -442,6 +442,7 @@ struct hip_encrypted {
 	hip_tlv_len_t     length;
 
         uint32_t     reserved;
+	uint8_t      iv[8]; /* XX FIX: kludge works only for 3DES-CBC */
 	/* fixed part ends */
 } __attribute__ ((packed));
 
