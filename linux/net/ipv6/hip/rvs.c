@@ -76,7 +76,7 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 
 	list_for_each_entry_safe(spi_out, spi_tmp, &ha->spis_out, list) {
 		list_for_each_entry(item, &spi_out->peer_addr_list, list) {
-			if (item->address_state != PEER_ADDR_STATE_REACHABLE)
+			if (item->address_state != PEER_ADDR_STATE_ACTIVE)
 				continue;
 
 			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &item->address);

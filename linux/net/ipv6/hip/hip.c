@@ -1986,7 +1986,6 @@ static void __exit hip_cleanup(void)
 	hip_rea_delete_sent_list();
 	hip_ac_delete_sent_list();
 	hip_update_spi_waitlist_delete_all();
-	hip_hadb_dump_spi_list_all();
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

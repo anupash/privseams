@@ -1311,7 +1311,8 @@ int hip_receive_r1(struct sk_buff *skb)
 			HIP_HEXDUMP("Mapping", &daddr, 16);
 			HIP_HEXDUMP("Received", &skb->nh.ipv6h->saddr, 16);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			hip_hadb_add_peer_addr(entry, &skb->nh.ipv6h->saddr, 0, 0);
+			hip_hadb_add_peer_addr(entry, &skb->nh.ipv6h->saddr, 0, 0,
+					       PEER_ADDR_STATE_ACTIVE);
 		}
 
 	}
@@ -1803,11 +1804,11 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		}
 	}
 
-	hip_hadb_delete_peer_addrlist(entry);
 	/* todo: what are the default values for initial address ?
 	   some flags to indicate that this address if the initial
 	   address ? */
-	err = hip_hadb_add_peer_addr(entry, &(ctx->skb_in->nh.ipv6h->saddr), 0, 0);
+	err = hip_hadb_add_peer_addr(entry, &(ctx->skb_in->nh.ipv6h->saddr), 0, 0,
+				     PEER_ADDR_STATE_ACTIVE);
 	if (err) {
 		HIP_ERROR("error while adding a new peer address\n");
 		goto out_err;
@@ -2204,12 +2205,11 @@ int hip_handle_i1(struct sk_buff *skb, hip_ha_t *entry)
 			*/
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			hip_hadb_add_peer_addr(entry, dst, 0, 0);
+			hip_hadb_add_peer_addr(entry, dst, 0, 0, PEER_ADDR_STATE_ACTIVE);
 		}
 	} else {
 		HIP_DEBUG("Didn't find FROM parameter in I1\n");
 	}
-	
 #endif
 
 	err = hip_xmit_r1(skb, dstip, dst);

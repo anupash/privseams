@@ -311,6 +311,9 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	   is a new one, it creates a new SPI that contains no addresses. */
 	spi_out = hip_hadb_get_spi_list(entry, spi);
 	if (!spi_out) {
+	  /* todo: outbound SPI must have been created by the
+	     corresponding NES in the same UPDATE packet */
+#if 0
 		err = hip_hadb_add_peer_spi(entry, spi);
 		if (err) {
 			HIP_DEBUG("failed to create a new SPI list\n");
@@ -322,6 +325,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 			goto out_err;
 		}
 		HIP_DEBUG("created a new SPI list\n");
+#endif
 	}
 
 	rea_address_item = (void *)rea+sizeof(struct hip_rea_info_mm02);
