@@ -1018,7 +1018,8 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	int addr_count = 0;
 	struct flowi fl;
 	struct inet6_ifaddr *ifa = NULL;
-
+	struct hip_lhi lhi;
+	
 	HIP_DEBUG("\n");
 	
 	/* Extra consistency test */
@@ -1037,21 +1038,25 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HIT */
-	if (hip_copy_any_localhost_hit(&hit_our) < 0) {
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our,
+					       HIP_HI_DEFAULT_ALGO) < 0) {
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
 	}
 
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+        memcpy(&(lhi.hit), &hit_our, sizeof(struct in6_addr));
+
 	/* Determine our HOST ID public key */
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+	host_id_pub = hip_get_localhost_public_key(&lhi);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;
 	}
 
 	/* Determine our HOST ID private key */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
