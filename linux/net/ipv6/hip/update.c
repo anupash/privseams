@@ -33,7 +33,7 @@ struct hip_update_spi_waitlist_item {
  * @spi: the inbound SPI to be added in host byte order
  * @hit: the HIT for which the @spi is related to
  */
-void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_rea_mm02 *rea)
+void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_rea *rea)
 {
 	struct hip_update_spi_waitlist_item *s;
 	unsigned long flags = 0;
@@ -273,7 +273,7 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	return err;
 }
 
-int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
+int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea/*,
 				    uint32_t update_id*/)
 {
 	/* assume that caller has the entry lock */
@@ -289,12 +289,12 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 	spi = ntohl(rea->spi);
 	HIP_DEBUG("REA SPI=0x%x\n", spi);
 
-	if ((hip_get_param_total_len(rea) - sizeof(struct hip_rea_mm02)) %
+	if ((hip_get_param_total_len(rea) - sizeof(struct hip_rea)) %
 	    sizeof(struct hip_rea_info_addr_item))
 		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
 			  ntohs(rea->length));
 
-	n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea_mm02)) /
+	n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea)) /
 		sizeof(struct hip_rea_info_addr_item);
 	HIP_DEBUG("REA has %d address(es), rea param len=%d\n",
 		  n_addrs, hip_get_param_total_len(rea));
@@ -319,7 +319,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 		a->is_preferred = 0;
 	}
 
-	rea_address_item = (void *)rea+sizeof(struct hip_rea_mm02);
+	rea_address_item = (void *)rea+sizeof(struct hip_rea);
 	for(i = 0; i < n_addrs; i++, rea_address_item++) {
 		struct in6_addr *rea_address = &rea_address_item->address;
 		uint32_t lifetime = ntohl(rea_address_item->lifetime);
@@ -362,7 +362,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
 		int spi_addr_is_in_rea = 0;
 
-		rea_address_item = (void *)rea+sizeof(struct hip_rea_mm02);
+		rea_address_item = (void *)rea+sizeof(struct hip_rea);
 		for(i = 0; i < n_addrs; i++, rea_address_item++) {
 			struct in6_addr *rea_address = &rea_address_item->address;
 
@@ -410,7 +410,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_nes *nes;
 	struct hip_seq *seq;
-	struct hip_rea_mm02 *rea;
+	struct hip_rea *rea;
 	struct hip_dh_fixed *dh;
 	struct hip_host_id *host_id_private;
 	uint32_t update_id_out = 0;
@@ -1119,7 +1119,7 @@ int hip_handle_update_plain_rea(struct hip_common *msg, struct in6_addr *src_ip,
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_common *update_packet = NULL;
 	struct hip_seq *seq;
-	struct hip_rea_mm02 *rea;
+	struct hip_rea *rea;
 	hip_ha_t *entry = NULL;
 
 	HIP_DEBUG("\n");
@@ -1293,7 +1293,7 @@ int hip_receive_update(struct sk_buff *skb)
 	struct hip_nes *nes = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
-	struct hip_rea_mm02 *rea;
+	struct hip_rea *rea;
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
 	struct hip_hmac *hmac = NULL;
@@ -1668,10 +1668,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	if (add_rea) {
 		/* REA is the first parameter of the UPDATE */
 		if (mapped_spi)
-			err = hip_build_param_rea_mm02(update_packet, mapped_spi,
+			err = hip_build_param_rea(update_packet, mapped_spi,
 							    addr_list, addr_count);
 		else
-			err = hip_build_param_rea_mm02(update_packet, new_spi_in,
+			err = hip_build_param_rea(update_packet, new_spi_in,
 							    addr_list, addr_count);
 		if (err) {
 			HIP_ERROR("Building of REA param failed\n");

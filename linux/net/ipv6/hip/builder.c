@@ -1767,15 +1767,15 @@ int hip_build_param_rea_info00(struct hip_common *msg,
 			       int address_count)
 {
 	int err = 0;
-	struct hip_rea_info00 rea_info;
+	struct hip_rea_info rea_info;
 	int addrs_len = address_count *
 		(sizeof(struct hip_rea_info_addr_item));
 
 	hip_set_param_type(&rea_info, HIP_PARAM_REA_INFO);
 	hip_calc_generic_param_len(&rea_info,
-				   sizeof(struct hip_rea_info00),
+				   sizeof(struct hip_rea_info),
 				   addrs_len);
-	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea_info00) -
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea_info) -
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len);
 	rea_info.interface_id = interface_id; /* no conversion */
@@ -1797,7 +1797,7 @@ int hip_build_param_rea_info00(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_rea_mm02 - build HIP REA_INFO parameter
+ * hip_build_param_rea - build HIP REA parameter
  *
  * @msg:             the message where the REA will be appended
  * @spi:             SPI
@@ -1806,21 +1806,21 @@ int hip_build_param_rea_info00(struct hip_common *msg,
  *
  * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_rea_mm02(struct hip_common *msg,
-			     uint32_t spi,
-			     struct hip_rea_info_addr_item *addresses,
-			     int address_count)
+int hip_build_param_rea(struct hip_common *msg,
+			uint32_t spi,
+			struct hip_rea_info_addr_item *addresses,
+			int address_count)
 {
 	int err = 0;
-	struct hip_rea_mm02 rea_info;
+	struct hip_rea rea_info;
 	int addrs_len = address_count *
 		(sizeof(struct hip_rea_info_addr_item));
 
 	hip_set_param_type(&rea_info, HIP_PARAM_REA);
 	hip_calc_generic_param_len(&rea_info,
-				   sizeof(struct hip_rea_mm02),
+				   sizeof(struct hip_rea),
 				   addrs_len);
-	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea_mm02) -
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea) -
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len);
 	rea_info.spi = htonl(spi);

@@ -524,7 +524,14 @@ struct hip_rea_info_addr_item {
 	struct in6_addr address;
 }  __attribute__ ((packed));
 
-struct hip_rea_info00 {
+struct hip_rea {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	uint32_t spi;
+	/* fixed part ends */
+} __attribute__ ((packed));
+
+struct hip_rea_info {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint32_t interface_id;
@@ -533,12 +540,6 @@ struct hip_rea_info00 {
 	uint32_t new_spi;
 	uint16_t keymat_index;
 	uint16_t rea_id;
-} __attribute__ ((packed));
-
-struct hip_rea_mm02 {
-	hip_tlv_type_t type;
-	hip_tlv_len_t length;
-	uint32_t spi;
 } __attribute__ ((packed));
 
 struct hip_hmac {
