@@ -6,7 +6,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2004, R. Byron Moore
+ * Copyright (C) 2000 - 2005, R. Byron Moore
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -66,6 +66,7 @@
 
 acpi_status
 acpi_ex_store_buffer_to_buffer (
+	acpi_object_type                original_src_type,
 	union acpi_operand_object       *source_desc,
 	union acpi_operand_object       *target_desc)
 {
@@ -93,34 +94,42 @@ acpi_ex_store_buffer_to_buffer (
 			return_ACPI_STATUS (AE_NO_MEMORY);
 		}
 
-		target_desc->common.flags &= ~AOPOBJ_STATIC_POINTER;
 		target_desc->buffer.length = length;
 	}
 
-	/*
-	 * Buffer is a static allocation,
-	 * only place what will fit in the buffer.
-	 */
+	/* Copy source buffer to target buffer */
+
 	if (length <= target_desc->buffer.length) {
 		/* Clear existing buffer and copy in the new one */
 
 		ACPI_MEMSET (target_desc->buffer.pointer, 0, target_desc->buffer.length);
 		ACPI_MEMCPY (target_desc->buffer.pointer, buffer, length);
+
+		/*
+		 * If the original source was a string, we must truncate the buffer,
+		 * according to the ACPI spec.  Integer-to-Buffer and Buffer-to-Buffer
+		 * copy must not truncate the original buffer.
+		 */
+		if (original_src_type == ACPI_TYPE_STRING) {
+			/* Set the new length of the target */
+
+			target_desc->buffer.length = length;
+		}
 	}
 	else {
-		/*
-		 * Truncate the source, copy only what will fit
-		 */
+		/* Truncate the source, copy only what will fit */
+
 		ACPI_MEMCPY (target_desc->buffer.pointer, buffer, target_desc->buffer.length);
 
 		ACPI_DEBUG_PRINT ((ACPI_DB_INFO,
-			"Truncating src buffer from %X to %X\n",
+			"Truncating source buffer from %X to %X\n",
 			length, target_desc->buffer.length));
 	}
 
 	/* Copy flags */
 
 	target_desc->buffer.flags = source_desc->buffer.flags;
+	target_desc->common.flags &= ~AOPOBJ_STATIC_POINTER;
 	return_ACPI_STATUS (AE_OK);
 }
 

@@ -156,7 +156,7 @@ out:
 }
 
 static int attach_one_algo(struct xfrm_algo **algpp, u8 *props,
-			   struct xfrm_algo_desc *(*get_byname)(char *),
+			   struct xfrm_algo_desc *(*get_byname)(char *, int),
 			   struct rtattr *u_arg)
 {
 	struct rtattr *rta = u_arg;
@@ -168,7 +168,7 @@ static int attach_one_algo(struct xfrm_algo **algpp, u8 *props,
 
 	ualg = RTA_DATA(rta);
 
-	algo = get_byname(ualg->alg_name);
+	algo = get_byname(ualg->alg_name, 1);
 	if (!algo)
 		return -ENOSYS;
 	*props = algo->desc.sadb_alg_id;
@@ -272,8 +272,6 @@ static int xfrm_add_sa(struct sk_buff *skb, struct nlmsghdr *nlh, void **xfrma)
 	err = verify_newsa_info(p, (struct rtattr **) xfrma);
 	if (err)
 		return err;
-
-	xfrm_probe_algs();
 
 	x = xfrm_state_construct(p, (struct rtattr **) xfrma, &err);
 	if (!x)
@@ -1128,8 +1126,8 @@ static int xfrm_send_acquire(struct xfrm_state *x, struct xfrm_tmpl *xt,
 /* User gives us xfrm_user_policy_info followed by an array of 0
  * or more templates.
  */
-struct xfrm_policy *xfrm_compile_policy(u16 family, int opt,
-                                        u8 *data, int len, int *dir)
+static struct xfrm_policy *xfrm_compile_policy(u16 family, int opt,
+					       u8 *data, int len, int *dir)
 {
 	struct xfrm_userpolicy_info *p = (struct xfrm_userpolicy_info *)data;
 	struct xfrm_user_tmpl *ut = (struct xfrm_user_tmpl *) (p + 1);

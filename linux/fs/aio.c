@@ -57,7 +57,7 @@ static struct workqueue_struct *aio_wq;
 static void aio_fput_routine(void *);
 static DECLARE_WORK(fput_work, aio_fput_routine, NULL);
 
-static spinlock_t	fput_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(fput_lock);
 LIST_HEAD(fput_head);
 
 static void aio_kick_handler(void *);
@@ -1285,6 +1285,7 @@ asmlinkage long sys_io_setup(unsigned nr_events, aio_context_t __user *ctxp)
 		if (!ret)
 			return 0;
 
+		get_ioctx(ioctx); /* io_destroy() expects us to hold a ref */
 		io_destroy(ioctx);
 	}
 

@@ -1052,8 +1052,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		spi_in = 0;
 		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
 				   &spi_in, transform_esp_suite, 
-				   &ctx->esp_in.key, &ctx->auth_in.key, 
-				   0, HIP_SPI_DIRECTION_IN);
+				   &ctx->esp_in.key, &ctx->auth_in.key, 0,
+				   HIP_SPI_DIRECTION_IN);
 
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
@@ -1741,7 +1741,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  */
 int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 {
-	int err = 0;
+	int err = 0, retransmission = 0;
 	struct hip_common *i2 = NULL;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
@@ -1758,6 +1758,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
  	struct in6_addr hit;
 	struct in6_addr *rcv_hit;
 	struct hip_spi_in_item spi_in_data;
+
  	HIP_DEBUG("\n");
 
 	/* assume already locked ha, if ha is not NULL */
@@ -2019,6 +2020,11 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		 * references, but since we continue to use the entry,
 		 * we have to hold for our own usage too
 		 */
+	} else {
+		/* If the I2 packet is a retransmission, we need reuse the
+		   the SPI that was setup already when the first I2 was
+		   received */
+		retransmission = 1;
 	}
 
 	/* If we have old SAs with these HITs delete them */
@@ -2074,10 +2080,9 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	/* Set up IPsec associations */
 
-
 	spi_in = 0;
 	err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_in, esp_tfm, 
-			   &ctx->esp_in.key, &ctx->auth_in.key, 0,
+			   &ctx->esp_in.key, &ctx->auth_in.key, retransmission,
 			   HIP_SPI_DIRECTION_IN);
 	
 	if (err) {
@@ -2099,8 +2104,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	spi_out = ntohl(hspi->spi);
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_out, esp_tfm, 
-			   &ctx->esp_out.key, &ctx->auth_out.key, 0,
-			   HIP_SPI_DIRECTION_OUT);
+			   &ctx->esp_out.key, &ctx->auth_out.key,
+			   retransmission, HIP_SPI_DIRECTION_OUT);
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
 		HIP_DEBUG("TODO: what to do ? currently ignored\n");

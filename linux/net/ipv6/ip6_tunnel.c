@@ -85,7 +85,7 @@ static struct ip6_tnl *tnls_wc[1];
 static struct ip6_tnl **tnls[2] = { tnls_wc, tnls_r_l };
 
 /* lock for the tunnel lists */
-static rwlock_t ip6ip6_lock = RW_LOCK_UNLOCKED;
+static DEFINE_RWLOCK(ip6ip6_lock);
 
 static inline struct dst_entry *ip6_tnl_dst_check(struct ip6_tnl *t)
 {
@@ -180,10 +180,10 @@ ip6ip6_tnl_link(struct ip6_tnl *t)
 {
 	struct ip6_tnl **tp = ip6ip6_bucket(&t->parms);
 
-	write_lock_bh(&ip6ip6_lock);
 	t->next = *tp;
-	write_unlock_bh(&ip6ip6_lock);
+	write_lock_bh(&ip6ip6_lock);
 	*tp = t;
+	write_unlock_bh(&ip6ip6_lock);
 }
 
 /**

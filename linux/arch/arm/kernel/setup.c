@@ -24,6 +24,7 @@
 #include <linux/cpu.h>
 #include <linux/interrupt.h>
 
+#include <asm/cpu.h>
 #include <asm/elf.h>
 #include <asm/hardware.h>
 #include <asm/io.h>
@@ -107,6 +108,8 @@ static char command_line[COMMAND_LINE_SIZE];
 static char default_command_line[COMMAND_LINE_SIZE] __initdata = CONFIG_CMDLINE;
 static union { char c[4]; unsigned long l; } endian_test __initdata = { { 'l', '?', '?', 'b' } };
 #define ENDIANNESS ((char)endian_test.l)
+
+DEFINE_PER_CPU(struct cpuinfo_arm, cpu_data);
 
 /*
  * Standard memory resources
@@ -218,12 +221,12 @@ static const char *proc_arch[] = {
 #define CACHE_M(y)	((y) & (1 << 2))
 #define CACHE_LINE(y)	((y) & 3)
 
-static inline void dump_cache(const char *prefix, unsigned int cache)
+static inline void dump_cache(const char *prefix, int cpu, unsigned int cache)
 {
 	unsigned int mult = 2 + (CACHE_M(cache) ? 1 : 0);
 
-	printk("%s: %d bytes, associativity %d, %d byte lines, %d sets\n",
-		prefix,
+	printk("CPU%u: %s: %d bytes, associativity %d, %d byte lines, %d sets\n",
+		cpu, prefix,
 		mult << (8 + CACHE_SIZE(cache)),
 		(mult << CACHE_ASSOC(cache)) >> 1,
 		8 << CACHE_LINE(cache),
@@ -231,18 +234,18 @@ static inline void dump_cache(const char *prefix, unsigned int cache)
 			CACHE_LINE(cache)));
 }
 
-static void __init dump_cpu_info(void)
+static void __init dump_cpu_info(int cpu)
 {
 	unsigned int info = read_cpuid(CPUID_CACHETYPE);
 
 	if (info != processor_id) {
-		printk("CPU: D %s %s cache\n", cache_is_vivt() ? "VIVT" : "VIPT",
+		printk("CPU%u: D %s %s cache\n", cpu, cache_is_vivt() ? "VIVT" : "VIPT",
 		       cache_types[CACHE_TYPE(info)]);
 		if (CACHE_S(info)) {
-			dump_cache("CPU: I cache", CACHE_ISIZE(info));
-			dump_cache("CPU: D cache", CACHE_DSIZE(info));
+			dump_cache("I cache", cpu, CACHE_ISIZE(info));
+			dump_cache("D cache", cpu, CACHE_DSIZE(info));
 		} else {
-			dump_cache("CPU: cache", CACHE_ISIZE(info));
+			dump_cache("cache", cpu, CACHE_ISIZE(info));
 		}
 	}
 }
@@ -264,9 +267,15 @@ int cpu_architecture(void)
 	return cpu_arch;
 }
 
+/*
+ * These functions re-use the assembly code in head.S, which
+ * already provide the required functionality.
+ */
+extern struct proc_info_list *lookup_processor_type(void);
+extern struct machine_desc *lookup_machine_type(unsigned int);
+
 static void __init setup_processor(void)
 {
-	extern struct proc_info_list __proc_info_begin, __proc_info_end;
 	struct proc_info_list *list;
 
 	/*
@@ -274,15 +283,8 @@ static void __init setup_processor(void)
 	 * types.  The linker builds this table for us from the
 	 * entries in arch/arm/mm/proc-*.S
 	 */
-	for (list = &__proc_info_begin; list < &__proc_info_end ; list++)
-		if ((processor_id & list->cpu_mask) == list->cpu_val)
-			break;
-
-	/*
-	 * If processor type is unrecognised, then we
-	 * can do nothing...
-	 */
-	if (list >= &__proc_info_end) {
+	list = lookup_processor_type();
+	if (!list) {
 		printk("CPU configuration botched (ID %08x), unable "
 		       "to continue.\n", processor_id);
 		while (1);
@@ -307,7 +309,7 @@ static void __init setup_processor(void)
 	       cpu_name, processor_id, (int)processor_id & 15,
 	       proc_arch[cpu_architecture()]);
 
-	dump_cpu_info();
+	dump_cpu_info(smp_processor_id());
 
 	sprintf(system_utsname.machine, "%s%c", list->arch_name, ENDIANNESS);
 	sprintf(elf_platform, "%s%c", list->elf_name, ENDIANNESS);
@@ -318,22 +320,14 @@ static void __init setup_processor(void)
 
 static struct machine_desc * __init setup_machine(unsigned int nr)
 {
-	extern struct machine_desc __arch_info_begin, __arch_info_end;
 	struct machine_desc *list;
 
 	/*
-	 * locate architecture in the list of supported architectures.
+	 * locate machine in the list of supported machines.
 	 */
-	for (list = &__arch_info_begin; list < &__arch_info_end; list++)
-		if (list->nr == nr)
-			break;
-
-	/*
-	 * If the architecture type is not recognised, then we
-	 * can co nothing...
-	 */
-	if (list >= &__arch_info_end) {
-		printk("Architecture configuration botched (nr %d), unable "
+	list = lookup_machine_type(nr);
+	if (!list) {
+		printk("Machine configuration botched (nr %d), unable "
 		       "to continue.\n", nr);
 		while (1);
 	}
@@ -739,11 +733,15 @@ void __init setup_arch(char **cmdline_p)
 #endif
 }
 
-static struct cpu cpu[1];
 
 static int __init topology_init(void)
 {
-	return register_cpu(cpu, 0, NULL);
+	int cpu;
+
+	for_each_cpu(cpu)
+		register_cpu(&per_cpu(cpu_data, cpu).cpu, cpu, NULL);
+
+	return 0;
 }
 
 subsys_initcall(topology_init);
@@ -784,9 +782,18 @@ static int c_show(struct seq_file *m, void *v)
 	seq_printf(m, "Processor\t: %s rev %d (%s)\n",
 		   cpu_name, (int)processor_id & 15, elf_platform);
 
+#if defined(CONFIG_SMP)
+	for_each_online_cpu(i) {
+		seq_printf(m, "Processor\t: %d\n", i);
+		seq_printf(m, "BogoMIPS\t: %lu.%02lu\n\n",
+			   per_cpu(cpu_data, i).loops_per_jiffy / (500000UL/HZ),
+			   (per_cpu(cpu_data, i).loops_per_jiffy / (5000UL/HZ)) % 100);
+	}
+#else /* CONFIG_SMP */
 	seq_printf(m, "BogoMIPS\t: %lu.%02lu\n",
 		   loops_per_jiffy / (500000/HZ),
 		   (loops_per_jiffy / (5000/HZ)) % 100);
+#endif
 
 	/* dump out the processor features */
 	seq_puts(m, "Features\t: ");

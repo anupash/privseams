@@ -34,7 +34,6 @@
 #include <linux/completion.h>
 #include <linux/sched.h>
 #include <linux/smp_lock.h>
-#include <linux/suspend.h>
 #include <linux/slab.h>
 
 MODULE_AUTHOR("Vojtech Pavlik <vojtech@ucw.cz>");
@@ -114,7 +113,7 @@ enum serio_event_type {
 	SERIO_UNREGISTER_PORT,
 };
 
-static spinlock_t serio_event_lock = SPIN_LOCK_UNLOCKED;	/* protects serio_event_list */
+static DEFINE_SPINLOCK(serio_event_lock);	/* protects serio_event_list */
 static LIST_HEAD(serio_event_list);
 static DECLARE_WAIT_QUEUE_HEAD(serio_wait);
 static DECLARE_COMPLETION(serio_exited);
@@ -225,8 +224,7 @@ static int serio_thread(void *nothing)
 	do {
 		serio_handle_events();
 		wait_event_interruptible(serio_wait, !list_empty(&serio_event_list));
-		if (current->flags & PF_FREEZE)
-			refrigerator(PF_FREEZE);
+		try_to_freeze(PF_FREEZE);
 	} while (!signal_pending(current));
 
 	printk(KERN_DEBUG "serio: kseriod exiting\n");
@@ -321,6 +319,7 @@ static void serio_create_port(struct serio *serio)
 	try_module_get(THIS_MODULE);
 
 	spin_lock_init(&serio->lock);
+	init_MUTEX(&serio->drv_sem);
 	list_add_tail(&serio->node, &serio_list);
 	snprintf(serio->dev.bus_id, sizeof(serio->dev.bus_id), "serio%d", serio_no++);
 	serio->dev.bus = &serio_bus;
@@ -590,17 +589,22 @@ start_over:
 	up(&serio_sem);
 }
 
-/* called from serio_driver->connect/disconnect methods under serio_sem */
-int serio_open(struct serio *serio, struct serio_driver *drv)
+static void serio_set_drv(struct serio *serio, struct serio_driver *drv)
 {
+	down(&serio->drv_sem);
 	serio_pause_rx(serio);
 	serio->drv = drv;
 	serio_continue_rx(serio);
+	up(&serio->drv_sem);
+}
+
+/* called from serio_driver->connect/disconnect methods under serio_sem */
+int serio_open(struct serio *serio, struct serio_driver *drv)
+{
+	serio_set_drv(serio, drv);
 
 	if (serio->open && serio->open(serio)) {
-		serio_pause_rx(serio);
-		serio->drv = NULL;
-		serio_continue_rx(serio);
+		serio_set_drv(serio, NULL);
 		return -1;
 	}
 	return 0;
@@ -612,9 +616,7 @@ void serio_close(struct serio *serio)
 	if (serio->close)
 		serio->close(serio);
 
-	serio_pause_rx(serio);
-	serio->drv = NULL;
-	serio_continue_rx(serio);
+	serio_set_drv(serio, NULL);
 }
 
 irqreturn_t serio_interrupt(struct serio *serio,

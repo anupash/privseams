@@ -19,7 +19,6 @@
 
 #define __ARCH_IRQ_STAT	1
 
-#define softirq_pending(cpu)		(cpu_data(cpu)->softirq_pending)
 #define local_softirq_pending()		(local_cpu_data->softirq_pending)
 
 #define HARDIRQ_BITS	14
@@ -33,5 +32,7 @@
 #endif
 
 extern void __iomem *ipi_base_addr;
+
+void ack_bad_irq(unsigned int irq);
 
 #endif /* _ASM_IA64_HARDIRQ_H */

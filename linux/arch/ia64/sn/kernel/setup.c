@@ -28,6 +28,7 @@
 #include <linux/compiler.h>
 #include <linux/sched.h>
 #include <linux/root_dev.h>
+#include <linux/nodemask.h>
 
 #include <asm/io.h>
 #include <asm/sal.h>
@@ -40,7 +41,6 @@
 #include <asm/sn/nodepda.h>
 #include <asm/sn/sn_cpuid.h>
 #include <asm/sn/simulator.h>
-#include "shub.h"
 #include <asm/sn/leds.h>
 #include <asm/sn/bte.h>
 #include <asm/sn/shub_mmr.h>
@@ -163,13 +163,12 @@ static int __init pxm_to_nasid(int pxm)
 
 void __init early_sn_setup(void)
 {
-	void ia64_sal_handler_init(void *entry_point, void *gpval);
 	efi_system_table_t *efi_systab;
 	efi_config_table_t *config_tables;
 	struct ia64_sal_systab *sal_systab;
 	struct ia64_sal_desc_entry_point *ep;
 	char *p;
-	int i;
+	int i, j;
 
 	/*
 	 * Parse enough of the SAL tables to locate the SAL entry point. Since, console
@@ -185,19 +184,21 @@ void __init early_sn_setup(void)
 		    0) {
 			sal_systab = __va(config_tables[i].table);
 			p = (char *)(sal_systab + 1);
-			for (i = 0; i < sal_systab->entry_count; i++) {
+			for (j = 0; j < sal_systab->entry_count; j++) {
 				if (*p == SAL_DESC_ENTRY_POINT) {
 					ep = (struct ia64_sal_desc_entry_point
 					      *)p;
 					ia64_sal_handler_init(__va
 							      (ep->sal_proc),
 							      __va(ep->gp));
-					break;
+					return;
 				}
 				p += SAL_DESC_SIZE(*p);
 			}
 		}
 	}
+	/* Uh-oh, SAL not available?? */
+	printk(KERN_ERR "failed to find SAL entry point\n");
 }
 
 extern int platform_intr_list[];
@@ -215,8 +216,10 @@ static inline int __init is_shub_1_1(int nasid)
 	unsigned long id;
 	int rev;
 
-	id = REMOTE_HUB_L(nasid, SH_SHUB_ID);
-	rev = (id & SH_SHUB_ID_REVISION_MASK) >> SH_SHUB_ID_REVISION_SHFT;
+	if (is_shub2())
+		return 0;
+	id = REMOTE_HUB_L(nasid, SH1_SHUB_ID);
+	rev = (id & SH1_SHUB_ID_REVISION_MASK) >> SH1_SHUB_ID_REVISION_SHFT;
 	return rev <= 2;
 }
 
@@ -224,9 +227,14 @@ static void __init sn_check_for_wars(void)
 {
 	int cnode;
 
-	for (cnode = 0; cnode < numnodes; cnode++)
-		if (is_shub_1_1(cnodeid_to_nasid(cnode)))
-			shub_1_1_found = 1;
+	if (is_shub2()) {
+		/* none yet */
+	} else {
+		for_each_online_node(cnode) {
+			if (is_shub_1_1(cnodeid_to_nasid(cnode)))
+				shub_1_1_found = 1;
+		}
+	}
 }
 
 /**
@@ -340,23 +348,23 @@ void __init sn_setup(char **cmdline_p)
  *
  * One time setup for Node Data Area.  Called by sn_setup().
  */
-void __init sn_init_pdas(char **cmdline_p)
+static void __init sn_init_pdas(char **cmdline_p)
 {
 	cnodeid_t cnode;
 
 	memset(pda->cnodeid_to_nasid_table, -1,
 	       sizeof(pda->cnodeid_to_nasid_table));
-	for (cnode = 0; cnode < numnodes; cnode++)
+	for_each_online_node(cnode)
 		pda->cnodeid_to_nasid_table[cnode] =
 		    pxm_to_nasid(nid_to_pxm_map[cnode]);
 
-	numionodes = numnodes;
+	numionodes = num_online_nodes();
 	scan_for_ionodes();
 
 	/*
 	 * Allocate & initalize the nodepda for each node.
 	 */
-	for (cnode = 0; cnode < numnodes; cnode++) {
+	for_each_online_node(cnode) {
 		nodepdaindr[cnode] =
 		    alloc_bootmem_node(NODE_DATA(cnode), sizeof(nodepda_t));
 		memset(nodepdaindr[cnode], 0, sizeof(nodepda_t));
@@ -367,7 +375,7 @@ void __init sn_init_pdas(char **cmdline_p)
 	/*
 	 * Allocate & initialize nodepda for TIOs.  For now, put them on node 0.
 	 */
-	for (cnode = numnodes; cnode < numionodes; cnode++) {
+	for (cnode = num_online_nodes(); cnode < numionodes; cnode++) {
 		nodepdaindr[cnode] =
 		    alloc_bootmem_node(NODE_DATA(0), sizeof(nodepda_t));
 		memset(nodepdaindr[cnode], 0, sizeof(nodepda_t));
@@ -385,7 +393,7 @@ void __init sn_init_pdas(char **cmdline_p)
 	 * The following routine actually sets up the hubinfo struct
 	 * in nodepda.
 	 */
-	for (cnode = 0; cnode < numnodes; cnode++) {
+	for_each_online_node(cnode) {
 		bte_init_node(nodepdaindr[cnode], cnode);
 	}
 
@@ -416,7 +424,16 @@ void __init sn_cpu_init(void)
 	int slice;
 	int cnode;
 	int i;
+	u64 shubtype, nasid_bitmask, nasid_shift;
 	static int wars_have_been_checked;
+
+	memset(pda, 0, sizeof(pda));
+	if (ia64_sn_get_hub_info(0, &shubtype, &nasid_bitmask, &nasid_shift))
+		BUG();
+	pda->shub2 = (u8)shubtype;
+	pda->nasid_bitmask = (u16)nasid_bitmask;
+	pda->nasid_shift = (u8)nasid_shift;
+	pda->as_shift = pda->nasid_shift - 2;
 
 	/*
 	 * The boot cpu makes this call again after platform initialization is
@@ -431,7 +448,7 @@ void __init sn_cpu_init(void)
 	if (ia64_sn_get_sapic_info(cpuphyid, &nasid, &subnode, &slice))
 		BUG();
 
-	for (i=0; i < NR_NODES; i++) {
+	for (i=0; i < MAX_NUMNODES; i++) {
 		if (nodepdaindr[i]) {
 			nodepdaindr[i]->phys_cpuid[cpuid].nasid = nasid;
 			nodepdaindr[i]->phys_cpuid[cpuid].slice = slice;
@@ -441,7 +458,6 @@ void __init sn_cpu_init(void)
 
 	cnode = nasid_to_cnodeid(nasid);
 
-	memset(pda, 0, sizeof(pda));
 	pda->p_nodepda = nodepdaindr[cnode];
 	pda->led_address =
 	    (typeof(pda->led_address)) (LED0 + (slice << LED_CPU_SHIFT));
@@ -469,25 +485,29 @@ void __init sn_cpu_init(void)
 	pda->shub_1_1_found = shub_1_1_found;
 
 	/*
-	 * We must use different memory allocators for first cpu (bootmem 
-	 * allocator) than for the other cpus (regular allocator).
+	 * Set up addresses of PIO/MEM write status registers.
 	 */
-	pda->pio_write_status_addr = (volatile unsigned long *)
-	    LOCAL_MMR_ADDR((slice <
-			    2 ? SH_PIO_WRITE_STATUS_0 : SH_PIO_WRITE_STATUS_1));
-	pda->mem_write_status_addr = (volatile u64 *)
-	    LOCAL_MMR_ADDR((slice <
-			    2 ? SH_MEMORY_WRITE_STATUS_0 :
-			    SH_MEMORY_WRITE_STATUS_1));
+	{
+		u64 pio1[] = {SH1_PIO_WRITE_STATUS_0, 0, SH1_PIO_WRITE_STATUS_1, 0};
+		u64 pio2[] = {SH2_PIO_WRITE_STATUS_0, SH2_PIO_WRITE_STATUS_1, 
+			SH2_PIO_WRITE_STATUS_2, SH2_PIO_WRITE_STATUS_3};
+		u64 *pio;
+		pio = is_shub1() ? pio1 : pio2;
+		pda->pio_write_status_addr = (volatile unsigned long *) LOCAL_MMR_ADDR(pio[slice]);
+		pda->pio_write_status_val = is_shub1() ? SH_PIO_WRITE_STATUS_PENDING_WRITE_COUNT_MASK : 0;
+	}
 
-	if (local_node_data->active_cpu_count++ == 0) {
+	/*
+	 * WAR addresses for SHUB 1.x.
+	 */
+	if (local_node_data->active_cpu_count++ == 0 && is_shub1()) {
 		int buddy_nasid;
 		buddy_nasid =
 		    cnodeid_to_nasid(numa_node_id() ==
-				     numnodes - 1 ? 0 : numa_node_id() + 1);
+				     num_online_nodes() - 1 ? 0 : numa_node_id() + 1);
 		pda->pio_shub_war_cam_addr =
 		    (volatile unsigned long *)GLOBAL_MMR_ADDR(nasid,
-							      SH_PI_CAM_CONTROL);
+							      SH1_PI_CAM_CONTROL);
 	}
 }
 
@@ -503,15 +523,15 @@ static void __init scan_for_ionodes(void)
 
 	/* Setup ionodes with memory */
 	for (nasid = 0; nasid < MAX_PHYSNODE_ID; nasid += 2) {
-		u64 klgraph_header;
+		char *klgraph_header;
 		cnodeid_t cnodeid;
 
 		if (physical_node_map[nasid] == -1)
 			continue;
 
-		klgraph_header = cnodeid = -1;
-		klgraph_header = ia64_sn_get_klconfig_addr(nasid);
-		if (klgraph_header <= 0) {
+		cnodeid = -1;
+		klgraph_header = __va(ia64_sn_get_klconfig_addr(nasid));
+		if (!klgraph_header) {
 			if (IS_RUNNING_ON_SIMULATOR())
 				continue;
 			BUG();	/* All nodes must have klconfig tables! */

@@ -73,6 +73,7 @@
 #include <asm/ppcdebug.h>
 #include <asm/time.h>
 #include <asm/mmu_context.h>
+#include <asm/systemcfg.h>
 
 #include "pci.h"
 
@@ -491,6 +492,7 @@ asmlinkage long sys32_settimeofday(struct compat_timeval __user *tv, struct time
 	return do_sys_settimeofday(tv ? &kts : NULL, tz ? &ktz : NULL);
 }
 
+#ifdef CONFIG_SYSVIPC
 long sys32_ipc(u32 call, u32 first, u32 second, u32 third, compat_uptr_t ptr,
 	       u32 fifth)
 {
@@ -555,6 +557,7 @@ long sys32_ipc(u32 call, u32 first, u32 second, u32 third, compat_uptr_t ptr,
 
 	return -ENOSYS;
 }
+#endif
 
 /* Note: it is necessary to treat out_fd and in_fd as unsigned ints, 
  * with the corresponding cast to a signed int to insure that the 
@@ -1103,6 +1106,7 @@ asmlinkage long sys32_umask(u32 mask)
 	return sys_umask((int)mask);
 }
 
+#ifdef CONFIG_SYSCTL
 struct __sysctl_args32 {
 	u32 name;
 	int nlen;
@@ -1152,23 +1156,7 @@ asmlinkage long sys32_sysctl(struct __sysctl_args32 __user *args)
 	}
 	return error;
 }
-
-asmlinkage long sys32_time(compat_time_t __user * tloc)
-{
-	compat_time_t secs;
-
-	struct timeval tv;
-
-	do_gettimeofday( &tv );
-	secs = tv.tv_sec;
-
-	if (tloc) {
-		if (put_user(secs,tloc))
-			secs = -EFAULT;
-	}
-
-	return secs;
-}
+#endif
 
 asmlinkage int sys32_olduname(struct oldold_utsname __user * name)
 {

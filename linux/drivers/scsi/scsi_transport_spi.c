@@ -2,6 +2,7 @@
  *  Parallel SCSI (SPI) transport specific attributes exported to sysfs.
  *
  *  Copyright (c) 2003 Silicon Graphics, Inc.  All rights reserved.
+ *  Copyright (c) 2004, 2005 James Bottomley <James.Bottomley@SteelEye.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,13 +32,11 @@
 #include <scsi/scsi_device.h>
 #include <scsi/scsi_host.h>
 #include <scsi/scsi_request.h>
+#include <scsi/scsi_eh.h>
 #include <scsi/scsi_transport.h>
 #include <scsi/scsi_transport_spi.h>
 
 #define SPI_PRINTK(x, l, f, a...)	dev_printk(l, &(x)->dev, f , ##a)
-
-static void transport_class_release(struct class_device *class_dev);
-static void host_class_release(struct class_device *class_dev);
 
 #define SPI_NUM_ATTRS 10	/* increase this if you add attributes */
 #define SPI_OTHER_ATTRS 1	/* Increase this if you add "always
@@ -118,40 +117,43 @@ static inline enum spi_signal_type spi_signal_to_value(const char *name)
 	return SPI_SIGNAL_UNKNOWN;
 }
 
-
-struct class spi_transport_class = {
-	.name = "spi_transport",
-	.release = transport_class_release,
-};
-
-struct class spi_host_class = {
-	.name = "spi_host",
-	.release = host_class_release,
-};
-
-static __init int spi_transport_init(void)
+static int spi_host_setup(struct device *dev)
 {
-	int error = class_register(&spi_host_class);
-	if (error)
-		return error;
-	return class_register(&spi_transport_class);
-}
+	struct Scsi_Host *shost = dev_to_shost(dev);
 
-static void __exit spi_transport_exit(void)
-{
-	class_unregister(&spi_transport_class);
-	class_unregister(&spi_host_class);
-}
-
-static int spi_setup_host_attrs(struct Scsi_Host *shost)
-{
 	spi_signalling(shost) = SPI_SIGNAL_UNKNOWN;
 
 	return 0;
 }
 
-static int spi_configure_device(struct scsi_device *sdev)
+static DECLARE_TRANSPORT_CLASS(spi_host_class,
+			       "spi_host",
+			       spi_host_setup,
+			       NULL,
+			       NULL);
+
+static int spi_host_match(struct attribute_container *cont,
+			  struct device *dev)
 {
+	struct Scsi_Host *shost;
+	struct spi_internal *i;
+
+	if (!scsi_is_host_device(dev))
+		return 0;
+
+	shost = dev_to_shost(dev);
+	if (!shost->transportt  || shost->transportt->host_attrs.class
+	    != &spi_host_class.class)
+		return 0;
+
+	i = to_spi_internal(shost->transportt);
+	
+	return &i->t.host_attrs == cont;
+}
+
+static int spi_device_configure(struct device *dev)
+{
+	struct scsi_device *sdev = to_scsi_device(dev);
 	struct scsi_target *starget = sdev->sdev_target;
 
 	/* Populate the target capability fields with the values
@@ -167,8 +169,10 @@ static int spi_configure_device(struct scsi_device *sdev)
 	return 0;
 }
 
-static int spi_setup_transport_attrs(struct scsi_target *starget)
+static int spi_setup_transport_attrs(struct device *dev)
 {
+	struct scsi_target *starget = to_scsi_target(dev);
+
 	spi_period(starget) = -1;	/* illegal value */
 	spi_offset(starget) = 0;	/* async */
 	spi_width(starget) = 0;	/* narrow */
@@ -184,18 +188,6 @@ static int spi_setup_transport_attrs(struct scsi_target *starget)
 	init_MUTEX(&spi_dv_sem(starget));
 
 	return 0;
-}
-
-static void transport_class_release(struct class_device *class_dev)
-{
-	struct scsi_target *starget = transport_class_to_starget(class_dev);
-	put_device(&starget->dev);
-}
-
-static void host_class_release(struct class_device *class_dev)
-{
-	struct Scsi_Host *shost = transport_class_to_shost(class_dev);
-	put_device(&shost->shost_gendev);
 }
 
 #define spi_transport_show_function(field, format_string)		\
@@ -378,10 +370,16 @@ static CLASS_DEVICE_ATTR(signalling, S_IRUGO | S_IWUSR,
 #define DV_RETRIES	3	/* should only need at most 
 				 * two cc/ua clears */
 
+enum spi_compare_returns {
+	SPI_COMPARE_SUCCESS,
+	SPI_COMPARE_FAILURE,
+	SPI_COMPARE_SKIP_TEST,
+};
+
 
 /* This is for read/write Domain Validation:  If the device supports
  * an echo buffer, we do read/write tests to it */
-static int
+static enum spi_compare_returns
 spi_dv_device_echo_buffer(struct scsi_request *sreq, u8 *buffer,
 			  u8 *ptr, const int retries)
 {
@@ -438,9 +436,23 @@ spi_dv_device_echo_buffer(struct scsi_request *sreq, u8 *buffer,
 		scsi_wait_req(sreq, spi_write_buffer, buffer, len,
 			      DV_TIMEOUT, DV_RETRIES);
 		if(sreq->sr_result || !scsi_device_online(sdev)) {
+			struct scsi_sense_hdr sshdr;
+
 			scsi_device_set_state(sdev, SDEV_QUIESCE);
+			if (scsi_request_normalize_sense(sreq, &sshdr)
+			    && sshdr.sense_key == ILLEGAL_REQUEST
+			    /* INVALID FIELD IN CDB */
+			    && sshdr.asc == 0x24 && sshdr.ascq == 0x00)
+				/* This would mean that the drive lied
+				 * to us about supporting an echo
+				 * buffer (unfortunately some Western
+				 * Digital drives do precisely this)
+				 */
+				return SPI_COMPARE_SKIP_TEST;
+
+
 			SPI_PRINTK(sdev->sdev_target, KERN_ERR, "Write Buffer failure %x\n", sreq->sr_result);
-			return 0;
+			return SPI_COMPARE_FAILURE;
 		}
 
 		memset(ptr, 0, len);
@@ -451,14 +463,14 @@ spi_dv_device_echo_buffer(struct scsi_request *sreq, u8 *buffer,
 		scsi_device_set_state(sdev, SDEV_QUIESCE);
 
 		if (memcmp(buffer, ptr, len) != 0)
-			return 0;
+			return SPI_COMPARE_FAILURE;
 	}
-	return 1;
+	return SPI_COMPARE_SUCCESS;
 }
 
 /* This is for the simplest form of Domain Validation: a read test
  * on the inquiry data from the device */
-static int
+static enum spi_compare_returns
 spi_dv_device_compare_inquiry(struct scsi_request *sreq, u8 *buffer,
 			      u8 *ptr, const int retries)
 {
@@ -480,7 +492,7 @@ spi_dv_device_compare_inquiry(struct scsi_request *sreq, u8 *buffer,
 		
 		if(sreq->sr_result || !scsi_device_online(sdev)) {
 			scsi_device_set_state(sdev, SDEV_QUIESCE);
-			return 0;
+			return SPI_COMPARE_FAILURE;
 		}
 
 		/* If we don't have the inquiry data already, the
@@ -493,24 +505,28 @@ spi_dv_device_compare_inquiry(struct scsi_request *sreq, u8 *buffer,
 
 		if (memcmp(buffer, ptr, len) != 0)
 			/* failure */
-			return 0;
+			return SPI_COMPARE_FAILURE;
 	}
-	return 1;
+	return SPI_COMPARE_SUCCESS;
 }
 
-static int
+static enum spi_compare_returns
 spi_dv_retrain(struct scsi_request *sreq, u8 *buffer, u8 *ptr,
-	       int (*compare_fn)(struct scsi_request *, u8 *, u8 *, int))
+	       enum spi_compare_returns 
+	       (*compare_fn)(struct scsi_request *, u8 *, u8 *, int))
 {
 	struct spi_internal *i = to_spi_internal(sreq->sr_host->transportt);
 	struct scsi_device *sdev = sreq->sr_device;
 	int period = 0, prevperiod = 0; 
+	enum spi_compare_returns retval;
 
 
 	for (;;) {
 		int newperiod;
-		if (compare_fn(sreq, buffer, ptr, DV_LOOPS))
-			/* Successful DV */
+		retval = compare_fn(sreq, buffer, ptr, DV_LOOPS);
+
+		if (retval == SPI_COMPARE_SUCCESS
+		    || retval == SPI_COMPARE_SKIP_TEST)
 			break;
 
 		/* OK, retrain, fallback */
@@ -527,13 +543,13 @@ spi_dv_retrain(struct scsi_request *sreq, u8 *buffer, u8 *ptr,
 			/* Total failure; set to async and return */
 			SPI_PRINTK(sdev->sdev_target, KERN_ERR, "Domain Validation Failure, dropping back to Asynchronous\n");
 			DV_SET(offset, 0);
-			return 0;
+			return SPI_COMPARE_FAILURE;
 		}
 		SPI_PRINTK(sdev->sdev_target, KERN_ERR, "Domain Validation detected failure, dropping back\n");
 		DV_SET(period, period);
 		prevperiod = period;
 	}
-	return 1;
+	return retval;
 }
 
 static int
@@ -599,7 +615,8 @@ spi_dv_device_internal(struct scsi_request *sreq, u8 *buffer)
 	DV_SET(offset, 0);
 	DV_SET(width, 0);
 	
-	if (!spi_dv_device_compare_inquiry(sreq, buffer, buffer, DV_LOOPS)) {
+	if (spi_dv_device_compare_inquiry(sreq, buffer, buffer, DV_LOOPS)
+	    != SPI_COMPARE_SUCCESS) {
 		SPI_PRINTK(sdev->sdev_target, KERN_ERR, "Domain Validation Initial Inquiry Failed\n");
 		/* FIXME: should probably offline the device here? */
 		return;
@@ -609,9 +626,10 @@ spi_dv_device_internal(struct scsi_request *sreq, u8 *buffer)
 	if (i->f->set_width && sdev->wdtr) {
 		i->f->set_width(sdev->sdev_target, 1);
 
-		if (!spi_dv_device_compare_inquiry(sreq, buffer,
+		if (spi_dv_device_compare_inquiry(sreq, buffer,
 						   buffer + len,
-						   DV_LOOPS)) {
+						   DV_LOOPS)
+		    != SPI_COMPARE_SUCCESS) {
 			SPI_PRINTK(sdev->sdev_target, KERN_ERR, "Wide Transfers Fail\n");
 			i->f->set_width(sdev->sdev_target, 0);
 		}
@@ -624,31 +642,39 @@ spi_dv_device_internal(struct scsi_request *sreq, u8 *buffer)
 	if(!sdev->ppr && !sdev->sdtr)
 		return;
 
-	/* now set up to the maximum */
-	DV_SET(offset, 255);
-	DV_SET(period, 1);
-	if (!spi_dv_retrain(sreq, buffer, buffer + len,
-			    spi_dv_device_compare_inquiry))
-		return;
-
-	/* OK, now we have our initial speed set by the read only inquiry
-	 * test, now try an echo buffer test (if the device allows it) */
+	/* see if the device has an echo buffer.  If it does we can
+	 * do the SPI pattern write tests */
 
 	len = 0;
 	if (sdev->ppr)
 		len = spi_dv_device_get_echo_buffer(sreq, buffer);
 
+ retry:
+
+	/* now set up to the maximum */
+	DV_SET(offset, 255);
+	DV_SET(period, 1);
+
 	if (len == 0) {
 		SPI_PRINTK(sdev->sdev_target, KERN_INFO, "Domain Validation skipping write tests\n");
+		spi_dv_retrain(sreq, buffer, buffer + len,
+			       spi_dv_device_compare_inquiry);
 		return;
 	}
+
 	if (len > SPI_MAX_ECHO_BUFFER_SIZE) {
 		SPI_PRINTK(sdev->sdev_target, KERN_WARNING, "Echo buffer size %d is too big, trimming to %d\n", len, SPI_MAX_ECHO_BUFFER_SIZE);
 		len = SPI_MAX_ECHO_BUFFER_SIZE;
 	}
 
-	spi_dv_retrain(sreq, buffer, buffer + len,
-		       spi_dv_device_echo_buffer);
+	if (spi_dv_retrain(sreq, buffer, buffer + len,
+			   spi_dv_device_echo_buffer)
+	    == SPI_COMPARE_SKIP_TEST) {
+		/* OK, the stupid drive can't do a write echo buffer
+		 * test after all, fall back to the read tests */
+		len = 0;
+		goto retry;
+	}
 }
 
 
@@ -788,6 +814,55 @@ EXPORT_SYMBOL(spi_schedule_dv_device);
 	i->host_attrs[count] = &i->private_host_attrs[count];		\
 	count++
 
+static int spi_device_match(struct attribute_container *cont,
+			    struct device *dev)
+{
+	struct scsi_device *sdev;
+	struct Scsi_Host *shost;
+
+	if (!scsi_is_sdev_device(dev))
+		return 0;
+
+	sdev = to_scsi_device(dev);
+	shost = sdev->host;
+	if (!shost->transportt  || shost->transportt->host_attrs.class
+	    != &spi_host_class.class)
+		return 0;
+	/* Note: this class has no device attributes, so it has
+	 * no per-HBA allocation and thus we don't need to distinguish
+	 * the attribute containers for the device */
+	return 1;
+}
+
+static int spi_target_match(struct attribute_container *cont,
+			    struct device *dev)
+{
+	struct Scsi_Host *shost;
+	struct spi_internal *i;
+
+	if (!scsi_is_target_device(dev))
+		return 0;
+
+	shost = dev_to_shost(dev->parent);
+	if (!shost->transportt  || shost->transportt->host_attrs.class
+	    != &spi_host_class.class)
+		return 0;
+
+	i = to_spi_internal(shost->transportt);
+	
+	return &i->t.target_attrs == cont;
+}
+
+static DECLARE_TRANSPORT_CLASS(spi_transport_class,
+			       "spi_transport",
+			       spi_setup_transport_attrs,
+			       NULL,
+			       NULL);
+
+static DECLARE_ANON_TRANSPORT_CLASS(spi_device_class,
+				    spi_device_match,
+				    spi_device_configure);
+
 struct scsi_transport_template *
 spi_attach_transport(struct spi_function_template *ft)
 {
@@ -800,14 +875,15 @@ spi_attach_transport(struct spi_function_template *ft)
 	memset(i, 0, sizeof(struct spi_internal));
 
 
-	i->t.target_attrs = &i->attrs[0];
-	i->t.target_class = &spi_transport_class;
-	i->t.target_setup = &spi_setup_transport_attrs;
-	i->t.device_configure = &spi_configure_device;
+	i->t.target_attrs.class = &spi_transport_class.class;
+	i->t.target_attrs.attrs = &i->attrs[0];
+	i->t.target_attrs.match = spi_target_match;
+	attribute_container_register(&i->t.target_attrs);
 	i->t.target_size = sizeof(struct spi_transport_attrs);
-	i->t.host_attrs = &i->host_attrs[0];
-	i->t.host_class = &spi_host_class;
-	i->t.host_setup = &spi_setup_host_attrs;
+	i->t.host_attrs.class = &spi_host_class.class;
+	i->t.host_attrs.attrs = &i->host_attrs[0];
+	i->t.host_attrs.match = spi_host_match;
+	attribute_container_register(&i->t.host_attrs);
 	i->t.host_size = sizeof(struct spi_host_attrs);
 	i->f = ft;
 
@@ -845,10 +921,28 @@ void spi_release_transport(struct scsi_transport_template *t)
 {
 	struct spi_internal *i = to_spi_internal(t);
 
+	attribute_container_unregister(&i->t.target_attrs);
+	attribute_container_unregister(&i->t.host_attrs);
+
 	kfree(i);
 }
 EXPORT_SYMBOL(spi_release_transport);
 
+static __init int spi_transport_init(void)
+{
+	int error = transport_class_register(&spi_transport_class);
+	if (error)
+		return error;
+	error = anon_transport_class_register(&spi_device_class);
+	return transport_class_register(&spi_host_class);
+}
+
+static void __exit spi_transport_exit(void)
+{
+	transport_class_unregister(&spi_transport_class);
+	anon_transport_class_unregister(&spi_device_class);
+	transport_class_unregister(&spi_host_class);
+}
 
 MODULE_AUTHOR("Martin Hicks");
 MODULE_DESCRIPTION("SPI Transport Attributes");

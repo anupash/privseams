@@ -81,6 +81,8 @@ static void last_ditch_exit(int sig)
 
 extern int uml_exitcode;
 
+extern void scan_elf_aux( char **envp);
+
 int main(int argc, char **argv, char **envp)
 {
 	char **new_argv;
@@ -147,8 +149,16 @@ int main(int argc, char **argv, char **envp)
 	set_handler(SIGTERM, last_ditch_exit, SA_ONESHOT | SA_NODEFER, -1);
 	set_handler(SIGHUP, last_ditch_exit, SA_ONESHOT | SA_NODEFER, -1);
 
+	scan_elf_aux( envp);
+
 	do_uml_initcalls();
 	ret = linux_main(argc, argv);
+
+	/* Disable SIGPROF - I have no idea why libc doesn't do this or turn
+	 * off the profiling time, but UML dies with a SIGPROF just before
+	 * exiting when profiling is active.
+	 */
+	change_sig(SIGPROF, 0);
 
 	/* Reboot */
 	if(ret){
@@ -156,16 +166,20 @@ int main(int argc, char **argv, char **envp)
 
 		printf("\n");
 
-		/* Let any pending signals fire, then disable them.  This
-		 * ensures that they won't be delivered after the exec, when
-		 * they are definitely not expected.
-		 */
-		unblock_signals();
+		/* stop timers and set SIG*ALRM to be ignored */
 		disable_timer();
+
+		/* disable SIGIO for the fds and set SIGIO to be ignored */
 		err = deactivate_all_fds();
 		if(err)
 			printf("deactivate_all_fds failed, errno = %d\n",
 			       -err);
+
+		/* Let any pending signals fire now.  This ensures
+		 * that they won't be delivered after the exec, when
+		 * they are definitely not expected.
+		 */
+		unblock_signals();
 
 		execvp(new_argv[0], new_argv);
 		perror("Failed to exec kernel");
@@ -222,13 +236,16 @@ void __wrap_free(void *ptr)
 	 * 	physical memory - kmalloc/kfree
 	 *	kernel virtual memory - vmalloc/vfree
 	 * 	anywhere else - malloc/free
-	 * If kmalloc is not yet possible, then the kernel memory regions
-	 * may not be set up yet, and the variables not initialized.  So,
-	 * free is called.
+	 * If kmalloc is not yet possible, then either high_physmem and/or
+	 * end_vm are still 0 (as at startup), in which case we call free, or
+	 * we have set them, but anyway addr has not been allocated from those
+	 * areas. So, in both cases __real_free is called.
 	 *
 	 * CAN_KMALLOC is checked because it would be bad to free a buffer
 	 * with kmalloc/vmalloc after they have been turned off during
 	 * shutdown.
+	 * XXX: However, we sometimes shutdown CAN_KMALLOC temporarily, so
+	 * there is a possibility for memory leaks.
 	 */
 
 	if((addr >= uml_physmem) && (addr < high_physmem)){

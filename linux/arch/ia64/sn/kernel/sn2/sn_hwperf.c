@@ -3,7 +3,7 @@
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
  *
- * Copyright (C) 2004 Silicon Graphics, Inc. All rights reserved.
+ * Copyright (C) 2004-2005 Silicon Graphics, Inc. All rights reserved.
  *
  * SGI Altix topology and hardware performance monitoring API.
  * Mark Goodwin <markgw@sgi.com>. 
@@ -30,6 +30,7 @@
 #include <linux/miscdevice.h>
 #include <linux/cpumask.h>
 #include <linux/smp_lock.h>
+#include <linux/nodemask.h>
 #include <asm/processor.h>
 #include <asm/topology.h>
 #include <asm/smp.h>
@@ -373,6 +374,42 @@ out:
 	return r;
 }
 
+/* map SAL hwperf error code to system error code */
+static int sn_hwperf_map_err(int hwperf_err)
+{
+	int e;
+
+	switch(hwperf_err) {
+	case SN_HWPERF_OP_OK:
+		e = 0;
+		break;
+
+	case SN_HWPERF_OP_NOMEM:
+		e = -ENOMEM;
+		break;
+
+	case SN_HWPERF_OP_NO_PERM:
+		e = -EPERM;
+		break;
+
+	case SN_HWPERF_OP_IO_ERROR:
+		e = -EIO;
+		break;
+
+	case SN_HWPERF_OP_BUSY:
+	case SN_HWPERF_OP_RECONFIGURE:
+		e = -EAGAIN;
+		break;
+
+	case SN_HWPERF_OP_INVAL:
+	default:
+		e = -EINVAL;
+		break;
+	}
+
+	return e;
+}
+
 /*
  * ioctl for "sn_hwperf" misc device
  */
@@ -510,12 +547,20 @@ sn_hwperf_ioctl(struct inode *in, struct file *fp, u32 op, u64 arg)
 		op_info.v0 = &v0;
 		op_info.op = op;
 		r = sn_hwperf_op_cpu(&op_info);
+		if (r) {
+			r = sn_hwperf_map_err(r);
+			goto error;
+		}
 		break;
 
 	default:
 		/* all other ops are a direct SAL call */
 		r = ia64_sn_hwperf_op(sn_hwperf_master_nasid, op,
 			      a.arg, a.sz, (u64) p, 0, 0, &v0);
+		if (r) {
+			r = sn_hwperf_map_err(r);
+			goto error;
+		}
 		a.v0 = v0;
 		break;
 	}
@@ -529,8 +574,7 @@ sn_hwperf_ioctl(struct inode *in, struct file *fp, u32 op, u64 arg)
 	}
 
 error:
-	if (p)
-		vfree(p);
+	vfree(p);
 
 	lock_kernel();
 	return r;
@@ -641,7 +685,6 @@ int sn_topology_release(struct inode *inode, struct file *file)
 {
 	struct seq_file *seq = file->private_data;
 
-	if (seq->private)
-		vfree(seq->private);
+	vfree(seq->private);
 	return seq_release(inode, file);
 }

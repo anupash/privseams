@@ -7,7 +7,6 @@
 #include <linux/xattr_acl.h>
 
 #define EXT3_ACL_VERSION	0x0001
-#define EXT3_ACL_MAX_ENTRIES	32
 
 typedef struct {
 	__le16		e_tag;
@@ -79,7 +78,6 @@ ext3_acl_chmod(struct inode *inode)
 static inline int
 ext3_init_acl(handle_t *handle, struct inode *inode, struct inode *dir)
 {
-	inode->i_mode &= ~current->fs->umask;
 	return 0;
 }
 #endif  /* CONFIG_EXT3_FS_POSIX_ACL */

@@ -81,7 +81,7 @@ struct socket_info {
 				    1 = empty socket, 
 				    2 = card but not initialized,
 				    3 = operational card */
-	int 	io_base; 	/* base io address of the socket */
+	kio_addr_t io_base; 	/* base io address of the socket */
 	
 	struct pcmcia_socket socket;
 	struct pci_dev *dev;	/* The PCI device for the socket */
@@ -122,7 +122,7 @@ static int __devinit i82092aa_pci_probe(struct pci_dev *dev, const struct pci_de
 	}
 	printk(KERN_INFO "i82092aa: configured as a %d socket device.\n", socket_count);
 
-	if (request_region(pci_resource_start(dev, 0), 2, "i82092aa")) {
+	if (!request_region(pci_resource_start(dev, 0), 2, "i82092aa")) {
 		ret = -EBUSY;
 		goto err_out_disable;
 	}
@@ -162,6 +162,7 @@ static int __devinit i82092aa_pci_probe(struct pci_dev *dev, const struct pci_de
 	for (i = 0; i<socket_count; i++) {
 		sockets[i].socket.dev.dev = &dev->dev;
 		sockets[i].socket.ops = &i82092aa_operations;
+		sockets[i].socket.resource_ops = &pccard_nonstatic_ops;
 		ret = pcmcia_register_socket(&sockets[i].socket);
 		if (ret) {
 			goto err_out_free_sockets;
@@ -199,7 +200,7 @@ static void __devexit i82092aa_pci_remove(struct pci_dev *dev)
 	leave("i82092aa_pci_remove");
 }
 
-static spinlock_t port_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(port_lock);
 
 /* basic value read/write functions */
 

@@ -152,7 +152,7 @@ static void idescsi_input_buffers (ide_drive_t *drive, idescsi_pc_t *pc, unsigne
 		}
 		count = min(pc->sg->length - pc->b_count, bcount);
 		buf = page_address(pc->sg->page) + pc->sg->offset;
-		atapi_input_bytes (drive, buf + pc->b_count, count);
+		drive->hwif->atapi_input_bytes(drive, buf + pc->b_count, count);
 		bcount -= count; pc->b_count += count;
 		if (pc->b_count == pc->sg->length) {
 			pc->sg++;
@@ -174,7 +174,7 @@ static void idescsi_output_buffers (ide_drive_t *drive, idescsi_pc_t *pc, unsign
 		}
 		count = min(pc->sg->length - pc->b_count, bcount);
 		buf = page_address(pc->sg->page) + pc->sg->offset;
-		atapi_output_bytes (drive, buf + pc->b_count, count);
+		drive->hwif->atapi_output_bytes(drive, buf + pc->b_count, count);
 		bcount -= count; pc->b_count += count;
 		if (pc->b_count == pc->sg->length) {
 			pc->sg++;
@@ -301,23 +301,9 @@ static int idescsi_check_condition(ide_drive_t *drive, struct request *failed_co
 	return ide_do_drive_cmd(drive, rq, ide_preempt);
 }
 
-ide_startstop_t idescsi_atapi_error (ide_drive_t *drive, const char *msg, byte stat)
+static ide_startstop_t
+idescsi_atapi_error(ide_drive_t *drive, struct request *rq, u8 stat, u8 err)
 {
-	struct request *rq;
-	byte err;
-
-	err = ide_dump_atapi_status(drive, msg, stat);
-
-	if (drive == NULL || (rq = HWGROUP(drive)->rq) == NULL)
-		return ide_stopped;
-
-	/* retry only "normal" I/O: */
-	if (rq->flags & (REQ_DRIVE_CMD | REQ_DRIVE_TASK | REQ_DRIVE_TASKFILE)) {
-		rq->errors = 1;
-		ide_end_drive_cmd(drive, stat, err);
-		return ide_stopped;
-	}
-
 	if (HWIF(drive)->INB(IDE_STATUS_REG) & (BUSY_STAT|DRQ_STAT))
 		/* force an abort */
 		HWIF(drive)->OUTB(WIN_IDLEIMMEDIATE,IDE_COMMAND_REG);
@@ -327,20 +313,9 @@ ide_startstop_t idescsi_atapi_error (ide_drive_t *drive, const char *msg, byte s
 	return ide_stopped;
 }
 
-ide_startstop_t idescsi_atapi_abort (ide_drive_t *drive, const char *msg)
+static ide_startstop_t
+idescsi_atapi_abort(ide_drive_t *drive, struct request *rq)
 {
-	struct request *rq;
-
-	if (drive == NULL || (rq = HWGROUP(drive)->rq) == NULL)
-	       return ide_stopped;
-
-	/* retry only "normal" I/O: */
-	if (rq->flags & (REQ_DRIVE_CMD | REQ_DRIVE_TASK | REQ_DRIVE_TASKFILE)) {
-		rq->errors = 1;
-		ide_end_drive_cmd(drive, BUSY_STAT, 0);
-		return ide_stopped;
-	}
-
 #if IDESCSI_DEBUG_LOG
 	printk(KERN_WARNING "idescsi_atapi_abort called for %lu\n",
 			((idescsi_pc_t *) rq->special)->scsi_cmd->serial_number);
@@ -506,7 +481,7 @@ static ide_startstop_t idescsi_pc_intr (ide_drive_t *drive)
 					if (pc->sg)
 						idescsi_input_buffers(drive, pc, temp);
 					else
-						atapi_input_bytes(drive, pc->current_position, temp);
+						drive->hwif->atapi_input_bytes(drive, pc->current_position, temp);
 					printk(KERN_ERR "ide-scsi: transferred %d of %d bytes\n", temp, bcount.all);
 				}
 				pc->actually_transferred += temp;
@@ -566,7 +541,7 @@ static ide_startstop_t idescsi_transfer_pc(ide_drive_t *drive)
 	/* Set the interrupt routine */
 	ide_set_handler(drive, &idescsi_pc_intr, get_timeout(pc), idescsi_expiry);
 	/* Send the actual packet */
-	atapi_output_bytes(drive, scsi->pc->c, 12);
+	drive->hwif->atapi_output_bytes(drive, scsi->pc->c, 12);
 	if (test_bit (PC_DMA_OK, &pc->flags)) {
 		set_bit (PC_DMA_IN_PROGRESS, &pc->flags);
 		hwif->dma_start(drive);

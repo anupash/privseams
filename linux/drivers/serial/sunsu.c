@@ -989,7 +989,7 @@ static struct uart_sunsu_port sunsu_ports[UART_NR];
 
 #ifdef CONFIG_SERIO
 
-static spinlock_t sunsu_serio_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(sunsu_serio_lock);
 
 static int sunsu_serio_write(struct serio *serio, unsigned char ch)
 {
@@ -1285,7 +1285,9 @@ static struct uart_driver sunsu_reg = {
 
 static int __init sunsu_kbd_ms_init(struct uart_sunsu_port *up, int channel)
 {
+#ifdef CONFIG_SERIO
 	struct serio *serio;
+#endif
 
 	up->port.line = channel;
 	up->port.type = PORT_UNKNOWN;

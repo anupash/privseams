@@ -48,6 +48,7 @@
 #include <linux/netdevice.h>
 #include <linux/if_arp.h>
 #include <linux/if_arcnet.h>
+#include <linux/if_infiniband.h>
 #include <linux/route.h>
 #include <linux/inetdevice.h>
 #include <linux/init.h>
@@ -102,9 +103,6 @@ static void addrconf_sysctl_register(struct inet6_dev *idev, struct ipv6_devconf
 static void addrconf_sysctl_unregister(struct ipv6_devconf *p);
 #endif
 
-int inet6_dev_count;
-int inet6_ifa_count;
-
 #ifdef CONFIG_IPV6_PRIVACY
 static int __ipv6_regen_rndid(struct inet6_dev *idev);
 static int __ipv6_try_regen_rndid(struct inet6_dev *idev, struct in6_addr *tmpaddr); 
@@ -112,7 +110,7 @@ static void ipv6_regen_rndid(unsigned long data);
 
 static int desync_factor = MAX_DESYNC_FACTOR * HZ;
 static struct crypto_tfm *md5_tfm;
-static spinlock_t md5_tfm_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(md5_tfm_lock);
 #endif
 
 static int ipv6_count_addresses(struct inet6_dev *idev);
@@ -121,16 +119,16 @@ static int ipv6_count_addresses(struct inet6_dev *idev);
  *	Configured unicast address hash table
  */
 static struct inet6_ifaddr		*inet6_addr_lst[IN6_ADDR_HSIZE];
-static rwlock_t	addrconf_hash_lock = RW_LOCK_UNLOCKED;
+static DEFINE_RWLOCK(addrconf_hash_lock);
 
 /* Protects inet6 devices */
-rwlock_t addrconf_lock = RW_LOCK_UNLOCKED;
+DEFINE_RWLOCK(addrconf_lock);
 
 static void addrconf_verify(unsigned long);
 
 static struct timer_list addr_chk_timer =
 			TIMER_INITIALIZER(addrconf_verify, 0, 0);
-static spinlock_t addrconf_verify_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(addrconf_verify_lock);
 
 static void addrconf_join_anycast(struct inet6_ifaddr *ifp);
 static void addrconf_leave_anycast(struct inet6_ifaddr *ifp);
@@ -194,7 +192,9 @@ static struct ipv6_devconf ipv6_devconf_dflt = {
 };
 
 /* IPv6 Wildcard Address and Loopback Address defined by RFC2553 */
+#if 0
 const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+#endif
 const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 
 int ipv6_addr_type(const struct in6_addr *addr)
@@ -312,8 +312,7 @@ void in6_dev_finish_destroy(struct inet6_dev *idev)
 		printk("Freeing alive inet6 device %p\n", idev);
 		return;
 	}
-	snmp6_unregister_dev(idev);
-	inet6_dev_count--;
+	snmp6_free_dev(idev);
 	kfree(idev);
 }
 
@@ -341,9 +340,18 @@ static struct inet6_dev * ipv6_add_dev(struct net_device *dev)
 			kfree(ndev);
 			return NULL;
 		}
-		inet6_dev_count++;
 		/* We refer to the device */
 		dev_hold(dev);
+
+		if (snmp6_alloc_dev(ndev) < 0) {
+			ADBG((KERN_WARNING
+				"%s(): cannot allocate memory for statistics; dev=%s.\n",
+				__FUNCTION__, dev->name));
+			neigh_parms_release(&nd_tbl, ndev->nd_parms);
+			ndev->dead = 1;
+			in6_dev_finish_destroy(ndev);
+			return NULL;
+		}
 
 		if (snmp6_register_dev(ndev) < 0) {
 			ADBG((KERN_WARNING
@@ -478,7 +486,6 @@ void inet6_ifa_finish_destroy(struct inet6_ifaddr *ifp)
 	}
 	dst_release(&ifp->rt->u.dst);
 
-	inet6_ifa_count--;
 	kfree(ifp);
 }
 EXPORT_SYMBOL(inet6_ifa_finish_destroy);
@@ -534,7 +541,6 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr, int pfxlen,
 	ifa->flags = flags | IFA_F_TENTATIVE;
 	ifa->cstamp = ifa->tstamp = jiffies;
 
-	inet6_ifa_count++;
 	ifa->idev = idev;
 	in6_dev_hold(idev);
 	/* For caller */
@@ -1089,10 +1095,29 @@ static int ipv6_generate_eui64(u8 *eui, struct net_device *dev)
 		if (dev->addr_len != ETH_ALEN)
 			return -1;
 		memcpy(eui, dev->dev_addr, 3);
-		memcpy(eui + 5, dev->dev_addr+3, 3);
-		eui[3] = 0xFF;
-		eui[4] = 0xFE;
-		eui[0] ^= 2;
+		memcpy(eui + 5, dev->dev_addr + 3, 3);
+
+		/*
+		 * The zSeries OSA network cards can be shared among various
+		 * OS instances, but the OSA cards have only one MAC address.
+		 * This leads to duplicate address conflicts in conjunction
+		 * with IPv6 if more than one instance uses the same card.
+		 * 
+		 * The driver for these cards can deliver a unique 16-bit
+		 * identifier for each instance sharing the same card.  It is
+		 * placed instead of 0xFFFE in the interface identifier.  The
+		 * "u" bit of the interface identifier is not inverted in this
+		 * case.  Hence the resulting interface identifier has local
+		 * scope according to RFC2373.
+		 */
+		if (dev->dev_id) {
+			eui[3] = (dev->dev_id >> 8) & 0xFF;
+			eui[4] = dev->dev_id & 0xFF;
+		} else {
+			eui[3] = 0xFF;
+			eui[4] = 0xFE;
+			eui[0] ^= 2;
+		}
 		return 0;
 	case ARPHRD_ARCNET:
 		/* XXX: inherit EUI-64 from other interface -- yoshfuji */
@@ -1100,6 +1125,12 @@ static int ipv6_generate_eui64(u8 *eui, struct net_device *dev)
 			return -1;
 		memset(eui, 0, 7);
 		eui[7] = *(u8*)dev->dev_addr;
+		return 0;
+	case ARPHRD_INFINIBAND:
+		if (dev->addr_len != INFINIBAND_ALEN)
+			return -1;
+		memcpy(eui, dev->dev_addr + 12, 8);
+		eui[0] |= 2;
 		return 0;
 	}
 	return -1;
@@ -1810,7 +1841,8 @@ static void addrconf_dev_config(struct net_device *dev)
 	if ((dev->type != ARPHRD_ETHER) && 
 	    (dev->type != ARPHRD_FDDI) &&
 	    (dev->type != ARPHRD_IEEE802_TR) &&
-	    (dev->type != ARPHRD_ARCNET)) {
+	    (dev->type != ARPHRD_ARCNET) &&
+	    (dev->type != ARPHRD_INFINIBAND)) {
 		/* Alas, we support only Ethernet autoconfiguration. */
 		return;
 	}
@@ -2007,6 +2039,10 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 		dev->ip6_ptr = NULL;
 		idev->dead = 1;
 		write_unlock_bh(&addrconf_lock);
+
+		/* Step 1.5: remove snmp6 entry */
+		snmp6_unregister_dev(idev);
+
 	}
 
 	/* Step 2: clear hash table */

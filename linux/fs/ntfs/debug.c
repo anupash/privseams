@@ -26,7 +26,7 @@
  * to protect concurrent accesses to it.
  */
 static char err_buf[1024];
-static spinlock_t err_buf_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(err_buf_lock);
 
 /**
  * __ntfs_warning - output a warning to the syslog
@@ -53,6 +53,10 @@ void __ntfs_warning(const char *function, const struct super_block *sb,
 	va_list args;
 	int flen = 0;
 
+#ifndef DEBUG
+	if (!printk_ratelimit())
+		return;
+#endif
 	if (function)
 		flen = strlen(function);
 	spin_lock(&err_buf_lock);
@@ -93,6 +97,10 @@ void __ntfs_error(const char *function, const struct super_block *sb,
 	va_list args;
 	int flen = 0;
 
+#ifndef DEBUG
+	if (!printk_ratelimit())
+		return;
+#endif
 	if (function)
 		flen = strlen(function);
 	spin_lock(&err_buf_lock);

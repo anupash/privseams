@@ -5,7 +5,7 @@
  *
  * Matt Porter <mporter@kernel.crashing.org>
  *
- * Copyright 2003-2004 MontaVista Software Inc.
+ * Copyright 2003-2005 MontaVista Software Inc.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -163,7 +163,7 @@ ocotea_setup_pcix(void)
 {
 	void *pcix_reg_base;
 
-	pcix_reg_base = ioremap64(PCIX0_REG_BASE, PCIX0_REG_SIZE);
+	pcix_reg_base = ioremap64(PCIX0_REG_BASE, PCIX_REG_SIZE);
 
 	/* Enable PCIX0 I/O, Mem, and Busmaster cycles */
 	PCIX_WRITEW(PCIX_READW(PCIX0_COMMAND) | PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER, PCIX0_COMMAND);
@@ -346,12 +346,6 @@ void __init platform_init(unsigned long r3, unsigned long r4,
 	 */
 	ibm440gx_get_clocks(&clocks, 33333333, 6 * 1843200);
 	ocp_sys_info.opb_bus_freq = clocks.opb;
-
-	/* XXX Fix L2C IRQ triggerring setting (edge-sensitive).
-	 * Firmware (at least PIBS v1.72 OCT/28/2003) sets it incorrectly
-	 * --ebs
-	 */
-	mtdcr(DCRN_UIC_TR(UIC2), mfdcr(DCRN_UIC_TR(UIC2)) | 0x00000100);
 
 	ibm44x_platform_init();
 

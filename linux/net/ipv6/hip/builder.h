@@ -14,6 +14,7 @@
 #include <net/ipv6.h>
 #include <net/hip.h>
 
+#define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
 
 #else /* not __KERNEL__ */
 
@@ -30,6 +31,8 @@
 
 #endif /* __KERNEL__ */
 
+/* Removed in 2.6.11 - why ? */
+extern const struct in6_addr in6addr_any;
 
 void hip_msg_init(struct hip_common *msg);
 struct hip_common *hip_msg_alloc(void);

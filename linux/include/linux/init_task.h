@@ -46,6 +46,7 @@
 
 #define INIT_SIGNALS(sig) {	\
 	.count		= ATOMIC_INIT(1), 		\
+	.wait_chldexit	= __WAIT_QUEUE_HEAD_INITIALIZER(sig.wait_chldexit),\
 	.shared_pending	= { 				\
 		.list = LIST_HEAD_INIT(sig.shared_pending.list),	\
 		.signal =  {{0}}}, \
@@ -53,10 +54,10 @@
 	.rlim		= INIT_RLIMITS,					\
 }
 
-#define INIT_SIGHAND(sighand) {	\
-	.count		= ATOMIC_INIT(1), 		\
-	.action		= { {{NULL,}}, },		\
-	.siglock	= SPIN_LOCK_UNLOCKED, 		\
+#define INIT_SIGHAND(sighand) {						\
+	.count		= ATOMIC_INIT(1), 				\
+	.action		= { { { .sa_handler = NULL, } }, },		\
+	.siglock	= SPIN_LOCK_UNLOCKED, 				\
 }
 
 extern struct group_info init_groups;
@@ -88,7 +89,6 @@ extern struct group_info init_groups;
 	.children	= LIST_HEAD_INIT(tsk.children),			\
 	.sibling	= LIST_HEAD_INIT(tsk.sibling),			\
 	.group_leader	= &tsk,						\
-	.wait_chldexit	= __WAIT_QUEUE_HEAD_INITIALIZER(tsk.wait_chldexit),\
 	.real_timer	= {						\
 		.function	= it_real_fn				\
 	},								\

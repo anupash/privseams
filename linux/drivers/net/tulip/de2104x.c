@@ -56,9 +56,10 @@ KERN_INFO DRV_NAME " PCI Ethernet driver v" DRV_VERSION " (" DRV_RELDATE ")\n";
 MODULE_AUTHOR("Jeff Garzik <jgarzik@pobox.com>");
 MODULE_DESCRIPTION("Intel/Digital 21040/1 series PCI Ethernet driver");
 MODULE_LICENSE("GPL");
+MODULE_VERSION(DRV_VERSION);
 
 static int debug = -1;
-MODULE_PARM (debug, "i");
+module_param (debug, int, 0);
 MODULE_PARM_DESC (debug, "de2104x bitmapped message enable number");
 
 /* Set the copy breakpoint for the copy-only-tiny-buffer Rx structure. */
@@ -69,7 +70,7 @@ static int rx_copybreak = 1518;
 #else
 static int rx_copybreak = 100;
 #endif
-MODULE_PARM (rx_copybreak, "i");
+module_param (rx_copybreak, int, 0);
 MODULE_PARM_DESC (rx_copybreak, "de2104x Breakpoint at which Rx packets are copied");
 
 #define PFX			DRV_NAME ": "
@@ -1702,6 +1703,7 @@ static void __init de21040_get_mac_address (struct de_private *de)
 			value = dr32(ROMCmd);
 		while (value < 0 && --boguscnt > 0);
 		de->dev->dev_addr[i] = value;
+		udelay(1);
 		if (boguscnt <= 0)
 			printk(KERN_WARNING PFX "timeout reading 21040 MAC address byte %u\n", i);
 	}
@@ -1958,8 +1960,6 @@ static int __devinit de_init_one (struct pci_dev *pdev,
 	dev->tx_timeout = de_tx_timeout;
 	dev->watchdog_timeo = TX_TIMEOUT;
 
-	dev->irq = pdev->irq;
-
 	de = dev->priv;
 	de->de21040 = ent->driver_data == 0 ? 1 : 0;
 	de->pdev = pdev;
@@ -1994,6 +1994,8 @@ static int __devinit de_init_one (struct pci_dev *pdev,
 		       pdev->irq, pci_name(pdev));
 		goto err_out_res;
 	}
+
+	dev->irq = pdev->irq;
 
 	/* obtain and check validity of PCI I/O address */
 	pciaddr = pci_resource_start(pdev, 1);

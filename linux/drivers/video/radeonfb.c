@@ -621,30 +621,6 @@ static void _radeon_engine_reset(struct radeonfb_info *rinfo)
 #define radeon_engine_reset()		_radeon_engine_reset(rinfo)
 
 
-static __inline__ u8 radeon_get_post_div_bitval(int post_div)
-{
-        switch (post_div) {
-                case 1:
-                        return 0x00;
-                case 2: 
-                        return 0x01;
-                case 3: 
-                        return 0x04;
-                case 4:
-                        return 0x02;
-                case 6:
-                        return 0x06;
-                case 8:
-                        return 0x03;
-                case 12:
-                        return 0x07;
-                default:
-                        return 0x02;
-        }
-}
-
-
-
 static __inline__ int round_div(int num, int den)
 {
         return (num + (den / 2)) / den;
@@ -838,7 +814,7 @@ static void radeon_get_pllinfo(struct radeonfb_info *rinfo, void __iomem *bios_s
 		if (radeon_read_OF(rinfo)) {
 			unsigned int tmp, Nx, M, ref_div, xclk;
 
-			tmp = INPLL(X_MPLL_REF_FB_DIV);
+			tmp = INPLL(M_SPLL_REF_FB_DIV);
 			ref_div = INPLL(PPLL_REF_DIV) & 0x3ff;
 
 			Nx = (tmp & 0xff00) >> 8;

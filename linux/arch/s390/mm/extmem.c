@@ -77,7 +77,7 @@ struct dcss_segment {
 	int segcnt;
 };
 
-static spinlock_t dcss_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(dcss_lock);
 static struct list_head dcss_list = LIST_HEAD_INIT(dcss_list);
 static char *segtype_string[] = { "SW", "EW", "SR", "ER", "SN", "EN", "SC",
 					"EW/EN-MIXED" };
@@ -117,7 +117,7 @@ segment_by_name (char *name)
 	struct list_head *l;
 	struct dcss_segment *tmp, *retval = NULL;
 
-	BUG_ON (!spin_is_locked(&dcss_lock));
+	assert_spin_locked(&dcss_lock);
 	dcss_mkname (name, dcss_name);
 	list_for_each (l, &dcss_list) {
 		tmp = list_entry (l, struct dcss_segment, list);
@@ -271,7 +271,7 @@ segment_overlaps_others (struct dcss_segment *seg)
 	struct list_head *l;
 	struct dcss_segment *tmp;
 
-	BUG_ON (!spin_is_locked(&dcss_lock));
+	assert_spin_locked(&dcss_lock);
 	list_for_each(l, &dcss_list) {
 		tmp = list_entry(l, struct dcss_segment, list);
 		if ((tmp->start_addr >> 20) > (seg->end >> 20))
@@ -545,7 +545,8 @@ out_unlock:
 /*
  * save segment content permanently
  */
-void segment_save(char *name)
+void
+segment_save(char *name)
 {
 	struct dcss_segment *seg;
 	int startpfn = 0;
@@ -575,8 +576,8 @@ void segment_save(char *name)
 			segtype_string[seg->range[i].start & 0xff]);
 	}
 	sprintf(cmd2, "SAVESEG %s", name);
-	cpcmd(cmd1, NULL, 80);
-	cpcmd(cmd2, NULL, 80);
+	cpcmd(cmd1, NULL, 0);
+	cpcmd(cmd2, NULL, 0);
 	spin_unlock(&dcss_lock);
 }
 

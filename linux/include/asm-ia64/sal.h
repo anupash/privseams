@@ -325,6 +325,10 @@ typedef struct sal_log_record_header {
 	efi_guid_t platform_guid;	/* Unique OEM Platform ID */
 } sal_log_record_header_t;
 
+#define sal_log_severity_recoverable	0
+#define sal_log_severity_fatal		1
+#define sal_log_severity_corrected	2
+
 /* Definition of log section header structures */
 typedef struct sal_log_sec_header {
     efi_guid_t guid;			/* Unique Section ID */
@@ -828,6 +832,8 @@ extern int ia64_sal_oemcall_nolock(struct ia64_sal_retval *, u64, u64, u64,
 				   u64, u64, u64, u64, u64);
 extern int ia64_sal_oemcall_reentrant(struct ia64_sal_retval *, u64, u64, u64,
 				      u64, u64, u64, u64, u64);
+
+extern void ia64_sal_handler_init(void *entry_point, void *gpval);
 
 #endif /* __ASSEMBLY__ */
 

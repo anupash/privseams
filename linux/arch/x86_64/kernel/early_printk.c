@@ -10,7 +10,7 @@
 #ifdef __i386__
 #define VGABASE		(__ISA_IO_base + 0xb8000)
 #else
-#define VGABASE		((void *)0xffffffff800b8000UL)
+#define VGABASE		((void __iomem *)0xffffffff800b8000UL)
 #endif
 
 #define MAX_YPOS	25
@@ -198,9 +198,6 @@ int __init setup_early_printk(char *opt)
 		early_console = &early_serial_console;		
 	} else if (!strncmp(buf, "vga", 3)) {
 		early_console = &early_vga_console; 
-	} else {
-		early_console = NULL; 		
-		return -1; 
 	}
 	early_console_initialized = 1;
 	register_console(early_console);       

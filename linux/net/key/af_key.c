@@ -35,9 +35,9 @@
 
 
 /* List of all pfkey sockets. */
-HLIST_HEAD(pfkey_table);
+static HLIST_HEAD(pfkey_table);
 static DECLARE_WAIT_QUEUE_HEAD(pfkey_table_wait);
-static rwlock_t pfkey_table_lock = RW_LOCK_UNLOCKED;
+static DEFINE_RWLOCK(pfkey_table_lock);
 static atomic_t pfkey_table_users = ATOMIC_INIT(0);
 
 static atomic_t pfkey_socks_nr = ATOMIC_INIT(0);
@@ -665,18 +665,18 @@ static struct sk_buff * pfkey_xfrm_state2msg(struct xfrm_state *x, int add_keys,
 		sa->sadb_sa_state = SADB_SASTATE_DEAD;
 	sa->sadb_sa_auth = 0;
 	if (x->aalg) {
-		struct xfrm_algo_desc *a = xfrm_aalg_get_byname(x->aalg->alg_name);
+		struct xfrm_algo_desc *a = xfrm_aalg_get_byname(x->aalg->alg_name, 0);
 		sa->sadb_sa_auth = a ? a->desc.sadb_alg_id : 0;
 	}
 	sa->sadb_sa_encrypt = 0;
 	BUG_ON(x->ealg && x->calg);
 	if (x->ealg) {
-		struct xfrm_algo_desc *a = xfrm_ealg_get_byname(x->ealg->alg_name);
+		struct xfrm_algo_desc *a = xfrm_ealg_get_byname(x->ealg->alg_name, 0);
 		sa->sadb_sa_encrypt = a ? a->desc.sadb_alg_id : 0;
 	}
 	/* KAME compatible: sadb_sa_encrypt is overloaded with calg id */
 	if (x->calg) {
-		struct xfrm_algo_desc *a = xfrm_calg_get_byname(x->calg->alg_name);
+		struct xfrm_algo_desc *a = xfrm_calg_get_byname(x->calg->alg_name, 0);
 		sa->sadb_sa_encrypt = a ? a->desc.sadb_alg_id : 0;
 	}
 
@@ -2344,7 +2344,7 @@ static u32 get_acqseq(void)
 {
 	u32 res;
 	static u32 acqseq;
-	static spinlock_t acqseq_lock = SPIN_LOCK_UNLOCKED;
+	static DEFINE_SPINLOCK(acqseq_lock);
 
 	spin_lock_bh(&acqseq_lock);
 	res = (++acqseq ? : ++acqseq);

@@ -11,18 +11,11 @@ enum ip_nat_manip_type
 	IP_NAT_MANIP_DST
 };
 
-#ifndef CONFIG_IP_NF_NAT_LOCAL
-/* SRC manip occurs only on POST_ROUTING */
-#define HOOK2MANIP(hooknum) ((hooknum) != NF_IP_POST_ROUTING)
-#else
 /* SRC manip occurs POST_ROUTING or LOCAL_IN */
 #define HOOK2MANIP(hooknum) ((hooknum) != NF_IP_POST_ROUTING && (hooknum) != NF_IP_LOCAL_IN)
-#endif
 
 #define IP_NAT_RANGE_MAP_IPS 1
 #define IP_NAT_RANGE_PROTO_SPECIFIED 2
-/* Used internally by get_unique_tuple(). */
-#define IP_NAT_RANGE_FULL 4
 
 /* NAT sequence number modifications */
 struct ip_nat_seq {
@@ -46,31 +39,13 @@ struct ip_nat_range
 	union ip_conntrack_manip_proto min, max;
 };
 
-/* A range consists of an array of 1 or more ip_nat_range */
-struct ip_nat_multi_range
+/* For backwards compat: don't use in modern code. */
+struct ip_nat_multi_range_compat
 {
-	unsigned int rangesize;
+	unsigned int rangesize; /* Must be 1. */
 
 	/* hangs off end. */
 	struct ip_nat_range range[1];
-};
-
-/* Worst case: local-out manip + 1 post-routing, and reverse dirn. */
-#define IP_NAT_MAX_MANIPS (2*3)
-
-struct ip_nat_info_manip
-{
-	/* The direction. */
-	u_int8_t direction;
-
-	/* Which hook the manipulation happens on. */
-	u_int8_t hooknum;
-
-	/* The manipulation type. */
-	u_int8_t maniptype;
-
-	/* Manipulations to occur at each conntrack in this dirn. */
-	struct ip_conntrack_manip manip;
 };
 
 #ifdef __KERNEL__
@@ -83,15 +58,7 @@ DECLARE_RWLOCK_EXTERN(ip_nat_lock);
 /* The structure embedded in the conntrack structure. */
 struct ip_nat_info
 {
-	/* Set to zero when conntrack created: bitmask of maniptypes */
-	u_int16_t initialized;
-
-	u_int16_t num_manips;
-
-	/* Manipulations to be done on this conntrack. */
-	struct ip_nat_info_manip manips[IP_NAT_MAX_MANIPS];
-
-	struct list_head bysource, byipsproto;
+	struct list_head bysource;
 
 	/* Helper (NULL if none). */
 	struct ip_nat_helper *helper;
@@ -99,9 +66,11 @@ struct ip_nat_info
 	struct ip_nat_seq seq[IP_CT_DIR_MAX];
 };
 
+struct ip_conntrack;
+
 /* Set up the info structure to map into this range. */
 extern unsigned int ip_nat_setup_info(struct ip_conntrack *conntrack,
-				      const struct ip_nat_multi_range *mr,
+				      const struct ip_nat_range *range,
 				      unsigned int hooknum);
 
 /* Is this tuple already taken? (not by us)*/
@@ -112,5 +81,7 @@ extern int ip_nat_used_tuple(const struct ip_conntrack_tuple *tuple,
 extern u_int16_t ip_nat_cheat_check(u_int32_t oldvalinv,
 				    u_int32_t newval,
 				    u_int16_t oldcheck);
+#else  /* !__KERNEL__: iptables wants this to compile. */
+#define ip_nat_multi_range ip_nat_multi_range_compat
 #endif /*__KERNEL__*/
 #endif

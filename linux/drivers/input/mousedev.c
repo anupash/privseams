@@ -115,20 +115,26 @@ static struct mousedev mousedev_mix;
 #define fx(i)  (mousedev->old_x[(mousedev->pkt_count - (i)) & 03])
 #define fy(i)  (mousedev->old_y[(mousedev->pkt_count - (i)) & 03])
 
-static void mousedev_touchpad_event(struct mousedev *mousedev, unsigned int code, int value)
+static void mousedev_touchpad_event(struct input_dev *dev, struct mousedev *mousedev, unsigned int code, int value)
 {
+	int size;
+
 	if (mousedev->touch) {
 		switch (code) {
 			case ABS_X:
+				size = dev->absmax[ABS_X] - dev->absmin[ABS_X];
+				if (size == 0) size = xres;
 				fx(0) = value;
 				if (mousedev->pkt_count >= 2)
-					mousedev->packet.dx = ((fx(0) - fx(1)) / 2 + (fx(1) - fx(2)) / 2) / 8;
+					mousedev->packet.dx = ((fx(0) - fx(1)) / 2 + (fx(1) - fx(2)) / 2) * xres / (size * 2);
 				break;
 
 			case ABS_Y:
+				size = dev->absmax[ABS_Y] - dev->absmin[ABS_Y];
+				if (size == 0) size = yres;
 				fy(0) = value;
 				if (mousedev->pkt_count >= 2)
-					mousedev->packet.dy = -((fy(0) - fy(1)) / 2 + (fy(1) - fy(2)) / 2) / 8;
+					mousedev->packet.dy = -((fy(0) - fy(1)) / 2 + (fy(1) - fy(2)) / 2) * yres / (size * 2);
 				break;
 		}
 	}
@@ -279,7 +285,7 @@ static void mousedev_event(struct input_handle *handle, unsigned int type, unsig
 				return;
 
 			if (test_bit(BTN_TOOL_FINGER, handle->dev->keybit))
-				mousedev_touchpad_event(mousedev, code, value);
+				mousedev_touchpad_event(handle->dev, mousedev, code, value);
 			else
 				mousedev_abs_event(handle->dev, mousedev, code, value);
 
@@ -461,10 +467,10 @@ static void mousedev_packet(struct mousedev_list *list, signed char *ps2_data)
 	}
 
 	if (!p->dx && !p->dy && !p->dz) {
-		if (list->tail != list->head)
-			list->tail = (list->tail + 1) % PACKET_QUEUE_LEN;
 		if (list->tail == list->head)
 			list->ready = 0;
+		else
+			list->tail = (list->tail + 1) % PACKET_QUEUE_LEN;
 	}
 
 	spin_unlock_irqrestore(&list->packet_lock, flags);

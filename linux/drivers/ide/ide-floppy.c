@@ -585,7 +585,7 @@ static void idefloppy_input_buffers (ide_drive_t *drive, idefloppy_pc_t *pc, uns
 			count = min(bvec->bv_len, bcount);
 
 			data = bvec_kmap_irq(bvec, &flags);
-			atapi_input_bytes(drive, data, count);
+			drive->hwif->atapi_input_bytes(drive, data, count);
 			bvec_kunmap_irq(data, &flags);
 
 			bcount -= count;
@@ -619,7 +619,7 @@ static void idefloppy_output_buffers (ide_drive_t *drive, idefloppy_pc_t *pc, un
 			count = min(bvec->bv_len, bcount);
 
 			data = bvec_kmap_irq(bvec, &flags);
-			atapi_output_bytes(drive, data, count);
+			drive->hwif->atapi_output_bytes(drive, data, count);
 			bvec_kunmap_irq(data, &flags);
 
 			bcount -= count;
@@ -1640,7 +1640,7 @@ static int idefloppy_get_format_progress(ide_drive_t *drive, int __user *arg)
 }
 
 /*
- *	Return the current floppy capacity to ide.c.
+ *	Return the current floppy capacity.
  */
 static sector_t idefloppy_capacity (ide_drive_t *drive)
 {
@@ -2034,7 +2034,7 @@ static int idefloppy_media_changed(struct gendisk *disk)
 static int idefloppy_revalidate_disk(struct gendisk *disk)
 {
 	ide_drive_t *drive = disk->private_data;
-	set_capacity(disk, current_capacity(drive));
+	set_capacity(disk, idefloppy_capacity(drive));
 	return 0;
 }
 

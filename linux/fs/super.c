@@ -45,7 +45,7 @@ void put_filesystem(struct file_system_type *fs);
 struct file_system_type *get_fs_type(const char *name);
 
 LIST_HEAD(super_blocks);
-spinlock_t sb_lock = SPIN_LOCK_UNLOCKED;
+DEFINE_SPINLOCK(sb_lock);
 
 /**
  *	alloc_super	-	create new superblock
@@ -70,6 +70,7 @@ static struct super_block *alloc_super(void)
 		INIT_LIST_HEAD(&s->s_files);
 		INIT_LIST_HEAD(&s->s_instances);
 		INIT_HLIST_HEAD(&s->s_anon);
+		INIT_LIST_HEAD(&s->s_inodes);
 		init_rwsem(&s->s_umount);
 		sema_init(&s->s_lock, 1);
 		down_write(&s->s_umount);
@@ -84,6 +85,7 @@ static struct super_block *alloc_super(void)
 		s->dq_op = sb_dquot_ops;
 		s->s_qcop = sb_quotactl_ops;
 		s->s_op = &default_op;
+		s->s_time_gran = 1000000000;
 	}
 out:
 	return s;
@@ -232,10 +234,10 @@ void generic_shutdown_super(struct super_block *sb)
 		dput(root);
 		fsync_super(sb);
 		lock_super(sb);
-		lock_kernel();
 		sb->s_flags &= ~MS_ACTIVE;
 		/* bad name - it should be evict_inodes() */
 		invalidate_inodes(sb);
+		lock_kernel();
 
 		if (sop->write_super && sb->s_dirt)
 			sop->write_super(sb);
@@ -588,7 +590,7 @@ void emergency_remount(void)
  */
 
 static struct idr unnamed_dev_idr;
-static spinlock_t unnamed_dev_lock = SPIN_LOCK_UNLOCKED;/* protects the above */
+static DEFINE_SPINLOCK(unnamed_dev_lock);/* protects the above */
 
 int set_anon_super(struct super_block *s, void *data)
 {

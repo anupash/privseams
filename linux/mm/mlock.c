@@ -21,17 +21,15 @@ static int mlock_fixup(struct vm_area_struct * vma,
 		goto out;
 
 	if (start != vma->vm_start) {
-		if (split_vma(mm, vma, start, 1)) {
-			ret = -EAGAIN;
+		ret = split_vma(mm, vma, start, 1);
+		if (ret)
 			goto out;
-		}
 	}
 
 	if (end != vma->vm_end) {
-		if (split_vma(mm, vma, end, 0)) {
-			ret = -EAGAIN;
+		ret = split_vma(mm, vma, end, 0);
+		if (ret)
 			goto out;
-		}
 	}
 
 	/*
@@ -53,6 +51,8 @@ static int mlock_fixup(struct vm_area_struct * vma,
 
 	vma->vm_mm->locked_vm -= pages;
 out:
+	if (ret == -ENOMEM)
+		ret = -EAGAIN;
 	return ret;
 }
 
@@ -204,7 +204,7 @@ asmlinkage long sys_munlockall(void)
  * Objects with different lifetime than processes (SHM_LOCK and SHM_HUGETLB
  * shm segments) get accounted against the user_struct instead.
  */
-static spinlock_t shmlock_user_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(shmlock_user_lock);
 
 int user_shm_lock(size_t size, struct user_struct *user)
 {

@@ -5,7 +5,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2004, R. Byron Moore
+ * Copyright (C) 2000 - 2005, R. Byron Moore
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -313,6 +313,12 @@ acpi_dm_word_descriptor (
 void
 acpi_dm_dword_descriptor (
 	struct asl_dword_address_desc   *resource,
+	u32                             length,
+	u32                             level);
+
+void
+acpi_dm_extended_descriptor (
+	struct asl_extended_address_desc   *resource,
 	u32                             length,
 	u32                             level);
 

@@ -236,8 +236,8 @@ static int dma;
 /* our stuff */
 #include "ltpc.h"
 
-static spinlock_t txqueue_lock = SPIN_LOCK_UNLOCKED;
-static spinlock_t mbox_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(txqueue_lock);
+static DEFINE_SPINLOCK(mbox_lock);
 
 /* function prototypes */
 static int do_read(struct net_device *dev, void *cbuf, int cbuflen,
@@ -1257,10 +1257,10 @@ static struct net_device *dev_ltpc;
 #ifdef MODULE
 
 MODULE_LICENSE("GPL");
-MODULE_PARM(debug, "i");
-MODULE_PARM(io, "i");
-MODULE_PARM(irq, "i");
-MODULE_PARM(dma, "i");
+module_param(debug, int, 0);
+module_param(io, int, 0);
+module_param(irq, int, 0);
+module_param(dma, int, 0);
 
 
 int __init init_module(void)

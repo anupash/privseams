@@ -6,7 +6,7 @@
  * Copyright (C) 1999		Arun Sharma <arun.sharma@intel.com>
  * Copyright (C) 1997,1998	Jakub Jelinek (jj@sunsite.mff.cuni.cz)
  * Copyright (C) 1997		David S. Miller (davem@caip.rutgers.edu)
- * Copyright (C) 2000-2003 Hewlett-Packard Co
+ * Copyright (C) 2000-2003, 2005 Hewlett-Packard Co
  *	David Mosberger-Tang <davidm@hpl.hp.com>
  * Copyright (C) 2004		Gordon Jin <gordon.jin@intel.com>
  *
@@ -1415,7 +1415,7 @@ sys32_ipc(u32 call, int first, int second, int third, u32 ptr, u32 fifth)
 	      case SHMDT:
 		return sys_shmdt(compat_ptr(ptr));
 	      case SHMGET:
-		return sys_shmget(first, second, third);
+		return sys_shmget(first, (unsigned)second, third);
 	      case SHMCTL:
 		return compat_sys_shmctl(first, second, compat_ptr(ptr));
 
@@ -1423,27 +1423,6 @@ sys32_ipc(u32 call, int first, int second, int third, u32 ptr, u32 fifth)
 		return -ENOSYS;
 	}
 	return -EINVAL;
-}
-
-/*
- * sys_time() can be implemented in user-level using
- * sys_gettimeofday().  IA64 did this but i386 Linux did not
- * so we have to implement this system call here.
- */
-asmlinkage long
-sys32_time (int __user *tloc)
-{
-	int i;
-	struct timeval tv;
-
-	do_gettimeofday(&tv);
-	i = tv.tv_sec;
-
-	if (tloc) {
-		if (put_user(i, tloc))
-			i = -EFAULT;
-	}
-	return i;
 }
 
 asmlinkage long
@@ -1457,7 +1436,7 @@ sys32_waitpid (int pid, unsigned int *stat_addr, int options)
 }
 
 static unsigned int
-ia32_peek (struct pt_regs *regs, struct task_struct *child, unsigned long addr, unsigned int *val)
+ia32_peek (struct task_struct *child, unsigned long addr, unsigned int *val)
 {
 	size_t copied;
 	unsigned int ret;
@@ -1467,7 +1446,7 @@ ia32_peek (struct pt_regs *regs, struct task_struct *child, unsigned long addr, 
 }
 
 static unsigned int
-ia32_poke (struct pt_regs *regs, struct task_struct *child, unsigned long addr, unsigned int val)
+ia32_poke (struct task_struct *child, unsigned long addr, unsigned int val)
 {
 
 	if (access_process_vm(child, addr, &val, sizeof(val), 1) != sizeof(val))
@@ -1772,25 +1751,16 @@ restore_ia32_fpxstate (struct task_struct *tsk, struct ia32_user_fxsr_struct __u
 	return 0;
 }
 
-/*
- *  Note that the IA32 version of `ptrace' calls the IA64 routine for
- *    many of the requests.  This will only work for requests that do
- *    not need access to the calling processes `pt_regs' which is located
- *    at the address of `stack'.  Once we call the IA64 `sys_ptrace' then
- *    the address of `stack' will not be the address of the `pt_regs'.
- */
 asmlinkage long
-sys32_ptrace (int request, pid_t pid, unsigned int addr, unsigned int data,
-	      long arg4, long arg5, long arg6, long arg7, long stack)
+sys32_ptrace (int request, pid_t pid, unsigned int addr, unsigned int data)
 {
-	struct pt_regs *regs = (struct pt_regs *) &stack;
 	struct task_struct *child;
 	unsigned int value, tmp;
 	long i, ret;
 
 	lock_kernel();
 	if (request == PTRACE_TRACEME) {
-		ret = sys_ptrace(request, pid, addr, data, arg4, arg5, arg6, arg7, stack);
+		ret = sys_ptrace(request, pid, addr, data);
 		goto out;
 	}
 
@@ -1807,7 +1777,7 @@ sys32_ptrace (int request, pid_t pid, unsigned int addr, unsigned int data,
 		goto out_tsk;
 
 	if (request == PTRACE_ATTACH) {
-		ret = sys_ptrace(request, pid, addr, data, arg4, arg5, arg6, arg7, stack);
+		ret = sys_ptrace(request, pid, addr, data);
 		goto out_tsk;
 	}
 
@@ -1818,7 +1788,7 @@ sys32_ptrace (int request, pid_t pid, unsigned int addr, unsigned int data,
 	switch (request) {
 	      case PTRACE_PEEKTEXT:
 	      case PTRACE_PEEKDATA:	/* read word at location addr */
-		ret = ia32_peek(regs, child, addr, &value);
+		ret = ia32_peek(child, addr, &value);
 		if (ret == 0)
 			ret = put_user(value, (unsigned int __user *) compat_ptr(data));
 		else
@@ -1827,7 +1797,7 @@ sys32_ptrace (int request, pid_t pid, unsigned int addr, unsigned int data,
 
 	      case PTRACE_POKETEXT:
 	      case PTRACE_POKEDATA:	/* write the word at location addr */
-		ret = ia32_poke(regs, child, addr, data);
+		ret = ia32_poke(child, addr, data);
 		goto out_tsk;
 
 	      case PTRACE_PEEKUSR:	/* read word at addr in USER area */
@@ -1894,12 +1864,16 @@ sys32_ptrace (int request, pid_t pid, unsigned int addr, unsigned int data,
 					    compat_ptr(data));
 		break;
 
+	      case PTRACE_GETEVENTMSG:   
+		ret = put_user(child->ptrace_message, (unsigned int __user *) compat_ptr(data));
+		break;
+
 	      case PTRACE_SYSCALL:	/* continue, stop after next syscall */
 	      case PTRACE_CONT:		/* restart after signal. */
 	      case PTRACE_KILL:
 	      case PTRACE_SINGLESTEP:	/* execute chile for one instruction */
 	      case PTRACE_DETACH:	/* detach a process */
-		ret = sys_ptrace(request, pid, addr, data, arg4, arg5, arg6, arg7, stack);
+		ret = sys_ptrace(request, pid, addr, data);
 		break;
 
 	      default:
@@ -1922,9 +1896,9 @@ typedef struct {
 
 asmlinkage long
 sys32_sigaltstack (ia32_stack_t __user *uss32, ia32_stack_t __user *uoss32,
-		   long arg2, long arg3, long arg4, long arg5, long arg6, long arg7, long stack)
+		   long arg2, long arg3, long arg4, long arg5, long arg6,
+		   long arg7, struct pt_regs pt)
 {
-	struct pt_regs *pt = (struct pt_regs *) &stack;
 	stack_t uss, uoss;
 	ia32_stack_t buf32;
 	int ret;
@@ -1945,7 +1919,7 @@ sys32_sigaltstack (ia32_stack_t __user *uss32, ia32_stack_t __user *uoss32,
 	}
 	set_fs(KERNEL_DS);
 	ret = do_sigaltstack(uss32 ? (stack_t __user *) &uss : NULL,
-			     (stack_t __user *) &uoss, pt->r12);
+			     (stack_t __user *) &uoss, pt.r12);
  	current->sas_ss_size = buf32.ss_size;
 	set_fs(old_fs);
 out:
@@ -1990,10 +1964,10 @@ struct sysctl32 {
 	unsigned int	__unused[4];
 };
 
+#ifdef CONFIG_SYSCTL
 asmlinkage long
 sys32_sysctl (struct sysctl32 __user *args)
 {
-#ifdef CONFIG_SYSCTL
 	struct sysctl32 a32;
 	mm_segment_t old_fs = get_fs ();
 	void __user *oldvalp, *newvalp;
@@ -2032,10 +2006,8 @@ sys32_sysctl (struct sysctl32 __user *args)
 		return -EFAULT;
 
 	return ret;
-#else
-	return -ENOSYS;
-#endif
 }
+#endif
 
 asmlinkage long
 sys32_newuname (struct new_utsname __user *name)
@@ -2662,7 +2634,7 @@ long sys32_fadvise64_64(int fd, __u32 offset_low, __u32 offset_high,
 } 
 
 asmlinkage long sys32_waitid(int which, compat_pid_t pid,
-			     siginfo_t32 __user *uinfo, int options,
+			     compat_siginfo_t __user *uinfo, int options,
 			     struct compat_rusage __user *uru)
 {
 	siginfo_t info;
@@ -2673,7 +2645,7 @@ asmlinkage long sys32_waitid(int which, compat_pid_t pid,
 	info.si_signo = 0;
 	set_fs (KERNEL_DS);
 	ret = sys_waitid(which, pid, (siginfo_t __user *) &info, options,
-			 uru ? &ru : NULL);
+			 uru ? (struct rusage __user *) &ru : NULL);
 	set_fs (old_fs);
 
 	if (ret < 0 || info.si_signo == 0)

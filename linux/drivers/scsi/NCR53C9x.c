@@ -100,7 +100,7 @@ int nesps = 0, esps_in_use = 0, esps_running = 0;
 irqreturn_t esp_intr(int irq, void *dev_id, struct pt_regs *pregs);
 
 /* Debugging routines */
-struct esp_cmdstrings {
+static struct esp_cmdstrings {
 	unchar cmdchar;
 	char *text;
 } esp_cmd_strings[] = {
@@ -290,7 +290,7 @@ static inline void esp_advance_phase(Scsi_Cmnd *s, int newphase)
 #endif
 
 #ifdef DEBUG_ESP_CMDS
-inline void esp_cmd(struct NCR_ESP *esp, struct ESP_regs *eregs,
+static inline void esp_cmd(struct NCR_ESP *esp, struct ESP_regs *eregs,
 			   unchar cmd)
 {
 	esp->espcmdlog[esp->espcmdent] = cmd;
@@ -1269,17 +1269,6 @@ int esp_queue(Scsi_Cmnd *SCpnt, void (*done)(Scsi_Cmnd *))
 		esp_exec_cmd(esp);
 
 	return 0;
-}
-
-/* Only queuing supported in this ESP driver. */
-int esp_command(Scsi_Cmnd *SCpnt)
-{
-#ifdef DEBUG_ESP
-	struct NCR_ESP *esp = (struct NCR_ESP *) SCpnt->device->host->hostdata;
-#endif
-
-	ESPLOG(("esp%d: esp_command() called...\n", esp->esp_id));
-	return -1;
 }
 
 /* Dump driver state. */

@@ -81,10 +81,8 @@ void default_idle(void)
 /*
  * the idle loop on a Sparc... ;)
  */
-int cpu_idle(void)
+void cpu_idle(void)
 {
-	int ret = -EPERM;
-
 	if (current->pid != 0)
 		goto out;
 
@@ -128,15 +126,14 @@ int cpu_idle(void)
 		schedule();
 		check_pgt_cache();
 	}
-	ret = 0;
 out:
-	return ret;
+	return;
 }
 
 #else
 
 /* This is being executed in task 0 'user space'. */
-int cpu_idle(void)
+void cpu_idle(void)
 {
 	/* endless idle loop with no priority at all */
 	while(1) {
@@ -201,7 +198,7 @@ void machine_power_off(void)
 
 EXPORT_SYMBOL(machine_power_off);
 
-static spinlock_t sparc_backtrace_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(sparc_backtrace_lock);
 
 void __show_backtrace(unsigned long fp)
 {
@@ -552,6 +549,11 @@ int copy_thread(int nr, unsigned long clone_flags, unsigned long sp,
 		}
 	}
 
+#ifdef CONFIG_SMP
+	/* FPU must be disabled on SMP. */
+	childregs->psr &= ~PSR_EF;
+#endif
+
 	/* Set the return value for the child. */
 	childregs->u_regs[UREG_I0] = current->pid;
 	childregs->u_regs[UREG_I1] = 1;
@@ -602,7 +604,7 @@ void dump_thread(struct pt_regs * regs, struct user * dump)
  */
 int dump_fpu (struct pt_regs * regs, elf_fpregset_t * fpregs)
 {
-	if (current->used_math == 0) {
+	if (used_math()) {
 		memset(fpregs, 0, sizeof(*fpregs));
 		fpregs->pr_q_entrysize = 8;
 		return 1;

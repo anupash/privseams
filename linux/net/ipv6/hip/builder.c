@@ -47,6 +47,10 @@
 #include "builder.h"
 #include "debug.h"
 
+#ifdef __KERNEL__
+const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+#endif /* __KERNEL__ */
+
 /**
  * hip_msg_init - initialize a network/daemon message
  * @msg: the message to be initialized

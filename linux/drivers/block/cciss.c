@@ -16,7 +16,7 @@
  *    along with this program; if not, write to the Free Software
  *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- *    Questions/Comments/Bugfixes to Cciss-discuss@lists.sourceforge.net
+ *    Questions/Comments/Bugfixes to iss_storagedev@hp.com
  *
  */
 
@@ -46,14 +46,14 @@
 #include <linux/completion.h>
 
 #define CCISS_DRIVER_VERSION(maj,min,submin) ((maj<<16)|(min<<8)|(submin))
-#define DRIVER_NAME "HP CISS Driver (v 2.6.2)"
-#define DRIVER_VERSION CCISS_DRIVER_VERSION(2,6,2)
+#define DRIVER_NAME "HP CISS Driver (v 2.6.4)"
+#define DRIVER_VERSION CCISS_DRIVER_VERSION(2,6,4)
 
 /* Embedded module documentation macros - see modules.h */
 MODULE_AUTHOR("Hewlett-Packard Company");
-MODULE_DESCRIPTION("Driver for HP Controller SA5xxx SA6xxx version 2.6.2");
+MODULE_DESCRIPTION("Driver for HP Controller SA5xxx SA6xxx version 2.6.4");
 MODULE_SUPPORTED_DEVICE("HP SA5i SA5i+ SA532 SA5300 SA5312 SA641 SA642 SA6400"
-			" SA6i V100");
+			" SA6i P600");
 MODULE_LICENSE("GPL");
 
 #include "cciss_cmd.h"
@@ -80,10 +80,8 @@ const struct pci_device_id cciss_pci_device_id[] = {
 		0x0E11, 0x409D, 0, 0, 0},
 	{ PCI_VENDOR_ID_COMPAQ, PCI_DEVICE_ID_COMPAQ_CISSC,
 		0x0E11, 0x4091, 0, 0, 0},
-	{ PCI_VENDOR_ID_COMPAQ, PCI_DEVICE_ID_COMPAQ_CISSC,
-		0x0E11, 0x409E, 0, 0, 0},
-	{ PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_CISS,
-		0x103C, 0x3211, 0, 0, 0},
+	{ PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_CISSA,
+		0x103C, 0x3225, 0, 0, 0},
 	{0,}
 };
 MODULE_DEVICE_TABLE(pci, cciss_pci_device_id);
@@ -104,8 +102,7 @@ static struct board_type products[] = {
 	{ 0x409C0E11, "Smart Array 6400", &SA5_access},
 	{ 0x409D0E11, "Smart Array 6400 EM", &SA5_access},
 	{ 0x40910E11, "Smart Array 6i", &SA5_access},
-	{ 0x409E0E11, "Smart Array 6422", &SA5_access},
-	{ 0x3211103C, "Smart Array V100", &SA5_access},
+	{ 0x3225103C, "Smart Array P600", &SA5_access},
 };
 
 /* How long to wait (in millesconds) for board to go into simple mode */
@@ -149,11 +146,18 @@ static void cciss_procinit(int i);
 static void cciss_procinit(int i) {}
 #endif /* CONFIG_PROC_FS */
 
+#ifdef CONFIG_COMPAT
+static long cciss_compat_ioctl(struct file *f, unsigned cmd, unsigned long arg);
+#endif
+
 static struct block_device_operations cciss_fops  = {
 	.owner		= THIS_MODULE,
 	.open		= cciss_open, 
 	.release       	= cciss_release,
         .ioctl		= cciss_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl   = cciss_compat_ioctl,
+#endif
 	.revalidate_disk= cciss_revalidate,
 };
 
@@ -480,80 +484,50 @@ static int cciss_release(struct inode *inode, struct file *filep)
 }
 
 #ifdef CONFIG_COMPAT
-/* for AMD 64 bit kernel compatibility with 32-bit userland ioctls */
-extern long sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
-extern int
-register_ioctl32_conversion(unsigned int cmd, int (*handler)(unsigned int,
-      unsigned int, unsigned long, struct file *));
-extern int unregister_ioctl32_conversion(unsigned int cmd);
 
-static int cciss_ioctl32_passthru(unsigned int fd, unsigned cmd, unsigned long arg, struct file *file);
-static int cciss_ioctl32_big_passthru(unsigned int fd, unsigned cmd, unsigned long arg,
-	struct file *file);
-
-typedef int (*handler_type) (unsigned int, unsigned int, unsigned long, struct file *);
-
-static struct ioctl32_map {
-	unsigned int cmd;
-	handler_type handler;
-	int registered;
-} cciss_ioctl32_map[] = {
-	{ CCISS_GETPCIINFO,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_GETINTINFO,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_SETINTINFO,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_GETNODENAME,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_SETNODENAME,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_GETHEARTBEAT,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_GETBUSTYPES,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_GETFIRMVER,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_GETDRIVVER,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_REVALIDVOLS,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_PASSTHRU32,	cciss_ioctl32_passthru, 0 },
-	{ CCISS_DEREGDISK,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_REGNEWDISK,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_REGNEWD,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_RESCANDISK,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_GETLUNINFO,	(handler_type) sys_ioctl, 0 },
-	{ CCISS_BIG_PASSTHRU32,	cciss_ioctl32_big_passthru, 0 },
-};
-#define NCCISS_IOCTL32_ENTRIES (sizeof(cciss_ioctl32_map) / sizeof(cciss_ioctl32_map[0]))
-static void register_cciss_ioctl32(void)
+static int do_ioctl(struct file *f, unsigned cmd, unsigned long arg)
 {
-	int i, rc;
+	int ret;
+	lock_kernel();
+	ret = cciss_ioctl(f->f_dentry->d_inode, f, cmd, arg);
+	unlock_kernel();
+	return ret;
+}
 
-	for (i=0; i < NCCISS_IOCTL32_ENTRIES; i++) {
-		rc = register_ioctl32_conversion(
-			cciss_ioctl32_map[i].cmd,
-			cciss_ioctl32_map[i].handler);
-		if (rc != 0) {
-			printk(KERN_WARNING "cciss: failed to register "
-				"32 bit compatible ioctl 0x%08x\n",
-				cciss_ioctl32_map[i].cmd);
-			cciss_ioctl32_map[i].registered = 0;
-		} else
-			cciss_ioctl32_map[i].registered = 1;
+static int cciss_ioctl32_passthru(struct file *f, unsigned cmd, unsigned long arg);
+static int cciss_ioctl32_big_passthru(struct file *f, unsigned cmd, unsigned long arg);
+
+static long cciss_compat_ioctl(struct file *f, unsigned cmd, unsigned long arg)
+{
+	switch (cmd) {
+	case CCISS_GETPCIINFO:
+	case CCISS_GETINTINFO:
+	case CCISS_SETINTINFO:
+	case CCISS_GETNODENAME:
+	case CCISS_SETNODENAME:
+	case CCISS_GETHEARTBEAT:
+	case CCISS_GETBUSTYPES:
+	case CCISS_GETFIRMVER:
+	case CCISS_GETDRIVVER:
+	case CCISS_REVALIDVOLS:
+	case CCISS_DEREGDISK:
+	case CCISS_REGNEWDISK:
+	case CCISS_REGNEWD:
+	case CCISS_RESCANDISK:
+	case CCISS_GETLUNINFO:
+		return do_ioctl(f, cmd, arg);
+
+	case CCISS_PASSTHRU32:
+		return cciss_ioctl32_passthru(f, cmd, arg);
+	case CCISS_BIG_PASSTHRU32:
+		return cciss_ioctl32_big_passthru(f, cmd, arg);
+
+	default:
+		return -ENOIOCTLCMD;
 	}
 }
-static void unregister_cciss_ioctl32(void)
-{
-	int i, rc;
 
-	for (i=0; i < NCCISS_IOCTL32_ENTRIES; i++) {
-		if (!cciss_ioctl32_map[i].registered)
-			continue;
-		rc = unregister_ioctl32_conversion(
-			cciss_ioctl32_map[i].cmd);
-		if (rc == 0) {
-			cciss_ioctl32_map[i].registered = 0;
-			continue;
-		}
-		printk(KERN_WARNING "cciss: failed to unregister "
-			"32 bit compatible ioctl 0x%08x\n",
-			cciss_ioctl32_map[i].cmd);
-	}
-}
-int cciss_ioctl32_passthru(unsigned int fd, unsigned cmd, unsigned long arg,
-	struct file *file)
+static int cciss_ioctl32_passthru(struct file *f, unsigned cmd, unsigned long arg)
 {
 	IOCTL32_Command_struct __user *arg32 =
 		(IOCTL32_Command_struct __user *) arg;
@@ -574,7 +548,7 @@ int cciss_ioctl32_passthru(unsigned int fd, unsigned cmd, unsigned long arg,
 	if (err)
 		return -EFAULT;
 
-	err = sys_ioctl(fd, CCISS_PASSTHRU, (unsigned long) p);
+	err = do_ioctl(f, CCISS_PASSTHRU, (unsigned long) p);
 	if (err)
 		return err;
 	err |= copy_in_user(&arg32->error_info, &p->error_info, sizeof(arg32->error_info));
@@ -583,8 +557,7 @@ int cciss_ioctl32_passthru(unsigned int fd, unsigned cmd, unsigned long arg,
 	return err;
 }
 
-int cciss_ioctl32_big_passthru(unsigned int fd, unsigned cmd, unsigned long arg,
-	struct file *file)
+static int cciss_ioctl32_big_passthru(struct file *file, unsigned cmd, unsigned long arg)
 {
 	BIG_IOCTL32_Command_struct __user *arg32 =
 		(BIG_IOCTL32_Command_struct __user *) arg;
@@ -606,7 +579,7 @@ int cciss_ioctl32_big_passthru(unsigned int fd, unsigned cmd, unsigned long arg,
 	if (err)
 		 return -EFAULT;
 
-	err = sys_ioctl(fd, CCISS_BIG_PASSTHRU, (unsigned long) p);
+	err = do_ioctl(file, CCISS_BIG_PASSTHRU, (unsigned long) p);
 	if (err)
 		return err;
 	err |= copy_in_user(&arg32->error_info, &p->error_info, sizeof(arg32->error_info));
@@ -614,9 +587,6 @@ int cciss_ioctl32_big_passthru(unsigned int fd, unsigned cmd, unsigned long arg,
 		return -EFAULT;
 	return err;
 }
-#else
-static inline void register_cciss_ioctl32(void) {}
-static inline void unregister_cciss_ioctl32(void) {}
 #endif
 /*
  * ioctl 
@@ -2918,7 +2888,6 @@ int __init cciss_init(void)
 
 static int __init init_cciss_module(void)
 {
-	register_cciss_ioctl32();
 	return ( cciss_init());
 }
 
@@ -2926,7 +2895,6 @@ static void __exit cleanup_cciss_module(void)
 {
 	int i;
 
-	unregister_cciss_ioctl32();
 	pci_unregister_driver(&cciss_pci_driver);
 	/* double check that all controller entrys have been removed */
 	for (i=0; i< MAX_CTLR; i++) 

@@ -1,7 +1,7 @@
 #ifndef _LINUX_SWSUSP_H
 #define _LINUX_SWSUSP_H
 
-#ifdef CONFIG_X86
+#if defined(CONFIG_X86) || defined(CONFIG_FRV)
 #include <asm/suspend.h>
 #endif
 #include <linux/swap.h>
@@ -10,7 +10,6 @@
 #include <linux/init.h>
 #include <linux/pm.h>
 
-#ifdef CONFIG_PM
 /* page backup entry */
 typedef struct pbe {
 	unsigned long address;		/* address of the copy */
@@ -31,30 +30,22 @@ extern int shrink_mem(void);
 
 /* mm/page_alloc.c */
 extern void drain_local_pages(void);
-
-/* kernel/power/swsusp.c */
-extern int software_suspend(void);
-
-#else	/* CONFIG_SOFTWARE_SUSPEND */
-static inline int software_suspend(void)
-{
-	printk("Warning: fake suspend called\n");
-	return -EPERM;
-}
-#endif	/* CONFIG_SOFTWARE_SUSPEND */
-
+extern void mark_free_pages(struct zone *zone);
 
 #ifdef CONFIG_PM
-extern void refrigerator(unsigned long);
-extern int freeze_processes(void);
-extern void thaw_processes(void);
+/* kernel/power/swsusp.c */
+extern int software_suspend(void);
 
 extern int pm_prepare_console(void);
 extern void pm_restore_console(void);
 
 #else
-static inline void refrigerator(unsigned long flag) {}
-#endif	/* CONFIG_PM */
+static inline int software_suspend(void)
+{
+	printk("Warning: fake suspend called\n");
+	return -EPERM;
+}
+#endif
 
 #ifdef CONFIG_SMP
 extern void disable_nonboot_cpus(void);

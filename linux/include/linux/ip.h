@@ -107,7 +107,14 @@ struct ip_options {
 
 #define optlength(opt) (sizeof(struct ip_options) + opt->optlen)
 
-struct inet_opt {
+struct ipv6_pinfo;
+
+struct inet_sock {
+	/* sk and pinet6 has to be the first two members of inet_sock */
+	struct sock		sk;
+#if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
+	struct ipv6_pinfo	*pinet6;
+#endif
 	/* Socket demultiplex comparisons on incoming packets. */
 	__u32			daddr;		/* Foreign IPv4 addr */
 	__u32			rcv_saddr;	/* Bound local IPv4 addr */
@@ -146,22 +153,25 @@ struct inet_opt {
 
 #define IPCORK_OPT	1	/* ip-options has been held in ipcork.opt */
 
-struct ipv6_pinfo;
-
-/* WARNING: don't change the layout of the members in inet_sock! */
-struct inet_sock {
-	struct sock	  sk;
-#if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
-	struct ipv6_pinfo *pinet6;
-#endif
-	struct inet_opt   inet;
-};
-
-static inline struct inet_opt * inet_sk(const struct sock *__sk)
+static inline struct inet_sock *inet_sk(const struct sock *sk)
 {
-	return &((struct inet_sock *)__sk)->inet;
+	return (struct inet_sock *)sk;
 }
 
+static inline void __inet_sk_copy_descendant(struct sock *sk_to,
+					     const struct sock *sk_from,
+					     const int ancestor_size)
+{
+	memcpy(inet_sk(sk_to) + 1, inet_sk(sk_from) + 1,
+	       sk_from->sk_prot->slab_obj_size - ancestor_size);
+}
+#if !(defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE))
+static inline void inet_sk_copy_descendant(struct sock *sk_to,
+					   const struct sock *sk_from)
+{
+	__inet_sk_copy_descendant(sk_to, sk_from, sizeof(struct inet_sock));
+}
+#endif
 #endif
 
 struct iphdr {

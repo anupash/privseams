@@ -35,7 +35,7 @@
 		     "thread_return:\n\t"					    \
 		     "movq %%gs:%P[pda_pcurrent],%%rsi\n\t"			  \
 		     "movq %P[thread_info](%%rsi),%%r8\n\t"			  \
-		     "btr  %[tif_fork],%P[ti_flags](%%r8)\n\t"			  \
+		     LOCK "btr  %[tif_fork],%P[ti_flags](%%r8)\n\t"		  \
 		     "movq %%rax,%%rdi\n\t" 					  \
 		     "jc   ret_from_fork\n\t"					  \
 		     RESTORE_CONTEXT						    \
@@ -325,6 +325,8 @@ static inline unsigned long __cmpxchg(volatile void *ptr, unsigned long old,
 
 /* For spinlocks etc */
 #define local_irq_save(x) 	do { warn_if_not_ulong(x); __asm__ __volatile__("# local_irq_save \n\t pushfq ; popq %0 ; cli":"=g" (x): /* no input */ :"memory"); } while (0)
+
+void cpu_idle_wait(void);
 
 /*
  * disable hlt during certain critical i/o operations

@@ -5,7 +5,6 @@
 
 #include <signal.h>
 #include <errno.h>
-#include <asm/sigcontext.h>
 #include "sysdep/ptrace.h"
 #include "signal_user.h"
 #include "user_util.h"
@@ -20,6 +19,14 @@ void sig_handler_common_skas(int sig, void *sc_ptr)
 	struct signal_info *info;
 	int save_errno = errno;
 	int save_user;
+
+	/* This is done because to allow SIGSEGV to be delivered inside a SEGV
+	 * handler.  This can happen in copy_user, and if SEGV is disabled,
+	 * the process will die.
+	 * XXX Figure out why this is better than SA_NODEFER
+	 */
+	if(sig == SIGSEGV)
+		change_sig(SIGSEGV, 1);
 
 	r = &TASK_REGS(get_current())->skas;
 	save_user = r->is_user;

@@ -16,7 +16,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
 
-   $Id: elan-104nc.c,v 1.24 2004/11/16 18:29:02 dwmw2 Exp $
+   $Id: elan-104nc.c,v 1.25 2004/11/28 09:40:39 dwmw2 Exp $
 
 The ELAN-104NC has up to 8 Mibyte of Intel StrataFlash (28F320/28F640) in x16
 mode.  This drivers uses the CFI probe and Intel Extended Command Set drivers.
@@ -54,7 +54,7 @@ always fail.  So we don't do it.  I just hope it doesn't break anything.
 
 static volatile int page_in_window = -1; // Current page in window.
 static void __iomem *iomapadr;
-static spinlock_t elan_104nc_spin = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(elan_104nc_spin);
 
 /* partition_info gives details on the logical partitions that the split the 
  * single flash device into. If the size if zero we use up to the end of the

@@ -42,8 +42,6 @@
 #include <asm/io.h>
 #include <asm/it8172/it8172_int.h>
 
-#include "it8172.h"
-
 /*
  * Prototypes
  */
@@ -56,7 +54,7 @@ static void it8172_tune_drive (ide_drive_t *drive, u8 pio)
 {
 	ide_hwif_t *hwif	= HWIF(drive);
 	struct pci_dev *dev	= hwif->pci_dev;
-	int is_slave		= (hwif->drives[1] == drive);
+	int is_slave		= (&hwif->drives[1] == drive);
 	unsigned long flags;
 	u16 drive_enables;
 	u32 drive_timing;
@@ -94,7 +92,7 @@ static void it8172_tune_drive (ide_drive_t *drive, u8 pio)
 	}
 
 	pci_write_config_word(dev, 0x40, drive_enables);
-	spin_unlock_irqrestore(&ide_lock, flags)
+	spin_unlock_irqrestore(&ide_lock, flags);
 }
 
 static u8 it8172_dma_2_pio (u8 xfer_rate)
@@ -266,13 +264,24 @@ static void __init init_hwif_it8172 (ide_hwif_t *hwif)
 	hwif->drives[1].autodma = hwif->autodma;
 }
 
+static ide_pci_device_t it8172_chipsets[] __devinitdata = {
+	{	/* 0 */
+		.name		= "IT8172G",
+		.init_chipset	= init_chipset_it8172,
+		.init_hwif	= init_hwif_it8172,
+		.channels	= 2,
+		.autodma	= AUTODMA,
+		.enablebits	= {{0x00,0x00,0x00}, {0x40,0x00,0x01}},
+		.bootable	= ON_BOARD,
+	}
+};
+
 static int __devinit it8172_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 {
         if ((!(PCI_FUNC(dev->devfn) & 1) ||
             (!((dev->class >> 8) == PCI_CLASS_STORAGE_IDE))))
-                return 1; /* IT8172 is more than only a IDE controller */
-	ide_setup_pci_device(dev, &it8172_chipsets[id->driver_data]);
-	return 0;
+		return -ENODEV; /* IT8172 is more than an IDE controller */
+	return ide_setup_pci_device(dev, &it8172_chipsets[id->driver_data]);
 }
 
 static struct pci_device_id it8172_pci_tbl[] = {

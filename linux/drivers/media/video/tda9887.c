@@ -1,4 +1,5 @@
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/kernel.h>
 #include <linux/i2c.h>
 #include <linux/types.h>
@@ -27,6 +28,7 @@
 
 /* Addresses to scan */
 static unsigned short normal_i2c[] = {
+	0x84 >>1,
 	0x86 >>1,
 	0x96 >>1,
 	I2C_CLIENT_END,
@@ -303,9 +305,9 @@ static void dump_write_message(unsigned char *buf)
 	printk("  B5   force mute audio: %s\n",
 	       (buf[1] & 0x20) ? "yes" : "no");
 	printk("  B6   output port 1   : %s\n",
-	       (buf[1] & 0x40) ? "high" : "low");
+	       (buf[1] & 0x40) ? "high (inactive)" : "low (active)");
 	printk("  B7   output port 2   : %s\n",
-	       (buf[1] & 0x80) ? "high" : "low");
+	       (buf[1] & 0x80) ? "high (inactive)" : "low (active)");
 
 	printk(PREFIX "write: byte C 0x%02x\n",buf[2]);
 	printk("  C0-4 top adjustment  : %s dB\n", adjust[buf[2] & 0x1f]);
@@ -374,8 +376,8 @@ static int tda9887_set_tvnorm(struct tda9887 *t, char *buf)
 	return 0;
 }
 
-static unsigned int port1  = 1;
-static unsigned int port2  = 1;
+static unsigned int port1  = UNSET;
+static unsigned int port2  = UNSET;
 static unsigned int qss    = UNSET;
 static unsigned int adjust = 0x10;
 module_param(port1, int, 0644);
@@ -385,10 +387,19 @@ module_param(adjust, int, 0644);
 
 static int tda9887_set_insmod(struct tda9887 *t, char *buf)
 {
-	if (port1)
-		buf[1] |= cOutputPort1Inactive;
-	if (port2)
-		buf[1] |= cOutputPort2Inactive;
+	if (UNSET != port1) {
+		if (port1)
+			buf[1] |= cOutputPort1Inactive;
+		else
+			buf[1] &= ~cOutputPort1Inactive;
+	}
+	if (UNSET != port2) {
+		if (port2)
+			buf[1] |= cOutputPort2Inactive;
+		else
+			buf[1] &= ~cOutputPort2Inactive;
+	}
+
 	if (UNSET != qss) {
 		if (qss)
 			buf[1] |= cQSS;
@@ -403,10 +414,15 @@ static int tda9887_set_insmod(struct tda9887 *t, char *buf)
 
 static int tda9887_set_config(struct tda9887 *t, char *buf)
 {
-	if (t->config & TDA9887_PORT1)
+	if (t->config & TDA9887_PORT1_ACTIVE)
+		buf[1] &= ~cOutputPort1Inactive;
+	if (t->config & TDA9887_PORT1_INACTIVE)
 		buf[1] |= cOutputPort1Inactive;
-	if (t->config & TDA9887_PORT2)
+	if (t->config & TDA9887_PORT2_ACTIVE)
+		buf[1] &= ~cOutputPort2Inactive;
+	if (t->config & TDA9887_PORT2_INACTIVE)
 		buf[1] |= cOutputPort2Inactive;
+
 	if (t->config & TDA9887_QSS)
 		buf[1] |= cQSS;
 	if (t->config & TDA9887_INTERCARRIER)
@@ -437,14 +453,14 @@ static int tda9887_set_pinnacle(struct tda9887 *t, char *buf)
 {
 	unsigned int bCarrierMode = UNSET;
 
-	if (t->std & V4L2_STD_PAL) {
+	if (t->std & V4L2_STD_625_50) {
 		if ((1 == t->pinnacle_id) || (7 == t->pinnacle_id)) {
 			bCarrierMode = cIntercarrier;
 		} else {
 			bCarrierMode = cQSS;
 		}
 	}
-	if (t->std & V4L2_STD_NTSC) {
+	if (t->std & V4L2_STD_525_60) {
                 if ((5 == t->pinnacle_id) || (6 == t->pinnacle_id)) {
 			bCarrierMode = cIntercarrier;
 		} else {
@@ -530,16 +546,23 @@ static int tda9887_configure(struct tda9887 *t)
 
 	memset(buf,0,sizeof(buf));
 	tda9887_set_tvnorm(t,buf);
+	buf[1] |= cOutputPort1Inactive;
+	buf[1] |= cOutputPort2Inactive;
 	if (UNSET != t->pinnacle_id) {
 		tda9887_set_pinnacle(t,buf);
 	}
 	tda9887_set_config(t,buf);
 	tda9887_set_insmod(t,buf);
 
+#if 0
+	/* This as-is breaks some cards, must be fixed in a
+	 * card-specific way, probably using TDA9887_SET_CONFIG to
+	  * turn on/off port2 */
 	if (t->std & V4L2_STD_SECAM_L) {
 		/* secam fixup (FIXME: move this to tvnorms array?) */
 		buf[1] &= ~cOutputPort2Inactive;
 	}
+#endif
 
 	dprintk(PREFIX "writing: b=0x%02x c=0x%02x e=0x%02x\n",
 		buf[1],buf[2],buf[3]);

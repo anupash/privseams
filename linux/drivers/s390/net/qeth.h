@@ -24,7 +24,7 @@
 
 #include "qeth_mpc.h"
 
-#define VERSION_QETH_H 		"$Revision: 1.124 $"
+#define VERSION_QETH_H 		"$Revision: 1.132 $"
 
 #ifdef CONFIG_QETH_IPV6
 #define QETH_VERSION_IPV6 	":IPv6"
@@ -669,7 +669,6 @@ struct qeth_reply {
 #define QETH_BROADCAST_WITHOUT_ECHO 2
 
 struct qeth_card_info {
-	char if_name[IF_NAME_LEN];
 	unsigned short unit_addr2;
 	unsigned short cula;
 	unsigned short chpid;
@@ -755,6 +754,8 @@ struct qeth_card {
 	struct qeth_perf_stats perf_stats;
 #endif /* CONFIG_QETH_PERF_STATS */
 	int use_hard_stop;
+	int (*orig_hard_header)(struct sk_buff *,struct net_device *,
+				unsigned short,void *,void *,unsigned);
 };
 
 struct qeth_card_list_struct {
@@ -774,6 +775,8 @@ extern spinlock_t qeth_notify_lock;
 extern struct list_head qeth_notify_list;
 
 /*some helper functions*/
+
+#define QETH_CARD_IFNAME(card) (((card)->dev)? (card)->dev->name : "")
 
 inline static __u8
 qeth_get_ipa_adp_type(enum qeth_link_types link_type)
@@ -827,6 +830,17 @@ qeth_get_netdev_flags(struct qeth_card *card)
 #endif
 	}
 }
+static inline struct sk_buff *
+qeth_pskb_unshare(struct sk_buff *skb, int pri)
+{
+        struct sk_buff *nskb;
+        if (!skb_cloned(skb))
+                return skb;
+        nskb = skb_copy(skb, pri);
+        kfree_skb(skb); /* free our shared copy */
+        return nskb;
+}
+
 
 inline static int
 qeth_get_initial_mtu_for_card(struct qeth_card * card)
@@ -1069,4 +1083,5 @@ qeth_schedule_recovery(struct qeth_card *);
 
 extern int
 qeth_realloc_buffer_pool(struct qeth_card *, int);
+
 #endif /* __QETH_H__ */

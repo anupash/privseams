@@ -51,6 +51,7 @@
 #include "xfs_inode.h"
 #include "xfs_error.h"
 #include "xfs_rw.h"
+#include "xfs_ioctl32.h"
 
 #include <linux/dcache.h>
 #include <linux/smp_lock.h>
@@ -81,23 +82,23 @@ __linvfs_read(
 
 
 STATIC ssize_t
-linvfs_read(
+linvfs_aio_read(
 	struct kiocb		*iocb,
 	char			__user *buf,
 	size_t			count,
 	loff_t			pos)
 {
-	return __linvfs_read(iocb, buf, 0, count, pos);
+	return __linvfs_read(iocb, buf, IO_ISAIO, count, pos);
 }
 
 STATIC ssize_t
-linvfs_read_invis(
+linvfs_aio_read_invis(
 	struct kiocb		*iocb,
 	char			__user *buf,
 	size_t			count,
 	loff_t			pos)
 {
-	return __linvfs_read(iocb, buf, IO_INVIS, count, pos);
+	return __linvfs_read(iocb, buf, IO_ISAIO|IO_INVIS, count, pos);
 }
 
 
@@ -125,23 +126,23 @@ __linvfs_write(
 
 
 STATIC ssize_t
-linvfs_write(
+linvfs_aio_write(
 	struct kiocb		*iocb,
 	const char		__user *buf,
 	size_t			count,
 	loff_t			pos)
 {
-	return __linvfs_write(iocb, buf, 0, count, pos);
+	return __linvfs_write(iocb, buf, IO_ISAIO, count, pos);
 }
 
 STATIC ssize_t
-linvfs_write_invis(
+linvfs_aio_write_invis(
 	struct kiocb		*iocb,
 	const char		__user *buf,
 	size_t			count,
 	loff_t			pos)
 {
-	return __linvfs_write(iocb, buf, IO_INVIS, count, pos);
+	return __linvfs_write(iocb, buf, IO_ISAIO|IO_INVIS, count, pos);
 }
 
 
@@ -415,20 +416,18 @@ linvfs_file_mmap(
 }
 
 
-STATIC int
+STATIC long
 linvfs_ioctl(
-	struct inode	*inode,
 	struct file	*filp,
 	unsigned int	cmd,
 	unsigned long	arg)
 {
 	int		error;
+	struct inode *inode = filp->f_dentry->d_inode;
 	vnode_t		*vp = LINVFS_GET_VP(inode);
 
-	unlock_kernel();
 	VOP_IOCTL(vp, inode, filp, 0, cmd, (void __user *)arg, error);
 	VMODIFY(vp);
-	lock_kernel();
 
 	/* NOTE:  some of the ioctl's return positive #'s as a
 	 *	  byte count indicating success, such as
@@ -439,21 +438,19 @@ linvfs_ioctl(
 	return error;
 }
 
-STATIC int
+STATIC long
 linvfs_ioctl_invis(
-	struct inode	*inode,
 	struct file	*filp,
 	unsigned int	cmd,
 	unsigned long	arg)
 {
 	int		error;
+	struct inode *inode = filp->f_dentry->d_inode;
 	vnode_t		*vp = LINVFS_GET_VP(inode);
 
-	unlock_kernel();
 	ASSERT(vp);
 	VOP_IOCTL(vp, inode, filp, IO_INVIS, cmd, (void __user *)arg, error);
 	VMODIFY(vp);
-	lock_kernel();
 
 	/* NOTE:  some of the ioctl's return positive #'s as a
 	 *	  byte count indicating success, such as
@@ -492,10 +489,13 @@ struct file_operations linvfs_file_operations = {
 	.write		= do_sync_write,
 	.readv		= linvfs_readv,
 	.writev		= linvfs_writev,
-	.aio_read	= linvfs_read,
-	.aio_write	= linvfs_write,
+	.aio_read	= linvfs_aio_read,
+	.aio_write	= linvfs_aio_write,
 	.sendfile	= linvfs_sendfile,
-	.ioctl		= linvfs_ioctl,
+	.unlocked_ioctl	= linvfs_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl   = xfs_compat_ioctl,
+#endif
 	.mmap		= linvfs_file_mmap,
 	.open		= linvfs_open,
 	.release	= linvfs_release,
@@ -508,10 +508,13 @@ struct file_operations linvfs_invis_file_operations = {
 	.write		= do_sync_write,
 	.readv		= linvfs_readv_invis,
 	.writev		= linvfs_writev_invis,
-	.aio_read	= linvfs_read_invis,
-	.aio_write	= linvfs_write_invis,
+	.aio_read	= linvfs_aio_read_invis,
+	.aio_write	= linvfs_aio_write_invis,
 	.sendfile	= linvfs_sendfile,
-	.ioctl		= linvfs_ioctl_invis,
+	.unlocked_ioctl	= linvfs_ioctl_invis,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl   = xfs_compat_invis_ioctl,
+#endif
 	.mmap		= linvfs_file_mmap,
 	.open		= linvfs_open,
 	.release	= linvfs_release,
@@ -522,12 +525,13 @@ struct file_operations linvfs_invis_file_operations = {
 struct file_operations linvfs_dir_operations = {
 	.read		= generic_read_dir,
 	.readdir	= linvfs_readdir,
-	.ioctl		= linvfs_ioctl,
+	.unlocked_ioctl	= linvfs_ioctl,
 	.fsync		= linvfs_fsync,
 };
 
 static struct vm_operations_struct linvfs_file_vm_ops = {
 	.nopage		= filemap_nopage,
+	.populate	= filemap_populate,
 #ifdef HAVE_VMOP_MPROTECT
 	.mprotect	= linvfs_mprotect,
 #endif

@@ -13,6 +13,7 @@
 
 #include <linux/config.h>
 #include <linux/smp.h>
+#include <asm/sn/addrs.h>
 #include <asm/sn/pda.h>
 #include <asm/intrinsics.h>
 
@@ -81,16 +82,13 @@
  */
 
 #ifndef CONFIG_SMP
-#define cpu_logical_id(cpu)			0
 #define cpu_physical_id(cpuid)			((ia64_getreg(_IA64_REG_CR_LID) >> 16) & 0xffff)
 #endif
 
 
-#define get_node_number(addr)			(((unsigned long)(addr)>>38) & 0x7ff)
+#define get_node_number(addr)			NASID_GET(addr)
 
 /*
- * NOTE: id & eid refer to Intel's definitions of the LID register
- * 
  * NOTE: on non-MP systems, only cpuid 0 exists
  */
 

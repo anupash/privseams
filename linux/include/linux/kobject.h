@@ -23,6 +23,7 @@
 #include <linux/rwsem.h>
 #include <linux/kref.h>
 #include <linux/kobject_uevent.h>
+#include <linux/kernel.h>
 #include <asm/atomic.h>
 
 #define KOBJ_NAME_LEN	20
@@ -167,6 +168,8 @@ struct subsystem _varname##_subsys = { \
 	} \
 }
 
+/* The global /sys/kernel/ subsystem for people to chain off of */
+extern struct subsystem kernel_subsys;
 
 /**
  * Helpers for setting the kset of registered objects.

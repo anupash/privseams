@@ -42,6 +42,9 @@
 #ifdef CONFIG_ARCH_IOP331
 #define XSCALE_PMU_IRQ  IRQ_IOP331_CORE_PMU
 #endif
+#ifdef CONFIG_ARCH_PXA
+#define XSCALE_PMU_IRQ  IRQ_PMU
+#endif
 
 /*
  * Different types of events that can be counted by the XScale PMU
@@ -305,9 +308,9 @@ static void inline __xsc1_check_ctrs(void)
 	/*       Overflow bit gets cleared. There's no workaround.	 */
 	/*	 Fixed in B stepping or later			 	 */
 
-	pmnc &= ~(PMU_ENABLE | pmu->cnt_ovf[PMN0] | pmu->cnt_ovf[PMN1] |
-		pmu->cnt_ovf[CCNT]);
-	write_pmnc(pmnc);
+	/* Write the value back to clear the overflow flags. Overflow */
+	/* flags remain in pmnc for use below */
+	write_pmnc(pmnc & ~PMU_ENABLE);
 
 	for (i = CCNT; i <= PMN1; i++) {
 		if (!(pmu->int_mask[i] & pmu->int_enable))
@@ -343,8 +346,7 @@ static void inline __xsc2_check_ctrs(void)
 
 static irqreturn_t xscale_pmu_interrupt(int irq, void *arg, struct pt_regs *regs)
 {
-	unsigned long pc = profile_pc(regs);
-	int i, is_kernel = !user_mode(regs);
+	int i;
 	u32 pmnc;
 
 	if (pmu->id == PMU_XSC1)
@@ -357,7 +359,7 @@ static irqreturn_t xscale_pmu_interrupt(int irq, void *arg, struct pt_regs *regs
 			continue;
 
 		write_counter(i, -(u32)results[i].reset_counter);
-		oprofile_add_sample(pc, is_kernel, i, smp_processor_id());
+		oprofile_add_sample(regs, i);
 		results[i].ovf--;
 	}
 

@@ -56,7 +56,6 @@ static const char *mcdx_c_version
     = "$Id: mcdx.c,v 1.21 1997/01/26 07:12:59 davem Exp $";
 #endif
 
-#include <linux/version.h>
 #include <linux/module.h>
 
 #include <linux/errno.h>
@@ -77,8 +76,6 @@ static const char *mcdx_c_version
 #include <linux/blkdev.h>
 #include <linux/devfs_fs_kernel.h>
 
-/* for compatible parameter passing with "insmod" */
-#define	mcdx_drive_map mcdx
 #include "mcdx.h"
 
 #ifndef HZ
@@ -307,9 +304,16 @@ static int mcdx_setattentuator(struct s_drive_stuff *,
 
 static int mcdx_drive_map[][2] = MCDX_DRIVEMAP;
 static struct s_drive_stuff *mcdx_stuffp[MCDX_NDRIVES];
-static spinlock_t mcdx_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(mcdx_lock);
 static struct request_queue *mcdx_queue;
-MODULE_PARM(mcdx, "1-4i");
+
+/* You can only set the first two pairs, from old MODULE_PARM code.  */
+static int mcdx_set(const char *val, struct kernel_param *kp)
+{
+	get_options((char *)val, 4, (int *)mcdx_drive_map);
+	return 0;
+}
+module_param_call(mcdx, mcdx_set, NULL, NULL, 0);
 
 static struct cdrom_device_ops mcdx_dops = {
 	.open		= mcdx_open,
@@ -1260,11 +1264,7 @@ int __init mcdx_init_drive(int drive)
 int __init mcdx_init(void)
 {
 	int drive;
-#ifdef MODULE
-	xwarn("Version 2.14(hs) for " UTS_RELEASE "\n");
-#else
 	xwarn("Version 2.14(hs) \n");
-#endif
 
 	xwarn("$Id: mcdx.c,v 1.21 1997/01/26 07:12:59 davem Exp $\n");
 

@@ -19,8 +19,6 @@
  * -  Kissed strtok() goodbye
  */
 
-#define IN_STRING_C 1
- 
 #include <linux/types.h>
 #include <linux/string.h>
 #include <linux/ctype.h>
@@ -454,30 +452,6 @@ void * memset(void * s,int c,size_t count)
 	return s;
 }
 EXPORT_SYMBOL(memset);
-#endif
-
-#ifndef __HAVE_ARCH_BCOPY
-/**
- * bcopy - Copy one area of memory to another
- * @srcp: Where to copy from
- * @destp: Where to copy to
- * @count: The size of the area.
- *
- * Note that this is the same as memcpy(), with the arguments reversed.
- * memcpy() is the standard, bcopy() is a legacy BSD function.
- *
- * You should not use this function to access IO space, use memcpy_toio()
- * or memcpy_fromio() instead.
- */
-void bcopy(const void * srcp, void * destp, size_t count)
-{
-	const char *src = srcp;
-	char *dest = destp;
-
-	while (count--)
-		*dest++ = *src++;
-}
-EXPORT_SYMBOL(bcopy);
 #endif
 
 #ifndef __HAVE_ARCH_MEMCPY

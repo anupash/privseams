@@ -41,7 +41,6 @@
 #include <asm/unistd.h>
 #include <asm/thread_info.h>
 #include <asm/hw_irq.h>
-#include <asm/errno.h>
 
 	.code64
 
@@ -537,6 +536,9 @@ retint_kernel:
 	jmp ret_from_intr
 	CFI_ENDPROC
 	.endm
+
+ENTRY(thermal_interrupt)
+	apicinterrupt THERMAL_APIC_VECTOR,smp_thermal_interrupt
 
 #ifdef CONFIG_SMP	
 ENTRY(reschedule_interrupt)
