@@ -35,7 +35,7 @@
 #include "tools/debug.h"
 
 int main(int argc,char *argv[]) {
-  struct endpointinfo hints, *res = NULL;
+  struct endpointinfo hints, *epinfo, *res = NULL;
   struct timeval stats_before, stats_after;
   unsigned long stats_diff_sec, stats_diff_usec;
   char mylovemostdata[IP_MAXPACKET];
@@ -114,11 +114,15 @@ int main(int argc,char *argv[]) {
 
   gettimeofday(&stats_before, NULL);
 
-  err = connect(sockfd, (struct sockaddr *) res->ei_endpoint,
-		res->ei_endpointlen);
-  if (err) {
-    HIP_PERROR("connect");
-    goto out;
+  epinfo = res;
+  while(epinfo) {
+    err = connect(sockfd, (struct sockaddr *) epinfo->ei_endpoint,
+		  epinfo->ei_endpointlen);
+    if (err) {
+      HIP_PERROR("connect");
+      goto out;
+    }
+    epinfo = epinfo->ei_next;
   }
 
   gettimeofday(&stats_after, NULL);
