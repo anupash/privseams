@@ -840,8 +840,8 @@ static int hip_send_rea(struct in6_addr *dst_hit,int interface_id,
 	}
 
 	tmplist[0] = HIP_HADB_OWN_HIT;
-	tmplist[1] = HIP_HADB_OWN_SPI;
-	tmplist[2] = HIP_HADB_PEER_SPI;
+	tmplist[1] = HIP_HADB_SPI_IN;
+	tmplist[2] = HIP_HADB_SPI_OUT;
 	tmplist[3] = HIP_HADB_OWN_HMAC;
 	setlist[0] = &hit_our;
 	setlist[1] = &spi_our;

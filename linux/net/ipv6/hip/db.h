@@ -48,8 +48,8 @@ struct hip_db_struct {
 
 #define HIP_HADB_OWN_UPDATE_ID_OUT  0x000004
 /* #define HIP_HADB_RESERVED         0x000008 */
-#define HIP_HADB_OWN_SPI            0x000010
-#define HIP_HADB_OWN_NEW_SPI        0x000008
+#define HIP_HADB_SPI_IN             0x000010
+#define HIP_HADB_NEW_SPI_IN         0x000008
 #define HIP_HADB_OWN_LSI            0x000020
 #define HIP_HADB_OWN_HIT            0x000040
 #define HIP_HADB_KEYMAT_INDEX       0x000080
@@ -61,9 +61,9 @@ struct hip_db_struct {
 #define HIP_HADB_OWN_DH_SHARED_LEN  0x000808 /* testing */
 #define HIP_HADB_MASK_OWN           0x000FF0
 
-#define HIP_HADB_PEER_SPI       0x001000
+#define HIP_HADB_SPI_OUT        0x001000
 #define HIP_HADB_PEER_LSI       0x002000
-#define HIP_HADB_PEER_NEW_SPI   0x080000
+#define HIP_HADB_NEW_SPI_OUT    0x080000
 #define HIP_HADB_PEER_HIT       0x004000
 #define HIP_HADB_PEER_RESERVED  0x008000
 #define HIP_HADB_PEER_ESP       0x010000
@@ -99,9 +99,9 @@ struct hip_db_struct {
 #define hip_hadb_get_update_id_out_by_hit(hit,a) \
             (hip_hadb_get_info(hit,a,HIP_HADB_OWN_UPDATE_ID_OUT|HIP_ARG_HIT))
 #define hip_hadb_get_peer_spi_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_PEER_SPI|HIP_ARG_HIT))
+            (hip_hadb_get_info(hit,a,HIP_HADB_SPI_OUT|HIP_ARG_HIT))
 #define hip_hadb_get_peer_new_spi_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_PEER_NEW_SPI|HIP_ARG_HIT))
+            (hip_hadb_get_info(hit,a,HIP_HADB_NEW_SPI_OUT|HIP_ARG_HIT))
 #define hip_hadb_get_state_by_hit(hit,a) \
             (hip_hadb_get_info(hit,a,HIP_HADB_STATE|HIP_ARG_HIT))
 

@@ -246,7 +246,7 @@ static struct hip_hadb_state *hip_hadb_find_by_spi(u32 spi)
 		return NULL;
 
 	list_for_each_entry(tmp,&hip_hadb.db_head,next) {
-		if (tmp->spi_our == spi)
+		if (tmp->spi_in == spi)
 			return tmp;
 	}
 	
@@ -1621,7 +1621,7 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 
 	len = snprintf(page, count,
 		       "state peer_controls hit_our hit_peer "
-		       "spi_our spi_peer new_spi_our new_spi_peer lsi_our lsi_peer esp_transform "
+		       "spi_in spi_out new_spi_in new_spi_out lsi_our lsi_peer esp_transform "
 		       "birthday keymat_index keymat_calc_index "
 		       "update_id_in update_id_out dh_len list_of_peer_addrs curr_dst_addr\n");
 	if (len >= count)
@@ -1650,8 +1650,8 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 			break;
 		if ( (len += snprintf(page+len, count-len,
 				      " 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x %s",
-				      entry->spi_our, entry->spi_peer, entry->new_spi_our,
-				      entry->new_spi_peer, entry->lsi_our, entry->lsi_peer,
+				      entry->spi_in, entry->spi_out, entry->new_spi_in,
+				      entry->new_spi_out, entry->lsi_our, entry->lsi_peer,
 				      entry->esp_transform <=
 				      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
 				      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
@@ -2081,17 +2081,17 @@ int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int t
 			goto out_err;
 		}
 		switch(*getlist) {
-		case HIP_HADB_OWN_SPI:
-			*((uint32_t *)target) = entry->spi_our;
+		case HIP_HADB_SPI_IN:
+			*((uint32_t *)target) = entry->spi_in;
 			break;
-		case HIP_HADB_PEER_SPI:
-			*((uint32_t *)target) = entry->spi_peer;
+		case HIP_HADB_SPI_OUT:
+			*((uint32_t *)target) = entry->spi_out;
 			break;
-		case HIP_HADB_OWN_NEW_SPI:
-			*((uint32_t *)target) = entry->new_spi_our;
+		case HIP_HADB_NEW_SPI_IN:
+			*((uint32_t *)target) = entry->new_spi_in;
 			break;
-		case HIP_HADB_PEER_NEW_SPI:
-			*((uint32_t *)target) = entry->new_spi_peer;
+		case HIP_HADB_NEW_SPI_OUT:
+			*((uint32_t *)target) = entry->new_spi_out;
 			break;
 		case HIP_HADB_OWN_LSI:
 			*((uint32_t *)target) = entry->lsi_our;
@@ -2227,17 +2227,17 @@ int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int t
 		}
 
 		switch((*getlist)) {
-		case HIP_HADB_OWN_SPI:
-			entry->spi_our = *((uint32_t *)target);
+		case HIP_HADB_SPI_IN:
+			entry->spi_in = *((uint32_t *)target);
 			break;
-		case HIP_HADB_PEER_SPI:
-			entry->spi_peer = *((uint32_t *) target);
+		case HIP_HADB_SPI_OUT:
+			entry->spi_out = *((uint32_t *) target);
 			break;
-		case HIP_HADB_OWN_NEW_SPI:
-			entry->new_spi_our = *((uint32_t *) target);
+		case HIP_HADB_NEW_SPI_IN:
+			entry->new_spi_in = *((uint32_t *) target);
 			break;
-		case HIP_HADB_PEER_NEW_SPI:
-			entry->new_spi_peer = *((uint32_t *) target);
+		case HIP_HADB_NEW_SPI_OUT:
+			entry->new_spi_out = *((uint32_t *) target);
 			break;
 		case HIP_HADB_OWN_LSI:
 			entry->lsi_our = *((uint32_t *) target);
