@@ -378,6 +378,27 @@ int hip_get_any_local_hit(struct in6_addr *dst)
 	return 0;
 }
 
+int hip_hit_is_our(struct in6_addr *hit)
+{
+	struct hip_host_id_entry *entry;
+	unsigned long lf;
+
+	if (!hit) {
+		HIP_ERROR("NULL hit\n");
+		return 0;
+	}
+
+	HIP_READ_LOCK_DB(&hip_local_hostid_db);
+	list_for_each_entry(entry, &hip_local_hostid_db.db_head, next) {
+		if (!ipv6_addr_cmp(&entry->lhi.hit, hit)) {
+			HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
+			return 1;
+		}
+	}
+	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
+	return 0;
+}
+
 /**
  * hip_get_host_id - Copies the host id into newly allocated memory
  * and returns it to the caller.

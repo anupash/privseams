@@ -982,16 +982,15 @@ static int hip_init_output_socket(void)
 	if (err)
 		HIP_ERROR("Failed to allocate the HIP control socket (err=%d)\n", err);
 
-	/* these are needed to send multicast packets and prevent them from
-	   coming back from loopback */
+	/* this is needed to prevent multicast packets sent out coming back to us */
 	np = inet6_sk(hip_output_socket->sk);
-	if (np) {
-		_HIP_DEBUG("mc_loop_prev=%d\n", mc_loop_prev);
-		np->mc_loop = 0;
-	} else {
+	if (!np) {
+		HIP_ERROR("Could not get inet6 sock of HIP control socket\n");
 		err = -EFAULT;
-		HIP_ERROR("hmm..no np\n");
 	}
+
+	np->mc_loop = 0;
+	/* TODO: same for IPv4 ? */
 
 	return err;
 }
@@ -1711,6 +1710,7 @@ static int hip_init_procfs(void)
 	if (!create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
 			       hip_proc_read_hadb_peer_addrs, NULL))
 		goto out_err_sdb_state;
+#if 0
 	/* a simple way to trigger sending of UPDATE packet to all peers */
 	if (!create_proc_read_entry("send_update", 0, hip_proc_root,
 			       hip_proc_send_update, NULL))
@@ -1718,15 +1718,17 @@ static int hip_init_procfs(void)
 	/* for testing dummy NOTIFY packets */
 	if (!create_proc_read_entry("send_notify", 0, hip_proc_root,
 			       hip_proc_send_notify, NULL))
-		goto out_err_send_update;
+#endif		goto out_err_send_update;
 
 	HIP_DEBUG("profcs init successful\n");
 	return 1;
 
+#if 0
  out_err_send_update:
 	remove_proc_entry("send_update", hip_proc_root);
  out_err_peer_addrs:
 	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
+#endif
  out_err_sdb_state:
 	remove_proc_entry("sdb_state", hip_proc_root);
  out_err_lhi:
@@ -1747,8 +1749,10 @@ static void hip_uninit_procfs(void)
 	remove_proc_entry("lhi", hip_proc_root);
 	remove_proc_entry("sdb_state", hip_proc_root);
 	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
+#if 0
 	remove_proc_entry("send_update", hip_proc_root);
 	remove_proc_entry("send_notify", hip_proc_root);
+#endif
 	remove_proc_entry("hip", proc_net);
 }
 #endif /* CONFIG_PROC_FS */

@@ -2703,7 +2703,6 @@ int hip_verify_network_header(struct hip_common *hip_common,
 {
 	int err = 0;
 	uint16_t csum;
-	struct in6_addr our_hit, opportunistic_hit;
 
 	HIP_DEBUG("skb len=%d, skb data_len=%d, v6hdr payload_len=%d mgtotlen=%d\n",
 		  (*skb)->len, (*skb)->data_len,
@@ -2746,27 +2745,23 @@ int hip_verify_network_header(struct hip_common *hip_common,
 		goto out_err;
 	}
 
-	/* XX FIX: we should iterate through all local HITs.. */
-	err = hip_get_any_local_hit(&our_hit);
-	if (err) {
-		HIP_ERROR("No HIT found the localhost\n");
-		err = -EFAULT;
+	if (ipv6_addr_any(&hip_common->hits)) {
+		HIP_ERROR("Received a NULL in HIT-sender. Dropping\n");
+		err = -EAFNOSUPPORT;
 		goto out_err;
 	}
-	
-	if (ipv6_addr_cmp(&our_hit, &hip_common->hitr)) {
-		memset(&opportunistic_hit, 0, sizeof(opportunistic_hit));
-		if (!ipv6_addr_cmp(&opportunistic_hit, &hip_common->hitr)) {
-			/* Required for e.g. BOS */
-			HIP_DEBUG("Received opportunistic HIT\n");
-		} else {
-			HIP_DEBUG("Dropping HIP packet. Not for us.\n");
-			err = -EADDRNOTAVAIL;
-			goto out_err;
-		}
-	}
-	    
-	if (!ipv6_addr_cmp(&our_hit, &hip_common->hits)) {
+
+	if (ipv6_addr_any(&hip_common->hitr)) {
+		/* Required for e.g. BOS */
+		HIP_DEBUG("Received opportunistic HIT\n");
+	} else if (!hip_hit_is_our(&hip_common->hitr)) {
+		HIP_ERROR("Receiver HIT is not ours\n");
+		err = -EFAULT;
+		goto out_err;
+	} else
+		HIP_DEBUG("Receiver HIT is ours\n");
+
+	if (!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr)) {
 		HIP_DEBUG("Dropping HIP packet. Loopback not supported.\n");
 		err = -ENOSYS;
 		goto out_err;
