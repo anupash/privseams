@@ -273,7 +273,7 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 	if ((skb->len <= mtu) || ipfragok) {
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 		int ret;
-#if 0
+#if 1
  		struct in6_addr src_hit, dst_hit;
  		ipv6_addr_copy(&src_hit, &hdr->saddr);
  		ipv6_addr_copy(&dst_hit, &hdr->daddr);
@@ -285,8 +285,8 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
  		ret = HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb);
 		if (ret < 0)
 			goto end_hip;
-#if 0
-		if (0 /* THIS IS NOT WORKING ret == 5 */) {
+#if 1
+		if (ret == 5) {  /* THIS IS NOT WORKING well */
 			struct dst_entry *dst_tmp;
 			struct dst_entry **dst_tmp2;
 			int err2;
@@ -303,14 +303,21 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 			if (err2) {
 				printk(KERN_DEBUG "ip6_dst_lookup failed, err2=%d\n", err2);
 			} else {
- 				printk(KERN_DEBUG "ip6_xmit dst_tmp2 post xfrm_lookup=%p\n", *dst_tmp2);
-				printk(KERN_DEBUG "do ip6_dst_store\n");
+ 				printk(KERN_DEBUG "ip6_xmit dst_tmp2 post lookup=%p\n", *dst_tmp2);
+				//printk(KERN_DEBUG "do ip6_dst_store\n");
  				//sk_dst_reset(sk); ?
- 				ip6_dst_store(sk, *dst_tmp2, NULL /* ? */);
+
+ 				printk(KERN_DEBUG "ip6_xmit pre skb dst release=%p\n", dst);
+ 				dst_release(dst); // try sk_dt_reset instead
+ 				// or dst_release(skb->dst); ?
+
+				dst = skb->dst = dst_clone(*dst_tmp2);
+				if (!dst)
+					printk(KERN_DEBUG "HIP test code: !dst\n");
+// 				ip6_dst_store(sk, *dst_tmp2, NULL /* ? */);
  				printk(KERN_DEBUG "ip6_xmit skb dst 0=%p\n", skb->dst);
- 				//dst_release(skb->dst); ?
- 				printk(KERN_DEBUG "ip6_xmit skb dst release=%p\n", skb->dst);
- 				dst = skb->dst = dst_clone(*dst_tmp2);
+
+ 				
  				printk(KERN_DEBUG "ip6_xmit, skb->dst 2 %p\n", skb->dst);
  			}
 		}
@@ -1258,7 +1265,6 @@ int ip6_push_pending_frames(struct sock *sk)
 	ipv6_addr_copy(&hdr->daddr, final_dst);
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	//printk(KERN_DEBUG "ip6_push_pending_frames\n");
 	if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0) {
 		kfree_skb(skb);
 		goto error;
