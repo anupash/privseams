@@ -86,6 +86,7 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
 {
 	int err;
 
+	printk(KERN_DEBUG "verify_newsa_info p->family=%d\n", p->family);
 	err = -EINVAL;
 	switch (p->family) {
 	case AF_INET:
@@ -103,6 +104,7 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
 		goto out;
 	};
 
+	printk(KERN_DEBUG "verify_newsa_info p->id.proto=%d\n", p->id.proto);
 	err = -EINVAL;
 	switch (p->id.proto) {
 	case IPPROTO_AH:
@@ -130,6 +132,7 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
 		goto out;
 	};
 
+	printk(KERN_DEBUG "verify_newsa_info verify algos\n");
 	if ((err = verify_one_alg(xfrma, XFRMA_ALG_AUTH)))
 		goto out;
 	if ((err = verify_one_alg(xfrma, XFRMA_ALG_CRYPT)))
@@ -139,6 +142,7 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
 	if ((err = verify_encap_tmpl(xfrma)))
 		goto out;
 
+	printk(KERN_DEBUG "verify_newsa_info p->mode=%d\n", p->mode);
 	err = -EINVAL;
 	switch (p->mode) {
 	case 0:
@@ -152,6 +156,7 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
 	err = 0;
 
 out:
+	printk(KERN_DEBUG "verify_newsa_info ret err=%d\n", err);
 	return err;
 }
 
@@ -254,19 +259,22 @@ static int xfrm_add_sa(struct sk_buff *skb, struct nlmsghdr *nlh, void **xfrma)
 	struct xfrm_state *x;
 	int err;
 
+	printk(KERN_DEBUG "xfrm_add_sa\n");
+
 	err = verify_newsa_info(p, (struct rtattr **) xfrma);
 	if (err)
 		return err;
-
+	printk(KERN_DEBUG "xfrm_add_sa info ok\n");
 	x = xfrm_state_construct(p, (struct rtattr **) xfrma, &err);
 	if (!x)
 		return err;
+	printk(KERN_DEBUG "xfrm_add_sa state construct ok\n");
 
 	if (nlh->nlmsg_type == XFRM_MSG_NEWSA)
 		err = xfrm_state_add(x);
 	else
 		err = xfrm_state_update(x);
-
+	printk(KERN_DEBUG "after state_add/update err=%d\n", err);
 	if (err < 0) {
 		x->km.state = XFRM_STATE_DEAD;
 		xfrm_state_put(x);
@@ -852,6 +860,8 @@ static int xfrm_user_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err
 	struct xfrm_link *link;
 	int type, min_len;
 
+	printk(KERN_DEBUG "len=%d type=%d flags=0x%x\n", nlh->nlmsg_len,
+	       nlh->nlmsg_type, nlh->nlmsg_flags);
 	if (!(nlh->nlmsg_flags & NLM_F_REQUEST))
 		return 0;
 
@@ -873,10 +883,10 @@ static int xfrm_user_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err
 		*errp = -EPERM;
 		return -1;
 	}
-
+	printk(KERN_DEBUG "xfrm rcv sec ok, type-base=%d\n", type);
 	if ((type == 2 || type == 5) && (nlh->nlmsg_flags & NLM_F_DUMP)) {
 		u32 rlen;
-
+		printk(KERN_DEBUG "dump flag set, link->dump=0x%p\n", link->dump);
 		if (link->dump == NULL)
 			goto err_einval;
 
@@ -894,12 +904,15 @@ static int xfrm_user_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err
 
 	memset(xfrma, 0, sizeof(xfrma));
 
+	printk(KERN_DEBUG "min_len=%d\n", xfrm_msg_min[type]);
 	if (nlh->nlmsg_len < (min_len = xfrm_msg_min[type]))
 		goto err_einval;
 
 	if (nlh->nlmsg_len > min_len) {
 		int attrlen = nlh->nlmsg_len - NLMSG_ALIGN(min_len);
 		struct rtattr *attr = (void *) nlh + NLMSG_ALIGN(min_len);
+		printk(KERN_DEBUG "attrlen=%d attr=0x%p\n", attrlen, attr);
+		printk(KERN_DEBUG "attr: rta_len=%u rta_type (flavor)=%u\n", attr->rta_len, attr->rta_type);
 
 		while (RTA_OK(attr, attrlen)) {
 			unsigned short flavor = attr->rta_type;
@@ -912,14 +925,16 @@ static int xfrm_user_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err
 		}
 	}
 
+	printk(KERN_DEBUG "link->doit=0x%p\n", link->doit);
 	if (link->doit == NULL)
 		goto err_einval;
 	*errp = link->doit(skb, nlh, (void **) &xfrma);
-
+	printk(KERN_DEBUG "ret=%d\n", *errp);
 	return *errp;
 
 err_einval:
 	*errp = -EINVAL;
+	printk(KERN_DEBUG "err ret=%d\n", *errp);
 	return -1;
 }
 
@@ -927,7 +942,7 @@ static int xfrm_user_rcv_skb(struct sk_buff *skb)
 {
 	int err;
 	struct nlmsghdr *nlh;
-
+	printk(KERN_DEBUG "xfrm_user_rcv_skb\n");
 	while (skb->len >= NLMSG_SPACE(0)) {
 		u32 rlen;
 
@@ -952,6 +967,7 @@ static int xfrm_user_rcv_skb(struct sk_buff *skb)
 
 static void xfrm_netlink_rcv(struct sock *sk, int len)
 {
+	printk(KERN_DEBUG "xfrm_netlink_rcv len=%d\n", len);
 	do {
 		struct sk_buff *skb;
 
@@ -959,6 +975,7 @@ static void xfrm_netlink_rcv(struct sock *sk, int len)
 
 		while ((skb = skb_dequeue(&sk->sk_receive_queue)) != NULL) {
 			if (xfrm_user_rcv_skb(skb)) {
+				printk(KERN_DEBUG "xfrm_netlink_rcv dequeue len=%d\n", skb->len);
 				if (skb->len)
 					skb_queue_head(&sk->sk_receive_queue,
 						       skb);

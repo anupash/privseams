@@ -27,7 +27,7 @@ static uint16_t hip_get_new_update_id(void) {
  *
  * Returns: 0 if successful, otherwise < 0.
  */
-int hip_handle_update_initial(struct hip_common *msg, int state /*, int is_reply*/)
+int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, int state /*, int is_reply*/)
 {
 	int err = 0;
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
@@ -225,7 +225,12 @@ int hip_handle_update_initial(struct hip_common *msg, int state /*, int is_reply
 	/* The system MUST NOT start using the new outgoing SA
 	   before it receives traffic on the new incoming SA. */
 	HIP_DEBUG("Try to set up new incoming SA\n");
-#if 1
+	err = hip_setup_sa(hitr /*src*/, hits /*dst*/, src_ip,
+			   &peer_new_spi, esp_transform,
+			   we_are_HITg ? &espkey_lg : &espkey_gl,
+			   we_are_HITg ? &authkey_lg : &authkey_gl,
+			   0);
+#if 0
 	/* kludge: fix hip_setup_spi_and_sa parameters */
 	err = hip_setup_spi_and_sa(hitr /*src*/, hits /*dst*/,
 //	err = hip_setup_spi_and_sa(hits /*src*/, hitr /*dst*/,
@@ -235,7 +240,7 @@ int hip_handle_update_initial(struct hip_common *msg, int state /*, int is_reply
 				   we_are_HITg ? &authkey_lg : &authkey_gl,
 				   //&espkey_peer, &authkey_peer,
 				   0);
-#else
+//#else
 	err = hip_setup_spi_and_sa(we_are_HITg ? hitr : hits,
 				   we_are_HITg ? hits : hitr,
 //				   &our_new_spi, esp_transform,
@@ -271,14 +276,19 @@ int hip_handle_update_initial(struct hip_common *msg, int state /*, int is_reply
 	/* oikein: set up new outgoing IPsec SA */
 	/* check: shouldn't do this yet, but this is just a test */
 	our_new_spi = ntohl(nes->new_spi);
-#if 1
+	err = hip_setup_sa(hits /*dst*/, hitr /*src*/, src_ip,
+			   &our_new_spi, esp_transform,
+			   we_are_HITg ? &espkey_gl : &espkey_lg,
+			   we_are_HITg ? &authkey_gl : &authkey_lg,
+			   1);
+#if 0
 	err = hip_setup_ipsec(hits /*dst*/, hitr /*src*/,
 //			      peer_new_spi, esp_transform,
 			      our_new_spi, esp_transform,
 			      we_are_HITg ? &espkey_gl : &espkey_lg,
 			      we_are_HITg ? &authkey_gl : &authkey_lg,
 			      1);
-#else
+//#else
 	err = hip_setup_ipsec(we_are_HITg ? hits : hitr,
 			      we_are_HITg ? hitr : hits,
 			      peer_new_spi, esp_transform,
@@ -444,7 +454,7 @@ int hip_handle_update_initial(struct hip_common *msg, int state /*, int is_reply
  *
  * Returns: 0 if successful, otherwise < 0.
  */
-int hip_handle_update_reply(struct hip_common *msg, int state /*, int is_reply*/)
+int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int state /*, int is_reply*/)
 {
 	int err = 0;
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
@@ -600,14 +610,19 @@ int hip_handle_update_reply(struct hip_common *msg, int state /*, int is_reply*/
 
 	/* set up new outbound IPsec SA */
 	peer_new_spi = ntohl(nes->new_spi);
-#if 1
+	err = hip_setup_sa(hits /*dst*/, hitr /*src*/, src_ip,
+			   &peer_new_spi, esp_transform,
+			   we_are_HITg ? &espkey_gl : &espkey_lg,
+			   we_are_HITg ? &authkey_gl : &authkey_lg,
+			   1);
+#if 0
 	err = hip_setup_ipsec(hits /*dst*/, hitr /*src*/,
 			      peer_new_spi, esp_transform,
 			      we_are_HITg ? &espkey_gl : &espkey_lg,
 			      we_are_HITg ? &authkey_gl : &authkey_lg,
 			      1);
 //			      &espkey_own, &authkey_own, 1);
-#else
+//#else
 	err = hip_setup_spi_and_sa(we_are_HITg ? hitr : hits,
 				   we_are_HITg ? hits : hitr,
 				   &peer_new_spi, esp_transform,
@@ -694,15 +709,15 @@ int hip_receive_update(struct sk_buff *skb)
 	uint16_t pkt_update_id; /* UPDATE ID in packet */
 	uint16_t update_id_in;  /* stored incoming UPDATE ID */
 	int is_reply;           /* the R bit in NES */
-//	int getlist[3];
-//	void *setlist[3];
 	uint16_t keymat_index;
 	struct hip_dh_fixed *dh;
+	struct in6_addr *src_ip;
 
 	HIP_DEBUG("\n");
 	msg = (struct hip_common *) skb->h.raw;
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
 
+	src_ip = &(skb->nh.ipv6h->saddr);
 	hits = &msg->hits;
 
 	if (!hip_hadb_get_state_by_hit(hits, &state)) {
@@ -872,16 +887,16 @@ int hip_receive_update(struct sk_buff *skb)
 	case HIP_STATE_ESTABLISHED:
 		if (!is_reply) {
 			HIP_DEBUG("case 8: established and is not reply\n");
-			err = hip_handle_update_initial(msg, state);
+			err = hip_handle_update_initial(msg, src_ip, state);
 		}
 		break;
 	case HIP_STATE_REKEYING:
 		if (is_reply) {
 			HIP_DEBUG("case 9: rekeying and is reply\n");
-			err = hip_handle_update_reply(msg, state);
+			err = hip_handle_update_reply(msg, src_ip, state);
 		} else {
 			HIP_DEBUG("case 10: rekeying and is not reply\n");
-			err = hip_handle_update_initial(msg, state);
+			err = hip_handle_update_initial(msg, src_ip, state);
 		}
 		break;
 	default:
@@ -1014,10 +1029,16 @@ int hip_send_update(struct hip_hadb_state *entry)
 	/* The specifications does not say that new SA should be done
 	 * here, but it is needed because of the New SPI value */
 	/* get a New SPI to use and prepare IPsec SA */
+	new_spi = 0;
+	err = hip_setup_sa(&entry->hit_our, &entry->hit_peer, NULL,
+			   &new_spi, entry->esp_transform,
+			   &espkey_new.key, &authkey_new.key, 0); /* sa state is larval */
+
+#if 0
 	err = hip_setup_spi_and_sa(&entry->hit_our, &entry->hit_peer,
 				   &new_spi, entry->esp_transform,
 				   &espkey_new.key, &authkey_new.key, 0); /* sa state is larval */
-
+#endif
 	/* todo: if hip_setup_spi_and_sa failed due to
 	   sadb_key_to_auth random keys could be weak, try again a
 	   couple of times ? */

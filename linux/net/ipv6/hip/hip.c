@@ -201,6 +201,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 
 	return 0;
 }
+
 /**
  * hip_build_digest_repeat - Calculate digest repeatedly
  * 
@@ -468,6 +469,7 @@ int hip_enc_key_length(int tid)
 		break;
 	default:
 		HIP_ERROR("unknown tid=%d\n", tid);
+		HIP_ASSERT(0);
 		break;
 	}
 	
@@ -487,12 +489,12 @@ int hip_hmac_key_length(int tid)
 		ret = 0;
 		break;
 	default:
+		HIP_ERROR("unknown tid=%d\n", tid);
 		HIP_ASSERT(0);
 		break;
 	}
 	
 	return ret;
-
 }
 
 /**
@@ -514,6 +516,7 @@ int hip_transform_key_length(int tid)
 		ret = 0;
 		break;
 	default:
+		HIP_ERROR("unknown tid=%d\n", tid);
 		HIP_ASSERT(0);
 		break;
 	}
@@ -542,6 +545,7 @@ int hip_auth_key_length_esp(int tid)
 		ret = 0;
 		break;
 	default:
+		HIP_ERROR("unknown tid=%d\n", tid);
 		HIP_ASSERT(0);
 		break;
 	}
@@ -599,47 +603,17 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 				      ctx->keymat_calc_index, ctx->current_keymat_K);
 	if (err) {
 		HIP_ERROR("entry keymat update failed\n");
-		err = -ENOMEM;
 		goto out_err;
 	}
 
-#if 0
-	entry->current_keymat_index = ctx->current_keymat_index;
-	entry->keymat_calc_index = ctx->keymat_calc_index;
-	HIP_DEBUG("Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
-		  entry->current_keymat_index, entry->keymat_calc_index);
-
-	entry->keymat.offset = ctx->keymat.offset;
-	entry->keymat.keymatlen = ctx->keymat.keymatlen;
-
-	if (entry->keymat.keymatdst) {
-		/* move this to hadb_entry_reinit ? */ 
-		HIP_DEBUG("kfreeing old keymat data at 0x%p\n",
-			  entry->keymat.keymatdst);
-		kfree(entry->keymat.keymatdst);
-	}
-	entry->keymat.keymatdst = NULL;
-
-	if (entry->keymat.keymatlen > 0) {
-		HIP_DEBUG("entry leftover keymat, allocated %u bytes\n", entry->keymat.keymatlen);
-		entry->keymat.keymatdst = kmalloc(entry->keymat.keymatlen, GFP_KERNEL);
-		if (!entry->keymat.keymatdst) {
-			HIP_ERROR("entry leftover keymat kmalloc failed\n");
-			err = -ENOMEM;
-			goto out_err;
-		}
-		memcpy(entry->keymat.keymatdst, ctx->keymat.keymatdst, entry->keymat.keymatlen);
-		HIP_HEXDUMP("Entry leftover KEYMAT", entry->keymat.keymatdst, entry->keymat.keymatlen);
-	} else {
-		HIP_DEBUG("leftover keymat len was 0\n");
+	if (entry->dh_shared_key) {
+		HIP_DEBUG("kfreeing old dh_shared_key\n");
+		kfree(entry->dh_shared_key);
 	}
 
-	HIP_DEBUG("Entry keymat: offset=%d keymatlen=%d keymatdst=0x%p\n",
-		  entry->keymat.offset, entry->keymat.keymatlen, entry->keymat.keymatdst);
-#endif
-	
-	entry->dh_shared_key  = kmalloc(ctx->dh_shared_key_len, GFP_KERNEL);
-	if (!ctx->dh_shared_key) {
+	entry->dh_shared_key_len = 0;
+	entry->dh_shared_key = kmalloc(ctx->dh_shared_key_len, GFP_KERNEL);
+	if (!entry->dh_shared_key) {
 		HIP_ERROR("entry dh_shared kmalloc failed\n");
 		err = -ENOMEM;
 		goto out_err;
@@ -678,9 +652,8 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 	length = ntohs(ht->length);
 	suggestion = (hip_transform_suite_t *) &ht->suite_id[0];
 
-	if ( (length >> 1) > 6) 
-	{
-		HIP_ERROR("Too many transforms (%d)\n",(length >> 1));
+	if ( (length >> 1) > 6) {
+		HIP_ERROR("Too many transforms (%d)\n", length >> 1);
 		goto out;
 	}
 
@@ -731,8 +704,10 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	length = ntohs(ht->length);
 	suggestion = (uint16_t*) &ht->suite_id[0];
 
-	if ( (length >> 1) > 6) 
+	if ( (length >> 1) > 6) {
+		HIP_ERROR("Too many transforms (%d)\n", length >> 1);
 		goto out;
+	}
 
 	for (i=0; i<length; i++) {
 		switch(ntohs(*suggestion)) {
@@ -863,7 +838,7 @@ void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 
 	/* draft: If the R1 is a response to an ESP packet with an unknown
 	   SPI, the Initiator HIT SHOULD be zero. */
-	HIP_DEBUG("Received Unknown SPI: %x\n", ntohl(spi));
+	HIP_DEBUG("Received Unknown SPI: 0x%x\n", ntohl(spi));
 	HIP_INFO("Sending R1 with NULL dst HIT\n");
 
 	HIP_DEBUG("SKIP SENDING OF R1 ON UNKNOWN SPI\n");
@@ -967,14 +942,14 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
  *
  * ip6_build_xmit() calls this if we have a source address that is not
  * a HIT and destination address which is a HIT. If that is true, we
- * make he source a HIT too.
+ * make the source a HIT too.
  */
 int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
-	HIP_DEBUG("PASKA!\n");
+	HIP_DEBUG("\n");
 
 	if (!ipv6_addr_is_hit(&fl->fl6_dst)) {
-		HIP_ERROR("AMMU ITTES!\n");
+		HIP_ERROR("dst not a HIT\n");
 		return 0;
 	}
 
@@ -1091,13 +1066,14 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
 		 */
 		for (i = 0, ifa = idev->addr_list;
 		     ifa && i < *idev_addr_count; i++, ifa = ifa->if_next) {
-			/* todo: continue only if address flag has IFA_F_PERMANENT ? */
-
+			/* todo: continue only if address flag has
+			 * IFA_F_PERMANENT ? */
 			spin_lock_bh(&ifa->lock);
-			tmp_list[i].lifetime = htonl(0); /* todo: how to calculate address lifetime */
-			tmp_list[i].reserved = 0;
 			ipv6_addr_copy(&tmp_list[i].address, &ifa->addr);
 			spin_unlock_bh(&ifa->lock);
+			/* todo: how to calculate address lifetime */
+			tmp_list[i].lifetime = htonl(0);
+			tmp_list[i].reserved = 0;
 		}
 	}
 
@@ -1456,7 +1432,7 @@ static int hip_init_procfs(void)
 	create_proc_read_entry("net/hip/sdb_peer_addrs", 0, 0,
 			       hip_proc_read_hadb_peer_addrs, NULL);
 
-	/* a simple way to trigger sending of NES packet to all peers */
+	/* a simple way to trigger sending of UPDATE packet to all peers */
 	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
 	return 1;
 }
@@ -1467,9 +1443,10 @@ static int hip_init_procfs(void)
 static void hip_uninit_procfs(void)
 {
 	HIP_DEBUG("\n");
-	remove_proc_entry("sdb_state", hip_proc_root);
-	remove_proc_entry("lhi", hip_proc_root);
-	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
+	remove_proc_entry("net/hip/lhi", hip_proc_root);
+	remove_proc_entry("net/hip/sdb_state", hip_proc_root);
+	remove_proc_entry("net/hip/sdb_peer_addrs", hip_proc_root);
+	remove_proc_entry("net/hip/send_update", hip_proc_root);
 	remove_proc_entry("net/hip", NULL);
 	return;
 }

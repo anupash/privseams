@@ -41,6 +41,7 @@
 #include "input.h"
 #include "keymat.h"
 #include "update.h"
+#include "crypto/dsa.h"
 
 #ifdef MAX
 #undef MAX
@@ -455,7 +456,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	struct hip_tlv_common *param = NULL;
 
-	/* perform light oeprations first before allocating memory or
+	/* perform light operations first before allocating memory or
 	 * using lots of cpu time */
 	param = hip_get_param(msg, HIP_PARAM_HIP_TRANSFORM);
 	if (!param) {
