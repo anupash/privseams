@@ -273,8 +273,7 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	return err;
 }
 
-int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea/*,
-				    uint32_t update_id*/)
+int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 {
 	/* assume that caller has the entry lock */
 	int err = 0;
@@ -554,7 +553,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 			HIP_ERROR("SPI 0x%x in REA is not equal to the New SPI 0x%x in NES\n",
 				  ntohl(rea->spi), ntohl(nes->new_spi));
 		} else {
-			err = hip_update_handle_rea_parameter(entry, rea/*, ntohl(seq->update_id)*/);
+			err = hip_update_handle_rea_parameter(entry, rea);
 			HIP_DEBUG("rea param handling ret %d\n", err);
 			err = 0;
 		}
@@ -1405,7 +1404,6 @@ int hip_receive_update(struct sk_buff *skb)
 	if (echo_response)
 		HIP_DEBUG("ECHO_RESPONSE found\n");
 
-
 	/* 8.11 Processing UPDATE packets checks */
 	if (seq && nes) {
 		HIP_DEBUG("UPDATE has both SEQ and NES, peer host is rekeying, MUST process this UPDATE\n");
@@ -1538,7 +1536,7 @@ int hip_receive_update(struct sk_buff *skb)
 
 	/* check that Old SPI value exists */
 	if (nes &&
-	    (nes->old_spi != nes->new_spi) && /* mm-02 check */
+	    (nes->old_spi != nes->new_spi) && /* mm check */
 	    !hip_update_exists_spi(entry, ntohl(nes->old_spi), HIP_SPI_DIRECTION_OUT, 0)) {
 		HIP_ERROR("Old SPI value 0x%x in NES parameter does not belong to the current list of outbound SPIs in HA\n",
 			  ntohl(nes->old_spi));
@@ -1613,16 +1611,11 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 
 	/* lock here ? */
-
-//	add_nes = flags & SEND_UPDATE_NES;
 	add_rea = flags & SEND_UPDATE_REA;
-
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
 		  addr_list, addr_count, ifindex, flags);
-	HIP_DEBUG("add_rea=%d\n", add_rea);
-
 	if (add_rea)
-		HIP_DEBUG("mm-02 UPDATE, %d addresses in REA\n", addr_count);
+		HIP_DEBUG("mm UPDATE, %d addresses in REA\n", addr_count);
 	else
 		HIP_DEBUG("Plain UPDATE\n");
 
@@ -1637,7 +1630,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	hip_print_hit("sending UPDATE to", &entry->hit_peer);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
 
-//	if (addr_list) {
 	if (add_rea) {
 		/* mm stuff, per-ifindex SA */
 		/* reuse old SA if we have one, else create a new SA */
@@ -1659,6 +1651,13 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		/* base draft UPDATE, create a new SA anyway */
 		HIP_DEBUG("base draft UPDATE, create a new SA\n");
 		make_new_sa = 1;
+	}
+
+	/* avoid sending empty REAs to the peer if we have not sent
+	 * previous information on this SPI yet */
+	if (!mapped_spi && addr_count == 0) {
+		HIP_DEBUG("NETDEV_DOWN and ifindex SPI not advertised yet, returning\n");
+		goto out;
 	}
 
 	if (make_new_sa) {
@@ -1699,7 +1698,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 
-//	if (addr_list) {
 	if (add_rea) {
 		/* REA is the first parameter of the UPDATE */
 		if (mapped_spi)

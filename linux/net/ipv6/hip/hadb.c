@@ -1438,6 +1438,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 		}
 	}
  out_err:
+	return;
 }
 
 void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id)

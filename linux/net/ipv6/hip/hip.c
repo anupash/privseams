@@ -1423,11 +1423,56 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 }
 
 
+/* ICMP errors caused by HIP packets are handled by this function */
 static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt, 
 			    int type, int code, int offset, __u32 info)
 {
-	/* hip_handle_icmp is useless if this works */
-	HIP_ERROR("type=%d code=%d offset=%d, info=%u\n", type, code, offset, info);
+	struct icmp6hdr *hdr;
+	struct ipv6hdr *invoking_hdr; /* RFC 2463 sec 3.1 */
+        struct in6_addr *saddr, *daddr;
+	char strs[INET6_ADDRSTRLEN];
+	char strd[INET6_ADDRSTRLEN];
+
+	hdr = (struct icmp6hdr *) skb->h.raw;
+	invoking_hdr = (struct ipv6hdr *) (hdr+1); /* check */
+
+	saddr = &skb->nh.ipv6h->saddr;
+        daddr = &skb->nh.ipv6h->daddr;
+	hip_in6_ntop(saddr, strs);
+	hip_in6_ntop(daddr, strd);
+	HIP_DEBUG("icmp6: src=%s dst=%s type=%d code=%d offset=%d info=%u skb->len=%d\n",
+		  strs, strd, type, code,  offset, info, skb->len);
+	hip_in6_ntop(&invoking_hdr->saddr, strs);
+	hip_in6_ntop(&invoking_hdr->daddr, strd);
+	HIP_DEBUG("invoking_hdr ip6: src=%s dst=%s\n", strs, strd);
+
+	switch (type) {
+	case ICMPV6_DEST_UNREACH:
+		HIP_DEBUG("got DEST_UNREACH\n");
+		switch(code) {
+		case ICMPV6_NOROUTE:
+		case ICMPV6_ADM_PROHIBITED:
+		case ICMPV6_ADDR_UNREACH:
+			HIP_DEBUG("TODO: handle ICMP DU code %d\n", code);
+			/* todo: deactivate invoking_hdr->daddr from every sdb
+			 * entry peer addr list */
+			break;
+		default:
+			HIP_DEBUG("ICMP DU code %d not handled\n", code);
+			break;
+		}
+		break;
+	case ICMPV6_PARAMPROB:
+		HIP_DEBUG("got PARAMPROB\n");
+		break;
+	case ICMPV6_TIME_EXCEED:
+		HIP_DEBUG("got TIME_EXCEED\n");
+		break;
+	default:
+		HIP_DEBUG("unhandled type %d\n", type);
+	}
+
+	return;
 }
 
 /**
@@ -1441,6 +1486,11 @@ static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt,
  */
 void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 {
+	HIP_DEBUG("icmp6: type=%d code=%d skb->len=%d\n",
+		  type, code, skb->len);
+	HIP_DEBUG("RETURNING, hip_err_handler should handle this ICMP\n");
+	return;
+#if 0
 	struct icmp6hdr *hdr;
 	struct ipv6hdr *invoking_hdr; /* RFC 2463 sec 3.1 */
 #ifdef CONFIG_HIP_DEBUG
@@ -1485,6 +1535,7 @@ void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 	}
 
 	return;
+#endif
 }
 
 /**

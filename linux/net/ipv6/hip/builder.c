@@ -888,31 +888,17 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 	hip_tlv_type_t type = hip_get_param_type(param);
 	int err = 0;
 
-	HIP_DEBUG("type=%u\n", type);
+	_HIP_DEBUG("type=%u\n", type);
 
 	switch(type) {
 	case HIP_PARAM_HIP_TRANSFORM:
 	case HIP_PARAM_ESP_TRANSFORM:
 	{
 		/* Search for one supported transform */
-		//uint16_t i;
 		hip_transform_suite_t suite;
 
  		HIP_DEBUG("Checking %s transform\n",
  			  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
-#if 0
-		for (i = 0; i < HIP_TRANSFORM_HIP_MAX; i++) {
-			suite = hip_get_param_transform_suite_id(param, i);
-			if (suite == HIP_TRANSFORM_3DES ||
-			    suite == HIP_TRANSFORM_NULL) {
-				err = 0;
-				HIP_DEBUG("Matched suite: %d\n", suite);
-				break;
-			} else {
-				HIP_DEBUG("Skipping suite: %d\n", suite);
-			}
-		}
-#endif
 		suite = hip_get_param_transform_suite_id(param, 0);
 		if (suite == 0) {
 			HIP_ERROR("Could not find suitable %s transform\n",
@@ -921,34 +907,6 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		}
 		break;
 	}
-#if 0
-	case HIP_PARAM_ESP_TRANSFORM:
-	{
-		/* Search for one supported transform */
-		uint16_t i;
-		hip_transform_suite_t suite;
-		err = -EPROTONOSUPPORT;
-		HIP_DEBUG("Checking ESP transform\n");
-		HIP_HEXDUMP("ESP transform", (char *) param,
-			    hip_get_param_total_len(param));
-#if 0
-		for (i = 0; i < HIP_TRANSFORM_ESP_MAX; i++) {
-			suite = hip_get_param_transform_suite_id(param, i);
-			if (suite ==  HIP_ESP_3DES_SHA1 ||
-			    suite == HIP_ESP_NULL_SHA1) {
-				err = 0;
-				break;
-			}
-		}
-#endif
-		suite = hip_get_param_transform_suite_id(param, i);
-		if (suite == 0) {
-			HIP_ERROR("Could not find suitable ESP transform\n");
-			err = -1;
-		}
-		break;
-	}
-#endif
 	case HIP_PARAM_HOST_ID:
 	{
 		uint8_t algo = 
@@ -960,7 +918,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		break;
 	}
 	}
-	HIP_DEBUG("err=%d\n", err);
+	_HIP_DEBUG("err=%d\n", err);
 	return err;
 }
 
