@@ -30,6 +30,12 @@
 #define jiffies random()
 #include "list.h"
 
+#define ipv6_addr_cmp(a1, a2) \
+  memcmp((const void *) a1, (const void *) a2, sizeof(struct in6_addr))
+
+#define ipv6_addr_copy(a1, a2) \
+  memcpy((void *) a1, (const void *) a2, sizeof(struct in6_addr));
+
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>
@@ -105,7 +111,6 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
 
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
-extern struct crypto_tfm *impl_sha1;
 extern struct crypto_tfm *impl_sha1;
 //extern struct semaphore hip_work;
 extern struct socket *hip_output_socket;

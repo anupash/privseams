@@ -1181,11 +1181,11 @@ int hip_socket_send_bos(const struct hip_common *msg)
 
  out_err:
 	if (host_id_private)
-		kfree(host_id_private);
+		HIP_FREE(host_id_private);
 	if (host_id_pub)
-		kfree(host_id_pub);
+		HIP_FREE(host_id_pub);
 	if (bos)
-		kfree(bos);
+		HIP_FREE(bos);
 
 	return err;
 }
@@ -1600,7 +1600,7 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	op->count++; /* increment count on error also so err handling works */
 		
  error:
-	//HIP_DEBUG("*** TODO: on error, kfree HIP_MALLOCed addresses here ? ***\n");
+	//HIP_DEBUG("*** TODO: on error, HIP_FREE HIP_MALLOCed addresses here ? ***\n");
 	_HIP_DEBUG("op->end->next=0x%p\n", op->end->next);
 	_HIP_DEBUG("op->end=0x%p\n", op->end);
 
@@ -1762,16 +1762,16 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 		_HIP_DEBUG("next=0x%p\n", next);
 		_HIP_DEBUG("entry->host_id=0x%p\n", entry->host_id);
 		if (entry->host_id)
-			kfree(entry->host_id);
+			HIP_FREE(entry->host_id);
 		addr = entry->addr_list;
 		_HIP_DEBUG("addrlist=0x%p\n", addr);
 		while (addr) {
 			_HIP_DEBUG("addr=0x%p\n", addr);
 			anext = addr->next;
-			kfree(addr);
+			HIP_FREE(addr);
 			addr = anext;
 		}
-		kfree(entry);
+		HIP_FREE(entry);
 		entry = next;
 	}
 	_HIP_DEBUG("done freeing mem, err = %d\n", err);

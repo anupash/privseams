@@ -1,6 +1,8 @@
 #ifndef HIP_CRYPTO_H
 #define HIP_CRYPTO_H
 
+#include <gcrypt.h>
+
 struct crypto_tfm {
   /* XX FIXME */
 };

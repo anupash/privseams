@@ -311,7 +311,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
  out_err:
 
 	if (msg_copy)
-		kfree(msg_copy);
+		HIP_FREE(msg_copy);
 
 	return err;
 }
@@ -613,14 +613,14 @@ int hip_produce_keying_material(struct hip_common *msg,
 	ctx->dh_shared_key = dh_shared_key;
 	ctx->dh_shared_key_len = dh_shared_len;
 
-	/* on success kfree for dh_shared_key is called by caller */
+	/* on success HIP_FREE for dh_shared_key is called by caller */
  out_err:
 	if (err) {
 		if (dh_shared_key)
-			kfree(dh_shared_key);
+			HIP_FREE(dh_shared_key);
 	}
 	if (keymat)
-		kfree(keymat);
+		HIP_FREE(keymat);
 
 	return err;
 }
@@ -1111,15 +1111,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
  out_err:
 	if (signature)
-		kfree(signature);
+		HIP_FREE(signature);
 	if (host_id_private)
-		kfree(host_id_private);
+		HIP_FREE(host_id_private);
 	if (host_id_pub)
-		kfree(host_id_pub);
+		HIP_FREE(host_id_pub);
 	if (i2)
-		kfree(i2);
+		HIP_FREE(i2);
 	if (dh_data)
-		kfree(dh_data);
+		HIP_FREE(dh_data);
 
 	return err;
 }
@@ -1303,9 +1303,9 @@ int hip_handle_r1(struct hip_common *r1,
 
  out_err:
 	if (ctx->dh_shared_key)
-		kfree(ctx->dh_shared_key);
+		HIP_FREE(ctx->dh_shared_key);
 	if (ctx)
-		kfree(ctx);
+		HIP_FREE(ctx);
 	return err;
 }
 
@@ -1604,11 +1604,11 @@ int hip_create_r2(struct hip_context *ctx,
 #endif
  out_err:
 	if (host_id_public)
-		kfree(host_id_public);
+		HIP_FREE(host_id_public);
 	if (host_id_private)
-		kfree(host_id_private);
+		HIP_FREE(host_id_private);
 	if (r2)
-		kfree(r2);
+		HIP_FREE(r2);
 	if (clear && entry) {/* Hmm, check */
 		HIP_ERROR("TODO: about to do hip_put_ha, should this happen here ?\n");
 		hip_put_ha(entry);
@@ -2074,11 +2074,11 @@ int hip_handle_i2(struct hip_common *i2,
 		}
 	}
 	if (tmp_enc)
-		kfree(tmp_enc);
+		HIP_FREE(tmp_enc);
 	if (ctx->dh_shared_key)
-		kfree(ctx->dh_shared_key);
+		HIP_FREE(ctx->dh_shared_key);
 	if (ctx)
-		kfree(ctx);
+		HIP_FREE(ctx);
 
 	return err;
 }
@@ -2318,9 +2318,9 @@ int hip_handle_r2(struct hip_common *r2,
 
  out_err:
 	if (peer_id)
-		kfree(peer_id);
+		HIP_FREE(peer_id);
 	if (ctx)
-		kfree(ctx);
+		HIP_FREE(ctx);
 	return err;
 }
 
@@ -2854,7 +2854,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
  out_err:
 	if (hmac_res)
-		kfree(hmac_res);
+		HIP_FREE(hmac_res);
 
 	return err;
 }
@@ -2869,6 +2869,6 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 void hip_hwo_input_destructor(struct hip_work_order *hwo)
 {
 	if (hwo && hwo->msg) {
-		kfree(hwo);
+		HIP_FREE(hwo);
 	}
 }

@@ -1,5 +1,7 @@
 #include "crypto.h"
 
+struct crypto_tfm impl_sha1; /* XX FIX: FILL THIS STRUCTURE */
+
 void crypto_digest_digest(struct crypto_tfm *tfm, char *src_buf, int ignore,
 			  char *dst_buf) {
   exit(1); /* XX FIXME */
@@ -83,4 +85,9 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 {
   exit(1); /* XX FIXME */
   return 1;
+}
+
+void get_random_bytes(void *buf, int nbytes)
+{
+  gcry_randomize(buf, nbytes, GCRY_STRONG_RANDOM);
 }

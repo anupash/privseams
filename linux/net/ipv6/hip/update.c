@@ -83,7 +83,7 @@ void hip_update_spi_waitlist_delete(uint32_t spi)
 		if (s->spi == spi) {
 			HIP_DEBUG("found, delete item %d\n", i);
 			list_del(&s->list);
-			kfree(s);
+			HIP_FREE(s);
 			break;
 		}
 		i++;
@@ -107,7 +107,7 @@ void hip_update_spi_waitlist_delete_all(void)
 	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
 		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
 		list_del(&s->list);
-		kfree(s);
+		HIP_FREE(s);
 	}
 	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
 	return;
@@ -709,7 +709,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 
  out_err:
 	if (update_packet)
-		kfree(update_packet);
+		HIP_FREE(update_packet);
 	if (err) {
 		hip_set_spi_update_status(entry, prev_spi_in, 0);
 		/* SA remove not tested yet */
@@ -1074,7 +1074,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	   move to state = ?
 	*/
 	if (update_packet)
-		kfree(update_packet);
+		HIP_FREE(update_packet);
 	
 	return err;
 }
@@ -1213,7 +1213,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 
  out_err:
 	if (update_packet)
-		kfree(update_packet);
+		HIP_FREE(update_packet);
 
 	_HIP_DEBUG("done, err=%d\n", err);
 	return err;
@@ -1269,7 +1269,7 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 
  out_err_nolock:
 	if (update_packet)
-		kfree(update_packet);
+		HIP_FREE(update_packet);
 	return err;
 }
 
@@ -1382,7 +1382,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 
  out_err:
 	if (update_packet)
-		kfree(update_packet);
+		HIP_FREE(update_packet);
 	return err;
 }
 
@@ -1953,7 +1953,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
  out:
 	HIP_UNLOCK_HA(entry);
 	if (update_packet)
-		kfree(update_packet);
+		HIP_FREE(update_packet);
 	return err;
 }
 

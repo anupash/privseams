@@ -259,8 +259,8 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	default:
 		HIP_ERROR("Received HIP packet of unknown/unimplemented type %d\n",
 			  hip_common->type_hdr);
-		kfree_skb(*skb);  /* sic */
-		kfree(hwo);
+		HIP_FREE_skb(*skb);  /* sic */
+		HIP_FREE(hwo);
 		/*  KRISUXXX: return value? */
 		return -1;
                 break;
@@ -269,7 +269,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
         hip_insert_work_order(hwo);
 
  out_err:
-	/* We must not use kfree_skb here... (worker thread releases) */
+	/* We must not use HIP_FREE_skb here... (worker thread releases) */
 	// FIXME: this is a memory leak for now, as the skb is not free-ed anywhere! (tkoponen)
 
 	return 0;

@@ -370,7 +370,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	if (msig)
 		mpi_free(msig);
 	if (buf)
-		kfree(buf);
+		HIP_FREE(buf);
 	return err;
 	
 }
@@ -497,7 +497,7 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	if (orig)
 		mpi_free(orig);
 	if (buf)
-		kfree(buf);
+		HIP_FREE(buf);
 	
 	return err;
 }

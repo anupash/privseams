@@ -320,7 +320,7 @@ void hip_uninit_rvadb()
 void hip_rva_delete(HIP_RVA *rva)
 {
 	/* last reference has been deleted by now */
-	kfree(rva);
+	HIP_FREE(rva);
 }
 
 void hip_rva_remove(HIP_RVA *rva)
@@ -452,7 +452,7 @@ int hip_relay_i1(struct sk_buff *skb, HIP_RVA *rva)
 	}
 		
  out:
-	kfree(final_dst);
+	HIP_FREE(final_dst);
 	return err;
 }
 

@@ -95,7 +95,7 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	}
 
 	HIP_DEBUG("end of dump (0x%p)\n", data+len);
-	kfree(buf);
+	HIP_FREE(buf);
 	return;
 }
 

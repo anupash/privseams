@@ -88,11 +88,7 @@ struct hip_common *hip_msg_alloc(void)
  */
 void hip_msg_free(struct hip_common *msg)
 {
-#ifdef __KERNEL__
-  kfree(msg);
-#else
-  free(msg);
-#endif /* __KERNEL__ */
+	HIP_FREE(msg);
 }
 
 /**
@@ -1319,7 +1315,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
  out_err:
 
 	if (host_id_padded)
-		kfree(host_id_padded);
+		HIP_FREE(host_id_padded);
 		
 	return err;
 }
@@ -1385,7 +1381,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	err = hip_build_param(msg, &hmac2);
  out_err:
 	if (tmp)
-		kfree(tmp);
+		HIP_FREE(tmp);
 
 	return err;
 }

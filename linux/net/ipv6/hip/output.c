@@ -337,9 +337,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	/************** Packet ready ***************/
 
  	if (host_id_pub)
- 		kfree(host_id_pub);
+ 		HIP_FREE(host_id_pub);
  	if (dh_data)
- 		kfree(dh_data);
+ 		HIP_FREE(dh_data);
 
 	HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
 
@@ -347,15 +347,15 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
   out_err:
 	if (signature) 
-		kfree(signature);
+		HIP_FREE(signature);
 	if (host_id_pub)
-		kfree(host_id_pub);
+		HIP_FREE(host_id_pub);
  	if (host_id_private)
- 		kfree(host_id_private);
+ 		HIP_FREE(host_id_private);
  	if (msg)
- 		kfree(msg);
+ 		HIP_FREE(msg);
  	if (dh_data)
- 		kfree(dh_data);
+ 		HIP_FREE(dh_data);
 
   	return NULL;
 }
@@ -471,7 +471,7 @@ void hip_send_notify(hip_ha_t *entry)
 
  out_err:
 	if (notify_packet)
-		kfree(notify_packet);
+		HIP_FREE(notify_packet);
 	return;
 }
 

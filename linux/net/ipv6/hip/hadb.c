@@ -67,7 +67,7 @@ static void hip_hadb_put_entry(void *entry)
 void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 {
 	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
-	kfree(hs);
+	HIP_FREE(hs);
 }
 
 static void hip_hadb_put_hs(void *entry)
@@ -318,8 +318,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	hip_hadb_delete_inbound_spis(ha);
 	hip_hadb_delete_outbound_spis(ha);
 	if (ha->dh_shared_key)
-		kfree(ha->dh_shared_key);
-	kfree(ha);
+		HIP_FREE(ha->dh_shared_key);
+	HIP_FREE(ha);
 }
 
 /**
@@ -737,7 +737,7 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 			if (!ipv6_addr_cmp(&item->address, addr)) {
 				_HIP_DEBUG("deleting address\n");
 				list_del(&item->list);
-				kfree(item);
+				HIP_FREE(item);
 				/* if address is on more than one spi list then do not goto out */
 				goto out;
 			}
@@ -939,7 +939,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 			hip_delete_sa(item->spi, &entry->hit_our);
 			hip_delete_sa(item->new_spi, &entry->hit_our);
 			list_del(&item->list);
-			kfree(item);
+			HIP_FREE(item);
 			break;
 		}
         }
@@ -960,7 +960,7 @@ void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
 		hip_delete_sa(item->spi, &entry->hit_our);
 		hip_delete_sa(item->new_spi, &entry->hit_our);
 		list_del(&item->list);
-		kfree(item);
+		HIP_FREE(item);
         }
 }
 
@@ -981,10 +981,10 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);
-				kfree(addr_item);
+				HIP_FREE(addr_item);
 			}
 			list_del(&item->list);
-			kfree(item);
+			HIP_FREE(item);
 		}
         }
 }
@@ -1008,10 +1008,10 @@ void hip_hadb_delete_outbound_spis(hip_ha_t *entry)
 		/* delete peer's addresses */
 		list_for_each_entry_safe(addr_item, addr_tmp, &spi_out->peer_addr_list, list) {
 			list_del(&addr_item->list);
-			kfree(addr_item);
+			HIP_FREE(addr_item);
 		}
 		list_del(&spi_out->list);
-		kfree(spi_out);
+		HIP_FREE(spi_out);
         }
 }
 
@@ -1988,7 +1988,7 @@ void hip_hadb_dump_hits(void)
 	}
 
 	HIP_UNLOCK_HT(&hadb_hit);
-	kfree(string);
+	HIP_FREE(string);
 }
 
 

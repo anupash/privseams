@@ -50,8 +50,8 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 	list_for_each_safe(curr,iter,&db->db_head) {
 		tmp = list_entry(curr,struct hip_host_id_entry,next);
 		if (tmp->host_id)
-			kfree(tmp->host_id);
-		kfree(tmp);
+			HIP_FREE(tmp->host_id);
+		HIP_FREE(tmp);
 	}
 
 	HIP_WRITE_UNLOCK_DB(db);
@@ -73,7 +73,7 @@ void hip_uninit_eid_db(struct hip_db_struct *db)
 
 	list_for_each_safe(curr,iter,&db->db_head) {
 		tmp = list_entry(curr, struct hip_host_id_entry, next);
-		kfree(tmp);
+		HIP_FREE(tmp);
 	}
 
 	HIP_WRITE_UNLOCK_DB(db);
@@ -227,8 +227,8 @@ int hip_add_host_id(struct hip_db_struct *db,
  out_err:
 	if (id_entry) {
 		if (id_entry->host_id)
-			kfree(id_entry->host_id);
-		kfree(id_entry);
+			HIP_FREE(id_entry->host_id);
+		HIP_FREE(id_entry);
 	}
 
 	return err;
@@ -281,8 +281,8 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 
 	/* free the dynamically reserved memory and
 	   set host_id to null to signal that it is free */
-	kfree(id->host_id);
-	kfree(id);
+	HIP_FREE(id->host_id);
+	HIP_FREE(id);
 	err = 0;
 	return err;
 }
@@ -476,7 +476,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	t = hip_get_param_total_len(tmp->host_id);
 	if (t > 1024) {
 		HIP_READ_UNLOCK_DB(db);
-		kfree(result);
+		HIP_FREE(result);
 		return NULL;
 	}
 
@@ -516,7 +516,7 @@ struct hip_host_id *hip_get_host_id_by_algo(struct hip_db_struct *db,
 	t = hip_get_param_total_len(tmp->host_id);
 	if (t > 1024) {
 		HIP_READ_UNLOCK_DB(db);
-		kfree(result);
+		HIP_FREE(result);
 		return NULL;
 	}
 
@@ -573,7 +573,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	T = *((u8 *)(tmp + 1));
 	if (T > 8) {
 		HIP_ERROR("Invalid T-value in DSA key (0x%x)\n",T);
-		kfree(tmp);
+		HIP_FREE(tmp);
 		return NULL;
 	}
 

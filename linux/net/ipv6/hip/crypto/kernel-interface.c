@@ -87,7 +87,7 @@ void gcry_free(void *p)
 
 	ptr = (u8 *)p - sizeof(u32);
 
-	kfree(ptr);
+	HIP_FREE(ptr);
 }
 
 void *gcry_calloc(size_t n, size_t m)

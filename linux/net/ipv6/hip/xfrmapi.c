@@ -393,9 +393,9 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
  out:
 	if (xs) {
 		if (xs->aalg)
-			kfree(xs->aalg);
+			HIP_FREE(xs->aalg);
 		if (xs->ealg)
-			kfree(xs->ealg);
+			HIP_FREE(xs->ealg);
 		// xfrm_state_delete(xs) ? see above
 		xfrm_state_put(xs);
 	}

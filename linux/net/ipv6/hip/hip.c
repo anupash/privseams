@@ -563,9 +563,9 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 
  out_err:
 	if (iv_copy)
-		kfree(iv_copy);
+		HIP_FREE(iv_copy);
 	if (result)
-		kfree(result);
+		HIP_FREE(result);
 	return err;
 }
 
@@ -850,7 +850,7 @@ static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 	}
 
 	if (addr_list)
-		kfree(addr_list);
+		HIP_FREE(addr_list);
 }
 
 /**

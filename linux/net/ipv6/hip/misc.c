@@ -124,7 +124,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
  out_err:
 
 	if (host_id_pub)
-		kfree(host_id_pub);
+		HIP_FREE(host_id_pub);
 
 	return err;
 }
@@ -171,7 +171,7 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
  out_err:
 	
 	if (host_id_pub)
-			kfree(host_id_pub);
+			HIP_FREE(host_id_pub);
 	
 	return err;
 }
@@ -541,8 +541,8 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 				ctx->keymat_calc_index, ctx->current_keymat_K);
 
 	if (entry->dh_shared_key) {
-		HIP_DEBUG("kfreeing old dh_shared_key\n");
-		kfree(entry->dh_shared_key);
+		HIP_DEBUG("HIP_FREEing old dh_shared_key\n");
+		HIP_FREE(entry->dh_shared_key);
 	}
 
 	entry->dh_shared_key_len = 0;
@@ -562,7 +562,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
  out_err:
 	if (entry->dh_shared_key)
-		kfree(entry->dh_shared_key);
+		HIP_FREE(entry->dh_shared_key);
 
 	return err;
 }

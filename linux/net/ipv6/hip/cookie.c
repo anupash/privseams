@@ -317,10 +317,10 @@ void hip_uninit_r1(void)
 	if (hip_r1table) {
 		for(i=0; i < HIP_R1TABLESIZE; i++) {
 			if (hip_r1table[i].r1) {
-				kfree(hip_r1table[i].r1);
+				HIP_FREE(hip_r1table[i].r1);
 			}
 		}
-		kfree(hip_r1table);
+		HIP_FREE(hip_r1table);
 	}
 }
 
