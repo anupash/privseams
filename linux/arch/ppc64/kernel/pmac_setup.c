@@ -60,7 +60,7 @@
 #include <asm/bitops.h>
 #include <asm/io.h>
 #include <asm/pci-bridge.h>
-#include <asm/pci_dma.h>
+#include <asm/iommu.h>
 #include <asm/machdep.h>
 #include <asm/dma.h>
 #include <asm/bootx.h>
@@ -73,7 +73,6 @@
 
 #include "pmac.h"
 
-extern char saved_command_line[];
 static int current_root_goodness = -1;
 #define DEFAULT_ROOT_DEVICE Root_SDA1	/* sda1 - slightly silly choice */
 
@@ -127,19 +126,6 @@ void __pmac pmac_show_cpuinfo(struct seq_file *m)
 	/* print parsed model */
 	seq_printf(m, "detected as\t: %d (%s)\n", mbmodel, mbname);
 	seq_printf(m, "pmac flags\t: %08x\n", mbflags);
-	seq_printf(m, "memory\t\t: %luMB\n", lmb_phys_mem_size() >> 20);
-
-	/* Checks "l2cr-value" property in the registry */
-	np = find_devices("cpus");	
-	if (np == 0)
-		np = find_type_devices("cpu");	
-	if (np != 0) {
-		unsigned int *l2cr = (unsigned int *)
-			get_property(np, "l2cr-value", NULL);
-		if (l2cr != 0) {
-			seq_printf(m, "l2cr override\t: 0x%x\n", *l2cr);
-		}
-	}
 
 	/* Indicate newworld */
 	seq_printf(m, "pmac-generation\t: NewWorld\n");
@@ -183,8 +169,9 @@ void __init pmac_setup_arch(void)
 #ifdef CONFIG_SMP
 	pmac_setup_smp();
 #endif
-	/* Setup the PCI DMA to "direct" for now, until we have proper
-	 * DART support and can deal with more than 2Gb of RAM
+
+	/* Setup the PCI DMA to "direct" by default. May be overriden
+	 * by iommu later on
 	 */
 	pci_dma_init_direct();
 

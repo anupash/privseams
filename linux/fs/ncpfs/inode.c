@@ -85,6 +85,12 @@ static void destroy_inodecache(void)
 		printk(KERN_INFO "ncp_inode_cache: not all structures were freed\n");
 }
 
+static int ncp_remount(struct super_block *sb, int *flags, char* data)
+{
+	*flags |= MS_NODIRATIME;
+	return 0;
+}
+
 static struct super_operations ncp_sops =
 {
 	.alloc_inode	= ncp_alloc_inode,
@@ -93,6 +99,7 @@ static struct super_operations ncp_sops =
 	.delete_inode	= ncp_delete_inode,
 	.put_super	= ncp_put_super,
 	.statfs		= ncp_statfs,
+	.remount_fs	= ncp_remount,
 };
 
 extern struct dentry_operations ncp_root_dentry_operations;
@@ -479,6 +486,7 @@ static int ncp_fill_super(struct super_block *sb, void *raw_data, int silent)
 	else
 		default_bufsize = 1024;
 
+	sb->s_flags |= MS_NODIRATIME;	/* probably even noatime */
 	sb->s_maxbytes = 0xFFFFFFFFU;
 	sb->s_blocksize = 1024;	/* Eh...  Is this correct? */
 	sb->s_blocksize_bits = 10;

@@ -29,7 +29,7 @@
  *	You can find the original tools for this direct from Multitech
  *		ftp://ftp.multitech.com/ISI-Cards/
  *
- *	Having installed the cards the module options (/etc/modules.conf)
+ *	Having installed the cards the module options (/etc/modprobe.conf)
  *
  *	options isicom   io=card1,card2,card3,card4 irq=card1,card2,card3,card4
  *
@@ -129,6 +129,7 @@ static int ISILoad_ioctl(struct inode *inode, struct file *filp,
 		         unsigned int cmd, unsigned long arg)
 {
 	unsigned int card, i, j, signature, status, portcount = 0;
+	unsigned long t;
 	unsigned short word_count, base;
 	bin_frame frame;
 	/* exec_record exec_rec; */
@@ -152,12 +153,12 @@ static int ISILoad_ioctl(struct inode *inode, struct file *filp,
 								
 			inw(base+0x8);
 			
-			for(i=jiffies+HZ/100;time_before(jiffies, i););
+			for(t=jiffies+HZ/100;time_before(jiffies, t););
 				
 			outw(0,base+0x8); /* Reset */
 			
 			for(j=1;j<=3;j++) {
-				for(i=jiffies+HZ;time_before(jiffies, i););
+				for(t=jiffies+HZ;time_before(jiffies, t););
 				printk(".");
 			}	
 			signature=(inw(base+0x4)) & 0xff;	
@@ -1291,63 +1292,43 @@ static inline void isicom_send_break(struct isi_port * port, unsigned long lengt
 out:	restore_flags(flags);
 }
 
-static int isicom_get_modem_info(struct isi_port * port, unsigned int * value)
+static int isicom_tiocmget(struct tty_struct *tty, struct file *file)
 {
+	struct isi_port * port = (struct isi_port *) tty->driver_data;
 	/* just send the port status */
-	unsigned int info;
 	unsigned short status = port->status;
+
+	if (isicom_paranoia_check(port, tty->name, "isicom_ioctl"))
+		return -ENODEV;
 	
-	info =  ((status & ISI_RTS) ? TIOCM_RTS : 0) |
+	return  ((status & ISI_RTS) ? TIOCM_RTS : 0) |
 		((status & ISI_DTR) ? TIOCM_DTR : 0) |
 		((status & ISI_DCD) ? TIOCM_CAR : 0) |
 		((status & ISI_DSR) ? TIOCM_DSR : 0) |
 		((status & ISI_CTS) ? TIOCM_CTS : 0) |
 		((status & ISI_RI ) ? TIOCM_RI  : 0);
-	return put_user(info, (unsigned int *) value);
 }
 
-static int isicom_set_modem_info(struct isi_port * port, unsigned int cmd,
-					unsigned int * value)
+static int isicom_tiocmset(struct tty_struct *tty, struct file *file,
+			   unsigned int set, unsigned int clear)
 {
-	unsigned int arg;
+	struct isi_port * port = (struct isi_port *) tty->driver_data;
 	unsigned long flags;
 	
-	if(get_user(arg, value))
-		return -EFAULT;
+	if (isicom_paranoia_check(port, tty->name, "isicom_ioctl"))
+		return -ENODEV;
 	
 	save_flags(flags); cli();
-	
-	switch(cmd) {
-		case TIOCMBIS:
-			if (arg & TIOCM_RTS) 
-				raise_rts(port);
-			if (arg & TIOCM_DTR) 
-				raise_dtr(port);
-			break;
-		
-		case TIOCMBIC:
-			if (arg & TIOCM_RTS)
-				drop_rts(port);
-			if (arg & TIOCM_DTR)
-				drop_dtr(port);	
-			break;
-			
-		case TIOCMSET:
-			if (arg & TIOCM_RTS)
-				raise_rts(port);
-			else
-				drop_rts(port);
-			
-			if (arg & TIOCM_DTR)
-				raise_dtr(port);
-			else
-				drop_dtr(port);
-			break;
-		
-		default:
-			restore_flags(flags);
-			return -EINVAL;		 	
-	}
+	if (set & TIOCM_RTS)
+		raise_rts(port);
+	if (set & TIOCM_DTR)
+		raise_dtr(port);
+
+	if (clear & TIOCM_RTS)
+		drop_rts(port);
+	if (clear & TIOCM_DTR)
+		drop_dtr(port);
+
 	restore_flags(flags);
 	return 0;
 }			
@@ -1445,15 +1426,6 @@ static int isicom_ioctl(struct tty_struct * tty, struct file * filp,
 				(arg ? CLOCAL : 0));
 			return 0;	
 			
-		case TIOCMGET:
-			return isicom_get_modem_info(port, (unsigned int*) arg);
-			
-		case TIOCMBIS:
-		case TIOCMBIC:
-		case TIOCMSET: 	
-			return isicom_set_modem_info(port, cmd, 
-					(unsigned int *) arg);
-		
 		case TIOCGSERIAL:
 			return isicom_get_serial_info(port, 
 					(struct serial_struct *) arg);
@@ -1640,6 +1612,8 @@ static struct tty_operations isicom_ops = {
 	.start	= isicom_start,
 	.hangup	= isicom_hangup,
 	.flush_buffer	= isicom_flush_buffer,
+	.tiocmget	= isicom_tiocmget,
+	.tiocmset	= isicom_tiocmset,
 };
 
 static int register_drivers(void)
@@ -1653,6 +1627,7 @@ static int register_drivers(void)
 
 	isicom_normal->owner	= THIS_MODULE;
 	isicom_normal->name 	= "ttyM";
+	isicom_normal->devfs_name = "isicom/";
 	isicom_normal->major	= ISICOM_NMAJOR;
 	isicom_normal->minor_start	= 0;
 	isicom_normal->type	= TTY_DRIVER_TYPE_SERIAL;
@@ -1674,8 +1649,8 @@ static int register_drivers(void)
 
 static void unregister_drivers(void)
 {
-	int error;
-	if (tty_unregister_driver(isicom_normal))
+	int error = tty_unregister_driver(isicom_normal);
+	if (error)
 		printk(KERN_DEBUG "ISICOM: couldn't unregister normal driver error=%d.\n",error);
 	put_tty_driver(isicom_normal);
 }

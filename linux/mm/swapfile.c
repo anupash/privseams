@@ -21,8 +21,9 @@
 #include <linux/seq_file.h>
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/rmap-locking.h>
+#include <linux/rmap.h>
 #include <linux/security.h>
+#include <linux/backing-dev.h>
 
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
@@ -44,7 +45,72 @@ struct swap_list_t swap_list = {-1, -1};
 
 struct swap_info_struct swap_info[MAX_SWAPFILES];
 
+static DECLARE_MUTEX(swapon_sem);
+
+/*
+ * Array of backing blockdevs, for swap_unplug_fn.  We need this because the
+ * bdev->unplug_fn can sleep and we cannot hold swap_list_lock while calling
+ * the unplug_fn.  And swap_list_lock cannot be turned into a semaphore.
+ */
+static DECLARE_MUTEX(swap_bdevs_sem);
+static struct block_device *swap_bdevs[MAX_SWAPFILES];
+
 #define SWAPFILE_CLUSTER 256
+
+/*
+ * Caller holds swap_bdevs_sem
+ */
+static void install_swap_bdev(struct block_device *bdev)
+{
+	int i;
+
+	for (i = 0; i < MAX_SWAPFILES; i++) {
+		if (swap_bdevs[i] == NULL) {
+			swap_bdevs[i] = bdev;
+			return;
+		}
+	}
+	BUG();
+}
+
+static void remove_swap_bdev(struct block_device *bdev)
+{
+	int i;
+
+	for (i = 0; i < MAX_SWAPFILES; i++) {
+		if (swap_bdevs[i] == bdev) {
+			memcpy(&swap_bdevs[i], &swap_bdevs[i + 1],
+				(MAX_SWAPFILES - i - 1) * sizeof(*swap_bdevs));
+			swap_bdevs[MAX_SWAPFILES - 1] = NULL;
+			return;
+		}
+	}
+	BUG();
+}
+
+/*
+ * Unlike a standard unplug_io_fn, swap_unplug_io_fn is never called
+ * through swap's backing_dev_info (which is only used by shrink_list),
+ * but directly from sync_page when PageSwapCache: and takes the page
+ * as argument, so that it can find the right device from swp_entry_t.
+ */
+void swap_unplug_io_fn(struct page *page)
+{
+	swp_entry_t entry;
+
+	down(&swap_bdevs_sem);
+	entry.val = page->private;
+	if (PageSwapCache(page)) {
+		struct block_device *bdev = swap_bdevs[swp_type(entry)];
+		struct backing_dev_info *bdi;
+
+		if (bdev) {
+			bdi = bdev->bd_inode->i_mapping->backing_dev_info;
+			(*bdi->unplug_io_fn)(bdi);
+		}
+	}
+	up(&swap_bdevs_sem);
+}
 
 static inline int scan_swap_map(struct swap_info_struct *si)
 {
@@ -247,16 +313,16 @@ static int exclusive_swap_page(struct page *page)
 	struct swap_info_struct * p;
 	swp_entry_t entry;
 
-	entry.val = page->index;
+	entry.val = page->private;
 	p = swap_info_get(entry);
 	if (p) {
 		/* Is the only swap cache user the cache itself? */
 		if (p->swap_map[swp_offset(entry)] == 1) {
-			/* Recheck the page count with the pagecache lock held.. */
-			spin_lock(&swapper_space.page_lock);
-			if (page_count(page) - !!PagePrivate(page) == 2)
+			/* Recheck the page count with the swapcache lock held.. */
+			spin_lock(&swapper_space.tree_lock);
+			if (page_count(page) == 2)
 				retval = 1;
-			spin_unlock(&swapper_space.page_lock);
+			spin_unlock(&swapper_space.tree_lock);
 		}
 		swap_info_put(p);
 	}
@@ -315,7 +381,7 @@ int remove_exclusive_swap_page(struct page *page)
 	if (page_count(page) != 2) /* 2: us + cache */
 		return 0;
 
-	entry.val = page->index;
+	entry.val = page->private;
 	p = swap_info_get(entry);
 	if (!p)
 		return 0;
@@ -323,14 +389,14 @@ int remove_exclusive_swap_page(struct page *page)
 	/* Is the only swap cache user the cache itself? */
 	retval = 0;
 	if (p->swap_map[swp_offset(entry)] == 1) {
-		/* Recheck the page count with the pagecache lock held.. */
-		spin_lock(&swapper_space.page_lock);
+		/* Recheck the page count with the swapcache lock held.. */
+		spin_lock(&swapper_space.tree_lock);
 		if ((page_count(page) == 2) && !PageWriteback(page)) {
 			__delete_from_swap_cache(page);
 			SetPageDirty(page);
 			retval = 1;
 		}
-		spin_unlock(&swapper_space.page_lock);
+		spin_unlock(&swapper_space.tree_lock);
 	}
 	swap_info_put(p);
 
@@ -353,8 +419,14 @@ void free_swap_and_cache(swp_entry_t entry)
 
 	p = swap_info_get(entry);
 	if (p) {
-		if (swap_entry_free(p, swp_offset(entry)) == 1)
-			page = find_trylock_page(&swapper_space, entry.val);
+		if (swap_entry_free(p, swp_offset(entry)) == 1) {
+			spin_lock(&swapper_space.tree_lock);
+			page = radix_tree_lookup(&swapper_space.page_tree,
+				entry.val);
+			if (page && TestSetPageLocked(page))
+				page = NULL;
+			spin_unlock(&swapper_space.tree_lock);
+		}
 		swap_info_put(p);
 	}
 	if (page) {
@@ -996,14 +1068,14 @@ int page_queue_congested(struct page *page)
 
 	BUG_ON(!PageLocked(page));	/* It pins the swap_info_struct */
 
-	bdi = page->mapping->backing_dev_info;
 	if (PageSwapCache(page)) {
-		swp_entry_t entry = { .val = page->index };
+		swp_entry_t entry = { .val = page->private };
 		struct swap_info_struct *sis;
 
 		sis = get_swap_info_struct(swp_type(entry));
 		bdi = sis->bdev->bd_inode->i_mapping->backing_dev_info;
-	}
+	} else
+		bdi = page->mapping->backing_dev_info;
 	return bdi_write_congested(bdi);
 }
 #endif
@@ -1088,6 +1160,8 @@ asmlinkage long sys_swapoff(const char __user * specialfile)
 		swap_list_unlock();
 		goto out_dput;
 	}
+	down(&swapon_sem);
+	down(&swap_bdevs_sem);
 	swap_list_lock();
 	swap_device_lock(p);
 	swap_file = p->swap_file;
@@ -1099,6 +1173,9 @@ asmlinkage long sys_swapoff(const char __user * specialfile)
 	destroy_swap_extents(p);
 	swap_device_unlock(p);
 	swap_list_unlock();
+	remove_swap_bdev(p->bdev);
+	up(&swap_bdevs_sem);
+	up(&swapon_sem);
 	vfree(swap_map);
 	if (S_ISBLK(mapping->host->i_mode)) {
 		struct block_device *bdev = I_BDEV(mapping->host);
@@ -1124,7 +1201,7 @@ static void *swap_start(struct seq_file *swap, loff_t *pos)
 	int i;
 	loff_t l = *pos;
 
-	swap_list_lock();
+	down(&swapon_sem);
 
 	for (i = 0; i < nr_swapfiles; i++, ptr++) {
 		if (!(ptr->flags & SWP_USED) || !ptr->swap_map)
@@ -1139,9 +1216,9 @@ static void *swap_start(struct seq_file *swap, loff_t *pos)
 static void *swap_next(struct seq_file *swap, void *v, loff_t *pos)
 {
 	struct swap_info_struct *ptr = v;
-	void *endptr = (void *) swap_info + nr_swapfiles * sizeof(struct swap_info_struct);
+	struct swap_info_struct *endptr = swap_info + nr_swapfiles;
 
-	for (++ptr; ptr < (struct swap_info_struct *) endptr; ptr++) {
+	for (++ptr; ptr < endptr; ptr++) {
 		if (!(ptr->flags & SWP_USED) || !ptr->swap_map)
 			continue;
 		++*pos;
@@ -1153,7 +1230,7 @@ static void *swap_next(struct seq_file *swap, void *v, loff_t *pos)
 
 static void swap_stop(struct seq_file *swap, void *v)
 {
-	swap_list_unlock();
+	up(&swapon_sem);
 }
 
 static int swap_show(struct seq_file *swap, void *v)
@@ -1167,7 +1244,7 @@ static int swap_show(struct seq_file *swap, void *v)
 
 	file = ptr->swap_file;
 	len = seq_path(swap, file->f_vfsmnt, file->f_dentry, " \t\n\\");
-	seq_printf(swap, "%*s %s\t%d\t%ld\t%d\n",
+	seq_printf(swap, "%*s%s\t%d\t%ld\t%d\n",
 		       len < 40 ? 40 - len : 1, " ",
 		       S_ISBLK(file->f_dentry->d_inode->i_mode) ?
 				"partition" : "file\t",
@@ -1242,7 +1319,19 @@ asmlinkage long sys_swapon(const char __user * specialfile, int swap_flags)
 		if (!(p->flags & SWP_USED))
 			break;
 	error = -EPERM;
-	if (type >= MAX_SWAPFILES) {
+	/*
+	 * Test if adding another swap device is possible. There are
+	 * two limiting factors: 1) the number of bits for the swap
+	 * type swp_entry_t definition and 2) the number of bits for
+	 * the swap type in the swap ptes as defined by the different
+	 * architectures. To honor both limitations a swap entry
+	 * with swap offset 0 and swap type ~0UL is created, encoded
+	 * to a swap pte, decoded to a swp_entry_t again and finally
+	 * the swap type part is extracted. This will mask all bits
+	 * from the initial ~0UL that can't be encoded in either the
+	 * swp_entry_t or the architecture definition of a swap pte.
+	 */
+	if (type > swp_type(pte_to_swp_entry(swp_entry_to_pte(swp_entry(~0UL,0))))) {
 		swap_list_unlock();
 		goto out;
 	}
@@ -1269,8 +1358,10 @@ asmlinkage long sys_swapon(const char __user * specialfile, int swap_flags)
 	swap_list_unlock();
 	name = getname(specialfile);
 	error = PTR_ERR(name);
-	if (IS_ERR(name))
+	if (IS_ERR(name)) {
+		name = NULL;
 		goto bad_swap_2;
+	}
 	swap_file = filp_open(name, O_RDWR, 0);
 	error = PTR_ERR(swap_file);
 	if (IS_ERR(swap_file)) {
@@ -1362,7 +1453,21 @@ asmlinkage long sys_swapon(const char __user * specialfile, int swap_flags)
 		}
 
 		p->lowest_bit  = 1;
-		maxpages = swp_offset(swp_entry(0,~0UL)) - 1;
+		/*
+		 * Find out how many pages are allowed for a single swap
+		 * device. There are two limiting factors: 1) the number of
+		 * bits for the swap offset in the swp_entry_t type and
+		 * 2) the number of bits in the a swap pte as defined by
+		 * the different architectures. In order to find the
+		 * largest possible bit mask a swap entry with swap type 0
+		 * and swap offset ~0UL is created, encoded to a swap pte,
+		 * decoded to a swp_entry_t again and finally the swap
+		 * offset is extracted. This will mask all the bits from
+		 * the initial ~0UL mask that can't be encoded in either
+		 * the swp_entry_t or the architecture definition of a
+		 * swap pte.
+		 */
+		maxpages = swp_offset(pte_to_swp_entry(swp_entry_to_pte(swp_entry(0,~0UL)))) - 1;
 		if (maxpages > swap_header->info.last_page)
 			maxpages = swap_header->info.last_page;
 		p->highest_bit = maxpages - 1;
@@ -1412,6 +1517,8 @@ asmlinkage long sys_swapon(const char __user * specialfile, int swap_flags)
 	if (error)
 		goto bad_swap;
 
+	down(&swapon_sem);
+	down(&swap_bdevs_sem);
 	swap_list_lock();
 	swap_device_lock(p);
 	p->flags = SWP_ACTIVE;
@@ -1437,6 +1544,9 @@ asmlinkage long sys_swapon(const char __user * specialfile, int swap_flags)
 	}
 	swap_device_unlock(p);
 	swap_list_unlock();
+	install_swap_bdev(p->bdev);
+	up(&swap_bdevs_sem);
+	up(&swapon_sem);
 	error = 0;
 	goto out;
 bad_swap:
@@ -1456,7 +1566,7 @@ bad_swap_2:
 	destroy_swap_extents(p);
 	if (swap_map)
 		vfree(swap_map);
-	if (swap_file && !IS_ERR(swap_file))
+	if (swap_file)
 		filp_close(swap_file, NULL);
 out:
 	if (page && !IS_ERR(page)) {

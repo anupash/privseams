@@ -1,22 +1,21 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
 
-#include <net/hip.h>
 #include "debug.h"
+
+#include <net/hip.h>
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
 
 #define HIP_LOCK_HA(ha) do { spin_lock(&ha->lock); } while(0)
 #define HIP_UNLOCK_HA(ha) do { spin_unlock(&ha->lock); } while(0)
-#define HIP_UNLOCK_HADB do { spin_unlock_bh(&hadb_global_lock); } while(0)
-#define HIP_LOCK_HADB do { spin_lock_bh(&hadb_global_lock); } while(0)
 
-extern spinlock_t hadb_global_lock;
+
 /*************** BASE FUNCTIONS *******************/
 
 /* Initialization functions */
-int hip_init_hadb(void);
+void hip_init_hadb(void);
 void hip_uninit_hadb(void);
 
 /* Accessors */
@@ -24,18 +23,17 @@ hip_ha_t *hip_hadb_find_byspi(u32 spi);
 hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
 
 /* insert/create/delete */
-
-hip_ha_t *hip_hadb_create_state(int gfpmask);
 int hip_hadb_insert_state(hip_ha_t *ha);
 void hip_hadb_remove_state(hip_ha_t *ha);
-void hip_hadb_delete_state(hip_ha_t *ha);
-
 void hip_hadb_remove_state_spi(hip_ha_t *ha);
 void hip_hadb_remove_state_hit(hip_ha_t *ha);
 
+/* existance */
+int hip_hadb_exists_entry(void *key, int type);
+
 /* debugging */
 void hip_hadb_dump_hits(void);
-void hip_hadb_dump_spis(void);
+//void hip_hadb_dump_spis(void);
 
 /*************** CONSTRUCTS ********************/
 int hip_hadb_exists_entry(void *arg, int type);
@@ -74,7 +72,9 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 int hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
 				  int count, int *eof, void *data);
 
-
+/**************** other useful ******************/
+void hip_hadb_delete_state(hip_ha_t *ha);
+hip_ha_t *hip_hadb_create_state(int gfpmask);
 
 #define hip_hold_ha(ha) do { \
 	atomic_inc(&ha->refcnt); \

@@ -38,6 +38,7 @@
 #include <linux/security.h>
 #include <linux/initrd.h>
 #include <linux/times.h>
+#include <linux/limits.h>
 #include <asm/uaccess.h>
 
 #ifdef CONFIG_ROOT_NFS
@@ -68,6 +69,8 @@ extern int printk_ratelimit_burst;
 static int maxolduid = 65535;
 static int minolduid;
 
+static int ngroups_max = NGROUPS_MAX;
+
 #ifdef CONFIG_KMOD
 extern char modprobe_path[];
 #endif
@@ -90,6 +93,7 @@ extern int sem_ctls[];
 #ifdef __sparc__
 extern char reboot_command [];
 extern int stop_a_enabled;
+extern int scons_pwroff;
 #endif
 
 #ifdef __hppa__
@@ -103,6 +107,8 @@ extern int sysctl_ieee_emulation_warnings;
 #endif
 extern int sysctl_userprocess_debug;
 #endif
+
+extern int sysctl_hz_timer;
 
 #if defined(CONFIG_PPC32) && defined(CONFIG_6xx)
 extern unsigned long powersave_nap;
@@ -133,6 +139,9 @@ static ctl_table fs_table[];
 static ctl_table debug_table[];
 static ctl_table dev_table[];
 extern ctl_table random_table[];
+#ifdef CONFIG_UNIX98_PTYS
+extern ctl_table pty_table[];
+#endif
 
 /* /proc declarations: */
 
@@ -315,6 +324,14 @@ static ctl_table kern_table[] = {
 		.ctl_name	= KERN_SPARC_STOP_A,
 		.procname	= "stop-a",
 		.data		= &stop_a_enabled,
+		.maxlen		= sizeof (int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= KERN_SPARC_SCONS_PWROFF,
+		.procname	= "scons-poweroff",
+		.data		= &scons_pwroff,
 		.maxlen		= sizeof (int),
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec,
@@ -518,6 +535,14 @@ static ctl_table kern_table[] = {
 		.mode		= 0555,
 		.child		= random_table,
 	},
+#ifdef CONFIG_UNIX98_PTYS
+	{
+		.ctl_name	= KERN_PTY,
+		.procname	= "pty",
+		.mode		= 0555,
+		.child		= pty_table,
+	},
+#endif
 	{
 		.ctl_name	= KERN_OVERFLOWUID,
 		.procname	= "overflowuid",
@@ -549,6 +574,16 @@ static ctl_table kern_table[] = {
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec,
+	},
+#endif
+#ifdef CONFIG_NO_IDLE_HZ
+	{
+		.ctl_name       = KERN_HZ_TIMER,
+		.procname       = "hz_timer",
+		.data           = &sysctl_hz_timer,
+		.maxlen         = sizeof(int),
+		.mode           = 0644,
+		.proc_handler   = &proc_dointvec,
 	},
 #endif
 	{
@@ -591,6 +626,14 @@ static ctl_table kern_table[] = {
 		.data		= &printk_ratelimit_burst,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= KERN_NGROUPS_MAX,
+		.procname	= "ngroups_max",
+		.data		= &ngroups_max,
+		.maxlen		= sizeof (int),
+		.mode		= 0444,
 		.proc_handler	= &proc_dointvec,
 	},
 	{ .ctl_name = 0 }
@@ -688,10 +731,12 @@ static ctl_table vm_table[] = {
 	 {
 		.ctl_name	= VM_HUGETLB_PAGES,
 		.procname	= "nr_hugepages",
-		.data		= &htlbpage_max,
-		.maxlen		= sizeof(int),
+		.data		= &max_huge_pages,
+		.maxlen		= sizeof(unsigned long),
 		.mode		= 0644,
 		.proc_handler	= &hugetlb_sysctl_handler,
+		.extra1		= (void *)&hugetlb_zero,
+		.extra2		= (void *)&hugetlb_infinity,
 	 },
 #endif
 	{
@@ -700,7 +745,7 @@ static ctl_table vm_table[] = {
 		.data		= &sysctl_lower_zone_protection,
 		.maxlen		= sizeof(sysctl_lower_zone_protection),
 		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
+		.proc_handler	= &lower_zone_protection_sysctl_handler,
 		.strategy	= &sysctl_intvec,
 		.extra1		= &zero,
 	},
@@ -711,6 +756,34 @@ static ctl_table vm_table[] = {
 		.maxlen		= sizeof(min_free_kbytes),
 		.mode		= 0644,
 		.proc_handler	= &min_free_kbytes_sysctl_handler,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &zero,
+	},
+	{
+		.ctl_name	= VM_MAX_MAP_COUNT,
+		.procname	= "max_map_count",
+		.data		= &sysctl_max_map_count,
+		.maxlen		= sizeof(sysctl_max_map_count),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec
+	},
+	{
+		.ctl_name	= VM_LAPTOP_MODE,
+		.procname	= "laptop_mode",
+		.data		= &laptop_mode,
+		.maxlen		= sizeof(laptop_mode),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &zero,
+	},
+	{
+		.ctl_name	= VM_BLOCK_DUMP,
+		.procname	= "block_dump",
+		.data		= &block_dump,
+		.maxlen		= sizeof(block_dump),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
 		.strategy	= &sysctl_intvec,
 		.extra1		= &zero,
 	},
@@ -808,6 +881,22 @@ static ctl_table fs_table[] = {
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec,
 	},
+	{
+		.ctl_name	= FS_AIO_NR,
+		.procname	= "aio-nr",
+		.data		= &aio_nr,
+		.maxlen		= sizeof(aio_nr),
+		.mode		= 0444,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= FS_AIO_MAX_NR,
+		.procname	= "aio-max-nr",
+		.data		= &aio_max_nr,
+		.maxlen		= sizeof(aio_max_nr),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
 	{ .ctl_name = 0 }
 };
 
@@ -861,27 +950,10 @@ int do_sysctl(int __user *name, int nlen, void __user *oldval, size_t __user *ol
 asmlinkage long sys_sysctl(struct __sysctl_args __user *args)
 {
 	struct __sysctl_args tmp;
-	int name[2];
 	int error;
 
 	if (copy_from_user(&tmp, args, sizeof(tmp)))
 		return -EFAULT;
-	
-	if (tmp.nlen != 2 || copy_from_user(name, tmp.name, sizeof(name)) ||
-	    name[0] != CTL_KERN || name[1] != KERN_VERSION) { 
-		int i;
-		printk(KERN_INFO "%s: numerical sysctl ", current->comm); 
-		for (i = 0; i < tmp.nlen; i++) {
-			int n;
-			
-			if (get_user(n, tmp.name+i)) {
-				printk("? ");
-			} else {
-				printk("%d ", n);
-			}
-		}
-		printk("is obsolete.\n");
-	} 
 
 	lock_kernel();
 	error = do_sysctl(tmp.name, tmp.nlen, tmp.oldval, tmp.oldlenp,
@@ -983,7 +1055,8 @@ int do_sysctl_strategy (ctl_table *table,
 	 * zero, proceed with automatic r/w */
 	if (table->data && table->maxlen) {
 		if (oldval && oldlenp) {
-			get_user(len, oldlenp);
+			if (get_user(len, oldlenp))
+				return -EFAULT;
 			if (len) {
 				if (len > table->maxlen)
 					len = table->maxlen;
@@ -1282,7 +1355,7 @@ int proc_dostring(ctl_table *table, int write, struct file *filp,
 		len = 0;
 		p = buffer;
 		while (len < *lenp) {
-			if(get_user(c, p++))
+			if (get_user(c, p++))
 				return -EFAULT;
 			if (c == 0 || c == '\n')
 				break;
@@ -1449,7 +1522,7 @@ static int do_proc_dointvec(ctl_table *table, int write, struct file *filp,
 		p = (char *) buffer;
 		while (left) {
 			char c;
-			if(get_user(c, p++))
+			if (get_user(c, p++))
 				return -EFAULT;
 			if (!isspace(c))
 				break;
@@ -1684,7 +1757,7 @@ static int do_proc_doulongvec_minmax(ctl_table *table, int write,
 		p = (char *) buffer;
 		while (left) {
 			char c;
-			if(get_user(c, p++))
+			if (get_user(c, p++))
 				return -EFAULT;
 			if (!isspace(c))
 				break;
@@ -1909,7 +1982,7 @@ int sysctl_string(ctl_table *table, int __user *name, int nlen,
 		return -ENOTDIR;
 	
 	if (oldval && oldlenp) {
-		if(get_user(len, oldlenp))
+		if (get_user(len, oldlenp))
 			return -EFAULT;
 		if (len) {
 			l = strlen(table->data);
@@ -1966,7 +2039,8 @@ int sysctl_intvec(ctl_table *table, int __user *name, int nlen,
 
 		for (i = 0; i < length; i++) {
 			int value;
-			get_user(value, vec + i);
+			if (get_user(value, vec + i))
+				return -EFAULT;
 			if (min && value < min[i])
 				return -EINVAL;
 			if (max && value > max[i])
@@ -2008,7 +2082,7 @@ int sysctl_jiffies(ctl_table *table, int __user *name, int nlen,
 #else /* CONFIG_SYSCTL */
 
 
-extern asmlinkage long sys_sysctl(struct __sysctl_args __user *args)
+asmlinkage long sys_sysctl(struct __sysctl_args __user *args)
 {
 	return -ENOSYS;
 }

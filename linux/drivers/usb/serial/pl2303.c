@@ -116,6 +116,7 @@ static struct usb_driver pl2303_driver = {
 #define VENDOR_READ_REQUEST		0x01
 
 #define UART_STATE			0x08
+#define UART_STATE_TRANSIENT_MASK	0x74
 #define UART_DCD			0x01
 #define UART_DSR			0x02
 #define UART_BREAK_ERROR		0x04
@@ -211,6 +212,9 @@ static int pl2303_write (struct usb_serial_port *port, int from_user,  const uns
 	int result;
 
 	dbg("%s - port %d, %d bytes", __FUNCTION__, port->number, count);
+
+	if (!count)
+		return count;
 
 	if (port->write_urb->status == -EINPROGRESS) {
 		dbg("%s - already writing", __FUNCTION__);
@@ -403,7 +407,7 @@ static int pl2303_open (struct usb_serial_port *port, struct file *filp)
 {
 	struct termios tmp_termios;
 	struct usb_serial *serial = port->serial;
-	unsigned char buf[10];
+	unsigned char *buf;
 	int result;
 
 	if (port_paranoia_check (port, __FUNCTION__))
@@ -413,6 +417,10 @@ static int pl2303_open (struct usb_serial_port *port, struct file *filp)
 
 	usb_clear_halt(serial->dev, port->write_urb->pipe);
 	usb_clear_halt(serial->dev, port->read_urb->pipe);
+
+	buf = kmalloc(10, GFP_KERNEL);
+	if (buf==NULL)
+		return -ENOMEM;
 
 #define FISH(a,b,c,d)								\
 	result=usb_control_msg(serial->dev, usb_rcvctrlpipe(serial->dev,0),	\
@@ -432,6 +440,8 @@ static int pl2303_open (struct usb_serial_port *port, struct file *filp)
 	SOUP (VENDOR_WRITE_REQUEST_TYPE, VENDOR_WRITE_REQUEST, 0x0404, 1);
 	FISH (VENDOR_READ_REQUEST_TYPE, VENDOR_READ_REQUEST, 0x8484, 0);
 	FISH (VENDOR_READ_REQUEST_TYPE, VENDOR_READ_REQUEST, 0x8383, 0);
+
+	kfree(buf);
 
 	/* Setup termios */
 	if (port->tty) {
@@ -656,6 +666,7 @@ static void pl2303_read_int_callback (struct urb *urb, struct pt_regs *regs)
 	unsigned char *data = urb->transfer_buffer;
 	unsigned long flags;
 	int status;
+	u8 uart_state;
 
 	dbg("%s (%d)", __FUNCTION__, port->number);
 
@@ -684,8 +695,10 @@ static void pl2303_read_int_callback (struct urb *urb, struct pt_regs *regs)
 		goto exit;
 
 	/* Save off the uart status for others to look at */
+	uart_state = data[UART_STATE];
 	spin_lock_irqsave(&priv->lock, flags);
-	priv->line_status = data[UART_STATE];
+	uart_state |= (priv->line_status & UART_STATE_TRANSIENT_MASK);
+	priv->line_status = uart_state;
 	spin_unlock_irqrestore(&priv->lock, flags);
 		
 exit:
@@ -746,6 +759,7 @@ static void pl2303_read_bulk_callback (struct urb *urb, struct pt_regs *regs)
 
 	spin_lock_irqsave(&priv->lock, flags);
 	status = priv->line_status;
+	priv->line_status &= ~UART_STATE_TRANSIENT_MASK;
 	spin_unlock_irqrestore(&priv->lock, flags);
 	wake_up_interruptible (&priv->delta_msr_wait);
 

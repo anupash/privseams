@@ -10,7 +10,9 @@
 #include <linux/config.h>
 #include <linux/init.h>
 #include <linux/threads.h>
+
 #include <asm/asm.h>
+#include <asm/hazards.h>
 #include <asm/regdef.h>
 #include <asm/mipsregs.h>
 #include <asm/stackframe.h>
@@ -133,9 +135,9 @@ LEAF(handle_vec1_r4k)
 	ld	k0, 0(k1)			# get even pte
 	ld	k1, 8(k1)			# get odd pte
 	PTE_RELOAD k0 k1
-	b	1f
-	 tlbwr
-1:	nop
+	mtc0_tlbw_hazard
+	tlbwr
+	tlbw_eret_hazard
 	eret
 
 9:						# handle the vmalloc range
@@ -143,9 +145,9 @@ LEAF(handle_vec1_r4k)
 	ld	k0, 0(k1)			# get even pte
 	ld	k1, 8(k1)			# get odd pte
 	PTE_RELOAD k0 k1
-	b	1f
+	mtc0_tlbw_hazard
 	 tlbwr
-1:	nop
+	tlbw_eret_hazard
 	eret
 END(handle_vec1_r4k)
 
@@ -191,7 +193,11 @@ END(handle_vec1_r10k)
 	.align	5
 LEAF(invalid_vmalloc_address)
 	.set	noat
+	SAVE_ALL
+	CLI
+	dmfc0	t0, CP0_BADVADDR
+	sd	t0, PT_BVADDR(sp)
+	move	a0, sp
+	jal	show_regs
 	PANIC("Invalid kernel address")
-1:	b	1b
-	 nop
 END(invalid_vmalloc_address)

@@ -153,7 +153,7 @@ __start:
  * like real mode cache inhibit or exception base
  */
 #ifdef CONFIG_POWER4
-	bl	__power4_cpu_preinit
+	bl	__970_cpu_preinit
 #endif /* CONFIG_POWER4 */
 
 #ifdef CONFIG_APUS
@@ -462,7 +462,7 @@ Alignment:
 	EXC_XFER_EE(0x600, AlignmentException)
 
 /* Program check exception */
-	EXCEPTION(0x700, ProgramCheck, ProgramCheckException, EXC_XFER_EE)
+	EXCEPTION(0x700, ProgramCheck, ProgramCheckException, EXC_XFER_STD)
 
 /* Floating-point unavailable */
 	. = 0x800
@@ -485,7 +485,7 @@ SystemCall:
 	EXC_XFER_EE_LITE(0xc00, DoSyscall)
 
 /* Single step - not used on 601 */
-	EXCEPTION(0xd00, SingleStep, SingleStepException, EXC_XFER_EE)
+	EXCEPTION(0xd00, SingleStep, SingleStepException, EXC_XFER_STD)
 	EXCEPTION(0xe00, Trap_0e, UnknownException, EXC_XFER_EE)
 
 /*
@@ -493,13 +493,14 @@ SystemCall:
  * We effectively remap it to 0x3000.
  */
 	. = 0xf00
-
-#ifdef CONFIG_ALTIVEC
 	b	Trap_0f
+
 	. = 0xf20
+#ifdef CONFIG_ALTIVEC
 	b	AltiVecUnavailable
-Trap_0f:
 #endif
+
+Trap_0f:
 	EXCEPTION_PROLOG
 	addi	r3,r1,STACK_FRAME_OVERHEAD
 	EXC_XFER_EE(0xf00, UnknownException)
@@ -1436,11 +1437,8 @@ _GLOBAL(set_context)
 	stw	r4, 0x4(r5)
 #endif
 	li	r4,0
-BEGIN_FTR_SECTION
-	dssall
-	sync
-END_FTR_SECTION_IFSET(CPU_FTR_ALTIVEC)
-3:	isync
+	isync
+3:
 #ifdef CONFIG_PPC64BRIDGE
 	slbie	r4
 #endif /* CONFIG_PPC64BRIDGE */
@@ -1492,22 +1490,22 @@ BEGIN_FTR_SECTION
 	 * seems that doesn't affect our ability to actually
 	 * write to these SPRs.
 	 */
-	mtspr	SPRN_DBAT4U,r20
-	mtspr	SPRN_DBAT4L,r20
-	mtspr	SPRN_DBAT5U,r20
-	mtspr	SPRN_DBAT5L,r20
-	mtspr	SPRN_DBAT6U,r20
-	mtspr	SPRN_DBAT6L,r20
-	mtspr	SPRN_DBAT7U,r20
-	mtspr	SPRN_DBAT7L,r20
-	mtspr	SPRN_IBAT4U,r20
-	mtspr	SPRN_IBAT4L,r20
-	mtspr	SPRN_IBAT5U,r20
-	mtspr	SPRN_IBAT5L,r20
-	mtspr	SPRN_IBAT6U,r20
-	mtspr	SPRN_IBAT6L,r20
-	mtspr	SPRN_IBAT7U,r20
-	mtspr	SPRN_IBAT7L,r20
+	mtspr	SPRN_DBAT4U,r10
+	mtspr	SPRN_DBAT4L,r10
+	mtspr	SPRN_DBAT5U,r10
+	mtspr	SPRN_DBAT5L,r10
+	mtspr	SPRN_DBAT6U,r10
+	mtspr	SPRN_DBAT6L,r10
+	mtspr	SPRN_DBAT7U,r10
+	mtspr	SPRN_DBAT7L,r10
+	mtspr	SPRN_IBAT4U,r10
+	mtspr	SPRN_IBAT4L,r10
+	mtspr	SPRN_IBAT5U,r10
+	mtspr	SPRN_IBAT5L,r10
+	mtspr	SPRN_IBAT6U,r10
+	mtspr	SPRN_IBAT6L,r10
+	mtspr	SPRN_IBAT7U,r10
+	mtspr	SPRN_IBAT7L,r10
 END_FTR_SECTION_IFSET(CPU_FTR_HAS_HIGH_BATS)
 	blr
 

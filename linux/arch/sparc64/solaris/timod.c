@@ -27,8 +27,6 @@
 #include "conv.h"
 #include "socksys.h"
 
-extern asmlinkage int sys_ioctl(unsigned int fd, unsigned int cmd, 
-	unsigned long arg);
 asmlinkage int solaris_ioctl(unsigned int fd, unsigned int cmd, u32 arg);
 
 static spinlock_t timod_pagelock = SPIN_LOCK_UNLOCKED;
@@ -298,7 +296,7 @@ static int timod_optmgmt(unsigned int fd, int flag, char *opt_buf, int opt_len, 
 		SOLD("calling GETSOCKOPT");
 		set_fs(KERNEL_DS);
 		error = sys_socketcall(SYS_GETSOCKOPT, args);
-		set_fs(old_fs);;
+		set_fs(old_fs);
 		if (error) {
 			failed = TBADOPT;
 			break;

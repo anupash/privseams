@@ -104,7 +104,7 @@ void check_pgt_cache(void)
                                 if (page2)
                                         page2->lru.next = page->lru.next;
                                 else
-                                        (struct page *)pgd_quicklist = page->lru.next;
+                                        pgd_quicklist = (void *) page->lru.next;
                                 pgd_cache_size -= 2;
                                 __free_page(page);
                                 if (page2)
@@ -139,9 +139,9 @@ __inline__ void flush_dcache_page_impl(struct page *page)
 #if (L1DCACHE_SIZE > PAGE_SIZE)
 	__flush_dcache_page(page->virtual,
 			    ((tlb_type == spitfire) &&
-			     page->mapping != NULL));
+			     page_mapping(page) != NULL));
 #else
-	if (page->mapping != NULL &&
+	if (page_mapping(page) != NULL &&
 	    tlb_type == spitfire)
 		__flush_icache_page(__pa(page->virtual));
 #endif
@@ -203,7 +203,7 @@ void update_mmu_cache(struct vm_area_struct *vma, unsigned long address, pte_t p
 
 	pfn = pte_pfn(pte);
 	if (pfn_valid(pfn) &&
-	    (page = pfn_to_page(pfn), page->mapping) &&
+	    (page = pfn_to_page(pfn), page_mapping(page)) &&
 	    ((pg_flags = page->flags) & (1UL << PG_dcache_dirty))) {
 		int cpu = ((pg_flags >> 24) & (NR_CPUS - 1UL));
 
@@ -224,12 +224,11 @@ void update_mmu_cache(struct vm_area_struct *vma, unsigned long address, pte_t p
 
 void flush_dcache_page(struct page *page)
 {
+	struct address_space *mapping = page_mapping(page);
 	int dirty = test_bit(PG_dcache_dirty, &page->flags);
 	int dirty_cpu = dcache_dirty_cpu(page);
 
-	if (page->mapping &&
-	    list_empty(&page->mapping->i_mmap) &&
-	    list_empty(&page->mapping->i_mmap_shared)) {
+	if (mapping && !mapping_mapped(mapping)) {
 		if (dirty) {
 			if (dirty_cpu == smp_processor_id())
 				return;
@@ -237,7 +236,7 @@ void flush_dcache_page(struct page *page)
 		}
 		set_dcache_dirty(page);
 	} else {
-		/* We could delay the flush for the !page->mapping
+		/* We could delay the flush for the !page_mapping
 		 * case too.  But that case is for exec env/arg
 		 * pages and those are %99 certainly going to get
 		 * faulted into the tlb (and thus flushed) anyways.
@@ -279,7 +278,7 @@ static inline void flush_cache_pte_range(struct mm_struct *mm, pmd_t *pmd, unsig
 			if (!pfn_valid(pfn))
 				continue;
 			page = pfn_to_page(pfn);
-			if (PageReserved(page) || !page->mapping)
+			if (PageReserved(page) || !page_mapping(page))
 				continue;
 			pgaddr = (unsigned long) page_address(page);
 			uaddr = address + offset;
@@ -1423,7 +1422,6 @@ unsigned long __init bootmem_init(unsigned long *pages_avail)
 
 /* paging_init() sets up the page tables */
 
-extern void sun_serial_setup(void);
 extern void cheetah_ecache_flush_init(void);
 
 static unsigned long last_valid_pfn;
@@ -1525,8 +1523,10 @@ void __init paging_init(void)
 	/* Now can init the kernel/bad page tables. */
 	pgd_set(&swapper_pg_dir[0], swapper_pmd_dir + (shift / sizeof(pgd_t)));
 	
-	sparc64_vpte_patchme1[0] |= (pgd_val(init_mm.pgd[0]) >> 10);
-	sparc64_vpte_patchme2[0] |= (pgd_val(init_mm.pgd[0]) & 0x3ff);
+	sparc64_vpte_patchme1[0] |=
+		(((unsigned long)pgd_val(init_mm.pgd[0])) >> 10);
+	sparc64_vpte_patchme2[0] |=
+		(((unsigned long)pgd_val(init_mm.pgd[0])) & 0x3ff);
 	flushi((long)&sparc64_vpte_patchme1[0]);
 	
 	/* Setup bootmem... */
@@ -1547,15 +1547,6 @@ void __init paging_init(void)
 	}
 
 	inherit_locked_prom_mappings(1);
-
-#ifdef CONFIG_SUN_SERIAL
-	/* This does not logically belong here, but we need to call it at
-	 * the moment we are able to use the bootmem allocator. This _has_
-	 * to be done after the prom_mappings above so since
-	 * __alloc_bootmem() doesn't work correctly until then.
-	 */
-	sun_serial_setup();
-#endif
 
 	/* We only created DTLB mapping of this stuff. */
 	spitfire_flush_dtlb_nucleus_page(alias_base);

@@ -1416,7 +1416,7 @@ compile_reg (struct unw_state_record *sr, int i, struct unw_script *script)
 
 	      case UNW_WHERE_FR:
 		if (rval <= 5)
-			val = unw.preg_index[UNW_REG_F2  + (rval -  1)];
+			val = unw.preg_index[UNW_REG_F2  + (rval -  2)];
 		else if (rval >= 16 && rval <= 31)
 			val = unw.preg_index[UNW_REG_F16 + (rval - 16)];
 		else {
@@ -1746,7 +1746,7 @@ run_script (struct unw_script *script, struct unw_frame_info *state)
 			if (!state->pri_unat_loc)
 				state->pri_unat_loc = &state->sw->ar_unat;
 			/* register off. is a multiple of 8, so the least 3 bits (type) are 0 */
-			s[dst+1] = (*state->pri_unat_loc - s[dst]) | UNW_NAT_MEMSTK;
+			s[dst+1] = ((unsigned long) state->pri_unat_loc - s[dst]) | UNW_NAT_MEMSTK;
 			break;
 
 		      case UNW_INSN_SETNAT_TYPE:

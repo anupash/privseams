@@ -76,6 +76,7 @@
 #include <asm/system.h>
 #include <asm/bitops.h>
 #include <linux/config.h>
+#include <linux/cpu.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
@@ -105,6 +106,7 @@
 #include <linux/kmod.h>
 #include <linux/module.h>
 #include <linux/kallsyms.h>
+#include <linux/netpoll.h>
 #ifdef CONFIG_NET_RADIO
 #include <linux/wireless.h>		/* Note : will define WIRELESS_EXT */
 #include <net/iw_handler.h>
@@ -430,6 +432,14 @@ unsigned long netdev_boot_base(const char *prefix, int unit)
 	int i;
 
 	sprintf(name, "%s%d", prefix, unit);
+
+	/*
+	 * If device already registered then return base of 1
+	 * to indicate not to probe for this interface
+	 */
+	if (__dev_get_by_name(name))
+		return 1;
+
 	for (i = 0; i < NETDEV_BOOT_SETUP_MAX; i++)
 		if (!strcmp(name, s[i].name))
 			return s[i].map.base_addr;
@@ -810,40 +820,6 @@ int dev_change_name(struct net_device *dev, char *newname)
 }
 
 /**
- *	dev_alloc - allocate a network device and name
- *	@name: name format string
- *	@err: error return pointer
- *
- *	Passed a format string, eg. "lt%d", it will allocate a network device
- *	and space for the name. %NULL is returned if no memory is available.
- *	If the allocation succeeds then the name is assigned and the
- *	device pointer returned. %NULL is returned if the name allocation
- *	failed. The cause of an error is returned as a negative errno code
- *	in the variable @err points to.
- *
- *	This call is deprecated in favor of alloc_netdev because
- *	the caller must hold the @dev_base or RTNL locks when doing this in
- *	order to avoid duplicate name allocations.
- */
-
-struct net_device *__dev_alloc(const char *name, int *err)
-{
-	struct net_device *dev = kmalloc(sizeof(*dev), GFP_KERNEL);
-
-	if (!dev)
-		*err = -ENOBUFS;
-	else {
-		memset(dev, 0, sizeof(*dev));
-		*err = dev_alloc_name(dev, name);
-		if (*err < 0) {
-			kfree(dev);
-			dev = NULL;
-		}
-	}
-	return dev;
-}
-
-/**
  *	netdev_state_change - device changes state
  *	@dev: device to cause notification
  *
@@ -1157,7 +1133,7 @@ int call_netdevice_notifiers(unsigned long val, void *v)
 void dev_queue_xmit_nit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct packet_type *ptype;
-	do_gettimeofday(&skb->stamp);
+	net_timestamp(&skb->stamp);
 
 	rcu_read_lock();
 	list_for_each_entry_rcu(ptype, &ptype_all, list) {
@@ -1572,8 +1548,15 @@ int netif_rx(struct sk_buff *skb)
 	struct softnet_data *queue;
 	unsigned long flags;
 
+#ifdef CONFIG_NETPOLL_RX
+	if (skb->dev->netpoll_rx && netpoll_rx(skb)) {
+		kfree_skb(skb);
+		return NET_RX_DROP;
+	}
+#endif
+	
 	if (!skb->stamp.tv_sec)
-		do_gettimeofday(&skb->stamp);
+		net_timestamp(&skb->stamp);
 
 	/*
 	 * The code is rearranged so that the path is the most
@@ -1725,10 +1708,17 @@ int netif_receive_skb(struct sk_buff *skb)
 {
 	struct packet_type *ptype, *pt_prev;
 	int ret = NET_RX_DROP;
-	unsigned short type = skb->protocol;
+	unsigned short type;
+
+#ifdef CONFIG_NETPOLL_RX
+	if (skb->dev->netpoll_rx && skb->dev->poll && netpoll_rx(skb)) {
+		kfree_skb(skb);
+		return NET_RX_DROP;
+	}
+#endif
 
 	if (!skb->stamp.tv_sec)
-		do_gettimeofday(&skb->stamp);
+		net_timestamp(&skb->stamp);
 
 	skb_bond(skb);
 
@@ -1742,6 +1732,7 @@ int netif_receive_skb(struct sk_buff *skb)
 #endif
 
 	skb->h.raw = skb->nh.raw = skb->data;
+	skb->mac_len = skb->nh.raw - skb->mac.raw;
 
 	pt_prev = NULL;
 	rcu_read_lock();
@@ -1758,6 +1749,7 @@ int netif_receive_skb(struct sk_buff *skb)
 	if (__handle_bridge(skb, &pt_prev, &ret))
 		goto out;
 
+	type = skb->protocol;
 	list_for_each_entry_rcu(ptype, &ptype_base[ntohs(type)&15], list) {
 		if (ptype->type == type &&
 		    (!ptype->dev || ptype->dev == skb->dev)) {
@@ -1852,7 +1844,6 @@ static void net_rx_action(struct softirq_action *h)
 	int budget = netdev_max_backlog;
 
 	
-	preempt_disable();
 	local_irq_disable();
 
 	while (!list_empty(&queue->poll_list)) {
@@ -1881,7 +1872,6 @@ static void net_rx_action(struct softirq_action *h)
 	}
 out:
 	local_irq_enable();
-	preempt_enable();
 	return;
 
 softnet_break:
@@ -1921,7 +1911,7 @@ int register_gifconf(unsigned int family, gifconf_func_t * gifconf)
  *	match.  --pb
  */
 
-static int dev_ifname(struct ifreq *arg)
+static int dev_ifname(struct ifreq __user *arg)
 {
 	struct net_device *dev;
 	struct ifreq ifr;
@@ -1954,7 +1944,7 @@ static int dev_ifname(struct ifreq *arg)
  *	Thus we will need a 'compatibility mode'.
  */
 
-static int dev_ifconf(char *arg)
+static int dev_ifconf(char __user *arg)
 {
 	struct ifconf ifc;
 	struct net_device *dev;
@@ -2479,9 +2469,8 @@ static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
 				return -EINVAL;
 			if (!netif_device_present(dev))
 				return -ENODEV;
-			dev_mc_add(dev, ifr->ifr_hwaddr.sa_data,
-				   dev->addr_len, 1);
-			return 0;
+			return dev_mc_add(dev, ifr->ifr_hwaddr.sa_data,
+					  dev->addr_len, 1);
 
 		case SIOCDELMULTI:
 			if (!dev->set_multicast_list ||
@@ -2489,9 +2478,8 @@ static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
 				return -EINVAL;
 			if (!netif_device_present(dev))
 				return -ENODEV;
-			dev_mc_delete(dev, ifr->ifr_hwaddr.sa_data,
-				      dev->addr_len, 1);
-			return 0;
+			return dev_mc_delete(dev, ifr->ifr_hwaddr.sa_data,
+					     dev->addr_len, 1);
 
 		case SIOCGIFINDEX:
 			ifr->ifr_ifindex = dev->ifindex;
@@ -2559,7 +2547,7 @@ static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
  *	positive or a negative errno code on error.
  */
 
-int dev_ioctl(unsigned int cmd, void *arg)
+int dev_ioctl(unsigned int cmd, void __user *arg)
 {
 	struct ifreq ifr;
 	int ret;
@@ -2572,12 +2560,12 @@ int dev_ioctl(unsigned int cmd, void *arg)
 
 	if (cmd == SIOCGIFCONF) {
 		rtnl_shlock();
-		ret = dev_ifconf((char *) arg);
+		ret = dev_ifconf((char __user *) arg);
 		rtnl_shunlock();
 		return ret;
 	}
 	if (cmd == SIOCGIFNAME)
-		return dev_ifname((struct ifreq *)arg);
+		return dev_ifname((struct ifreq __user *)arg);
 
 	if (copy_from_user(&ifr, arg, sizeof(struct ifreq)))
 		return -EFAULT;
@@ -3150,6 +3138,52 @@ int unregister_netdevice(struct net_device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_HOTPLUG_CPU
+static int dev_cpu_callback(struct notifier_block *nfb,
+			    unsigned long action,
+			    void *ocpu)
+{
+	struct sk_buff **list_skb;
+	struct net_device **list_net;
+	struct sk_buff *skb;
+	unsigned int cpu, oldcpu = (unsigned long)ocpu;
+	struct softnet_data *sd, *oldsd;
+
+	if (action != CPU_DEAD)
+		return NOTIFY_OK;
+
+	local_irq_disable();
+	cpu = smp_processor_id();
+	sd = &per_cpu(softnet_data, cpu);
+	oldsd = &per_cpu(softnet_data, oldcpu);
+
+	/* Find end of our completion_queue. */
+	list_skb = &sd->completion_queue;
+	while (*list_skb)
+		list_skb = &(*list_skb)->next;
+	/* Append completion queue from offline CPU. */
+	*list_skb = oldsd->completion_queue;
+	oldsd->completion_queue = NULL;
+
+	/* Find end of our output_queue. */
+	list_net = &sd->output_queue;
+	while (*list_net)
+		list_net = &(*list_net)->next_sched;
+	/* Append output queue from offline CPU. */
+	*list_net = oldsd->output_queue;
+	oldsd->output_queue = NULL;
+
+	raise_softirq_irqoff(NET_TX_SOFTIRQ);
+	local_irq_enable();
+
+	/* Process offline CPU's input_pkt_queue */
+	while ((skb = __skb_dequeue(&oldsd->input_pkt_queue)))
+		netif_rx(skb);
+
+	return NOTIFY_OK;
+}
+#endif /* CONFIG_HOTPLUG_CPU */
+
 
 /*
  *	Initialize the DEV module. At boot time this walks the device list and
@@ -3214,12 +3248,9 @@ static int __init net_dev_init(void)
 	open_softirq(NET_TX_SOFTIRQ, net_tx_action, NULL);
 	open_softirq(NET_RX_SOFTIRQ, net_rx_action, NULL);
 
+	hotcpu_notifier(dev_cpu_callback, 0);
 	dst_init();
 	dev_mcast_init();
-
-#ifdef CONFIG_NET_SCHED
-	pktsched_init();
-#endif
 	rc = 0;
 out:
 	return rc;
@@ -3235,7 +3266,6 @@ EXPORT_SYMBOL(__dev_remove_pack);
 EXPORT_SYMBOL(__skb_linearize);
 EXPORT_SYMBOL(call_netdevice_notifiers);
 EXPORT_SYMBOL(dev_add_pack);
-EXPORT_SYMBOL(__dev_alloc);
 EXPORT_SYMBOL(dev_alloc_name);
 EXPORT_SYMBOL(dev_close);
 EXPORT_SYMBOL(dev_get_by_flags);

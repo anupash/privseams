@@ -13,7 +13,7 @@
 
 /*
  * Locking:
- * - the page->pte.chain is protected by the PG_chainlock bit,
+ * - the page->pte.chain is protected by the PG_maplock bit,
  *   which nests within the the mm->page_table_lock,
  *   which nests within the page lock.
  * - because swapout locking is opposite to the locking order
@@ -26,7 +26,7 @@
 #include <linux/swapops.h>
 #include <linux/slab.h>
 #include <linux/init.h>
-#include <linux/rmap-locking.h>
+#include <linux/rmap.h>
 #include <linux/cache.h>
 #include <linux/percpu.h>
 
@@ -35,7 +35,18 @@
 #include <asm/tlb.h>
 #include <asm/tlbflush.h>
 
-/* #define DEBUG_RMAP */
+/*
+ * Something oopsable to put for now in the page->mapping
+ * of an anonymous page, to test that it is ignored.
+ */
+#define ANON_MAPPING_DEBUG	((struct address_space *) 0)
+
+static inline void clear_page_anon(struct page *page)
+{
+	BUG_ON(page->mapping != ANON_MAPPING_DEBUG);
+	page->mapping = NULL;
+	ClearPageAnon(page);
+}
 
 /*
  * Shared pages have a chain of pte_chain structures, used to locate
@@ -50,7 +61,8 @@
 
 /*
  * next_and_idx encodes both the address of the next pte_chain and the
- * offset of the highest-index used pte in ptes[].
+ * offset of the lowest-index used pte in ptes[] (which is equal also
+ * to the offset of the highest-index unused pte in ptes[], plus one).
  */
 struct pte_chain {
 	unsigned long next_and_idx;
@@ -107,18 +119,18 @@ pte_chain_encode(struct pte_chain *pte_chain, int idx)
  *
  * Quick test_and_clear_referenced for all mappings to a page,
  * returns the number of processes which referenced the page.
- * Caller needs to hold the pte_chain_lock.
+ * Caller needs to hold the rmap lock.
  *
  * If the page has a single-entry pte_chain, collapse that back to a PageDirect
  * representation.  This way, it's only done under memory pressure.
  */
-int page_referenced(struct page * page)
+int fastcall page_referenced(struct page * page)
 {
 	struct pte_chain *pc;
 	int referenced = 0;
 
 	if (page_test_and_clear_young(page))
-		mark_page_accessed(page);
+		referenced++;
 
 	if (TestClearPageReferenced(page))
 		referenced++;
@@ -165,20 +177,24 @@ int page_referenced(struct page * page)
  * Add a new pte reverse mapping to a page.
  * The caller needs to hold the mm->page_table_lock.
  */
-struct pte_chain *
+struct pte_chain * fastcall
 page_add_rmap(struct page *page, pte_t *ptep, struct pte_chain *pte_chain)
 {
 	pte_addr_t pte_paddr = ptep_to_paddr(ptep);
 	struct pte_chain *cur_pte_chain;
 
-	if (!pfn_valid(page_to_pfn(page)) || PageReserved(page))
+	if (PageReserved(page))
 		return pte_chain;
 
-	pte_chain_lock(page);
+	rmap_lock(page);
 
 	if (page->pte.direct == 0) {
 		page->pte.direct = pte_paddr;
 		SetPageDirect(page);
+		if (!page->mapping) {
+			SetPageAnon(page);
+			page->mapping = ANON_MAPPING_DEBUG;
+		}
 		inc_page_state(nr_mapped);
 		goto out;
 	}
@@ -207,7 +223,7 @@ page_add_rmap(struct page *page, pte_t *ptep, struct pte_chain *pte_chain)
 	cur_pte_chain->ptes[pte_chain_idx(cur_pte_chain) - 1] = pte_paddr;
 	cur_pte_chain->next_and_idx--;
 out:
-	pte_chain_unlock(page);
+	rmap_unlock(page);
 	return pte_chain;
 }
 
@@ -221,7 +237,7 @@ out:
  * the page.
  * Caller needs to hold the mm->page_table_lock.
  */
-void page_remove_rmap(struct page *page, pte_t *ptep)
+void fastcall page_remove_rmap(struct page *page, pte_t *ptep)
 {
 	pte_addr_t pte_paddr = ptep_to_paddr(ptep);
 	struct pte_chain *pc;
@@ -229,7 +245,7 @@ void page_remove_rmap(struct page *page, pte_t *ptep)
 	if (!pfn_valid(page_to_pfn(page)) || PageReserved(page))
 		return;
 
-	pte_chain_lock(page);
+	rmap_lock(page);
 
 	if (!page_mapped(page))
 		goto out_unlock;	/* remap_page_range() from a driver? */
@@ -270,13 +286,15 @@ void page_remove_rmap(struct page *page, pte_t *ptep)
 		}
 	}
 out:
-	if (page->pte.direct == 0 && page_test_and_clear_dirty(page))
-		set_page_dirty(page);
-	if (!page_mapped(page))
+	if (!page_mapped(page)) {
+		if (page_test_and_clear_dirty(page))
+			set_page_dirty(page);
+		if (PageAnon(page))
+			clear_page_anon(page);
 		dec_page_state(nr_mapped);
+	}
 out_unlock:
-	pte_chain_unlock(page);
-	return;
+	rmap_unlock(page);
 }
 
 /**
@@ -289,11 +307,10 @@ out_unlock:
  * to the locking order used by the page fault path, we use trylocks.
  * Locking:
  *	    page lock			shrink_list(), trylock
- *		pte_chain_lock		shrink_list()
+ *		rmap lock		shrink_list()
  *		    mm->page_table_lock	try_to_unmap_one(), trylock
  */
-static int FASTCALL(try_to_unmap_one(struct page *, pte_addr_t));
-static int try_to_unmap_one(struct page * page, pte_addr_t paddr)
+static int fastcall try_to_unmap_one(struct page * page, pte_addr_t paddr)
 {
 	pte_t *ptep = rmap_ptep_map(paddr);
 	unsigned long address = ptep_to_address(ptep);
@@ -314,8 +331,7 @@ static int try_to_unmap_one(struct page * page, pte_addr_t paddr)
 		return SWAP_AGAIN;
 	}
 
-
-	/* During mremap, it's possible pages are not in a VMA. */
+	/* unmap_vmas drops page_table_lock with vma unlinked */
 	vma = find_vma(mm, address);
 	if (!vma) {
 		ret = SWAP_FAIL;
@@ -332,25 +348,23 @@ static int try_to_unmap_one(struct page * page, pte_addr_t paddr)
 	flush_cache_page(vma, address);
 	pte = ptep_clear_flush(vma, address, ptep);
 
-	if (PageSwapCache(page)) {
+	if (PageAnon(page)) {
+		swp_entry_t entry = { .val = page->private };
 		/*
 		 * Store the swap location in the pte.
 		 * See handle_pte_fault() ...
 		 */
-		swp_entry_t entry = { .val = page->index };
+		BUG_ON(!PageSwapCache(page));
 		swap_duplicate(entry);
 		set_pte(ptep, swp_entry_to_pte(entry));
 		BUG_ON(pte_file(*ptep));
 	} else {
-		unsigned long pgidx;
 		/*
 		 * If a nonlinear mapping then store the file page offset
 		 * in the pte.
 		 */
-		pgidx = (address - vma->vm_start) >> PAGE_SHIFT;
-		pgidx += vma->vm_pgoff;
-		pgidx >>= PAGE_CACHE_SHIFT - PAGE_SHIFT;
-		if (page->index != pgidx) {
+		BUG_ON(!page->mapping);
+		if (page->index != linear_page_index(vma, address)) {
 			set_pte(ptep, pgoff_to_pte(page->index));
 			BUG_ON(!pte_file(*ptep));
 		}
@@ -376,13 +390,13 @@ out_unlock:
  *
  * Tries to remove all the page table entries which are mapping this
  * page, used in the pageout path.  Caller must hold the page lock
- * and its pte chain lock.  Return values are:
+ * and its rmap lock.  Return values are:
  *
  * SWAP_SUCCESS	- we succeeded in removing all mappings
  * SWAP_AGAIN	- we missed a trylock, try again later
  * SWAP_FAIL	- the page is unswappable
  */
-int try_to_unmap(struct page * page)
+int fastcall try_to_unmap(struct page * page)
 {
 	struct pte_chain *pc, *next_pc, *start;
 	int ret = SWAP_SUCCESS;
@@ -393,20 +407,15 @@ int try_to_unmap(struct page * page)
 		BUG();
 	if (!PageLocked(page))
 		BUG();
-	/* We need backing store to swap out a page. */
-	if (!page->mapping)
-		BUG();
 
 	if (PageDirect(page)) {
 		ret = try_to_unmap_one(page, page->pte.direct);
 		if (ret == SWAP_SUCCESS) {
-			if (page_test_and_clear_dirty(page))
-				set_page_dirty(page);
 			page->pte.direct = 0;
 			ClearPageDirect(page);
 		}
 		goto out;
-	}		
+	}
 
 	start = page->pte.chain;
 	victim_i = pte_chain_idx(start);
@@ -438,9 +447,6 @@ int try_to_unmap(struct page * page)
 				} else {
 					start->next_and_idx++;
 				}
-				if (page->pte.direct == 0 &&
-				    page_test_and_clear_dirty(page))
-					set_page_dirty(page);
 				break;
 			case SWAP_AGAIN:
 				/* Skip this pte, remembering status. */
@@ -453,8 +459,14 @@ int try_to_unmap(struct page * page)
 		}
 	}
 out:
-	if (!page_mapped(page))
+	if (!page_mapped(page)) {
+		if (page_test_and_clear_dirty(page))
+			set_page_dirty(page);
+		if (PageAnon(page))
+			clear_page_anon(page);
 		dec_page_state(nr_mapped);
+		ret = SWAP_SUCCESS;
+	}
 	return ret;
 }
 
@@ -522,8 +534,8 @@ void __init pte_chain_init(void)
 {
 	pte_chain_cache = kmem_cache_create(	"pte_chain",
 						sizeof(struct pte_chain),
+						sizeof(struct pte_chain),
 						0,
-						SLAB_MUST_HWCACHE_ALIGN,
 						pte_chain_ctor,
 						NULL);
 

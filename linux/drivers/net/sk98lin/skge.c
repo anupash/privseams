@@ -2,6 +2,8 @@
  *
  * Name:	skge.c
  * Project:	GEnesis, PCI Gigabit Ethernet Adapter
+ * Version:	$Revision: 1.45 $
+ * Date:       	$Date: 2004/02/12 14:41:02 $
  * Purpose:	The main driver source module
  *
  ******************************************************************************/
@@ -294,7 +296,6 @@ static int __init skge_probe (void)
 	SK_BOOL BootStringCount = SK_FALSE;
 	int			retval;
 #ifdef CONFIG_PROC_FS
-	int			proc_root_initialized = 0;
 	struct proc_dir_entry	*pProcFile;
 #endif
 
@@ -311,6 +312,12 @@ static int __init skge_probe (void)
 		dev = NULL;
 		pNet = NULL;
 
+		/* Don't handle Yukon2 cards at the moment */
+		/* 12-feb-2004 ---- mlindner@syskonnect.de */
+		if (pdev->vendor == 0x11ab) {
+			if ( (pdev->device == 0x4360) || (pdev->device == 0x4361) )
+				continue;
+		}
 
 		SK_PCI_ISCOMPLIANT(vendor_flag, pdev);
 		if (!vendor_flag)
@@ -375,6 +382,7 @@ static int __init skge_probe (void)
 		dev->do_ioctl =		&SkGeIoctl;
 		dev->change_mtu =	&SkGeChangeMtu;
 		dev->flags &= 		~IFF_RUNNING;
+		SET_NETDEV_DEV(dev, &pdev->dev);
 
 #ifdef SK_ZEROCOPY
 #ifdef USE_SK_TX_CHECKSUM
@@ -2526,12 +2534,6 @@ rx_start:
 				"Control: %x\nRxStat: %x\n",
 				Control, FrameStat));
 
-			PhysAddr = ((SK_U64) pRxd->VDataHigh) << (SK_U64)32;
-			PhysAddr |= (SK_U64) pRxd->VDataLow;
-			pci_dma_sync_single(pAC->PciDev,
-						(dma_addr_t) PhysAddr,
-						FrameLength,
-						PCI_DMA_FROMDEVICE);
 			ReQueueRxBuffer(pAC, pRxPort, pMsg,
 				pRxd->VDataHigh, pRxd->VDataLow);
 
@@ -2552,12 +2554,16 @@ rx_start:
 			PhysAddr = ((SK_U64) pRxd->VDataHigh) << (SK_U64)32;
 			PhysAddr |= (SK_U64) pRxd->VDataLow;
 
-			pci_dma_sync_single(pAC->PciDev,
-						(dma_addr_t) PhysAddr,
-						FrameLength,
-						PCI_DMA_FROMDEVICE);
+			pci_dma_sync_single_for_cpu(pAC->PciDev,
+						    (dma_addr_t) PhysAddr,
+						    FrameLength,
+						    PCI_DMA_FROMDEVICE);
 			eth_copy_and_sum(pNewMsg, pMsg->data,
 				FrameLength, 0);
+			pci_dma_sync_single_for_device(pAC->PciDev,
+						       (dma_addr_t) PhysAddr,
+						       FrameLength,
+						       PCI_DMA_FROMDEVICE);
 			ReQueueRxBuffer(pAC, pRxPort, pMsg,
 				pRxd->VDataHigh, pRxd->VDataLow);
 

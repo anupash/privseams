@@ -15,10 +15,10 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/bootmem.h>
+#include <linux/cpumask.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/sn/sgi.h>
-#include <asm/sn/iograph.h>
 #include <asm/sn/hcl.h>
 #include <asm/sn/types.h>
 #include <asm/sn/pci/pciio.h>
@@ -40,6 +40,7 @@
 static void force_interrupt(int irq);
 extern void pcibr_force_interrupt(pcibr_intr_t intr);
 extern int sn_force_interrupt_flag;
+struct irq_desc * sn_irq_desc(unsigned int irq);
 
 struct sn_intr_list_t {
 	struct sn_intr_list_t *next;
@@ -101,6 +102,8 @@ sn_end_irq(unsigned int irq)
 	int nasid;
 	int ivec;
 	unsigned long event_occurred;
+	irq_desc_t *desc = sn_irq_desc(irq);
+	unsigned int status = desc->status;
 
 	ivec = irq & 0xff;
 	if (ivec == SGI_UART_VECTOR) {
@@ -115,14 +118,16 @@ sn_end_irq(unsigned int irq)
 	}
 	__clear_bit(ivec, (volatile void *)pda->sn_in_service_ivecs);
 	if (sn_force_interrupt_flag)
-		force_interrupt(irq);
+		if (!(status & (IRQ_DISABLED | IRQ_INPROGRESS)))
+			force_interrupt(irq);
 }
 
 static void
-sn_set_affinity_irq(unsigned int irq, unsigned long cpu)
+sn_set_affinity_irq(unsigned int irq, cpumask_t mask)
 {
-#if CONFIG_SMP
+#ifdef CONFIG_SMP
 	int redir = 0;
+	int cpu;
 	struct sn_intr_list_t *p = sn_intr_list[irq];
 	pcibr_intr_t intr;
 	extern void sn_shub_redirect_intr(pcibr_intr_t intr, unsigned long cpu);
@@ -136,7 +141,9 @@ sn_set_affinity_irq(unsigned int irq, unsigned long cpu)
 	if (intr == NULL)
 		return; 
 
+	cpu = first_cpu(mask);
 	sn_shub_redirect_intr(intr, cpu);
+	irq = irq & 0xff;  /* strip off redirect bit, if someone stuck it on. */
 	(void) set_irq_affinity_info(irq, cpu_physical_id(intr->bi_cpu), redir);
 #endif /* CONFIG_SMP */
 }
@@ -210,6 +217,49 @@ register_pcibr_intr(int irq, pcibr_intr_t intr)
 		p->next = NULL;
 		p->intr = intr;
 	}
+}
+
+void
+unregister_pcibr_intr(int irq, pcibr_intr_t intr)
+{
+
+	struct sn_intr_list_t **prev, *curr;
+	int cpu = intr->bi_cpu;
+	int i;
+
+	if (sn_intr_list[irq] == NULL)
+		return;
+
+	prev = &sn_intr_list[irq];
+	curr = sn_intr_list[irq];
+	while (curr) {
+		if (curr->intr == intr)	 {
+			*prev = curr->next;
+			break;
+		}
+		prev = &curr->next;
+		curr = curr->next;
+	}
+
+	if (curr)
+		kfree(curr);
+
+	if (!sn_intr_list[irq]) {
+		if (pdacpu(cpu)->sn_last_irq == irq) {
+			for (i = pdacpu(cpu)->sn_last_irq - 1; i; i--)
+				if (sn_intr_list[i])
+					break;
+			pdacpu(cpu)->sn_last_irq = i;
+		}
+
+		if (pdacpu(cpu)->sn_first_irq == irq) {
+			pdacpu(cpu)->sn_first_irq = 0;
+			for (i = pdacpu(cpu)->sn_first_irq + 1; i < NR_IRQS; i++)
+				if (sn_intr_list[i])
+					pdacpu(cpu)->sn_first_irq = i;
+		}
+	}
+
 }
 
 void

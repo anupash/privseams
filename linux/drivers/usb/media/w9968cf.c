@@ -820,7 +820,7 @@ static void w9968cf_urb_complete(struct urb *urb, struct pt_regs *regs)
 			(*f)->length = cam->frame_tmp.length;
 			memcpy((*f)->buffer, cam->frame_tmp.buffer,
 			       (*f)->length);
-			DBG(6, "Switched from temp. frame to frame #%d", 
+			DBG(6, "Switched from temp. frame to frame #%zd", 
 			    (*f) - &cam->frame[0])
 		}
 	}
@@ -858,7 +858,7 @@ static void w9968cf_urb_complete(struct urb *urb, struct pt_regs *regs)
 
 		} else if ((*f)->status == F_GRABBING) { /* end of frame */
 
-			DBG(6, "Frame #%d successfully grabbed.",
+			DBG(6, "Frame #%zd successfully grabbed.",
 			    ((*f)==&cam->frame_tmp ? -1 : (*f)-&cam->frame[0]))
 
 			if (cam->vpp_flag & VPP_DECOMPRESSION) {
@@ -905,8 +905,7 @@ static void w9968cf_urb_complete(struct urb *urb, struct pt_regs *regs)
 	spin_unlock(&cam->urb_lock);
 
 	/* Wake up the user process */
-	if (waitqueue_active(&cam->wait_queue))
-		wake_up_interruptible(&cam->wait_queue);
+	wake_up_interruptible(&cam->wait_queue);
 }
 
 
@@ -2075,7 +2074,7 @@ w9968cf_pop_frame(struct w9968cf_device* cam, struct w9968cf_frame_t** framep)
 
 	spin_unlock(&cam->flist_lock);
 
-	DBG(6,"Popped frame #%d from the list.",*framep-&cam->frame[0])
+	DBG(6,"Popped frame #%zd from the list.",*framep-&cam->frame[0])
 }
 
 
@@ -2690,6 +2689,7 @@ static int w9968cf_open(struct inode* inode, struct file* filp)
 			up(&cam->dev_sem);
 			return -EWOULDBLOCK;
 		}
+retry:
 		up(&cam->dev_sem);
 		err = wait_event_interruptible(cam->open, cam->disconnected ||
 		                               (cam->users == 0));
@@ -2698,6 +2698,9 @@ static int w9968cf_open(struct inode* inode, struct file* filp)
 		if (cam->disconnected)
 			return -ENODEV;
 		down(&cam->dev_sem);
+		/*recheck - there may be several waiters */
+		if (cam->users)
+			goto retry;
 	}
 
 	DBG(5, "Opening '%s', /dev/video%d ...",
@@ -2758,8 +2761,7 @@ static int w9968cf_release(struct inode* inode, struct file* filp)
 	cam->users--;
 	w9968cf_deallocate_memory(cam);
 
-	if (waitqueue_active(&cam->open))
-		wake_up_interruptible(&cam->open);
+	wake_up_interruptible(&cam->open);
 
 	DBG(5, "Video device closed.")
 	up(&cam->dev_sem);
@@ -2830,7 +2832,7 @@ w9968cf_read(struct file* filp, char* buf, size_t count, loff_t* f_pos)
 
 	fr->status = F_UNUSED;
 
-	DBG(5, "%d bytes read.", count)
+	DBG(5, "%zd bytes read.", count)
 
 	up(&cam->fileop_sem);
 	return count;
@@ -3371,7 +3373,7 @@ w9968cf_v4l_ioctl(struct inode* inode, struct file* filp,
 		if (copy_from_user(&tuner, arg, sizeof(tuner)))
 			return -EFAULT;
 
-		if (tuner.tuner != 0);
+		if (tuner.tuner != 0)
 			return -EINVAL;
 
 		strcpy(tuner.name, "no_tuner");
@@ -3506,7 +3508,7 @@ w9968cf_usb_probe(struct usb_interface* intf, const struct usb_device_id* id)
 	          kmalloc(sizeof(struct w9968cf_device), GFP_KERNEL);
 
 	if (!cam) {
-		DBG(1, "Couldn't allocate %d bytes of kernel memory.",
+		DBG(1, "Couldn't allocate %zd bytes of kernel memory.",
 		    sizeof(struct w9968cf_device))
 		err = -ENOMEM;
 		goto fail;

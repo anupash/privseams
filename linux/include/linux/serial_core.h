@@ -16,8 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *  $Id: serial_core.h,v 1.49 2002/07/20 18:06:32 rmk Exp $
  */
 
 /*
@@ -38,7 +36,8 @@
 #define PORT_16850	12
 #define PORT_RSA	13
 #define PORT_NS16550A	14
-#define PORT_MAX_8250	14	/* max port ID */
+#define PORT_XSCALE	15
+#define PORT_MAX_8250	15	/* max port ID */
 
 /*
  * ARM specific type numbers.  These are not currently guaranteed
@@ -46,6 +45,7 @@
  * separate so any additions to the old serial.c that occur before
  * we are merged can be easily merged here.
  */
+#define PORT_PXA	31
 #define PORT_AMBA	32
 #define PORT_CLPS711X	33
 #define PORT_SA1100	34
@@ -77,16 +77,26 @@
 #define PORT_MAC_ZILOG	50	/* m68k : not yet implemented */
 #define PORT_PMAC_ZILOG	51
 
+/* SH-SCI */
+#define PORT_SCI	52
+#define PORT_SCIF	53
+#define PORT_IRDA	54
+
+/* Samsung S3C2410 SoC and derivatives thereof */
+#define PORT_S3C2410    55
+
 #ifdef __KERNEL__
 
 #include <linux/config.h>
 #include <linux/interrupt.h>
 #include <linux/circ_buf.h>
 #include <linux/spinlock.h>
+#include <linux/sched.h>
 
 struct uart_port;
 struct uart_info;
 struct serial_struct;
+struct device;
 
 /*
  * This structure describes all the operations that can be
@@ -175,7 +185,6 @@ struct uart_port {
 
 	unsigned int		flags;
 
-#define UPF_HUP_NOTIFY		(1 << 0)
 #define UPF_FOURPORT		(1 << 1)
 #define UPF_SAK			(1 << 2)
 #define UPF_SPD_MASK		(0x1030)
@@ -208,6 +217,7 @@ struct uart_port {
 	unsigned int		custom_divisor;
 	unsigned int		line;			/* port index */
 	unsigned long		mapbase;		/* for ioremap */
+	struct device		*dev;			/* parent device */
 	unsigned char		hub6;			/* this should be in the 8250 driver */
 	unsigned char		unused[3];
 };

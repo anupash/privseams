@@ -57,14 +57,29 @@ __u8 isa_irq_to_vector_map[16] = {
 };
 EXPORT_SYMBOL(isa_irq_to_vector_map);
 
+static inline void
+irq_enter (void)
+{
+	preempt_count() += HARDIRQ_OFFSET;
+}
+
+static inline void
+irq_exit (void)
+{
+	preempt_count() -= IRQ_EXIT_OFFSET;
+	if (!in_interrupt() && local_softirq_pending())
+		do_softirq();
+	preempt_enable_no_resched();
+}
+
 int
-ia64_alloc_vector (void)
+assign_irq_vector (int irq)
 {
 	static int next_vector = IA64_FIRST_DEVICE_VECTOR;
 
 	if (next_vector > IA64_LAST_DEVICE_VECTOR)
 		/* XXX could look for sharable vectors instead of panic'ing... */
-		panic("ia64_alloc_vector: out of interrupt vectors!");
+		panic("assign_irq_vector: out of interrupt vectors!");
 	return next_vector++;
 }
 
@@ -120,6 +135,7 @@ ia64_handle_irq (ia64_vector vector, struct pt_regs *regs)
 	 * 16 (without this, it would be ~240, which could easily lead
 	 * to kernel stack overflows).
 	 */
+	irq_enter();
 	saved_tpr = ia64_getreg(_IA64_REG_CR_TPR);
 	ia64_srlz_d();
 	while (vector != IA64_SPURIOUS_INT_VECTOR) {
@@ -143,8 +159,7 @@ ia64_handle_irq (ia64_vector vector, struct pt_regs *regs)
 	 * handler needs to be able to wait for further keyboard interrupts, which can't
 	 * come through until ia64_eoi() has been done.
 	 */
-	if (local_softirq_pending())
-		do_softirq();
+	irq_exit();
 }
 
 #ifdef CONFIG_SMP

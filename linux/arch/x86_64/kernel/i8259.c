@@ -13,6 +13,7 @@
 #include <linux/kernel_stat.h>
 #include <linux/sysdev.h>
 
+#include <asm/acpi.h>
 #include <asm/atomic.h>
 #include <asm/system.h>
 #include <asm/io.h>
@@ -423,14 +424,14 @@ static struct sysdev_class timer_sysclass = {
 
 static struct sys_device device_timer = {
 	.id		= 0,
-	.cls		&timer_sysclass,
+	.cls		= &timer_sysclass,
 };
 
 static int __init init_timer_sysfs(void)
 {
 	int error = sysdev_class_register(&timer_sysclass);
 	if (!error)
-		error = sys_device_register(&device_timer);
+		error = sysdev_register(&device_timer);
 	return error;
 }
 
@@ -490,5 +491,6 @@ void __init init_IRQ(void)
 	 */
 	setup_timer();
 
-	setup_irq(2, &irq2);
+	if (!acpi_ioapic)
+		setup_irq(2, &irq2);
 }

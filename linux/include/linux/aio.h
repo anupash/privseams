@@ -59,7 +59,7 @@ struct kiocb {
 	struct list_head	ki_list;	/* the aio core uses this
 						 * for cancellation */
 
-	void			*ki_user_obj;	/* pointer to userland's iocb */
+	void __user		*ki_user_obj;	/* pointer to userland's iocb */
 	__u64			ki_user_data;	/* user's data for completion */
 	loff_t			ki_pos;
 
@@ -167,6 +167,7 @@ static inline struct kiocb *list_kiocb(struct list_head *h)
 }
 
 /* for sysctl: */
-extern unsigned aio_max_nr, aio_max_size, aio_max_pinned;
+extern atomic_t aio_nr;
+extern unsigned aio_max_nr;
 
 #endif /* __LINUX__AIO_H */

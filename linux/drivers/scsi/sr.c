@@ -87,6 +87,11 @@ static struct scsi_driver sr_template = {
 static unsigned long sr_index_bits[SR_DISKS / BITS_PER_LONG];
 static spinlock_t sr_index_lock = SPIN_LOCK_UNLOCKED;
 
+/* This semaphore is used to mediate the 0->1 reference get in the
+ * face of object destruction (i.e. we can't allow a get on an
+ * object after last put) */
+static DECLARE_MUTEX(sr_ref_sem);
+
 static int sr_open(struct cdrom_device_info *, int);
 static void sr_release(struct cdrom_device_info *);
 
@@ -112,6 +117,39 @@ static struct cdrom_device_ops sr_dops = {
 	.capability		= SR_CAPABILITIES,
 	.generic_packet		= sr_packet,
 };
+
+static void sr_kref_release(struct kref *kref);
+
+static inline struct scsi_cd *scsi_cd(struct gendisk *disk)
+{
+	return container_of(disk->private_data, struct scsi_cd, driver);
+}
+
+/*
+ * The get and put routines for the struct scsi_cd.  Note this entity
+ * has a scsi_device pointer and owns a reference to this.
+ */
+static inline struct scsi_cd *scsi_cd_get(struct gendisk *disk)
+{
+	struct scsi_cd *cd = NULL;
+
+	down(&sr_ref_sem);
+	if (disk->private_data == NULL)
+		goto out;
+	cd = scsi_cd(disk);
+	if (!kref_get(&cd->kref))
+		cd = NULL;
+ out:
+	up(&sr_ref_sem);
+	return cd;
+}
+
+static inline void scsi_cd_put(struct scsi_cd *cd)
+{
+	down(&sr_ref_sem);
+	kref_put(&cd->kref);
+	up(&sr_ref_sem);
+}
 
 /*
  * This function checks to see if the media has been changed in the
@@ -165,11 +203,6 @@ int sr_media_change(struct cdrom_device_info *cdi, int slot)
 	return retval;
 }
  
-static inline struct scsi_cd *scsi_cd(struct gendisk *disk)
-{
-	return container_of(disk->private_data, struct scsi_cd, driver);
-}
-
 /*
  * rw_intr is the interrupt routine for the device driver.
  *
@@ -179,14 +212,14 @@ static inline struct scsi_cd *scsi_cd(struct gendisk *disk)
 static void rw_intr(struct scsi_cmnd * SCpnt)
 {
 	int result = SCpnt->result;
-	int this_count = SCpnt->bufflen >> 9;
-	int good_sectors = (result == 0 ? this_count : 0);
+	int this_count = SCpnt->bufflen;
+	int good_bytes = (result == 0 ? this_count : 0);
 	int block_sectors = 0;
 	long error_sector;
 	struct scsi_cd *cd = scsi_cd(SCpnt->request->rq_disk);
 
 #ifdef DEBUG
-	printk("sr.c done: %x %p\n", result, SCpnt->request->bh->b_data);
+	printk("sr.c done: %x\n", result);
 #endif
 
 	/*
@@ -203,6 +236,8 @@ static void rw_intr(struct scsi_cmnd * SCpnt)
 		case ILLEGAL_REQUEST:
 			if (!(SCpnt->sense_buffer[0] & 0x90))
 				break;
+			if (!blk_fs_request(SCpnt->request))
+				break;
 			error_sector = (SCpnt->sense_buffer[3] << 24) |
 				(SCpnt->sense_buffer[4] << 16) |
 				(SCpnt->sense_buffer[5] << 8) |
@@ -215,9 +250,9 @@ static void rw_intr(struct scsi_cmnd * SCpnt)
 			if (cd->device->sector_size == 2048)
 				error_sector <<= 2;
 			error_sector &= ~(block_sectors - 1);
-			good_sectors = error_sector - SCpnt->request->sector;
-			if (good_sectors < 0 || good_sectors >= this_count)
-				good_sectors = 0;
+			good_bytes = (error_sector - SCpnt->request->sector) << 9;
+			if (good_bytes < 0 || good_bytes >= this_count)
+				good_bytes = 0;
 			/*
 			 * The SCSI specification allows for the value
 			 * returned by READ CAPACITY to be up to 75 2K
@@ -241,7 +276,7 @@ static void rw_intr(struct scsi_cmnd * SCpnt)
 			print_sense("sr", SCpnt);
 			SCpnt->result = 0;
 			SCpnt->sense_buffer[0] = 0x0;
-			good_sectors = this_count;
+			good_bytes = this_count;
 			break;
 
 		default:
@@ -254,7 +289,7 @@ static void rw_intr(struct scsi_cmnd * SCpnt)
 	 * how many actual sectors finished, and how many sectors we need
 	 * to say have failed.
 	 */
-	scsi_io_completion(SCpnt, good_sectors, block_sectors);
+	scsi_io_completion(SCpnt, good_bytes, block_sectors << 9);
 }
 
 static int sr_init_command(struct scsi_cmnd * SCpnt)
@@ -265,7 +300,7 @@ static int sr_init_command(struct scsi_cmnd * SCpnt)
 	SCSI_LOG_HLQUEUE(1, printk("Doing sr request, dev = %s, block = %d\n",
 				cd->disk->disk_name, block));
 
-	if (!cd->device || !cd->device->online) {
+	if (!cd->device || !scsi_device_online(cd->device)) {
 		SCSI_LOG_HLQUEUE(2, printk("Finishing %ld sectors\n",
 					SCpnt->request->nr_sectors));
 		SCSI_LOG_HLQUEUE(2, printk("Retry with 0x%p\n", SCpnt));
@@ -416,14 +451,30 @@ queue:
 
 static int sr_block_open(struct inode *inode, struct file *file)
 {
+	struct gendisk *disk = inode->i_bdev->bd_disk;
 	struct scsi_cd *cd = scsi_cd(inode->i_bdev->bd_disk);
-	return cdrom_open(&cd->cdi, inode, file);
+	int ret = 0;
+
+	if(!(cd = scsi_cd_get(disk)))
+		return -ENXIO;
+
+	if((ret = cdrom_open(&cd->cdi, inode, file)) != 0)
+		scsi_cd_put(cd);
+
+	return ret;
 }
 
 static int sr_block_release(struct inode *inode, struct file *file)
 {
+	int ret;
 	struct scsi_cd *cd = scsi_cd(inode->i_bdev->bd_disk);
-	return cdrom_release(&cd->cdi, file);
+	ret = cdrom_release(&cd->cdi, file);
+	if(ret)
+		return ret;
+	
+	scsi_cd_put(cd);
+
+	return 0;
 }
 
 static int sr_block_ioctl(struct inode *inode, struct file *file, unsigned cmd,
@@ -465,10 +516,6 @@ static int sr_open(struct cdrom_device_info *cdi, int purpose)
 	struct scsi_device *sdev = cd->device;
 	int retval;
 
-	retval = scsi_device_get(sdev);
-	if (retval)
-		return retval;
-	
 	/*
 	 * If the device is in error recovery, wait until it is done.
 	 * If the device is offline, then disallow any access to it.
@@ -487,7 +534,7 @@ static int sr_open(struct cdrom_device_info *cdi, int purpose)
 	return 0;
 
 error_out:
-	scsi_device_put(sdev);
+	scsi_cd_put(cd);
 	return retval;	
 }
 
@@ -498,7 +545,6 @@ static void sr_release(struct cdrom_device_info *cdi)
 	if (cd->device->sector_size > 2048)
 		sr_set_blocklength(cd, 2048);
 
-	scsi_device_put(cd->device);
 }
 
 static int sr_probe(struct device *dev)
@@ -512,11 +558,16 @@ static int sr_probe(struct device *dev)
 	if (sdev->type != TYPE_ROM && sdev->type != TYPE_WORM)
 		goto fail;
 
+	if ((error = scsi_device_get(sdev)) != 0)
+		goto fail;
+
 	error = -ENOMEM;
 	cd = kmalloc(sizeof(*cd), GFP_KERNEL);
 	if (!cd)
-		goto fail;
+		goto fail_put_sdev;
 	memset(cd, 0, sizeof(*cd));
+
+	kref_init(&cd->kref, sr_kref_release);
 
 	disk = alloc_disk(1);
 	if (!disk)
@@ -564,12 +615,16 @@ static int sr_probe(struct device *dev)
 	snprintf(disk->devfs_name, sizeof(disk->devfs_name),
 			"%s/cd", sdev->devfs_name);
 	disk->driverfs_dev = &sdev->sdev_gendev;
-	register_cdrom(&cd->cdi);
 	set_capacity(disk, cd->capacity);
 	disk->private_data = &cd->driver;
 	disk->queue = sdev->request_queue;
+	cd->cdi.disk = disk;
+
+	if (register_cdrom(&cd->cdi))
+		goto fail_put;
 
 	dev_set_drvdata(dev, cd);
+	disk->flags |= GENHD_FL_REMOVABLE;
 	add_disk(disk);
 
 	printk(KERN_DEBUG
@@ -582,6 +637,8 @@ fail_put:
 	put_disk(disk);
 fail_free:
 	kfree(cd);
+fail_put_sdev:
+	scsi_device_put(sdev);
 fail:
 	return error;
 }
@@ -693,7 +750,7 @@ Enomem:
 static void get_capabilities(struct scsi_cd *cd)
 {
 	unsigned char *buffer;
-	int rc, n, mrw_write = 0, mrw = 1;
+	int rc, n, mrw_write = 0, mrw = 1,ram_write=0;
 	struct scsi_mode_data data;
 	struct scsi_request *SRpnt;
 	unsigned char cmd[MAX_COMMAND_SIZE];
@@ -778,6 +835,11 @@ static void get_capabilities(struct scsi_cd *cd)
 	if (!mrw_write)
 		cd->cdi.mask |= CDC_MRW_W;
 
+	if (cdrom_is_random_writable(&cd->cdi, &ram_write))
+		cd->cdi.mask |= CDC_RAM;
+	if (!ram_write)
+		cd->cdi.mask |= CDC_RAM;
+
 	n = data.header_length + data.block_descriptor_length;
 	cd->cdi.speed = ((buffer[n + 8] << 8) + buffer[n + 9]) / 176;
 	cd->readcd_known = 1;
@@ -827,8 +889,8 @@ static void get_capabilities(struct scsi_cd *cd)
 	/*
 	 * if DVD-RAM of MRW-W, we are randomly writeable
 	 */
-	if ((cd->cdi.mask & (CDC_DVD_RAM | CDC_MRW_W)) !=
-			(CDC_DVD_RAM | CDC_MRW_W)) {
+	if ((cd->cdi.mask & (CDC_DVD_RAM | CDC_MRW_W | CDC_RAM)) !=
+			(CDC_DVD_RAM | CDC_MRW_W | CDC_RAM)) {
 		cd->device->writeable = 1;
 		set_disk_ro(cd->disk, 0);
 	}
@@ -852,19 +914,43 @@ static int sr_packet(struct cdrom_device_info *cdi,
 	return cgc->stat;
 }
 
+/**
+ *	sr_kref_release - Called to free the scsi_cd structure
+ *	@kref: pointer to embedded kref
+ *
+ *	sr_ref_sem must be held entering this routine.  Because it is
+ *	called on last put, you should always use the scsi_cd_get()
+ *	scsi_cd_put() helpers which manipulate the semaphore directly
+ *	and never do a direct kref_put().
+ **/
+static void sr_kref_release(struct kref *kref)
+{
+	struct scsi_cd *cd = container_of(kref, struct scsi_cd, kref);
+	struct scsi_device *sdev = cd->device;
+	struct gendisk *disk = cd->disk;
+
+	spin_lock(&sr_index_lock);
+	clear_bit(disk->first_minor, sr_index_bits);
+	spin_unlock(&sr_index_lock);
+
+	unregister_cdrom(&cd->cdi);
+
+	disk->private_data = NULL;
+
+	put_disk(disk);
+
+	kfree(cd);
+
+	scsi_device_put(sdev);
+}
+
 static int sr_remove(struct device *dev)
 {
 	struct scsi_cd *cd = dev_get_drvdata(dev);
 
 	del_gendisk(cd->disk);
 
-	spin_lock(&sr_index_lock);
-	clear_bit(cd->disk->first_minor, sr_index_bits);
-	spin_unlock(&sr_index_lock);
-
-	put_disk(cd->disk);
-	unregister_cdrom(&cd->cdi);
-	kfree(cd);
+	scsi_cd_put(cd);
 
 	return 0;
 }

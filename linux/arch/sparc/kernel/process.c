@@ -9,7 +9,6 @@
  * This file handles the architecture-dependent parts of process handling..
  */
 
-#define __KERNEL_SYSCALLS__
 #include <stdarg.h>
 
 #include <linux/errno.h>
@@ -19,7 +18,6 @@
 #include <linux/kallsyms.h>
 #include <linux/mm.h>
 #include <linux/stddef.h>
-#include <linux/unistd.h>
 #include <linux/ptrace.h>
 #include <linux/slab.h>
 #include <linux/user.h>
@@ -30,6 +28,7 @@
 #include <linux/reboot.h>
 #include <linux/delay.h>
 #include <linux/pm.h>
+#include <linux/init.h>
 
 #include <asm/auxio.h>
 #include <asm/oplib.h>
@@ -42,6 +41,7 @@
 #include <asm/processor.h>
 #include <asm/psr.h>
 #include <asm/elf.h>
+#include <asm/unistd.h>
 
 /* 
  * Power management idle function 
@@ -55,6 +55,12 @@ void (*pm_idle)(void);
  * handler when auxio is not present-- unused for now...
  */
 void (*pm_power_off)(void);
+
+/*
+ * sysctl - toggle power-off restriction for serial console 
+ * systems in machine_power_off()
+ */
+int scons_pwroff = 1;
 
 extern void fpsave(unsigned long *, unsigned long *, void *, unsigned long *);
 
@@ -187,7 +193,7 @@ EXPORT_SYMBOL(machine_restart);
 void machine_power_off(void)
 {
 #ifdef CONFIG_SUN_AUXIO
-	if (auxio_power_register && !serial_console)
+	if (auxio_power_register && (!serial_console || scons_pwroff))
 		*auxio_power_register |= AUXIO_POWER_OFF;
 #endif
 	machine_halt();
@@ -318,7 +324,7 @@ void show_stack(struct task_struct *tsk, unsigned long *_ksp)
 	fp = (unsigned long) _ksp;
 	do {
 		/* Bogus frame pointer? */
-		if (fp < (task_base + sizeof(struct task_struct)) ||
+		if (fp < (task_base + sizeof(struct thread_info)) ||
 		    fp >= (task_base + (PAGE_SIZE << 1)))
 			break;
 		rw = (struct reg_window *) fp;
@@ -346,7 +352,7 @@ void exit_thread(void)
 #ifndef CONFIG_SMP
 	if(last_task_used_math == current) {
 #else
-	if(current->flags & PF_USEDFPU) {
+	if(current_thread_info()->flags & _TIF_USEDFPU) {
 #endif
 		/* Keep process from leaving FPU in a bogon state. */
 		put_psr(get_psr() | PSR_EF);
@@ -355,7 +361,7 @@ void exit_thread(void)
 #ifndef CONFIG_SMP
 		last_task_used_math = NULL;
 #else
-		current->flags &= ~PF_USEDFPU;
+		current_thread_info()->flags &= ~_TIF_USEDFPU;
 #endif
 	}
 }
@@ -369,7 +375,7 @@ void flush_thread(void)
 #ifndef CONFIG_SMP
 	if(last_task_used_math == current) {
 #else
-	if(current->flags & PF_USEDFPU) {
+	if(current_thread_info()->flags & _TIF_USEDFPU) {
 #endif
 		/* Clean the fpu. */
 		put_psr(get_psr() | PSR_EF);
@@ -378,7 +384,7 @@ void flush_thread(void)
 #ifndef CONFIG_SMP
 		last_task_used_math = NULL;
 #else
-		current->flags &= ~PF_USEDFPU;
+		current_thread_info()->flags &= ~_TIF_USEDFPU;
 #endif
 	}
 
@@ -459,13 +465,13 @@ int copy_thread(int nr, unsigned long clone_flags, unsigned long sp,
 #ifndef CONFIG_SMP
 	if(last_task_used_math == current) {
 #else
-	if(current->flags & PF_USEDFPU) {
+	if(current_thread_info()->flags & _TIF_USEDFPU) {
 #endif
 		put_psr(get_psr() | PSR_EF);
 		fpsave(&p->thread.float_regs[0], &p->thread.fsr,
 		       &p->thread.fpqueue[0], &p->thread.fpqdepth);
 #ifdef CONFIG_SMP
-		current->flags &= ~PF_USEDFPU;
+		current_thread_info()->flags &= ~_TIF_USEDFPU;
 #endif
 	}
 
@@ -597,13 +603,13 @@ int dump_fpu (struct pt_regs * regs, elf_fpregset_t * fpregs)
 		return 1;
 	}
 #ifdef CONFIG_SMP
-	if (current->flags & PF_USEDFPU) {
+	if (current_thread_info()->flags & _TIF_USEDFPU) {
 		put_psr(get_psr() | PSR_EF);
 		fpsave(&current->thread.float_regs[0], &current->thread.fsr,
 		       &current->thread.fpqueue[0], &current->thread.fpqdepth);
 		if (regs != NULL) {
 			regs->psr &= ~(PSR_EF);
-			current->flags &= ~(PF_USEDFPU);
+			current_thread_info()->flags &= ~(_TIF_USEDFPU);
 		}
 	}
 #else
@@ -695,9 +701,6 @@ pid_t kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 	return retval;
 }
 
-extern void scheduling_functions_start_here(void);
-extern void scheduling_functions_end_here(void);
-
 unsigned long get_wchan(struct task_struct *task)
 {
 	unsigned long pc, fp, bias = 0;
@@ -713,7 +716,7 @@ unsigned long get_wchan(struct task_struct *task)
 	fp = task->thread_info->ksp + bias;
 	do {
 		/* Bogus frame pointer? */
-		if (fp < (task_base + sizeof(struct task_struct)) ||
+		if (fp < (task_base + sizeof(struct thread_info)) ||
 		    fp >= (task_base + (2 * PAGE_SIZE)))
 			break;
 		rw = (struct reg_window *) fp;

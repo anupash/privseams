@@ -10,7 +10,6 @@
  * This file handles the architecture-dependent parts of process handling..
  */
 
-#define __KERNEL_SYSCALLS__
 #include <stdarg.h>
 
 #include <linux/errno.h>
@@ -22,7 +21,6 @@
 #include <linux/smp.h>
 #include <linux/smp_lock.h>
 #include <linux/stddef.h>
-#include <linux/unistd.h>
 #include <linux/ptrace.h>
 #include <linux/slab.h>
 #include <linux/user.h>
@@ -30,6 +28,7 @@
 #include <linux/config.h>
 #include <linux/reboot.h>
 #include <linux/delay.h>
+#include <linux/init.h>
 
 #include <asm/oplib.h>
 #include <asm/uaccess.h>
@@ -43,6 +42,7 @@
 #include <asm/fpumacro.h>
 #include <asm/head.h>
 #include <asm/cpudata.h>
+#include <asm/unistd.h>
 
 /* #define VERBOSE_SHOWREGS */
 
@@ -435,7 +435,7 @@ void flush_thread(void)
 					page = pmd_alloc_one(NULL, 0);
 				pgd_set(pgd0, page);
 			}
-			pgd_cache = pgd_val(*pgd0) << 11UL;
+			pgd_cache = ((unsigned long) pgd_val(*pgd0)) << 11UL;
 		}
 		__asm__ __volatile__("stxa %0, [%1] %2\n\t"
 				     "membar #Sync"
@@ -823,9 +823,6 @@ asmlinkage int sparc_execve(struct pt_regs *regs)
 out:
 	return error;
 }
-
-extern void scheduling_functions_start_here(void);
-extern void scheduling_functions_end_here(void);
 
 unsigned long get_wchan(struct task_struct *task)
 {

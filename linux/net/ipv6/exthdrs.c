@@ -120,7 +120,7 @@ static int ip6_parse_tlv(struct tlvtype_proc *procs, struct sk_buff *skb)
 			for (curr=procs; curr->type >= 0; curr++) {
 				if (curr->type == skb->nh.raw[off]) {
 					/* type specific length/alignment 
-					   checks will be perfomed in the 
+					   checks will be performed in the 
 					   func(). */
 					if (curr->func(skb, off) == 0)
 						return 0;
@@ -159,6 +159,7 @@ static int ipv6_destopt_rcv(struct sk_buff **skbp, unsigned int *nhoffp)
 
 	if (!pskb_may_pull(skb, (skb->h.raw-skb->data)+8) ||
 	    !pskb_may_pull(skb, (skb->h.raw-skb->data)+((skb->h.raw[1]+1)<<3))) {
+		IP6_INC_STATS_BH(Ip6InHdrErrors);
 		kfree_skb(skb);
 		return -1;
 	}
@@ -171,6 +172,7 @@ static int ipv6_destopt_rcv(struct sk_buff **skbp, unsigned int *nhoffp)
 		return 1;
 	}
 
+	IP6_INC_STATS_BH(Ip6InHdrErrors);
 	return -1;
 }
 
@@ -234,6 +236,7 @@ static int ipv6_rthdr_rcv(struct sk_buff **skbp, unsigned int *nhoffp)
 
 	if (ipv6_addr_is_multicast(&skb->nh.ipv6h->daddr) ||
 	    skb->pkt_type != PACKET_HOST) {
+		IP6_INC_STATS_BH(Ip6InAddrErrors);
 		kfree_skb(skb);
 		return -1;
 	}
@@ -249,11 +252,13 @@ looped_back:
 	}
 
 	if (hdr->type != IPV6_SRCRT_TYPE_0) {
+		IP6_INC_STATS_BH(Ip6InHdrErrors);
 		icmpv6_param_prob(skb, ICMPV6_HDR_FIELD, (&hdr->type) - skb->nh.raw);
 		return -1;
 	}
 	
 	if (hdr->hdrlen & 0x01) {
+		IP6_INC_STATS_BH(Ip6InHdrErrors);
 		icmpv6_param_prob(skb, ICMPV6_HDR_FIELD, (&hdr->hdrlen) - skb->nh.raw);
 		return -1;
 	}
@@ -266,6 +271,7 @@ looped_back:
 	n = hdr->hdrlen >> 1;
 
 	if (hdr->segments_left > n) {
+		IP6_INC_STATS_BH(Ip6InHdrErrors);
 		icmpv6_param_prob(skb, ICMPV6_HDR_FIELD, (&hdr->segments_left) - skb->nh.raw);
 		return -1;
 	}
@@ -276,8 +282,11 @@ looped_back:
 	if (skb_cloned(skb)) {
 		struct sk_buff *skb2 = skb_copy(skb, GFP_ATOMIC);
 		kfree_skb(skb);
-		if (skb2 == NULL)
+		/* the copy is a forwarded packet */
+		if (skb2 == NULL) {
+			IP6_INC_STATS_BH(Ip6OutDiscards);	
 			return -1;
+		}
 		*skbp = skb = skb2;
 		opt = (struct inet6_skb_parm *)skb2->cb;
 		hdr = (struct ipv6_rt_hdr *) skb2->h.raw;
@@ -293,6 +302,7 @@ looped_back:
 	addr += i - 1;
 
 	if (ipv6_addr_is_multicast(addr)) {
+		IP6_INC_STATS_BH(Ip6InAddrErrors);
 		kfree_skb(skb);
 		return -1;
 	}
@@ -309,6 +319,7 @@ looped_back:
 	}
 	if (skb->dst->dev->flags&IFF_LOOPBACK) {
 		if (skb->nh.ipv6h->hop_limit <= 1) {
+			IP6_INC_STATS_BH(Ip6InHdrErrors);
 			icmpv6_send(skb, ICMPV6_TIME_EXCEED, ICMPV6_EXC_HOPLIMIT,
 				    0, skb->dev);
 			kfree_skb(skb);
@@ -410,8 +421,8 @@ static int ipv6_hop_ra(struct sk_buff *skb, int optoff)
 		((struct inet6_skb_parm*)skb->cb)->ra = optoff;
 		return 1;
 	}
-	if (net_ratelimit())
-		printk(KERN_DEBUG "ipv6_hop_ra: wrong RA length %d\n", skb->nh.raw[optoff+1]);
+	LIMIT_NETDEBUG(
+		 printk(KERN_DEBUG "ipv6_hop_ra: wrong RA length %d\n", skb->nh.raw[optoff+1]));
 	kfree_skb(skb);
 	return 0;
 }
@@ -423,17 +434,20 @@ static int ipv6_hop_jumbo(struct sk_buff *skb, int optoff)
 	u32 pkt_len;
 
 	if (skb->nh.raw[optoff+1] != 4 || (optoff&3) != 2) {
-		if (net_ratelimit())
-			printk(KERN_DEBUG "ipv6_hop_jumbo: wrong jumbo opt length/alignment %d\n", skb->nh.raw[optoff+1]);
+		LIMIT_NETDEBUG(
+			 printk(KERN_DEBUG "ipv6_hop_jumbo: wrong jumbo opt length/alignment %d\n", skb->nh.raw[optoff+1]));
+		IP6_INC_STATS_BH(Ip6InHdrErrors);
 		goto drop;
 	}
 
 	pkt_len = ntohl(*(u32*)(skb->nh.raw+optoff+2));
 	if (pkt_len <= IPV6_MAXPLEN) {
+		IP6_INC_STATS_BH(Ip6InHdrErrors);
 		icmpv6_param_prob(skb, ICMPV6_HDR_FIELD, optoff+2);
 		return 0;
 	}
 	if (skb->nh.ipv6h->payload_len) {
+		IP6_INC_STATS_BH(Ip6InHdrErrors);
 		icmpv6_param_prob(skb, ICMPV6_HDR_FIELD, optoff);
 		return 0;
 	}
@@ -633,97 +647,3 @@ ipv6_dup_options(struct sock *sk, struct ipv6_txoptions *opt)
 	}
 	return opt2;
 }
-
-
-/* 
- * find out if nexthdr is a well-known extension header or a protocol
- */
-
-int ipv6_ext_hdr(u8 nexthdr)
-{
-	/* 
-	 * find out if nexthdr is an extension header or a protocol
-	 */
-	return ( (nexthdr == NEXTHDR_HOP)	||
-		 (nexthdr == NEXTHDR_ROUTING)	||
-		 (nexthdr == NEXTHDR_FRAGMENT)	||
-		 (nexthdr == NEXTHDR_AUTH)	||
-		 (nexthdr == NEXTHDR_NONE)	||
-		 (nexthdr == NEXTHDR_DEST) );
-}
-
-/*
- * Skip any extension headers. This is used by the ICMP module.
- *
- * Note that strictly speaking this conflicts with RFC 2460 4.0:
- * ...The contents and semantics of each extension header determine whether 
- * or not to proceed to the next header.  Therefore, extension headers must
- * be processed strictly in the order they appear in the packet; a
- * receiver must not, for example, scan through a packet looking for a
- * particular kind of extension header and process that header prior to
- * processing all preceding ones.
- * 
- * We do exactly this. This is a protocol bug. We can't decide after a
- * seeing an unknown discard-with-error flavour TLV option if it's a 
- * ICMP error message or not (errors should never be send in reply to
- * ICMP error messages).
- * 
- * But I see no other way to do this. This might need to be reexamined
- * when Linux implements ESP (and maybe AUTH) headers.
- * --AK
- *
- * This function parses (probably truncated) exthdr set "hdr"
- * of length "len". "nexthdrp" initially points to some place,
- * where type of the first header can be found.
- *
- * It skips all well-known exthdrs, and returns pointer to the start
- * of unparsable area i.e. the first header with unknown type.
- * If it is not NULL *nexthdr is updated by type/protocol of this header.
- *
- * NOTES: - if packet terminated with NEXTHDR_NONE it returns NULL.
- *        - it may return pointer pointing beyond end of packet,
- *	    if the last recognized header is truncated in the middle.
- *        - if packet is truncated, so that all parsed headers are skipped,
- *	    it returns NULL.
- *	  - First fragment header is skipped, not-first ones
- *	    are considered as unparsable.
- *	  - ESP is unparsable for now and considered like
- *	    normal payload protocol.
- *	  - Note also special handling of AUTH header. Thanks to IPsec wizards.
- *
- * --ANK (980726)
- */
-
-int ipv6_skip_exthdr(struct sk_buff *skb, int start, u8 *nexthdrp, int len)
-{
-	u8 nexthdr = *nexthdrp;
-
-	while (ipv6_ext_hdr(nexthdr)) {
-		struct ipv6_opt_hdr hdr;
-		int hdrlen;
-
-		if (len < (int)sizeof(struct ipv6_opt_hdr))
-			return -1;
-		if (nexthdr == NEXTHDR_NONE)
-			return -1;
-		if (skb_copy_bits(skb, start, &hdr, sizeof(hdr)))
-			BUG();
-		if (nexthdr == NEXTHDR_FRAGMENT) {
-			struct frag_hdr *fhdr = (struct frag_hdr *) &hdr;
-			if (ntohs(fhdr->frag_off) & ~0x7)
-				break;
-			hdrlen = 8;
-		} else if (nexthdr == NEXTHDR_AUTH)
-			hdrlen = (hdr.hdrlen+2)<<2; 
-		else
-			hdrlen = ipv6_optlen(&hdr); 
-
-		nexthdr = hdr.nexthdr;
-		len -= hdrlen;
-		start += hdrlen;
-	}
-
-	*nexthdrp = nexthdr;
-	return start;
-}
-

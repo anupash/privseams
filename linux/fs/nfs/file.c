@@ -33,6 +33,8 @@
 
 #define NFSDBG_FACILITY		NFSDBG_FILE
 
+static long nfs_file_fcntl(int fd, unsigned int cmd,
+			unsigned long arg, struct file *filp);
 static int nfs_file_open(struct inode *, struct file *);
 static int nfs_file_release(struct inode *, struct file *);
 static int  nfs_file_mmap(struct file *, struct vm_area_struct *);
@@ -55,6 +57,7 @@ struct file_operations nfs_file_operations = {
 	.fsync		= nfs_fsync,
 	.lock		= nfs_lock,
 	.sendfile	= nfs_file_sendfile,
+	.fcntl		= nfs_file_fcntl,
 };
 
 struct inode_operations nfs_file_inode_operations = {
@@ -68,6 +71,28 @@ struct inode_operations nfs_file_inode_operations = {
 # define IS_SWAPFILE(inode)	(0)
 #endif
 
+#define nfs_invalid_flags	(O_APPEND | O_DIRECT)
+
+/*
+ * Check for special cases that NFS doesn't support, and
+ * pass the rest to the generic fcntl function.
+ */
+static long
+nfs_file_fcntl(int fd, unsigned int cmd,
+		unsigned long arg, struct file *filp)
+{
+	switch (cmd) {
+	case F_SETFL:
+		if ((filp->f_flags & nfs_invalid_flags) == nfs_invalid_flags)
+			return -EINVAL;
+		break;
+	default:
+		break;
+	}
+
+	return generic_file_fcntl(fd, cmd, arg, filp);
+}
+
 /*
  * Open file
  */
@@ -77,6 +102,9 @@ nfs_file_open(struct inode *inode, struct file *filp)
 	struct nfs_server *server = NFS_SERVER(inode);
 	int (*open)(struct inode *, struct file *);
 	int res = 0;
+
+	if ((filp->f_flags & nfs_invalid_flags) == nfs_invalid_flags)
+		return -EINVAL;
 
 	lock_kernel();
 	/* Do NFSv4 open() call */
@@ -104,11 +132,16 @@ nfs_file_flush(struct file *file)
 
 	dfprintk(VFS, "nfs: flush(%s/%ld)\n", inode->i_sb->s_id, inode->i_ino);
 
+	if ((file->f_mode & FMODE_WRITE) == 0)
+		return 0;
 	lock_kernel();
-	status = nfs_wb_file(inode, file);
+	/* Ensure that data+attribute caches are up to date after close() */
+	status = nfs_wb_all(inode);
 	if (!status) {
 		status = file->f_error;
 		file->f_error = 0;
+		if (!status)
+			__nfs_revalidate_inode(NFS_SERVER(inode), inode);
 	}
 	unlock_kernel();
 	return status;
@@ -179,7 +212,7 @@ nfs_fsync(struct file *file, struct dentry *dentry, int datasync)
 	dfprintk(VFS, "nfs: fsync(%s/%ld)\n", inode->i_sb->s_id, inode->i_ino);
 
 	lock_kernel();
-	status = nfs_wb_file(inode, file);
+	status = nfs_wb_all(inode);
 	if (!status) {
 		status = file->f_error;
 		file->f_error = 0;

@@ -599,12 +599,10 @@ do_boot_cpu(__u8 cpu)
 	idle->thread.eip = (unsigned long) start_secondary;
 	unhash_process(idle);
 	/* init_tasks (in sched.c) is indexed logically */
-#if 0
-	// for AC kernels
-	stack_start.esp = (THREAD_SIZE + (__u8 *)TSK_TO_KSTACK(idle));
-#else
-	stack_start.esp = (void *) (1024 + PAGE_SIZE + (char *)idle->thread_info);
-#endif
+	stack_start.esp = (void *) idle->thread.esp;
+
+	irq_ctx_init(cpu);
+
 	/* Note: Don't modify initial ss override */
 	VDEBUG(("VOYAGER SMP: Booting CPU%d at 0x%lx[%x:%x], stack %p\n", cpu, 
 		(unsigned long)hijack_source.val, hijack_source.idt.Segment,
@@ -623,7 +621,9 @@ do_boot_cpu(__u8 cpu)
 		((virt_to_phys(page_table_copies)) & PAGE_MASK)
 		| _PAGE_RW | _PAGE_USER | _PAGE_PRESENT;
 #else
-	((unsigned long *)swapper_pg_dir)[0] = 0x102007;
+	((unsigned long *)swapper_pg_dir)[0] = 
+		(virt_to_phys(pg0) & PAGE_MASK)
+		| _PAGE_RW | _PAGE_USER | _PAGE_PRESENT;
 #endif
 
 	if(quad_boot) {

@@ -384,6 +384,23 @@ static void skb_return (struct usbnet *dev, struct sk_buff *skb)
 }
 
 
+#ifdef	CONFIG_USB_ALI_M5632
+#define	HAVE_HARDWARE
+
+/*-------------------------------------------------------------------------
+ *
+ * ALi M5632 driver ... does high speed
+ *
+ *-------------------------------------------------------------------------*/
+
+static const struct driver_info	ali_m5632_info = {
+	.description =	"ALi M5632",
+};
+
+
+#endif
+
+
 #ifdef	CONFIG_USB_AN2720
 #define	HAVE_HARDWARE
 
@@ -2090,8 +2107,12 @@ pl_set_QuickLink_features (struct usbnet *dev, int val)
 
 static int pl_reset (struct usbnet *dev)
 {
-	return pl_set_QuickLink_features (dev,
+	/* some units seem to need this reset, others reject it utterly.
+	 * FIXME be more like "naplink" or windows drivers.
+	 */
+	(void) pl_set_QuickLink_features (dev,
 		PL_S_EN|PL_RESET_OUT|PL_RESET_IN|PL_PEER_E);
+	return 0;
 }
 
 static const struct driver_info	prolific_info = {
@@ -2981,7 +3002,7 @@ static void usbnet_disconnect (struct usb_interface *intf)
 	if (dev->driver_info->unbind)
 		dev->driver_info->unbind (dev, intf);
 
-	kfree(dev->net);
+	free_netdev(dev->net);
 	kfree (dev);
 	usb_put_dev (xdev);
 }
@@ -3009,7 +3030,7 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 		return -ENODEV;
 	}
 	xdev = interface_to_usbdev (udev);
-	interface = &udev->altsetting [udev->act_altsetting];
+	interface = udev->cur_altsetting;
 
 	usb_get_dev (xdev);
 
@@ -3087,7 +3108,7 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 
 	}
 	if (status < 0)
-		goto out2;
+		goto out1;
 
 	dev->maxpacket = usb_maxpacket (dev->udev, dev->out, 1);
 	
@@ -3110,8 +3131,7 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 out3:
 	if (info->unbind)
 		info->unbind (dev, udev);
-out2:
-	kfree(net);
+	free_netdev(net);
 out1:
 	kfree(dev);
 out:
@@ -3132,6 +3152,13 @@ out:
  */
 
 static const struct usb_device_id	products [] = {
+
+#ifdef	CONFIG_USB_ALI_M5632
+{
+	USB_DEVICE (0x0402, 0x5632),	// ALi defaults
+	.driver_info =	(unsigned long) &ali_m5632_info,
+},
+#endif
 
 #ifdef	CONFIG_USB_AN2720
 {
@@ -3314,6 +3341,15 @@ static const struct usb_device_id	products [] = {
 	.bInterfaceSubClass     = 0x0a,
 	.bInterfaceProtocol     = 0x00,
 	.driver_info =  (unsigned long) &zaurus_pxa_info,
+}, {
+	.match_flags    =   USB_DEVICE_ID_MATCH_INT_INFO
+		 | USB_DEVICE_ID_MATCH_DEVICE,
+	.idVendor               = 0x04DD,
+	.idProduct              = 0x9050,	/* C-860 */
+	.bInterfaceClass        = 0x02,
+	.bInterfaceSubClass     = 0x0a,
+	.bInterfaceProtocol     = 0x00,
+	.driver_info =  (unsigned long) &zaurus_pxa_info,
 },
 #endif
 
@@ -3381,9 +3417,7 @@ static int __init usbnet_init (void)
 			< sizeof (struct cdc_state)));
 #endif
 
-	get_random_bytes (node_id, sizeof node_id);
-	node_id [0] &= 0xfe;	// clear multicast bit
-	node_id [0] |= 0x02;    // set local assignment bit (IEEE802)
+	random_ether_addr(node_id);
 
  	return usb_register(&usbnet_driver);
 }

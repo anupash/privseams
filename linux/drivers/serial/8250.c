@@ -16,15 +16,12 @@
  *
  * A note about mapbase / membase
  *
- *  mapbase is the physical address of the IO port.  Currently, we don't
- *  support this very well, and it may well be dropped from this driver
- *  in future.  As such, mapbase should be NULL.
- *
- *  membase is an 'ioremapped' cookie.  This is compatible with the old
- *  serial.c driver, and is currently the preferred form.
+ *  mapbase is the physical address of the IO port.
+ *  membase is an 'ioremapped' cookie.
  */
 #include <linux/config.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/tty.h>
 #include <linux/ioport.h>
 #include <linux/init.h>
@@ -34,6 +31,7 @@
 #include <linux/serial.h>
 #include <linux/serialP.h>
 #include <linux/delay.h>
+#include <linux/device.h>
 
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -120,11 +118,11 @@ static struct old_serial_port old_serial_port[] = {
 
 #define UART_NR	(ARRAY_SIZE(old_serial_port) + CONFIG_SERIAL_8250_NR_UARTS)
 
-#if defined(CONFIG_SERIAL_8250_RSA) && defined(MODULE)
+#ifdef CONFIG_SERIAL_8250_RSA
 
 #define PORT_RSA_MAX 4
-static int probe_rsa[PORT_RSA_MAX];
-static int force_rsa[PORT_RSA_MAX];
+static unsigned long probe_rsa[PORT_RSA_MAX];
+static unsigned int probe_rsa_count;
 #endif /* CONFIG_SERIAL_8250_RSA  */
 
 struct uart_8250_port {
@@ -136,6 +134,7 @@ struct uart_8250_port {
 	unsigned char		acr;
 	unsigned char		ier;
 	unsigned char		lcr;
+	unsigned char		mcr;
 	unsigned char		mcr_mask;	/* mask of user bits */
 	unsigned char		mcr_force;	/* mask of forced bits */
 	unsigned char		lsr_break_flag;
@@ -172,7 +171,8 @@ static const struct serial_uart_config uart_config[PORT_MAX_8250+1] = {
 	{ "ST16654",	64,	UART_CLEAR_FIFO | UART_USE_FIFO | UART_STARTECH },
 	{ "XR16850",	128,	UART_CLEAR_FIFO | UART_USE_FIFO | UART_STARTECH },
 	{ "RSA",	2048,	UART_CLEAR_FIFO | UART_USE_FIFO },
-	{ "NS16550A",	16,	UART_CLEAR_FIFO | UART_USE_FIFO | UART_NATSEMI }
+	{ "NS16550A",	16,	UART_CLEAR_FIFO | UART_USE_FIFO | UART_NATSEMI },
+	{ "XScale",	32,	UART_CLEAR_FIFO | UART_USE_FIFO  },
 };
 
 static _INLINE_ unsigned int serial_in(struct uart_8250_port *up, int offset)
@@ -180,11 +180,11 @@ static _INLINE_ unsigned int serial_in(struct uart_8250_port *up, int offset)
 	offset <<= up->port.regshift;
 
 	switch (up->port.iotype) {
-	case SERIAL_IO_HUB6:
+	case UPIO_HUB6:
 		outb(up->port.hub6 - 1 + offset, up->port.iobase);
 		return inb(up->port.iobase + 1);
 
-	case SERIAL_IO_MEM:
+	case UPIO_MEM:
 		return readb(up->port.membase + offset);
 
 	default:
@@ -198,12 +198,12 @@ serial_out(struct uart_8250_port *up, int offset, int value)
 	offset <<= up->port.regshift;
 
 	switch (up->port.iotype) {
-	case SERIAL_IO_HUB6:
+	case UPIO_HUB6:
 		outb(up->port.hub6 - 1 + offset, up->port.iobase);
 		outb(value, up->port.iobase + 1);
 		break;
 
-	case SERIAL_IO_MEM:
+	case UPIO_MEM:
 		writeb(value, up->port.membase + offset);
 		break;
 
@@ -577,7 +577,7 @@ static void autoconfig(struct uart_8250_port *up, unsigned int probeflags)
 	if (!up->port.iobase && !up->port.mapbase && !up->port.membase)
 		return;
 
-	DEBUG_AUTOCONF("ttyS%d: autoconf (0x%04x, 0x%08lx): ",
+	DEBUG_AUTOCONF("ttyS%d: autoconf (0x%04x, 0x%p): ",
 			up->port.line, up->port.iobase, up->port.membase);
 
 	/*
@@ -679,21 +679,16 @@ static void autoconfig(struct uart_8250_port *up, unsigned int probeflags)
 		break;
 	}
 
-#if defined(CONFIG_SERIAL_8250_RSA) && defined(MODULE)
+#ifdef CONFIG_SERIAL_8250_RSA
 	/*
 	 * Only probe for RSA ports if we got the region.
 	 */
 	if (up->port.type == PORT_16550A && probeflags & PROBE_RSA) {
 		int i;
 
-		for (i = 0 ; i < PORT_RSA_MAX ; ++i) {
-			if (!probe_rsa[i] && !force_rsa[i])
-				break;
-			if (((probe_rsa[i] != up->port.iobase) ||
-			     check_region(up->port.iobase + UART_RSA_BASE, 16)) &&
-			    (force_rsa[i] != up->port.iobase))
-				continue;
-			if (__enable_rsa(up)) {
+		for (i = 0 ; i < probe_rsa_count; ++i) {
+			if (probe_rsa[i] == up->port.iobase &&
+			    __enable_rsa(up)) {
 				up->port.type = PORT_RSA;
 				break;
 			}
@@ -1179,7 +1174,7 @@ static void serial8250_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	if (mctrl & TIOCM_LOOP)
 		mcr |= UART_MCR_LOOP;
 
-	mcr = (mcr & up->mcr_mask) | up->mcr_force;
+	mcr = (mcr & up->mcr_mask) | up->mcr_force | up->mcr;
 
 	serial_out(up, UART_MCR, mcr);
 }
@@ -1205,6 +1200,7 @@ static int serial8250_startup(struct uart_port *port)
 	int retval;
 
 	up->capabilities = uart_config[up->port.type].flags;
+	up->mcr = 0;
 
 	if (up->port.type == PORT_16C950) {
 		/* Wake up and initialize UART */
@@ -1454,8 +1450,19 @@ serial8250_set_termios(struct uart_port *port, struct termios *termios,
 		else
 			fcr = UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_8;
 	}
-	if (up->port.type == PORT_16750)
+
+	/*
+	 * TI16C750: hardware flow control and 64 byte FIFOs. When AFE is
+	 * enabled, RTS will be deasserted when the receive FIFO contains
+	 * more characters than the trigger, or the MCR RTS bit is cleared.
+	 */
+	if (up->port.type == PORT_16750) {
+		up->mcr &= ~UART_MCR_AFE;
+		if (termios->c_cflag & CRTSCTS)
+			up->mcr |= UART_MCR_AFE;
+
 		fcr |= UART_FCR7_64BYTE;
+	}
 
 	/*
 	 * Ok, we're now changing the port state.  Do it with
@@ -1502,6 +1509,8 @@ serial8250_set_termios(struct uart_port *port, struct termios *termios,
 	up->ier &= ~UART_IER_MSI;
 	if (UART_ENABLE_MS(&up->port, termios->c_cflag))
 		up->ier |= UART_IER_MSI;
+	if (up->port.type == PORT_XSCALE)
+		up->ier |= UART_IER_UUE | UART_IER_RTOIE;
 
 	serial_out(up, UART_IER, up->ier);
 
@@ -1517,10 +1526,17 @@ serial8250_set_termios(struct uart_port *port, struct termios *termios,
 	} else {
 		serial_outp(up, UART_LCR, cval | UART_LCR_DLAB);/* set DLAB */
 	}
+
 	serial_outp(up, UART_DLL, quot & 0xff);		/* LS of divisor */
 	serial_outp(up, UART_DLM, quot >> 8);		/* MS of divisor */
+
+	/*
+	 * LCR DLAB must be set to enable 64-byte FIFO mode. If the FCR
+	 * is written without DLAB set, this mode will be disabled.
+	 */
 	if (up->port.type == PORT_16750)
-		serial_outp(up, UART_FCR, fcr);		/* set fcr */
+		serial_outp(up, UART_FCR, fcr);
+
 	serial_outp(up, UART_LCR, cval);		/* reset DLAB */
 	up->lcr = cval;					/* Save LCR */
 	if (up->port.type != PORT_16750) {
@@ -1530,6 +1546,7 @@ serial8250_set_termios(struct uart_port *port, struct termios *termios,
 		}
 		serial_outp(up, UART_FCR, fcr);		/* set fcr */
 	}
+	serial8250_set_mctrl(&up->port, up->port.mctrl);
 	spin_unlock_irqrestore(&up->port.lock, flags);
 }
 
@@ -1616,7 +1633,7 @@ serial8250_request_std_resource(struct uart_8250_port *up, struct resource **res
 	int ret = 0;
 
 	switch (up->port.iotype) {
-	case SERIAL_IO_MEM:
+	case UPIO_MEM:
 		if (up->port.mapbase) {
 			*res = request_mem_region(up->port.mapbase, size, "serial");
 			if (!*res)
@@ -1624,8 +1641,8 @@ serial8250_request_std_resource(struct uart_8250_port *up, struct resource **res
 		}
 		break;
 
-	case SERIAL_IO_HUB6:
-	case SERIAL_IO_PORT:
+	case UPIO_HUB6:
+	case UPIO_PORT:
 		*res = request_region(up->port.iobase, size, "serial");
 		if (!*res)
 			ret = -EBUSY;
@@ -1642,7 +1659,7 @@ serial8250_request_rsa_resource(struct uart_8250_port *up, struct resource **res
 	int ret = 0;
 
 	switch (up->port.iotype) {
-	case SERIAL_IO_MEM:
+	case UPIO_MEM:
 		if (up->port.mapbase) {
 			start = up->port.mapbase;
 			start += UART_RSA_BASE << up->port.regshift;
@@ -1652,8 +1669,8 @@ serial8250_request_rsa_resource(struct uart_8250_port *up, struct resource **res
 		}
 		break;
 
-	case SERIAL_IO_HUB6:
-	case SERIAL_IO_PORT:
+	case UPIO_HUB6:
+	case UPIO_PORT:
 		start = up->port.iobase;
 		start += UART_RSA_BASE << up->port.regshift;
 		*res = request_region(start, size, "serial-rsa");
@@ -1670,6 +1687,8 @@ static void serial8250_release_port(struct uart_port *port)
 	struct uart_8250_port *up = (struct uart_8250_port *)port;
 	unsigned long start, offset = 0, size = 0;
 
+	if (!(up->port.flags & UPF_RESOURCES))
+		return;
 	if (up->port.type == PORT_RSA) {
 		offset = UART_RSA_BASE << up->port.regshift;
 		size = 8;
@@ -1678,7 +1697,7 @@ static void serial8250_release_port(struct uart_port *port)
 	size <<= up->port.regshift;
 
 	switch (up->port.iotype) {
-	case SERIAL_IO_MEM:
+	case UPIO_MEM:
 		if (up->port.mapbase) {
 			/*
 			 * Unmap the area.
@@ -1694,8 +1713,8 @@ static void serial8250_release_port(struct uart_port *port)
 		}
 		break;
 
-	case SERIAL_IO_HUB6:
-	case SERIAL_IO_PORT:
+	case UPIO_HUB6:
+	case UPIO_PORT:
 		start = up->port.iobase;
 
 		if (size)
@@ -1933,7 +1952,11 @@ serial8250_console_write(struct console *co, const char *s, unsigned int count)
 	 *	First save the UER then disable the interrupts
 	 */
 	ier = serial_in(up, UART_IER);
-	serial_out(up, UART_IER, 0);
+
+	if (up->port.type == PORT_XSCALE)
+		serial_out(up, UART_IER, UART_IER_UUE);
+	else
+		serial_out(up, UART_IER, 0);
 
 	/*
 	 *	Now, do each character
@@ -1976,6 +1999,8 @@ static int __init serial8250_console_setup(struct console *co, char *options)
 	if (co->index >= UART_NR)
 		co->index = 0;
 	port = &serial8250_ports[co->index].port;
+	if (!port->ops)
+		return -ENODEV;
 
 	/*
 	 * Temporary fix.
@@ -2006,6 +2031,14 @@ static int __init serial8250_console_init(void)
 	return 0;
 }
 console_initcall(serial8250_console_init);
+
+static int __init serial8250_late_console_init(void)
+{
+	if (!(serial8250_console.flags & CON_ENABLED))
+		register_console(&serial8250_console);
+	return 0;
+}
+late_initcall(serial8250_late_console_init);
 
 #define SERIAL8250_CONSOLE	&serial8250_console
 #else
@@ -2178,13 +2211,12 @@ EXPORT_SYMBOL(serial8250_resume_port);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Generic 8250/16x50 serial driver $Revision: 1.90 $");
 
-MODULE_PARM(share_irqs, "i");
+module_param(share_irqs, uint, 0644);
 MODULE_PARM_DESC(share_irqs, "Share IRQs with other non-8250/16x50 devices"
 	" (unsafe)");
 
-#if defined(CONFIG_SERIAL_8250_RSA) && defined(MODULE)
-MODULE_PARM(probe_rsa, "1-" __MODULE_STRING(PORT_RSA_MAX) "i");
+#ifdef CONFIG_SERIAL_8250_RSA
+module_param_array(probe_rsa, ulong, probe_rsa_count, 0444);
 MODULE_PARM_DESC(probe_rsa, "Probe I/O ports for RSA");
-MODULE_PARM(force_rsa, "1-" __MODULE_STRING(PORT_RSA_MAX) "i");
-MODULE_PARM_DESC(force_rsa, "Force I/O ports for RSA");
 #endif
+MODULE_ALIAS_CHARDEV_MAJOR(TTY_MAJOR);

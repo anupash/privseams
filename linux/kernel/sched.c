@@ -33,10 +33,12 @@
 #include <linux/suspend.h>
 #include <linux/blkdev.h>
 #include <linux/delay.h>
+#include <linux/smp.h>
 #include <linux/timer.h>
 #include <linux/rcupdate.h>
 #include <linux/cpu.h>
 #include <linux/percpu.h>
+#include <linux/kthread.h>
 
 #ifdef CONFIG_NUMA
 #define cpu_to_node_mask(cpu) node_to_cpumask(cpu_to_node(cpu))
@@ -199,8 +201,9 @@ struct prio_array {
  */
 struct runqueue {
 	spinlock_t lock;
-	unsigned long nr_running, nr_switches, expired_timestamp,
-		      nr_uninterruptible, timestamp_last_tick;
+	unsigned long long nr_switches;
+	unsigned long nr_running, expired_timestamp, nr_uninterruptible,
+		timestamp_last_tick;
 	task_t *curr, *idle;
 	struct mm_struct *prev_mm;
 	prio_array_t *active, *expired, arrays[2];
@@ -221,6 +224,13 @@ static DEFINE_PER_CPU(struct runqueue, runqueues);
 #define this_rq()		(&__get_cpu_var(runqueues))
 #define task_rq(p)		cpu_rq(task_cpu(p))
 #define cpu_curr(cpu)		(cpu_rq(cpu)->curr)
+
+extern unsigned long __scheduling_functions_start_here;
+extern unsigned long __scheduling_functions_end_here;
+const unsigned long scheduling_functions_start_here =
+			(unsigned long)&__scheduling_functions_start_here;
+const unsigned long scheduling_functions_end_here =
+			(unsigned long)&__scheduling_functions_end_here;
 
 /*
  * Default context-switch locking:
@@ -591,28 +601,21 @@ void wait_task_inactive(task_t * p)
 {
 	unsigned long flags;
 	runqueue_t *rq;
+	int preempted;
 
 repeat:
-	preempt_disable();
-	rq = task_rq(p);
-	if (unlikely(task_running(rq, p))) {
-		cpu_relax();
-		/*
-		 * enable/disable preemption just to make this
-		 * a preemption point - we are busy-waiting
-		 * anyway.
-		 */
-		preempt_enable();
-		goto repeat;
-	}
 	rq = task_rq_lock(p, &flags);
-	if (unlikely(task_running(rq, p))) {
+	/* Must be off runqueue entirely, not preempted. */
+	if (unlikely(p->array)) {
+		/* If it's preempted, we yield.  It could be a while. */
+		preempted = !task_running(rq, p);
 		task_rq_unlock(rq, &flags);
-		preempt_enable();
+		cpu_relax();
+		if (preempted)
+			yield();
 		goto repeat;
 	}
 	task_rq_unlock(rq, &flags);
-	preempt_enable();
 }
 
 /***
@@ -670,8 +673,8 @@ repeat_lock_task:
 			if (unlikely(sync && !task_running(rq, p) &&
 				(task_cpu(p) != smp_processor_id()) &&
 					cpu_isset(smp_processor_id(),
-							p->cpus_allowed))) {
-
+							p->cpus_allowed) &&
+					!cpu_is_offline(smp_processor_id()))) {
 				set_task_cpu(p, smp_processor_id());
 				task_rq_unlock(rq, &flags);
 				goto repeat_lock_task;
@@ -699,7 +702,7 @@ repeat_lock_task:
 
 	return success;
 }
-int wake_up_process(task_t * p)
+int fastcall wake_up_process(task_t * p)
 {
 	return try_to_wake_up(p, TASK_STOPPED |
 		       		 TASK_INTERRUPTIBLE | TASK_UNINTERRUPTIBLE, 0);
@@ -707,7 +710,7 @@ int wake_up_process(task_t * p)
 
 EXPORT_SYMBOL(wake_up_process);
 
-int wake_up_state(task_t *p, unsigned int state)
+int fastcall wake_up_state(task_t *p, unsigned int state)
 {
 	return try_to_wake_up(p, state, 0);
 }
@@ -716,7 +719,7 @@ int wake_up_state(task_t *p, unsigned int state)
  * Perform scheduler related setup for a newly forked process p.
  * p is forked by current.
  */
-void sched_fork(task_t *p)
+void fastcall sched_fork(task_t *p)
 {
 	/*
 	 * We mark the process as running here, but have not actually
@@ -772,7 +775,7 @@ void sched_fork(task_t *p)
  * This function will do some initial scheduler statistics housekeeping
  * that must be done for every newly created process.
  */
-void wake_up_forked_process(task_t * p)
+void fastcall wake_up_forked_process(task_t * p)
 {
 	unsigned long flags;
 	runqueue_t *rq = task_rq_lock(current, &flags);
@@ -816,7 +819,7 @@ void wake_up_forked_process(task_t * p)
  * artificially, because any timeslice recovered here
  * was given away by the parent in the first place.)
  */
-void sched_exit(task_t * p)
+void fastcall sched_exit(task_t * p)
 {
 	unsigned long flags;
 	runqueue_t *rq;
@@ -948,9 +951,9 @@ unsigned long nr_uninterruptible(void)
 	return sum;
 }
 
-unsigned long nr_context_switches(void)
+unsigned long long nr_context_switches(void)
 {
-	unsigned long i, sum = 0;
+	unsigned long long i, sum = 0;
 
 	for_each_cpu(i)
 		sum += cpu_rq(i)->nr_switches;
@@ -1016,6 +1019,7 @@ static void sched_migrate_task(task_t *p, int dest_cpu)
 	unsigned long flags;
 	cpumask_t old_mask, new_mask = cpumask_of_cpu(dest_cpu);
 
+	lock_cpu_hotplug();
 	rq = task_rq_lock(p, &flags);
 	old_mask = p->cpus_allowed;
 	if (!cpu_isset(dest_cpu, old_mask) || !cpu_online(dest_cpu))
@@ -1039,6 +1043,7 @@ static void sched_migrate_task(task_t *p, int dest_cpu)
 	}
 out:
 	task_rq_unlock(rq, &flags);
+	unlock_cpu_hotplug();
 }
 
 /*
@@ -1302,6 +1307,9 @@ static void load_balance(runqueue_t *this_rq, int idle, cpumask_t cpumask)
 	prio_array_t *array;
 	struct list_head *head, *curr;
 	task_t *tmp;
+
+	if (cpu_is_offline(this_cpu))
+		goto out;
 
 	busiest = find_busiest_queue(this_rq, this_cpu, idle,
 				     &imbalance, cpumask);
@@ -1586,12 +1594,10 @@ out:
 	rebalance_tick(rq, 0);
 }
 
-void scheduling_functions_start_here(void) { }
-
 /*
  * schedule() is the main scheduler function.
  */
-asmlinkage void schedule(void)
+asmlinkage void __sched schedule(void)
 {
 	long *switch_count;
 	task_t *prev, *next;
@@ -1677,7 +1683,7 @@ need_resched:
 	queue = array->queue + idx;
 	next = list_entry(queue->next, task_t, run_list);
 
-	if (next->activated > 0) {
+	if (!rt_task(next) && next->activated > 0) {
 		unsigned long long delta = now - next->timestamp;
 
 		if (next->activated == 1)
@@ -1730,7 +1736,7 @@ EXPORT_SYMBOL(schedule);
  * off of preempt_enable.  Kernel preemptions off return from interrupt
  * occur there and call schedule directly.
  */
-asmlinkage void preempt_schedule(void)
+asmlinkage void __sched preempt_schedule(void)
 {
 	struct thread_info *ti = current_thread_info();
 
@@ -1795,7 +1801,7 @@ static void __wake_up_common(wait_queue_head_t *q, unsigned int mode,
  * @mode: which threads
  * @nr_exclusive: how many wake-one or wake-many threads to wake up
  */
-void __wake_up(wait_queue_head_t *q, unsigned int mode, int nr_exclusive)
+void fastcall __wake_up(wait_queue_head_t *q, unsigned int mode, int nr_exclusive)
 {
 	unsigned long flags;
 
@@ -1809,7 +1815,7 @@ EXPORT_SYMBOL(__wake_up);
 /*
  * Same as __wake_up but called with the spinlock in wait_queue_head_t held.
  */
-void __wake_up_locked(wait_queue_head_t *q, unsigned int mode)
+void fastcall __wake_up_locked(wait_queue_head_t *q, unsigned int mode)
 {
 	__wake_up_common(q, mode, 1, 0);
 }
@@ -1827,7 +1833,7 @@ void __wake_up_locked(wait_queue_head_t *q, unsigned int mode)
  *
  * On UP it can prevent extra preemption.
  */
-void __wake_up_sync(wait_queue_head_t *q, unsigned int mode, int nr_exclusive)
+void fastcall __wake_up_sync(wait_queue_head_t *q, unsigned int mode, int nr_exclusive)
 {
 	unsigned long flags;
 
@@ -1841,10 +1847,9 @@ void __wake_up_sync(wait_queue_head_t *q, unsigned int mode, int nr_exclusive)
 		__wake_up_common(q, mode, nr_exclusive, 0);
 	spin_unlock_irqrestore(&q->lock, flags);
 }
-
 EXPORT_SYMBOL_GPL(__wake_up_sync);	/* For internal use only */
 
-void complete(struct completion *x)
+void fastcall complete(struct completion *x)
 {
 	unsigned long flags;
 
@@ -1854,10 +1859,9 @@ void complete(struct completion *x)
 			 1, 0);
 	spin_unlock_irqrestore(&x->wait.lock, flags);
 }
-
 EXPORT_SYMBOL(complete);
 
-void complete_all(struct completion *x)
+void fastcall complete_all(struct completion *x)
 {
 	unsigned long flags;
 
@@ -1867,8 +1871,9 @@ void complete_all(struct completion *x)
 			 0, 0);
 	spin_unlock_irqrestore(&x->wait.lock, flags);
 }
+EXPORT_SYMBOL(complete_all);
 
-void wait_for_completion(struct completion *x)
+void fastcall __sched wait_for_completion(struct completion *x)
 {
 	might_sleep();
 	spin_lock_irq(&x->wait.lock);
@@ -1888,7 +1893,6 @@ void wait_for_completion(struct completion *x)
 	x->done--;
 	spin_unlock_irq(&x->wait.lock);
 }
-
 EXPORT_SYMBOL(wait_for_completion);
 
 #define	SLEEP_ON_VAR					\
@@ -1906,7 +1910,7 @@ EXPORT_SYMBOL(wait_for_completion);
 	__remove_wait_queue(q, &wait);			\
 	spin_unlock_irqrestore(&q->lock, flags);
 
-void interruptible_sleep_on(wait_queue_head_t *q)
+void fastcall __sched interruptible_sleep_on(wait_queue_head_t *q)
 {
 	SLEEP_ON_VAR
 
@@ -1919,7 +1923,7 @@ void interruptible_sleep_on(wait_queue_head_t *q)
 
 EXPORT_SYMBOL(interruptible_sleep_on);
 
-long interruptible_sleep_on_timeout(wait_queue_head_t *q, long timeout)
+long fastcall __sched interruptible_sleep_on_timeout(wait_queue_head_t *q, long timeout)
 {
 	SLEEP_ON_VAR
 
@@ -1934,7 +1938,7 @@ long interruptible_sleep_on_timeout(wait_queue_head_t *q, long timeout)
 
 EXPORT_SYMBOL(interruptible_sleep_on_timeout);
 
-void sleep_on(wait_queue_head_t *q)
+void fastcall __sched sleep_on(wait_queue_head_t *q)
 {
 	SLEEP_ON_VAR
 
@@ -1947,7 +1951,7 @@ void sleep_on(wait_queue_head_t *q)
 
 EXPORT_SYMBOL(sleep_on);
 
-long sleep_on_timeout(wait_queue_head_t *q, long timeout)
+long fastcall __sched sleep_on_timeout(wait_queue_head_t *q, long timeout)
 {
 	SLEEP_ON_VAR
 
@@ -1961,8 +1965,6 @@ long sleep_on_timeout(wait_queue_head_t *q, long timeout)
 }
 
 EXPORT_SYMBOL(sleep_on_timeout);
-
-void scheduling_functions_end_here(void) { }
 
 void set_user_nice(task_t *p, long nice)
 {
@@ -2101,6 +2103,18 @@ static inline task_t *find_process_by_pid(pid_t pid)
 	return pid ? find_task_by_pid(pid) : current;
 }
 
+/* Actually do priority change: must hold rq lock. */
+static void __setscheduler(struct task_struct *p, int policy, int prio)
+{
+	BUG_ON(p->array);
+	p->policy = policy;
+	p->rt_priority = prio;
+	if (policy != SCHED_NORMAL)
+		p->prio = MAX_USER_RT_PRIO-1 - p->rt_priority;
+	else
+		p->prio = p->static_prio;
+}
+
 /*
  * setscheduler - change the scheduling policy and/or RT priority of a thread.
  */
@@ -2173,13 +2187,8 @@ static int setscheduler(pid_t pid, int policy, struct sched_param __user *param)
 	if (array)
 		deactivate_task(p, task_rq(p));
 	retval = 0;
-	p->policy = policy;
-	p->rt_priority = lp.sched_priority;
 	oldprio = p->prio;
-	if (policy != SCHED_NORMAL)
-		p->prio = MAX_USER_RT_PRIO-1 - p->rt_priority;
-	else
-		p->prio = p->static_prio;
+	__setscheduler(p, policy, lp.sched_priority);
 	if (array) {
 		__activate_task(p, task_rq(p));
 		/*
@@ -2310,11 +2319,13 @@ asmlinkage long sys_sched_setaffinity(pid_t pid, unsigned int len,
 	if (copy_from_user(&new_mask, user_mask_ptr, sizeof(new_mask)))
 		return -EFAULT;
 
+	lock_cpu_hotplug();
 	read_lock(&tasklist_lock);
 
 	p = find_process_by_pid(pid);
 	if (!p) {
 		read_unlock(&tasklist_lock);
+		unlock_cpu_hotplug();
 		return -ESRCH;
 	}
 
@@ -2335,6 +2346,7 @@ asmlinkage long sys_sched_setaffinity(pid_t pid, unsigned int len,
 
 out_unlock:
 	put_task_struct(p);
+	unlock_cpu_hotplug();
 	return retval;
 }
 
@@ -2364,7 +2376,7 @@ asmlinkage long sys_sched_getaffinity(pid_t pid, unsigned int len,
 		goto out_unlock;
 
 	retval = 0;
-	cpus_and(mask, p->cpus_allowed, cpu_online_map);
+	cpus_and(mask, p->cpus_allowed, cpu_possible_map);
 
 out_unlock:
 	read_unlock(&tasklist_lock);
@@ -2413,7 +2425,7 @@ asmlinkage long sys_sched_yield(void)
 	return 0;
 }
 
-void __cond_resched(void)
+void __sched __cond_resched(void)
 {
 	set_current_state(TASK_RUNNING);
 	schedule();
@@ -2427,7 +2439,7 @@ EXPORT_SYMBOL(__cond_resched);
  * this is a shortcut for kernel-space yielding - it marks the
  * thread runnable and calls sys_sched_yield().
  */
-void yield(void)
+void __sched yield(void)
 {
 	set_current_state(TASK_RUNNING);
 	sys_sched_yield();
@@ -2442,7 +2454,7 @@ EXPORT_SYMBOL(yield);
  * But don't do that if it is a deliberate, throttling IO wait (this task
  * has set its backing_dev_info: the queue against which it should throttle)
  */
-void io_schedule(void)
+void __sched io_schedule(void)
 {
 	struct runqueue *rq = this_rq();
 
@@ -2453,7 +2465,7 @@ void io_schedule(void)
 
 EXPORT_SYMBOL(io_schedule);
 
-long io_schedule_timeout(long timeout)
+long __sched io_schedule_timeout(long timeout)
 {
 	struct runqueue *rq = this_rq();
 	long ret;
@@ -2568,34 +2580,36 @@ static inline struct task_struct *younger_sibling(struct task_struct *p)
 
 static void show_task(task_t * p)
 {
-	unsigned long free = 0;
 	task_t *relative;
-	int state;
-	static const char * stat_nam[] = { "R", "S", "D", "T", "Z", "W" };
+	unsigned state;
+	unsigned long free = 0;
+	static const char *stat_nam[] = { "R", "S", "D", "T", "Z", "W" };
 
 	printk("%-13.13s ", p->comm);
 	state = p->state ? __ffs(p->state) + 1 : 0;
-	if (((unsigned) state) < sizeof(stat_nam)/sizeof(char *))
+	if (state < ARRAY_SIZE(stat_nam))
 		printk(stat_nam[state]);
 	else
-		printk(" ");
+		printk("?");
 #if (BITS_PER_LONG == 32)
-	if (p == current)
-		printk(" current  ");
+	if (state == TASK_RUNNING)
+		printk(" running ");
 	else
 		printk(" %08lX ", thread_saved_pc(p));
 #else
-	if (p == current)
-		printk("   current task   ");
+	if (state == TASK_RUNNING)
+		printk("  running task   ");
 	else
 		printk(" %016lx ", thread_saved_pc(p));
 #endif
+#ifdef CONFIG_DEBUG_STACK_USAGE
 	{
 		unsigned long * n = (unsigned long *) (p->thread_info+1);
 		while (!*n)
 			n++;
 		free = (unsigned long) n - (unsigned long)(p->thread_info+1);
 	}
+#endif
 	printk("%5lu %5d %6d ", free, p->pid, p->parent->pid);
 	if ((relative = eldest_child(p)))
 		printk("%5d ", relative->pid);
@@ -2614,7 +2628,8 @@ static void show_task(task_t * p)
 	else
 		printk(" (NOTLB)\n");
 
-	show_stack(p, NULL);
+	if (state != TASK_RUNNING)
+		show_stack(p, NULL);
 }
 
 void show_state(void)
@@ -2623,12 +2638,12 @@ void show_state(void)
 
 #if (BITS_PER_LONG == 32)
 	printk("\n"
-	       "                         free                        sibling\n");
-	printk("  task             PC    stack   pid father child younger older\n");
+	       "                                               sibling\n");
+	printk("  task             PC      pid father child younger older\n");
 #else
 	printk("\n"
-	       "                                 free                        sibling\n");
-	printk("  task                 PC        stack   pid father child younger older\n");
+	       "                                                       sibling\n");
+	printk("  task                 PC          pid father child younger older\n");
 #endif
 	read_lock(&tasklist_lock);
 	do_each_thread(g, p) {
@@ -2668,6 +2683,15 @@ void __init init_idle(task_t *idle, int cpu)
 	idle->thread_info->preempt_count = 0;
 #endif
 }
+
+/*
+ * In a system that switches off the HZ timer idle_cpu_mask
+ * indicates which cpus entered this state. This is used
+ * in the rcu update to wait only for active cpus. For system
+ * which do not switch off the HZ timer idle_cpu_mask should
+ * always be CPU_MASK_NONE.
+ */
+cpumask_t idle_cpu_mask = CPU_MASK_NONE;
 
 #ifdef CONFIG_SMP
 /*
@@ -2726,11 +2750,9 @@ EXPORT_SYMBOL_GPL(set_cpus_allowed);
 static void move_task_away(struct task_struct *p, int dest_cpu)
 {
 	runqueue_t *rq_dest;
-	unsigned long flags;
 
 	rq_dest = cpu_rq(dest_cpu);
 
-	local_irq_save(flags);
 	double_rq_lock(this_rq(), rq_dest);
 	if (task_cpu(p) != smp_processor_id())
 		goto out; /* Already moved */
@@ -2746,14 +2768,7 @@ static void move_task_away(struct task_struct *p, int dest_cpu)
 
 out:
 	double_rq_unlock(this_rq(), rq_dest);
-	local_irq_restore(flags);
 }
-
-typedef struct {
-	int cpu;
-	struct completion startup_done;
-	task_t *task;
-} migration_startup_t;
 
 /*
  * migration_thread - this is a highprio system thread that performs
@@ -2762,34 +2777,18 @@ typedef struct {
  */
 static int migration_thread(void * data)
 {
-	/* Marking "param" __user is ok, since we do a set_fs(KERNEL_DS); */
-	struct sched_param __user param = { .sched_priority = MAX_RT_PRIO-1 };
-	migration_startup_t *startup = data;
-	int cpu = startup->cpu;
 	runqueue_t *rq;
-	int ret;
+	int cpu = (long)data;
 
-	startup->task = current;
-	complete(&startup->startup_done);
-	set_current_state(TASK_UNINTERRUPTIBLE);
-	schedule();
+	rq = cpu_rq(cpu);
+	BUG_ON(rq->migration_thread != current);
 
-	BUG_ON(smp_processor_id() != cpu);
-
-	daemonize("migration/%d", cpu);
-	set_fs(KERNEL_DS);
-
-	ret = setscheduler(0, SCHED_FIFO, &param);
-
-	rq = this_rq();
-	rq->migration_thread = current;
-
-	for (;;) {
+	while (!kthread_should_stop()) {
 		struct list_head *head;
 		migration_req_t *req;
 
 		if (current->flags & PF_FREEZE)
-			refrigerator(PF_IOTHREAD);
+			refrigerator(PF_FREEZE);
 
 		spin_lock_irq(&rq->lock);
 		head = &rq->migration_queue;
@@ -2801,13 +2800,72 @@ static int migration_thread(void * data)
 		}
 		req = list_entry(head->next, migration_req_t, list);
 		list_del_init(head->next);
-		spin_unlock_irq(&rq->lock);
+		spin_unlock(&rq->lock);
 
 		move_task_away(req->task,
 			       any_online_cpu(req->task->cpus_allowed));
+		local_irq_enable();
 		complete(&req->done);
 	}
+	return 0;
 }
+
+#ifdef CONFIG_HOTPLUG_CPU
+/* migrate_all_tasks - function to migrate all the tasks from the
+ * current cpu caller must have already scheduled this to the target
+ * cpu via set_cpus_allowed.  Machine is stopped.  */
+void migrate_all_tasks(void)
+{
+	struct task_struct *tsk, *t;
+	int dest_cpu, src_cpu;
+	unsigned int node;
+
+	/* We're nailed to this CPU. */
+	src_cpu = smp_processor_id();
+
+	/* Not required, but here for neatness. */
+	write_lock(&tasklist_lock);
+
+	/* watch out for per node tasks, let's stay on this node */
+	node = cpu_to_node(src_cpu);
+
+	do_each_thread(t, tsk) {
+		cpumask_t mask;
+		if (tsk == current)
+			continue;
+
+		if (task_cpu(tsk) != src_cpu)
+			continue;
+
+		/* Figure out where this task should go (attempting to
+		 * keep it on-node), and check if it can be migrated
+		 * as-is.  NOTE that kernel threads bound to more than
+		 * one online cpu will be migrated. */
+		mask = node_to_cpumask(node);
+		cpus_and(mask, mask, tsk->cpus_allowed);
+		dest_cpu = any_online_cpu(mask);
+		if (dest_cpu == NR_CPUS)
+			dest_cpu = any_online_cpu(tsk->cpus_allowed);
+		if (dest_cpu == NR_CPUS) {
+			cpus_clear(tsk->cpus_allowed);
+			cpus_complement(tsk->cpus_allowed);
+			dest_cpu = any_online_cpu(tsk->cpus_allowed);
+
+			/* Don't tell them about moving exiting tasks
+			   or kernel threads (both mm NULL), since
+			   they never leave kernel. */
+			if (tsk->mm && printk_ratelimit())
+				printk(KERN_INFO "process %d (%s) no "
+				       "longer affine to cpu%d\n",
+				       tsk->pid, tsk->comm, src_cpu);
+		}
+
+		move_task_away(tsk, dest_cpu);
+	} while_each_thread(t, tsk);
+
+	write_unlock(&tasklist_lock);
+}
+#endif /* CONFIG_HOTPLUG_CPU */
 
 /*
  * migration_call - callback that gets triggered when a CPU is added.
@@ -2816,47 +2874,54 @@ static int migration_thread(void * data)
 static int migration_call(struct notifier_block *nfb, unsigned long action,
 			  void *hcpu)
 {
-	long cpu = (long)hcpu;
-	migration_startup_t startup;
+	int cpu = (long)hcpu;
+	struct task_struct *p;
+	struct runqueue *rq;
+	unsigned long flags;
 
 	switch (action) {
-	case CPU_ONLINE:
-
-		printk("Starting migration thread for cpu %li\n", cpu);
-
-		startup.cpu = cpu;
-		startup.task = NULL;
-		init_completion(&startup.startup_done);
-
-		kernel_thread(migration_thread, &startup, CLONE_KERNEL);
-		wait_for_completion(&startup.startup_done);
-		wait_task_inactive(startup.task);
-
-		startup.task->thread_info->cpu = cpu;
-		startup.task->cpus_allowed = cpumask_of_cpu(cpu);
-
-		wake_up_process(startup.task);
-
-		while (!cpu_rq(cpu)->migration_thread)
-			yield();
-
+	case CPU_UP_PREPARE:
+		p = kthread_create(migration_thread, hcpu, "migration/%d",cpu);
+		if (IS_ERR(p))
+			return NOTIFY_BAD;
+		kthread_bind(p, cpu);
+		/* Must be high prio: stop_machine expects to yield to it. */
+		rq = task_rq_lock(p, &flags);
+		__setscheduler(p, SCHED_FIFO, MAX_RT_PRIO-1);
+		task_rq_unlock(rq, &flags);
+		cpu_rq(cpu)->migration_thread = p;
 		break;
+	case CPU_ONLINE:
+		/* Strictly unneccessary, as first user will wake it. */
+		wake_up_process(cpu_rq(cpu)->migration_thread);
+		break;
+#ifdef CONFIG_HOTPLUG_CPU
+	case CPU_UP_CANCELED:
+		/* Unbind it from offline cpu so it can run.  Fall thru. */
+		kthread_bind(cpu_rq(cpu)->migration_thread,smp_processor_id());
+	case CPU_DEAD:
+		kthread_stop(cpu_rq(cpu)->migration_thread);
+		cpu_rq(cpu)->migration_thread = NULL;
+ 		BUG_ON(cpu_rq(cpu)->nr_running != 0);
+ 		break;
+#endif
 	}
 	return NOTIFY_OK;
 }
 
-static struct notifier_block migration_notifier
-			= { .notifier_call = &migration_call };
+static struct notifier_block __devinitdata migration_notifier = {
+	.notifier_call = migration_call,
+};
 
-__init int migration_init(void)
+int __init migration_init(void)
 {
+	void *cpu = (void *)(long)smp_processor_id();
 	/* Start one for boot CPU. */
-	migration_call(&migration_notifier, CPU_ONLINE,
-		       (void *)(long)smp_processor_id());
+	migration_call(&migration_notifier, CPU_UP_PREPARE, cpu);
+	migration_call(&migration_notifier, CPU_ONLINE, cpu);
 	register_cpu_notifier(&migration_notifier);
 	return 0;
 }
-
 #endif
 
 /*
@@ -2874,45 +2939,11 @@ __init int migration_init(void)
 spinlock_t kernel_flag __cacheline_aligned_in_smp = SPIN_LOCK_UNLOCKED;
 EXPORT_SYMBOL(kernel_flag);
 
-static void kstat_init_cpu(int cpu)
-{
-	/* Add any initialisation to kstat here */
-	/* Useful when cpu offlining logic is added.. */
-}
-
-static int __devinit kstat_cpu_notify(struct notifier_block *self,
-				      unsigned long action, void *hcpu)
-{
-	int cpu = (unsigned long)hcpu;
-	switch(action) {
-	case CPU_UP_PREPARE:
-		kstat_init_cpu(cpu);
-		break;
-	default:
-		break;
-	}
-	return NOTIFY_OK;
-}
-
-static struct notifier_block __devinitdata kstat_nb = {
-	.notifier_call	= kstat_cpu_notify,
-	.next		= NULL,
-};
-
-__init static void init_kstat(void)
-{
-	kstat_cpu_notify(&kstat_nb, (unsigned long)CPU_UP_PREPARE,
-			 (void *)(long)smp_processor_id());
-	register_cpu_notifier(&kstat_nb);
-}
-
 void __init sched_init(void)
 {
 	runqueue_t *rq;
 	int i, j, k;
 
-	/* Init the kstat counters */
-	init_kstat();
 	for (i = 0; i < NR_CPUS; i++) {
 		prio_array_t *array;
 
@@ -2961,7 +2992,8 @@ void __might_sleep(char *file, int line)
 #if defined(in_atomic)
 	static unsigned long prev_jiffy;	/* ratelimiting */
 
-	if ((in_atomic() || irqs_disabled()) && system_running) {
+	if ((in_atomic() || irqs_disabled()) &&
+	    system_state == SYSTEM_RUNNING) {
 		if (time_before(jiffies, prev_jiffy + HZ) && prev_jiffy)
 			return;
 		prev_jiffy = jiffies;
@@ -2988,7 +3020,7 @@ EXPORT_SYMBOL(__might_sleep);
  *
  * Called inside preempt_disable().
  */
-void __preempt_spin_lock(spinlock_t *lock)
+void __sched __preempt_spin_lock(spinlock_t *lock)
 {
 	if (preempt_count() > 1) {
 		_raw_spin_lock(lock);
@@ -3004,7 +3036,7 @@ void __preempt_spin_lock(spinlock_t *lock)
 
 EXPORT_SYMBOL(__preempt_spin_lock);
 
-void __preempt_write_lock(rwlock_t *lock)
+void __sched __preempt_write_lock(rwlock_t *lock)
 {
 	if (preempt_count() > 1) {
 		_raw_write_lock(lock);

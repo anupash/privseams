@@ -259,9 +259,6 @@ tapeblock_setup_device(struct tape_device * device)
 	INIT_WORK(&blkdat->requeue_task, tapeblock_requeue,
 		tape_get_device_reference(device));
 
-	/* Will vanish */
-	tape_hotplug_event(device, tapeblock_major, TAPE_HOTPLUG_BLOCK_ADD);
-
 	return 0;
 
 cleanup_queue:
@@ -274,10 +271,14 @@ cleanup_queue:
 void
 tapeblock_cleanup_device(struct tape_device *device)
 {
-	tape_hotplug_event(device, tapeblock_major, TAPE_HOTPLUG_BLOCK_REMOVE);
-
 	flush_scheduled_work();
 	device->blk_data.requeue_task.data = tape_put_device(device);
+
+	if (!device->blk_data.disk) {
+		PRINT_ERR("(%s): No gendisk to clean up!\n",
+			device->cdev->dev.bus_id);
+		goto cleanup_queue;
+	}
 
 	del_gendisk(device->blk_data.disk);
 	device->blk_data.disk->private_data =
@@ -285,6 +286,7 @@ tapeblock_cleanup_device(struct tape_device *device)
 	put_disk(device->blk_data.disk);
 
 	device->blk_data.disk = NULL;
+cleanup_queue:
 	device->blk_data.request_queue->queuedata = tape_put_device(device);
 
 	blk_cleanup_queue(device->blk_data.request_queue);

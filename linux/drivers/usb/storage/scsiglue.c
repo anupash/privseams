@@ -64,8 +64,21 @@ static const char* host_info(struct Scsi_Host *host)
 	return "SCSI emulation for USB Mass Storage devices";
 }
 
-static int slave_configure (struct scsi_device *sdev)
+static int slave_alloc (struct scsi_device *sdev)
 {
+	/*
+	 * Set default bflags. These can be overridden for individual
+	 * models and vendors via the scsi devinfo mechanism.
+	 */
+	sdev->sdev_bflags = (BLIST_MS_SKIP_PAGE_08 | BLIST_MS_SKIP_PAGE_3F |
+			     BLIST_USE_10_BYTE_MS);
+	return 0;
+}
+
+static int slave_configure(struct scsi_device *sdev)
+{
+	struct us_data *us = (struct us_data *) sdev->host->hostdata[0];
+
 	/* Scatter-gather buffers (all but the last) must have a length
 	 * divisible by the bulk maxpacket size.  Otherwise a data packet
 	 * would end up being short, causing a premature end to the data
@@ -75,6 +88,16 @@ static int slave_configure (struct scsi_device *sdev)
 	 * have the desired effect because, except at the beginning and
 	 * the end, scatter-gather buffers follow page boundaries. */
 	blk_queue_dma_alignment(sdev->request_queue, (512 - 1));
+
+	/* Devices using Genesys Logic chips cause a lot of trouble for
+	 * high-speed transfers; they die unpredictably when given more
+	 * than 64 KB of data at a time.  If we detect such a device,
+	 * reduce the maximum transfer size to 64 KB = 128 sectors. */
+
+#define USB_VENDOR_ID_GENESYS	0x05e3		// Needs a standard location
+	if (us->pusb_dev->descriptor.idVendor == USB_VENDOR_ID_GENESYS &&
+			us->pusb_dev->speed == USB_SPEED_HIGH)
+		blk_queue_max_sectors(sdev->request_queue, 128);
 
 	/* this is to satisify the compiler, tho I don't think the 
 	 * return code is ever checked anywhere. */
@@ -365,6 +388,7 @@ struct scsi_host_template usb_stor_host_template = {
 	/* unknown initiator id */
 	.this_id =			-1,
 
+	.slave_alloc =			slave_alloc,
 	.slave_configure =		slave_configure,
 
 	/* lots of sg segments can be handled */
@@ -384,10 +408,6 @@ struct scsi_host_template usb_stor_host_template = {
 
 	/* sysfs device attributes */
 	.sdev_attrs =			sysfs_device_attr_list,
-
-	/* modify scsi_device bits on probe */
-	.flags = (BLIST_MS_SKIP_PAGE_08 | BLIST_MS_SKIP_PAGE_3F |
-		  BLIST_USE_10_BYTE_MS),
 
 	/* module management */
 	.module =			THIS_MODULE

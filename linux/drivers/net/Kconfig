@@ -21,10 +21,6 @@ config NETDEVICES
 
 	  If unsure, say Y.
 
-if NETDEVICES
-	source "drivers/net/arcnet/Kconfig"
-endif
-
 config DUMMY
 	tristate "Dummy net driver support"
 	depends on NETDEVICES
@@ -154,6 +150,10 @@ config NET_SB1000
 	  <http://linuxpower.cx/~cable/>
 
 	  If you don't have this card, of course say N.
+
+if NETDEVICES
+	source "drivers/net/arcnet/Kconfig"
+endif
 
 #
 #	Ethernet
@@ -471,10 +471,31 @@ config SGI_IOC3_ETH
 	bool "SGI IOC3 Ethernet"
 	depends on NET_ETHERNET && SGI_IP27
 	select CRC32
+	select MII
 	help
 	  If you have a network (Ethernet) card of this type, say Y and read
 	  the Ethernet-HOWTO, available from
 	  <http://www.tldp.org/docs.html#howto>.
+
+config SGI_IOC3_ETH_HW_RX_CSUM
+	bool "Receive hardware checksums"
+	depends on SGI_IOC3_ETH && INET
+	default y
+	help
+	  The SGI IOC3 network adapter supports TCP and UDP checksums in
+	  hardware to offload processing of these checksums from the CPU.  At
+	  the moment only acceleration of IPv4 is supported.  This option
+	  enables offloading for checksums on receive.  If unsure, say Y.
+
+config SGI_IOC3_ETH_HW_TX_CSUM
+	bool "Transmit hardware checksums"
+	depends on SGI_IOC3_ETH && INET
+	default y
+	help
+	  The SGI IOC3 network adapter supports TCP and UDP checksums in
+	  hardware to offload processing of these checksums from the CPU.  At
+	  the moment only acceleration of IPv4 is supported.  This option
+	  enables offloading for checksums on transmit.  If unsure, say Y.
 
 config SGI_O2MACE_ETH
 	tristate "SGI O2 MACE Fast Ethernet support"
@@ -1164,7 +1185,7 @@ config NE2_MCA
 
 config IBMLANA
 	tristate "IBM LAN Adapter/A support"
-	depends on NET_ETHERNET && MCA
+	depends on NET_ETHERNET && MCA && MCA_LEGACY
 	---help---
 	  This is a Micro Channel Ethernet adapter.  You need to set
 	  CONFIG_MCA to use this driver.  It is both available as an in-kernel
@@ -1177,6 +1198,17 @@ config IBMLANA
 	  gives a better security against packet losses.  Usage of multiple
 	  boards with this driver should be possible, but has not been tested
 	  up to now due to lack of hardware.
+
+config IBMVETH
+	tristate "IBM LAN Virtual Ethernet support"
+	depends on NETDEVICES && NET_ETHERNET && PPC_PSERIES
+	---help---
+	  This driver supports virtual ethernet adapters on newer IBM iSeries
+	  and pSeries systems.
+
+	  To compile this driver as a module, choose M here and read
+	  <file:Documentation/networking/net-modules.txt>. The module will
+	  be called ibmveth.
 
 config NET_PCI
 	bool "EISA, VLB, PCI and on board controllers"
@@ -1219,6 +1251,9 @@ config AMD8111_ETH
 	  To compile this driver as a module, choose M here and read
 	  <file:Documentation/networking/net-modules.txt>. The module
 	  will be called amd8111e.
+config AMD8111E_NAPI
+	bool "Enable NAPI support"
+	depends on AMD8111_ETH
 
 config ADAPTEC_STARFIRE
 	tristate "Adaptec Starfire/DuraLAN support"
@@ -1274,6 +1309,7 @@ config APRICOT
 config B44
 	tristate "Broadcom 4400 ethernet support (EXPERIMENTAL)"
 	depends on NET_PCI && PCI && EXPERIMENTAL
+	select MII
 	help
 	  If you have a network (Ethernet) controller of this type, say Y and
 	  read the Ethernet-HOWTO, available from
@@ -1354,8 +1390,9 @@ config EEPRO100_PIO
 	  say N.
 
 config E100
-	tristate "EtherExpressPro/100 support (e100, Alternate Intel driver)"
+	tristate "Intel(R) PRO/100+ support"
 	depends on NET_PCI && PCI
+	select MII
 	---help---
 	  This driver supports Intel(R) PRO/100 family of adapters, which 
 	  includes:
@@ -1427,6 +1464,10 @@ config E100
 	  To compile this driver as a module, choose M here and read
 	  <file:Documentation/networking/net-modules.txt>.  The module
 	  will be called e100.
+
+config E100_NAPI
+	bool "Use Rx Polling (NAPI)"
+	depends on E100
 
 config LNE390
 	tristate "Mylex EISA LNE390A/B support (EXPERIMENTAL)"
@@ -1540,6 +1581,7 @@ config 8139TOO
 
 config 8139TOO_PIO
 	bool "Use PIO instead of MMIO"
+	default y
 	depends on 8139TOO
 	help
 	  This instructs the driver to use programmed I/O ports (PIO) instead
@@ -1576,24 +1618,6 @@ config 8139_OLD_RX_RESET
 	  RX-reset method should be adequate for all boards.  But if you
 	  experience problems, you can enable this option to restore the
 	  old RX-reset behavior.  If unsure, say N.
-
-config 8139_RXBUF_IDX
-	int "Receive ring size (0 => 8K, 1 => 16K, 2 => 32K, 3 => 64K)"
-	depends on 8139TOO
-	range 0 3
-	default 1 if EMBEDDED || SH_DREAMCAST
-	default 2
-	help
-	   The 8139too driver has a fixed area of memory for receiving data.
-	   The default value is adequate for most systems. The 64KB 
-	   ring size has hardware issues that may cause problems.
-	   Values:
-		0  => 8 KB 
-		1  => 16 KB embedded systems
-		2  => 32 KB default for most systems
-		3  => 64 KB 
-	   If unsure, use the default 2.
-
 
 config SIS900
 	tristate "SiS 900/7016 PCI Fast Ethernet Adapter support"
@@ -1670,25 +1694,23 @@ config VIA_RHINE
 	select CRC32
 	select MII
 	help
-	  If you have a VIA "rhine" based network card (Rhine-I (3043) or
-	  Rhine-2 (VT86c100A)), say Y here.
+	  If you have a VIA "Rhine" based network card (Rhine-I (VT86C100A),
+	  Rhine-II (VT6102), or Rhine-III (VT6105)), say Y here. Rhine-type
+	  Ethernet functions can also be found integrated on South Bridges
+	  (e.g. VT8235).
 
-	  To compile this driver as a module, choose M here and read
-	  <file:Documentation/networking/net-modules.txt>. The module
+	  To compile this driver as a module, choose M here. The module
 	  will be called via-rhine.
 
 config VIA_RHINE_MMIO
-	bool "Use MMIO instead of PIO (EXPERIMENTAL)"
-	depends on VIA_RHINE && EXPERIMENTAL
+	bool "Use MMIO instead of PIO"
+	depends on VIA_RHINE
 	help
 	  This instructs the driver to use PCI shared memory (MMIO) instead of
 	  programmed I/O ports (PIO). Enabling this gives an improvement in
 	  processing time in parts of the driver.
 
-	  It is not known if this works reliably on all "rhine" based cards,
-	  but it has been tested successfully on some DFE-530TX adapters.
-
-	  If unsure, say N.
+	  If unsure, say Y.
 
 config LAN_SAA9730
 	bool "Philips SAA9730 Ethernet support (EXPERIMENTAL)"
@@ -1715,7 +1737,8 @@ config NET_POCKET
 	  <file:Documentation/Changes>) and you can say N here.
 
 	  Laptop users should read the Linux Laptop home page at
-	  <http://www.linux-on-laptops.com/>.
+	  <http://www.linux-on-laptops.com/> or
+	  Tuxmobil - Linux on Mobile Computers at <http://www.tuxmobil.org/>.
 
 	  Note that the answer to this question doesn't directly affect the
 	  kernel: saying N will just cause the configurator to skip all
@@ -1776,7 +1799,7 @@ config SGISEEQ
 
 config DECLANCE
 	tristate "DEC LANCE ethernet controller support"
-	depends on NET_ETHERNET && DECSTATION
+	depends on NET_ETHERNET && MACH_DECSTATION
 	select CRC32
 	help
 	  This driver is for the series of Ethernet controllers produced by
@@ -1957,16 +1980,6 @@ config R8169
 	  To compile this driver as a module, choose M here: the module
 	  will be called r8169.  This is recommended.
 
-config SIS190
-	tristate "SiS190 gigabit ethernet support (EXPERIMENTAL)"
-	depends on PCI && EXPERIMENTAL
-	select CRC32
-	---help---
-	  Say Y here if you have a SiS 190 PCI Gigabit Ethernet adapter.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called sis190.  This is recommended.
-
 config SK98LIN
 	tristate "Marvell Yukon Chipset / SysKonnect SK-98xx Support"
 	depends on PCI
@@ -1984,6 +1997,7 @@ config SK98LIN
 	    - Allied Telesyn AT-2970TX/2TX Gigabit Ethernet Adapter
 	    - Allied Telesyn AT-2971SX Gigabit Ethernet Adapter
 	    - Allied Telesyn AT-2971T Gigabit Ethernet Adapter
+	    - Belkin Gigabit Desktop Card 10/100/1000Base-T Adapter, Copper RJ-45
 	    - DGE-530T Gigabit Ethernet Adapter
 	    - EG1032 v2 Instant Gigabit Network Adapter
 	    - EG1064 v2 Instant Gigabit Network Adapter
@@ -1995,6 +2009,7 @@ config SK98LIN
 	    - Marvell 88E8001 Gigabit LOM Ethernet Adapter (Foxconn)
 	    - Marvell 88E8001 Gigabit LOM Ethernet Adapter (Gigabyte)
 	    - Marvell 88E8001 Gigabit LOM Ethernet Adapter (Iwill)
+	    - Marvell 88E8050 Gigabit LOM Ethernet Adapter (Intel)
 	    - Marvell RDK-8001 Adapter
 	    - Marvell RDK-8002 Adapter
 	    - Marvell RDK-8003 Adapter
@@ -2006,6 +2021,7 @@ config SK98LIN
 	    - Marvell RDK-8010 Adapter
 	    - Marvell RDK-8011 Adapter
 	    - Marvell RDK-8012 Adapter
+	    - Marvell RDK-8052 Adapter
 	    - Marvell Yukon Gigabit Ethernet 10/100/1000Base-T Adapter (32 bit)
 	    - Marvell Yukon Gigabit Ethernet 10/100/1000Base-T Adapter (64 bit)
 	    - N-Way PCI-Bus Giga-Card 1000/100/10Mbps(L)
@@ -2040,8 +2056,8 @@ config SK98LIN
 	  
 	  If you want to compile this driver as a module ( = code which can be
 	  inserted in and removed from the running kernel whenever you want),
-	  say M here and read Documentation/modules.txt. This is recommended.
-	  The module will be called sk98lin. This is recommended.
+	  say M here and read Documentation/kbuild/modules.txt. The module will
+	  be called sk98lin. This is recommended.
 
 config TIGON3
 	tristate "Broadcom Tigon3 support"
@@ -2093,10 +2109,33 @@ config IXGB_NAPI
 	bool "Use Rx Polling (NAPI) (EXPERIMENTAL)"
 	depends on IXGB && EXPERIMENTAL
 
+config S2IO
+	tristate "S2IO 10Gbe XFrame NIC"
+	depends on PCI
+	---help---
+	  This driver supports the 10Gbe XFrame NIC of S2IO. 
+	  For help regarding driver compilation, installation and 
+	  tuning please look into ~/drivers/net/s2io/README.txt.
+
+config S2IO_NAPI
+	bool "Use Rx Polling (NAPI) (EXPERIMENTAL)"
+	depends on S2IO && EXPERIMENTAL
+
 endmenu
 
+source "drivers/net/tokenring/Kconfig"
 
-config VETH
+source "drivers/net/wireless/Kconfig"
+
+source "drivers/net/pcmcia/Kconfig"
+
+source "drivers/net/wan/Kconfig"
+
+source "drivers/atm/Kconfig"
+
+source "drivers/s390/net/Kconfig"
+
+config ISERIES_VETH
 	tristate "iSeries Virtual Ethernet driver support"
 	depends on NETDEVICES && PPC_ISERIES
 
@@ -2419,10 +2458,6 @@ config SLIP_MODE_SLIP6
 	  end of the link as well. It's good enough, for example, to run IP
 	  over the async ports of a Camtec JNT Pad. If unsure, say N.
 
-source "drivers/net/wireless/Kconfig"
-
-source "drivers/net/tokenring/Kconfig"
-
 config NET_FC
 	bool "Fibre Channel driver support"
 	depends on NETDEVICES && SCSI && PCI
@@ -2476,10 +2511,9 @@ config SHAPER
 	  To compile this driver as a module, choose M here: the module
 	  will be called shaper.  If unsure, say N.
 
-source "drivers/net/wan/Kconfig"
-
-source "drivers/net/pcmcia/Kconfig"
-
-source "drivers/atm/Kconfig"
-
-source "drivers/s390/net/Kconfig"
+config NETCONSOLE
+	tristate "Network console logging support (EXPERIMENTAL)"
+	depends on NETDEVICES && EXPERIMENTAL
+	---help---
+	If you want to log kernel messages over the network, enable this.
+	See Documentation/networking/netconsole.txt for details.

@@ -10,8 +10,7 @@
  *
  */
 
-#undef DEBUG
-
+#include <linux/config.h>
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/init.h>
@@ -103,13 +102,21 @@ void class_put(struct class * cls)
 
 int class_register(struct class * cls)
 {
+	int error;
+
 	pr_debug("device class '%s': registering\n",cls->name);
 
 	INIT_LIST_HEAD(&cls->children);
 	INIT_LIST_HEAD(&cls->interfaces);
-	kobject_set_name(&cls->subsys.kset.kobj,cls->name);
+	error = kobject_set_name(&cls->subsys.kset.kobj,cls->name);
+	if (error)
+		return error;
+
 	subsys_set_kset(cls,class_subsys);
-	subsystem_register(&cls->subsys);
+
+	error = subsystem_register(&cls->subsys);
+	if (error)
+		return error;
 
 	return 0;
 }
@@ -148,8 +155,7 @@ static int class_device_dev_link(struct class_device * class_dev)
 
 static void class_device_dev_unlink(struct class_device * class_dev)
 {
-	if (class_dev->dev)
-		sysfs_remove_link(&class_dev->kobj, "device");
+	sysfs_remove_link(&class_dev->kobj, "device");
 }
 
 static int class_device_driver_link(struct class_device * class_dev)
@@ -162,8 +168,7 @@ static int class_device_driver_link(struct class_device * class_dev)
 
 static void class_device_driver_unlink(struct class_device * class_dev)
 {
-	if ((class_dev->dev) && (class_dev->dev->driver))
-		sysfs_remove_link(&class_dev->kobj, "driver");
+	sysfs_remove_link(&class_dev->kobj, "driver");
 }
 
 

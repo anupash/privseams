@@ -116,6 +116,8 @@ typedef uint16_t in_port_t;
 #define HIP_CONTROL_PIGGYBACK_ALLOW 0x4000   /* Host accepts piggybacked ESP in I2 and R2 */
 #define HIP_CONTROL_CERTIFICATES    0x2000   /* Certificate packets follow */
 #define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
+#define HIP_CONTROL_RVS_CAPABLE              /* not yet defined */
+#define HIP_CONTROL_CONCEAL_IP               /* still undefined */
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
 #define HIP_CONTROL_NONE            0x0000
 
@@ -142,9 +144,16 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_ENCRYPTED          21
 #define HIP_PARAM_HOST_ID            35
 #define HIP_PARAM_CERT               64
+#define HIP_PARAM_RVA_REQUEST       100
+#define HIP_PARAM_RVA_REPLY         102
+
 #define HIP_PARAM_REA_INFO          128
 #define HIP_PARAM_AC_INFO           129 /* mm-01: to be removed */
 #define HIP_PARAM_FA_INFO           130 /* mm-01: to be removed */
+
+#define HIP_PARAM_NOTIFY            256
+#define HIP_PARAM_ECHO_REQUEST_SIG 1022
+#define HIP_PARAM_ECHO_REPLY_SIG   1024
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
@@ -159,10 +168,17 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_EID_ADDR              32777
 /* End of HIPL private parameters. */
 
+#define HIP_PARAM_FROM_SIG        65100
+#define HIP_PARAM_TO_SIG          65102
 #define HIP_PARAM_HMAC            65245
 #define HIP_PARAM_HIP_SIGNATURE2  65277
-
 #define HIP_PARAM_HIP_SIGNATURE   65279
+#define HIP_PARAM_ECHO_REQUEST    65281
+#define HIP_PARAM_ECHO_REPLY      65283
+#define HIP_PARAM_FROM            65300
+#define HIP_PARAM_TO              65302
+#define HIP_PARAM_RVA_HMAC        65320
+#define HIP_PARAM_VIA_RVS         65500
 #define HIP_PARAM_MAX             65536 /* exclusive */
 
 #define HIP_TRANSFORM_RESERVED          0
@@ -485,6 +501,58 @@ struct hip_cert {
 	/* XX TODO */
 } __attribute__ ((packed));
 
+/************* RVS *******************/
+
+struct hip_rva_request {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint32_t       lifetime;
+	/* RVA types */
+} __attribute__ ((packed));
+
+struct hip_rva_reply {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint32_t       lifetime;
+	/* RVA typess */
+} __attribute__ ((packed));
+
+struct hip_rva_hmac {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t hmac_data[HIP_AH_SHA_LEN];
+} __attribute__ ((packed));
+
+struct hip_from {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t address[16];
+} __attribute__ ((packed));
+
+struct hip_to {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t address[16];
+} __attribute__ ((packed));
+
+struct hip_via_rvs {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t address[16];
+	/* the rest of the addresses */
+} __attribute__ ((packed));
+
+struct hip_echo_request {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	/* opaque */
+} __attribute__ ((packed));
+
+struct hip_echo_reply {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	/* opaque */
+} __attribute__ ((packed));
 
 /* Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
@@ -560,13 +628,6 @@ struct hip_packet_dh_sig
 	struct hip_sig2 *hsig2;
 };
 
-struct hip_kludge
-{
-	struct list_head socklist;
-	struct sock *sk;
-
-};
-
 struct hip_context
 {
 	struct sk_buff *skb_in;         /* received skbuff */
@@ -628,10 +689,15 @@ struct hip_peer_addr_list_item
 /* peer address is assumed not to be currently reachable */
 #define PEER_ADDR_STATE_UNREACHABLE 2
 
+#define HIP_TYPE_HA    1
+#define HIP_TYPE_RVA   2
+
 struct hip_hadb_state
 {
-	struct list_head     next_spi;
+	uint8_t              type;         /* RVAs and HAs are stored in the same hash table */
 	struct list_head     next_hit;
+	struct list_head     next_spi;
+
 
 	spinlock_t           lock;
 	atomic_t             refcnt;

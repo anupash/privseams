@@ -62,6 +62,7 @@
 #include <linux/if_tun.h>
 #include <linux/ctype.h>
 #include <linux/ioctl32.h>
+#include <linux/syscalls.h>
 #include <linux/ncp_fs.h>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
@@ -69,8 +70,10 @@
 
 #include <net/sock.h>          /* siocdevprivate_ioctl */
 #include <net/bluetooth/bluetooth.h>
-#include <net/bluetooth/rfcomm.h>
 #include <net/bluetooth/hci.h>
+#include <net/bluetooth/rfcomm.h>
+
+#include <linux/capi.h>
 
 #include <scsi/scsi.h>
 /* Ugly hack. */
@@ -1457,6 +1460,7 @@ static int cdrom_do_generic_command(unsigned int fd, unsigned int cmd, unsigned 
 	struct cdrom_generic_command *cgc;
 	struct cdrom_generic_command32 *cgc32;
 	unsigned char dir;
+	int itmp;
 
 	cgc = compat_alloc_user_space(sizeof(*cgc));
 	cgc32 = compat_ptr(arg);
@@ -1468,12 +1472,16 @@ static int cdrom_do_generic_command(unsigned int fd, unsigned int cmd, unsigned 
 	    __cgc_do_ptr((void **) &cgc->sense, &cgc32->sense))
 		return -EFAULT;
 
-	if (get_user(dir, &cgc->data_direction) ||
-	    put_user(dir, &cgc32->data_direction))
+	if (get_user(dir, &cgc32->data_direction) ||
+	    put_user(dir, &cgc->data_direction))
 		return -EFAULT;
 
-	if (copy_in_user(&cgc->quiet, &cgc32->quiet,
-			 2 * sizeof(int)))
+	if (get_user(itmp, &cgc32->quiet) ||
+	    put_user(itmp, &cgc->quiet))
+		return -EFAULT;
+
+	if (get_user(itmp, &cgc32->timeout) ||
+	    put_user(itmp, &cgc->timeout))
 		return -EFAULT;
 
 	if (__cgc_do_ptr(&cgc->reserved[0], &cgc32->reserved[0]))
@@ -1598,7 +1606,7 @@ static int vt_check(struct file *file)
 	 * To have permissions to do most of the vt ioctls, we either have
 	 * to be the owner of the tty, or super-user.
 	 */
-	if (current->tty == tty || capable(CAP_SYS_ADMIN))
+	if (current->signal->tty == tty || capable(CAP_SYS_ADMIN))
 		return 1;
 	return 0;                                                    
 }
@@ -1946,6 +1954,7 @@ static int blkpg_ioctl_trans(unsigned int fd, unsigned int cmd, unsigned long ar
 		set_fs (KERNEL_DS);
 		err = sys_ioctl(fd, cmd, (unsigned long)&a);
 		set_fs (old_fs);
+		break;
 	default:
 		return -EINVAL;
 	}                                        
@@ -1979,13 +1988,18 @@ static int do_blkgetsize64(unsigned int fd, unsigned int cmd,
 }
 
 /* Bluetooth ioctls */
-#define HCIUARTSETPROTO        _IOW('U', 200, int)
-#define HCIUARTGETPROTO        _IOR('U', 201, int)
+#define HCIUARTSETPROTO	_IOW('U', 200, int)
+#define HCIUARTGETPROTO	_IOR('U', 201, int)
 
-#define BNEPCONNADD    _IOW('B', 200, int)
-#define BNEPCONNDEL    _IOW('B', 201, int)
-#define BNEPGETCONNLIST        _IOR('B', 210, int)
-#define BNEPGETCONNINFO        _IOR('B', 211, int)
+#define BNEPCONNADD	_IOW('B', 200, int)
+#define BNEPCONNDEL	_IOW('B', 201, int)
+#define BNEPGETCONNLIST	_IOR('B', 210, int)
+#define BNEPGETCONNINFO	_IOR('B', 211, int)
+
+#define CMTPCONNADD	_IOW('C', 200, int)
+#define CMTPCONNDEL	_IOW('C', 201, int)
+#define CMTPGETCONNLIST	_IOR('C', 210, int)
+#define CMTPGETCONNINFO	_IOR('C', 211, int)
 
 struct floppy_struct32 {
 	compat_uint_t	size;
@@ -3058,6 +3072,20 @@ static int do_wireless_ioctl(unsigned int fd, unsigned int cmd, unsigned long ar
 	return sys_ioctl(fd, cmd, (unsigned long) iwr);
 }
 
+/* Emulate old style bridge ioctls */
+static int do_bridge_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg)
+{
+	u32 tmp;
+	unsigned long *argbuf = compat_alloc_user_space(3 * sizeof(unsigned long)); 
+	int i;	
+	for (i = 0; i < 3; i++) {
+		if (get_user(tmp, i + ((u32 *)arg)) ||
+		    put_user(tmp, i + argbuf))
+			return -EFAULT;
+	}
+	return sys_ioctl(fd, cmd, (unsigned long)argbuf);
+}
+
 #undef CODE
 #endif
 
@@ -3235,6 +3263,8 @@ HANDLE_IOCTL(SIOCSIWNICKN, do_wireless_ioctl)
 HANDLE_IOCTL(SIOCGIWNICKN, do_wireless_ioctl)
 HANDLE_IOCTL(SIOCSIWENCODE, do_wireless_ioctl)
 HANDLE_IOCTL(SIOCGIWENCODE, do_wireless_ioctl)
+HANDLE_IOCTL(SIOCSIFBR, do_bridge_ioctl)
+HANDLE_IOCTL(SIOCGIFBR, do_bridge_ioctl)
 
 #undef DECLARES
 #endif

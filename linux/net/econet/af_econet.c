@@ -665,10 +665,8 @@ static int econet_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg
 
 	switch(cmd) {
 		case SIOCGSTAMP:
-			if (!sk->sk_stamp.tv_sec)
-				return -ENOENT;
-			return copy_to_user((void *)arg, &sk->sk_stamp,
-					  sizeof(struct timeval)) ? -EFAULT : 0;
+			return sock_get_timestamp(sk,(struct timeval *)arg);
+
 		case SIOCSIFADDR:
 		case SIOCGIFADDR:
 			return ec_dev_ioctl(sock, cmd, (void *)arg);
@@ -978,7 +976,7 @@ static int __init aun_udp_initialise(void)
 
 	/* We can count ourselves lucky Acorn machines are too dim to
 	   speak IPv6. :-) */
-	if ((error = sock_create(PF_INET, SOCK_DGRAM, 0, &udpsock)) < 0)
+	if ((error = sock_create_kern(PF_INET, SOCK_DGRAM, 0, &udpsock)) < 0)
 	{
 		printk("AUN: socket error %d\n", -error);
 		return error;

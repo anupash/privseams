@@ -18,6 +18,7 @@
 #include <linux/cpufreq.h>
 #include <linux/ioport.h>
 
+#include <asm/div64.h>
 #include <asm/hardware.h>
 #include <asm/system.h>
 #include <asm/pgtable.h>
@@ -112,6 +113,21 @@ EXPORT_SYMBOL(cpufreq_get);
 #endif
 
 /*
+ * This is the SA11x0 sched_clock implementation.  This has
+ * a resolution of 271ns, and a maximum value of 1165s.
+ *  ( * 1E9 / 3686400 => * 78125 / 288)
+ */
+unsigned long long sched_clock(void)
+{
+	unsigned long long v;
+
+	v = (unsigned long long)OSCR * 78125;
+	do_div(v, 288);
+
+	return v;
+}
+
+/*
  * Default power-off for SA1100
  */
 static void sa1100_power_off(void)
@@ -146,9 +162,40 @@ static struct platform_device sa11x0udc_device = {
 	.id		= 0,
 	.dev		= {
 		.dma_mask = &sa11x0udc_dma_mask,
+		.coherent_dma_mask = 0xffffffff,
 	},
 	.num_resources	= ARRAY_SIZE(sa11x0udc_resources),
 	.resource	= sa11x0udc_resources,
+};
+
+static struct resource sa11x0uart1_resources[] = {
+	[0] = {
+		.start	= 0x80010000,
+		.end	= 0x8001ffff,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device sa11x0uart1_device = {
+	.name		= "sa11x0-uart",
+	.id		= 1,
+	.num_resources	= ARRAY_SIZE(sa11x0uart1_resources),
+	.resource	= sa11x0uart1_resources,
+};
+
+static struct resource sa11x0uart3_resources[] = {
+	[0] = {
+		.start	= 0x80050000,
+		.end	= 0x8005ffff,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device sa11x0uart3_device = {
+	.name		= "sa11x0-uart",
+	.id		= 3,
+	.num_resources	= ARRAY_SIZE(sa11x0uart3_resources),
+	.resource	= sa11x0uart3_resources,
 };
 
 static struct resource sa11x0mcp_resources[] = {
@@ -166,6 +213,7 @@ static struct platform_device sa11x0mcp_device = {
 	.id		= 0,
 	.dev = {
 		.dma_mask = &sa11x0mcp_dma_mask,
+		.coherent_dma_mask = 0xffffffff,
 	},
 	.num_resources	= ARRAY_SIZE(sa11x0mcp_resources),
 	.resource	= sa11x0mcp_resources,
@@ -186,6 +234,7 @@ static struct platform_device sa11x0ssp_device = {
 	.id		= 0,
 	.dev = {
 		.dma_mask = &sa11x0ssp_dma_mask,
+		.coherent_dma_mask = 0xffffffff,
 	},
 	.num_resources	= ARRAY_SIZE(sa11x0ssp_resources),
 	.resource	= sa11x0ssp_resources,
@@ -207,6 +256,9 @@ static struct resource sa11x0fb_resources[] = {
 static struct platform_device sa11x0fb_device = {
 	.name		= "sa11x0-fb",
 	.id		= 0,
+	.dev = {
+		.coherent_dma_mask = 0xffffffff,
+	},
 	.num_resources	= ARRAY_SIZE(sa11x0fb_resources),
 	.resource	= sa11x0fb_resources,
 };
@@ -218,6 +270,8 @@ static struct platform_device sa11x0pcmcia_device = {
 
 static struct platform_device *sa11x0_devices[] __initdata = {
 	&sa11x0udc_device,
+	&sa11x0uart1_device,
+	&sa11x0uart3_device,
 	&sa11x0mcp_device,
 	&sa11x0ssp_device,
 	&sa11x0pcmcia_device,

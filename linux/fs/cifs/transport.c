@@ -1,7 +1,7 @@
 /*
  *   fs/cifs/transport.c
  *
- *   Copyright (C) International Business Machines  Corp., 2002,2003
+ *   Copyright (C) International Business Machines  Corp., 2002,2004
  *   Author(s): Steve French (sfrench@us.ibm.com)
  *
  *   This library is free software; you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 #include "cifsglob.h"
 #include "cifsproto.h"
 #include "cifs_debug.h"
-
+  
 extern kmem_cache_t *cifs_mid_cachep;
 extern kmem_cache_t *cifs_oplock_cachep;
 
@@ -37,7 +37,6 @@ struct mid_q_entry *
 AllocMidQEntry(struct smb_hdr *smb_buffer, struct cifsSesInfo *ses)
 {
 	struct mid_q_entry *temp;
-	int timeout = 10 * HZ;
 
 	if (ses == NULL) {
 		cERROR(1, ("Null session passed in to AllocMidQEntry "));
@@ -63,25 +62,11 @@ AllocMidQEntry(struct smb_hdr *smb_buffer, struct cifsSesInfo *ses)
 		temp->tsk = current;
 	}
 
-	while ((ses->server->tcpStatus != CifsGood) && (timeout > 0)){ 
-		/* Give the tcp thread up to 10 seconds to reconnect */
-		/* Should we wake up tcp thread first? BB  */
-		timeout = wait_event_interruptible_timeout(ses->server->response_q,
-			(ses->server->tcpStatus == CifsGood), timeout);
-	}
-
-	if (ses->server->tcpStatus == CifsGood) {
-		spin_lock(&GlobalMid_Lock);
-		list_add_tail(&temp->qhead, &ses->server->pending_mid_q);
-		atomic_inc(&midCount);
-		temp->midState = MID_REQUEST_ALLOCATED;
-		spin_unlock(&GlobalMid_Lock);
-	} else { 
-		cERROR(1,("Need to reconnect after session died to server"));
-		if (temp)
-			kmem_cache_free(cifs_mid_cachep, temp);
-		return NULL;
-	}
+	spin_lock(&GlobalMid_Lock);
+	list_add_tail(&temp->qhead, &ses->server->pending_mid_q);
+	atomic_inc(&midCount);
+	temp->midState = MID_REQUEST_ALLOCATED;
+	spin_unlock(&GlobalMid_Lock);
 	return temp;
 }
 
@@ -93,7 +78,7 @@ DeleteMidQEntry(struct mid_q_entry *midEntry)
 	list_del(&midEntry->qhead);
 	atomic_dec(&midCount);
 	spin_unlock(&GlobalMid_Lock);
-	buf_release(midEntry->resp_buf);
+	cifs_buf_release(midEntry->resp_buf);
 	kmem_cache_free(cifs_mid_cachep, midEntry);
 }
 
@@ -164,18 +149,25 @@ smb_send(struct socket *ssocket, struct smb_hdr *smb_buffer,
 
 	temp_fs = get_fs();	/* we must turn off socket api parm checking */
 	set_fs(get_ds());
-	rc = sock_sendmsg(ssocket, &smb_msg, smb_buf_length + 4);
-	while((rc == -ENOSPC) || (rc == -EAGAIN)) {
-		schedule_timeout(HZ/2);
+	while(iov.iov_len > 0) {
 		rc = sock_sendmsg(ssocket, &smb_msg, smb_buf_length + 4);
+		if ((rc == -ENOSPC) || (rc == -EAGAIN)) {
+			set_current_state(TASK_INTERRUPTIBLE);
+			schedule_timeout(HZ/2);
+			continue;
+		}
+		if (rc < 0) 
+			break;
+		iov.iov_base += rc;
+		iov.iov_len -= rc;
 	}
 	set_fs(temp_fs);
 
 	if (rc < 0) {
-		cERROR(1,
-		       ("Error %d sending data on socket to server.", rc));
-	} else
+		cERROR(1,("Error %d sending data on socket to server.", rc));
+	} else {
 		rc = 0;
+	}
 
 	return rc;
 }
@@ -190,10 +182,35 @@ SendReceive(const unsigned int xid, struct cifsSesInfo *ses,
 	long timeout;
 	struct mid_q_entry *midQ;
 
-	midQ = AllocMidQEntry(in_buf, ses);
-	if (midQ == NULL)
+	if ((ses == NULL) || (ses->server == NULL)) {
+		cERROR(1,("Null tcp session or smb session: %p",ses));
 		return -EIO;
+	}
+
+	if (ses->server->tcpStatus == CifsExiting) {
+		return -ENOENT;
+	} else if (ses->server->tcpStatus == CifsNeedReconnect) {
+		cFYI(1,("tcp session dead - return to caller to retry"));
+		return -EAGAIN;
+	} else if (ses->status != CifsGood) {
+		/* check if SMB session is bad because we are setting it up */
+		if((in_buf->Command != SMB_COM_SESSION_SETUP_ANDX) && 
+			(in_buf->Command != SMB_COM_NEGOTIATE)) {
+			return -EAGAIN;
+		} /* else ok - we are setting up session */
+	}
+	/* make sure that we sign in the same order that we send on this socket 
+		and avoid races inside tcp sendmsg code that could cause corruption
+		of smb data */
+	down(&ses->server->tcpSem); 
+	midQ = AllocMidQEntry(in_buf, ses);
+	if (midQ == NULL) {
+		up(&ses->server->tcpSem);
+		return -EIO;
+	}
+
 	if (in_buf->smb_buf_length > CIFS_MAX_MSGSIZE + MAX_CIFS_HDR_SIZE - 4) {
+		up(&ses->server->tcpSem);
 		cERROR(1,
 		       ("Illegal length, greater than maximum frame, %d ",
 			in_buf->smb_buf_length));
@@ -201,52 +218,78 @@ SendReceive(const unsigned int xid, struct cifsSesInfo *ses,
 		return -EIO;
 	}
 
-        if (in_buf->smb_buf_length > 12)
-                in_buf->Flags2 = cpu_to_le16(in_buf->Flags2);
+	if (in_buf->smb_buf_length > 12)
+		in_buf->Flags2 = cpu_to_le16(in_buf->Flags2);
 	
-        rc = cifs_sign_smb(in_buf, ses, &midQ->sequence_number);
+	rc = cifs_sign_smb(in_buf, ses, &midQ->sequence_number);
 
 	midQ->midState = MID_REQUEST_SUBMITTED;
 	rc = smb_send(ses->server->ssocket, in_buf, in_buf->smb_buf_length,
-		      (struct sockaddr *) &(ses->server->sockAddr));
-
+		      (struct sockaddr *) &(ses->server->addr.sockAddr));
+	up(&ses->server->tcpSem);
 	if (long_op == -1)
 		goto cifs_no_response_exit;
-	if (long_op > 1) /* writes past end of file can take looooong time */
+	else if (long_op == 2) /* writes past end of file can take looooong time */
 		timeout = 300 * HZ;
 	else if (long_op == 1)
 		timeout = 45 * HZ; /* should be greater than 
 			servers oplock break timeout (about 43 seconds) */
-	else
+	else if (long_op > 2) {
+		timeout = MAX_SCHEDULE_TIMEOUT;
+	} else
 		timeout = 15 * HZ;
 	/* wait for 15 seconds or until woken up due to response arriving or 
 	   due to last connection to this server being unmounted */
-
-	timeout = wait_event_interruptible_timeout(ses->server->response_q,
-				midQ->
-				midState & MID_RESPONSE_RECEIVED,
-				timeout);
 	if (signal_pending(current)) {
-		cERROR(1, ("CIFS: caught signal"));
-		DeleteMidQEntry(midQ);
-		return -EINTR;
-	} else {
-		if (midQ->resp_buf)
-			receive_len =
-			    be32_to_cpu(midQ->resp_buf->smb_buf_length);
-		else {
-			cFYI(1,("No response buffer"));
-			DeleteMidQEntry(midQ);
-			ses->server->tcpStatus = CifsNeedReconnect;
-			return -EIO;
+		/* if signal pending do not hold up user for full smb timeout
+		but we still give response a change to complete */
+		if(midQ->midState & MID_REQUEST_SUBMITTED) {
+			set_current_state(TASK_UNINTERRUPTIBLE);
+			timeout = sleep_on_timeout(&ses->server->response_q,2 * HZ);
+		}
+	} else { /* using normal timeout */
+		/* timeout = wait_event_interruptible_timeout(ses->server->response_q,
+			(midQ->midState & MID_RESPONSE_RECEIVED) || 
+			((ses->server->tcpStatus != CifsGood) &&
+			 (ses->server->tcpStatus != CifsNew)),
+			timeout); */ 
+		/* Can not allow user interrupts- wreaks havoc with performance */
+		if(midQ->midState & MID_REQUEST_SUBMITTED) {
+			set_current_state(TASK_UNINTERRUPTIBLE);
+			timeout = sleep_on_timeout(&ses->server->response_q,timeout);
 		}
 	}
+    
+	spin_lock(&GlobalMid_Lock);
+	if (midQ->resp_buf) {
+		spin_unlock(&GlobalMid_Lock);
+		receive_len = be32_to_cpu(midQ->resp_buf->smb_buf_length);
+	} else {
+		cERROR(1,("No response buffer"));
+		if(midQ->midState == MID_REQUEST_SUBMITTED) {
+			if(ses->server->tcpStatus == CifsExiting)
+				rc = -EHOSTDOWN;
+			else {
+				ses->server->tcpStatus = CifsNeedReconnect;
+				midQ->midState = MID_RETRY_NEEDED;
+			}
+		}
 
-	if (timeout == 0) {
-		cFYI(1,
-		     ("Timeout on receive. Assume response SMB is invalid."));
-		rc = -ETIMEDOUT;
-	} else if (receive_len > CIFS_MAX_MSGSIZE + MAX_CIFS_HDR_SIZE) {
+		if (rc != -EHOSTDOWN) {
+			if(midQ->midState == MID_RETRY_NEEDED) {
+				rc = -EAGAIN;
+				cFYI(1,("marking request for retry"));
+			} else {
+				rc = -EIO;
+			}
+		}
+		spin_unlock(&GlobalMid_Lock);
+		DeleteMidQEntry(midQ);
+		return rc;
+	}
+  
+
+	if (receive_len > CIFS_MAX_MSGSIZE + MAX_CIFS_HDR_SIZE) {
 		cERROR(1,
 		       ("Frame too large received.  Length: %d  Xid: %d",
 			receive_len, xid));

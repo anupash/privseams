@@ -11,7 +11,6 @@
  * This file handles the architecture-dependent parts of process handling..
  */
 
-#define __KERNEL_SYSCALLS__
 #include <stdarg.h>
 
 #include <linux/errno.h>
@@ -23,13 +22,13 @@
 #include <linux/smp.h>
 #include <linux/smp_lock.h>
 #include <linux/stddef.h>
-#include <linux/unistd.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/user.h>
 #include <linux/a.out.h>
 #include <linux/interrupt.h>
 #include <linux/config.h>
+#include <linux/version.h>
 #include <linux/delay.h>
 #include <linux/reboot.h>
 #include <linux/init.h>
@@ -224,7 +223,7 @@ void show_regs(struct pt_regs * regs)
 
 	if (regs->xcs & 3)
 		printk(" ESP: %04x:%08lx",0xffff & regs->xss,regs->esp);
-	printk(" EFLAGS: %08lx    %s\n",regs->eflags, print_tainted());
+	printk(" EFLAGS: %08lx    %s  (%s)\n",regs->eflags, print_tainted(),UTS_RELEASE);
 	printk("EAX: %08lx EBX: %08lx ECX: %08lx EDX: %08lx\n",
 		regs->eax,regs->ebx,regs->ecx,regs->edx);
 	printk("ESI: %08lx EDI: %08lx EBP: %08lx",
@@ -279,7 +278,7 @@ int kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
 	regs.orig_eax = -1;
 	regs.eip = (unsigned long) kernel_thread_helper;
 	regs.xcs = __KERNEL_CS;
-	regs.eflags = 0x286;
+	regs.eflags = X86_EFLAGS_IF | X86_EFLAGS_SF | X86_EFLAGS_PF | 0x2;
 
 	/* Ok, create the new process.. */
 	return do_fork(flags | CLONE_VM | CLONE_UNTRACED, 0, &regs, 0, NULL, NULL);
@@ -294,8 +293,12 @@ void exit_thread(void)
 
 	/* The process may have allocated an io port bitmap... nuke it. */
 	if (unlikely(NULL != tsk->thread.io_bitmap_ptr)) {
+		int cpu = get_cpu();
+		struct tss_struct *tss = init_tss + cpu;
 		kfree(tsk->thread.io_bitmap_ptr);
 		tsk->thread.io_bitmap_ptr = NULL;
+		tss->io_bitmap_base = INVALID_IO_BITMAP_OFFSET;
+		put_cpu();
 	}
 }
 
@@ -495,7 +498,7 @@ int dump_task_regs(struct task_struct *tsk, elf_gregset_t *regs)
  * the task-switch, and shows up in ret_from_fork in entry.S,
  * for example.
  */
-struct task_struct * __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
+struct task_struct fastcall * __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
 {
 	struct thread_struct *prev = &prev_p->thread,
 				 *next = &next_p->thread;
@@ -633,10 +636,10 @@ out:
 /*
  * These bracket the sleeping functions..
  */
-extern void scheduling_functions_start_here(void);
-extern void scheduling_functions_end_here(void);
 #define first_sched	((unsigned long) scheduling_functions_start_here)
 #define last_sched	((unsigned long) scheduling_functions_end_here)
+#define top_esp                (THREAD_SIZE - sizeof(unsigned long))
+#define top_ebp                (THREAD_SIZE - 2*sizeof(unsigned long))
 
 unsigned long get_wchan(struct task_struct *p)
 {
@@ -647,12 +650,12 @@ unsigned long get_wchan(struct task_struct *p)
 		return 0;
 	stack_page = (unsigned long)p->thread_info;
 	esp = p->thread.esp;
-	if (!stack_page || esp < stack_page || esp > 8188+stack_page)
+	if (!stack_page || esp < stack_page || esp > top_esp+stack_page)
 		return 0;
 	/* include/asm-i386/system.h:switch_to() pushes ebp last. */
 	ebp = *(unsigned long *) esp;
 	do {
-		if (ebp < stack_page || ebp > 8184+stack_page)
+		if (ebp < stack_page || ebp > top_ebp+stack_page)
 			return 0;
 		eip = *(unsigned long *) (ebp+4);
 		if (eip < first_sched || eip >= last_sched)

@@ -10,13 +10,10 @@
 #include <linux/random.h>
 
 #ifdef SUBARCH
-# if (SUBARCH == i386)
-#  include <asm-i386/mpi-defs.h>
-# else
-#  error Unknown subarch. Please fix.
-# endif
-#else /* SUBARCH */
-#include <asm/mpi-defs.h>
+/* UML in use? */
+#  include <asm-um/arch/mpi-defs.h>
+#else /* !SUBARCH */
+#  include <asm/mpi-defs.h>
 #endif
 
 #include "../debug.h"

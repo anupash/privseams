@@ -199,7 +199,11 @@ int amba_device_register(struct amba_device *dev, struct resource *parent)
 
 	dev->dev.release = amba_device_release;
 	dev->dev.bus = &amba_bustype;
+	dev->dev.dma_mask = &dev->dma_mask;
 	dev->res.name = dev->dev.bus_id;
+
+	if (!dev->dev.coherent_dma_mask && dev->dma_mask)
+		dev_warn(&dev->dev, "coherent dma mask is unset\n");
 
 	ret = request_resource(parent, &dev->res);
 	if (ret == 0) {
@@ -315,9 +319,17 @@ amba_find_device(const char *busid, struct device *parent, unsigned int id,
 	return data.dev;
 }
 
+/**
+ *	amba_request_regions - request all mem regions associated with device
+ *	@dev: amba_device structure for device
+ *	@name: name, or NULL to use driver name
+ */
 int amba_request_regions(struct amba_device *dev, const char *name)
 {
 	int ret = 0;
+
+	if (!name)
+		name = dev->dev.driver->name;
 
 	if (!request_mem_region(dev->res.start, SZ_4K, name))
 		ret = -EBUSY;
@@ -325,6 +337,12 @@ int amba_request_regions(struct amba_device *dev, const char *name)
 	return ret;
 }
 
+/**
+ *	amba_release_regions - release mem regions assoicated with device
+ *	@dev: amba_device structure for device
+ *
+ *	Release regions claimed by a successful call to amba_request_regions.
+ */
 void amba_release_regions(struct amba_device *dev)
 {
 	release_mem_region(dev->res.start, SZ_4K);

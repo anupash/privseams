@@ -12,7 +12,7 @@
 #include <linux/mman.h>
 #include <linux/pagemap.h>
 #include <linux/swapops.h>
-#include <linux/rmap-locking.h>
+#include <linux/rmap.h>
 #include <linux/module.h>
 
 #include <asm/mmu_context.h>
@@ -155,7 +155,7 @@ err_unlock:
  * protection is used. Arbitrary protections might be implemented in the
  * future.
  */
-long sys_remap_file_pages(unsigned long start, unsigned long size,
+asmlinkage long sys_remap_file_pages(unsigned long start, unsigned long size,
 	unsigned long __prot, unsigned long pgoff, unsigned long flags)
 {
 	struct mm_struct *mm = current->mm;

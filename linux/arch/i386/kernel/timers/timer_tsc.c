@@ -232,7 +232,7 @@ static void mark_offset_tsc(void)
 		/* sanity check to ensure we're not always losing ticks */
 		if (lost_count++ > 100) {
 			printk(KERN_WARNING "Losing too many ticks!\n");
-			printk(KERN_WARNING "TSC cannot be used as a timesource.  ");
+			printk(KERN_WARNING "TSC cannot be used as a timesource.  \n");
 			printk(KERN_WARNING "Possible reasons for this are:\n");
 			printk(KERN_WARNING "  You're running with Speedstep,\n");
 			printk(KERN_WARNING "  You don't have DMA enabled for your hard disk (see hdparm),\n");
@@ -360,8 +360,9 @@ time_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
 		if (variable_tsc)
 			cpu_data[freq->cpu].loops_per_jiffy = cpufreq_scale(loops_per_jiffy_ref, ref_freq, freq->new);
 #ifndef CONFIG_SMP
-		if (use_tsc) {
+		if (cpu_khz)
 			cpu_khz = cpufreq_scale(cpu_khz_ref, ref_freq, freq->new);
+		if (use_tsc) {
 			if (variable_tsc) {
 				fast_gettimeoffset_quotient = cpufreq_scale(fast_gettimeoffset_ref, freq->new, ref_freq);
 				set_cyc2ns_scale(cpu_khz/1000);

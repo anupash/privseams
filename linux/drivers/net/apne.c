@@ -333,6 +333,9 @@ static int __init apne_probe1(struct net_device *dev, int ioaddr)
     ei_status.get_8390_hdr = &apne_get_8390_hdr;
     dev->open = &apne_open;
     dev->stop = &apne_close;
+#ifdef CONFIG_NET_POLL_CONTROLLER
+    dev->poll_controller = ei_poll;
+#endif
     NS8390_init(dev, 0);
 
     pcmcia_ack_int(pcmcia_get_intreq());		/* ack PCMCIA int req */
@@ -579,6 +582,8 @@ void cleanup_module(void)
 	free_irq(IRQ_AMIGA_PORTS, apne_dev);
 
 	pcmcia_reset();
+
+	release_region(IOBASE, 0x20);
 
 	free_netdev(apne_dev);
 }

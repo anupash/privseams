@@ -266,8 +266,20 @@
 #define __NR_fstatfs64		253
 #define __NR_fadvise64_64	254
 #define __NR_rtas		255
+/* Number 256 is reserved for sys_debug_setcontext */
+/* Number 257 is reserved for vserver */
+/* Number 258 is reserved for new sys_remap_file_pages */
+/* Number 259 is reserved for new sys_mbind */
+/* Number 260 is reserved for new sys_get_mempolicy */
+/* Number 261 is reserved for new sys_set_mempolicy */
+#define __NR_mq_open		262
+#define __NR_mq_unlink		263
+#define __NR_mq_timedsend	264
+#define __NR_mq_timedreceive	265
+#define __NR_mq_notify		266
+#define __NR_mq_getsetattr	267
 
-#define __NR_syscalls		256
+#define __NR_syscalls		268
 #ifdef __KERNEL__
 #define NR_syscalls	__NR_syscalls
 #endif
@@ -395,17 +407,37 @@ type name(type1 arg1, type2 arg2, type3 arg3, type4 arg4, type5 arg5, type6 arg6
 /*
  * System call prototypes.
  */
-extern pid_t setsid(void);
-extern int write(int fd, const char *buf, off_t count);
-extern int read(int fd, char *buf, off_t count);
-extern off_t lseek(int fd, off_t offset, int count);
-extern int dup(int fd);
-extern int execve(const char *file, char **argv, char **envp);
-extern int open(const char *file, int flag, int mode);
-extern int close(int fd);
-extern pid_t waitpid(pid_t pid, int *wait_stat, int options);
+static inline _syscall3(int, execve, __const__ char *, file, char **, argv,
+			char **,envp)
 
 #endif /* __KERNEL_SYSCALLS__ */
+
+#ifdef __KERNEL__
+
+#include <linux/types.h>
+#include <linux/compiler.h>
+#include <linux/linkage.h>
+
+unsigned long sys_mmap(unsigned long addr, size_t len, unsigned long prot,
+		       unsigned long flags, unsigned long fd, off_t offset);
+struct pt_regs;
+int sys_execve(unsigned long a0, unsigned long a1, unsigned long a2,
+		unsigned long a3, unsigned long a4, unsigned long a5,
+		struct pt_regs *regs);
+int sys_clone(unsigned long clone_flags, unsigned long p2, unsigned long p3,
+		unsigned long p4, unsigned long p5, unsigned long p6,
+		struct pt_regs *regs);
+int sys_fork(unsigned long p1, unsigned long p2, unsigned long p3,
+		unsigned long p4, unsigned long p5, unsigned long p6,
+		struct pt_regs *regs);
+int sys_vfork(unsigned long p1, unsigned long p2, unsigned long p3,
+		unsigned long p4, unsigned long p5, unsigned long p6,
+		struct pt_regs *regs);
+int sys_pipe(int *fildes);
+int sys_ptrace(long request, long pid, long addr, long data);
+struct sigaction;
+long sys_rt_sigaction(int sig, const struct sigaction __user *act,
+		      struct sigaction __user *oact, size_t sigsetsize);
 
 /*
  * "Conditional" syscalls
@@ -414,6 +446,8 @@ extern pid_t waitpid(pid_t pid, int *wait_stat, int options);
  * but it doesn't work on all toolchains, so we just do it by hand
  */
 #define cond_syscall(x) asm(".weak\t." #x "\n\t.set\t." #x ",.sys_ni_syscall");
+
+#endif		/* __KERNEL__ */
 
 #endif		/* __ASSEMBLY__ */
 

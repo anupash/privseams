@@ -7,6 +7,8 @@
 #define RAW1394_DEVICE_MAJOR      171
 #define RAW1394_DEVICE_NAME       "raw1394"
 
+#define RAW1394_MAX_USER_CSR_DIRS	16
+
 struct iso_block_store {
         atomic_t refcount;
         size_t data_size;
@@ -31,7 +33,7 @@ struct file_info {
         spinlock_t reqlists_lock;
         wait_queue_head_t poll_wait_complete;
 
-        struct list_head addr_list;           
+        struct list_head addr_list;
 
         u8 *fcp_buffer;
 
@@ -45,6 +47,12 @@ struct file_info {
 	/* new rawiso API */
 	enum raw1394_iso_state iso_state;
 	struct hpsb_iso *iso_handle;
+
+	/* User space's CSR1212 dynamic ConfigROM directories */
+	struct csr1212_keyval *csr1212_dirs[RAW1394_MAX_USER_CSR_DIRS];
+
+	/* Legacy ConfigROM update flag */
+	u8 cfgrom_upd;
 };
 
 struct arm_addr {

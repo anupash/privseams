@@ -24,6 +24,7 @@
 #include <asm/mtrr.h>
 #include <asm/proto.h>
 #include <asm/mman.h>
+#include <asm/numa.h>
 
 char x86_boot_params[2048] __initdata = {0,};
 
@@ -191,7 +192,7 @@ void pda_init(int cpu)
 
 char boot_exception_stacks[N_EXCEPTION_STACKS * EXCEPTION_STKSZ];
 
-void syscall_init(void)
+void __init syscall_init(void)
 {
 	/* 
 	 * LSTAR and STAR live in a bit strange symbiosis.
@@ -202,11 +203,21 @@ void syscall_init(void)
 	wrmsrl(MSR_LSTAR, system_call); 
 
 #ifdef CONFIG_IA32_EMULATION   		
-	wrmsrl(MSR_CSTAR, ia32_cstar_target); 
+	syscall32_cpu_init ();
 #endif
 
 	/* Flags to clear on syscall */
 	wrmsrl(MSR_SYSCALL_MASK, EF_TF|EF_DF|EF_IE|0x3000); 
+}
+
+void __init check_efer(void)
+{
+	unsigned long efer;
+
+	rdmsrl(MSR_EFER, efer); 
+        if (!(efer & EFER_NX) || do_not_nx) { 
+                __supported_pte_mask &= ~_PAGE_NX; 
+        }       
 }
 
 /*
@@ -224,7 +235,7 @@ void __init cpu_init (void)
 	int cpu = smp_processor_id();
 #endif
 	struct tss_struct * t = &init_tss[cpu];
-	unsigned long v, efer; 
+	unsigned long v; 
 	char *estacks = NULL; 
 	struct task_struct *me;
 
@@ -264,23 +275,24 @@ void __init cpu_init (void)
 
 	asm volatile("pushfq ; popq %%rax ; btr $14,%%rax ; pushq %%rax ; popfq" ::: "eax");
 
+	if (cpu == 0) 
+		early_identify_cpu(&boot_cpu_data);
+
 	syscall_init();
 
 	wrmsrl(MSR_FS_BASE, 0);
 	wrmsrl(MSR_KERNEL_GS_BASE, 0);
 	barrier(); 
 
-	rdmsrl(MSR_EFER, efer); 
-        if (!(efer & EFER_NX) || do_not_nx) { 
-                __supported_pte_mask &= ~_PAGE_NX; 
-        }       
+	check_efer();
 
 	/*
 	 * set up and load the per-CPU TSS
 	 */
 	for (v = 0; v < N_EXCEPTION_STACKS; v++) {
 		if (cpu) {
-			estacks = (char *)__get_free_pages(GFP_ATOMIC, 0);
+			estacks = (char *)__get_free_pages(GFP_ATOMIC, 
+						   EXCEPTION_STACK_ORDER);
 			if (!estacks)
 				panic("Cannot allocate exception stack %ld %d\n",
 				      v, cpu); 
@@ -318,4 +330,8 @@ void __init cpu_init (void)
 	set_debug(0UL, 7);
 
 	fpu_init(); 
+
+#ifdef CONFIG_NUMA
+	numa_add_cpu(cpu);
+#endif
 }

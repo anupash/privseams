@@ -213,7 +213,7 @@ static inline pte_t srmmu_pte_mkyoung(pte_t pte)
  * and a page entry and page directory to the page they refer to.
  */
 static pte_t srmmu_mk_pte(struct page *page, pgprot_t pgprot)
-{ return __pte(((page - mem_map) << (PAGE_SHIFT-4)) | pgprot_val(pgprot)); }
+{ return __pte((page_to_pfn(page) << (PAGE_SHIFT-4)) | pgprot_val(pgprot)); }
 
 static pte_t srmmu_mk_pte_phys(unsigned long page, pgprot_t pgprot)
 { return __pte(((page) >> 4) | pgprot_val(pgprot)); }
@@ -245,7 +245,7 @@ static void srmmu_pmd_populate(pmd_t *pmdp, struct page *ptep)
 	unsigned long ptp;	/* Physical address, shifted right by 4 */
 	int i;
 
-	ptp = (ptep - mem_map) << (PAGE_SHIFT-4);	/* watch for overflow */
+	ptp = page_to_pfn(ptep) << (PAGE_SHIFT-4);	/* watch for overflow */
 	for (i = 0; i < SRMMU_PTRS_PER_PTE_SOFT/SRMMU_PTRS_PER_PTE; i++) {
 		srmmu_set_pte((pte_t *)&pmdp->pmdv[i], SRMMU_ET_PTD | ptp);
 		ptp += (SRMMU_PTRS_PER_PTE*sizeof(pte_t) >> 4);
@@ -274,6 +274,23 @@ static inline pte_t *srmmu_pte_offset(pmd_t * dir, unsigned long address)
 	pte = __nocache_va((dir->pmdv[0] & SRMMU_PTD_PMASK) << 4);
 	return (pte_t *) pte +
 	    ((address >> PAGE_SHIFT) & (SRMMU_PTRS_PER_PTE_SOFT - 1));
+}
+
+static unsigned long srmmu_swp_type(swp_entry_t entry)
+{
+	return (entry.val >> SRMMU_SWP_TYPE_SHIFT) & SRMMU_SWP_TYPE_MASK;
+}
+
+static unsigned long srmmu_swp_offset(swp_entry_t entry)
+{
+	return (entry.val >> SRMMU_SWP_OFF_SHIFT) & SRMMU_SWP_OFF_MASK;
+}
+
+static swp_entry_t srmmu_swp_entry(unsigned long type, unsigned long offset)
+{
+	return (swp_entry_t) {
+		  (type & SRMMU_SWP_TYPE_MASK) << SRMMU_SWP_TYPE_SHIFT
+		| (offset & SRMMU_SWP_OFF_MASK) << SRMMU_SWP_OFF_SHIFT };
 }
 
 /*
@@ -480,7 +497,7 @@ srmmu_pte_alloc_one(struct mm_struct *mm, unsigned long address)
 
 	if ((pte = (unsigned long)srmmu_pte_alloc_one_kernel(mm, address)) == 0)
 		return NULL;
-	return mem_map + (__nocache_pa(pte) >> PAGE_SHIFT);
+	return pfn_to_page( __nocache_pa(pte) >> PAGE_SHIFT );
 }
 
 static void srmmu_free_pte_fast(pte_t *pte)
@@ -495,7 +512,7 @@ static void srmmu_pte_free(struct page *pte)
 	p = (unsigned long)page_address(pte);	/* Cached address (for test) */
 	if (p == 0)
 		BUG();
-	p = ((pte - mem_map) << PAGE_SHIFT);	/* Physical address */
+	p = page_to_pfn(pte) << PAGE_SHIFT;	/* Physical address */
 	p = (unsigned long) __nocache_va(p);	/* Nocached virtual */
 	srmmu_free_nocache(p, SRMMU_PTE_SZ_SOFT);
 }
@@ -627,8 +644,16 @@ static void srmmu_unmapiorange(unsigned long virt_addr, unsigned int len)
  */
 struct thread_info *srmmu_alloc_thread_info(void)
 {
-	return (struct thread_info *)
-	    __get_free_pages(GFP_KERNEL, THREAD_INFO_ORDER);
+	struct thread_info *ret;
+
+	ret = (struct thread_info *)__get_free_pages(GFP_KERNEL,
+						     THREAD_INFO_ORDER);
+#ifdef CONFIG_DEBUG_STACK_USAGE
+	if (ret)
+		memset(ret, 0, PAGE_SIZE << THREAD_INFO_ORDER);
+#endif /* DEBUG_STACK_USAGE */
+
+	return ret;
 }
 
 static void srmmu_free_thread_info(struct thread_info *ti)
@@ -1222,8 +1247,6 @@ static inline void map_kernel(void)
 /* Paging initialization on the Sparc Reference MMU. */
 extern void sparc_context_init(int);
 
-extern int linux_num_cpus;
-
 void (*poke_srmmu)(void) __initdata = NULL;
 
 extern unsigned long bootmem_init(unsigned long *pages_avail);
@@ -1310,7 +1333,7 @@ void __init srmmu_paging_init(void)
 		for (znum = 0; znum < MAX_NR_ZONES; znum++)
 			zones_size[znum] = zholes_size[znum] = 0;
 
-		npages = max_low_pfn - (phys_base >> PAGE_SHIFT);
+		npages = max_low_pfn - pfn_base;
 
 		zones_size[ZONE_DMA] = npages;
 		zholes_size[ZONE_DMA] = npages - pages_avail;
@@ -1320,13 +1343,9 @@ void __init srmmu_paging_init(void)
 		zholes_size[ZONE_HIGHMEM] = npages - calc_highpages();
 
 		free_area_init_node(0, &contig_page_data, NULL, zones_size,
-				    phys_base >> PAGE_SHIFT, zholes_size);
+				    pfn_base, zholes_size);
 		mem_map = contig_page_data.node_mem_map;
 	}
-
-/* P3: easy to fix, todo. Current code is utterly broken, though. */
-	if (phys_base != 0)
-		panic("phys_base nonzero");
 }
 
 static void srmmu_mmu_info(struct seq_file *m)
@@ -2202,6 +2221,10 @@ void __init ld_mmu_srmmu(void)
 
 	BTFIXUPSET_CALL(sparc_mapiorange, srmmu_mapiorange, BTFIXUPCALL_NORM);
 	BTFIXUPSET_CALL(sparc_unmapiorange, srmmu_unmapiorange, BTFIXUPCALL_NORM);
+
+	BTFIXUPSET_CALL(__swp_type, srmmu_swp_type, BTFIXUPCALL_NORM);
+	BTFIXUPSET_CALL(__swp_offset, srmmu_swp_offset, BTFIXUPCALL_NORM);
+	BTFIXUPSET_CALL(__swp_entry, srmmu_swp_entry, BTFIXUPCALL_NORM);
 
 	BTFIXUPSET_CALL(mmu_info, srmmu_mmu_info, BTFIXUPCALL_NORM);
 

@@ -184,7 +184,7 @@ static int exact_lock(dev_t dev, void *data)
 }
 
 /**
- * add_gendisk - add partitioning information to kernel list
+ * add_disk - add partitioning information to kernel list
  * @disk: per-device partitioning information
  *
  * This function registers the partitioning information in @disk
@@ -262,8 +262,9 @@ static int show_partition(struct seq_file *part, void *v)
 
 	/* Don't show non-partitionable removeable devices or empty devices */
 	if (!get_capacity(sgp) ||
-	    (sgp->minors == 1 && (sgp->flags & GENHD_FL_REMOVABLE))
-		)
+			(sgp->minors == 1 && (sgp->flags & GENHD_FL_REMOVABLE)))
+		return 0;
+	if (sgp->flags & GENHD_FL_SUPPRESS_PARTITION_INFO)
 		return 0;
 
 	/* show the full disk and all non-0 size partitions of it */

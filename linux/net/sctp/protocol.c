@@ -64,6 +64,9 @@ struct sctp_globals sctp_globals;
 struct proc_dir_entry	*proc_net_sctp;
 DEFINE_SNMP_STAT(struct sctp_mib, sctp_statistics);
 
+struct idr sctp_assocs_id;
+spinlock_t sctp_assocs_id_lock = SPIN_LOCK_UNLOCKED;
+
 /* This is the global socket data structure used for responding to
  * the Out-of-the-blue (OOTB) packets.  A control sock will be created
  * for this socket at the initialization time.
@@ -650,8 +653,8 @@ int sctp_ctl_sock_init(void)
 	else
 		family = PF_INET;
 
-	err = sock_create(family, SOCK_SEQPACKET, IPPROTO_SCTP,
-			  &sctp_ctl_socket);
+	err = sock_create_kern(family, SOCK_SEQPACKET, IPPROTO_SCTP,
+			       &sctp_ctl_socket);
 	if (err < 0) {
 		printk(KERN_ERR
 		       "SCTP: Failed to create the SCTP control socket.\n");
@@ -721,7 +724,7 @@ static void sctp_inet_event_msgname(struct sctp_ulpevent *event, char *msgname,
 	if (msgname) {
 		struct sctp_association *asoc;
 
-		asoc = event->sndrcvinfo.sinfo_assoc_id;
+		asoc = event->asoc;
 		sctp_inet_msgname(msgname, addr_len);
 		sin = (struct sockaddr_in *)msgname;
 		sinfrom = &asoc->peer.primary_addr.v4;
@@ -1001,7 +1004,9 @@ __init int sctp_init(void)
 		goto err_init_mibs;
 
 	/* Initialize proc fs directory.  */
-	sctp_proc_init();
+	status = sctp_proc_init();
+	if (status)
+		goto err_init_proc;
 
 	/* Initialize object count debugging.  */
 	sctp_dbg_objcnt_init();
@@ -1048,6 +1053,9 @@ __init int sctp_init(void)
 	/* Initialize default stream count setup information. */
 	sctp_max_instreams    		= SCTP_DEFAULT_INSTREAMS;
 	sctp_max_outstreams   		= SCTP_DEFAULT_OUTSTREAMS;
+
+	/* Initialize handle used for association ids. */
+	idr_init(&sctp_assocs_id);
 
 	/* Size and allocate the association hash table.
 	 * The methodology is similar to that of the tcp hash tables.
@@ -1121,6 +1129,9 @@ __init int sctp_init(void)
 	/* Disable ADDIP by default. */
 	sctp_addip_enable = 0;
 
+	/* Enable PR-SCTP by default. */
+	sctp_prsctp_enable = 1;
+
 	sctp_sysctl_register();
 
 	INIT_LIST_HEAD(&sctp_address_families);
@@ -1165,6 +1176,7 @@ err_ehash_alloc:
 			     sizeof(struct sctp_hashbucket)));
 err_ahash_alloc:
 	sctp_dbg_objcnt_exit();
+err_init_proc:
 	sctp_proc_exit();
 	cleanup_sctp_mibs();
 err_init_mibs:

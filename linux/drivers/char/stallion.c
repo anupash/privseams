@@ -41,6 +41,7 @@
 #include <linux/init.h>
 #include <linux/smp_lock.h>
 #include <linux/devfs_fs_kernel.h>
+#include <linux/device.h>
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -732,6 +733,8 @@ static struct file_operations	stl_fsiomem = {
 
 /*****************************************************************************/
 
+static struct class_simple *stallion_class;
+
 #ifdef MODULE
 
 /*
@@ -788,12 +791,15 @@ static void __exit stallion_module_exit(void)
 		restore_flags(flags);
 		return;
 	}
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++) {
 		devfs_remove("staliomem/%d", i);
+		class_simple_device_remove(MKDEV(STL_SIOMEMMAJOR, i));
+	}
 	devfs_remove("staliomem");
 	if ((i = unregister_chrdev(STL_SIOMEMMAJOR, "staliomem")))
 		printk("STALLION: failed to un-register serial memory device, "
 			"errno=%d\n", -i);
+	class_simple_destroy(stallion_class);
 
 	if (stl_tmpwritebuf != (char *) NULL)
 		kfree(stl_tmpwritebuf);
@@ -1514,6 +1520,48 @@ static int stl_setserial(stlport_t *portp, struct serial_struct *sp)
 
 /*****************************************************************************/
 
+static int stl_tiocmget(struct tty_struct *tty, struct file *file)
+{
+	stlport_t	*portp;
+
+	if (tty == (struct tty_struct *) NULL)
+		return(-ENODEV);
+	portp = tty->driver_data;
+	if (portp == (stlport_t *) NULL)
+		return(-ENODEV);
+	if (tty->flags & (1 << TTY_IO_ERROR))
+		return(-EIO);
+
+	return stl_getsignals(portp);
+}
+
+static int stl_tiocmset(struct tty_struct *tty, struct file *file,
+			unsigned int set, unsigned int clear)
+{
+	stlport_t	*portp;
+	int rts = -1, dtr = -1;
+
+	if (tty == (struct tty_struct *) NULL)
+		return(-ENODEV);
+	portp = tty->driver_data;
+	if (portp == (stlport_t *) NULL)
+		return(-ENODEV);
+	if (tty->flags & (1 << TTY_IO_ERROR))
+		return(-EIO);
+
+	if (set & TIOCM_RTS)
+		rts = 1;
+	if (set & TIOCM_DTR)
+		dtr = 1;
+	if (clear & TIOCM_RTS)
+		rts = 0;
+	if (clear & TIOCM_DTR)
+		dtr = 0;
+
+	stl_setsignals(portp, dtr, rts);
+	return 0;
+}
+
 static int stl_ioctl(struct tty_struct *tty, struct file *file, unsigned int cmd, unsigned long arg)
 {
 	stlport_t	*portp;
@@ -1551,37 +1599,6 @@ static int stl_ioctl(struct tty_struct *tty, struct file *file, unsigned int cmd
 			tty->termios->c_cflag =
 				(tty->termios->c_cflag & ~CLOCAL) |
 				(ival ? CLOCAL : 0);
-		}
-		break;
-	case TIOCMGET:
-		if ((rc = verify_area(VERIFY_WRITE, (void *) arg,
-		    sizeof(unsigned int))) == 0) {
-			ival = stl_getsignals(portp);
-			put_user(ival, (unsigned int *) arg);
-		}
-		break;
-	case TIOCMBIS:
-		if ((rc = verify_area(VERIFY_READ, (void *) arg,
-		    sizeof(unsigned int))) == 0) {
-			get_user(ival, (unsigned int *) arg);
-			stl_setsignals(portp, ((ival & TIOCM_DTR) ? 1 : -1),
-				((ival & TIOCM_RTS) ? 1 : -1));
-		}
-		break;
-	case TIOCMBIC:
-		if ((rc = verify_area(VERIFY_READ, (void *) arg,
-		    sizeof(unsigned int))) == 0) {
-			get_user(ival, (unsigned int *) arg);
-			stl_setsignals(portp, ((ival & TIOCM_DTR) ? 0 : -1),
-				((ival & TIOCM_RTS) ? 0 : -1));
-		}
-		break;
-	case TIOCMSET:
-		if ((rc = verify_area(VERIFY_READ, (void *) arg,
-		    sizeof(unsigned int))) == 0) {
-			get_user(ival, (unsigned int *) arg);
-			stl_setsignals(portp, ((ival & TIOCM_DTR) ? 1 : 0),
-				((ival & TIOCM_RTS) ? 1 : 0));
 		}
 		break;
 	case TIOCGSERIAL:
@@ -3137,6 +3154,8 @@ static struct tty_operations stl_ops = {
 	.wait_until_sent = stl_waituntilsent,
 	.send_xchar = stl_sendxchar,
 	.read_proc = stl_readproc,
+	.tiocmget = stl_tiocmget,
+	.tiocmset = stl_tiocmset,
 };
 
 /*****************************************************************************/
@@ -3168,10 +3187,12 @@ int __init stl_init(void)
 		printk("STALLION: failed to register serial board device\n");
 	devfs_mk_dir("staliomem");
 
+	stallion_class = class_simple_create(THIS_MODULE, "staliomem");
 	for (i = 0; i < 4; i++) {
 		devfs_mk_cdev(MKDEV(STL_SIOMEMMAJOR, i),
 				S_IFCHR|S_IRUSR|S_IWUSR,
 				"staliomem/%d", i);
+		class_simple_device_add(stallion_class, MKDEV(STL_SIOMEMMAJOR, i), NULL, "staliomem%d", i);
 	}
 
 	stl_serial->owner = THIS_MODULE;

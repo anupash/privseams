@@ -224,11 +224,11 @@ simeth_probe1(void)
 
 	err = register_netdev(dev);
 	if (err) {
-		kfree(dev);
+		free_netdev(dev);
 		return err;
 	}
 
-	dev->irq = ia64_alloc_vector();
+	dev->irq = assign_irq_vector(AUTO_ASSIGN);
 
 	/*
 	 * attach the interrupt in the simulator, this does enable interrupts

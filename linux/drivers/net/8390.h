@@ -39,6 +39,10 @@ extern int ei_debug;
 #define ei_debug 1
 #endif
 
+#ifdef CONFIG_NET_POLL_CONTROLLER
+extern void ei_poll(struct net_device *dev);
+#endif
+
 extern void NS8390_init(struct net_device *dev, int startp);
 extern int ei_open(struct net_device *dev);
 extern int ei_close(struct net_device *dev);
@@ -127,8 +131,19 @@ struct ei_device {
 #define inb_p(port)   in_8(port)
 #define outb_p(val,port)  out_8(port,val)
 
-#elif defined(CONFIG_ARM_ETHERH) || defined(CONFIG_ARM_ETHERH_MODULE) || \
-      defined(CONFIG_NET_CBUS)
+#elif defined(CONFIG_ARM_ETHERH) || defined(CONFIG_ARM_ETHERH_MODULE)
+#define EI_SHIFT(x)	(ei_local->reg_offset[x])
+#undef inb
+#undef inb_p
+#undef outb
+#undef outb_p
+
+#define inb(_p)		readb(_p)
+#define outb(_v,_p)	writeb(_v,_p)
+#define inb_p(_p)	inb(_p)
+#define outb_p(_v,_p)	outb(_v,_p)
+
+#elif defined(CONFIG_NET_CBUS)
 #define EI_SHIFT(x)	(ei_local->reg_offset[x])
 #else
 #define EI_SHIFT(x)	(x)

@@ -92,6 +92,7 @@ static inline int ip6_output_finish(struct sk_buff *skb)
 	} else if (dst->neighbour)
 		return dst->neighbour->output(skb);
 
+	IP6_INC_STATS_BH(Ip6OutNoRoutes);
 	kfree_skb(skb);
 	return -EINVAL;
 
@@ -136,6 +137,7 @@ int ip6_output2(struct sk_buff *skb)
 					ip6_dev_loopback_xmit);
 
 			if (skb->nh.ipv6h->hop_limit == 0) {
+				IP6_INC_STATS(Ip6OutDiscards);
 				kfree_skb(skb);
 				return 0;
 			}
@@ -172,8 +174,9 @@ int ip6_route_me_harder(struct sk_buff *skb)
 	dst = ip6_route_output(skb->sk, &fl);
 
 	if (dst->error) {
-		if (net_ratelimit())
-			printk(KERN_DEBUG "ip6_route_me_harder: No more route.\n");
+		IP6_INC_STATS(Ip6OutNoRoutes);
+		LIMIT_NETDEBUG(
+			printk(KERN_DEBUG "ip6_route_me_harder: No more route.\n"));
 		dst_release(dst);
 		return -EINVAL;
 	}
@@ -229,8 +232,10 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 			struct sk_buff *skb2 = skb_realloc_headroom(skb, head_room);
 			kfree_skb(skb);
 			skb = skb2;
-			if (skb == NULL)
+			if (skb == NULL) {	
+				IP6_INC_STATS(Ip6OutDiscards);
 				return -ENOBUFS;
+			}
 			if (sk)
 				skb_set_owner_w(skb, sk);
 		}
@@ -274,6 +279,7 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 		printk(KERN_DEBUG "IPv6: sending pkt_too_big to self\n");
 	skb->dev = dst->dev;
 	icmpv6_send(skb, ICMPV6_PKT_TOOBIG, 0, mtu, skb->dev);
+	IP6_INC_STATS(Ip6FragFails);
  end_hip:
 	kfree_skb(skb);
 	return -EMSGSIZE;
@@ -355,8 +361,10 @@ int ip6_forward(struct sk_buff *skb)
 	if (ipv6_devconf.forwarding == 0)
 		goto error;
 
-	if (!xfrm6_policy_check(NULL, XFRM_POLICY_FWD, skb))
+	if (!xfrm6_policy_check(NULL, XFRM_POLICY_FWD, skb)) {
+		IP6_INC_STATS(Ip6InDiscards);
 		goto drop;
+	}
 
 	skb->ip_summed = CHECKSUM_NONE;
 
@@ -392,8 +400,10 @@ int ip6_forward(struct sk_buff *skb)
 		return -ETIMEDOUT;
 	}
 
-	if (!xfrm6_route_forward(skb))
+	if (!xfrm6_route_forward(skb)) {
+		IP6_INC_STATS(Ip6InDiscards);
 		goto drop;
+	}
 
 	/* IPv6 specs say nothing about it, but it is clear that we cannot
 	   send redirects to source routed frames.
@@ -430,12 +440,15 @@ int ip6_forward(struct sk_buff *skb)
 		skb->dev = dst->dev;
 		icmpv6_send(skb, ICMPV6_PKT_TOOBIG, 0, dst_pmtu(dst), skb->dev);
 		IP6_INC_STATS_BH(Ip6InTooBigErrors);
+		IP6_INC_STATS_BH(Ip6FragFails);
 		kfree_skb(skb);
 		return -EMSGSIZE;
 	}
 
-	if (skb_cow(skb, dst->dev->hard_header_len))
+	if (skb_cow(skb, dst->dev->hard_header_len)) {
+		IP6_INC_STATS(Ip6OutDiscards);
 		goto drop;
+	}
 
 	hdr = skb->nh.ipv6h;
 
@@ -658,6 +671,7 @@ slow_path:
 
 		if ((frag = alloc_skb(len+hlen+sizeof(struct frag_hdr)+LL_RESERVED_SPACE(rt->u.dst.dev), GFP_ATOMIC)) == NULL) {
 			NETDEBUG(printk(KERN_INFO "IPv6: frag: no memory for new fragment!\n"));
+			IP6_INC_STATS(Ip6FragFails);
 			err = -ENOMEM;
 			goto fail;
 		}
@@ -890,9 +904,15 @@ int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to, int offse
 		 * setup for corking
 		 */
 		if (opt) {
-			if (np->cork.opt == NULL)
+			if (np->cork.opt == NULL) {
 				np->cork.opt = kmalloc(opt->tot_len,
 						       sk->sk_allocation);
+				if (unlikely(np->cork.opt == NULL))
+					return -ENOBUFS;
+			} else if (np->cork.opt->tot_len < opt->tot_len) {
+				printk(KERN_DEBUG "ip6_append_data: invalid option length\n");
+				return -EINVAL;
+			}
 			memcpy(np->cork.opt, opt, opt->tot_len);
 			inet->cork.flags |= IPCORK_OPT;
 			/* need source address above miyazawa*/
@@ -1129,13 +1149,14 @@ int ip6_push_pending_frames(struct sock *sk)
 	ipv6_addr_copy(&hdr->saddr, &fl->fl6_src);
 	ipv6_addr_copy(&hdr->daddr, final_dst);
 
-	skb->dst = dst_clone(&rt->u.dst);
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0) {
 		kfree_skb(skb);
 		goto error;
 	}
 #endif
+	skb->dst = dst_clone(&rt->u.dst);
+	IP6_INC_STATS(Ip6OutRequests);	
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, skb->dst->dev, dst_output);
 	if (err) {
 		if (err > 0)
@@ -1166,8 +1187,10 @@ void ip6_flush_pending_frames(struct sock *sk)
 	struct ipv6_pinfo *np = inet6_sk(sk);
 	struct sk_buff *skb;
 
-	while ((skb = __skb_dequeue_tail(&sk->sk_write_queue)) != NULL)
+	while ((skb = __skb_dequeue_tail(&sk->sk_write_queue)) != NULL) {
+		IP6_INC_STATS(Ip6OutDiscards);
 		kfree_skb(skb);
+	}
 
 	inet->cork.flags &= ~IPCORK_OPT;
 

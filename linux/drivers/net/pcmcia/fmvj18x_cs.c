@@ -256,7 +256,7 @@ static dev_link_t *fmvj18x_attach(void)
     dev = alloc_etherdev(sizeof(local_info_t));
     if (!dev)
 	return NULL;
-    lp = dev->priv;
+    lp = netdev_priv(dev);
     link = &lp->link;
     link->priv = dev;
 
@@ -394,7 +394,7 @@ static void fmvj18x_config(dev_link_t *link)
 {
     client_handle_t handle = link->handle;
     struct net_device *dev = link->priv;
-    local_info_t *lp = dev->priv;
+    local_info_t *lp = netdev_priv(dev);
     tuple_t tuple;
     cisparse_t parse;
     u_short buf[32];
@@ -510,10 +510,6 @@ static void fmvj18x_config(dev_link_t *link)
     CS_CHECK(RequestConfiguration, pcmcia_request_configuration(link->handle, &link->conf));
     dev->irq = link->irq.AssignedIRQ;
     dev->base_addr = link->io.BasePort1;
-    if (register_netdev(dev) != 0) {
-	printk(KERN_NOTICE "fmvj18x_cs: register_netdev() failed\n");
-	goto failed;
-    }
 
     if (link->io.BasePort2 != 0)
 	fmvj18x_setup_mfc(link);
@@ -575,7 +571,6 @@ static void fmvj18x_config(dev_link_t *link)
 	/* Read MACID from Buggy CIS */
 	if (fmvj18x_get_hwinfo(link, tuple.TupleData) == -1) {
 	    printk(KERN_NOTICE "fmvj18x_cs: unable to read hardware net address.\n");
-	    unregister_netdev(dev);
 	    goto failed;
 	}
 	for (i = 0 ; i < 6; i++) {
@@ -592,10 +587,18 @@ static void fmvj18x_config(dev_link_t *link)
 	break;
     }
 
-    strcpy(lp->node.dev_name, dev->name);
-    link->dev = &lp->node;
-
     lp->cardtype = cardtype;
+    link->dev = &lp->node;
+    link->state &= ~DEV_CONFIG_PENDING;
+
+    if (register_netdev(dev) != 0) {
+	printk(KERN_NOTICE "fmvj18x_cs: register_netdev() failed\n");
+	link->dev = NULL;
+	goto failed;
+    }
+
+    strcpy(lp->node.dev_name, dev->name);
+
     /* print current configuration */
     printk(KERN_INFO "%s: %s, sram %s, port %#3lx, irq %d, hw_addr ", 
 	   dev->name, card_name, sram_config == 0 ? "4K TX*2" : "8K TX*2", 
@@ -603,7 +606,6 @@ static void fmvj18x_config(dev_link_t *link)
     for (i = 0; i < 6; i++)
 	printk("%02X%s", dev->dev_addr[i], ((i<5) ? ":" : "\n"));
 
-    link->state &= ~DEV_CONFIG_PENDING;
     return;
     
 cs_failed:
@@ -803,7 +805,7 @@ module_exit(exit_fmvj18x_cs);
 static irqreturn_t fjn_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 {
     struct net_device *dev = dev_id;
-    local_info_t *lp = dev->priv;
+    local_info_t *lp = netdev_priv(dev);
     ioaddr_t ioaddr;
     unsigned short tx_stat, rx_stat;
 
@@ -862,7 +864,7 @@ static irqreturn_t fjn_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 
 static void fjn_tx_timeout(struct net_device *dev)
 {
-    struct local_info_t *lp = (struct local_info_t *)dev->priv;
+    struct local_info_t *lp = netdev_priv(dev);
     ioaddr_t ioaddr = dev->base_addr;
 
     printk(KERN_NOTICE "%s: transmit timed out with status %04x, %s?\n",
@@ -892,7 +894,7 @@ static void fjn_tx_timeout(struct net_device *dev)
 
 static int fjn_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
-    struct local_info_t *lp = (struct local_info_t *)dev->priv;
+    struct local_info_t *lp = netdev_priv(dev);
     ioaddr_t ioaddr = dev->base_addr;
     short length = skb->len;
     
@@ -966,7 +968,7 @@ static int fjn_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 static void fjn_reset(struct net_device *dev)
 {
-    struct local_info_t *lp = (struct local_info_t *)dev->priv;
+    struct local_info_t *lp = netdev_priv(dev);
     ioaddr_t ioaddr = dev->base_addr;
     int i;
 
@@ -1052,7 +1054,7 @@ static void fjn_reset(struct net_device *dev)
 
 static void fjn_rx(struct net_device *dev)
 {
-    struct local_info_t *lp = (struct local_info_t *)dev->priv;
+    struct local_info_t *lp = netdev_priv(dev);
     ioaddr_t ioaddr = dev->base_addr;
     int boguscount = 10;	/* 5 -> 10: by agy 19940922 */
 
@@ -1181,7 +1183,7 @@ static int fjn_config(struct net_device *dev, struct ifmap *map){
 
 static int fjn_open(struct net_device *dev)
 {
-    struct local_info_t *lp = (struct local_info_t *)dev->priv;
+    struct local_info_t *lp = netdev_priv(dev);
     dev_link_t *link = &lp->link;
 
     DEBUG(4, "fjn_open('%s').\n", dev->name);
@@ -1206,7 +1208,7 @@ static int fjn_open(struct net_device *dev)
 
 static int fjn_close(struct net_device *dev)
 {
-    struct local_info_t *lp = (struct local_info_t *)dev->priv;
+    struct local_info_t *lp = netdev_priv(dev);
     dev_link_t *link = &lp->link;
     ioaddr_t ioaddr = dev->base_addr;
 
@@ -1239,7 +1241,7 @@ static int fjn_close(struct net_device *dev)
 
 static struct net_device_stats *fjn_get_stats(struct net_device *dev)
 {
-    local_info_t *lp = (local_info_t *)dev->priv;
+    local_info_t *lp = netdev_priv(dev);
     return &lp->stats;
 } /* fjn_get_stats */
 
@@ -1252,7 +1254,7 @@ static struct net_device_stats *fjn_get_stats(struct net_device *dev)
 static void set_rx_mode(struct net_device *dev)
 {
     ioaddr_t ioaddr = dev->base_addr;
-    struct local_info_t *lp = (struct local_info_t *)dev->priv;
+    struct local_info_t *lp = netdev_priv(dev);
     u_char mc_filter[8];		 /* Multicast hash filter */
     u_long flags;
     int i;

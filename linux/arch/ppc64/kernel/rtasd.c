@@ -18,6 +18,7 @@
 #include <linux/init.h>
 #include <linux/vmalloc.h>
 #include <linux/spinlock.h>
+#include <linux/cpu.h>
 
 #include <asm/uaccess.h>
 #include <asm/io.h>
@@ -25,7 +26,6 @@
 #include <asm/prom.h>
 #include <asm/nvram.h>
 #include <asm/atomic.h>
-#include <asm/proc_fs.h>
 
 #if 0
 #define DEBUG(A...)	printk(KERN_ERR A)
@@ -46,7 +46,6 @@ static unsigned int rtas_event_scan_rate;
 static unsigned int rtas_error_log_max;
 static unsigned int rtas_error_log_buffer_max;
 
-extern spinlock_t proc_ppc64_lock;
 extern volatile int no_more_logging;
 
 volatile int error_log_cnt = 0;
@@ -79,7 +78,7 @@ static void printk_log_rtas(char *buf, int len)
 	char buffer[64];
 	char * str = "RTAS event";
 
-	printk(RTAS_ERR "%d -------- %s begin --------\n", error_log_cnt, str);
+	printk(RTAS_DEBUG "%d -------- %s begin --------\n", error_log_cnt, str);
 
 	/*
 	 * Print perline bytes on each line, each line will start
@@ -100,12 +99,12 @@ static void printk_log_rtas(char *buf, int len)
 		n += sprintf(buffer+n, "%02x", (unsigned char)buf[i]);
 
 		if (j == (perline-1))
-			printk(KERN_ERR "%s\n", buffer);
+			printk(KERN_DEBUG "%s\n", buffer);
 	}
 	if ((i % perline) != 0)
-		printk(KERN_ERR "%s\n", buffer);
+		printk(KERN_DEBUG "%s\n", buffer);
 
-	printk(RTAS_ERR "%d -------- %s end ----------\n", error_log_cnt, str);
+	printk(RTAS_DEBUG "%d -------- %s end ----------\n", error_log_cnt, str);
 }
 
 static int log_rtas_len(char * buf)
@@ -120,10 +119,11 @@ static int log_rtas_len(char * buf)
 
 		/* extended header */
 		len += err->extended_log_length;
-
-		if (len > RTAS_ERROR_LOG_MAX)
-			len = RTAS_ERROR_LOG_MAX;
 	}
+
+	if (len > rtas_error_log_max)
+		len = rtas_error_log_max;
+
 	return len;
 }
 
@@ -331,20 +331,40 @@ static int get_eventscan_parms(void)
 		printk(KERN_ERR "rtasd: truncated error log from %d to %d bytes\n", rtas_error_log_max, RTAS_ERROR_LOG_MAX);
 		rtas_error_log_max = RTAS_ERROR_LOG_MAX;
 	}
+
+	/* Make room for the sequence number */
+	rtas_error_log_buffer_max = rtas_error_log_max + sizeof(int);
+
 	of_node_put(node);
 
 	return 0;
 }
 
-extern long sys_sched_get_priority_max(int policy);
+static void do_event_scan(int event_scan)
+{
+	int error;
+	do {
+		memset(logdata, 0, rtas_error_log_max);
+		error = rtas_call(event_scan, 4, 1, NULL,
+				  RTAS_EVENT_SCAN_ALL_EVENTS, 0,
+				  __pa(logdata), rtas_error_log_max);
+		if (error == -1) {
+			printk(KERN_ERR "event-scan failed\n");
+			break;
+		}
+
+		if (error == 0)
+			pSeries_log_error(logdata, ERR_TYPE_RTAS_LOG, 0);
+
+	} while(error == 0);
+}
 
 static int rtasd(void *unused)
 {
 	unsigned int err_type;
 	int cpu = 0;
-	int error;
-	int first_pass = 1;
 	int event_scan = rtas_token("event-scan");
+	cpumask_t all = CPU_MASK_ALL;
 	int rc;
 
 	daemonize("rtasd");
@@ -375,53 +395,45 @@ static int rtasd(void *unused)
 		}
 	}
 
-repeat:
-	for (cpu = 0; cpu < NR_CPUS; cpu++) {
-		if (!cpu_online(cpu))
-			continue;
-
+	/* First pass. */
+	lock_cpu_hotplug();
+	for_each_online_cpu(cpu) {
 		DEBUG("scheduling on %d\n", cpu);
 		set_cpus_allowed(current, cpumask_of_cpu(cpu));
 		DEBUG("watchdog scheduled on cpu %d\n", smp_processor_id());
 
-		do {
-			memset(logdata, 0, rtas_error_log_max);
-			error = rtas_call(event_scan, 4, 1, NULL,
-					RTAS_EVENT_SCAN_ALL_EVENTS, 0,
-					__pa(logdata), rtas_error_log_max);
-			if (error == -1) {
-				printk(KERN_ERR "event-scan failed\n");
-				break;
-			}
-
-			if (error == 0)
-				pSeries_log_error(logdata, ERR_TYPE_RTAS_LOG, 0);
-
-		} while(error == 0);
-
-		/*
-		 * Check all cpus for pending events quickly, sleeping for
-		 * at least one second since some machines have problems
-		 * if we call event-scan too quickly
-		 */
+		do_event_scan(event_scan);
 		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout(first_pass ? HZ : (HZ*60/rtas_event_scan_rate) / 2);
+		schedule_timeout(HZ);
 	}
+	unlock_cpu_hotplug();
 
-	if (first_pass && (surveillance_timeout != -1)) {
+	if (surveillance_timeout != -1) {
 		DEBUG("enabling surveillance\n");
-		if (enable_surveillance(surveillance_timeout))
-			goto error_vfree;
+		enable_surveillance(surveillance_timeout);
 		DEBUG("surveillance enabled\n");
 	}
 
-	first_pass = 0;
-	goto repeat;
+	lock_cpu_hotplug();
+	cpu = first_cpu_const(mk_cpumask_const(cpu_online_map));
+	for (;;) {
+		set_cpus_allowed(current, cpumask_of_cpu(cpu));
+		do_event_scan(event_scan);
+		set_cpus_allowed(current, all);
 
-error_vfree:
-	if (rtas_log_buf)
-		vfree(rtas_log_buf);
-	rtas_log_buf = NULL;
+		/* Drop hotplug lock, and sleep for a bit (at least
+		 * one second since some machines have problems if we
+		 * call event-scan too quickly). */
+		unlock_cpu_hotplug();
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout((HZ*60/rtas_event_scan_rate) / 2);
+		lock_cpu_hotplug();
+
+		cpu = next_cpu_const(cpu, mk_cpumask_const(cpu_online_map));
+		if (cpu == NR_CPUS)
+			cpu = first_cpu_const(mk_cpumask_const(cpu_online_map));
+	}
+
 error:
 	/* Should delete proc entries */
 	return -EINVAL;
@@ -431,26 +443,21 @@ static int __init rtas_init(void)
 {
 	struct proc_dir_entry *entry;
 
-	if (proc_ppc64.rtas == NULL) {
-		proc_ppc64_init();
+	/* No RTAS, only warn if we are on a pSeries box  */
+	if (rtas_token("event-scan") == RTAS_UNKNOWN_SERVICE) {
+		if (systemcfg->platform & PLATFORM_PSERIES);
+			printk(KERN_ERR "rtasd: no RTAS on system\n");
+		return 1;
 	}
 
-	if (proc_ppc64.rtas == NULL) {
-		printk(KERN_ERR "rtas_init: /proc/ppc64/rtas does not exist.");
-		return -EIO;
-	}
-
-	entry = create_proc_entry("error_log", S_IRUSR, proc_ppc64.rtas);
+	entry = create_proc_entry("ppc64/error_log", S_IRUSR, NULL);
 	if (entry)
 		entry->proc_fops = &proc_rtas_log_operations;
 	else
-		printk(KERN_ERR "Failed to create rtas/error_log proc entry\n");
+		printk(KERN_ERR "Failed to create error_log proc entry\n");
 
 	if (kernel_thread(rtasd, 0, CLONE_FS) < 0)
 		printk(KERN_ERR "Failed to start RTAS daemon\n");
-
-	/* Make room for the sequence number */
-	rtas_error_log_buffer_max = rtas_error_log_max + sizeof(int);
 
 	return 0;
 }

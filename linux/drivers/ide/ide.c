@@ -203,34 +203,23 @@ static void setup_driver_defaults(ide_driver_t *driver);
 /*
  * Do not even *think* about calling this!
  */
-static void init_hwif_data (unsigned int index)
+static void init_hwif_data(ide_hwif_t *hwif, unsigned int index)
 {
 	unsigned int unit;
-	hw_regs_t hw;
-	ide_hwif_t *hwif = &ide_hwifs[index];
 
 	/* bulk initialize hwif & drive info with zeros */
 	memset(hwif, 0, sizeof(ide_hwif_t));
-	memset(&hw, 0, sizeof(hw_regs_t));
 
 	/* fill in any non-zero initial values */
-	hwif->index     = index;
-	ide_init_hwif_ports(&hw, ide_default_io_base(index), 0, &hwif->irq);
-	memcpy(&hwif->hw, &hw, sizeof(hw));
-	memcpy(hwif->io_ports, hw.io_ports, sizeof(hw.io_ports));
-	hwif->noprobe	= !hwif->io_ports[IDE_DATA_OFFSET];
-#ifdef CONFIG_BLK_DEV_HD
-	if (hwif->io_ports[IDE_DATA_OFFSET] == HD_DATA)
-		hwif->noprobe = 1; /* may be overridden by ide_setup() */
-#endif /* CONFIG_BLK_DEV_HD */
+	hwif->index	= index;
 	hwif->major	= ide_hwif_to_major[index];
+
 	hwif->name[0]	= 'i';
 	hwif->name[1]	= 'd';
 	hwif->name[2]	= 'e';
 	hwif->name[3]	= '0' + index;
-	hwif->bus_state = BUSSTATE_ON;
-	hwif->reset_poll= NULL;
-	hwif->pre_reset = NULL;
+
+	hwif->bus_state	= BUSSTATE_ON;
 
 	hwif->atapi_dma = 0;		/* disable all atapi dma */ 
 	hwif->ultra_mask = 0x80;	/* disable all ultra */
@@ -265,6 +254,24 @@ static void init_hwif_data (unsigned int index)
 	}
 }
 
+static void init_hwif_default(ide_hwif_t *hwif, unsigned int index)
+{
+	hw_regs_t hw;
+
+	memset(&hw, 0, sizeof(hw_regs_t));
+
+	ide_init_hwif_ports(&hw, ide_default_io_base(index), 0, &hwif->irq);
+
+	memcpy(&hwif->hw, &hw, sizeof(hw));
+	memcpy(hwif->io_ports, hw.io_ports, sizeof(hw.io_ports));
+
+	hwif->noprobe = !hwif->io_ports[IDE_DATA_OFFSET];
+#ifdef CONFIG_BLK_DEV_HD
+	if (hwif->io_ports[IDE_DATA_OFFSET] == HD_DATA)
+		hwif->noprobe = 1;	/* may be overridden by ide_setup() */
+#endif
+}
+
 /*
  * init_ide_data() sets reasonable default values into all fields
  * of all instances of the hwifs and drives, but only on the first call.
@@ -285,6 +292,7 @@ static void init_hwif_data (unsigned int index)
 #define MAGIC_COOKIE 0x12345678
 static void __init init_ide_data (void)
 {
+	ide_hwif_t *hwif;
 	unsigned int index;
 	static unsigned long magic_cookie = MAGIC_COOKIE;
 
@@ -295,16 +303,23 @@ static void __init init_ide_data (void)
 	setup_driver_defaults(&idedefault_driver);
 
 	/* Initialise all interface structures */
-	for (index = 0; index < MAX_HWIFS; ++index)
-		init_hwif_data(index);
+	for (index = 0; index < MAX_HWIFS; ++index) {
+		hwif = &ide_hwifs[index];
+		init_hwif_data(hwif, index);
+		init_hwif_default(hwif, index);
+#if !defined(CONFIG_PPC32) || !defined(CONFIG_PCI)
+		hwif->irq = hwif->hw.irq =
+			ide_init_default_irq(hwif->io_ports[IDE_DATA_OFFSET]);
+#endif
+	}
 
+/* OBSOLETE: still needed on arm26 and arm */
+#ifdef CONFIG_ARM
 	/* Add default hw interfaces */
 	initializing = 1;
 	ide_init_default_hwifs();
 	initializing = 0;
-
-	idebus_parameter = 0;
-	system_bus_speed = 0;
+#endif
 }
 
 /*
@@ -474,6 +489,8 @@ struct seq_operations ide_drivers_op = {
 };
 
 #ifdef CONFIG_PROC_FS
+struct proc_dir_entry *proc_ide_root;
+
 ide_proc_entry_t generic_subdriver_entries[] = {
 	{ "capacity",	S_IFREG|S_IRUGO,	proc_ide_read_capacity,	NULL },
 	{ NULL, 0, NULL, NULL }
@@ -483,22 +500,13 @@ ide_proc_entry_t generic_subdriver_entries[] = {
 static struct resource* hwif_request_region(ide_hwif_t *hwif,
 					    unsigned long addr, int num)
 {
-	struct resource *res;
-
-	if (hwif->mmio)
-		res = request_mem_region(addr, num, hwif->name);
-	else
-		res = request_region(addr, num, hwif->name);
+	struct resource *res = request_region(addr, num, hwif->name);
 
 	if (!res)
-		printk(KERN_ERR "%s: %s resource 0x%lX-0x%lX not free.\n",
-				hwif->name, hwif->mmio ? "MMIO" : "I/O",
-				addr, addr+num-1);
+		printk(KERN_ERR "%s: I/O resource 0x%lX-0x%lX not free.\n",
+				hwif->name, addr, addr+num-1);
 	return res;
 }
-
-#define hwif_release_region(addr, num) \
-	((hwif->mmio) ? release_mem_region((addr),(num)) : release_region((addr),(num)))
 
 /**
  *	ide_hwif_request_regions - request resources for IDE
@@ -516,14 +524,10 @@ int ide_hwif_request_regions(ide_hwif_t *hwif)
 
 	if (hwif->mmio == 2)
 		return 0;
+	BUG_ON(hwif->mmio == 1);
 	addr = hwif->io_ports[IDE_CONTROL_OFFSET];
 	if (addr && !hwif_request_region(hwif, addr, 1))
 		goto control_region_busy;
-#if defined(CONFIG_AMIGA) || defined(CONFIG_MAC)
-	addr = hwif->io_ports[IDE_IRQ_OFFSET];
-	if (addr && !hwif_request_region(hwif, addr, 1))
-		goto irq_region_busy;
-#endif /* (CONFIG_AMIGA) || (CONFIG_MAC) */
 	hwif->straight8 = 0;
 	addr = hwif->io_ports[IDE_DATA_OFFSET];
 	if ((addr | 7) == hwif->io_ports[IDE_STATUS_OFFSET]) {
@@ -536,22 +540,16 @@ int ide_hwif_request_regions(ide_hwif_t *hwif)
 		addr = hwif->io_ports[i];
 		if (!hwif_request_region(hwif, addr, 1)) {
 			while (--i)
-				hwif_release_region(addr, 1);
+				release_region(addr, 1);
 			goto data_region_busy;
 		}
 	}
 	return 0;
 
 data_region_busy:
-#if defined(CONFIG_AMIGA) || defined(CONFIG_MAC)
-	addr = hwif->io_ports[IDE_IRQ_OFFSET];
-	if (addr)
-		hwif_release_region(addr, 1);
-irq_region_busy:
-#endif /* (CONFIG_AMIGA) || (CONFIG_MAC) */
 	addr = hwif->io_ports[IDE_CONTROL_OFFSET];
 	if (addr)
-		hwif_release_region(addr, 1);
+		release_region(addr, 1);
 control_region_busy:
 	/* If any errors are return, we drop the hwif interface. */
 	return -EBUSY;
@@ -577,26 +575,17 @@ void ide_hwif_release_regions(ide_hwif_t *hwif)
 	if (hwif->mmio == 2)
 		return;
 	if (hwif->io_ports[IDE_CONTROL_OFFSET])
-		hwif_release_region(hwif->io_ports[IDE_CONTROL_OFFSET], 1);
-#if defined(CONFIG_AMIGA) || defined(CONFIG_MAC)
-	if (hwif->io_ports[IDE_IRQ_OFFSET])
-		hwif_release_region(hwif->io_ports[IDE_IRQ_OFFSET], 1);
-#endif /* (CONFIG_AMIGA) || (CONFIG_MAC) */
-
+		release_region(hwif->io_ports[IDE_CONTROL_OFFSET], 1);
 	if (hwif->straight8) {
-		hwif_release_region(hwif->io_ports[IDE_DATA_OFFSET], 8);
+		release_region(hwif->io_ports[IDE_DATA_OFFSET], 8);
 		return;
 	}
-	for (i = IDE_DATA_OFFSET; i <= IDE_STATUS_OFFSET; i++) {
-		if (hwif->io_ports[i]) {
-			hwif_release_region(hwif->io_ports[i], 1);
-		}
-	}
+	for (i = IDE_DATA_OFFSET; i <= IDE_STATUS_OFFSET; i++)
+		if (hwif->io_ports[i])
+			release_region(hwif->io_ports[i], 1);
 }
 
 EXPORT_SYMBOL(ide_hwif_release_regions);
-
-extern void init_hwif_data(unsigned int index);
 
 /**
  *	ide_unregister		-	free an ide interface
@@ -642,10 +631,9 @@ void ide_unregister (unsigned int index)
 		drive = &hwif->drives[unit];
 		if (!drive->present)
 			continue;
-		if (drive->usage)
+		if (drive->usage || DRIVER(drive)->busy)
 			goto abort;
-		if (DRIVER(drive)->shutdown(drive))
-			goto abort;
+		drive->dead = 1;
 	}
 	hwif->present = 0;
 	
@@ -765,7 +753,6 @@ void ide_unregister (unsigned int index)
 	unregister_blkdev(hwif->major, hwif->name);
 	spin_lock_irq(&ide_lock);
 
-#if !defined(CONFIG_DMA_NONPCI)
 	if (hwif->dma_base) {
 		(void) ide_release_dma(hwif);
 
@@ -777,9 +764,12 @@ void ide_unregister (unsigned int index)
 		hwif->dma_vendor3 = 0;
 		hwif->dma_prdtable = 0;
 	}
-#endif /* !(CONFIG_DMA_NONPCI) */
+
 	old_hwif			= *hwif;
-	init_hwif_data(index);	/* restore hwif data to pristine status */
+
+	init_hwif_data(hwif, index);	/* restore hwif data to pristine status */
+	init_hwif_default(hwif, index);
+
 	hwif->hwgroup			= old_hwif.hwgroup;
 
 	hwif->gendev.parent		= old_hwif.gendev.parent;
@@ -871,7 +861,6 @@ void ide_unregister (unsigned int index)
 #ifndef CONFIG_BLK_DEV_IDECS
 	hwif->irq			= old_hwif.irq;
 #endif /* CONFIG_BLK_DEV_IDECS */
-	hwif->initializing		= old_hwif.initializing;
 
 	hwif->dma_base			= old_hwif.dma_base;
 	hwif->dma_master		= old_hwif.dma_master;
@@ -982,8 +971,10 @@ int ide_register_hw (hw_regs_t *hw, ide_hwif_t **hwifp)
 found:
 	if (hwif->present)
 		ide_unregister(index);
-	else if (!hwif->hold)
-		init_hwif_data(index);
+	else if (!hwif->hold) {
+		init_hwif_data(hwif, index);
+		init_hwif_default(hwif, index);
+	}
 	if (hwif->present)
 		return -1;
 	memcpy(&hwif->hw, hw, sizeof(*hw));
@@ -994,9 +985,7 @@ found:
 
 	if (!initializing) {
 		probe_hwif_init(hwif);
-#ifdef CONFIG_PROC_FS
 		create_proc_ide_interfaces();
-#endif
 	}
 
 	if (hwifp)
@@ -1392,7 +1381,6 @@ void ide_add_generic_settings (ide_drive_t *drive)
 	ide_add_setting(drive,	"keepsettings",		SETTING_RW,					HDIO_GET_KEEPSETTINGS,	HDIO_SET_KEEPSETTINGS,	TYPE_BYTE,	0,	1,				1,		1,		&drive->keep_settings,		NULL);
 	ide_add_setting(drive,	"nice1",		SETTING_RW,					-1,			-1,			TYPE_BYTE,	0,	1,				1,		1,		&drive->nice1,			NULL);
 	ide_add_setting(drive,	"pio_mode",		SETTING_WRITE,					-1,			HDIO_SET_PIO_MODE,	TYPE_BYTE,	0,	255,				1,		1,		NULL,				set_pio_mode);
-	ide_add_setting(drive,	"slow",			SETTING_RW,					-1,			-1,			TYPE_BYTE,	0,	1,				1,		1,		&drive->slow,			NULL);
 	ide_add_setting(drive,	"unmaskirq",		drive->no_unmask ? SETTING_READ : SETTING_RW,	HDIO_GET_UNMASKINTR,	HDIO_SET_UNMASKINTR,	TYPE_BYTE,	0,	1,				1,		1,		&drive->unmask,			NULL);
 	ide_add_setting(drive,	"using_dma",		SETTING_RW,					HDIO_GET_DMA,		HDIO_SET_DMA,		TYPE_BYTE,	0,	1,				1,		1,		&drive->using_dma,		set_using_dma);
 	ide_add_setting(drive,	"init_speed",		SETTING_RW,					-1,			-1,			TYPE_BYTE,	0,	70,				1,		1,		&drive->init_speed,		NULL);
@@ -1607,6 +1595,7 @@ int generic_ide_ioctl(struct block_device *bdev, unsigned int cmd,
 			if (!capable(CAP_SYS_RAWIO)) return -EACCES;
 			if (copy_from_user(args, (void *)arg, 3 * sizeof(int)))
 				return -EFAULT;
+			memset(&hw, 0, sizeof(hw));
 			ide_init_hwif_ports(&hw, (unsigned long) args[0],
 					    (unsigned long) args[1], NULL);
 			hw.irq = args[2];
@@ -1786,83 +1775,9 @@ static int __initdata is_chipset_set[MAX_HWIFS];
 
 /*
  * ide_setup() gets called VERY EARLY during initialization,
- * to handle kernel "command line" strings beginning with "hdx="
- * or "ide".  Here is the complete set currently supported:
+ * to handle kernel "command line" strings beginning with "hdx=" or "ide".
  *
- * "hdx="  is recognized for all "x" from "a" to "h", such as "hdc".
- * "idex=" is recognized for all "x" from "0" to "3", such as "ide1".
- *
- * "hdx=noprobe"	: drive may be present, but do not probe for it
- * "hdx=none"		: drive is NOT present, ignore cmos and do not probe
- * "hdx=nowerr"		: ignore the WRERR_STAT bit on this drive
- * "hdx=cdrom"		: drive is present, and is a cdrom drive
- * "hdx=cyl,head,sect"	: disk drive is present, with specified geometry
- * "hdx=remap63"	: add 63 to all sector numbers (for OnTrack DM)
- * "hdx=remap"		: remap 0->1 (for EZDrive)
- * "hdx=autotune"	: driver will attempt to tune interface speed
- *				to the fastest PIO mode supported,
- *				if possible for this drive only.
- *				Not fully supported by all chipset types,
- *				and quite likely to cause trouble with
- *				older/odd IDE drives.
- * "hdx=slow"		: insert a huge pause after each access to the data
- *				port. Should be used only as a last resort.
- *
- * "hdx=swapdata"	: when the drive is a disk, byte swap all data
- * "hdx=bswap"		: same as above..........
- * "hdxlun=xx"          : set the drive last logical unit.
- * "hdx=flash"		: allows for more than one ata_flash disk to be
- *				registered. In most cases, only one device
- *				will be present.
- * "hdx=scsi"		: the return of the ide-scsi flag, this is useful for
- *				allowing ide-floppy, ide-tape, and ide-cdrom|writers
- *				to use ide-scsi emulation on a device specific option.
- * "idebus=xx"		: inform IDE driver of VESA/PCI bus speed in MHz,
- *				where "xx" is between 20 and 66 inclusive,
- *				used when tuning chipset PIO modes.
- *				For PCI bus, 25 is correct for a P75 system,
- *				30 is correct for P90,P120,P180 systems,
- *				and 33 is used for P100,P133,P166 systems.
- *				If in doubt, use idebus=33 for PCI.
- *				As for VLB, it is safest to not specify it.
- *
- * "idex=noprobe"	: do not attempt to access/use this interface
- * "idex=base"		: probe for an interface at the addr specified,
- *				where "base" is usually 0x1f0 or 0x170
- *				and "ctl" is assumed to be "base"+0x206
- * "idex=base,ctl"	: specify both base and ctl
- * "idex=base,ctl,irq"	: specify base, ctl, and irq number
- * "idex=autotune"	: driver will attempt to tune interface speed
- *				to the fastest PIO mode supported,
- *				for all drives on this interface.
- *				Not fully supported by all chipset types,
- *				and quite likely to cause trouble with
- *				older/odd IDE drives.
- * "idex=noautotune"	: driver will NOT attempt to tune interface speed
- *				This is the default for most chipsets,
- *				except the cmd640.
- * "idex=serialize"	: do not overlap operations on idex and ide(x^1)
- * "idex=four"		: four drives on idex and ide(x^1) share same ports
- * "idex=reset"		: reset interface before first use
- * "idex=dma"		: enable DMA by default on both drives if possible
- * "idex=ata66"		: informs the interface that it has an 80c cable
- *				for chipsets that are ATA-66 capable, but
- *				the ablity to bit test for detection is
- *				currently unknown.
- * "ide=reverse"	: Formerly called to pci sub-system, but now local.
- *
- * The following are valid ONLY on ide0, (except dc4030)
- * and the defaults for the base,ctl ports must not be altered.
- *
- * "ide0=dtc2278"	: probe/support DTC2278 interface
- * "ide0=ht6560b"	: probe/support HT6560B interface
- * "ide0=cmd640_vlb"	: *REQUIRED* for VLB cards with the CMD640 chip
- *			  (not for PCI -- automatically detected)
- * "ide0=qd65xx"	: probe/support qd65xx interface
- * "ide0=ali14xx"	: probe/support ali14xx chipsets (ALI M1439, M1443, M1445)
- * "ide0=umc8672"	: probe/support umc8672 chipsets
- * "idex=dc4030"	: probe/support Promise DC4030VL interface
- * "ide=doubler"	: probe/support IDE doublers on Amiga
+ * Remember to update Documentation/ide.txt if you change something here.
  */
 int __init ide_setup (char *s)
 {
@@ -1877,9 +1792,7 @@ int __init ide_setup (char *s)
 	if (strncmp(s,"hd",2) == 0 && s[2] == '=')	/* hd= is for hd.c   */
 		return 0;				/* driver and not us */
 
-	if (strncmp(s,"ide",3) &&
-	    strncmp(s,"idebus",6) &&
-	    strncmp(s,"hd",2))		/* hdx= & hdxlun= */
+	if (strncmp(s,"ide",3) && strncmp(s,"idebus",6) && strncmp(s,"hd",2))
 		return 0;
 
 	printk(KERN_INFO "ide_setup: %s", s);
@@ -1915,8 +1828,8 @@ int __init ide_setup (char *s)
 	if (s[0] == 'h' && s[1] == 'd' && s[2] >= 'a' && s[2] <= max_drive) {
 		const char *hd_words[] = {
 			"none", "noprobe", "nowerr", "cdrom", "serialize",
-			"autotune", "noautotune", "slow", "swapdata", "bswap",
-			"flash", "remap", "remap63", "scsi", NULL };
+			"autotune", "noautotune", "minus8", "swapdata", "bswap",
+			"minus11", "remap", "remap63", "scsi", NULL };
 		unit = s[2] - 'a';
 		hw   = unit / MAX_DRIVES;
 		unit = unit % MAX_DRIVES;
@@ -1926,22 +1839,8 @@ int __init ide_setup (char *s)
 			strlcpy(drive->driver_req, s + 4, sizeof(drive->driver_req));
 			goto done;
 		}
-		/*
-		 * Look for last lun option:  "hdxlun="
-		 */
-		if (s[3] == 'l' && s[4] == 'u' && s[5] == 'n') {
-			if (match_parm(&s[6], NULL, vals, 1) != 1)
-				goto bad_option;
-			if (vals[0] >= 0 && vals[0] <= 7) {
-				drive->last_lun = vals[0];
-				drive->forced_lun = 1;
-			} else
-				printk(" -- BAD LAST LUN! Expected value from 0 to 7");
-			goto done;
-		}
 		switch (match_parm(&s[3], hd_words, vals, 3)) {
 			case -1: /* "none" */
-				drive->nobios = 1;  /* drop into "noprobe" */
 			case -2: /* "noprobe" */
 				drive->noprobe = 1;
 				goto done;
@@ -1963,15 +1862,9 @@ int __init ide_setup (char *s)
 			case -7: /* "noautotune" */
 				drive->autotune = IDE_TUNE_NOAUTO;
 				goto done;
-			case -8: /* "slow" */
-				drive->slow = 1;
-				goto done;
 			case -9: /* "swapdata" */
 			case -10: /* "bswap" */
 				drive->bswap = 1;
-				goto done;
-			case -11: /* "flash" */
-				drive->ata_flash = 1;
 				goto done;
 			case -12: /* "remap" */
 				drive->remap_0_to_1 = 1;
@@ -2018,7 +1911,7 @@ int __init ide_setup (char *s)
 		 * Be VERY CAREFUL changing this: note hardcoded indexes below
 		 * (-8, -9, -10) are reserved to ease the hardcoding.
 		 */
-		const char *ide_words[] = {
+		static const char *ide_words[] = {
 			"noprobe", "serialize", "autotune", "noautotune", 
 			"reset", "dma", "ata66", "minus8", "minus9",
 			"minus10", "four", "qd65xx", "ht6560b", "cmd640_vlb",
@@ -2251,34 +2144,6 @@ static int default_cleanup (ide_drive_t *drive)
 	return ide_unregister_subdriver(drive);
 }
 
-/*
- *	Check if we can unregister the subdriver. Called with the
- *	request lock held.
- */
- 
-static int default_shutdown(ide_drive_t *drive)
-{
-	if (drive->usage || DRIVER(drive)->busy) {
-		return 1;
-	}
-	drive->dead = 1;
-	return 0;
-}
-
-/*
- *	Default function to use for the cache flush operation. This
- *	must be replaced for disk devices (see ATA specification
- *	documents on cache flush and drive suspend rules)
- *
- *	If we have no device attached or the device is not writable
- *	this handler is sufficient.
- */
- 
-static int default_flushcache (ide_drive_t *drive)
-{
-	return 0;
-}
-
 static ide_startstop_t default_do_request (ide_drive_t *drive, struct request *rq, sector_t block)
 {
 	ide_end_request(drive, 0, 0);
@@ -2341,8 +2206,6 @@ static ide_startstop_t default_start_power_step(ide_drive_t *drive,
 static void setup_driver_defaults (ide_driver_t *d)
 {
 	if (d->cleanup == NULL)		d->cleanup = default_cleanup;
-	if (d->shutdown == NULL)	d->shutdown = default_shutdown;
-	if (d->flushcache == NULL)	d->flushcache = default_flushcache;
 	if (d->do_request == NULL)	d->do_request = default_do_request;
 	if (d->end_request == NULL)	d->end_request = default_end_request;
 	if (d->sense == NULL)		d->sense = default_sense;
@@ -2356,15 +2219,15 @@ static void setup_driver_defaults (ide_driver_t *d)
 		d->start_power_step = default_start_power_step;
 }
 
-int ide_register_subdriver (ide_drive_t *drive, ide_driver_t *driver, int version)
+int ide_register_subdriver(ide_drive_t *drive, ide_driver_t *driver)
 {
 	unsigned long flags;
-	
-	BUG_ON(drive->driver == NULL);
-	
+
+	BUG_ON(!drive->driver);
+
 	spin_lock_irqsave(&ide_lock, flags);
-	if (version != IDE_SUBDRIVER_VERSION || !drive->present ||
-	    drive->driver != &idedefault_driver || drive->usage || drive->dead) {
+	if (!drive->present || drive->driver != &idedefault_driver ||
+	    drive->usage || drive->dead) {
 		spin_unlock_irqrestore(&ide_lock, flags);
 		return 1;
 	}
@@ -2477,12 +2340,6 @@ void ide_unregister_driver(ide_driver_t *driver)
 			printk(KERN_ERR "%s: cleanup_module() called while still busy\n", drive->name);
 			BUG();
 		}
-		/* We must remove proc entries defined in this module.
-		   Otherwise we oops while accessing these entries */
-#ifdef CONFIG_PROC_FS
-		if (drive->proc)
-			ide_remove_proc_entries(drive->proc, driver->proc);
-#endif
 		ata_attach(drive);
 	}
 }
@@ -2520,6 +2377,10 @@ int __init ide_init (void)
 	bus_register(&ide_bus_type);
 
 	init_ide_data();
+
+#ifdef CONFIG_PROC_FS
+	proc_ide_root = proc_mkdir("ide", 0);
+#endif
 
 #ifdef CONFIG_BLK_DEV_ALI14XX
 	if (probe_ali14xx)
@@ -2584,10 +2445,8 @@ void cleanup_module (void)
 
 	for (index = 0; index < MAX_HWIFS; ++index) {
 		ide_unregister(index);
-#if !defined(CONFIG_DMA_NONPCI)
 		if (ide_hwifs[index].dma_base)
 			(void) ide_release_dma(&ide_hwifs[index]);
-#endif /* !(CONFIG_DMA_NONPCI) */
 	}
 
 #ifdef CONFIG_PROC_FS

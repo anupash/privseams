@@ -5,6 +5,7 @@
 
 #include <linux/config.h>
 #include <linux/module.h>
+#include <linux/init.h>
 #include <linux/types.h>
 #include <linux/string.h>
 #include <linux/errno.h>
@@ -325,7 +326,8 @@ int dsmark_init(struct Qdisc *sch,struct rtattr *opt)
 	__u16 tmp;
 
 	DPRINTK("dsmark_init(sch %p,[qdisc %p],opt %p)\n",sch,p,opt);
-	if (rtattr_parse(tb,TCA_DSMARK_MAX,RTA_DATA(opt),RTA_PAYLOAD(opt)) < 0 ||
+	if (!opt ||
+	    rtattr_parse(tb,TCA_DSMARK_MAX,RTA_DATA(opt),RTA_PAYLOAD(opt)) < 0 ||
 	    !tb[TCA_DSMARK_INDICES-1] ||
 	    RTA_PAYLOAD(tb[TCA_DSMARK_INDICES-1]) < sizeof(__u16))
                 return -EINVAL;
@@ -447,7 +449,7 @@ static struct Qdisc_class_ops dsmark_class_ops = {
 	.dump		=	dsmark_dump_class,
 };
 
-struct Qdisc_ops dsmark_qdisc_ops = {
+static struct Qdisc_ops dsmark_qdisc_ops = {
 	.next		=	NULL,
 	.cl_ops		=	&dsmark_class_ops,
 	.id		=	"dsmark",
@@ -464,16 +466,14 @@ struct Qdisc_ops dsmark_qdisc_ops = {
 	.owner		=	THIS_MODULE,
 };
 
-#ifdef MODULE
-int init_module(void)
+static int __init dsmark_module_init(void)
 {
 	return register_qdisc(&dsmark_qdisc_ops);
 }
-
-
-void cleanup_module(void) 
+static void __exit dsmark_module_exit(void) 
 {
 	unregister_qdisc(&dsmark_qdisc_ops);
 }
-#endif
+module_init(dsmark_module_init)
+module_exit(dsmark_module_exit)
 MODULE_LICENSE("GPL");

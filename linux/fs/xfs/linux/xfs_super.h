@@ -44,6 +44,8 @@
 
 #ifdef CONFIG_XFS_QUOTA
 # define vfs_insertquota(vfs)	vfs_insertops(vfsp, &xfs_qmops)
+extern void xfs_qm_init(void);
+extern void xfs_qm_exit(void);
 # define vfs_initquota()	xfs_qm_init()
 # define vfs_exitquota()	xfs_qm_exit()
 #else
@@ -61,7 +63,7 @@
 #endif
 
 #ifdef CONFIG_XFS_SECURITY
-# define XFS_SECURITY_STRING	"security attrs, "
+# define XFS_SECURITY_STRING	"security attributes, "
 # define ENOSECURITY		0
 #else
 # define XFS_SECURITY_STRING
@@ -110,7 +112,7 @@
 
 struct xfs_inode;
 struct xfs_mount;
-struct pb_target;
+struct xfs_buftarg;
 struct block_device;
 
 extern __uint64_t xfs_max_file_offset(unsigned int);
@@ -123,13 +125,5 @@ extern void xfs_flush_device(struct xfs_inode *);
 extern int  xfs_blkdev_get(struct xfs_mount *, const char *,
 				struct block_device **);
 extern void xfs_blkdev_put(struct block_device *);
-
-extern struct pb_target *xfs_alloc_buftarg(struct block_device *);
-extern void xfs_relse_buftarg(struct pb_target *);
-extern void xfs_free_buftarg(struct pb_target *);
-extern void xfs_flush_buftarg(struct pb_target *);
-extern int xfs_readonly_buftarg(struct pb_target *);
-extern void xfs_setsize_buftarg(struct pb_target *, unsigned int, unsigned int);
-extern unsigned int xfs_getsize_buftarg(struct pb_target *);
 
 #endif	/* __XFS_SUPER_H__ */

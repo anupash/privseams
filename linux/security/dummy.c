@@ -25,6 +25,9 @@
 #include <linux/netlink.h>
 #include <net/sock.h>
 #include <linux/xattr.h>
+#include <linux/hugetlb.h>
+#include <linux/ptrace.h>
+#include <linux/file.h>
 
 static int dummy_ptrace (struct task_struct *parent, struct task_struct *child)
 {
@@ -101,13 +104,21 @@ static int dummy_syslog (int type)
 	return 0;
 }
 
+/*
+ * Check that a process has enough memory to allocate a new virtual
+ * mapping. 0 means there is enough memory for the allocation to
+ * succeed and -ENOMEM implies there is not.
+ *
+ * We currently support three overcommit policies, which are set via the
+ * vm.overcommit_memory sysctl.  See Documentation/vm/overcommit-accounting
+ */
 static int dummy_vm_enough_memory(long pages)
 {
 	unsigned long free, allowed;
 
 	vm_acct_memory(pages);
 
-        /*
+	/*
 	 * Sometimes we want to use more memory than we have
 	 */
 	if (sysctl_overcommit_memory == 1)
@@ -138,7 +149,8 @@ static int dummy_vm_enough_memory(long pages)
 		return -ENOMEM;
 	}
 
-	allowed = totalram_pages * sysctl_overcommit_ratio / 100;
+	allowed = (totalram_pages - hugetlb_total_pages())
+		* sysctl_overcommit_ratio / 100;
 	allowed += total_swap_pages;
 
 	if (atomic_read(&vm_committed_space) < allowed)
@@ -159,9 +171,19 @@ static void dummy_bprm_free_security (struct linux_binprm *bprm)
 	return;
 }
 
-static void dummy_bprm_compute_creds (struct linux_binprm *bprm)
+static void dummy_bprm_apply_creds (struct linux_binprm *bprm, int unsafe)
 {
-	return;
+	if (bprm->e_uid != current->uid || bprm->e_gid != current->gid) {
+		current->mm->dumpable = 0;
+
+		if ((unsafe & ~LSM_UNSAFE_PTRACE_CAP) && !capable(CAP_SETUID)) {
+			bprm->e_uid = current->uid;
+			bprm->e_gid = current->gid;
+		}
+	}
+
+	current->suid = current->euid = current->fsuid = bprm->e_uid;
+	current->sgid = current->egid = current->fsgid = bprm->e_gid;
 }
 
 static int dummy_bprm_set_security (struct linux_binprm *bprm)
@@ -194,7 +216,8 @@ static void dummy_sb_free_security (struct super_block *sb)
 	return;
 }
 
-static int dummy_sb_copy_data (const char *fstype, void *orig, void *copy)
+static int dummy_sb_copy_data (struct file_system_type *type,
+			       void *orig, void *copy)
 {
 	return 0;
 }
@@ -544,7 +567,7 @@ static int dummy_task_getsid (struct task_struct *p)
 	return 0;
 }
 
-static int dummy_task_setgroups (int gidsetsize, gid_t * grouplist)
+static int dummy_task_setgroups (struct group_info *group_info)
 {
 	return 0;
 }
@@ -727,13 +750,14 @@ static int dummy_unix_may_send (struct socket *sock,
 	return 0;
 }
 
-static int dummy_socket_create (int family, int type, int protocol)
+static int dummy_socket_create (int family, int type,
+				int protocol, int kern)
 {
 	return 0;
 }
 
 static void dummy_socket_post_create (struct socket *sock, int family, int type,
-				      int protocol)
+				      int protocol, int kern)
 {
 	return;
 }
@@ -876,7 +900,7 @@ void security_fixup_ops (struct security_operations *ops)
 	set_to_dummy_if_null(ops, vm_enough_memory);
 	set_to_dummy_if_null(ops, bprm_alloc_security);
 	set_to_dummy_if_null(ops, bprm_free_security);
-	set_to_dummy_if_null(ops, bprm_compute_creds);
+	set_to_dummy_if_null(ops, bprm_apply_creds);
 	set_to_dummy_if_null(ops, bprm_set_security);
 	set_to_dummy_if_null(ops, bprm_check_security);
 	set_to_dummy_if_null(ops, bprm_secureexec);

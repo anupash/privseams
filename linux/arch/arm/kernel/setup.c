@@ -118,21 +118,21 @@ static struct resource io_res[] = {
 #define lp2 io_res[2]
 
 static const char *cache_types[16] = {
-	"write-through",
-	"write-back",
-	"write-back",
+	"VIVT write-through",
+	"VIVT write-back",
+	"VIVT write-back",
 	"undefined 3",
 	"undefined 4",
 	"undefined 5",
-	"write-back",
-	"write-back",
+	"VIVT write-back",
+	"VIVT write-back",
 	"undefined 8",
 	"undefined 9",
 	"undefined 10",
 	"undefined 11",
 	"undefined 12",
 	"undefined 13",
-	"undefined 14",
+	"VIPT write-back",
 	"undefined 15",
 };
 
@@ -151,7 +151,7 @@ static const char *cache_clean[16] = {
 	"undefined 11",
 	"undefined 12",
 	"undefined 13",
-	"undefined 14",
+	"cp15 c7 ops",
 	"undefined 15",
 };
 
@@ -170,7 +170,7 @@ static const char *cache_lockdown[16] = {
 	"undefined 11",
 	"undefined 12",
 	"undefined 13",
-	"undefined 14",
+	"format C",
 	"undefined 15",
 };
 
@@ -183,7 +183,7 @@ static const char *proc_arch[] = {
 	"5T",
 	"5TE",
 	"5TEJ",
-	"?(9)",
+	"6TEJ",
 	"?(10)",
 	"?(11)",
 	"?(12)",
@@ -219,9 +219,7 @@ static inline void dump_cache(const char *prefix, unsigned int cache)
 
 static void __init dump_cpu_info(void)
 {
-	unsigned int info;
-
-	asm("mrc p15, 0, %0, c0, c0, 1" : "=r" (info));
+	unsigned int info = read_cpuid(CPUID_CACHETYPE);
 
 	if (info != processor_id) {
 		printk("CPU: D %s cache\n", cache_types[CACHE_TYPE(info)]);
@@ -803,9 +801,7 @@ static int c_show(struct seq_file *m, void *v)
 	seq_printf(m, "CPU revision\t: %d\n", processor_id & 15);
 
 	{
-		unsigned int cache_info;
-
-		asm("mrc p15, 0, %0, c0, c0, 1" : "=r" (cache_info));
+		unsigned int cache_info = read_cpuid(CPUID_CACHETYPE);
 		if (cache_info != processor_id) {
 			seq_printf(m, "Cache type\t: %s\n"
 				      "Cache clean\t: %s\n"

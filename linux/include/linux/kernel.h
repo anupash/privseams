@@ -72,6 +72,9 @@ extern int vsprintf(char *buf, const char *, va_list);
 extern int snprintf(char * buf, size_t size, const char * fmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
 extern int vsnprintf(char *buf, size_t size, const char *fmt, va_list args);
+extern int scnprintf(char * buf, size_t size, const char * fmt, ...)
+	__attribute__ ((format (printf, 3, 4)));
+extern int vscnprintf(char *buf, size_t size, const char *fmt, va_list args);
 
 extern int sscanf(const char *, const char *, ...)
 	__attribute__ ((format (scanf,2,3)));
@@ -106,9 +109,15 @@ static inline void console_verbose(void)
 extern void bust_spinlocks(int yes);
 extern int oops_in_progress;		/* If set, an oops, panic(), BUG() or die() is in progress */
 extern int panic_on_oops;
-extern int system_running;
+extern int system_state;		/* See values below */
 extern int tainted;
 extern const char *print_tainted(void);
+
+/* Values used for system_state */
+#define SYSTEM_BOOTING 0
+#define SYSTEM_RUNNING 1
+#define SYSTEM_SHUTDOWN 2
+
 #define TAINT_PROPRIETARY_MODULE	(1<<0)
 #define TAINT_FORCED_MODULE		(1<<1)
 #define TAINT_UNSAFE_SMP		(1<<2)
@@ -165,14 +174,14 @@ extern void dump_stack(void);
  * "unnecessary" pointer comparison.
  */
 #define min(x,y) ({ \
-	const typeof(x) _x = (x);	\
-	const typeof(y) _y = (y);	\
+	typeof(x) _x = (x);	\
+	typeof(y) _y = (y);	\
 	(void) (&_x == &_y);		\
 	_x < _y ? _x : _y; })
 
 #define max(x,y) ({ \
-	const typeof(x) _x = (x);	\
-	const typeof(y) _y = (y);	\
+	typeof(x) _x = (x);	\
+	typeof(y) _y = (y);	\
 	(void) (&_x == &_y);		\
 	_x > _y ? _x : _y; })
 

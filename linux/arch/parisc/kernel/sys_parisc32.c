@@ -47,6 +47,7 @@
 #include <linux/vfs.h>
 #include <linux/ptrace.h>
 #include <linux/swap.h>
+#include <linux/syscalls.h>
 
 #include <asm/types.h>
 #include <asm/uaccess.h>
@@ -357,7 +358,6 @@ asmlinkage long sys32_sched_rr_get_interval(pid_t pid,
 {
 	struct timespec t;
 	int ret;
-	extern asmlinkage long sys_sched_rr_get_interval(pid_t pid, struct timespec *interval);
 	
 	KERNEL_SYSCALL(ret, sys_sched_rr_get_interval, pid, &t);
 	if (put_compat_timespec(&t, interval))
@@ -388,14 +388,16 @@ static inline long get_ts32(struct timespec *o, struct compat_timeval *i)
 
 asmlinkage long sys32_time(compat_time_t *tloc)
 {
-    time_t now = get_seconds();
-    compat_time_t now32 = now;
+    struct timeval tv;
 
-    if (tloc)
-    	if (put_user(now32, tloc))
-		now32 = -EFAULT;
+	do_gettimeofday(&tv);
+	compat_time_t now32 = tv.tv_sec;
 
-    return now32;
+	if (tloc)
+		if (put_user(now32, tloc))
+			now32 = -EFAULT;
+
+	return now32;
 }
 
 asmlinkage int
@@ -606,105 +608,6 @@ sys32_readdir (unsigned int fd, void * dirent, unsigned int count)
 out:
 	return error;
 }
-
-static int copy_mount_stuff_to_kernel(const void *user, unsigned long *kernel)
-{
-	int i;
-	unsigned long page;
-	struct vm_area_struct *vma;
-
-	*kernel = 0;
-	if(!user)
-		return 0;
-	vma = find_vma(current->mm, (unsigned long)user);
-	if(!vma || (unsigned long)user < vma->vm_start)
-		return -EFAULT;
-	if(!(vma->vm_flags & VM_READ))
-		return -EFAULT;
-	i = vma->vm_end - (unsigned long) user;
-	if(PAGE_SIZE <= (unsigned long) i)
-		i = PAGE_SIZE - 1;
-	if(!(page = __get_free_page(GFP_KERNEL)))
-		return -ENOMEM;
-	if(copy_from_user((void *) page, user, i)) {
-		free_page(page);
-		return -EFAULT;
-	}
-	*kernel = page;
-	return 0;
-}
-
-#define SMBFS_NAME	"smbfs"
-#define NCPFS_NAME	"ncpfs"
-
-asmlinkage int sys32_mount(char *dev_name, char *dir_name, char *type, unsigned long new_flags, u32 data)
-{
-	unsigned long type_page = 0;
-	unsigned long data_page = 0;
-	unsigned long dev_page = 0;
-	unsigned long dir_page = 0;
-	int err, is_smb, is_ncp;
-
-	is_smb = is_ncp = 0;
-
-	err = copy_mount_stuff_to_kernel((const void *)type, &type_page);
-	if (err)
-		goto out;
-
-	if (!type_page) {
-		err = -EINVAL;
-		goto out;
-	}
-
-	is_smb = !strcmp((char *)type_page, SMBFS_NAME);
-	is_ncp = !strcmp((char *)type_page, NCPFS_NAME);
-
-	err = copy_mount_stuff_to_kernel((const void *)(unsigned long)data, &data_page);
-	if (err)
-		goto type_out;
-
-	err = copy_mount_stuff_to_kernel(dev_name, &dev_page);
-	if (err)
-		goto data_out;
-
-	err = copy_mount_stuff_to_kernel(dir_name, &dir_page);
-	if (err)
-		goto dev_out;
-
-	if (!is_smb && !is_ncp) {
-		lock_kernel();
-		err = do_mount((char*)dev_page, (char*)dir_page,
-				(char*)type_page, new_flags, (char*)data_page);
-		unlock_kernel();
-	} else {
-		if (is_ncp)
-			panic("NCP mounts not yet supported 32/64 parisc");
-			/* do_ncp_super_data_conv((void *)data_page); */
-		else {
-			panic("SMB mounts not yet supported 32/64 parisc");
-			/* do_smb_super_data_conv((void *)data_page); */
-		}
-
-		lock_kernel();
-		err = do_mount((char*)dev_page, (char*)dir_page,
-				(char*)type_page, new_flags, (char*)data_page);
-		unlock_kernel();
-	}
-	free_page(dir_page);
-
-dev_out:
-	free_page(dev_page);
-
-data_out:
-	free_page(data_page);
-
-type_out:
-	free_page(type_page);
-
-out:
-	return err;
-}
-
 
 /* readv/writev stolen from mips64 */
 typedef ssize_t (*IO_fn_t)(struct file *, char *, size_t, loff_t *);
@@ -1089,7 +992,6 @@ asmlinkage long sys32_msgrcv(int msqid,
 }
 
 
-extern asmlinkage ssize_t sys_sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
 asmlinkage int sys32_sendfile(int out_fd, int in_fd, compat_off_t *offset, s32 count)
 {
         mm_segment_t old_fs = get_fs();
@@ -1197,7 +1099,6 @@ asmlinkage int sys32_nfsservctl(int cmd, void *argp, void *resp)
 	return ret;
 }
 
-extern asmlinkage ssize_t sys_sendfile64(int out_fd, int in_fd, loff_t *offset, size_t count);
 typedef long __kernel_loff_t32;		/* move this to asm/posix_types.h? */
 
 asmlinkage int sys32_sendfile64(int out_fd, int in_fd, __kernel_loff_t32 *offset, s32 count)
@@ -1345,8 +1246,6 @@ asmlinkage int sys32_sysinfo(struct sysinfo32 *info)
  * half of the argument has been zeroed by syscall.S.
  */
 
-extern asmlinkage off_t sys_lseek(unsigned int fd, off_t offset, unsigned int origin);
-
 asmlinkage int sys32_lseek(unsigned int fd, int offset, unsigned int origin)
 {
 	return sys_lseek(fd, offset, origin);
@@ -1366,8 +1265,6 @@ asmlinkage long sys32_semctl(int semid, int semnum, int cmd, union semun arg)
 	}
 	return sys_semctl (semid, semnum, cmd, arg);
 }
-
-extern long sys_lookup_dcookie(u64 cookie64, char *buf, size_t len);
 
 long sys32_lookup_dcookie(u32 cookie_high, u32 cookie_low, char *buf,
 			  size_t len)

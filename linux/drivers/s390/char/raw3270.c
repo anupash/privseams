@@ -345,8 +345,10 @@ raw3270_irq (struct ccw_device *cdev, unsigned long intparm, struct irb *irb)
 	rq = (struct raw3270_request *) intparm;
 	view = rq ? rq->view : rp->view;
 
-	if (irb->scsw.dstat == 
-	    (DEV_STAT_CHN_END | DEV_STAT_DEV_END | DEV_STAT_UNIT_EXCEP)) {
+	if (IS_ERR(irb))
+		rc = RAW3270_IO_RETRY;
+	else if (irb->scsw.dstat ==  (DEV_STAT_CHN_END | DEV_STAT_DEV_END |
+				      DEV_STAT_UNIT_EXCEP)) {
 		/* Handle CE-DE-UE and subsequent UDE */
 		set_bit(RAW3270_FLAGS_BUSY, &rp->flags);
 		rc = RAW3270_IO_BUSY;
@@ -381,6 +383,8 @@ raw3270_irq (struct ccw_device *cdev, unsigned long intparm, struct irb *irb)
 			return;	/* Sucessfully restarted. */
 		break;
 	case RAW3270_IO_STOP:
+		if (!rq)
+			break;
 		raw3270_halt_io_nolock(rp, rq);
 		rq->rc = -EIO;
 		break;
@@ -881,7 +885,7 @@ raw3270_activate_view(struct raw3270_view *view)
 		if (rc) {
 			/* Didn't work. Try to reactivate the old view. */
 			rp->view = oldview;
-			if (oldview->fn->activate(oldview) != 0) {
+			if (!oldview || oldview->fn->activate(oldview) != 0) {
 				/* Didn't work as well. Try any other view. */
 				list_for_each_entry(nv, &rp->view_list, list)
 					if (nv != view && nv != oldview) {

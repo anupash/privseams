@@ -26,14 +26,7 @@
  * maybe other stuff do to.
  */
 
-/* Argh. Some architectures have kernel_thread in asm/processor.h
-   Some have it in unistd.h and you need to define __KERNEL_SYSCALLS__
-   Pass me a baseball bat and the person responsible.
-   dwmw2
-*/
-#define __KERNEL_SYSCALLS__
 #include <linux/time.h>
-#include <linux/unistd.h>
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -76,6 +69,8 @@ static int jffs_fill_super(struct super_block *sb, void *data, int silent)
 {
 	struct inode *root_inode;
 	struct jffs_control *c;
+
+	sb->s_flags |= MS_NODIRATIME;
 
 	D1(printk(KERN_NOTICE "JFFS: Trying to mount device %s.\n",
 		  sb->s_id));
@@ -1776,6 +1771,12 @@ jffs_write_super(struct super_block *sb)
 	unlock_kernel();
 }
 
+static int jffs_remount(struct super_block *sb, int *flags, char *data)
+{
+	*flags |= MS_NODIRATIME;
+	return 0;
+}
+
 static struct super_operations jffs_ops =
 {
 	.read_inode	= jffs_read_inode,
@@ -1783,6 +1784,7 @@ static struct super_operations jffs_ops =
 	.put_super	= jffs_put_super,
 	.write_super	= jffs_write_super,
 	.statfs		= jffs_statfs,
+	.remount_fs	= jffs_remount,
 };
 
 static struct super_block *jffs_get_sb(struct file_system_type *fs_type,
@@ -1807,13 +1809,25 @@ init_jffs_fs(void)
 	
 #ifdef CONFIG_JFFS_PROC_FS
 	jffs_proc_root = proc_mkdir("jffs", proc_root_fs);
+	if (!jffs_proc_root) {
+		printk(KERN_WARNING "cannot create /proc/jffs entry\n");
+	}
 #endif
 	fm_cache = kmem_cache_create("jffs_fm", sizeof(struct jffs_fm),
 				     0, SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT, 
 				     NULL, NULL);
+	if (!fm_cache) {
+		return -ENOMEM;
+	}
+
 	node_cache = kmem_cache_create("jffs_node",sizeof(struct jffs_node),
 				       0, SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT, 
 				       NULL, NULL);
+	if (!node_cache) {
+		kmem_cache_destroy(fm_cache);
+		return -ENOMEM;
+	}
+
 	return register_filesystem(&jffs_fs_type);
 }
 

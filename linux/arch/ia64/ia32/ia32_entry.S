@@ -229,7 +229,7 @@ ia32_syscall_table:
 	data8 sys_ni_syscall
 	data8 sys32_lseek
 	data8 sys_getpid	  /* 20 */
-	data8 sys_mount
+	data8 compat_sys_mount
 	data8 sys_oldumount
 	data8 sys_setuid	/* 16-bit version */
 	data8 sys_getuid	/* 16-bit version */
@@ -483,6 +483,14 @@ ia32_syscall_table:
  	data8 sys32_fadvise64_64
  	data8 sys_ni_syscall
   	data8 sys_ni_syscall
+ 	data8 sys_ni_syscall	/* 275 */
+  	data8 sys_ni_syscall
+  	data8 compat_sys_mq_open
+  	data8 sys_mq_unlink
+  	data8 compat_sys_mq_timedsend
+  	data8 compat_sys_mq_timedreceive	/* 280 */
+  	data8 compat_sys_mq_notify
+  	data8 compat_sys_mq_getsetattr
 
 	// guard against failures to increase IA32_NR_syscalls
 	.org ia32_syscall_table + 8*IA32_NR_syscalls

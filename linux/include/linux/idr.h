@@ -23,6 +23,7 @@
 # error "BITS_PER_LONG is not 32 or 64"
 #endif
 
+#define IDR_SIZE (1 << IDR_BITS)
 #define IDR_MASK ((1 << IDR_BITS)-1)
 
 /* Define the size of the id's */
@@ -53,12 +54,23 @@ struct idr {
 	spinlock_t	  lock;
 };
 
+#define IDR_INIT(name)	\
+{								\
+	.top		= NULL,					\
+	.id_free	= NULL,					\
+	.count		= 0,					\
+	.layers 	= 0,					\
+	.id_free_cnt	= 0,					\
+	.lock		= SPIN_LOCK_UNLOCKED,			\
+}
+#define DEFINE_IDR(name)	struct idr name = IDR_INIT(name)
+
 /*
  * This is what we export.
  */
 
 void *idr_find(struct idr *idp, int id);
-int idr_pre_get(struct idr *idp);
+int idr_pre_get(struct idr *idp, unsigned gfp_mask);
 int idr_get_new(struct idr *idp, void *ptr);
 void idr_remove(struct idr *idp, int id);
 void idr_init(struct idr *idp);

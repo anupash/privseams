@@ -375,7 +375,7 @@ static void via82cxxx_tune_drive(ide_drive_t *drive, u8 pio)
 		return;
 	}
 
-	via_set_drive(drive, XFER_PIO_0 + MIN(pio, 5));
+	via_set_drive(drive, XFER_PIO_0 + min_t(u8, pio, 5));
 }
 
 /**
@@ -567,7 +567,7 @@ static unsigned int __init init_chipset_via82cxxx(struct pci_dev *dev, const cha
 		via_base = pci_resource_start(dev, 4);
 		bmide_dev = dev;
 		isa_dev = isa;
-		ide_pci_register_host_proc(&via_procs[0]);
+		ide_pci_create_host_proc("via", via_get_info);
 		via_proc = 1;
 	}
 #endif /* DISPLAY_VIA_TIMINGS && CONFIG_PROC_FS */
@@ -607,8 +607,6 @@ static void __init init_hwif_via82cxxx(ide_hwif_t *hwif)
 	hwif->drives[1].autodma = hwif->autodma;
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
 static int __devinit via_init_one(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	ide_pci_device_t *d = &via82cxxx_chipsets[id->driver_data];
@@ -623,6 +621,7 @@ static struct pci_device_id via_pci_tbl[] = {
 	{ PCI_VENDOR_ID_VIA, PCI_DEVICE_ID_VIA_82C586_1, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 1},
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, via_pci_tbl);
 
 static struct pci_driver driver = {
 	.name 		= "VIA IDE",

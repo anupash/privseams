@@ -147,6 +147,7 @@ dasd_ioctl_enable(struct block_device *bdev, int no, long args)
 
 /*
  * Disable device.
+ * Used by dasdfmt. Disable I/O operations but allow ioctls.
  */
 static int
 dasd_ioctl_disable(struct block_device *bdev, int no, long args)
@@ -167,6 +168,13 @@ dasd_ioctl_disable(struct block_device *bdev, int no, long args)
 	 * device is DASD_STATE_BASIC that allows to do basic i/o.
 	 */
 	dasd_set_target_state(device, DASD_STATE_BASIC);
+	/*
+	 * Set i_size to zero, since read, write, etc. check against this
+	 * value.
+	 */
+	down(&bdev->bd_sem);
+	i_size_write(bdev->bd_inode, 0);
+	up(&bdev->bd_sem);
 	return 0;
 }
 
@@ -237,9 +245,9 @@ dasd_format(struct dasd_device * device, struct format_data_t * fdata)
 	if (device->discipline->format_device == NULL)
 		return -EPERM;
 
-	if (atomic_read(&device->open_count) > 1) {
+	if (device->state != DASD_STATE_BASIC) {
 		DEV_MESSAGE(KERN_WARNING, device, "%s",
-			    "dasd_format: device is open! ");
+			    "dasd_format: device is not disabled! ");
 		return -EBUSY;
 	}
 
@@ -247,6 +255,16 @@ dasd_format(struct dasd_device * device, struct format_data_t * fdata)
 		      "formatting units %d to %d (%d B blocks) flags %d",
 		      fdata->start_unit,
 		      fdata->stop_unit, fdata->blksize, fdata->intensity);
+
+	/* Since dasdfmt keeps the device open after it was disabled,
+	 * there still exists an inode for this device. We must update i_blkbits,
+	 * otherwise we might get errors when enabling the device later.
+	 */
+	if (fdata->start_unit == 0) {
+		struct block_device *bdev = bdget_disk(device->gdp, 0);
+		bdev->bd_inode->i_blkbits = blksize_bits(fdata->blksize);
+		bdput(bdev);
+	}
 
 	while (fdata->start_unit <= fdata->stop_unit) {
 		cqr = device->discipline->format_device(device, fdata);
@@ -285,7 +303,7 @@ dasd_ioctl_format(struct block_device *bdev, int no, long args)
 
 	if (device == NULL)
 		return -ENODEV;
-	if (device->ro_flag)
+	if (test_bit(DASD_FLAG_RO, &device->flags))
 		return -EROFS;
 	if (copy_from_user(&fdata, (void *) args,
 			   sizeof (struct format_data_t)))
@@ -397,8 +415,8 @@ dasd_ioctl_information(struct block_device *bdev, int no, long args)
 	    (dasd_check_blocksize(device->bp_block)))
 		dasd_info->format = DASD_FORMAT_NONE;
 	
-	dasd_info->features |= device->ro_flag ? DASD_FEATURE_READONLY
-					       : DASD_FEATURE_DEFAULT;
+	dasd_info->features |= test_bit(DASD_FLAG_RO, &device->flags) ?
+		DASD_FEATURE_READONLY : DASD_FEATURE_DEFAULT;
 
 	if (device->discipline)
 		memcpy(dasd_info->type, device->discipline->name, 4);
@@ -454,7 +472,10 @@ dasd_ioctl_set_ro(struct block_device *bdev, int no, long args)
 	if (device == NULL)
 		return -ENODEV;
 	set_disk_ro(bdev->bd_disk, intval);
-	device->ro_flag = intval;
+	if (intval)
+		set_bit(DASD_FLAG_RO, &device->flags);
+	else
+		clear_bit(DASD_FLAG_RO, &device->flags);
 	return 0;
 }
 

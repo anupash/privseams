@@ -329,8 +329,8 @@ void icmpv6_send(struct sk_buff *skb, int type, int code, __u32 info,
 	 *	for now we don't know that.
 	 */
 	if ((addr_type == IPV6_ADDR_ANY) || (addr_type & IPV6_ADDR_MULTICAST)) {
-		if (net_ratelimit())
-			printk(KERN_DEBUG "icmpv6_send: addr_any/mcast source\n");
+		LIMIT_NETDEBUG(
+			printk(KERN_DEBUG "icmpv6_send: addr_any/mcast source\n"));
 		return;
 	}
 
@@ -338,8 +338,8 @@ void icmpv6_send(struct sk_buff *skb, int type, int code, __u32 info,
 	 *	Never answer to a ICMP packet.
 	 */
 	if (is_ineligible(skb)) {
-		if (net_ratelimit())
-			printk(KERN_DEBUG "icmpv6_send: no reply to icmp error\n"); 
+		LIMIT_NETDEBUG(
+			printk(KERN_DEBUG "icmpv6_send: no reply to icmp error\n")); 
 		return;
 	}
 
@@ -385,8 +385,8 @@ void icmpv6_send(struct sk_buff *skb, int type, int code, __u32 info,
 	len = skb->len - msg.offset;
 	len = min_t(unsigned int, len, IPV6_MIN_MTU - sizeof(struct ipv6hdr) -sizeof(struct icmp6hdr));
 	if (len < 0) {
-		if (net_ratelimit())
-			printk(KERN_DEBUG "icmp: len problem\n");
+		LIMIT_NETDEBUG(
+			printk(KERN_DEBUG "icmp: len problem\n"));
 		goto out_dst_release;
 	}
 
@@ -570,17 +570,17 @@ static int icmpv6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
 		if (csum_ipv6_magic(saddr, daddr, skb->len, IPPROTO_ICMPV6,
 				    skb->csum)) {
-			if (net_ratelimit())
-				printk(KERN_DEBUG "ICMPv6 hw checksum failed\n");
+			LIMIT_NETDEBUG(
+				printk(KERN_DEBUG "ICMPv6 hw checksum failed\n"));
 			skb->ip_summed = CHECKSUM_NONE;
 		}
 	}
 	if (skb->ip_summed == CHECKSUM_NONE) {
 		if (csum_ipv6_magic(saddr, daddr, skb->len, IPPROTO_ICMPV6,
 				    skb_checksum(skb, 0, skb->len, 0))) {
-			if (net_ratelimit())
+			LIMIT_NETDEBUG(
 				printk(KERN_DEBUG "ICMPv6 checksum failed [%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x > %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x]\n",
-				       NIP6(*saddr), NIP6(*daddr));
+				       NIP6(*saddr), NIP6(*daddr)));
 			goto discard_it;
 		}
 	}
@@ -646,11 +646,12 @@ static int icmpv6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 		break;
 
 	case ICMPV6_MGM_REDUCTION:
+	case ICMPV6_MLD2_REPORT:
 		break;
 
 	default:
-		if (net_ratelimit())
-			printk(KERN_DEBUG "icmpv6: msg of unknown type\n");
+		LIMIT_NETDEBUG(
+			printk(KERN_DEBUG "icmpv6: msg of unknown type\n"));
 
 		/* informational */
 		if (type & ICMPV6_INFOMSG_MASK)
@@ -681,8 +682,8 @@ int __init icmpv6_init(struct net_proto_family *ops)
 		if (!cpu_possible(i))
 			continue;
 
-		err = sock_create(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6,
-				  &per_cpu(__icmpv6_socket, i));
+		err = sock_create_kern(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6,
+				       &per_cpu(__icmpv6_socket, i));
 		if (err < 0) {
 			printk(KERN_ERR
 			       "Failed to initialize the ICMP6 control socket "
@@ -693,7 +694,13 @@ int __init icmpv6_init(struct net_proto_family *ops)
 
 		sk = per_cpu(__icmpv6_socket, i)->sk;
 		sk->sk_allocation = GFP_ATOMIC;
-		sk->sk_sndbuf = SK_WMEM_MAX * 2;
+
+		/* Enough space for 2 64K ICMP packets, including
+		 * sk_buff struct overhead.
+		 */
+		sk->sk_sndbuf =
+			(2 * ((64 * 1024) + sizeof(struct sk_buff)));
+
 		sk->sk_prot->unhash(sk);
 	}
 

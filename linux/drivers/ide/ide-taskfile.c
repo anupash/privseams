@@ -101,7 +101,8 @@ int taskfile_lib_get_identify (ide_drive_t *drive, u8 *buf)
 		args.tfRegister[IDE_COMMAND_OFFSET]	= WIN_IDENTIFY;
 	else
 		args.tfRegister[IDE_COMMAND_OFFSET]	= WIN_PIDENTIFY;
-	args.command_type			= ide_cmd_type_parser(&args);
+	args.command_type = IDE_DRIVE_TASK_IN;
+	args.handler	  = &task_in_intr;
 	return ide_raw_taskfile(drive, &args, buf);
 }
 
@@ -120,13 +121,13 @@ void debug_taskfile (ide_drive_t *drive, ide_task_t *args)
 	printk("TF.6=x%02x ", args->tfRegister[IDE_SELECT_OFFSET]);
 	printk("TF.7=x%02x\n", args->tfRegister[IDE_COMMAND_OFFSET]);
 	printk(KERN_INFO "%s: ", drive->name);
-//	printk("HTF.0=x%02x ", args->hobRegister[IDE_DATA_OFFSET_HOB]);
-	printk("HTF.1=x%02x ", args->hobRegister[IDE_FEATURE_OFFSET_HOB]);
-	printk("HTF.2=x%02x ", args->hobRegister[IDE_NSECTOR_OFFSET_HOB]);
-	printk("HTF.3=x%02x ", args->hobRegister[IDE_SECTOR_OFFSET_HOB]);
-	printk("HTF.4=x%02x ", args->hobRegister[IDE_LCYL_OFFSET_HOB]);
-	printk("HTF.5=x%02x ", args->hobRegister[IDE_HCYL_OFFSET_HOB]);
-	printk("HTF.6=x%02x ", args->hobRegister[IDE_SELECT_OFFSET_HOB]);
+//	printk("HTF.0=x%02x ", args->hobRegister[IDE_DATA_OFFSET]);
+	printk("HTF.1=x%02x ", args->hobRegister[IDE_FEATURE_OFFSET]);
+	printk("HTF.2=x%02x ", args->hobRegister[IDE_NSECTOR_OFFSET]);
+	printk("HTF.3=x%02x ", args->hobRegister[IDE_SECTOR_OFFSET]);
+	printk("HTF.4=x%02x ", args->hobRegister[IDE_LCYL_OFFSET]);
+	printk("HTF.5=x%02x ", args->hobRegister[IDE_HCYL_OFFSET]);
+	printk("HTF.6=x%02x ", args->hobRegister[IDE_SELECT_OFFSET]);
 	printk("HTF.7=x%02x\n", args->hobRegister[IDE_CONTROL_OFFSET_HOB]);
 }
 #endif /* CONFIG_IDE_TASK_IOCTL_DEBUG */
@@ -217,66 +218,6 @@ ide_startstop_t do_rw_taskfile (ide_drive_t *drive, ide_task_t *task)
 }
 
 EXPORT_SYMBOL(do_rw_taskfile);
-
-/*
- * Clean up after success/failure of an explicit taskfile operation.
- */
-void ide_end_taskfile (ide_drive_t *drive, u8 stat, u8 err)
-{
-	ide_hwif_t *hwif = HWIF(drive);
-	unsigned long flags;
-	struct request *rq;
-	ide_task_t *args;
-	task_ioreg_t command;
-
-	spin_lock_irqsave(&ide_lock, flags);
-	rq = HWGROUP(drive)->rq;
-	spin_unlock_irqrestore(&ide_lock, flags);
-	args = (ide_task_t *) rq->special;
-
-	command = args->tfRegister[IDE_COMMAND_OFFSET];
-
-	if (rq->errors == 0)
-		rq->errors = !OK_STAT(stat,READY_STAT,BAD_STAT);
-
-	if (args->tf_in_flags.b.data) {
-		u16 data = hwif->INW(IDE_DATA_REG);
-		args->tfRegister[IDE_DATA_OFFSET] = (data) & 0xFF;
-		args->hobRegister[IDE_DATA_OFFSET_HOB]	= (data >> 8) & 0xFF;
-	}
-	args->tfRegister[IDE_ERROR_OFFSET]   = err;
-	args->tfRegister[IDE_NSECTOR_OFFSET] = hwif->INB(IDE_NSECTOR_REG);
-	args->tfRegister[IDE_SECTOR_OFFSET]  = hwif->INB(IDE_SECTOR_REG);
-	args->tfRegister[IDE_LCYL_OFFSET]    = hwif->INB(IDE_LCYL_REG);
-	args->tfRegister[IDE_HCYL_OFFSET]    = hwif->INB(IDE_HCYL_REG);
-	args->tfRegister[IDE_SELECT_OFFSET]  = hwif->INB(IDE_SELECT_REG);
-	args->tfRegister[IDE_STATUS_OFFSET]  = stat;
-	if ((drive->id->command_set_2 & 0x0400) &&
-	    (drive->id->cfs_enable_2 & 0x0400) &&
-	    (drive->addressing == 1)) {
-		hwif->OUTB(drive->ctl|0x80, IDE_CONTROL_REG_HOB);
-		args->hobRegister[IDE_FEATURE_OFFSET_HOB] = hwif->INB(IDE_FEATURE_REG);
-		args->hobRegister[IDE_NSECTOR_OFFSET_HOB] = hwif->INB(IDE_NSECTOR_REG);
-		args->hobRegister[IDE_SECTOR_OFFSET_HOB]  = hwif->INB(IDE_SECTOR_REG);
-		args->hobRegister[IDE_LCYL_OFFSET_HOB]    = hwif->INB(IDE_LCYL_REG);
-		args->hobRegister[IDE_HCYL_OFFSET_HOB]    = hwif->INB(IDE_HCYL_REG);
-	}
-
-#if 0
-/*	taskfile_settings_update(drive, args, command); */
-
-	if (args->posthandler != NULL)
-		args->posthandler(drive, args);
-#endif
-
-	spin_lock_irqsave(&ide_lock, flags);
-	blkdev_dequeue_request(rq);
-	HWGROUP(drive)->rq = NULL;
-	end_that_request_last(rq);
-	spin_unlock_irqrestore(&ide_lock, flags);
-}
-
-EXPORT_SYMBOL(ide_end_taskfile);
 
 /*
  * set_multmode_intr() is invoked on completion of a WIN_SETMULT cmd.
@@ -1050,336 +991,11 @@ EXPORT_SYMBOL(pre_task_mulout_intr);
 
 #endif /* !CONFIG_IDE_TASKFILE_IO */
 
-/* Called by internal to feature out type of command being called */
-//ide_pre_handler_t * ide_pre_handler_parser (task_struct_t *taskfile, hob_struct_t *hobfile)
-ide_pre_handler_t * ide_pre_handler_parser (struct hd_drive_task_hdr *taskfile, struct hd_drive_hob_hdr *hobfile)
-{
-	switch(taskfile->command) {
-				/* IDE_DRIVE_TASK_RAW_WRITE */
-		case CFA_WRITE_MULTI_WO_ERASE:
-	//	case WIN_WRITE_LONG:
-	//	case WIN_WRITE_LONG_ONCE:
-		case WIN_MULTWRITE:
-		case WIN_MULTWRITE_EXT:
-			return &pre_task_mulout_intr;
-			
-				/* IDE_DRIVE_TASK_OUT */
-		case WIN_WRITE:
-	//	case WIN_WRITE_ONCE:
-		case WIN_WRITE_EXT:
-		case WIN_WRITE_VERIFY:
-		case WIN_WRITE_BUFFER:
-		case CFA_WRITE_SECT_WO_ERASE:
-		case WIN_DOWNLOAD_MICROCODE:
-			return &pre_task_out_intr;
-				/* IDE_DRIVE_TASK_OUT */
-		case WIN_SMART:
-			if (taskfile->feature == SMART_WRITE_LOG_SECTOR)
-				return &pre_task_out_intr;
-		case WIN_WRITEDMA:
-	//	case WIN_WRITEDMA_ONCE:
-		case WIN_WRITEDMA_QUEUED:
-		case WIN_WRITEDMA_EXT:
-		case WIN_WRITEDMA_QUEUED_EXT:
-				/* IDE_DRIVE_TASK_OUT */
-		default:
-			break;
-	}
-	return(NULL);
-}
-
-EXPORT_SYMBOL(ide_pre_handler_parser);
-
-/* Called by internal to feature out type of command being called */
-//ide_handler_t * ide_handler_parser (task_struct_t *taskfile, hob_struct_t *hobfile)
-ide_handler_t * ide_handler_parser (struct hd_drive_task_hdr *taskfile, struct hd_drive_hob_hdr *hobfile)
-{
-	switch(taskfile->command) {
-		case WIN_IDENTIFY:
-		case WIN_PIDENTIFY:
-		case CFA_TRANSLATE_SECTOR:
-		case WIN_READ_BUFFER:
-		case WIN_READ:
-	//	case WIN_READ_ONCE:
-		case WIN_READ_EXT:
-			return &task_in_intr;
-		case WIN_SECURITY_DISABLE:
-		case WIN_SECURITY_ERASE_UNIT:
-		case WIN_SECURITY_SET_PASS:
-		case WIN_SECURITY_UNLOCK:
-		case WIN_DOWNLOAD_MICROCODE:
-		case CFA_WRITE_SECT_WO_ERASE:
-		case WIN_WRITE_BUFFER:
-		case WIN_WRITE_VERIFY:
-		case WIN_WRITE:
-	//	case WIN_WRITE_ONCE:	
-		case WIN_WRITE_EXT:
-			return &task_out_intr;
-	//	case WIN_READ_LONG:
-	//	case WIN_READ_LONG_ONCE:
-		case WIN_MULTREAD:
-		case WIN_MULTREAD_EXT:
-			return &task_mulin_intr;
-	//	case WIN_WRITE_LONG:
-	//	case WIN_WRITE_LONG_ONCE:
-		case CFA_WRITE_MULTI_WO_ERASE:
-		case WIN_MULTWRITE:
-		case WIN_MULTWRITE_EXT:
-			return &task_mulout_intr;
-		case WIN_SMART:
-			switch(taskfile->feature) {
-				case SMART_READ_VALUES:
-				case SMART_READ_THRESHOLDS:
-				case SMART_READ_LOG_SECTOR:
-					return &task_in_intr;
-				case SMART_WRITE_LOG_SECTOR:
-					return &task_out_intr;
-				default:
-					return &task_no_data_intr;
-			}
-		case CFA_REQ_EXT_ERROR_CODE:
-		case CFA_ERASE_SECTORS:
-		case WIN_VERIFY:
-	//	case WIN_VERIFY_ONCE:
-		case WIN_VERIFY_EXT:
-		case WIN_SEEK:
-			return &task_no_data_intr;
-		case WIN_SPECIFY:
-			return &set_geometry_intr;
-		case WIN_RECAL:
-	//	case WIN_RESTORE:
-			return &recal_intr;
-		case WIN_NOP:
-		case WIN_DIAGNOSE:
-		case WIN_FLUSH_CACHE:
-		case WIN_FLUSH_CACHE_EXT:
-		case WIN_STANDBYNOW1:
-		case WIN_STANDBYNOW2:
-		case WIN_SLEEPNOW1:
-		case WIN_SLEEPNOW2:
-		case WIN_SETIDLE1:
-		case WIN_CHECKPOWERMODE1:
-		case WIN_CHECKPOWERMODE2:
-		case WIN_GETMEDIASTATUS:
-		case WIN_MEDIAEJECT:
-			return &task_no_data_intr;
-		case WIN_SETMULT:
-			return &set_multmode_intr;
-		case WIN_READ_NATIVE_MAX:
-		case WIN_SET_MAX:
-		case WIN_READ_NATIVE_MAX_EXT:
-		case WIN_SET_MAX_EXT:
-		case WIN_SECURITY_ERASE_PREPARE:
-		case WIN_SECURITY_FREEZE_LOCK:
-		case WIN_DOORLOCK:
-		case WIN_DOORUNLOCK:
-		case WIN_SETFEATURES:
-			return &task_no_data_intr;
-		case DISABLE_SEAGATE:
-		case EXABYTE_ENABLE_NEST:
-			return &task_no_data_intr;
-		case WIN_READDMA:
-	//	case WIN_READDMA_ONCE:
-		case WIN_IDENTIFY_DMA:
-		case WIN_READDMA_QUEUED:
-		case WIN_READDMA_EXT:
-		case WIN_READDMA_QUEUED_EXT:
-		case WIN_WRITEDMA:
-	//	case WIN_WRITEDMA_ONCE:
-		case WIN_WRITEDMA_QUEUED:
-		case WIN_WRITEDMA_EXT:
-		case WIN_WRITEDMA_QUEUED_EXT:
-		case WIN_FORMAT:
-		case WIN_INIT:
-		case WIN_DEVICE_RESET:
-		case WIN_QUEUED_SERVICE:
-		case WIN_PACKETCMD:
-		default:
-			return(NULL);
-	}	
-}
-
-EXPORT_SYMBOL(ide_handler_parser);
-
-ide_post_handler_t * ide_post_handler_parser (struct hd_drive_task_hdr *taskfile, struct hd_drive_hob_hdr *hobfile)
-{
-	switch(taskfile->command) {
-		case WIN_SPECIFY:	/* set_geometry_intr */
-		case WIN_RESTORE:	/* recal_intr */
-		case WIN_SETMULT:	/* set_multmode_intr */
-		default:
-			return(NULL);
-	}
-}
-
-EXPORT_SYMBOL(ide_post_handler_parser);
-
-/* Called by ioctl to feature out type of command being called */
-int ide_cmd_type_parser (ide_task_t *args)
-{
-
-	task_struct_t *taskfile = (task_struct_t *) args->tfRegister;
-	hob_struct_t *hobfile   = (hob_struct_t *) args->hobRegister;
-
-	args->prehandler	= ide_pre_handler_parser(taskfile, hobfile);
-	args->handler		= ide_handler_parser(taskfile, hobfile);
-	args->posthandler	= ide_post_handler_parser(taskfile, hobfile);
-
-	switch(args->tfRegister[IDE_COMMAND_OFFSET]) {
-		case WIN_IDENTIFY:
-		case WIN_PIDENTIFY:
-			return IDE_DRIVE_TASK_IN;
-		case CFA_TRANSLATE_SECTOR:
-		case WIN_READ:
-	//	case WIN_READ_ONCE:
-		case WIN_READ_EXT:
-		case WIN_READ_BUFFER:
-			return IDE_DRIVE_TASK_IN;
-		case WIN_WRITE:
-	//	case WIN_WRITE_ONCE:
-		case WIN_WRITE_EXT:
-		case WIN_WRITE_VERIFY:
-		case WIN_WRITE_BUFFER:
-		case CFA_WRITE_SECT_WO_ERASE:
-		case WIN_DOWNLOAD_MICROCODE:
-			return IDE_DRIVE_TASK_RAW_WRITE;
-	//	case WIN_READ_LONG:
-	//	case WIN_READ_LONG_ONCE:
-		case WIN_MULTREAD:
-		case WIN_MULTREAD_EXT:
-			return IDE_DRIVE_TASK_IN;
-	//	case WIN_WRITE_LONG:
-	//	case WIN_WRITE_LONG_ONCE:
-		case CFA_WRITE_MULTI_WO_ERASE:
-		case WIN_MULTWRITE:
-		case WIN_MULTWRITE_EXT:
-			return IDE_DRIVE_TASK_RAW_WRITE;
-		case WIN_SECURITY_DISABLE:
-		case WIN_SECURITY_ERASE_UNIT:
-		case WIN_SECURITY_SET_PASS:
-		case WIN_SECURITY_UNLOCK:
-			return IDE_DRIVE_TASK_OUT;
-		case WIN_SMART:
-			args->tfRegister[IDE_LCYL_OFFSET] = SMART_LCYL_PASS;
-			args->tfRegister[IDE_HCYL_OFFSET] = SMART_HCYL_PASS;
-			switch(args->tfRegister[IDE_FEATURE_OFFSET]) {
-				case SMART_READ_VALUES:
-				case SMART_READ_THRESHOLDS:
-				case SMART_READ_LOG_SECTOR:
-					return IDE_DRIVE_TASK_IN;
-				case SMART_WRITE_LOG_SECTOR:
-					return IDE_DRIVE_TASK_OUT;
-				default:
-					return IDE_DRIVE_TASK_NO_DATA;
-			}
-		case WIN_READDMA:
-	//	case WIN_READDMA_ONCE:
-		case WIN_IDENTIFY_DMA:
-		case WIN_READDMA_QUEUED:
-		case WIN_READDMA_EXT:
-		case WIN_READDMA_QUEUED_EXT:
-			return IDE_DRIVE_TASK_IN;
-		case WIN_WRITEDMA:
-	//	case WIN_WRITEDMA_ONCE:
-		case WIN_WRITEDMA_QUEUED:
-		case WIN_WRITEDMA_EXT:
-		case WIN_WRITEDMA_QUEUED_EXT:
-			return IDE_DRIVE_TASK_RAW_WRITE;
-		case WIN_SETFEATURES:
-			switch(args->tfRegister[IDE_FEATURE_OFFSET]) {
-				case SETFEATURES_EN_8BIT:
-				case SETFEATURES_EN_WCACHE:
-					return IDE_DRIVE_TASK_NO_DATA;
-				case SETFEATURES_XFER:
-					return IDE_DRIVE_TASK_SET_XFER;
-				case SETFEATURES_DIS_DEFECT:
-				case SETFEATURES_EN_APM:
-				case SETFEATURES_DIS_MSN:
-				case SETFEATURES_DIS_RETRY:
-				case SETFEATURES_EN_AAM:
-				case SETFEATURES_RW_LONG:
-				case SETFEATURES_SET_CACHE:
-				case SETFEATURES_DIS_RLA:
-				case SETFEATURES_EN_RI:
-				case SETFEATURES_EN_SI:
-				case SETFEATURES_DIS_RPOD:
-				case SETFEATURES_DIS_WCACHE:
-				case SETFEATURES_EN_DEFECT:
-				case SETFEATURES_DIS_APM:
-				case SETFEATURES_EN_ECC:
-				case SETFEATURES_EN_MSN:
-				case SETFEATURES_EN_RETRY:
-				case SETFEATURES_EN_RLA:
-				case SETFEATURES_PREFETCH:
-				case SETFEATURES_4B_RW_LONG:
-				case SETFEATURES_DIS_AAM:
-				case SETFEATURES_EN_RPOD:
-				case SETFEATURES_DIS_RI:
-				case SETFEATURES_DIS_SI:
-				default:
-					return IDE_DRIVE_TASK_NO_DATA;
-			}
-		case WIN_NOP:
-		case CFA_REQ_EXT_ERROR_CODE:
-		case CFA_ERASE_SECTORS:
-		case WIN_VERIFY:
-	//	case WIN_VERIFY_ONCE:
-		case WIN_VERIFY_EXT:
-		case WIN_SEEK:
-		case WIN_SPECIFY:
-		case WIN_RESTORE:
-		case WIN_DIAGNOSE:
-		case WIN_FLUSH_CACHE:
-		case WIN_FLUSH_CACHE_EXT:
-		case WIN_STANDBYNOW1:
-		case WIN_STANDBYNOW2:
-		case WIN_SLEEPNOW1:
-		case WIN_SLEEPNOW2:
-		case WIN_SETIDLE1:
-		case DISABLE_SEAGATE:
-		case WIN_CHECKPOWERMODE1:
-		case WIN_CHECKPOWERMODE2:
-		case WIN_GETMEDIASTATUS:
-		case WIN_MEDIAEJECT:
-		case WIN_SETMULT:
-		case WIN_READ_NATIVE_MAX:
-		case WIN_SET_MAX:
-		case WIN_READ_NATIVE_MAX_EXT:
-		case WIN_SET_MAX_EXT:
-		case WIN_SECURITY_ERASE_PREPARE:
-		case WIN_SECURITY_FREEZE_LOCK:
-		case EXABYTE_ENABLE_NEST:
-		case WIN_DOORLOCK:
-		case WIN_DOORUNLOCK:
-			return IDE_DRIVE_TASK_NO_DATA;
-		case WIN_FORMAT:
-		case WIN_INIT:
-		case WIN_DEVICE_RESET:
-		case WIN_QUEUED_SERVICE:
-		case WIN_PACKETCMD:
-		default:
-			return IDE_DRIVE_TASK_INVALID;
-	}
-}
-
-EXPORT_SYMBOL(ide_cmd_type_parser);
-
-/*
- * This function is intended to be used prior to invoking ide_do_drive_cmd().
- */
-void ide_init_drive_taskfile (struct request *rq)
-{
-	memset(rq, 0, sizeof(*rq));
-	rq->flags = REQ_DRIVE_TASKFILE;
-}
-
-EXPORT_SYMBOL(ide_init_drive_taskfile);
-
 int ide_diag_taskfile (ide_drive_t *drive, ide_task_t *args, unsigned long data_size, u8 *buf)
 {
 	struct request rq;
 
-	ide_init_drive_taskfile(&rq);
+	memset(&rq, 0, sizeof(rq));
 	rq.flags = REQ_DRIVE_TASKFILE;
 	rq.buffer = buf;
 
@@ -1391,7 +1007,7 @@ int ide_diag_taskfile (ide_drive_t *drive, ide_task_t *args, unsigned long data_
 	 */
 	if (args->command_type != IDE_DRIVE_TASK_NO_DATA) {
 		if (data_size == 0)
-			rq.nr_sectors = (args->hobRegister[IDE_NSECTOR_OFFSET_HOB] << 8) | args->tfRegister[IDE_NSECTOR_OFFSET];
+			rq.nr_sectors = (args->hobRegister[IDE_NSECTOR_OFFSET] << 8) | args->tfRegister[IDE_NSECTOR_OFFSET];
 		else
 			rq.nr_sectors = data_size / SECTOR_SIZE;
 
@@ -1399,16 +1015,6 @@ int ide_diag_taskfile (ide_drive_t *drive, ide_task_t *args, unsigned long data_
 		rq.hard_cur_sectors = rq.current_nr_sectors = rq.nr_sectors;
 	}
 
-	if (args->tf_out_flags.all == 0) {
-		/*
-		 * clean up kernel settings for driver sanity, regardless.
-		 * except for discrete diag services.
-		 */
-		args->posthandler = ide_post_handler_parser(
-				(struct hd_drive_task_hdr *) args->tfRegister,
-				(struct hd_drive_hob_hdr *) args->hobRegister);
-
-	}
 	rq.special = args;
 	return ide_do_drive_cmd(drive, &rq, ide_wait);
 }
@@ -1421,18 +1027,6 @@ int ide_raw_taskfile (ide_drive_t *drive, ide_task_t *args, u8 *buf)
 }
 
 EXPORT_SYMBOL(ide_raw_taskfile);
-	
-#ifdef CONFIG_IDE_TASK_IOCTL_DEBUG
-char * ide_ioctl_verbose (unsigned int cmd)
-{
-	return("unknown");
-}
-
-char * ide_task_cmd_verbose (u8 task)
-{
-	return("unknown");
-}
-#endif /* CONFIG_IDE_TASK_IOCTL_DEBUG */
 
 #define MAX_DMA		(256*SECTOR_WORDS)
 
@@ -1509,13 +1103,6 @@ int ide_taskfile_ioctl (ide_drive_t *drive, unsigned int cmd, unsigned long arg)
 	args.data_phase   = req_task->data_phase;
 	args.command_type = req_task->req_cmd;
 
-#ifdef CONFIG_IDE_TASK_IOCTL_DEBUG
-	DTF("%s: ide_ioctl_cmd %s:  ide_task_cmd %s\n",
-		drive->name,
-		ide_ioctl_verbose(cmd),
-		ide_task_cmd_verbose(args.tfRegister[IDE_COMMAND_OFFSET]));
-#endif /* CONFIG_IDE_TASK_IOCTL_DEBUG */
-
 	drive->io_32bit = 0;
 	switch(req_task->data_phase) {
 		case TASKFILE_OUT_DMAQ:
@@ -1530,11 +1117,9 @@ int ide_taskfile_ioctl (ide_drive_t *drive, unsigned int cmd, unsigned long arg)
 #if 0
 			args.prehandler = &pre_task_out_intr;
 			args.handler = &task_out_intr;
-			args.posthandler = NULL;
 			err = ide_diag_taskfile(drive, &args, taskout, outbuf);
 			args.prehandler = NULL;
 			args.handler = &task_in_intr;
-			args.posthandler = NULL;
 			err = ide_diag_taskfile(drive, &args, taskin, inbuf);
 			break;
 #else
@@ -1669,7 +1254,6 @@ EXPORT_SYMBOL(ide_wait_cmd);
  */
 int ide_cmd_ioctl (ide_drive_t *drive, unsigned int cmd, unsigned long arg)
 {
-#if 1
 	int err = 0;
 	u8 args[4], *argbuf = args;
 	u8 xfer_rate = 0;
@@ -1720,70 +1304,6 @@ abort:
 	if (argsize > 4)
 		kfree(argbuf);
 	return err;
-
-#else
-
-	int err = -EIO;
-	u8 args[4], *argbuf = args;
-	u8 xfer_rate = 0;
-	int argsize = 0;
-	ide_task_t tfargs;
-
-	if (NULL == (void *) arg) {
-		struct request rq;
-		ide_init_drive_cmd(&rq);
-		return ide_do_drive_cmd(drive, &rq, ide_wait);
-	}
-
-	if (copy_from_user(args, (void *)arg, 4))
-		return -EFAULT;
-
-	memset(&tfargs, 0, sizeof(ide_task_t));
-	tfargs.tfRegister[IDE_FEATURE_OFFSET] = args[2];
-	tfargs.tfRegister[IDE_NSECTOR_OFFSET] = args[3];
-	tfargs.tfRegister[IDE_SECTOR_OFFSET]  = args[1];
-	tfargs.tfRegister[IDE_LCYL_OFFSET]    = 0x00;
-	tfargs.tfRegister[IDE_HCYL_OFFSET]    = 0x00;
-	tfargs.tfRegister[IDE_SELECT_OFFSET]  = 0x00;
-	tfargs.tfRegister[IDE_COMMAND_OFFSET] = args[0];
-
-	if (args[3]) {
-		argsize = (SECTOR_WORDS * 4 * args[3]);
-		argbuf = kmalloc(argsize, GFP_KERNEL);
-		if (argbuf == NULL)
-			return -ENOMEM;
-	}
-
-	if (set_transfer(drive, &tfargs)) {
-		xfer_rate = args[1];
-		if (ide_ata66_check(drive, &tfargs))
-			goto abort;
-	}
-
-	tfargs.command_type = ide_cmd_type_parser(&tfargs);
-	err = ide_raw_taskfile(drive, &tfargs, argbuf);
-
-	if (!err && xfer_rate) {
-		/* active-retuning-calls future */
-		ide_set_xfer_rate(driver, xfer_rate);
-		ide_driveid_update(drive);
-	}
-abort:
-	args[0] = tfargs.tfRegister[IDE_COMMAND_OFFSET];
-	args[1] = tfargs.tfRegister[IDE_FEATURE_OFFSET];
-	args[2] = tfargs.tfRegister[IDE_NSECTOR_OFFSET];
-	args[3] = 0;
-
-	if (copy_to_user((void *)arg, argbuf, 4))
-		err = -EFAULT;
-	if (argbuf != NULL) {
-		if (copy_to_user((void *)arg, argbuf + 4, argsize))
-			err = -EFAULT;
-		kfree(argbuf);
-	}
-	return err;
-
-#endif
 }
 
 EXPORT_SYMBOL(ide_cmd_ioctl);

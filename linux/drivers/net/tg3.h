@@ -129,6 +129,9 @@
 #define   CHIPREV_5700_BX		 0x71
 #define   CHIPREV_5700_CX		 0x72
 #define   CHIPREV_5701_AX		 0x00
+#define   CHIPREV_5703_AX		 0x10
+#define   CHIPREV_5704_AX		 0x20
+#define   CHIPREV_5704_BX		 0x21
 #define  GET_METAL_REV(CHIP_REV_ID)	((CHIP_REV_ID) & 0xff)
 #define   METAL_REV_A0			 0x00
 #define   METAL_REV_A1			 0x01
@@ -1814,6 +1817,37 @@ struct tg3_bufmgr_config {
 	u32		dma_high_water;
 };
 
+struct tg3_ethtool_stats {
+	/* Statistics maintained by Receive MAC. */
+	u64		rx_fragments;
+	u64		rx_ucast_packets;
+	u64		rx_bcast_packets;
+	u64		rx_fcs_errors;
+	u64		rx_xon_pause_rcvd;
+	u64		rx_xoff_pause_rcvd;
+	u64		rx_mac_ctrl_rcvd;
+	u64		rx_xoff_entered;
+	u64		rx_frame_too_long_errors;
+	u64		rx_jabbers;
+	u64		rx_undersize_packets;
+	u64		rx_in_length_errors;
+	u64		rx_out_length_errors;
+
+	/* Statistics maintained by Transmit MAC. */
+	u64		tx_xon_sent;
+	u64		tx_xoff_sent;
+	u64		tx_flow_control;
+	u64		tx_mac_errors;
+	u64		tx_single_collisions;
+	u64		tx_mult_collisions;
+	u64		tx_deferred;
+	u64		tx_excessive_collisions;
+	u64		tx_late_collisions;
+	u64		tx_ucast_packets;
+	u64		tx_mcast_packets;
+	u64		tx_bcast_packets;
+};
+
 struct tg3 {
 	/* begin "general, frequently-used members" cacheline section */
 
@@ -1877,6 +1911,9 @@ struct tg3 {
 	/* begin "everything else" cacheline(s) section */
 	struct net_device_stats		net_stats;
 	struct net_device_stats		net_stats_prev;
+	struct tg3_ethtool_stats	estats;
+	struct tg3_ethtool_stats	estats_prev;
+
 	unsigned long			phy_crc_errors;
 
 	u32				rx_offset;
@@ -1889,7 +1926,11 @@ struct tg3 {
 #define TG3_FLAG_ENABLE_ASF		0x00000020
 #define TG3_FLAG_5701_REG_WRITE_BUG	0x00000040
 #define TG3_FLAG_POLL_SERDES		0x00000080
+#if defined(CONFIG_X86)
 #define TG3_FLAG_MBOX_WRITE_REORDER	0x00000100
+#else
+#define TG3_FLAG_MBOX_WRITE_REORDER	0	/* disables code too */
+#endif
 #define TG3_FLAG_PCIX_TARGET_HWBUG	0x00000200
 #define TG3_FLAG_WOL_SPEED_100MB	0x00000400
 #define TG3_FLAG_WOL_ENABLE		0x00000800
@@ -1920,6 +1961,9 @@ struct tg3 {
 #define TG3_FLG2_IS_5788		0x00000008
 #define TG3_FLG2_MAX_RXPEND_64		0x00000010
 #define TG3_FLG2_TSO_CAPABLE		0x00000020
+#define TG3_FLG2_PHY_ADC_BUG		0x00000040
+#define TG3_FLG2_PHY_5704_A0_BUG	0x00000080
+#define TG3_FLG2_PHY_BER_BUG		0x00000100
 
 	u32				split_mode_max_reqs;
 #define SPLIT_MODE_5704_MAX_REQ		3

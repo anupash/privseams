@@ -1,8 +1,8 @@
 /**
  * aops.c - NTFS kernel address space operations and page cache handling.
- * 	    Part of the Linux-NTFS project.
+ *	    Part of the Linux-NTFS project.
  *
- * Copyright (c) 2001-2003 Anton Altaparmakov
+ * Copyright (c) 2001-2004 Anton Altaparmakov
  * Copyright (c) 2002 Richard Russon
  *
  * This program/include file is free software; you can redistribute it and/or
@@ -10,13 +10,13 @@
  * by the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  *
- * This program/include file is distributed in the hope that it will be 
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty 
+ * This program/include file is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty
  * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program (in the main directory of the Linux-NTFS 
+ * along with this program (in the main directory of the Linux-NTFS
  * distribution in the file COPYING); if not, write to the Free Software
  * Foundation,Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
@@ -77,7 +77,7 @@ static void ntfs_end_buffer_async_read(struct buffer_head *bh, int uptodate)
 		}
 	} else {
 		clear_buffer_uptodate(bh);
-		ntfs_error(ni->vol->sb, "Buffer I/O error, logical block %Lu.",
+		ntfs_error(ni->vol->sb, "Buffer I/O error, logical block %llu.",
 				(unsigned long long)bh->b_blocknr);
 		SetPageError(page);
 	}
@@ -120,10 +120,10 @@ static void ntfs_end_buffer_async_read(struct buffer_head *bh, int uptodate)
 				continue;
 			nr_err++;
 			ntfs_error(ni->vol->sb, "post_read_mst_fixup() failed, "
-					"corrupt %s record 0x%Lx. Run chkdsk.",
+					"corrupt %s record 0x%llx. Run chkdsk.",
 					ni->mft_no ? "index" : "mft",
-					(long long)(((s64)page->index <<
-					PAGE_CACHE_SHIFT >>
+					(unsigned long long)(((s64)page->index
+					<< PAGE_CACHE_SHIFT >>
 					ni->itype.index.block_size_bits) + i));
 		}
 		flush_dcache_page(page);
@@ -263,9 +263,10 @@ lock_retry_remap:
 			}
 			/* Hard error, zero out region. */
 			SetPageError(page);
-			ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%Lx) failed "
-					"with error code 0x%Lx%s.",
-					(long long)vcn, (long long)-lcn,
+			ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%llx) failed "
+					"with error code 0x%llx%s.",
+					(unsigned long long)vcn,
+					(unsigned long long)-lcn,
 					is_retry ? " even after retrying" : "");
 			// FIXME: Depending on vol->on_errors, do something.
 		}
@@ -458,7 +459,7 @@ err_out:
  *
  * Based on ntfs_read_block() and __block_write_full_page().
  */
-static int ntfs_write_block(struct page *page)
+static int ntfs_write_block(struct writeback_control *wbc, struct page *page)
 {
 	VCN vcn;
 	LCN lcn;
@@ -499,10 +500,7 @@ static int ntfs_write_block(struct page *page)
 		 * Put the page back on mapping->dirty_pages, but leave its
 		 * buffer's dirty state as-is.
 		 */
-		// FIXME: Once Andrew's -EAGAIN patch goes in, remove the
-		// __set_page_dirty_nobuffers(page) and return -EAGAIN instead
-		// of zero.
-		__set_page_dirty_nobuffers(page);
+		redirty_page_for_writepage(wbc, page);
 		unlock_page(page);
 		return 0;
 	}
@@ -575,11 +573,11 @@ static int ntfs_write_block(struct page *page)
 				// Again for each page do:
 				// - wait_on_page_locked()
 				// - Check (PageUptodate(page) &&
-				// 			!PageError(page))
+				//			!PageError(page))
 				// Update initialized size in the attribute and
 				// in the inode.
 				// Again, for each page do:
-				// 	__set_page_dirty_buffers();
+				//	__set_page_dirty_buffers();
 				// page_cache_release()
 				// We don't need to wait on the writes.
 				// Update iblock.
@@ -670,9 +668,10 @@ lock_retry_remap:
 		}
 		/* Failed to map the buffer, even after retrying. */
 		bh->b_blocknr = -1UL;
-		ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%Lx) failed "
-				"with error code 0x%Lx%s.",
-				(long long)vcn, (long long)-lcn,
+		ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%llx) failed "
+				"with error code 0x%llx%s.",
+				(unsigned long long)vcn,
+				(unsigned long long)-lcn,
 				is_retry ? " even after retrying" : "");
 		// FIXME: Depending on vol->on_errors, do something.
 		if (!err)
@@ -733,17 +732,14 @@ lock_retry_remap:
 			 * Put the page back on mapping->dirty_pages, but
 			 * leave its buffer's dirty state as-is.
 			 */
-			// FIXME: Once Andrew's -EAGAIN patch goes in, remove
-			// the __set_page_dirty_nobuffers(page) and set err to
-			// -EAGAIN instead of zero.
-			__set_page_dirty_nobuffers(page);
+			redirty_page_for_writepage(wbc, page);
 			err = 0;
 		} else
 			SetPageError(page);
 	}
 
 	BUG_ON(PageWriteback(page));
-	SetPageWriteback(page);		/* Keeps try_to_free_buffers() away. */
+	set_page_writeback(page);	/* Keeps try_to_free_buffers() away. */
 	unlock_page(page);
 
 	/*
@@ -869,7 +865,7 @@ static int ntfs_writepage(struct page *page, struct writeback_control *wbc)
 		}
 
 		/* Normal data stream. */
-		return ntfs_write_block(page);
+		return ntfs_write_block(wbc, page);
 	}
 
 	/*
@@ -885,7 +881,7 @@ static int ntfs_writepage(struct page *page, struct writeback_control *wbc)
 	// FIXME: Make sure it is ok to SetPageError() on unlocked page under
 	// writeback before doing the change!
 #if 0
-	SetPageWriteback(page);
+	set_page_writeback(page);
 	unlock_page(page);
 #endif
 
@@ -920,15 +916,16 @@ static int ntfs_writepage(struct page *page, struct writeback_control *wbc)
 	attr_len = le32_to_cpu(ctx->attr->data.resident.value_length);
 
 	if (unlikely(vi->i_size != attr_len)) {
-		ntfs_error(vi->i_sb, "BUG()! i_size (0x%Lx) doesn't match "
+		ntfs_error(vi->i_sb, "BUG()! i_size (0x%llx) doesn't match "
 				"attr_len (0x%x). Aborting write.", vi->i_size,
 				attr_len);
 		err = -EIO;
 		goto err_out;
 	}
 	if (unlikely(attr_pos >= attr_len)) {
-		ntfs_error(vi->i_sb, "BUG()! attr_pos (0x%Lx) > attr_len (0x%x)"
-				". Aborting write.", attr_pos, attr_len);
+		ntfs_error(vi->i_sb, "BUG()! attr_pos (0x%llx) > attr_len "
+				"(0x%x). Aborting write.",
+				(unsigned long long)attr_pos, attr_len);
 		err = -EIO;
 		goto err_out;
 	}
@@ -986,10 +983,7 @@ err_out:
 		 * Put the page back on mapping->dirty_pages, but leave its
 		 * buffer's dirty state as-is.
 		 */
-		// FIXME: Once Andrew's -EAGAIN patch goes in, remove the
-		// __set_page_dirty_nobuffers(page) and set err to -EAGAIN
-		// instead of zero.
-		__set_page_dirty_nobuffers(page);
+		redirty_page_for_writepage(wbc, page);
 		err = 0;
 	} else {
 		ntfs_error(vi->i_sb, "Resident attribute write failed with "
@@ -1121,11 +1115,11 @@ static int ntfs_prepare_nonresident_write(struct page *page,
 				// Again for each page do:
 				// - wait_on_page_locked()
 				// - Check (PageUptodate(page) &&
-				// 			!PageError(page))
+				//			!PageError(page))
 				// Update initialized size in the attribute and
 				// in the inode.
 				// Again, for each page do:
-				// 	__set_page_dirty_buffers();
+				//	__set_page_dirty_buffers();
 				// page_cache_release()
 				// We don't need to wait on the writes.
 				// Update iblock.
@@ -1197,7 +1191,7 @@ lock_retry_remap:
 					// TODO: Instantiate the hole.
 					// clear_buffer_new(bh);
 					// unmap_underlying_metadata(bh->b_bdev,
-					// 		bh->b_blocknr);
+					//		bh->b_blocknr);
 					// For non-uptodate buffers, need to
 					// zero out the region outside the
 					// request in this bh or all bhs,
@@ -1230,11 +1224,13 @@ lock_retry_remap:
 				 * retrying.
 				 */
 				bh->b_blocknr = -1UL;
-				ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%Lx) "
+				ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%llx) "
 						"failed with error code "
-						"0x%Lx%s.", (long long)vcn,
-						(long long)-lcn, is_retry ?
-						" even after retrying" : "");
+						"0x%llx%s.",
+						(unsigned long long)vcn,
+						(unsigned long long)-lcn,
+						is_retry ? " even after "
+						"retrying" : "");
 				// FIXME: Depending on vol->on_errors, do
 				// something.
 				if (!err)
@@ -1288,7 +1284,7 @@ lock_retry_remap:
 		if (PageUptodate(page)) {
 			if (!buffer_uptodate(bh))
 				set_buffer_uptodate(bh);
-			continue; 
+			continue;
 		}
 		/*
 		 * The page is not uptodate. The buffer is mapped. If it is not
@@ -1340,8 +1336,6 @@ err_out:
 			void *kaddr;
 
 			clear_buffer_new(bh);
-			if (buffer_uptodate(bh))
-				buffer_error();
 			kaddr = kmap_atomic(page, KM_USER0);
 			memset(kaddr + block_start, 0, bh->b_size);
 			kunmap_atomic(kaddr, KM_USER0);
@@ -1536,6 +1530,7 @@ static int ntfs_commit_nonresident_write(struct page *page,
 	if (pos > vi->i_size) {
 		ntfs_error(vi->i_sb, "Writing beyond the existing file size is "
 				"not supported yet. Sorry.");
+		return -EOPNOTSUPP;
 		// vi->i_size = pos;
 		// mark_inode_dirty(vi);
 	}
@@ -1685,15 +1680,16 @@ static int ntfs_commit_write(struct file *file, struct page *page,
 	attr_len = le32_to_cpu(ctx->attr->data.resident.value_length);
 
 	if (unlikely(vi->i_size != attr_len)) {
-		ntfs_error(vi->i_sb, "BUG()! i_size (0x%Lx) doesn't match "
+		ntfs_error(vi->i_sb, "BUG()! i_size (0x%llx) doesn't match "
 				"attr_len (0x%x). Aborting write.", vi->i_size,
 				attr_len);
 		err = -EIO;
 		goto err_out;
 	}
 	if (unlikely(attr_pos >= attr_len)) {
-		ntfs_error(vi->i_sb, "BUG()! attr_pos (0x%Lx) > attr_len (0x%x)"
-				". Aborting write.", attr_pos, attr_len);
+		ntfs_error(vi->i_sb, "BUG()! attr_pos (0x%llx) > attr_len "
+				"(0x%x). Aborting write.",
+				(unsigned long long)attr_pos, attr_len);
 		err = -EIO;
 		goto err_out;
 	}
@@ -1719,7 +1715,7 @@ static int ntfs_commit_write(struct file *file, struct page *page,
 		/*
 		 * Bring the out of bounds area(s) uptodate by copying data
 		 * from the mft record to the page.
-	 	 */
+		 */
 		if (from > 0)
 			memcpy(kaddr, kattr, from);
 		if (to < bytes)

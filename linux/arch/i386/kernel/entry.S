@@ -162,7 +162,7 @@ do_lcall:
 	movl %eax,EFLAGS(%ebp)	#
 	movl %edx,EIP(%ebp)	# Now we move them to their "normal" places
 	movl %ecx,CS(%ebp)	#
-	andl $-8192, %ebp	# GET_THREAD_INFO
+	GET_THREAD_INFO_WITH_ESP(%ebp)	# GET_THREAD_INFO
 	movl TI_EXEC_DOMAIN(%ebp), %edx	# Get the execution domain
 	call *4(%edx)		# Call the lcall7 handler for the domain
 	addl $4, %esp
@@ -264,7 +264,7 @@ sysenter_past_esp:
 	cmpl $(nr_syscalls), %eax
 	jae syscall_badsys
 
-	testb $_TIF_SYSCALL_TRACE,TI_FLAGS(%ebp)
+	testb $(_TIF_SYSCALL_TRACE|_TIF_SYSCALL_AUDIT),TI_FLAGS(%ebp)
 	jnz syscall_trace_entry
 	call *sys_call_table(,%eax,4)
 	movl %eax,EAX(%esp)
@@ -287,7 +287,7 @@ ENTRY(system_call)
 	cmpl $(nr_syscalls), %eax
 	jae syscall_badsys
 					# system call tracing in operation
-	testb $_TIF_SYSCALL_TRACE,TI_FLAGS(%ebp)
+	testb $(_TIF_SYSCALL_TRACE|_TIF_SYSCALL_AUDIT),TI_FLAGS(%ebp)
 	jnz syscall_trace_entry
 syscall_call:
 	call *sys_call_table(,%eax,4)
@@ -354,7 +354,7 @@ syscall_trace_entry:
 	# perform syscall exit tracing
 	ALIGN
 syscall_exit_work:
-	testb $_TIF_SYSCALL_TRACE, %cl
+	testb $(_TIF_SYSCALL_TRACE|_TIF_SYSCALL_AUDIT), %cl
 	jz work_pending
 	sti				# could let do_syscall_trace() call
 					# schedule() instead
@@ -515,8 +515,8 @@ ENTRY(nmi)
 	/* Do not access memory above the end of our stack page,
 	 * it might not exist.
 	 */
-	andl $0x1fff,%eax
-	cmpl $0x1fec,%eax
+	andl $(THREAD_SIZE-1),%eax
+	cmpl $(THREAD_SIZE-20),%eax
 	popl %eax
 	jae nmi_stack_correct
 	cmpl $sysenter_entry,12(%esp)
@@ -882,5 +882,14 @@ ENTRY(sys_call_table)
 	.long sys_utimes
  	.long sys_fadvise64_64
 	.long sys_ni_syscall	/* sys_vserver */
+	.long sys_ni_syscall	/* sys_mbind */
+	.long sys_ni_syscall	/* 275 sys_get_mempolicy */
+	.long sys_ni_syscall	/* sys_set_mempolicy */
+	.long sys_mq_open
+	.long sys_mq_unlink
+	.long sys_mq_timedsend
+	.long sys_mq_timedreceive	/* 280 */
+	.long sys_mq_notify
+	.long sys_mq_getsetattr
 
 syscall_table_size=(.-sys_call_table)

@@ -110,24 +110,24 @@ struct cpufreq_freqs {
  * @div:   divisor
  * @mult:  multiplier
  *
- * Needed for loops_per_jiffy and similar calculations.  We do it 
- * this way to avoid math overflow on 32-bit machines.  This will
- * become architecture dependent once high-resolution-timer is
- * merged (or any other thing that introduces sc_math.h).
  *
  *    new = old * mult / div
  */
 static inline unsigned long cpufreq_scale(unsigned long old, u_int div, u_int mult)
 {
-	unsigned long val, carry;
+#if BITS_PER_LONG == 32
 
-	mult /= 100;
-	div  /= 100;
-        val   = (old / div) * mult;
-        carry = old % div;
-	carry = carry * mult / div;
+	u64 result = ((u64) old) * ((u64) mult);
+	do_div(result, div);
+	return (unsigned long) result;
 
-	return carry + val;
+#elif BITS_PER_LONG == 64
+
+	unsigned long result = old * ((u64) mult);
+	result /= div;
+	return result;
+
+#endif
 };
 
 /*********************************************************************
@@ -175,6 +175,7 @@ struct freq_attr;
 struct cpufreq_driver {
 	struct module           *owner;
 	char			name[CPUFREQ_NAME_LEN];
+	u8			flags;
 
 	/* needed by all drivers */
 	int	(*init)		(struct cpufreq_policy *policy);
@@ -191,6 +192,11 @@ struct cpufreq_driver {
 	int	(*resume)	(struct cpufreq_policy *policy);
 	struct freq_attr	**attr;
 };
+
+/* flags */
+
+#define CPUFREQ_STICKY	0x01	/* the driver isn't removed even if 
+				   all ->init() calls failed */
 
 int cpufreq_register_driver(struct cpufreq_driver *driver_data);
 int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);

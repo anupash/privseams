@@ -189,11 +189,7 @@ static int proc_fd_link(struct inode *inode, struct dentry **dentry, struct vfsm
 	struct file *file;
 	int fd = proc_type(inode) - PROC_TID_FD_DIR;
 
-	task_lock(task);
-	files = task->files;
-	if (files)
-		atomic_inc(&files->count);
-	task_unlock(task);
+	files = get_files_struct(task);
 	if (files) {
 		spin_lock(&files->file_lock);
 		file = fcheck_files(files, fd);
@@ -806,11 +802,7 @@ static int proc_readfd(struct file * filp, void * dirent, filldir_t filldir)
 				goto out;
 			filp->f_pos++;
 		default:
-			task_lock(p);
-			files = p->files;
-			if (files)
-				atomic_inc(&files->count);
-			task_unlock(p);
+			files = get_files_struct(p);
 			if (!files)
 				goto out;
 			spin_lock(&files->file_lock);
@@ -1009,11 +1001,7 @@ static int tid_fd_revalidate(struct dentry *dentry, struct nameidata *nd)
 	int fd = proc_type(inode) - PROC_TID_FD_DIR;
 	struct files_struct *files;
 
-	task_lock(task);
-	files = task->files;
-	if (files)
-		atomic_inc(&files->count);
-	task_unlock(task);
+	files = get_files_struct(task);
 	if (files) {
 		spin_lock(&files->file_lock);
 		if (fcheck_files(files, fd)) {
@@ -1117,11 +1105,7 @@ static struct dentry *proc_lookupfd(struct inode * dir, struct dentry * dentry, 
 	if (!inode)
 		goto out;
 	ei = PROC_I(inode);
-	task_lock(task);
-	files = task->files;
-	if (files)
-		atomic_inc(&files->count);
-	task_unlock(task);
+	files = get_files_struct(task);
 	if (!files)
 		goto out_unlock;
 	inode->i_mode = S_IFLNK;
@@ -1622,6 +1606,7 @@ out:
 static struct dentry *proc_task_lookup(struct inode *dir, struct dentry * dentry, struct nameidata *nd)
 {
 	struct task_struct *task;
+	struct task_struct *leader = proc_task(dir);
 	struct inode *inode;
 	unsigned tid;
 
@@ -1636,14 +1621,14 @@ static struct dentry *proc_task_lookup(struct inode *dir, struct dentry * dentry
 	read_unlock(&tasklist_lock);
 	if (!task)
 		goto out;
+	if (leader->tgid != task->tgid)
+		goto out_drop_task;
 
 	inode = proc_pid_make_inode(dir->i_sb, task, PROC_TID_INO);
 
 
-	if (!inode) {
-		put_task_struct(task);
-		goto out;
-	}
+	if (!inode)
+		goto out_drop_task;
 	inode->i_mode = S_IFDIR|S_IRUGO|S_IXUGO;
 	inode->i_op = &proc_tid_base_inode_operations;
 	inode->i_fop = &proc_tid_base_operations;
@@ -1656,6 +1641,8 @@ static struct dentry *proc_task_lookup(struct inode *dir, struct dentry * dentry
 
 	put_task_struct(task);
 	return NULL;
+out_drop_task:
+	put_task_struct(task);
 out:
 	return ERR_PTR(-ENOENT);
 }

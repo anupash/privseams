@@ -373,7 +373,7 @@ static munich_board_t pcicom_boards[MAX_BOARDS];
 
 void rework_idle_channels(struct net_device *dev)
 {
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw = ch->HW_privdata;
     munich_board_t *board = slicecom_boards + hw->boardnum;
     munich_ccb_t *ccb = board->ccb;
@@ -731,7 +731,7 @@ static void pcicom_modemline(unsigned long b)
 {
     munich_board_t *board = (munich_board_t *) b;
     struct net_device *dev = board->twins[0];
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     unsigned long regs;
 
     regs = readl((void *)(&board->bar1[GPDATA]));
@@ -765,7 +765,7 @@ static void pcicom_modemline(unsigned long b)
 
 static int MUNICH_txe(struct net_device *dev)
 {
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw = ch->HW_privdata;
 
     return (hw->busy < TX_DESC_MAX - 1);
@@ -905,7 +905,7 @@ static int munich_probe(void)
 #if 0
 static int slicecom_reset(struct net_device *dev)
 {
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
 
     printk("slicecom_reset: resetting the hardware\n");
 
@@ -933,7 +933,7 @@ static int slicecom_reset(struct net_device *dev)
 
 static int MUNICH_send_packet(struct net_device *dev, struct sk_buff *skb)
 {
-    struct comx_channel *ch = (struct comx_channel *)dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw = ch->HW_privdata;
 
     /* Send it to the debug facility too if needed: */
@@ -1085,7 +1085,7 @@ static irqreturn_t MUNICH_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 		goto go_for_next_interrupt;
 	    }
 
-	    ch = (struct comx_channel *)dev->priv;
+	    ch = netdev_priv(dev);
 	    hw = (struct slicecom_privdata *)ch->HW_privdata;
 
 	    //      printk("Rx STAT=0x%08x int_info=0x%08x rx_desc_ptr=%d rx_desc.status=0x%01x\n",
@@ -1125,7 +1125,7 @@ static irqreturn_t MUNICH_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 
 	    if (dev != NULL)
 	    {
-		ch = (struct comx_channel *)dev->priv;
+		ch = netdev_priv(dev);
 		hw = (struct slicecom_privdata *)ch->HW_privdata;
 
 		rx_status = hw->rx_desc[hw->rx_desc_ptr].status;
@@ -1261,7 +1261,7 @@ static irqreturn_t MUNICH_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 		goto go_for_next_tx_interrupt;
 	    }
 
-	    ch = (struct comx_channel *)dev->priv;
+	    ch = netdev_priv(dev);
 	    hw = (struct slicecom_privdata *)ch->HW_privdata;
 
 	    //      printk("Tx STAT=0x%08x int_info=0x%08x tiq_ptr=%d\n", stat, int_info.all, board->tiq_ptr );
@@ -1295,7 +1295,7 @@ static irqreturn_t MUNICH_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 	    {
 		int newbusy;
 
-		ch = (struct comx_channel *)dev->priv;
+		ch = netdev_priv(dev);
 		hw = (struct slicecom_privdata *)ch->HW_privdata;
 
 		/* We don't trust the "Tx available" info from the TIQ, but check        */
@@ -1398,7 +1398,7 @@ static irqreturn_t MUNICH_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 
 static int MUNICH_open(struct net_device *dev)
 {
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw = ch->HW_privdata;
     struct proc_dir_entry *procfile = ch->procdir->subdir;
     munich_board_t *board;
@@ -1891,7 +1891,7 @@ static int MUNICH_open(struct net_device *dev)
 
 static int MUNICH_close(struct net_device *dev)
 {
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw = ch->HW_privdata;
     struct proc_dir_entry *procfile = ch->procdir->subdir;
     munich_board_t *board;
@@ -2028,7 +2028,7 @@ static int MUNICH_close(struct net_device *dev)
 
 static int MUNICH_minden(struct net_device *dev, char *page)
 {
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw = ch->HW_privdata;
     munich_board_t *board;
     struct net_device *devp;
@@ -2058,30 +2058,30 @@ static int MUNICH_minden(struct net_device *dev, char *page)
     {
 	frs0 = readb(lbi + FRS0);
 	fmr2 = readb(lbi + FMR2);
-	len += snprintf(page + len, PAGE_SIZE - len, "Controller status:\n");
+	len += scnprintf(page + len, PAGE_SIZE - len, "Controller status:\n");
 	if (frs0 == 0)
-	    len += snprintf(page + len, PAGE_SIZE - len, "\tNo alarms\n");
+	    len += scnprintf(page + len, PAGE_SIZE - len, "\tNo alarms\n");
 	else
 	{
 	    if (frs0 & FRS0_LOS)
-	            len += snprintf(page + len, PAGE_SIZE - len, "\tLoss Of Signal\n");
+	            len += scnprintf(page + len, PAGE_SIZE - len, "\tLoss Of Signal\n");
 	    else
 	    {
 		if (frs0 & FRS0_AIS)
-		    len += snprintf(page + len, PAGE_SIZE - len,
+		    len += scnprintf(page + len, PAGE_SIZE - len,
 				 "\tAlarm Indication Signal\n");
 		else
 		{
 		    if (frs0 & FRS0_AUXP)
-			len += snprintf(page + len, PAGE_SIZE - len,
+			len += scnprintf(page + len, PAGE_SIZE - len,
 				     "\tAuxiliary Pattern Indication\n");
 		    if (frs0 & FRS0_LFA)
-			len += snprintf(page + len, PAGE_SIZE - len,
+			len += scnprintf(page + len, PAGE_SIZE - len,
 				     "\tLoss of Frame Alignment\n");
 		    else
 		    {
 			if (frs0 & FRS0_RRA)
-			    len += snprintf(page + len, PAGE_SIZE - len,
+			    len += scnprintf(page + len, PAGE_SIZE - len,
 					 "\tReceive Remote Alarm\n");
 
 			/* You can't set this framing with the /proc interface, but it  */
@@ -2089,11 +2089,11 @@ static int MUNICH_minden(struct net_device *dev, char *page)
 
 			if ((board->framing == SLICECOM_FRAMING_CRC4) &&
 			    (frs0 & FRS0_LMFA))
-			    len += snprintf(page + len, PAGE_SIZE - len,
+			    len += scnprintf(page + len, PAGE_SIZE - len,
 					 "\tLoss of CRC4 Multiframe Alignment\n");
 
 			if (((fmr2 & 0xc0) == 0xc0) && (frs0 & FRS0_NMF))
-			    len += snprintf(page + len, PAGE_SIZE - len,
+			    len += scnprintf(page + len, PAGE_SIZE - len,
 				 "\tNo CRC4 Multiframe alignment Found after 400 msec\n");
 		    }
 		}
@@ -2102,27 +2102,27 @@ static int MUNICH_minden(struct net_device *dev, char *page)
 
 	frs1 = readb(lbi + FRS1);
 	if (FRS1_XLS & frs1)
-	    len += snprintf(page + len, PAGE_SIZE - len,
+	    len += scnprintf(page + len, PAGE_SIZE - len,
 		 "\tTransmit Line Short\n");
 
 	/* debug Rx ring: DEL: - vagy meghagyni, de akkor legyen kicsit altalanosabb */
     }
 
-    len += snprintf(page + len, PAGE_SIZE - len, "Rx ring:\n");
-    len += snprintf(page + len, PAGE_SIZE - len, "\trafutott: %d\n", hw->rafutott);
-    len += snprintf(page + len, PAGE_SIZE - len,
+    len += scnprintf(page + len, PAGE_SIZE - len, "Rx ring:\n");
+    len += scnprintf(page + len, PAGE_SIZE - len, "\trafutott: %d\n", hw->rafutott);
+    len += scnprintf(page + len, PAGE_SIZE - len,
 		 "\tlastcheck: %ld, jiffies: %ld\n", board->lastcheck, jiffies);
-    len += snprintf(page + len, PAGE_SIZE - len, "\tbase: %08x\n",
+    len += scnprintf(page + len, PAGE_SIZE - len, "\tbase: %08x\n",
 	(u32) virt_to_phys(&hw->rx_desc[0]));
-    len += snprintf(page + len, PAGE_SIZE - len, "\trx_desc_ptr: %d\n",
+    len += scnprintf(page + len, PAGE_SIZE - len, "\trx_desc_ptr: %d\n",
 		 hw->rx_desc_ptr);
-    len += snprintf(page + len, PAGE_SIZE - len, "\trx_desc_ptr: %08x\n",
+    len += scnprintf(page + len, PAGE_SIZE - len, "\trx_desc_ptr: %08x\n",
 	(u32) virt_to_phys(&hw->rx_desc[hw->rx_desc_ptr]));
-    len += snprintf(page + len, PAGE_SIZE - len, "\thw_curr_ptr: %08x\n",
+    len += scnprintf(page + len, PAGE_SIZE - len, "\thw_curr_ptr: %08x\n",
 		 board->ccb->current_rx_desc[hw->channel]);
 
     for (i = 0; i < RX_DESC_MAX; i++)
-	len += snprintf(page + len, PAGE_SIZE - len, "\t%08x %08x %08x %08x\n",
+	len += scnprintf(page + len, PAGE_SIZE - len, "\t%08x %08x %08x %08x\n",
 		     *((u32 *) & hw->rx_desc[i] + 0),
 		     *((u32 *) & hw->rx_desc[i] + 1),
 		     *((u32 *) & hw->rx_desc[i] + 2),
@@ -2130,7 +2130,7 @@ static int MUNICH_minden(struct net_device *dev, char *page)
 
     if (!board->isx21)
     {
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "Interfaces using this board: (channel-group, interface, timeslots)\n");
 	for (i = 0; i < 32; i++)
 	{
@@ -2141,26 +2141,26 @@ static int MUNICH_minden(struct net_device *dev, char *page)
 		    ((struct slicecom_privdata *)((struct comx_channel *)devp->
 						  priv)->HW_privdata)->
 		    timeslots;
-		len += snprintf(page + len, PAGE_SIZE - len, "\t%2d %s: ", i,
+		len += scnprintf(page + len, PAGE_SIZE - len, "\t%2d %s: ", i,
 			     devp->name);
 		for (j = 0; j < 32; j++)
 		    if ((1 << j) & timeslots)
-			len += snprintf(page + len, PAGE_SIZE - len, "%d ", j);
-		len += snprintf(page + len, PAGE_SIZE - len, "\n");
+			len += scnprintf(page + len, PAGE_SIZE - len, "%d ", j);
+		len += scnprintf(page + len, PAGE_SIZE - len, "\n");
 	    }
 	}
     }
 
-    len += snprintf(page + len, PAGE_SIZE - len, "Interrupt work histogram:\n");
+    len += scnprintf(page + len, PAGE_SIZE - len, "Interrupt work histogram:\n");
     for (i = 0; i < MAX_WORK; i++)
-	len += snprintf(page + len, PAGE_SIZE - len, "hist[%2d]: %8u%c", i,
+	len += scnprintf(page + len, PAGE_SIZE - len, "hist[%2d]: %8u%c", i,
 		     board->histogram[i], (i &&
 					   ((i + 1) % 4 == 0 ||
 					    i == MAX_WORK - 1)) ? '\n' : ' ');
 
-    len += snprintf(page + len, PAGE_SIZE - len, "Tx ring histogram:\n");
+    len += scnprintf(page + len, PAGE_SIZE - len, "Tx ring histogram:\n");
     for (i = 0; i < TX_DESC_MAX; i++)
-	len += snprintf(page + len, PAGE_SIZE - len, "hist[%2d]: %8u%c", i,
+	len += scnprintf(page + len, PAGE_SIZE - len, "hist[%2d]: %8u%c", i,
 		     hw->tx_ring_hist[i], (i &&
 					   ((i + 1) % 4 == 0 ||
 					    i ==
@@ -2196,72 +2196,72 @@ static int MUNICH_minden(struct net_device *dev, char *page)
 		sump[j] += p[j];
 	}
 
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "Data in current interval (%d seconds elapsed):\n",
 		     board->elapsed_seconds);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Line Code Violations, %d Path Code Violations, %d E-Bit Errors\n",
 		     curr_int->line_code_violations,
 		     curr_int->path_code_violations, curr_int->e_bit_errors);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Slip Secs, %d Fr Loss Secs, %d Line Err Secs, %d Degraded Mins\n",
 		     curr_int->slip_secs, curr_int->fr_loss_secs,
 		     curr_int->line_err_secs, curr_int->degraded_mins);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Errored Secs, %d Bursty Err Secs, %d Severely Err Secs, %d Unavail Secs\n",
 		     curr_int->errored_secs, curr_int->bursty_err_secs,
 		     curr_int->severely_err_secs, curr_int->unavail_secs);
 
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "Data in Interval 1 (15 minutes):\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Line Code Violations, %d Path Code Violations, %d E-Bit Errors\n",
 		     prev_int->line_code_violations,
 		     prev_int->path_code_violations, prev_int->e_bit_errors);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Slip Secs, %d Fr Loss Secs, %d Line Err Secs, %d Degraded Mins\n",
 		     prev_int->slip_secs, prev_int->fr_loss_secs,
 		     prev_int->line_err_secs, prev_int->degraded_mins);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Errored Secs, %d Bursty Err Secs, %d Severely Err Secs, %d Unavail Secs\n",
 		     prev_int->errored_secs, prev_int->bursty_err_secs,
 		     prev_int->severely_err_secs, prev_int->unavail_secs);
 
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "Data in last 4 intervals (1 hour):\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Line Code Violations, %d Path Code Violations, %d E-Bit Errors\n",
 		     last4.line_code_violations, last4.path_code_violations,
 		     last4.e_bit_errors);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Slip Secs, %d Fr Loss Secs, %d Line Err Secs, %d Degraded Mins\n",
 		     last4.slip_secs, last4.fr_loss_secs, last4.line_err_secs,
 		     last4.degraded_mins);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Errored Secs, %d Bursty Err Secs, %d Severely Err Secs, %d Unavail Secs\n",
 		     last4.errored_secs, last4.bursty_err_secs,
 		     last4.severely_err_secs, last4.unavail_secs);
 
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "Data in last 96 intervals (24 hours):\n");
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Line Code Violations, %d Path Code Violations, %d E-Bit Errors\n",
 		     last96.line_code_violations, last96.path_code_violations,
 		     last96.e_bit_errors);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Slip Secs, %d Fr Loss Secs, %d Line Err Secs, %d Degraded Mins\n",
 		     last96.slip_secs, last96.fr_loss_secs,
 		     last96.line_err_secs, last96.degraded_mins);
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "   %d Errored Secs, %d Bursty Err Secs, %d Severely Err Secs, %d Unavail Secs\n",
 		     last96.errored_secs, last96.bursty_err_secs,
 		     last96.severely_err_secs, last96.unavail_secs);
 
     }
 
-//      len +=snprintf( page + len, PAGE_SIZE - len, "Special events:\n" );
-//      len +=snprintf( page + len, PAGE_SIZE - len, "\tstat_pri/missed: %u / %u\n", board->stat_pri_races, board->stat_pri_races_missed );
-//      len +=snprintf( page + len, PAGE_SIZE - len, "\tstat_pti/missed: %u / %u\n", board->stat_pti_races, board->stat_pti_races_missed );
+//      len +=scnprintf( page + len, PAGE_SIZE - len, "Special events:\n" );
+//      len +=scnprintf( page + len, PAGE_SIZE - len, "\tstat_pri/missed: %u / %u\n", board->stat_pri_races, board->stat_pri_races_missed );
+//      len +=scnprintf( page + len, PAGE_SIZE - len, "\tstat_pti/missed: %u / %u\n", board->stat_pti_races, board->stat_pti_races_missed );
     return len;
 }
 
@@ -2290,7 +2290,7 @@ static int munich_read_proc(char *page, char **start, off_t off, int count,
 {
     struct proc_dir_entry *file = (struct proc_dir_entry *)data;
     struct net_device *dev = file->parent->data;
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw = ch->HW_privdata;
     munich_board_t *board;
 
@@ -2305,8 +2305,8 @@ static int munich_read_proc(char *page, char **start, off_t off, int count,
     {
 	for (i = 0; i < 32; i++)
 	    if ((1 << i) & timeslots)
-		len += snprintf(page + len, PAGE_SIZE - len, "%d ", i);
-	len += snprintf(page + len, PAGE_SIZE - len, "\n");
+		len += scnprintf(page + len, PAGE_SIZE - len, "%d ", i);
+	len += scnprintf(page + len, PAGE_SIZE - len, "\n");
     }
     else if (!strcmp(file->name, FILENAME_FRAMING))
     {
@@ -2314,7 +2314,7 @@ static int munich_read_proc(char *page, char **start, off_t off, int count,
 	while (slicecom_framings[i].value &&
 	       slicecom_framings[i].value != board->framing)
 	    i++;
-	len += snprintf(page + len, PAGE_SIZE - len, "%s\n",
+	len += scnprintf(page + len, PAGE_SIZE - len, "%s\n",
 		     slicecom_framings[i].name);
     }
     else if (!strcmp(file->name, FILENAME_LINECODE))
@@ -2323,7 +2323,7 @@ static int munich_read_proc(char *page, char **start, off_t off, int count,
 	while (slicecom_linecodes[i].value &&
 	       slicecom_linecodes[i].value != board->linecode)
 	    i++;
-	len += snprintf(page + len, PAGE_SIZE - len, "%s\n",
+	len += scnprintf(page + len, PAGE_SIZE - len, "%s\n",
 		     slicecom_linecodes[i].name);
     }
     else if (!strcmp(file->name, FILENAME_CLOCK_SOURCE))
@@ -2333,7 +2333,7 @@ static int munich_read_proc(char *page, char **start, off_t off, int count,
 	       slicecom_clock_sources[i].value != board->clock_source)
 	    i++;
 	len +=
-	    snprintf(page + len, PAGE_SIZE - len, "%s\n",
+	    scnprintf(page + len, PAGE_SIZE - len, "%s\n",
 		     slicecom_clock_sources[i].name);
     }
     else if (!strcmp(file->name, FILENAME_LOOPBACK))
@@ -2342,18 +2342,18 @@ static int munich_read_proc(char *page, char **start, off_t off, int count,
 	while (slicecom_loopbacks[i].value &&
 	       slicecom_loopbacks[i].value != board->loopback)
 	    i++;
-	len += snprintf(page + len, PAGE_SIZE - len, "%s\n",
+	len += scnprintf(page + len, PAGE_SIZE - len, "%s\n",
 		     slicecom_loopbacks[i].name);
     }
     /* We set permissions to write-only for REG and LBIREG, but root can read them anyway: */
     else if (!strcmp(file->name, FILENAME_REG))
     {
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "%s: " FILENAME_REG ": write-only file\n", dev->name);
     }
     else if (!strcmp(file->name, FILENAME_LBIREG))
     {
-	len += snprintf(page + len, PAGE_SIZE - len,
+	len += scnprintf(page + len, PAGE_SIZE - len,
 		     "%s: " FILENAME_LBIREG ": write-only file\n", dev->name);
     }
     else
@@ -2388,7 +2388,7 @@ static int munich_write_proc(struct file *file, const char *buffer,
 {
     struct proc_dir_entry *entry = (struct proc_dir_entry *)data;
     struct net_device *dev = (struct net_device *)entry->parent->data;
-    struct comx_channel *ch = dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw = ch->HW_privdata;
     munich_board_t *board;
 
@@ -2656,7 +2656,7 @@ static int init_escape(struct comx_channel *ch)
 
 static int BOARD_init(struct net_device *dev)
 {
-    struct comx_channel *ch = (struct comx_channel *)dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
     struct slicecom_privdata *hw;
     struct proc_dir_entry *new_file;
 
@@ -2772,7 +2772,7 @@ static int BOARD_init(struct net_device *dev)
  */
 static int BOARD_exit(struct net_device *dev)
 {
-    struct comx_channel *ch = (struct comx_channel *)dev->priv;
+    struct comx_channel *ch = netdev_priv(dev);
 
     /* Free private data area */
 //    board = hw->boardnum + (ch->hardware == &pcicomhw ? pcicom_boards : slicecom_boards);

@@ -279,8 +279,17 @@
 #define __NR_utimes		271
 #define __NR_fadvise64_64	272
 #define __NR_vserver		273
+#define __NR_mbind		274
+#define __NR_get_mempolicy	275
+#define __NR_set_mempolicy	276
+#define __NR_mq_open 		277
+#define __NR_mq_unlink		(__NR_mq_open+1)
+#define __NR_mq_timedsend	(__NR_mq_open+2)
+#define __NR_mq_timedreceive	(__NR_mq_open+3)
+#define __NR_mq_notify		(__NR_mq_open+4)
+#define __NR_mq_getsetattr	(__NR_mq_open+5)
 
-#define NR_syscalls 274
+#define NR_syscalls 283
 
 /* user-visible error numbers are in the range -1 - -124: see <asm-i386/errno.h> */
 
@@ -373,6 +382,11 @@ __syscall_return(type,__res); \
 
 #ifdef __KERNEL_SYSCALLS__
 
+#include <linux/compiler.h>
+#include <linux/types.h>
+#include <linux/linkage.h>
+#include <asm/ptrace.h>
+
 /*
  * we need this inline - forking from kernel space will result
  * in NO COPY ON WRITE (!!!), until an execve is executed. This
@@ -394,6 +408,23 @@ static inline _syscall3(int,execve,const char *,file,char **,argv,char **,envp)
 static inline _syscall3(int,open,const char *,file,int,flag,int,mode)
 static inline _syscall1(int,close,int,fd)
 static inline _syscall3(pid_t,waitpid,pid_t,pid,int *,wait_stat,int,options)
+
+asmlinkage int sys_modify_ldt(int func, void __user *ptr, unsigned long bytecount);
+asmlinkage long sys_mmap2(unsigned long addr, unsigned long len,
+			unsigned long prot, unsigned long flags,
+			unsigned long fd, unsigned long pgoff);
+asmlinkage int sys_execve(struct pt_regs regs);
+asmlinkage int sys_clone(struct pt_regs regs);
+asmlinkage int sys_fork(struct pt_regs regs);
+asmlinkage int sys_vfork(struct pt_regs regs);
+asmlinkage int sys_pipe(unsigned long __user *fildes);
+asmlinkage int sys_ptrace(long request, long pid, long addr, long data);
+asmlinkage long sys_iopl(unsigned long unused);
+struct sigaction;
+asmlinkage long sys_rt_sigaction(int sig,
+				const struct sigaction __user *act,
+				struct sigaction __user *oact,
+				size_t sigsetsize);
 
 #endif
 

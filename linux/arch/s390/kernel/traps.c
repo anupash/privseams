@@ -64,6 +64,9 @@ extern void pfault_fini(void);
 extern void pfault_interrupt(struct pt_regs *regs, __u16 error_code);
 static ext_int_info_t ext_int_pfault;
 #endif
+#if defined(CONFIG_NO_IDLE_HZ) || defined(CONFIG_VIRT_TIMER)
+extern pgm_check_handler_t do_monitor_call;
+#endif
 
 #define stack_pointer ({ void **sp; asm("la %0,0(15)" : "=&d" (sp)); sp; })
 
@@ -100,17 +103,6 @@ void show_trace(struct task_struct *task, unsigned long * stack)
 		backchain = *((unsigned long *) backchain) & PSW_ADDR_INSN;
 	}
 	printk("\n");
-}
-
-void show_trace_task(struct task_struct *tsk)
-{
-	/*
-	 * We can't print the backtrace of a running process. It is
-	 * unreliable at best and can cause kernel oopses.
-	 */
-	if (tsk->state == TASK_RUNNING)
-		return;
-	show_trace(tsk, (unsigned long *) tsk->thread.ksp);
 }
 
 void show_stack(struct task_struct *task, unsigned long *sp)
@@ -170,6 +162,10 @@ void show_registers(struct pt_regs *regs)
 	printk("           " FOURLONG,
 	       regs->gprs[12], regs->gprs[13], regs->gprs[14], regs->gprs[15]);
 
+#if 0
+	/* FIXME: this isn't needed any more but it changes the ksymoops
+	 * input. To remove or not to remove ... */
+	save_access_regs(regs->acrs);
 	printk("%s ACRS: %08x %08x %08x %08x\n", mode,
 	       regs->acrs[0], regs->acrs[1], regs->acrs[2], regs->acrs[3]);
 	printk("           %08x %08x %08x %08x\n",
@@ -178,6 +174,7 @@ void show_registers(struct pt_regs *regs)
 	       regs->acrs[8], regs->acrs[9], regs->acrs[10], regs->acrs[11]);
 	printk("           %08x %08x %08x %08x\n",
 	       regs->acrs[12], regs->acrs[13], regs->acrs[14], regs->acrs[15]);
+#endif
 
 	/*
 	 * Print the first 20 byte of the instruction stream at the
@@ -226,17 +223,17 @@ char *task_show_regs(struct task_struct *task, char *buffer)
 			  regs->gprs[12], regs->gprs[13],
 			  regs->gprs[14], regs->gprs[15]);
 	buffer += sprintf(buffer, "User ACRS: %08x %08x %08x %08x\n",
-			  regs->acrs[0], regs->acrs[1],
-			  regs->acrs[2], regs->acrs[3]);
+			  task->thread.acrs[0], task->thread.acrs[1],
+			  task->thread.acrs[2], task->thread.acrs[3]);
 	buffer += sprintf(buffer, "           %08x %08x %08x %08x\n",
-			  regs->acrs[4], regs->acrs[5],
-			  regs->acrs[6], regs->acrs[7]);
+			  task->thread.acrs[4], task->thread.acrs[5],
+			  task->thread.acrs[6], task->thread.acrs[7]);
 	buffer += sprintf(buffer, "           %08x %08x %08x %08x\n",
-			  regs->acrs[8], regs->acrs[9],
-			  regs->acrs[10], regs->acrs[11]);
+			  task->thread.acrs[8], task->thread.acrs[9],
+			  task->thread.acrs[10], task->thread.acrs[11]);
 	buffer += sprintf(buffer, "           %08x %08x %08x %08x\n",
-			  regs->acrs[12], regs->acrs[13],
-			  regs->acrs[14], regs->acrs[15]);
+			  task->thread.acrs[12], task->thread.acrs[13],
+			  task->thread.acrs[14], task->thread.acrs[15]);
 	return buffer;
 }
 
@@ -305,7 +302,7 @@ static inline void *get_check_address(struct pt_regs *regs)
 	return (void *)((regs->psw.addr-S390_lowcore.pgm_ilc) & PSW_ADDR_INSN);
 }
 
-static int do_debugger_trap(struct pt_regs *regs)
+int do_debugger_trap(struct pt_regs *regs)
 {
 	if ((regs->psw.mask & PSW_MASK_PSTATE) &&
 	    (current->ptrace & PT_PTRACED)) {
@@ -613,8 +610,6 @@ void __init trap_init(void)
         pgm_check_table[9] = &divide_exception;
         pgm_check_table[0x10] = &do_segment_exception;
         pgm_check_table[0x11] = &do_page_exception;
-        pgm_check_table[0x10] = &do_segment_exception;
-        pgm_check_table[0x11] = &do_page_exception;
         pgm_check_table[0x12] = &translation_exception;
         pgm_check_table[0x13] = &special_op_exception;
 #ifndef CONFIG_ARCH_S390X
@@ -625,6 +620,9 @@ void __init trap_init(void)
 #endif /* CONFIG_ARCH_S390X */
         pgm_check_table[0x15] = &operand_exception;
         pgm_check_table[0x1C] = &privileged_op;
+#if defined(CONFIG_VIRT_TIMER) || defined(CONFIG_NO_IDLE_HZ)
+	pgm_check_table[0x40] = &do_monitor_call;
+#endif
 	if (MACHINE_IS_VM) {
 		/*
 		 * First try to get pfault pseudo page faults going.
@@ -648,23 +646,3 @@ void __init trap_init(void)
 #endif
 	}
 }
-
-
-void handle_per_exception(struct pt_regs *regs)
-{
-	if (regs->psw.mask & PSW_MASK_PSTATE) {
-		per_struct *per_info=&current->thread.per_info;
-		per_info->lowcore.words.perc_atmid=S390_lowcore.per_perc_atmid;
-		per_info->lowcore.words.address=S390_lowcore.per_address;
-		per_info->lowcore.words.access_id=S390_lowcore.per_access_id;
-	}
-	if (do_debugger_trap(regs)) {
-		/* I've seen this possibly a task structure being reused ? */
-		printk("Spurious per exception detected\n");
-		printk("switching off per tracing for this task.\n");
-		show_regs(regs);
-		/* Hopefully switching off per tracing will help us survive */
-		regs->psw.mask &= ~PSW_MASK_PER;
-	}
-}
-

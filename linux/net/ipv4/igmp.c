@@ -105,7 +105,8 @@
 #include <linux/seq_file.h>
 #endif
 
-#define IP_MAX_MEMBERSHIPS 20
+#define IP_MAX_MEMBERSHIPS	20
+#define IP_MAX_MSF		10
 
 #ifdef CONFIG_IP_MULTICAST
 /* Parameter names and values are taken from igmp-v2-06 draft */
@@ -1216,6 +1217,9 @@ void ip_mc_down(struct in_device *in_dev)
 
 	ASSERT_RTNL();
 
+	for (i=in_dev->mc_list; i; i=i->next)
+		igmp_group_dropped(i);
+
 #ifdef CONFIG_IP_MULTICAST
 	in_dev->mr_ifc_count = 0;
 	if (del_timer(&in_dev->mr_ifc_timer))
@@ -1223,24 +1227,14 @@ void ip_mc_down(struct in_device *in_dev)
 	in_dev->mr_gq_running = 0;
 	if (del_timer(&in_dev->mr_gq_timer))
 		__in_dev_put(in_dev);
-#endif
-
-	for (i=in_dev->mc_list; i; i=i->next)
-		igmp_group_dropped(i);
-
-#ifdef CONFIG_IP_MULTICAST
 	igmpv3_clear_delrec(in_dev);
 #endif
 
 	ip_mc_dec_group(in_dev, IGMP_ALL_HOSTS);
 }
 
-/* Device going up */
-
-void ip_mc_up(struct in_device *in_dev)
+void ip_mc_init_dev(struct in_device *in_dev)
 {
-	struct ip_mc_list *i;
-
 	ASSERT_RTNL();
 
 	in_dev->mc_tomb = 0;
@@ -1257,6 +1251,16 @@ void ip_mc_up(struct in_device *in_dev)
 #endif
 
 	in_dev->mc_lock = RW_LOCK_UNLOCKED;
+}
+
+/* Device going up */
+
+void ip_mc_up(struct in_device *in_dev)
+{
+	struct ip_mc_list *i;
+
+	ASSERT_RTNL();
+
 	ip_mc_inc_group(in_dev, IGMP_ALL_HOSTS);
 
 	for (i=in_dev->mc_list; i; i=i->next)
@@ -1325,6 +1329,7 @@ static struct in_device * ip_mc_find_dev(struct ip_mreqn *imr)
  *	Join a socket to a group
  */
 int sysctl_igmp_max_memberships = IP_MAX_MEMBERSHIPS;
+int sysctl_igmp_max_msf = IP_MAX_MSF;
 
 
 static int ip_mc_del1_src(struct ip_mc_list *pmc, int sfmode,
@@ -1790,6 +1795,10 @@ int ip_mc_source(int add, int omode, struct sock *sk, struct
 	}
 	/* else, add a new source to the filter */
 
+	if (psl && psl->sl_count >= sysctl_igmp_max_msf) {
+		err = -ENOBUFS;
+		goto done;
+	}
 	if (!psl || psl->sl_count == psl->sl_max) {
 		struct ip_sf_socklist *newpsl;
 		int count = IP_SFBLOCK;
@@ -2214,7 +2223,9 @@ static int igmp_mc_seq_show(struct seq_file *seq, void *v)
 		struct igmp_mc_iter_state *state = igmp_mc_seq_private(seq);
 		char   *querier;
 #ifdef CONFIG_IP_MULTICAST
-		querier = IGMP_V1_SEEN(state->in_dev) ? "V1" : "V2";
+		querier = IGMP_V1_SEEN(state->in_dev) ? "V1" :
+			  IGMP_V2_SEEN(state->in_dev) ? "V2" :
+			  "V3";
 #else
 		querier = "NONE";
 #endif
@@ -2227,7 +2238,9 @@ static int igmp_mc_seq_show(struct seq_file *seq, void *v)
 		seq_printf(seq,
 			   "\t\t\t\t%08lX %5d %d:%08lX\t\t%d\n",
 			   im->multiaddr, im->users,
-			   im->tm_running, jiffies_to_clock_t(im->timer.expires-jiffies), im->reporter);
+			   im->tm_running, im->tm_running ?
+			   jiffies_to_clock_t(im->timer.expires-jiffies) : 0,
+			   im->reporter);
 	}
 	return 0;
 }

@@ -659,7 +659,7 @@ xfs_ioctl(
 
 	case XFS_IOC_DIOINFO: {
 		struct dioattr	da;
-		pb_target_t	*target =
+		xfs_buftarg_t	*target =
 			(ip->i_d.di_flags & XFS_DIFLAG_REALTIME) ?
 			mp->m_rtdev_targp : mp->m_ddev_targp;
 
@@ -699,9 +699,7 @@ xfs_ioctl(
 
 		error = xfs_set_dmattrs(bdp, dmi.fsd_dmevmask, dmi.fsd_dmstate,
 							NULL);
-		if (error)
-			return -error;
-		return 0;
+		return -error;
 	}
 
 	case XFS_IOC_GETBMAP:
@@ -733,9 +731,7 @@ xfs_ioctl(
 
 	case XFS_IOC_SWAPEXT: {
 		error = xfs_swapext((struct xfs_swapext *)arg);
-		if (error)
-			return -error;
-		return 0;
+		return -error;
 	}
 
 	case XFS_IOC_FSCOUNTS: {
@@ -763,6 +759,8 @@ xfs_ioctl(
 		/* input parameter is passed in resblks field of structure */
 		in = inout.resblks;
 		error = xfs_reserve_blocks(mp, &in, &inout);
+		if (error)
+			return -error;
 
 		if (copy_to_user((char *)arg, &inout, sizeof(inout)))
 			return -XFS_ERROR(EFAULT);
@@ -795,9 +793,7 @@ xfs_ioctl(
 			return -XFS_ERROR(EFAULT);
 
 		error = xfs_growfs_data(mp, &in);
-		if (error)
-			return -error;
-		return 0;
+		return -error;
 	}
 
 	case XFS_IOC_FSGROWFSLOG: {
@@ -810,9 +806,7 @@ xfs_ioctl(
 			return -XFS_ERROR(EFAULT);
 
 		error = xfs_growfs_log(mp, &in);
-		if (error)
-			return -error;
-		return 0;
+		return -error;
 	}
 
 	case XFS_IOC_FSGROWFSRT: {
@@ -825,36 +819,52 @@ xfs_ioctl(
 			return -XFS_ERROR(EFAULT);
 
 		error = xfs_growfs_rt(mp, &in);
-		if (error)
-			return -error;
-		return 0;
+		return -error;
 	}
 
 	case XFS_IOC_FREEZE:
 		if (!capable(CAP_SYS_ADMIN))
 			return -EPERM;
-		xfs_fs_freeze(mp);
+
+		freeze_bdev(inode->i_sb->s_bdev);
 		return 0;
 
 	case XFS_IOC_THAW:
 		if (!capable(CAP_SYS_ADMIN))
 			return -EPERM;
-		xfs_fs_thaw(mp);
+		thaw_bdev(inode->i_sb->s_bdev, inode->i_sb);
 		return 0;
+
+	case XFS_IOC_GOINGDOWN: {
+		__uint32_t in;
+
+		if (!capable(CAP_SYS_ADMIN))
+			return -EPERM;
+
+		if (get_user(in, (__uint32_t *)arg))
+			return -XFS_ERROR(EFAULT);
+
+		error = xfs_fs_goingdown(mp, in);
+		return -error;
+	}
 
 	case XFS_IOC_ERROR_INJECTION: {
 		xfs_error_injection_t in;
+
+		if (!capable(CAP_SYS_ADMIN))
+			return -EPERM;
 
 		if (copy_from_user(&in, (char *)arg, sizeof(in)))
 			return -XFS_ERROR(EFAULT);
 
 		error = xfs_errortag_add(in.errtag, mp);
-		if (error)
-			return -error;
-		return 0;
+		return -error;
 	}
 
 	case XFS_IOC_ERROR_CLEARALL:
+		if (!capable(CAP_SYS_ADMIN))
+			return -EPERM;
+
 		error = xfs_errortag_clearall(mp);
 		return -error;
 
@@ -879,7 +889,7 @@ xfs_ioc_space(
 	if (vp->v_inode.i_flags & (S_IMMUTABLE|S_APPEND))
 		return -XFS_ERROR(EPERM);
 
-	if (filp->f_flags & O_RDONLY)
+	if (!(filp->f_flags & FMODE_WRITE))
 		return -XFS_ERROR(EBADF);
 
 	if (vp->v_type != VREG)

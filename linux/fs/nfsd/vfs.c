@@ -823,7 +823,7 @@ out:
  */
 int
 nfsd_commit(struct svc_rqst *rqstp, struct svc_fh *fhp,
-               off_t offset, unsigned long count)
+               loff_t offset, unsigned long count)
 {
 	struct file	file;
 	int		err;
@@ -1143,7 +1143,7 @@ nfsd_readlink(struct svc_rqst *rqstp, struct svc_fh *fhp, char *buf, int *lenp)
 	if (!inode->i_op || !inode->i_op->readlink)
 		goto out;
 
-	update_atime(inode);
+	touch_atime(fhp->fh_export->ex_mnt, dentry);
 	/* N.B. Why does this call need a get_fs()??
 	 * Remove the set_fs and watch the fireworks:-) --okir
 	 */
@@ -1494,7 +1494,7 @@ nfsd_readdir(struct svc_rqst *rqstp, struct svc_fh *fhp, loff_t *offsetp,
 		err = cdp->err;
 	*offsetp = file.f_pos;
 
-	if (err == nfserr_eof || err == nfserr_readdir_nospc)
+	if (err == nfserr_eof || err == nfserr_toosmall)
 		err = nfs_ok; /* can still be found in ->err */
 out_close:
 	nfsd_close(&file);

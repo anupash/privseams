@@ -87,11 +87,12 @@ union pci_range {
 	} pci64;
 };
 
-struct _of_tce_table {
+struct of_tce_table {
 	phandle node;
 	unsigned long base;
 	unsigned long size;
 };
+extern struct of_tce_table of_tce_table[];
 
 struct reg_property {
 	unsigned long address;
@@ -134,7 +135,7 @@ struct property {
  * indication of a real PCI node.  Other nodes leave these fields zeroed.
  */
 struct pci_controller;
-struct TceTable;
+struct iommu_table;
 struct device_node {
 	char	*name;
 	char	*type;
@@ -155,7 +156,7 @@ struct device_node {
 	int	eeh_mode;		/* See eeh.h for possible EEH_MODEs */
 	int	eeh_config_addr;
 	struct  pci_controller *phb;	/* for pci devices */
-	struct	TceTable *tce_table;	/* for phb's or bridges */
+	struct	iommu_table *iommu_table;	/* for phb's or bridges */
 
 	struct	property *properties;
 	struct	device_node *parent;
@@ -259,7 +260,6 @@ extern int of_remove_node(struct device_node *np);
 /* Other Prototypes */
 extern unsigned long prom_init(unsigned long, unsigned long, unsigned long,
 	unsigned long, unsigned long);
-extern void prom_print(const char *msg);
 extern void relocate_nodes(void);
 extern void finish_device_tree(void);
 extern int device_is_compatible(struct device_node *device, const char *);

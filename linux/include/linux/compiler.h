@@ -4,9 +4,11 @@
 #ifdef __CHECKER__
 # define __user		__attribute__((noderef, address_space(1)))
 # define __kernel	/* default address space */
+# define __safe		__attribute__((safe))
 #else
 # define __user
 # define __kernel
+# define __safe
 #endif
 
 #ifdef __KERNEL__
@@ -38,6 +40,20 @@
 
 #define likely(x)	__builtin_expect(!!(x), 1)
 #define unlikely(x)	__builtin_expect(!!(x), 0)
+
+/* Optimization barrier */
+#ifndef barrier
+# define barrier() __memory_barrier()
+#endif
+
+#ifndef RELOC_HIDE
+# define RELOC_HIDE(ptr, off)					\
+  ({ unsigned long __ptr;					\
+     __ptr = (unsigned long) (ptr);				\
+    (typeof(ptr)) (__ptr + (off)); })
+#endif
+
+#endif /* __KERNEL__ */
 
 /*
  * Allow us to mark functions as 'deprecated' and have gcc emit a nice
@@ -96,18 +112,8 @@
 # define __attribute_const__	/* unimplemented */
 #endif
 
-/* Optimization barrier */
-#ifndef barrier
-# define barrier() __memory_barrier()
+#ifndef noinline
+#define noinline
 #endif
-
-#ifndef RELOC_HIDE
-# define RELOC_HIDE(ptr, off)					\
-  ({ unsigned long __ptr;					\
-     __ptr = (unsigned long) (ptr);				\
-    (typeof(ptr)) (__ptr + (off)); })
-#endif
-
-#endif /* __KERNEL__ */
 
 #endif /* __LINUX_COMPILER_H */

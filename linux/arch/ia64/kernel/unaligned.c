@@ -1337,7 +1337,7 @@ ia64_handle_unaligned (unsigned long ifa, struct pt_regs *regs)
 			 * be holding locks...
 			 */
 			if (user_mode(regs))
-				tty_write_message(current->tty, buf);
+				tty_write_message(current->signal->tty, buf);
 			buf[len-1] = '\0';	/* drop '\r' */
 			printk(KERN_WARNING "%s", buf);	/* watch for command names containing %s */
 		}
@@ -1486,7 +1486,7 @@ ia64_handle_unaligned (unsigned long ifa, struct pt_regs *regs)
 	/* something went wrong... */
 	if (!user_mode(regs)) {
 		if (eh) {
-			handle_exception(regs, eh);
+			ia64_handle_exception(regs, eh);
 			goto done;
 		}
 		die_if_kernel("error during unaligned kernel access\n", regs, ret);

@@ -1756,6 +1756,10 @@ static int __init hip_init(void)
 
 	hip_init_hadb();
 
+#ifdef CONFIG_HIP_RVS
+	hip_init_rvdb();
+#endif
+
 #ifdef CONFIG_PROC_FS
 	if (hip_init_procfs() < 0)
 		goto out;
@@ -1842,6 +1846,7 @@ static void __exit hip_cleanup(void)
 
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
+
 	hip_uninit_netdev_notifier(); /* comment this if network device event causes troubles */
 	hip_uninit_ioctl();
 	hip_uninit_user();
@@ -1852,6 +1857,9 @@ static void __exit hip_cleanup(void)
 
 	hip_uninit_socket_handler();
 	hip_uninit_host_id_dbs();
+#ifdef CONFIG_HIP_RVS
+	hip_uninit_rvdb();
+#endif
 	hip_uninit_hadb();
 	hip_uninit_all_eid_db();
 	hip_uninit_output_socket();

@@ -15,6 +15,7 @@
 #include <asm/io.h>
 #include <asm/smp.h>
 #include <asm/io_apic.h>
+#include <asm/hw_irq.h>
 
 #include "pci.h"
 
@@ -452,15 +453,12 @@ static int pirq_bios_set(struct pci_dev *router, struct pci_dev *dev, int pirq, 
 
 static __init int intel_router_probe(struct irq_router *r, struct pci_dev *router, u16 device)
 {
-#if 0 /* Let's see what chip this is supposed to be ... */
-	/* We must not touch 440GX even if we have tables. 440GX has
-	   different IRQ routing weirdness */
+	/* 440GX has a proprietary PIRQ router -- don't use it */
 	if (	pci_find_device(PCI_VENDOR_ID_INTEL,
 				PCI_DEVICE_ID_INTEL_82443GX_0, NULL) ||
 		pci_find_device(PCI_VENDOR_ID_INTEL,
 				PCI_DEVICE_ID_INTEL_82443GX_2, NULL))
 		return 0;
-#endif
 
 	switch(device)
 	{
@@ -479,6 +477,7 @@ static __init int intel_router_probe(struct irq_router *r, struct pci_dev *route
 		case PCI_DEVICE_ID_INTEL_82801E_0:
 		case PCI_DEVICE_ID_INTEL_82801EB_0:
 		case PCI_DEVICE_ID_INTEL_ESB_0:
+		case PCI_DEVICE_ID_INTEL_ICH6_0:
 			r->name = "PIIX/ICH";
 			r->get = pirq_piix_get;
 			r->set = pirq_piix_set;
@@ -589,12 +588,13 @@ static __init int ali_router_probe(struct irq_router *r, struct pci_dev *router,
 {
 	switch(device)
 	{
-		case PCI_DEVICE_ID_AL_M1533:
+	case PCI_DEVICE_ID_AL_M1533:
+	case PCI_DEVICE_ID_AL_M1563:
+		printk("PCI: Using ALI IRQ Router\n");
 			r->name = "ALI";
 			r->get = pirq_ali_get;
 			r->set = pirq_ali_set;
 			return 1;
-		/* Should add 156x some day */
 	}
 	return 0;
 }
@@ -1003,4 +1003,34 @@ int pirq_enable_irq(struct pci_dev *dev)
 	else if (interrupt_line_quirk)
 		pci_write_config_byte(dev, PCI_INTERRUPT_LINE, dev->irq);
 	return 0;
+}
+
+int pci_vector_resources(int last, int nr_released)
+{
+	int count = nr_released;
+
+	int next = last;
+	int offset = (last % 8);
+
+	while (next < FIRST_SYSTEM_VECTOR) {
+		next += 8;
+#ifdef CONFIG_X86_64
+		if (next == IA32_SYSCALL_VECTOR)
+			continue;
+#else
+		if (next == SYSCALL_VECTOR)
+			continue;
+#endif
+		count++;
+		if (next >= FIRST_SYSTEM_VECTOR) {
+			if (offset%8) {
+				next = FIRST_DEVICE_VECTOR + offset;
+				offset++;
+				continue;
+			}
+			count--;
+		}
+	}
+
+	return count;
 }

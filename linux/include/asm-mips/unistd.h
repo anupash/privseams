@@ -498,7 +498,7 @@
 #define __NR_lremovexattr		(__NR_Linux + 190)
 #define __NR_fremovexattr		(__NR_Linux + 191)
 #define __NR_tkill			(__NR_Linux + 192)
-#define __NR_time			(__NR_Linux + 193)
+#define __NR_reserved193		(__NR_Linux + 193)
 #define __NR_futex			(__NR_Linux + 194)
 #define __NR_sched_setaffinity		(__NR_Linux + 195)
 #define __NR_sched_getaffinity		(__NR_Linux + 196)
@@ -742,7 +742,7 @@
 #define __NR_lremovexattr		(__NR_Linux + 190)
 #define __NR_fremovexattr		(__NR_Linux + 191)
 #define __NR_tkill			(__NR_Linux + 192)
-#define __NR_time			(__NR_Linux + 193)
+#define __NR_reserved193		(__NR_Linux + 193)
 #define __NR_futex			(__NR_Linux + 194)
 #define __NR_sched_setaffinity		(__NR_Linux + 195)
 #define __NR_sched_getaffinity		(__NR_Linux + 196)
@@ -769,27 +769,27 @@
 #define __NR_statfs64			(__NR_Linux + 217)
 #define __NR_fstatfs64			(__NR_Linux + 218)
 #define __NR_sendfile64			(__NR_Linux + 219)
-#define __NR_timer_create		(__NR_Linux + 221)
-#define __NR_timer_settime		(__NR_Linux + 222)
-#define __NR_timer_gettime		(__NR_Linux + 223)
-#define __NR_timer_getoverrun		(__NR_Linux + 224)
-#define __NR_timer_delete		(__NR_Linux + 225)
-#define __NR_clock_settime		(__NR_Linux + 226)
-#define __NR_clock_gettime		(__NR_Linux + 227)
-#define __NR_clock_getres		(__NR_Linux + 228)
-#define __NR_clock_nanosleep		(__NR_Linux + 229)
-#define __NR_tgkill			(__NR_Linux + 230)
-#define __NR_utimes			(__NR_Linux + 231)
+#define __NR_timer_create		(__NR_Linux + 220)
+#define __NR_timer_settime		(__NR_Linux + 221)
+#define __NR_timer_gettime		(__NR_Linux + 222)
+#define __NR_timer_getoverrun		(__NR_Linux + 223)
+#define __NR_timer_delete		(__NR_Linux + 224)
+#define __NR_clock_settime		(__NR_Linux + 225)
+#define __NR_clock_gettime		(__NR_Linux + 226)
+#define __NR_clock_getres		(__NR_Linux + 227)
+#define __NR_clock_nanosleep		(__NR_Linux + 228)
+#define __NR_tgkill			(__NR_Linux + 229)
+#define __NR_utimes			(__NR_Linux + 230)
 
 /*
  * Offset of the last N32 flavoured syscall
  */
-#define __NR_Linux_syscalls		231
+#define __NR_Linux_syscalls		230
 
 #endif /* _MIPS_SIM == _MIPS_SIM_NABI32 */
 
 #define __NR_N32_Linux			6000
-#define __NR_N32_Linux_syscalls		231
+#define __NR_N32_Linux_syscalls		230
 
 #ifndef __ASSEMBLY__
 
@@ -917,7 +917,7 @@ type name(atype a, btype b, ctype c, dtype d) \
 	return -1; \
 }
 
-#if (_MIPS_SIM == _MIPS_SIM_ABIN32)
+#if (_MIPS_SIM == _MIPS_SIM_ABI32)
 
 /*
  * Using those means your brain needs more than an oil change ;-)
@@ -985,9 +985,9 @@ type name(atype a, btype b, ctype c, dtype d, etype e, ftype f) \
 	return -1; \
 }
 
-#endif /* (_MIPS_SIM == _MIPS_SIM_ABIN32) */
+#endif /* (_MIPS_SIM == _MIPS_SIM_ABI32) */
 
-#if (_MIPS_SIM == _MIPS_SIM_NABIN32) || (_MIPS_SIM == _MIPS_SIM_ABI64)
+#if (_MIPS_SIM == _MIPS_SIM_NABI32) || (_MIPS_SIM == _MIPS_SIM_ABI64)
 
 #define _syscall5(type,name,atype,a,btype,b,ctype,c,dtype,d,etype,e) \
 type name (atype a,btype b,ctype c,dtype d,etype e) \
@@ -1043,9 +1043,15 @@ type name (atype a,btype b,ctype c,dtype d,etype e,ftype f) \
 	return -1; \
 }
 
-#endif /* (_MIPS_SIM == _MIPS_SIM_NABIN32) || (_MIPS_SIM == _MIPS_SIM_ABI64) */
+#endif /* (_MIPS_SIM == _MIPS_SIM_NABI32) || (_MIPS_SIM == _MIPS_SIM_ABI64) */
 
 #ifdef __KERNEL_SYSCALLS__
+
+#include <linux/compiler.h>
+#include <linux/types.h>
+#include <linux/linkage.h>
+#include <asm/ptrace.h>
+#include <asm/sim.h>
 
 /*
  * we need this inline - forking from kernel space will result
@@ -1059,7 +1065,6 @@ type name (atype a,btype b,ctype c,dtype d,etype e,ftype f) \
  * won't be any messing with the stack from main(), but we define
  * some others too.
  */
-#define __NR__exit __NR_exit
 static inline _syscall0(pid_t,setsid)
 static inline _syscall3(int,write,int,fd,const char *,buf,off_t,count)
 static inline _syscall3(int,read,int,fd,char *,buf,off_t,count)
@@ -1068,7 +1073,6 @@ static inline _syscall1(int,dup,int,fd)
 static inline _syscall3(int,execve,const char *,file,char **,argv,char **,envp)
 static inline _syscall3(int,open,const char *,file,int,flag,int,mode)
 static inline _syscall1(int,close,int,fd)
-static inline _syscall1(int,_exit,int,exitcode)
 struct rusage;
 static inline _syscall4(pid_t,wait4,pid_t,pid,int *,stat_addr,int,options,struct rusage *,ru)
 
@@ -1076,6 +1080,23 @@ static inline pid_t waitpid(int pid, int * wait_stat, int flags)
 {
 	return wait4(pid, wait_stat, flags, NULL);
 }
+
+asmlinkage unsigned long sys_mmap(
+				unsigned long addr, size_t len,
+				int prot, int flags,
+				int fd, off_t offset);
+asmlinkage long sys_mmap2(
+			unsigned long addr, unsigned long len,
+			unsigned long prot, unsigned long flags,
+			unsigned long fd, unsigned long pgoff);
+asmlinkage int sys_execve(nabi_no_regargs struct pt_regs regs);
+asmlinkage int sys_pipe(nabi_no_regargs struct pt_regs regs);
+asmlinkage int sys_ptrace(long request, long pid, long addr, long data);
+struct sigaction;
+asmlinkage long sys_rt_sigaction(int sig,
+				const struct sigaction __user *act,
+				struct sigaction __user *oact,
+				size_t sigsetsize);
 
 #endif /* __KERNEL_SYSCALLS__ */
 #endif /* !__ASSEMBLY__ */

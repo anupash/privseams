@@ -165,7 +165,9 @@ static void ne_block_output(struct net_device *dev, const int count,
 static int __init do_ne_probe(struct net_device *dev)
 {
 	unsigned int base_addr = dev->base_addr;
-	int irq = dev->irq;
+#ifndef MODULE
+	int orig_irq = dev->irq;
+#endif
 
 	SET_MODULE_OWNER(dev);
 
@@ -183,7 +185,7 @@ static int __init do_ne_probe(struct net_device *dev)
 	/* Last resort. The semi-risky ISA auto-probe. */
 	for (base_addr = 0; netcard_portlist[base_addr] != 0; base_addr++) {
 		int ioaddr = netcard_portlist[base_addr];
-		dev->irq = irq;
+		dev->irq = orig_irq;
 		if (ne_probe1(dev, ioaddr) == 0)
 			return 0;
 	}
@@ -496,6 +498,9 @@ static int __init ne_probe1(struct net_device *dev, int ioaddr)
 	ei_status.priv = 0;
 	dev->open = &ne_open;
 	dev->stop = &ne_close;
+#ifdef CONFIG_NET_POLL_CONTROLLER
+	dev->poll_controller = ei_poll;
+#endif
 	NS8390_init(dev, 0);
 	return 0;
 

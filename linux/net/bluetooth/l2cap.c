@@ -535,7 +535,7 @@ done:
 	return err;
 }
 
-int l2cap_sock_listen(struct socket *sock, int backlog)
+static int l2cap_sock_listen(struct socket *sock, int backlog)
 {
 	struct sock *sk = sock->sk;
 	int err = 0;
@@ -563,7 +563,7 @@ done:
 	return err;
 }
 
-int l2cap_sock_accept(struct socket *sock, struct socket *newsock, int flags)
+static int l2cap_sock_accept(struct socket *sock, struct socket *newsock, int flags)
 {
 	DECLARE_WAITQUEUE(wait, current);
 	struct sock *sk = sock->sk, *nsk;
@@ -1051,7 +1051,7 @@ static void l2cap_chan_ready(struct sock *sk)
 }
 
 /* Copy frame to all raw sockets on that connection */
-void l2cap_raw_recv(struct l2cap_conn *conn, struct sk_buff *skb)
+static void l2cap_raw_recv(struct l2cap_conn *conn, struct sk_buff *skb)
 {
 	struct l2cap_chan_list *l = &conn->chan_list;
 	struct sk_buff *nskb;
@@ -1629,6 +1629,8 @@ static inline void l2cap_sig_channel(struct l2cap_conn *conn, struct sk_buff *sk
 	struct l2cap_cmd_hdr cmd;
 	int err = 0;
 
+	l2cap_raw_recv(conn, skb);
+
 	while (len >= L2CAP_CMD_HDR_SIZE) {
 		memcpy(&cmd, data, L2CAP_CMD_HDR_SIZE);
 		data += L2CAP_CMD_HDR_SIZE;
@@ -1670,7 +1672,6 @@ static inline void l2cap_sig_channel(struct l2cap_conn *conn, struct sk_buff *sk
 
 		case L2CAP_COMMAND_REJ:
 			/* FIXME: We should process this */
-			l2cap_raw_recv(conn, skb);
 			break;
 
 		case L2CAP_ECHO_REQ:
@@ -1680,11 +1681,10 @@ static inline void l2cap_sig_channel(struct l2cap_conn *conn, struct sk_buff *sk
 		case L2CAP_ECHO_RSP:
 		case L2CAP_INFO_REQ:
 		case L2CAP_INFO_RSP:
-			l2cap_raw_recv(conn, skb);
 			break;
 
 		default:
-			BT_ERR("Uknown signaling command 0x%2.2x", cmd.code);
+			BT_ERR("Unknown signaling command 0x%2.2x", cmd.code);
 			err = -EINVAL;
 			break;
 		}
@@ -2153,7 +2153,7 @@ static struct hci_proto l2cap_hci_proto = {
 	.recv_acldata =	l2cap_recv_acldata
 };
 
-int __init l2cap_init(void)
+static int __init l2cap_init(void)
 {
 	int err;
 
@@ -2175,7 +2175,7 @@ int __init l2cap_init(void)
 	return 0;
 }
 
-void __exit l2cap_cleanup(void)
+static void __exit l2cap_exit(void)
 {
 	l2cap_proc_cleanup();
 
@@ -2197,9 +2197,10 @@ void l2cap_load(void)
 EXPORT_SYMBOL(l2cap_load);
 
 module_init(l2cap_init);
-module_exit(l2cap_cleanup);
+module_exit(l2cap_exit);
 
 MODULE_AUTHOR("Maxim Krasnyansky <maxk@qualcomm.com>");
 MODULE_DESCRIPTION("Bluetooth L2CAP ver " VERSION);
+MODULE_VERSION(VERSION);
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("bt-proto-0");

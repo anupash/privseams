@@ -149,6 +149,8 @@ typedef struct task_struct task_t;
 extern void sched_init(void);
 extern void init_idle(task_t *idle, int cpu);
 
+extern cpumask_t idle_cpu_mask;
+
 extern void show_state(void);
 extern void show_regs(struct pt_regs *);
 
@@ -169,6 +171,8 @@ extern void update_one_process(struct task_struct *p, unsigned long user,
 			       unsigned long system, int cpu);
 extern void scheduler_tick(int user_tick, int system);
 extern unsigned long cache_decay_ticks;
+extern const unsigned long scheduling_functions_start_here;
+extern const unsigned long scheduling_functions_end_here;
 
 
 #define	MAX_SCHEDULE_TIMEOUT	LONG_MAX
@@ -178,7 +182,9 @@ asmlinkage void schedule(void);
 struct namespace;
 
 /* Maximum number of active map areas.. This is a random (large) number */
-#define MAX_MAP_COUNT	(65536)
+#define DEFAULT_MAX_MAP_COUNT	65536
+
+extern int sysctl_max_map_count;
 
 #include <linux/aio.h>
 
@@ -264,6 +270,18 @@ struct signal_struct {
 
 	/* thread group stop support, overloads group_exit_code too */
 	int			group_stop_count;
+
+	/* POSIX.1b Interval Timers */
+	struct list_head posix_timers;
+
+	/* job control IDs */
+	pid_t pgrp;
+	pid_t tty_old_pgrp;
+	pid_t session;
+	/* boolean value for session group leader */
+	int leader;
+
+	struct tty_struct *tty; /* NULL if no tty */
 };
 
 /*
@@ -330,6 +348,35 @@ struct k_itimer {
 struct io_context;			/* See blkdev.h */
 void exit_io_context(void);
 
+#define NGROUPS_SMALL		32
+#define NGROUPS_PER_BLOCK	((int)(EXEC_PAGESIZE / sizeof(gid_t)))
+struct group_info {
+	int ngroups;
+	atomic_t usage;
+	gid_t small_block[NGROUPS_SMALL];
+	int nblocks;
+	gid_t *blocks[0];
+};
+
+#define get_group_info(group_info) do { \
+	atomic_inc(&(group_info)->usage); \
+} while (0)
+
+#define put_group_info(group_info) do { \
+	if (atomic_dec_and_test(&(group_info)->usage)) \
+		groups_free(group_info); \
+} while (0)
+
+struct group_info *groups_alloc(int gidsetsize);
+void groups_free(struct group_info *group_info);
+int set_current_groups(struct group_info *group_info);
+/* access the groups "array" with this macro */
+#define GROUP_AT(gi, i) \
+    ((gi)->blocks[(i)/NGROUPS_PER_BLOCK][(i)%NGROUPS_PER_BLOCK])
+
+
+struct audit_context;		/* See audit.c */
+
 struct task_struct {
 	volatile long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
 	struct thread_info *thread_info;
@@ -366,12 +413,7 @@ struct task_struct {
 	unsigned long personality;
 	int did_exec:1;
 	pid_t pid;
-	pid_t __pgrp;		/* Accessed via process_group() */
-	pid_t tty_old_pgrp;
-	pid_t session;
 	pid_t tgid;
-	/* boolean value for session group leader */
-	int leader;
 	/* 
 	 * pointers to (original) parent process, youngest child, younger sibling,
 	 * older sibling, respectively.  (p->father can be replaced with 
@@ -395,17 +437,15 @@ struct task_struct {
 	unsigned long it_real_value, it_prof_value, it_virt_value;
 	unsigned long it_real_incr, it_prof_incr, it_virt_incr;
 	struct timer_list real_timer;
-	struct list_head posix_timers; /* POSIX.1b Interval Timers */
 	unsigned long utime, stime, cutime, cstime;
 	unsigned long nvcsw, nivcsw, cnvcsw, cnivcsw; /* context switch counts */
 	u64 start_time;
 /* mm fault and swap info: this can arguably be seen as either mm-specific or thread-specific */
-	unsigned long min_flt, maj_flt, nswap, cmin_flt, cmaj_flt, cnswap;
+	unsigned long min_flt, maj_flt, cmin_flt, cmaj_flt;
 /* process credentials */
 	uid_t uid,euid,suid,fsuid;
 	gid_t gid,egid,sgid,fsgid;
-	int ngroups;
-	gid_t	groups[NGROUPS];
+	struct group_info *group_info;
 	kernel_cap_t   cap_effective, cap_inheritable, cap_permitted;
 	int keep_capabilities:1;
 	struct user_struct *user;
@@ -415,7 +455,6 @@ struct task_struct {
 	char comm[16];
 /* file system info */
 	int link_count, total_link_count;
-	struct tty_struct *tty; /* NULL if no tty */
 /* ipc stuff */
 	struct sysv_sem sysvsem;
 /* CPU-specific state of this task */
@@ -440,6 +479,7 @@ struct task_struct {
 	sigset_t *notifier_mask;
 	
 	void *security;
+	struct audit_context *audit_context;
 
 /* Thread group tracking */
    	u32 parent_exec_id;
@@ -468,7 +508,7 @@ struct task_struct {
 
 static inline pid_t process_group(struct task_struct *tsk)
 {
-	return tsk->group_leader->__pgrp;
+	return tsk->signal->pgrp;
 }
 
 extern void __put_task_struct(struct task_struct *tsk);
@@ -493,7 +533,7 @@ do { if (atomic_dec_and_test(&(tsk)->usage)) __put_task_struct(tsk); } while(0)
 #define PF_FLUSHER	0x00002000	/* responsible for disk writeback */
 
 #define PF_FREEZE	0x00004000	/* this task should be frozen for suspend */
-#define PF_IOTHREAD	0x00008000	/* this thread is needed for doing I/O to swap */
+#define PF_NOFREEZE	0x00008000	/* this thread should not be frozen */
 #define PF_FROZEN	0x00010000	/* frozen for system suspend */
 #define PF_FSTRANS	0x00020000	/* inside a filesystem transaction */
 #define PF_KSWAPD	0x00040000	/* I am kswapd */
@@ -520,6 +560,8 @@ extern void node_nr_running_init(void);
 #define node_nr_running_init() {}
 #endif
 
+/* Move tasks off this (offline) CPU onto another. */
+extern void migrate_all_tasks(void);
 extern void set_user_nice(task_t *p, long nice);
 extern int task_prio(task_t *p);
 extern int task_nice(task_t *p);
@@ -533,13 +575,9 @@ void yield(void);
  */
 extern struct exec_domain	default_exec_domain;
 
-#ifndef INIT_THREAD_SIZE
-# define INIT_THREAD_SIZE	2048*sizeof(long)
-#endif
-
 union thread_union {
 	struct thread_info thread_info;
-	unsigned long stack[INIT_THREAD_SIZE/sizeof(long)];
+	unsigned long stack[THREAD_SIZE/sizeof(long)];
 };
 
 #ifndef __HAVE_ARCH_KSTACK_END
@@ -575,15 +613,13 @@ extern void do_timer(struct pt_regs *);
 extern int FASTCALL(wake_up_state(struct task_struct * tsk, unsigned int state));
 extern int FASTCALL(wake_up_process(struct task_struct * tsk));
 #ifdef CONFIG_SMP
- extern void FASTCALL(kick_process(struct task_struct * tsk));
+ extern void kick_process(struct task_struct *tsk);
 #else
  static inline void kick_process(struct task_struct *tsk) { }
 #endif
 extern void FASTCALL(wake_up_forked_process(struct task_struct * tsk));
 extern void FASTCALL(sched_fork(task_t * p));
 extern void FASTCALL(sched_exit(task_t * p));
-
-asmlinkage long sys_wait4(pid_t pid,unsigned int * stat_addr, int options, struct rusage * ru);
 
 extern int in_group_p(gid_t);
 extern int in_egroup_p(gid_t);
@@ -695,7 +731,7 @@ extern void exit_signal(struct task_struct *);
 extern void __exit_signal(struct task_struct *);
 extern void exit_sighand(struct task_struct *);
 extern void __exit_sighand(struct task_struct *);
-extern void exit_itimers(struct task_struct *);
+extern void exit_itimers(struct signal_struct *);
 
 extern NORET_TYPE void do_group_exit(int);
 
@@ -762,7 +798,8 @@ static inline int thread_group_empty(task_t *p)
 
 extern void unhash_process(struct task_struct *p);
 
-/* Protects ->fs, ->files, ->mm, and synchronises with wait4().
+/*
+ * Protects ->fs, ->files, ->mm, ->ptrace and synchronises with wait4().
  * Nests both inside and outside of read_lock(&tasklist_lock).
  * It must not be nested with write_lock_irq(&tasklist_lock),
  * neither inside nor outside.

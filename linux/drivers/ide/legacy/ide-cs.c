@@ -213,6 +213,7 @@ do { last_fn = (fn); if ((last_ret = (ret)) != 0) goto cs_failed; } while (0)
 static int idecs_register(unsigned long io, unsigned long ctl, unsigned long irq)
 {
     hw_regs_t hw;
+    memset(&hw, 0, sizeof(hw));
     ide_init_hwif_ports(&hw, io, ctl, NULL);
     hw.irq = irq;
     hw.chipset = ide_pci;
@@ -361,7 +362,6 @@ void ide_config(dev_link_t *link)
 	goto failed;
     }
 
-    MOD_INC_USE_COUNT;
     info->ndev = 1;
     sprintf(info->node.dev_name, "hd%c", 'a'+(hd*2));
     info->node.major = ide_major[hd];
@@ -407,7 +407,6 @@ void ide_release(dev_link_t *link)
 	if (link->io.NumPorts2)
 	    request_region(link->io.BasePort2, link->io.NumPorts2,
 			   info->node.dev_name);
-	MOD_DEC_USE_COUNT;
     }
     info->ndev = 0;
     link->dev = NULL;

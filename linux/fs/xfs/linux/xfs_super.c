@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2003 Silicon Graphics, Inc.  All Rights Reserved.
+ * Copyright (c) 2000-2004 Silicon Graphics, Inc.  All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -67,7 +67,6 @@
 #include "xfs_utils.h"
 #include "xfs_version.h"
 
-#include <linux/blkdev.h>
 #include <linux/namei.h>
 #include <linux/init.h>
 #include <linux/mount.h>
@@ -153,8 +152,7 @@ xfs_set_inodeops(
 			inode->i_mapping->a_ops = &linvfs_aops;
 	} else {
 		inode->i_op = &linvfs_file_inode_operations;
-		init_special_inode(inode, inode->i_mode,
-					inode->i_rdev);
+		init_special_inode(inode, inode->i_mode, inode->i_rdev);
 	}
 }
 
@@ -247,7 +245,7 @@ xfs_flush_inode(
 {
 	struct inode	*inode = LINVFS_GET_IP(XFS_ITOV(ip));
 
-	filemap_fdatawrite(inode->i_mapping);
+	filemap_flush(inode->i_mapping);
 }
 
 void
@@ -266,7 +264,7 @@ xfs_blkdev_get(
 {
 	int			error = 0;
 
-	*bdevp = open_bdev_excl(name, 0, BDEV_FS, mp);
+	*bdevp = open_bdev_excl(name, 0, mp);
 	if (IS_ERR(*bdevp)) {
 		error = PTR_ERR(*bdevp);
 		printk("XFS: Invalid device [%s], error=%d\n", name, error);
@@ -280,78 +278,9 @@ xfs_blkdev_put(
 	struct block_device	*bdev)
 {
 	if (bdev)
-		close_bdev_excl(bdev, BDEV_FS);
+		close_bdev_excl(bdev);
 }
 
-void
-xfs_flush_buftarg(
-	xfs_buftarg_t		*btp)
-{
-	pagebuf_delwri_flush(btp, PBDF_WAIT, NULL);
-}
-
-void
-xfs_free_buftarg(
-	xfs_buftarg_t		*btp)
-{
-	xfs_flush_buftarg(btp);
-	kmem_free(btp, sizeof(*btp));
-}
-
-int
-xfs_readonly_buftarg(
-	xfs_buftarg_t		*btp)
-{
-	return bdev_read_only(btp->pbr_bdev);
-}
-
-void
-xfs_relse_buftarg(
-	xfs_buftarg_t		*btp)
-{
-	invalidate_bdev(btp->pbr_bdev, 1);
-	truncate_inode_pages(btp->pbr_mapping, 0LL);
-}
-
-unsigned int
-xfs_getsize_buftarg(
-	xfs_buftarg_t		*btp)
-{
-	return block_size(btp->pbr_bdev);
-}
-
-void
-xfs_setsize_buftarg(
-	xfs_buftarg_t		*btp,
-	unsigned int		blocksize,
-	unsigned int		sectorsize)
-{
-	btp->pbr_bsize = blocksize;
-	btp->pbr_sshift = ffs(sectorsize) - 1;
-	btp->pbr_smask = sectorsize - 1;
-
-	if (set_blocksize(btp->pbr_bdev, sectorsize)) {
-		printk(KERN_WARNING
-			"XFS: Cannot set_blocksize to %u on device %s\n",
-			sectorsize, XFS_BUFTARG_NAME(btp));
-	}
-}
-
-xfs_buftarg_t *
-xfs_alloc_buftarg(
-	struct block_device	*bdev)
-{
-	xfs_buftarg_t		*btp;
-
-	btp = kmem_zalloc(sizeof(*btp), KM_SLEEP);
-
-	btp->pbr_dev =  bdev->bd_dev;
-	btp->pbr_bdev = bdev;
-	btp->pbr_mapping = bdev->bd_inode->i_mapping;
-	xfs_setsize_buftarg(btp, PAGE_CACHE_SIZE, bdev_hardsect_size(bdev));
-
-	return btp;
-}
 
 STATIC struct inode *
 linvfs_alloc_inode(
@@ -448,12 +377,13 @@ linvfs_clear_inode(
 #define SYNCD_FLAGS	(SYNC_FSDATA|SYNC_BDFLUSH|SYNC_ATTR)
 
 STATIC int
-syncd(void *arg)
+xfssyncd(
+	void			*arg)
 {
 	vfs_t			*vfsp = (vfs_t *) arg;
 	int			error;
 
-	daemonize("xfs_syncd");
+	daemonize("xfssyncd");
 
 	vfsp->vfs_sync_task = current;
 	wmb();
@@ -464,7 +394,7 @@ syncd(void *arg)
 		schedule_timeout(xfs_syncd_interval);
 		/* swsusp */
 		if (current->flags & PF_FREEZE)
-			refrigerator(PF_IOTHREAD);
+			refrigerator(PF_FREEZE);
 		if (vfsp->vfs_flag & VFS_UMOUNT)
 			break;
 		if (vfsp->vfs_flag & VFS_RDONLY)
@@ -480,20 +410,22 @@ syncd(void *arg)
 }
 
 STATIC int
-linvfs_start_syncd(vfs_t *vfsp)
+linvfs_start_syncd(
+	vfs_t			*vfsp)
 {
-	int pid;
+	int			pid;
 
-	pid = kernel_thread(syncd, (void *) vfsp,
+	pid = kernel_thread(xfssyncd, (void *) vfsp,
 			CLONE_VM | CLONE_FS | CLONE_FILES);
 	if (pid < 0)
-		return pid;
+		return -pid;
 	wait_event(vfsp->vfs_wait_sync_task, vfsp->vfs_sync_task);
 	return 0;
 }
 
 STATIC void
-linvfs_stop_syncd(vfs_t *vfsp)
+linvfs_stop_syncd(
+	vfs_t			*vfsp)
 {
 	vfsp->vfs_flag |= VFS_UMOUNT;
 	wmb();
@@ -589,28 +521,7 @@ STATIC void
 linvfs_freeze_fs(
 	struct super_block	*sb)
 {
-	vfs_t			*vfsp = LINVFS_GET_VFS(sb);
-	vnode_t			*vp;
-	int			error;
-
-	if (sb->s_flags & MS_RDONLY)
-		return;
-	VFS_ROOT(vfsp, &vp, error);
-	VOP_IOCTL(vp, LINVFS_GET_IP(vp), NULL, 0, XFS_IOC_FREEZE, 0, error);
-	VN_RELE(vp);
-}
-
-STATIC void
-linvfs_unfreeze_fs(
-	struct super_block	*sb)
-{
-	vfs_t			*vfsp = LINVFS_GET_VFS(sb);
-	vnode_t			*vp;
-	int			error;
-
-	VFS_ROOT(vfsp, &vp, error);
-	VOP_IOCTL(vp, LINVFS_GET_IP(vp), NULL, 0, XFS_IOC_THAW, 0, error);
-	VN_RELE(vp);
+	VFS_FREEZE(LINVFS_GET_VFS(sb));
 }
 
 STATIC struct dentry *
@@ -756,7 +667,7 @@ linvfs_fill_super(
 	struct vfs		*vfsp = vfs_allocate();
 	struct xfs_mount_args	*args = xfs_args_allocate(sb);
 	struct kstatfs		statvfs;
-	int			error;
+	int			error, error2;
 
 	vfsp->vfs_super = sb;
 	LINVFS_SET_VFS(sb, vfsp);
@@ -797,11 +708,15 @@ linvfs_fill_super(
 		goto fail_unmount;
 
 	sb->s_root = d_alloc_root(LINVFS_GET_IP(rootvp));
-	if (!sb->s_root)
+	if (!sb->s_root) {
+		error = ENOMEM;
 		goto fail_vnrele;
-	if (is_bad_inode(sb->s_root->d_inode))
+	}
+	if (is_bad_inode(sb->s_root->d_inode)) {
+		error = EINVAL;
 		goto fail_vnrele;
-	if (linvfs_start_syncd(vfsp))
+	}
+	if ((error = linvfs_start_syncd(vfsp)))
 		goto fail_vnrele;
 	vn_trace_exit(rootvp, __FUNCTION__, (inst_t *)__return_address);
 
@@ -817,7 +732,7 @@ fail_vnrele:
 	}
 
 fail_unmount:
-	VFS_UNMOUNT(vfsp, 0, NULL, error);
+	VFS_UNMOUNT(vfsp, 0, NULL, error2);
 
 fail_vfsop:
 	vfs_deallocate(vfsp);
@@ -850,7 +765,6 @@ STATIC struct super_operations linvfs_sops = {
 	.write_super		= linvfs_write_super,
 	.sync_fs		= linvfs_sync_super,
 	.write_super_lockfs	= linvfs_freeze_fs,
-	.unlockfs		= linvfs_unfreeze_fs,
 	.statfs			= linvfs_statfs,
 	.remount_fs		= linvfs_remount,
 	.show_options		= linvfs_show_options,
@@ -919,10 +833,10 @@ undo_inodecache:
 STATIC void __exit
 exit_xfs_fs( void )
 {
-	unregister_filesystem(&xfs_fs_type);
-	xfs_cleanup();
 	vfs_exitquota();
 	vfs_exitdmapi();
+	unregister_filesystem(&xfs_fs_type);
+	xfs_cleanup();
 	pagebuf_terminate();
 	destroy_inodecache();
 	ktrace_uninit();

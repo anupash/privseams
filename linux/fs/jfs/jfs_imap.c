@@ -1546,6 +1546,7 @@ int diAlloc(struct inode *pip, boolean_t dir, struct inode *ip)
 						 0);
 				if (rem >= INOSPEREXT) {
 					IREAD_UNLOCK(ipimap);
+					release_metapage(mp);
 					AG_UNLOCK(imap, agno);
 					jfs_error(ip->i_sb,
 						  "diAlloc: can't find free bit "
@@ -1840,6 +1841,7 @@ static int diAllocIno(struct inomap * imap, int agno, struct inode *ip)
 	 */
 	if (!iagp->nfreeinos) {
 		IREAD_UNLOCK(imap->im_ipimap);
+		release_metapage(mp);
 		jfs_error(ip->i_sb,
 			  "diAllocIno: nfreeinos = 0, but iag on freelist");
 		return -EIO;
@@ -1851,6 +1853,7 @@ static int diAllocIno(struct inomap * imap, int agno, struct inode *ip)
 	for (sword = 0;; sword++) {
 		if (sword >= SMAPSZ) {
 			IREAD_UNLOCK(imap->im_ipimap);
+			release_metapage(mp);
 			jfs_error(ip->i_sb,
 				  "diAllocIno: free inode not found in summary map");
 			return -EIO;
@@ -1866,6 +1869,7 @@ static int diAllocIno(struct inomap * imap, int agno, struct inode *ip)
 	rem = diFindFree(le32_to_cpu(iagp->inosmap[sword]), 0);
 	if (rem >= EXTSPERSUM) {
 		IREAD_UNLOCK(imap->im_ipimap);
+		release_metapage(mp);
 		jfs_error(ip->i_sb, "diAllocIno: no free extent found");
 		return -EIO;
 	}
@@ -1876,6 +1880,7 @@ static int diAllocIno(struct inomap * imap, int agno, struct inode *ip)
 	rem = diFindFree(le32_to_cpu(iagp->wmap[extno]), 0);
 	if (rem >= INOSPEREXT) {
 		IREAD_UNLOCK(imap->im_ipimap);
+		release_metapage(mp);
 		jfs_error(ip->i_sb, "diAllocIno: free inode not found");
 		return -EIO;
 	}
@@ -2055,7 +2060,7 @@ static int diAllocExt(struct inomap * imap, int agno, struct inode *ip)
 static int diAllocBit(struct inomap * imap, struct iag * iagp, int ino)
 {
 	int extno, bitno, agno, sword, rc;
-	struct metapage *amp, *bmp;
+	struct metapage *amp = NULL, *bmp = NULL;
 	struct iag *aiagp = 0, *biagp = 0;
 	u32 mask;
 
@@ -2065,8 +2070,6 @@ static int diAllocBit(struct inomap * imap, struct iag * iagp, int ino)
 	 * it on the list.
 	 */
 	if (iagp->nfreeinos == cpu_to_le32(1)) {
-		amp = bmp = NULL;
-
 		if ((int) le32_to_cpu(iagp->inofreefwd) >= 0) {
 			if ((rc =
 			     diIAGRead(imap, le32_to_cpu(iagp->inofreefwd),
@@ -2841,12 +2844,14 @@ diUpdatePMap(struct inode *ipimap,
 		 * and should be free in persistent map;
 		 */
 		if (!(le32_to_cpu(iagp->wmap[extno]) & mask)) {
+			release_metapage(mp);
 			jfs_error(ipimap->i_sb,
 				  "diUpdatePMap: the inode is not allocated in "
 				  "the working map");
 			return -EIO;
 		}
 		if ((le32_to_cpu(iagp->pmap[extno]) & mask) != 0) {
+			release_metapage(mp);
 			jfs_error(ipimap->i_sb,
 				  "diUpdatePMap: the inode is not free in the "
 				  "persistent map");

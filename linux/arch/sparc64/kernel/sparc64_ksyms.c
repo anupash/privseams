@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <linux/mm.h>
 #include <linux/socket.h>
+#include <linux/syscalls.h>
 #include <linux/percpu.h>
 #include <net/compat.h>
 
@@ -84,21 +85,14 @@ extern void syscall_trace(void);
 extern u32 sunos_sys_table[], sys_call_table32[];
 extern void tl0_solaris(void);
 extern void sys_sigsuspend(void);
-extern int sys_getppid(void);
-extern int sys_getpid(void);
-extern int sys_geteuid(void);
-extern int sys_getuid(void);
-extern int sys_getegid(void);
-extern int sys_getgid(void);
 extern int svr4_getcontext(svr4_ucontext_t *uc, struct pt_regs *regs);
 extern int svr4_setcontext(svr4_ucontext_t *uc, struct pt_regs *regs);
-extern int sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
 extern int compat_sys_ioctl(unsigned int fd, unsigned int cmd, u32 arg);
 extern int (*handle_mathemu)(struct pt_regs *, struct fpustate *);
 extern long sparc32_open(const char * filename, int flags, int mode);
 extern int io_remap_page_range(struct vm_area_struct *vma, unsigned long from, unsigned long offset, unsigned long size, pgprot_t prot, int space);
-extern long sys_close(unsigned int);
-                
+extern void (*prom_palette)(int);
+
 extern int __ashrdi3(int, int);
 
 extern void dump_thread(struct pt_regs *, struct user *);
@@ -152,7 +146,6 @@ EXPORT_SYMBOL_NOVERS(mcount);
 /* CPU online map and active count.  */
 EXPORT_SYMBOL(cpu_online_map);
 EXPORT_SYMBOL(phys_cpu_present_map);
-EXPORT_SYMBOL(sparc64_num_cpus_possible);
 
 /* Spinlock debugging library, optional. */
 #ifdef CONFIG_DEBUG_SPINLOCK
@@ -221,8 +214,10 @@ EXPORT_SYMBOL(sbus_map_single);
 EXPORT_SYMBOL(sbus_unmap_single);
 EXPORT_SYMBOL(sbus_map_sg);
 EXPORT_SYMBOL(sbus_unmap_sg);
-EXPORT_SYMBOL(sbus_dma_sync_single);
-EXPORT_SYMBOL(sbus_dma_sync_sg);
+EXPORT_SYMBOL(sbus_dma_sync_single_for_cpu);
+EXPORT_SYMBOL(sbus_dma_sync_single_for_device);
+EXPORT_SYMBOL(sbus_dma_sync_sg_for_cpu);
+EXPORT_SYMBOL(sbus_dma_sync_sg_for_device);
 #endif
 EXPORT_SYMBOL(outsb);
 EXPORT_SYMBOL(outsw);
@@ -240,8 +235,8 @@ EXPORT_SYMBOL(pci_map_single);
 EXPORT_SYMBOL(pci_unmap_single);
 EXPORT_SYMBOL(pci_map_sg);
 EXPORT_SYMBOL(pci_unmap_sg);
-EXPORT_SYMBOL(pci_dma_sync_single);
-EXPORT_SYMBOL(pci_dma_sync_sg);
+EXPORT_SYMBOL(pci_dma_sync_single_for_cpu);
+EXPORT_SYMBOL(pci_dma_sync_sg_for_cpu);
 EXPORT_SYMBOL(pci_dma_supported);
 #endif
 
@@ -394,3 +389,5 @@ EXPORT_SYMBOL(xor_vis_2);
 EXPORT_SYMBOL(xor_vis_3);
 EXPORT_SYMBOL(xor_vis_4);
 EXPORT_SYMBOL(xor_vis_5);
+
+EXPORT_SYMBOL(prom_palette);

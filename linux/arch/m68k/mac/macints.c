@@ -132,7 +132,6 @@
 #include <asm/mac_psc.h>
 #include <asm/hwtest.h>
 #include <asm/errno.h>
-
 #include <asm/macints.h>
 
 #define DEBUG_SPURIOUS
@@ -262,7 +261,8 @@ void mac_init_IRQ(void)
 	if (psc_present) psc_register_interrupts();
 	if (baboon_present) baboon_register_interrupts();
 	iop_register_interrupts();
-	sys_request_irq(7, mac_nmi_handler, IRQ_FLG_LOCK, "NMI", mac_nmi_handler);
+	cpu_request_irq(7, mac_nmi_handler, IRQ_FLG_LOCK, "NMI",
+			mac_nmi_handler);
 #ifdef DEBUG_MACINTS
 	printk("mac_init_IRQ(): Done!\n");
 #endif
@@ -508,7 +508,7 @@ int mac_request_irq(unsigned int irq,
 #endif
 
 	if (irq < VIA1_SOURCE_BASE) {
-		return sys_request_irq(irq, handler, flags, devname, dev_id);
+		return cpu_request_irq(irq, handler, flags, devname, dev_id);
 	}
 
 	if (irq >= NUM_MAC_SOURCES) {
@@ -545,7 +545,7 @@ void mac_free_irq(unsigned int irq, void *dev_id)
 #endif
 
 	if (irq < VIA1_SOURCE_BASE) {
-		return sys_free_irq(irq, dev_id);
+		return cpu_free_irq(irq, dev_id);
 	}
 
 	if (irq >= NUM_MAC_SOURCES) {
@@ -644,7 +644,7 @@ void mac_default_handler(int irq, void *dev_id, struct pt_regs *regs)
 #endif
 }
 
-static int num_debug[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+static int num_debug[8];
 
 irqreturn_t mac_debug_handler(int irq, void *dev_id, struct pt_regs *regs)
 {
@@ -655,8 +655,8 @@ irqreturn_t mac_debug_handler(int irq, void *dev_id, struct pt_regs *regs)
 	return IRQ_HANDLED;
 }
 
-static int in_nmi = 0;
-static volatile int nmi_hold = 0;
+static int in_nmi;
+static volatile int nmi_hold;
 
 irqreturn_t mac_nmi_handler(int irq, void *dev_id, struct pt_regs *fp)
 {

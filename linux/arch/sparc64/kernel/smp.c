@@ -36,9 +36,6 @@
 #include <asm/timer.h>
 #include <asm/starfire.h>
 
-#define __KERNEL_SYSCALLS__
-#include <linux/unistd.h>
-
 extern int linux_num_cpus;
 extern void calibrate_delay(void);
 
@@ -46,7 +43,6 @@ extern void calibrate_delay(void);
 static unsigned char boot_cpu_id;
 
 cpumask_t cpu_online_map = CPU_MASK_NONE;
-atomic_t sparc64_num_cpus_possible = ATOMIC_INIT(0);
 cpumask_t phys_cpu_present_map = CPU_MASK_NONE;
 static cpumask_t smp_commenced_mask;
 static cpumask_t cpu_callout_map;
@@ -675,9 +671,9 @@ static __inline__ void __local_flush_dcache_page(struct page *page)
 #if (L1DCACHE_SIZE > PAGE_SIZE)
 	__flush_dcache_page(page->virtual,
 			    ((tlb_type == spitfire) &&
-			     page->mapping != NULL));
+			     page_mapping(page) != NULL));
 #else
-	if (page->mapping != NULL &&
+	if (page_mapping(page) != NULL &&
 	    tlb_type == spitfire)
 		__flush_icache_page(__pa(page->virtual));
 #endif
@@ -698,7 +694,7 @@ void smp_flush_dcache_page_impl(struct page *page, int cpu)
 		if (tlb_type == spitfire) {
 			data0 =
 				((u64)&xcall_flush_dcache_page_spitfire);
-			if (page->mapping != NULL)
+			if (page_mapping(page) != NULL)
 				data0 |= ((u64)1 << 32);
 			spitfire_xcall_deliver(data0,
 					       __pa(page->virtual),
@@ -731,7 +727,7 @@ void flush_dcache_page_all(struct mm_struct *mm, struct page *page)
 		goto flush_self;
 	if (tlb_type == spitfire) {
 		data0 = ((u64)&xcall_flush_dcache_page_spitfire);
-		if (page->mapping != NULL)
+		if (page_mapping(page) != NULL)
 			data0 |= ((u64)1 << 32);
 		spitfire_xcall_deliver(data0,
 				       __pa(page->virtual),
@@ -1236,20 +1232,17 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 
 	instance = 0;
 	while (!cpu_find_by_instance(instance, NULL, &mid)) {
-		if (mid < max_cpus) {
+		if (mid < max_cpus)
 			cpu_set(mid, phys_cpu_present_map);
-			atomic_inc(&sparc64_num_cpus_possible);
-		}
 		instance++;
 	}
 
-	if (atomic_read(&sparc64_num_cpus_possible) > max_cpus) {
+	if (num_possible_cpus() > max_cpus) {
 		instance = 0;
 		while (!cpu_find_by_instance(instance, NULL, &mid)) {
 			if (mid != boot_cpu_id) {
 				cpu_clear(mid, phys_cpu_present_map);
-				atomic_dec(&sparc64_num_cpus_possible);
-				if (atomic_read(&sparc64_num_cpus_possible) <= max_cpus)
+				if (num_possible_cpus() <= max_cpus)
 					break;
 			}
 			instance++;

@@ -33,7 +33,7 @@
 #include <asm/pgtable.h>
 #include <asm/cacheflush.h>
 
-#define DEBUG_SIG 0
+#undef DEBUG_SIG
 
 #define _BLOCKABLE (~(sigmask(SIGKILL) | sigmask(SIGSTOP)))
 
@@ -191,8 +191,15 @@ save_user_regs(struct pt_regs *regs, struct mcontext *frame, int sigret)
 {
 	/* save general and floating-point registers */
 	CHECK_FULL_REGS(regs);
+	preempt_disable();
 	if (regs->msr & MSR_FP)
 		giveup_fpu(current);
+#ifdef CONFIG_ALTIVEC
+	if (current->thread.used_vr && (regs->msr & MSR_VEC))
+		giveup_altivec(current);
+#endif /* CONFIG_ALTIVEC */
+	preempt_enable();
+
 	if (__copy_to_user(&frame->mc_gregs, regs, GP_REGS_SIZE)
 	    || __copy_to_user(&frame->mc_fregs, current->thread.fpr,
 			      ELF_NFPREG * sizeof(double)))
@@ -203,8 +210,6 @@ save_user_regs(struct pt_regs *regs, struct mcontext *frame, int sigret)
 #ifdef CONFIG_ALTIVEC
 	/* save altivec registers */
 	if (current->thread.used_vr) {
-		if (regs->msr & MSR_VEC)
-			giveup_altivec(current);
 		if (__copy_to_user(&frame->mc_vregs, current->thread.vr,
 				   ELF_NVRREG * sizeof(vector128)))
 			return 1;
@@ -356,7 +361,7 @@ handle_rt_signal(unsigned long sig, struct k_sigaction *ka,
 	return;
 
 badframe:
-#if DEBUG_SIG
+#ifdef DEBUG_SIG
 	printk("badframe in handle_rt_signal, regs=%p frame=%p newsp=%lx\n",
 	       regs, frame, newsp);
 #endif
@@ -508,9 +513,9 @@ handle_signal(unsigned long sig, struct k_sigaction *ka,
 	return;
 
 badframe:
-#if DEBUG_SIG
-	printk("badframe in handle_signal, regs=%p frame=%lx newsp=%lx\n",
-	       regs, frame, *newspp);
+#ifdef DEBUG_SIG
+	printk("badframe in handle_signal, regs=%p frame=%p newsp=%lx\n",
+	       regs, frame, newsp);
 #endif
 	if (sig == SIGSEGV)
 		ka->sa.sa_handler = SIG_DFL;

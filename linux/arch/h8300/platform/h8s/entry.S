@@ -22,27 +22,7 @@
 #include <asm/linkage.h>
 #include <asm/asm-offsets.h>
 #include <asm/thread_info.h>
-
-ENOSYS = 38
-
-LSIGTRAP = 5
-
-SOFTIRQ_PENDING = 0
-		
-/* the following macro is used when enabling interrupts */
-
-LER4	=	0
-LER5	=	4
-LER6	=	8
-LER3	=	12
-LER2	=	16
-LER1	=	20
-LORIG	=	24
-LCCR	=	28
-LER0	=	30
-LVEC	=	34
-LEXR	=	38
-LRET	=	40
+#include <asm/errno.h>
 
 	.h8300s
 
@@ -186,7 +166,7 @@ SYMBOL_NAME_LABEL(interrupt_entry)
 	mov.l	sp,er1
 	subs	#4,er1				/* adjust ret_pc */
 	jsr	@SYMBOL_NAME(process_int)
-	mov.l	@SYMBOL_NAME(irq_stat)+SOFTIRQ_PENDING,er0
+	mov.l	@SYMBOL_NAME(irq_stat)+CPUSTAT_SOFTIRQ_PENDING,er0
 	beq	1f
 	jsr	@SYMBOL_NAME(do_softirq)
 1:
@@ -233,7 +213,7 @@ SYMBOL_NAME_LABEL(system_call)
 	mov.l	@(LER3:16,sp),er2
 	jsr	@er4
 	mov.l	er0,@(LER0:16,sp)		/* save the return value */
-	jsr	SYMBOL_NAME(syscall_trace)
+	jsr	@SYMBOL_NAME(syscall_trace)
 
 SYMBOL_NAME_LABEL(ret_from_signal)
 
@@ -250,7 +230,7 @@ SYMBOL_NAME_LABEL(ret_from_exception)
 1:
 	mov.l	@(TI_FLAGS:16,er2),er1
 	btst	#TIF_NEED_RESCHED,r1l
-	bne	@SYMBOL_NAME(reschedule):16
+	bne	SYMBOL_NAME(reschedule):16
 	mov.l	sp,er1
 	subs	#4,er1			/* adjust retpc */
 	mov.l	er2,er0
@@ -270,7 +250,7 @@ SYMBOL_NAME_LABEL(reschedule)
 SYMBOL_NAME_LABEL(ret_from_fork)
 	mov.l	er2,er0
 	jsr	@SYMBOL_NAME(schedule_tail)
-	jmp	@SYMBOL_NAME_LABEL(ret_from_exception)	
+	jmp	@SYMBOL_NAME(ret_from_exception)	
 
 
 SYMBOL_NAME_LABEL(resume)

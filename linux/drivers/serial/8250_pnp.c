@@ -21,8 +21,10 @@
 #include <linux/pnp.h>
 #include <linux/string.h>
 #include <linux/kernel.h>
+#include <linux/tty.h>
 #include <linux/serial.h>
 #include <linux/serialP.h>
+#include <linux/serial_core.h>
 
 #include <asm/bitops.h>
 #include <asm/byteorder.h>
@@ -264,6 +266,8 @@ static const struct pnp_device_id pnp_dev_table[] = {
 	{	"RSS00A0",		0	},
 	/* Viking 56K FAX INT */
 	{	"RSS0262",		0	},
+	/* K56 par,VV,Voice,Speakphone,AudioSpan,PnP */
+	{       "RSS0250",              0       },
 	/* SupraExpress 28.8 Data/Fax PnP modem */
 	{	"SUP1310",		0	},
 	/* SupraExpress 33.6 Data/Fax PnP modem */
@@ -281,6 +285,8 @@ static const struct pnp_device_id pnp_dev_table[] = {
 	/* 3Com Corp. */
 	/* Gateway Telepath IIvi 33.6 */
 	{	"USR0000",		0	},
+	/* U.S. Robotics Sporster 33.6K Fax INT PnP */
+	{	"USR0002",		0	},
 	/*  Sportster Vi 14.4 PnP FAX Voicemail */
 	{	"USR0004",		0	},
 	/* U.S. Robotics 33.6K Voice INT PnP */
@@ -313,6 +319,8 @@ static const struct pnp_device_id pnp_dev_table[] = {
 	{	"USR9180",		0	},
 	/* U.S. Robotics 56K Voice INT PnP*/
 	{	"USR9190",		0	},
+	/* Rockwell's (PORALiNK) 33600 INT PNP */
+	{	"WCI0003",		0	},
 	/* Unkown PnP modems */
 	{	"PNPCXXX",		UNKNOWN_DEV	},
 	/* More unkown PnP modems */
@@ -388,7 +396,7 @@ static int __devinit serial_pnp_guess_board(struct pnp_dev *dev, int *flags)
 	return -ENODEV;
 }
 
-static int
+static int __devinit
 serial_pnp_probe(struct pnp_dev * dev, const struct pnp_device_id *dev_id)
 {
 	struct serial_struct serial_req;
@@ -408,7 +416,7 @@ serial_pnp_probe(struct pnp_dev * dev, const struct pnp_device_id *dev_id)
 	       serial_req.port, serial_req.irq, serial_req.io_type);
 #endif
 
-	serial_req.flags = ASYNC_SKIP_TEST | ASYNC_AUTOPROBE;
+	serial_req.flags = UPF_SKIP_TEST | UPF_AUTOPROBE  | UPF_RESOURCES;
 	serial_req.baud_base = 115200;
 	line = register_serial(&serial_req);
 
@@ -418,7 +426,7 @@ serial_pnp_probe(struct pnp_dev * dev, const struct pnp_device_id *dev_id)
 
 }
 
-static void serial_pnp_remove(struct pnp_dev * dev)
+static void __devexit serial_pnp_remove(struct pnp_dev * dev)
 {
 	int line = (int)pnp_get_drvdata(dev);
 	if (line)

@@ -75,28 +75,6 @@ choice
 config ARCH_ADIFCC
 	bool "ADIFCC-based"
 
-config ARCH_ANAKIN
-	bool "Anakin"
-	---help---
-	  The Anakin is a StrongArm based SA110 - 2 DIN Vehicle Telematics Platform.
-	  64MB SDRAM - 4 Mb Flash - Compact Flash Interface - 1 MB VRAM
-
-	  On board peripherals:
-	  * Front display: 400x234 16 bit TFT touchscreen
-	  * External independent second screen interface
-	  * CAN controller SJA1000
-	  * USB host controller
-	  * 6 channel video codec with hardware overlay
-	  * Smartcard reader
-	  * IrDa
-
-	  Modules interfaced over the Multi Media Extension slots:
-	  * A communication card
-	  Wavecom GPRS modem
-	  uBlock GPS
-	  Bosch DAB module
-	  * An audio card ( 4 * 40W, AC97 Codec, I2S)
-
 config ARCH_CLPS7500
 	bool "Cirrus-CL-PS7500FE"
 
@@ -157,6 +135,29 @@ config ARCH_SA1100
 config ARCH_SHARK
 	bool "Shark"
 
+config ARCH_S3C2410
+	bool "Samsung S3C2410"
+	help
+	  Samsung S3C2410X CPU based systems, such as the Simtec Electronics
+	  BAST (http://www.simtec.co.uk/products/EB110ITX/), the IPAQ 1940 or
+	  the Samsung SMDK2410 development board (and derviatives).
+
+config ARCH_OMAP
+	bool "TI OMAP"
+
+config ARCH_LH7A40X
+	bool "Sharp LH7A40X"
+	help
+	  Say Y here for systems based on one of the Sharp LH7A40X
+	  System on a Chip processors.  These CPUs include an ARM922T
+	  core with a wide array of integrated devices for
+	  hand-held and low-power applications.
+
+config ARCH_VERSATILE_PB
+	bool "Versatile PB"
+	help
+	  This enables support for ARM Ltd Versatile PB board.
+
 endchoice
 
 source "arch/arm/mach-clps711x/Kconfig"
@@ -172,6 +173,12 @@ source "arch/arm/mach-iop3xx/Kconfig"
 source "arch/arm/mach-pxa/Kconfig"
 
 source "arch/arm/mach-sa1100/Kconfig"
+
+source "arch/arm/mach-omap/Kconfig"
+
+source "arch/arm/mach-s3c2410/Kconfig"
+
+source "arch/arm/mach-lh7a40x/Kconfig"
 
 # Definitions to make life easier
 config ARCH_ACORN
@@ -213,6 +220,11 @@ config FORCE_MAX_ZONEORDER
 	depends on SA1111
 	default "9"
 
+config DMABOUNCE
+	bool
+	depends on SA1111
+	default y
+
 source arch/arm/mm/Kconfig
 
 #  bool 'Use XScale PMU as timer source' CONFIG_XSCALE_PMU_TIMER
@@ -229,7 +241,7 @@ menu "General setup"
 # Select various configuration options depending on the machine type
 config DISCONTIGMEM
 	bool
-	depends on ARCH_EDB7211 || ARCH_SA1100
+	depends on ARCH_EDB7211 || ARCH_SA1100 || ARCH_LH7A40X
 	default y
 	help
 	  Say Y to upport efficient handling of discontiguous physical memory,
@@ -270,7 +282,7 @@ config ICST525
 
 config ARM_AMBA
 	bool
-	depends on ARCH_INTEGRATOR
+	depends on ARCH_INTEGRATOR || ARCH_VERSATILE_PB
 	default y
 
 config ISA
@@ -291,7 +303,7 @@ config ISA_DMA
 
 config FIQ
 	bool
-	depends on ARCH_ACORN || ARCH_L7200
+	depends on ARCH_ACORN || ARCH_L7200 || ARCH_LH7A400
 	default y
 
 # Compressed boot loader in ROM.  Yes, we really want to ask about
@@ -336,14 +348,12 @@ config CPU_FREQ_SA1100
 	bool
 	depends on CPU_FREQ && SA1100_LART
 	default y
-	select CPU_FREQ_DEFAULT_GOV_USERSPACE
 	select CPU_FREQ_24_API if SYSCTL
 
 config CPU_FREQ_SA1110
 	bool
 	depends on CPU_FREQ && (SA1100_ASSABET || SA1100_CERF || SA1100_PT_SYSTEM3)
 	default y
-	select CPU_FREQ_DEFAULT_GOV_USERSPACE
 	select CPU_FREQ_24_API if SYSCTL
 
 config CPU_FREQ_INTEGRATOR
@@ -353,7 +363,7 @@ config CPU_FREQ_INTEGRATOR
 	help
 	  This enables the CPUfreq driver for ARM Integrator CPUs.
 
-	  For details, take a look at linux/Documentation/cpufreq.
+	  For details, take a look at linux/Documentation/cpu-freq.
 
 	  If in doubt, say Y.
 
@@ -364,24 +374,6 @@ source "drivers/cpufreq/Kconfig"
 endif
 
 source "drivers/pci/Kconfig"
-
-config HOTPLUG
-	bool "Support for hot-pluggable devices"
-	---help---
-	  Say Y here if you want to plug devices into your computer while
-	  the system is running, and be able to use them quickly.  In many
-	  cases, the devices can likewise be unplugged at any time too.
-
-	  One well known example of this is PCMCIA- or PC-cards, credit-card
-	  size devices such as network cards, modems or hard drives which are
-	  plugged into slots found on all modern laptop computers.  Another
-	  example, used on modern desktops as well as laptops, is USB.
-
-	  Enable HOTPLUG and KMOD, and build a modular kernel.  Get agent
-	  software (at <http://linux-hotplug.sourceforge.net/>) and install it.
-	  Then your kernel will automatically call out to a user mode "policy
-	  agent" (/sbin/hotplug) to load modules and set up software needed
-	  to use devices as you hotplug them.
 
 source "drivers/pcmcia/Kconfig"
 
@@ -439,9 +431,9 @@ config PM
 
 	  Power Management is most important for battery powered laptop
 	  computers; if you have a laptop, check out the Linux Laptop home
-	  page on the WWW at
-	  <http://www.cs.utexas.edu/users/kharker/linux-laptop/> and the
-	  Battery Powered Linux mini-HOWTO, available from
+	  page on the WWW at <http://www.linux-on-laptops.com/> or
+	  Tuxmobil - Linux on Mobile Computers at <http://www.tuxmobil.org/>
+	  and the Battery Powered Linux mini-HOWTO, available from
 	  <http://www.tldp.org/docs.html#howto>.
 
 	  Note that, even if you say N here, Linux on the x86 architecture
@@ -542,7 +534,7 @@ config CMDLINE
 
 config LEDS
 	bool "Timer and CPU usage LEDs"
-	depends on ARCH_NETWINDER || ARCH_EBSA110 || ARCH_EBSA285 || ARCH_FTVPCI || ARCH_SHARK || ARCH_CO285 || ARCH_SA1100 || ARCH_LUBBOCK || ARCH_PXA_IDP || ARCH_INTEGRATOR || ARCH_CDB89712 || ARCH_P720T
+	depends on ARCH_NETWINDER || ARCH_EBSA110 || ARCH_EBSA285 || ARCH_FTVPCI || ARCH_SHARK || ARCH_CO285 || ARCH_SA1100 || ARCH_LUBBOCK || ARCH_PXA_IDP || ARCH_INTEGRATOR || ARCH_CDB89712 || ARCH_P720T || ARCH_OMAP || ARCH_VERSATILE_PB
 	help
 	  If you say Y here, the LEDs on your machine will be used
 	  to provide useful information about your current system status.
@@ -555,8 +547,8 @@ config LEDS
 	  system, but the driver will do nothing.
 
 config LEDS_TIMER
-	bool "Timer LED" if LEDS && (ARCH_NETWINDER || ARCH_EBSA285 || ARCH_SHARK || ARCH_CO285 || ARCH_SA1100 || ARCH_LUBBOCK || ARCH_PXA_IDP || ARCH_INTEGRATOR || ARCH_P720T)
-	depends on ARCH_NETWINDER || ARCH_EBSA110 || ARCH_EBSA285 || ARCH_FTVPCI || ARCH_SHARK || ARCH_CO285 || ARCH_SA1100 || ARCH_LUBBOCK || ARCH_PXA_IDP || ARCH_INTEGRATOR || ARCH_CDB89712 || ARCH_P720T
+	bool "Timer LED" if LEDS && (ARCH_NETWINDER || ARCH_EBSA285 || ARCH_SHARK || ARCH_CO285 || ARCH_SA1100 || ARCH_LUBBOCK || ARCH_PXA_IDP || ARCH_INTEGRATOR || ARCH_P720T || ARCH_VERSATILE_PB)
+	depends on ARCH_NETWINDER || ARCH_EBSA110 || ARCH_EBSA285 || ARCH_FTVPCI || ARCH_SHARK || ARCH_CO285 || ARCH_SA1100 || ARCH_LUBBOCK || ARCH_PXA_IDP || ARCH_INTEGRATOR || ARCH_CDB89712 || ARCH_P720T || ARCH_OMAP || ARCH_VERSATILE_PB
 	default y if ARCH_EBSA110
 	help
 	  If you say Y here, one of the system LEDs (the green one on the
@@ -571,7 +563,7 @@ config LEDS_TIMER
 
 config LEDS_CPU
 	bool "CPU usage LED"
-	depends on LEDS && (ARCH_NETWINDER || ARCH_EBSA285 || ARCH_SHARK || ARCH_CO285 || ARCH_SA1100 || ARCH_LUBBOCK || ARCH_PXA_IDP || ARCH_INTEGRATOR || ARCH_P720T)
+	depends on LEDS && (ARCH_NETWINDER || ARCH_EBSA285 || ARCH_SHARK || ARCH_CO285 || ARCH_SA1100 || ARCH_LUBBOCK || ARCH_PXA_IDP || ARCH_INTEGRATOR || ARCH_P720T || ARCH_VERSATILE_PB)
 	help
 	  If you say Y here, the red LED will be used to give a good real
 	  time indication of CPU usage, by lighting whenever the idle task
@@ -633,19 +625,17 @@ source "drivers/char/Kconfig"
 
 source "drivers/i2c/Kconfig"
 
-source "drivers/l3/Kconfig"
+#source "drivers/l3/Kconfig"
 
 source "drivers/media/Kconfig"
 
 source "fs/Kconfig"
 
+source "arch/arm/oprofile/Kconfig"
+
 source "drivers/video/Kconfig"
 
-if ARCH_ACORN || ARCH_CLPS7500 || ARCH_TBOX || ARCH_SHARK || ARCH_SA1100 || PCI
-
 source "sound/Kconfig"
-
-endif
 
 source "drivers/misc/Kconfig"
 
@@ -674,6 +664,15 @@ config DEBUG_USER
 	  print a brief message explaining what the problem was. This is
 	  sometimes helpful for debugging but serves no purpose on a
 	  production system. Most people should say N here.
+
+	  In addition, you need to pass user_debug=N on the kernel command
+	  line to enable this feature.  N consists of the sum of:
+
+	      1 - undefined instruction events
+	      2 - system calls
+	      4 - invalid data aborts
+	      8 - SIGSEGV faults
+	     16 - SIGBUS faults
 
 config DEBUG_INFO
 	bool "Include GDB debugging information in kernel binary"
@@ -754,6 +753,18 @@ config DEBUG_LL
 	  in the kernel.  This is helpful if you are debugging code that
 	  executes before the console is initialized.
 
+config DEBUG_ICEDCC
+	bool "Kernel low-level debugging via EmbeddedICE DCC channel"
+	depends on DEBUG_LL
+	help
+	  Say Y here if you want the debug print routines to direct their
+	  output to the EmbeddedICE macrocell's DCC channel using
+	  co-processor 14. This is known to work on the ARM9 style ICE
+	  channel.
+
+	  It does include a timeout to ensure that the system does not
+	  totally freeze when there is nothing connected to read.
+
 config DEBUG_DC21285_PORT
 	bool "Kernel low-level debugging messages via footbridge serial port"
 	depends on DEBUG_LL && FOOTBRIDGE
@@ -770,6 +781,23 @@ config DEBUG_CLPS711X_UART2
 	  Say Y here if you want the debug print routines to direct their
 	  output to the second serial port on these devices.  Saying N will
 	  cause the debug messages to appear on the first serial port.
+
+config DEBUG_S3C2410_PORT
+	depends on DEBUG_LL && ARCH_S3C2410
+	bool "Kernel low-level debugging messages via S3C2410 UART"
+	help
+	  Say Y here if you want debug print routines to go to one of the
+	  S3C2410 internal UARTs. The chosen UART must have been configured
+	  before it is used.
+
+config DEBUG_S3C2410_UART
+	int
+	depends on DEBUG_LL && ARCH_S3C2410
+	default "0"
+	help
+	  Choice for UART for kernel low-level using S3C2410 UARTS,
+	  should be between zero and two. The port must have been
+	  initalised by the boot-loader before use.
 
 endmenu
 

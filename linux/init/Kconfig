@@ -66,7 +66,7 @@ endmenu
 menu "General setup"
 
 config SWAP
-	bool "Support for paging of anonymous memory"
+	bool "Support for paging of anonymous memory (swap)"
 	depends on MMU
 	default y
 	help
@@ -83,13 +83,30 @@ config SYSVIPC
 	  exchange information. It is generally considered to be a good thing,
 	  and some programs won't run unless you say Y here. In particular, if
 	  you want to run the DOS emulator dosemu under Linux (read the
-	  DOSEMU-HOWTO, available from
-	  <http://www.tldp.org/docs.html#howto>), you'll need to say Y
-	  here.
+	  DOSEMU-HOWTO, available from <http://www.tldp.org/docs.html#howto>),
+	  you'll need to say Y here.
 
 	  You can find documentation about IPC with "info ipc" and also in
 	  section 6.4 of the Linux Programmer's Guide, available from
-	  <http://www.tldp.org/docs.html#guide>.
+	  <http://www.tldp.org/guides.html>.
+
+config POSIX_MQUEUE
+	bool "POSIX Message Queues"
+	depends on EXPERIMENTAL
+	---help---
+	  POSIX variant of message queues is a part of IPC. In POSIX message
+	  queues every message has a priority which decides about succession
+	  of receiving it by a process. If you want to compile and run
+	  programs written e.g. for Solaris with use of its POSIX message
+	  queues (functions mq_*) say Y here. To use this feature you will
+	  also need mqueue library, available from
+	  <http://www.mat.uni.torun.pl/~wrona/posix_ipc/>
+
+	  POSIX message queues are visible as a filesystem called 'mqueue'
+	  and can be mounted somewhere if you want to do filesystem
+	  operations on message queues.
+
+	  If unsure, say Y.
 
 config BSD_PROCESS_ACCT
 	bool "BSD Process Accounting"
@@ -120,6 +137,26 @@ config SYSCTL
 	  building a kernel for install/rescue disks or your system is very
 	  limited in memory.
 
+config AUDIT
+	bool "Auditing support"
+	default y if SECURITY_SELINUX
+	default n
+	help
+	  Enable auditing infrastructure that can be used with another
+	  kernel subsystem, such as SELinux (which requires this for
+	  logging of avc messages output).  Does not do system-call
+	  auditing without CONFIG_AUDITSYSCALL.
+
+config AUDITSYSCALL
+	bool "Enable system-call auditing support"
+	depends on AUDIT && (X86 || PPC64 || ARCH_S390)
+	default y if SECURITY_SELINUX
+	default n
+	help
+	  Enable low-overhead system-call auditing infrastructure that
+	  can be used independently or with another kernel subsystem,
+	  such as SELinux.
+
 config LOG_BUF_SHIFT
 	int "Kernel log buffer size (16 => 64KB, 17 => 128KB)" if DEBUG_KERNEL
 	range 12 20
@@ -136,6 +173,25 @@ config LOG_BUF_SHIFT
 	             14 => 16 KB for uniprocessor
 		     13 =>  8 KB
 		     12 =>  4 KB
+
+config HOTPLUG
+	bool "Support for hot-pluggable devices" if !ARCH_S390
+	default ARCH_S390
+	help
+	  Say Y here if you want to plug devices into your computer while
+	  the system is running, and be able to use them quickly.  In many
+	  cases, the devices can likewise be unplugged at any time too.
+
+	  One well known example of this is PCMCIA- or PC-cards, credit-card
+	  size devices such as network cards, modems or hard drives which are
+	  plugged into slots found on all modern laptop computers.  Another
+	  example, used on modern desktops as well as laptops, is USB.
+
+	  Enable HOTPLUG and KMOD, and build a modular kernel.  Get agent
+	  software (at <http://linux-hotplug.sourceforge.net/>) and install it.
+	  Then your kernel will automatically call out to a user mode "policy
+	  agent" (/sbin/hotplug) to load modules and set up software needed
+	  to use devices as you hotplug them.
 
 config IKCONFIG
 	bool "Kernel .config support"
@@ -164,12 +220,12 @@ config IKCONFIG_PROC
 
 
 menuconfig EMBEDDED
-	bool "Remove kernel features (for embedded systems)"
+	bool "Configure standard kernel features (for small systems)"
 	help
-	  This option allows certain base kernel features to be removed from
-	  the build.  This is for specialized environments which can tolerate
-	  a "non-standard" kernel.  Only use this if you really know what you
-	  are doing.
+	  This option allows certain base kernel options and settings
+          to be disabled or tweaked. This is for specialized
+          environments which can tolerate a "non-standard" kernel.
+          Only use this if you really know what you are doing.
 
 config KALLSYMS
 	 bool "Load all symbols for debugging/kksymoops" if EMBEDDED
@@ -285,4 +341,10 @@ config KMOD
 	  runs modprobe with the appropriate arguments, thereby
 	  loading the module if it is available.  If unsure, say Y.
 
+config STOP_MACHINE
+	bool
+	default y
+	depends on (SMP && MODULE_UNLOAD) || HOTPLUG_CPU
+	help
+	  Need stop_machine() primitive.
 endmenu

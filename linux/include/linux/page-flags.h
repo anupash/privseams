@@ -69,12 +69,14 @@
 #define PG_private		12	/* Has something at ->private */
 #define PG_writeback		13	/* Page is under writeback */
 #define PG_nosave		14	/* Used for system suspend/resume */
-#define PG_chainlock		15	/* lock bit for ->pte_chain */
+#define PG_maplock		15	/* Lock bit for rmap to ptes */
 
 #define PG_direct		16	/* ->pte_chain points directly at pte */
 #define PG_mappedtodisk		17	/* Has blocks allocated on-disk */
 #define PG_reclaim		18	/* To be reclaimed asap */
 #define PG_compound		19	/* Part of a compound page */
+#define PG_anon			20	/* Anonymous page: anon_vma in mapping*/
+#define PG_swapcache		21	/* Swap page: swp_entry_t in private */
 
 
 /*
@@ -98,23 +100,38 @@ struct page_state {
 	unsigned long pgpgout;		/* Disk writes */
 	unsigned long pswpin;		/* swap reads */
 	unsigned long pswpout;		/* swap writes */
-	unsigned long pgalloc;		/* page allocations */
+	unsigned long pgalloc_high;	/* page allocations */
 
+	unsigned long pgalloc_normal;
+	unsigned long pgalloc_dma;
 	unsigned long pgfree;		/* page freeings */
 	unsigned long pgactivate;	/* pages moved inactive->active */
 	unsigned long pgdeactivate;	/* pages moved active->inactive */
+
 	unsigned long pgfault;		/* faults (major+minor) */
 	unsigned long pgmajfault;	/* faults (major only) */
+	unsigned long pgrefill_high;	/* inspected in refill_inactive_zone */
+	unsigned long pgrefill_normal;
+	unsigned long pgrefill_dma;
 
-	unsigned long pgscan;		/* pages scanned by page reclaim */
-	unsigned long pgrefill;		/* inspected in refill_inactive_zone */
-	unsigned long pgsteal;		/* total pages reclaimed */
+	unsigned long pgsteal_high;	/* total highmem pages reclaimed */
+	unsigned long pgsteal_normal;
+	unsigned long pgsteal_dma;
+	unsigned long pgscan_kswapd_high;/* total highmem pages scanned */
+	unsigned long pgscan_kswapd_normal;
+
+	unsigned long pgscan_kswapd_dma;
+	unsigned long pgscan_direct_high;/* total highmem pages scanned */
+	unsigned long pgscan_direct_normal;
+	unsigned long pgscan_direct_dma;
 	unsigned long pginodesteal;	/* pages reclaimed via inode freeing */
-	unsigned long kswapd_steal;	/* pages reclaimed by kswapd */
 
+	unsigned long slabs_scanned;	/* slab objects scanned */
+	unsigned long kswapd_steal;	/* pages reclaimed by kswapd */
 	unsigned long kswapd_inodesteal;/* reclaimed via kswapd inode freeing */
 	unsigned long pageoutrun;	/* kswapd's calls to page reclaim */
 	unsigned long allocstall;	/* direct reclaim calls */
+
 	unsigned long pgrotated;	/* pages rotated to tail of the LRU */
 } ____cacheline_aligned;
 
@@ -131,11 +148,24 @@ extern void get_full_page_state(struct page_state *ret);
 		local_irq_restore(flags);				\
 	} while (0)
 
+
 #define inc_page_state(member)	mod_page_state(member, 1UL)
 #define dec_page_state(member)	mod_page_state(member, 0UL - 1)
 #define add_page_state(member,delta) mod_page_state(member, (delta))
 #define sub_page_state(member,delta) mod_page_state(member, 0UL - (delta))
 
+#define mod_page_state_zone(zone, member, delta)			\
+	do {								\
+		unsigned long flags;					\
+		local_irq_save(flags);					\
+		if (is_highmem(zone))					\
+			__get_cpu_var(page_states).member##_high += (delta);\
+		else if (is_normal(zone))				\
+			__get_cpu_var(page_states).member##_normal += (delta);\
+		else							\
+			__get_cpu_var(page_states).member##_dma += (delta);\
+		local_irq_restore(flags);				\
+	} while (0)
 
 /*
  * Manipulation of page state flags
@@ -270,24 +300,33 @@ extern void get_full_page_state(struct page_state *ret);
 #define SetPageCompound(page)	set_bit(PG_compound, &(page)->flags)
 #define ClearPageCompound(page)	clear_bit(PG_compound, &(page)->flags)
 
-/*
- * The PageSwapCache predicate doesn't use a PG_flag at this time,
- * but it may again do so one day.
- */
+#define PageAnon(page)		test_bit(PG_anon, &(page)->flags)
+#define SetPageAnon(page)	set_bit(PG_anon, &(page)->flags)
+#define ClearPageAnon(page)	clear_bit(PG_anon, &(page)->flags)
+
 #ifdef CONFIG_SWAP
-extern struct address_space swapper_space;
-#define PageSwapCache(page) ((page)->mapping == &swapper_space)
+#define PageSwapCache(page)	test_bit(PG_swapcache, &(page)->flags)
+#define SetPageSwapCache(page)	set_bit(PG_swapcache, &(page)->flags)
+#define ClearPageSwapCache(page) clear_bit(PG_swapcache, &(page)->flags)
 #else
-#define PageSwapCache(page) 0
+#define PageSwapCache(page)	0
 #endif
 
 struct page;	/* forward declaration */
 
 int test_clear_page_dirty(struct page *page);
+int __clear_page_dirty(struct page *page);
+int test_clear_page_writeback(struct page *page);
+int test_set_page_writeback(struct page *page);
 
 static inline void clear_page_dirty(struct page *page)
 {
 	test_clear_page_dirty(page);
+}
+
+static inline void set_page_writeback(struct page *page)
+{
+	test_set_page_writeback(page);
 }
 
 #endif	/* PAGE_FLAGS_H */

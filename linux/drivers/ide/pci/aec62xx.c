@@ -423,7 +423,7 @@ static unsigned int __init init_chipset_aec62xx (struct pci_dev *dev, const char
 
 	if (!aec62xx_proc) {
 		aec62xx_proc = 1;
-		ide_pci_register_host_proc(&aec62xx_procs[0]);
+		ide_pci_create_host_proc("aec62xx", aec62xx_get_info);
 	}
 #endif /* DISPLAY_AEC62XX_TIMINGS && CONFIG_PROC_FS */
 
@@ -490,8 +490,6 @@ static void __init init_dma_aec62xx (ide_hwif_t *hwif, unsigned long dmabase)
 	ide_setup_dma(hwif, dmabase, 8);
 }
 
-extern void ide_setup_pci_device(struct pci_dev *, ide_pci_device_t *);
-
 static void __init init_setup_aec62xx (struct pci_dev *dev, ide_pci_device_t *d)
 {
 	ide_setup_pci_device(dev, d);
@@ -541,6 +539,7 @@ static struct pci_device_id aec62xx_pci_tbl[] = {
 	{ PCI_VENDOR_ID_ARTOP, PCI_DEVICE_ID_ARTOP_ATP865R,  PCI_ANY_ID, PCI_ANY_ID, 0, 0, 4 },
 	{ 0, },
 };
+MODULE_DEVICE_TABLE(pci, aec62xx_pci_tbl);
 
 static struct pci_driver driver = {
 	.name		= "AEC62xx IDE",

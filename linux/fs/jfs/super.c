@@ -195,7 +195,8 @@ static void jfs_put_super(struct super_block *sb)
 	rc = jfs_umount(sb);
 	if (rc)
 		jfs_err("jfs_umount failed with return code %d", rc);
-	unload_nls(sbi->nls_tab);
+	if (sbi->nls_tab)
+		unload_nls(sbi->nls_tab);
 	sbi->nls_tab = NULL;
 
 	kfree(sbi);
@@ -320,7 +321,7 @@ cleanup:
 	return 0;
 }
 
-int jfs_remount(struct super_block *sb, int *flags, char *data)
+static int jfs_remount(struct super_block *sb, int *flags, char *data)
 {
 	s64 newLVSize = 0;
 	int rc = 0;
@@ -380,6 +381,7 @@ static int jfs_fill_super(struct super_block *sb, void *data, int silent)
 		return -ENOSPC;
 	memset(sbi, 0, sizeof (struct jfs_sb_info));
 	sb->s_fs_info = sbi;
+	sbi->sb = sb;
 
 	/* initialize the mount flag and determine the default error handler */
 	flag = JFS_ERR_REMOUNT_RO;
@@ -434,9 +436,6 @@ static int jfs_fill_super(struct super_block *sb, void *data, int silent)
 	sb->s_root = d_alloc_root(inode);
 	if (!sb->s_root)
 		goto out_no_root;
-
-	if (!sbi->nls_tab)
-		sbi->nls_tab = load_nls_default();
 
 	/* logical blocks are represented by 40 bits in pxd_t, etc. */
 	sb->s_maxbytes = ((u64) sb->s_blocksize) << 40;
@@ -549,11 +548,11 @@ static void init_once(void *foo, kmem_cache_t * cachep, unsigned long flags)
 
 	if ((flags & (SLAB_CTOR_VERIFY | SLAB_CTOR_CONSTRUCTOR)) ==
 	    SLAB_CTOR_CONSTRUCTOR) {
+		memset(jfs_ip, 0, sizeof(struct jfs_inode_info));
 		INIT_LIST_HEAD(&jfs_ip->anon_inode_list);
 		init_rwsem(&jfs_ip->rdwrlock);
 		init_MUTEX(&jfs_ip->commit_sem);
 		init_rwsem(&jfs_ip->xattr_sem);
-		jfs_ip->atlhead = 0;
 		jfs_ip->active_ag = -1;
 #ifdef CONFIG_JFS_POSIX_ACL
 		jfs_ip->i_acl = JFS_ACL_NOT_CACHED;

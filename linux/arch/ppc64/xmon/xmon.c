@@ -50,13 +50,11 @@ static unsigned long ndump = 64;
 static unsigned long nidump = 16;
 static unsigned long ncsum = 4096;
 static int termch;
+static char tmpstr[128];
 
 static u_int bus_error_jmp[100];
 #define setjmp xmon_setjmp
 #define longjmp xmon_longjmp
-
-/* Max number of stack frames we are willing to produce on a backtrace. */
-#define MAXFRAMECOUNT 50
 
 /* Breakpoint stuff */
 struct bpt {
@@ -84,7 +82,6 @@ static void dump(void);
 static void prdump(unsigned long, long);
 static int ppc_inst_dump(unsigned long, long);
 void print_address(unsigned long);
-static int getsp(void);
 static void backtrace(struct pt_regs *);
 static void excprint(struct pt_regs *);
 static void prregs(struct pt_regs *);
@@ -115,6 +112,7 @@ static void cpu_cmd(void);
 static void csum(void);
 static void bootcmds(void);
 void dump_segments(void);
+static void symbol_lookup(void);
 
 static void debug_trace(void);
 
@@ -160,6 +158,8 @@ Commands:\n\
   dd	dump double values\n\
   e	print exception information\n\
   f	flush cache\n\
+  la	lookup symbol+offset of specified address\n\
+  ls	lookup address of specified symbol\n\
   m	examine/change memory\n\
   mm	move a block of memory\n\
   ms	set a block of memory\n\
@@ -173,14 +173,13 @@ Commands:\n\
   S	print special registers\n\
   t	print backtrace\n\
   T	Enable/Disable PPCDBG flags\n\
-  x	exit monitor\n\
+  x	exit monitor and recover\n\
+  X	exit monitor and dont recover\n\
   u	dump segment table or SLB\n\
   ?	help\n"
-#ifndef CONFIG_PPC_ISERIES
   "\
   zr	reboot\n\
   zh	halt\n"
-#endif
 ;
 
 static int xmon_trace[NR_CPUS];
@@ -342,7 +341,10 @@ xmon(struct pt_regs *excp)
 #endif /* CONFIG_SMP */
 	set_msrd(msr);		/* restore interrupt enable */
 
-	return 0;
+	if (cmd == 'X')
+		return 0;
+
+	return 1;
 }
 
 int
@@ -450,7 +452,7 @@ insert_bpts()
 		}
 	}
 
-	if ((cur_cpu_spec->cpu_features & CPU_FTR_DABR) && dabr.enabled)
+	if (dabr.enabled)
 		set_dabr(dabr.address);
 	if ((cur_cpu_spec->cpu_features & CPU_FTR_IABR) && iabr.enabled)
 		set_iabr(iabr.address);
@@ -463,8 +465,7 @@ remove_bpts()
 	struct bpt *bp;
 	unsigned instr;
 
-	if ((cur_cpu_spec->cpu_features & CPU_FTR_DABR))
-		set_dabr(0);
+	set_dabr(0);
 	if ((cur_cpu_spec->cpu_features & CPU_FTR_IABR))
 		set_iabr(0);
 
@@ -537,9 +538,11 @@ cmds(struct pt_regs *excp)
 		case 'd':
 			dump();
 			break;
+		case 'l':
+			symbol_lookup();
+			break;
 		case 'r':
-			if (excp != NULL)
-				prregs(excp);	/* print regs */
+			prregs(excp);	/* print regs */
 			break;
 		case 'e':
 			if (excp == NULL)
@@ -558,6 +561,7 @@ cmds(struct pt_regs *excp)
 			break;
 		case 's':
 		case 'x':
+		case 'X':
 		case EOF:
 			return cmd;
 		case '?':
@@ -577,10 +581,8 @@ cmds(struct pt_regs *excp)
 			cpu_cmd();
 			break;
 #endif /* CONFIG_SMP */
-#ifndef CONFIG_PPC_ISERIES
 		case 'z':
 			bootcmds();
-#endif
 		case 'T':
 			debug_trace();
 			break;
@@ -747,10 +749,6 @@ bpt_cmds(void)
 	cmd = inchar();
 	switch (cmd) {
 	case 'd':	/* bd - hardware data breakpoint */
-		if (!(cur_cpu_spec->cpu_features & CPU_FTR_DABR)) {
-			printf("Not implemented on this cpu\n");
-			break;
-		}
 		mode = 7;
 		cmd = inchar();
 		if (cmd == 'r')
@@ -894,99 +892,80 @@ const char *getvecname(unsigned long vec)
 	return ret;
 }
 
-static void
-backtrace(struct pt_regs *excp)
+/*
+ * Most of our exceptions are in the form:
+ *    bl handler
+ *    b .ret_from_exception
+ * and this currently fails to catch them.
+ */
+static inline int exception_frame(unsigned long ip)
 {
-	unsigned long sp;
-	unsigned long lr;
-	unsigned long stack[3];
-	struct pt_regs regs;
-	int framecount;
-	char *funcname;
-	/* declare these as raw ptrs so we don't get func descriptors */
-	extern void *ret_from_except, *ret_from_syscall_1;
+	extern void *ret_from_syscall_1, *ret_from_syscall_2, *ret_from_except;
 
-	if (excp != NULL) {
-	        lr = excp->link;
-		sp = excp->gpr[1];
-	} else {
-	        /* Use care not to call any function before this point
-		 so the saved lr has a chance of being good. */
-	        asm volatile ("mflr %0" : "=r" (lr) :);
-		sp = getsp();
-	}
-	scanhex(&sp);
-	scannl();
-	for (framecount = 0;
-	     sp != 0 && framecount < MAXFRAMECOUNT;
-	     sp = stack[0], framecount++) {
-		if (mread(sp, stack, sizeof(stack)) != sizeof(stack))
-			break;
-#if 0
-		if (lr != 0) {
-		    stack[2] = lr;	/* fake out the first saved lr.  It may not be saved yet. */
-		    lr = 0;
-		}
-#endif
-		printf("%.16lx  %.16lx", sp, stack[2]);
-		/* TAI -- for now only the ones cast to unsigned long will match.
-		 * Need to test the rest...
-		 */
-		if ((stack[2] == (unsigned long)ret_from_except &&
-		            (funcname = "ret_from_except"))
-		    || (stack[2] == (unsigned long)ret_from_syscall_1 &&
-		            (funcname = "ret_from_syscall_1"))
-#if 0
-		    || stack[2] == (unsigned) &ret_from_syscall_2
-		    || stack[2] == (unsigned) &do_signal_ret
-#endif
-		    ) {
-			printf("  %s\n", funcname);
-			if (mread(sp+112, &regs, sizeof(regs)) != sizeof(regs))
-				break;
-			printf("exception: %lx %s regs %lx\n", regs.trap, getvecname(regs.trap), sp+112);
-			printf("                  %.16lx", regs.nip);
-			if (regs.nip & 0xffffffff00000000UL)
-				xmon_print_symbol("  %s", regs.nip);
-			printf("\n");
-                        if (regs.gpr[1] < sp) {
-                            printf("<Stack drops into userspace %.16lx>\n", regs.gpr[1]);
-                            break;
-			}
+	if ((ip == (unsigned long)ret_from_syscall_1) ||
+	    (ip == (unsigned long)ret_from_syscall_2) ||
+	    (ip == (unsigned long)ret_from_except))
+		return 1;
 
-			sp = regs.gpr[1];
-			if (mread(sp, stack, sizeof(stack)) != sizeof(stack))
-				break;
-		} else {
-			if (stack[2])
-				xmon_print_symbol("  %s", stack[2]);
-			printf("\n");
-		}
-		if (stack[0] && stack[0] <= sp) {
-			if ((stack[0] & 0xffffffff00000000UL) == 0)
-				printf("<Stack drops into 32-bit userspace %.16lx>\n", stack[0]);
-			else
-				printf("<Corrupt stack.  Next backchain is %.16lx>\n", stack[0]);
-			break;
-		}
-	}
-	if (framecount >= MAXFRAMECOUNT)
-		printf("<Punt. Too many stack frames>\n");
+	return 0;
 }
 
-int
-getsp()
-{
-	int x;
+static int xmon_depth_to_print = 64;
 
-	asm("mr %0,1" : "=r" (x) :);
-	return x;
+static void xmon_show_stack(unsigned long sp)
+{
+	unsigned long ip;
+	unsigned long newsp;
+	int count = 0;
+	struct pt_regs regs;
+
+	do {
+		if (sp < PAGE_OFFSET) {
+			printf("SP in userspace\n");
+			break;
+		}
+
+		if (!mread((sp + 16), &ip, sizeof(unsigned long)))
+			break;
+
+		printf("[%016lx] [%016lx] ", sp, ip);
+		xmon_print_symbol("%s\n", ip);
+
+		if (exception_frame(ip)) {
+			if (mread(sp+112, &regs, sizeof(regs)) != sizeof(regs))
+				break;
+
+                        printf("  exception: %lx %s regs %lx\n", regs.trap,
+			       getvecname(regs.trap), sp+112);
+		}
+
+		if (!mread(sp, &newsp, sizeof(unsigned long)))
+			break;
+		if (newsp < sp)
+			break;
+
+		sp = newsp;
+	} while (count++ < xmon_depth_to_print);
+}
+
+static void backtrace(struct pt_regs *excp)
+{
+	unsigned long sp;
+
+	if (excp == NULL)
+		sp = __get_SP();
+	else
+		sp = excp->gpr[1];
+
+	scanhex(&sp);
+	scannl();
+
+	xmon_show_stack(sp);
 }
 
 spinlock_t exception_print_lock = SPIN_LOCK_UNLOCKED;
 
-void
-excprint(struct pt_regs *fp)
+void excprint(struct pt_regs *fp)
 {
 	unsigned long flags;
 
@@ -1021,21 +1000,31 @@ excprint(struct pt_regs *fp)
 	spin_unlock_irqrestore(&exception_print_lock, flags);
 }
 
-void
-prregs(struct pt_regs *fp)
+void prregs(struct pt_regs *fp)
 {
 	int n;
 	unsigned long base;
 
 	if (scanhex((void *)&base))
 		fp = (struct pt_regs *) base;
-	for (n = 0; n < 16; ++n)
-		printf("R%.2ld = %.16lx   R%.2ld = %.16lx\n", n, fp->gpr[n],
-		       n+16, fp->gpr[n+16]);
-	printf("pc  = %.16lx   msr = %.16lx\nlr  = %.16lx   cr  = %.16lx\n",
-	       fp->nip, fp->msr, fp->link, fp->ccr);
-	printf("ctr = %.16lx   xer = %.16lx   trap = %8lx\n",
-	       fp->ctr, fp->xer, fp->trap);
+
+	if (setjmp(bus_error_jmp) == 0) {
+		__debugger_fault_handler = handle_fault;
+		sync();
+		for (n = 0; n < 16; ++n)
+			printf("R%.2ld = %.16lx   R%.2ld = %.16lx\n", n,
+			       fp->gpr[n], n+16, fp->gpr[n+16]);
+		printf("pc  = %.16lx   msr = %.16lx\nlr  = %.16lx   "
+		       "cr  = %.16lx\n", fp->nip, fp->msr, fp->link, fp->ccr);
+		printf("ctr = %.16lx   xer = %.16lx   trap = %8lx\n",
+		       fp->ctr, fp->xer, fp->trap);
+
+		sync();
+		/* wait a little while to see if we get a machine check */
+		__delay(200);
+	} else {
+		printf("*** Error reading regs\n");
+	}
 }
 
 void
@@ -1148,7 +1137,6 @@ super_regs()
 	int cmd;
 	unsigned long val;
 #ifdef CONFIG_PPC_ISERIES
-	int i;
 	struct paca_struct *ptrPaca = NULL;
 	struct ItLpPaca *ptrLpPaca = NULL;
 	struct ItLpRegSave *ptrLpRegSave = NULL;
@@ -1641,8 +1629,21 @@ ppc_inst_dump(unsigned long adr, long count)
 void
 print_address(unsigned long addr)
 {
-	printf("0x%lx", addr);
+	const char *name;
+	char *modname;
+	long size, offset;
+
+	name = kallsyms_lookup(addr, &size, &offset, &modname, tmpstr);
+
+	if (name) {
+		if (modname)
+			printf("0x%lx\t# %s:%s+0x%lx", addr, modname, name, offset);
+		else
+			printf("0x%lx\t# %s+0x%lx", addr, name, offset);
+	} else
+		printf("0x%lx", addr);
 }
+
 
 /*
  * Memory operations - move, set, print differences
@@ -1822,8 +1823,33 @@ unsigned long *vp;
 		return 0;
 	}
 
+	/* skip leading "0x" if any */
+
+	if (c == '0') {
+		c = inchar();
+		if (c == 'x')
+			c = inchar();
+	} else if (c == '$') {
+		int i;
+		for (i=0; i<63; i++) {
+			c = inchar();
+			if (isspace(c)) {
+				termch = c;
+				break;
+			}
+			tmpstr[i] = c;
+		}
+		tmpstr[i++] = 0;
+		*vp = kallsyms_lookup_name(tmpstr);
+		if (!(*vp)) {
+			printf("unknown symbol '%s'\n", tmpstr);
+			return 0;
+		}
+		return 1;
+	}
+
 	d = hexdigit(c);
-	if( d == EOF ){
+	if (d == EOF) {
 		termch = c;
 		return 0;
 	}
@@ -1832,7 +1858,7 @@ unsigned long *vp;
 		v = (v << 4) + d;
 		c = inchar();
 		d = hexdigit(c);
-	} while( d != EOF );
+	} while (d != EOF);
 	termch = c;
 	*vp = v;
 	return 1;
@@ -1907,19 +1933,53 @@ char *str;
 	lineptr = str;
 }
 
+
+static void
+symbol_lookup(void)
+{
+	int type = inchar();
+	unsigned long addr;
+	static char tmp[64];
+
+	switch (type) {
+	case 'a':
+		if (scanhex(&addr)) {
+			printf("%lx: ", addr);
+			xmon_print_symbol("%s\n", addr);
+		}
+		termch = 0;
+		break;
+	case 's':
+		getstring(tmp, 64);
+		if (setjmp(bus_error_jmp) == 0) {
+			__debugger_fault_handler = handle_fault;
+			sync();
+			addr = kallsyms_lookup_name(tmp);
+			if (addr)
+				printf("%s: %lx\n", tmp, addr);
+			else
+				printf("Symbol '%s' not found.\n", tmp);
+			sync();
+		}
+		__debugger_fault_handler = 0;
+		termch = 0;
+		break;
+	}
+}
+
+
 /* xmon version of __print_symbol */
 void __xmon_print_symbol(const char *fmt, unsigned long address)
 {
 	char *modname;
 	const char *name;
 	unsigned long offset, size;
-	char namebuf[128];
 
 	if (setjmp(bus_error_jmp) == 0) {
 		__debugger_fault_handler = handle_fault;
 		sync();
 		name = kallsyms_lookup(address, &size, &offset, &modname,
-				       namebuf);
+				       tmpstr);
 		sync();
 		/* wait a little while to see if we get a machine check */
 		__delay(200);

@@ -6,8 +6,8 @@
  * version 2
  *
  * Copyright 2000,2002 IBM Corporation
- * Author(s): Utz Bacher <utz.bacher@de.ibm.com>
- *            Cornelia Huck <cohuck@de.ibm.com>
+ * Author(s):             Utz Bacher <utz.bacher@de.ibm.com>
+ * 2.6 cio integration by Cornelia Huck <cohuck@de.ibm.com>
  *
  * Restriction: only 63 iqdio subchannels would have its own indicator,
  * after that, subsequent subchannels share one indicator
@@ -56,7 +56,7 @@
 #include "ioasm.h"
 #include "chsc.h"
 
-#define VERSION_QDIO_C "$Revision: 1.67 $"
+#define VERSION_QDIO_C "$Revision: 1.80 $"
 
 /****************** MODULE PARAMETER VARIABLES ********************/
 MODULE_AUTHOR("Utz Bacher <utz.bacher@de.ibm.com>");
@@ -76,6 +76,7 @@ static struct qdio_perf_stats perf_stats;
 #endif /* QDIO_PERFORMANCE_STATS */
 
 static int hydra_thinints;
+static int omit_svs;
 
 static int indicator_used[INDICATORS_PER_CACHELINE];
 static __u32 * volatile indicators;
@@ -114,7 +115,7 @@ qdio_min(int a,int b)
 static inline volatile __u64 
 qdio_get_micros(void)
 {
-        return (get_clock() >> 12); /* time>>12 is microseconds */
+        return (get_clock() >> 10); /* time>>12 is microseconds */
 }
 
 /* 
@@ -391,6 +392,11 @@ qdio_unmark_q(struct qdio_q *q)
 	if ((q->is_thinint_q)&&(q->is_input_q)) {
 		/* iQDIO */
 		spin_lock_irqsave(&ttiq_list_lock,flags);
+		/* in case cleanup has done this already and simultanously
+		 * qdio_unmark_q is called from the interrupt handler, we've
+		 * got to check this in this specific case again */
+		if ((!q->list_prev)||(!q->list_next))
+			goto out;
 		if (q->list_next==q) {
 			/* q was the only interesting q */
 			tiq_list=NULL;
@@ -403,6 +409,7 @@ qdio_unmark_q(struct qdio_q *q)
 			q->list_next=NULL;
 			q->list_prev=NULL;
 		}
+out:
 		spin_unlock_irqrestore(&ttiq_list_lock,flags);
 	}
 }
@@ -454,12 +461,12 @@ check_next:
 
 	switch(slsb[f_mod_no]) {
 
-        /* the hydra has not fetched the output yet */
+        /* the adapter has not fetched the output yet */
 	case SLSB_CU_OUTPUT_PRIMED:
 		QDIO_DBF_TEXT5(0,trace,"outpprim");
 		break;
 
-	/* the hydra got it */
+	/* the adapter got it */
 	case SLSB_P_OUTPUT_EMPTY:
 		atomic_dec(&q->number_of_buffers_used);
 		f++;
@@ -530,7 +537,6 @@ qdio_has_outbound_q_moved(struct qdio_q *q)
 	if ( (i!=GET_SAVED_FRONTIER(q)) ||
 	     (q->error_status_flags&QDIO_STATUS_LOOK_FOR_ERROR) ) {
 		SAVE_FRONTIER(q,i);
-		SAVE_TIMESTAMP(q);
 		QDIO_DBF_TEXT4(0,trace,"oqhasmvd");
 		QDIO_DBF_HEX4(0,trace,&q,sizeof(void*));
 		return 1;
@@ -545,6 +551,7 @@ inline static void
 qdio_kick_outbound_q(struct qdio_q *q)
 {
 	int result;
+	char dbf_text[15];
 
 	QDIO_DBF_TEXT4(0,trace,"kickoutq");
 	QDIO_DBF_HEX4(0,trace,&q,sizeof(void*));
@@ -552,15 +559,75 @@ qdio_kick_outbound_q(struct qdio_q *q)
 	if (!q->siga_out)
 		return;
 
+	/* here's the story with cc=2 and busy bit set (thanks, Rick):
+	 * VM's CP could present us cc=2 and busy bit set on SIGA-write
+	 * during reconfiguration of their Guest LAN (only in HIPERS mode,
+	 * QDIO mode is asynchronous -- cc=2 and busy bit there will take
+	 * the queues down immediately; and not being under VM we have a
+	 * problem on cc=2 and busy bit set right away).
+	 *
+	 * Therefore qdio_siga_output will try for a short time constantly,
+	 * if such a condition occurs. If it doesn't change, it will
+	 * increase the busy_siga_counter and save the timestamp, and
+	 * schedule the queue for later processing (via mark_q, using the
+	 * queue tasklet). __qdio_outbound_processing will check out the
+	 * counter. If non-zero, it will call qdio_kick_outbound_q as often
+	 * as the value of the counter. This will attempt further SIGA
+	 * instructions. For each successful SIGA, the counter is
+	 * decreased, for failing SIGAs the counter remains the same, after
+	 * all.
+	 * After some time of no movement, qdio_kick_outbound_q will
+	 * finally fail and reflect corresponding error codes to call
+	 * the upper layer module and have it take the queues down.
+	 *
+	 * Note that this is a change from the original HiperSockets design
+	 * (saying cc=2 and busy bit means take the queues down), but in
+	 * these days Guest LAN didn't exist... excessive cc=2 with busy bit
+	 * conditions will still take the queues down, but the threshold is
+	 * higher due to the Guest LAN environment.
+	 */
+
+
 	result=qdio_siga_output(q);
 
-	if (!result)
-		return;
+		switch (result) {
+		case 0:
+		/* went smooth this time, reset timestamp */
+			QDIO_DBF_TEXT3(0,trace,"cc2reslv");
+			sprintf(dbf_text,"%4x%2x%2x",q->irq,q->q_no,
+				atomic_read(&q->busy_siga_counter));
+			QDIO_DBF_TEXT3(0,trace,dbf_text);
+			q->timing.busy_start=0;
+			break;
+		case (2|QDIO_SIGA_ERROR_B_BIT_SET):
+			/* cc=2 and busy bit: */
+		atomic_inc(&q->busy_siga_counter);
 
-	if (q->siga_error)
-		q->error_status_flags|=QDIO_STATUS_MORE_THAN_ONE_SIGA_ERROR;
-	q->error_status_flags |= QDIO_STATUS_LOOK_FOR_ERROR;
-	q->siga_error=result;
+			/* if the last siga was successful, save
+			 * timestamp here */
+			if (!q->timing.busy_start)
+				q->timing.busy_start=NOW;
+
+			/* if we're in time, don't touch error_status_flags
+			 * and siga_error */
+			if (NOW-q->timing.busy_start<QDIO_BUSY_BIT_GIVE_UP) {
+				qdio_mark_q(q);
+				break;
+			}
+			QDIO_DBF_TEXT2(0,trace,"cc2REPRT");
+			sprintf(dbf_text,"%4x%2x%2x",q->irq,q->q_no,
+				atomic_read(&q->busy_siga_counter));
+			QDIO_DBF_TEXT3(0,trace,dbf_text);
+			/* else fallthrough and report error */
+		default:
+			/* for plain cc=1, 2 or 3: */
+			if (q->siga_error)
+				q->error_status_flags|=
+					QDIO_STATUS_MORE_THAN_ONE_SIGA_ERROR;
+			q->error_status_flags|=
+				QDIO_STATUS_LOOK_FOR_ERROR;
+			q->siga_error=result;
+		}
 }
 
 inline static void
@@ -596,9 +663,11 @@ qdio_kick_outbound_handler(struct qdio_q *q)
 	q->error_status_flags=0;
 }
 
-static void
-qdio_outbound_processing(struct qdio_q *q)
+static inline void
+__qdio_outbound_processing(struct qdio_q *q)
 {
+	int siga_attempts;
+
 	QDIO_DBF_TEXT4(0,trace,"qoutproc");
 	QDIO_DBF_HEX4(0,trace,&q,sizeof(void*));
 
@@ -619,6 +688,14 @@ qdio_outbound_processing(struct qdio_q *q)
 	perf_stats.tl_runs++;
 #endif /* QDIO_PERFORMANCE_STATS */
 
+	/* see comment in qdio_kick_outbound_q */
+	siga_attempts=atomic_read(&q->busy_siga_counter);
+	while (siga_attempts) {
+		atomic_dec(&q->busy_siga_counter);
+		qdio_kick_outbound_q(q);
+		siga_attempts--;
+	}
+
 	if (qdio_has_outbound_q_moved(q))
 		qdio_kick_outbound_handler(q);
 
@@ -637,6 +714,12 @@ qdio_outbound_processing(struct qdio_q *q)
 			qdio_mark_q(q);
 
 	qdio_release_q(q);
+}
+
+static void
+qdio_outbound_processing(struct qdio_q *q)
+{
+	__qdio_outbound_processing(q);
 }
 
 /************************* INBOUND ROUTINES *******************************/
@@ -836,7 +919,7 @@ qdio_is_inbound_q_done(struct qdio_q *q)
 	no_used=atomic_read(&q->number_of_buffers_used);
 
 	/* 
-	 * we need that one for synchronization with Hydra, as Hydra
+	 * we need that one for synchronization with the adapter, as it
 	 * does a kind of PCI avoidance 
 	 */
 	SYNC_MEMORY;
@@ -986,7 +1069,7 @@ __tiqdio_inbound_processing(struct qdio_q *q, int spare_ind_was_set)
 	}
 	/*
 	 * maybe we have to do work on our outbound queues... at least
-	 * we have to check Hydra outbound-int-capable thinint-capable
+	 * we have to check the outbound-int-capable thinint-capable
 	 * queues
 	 */
 	if (q->hydra_gives_outbound_pcis) {
@@ -997,7 +1080,7 @@ __tiqdio_inbound_processing(struct qdio_q *q, int spare_ind_was_set)
 			perf_stats.tl_runs--;
 #endif /* QDIO_PERFORMANCE_STATS */
 			if (!qdio_is_outbound_q_done(oq))
-				qdio_outbound_processing(oq);
+				__qdio_outbound_processing(oq);
 		}
 	}
 
@@ -1024,8 +1107,8 @@ tiqdio_inbound_processing(struct qdio_q *q)
 	__tiqdio_inbound_processing(q, atomic_read(&spare_indicator_usecount));
 }
 
-static void
-qdio_inbound_processing(struct qdio_q *q)
+static inline void
+__qdio_inbound_processing(struct qdio_q *q)
 {
 	int q_laps=0;
 
@@ -1065,6 +1148,12 @@ again:
 	}
 
 	qdio_release_q(q);
+}
+
+static void
+qdio_inbound_processing(struct qdio_q *q)
+{
+	__qdio_inbound_processing(q);
 }
 
 /************************* MAIN ROUTINES *******************************/
@@ -1211,8 +1300,7 @@ next:
 		kfree(irq_ptr->output_qs[i]);
 
 	}
-	if (irq_ptr->qdr)
-		kfree(irq_ptr->qdr);
+	kfree(irq_ptr->qdr);
 	kfree(irq_ptr);
 }
 
@@ -1357,6 +1445,10 @@ qdio_fill_qs(struct qdio_irq *irq_ptr, struct ccw_device *cdev,
 			((irq_ptr->is_thinint_irq)?&tiqdio_inbound_processing:
 			 &qdio_inbound_processing);
 
+		/* actually this is not used for inbound queues. yet. */
+		atomic_set(&q->busy_siga_counter,0);
+		q->timing.busy_start=0;
+
 /*		for (j=0;j<QDIO_STATS_NUMBER;j++)
 			q->timing.last_transfer_times[j]=(qdio_get_micros()/
 							  QDIO_STATS_NUMBER)*j;
@@ -1420,6 +1512,9 @@ qdio_fill_qs(struct qdio_irq *irq_ptr, struct ccw_device *cdev,
 		q->tasklet.data=(unsigned long)q;
 		q->tasklet.func=(void(*)(unsigned long))
 			&qdio_outbound_processing;
+
+		atomic_set(&q->busy_siga_counter,0);
+		q->timing.busy_start=0;
 
 		/* fill in slib */
 		if (i>0) irq_ptr->output_qs[i-1]->slib->nsliba=
@@ -1493,8 +1588,11 @@ tiqdio_thinint_handler(void)
 	perf_stats.thinints++;
 	perf_stats.start_time_inbound=NOW;
 #endif /* QDIO_PERFORMANCE_STATS */
-	/* VM will do the SVS for us */
-	if (!MACHINE_IS_VM)
+
+	/* SVS only when needed:
+	 * issue SVS to benefit from iqdio interrupt avoidance
+	 * (SVS clears AISOI)*/
+	if (!omit_svs)
 		tiqdio_clear_global_summary();
 
 	tiqdio_inbound_checks();
@@ -1554,7 +1652,7 @@ qdio_handle_pci(struct qdio_irq *irq_ptr)
 #ifdef QDIO_PERFORMANCE_STATS
 			perf_stats.tl_runs--;
 #endif /* QDIO_PERFORMANCE_STATS */
-			qdio_inbound_processing(q);
+			__qdio_inbound_processing(q);
 		}
 	}
 	if (!irq_ptr->hydra_gives_outbound_pcis)
@@ -1568,7 +1666,7 @@ qdio_handle_pci(struct qdio_irq *irq_ptr)
 			continue;
 		if (!irq_ptr->sync_done_on_outb_pcis)
 			SYNC_MEMORY;
-		qdio_outbound_processing(q);
+		__qdio_outbound_processing(q);
 	}
 }
 
@@ -1700,7 +1798,6 @@ qdio_handler(struct ccw_device *cdev, unsigned long intparm, struct irb *irb)
 		case -EIO:
 			QDIO_PRINT_ERR("i/o error on device %s\n",
 				       cdev->dev.bus_id);
-			//FIXME: hm?
 			return;
 		case -ETIMEDOUT:
 			qdio_timeout_handler(cdev);
@@ -1817,12 +1914,13 @@ qdio_check_siga_needs(int sch)
 		u8  ocnt;
 	} *ssqd_area;
 
-	/* FIXME make this GFP_KERNEL */
-	ssqd_area = (void *)get_zeroed_page(GFP_ATOMIC | GFP_DMA);
+	ssqd_area = (void *)get_zeroed_page(GFP_KERNEL | GFP_DMA);
 	if (!ssqd_area) {
 	        QDIO_PRINT_WARN("Could not get memory for chsc. Using all " \
 				"SIGAs for sch x%x.\n", sch);
-		return -1; /* all flags set */
+		return CHSC_FLAG_SIGA_INPUT_NECESSARY ||
+			CHSC_FLAG_SIGA_OUTPUT_NECESSARY ||
+			CHSC_FLAG_SIGA_SYNC_NECESSARY; /* all flags set */
 	}
 	ssqd_area->request = (struct chsc_header) {
 		.length = 0x0010,
@@ -1838,7 +1936,9 @@ qdio_check_siga_needs(int sch)
 		QDIO_PRINT_WARN("CHSC returned cc %i. Using all " \
 				"SIGAs for sch x%x.\n",
 				result,sch);
-		qdioac = -1; /* all flags set */
+		qdioac = CHSC_FLAG_SIGA_INPUT_NECESSARY ||
+			CHSC_FLAG_SIGA_OUTPUT_NECESSARY ||
+			CHSC_FLAG_SIGA_SYNC_NECESSARY; /* all flags set */
 		goto out;
 	}
 
@@ -1846,7 +1946,9 @@ qdio_check_siga_needs(int sch)
 		QDIO_PRINT_WARN("response upon checking SIGA needs " \
 				"is 0x%x. Using all SIGAs for sch x%x.\n",
 				ssqd_area->response.code, sch);
-		qdioac = -1; /* all flags set */
+		qdioac = CHSC_FLAG_SIGA_INPUT_NECESSARY ||
+			CHSC_FLAG_SIGA_OUTPUT_NECESSARY ||
+			CHSC_FLAG_SIGA_SYNC_NECESSARY; /* all flags set */
 		goto out;
 	}
 	if (!(ssqd_area->flags & CHSC_FLAG_QDIO_CAPABILITY) ||
@@ -1925,10 +2027,17 @@ tiqdio_check_chsc_availability(void)
 		goto exit;
 	}
 
-	/* Check for hydra thin interrupts (bit 67). */
+	/* Check for OSA/FCP thin interrupts (bit 67). */
 	hydra_thinints = ((scsc_area->general_char[2] & 0x10000000)
 		== 0x10000000);
 	sprintf(dbf_text,"hydrati%1x", hydra_thinints);
+	QDIO_DBF_TEXT0(0,setup,dbf_text);
+
+	/* Check for aif time delay disablement fac (bit 56). If installed,
+	 * omit svs even under lpar (good point by rick again) */
+	omit_svs = ((scsc_area->general_char[1] & 0x00000080)
+		== 0x00000080);
+	sprintf(dbf_text,"omitsvs%1x", omit_svs);
 	QDIO_DBF_TEXT0(0,setup,dbf_text);
 exit:
 	free_page ((unsigned long) scsc_area);
@@ -2109,7 +2218,7 @@ qdio_cleanup(struct ccw_device *cdev, int how)
 	QDIO_DBF_TEXT0(0,setup,dbf_text);
 
 	rc = qdio_shutdown(cdev, how);
-	if (rc == 0)
+	if ((rc == 0) || (rc == -EINPROGRESS))
 		rc = qdio_free(cdev);
 	return rc;
 }
@@ -2120,9 +2229,10 @@ qdio_shutdown(struct ccw_device *cdev, int how)
 	struct qdio_irq *irq_ptr;
 	int i;
 	int result = 0;
+	int rc;
 	unsigned long flags;
 	int timeout;
-	char dbf_text[15]="12345678";
+	char dbf_text[15];
 
 	irq_ptr = cdev->private->qdio_data;
 	if (!irq_ptr)
@@ -2152,13 +2262,6 @@ qdio_shutdown(struct ccw_device *cdev, int how)
 							      use_count),
 						 QDIO_NO_USE_COUNT_TIMEOUT);
 		if (atomic_read(&irq_ptr->input_qs[i]->use_count))
-			/*
-			 * FIXME:
-			 * nobody cares about such retval,
-			 * does a timeout make sense at all?
-			 * can this case be eliminated?
-			 * mutex should be released anyway, shouldn't it?
-			 */ 
 			result=-EINPROGRESS;
 	}
 
@@ -2170,37 +2273,26 @@ qdio_shutdown(struct ccw_device *cdev, int how)
 							      use_count),
 						 QDIO_NO_USE_COUNT_TIMEOUT);
 		if (atomic_read(&irq_ptr->output_qs[i]->use_count))
-			/*
-			 * FIXME:
-			 * nobody cares about such retval,
-			 * does a timeout make sense at all?
-			 * can this case be eliminated?
-			 * mutex should be released anyway, shouldn't it?
-			 */ 
 			result=-EINPROGRESS;
 	}
-
-	if (result)
-		goto out;
 
 	/* cleanup subchannel */
 	spin_lock_irqsave(get_ccwdev_lock(cdev),flags);
 	if (how&QDIO_FLAG_CLEANUP_USING_CLEAR) {
-		result = ccw_device_clear(cdev, QDIO_DOING_CLEANUP);
+		rc = ccw_device_clear(cdev, QDIO_DOING_CLEANUP);
 		timeout=QDIO_CLEANUP_CLEAR_TIMEOUT;
 	} else if (how&QDIO_FLAG_CLEANUP_USING_HALT) {
-		result = ccw_device_halt(cdev, QDIO_DOING_CLEANUP);
+		rc = ccw_device_halt(cdev, QDIO_DOING_CLEANUP);
 		timeout=QDIO_CLEANUP_HALT_TIMEOUT;
 	} else { /* default behaviour */
-		result = ccw_device_halt(cdev, QDIO_DOING_CLEANUP);
+		rc = ccw_device_halt(cdev, QDIO_DOING_CLEANUP);
 		timeout=QDIO_CLEANUP_HALT_TIMEOUT;
 	}
-	if (result == -ENODEV) {
+	if (rc == -ENODEV) {
 		/* No need to wait for device no longer present. */
 		qdio_set_state(irq_ptr, QDIO_IRQ_STATE_INACTIVE);
-		result = 0; /* No error. */
 		spin_unlock_irqrestore(get_ccwdev_lock(cdev), flags);
-	} else if (result == 0) {
+	} else if (rc == 0) {
 		qdio_set_state(irq_ptr, QDIO_IRQ_STATE_CLEANUP);
 		ccw_device_set_timeout(cdev, timeout);
 		spin_unlock_irqrestore(get_ccwdev_lock(cdev),flags);
@@ -2212,6 +2304,7 @@ qdio_shutdown(struct ccw_device *cdev, int how)
 		QDIO_PRINT_INFO("ccw_device_{halt,clear} returned %d for "
 				"device %s\n", result, cdev->dev.bus_id);
 		spin_unlock_irqrestore(get_ccwdev_lock(cdev), flags);
+		result = rc;
 		goto out;
 	}
 	if (irq_ptr->is_thinint_irq) {
@@ -2260,11 +2353,10 @@ qdio_free(struct ccw_device *cdev)
 static inline void
 qdio_allocate_do_dbf(struct qdio_initialize *init_data)
 {
-	char dbf_text[20]; /* if a printf would print out more than 8 chars */
+	char dbf_text[20]; /* if a printf printed out more than 8 chars */
 
 	sprintf(dbf_text,"qfmt:%x",init_data->q_format);
 	QDIO_DBF_TEXT0(0,setup,dbf_text);
-	QDIO_DBF_TEXT0(0,setup,init_data->adapter_name);
 	QDIO_DBF_HEX0(0,setup,init_data->adapter_name,8);
 	sprintf(dbf_text,"qpff%4x",init_data->qib_param_field_format);
 	QDIO_DBF_TEXT0(0,setup,dbf_text);
@@ -2510,7 +2602,6 @@ qdio_allocate(struct qdio_initialize *init_data)
 
 	irq_ptr->qdr=kmalloc(sizeof(struct qdr), GFP_KERNEL | GFP_DMA);
   	if (!(irq_ptr->qdr)) {
-   		kfree(irq_ptr->qdr);
    		kfree(irq_ptr);
     		QDIO_PRINT_ERR("kmalloc of irq_ptr->qdr failed!\n");
 		return -ENOMEM;
@@ -2660,8 +2751,6 @@ int qdio_fill_irq(struct qdio_initialize *init_data)
 	irq_ptr->original_int_handler = init_data->cdev->handler;
 	init_data->cdev->handler = qdio_handler;
 
-	up(&irq_ptr->setting_up_sema);
-
 	return 0;
 }
 
@@ -2692,7 +2781,7 @@ qdio_establish(struct qdio_initialize *init_data)
 		result = tiqdio_set_subchannel_ind(irq_ptr,0);
 		if (result) {
 			up(&irq_ptr->setting_up_sema);
-			qdio_cleanup(cdev, QDIO_FLAG_CLEANUP_USING_CLEAR);
+			qdio_shutdown(cdev, QDIO_FLAG_CLEANUP_USING_CLEAR);
 			return result;
 		}
 		tiqdio_set_delay_target(irq_ptr,TIQDIO_DELAY_TARGET);
@@ -2740,23 +2829,23 @@ qdio_establish(struct qdio_initialize *init_data)
 		return result;
 	}
 	
-	/* FIXME: don't wait forever if hardware is broken */
-	wait_event(cdev->private->wait_q,
-		   irq_ptr->state == QDIO_IRQ_STATE_ESTABLISHED ||
-		   irq_ptr->state == QDIO_IRQ_STATE_ERR);
+	wait_event_interruptible_timeout(cdev->private->wait_q,
+		 irq_ptr->state == QDIO_IRQ_STATE_ESTABLISHED ||
+		 irq_ptr->state == QDIO_IRQ_STATE_ERR,
+		 QDIO_ESTABLISH_TIMEOUT);
 
 	if (irq_ptr->state == QDIO_IRQ_STATE_ESTABLISHED)
 		result = 0;
 	else {
+		up(&irq_ptr->setting_up_sema);
 		qdio_shutdown(cdev, QDIO_FLAG_CLEANUP_USING_CLEAR);
-		result = -EIO;
+		return -EIO;
 	}
 
-	if (MACHINE_IS_VM)
-		irq_ptr->qdioac=qdio_check_siga_needs(irq_ptr->irq);
-	else
-                irq_ptr->qdioac=CHSC_FLAG_SIGA_INPUT_NECESSARY
-                        | CHSC_FLAG_SIGA_OUTPUT_NECESSARY;
+	irq_ptr->qdioac=qdio_check_siga_needs(irq_ptr->irq);
+	/* if this gets set once, we're running under VM and can omit SVSes */
+	if (irq_ptr->qdioac&CHSC_FLAG_SIGA_SYNC_NECESSARY)
+		omit_svs=1;
 
 	sprintf(dbf_text,"qdioac%2x",irq_ptr->qdioac);
 	QDIO_DBF_TEXT2(0,setup,dbf_text);
@@ -2864,7 +2953,9 @@ qdio_activate(struct ccw_device *cdev, int flags)
 	switch (irq_ptr->state) {
 	case QDIO_IRQ_STATE_STOPPED:
 	case QDIO_IRQ_STATE_ERR:
+		up(&irq_ptr->setting_up_sema);
 		qdio_shutdown(cdev, QDIO_FLAG_CLEANUP_USING_CLEAR);
+		down(&irq_ptr->setting_up_sema);
 		result = -EIO;
 		break;
 	default:
@@ -2878,7 +2969,7 @@ qdio_activate(struct ccw_device *cdev, int flags)
 }
 
 /* buffers filled forwards again to make Rick happy */
-static void
+static inline void
 qdio_do_qdio_fill_input(struct qdio_q *q, unsigned int qidx,
 			unsigned int count, struct qdio_buffer *buffers)
 {
@@ -2972,7 +3063,7 @@ do_qdio_handle_outbound(struct qdio_q *q, unsigned int callflags,
 		while (count--)
 			qdio_kick_outbound_q(q);
 			
-		qdio_outbound_processing(q);
+		__qdio_outbound_processing(q);
 	} else {
 		/* under VM, we do a SIGA sync unconditionally */
 		SYNC_MEMORY;
@@ -2998,7 +3089,7 @@ do_qdio_handle_outbound(struct qdio_q *q, unsigned int callflags,
 		 * the upper layer module could do a lot of
 		 * traffic in that time 
 		 */
-		qdio_outbound_processing(q);
+		__qdio_outbound_processing(q);
 	}
 
 #ifdef QDIO_PERFORMANCE_STATS

@@ -28,7 +28,6 @@
 #include <asm/io.h>
 #include <linux/ata.h>
 
-
 /*
  * compile-time options
  */
@@ -70,6 +69,7 @@
 
 enum {
 	/* various global constants */
+	LIBATA_MAX_PRD		= ATA_MAX_PRD / 2,
 	ATA_MAX_PORTS		= 8,
 	ATA_DEF_QUEUE		= 1,
 	ATA_MAX_QUEUE		= 1,
@@ -81,7 +81,7 @@ enum {
 	ATA_SHT_EMULATED	= 1,
 	ATA_SHT_CMD_PER_LUN	= 1,
 	ATA_SHT_THIS_ID		= -1,
-	ATA_SHT_USE_CLUSTERING	= 1,
+	ATA_SHT_USE_CLUSTERING	= 0,
 
 	/* struct ata_device stuff */
 	ATA_DFLAG_LBA48		= (1 << 0), /* device supports LBA48 */
@@ -107,12 +107,6 @@ enum {
 	ATA_FLAG_MMIO		= (1 << 6), /* use MMIO, not PIO */
 	ATA_FLAG_SATA_RESET	= (1 << 7), /* use COMRESET */
 
-	/* struct ata_taskfile flags */
-	ATA_TFLAG_LBA48		= (1 << 0),
-	ATA_TFLAG_ISADDR	= (1 << 1), /* enable r/w to nsect/lba regs */
-	ATA_TFLAG_DEVICE	= (1 << 2), /* enable r/w to device reg */
-
-	ATA_QCFLAG_WRITE	= (1 << 0), /* read==0, write==1 */
 	ATA_QCFLAG_ACTIVE	= (1 << 1), /* cmd not yet ack'd to scsi lyer */
 	ATA_QCFLAG_DMA		= (1 << 2), /* data delivered via DMA */
 	ATA_QCFLAG_ATAPI	= (1 << 3), /* is ATAPI packet command? */
@@ -182,12 +176,15 @@ struct ata_ioports {
 	unsigned long		cmd_addr;
 	unsigned long		data_addr;
 	unsigned long		error_addr;
+	unsigned long		feature_addr;
 	unsigned long		nsect_addr;
 	unsigned long		lbal_addr;
 	unsigned long		lbam_addr;
 	unsigned long		lbah_addr;
 	unsigned long		device_addr;
-	unsigned long		cmdstat_addr;
+	unsigned long		status_addr;
+	unsigned long		command_addr;
+	unsigned long		altstatus_addr;
 	unsigned long		ctl_addr;
 	unsigned long		bmdma_addr;
 	unsigned long		scr_addr;
@@ -220,34 +217,11 @@ struct ata_host_set {
 	struct ata_port *	ports[0];
 };
 
-struct ata_taskfile {
-	unsigned long		flags;		/* ATA_TFLAG_xxx */
-	u8			protocol;	/* ATA_PROT_xxx */
-
-	u8			ctl;		/* control reg */
-
-	u8			hob_feature;	/* additional data */
-	u8			hob_nsect;	/* to support LBA48 */
-	u8			hob_lbal;
-	u8			hob_lbam;
-	u8			hob_lbah;
-
-	u8			feature;
-	u8			nsect;
-	u8			lbal;
-	u8			lbam;
-	u8			lbah;
-
-	u8			device;
-
-	u8			command;	/* IO operation */
-};
-
 struct ata_queued_cmd {
 	struct ata_port		*ap;
 	struct ata_device	*dev;
 
-	struct scsi_cmnd		*scsicmd;
+	struct scsi_cmnd	*scsicmd;
 	void			(*scsidone)(struct scsi_cmnd *);
 
 	struct list_head	node;
@@ -290,6 +264,11 @@ struct ata_device {
 						 * ATAPI7 spec size, 40 ASCII
 						 * characters
 						 */
+
+	/* cache info about current transfer mode */
+	u8			xfer_protocol;	/* taskfile xfer protocol */
+	u8			read_cmd;	/* opcode to use on read */
+	u8			write_cmd;	/* opcode to use on write */
 };
 
 struct ata_engine {
@@ -359,7 +338,7 @@ struct ata_port_operations {
 	u8   (*check_status)(struct ata_port *ap);
 
 	void (*phy_reset) (struct ata_port *ap);
-	void (*phy_config) (struct ata_port *ap);
+	void (*post_set_mode) (struct ata_port *ap);
 
 	void (*bmdma_start) (struct ata_queued_cmd *qc);
 	void (*fill_sg) (struct ata_queued_cmd *qc);
@@ -393,7 +372,6 @@ struct pci_bits {
 };
 
 extern void ata_port_probe(struct ata_port *);
-extern void pata_phy_config(struct ata_port *ap);
 extern void sata_phy_reset(struct ata_port *ap);
 extern void ata_bus_reset(struct ata_port *ap);
 extern void ata_port_disable(struct ata_port *);
@@ -406,7 +384,7 @@ extern int ata_scsi_detect(Scsi_Host_Template *sht);
 extern int ata_scsi_queuecmd(struct scsi_cmnd *cmd, void (*done)(struct scsi_cmnd *));
 extern int ata_scsi_error(struct Scsi_Host *host);
 extern int ata_scsi_release(struct Scsi_Host *host);
-extern int ata_scsi_slave_config(struct scsi_device *sdev);
+extern unsigned int ata_host_intr(struct ata_port *ap, struct ata_queued_cmd *qc);
 /*
  * Default driver ops implementations
  */
@@ -430,6 +408,7 @@ extern void ata_eng_timeout(struct ata_port *ap);
 extern int ata_std_bios_param(struct scsi_device *sdev,
 			      struct block_device *bdev,
 			      sector_t capacity, int geom[]);
+extern int ata_scsi_slave_config(struct scsi_device *sdev);
 
 
 static inline unsigned long msecs_to_jiffies(unsigned long msecs)
@@ -464,8 +443,8 @@ static inline u8 ata_chk_status(struct ata_port *ap)
 static inline u8 ata_altstatus(struct ata_port *ap)
 {
 	if (ap->flags & ATA_FLAG_MMIO)
-		return readb(ap->ioaddr.ctl_addr);
-	return inb(ap->ioaddr.ctl_addr);
+		return readb(ap->ioaddr.altstatus_addr);
+	return inb(ap->ioaddr.altstatus_addr);
 }
 
 static inline void ata_pause(struct ata_port *ap)
@@ -493,7 +472,7 @@ static inline u8 ata_wait_idle(struct ata_port *ap)
 	u8 status = ata_busy_wait(ap, ATA_BUSY | ATA_DRQ, 1000);
 
 	if (status & (ATA_BUSY | ATA_DRQ)) {
-		unsigned long l = ap->ioaddr.cmdstat_addr;
+		unsigned long l = ap->ioaddr.status_addr;
 		printk(KERN_WARNING
 		       "ATA: abnormal status 0x%X on port 0x%lX\n",
 		       status, l);

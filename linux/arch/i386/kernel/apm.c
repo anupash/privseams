@@ -1435,7 +1435,7 @@ static int check_apm_user(struct apm_user *as, const char *func)
 	return 0;
 }
 
-static ssize_t do_read(struct file *fp, char *buf, size_t count, loff_t *ppos)
+static ssize_t do_read(struct file *fp, char __user *buf, size_t count, loff_t *ppos)
 {
 	struct apm_user *	as;
 	int			i;
@@ -1701,7 +1701,7 @@ static int apm(void *unused)
 
 	daemonize("kapmd");
 
-	current->flags |= PF_IOTHREAD;
+	current->flags |= PF_NOFREEZE;
 
 #ifdef CONFIG_SMP
 	/* 2002/08/01 - WT

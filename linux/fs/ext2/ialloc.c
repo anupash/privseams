@@ -294,7 +294,7 @@ static int find_group_orlov(struct super_block *sb, struct inode *parent)
 	ndirs = percpu_counter_read_positive(&sbi->s_dirs_counter);
 
 	if ((parent == sb->s_root->d_inode) ||
-	    (parent->i_flags & EXT2_TOPDIR_FL)) {
+	    (EXT2_I(parent)->i_flags & EXT2_TOPDIR_FL)) {
 		struct ext2_group_desc *best_desc = NULL;
 		struct buffer_head *best_bh = NULL;
 		int best_ndir = inodes_per_group;
@@ -431,8 +431,8 @@ static int find_group_other(struct super_block *sb, struct inode *parent)
 	 * That failed: try linear search for a free inode, even if that group
 	 * has no free blocks.
 	 */
-	group = parent_group + 1;
-	for (i = 2; i < ngroups; i++) {
+	group = parent_group;
+	for (i = 0; i < ngroups; i++) {
 		if (++group >= ngroups)
 			group = 0;
 		desc = ext2_get_group_desc (sb, group, &bh);

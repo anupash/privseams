@@ -500,7 +500,7 @@ static void flex_sram_read(struct adapter *adapter, u32 bank, u32 addr, u8 *buf,
 	}
 }
 
-static void sram_writeChunk(struct adapter *adapter, u32 addr, u8 *buf, u16 len)
+static void sram_write_chunk(struct adapter *adapter, u32 addr, u8 *buf, u16 len)
 {
 	u32 bank;
 
@@ -520,7 +520,7 @@ static void sram_writeChunk(struct adapter *adapter, u32 addr, u8 *buf, u16 len)
 	flex_sram_write(adapter, bank, addr & 0x7fff, buf, len);
 }
 
-static void sram_readChunk(struct adapter *adapter, u32 addr, u8 *buf, u16 len)
+static void sram_read_chunk(struct adapter *adapter, u32 addr, u8 *buf, u16 len)
 {
 	u32 bank;
 
@@ -554,7 +554,7 @@ static void sram_read(struct adapter *adapter, u32 addr, u8 *buf, u32 len)
 			length = (((addr >> 0x0f) + 1) << 0x0f) - addr;
 		}
 
-		sram_readChunk(adapter, addr, buf, length);
+		sram_read_chunk(adapter, addr, buf, length);
 
 		addr = addr + length;
 		buf = buf + length;
@@ -576,7 +576,7 @@ static void sram_write(struct adapter *adapter, u32 addr, u8 *buf, u32 len)
 			length = (((addr >> 0x0f) + 1) << 0x0f) - addr;
 		}
 
-		sram_writeChunk(adapter, addr, buf, length);
+		sram_write_chunk(adapter, addr, buf, length);
 
 		addr = addr + length;
 		buf = buf + length;
@@ -2242,7 +2242,7 @@ static int skystar2_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (driver_initialize(pdev) != 0)
 		return -ENODEV;
 
-	dvb_register_adapter(&dvb_adapter, skystar2_pci_driver.name);
+	dvb_register_adapter(&dvb_adapter, skystar2_pci_driver.name, THIS_MODULE);
 
 	if (dvb_adapter == NULL) {
 		printk("%s: Error registering DVB adapter\n", __FUNCTION__);
@@ -2341,6 +2341,8 @@ static struct pci_device_id skystar2_pci_tbl[] = {
 	{0x000013d0, 0x00002200, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000},	//FCIII
 	{0,},
 };
+
+MODULE_DEVICE_TABLE(pci, skystar2_pci_tbl);
 
 static struct pci_driver skystar2_pci_driver = {
 	.name = "Technisat SkyStar2 driver",

@@ -16,7 +16,6 @@
  * This file handles the architecture-dependent parts of process handling..
  */
 
-#define __KERNEL_SYSCALLS__
 #include <stdarg.h>
 
 #include <linux/errno.h>
@@ -25,7 +24,6 @@
 #include <linux/mm.h>
 #include <linux/elfcore.h>
 #include <linux/smp.h>
-#include <linux/unistd.h>
 #include <linux/slab.h>
 #include <linux/user.h>
 #include <linux/module.h>
@@ -34,6 +32,7 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/ptrace.h>
+#include <linux/version.h>
 
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
@@ -53,7 +52,7 @@ asmlinkage extern void ret_from_fork(void);
 
 unsigned long kernel_thread_flags = CLONE_VM | CLONE_UNTRACED;
 
-int hlt_counter;
+atomic_t hlt_counter = ATOMIC_INIT(0);
 
 /*
  * Powermanagement idle function, if any..
@@ -62,14 +61,14 @@ void (*pm_idle)(void);
 
 void disable_hlt(void)
 {
-	hlt_counter++;
+	atomic_inc(&hlt_counter);
 }
 
 EXPORT_SYMBOL(disable_hlt);
 
 void enable_hlt(void)
 {
-	hlt_counter--;
+	atomic_dec(&hlt_counter);
 }
 
 EXPORT_SYMBOL(enable_hlt);
@@ -80,7 +79,7 @@ EXPORT_SYMBOL(enable_hlt);
  */
 void default_idle(void)
 {
-	if (!hlt_counter) {
+	if (!atomic_read(&hlt_counter)) {
 		local_irq_disable();
 		if (!need_resched())
 			safe_halt();
@@ -140,6 +139,52 @@ void cpu_idle (void)
 	}
 }
 
+/*
+ * This uses new MONITOR/MWAIT instructions on P4 processors with PNI,
+ * which can obviate IPI to trigger checking of need_resched.
+ * We execute MONITOR against need_resched and enter optimized wait state
+ * through MWAIT. Whenever someone changes need_resched, we would be woken
+ * up from MWAIT (without an IPI).
+ */
+static void mwait_idle(void)
+{
+	local_irq_enable();
+
+	if (!need_resched()) {
+		set_thread_flag(TIF_POLLING_NRFLAG);
+		do {
+			__monitor((void *)&current_thread_info()->flags, 0, 0);
+			if (need_resched())
+				break;
+			__mwait(0, 0);
+		} while (!need_resched());
+		clear_thread_flag(TIF_POLLING_NRFLAG);
+	}
+}
+
+void __init select_idle_routine(const struct cpuinfo_x86 *c)
+{
+	static int printed;
+	if (cpu_has(c, X86_FEATURE_MWAIT)) {
+		/*
+		 * Skip, if setup has overridden idle.
+		 * Also, take care of system with asymmetric CPUs.
+		 * Use, mwait_idle only if all cpus support it.
+		 * If not, we fallback to default_idle()
+		 */
+		if (!pm_idle) {
+			if (!printed) {
+				printk("using mwait in idle threads.\n");
+				printed = 1;
+			}
+			pm_idle = mwait_idle;
+		}
+		return;
+	}
+	pm_idle = default_idle;
+	return;
+}
+
 static int __init idle_setup (char *str)
 {
 	if (!strncmp(str, "poll", 4)) {
@@ -161,7 +206,8 @@ void __show_regs(struct pt_regs * regs)
 
 	printk("\n");
 	print_modules();
-	printk("Pid: %d, comm: %.20s %s\n", current->pid, current->comm, print_tainted());
+	printk("Pid: %d, comm: %.20s %s %s\n", 
+	       current->pid, current->comm, print_tainted(), UTS_RELEASE);
 	printk("RIP: %04lx:[<%016lx>] ", regs->cs & 0xffff, regs->rip);
 	printk_address(regs->rip); 
 	printk("\nRSP: %04lx:%016lx  EFLAGS: %08lx\n", regs->ss, regs->rsp, regs->eflags);
@@ -210,10 +256,11 @@ void exit_thread(void)
 {
 	struct task_struct *me = current;
 	if (me->thread.io_bitmap_ptr) { 
+		struct tss_struct *tss = init_tss + get_cpu();
 		kfree(me->thread.io_bitmap_ptr); 
 		me->thread.io_bitmap_ptr = NULL;
-		(init_tss + smp_processor_id())->io_bitmap_base = 
-			INVALID_IO_BITMAP_OFFSET;
+		tss->io_bitmap_base = INVALID_IO_BITMAP_OFFSET;
+		put_cpu();
 	}
 }
 
@@ -530,23 +577,23 @@ asmlinkage long sys_vfork(struct pt_regs regs)
 /*
  * These bracket the sleeping functions..
  */
-extern void scheduling_functions_start_here(void);
-extern void scheduling_functions_end_here(void);
 #define first_sched	((unsigned long) scheduling_functions_start_here)
 #define last_sched	((unsigned long) scheduling_functions_end_here)
 
 unsigned long get_wchan(struct task_struct *p)
 {
+	unsigned long stack;
 	u64 fp,rip;
 	int count = 0;
 
 	if (!p || p == current || p->state==TASK_RUNNING)
 		return 0; 
-	if (p->thread.rsp < (u64)p || p->thread.rsp > (u64)p + THREAD_SIZE)
+	stack = (unsigned long)p->thread_info; 
+	if (p->thread.rsp < stack || p->thread.rsp > stack+THREAD_SIZE)
 		return 0;
 	fp = *(u64 *)(p->thread.rsp);
 	do { 
-		if (fp < (unsigned long)p || fp > (unsigned long)p+THREAD_SIZE)
+		if (fp < (unsigned long)stack || fp > (unsigned long)stack+THREAD_SIZE)
 			return 0; 
 		rip = *(u64 *)(fp+8); 
 		if (rip < first_sched || rip >= last_sched)

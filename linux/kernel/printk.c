@@ -240,6 +240,7 @@ __setup("log_buf_len=", log_buf_len_setup);
  * 	7 -- Enable printk's to console
  *	8 -- Set level of messages printed to console
  *	9 -- Return number of unread characters in the log buffer
+ *     10 -- Return size of the log buffer
  */
 int do_syslog(int type, char __user * buf, int len)
 {
@@ -358,6 +359,9 @@ int do_syslog(int type, char __user * buf, int len)
 		break;
 	case 9:		/* Number of chars in the log buffer */
 		error = log_end - log_start;
+		break;
+	case 10:	/* Size of the log buffer */
+		error = log_buf_len;
 		break;
 	default:
 		error = -EINVAL;
@@ -501,7 +505,7 @@ asmlinkage int printk(const char *fmt, ...)
 
 	/* Emit the output into the temporary buffer */
 	va_start(args, fmt);
-	printed_len = vsnprintf(printk_buf, sizeof(printk_buf), fmt, args);
+	printed_len = vscnprintf(printk_buf, sizeof(printk_buf), fmt, args);
 	va_end(args);
 
 	/*
@@ -522,7 +526,8 @@ asmlinkage int printk(const char *fmt, ...)
 			log_level_unknown = 1;
 	}
 
-	if (!cpu_online(smp_processor_id())) {
+	if (!cpu_online(smp_processor_id()) &&
+	    system_state != SYSTEM_RUNNING) {
 		/*
 		 * Some console drivers may assume that per-cpu resources have
 		 * been allocated.  So don't allow them to be called by this

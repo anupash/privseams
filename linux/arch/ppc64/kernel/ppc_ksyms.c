@@ -20,6 +20,7 @@
 #include <linux/pci.h>
 #include <linux/delay.h>
 #include <linux/smp_lock.h>
+#include <linux/syscalls.h>
 
 #include <asm/page.h>
 #include <asm/semaphore.h>
@@ -39,31 +40,20 @@
 #include <asm/hw_irq.h>
 #include <asm/abs_addr.h>
 #include <asm/cacheflush.h>
-#include <asm/proc_fs.h>
 #ifdef CONFIG_PPC_ISERIES
-#include <asm/iSeries/iSeries_pci.h>
-#include <asm/iSeries/iSeries_proc.h>
-#include <asm/iSeries/mf.h>
-#include <asm/iSeries/HvLpEvent.h>
-#include <asm/iSeries/HvLpConfig.h>
+#include <asm/iSeries/HvCallSc.h>
+#include <asm/iSeries/LparData.h>
 #endif
 
-extern int sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
 extern int do_signal(sigset_t *, struct pt_regs *);
 
 int abs(int);
-
-extern struct pci_dev * iSeries_veth_dev;
-extern struct pci_dev * iSeries_vio_dev;
 
 EXPORT_SYMBOL(do_signal);
 EXPORT_SYMBOL(sys_ioctl);
 
 EXPORT_SYMBOL(isa_io_base);
 EXPORT_SYMBOL(pci_io_base);
-
-EXPORT_SYMBOL(find_next_zero_bit);
-EXPORT_SYMBOL(find_next_zero_le_bit);
 
 EXPORT_SYMBOL(strcpy);
 EXPORT_SYMBOL(strncpy);
@@ -82,6 +72,9 @@ EXPORT_SYMBOL(__down_interruptible);
 EXPORT_SYMBOL(__up);
 EXPORT_SYMBOL(naca);
 EXPORT_SYMBOL(__down);
+#ifdef CONFIG_PPC_ISERIES
+EXPORT_SYMBOL(itLpNaca);
+#endif
 
 EXPORT_SYMBOL(csum_partial);
 EXPORT_SYMBOL(csum_partial_copy_generic);
@@ -101,7 +94,6 @@ EXPORT_SYMBOL(msChunks);
 EXPORT_SYMBOL(reloc_offset);
 
 #ifdef CONFIG_PPC_ISERIES
-EXPORT_SYMBOL(iSeries_proc_callback);
 EXPORT_SYMBOL(HvCall0);
 EXPORT_SYMBOL(HvCall1);
 EXPORT_SYMBOL(HvCall2);
@@ -110,11 +102,6 @@ EXPORT_SYMBOL(HvCall4);
 EXPORT_SYMBOL(HvCall5);
 EXPORT_SYMBOL(HvCall6);
 EXPORT_SYMBOL(HvCall7);
-EXPORT_SYMBOL(HvLpEvent_unregisterHandler);
-EXPORT_SYMBOL(HvLpEvent_registerHandler);
-EXPORT_SYMBOL(mf_allocateLpEvents);
-EXPORT_SYMBOL(mf_deallocateLpEvents);
-EXPORT_SYMBOL(HvLpConfig_getLpIndex_outline);
 #endif
 
 EXPORT_SYMBOL(_insb);
@@ -130,35 +117,6 @@ EXPORT_SYMBOL(_outsl_ns);
 EXPORT_SYMBOL(ioremap);
 EXPORT_SYMBOL(__ioremap);
 EXPORT_SYMBOL(iounmap);
-
-#ifdef CONFIG_PCI
-EXPORT_SYMBOL(pci_alloc_consistent);
-EXPORT_SYMBOL(pci_free_consistent);
-EXPORT_SYMBOL(pci_map_single);
-EXPORT_SYMBOL(pci_unmap_single);
-EXPORT_SYMBOL(pci_map_sg);
-EXPORT_SYMBOL(pci_unmap_sg);
-#ifdef CONFIG_PPC_ISERIES
-EXPORT_SYMBOL(iSeries_GetLocationData);
-EXPORT_SYMBOL(iSeries_Device_ToggleReset);
-EXPORT_SYMBOL(iSeries_memset_io);
-EXPORT_SYMBOL(iSeries_memcpy_toio);
-EXPORT_SYMBOL(iSeries_memcpy_fromio);
-EXPORT_SYMBOL(iSeries_Read_Byte);
-EXPORT_SYMBOL(iSeries_Read_Word);
-EXPORT_SYMBOL(iSeries_Read_Long);
-EXPORT_SYMBOL(iSeries_Write_Byte);
-EXPORT_SYMBOL(iSeries_Write_Word);
-EXPORT_SYMBOL(iSeries_Write_Long);
-#endif /* CONFIG_PPC_ISERIES */
-#ifndef CONFIG_PPC_ISERIES
-EXPORT_SYMBOL(eeh_check_failure);
-EXPORT_SYMBOL(eeh_total_mmio_ffs);
-#endif /* CONFIG_PPC_ISERIES */
-#endif /* CONFIG_PCI */
-
-EXPORT_SYMBOL(iSeries_veth_dev);
-EXPORT_SYMBOL(iSeries_vio_dev);
 
 EXPORT_SYMBOL(start_thread);
 EXPORT_SYMBOL(kernel_thread);
@@ -209,4 +167,5 @@ EXPORT_SYMBOL(console_drivers);
 
 EXPORT_SYMBOL(tb_ticks_per_usec);
 EXPORT_SYMBOL(paca);
-EXPORT_SYMBOL(proc_ppc64);
+EXPORT_SYMBOL(cur_cpu_spec);
+EXPORT_SYMBOL(systemcfg);

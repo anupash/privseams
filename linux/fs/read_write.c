@@ -143,6 +143,7 @@ asmlinkage off_t sys_lseek(unsigned int fd, off_t offset, unsigned int origin)
 bad:
 	return retval;
 }
+EXPORT_SYMBOL_GPL(sys_lseek);
 
 #if !defined(__alpha__)
 asmlinkage long sys_llseek(unsigned int fd, unsigned long offset_high,
@@ -281,6 +282,7 @@ asmlinkage ssize_t sys_read(unsigned int fd, char __user * buf, size_t count)
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(sys_read);
 
 asmlinkage ssize_t sys_write(unsigned int fd, const char __user * buf, size_t count)
 {
@@ -410,13 +412,13 @@ static ssize_t do_readv_writev(int type, struct file *file,
 	 */
 	tot_len = 0;
 	ret = -EINVAL;
-	for (seg = 0 ; seg < nr_segs; seg++) {
-		ssize_t tmp = tot_len;
+	for (seg = 0; seg < nr_segs; seg++) {
 		ssize_t len = (ssize_t)iov[seg].iov_len;
+
 		if (len < 0)	/* size_t not fitting an ssize_t .. */
 			goto out;
 		tot_len += len;
-		if (tot_len < tmp) /* maths overflow on the ssize_t */
+		if ((ssize_t)tot_len < 0) /* maths overflow on the ssize_t */
 			goto out;
 	}
 	if (tot_len == 0) {
@@ -633,7 +635,7 @@ asmlinkage ssize_t sys_sendfile(int out_fd, int in_fd, off_t __user *offset, siz
 		return ret;
 	}
 
-	return do_sendfile(out_fd, in_fd, NULL, count, MAX_NON_LFS);
+	return do_sendfile(out_fd, in_fd, NULL, count, 0);
 }
 
 asmlinkage ssize_t sys_sendfile64(int out_fd, int in_fd, loff_t __user *offset, size_t count)

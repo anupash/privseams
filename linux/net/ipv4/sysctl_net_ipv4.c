@@ -39,6 +39,7 @@ extern int sysctl_icmp_ratemask;
 
 /* From igmp.c */
 extern int sysctl_igmp_max_memberships;
+extern int sysctl_igmp_max_msf;
 
 /* From inetpeer.c */
 extern int inet_peer_threshold;
@@ -412,6 +413,14 @@ ctl_table ipv4_table[] = {
 
 #endif
 	{
+		.ctl_name	= NET_IPV4_IGMP_MAX_MSF,
+		.procname	= "igmp_max_msf",
+		.data		= &sysctl_igmp_max_msf,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec
+	},
+	{
 		.ctl_name	= NET_IPV4_INET_PEER_THRESHOLD,
 		.procname	= "inet_peer_threshold",
 		.data		= &inet_peer_threshold,
@@ -585,9 +594,73 @@ ctl_table ipv4_table[] = {
 		.strategy	= &sysctl_jiffies
 	},
 	{
+		.ctl_name	= NET_TCP_NO_METRICS_SAVE,
+		.procname	= "tcp_no_metrics_save",
+		.data		= &sysctl_tcp_nometrics_save,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
 		.ctl_name	= NET_TCP_WESTWOOD, 
 		.procname	= "tcp_westwood",
 		.data		= &sysctl_tcp_westwood,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= NET_TCP_VEGAS,
+		.procname	= "tcp_vegas_cong_avoid",
+		.data		= &sysctl_tcp_vegas_cong_avoid,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= NET_TCP_VEGAS_ALPHA,
+		.procname	= "tcp_vegas_alpha",
+		.data		= &sysctl_tcp_vegas_alpha,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= NET_TCP_VEGAS_BETA,
+		.procname	= "tcp_vegas_beta",
+		.data		= &sysctl_tcp_vegas_beta,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= NET_TCP_VEGAS_GAMMA,
+		.procname	= "tcp_vegas_gamma",
+		.data		= &sysctl_tcp_vegas_gamma,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= NET_TCP_BIC,
+		.procname	= "tcp_bic",
+		.data		= &sysctl_tcp_bic,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= NET_TCP_BIC_FAST_CONVERGENCE,
+		.procname	= "tcp_bic_fast_convergence",
+		.data		= &sysctl_tcp_bic_fast_convergence,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= NET_TCP_BIC_LOW_WINDOW,
+		.procname	= "tcp_bic_low_window",
+		.data		= &sysctl_tcp_bic_low_window,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= &proc_dointvec,

@@ -39,7 +39,7 @@ obj-$(CONFIG_QUOTACTL)		+= quota.o
 
 obj-$(CONFIG_PROC_FS)		+= proc/
 obj-y				+= partitions/
-obj-y				+= sysfs/
+obj-$(CONFIG_SYSFS)		+= sysfs/
 obj-y				+= devpts/
 
 obj-$(CONFIG_PROFILING)		+= dcookies.o
@@ -62,6 +62,7 @@ obj-$(CONFIG_VFAT_FS)		+= vfat/
 obj-$(CONFIG_BFS_FS)		+= bfs/
 obj-$(CONFIG_ISO9660_FS)	+= isofs/
 obj-$(CONFIG_DEVFS_FS)		+= devfs/
+obj-$(CONFIG_HFSPLUS_FS)	+= hfsplus/ # Before hfs to find wrapped HFS+
 obj-$(CONFIG_HFS_FS)		+= hfs/
 obj-$(CONFIG_VXFS_FS)		+= freevxfs/
 obj-$(CONFIG_NFS_FS)		+= nfs/

@@ -197,7 +197,7 @@ void ide_end_drive_cmd (ide_drive_t *drive, u8 stat, u8 err)
 			if (args->tf_in_flags.b.data) {
 				u16 data				= hwif->INW(IDE_DATA_REG);
 				args->tfRegister[IDE_DATA_OFFSET]	= (data) & 0xFF;
-				args->hobRegister[IDE_DATA_OFFSET_HOB]	= (data >> 8) & 0xFF;
+				args->hobRegister[IDE_DATA_OFFSET]	= (data >> 8) & 0xFF;
 			}
 			args->tfRegister[IDE_ERROR_OFFSET]   = err;
 			args->tfRegister[IDE_NSECTOR_OFFSET] = hwif->INB(IDE_NSECTOR_REG);
@@ -208,12 +208,12 @@ void ide_end_drive_cmd (ide_drive_t *drive, u8 stat, u8 err)
 			args->tfRegister[IDE_STATUS_OFFSET]  = stat;
 
 			if (drive->addressing == 1) {
-				hwif->OUTB(drive->ctl|0x80, IDE_CONTROL_REG_HOB);
-				args->hobRegister[IDE_FEATURE_OFFSET_HOB] = hwif->INB(IDE_FEATURE_REG);
-				args->hobRegister[IDE_NSECTOR_OFFSET_HOB] = hwif->INB(IDE_NSECTOR_REG);
-				args->hobRegister[IDE_SECTOR_OFFSET_HOB]  = hwif->INB(IDE_SECTOR_REG);
-				args->hobRegister[IDE_LCYL_OFFSET_HOB]    = hwif->INB(IDE_LCYL_REG);
-				args->hobRegister[IDE_HCYL_OFFSET_HOB]    = hwif->INB(IDE_HCYL_REG);
+				hwif->OUTB(drive->ctl|0x80, IDE_CONTROL_REG);
+				args->hobRegister[IDE_FEATURE_OFFSET]	= hwif->INB(IDE_FEATURE_REG);
+				args->hobRegister[IDE_NSECTOR_OFFSET]	= hwif->INB(IDE_NSECTOR_REG);
+				args->hobRegister[IDE_SECTOR_OFFSET]	= hwif->INB(IDE_SECTOR_REG);
+				args->hobRegister[IDE_LCYL_OFFSET]	= hwif->INB(IDE_LCYL_REG);
+				args->hobRegister[IDE_HCYL_OFFSET]	= hwif->INB(IDE_HCYL_REG);
 			}
 		}
 	} else if (blk_pm_request(rq)) {
@@ -300,7 +300,6 @@ ide_startstop_t ide_error (ide_drive_t *drive, const char *msg, u8 stat)
 	if (rq->flags & REQ_DRIVE_TASKFILE) {
 		rq->errors = 1;
 		ide_end_drive_cmd(drive, stat, err);
-//		ide_end_taskfile(drive, stat, err);
 		return ide_stopped;
 	}
 
@@ -387,7 +386,6 @@ ide_startstop_t ide_abort(ide_drive_t *drive, const char *msg)
 	if (rq->flags & REQ_DRIVE_TASKFILE) {
 		rq->errors = 1;
 		ide_end_drive_cmd(drive, BUSY_STAT, 0);
-//		ide_end_taskfile(drive, BUSY_STAT, 0);
 		return ide_stopped;
 	}
 
@@ -591,7 +589,7 @@ EXPORT_SYMBOL(execute_drive_cmd);
 ide_startstop_t start_request (ide_drive_t *drive, struct request *rq)
 {
 	ide_startstop_t startstop;
-	unsigned long block;
+	sector_t block;
 
 	BUG_ON(!(rq->flags & REQ_STARTED));
 
@@ -743,7 +741,7 @@ repeat:
 				 && 0 < (signed long)(WAKEUP(drive) - (jiffies - best->service_time))
 				 && 0 < (signed long)((jiffies + t) - WAKEUP(drive)))
 				{
-					ide_stall_queue(best, IDE_MIN(t, 10 * WAIT_MIN_SLEEP));
+					ide_stall_queue(best, min_t(long, t, 10 * WAIT_MIN_SLEEP));
 					goto repeat;
 				}
 			} while ((drive = drive->next) != best);

@@ -162,9 +162,6 @@ static int dtSplitRoot(tid_t tid, struct inode *ip,
 static int dtDeleteUp(tid_t tid, struct inode *ip, struct metapage * fmp,
 		      dtpage_t * fp, struct btstack * btstack);
 
-static int dtSearchNode(struct inode *ip,
-			s64 lmxaddr, pxd_t * kpxd, struct btstack * btstack);
-
 static int dtRelink(tid_t tid, struct inode *ip, dtpage_t * p);
 
 static int dtReadFirst(struct inode *ip, struct btstack * btstack);
@@ -985,7 +982,9 @@ static int dtSplitUp(tid_t tid,
 		split->pxdlist = &pxdlist;
 		rc = dtSplitRoot(tid, ip, split, &rmp);
 
-		DT_PUTPAGE(rmp);
+		if (!rc)
+			DT_PUTPAGE(rmp);
+
 		DT_PUTPAGE(smp);
 
 		goto freeKeyName;
@@ -1426,8 +1425,10 @@ static int dtSplitPage(tid_t tid, struct inode *ip, struct dtsplit * split,
 	 */
 	if (nextbn != 0) {
 		DT_GETPAGE(ip, nextbn, mp, PSIZE, p, rc);
-		if (rc)
+		if (rc) {
+			discard_metapage(rmp);
 			return rc;
+		}
 
 		BT_MARK_DIRTY(mp, ip);
 		/*
@@ -1877,6 +1878,9 @@ static int dtSplitRoot(tid_t tid,
 	xlen = lengthPXD(pxd);
 	xsize = xlen << JFS_SBI(sb)->l2bsize;
 	rmp = get_metapage(ip, rbn, xsize, 1);
+	if (!rmp)
+		return -EIO;
+
 	rp = rmp->data;
 
 	BT_MARK_DIRTY(rmp, ip);
@@ -2238,8 +2242,10 @@ static int dtDeleteUp(tid_t tid, struct inode *ip,
 	pxdlock->index = 1;
 
 	/* update sibling pointers */
-	if ((rc = dtRelink(tid, ip, fp)))
+	if ((rc = dtRelink(tid, ip, fp))) {
+		BT_PUTPAGE(fmp);
 		return rc;
+	}
 
 	xlen = lengthPXD(&fp->header.self);
 	ip->i_blocks -= LBLK2PBLK(ip->i_sb, xlen);
@@ -2310,8 +2316,10 @@ static int dtDeleteUp(tid_t tid, struct inode *ip,
 				pxdlock->index = 1;
 
 				/* update sibling pointers */
-				if ((rc = dtRelink(tid, ip, p)))
+				if ((rc = dtRelink(tid, ip, p))) {
+					DT_PUTPAGE(mp);
 					return rc;
+				}
 
 				xlen = lengthPXD(&p->header.self);
 				ip->i_blocks -= LBLK2PBLK(ip->i_sb, xlen);
@@ -2380,7 +2388,7 @@ static int dtDeleteUp(tid_t tid, struct inode *ip,
 	return 0;
 }
 
-
+#ifdef _NOTYET
 /*
  * NAME:        dtRelocate()
  *
@@ -2575,7 +2583,6 @@ int dtRelocate(tid_t tid, struct inode *ip, s64 lmxaddr, pxd_t * opxd,
 	return rc;
 }
 
-
 /*
  * NAME:	dtSearchNode()
  *
@@ -2625,8 +2632,10 @@ static int dtSearchNode(struct inode *ip, s64 lmxaddr, pxd_t * kpxd,
 		/*
 		 * descend down to leftmost child page
 		 */
-		if (p->header.flag & BT_LEAF)
+		if (p->header.flag & BT_LEAF) {
+			DT_PUTPAGE(mp);
 			return -ESTALE;
+		}
 
 		/* get the leftmost entry */
 		stbl = DT_GETSTBL(p);
@@ -2677,7 +2686,7 @@ static int dtSearchNode(struct inode *ip, s64 lmxaddr, pxd_t * kpxd,
 
 	goto loop;
 }
-
+#endif /* _NOTYET */
 
 /*
  *	dtRelink()
@@ -2933,7 +2942,7 @@ struct jfs_dirent {
 /*
  * function to determine next variable-sized jfs_dirent in buffer
  */
-inline struct jfs_dirent *next_jfs_dirent(struct jfs_dirent *dirent)
+static inline struct jfs_dirent *next_jfs_dirent(struct jfs_dirent *dirent)
 {
 	return (struct jfs_dirent *)
 		((char *)dirent +
