@@ -297,6 +297,13 @@ typedef uint16_t in_port_t;
 
 #endif /* __KERNEL__ */
 
+#ifdef __KERNEL__
+#  define HIP_MALLOC(size, flags)  kmalloc(size, flags)
+#  define HIP_FREE(obj)            kfree(obj)
+#else /* userspace */
+#  define HIP_MALLOC(size, flags)  malloc(size)
+#  define HIP_FREE(obj)            free(obj)
+#endif /* __KERNEL__ */
 
 #define HIP_AH_SHA_LEN                 20
 
