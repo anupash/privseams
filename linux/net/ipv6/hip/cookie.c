@@ -449,7 +449,8 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			return 0;
 		}
 
-		if (memcmp(solution->opaque, result->Copaque, 3) != 0) {
+		if (memcmp(solution->opaque, result->Copaque,
+			   HIP_PUZZLE_OPAQUE_LEN) != 0) {
 			HIP_ERROR("Solution's opaque data does not match sent opaque data\n");
 			return 0;
 		}

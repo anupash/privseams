@@ -519,7 +519,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 			goto out_err;
 		}
 
-		get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
+		// FIX ME: this does not always work:
+		//get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
+
+		/* hardcode kludge */
+		pz->opaque[0] = 'H';
+		pz->opaque[1] = 'I';
+		pz->opaque[2] = 'P';
 
 		get_random_bytes(&random_i,sizeof(random_i));
 		pz->I = random_i;
@@ -1514,12 +1520,18 @@ static int hip_init_cipher(void)
 		goto out_err;
 	}
 
+	HIP_DEBUG("Initializing SHA1\n");
+	schedule();
+	
 	impl_sha1 = crypto_alloc_tfm("sha1", 0);
 	if (!impl_sha1) {
 		HIP_ERROR("Unable to register SHA1 digest\n");
 		err = -1;
 		goto out_err;
 	}
+
+	HIP_DEBUG("SHA1 initialized\n");
+	schedule();
 
 	supported_groups = (1 << HIP_DH_OAKLEY_1 | 
 			    1 << HIP_DH_OAKLEY_5 |
@@ -1529,6 +1541,9 @@ static int hip_init_cipher(void)
 	   the code will try to regenerate the key if it is
 	   missing...
 	*/
+	HIP_DEBUG("Generating DH keys\n");
+	schedule();
+	
 	hip_regen_dh_keys(supported_groups);	
 
 	return 0;
@@ -1916,7 +1931,7 @@ static void __exit hip_cleanup(void)
 
 	/* disable callback for HIP packets */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
-
+	
 	/* disable hooks to call our code */
 	HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
@@ -1936,7 +1951,8 @@ static void __exit hip_cleanup(void)
 
 		while(atomic_read(&hip_working)) {
 			if (net_ratelimit())
-				HIP_DEBUG("%d HIP threads left\n", atomic_read(&hip_working));
+				HIP_DEBUG("%d HIP threads left\n",
+					  atomic_read(&hip_working));
 			schedule(); /* wait until stopped */
 		}
 	}
