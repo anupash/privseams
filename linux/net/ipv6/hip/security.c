@@ -483,9 +483,10 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 		}
 	}
 
-	spin_lock(&dh_table_lock);
+/* argh... dh_clone does kmalloc(GFP_KERNEL) :( */
+//	spin_lock(&dh_table_lock);
 	tmp = hip_dh_clone(dh_table[group_id]);
-	spin_unlock(&dh_table_lock);
+//	spin_unlock(&dh_table_lock);
 
 	if (!tmp) {
 		HIP_ERROR("Could not clone DH-key\n");

@@ -838,6 +838,7 @@ cscope: FORCE
 
 quiet_cmd_TAGS = MAKE   $@
 cmd_TAGS = $(all-sources) | etags -
+#cmd_TAGS = find kernel mm net crypto arch/i386/ init ipc fs include/linux include/net include/asm-i386 -name '*.[ch]' | etags -
 
 # 	Exuberant ctags works better with -I
 
