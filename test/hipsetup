@@ -331,11 +331,11 @@ case $MODE in
 	# to do it the other way around because of synchronization problems.
 	#
 	echo "Initiator-responder mode"
-	if pidof nc6 >/dev/null
+	if pidof conntest-server >/dev/null
 	then
-	    killall nc6
+	    killall conntest-server
 	fi
-	nc6 -n -vv -l -p $PORT &
+	$HIPL_DIR/test/conntest-server $PROTO $PORT &
 	ssh "$REMOTE_USER@$PEER_NAME" `convert_ssh_remote_command $0 $@`
 	check_hip_state_established $PEER_NAME
     ;;
