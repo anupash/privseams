@@ -380,30 +380,30 @@ int hip_copy_different_localhost_hit(struct in6_addr *target,
 /* Get a LHI from given DB @db */
 /* @res must be previously allocated */
 /* Returns: 0 if a lhi was copied successfully to @res, < 0 otherwise. */
-int hip_get_any_hit(struct hip_db_struct *db, struct hip_lhi *res)
+int hip_get_any_hit(struct hip_db_struct *db, struct hip_lhi *res,
+		    uint8_t algo)
 {
-	struct hip_host_id_entry *tmp;
+	struct hip_host_id_entry *entry;
 	unsigned long lf;
 
 	if (!res)
 		return -EINVAL;
 	if (list_empty(&db->db_head))
 		return -EINVAL;
-
+	
 	HIP_READ_LOCK_DB(db);
-	/* why get .next and not the first ? */
-	tmp = list_entry(db->db_head.next, struct hip_host_id_entry, next);
-	if (!tmp) {
-		HIP_READ_UNLOCK_DB(db);
-		return -EINVAL;
-	}
-	memcpy(res, &tmp->lhi, sizeof(struct hip_lhi));
-	HIP_READ_UNLOCK_DB(db);
 
-	return 0;
+	list_for_each_entry(entry, db->db_head.next, next) {
+		if (hip_get_host_id_algo(entry->host_id) == algo) {
+	                memcpy(res, &entry->lhi, sizeof(struct hip_lhi));
+			HIP_READ_UNLOCK_DB(db);
+			return 0;
+		}
+	}
+	return -EINVAL;
 }
 
-int hip_get_any_local_hit(struct in6_addr *dst)
+int hip_get_any_local_hit(struct in6_addr *dst, uint8_t algo)
 {
 	struct hip_lhi lhi;
 
@@ -411,7 +411,7 @@ int hip_get_any_local_hit(struct in6_addr *dst)
 		HIP_ERROR("NULL dst\n");
 		return -EINVAL;
 	}
-	if (hip_get_any_hit(&hip_local_hostid_db, &lhi) != 0) {
+	if (hip_get_any_hit(&hip_local_hostid_db, &lhi, algo) != 0) {
 		HIP_ERROR("Could not retrieve any local HIT\n");
 		return -ENOENT;
 	}
@@ -666,18 +666,21 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 
 	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
 
+	HIP_DEBUG("dilen: %d\n", dilen);
+
 	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
-	from = to + (128+64+64);
+	from = to + (128+64+64); /* d, p, q*/
 	memmove(to, from, dilen);
 
 	hip_set_param_contents_len(tmp, (len - (128+64+64)));
 
-	_HIP_DEBUG("Host ID len after cut-off: %d\n",
+	HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
 
-	/* make sure that the padding is zero (and not to reveal any bytes of the
-	   private key */
-	to = (char *)tmp + hip_get_param_contents_len(tmp) + sizeof(struct hip_tlv_common);
+	/* make sure that the padding is zero (and not to reveal any bytes of
+	   the private key */
+	to = (char *)tmp + hip_get_param_contents_len(tmp) +
+	  sizeof(struct hip_tlv_common);
 	memset(to, 0, 8);
 
 	_HIP_HEXDUMP("HOSTID... (public)", tmp, hip_get_param_total_len(tmp));
@@ -687,7 +690,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 }
 
 /**
- * hip_get_any_locahost_public_key - Self documenting.
+ * hip_get_any_localhost_public_key - Self documenting.
  *
  * NOTE: Remember to free the return value.
  *

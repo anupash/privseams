@@ -412,7 +412,7 @@ int handle_hi(struct hip_common *msg,
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
     }
-    HIP_HEXDUMP("Calculated HIT: ", &dsa_lhi.hit,
+    HIP_HEXDUMP("Calculated DSA HIT: ", &dsa_lhi.hit,
 		sizeof(struct in6_addr));
 
     err = rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH126, &rsa_lhi.hit);
@@ -420,7 +420,7 @@ int handle_hi(struct hip_common *msg,
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out;
     }
-    HIP_HEXDUMP("Calculated HIT: ", &rsa_lhi.hit,
+    HIP_HEXDUMP("Calculated RSA HIT: ", &rsa_lhi.hit,
 		sizeof(struct in6_addr));
     break;
   case ACTION_DEL:

@@ -86,6 +86,9 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 
 #ifdef __KERNEL__
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
+int hip_build_param_hmac2_contents(struct hip_common *msg,
+				   struct hip_crypto_key *key,
+				   struct hip_host_id *host_id);
 int hip_build_param_hmac_contents(struct hip_common *msg,
 				  struct hip_crypto_key *key);
 #endif /* __KERNEL__ */
@@ -118,6 +121,8 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
 int hip_build_param_spi(struct hip_common *msg, uint32_t spi);
+int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
+				      struct hip_host_id *host_id);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
 				      struct hip_host_id *host_id);
 int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
@@ -141,7 +146,7 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
                                  size_t sockaddr_len);
 
 int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
-			   uint32_t opaque, uint64_t random_i);
+			   uint8_t lifetime, uint32_t opaque, uint64_t random_i);
 
 int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *puzzle,
 			     uint64_t val_J);
@@ -160,6 +165,6 @@ int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
 int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 			   void *notification_data, size_t notification_data_len);
-
+uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht);
 
 #endif /* HIP_BUILDER */

@@ -120,6 +120,17 @@ typedef uint16_t in_port_t;
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
 #define HIP_CONTROL_NONE            0x0000
 
+#define HIP_CONTROL_SHT_SHIFT       13
+#define HIP_CONTROL_DHT_SHIFT       10
+#define HIP_CONTROL_SHT_MASK        (0x8000|0x4000|0x2000) /* bits 16-14 */
+#define HIP_CONTROL_DHT_MASK        (0x1000|0x800|0x400)  /* bits 13-11 */
+#define HIP_CONTROL_SHT_TYPE1       1
+#define HIP_CONTROL_SHT_TYPE2       2
+#define HIP_CONTROL_DHT_TYPE1       HIP_CONTROL_SHT_TYPE1
+#define HIP_CONTROL_DHT_TYPE2       HIP_CONTROL_SHT_TYPE2
+#define HIP_CONTROL_SHT_ALL         (HIP_CONTROL_SHT_MASK >> HIP_CONTROL_SHT_SHIFT)
+#define HIP_CONTROL_DHT_ALL         (HIP_CONTROL_DHT_MASK >> HIP_CONTROL_DHT_SHIFT)
+
 #define HIP_VER_RES                 0x10     /* Version 1, reserved 0 */
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F 
@@ -178,6 +189,7 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_FROM_SIGN       65100
 #define HIP_PARAM_TO_SIGN         65102
 #define HIP_PARAM_HMAC            65245
+#define HIP_PARAM_HMAC2           65247
 #define HIP_PARAM_HIP_SIGNATURE2  65277
 #define HIP_PARAM_HIP_SIGNATURE   65279
 #define HIP_PARAM_ECHO_REQUEST    65281
@@ -187,7 +199,6 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_RVA_HMAC        65320
 #define HIP_PARAM_VIA_RVS         65500
 #define HIP_PARAM_MAX             65536 /* exclusive */
-
 
 #define HIP_HIP_RESERVED                0
 #define HIP_HIP_AES_SHA1                1
@@ -206,6 +217,9 @@ typedef uint16_t in_port_t;
 #define HIP_ESP_NULL_SHA1               5
 #define HIP_ESP_NULL_MD5                6
 
+#define ESP_AES_KEY_BITS                128
+#define ESP_3DES_KEY_BITS               192
+
 /* Only for testing!!! */
 #define HIP_ESP_NULL_NULL            0x0
 
@@ -221,8 +235,8 @@ typedef uint16_t in_port_t;
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
-#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_DSA
+#define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
+#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
 
 #define HIP_DIGEST_MD5                1
 #define HIP_DIGEST_SHA1               2
@@ -236,7 +250,7 @@ typedef uint16_t in_port_t;
 
 #define HIP_VERIFY_PUZZLE             0
 #define HIP_SOLVE_PUZZLE              1
-#define HIP_PUZZLE_OPAQUE_LEN         3
+#define HIP_PUZZLE_OPAQUE_LEN         2
 
 #define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
@@ -393,6 +407,7 @@ struct hip_puzzle {
 	hip_tlv_len_t     length;
 
 	uint8_t           K;
+	uint8_t           lifetime;
 	uint8_t           opaque[HIP_PUZZLE_OPAQUE_LEN];
 	uint64_t          I;
 } __attribute__ ((packed));
@@ -402,7 +417,8 @@ struct hip_solution {
 	hip_tlv_len_t     length;
 
 	uint8_t           K;
-	uint8_t           opaque[3];
+	uint8_t           reserved;
+	uint8_t           opaque[HIP_PUZZLE_OPAQUE_LEN];
 	uint64_t          I;
 	uint64_t          J;
 } __attribute__ ((packed));
@@ -461,6 +477,15 @@ struct hip_host_id {
 	uint16_t     di_type_length;
 
 	struct hip_host_id_key_rdata rdata;
+	/* fixed part ends */
+} __attribute__ ((packed));
+
+struct hip_encrypted_aes_sha1 {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t     length;
+
+        uint32_t     reserved;
+	uint8_t      iv[16];
 	/* fixed part ends */
 } __attribute__ ((packed));
 
@@ -712,7 +737,6 @@ struct hip_context
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
 	uint16_t keymat_index; /* KEYMAT offset */
-	uint8_t host_id_algo; /* used in create_r2 */
 };
 
 struct hip_context_dh_sig
@@ -888,8 +912,8 @@ struct hip_eid_db_entry {
 #endif /* __KERNEL__ */
 
 /* Some default settings for HIPL */
-#define HIP_DEFAULT_HIP_ENCR         HIP_ENCR_3DES   /* HIP transform in R1 */
-#define HIP_DEFAULT_ESP_ENCR         HIP_ENCR_3DES   /* ESP transform in R1 */
+//#define HIP_DEFAULT_HIP_ENCR         HIP_ENCR_3DES  /* HIP transform in R1 */
+//#define HIP_DEFAULT_ESP_ENCR         HIP_ENCR_3DES  /* ESP transform in R1 */
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
 #endif /* _NET_HIP */

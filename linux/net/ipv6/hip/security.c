@@ -219,7 +219,7 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  * Returns: 0 if successful, else < 0.
  */
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
-		 uint32_t *spi, int alg, void *enckey, void *authkey, 
+		 uint32_t *spi, int alg, void *enckey, void *authkey,
 		 int already_acquired, int direction)
 {
 	int err;
@@ -304,6 +304,22 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	err = -ENOENT;
 	switch (alg) {
+	case HIP_ESP_AES_SHA1:
+		ead = xfrm_ealg_get_byid(SADB_X_EALG_AESCBC);
+		if (!ead) {
+			HIP_ERROR("AES not supported\n");
+			goto out;
+		}
+
+		aad = xfrm_aalg_get_byid(SADB_AALG_SHA1HMAC);
+		if (!aad) {
+			HIP_ERROR("SHA1 not supported\n");
+			goto out;
+		}
+
+		xs->props.ealgo = SADB_X_EALG_AESCBC;
+		xs->props.aalgo = SADB_AALG_SHA1HMAC;
+		break;
 	case HIP_ESP_3DES_SHA1:
 		ead = xfrm_ealg_get_byid(SADB_EALG_3DESCBC);
 		if (!ead) {
@@ -343,8 +359,15 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		HIP_ASSERT(0);
 	}
 
-	ekeylen = ead->desc.sadb_alg_maxbits;
-	akeylen = aad->desc.sadb_alg_maxbits;
+	/*
+	 * AES max bits is 256 and IPsec standards recommend only 128 bits,
+	 * so we're sticking with 128 bits (min bits). These values could
+	 * also be passed as arguments to this function...
+	 */
+	ekeylen = ead->desc.sadb_alg_minbits;
+	akeylen = aad->desc.sadb_alg_minbits;
+
+	HIP_DEBUG("ekeylen=%d, akeylen=%d\n", ekeylen, akeylen);
 
 	err = -ENOMEM;
 	xs->ealg = kmalloc(sizeof(struct xfrm_algo) + (ekeylen + 7)/8, GFP_ATOMIC);

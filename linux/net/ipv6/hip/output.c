@@ -238,6 +238,18 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	return hip_csum_send_fl(src_addr, peer_addr, buf, (struct flowi *) NULL);
 }
 
+/**
+ * hip_csum_send_fl - send a HIP packet to given address
+ * @src_addr: packet's source IPv6 address
+ * @peer_addr: packet's destination IPv6 address
+ * @buf: start of the HIP packet
+ * @out_fl: flow containing the source and the destination IPv6 address of the packet
+ *
+ * If @src_addr is NULL, kernel selects which source IPv6 address to
+ * use is the packet.
+ *
+ * Returns: 0 if packet was delivered to lower layer, < 0 otherwise.
+ */
 int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		     struct hip_common* buf, struct flowi *out_fl)
 {
@@ -277,7 +289,7 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		goto out_err;
 	}
 
-	HIP_DUMP_MSG(buf);
+	_HIP_DUMP_MSG(buf);
 	HIP_DEBUG("pkt out: len=%d proto=%d csum=0x%x\n", len, ofl->proto, csum);
 	HIP_DEBUG_IN6ADDR("pkt out: src IPv6 addr: ", &(ofl->fl6_src));
  	HIP_DEBUG_IN6ADDR("pkt out: dst IPv6 addr: ", &(ofl->fl6_dst));
@@ -350,6 +362,12 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 		mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 
+	//HIP_DEBUG("mask pre=0x%x\n", mask);
+	//mask |= (HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT);
+	//HIP_DEBUG("mask post=0x%x\n", mask);
+
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+					HIP_CONTROL_DHT_TYPE1);
 	hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
 			      mask, &hit_our,
 			      dsthit);

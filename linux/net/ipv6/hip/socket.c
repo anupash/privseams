@@ -992,7 +992,7 @@ int hip_socket_send_bos(const struct hip_common *msg)
  	int i, mask;
  	struct hip_host_id  *host_id_pub = NULL;
 	struct hip_host_id *host_id_private = NULL;
-	u8 signature[HIP_DSA_SIGNATURE_LEN];
+	u8 signature[HIP_RSA_SIGNATURE_LEN]; // assert RSA > DSA
 	struct net_device *saddr_dev;
 	struct inet6_dev *idev;
 	struct in6_addr saddr[MAX_SRC_ADDRS];
@@ -1026,14 +1026,14 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HOST ID public key */
-	host_id_pub = hip_get_any_localhost_public_key(0);
+	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;
 	}
 
 	/* Determine our HOST ID private key */
-	host_id_private = hip_get_any_localhost_host_id(0);
+	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
@@ -1074,12 +1074,13 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	}
 
 	/* Only DSA supported currently */
-	HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
+	_HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
 
 	err = hip_build_param_signature_contents(bos,
 					signature,
-					HIP_DSA_SIGNATURE_LEN,
-					HIP_SIG_DSA);
+		       ((HIP_SIG_DEFAULT_ALGO == HIP_HI_RSA) ?
+			HIP_RSA_SIGNATURE_LEN  : HIP_DSA_SIGNATURE_LEN),
+					HIP_SIG_DEFAULT_ALGO);
 	if (err) {
 		HIP_ERROR("Building of signature failed (%d)\n", err);
 		goto out_err;
