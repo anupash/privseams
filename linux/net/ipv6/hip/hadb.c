@@ -236,9 +236,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	hip_delete_sa(ha->new_spi_out, &ha->hit_peer);
 	hip_delete_sa(ha->new_spi_in, &ha->hit_our);
 
-	/* peer addr list */
 	hip_hadb_delete_peer_addrlist(ha);
-
+	hip_ifindex2spi_map_delete_all(ha);
 	/* keymat & mm-01 stuff */
 	if (ha->dh_shared_key)
 		kfree(ha->dh_shared_key);
@@ -266,6 +265,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	INIT_LIST_HEAD(&entry->next_hit);
 	INIT_LIST_HEAD(&entry->peer_addr_list);
 	INIT_LIST_HEAD(&entry->peer_spi_list);
+	INIT_LIST_HEAD(&entry->ifindex2spi_map);
 
 	spin_lock_init(&entry->lock);
 	atomic_set(&entry->refcnt,0);
@@ -1410,7 +1410,7 @@ static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
 	char *page = op->page;
 	int len = op->len;
 	int count = op->count;
-
+	const char *state_name[] = { "NONE", "UNVERIFIED", "ACTIVE", "DEPRECATED" };
 	i = 0; // test
 
 	HIP_LOCK_HA(entry);
@@ -1427,8 +1427,8 @@ static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
 			goto error;
 		list_for_each_entry(a, &spi_list->peer_addr_list, list) {
 			hip_in6_ntop(&a->address, addr_str);
-			if ( (len += snprintf(page+len, count-len, "\n  addr=%s state=0x%x lifetime=0x%x mod=%ld/%06ld",
-					      addr_str, a->address_state, a->lifetime,
+			if ( (len += snprintf(page+len, count-len, "\n  addr=%s state=%s lifetime=0x%x mod=%ld/%06ld",
+					      addr_str, state_name[a->address_state], a->lifetime,
 					      a->modified_time.tv_sec, a->modified_time.tv_usec)
 				     ) >= count)
 			goto error;

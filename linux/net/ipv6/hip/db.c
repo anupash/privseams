@@ -814,8 +814,101 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 	return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
 }
 
+
+/* assumes locked HA */
+void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
+{
+	struct hip_ifindex2spi_map *m;
+	struct list_head *pos, *tmp;
+	int i = 1;
+	char str[INET6_ADDRSTRLEN];
+
+	HIP_DEBUG("spi=0x%x ifindex=%d\n", spi, ifindex);
+
+
+	m = kmalloc(sizeof(struct hip_ifindex2spi_map), GFP_ATOMIC);
+	if (!m) {
+		HIP_ERROR("kmalloc failed\n");
+		goto out;
+	}
+
+	m->spi = spi;
+	m->ifindex = ifindex;
+	list_add(&m->list, &entry->ifindex2spi_map);
+
+	hip_in6_ntop(&entry->hit_peer, str);
+	HIP_DEBUG("Current ifindex->SPI mappings for %s:\n", str);
+	list_for_each_safe(pos, tmp, &entry->ifindex2spi_map) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		//HIP_DEBUG("%d: HIT %s SPI=0x%x ifindex=%d\n", i, str, m->spi, m->ifindex);
+		HIP_DEBUG("%d: SPI=0x%x ifindex=%d\n", i, m->spi, m->ifindex);
+		i++;
+	}
+	HIP_DEBUG("End of mapping list\n");
+
+ out:
+	return;
+}
+
+/* assumes locked HA */
+void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_ifindex2spi_map *m;
+	struct list_head *pos, *tmp;
+
+	HIP_DEBUG("spi=0x%x\n", spi);
+
+	list_for_each_safe(pos, tmp, &entry->ifindex2spi_map) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		if (m->spi == spi) {
+			HIP_DEBUG("found\n");
+			list_del(&m->list);
+			kfree(m);
+			goto out;
+		}
+	}
+
+ out:
+	return;
+}
+
+
+/* assumes locked HA */
+uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex)
+{
+	struct list_head *pos, *n;
+	struct hip_ifindex2spi_map *m = NULL;
+	uint32_t spi = 0;
+
+	HIP_DEBUG("ifindex=%d\n", ifindex);
+	list_for_each_safe(pos, n, &entry->ifindex2spi_map) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		if (m->ifindex == ifindex) {
+			HIP_DEBUG("found\n");
+			spi = m->spi;
+			break;
+		}
+	}
+	return spi;
+}
+
+/* assumes locked HA */
+void hip_ifindex2spi_map_delete_all(hip_ha_t *entry)
+{
+	struct list_head *pos, *n;
+	struct hip_ifindex2spi_map *m = NULL;
+
+	HIP_DEBUG("\n");
+	list_for_each_safe(pos, n, &entry->ifindex2spi_map) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		list_del(&m->list);
+		kfree(m);
+	}
+	return;
+}
+
+
 #undef HIP_READ_LOCK_DB
 #undef HIP_WRITE_LOCK_DB
 #undef HIP_READ_UNLOCK_DB
 #undef HIP_WRITE_UNLOCK_DB
-

@@ -225,6 +225,11 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 			     struct hip_lhi *lhi,
 			     struct hip_eid_owner_info *owner_info);
 
+void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex);
+void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi);
+void hip_ifindex2spi_map_delete_all(hip_ha_t *entry);
+uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex);
+
 extern struct hip_db_struct hip_peer_hostid_db;
 extern struct hip_db_struct hip_local_hostid_db;
 

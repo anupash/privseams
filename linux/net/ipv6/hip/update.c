@@ -181,7 +181,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 		hip_finalize_sa(&s->hit, entry->new_spi_out);
 #if 1
 		HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", old_spi_out);
-		hip_ifindex2spi_map_del(&s->hit, old_spi_out);
+		hip_ifindex2spi_map_del(entry, old_spi_out);
 		err = hip_delete_sa(old_spi_out, &s->hit);
 		if (err)
 			HIP_DEBUG("delete_sa ret err=%d\n", err);
@@ -796,12 +796,15 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 	/* delete old SAs */
 	/* todo: set SA state to dying */
 	HIP_DEBUG("REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", prev_spi_out);
-	hip_ifindex2spi_map_del(hits, prev_spi_out);
 	err = hip_delete_sa(prev_spi_out, hits);
 	HIP_DEBUG("delete_sa out retval=%d\n", err);
 
 	HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
 	err = hip_delete_sa(prev_spi_in, hitr);
+
+	hip_print_hit("map_del", hits);
+	hip_ifindex2spi_map_del(entry, prev_spi_in);
+
 	HIP_DEBUG("delete_sa in retval=%d\n", err);
 
  out_err:
@@ -1283,7 +1286,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
 	/* mm stuff */
 	if (addr_list && addr_count > 0) {
-		spi = hip_ifindex2spi_get_spi(&entry->hit_peer, ifindex);
+		spi = hip_ifindex2spi_get_spi(entry, ifindex);
 		HIP_DEBUG("mapped spi=0x%x\n", spi);
 		if (spi) {
 			/* NES not needed */
@@ -1317,7 +1320,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
 
 	if (ifindex) /* todo: move to rekeying_finish */
-		hip_ifindex2spi_map_add(&entry->hit_peer, new_spi_in, ifindex);
+		hip_ifindex2spi_map_add(entry, new_spi_in, ifindex);
 
 	if (addr_list && addr_count > 0) {
 		/* tell the peer about additional interface */

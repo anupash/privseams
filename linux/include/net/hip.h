@@ -39,6 +39,7 @@
 #  include <linux/timer.h>
 #  include <linux/time.h>
 #  include <linux/ioctl.h>
+#  include <linux/list.h>
 
 typedef uint16_t in_port_t;
 
@@ -153,7 +154,7 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_RVA_REQUEST        100
 #define HIP_PARAM_RVA_REPLY          102
 
-#define HIP_PARAM_REA_INFO           128
+#define HIP_PARAM_REA_INFO           8 /* mm-02: Type: TBD (to be determined) */
 #define HIP_PARAM_AC_INFO            129 /* mm-01: to be removed */
 #define HIP_PARAM_FA_INFO            130 /* mm-01: to be removed */
 
@@ -757,6 +758,13 @@ struct hip_peer_spi_list_item
 #define HIP_TYPE_HA    1
 #define HIP_TYPE_RVA   2
 
+/* inbound IPsec SA SPI mappings */
+struct hip_ifindex2spi_map {
+	struct list_head list;
+	int ifindex;
+	uint32_t spi;
+};
+
 struct hip_hadb_state
 {
 	uint8_t              type;         /* RVAs and HAs are stored in the same hash table */
@@ -784,6 +792,7 @@ struct hip_hadb_state
 
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address;
+	struct list_head     ifindex2spi_map;/* inbound IPsec SA SPI mapping data */
 
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;
@@ -799,14 +808,6 @@ struct hip_hadb_state
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.
 	 */
-#if 0
-	struct hip_crypto_key esp_our; //espi_key;
-	struct hip_crypto_key esp_peer; //spr_key;
-	struct hip_crypto_key auth_our; //authi_key;
-	struct hip_crypto_key auth_peer; //authr_key;
-	struct hip_crypto_key hmac_our;
-	struct hip_crypto_key hmac_peer;
-#endif
 	struct hip_crypto_key hip_enc_out; /* outgoing HIP packets */
 	struct hip_crypto_key hip_hmac_out;
 	struct hip_crypto_key esp_out;  /* outgoing ESP packets */

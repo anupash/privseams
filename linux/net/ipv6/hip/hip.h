@@ -112,9 +112,6 @@ uint64_t hip_get_current_birthday(void);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
 			     const u8 *addr, const u32 size);
-void hip_ifindex2spi_map_add(struct in6_addr *peer_hit, uint32_t spi, int ifindex);
-void hip_ifindex2spi_map_del(struct in6_addr *peer_hit, uint32_t spi);
-uint32_t hip_ifindex2spi_get_spi(struct in6_addr *peer_hit, int ifindex);
 int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
