@@ -99,7 +99,7 @@ tla changes
 # How to make a branch from the current version of the main branch
 #
 tla my-default archive # Make sure that you are accessing the HIPL archive
-tla archive setup hipl--mybranch--2.6
+tla archive-setup hipl--mybranch--2.6
 tla tag hipl--main--2.6 hipl--mybranch--2.6
 
 # Get the new branch
