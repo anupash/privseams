@@ -39,7 +39,7 @@ static int hip_hadb_match_spi(void *key_1, void *key_2)
 static void hip_hadb_hold_entry(void *entry)
 {
 	hip_ha_t *ha = (hip_ha_t *)entry;
-	
+
 	if (!entry)
 		return;
 
@@ -50,7 +50,7 @@ static void hip_hadb_hold_entry(void *entry)
 static void hip_hadb_put_entry(void *entry)
 {
 	hip_ha_t *ha = (hip_ha_t *)entry;
-	
+
 	if (!entry)
 		return;
 
@@ -177,7 +177,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 {
 	hip_hastate_t st;
 	hip_ha_t *tmp;
- 
+
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer) &&
 		     (ha->spi_in == 0)));
 
@@ -499,7 +499,7 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry,
 	}
 	HIP_UNLOCK_HA(entry);
 	_HIP_DEBUG("not found\n");
-	
+
 	return 0;
 }
 
@@ -1254,7 +1254,7 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 			      entry->keymat_calc_index, entry->update_id_in,
 			      entry->update_id_out, entry->dh_shared_key_len )) >= count)
 		goto error;
-	
+
 #if 0
 	list_for_each_entry(s, &entry->peer_addr_list, list) {
 		hip_in6_ntop(&s->address, addr_str);
@@ -1298,7 +1298,7 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 	char *page = op->page;
 	int len = op->len;
 	int count = op->count;
-	
+
 	do_gettimeofday(&now);
 
 	HIP_LOCK_HA(entry);
@@ -1545,7 +1545,7 @@ void hip_hadb_dump_hits(void)
 	for(i=0;i<HIP_HADB_SIZE;i++) {
 		if (!list_empty(&hadb_byhit[i])) {
 			cnt = sprintf(string, "[%d]: ", i);
-		
+
 			list_for_each_entry(entry, &hadb_byhit[i], next_hit) {
 				hip_hold_ha(entry);
 				if (cnt > 3900) {
@@ -1562,7 +1562,7 @@ void hip_hadb_dump_hits(void)
 			printk(KERN_ALERT "%s\n", string);
 		}
 	}
-	
+
 	HIP_UNLOCK_HT(&hadb_hit);
 	kfree(string);
 }
@@ -1591,7 +1591,7 @@ void hip_hadb_dump_spis(void)
 			}
 		}
 	}
-	
+
 	HIP_UNLOCK_HT(&hadb_hit);
 	HIP_DEBUG("end\n");
 }
@@ -1645,16 +1645,13 @@ void hip_uninit_hadb()
 		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
 			if (atomic_read(&ha->refcnt) > 2)
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
-			
 			hip_hadb_remove_state(ha);
 		}
 
 		list_for_each_entry_safe(ha, tmp, &hadb_byspi[i], next_spi) {
 			if (atomic_read(&ha->refcnt) > 1)
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
-			
 			hip_hadb_remove_state(ha);
 		}
 	}
 }
-

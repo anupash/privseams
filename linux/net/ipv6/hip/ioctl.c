@@ -101,14 +101,14 @@ int hip_ioctl_handle_async_msg(unsigned long data_from_userspace)
 	struct hip_common *response = NULL;
 
 	spin_lock(&hip_user_msg.lock);
-	
+
 	/* pass the async msg pointer */
 	err = hip_user_output_copy(data_from_userspace, hip_user_msg.msg);
 	if (err) {
 		HIP_ERROR("out copying failed (%d)\n", err);
 		goto out_err;
 	}
-	
+
 	if (!hip_check_userspace_msg_type(hip_user_msg.msg) ||
 	    !*hip_user_msg_handler[hip_get_msg_type(hip_user_msg.msg) - HIP_USER_BASE_MIN - 1]) {
 		HIP_ERROR("msg handler not implemented (%d)\n",
@@ -116,7 +116,7 @@ int hip_ioctl_handle_async_msg(unsigned long data_from_userspace)
 		err = -ENOSYS;
 		goto out_err;
 	}
-	
+
 	_HIP_DUMP_MSG(hip_user_msg.msg);
 
 	response = hip_msg_alloc();
@@ -139,9 +139,9 @@ int hip_ioctl_handle_async_msg(unsigned long data_from_userspace)
 		err = -EINVAL;
 		goto out_err;
 	}
-	
+
 	_HIP_DEBUG("hipd async message was successful\n");
-	
+
  out_err:
 	if (response)
 	  hip_msg_free(response);

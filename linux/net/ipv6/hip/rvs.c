@@ -20,7 +20,7 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 	res->lifetime = 0;
 	res->type = HIP_TYPE_RVA;
 	memset(res->ip_addrs, 0, HIP_RVA_MAX_IPS*sizeof(struct in6_addr));
-	
+
 	return res;
 }
 
@@ -90,7 +90,7 @@ HIP_RVA *hip_rva_find(struct in6_addr *hit)
 	HIP_LOCK_HADB;
 	rva = hip_rva_find_nolock(hit, h);
 	HIP_UNLOCK_HADB;
-	
+
 	return rva;
 }
 

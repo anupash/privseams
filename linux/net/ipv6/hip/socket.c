@@ -235,7 +235,7 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
-	
+
 	/* XX FIX: check access permissions from eid_owner_info */
 
 	err = socket_handler->bind(sock, (struct sockaddr *) &sockaddr_in6,
@@ -280,7 +280,7 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 
 	/* Note: connect calls autobind if the application has not already
 	   called bind manually. */
-	
+
 	/* XX CHECK: what about autobind src eid ? */
 
 	/* XX CHECK: check does the autobind actually bind to an IPv6 address
@@ -348,7 +348,7 @@ int hip_socket_accept(struct socket *sock, struct socket *newsock,
 	/* XX FIXME: do something to the newsock? */
 
  out_err:
-	
+
 	return err;
 }
 
@@ -441,7 +441,7 @@ unsigned int hip_socket_poll(struct file *file, struct socket *sock,
 	mask = socket_handler->poll(file, sock, wait);
 
  out_err:
-	
+
 	return mask;
 }
 
@@ -488,7 +488,7 @@ int hip_socket_listen(struct socket *sock, int backlog)
 	}
 
  out_err:
-	
+
 	return err;
 }
 
@@ -637,7 +637,7 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 	}
 
  out_err:
-	
+
 	return err;
 }
 

@@ -14,9 +14,6 @@
 #include "output.h"
 
 
-atomic_t hip_update_id = ATOMIC_INIT(0);
-spinlock_t hip_update_id_lock = SPIN_LOCK_UNLOCKED;
-
 /* List of SPIs which are waiting for data to come through */
 /* See draft's section "Processing an initial UPDATE packet" */
 LIST_HEAD(hip_update_spi_waitlist);
@@ -233,33 +230,34 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	Kn_pos = entry->current_keymat_index - (entry->current_keymat_index % HIP_AH_SHA_LEN);
 	err = hip_keymat_get_new(espkey_gl->key, esp_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
-	_HIP_DEBUG("enckey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
+	HIP_DEBUG("enckey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
-	_HIP_HEXDUMP("ENC KEY gl", espkey_gl->key, esp_transf_length);
+	HIP_HEXDUMP("ENC KEY gl", espkey_gl->key, esp_transf_length);
 	k += esp_transf_length;
+
 	err = hip_keymat_get_new(authkey_gl->key, auth_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
-	_HIP_DEBUG("authkey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
+	HIP_DEBUG("authkey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
-	_HIP_HEXDUMP("AUTH KEY gl", authkey_gl->key, auth_transf_length);
+	HIP_HEXDUMP("AUTH KEY gl", authkey_gl->key, auth_transf_length);
 	k += auth_transf_length;
 
 	/* SA-lg */
 	err = hip_keymat_get_new(espkey_lg->key, esp_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
-	_HIP_DEBUG("enckey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
+	HIP_DEBUG("enckey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
-	_HIP_HEXDUMP("ENC KEY lg", espkey_lg->key, esp_transf_length);
+	HIP_HEXDUMP("ENC KEY lg", espkey_lg->key, esp_transf_length);
 	k += esp_transf_length;
 	err = hip_keymat_get_new(authkey_lg->key, auth_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
-	_HIP_DEBUG("authkey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
+	HIP_DEBUG("authkey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
-	_HIP_HEXDUMP("AUTH KEY lg", authkey_lg->key, auth_transf_length);
+	HIP_HEXDUMP("AUTH KEY lg", authkey_lg->key, auth_transf_length);
 	k += auth_transf_length;
 
 	HIP_DEBUG("at end: k=%u c=%u\n", k, c);
@@ -351,7 +349,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	HIP_DEBUG("deprecating not listed address from the SPI list\n");
 	list_for_each_entry_safe(a, tmp, &spi_list->peer_addr_list, list) {
 		int spi_addr_is_in_rea = 0;
-		
+
 		hip_print_hit("testing SPI address", &a->address);
 		rea_address_item = (void *)rea+sizeof(struct hip_rea_info_mm02);
 		for(i = 0; i < n_addrs; i++, rea_address_item++) {
@@ -1100,7 +1098,7 @@ int hip_receive_update(struct sk_buff *skb)
 		peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
 		for (i = 0; i < n; i++, peer_update_id++) {
 			uint32_t puid = ntohl(*peer_update_id);
-			
+
 			HIP_DEBUG("ACK: peer Update ID=%u\n", puid);
 #if 1
 			if (puid == entry->stored_sent_update_id) {

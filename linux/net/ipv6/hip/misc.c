@@ -23,6 +23,8 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
 
        HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
 
+       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+
        if (hit_type != HIP_HIT_TYPE_HASH126) {
                err = -ENOSYS;
                goto out_err;
@@ -173,7 +175,7 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 	uint16_t len = hip_get_param_contents_len(host_id);
 	u8 *buf = (u8 *)(host_id + 1);
 	u8 t = *buf;
-	
+
 	return len >= 3 * (64 + 8 * t) + 2 * 20; /* PQGXY 3*(64+8*t) + 2*20 */
 }
 

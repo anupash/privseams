@@ -336,7 +336,7 @@ struct hip_keymat_keymat
 {
 	size_t offset;      /* Offset into the key material */
 	size_t keymatlen;   /* Length of the key material */
-	
+
 	void *keymatdst; /* Pointer to beginning of key material */
 };
 
@@ -379,7 +379,7 @@ struct hip_puzzle {
 struct hip_solution {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-	
+
 	uint8_t           K;
 	uint8_t           opaque[3];
 	uint64_t          I;
@@ -399,7 +399,7 @@ typedef uint16_t hip_transform_suite_t;
 struct hip_hip_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
-	
+
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX];
 } __attribute__ ((packed));
 
@@ -463,7 +463,7 @@ struct hip_sig2 {
 	hip_tlv_len_t     length;
 
 	uint8_t      algorithm;
-	
+
 	/* fixed part end */
 } __attribute__ ((packed));
 
@@ -801,7 +801,7 @@ struct hip_hadb_state
 	int                  esp_transform;
 
 	uint64_t             birthday;
-	
+
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
 

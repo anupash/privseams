@@ -86,8 +86,6 @@ int hip_init_user(void)
 
  out:
 	return err;
-
-	
 }
 
 /**
@@ -220,14 +218,14 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 		err = -ENOMEM;
 		goto out_err;
 	}
-	
+
 	ip_copy = kmalloc(sizeof(struct in6_addr), GFP_ATOMIC);
 	if (!ip_copy) {
 		HIP_ERROR("No memory to copy IP to work order\n");
 		err = -ENOMEM;
 		goto out_err;
 	}
-	
+
 	ipv6_addr_copy(ip_copy,ip);
 	hwo->arg2 = ip_copy;
 	hwo->type = HIP_WO_TYPE_MSG;
@@ -280,7 +278,7 @@ int hip_user_handle_add_peer_map_hit_ip(const struct hip_common *input,
 	HIP_INFO("map HIT: %s\n", buf);
 	hip_in6_ntop(ip, buf);
 	HIP_INFO("map IP: %s\n", buf);
-	
+
  	err = hip_insert_peer_map_work_order(hit, ip, 1);
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
@@ -327,7 +325,7 @@ int hip_user_handle_del_peer_map_hit_ip(const struct hip_common *input,
 	HIP_INFO("map HIT: %s\n", buf);
 	hip_in6_ntop(ip, buf);
 	HIP_INFO("map IP: %s\n", buf);
-	
+
  	err = hip_insert_peer_map_work_order(hit, ip, 0);
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
@@ -415,16 +413,16 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 	struct hip_lhi lhi;
 	struct hip_eid_owner_info owner_info;
 	struct hip_host_id *host_id;
-	
+
 	HIP_DEBUG("\n");
-	
+
 	/* Extra consistency test */
 	if (hip_get_msg_type(input) != HIP_USER_SET_MY_EID) {
 		err = -EINVAL;
 		HIP_ERROR("Bad message type\n");
 		goto out_err;
 	}
-	
+
 	eid_endpoint = hip_get_param(input, HIP_PARAM_EID_ENDPOINT);
 	if (!eid_endpoint) {
 		err = -ENOENT;
@@ -437,7 +435,7 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 		HIP_ERROR("setmyeid does not support HITs, only HIs\n");
 		goto out_err;
 	}
-	
+
 	HIP_DEBUG("hi len %d\n",
 		  ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
 
@@ -448,7 +446,7 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
-	
+
 	if (hip_host_id_contains_private_key(host_id)) {
 		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
 						 HIP_HIT_TYPE_HASH126);
@@ -456,7 +454,7 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 			HIP_ERROR("Failed to calculate HIT from HI.");
 			goto out_err;
 		}
-	
+
 		/* XX TODO: check UID/GID permissions before adding */
 		err = hip_user_add_local_hi(host_id, &lhi);
 		if (err == -EEXIST) {
@@ -471,9 +469,9 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 		err = hip_host_id_to_hit(host_id,
 					 &lhi.hit, HIP_HIT_TYPE_HASH126);
 	}
-	
+
 	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
-	
+
 	/* Iterate through the interfaces */
 	while((param = hip_get_next_param(input, param)) != NULL) {
 		/* Skip other parameters (only the endpoint should
@@ -485,15 +483,15 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 		/* XX TODO: check also the UID permissions for storing
 		   the ifaces before actually storing them */
 	}
-	
+
 	/* The eid port information will be filled by the resolver. It is not
 	   really meaningful in the eid db. */
 	eid.eid_port = htons(0);
-	
+
 	lhi.anonymous =
 	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
 		1 : 0;
-	
+
 	/* XX TODO: check UID/GID permissions before adding ? */
 	err = hip_db_set_my_eid(&eid, &lhi, &owner_info);
 	if (err) {
@@ -505,7 +503,7 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 
 	/* Clear the output (in the case it is the same as the input) and
 	   write a return message */
-	
+
 	hip_msg_init(output);
 	hip_build_user_hdr(output, HIP_USER_SET_MY_EID, err);
 	err = hip_build_param_eid_sockaddr(output,
@@ -515,7 +513,7 @@ int hip_user_handle_set_my_eid(const struct hip_common *input,
 		HIP_ERROR("Could not build eid sockaddr\n");
 		goto out_err;
 	}
-	
+
  out_err:
 	return err;
 }
@@ -532,21 +530,21 @@ int hip_user_handle_set_peer_eid(const struct hip_common *input,
 	struct hip_eid_owner_info owner_info;
 
 	HIP_DEBUG("\n");
-	
+
 	/* Extra consistency test */
 	if (hip_get_msg_type(input) != HIP_USER_SET_PEER_EID) {
 		err = -EINVAL;
 		HIP_ERROR("Bad message type\n");
 		goto out_err;
 	}
-	
+
 	eid_endpoint = hip_get_param(input, HIP_PARAM_EID_ENDPOINT);
 	if (!eid_endpoint) {
 		err = -ENOENT;
 		HIP_ERROR("Could not find eid endpoint\n");
 		goto out_err;
 	}
-	
+
 	if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
 		memcpy(&lhi.hit, &eid_endpoint->endpoint.id.hit,
 		       sizeof(struct in6_addr));
@@ -569,7 +567,7 @@ int hip_user_handle_set_peer_eid(const struct hip_common *input,
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
-	
+
 	/* The eid port information will be filled by the resolver. It is not
 	   really meaningful in the eid db. */
 	eid.eid_port = htons(0);
@@ -579,9 +577,8 @@ int hip_user_handle_set_peer_eid(const struct hip_common *input,
 		HIP_ERROR("Could not set my eid into the db\n");
 		goto out_err;
 	}
-	
-	/* Iterate through the addresses */
 
+	/* Iterate through the addresses */
 	while((param = hip_get_next_param(input, param)) != NULL) {
 		struct sockaddr_in6 *sockaddr;
 
@@ -614,9 +611,8 @@ int hip_user_handle_set_peer_eid(const struct hip_common *input,
 			goto out_err;
 		}
 	}
-	
+
 	/* Finished. Write a return message with the EID. */
-	
 	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
 	err = hip_build_param_eid_sockaddr(output,
 					   (struct sockaddr *) &eid,

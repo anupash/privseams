@@ -170,7 +170,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 		slist[elt].dma_address = 0;
 		slist[elt].page = virt_to_page(addr+offset);
 		slist[elt].offset = (unsigned long) (addr+offset) % PAGE_SIZE;
-		
+
 		/* page left */
 		/* pleft = how many bytes there are for us in current page */
 		pleft = PAGE_SIZE - slist[elt].offset;
@@ -364,7 +364,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
- 
+
  	msg = hip_msg_alloc();
  	if (!msg) {
 		err = -ENOMEM;
@@ -390,13 +390,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	/* Get a localhost identity, allocate memory for the public key part
  	   and extract the public key from the private key. The public key is
  	   needed for writing the host id parameter in R1. */
- 
+
 	host_id_private = hip_get_any_localhost_host_id();
  	if (!host_id_private) {
  		HIP_ERROR("Could not acquire localhost host id\n");
  		goto out_err;
  	}
- 	
+
 	host_id_pub = hip_get_any_localhost_public_key();
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
@@ -404,29 +404,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	}
 
  	/* Ready to begin building of the R1 packet */
-	/*
-	    IP ( HIP ( [ R1_COUNTER, ]
-              PUZZLE,
-              DIFFIE_HELLMAN,
-              HIP_TRANSFORM,
-              ESP_TRANSFORM,
-              HOST_ID,
-              [ ECHO_REQUEST, ]
-              HIP_SIGNATURE_2 )
-              [, ECHO_REQUEST ])
-	 */
-
-
  	memset(&dst_hit, 0, sizeof(struct in6_addr));
  	hip_build_network_hdr(msg, HIP_R1, HIP_CONTROL_NONE, src_hit,
  			      &dst_hit);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 
-	while(0);
-
  	/********** PUZZLE ************/
-
 	{
 		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K, 0, 0);
 		if (err) {
@@ -434,9 +418,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 			goto out_err;
 		}
 	}
- 
- 	/********** Diffie-Hellman **********/
 
+ 	/********** Diffie-Hellman **********/
 	written = hip_insert_dh(dh_data,dh_size,HIP_DEFAULT_DH_GROUP_ID);
 	if (written < 0) {
  		HIP_ERROR("Could not extract DH public key\n");
@@ -541,8 +524,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		kfree(host_id_pub);
  	if (dh_data)
  		kfree(dh_data);
- 
- 	return msg;
+
+	return msg;
 
   out_err:
 	if (host_id_pub)
@@ -581,7 +564,7 @@ int hip_enc_key_length(int tid)
 		HIP_ASSERT(0);
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -602,7 +585,7 @@ int hip_hmac_key_length(int tid)
 		HIP_ASSERT(0);
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -629,7 +612,7 @@ int hip_transform_key_length(int tid)
 		HIP_ASSERT(0);
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -658,7 +641,7 @@ int hip_auth_key_length_esp(int tid)
 		HIP_ASSERT(0);
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -779,7 +762,7 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 			tid = ntohs(*suggestion);
 			goto out;
 			break;
-			
+
 		default:
 			/* Specs don't say what to do when unknown are found. 
 			 * We ignore.
@@ -832,7 +815,6 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 			tid = ntohs(*suggestion);
 			goto out;
 			break;
-			
 		default:
 			/* Specs don't say what to do when unknowns are found. 
 			 * We ignore.
@@ -949,7 +931,7 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 			err = -EFAULT;
 			goto out_err;
 		}
-			
+
 		break;
 	case HIP_DIRECTION_DECRYPT:
 		if (iv) {
@@ -1057,7 +1039,7 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 		return 0;
 
 	hip_in6_ntop(hit,str);
-	
+
 	entry = hip_hadb_find_byhit(hit);
 	if (!entry) {
 		HIP_ERROR("Unknown HIT: %s\n", str);
@@ -1108,7 +1090,7 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
 		goto out;
 
 	return 1;
-		
+
  out:
 	return 0;
 }
@@ -1830,7 +1812,7 @@ static int hip_do_work(void)
 			goto out_err;
 		}
 	}
-		
+
  out_err:
 	hip_free_work_order(job);
 	return res;
@@ -1884,7 +1866,7 @@ static int __init hip_init(void)
 
 	HIP_INFO("Initializing HIP module\n");
 	hip_get_load_time();
-	
+
 	if(!hip_init_r1())
 		goto out;
 

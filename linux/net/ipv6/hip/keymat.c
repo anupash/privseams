@@ -132,15 +132,12 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 
 	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, kij_len + HIP_AH_SHA_LEN + 1);
 	HIP_ASSERT(!err);
-	
-	while (dstoffset < dstbuflen) {
 
+	while (dstoffset < dstbuflen) {
 		crypto_digest_digest(sha, sg, nsg, dstbuf + dstoffset);
 		seedkey = dstbuf + dstoffset;
-
 		dstoffset += HIP_AH_SHA_LEN;
 		index_nbr++;
-
 		hip_update_keymat_buffer(shabuffer, seedkey, HIP_AH_SHA_LEN,
 					 kij_len, index_nbr);
 	}
@@ -279,7 +276,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		err = -ENOMEM;
 		goto out_err;
 	}
-	
+
 	memcpy(tmp_data, kij, kij_len); /* fixed part of every Kn round */
 
 	while (copied < key_len) {
@@ -333,7 +330,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	return err;
 }
 
- 
+
 /** hip_update_entry_keymat - update HADB's KEYMAT related information
  * @entry: HADB entry to be update
  * @new_keymat_index: new Keymat Index value

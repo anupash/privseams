@@ -86,14 +86,14 @@ void hip_uninit_eid_db(struct hip_db_struct *db)
 	struct list_head *curr, *iter;
 	struct hip_host_id_entry *tmp;
 	unsigned long lf;
-	
+
 	HIP_WRITE_LOCK_DB(db);
-	
+
 	list_for_each_safe(curr,iter,&db->db_head) {
 		tmp = list_entry(curr, struct hip_host_id_entry, next);
 		kfree(tmp);
 	}
-	
+
 	HIP_WRITE_UNLOCK_DB(db);
 }
 
@@ -181,7 +181,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	struct hip_host_id_entry *id_entry;
 	struct hip_host_id_entry *old_entry;
 	unsigned long lf;
-	
+
 	_HIP_HEXDUMP("adding host id",lhi,sizeof(struct hip_lhi));
 
 	HIP_ASSERT(lhi != NULL);
@@ -200,7 +200,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 		err = -ENOMEM;
 		goto out_err;
 	}
-	
+
 	/* copy lhi and host_id (host_id is already in network byte order) */
 	id_entry->lhi.anonymous = lhi->anonymous;
 	ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
@@ -307,7 +307,7 @@ int hip_copy_any_localhost_hit(struct in6_addr *target)
 		err=-ENOENT;
 		goto out;
 	}
-		
+
 	ipv6_addr_copy(target,&entry->lhi.hit);
 	err = 0;
 
@@ -370,7 +370,7 @@ static struct hip_lhi *hip_get_any_hit(struct hip_db_struct *db)
 	}
 
 	memcpy(res, &tmp->lhi, sizeof(struct hip_lhi));
-	
+
 	HIP_READ_UNLOCK_DB(db);
 
 	return res;
@@ -416,7 +416,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	struct hip_host_id *result;
 	unsigned long lf;
 	int t;
-	
+
 	result = kmalloc(1024, GFP_KERNEL);
 	if (!result) {
 		HIP_ERROR("no memory\n");
@@ -515,7 +515,7 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 	HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
 
 	/* Move the hostname 20 bytes earlier */
-	
+
 	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
 
 	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
@@ -559,14 +559,13 @@ int hip_insert_any_localhost_public_key(u8 *target)
 		err=-ENOENT;
 		goto end_err;
 	}
-	
+
 	buf = (u8 *)(tmp + 1); // skip header
-	
+
 	if (*buf > 8) { /* T is over 8... error */
 		HIP_ERROR("Invalid T-value in DSA key (%x)\n",*buf);
 		err=-EBADMSG;
 		goto end_err;
-
 	}
 
 	if (*buf != 8) {
@@ -685,7 +684,7 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_hit_no_lock(struct hip_db_stru
 				   (struct in6_addr *) &lhi->hit))
 			return entry;
 	}
-	
+
 	return NULL;
 }
 
@@ -700,7 +699,7 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_eid_no_lock(struct hip_db_stru
 		if (entry->eid.eid_val == eid->eid_val)
 			    return entry;
 	}
-	
+
 	return NULL;
 }
 
@@ -792,7 +791,7 @@ int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
 	memcpy(lhi, &entry->lhi, sizeof(struct hip_lhi));
 	memcpy(owner_info, &entry->owner_info,
 	       sizeof(struct hip_eid_owner_info));
-	
+
  out_err:
 	HIP_READ_UNLOCK_DB(db);
 

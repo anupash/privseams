@@ -33,7 +33,7 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 		base ^= ip_i->s6_addr32[i];
 		base ^= ip_r->s6_addr32[i];
 	}
-	
+
 	for(i = 0; i < 3; i++) {
 		base ^= ((base >> (24 - i * 8)) & 0xFF);
 	}
@@ -68,8 +68,6 @@ static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
 	pz->opaque[0] = (tv->tv_sec & 0xFF);
 	pz->opaque[1] = ((tv->tv_sec >> 8) & 0xFF);
 	pz->opaque[2] = ((tv->tv_sec >> 16) & 0xFF);		
-	
-
 }
 
 /**
@@ -106,7 +104,7 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 	/* generating opaque data */
 
 	do_gettimeofday(&tv);
-	
+
 	/* extract the puzzle */
 	pz = hip_get_param(r1->r1, HIP_PARAM_PUZZLE);
 	if (!pz) {
@@ -117,22 +115,19 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 	ts = pz->opaque[0];
 	ts |= ((int)pz->opaque[1] << 8);
 	ts |= ((int)pz->opaque[2] << 16);
-	
+
 	if (ts != 0) {
-
 		/* check if the cookie is too old */
-
 		diff = (tv.tv_sec & 0xFFFFFF) - ts;
 		if (diff < 0)
 			diff += 0x1000000;
-		
+
 		HIP_DEBUG("Old puzzle still valid\n");
 		if (diff <= HIP_PUZZLE_MAX_LIFETIME)
 			return r1;
 	}
 
 	/* either ts == 0 or diff > HIP_PUZZLE_MAX_LIFETIME */
-
 	HIP_DEBUG("Creating new puzzle\n");
 	hip_create_new_puzzle(pz, r1, &tv);
 
@@ -169,6 +164,8 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		struct hip_puzzle pz;
 		struct hip_solution sl;
 	} *u;
+
+	HIP_DEBUG("\n");
 
 	HIP_DEBUG("\n");
 
@@ -213,7 +210,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		HIP_ERROR("Error mapping virtual addresses to physical pages\n");
 		return 0; // !ok
 	}
-	
+
 	/* while loops should work even if the maxtries is unsigned
 	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
 	 * the next round while (0 > 0) [maxtries > 0 now]
@@ -221,12 +218,12 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	while(maxtries-- > 0)
 	{
 		u8 sha_digest[HIP_AH_SHA_LEN];
-		
+
 		/* must be 8 */
 		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
 
 		hip_build_digest_repeat(impl_sha1, sg, nsg, sha_digest);
-				
+
                 /* copy the last 8 bytes for checking */
 		memcpy(&digest, sha_digest + 12, 8);
 
@@ -422,10 +419,17 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_DEBUG("Solution's I (0x%llx), sent I (0x%llx)\n",
 		  solution->I, puzzle->I);
 
+	HIP_HEXDUMP("opaque in solution", solution->opaque, 3);
+	HIP_HEXDUMP("opaque in result", result->Copaque, 3);
+	HIP_HEXDUMP("opaque in puzzle", puzzle->opaque, 3);
+
+	HIP_DEBUG("Solution's I (0x%llx), sent I (0x%llx)\n",
+		  solution->I, puzzle->I);
+
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
 			 solution->K, puzzle->K);
-		
+
 		if (solution->K != result->Ck) {
 			HIP_ERROR("Solution's K did not match any sent Ks.\n");
 			return 0;
@@ -452,7 +456,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			HIP_ERROR("Solution's I did not match the sent I\n");
 			return 0;
 		}
-		
+
 		if (memcmp(solution->opaque, puzzle->opaque, 3) != 0) {
 			HIP_ERROR("Solution's opaque data does not match the opaque data sent\n");
 			return 0;

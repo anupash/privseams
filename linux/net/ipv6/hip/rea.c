@@ -620,11 +620,11 @@ static void hip_rea_delete_sent_list_one(int delete_all, uint16_t rea_id)
 {
 	struct hip_sent_rea_info *sent_rea, *tmp;
 	int i = 1;
-	
+
 	spin_lock_bh(&hip_sent_rea_info_lock);
 	_HIP_DEBUG("delete_all=%d rea_id=%u (net=%u)\n",
 		   delete_all, rea_id, htons(rea_id));
-	
+
 	list_for_each_entry_safe(sent_rea, tmp, &hip_sent_rea_info_pkts, list) {
 		if (delete_all || (sent_rea->rea_id == rea_id)) {
 			_HIP_DEBUG("%d: pos=0x%p, sent_rea=0x%p rea_id=%u\n",
@@ -756,16 +756,16 @@ static void hip_ac_sent_id_expired(unsigned long val)
 	/* (if above declaration is used) DANGEROUS: sent_ac might be
 	 * kfree'd at any time if ACR is received at the same time
 	 * when this functions is called, fix */
-	
+
 	/* A simple way to fix the problem is that if we trust that we
 	 * don't have two sent ACs with same AC IDs -> use val as the
 	 * ac id (that is, we don't have > 65535 sent AC packet within
 	 * the AC timeout period) */
-	
+
 	/* kludge workaround test */
 	uint16_t ac_id = (uint16_t) ((val & 0xffff0000) >> 16);
 	uint16_t rea_id = (uint16_t) (val & 0xffff);
-	
+
 	HIP_DEBUG("ac_id=%u rea_id=%u\n", ac_id, rea_id);
 	hip_ac_delete_sent_list_one(0, rea_id, ac_id);
 	return;
@@ -795,7 +795,7 @@ static int hip_ac_add_to_sent_list(uint16_t rea_id, uint16_t ac_id,
 {
 	int err = 0;
 	struct hip_sent_ac_info *sent_ac;
- 
+
 	spin_lock_bh(&hip_sent_ac_info_lock);
 	_HIP_DEBUG("\n");
 
@@ -1165,7 +1165,7 @@ void hip_send_rea_all(int interface_id, struct hip_rea_info_addr_item *addresses
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-	
+
 	err = hip_for_each_ha(hip_get_all_valid, &rk);
 
 	for (i=0; i<rk.count; i++) {
@@ -1175,7 +1175,7 @@ void hip_send_rea_all(int interface_id, struct hip_rea_info_addr_item *addresses
 			hip_put_ha(rk.array[i]);
 		}
 	}
-		
+
 	return;
 }
 

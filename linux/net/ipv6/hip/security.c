@@ -105,7 +105,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 	}
 	/* xfrm_state_put ? (xfrm_state_lookup incs xs's refcount) */
 	xfrm_state_delete(xs);
-	
+
 	return 0;
 }
 
@@ -183,11 +183,10 @@ int hip_setup_sp(int dir)
 	xp->flags = 0;
 	xp->dead = 0;
 	xp->xfrm_nr = 1; // one transform? 
-	
+
 	tmpl = &xp->xfrm_vec[0];
 
 	tmpl->id.proto = IPPROTO_ESP;
-
 	tmpl->reqid = 0;
 	tmpl->mode = XFRM_MODE_TRANSPORT;
 	tmpl->share = 0; // unique. Is this the correct number?
@@ -404,7 +403,7 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 		/* do what? */
 		return;
 	}
-	
+
 	spin_lock_bh(&xs->lock);
 	xs->km.state = XFRM_STATE_VALID;
 	xs->lft.hard_add_expires_seconds = 0;
@@ -413,7 +412,7 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 	xfrm_state_put(xs);
 	wake_up(&km_waitq);
 }
-      
+
 
 /**
  * hip_insert_dh - Insert the current DH-key into the buffer

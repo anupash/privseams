@@ -166,7 +166,6 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		break;
 	}
 
-	
  out:
 	if (entry)
 		hip_put_ha(entry);
@@ -295,7 +294,6 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	if (buf->checksum == 0)
 		buf->checksum = -1;
 
-	
  	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, &fl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err) {

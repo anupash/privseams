@@ -550,7 +550,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 		pos += sizeof(struct hip_common);
 	else
 		pos += hip_get_param_total_len(current_param);
-	
+
 	next_param = (struct hip_tlv_common *) pos;
 
 	_HIP_DEBUG("Next param is at slot: %d\n", (pos - (void *) msg));
@@ -708,16 +708,15 @@ void *hip_find_free_param(const struct hip_common *msg)
 		free_pos = first_pos;
 		goto out;
 	}
-	    
+
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
 		last_used_pos = current_param;
 		_HIP_DEBUG("not free: type=%d, contents_len=%d\n",
 			  hip_get_param_type(current_param),
 			  hip_get_param_contents_len(current_param));
-			  
 	}
-	
+
 	if (last_used_pos == NULL) {
 		free_pos = NULL; /* the message was full */
 	} else {
@@ -905,7 +904,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 {
 	hip_tlv_type_t type = hip_get_param_type(param);
 	int err = 0;
-	
+
 	switch(type) {
 	case HIP_PARAM_HIP_TRANSFORM:
 	{
@@ -991,7 +990,7 @@ int hip_check_network_msg(const struct hip_common *msg)
 		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
 		goto out;
 	}
-	
+
 	/* Checking of param types, lengths and ordering. */
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
@@ -1079,7 +1078,7 @@ int hip_build_generic_param(struct hip_common *msg,
 	}
 
 	_HIP_DEBUG("found free: %d\n", dst - ((void *)msg));
-       
+
 	if (dst + hip_get_param_total_len(param) > max_dst) {
 		err = -EMSGSIZE;
 		HIP_ERROR("hipd build param: contents size (%d) too long\n",
@@ -1117,7 +1116,7 @@ int hip_build_generic_param(struct hip_common *msg,
 	_HIP_HEXDUMP("build msg: ", (void *) msg,
 		     hip_get_msg_total_len(msg));
  out:
-	
+
 	return err;
 }
 
@@ -1145,7 +1144,7 @@ int hip_build_param_contents(struct hip_common *msg,
 
 	hip_set_param_type(&param, param_type);
 	hip_set_param_contents_len(&param, contents_size);
-	
+
 	return hip_build_generic_param(msg, &param,
 				       sizeof(struct hip_tlv_common),
 				       contents);
@@ -1213,7 +1212,7 @@ int hip_build_user_hdr(struct hip_common *msg,
 	int err = 0;
 
 	_HIP_DEBUG("\n");
-	
+
 	hip_set_msg_type(msg, base_type);
 	hip_set_msg_err(msg, err_val);
 	/* Note: final header length is usually calculated by the
@@ -1656,7 +1655,6 @@ int hip_build_param_transform(struct hip_common *msg,
 
  out_err:
 	return err;
-    
 }
 
 /**
@@ -1684,7 +1682,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 	} else {
 		suite = ntohs(tf->suite_id[index]);
 	}
-	
+
 	return suite;
 }
 
@@ -1945,7 +1943,7 @@ int hip_build_param_encrypted(struct hip_common *msg,
 	memset(&enc.iv, 0, 8);
 
 	/* copy the IV *IF* needed, and then the encrypted data */
-	
+
 	err = hip_build_generic_param(msg, &enc,
 				      sizeof(struct hip_encrypted),
 				      host_id);
@@ -2000,7 +1998,7 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
 	uint16_t fqdn_len;
 
 	HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
-	
+
 	HIP_DEBUG("Copying %d bytes\n", rr_len);
 
 	memcpy(ptr, rr_data, rr_len);
@@ -2037,7 +2035,7 @@ int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *
 	type = ntohs(host->di_type_length);
 	*len = type & 0x0FFF;
 	type = (type & 0xF000) >> 12;
-	
+
 	if (type > 2) {
 		HIP_ERROR("Illegal DI-type: %d\n",type);
 		return -1;
@@ -2113,10 +2111,9 @@ int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
 	int err = 0;
 
 	HIP_ASSERT(!(endpoint->flags & HIP_ENDPOINT_FLAG_HIT));
-	
+
 	err = hip_build_param_contents(msg, endpoint, HIP_PARAM_EID_ENDPOINT,
 				       endpoint->length);
-
 	return err;
 }
 
@@ -2161,7 +2158,7 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 	} else {
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
-	
+
 	return err;
 }
 

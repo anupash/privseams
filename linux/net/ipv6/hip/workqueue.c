@@ -100,7 +100,7 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 
 	wq = &per_cpu(hip_workqueue, cpu);
 	list_add_tail(&hwo->queue, wq->workqueue);
-	
+
 	local_irq_restore(eflags);
 	up(wq->worklock);
 	/* what is the correct order of these two? */
@@ -194,7 +194,7 @@ void hip_stop_khipd()
 {
 	struct hip_work_order *hwo;
 	int i;
-	
+
 	for(i=0; i<NR_CPUS; i++) {
 		hwo = hip_init_job(GFP_KERNEL);
 		if (!hwo) {
