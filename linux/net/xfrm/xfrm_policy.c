@@ -772,7 +772,13 @@ restart:
 			break;
 
 		nx = xfrm_tmpl_resolve(policy, fl, xfrm, family);
-
+		if (nx > 0) {
+		  int i = 0;
+		  printk(KERN_DEBUG "xfrm_lookup: nx=%d\n", nx);
+		  for (i = 0; i < nx; i++) {
+		    printk(KERN_DEBUG "xfrm_lookup: SPI %d=0x%x\n", i, ntohl(xfrm[i]->id.spi));
+		  }
+		}
 		if (unlikely(nx<0)) {
 			err = nx;
 			if (err == -EAGAIN && flags) {

@@ -283,6 +283,9 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 	
 	/* XX CHECK: what about autobind src eid ? */
 
+	/* XX CHECK: check does the autobind actually bind to an IPv6 address
+	   or HIT? Or inaddr_any? Should we do the autobind manually here? */
+
 	err = socket_handler->connect(sock, (struct sockaddr *) &sockaddr_in6,
 				      sizeof(struct sockaddr_in6), flags);
 	if (err) {

@@ -18,11 +18,11 @@ import java.net.InetSocketAddress;
  * implements a HIP-specific socket in the standard Java manner, by
  * extending the {@link SocketImpl} class.  An application should
  * never create objects of this class directly, but rather install the
- * {@link HipSocketFactory} as the socket creator.
+ * {@link HipSocketImplFactory} as the socket creator.
  *
  * @author Jaakko Kangasharju
  */
-public class HipSocket extends SocketImpl {
+public class HipSocketImpl extends SocketImpl {
 
     private final static char hexDigits[] = { '0', '1', '2', '3', '4', '5',
 					      '6', '7', '8', '9', 'A', 'B',
@@ -66,11 +66,23 @@ public class HipSocket extends SocketImpl {
 	}
     }
 
-    protected native void bind (InetAddress address, int port);
-
     public native void create (boolean stream);
 
-    public native void connect (InetAddress address, int port);
+    private native void bind (HipAddress address, int port);
+
+    private native void connect (HipAddress address, int port);
+
+    public void bind (InetAddress address, int port) {
+	bind(HipAddress.getByAddress(address), port);
+    }
+
+    public void bind (String host, int port) {
+	bind(HipAddress.getByName(host), port);
+    }
+
+    public void connect (InetAddress address, int port) {
+	connect(HipAddress.getByAddress(address), port);
+    }
 
     public void connect (String host, int port) {
 	connect(HipAddress.getByName(host), port);
@@ -87,10 +99,6 @@ public class HipSocket extends SocketImpl {
 	if (oldTimeout != null) {
 	    setOption(SO_TIMEOUT, oldTimeout);
 	}
-    }
-
-    public void bind (String host, int port) {
-	bind(HipAddress.getByName(host), port);
     }
 
     public native void listen (int backlog);

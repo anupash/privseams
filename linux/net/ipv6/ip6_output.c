@@ -821,6 +821,8 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 		}
 #endif
 		*dst = ip6_route_output(sk, fl);
+		/* daddr is now destination HIT */
+		/* fl->fl6_dst is now IPv6 address */
 	}
 	
 	

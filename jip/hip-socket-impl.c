@@ -3,7 +3,7 @@
  * Copyright: GNU/GPL 2004
  */
 
-#include "jip_HipSocket.h"
+#include "jip_HipSocketImpl.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -37,6 +37,7 @@
 static jfieldID native_fd_id;
 static jfieldID localport_id;
 static jfieldID port_id;
+static jfieldID ha_value_id;
 static jmethodID dump_id;
 static jmethodID set_address_id;
 static jmethodID ia_get_host_address_id;
@@ -119,17 +120,23 @@ create_integer (JNIEnv *env, jint value)
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocket_nativeInit (JNIEnv *env, jclass cls)
+Java_jip_HipSocketImpl_nativeInit (JNIEnv *env, jclass cls)
 {
-    jclass ia_cls = (*env)->FindClass(env, "java/net/InetAddress");
+    jclass ia_cls, ha_cls;
+    puts("HipSocketImpl.nativeInit");
+    fflush(stdout);
+    ia_cls = (*env)->FindClass(env, "java/net/InetAddress");
     if (ia_cls == NULL) {
 	return;
     }
-    puts("Native init");
-    fflush(stdout);
+    ha_cls = (*env)->FindClass(env, "jip/HipAddress");
+    if (ha_cls == NULL) {
+	return;
+    }
     native_fd_id = (*env)->GetFieldID(env, cls, "native_fd", "I");
     localport_id = (*env)->GetFieldID(env, cls, "localport", "I");
     port_id = (*env)->GetFieldID(env, cls, "port", "I");
+    ha_value_id = (*env)->GetFieldID(env, ha_cls, "value", "S");
     dump_id = (*env)->GetMethodID(env, cls, "dump", "()V");
     set_address_id = (*env)->GetMethodID(env, cls, "setAddress", "([B)V");
     ia_get_host_address_id = (*env)->GetMethodID(env, ia_cls, "getHostAddress",
@@ -151,53 +158,9 @@ Java_jip_HipSocket_nativeInit (JNIEnv *env, jclass cls)
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocket_bind (JNIEnv *env, jobject obj, jobject addr, jint port)
+Java_jip_HipSocketImpl_create (JNIEnv *env, jobject obj, jboolean is_stream)
 {
-    int fd = (*env)->GetIntField(env, obj, native_fd_id);
-    jstring addr_str = (*env)->CallObjectMethod(env, addr,
-						ia_get_host_address_id);
-    const jbyte *s = (*env)->GetStringUTFChars(env, addr_str, NULL);
-    struct addrinfo hints, *res, *ai;
-    char buffer[256];
-    int error, i;
-    snprintf(buffer, sizeof buffer, "%d", port);
-    printf("Bind: <%s:%d> %d\n", s, port, fd);
-    fflush(stdout);
-    (*env)->CallVoidMethod(env, obj, dump_id);
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET6;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-    hints.ai_flags = AI_HIP;
-    error = getaddrinfo(s, buffer, &hints, &res);
-    if (error) {
-	char buf[256];
-	snprintf(buf, sizeof buf, "Getaddrinfo failed %d: %s", error,
-		 gai_strerror(error));
-	CHECK(-1, buf);
-    }
-    (*env)->ReleaseStringUTFChars(env, addr_str, s);
-    printf("got gai addresses:\n");
-    for(ai = res; ai != NULL; ai = ai->ai_next) {
-      struct sockaddr_in6 *s = (struct sockaddr_in6 *)ai->ai_addr;
-
-      //s->sin6_port = htons(port);
-	printf("GAI: ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d ai_addrlen=%d ai_canonname=%s\n",
-	       ai->ai_flags, ai->ai_family, ai->ai_socktype, ai->ai_protocol, ai->ai_addrlen, ai->ai_canonname);
-	printf("\tAF_INET6: ship6_port=%d in6_addr=0x", port);
-	for (i = 0; i < 16; i++) printf("%02x", (unsigned char) (s->sin6_addr.in6_u.u6_addr8[i]));
-	printf("\n");
-    }
-    printf("\n\n");
-    ((struct sockaddr_in6 *)res->ai_addr)->sin6_addr = in6addr_any;
-    CHECK(bind(fd, res->ai_addr, res->ai_addrlen), "Bind failed");
-    (*env)->SetIntField(env, obj, localport_id, port);
-}
-
-JNIEXPORT void JNICALL
-Java_jip_HipSocket_create (JNIEnv *env, jobject obj, jboolean is_stream)
-{
-    int fd = socket(AF_INET6, is_stream ? SOCK_STREAM : SOCK_DGRAM, 0);
+    int fd = socket(PF_HIP, is_stream ? SOCK_STREAM : SOCK_DGRAM, 0);
     printf("Create: %d %d\n", fd, is_stream);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
@@ -206,62 +169,40 @@ Java_jip_HipSocket_create (JNIEnv *env, jobject obj, jboolean is_stream)
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocket_connect (JNIEnv *env, jobject obj, jobject address,
-			    jint port)
+Java_jip_HipSocketImpl_bind (JNIEnv *env, jobject obj, jobject addr, jint port)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
-    jstring addr_str = (*env)->CallObjectMethod(env, address,
-						ia_get_host_address_id);
-    const jbyte *s = (*env)->GetStringUTFChars(env, addr_str, NULL);
-    struct addrinfo hints, *res, *ai;
-    struct sockaddr_in6 addr;
-    jbyteArray addr_bytes;
-    char buffer[256];
-    int error, i;
-    snprintf(buffer, sizeof buffer, "%d", port);
-    printf("Connect: <%s:%d> %d\n", s, port, fd);
+    struct sockaddr_eid eid_addr;
+    printf("Bind: <%d> %d\n", port, fd);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET6;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_HIP;
-    error = getaddrinfo(s, buffer, &hints, &res);
-    if (error) {
-	char buf[256];
-	snprintf(buf, sizeof buf, "Getaddrinfo failed %d: %s", error,
-		 gai_strerror(error));
-	CHECK(-1, buf);
-    }
-    (*env)->ReleaseStringUTFChars(env, addr_str, s);
-    printf("got gai addresses:\n");
-    for(ai = res; ai != NULL; ai = ai->ai_next) {
-	struct sockaddr_in6 *s = (struct sockaddr_in6 *)ai->ai_addr;
-	int i = 0;
-
-	//s->sin6_port = htons(port);
-	printf("GAI: ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d ai_addrlen=%d ai_canonname=%s\n",
-	       ai->ai_flags, ai->ai_family, ai->ai_socktype, ai->ai_protocol, ai->ai_addrlen, ai->ai_canonname);
-	printf("\tAF_INET6: ship6_port=%d in6_addr=0x", port);
-	for (i = 0; i < 16; i++) printf("%02x", (unsigned char) (s->sin6_addr.in6_u.u6_addr8[i]));
-	printf("\n");
-    }
-    printf("\n\n");
-    CHECK(connect(fd, res->ai_addr, res->ai_addrlen), "Connect failed");
-    (*env)->SetIntField(env, obj, port_id, port);
-    memset(&addr, 0, sizeof addr);
-    memcpy(&addr, res->ai_addr, res->ai_addrlen);
-    for (i = 0; i < 16; i++) printf("%02x", (unsigned char) (addr.sin6_addr.in6_u.u6_addr8[i]));
-    printf("\n");
-    addr_bytes = (*env)->NewByteArray(env, sizeof addr.sin6_addr.s6_addr);
-    (*env)->SetByteArrayRegion(env, addr_bytes, 0,
-			       sizeof addr.sin6_addr.s6_addr,
-			       (jbyte *) addr.sin6_addr.s6_addr);
-    (*env)->CallVoidMethod(env, obj, set_address_id, addr_bytes);
+    eid_addr.eid_family = PF_HIP;
+    eid_addr.eid_port = port;
+    eid_addr.eid_val = (*env)->GetShortField(env, addr, ha_value_id);
+    CHECK(bind(fd, (struct sockaddr *) &eid_addr, sizeof eid_addr),
+	  "Bind failed");
+    (*env)->SetIntField(env, obj, localport_id, port);
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocket_listen (JNIEnv *env, jobject obj, jint backlog)
+Java_jip_HipSocketImpl_connect (JNIEnv *env, jobject obj, jobject address,
+				jint port)
+{
+    int fd = (*env)->GetIntField(env, obj, native_fd_id);
+    struct sockaddr_eid eid_addr;
+    printf("Connect: <%d> %d\n", port, fd);
+    fflush(stdout);
+    (*env)->CallVoidMethod(env, obj, dump_id);
+    eid_addr.eid_family = PF_HIP;
+    eid_addr.eid_port = port;
+    eid_addr.eid_val = (*env)->GetShortField(env, address, ha_value_id);
+    CHECK(connect(fd, (struct sockaddr *) &eid_addr, sizeof eid_addr),
+	  "Connect failed");
+    (*env)->SetIntField(env, obj, port_id, port);
+}
+
+JNIEXPORT void JNICALL
+Java_jip_HipSocketImpl_listen (JNIEnv *env, jobject obj, jint backlog)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     printf("Listen: %d %d\n", fd, backlog);
@@ -271,35 +212,26 @@ Java_jip_HipSocket_listen (JNIEnv *env, jobject obj, jint backlog)
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocket_accept (JNIEnv *env, jobject obj, jobject impl)
+Java_jip_HipSocketImpl_accept (JNIEnv *env, jobject obj, jobject impl)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     int s;
-    struct sockaddr_in6 local_addr, remote_addr;
+    struct sockaddr_eid local_addr, remote_addr;
     socklen_t local_len = sizeof local_addr, remote_len = sizeof remote_addr;
-    jbyteArray remote_bytes;
     printf("Accept: %d\n", fd);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
-    s = accept(fd, NULL, NULL);
+    s = accept(fd, (struct sockaddr *) &remote_addr, &remote_len);
     CHECK(s, "Accept failed");
     CHECK(getsockname(s, (struct sockaddr *) &local_addr, &local_len),
 	  "Sockname failed");
-    CHECK(getpeername(s, (struct sockaddr *) &remote_addr, &remote_len),
-	  "Peername failed");
     (*env)->SetIntField(env, impl, native_fd_id, s);
-    (*env)->SetIntField(env, impl, localport_id, ntohs(local_addr.sin6_port));
-    (*env)->SetIntField(env, impl, port_id, ntohs(remote_addr.sin6_port));
-    remote_bytes = (*env)->NewByteArray(env,
-					sizeof remote_addr.sin6_addr.s6_addr);
-    (*env)->SetByteArrayRegion(env, remote_bytes, 0,
-			       sizeof remote_addr.sin6_addr.s6_addr,
-			       (jbyte *) remote_addr.sin6_addr.s6_addr);
-    (*env)->CallVoidMethod(env, impl, set_address_id, remote_bytes);
+    (*env)->SetIntField(env, impl, localport_id, ntohs(local_addr.eid_port));
+    (*env)->SetIntField(env, impl, port_id, ntohs(remote_addr.eid_port));
 }
 
 JNIEXPORT jint JNICALL
-Java_jip_HipSocket_available (JNIEnv *env, jobject obj)
+Java_jip_HipSocketImpl_available (JNIEnv *env, jobject obj)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     int value;
@@ -311,7 +243,7 @@ Java_jip_HipSocket_available (JNIEnv *env, jobject obj)
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocket_close (JNIEnv *env, jobject obj)
+Java_jip_HipSocketImpl_close (JNIEnv *env, jobject obj)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     printf("Close: %d\n", fd);
@@ -321,7 +253,7 @@ Java_jip_HipSocket_close (JNIEnv *env, jobject obj)
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocket_sendUrgentData (JNIEnv *env, jobject obj, jint data)
+Java_jip_HipSocketImpl_sendUrgentData (JNIEnv *env, jobject obj, jint data)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     char c = data & 0xFF;
@@ -332,7 +264,7 @@ Java_jip_HipSocket_sendUrgentData (JNIEnv *env, jobject obj, jint data)
 }
 
 JNIEXPORT jobject JNICALL
-Java_jip_HipSocket_getOption (JNIEnv *env, jobject obj, jint id)
+Java_jip_HipSocketImpl_getOption (JNIEnv *env, jobject obj, jint id)
 {
     jobject result = NULL;
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
@@ -368,7 +300,8 @@ Java_jip_HipSocket_getOption (JNIEnv *env, jobject obj, jint id)
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocket_setOption (JNIEnv *env, jobject obj, jint id, jobject value)
+Java_jip_HipSocketImpl_setOption (JNIEnv *env, jobject obj, jint id,
+				  jobject value)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     printf("Set option: %d %d\n", fd, id);

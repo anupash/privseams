@@ -14,7 +14,7 @@ import java.net.SocketImplFactory;
  * socket factory to use when creating new sockets.  For any network
  * application this requires code like
  * <pre>
- * HipSocketFactory factory = new HipSocketFactory();
+ * HipSocketImplFactory factory = new HipSocketImplFactory();
  * Socket.setSocketImplFactory(factory);
  * </pre>
  * Code using a {@link java.net.ServerSocket} also requires
@@ -24,10 +24,10 @@ import java.net.SocketImplFactory;
  *
  * @author Jaakko Kangasharju
  */
-public class HipSocketFactory implements SocketImplFactory {
+public class HipSocketImplFactory implements SocketImplFactory {
 
     public SocketImpl createSocketImpl () {
-	return new HipSocket();
+	return new HipSocketImpl();
     }
 
 }
