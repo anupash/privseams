@@ -151,12 +151,6 @@
       &nbsp;[*]   HIP: debugging (NEW)
     </para>
     <para>
-      We urge you to enable the preemptive kernel option. You can run HIP
-      without this, but you will experience losses of interaction with
-      underlying host. This typically happens when you load the HIP module,
-      or when the module sends HIP messages to the network.
-    </para>
-    <para>
       IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
       dependencies after you have selected HIP. We recommend that you
       compile HIP as a kernel module. Currently, there is bug in the HIP
