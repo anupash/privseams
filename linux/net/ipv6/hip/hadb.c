@@ -907,16 +907,13 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	struct hip_spi_in_item *item, *tmp;
 
 	/* assumes locked entry */
-	HIP_DEBUG("entry=0x%p\n", entry);
-
+	HIP_DEBUG("entry=0x%p SPI=0x%x\n", entry, spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		if (item->spi == spi) {
 			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
-
 			HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
-
 			hip_delete_sa(item->spi, &entry->hit_our);
 			hip_delete_sa(item->new_spi, &entry->hit_our);
 			list_del(&item->list);
@@ -933,13 +930,11 @@ void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
 
 	/* assumes locked entry */
 	HIP_DEBUG("entry=0x%p\n", entry);
-
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
 			  item->spi, item->new_spi, item);
 		HIP_DEBUG("remove SPI from HIT-SPI HT\n");
 		hip_hadb_remove_hs(item->spi);
-
 		hip_delete_sa(item->spi, &entry->hit_our);
 		hip_delete_sa(item->new_spi, &entry->hit_our);
 		list_del(&item->list);
@@ -952,8 +947,7 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 	struct hip_spi_out_item *item, *tmp;
 
 	/* assumes locked entry */
-
-	HIP_DEBUG("entry=0x%p\n", entry);
+	HIP_DEBUG("entry=0x%p SPI=0x%x\n", entry, spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 		if (item->spi == spi) {
 			struct hip_peer_addr_list_item *addr_item, *addr_tmp;
@@ -962,13 +956,11 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 				  item->spi, item->new_spi, item);
 			hip_delete_sa(item->spi, &entry->hit_peer);
 			hip_delete_sa(item->new_spi, &entry->hit_peer);
-
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);
 				kfree(addr_item);
 			}
-
 			list_del(&item->list);
 			kfree(item);
 		}
@@ -991,13 +983,11 @@ void hip_hadb_delete_outbound_spis(hip_ha_t *entry)
 			  spi_out->spi, spi_out->new_spi, spi_out);
 		hip_delete_sa(spi_out->spi, &entry->hit_peer);
 		hip_delete_sa(spi_out->new_spi, &entry->hit_peer);
-
 		/* delete peer's addresses */
 		list_for_each_entry_safe(addr_item, addr_tmp, &spi_out->peer_addr_list, list) {
 			list_del(&addr_item->list);
 			kfree(addr_item);
 		}
-
 		list_del(&spi_out->list);
 		kfree(spi_out);
         }
@@ -1010,67 +1000,55 @@ void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex)
 {
 	struct hip_spi_in_item *item, *tmp;
 	/* assumes that inbound spi already exists in ha's spis_in */
-	HIP_DEBUG("spi=0x%x ifindex=%d\n", spi, ifindex);
+	HIP_DEBUG("SPI=0x%x ifindex=%d\n", spi, ifindex);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->spi == spi) {
-			HIP_DEBUG("updated spi-ifindex mapping\n");
+			HIP_DEBUG("found updated spi-ifindex mapping\n");
 			item->ifindex = ifindex;
-			break;
-		}
-		if (item->new_spi == spi) {
-			/* todo: remove, new_spi is not yet in use ? */
-			HIP_DEBUG("test: new_spi matches, updated spi-ifindex mapping, REMOVE ?\n");
-			item->ifindex = ifindex;
-			break;
+			return;
 		}
         }
-	HIP_DEBUG("returning\n");
+	HIP_DEBUG("SPI not found, returning\n");
 }
 
-/* Get the ifindex of given SPI */
+/* Get the ifindex of given SPI, returns 0 if SPI was not found */
 int hip_hadb_get_spi_ifindex(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_in_item *item, *tmp;
-	int ifindex = 0;
 
 	HIP_DEBUG("spi=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->spi == spi || item->new_spi == spi) {
-			ifindex = item->ifindex;
-			break;
+			HIP_DEBUG("found\n");
+			return item->ifindex;
 		}
         }
-	if (!ifindex)
-		HIP_DEBUG("not found\n");
-	return ifindex;
+	HIP_DEBUG("ifindex not found for the SPI\n");
+	return 0;
 }
 
-/* Get the SPI of given ifindex */
+/* Get the SPI of given ifindex, returns 0 if ifindex was not found  */
 uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex)
 {
 	struct hip_spi_in_item *item, *tmp;
-	uint32_t spi = 0;
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->ifindex == ifindex) {
 			HIP_DEBUG("found\n");
-			spi = item->spi;
-			break;
+			return item->spi;
 		}
         }
-	if (!spi)
-		HIP_DEBUG("not found\n");
-	return spi;
+	HIP_DEBUG("SPI not found for the ifindex\n");
+	return 0;
 }
 
 uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
-	uint32_t spi = 0;
 
 	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
@@ -1078,41 +1056,37 @@ uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 			  item->ifindex, item->spi, item->nes_spi_out, item->seq_update_id);
 		if (item->seq_update_id == peer_update_id) {
 			HIP_DEBUG("found\n");
-			spi = item->spi;
-			break;
+			return item->spi;
 		}
         }
-	HIP_DEBUG("returning SPI 0x%x\n", spi);
-	return spi;
+	HIP_DEBUG("SPI not found\n");
+	return 0;
 }
 
-
-/* test: get the SPI of the SA belonging to the interface through
+/* Get the SPI of the SA belonging to the interface through
    which we received the UPDATE */
 /* also sets updating flag of SPI to 1 */
 uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *dev_addr)
 {
 	struct hip_spi_in_item *item, *tmp;
 	int ifindex;
-	uint32_t spi = 0;
 
 	hip_print_hit("dst dev_addr", dev_addr);
 	ifindex = hip_ipv6_devaddr2ifindex(dev_addr);
 	HIP_DEBUG("ifindex of dst dev=%d\n", ifindex);
 	if (!ifindex)
-		goto out;
+		return 0;
 
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->ifindex == ifindex) {
 			item->updating = 1;
-			spi = item->spi;
-			break;
+			return item->spi;
 		}
         }
- out:
-	HIP_DEBUG("returning spi 0x%x\n", spi);
-	return spi;
+
+	HIP_DEBUG("SPI not found for ifindex\n");
+	return 0;
 }
 
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
@@ -1120,7 +1094,6 @@ void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
 	struct hip_spi_in_item *item, *tmp;
 
 	HIP_DEBUG("spi=0x%x set=%d\n", spi, set);
-
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: ifindex=%d spi=0x%x updating=%d\n",
 			  item->ifindex, item->spi, item->updating);
@@ -1137,7 +1110,6 @@ void hip_update_clear_status(hip_ha_t *entry, uint32_t spi)
 	struct hip_spi_in_item *item, *tmp;
 
 	HIP_DEBUG("spi=0x%x\n", spi);
-
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: spi=0x%x\n", item->spi);
 		if (item->spi == spi) {
@@ -1179,8 +1151,8 @@ void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
 void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi)
 {
 	struct hip_spi_out_item *item, *tmp;
-	HIP_DEBUG("spi=0x%x new_spi=0x%x\n", spi, new_spi);
 
+	HIP_DEBUG("spi=0x%x new_spi=0x%x\n", spi, new_spi);
 	list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
 			  item->spi, item->new_spi);
@@ -1200,20 +1172,19 @@ void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi)
 uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
-	uint32_t new_spi = 0;
 
 	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
 			  item->spi, item->new_spi);
 		if (item->seq_update_id == peer_update_id) {
-			new_spi = item->new_spi;
-			break;
+			return item->new_spi;
+			
 		}
         }
-	return new_spi;
+	HIP_DEBUG("New SPI not found\n");
+	return 0;
 }
-
 
 /* switch from Old SPI to New SPI (inbound SA) */
 /* caller must delete the Old SPI */
@@ -1258,78 +1229,72 @@ void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi)
 }
 
 
-void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
-			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
-			   uint16_t keymat_index)
+void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
+			   uint32_t update_id, int update_flags_or,
+			   struct hip_nes *nes, uint16_t keymat_index)
 {
-	HIP_DEBUG("spi=0x%x direction=%s update_id=%u update_flags_or=0x%x keymat_index=%u nes=0x%p\n",
-		  spi, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT",
-		  update_id, update_flags_or, keymat_index, nes);
+	struct hip_spi_in_item *item, *tmp;
+
+	HIP_DEBUG("spi=0x%x update_id=%u update_flags_or=0x%x keymat_index=%u nes=0x%p\n",
+		  spi, update_id, update_flags_or, keymat_index, nes);
 	if (nes)
 		HIP_DEBUG("NES: old_spi=0x%x new_spi=0x%x keymat_index=%u\n",
 			  ntohl(nes->old_spi), ntohl(nes->new_spi), ntohs(nes->keymat_index));
 
-	if (direction == HIP_SPI_DIRECTION_IN) {
-		struct hip_spi_in_item *item, *tmp;
-		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-			HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
-				  item->spi, item->new_spi);
-			if (item->spi == spi) {
-				HIP_DEBUG("setting new values\n");
-				if (set_flags & 0x1)
-					item->seq_update_id = update_id;
-				if (set_flags & 0x2)
-					item->update_state_flags |= update_flags_or;
-				if (nes && (set_flags & 0x4)) {
-					item->stored_received_nes.old_spi = ntohl(nes->old_spi);
-					item->stored_received_nes.new_spi = ntohl(nes->new_spi);
-					item->stored_received_nes.keymat_index = ntohs(nes->keymat_index);
-				}
-				if (set_flags & 0x8)
-					item->keymat_index = keymat_index;
-
-				return;
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
+			  item->spi, item->new_spi);
+		if (item->spi == spi) {
+			HIP_DEBUG("setting new values\n");
+			if (set_flags & 0x1)
+				item->seq_update_id = update_id;
+			if (set_flags & 0x2)
+				item->update_state_flags |= update_flags_or;
+			if (nes && (set_flags & 0x4)) {
+				item->stored_received_nes.old_spi = ntohl(nes->old_spi);
+				item->stored_received_nes.new_spi = ntohl(nes->new_spi);
+				item->stored_received_nes.keymat_index = ntohs(nes->keymat_index);
 			}
-		}
-	} else
-		HIP_ERROR("unknown direction %d, REMOVE ?\n", direction);
+			if (set_flags & 0x8)
+				item->keymat_index = keymat_index;
 
+			return;
+		}
+	}
 	HIP_ERROR("SPI not found\n");
 }
 
 
+/* returns 1 if given SPI belongs to the SA having direction
+ * @direction, else 0. If @test_new_spi is 1 then test new_spi instead
+ * of spi */
 int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			       int direction, int test_new_spi)
 {
-	int found = 0;
 	_HIP_DEBUG("spi=0x%x direction=%d test_new_spi=%d\n",
 		  spi, direction, test_new_spi);
-	/* lock or not ? */
+	/* assumes locked entry  */
 	if (direction == HIP_SPI_DIRECTION_IN) {
 		struct hip_spi_in_item *item, *tmp;
 		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 			_HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
-				  item->spi, item->new_spi);
+				   item->spi, item->new_spi);
 			if ( (item->spi == spi && !test_new_spi) ||
-			     (item->new_spi == spi && test_new_spi) ) {
-				found = 1;
-				break;
-			}
+			     (item->new_spi == spi && test_new_spi) )
+				return 1;
 		}
         } else {
 		struct hip_spi_out_item *item, *tmp;
 		list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 			_HIP_DEBUG("test item: spi_out=0x%x new_spi=0x%x\n",
-				  item->spi, item->new_spi);
+				   item->spi, item->new_spi);
 			if ( (item->spi == spi && !test_new_spi) ||
-			     (item->new_spi == spi && test_new_spi) ) {
-				found = 1;
-				break;
-			}
+			     (item->new_spi == spi && test_new_spi) )
+				return 1;
 		}
 	}
-	HIP_DEBUG("found=%d\n", found);
-	return found;
+	HIP_DEBUG("not found\n");
+	return 0;
 }
 
 /* have_nes is 1, if there is NES in the same packet as the ACK was */
@@ -1360,6 +1325,8 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes)
 		uint32_t puid = ntohl(*peer_update_id);
 
 		HIP_DEBUG("peer Update ID=%u\n", puid);
+
+		/* see if your NES is acked and maybe if corresponging NES was received */
 		list_for_each_entry_safe(in_item, in_tmp, &entry->spis_in, list) {
 			HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
 				  in_item->spi, in_item->seq_update_id);
@@ -1398,7 +1365,6 @@ void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id)
 	struct hip_spi_in_item *item, *tmp;
 
 	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
-
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
 			  item->spi, item->seq_update_id);
@@ -1445,24 +1411,6 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 	HIP_DEBUG("newest spi_in is 0x%x\n", spi);
 	return spi;
 }
-
-/*
-
-old, todo: update, validate
-
-outbound SPIs and the addresses belonging to a SPI value are in list:
-
--------   -------          -------
-|entry|-->|SPI 1|--> .. -->|SPI n|
--------   -------          -------
-             |                |
-         ----------       ----------
-         |addr_1_1|       |addr_n_1|
-         |   ..   |       |   ..   | <-- peer addresses
-         |addr_1_i|       |addr_n_i|
-         ----------       ----------
-
-*/
 
 /* get pointer to the SPI list or NULL if SPI list does not exist */
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)

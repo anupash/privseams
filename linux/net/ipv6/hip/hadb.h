@@ -84,7 +84,7 @@ void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi)
 uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t spi);
 void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi);
 void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi);
-void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
+void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
 			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
 			   uint16_t keymat_index);
 void hip_update_clear_status(hip_ha_t *entry, uint32_t spi);
