@@ -1812,7 +1812,6 @@ int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
  * @msg: the message where the parameter will be appended
  * @is_reply: 1 if this packet is a reply to another UPDATE
  * @keymat_index: Keymat Index in host byte order
- * @update_id: UPDATE ID in host byte order
  * @old_spi: Old SPI value in host byte order
  * @new_spi: New SPI value in host byte order
  * 
@@ -1836,6 +1835,25 @@ int hip_build_param_nes(struct hip_common *msg, int is_reply,
 	nes.old_spi = htonl(old_spi);
 	nes.new_spi = htonl(new_spi);
 	err = hip_build_param(msg, &nes);
+	return err;
+}
+
+/**
+ * hip_build_param_seq - build and append HIP SEQ parameter
+ * @msg: the message where the parameter will be appended
+ * @seq: Update ID
+ * 
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
+{
+	int err = 0;
+	struct hip_seq seq;
+
+	hip_set_param_type(&seq, HIP_PARAM_SEQ);
+	hip_calc_generic_param_len(&seq, sizeof(struct hip_seq), 0);
+	seq.update_id = htonl(update_id);
+	err = hip_build_param(msg, &seq);
 	return err;
 }
 

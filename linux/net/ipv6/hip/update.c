@@ -589,6 +589,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 	/* test code, not in specs */
+#if 0
 	if (nes->old_spi != nes->new_spi)
 		err = hip_build_param_nes(update_packet, 1,
 					  our_current_keymat_index, ntohs(nes->update_id),
@@ -597,6 +598,14 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		err = hip_build_param_nes(update_packet, 1,
 					  our_current_keymat_index+1 /* TEST */, ntohs(nes->update_id),
 					  entry->spi_in, entry->spi_in);
+#endif
+	if (nes->old_spi != nes->new_spi)
+		err = hip_build_param_nes(update_packet, 1, our_current_keymat_index,
+					  prev_spi_in, new_spi_in);
+	else /* ack to rea update */
+		err = hip_build_param_nes(update_packet, 1, our_current_keymat_index+1 /* TEST */, 
+					  entry->spi_in, entry->spi_in);
+
 	if (err) {
 		HIP_ERROR("Building of NES failed\n");
 		goto out_err;
@@ -926,6 +935,7 @@ int hip_receive_update(struct sk_buff *skb)
 	struct hip_common *msg;
 	struct in6_addr *hits;
 	struct hip_nes *nes;
+	struct hip_seq *seq;
 	int state = 0;
 	uint16_t pkt_update_id; /* UPDATE ID in packet */
 	uint16_t update_id_in;  /* stored incoming UPDATE ID */
@@ -953,14 +963,12 @@ int hip_receive_update(struct sk_buff *skb)
 
 	HIP_DEBUG("Received UPDATE in state %s\n", hip_state_str(state));
 
-#if 0
 	/* in state R2-SENT: Receive UPDATE, go to ESTABLISHED and
 	 * process from ESTABLISHED state */
 	if (state == HIP_STATE_R2_SENT) {
 		state = entry->state = HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
 	}
-#endif
 
 	if (! (state == HIP_STATE_ESTABLISHED || state == HIP_STATE_REKEYING) ) {
 		HIP_DEBUG("received UPDATE when not on established or rekeying state\n");
@@ -973,11 +981,16 @@ int hip_receive_update(struct sk_buff *skb)
 		err = -ENOMSG;
 		goto out_err;
 	}
-	HIP_DEBUG("NES found\n");
+	seq = hip_get_param(msg, HIP_PARAM_SEQ);
+	if (!seq) {
+		HIP_ERROR("UPDATE contained no SEQ parameter\n");
+		err = -ENOMSG;
+		goto out_err;
+	}
 
 	is_reply = ntohs(nes->keymat_index) & 0x8000 ? 1 : 0;
 	keymat_index = 0x7fff & ntohs(nes->keymat_index);
-	pkt_update_id = ntohs(nes->update_id);
+	pkt_update_id = ntohs(seq->update_id);
 
 	HIP_DEBUG("NES: is reply packet: %s\n", is_reply ? "yes" : "no");
 	HIP_DEBUG("NES: Keymaterial Index: %u\n", keymat_index);
@@ -1157,7 +1170,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		    int addr_count, int ifindex)
 {
 	int err = 0;
-	uint16_t update_id_out;
+	uint16_t update_id_out = 0;
 	uint32_t spi = 0;
 	uint32_t new_spi_in = 0;
 	struct hip_common *update_packet = NULL;
@@ -1243,18 +1256,30 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	}
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
-
+#if 0
 	if (addr_list && addr_count > 0) /* mm02-pre3 5.2 Host multihoming */
 		err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
 					  update_id_out, new_spi_in, new_spi_in); 
 	else /* plain UPDATE */
 		err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
 					  update_id_out, entry->spi_in, new_spi_in); 
+#endif
+	if (addr_list && addr_count > 0) /* mm02-pre3 5.2 Host multihoming */
+		err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
+					  new_spi_in, new_spi_in); 
+	else /* plain UPDATE */
+		err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
+					  entry->spi_in, new_spi_in); 
 	if (err) {
 		HIP_ERROR("Building of NES param failed\n");
 		goto out_err;
 	}
 
+	err = hip_build_param_seq(update_packet, update_id_out);
+	if (err) {
+		HIP_ERROR("Building of SEQ param failed\n");
+		goto out_err;
+	}
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
