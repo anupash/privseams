@@ -42,6 +42,8 @@
 #define atomic_set(x, v) \
          ((*x).counter = v)
 
+#define read_lock_irqsave
+
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))
 #endif

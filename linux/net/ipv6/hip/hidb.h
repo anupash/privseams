@@ -9,6 +9,7 @@
 #else
 
 typedef struct { } rwlock_t;
+#define RW_LOCK_UNLOCKED (rwlock_t) { }
 
 #endif /* __KERNEL__ */
 
@@ -45,11 +46,6 @@ struct hip_hadb_multi {
 	void *           m_arg;
 	int              m_type;
 };
-
-#ifndef __KERNEL__
-typedef struct { } rwlock_t;
-#  define RW_LOCK_UNLOCKED (rwlock_t) { }
-#endif /* __KERNEL__ */
 
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
