@@ -2701,6 +2701,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 {
 	int err = 0;
 	uint16_t csum;
+	struct in6_addr tmp_hit;
 
 	_HIP_DEBUG("skb len=%d, v6hdr payload_len=%d/hip hdr pkt total len=%d\n",
 		  (*skb)->len, ntohs((*skb)->nh.ipv6h->payload_len),
@@ -2739,6 +2740,29 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	    !ipv6_addr_any(&hip_common->hitr)) {
 		HIP_ERROR("Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
 		err = -EAFNOSUPPORT;
+		goto out_err;
+	}
+
+	/* XX FIX: we should iterate through all local HITs.. */
+	err = hip_get_any_local_hit(&tmp_hit);
+	if (err) {
+		HIP_ERROR("No HIT found the localhost\n");
+		err = -EFAULT;
+		goto out_err;
+	}
+
+	/* Check that we are the actual receiver */
+
+	if (memcmp(&tmp_hit, &hip_common->hitr, sizeof(struct in6_addr))) {
+		HIP_DEBUG("Dropping HIP packet. Not for us.\n");
+		err = -EADDRNOTAVAIL;
+		goto out_err;
+	}
+
+
+	if (!memcmp(&tmp_hit, &hip_common->hits, sizeof(struct in6_addr))) {
+		HIP_DEBUG("Dropping HIP packet. Loopback not supported.\n");
+		err = -ENOSYS;
 		goto out_err;
 	}
 

@@ -206,7 +206,7 @@ int hip_csum_verify(struct sk_buff *skb)
 	hip_common = (struct hip_common*) skb->h.raw;
         len = hip_get_msg_total_len(hip_common);
 
-	_HIP_HEXDUMP("hip_csum_verify data", skb->h.raw, (len + 1) << 3);
+	_HIP_HEXDUMP("hip_csum_verify data", skb->h.raw, len);
 	_HIP_DEBUG("len=%d\n", len);
 	_HIP_HEXDUMP("saddr", &(skb->nh.ipv6h->saddr),
 		     sizeof(struct in6_addr));

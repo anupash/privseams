@@ -1060,6 +1060,10 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 	ipv6_addr_set(&daddr, htonl(0xFF020000), htonl(0x00000000),
 		      htonl(0x00000000), htonl(0x00000001));
 
+	/* This works */
+	//ipv6_addr_set(&daddr, htonl(0x3ffe0000), htonl(0x00000000),
+	//	      htonl(0x00000000), htonl(0x00000001));
+
 	/* Iterate through all the network devices, recording source
 	 * addresses for BOS packets */
 
@@ -1116,7 +1120,7 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 		        spin_lock_bh(&ifa->lock);
 			HIP_DEBUG_IN6ADDR("addr", &ifa->addr);
 			if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL){
-			       HIP_DEBUG("not counting link local address\n");
+				HIP_DEBUG("not counting link local address\n");
 			} else {
 				if_idx[addr_count] = saddr_dev->ifindex;
 			        ipv6_addr_copy(&(saddr[addr_count++]), 
