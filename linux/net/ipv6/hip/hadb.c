@@ -83,7 +83,7 @@ static inline void hip_hadb_rem_state_spi(void *entry)
 
 	ha->hastate &= ~HIP_HASTATE_SPIOK;
 	hip_ht_delete(&hadb_spi, entry);
-//	hip_hadb_delete_spi_list(ha, ha->spi_in); // check
+//	hip_hadb_delete_spi_list(ha, ha->default_spi_out); // check
 }
 
 /*
@@ -264,7 +264,6 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	entry->hastate = HIP_HASTATE_INVALID;
 
 	return entry;
-
 }
 
 /**
@@ -344,7 +343,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	int err = 0;
         struct hip_peer_addr_list_item *s, *candidate = NULL;
 	struct timeval latest, dt;
-	struct hip_peer_spi_list_item *spi_list;
+//	struct hip_peer_spi_list_item *spi_list;
 
 #ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
@@ -869,8 +868,25 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 
 /* mm-02 test */
 
+/*
+
+outbound SPIs and the addresses belonging to a SPI value are in list:
+
+-------   -------          -------
+|entry|-->|SPI 1|--> .. -->|SPI n|
+-------   -------          -------
+             |                |
+         ----------       ----------
+         |addr_1_1|       |addr_n_1|
+         |   ..   |       |   ..   | <-- peer addresses
+         |addr_1_i|       |addr_n_i|
+         ----------       ----------
+
+*/
+
 /* create a new SPI list with no peer addresses */
 /* @spi is in host byte order */
+/* if @spi already exists no new SPI list is created */
 int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi)
 {
 	int err = 0;
@@ -907,9 +923,12 @@ int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi)
 	return err;
 }
 
+/* get pointer to the SPI list */
 struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_peer_spi_list_item *item, *tmp;
+
+	/* no locking */
 
 	HIP_DEBUG("spi=0x%x\n", spi);
 
@@ -918,7 +937,6 @@ struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t s
 		return NULL;
 	}
 
-	/* no locking */
         list_for_each_entry_safe(item, tmp, &entry->peer_spi_list, list) {
 		_HIP_DEBUG("item=0x%p\n", item);
 		if (item->spi == spi)
@@ -932,7 +950,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			     uint32_t interface_id, int address_state, uint32_t lifetime,
 			     int is_preferred_addr)
 {
-	/* no locking (?) */
+	/* no locking */
 	int err = 0;
 	struct hip_peer_spi_list_item *spi_list;
 	struct hip_peer_addr_list_item *new_addr = NULL;
@@ -1079,22 +1097,32 @@ void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi)
 		HIP_DEBUG("SPI not found\n");
 }
 
-uint32_t hip_get_default_spi_out(struct in6_addr *hit)
+/** hip_get_default_spi_out - Get the SPI to use in the outbound ESP packet
+ * @hit: peer HIT
+ * @state_ok: status of SPI lookup
+ *
+ * On successful return state_ok is 1, on error it is 0.
+ *
+ * Returns: the SPI value to use in the packet, or 0 on error.
+*/
+uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
 {
 	uint32_t spi;
 	hip_ha_t *entry;
 
-	HIP_DEBUG("\n");
+	_HIP_DEBUG("\n");
 
 	entry = hip_hadb_find_byhit(hit);
 	if (!entry) {
 		HIP_DEBUG("entry not found\n");
+		*state_ok = 0;
 		return 0;
 	}
 
 	HIP_LOCK_HA(entry);
 	spi = entry->default_spi_out;
 	HIP_UNLOCK_HA(entry);
+	*state_ok = spi ? 1 : 0;
 	return spi;
 }
 
@@ -1168,9 +1196,9 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 		goto error;
 
 	if ( (len += snprintf(page+len, count-len,
-			      " 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x %s",
+			      " 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x %s",
 			      entry->spi_in, entry->spi_out, entry->new_spi_in,
-			      entry->new_spi_out, entry->lsi_our, entry->lsi_peer,
+			      entry->new_spi_out, entry->default_spi_out, entry->lsi_our, entry->lsi_peer,
 			      entry->esp_transform <=
 			      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
 			      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
@@ -1292,7 +1320,7 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 
 	ps.len = snprintf(page, count,
 		       "state hastate refcnt peer_controls hit_our hit_peer "
-		       "spi_in spi_out new_spi_in new_spi_out lsi_our lsi_peer esp_transform "
+		       "spi_in spi_out new_spi_in new_spi_out default_spi_out lsi_our lsi_peer esp_transform "
 		       "birthday keymat_index keymat_calc_index "
 		       "update_id_in update_id_out dh_len\n");
 
@@ -1443,6 +1471,7 @@ int hip_proc_read_hadb_peer_spi_list(char *page, char **start, off_t off,
 	} else
 		page[ps.len] = '\0';
 
+	hip_hadb_dump_spis();
 	return ps.len;
 }
 
@@ -1495,6 +1524,34 @@ void hip_hadb_dump_hits(void)
 	kfree(string);
 }
 
+void hip_hadb_dump_spis(void)
+{
+	int i;
+	hip_ha_t *entry;
+	struct hip_peer_spi_list_item *spi_list, *tmp;
+	char str[INET6_ADDRSTRLEN];
+
+	HIP_DEBUG("\n");
+	HIP_LOCK_HT(&hadb_spi);
+
+	for(i=0;i<HIP_HADB_SIZE;i++) {
+		if (!list_empty(&hadb_byspi[i])) {
+			HIP_DEBUG("HT[%d]\n", i);
+			list_for_each_entry(entry, &hadb_byspi[i], next_spi) {
+				hip_hold_ha(entry);
+				list_for_each_entry_safe(spi_list, tmp, &entry->peer_spi_list, list) {
+					_HIP_DEBUG("SPI list=0x%p\n", spi_list);
+					hip_in6_ntop(&spi_list->preferred_address, str);
+					HIP_DEBUG("SPI=0x%x preferred address=%s\n", spi_list->spi, str);
+				}
+				hip_put_ha(entry);
+			}
+		}
+	}
+	
+	HIP_UNLOCK_HT(&hadb_hit);
+	HIP_DEBUG("end\n");
+}
 
 void hip_init_hadb(void)
 {

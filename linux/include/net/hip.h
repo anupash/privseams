@@ -723,7 +723,7 @@ struct hip_hadb_state
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
-	struct list_head     peer_spi_list;  /* Peer's SPI values, mm-02 */
+	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
 
 	uint32_t             spi_out;       /* outbound IPsec SA SPI */
 	uint32_t             spi_in;        /* inbound IPsec SA SPI */

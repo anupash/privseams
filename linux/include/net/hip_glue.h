@@ -29,6 +29,7 @@ struct hip_callable_functions {
 	int (*hip_trigger_bex) (struct in6_addr *dsthit);
 	void (*hip_handle_ipv6_ifa_notify)(struct inet6_ifaddr *ifp, int event);
 	int (*hip_update_spi_waitlist_ispending)(uint32_t spi);
+	uint32_t (*hip_get_default_spi_out) (struct in6_addr *hit, int *state_ok);
 };
 
 extern struct hip_callable_functions hip_functions;

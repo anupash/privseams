@@ -28,12 +28,12 @@ void hip_hadb_remove_state(hip_ha_t *ha);
 void hip_hadb_remove_state_spi(hip_ha_t *ha);
 void hip_hadb_remove_state_hit(hip_ha_t *ha);
 
-/* existance */
+/* existence */
 int hip_hadb_exists_entry(void *key, int type);
 
 /* debugging */
 void hip_hadb_dump_hits(void);
-//void hip_hadb_dump_spis(void);
+void hip_hadb_dump_spis(void);
 
 /*************** CONSTRUCTS ********************/
 int hip_hadb_exists_entry(void *arg, int type);
@@ -71,7 +71,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 int hip_hadb_dump_spi_list(hip_ha_t *entry, void *unused);
 void hip_hadb_dump_spi_list_all(void);
 void hip_hadb_delete_spi_list(hip_ha_t *entry, uint32_t spi);
-uint32_t hip_get_default_spi_out(struct in6_addr *hit);
+uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
 
 /***********************************************/
 int hip_proc_read_hadb_state(char *page, char **start, off_t off,

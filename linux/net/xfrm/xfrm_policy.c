@@ -811,20 +811,26 @@ restart:
 		}
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		/* set default outbound SPI to packets belonging to
+		 * established HIP state */
 		if (nx == 1 && ipv6_addr_is_hit(&fl->fl6_dst)) {
 			/* with HIP nx is always 1 ? */
 			uint32_t spi;
-			printk(KERN_DEBUG "xfrm_lookup: nx == 1\n");
-			printk(KERN_DEBUG "fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
-			printk(KERN_DEBUG "xfrm_lookup: SPI=0x%x\n", ntohl(xfrm[0]->id.spi));
-			spi = HIP_CALLFUNC(hip_get_default_spi_out, 0) (&fl->fl6_dst);
-			if (!spi) {
-				printk(KERN_DEBUG "outbound SPI not found\n");
-				err = -ENOMSG;
-				goto error;
-			}
-			printk(KERN_DEBUG "changing outbound SPI to 0x%x\n", spi);
-			xfrm[0]->id.spi = htonl(spi);
+			int hip_state_ok = 0;
+
+			printk(KERN_DEBUG "xfrm_lookup nx==1: fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x SPI=0x%x\n",
+			       NIP6(fl->fl6_dst), ntohl(xfrm[0]->id.spi));
+			spi = HIP_CALLFUNC(hip_get_default_spi_out, 0) (&fl->fl6_dst, &hip_state_ok);
+			if (hip_state_ok) {
+				if (!spi) {
+					printk(KERN_DEBUG "outbound SPI not found\n");
+					err = -ENOMSG;
+					goto error;
+				}
+				printk(KERN_DEBUG "changing outbound SPI to 0x%x\n", spi);
+				xfrm[0]->id.spi = htonl(spi);
+			} else
+				printk(KERN_DEBUG "HIT not in ok state, SPI not changed\n"); /* other states ? */
 		}
 #endif
 		dst = &rt->u.dst;
