@@ -189,7 +189,10 @@ enum
 	NET_TR=14,
 	NET_DECNET=15,
 	NET_ECONET=16,
-	NET_SCTP=17, 
+	NET_SCTP=17,
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	NET_HIP=18,
+#endif
 };
 
 /* /proc/sys/kernel/random */
@@ -641,6 +644,12 @@ enum {
 	NET_BRIDGE_NF_CALL_IP6TABLES = 3,
 	NET_BRIDGE_NF_FILTER_VLAN_TAGGED = 4,
 };
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+enum {
+	NET_HIP_TEST = 1,
+};
+#endif
 
 /* CTL_PROC names: */
 

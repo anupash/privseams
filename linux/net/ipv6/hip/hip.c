@@ -40,6 +40,9 @@
 #include <linux/suspend.h>
 #include <linux/completion.h>
 #include <linux/cpumask.h>
+#ifdef CONFIG_SYSCTL
+#include <linux/sysctl.h>
+#endif
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -92,6 +95,58 @@ static struct inet6_protocol hip_protocol = {
 	.err_handler = hip_err_handler,
 	.flags       = INET6_PROTO_NOPOLICY,
 };
+
+#ifdef CONFIG_SYSCTL
+/* /proc/sys/net/hip */
+int sysctl_hip_test = 0;
+static struct ctl_table_header *hip_sysctl_header = NULL;
+
+static ctl_table hip_table[] = {
+	{
+		.ctl_name	= NET_HIP_TEST,
+		.procname	= "test",
+		.data		= &sysctl_hip_test,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec
+	},
+	{ .ctl_name = 0 }
+};
+
+static ctl_table hip_net_table[] = {
+	{
+		.ctl_name	= NET_HIP,
+		.procname	= "hip",
+		.mode		= 0555,
+		.child		= hip_table
+	},
+        { .ctl_name = 0 }
+};
+
+static ctl_table hip_root_table[] = {
+	{
+		.ctl_name	= CTL_NET,
+		.procname	= "net",
+		.mode		= 0555,
+		.child		= hip_net_table
+	},
+        { .ctl_name = 0 }
+};
+
+int hip_register_sysctl(void)
+{
+	HIP_DEBUG("\n");
+	hip_sysctl_header = register_sysctl_table(hip_root_table, 0);
+	return (hip_sysctl_header ? 1 : 0);
+}
+
+void hip_unregister_sysctl(void)
+{
+	HIP_DEBUG("\n");
+	if (hip_sysctl_header)
+		unregister_sysctl_table(hip_sysctl_header);
+}
+#endif
 
 /**
  * hip_get_dh_size - determine the size for required to store DH shared secret
@@ -1865,8 +1920,6 @@ static int hip_do_work(void)
 			break;
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
-
-
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
 			if (res < 0)
@@ -2040,7 +2093,12 @@ static int __init hip_init(void)
 		HIP_ERROR("Could not register XFRM key manager for HIP\n");
 		goto out;
 	}
-
+#ifdef CONFIG_SYSCTL
+	if (!hip_register_sysctl()) {
+		HIP_ERROR("Could not register sysctl for HIP\n");
+		goto out;
+	}
+#endif
 	HIP_INFO("HIP module initialized successfully\n");
 	return 0;
 
@@ -2059,6 +2117,9 @@ static void __exit hip_cleanup(void)
 
 	HIP_INFO("Uninitializing HIP module\n");
 
+#ifdef CONFIG_SYSCTL
+	hip_unregister_sysctl();
+#endif
 	/* unregister XFRM km handler */
 	xfrm_unregister_km(&hip_xfrm_km_mgr);
 
