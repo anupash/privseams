@@ -1,6 +1,8 @@
 #ifndef HIP_XFRMAPI_H
 #define HIP_XFRMAPI_H
 
+#include <net/hip.h>
+
 int hip_delete_sp(int dir);
 int hip_delete_sa(u32 spi, struct in6_addr *dst);
 int hip_setup_sp(int dir);

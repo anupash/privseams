@@ -18,7 +18,7 @@ INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 sbin_PROGRAMS = hipd
 hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c
 hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
-hipd_SOURCES += input.c output.c
+hipd_SOURCES += input.c output.c xfrmapi.c preoutput.c
 #hipd_SOURCES += dh2.c dsa.c rsa.c
 
 # i3 and KeyNotev2 specific includes/libraries:
@@ -96,6 +96,8 @@ input.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.h .
 preoutput.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/preoutput.h .
+xfrmapi.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/xfrmapi.h .
 #rsa.h:
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto/rsa.h
 #rsa.c: rsa.h

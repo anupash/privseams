@@ -761,7 +761,8 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 	}
 
 	if (ipv6_addr_any(addr)) {
-		hip_delete_esp(ha);
+		hip_hadb_delete_inbound_spis(ha);
+		hip_hadb_delete_outbound_spis(ha);
 		hip_hadb_remove_state_hit(ha);
 		/* by now, if everything is according to plans, the refcnt should be 1 */
 		hip_put_ha(ha);

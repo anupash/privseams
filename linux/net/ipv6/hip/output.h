@@ -22,18 +22,11 @@
 #include "builder.h"
 #include "cookie.h"
 #include "builder.h"
-
-#ifdef __KERNEL__
-int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb);
-int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-		  struct hip_common* buf, struct flowi *out_fl);
-#endif /* __KERNEL__ */
+#include "preoutput.h"
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct in6_addr *dst_ip, struct in6_addr *dst_hit);
-int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-		  struct hip_common* buf);
 int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry);
 void hip_send_notify_all(void);
 

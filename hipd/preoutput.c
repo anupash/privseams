@@ -1,8 +1,8 @@
 #include "preoutput.h"
 
 /* Called by userspace daemon to send a packet to wire */
-int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-                     struct hip_common* buf)
+int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+		  struct hip_common* buf)
 {
 	struct hip_work_order hwo;
 	hwo.hdr.type = HIP_WO_TYPE_OUTGOING;

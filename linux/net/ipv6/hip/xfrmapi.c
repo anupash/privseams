@@ -1,4 +1,4 @@
-#include "xfrm.h"
+#include "xfrmapi.h"
 
 /**
  * hip_delete_spd - delete an SPD entry suitable for HIP
