@@ -47,6 +47,8 @@
 
 void (*ia64_mark_idle)(int);
 
+unsigned long boot_option_idle_override = 0;
+EXPORT_SYMBOL(boot_option_idle_override);
 
 void
 ia64_do_show_stack (struct unw_frame_info *info, void *arg)
@@ -185,6 +187,8 @@ default_idle (void)
 	while (!need_resched())
 		if (pal_halt && !pmu_active)
 			safe_halt();
+		else
+			cpu_relax();
 }
 
 #ifdef CONFIG_HOTPLUG_CPU

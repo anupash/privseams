@@ -31,6 +31,7 @@
 #include <linux/stringify.h>
 #include <linux/delay.h>
 #include <linux/initrd.h>
+#include <linux/bitops.h>
 #include <asm/prom.h>
 #include <asm/rtas.h>
 #include <asm/lmb.h>
@@ -43,7 +44,6 @@
 #include <asm/system.h>
 #include <asm/mmu.h>
 #include <asm/pgtable.h>
-#include <asm/bitops.h>
 #include <asm/naca.h>
 #include <asm/pci.h>
 #include <asm/iommu.h>
@@ -52,7 +52,6 @@
 #include <asm/btext.h>
 #include <asm/sections.h>
 #include <asm/machdep.h>
-#include "open_pic.h"
 
 #ifdef DEBUG
 #define DBG(fmt...) udbg_printf(fmt)
@@ -442,7 +441,7 @@ static unsigned long __init interpret_isa_props(struct device_node *np,
 	if (rp != 0 && l >= sizeof(struct isa_reg_property)) {
 		i = 0;
 		adr = (struct address_range *) mem_start;
-		while ((l -= sizeof(struct reg_property)) >= 0) {
+		while ((l -= sizeof(struct isa_reg_property)) >= 0) {
 			if (!measure_only) {
 				adr[i].space = rp[i].space;
 				adr[i].address = rp[i].address;
@@ -824,7 +823,7 @@ void __init unflatten_device_tree(void)
 			strlcpy(cmd_line, p, min(l, COMMAND_LINE_SIZE));
 	}
 #ifdef CONFIG_CMDLINE
-	if (l == 0) /* dbl check */
+	if (l == 0 || (l == 1 && (*p) == 0))
 		strlcpy(cmd_line, CONFIG_CMDLINE, COMMAND_LINE_SIZE);
 #endif /* CONFIG_CMDLINE */
 
@@ -854,10 +853,19 @@ static int __init early_init_dt_scan_cpus(unsigned long node,
 		}
 	}
 
-	/* Check if it's the boot-cpu, set it's hw index in paca now */
-	if (get_flat_dt_prop(node, "linux,boot-cpu", NULL) != NULL) {
-		u32 *prop = get_flat_dt_prop(node, "reg", NULL);
-		paca[0].hw_cpu_id = prop == NULL ? 0 : *prop;
+	if (initial_boot_params && initial_boot_params->version >= 2) {
+		/* version 2 of the kexec param format adds the phys cpuid
+		 * of booted proc.
+		 */
+		boot_cpuid_phys = initial_boot_params->boot_cpuid_phys;
+		boot_cpuid = 0;
+	} else {
+		/* Check if it's the boot-cpu, set it's hw index in paca now */
+		if (get_flat_dt_prop(node, "linux,boot-cpu", NULL) != NULL) {
+			u32 *prop = get_flat_dt_prop(node, "reg", NULL);
+			set_hard_smp_processor_id(0, prop == NULL ? 0 : *prop);
+			boot_cpuid_phys = get_hard_smp_processor_id(0);
+		}
 	}
 
 	return 0;
@@ -1024,6 +1032,7 @@ void __init early_init_devtree(void *params)
 	scan_flat_dt(early_init_dt_scan_memory, NULL);
 	lmb_analyze();
 	systemcfg->physicalMemorySize = lmb_phys_mem_size();
+	lmb_reserve(0, __pa(klimit));
 
 	DBG("Phys. mem: %lx\n", systemcfg->physicalMemorySize);
 
@@ -1092,8 +1101,7 @@ prom_n_size_cells(struct device_node* np)
  * Work out the sense (active-low level / active-high edge)
  * of each interrupt from the device tree.
  */
-void __init
-prom_get_irq_senses(unsigned char *senses, int off, int max)
+void __init prom_get_irq_senses(unsigned char *senses, int off, int max)
 {
 	struct device_node *np;
 	int i, j;
@@ -1105,7 +1113,9 @@ prom_get_irq_senses(unsigned char *senses, int off, int max)
 		for (j = 0; j < np->n_intrs; j++) {
 			i = np->intrs[j].line;
 			if (i >= off && i < max)
-				senses[i-off] = np->intrs[j].sense;
+				senses[i-off] = np->intrs[j].sense ?
+					IRQ_SENSE_LEVEL | IRQ_POLARITY_NEGATIVE :
+					IRQ_SENSE_EDGE | IRQ_POLARITY_POSITIVE;
 		}
 	}
 }
@@ -1740,7 +1750,7 @@ static int of_finish_dynamic_node(struct device_node *node)
 	if (strcmp(node->name, "pci") == 0 &&
 	    get_property(node, "ibm,dma-window", NULL)) {
 		node->bussubno = node->busno;
-		iommu_devnode_init(node);
+		iommu_devnode_init_pSeries(node);
 	} else
 		node->iommu_table = parent->iommu_table;
 #endif /* CONFIG_PPC_PSERIES */
@@ -1802,6 +1812,15 @@ int of_add_node(const char *path, struct property *proplist)
 }
 
 /*
+ * Prepare an OF node for removal from system
+ */
+static void of_cleanup_node(struct device_node *np)
+{
+	if (np->iommu_table && get_property(np, "ibm,dma-window", NULL))
+		iommu_free_table(np);
+}
+
+/*
  * Remove an OF device node from the system.
  * Caller should have already "gotten" np.
  */
@@ -1817,6 +1836,8 @@ int of_remove_node(struct device_node *np)
 		of_node_put(child);
 		return -EBUSY;
 	}
+
+	of_cleanup_node(np);
 
 	write_lock(&devtree_lock);
 	OF_MARK_STALE(np);

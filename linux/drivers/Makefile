@@ -17,8 +17,9 @@ obj-$(CONFIG_PNP)		+= pnp/
 # default.
 obj-y				+= char/
 
-# i810fb depends on char/agp/
+# i810fb and intelfb depend on char/agp/
 obj-$(CONFIG_FB_I810)           += video/i810/
+obj-$(CONFIG_FB_INTEL)          += video/intelfb/
 
 # we also need input/serio early so serio bus is initialized by the time
 # serial drivers start registering their serio ports
@@ -36,7 +37,7 @@ obj-$(CONFIG_FUSION)		+= message/
 obj-$(CONFIG_IEEE1394)		+= ieee1394/
 obj-y				+= cdrom/
 obj-$(CONFIG_MTD)		+= mtd/
-obj-$(CONFIG_PCMCIA)		+= pcmcia/
+obj-$(CONFIG_PCCARD)		+= pcmcia/
 obj-$(CONFIG_DIO)		+= dio/
 obj-$(CONFIG_SBUS)		+= sbus/
 obj-$(CONFIG_ZORRO)		+= zorro/

@@ -19,9 +19,9 @@
 #include <linux/slab.h>
 #include <linux/swap.h>
 #include <linux/proc_fs.h>
+#include <linux/bitops.h>
 
 #include <asm/a.out.h>
-#include <asm/bitops.h>
 #include <asm/dma.h>
 #include <asm/ia32.h>
 #include <asm/io.h>
@@ -98,7 +98,7 @@ update_mmu_cache (struct vm_area_struct *vma, unsigned long vaddr, pte_t pte)
 inline void
 ia64_set_rbs_bot (void)
 {
-	unsigned long stack_size = current->rlim[RLIMIT_STACK].rlim_max & -16;
+	unsigned long stack_size = current->signal->rlim[RLIMIT_STACK].rlim_max & -16;
 
 	if (stack_size > MAX_USER_STACK_SIZE)
 		stack_size = MAX_USER_STACK_SIZE;
@@ -131,7 +131,13 @@ ia64_init_addr_space (void)
 		vma->vm_end = vma->vm_start + PAGE_SIZE;
 		vma->vm_page_prot = protection_map[VM_DATA_DEFAULT_FLAGS & 0x7];
 		vma->vm_flags = VM_DATA_DEFAULT_FLAGS | VM_GROWSUP;
-		insert_vm_struct(current->mm, vma);
+		down_write(&current->mm->mmap_sem);
+		if (insert_vm_struct(current->mm, vma)) {
+			up_write(&current->mm->mmap_sem);
+			kmem_cache_free(vm_area_cachep, vma);
+			return;
+		}
+		up_write(&current->mm->mmap_sem);
 	}
 
 	/* map NaT-page at address zero to speed up speculative dereferencing of NULL: */
@@ -143,7 +149,13 @@ ia64_init_addr_space (void)
 			vma->vm_end = PAGE_SIZE;
 			vma->vm_page_prot = __pgprot(pgprot_val(PAGE_READONLY) | _PAGE_MA_NAT);
 			vma->vm_flags = VM_READ | VM_MAYREAD | VM_IO | VM_RESERVED;
-			insert_vm_struct(current->mm, vma);
+			down_write(&current->mm->mmap_sem);
+			if (insert_vm_struct(current->mm, vma)) {
+				up_write(&current->mm->mmap_sem);
+				kmem_cache_free(vm_area_cachep, vma);
+				return;
+			}
+			up_write(&current->mm->mmap_sem);
 		}
 	}
 }

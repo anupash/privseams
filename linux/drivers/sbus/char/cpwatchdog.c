@@ -165,11 +165,11 @@ static int wd1_timeout = 0;
 static int wd2_timeout = 0;
 
 #ifdef MODULE
-MODULE_PARM		(wd0_timeout, "i");
+module_param	(wd0_timeout, int, 0);
 MODULE_PARM_DESC(wd0_timeout, "Default watchdog0 timeout in 1/10secs");
-MODULE_PARM 	(wd1_timeout, "i");
+module_param 	(wd1_timeout, int, 0);
 MODULE_PARM_DESC(wd1_timeout, "Default watchdog1 timeout in 1/10secs");
-MODULE_PARM 	(wd2_timeout, "i");
+module_param 	(wd2_timeout, int, 0);
 MODULE_PARM_DESC(wd2_timeout, "Default watchdog2 timeout in 1/10secs");
 
 MODULE_AUTHOR
@@ -743,7 +743,7 @@ ebus_done:
 	}
 
 	wd_dev.regs = 
-		ioremap(edev->resource[0].start, sizeof(struct wd_regblk));
+		ioremap(edev->resource[0].start, 4 * WD_TIMER_REGSZ); /* ? */
 
 	if(NULL == wd_dev.regs) {
 		printk("%s: unable to map registers\n", WD_OBPNAME);

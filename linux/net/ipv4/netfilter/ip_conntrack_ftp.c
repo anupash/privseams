@@ -34,7 +34,7 @@ struct module *ip_conntrack_ftp = THIS_MODULE;
 #define MAX_PORTS 8
 static int ports[MAX_PORTS];
 static int ports_c;
-module_param_array(ports, int, ports_c, 0400);
+module_param_array(ports, int, &ports_c, 0400);
 
 static int loose;
 module_param(loose, int, 0600);
@@ -381,6 +381,7 @@ static int help(struct sk_buff *skb,
 		   problem (DMZ machines opening holes to internal
 		   networks, or the packet filter itself). */
 		if (!loose) {
+			ip_conntrack_expect_put(exp);
 			ret = NF_ACCEPT;
 			goto out;
 		}

@@ -51,8 +51,7 @@ MODULE_AUTHOR("Frank van de Pol <fvdpol@coil.demon.nl>, Jaroslav Kysela <perex@s
 MODULE_DESCRIPTION("Advanced Linux Sound Architecture sequencer.");
 MODULE_LICENSE("GPL");
 
-static int boot_devs;
-module_param_array(seq_client_load, int, boot_devs, 0444);
+module_param_array(seq_client_load, int, NULL, 0444);
 MODULE_PARM_DESC(seq_client_load, "The numbers of global (system) clients to load through kmod.");
 module_param(seq_default_timer_class, int, 0644);
 MODULE_PARM_DESC(seq_default_timer_class, "The default timer class.");
@@ -71,35 +70,37 @@ MODULE_PARM_DESC(seq_default_timer_resolution, "The default timer resolution in 
  *  INIT PART
  */
 
-
 static int __init alsa_seq_init(void)
 {
 	int err;
 
+	snd_seq_autoload_lock();
 	if ((err = client_init_data()) < 0)
-		return err;
+		goto error;
 
 	/* init memory, room for selected events */
 	if ((err = snd_sequencer_memory_init()) < 0)
-		return err;
+		goto error;
 
 	/* init event queues */
 	if ((err = snd_seq_queues_init()) < 0)
-		return err;
+		goto error;
 
 	/* register sequencer device */
 	if ((err = snd_sequencer_device_init()) < 0)
-		return err;
+		goto error;
 
 	/* register proc interface */
 	if ((err = snd_seq_info_init()) < 0)
-		return err;
+		goto error;
 
 	/* register our internal client */
 	if ((err = snd_seq_system_client_init()) < 0)
-		return err;
+		goto error;
 
-	return 0;
+ error:
+	snd_seq_autoload_unlock();
+	return err;
 }
 
 static void __exit alsa_seq_exit(void)

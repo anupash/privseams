@@ -31,7 +31,6 @@
 #include <asm/uaccess.h>
 
 #include "dvb_demux.h"
-#include "dvb_functions.h"
 
 #define NOBUFS  
 /* 
@@ -425,7 +424,7 @@ void dvb_dmx_swfilter_packet(struct dvb_demux *demux, const u8 *buf)
 			feed->cb.ts(buf, 188, NULL, 0, &feed->feed.ts, DMX_OK);
 	}
 }
-
+EXPORT_SYMBOL(dvb_dmx_swfilter_packet);
 
 void dvb_dmx_swfilter_packets(struct dvb_demux *demux, const u8 *buf, size_t count)
 {
@@ -440,6 +439,7 @@ void dvb_dmx_swfilter_packets(struct dvb_demux *demux, const u8 *buf, size_t cou
 
 	spin_unlock(&demux->lock);
 }
+EXPORT_SYMBOL(dvb_dmx_swfilter_packets);
 
 
 void dvb_dmx_swfilter(struct dvb_demux *demux, const u8 *buf, size_t count)
@@ -479,6 +479,7 @@ void dvb_dmx_swfilter(struct dvb_demux *demux, const u8 *buf, size_t count)
 bailout:
 	spin_unlock(&demux->lock);
 }
+EXPORT_SYMBOL(dvb_dmx_swfilter);
 
 void dvb_dmx_swfilter_204(struct dvb_demux *demux, const u8 *buf, size_t count)
 {
@@ -523,6 +524,7 @@ void dvb_dmx_swfilter_204(struct dvb_demux *demux, const u8 *buf, size_t count)
 bailout:
 	spin_unlock(&demux->lock);
 }
+EXPORT_SYMBOL(dvb_dmx_swfilter_204);
 
 
 static struct dvb_demux_filter * dvb_dmx_filter_alloc(struct dvb_demux *demux)
@@ -570,24 +572,30 @@ static int dvb_demux_feed_find(struct dvb_demux_feed *feed)
 
 static void dvb_demux_feed_add(struct dvb_demux_feed *feed)
 {
+	spin_lock_irq(&feed->demux->lock);
 	if (dvb_demux_feed_find(feed)) {
 		printk(KERN_ERR "%s: feed already in list (type=%x state=%x pid=%x)\n",
 				__FUNCTION__, feed->type, feed->state, feed->pid);
-		return;
+		goto out;
 	}
 
 	list_add(&feed->list_head, &feed->demux->feed_list);
+out:
+	spin_unlock_irq(&feed->demux->lock);
 }
 
 static void dvb_demux_feed_del(struct dvb_demux_feed *feed)
 {
+	spin_lock_irq(&feed->demux->lock);
 	if (!(dvb_demux_feed_find(feed))) {
 		printk(KERN_ERR "%s: feed not in list (type=%x state=%x pid=%x)\n",
 				__FUNCTION__, feed->type, feed->state, feed->pid);
-		return;
+		goto out;
 }
 
 	list_del(&feed->list_head);
+out:
+	spin_unlock_irq(&feed->demux->lock);
 }
 
 static int dmx_ts_feed_set (struct dmx_ts_feed* ts_feed, u16 pid, int ts_type, 
@@ -789,7 +797,7 @@ static int dvbdmx_release_ts_feed(struct dmx_demux *dmx, struct dmx_ts_feed *ts_
 
 		feed->pid = 0xffff;
 	
-	if (feed->ts_type & TS_DECODER)
+	if (feed->ts_type & TS_DECODER && feed->pes_type < DMX_TS_PES_OTHER)
 		demux->pesfilter[feed->pes_type] = NULL;
 
 	up(&demux->mutex);
@@ -1158,6 +1166,7 @@ int dvbdmx_connect_frontend(struct dmx_demux *demux, struct dmx_frontend *fronte
 	up(&dvbdemux->mutex);
 	return 0;
 }
+EXPORT_SYMBOL(dvbdmx_connect_frontend);
 
 
 int dvbdmx_disconnect_frontend(struct dmx_demux *demux)
@@ -1171,6 +1180,7 @@ int dvbdmx_disconnect_frontend(struct dmx_demux *demux)
 	up(&dvbdemux->mutex);
 	return 0;
 }
+EXPORT_SYMBOL(dvbdmx_disconnect_frontend);
 
 
 static int dvbdmx_get_pes_pids(struct dmx_demux *demux, u16 *pids)
@@ -1251,6 +1261,7 @@ int dvb_dmx_init(struct dvb_demux *dvbdemux)
 
 	return 0;
 }
+EXPORT_SYMBOL(dvb_dmx_init);
 
 
 int dvb_dmx_release(struct dvb_demux *dvbdemux)
@@ -1264,3 +1275,5 @@ int dvb_dmx_release(struct dvb_demux *dvbdemux)
 		vfree(dvbdemux->feed);
 	return 0;
 }
+EXPORT_SYMBOL(dvb_dmx_release);
+

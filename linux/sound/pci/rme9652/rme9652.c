@@ -42,15 +42,14 @@ static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;	/* Index 0-MAX */
 static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;	/* ID for this card */
 static int enable[SNDRV_CARDS] = SNDRV_DEFAULT_ENABLE_PNP;	/* Enable this card */
 static int precise_ptr[SNDRV_CARDS] = { [0 ... (SNDRV_CARDS-1)] = 0 }; /* Enable precise pointer */
-static int boot_devs;
 
-module_param_array(index, int, boot_devs, 0444);
+module_param_array(index, int, NULL, 0444);
 MODULE_PARM_DESC(index, "Index value for RME Digi9652 (Hammerfall) soundcard.");
-module_param_array(id, charp, boot_devs, 0444);
+module_param_array(id, charp, NULL, 0444);
 MODULE_PARM_DESC(id, "ID string for RME Digi9652 (Hammerfall) soundcard.");
-module_param_array(enable, bool, boot_devs, 0444);
+module_param_array(enable, bool, NULL, 0444);
 MODULE_PARM_DESC(enable, "Enable/disable specific RME96{52,36} soundcards.");
-module_param_array(precise_ptr, bool, boot_devs, 0444);
+module_param_array(precise_ptr, bool, NULL, 0444);
 MODULE_PARM_DESC(precise_ptr, "Enable precise pointer (doesn't work reliably).");
 MODULE_AUTHOR("Paul Davis <pbd@op.net>, Winfried Ritsch");
 MODULE_DESCRIPTION("RME Digi9652/Digi9636");
@@ -212,7 +211,7 @@ typedef struct snd_rme9652 {
 	spinlock_t lock;
 	int irq;
 	unsigned long port;
-	unsigned long iobase;
+	void __iomem *iobase;
 	
 	int precise_ptr;
 
@@ -1629,7 +1628,7 @@ snd_rme9652_proc_read(snd_info_entry_t *entry, snd_info_buffer_t *buffer)
 	snd_iprintf(buffer, "Buffers: capture %p playback %p\n",
 		    rme9652->capture_buffer, rme9652->playback_buffer);
 	snd_iprintf(buffer, "IRQ: %d Registers bus: 0x%lx VM: 0x%lx\n",
-		    rme9652->irq, rme9652->port, rme9652->iobase);
+		    rme9652->irq, rme9652->port, (unsigned long)rme9652->iobase);
 	snd_iprintf(buffer, "Control register: %x\n", rme9652->control_register);
 
 	snd_iprintf(buffer, "\n");
@@ -1809,10 +1808,11 @@ static int snd_rme9652_free(rme9652_t *rme9652)
 	if (rme9652->irq >= 0)
 		free_irq(rme9652->irq, (void *)rme9652);
 	if (rme9652->iobase)
-		iounmap((void *) rme9652->iobase);
+		iounmap(rme9652->iobase);
 	if (rme9652->port)
 		pci_release_regions(rme9652->pci);
 
+	pci_disable_device(rme9652->pci);
 	return 0;
 }
 
@@ -2497,8 +2497,8 @@ static int __devinit snd_rme9652_create(snd_card_t *card,
 	if ((err = pci_request_regions(pci, "rme9652")) < 0)
 		return err;
 	rme9652->port = pci_resource_start(pci, 0);
-	rme9652->iobase = (unsigned long) ioremap_nocache(rme9652->port, RME9652_IO_EXTENT);
-	if (rme9652->iobase == 0) {
+	rme9652->iobase = ioremap_nocache(rme9652->port, RME9652_IO_EXTENT);
+	if (rme9652->iobase == NULL) {
 		snd_printk("unable to remap region 0x%lx-0x%lx\n", rme9652->port, rme9652->port + RME9652_IO_EXTENT - 1);
 		return -EBUSY;
 	}

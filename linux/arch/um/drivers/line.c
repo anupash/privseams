@@ -107,29 +107,13 @@ static int flush_buffer(struct line *line)
 	return(line->head == line->tail);
 }
 
-int line_write(struct line *lines, struct tty_struct *tty, int from_user,
-	       const char *buf, int len)
+int line_write(struct line *lines, struct tty_struct *tty, const char *buf, int len)
 {
 	struct line *line;
-	char *new;
 	unsigned long flags;
 	int n, err, i, ret = 0;
 
 	if(tty->stopped) return 0;
-
-	if(from_user){
-		new = kmalloc(len, GFP_KERNEL);
-		if(new == NULL)
-			return(0);
-		n = copy_from_user(new, buf, len);
-		buf = new;
-		if(n == len){
-			len = -EFAULT;
-			goto out_free;
-		}
-
-		len -= n;
-	}
 
 	i = tty->index;
 	line = &lines[i];
@@ -158,9 +142,6 @@ int line_write(struct line *lines, struct tty_struct *tty, int from_user,
 	}
  out_up:
 	up(&line->sem);
- out_free:
-	if(from_user)
-		kfree(buf);
 	return(ret);
 }
 
@@ -220,13 +201,17 @@ void line_disable(struct line *line, int current_irq)
 
 	if(line->driver->read_irq == current_irq)
 		free_irq_later(line->driver->read_irq, line);
-	else
+	else {
+		free_irq_by_irq_and_dev(line->driver->read_irq, line);
 		free_irq(line->driver->read_irq, line);
+	}
 
 	if(line->driver->write_irq == current_irq)
 		free_irq_later(line->driver->write_irq, line);
-	else
+	else {
+		free_irq_by_irq_and_dev(line->driver->write_irq, line);
 		free_irq(line->driver->write_irq, line);
+	}
 
 	line->have_irq = 0;
 }

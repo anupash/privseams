@@ -54,6 +54,9 @@ unsigned long kernel_thread_flags = CLONE_VM | CLONE_UNTRACED;
 
 atomic_t hlt_counter = ATOMIC_INIT(0);
 
+unsigned long boot_option_idle_override = 0;
+EXPORT_SYMBOL(boot_option_idle_override);
+
 /*
  * Powermanagement idle function, if any..
  */
@@ -196,6 +199,7 @@ static int __init idle_setup (char *str)
 		pm_idle = poll_idle;
 	}
 
+	boot_option_idle_override = 1;
 	return 1;
 }
 
@@ -359,7 +363,6 @@ int copy_thread(int nr, unsigned long clone_flags, unsigned long rsp,
 	if (rsp == ~0UL) {
 		childregs->rsp = (unsigned long)childregs;
 	}
-	p->set_child_tid = p->clear_child_tid = NULL;
 
 	p->thread.rsp = (unsigned long) childregs;
 	p->thread.rsp0 = (unsigned long) (childregs+1);
@@ -542,8 +545,11 @@ long sys_execve(char __user *name, char __user * __user *argv,
 	if (IS_ERR(filename)) 
 		return error;
 	error = do_execve(filename, argv, envp, &regs); 
-	if (error == 0)
+	if (error == 0) {
+		task_lock(current);
 		current->ptrace &= ~PT_DTRACE;
+		task_unlock(current);
+	}
 	putname(filename);
 	return error;
 }

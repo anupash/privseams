@@ -29,6 +29,7 @@
 #include <linux/kernelcapi.h>
 #include <linux/ctype.h>
 #include <linux/init.h>
+#include <linux/moduleparam.h>
 
 #include <linux/isdn/capiutil.h>
 #include <linux/isdn/capicmd.h>
@@ -40,7 +41,7 @@ static int debugmode = 0;
 MODULE_DESCRIPTION("CAPI4Linux: Interface to ISDN4Linux");
 MODULE_AUTHOR("Carsten Paeth");
 MODULE_LICENSE("GPL");
-MODULE_PARM(debugmode, "i");
+module_param(debugmode, uint, 0);
 
 /* -------- type definitions ----------------------------------------- */
 
@@ -2057,17 +2058,16 @@ static int capidrv_addcontr(u16 contr, struct capi_profile *profp)
 		return -1;
 	}
 	card->myid = card->interface.channels;
+	memset(card->bchans, 0, sizeof(capidrv_bchan) * card->nbchan);
+	for (i = 0; i < card->nbchan; i++) {
+		card->bchans[i].contr = card;
+	}
 
 	spin_lock_irqsave(&global_lock, flags);
 	card->next = global.contr_list;
 	global.contr_list = card;
 	global.ncontr++;
 	spin_unlock_irqrestore(&global_lock, flags);
-
-	memset(card->bchans, 0, sizeof(capidrv_bchan) * card->nbchan);
-	for (i = 0; i < card->nbchan; i++) {
-		card->bchans[i].contr = card;
-	}
 
 	cmd.command = ISDN_STAT_RUN;
 	cmd.driver = card->myid;
@@ -2076,10 +2076,9 @@ static int capidrv_addcontr(u16 contr, struct capi_profile *profp)
 	card->cipmask = 0x1FFF03FF;	/* any */
 	card->cipmask2 = 0;
 
-	send_listen(card);
-
 	card->listentimer.data = (unsigned long)card;
 	card->listentimer.function = listentimerfunc;
+	send_listen(card);
 	mod_timer(&card->listentimer, jiffies + 60*HZ);
 
 	printk(KERN_INFO "%s: now up (%d B channels)\n",

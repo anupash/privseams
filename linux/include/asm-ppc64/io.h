@@ -1,4 +1,4 @@
-#ifndef _PPC64_IO_H
+ #ifndef _PPC64_IO_H
 #define _PPC64_IO_H
 
 /* 
@@ -33,6 +33,12 @@
 
 extern unsigned long isa_io_base;
 extern unsigned long pci_io_base;
+extern unsigned long io_page_mask;
+
+#define MAX_ISA_PORT 0x10000
+
+#define _IO_IS_VALID(port) ((port) >= MAX_ISA_PORT || (1 << (port>>PAGE_SHIFT)) \
+			    & io_page_mask)
 
 #ifdef CONFIG_PPC_ISERIES
 /* __raw_* accessors aren't supported on iSeries */
@@ -152,6 +158,8 @@ extern void _outsw_ns(volatile u16 *port, const void *buf, int ns);
 extern void _insl_ns(volatile u32 *port, void *buf, int nl);
 extern void _outsl_ns(volatile u32 *port, const void *buf, int nl);
 
+#define mmiowb()
+
 /*
  * output pause versions need a delay at least for the
  * w83c105 ide controller in a p610.
@@ -197,7 +205,7 @@ extern void __iomem *ioremap(unsigned long address, unsigned long size);
 #define ioremap_nocache(addr, size)	ioremap((addr), (size))
 extern int iounmap_explicit(volatile void __iomem *addr, unsigned long size);
 extern void iounmap(volatile void __iomem *addr);
-extern void * reserve_phb_iospace(unsigned long size);
+extern void __iomem * reserve_phb_iospace(unsigned long size);
 
 /**
  *	virt_to_phys	-	map virtual addresses to physical
@@ -265,7 +273,7 @@ static inline void iosync(void)
  * and should not be used directly by device drivers.  Use inb/readb
  * instead.
  */
-static inline int in_8(volatile unsigned char *addr)
+static inline int in_8(const volatile unsigned char __iomem *addr)
 {
 	int ret;
 
@@ -274,13 +282,13 @@ static inline int in_8(volatile unsigned char *addr)
 	return ret;
 }
 
-static inline void out_8(volatile unsigned char *addr, int val)
+static inline void out_8(volatile unsigned char __iomem *addr, int val)
 {
 	__asm__ __volatile__("stb%U0%X0 %1,%0; sync"
 			     : "=m" (*addr) : "r" (val));
 }
 
-static inline int in_le16(volatile unsigned short *addr)
+static inline int in_le16(const volatile unsigned short __iomem *addr)
 {
 	int ret;
 
@@ -289,7 +297,7 @@ static inline int in_le16(volatile unsigned short *addr)
 	return ret;
 }
 
-static inline int in_be16(volatile unsigned short *addr)
+static inline int in_be16(const volatile unsigned short __iomem *addr)
 {
 	int ret;
 
@@ -298,19 +306,19 @@ static inline int in_be16(volatile unsigned short *addr)
 	return ret;
 }
 
-static inline void out_le16(volatile unsigned short *addr, int val)
+static inline void out_le16(volatile unsigned short __iomem *addr, int val)
 {
 	__asm__ __volatile__("sthbrx %1,0,%2; sync"
 			     : "=m" (*addr) : "r" (val), "r" (addr));
 }
 
-static inline void out_be16(volatile unsigned short *addr, int val)
+static inline void out_be16(volatile unsigned short __iomem *addr, int val)
 {
 	__asm__ __volatile__("sth%U0%X0 %1,%0; sync"
 			     : "=m" (*addr) : "r" (val));
 }
 
-static inline unsigned in_le32(volatile unsigned *addr)
+static inline unsigned in_le32(const volatile unsigned __iomem *addr)
 {
 	unsigned ret;
 
@@ -319,7 +327,7 @@ static inline unsigned in_le32(volatile unsigned *addr)
 	return ret;
 }
 
-static inline unsigned in_be32(volatile unsigned *addr)
+static inline unsigned in_be32(const volatile unsigned __iomem *addr)
 {
 	unsigned ret;
 
@@ -328,19 +336,19 @@ static inline unsigned in_be32(volatile unsigned *addr)
 	return ret;
 }
 
-static inline void out_le32(volatile unsigned *addr, int val)
+static inline void out_le32(volatile unsigned __iomem *addr, int val)
 {
 	__asm__ __volatile__("stwbrx %1,0,%2; sync" : "=m" (*addr)
 			     : "r" (val), "r" (addr));
 }
 
-static inline void out_be32(volatile unsigned *addr, int val)
+static inline void out_be32(volatile unsigned __iomem *addr, int val)
 {
 	__asm__ __volatile__("stw%U0%X0 %1,%0; sync"
 			     : "=m" (*addr) : "r" (val));
 }
 
-static inline unsigned long in_le64(volatile unsigned long *addr)
+static inline unsigned long in_le64(const volatile unsigned long __iomem *addr)
 {
 	unsigned long tmp, ret;
 
@@ -359,7 +367,7 @@ static inline unsigned long in_le64(volatile unsigned long *addr)
 	return ret;
 }
 
-static inline unsigned long in_be64(volatile unsigned long *addr)
+static inline unsigned long in_be64(const volatile unsigned long __iomem *addr)
 {
 	unsigned long ret;
 
@@ -368,7 +376,7 @@ static inline unsigned long in_be64(volatile unsigned long *addr)
 	return ret;
 }
 
-static inline void out_le64(volatile unsigned long *addr, unsigned long val)
+static inline void out_le64(volatile unsigned long __iomem *addr, unsigned long val)
 {
 	unsigned long tmp;
 
@@ -385,7 +393,7 @@ static inline void out_le64(volatile unsigned long *addr, unsigned long val)
 			     : "=&r" (tmp) , "=&r" (val) : "1" (val) , "b" (addr) , "m" (*addr));
 }
 
-static inline void out_be64(volatile unsigned long *addr, unsigned long val)
+static inline void out_be64(volatile unsigned long __iomem *addr, unsigned long val)
 {
 	__asm__ __volatile__("std%U0%X0 %1,%0; sync" : "=m" (*addr) : "r" (val));
 }
@@ -429,6 +437,10 @@ out:
 #define dma_cache_inv(_start,_size)		do { } while (0)
 #define dma_cache_wback(_start,_size)		do { } while (0)
 #define dma_cache_wback_inv(_start,_size)	do { } while (0)
+
+/* Check of existence of legacy devices */
+extern int check_legacy_ioport(unsigned long base_port);
+
 
 #endif /* __KERNEL__ */
 

@@ -26,6 +26,7 @@
  */
 
 #include <linux/config.h>
+#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/mm.h>
@@ -61,8 +62,11 @@ struct acpi_os_dpc
 
 #ifdef ENABLE_DEBUGGER
 #include <linux/kdb.h>
+
 /* stuff for debugger support */
 int acpi_in_debugger;
+EXPORT_SYMBOL(acpi_in_debugger);
+
 extern char line_buf[80];
 #endif /*ENABLE_DEBUGGER*/
 
@@ -117,6 +121,7 @@ acpi_os_printf(const char *fmt,...)
 	acpi_os_vprintf(fmt, args);
 	va_end(args);
 }
+EXPORT_SYMBOL(acpi_os_printf);
 
 void
 acpi_os_vprintf(const char *fmt, va_list args)
@@ -147,6 +152,7 @@ acpi_os_free(void *ptr)
 {
 	kfree(ptr);
 }
+EXPORT_SYMBOL(acpi_os_free);
 
 acpi_status
 acpi_os_get_root_pointer(u32 flags, struct acpi_pointer *addr)
@@ -205,6 +211,7 @@ acpi_os_unmap_memory(void __iomem *virt, acpi_size size)
 	iounmap(virt);
 }
 
+#ifdef ACPI_FUTURE_USAGE
 acpi_status
 acpi_os_get_physical_address(void *virt, acpi_physical_address *phys)
 {
@@ -215,6 +222,7 @@ acpi_os_get_physical_address(void *virt, acpi_physical_address *phys)
 
 	return AE_OK;
 }
+#endif
 
 #define ACPI_MAX_OVERRIDE_LEN 100
 
@@ -229,7 +237,7 @@ acpi_os_predefined_override (const struct acpi_predefined_names *init_val,
 
 	*new_val = NULL;
 	if (!memcmp (init_val->name, "_OS_", 4) && strlen(acpi_os_name)) {
-		printk(KERN_INFO PREFIX "Overriding _OS definition %s\n",
+		printk(KERN_INFO PREFIX "Overriding _OS definition to '%s'\n",
 			acpi_os_name);
 		*new_val = acpi_os_name;
 	}
@@ -306,11 +314,12 @@ acpi_os_remove_interrupt_handler(u32 irq, acpi_osd_handler handler)
  */
 
 void
-acpi_os_sleep(u32 sec, u32 ms)
+acpi_os_sleep(acpi_integer ms)
 {
 	current->state = TASK_INTERRUPTIBLE;
-	schedule_timeout(HZ * sec + (ms * HZ) / 1000);
+	schedule_timeout(((signed long) ms * HZ) / 1000);
 }
+EXPORT_SYMBOL(acpi_os_sleep);
 
 void
 acpi_os_stall(u32 us)
@@ -324,6 +333,30 @@ acpi_os_stall(u32 us)
 		touch_nmi_watchdog();
 		us -= delay;
 	}
+}
+EXPORT_SYMBOL(acpi_os_stall);
+
+/*
+ * Support ACPI 3.0 AML Timer operand
+ * Returns 64-bit free-running, monotonically increasing timer
+ * with 100ns granularity
+ */
+u64
+acpi_os_get_timer (void)
+{
+	static u64 t;
+
+#ifdef	CONFIG_HPET
+	/* TBD: use HPET if available */
+#endif
+
+#ifdef	CONFIG_X86_PM_TIMER
+	/* TBD: default to PM timer if HPET was not available */
+#endif
+	if (!t)
+		printk(KERN_ERR PREFIX "acpi_os_get_timer() TBD\n");
+
+	return(++t);
 }
 
 acpi_status
@@ -354,6 +387,7 @@ acpi_os_read_port(
 
 	return AE_OK;
 }
+EXPORT_SYMBOL(acpi_os_read_port);
 
 acpi_status
 acpi_os_write_port(
@@ -378,6 +412,7 @@ acpi_os_write_port(
 
 	return AE_OK;
 }
+EXPORT_SYMBOL(acpi_os_write_port);
 
 acpi_status
 acpi_os_read_memory(
@@ -496,6 +531,7 @@ acpi_os_read_pci_configuration (struct acpi_pci_id *pci_id, u32 reg, void *value
 
 	return (result ? AE_ERROR : AE_OK);
 }
+EXPORT_SYMBOL(acpi_os_read_pci_configuration);
 
 acpi_status
 acpi_os_write_pci_configuration (struct acpi_pci_id *pci_id, u32 reg, acpi_integer value, u32 width)
@@ -689,6 +725,7 @@ acpi_os_queue_for_execution(
 
 	return_ACPI_STATUS (status);
 }
+EXPORT_SYMBOL(acpi_os_queue_for_execution);
 
 void
 acpi_os_wait_events_complete(
@@ -696,6 +733,7 @@ acpi_os_wait_events_complete(
 {
 	flush_workqueue(kacpid_wq);
 }
+EXPORT_SYMBOL(acpi_os_wait_events_complete);
 
 /*
  * Allocate the memory for a spinlock and initialize it.
@@ -807,6 +845,7 @@ acpi_os_create_semaphore(
 
 	return_ACPI_STATUS (AE_OK);
 }
+EXPORT_SYMBOL(acpi_os_create_semaphore);
 
 
 /*
@@ -833,6 +872,7 @@ acpi_os_delete_semaphore(
 
 	return_ACPI_STATUS (AE_OK);
 }
+EXPORT_SYMBOL(acpi_os_delete_semaphore);
 
 
 /*
@@ -922,6 +962,7 @@ acpi_os_wait_semaphore(
 
 	return_ACPI_STATUS (status);
 }
+EXPORT_SYMBOL(acpi_os_wait_semaphore);
 
 
 /*
@@ -948,7 +989,9 @@ acpi_os_signal_semaphore(
 
 	return_ACPI_STATUS (AE_OK);
 }
+EXPORT_SYMBOL(acpi_os_signal_semaphore);
 
+#ifdef ACPI_FUTURE_USAGE
 u32
 acpi_os_get_line(char *buffer)
 {
@@ -967,6 +1010,7 @@ acpi_os_get_line(char *buffer)
 
 	return 0;
 }
+#endif  /*  ACPI_FUTURE_USAGE  */
 
 /* Assumes no unreadable holes inbetween */
 u8
@@ -979,6 +1023,7 @@ acpi_os_readable(void *ptr, acpi_size len)
 	return 1;
 }
 
+#ifdef ACPI_FUTURE_USAGE
 u8
 acpi_os_writable(void *ptr, acpi_size len)
 {
@@ -986,6 +1031,7 @@ acpi_os_writable(void *ptr, acpi_size len)
 	   The later may be difficult at early boot when kmap doesn't work yet. */
 	return 1;
 }
+#endif
 
 u32
 acpi_os_get_thread_id (void)
@@ -1007,17 +1053,22 @@ acpi_os_signal (
 		printk(KERN_ERR PREFIX "Fatal opcode executed\n");
 		break;
 	case ACPI_SIGNAL_BREAKPOINT:
-		{
-			char *bp_info = (char*) info;
-
-			printk(KERN_ERR "ACPI breakpoint: %s\n", bp_info);
-		}
+		/*
+		 * AML Breakpoint
+		 * ACPI spec. says to treat it as a NOP unless
+		 * you are debugging.  So if/when we integrate
+		 * AML debugger into the kernel debugger its
+		 * hook will go here.  But until then it is
+		 * not useful to print anything on breakpoints.
+		 */
+		break;
 	default:
 		break;
 	}
 
 	return AE_OK;
 }
+EXPORT_SYMBOL(acpi_os_signal);
 
 int __init
 acpi_os_name_setup(char *str)
@@ -1100,3 +1151,11 @@ acpi_wake_gpes_always_on_setup(char *str)
 
 __setup("acpi_wake_gpes_always_on", acpi_wake_gpes_always_on_setup);
 
+/*
+ * max_cstate is defined in the base kernel so modules can
+ * change it w/o depending on the state of the processor module.
+ */
+unsigned int max_cstate = ACPI_C_STATES_MAX;
+
+
+EXPORT_SYMBOL(max_cstate);

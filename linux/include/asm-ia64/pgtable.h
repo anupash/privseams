@@ -6,7 +6,7 @@
  * the IA-64 page table tree.
  *
  * This hopefully works with any (fixed) IA-64 page-size, as defined
- * in <asm/page.h> (currently 8192).
+ * in <asm/page.h>.
  *
  * Copyright (C) 1998-2004 Hewlett-Packard Co
  *	David Mosberger-Tang <davidm@hpl.hp.com>
@@ -309,15 +309,15 @@ pgd_index (unsigned long address)
 }
 
 /* The offset in the 1-level directory is given by the 3 region bits
-   (61..63) and the seven level-1 bits (33-39).  */
+   (61..63) and the level-1 bits.  */
 static inline pgd_t*
 pgd_offset (struct mm_struct *mm, unsigned long address)
 {
 	return mm->pgd + pgd_index(address);
 }
 
-/* In the kernel's mapped region we have a full 43 bit space available and completely
-   ignore the region number (since we know its in region number 5). */
+/* In the kernel's mapped region we completely ignore the region number
+   (since we know it's in region number 5). */
 #define pgd_offset_k(addr) \
 	(init_mm.pgd + (((addr) >> PGDIR_SHIFT) & (PTRS_PER_PGD - 1)))
 
@@ -452,7 +452,9 @@ extern void paging_init (void);
 #define pte_to_pgoff(pte)		((pte_val(pte) << 1) >> 3)
 #define pgoff_to_pte(off)		((pte_t) { ((off) << 2) | _PAGE_FILE })
 
-#define io_remap_page_range remap_page_range	/* XXX is this right? */
+/* XXX is this right? */
+#define io_remap_page_range(vma, vaddr, paddr, size, prot)		\
+		remap_pfn_range(vma, vaddr, (paddr) >> PAGE_SHIFT, size, prot)
 
 /*
  * ZERO_PAGE is a global shared page that is always zero: used

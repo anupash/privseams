@@ -90,6 +90,7 @@ extern char ignore_irq13;
 
 extern void identify_cpu(struct cpuinfo_x86 *);
 extern void print_cpu_info(struct cpuinfo_x86 *);
+extern unsigned int init_intel_cacheinfo(struct cpuinfo_x86 *c);
 extern void dodgy_tsc(void);
 
 /*
@@ -459,5 +460,7 @@ static inline void __mwait(unsigned long eax, unsigned long ecx)
 })
 
 #define cache_line_size() (boot_cpu_data.x86_cache_alignment)
+
+extern unsigned long boot_option_idle_override;
 
 #endif /* __ASM_X86_64_PROCESSOR_H */

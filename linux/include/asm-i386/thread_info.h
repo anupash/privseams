@@ -10,6 +10,7 @@
 #ifdef __KERNEL__
 
 #include <linux/config.h>
+#include <linux/compiler.h>
 #include <asm/page.h>
 
 #ifndef __ASSEMBLY__
@@ -51,7 +52,7 @@ struct thread_info {
 
 #endif
 
-#define PREEMPT_ACTIVE		0x4000000
+#define PREEMPT_ACTIVE		0x10000000
 #ifdef CONFIG_4KSTACKS
 #define THREAD_SIZE            (4096)
 #else
@@ -92,12 +93,7 @@ static inline struct thread_info *current_thread_info(void)
 }
 
 /* how to get the current stack pointer from C */
-static inline unsigned long current_stack_pointer(void)
-{
-	unsigned long ti;
-	__asm__("movl %%esp,%0; ":"=r" (ti) : );
-	return ti;
-}
+register unsigned long current_stack_pointer asm("esp") __attribute_used__;
 
 /* thread information allocation */
 #ifdef CONFIG_DEBUG_STACK_USAGE

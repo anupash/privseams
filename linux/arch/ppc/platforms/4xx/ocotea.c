@@ -1,11 +1,11 @@
 /*
- * arch/ppc/platforms/ocotea.c
+ * arch/ppc/platforms/4xx/ocotea.c
  *
  * Ocotea board specific routines
  *
- * Matt Porter <mporter@mvista.com>
+ * Matt Porter <mporter@kernel.crashing.org>
  *
- * Copyright 2003 MontaVista Software Inc.
+ * Copyright 2003-2004 MontaVista Software Inc.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -49,6 +49,7 @@
 #include <asm/ppc4xx_pic.h>
 #include <asm/ppcboot.h>
 
+#include <syslib/gen550.h>
 #include <syslib/ibm440gx_common.h>
 
 /*
@@ -80,7 +81,7 @@ ocotea_show_cpuinfo(struct seq_file *m)
 {
 	seq_printf(m, "vendor\t\t: IBM\n");
 	seq_printf(m, "machine\t\t: PPC440GX EVB (Ocotea)\n");
-
+	ibm440gx_show_cpuinfo(m);
 	return 0;
 }
 
@@ -144,13 +145,13 @@ static void __init ocotea_set_emacdata(void)
 }
 
 #define PCIX_READW(offset) \
-	(readw((u32)pcix_reg_base+offset))
+	(readw(pcix_reg_base+offset))
 
 #define PCIX_WRITEW(value, offset) \
-	(writew(value, (u32)pcix_reg_base+offset))
+	(writew(value, pcix_reg_base+offset))
 
 #define PCIX_WRITEL(value, offset) \
-	(writel(value, (u32)pcix_reg_base+offset))
+	(writel(value, pcix_reg_base+offset))
 
 /*
  * FIXME: This is only here to "make it work".  This will move
@@ -263,6 +264,11 @@ ocotea_early_serial_map(void)
 		printk("Early serial init of port 0 failed\n");
 	}
 
+#if defined(CONFIG_SERIAL_TEXT_DEBUG) || defined(CONFIG_KGDB)
+	/* Configure debug serial access */
+	gen550_init(0, &port);
+#endif
+
 	port.membase = ioremap64(PPC440GX_UART1_ADDR, 8);
 	port.irq = UART1_INT;
 	port.uartclk = clocks.uart1;
@@ -271,6 +277,11 @@ ocotea_early_serial_map(void)
 	if (early_serial_setup(&port) != 0) {
 		printk("Early serial init of port 1 failed\n");
 	}
+
+#if defined(CONFIG_SERIAL_TEXT_DEBUG) || defined(CONFIG_KGDB)
+	/* Configure debug serial access */
+	gen550_init(1, &port);
+#endif
 }
 
 static void __init
@@ -279,23 +290,6 @@ ocotea_setup_arch(void)
 	ocotea_set_emacdata();
 
 	ibm440gx_tah_enable();
-
-#if !defined(CONFIG_BDI_SWITCH)
-	/*
-	 * The Abatron BDI JTAG debugger does not tolerate others
-	 * mucking with the debug registers.
-	 */
-        mtspr(SPRN_DBCR0, (DBCR0_TDE | DBCR0_IDM));
-#endif
-
-	/*
-	 * Determine various clocks.
-	 * To be completely correct we should get SysClk
-	 * from FPGA, because it can be changed by on-board switches
-	 * --ebs
-	 */
-	ibm440gx_get_clocks(&clocks, 33333333, 6 * 1843200);
-	ocp_sys_info.opb_bus_freq = clocks.opb;
 
 	/* Setup TODC access */
 	TODC_INIT(TODC_TYPE_DS1743,
@@ -327,6 +321,11 @@ ocotea_setup_arch(void)
 	printk("IBM Ocotea port (MontaVista Software, Inc. <source@mvista.com>)\n");
 }
 
+static void __init ocotea_init(void)
+{
+	ibm440gx_l2c_setup(&clocks);
+}
+
 void __init platform_init(unsigned long r3, unsigned long r4,
 		unsigned long r5, unsigned long r6, unsigned long r7)
 {
@@ -339,8 +338,20 @@ void __init platform_init(unsigned long r3, unsigned long r4,
 	if (r3)
 		__res = *(bd_t *)(r3 + KERNELBASE);
 
-	/* Disable L2-Cache due to hardware issues */
-	ibm440gx_l2c_disable();
+	/*
+	 * Determine various clocks.
+	 * To be completely correct we should get SysClk
+	 * from FPGA, because it can be changed by on-board switches
+	 * --ebs
+	 */
+	ibm440gx_get_clocks(&clocks, 33333333, 6 * 1843200);
+	ocp_sys_info.opb_bus_freq = clocks.opb;
+
+	/* XXX Fix L2C IRQ triggerring setting (edge-sensitive).
+	 * Firmware (at least PIBS v1.72 OCT/28/2003) sets it incorrectly
+	 * --ebs
+	 */
+	mtdcr(DCRN_UIC_TR(UIC2), mfdcr(DCRN_UIC_TR(UIC2)) | 0x00000100);
 
 	ibm44x_platform_init();
 
@@ -355,8 +366,8 @@ void __init platform_init(unsigned long r3, unsigned long r4,
 
 	ppc_md.nvram_read_val = todc_direct_read_val;
 	ppc_md.nvram_write_val = todc_direct_write_val;
-
 #ifdef CONFIG_KGDB
 	ppc_md.early_serial_map = ocotea_early_serial_map;
 #endif
+	ppc_md.init = ocotea_init;
 }

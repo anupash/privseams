@@ -57,44 +57,13 @@
 		__val;							\
 	})
 
-#define __cacheid_present(val)		(val != read_cpuid(CPUID_ID))
-#define __cacheid_vivt(val)		((val & (15 << 25)) != (14 << 25))
-#define __cacheid_vipt(val)		((val & (15 << 25)) == (14 << 25))
-#define __cacheid_vipt_nonaliasing(val)	((val & (15 << 25 | 1 << 23)) == (14 << 25))
-#define __cacheid_vipt_aliasing(val)	((val & (15 << 25 | 1 << 23)) == (14 << 25 | 1 << 23))
-
-#define cache_is_vivt()							\
-	({								\
-		unsigned int __val = read_cpuid(CPUID_CACHETYPE);	\
-		(!__cacheid_present(__val)) || __cacheid_vivt(__val);	\
-	})
-		
-#define cache_is_vipt()							\
-	({								\
-		unsigned int __val = read_cpuid(CPUID_CACHETYPE);	\
-		__cacheid_present(__val) && __cacheid_vipt(__val);	\
-	})
-
-#define cache_is_vipt_nonaliasing()					\
-	({								\
-		unsigned int __val = read_cpuid(CPUID_CACHETYPE);	\
-		__cacheid_present(__val) &&				\
-		 __cacheid_vipt_nonaliasing(__val);			\
-	})
-
-#define cache_is_vipt_aliasing()					\
-	({								\
-		unsigned int __val = read_cpuid(CPUID_CACHETYPE);	\
-		__cacheid_present(__val) &&				\
-		 __cacheid_vipt_aliasing(__val);			\
-	})
-
 /*
  * This is used to ensure the compiler did actually allocate the register we
  * asked it for some inline assembly sequences.  Apparently we can't trust
  * the compiler from one version to another so a bit of paranoia won't hurt.
  * This string is meant to be concatenated with the inline asm string and
  * will cause compilation to stop on mismatch.
+ * (for details, see gcc PR 15089)
  */
 #define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 
@@ -159,9 +128,9 @@ extern unsigned long cr_alignment;	/* defined in entry-armv.S */
 extern unsigned int user_debug;
 
 #if __LINUX_ARM_ARCH__ >= 4
-#define vectors_base()	((cr_alignment & CR_V) ? 0xffff0000 : 0)
+#define vectors_high()	(cr_alignment & CR_V)
 #else
-#define vectors_base()	(0)
+#define vectors_high()	(0)
 #endif
 
 #define mb() __asm__ __volatile__ ("" : : : "memory")
@@ -282,7 +251,7 @@ do {									\
 /*
  * Enable FIQs
  */
-#define __stf()							\
+#define local_fiq_enable()					\
 	({							\
 		unsigned long temp;				\
 	__asm__ __volatile__(					\
@@ -297,7 +266,7 @@ do {									\
 /*
  * Disable FIQs
  */
-#define __clf()							\
+#define local_fiq_disable()					\
 	({							\
 		unsigned long temp;				\
 	__asm__ __volatile__(					\
@@ -331,6 +300,13 @@ do {									\
 	: "r" (x)						\
 	: "memory", "cc")
 
+#define irqs_disabled()			\
+({					\
+	unsigned long flags;		\
+	local_save_flags(flags);	\
+	flags & PSR_I_BIT;		\
+})
+
 #ifdef CONFIG_SMP
 #error SMP not supported
 
@@ -345,16 +321,6 @@ do {									\
 #define smp_rmb()		barrier()
 #define smp_wmb()		barrier()
 #define smp_read_barrier_depends()		do { } while(0)
-
-#define clf()			__clf()
-#define stf()			__stf()
-
-#define irqs_disabled()			\
-({					\
-	unsigned long flags;		\
-	local_save_flags(flags);	\
-	flags & PSR_I_BIT;		\
-})
 
 #if defined(CONFIG_CPU_SA1100) || defined(CONFIG_CPU_SA110)
 /*

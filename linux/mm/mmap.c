@@ -136,7 +136,7 @@ asmlinkage unsigned long sys_brk(unsigned long brk)
 	}
 
 	/* Check against rlimit.. */
-	rlim = current->rlim[RLIMIT_DATA].rlim_cur;
+	rlim = current->signal->rlim[RLIMIT_DATA].rlim_cur;
 	if (rlim < RLIM_INFINITY && brk - mm->start_data > rlim)
 		goto out;
 
@@ -744,12 +744,12 @@ void __vm_stat_account(struct mm_struct *mm, unsigned long flags,
 	}
 #endif /* CONFIG_HUGETLB */
 
-	if (file)
+	if (file) {
 		mm->shared_vm += pages;
-	else if (flags & stack_flags)
+		if ((flags & (VM_EXEC|VM_WRITE)) == VM_EXEC)
+			mm->exec_vm += pages;
+	} else if (flags & stack_flags)
 		mm->stack_vm += pages;
-	if (flags & VM_EXEC)
-		mm->exec_vm += pages;
 	if (flags & (VM_RESERVED|VM_IO))
 		mm->reserved_vm += pages;
 }
@@ -833,7 +833,7 @@ unsigned long do_mmap_pgoff(struct file * file, unsigned long addr,
 	if (vm_flags & VM_LOCKED) {
 		unsigned long locked, lock_limit;
 		locked = mm->locked_vm << PAGE_SHIFT;
-		lock_limit = current->rlim[RLIMIT_MEMLOCK].rlim_cur;
+		lock_limit = current->signal->rlim[RLIMIT_MEMLOCK].rlim_cur;
 		locked += len;
 		if (locked > lock_limit && !capable(CAP_IPC_LOCK))
 			return -EAGAIN;
@@ -905,7 +905,7 @@ munmap_back:
 
 	/* Check against address space limit. */
 	if ((mm->total_vm << PAGE_SHIFT) + len
-	    > current->rlim[RLIMIT_AS].rlim_cur)
+	    > current->signal->rlim[RLIMIT_AS].rlim_cur)
 		return -ENOMEM;
 
 	if (accountable && (!(flags & MAP_NORESERVE) ||
@@ -988,9 +988,12 @@ munmap_back:
 	 *         f_op->mmap method. -DaveM
 	 */
 	addr = vma->vm_start;
+	pgoff = vma->vm_pgoff;
+	vm_flags = vma->vm_flags;
 
 	if (!file || !vma_merge(mm, prev, addr, vma->vm_end,
 			vma->vm_flags, NULL, file, pgoff, vma_policy(vma))) {
+		file = vma->vm_file;
 		vma_link(mm, vma, prev, rb_link, rb_parent);
 		if (correct_wcount)
 			atomic_inc(&inode->i_writecount);
@@ -1005,6 +1008,7 @@ munmap_back:
 	}
 out:	
 	mm->total_vm += len >> PAGE_SHIFT;
+	__vm_stat_account(mm, vm_flags, file, len >> PAGE_SHIFT);
 	if (vm_flags & VM_LOCKED) {
 		mm->locked_vm += len >> PAGE_SHIFT;
 		make_pages_present(addr, addr + len);
@@ -1015,7 +1019,6 @@ out:
 					pgoff, flags & MAP_NONBLOCK);
 		down_write(&mm->mmap_sem);
 	}
-	__vm_stat_account(mm, vm_flags, file, len >> PAGE_SHIFT);
 	return addr;
 
 unmap_and_free_vma:
@@ -1350,9 +1353,9 @@ int expand_stack(struct vm_area_struct * vma, unsigned long address)
 		return -ENOMEM;
 	}
 	
-	if (address - vma->vm_start > current->rlim[RLIMIT_STACK].rlim_cur ||
+	if (address - vma->vm_start > current->signal->rlim[RLIMIT_STACK].rlim_cur ||
 			((vma->vm_mm->total_vm + grow) << PAGE_SHIFT) >
-			current->rlim[RLIMIT_AS].rlim_cur) {
+			current->signal->rlim[RLIMIT_AS].rlim_cur) {
 		anon_vma_unlock(vma);
 		vm_unacct_memory(grow);
 		return -ENOMEM;
@@ -1412,9 +1415,9 @@ int expand_stack(struct vm_area_struct *vma, unsigned long address)
 		return -ENOMEM;
 	}
 	
-	if (vma->vm_end - address > current->rlim[RLIMIT_STACK].rlim_cur ||
+	if (vma->vm_end - address > current->signal->rlim[RLIMIT_STACK].rlim_cur ||
 			((vma->vm_mm->total_vm + grow) << PAGE_SHIFT) >
-			current->rlim[RLIMIT_AS].rlim_cur) {
+			current->signal->rlim[RLIMIT_AS].rlim_cur) {
 		anon_vma_unlock(vma);
 		vm_unacct_memory(grow);
 		return -ENOMEM;
@@ -1760,7 +1763,7 @@ unsigned long do_brk(unsigned long addr, unsigned long len)
 	if (mm->def_flags & VM_LOCKED) {
 		unsigned long locked, lock_limit;
 		locked = mm->locked_vm << PAGE_SHIFT;
-		lock_limit = current->rlim[RLIMIT_MEMLOCK].rlim_cur;
+		lock_limit = current->signal->rlim[RLIMIT_MEMLOCK].rlim_cur;
 		locked += len;
 		if (locked > lock_limit && !capable(CAP_IPC_LOCK))
 			return -EAGAIN;
@@ -1779,7 +1782,7 @@ unsigned long do_brk(unsigned long addr, unsigned long len)
 
 	/* Check against address space limits *after* clearing old maps... */
 	if ((mm->total_vm << PAGE_SHIFT) + len
-	    > current->rlim[RLIMIT_AS].rlim_cur)
+	    > current->signal->rlim[RLIMIT_AS].rlim_cur)
 		return -ENOMEM;
 
 	if (mm->map_count > sysctl_max_map_count)
@@ -1868,7 +1871,7 @@ void exit_mmap(struct mm_struct *mm)
  * and into the inode's i_mmap tree.  If vm_file is non-NULL
  * then i_mmap_lock is taken here.
  */
-void insert_vm_struct(struct mm_struct * mm, struct vm_area_struct * vma)
+int insert_vm_struct(struct mm_struct * mm, struct vm_area_struct * vma)
 {
 	struct vm_area_struct * __vma, * prev;
 	struct rb_node ** rb_link, * rb_parent;
@@ -1891,8 +1894,9 @@ void insert_vm_struct(struct mm_struct * mm, struct vm_area_struct * vma)
 	}
 	__vma = find_vma_prepare(mm,vma->vm_start,&prev,&rb_link,&rb_parent);
 	if (__vma && __vma->vm_start < vma->vm_end)
-		BUG();
+		return -ENOMEM;
 	vma_link(mm, vma, prev, rb_link, rb_parent);
+	return 0;
 }
 
 /*

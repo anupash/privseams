@@ -38,7 +38,7 @@ static struct tridentfb_par default_par;
 
 /* FIXME:kmalloc these 3 instead */
 static struct fb_info fb_info;
-static int pseudo_pal[16];
+static u32 pseudo_pal[16];
 
 
 static struct fb_var_screeninfo default_var;
@@ -460,7 +460,7 @@ static void tridentfb_fillrect(struct fb_info * info, const struct fb_fillrect *
 		default:
 		case 8: col = fr->color;
 			break;
-		case 16: col = ((u16 *)(info->pseudo_palette))[fr->color];
+		case 16: col = ((u32 *)(info->pseudo_palette))[fr->color];
 			 break;
 		case 32: col = ((u32 *)(info->pseudo_palette))[fr->color];
 			 break;
@@ -990,7 +990,7 @@ static int tridentfb_setcolreg(unsigned regno, unsigned red, unsigned green,
 
 	} else
 	if (bpp == 16) 			/* RGB 565 */
-			((u16*)info->pseudo_palette)[regno] = (red & 0xF800) |
+			((u32*)info->pseudo_palette)[regno] = (red & 0xF800) |
 			((green & 0xFC00) >> 5) | ((blue & 0xF800) >> 11);
 	else
 	if (bpp == 32)		/* ARGB 8888 */
@@ -1017,22 +1017,24 @@ static int tridentfb_blank(int blank_mode, struct fb_info *info)
 	DPMSCont = read3CE(PowerStatus) & 0xFC;
 	switch (blank_mode)
 	{
-	case VESA_NO_BLANKING:
+	case FB_BLANK_UNBLANK:
 		/* Screen: On, HSync: On, VSync: On */
+	case FB_BLANK_NORMAL:
+		/* Screen: Off, HSync: On, VSync: On */
 		PMCont |= 0x03;
 		DPMSCont |= 0x00;
 		break;
-	case VESA_HSYNC_SUSPEND:
+	case FB_BLANK_HSYNC_SUSPEND:
 		/* Screen: Off, HSync: Off, VSync: On */
 		PMCont |= 0x02;
 		DPMSCont |= 0x01;
 		break;
-	case VESA_VSYNC_SUSPEND:
+	case FB_BLANK_VSYNC_SUSPEND:
 		/* Screen: Off, HSync: On, VSync: Off */
 		PMCont |= 0x02;
 		DPMSCont |= 0x02;
 		break;
-	case VESA_POWERDOWN:
+	case FB_BLANK_POWERDOWN:
 		/* Screen: Off, HSync: Off, VSync: Off */
 		PMCont |= 0x00;
 		DPMSCont |= 0x03;
@@ -1044,7 +1046,9 @@ static int tridentfb_blank(int blank_mode, struct fb_info *info)
 	t_outb(PMCont,0x83C6);
 
 	debug("exit\n");
-	return 0;
+
+	/* let fbcon do a softblank for us */
+	return (blank_mode == FB_BLANK_NORMAL) ? 1 : 0;
 }
 
 static int __devinit trident_pci_probe(struct pci_dev * dev, const struct pci_device_id * id)
@@ -1164,6 +1168,7 @@ static int __devinit trident_pci_probe(struct pci_dev * dev, const struct pci_de
 		default_var.accel_flags &= ~FB_ACCELF_TEXT;
 	default_var.activate |= FB_ACTIVATE_NOW;
 	fb_info.var = default_var;
+	fb_info.device = &dev->dev;
 	if (register_framebuffer(&fb_info) < 0) {
 		output("Could not register Trident framebuffer\n");
 		return -EINVAL;

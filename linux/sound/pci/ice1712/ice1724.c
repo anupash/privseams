@@ -46,6 +46,7 @@
 #include "aureon.h"
 #include "vt1720_mobo.h"
 #include "pontis.h"
+#include "prodigy192.h"
 
 
 MODULE_AUTHOR("Jaroslav Kysela <perex@suse.cz>");
@@ -57,6 +58,7 @@ MODULE_SUPPORTED_DEVICE("{"
 	       AUREON_DEVICE_DESC
 	       VT1720_MOBO_DEVICE_DESC
 	       PONTIS_DEVICE_DESC
+	       PRODIGY192_DEVICE_DESC
 		"{VIA,VT1720},"
 		"{VIA,VT1724},"
 		"{ICEnsemble,Generic ICE1724},"
@@ -67,15 +69,14 @@ static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;	/* Index 0-MAX */
 static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;	/* ID for this card */
 static int enable[SNDRV_CARDS] = SNDRV_DEFAULT_ENABLE_PNP;		/* Enable this card */
 static char *model[SNDRV_CARDS];
-static int boot_devs;
 
-module_param_array(index, int, boot_devs, 0444);
+module_param_array(index, int, NULL, 0444);
 MODULE_PARM_DESC(index, "Index value for ICE1724 soundcard.");
-module_param_array(id, charp, boot_devs, 0444);
+module_param_array(id, charp, NULL, 0444);
 MODULE_PARM_DESC(id, "ID string for ICE1724 soundcard.");
-module_param_array(enable, bool, boot_devs, 0444);
+module_param_array(enable, bool, NULL, 0444);
 MODULE_PARM_DESC(enable, "Enable ICE1724 soundcard.");
-module_param_array(model, charp, boot_devs, 0444);
+module_param_array(model, charp, NULL, 0444);
 MODULE_PARM_DESC(model, "Use the given board model.");
 
 #ifndef PCI_VENDOR_ID_ICE
@@ -1864,6 +1865,7 @@ static struct snd_ice1712_card_info *card_tables[] __devinitdata = {
 	snd_vt1724_aureon_cards,
 	snd_vt1720_mobo_cards,
 	snd_vt1720_pontis_cards,
+	snd_vt1724_prodigy192_cards,
 	NULL,
 };
 
@@ -2074,6 +2076,7 @@ static int snd_vt1724_free(ice1712_t *ice)
 	}
 	pci_release_regions(ice->pci);
 	snd_ice1712_akm4xxx_free(ice);
+	pci_disable_device(ice->pci);
 	kfree(ice);
 	return 0;
 }
@@ -2103,8 +2106,10 @@ static int __devinit snd_vt1724_create(snd_card_t * card,
 		return err;
 
 	ice = kcalloc(1, sizeof(*ice), GFP_KERNEL);
-	if (ice == NULL)
+	if (ice == NULL) {
+		pci_disable_device(pci);
 		return -ENOMEM;
+	}
 	ice->vt1724 = 1;
 	spin_lock_init(&ice->reg_lock);
 	init_MUTEX(&ice->gpio_mutex);
@@ -2122,6 +2127,7 @@ static int __devinit snd_vt1724_create(snd_card_t * card,
 
 	if ((err = pci_request_regions(pci, "ICE1724")) < 0) {
 		kfree(ice);
+		pci_disable_device(pci);
 		return err;
 	}
 	ice->port = pci_resource_start(pci, 0);

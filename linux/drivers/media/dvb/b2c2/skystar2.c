@@ -30,14 +30,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/delay.h>
 #include <linux/pci.h>
 #include <linux/init.h>
+#include <linux/version.h>
 
 #include <asm/io.h>
 
-#include "dvb_i2c.h"
 #include "dvb_frontend.h"
 
 #include <linux/dvb/frontend.h>
@@ -48,13 +50,21 @@
 #include "dvbdev.h"
 #include "demux.h"
 #include "dvb_net.h"
+#include "stv0299.h"
+#include "mt352.h"
+#include "mt312.h"
 
-#include "dvb_functions.h"
 
-static int debug = 0;
+static int debug;
+static int enable_hw_filters = 2;
+
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "Set debugging level (0 = default, 1 = most messages, 2 = all messages).");
+module_param(enable_hw_filters, int, 0444);
+MODULE_PARM_DESC(enable_hw_filters, "enable hardware filters: supported values: 0 (none), 1, 2");
+
 #define dprintk(x...)	do { if (debug>=1) printk(x); } while (0)
 #define ddprintk(x...)	do { if (debug>=2) printk(x); } while (0)
-static int enable_hw_filters = 2;
 
 #define SIZE_OF_BUF_DMA1	0x3ac00
 #define SIZE_OF_BUF_DMA2	0x758
@@ -70,6 +80,9 @@ struct dmaq {
 	u8 *buffer;
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,9)
+#define __iomem
+#endif
 
 struct adapter {
 	struct pci_dev *pdev;
@@ -79,7 +92,7 @@ struct adapter {
 	u32 pid_filter_max;
 	u32 mac_filter_max;
 	u32 irq;
-	unsigned long io_mem;
+	void __iomem *io_mem;
 	unsigned long io_port;
 	u8 mac_addr[8];
 	u32 dw_sram_type;
@@ -89,7 +102,7 @@ struct adapter {
 	struct dmxdev dmxdev;
 	struct dmx_frontend hw_frontend;
 	struct dmx_frontend mem_frontend;
-	struct dvb_i2c_bus *i2c_bus;
+	struct i2c_adapter i2c_adap;
 	struct dvb_net dvbnet;
 
 	struct semaphore i2c_sem;
@@ -111,6 +124,9 @@ struct adapter {
 	int pid_count;
 	int whole_bandwidth_count;
 	u32 mac_filter;
+
+	struct dvb_frontend* fe;
+	int (*fe_sleep)(struct dvb_frontend* fe);
 };
 
 #define write_reg_dw(adapter,reg,value) writel(value, adapter->io_mem + reg)
@@ -277,9 +293,9 @@ static u32 flex_i2c_write(struct adapter *adapter, u32 device, u32 bus, u32 addr
 	return buf - start;
 }
 
-static int master_xfer(struct dvb_i2c_bus *i2c, const struct i2c_msg *msgs, int num)
+static int master_xfer(struct i2c_adapter* adapter, struct i2c_msg msgs[], int num)
 {
-	struct adapter *tmp = i2c->data;
+	struct adapter *tmp = i2c_get_adapdata(adapter);
 	int i, ret = 0;
 
 	if (down_interruptible(&tmp->i2c_sem))
@@ -290,13 +306,6 @@ static int master_xfer(struct dvb_i2c_bus *i2c, const struct i2c_msg *msgs, int 
 		for (i = 0; i < num; i++) {
 		ddprintk("message %d: flags=0x%x, addr=0x%x, buf=0x%x, len=%d \n", i,
 			 msgs[i].flags, msgs[i].addr, msgs[i].buf[0], msgs[i].len);
-	
-		/* allow only the mt312 and stv0299 frontends to access the bus */
-		if ((msgs[i].addr != 0x0e) && (msgs[i].addr != 0x68) && (msgs[i].addr != 0x61)) {
-		up(&tmp->i2c_sem);
-
-		return -EREMOTEIO;
-	}
 	}
 
 	// read command
@@ -307,10 +316,10 @@ static int master_xfer(struct dvb_i2c_bus *i2c, const struct i2c_msg *msgs, int 
 		up(&tmp->i2c_sem);
 
 		if (ret != msgs[1].len) {
-			printk("%s: read error !\n", __FUNCTION__);
+			dprintk("%s: read error !\n", __FUNCTION__);
 
 			for (i = 0; i < 2; i++) {
-				printk("message %d: flags=0x%x, addr=0x%x, buf=0x%x, len=%d \n", i,
+				dprintk("message %d: flags=0x%x, addr=0x%x, buf=0x%x, len=%d \n", i,
 				       msgs[i].flags, msgs[i].addr, msgs[i].buf[0], msgs[i].len);
 		}
 
@@ -330,9 +339,9 @@ static int master_xfer(struct dvb_i2c_bus *i2c, const struct i2c_msg *msgs, int 
 		up(&tmp->i2c_sem);
 
 		if (ret != msgs[0].len - 1) {
-			printk("%s: write error %i !\n", __FUNCTION__, ret);
+			dprintk("%s: write error %i !\n", __FUNCTION__, ret);
 
-			printk("message %d: flags=0x%x, addr=0x%x, buf[0]=0x%x, len=%d \n", i,
+			dprintk("message %d: flags=0x%x, addr=0x%x, buf[0]=0x%x, len=%d \n", i,
 			       msgs[i].flags, msgs[i].addr, msgs[i].buf[0], msgs[i].len);
 
 			return -EREMOTEIO;
@@ -778,7 +787,7 @@ static int eeprom_read(struct adapter *adapter, u16 addr, u8 *buf, u16 len)
 	return flex_i2c_read(adapter, 0x20000000, 0x50, addr, buf, len);
 }
 
-u8 calc_lrc(u8 *buf, int len)
+static u8 calc_lrc(u8 *buf, int len)
 {
 	int i;
 	u8 sum;
@@ -1763,11 +1772,11 @@ static void free_adapter_object(struct adapter *adapter)
 
 	free_dma_queue(adapter);
 
-	if (adapter->io_mem != 0)
-		iounmap((void *) adapter->io_mem);
+	if (adapter->io_mem)
+		iounmap(adapter->io_mem);
 
 	if (adapter != 0)
-		kfree(adapter);
+	kfree(adapter);
 }
 
 static struct pci_driver skystar2_pci_driver;
@@ -1798,15 +1807,15 @@ static int claim_adapter(struct adapter *adapter)
 
 	adapter->io_port = pdev->resource[1].start;
 
-	adapter->io_mem = (unsigned long) ioremap(pdev->resource[0].start, 0x800);
+	adapter->io_mem = ioremap(pdev->resource[0].start, 0x800);
 
-	if (adapter->io_mem == 0) {
+	if (!adapter->io_mem) {
 		dprintk("%s: can not map io memory\n", __FUNCTION__);
 
 		return 2;
 	}
 
-	dprintk("%s: io memory maped at %lx\n", __FUNCTION__, adapter->io_mem);
+	dprintk("%s: io memory maped at %p\n", __FUNCTION__, adapter->io_mem);
 
 	return 1;
 }
@@ -2122,18 +2131,17 @@ static int send_diseqc_msg(struct adapter *adapter, int len, u8 *msg, unsigned l
 			udelay(12500);
 			set_tuner_tone(adapter, 0);
 		}
-		dvb_delay(20);
+		msleep(20);
 	}
 
 	return 0;
 }
 
-
-int soft_diseqc(struct adapter *adapter, unsigned int cmd, void *arg)
+static int flexcop_set_tone(struct dvb_frontend* fe, fe_sec_tone_mode_t tone)
 {
-	switch (cmd) {
-	case FE_SET_TONE:
-		switch ((fe_sec_tone_mode_t) arg) {
+	struct adapter* adapter = (struct adapter*) fe->dvb->priv;
+
+	switch(tone) {
 		case SEC_TONE_ON:
 			set_tuner_tone(adapter, 1);
 			break;
@@ -2143,90 +2151,311 @@ int soft_diseqc(struct adapter *adapter, unsigned int cmd, void *arg)
 			default:
 				return -EINVAL;
 			};
-		break;
 
-	case FE_DISEQC_SEND_MASTER_CMD:
+	return 0;
+}
+
+static int flexcop_diseqc_send_master_cmd(struct dvb_frontend* fe, struct dvb_diseqc_master_cmd* cmd)
 		{
-			struct dvb_diseqc_master_cmd *cmd = arg;
+	struct adapter* adapter = (struct adapter*) fe->dvb->priv;
 
 			send_diseqc_msg(adapter, cmd->msg_len, cmd->msg, 0);
+
+	return 0;
+		}
+
+static int flexcop_diseqc_send_burst(struct dvb_frontend* fe, fe_sec_mini_cmd_t minicmd)
+{
+	struct adapter* adapter = (struct adapter*) fe->dvb->priv;
+
+	send_diseqc_msg(adapter, 0, NULL, minicmd);
+
+	return 0;
+}
+
+static int flexcop_set_voltage(struct dvb_frontend* fe, fe_sec_voltage_t voltage)
+		{
+	struct adapter* adapter = (struct adapter*) fe->dvb->priv;
+
+	dprintk("%s: FE_SET_VOLTAGE\n", __FUNCTION__);
+
+	switch (voltage) {
+	case SEC_VOLTAGE_13:
+		dprintk("%s: SEC_VOLTAGE_13, %x\n", __FUNCTION__, SEC_VOLTAGE_13);
+		set_tuner_polarity(adapter, 1);
+		return 0;
+
+	case SEC_VOLTAGE_18:
+		dprintk("%s: SEC_VOLTAGE_18, %x\n", __FUNCTION__, SEC_VOLTAGE_18);
+		set_tuner_polarity(adapter, 2);
+			return 0;
+
+	default:
+		return -EINVAL;
+	}
+	}
+
+static int flexcop_sleep(struct dvb_frontend* fe)
+		{
+	struct adapter* adapter = (struct adapter*) fe->dvb->priv;
+
+	dprintk("%s: FE_SLEEP\n", __FUNCTION__);
+			set_tuner_polarity(adapter, 0);
+
+	if (adapter->fe_sleep) return adapter->fe_sleep(fe);
+	return 0;
+		}
+
+static u32 flexcop_i2c_func(struct i2c_adapter *adapter)
+		{
+	printk("flexcop_i2c_func\n");
+
+	return I2C_FUNC_I2C;
+}
+
+static struct i2c_algorithm    flexcop_algo = {
+	.name		= "flexcop i2c algorithm",
+	.id		= I2C_ALGO_BIT,
+	.master_xfer	= master_xfer,
+	.functionality	= flexcop_i2c_func,
+};
+
+
+
+
+static int samsung_tbmu24112_set_symbol_rate(struct dvb_frontend* fe, u32 srate, u32 ratio)
+{
+	u8 aclk = 0;
+	u8 bclk = 0;
+
+	if (srate < 1500000) { aclk = 0xb7; bclk = 0x47; }
+	else if (srate < 3000000) { aclk = 0xb7; bclk = 0x4b; }
+	else if (srate < 7000000) { aclk = 0xb7; bclk = 0x4f; }
+	else if (srate < 14000000) { aclk = 0xb7; bclk = 0x53; }
+	else if (srate < 30000000) { aclk = 0xb6; bclk = 0x53; }
+	else if (srate < 45000000) { aclk = 0xb4; bclk = 0x51; }
+
+	stv0299_writereg (fe, 0x13, aclk);
+	stv0299_writereg (fe, 0x14, bclk);
+	stv0299_writereg (fe, 0x1f, (ratio >> 16) & 0xff);
+	stv0299_writereg (fe, 0x20, (ratio >>  8) & 0xff);
+	stv0299_writereg (fe, 0x21, (ratio      ) & 0xf0);
+
+	return 0;
+}
+
+static int samsung_tbmu24112_pll_set(struct dvb_frontend* fe, struct dvb_frontend_parameters* params)
+{
+	u8 buf[4];
+	u32 div;
+	struct i2c_msg msg = { .addr = 0x61, .flags = 0, .buf = buf, .len = sizeof(buf) };
+	struct adapter* adapter = (struct adapter*) fe->dvb->priv;
+
+	div = params->frequency / 125;
+
+	buf[0] = (div >> 8) & 0x7f;
+	buf[1] = div & 0xff;
+	buf[2] = 0x84;  // 0xC4
+	buf[3] = 0x08;
+
+	if (params->frequency < 1500000) buf[3] |= 0x10;
+
+	if (i2c_transfer (&adapter->i2c_adap, &msg, 1) != 1) return -EIO;
+	return 0;
+}
+
+static u8 samsung_tbmu24112_inittab[] = {
+	     0x01, 0x15,
+	     0x02, 0x30,
+	     0x03, 0x00,
+	     0x04, 0x7D,
+	     0x05, 0x35,
+	     0x06, 0x02,
+	     0x07, 0x00,
+	     0x08, 0xC3,
+	     0x0C, 0x00,
+	     0x0D, 0x81,
+	     0x0E, 0x23,
+	     0x0F, 0x12,
+	     0x10, 0x7E,
+	     0x11, 0x84,
+	     0x12, 0xB9,
+	     0x13, 0x88,
+	     0x14, 0x89,
+	     0x15, 0xC9,
+	     0x16, 0x00,
+	     0x17, 0x5C,
+	     0x18, 0x00,
+	     0x19, 0x00,
+	     0x1A, 0x00,
+	     0x1C, 0x00,
+	     0x1D, 0x00,
+	     0x1E, 0x00,
+	     0x1F, 0x3A,
+	     0x20, 0x2E,
+	     0x21, 0x80,
+	     0x22, 0xFF,
+	     0x23, 0xC1,
+	     0x28, 0x00,
+	     0x29, 0x1E,
+	     0x2A, 0x14,
+	     0x2B, 0x0F,
+	     0x2C, 0x09,
+	     0x2D, 0x05,
+	     0x31, 0x1F,
+	     0x32, 0x19,
+	     0x33, 0xFE,
+	     0x34, 0x93,
+	     0xff, 0xff,
+			};
+
+static struct stv0299_config samsung_tbmu24112_config = {
+	.demod_address = 0x68,
+	.inittab = samsung_tbmu24112_inittab,
+	.mclk = 88000000UL,
+	.invert = 0,
+	.enhanced_tuning = 0,
+	.skip_reinit = 0,
+	.lock_output = STV0229_LOCKOUTPUT_LK,
+	.volt13_op0_op1 = STV0299_VOLT13_OP1,
+	.min_delay_ms = 100,
+	.set_symbol_rate = samsung_tbmu24112_set_symbol_rate,
+   	.pll_set = samsung_tbmu24112_pll_set,
+};
+
+
+
+
+
+static int samsung_tdtc9251dh0_demod_init(struct dvb_frontend* fe)
+{
+	static u8 mt352_clock_config [] = { 0x89, 0x10, 0x2d };
+	static u8 mt352_reset [] = { 0x50, 0x80 };
+	static u8 mt352_adc_ctl_1_cfg [] = { 0x8E, 0x40 };
+	static u8 mt352_agc_cfg [] = { 0x67, 0x28, 0xa1 };
+	static u8 mt352_capt_range_cfg[] = { 0x75, 0x32 };
+
+	mt352_write(fe, mt352_clock_config, sizeof(mt352_clock_config));
+	udelay(2000);
+	mt352_write(fe, mt352_reset, sizeof(mt352_reset));
+	mt352_write(fe, mt352_adc_ctl_1_cfg, sizeof(mt352_adc_ctl_1_cfg));
+
+	mt352_write(fe, mt352_agc_cfg, sizeof(mt352_agc_cfg));
+	mt352_write(fe, mt352_capt_range_cfg, sizeof(mt352_capt_range_cfg));
+
+	return 0;
+}
+
+int samsung_tdtc9251dh0_pll_set(struct dvb_frontend* fe, struct dvb_frontend_parameters* params, u8* pllbuf)
+{
+	u32 div;
+	unsigned char bs = 0;
+
+	#define IF_FREQUENCYx6 217    /* 6 * 36.16666666667MHz */
+	div = (((params->frequency + 83333) * 3) / 500000) + IF_FREQUENCYx6;
+
+	if (params->frequency >= 48000000 && params->frequency <= 154000000) bs = 0x09;
+	if (params->frequency >= 161000000 && params->frequency <= 439000000) bs = 0x0a;
+	if (params->frequency >= 447000000 && params->frequency <= 863000000) bs = 0x08;
+
+	pllbuf[0] = 0xc2; // Note: non-linux standard PLL i2c address
+	pllbuf[1] = div >> 8;
+   	pllbuf[2] = div & 0xff;
+   	pllbuf[3] = 0xcc;
+   	pllbuf[4] = bs;
+
+	return 0;
+}
+
+static struct mt352_config samsung_tdtc9251dh0_config = {
+
+	.demod_address = 0x0f,
+	.demod_init = samsung_tdtc9251dh0_demod_init,
+   	.pll_set = samsung_tdtc9251dh0_pll_set,
+};
+
+static int skystar23_samsung_tbdu18132_pll_set(struct dvb_frontend* fe, struct dvb_frontend_parameters* params)
+{
+	u8 buf[4];
+	u32 div;
+	struct i2c_msg msg = { .addr = 0x61, .flags = 0, .buf = buf, .len = sizeof(buf) };
+	struct adapter* adapter = (struct adapter*) fe->dvb->priv;
+
+	div = (params->frequency + (125/2)) / 125;
+
+	buf[0] = (div >> 8) & 0x7f;
+	buf[1] = (div >> 0) & 0xff;
+	buf[2] = 0x84 | ((div >> 10) & 0x60);
+	buf[3] = 0x80;
+
+	if (params->frequency < 1550000)
+		buf[3] |= 0x02;
+
+	if (i2c_transfer (&adapter->i2c_adap, &msg, 1) != 1) return -EIO;
+	return 0;
+}
+
+static struct mt312_config skystar23_samsung_tbdu18132_config = {
+
+	.demod_address = 0x0e,
+   	.pll_set = skystar23_samsung_tbdu18132_pll_set,
+};
+
+
+
+
+static void frontend_init(struct adapter *skystar2)
+{
+	switch(skystar2->pdev->device) {
+	case 0x2103: // Technisat Skystar2 OR Technisat Airstar2
+
+		// try the skystar2 v2.6 first (stv0299/Samsung tbmu24112(sl1935))
+		skystar2->fe = stv0299_attach(&samsung_tbmu24112_config, &skystar2->i2c_adap);
+		if (skystar2->fe != NULL) {
+			skystar2->fe->ops->set_voltage = flexcop_set_voltage;
+			skystar2->fe_sleep = skystar2->fe->ops->sleep;
+			skystar2->fe->ops->sleep = flexcop_sleep;
+			break;
+}
+
+		// try the airstar2 (mt352/Samsung tdtc9251dh0(??))
+		skystar2->fe = mt352_attach(&samsung_tdtc9251dh0_config, &skystar2->i2c_adap);
+		if (skystar2->fe != NULL) {
+			skystar2->fe->ops->info.frequency_min = 474000000;
+			skystar2->fe->ops->info.frequency_max = 858000000;
 			break;
 		}
 
-	case FE_DISEQC_SEND_BURST:
-		send_diseqc_msg(adapter, 0, NULL, (unsigned long) arg);
+		// try the skystar2 v2.3 (vp310/Samsung tbdu18132(tsa5059))
+		skystar2->fe = vp310_attach(&skystar23_samsung_tbdu18132_config, &skystar2->i2c_adap);
+		if (skystar2->fe != NULL) {
+			skystar2->fe->ops->diseqc_send_master_cmd = flexcop_diseqc_send_master_cmd;
+			skystar2->fe->ops->diseqc_send_burst = flexcop_diseqc_send_burst;
+			skystar2->fe->ops->set_tone = flexcop_set_tone;
+			skystar2->fe->ops->set_voltage = flexcop_set_voltage;
+			skystar2->fe_sleep = skystar2->fe->ops->sleep;
+			skystar2->fe->ops->sleep = flexcop_sleep;
+			break;
+		}
 		break;
-
-	default:
-		return -EOPNOTSUPP;
-	};
-
-	return 0;
-}
-
-static int flexcop_diseqc_ioctl(struct dvb_frontend *fe, unsigned int cmd, void *arg)
-		{
-	struct adapter *adapter = fe->before_after_data;
-
-	struct dvb_frontend_info info;
-
-	fe->ioctl(fe, FE_GET_INFO, &info);
-
-	// we must use different DiSEqC hw
-
-	if (strcmp(info.name, "Zarlink MT312") == 0) {
-		//VP310 using mt312 driver for tuning only: diseqc not wired
-		//use FCII instead
-		if (!soft_diseqc(adapter, cmd, arg))
-			return 0;
 	}
 
-	switch (cmd) {
-	case FE_SLEEP:
-		{
-			dprintk("%s: FE_SLEEP\n", __FUNCTION__);
-
-			set_tuner_polarity(adapter, 0);
-
-			// return -EOPNOTSUPP, to make DVB core also send "FE_SLEEP" command to frontend.
-			return -EOPNOTSUPP;
+	if (skystar2->fe == NULL) {
+		printk("skystar2: A frontend driver was not found for device %04x/%04x subsystem %04x/%04x\n",
+		       skystar2->pdev->vendor,
+		       skystar2->pdev->device,
+		       skystar2->pdev->subsystem_vendor,
+		       skystar2->pdev->subsystem_device);
+	} else {
+		if (dvb_register_frontend(skystar2->dvb_adapter, skystar2->fe)) {
+			printk("skystar2: Frontend registration failed!\n");
+			if (skystar2->fe->ops->release)
+				skystar2->fe->ops->release(skystar2->fe);
+			skystar2->fe = NULL;
 		}
-
-	case FE_SET_VOLTAGE:
-		{
-			dprintk("%s: FE_SET_VOLTAGE\n", __FUNCTION__);
-
-			switch ((fe_sec_voltage_t) arg) {
-			case SEC_VOLTAGE_13:
-
-				dprintk("%s: SEC_VOLTAGE_13, %x\n", __FUNCTION__, SEC_VOLTAGE_13);
-
-				set_tuner_polarity(adapter, 1);
-
-				return 0;
-
-			case SEC_VOLTAGE_18:
-
-				dprintk("%s: SEC_VOLTAGE_18, %x\n", __FUNCTION__, SEC_VOLTAGE_18);
-
-				set_tuner_polarity(adapter, 2);
-
-				return 0;
-
-			default:
-
-				return -EINVAL;
-			};
-		}
-
-
-	default:
-
-		return -EOPNOTSUPP;
-	};
-
-	return 0;
+	}
 }
+
 
 static int skystar2_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
@@ -2254,16 +2483,31 @@ static int skystar2_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	adapter = (struct adapter *) pci_get_drvdata(pdev);
 
+	dvb_adapter->priv = adapter;
 	adapter->dvb_adapter = dvb_adapter;
+
 
 	init_MUTEX(&adapter->i2c_sem);
 
-	adapter->i2c_bus = dvb_register_i2c_bus(master_xfer, adapter, adapter->dvb_adapter, 0);
 
-	if (!adapter->i2c_bus)
+	memset(&adapter->i2c_adap, 0, sizeof(struct i2c_adapter));
+	strcpy(adapter->i2c_adap.name, "SkyStar2");
+
+	i2c_set_adapdata(&adapter->i2c_adap, adapter);
+
+#ifdef I2C_ADAP_CLASS_TV_DIGITAL
+	adapter->i2c_adap.class 	    = I2C_ADAP_CLASS_TV_DIGITAL;
+#else
+	adapter->i2c_adap.class 	    = I2C_CLASS_TV_DIGITAL;
+#endif
+	adapter->i2c_adap.algo              = &flexcop_algo;
+	adapter->i2c_adap.algo_data         = NULL;
+	adapter->i2c_adap.id                = I2C_ALGO_BIT;
+
+	if (i2c_add_adapter(&adapter->i2c_adap) < 0) {
+		dvb_unregister_adapter (adapter->dvb_adapter);
 		return -ENOMEM;
-
-	dvb_add_frontend_ioctls(adapter->dvb_adapter, flexcop_diseqc_ioctl, NULL, adapter);
+	}
 
 	dvbdemux = &adapter->demux;
 
@@ -2300,6 +2544,9 @@ static int skystar2_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		return ret;
 
 	dvb_net_init(adapter->dvb_adapter, &adapter->dvbnet, &dvbdemux->dmx);
+
+	frontend_init(adapter);
+
 	return 0;
 }
 
@@ -2324,11 +2571,10 @@ static void skystar2_remove(struct pci_dev *pdev)
 		dvb_dmxdev_release(&adapter->dmxdev);
 		dvb_dmx_release(&adapter->demux);
 
-		if (adapter->dvb_adapter != NULL) {
-			dvb_remove_frontend_ioctls(adapter->dvb_adapter, flexcop_diseqc_ioctl, NULL);
+		if (adapter->fe != NULL) dvb_unregister_frontend(adapter->fe);
 
-			if (adapter->i2c_bus != NULL)
-				dvb_unregister_i2c_bus(master_xfer, adapter->i2c_bus->adapter, adapter->i2c_bus->id);
+		if (adapter->dvb_adapter != NULL) {
+			i2c_del_adapter(&adapter->i2c_adap);
 
 			dvb_unregister_adapter(adapter->dvb_adapter);
 		}
@@ -2338,7 +2584,7 @@ static void skystar2_remove(struct pci_dev *pdev)
 
 static struct pci_device_id skystar2_pci_tbl[] = {
 	{0x000013d0, 0x00002103, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000},
-	{0x000013d0, 0x00002200, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000},	//FCIII
+/*	{0x000013d0, 0x00002200, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000}, UNDEFINED HARDWARE - mail linuxtv.org list */	//FCIII
 	{0,},
 };
 
@@ -2363,11 +2609,6 @@ static void skystar2_cleanup(void)
 
 module_init(skystar2_init);
 module_exit(skystar2_cleanup);
-
-MODULE_PARM(debug, "i");
-MODULE_PARM_DESC(debug, "enable verbose debug messages: supported values: 1 and 2");
-MODULE_PARM(enable_hw_filters, "i");
-MODULE_PARM_DESC(enable_hw_filters, "enable hardware filters: supported values: 0 (none), 1, 2");
 
 MODULE_DESCRIPTION("Technisat SkyStar2 DVB PCI Driver");
 MODULE_LICENSE("GPL");

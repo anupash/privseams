@@ -377,7 +377,7 @@ static int shrink_list(struct list_head *page_list, struct scan_control *sc)
 		if (page_mapped(page) || PageSwapCache(page))
 			sc->nr_scanned++;
 
-		referenced = page_referenced(page, 1);
+		referenced = page_referenced(page, 1, sc->priority <= 0);
 		/* In active use or really unfreeable?  Activate it. */
 		if (referenced && page_mapping_inuse(page))
 			goto activate_locked;
@@ -574,7 +574,6 @@ static void shrink_cache(struct zone *zone, struct scan_control *sc)
 			nr_taken++;
 		}
 		zone->nr_inactive -= nr_taken;
-		zone->pages_scanned += nr_taken;
 		spin_unlock_irq(&zone->lru_lock);
 
 		if (nr_taken == 0)
@@ -675,6 +674,7 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 		}
 		pgscanned++;
 	}
+	zone->pages_scanned += pgscanned;
 	zone->nr_active -= pgmoved;
 	spin_unlock_irq(&zone->lru_lock);
 
@@ -715,7 +715,7 @@ refill_inactive_zone(struct zone *zone, struct scan_control *sc)
 		if (page_mapped(page)) {
 			if (!reclaim_mapped ||
 			    (total_swap_pages == 0 && PageAnon(page)) ||
-			    page_referenced(page, 0)) {
+			    page_referenced(page, 0, sc->priority <= 0)) {
 				list_add(&page->lru, &l_active);
 				continue;
 			}

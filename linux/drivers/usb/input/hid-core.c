@@ -94,7 +94,8 @@ static struct hid_field *hid_register_field(struct hid_report *report, unsigned 
 	memset(field, 0, sizeof(struct hid_field) + usages * sizeof(struct hid_usage)
 		+ values * sizeof(unsigned));
 
-	report->field[report->maxfield++] = field;
+	field->index = report->maxfield++;
+	report->field[field->index] = field;
 	field->usage = (struct hid_usage *)(field + 1);
 	field->value = (unsigned *)(field->usage + usages);
 	field->report = report;
@@ -925,6 +926,7 @@ static void hid_irq_in(struct urb *urb, struct pt_regs *regs)
 		case -ECONNRESET:	/* unlink */
 		case -ENOENT:
 		case -ESHUTDOWN:
+		case -EPERM:
 			return;
 		case -ETIMEDOUT:	/* NAK */
 			break;
@@ -1260,8 +1262,10 @@ int hid_wait_io(struct hid_device *hid)
 	add_wait_queue(&hid->wait, &wait);
 
 	while (timeout && (test_bit(HID_CTRL_RUNNING, &hid->iofl) ||
-			   test_bit(HID_OUT_RUNNING, &hid->iofl)))
+			   test_bit(HID_OUT_RUNNING, &hid->iofl))) {
+		set_current_state(TASK_UNINTERRUPTIBLE);
 		timeout = schedule_timeout(timeout);
+	}
 
 	set_current_state(TASK_RUNNING);
 	remove_wait_queue(&hid->wait, &wait);
@@ -1350,9 +1354,9 @@ void hid_init_reports(struct hid_device *hid)
 	while (ret) {
 		err |= ret;
 		if (test_bit(HID_CTRL_RUNNING, &hid->iofl))
-			usb_unlink_urb(hid->urbctrl);
+			usb_kill_urb(hid->urbctrl);
 		if (test_bit(HID_OUT_RUNNING, &hid->iofl))
-			usb_unlink_urb(hid->urbout);
+			usb_kill_urb(hid->urbout);
 		ret = hid_wait_io(hid);
 	}
 
@@ -1428,6 +1432,7 @@ void hid_init_reports(struct hid_device *hid)
 
 #define USB_VENDOR_ID_CYPRESS		0x04b4
 #define USB_DEVICE_ID_CYPRESS_MOUSE	0x0001
+#define USB_DEVICE_ID_CYPRESS_HIDCOM	0x5500
 
 #define USB_VENDOR_ID_BERKSHIRE		0x0c98
 #define USB_DEVICE_ID_BERKSHIRE_PCWD	0x1140
@@ -1455,10 +1460,14 @@ void hid_init_reports(struct hid_device *hid)
 #define USB_DEVICE_ID_1_PHIDGETSERVO_20	0x8101
 #define USB_DEVICE_ID_4_PHIDGETSERVO_20	0x8104
 
-#define USB_VENDOR_ID_CODEMERCS		0x07c0
-#define USB_DEVICE_ID_CODEMERCS_IOW40	0x1500
-#define USB_DEVICE_ID_CODEMERCS_IOW24	0x1501
+#define USB_VENDOR_ID_CODEMERCS        0x07c0
+#define USB_DEVICE_ID_CODEMERCS_IOW40  0x1500
+#define USB_DEVICE_ID_CODEMERCS_IOW24  0x1501
+#define USB_DEVICE_ID_CODEMERCS_IOW48  0x1502
+#define USB_DEVICE_ID_CODEMERCS_IOW28  0x1503
 
+#define USB_VENDOR_ID_DELORME		0x1163
+#define USB_DEVICE_ID_DELORME_EARTHMATE 0x0100
 
 static struct hid_blacklist {
 	__u16 idVendor;
@@ -1532,6 +1541,7 @@ static struct hid_blacklist {
 
 	{ USB_VENDOR_ID_A4TECH, USB_DEVICE_ID_A4TECH_WCP32PU, HID_QUIRK_2WHEEL_MOUSE_HACK_BACK },
 	{ USB_VENDOR_ID_CYPRESS, USB_DEVICE_ID_CYPRESS_MOUSE, HID_QUIRK_2WHEEL_MOUSE_HACK_EXTRA },
+	{ USB_VENDOR_ID_CYPRESS, USB_DEVICE_ID_CYPRESS_HIDCOM, HID_QUIRK_IGNORE },
 
 	{ USB_VENDOR_ID_ALPS, USB_DEVICE_ID_IBM_GAMEPAD, HID_QUIRK_BADPAD },
 	{ USB_VENDOR_ID_CHIC, USB_DEVICE_ID_CHIC_GAMEPAD, HID_QUIRK_BADPAD },
@@ -1541,6 +1551,13 @@ static struct hid_blacklist {
 	{ USB_VENDOR_ID_NEC, USB_DEVICE_ID_NEC_USB_GAME_PAD, HID_QUIRK_BADPAD },
 	{ USB_VENDOR_ID_SAITEK, USB_DEVICE_ID_SAITEK_RUMBLEPAD, HID_QUIRK_BADPAD },
 	{ USB_VENDOR_ID_TOPMAX, USB_DEVICE_ID_TOPMAX_COBRAPAD, HID_QUIRK_BADPAD },
+
+	{ USB_VENDOR_ID_CODEMERCS, USB_DEVICE_ID_CODEMERCS_IOW40, HID_QUIRK_IGNORE },
+	{ USB_VENDOR_ID_CODEMERCS, USB_DEVICE_ID_CODEMERCS_IOW24, HID_QUIRK_IGNORE },
+	{ USB_VENDOR_ID_CODEMERCS, USB_DEVICE_ID_CODEMERCS_IOW48, HID_QUIRK_IGNORE },
+	{ USB_VENDOR_ID_CODEMERCS, USB_DEVICE_ID_CODEMERCS_IOW28, HID_QUIRK_IGNORE },
+
+	{ USB_VENDOR_ID_DELORME, USB_DEVICE_ID_DELORME_EARTHMATE, HID_QUIRK_IGNORE },
 
 	{ 0, 0 }
 };
@@ -1686,8 +1703,8 @@ static struct hid_device *usb_hid_configure(struct usb_interface *intf)
 
 	init_waitqueue_head(&hid->wait);
 	
-	hid->outlock = SPIN_LOCK_UNLOCKED;
-	hid->ctrllock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&hid->outlock);
+	spin_lock_init(&hid->ctrllock);
 
 	hid->version = le16_to_cpu(hdesc->bcdHID);
 	hid->country = hdesc->bCountryCode;
@@ -1825,6 +1842,30 @@ static int hid_probe (struct usb_interface *intf, const struct usb_device_id *id
 	return 0;
 }
 
+static int hid_suspend(struct usb_interface *intf, u32 state)
+{
+	struct hid_device *hid = usb_get_intfdata (intf);
+
+	usb_kill_urb(hid->urbin);
+	intf->dev.power.power_state = state;
+	dev_dbg(&intf->dev, "suspend\n");
+	return 0;
+}
+
+static int hid_resume(struct usb_interface *intf)
+{
+	struct hid_device *hid = usb_get_intfdata (intf);
+	int status;
+
+	intf->dev.power.power_state = PM_SUSPEND_ON;
+	if (hid->open)
+		status = usb_submit_urb(hid->urbin, GFP_NOIO);
+	else
+		status = 0;
+	dev_dbg(&intf->dev, "resume status %d\n", status);
+	return status;
+}
+
 static struct usb_device_id hid_usb_ids [] = {
 	{ .match_flags = USB_DEVICE_ID_MATCH_INT_CLASS,
 	    .bInterfaceClass = USB_INTERFACE_CLASS_HID },
@@ -1838,6 +1879,8 @@ static struct usb_driver hid_driver = {
 	.name =		"usbhid",
 	.probe =	hid_probe,
 	.disconnect =	hid_disconnect,
+	.suspend =	hid_suspend,
+	.resume =	hid_resume,
 	.id_table =	hid_usb_ids,
 };
 

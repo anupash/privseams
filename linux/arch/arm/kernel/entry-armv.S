@@ -464,7 +464,7 @@ ENTRY(soft_irq_mask)
 		.macro	irq_prio_table
 		.endm
 
-#elif defined(CONFIG_ARCH_VERSATILE_PB)
+#elif defined(CONFIG_ARCH_VERSATILE)
 
 		.macro	disable_fiq
 		.endm
@@ -1657,6 +1657,8 @@ __stubs_end:
 ENTRY(__trap_init)
 		stmfd	sp!, {r4 - r6, lr}
 
+		mov	r0, #0xff000000
+		orr	r0, r0, #0x00ff0000		@ high vectors position
 		adr	r1, .LCvectors			@ set up the vectors
 		ldmia	r1, {r1, r2, r3, r4, r5, r6, ip, lr}
 		stmia	r0, {r1, r2, r3, r4, r5, r6, ip, lr}

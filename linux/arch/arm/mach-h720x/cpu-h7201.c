@@ -22,18 +22,20 @@
 #include <asm/arch/irqs.h>
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
-
-extern unsigned long h720x_gettimeoffset(void);
-extern void __init h720x_init_irq (void);
-
+#include "common.h"
 /*
  * Timer interrupt handler
  */
 static irqreturn_t
 h7201_timer_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 {
+	write_seqlock(&xtime_lock);
+
 	CPU_REG (TIMER_VIRT, TIMER_TOPSTAT);
 	timer_tick(regs);
+
+	write_sequnlock(&xtime_lock);
+
 	return IRQ_HANDLED;
 }
 
@@ -48,8 +50,6 @@ static struct irqaction h7201_timer_irq = {
  */
 void __init h7201_init_time(void)
 {
-	gettimeoffset = h720x_gettimeoffset;
-
 	CPU_REG (TIMER_VIRT, TM0_PERIOD) = LATCH;
 	CPU_REG (TIMER_VIRT, TM0_CTRL) = TM_RESET;
 	CPU_REG (TIMER_VIRT, TM0_CTRL) = TM_REPEAT | TM_START;
@@ -57,3 +57,8 @@ void __init h7201_init_time(void)
 
 	setup_irq(IRQ_TIMER0, &h7201_timer_irq);
 }
+
+struct sys_timer h7201_timer = {
+	.init		= h7201_init_time,
+	.offset		= h720x_gettimeoffset,
+};

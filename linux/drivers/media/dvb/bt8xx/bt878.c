@@ -27,8 +27,8 @@
  * 
  */
 
-#include <linux/version.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/kernel.h>
 #include <linux/pci.h>
 #include <asm/io.h>
@@ -44,22 +44,21 @@
 #include "dmxdev.h"
 #include "dvbdev.h"
 #include "bt878.h"
-#include "dst-bt878.h"
+#include "dst_priv.h"
 
-#include "dvb_functions.h"
 
 /**************************************/
 /* Miscellaneous utility  definitions */
 /**************************************/
 
-unsigned int bt878_verbose = 1;
-unsigned int bt878_debug = 0;
-MODULE_PARM(bt878_verbose, "i");
+static unsigned int bt878_verbose = 1;
+static unsigned int bt878_debug;
+
+module_param_named(verbose, bt878_verbose, int, 0444);
 MODULE_PARM_DESC(bt878_verbose,
 		 "verbose startup messages, default is 1 (yes)");
-MODULE_PARM(bt878_debug, "i");
-MODULE_PARM_DESC(bt878_debug, "debug messages, default is 0 (no)");
-MODULE_LICENSE("GPL");
+module_param_named(debug, bt878_debug, int, 0644);
+MODULE_PARM_DESC(bt878_debug, "Turn on/off debugging (default:off).");
 
 int bt878_num;
 struct bt878 bt878[BT878_MAX];
@@ -339,10 +338,6 @@ static irqreturn_t bt878_irq(int irq, void *dev_id, struct pt_regs *regs)
 	return IRQ_HANDLED;
 }
 
-extern int bttv_gpio_enable(unsigned int card, unsigned long mask, unsigned long data);
-extern int bttv_read_gpio(unsigned int card, unsigned long *data);
-extern int bttv_write_gpio(unsigned int card, unsigned long mask, unsigned long data);
-
 int
 bt878_device_control(struct bt878 *bt, unsigned int cmd, union dst_gpio_packet *mp)
 {
@@ -386,20 +381,20 @@ bt878_device_control(struct bt878 *bt, unsigned int cmd, union dst_gpio_packet *
 
 EXPORT_SYMBOL(bt878_device_control);
 
-struct bt878 *bt878_find_by_dvb_adap(struct dvb_adapter *adap)
+struct bt878 *bt878_find_by_i2c_adap(struct i2c_adapter *adapter)
 {
 	unsigned int card_nr;
 	
-	printk("bt878 find by dvb adap: checking \"%s\"\n",adap->name);
+	printk("bt878 find by dvb adap: checking \"%s\"\n",adapter->name);
 	for (card_nr = 0; card_nr < bt878_num; card_nr++) {
-		if (bt878[card_nr].adap_ptr == adap)
+		if (bt878[card_nr].adapter == adapter)
 			return &bt878[card_nr];
 	}
-	printk("bt878 find by dvb adap: NOT found \"%s\"\n",adap->name);
+	printk("bt878 find by dvb adap: NOT found \"%s\"\n",adapter->name);
 	return NULL;
 }
 
-EXPORT_SYMBOL(bt878_find_by_dvb_adap);
+EXPORT_SYMBOL(bt878_find_by_i2c_adap);
 
 /***********************/
 /* PCI device handling */
@@ -516,7 +511,7 @@ static void __devexit bt878_remove(struct pci_dev *pci_dev)
 		printk("bt878(%d): unloading\n", bt->nr);
 
 	/* turn off all capturing, DMA and IRQs */
-	btand(~13, BT878_AGPIO_DMA_CTL);
+	btand(~0x13, BT878_AGPIO_DMA_CTL);
 
 	/* first disable interrupts before unmapping the memory! */
 	btwrite(0, BT878_AINT_MASK);
@@ -564,22 +559,11 @@ static struct pci_driver bt878_pci_driver = {
 
 static int bt878_pci_driver_registered = 0;
 
-/* This will be used later by dvb-bt8xx to only use the audio
- * dma of certain cards */
-int bt878_find_audio_dma(void)
-{
-	// pci_register_driver(&bt878_pci_driver);
-	bt878_pci_driver_registered = 1;
-	return 0;
-}
-
-EXPORT_SYMBOL(bt878_find_audio_dma);
-
 /*******************************/
 /* Module management functions */
 /*******************************/
 
-int bt878_init_module(void)
+static int bt878_init_module(void)
 {
 	bt878_num = 0;
 	bt878_pci_driver_registered = 0;
@@ -591,13 +575,13 @@ int bt878_init_module(void)
 /*
         bt878_check_chipset();
 */
-	/* later we register inside of bt878_find_audio_dma
+	/* later we register inside of bt878_find_audio_dma()
 	 * because we may want to ignore certain cards */
 	bt878_pci_driver_registered = 1;
 	return pci_module_init(&bt878_pci_driver);
 }
 
-void bt878_cleanup_module(void)
+static void bt878_cleanup_module(void)
 {
 	if (bt878_pci_driver_registered) {
 		bt878_pci_driver_registered = 0;
@@ -606,10 +590,11 @@ void bt878_cleanup_module(void)
 	return;
 }
 
-EXPORT_SYMBOL(bt878_init_module);
-EXPORT_SYMBOL(bt878_cleanup_module);
 module_init(bt878_init_module);
 module_exit(bt878_cleanup_module);
+
+//MODULE_AUTHOR("XXX");
+MODULE_LICENSE("GPL");
 
 /*
  * Local variables:

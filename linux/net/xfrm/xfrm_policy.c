@@ -44,6 +44,9 @@ static struct list_head xfrm_policy_gc_list =
 	LIST_HEAD_INIT(xfrm_policy_gc_list);
 static spinlock_t xfrm_policy_gc_lock = SPIN_LOCK_UNLOCKED;
 
+static struct xfrm_policy_afinfo *xfrm_policy_get_afinfo(unsigned short family);
+static void xfrm_policy_put_afinfo(struct xfrm_policy_afinfo *afinfo);
+
 int xfrm_register_type(struct xfrm_type *type, unsigned short family)
 {
 	struct xfrm_policy_afinfo *afinfo = xfrm_policy_get_afinfo(family);
@@ -228,7 +231,7 @@ struct xfrm_policy *xfrm_policy_alloc(int gfp)
 	if (policy) {
 		memset(policy, 0, sizeof(struct xfrm_policy));
 		atomic_set(&policy->refcnt, 1);
-		policy->lock = RW_LOCK_UNLOCKED;
+		rwlock_init(&policy->lock);
 		init_timer(&policy->timer);
 		policy->timer.data = (unsigned long)policy;
 		policy->timer.function = xfrm_policy_timer;
@@ -290,7 +293,7 @@ static void xfrm_policy_gc_task(void *data)
  * entry dead. The rule must be unlinked from lists to the moment.
  */
 
-void xfrm_policy_kill(struct xfrm_policy *policy)
+static void xfrm_policy_kill(struct xfrm_policy *policy)
 {
 	write_lock_bh(&policy->lock);
 	if (policy->dead)
@@ -336,7 +339,7 @@ int xfrm_policy_insert(int dir, struct xfrm_policy *policy, int excl)
 	struct xfrm_policy **newpos = NULL;
 
 	write_lock_bh(&xfrm_policy_lock);
-	for (p = &xfrm_policy_list[dir]; (pol=*p)!=NULL; p = &pol->next) {
+	for (p = &xfrm_policy_list[dir]; (pol=*p)!=NULL;) {
 		if (!delpol && memcmp(&policy->selector, &pol->selector, sizeof(pol->selector)) == 0) {
 			if (excl) {
 				write_unlock_bh(&xfrm_policy_lock);
@@ -346,12 +349,15 @@ int xfrm_policy_insert(int dir, struct xfrm_policy *policy, int excl)
 			delpol = pol;
 			if (policy->priority > pol->priority)
 				continue;
-		} else if (policy->priority >= pol->priority)
+		} else if (policy->priority >= pol->priority) {
+			p = &pol->next;
 			continue;
+		}
 		if (!newpos)
 			newpos = p;
 		if (delpol)
 			break;
+		p = &pol->next;
 	}
 	if (newpos)
 		p = newpos;
@@ -912,7 +918,6 @@ xfrm_policy_ok(struct xfrm_tmpl *tmpl, struct sec_path *sp, int start,
 	for (; idx < sp->len; idx++) {
 		if (xfrm_state_ok(tmpl, sp->x[idx].xvec, family))
 			return ++idx;
-/* XXX:Krisu - BEET mode? */
 		if (sp->x[idx].xvec->props.mode)
 			break;
 	}
@@ -929,6 +934,16 @@ _decode_session(struct sk_buff *skb, struct flowi *fl, unsigned short family)
 
 	afinfo->decode_session(skb, fl);
 	xfrm_policy_put_afinfo(afinfo);
+	return 0;
+}
+
+static inline int secpath_has_tunnel(struct sec_path *sp, int k)
+{
+	for (; k < sp->len; k++) {
+		if (sp->x[k].xvec->props.mode)
+			return 1;
+	}
+
 	return 0;
 }
 
@@ -969,7 +984,7 @@ int __xfrm_policy_check(struct sock *sk, int dir, struct sk_buff *skb,
 					xfrm_policy_lookup);
 
 	if (!pol)
-		return !skb->sp;
+		return !skb->sp || !secpath_has_tunnel(skb->sp, 0);
 
 	pol->curlft.use_time = (unsigned long)xtime.tv_sec;
 
@@ -993,11 +1008,13 @@ int __xfrm_policy_check(struct sock *sk, int dir, struct sk_buff *skb,
 				goto reject;
 		}
 
-/* XXX:Krisu - BEET checks? */
 		for (; k < sp->len; k++) {
 			if (sp->x[k].xvec->props.mode)
 				goto reject;
 		}
+
+ 		if (secpath_has_tunnel(sp, k))
+			goto reject;
 
 		xfrm_pol_put(pol);
 		return 1;
@@ -1217,7 +1234,7 @@ int xfrm_policy_unregister_afinfo(struct xfrm_policy_afinfo *afinfo)
 	return err;
 }
 
-struct xfrm_policy_afinfo *xfrm_policy_get_afinfo(unsigned short family)
+static struct xfrm_policy_afinfo *xfrm_policy_get_afinfo(unsigned short family)
 {
 	struct xfrm_policy_afinfo *afinfo;
 	if (unlikely(family >= NPROTO))
@@ -1230,7 +1247,7 @@ struct xfrm_policy_afinfo *xfrm_policy_get_afinfo(unsigned short family)
 	return afinfo;
 }
 
-void xfrm_policy_put_afinfo(struct xfrm_policy_afinfo *afinfo)
+static void xfrm_policy_put_afinfo(struct xfrm_policy_afinfo *afinfo)
 {
 	if (unlikely(afinfo == NULL))
 		return;

@@ -282,6 +282,12 @@ static inline void __iomem *ioremap(unsigned long port, unsigned long size)
 	return IO_CONCAT(__IO_PREFIX,ioremap) (port, size);
 }
 
+static inline void __iomem *__ioremap(unsigned long port, unsigned long size,
+				      unsigned long flags)
+{
+	return ioremap(port, size);
+}
+
 static inline void __iomem * ioremap_nocache(unsigned long offset,
 					     unsigned long size)
 {
@@ -489,6 +495,8 @@ extern inline void writeq(u64 b, volatile void __iomem *addr)
 #define readl_relaxed(addr) __raw_readl(addr)
 #define readq_relaxed(addr) __raw_readq(addr)
 
+#define mmiowb()
+
 /*
  * String version of IO memory access ops:
  */
@@ -623,16 +631,6 @@ isa_memcpy_toio(unsigned long offset, const void *src, long n)
 	iounmap(addr);
 }
 
-static inline int
-isa_check_signature(unsigned long offset, const unsigned char *sig, long len)
-{
-	void __iomem *addr = ioremap(offset, len);
-	int ret = check_signature(addr, sig, len);
-	iounmap(addr);
-	return ret;
-}
-
-
 /*
  * The Alpha Jensen hardware for some rather strange reason puts
  * the RTC clock at 0x170 instead of 0x70. Probably due to some
@@ -657,6 +655,16 @@ isa_check_signature(unsigned long offset, const unsigned char *sig, long len)
 #define dma_cache_inv(_start,_size)		do { } while (0)
 #define dma_cache_wback(_start,_size)		do { } while (0)
 #define dma_cache_wback_inv(_start,_size)	do { } while (0)
+
+/*
+ * Some mucking forons use if[n]def writeq to check if platform has it.
+ * It's a bloody bad idea and we probably want ARCH_HAS_WRITEQ for them
+ * to play with; for now just use cpp anti-recursion logics and make sure
+ * that damn thing is defined and expands to itself.
+ */
+
+#define writeq writeq
+#define readq readq
 
 #endif /* __KERNEL__ */
 

@@ -182,6 +182,7 @@ struct elf_prpsinfo
 #define user user32
 
 #define __ASM_X86_64_ELF_H 1
+#define elf_read_implies_exec(ex, have_pt_gnu_stack)	(!(have_pt_gnu_stack))
 //#include <asm/ia32.h>
 #include <linux/elf.h>
 
@@ -333,7 +334,7 @@ int setup_arg_pages(struct linux_binprm *bprm, int executable_stack)
 	unsigned long stack_base;
 	struct vm_area_struct *mpnt;
 	struct mm_struct *mm = current->mm;
-	int i;
+	int i, ret;
 
 	stack_base = IA32_STACK_TOP - MAX_ARG_PAGES * PAGE_SIZE;
 	mm->arg_start = bprm->p + stack_base;
@@ -360,14 +361,18 @@ int setup_arg_pages(struct linux_binprm *bprm, int executable_stack)
 		mpnt->vm_start = PAGE_MASK & (unsigned long) bprm->p;
 		mpnt->vm_end = IA32_STACK_TOP;
 		if (executable_stack == EXSTACK_ENABLE_X)
-			mpnt->vm_flags = vm_stack_flags32 |  VM_EXEC;
+			mpnt->vm_flags = VM_STACK_FLAGS |  VM_EXEC;
 		else if (executable_stack == EXSTACK_DISABLE_X)
-			mpnt->vm_flags = vm_stack_flags32 & ~VM_EXEC;
+			mpnt->vm_flags = VM_STACK_FLAGS & ~VM_EXEC;
 		else
-			mpnt->vm_flags = vm_stack_flags32;
+			mpnt->vm_flags = VM_STACK_FLAGS;
  		mpnt->vm_page_prot = (mpnt->vm_flags & VM_EXEC) ? 
  			PAGE_COPY_EXEC : PAGE_COPY;
-		insert_vm_struct(mm, mpnt);
+		if ((ret = insert_vm_struct(mm, mpnt))) {
+			up_write(&mm->mmap_sem);
+			kmem_cache_free(vm_area_cachep, mpnt);
+			return ret;
+		}
 		mm->stack_vm = mm->total_vm = vma_pages(mpnt);
 	} 
 
@@ -389,9 +394,6 @@ elf32_map (struct file *filep, unsigned long addr, struct elf_phdr *eppnt, int p
 {
 	unsigned long map_addr;
 	struct task_struct *me = current; 
-
-	if (prot & PROT_READ) 
-		prot |= vm_force_exec32;
 
 	down_write(&me->mm->mmap_sem);
 	map_addr = do_mmap(filep, ELF_PAGESTART(addr),

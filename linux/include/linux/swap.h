@@ -230,6 +230,7 @@ extern spinlock_t swaplock;
 
 /* linux/mm/thrash.c */
 extern struct mm_struct * swap_token_mm;
+extern unsigned long swap_token_default_timeout;
 extern void grab_swap_token(void);
 extern void __put_swap_token(struct mm_struct *);
 
@@ -268,6 +269,7 @@ static inline void put_swap_token(struct mm_struct *mm)
 #define move_from_swap_cache(p, i, m)		1
 #define __delete_from_swap_cache(p)		/*NOTHING*/
 #define delete_from_swap_cache(p)		/*NOTHING*/
+#define swap_token_default_timeout		0
 
 static inline int remove_exclusive_swap_page(struct page *p)
 {

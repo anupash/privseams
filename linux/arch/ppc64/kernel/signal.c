@@ -26,6 +26,7 @@
 #include <linux/unistd.h>
 #include <linux/stddef.h>
 #include <linux/elf.h>
+#include <linux/ptrace.h>
 #include <asm/sigcontext.h>
 #include <asm/ucontext.h>
 #include <asm/uaccess.h>
@@ -98,7 +99,7 @@ long sys_rt_sigsuspend(sigset_t __user *unewset, size_t sigsetsize, int p3, int 
 		current->state = TASK_INTERRUPTIBLE;
 		schedule();
 		if (do_signal(&saveset, regs))
-			return regs->gpr[3];
+			return 0;
 	}
 }
 
@@ -179,6 +180,9 @@ static long restore_sigcontext(struct pt_regs *regs, sigset_t *set, int sig,
 	unsigned long err = 0;
 	unsigned long save_r13 = 0;
 	elf_greg_t *gregs = (elf_greg_t *)regs;
+#ifdef CONFIG_ALTIVEC
+	unsigned long msr;
+#endif
 	int i;
 
 	/* If this is not a signal return, we preserve the TLS in r13 */
@@ -204,13 +208,15 @@ static long restore_sigcontext(struct pt_regs *regs, sigset_t *set, int sig,
 
 #ifdef CONFIG_ALTIVEC
 	err |= __get_user(v_regs, &sc->v_regs);
+	err |= __get_user(msr, &sc->gp_regs[PT_MSR]);
 	if (err)
 		return err;
 	/* Copy 33 vec registers (vr0..31 and vscr) from the stack */
-	if (v_regs != 0 && (regs->msr & MSR_VEC) != 0)
-		err |= __copy_from_user(current->thread.vr, v_regs, 33 * sizeof(vector128));
+	if (v_regs != 0 && (msr & MSR_VEC) != 0)
+		err |= __copy_from_user(current->thread.vr, v_regs,
+					33 * sizeof(vector128));
 	else if (current->thread.used_vr)
-		memset(&current->thread.vr, 0, 33);
+		memset(current->thread.vr, 0, 33 * sizeof(vector128));
 	/* Always get VRSAVE back */
 	if (v_regs != 0)
 		err |= __get_user(current->thread.vrsave, (u32 __user *)&v_regs[33]);
@@ -218,6 +224,14 @@ static long restore_sigcontext(struct pt_regs *regs, sigset_t *set, int sig,
 		current->thread.vrsave = 0;
 #endif /* CONFIG_ALTIVEC */
 
+#ifndef CONFIG_SMP
+	preempt_disable();
+	if (last_task_used_math == current)
+		last_task_used_math = NULL;
+	if (last_task_used_altivec == current)
+		last_task_used_altivec = NULL;
+	preempt_enable();
+#endif
 	/* Force reload of FP/VEC */
 	regs->msr &= ~(MSR_FP | MSR_FE0 | MSR_FE1 | MSR_VEC);
 
@@ -374,7 +388,7 @@ badframe:
 	return 0;
 }
 
-static void setup_rt_frame(int signr, struct k_sigaction *ka, siginfo_t *info,
+static int setup_rt_frame(int signr, struct k_sigaction *ka, siginfo_t *info,
 		sigset_t *set, struct pt_regs *regs)
 {
 	/* Handler is *really* a pointer to the function descriptor for
@@ -420,7 +434,7 @@ static void setup_rt_frame(int signr, struct k_sigaction *ka, siginfo_t *info,
 
 	/* Allocate a dummy caller frame for the signal handler. */
 	newsp = (unsigned long)frame - __SIGNAL_FRAMESIZE;
-	err |= put_user(0, (unsigned long __user *)newsp);
+	err |= put_user(regs->gpr[1], (unsigned long __user *)newsp);
 
 	/* Set up "regs" so we "return" to the signal handler. */
 	err |= get_user(regs->nip, &funct_desc_ptr->entry);
@@ -439,7 +453,10 @@ static void setup_rt_frame(int signr, struct k_sigaction *ka, siginfo_t *info,
 	if (err)
 		goto badframe;
 
-	return;
+	if (test_thread_flag(TIF_SINGLESTEP))
+		ptrace_notify(SIGTRAP);
+
+	return 1;
 
 badframe:
 #if DEBUG_SIG
@@ -447,25 +464,30 @@ badframe:
 	       regs, frame, newsp);
 #endif
 	force_sigsegv(signr, current);
+	return 0;
 }
 
 
 /*
  * OK, we're invoking a handler
  */
-static void handle_signal(unsigned long sig, struct k_sigaction *ka,
-			  siginfo_t *info, sigset_t *oldset, struct pt_regs *regs)
+static int handle_signal(unsigned long sig, struct k_sigaction *ka,
+			 siginfo_t *info, sigset_t *oldset, struct pt_regs *regs)
 {
-	/* Set up Signal Frame */
-	setup_rt_frame(sig, ka, info, oldset, regs);
+	int ret;
 
-	if (!(ka->sa.sa_flags & SA_NODEFER)) {
+	/* Set up Signal Frame */
+	ret = setup_rt_frame(sig, ka, info, oldset, regs);
+
+	if (ret && !(ka->sa.sa_flags & SA_NODEFER)) {
 		spin_lock_irq(&current->sighand->siglock);
 		sigorsets(&current->blocked, &current->blocked, &ka->sa.sa_mask);
 		sigaddset(&current->blocked,sig);
 		recalc_sigpending();
 		spin_unlock_irq(&current->sighand->siglock);
 	}
+
+	return ret;
 }
 
 static inline void syscall_restart(struct pt_regs *regs, struct k_sigaction *ka)
@@ -525,8 +547,7 @@ int do_signal(sigset_t *oldset, struct pt_regs *regs)
 		/* Whee!  Actually deliver the signal.  */
 		if (TRAP(regs) == 0x0C00)
 			syscall_restart(regs, &ka);
-		handle_signal(signr, &ka, &info, oldset, regs);
-		return 1;
+		return handle_signal(signr, &ka, &info, oldset, regs);
 	}
 
 	if (TRAP(regs) == 0x0C00) {	/* System Call! */

@@ -31,10 +31,12 @@
 #include <linux/topology.h>
 #include <linux/sysctl.h>
 #include <linux/cpu.h>
+#include <linux/nodemask.h>
 
 #include <asm/tlbflush.h>
 
-DECLARE_BITMAP(node_online_map, MAX_NUMNODES);
+nodemask_t node_online_map = NODE_MASK_NONE;
+nodemask_t node_possible_map = NODE_MASK_ALL;
 struct pglist_data *pgdat_list;
 unsigned long totalram_pages;
 unsigned long totalhigh_pages;
@@ -92,6 +94,7 @@ static void bad_page(const char *function, struct page *page)
 	set_page_count(page, 0);
 	reset_page_mapcount(page);
 	page->mapping = NULL;
+	tainted |= TAINT_BAD_PAGE;
 }
 
 #ifndef CONFIG_HUGETLB_PAGE
@@ -1100,6 +1103,8 @@ void show_free_areas(void)
 			" active:%lukB"
 			" inactive:%lukB"
 			" present:%lukB"
+			" pages_scanned:%lu"
+			" all_unreclaimable? %s"
 			"\n",
 			zone->name,
 			K(zone->free_pages),
@@ -1108,7 +1113,9 @@ void show_free_areas(void)
 			K(zone->pages_high),
 			K(zone->nr_active),
 			K(zone->nr_inactive),
-			K(zone->present_pages)
+			K(zone->present_pages),
+			zone->pages_scanned,
+			(zone->all_unreclaimable ? "yes" : "no")
 			);
 		printk("protections[]:");
 		for (i = 0; i < MAX_NR_ZONES; i++)
@@ -1205,6 +1212,12 @@ static int __init find_next_best_node(int node, void *used_node_mask)
 		/* Don't want a node to appear more than once */
 		if (test_bit(n, used_node_mask))
 			continue;
+
+		/* Use the local node if we haven't already */
+		if (!test_bit(node, used_node_mask)) {
+			best_node = node;
+			break;
+		}
 
 		/* Use the distance array to find the distance */
 		val = node_distance(node, n);
@@ -1932,8 +1945,12 @@ static void setup_per_zone_pages_min(void)
 			                   lowmem_pages;
 		}
 
-		zone->pages_low = zone->pages_min * 2;
-		zone->pages_high = zone->pages_min * 3;
+		/*
+		 * When interpreting these watermarks, just keep in mind that:
+		 * zone->pages_min == (zone->pages_min * 4) / 4;
+		 */
+		zone->pages_low   = (zone->pages_min * 5) / 4;
+		zone->pages_high  = (zone->pages_min * 6) / 4;
 		spin_unlock_irqrestore(&zone->lru_lock, flags);
 	}
 }
@@ -1942,24 +1959,25 @@ static void setup_per_zone_pages_min(void)
  * Initialise min_free_kbytes.
  *
  * For small machines we want it small (128k min).  For large machines
- * we want it large (16MB max).  But it is not linear, because network
+ * we want it large (64MB max).  But it is not linear, because network
  * bandwidth does not increase linearly with machine size.  We use
  *
- *	min_free_kbytes = sqrt(lowmem_kbytes)
+ * 	min_free_kbytes = 4 * sqrt(lowmem_kbytes), for better accuracy:
+ *	min_free_kbytes = sqrt(lowmem_kbytes * 16)
  *
  * which yields
  *
- * 16MB:	128k
- * 32MB:	181k
- * 64MB:	256k
- * 128MB:	362k
- * 256MB:	512k
- * 512MB:	724k
- * 1024MB:	1024k
- * 2048MB:	1448k
- * 4096MB:	2048k
- * 8192MB:	2896k
- * 16384MB:	4096k
+ * 16MB:	512k
+ * 32MB:	724k
+ * 64MB:	1024k
+ * 128MB:	1448k
+ * 256MB:	2048k
+ * 512MB:	2896k
+ * 1024MB:	4096k
+ * 2048MB:	5792k
+ * 4096MB:	8192k
+ * 8192MB:	11584k
+ * 16384MB:	16384k
  */
 static int __init init_per_zone_pages_min(void)
 {
@@ -1967,11 +1985,11 @@ static int __init init_per_zone_pages_min(void)
 
 	lowmem_kbytes = nr_free_buffer_pages() * (PAGE_SIZE >> 10);
 
-	min_free_kbytes = int_sqrt(lowmem_kbytes);
+	min_free_kbytes = int_sqrt(lowmem_kbytes * 16);
 	if (min_free_kbytes < 128)
 		min_free_kbytes = 128;
-	if (min_free_kbytes > 16384)
-		min_free_kbytes = 16384;
+	if (min_free_kbytes > 65536)
+		min_free_kbytes = 65536;
 	setup_per_zone_pages_min();
 	setup_per_zone_protection();
 	return 0;
