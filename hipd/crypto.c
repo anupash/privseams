@@ -2,7 +2,7 @@
 
 struct crypto_tfm impl_sha1; /* XX FIX: FILL THIS STRUCTURE */
 
-time_t load_time; /* XX INITIALIZE THIS */
+time_t load_time; /* XX FIX: INITIALIZE THIS */
 
 void crypto_digest_digest(struct crypto_tfm *tfm, char *src_buf, int ignore,
 			  char *dst_buf) {
@@ -91,5 +91,59 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 
 void get_random_bytes(void *buf, int nbytes)
 {
-  gcry_randomize(buf, nbytes, GCRY_STRONG_RANDOM);
+  exit(1); /* XX FIXME */
+}
+
+int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
+{
+  exit(1); /* XX FIXME */
+  return 1;
+}
+
+int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
+{
+  exit(1); /* XX FIXME */
+  return 1;
+}
+
+int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
+{
+  exit(1); /* XX FIXME */
+  return 1;
+}
+
+int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
+{
+  exit(1); /* XX FIXME */
+  return 1;
+}
+
+int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *out,
+			  size_t outlen)
+{
+  exit(1); /* XX FIXME */
+  return 1;
+}
+
+int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen)
+{
+  exit(1); /* XX FIXME */
+  return 1;
+}
+
+DH *hip_generate_dh_key(int group_id)
+{
+  exit(1); /* XX FIXME */
+  return NULL;
+}
+
+DH *hip_dh_clone(DH *src)
+{
+  exit(1); /* XX FIXME */
+  return NULL;
+}
+
+void hip_free_dh_structure(DH *target)
+{
+  exit(1); /* XX FIXME */
 }

@@ -22,11 +22,12 @@
 #define G10_RSA_H
 
 #ifdef __KERNEL__
-#include <net/hip.h>
-#include "kernel-interface.h"
+#  include "kernel-interface.h"
+#else
+#  include <gcrypt.h>
 #endif /* __KERNEL__ */
 
-//#include "gcrypt.h"
+#include <net/hip.h>
 
 int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		 int priv_klen);

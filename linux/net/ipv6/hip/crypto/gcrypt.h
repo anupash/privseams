@@ -65,7 +65,6 @@ struct gcry_mpi {
 
 typedef struct gcry_mpi *MPI;
 
-
 /* The data object used to hold a multi precision integer.  GcryMPI is
    the preferred one. */
 struct gcry_mpi;

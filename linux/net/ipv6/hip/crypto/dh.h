@@ -8,9 +8,10 @@
 #  include <linux/errno.h>
 #  include "kernel-interface.h"
 #else
-#  include <net/hip.h>
 #  include <gcrypt.h>
 #endif /* __KERNEL__ */
+
+#include <net/hip.h>
 
 typedef struct DH_str {
 	MPI p;
@@ -27,5 +28,7 @@ int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
 DH *hip_dh_clone(DH *src);
 void hip_free_dh_structure(DH *target);
+
+
 
 #endif /* DH_H */

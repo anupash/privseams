@@ -21,8 +21,12 @@
 #define G10_DSA_H
 
 #ifdef __KERNEL__
-#include "kernel-interface.h"
+#  include "kernel-interface.h"
+#else
+#  include <gcrypt.h>
 #endif /* __KERNEL__ */
+
+#include <net/hip.h>
 
 int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature);
 int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
