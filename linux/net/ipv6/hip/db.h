@@ -81,6 +81,7 @@ int        hip_add_localhost_id(const struct hip_lhi *lhi,
 				const struct hip_host_id *host_id);
 int        hip_add_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 int        hip_copy_any_localhost_hit(struct in6_addr *target);
+int        hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo);
 HIP_HID   *hip_get_any_localhost_host_id(int);
 int        hip_insert_any_localhost_public_key(uint8_t *target);
 struct hip_host_id *hip_get_any_localhost_public_key(int);

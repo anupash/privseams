@@ -1322,6 +1322,7 @@ int hip_receive_r1(struct sk_buff *skb)
 	}
 
 	entry = hip_hadb_find_byhit(&hip_common->hits);
+	HIP_DEBUG_HIT("RECEIVE R1 SENDER HIT: ", &hip_common->hits);
 	if (!entry) {
 		err = -EFAULT;
 		HIP_ERROR("Received R1 with no local state. Dropping\n");

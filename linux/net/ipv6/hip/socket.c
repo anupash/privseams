@@ -690,14 +690,15 @@ int hip_socket_add_local_hi(const struct hip_host_id *host_identity,
 	/* If adding localhost id failed because there was a duplicate, we
 	   won't precreate anything (and void causing dagling memory
 	   pointers) */
-
+#if 0	
 	HIP_DEBUG("hip: Generating a new R1 now\n");
 
-	if (!hip_precreate_r1(&lhi->hit)) {
+       	if (!hip_precreate_r1(&lhi->hit)) {
 		HIP_ERROR("Unable to precreate R1s... failing\n");
 		err = -ENOENT;
 		goto out_err;
 	}
+#endif
 
  out_err:
 	return err;
@@ -714,7 +715,8 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 	int err = 0;
 	struct hip_host_id *dsa_host_identity, *rsa_host_identity = NULL;
 	struct hip_lhi dsa_lhi, rsa_lhi;
-
+	struct in6_addr hit_our;
+	
 	HIP_DEBUG("\n");
 
 	if ((err = hip_get_msg_err(input)) != 0) {
@@ -772,8 +774,22 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 
 	HIP_DEBUG("Adding of HIP localhost identity was successful\n");
 
+	HIP_DEBUG("hip: Generating a new R1 now\n");
+	
+        /* XX TODO: precreate R1s for both algorithms, not just the default */ 
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
+		HIP_ERROR("Didn't find HIT for R1 precreation\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+       	if (!hip_precreate_r1(&hit_our)) {
+		HIP_ERROR("Unable to precreate R1s... failing\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+	
  out_err:
-
+	
 	return err;
 }
 

@@ -329,12 +329,21 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 
 	HIP_DEBUG("\n");
 
+	/* TODO: we must use the same algorithm that is used in the dsthit */
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
+		HIP_ERROR("Out HIT not found\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+	HIP_DEBUG_HIT("DEFAULT ALGO HIT: ", &hit_our);
+#if 0
 	if (hip_copy_any_localhost_hit(&hit_our) < 0) {
 		HIP_ERROR("Out HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
 	}
-
+	HIP_DEBUG_HIT("ANY HIT: ", &hit_our);
+#endif
 	mask = HIP_CONTROL_NONE;
 #ifdef CONFIG_HIP_RVS
 	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))

@@ -118,6 +118,25 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi(struct hip_db_struct *db,
 	return NULL;
 }
 
+/**
+ *
+ *
+ */
+static
+struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
+							       const struct hip_lhi *lhi,
+							       int algo)
+{
+	struct hip_host_id_entry *id_entry;
+
+	list_for_each_entry(id_entry,&db->db_head,next) {
+		if ((lhi == NULL || hip_lhi_are_equal(&id_entry->lhi, lhi)) &&
+		    (hip_get_host_id_algo(*(&id_entry->host_id))==algo))
+			return id_entry;
+	}
+	return NULL;
+}
+
 /*
  *
  *
@@ -305,6 +324,28 @@ int hip_copy_any_localhost_hit(struct in6_addr *target)
 	return err;
 }
 
+int hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo)
+{
+	struct hip_host_id_entry *entry;
+	int err = 0;
+	unsigned long lf;
+
+	HIP_READ_LOCK_DB(&hip_local_hostid_db);
+
+	entry = hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,NULL,algo);
+	if (!entry) {
+		err=-ENOENT;
+		goto out;
+	}
+	
+	ipv6_addr_copy(target,&entry->lhi.hit);
+	err = 0;
+	
+ out:
+	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
+	return err;
+}
+
 
 /**
  * hip_copy_different_localhost_hit - Copy HIT that is not the same as the
@@ -453,6 +494,46 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	return result;
 }
 
+struct hip_host_id *hip_get_host_id_by_algo(struct hip_db_struct *db, 
+					    struct hip_lhi *lhi, int algo)
+{
+
+	struct hip_host_id_entry *tmp;
+	struct hip_host_id *result;
+	unsigned long lf;
+	int t;
+
+	result = kmalloc(1024, GFP_ATOMIC);
+	if (!result) {
+		HIP_ERROR("no memory\n");
+		return NULL;
+	}
+
+	memset(result, 0, 1024);
+
+	HIP_READ_LOCK_DB(db);
+
+	tmp = hip_get_hostid_entry_by_lhi_and_algo(db, lhi, algo);
+	if (!tmp) {
+		HIP_READ_UNLOCK_DB(db);
+		HIP_ERROR("No host id found\n");
+		return NULL;
+	}
+
+	t = hip_get_param_total_len(tmp->host_id);
+	if (t > 1024) {
+		HIP_READ_UNLOCK_DB(db);
+		kfree(result);
+		return NULL;
+	}
+
+	memcpy(result, tmp->host_id, t);
+
+	HIP_READ_UNLOCK_DB(db);
+
+	return result;
+}
+
 /**
  * hip_get_any_localhost_host_id - Self documenting.
  *
@@ -465,7 +546,7 @@ struct hip_host_id *hip_get_any_localhost_host_id(int algo)
 {
 	struct hip_host_id *result;
 	/* XX TODO: use the algo */
-	result = hip_get_host_id(&hip_local_hostid_db,NULL);
+	result = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL, algo);
 	return result;
 }
 
@@ -489,7 +570,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	/* T could easily have been an int, since the compiler will
 	   probably add 3 alignment bytes here anyway. */
 
-	tmp = hip_get_host_id(&hip_local_hostid_db,NULL);
+	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL,HIP_HI_DSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
@@ -559,7 +640,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	uint16_t dilen;
 	char *from, *to;
 
-	tmp = hip_get_host_id(&hip_local_hostid_db,NULL);
+	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL, HIP_HI_RSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
