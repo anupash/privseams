@@ -3314,10 +3314,6 @@ static void addrconf_sysctl_unregister(struct ipv6_devconf *p)
 		kfree(t->addrconf_dev[0].procname);
 		kfree(t);
 	}
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	HIP_CALLFUNC(hip_handle_ipv6_ifa_notify, 0)(ifp, event);
-#endif
 }
 
 
