@@ -859,6 +859,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	hip_update_switch_spi_out(entry, prev_spi_out);
 
 	hip_set_spi_update_status(entry, new_spi_in, 0);
+	hip_update_clear_status(entry, new_spi_in);
 
 	/* set default spi out only if rea included and rea contains preferred address ? */
 	entry->default_spi_out = new_spi_out;

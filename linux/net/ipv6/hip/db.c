@@ -947,6 +947,23 @@ void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
         }
 }
 
+void hip_update_clear_status(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_spi_in_item *item, *tmp;
+
+	HIP_DEBUG("spi=0x%x\n", spi);
+
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("test item: spi=0x%x\n", item->spi);
+		if (item->spi == spi) {
+			HIP_DEBUG("clearing SPI status\n");
+			item->update_state_flags = 0;
+			memset(&item->stored_received_nes, 0, sizeof(struct hip_nes));
+			break;
+		}
+        }
+}
+
 /* spi_out is the SPI which was in the received NES Old SPI field */
 void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
 			       uint32_t spi_out /* test */)

@@ -141,6 +141,7 @@ void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi);
 void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
 			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
 			   uint16_t keymat_index);
+void hip_update_clear_status(hip_ha_t *entry, uint32_t spi);
 int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			  int direction, int test_new_spi);
 void hip_update_handle_ack(hip_ha_t *entry, uint32_t peer_update_id);
