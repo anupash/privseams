@@ -58,6 +58,7 @@
 #include <asm/bitops.h>
 #include <linux/devfs_fs_kernel.h>	/* DevFs support */
 #include <linux/parport.h>	/* Our code depend on parport */
+#include <linux/device.h>
 
 /*
  * TI definitions
@@ -91,6 +92,8 @@ static int timeout = TIMAXTIME;	/* timeout in tenth of seconds     */
 
 static unsigned int tp_count;	/* tipar count */
 static unsigned long opened;	/* opened devices */
+
+static struct class_simple *tipar_class;
 
 /* --- macros for parport access -------------------------------------- */
 
@@ -259,7 +262,7 @@ tipar_open(struct inode *inode, struct file *file)
 	init_ti_parallel(minor);
 	parport_release(table[minor].dev);
 
-	return 0;
+	return nonseekable_open(inode, file);
 }
 
 static int
@@ -276,7 +279,7 @@ tipar_close(struct inode *inode, struct file *file)
 }
 
 static ssize_t
-tipar_write(struct file *file, const char *buf, size_t count, loff_t * ppos)
+tipar_write(struct file *file, const char __user *buf, size_t count, loff_t * ppos)
 {
 	unsigned int minor = iminor(file->f_dentry->d_inode) - TIPAR_MINOR;
 	ssize_t n;
@@ -303,7 +306,7 @@ tipar_write(struct file *file, const char *buf, size_t count, loff_t * ppos)
 }
 
 static ssize_t
-tipar_read(struct file *file, char *buf, size_t count, loff_t * ppos)
+tipar_read(struct file *file, char __user *buf, size_t count, loff_t * ppos)
 {
 	int b = 0;
 	unsigned int minor = iminor(file->f_dentry->d_inode) - TIPAR_MINOR;
@@ -312,9 +315,6 @@ tipar_read(struct file *file, char *buf, size_t count, loff_t * ppos)
 
 	if (count == 0)
 		return 0;
-
-	if (ppos != &file->f_pos)
-		return -ESPIPE;
 
 	parport_claim_or_block(table[minor].dev);
 
@@ -325,7 +325,7 @@ tipar_read(struct file *file, char *buf, size_t count, loff_t * ppos)
 			retval = -ETIMEDOUT;
 			goto out;
 		} else {
-			if (put_user(b, ((unsigned char *) buf) + n)) {
+			if (put_user(b, buf + n)) {
 				retval = -EFAULT;
 				break;
 			} else
@@ -424,18 +424,26 @@ tipar_setup(char *str)
 static int
 tipar_register(int nr, struct parport *port)
 {
+	int err = 0;
+
 	/* Register our module into parport */
 	table[nr].dev = parport_register_device(port, "tipar",
 						NULL, NULL, NULL, 0,
 						(void *) &table[nr]);
 
-	if (table[nr].dev == NULL)
-		return 1;
+	if (table[nr].dev == NULL) {
+		err = 1;
+		goto out;
+	}
 
+	class_simple_device_add(tipar_class, MKDEV(TIPAR_MAJOR, TIPAR_MINOR + nr),
+			NULL, "par%d", nr);
 	/* Use devfs, tree: /dev/ticables/par/[0..2] */
-	devfs_mk_cdev(MKDEV(TIPAR_MAJOR, TIPAR_MINOR + nr),
+	err = devfs_mk_cdev(MKDEV(TIPAR_MAJOR, TIPAR_MINOR + nr),
 			S_IFCHR | S_IRUGO | S_IWUGO,
 			"ticables/par/%d", nr);
+	if (err)
+		goto out_class;
 
 	/* Display informations */
 	printk(KERN_INFO "tipar%d: using %s (%s).\n", nr, port->name,
@@ -447,7 +455,14 @@ tipar_register(int nr, struct parport *port)
 	else
 		printk("tipar%d: link cable not found.\n", nr);
 
-	return 0;
+	err = 0;
+	goto out;
+
+out_class:
+	class_simple_device_remove(MKDEV(TIPAR_MAJOR, TIPAR_MINOR + nr));
+	class_simple_destroy(tipar_class);
+out:
+	return err;
 }
 
 static void
@@ -477,23 +492,38 @@ static struct parport_driver tipar_driver = {
 int __init
 tipar_init_module(void)
 {
+	int err = 0;
+
 	printk("tipar: parallel link cable driver, version %s\n",
 	       DRIVER_VERSION);
 
 	if (register_chrdev(TIPAR_MAJOR, "tipar", &tipar_fops)) {
 		printk("tipar: unable to get major %d\n", TIPAR_MAJOR);
-		return -EIO;
+		err = -EIO;
+		goto out;
 	}
 
 	/* Use devfs with tree: /dev/ticables/par/[0..2] */
 	devfs_mk_dir("ticables/par");
 
+	tipar_class = class_simple_create(THIS_MODULE, "ticables");
+	if (IS_ERR(tipar_class)) {
+		err = PTR_ERR(tipar_class);
+		goto out_chrdev;
+	}
 	if (parport_register_driver(&tipar_driver)) {
 		printk("tipar: unable to register with parport\n");
-		return -EIO;
+		err = -EIO;
+		goto out;
 	}
 
-	return 0;
+	err = 0;
+	goto out;
+
+out_chrdev:
+	unregister_chrdev(TIPAR_MAJOR, "tipar");
+out:
+	return err;	
 }
 
 void __exit
@@ -510,8 +540,10 @@ tipar_cleanup_module(void)
 		if (table[i].dev == NULL)
 			continue;
 		parport_unregister_device(table[i].dev);
+		class_simple_device_remove(MKDEV(TIPAR_MAJOR, i));
 		devfs_remove("ticables/par/%d", i);
 	}
+	class_simple_destroy(tipar_class);
 	devfs_remove("ticables/par");
 
 	printk("tipar: module unloaded !\n");

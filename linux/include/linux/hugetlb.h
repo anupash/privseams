@@ -3,6 +3,8 @@
 
 #ifdef CONFIG_HUGETLB_PAGE
 
+#include <linux/mempolicy.h>
+
 struct ctl_table;
 
 static inline int is_vm_hugetlb_page(struct vm_area_struct *vma)
@@ -10,13 +12,14 @@ static inline int is_vm_hugetlb_page(struct vm_area_struct *vma)
 	return vma->vm_flags & VM_HUGETLB;
 }
 
-int hugetlb_sysctl_handler(struct ctl_table *, int, struct file *, void *, size_t *);
+int hugetlb_sysctl_handler(struct ctl_table *, int, struct file *, void __user *, size_t *, loff_t *);
 int copy_hugetlb_page_range(struct mm_struct *, struct mm_struct *, struct vm_area_struct *);
 int follow_hugetlb_page(struct mm_struct *, struct vm_area_struct *, struct page **, struct vm_area_struct **, unsigned long *, int *, int);
 void zap_hugepage_range(struct vm_area_struct *, unsigned long, unsigned long);
 void unmap_hugepage_range(struct vm_area_struct *, unsigned long, unsigned long);
 int hugetlb_prefault(struct address_space *, struct vm_area_struct *);
 int hugetlb_report_meminfo(char *);
+int hugetlb_report_node_meminfo(int, char *);
 int is_hugepage_mem_enough(size_t);
 unsigned long hugetlb_total_pages(void);
 struct page *follow_huge_addr(struct mm_struct *mm, unsigned long address,
@@ -30,13 +33,7 @@ void free_huge_page(struct page *);
 
 extern unsigned long max_huge_pages;
 extern const unsigned long hugetlb_zero, hugetlb_infinity;
-
-static inline void
-mark_mm_hugetlb(struct mm_struct *mm, struct vm_area_struct *vma)
-{
-	if (is_vm_hugetlb_page(vma))
-		mm->used_hugetlb = 1;
-}
+extern int sysctl_hugetlb_shm_group;
 
 #ifndef ARCH_HAS_HUGEPAGE_ONLY_RANGE
 #define is_hugepage_only_range(addr, len)	0
@@ -69,8 +66,8 @@ static inline unsigned long hugetlb_total_pages(void)
 #define unmap_hugepage_range(vma, start, end)	BUG()
 #define is_hugepage_mem_enough(size)		0
 #define hugetlb_report_meminfo(buf)		0
-#define mark_mm_hugetlb(mm, vma)		do { } while (0)
-#define follow_huge_pmd(mm, addr, pmd, write)	0
+#define hugetlb_report_node_meminfo(n, buf)	0
+#define follow_huge_pmd(mm, addr, pmd, write)	NULL
 #define is_aligned_hugepage_range(addr, len)	0
 #define prepare_hugepage_range(addr, len)	(-EINVAL)
 #define pmd_huge(x)	0
@@ -102,6 +99,17 @@ struct hugetlbfs_sb_info {
 	long	free_inodes;  /* inodes free */
 	spinlock_t	stat_lock;
 };
+
+
+struct hugetlbfs_inode_info {
+	struct shared_policy policy;
+	struct inode vfs_inode;
+};
+
+static inline struct hugetlbfs_inode_info *HUGETLBFS_I(struct inode *inode)
+{
+	return container_of(inode, struct hugetlbfs_inode_info, vfs_inode);
+}
 
 static inline struct hugetlbfs_sb_info *HUGETLBFS_SB(struct super_block *sb)
 {

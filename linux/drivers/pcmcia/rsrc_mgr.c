@@ -118,7 +118,7 @@ make_resource(unsigned long b, unsigned long n, int flags, char *name)
 		res->name = name;
 		res->start = b;
 		res->end = b + n - 1;
-		res->flags = flags | IORESOURCE_BUSY;
+		res->flags = flags;
 	}
 	return res;
 }
@@ -303,6 +303,7 @@ static int readable(struct pcmcia_socket *s, struct resource *res, cisinfo_t *in
 
 	s->cis_mem.sys_start = res->start;
 	s->cis_mem.sys_stop = res->end;
+	s->cis_mem.res = res;
 	s->cis_virt = ioremap(res->start, s->map_size);
 	if (s->cis_virt) {
 		ret = pcmcia_validate_cis(s->clients, info);
@@ -313,6 +314,7 @@ static int readable(struct pcmcia_socket *s, struct resource *res, cisinfo_t *in
 	}
 	s->cis_mem.sys_start = 0;
 	s->cis_mem.sys_stop = 0;
+	s->cis_mem.res = NULL;
 	if ((ret != 0) || (info->Chains == 0))
 		return 0;
 	return 1;
@@ -332,6 +334,7 @@ static int checksum(struct pcmcia_socket *s, struct resource *res)
 		map.speed = 0;
 		map.sys_start = res->start;
 		map.sys_stop = res->end;
+		map.res = res;
 		map.card_start = 0;
 		s->ops->set_mem_map(s, &map);
 
@@ -454,16 +457,13 @@ static u_long inv_probe(resource_map_t *m, struct pcmcia_socket *s)
     return do_mem_probe(m->base, m->num, s);
 }
 
-void validate_mem(struct pcmcia_socket *s)
+static void validate_mem(struct pcmcia_socket *s)
 {
     resource_map_t *m, mm;
     static u_char order[] = { 0xd0, 0xe0, 0xc0, 0xf0 };
     static int hi = 0, lo = 0;
     u_long b, i, ok = 0;
     int force_low = !(s->features & SS_CAP_PAGE_REGS);
-
-    if (!probe_mem)
-	return;
 
     down(&rsrc_sem);
     /* We do up to four passes through the list */
@@ -500,12 +500,12 @@ void validate_mem(struct pcmcia_socket *s)
 
 #else /* CONFIG_PCMCIA_PROBE */
 
-void validate_mem(struct pcmcia_socket *s)
+static void validate_mem(struct pcmcia_socket *s)
 {
     resource_map_t *m, mm;
     static int done = 0;
     
-    if (probe_mem && done++ == 0) {
+    if (done++ == 0) {
 	down(&rsrc_sem);
 	for (m = mem_db.next; m != &mem_db; m = mm.next) {
 	    mm = *m;
@@ -517,6 +517,18 @@ void validate_mem(struct pcmcia_socket *s)
 }
 
 #endif /* CONFIG_PCMCIA_PROBE */
+
+void pcmcia_validate_mem(struct pcmcia_socket *s)
+{
+	down(&s->skt_sem);
+
+	if (probe_mem && s->state & SOCKET_PRESENT)
+		validate_mem(s);
+
+	up(&s->skt_sem);
+}
+
+EXPORT_SYMBOL(pcmcia_validate_mem);
 
 struct pcmcia_align_data {
 	unsigned long	mask;
@@ -550,7 +562,7 @@ pcmcia_align(void *align_data, struct resource *res,
 
 	for (m = data->map->next; m != data->map; m = m->next) {
 		unsigned long start = m->base;
-		unsigned long end = m->base + m->num;
+		unsigned long end = m->base + m->num - 1;
 
 		/*
 		 * If the lower resources are not available, try aligning
@@ -569,7 +581,7 @@ pcmcia_align(void *align_data, struct resource *res,
 		if (res->start >= res->end)
 			break;
 
-		if ((res->start + size) <= end)
+		if ((res->start + size - 1) <= end)
 			break;
 	}
 
@@ -578,6 +590,32 @@ pcmcia_align(void *align_data, struct resource *res,
 	 */
 	if (m == data->map)
 		res->start = res->end;
+}
+
+/*
+ * Adjust an existing IO region allocation, but making sure that we don't
+ * encroach outside the resources which the user supplied.
+ */
+int adjust_io_region(struct resource *res, unsigned long r_start,
+		     unsigned long r_end, struct pcmcia_socket *s)
+{
+	resource_map_t *m;
+	int ret = -ENOMEM;
+
+	down(&rsrc_sem);
+	for (m = io_db.next; m != &io_db; m = m->next) {
+		unsigned long start = m->base;
+		unsigned long end = m->base + m->num - 1;
+
+		if (start > r_start || r_end > end)
+			continue;
+
+		ret = adjust_resource(res, r_start, r_end - r_start + 1);
+		break;
+	}
+	up(&rsrc_sem);
+
+	return ret;
 }
 
 /*======================================================================
@@ -593,46 +631,43 @@ pcmcia_align(void *align_data, struct resource *res,
     
 ======================================================================*/
 
-int find_io_region(ioaddr_t *base, ioaddr_t num, unsigned long align,
-		   char *name, struct pcmcia_socket *s)
+struct resource *find_io_region(unsigned long base, int num,
+		   unsigned long align, char *name, struct pcmcia_socket *s)
 {
-	struct resource *res = make_resource(0, num, IORESOURCE_IO, name);
+	struct resource *res = make_resource(0, num, IORESOURCE_IO, s->dev.class_id);
 	struct pcmcia_align_data data;
-	unsigned long min = *base;
+	unsigned long min = base;
 	int ret;
 
 	if (align == 0)
 		align = 0x10000;
 
 	data.mask = align - 1;
-	data.offset = *base & data.mask;
+	data.offset = base & data.mask;
 	data.map = &io_db;
 
+	down(&rsrc_sem);
 #ifdef CONFIG_PCI
 	if (s->cb_dev) {
 		ret = pci_bus_alloc_resource(s->cb_dev->bus, res, num, 1,
 					     min, 0, pcmcia_align, &data);
 	} else
 #endif
-	{
-		down(&rsrc_sem);
-		ret = allocate_resource(&ioport_resource, res, num, min, ~0UL, 0,
-					pcmcia_align, &data);
-		up(&rsrc_sem);
-	}
+		ret = allocate_resource(&ioport_resource, res, num, min, ~0UL,
+					1, pcmcia_align, &data);
+	up(&rsrc_sem);
 
 	if (ret != 0) {
 		kfree(res);
-	} else {
-		*base = res->start;
+		res = NULL;
 	}
-	return ret;
+	return res;
 }
 
-int find_mem_region(u_long *base, u_long num, u_long align,
-		    int low, char *name, struct pcmcia_socket *s)
+struct resource *find_mem_region(u_long base, u_long num, u_long align,
+				 int low, char *name, struct pcmcia_socket *s)
 {
-	struct resource *res = make_resource(0, num, IORESOURCE_MEM, name);
+	struct resource *res = make_resource(0, num, IORESOURCE_MEM, s->dev.class_id);
 	struct pcmcia_align_data data;
 	unsigned long min, max;
 	int ret, i;
@@ -640,18 +675,19 @@ int find_mem_region(u_long *base, u_long num, u_long align,
 	low = low || !(s->features & SS_CAP_PAGE_REGS);
 
 	data.mask = align - 1;
-	data.offset = *base & data.mask;
+	data.offset = base & data.mask;
 	data.map = &mem_db;
 
 	for (i = 0; i < 2; i++) {
 		if (low) {
 			max = 0x100000UL;
-			min = *base < max ? *base : 0;
+			min = base < max ? base : 0;
 		} else {
 			max = ~0UL;
-			min = 0x100000UL + *base;
+			min = 0x100000UL + base;
 		}
 
+		down(&rsrc_sem);
 #ifdef CONFIG_PCI
 		if (s->cb_dev) {
 			ret = pci_bus_alloc_resource(s->cb_dev->bus, res, num,
@@ -659,12 +695,9 @@ int find_mem_region(u_long *base, u_long num, u_long align,
 						     pcmcia_align, &data);
 		} else
 #endif
-		{
-			down(&rsrc_sem);
 			ret = allocate_resource(&iomem_resource, res, num, min,
-						max, 0, pcmcia_align, &data);
-			up(&rsrc_sem);
-		}
+						max, 1, pcmcia_align, &data);
+		up(&rsrc_sem);
 		if (ret == 0 || low)
 			break;
 		low = 1;
@@ -672,10 +705,9 @@ int find_mem_region(u_long *base, u_long num, u_long align,
 
 	if (ret != 0) {
 		kfree(res);
-	} else {
-		*base = res->start;
+		res = NULL;
 	}
-	return ret;
+	return res;
 }
 
 /*======================================================================

@@ -1,9 +1,87 @@
+Version 1.22
+------------
+Add config option to enable XATTR (extended attribute) support, mapping
+xattr names in the "user." namespace space to SMB/CIFS EAs.
+
+Version 1.21
+------------
+Add new mount parm to control whether mode check (vfs_permission) is done on
+the client.  If Unix extensions are enabled and the uids on the client
+and server do not match, client permission checks are meaningless on
+server uids that do not exist on the client (this does not affect the
+normal ACL check which occurs on the server).  Fix default uid
+on mknod to match create and mkdir. Add optional mount parm to allow
+override of the default uid behavior (in which the server sets the uid
+and gid of newly created files). Normally for network filesystem mounts
+user want the server to set the uid/gid on newly created files (rather than 
+using uid of the client processes you would in a local filesystem).
+
+Version 1.20
+------------
+Make transaction counts more consistent. Merge /proc/fs/cifs/SimultaneousOps
+info into /proc/fs/cifs/DebugData.  Fix oops in rare oops in readdir 
+(in build_wildcard_path_from_dentry).  Fix mknod to pass type field
+(block/char/fifo) properly.  Remove spurious mount warning log entry when
+credentials passed as mount argument. Set major/minor device number in
+inode for block and char devices when unix extensions enabled.
+
+Version 1.19
+------------
+Fix /proc/fs/cifs/Stats and DebugData display to handle larger
+amounts of return data. Properly limit requests to MAX_REQ (50
+is the usual maximum active multiplex SMB/CIFS requests per server).
+Do not kill cifsd (and thus hurt the other SMB session) when more than one
+session to the same server (but with different userids) exists and one
+of the two user's smb sessions is being removed while leaving the other.
+Do not loop reconnecting in cifsd demultiplex thread when admin
+kills the thread without going through unmount.
+
+Version 1.18
+------------
+Do not rename hardlinked files (since that should be a noop). Flush
+cached write behind data when reopening a file after session abend,
+except when already in write. Grab per socket sem during reconnect 
+to avoid oops in sendmsg if overlapping with reconnect. Do not
+reset cached inode file size on readdir for files open for write on 
+client.
+
+
+Version 1.17
+------------
+Update number of blocks in file so du command is happier (in Linux a fake
+blocksize of 512 is required for calculating number of blocks in inode).
+Fix prepare write of partial pages to read in data from server if possible.
+Fix race on tcpStatus field between unmount and reconnection code, causing
+cifsd process sometimes to hang around forever. Improve out of memory
+checks in cifs_filldir
+
+Version 1.16
+------------
+Fix incorrect file size in file handle based setattr on big endian hardware.
+Fix oops in build_path_from_dentry when out of memory.  Add checks for invalid
+and closing file structs in writepage/partialpagewrite.  Add statistics
+for each mounted share (new menuconfig option). Fix endianness problem in
+volume information displayed in /proc/fs/cifs/DebugData (only affects
+affects big endian architectures). Prevent renames while constructing
+path names for open, mkdir and rmdir.
+
+Version 1.15
+------------
+Change to mempools for alloc smb request buffers and multiplex structs
+to better handle low memory problems (and potential deadlocks).
+
+Version 1.14
+------------
+Fix incomplete listings of large directories on Samba servers when Unix
+extensions enabled.  Fix oops when smb_buffer can not be allocated. Fix
+rename deadlock when writing out dirty pages at same time.
+
 Version 1.13
 ------------
 Fix open of files in which O_CREATE can cause the mode to change in
 some cases. Fix case in which retry of write overlaps file close.
 Fix PPC64 build error.  Reduce excessive stack usage in smb password
-hashing.
+hashing. Fix overwrite of Linux user's view of file mode to Windows servers.
 
 Version 1.12
 ------------

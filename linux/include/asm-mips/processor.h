@@ -137,9 +137,9 @@ extern unsigned int vced_count, vcei_count;
 #endif
 
 /*
- * Size of io_bitmap in longwords: 32 is ports 0-0x3ff.
+ * Size of io_bitmap in longwords.
  */
-#define IO_BITMAP_SIZE	32
+#define IO_BITMAP_SIZE	2048
 
 #define NUM_FPU_REGS	32
 
@@ -174,6 +174,8 @@ union mips_fpu_union {
 typedef struct {
 	unsigned long seg;
 } mm_segment_t;
+
+#define ARCH_MIN_TASKALIGN	8
 
 /*
  * If you change thread_struct remember to change the #defines below too!
@@ -277,15 +279,6 @@ unsigned long get_wchan(struct task_struct *p);
  * address register on the stack.
  */
 #define return_address() ({__asm__ __volatile__("":::"$31");__builtin_return_address(0);})
-
-/*
- * For now.  The 32-bit cycle counter is screwed up so solving this nicely takes a little
- * brainwork ...
- */
-static inline unsigned long long sched_clock(void)
-{
-	return 0ULL;
-}
 
 #ifdef CONFIG_CPU_HAS_PREFETCH
 

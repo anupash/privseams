@@ -253,6 +253,24 @@ _GLOBAL(low_choose_750fx_pll)
 	mtmsr	r7
 	blr
 
+_GLOBAL(low_choose_7447a_dfs)
+	/* Clear MSR:EE */
+	mfmsr	r7
+	rlwinm	r0,r7,0,17,15
+	mtmsr	r0
+	
+	/* Calc new HID1 value */
+	mfspr	r4,SPRN_HID1
+	insrwi	r4,r3,1,9	/* insert parameter into bit 9 */
+	sync
+	mtspr	SPRN_HID1,r4
+	sync
+	isync
+
+	/* Return */
+	mtmsr	r7
+	blr
+
 #endif /* CONFIG_CPU_FREQ_PMAC && CONFIG_6xx */
 
 /* void local_save_flags_ptr(unsigned long *flags) */
@@ -419,7 +437,24 @@ _GLOBAL(_tlbia)
 	ble	1b
 
 	isync
-#else /* !(CONFIG_40x || CONFIG_44x) */
+#elif defined(CONFIG_FSL_BOOKE)
+	/* Invalidate all entries in TLB0 */
+	li	r3, 0x04
+	tlbivax	0,3
+	/* Invalidate all entries in TLB1 */
+	li	r3, 0x0c
+	tlbivax	0,3
+	/* Invalidate all entries in TLB2 */
+	li	r3, 0x14
+	tlbivax	0,3
+	/* Invalidate all entries in TLB3 */
+	li	r3, 0x1c
+	tlbivax	0,3
+	msync
+#ifdef CONFIG_SMP
+	tlbsync
+#endif /* CONFIG_SMP */
+#else /* !(CONFIG_40x || CONFIG_44x || CONFIG_FSL_BOOKE) */
 #if defined(CONFIG_SMP)
 	rlwinm	r8,r1,0,0,18
 	lwz	r8,TI_CPU(r8)
@@ -487,7 +522,20 @@ _GLOBAL(_tlbie)
 	tlbwe	r3, r3, PPC44x_TLB_PAGEID
 	isync
 10:
-#else /* !(CONFIG_40x || CONFIG_44x) */
+#elif defined(CONFIG_FSL_BOOKE)
+	rlwinm	r4, r3, 0, 0, 19
+	ori	r5, r4, 0x08	/* TLBSEL = 1 */
+	ori	r6, r4, 0x10	/* TLBSEL = 2 */
+	ori	r7, r4, 0x18	/* TLBSEL = 3 */
+	tlbivax	0, r4
+	tlbivax	0, r5
+	tlbivax	0, r6
+	tlbivax	0, r7
+	msync
+#if defined(CONFIG_SMP)
+	tlbsync
+#endif /* CONFIG_SMP */
+#else /* !(CONFIG_40x || CONFIG_44x || CONFIG_FSL_BOOKE) */
 #if defined(CONFIG_SMP)
 	rlwinm	r8,r1,0,0,18
 	lwz	r8,TI_CPU(r8)
@@ -544,6 +592,10 @@ _GLOBAL(flush_instruction_cache)
 	lis	r3, KERNELBASE@h
 	iccci	0,r3
 #endif
+#elif CONFIG_FSL_BOOKE
+	mfspr	r3,SPRN_L1CSR1
+	ori	r3,r3,L1CSR1_ICFI|L1CSR1_ICLFR
+	mtspr	SPRN_L1CSR1,r3
 #else
 	mfspr	r3,PVR
 	rlwinm	r3,r3,16,16,31
@@ -780,9 +832,18 @@ _GLOBAL(clear_pages)
 _GLOBAL(copy_page)
 	addi	r3,r3,-4
 	addi	r4,r4,-4
+
+#ifdef CONFIG_8xx
+	/* don't use prefetch on 8xx */
+    	li	r0,4096/L1_CACHE_LINE_SIZE
+	mtctr	r0
+1:	COPY_16_BYTES
+	bdnz	1b
+	blr
+
+#else	/* not 8xx, we can prefetch */
 	li	r5,4
 
-#ifndef CONFIG_8xx
 #if MAX_COPY_PREFETCH > 1
 	li	r0,MAX_COPY_PREFETCH
 	li	r11,4
@@ -790,19 +851,17 @@ _GLOBAL(copy_page)
 11:	dcbt	r11,r4
 	addi	r11,r11,L1_CACHE_LINE_SIZE
 	bdnz	11b
-#else /* MAX_L1_COPY_PREFETCH == 1 */
+#else /* MAX_COPY_PREFETCH == 1 */
 	dcbt	r5,r4
 	li	r11,L1_CACHE_LINE_SIZE+4
-#endif /* MAX_L1_COPY_PREFETCH */
-#endif /* CONFIG_8xx */
-
-	li	r0,4096/L1_CACHE_LINE_SIZE
+#endif /* MAX_COPY_PREFETCH */
+	li	r0,4096/L1_CACHE_LINE_SIZE - MAX_COPY_PREFETCH
+	crclr	4*cr0+eq
+2:
 	mtctr	r0
 1:
-#ifndef CONFIG_8xx
 	dcbt	r11,r4
 	dcbz	r5,r3
-#endif
 	COPY_16_BYTES
 #if L1_CACHE_LINE_SIZE >= 32
 	COPY_16_BYTES
@@ -818,7 +877,12 @@ _GLOBAL(copy_page)
 #endif
 #endif
 	bdnz	1b
-	blr
+	beqlr
+	crnot	4*cr0+eq,4*cr0+eq
+	li	r0,MAX_COPY_PREFETCH
+	li	r11,4
+	b	2b
+#endif	/* CONFIG_8xx */
 
 /*
  * void atomic_clear_mask(atomic_t mask, atomic_t *addr)
@@ -1035,7 +1099,7 @@ _GLOBAL(_get_SP)
  * and exceptions as if the cpu had performed the load or store.
  */
 
-#if defined(CONFIG_4xx)
+#if defined(CONFIG_4xx) || defined(CONFIG_E500)
 _GLOBAL(cvt_fd)
 	lfs	0,0(r3)
 	stfd	0,0(r4)
@@ -1385,3 +1449,4 @@ _GLOBAL(sys_call_table)
 	.long sys_mq_timedreceive	/* 265 */
 	.long sys_mq_notify
 	.long sys_mq_getsetattr
+	.long sys_ni_syscall		/* 268 reserved for sys_kexec_load */

@@ -1,5 +1,5 @@
 /* 
- * $Id: iucv.c,v 1.28 2004/04/15 06:34:58 braunu Exp $
+ * $Id: iucv.c,v 1.40 2004/08/04 12:29:33 cborntra Exp $
  *
  * IUCV network driver
  *
@@ -29,7 +29,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * RELEASE-TAG: IUCV lowlevel driver $Revision: 1.28 $
+ * RELEASE-TAG: IUCV lowlevel driver $Revision: 1.40 $
  *
  */
 
@@ -53,6 +53,7 @@
 #include <asm/io.h>
 #include <asm/s390_ext.h>
 #include <asm/ebcdic.h>
+#include <asm/smp.h>
 #include <asm/ccwdev.h> //for root device stuff
 
 /* FLAGS:
@@ -98,7 +99,7 @@ typedef struct {
 	__u8  res3[24];
 } iucv_GeneralInterrupt;
 
-static iucv_GeneralInterrupt *iucv_external_int_buffer;
+static iucv_GeneralInterrupt *iucv_external_int_buffer = NULL;
 
 /* Spin Lock declaration */
 
@@ -177,9 +178,11 @@ static handler **iucv_pathid_table;
 static unsigned long max_connections;
 
 /**
- * declare_flag: is 0 when iucv_declare_buffer has not been called
+ * iucv_cpuid: contains the logical cpu number of the cpu which
+ * has declared the iucv buffer by issuing DECLARE_BUFFER.
+ * If no cpu has done the initialization iucv_cpuid contains -1.
  */
-static int declare_flag;
+static int iucv_cpuid = -1;
 /**
  * register_flag: is 0 when external interrupt has not been registered
  */
@@ -285,6 +288,7 @@ typedef struct {
 		iparml_set_mask p_set_mask;
 	} param;
 	atomic_t in_use;
+	__u32    res;
 }  __attribute__ ((aligned(8))) iucv_param;
 #define PARAM_POOL_SIZE (PAGE_SIZE / sizeof(iucv_param))
 
@@ -351,7 +355,7 @@ do { \
 static void
 iucv_banner(void)
 {
-	char vbuf[] = "$Revision: 1.28 $";
+	char vbuf[] = "$Revision: 1.40 $";
 	char *version = vbuf;
 
 	if ((version = strchr(version, ':'))) {
@@ -383,7 +387,7 @@ iucv_init(void)
 	}
 
 	ret = bus_register(&iucv_bus);
-	if (ret != 0) {
+	if (ret) {
 		printk(KERN_ERR "IUCV: failed to register bus.\n");
 		return ret;
 	}
@@ -403,6 +407,7 @@ iucv_init(void)
 		       "%s: Could not allocate external interrupt buffer\n",
 		       __FUNCTION__);
 		s390_root_dev_unregister(iucv_root);
+		bus_unregister(&iucv_bus);
 		return -ENOMEM;
 	}
 	memset(iucv_external_int_buffer, 0, sizeof(iucv_GeneralInterrupt));
@@ -416,6 +421,7 @@ iucv_init(void)
 		kfree(iucv_external_int_buffer);
 		iucv_external_int_buffer = NULL;
 		s390_root_dev_unregister(iucv_root);
+		bus_unregister(&iucv_bus);
 		return -ENOMEM;
 	}
 	memset(iucv_param_pool, 0, sizeof(iucv_param) * PARAM_POOL_SIZE);
@@ -441,10 +447,14 @@ static void
 iucv_exit(void)
 {
 	iucv_retrieve_buffer();
-      	if (iucv_external_int_buffer)
+      	if (iucv_external_int_buffer) {
 		kfree(iucv_external_int_buffer);
-	if (iucv_param_pool)
+		iucv_external_int_buffer = NULL;
+	}
+	if (iucv_param_pool) {
 		kfree(iucv_param_pool);
+		iucv_param_pool = NULL;
+	}
 	s390_root_dev_unregister(iucv_root);
 	bus_unregister(&iucv_bus);
 	printk(KERN_INFO "IUCV lowlevel driver unloaded\n");
@@ -463,17 +473,19 @@ iucv_exit(void)
 static __inline__ iucv_param *
 grab_param(void)
 {
-	iucv_param *ret;
-	static int i = 0;
+	iucv_param *ptr;
+        static int hint = 0;
 
-	while (atomic_compare_and_swap(0, 1, &iucv_param_pool[i].in_use)) {
-		i++;
-		if (i >= PARAM_POOL_SIZE)
-			i = 0;
-	}
-	ret = &iucv_param_pool[i];
-	memset(&ret->param, 0, sizeof(ret->param));
-	return ret;
+	ptr = iucv_param_pool + hint;
+	do {
+		ptr++;
+		if (ptr >= iucv_param_pool + PARAM_POOL_SIZE)
+			ptr = iucv_param_pool;
+	} while (atomic_compare_and_swap(0, 1, &ptr->in_use));
+	hint = ptr - iucv_param_pool;
+
+	memset(&ptr->param, 0, sizeof(ptr->param));
+	return ptr;
 }
 
 /**
@@ -516,7 +528,7 @@ iucv_add_handler (handler *new)
 		 */
 		list_for_each(lh, &iucv_handler_table) {
 			handler *h = list_entry(lh, handler, list);
-			if (memcmp(&new->id, &h->id, sizeof(h->id)) == 0) {
+			if (!memcmp(&new->id, &h->id, sizeof(h->id))) {
 				iucv_debug(1, "ret 1");
 				spin_unlock_irqrestore (&iucv_lock, flags);
 				return 1;
@@ -622,17 +634,15 @@ iucv_remove_pathid(__u16 pathid)
 }
 
 /**
- * iucv_declare_buffer_cpu0
- * Register at VM for subsequent IUCV operations. This is always
- * executed on CPU 0. Called from iucv_declare_buffer().
+ * iucv_declare_buffer_cpuid
+ * Register at VM for subsequent IUCV operations. This is executed
+ * on the reserved CPU iucv_cpuid. Called from iucv_declare_buffer().
  */
 static void
-iucv_declare_buffer_cpu0 (void *result)
+iucv_declare_buffer_cpuid (void *result)
 {
 	iparml_db *parm;
 
-	if (!(result && (smp_processor_id() == 0)))
-		return;
 	parm = (iparml_db *)grab_param();
 	parm->ipbfadr1 = virt_to_phys(iucv_external_int_buffer);
 	if ((*((ulong *)result) = b2f0(DECLARE_BUFFER, parm)) == 1)
@@ -641,17 +651,16 @@ iucv_declare_buffer_cpu0 (void *result)
 }
 
 /**
- * iucv_retrieve_buffer_cpu0:
- * Unregister IUCV usage at VM. This is always executed on CPU 0.
+ * iucv_retrieve_buffer_cpuid:
+ * Unregister IUCV usage at VM. This is always executed on the same
+ * cpu that registered the buffer to VM.
  * Called from iucv_retrieve_buffer().
  */
 static void
-iucv_retrieve_buffer_cpu0 (void *result)
+iucv_retrieve_buffer_cpuid (void *cpu)
 {
 	iparml_control *parm;
 
-	if (smp_processor_id() != 0)
-		return;
 	parm = (iparml_control *)grab_param();
 	b2f0(RETRIEVE_BUFFER, parm);
 	release_param(parm);
@@ -667,18 +676,27 @@ iucv_retrieve_buffer_cpu0 (void *result)
 static int
 iucv_declare_buffer (void)
 {
-	ulong b2f0_result = 0x0deadbeef;
+	unsigned long flags;
+	ulong b2f0_result;
 
 	iucv_debug(1, "entering");
-	preempt_disable();
-	if (smp_processor_id() == 0)
-		iucv_declare_buffer_cpu0(&b2f0_result);
-	else
-		smp_call_function(iucv_declare_buffer_cpu0, &b2f0_result, 0, 1);
-	preempt_enable();
-	iucv_debug(1, "Address of EIB = %p", iucv_external_int_buffer);
-	if (b2f0_result == 0x0deadbeef)
-	    b2f0_result = 0xaa;
+	b2f0_result = -ENODEV;
+	spin_lock_irqsave (&iucv_lock, flags);
+	if (iucv_cpuid == -1) {
+		/* Reserve any cpu for use by iucv. */
+		iucv_cpuid = smp_get_cpu(CPU_MASK_ALL);
+		spin_unlock_irqrestore (&iucv_lock, flags);
+		smp_call_function_on(iucv_declare_buffer_cpuid,
+			&b2f0_result, 0, 1, iucv_cpuid);
+		if (b2f0_result) {
+			smp_put_cpu(iucv_cpuid);
+			iucv_cpuid = -1;
+		}
+		iucv_debug(1, "Address of EIB = %p", iucv_external_int_buffer);
+	} else {
+		spin_unlock_irqrestore (&iucv_lock, flags);
+		b2f0_result = 0;
+	}
 	iucv_debug(1, "exiting");
 	return b2f0_result;
 }
@@ -693,14 +711,12 @@ static int
 iucv_retrieve_buffer (void)
 {
 	iucv_debug(1, "entering");
-	if (declare_flag) {
-		preempt_disable();
-		if (smp_processor_id() == 0)
-			iucv_retrieve_buffer_cpu0(0);
-		else
-			smp_call_function(iucv_retrieve_buffer_cpu0, 0, 0, 1);
-		declare_flag = 0;
-		preempt_enable();
+	if (iucv_cpuid != -1) {
+		smp_call_function_on(iucv_retrieve_buffer_cpuid,
+				     0, 0, 1, iucv_cpuid);
+		/* Release the cpu reserved by iucv_declare_buffer. */
+		smp_put_cpu(iucv_cpuid);
+		iucv_cpuid = -1;
 	}
 	iucv_debug(1, "exiting");
 	return 0;
@@ -853,40 +869,33 @@ iucv_register_program (__u8 pgmname[16],
 		return NULL;
 	}
 
-	if (declare_flag == 0) {
-		rc = iucv_declare_buffer();
-		if (rc) {
-			char *err = "Unknown";
-			iucv_remove_handler(new_handler);
-			kfree(new_handler);
-			switch(rc) {
-				case 0x03:
-					err = "Directory error";
-					break;
-				case 0x0a:
-					err = "Invalid length";
-					break;
-				case 0x13:
-					err = "Buffer already exists";
-					break;
-				case 0x3e:
-					err = "Buffer overlap";
-					break;
-				case 0x5c:
-					err = "Paging or storage error";
-					break;
-				case 0xaa:
-					err = "Function not called";
-					break;
-			}
-			printk(KERN_WARNING "%s: iucv_declare_buffer "
-			       "returned error 0x%02lx (%s)\n", __FUNCTION__, rc,
-			       err);
-			return NULL;
+	rc = iucv_declare_buffer();
+	if (rc) {
+		char *err = "Unknown";
+		iucv_remove_handler(new_handler);
+		kfree(new_handler);
+		switch(rc) {
+		case 0x03:
+			err = "Directory error";
+			break;
+		case 0x0a:
+			err = "Invalid length";
+			break;
+		case 0x13:
+			err = "Buffer already exists";
+			break;
+		case 0x3e:
+			err = "Buffer overlap";
+			break;
+		case 0x5c:
+			err = "Paging or storage error";
+			break;
 		}
-		declare_flag = 1;
+		printk(KERN_WARNING "%s: iucv_declare_buffer "
+		       "returned error 0x%02lx (%s)\n", __FUNCTION__, rc, err);
+		return NULL;
 	}
-	if (register_flag == 0) {
+	if (!register_flag) {
 		/* request the 0x4000 external interrupt */
 		rc = register_external_interrupt (0x4000, iucv_irq_handler);
 		if (rc) {
@@ -1036,7 +1045,7 @@ iucv_accept(__u16 pathid, __u16 msglim_reqstd,
 	parm->ipflags1 = (__u8)flags1;
 	b2f0_result = b2f0(ACCEPT, parm);
 
-	if (b2f0_result == 0) {
+	if (!b2f0_result) {
 		if (msglim)
 			*msglim = parm->ipmsglim;
 		if (pgm_data)
@@ -1176,7 +1185,7 @@ iucv_connect (__u16 *pathid, __u16 msglim_reqstd,
 	memcpy(&local_parm, parm, sizeof(local_parm));
 	release_param(parm);
 	parm = &local_parm;
-	if (b2f0_result == 0)
+	if (!b2f0_result)
 		add_pathid_result = __iucv_add_pathid(parm->ippathid, h);
 	spin_unlock_irqrestore (&iucv_lock, flags);
 
@@ -1236,7 +1245,7 @@ iucv_purge (__u16 pathid, __u32 msgid, __u32 srccls, __u32 *audit)
 	parm->ipflags1 |= (IPSRCCLS | IPFGMID | IPFGPID);
 	b2f0_result = b2f0(PURGE, parm);
 
-	if ((b2f0_result == 0) && audit) {
+	if (!b2f0_result && audit) {
 		memcpy(audit, parm->ipaudit, sizeof(parm->ipaudit));
 		/* parm->ipaudit has only 3 bytes */
 		*audit >>= 8;
@@ -1400,7 +1409,7 @@ iucv_receive (__u16 pathid, __u32 msgid, __u32 trgcls,
 
 	b2f0_result = b2f0(RECEIVE, parm);
 
-	if (b2f0_result == 0 || b2f0_result == 5) {
+	if (!b2f0_result || b2f0_result == 5) {
 		if (flags1_out) {
 			iucv_debug(2, "*flags1_out = %d", *flags1_out);
 			*flags1_out = (parm->ipflags1 & (~0x07));
@@ -1490,7 +1499,7 @@ iucv_receive_array (__u16 pathid,
 
 	b2f0_result = b2f0(RECEIVE, parm);
 
-	if (b2f0_result == 0 || b2f0_result == 5) {
+	if (!b2f0_result || b2f0_result == 5) {
 
 		if (flags1_out) {
 			iucv_debug(2, "*flags1_out = %d", *flags1_out);
@@ -1537,7 +1546,7 @@ iucv_receive_array (__u16 pathid,
 				*residual_length = abs (buflen - 8);
 
 			if (residual_buffer) {
-				if (moved == 0)
+				if (!moved)
 					*residual_buffer = (ulong) buffer;
 				else
 					*residual_buffer =
@@ -1639,7 +1648,7 @@ iucv_reply (__u16 pathid,
 
 	b2f0_result = b2f0(REPLY, parm);
 
-	if ((b2f0_result == 0) || (b2f0_result == 5)) {
+	if ((!b2f0_result) || (b2f0_result == 5)) {
 		if (ipbfadr2)
 			*ipbfadr2 = parm->ipbfadr2;
 		if (ipbfln2f)
@@ -1705,7 +1714,7 @@ iucv_reply_array (__u16 pathid,
 
 	b2f0_result = b2f0(REPLY, parm);
 
-	if ((b2f0_result == 0) || (b2f0_result == 5)) {
+	if ((!b2f0_result) || (b2f0_result == 5)) {
 
 		if (ipbfadr2)
 			*ipbfadr2 = parm->ipbfadr2;
@@ -1831,7 +1840,7 @@ iucv_send (__u16 pathid, __u32 * msgid,
 
 	b2f0_result = b2f0(SEND, parm);
 
-	if ((b2f0_result == 0) && (msgid))
+	if ((!b2f0_result) && (msgid))
 		*msgid = parm->ipmsgid;
 	release_param(parm);
 
@@ -1885,7 +1894,7 @@ iucv_send_array (__u16 pathid,
 	parm->ipflags1 = (IPNORPY | IPBUFLST | flags1);
 	b2f0_result = b2f0(SEND, parm);
 
-	if ((b2f0_result == 0) && (msgid))
+	if ((!b2f0_result) && (msgid))
 		*msgid = parm->ipmsgid;
 	release_param(parm);
 
@@ -1931,7 +1940,7 @@ iucv_send_prmmsg (__u16 pathid,
 
 	b2f0_result = b2f0(SEND, parm);
 
-	if ((b2f0_result == 0) && (msgid))
+	if ((!b2f0_result) && (msgid))
 		*msgid = parm->ipmsgid;
 	release_param(parm);
 
@@ -1992,7 +2001,7 @@ iucv_send2way (__u16 pathid,
 
 	b2f0_result = b2f0(SEND, parm);
 
-	if ((b2f0_result == 0) && (msgid))
+	if ((!b2f0_result) && (msgid))
 		*msgid = parm->ipmsgid;
 	release_param(parm);
 
@@ -2053,7 +2062,7 @@ iucv_send2way_array (__u16 pathid,
 	parm->ipmsgtag = msgtag;
 	parm->ipflags1 = (IPBUFLST | IPANSLST | flags1);
 	b2f0_result = b2f0(SEND, parm);
-	if ((b2f0_result == 0) && (msgid))
+	if ((!b2f0_result) && (msgid))
 		*msgid = parm->ipmsgid;
 	release_param(parm);
 
@@ -2111,7 +2120,7 @@ iucv_send2way_prmmsg (__u16 pathid,
 
 	b2f0_result = b2f0(SEND, parm);
 
-	if ((b2f0_result == 0) && (msgid))
+	if ((!b2f0_result) && (msgid))
 		*msgid = parm->ipmsgid;
 	release_param(parm);
 
@@ -2172,7 +2181,7 @@ iucv_send2way_prmmsg_array (__u16 pathid,
 	parm->ipflags1 = (IPRMDATA | IPANSLST | flags1);
 	memcpy(parm->iprmmsg, prmmsg, sizeof(parm->iprmmsg));
 	b2f0_result = b2f0(SEND, parm);
-	if ((b2f0_result == 0) && (msgid))
+	if ((!b2f0_result) && (msgid))
 		*msgid = parm->ipmsgid;
 	release_param(parm);
 
@@ -2181,12 +2190,9 @@ iucv_send2way_prmmsg_array (__u16 pathid,
 }
 
 void
-iucv_setmask_cpu0 (void *result)
+iucv_setmask_cpuid (void *result)
 {
         iparml_set_mask *parm;
-
-        if (smp_processor_id() != 0)
-                return;
 
         iucv_debug(1, "entering");
         parm = (iparml_set_mask *)grab_param();
@@ -2219,14 +2225,12 @@ iucv_setmask (int SetMaskFlag)
 		ulong result;
 		__u8  param;
 	} u;
+	int cpu;
 
 	u.param = SetMaskFlag;
-	preempt_disable();
-	if (smp_processor_id() == 0)
-		iucv_setmask_cpu0(&u);
-	else
-		smp_call_function(iucv_setmask_cpu0, &u, 0, 1);
-	preempt_enable();
+	cpu = get_cpu();
+	smp_call_function_on(iucv_setmask_cpuid, &u, 0, 1, iucv_cpuid);
+	put_cpu();
 
 	return u.result;
 }
@@ -2354,12 +2358,13 @@ iucv_do_int(iucv_GeneralInterrupt * int_buf)
 				iucv_dumpit("temp_buff2",
 					    temp_buff2, sizeof(temp_buff2));
 				
-				if (memcmp (temp_buff1, temp_buff2, 24) == 0) {
+				if (!memcmp (temp_buff1, temp_buff2, 24)) {
 					
 					iucv_debug(2,
 						   "found a matching handler");
 					break;
-				}
+				} else
+					h = NULL;
 			}
 			spin_unlock_irqrestore (&iucv_lock, flags);
 			if (h) {

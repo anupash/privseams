@@ -1,6 +1,10 @@
 /*
    sata_via.c - VIA Serial ATA controllers
 
+   Maintained by:  Jeff Garzik <jgarzik@pobox.com>
+   		   Please ALWAYS copy linux-ide@vger.kernel.org
+ 		   on emails.
+
    Copyright 2003-2004 Red Hat, Inc.  All rights reserved.
    Copyright 2003-2004 Jeff Garzik
 
@@ -29,7 +33,7 @@
 #include <linux/blkdev.h>
 #include <linux/delay.h>
 #include "scsi.h"
-#include "hosts.h"
+#include <scsi/scsi_host.h>
 #include <linux/libata.h>
 #include <asm/io.h>
 
@@ -102,11 +106,15 @@ static struct ata_port_operations svia_sata_ops = {
 
 	.phy_reset		= sata_phy_reset,
 
+	.bmdma_setup            = ata_bmdma_setup_pio,
 	.bmdma_start            = ata_bmdma_start_pio,
-	.fill_sg		= ata_fill_sg,
+	.qc_prep		= ata_qc_prep,
+	.qc_issue		= ata_qc_issue_prot,
+
 	.eng_timeout		= ata_eng_timeout,
 
 	.irq_handler		= ata_interrupt,
+	.irq_clear		= ata_bmdma_irq_clear,
 
 	.scr_read		= svia_scr_read,
 	.scr_write		= svia_scr_write,
@@ -142,17 +150,6 @@ static unsigned long svia_scr_addr(unsigned long addr, unsigned int port)
 {
 	return addr + (port * 128);
 }
-
-/**
- *	svia_init_one -
- *	@pdev:
- *	@ent:
- *
- *	LOCKING:
- *
- *	RETURNS:
- *
- */
 
 static int svia_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 {
@@ -284,26 +281,10 @@ err_out:
 	return rc;
 }
 
-/**
- *	svia_init -
- *
- *	LOCKING:
- *
- *	RETURNS:
- *
- */
-
 static int __init svia_init(void)
 {
 	return pci_module_init(&svia_pci_driver);
 }
-
-/**
- *	svia_exit -
- *
- *	LOCKING:
- *
- */
 
 static void __exit svia_exit(void)
 {

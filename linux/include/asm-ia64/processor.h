@@ -2,7 +2,7 @@
 #define _ASM_IA64_PROCESSOR_H
 
 /*
- * Copyright (C) 1998-2003 Hewlett-Packard Co
+ * Copyright (C) 1998-2004 Hewlett-Packard Co
  *	David Mosberger-Tang <davidm@hpl.hp.com>
  *	Stephane Eranian <eranian@hpl.hp.com>
  * Copyright (C) 1999 Asit Mallick <asit.k.mallick@intel.com>
@@ -61,7 +61,6 @@
 							/* bit 5 is currently unused */
 #define IA64_THREAD_FPEMU_NOPRINT (__IA64_UL(1) << 6)	/* don't log any fpswa faults */
 #define IA64_THREAD_FPEMU_SIGFPE  (__IA64_UL(1) << 7)	/* send a SIGFPE for fpswa faults */
-#define IA64_THREAD_XSTACK	(__IA64_UL(1) << 8)	/* stack executable by default? */
 
 #define IA64_THREAD_UAC_SHIFT	3
 #define IA64_THREAD_UAC_MASK	(IA64_THREAD_UAC_NOPRINT | IA64_THREAD_UAC_SIGBUS)
@@ -230,6 +229,7 @@ struct desc_struct {
 
 #define TLS_SIZE (GDT_ENTRY_TLS_ENTRIES * 8)
 
+struct partial_page_list;
 #endif
 
 struct thread_struct {
@@ -251,6 +251,7 @@ struct thread_struct {
 	__u64 fdr;			/* IA32 fp except. data reg */
 	__u64 old_k1;			/* old value of ar.k1 */
 	__u64 old_iob;			/* old IOBase value */
+	struct partial_page_list *ppl;	/* partial page list for 4K page size issue */
         /* cached TLS descriptors. */
 	struct desc_struct tls_array[GDT_ENTRY_TLS_ENTRIES];
 
@@ -260,7 +261,8 @@ struct thread_struct {
 				.fir =		0,			\
 				.fdr =		0,			\
 				.old_k1 =	0,			\
-				.old_iob =	0,
+				.old_iob =	0,			\
+				.ppl =		0,
 #else
 # define INIT_THREAD_IA32
 #endif /* CONFIG_IA32_SUPPORT */

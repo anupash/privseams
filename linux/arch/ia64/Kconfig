@@ -149,20 +149,6 @@ config IA64_L1_CACHE_SHIFT
 	default "6" if ITANIUM
 
 # align cache-sensitive data to 64 bytes
-config MCKINLEY_ASTEP_SPECIFIC
-	bool "McKinley A-step specific code"
-	depends on MCKINLEY
-	help
-	  Select this option to build a kernel for an IA-64 McKinley prototype
-	  system with any A-stepping CPU.
-
-config MCKINLEY_A0_SPECIFIC
-	bool "McKinley A0/A1-step specific code"
-	depends on MCKINLEY_ASTEP_SPECIFIC
-	help
-	  Select this option to build a kernel for an IA-64 McKinley prototype
-	  system with an A0 or A1 stepping CPU.
-
 config NUMA
 	bool "NUMA support"
 	depends on !IA64_HP_SIM
@@ -184,7 +170,7 @@ config VIRTUAL_MEM_MAP
 
 config DISCONTIGMEM
 	bool "Discontiguous memory support"
-	depends on (IA64_DIG || IA64_SGI_SN2 || IA64_GENERIC) && NUMA && VIRTUAL_MEM_MAP
+	depends on (IA64_DIG || IA64_SGI_SN2 || IA64_GENERIC || IA64_HP_ZX1) && NUMA && VIRTUAL_MEM_MAP
 	default y if (IA64_SGI_SN2 || IA64_GENERIC) && NUMA
 	help
 	  Say Y to support efficient handling of discontiguous physical memory,
@@ -193,10 +179,10 @@ config DISCONTIGMEM
 	  See <file:Documentation/vm/numa> for more.
 
 config IA64_CYCLONE
-	bool "Support Cyclone(EXA) Time Source"
+	bool "Cyclone (EXA) Time Source support"
 	help
-		Say Y here to enable support for IBM EXA Cyclone time source.
-		If you're unsure, answer N.
+	  Say Y here to enable support for IBM EXA Cyclone time source.
+	  If you're unsure, answer N.
 
 config IOSAPIC
 	bool
@@ -243,6 +229,15 @@ config NR_CPUS
 	  only use 2 CPUs on a >2 CPU system.  Setting this to a value larger
 	  than 64 will cause the use of a CPU mask array, causing a small
 	  performance hit.
+
+config HOTPLUG_CPU
+    bool "Support for hot-pluggable CPUs (EXPERIMENTAL)"
+    depends on SMP && HOTPLUG && EXPERIMENTAL
+	default n
+    ---help---
+      Say Y here to experiment with turning CPUs off and on.  CPUs
+      can be controlled through /sys/devices/system/cpu/cpu#.
+      Say N if you want to disable CPU hotplug.
 
 config PREEMPT
 	bool "Preemptible Kernel"
@@ -393,7 +388,7 @@ config IA64_GRANULE_16MB
 
 config IA64_GRANULE_64MB
 	bool "64MB"
-	depends on !(IA64_GENERIC || IA64_HP_ZX1)
+	depends on !(IA64_GENERIC || IA64_HP_ZX1 || IA64_SGI_SN2)
 
 endchoice
 

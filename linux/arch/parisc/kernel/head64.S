@@ -80,7 +80,8 @@ $bss_loop:
 
 	ldil		L%PA(pmd0),%r5
 	ldo		R%PA(pmd0)(%r5),%r5
-	ldo		_PAGE_TABLE(%r5),%r3
+	shrd		%r5,PxD_VALUE_SHIFT,%r3
+	ldo		(PxD_FLAG_PRESENT+PxD_FLAG_VALID)(%r3),%r3
 
 	ldil		L%PA(swapper_pg_dir),%r4
 	ldo		R%PA(swapper_pg_dir)(%r4),%r4
@@ -88,26 +89,26 @@ $bss_loop:
 	mtctl		%r4,%cr24	/* Initialize kernel root pointer */
 	mtctl		%r4,%cr25	/* Initialize user root pointer */
 
-#if (__PAGE_OFFSET != 0x10000000UL)
-Error! Code below (the next five std's) needs to be changed
-#endif
+	stw             %r3,ASM_PGD_ENTRY*ASM_PGD_ENTRY_SIZE(%r4)
 
-	std             %r3,0x00(%r4)   /* Hardwired 0x1... kernel Vaddr start*/
+	shrd		%r1,PxD_VALUE_SHIFT,%r3
+	ldo		(PxD_FLAG_PRESENT+PxD_FLAG_VALID)(%r3),%r3
+	ldo		ASM_PMD_ENTRY*ASM_PMD_ENTRY_SIZE(%r5),%r5
+	ldi		ASM_PT_INITIAL,%r1
+1:
+	stw		%r3,0(%r5)
+	ldo		(ASM_PAGE_SIZE >> PxD_VALUE_SHIFT)(%r3),%r3
+	addib,>		-1,%r1,1b
+	ldo		ASM_PMD_ENTRY_SIZE(%r5),%r5
 
-	ldo		_PAGE_TABLE(%r1),%r3
-	std             %r3,0x400(%r5)  /* Hardwired 0x1... kernel Vaddr start*/
-	ldo		0x1000(%r3),%r3
-	std             %r3,0x408(%r5)
-	ldo		0x1000(%r3),%r3
-	std             %r3,0x410(%r5)
-	ldo		0x1000(%r3),%r3
-	std             %r3,0x418(%r5)
+	ldo             _PAGE_KERNEL(%r0),%r3 /* Hardwired 0 phys addr start */
+	ldil		L%PA(pg0),%r1
+	ldo		R%PA(pg0)(%r1),%r1
 
-	ldo		_PAGE_KERNEL(%r0),%r3 /* Hardwired 0 phys addr start */
 $pgt_fill_loop:
-	std,ma		%r3,8(%r1)
-	ldo		0x1000(%r3),%r3
-	bb,>=		%r3,8,$pgt_fill_loop
+	std,ma		%r3,ASM_PTE_ENTRY_SIZE(%r1)
+	ldo		ASM_PAGE_SIZE(%r3),%r3
+	bb,>=		%r3,31-KERNEL_INITIAL_ORDER,$pgt_fill_loop
 	nop
 
 	/* And the RFI Target address too */
@@ -169,7 +170,6 @@ common_stext:
 	tophys_r1	%r10
 	std		%r11,  TASK_PT_GR11(%r10)
 
-#ifndef CONFIG_PDC_NARROW
 	/* Switch to wide mode; Superdome doesn't support narrow PDC
 	** calls.
 	*/
@@ -179,7 +179,6 @@ common_stext:
 	bv		(%rp)
 	ssm		PSW_SM_W,%r0
 2:
-#endif /* CONFIG_PDC_NARROW */
 
 	/* Set Wide mode as the "Default" (eg for traps)
 	** First trap occurs *right* after (or part of) rfi for slave CPUs.
@@ -302,6 +301,7 @@ smp_slave_stext:
 	/*  Initialize the SP - monarch sets up smp_init_current_idle_task */
 	load32		PA(smp_init_current_idle_task),%sp
 	ldd		0(%sp),%sp	/* load task address */
+	tophys_r1	%sp
 	ldd		TASK_THREAD_INFO(%sp), %sp
 	mtctl           %sp,%cr30       /* store in cr30 */
 	ldo             THREAD_SZ_ALGN(%sp),%sp

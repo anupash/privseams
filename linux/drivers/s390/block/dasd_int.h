@@ -6,7 +6,7 @@
  * Bugreports.to..: <Linux390@de.ibm.com>
  * (C) IBM Corporation, IBM Deutschland Entwicklung GmbH, 1999,2000
  *
- * $Revision: 1.57 $
+ * $Revision: 1.60 $
  */
 
 #ifndef DASD_INT_H
@@ -168,7 +168,7 @@ struct dasd_ccw_req {
 	void *data;			/* pointer to data area */
 
 	/* these are important for recovering erroneous requests          */
-	struct irb *dstat;		/* device status in case of an error */
+	struct irb irb;			/* device status in case of an error */
 	struct dasd_ccw_req *refers;	/* ERP-chain queueing. */
 	void *function; 		/* originating ERP action */
 
@@ -192,6 +192,7 @@ struct dasd_ccw_req {
 #define DASD_CQR_DONE     0x03	/* request is completed successfully */
 #define DASD_CQR_ERROR    0x04	/* request is completed with error */
 #define DASD_CQR_FAILED   0x05	/* request is finally failed */
+#define DASD_CQR_CLEAR    0x06	/* request is clear pending */
 
 /* per dasd_ccw_req flags */
 #define DASD_CQR_FLAGS_USE_ERP   0	/* use ERP for this request */
@@ -260,12 +261,7 @@ struct dasd_discipline {
 	int (*fill_info) (struct dasd_device *, struct dasd_information2_t *);
 };
 
-extern struct dasd_discipline dasd_diag_discipline;
-#ifdef CONFIG_DASD_DIAG
-#define dasd_diag_discipline_pointer (&dasd_diag_discipline)
-#else
-#define dasd_diag_discipline_pointer (0)
-#endif
+extern struct dasd_discipline *dasd_diag_discipline_pointer;
 
 struct dasd_device {
 	/* Block device stuff. */

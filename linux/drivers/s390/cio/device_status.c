@@ -35,7 +35,7 @@ ccw_device_msg_control_check(struct ccw_device *cdev, struct irb *irb)
 		return;
 		
 	CIO_MSG_EVENT(0, "Channel-Check or Interface-Control-Check "
-		      "received\n"
+		      "received"
 		      " ... device %04X on subchannel %04X, dev_stat "
 		      ": %02X sch_stat : %02X\n",
 		      cdev->private->devno, cdev->private->irq,
@@ -216,8 +216,9 @@ ccw_device_accumulate_irb(struct ccw_device *cdev, struct irb *irb)
 	/*
 	 * Don't accumulate unsolicited interrupts.
 	 */
-	if (irb->scsw.stctl ==
-	    (SCSW_STCTL_STATUS_PEND | SCSW_STCTL_ALERT_STATUS))
+	if ((irb->scsw.stctl ==
+	     (SCSW_STCTL_STATUS_PEND | SCSW_STCTL_ALERT_STATUS)) &&
+	    (!irb->scsw.cc))
 		return;
 
 	cdev_irb = &cdev->private->irb;
@@ -347,7 +348,8 @@ ccw_device_accumulate_basic_sense(struct ccw_device *cdev, struct irb *irb)
 	     (irb->scsw.actl & SCSW_ACTL_SUSPENDED)))
 		ccw_device_path_notoper(cdev);
 
-	if (!(irb->scsw.dstat & DEV_STAT_UNIT_CHECK)) {
+	if (!(irb->scsw.dstat & DEV_STAT_UNIT_CHECK) &&
+	    (irb->scsw.dstat & DEV_STAT_CHN_END)) {
 		cdev->private->irb.esw.esw0.erw.cons = 1;
 		cdev->private->flags.dosense = 0;
 	}

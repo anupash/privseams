@@ -215,6 +215,8 @@ struct hh_cache
  */
 #define LL_RESERVED_SPACE(dev) \
 	(((dev)->hard_header_len&~(HH_DATA_MOD - 1)) + HH_DATA_MOD)
+#define LL_RESERVED_SPACE_EXTRA(dev,extra) \
+	((((dev)->hard_header_len+extra)&~(HH_DATA_MOD - 1)) + HH_DATA_MOD)
 
 /* These flag bits are private to the generic network queueing
  * layer, they may not be explicitly referenced by any other
@@ -360,10 +362,12 @@ struct net_device
 
 	struct Qdisc		*qdisc;
 	struct Qdisc		*qdisc_sleeping;
-	struct Qdisc		*qdisc_list;
 	struct Qdisc		*qdisc_ingress;
+	struct list_head	qdisc_list;
 	unsigned long		tx_queue_len;	/* Max frames per queue allowed */
 
+	/* ingress path synchronizer */
+	spinlock_t		ingress_lock;
 	/* hard_start_xmit synchronizer */
 	spinlock_t		xmit_lock;
 	/* cpu id of processor entered to hard_start_xmit or -1,
@@ -403,6 +407,7 @@ struct net_device
 #define NETIF_F_HW_VLAN_FILTER	512	/* Receive filtering on VLAN */
 #define NETIF_F_VLAN_CHALLENGED	1024	/* Device cannot handle VLAN packets */
 #define NETIF_F_TSO		2048	/* Can offload TCP/IP segmentation */
+#define NETIF_F_LLTX		4096	/* LockLess TX */
 
 	/* Called after device is detached from network. */
 	void			(*uninit)(struct net_device *dev);
@@ -467,12 +472,6 @@ struct net_device
 	/* bridge stuff */
 	struct net_bridge_port	*br_port;
 
-#ifdef CONFIG_NET_FASTROUTE
-#define NETDEV_FASTROUTE_HMASK 0xF
-	/* Semi-private data. Keep it at the end of device struct. */
-	rwlock_t		fastpath_lock;
-	struct dst_entry	*fastpath[NETDEV_FASTROUTE_HMASK+1];
-#endif
 #ifdef CONFIG_NET_DIVERT
 	/* this will get initialized at each interface type init routine */
 	struct divert_blk	*divert;
@@ -556,11 +555,11 @@ extern int		dev_restart(struct net_device *dev);
 extern int		netpoll_trap(void);
 #endif
 
-typedef int gifconf_func_t(struct net_device * dev, char * bufptr, int len);
+typedef int gifconf_func_t(struct net_device * dev, char __user * bufptr, int len);
 extern int		register_gifconf(unsigned int family, gifconf_func_t * gifconf);
 static inline int unregister_gifconf(unsigned int family)
 {
-	return register_gifconf(family, 0);
+	return register_gifconf(family, NULL);
 }
 
 /*
@@ -674,7 +673,7 @@ static inline void dev_kfree_skb_any(struct sk_buff *skb)
 extern int		netif_rx(struct sk_buff *skb);
 #define HAVE_NETIF_RECEIVE_SKB 1
 extern int		netif_receive_skb(struct sk_buff *skb);
-extern int		dev_ioctl(unsigned int cmd, void *);
+extern int		dev_ioctl(unsigned int cmd, void __user *);
 extern int		dev_ethtool(struct ifreq *);
 extern unsigned		dev_get_flags(const struct net_device *);
 extern int		dev_change_flags(struct net_device *, unsigned);
@@ -941,12 +940,7 @@ extern int		weight_p;
 extern unsigned long	netdev_fc_xoff;
 extern atomic_t netdev_dropping;
 extern int		netdev_set_master(struct net_device *dev, struct net_device *master);
-extern struct sk_buff * skb_checksum_help(struct sk_buff *skb);
-#ifdef CONFIG_NET_FASTROUTE
-extern int		netdev_fastroute;
-extern int		netdev_fastroute_obstacles;
-extern void		dev_clear_fastroute(struct net_device *dev);
-#endif
+extern int skb_checksum_help(struct sk_buff **pskb, int inward);
 
 #ifdef CONFIG_SYSCTL
 extern char *net_sysctl_strdup(const char *s);

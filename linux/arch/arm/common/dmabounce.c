@@ -100,6 +100,7 @@ find_dmabounce_dev(struct device *dev)
 		if (d->dev == dev)
 			return d;
 	}
+	return NULL;
 }
 
 
@@ -185,7 +186,7 @@ find_safe_buffer(struct dmabounce_device_info *device_info, dma_addr_t safe_dma_
 static inline void
 free_safe_buffer(struct dmabounce_device_info *device_info, struct safe_buffer *buf)
 {
-	dev_dbg(dev_info->dev, "%s(buf=%p)\n", __func__, buf);
+	dev_dbg(device_info->dev, "%s(buf=%p)\n", __func__, buf);
 
 	list_del(&buf->node);
 
@@ -233,7 +234,7 @@ map_single(struct device *dev, void *ptr, size_t size,
 		}
 	}
 
-	dma_addr = virt_to_bus(ptr);
+	dma_addr = virt_to_dma(dev, ptr);
 
 	if (device_info && dma_needs_bounce(dev, dma_addr, size)) {
 		struct safe_buffer *buf;
@@ -247,7 +248,7 @@ map_single(struct device *dev, void *ptr, size_t size,
 
 		dev_dbg(dev,
 			"%s: unsafe buffer %p (phy=%p) mapped to %p (phy=%p)\n",
-			__func__, buf->ptr, (void *) virt_to_bus(buf->ptr),
+			__func__, buf->ptr, (void *) virt_to_dma(dev, buf->ptr),
 			buf->safe, (void *) buf->safe_dma_addr);
 
 		if ((dir == DMA_TO_DEVICE) ||
@@ -289,7 +290,7 @@ unmap_single(struct device *dev, dma_addr_t dma_addr, size_t size,
 
 		dev_dbg(dev,
 			"%s: unsafe buffer %p (phy=%p) mapped to %p (phy=%p)\n",
-			__func__, buf->ptr, (void *) virt_to_bus(buf->ptr),
+			__func__, buf->ptr, (void *) virt_to_dma(dev, buf->ptr),
 			buf->safe, (void *) buf->safe_dma_addr);
 
 
@@ -341,7 +342,7 @@ sync_single(struct device *dev, dma_addr_t dma_addr, size_t size,
 
 		dev_dbg(dev,
 			"%s: unsafe buffer %p (phy=%p) mapped to %p (phy=%p)\n",
-			__func__, buf->ptr, (void *) virt_to_bus(buf->ptr),
+			__func__, buf->ptr, (void *) virt_to_dma(dev, buf->ptr),
 			buf->safe, (void *) buf->safe_dma_addr);
 
 		DO_STATS ( device_info->bounce_count++ );
@@ -366,7 +367,7 @@ sync_single(struct device *dev, dma_addr_t dma_addr, size_t size,
 		}
 		consistent_sync(buf->safe, size, dir);
 	} else {
-		consistent_sync(bus_to_virt(dma_addr), size, dir);
+		consistent_sync(dma_to_virt(dev, dma_addr), size, dir);
 	}
 }
 

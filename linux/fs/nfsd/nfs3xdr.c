@@ -74,7 +74,7 @@ decode_fh(u32 *p, struct svc_fh *fhp)
 static inline u32 *
 encode_fh(u32 *p, struct svc_fh *fhp)
 {
-	int size = fhp->fh_handle.fh_size;
+	unsigned int size = fhp->fh_handle.fh_size;
 	*p++ = htonl(size);
 	if (size) p[XDR_QUADLEN(size)-1]=0;
 	memcpy(p, &fhp->fh_handle.fh_base, size);
@@ -328,7 +328,7 @@ int
 nfs3svc_decode_readargs(struct svc_rqst *rqstp, u32 *p,
 					struct nfsd3_readargs *args)
 {
-	int len;
+	unsigned int len;
 	int v,pn;
 
 	if (!(p = decode_fh(p, &args->fh))
@@ -340,15 +340,15 @@ nfs3svc_decode_readargs(struct svc_rqst *rqstp, u32 *p,
 	if (len > NFSSVC_MAXBLKSIZE)
 		len = NFSSVC_MAXBLKSIZE;
 
-	/* set up the iovec */
+	/* set up the kvec */
 	v=0;
 	while (len > 0) {
 		pn = rqstp->rq_resused;
 		svc_take_page(rqstp);
 		args->vec[v].iov_base = page_address(rqstp->rq_respages[pn]);
 		args->vec[v].iov_len = len < PAGE_SIZE? len : PAGE_SIZE;
+		len -= args->vec[v].iov_len;
 		v++;
-		len -= PAGE_SIZE;
 	}
 	args->vlen = v;
 	return xdr_argsize_check(rqstp, p);
@@ -358,7 +358,7 @@ int
 nfs3svc_decode_writeargs(struct svc_rqst *rqstp, u32 *p,
 					struct nfsd3_writeargs *args)
 {
-	int len, v;
+	unsigned int len, v, hdr;
 
 	if (!(p = decode_fh(p, &args->fh))
 	 || !(p = xdr_decode_hyper(p, &args->offset)))
@@ -368,9 +368,12 @@ nfs3svc_decode_writeargs(struct svc_rqst *rqstp, u32 *p,
 	args->stable = ntohl(*p++);
 	len = args->len = ntohl(*p++);
 
+	hdr = (void*)p - rqstp->rq_arg.head[0].iov_base;
+	if (rqstp->rq_arg.len < len + hdr)
+		return 0;
+
 	args->vec[0].iov_base = (void*)p;
-	args->vec[0].iov_len = rqstp->rq_arg.head[0].iov_len -
-		(((void*)p) - rqstp->rq_arg.head[0].iov_base);
+	args->vec[0].iov_len = rqstp->rq_arg.head[0].iov_len - hdr;
 
 	if (len > NFSSVC_MAXBLKSIZE)
 		len = NFSSVC_MAXBLKSIZE;
@@ -427,10 +430,10 @@ int
 nfs3svc_decode_symlinkargs(struct svc_rqst *rqstp, u32 *p,
 					struct nfsd3_symlinkargs *args)
 {
-	int len;
+	unsigned int len;
 	int avail;
 	char *old, *new;
-	struct iovec *vec;
+	struct kvec *vec;
 
 	if (!(p = decode_fh(p, &args->ffh))
 	 || !(p = decode_filename(p, &args->fname, &args->flen))
@@ -444,7 +447,7 @@ nfs3svc_decode_symlinkargs(struct svc_rqst *rqstp, u32 *p,
 	 */
 	svc_take_page(rqstp);
 	len = ntohl(*p++);
-	if (len <= 0 || len > NFS3_MAXPATHLEN || len >= PAGE_SIZE)
+	if (len == 0 || len > NFS3_MAXPATHLEN || len >= PAGE_SIZE)
 		return 0;
 	args->tname = new = page_address(rqstp->rq_respages[rqstp->rq_resused-1]);
 	args->tlen = len;
@@ -799,6 +802,7 @@ compose_entry_fh(struct nfsd3_readdirres *cd, struct svc_fh *fhp,
 {
 	struct svc_export	*exp;
 	struct dentry		*dparent, *dchild;
+	int rv = 0;
 
 	dparent = cd->fh.fh_dentry;
 	exp  = cd->fh.fh_export;
@@ -813,11 +817,12 @@ compose_entry_fh(struct nfsd3_readdirres *cd, struct svc_fh *fhp,
 		dchild = lookup_one_len(name, dparent, namlen);
 	if (IS_ERR(dchild))
 		return 1;
-	if (d_mountpoint(dchild))
-		return 1;
-	if (fh_compose(fhp, exp, dchild, &cd->fh) != 0 || !dchild->d_inode)
-		return 1;
-	return 0;
+	if (d_mountpoint(dchild) ||
+	    fh_compose(fhp, exp, dchild, &cd->fh) != 0 ||
+	    !dchild->d_inode)
+		rv = 1;
+	dput(dchild);
+	return rv;
 }
 
 /*
@@ -845,8 +850,18 @@ encode_entry(struct readdir_cd *ccd, const char *name,
 	int		elen;		/* estimated entry length in words */
 	int		num_entry_words = 0;	/* actual number of words */
 
-	if (cd->offset)
-		xdr_encode_hyper(cd->offset, (u64) offset);
+	if (cd->offset) {
+		u64 offset64 = offset;
+
+		if (unlikely(cd->offset1)) {
+			/* we ended up with offset on a page boundary */
+			*cd->offset = htonl(offset64 >> 32);
+			*cd->offset1 = htonl(offset64 & 0xffffffff);
+			cd->offset1 = NULL;
+		} else {
+			xdr_encode_hyper(cd->offset, (u64) offset);
+		}
+	}
 
 	/*
 	dprintk("encode_entry(%.*s @%ld%s)\n",
@@ -927,17 +942,32 @@ encode_entry(struct readdir_cd *ccd, const char *name,
 			/* update offset */
 			cd->offset = cd->buffer + (cd->offset - tmp);
 		} else {
+			unsigned int offset_r = (cd->offset - tmp) << 2;
+
+			/* update pointer to offset location.
+			 * This is a 64bit quantity, so we need to
+			 * deal with 3 cases:
+			 *  -	entirely in first page
+			 *  -	entirely in second page
+			 *  -	4 bytes in each page
+			 */
+			if (offset_r + 8 <= len1) {
+				cd->offset = p + (cd->offset - tmp);
+			} else if (offset_r >= len1) {
+				cd->offset -= len1 >> 2;
+			} else {
+				/* sitting on the fence */
+				BUG_ON(offset_r != len1 - 4);
+				cd->offset = p + (cd->offset - tmp);
+				cd->offset1 = tmp;
+			}
+
 			len2 = (num_entry_words << 2) - len1;
 
 			/* move from temp page to current and next pages */
 			memmove(p, tmp, len1);
 			memmove(tmp, (caddr_t)tmp+len1, len2);
 
-			/* update offset */
-			if (((cd->offset - tmp) << 2) <= len1)
-				cd->offset = p + (cd->offset - tmp);
-			else
-				cd->offset -= len1 >> 2;
 			p = tmp + (len2 >> 2);
 		}
 	}

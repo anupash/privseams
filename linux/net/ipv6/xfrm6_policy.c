@@ -107,7 +107,6 @@ __xfrm6_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 			goto error;
 		}
 
-		dst1->xfrm = xfrm[i];
 		if (!dst)
 			dst = dst1;
 		else {
@@ -139,9 +138,11 @@ __xfrm6_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 		dst_hold(&rt->u.dst);
 	}
 	dst_prev->child = &rt->u.dst;
+	i = 0;
 	for (dst_prev = dst; dst_prev != &rt->u.dst; dst_prev = dst_prev->child) {
 		struct xfrm_dst *x = (struct xfrm_dst*)dst_prev;
 
+		dst_prev->xfrm = xfrm[i++];
 		dst_prev->dev = rt->u.dst.dev;
 		if (rt->u.dst.dev)
 			dev_hold(rt->u.dst.dev);
@@ -156,7 +157,7 @@ __xfrm6_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 		/* Copy neighbour for reachability confirmation */
 		dst_prev->neighbour	= neigh_clone(rt->u.dst.neighbour);
 		dst_prev->input		= rt->u.dst.input;
-		dst_prev->output	= dst_prev->xfrm->type->output;
+		dst_prev->output	= xfrm6_output;
 		/* Sheit... I remember I did this right. Apparently,
 		 * it was magically lost, so this code needs audit */
 		x->u.rt6.rt6i_flags    = rt0->rt6i_flags&(RTCF_BROADCAST|RTCF_MULTICAST|RTCF_LOCAL);
@@ -236,10 +237,10 @@ static void xfrm6_update_pmtu(struct dst_entry *dst, u32 mtu)
 {
 	struct dst_entry *path = dst->path;
 
-	if (mtu >= 1280 && mtu < dst_pmtu(dst))
-		return;
-
-	path->ops->update_pmtu(path, mtu);
+	if (mtu >= IPV6_MIN_MTU && mtu < dst_pmtu(dst))
+		path->ops->update_pmtu(path, mtu);
+	
+	return;
 }
 
 struct dst_ops xfrm6_dst_ops = {
@@ -276,10 +277,12 @@ void __init xfrm6_init(void)
 {
 	xfrm6_policy_init();
 	xfrm6_state_init();
+	xfrm6_tunnel_init();
 }
 
 void __exit xfrm6_fini(void)
 {
+	xfrm6_tunnel_fini();
 	//xfrm6_input_fini();
 	xfrm6_policy_fini();
 	xfrm6_state_fini();

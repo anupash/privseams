@@ -8,6 +8,7 @@
 #include <linux/fs.h>
 #include <linux/list.h>
 #include <linux/highmem.h>
+#include <linux/compiler.h>
 #include <asm/uaccess.h>
 #include <linux/gfp.h>
 
@@ -136,7 +137,10 @@ static inline void pagecache_acct(int count)
 
 static inline unsigned long get_page_cache_size(void)
 {
-        return atomic_read(&nr_pagecache);
+	int ret = atomic_read(&nr_pagecache);
+	if (unlikely(ret < 0))
+		ret = 0;
+	return ret;
 }
 
 static inline pgoff_t linear_page_index(struct vm_area_struct *vma,
@@ -220,13 +224,13 @@ static inline void fault_in_pages_readable(const char __user *uaddr, int size)
 	volatile char c;
 	int ret;
 
-	ret = __get_user(c, (char *)uaddr);
+	ret = __get_user(c, uaddr);
 	if (ret == 0) {
 		const char __user *end = uaddr + size - 1;
 
 		if (((unsigned long)uaddr & PAGE_MASK) !=
 				((unsigned long)end & PAGE_MASK))
-		 	__get_user(c, (char *)end);
+		 	__get_user(c, end);
 	}
 }
 

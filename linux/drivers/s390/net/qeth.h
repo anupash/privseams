@@ -23,7 +23,7 @@
 
 #include "qeth_mpc.h"
 
-#define VERSION_QETH_H 		"$Revision: 1.102 $"
+#define VERSION_QETH_H 		"$Revision: 1.113 $"
 
 #ifdef CONFIG_QETH_IPV6
 #define QETH_VERSION_IPV6 	":IPv6"
@@ -91,10 +91,14 @@
 		debug_event(qeth_dbf_##name,level,(void*)(addr),len); \
 	} while (0)
 
-#define QETH_DBF_TEXT_(name,level,text...)				  \
-	do {								  \
-		sprintf(qeth_dbf_text_buf, text);			  \
-		debug_text_event(qeth_dbf_##name,level,qeth_dbf_text_buf);\
+extern DEFINE_PER_CPU(char[256], qeth_dbf_txt_buf);
+
+#define QETH_DBF_TEXT_(name,level,text...)				\
+	do {								\
+		char* dbf_txt_buf = get_cpu_var(qeth_dbf_txt_buf);	\
+		sprintf(dbf_txt_buf, text);			  	\
+		debug_text_event(qeth_dbf_##name,level,dbf_txt_buf);	\
+		put_cpu_var(qeth_dbf_txt_buf);				\
 	} while (0)
 
 #define QETH_DBF_SPRINTF(name,level,text...) \
@@ -146,6 +150,8 @@ qeth_hex_dump(unsigned char *buf, size_t len)
 #define SENSE_RESETTING_EVENT_BYTE 1
 #define SENSE_RESETTING_EVENT_FLAG 0x80
 
+#define atomic_swap(a,b) xchg((int *)a.counter, b)
+
 /*
  * Common IO related definitions
  */
@@ -179,13 +185,26 @@ struct qeth_perf_stats {
 
 	unsigned int sc_dp_p;
 	unsigned int sc_p_dp;
-
+	/* qdio_input_handler: number of times called, time spent in */
 	__u64 inbound_start_time;
 	unsigned int inbound_cnt;
 	unsigned int inbound_time;
+	/* qeth_send_packet: number of times called, time spent in */
 	__u64 outbound_start_time;
 	unsigned int outbound_cnt;
 	unsigned int outbound_time;
+	/* qdio_output_handler: number of times called, time spent in */
+	__u64 outbound_handler_start_time;
+	unsigned int outbound_handler_cnt;
+	unsigned int outbound_handler_time;
+	/* number of calls to and time spent in do_QDIO for inbound queue */
+	__u64 inbound_do_qdio_start_time;
+	unsigned int inbound_do_qdio_cnt;
+	unsigned int inbound_do_qdio_time;
+	/* number of calls to and time spent in do_QDIO for outbound queues */
+	__u64 outbound_do_qdio_start_time;
+	unsigned int outbound_do_qdio_cnt;
+	unsigned int outbound_do_qdio_time;
 };
 #endif /* CONFIG_QETH_PERF_STATS */
 
@@ -279,7 +298,7 @@ qeth_is_ipa_enabled(struct qeth_ipa_info *ipa, enum qeth_ipa_funcs func)
 #define QETH_IN_BUF_COUNT_MAX 128
 #define QETH_MAX_BUFFER_ELEMENTS(card) ((card)->qdio.in_buf_size >> 12)
 #define QETH_IN_BUF_REQUEUE_THRESHOLD(card) \
-		((card)->qdio.in_buf_pool.buf_count / 4)
+		((card)->qdio.in_buf_pool.buf_count / 2)
 
 /* buffers we have to be behind before we get a PCI */
 #define QETH_PCI_THRESHOLD_A(card) ((card)->qdio.in_buf_pool.buf_count+1)
@@ -363,11 +382,6 @@ enum qeth_qdio_buffer_states {
 	 * outbound: filled by driver; owned by hardware in order to be sent
 	 */
 	QETH_QDIO_BUF_PRIMED,
-	/*
-	 * inbound only: an error condition has been detected for a buffer
-	 *     the buffer will be discarded (not read out)
-	 */
-	QETH_QDIO_BUF_ERROR,
 };
 
 enum qeth_qdio_info_states {
@@ -406,19 +420,25 @@ struct qeth_qdio_q {
 
 struct qeth_qdio_out_buffer {
 	struct qdio_buffer *buffer;
-	volatile enum qeth_qdio_buffer_states state;
+	atomic_t state;
 	volatile int next_element_to_fill;
 	struct sk_buff_head skb_list;
 };
 
 struct qeth_card;
 
+enum qeth_out_q_states {
+       QETH_OUT_Q_UNLOCKED,
+       QETH_OUT_Q_LOCKED,
+       QETH_OUT_Q_LOCKED_FLUSH,
+};
+
 struct qeth_qdio_out_q {
 	struct qdio_buffer qdio_bufs[QDIO_MAX_BUFFERS_PER_Q];
 	struct qeth_qdio_out_buffer bufs[QDIO_MAX_BUFFERS_PER_Q];
 	int queue_no;
 	struct qeth_card *card;
-	spinlock_t lock;
+	atomic_t state;
 	volatile int do_pack;
 	/*
 	 * index of buffer to be filled by driver; state EMPTY or PACKING
@@ -598,14 +618,15 @@ struct qeth_seqno {
 	__u32 trans_hdr;
 	__u32 pdu_hdr;
 	__u32 pdu_hdr_ack;
-	__u32 ipa;
+	__u16 ipa;
 };
 
 struct qeth_reply {
 	struct list_head list;
 	wait_queue_head_t wait_q;
 	int (*callback)(struct qeth_card *,struct qeth_reply *,unsigned long);
- 	int seqno;
+ 	u32 seqno;
+	unsigned long offset;
 	int received;
 	int rc;
 	void *param;
@@ -613,8 +634,10 @@ struct qeth_reply {
 	atomic_t refcnt;
 };
 
-struct qeth_card_info {
+#define QETH_BROADCAST_WITH_ECHO    1
+#define QETH_BROADCAST_WITHOUT_ECHO 2
 
+struct qeth_card_info {
 	char if_name[IF_NAME_LEN];
 	unsigned short unit_addr2;
 	unsigned short cula;
@@ -646,7 +669,6 @@ struct qeth_card_options {
 	enum qeth_checksum_types checksum_type;
 	int broadcast_mode;
 	int macaddr_mode;
-	int enable_takeover;
 	int fake_broadcast;
 	int add_hhlen;
 	int fake_ll;
@@ -709,6 +731,15 @@ struct qeth_card_list_struct {
 };
 
 extern struct qeth_card_list_struct qeth_card_list;
+
+/*notifier list */
+struct qeth_notify_list_struct {
+	struct list_head list;
+	struct task_struct *task;
+	int signum;
+};
+extern spinlock_t qeth_notify_lock;
+extern struct list_head qeth_notify_list;
 
 /*some helper functions*/
 
@@ -992,6 +1023,12 @@ qeth_add_rxip(struct qeth_card *, enum qeth_prot_versions, const u8 *);
 
 extern void
 qeth_del_rxip(struct qeth_card *, enum qeth_prot_versions, const u8 *);
+
+extern int
+qeth_notifier_register(struct task_struct *, int );
+
+extern int
+qeth_notifier_unregister(struct task_struct * );
 
 extern void
 qeth_schedule_recovery(struct qeth_card *);

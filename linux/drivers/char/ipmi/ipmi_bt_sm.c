@@ -31,7 +31,7 @@
 #include <linux/ipmi_msgdefs.h>		/* for completion codes */
 #include "ipmi_si_sm.h"
 
-#define IPMI_BT_VERSION "v31"
+#define IPMI_BT_VERSION "v32"
 
 static int bt_debug = 0x00;	/* Production value 0, see following flags */
 
@@ -445,7 +445,7 @@ static enum si_sm_result bt_event(struct si_sm_data *bt, long time)
 
 	case BT_STATE_RESET1:
     		reset_flags(bt);
-    		bt->timeout = BT_RESET_DELAY;;
+    		bt->timeout = BT_RESET_DELAY;
 		bt->state = BT_STATE_RESET2;
 		break;
 

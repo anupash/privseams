@@ -159,6 +159,14 @@ struct ipmi_msg
 	unsigned char  netfn;
 	unsigned char  cmd;
 	unsigned short data_len;
+	unsigned char  __user *data;
+};
+
+struct kernel_ipmi_msg
+{
+	unsigned char  netfn;
+	unsigned char  cmd;
+	unsigned short data_len;
 	unsigned char  *data;
 };
 
@@ -223,7 +231,7 @@ struct ipmi_recv_msg
 	ipmi_user_t      user;
 	struct ipmi_addr addr;
 	long             msgid;
-	struct ipmi_msg  msg;
+	struct kernel_ipmi_msg  msg;
 
 	/* The user_msg_data is the data supplied when a message was
 	   sent, if this is a response to a sent message.  If this is
@@ -316,7 +324,7 @@ unsigned char ipmi_get_my_LUN(ipmi_user_t user);
 int ipmi_request(ipmi_user_t      user,
 		 struct ipmi_addr *addr,
 		 long             msgid,
-		 struct ipmi_msg  *msg,
+		 struct kernel_ipmi_msg *msg,
 		 void             *user_msg_data,
 		 int              priority);
 
@@ -336,7 +344,7 @@ int ipmi_request(ipmi_user_t      user,
 int ipmi_request_settime(ipmi_user_t      user,
 			 struct ipmi_addr *addr,
 			 long             msgid,
-			 struct ipmi_msg  *msg,
+			 struct kernel_ipmi_msg  *msg,
 			 void             *user_msg_data,
 			 int              priority,
 			 int              max_retries,
@@ -348,7 +356,7 @@ int ipmi_request_settime(ipmi_user_t      user,
 int ipmi_request_with_source(ipmi_user_t      user,
 			     struct ipmi_addr *addr,
 			     long             msgid,
-			     struct ipmi_msg  *msg,
+			     struct kernel_ipmi_msg  *msg,
 			     void             *user_msg_data,
 			     int              priority,
 			     unsigned char    source_address,
@@ -366,11 +374,21 @@ int ipmi_request_with_source(ipmi_user_t      user,
 int ipmi_request_supply_msgs(ipmi_user_t          user,
 			     struct ipmi_addr     *addr,
 			     long                 msgid,
-			     struct ipmi_msg      *msg,
+			     struct kernel_ipmi_msg *msg,
 			     void                 *user_msg_data,
 			     void                 *supplied_smi,
 			     struct ipmi_recv_msg *supplied_recv,
 			     int                  priority);
+
+/*
+ * Do polling on the IPMI interface the user is attached to.  This
+ * causes the IPMI code to do an immediate check for information from
+ * the driver and handle anything that is immediately pending.  This
+ * will not block in anyway.  This is useful if you need to implement
+ * polling from the user like you need to send periodic watchdog pings
+ * from a crash dump, or something like that.
+ */
+void ipmi_poll_interface(ipmi_user_t user);
 
 /*
  * When commands come in to the SMS, the user can register to receive
@@ -488,7 +506,7 @@ int ipmi_addr_equal(struct ipmi_addr *addr1, struct ipmi_addr *addr2);
 /* Messages sent to the interface are this format. */
 struct ipmi_req
 {
-	unsigned char *addr; /* Address to send the message to. */
+	unsigned char __user *addr; /* Address to send the message to. */
 	unsigned int  addr_len;
 
 	long    msgid; /* The sequence number for the message.  This
@@ -539,7 +557,7 @@ struct ipmi_recv
 	int     recv_type; /* Is this a command, response or an
 			      asyncronous event. */
 
-	unsigned char *addr;    /* Address the message was from is put
+	unsigned char __user *addr;    /* Address the message was from is put
 				   here.  The caller must supply the
 				   memory. */
 	unsigned int  addr_len; /* The size of the address buffer.

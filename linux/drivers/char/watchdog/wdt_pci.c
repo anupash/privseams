@@ -331,12 +331,8 @@ static irqreturn_t wdtpci_interrupt(int irq, void *dev_id, struct pt_regs *regs)
  *	write of data will do, as we we don't define content meaning.
  */
 
-static ssize_t wdtpci_write(struct file *file, const char *buf, size_t count, loff_t *ppos)
+static ssize_t wdtpci_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos)
 {
-	/*  Can't seek (pwrite) on this device  */
-	if (ppos != &file->f_pos)
-		return -ESPIPE;
-
 	if (count) {
 		if (!nowayout) {
 			size_t i;
@@ -374,6 +370,8 @@ static int wdtpci_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 {
 	int new_heartbeat;
 	int status;
+	void __user *argp = (void __user *)arg;
+	int __user *p = argp;
 
 	static struct watchdog_info ident = {
 		.options =		WDIOF_SETTIMEOUT|
@@ -396,18 +394,18 @@ static int wdtpci_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 		default:
 			return -ENOIOCTLCMD;
 		case WDIOC_GETSUPPORT:
-			return copy_to_user((struct watchdog_info *)arg, &ident, sizeof(ident))?-EFAULT:0;
+			return copy_to_user(argp, &ident, sizeof(ident))?-EFAULT:0;
 
 		case WDIOC_GETSTATUS:
 			wdtpci_get_status(&status);
-			return put_user(status,(int *)arg);
+			return put_user(status, p);
 		case WDIOC_GETBOOTSTATUS:
-			return put_user(0, (int *)arg);
+			return put_user(0, p);
 		case WDIOC_KEEPALIVE:
 			wdtpci_ping();
 			return 0;
 		case WDIOC_SETTIMEOUT:
-			if (get_user(new_heartbeat, (int *)arg))
+			if (get_user(new_heartbeat, p))
 				return -EFAULT;
 
 			if (wdtpci_set_heartbeat(new_heartbeat))
@@ -416,7 +414,7 @@ static int wdtpci_ioctl(struct inode *inode, struct file *file, unsigned int cmd
 			wdtpci_ping();
 			/* Fall */
 		case WDIOC_GETTIMEOUT:
-			return put_user(heartbeat, (int *)arg);
+			return put_user(heartbeat, p);
 	}
 }
 
@@ -444,7 +442,7 @@ static int wdtpci_open(struct inode *inode, struct file *file)
 	 *	Activate
 	 */
 	wdtpci_start();
-	return 0;
+	return nonseekable_open(inode, file);
 }
 
 /**
@@ -484,13 +482,9 @@ static int wdtpci_release(struct inode *inode, struct file *file)
  *	fahrenheit. It was designed by an imperial measurement luddite.
  */
 
-static ssize_t wdtpci_temp_read(struct file *file, char *buf, size_t count, loff_t *ptr)
+static ssize_t wdtpci_temp_read(struct file *file, char __user *buf, size_t count, loff_t *ptr)
 {
 	int temperature;
-
-	/*  Can't seek (pread) on this device  */
-	if (ptr != &file->f_pos)
-		return -ESPIPE;
 
 	if (wdtpci_get_temperature(&temperature))
 		return -EFAULT;
@@ -511,7 +505,7 @@ static ssize_t wdtpci_temp_read(struct file *file, char *buf, size_t count, loff
 
 static int wdtpci_temp_open(struct inode *inode, struct file *file)
 {
-	return 0;
+	return nonseekable_open(inode, file);
 }
 
 /**

@@ -23,6 +23,8 @@
 #ifndef __QLA_GBL_H
 #define	__QLA_GBL_H
 
+#include <linux/interrupt.h>
+
 extern void qla2x00_remove_one(struct pci_dev *);
 extern int qla2x00_probe_one(struct pci_dev *, struct qla_board_info *);
 
@@ -64,6 +66,7 @@ extern int qlport_down_retry;
 extern int ql2xmaxqdepth;
 extern int displayConfig;
 extern int ql2xplogiabsentdevice;
+extern int ql2xenablezio;
 extern int ql2xintrdelaytimer;
 extern int ql2xloginretrycount;
 
@@ -74,8 +77,6 @@ extern int ql2xsuspendcount;
 #if defined(MODULE)
 extern char *ql2xopts;
 #endif
-extern struct list_head qla_hostlist;
-extern rwlock_t qla_hostlist_lock;
 
 extern char *qla2x00_get_fw_version_str(struct scsi_qla_host *, char *);
 
@@ -140,7 +141,7 @@ qla2x00_execute_fw(scsi_qla_host_t *);
 
 extern void
 qla2x00_get_fw_version(scsi_qla_host_t *, uint16_t *,
-    uint16_t *, uint16_t *, uint16_t *);
+    uint16_t *, uint16_t *, uint16_t *, uint32_t *);
 
 extern int
 qla2x00_get_fw_options(scsi_qla_host_t *, uint16_t *);
@@ -198,7 +199,7 @@ extern int
 qla2x00_get_port_name(scsi_qla_host_t *, uint16_t, uint8_t *, uint8_t);
 
 extern uint8_t
-qla2x00_get_link_status(scsi_qla_host_t *, uint8_t, link_stat_t *, uint16_t *);
+qla2x00_get_link_status(scsi_qla_host_t *, uint16_t, link_stat_t *, uint16_t *);
 
 extern int
 qla2x00_lip_reset(scsi_qla_host_t *);
@@ -255,14 +256,6 @@ extern void qla2x00_lock_nvram_access(scsi_qla_host_t *);
 extern void qla2x00_unlock_nvram_access(scsi_qla_host_t *);
 extern uint16_t qla2x00_get_nvram_word(scsi_qla_host_t *, uint32_t);
 extern void qla2x00_write_nvram_word(scsi_qla_host_t *, uint32_t, uint16_t);
-extern void qla2x00_flash_enable(scsi_qla_host_t *);
-extern void qla2x00_flash_disable(scsi_qla_host_t *);
-extern uint8_t qla2x00_read_flash_byte(scsi_qla_host_t *, uint32_t);
-extern uint8_t qla2x00_get_flash_manufacturer(scsi_qla_host_t *);
-extern uint16_t qla2x00_get_flash_version(scsi_qla_host_t *);
-extern uint16_t qla2x00_get_flash_image(scsi_qla_host_t *, uint8_t *);
-extern uint16_t qla2x00_set_flash_image(scsi_qla_host_t *, uint8_t *);
-
 /*
  * Global Function Prototypes in qla_dbg.c source file.
  */

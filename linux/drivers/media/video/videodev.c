@@ -183,7 +183,7 @@ video_usercopy(struct inode *inode, struct file *file,
 	/*  Copy arguments into temp kernel buffer  */
 	switch (_IOC_DIR(cmd)) {
 	case _IOC_NONE:
-		parg = (void *)arg;
+		parg = NULL;
 		break;
 	case _IOC_READ:
 	case _IOC_WRITE:
@@ -200,7 +200,7 @@ video_usercopy(struct inode *inode, struct file *file,
 		
 		err = -EFAULT;
 		if (_IOC_DIR(cmd) & _IOC_WRITE)
-			if (copy_from_user(parg, (void *)arg, _IOC_SIZE(cmd)))
+			if (copy_from_user(parg, (void __user *)arg, _IOC_SIZE(cmd)))
 				goto out;
 		break;
 	}
@@ -217,7 +217,7 @@ video_usercopy(struct inode *inode, struct file *file,
 	{
 	case _IOC_READ:
 	case (_IOC_WRITE | _IOC_READ):
-		if (copy_to_user((void *)arg, parg, _IOC_SIZE(cmd)))
+		if (copy_to_user((void __user *)arg, parg, _IOC_SIZE(cmd)))
 			err = -EFAULT;
 		break;
 	}
@@ -231,7 +231,7 @@ out:
 /*
  * open/release helper functions -- handle exclusive opens
  */
-extern int video_exclusive_open(struct inode *inode, struct file *file)
+int video_exclusive_open(struct inode *inode, struct file *file)
 {
 	struct  video_device *vfl = video_devdata(file);
 	int retval = 0;
@@ -246,7 +246,7 @@ extern int video_exclusive_open(struct inode *inode, struct file *file)
 	return retval;
 }
 
-extern int video_exclusive_release(struct inode *inode, struct file *file)
+int video_exclusive_release(struct inode *inode, struct file *file)
 {
 	struct  video_device *vfl = video_devdata(file);
 	
@@ -397,12 +397,21 @@ static struct file_operations video_fops=
  
 static int __init videodev_init(void)
 {
+	int ret;
+
 	printk(KERN_INFO "Linux video capture interface: v1.00\n");
-	if (register_chrdev(VIDEO_MAJOR,VIDEO_NAME, &video_fops)) {
-		printk("video_dev: unable to get major %d\n", VIDEO_MAJOR);
+	if (register_chrdev(VIDEO_MAJOR, VIDEO_NAME, &video_fops)) {
+		printk(KERN_WARNING "video_dev: unable to get major %d\n", VIDEO_MAJOR);
 		return -EIO;
 	}
-	class_register(&video_class);
+
+	ret = class_register(&video_class);
+	if (ret < 0) {
+		unregister_chrdev(VIDEO_MAJOR, VIDEO_NAME);
+		printk(KERN_WARNING "video_dev: class_register failed\n");
+		return -EIO;
+	}
+
 	return 0;
 }
 

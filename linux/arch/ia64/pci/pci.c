@@ -134,10 +134,18 @@ static struct pci_ops pci_root_ops = {
 static int __init
 pci_acpi_init (void)
 {
-	if (!acpi_pci_irq_init())
-		printk(KERN_INFO "PCI: Using ACPI for IRQ routing\n");
-	else
-		printk(KERN_WARNING "PCI: Invalid ACPI-PCI IRQ routing table\n");
+	struct pci_dev *dev = NULL;
+
+	printk(KERN_INFO "PCI: Using ACPI for IRQ routing\n");
+
+	/*
+	 * PCI IRQ routing is set up by pci_enable_device(), but we
+	 * also do it here in case there are still broken drivers that
+	 * don't use pci_enable_device().
+	 */
+	while ((dev = pci_find_device(PCI_ANY_ID, PCI_ANY_ID, dev)) != NULL)
+		acpi_pci_irq_enable(dev);
+
 	return 0;
 }
 
@@ -323,8 +331,10 @@ pcibios_fixup_device_resources (struct pci_dev *dev, struct pci_bus *bus)
 	struct pci_controller *controller = PCI_CONTROLLER(dev);
 	struct pci_window *window;
 	int i, j;
+	int limit = (dev->hdr_type == PCI_HEADER_TYPE_NORMAL) ? \
+		PCI_ROM_RESOURCE : PCI_NUM_RESOURCES;
 
-	for (i = 0; i < PCI_NUM_RESOURCES; i++) {
+	for (i = 0; i < limit; i++) {
 		if (!dev->resource[i].start)
 			continue;
 

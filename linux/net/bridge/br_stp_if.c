@@ -52,7 +52,7 @@ void br_stp_enable_bridge(struct net_bridge *br)
 	br_config_bpdu_generation(br);
 
 	list_for_each_entry(p, &br->port_list, list) {
-		if (p->dev->flags & IFF_UP)
+		if ((p->dev->flags & IFF_UP) && netif_carrier_ok(p->dev))
 			br_stp_enable_port(p);
 
 	}
@@ -211,4 +211,12 @@ void br_stp_set_path_cost(struct net_bridge_port *p, u32 path_cost)
 	p->path_cost = path_cost;
 	br_configuration_update(p->br);
 	br_port_state_selection(p->br);
+}
+
+ssize_t br_show_bridge_id(char *buf, const struct bridge_id *id)
+{
+	return sprintf(buf, "%.2x%.2x.%.2x%.2x%.2x%.2x%.2x%.2x\n",
+	       id->prio[0], id->prio[1],
+	       id->addr[0], id->addr[1], id->addr[2],
+	       id->addr[3], id->addr[4], id->addr[5]);
 }

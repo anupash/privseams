@@ -15,7 +15,6 @@
 #include <linux/err.h>
 #include <linux/sysctl.h>
 #include <asm/mman.h>
-#include <asm/pgalloc.h>
 #include <asm/tlb.h>
 #include <asm/tlbflush.h>
 
@@ -147,9 +146,6 @@ follow_huge_addr(struct mm_struct *mm, unsigned long address, int write)
 	struct page *page;
 	struct vm_area_struct *vma;
 
-	if (! mm->used_hugetlb)
-		return ERR_PTR(-EINVAL);
-
 	vma = find_vma(mm, addr);
 	if (!vma || !is_vm_hugetlb_page(vma))
 		return ERR_PTR(-EINVAL);
@@ -245,8 +241,15 @@ int hugetlb_prefault(struct address_space *mapping, struct vm_area_struct *vma)
 			ret = -ENOMEM;
 			goto out;
 		}
-		if (!pte_none(*pte))
-			continue;
+
+		if (!pte_none(*pte)) {
+			pmd_t *pmd = (pmd_t *) pte;
+
+			page = pmd_page(*pmd);
+			pmd_clear(pmd);
+			dec_page_state(nr_page_table_pages);
+			page_cache_release(page);
+		}
 
 		idx = ((addr - vma->vm_start) >> HPAGE_SHIFT)
 			+ (vma->vm_pgoff >> (HPAGE_SHIFT - PAGE_SHIFT));
@@ -264,8 +267,9 @@ int hugetlb_prefault(struct address_space *mapping, struct vm_area_struct *vma)
 				goto out;
 			}
 			ret = add_to_page_cache(page, mapping, idx, GFP_ATOMIC);
-			unlock_page(page);
-			if (ret) {
+			if (! ret) {
+				unlock_page(page);
+			} else {
 				hugetlb_put_quota(mapping);
 				free_huge_page(page);
 				goto out;

@@ -63,6 +63,7 @@ check_pgt_cache (void)
 	low = pgt_cache_water[0];
 	high = pgt_cache_water[1];
 
+	preempt_disable();
 	if (pgtable_cache_size > (u64) high) {
 		do {
 			if (pgd_quicklist)
@@ -71,6 +72,7 @@ check_pgt_cache (void)
 				free_page((unsigned long)pmd_alloc_one_fast(0, 0));
 		} while (pgtable_cache_size > (u64) low);
 	}
+	preempt_enable();
 }
 
 void
@@ -123,15 +125,12 @@ ia64_init_addr_space (void)
 	 */
 	vma = kmem_cache_alloc(vm_area_cachep, SLAB_KERNEL);
 	if (vma) {
+		memset(vma, 0, sizeof(*vma));
 		vma->vm_mm = current->mm;
 		vma->vm_start = current->thread.rbs_bot & PAGE_MASK;
 		vma->vm_end = vma->vm_start + PAGE_SIZE;
 		vma->vm_page_prot = protection_map[VM_DATA_DEFAULT_FLAGS & 0x7];
-		vma->vm_flags = VM_READ|VM_WRITE|VM_MAYREAD|VM_MAYWRITE|VM_GROWSUP;
-		vma->vm_ops = NULL;
-		vma->vm_pgoff = 0;
-		vma->vm_file = NULL;
-		vma->vm_private_data = NULL;
+		vma->vm_flags = VM_DATA_DEFAULT_FLAGS | VM_GROWSUP;
 		insert_vm_struct(current->mm, vma);
 	}
 
@@ -172,7 +171,7 @@ free_initrd_mem (unsigned long start, unsigned long end)
 {
 	struct page *page;
 	/*
-	 * EFI uses 4KB pages while the kernel can use 4KB  or bigger.
+	 * EFI uses 4KB pages while the kernel can use 4KB or bigger.
 	 * Thus EFI and the kernel may have different page sizes. It is
 	 * therefore possible to have the initrd share the same page as
 	 * the end of the kernel (given current setup).
@@ -220,7 +219,7 @@ free_initrd_mem (unsigned long start, unsigned long end)
 }
 
 /*
- * This is like put_dirty_page() but installs a clean page in the kernel's page table.
+ * This installs a clean page in the kernel's page table.
  */
 struct page *
 put_kernel_page (struct page *page, unsigned long address, pgprot_t pgprot)
@@ -275,11 +274,11 @@ setup_gate (void)
 	ia64_patch_gate();
 }
 
-void __init
+void __devinit
 ia64_mmu_init (void *my_cpu_data)
 {
 	unsigned long psr, pta, impl_va_bits;
-	extern void __init tlb_init (void);
+	extern void __devinit tlb_init (void);
 	int cpu;
 
 #ifdef CONFIG_DISABLE_VHPT
@@ -343,6 +342,7 @@ ia64_mmu_init (void *my_cpu_data)
 
 #ifdef	CONFIG_HUGETLB_PAGE
 	ia64_set_rr(HPAGE_REGION_BASE, HPAGE_SHIFT << 2);
+	ia64_srlz_d();
 #endif
 
 	cpu = smp_processor_id();
@@ -582,7 +582,7 @@ mem_init (void)
 		if (!fsyscall_table[i] || nolwsys)
 			fsyscall_table[i] = sys_call_table[i] | 1;
 	}
-	setup_gate();	/* setup gate pages before we free up boot memory... */
+	setup_gate();
 
 #ifdef CONFIG_IA32_SUPPORT
 	ia32_boot_gdt_init();

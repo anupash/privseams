@@ -116,7 +116,12 @@ extern void lpd7a400_map_io (void);
 
 static void __init lpd7a40x_init (void)
 {
-	CPLD_CONTROL = 0x0;	/* Enable LAN (Disable LCD) */
+	CPLD_CONTROL |=     (1<<6); /* Mask USB1 connection IRQ */
+	CPLD_CONTROL &= ~(0
+			  | (1<<1) /* Disable LCD */
+			  | (1<<0) /* Enable WLAN */
+		);
+
 	platform_add_devices (lpd7a40x_devs, ARRAY_SIZE (lpd7a40x_devs));
 }
 
@@ -191,7 +196,7 @@ void __init lh7a40x_init_board_irq (void)
 	int pinCPLD = (cpld_version == 0x28) ? 7 : 3;
 
 #if defined CONFIG_MACH_LPD7A404
-	cpld_version = 0x34;	/* Override, for now */
+	cpld_version = 0x34;	/* Coerce LPD7A404 to RevB */
 #endif
 
 		/* First, configure user controlled GPIOF interrupts  */
@@ -204,7 +209,7 @@ void __init lh7a40x_init_board_irq (void)
 
 		/* Then, configure CPLD interrupt */
 
-	CPLD_INTERRUPTS	=   0x0c; /* Disable all CPLD interrupts */
+	CPLD_INTERRUPTS	=   0x9c; /* Disable all CPLD interrupts */
 	GPIO_PFDD	&= ~(1 << pinCPLD); /* Make input */
 	GPIO_INTTYPE1	|=  (1 << pinCPLD); /* Edge triggered */
 	GPIO_INTTYPE2	&= ~(1 << pinCPLD); /* Active low */
@@ -260,6 +265,7 @@ lpd7a400_map_io(void)
 #ifdef CONFIG_MACH_LPD7A400
 
 extern void lh7a400_init_irq (void);
+extern void lh7a40x_init_time (void);
 
 MACHINE_START (LPD7A400, "Logic Product Development LPD7A400-10")
 	MAINTAINER ("Marc Singer")
@@ -267,6 +273,7 @@ MACHINE_START (LPD7A400, "Logic Product Development LPD7A400-10")
 	BOOT_PARAMS (0xc0000100)
 	MAPIO (lpd7a400_map_io)
 	INITIRQ (lh7a400_init_irq)
+	INITTIME (lh7a40x_init_time)
 	INIT_MACHINE (lpd7a40x_init)
 MACHINE_END
 
@@ -275,6 +282,7 @@ MACHINE_END
 #ifdef CONFIG_MACH_LPD7A404
 
 extern void lh7a404_init_irq (void);
+extern void lh7a40x_init_time (void);
 
 MACHINE_START (LPD7A404, "Logic Product Development LPD7A404-10")
 	MAINTAINER ("Marc Singer")
@@ -282,6 +290,7 @@ MACHINE_START (LPD7A404, "Logic Product Development LPD7A404-10")
 	BOOT_PARAMS (0xc0000100)
 	MAPIO (lpd7a400_map_io)
 	INITIRQ (lh7a404_init_irq)
+	INITTIME (lh7a40x_init_time)
 	INIT_MACHINE (lpd7a40x_init)
 MACHINE_END
 

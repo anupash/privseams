@@ -46,7 +46,10 @@ struct net_bridge_fdb_entry
 {
 	struct hlist_node		hlist;
 	struct net_bridge_port		*dst;
-	struct list_head		age_list;
+	union {
+		struct list_head	age_list;
+		struct rcu_head		rcu;
+	} u;
 	atomic_t			use_count;
 	unsigned long			ageing_timer;
 	mac_addr			addr;
@@ -76,6 +79,7 @@ struct net_bridge_port
 	struct timer_list		forward_delay_timer;
 	struct timer_list		hold_timer;
 	struct timer_list		message_age_timer;
+	struct kobject			kobj;
 	struct rcu_head			rcu;
 };
 
@@ -85,7 +89,7 @@ struct net_bridge
 	struct list_head		port_list;
 	struct net_device		*dev;
 	struct net_device_stats		statistics;
-	rwlock_t			hash_lock;
+	spinlock_t			hash_lock;
 	struct hlist_head		hash[BR_HASH_SIZE];
 	struct list_head		age_list;
 
@@ -110,6 +114,7 @@ struct net_bridge
 	struct timer_list		tcn_timer;
 	struct timer_list		topology_change_timer;
 	struct timer_list		gc_timer;
+	struct kobject			ifobj;
 };
 
 extern struct notifier_block br_device_notifier;
@@ -134,13 +139,13 @@ extern void br_fdb_changeaddr(struct net_bridge_port *p,
 extern void br_fdb_cleanup(unsigned long arg);
 extern void br_fdb_delete_by_port(struct net_bridge *br,
 			   struct net_bridge_port *p);
+extern struct net_bridge_fdb_entry *__br_fdb_get(struct net_bridge *br,
+						 const unsigned char *addr);
 extern struct net_bridge_fdb_entry *br_fdb_get(struct net_bridge *br,
-					unsigned char *addr);
+					       unsigned char *addr);
 extern void br_fdb_put(struct net_bridge_fdb_entry *ent);
-extern int  br_fdb_get_entries(struct net_bridge *br,
-			unsigned char *_buf,
-			int maxnum,
-			int offset);
+extern int br_fdb_fillbuf(struct net_bridge *br, void *buf, 
+			  unsigned long count, unsigned long off);
 extern int br_fdb_insert(struct net_bridge *br,
 			 struct net_bridge_port *source,
 			 const unsigned char *addr,
@@ -168,22 +173,15 @@ extern int br_add_if(struct net_bridge *br,
 	      struct net_device *dev);
 extern int br_del_if(struct net_bridge *br,
 	      struct net_device *dev);
-extern int br_get_bridge_ifindices(int *indices,
-			    int num);
-extern void br_get_port_ifindices(struct net_bridge *br,
-			   int *ifindices, int num);
+extern int br_min_mtu(const struct net_bridge *br);
 
 /* br_input.c */
 extern int br_handle_frame_finish(struct sk_buff *skb);
 extern int br_handle_frame(struct sk_buff *skb);
 
 /* br_ioctl.c */
-extern int br_ioctl_device(struct net_bridge *br,
-			   unsigned int cmd,
-			   unsigned long arg0,
-			   unsigned long arg1,
-			   unsigned long arg2);
-extern int br_ioctl_deviceless_stub(unsigned long arg);
+extern int br_dev_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
+extern int br_ioctl_deviceless_stub(unsigned int cmd, void __user *arg);
 
 /* br_netfilter.c */
 extern int br_netfilter_init(void);
@@ -208,6 +206,7 @@ extern void br_stp_set_port_priority(struct net_bridge_port *p,
 				     u8 newprio);
 extern void br_stp_set_path_cost(struct net_bridge_port *p,
 				 u32 path_cost);
+extern ssize_t br_show_bridge_id(char *buf, const struct bridge_id *id);
 
 /* br_stp_bpdu.c */
 extern int br_stp_handle_bpdu(struct sk_buff *skb);
@@ -215,5 +214,25 @@ extern int br_stp_handle_bpdu(struct sk_buff *skb);
 /* br_stp_timer.c */
 extern void br_stp_timer_init(struct net_bridge *br);
 extern void br_stp_port_timer_init(struct net_bridge_port *p);
+extern unsigned long br_timer_value(const struct timer_list *timer);
+
+#ifdef CONFIG_SYSFS
+/* br_sysfs_if.c */
+extern int br_sysfs_addif(struct net_bridge_port *p);
+extern void br_sysfs_removeif(struct net_bridge_port *p);
+extern void br_sysfs_freeif(struct net_bridge_port *p);
+
+/* br_sysfs_br.c */
+extern int br_sysfs_addbr(struct net_device *dev);
+extern void br_sysfs_delbr(struct net_device *dev);
+
+#else
+
+#define br_sysfs_addif(p)	(0)
+#define br_sysfs_removeif(p)	do { } while(0)
+#define br_sysfs_freeif(p)	kfree(p)
+#define br_sysfs_addbr(dev)	(0)
+#define br_sysfs_delbr(dev)	do { } while(0)
+#endif /* CONFIG_SYSFS */
 
 #endif

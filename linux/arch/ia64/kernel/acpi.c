@@ -52,6 +52,9 @@
 #include <asm/sal.h>
 #include <asm/cyclone.h>
 
+#define BAD_MADT_ENTRY(entry, end) (                                        \
+		(!entry) || (unsigned long)entry + sizeof(*entry) > end ||  \
+		((acpi_table_entry_header *)entry)->length != sizeof(*entry))
 
 #define PREFIX			"ACPI: "
 
@@ -158,15 +161,15 @@ static u8			has_8259;
 
 
 static int __init
-acpi_parse_lapic_addr_ovr (acpi_table_entry_header *header)
+acpi_parse_lapic_addr_ovr (
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_lapic_addr_ovr *lapic;
 
 	lapic = (struct acpi_table_lapic_addr_ovr *) header;
-	if (!lapic)
-		return -EINVAL;
 
-	acpi_table_print_madt_entry(header);
+	if (BAD_MADT_ENTRY(lapic, end))
+		return -EINVAL;
 
 	if (lapic->address) {
 		iounmap((void *) ipi_base_addr);
@@ -177,32 +180,21 @@ acpi_parse_lapic_addr_ovr (acpi_table_entry_header *header)
 
 
 static int __init
-acpi_parse_lsapic (acpi_table_entry_header *header)
+acpi_parse_lsapic (acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_lsapic *lsapic;
 
 	lsapic = (struct acpi_table_lsapic *) header;
-	if (!lsapic)
+
+	if (BAD_MADT_ENTRY(lsapic, end))
 		return -EINVAL;
 
-	acpi_table_print_madt_entry(header);
-
-	printk(KERN_INFO "CPU %d (0x%04x)", total_cpus, (lsapic->id << 8) | lsapic->eid);
-
-	if (!lsapic->flags.enabled)
-		printk(" disabled");
-	else {
-		printk(" enabled");
+	if (lsapic->flags.enabled) {
 #ifdef CONFIG_SMP
 		smp_boot_data.cpu_phys_id[available_cpus] = (lsapic->id << 8) | lsapic->eid;
-		if (hard_smp_processor_id()
-		    == (unsigned int) smp_boot_data.cpu_phys_id[available_cpus])
-			printk(" (BSP)");
 #endif
 		++available_cpus;
 	}
-
-	printk("\n");
 
 	total_cpus++;
 	return 0;
@@ -210,15 +202,14 @@ acpi_parse_lsapic (acpi_table_entry_header *header)
 
 
 static int __init
-acpi_parse_lapic_nmi (acpi_table_entry_header *header)
+acpi_parse_lapic_nmi (acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_lapic_nmi *lacpi_nmi;
 
 	lacpi_nmi = (struct acpi_table_lapic_nmi*) header;
-	if (!lacpi_nmi)
-		return -EINVAL;
 
-	acpi_table_print_madt_entry(header);
+	if (BAD_MADT_ENTRY(lacpi_nmi, end))
+		return -EINVAL;
 
 	/* TBD: Support lapic_nmi entries */
 	return 0;
@@ -226,15 +217,14 @@ acpi_parse_lapic_nmi (acpi_table_entry_header *header)
 
 
 static int __init
-acpi_parse_iosapic (acpi_table_entry_header *header)
+acpi_parse_iosapic (acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_iosapic *iosapic;
 
 	iosapic = (struct acpi_table_iosapic *) header;
-	if (!iosapic)
-		return -EINVAL;
 
-	acpi_table_print_madt_entry(header);
+	if (BAD_MADT_ENTRY(iosapic, end))
+		return -EINVAL;
 
 	iosapic_init(iosapic->address, iosapic->global_irq_base);
 
@@ -243,16 +233,16 @@ acpi_parse_iosapic (acpi_table_entry_header *header)
 
 
 static int __init
-acpi_parse_plat_int_src (acpi_table_entry_header *header)
+acpi_parse_plat_int_src (
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_plat_int_src *plintsrc;
 	int vector;
 
 	plintsrc = (struct acpi_table_plat_int_src *) header;
-	if (!plintsrc)
-		return -EINVAL;
 
-	acpi_table_print_madt_entry(header);
+	if (BAD_MADT_ENTRY(plintsrc, end))
+		return -EINVAL;
 
 	/*
 	 * Get vector assignment for this interrupt, set attributes,
@@ -272,15 +262,15 @@ acpi_parse_plat_int_src (acpi_table_entry_header *header)
 
 
 static int __init
-acpi_parse_int_src_ovr (acpi_table_entry_header *header)
+acpi_parse_int_src_ovr (
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_int_src_ovr *p;
 
 	p = (struct acpi_table_int_src_ovr *) header;
-	if (!p)
-		return -EINVAL;
 
-	acpi_table_print_madt_entry(header);
+	if (BAD_MADT_ENTRY(p, end))
+		return -EINVAL;
 
 	iosapic_override_isa_irq(p->bus_irq, p->global_irq,
 				 (p->flags.polarity == 1) ? IOSAPIC_POL_HIGH : IOSAPIC_POL_LOW,
@@ -290,34 +280,33 @@ acpi_parse_int_src_ovr (acpi_table_entry_header *header)
 
 
 static int __init
-acpi_parse_nmi_src (acpi_table_entry_header *header)
+acpi_parse_nmi_src (acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_nmi_src *nmi_src;
 
 	nmi_src = (struct acpi_table_nmi_src*) header;
-	if (!nmi_src)
-		return -EINVAL;
 
-	acpi_table_print_madt_entry(header);
+	if (BAD_MADT_ENTRY(nmi_src, end))
+		return -EINVAL;
 
 	/* TBD: Support nimsrc entries */
 	return 0;
 }
 
-/* Hook from generic ACPI tables.c */
-void __init acpi_madt_oem_check(char *oem_id, char *oem_table_id)
+static void __init
+acpi_madt_oem_check (char *oem_id, char *oem_table_id)
 {
 	if (!strncmp(oem_id, "IBM", 3) &&
-	    (!strncmp(oem_table_id, "SERMOW", 6))){
+	    (!strncmp(oem_table_id, "SERMOW", 6))) {
 
-		/* Unfortunatly ITC_DRIFT is not yet part of the
+		/*
+		 * Unfortunately ITC_DRIFT is not yet part of the
 		 * official SAL spec, so the ITC_DRIFT bit is not
 		 * set by the BIOS on this hardware.
 		 */
 		sal_platform_features |= IA64_SAL_PLATFORM_FEATURE_ITC_DRIFT;
 
-		/*Start cyclone clock*/
-		cyclone_setup(0);
+		cyclone_setup();
 	}
 }
 
@@ -508,9 +497,14 @@ acpi_numa_arch_fixup (void)
 #endif /* CONFIG_ACPI_NUMA */
 
 unsigned int
-acpi_register_gsi (u32 gsi, int polarity, int trigger)
+acpi_register_gsi (u32 gsi, int edge_level, int active_high_low)
 {
-	return acpi_register_irq(gsi, polarity, trigger);
+	if (has_8259 && gsi < 16)
+		return isa_irq_to_vector(gsi);
+
+	return iosapic_register_intr(gsi,
+			(active_high_low == ACPI_ACTIVE_HIGH) ? IOSAPIC_POL_HIGH : IOSAPIC_POL_LOW,
+			(edge_level == ACPI_EDGE_SENSITIVE) ? IOSAPIC_EDGE : IOSAPIC_LEVEL);
 }
 EXPORT_SYMBOL(acpi_register_gsi);
 
@@ -535,7 +529,7 @@ acpi_parse_fadt (unsigned long phys_addr, unsigned long size)
 	if (fadt->iapc_boot_arch & BAF_LEGACY_DEVICES)
 		acpi_legacy_devices = 1;
 
-	acpi_register_gsi(fadt->sci_int, ACPI_ACTIVE_LOW, ACPI_LEVEL_SENSITIVE);
+	acpi_register_gsi(fadt->sci_int, ACPI_LEVEL_SENSITIVE, ACPI_ACTIVE_LOW);
 	return 0;
 }
 
@@ -632,16 +626,6 @@ acpi_boot_init (void)
 	return 0;
 }
 
-/* deprecated in favor of acpi_gsi_to_irq */
-int
-acpi_irq_to_vector (u32 gsi)
-{
-	if (has_8259 && gsi < 16)
-		return isa_irq_to_vector(gsi);
-
-	return gsi_to_vector(gsi);
-}
-
 int
 acpi_gsi_to_irq (u32 gsi, unsigned int *irq)
 {
@@ -658,17 +642,5 @@ acpi_gsi_to_irq (u32 gsi, unsigned int *irq)
 	}
 	return 0;
 }
-
-int
-acpi_register_irq (u32 gsi, u32 polarity, u32 trigger)
-{
-	if (has_8259 && gsi < 16)
-		return isa_irq_to_vector(gsi);
-
-	return iosapic_register_intr(gsi,
-			(polarity == ACPI_ACTIVE_HIGH) ? IOSAPIC_POL_HIGH : IOSAPIC_POL_LOW,
-			(trigger == ACPI_EDGE_SENSITIVE) ? IOSAPIC_EDGE : IOSAPIC_LEVEL);
-}
-EXPORT_SYMBOL(acpi_register_irq);
 
 #endif /* CONFIG_ACPI_BOOT */

@@ -45,7 +45,7 @@
 #include <asm/semaphore.h>
 #include <linux/init.h>
 
-#define IPMI_DEVINTF_VERSION "v31"
+#define IPMI_DEVINTF_VERSION "v32"
 
 struct ipmi_file_private
 {
@@ -174,7 +174,7 @@ static int handle_send_req(ipmi_user_t     user,
 {
 	int              rv;
 	struct ipmi_addr addr;
-	unsigned char    *msgdata;
+	struct kernel_ipmi_msg msg;
 
 	if (req->addr_len > sizeof(struct ipmi_addr))
 		return -EINVAL;
@@ -182,8 +182,11 @@ static int handle_send_req(ipmi_user_t     user,
 	if (copy_from_user(&addr, req->addr, req->addr_len))
 		return -EFAULT;
 
-	msgdata = kmalloc(IPMI_MAX_MSG_LENGTH, GFP_KERNEL);
-	if (!msgdata)
+	msg.netfn = req->msg.netfn;
+	msg.cmd = req->msg.cmd;
+	msg.data_len = req->msg.data_len;
+	msg.data = kmalloc(IPMI_MAX_MSG_LENGTH, GFP_KERNEL);
+	if (!msg.data)
 		return -ENOMEM;
 
 	/* From here out we cannot return, we must jump to "out" for
@@ -199,7 +202,7 @@ static int handle_send_req(ipmi_user_t     user,
 			goto out;
 		}
 
-		if (copy_from_user(&msgdata,
+		if (copy_from_user(msg.data,
 				   req->msg.data,
 				   req->msg.data_len))
 		{
@@ -207,20 +210,19 @@ static int handle_send_req(ipmi_user_t     user,
 			goto out;
 		}
 	} else {
-		req->msg.data_len = 0;
+		msg.data_len = 0;
 	}
-	req->msg.data = msgdata;
 
 	rv = ipmi_request_settime(user,
 				  &addr,
 				  req->msgid,
-				  &(req->msg),
+				  &msg,
 				  NULL,
 				  0,
 				  retries,
 				  retry_time_ms);
  out:
-	kfree(msgdata);
+	kfree(msg.data);
 	return rv;
 }
 
@@ -231,6 +233,7 @@ static int ipmi_ioctl(struct inode  *inode,
 {
 	int                      rv = -EINVAL;
 	struct ipmi_file_private *priv = file->private_data;
+	void __user *arg = (void __user *)data;
 
 	switch (cmd) 
 	{
@@ -238,7 +241,7 @@ static int ipmi_ioctl(struct inode  *inode,
 	{
 		struct ipmi_req req;
 
-		if (copy_from_user(&req, (void *) data, sizeof(req))) {
+		if (copy_from_user(&req, arg, sizeof(req))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -254,7 +257,7 @@ static int ipmi_ioctl(struct inode  *inode,
 	{
 		struct ipmi_req_settime req;
 
-		if (copy_from_user(&req, (void *) data, sizeof(req))) {
+		if (copy_from_user(&req, arg, sizeof(req))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -277,7 +280,7 @@ static int ipmi_ioctl(struct inode  *inode,
 		
 
 		rv = 0;
-		if (copy_from_user(&rsp, (void *) data, sizeof(rsp))) {
+		if (copy_from_user(&rsp, arg, sizeof(rsp))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -344,7 +347,7 @@ static int ipmi_ioctl(struct inode  *inode,
 			rsp.msg.data_len = 0;
 		}
 
-		if (copy_to_user((void *) data, &rsp, sizeof(rsp))) {
+		if (copy_to_user(arg, &rsp, sizeof(rsp))) {
 			rv = -EFAULT;
 			goto recv_putback_on_err;
 		}
@@ -371,7 +374,7 @@ static int ipmi_ioctl(struct inode  *inode,
 	{
 		struct ipmi_cmdspec val;
 
-		if (copy_from_user(&val, (void *) data, sizeof(val))) {
+		if (copy_from_user(&val, arg, sizeof(val))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -384,7 +387,7 @@ static int ipmi_ioctl(struct inode  *inode,
 	{
 		struct ipmi_cmdspec   val;
 
-		if (copy_from_user(&val, (void *) data, sizeof(val))) {
+		if (copy_from_user(&val, arg, sizeof(val))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -397,7 +400,7 @@ static int ipmi_ioctl(struct inode  *inode,
 	{
 		int val;
 
-		if (copy_from_user(&val, (void *) data, sizeof(val))) {
+		if (copy_from_user(&val, arg, sizeof(val))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -410,7 +413,7 @@ static int ipmi_ioctl(struct inode  *inode,
 	{
 		unsigned int val;
 
-		if (copy_from_user(&val, (void *) data, sizeof(val))) {
+		if (copy_from_user(&val, arg, sizeof(val))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -426,7 +429,7 @@ static int ipmi_ioctl(struct inode  *inode,
 
 		val = ipmi_get_my_address(priv->user);
 
-		if (copy_to_user((void *) data, &val, sizeof(val))) {
+		if (copy_to_user(arg, &val, sizeof(val))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -438,7 +441,7 @@ static int ipmi_ioctl(struct inode  *inode,
 	{
 		unsigned int val;
 
-		if (copy_from_user(&val, (void *) data, sizeof(val))) {
+		if (copy_from_user(&val, arg, sizeof(val))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -454,7 +457,7 @@ static int ipmi_ioctl(struct inode  *inode,
 
 		val = ipmi_get_my_LUN(priv->user);
 
-		if (copy_to_user((void *) data, &val, sizeof(val))) {
+		if (copy_to_user(arg, &val, sizeof(val))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -465,7 +468,7 @@ static int ipmi_ioctl(struct inode  *inode,
 	{
 		struct ipmi_timing_parms parms;
 
-		if (copy_from_user(&parms, (void *) data, sizeof(parms))) {
+		if (copy_from_user(&parms, arg, sizeof(parms))) {
 			rv = -EFAULT;
 			break;
 		}
@@ -483,7 +486,7 @@ static int ipmi_ioctl(struct inode  *inode,
 		parms.retries = priv->default_retries;
 		parms.retry_time_ms = priv->default_retry_time_ms;
 
-		if (copy_to_user((void *) data, &parms, sizeof(parms))) {
+		if (copy_to_user(arg, &parms, sizeof(parms))) {
 			rv = -EFAULT;
 			break;
 		}

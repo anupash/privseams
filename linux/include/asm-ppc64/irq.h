@@ -9,7 +9,8 @@
  * 2 of the License, or (at your option) any later version.
  */
 
-#include <asm/atomic.h>
+#include <linux/config.h>
+#include <linux/threads.h>
 
 /*
  * Maximum number of interrupt sources that we can handle.
@@ -45,6 +46,8 @@ static inline unsigned int virt_irq_to_real(unsigned int virt_irq)
 	return virt_irq_to_real_map[virt_irq];
 }
 
+extern unsigned int real_irq_to_virt_slowpath(unsigned int real_irq);
+
 /*
  * Because many systems have two overlapping names spaces for
  * interrupts (ISA and XICS for example), and the ISA interrupts
@@ -77,7 +80,26 @@ static __inline__ int irq_canonicalize(int irq)
 
 struct irqaction;
 struct pt_regs;
-int handle_IRQ_event(unsigned int, struct pt_regs *, struct irqaction *);
+int handle_irq_event(int, struct pt_regs *, struct irqaction *);
+
+#ifdef CONFIG_IRQSTACKS
+/*
+ * Per-cpu stacks for handling hard and soft interrupts.
+ */
+extern struct thread_info *hardirq_ctx[NR_CPUS];
+extern struct thread_info *softirq_ctx[NR_CPUS];
+
+extern void irq_ctx_init(void);
+extern void call_do_softirq(struct thread_info *tp);
+extern int call_handle_irq_event(int irq, struct pt_regs *regs,
+			struct irqaction *action, struct thread_info *tp);
+
+#define __ARCH_HAS_DO_SOFTIRQ
+
+#else
+#define irq_ctx_init()
+
+#endif /* CONFIG_IRQSTACKS */
 
 #endif /* _ASM_IRQ_H */
 #endif /* __KERNEL__ */

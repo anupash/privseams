@@ -41,10 +41,6 @@
 
 #include "io_ports.h"
 
-#undef APIC_LOCKUP_DEBUG
-
-#define APIC_LOCKUP_DEBUG
-
 static spinlock_t ioapic_lock = SPIN_LOCK_UNLOCKED;
 
 /*
@@ -77,7 +73,7 @@ static struct irq_pin_list {
 } irq_2_pin[PIN_MAP_SIZE];
 
 int vector_irq[NR_VECTORS] = { [0 ... NR_VECTORS - 1] = -1};
-#ifdef CONFIG_PCI_USE_VECTOR
+#ifdef CONFIG_PCI_MSI
 #define vector_to_irq(vector) 	\
 	(platform_legacy_irq(vector) ? vector : vector_irq[vector])
 #else
@@ -127,83 +123,47 @@ static void __init replace_pin_at_irq(unsigned int irq,
 	}
 }
 
-/* mask = 1 */
-static void __mask_IO_APIC_irq (unsigned int irq)
+static void __modify_IO_APIC_irq (unsigned int irq, unsigned long enable, unsigned long disable)
 {
-	int pin;
 	struct irq_pin_list *entry = irq_2_pin + irq;
+	unsigned int pin, reg;
 
 	for (;;) {
-		unsigned int reg;
 		pin = entry->pin;
 		if (pin == -1)
 			break;
 		reg = io_apic_read(entry->apic, 0x10 + pin*2);
-		io_apic_modify(entry->apic, 0x10 + pin*2, reg |= 0x00010000);
+		reg &= ~disable;
+		reg |= enable;
+		io_apic_modify(entry->apic, 0x10 + pin*2, reg);
 		if (!entry->next)
 			break;
 		entry = irq_2_pin + entry->next;
 	}
-	io_apic_sync(entry->apic);
+}
+
+/* mask = 1 */
+static void __mask_IO_APIC_irq (unsigned int irq)
+{
+	__modify_IO_APIC_irq(irq, 0x00010000, 0);
 }
 
 /* mask = 0 */
 static void __unmask_IO_APIC_irq (unsigned int irq)
 {
-	int pin;
-	struct irq_pin_list *entry = irq_2_pin + irq;
-
-	for (;;) {
-		unsigned int reg;
-		pin = entry->pin;
-		if (pin == -1)
-			break;
-		reg = io_apic_read(entry->apic, 0x10 + pin*2);
-		io_apic_modify(entry->apic, 0x10 + pin*2, reg &= 0xfffeffff);
-		if (!entry->next)
-			break;
-		entry = irq_2_pin + entry->next;
-	}
+	__modify_IO_APIC_irq(irq, 0, 0x00010000);
 }
 
 /* mask = 1, trigger = 0 */
 static void __mask_and_edge_IO_APIC_irq (unsigned int irq)
 {
-	int pin;
-	struct irq_pin_list *entry = irq_2_pin + irq;
-
-	for (;;) {
-		unsigned int reg;
-		pin = entry->pin;
-		if (pin == -1)
-			break;
-		reg = io_apic_read(entry->apic, 0x10 + pin*2);
-		reg = (reg & 0xffff7fff) | 0x00010000;
-		io_apic_modify(entry->apic, 0x10 + pin*2, reg);
-		if (!entry->next)
-			break;
-		entry = irq_2_pin + entry->next;
-	}
+	__modify_IO_APIC_irq(irq, 0x00010000, 0x00008000);
 }
 
 /* mask = 0, trigger = 1 */
 static void __unmask_and_level_IO_APIC_irq (unsigned int irq)
 {
-	int pin;
-	struct irq_pin_list *entry = irq_2_pin + irq;
-
-	for (;;) {
-		unsigned int reg;
-		pin = entry->pin;
-		if (pin == -1)
-			break;
-		reg = io_apic_read(entry->apic, 0x10 + pin*2);
-		reg = (reg & 0xfffeffff) | 0x00008000;
-		io_apic_modify(entry->apic, 0x10 + pin*2, reg);
-		if (!entry->next)
-			break;
-		entry = irq_2_pin + entry->next;
-	}
+	__modify_IO_APIC_irq(irq, 0x00008000, 0x00010000);
 }
 
 static void mask_IO_APIC_irq (unsigned int irq)
@@ -264,7 +224,7 @@ static void set_ioapic_affinity_irq(unsigned int irq, cpumask_t cpumask)
 	struct irq_pin_list *entry = irq_2_pin + irq;
 	unsigned int apicid_value;
 	
-	apicid_value = cpu_mask_to_apicid(mk_cpumask_const(cpumask));
+	apicid_value = cpu_mask_to_apicid(cpumask);
 	/* Prepare to do the io_apic_write */
 	apicid_value = apicid_value << 24;
 	spin_lock_irqsave(&ioapic_lock, flags);
@@ -317,8 +277,7 @@ struct irq_cpu_info {
 
 #define IRQ_ALLOWED(cpu, allowed_mask)	cpu_isset(cpu, allowed_mask)
 
-#define CPU_TO_PACKAGEINDEX(i) \
-		((physical_balance && i > cpu_sibling_map[i]) ? cpu_sibling_map[i] : i)
+#define CPU_TO_PACKAGEINDEX(i) (first_cpu(cpu_sibling_map[i]))
 
 #define MAX_BALANCED_IRQ_INTERVAL	(5*HZ)
 #define MIN_BALANCED_IRQ_INTERVAL	(HZ/2)
@@ -401,6 +360,7 @@ static void do_irq_balance(void)
 	unsigned long max_cpu_irq = 0, min_cpu_irq = (~0);
 	unsigned long move_this_load = 0;
 	int max_loaded = 0, min_loaded = 0;
+	int load;
 	unsigned long useful_load_threshold = balanced_irq_interval + 10;
 	int selected_irq;
 	int tmp_loaded, first_attempt = 1;
@@ -452,7 +412,7 @@ static void do_irq_balance(void)
 	for (i = 0; i < NR_CPUS; i++) {
 		if (!cpu_online(i))
 			continue;
-		if (physical_balance && i > cpu_sibling_map[i])
+		if (i != CPU_TO_PACKAGEINDEX(i))
 			continue;
 		if (min_cpu_irq > CPU_IRQ(i)) {
 			min_cpu_irq = CPU_IRQ(i);
@@ -471,7 +431,7 @@ tryanothercpu:
 	for (i = 0; i < NR_CPUS; i++) {
 		if (!cpu_online(i))
 			continue;
-		if (physical_balance && i > cpu_sibling_map[i])
+		if (i != CPU_TO_PACKAGEINDEX(i))
 			continue;
 		if (max_cpu_irq <= CPU_IRQ(i)) 
 			continue;
@@ -551,9 +511,14 @@ tryanotherirq:
 	 * We seek the least loaded sibling by making the comparison
 	 * (A+B)/2 vs B
 	 */
-	if (physical_balance && (CPU_IRQ(min_loaded) >> 1) >
-					CPU_IRQ(cpu_sibling_map[min_loaded]))
-		min_loaded = cpu_sibling_map[min_loaded];
+	load = CPU_IRQ(min_loaded) >> 1;
+	for_each_cpu_mask(j, cpu_sibling_map[min_loaded]) {
+		if (load > CPU_IRQ(j)) {
+			/* This won't change cpu_sibling_map[min_loaded] */
+			load = CPU_IRQ(j);
+			min_loaded = j;
+		}
+	}
 
 	cpus_and(allowed_mask, cpu_online_map, irq_affinity[selected_irq]);
 	target_cpu_mask = cpumask_of_cpu(min_loaded);
@@ -590,7 +555,7 @@ not_worth_the_effort:
 	return;
 }
 
-int balanced_irq(void *unused)
+static int balanced_irq(void *unused)
 {
 	int i;
 	unsigned long prev_balance_time = jiffies;
@@ -603,17 +568,17 @@ int balanced_irq(void *unused)
 		pending_irq_balance_cpumask[i] = cpumask_of_cpu(0);
 	}
 
-repeat:
-	set_current_state(TASK_INTERRUPTIBLE);
-	time_remaining = schedule_timeout(time_remaining);
-	if (time_after(jiffies, prev_balance_time+balanced_irq_interval)) {
-		Dprintk("balanced_irq: calling do_irq_balance() %lu\n",
-					jiffies);
-		do_irq_balance();
-		prev_balance_time = jiffies;
-		time_remaining = balanced_irq_interval;
+	for ( ; ; ) {
+		set_current_state(TASK_INTERRUPTIBLE);
+		time_remaining = schedule_timeout(time_remaining);
+		if (time_after(jiffies,
+				prev_balance_time+balanced_irq_interval)) {
+			do_irq_balance();
+			prev_balance_time = jiffies;
+			time_remaining = balanced_irq_interval;
+		}
 	}
-	goto repeat;
+	return 0;
 }
 
 static int __init balanced_irq_init(void)
@@ -848,7 +813,7 @@ int IO_APIC_get_PCI_irq_vector(int bus, int slot, int pin)
  * we need to reprogram the ioredtbls to cater for the cpus which have come online
  * so mask in all cases should simply be TARGET_CPUS
  */
-void __init setup_ioapic_dest(cpumask_t mask)
+void __init setup_ioapic_dest(void)
 {
 	int pin, ioapic, irq, irq_entry;
 
@@ -861,7 +826,7 @@ void __init setup_ioapic_dest(cpumask_t mask)
 			if (irq_entry == -1)
 				continue;
 			irq = pin_2_irq(irq_entry, ioapic, pin);
-			set_ioapic_affinity_irq(irq, mask);
+			set_ioapic_affinity_irq(irq, TARGET_CPUS);
 		}
 
 	}
@@ -1149,7 +1114,7 @@ static inline int IO_APIC_irq_trigger(int irq)
 /* irq_vectors is indexed by the sum of all RTEs in all I/O APICs. */
 u8 irq_vector[NR_IRQ_VECTORS] = { FIRST_DEVICE_VECTOR , 0 };
 
-#ifdef CONFIG_PCI_USE_VECTOR
+#ifdef CONFIG_PCI_MSI
 int assign_irq_vector(int irq)
 #else
 int __init assign_irq_vector(int irq)
@@ -1361,7 +1326,7 @@ void __init print_IO_APIC(void)
 	printk(KERN_DEBUG ".......    : physical APIC id: %02X\n", reg_00.bits.ID);
 	printk(KERN_DEBUG ".......    : Delivery Type: %X\n", reg_00.bits.delivery_type);
 	printk(KERN_DEBUG ".......    : LTS          : %X\n", reg_00.bits.LTS);
-	if (reg_00.bits.ID >= APIC_BROADCAST_ID)
+	if (reg_00.bits.ID >= get_physical_broadcast())
 		UNEXPECTED_IO_APIC();
 	if (reg_00.bits.__reserved_1 || reg_00.bits.__reserved_2)
 		UNEXPECTED_IO_APIC();
@@ -1446,12 +1411,17 @@ void __init print_IO_APIC(void)
 		);
 	}
 	}
+	if (use_pci_vector())
+		printk(KERN_INFO "Using vector-based indexing\n");
 	printk(KERN_DEBUG "IRQ to pin mappings:\n");
 	for (i = 0; i < NR_IRQS; i++) {
 		struct irq_pin_list *entry = irq_2_pin + i;
 		if (entry->pin < 0)
 			continue;
-		printk(KERN_DEBUG "IRQ%d ", i);
+ 		if (use_pci_vector() && !platform_legacy_irq(i))
+			printk(KERN_DEBUG "IRQ%d ", IO_APIC_VECTOR(i));
+		else
+			printk(KERN_DEBUG "IRQ%d ", i);
 		for (;;) {
 			printk("-> %d:%d", entry->apic, entry->pin);
 			if (!entry->next)
@@ -1677,7 +1647,7 @@ static void __init setup_ioapic_ids_from_mpc(void)
 		
 		old_id = mp_ioapics[apic].mpc_apicid;
 
-		if (mp_ioapics[apic].mpc_apicid >= APIC_BROADCAST_ID) {
+		if (mp_ioapics[apic].mpc_apicid >= get_physical_broadcast()) {
 			printk(KERN_ERR "BIOS bug, IO-APIC#%d ID is %d in the MPC table!...\n",
 				apic, mp_ioapics[apic].mpc_apicid);
 			printk(KERN_ERR "... fixing up to %d. (tell your hw vendor)\n",
@@ -1698,10 +1668,10 @@ static void __init setup_ioapic_ids_from_mpc(void)
 					mp_ioapics[apic].mpc_apicid)) {
 			printk(KERN_ERR "BIOS bug, IO-APIC#%d ID %d is already used!...\n",
 				apic, mp_ioapics[apic].mpc_apicid);
-			for (i = 0; i < APIC_BROADCAST_ID; i++)
+			for (i = 0; i < get_physical_broadcast(); i++)
 				if (!physid_isset(i, phys_id_present_map))
 					break;
-			if (i >= APIC_BROADCAST_ID)
+			if (i >= get_physical_broadcast())
 				panic("Max APIC ID exceeded!\n");
 			printk(KERN_ERR "... fixing up to %d. (tell your hw vendor)\n",
 				i);
@@ -1888,36 +1858,17 @@ static void end_level_ioapic_irq (unsigned int irq)
 	ack_APIC_irq();
 
 	if (!(v & (1 << (i & 0x1f)))) {
-#ifdef APIC_LOCKUP_DEBUG
-		struct irq_pin_list *entry;
-#endif
-
 #ifdef APIC_MISMATCH_DEBUG
 		atomic_inc(&irq_mis_count);
 #endif
 		spin_lock(&ioapic_lock);
 		__mask_and_edge_IO_APIC_irq(irq);
-#ifdef APIC_LOCKUP_DEBUG
-		for (entry = irq_2_pin + irq;;) {
-			unsigned int reg;
-
-			if (entry->pin == -1)
-				break;
-			reg = io_apic_read(entry->apic, 0x10 + entry->pin * 2);
-			if (reg & 0x00004000)
-				printk(KERN_CRIT "Aieee!!!  Remote IRR"
-					" still set after unlock!\n");
-			if (!entry->next)
-				break;
-			entry = irq_2_pin + entry->next;
-		}
-#endif
 		__unmask_and_level_IO_APIC_irq(irq);
 		spin_unlock(&ioapic_lock);
 	}
 }
 
-#ifdef CONFIG_PCI_USE_VECTOR
+#ifdef CONFIG_PCI_MSI
 static unsigned int startup_edge_ioapic_vector(unsigned int vector)
 {
 	int irq = vector_to_irq(vector);
@@ -2261,7 +2212,7 @@ static inline void check_timer(void)
 		return;
 	}
 	printk(" failed :(.\n");
-	panic("IO-APIC + timer doesn't work! pester mingo@redhat.com");
+	panic("IO-APIC + timer doesn't work! Try using the 'noapic' kernel parameter\n");
 }
 
 /*
@@ -2317,8 +2268,6 @@ late_initcall(io_apic_bug_finalize);
 
 #ifdef CONFIG_ACPI_BOOT
 
-#define IO_APIC_MAX_ID APIC_BROADCAST_ID
-
 int __init io_apic_get_unique_id (int ioapic, int apic_id)
 {
 	union IO_APIC_reg_00 reg_00;
@@ -2343,7 +2292,7 @@ int __init io_apic_get_unique_id (int ioapic, int apic_id)
 	reg_00.raw = io_apic_read(ioapic, 0);
 	spin_unlock_irqrestore(&ioapic_lock, flags);
 
-	if (apic_id >= IO_APIC_MAX_ID) {
+	if (apic_id >= get_physical_broadcast()) {
 		printk(KERN_WARNING "IOAPIC[%d]: Invalid apic_id %d, trying "
 			"%d\n", ioapic, apic_id, reg_00.bits.ID);
 		apic_id = reg_00.bits.ID;
@@ -2355,12 +2304,12 @@ int __init io_apic_get_unique_id (int ioapic, int apic_id)
 	 */
 	if (check_apicid_used(apic_id_map, apic_id)) {
 
-		for (i = 0; i < IO_APIC_MAX_ID; i++) {
+		for (i = 0; i < get_physical_broadcast(); i++) {
 			if (!check_apicid_used(apic_id_map, i))
 				break;
 		}
 
-		if (i == IO_APIC_MAX_ID)
+		if (i == get_physical_broadcast())
 			panic("Max apic_id exceeded!\n");
 
 		printk(KERN_WARNING "IOAPIC[%d]: apic_id %d already used, "

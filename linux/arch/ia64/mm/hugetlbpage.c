@@ -158,8 +158,6 @@ struct page *follow_huge_addr(struct mm_struct *mm, unsigned long addr, int writ
 	struct page *page;
 	pte_t *ptep;
 
-	if (! mm->used_hugetlb)
-		return ERR_PTR(-EINVAL);
 	if (REGION_NUMBER(addr) != REGION_HPAGE)
 		return ERR_PTR(-EINVAL);
 
@@ -293,10 +291,11 @@ int hugetlb_prefault(struct address_space *mapping, struct vm_area_struct *vma)
 				goto out;
 			}
 			ret = add_to_page_cache(page, mapping, idx, GFP_ATOMIC);
-			unlock_page(page);
-			if (ret) {
+			if (! ret) {
+				unlock_page(page);
+			} else {
 				hugetlb_put_quota(mapping);
-				free_huge_page(page);
+				page_cache_release(page);
 				goto out;
 			}
 		}

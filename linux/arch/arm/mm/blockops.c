@@ -130,10 +130,11 @@ static struct undef_hook blockops_hook __initdata = {
 static int __init blockops_check(void)
 {
 	register unsigned int err asm("r4") = 0;
+	unsigned int err_pos = 1;
 	unsigned int cache_type;
 	int i;
 
-	asm("mcr p15, 0, %0, c0, c0, 1" : "=r" (cache_type));
+	asm("mrc p15, 0, %0, c0, c0, 1" : "=r" (cache_type));
 
 	printk("Checking V6 block cache operations:\n");
 	register_undef_hook(&blockops_hook);
@@ -156,8 +157,8 @@ static int __init blockops_check(void)
 
 	unregister_undef_hook(&blockops_hook);
 
-	for (i = 0; i < ARRAY_SIZE(func); i++, err >>= 1)
-		printk("%30s: %ssupported\n", func[i], err & 1 ? "not " : "");
+	for (i = 0; i < ARRAY_SIZE(func); i++, err_pos <<= 1)
+		printk("%30s: %ssupported\n", func[i], err & err_pos ? "not " : "");
 
 	if ((err & 8) == 0) {
 		printk(" --> Using %s block cache invalidate\n",

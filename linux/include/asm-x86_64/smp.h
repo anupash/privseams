@@ -47,7 +47,7 @@ extern void smp_invalidate_rcv(void);		/* Process an NMI */
 extern void (*mtrr_hook) (void);
 extern void zap_low_mappings(void);
 void smp_stop_cpu(void);
-extern char cpu_sibling_map[];
+extern cpumask_t cpu_sibling_map[NR_CPUS];
 extern char phys_proc_id[NR_CPUS];
 
 #define SMP_TRAMPOLINE_BASE 0x6000
@@ -60,7 +60,6 @@ extern char phys_proc_id[NR_CPUS];
 
 extern cpumask_t cpu_callout_map;
 #define cpu_possible_map cpu_callout_map
-#define cpu_online(cpu) cpu_isset(cpu, cpu_online_map)
 
 static inline int num_booting_cpus(void)
 {
@@ -105,7 +104,6 @@ static inline int cpu_present_to_apicid(int mps_cpu)
 		return BAD_APICID;
 }
 
-#define cpu_online(cpu) cpu_isset(cpu, cpu_online_map)
 #endif /* !ASSEMBLY */
 
 #define NO_PROC_ID		0xFF		/* No processor magic marker */
@@ -115,9 +113,9 @@ static inline int cpu_present_to_apicid(int mps_cpu)
 #define TARGET_CPUS 1
 
 #ifndef ASSEMBLY
-static inline unsigned int cpu_mask_to_apicid(cpumask_const_t cpumask)
+static inline unsigned int cpu_mask_to_apicid(cpumask_t cpumask)
 {
-	return cpus_coerce_const(cpumask);
+	return cpus_addr(cpumask)[0];
 }
 #endif
 

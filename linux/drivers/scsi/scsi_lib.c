@@ -16,9 +16,13 @@
 #include <linux/init.h>
 #include <linux/pci.h>
 
+#include <scsi/scsi.h>
+#include <scsi/scsi_dbg.h>
+#include <scsi/scsi_device.h>
 #include <scsi/scsi_driver.h>
+#include <scsi/scsi_eh.h>
 #include <scsi/scsi_host.h>
-#include "scsi.h"
+#include <scsi/scsi_request.h>
 
 #include "scsi_priv.h"
 #include "scsi_logging.h"
@@ -255,7 +259,6 @@ void scsi_wait_req(struct scsi_request *sreq, const void *cmnd, void *buffer,
 	sreq->sr_request->rq_status = RQ_SCSI_BUSY;
 	scsi_do_req(sreq, cmnd, buffer, bufflen, scsi_wait_done,
 			timeout, retries);
-	generic_unplug_device(sreq->sr_device->request_queue);
 	wait_for_completion(&wait);
 	sreq->sr_request->waiting = NULL;
 	if (sreq->sr_request->rq_status != RQ_SCSI_DONE)
@@ -838,8 +841,8 @@ void scsi_io_completion(struct scsi_cmnd *cmd, unsigned int good_bytes,
 			printk("scsi%d: ERROR on channel %d, id %d, lun %d, CDB: ",
 			       cmd->device->host->host_no, (int) cmd->device->channel,
 			       (int) cmd->device->id, (int) cmd->device->lun);
-			print_command(cmd->data_cmnd);
-			print_sense("", cmd);
+			__scsi_print_command(cmd->data_cmnd);
+			scsi_print_sense("", cmd);
 			cmd = scsi_end_request(cmd, 0, block_bytes, 1);
 			return;
 		default:
@@ -863,7 +866,7 @@ void scsi_io_completion(struct scsi_cmnd *cmd, unsigned int good_bytes,
 		       cmd->device->lun, result);
 
 		if (driver_byte(result) & DRIVER_SENSE)
-			print_sense("", cmd);
+			scsi_print_sense("", cmd);
 		/*
 		 * Mark a single buffer as not uptodate.  Queue the remainder.
 		 * We sometimes get this cruft in the event that a medium error
@@ -1610,7 +1613,9 @@ scsi_device_set_state(struct scsi_device *sdev, enum scsi_device_state state)
 
 	case SDEV_CANCEL:
 		switch (oldstate) {
+		case SDEV_CREATED:
 		case SDEV_RUNNING:
+		case SDEV_OFFLINE:
 			break;
 		default:
 			goto illegal;
@@ -1619,9 +1624,7 @@ scsi_device_set_state(struct scsi_device *sdev, enum scsi_device_state state)
 
 	case SDEV_DEL:
 		switch (oldstate) {
-		case SDEV_CREATED:
 		case SDEV_CANCEL:
-		case SDEV_OFFLINE:
 			break;
 		default:
 			goto illegal;

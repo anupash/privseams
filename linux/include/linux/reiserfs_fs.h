@@ -75,12 +75,13 @@
 */
 #define REISERFS_DEBUG_CODE 5 /* extra messages to help find/debug errors */ 
 
+void reiserfs_warning (struct super_block *s, const char * fmt, ...);
 /* assertions handling */
 
 /** always check a condition and panic if it's false. */
 #define RASSERT( cond, format, args... )					\
 if( !( cond ) ) 								\
-  reiserfs_panic( 0, "reiserfs[%i]: assertion " #cond " failed at "	\
+  reiserfs_panic( NULL, "reiserfs[%i]: assertion " #cond " failed at "	\
 		  __FILE__ ":%i:%s: " format "\n",		\
 		  in_interrupt() ? -1 : current -> pid, __LINE__ , __FUNCTION__ , ##args )
 
@@ -268,6 +269,7 @@ int is_reiserfs_jr (struct reiserfs_super_block * rs);
 #define NO_DISK_SPACE -3
 #define NO_BALANCING_NEEDED  (-4)
 #define NO_MORE_UNUSED_CONTIGUOUS_BLOCKS (-5)
+#define QUOTA_EXCEEDED -6
 
 typedef __u32 b_blocknr_t;
 typedef __u32 unp_t;
@@ -287,7 +289,7 @@ struct unfm_nodeinfo {
 #define STAT_DATA_V2 1
 
 
-static inline struct reiserfs_inode_info *REISERFS_I(struct inode *inode)
+static inline struct reiserfs_inode_info *REISERFS_I(const struct inode *inode)
 {
 	return container_of(inode, struct reiserfs_inode_info, vfs_inode);
 }
@@ -561,9 +563,6 @@ struct item_head
 #define V1_DIRENTRY_UNIQUENESS 500
 #define V1_ANY_UNIQUENESS 555 // FIXME: comment is required
 
-extern void reiserfs_warning (const char * fmt, ...);
-/* __attribute__( ( format ( printf, 1, 2 ) ) ); */
-
 //
 // here are conversion routines
 //
@@ -576,7 +575,8 @@ static inline int uniqueness2type (__u32 uniqueness)
     case V1_DIRECT_UNIQUENESS: return TYPE_DIRECT;
     case V1_DIRENTRY_UNIQUENESS: return TYPE_DIRENTRY;
     default:
-	    reiserfs_warning( "vs-500: unknown uniqueness %d\n", uniqueness);
+	    reiserfs_warning (NULL, "vs-500: unknown uniqueness %d",
+			      uniqueness);
 	case V1_ANY_UNIQUENESS:
 	    return TYPE_ANY;
     }
@@ -591,7 +591,7 @@ static inline __u32 type2uniqueness (int type)
     case TYPE_DIRECT: return V1_DIRECT_UNIQUENESS;
     case TYPE_DIRENTRY: return V1_DIRENTRY_UNIQUENESS;
     default:
-	    reiserfs_warning( "vs-501: unknown type %d\n", type);
+	    reiserfs_warning (NULL, "vs-501: unknown type %d", type);
 	case TYPE_ANY:
 	    return V1_ANY_UNIQUENESS;
     }
@@ -630,8 +630,8 @@ static inline loff_t le_ih_k_type (const struct item_head * ih)
 static inline void set_le_key_k_offset (int version, struct key * key, loff_t offset)
 {
     (version == KEY_FORMAT_3_5) ?
-        (key->u.k_offset_v1.k_offset = cpu_to_le32 (offset)) : /* jdm check */
-	(set_offset_v2_k_offset( &(key->u.k_offset_v2), offset ));
+        (void)(key->u.k_offset_v1.k_offset = cpu_to_le32 (offset)) : /* jdm check */
+	(void)(set_offset_v2_k_offset( &(key->u.k_offset_v2), offset ));
 }
 
 
@@ -644,8 +644,8 @@ static inline void set_le_ih_k_offset (struct item_head * ih, loff_t offset)
 static inline void set_le_key_k_type (int version, struct key * key, int type)
 {
     (version == KEY_FORMAT_3_5) ?
-        (key->u.k_offset_v1.k_uniqueness = cpu_to_le32(type2uniqueness(type))):
-	(set_offset_v2_k_type( &(key->u.k_offset_v2), type ));
+        (void)(key->u.k_offset_v1.k_uniqueness = cpu_to_le32(type2uniqueness(type))):
+	(void)(set_offset_v2_k_type( &(key->u.k_offset_v2), type ));
 }
 static inline void set_le_ih_k_type (struct item_head * ih, int type)
 {
@@ -1238,9 +1238,12 @@ excessive effort to avoid disturbing the precious VFS code.:-( The
 gods only know how we are going to SMP the code that uses them.
 znodes are the way! */
 
+#define PATH_READA	0x1 /* do read ahead */
+#define PATH_READA_BACK 0x2 /* read backwards */
 
 struct  path {
   int                   path_length;                      	/* Length of the array above.   */
+  int			reada;
   struct  path_element  path_elements[EXTENDED_MAX_HEIGHT];	/* Array of the path elements.  */
   int			pos_in_item;
 };
@@ -1248,7 +1251,7 @@ struct  path {
 #define pos_in_item(path) ((path)->pos_in_item)
 
 #define INITIALIZE_PATH(var) \
-struct path var = {ILLEGAL_PATH_ELEMENT_OFFSET, }
+struct path var = {.path_length = ILLEGAL_PATH_ELEMENT_OFFSET, .reada = 0,}
 
 /* Get path element by path and path position. */
 #define PATH_OFFSET_PELEMENT(p_s_path,n_offset)  ((p_s_path)->path_elements +(n_offset))
@@ -1749,6 +1752,14 @@ int reiserfs_add_tail_list(struct inode *inode, struct buffer_head *bh);
 int reiserfs_add_ordered_list(struct inode *inode, struct buffer_head *bh);
 int journal_mark_dirty(struct reiserfs_transaction_handle *, struct super_block *, struct buffer_head *bh) ;
 
+static inline int
+reiserfs_file_data_log(struct inode *inode) {
+    if (reiserfs_data_log(inode->i_sb) ||
+       (REISERFS_I(inode)->i_flags & i_data_log))
+        return 1 ;
+    return 0 ;
+}
+
 static inline int reiserfs_transaction_running(struct super_block *s) {
     struct reiserfs_transaction_handle *th = current->journal_info ;
     if (th && th->t_super == s)
@@ -1771,7 +1782,7 @@ void reiserfs_update_inode_transaction(struct inode *) ;
 void reiserfs_wait_on_write_block(struct super_block *s) ;
 void reiserfs_block_writes(struct reiserfs_transaction_handle *th) ;
 void reiserfs_allow_writes(struct super_block *s) ;
-void reiserfs_check_lock_depth(char *caller) ;
+void reiserfs_check_lock_depth(struct super_block *s, char *caller) ;
 int reiserfs_prepare_for_journal(struct super_block *, struct buffer_head *bh, int wait) ;
 void reiserfs_restore_prepared_buffer(struct super_block *, struct buffer_head *bh) ;
 int journal_init(struct super_block *, const char * j_dev_name, int old_format, unsigned int) ;
@@ -1889,11 +1900,13 @@ void pathrelse_and_restore (struct super_block *s, struct path * p_s_search_path
 int reiserfs_insert_item (struct reiserfs_transaction_handle *th, 
 			  struct path * path, 
 			  const struct cpu_key * key,
-			  struct item_head * ih, const char * body);
+			  struct item_head * ih,
+			  struct inode *inode, const char * body);
 
 int reiserfs_paste_into_item (struct reiserfs_transaction_handle *th,
 			      struct path * path,
 			      const struct cpu_key * key,
+			      struct inode *inode,
 			      const char * body, int paste_size);
 
 int reiserfs_cut_from_item (struct reiserfs_transaction_handle *th,
@@ -1910,7 +1923,7 @@ int reiserfs_delete_item (struct reiserfs_transaction_handle *th,
 			  struct buffer_head  * p_s_un_bh);
 
 void reiserfs_delete_solid_item (struct reiserfs_transaction_handle *th,
-                                                                struct key * key);
+				 struct inode *inode, struct key * key);
 void reiserfs_delete_object (struct reiserfs_transaction_handle *th, struct inode * p_s_inode);
 void reiserfs_do_truncate (struct reiserfs_transaction_handle *th, 
 			   struct  inode * p_s_inode, struct page *, 
@@ -1955,11 +1968,22 @@ int reiserfs_new_inode (struct reiserfs_transaction_handle *th,
 				   struct inode * dir, int mode, 
 				   const char * symname, loff_t i_size,
 				   struct dentry *dentry, struct inode *inode);
-int reiserfs_sync_inode (struct reiserfs_transaction_handle *th, struct inode * inode);
-void reiserfs_update_sd (struct reiserfs_transaction_handle *th, struct inode * inode);
+
+int reiserfs_sync_inode (struct reiserfs_transaction_handle *th,
+                         struct inode * inode);
+
+void reiserfs_update_sd_size (struct reiserfs_transaction_handle *th,
+                              struct inode * inode, loff_t size);
+
+static inline void reiserfs_update_sd(struct reiserfs_transaction_handle *th,
+                                      struct inode *inode)
+{
+    reiserfs_update_sd_size(th, inode, inode->i_size) ;
+}
 
 void sd_attrs_to_i_attrs( __u16 sd_attrs, struct inode *inode );
 void i_attrs_to_sd_attrs( struct inode *inode, __u16 *sd_attrs );
+int reiserfs_setattr(struct dentry *dentry, struct iattr *attr);
 
 /* namei.c */
 void set_de_name_and_namelen (struct reiserfs_dir_entry * de);
@@ -2010,6 +2034,8 @@ int reiserfs_global_version_in_proc( char *buffer, char **start, off_t offset,
 
 /* dir.c */
 extern struct inode_operations reiserfs_dir_inode_operations;
+extern struct inode_operations reiserfs_symlink_inode_operations;
+extern struct inode_operations reiserfs_special_inode_operations;
 extern struct file_operations reiserfs_dir_operations;
 
 /* tail_conversion.c */
@@ -2048,10 +2074,10 @@ void free_buffers_in_tb (struct tree_balance * p_s_tb);
 
 
 /* prints.c */
-void reiserfs_panic (struct super_block * s, const char * fmt, ...)
-__attribute__ ( ( noreturn ) );/* __attribute__( ( format ( printf, 2, 3 ) ) ) */
+void reiserfs_panic (struct super_block * s, const char * fmt, ...) __attribute__ ( ( noreturn ) );
+void reiserfs_info (struct super_block *s, const char * fmt, ...);
+void reiserfs_printk (const char * fmt, ...);
 void reiserfs_debug (struct super_block *s, int level, const char * fmt, ...);
-/* __attribute__( ( format ( printf, 3, 4 ) ) ); */
 void print_virtual_node (struct virtual_node * vn);
 void print_indirect_item (struct buffer_head * bh, int item_num);
 void store_print_tb (struct tree_balance * tb);
@@ -2135,8 +2161,17 @@ struct buffer_head * get_FEB (struct tree_balance *);
 typedef struct __reiserfs_blocknr_hint reiserfs_blocknr_hint_t;
 
 int reiserfs_parse_alloc_options (struct super_block *, char *);
+void reiserfs_init_alloc_options (struct super_block *s);
+
+/*
+ * given a directory, this will tell you what packing locality
+ * to use for a new object underneat it.  The locality is returned
+ * in disk byte order (le).
+ */
+u32 reiserfs_choose_packing(struct inode *dir);
+
 int is_reusable (struct super_block * s, b_blocknr_t block, int bit_value);
-void reiserfs_free_block (struct reiserfs_transaction_handle *th, b_blocknr_t);
+void reiserfs_free_block (struct reiserfs_transaction_handle *th, struct inode *, b_blocknr_t, int for_unformatted);
 int reiserfs_allocate_blocknrs(reiserfs_blocknr_hint_t *, b_blocknr_t * , int, int);
 extern inline int reiserfs_new_form_blocknrs (struct tree_balance * tb,
 					      b_blocknr_t *new_blocknrs, int amount_needed)
@@ -2237,6 +2272,9 @@ int reiserfs_unpack (struct inode * inode, struct file * filp);
 #define reiserfs_write_lock( sb ) lock_kernel()
 #define reiserfs_write_unlock( sb ) unlock_kernel()
  			         
+/* xattr stuff */
+#define REISERFS_XATTR_DIR_SEM(s) (REISERFS_SB(s)->xattr_dir_sem)
+
 #endif /* _LINUX_REISER_FS_H */
 
 

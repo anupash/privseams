@@ -412,9 +412,7 @@ DataAccess:
 1:	stw	r10,_DSISR(r11)
 	mr	r5,r10
 	mfspr	r4,DAR
-	stw	r4,_DAR(r11)
-	addi	r3,r1,STACK_FRAME_OVERHEAD
-	EXC_XFER_EE_LITE(0x300, do_page_fault)
+	EXC_XFER_EE_LITE(0x300, handle_page_fault)
 
 #ifdef CONFIG_PPC64BRIDGE
 /* SLB fault on data access. */
@@ -436,10 +434,9 @@ InstructionAccess:
 	li	r3,0			/* into the hash table */
 	mr	r4,r12			/* SRR0 is fault address */
 	bl	hash_page
-1:	addi	r3,r1,STACK_FRAME_OVERHEAD
-	mr	r4,r12
+1:	mr	r4,r12
 	mr	r5,r9
-	EXC_XFER_EE_LITE(0x400, do_page_fault)
+	EXC_XFER_EE_LITE(0x400, handle_page_fault)
 
 #ifdef CONFIG_PPC64BRIDGE
 /* SLB fault on instruction access. */
@@ -491,14 +488,16 @@ SystemCall:
 /*
  * The Altivec unavailable trap is at 0x0f20.  Foo.
  * We effectively remap it to 0x3000.
+ * We include an altivec unavailable exception vector even if
+ * not configured for Altivec, so that you can't panic a
+ * non-altivec kernel running on a machine with altivec just
+ * by executing an altivec instruction.
  */
 	. = 0xf00
 	b	Trap_0f
 
 	. = 0xf20
-#ifdef CONFIG_ALTIVEC
 	b	AltiVecUnavailable
-#endif
 
 Trap_0f:
 	EXCEPTION_PROLOG
@@ -553,7 +552,7 @@ InstructionTLBMiss:
 	rlwimi	r3,r3,32-1,31,31	/* _PAGE_USER -> PP lsb */
 	ori	r1,r1,0xe14		/* clear out reserved bits and M */
 	andc	r1,r3,r1		/* PP = user? (rw&dirty? 2: 3): 0 */
-	mtspr	RPA,r1
+	mtspr	SPRN_RPA,r1
 	mfspr	r3,IMISS
 	tlbli	r3
 	mfspr	r3,SRR1		/* Need to restore CR0 */
@@ -627,7 +626,7 @@ DataLoadTLBMiss:
 	rlwimi	r3,r3,32-1,31,31	/* _PAGE_USER -> PP lsb */
 	ori	r1,r1,0xe14		/* clear out reserved bits and M */
 	andc	r1,r3,r1		/* PP = user? (rw&dirty? 2: 3): 0 */
-	mtspr	RPA,r1
+	mtspr	SPRN_RPA,r1
 	mfspr	r3,DMISS
 	tlbld	r3
 	mfspr	r3,SRR1		/* Need to restore CR0 */
@@ -695,7 +694,7 @@ DataStoreTLBMiss:
 	rlwimi	r3,r3,32-1,30,30	/* _PAGE_USER -> PP msb */
 	li	r1,0xe15		/* clear out reserved bits and M */
 	andc	r1,r3,r1		/* PP = user? 2: 0 */
-	mtspr	RPA,r1
+	mtspr	SPRN_RPA,r1
 	mfspr	r3,DMISS
 	tlbld	r3
 	mfspr	r3,SRR1		/* Need to restore CR0 */
@@ -705,6 +704,7 @@ DataStoreTLBMiss:
 #ifndef CONFIG_ALTIVEC
 #define AltivecAssistException	UnknownException
 #endif
+
 	EXCEPTION(0x1300, Trap_13, InstructionBreakpoint, EXC_XFER_EE)
 	EXCEPTION(0x1400, SMI, SMIException, EXC_XFER_EE)
 	EXCEPTION(0x1500, Trap_15, UnknownException, EXC_XFER_EE)
@@ -746,12 +746,12 @@ DataStoreTLBMiss:
 
 	. = 0x3000
 
-#ifdef CONFIG_ALTIVEC
 AltiVecUnavailable:
 	EXCEPTION_PROLOG
+#ifdef CONFIG_ALTIVEC
 	bne	load_up_altivec		/* if from user, just load it up */
-	EXC_XFER_EE_LITE(0xf20, KernelAltiVec)
 #endif /* CONFIG_ALTIVEC */
+	EXC_XFER_EE_LITE(0xf20, AltivecUnavailException)
 
 #ifdef CONFIG_PPC64BRIDGE
 DataAccess:
@@ -1633,7 +1633,7 @@ initial_mm_power4:
 	blr
 
 #endif /* CONFIG_POWER4 */
-	
+
 #ifdef CONFIG_8260
 /* Jump into the system reset for the rom.
  * We first disable the MMU, and then jump to the ROM reset address.

@@ -83,7 +83,7 @@ int saa7146_buffer_queue(struct saa7146_dev *dev,
 			 struct saa7146_dmaqueue *q,
 			 struct saa7146_buf *buf)
 {
-#if DEBUG_SPINLOCKS
+#ifdef DEBUG_SPINLOCKS
 	BUG_ON(!spin_is_locked(&dev->slock));
 #endif
 	DEB_EE(("dev:%p, dmaq:%p, buf:%p\n", dev, q, buf));
@@ -109,7 +109,7 @@ void saa7146_buffer_finish(struct saa7146_dev *dev,
 			   struct saa7146_dmaqueue *q,
 			   int state)
 {
-#if DEBUG_SPINLOCKS
+#ifdef DEBUG_SPINLOCKS
 	BUG_ON(!spin_is_locked(&dev->slock));
 #endif
 	if( NULL == q->curr ) {
@@ -145,7 +145,7 @@ void saa7146_buffer_next(struct saa7146_dev *dev,
 
 	DEB_INT(("dev:%p, dmaq:%p, vbi:%d\n", dev, q, vbi));
 
-#if DEBUG_SPINLOCKS
+#ifdef DEBUG_SPINLOCKS
 	BUG_ON(!spin_is_locked(&dev->slock));
 #endif
 	if (!list_empty(&q->queue)) {
@@ -396,7 +396,7 @@ static unsigned int fops_poll(struct file *file, struct poll_table_struct *wait)
 	return 0;
 }
 
-static ssize_t fops_read(struct file *file, char *data, size_t count, loff_t *ppos)
+static ssize_t fops_read(struct file *file, char __user *data, size_t count, loff_t *ppos)
 {
 	struct saa7146_fh *fh = file->private_data;
 

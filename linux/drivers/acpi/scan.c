@@ -4,7 +4,6 @@
 
 #include <linux/init.h>
 #include <linux/acpi.h>
-#include <linux/module.h>
 
 #include <acpi/acpi_drivers.h>
 #include <acpi/acinterp.h>	/* for acpi_ex_eisa_id_to_string() */
@@ -16,12 +15,6 @@ ACPI_MODULE_NAME		("scan")
 #define STRUCT_TO_INT(s)	(*((int*)&s))
 
 extern struct acpi_device		*acpi_root;
-struct acpi_device 		*acpi_fixed_pwr_button;
-struct acpi_device 		*acpi_fixed_sleep_button;
-
-EXPORT_SYMBOL(acpi_fixed_pwr_button);
-EXPORT_SYMBOL(acpi_fixed_sleep_button);
-
 
 
 #define ACPI_BUS_CLASS			"system_bus"
@@ -108,7 +101,7 @@ acpi_bus_get_power_flags (
 	struct acpi_device	*device)
 {
 	acpi_status             status = 0;
-	acpi_handle		handle = 0;
+	acpi_handle		handle = NULL;
 	u32                     i = 0;
 
 	ACPI_FUNCTION_TRACE("acpi_bus_get_power_flags");
@@ -318,8 +311,10 @@ static int acpi_driver_detach(struct acpi_driver * drv)
 		struct acpi_device * dev = container_of(node,struct acpi_device,g_list);
 
 		if (dev->driver == drv) {
+			spin_unlock(&acpi_device_lock);
 			if (drv->ops.remove)
 				drv->ops.remove(dev,ACPI_BUS_REMOVAL_NORMAL);
+			spin_lock(&acpi_device_lock);
 			dev->driver = NULL;
 			dev->driver_data = NULL;
 			atomic_dec(&drv->references);
@@ -804,8 +799,8 @@ static int acpi_bus_scan (struct acpi_device	*start)
 	acpi_status		status = AE_OK;
 	struct acpi_device	*parent = NULL;
 	struct acpi_device	*child = NULL;
-	acpi_handle		phandle = 0;
-	acpi_handle		chandle = 0;
+	acpi_handle		phandle = NULL;
+	acpi_handle		chandle = NULL;
 	acpi_object_type	type = 0;
 	u32			level = 1;
 
@@ -848,7 +843,7 @@ static int acpi_bus_scan (struct acpi_device	*start)
 		if (type == ACPI_TYPE_LOCAL_SCOPE) {
 			level++;
 			phandle = chandle;
-			chandle = 0;
+			chandle = NULL;
 			continue;
 		}
 
@@ -888,11 +883,11 @@ static int acpi_bus_scan (struct acpi_device	*start)
 		 */
 		if (child->status.present) {
 			status = acpi_get_next_object(ACPI_TYPE_ANY, chandle,
-				0, NULL);
+						      NULL, NULL);
 			if (ACPI_SUCCESS(status)) {
 				level++;
 				phandle = chandle;
-				chandle = 0;
+				chandle = NULL;
 				parent = child;
 			}
 		}
@@ -907,12 +902,9 @@ acpi_bus_scan_fixed (
 	struct acpi_device	*root)
 {
 	int			result = 0;
+	struct acpi_device	*device = NULL;
 
 	ACPI_FUNCTION_TRACE("acpi_bus_scan_fixed");
-
-	acpi_fixed_pwr_button = NULL;
-	acpi_fixed_sleep_button = NULL;
-
 
 	if (!root)
 		return_VALUE(-ENODEV);
@@ -921,11 +913,11 @@ acpi_bus_scan_fixed (
 	 * Enumerate all fixed-feature devices.
 	 */
 	if (acpi_fadt.pwr_button == 0)
-		result = acpi_bus_add(&acpi_fixed_pwr_button, acpi_root, 
+		result = acpi_bus_add(&device, acpi_root, 
 			NULL, ACPI_BUS_TYPE_POWER_BUTTON);
 
 	if (acpi_fadt.sleep_button == 0)
-		result = acpi_bus_add(&acpi_fixed_sleep_button, acpi_root, 
+		result = acpi_bus_add(&device, acpi_root, 
 			NULL, ACPI_BUS_TYPE_SLEEP_BUTTON);
 
 	return_VALUE(result);

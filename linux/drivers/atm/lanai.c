@@ -2435,7 +2435,7 @@ static int lanai_open(struct atm_vcc *atmvcc)
 #if 0
 /* ioctl operations for card */
 /* NOTE: these are all DEBUGGING ONLY currently */
-static int lanai_ioctl(struct atm_dev *atmdev, unsigned int cmd, void *arg)
+static int lanai_ioctl(struct atm_dev *atmdev, unsigned int cmd, void __user *arg)
 {
 	int result = 0;
 	struct lanai_dev *lanai = (struct lanai_dev *) atmdev->dev_data;
@@ -2702,7 +2702,7 @@ static int __devinit lanai_init_one(struct pci_dev *pci,
 		return -ENOMEM;
 	}
 
-	atmdev = atm_dev_register(DEV_LABEL, &ops, -1, 0);
+	atmdev = atm_dev_register(DEV_LABEL, &ops, -1, NULL);
 	if (atmdev == NULL) {
 		printk(KERN_ERR DEV_LABEL
 		    ": couldn't register atm device!\n");

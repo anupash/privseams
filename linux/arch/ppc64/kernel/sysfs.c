@@ -114,6 +114,7 @@ void ppc64_enable_pmcs(void)
 	unsigned long hid0;
 	unsigned long set, reset;
 	int ret;
+	unsigned int ctrl;
 
 	/* Only need to enable them once */
 	if (__get_cpu_var(pmcs_enabled))
@@ -155,8 +156,18 @@ void ppc64_enable_pmcs(void)
 
 	/* instruct hypervisor to maintain PMCs */
 	if (cur_cpu_spec->firmware_features & FW_FEATURE_SPLPAR) {
-		char *ptr = (char *)&paca[smp_processor_id()].xLpPaca;
+		char *ptr = (char *)&paca[smp_processor_id()].lppaca;
 		ptr[0xBB] = 1;
+	}
+
+	/*
+	 * On SMT machines we have to set the run latch in the ctrl register
+	 * in order to make PMC6 spin.
+	 */
+	if (cur_cpu_spec->cpu_features & CPU_FTR_SMT) {
+		ctrl = mfspr(CTRLF);
+		ctrl |= RUNLATCH;
+		mtspr(CTRLT, ctrl);
 	}
 }
 #endif
@@ -197,8 +208,8 @@ static ssize_t show_##NAME(struct sys_device *dev, char *buf) \
 	unsigned long val = run_on_cpu(cpu->sysdev.id, read_##NAME, 0); \
 	return sprintf(buf, "%lx\n", val); \
 } \
-static ssize_t store_##NAME(struct sys_device *dev, const char *buf, \
-			    size_t count) \
+static ssize_t __attribute_used__ \
+	store_##NAME(struct sys_device *dev, const char *buf, size_t count) \
 { \
 	struct cpu *cpu = container_of(dev, struct cpu, sysdev); \
 	unsigned long val; \
@@ -314,6 +325,16 @@ static int __init topology_init(void)
 #ifdef CONFIG_NUMA
 		parent = &node_devices[cpu_to_node(cpu)];
 #endif
+		/*
+		 * For now, we just see if the system supports making
+		 * the RTAS calls for CPU hotplug.  But, there may be a
+		 * more comprehensive way to do this for an individual
+		 * CPU.  For instance, the boot cpu might never be valid
+		 * for hotplugging.
+		 */
+		if (systemcfg->platform != PLATFORM_PSERIES_LPAR)
+			c->no_control = 1;
+
 		register_cpu(c, cpu, parent);
 
 		register_cpu_pmc(&c->sysdev);

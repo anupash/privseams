@@ -222,10 +222,30 @@ static void mark_swapfiles(swp_entry_t prev, int mode)
 	__free_page(page);
 }
 
+
+/*
+ * Check whether the swap device is the specified resume
+ * device, irrespective of whether they are specified by
+ * identical names.
+ *
+ * (Thus, device inode aliasing is allowed.  You can say /dev/hda4
+ * instead of /dev/ide/host0/bus0/target0/lun0/part4 [if using devfs]
+ * and they'll be considered the same device.  This is *necessary* for
+ * devfs, since the resume code can only recognize the form /dev/hda4,
+ * but the suspend code would see the long name.)
+ */
+static int is_resume_device(const struct swap_info_struct *swap_info)
+{
+	struct file *file = swap_info->swap_file;
+	struct inode *inode = file->f_dentry->d_inode;
+
+	return S_ISBLK(inode->i_mode) &&
+		resume_device == MKDEV(imajor(inode), iminor(inode));
+}
+
 static void read_swapfiles(void) /* This is called before saving image */
 {
 	int i, len;
-	static char buff[sizeof(resume_file)], *sname;
 	
 	len=strlen(resume_file);
 	root_swap = 0xFFFF;
@@ -244,17 +264,10 @@ static void read_swapfiles(void) /* This is called before saving image */
 					swapfile_used[i] = SWAPFILE_IGNORED;				  
 			} else {
 	  			/* we ignore all swap devices that are not the resume_file */
-				sname = d_path(swap_info[i].swap_file->f_dentry,
-					       swap_info[i].swap_file->f_vfsmnt,
-					       buff,
-					       sizeof(buff));
-				if (!strcmp(sname, resume_file)) {
+				if (is_resume_device(&swap_info[i])) {
 					swapfile_used[i] = SWAPFILE_SUSPEND;
 					root_swap = i;
 				} else {
-#if 0
-					printk( "Resume: device %s (%x != %x) ignored\n", swap_info[i].swap_file->d_name.name, swap_info[i].swap_device, resume_device );				  
-#endif
 				  	swapfile_used[i] = SWAPFILE_IGNORED;
 				}
 			}
@@ -304,7 +317,8 @@ static int write_suspend_image(void)
 	for (i=0; i<nr_copy_pages; i++) {
 		if (!(i%100))
 			printk( "." );
-		if (!(entry = get_swap_page()).val)
+		entry = get_swap_page();
+		if (!entry.val)
 			panic("\nNot enough swapspace when writing data" );
 		
 		if (swapfile_used[swp_type(entry)] != SWAPFILE_SUSPEND)
@@ -321,7 +335,8 @@ static int write_suspend_image(void)
 		cur = (union diskpage *)((char *) pagedir_nosave)+i;
 		BUG_ON ((char *) cur != (((char *) pagedir_nosave) + i*PAGE_SIZE));
 		printk( "." );
-		if (!(entry = get_swap_page()).val) {
+		entry = get_swap_page();
+		if (!entry.val) {
 			printk(KERN_CRIT "Not enough swapspace when writing pgdir\n" );
 			panic("Don't know how to recover");
 			free_page((unsigned long) buffer);
@@ -343,7 +358,8 @@ static int write_suspend_image(void)
 	BUG_ON (sizeof(struct suspend_header) > PAGE_SIZE-sizeof(swp_entry_t));
 	BUG_ON (sizeof(union diskpage) != PAGE_SIZE);
 	BUG_ON (sizeof(struct link) != PAGE_SIZE);
-	if (!(entry = get_swap_page()).val)
+	entry = get_swap_page();
+	if (!entry.val)
 		panic( "\nNot enough swapspace when writing header" );
 	if (swapfile_used[swp_type(entry)] != SWAPFILE_SUSPEND)
 		panic("\nNot enough swapspace for header on suspend device" );
@@ -490,6 +506,9 @@ static int count_and_copy_zone(struct zone *zone, struct pbe **pagedir_p)
 		if (!pbe)
 			continue;
 		pbe->orig_address = (long) page_address(page);
+		/* Copy page is dangerous: it likes to mess with
+		   preempt count on specific cpus. Wrong preempt count is then copied,
+		   oops. */
 		copy_page((void *)pbe->address, (void *)pbe->orig_address);
 		pbe++;
 	}
@@ -680,6 +699,7 @@ static void suspend_power_down(void)
 	else
 #endif
 	{
+		device_suspend(3);
 		device_shutdown();
 		machine_power_off();
 	}
@@ -700,7 +720,7 @@ asmlinkage void do_magic_resume_1(void)
 	mb();
 	spin_lock_irq(&suspend_pagedir_lock);	/* Done to disable interrupts */ 
 
-	device_power_down(4);
+	device_power_down(3);
 	PRINTK( "Waiting for DMAs to settle down...\n");
 	mdelay(1000);	/* We do not want some readahead with DMA to corrupt our memory, right?
 			   Do it with disabled interrupts for best effect. That way, if some
@@ -769,7 +789,7 @@ asmlinkage void do_magic_suspend_2(void)
 {
 	int is_problem;
 	read_swapfiles();
-	device_power_down(4);
+	device_power_down(3);
 	is_problem = suspend_prepare_image();
 	device_power_up();
 	spin_unlock_irq(&suspend_pagedir_lock);
@@ -786,7 +806,6 @@ asmlinkage void do_magic_suspend_2(void)
 	barrier();
 	mb();
 	spin_lock_irq(&suspend_pagedir_lock);	/* Done to disable interrupts */ 
-	mdelay(1000);
 
 	free_pages((unsigned long) pagedir_nosave, pagedir_order);
 	spin_unlock_irq(&suspend_pagedir_lock);
@@ -823,9 +842,10 @@ int software_suspend(void)
                    need half of memory free. */
 
 		free_some_memory();
-		
-		/* Save state of all device drivers, and stop them. */		   
-		if ((res = device_suspend(4))==0)
+		disable_nonboot_cpus();
+		/* Save state of all device drivers, and stop them. */
+		printk("Suspending devices... ");
+		if ((res = device_suspend(3))==0) {
 			/* If stopping device drivers worked, we proceed basically into
 			 * suspend_save_image.
 			 *
@@ -836,7 +856,9 @@ int software_suspend(void)
 			 * using normal kernel mechanism.
 			 */
 			do_magic(0);
+		}
 		thaw_processes();
+		enable_nonboot_cpus();
 	} else
 		res = -EBUSY;
 	software_suspend_enabled = 1;
@@ -846,19 +868,6 @@ int software_suspend(void)
 }
 
 /* More restore stuff */
-
-/* FIXME: Why not memcpy(to, from, 1<<pagedir_order*PAGE_SIZE)? */
-static void copy_pagedir(suspend_pagedir_t *to, suspend_pagedir_t *from)
-{
-	int i;
-	char *topointer=(char *)to, *frompointer=(char *)from;
-
-	for(i=0; i < 1 << pagedir_order; i++) {
-		copy_page(topointer, frompointer);
-		topointer += PAGE_SIZE;
-		frompointer += PAGE_SIZE;
-	}
-}
 
 #define does_collide(addr) does_collide_order(pagedir_nosave, addr, 0)
 
@@ -907,19 +916,19 @@ static int relocate_pagedir(void)
 	 * We have to avoid recursion (not to overflow kernel stack),
 	 * and that's why code looks pretty cryptic 
 	 */
-	suspend_pagedir_t *new_pagedir, *old_pagedir = pagedir_nosave;
+	suspend_pagedir_t *old_pagedir = pagedir_nosave;
 	void **eaten_memory = NULL;
 	void **c = eaten_memory, *m, *f;
+	int ret = 0;
 
-	printk("Relocating pagedir");
+	printk("Relocating pagedir ");
 
 	if(!does_collide_order(old_pagedir, (unsigned long)old_pagedir, pagedir_order)) {
 		printk("not necessary\n");
 		return 0;
 	}
 
-	while ((m = (void *) __get_free_pages(GFP_ATOMIC, pagedir_order))) {
-		memset(m, 0, PAGE_SIZE);
+	while ((m = (void *) __get_free_pages(GFP_ATOMIC, pagedir_order)) != NULL) {
 		if (!does_collide_order(old_pagedir, (unsigned long)m, pagedir_order))
 			break;
 		eaten_memory = m;
@@ -928,22 +937,23 @@ static int relocate_pagedir(void)
 		c = eaten_memory;
 	}
 
-	if (!m)
-		return -ENOMEM;
-
-	pagedir_nosave = new_pagedir = m;
-	copy_pagedir(new_pagedir, old_pagedir);
+	if (!m) {
+		printk("out of memory\n");
+		ret = -ENOMEM;
+	} else {
+		pagedir_nosave =
+			memcpy(m, old_pagedir, PAGE_SIZE << pagedir_order);
+	}
 
 	c = eaten_memory;
-	while(c) {
+	while (c) {
 		printk(":");
-		f = *c;
+		f = c;
 		c = *c;
-		if (f)
-			free_pages((unsigned long)f, pagedir_order);
+		free_pages((unsigned long)f, pagedir_order);
 	}
 	printk("|\n");
-	return 0;
+	return ret;
 }
 
 /*
@@ -1098,7 +1108,7 @@ static int __init __read_suspend_image(struct block_device *bdev, union diskpage
 	return 0;
 }
 
-static int read_suspend_image(const char * specialfile, int noresume)
+static int __init read_suspend_image(const char * specialfile, int noresume)
 {
 	union diskpage *cur;
 	unsigned long scratch_page = 0;
@@ -1188,7 +1198,9 @@ static int __init software_resume(void)
 	printk( "resuming from %s\n", resume_file);
 	if (read_suspend_image(resume_file, 0))
 		goto read_failure;
-	device_suspend(4);
+	/* FIXME: Should we stop processes here, just to be safer? */
+	disable_nonboot_cpus();
+	device_suspend(3);
 	do_magic(1);
 	panic("This never returns");
 

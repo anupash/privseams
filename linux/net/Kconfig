@@ -109,6 +109,8 @@ source "net/ipv4/Kconfig"
 config IPV6
 	tristate "The IPv6 protocol (EXPERIMENTAL)"
 	depends on INET && EXPERIMENTAL
+	select CRYPTO if IPV6_PRIVACY
+	select CRYPTO_MD5 if IPV6_PRIVACY
 	---help---
 	  This is experimental support for the IP version 6 (formerly called
 	  IPng "IP next generation").  You will still be able to do
@@ -546,26 +548,6 @@ config WAN_ROUTER
 
 	  To compile WAN routing support as a module, choose M here: the
 	  module will be called wanrouter.
-
-	  If unsure, say N.
-
-config NET_FASTROUTE
-	bool "Fast switching (read help!)"
-	depends on EXPERIMENTAL
-	---help---
-	  Saying Y here enables direct NIC-to-NIC (NIC = Network Interface
-	  Card) data transfers on the local network, which is fast.
-
-	  IMPORTANT NOTE: This option is NOT COMPATIBLE with "Network packet
-	  filtering" (CONFIG_NETFILTER). Say N here if you say Y there.
-
-	  However, it will work with all options in the "Advanced router"
-	  section (except for "Use TOS value as routing key" and
-	  "Use FWMARK value as routing key").
-
-	  At the moment, few devices support fast switching (tulip is one of
-	  them, a modified 8390 driver can be found at
-	  <ftp://ftp.tux.org/pub/net/ip-routing/fastroute/fastroute-8390.tar.gz>).
 
 	  If unsure, say N.
 

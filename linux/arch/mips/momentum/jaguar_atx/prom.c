@@ -25,25 +25,14 @@
 #include <asm/addrspace.h>
 #include <asm/bootinfo.h>
 #include <asm/mv64340.h>
+#include <asm/pmon.h>
 
 #include "jaguar_atx_fpga.h"
 
 extern void ja_setup_console(void);
 
-struct callvectors {
-	int	(*open) (char*, int, int);		/*	 0 */
-	int	(*close) (int);				/*	 4 */
-	int	(*read) (int, void*, int);		/*	 8 */
-	int	(*write) (int, void*, int);		/*	12 */
-	off_t	(*lseek) (int, off_t, int);		/*	16 */
-	int	(*printf) (const char*, ...);		/*	20 */
-	void	(*cacheflush) (void);			/*	24 */
-	char*	(*gets) (char*);			/*	28 */
-};
-
 struct callvectors *debug_vectors;
 
-extern unsigned long mv64340_base;
 extern unsigned long cpu_clock;
 
 const char *get_system_type(void)
@@ -195,13 +184,13 @@ void __init prom_init(void)
 			break;
 
 		if (strncmp("gtbase", ptr, strlen("gtbase")) == 0) {
-			mv64340_base = simple_strtol(ptr + strlen("gtbase="),
+			marvell_base = simple_strtol(ptr + strlen("gtbase="),
 							NULL, 16);
 
-			if ((mv64340_base & 0xffffffff00000000) == 0)
-				mv64340_base |= 0xffffffff00000000;
+			if ((marvell_base & 0xffffffff00000000) == 0)
+				marvell_base |= 0xffffffff00000000;
 
-			printk("mv64340_base set to 0x%016lx\n", mv64340_base);
+			printk("marvell_base set to 0x%016lx\n", marvell_base);
 		}
 		if (strncmp("cpuclock", ptr, strlen("cpuclock")) == 0) {
 			cpu_clock = simple_strtol(ptr + strlen("cpuclock="),
@@ -228,7 +217,7 @@ void __init prom_init(void)
 
 	while (*env) {
 		if (strncmp("gtbase", *env, strlen("gtbase")) == 0) {
-			mv64340_base = simple_strtol(*env + strlen("gtbase="),
+			marvell_base = simple_strtol(*env + strlen("gtbase="),
 							NULL, 16);
 		}
 		if (strncmp("cpuclock", *env, strlen("cpuclock")) == 0) {
@@ -253,20 +242,6 @@ void __init prom_free_prom_memory(void)
 
 void __init prom_fixup_mem_map(unsigned long start, unsigned long end)
 {
-}
-
-/*
- * SMP support
- */
-int prom_setup_smp(void)
-{
-	int	num_cpus = 2;
-
-	/*
-	 * We know that the RM9000 on the Jaguar ATX board has 2 cores.
-	 * Hence, this can be hardcoded for now.
-	 */
-	return num_cpus;
 }
 
 int prom_boot_secondary(int cpu, unsigned long sp, unsigned long gp)

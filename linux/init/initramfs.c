@@ -169,7 +169,7 @@ static int __init do_collect(void)
 	memcpy(collect, victim, n);
 	eat(n);
 	collect += n;
-	if (remains -= n)
+	if ((remains -= n) != 0)
 		return 1;
 	state = next_state;
 	return 0;
@@ -207,7 +207,7 @@ static int __init do_header(void)
 
 static int __init do_skip(void)
 {
-	if (this_header + count <= next_header) {
+	if (this_header + count < next_header) {
 		eat(count);
 		return 1;
 	} else {

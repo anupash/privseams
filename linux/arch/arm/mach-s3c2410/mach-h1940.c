@@ -52,7 +52,7 @@ static struct s3c2410_uartcfg ipaq_uartcfgs[] = {
 	[0] = {
 		.hwport	     = 0,
 		.flags	     = 0,
-		.clock	     = &s3c2410_hclk,
+		.clock	     = &s3c2410_pclk,
 		.ucon	     = 0x3c5,
 		.ulcon	     = 0x03,
 		.ufcon	     = 0x51,
@@ -60,7 +60,7 @@ static struct s3c2410_uartcfg ipaq_uartcfgs[] = {
 	[1] = {
 		.hwport	     = 1,
 		.flags	     = 0,
-		.clock	     = &s3c2410_hclk,
+		.clock	     = &s3c2410_pclk,
 		.ucon	     = 0x245,
 		.ulcon	     = 0x03,
 		.ufcon	     = 0x00,
@@ -69,7 +69,7 @@ static struct s3c2410_uartcfg ipaq_uartcfgs[] = {
 	[2] = {
 		.hwport	     = 2,
 		.flags	     = 0,
-		.clock	     = &s3c2410_hclk,
+		.clock	     = &s3c2410_pclk,
 		.ucon	     = 0x3c5,
 		.ulcon	     = 0x43,
 		.ufcon	     = 0x51,
@@ -91,10 +91,16 @@ void __init ipaq_init_irq(void)
 
 }
 
+void __init ipaq_init_time(void)
+{
+	s3c2410_init_time();
+}
+
 MACHINE_START(H1940, "IPAQ-H1940")
      MAINTAINER("Ben Dooks <ben@fluff.org>")
      BOOT_MEM(S3C2410_SDRAM_PA, S3C2410_PA_UART, S3C2410_VA_UART)
      BOOT_PARAMS(S3C2410_SDRAM_PA + 0x100)
      MAPIO(ipaq_map_io)
      INITIRQ(ipaq_init_irq)
+     INITTIME(ipaq_init_time)
 MACHINE_END

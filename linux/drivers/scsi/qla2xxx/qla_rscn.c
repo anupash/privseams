@@ -16,8 +16,6 @@
  * General Public License for more details.
  *
  */
-#include "qla_os.h"
-
 #include "qla_def.h"
 
 /**
@@ -283,6 +281,8 @@ qla2x00_iodesc_timeout(unsigned long data)
 
 	qla2x00_free_iodesc(iodesc);
 
+	qla_printk(KERN_WARNING, iodesc->ha,
+	    "IO descriptor timeout. Scheduling ISP abort.\n");
 	set_bit(ISP_ABORT_NEEDED, &iodesc->ha->dpc_flags);
 }
 
@@ -385,7 +385,7 @@ qla2x00_get_mbx_iocb_entry(scsi_qla_host_t *ha, uint32_t handle)
 		if  (ha->req_ring_index < cnt)
 			ha->req_q_cnt = cnt - ha->req_ring_index;
 		else
-			ha->req_q_cnt = REQUEST_ENTRY_CNT -
+			ha->req_q_cnt = ha->request_q_length -
 			    (ha->req_ring_index - cnt);
 	}
 	if (ha->req_q_cnt >= 3) {
@@ -436,6 +436,7 @@ qla2x00_send_abort_iocb(scsi_qla_host_t *ha, struct io_descriptor *iodesc,
 	    cpu_to_le16(iodesc->remote_fcport->loop_id);
 	mbxentry->mb2 = LSW(handle_to_abort);
 	mbxentry->mb3 = MSW(handle_to_abort);
+	wmb();
 
 	qla2x00_add_iodesc_timer(iodesc);
 
@@ -512,6 +513,7 @@ qla2x00_send_adisc_iocb(scsi_qla_host_t *ha, struct io_descriptor *iodesc,
 	mbxentry->mb6 = cpu_to_le16(MSW(MSD(ha->iodesc_pd_dma)));
 	mbxentry->mb7 = cpu_to_le16(LSW(MSD(ha->iodesc_pd_dma)));
 	mbxentry->mb10 = __constant_cpu_to_le16(BIT_0);
+	wmb();
 
 	qla2x00_add_iodesc_timer(iodesc);
 
@@ -623,6 +625,7 @@ qla2x00_send_logout_iocb(scsi_qla_host_t *ha, struct io_descriptor *iodesc,
 	mbxentry->mb0 = __constant_cpu_to_le16(MBC_LOGOUT_FABRIC_PORT);
 	mbxentry->mb1 = mbxentry->loop_id.extended =
 	    cpu_to_le16(iodesc->remote_fcport->loop_id);
+	wmb();
 
 	qla2x00_add_iodesc_timer(iodesc);
 
@@ -700,6 +703,7 @@ qla2x00_send_login_iocb(scsi_qla_host_t *ha, struct io_descriptor *iodesc,
 	mbxentry->mb2 = cpu_to_le16(d_id->b.domain);
 	mbxentry->mb3 = cpu_to_le16(d_id->b.area << 8 | d_id->b.al_pa);
 	mbxentry->mb10 = __constant_cpu_to_le16(BIT_0);
+	wmb();
 
 	qla2x00_add_iodesc_timer(iodesc);
 

@@ -356,7 +356,7 @@ static int ext3_blkdev_remove(struct ext3_sb_info *sbi)
 	bdev = sbi->journal_bdev;
 	if (bdev) {
 		ret = ext3_blkdev_put(bdev);
-		sbi->journal_bdev = 0;
+		sbi->journal_bdev = NULL;
 	}
 	return ret;
 }
@@ -521,6 +521,8 @@ static void ext3_clear_inode(struct inode *inode)
 static int ext3_dquot_initialize(struct inode *inode, int type);
 static int ext3_dquot_drop(struct inode *inode);
 static int ext3_write_dquot(struct dquot *dquot);
+static int ext3_acquire_dquot(struct dquot *dquot);
+static int ext3_release_dquot(struct dquot *dquot);
 static int ext3_mark_dquot_dirty(struct dquot *dquot);
 static int ext3_write_info(struct super_block *sb, int type);
 static int ext3_quota_on(struct super_block *sb, int type, int format_id, char *path);
@@ -536,6 +538,8 @@ static struct dquot_operations ext3_quota_operations = {
 	.free_inode	= dquot_free_inode,
 	.transfer	= dquot_transfer,
 	.write_dquot	= ext3_write_dquot,
+	.acquire_dquot	= ext3_acquire_dquot,
+	.release_dquot	= ext3_release_dquot,
 	.mark_dirty	= ext3_mark_dquot_dirty,
 	.write_info	= ext3_write_info
 };
@@ -1197,7 +1201,7 @@ static unsigned long descriptor_loc(struct super_block *sb,
 static int ext3_fill_super (struct super_block *sb, void *data, int silent)
 {
 	struct buffer_head * bh;
-	struct ext3_super_block *es = 0;
+	struct ext3_super_block *es = NULL;
 	struct ext3_sb_info *sbi;
 	unsigned long block;
 	unsigned long sb_block = get_sb_block(&data);
@@ -1469,7 +1473,7 @@ static int ext3_fill_super (struct super_block *sb, void *data, int silent)
 #endif
 	INIT_LIST_HEAD(&sbi->s_orphan); /* unlinked but open files */
 
-	sb->s_root = 0;
+	sb->s_root = NULL;
 
 	needs_recovery = (es->s_last_orphan != 0 ||
 			  EXT3_HAS_INCOMPAT_FEATURE(sb,
@@ -1639,6 +1643,7 @@ static journal_t *ext3_get_journal(struct super_block *sb, int journal_inum)
 	if (!journal) {
 		printk(KERN_ERR "EXT3-fs: Could not load journal inode\n");
 		iput(journal_inode);
+		return NULL;
 	}
 	journal->j_private = sb;
 	ext3_init_journal_params(EXT3_SB(sb), journal);
@@ -1870,13 +1875,17 @@ static void ext3_commit_super (struct super_block * sb,
 static void ext3_mark_recovery_complete(struct super_block * sb,
 					struct ext3_super_block * es)
 {
-	journal_flush(EXT3_SB(sb)->s_journal);
+	journal_t *journal = EXT3_SB(sb)->s_journal;
+
+	journal_lock_updates(journal);
+	journal_flush(journal);
 	if (EXT3_HAS_INCOMPAT_FEATURE(sb, EXT3_FEATURE_INCOMPAT_RECOVER) &&
 	    sb->s_flags & MS_RDONLY) {
 		EXT3_CLEAR_INCOMPAT_FEATURE(sb, EXT3_FEATURE_INCOMPAT_RECOVER);
 		sb->s_dirt = 0;
 		ext3_commit_super(sb, es, 1);
 	}
+	journal_unlock_updates(journal);
 }
 
 /*
@@ -2175,6 +2184,38 @@ static int ext3_write_dquot(struct dquot *dquot)
 	if (IS_ERR(handle))
 		return PTR_ERR(handle);
 	ret = dquot_commit(dquot);
+	err = ext3_journal_stop(handle);
+	if (!ret)
+		ret = err;
+	return ret;
+}
+
+static int ext3_acquire_dquot(struct dquot *dquot)
+{
+	int ret, err;
+	handle_t *handle;
+
+	handle = ext3_journal_start(dquot_to_inode(dquot),
+					EXT3_QUOTA_INIT_BLOCKS);
+	if (IS_ERR(handle))
+		return PTR_ERR(handle);
+	ret = dquot_acquire(dquot);
+	err = ext3_journal_stop(handle);
+	if (!ret)
+		ret = err;
+	return ret;
+}
+
+static int ext3_release_dquot(struct dquot *dquot)
+{
+	int ret, err;
+	handle_t *handle;
+
+	handle = ext3_journal_start(dquot_to_inode(dquot),
+					EXT3_QUOTA_INIT_BLOCKS);
+	if (IS_ERR(handle))
+		return PTR_ERR(handle);
+	ret = dquot_release(dquot);
 	err = ext3_journal_stop(handle);
 	if (!ret)
 		ret = err;

@@ -40,6 +40,7 @@
 #include "mls.h"
 
 extern void selnl_notify_policyload(u32 seqno);
+extern int policydb_loaded_version;
 
 static rwlock_t policy_rwlock = RW_LOCK_UNLOCKED;
 #define POLICY_RDLOCK read_lock(&policy_rwlock)
@@ -203,6 +204,17 @@ static int context_struct_compute_av(struct context *scontext,
 	struct avtab_datum *avdatum;
 	struct class_datum *tclass_datum;
 
+	/*
+	 * Remap extended Netlink classes for old policy versions.
+	 * Do this here rather than socket_type_to_security_class()
+	 * in case a newer policy version is loaded, allowing sockets
+	 * to remain in the correct class.
+	 */
+	if (policydb_loaded_version < POLICYDB_VERSION_NLCLASS)
+		if (tclass >= SECCLASS_NETLINK_ROUTE_SOCKET &&
+		    tclass <= SECCLASS_NETLINK_DNRT_SOCKET)
+			tclass = SECCLASS_NETLINK_SOCKET;
+
 	if (!tclass || tclass > policydb.p_classes.nprim) {
 		printk(KERN_ERR "security_compute_av:  unrecognized class %d\n",
 		       tclass);
@@ -296,7 +308,7 @@ int security_compute_av(u32 ssid,
 			u32 requested,
 			struct av_decision *avd)
 {
-	struct context *scontext = 0, *tcontext = 0;
+	struct context *scontext = NULL, *tcontext = NULL;
 	int rc = 0;
 
 	if (!ss_initialized) {
@@ -343,7 +355,7 @@ int context_struct_to_string(struct context *context, char **scontext, u32 *scon
 {
 	char *scontextp;
 
-	*scontext = 0;
+	*scontext = NULL;
 	*scontext_len = 0;
 
 	/* Compute the size of the context. */
@@ -532,6 +544,11 @@ int security_context_to_sid(char *scontext, u32 scontext_len, u32 *sid)
 	if (rc)
 		goto out_unlock;
 
+	if ((p - scontext2) < scontext_len) {
+		rc = -EINVAL;
+		goto out_unlock;
+	}
+
 	/* Check the validity of the new context. */
 	if (!policydb_context_isvalid(&policydb, &context)) {
 		rc = -EINVAL;
@@ -583,8 +600,8 @@ static int security_compute_sid(u32 ssid,
 				u32 specified,
 				u32 *out_sid)
 {
-	struct context *scontext = 0, *tcontext = 0, newcontext;
-	struct role_trans *roletr = 0;
+	struct context *scontext = NULL, *tcontext = NULL, newcontext;
+	struct role_trans *roletr = NULL;
 	struct avtab_key avkey;
 	struct avtab_datum *avdatum;
 	struct avtab_node *node;

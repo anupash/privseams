@@ -54,7 +54,7 @@ struct _ntfs_inode {
 	 * name_len = 4 for directories.
 	 */
 	ATTR_TYPES type;	/* Attribute type of this fake inode. */
-	uchar_t *name;		/* Attribute name of this fake inode. */
+	ntfschar *name;		/* Attribute name of this fake inode. */
 	u32 name_len;		/* Attribute name length of this fake inode. */
 	run_list run_list;	/* If state has the NI_NonResident bit set,
 				   the run list of the unnamed data attribute
@@ -90,16 +90,18 @@ struct _ntfs_inode {
 	u8 *attr_list;		/* Attribute list value itself. */
 	run_list attr_list_rl;	/* Run list for the attribute list value. */
 	union {
-		struct { /* It is a directory or $MFT. */
+		struct { /* It is a directory, $MFT, or an index inode. */
 			struct inode *bmp_ino;	/* Attribute inode for the
-						   directory index $BITMAP. */
+						   index $BITMAP. */
 			u32 block_size;		/* Size of an index block. */
 			u32 vcn_size;		/* Size of a vcn in this
-						   directory index. */
+						   index. */
+			COLLATION_RULES collation_rule; /* The collation rule
+						   for the index. */
 			u8 block_size_bits; 	/* Log2 of the above. */
 			u8 vcn_size_bits;	/* Log2 of the above. */
 		} index;
-		struct { /* It is a compressed file or fake inode. */
+		struct { /* It is a compressed file or an attribute inode. */
 			s64 size;		/* Copy of compressed_size from
 						   $DATA. */
 			u32 block_size;		/* Size of a compression block
@@ -248,7 +250,7 @@ static inline struct inode *VFS_I(ntfs_inode *ni)
  */
 typedef struct {
 	unsigned long mft_no;
-	uchar_t *name;
+	ntfschar *name;
 	u32 name_len;
 	ATTR_TYPES type;
 } ntfs_attr;
@@ -259,7 +261,9 @@ extern int ntfs_test_inode(struct inode *vi, ntfs_attr *na);
 
 extern struct inode *ntfs_iget(struct super_block *sb, unsigned long mft_no);
 extern struct inode *ntfs_attr_iget(struct inode *base_vi, ATTR_TYPES type,
-		uchar_t *name, u32 name_len);
+		ntfschar *name, u32 name_len);
+extern struct inode *ntfs_index_iget(struct inode *base_vi, ntfschar *name,
+		u32 name_len);
 
 extern struct inode *ntfs_alloc_big_inode(struct super_block *sb);
 extern void ntfs_destroy_big_inode(struct inode *inode);
@@ -269,7 +273,7 @@ extern ntfs_inode *ntfs_new_extent_inode(struct super_block *sb,
 		unsigned long mft_no);
 extern void ntfs_clear_extent_inode(ntfs_inode *ni);
 
-extern void ntfs_read_inode_mount(struct inode *vi);
+extern int ntfs_read_inode_mount(struct inode *vi);
 
 extern void ntfs_put_inode(struct inode *vi);
 
@@ -280,6 +284,15 @@ extern int ntfs_show_options(struct seq_file *sf, struct vfsmount *mnt);
 extern void ntfs_truncate(struct inode *vi);
 
 extern int ntfs_setattr(struct dentry *dentry, struct iattr *attr);
+
+extern void ntfs_write_inode(struct inode *vi, int sync);
+
+static inline void ntfs_commit_inode(struct inode *vi)
+{
+	if (!is_bad_inode(vi))
+		ntfs_write_inode(vi, 1);
+	return;
+}
 
 #endif /* NTFS_RW */
 

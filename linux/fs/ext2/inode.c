@@ -133,7 +133,7 @@ static int ext2_alloc_block (struct inode * inode, unsigned long goal, int *err)
 				 &ei->i_prealloc_count,
 				 &ei->i_prealloc_block, err);
 		else
-			result = ext2_new_block (inode, goal, 0, 0, err);
+			result = ext2_new_block(inode, goal, NULL, NULL, err);
 	}
 #else
 	result = ext2_new_block (inode, goal, 0, 0, err);
@@ -584,6 +584,7 @@ out:
 	if (err == -EAGAIN)
 		goto changed;
 
+	goal = 0;
 	if (ext2_find_goal(inode, iblock, chain, partial, &goal) < 0)
 		goto changed;
 
@@ -1275,8 +1276,8 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 		if (error)
 			return error;
 	}
-	inode_setattr(inode, iattr);
-	if (iattr->ia_valid & ATTR_MODE)
+	error = inode_setattr(inode, iattr);
+	if (!error && (iattr->ia_valid & ATTR_MODE))
 		error = ext2_acl_chmod(inode);
 	return error;
 }

@@ -33,7 +33,7 @@
 #define ZFCP_DEF_H
 
 /* this drivers version (do not edit !!! generated and updated by cvs) */
-#define ZFCP_DEF_REVISION "$Revision: 1.72 $"
+#define ZFCP_DEF_REVISION "$Revision: 1.81 $"
 
 /*************************** INCLUDES *****************************************/
 
@@ -42,18 +42,20 @@
 #include <linux/miscdevice.h>
 #include <linux/major.h>
 #include <linux/blkdev.h>
+#include <linux/delay.h>
 #include <scsi/scsi.h>
 #include <scsi/scsi_tcq.h>
 #include <scsi/scsi_cmnd.h>
 #include <scsi/scsi_device.h>
 #include <scsi/scsi_host.h>
+#include <scsi/scsi_transport.h>
+#include <scsi/scsi_transport_fc.h>
 #include "../../fc4/fc.h"
 #include "zfcp_fsf.h"
 #include <asm/ccwdev.h>
 #include <asm/qdio.h>
 #include <asm/debug.h>
 #include <asm/ebcdic.h>
-#include <linux/reboot.h>
 #include <linux/mempool.h>
 #include <linux/syscalls.h>
 #include <linux/ioctl.h>
@@ -64,13 +66,11 @@
 /************************ DEBUG FLAGS *****************************************/
 
 #define	ZFCP_PRINT_FLAGS
-#define	ZFCP_STAT_REQSIZES
-#define	ZFCP_STAT_QUEUES
 
 /********************* GENERAL DEFINES *********************************/
 
 /* zfcp version number, it consists of major, minor, and patch-level number */
-#define ZFCP_VERSION		"4.0.0"
+#define ZFCP_VERSION		"4.1.3"
 
 static inline void *
 zfcp_sg_to_address(struct scatterlist *list)
@@ -511,14 +511,14 @@ struct zfcp_ls_rnid_acc {
 
 /* all log-level defaults are combined to generate initial log-level */
 #define ZFCP_LOG_LEVEL_DEFAULTS \
-	(ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_INFO, ZFCP_LOG_AREA_OTHER) | \
-	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_INFO, ZFCP_LOG_AREA_SCSI) | \
-	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_INFO, ZFCP_LOG_AREA_FSF) | \
-	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_INFO, ZFCP_LOG_AREA_CONFIG) | \
-	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_INFO, ZFCP_LOG_AREA_CIO) | \
-	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_INFO, ZFCP_LOG_AREA_QDIO) | \
-	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_INFO, ZFCP_LOG_AREA_ERP) | \
-	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_INFO, ZFCP_LOG_AREA_FC))
+	(ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_NORMAL, ZFCP_LOG_AREA_OTHER) | \
+	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_NORMAL, ZFCP_LOG_AREA_SCSI) | \
+	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_NORMAL, ZFCP_LOG_AREA_FSF) | \
+	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_NORMAL, ZFCP_LOG_AREA_CONFIG) | \
+	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_NORMAL, ZFCP_LOG_AREA_CIO) | \
+	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_NORMAL, ZFCP_LOG_AREA_QDIO) | \
+	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_NORMAL, ZFCP_LOG_AREA_ERP) | \
+	 ZFCP_SET_LOG_NIBBLE(ZFCP_LOG_LEVEL_NORMAL, ZFCP_LOG_AREA_FC))
 
 /* check whether we have the right level for logging */
 #define ZFCP_LOG_CHECK(level) \
@@ -1074,36 +1074,11 @@ struct zfcp_data {
 						       lists */
 	struct semaphore        config_sema;        /* serialises configuration
 						       changes */
-	struct notifier_block	reboot_notifier;     /* used to register cleanup
-							functions */
 	atomic_t		loglevel;            /* current loglevel */
 	char                    init_busid[BUS_ID_SIZE];
 	wwn_t                   init_wwpn;
 	fcp_lun_t               init_fcp_lun;
-#ifdef ZFCP_STAT_REQSIZES                            /* Statistical accounting
-							of processed data */
-	struct list_head	read_req_head;
-	struct list_head	write_req_head;
-	struct list_head	read_sg_head;
-	struct list_head	write_sg_head;
-	struct list_head	read_sguse_head;
-	struct list_head	write_sguse_head;
-	unsigned long		stat_errors;
-	rwlock_t		stat_lock;
-#endif
-#ifdef ZFCP_STAT_QUEUES
-        atomic_t                outbound_queue_full;
-	atomic_t		outbound_total;
-#endif
 };
-
-#ifdef ZFCP_STAT_REQSIZES
-struct zfcp_statistics {
-        struct list_head list;
-        u32 num;
-        u32 occurrence;
-};
-#endif
 
 struct zfcp_sg_list {
 	struct scatterlist *sg;
@@ -1148,32 +1123,6 @@ extern void _zfcp_hex_dump(char *, int);
 		if (ZFCP_LOG_CHECK(level)) { \
 			_zfcp_hex_dump(addr, count); \
 		}
-/*
- * Not yet optimal but useful:
- * Waits until the condition is met or the timeout occurs.
- * The condition may be a function call. This allows to
- * execute some additional instructions in addition
- * to a simple condition check.
- * The timeout is modified on exit and holds the remaining time.
- * Thus it is zero if a timeout ocurred, i.e. the condition was 
- * not met in the specified interval.
- */
-#define __ZFCP_WAIT_EVENT_TIMEOUT(timeout, condition) \
-do { \
-	set_current_state(TASK_UNINTERRUPTIBLE); \
-	while (!(condition) && timeout) \
-		timeout = schedule_timeout(timeout); \
-	current->state = TASK_RUNNING; \
-} while (0);
-
-#define ZFCP_WAIT_EVENT_TIMEOUT(waitqueue, timeout, condition) \
-do { \
-	wait_queue_t entry; \
-	init_waitqueue_entry(&entry, current); \
-	add_wait_queue(&waitqueue, &entry); \
-	__ZFCP_WAIT_EVENT_TIMEOUT(timeout, condition) \
-	remove_wait_queue(&waitqueue, &entry); \
-} while (0);
 
 #define zfcp_get_busid_by_adapter(adapter) (adapter->ccw_device->dev.bus_id)
 #define zfcp_get_busid_by_port(port) (zfcp_get_busid_by_adapter(port->adapter))

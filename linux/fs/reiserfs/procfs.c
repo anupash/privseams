@@ -548,8 +548,8 @@ int reiserfs_proc_info_init( struct super_block *sb )
 		add_file(sb, "journal", show_journal);
 		return 0;
 	}
-	reiserfs_warning( "reiserfs: cannot create /proc/%s/%s\n",
-			  proc_info_root_name, reiserfs_bdevname (sb) );
+	reiserfs_warning(sb, "reiserfs: cannot create /proc/%s/%s",
+			 proc_info_root_name, reiserfs_bdevname (sb) );
 	return 1;
 }
 
@@ -591,11 +591,12 @@ void reiserfs_proc_unregister_global( const char *name )
 int reiserfs_proc_info_global_init( void )
 {
 	if( proc_info_root == NULL ) {
-		proc_info_root = proc_mkdir( proc_info_root_name, 0 );
+		proc_info_root = proc_mkdir(proc_info_root_name, NULL);
 		if( proc_info_root ) {
 			proc_info_root -> owner = THIS_MODULE;
 		} else {
-			reiserfs_warning( "reiserfs: cannot create /proc/%s\n",
+			reiserfs_warning (NULL,
+					  "reiserfs: cannot create /proc/%s",
 					  proc_info_root_name );
 			return 1;
 		}
@@ -607,7 +608,7 @@ int reiserfs_proc_info_global_done( void )
 {
 	if ( proc_info_root != NULL ) {
 		proc_info_root = NULL;
-		remove_proc_entry( proc_info_root_name, 0 );
+		remove_proc_entry(proc_info_root_name, NULL);
 	}
 	return 0;
 }

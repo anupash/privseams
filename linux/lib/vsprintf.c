@@ -40,11 +40,14 @@ unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base)
 		if (*cp == '0') {
 			base = 8;
 			cp++;
-			if ((*cp == 'x') && isxdigit(cp[1])) {
+			if ((toupper(*cp) == 'X') && isxdigit(cp[1])) {
 				cp++;
 				base = 16;
 			}
 		}
+	} else if (base == 16) {
+		if (cp[0] == '0' && toupper(cp[1]) == 'X')
+			cp += 2;
 	}
 	while (isxdigit(*cp) &&
 	       (value = isdigit(*cp) ? *cp-'0' : toupper(*cp)-'A'+10) < base) {
@@ -88,11 +91,14 @@ unsigned long long simple_strtoull(const char *cp,char **endp,unsigned int base)
 		if (*cp == '0') {
 			base = 8;
 			cp++;
-			if ((*cp == 'x') && isxdigit(cp[1])) {
+			if ((toupper(*cp) == 'X') && isxdigit(cp[1])) {
 				cp++;
 				base = 16;
 			}
 		}
+	} else if (base == 16) {
+		if (cp[0] == '0' && toupper(cp[1]) == 'X')
+			cp += 2;
 	}
 	while (isxdigit(*cp) && (value = isdigit(*cp) ? *cp-'0' : (islower(*cp)
 	    ? toupper(*cp) : *cp)-'A'+10) < base) {
@@ -148,7 +154,7 @@ static char * number(char * buf, char * end, unsigned long long num, int base, i
 	if (type & LEFT)
 		type &= ~ZEROPAD;
 	if (base < 2 || base > 36)
-		return 0;
+		return NULL;
 	c = (type & ZEROPAD) ? '0' : ' ';
 	sign = 0;
 	if (type & SIGN) {
@@ -662,8 +668,16 @@ int vsscanf(const char * buf, const char * fmt, va_list args)
 		qualifier = -1;
 		if (*fmt == 'h' || *fmt == 'l' || *fmt == 'L' ||
 		    *fmt == 'Z' || *fmt == 'z') {
-			qualifier = *fmt;
-			fmt++;
+			qualifier = *fmt++;
+			if (unlikely(qualifier == *fmt)) {
+				if (qualifier == 'h') {
+					qualifier = 'H';
+					fmt++;
+				} else if (qualifier == 'l') {
+					qualifier = 'L';
+					fmt++;
+				}
+			}
 		}
 		base = 10;
 		is_sign = 0;
@@ -748,6 +762,15 @@ int vsscanf(const char * buf, const char * fmt, va_list args)
 				break;
 
 		switch(qualifier) {
+		case 'H':	/* that's 'hh' in format */
+			if (is_sign) {
+				signed char *s = (signed char *) va_arg(args,signed char *);
+				*s = (signed char) simple_strtol(str,&next,base);
+			} else {
+				unsigned char *s = (unsigned char *) va_arg(args, unsigned char *);
+				*s = (unsigned char) simple_strtoul(str, &next, base);
+			}
+			break;
 		case 'h':
 			if (is_sign) {
 				short *s = (short *) va_arg(args,short *);

@@ -19,6 +19,8 @@ enum dma_data_direction {
 #define dma_sync_single		dma_sync_single_for_cpu
 #define dma_sync_sg		dma_sync_sg_for_cpu
 
+extern u64 dma_get_required_mask(struct device *dev);
+
 #endif
 
 

@@ -183,8 +183,10 @@ FAN_TO_REG(long rpm, int div)
 #define ALARMS_FROM_REG(val)		(val)
 #define PWM_FROM_REG(val)		(val)
 #define PWM_TO_REG(val)			(SENSORS_LIMIT((val),0,255))
-#define BEEP_MASK_FROM_REG(val)		(val)
-#define BEEP_MASK_TO_REG(val)		((val) & 0xffffff)
+#define BEEP_MASK_FROM_REG(val,type)	((type) == as99127f ? \
+					 (val) ^ 0x7fff : (val))
+#define BEEP_MASK_TO_REG(val,type)	((type) == as99127f ? \
+					 (~(val)) & 0x7fff : (val) & 0xffffff)
 
 #define BEEP_ENABLE_TO_REG(val)		((val) ? 1 : 0)
 #define BEEP_ENABLE_FROM_REG(val)	((val) ? 1 : 0)
@@ -318,7 +320,7 @@ show_regs_in_##offset (struct device *dev, char *buf) \
 { \
         return show_in(dev, buf, 0x##offset); \
 } \
-static DEVICE_ATTR(in##offset##_input, S_IRUGO, show_regs_in_##offset, NULL)
+static DEVICE_ATTR(in##offset##_input, S_IRUGO, show_regs_in_##offset, NULL);
 
 #define sysfs_in_reg_offset(reg, offset) \
 static ssize_t show_regs_in_##reg##offset (struct device *dev, char *buf) \
@@ -329,7 +331,7 @@ static ssize_t store_regs_in_##reg##offset (struct device *dev, const char *buf,
 { \
 	return store_in_##reg (dev, buf, count, 0x##offset); \
 } \
-static DEVICE_ATTR(in##offset##_##reg, S_IRUGO| S_IWUSR, show_regs_in_##reg##offset, store_regs_in_##reg##offset)
+static DEVICE_ATTR(in##offset##_##reg, S_IRUGO| S_IWUSR, show_regs_in_##reg##offset, store_regs_in_##reg##offset);
 
 #define sysfs_in_offsets(offset) \
 sysfs_in_offset(offset); \
@@ -384,7 +386,7 @@ static ssize_t show_regs_fan_##offset (struct device *dev, char *buf) \
 { \
 	return show_fan(dev, buf, 0x##offset); \
 } \
-static DEVICE_ATTR(fan##offset##_input, S_IRUGO, show_regs_fan_##offset, NULL)
+static DEVICE_ATTR(fan##offset##_input, S_IRUGO, show_regs_fan_##offset, NULL);
 
 #define sysfs_fan_min_offset(offset) \
 static ssize_t show_regs_fan_min##offset (struct device *dev, char *buf) \
@@ -395,7 +397,7 @@ static ssize_t store_regs_fan_min##offset (struct device *dev, const char *buf, 
 { \
 	return store_fan_min(dev, buf, count, 0x##offset); \
 } \
-static DEVICE_ATTR(fan##offset##_min, S_IRUGO | S_IWUSR, show_regs_fan_min##offset, store_regs_fan_min##offset)
+static DEVICE_ATTR(fan##offset##_min, S_IRUGO | S_IWUSR, show_regs_fan_min##offset, store_regs_fan_min##offset);
 
 sysfs_fan_offset(1);
 sysfs_fan_min_offset(1);
@@ -464,7 +466,7 @@ show_regs_temp_##offset (struct device *dev, char *buf) \
 { \
 	return show_temp(dev, buf, 0x##offset); \
 } \
-static DEVICE_ATTR(temp##offset##_input, S_IRUGO, show_regs_temp_##offset, NULL)
+static DEVICE_ATTR(temp##offset##_input, S_IRUGO, show_regs_temp_##offset, NULL);
 
 #define sysfs_temp_reg_offset(reg, offset) \
 static ssize_t show_regs_temp_##reg##offset (struct device *dev, char *buf) \
@@ -475,7 +477,7 @@ static ssize_t store_regs_temp_##reg##offset (struct device *dev, const char *bu
 { \
 	return store_temp_##reg (dev, buf, count, 0x##offset); \
 } \
-static DEVICE_ATTR(temp##offset##_##reg, S_IRUGO| S_IWUSR, show_regs_temp_##reg##offset, store_regs_temp_##reg##offset)
+static DEVICE_ATTR(temp##offset##_##reg, S_IRUGO| S_IWUSR, show_regs_temp_##reg##offset, store_regs_temp_##reg##offset);
 
 #define sysfs_temp_offsets(offset) \
 sysfs_temp_offset(offset); \
@@ -501,7 +503,7 @@ show_vid_reg(struct device *dev, char *buf)
 }
 
 static
-DEVICE_ATTR(in0_ref, S_IRUGO, show_vid_reg, NULL)
+DEVICE_ATTR(in0_ref, S_IRUGO, show_vid_reg, NULL);
 #define device_create_file_vid(client) \
 device_create_file(&client->dev, &dev_attr_in0_ref);
 static ssize_t
@@ -525,7 +527,7 @@ store_vrm_reg(struct device *dev, const char *buf, size_t count)
 }
 
 static
-DEVICE_ATTR(vrm, S_IRUGO | S_IWUSR, show_vrm_reg, store_vrm_reg)
+DEVICE_ATTR(vrm, S_IRUGO | S_IWUSR, show_vrm_reg, store_vrm_reg);
 #define device_create_file_vrm(client) \
 device_create_file(&client->dev, &dev_attr_vrm);
 static ssize_t
@@ -536,17 +538,21 @@ show_alarms_reg(struct device *dev, char *buf)
 }
 
 static
-DEVICE_ATTR(alarms, S_IRUGO, show_alarms_reg, NULL)
+DEVICE_ATTR(alarms, S_IRUGO, show_alarms_reg, NULL);
 #define device_create_file_alarms(client) \
 device_create_file(&client->dev, &dev_attr_alarms);
-#define show_beep_reg(REG, reg) \
-static ssize_t show_beep_##reg (struct device *dev, char *buf) \
-{ \
-	struct w83781d_data *data = w83781d_update_device(dev); \
-	return sprintf(buf,"%ld\n", (long)BEEP_##REG##_FROM_REG(data->beep_##reg)); \
+static ssize_t show_beep_mask (struct device *dev, char *buf)
+{
+	struct w83781d_data *data = w83781d_update_device(dev);
+	return sprintf(buf, "%ld\n",
+		       (long)BEEP_MASK_FROM_REG(data->beep_mask, data->type));
 }
-show_beep_reg(ENABLE, enable);
-show_beep_reg(MASK, mask);
+static ssize_t show_beep_enable (struct device *dev, char *buf)
+{
+	struct w83781d_data *data = w83781d_update_device(dev);
+	return sprintf(buf, "%ld\n",
+		       (long)BEEP_ENABLE_FROM_REG(data->beep_enable));
+}
 
 #define BEEP_ENABLE			0	/* Store beep_enable */
 #define BEEP_MASK			1	/* Store beep_mask */
@@ -562,7 +568,7 @@ store_beep_reg(struct device *dev, const char *buf, size_t count,
 	val = simple_strtoul(buf, NULL, 10);
 
 	if (update_mask == BEEP_MASK) {	/* We are storing beep_mask */
-		data->beep_mask = BEEP_MASK_TO_REG(val);
+		data->beep_mask = BEEP_MASK_TO_REG(val, data->type);
 		w83781d_write_value(client, W83781D_REG_BEEP_INTS1,
 				    data->beep_mask & 0xff);
 
@@ -592,7 +598,7 @@ static ssize_t store_regs_beep_##reg (struct device *dev, const char *buf, size_
 { \
 	return store_beep_reg(dev, buf, count, BEEP_##REG); \
 } \
-static DEVICE_ATTR(beep_##reg, S_IRUGO | S_IWUSR, show_regs_beep_##reg, store_regs_beep_##reg)
+static DEVICE_ATTR(beep_##reg, S_IRUGO | S_IWUSR, show_regs_beep_##reg, store_regs_beep_##reg);
 
 sysfs_beep(ENABLE, enable);
 sysfs_beep(MASK, mask);
@@ -659,7 +665,7 @@ static ssize_t store_regs_fan_div_##offset (struct device *dev, const char *buf,
 { \
 	return store_fan_div_reg(dev, buf, count, offset - 1); \
 } \
-static DEVICE_ATTR(fan##offset##_div, S_IRUGO | S_IWUSR, show_regs_fan_div_##offset, store_regs_fan_div_##offset)
+static DEVICE_ATTR(fan##offset##_div, S_IRUGO | S_IWUSR, show_regs_fan_div_##offset, store_regs_fan_div_##offset);
 
 sysfs_fan_div(1);
 sysfs_fan_div(2);
@@ -738,7 +744,7 @@ static ssize_t store_regs_pwm_##offset (struct device *dev, const char *buf, siz
 { \
 	return store_pwm_reg(dev, buf, count, offset); \
 } \
-static DEVICE_ATTR(fan##offset##_pwm, S_IRUGO | S_IWUSR, show_regs_pwm_##offset, store_regs_pwm_##offset)
+static DEVICE_ATTR(fan##offset##_pwm, S_IRUGO | S_IWUSR, show_regs_pwm_##offset, store_regs_pwm_##offset);
 
 #define sysfs_pwmenable(offset) \
 static ssize_t show_regs_pwmenable_##offset (struct device *dev, char *buf) \
@@ -749,7 +755,7 @@ static ssize_t store_regs_pwmenable_##offset (struct device *dev, const char *bu
 { \
 	return store_pwmenable_reg(dev, buf, count, offset); \
 } \
-static DEVICE_ATTR(fan##offset##_pwm_enable, S_IRUGO | S_IWUSR, show_regs_pwmenable_##offset, store_regs_pwmenable_##offset)
+static DEVICE_ATTR(fan##offset##_pwm_enable, S_IRUGO | S_IWUSR, show_regs_pwmenable_##offset, store_regs_pwmenable_##offset);
 
 sysfs_pwm(1);
 sysfs_pwm(2);
@@ -827,7 +833,7 @@ static ssize_t store_regs_sensor_##offset (struct device *dev, const char *buf, 
 { \
     return store_sensor_reg(dev, buf, count, offset); \
 } \
-static DEVICE_ATTR(temp##offset##_type, S_IRUGO | S_IWUSR, show_regs_sensor_##offset, store_regs_sensor_##offset)
+static DEVICE_ATTR(temp##offset##_type, S_IRUGO | S_IWUSR, show_regs_sensor_##offset, store_regs_sensor_##offset);
 
 sysfs_sensor(1);
 sysfs_sensor(2);
@@ -885,7 +891,7 @@ static ssize_t store_regs_rt_##offset (struct device *dev, const char *buf, size
 { \
     return store_rt_reg(dev, buf, count, offset); \
 } \
-static DEVICE_ATTR(rt##offset, S_IRUGO | S_IWUSR, show_regs_rt_##offset, store_regs_rt_##offset)
+static DEVICE_ATTR(rt##offset, S_IRUGO | S_IWUSR, show_regs_rt_##offset, store_regs_rt_##offset);
 
 sysfs_rt(1);
 sysfs_rt(2);
@@ -905,7 +911,7 @@ device_create_file(&client->dev, &dev_attr_rt##offset); \
 static int
 w83781d_attach_adapter(struct i2c_adapter *adapter)
 {
-	if (!(adapter->class & I2C_ADAP_CLASS_SMBUS))
+	if (!(adapter->class & I2C_CLASS_HWMON))
 		return 0;
 	return i2c_detect(adapter, &addr_data, w83781d_detect);
 }
@@ -1330,7 +1336,13 @@ w83781d_detach_client(struct i2c_client *client)
 		return err;
 	}
 
-	kfree(i2c_get_clientdata(client));
+	if (i2c_get_clientdata(client)==NULL) {
+		/* subclients */
+		kfree(client);
+	} else {
+		/* main client */
+		kfree(i2c_get_clientdata(client));
+	}
 
 	return 0;
 }
@@ -1479,7 +1491,7 @@ static void
 w83781d_init_client(struct i2c_client *client)
 {
 	struct w83781d_data *data = i2c_get_clientdata(client);
-	int vid = 0, i, p;
+	int i, p;
 	int type = data->type;
 	u8 tmp;
 
@@ -1501,14 +1513,7 @@ w83781d_init_client(struct i2c_client *client)
 		w83781d_write_value(client, W83781D_REG_BEEP_INTS2, 0);
 	}
 
-	if (type != w83697hf) {
-		vid = w83781d_read_value(client, W83781D_REG_VID_FANDIV) & 0x0f;
-		vid |=
-		    (w83781d_read_value(client, W83781D_REG_CHIPID) & 0x01) <<
-		    4;
-		data->vrm = DEFAULT_VRM;
-		vid = vid_from_reg(vid, data->vrm);
-	}
+	data->vrm = 82;
 
 	if ((type != w83781d) && (type != as99127f)) {
 		tmp = w83781d_read_value(client, W83781D_REG_SCFG1);

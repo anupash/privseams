@@ -27,13 +27,11 @@
 #include <linux/string.h>
 #include <linux/mm.h>
 #include <linux/init.h>
-#include <linux/list.h>
 #include <linux/completion.h>
-#include <linux/unistd.h>
 
+#include <scsi/scsi_device.h>
 #include <scsi/scsi_host.h>
 #include <scsi/scsi_transport.h>
-#include "scsi.h"
 
 #include "scsi_priv.h"
 #include "scsi_logging.h"
@@ -345,7 +343,7 @@ struct Scsi_Host *scsi_host_lookup(unsigned short hostnum)
 }
 
 /**
- * *scsi_host_get - inc a Scsi_Host ref count
+ * scsi_host_get - inc a Scsi_Host ref count
  * @shost:	Pointer to Scsi_Host to inc.
  **/
 struct Scsi_Host *scsi_host_get(struct Scsi_Host *shost)
@@ -357,7 +355,7 @@ struct Scsi_Host *scsi_host_get(struct Scsi_Host *shost)
 }
 
 /**
- * *scsi_host_put - dec a Scsi_Host ref count
+ * scsi_host_put - dec a Scsi_Host ref count
  * @shost:	Pointer to Scsi_Host to dec.
  **/
 void scsi_host_put(struct Scsi_Host *shost)

@@ -179,23 +179,23 @@ static int nfs_writepage_sync(struct file *file, struct inode *inode,
 {
 	unsigned int	wsize = NFS_SERVER(inode)->wsize;
 	int		result, written = 0;
-	struct nfs_write_data	wdata = {
-		.flags		= how,
-		.cred		= NULL,
-		.inode		= inode,
-		.args		= {
-			.fh		= NFS_FH(inode),
-			.lockowner	= current->files,
-			.pages		= &page,
-			.stable		= NFS_FILE_SYNC,
-			.pgbase		= offset,
-			.count		= wsize,
-		},
-		.res		= {
-			.fattr		= &wdata.fattr,
-			.verf		= &wdata.verf,
-		},
-	};
+	struct nfs_write_data *wdata;
+
+	wdata = kmalloc(sizeof(*wdata), GFP_NOFS);
+	if (!wdata)
+		return -ENOMEM;
+
+	memset(wdata, 0, sizeof(*wdata));
+	wdata->flags = how;
+	wdata->inode = inode;
+	wdata->args.fh = NFS_FH(inode);
+	wdata->args.lockowner = current->files;
+	wdata->args.pages = &page;
+	wdata->args.stable = NFS_FILE_SYNC;
+	wdata->args.pgbase = offset;
+	wdata->args.count = wsize;
+	wdata->res.fattr = &wdata->fattr;
+	wdata->res.verf = &wdata->verf;
 
 	dprintk("NFS:      nfs_writepage_sync(%s/%Ld %d@%Ld)\n",
 		inode->i_sb->s_id,
@@ -205,22 +205,22 @@ static int nfs_writepage_sync(struct file *file, struct inode *inode,
 	nfs_begin_data_update(inode);
 	do {
 		if (count < wsize)
-			wdata.args.count = count;
-		wdata.args.offset = page_offset(page) + wdata.args.pgbase;
+			wdata->args.count = count;
+		wdata->args.offset = page_offset(page) + wdata->args.pgbase;
 
-		result = NFS_PROTO(inode)->write(&wdata, file);
+		result = NFS_PROTO(inode)->write(wdata, file);
 
 		if (result < 0) {
 			/* Must mark the page invalid after I/O error */
 			ClearPageUptodate(page);
 			goto io_error;
 		}
-		if (result < wdata.args.count)
+		if (result < wdata->args.count)
 			printk(KERN_WARNING "NFS: short write, count=%u, result=%d\n",
-					wdata.args.count, result);
+					wdata->args.count, result);
 
-		wdata.args.offset += result;
-	        wdata.args.pgbase += result;
+		wdata->args.offset += result;
+	        wdata->args.pgbase += result;
 		written += result;
 		count -= result;
 	} while (count);
@@ -234,9 +234,10 @@ static int nfs_writepage_sync(struct file *file, struct inode *inode,
 
 io_error:
 	nfs_end_data_update_defer(inode);
-	if (wdata.cred)
-		put_rpccred(wdata.cred);
+	if (wdata->cred)
+		put_rpccred(wdata->cred);
 
+	kfree(wdata);
 	return written ? written : result;
 }
 
@@ -313,7 +314,7 @@ do_it:
 		if (err >= 0) {
 			err = 0;
 			if (wbc->for_reclaim)
-				err = WRITEPAGE_ACTIVATE;
+				nfs_flush_inode(inode, 0, 0, FLUSH_STABLE);
 		}
 	} else {
 		err = nfs_writepage_sync(NULL, inode, page, 0,
@@ -326,8 +327,7 @@ do_it:
 	}
 	unlock_kernel();
 out:
-	if (err != WRITEPAGE_ACTIVATE)
-		unlock_page(page);
+	unlock_page(page);
 	if (inode_referenced)
 		iput(inode);
 	return err; 

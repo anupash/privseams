@@ -1,15 +1,18 @@
 /* linux/arch/arm/mach-s3c2410/mach-vr1000.c
  *
- * Copyright (c) 2003 Simtec Electronics
+ * Copyright (c) 2003,2004 Simtec Electronics
  *   Ben Dooks <ben@simtec.co.uk>
  *
- * http://www.simtec.co.uk/
+ * Machine support for Thorcom VR1000 board. Designed for Thorcom by
+ * Simtec Electronics, http://www.simtec.co.uk/
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
  * Modifications:
+ *     06-Aug-2004 BJD  Fixed call to time initialisation
+ *     12-Jul-2004 BJD  Renamed machine
  *     16-May-2003 BJD  Created initial version
  *     16-Aug-2003 BJD  Fixed header files and copyright, added URL
  *     05-Sep-2003 BJD  Moved to v2.6 kernel
@@ -155,10 +158,16 @@ void __init vr1000_init_irq(void)
 
 }
 
-MACHINE_START(VR1000, "Simtec-VR1000")
+void __init vr1000_init_time(void)
+{
+	s3c2410_init_time();
+}
+
+MACHINE_START(VR1000, "Thorcom-VR1000")
      MAINTAINER("Ben Dooks <ben@simtec.co.uk>")
      BOOT_MEM(S3C2410_SDRAM_PA, S3C2410_PA_UART, S3C2410_VA_UART)
      BOOT_PARAMS(S3C2410_SDRAM_PA + 0x100)
      MAPIO(vr1000_map_io)
      INITIRQ(vr1000_init_irq)
+     INITTIME(vr1000_init_time)
 MACHINE_END

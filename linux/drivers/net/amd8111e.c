@@ -701,7 +701,7 @@ static int amd8111e_tx(struct net_device *dev)
 				  	lp->tx_skbuff[tx_index]->len,
 					PCI_DMA_TODEVICE);
 			dev_kfree_skb_irq (lp->tx_skbuff[tx_index]);
-			lp->tx_skbuff[tx_index] = 0;
+			lp->tx_skbuff[tx_index] = NULL;
 			lp->tx_dma_addr[tx_index] = 0;
 		}
 		lp->tx_complete_idx++;
@@ -1544,7 +1544,7 @@ static void amd8111e_set_multicast_list(struct net_device *dev)
 	if( dev->mc_count == 0 ){
 		/* get only own packets */
 		mc_filter[1] = mc_filter[0] = 0;
-		lp->mc_list = 0;
+		lp->mc_list = NULL;
 		lp->options &= ~OPTION_MULTICAST_ENABLE;
 		amd8111e_writeq(*(u64*)mc_filter,lp->mmio + LADRF);
 		/* disable promiscous mode */
@@ -1571,7 +1571,7 @@ static void amd8111e_set_multicast_list(struct net_device *dev)
 This function handles all the  ethtool ioctls. It gives driver info, gets/sets driver speed, gets memory mapped register values, forces auto negotiation, sets/gets WOL options for ethtool application. 
 */
 	
-static int amd8111e_ethtool_ioctl(struct net_device* dev, void* useraddr)
+static int amd8111e_ethtool_ioctl(struct net_device* dev, void __user *useraddr)
 {
 	struct amd8111e_priv *lp = netdev_priv(dev);
 	struct pci_dev *pci_dev = lp->pci_dev;
@@ -1694,7 +1694,7 @@ static int amd8111e_ethtool_ioctl(struct net_device* dev, void* useraddr)
 }
 static int amd8111e_ioctl(struct net_device * dev , struct ifreq *ifr, int cmd)
 {
-	struct mii_ioctl_data *data = (struct mii_ioctl_data *)&ifr->ifr_data;
+	struct mii_ioctl_data *data = if_mii(ifr);
 	struct amd8111e_priv *lp = netdev_priv(dev);
 	int err;
 	u32 mii_regval;
@@ -1704,7 +1704,7 @@ static int amd8111e_ioctl(struct net_device * dev , struct ifreq *ifr, int cmd)
 
 	switch(cmd) {
 	case SIOCETHTOOL:
-		return amd8111e_ethtool_ioctl(dev, (void *) ifr->ifr_data);
+		return amd8111e_ethtool_ioctl(dev, ifr->ifr_data);
 	case SIOCGMIIPHY:
 		data->phy_id = PHY_ID;
 

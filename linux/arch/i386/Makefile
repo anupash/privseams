@@ -18,8 +18,9 @@
 LDFLAGS		:= -m elf_i386
 OBJCOPYFLAGS	:= -O binary -R .note -R .comment -S
 LDFLAGS_vmlinux :=
+CHECK		:= $(CHECK) -D__i386__=1
 
-CFLAGS += -pipe
+CFLAGS += -pipe -msoft-float
 
 # prevent gcc from keeping the stack 16 byte aligned
 CFLAGS += $(call check_gcc,-mpreferred-stack-boundary=2,)
@@ -92,7 +93,8 @@ core-$(CONFIG_X86_GENERICARCH) += arch/i386/mach-generic/
 
 # ES7000 subarch support
 mflags-$(CONFIG_X86_ES7000)	:= -Iinclude/asm-i386/mach-es7000
-mcore-$(CONFIG_X86_ES7000)	:= mach-es7000
+mcore-$(CONFIG_X86_ES7000)	:= mach-default
+core-$(CONFIG_X86_ES7000)	:= arch/i386/mach-es7000/
 
 # default subarch .h files
 mflags-y += -Iinclude/asm-i386/mach-default
@@ -102,7 +104,8 @@ head-y := arch/i386/kernel/head.o arch/i386/kernel/init_task.o
 libs-y 					+= arch/i386/lib/
 core-y					+= arch/i386/kernel/ \
 					   arch/i386/mm/ \
-					   arch/i386/$(mcore-y)/
+					   arch/i386/$(mcore-y)/ \
+					   arch/i386/crypto/
 drivers-$(CONFIG_MATH_EMULATION)	+= arch/i386/math-emu/
 drivers-$(CONFIG_PCI)			+= arch/i386/pci/
 # must be linked after kernel/
@@ -119,22 +122,23 @@ boot := arch/i386/boot
 
 all: bzImage
 
-BOOTIMAGE=arch/i386/boot/bzImage
-zImage zlilo zdisk: BOOTIMAGE=arch/i386/boot/zImage
+# KBUILD_IMAGE specify target image being built
+                    KBUILD_IMAGE := $(boot)/bzImage
+zImage zlilo zdisk: KBUILD_IMAGE := arch/i386/boot/zImage
 
 zImage bzImage: vmlinux
-	$(Q)$(MAKE) $(build)=$(boot) $(BOOTIMAGE)
+	$(Q)$(MAKE) $(build)=$(boot) $(KBUILD_IMAGE)
 
 compressed: zImage
 
 zlilo bzlilo: vmlinux
-	$(Q)$(MAKE) $(build)=$(boot) BOOTIMAGE=$(BOOTIMAGE) zlilo
+	$(Q)$(MAKE) $(build)=$(boot) BOOTIMAGE=$(KBUILD_IMAGE) zlilo
 
 zdisk bzdisk: vmlinux
-	$(Q)$(MAKE) $(build)=$(boot) BOOTIMAGE=$(BOOTIMAGE) zdisk
+	$(Q)$(MAKE) $(build)=$(boot) BOOTIMAGE=$(KBUILD_IMAGE) zdisk
 
 install fdimage fdimage144 fdimage288: vmlinux
-	$(Q)$(MAKE) $(build)=$(boot) BOOTIMAGE=$(BOOTIMAGE) $@
+	$(Q)$(MAKE) $(build)=$(boot) BOOTIMAGE=$(KBUILD_IMAGE) $@
 
 prepare: include/asm-$(ARCH)/asm_offsets.h
 CLEAN_FILES += include/asm-$(ARCH)/asm_offsets.h

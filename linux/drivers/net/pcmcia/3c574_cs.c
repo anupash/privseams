@@ -360,7 +360,10 @@ static void tc574_detach(dev_link_t *link)
 	for (linkp = &dev_list; *linkp; linkp = &(*linkp)->next)
 		if (*linkp == link) break;
 	if (*linkp == NULL)
-	return;
+		return;
+
+	if (link->dev)
+		unregister_netdev(dev);
 
 	if (link->state & DEV_CONFIG)
 		tc574_release(link);
@@ -370,8 +373,6 @@ static void tc574_detach(dev_link_t *link)
 
 	/* Unlink device structure, free bits */
 	*linkp = link->next;
-	if (link->dev)
-		unregister_netdev(dev);
 	free_netdev(dev);
 } /* tc574_detach */
 
@@ -580,10 +581,8 @@ static int tc574_event(event_t event, int priority,
 	switch (event) {
 	case CS_EVENT_CARD_REMOVAL:
 		link->state &= ~DEV_PRESENT;
-		if (link->state & DEV_CONFIG) {
+		if (link->state & DEV_CONFIG)
 			netif_device_detach(dev);
-			tc574_release(link);
-		}
 		break;
 	case CS_EVENT_CARD_INSERTION:
 		link->state |= DEV_PRESENT | DEV_CONFIG_PENDING;
@@ -1196,7 +1195,7 @@ static int el3_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 {
 	struct el3_private *lp = netdev_priv(dev);
 	ioaddr_t ioaddr = dev->base_addr;
-	u16 *data = (u16 *)&rq->ifr_data;
+	u16 *data = (u16 *)&rq->ifr_ifru;
 	int phy = lp->phys & 0x1f;
 
 	DEBUG(2, "%s: In ioct(%-.6s, %#4.4x) %4.4x %4.4x %4.4x %4.4x.\n",

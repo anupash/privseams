@@ -1,7 +1,7 @@
 /*
  *  drivers/s390/cio/css.c
  *  driver for channel subsystem
- *   $Revision: 1.73 $
+ *   $Revision: 1.80 $
  *
  *    Copyright (C) 2002 IBM Deutschland Entwicklung GmbH,
  *			 IBM Corporation
@@ -19,10 +19,14 @@
 #include "cio.h"
 #include "cio_debug.h"
 #include "ioasm.h"
+#include "chsc.h"
 
 unsigned int highest_subchannel;
 int need_rescan = 0;
 int css_init_done = 0;
+
+struct pgid global_pgid;
+int css_characteristics_avail = 0;
 
 struct device css_bus_device = {
 	.bus_id = "css0",
@@ -166,10 +170,12 @@ css_get_subchannel_status(struct subchannel *sch, int schid)
 	if (sch && sch->schib.pmcw.dnv &&
 	    (schib.pmcw.dev != sch->schib.pmcw.dev))
 		return CIO_REVALIDATE;
+	if (sch && !sch->lpm)
+		return CIO_NO_PATH;
 	return CIO_OPER;
 }
 	
-static inline int
+static int
 css_evaluate_subchannel(int irq, int slow)
 {
 	int event, ret, disc;
@@ -188,15 +194,34 @@ css_evaluate_subchannel(int irq, int slow)
 		return -EAGAIN; /* Will be done on the slow path. */
 	}
 	event = css_get_subchannel_status(sch, irq);
+	CIO_MSG_EVENT(4, "Evaluating schid %04x, event %d, %s, %s path.\n",
+		      irq, event, sch?(disc?"disconnected":"normal"):"unknown",
+		      slow?"slow":"fast");
 	switch (event) {
+	case CIO_NO_PATH:
 	case CIO_GONE:
 		if (!sch) {
 			/* Never used this subchannel. Ignore. */
 			ret = 0;
 			break;
 		}
+		if (disc && (event == CIO_NO_PATH)) {
+			/*
+			 * Uargh, hack again. Because we don't get a machine
+			 * check on configure on, our path bookkeeping can
+			 * be out of date here (it's fine while we only do
+			 * logical varying or get chsc machine checks). We
+			 * need to force reprobing or we might miss devices
+			 * coming operational again. It won't do harm in real
+			 * no path situations.
+			 */
+			device_trigger_reprobe(sch);
+			ret = 0;
+			break;
+		}
 		if (sch->driver && sch->driver->notify &&
-		    sch->driver->notify(&sch->dev, CIO_GONE)) {
+		    sch->driver->notify(&sch->dev, event)) {
+			cio_disable_subchannel(sch);
 			device_set_disconnected(sch);
 			ret = 0;
 			break;
@@ -205,6 +230,7 @@ css_evaluate_subchannel(int irq, int slow)
 		 * Unregister subchannel.
 		 * The device will be killed automatically.
 		 */
+		cio_disable_subchannel(sch);
 		device_unregister(&sch->dev);
 		/* Reset intparm to zeroes. */
 		sch->schib.pmcw.intparm = 0;
@@ -218,12 +244,21 @@ css_evaluate_subchannel(int irq, int slow)
 		 * We don't notify the driver since we have to throw the device
 		 * away in any case.
 		 */
-		device_unregister(&sch->dev);
-		/* Reset intparm to zeroes. */
-		sch->schib.pmcw.intparm = 0;
-		cio_modify(sch);
-		put_device(&sch->dev);
-		ret = css_probe_device(irq);
+		if (!disc) {
+			device_unregister(&sch->dev);
+			/* Reset intparm to zeroes. */
+			sch->schib.pmcw.intparm = 0;
+			cio_modify(sch);
+			put_device(&sch->dev);
+			ret = css_probe_device(irq);
+		} else {
+			/*
+			 * We can't immediately deregister the disconnected
+			 * device since it might block.
+			 */
+			device_trigger_reprobe(sch);
+			ret = 0;
+		}
 		break;
 	case CIO_OPER:
 		if (disc)
@@ -257,22 +292,43 @@ css_rescan_devices(void)
 	}
 }
 
-static void
-css_evaluate_slow_subchannel(unsigned long schid)
-{
-	css_evaluate_subchannel(schid, 1);
-}
+struct slow_subchannel {
+	struct list_head slow_list;
+	unsigned long schid;
+};
 
-void
+static LIST_HEAD(slow_subchannels_head);
+static spinlock_t slow_subchannel_lock = SPIN_LOCK_UNLOCKED;
+
+static void
 css_trigger_slow_path(void)
 {
+	CIO_TRACE_EVENT(4, "slowpath");
+
 	if (need_rescan) {
 		need_rescan = 0;
 		css_rescan_devices();
 		return;
 	}
-	css_walk_subchannel_slow_list(css_evaluate_slow_subchannel);
+
+	spin_lock_irq(&slow_subchannel_lock);
+	while (!list_empty(&slow_subchannels_head)) {
+		struct slow_subchannel *slow_sch =
+			list_entry(slow_subchannels_head.next,
+				   struct slow_subchannel, slow_list);
+
+		list_del_init(slow_subchannels_head.next);
+		spin_unlock_irq(&slow_subchannel_lock);
+		css_evaluate_subchannel(slow_sch->schid, 1);
+		spin_lock_irq(&slow_subchannel_lock);
+		kfree(slow_sch);
+	}
+	spin_unlock_irq(&slow_subchannel_lock);
 }
+
+typedef void (*workfunc)(void *);
+DECLARE_WORK(slow_path_work, (workfunc)css_trigger_slow_path, NULL);
+struct workqueue_struct *slow_path_wq;
 
 /*
  * Rescan for new devices. FIXME: This is slow.
@@ -314,9 +370,26 @@ css_process_crw(int irq)
 	return ret;
 }
 
+static void __init
+css_generate_pgid(void)
+{
+	/* Let's build our path group ID here. */
+	if (css_characteristics_avail && css_general_characteristics.mcss)
+		global_pgid.cpu_addr = 0x8000;
+	else {
+#ifdef CONFIG_SMP
+		global_pgid.cpu_addr = hard_smp_processor_id();
+#else
+		global_pgid.cpu_addr = 0;
+#endif
+	}
+	global_pgid.cpu_id = ((cpuid_t *) __LC_CPUID)->ident;
+	global_pgid.cpu_model = ((cpuid_t *) __LC_CPUID)->machine;
+	global_pgid.tod_high = (__u32) (get_clock() >> 32);
+}
+
 /*
- * some of the initialization has already been done from init_IRQ(),
- * here we do the rest now that the driver core is running.
+ * Now that the driver core is running, we can setup our channel subsystem.
  * The struct subchannel's are created during probing (except for the
  * static console subchannel).
  */
@@ -324,6 +397,11 @@ static int __init
 init_channel_subsystem (void)
 {
 	int ret, irq;
+
+	if (chsc_determine_css_characteristics() == 0)
+		css_characteristics_avail = 1;
+
+	css_generate_pgid();
 
 	if ((ret = bus_register(&css_bus_type)))
 		goto out;
@@ -434,14 +512,6 @@ s390_root_dev_unregister(struct device *dev)
 		device_unregister(dev);
 }
 
-struct slow_subchannel {
-	struct list_head slow_list;
-	unsigned long schid;
-};
-
-static LIST_HEAD(slow_subchannels_head);
-static spinlock_t slow_subchannel_lock = SPIN_LOCK_UNLOCKED;
-
 int
 css_enqueue_subchannel_slow(unsigned long schid)
 {
@@ -475,25 +545,7 @@ css_clear_subchannel_slow_list(void)
 	spin_unlock_irqrestore(&slow_subchannel_lock, flags);
 }
 
-void
-css_walk_subchannel_slow_list(void (*fn)(unsigned long))
-{
-	unsigned long flags;
 
-	spin_lock_irqsave(&slow_subchannel_lock, flags);
-	while (!list_empty(&slow_subchannels_head)) {
-		struct slow_subchannel *slow_sch =
-			list_entry(slow_subchannels_head.next,
-				   struct slow_subchannel, slow_list);
-
-		list_del_init(slow_subchannels_head.next);
-		spin_unlock_irqrestore(&slow_subchannel_lock, flags);
-		fn(slow_sch->schid);
-		spin_lock_irqsave(&slow_subchannel_lock, flags);
-		kfree(slow_sch);
-	}
-	spin_unlock_irqrestore(&slow_subchannel_lock, flags);
-}
 
 int
 css_slow_subchannels_exist(void)
@@ -505,3 +557,4 @@ MODULE_LICENSE("GPL");
 EXPORT_SYMBOL(css_bus_type);
 EXPORT_SYMBOL(s390_root_dev_register);
 EXPORT_SYMBOL(s390_root_dev_unregister);
+EXPORT_SYMBOL_GPL(css_characteristics_avail);

@@ -17,6 +17,7 @@
 #include <linux/smp_lock.h>
 #include <linux/init.h>
 #include <linux/idr.h>
+#include <linux/namei.h>
 #include <asm/uaccess.h>
 #include <asm/bitops.h>
 
@@ -230,14 +231,21 @@ out:
 static int proc_notify_change(struct dentry *dentry, struct iattr *iattr)
 {
 	struct inode *inode = dentry->d_inode;
-	int error = inode_setattr(inode, iattr);
-	if (!error) {
-		struct proc_dir_entry *de = PDE(inode);
-		de->uid = inode->i_uid;
-		de->gid = inode->i_gid;
-		de->mode = inode->i_mode;
-	}
+	struct proc_dir_entry *de = PDE(inode);
+	int error;
 
+	error = inode_change_ok(inode, iattr);
+	if (error)
+		goto out;
+
+	error = inode_setattr(inode, iattr);
+	if (error)
+		goto out;
+	
+	de->uid = inode->i_uid;
+	de->gid = inode->i_gid;
+	de->mode = inode->i_mode;
+out:
 	return error;
 }
 
@@ -288,18 +296,20 @@ static spinlock_t proc_inum_lock = SPIN_LOCK_UNLOCKED; /* protects the above */
  */
 static unsigned int get_inode_number(void)
 {
-	unsigned int i, inum = 0;
+	int i, inum = 0;
+	int error;
 
 retry:
 	if (idr_pre_get(&proc_inum_idr, GFP_KERNEL) == 0)
 		return 0;
 
 	spin_lock(&proc_inum_lock);
-	i = idr_get_new(&proc_inum_idr, NULL);
+	error = idr_get_new(&proc_inum_idr, NULL, &i);
 	spin_unlock(&proc_inum_lock);
-
-	if (i == -1)
+	if (error == -EAGAIN)
 		goto retry;
+	else if (error)
+		return 0;
 
 	inum = (i & MAX_ID_MASK) + PROC_DYNAMIC_FIRST;
 
@@ -319,21 +329,14 @@ static void release_inode_number(unsigned int inum)
 	spin_unlock(&proc_inum_lock);
 }
 
-static int
-proc_readlink(struct dentry *dentry, char __user *buffer, int buflen)
-{
-	char *s = PDE(dentry->d_inode)->data;
-	return vfs_readlink(dentry, buffer, buflen, s);
-}
-
 static int proc_follow_link(struct dentry *dentry, struct nameidata *nd)
 {
-	char *s = PDE(dentry->d_inode)->data;
-	return vfs_follow_link(nd, s);
+	nd_set_link(nd, PDE(dentry->d_inode)->data);
+	return 0;
 }
 
 static struct inode_operations proc_link_inode_operations = {
-	.readlink	= proc_readlink,
+	.readlink	= generic_readlink,
 	.follow_link	= proc_follow_link,
 };
 

@@ -42,6 +42,16 @@ static void blk_unplug_timeout(unsigned long data);
  */
 static kmem_cache_t *request_cachep;
 
+/*
+ * For queue allocation
+ */
+static kmem_cache_t *requestq_cachep;
+
+/*
+ * For io context allocations
+ */
+static kmem_cache_t *iocontext_cachep;
+
 static wait_queue_head_t congestion_wqh[2] = {
 		__WAIT_QUEUE_HEAD_INITIALIZER(congestion_wqh[0]),
 		__WAIT_QUEUE_HEAD_INITIALIZER(congestion_wqh[1])
@@ -70,14 +80,7 @@ EXPORT_SYMBOL(blk_max_pfn);
  */
 static inline int queue_congestion_on_threshold(struct request_queue *q)
 {
-	int ret;
-
-	ret = q->nr_requests - (q->nr_requests / 8) + 1;
-
-	if (ret > q->nr_requests)
-		ret = q->nr_requests;
-
-	return ret;
+	return q->nr_congestion_on;
 }
 
 /*
@@ -85,14 +88,22 @@ static inline int queue_congestion_on_threshold(struct request_queue *q)
  */
 static inline int queue_congestion_off_threshold(struct request_queue *q)
 {
-	int ret;
+	return q->nr_congestion_off;
+}
 
-	ret = q->nr_requests - (q->nr_requests / 8) - 1;
+static void blk_queue_congestion_threshold(struct request_queue *q)
+{
+	int nr;
 
-	if (ret < 1)
-		ret = 1;
+	nr = q->nr_requests - (q->nr_requests / 8) + 1;
+	if (nr > q->nr_requests)
+		nr = q->nr_requests;
+	q->nr_congestion_on = nr;
 
-	return ret;
+	nr = q->nr_requests - (q->nr_requests / 8) - 1;
+	if (nr < 1)
+		nr = 1;
+	q->nr_congestion_off = nr;
 }
 
 /*
@@ -229,6 +240,7 @@ void blk_queue_make_request(request_queue_t * q, make_request_fn * mfn)
 	blk_queue_max_sectors(q, MAX_SECTORS);
 	blk_queue_hardsect_size(q, 512);
 	blk_queue_dma_alignment(q, 511);
+	blk_queue_congestion_threshold(q);
 
 	q->unplug_thresh = 4;		/* hmm */
 	q->unplug_delay = (3 * HZ) / 1000;	/* 3 milliseconds */
@@ -265,8 +277,6 @@ EXPORT_SYMBOL(blk_queue_make_request);
 void blk_queue_bounce_limit(request_queue_t *q, u64 dma_addr)
 {
 	unsigned long bounce_pfn = dma_addr >> PAGE_SHIFT;
-	unsigned long mb = dma_addr >> 20;
-	static request_queue_t *last_q;
 
 	/*
 	 * set appropriate bounce gfp mask -- unfortunately we don't have a
@@ -280,19 +290,7 @@ void blk_queue_bounce_limit(request_queue_t *q, u64 dma_addr)
 	} else
 		q->bounce_gfp = GFP_NOIO;
 
-	/*
-	 * keep this for debugging for now...
-	 */
-	if (dma_addr != BLK_BOUNCE_HIGH && q != last_q) {
-		printk("blk: queue %p, ", q);
-		if (dma_addr == BLK_BOUNCE_ANY)
-			printk("no I/O memory limit\n");
-		else
-			printk("I/O limit %luMb (mask 0x%Lx)\n", mb, (long long) dma_addr);
-	}
-
 	q->bounce_pfn = bounce_pfn;
-	last_q = q;
 }
 
 EXPORT_SYMBOL(blk_queue_bounce_limit);
@@ -634,6 +632,8 @@ int blk_queue_resize_tags(request_queue_t *q, int new_depth)
 	return 0;
 }
 
+EXPORT_SYMBOL(blk_queue_resize_tags);
+
 /**
  * blk_queue_end_tag - end tag operations for a request
  * @q:  the request queue for the device
@@ -819,14 +819,14 @@ EXPORT_SYMBOL(blk_dump_rq_flags);
 void blk_recount_segments(request_queue_t *q, struct bio *bio)
 {
 	struct bio_vec *bv, *bvprv = NULL;
-	int i, nr_phys_segs, nr_hw_segs, seg_size, cluster;
+	int i, nr_phys_segs, nr_hw_segs, seg_size, hw_seg_size, cluster;
 	int high, highprv = 1;
 
 	if (unlikely(!bio->bi_io_vec))
 		return;
 
 	cluster = q->queue_flags & (1 << QUEUE_FLAG_CLUSTER);
-	seg_size = nr_phys_segs = nr_hw_segs = 0;
+	hw_seg_size = seg_size = nr_phys_segs = nr_hw_segs = 0;
 	bio_for_each_segment(bv, bio, i) {
 		/*
 		 * the trick here is making sure that a high page is never
@@ -843,22 +843,35 @@ void blk_recount_segments(request_queue_t *q, struct bio *bio)
 				goto new_segment;
 			if (!BIOVEC_SEG_BOUNDARY(q, bvprv, bv))
 				goto new_segment;
+			if (BIOVEC_VIRT_OVERSIZE(hw_seg_size + bv->bv_len))
+				goto new_hw_segment;
 
 			seg_size += bv->bv_len;
+			hw_seg_size += bv->bv_len;
 			bvprv = bv;
 			continue;
 		}
 new_segment:
-		if (!BIOVEC_VIRT_MERGEABLE(bvprv, bv))
+		if (BIOVEC_VIRT_MERGEABLE(bvprv, bv) &&
+		    !BIOVEC_VIRT_OVERSIZE(hw_seg_size + bv->bv_len)) {
+			hw_seg_size += bv->bv_len;
+		} else {
 new_hw_segment:
+			if (hw_seg_size > bio->bi_hw_front_size)
+				bio->bi_hw_front_size = hw_seg_size;
+			hw_seg_size = BIOVEC_VIRT_START_SIZE(bv) + bv->bv_len;
 			nr_hw_segs++;
+		}
 
 		nr_phys_segs++;
 		bvprv = bv;
 		seg_size = bv->bv_len;
 		highprv = high;
 	}
-
+	if (hw_seg_size > bio->bi_hw_back_size)
+		bio->bi_hw_back_size = hw_seg_size;
+	if (nr_hw_segs == 1 && hw_seg_size > bio->bi_hw_front_size)
+		bio->bi_hw_front_size = hw_seg_size;
 	bio->bi_phys_segments = nr_phys_segs;
 	bio->bi_hw_segments = nr_hw_segs;
 	bio->bi_flags |= (1 << BIO_SEG_VALID);
@@ -891,22 +904,17 @@ EXPORT_SYMBOL(blk_phys_contig_segment);
 int blk_hw_contig_segment(request_queue_t *q, struct bio *bio,
 				 struct bio *nxt)
 {
-	if (!(q->queue_flags & (1 << QUEUE_FLAG_CLUSTER)))
-		return 0;
-
-	if (!BIOVEC_VIRT_MERGEABLE(__BVEC_END(bio), __BVEC_START(nxt)))
+	if (unlikely(!bio_flagged(bio, BIO_SEG_VALID)))
+		blk_recount_segments(q, bio);
+	if (unlikely(!bio_flagged(nxt, BIO_SEG_VALID)))
+		blk_recount_segments(q, nxt);
+	if (!BIOVEC_VIRT_MERGEABLE(__BVEC_END(bio), __BVEC_START(nxt)) ||
+	    BIOVEC_VIRT_OVERSIZE(bio->bi_hw_front_size + bio->bi_hw_back_size))
 		return 0;
 	if (bio->bi_size + nxt->bi_size > q->max_segment_size)
 		return 0;
 
-	/*
-	 * bio and nxt are contigous in memory, check if the queue allows
-	 * these two to be merged into one
-	 */
-	if (BIO_SEG_BOUNDARY(q, bio, nxt))
-		return 1;
-
-	return 0;
+	return 1;
 }
 
 EXPORT_SYMBOL(blk_hw_contig_segment);
@@ -976,7 +984,8 @@ static inline int ll_new_mergeable(request_queue_t *q,
 
 	if (req->nr_phys_segments + nr_phys_segs > q->max_phys_segments) {
 		req->flags |= REQ_NOMERGE;
-		q->last_merge = NULL;
+		if (req == q->last_merge)
+			q->last_merge = NULL;
 		return 0;
 	}
 
@@ -998,7 +1007,8 @@ static inline int ll_new_hw_segment(request_queue_t *q,
 	if (req->nr_hw_segments + nr_hw_segs > q->max_hw_segments
 	    || req->nr_phys_segments + nr_phys_segs > q->max_phys_segments) {
 		req->flags |= REQ_NOMERGE;
-		q->last_merge = NULL;
+		if (req == q->last_merge)
+			q->last_merge = NULL;
 		return 0;
 	}
 
@@ -1014,14 +1024,31 @@ static inline int ll_new_hw_segment(request_queue_t *q,
 static int ll_back_merge_fn(request_queue_t *q, struct request *req, 
 			    struct bio *bio)
 {
+	int len;
+
 	if (req->nr_sectors + bio_sectors(bio) > q->max_sectors) {
 		req->flags |= REQ_NOMERGE;
-		q->last_merge = NULL;
+		if (req == q->last_merge)
+			q->last_merge = NULL;
 		return 0;
 	}
+	if (unlikely(!bio_flagged(req->biotail, BIO_SEG_VALID)))
+		blk_recount_segments(q, req->biotail);
+	if (unlikely(!bio_flagged(bio, BIO_SEG_VALID)))
+		blk_recount_segments(q, bio);
+	len = req->biotail->bi_hw_back_size + bio->bi_hw_front_size;
+	if (BIOVEC_VIRT_MERGEABLE(__BVEC_END(req->biotail), __BVEC_START(bio)) &&
+	    !BIOVEC_VIRT_OVERSIZE(len)) {
+		int mergeable =  ll_new_mergeable(q, req, bio);
 
-	if (BIOVEC_VIRT_MERGEABLE(__BVEC_END(req->biotail), __BVEC_START(bio)))
-		return ll_new_mergeable(q, req, bio);
+		if (mergeable) {
+			if (req->nr_hw_segments == 1)
+				req->bio->bi_hw_front_size = len;
+			if (bio->bi_hw_segments == 1)
+				bio->bi_hw_back_size = len;
+		}
+		return mergeable;
+	}
 
 	return ll_new_hw_segment(q, req, bio);
 }
@@ -1029,14 +1056,31 @@ static int ll_back_merge_fn(request_queue_t *q, struct request *req,
 static int ll_front_merge_fn(request_queue_t *q, struct request *req, 
 			     struct bio *bio)
 {
+	int len;
+
 	if (req->nr_sectors + bio_sectors(bio) > q->max_sectors) {
 		req->flags |= REQ_NOMERGE;
-		q->last_merge = NULL;
+		if (req == q->last_merge)
+			q->last_merge = NULL;
 		return 0;
 	}
+	len = bio->bi_hw_back_size + req->bio->bi_hw_front_size;
+	if (unlikely(!bio_flagged(bio, BIO_SEG_VALID)))
+		blk_recount_segments(q, bio);
+	if (unlikely(!bio_flagged(req->bio, BIO_SEG_VALID)))
+		blk_recount_segments(q, req->bio);
+	if (BIOVEC_VIRT_MERGEABLE(__BVEC_END(bio), __BVEC_START(req->bio)) &&
+	    !BIOVEC_VIRT_OVERSIZE(len)) {
+		int mergeable =  ll_new_mergeable(q, req, bio);
 
-	if (BIOVEC_VIRT_MERGEABLE(__BVEC_END(bio), __BVEC_START(req->bio)))
-		return ll_new_mergeable(q, req, bio);
+		if (mergeable) {
+			if (bio->bi_hw_segments == 1)
+				bio->bi_hw_front_size = len;
+			if (req->nr_hw_segments == 1)
+				req->biotail->bi_hw_back_size = len;
+		}
+		return mergeable;
+	}
 
 	return ll_new_hw_segment(q, req, bio);
 }
@@ -1068,8 +1112,17 @@ static int ll_merge_requests_fn(request_queue_t *q, struct request *req,
 		return 0;
 
 	total_hw_segments = req->nr_hw_segments + next->nr_hw_segments;
-	if (blk_hw_contig_segment(q, req->biotail, next->bio))
+	if (blk_hw_contig_segment(q, req->biotail, next->bio)) {
+		int len = req->biotail->bi_hw_back_size + next->bio->bi_hw_front_size;
+		/*
+		 * propagate the combined length to the end of the requests
+		 */
+		if (req->nr_hw_segments == 1)
+			req->bio->bi_hw_front_size = len;
+		if (next->nr_hw_segments == 1)
+			next->biotail->bi_hw_back_size = len;
 		total_hw_segments--;
+	}
 
 	if (total_hw_segments > q->max_hw_segments)
 		return 0;
@@ -1125,7 +1178,7 @@ EXPORT_SYMBOL(blk_remove_plug);
 /*
  * remove the plug and let it rip..
  */
-static inline void __generic_unplug_device(request_queue_t *q)
+void __generic_unplug_device(request_queue_t *q)
 {
 	if (test_bit(QUEUE_FLAG_STOPPED, &q->queue_flags))
 		return;
@@ -1139,10 +1192,11 @@ static inline void __generic_unplug_device(request_queue_t *q)
 	if (elv_next_request(q))
 		q->request_fn(q);
 }
+EXPORT_SYMBOL(__generic_unplug_device);
 
 /**
  * generic_unplug_device - fire a request queue
- * @data:    The &request_queue_t in question
+ * @q:    The &request_queue_t in question
  *
  * Description:
  *   Linux uses plugging to build bigger requests queues before letting
@@ -1159,7 +1213,8 @@ void generic_unplug_device(request_queue_t *q)
 }
 EXPORT_SYMBOL(generic_unplug_device);
 
-static void blk_backing_dev_unplug(struct backing_dev_info *bdi)
+static void blk_backing_dev_unplug(struct backing_dev_info *bdi,
+				   struct page *page)
 {
 	request_queue_t *q = bdi->unplug_io_data;
 
@@ -1206,7 +1261,7 @@ void blk_start_queue(request_queue_t *q)
 		clear_bit(QUEUE_FLAG_REENTER, &q->queue_flags);
 	} else {
 		blk_plug_device(q);
-		schedule_work(&q->unplug_work);
+		kblockd_schedule_work(&q->unplug_work);
 	}
 }
 
@@ -1283,7 +1338,7 @@ void blk_cleanup_queue(request_queue_t * q)
 	if (blk_queue_tagged(q))
 		blk_queue_free_tags(q);
 
-	kfree(q);
+	kmem_cache_free(requestq_cachep, q);
 }
 
 EXPORT_SYMBOL(blk_cleanup_queue);
@@ -1347,7 +1402,7 @@ __setup("elevator=", elevator_setup);
 
 request_queue_t *blk_alloc_queue(int gfp_mask)
 {
-	request_queue_t *q = kmalloc(sizeof(*q), gfp_mask);
+	request_queue_t *q = kmem_cache_alloc(requestq_cachep, gfp_mask);
 
 	if (!q)
 		return NULL;
@@ -1412,9 +1467,6 @@ request_queue_t *blk_init_queue(request_fn_proc *rfn, spinlock_t *lock)
 		printk("Using %s io scheduler\n", chosen_elevator->elevator_name);
 	}
 
-	if (elevator_init(q, chosen_elevator))
-		goto out_elv;
-
 	q->request_fn		= rfn;
 	q->back_merge_fn       	= ll_back_merge_fn;
 	q->front_merge_fn      	= ll_front_merge_fn;
@@ -1432,11 +1484,15 @@ request_queue_t *blk_init_queue(request_fn_proc *rfn, spinlock_t *lock)
 	blk_queue_max_hw_segments(q, MAX_HW_SEGMENTS);
 	blk_queue_max_phys_segments(q, MAX_PHYS_SEGMENTS);
 
-	return q;
-out_elv:
+	/*
+	 * all done
+	 */
+	if (!elevator_init(q, chosen_elevator))
+		return q;
+
 	blk_cleanup_queue(q);
 out_init:
-	kfree(q);
+	kmem_cache_free(requestq_cachep, q);
 	return NULL;
 }
 
@@ -1760,54 +1816,53 @@ EXPORT_SYMBOL(blk_insert_request);
  *
  *    A matching blk_rq_unmap_user() must be issued at the end of io, while
  *    still in process context.
+ *
+ *    Note: The mapped bio may need to be bounced through blk_queue_bounce()
+ *    before being submitted to the device, as pages mapped may be out of
+ *    reach. It's the callers responsibility to make sure this happens. The
+ *    original bio must be passed back in to blk_rq_unmap_user() for proper
+ *    unmapping.
  */
 struct request *blk_rq_map_user(request_queue_t *q, int rw, void __user *ubuf,
 				unsigned int len)
 {
-	struct request *rq = NULL;
-	char *buf = NULL;
+	unsigned long uaddr;
+	struct request *rq;
 	struct bio *bio;
-	int ret;
+
+	if (len > (q->max_sectors << 9))
+		return ERR_PTR(-EINVAL);
+	if ((!len && ubuf) || (len && !ubuf))
+		return ERR_PTR(-EINVAL);
 
 	rq = blk_get_request(q, rw, __GFP_WAIT);
 	if (!rq)
 		return ERR_PTR(-ENOMEM);
 
-	bio = bio_map_user(q, NULL, (unsigned long) ubuf, len, rw == READ);
-	if (!bio) {
-		int bytes = (len + 511) & ~511;
+	/*
+	 * if alignment requirement is satisfied, map in user pages for
+	 * direct dma. else, set up kernel bounce buffers
+	 */
+	uaddr = (unsigned long) ubuf;
+	if (!(uaddr & queue_dma_alignment(q)) && !(len & queue_dma_alignment(q)))
+		bio = bio_map_user(q, NULL, uaddr, len, rw == READ);
+	else
+		bio = bio_copy_user(q, uaddr, len, rw == READ);
 
-		buf = kmalloc(bytes, q->bounce_gfp | GFP_USER);
-		if (!buf) {
-			ret = -ENOMEM;
-			goto fault;
-		}
-
-		if (rw == WRITE) {
-			if (copy_from_user(buf, ubuf, len)) {
-				ret = -EFAULT;
-				goto fault;
-			}
-		} else
-			memset(buf, 0, len);
-	}
-
-	rq->bio = rq->biotail = bio;
-	if (rq->bio)
+	if (!IS_ERR(bio)) {
+		rq->bio = rq->biotail = bio;
 		blk_rq_bio_prep(q, rq, bio);
 
-	rq->buffer = rq->data = buf;
-	rq->data_len = len;
-	return rq;
-fault:
-	if (buf)
-		kfree(buf);
-	if (bio)
-		bio_unmap_user(bio, 1);
-	if (rq)
-		blk_put_request(rq);
+		rq->buffer = rq->data = NULL;
+		rq->data_len = len;
+		return rq;
+	}
 
-	return ERR_PTR(ret);
+	/*
+	 * bio is the err-ptr
+	 */
+	blk_put_request(rq);
+	return (struct request *) bio;
 }
 
 EXPORT_SYMBOL(blk_rq_map_user);
@@ -1821,18 +1876,15 @@ EXPORT_SYMBOL(blk_rq_map_user);
  * Description:
  *    Unmap a request previously mapped by blk_rq_map_user().
  */
-int blk_rq_unmap_user(struct request *rq, void __user *ubuf, struct bio *bio,
-		      unsigned int ulen)
+int blk_rq_unmap_user(struct request *rq, struct bio *bio, unsigned int ulen)
 {
-	const int read = rq_data_dir(rq) == READ;
 	int ret = 0;
 
-	if (bio)
-		bio_unmap_user(bio, read);
-	if (rq->buffer) {
-		if (read && copy_to_user(ubuf, rq->buffer, ulen))
-			ret = -EFAULT;
-		kfree(rq->buffer);
+	if (bio) {
+		if (bio_flagged(bio, BIO_USER_MAPPED))
+			bio_unmap_user(bio);
+		else
+			ret = bio_uncopy_user(bio);
 	}
 
 	blk_put_request(rq);
@@ -1877,6 +1929,7 @@ int blk_execute_rq(request_queue_t *q, struct gendisk *bd_disk,
 	elv_add_request(q, rq, ELEVATOR_INSERT_BACK, 1);
 	generic_unplug_device(q);
 	wait_for_completion(&wait);
+	rq->waiting = NULL;
 
 	if (rq->errors)
 		err = -EIO;
@@ -2280,13 +2333,9 @@ get_rq:
 out:
 	if (freereq)
 		__blk_put_request(q, freereq);
+	if (bio_sync(bio))
+		__generic_unplug_device(q);
 
-	if (blk_queue_plugged(q)) {
-		int nrq = q->rq.count[READ] + q->rq.count[WRITE] - q->in_flight;
-
-		if (nrq == q->unplug_thresh || bio_sync(bio))
-			__generic_unplug_device(q);
-	}
 	spin_unlock_irq(q->queue_lock);
 	return 0;
 
@@ -2444,7 +2493,7 @@ void submit_bio(int rw, struct bio *bio)
 
 	if (unlikely(block_dump)) {
 		char b[BDEVNAME_SIZE];
-		printk("%s(%d): %s block %Lu on %s\n",
+		printk(KERN_DEBUG "%s(%d): %s block %Lu on %s\n",
 			current->comm, current->pid,
 			(rw & WRITE) ? "WRITE" : "READ",
 			(unsigned long long)bio->bi_sector,
@@ -2535,7 +2584,7 @@ EXPORT_SYMBOL(process_that_request_first);
 
 void blk_recalc_rq_segments(struct request *rq)
 {
-	struct bio *bio;
+	struct bio *bio, *prevbio = NULL;
 	int nr_phys_segs, nr_hw_segs;
 
 	if (!rq->bio)
@@ -2548,6 +2597,13 @@ void blk_recalc_rq_segments(struct request *rq)
 
 		nr_phys_segs += bio_phys_segments(rq->q, bio);
 		nr_hw_segs += bio_hw_segments(rq->q, bio);
+		if (prevbio) {
+			if (blk_phys_contig_segment(rq->q, prevbio, bio))
+				nr_phys_segs--;
+			if (blk_hw_contig_segment(rq->q, prevbio, bio))
+				nr_hw_segs--;
+		}
+		prevbio = bio;
 	}
 
 	rq->nr_phys_segments = nr_phys_segs;
@@ -2610,7 +2666,7 @@ static int __end_that_request_first(struct request *req, int uptodate,
 	}
 
 	total_bytes = bio_nbytes = 0;
-	while ((bio = req->bio)) {
+	while ((bio = req->bio) != NULL) {
 		int nbytes;
 
 		if (nr_bytes >= bio->bi_size) {
@@ -2812,6 +2868,8 @@ int kblockd_schedule_work(struct work_struct *work)
 	return queue_work(kblockd_workqueue, work);
 }
 
+EXPORT_SYMBOL(kblockd_schedule_work);
+
 void kblockd_flush(void)
 {
 	flush_workqueue(kblockd_workqueue);
@@ -2824,9 +2882,13 @@ int __init blk_dev_init(void)
 		panic("Failed to create kblockd\n");
 
 	request_cachep = kmem_cache_create("blkdev_requests",
-			sizeof(struct request), 0, 0, NULL, NULL);
-	if (!request_cachep)
-		panic("Can't create request pool slab cache\n");
+			sizeof(struct request), 0, SLAB_PANIC, NULL, NULL);
+
+	requestq_cachep = kmem_cache_create("blkdev_queue",
+			sizeof(request_queue_t), 0, SLAB_PANIC, NULL, NULL);
+
+	iocontext_cachep = kmem_cache_create("blkdev_ioc",
+			sizeof(struct io_context), 0, SLAB_PANIC, NULL, NULL);
 
 	blk_max_low_pfn = max_low_pfn;
 	blk_max_pfn = max_pfn;
@@ -2846,7 +2908,7 @@ void put_io_context(struct io_context *ioc)
 	if (atomic_dec_and_test(&ioc->refcount)) {
 		if (ioc->aic && ioc->aic->dtor)
 			ioc->aic->dtor(ioc->aic);
-		kfree(ioc);
+		kmem_cache_free(iocontext_cachep, ioc);
 	}
 }
 
@@ -2885,7 +2947,7 @@ struct io_context *get_io_context(int gfp_flags)
 	local_irq_save(flags);
 	ret = tsk->io_context;
 	if (ret == NULL) {
-		ret = kmalloc(sizeof(*ret), GFP_ATOMIC);
+		ret = kmem_cache_alloc(iocontext_cachep, GFP_ATOMIC);
 		if (ret) {
 			atomic_set(&ret->refcount, 1);
 			ret->pid = tsk->pid;
@@ -2960,6 +3022,7 @@ queue_requests_store(struct request_queue *q, const char *page, size_t count)
 	int ret = queue_var_store(&q->nr_requests, page, count);
 	if (q->nr_requests < BLKDEV_MIN_RQ)
 		q->nr_requests = BLKDEV_MIN_RQ;
+	blk_queue_congestion_threshold(q);
 
 	if (rl->count[READ] >= queue_congestion_on_threshold(q))
 		set_queue_congested(q, READ);
@@ -2987,14 +3050,41 @@ queue_requests_store(struct request_queue *q, const char *page, size_t count)
 	return ret;
 }
 
+static ssize_t queue_ra_show(struct request_queue *q, char *page)
+{
+	int ra_kb = q->backing_dev_info.ra_pages << (PAGE_CACHE_SHIFT - 10);
+
+	return queue_var_show(ra_kb, (page));
+}
+
+static ssize_t
+queue_ra_store(struct request_queue *q, const char *page, size_t count)
+{
+	unsigned long ra_kb;
+	ssize_t ret = queue_var_store(&ra_kb, page, count);
+
+	if (ra_kb > (q->max_sectors >> 1))
+		ra_kb = (q->max_sectors >> 1);
+
+	q->backing_dev_info.ra_pages = ra_kb >> (PAGE_CACHE_SHIFT - 10);
+	return ret;
+}
+
 static struct queue_sysfs_entry queue_requests_entry = {
 	.attr = {.name = "nr_requests", .mode = S_IRUGO | S_IWUSR },
 	.show = queue_requests_show,
 	.store = queue_requests_store,
 };
 
+static struct queue_sysfs_entry queue_ra_entry = {
+	.attr = {.name = "read_ahead_kb", .mode = S_IRUGO | S_IWUSR },
+	.show = queue_ra_show,
+	.store = queue_ra_store,
+};
+
 static struct attribute *default_attrs[] = {
 	&queue_requests_entry.attr,
+	&queue_ra_entry.attr,
 	NULL,
 };
 

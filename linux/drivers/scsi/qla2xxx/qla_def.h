@@ -20,6 +20,24 @@
 #ifndef __QLA_DEF_H
 #define __QLA_DEF_H
 
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/types.h>
+#include <linux/module.h>
+#include <linux/list.h>
+#include <linux/pci.h>
+#include <linux/sched.h>
+#include <linux/slab.h>
+#include <linux/mempool.h>
+#include <linux/spinlock.h>
+#include <linux/completion.h>
+#include <asm/semaphore.h>
+
+#include <scsi/scsi.h>
+#include <scsi/scsi_host.h>
+#include <scsi/scsi_device.h>
+#include <scsi/scsi_cmnd.h>
+
 /* XXX(hch): move to pci_ids.h */
 #ifndef PCI_DEVICE_ID_QLOGIC_ISP2300
 #define PCI_DEVICE_ID_QLOGIC_ISP2300	0x2300
@@ -154,6 +172,9 @@
 #define RD_REG_BYTE(addr)		readb(addr)
 #define RD_REG_WORD(addr)		readw(addr)
 #define RD_REG_DWORD(addr)		readl(addr)
+#define RD_REG_BYTE_RELAXED(addr)	readb_relaxed(addr)
+#define RD_REG_WORD_RELAXED(addr)	readw_relaxed(addr)
+#define RD_REG_DWORD_RELAXED(addr)	readl_relaxed(addr)
 #define WRT_REG_BYTE(addr, data)	writeb(data,addr)
 #define WRT_REG_WORD(addr, data)	writew(data,addr)
 #define WRT_REG_DWORD(addr, data)	writel(data,addr)
@@ -209,19 +230,10 @@
 #define MAX_OUTSTANDING_COMMANDS	1024
 
 /* ISP request and response entry counts (37-65535) */
-#define REQUEST_ENTRY_CNT		2048	/* Number of request entries. */
+#define REQUEST_ENTRY_CNT_2100		128	/* Number of request entries. */
+#define REQUEST_ENTRY_CNT_2200		2048	/* Number of request entries. */
 #define RESPONSE_ENTRY_CNT_2100		64	/* Number of response entries.*/
 #define RESPONSE_ENTRY_CNT_2300		512	/* Number of response entries.*/
-
-/* Calculations for SG segments */
-#define SEGS_PER_REQUEST_32	3 
-#define SEGS_PER_CONT_32	7
-#define SG_SEGMENTS_32 (SEGS_PER_REQUEST_32 + \
-    (SEGS_PER_CONT_32 * (REQUEST_ENTRY_CNT - 2)))     
-#define SEGS_PER_REQUEST_64	2 
-#define SEGS_PER_CONT_64	5
-#define SG_SEGMENTS_64 (SEGS_PER_REQUEST_64 + \
-    (SEGS_PER_CONT_64 * (REQUEST_ENTRY_CNT - 2)))     
 
 /*
  * SCSI Request Block 
@@ -270,10 +282,6 @@ typedef struct srb {
 #define SRB_ERR_DEVICE	3		/* Request failed -- "device error" */
 #define SRB_ERR_OTHER	4
 
-	/* Segment/entries counts */
-	uint16_t	req_cnt;	/* !0 indicates counts determined */
-	uint16_t	tot_dsds;
-
 	/* SRB magic number */
 	uint16_t magic;
 #define SRB_MAGIC       0x10CB
@@ -294,7 +302,8 @@ typedef struct srb {
 
 #define SRB_BUSY		BIT_8	/* Command is in busy retry state */
 #define SRB_FO_CANCEL		BIT_9	/* Command don't need to do failover */
-#define	SRB_IOCTL		BIT_10	/* IOCTL command. */
+#define SRB_IOCTL		BIT_10	/* IOCTL command. */
+#define SRB_TAPE		BIT_11	/* FCP2 (Tape) command. */
 
 /*
  * SRB state definitions
@@ -1312,8 +1321,7 @@ typedef struct {
 #define SS_RESIDUAL_UNDER		BIT_11
 #define SS_RESIDUAL_OVER		BIT_10
 #define SS_SENSE_LEN_VALID		BIT_9
-#define SS_RESIDUAL_LEN_VALID		BIT_8	/* ISP2100 only */
-#define SS_RESPONSE_INFO_LEN_VALID	BIT_8	/* ISP2200 and 23xx */
+#define SS_RESPONSE_INFO_LEN_VALID	BIT_8
 
 #define SS_RESERVE_CONFLICT		(BIT_4 | BIT_3)
 #define SS_BUSY_CONDITION		BIT_3
@@ -1931,10 +1939,6 @@ struct ct_sns_pkt {
 #define	RFT_ID_SNS_CMD_SIZE	60
 #define	RFT_ID_SNS_DATA_SIZE	16
 
-#define	RFF_ID_SNS_SCMD_LEN	8
-#define	RFF_ID_SNS_CMD_SIZE	32
-#define	RFF_ID_SNS_DATA_SIZE	16
-
 #define	RNN_ID_SNS_SCMD_LEN	10
 #define	RNN_ID_SNS_CMD_SIZE	36
 #define	RNN_ID_SNS_DATA_SIZE	16
@@ -1970,7 +1974,6 @@ struct sns_cmd_pkt {
 		} cmd;
 
 		uint8_t rft_data[RFT_ID_SNS_DATA_SIZE];
-		uint8_t rff_data[RFF_ID_SNS_DATA_SIZE];
 		uint8_t rnn_data[RNN_ID_SNS_DATA_SIZE];
 		uint8_t gan_data[GA_NXT_SNS_DATA_SIZE];
 		uint8_t gid_data[GID_PT_SNS_DATA_SIZE];
@@ -2123,6 +2126,7 @@ typedef struct scsi_qla_host {
 	request_t       *request_ring_ptr;  /* Current address. */
 	uint16_t        req_ring_index;     /* Current index. */
 	uint16_t        req_q_cnt;          /* Number of available entries. */
+	uint16_t	request_q_length;
 
 	dma_addr_t	response_dma;       /* Physical address. */
 	response_t      *response_ring;     /* Base virtual address */
@@ -2281,7 +2285,8 @@ typedef struct scsi_qla_host {
 	mbx_cmd_t	*mcp;
 	unsigned long	mbx_cmd_flags;
 #define MBX_INTERRUPT	1
-#define MBX_INTR_WAIT   2
+#define MBX_INTR_WAIT	2
+#define MBX_UPDATE_FLASH_ACTIVE	3
 
 	spinlock_t	mbx_reg_lock;   /* Mbx Cmd Register Lock */
 
@@ -2317,6 +2322,7 @@ typedef struct scsi_qla_host {
 	uint16_t	fw_minor_version;
 	uint16_t	fw_subminor_version;
 	uint16_t	fw_attributes;
+	uint32_t	fw_memory_size;
 	uint32_t	fw_transfer_size;
 
 	uint16_t	fw_options[16];		/* slots: 1,2,3,10,11 */
@@ -2340,8 +2346,6 @@ typedef struct scsi_qla_host {
 
 	uint8_t     node_name[WWN_SIZE];
 	uint8_t     nvram_version; 
-	uint8_t     optrom_major; 
-	uint8_t     optrom_minor; 
 	uint32_t    isp_abort_cnt;
 
 	/* Adapter I/O statistics for failover */
@@ -2433,5 +2437,18 @@ struct _qla2x00stats  {
 #include "qla_dbg.h"
 #include "qla_inline.h"
 #include "qla_listops.h"
+
+/*
+* String arrays
+*/
+#define LINESIZE    256
+#define MAXARGS      26
+
+#define CMD_SP(Cmnd)		((Cmnd)->SCp.ptr)
+#define CMD_COMPL_STATUS(Cmnd)  ((Cmnd)->SCp.this_residual)
+#define CMD_RESID_LEN(Cmnd)	((Cmnd)->SCp.buffers_residual)
+#define CMD_SCSI_STATUS(Cmnd)	((Cmnd)->SCp.Status)
+#define CMD_ACTUAL_SNSLEN(Cmnd)	((Cmnd)->SCp.Message)
+#define CMD_ENTRY_STATUS(Cmnd)	((Cmnd)->SCp.have_data_in)
 
 #endif

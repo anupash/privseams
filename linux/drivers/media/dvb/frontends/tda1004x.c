@@ -32,7 +32,6 @@
  */
 
 
-#define __KERNEL_SYSCALLS__
 #include <linux/kernel.h>
 #include <linux/vmalloc.h>
 #include <linux/module.h>
@@ -40,7 +39,6 @@
 #include <linux/string.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
-#include <linux/unistd.h>
 #include <linux/fcntl.h>
 #include <linux/errno.h>
 #include <linux/syscalls.h>
@@ -190,6 +188,7 @@ static int tda10045h_fwinfo_count = sizeof(tda10045h_fwinfo) / sizeof(struct fwi
 static struct fwinfo tda10046h_fwinfo[] = { {.file_size = 286720,.fw_offset = 0x3c4f9,.fw_size = 24479} };
 static int tda10046h_fwinfo_count = sizeof(tda10046h_fwinfo) / sizeof(struct fwinfo);
 
+static int errno;
 
 
 static int tda1004x_write_byte(struct dvb_i2c_bus *i2c, struct tda1004x_state *tda_state, int reg, int data)
@@ -398,13 +397,13 @@ static int tda1004x_fwupload(struct dvb_i2c_bus *i2c, struct tda1004x_state *tda
 
 	// Load the firmware
 	set_fs(get_ds());
-	fd = open(tda1004x_firmware, 0, 0);
+	fd = sys_open(tda1004x_firmware, 0, 0);
 	if (fd < 0) {
 		printk("%s: Unable to open firmware %s\n", __FUNCTION__,
 		       tda1004x_firmware);
 		return -EIO;
 	}
-	filesize = lseek(fd, 0L, 2);
+	filesize = sys_lseek(fd, 0L, 2);
 	if (filesize <= 0) {
 		printk("%s: Firmware %s is empty\n", __FUNCTION__,
 		       tda1004x_firmware);
@@ -435,8 +434,8 @@ static int tda1004x_fwupload(struct dvb_i2c_bus *i2c, struct tda1004x_state *tda
 	}
 
 	// read it!
-	lseek(fd, fw_offset, 0);
-	if (read(fd, firmware, fw_size) != fw_size) {
+	sys_lseek(fd, fw_offset, 0);
+	if (sys_read(fd, firmware, fw_size) != fw_size) {
 		printk("%s: Failed to read firmware\n", __FUNCTION__);
 		vfree(firmware);
 		sys_close(fd);
@@ -537,7 +536,7 @@ static int tda1004x_fwupload(struct dvb_i2c_bus *i2c, struct tda1004x_state *tda
 
 static int tda10045h_init(struct dvb_i2c_bus *i2c, struct tda1004x_state *tda_state)
 {
-        struct i2c_msg tuner_msg = {.addr = 0,.flags = 0,.buf = 0,.len = 0 };
+        struct i2c_msg tuner_msg = {.addr = 0,.flags = 0,.buf = NULL,.len = 0 };
         static u8 disable_mc44BC374c[] = { 0x1d, 0x74, 0xa0, 0x68 };
 
         dprintk("%s\n", __FUNCTION__);
@@ -575,7 +574,7 @@ static int tda10045h_init(struct dvb_i2c_bus *i2c, struct tda1004x_state *tda_st
 
 static int tda10046h_init(struct dvb_i2c_bus *i2c, struct tda1004x_state *tda_state)
 {
-        struct i2c_msg tuner_msg = {.addr = 0,.flags = 0,.buf = 0,.len = 0 };
+        struct i2c_msg tuner_msg = {.addr = 0,.flags = 0,.buf = NULL,.len = 0 };
         static u8 disable_mc44BC374c[] = { 0x1d, 0x74, 0xa0, 0x68 };
 
         dprintk("%s\n", __FUNCTION__);
@@ -1392,7 +1391,7 @@ static int tda1004x_attach(struct dvb_i2c_bus *i2c, void **data)
         int tuner_type = -1;
 	struct tda1004x_state tda_state;
 	struct tda1004x_state* ptda_state;
-	struct i2c_msg tuner_msg = {.addr=0, .flags=0, .buf=0, .len=0 };
+	struct i2c_msg tuner_msg = {.addr=0, .flags=0, .buf=NULL, .len=0 };
         static u8 td1344_init[] = { 0x0b, 0xf5, 0x88, 0xab };
         static u8 td1316_init[] = { 0x0b, 0xf5, 0x85, 0xab };
         static u8 td1316_init_tda10046h[] = { 0x0b, 0xf5, 0x80, 0xab };

@@ -148,6 +148,8 @@ static void xfrm_policy_timer(unsigned long data)
 	int warn = 0;
 	int dir;
 
+	read_lock(&xp->lock);
+
 	if (xp->dead)
 		goto out;
 
@@ -197,10 +199,12 @@ static void xfrm_policy_timer(unsigned long data)
 		xfrm_pol_hold(xp);
 
 out:
+	read_unlock(&xp->lock);
 	xfrm_pol_put(xp);
 	return;
 
 expired:
+	read_unlock(&xp->lock);
 	km_policy_expired(xp, dir, 1);
 	xfrm_policy_delete(xp, dir);
 	xfrm_pol_put(xp);
@@ -532,8 +536,11 @@ void xfrm_policy_delete(struct xfrm_policy *pol, int dir)
 	write_lock_bh(&xfrm_policy_lock);
 	pol = __xfrm_policy_unlink(pol, dir);
 	write_unlock_bh(&xfrm_policy_lock);
-	if (pol)
+	if (pol) {
+		if (dir < XFRM_POLICY_MAX)
+			atomic_inc(&flow_cache_genid);
 		xfrm_policy_kill(pol);
+	}
 }
 
 int xfrm_sk_policy_insert(struct sock *sk, int dir, struct xfrm_policy *pol)
@@ -1017,6 +1024,8 @@ static int stale_bundle(struct dst_entry *dst)
 
 static void xfrm_dst_destroy(struct dst_entry *dst)
 {
+	if (!dst->xfrm)
+		return;
 	xfrm_state_put(dst->xfrm);
 	dst->xfrm = NULL;
 }

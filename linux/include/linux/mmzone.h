@@ -20,6 +20,18 @@
 #define MAX_ORDER CONFIG_FORCE_MAX_ZONEORDER
 #endif
 
+/*
+ * system hash table size limits
+ * - on large memory machines, we may want to allocate a bigger hash than that
+ *   permitted by MAX_ORDER, so we allocate with the bootmem allocator, and are
+ *   limited to this size
+ */
+#if MAX_ORDER > 14
+#define MAX_SYS_HASH_TABLE_ORDER MAX_ORDER
+#else
+#define MAX_SYS_HASH_TABLE_ORDER 14
+#endif
+
 struct free_area {
 	struct list_head	free_list;
 	unsigned long		*map;
@@ -52,6 +64,14 @@ struct per_cpu_pages {
 
 struct per_cpu_pageset {
 	struct per_cpu_pages pcp[2];	/* 0: hot.  1: cold */
+#ifdef CONFIG_NUMA
+	unsigned long numa_hit;		/* allocated in intended node */
+	unsigned long numa_miss;	/* allocated in non intended node */
+	unsigned long numa_foreign;	/* was intended here, hit elsewhere */
+	unsigned long interleave_hit; 	/* interleaver prefered this zone */
+	unsigned long local_node;	/* allocation from local node */
+	unsigned long other_node;	/* allocation from other node */
+#endif
 } ____cacheline_aligned_in_smp;
 
 #define ZONE_DMA		0
@@ -61,7 +81,34 @@ struct per_cpu_pageset {
 #define MAX_NR_ZONES		3	/* Sync this with ZONES_SHIFT */
 #define ZONES_SHIFT		2	/* ceil(log2(MAX_NR_ZONES)) */
 
+
+/*
+ * When a memory allocation must conform to specific limitations (such
+ * as being suitable for DMA) the caller will pass in hints to the
+ * allocator in the gfp_mask, in the zone modifier bits.  These bits
+ * are used to select a priority ordered list of memory zones which
+ * match the requested limits.  GFP_ZONEMASK defines which bits within
+ * the gfp_mask should be considered as zone modifiers.  Each valid
+ * combination of the zone modifier bits has a corresponding list
+ * of zones (in node_zonelists).  Thus for two zone modifiers there
+ * will be a maximum of 4 (2 ** 2) zonelists, for 3 modifiers there will
+ * be 8 (2 ** 3) zonelists.  GFP_ZONETYPES defines the number of possible
+ * combinations of zone modifiers in "zone modifier space".
+ */
 #define GFP_ZONEMASK	0x03
+/*
+ * As an optimisation any zone modifier bits which are only valid when
+ * no other zone modifier bits are set (loners) should be placed in
+ * the highest order bits of this field.  This allows us to reduce the
+ * extent of the zonelists thus saving space.  For example in the case
+ * of three zone modifier bits, we could require up to eight zonelists.
+ * If the left most zone modifier is a "loner" then the highest valid
+ * zonelist would be four allowing us to allocate only five zonelists.
+ * Use the first form when the left most bit is not a "loner", otherwise
+ * use the second.
+ */
+/* #define GFP_ZONETYPES	(GFP_ZONEMASK + 1) */		/* Non-loner */
+#define GFP_ZONETYPES	((GFP_ZONEMASK + 1) / 2 + 1)		/* Loner */
 
 /*
  * On machines where it is needed (eg PCs) we divide physical memory
@@ -98,8 +145,8 @@ struct zone {
 	spinlock_t		lru_lock;	
 	struct list_head	active_list;
 	struct list_head	inactive_list;
-	atomic_t		nr_scan_active;
-	atomic_t		nr_scan_inactive;
+	unsigned long		nr_scan_active;
+	unsigned long		nr_scan_inactive;
 	unsigned long		nr_active;
 	unsigned long		nr_inactive;
 	int			all_unreclaimable; /* All pages pinned */
@@ -217,7 +264,7 @@ struct zonelist {
 struct bootmem_data;
 typedef struct pglist_data {
 	struct zone node_zones[MAX_NR_ZONES];
-	struct zonelist node_zonelists[MAX_NR_ZONES];
+	struct zonelist node_zonelists[GFP_ZONETYPES];
 	int nr_zones;
 	struct page *node_mem_map;
 	struct bootmem_data *bdata;
@@ -298,6 +345,15 @@ static inline struct zone *next_zone(struct zone *zone)
 #define for_each_zone(zone) \
 	for (zone = pgdat_list->node_zones; zone; zone = next_zone(zone))
 
+static inline int is_highmem_idx(int idx)
+{
+	return (idx == ZONE_HIGHMEM);
+}
+
+static inline int is_normal_idx(int idx)
+{
+	return (idx == ZONE_NORMAL);
+}
 /**
  * is_highmem - helper function to quickly check if a struct zone is a 
  *              highmem zone or not.  This is an attempt to keep references
@@ -306,21 +362,21 @@ static inline struct zone *next_zone(struct zone *zone)
  */
 static inline int is_highmem(struct zone *zone)
 {
-	return (zone - zone->zone_pgdat->node_zones == ZONE_HIGHMEM);
+	return (is_highmem_idx(zone - zone->zone_pgdat->node_zones));
 }
 
 static inline int is_normal(struct zone *zone)
 {
-	return (zone - zone->zone_pgdat->node_zones == ZONE_NORMAL);
+	return (is_normal_idx(zone - zone->zone_pgdat->node_zones));
 }
 
 /* These two functions are used to setup the per zone pages min values */
 struct ctl_table;
 struct file;
 int min_free_kbytes_sysctl_handler(struct ctl_table *, int, struct file *, 
-					void __user *, size_t *);
+					void __user *, size_t *, loff_t *);
 int lower_zone_protection_sysctl_handler(struct ctl_table *, int, struct file *,
-					void __user *, size_t *);
+					void __user *, size_t *, loff_t *);
 
 #include <linux/topology.h>
 /* Returns the number of the current Node. */

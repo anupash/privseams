@@ -163,6 +163,8 @@ enum
 	VM_MAX_MAP_COUNT=22,	/* int: Maximum number of mmaps/address-space */
 	VM_LAPTOP_MODE=23,	/* vm laptop mode */
 	VM_BLOCK_DUMP=24,	/* block dump mode */
+	VM_HUGETLB_GROUP=25,	/* permitted hugetlb group */
+	VM_VFS_CACHE_PRESSURE=26, /* dcache/icache reclaim pressure */
 };
 
 
@@ -335,6 +337,8 @@ enum
  	NET_TCP_BIC=102,
  	NET_TCP_BIC_FAST_CONVERGENCE=103,
 	NET_TCP_BIC_LOW_WINDOW=104,
+	NET_TCP_DEFAULT_WIN_SCALE=105,
+	NET_TCP_MODERATE_RCVBUF=106,
 };
 
 enum {
@@ -758,24 +762,24 @@ typedef int ctl_handler (ctl_table *table, int __user *name, int nlen,
 			 void **context);
 
 typedef int proc_handler (ctl_table *ctl, int write, struct file * filp,
-			  void __user *buffer, size_t *lenp);
+			  void __user *buffer, size_t *lenp, loff_t *ppos);
 
 extern int proc_dostring(ctl_table *, int, struct file *,
-			 void __user *, size_t *);
+			 void __user *, size_t *, loff_t *);
 extern int proc_dointvec(ctl_table *, int, struct file *,
-			 void __user *, size_t *);
+			 void __user *, size_t *, loff_t *);
 extern int proc_dointvec_bset(ctl_table *, int, struct file *,
-			      void __user *, size_t *);
+			      void __user *, size_t *, loff_t *);
 extern int proc_dointvec_minmax(ctl_table *, int, struct file *,
-				void __user *, size_t *);
+				void __user *, size_t *, loff_t *);
 extern int proc_dointvec_jiffies(ctl_table *, int, struct file *,
-				 void __user *, size_t *);
+				 void __user *, size_t *, loff_t *);
 extern int proc_dointvec_userhz_jiffies(ctl_table *, int, struct file *,
-					void __user *, size_t *);
+					void __user *, size_t *, loff_t *);
 extern int proc_doulongvec_minmax(ctl_table *, int, struct file *,
-				  void __user *, size_t *);
+				  void __user *, size_t *, loff_t *);
 extern int proc_doulongvec_ms_jiffies_minmax(ctl_table *table, int,
-				      struct file *, void __user *, size_t *);
+				      struct file *, void __user *, size_t *, loff_t *);
 
 extern int do_sysctl (int __user *name, int nlen,
 		      void __user *oldval, size_t __user *oldlenp,

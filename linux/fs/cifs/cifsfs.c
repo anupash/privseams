@@ -31,6 +31,7 @@
 #include <linux/list.h>
 #include <linux/seq_file.h>
 #include <linux/vfs.h>
+#include <linux/mempool.h>
 #include "cifsfs.h"
 #include "cifspdu.h"
 #define DECLARE_GLOBALS_HERE
@@ -39,13 +40,11 @@
 #include "cifs_debug.h"
 #include "cifs_fs_sb.h"
 #include <linux/mm.h>
-#define CIFS_MAGIC_NUMBER 0xFF534D42	/* the first four bytes of all SMB PDUs */
+#define CIFS_MAGIC_NUMBER 0xFF534D42	/* the first four bytes of SMB PDUs */
 
-#ifdef CIFS_QUOTA
+#ifdef CONFIG_CIFS_QUOTA
 static struct quotactl_ops cifs_quotactl_ops;
 #endif
-
-extern struct file_system_type cifs_fs_type;
 
 int cifsFYI = 0;
 int cifsERROR = 1;
@@ -100,7 +99,7 @@ cifs_read_super(struct super_block *sb, void *data,
 	sb->s_op = &cifs_super_ops;
 /*	if(cifs_sb->tcon->ses->server->maxBuf > MAX_CIFS_HDR_SIZE + 512)
 	    sb->s_blocksize = cifs_sb->tcon->ses->server->maxBuf - MAX_CIFS_HDR_SIZE; */
-#ifdef CIFS_QUOTA
+#ifdef CONFIG_CIFS_QUOTA
 	sb->s_qcop = &cifs_quotactl_ops;
 #endif
 	sb->s_blocksize = CIFS_MAX_MSGSIZE;
@@ -191,15 +190,11 @@ cifs_statfs(struct super_block *sb, struct kstatfs *buf)
 
 static int cifs_permission(struct inode * inode, int mask, struct nameidata *nd)
 {
-        struct cifs_sb_info *cifs_sb;
+	struct cifs_sb_info *cifs_sb;
 
-        cifs_sb = CIFS_SB(inode->i_sb);
+	cifs_sb = CIFS_SB(inode->i_sb);
 
-        if (cifs_sb->tcon->ses->capabilities & CAP_UNIX) {
-		/* the server supports the Unix-like mode bits and does its
-		own permission checks, and therefore we do not allow the file
-		mode to be overriden on these mounts - so do not do perm
-		check on client side */
+	if (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_NO_PERM) {
 		return 0;
 	} else /* file mode might have been restricted at mount time 
 		on the client (above and beyond ACL on servers) for  
@@ -209,9 +204,11 @@ static int cifs_permission(struct inode * inode, int mask, struct nameidata *nd)
 }
 
 static kmem_cache_t *cifs_inode_cachep;
-kmem_cache_t *cifs_req_cachep;
-kmem_cache_t *cifs_mid_cachep;
+static kmem_cache_t *cifs_req_cachep;
+static kmem_cache_t *cifs_mid_cachep;
 kmem_cache_t *cifs_oplock_cachep;
+mempool_t *cifs_req_poolp;
+mempool_t *cifs_mid_poolp;
 
 static struct inode *
 cifs_alloc_inode(struct super_block *sb)
@@ -271,7 +268,7 @@ cifs_show_options(struct seq_file *s, struct vfsmount *m)
 	return 0;
 }
 
-#ifdef CIFS_QUOTA
+#ifdef CONFIG_CIFS_QUOTA
 int cifs_xquota_set(struct super_block * sb, int quota_type, qid_t qid,
 		struct fs_disk_quota * pdquota)
 {
@@ -421,7 +418,7 @@ cifs_get_sb(struct file_system_type *fs_type,
 }
 
 static ssize_t
-cifs_read_wrapper(struct file * file, char *read_data, size_t read_size,
+cifs_read_wrapper(struct file * file, char __user *read_data, size_t read_size,
           loff_t * poffset)
 {
 	if(file == NULL)
@@ -450,7 +447,7 @@ cifs_read_wrapper(struct file * file, char *read_data, size_t read_size,
 }
 
 static ssize_t
-cifs_write_wrapper(struct file * file, const char *write_data,
+cifs_write_wrapper(struct file * file, const char __user *write_data,
            size_t write_size, loff_t * poffset) 
 {
 	ssize_t written;
@@ -504,7 +501,7 @@ struct inode_operations cifs_file_inode_ops = {
 	.getattr = cifs_getattr, /* do we need this anymore? */
 	.rename = cifs_rename,
 	.permission = cifs_permission,
-#ifdef CIFS_XATTR
+#ifdef CONFIG_CIFS_XATTR
 	.setxattr = cifs_setxattr,
 	.getxattr = cifs_getxattr,
 	.listxattr = cifs_listxattr,
@@ -519,7 +516,7 @@ struct inode_operations cifs_symlink_inode_ops = {
 	/* BB add the following two eventually */
 	/* revalidate: cifs_revalidate,
 	   setattr:    cifs_notify_change, *//* BB do we need notify change */
-#ifdef CIFS_XATTR
+#ifdef CONFIG_CIFS_XATTR
 	.setxattr = cifs_setxattr,
 	.getxattr = cifs_getxattr,
 	.listxattr = cifs_listxattr,
@@ -537,18 +534,14 @@ struct file_operations cifs_file_ops = {
 	.flush = cifs_flush,
 	.mmap  = cifs_file_mmap,
 	.sendfile = generic_file_sendfile,
-#ifdef CIFS_FCNTL
-	.fcntl = cifs_fcntl,
-#endif
+	.dir_notify = cifs_dir_notify,
 };
 
 struct file_operations cifs_dir_ops = {
 	.readdir = cifs_readdir,
 	.release = cifs_closedir,
 	.read    = generic_read_dir,
-#ifdef CIFS_FCNTL
-	.fcntl   = cifs_fcntl,
-#endif
+	.dir_notify = cifs_dir_notify,
 };
 
 static void
@@ -593,12 +586,23 @@ cifs_init_request_bufs(void)
 	if (cifs_req_cachep == NULL)
 		return -ENOMEM;
 
+	cifs_req_poolp = mempool_create(CIFS_MIN_RCV_POOL,
+					mempool_alloc_slab,
+					mempool_free_slab,
+					cifs_req_cachep);
+
+	if(cifs_req_poolp == NULL) {
+		kmem_cache_destroy(cifs_req_cachep);
+		return -ENOMEM;
+	}
+
 	return 0;
 }
 
 static void
 cifs_destroy_request_bufs(void)
 {
+	mempool_destroy(cifs_req_poolp);
 	if (kmem_cache_destroy(cifs_req_cachep))
 		printk(KERN_WARNING
 		       "cifs_destroy_request_cache: error not all structures were freed\n");
@@ -612,11 +616,22 @@ cifs_init_mids(void)
 				SLAB_HWCACHE_ALIGN, NULL, NULL);
 	if (cifs_mid_cachep == NULL)
 		return -ENOMEM;
+
+	cifs_mid_poolp = mempool_create(3 /* a reasonable min simultan opers */,
+					mempool_alloc_slab,
+					mempool_free_slab,
+					cifs_mid_cachep);
+	if(cifs_mid_poolp == NULL) {
+		kmem_cache_destroy(cifs_mid_cachep);
+		return -ENOMEM;
+	}
+
 	cifs_oplock_cachep = kmem_cache_create("cifs_oplock_structs",
 				sizeof (struct oplock_q_entry), 0,
 				SLAB_HWCACHE_ALIGN, NULL, NULL);
 	if (cifs_oplock_cachep == NULL) {
 		kmem_cache_destroy(cifs_mid_cachep);
+		mempool_destroy(cifs_mid_poolp);
 		return -ENOMEM;
 	}
 
@@ -626,9 +641,11 @@ cifs_init_mids(void)
 static void
 cifs_destroy_mids(void)
 {
+	mempool_destroy(cifs_mid_poolp);
 	if (kmem_cache_destroy(cifs_mid_cachep))
 		printk(KERN_WARNING
 		       "cifs_destroy_mids: error not all structures were freed\n");
+
 	if (kmem_cache_destroy(cifs_oplock_cachep))
 		printk(KERN_WARNING
 		       "error not all oplock structures were freed\n");
@@ -719,6 +736,7 @@ init_cifs(void)
  */
 	atomic_set(&sesInfoAllocCount, 0);
 	atomic_set(&tconInfoAllocCount, 0);
+	atomic_set(&tcpSesAllocCount,0);
 	atomic_set(&tcpSesReconnectCount, 0);
 	atomic_set(&tconInfoReconnectCount, 0);
 

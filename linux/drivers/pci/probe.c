@@ -193,7 +193,7 @@ void __devinit pci_read_bridge_bases(struct pci_bus *child)
 		return;
 
 	if (dev->transparent) {
-		printk("Transparent bridge - %s\n", pci_name(dev));
+		printk(KERN_INFO "PCI: Transparent bridge - %s\n", pci_name(dev));
 		for(i = 0; i < PCI_BUS_NUM_RESOURCES; i++)
 			child->resource[i] = child->parent->resource[i];
 		return;
@@ -326,7 +326,7 @@ struct pci_bus * __devinit pci_add_new_bus(struct pci_bus *parent, struct pci_de
 	return child;
 }
 
-static unsigned int __devinit pci_scan_child_bus(struct pci_bus *bus);
+unsigned int __devinit pci_scan_child_bus(struct pci_bus *bus);
 
 /*
  * If it's a bridge, configure it and scan the bus behind it.
@@ -366,6 +366,8 @@ int __devinit pci_scan_bridge(struct pci_bus *bus, struct pci_dev * dev, int max
 			return max;
 		busnr = (buses >> 8) & 0xFF;
 		child = pci_alloc_child_bus(bus, dev, busnr);
+		if (!child)
+			return max;
 		child->primary = buses & 0xFF;
 		child->subordinate = (buses >> 16) & 0xFF;
 		child->bridge_ctl = bctl;
@@ -692,7 +694,7 @@ int __devinit pci_scan_slot(struct pci_bus *bus, int devfn)
 	return nr;
 }
 
-static unsigned int __devinit pci_scan_child_bus(struct pci_bus *bus)
+unsigned int __devinit pci_scan_child_bus(struct pci_bus *bus)
 {
 	unsigned int devfn, pass, max = bus->secondary;
 	struct pci_dev *dev;
@@ -799,4 +801,5 @@ EXPORT_SYMBOL(pci_do_scan_bus);
 EXPORT_SYMBOL(pci_scan_slot);
 EXPORT_SYMBOL(pci_scan_bridge);
 EXPORT_SYMBOL(pci_scan_single_device);
+EXPORT_SYMBOL_GPL(pci_scan_child_bus);
 #endif

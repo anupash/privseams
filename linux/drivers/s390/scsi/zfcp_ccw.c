@@ -26,13 +26,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define ZFCP_CCW_C_REVISION "$Revision: 1.52 $"
+#define ZFCP_CCW_C_REVISION "$Revision: 1.56 $"
 
-#include <linux/init.h>
-#include <linux/module.h>
-#include <asm/ccwdev.h>
 #include "zfcp_ext.h"
-#include "zfcp_def.h"
 
 #define ZFCP_LOG_AREA                   ZFCP_LOG_AREA_CONFIG
 
@@ -41,6 +37,7 @@ static void zfcp_ccw_remove(struct ccw_device *);
 static int zfcp_ccw_set_online(struct ccw_device *);
 static int zfcp_ccw_set_offline(struct ccw_device *);
 static int zfcp_ccw_notify(struct ccw_device *, int);
+static void zfcp_ccw_shutdown(struct device *);
 
 static struct ccw_device_id zfcp_ccw_device_id[] = {
 	{CCW_DEVICE_DEVTYPE(ZFCP_CONTROL_UNIT_TYPE,
@@ -63,6 +60,9 @@ static struct ccw_driver zfcp_ccw_driver = {
 	.set_online  = zfcp_ccw_set_online,
 	.set_offline = zfcp_ccw_set_offline,
 	.notify      = zfcp_ccw_notify,
+	.driver      = {
+		.shutdown = zfcp_ccw_shutdown,
+	},
 };
 
 MODULE_DEVICE_TABLE(ccw, zfcp_ccw_device_id);
@@ -232,14 +232,19 @@ zfcp_ccw_notify(struct ccw_device *ccw_device, int event)
 	case CIO_GONE:
 		ZFCP_LOG_NORMAL("adapter %s: device gone\n",
 				zfcp_get_busid_by_adapter(adapter));
+		debug_text_event(adapter->erp_dbf,1,"dev_gone");
+		zfcp_erp_adapter_shutdown(adapter, 0);
 		break;
 	case CIO_NO_PATH:
 		ZFCP_LOG_NORMAL("adapter %s: no path\n",
 				zfcp_get_busid_by_adapter(adapter));
+		debug_text_event(adapter->erp_dbf,1,"no_path");
+		zfcp_erp_adapter_shutdown(adapter, 0);
 		break;
 	case CIO_OPER:
 		ZFCP_LOG_NORMAL("adapter %s: operational again\n",
 				zfcp_get_busid_by_adapter(adapter));
+		debug_text_event(adapter->erp_dbf,1,"dev_oper");
 		zfcp_erp_modify_adapter_status(adapter,
 					       ZFCP_STATUS_COMMON_RUNNING,
 					       ZFCP_SET);
@@ -247,6 +252,7 @@ zfcp_ccw_notify(struct ccw_device *ccw_device, int event)
 					ZFCP_STATUS_COMMON_ERP_FAILED);
 		break;
 	}
+	zfcp_erp_wait(adapter);
 	up(&zfcp_data.config_sema);
 	return 1;
 }
@@ -283,6 +289,21 @@ zfcp_ccw_unregister(void)
 {
 	zfcp_sysfs_driver_remove_files(&zfcp_ccw_driver.driver);
 	ccw_driver_unregister(&zfcp_ccw_driver);
+}
+
+/**
+ * zfcp_ccw_shutdown - gets called on reboot/shutdown
+ *
+ * Makes sure that QDIO queues are down when the system gets stopped.
+ */
+static void
+zfcp_ccw_shutdown(struct device *dev)
+{
+	struct zfcp_adapter *adapter;
+
+	adapter = dev_get_drvdata(dev);
+	zfcp_erp_adapter_shutdown(adapter, 0);
+	zfcp_erp_wait(adapter);
 }
 
 #undef ZFCP_LOG_AREA

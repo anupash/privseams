@@ -74,11 +74,11 @@ int register_vio_slot(struct device_node *dn)
 	int rc = 1;
 	struct slot *slot = NULL;
 	
+	name = rpaphp_get_drc_name(dn);
+	if (!name)
+		goto exit_rc;
 	index = (u32 *) get_property(dn, "ibm,my-drc-index", NULL);
 	if (!index)
-		goto exit_rc;
-	name = get_property(dn, "ibm,loc-code", NULL);
-	if (!name)
 		goto exit_rc;
 	if (!(slot = alloc_slot_struct(dn, *index, name, 0))) {
 		rc = -ENOMEM;
@@ -86,14 +86,22 @@ int register_vio_slot(struct device_node *dn)
 	}
 	slot->dev_type = VIO_DEV;
 	slot->dev.vio_dev = vio_find_node(dn);
-	if (!slot->dev.vio_dev)
-		slot->dev.vio_dev = vio_register_device(dn);
+	if (slot->dev.vio_dev) {
+		/*
+		 * rpaphp is the only owner of vio devices and
+		 * does not need extra reference taken by
+		 * vio_find_node
+		 */
+		put_device(&slot->dev.vio_dev->dev);
+	} else
+		slot->dev.vio_dev = vio_register_device_node(dn);
 	if (slot->dev.vio_dev)
 		slot->state = CONFIGURED;
 	else
 		slot->state = NOT_CONFIGURED;
 	if (setup_vio_hotplug_slot_info(slot))
 		goto exit_rc;
+	strcpy(slot->name, slot->dev.vio_dev->dev.bus_id);
 	info("%s: registered VIO device[name=%s vio_dev=%p]\n",
 		__FUNCTION__, slot->name, slot->dev.vio_dev); 
 	rc = register_slot(slot);
@@ -107,7 +115,7 @@ int rpaphp_enable_vio_slot(struct slot *slot)
 {
 	int retval = 0;
 
-	if ((slot->dev.vio_dev = vio_register_device(slot->dn))) {
+	if ((slot->dev.vio_dev = vio_register_device_node(slot->dn))) {
 		info("%s: VIO adapter %s in slot[%s] has been configured\n",
 			__FUNCTION__, slot->dn->name, slot->name);
 		slot->state = CONFIGURED;

@@ -40,6 +40,7 @@
 #include <linux/proc_fs.h>
 #include <acpi/acpi_drivers.h>
 #include <acpi/acpi_bus.h>
+#include <asm/uaccess.h>
 
 #define ASUS_ACPI_VERSION "0.28"
 
@@ -480,16 +481,31 @@ read_led(struct asus_hotk *hotk, const char *ledname, int ledmask)
 	return (hotk->status & ledmask) ? 1 : 0;
 }
 
+static int parse_arg(const char __user *buf, unsigned long count, int *val)
+{
+	char s[32];
+	if (!count)
+		return 0;
+	if (count > 31)
+		return -EINVAL;
+	if (copy_from_user(s, buf, count))
+		return -EFAULT;
+	s[count] = 0;
+	if (sscanf(s, "%i", val) != 1)
+		return -EINVAL;
+	return count;
+}
 
 /* FIXME: kill extraneous args so it can be called independently */
 static int
-write_led(const char *buffer, unsigned long count, struct asus_hotk *hotk, 
+write_led(const char __user *buffer, unsigned long count, struct asus_hotk *hotk, 
           char *ledname, int ledmask, int invert)
 {
 	int value;
 	int led_out = 0;
 
-	if (sscanf(buffer, "%i", &value) == 1)
+	count = parse_arg(buffer, count, &value);
+	if (count > 0)
 		led_out = value ? 1 : 0;
 
 	hotk->status =
@@ -518,7 +534,7 @@ proc_read_mled(char *page, char **start, off_t off, int count, int *eof,
 
 
 static int
-proc_write_mled(struct file *file, const char *buffer,
+proc_write_mled(struct file *file, const char __user *buffer,
 		unsigned long count, void *data)
 {
 	struct asus_hotk *hotk = (struct asus_hotk *) data;
@@ -537,7 +553,7 @@ proc_read_wled(char *page, char **start, off_t off, int count, int *eof,
 }
 
 static int
-proc_write_wled(struct file *file, const char *buffer,
+proc_write_wled(struct file *file, const char __user *buffer,
 		unsigned long count, void *data)
 {
 	struct asus_hotk *hotk = (struct asus_hotk *) data;
@@ -556,7 +572,7 @@ proc_read_tled(char *page, char **start, off_t off, int count, int *eof,
 }
 
 static int
-proc_write_tled(struct file *file, const char *buffer,
+proc_write_tled(struct file *file, const char __user *buffer,
 		unsigned long count, void *data)
 {
 	struct asus_hotk *hotk = (struct asus_hotk *) data;
@@ -640,13 +656,14 @@ proc_read_lcd(char *page, char **start, off_t off, int count, int *eof,
 
 
 static int
-proc_write_lcd(struct file *file, const char *buffer,
+proc_write_lcd(struct file *file, const char __user *buffer,
 	       unsigned long count, void *data)
 {
 	int value;
 	struct asus_hotk *hotk = (struct asus_hotk *) data;
 	
-	if (sscanf(buffer, "%i", &value) == 1)
+	count = parse_arg(buffer, count, &value);
+	if (count > 0)
 		set_lcd_state(hotk, value);
 	return count;
 }
@@ -707,17 +724,18 @@ proc_read_brn(char *page, char **start, off_t off, int count, int *eof,
 }
 
 static int
-proc_write_brn(struct file *file, const char *buffer,
+proc_write_brn(struct file *file, const char __user *buffer,
 	       unsigned long count, void *data)
 {
 	int value;
 	struct asus_hotk *hotk = (struct asus_hotk *) data;
 
-	if (sscanf(buffer, "%d", &value) == 1) {
+	count = parse_arg(buffer, count, &value);
+	if (count > 0) {
 		value = (0 < value) ? ((15 < value) ? 15 : value) : 0;
 			/* 0 <= value <= 15 */
 		set_brightness(value, hotk);
-	} else {
+	} else if (count < 0) {
 		printk(KERN_WARNING "Asus ACPI: Error reading user input\n");
 	}
 
@@ -756,17 +774,17 @@ proc_read_disp(char *page, char **start, off_t off, int count, int *eof,
  * simultaneously, so be warned. See the acpi4asus README for more info.
  */
 static int
-proc_write_disp(struct file *file, const char *buffer,
+proc_write_disp(struct file *file, const char __user *buffer,
 	       unsigned long count, void *data)
 {
 	int value;
 	struct asus_hotk *hotk = (struct asus_hotk *) data;
 
-	if (sscanf(buffer, "%d", &value) == 1)
+	count = parse_arg(buffer, count, &value);
+	if (count > 0)
 		set_display(value, hotk);
-	else {
+	else if (count < 0)
 		printk(KERN_WARNING "Asus ACPI: Error reading user input\n");
-	}
 
 	return count;
 }
@@ -774,7 +792,7 @@ proc_write_disp(struct file *file, const char *buffer,
 
 typedef int (proc_readfunc)(char *page, char **start, off_t off, int count,
 	                     int *eof, void *data);
-typedef int (proc_writefunc)(struct file *file, const char *buffer,
+typedef int (proc_writefunc)(struct file *file, const char __user *buffer,
 	                      unsigned long count, void *data);
 
 static int
@@ -860,6 +878,29 @@ static int __init asus_hotk_add_fs(struct acpi_device *device)
 
 	}
 
+	return 0;
+}
+
+static int asus_hotk_remove_fs(struct acpi_device* device)
+{
+	struct asus_hotk* hotk = acpi_driver_data(device);
+
+
+	if(acpi_device_dir(device)){
+		remove_proc_entry(PROC_INFO,acpi_device_dir(device));
+		if (hotk->methods->mt_wled)
+			remove_proc_entry(PROC_WLED,acpi_device_dir(device));
+		if (hotk->methods->mt_mled)
+			remove_proc_entry(PROC_MLED,acpi_device_dir(device));
+		if (hotk->methods->mt_tled)
+			remove_proc_entry(PROC_TLED,acpi_device_dir(device));
+		if (hotk->methods->mt_lcd_switch && hotk->methods->lcd_status) 
+			remove_proc_entry(PROC_LCD, acpi_device_dir(device));
+		if ((hotk->methods->brightness_up && hotk->methods->brightness_down) || (hotk->methods->brightness_get && hotk->methods->brightness_get)) 
+			remove_proc_entry(PROC_BRN, acpi_device_dir(device));
+		if (hotk->methods->display_set) 
+			remove_proc_entry(PROC_DISP, acpi_device_dir(device));
+	}
 	return 0;
 }
 
@@ -1111,7 +1152,6 @@ static int __init asus_hotk_add(struct acpi_device *device)
 	return(result);
 }
 
-
 static int asus_hotk_remove(struct acpi_device *device, int type)
 {
 	acpi_status status = 0;
@@ -1126,6 +1166,8 @@ static int asus_hotk_remove(struct acpi_device *device, int type)
 					    asus_hotk_notify);
 	if (ACPI_FAILURE(status))
 		printk(KERN_ERR "Asus ACPI: Error removing notify handler\n");
+
+	asus_hotk_remove_fs(device);
 
 	kfree(hotk);
 

@@ -60,7 +60,7 @@ void show_mem(void)
 
 	printk("Mem-info:\n");
 	show_free_areas();
-	printk("Free swap:       %6dkB\n",nr_swap_pages<<(PAGE_SHIFT-10));
+	printk("Free swap:       %6ldkB\n", nr_swap_pages<<(PAGE_SHIFT-10));
 
 	for_each_pgdat(pgdat) {
                for (i = 0; i < pgdat->node_spanned_pages; ++i) {
@@ -512,9 +512,7 @@ void __init reserve_bootmem_generic(unsigned long phys, unsigned len)
 	/* Should check here against the e820 map to avoid double free */ 
 #ifdef CONFIG_DISCONTIGMEM
 	int nid = phys_to_nid(phys);
-	if (phys < HIGH_MEMORY && nid) 
-		panic("reserve of %lx at node %d", phys, nid);
-	reserve_bootmem_node(NODE_DATA(nid), phys, len);
+  	reserve_bootmem_node(NODE_DATA(nid), phys, len);
 #else       		
 	reserve_bootmem(phys, len);    
 #endif

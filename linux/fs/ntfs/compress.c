@@ -195,11 +195,17 @@ static int ntfs_decompress(struct page *dest_pages[], int *dest_index,
 
 	ntfs_debug("Entering, cb_size = 0x%x.", cb_size);
 do_next_sb:
-	ntfs_debug("Beginning sub-block at offset = 0x%x in the cb.",
+	ntfs_debug("Beginning sub-block at offset = 0x%zx in the cb.",
 			cb - cb_start);
-
-	/* Have we reached the end of the compression block? */
-	if (cb == cb_end || !le16_to_cpup((u16*)cb)) {
+	/*
+	 * Have we reached the end of the compression block or the end of the
+	 * decompressed data?  The latter can happen for example if the current
+	 * position in the compression block is one byte before its end so the
+	 * first two checks do not detect it.
+	 */
+	if (cb == cb_end || !le16_to_cpup((u16*)cb) ||
+			(*dest_index == dest_max_index &&
+			*dest_ofs == dest_max_ofs)) {
 		int i;
 
 		ntfs_debug("Completed. Returning success (0).");
@@ -427,7 +433,7 @@ do_next_tag:
 	goto do_next_tag;
 
 return_overflow:
-	ntfs_error(NULL, "Failed. Returning -EOVERFLOW.\n");
+	ntfs_error(NULL, "Failed. Returning -EOVERFLOW.");
 	goto return_error;
 }
 
@@ -845,7 +851,7 @@ lock_retry_remap:
 		if (err) {
 			ntfs_error(vol->sb, "ntfs_decompress() failed in inode "
 					"0x%lx with error code %i. Skipping "
-					"this compression block.\n",
+					"this compression block.",
 					ni->mft_no, -err);
 			/* Release the unfinished pages. */
 			for (; prev_cur_page < cur_page; prev_cur_page++) {
@@ -882,7 +888,8 @@ lock_retry_remap:
 		if (page) {
 			ntfs_error(vol->sb, "Still have pages left! "
 					"Terminating them with extreme "
-					"prejudice.");
+					"prejudice.  Inode 0x%lx, page index "
+					"0x%lx.", ni->mft_no, page->index);
 			if (cur_page == xpage && !xpage_done)
 				SetPageError(page);
 			flush_dcache_page(page);

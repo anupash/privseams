@@ -24,7 +24,6 @@
 #include <asm/machdep.h>
 #include <asm/cputable.h>
 #include <asm/tlb.h>
-#include <asm/rmap.h>
 
 #include <linux/sysctl.h>
 
@@ -214,7 +213,7 @@ static int prepare_low_seg_for_htlb(struct mm_struct *mm, unsigned long seg)
 		}
 		page = pmd_page(*pmd);
 		pmd_clear(pmd);
-		pgtable_remove_rmap(page);
+		dec_page_state(nr_page_table_pages);
 		pte_free_tlb(tlb, page);
 	}
 	tlb_finish_mmu(tlb, start, end);
@@ -376,6 +375,7 @@ void unmap_hugepage_range(struct vm_area_struct *vma,
 	unsigned long addr;
 	hugepte_t *ptep;
 	struct page *page;
+	int cpu;
 	int local = 0;
 	cpumask_t tmp;
 
@@ -384,7 +384,8 @@ void unmap_hugepage_range(struct vm_area_struct *vma,
 	BUG_ON((end % HPAGE_SIZE) != 0);
 
 	/* XXX are there races with checking cpu_vm_mask? - Anton */
-	tmp = cpumask_of_cpu(smp_processor_id());
+	cpu = get_cpu();
+	tmp = cpumask_of_cpu(cpu);
 	if (cpus_equal(vma->vm_mm->cpu_vm_mask, tmp))
 		local = 1;
 
@@ -407,6 +408,7 @@ void unmap_hugepage_range(struct vm_area_struct *vma,
 
 		put_page(page);
 	}
+	put_cpu();
 
 	mm->rss -= (end - start) >> PAGE_SHIFT;
 }
@@ -452,8 +454,9 @@ int hugetlb_prefault(struct address_space *mapping, struct vm_area_struct *vma)
 				goto out;
 			}
 			ret = add_to_page_cache(page, mapping, idx, GFP_ATOMIC);
-			unlock_page(page);
-			if (ret) {
+			if (! ret) {
+				unlock_page(page);
+			} else {
 				hugetlb_put_quota(mapping);
 				free_huge_page(page);
 				goto out;

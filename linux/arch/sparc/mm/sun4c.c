@@ -497,7 +497,7 @@ static void __init sun4c_probe_mmu(void)
 	patch_kernel_fault_handler();
 }
 
-volatile unsigned long *sun4c_memerr_reg = 0;
+volatile unsigned long *sun4c_memerr_reg = NULL;
 
 void __init sun4c_probe_memerr_reg(void)
 {
@@ -599,13 +599,13 @@ static void __init sun4c_init_mmu_entry_pool(void)
 
 	for (i=0; i < SUN4C_MAX_SEGMAPS; i++) {
 		mmu_entry_pool[i].pseg = i;
-		mmu_entry_pool[i].next = 0;
-		mmu_entry_pool[i].prev = 0;
+		mmu_entry_pool[i].next = NULL;
+		mmu_entry_pool[i].prev = NULL;
 		mmu_entry_pool[i].vaddr = 0;
 		mmu_entry_pool[i].locked = 0;
 		mmu_entry_pool[i].ctx = 0;
-		mmu_entry_pool[i].lru_next = 0;
-		mmu_entry_pool[i].lru_prev = 0;
+		mmu_entry_pool[i].lru_next = NULL;
+		mmu_entry_pool[i].lru_prev = NULL;
 	}
 	mmu_entry_pool[invalid_segment].locked = 1;
 }
@@ -1170,7 +1170,7 @@ abend:
 	local_irq_restore(flags);
 	printk("DMA vaddr=0x%p size=%08lx\n", vaddr, size);
 	panic("Out of iobuffer table");
-	return 0;
+	return NULL;
 }
 
 static void sun4c_unlockarea(char *vaddr, unsigned long size)
@@ -2137,14 +2137,10 @@ void __init ld_mmu_sun4c(void)
 	printk("Loading sun4c MMU routines\n");
 
 	/* First the constants */
-	BTFIXUPSET_SIMM13(pmd_shift, SUN4C_PMD_SHIFT);
-	BTFIXUPSET_SETHI(pmd_size, SUN4C_PMD_SIZE);
-	BTFIXUPSET_SETHI(pmd_mask, SUN4C_PMD_MASK);
 	BTFIXUPSET_SIMM13(pgdir_shift, SUN4C_PGDIR_SHIFT);
 	BTFIXUPSET_SETHI(pgdir_size, SUN4C_PGDIR_SIZE);
 	BTFIXUPSET_SETHI(pgdir_mask, SUN4C_PGDIR_MASK);
 
-	BTFIXUPSET_SIMM13(ptrs_per_pte, SUN4C_PTRS_PER_PTE);
 	BTFIXUPSET_SIMM13(ptrs_per_pmd, SUN4C_PTRS_PER_PMD);
 	BTFIXUPSET_SIMM13(ptrs_per_pgd, SUN4C_PTRS_PER_PGD);
 	BTFIXUPSET_SIMM13(user_ptrs_per_pgd, KERNBASE / SUN4C_PGDIR_SIZE);

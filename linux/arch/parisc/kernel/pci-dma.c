@@ -32,6 +32,19 @@
 #include <asm/pgalloc.h>
 #include <asm/uaccess.h>
 
+#ifdef DEBUG_PCI
+#undef ASSERT
+#define ASSERT(expr) \
+	if(!(expr)) { \
+		printk("\n%s:%d: Assertion " #expr " failed!\n", \
+				__FILE__, __LINE__); \
+		panic(#expr); \
+	}
+#else
+#define ASSERT(expr)
+#endif
+
+
 static struct proc_dir_entry * proc_gsc_root = NULL;
 static int pcxl_proc_info(char *buffer, char **start, off_t offset, int length);
 static unsigned long pcxl_used_bytes = 0;
@@ -539,10 +552,10 @@ struct hppa_dma_ops pcx_dma_ops = {
 	.unmap_single =		pa11_dma_unmap_single,
 	.map_sg =		pa11_dma_map_sg,
 	.unmap_sg =		pa11_dma_unmap_sg,
-	.dma_sync_single_cpu =	pa11_dma_sync_single_cpu,
-	.dma_sync_single_device = pa11_dma_sync_single_device,
-	.dma_sync_sg_cpu =	pa11_dma_sync_sg_cpu,
-	.dma_sync_sg_device =	pa11_dma_sync_sg_device,
+	.dma_sync_single_for_cpu =	pa11_dma_sync_single_for_cpu,
+	.dma_sync_single_for_device =	pa11_dma_sync_single_for_device,
+	.dma_sync_sg_for_cpu =		pa11_dma_sync_sg_for_cpu,
+	.dma_sync_sg_for_device =	pa11_dma_sync_sg_for_device,
 };
 
 

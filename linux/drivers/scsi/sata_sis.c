@@ -1,6 +1,10 @@
 /*
  *  sata_sis.c - Silicon Integrated Systems SATA
  *
+ *  Maintained by:  Uwe Koziolek
+ *  		    Please ALWAYS copy linux-ide@vger.kernel.org
+ *		    on emails.
+ *
  *  Copyright 2004 Uwe Koziolek
  *
  *  The contents of this file are subject to the Open
@@ -30,7 +34,7 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include "scsi.h"
-#include "hosts.h"
+#include <scsi/scsi_host.h>
 #include <linux/libata.h>
 
 #define DRV_NAME	"sata_sis"
@@ -56,7 +60,8 @@ static u32 sis_scr_read (struct ata_port *ap, unsigned int sc_reg);
 static void sis_scr_write (struct ata_port *ap, unsigned int sc_reg, u32 val);
 
 static struct pci_device_id sis_pci_tbl[] = {
-	{ PCI_VENDOR_ID_SI, PCI_DEVICE_ID_SI_180, PCI_ANY_ID, PCI_ANY_ID, 0, 0, sis_180 },
+	{ PCI_VENDOR_ID_SI, 0x180, PCI_ANY_ID, PCI_ANY_ID, 0, 0, sis_180 },
+	{ PCI_VENDOR_ID_SI, 0x181, PCI_ANY_ID, PCI_ANY_ID, 0, 0, sis_180 },
 	{ }	/* terminate list */
 };
 
@@ -93,10 +98,13 @@ static struct ata_port_operations sis_ops = {
 	.check_status		= ata_check_status_pio,
 	.exec_command		= ata_exec_command_pio,
 	.phy_reset		= sata_phy_reset,
+	.bmdma_setup            = ata_bmdma_setup_pio,
 	.bmdma_start            = ata_bmdma_start_pio,
-	.fill_sg		= ata_fill_sg,
+	.qc_prep		= ata_qc_prep,
+	.qc_issue		= ata_qc_issue_prot,
 	.eng_timeout		= ata_eng_timeout,
 	.irq_handler		= ata_interrupt,
+	.irq_clear		= ata_bmdma_irq_clear,
 	.scr_read		= sis_scr_read,
 	.scr_write		= sis_scr_write,
 	.port_start		= ata_port_start,

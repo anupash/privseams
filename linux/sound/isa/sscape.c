@@ -26,12 +26,12 @@
 #include <linux/delay.h>
 #include <linux/pnp.h>
 #include <linux/spinlock.h>
+#include <linux/moduleparam.h>
 #include <asm/dma.h>
 #include <sound/core.h>
 #include <sound/hwdep.h>
 #include <sound/cs4231.h>
 #include <sound/mpu401.h>
-#define SNDRV_GET_ID
 #include <sound/initval.h>
 
 #include <sound/sscape_ioctl.h>
@@ -49,28 +49,29 @@ static long port[SNDRV_CARDS] __devinitdata = { [0 ... (SNDRV_CARDS-1)] = SNDRV_
 static int irq[SNDRV_CARDS] __devinitdata = SNDRV_DEFAULT_IRQ;
 static int mpu_irq[SNDRV_CARDS] __devinitdata = SNDRV_DEFAULT_IRQ;
 static int dma[SNDRV_CARDS] __devinitdata = SNDRV_DEFAULT_DMA;
+static int boot_devs;
 
-MODULE_PARM(index, "1-" __MODULE_STRING(SNDRV_CARDS) "i");
+module_param_array(index, int, boot_devs, 0444);
 MODULE_PARM_DESC(index, "Index number for SoundScape soundcard");
 MODULE_PARM_SYNTAX(index, SNDRV_INDEX_DESC);
 
-MODULE_PARM(id, "1-" __MODULE_STRING(SNDRV_CARDS) "s");
+module_param_array(id, charp, boot_devs, 0444);
 MODULE_PARM_DESC(id, "Description for SoundScape card");
 MODULE_PARM_SYNTAX(id, SNDRV_ID_DESC);
 
-MODULE_PARM(port, "1-" __MODULE_STRING(SNDRV_CARDS) "l");
+module_param_array(port, long, boot_devs, 0444);
 MODULE_PARM_DESC(port, "Port # for SoundScape driver.");
 MODULE_PARM_SYNTAX(port, SNDRV_ENABLED);
 
-MODULE_PARM(irq, "1-" __MODULE_STRING(SNDRV_CARDS) "i");
+module_param_array(irq, int, boot_devs, 0444);
 MODULE_PARM_DESC(irq, "IRQ # for SoundScape driver.");
 MODULE_PARM_SYNTAX(irq, SNDRV_IRQ_DESC);
 
-MODULE_PARM(mpu_irq, "1-" __MODULE_STRING(SNDRV_CARDS) "i");
+module_param_array(mpu_irq, int, boot_devs, 0444);
 MODULE_PARM_DESC(mpu_irq, "MPU401 IRQ # for SoundScape driver.");
 MODULE_PARM_SYNTAX(mpu_irq, SNDRV_IRQ_DESC);
 
-MODULE_PARM(dma, "1-" __MODULE_STRING(SNDRV_CARDS) "i");
+module_param_array(dma, int, boot_devs, 0444);
 MODULE_PARM_DESC(dma, "DMA # for SoundScape driver.");
 MODULE_PARM_SYNTAX(dma, SNDRV_DMA8_DESC);
   
@@ -454,7 +455,7 @@ static int host_startup_ack(struct soundscape *s, unsigned timeout)
  * Upload a byte-stream into the SoundScape using DMA channel A.
  */
 static int upload_dma_data(struct soundscape *s,
-                           const unsigned char *data,
+                           const unsigned char __user *data,
                            size_t size)
 {
 	unsigned long flags;
@@ -568,7 +569,7 @@ static int upload_dma_data(struct soundscape *s,
  *       However, we have already verified its memory
  *       addresses by the time we get here.
  */
-static int sscape_upload_bootblock(struct soundscape *sscape, struct sscape_bootblock *bb)
+static int sscape_upload_bootblock(struct soundscape *sscape, struct sscape_bootblock __user *bb)
 {
 	unsigned long flags;
 	int data = 0;
@@ -603,10 +604,10 @@ static int sscape_upload_bootblock(struct soundscape *sscape, struct sscape_boot
  * SPACE, and save ourselves from copying it at all.
  */
 static int sscape_upload_microcode(struct soundscape *sscape,
-                                   const struct sscape_microcode *mc)
+                                   const struct sscape_microcode __user *mc)
 {
 	unsigned long flags;
-	char *code;
+	char __user *code;
 	int err, ret;
 
 	/*
@@ -682,7 +683,7 @@ static int sscape_hw_ioctl(snd_hwdep_t * hw, struct file *file,
 	switch (cmd) {
 	case SND_SSCAPE_LOAD_BOOTB:
 		{
-			register struct sscape_bootblock *bb = (struct sscape_bootblock *) arg;
+			register struct sscape_bootblock __user *bb = (struct sscape_bootblock __user *) arg;
 
 			/*
 			 * We are going to have to copy this data into a special
@@ -704,7 +705,7 @@ static int sscape_hw_ioctl(snd_hwdep_t * hw, struct file *file,
 
 	case SND_SSCAPE_LOAD_MCODE:
 		{
-			register const struct sscape_microcode *mc = (const struct sscape_microcode *) arg;
+			register const struct sscape_microcode __user *mc = (const struct sscape_microcode __user *) arg;
 
 			err = sscape_upload_microcode(sscape, mc);
 		}
@@ -1531,30 +1532,3 @@ static int __init sscape_init(void)
 
 module_init(sscape_init);
 module_exit(sscape_exit);
-
-#ifndef MODULE
-
-/* format is: snd-sscape=index,id,port,irq,mpu_irq,dma */
-
-static int __init builtin_sscape_setup(char *str)
-{
-	static unsigned __initdata nr_dev;
-
-	if (nr_dev >= SNDRV_CARDS)
-		return 0;
-
-	(void)((get_option(&str, &index[nr_dev]) == 2) &&
-	       (get_id(&str, &id[nr_dev]) == 2) &&
-	       (get_option_long(&str, &port[nr_dev]) == 2) &&
-	       (get_option(&str, &irq[nr_dev]) == 2) &&
-	       (get_option(&str, &mpu_irq[nr_dev]) == 2) &&
-	       (get_option(&str, &dma[nr_dev]) == 2)); 
- 
-	++nr_dev;
-	return 1;
-}
-
-__setup("snd-sscape=", builtin_sscape_setup);
-
-#endif
-

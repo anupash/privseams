@@ -7,7 +7,7 @@
  * Bugreports.to..: <Linux390@de.ibm.com>
  * (C) IBM Corporation, IBM Deutschland Entwicklung GmbH, 1999,2000
  *
- * $Revision: 1.54 $
+ * $Revision: 1.57 $
  */
 
 #include <linux/config.h>
@@ -983,8 +983,8 @@ dasd_eckd_build_cp(struct dasd_device * device, struct request *req)
 				return ERR_PTR(-EINVAL);
 			count += bv->bv_len >> (device->s2b_shift + 9);
 #if defined(CONFIG_ARCH_S390X)
-			cidaw += idal_nr_words(page_address(bv->bv_page) +
-					       bv->bv_offset, bv->bv_len);
+			if (idal_is_needed (page_address(bv->bv_page), bv->bv_len))
+				cidaw += bv->bv_len >> (device->s2b_shift + 9);
 #endif
 		}
 	}
@@ -1070,7 +1070,7 @@ dasd_eckd_build_cp(struct dasd_device * device, struct request *req)
 	cqr->device = device;
 	cqr->expires = 5 * 60 * HZ;	/* 5 minutes */
 	cqr->lpm = LPM_ANYPATH;
-	cqr->retries = 2;
+	cqr->retries = 256;
 	cqr->buildclk = get_clock();
 	cqr->status = DASD_CQR_FILLED;
 	return cqr;
@@ -1289,7 +1289,7 @@ dasd_eckd_performance(struct block_device *bdev, int no, long args)
 		/* Prepare for Read Subsystem Data */
 		prssdp = (struct dasd_psf_prssd_data *) cqr->data;
 		stats = (struct dasd_rssd_perf_stats_t *) (prssdp + 1);
-		rc = copy_to_user((long *) args, (long *) stats,
+		rc = copy_to_user((long __user *) args, (long *) stats,
 				  sizeof(struct dasd_rssd_perf_stats_t));
 	}
 	dasd_sfree_request(cqr, cqr->device);
@@ -1319,10 +1319,10 @@ dasd_eckd_get_attrib (struct block_device *bdev, int no, long args)
 
         private = (struct dasd_eckd_private *) device->private;
         attrib = private->attrib;
-	
-        rc = copy_to_user((long *) args, (long *) &attrib,
+
+        rc = copy_to_user((long __user *) args, (long *) &attrib,
 			  sizeof (struct attrib_data_t));
-	
+
 	return rc;
 }
 
@@ -1346,7 +1346,7 @@ dasd_eckd_set_attrib(struct block_device *bdev, int no, long args)
 	if (device == NULL)
 		return -ENODEV;
 
-	if (copy_from_user(&attrib, (void *) args,
+	if (copy_from_user(&attrib, (void __user *) args,
 			   sizeof (struct attrib_data_t))) {
 		return -EFAULT;
 	}

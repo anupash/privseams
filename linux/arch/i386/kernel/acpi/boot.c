@@ -28,7 +28,9 @@
 #include <linux/acpi.h>
 #include <linux/efi.h>
 #include <linux/irq.h>
-#include <asm/pgalloc.h>
+#include <linux/module.h>
+
+#include <asm/pgtable.h>
 #include <asm/io_apic.h>
 #include <asm/apic.h>
 #include <asm/io.h>
@@ -50,6 +52,10 @@ static inline int ioapic_setup_disabled(void) { return 0; }
 #endif	/* CONFIG_X86_LOCAL_APIC */
 
 #endif	/* X86 */
+
+#define BAD_MADT_ENTRY(entry, end) (					    \
+		(!entry) || (unsigned long)entry + sizeof(*entry) > end ||  \
+		((acpi_table_entry_header *)entry)->length != sizeof(*entry))
 
 #define PREFIX			"ACPI: "
 
@@ -135,7 +141,7 @@ char *__acpi_map_table(unsigned long phys, unsigned long size)
 	idx = FIX_ACPI_END;
 	while (mapped_size < size) {
 		if (--idx < FIX_ACPI_BEGIN)
-			return 0;	/* cannot handle this */
+			return NULL;	/* cannot handle this */
 		phys += PAGE_SIZE;
 		set_fixmap(idx, phys);
 		mapped_size += PAGE_SIZE;
@@ -204,12 +210,13 @@ acpi_parse_madt (
 
 static int __init
 acpi_parse_lapic (
-	acpi_table_entry_header *header)
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_lapic	*processor = NULL;
 
 	processor = (struct acpi_table_lapic*) header;
-	if (!processor)
+
+	if (BAD_MADT_ENTRY(processor, end))
 		return -EINVAL;
 
 	acpi_table_print_madt_entry(header);
@@ -225,15 +232,15 @@ acpi_parse_lapic (
 	return 0;
 }
 
-
 static int __init
 acpi_parse_lapic_addr_ovr (
-	acpi_table_entry_header *header)
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_lapic_addr_ovr *lapic_addr_ovr = NULL;
 
 	lapic_addr_ovr = (struct acpi_table_lapic_addr_ovr*) header;
-	if (!lapic_addr_ovr)
+
+	if (BAD_MADT_ENTRY(lapic_addr_ovr, end))
 		return -EINVAL;
 
 	acpi_lapic_addr = lapic_addr_ovr->address;
@@ -243,12 +250,13 @@ acpi_parse_lapic_addr_ovr (
 
 static int __init
 acpi_parse_lapic_nmi (
-	acpi_table_entry_header *header)
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_lapic_nmi *lapic_nmi = NULL;
 
 	lapic_nmi = (struct acpi_table_lapic_nmi*) header;
-	if (!lapic_nmi)
+
+	if (BAD_MADT_ENTRY(lapic_nmi, end))
 		return -EINVAL;
 
 	acpi_table_print_madt_entry(header);
@@ -266,12 +274,13 @@ acpi_parse_lapic_nmi (
 
 static int __init
 acpi_parse_ioapic (
-	acpi_table_entry_header *header)
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_ioapic *ioapic = NULL;
 
 	ioapic = (struct acpi_table_ioapic*) header;
-	if (!ioapic)
+
+	if (BAD_MADT_ENTRY(ioapic, end))
 		return -EINVAL;
  
 	acpi_table_print_madt_entry(header);
@@ -320,12 +329,13 @@ acpi_sci_ioapic_setup(u32 gsi, u16 polarity, u16 trigger)
 
 static int __init
 acpi_parse_int_src_ovr (
-	acpi_table_entry_header *header)
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_int_src_ovr *intsrc = NULL;
 
 	intsrc = (struct acpi_table_int_src_ovr*) header;
-	if (!intsrc)
+
+	if (BAD_MADT_ENTRY(intsrc, end))
 		return -EINVAL;
 
 	acpi_table_print_madt_entry(header);
@@ -354,12 +364,13 @@ acpi_parse_int_src_ovr (
 
 static int __init
 acpi_parse_nmi_src (
-	acpi_table_entry_header *header)
+	acpi_table_entry_header *header, const unsigned long end)
 {
 	struct acpi_table_nmi_src *nmi_src = NULL;
 
 	nmi_src = (struct acpi_table_nmi_src*) header;
-	if (!nmi_src)
+
+	if (BAD_MADT_ENTRY(nmi_src, end))
 		return -EINVAL;
 
 	acpi_table_print_madt_entry(header);
@@ -417,16 +428,6 @@ acpi_pic_sci_set_trigger(unsigned int irq, u16 trigger)
 
 #endif /* CONFIG_ACPI_BUS */
 
-#ifdef CONFIG_X86_IO_APIC
-/* deprecated in favor of acpi_gsi_to_irq */
-int acpi_irq_to_vector(u32 irq)
-{
-	if (use_pci_vector() && !platform_legacy_irq(irq))
- 		irq = IO_APIC_VECTOR(irq);
-	return irq;
-}
-#endif
-
 int acpi_gsi_to_irq(u32 gsi, unsigned int *irq)
 {
 #ifdef CONFIG_X86_IO_APIC
@@ -437,6 +438,38 @@ int acpi_gsi_to_irq(u32 gsi, unsigned int *irq)
 		*irq = gsi;
 	return 0;
 }
+
+unsigned int acpi_register_gsi(u32 gsi, int edge_level, int active_high_low)
+{
+	unsigned int irq;
+
+#ifdef CONFIG_PCI
+	/*
+	 * Make sure all (legacy) PCI IRQs are set as level-triggered.
+	 */
+	if (acpi_irq_model == ACPI_IRQ_MODEL_PIC) {
+		static u16 irq_mask;
+		extern void eisa_set_level_irq(unsigned int irq);
+
+		if (edge_level == ACPI_LEVEL_SENSITIVE) {
+			if ((gsi < 16) && !((1 << gsi) & irq_mask)) {
+				Dprintk(KERN_DEBUG PREFIX "Setting GSI %u as level-triggered\n", gsi);
+				irq_mask |= (1 << gsi);
+				eisa_set_level_irq(gsi);
+			}
+		}
+	}
+#endif
+
+#ifdef CONFIG_X86_IO_APIC
+	if (acpi_irq_model == ACPI_IRQ_MODEL_IOAPIC) {
+		mp_register_gsi(gsi, edge_level, active_high_low);
+	}
+#endif
+	acpi_gsi_to_irq(gsi, &irq);
+	return irq;
+}
+EXPORT_SYMBOL(acpi_register_gsi);
 
 static unsigned long __init
 acpi_scan_rsdp (
@@ -527,7 +560,7 @@ extern u32 pmtmr_ioport;
 
 static int __init acpi_parse_fadt(unsigned long phys, unsigned long size)
 {
-	struct fadt_descriptor_rev2 *fadt =0;
+	struct fadt_descriptor_rev2 *fadt = NULL;
 
 	fadt = (struct fadt_descriptor_rev2*) __acpi_map_table(phys,size);
 	if(!fadt) {
@@ -728,6 +761,13 @@ acpi_process_madt(void)
 				smp_found_config = 1;
 				clustered_apic_check();
 			}
+		}
+		if (error == -EINVAL) {
+			/*
+			 * Dell Precision Workstation 410, 610 come here.
+			 */
+			printk(KERN_ERR PREFIX "Invalid BIOS MADT, disabling ACPI\n");
+			disable_acpi();
 		}
 	}
 #endif

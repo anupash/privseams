@@ -395,7 +395,7 @@ static int dio_bio_complete(struct dio *dio, struct bio *bio)
 		for (page_no = 0; page_no < bio->bi_vcnt; page_no++) {
 			struct page *page = bvec[page_no].bv_page;
 
-			if (dio->rw == READ)
+			if (dio->rw == READ && !PageCompound(page))
 				set_page_dirty_lock(page);
 			page_cache_release(page);
 		}
@@ -690,8 +690,11 @@ out:
 static void clean_blockdev_aliases(struct dio *dio)
 {
 	unsigned i;
+	unsigned nblocks;
 
-	for (i = 0; i < dio->blocks_available; i++) {
+	nblocks = dio->map_bh.b_size >> dio->inode->i_blkbits;
+
+	for (i = 0; i < nblocks; i++) {
 		unmap_underlying_metadata(dio->map_bh.b_bdev,
 					dio->map_bh.b_blocknr + i);
 	}
@@ -1060,24 +1063,29 @@ direct_io_worker(int rw, struct kiocb *iocb, struct inode *inode,
 			kfree(dio);
 		}
 	} else {
+		ssize_t transferred = 0;
+
 		finished_one_bio(dio);
 		ret2 = dio_await_completion(dio);
 		if (ret == 0)
 			ret = ret2;
 		if (ret == 0)
 			ret = dio->page_errors;
-		if (ret == 0 && dio->result) {
+		if (dio->result) {
 			loff_t i_size = i_size_read(inode);
 
-			ret = dio->result;
+			transferred = dio->result;
 			/*
 			 * Adjust the return value if the read crossed a
 			 * non-block-aligned EOF.
 			 */
-			if (rw == READ && (offset + ret > i_size))
-				ret = i_size - offset;
+			if (rw == READ && (offset + transferred > i_size))
+				transferred = i_size - offset;
 		}
-		dio_complete(dio, offset, ret);
+		dio_complete(dio, offset, transferred);
+		if (ret == 0)
+			ret = transferred;
+
 		/* We could have also come here on an AIO file extend */
 		if (!is_sync_kiocb(iocb) && rw == WRITE &&
 		    ret >= 0 && dio->result == dio->size)

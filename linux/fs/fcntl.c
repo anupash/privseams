@@ -212,7 +212,7 @@ asmlinkage long sys_dup(unsigned int fildes)
 	return ret;
 }
 
-#define SETFL_MASK (O_APPEND | O_NONBLOCK | O_NDELAY | FASYNC | O_DIRECT)
+#define SETFL_MASK (O_APPEND | O_NONBLOCK | O_NDELAY | FASYNC | O_DIRECT | O_NOATIME)
 
 static int setfl(int fd, struct file * filp, unsigned long arg)
 {
@@ -222,6 +222,11 @@ static int setfl(int fd, struct file * filp, unsigned long arg)
 	/* O_APPEND cannot be cleared if the file is marked as append-only */
 	if (!(arg & O_APPEND) && IS_APPEND(inode))
 		return -EPERM;
+
+	/* O_NOATIME can only be set by the owner or superuser */
+	if ((arg & O_NOATIME) && !(filp->f_flags & O_NOATIME))
+		if (current->fsuid != inode->i_uid && !capable(CAP_FOWNER))
+			return -EPERM;
 
 	/* required for strict SunOS emulation */
 	if (O_NONBLOCK != O_NDELAY)
@@ -233,6 +238,11 @@ static int setfl(int fd, struct file * filp, unsigned long arg)
 			!filp->f_mapping->a_ops->direct_IO)
 				return -EINVAL;
 	}
+
+	if (filp->f_op && filp->f_op->check_flags)
+		error = filp->f_op->check_flags(arg);
+	if (error)
+		return error;
 
 	lock_kernel();
 	if ((arg ^ filp->f_flags) & FASYNC) {
@@ -282,8 +292,8 @@ void f_delown(struct file *filp)
 
 EXPORT_SYMBOL(f_delown);
 
-long generic_file_fcntl(int fd, unsigned int cmd,
-			unsigned long arg, struct file *filp)
+static long do_fcntl(int fd, unsigned int cmd, unsigned long arg,
+		struct file *filp)
 {
 	long err = -EINVAL;
 
@@ -350,15 +360,6 @@ long generic_file_fcntl(int fd, unsigned int cmd,
 		break;
 	}
 	return err;
-}
-EXPORT_SYMBOL(generic_file_fcntl);
-
-static long do_fcntl(int fd, unsigned int cmd,
-			unsigned long arg, struct file *filp)
-{
-	if (filp->f_op && filp->f_op->fcntl)
-		return filp->f_op->fcntl(fd, cmd, arg, filp);
-	return generic_file_fcntl(fd, cmd, arg, filp);
 }
 
 asmlinkage long sys_fcntl(int fd, unsigned int cmd, unsigned long arg)
@@ -627,15 +628,12 @@ void kill_fasync(struct fasync_struct **fp, int sig, int band)
 		read_unlock(&fasync_lock);
 	}
 }
-
 EXPORT_SYMBOL(kill_fasync);
 
 static int __init fasync_init(void)
 {
 	fasync_cache = kmem_cache_create("fasync_cache",
-		sizeof(struct fasync_struct), 0, 0, NULL, NULL);
-	if (!fasync_cache)
-		panic("cannot create fasync slab cache");
+		sizeof(struct fasync_struct), 0, SLAB_PANIC, NULL, NULL);
 	return 0;
 }
 
