@@ -311,7 +311,7 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
  *
  * Returns 0 on success, or negative on error
  */
-struct hip_common *hip_create_r1(struct in6_addr *src_hit)
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 {
  	struct hip_common *msg;
  	struct in6_addr dst_hit;

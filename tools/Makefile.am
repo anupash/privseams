@@ -1,9 +1,12 @@
 AUTOMAKE_OPTIONS = foreign
 
-# Note: -I.. is included because tools/debug.h" is included; otherwise this
+# Note: .. is included because tools/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
+# The ../libinet6/include_glibc23 is included because the ../libinet6/include
+# path may not exist (it is created by libinet6/configure).
 #
-CFLAGS += -I../libinet6/include -I../linux/include -I../linux/net/ipv6/hip -I..
+CFLAGS += -I../libinet6/include -I../libinet6/include_glibc23
+CFLAGS += -I../linux/include -I../linux/net/ipv6/hip -I..
 CFLAGS += -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
 
 bin_PROGRAMS = hipconf

@@ -210,7 +210,7 @@ int hip_init_r1(void)
 	return res;
 }
 
-int hip_precreate_r1(struct in6_addr *src_hit)
+int hip_precreate_r1(const struct in6_addr *src_hit)
 {
 	int i=0;
 	struct hip_common *pkt;

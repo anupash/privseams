@@ -1259,8 +1259,8 @@ int hip_build_user_hdr(struct hip_common *msg,
  * either because it is done in hip_csum_send().
  */
 void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
-			  uint16_t control, struct in6_addr *hit_sender,
-			  struct in6_addr *hit_receiver)
+			  uint16_t control, const struct in6_addr *hit_sender,
+			  const struct in6_addr *hit_receiver)
 {
 	/*
 	 * XX TODO: build HIP network header in the same fashion as in

@@ -69,7 +69,7 @@ PACKAGE = @PACKAGE@
 VERSION = @VERSION@
 
 AUTOMAKE_OPTIONS = foreign
-CFLAGS =  -I../libinet6/include -I../linux/include -I../linux/net/ipv6/hip -I.. -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
+CFLAGS =  -I../libinet6/include -I../libinet6/include_glibc23 -I../linux/include -I../linux/net/ipv6/hip -I.. -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
 
 bin_PROGRAMS = hipconf
 

@@ -24,15 +24,11 @@
 #include <netinet/ip.h>
 #include <unistd.h>
 #include <netdb.h>
-/* Kludge: compilation problems on Debian testing 20040202 */
-#if 0
-#  include <signal.h>
-#else
-#  define SIGTERM 15
-#  define SIG_ERR -1
-typedef void (*__sighandler_t)(int);
+/* Workaround for some compilation problems on Debian */
+#ifndef __user
+#  define __user
 #endif
-
+#include <signal.h>
 #include "tools/debug.h"
 
 static void sig_handler(int signo) {

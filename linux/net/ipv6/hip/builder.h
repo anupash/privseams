@@ -6,7 +6,6 @@
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
  *
- * TODO: move this to linux/net/ipv6/hip/builder.h
  */
 
 #ifdef __KERNEL__
@@ -30,8 +29,8 @@ void hip_msg_init(struct hip_common *msg);
 struct hip_common *hip_msg_alloc(void);
 void hip_msg_free(struct hip_common *msg);
 void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
-			   uint16_t control, struct in6_addr *hit_sender,
-			   struct in6_addr *hit_receiver);
+			   uint16_t control, const struct in6_addr *hit_sender,
+			   const struct in6_addr *hit_receiver);
 
 uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t len);
 uint16_t hip_get_msg_total_len(const struct hip_common *msg);

@@ -45,8 +45,11 @@ static char sccsid[] = "@(#)rcmd.c	8.3 (Berkeley) 3/26/94";
 
 #include <alloca.h>
 /* BEGIN HIPL PATCH */
-#include <signal.h>
+#ifndef __user
+#  define __user
+#endif
 /* END HIPL PATCH */
+#include <signal.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <unistd.h>

@@ -5,6 +5,11 @@ ABOUT
 This file contains developer information on policies in the HIPL
 project.
 
+TODO
+====
+
+- xx
+
 
 AUTOCONF AND AUTOMAKE
 =====================
@@ -53,59 +58,94 @@ CODING CONVENTIONS
   userspace code. This rule may be relaxed in the kernel code because
   the space is very limited due to the 8 character indentation.
 
-VERSION MANAGEMENT
-==================
+CVS POLICY
+==========
 
-Version management is controlled and applied with tla. You should be
-aquinted with tla version management (which is very different from cvs
-version management) before reading this section. Here is the
-simplified picture of the version management tree which will be
-explained below:
+There are no long-term branches in the HIPL project other than the
+MAIN branch. The MAIN branch contains always bleeding edge development
+code but some quality assurance must be done by the developer before
+any code can be committed to CVS:
 
+- the code should compile as it is without errors
+- compiler warning messages must be taken seriously and must not be ignored
+  unless you really know what the message means. And we REALLY mean really.
+- the base exchange should be manually tested between two hosts
+- all existing unit tests should be run without any errors (see TESTING)
 
-test branch           o---------------o
-                      |               |
-                      |               |
-main--1.0    --> X----o---------o-----o---... ---o
-                      |         |                |
-                      |         |                |
-                      |         |                |
-release 0.x  -->  main--0.1  main--0.2           |
-                                                 |
-                                                 |
-                                                 |
-main--2.0    -->                                 o------o-----------o---...
-                                                        |           |
-                                                        |           |
-                                                        |           |
-release 1.x                                         main--1.1  main--1.2
+Tag names:
 
+    Use the format PROJECT_NAME_TYPE_DATE for TAG names, where...
 
-The time advances in the ascii picture from left to right. The birth
-of the version management tree is marked with an "X", the branchpoints
-are marked with "o" characters and patches to a specific branch are
-marked with "-" characters. Three subsequent dots denote a
-repetition. The branches are named or characterized on the left of the
-tree.
+    PROJECT = HIPL:      the tag is related to change in the HIP code
+              FUEGOCORE: the tag is related to Fuego-Core
+              LINUX:     the tag is related to the upgrade of kernel version
+              IETF:      changes in IETF
 
-main--1.0, main--2.0 (and so fort) branches are stable
-branches. Stable means that the code is guaranteed to compile and work
-on those branches. Only bug fixes and well tested new features can be
-applied to the stable branches.
+    NAME = A short identification name (CRYPTO_MOD, KERNEL_2_6_UPGRADE, etc)
+           for the tag.
+  
+    TYPE = DEV or BUG or something else?. DEV should be used when the branch
+           was created for developing new feature / functionality. BUG =
+           branch was created to fix bugs, errors, etc...
 
-Test branches are the opposite of stable branches. New features are
-tested on the test branches and therefore the code is not guaranteed
-to work properly and it may not even compile. When a feature has been
-stabilised, it is merged into the stable branch.
+    DATE = yyyymmdd (the day the branch is created). 
 
-Release branches act as milestones in the stable branch. The release
-branches are branched from the stable branch after major architectural
-changes or some amount of bugfixes. The release branches are a bit
-different from what is usually referred as to "snapshots" because one
-is able to apply new patches to a specific release branch. This way,
-it is possible to include bug, demo and performance fixes for a
-specific release branch without necessarily merging the fixes into
-the stable branch.
+  Do not use your own name in the tags.
+
+Branch names:
+
+  Create the branch with the name PROJECT_NAME
+  The project and name are the same as in the tags.
+  Do not use your own name in the branch name.
+
+Merging:
+
+  There branches that need to be synchronized to/from the
+  HEAD. Synchronization is done using CVS merge but there are some
+  pitfalls in the merging process. There are only two simple rules to
+  keep you out of trouble (indepently of the direction of the merge):
+
+  +------------------------------------------------+
+  | Tag the branch and the HEAD _before_ merge.    |
+  | Tag the branch and the HEAD _after_ the merge. |
+  +------------------------------------------------+
+
+You will need to supply the "cvs merge" command with two branch names
+so that cvs can "diff" the only the updates that haven't been
+merged. This is where the tag names before and after the last merge
+become handy. Otherwise you will get CVS conficts! You cannot rely on
+CVS internal dates with merging because they really don't work in
+practice.
+
+Add the following line to the changetags.txt in the doc directory
+after merging:
+
+  BRANCHPOINT_TAG BRANCH_TAG SHORT DESCRIPTION
+  The short description should be without any formatting symbols so that it
+  can be nicely parsed with a tool. Naturally the file should not be branched.
+  E.g. HIPL_CRYPTO_BUG_20030831 HIPL_CRYPTO fixed deadlock situation in xxx
+
+- Benefits:
+  + The branch point tag enables us to easily get the
+    sources before the bug fixing started.
+  + The merging tag brings us back to the moment just before the 
+    merging occured. So that, if the merge turned out to be complete crap, we
+    can unroll the whole source tree easily (otherwise manually checking
+    version history of every file).
+  + The changetags.txt serves as a quick loopup table for:
+    TAG <-> reason for the branch. Also the starting date and point can be 
+    looked up easily.
+
+- Problems:
+  - The merging tag and the actual merge is not an atomic operation. This might
+    lead to a situation where there is a merging tag, a normal commit and a
+    merge. Any ideas to improve the situation are appreciated.
+  - Manual updating of the changetags.txt
+
+- Not yet decided:
+  + Should the branching be done to the whole project, or only to the 
+    "subproject/subdirs"?
+
 
 DEBUGGING
 =========
@@ -209,9 +249,9 @@ HIPL is still work in progress. The code is being constantly developed
 and it may be difficult to merge your contribution to the HIPL code.
 
 If you still want to submit patches to the HIPL project, see that the
-patch follows the TLA POLICY (see above). Build your patches against
-the the latest MAIN version in TLA.  It would be nice if you would
-build one (or multiple) unit test case to validate your patch.
+patch follows the CVS POLICY (see above). Build your patches against
+the HEAD branch in CVS.  It would be nice if you would build one (or
+multiple) unit test case to validate your patch.
 
 TESTING
 =======

@@ -21,7 +21,7 @@ struct hip_r1entry {
 struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r);
 int hip_init_r1(void);
 void hip_uninit_r1(void);
-int hip_precreate_r1(struct in6_addr *src_hit);
+int hip_precreate_r1(const struct in6_addr *src_hit);
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
 		      struct hip_common *hdr,
 		      struct hip_birthday_cookie *cookie);

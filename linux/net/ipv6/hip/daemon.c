@@ -45,7 +45,7 @@
 struct hip_user_msg hip_user_msg;
 
 /* kernel module unit tests */
-struct hip_unit_test_suite_list hip_unit_test_suite_list;
+extern struct hip_unit_test_suite_list hip_unit_test_suite_list;
 
 /*
  * Handlers for messages from userspace.  These *must* be in same order as
@@ -103,6 +103,36 @@ void hip_uninit_user(void)
 
 }
 
+/*
+ * note this function is called by two other functions below.
+ */
+int hip_user_add_local_hi(const struct hip_host_id *host_identity,
+			  const struct hip_lhi *lhi)
+{
+	int err = 0;
+
+	err = hip_add_localhost_id(lhi, host_identity);
+	if (err) {
+		HIP_ERROR("adding of local host identity failed\n");
+		goto out_err;
+	}
+
+	/* If adding localhost id failed because there was a duplicate, we
+	   won't precreate anything (and void causing dagling memory
+	   pointers) */
+
+	HIP_DEBUG("hip: Generating a new R1 now\n");
+
+	if (!hip_precreate_r1(&lhi->hit)) {
+		HIP_ERROR("Unable to precreate R1s... failing\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+
+ out_err:
+	return err;
+}
+
 /**
  * hip_user_handle_local_add_hi - handle adding of a localhost host identity
  * @msg: contains the hi parameter in fqdn format (includes private key)
@@ -140,21 +170,13 @@ int hip_user_handle_add_local_hi(const struct hip_common *input,
 		goto out_err;
 	}
 
-	err = hip_add_localhost_id(&lhi, host_identity);
+	err = hip_user_add_local_hi(host_identity, &lhi);
 	if (err) {
-		HIP_ERROR("adding of local host identity failed\n");
+		HIP_ERROR("Failed to add HIP localhost identity\n");
 		goto out_err;
 	}
 
-	HIP_DEBUG("hip: Generating a new R1 now\n");
-
-	if (!hip_precreate_r1(&lhi.hit)) {
-		HIP_ERROR("Unable to precreate R1s... failing\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-
-	HIP_DEBUG("hip auto setup ok\n");
+	HIP_DEBUG("Adding of HIP localhost identity was successful\n");
 
  out_err:
 
@@ -376,17 +398,128 @@ int hip_user_handle_unit_test(const struct hip_common *input,
 }
 
 /*
- * This function is necessary because there must the constant for
- * HIP_USER_SET_MY_EID and therefore hip_user_msg_handler needs a dummy
- * function for it.
+ * This function is similar to hip_user_handle_add_local_hi but there are three
+ * major differences:
+ * - this function is used by native HIP sockets (not hipconf)
+ * - HIP sockets require EID handling which is done here
+ * - this function DOES NOT call hip_precreate_r1, so you need launch
  */
 int hip_user_handle_set_my_eid(const struct hip_common *input,
 			       struct hip_common *output)
 {
-	int err = -ENOSYS;
-	hip_build_user_hdr(output, hip_get_msg_type(input), -err);
+	int err = 0;
+	struct sockaddr_eid eid;
+	struct hip_tlv_common *param = NULL;
+	struct hip_eid_iface *iface;
+	struct hip_eid_endpoint *eid_endpoint;
+	struct hip_lhi lhi;
+	struct hip_eid_owner_info owner_info;
+	struct hip_host_id *host_id;
+	
+	HIP_DEBUG("\n");
+	
+	/* Extra consistency test */
+	if (hip_get_msg_type(input) != HIP_USER_SET_MY_EID) {
+		err = -EINVAL;
+		HIP_ERROR("Bad message type\n");
+		goto out_err;
+	}
+	
+	eid_endpoint = hip_get_param(input, HIP_PARAM_EID_ENDPOINT);
+	if (!eid_endpoint) {
+		err = -ENOENT;
+		HIP_ERROR("Could not find eid endpoint\n");
+		goto out_err;
+	}
+
+	if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
+		err = -EAFNOSUPPORT;
+		HIP_ERROR("setmyeid does not support HITs, only HIs\n");
+		goto out_err;
+	}
+	
+	HIP_DEBUG("hi len %d\n",
+		  ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
+
+	HIP_HEXDUMP("eid endpoint", eid_endpoint,
+		    hip_get_param_total_len(eid_endpoint));
+
+	host_id = &eid_endpoint->endpoint.id.host_id;
+
+	owner_info.uid = current->uid;
+	owner_info.gid = current->gid;
+	
+	if (hip_host_id_contains_private_key(host_id)) {
+		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
+						 HIP_HIT_TYPE_HASH126);
+		if (err) {
+			HIP_ERROR("Failed to calculate HIT from HI.");
+			goto out_err;
+		}
+	
+		/* XX TODO: check UID/GID permissions before adding */
+		err = hip_user_add_local_hi(host_id, &lhi);
+		if (err == -EEXIST) {
+			HIP_INFO("Host id exists already, ignoring\n");
+			err = 0;
+		} else if (err) {
+			HIP_ERROR("Adding of localhost id failed");
+			goto out_err;
+		}
+	} else {
+		/* Only public key */
+		err = hip_host_id_to_hit(host_id,
+					 &lhi.hit, HIP_HIT_TYPE_HASH126);
+	}
+	
+	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
+	
+	/* Iterate through the interfaces */
+	while((param = hip_get_next_param(input, param)) != NULL) {
+		/* Skip other parameters (only the endpoint should
+		   really be there). */
+		if (hip_get_param_type(param) != HIP_PARAM_EID_IFACE)
+			continue;
+		iface = (struct hip_eid_iface *) param;
+		/* XX TODO: convert and store the iface somewhere?? */
+		/* XX TODO: check also the UID permissions for storing
+		   the ifaces before actually storing them */
+	}
+	
+	/* The eid port information will be filled by the resolver. It is not
+	   really meaningful in the eid db. */
+	eid.eid_port = htons(0);
+	
+	lhi.anonymous =
+	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
+		1 : 0;
+	
+	/* XX TODO: check UID/GID permissions before adding ? */
+	err = hip_db_set_my_eid(&eid, &lhi, &owner_info);
+	if (err) {
+		HIP_ERROR("Could not set my eid into the db\n");
+		goto out_err;
+	}
+
+	HIP_DEBUG("EID value was set to %d\n", ntohs(eid.eid_val));
+
+	/* Clear the output (in the case it is the same as the input) and
+	   write a return message */
+	
+	hip_msg_init(output);
+	hip_build_user_hdr(output, HIP_USER_SET_MY_EID, err);
+	err = hip_build_param_eid_sockaddr(output,
+					   (struct sockaddr *) &eid,
+					   sizeof(struct sockaddr_eid));
+	if (err) {
+		HIP_ERROR("Could not build eid sockaddr\n");
+		goto out_err;
+	}
+	
+ out_err:
 	return err;
 }
+
 
 int hip_user_handle_set_peer_eid(const struct hip_common *input,
 				 struct hip_common *output)
@@ -447,7 +580,7 @@ int hip_user_handle_set_peer_eid(const struct hip_common *input,
 		goto out_err;
 	}
 	
-	/* Iterate through the interfaces */
+	/* Iterate through the addresses */
 
 	while((param = hip_get_next_param(input, param)) != NULL) {
 		struct sockaddr_in6 *sockaddr;

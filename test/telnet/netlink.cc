@@ -84,13 +84,12 @@ void netlink::close(int doshutdown) {
 }
 
 #ifdef USE_HIP
+/*
+ * XX FIXME: MERGE BETTER WITH THE ORIGINAL CONNECT?
+ */
 int netlink::connect(int debug, struct endpointinfo *endpointinfo,
-		     const char *service, char *srcroute, int srlen,
-		     int tos) 
+		     char *srcroute, int srlen, int tos) 
 {
-    struct sockaddr_eid peer_eid; // XX CHECK: STORE SOMEWHERE?!
-    int err;
-
     /* FIXME: we just ignore the srcroute, srlen and tos here */
     net = socket(endpointinfo->ei_family, SOCK_STREAM, 0);
     if (net < 0) {
@@ -100,14 +99,8 @@ int netlink::connect(int debug, struct endpointinfo *endpointinfo,
 	return 0;
     }
 
-    if (err = setpeereid(&peer_eid, service, endpointinfo->ei_endpoint,
-			 &endpointinfo->ei_addrlist)) {
-	fprintf(stderr, "telnet: setpeereid failed (%d)\n", err);
-	return 0;
-    }
-
-    if (::connect(net, (struct sockaddr *) &peer_eid,
-		  sizeof(struct sockaddr_eid)) < 0) {
+    if (::connect(net, (struct sockaddr *) endpointinfo->ei_endpoint,
+		  endpointinfo->ei_endpointlen) < 0) {
 	return 1;
     }
     return 2;

@@ -379,6 +379,9 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
  * file @filenamebase.params. If any of the files cannot be saved, all
  * files are deleted.
  *
+ * XX FIXME: change filenamebase to filename! There is no need for a
+ * filenamebase!!!
+ *
  * Returns: 0 if all files were saved successfully, or non-zero if an error
  * occurred.
  */
@@ -386,8 +389,6 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
   int err = 0;
   char *pubfilename;
   int pubfilename_len;
-  char *paramsfilename;
-  int paramsfilename_len;
   FILE *fp;
 
   if (!filenamebase) {
@@ -403,24 +404,12 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
     goto out_err;
   }
 
-  paramsfilename_len = strlen(filenamebase) +
-    strlen(DEFAULT_PARAMS_FILE_SUFFIX)+1;
-  paramsfilename = malloc(paramsfilename_len);
-  if (!paramsfilename) {
-    HIP_ERROR("malloc(%d) failed\n", paramsfilename_len);
-    free(pubfilename);
-    goto out_err;
-  }
-
   /* check retval */
   snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
 	   DEFAULT_PUB_FILE_SUFFIX);
-  snprintf(paramsfilename, paramsfilename_len, "%s%s", filenamebase,
-	   DEFAULT_PARAMS_FILE_SUFFIX);
 
   HIP_INFO("Saving DSA keys to: pub='%s' priv='%s'\n", pubfilename,
 	   filenamebase);
-  HIP_INFO("Saving DSA params to '%s'\n", paramsfilename);
   HIP_INFO("Saving host DSA pubkey=%s\n", BN_bn2hex(dsa->pub_key));
   HIP_INFO("Saving host DSA privkey=%s\n", BN_bn2hex(dsa->priv_key));
   HIP_INFO("Saving host DSA p=%s\n", BN_bn2hex(dsa->p));
@@ -457,33 +446,16 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
   }
   fclose(fp); /* add error check */
 
-  fp = fopen(paramsfilename, "wb" /* mode */);
-  if (!fp) {
-    HIP_ERROR("Couldn't open params file %s for writing\n", paramsfilename);
-    goto out_err_priv;
-  }
-
-  err = PEM_write_DSAparams(fp, dsa);
-  if (!err) {
-    HIP_ERROR("Write failed for %s\n", paramsfilename);
-    fclose(fp); /* add error check */
-    goto out_err_params;
-  }
-  fclose(fp); /* add error check */
-
   free(pubfilename);
-  free(paramsfilename);
+
   return 0;
 
- out_err_params:
-   unlink(paramsfilename); /* add error check */
  out_err_priv:
    unlink(filenamebase); /* add error check */
  out_err_pub:
    unlink(pubfilename); /* add error check */
 
    free(pubfilename);
-   free(paramsfilename);
  out_err:
   return 1;
 }
@@ -496,6 +468,9 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
  * from file @filenamebase.pub and private key from file @filenamebase. DSA
  * struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with DSA_free.
+ *
+ * XX FIXME: change filenamebase to filename! There is no need for a
+ * filenamebase!!!
  *
  * Returns: NULL if the key could not be loaded (not in PEM format or file
  * not found, etc).
@@ -582,6 +557,9 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
  * Loads DSA public key from the given files, (file @filenamebase.pub).
  * The DSA struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with DSA_free.
+ *
+ * XX FIXME: change filenamebase to filename! There is no need for a
+ * filenamebase!!!
  *
  * Returns: NULL if the key could not be loaded (not in PEM format or file
  * not found, etc).

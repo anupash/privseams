@@ -100,6 +100,9 @@ extern void usage(void);
 static void
 wait_for_connection(const char *service)
 {
+  /*
+   * XX FIX: MERGE HIP PATCH BETTER WITH THE EXISTING CODE
+   */
 #ifdef USE_HIP
 	struct endpointinfo hints;
 	struct endpointinfo *res, *epi;
@@ -111,9 +114,7 @@ wait_for_connection(const char *service)
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ei_family = PF_HIP;
-	hints.ei_addrlist.ai_family = PF_UNSPEC;
-	hints.ei_addrlist.ai_flags = AI_PASSIVE;
-	hints.ei_addrlist.ai_socktype = SOCK_STREAM;
+	hints.ei_socktype = SOCK_STREAM;
 	error = getendpointinfo(NULL, service, &hints, &res);
 	if (error) {
 		fprintf(stderr, "telnetd: getendpointinfo: %s\n",
@@ -127,7 +128,6 @@ wait_for_connection(const char *service)
         fds = malloc(sizeof(struct pollfd) * nfds);
 	for (epi = res, fdp = fds; epi; epi = epi->ei_next, fdp++) {
 		int s;
-		struct sockaddr_eid my_eid;
 
 		if (0) { // XX FIXME: Could be handled better
 nextaddr:
@@ -145,12 +145,7 @@ nextaddr:
 			exit(1);
 		}
 		setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-		error = setmyeid(s, &my_eid, service, epi->ei_endpoint, NULL);
-		if (error) {
-			perror("telnetd: setmyeid");
-			exit(1);
-		}
-		if (bind(s, (struct sockaddr *) &my_eid, sizeof(my_eid)) < 0) {
+		if (bind(s, epi->ei_endpoint, epi->ei_endpointlen) < 0) {
 			if (errno == EADDRINUSE) {
 				/* Must be Linux! */
 				close(s);
