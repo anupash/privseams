@@ -79,3 +79,5 @@ include/netdb.h:
 	$(LN_S) include_glibc$(usagi_libc) include
 builder.c:
 	$(LN_S) $(HIPL_LINUX_MODULE)/builder.c .
+
+SUBDIRS = include_glibc21 include_glibc22 include_glibc23
