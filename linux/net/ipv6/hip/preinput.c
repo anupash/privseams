@@ -111,7 +111,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
  */
 void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 {
-	struct hip_xfrm_state *xs;
+        struct hip_xfrm_state *xs;
 
 	/* We are called only from bh.
 	 * No locking will take place since the data
@@ -125,26 +125,33 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	}
 
 	/* New in draft-10: If we are responder and in some proper state, then
-	   as soon as we receive ESP packets for a valid SA, we should transition
-	   to ESTABLISHED state.
-	   Since we want to avoid excessive hooks, we will do it here, although the
-	   SA check is done later... (and the SA might be invalid).
+	   as soon as we receive ESP packets for a valid SA, we should
+	   transition to ESTABLISHED state. Since we want to avoid excessive
+	   hooks, we will do it here, although the SA check is done later...
+	   (and the SA might be invalid).
 	*/
-#if 0  
-	// FIXME: tkoponen, miika said this could be removed.. note, xs->state is readonly in kernel!
-     	if (ha->state == HIP_STATE_R2_SENT) {
+
+        /* XX FIXME:
+	  - xs->state is read-only in the kernel
+	  - this can be removed if the state machine transitions directly
+	    to established
+	  - currently this is may break things...
+	*/
+
+#if 0
+          if (ha->state == HIP_STATE_R2_SENT) {
 		ha->state = HIP_STATE_ESTABLISHED;
-		
-		HIP_DEBUG("Transition to ESTABLISHED state from R2_SENT\n");	
-	}
+		HIP_DEBUG("Transition to ESTABLISHED state from R2_SENT\n");
+          }
 #endif
 
 	ipv6_addr_copy(&hdr->daddr, &xs->hit_our);
 	ipv6_addr_copy(&hdr->saddr, &xs->hit_peer);
 
-#if 0
-	// FIXME: tkoponen, where is the hold_ha?
-     	hip_put_ha(ha);
+	/* hip_hadb_find_byspi_list gets are reference to the HA, so it needs
+	   to be decremented here - there is no other way to do this */
+#if 0 /* XX FIXME: probably breaks something? */
+	hip_put_ha(ha);
 #endif
 	return;
 }

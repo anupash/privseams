@@ -21,6 +21,7 @@ AC_PROG_MAKE_SET
 AM_PROG_LIBTOOL
 AC_CHECK_LIB([c], [__libc_main])
 AC_CHECK_LIB([crypto], [DSA_generate_key])
+AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 AC_HEADER_SYS_WAIT
 # Checks for header files.
 AC_HEADER_STDC
