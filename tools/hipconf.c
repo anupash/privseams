@@ -559,6 +559,8 @@ int main(int argc, char *argv[]) {
     goto out;
   }
 
+  /* XX FIXME: THE RVS/RST HANDLING IS FUNKY. REWRITE */
+
   if (action != ACTION_RST &&
       action != ACTION_RVS) 
   {
