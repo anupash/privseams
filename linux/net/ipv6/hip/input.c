@@ -17,6 +17,7 @@
 
 #include "input.h"
 #include "debug.h"
+#include "xfrm.h"
 #include "hadb.h"
 #include "keymat.h"
 #include "crypto/dsa.h"
@@ -82,15 +83,15 @@ int hip_controls_sane(u16 controls, u16 legal)
  */
 void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 {
-	hip_ha_t *ha;
+	hip_xfrm_state *xs;
 
 	/* We are called only from bh.
 	 * No locking will take place since the data
 	 * that we are copying is very static
 	 */
 	_HIP_DEBUG("SPI=0x%x\n", spi);
-	ha = hip_hadb_find_byspi_list(spi);
-	if (!ha) {
+	xs = hip_xfrm_find(spi);
+	if (!xs) {
 		HIP_INFO("HT BYSPILIST: NOT found, unknown SPI 0x%x\n",spi);
 		return;
 	}
@@ -101,15 +102,16 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	   Since we want to avoid excessive hooks, we will do it here, although the
 	   SA check is done later... (and the SA might be invalid).
 	*/
-	if (ha->state == HIP_STATE_R2_SENT) {
+     /*	if (ha->state == HIP_STATE_R2_SENT) {
 		ha->state = HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("Transition to ESTABLISHED state from R2_SENT\n");
-	}
+          FIXME: tkoponen, miika said this could be removed.. note, xs->state is readonly in kernel!
+          }*/
 
-	ipv6_addr_copy(&hdr->daddr, &ha->hit_our);
-	ipv6_addr_copy(&hdr->saddr, &ha->hit_peer);
+	ipv6_addr_copy(&hdr->daddr, &xs->hit_our);
+	ipv6_addr_copy(&hdr->saddr, &xs->hit_peer);
 
-	hip_put_ha(ha);
+     //	hip_put_ha(ha); FIXME: tkoponen, what is this doing here?
 	return;
 }
 
@@ -829,7 +831,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   function. Now, begin to build I2 piece by piece. */
 
 	/* Delete old SPDs and SAs, if present */
-	hip_delete_esp(entry);
+     hip_hadb_delete_inbound_spis(entry);
+     hip_hadb_delete_outbound_spis(entry);
 
 	/* create I2 */
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
@@ -1999,7 +2002,8 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 
 	/* If we have old SAs with these HITs delete them */
-	hip_delete_esp(entry);
+	hip_hadb_delete_inbound_spis(entry);
+	hip_hadb_delete_outbound_spis(entry);
 
 	{
 		struct hip_esp_transform *esp_tf;
@@ -2062,7 +2066,8 @@ int hip_handle_i2(struct hip_common *i2,
 		if (err == -EEXIST)
 			HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
 				  spi_in);
-		hip_delete_esp(entry);
+          hip_hadb_delete_inbound_spis(entry);
+          hip_hadb_delete_outbound_spis(entry);
 		goto out_err;
 	}
 	/* XXX: Check -EAGAIN */
@@ -2084,7 +2089,8 @@ int hip_handle_i2(struct hip_common *i2,
 	} else if (err) {
 		HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:dst (err=%d)\n", err);
 		/* delete all IPsec related SPD/SA for this entry */
-		hip_delete_esp(entry);
+          hip_hadb_delete_inbound_spis(entry);
+          hip_hadb_delete_outbound_spis(entry);
 		goto out_err;
 	}
 	/* XXX: Check if err = -EAGAIN... */

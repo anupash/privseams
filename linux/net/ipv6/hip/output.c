@@ -53,7 +53,8 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	 */
 	int err = 0;
 	int state = 0;
-	hip_ha_t *entry;
+	//hip_ha_t *entry;
+	hip_xfrm_state *xs;
 
 	if (!ipv6_addr_is_hit(&hdr->daddr)) {
 		/* The address was an IPv6 address, ignore. */
@@ -61,17 +62,20 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	}
 
 	/* The source address is not yet a HIT, just the dst address. */
-	entry = hip_hadb_find_byhit(&hdr->daddr);
-	if (!entry) {
+	//entry = hip_hadb_find_byhit(&hdr->daddr);
+	xs = hip_xfrm_find(&hdr->daddr);
+     
+	if (!xs) {
 		HIP_ERROR("Unknown HA\n");
 		err = -EFAULT;
 		goto out;
 	}
 
 	smp_wmb();
-	state = entry->state;
-
-       	_HIP_DEBUG("hadb entry state is %s\n", hip_state_str(state));
+	//state = entry->state;
+	state = xs->state;
+	
+	_HIP_DEBUG("hadb entry state is %s\n", hip_state_str(state));
 
 	switch(state) {
 	case HIP_STATE_NONE:
@@ -87,8 +91,13 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		}
 #endif
 		barrier();
-		entry->state = HIP_STATE_I1_SENT;
+		//entry->state = HIP_STATE_I1_SENT;
+		xs->state = HIP_STATE_I1_SENT;
 
+#if 0
+		// FIXME: replace this with a work order to workqueue
+		// to send i1 the work order execution then changes
+		// the state in the userspace/hadb too.
 		err = hip_send_i1(&hdr->daddr, entry);
 		if (err < 0) {
 			HIP_ERROR("Sending of I1 failed (%d)\n", err);
@@ -98,10 +107,12 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			entry->state = HIP_STATE_UNASSOCIATED;
 			goto out;
 		}
-
-		err = -1; // drop the TCP/UDP packet
+#endif
+		err = -1; // drop the TCP/UDP packet (FIXME: tkoponen, dropping does not happen due to blocking happening earlier?)
 		break;
 	case HIP_STATE_I1_SENT:
+#if 0
+// FIXME: no i1 retransmission until its properly done.
 		HIP_DEBUG("I1 retransmission\n");
 		/* XX TODO: we should have timers on HIP layer and
 		   not depend on transport layer timeouts? In that case
@@ -111,7 +122,8 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		if (err) {
 			HIP_ERROR("I1 retransmission failed");
 			goto out;
-		}
+		}			
+#endif
 		err = -1; // just something to drop the TCP packet;
 		break;
 	case HIP_STATE_I2_SENT:
@@ -123,13 +135,16 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		/* State is already established; just rewrite HITs to IPv6
 		   addresses and continue normal IPv6 packet processing. */
 		/* first get peer IPv6 addr */
-		err = hip_hadb_get_peer_addr(entry, &hdr->daddr);
-		if (err) {
+		//err = hip_hadb_get_peer_addr(entry, &hdr->daddr);
+		//FIXME: tkoponen, is it ok to assume the xs to have a
+		//single address that is always used if such exists?
+		if (ipv6_addr_any(&xs->preferred_address)) {
 			HIP_ERROR("Could not find peer address\n");
 			err = -EADDRNOTAVAIL;
 			goto out;
 		}
-
+		ipv6_addr_copy(&hdr->daddr, &entry->preferred_address);
+		    
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 		if (!skb) {
 			HIP_ERROR("ESTABLISHED state and no skb!\n");
@@ -157,15 +172,20 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		break;
 	}
 
+#if 0
 	if (entry->skbtest) {
 		/* sock needs to relookup its dst, todo */
 		HIP_DEBUG("skbtest is 1, setting back to 0\n");
 		entry->skbtest = 0;
 	        err = 5;
 	}
+#endif
  out:
+#if 0
+	// FIXME: tkoponen, what is this doing here?
 	if (entry)
 		hip_put_ha(entry);
+#endif
 	_HIP_DEBUG("err=%d\n", err);
 	return err;
 }

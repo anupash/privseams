@@ -7,11 +7,12 @@
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
 
+#ifdef __KERNEL__
 #define HIP_LOCK_HA(ha) do { spin_lock_bh(&ha->lock); } while(0)
 #define HIP_UNLOCK_HA(ha) do { spin_unlock_bh(&ha->lock); } while(0)
 #define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
 #define HIP_UNLOCK_HS(hs) do { spin_unlock_bh(&hs->lock); } while(0)
-
+#endif
 
 /*************** BASE FUNCTIONS *******************/
 
@@ -20,8 +21,8 @@ void hip_init_hadb(void);
 void hip_uninit_hadb(void);
 
 /* Accessors */
-hip_ha_t *hip_hadb_find_byspi_list(u32 spi);
 hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
+hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
@@ -91,7 +92,7 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			  int direction, int test_new_spi);
 uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry);
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
-				   struct in6_addr *addr);
+                                   struct in6_addr *addr);
 void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 			   struct hip_echo_response *echo_esp);
 void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id);
@@ -117,6 +118,7 @@ void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
 
+#ifdef __KERNEL__
 #define hip_hold_ha(ha) do { \
 	atomic_inc(&ha->refcnt); \
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
@@ -131,5 +133,6 @@ void hip_hadb_dump_hs_ht(void);
                 _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, atomic_read(&ha->refcnt)); \
         } \
 } while(0)
+#endif
 
 #endif /* HIP_HADB_H */
