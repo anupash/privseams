@@ -332,6 +332,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 {
  	struct hip_common *msg;
  	int err = 0;
+	int use_rsa = 0;
  	u8 *dh_data = NULL;
  	int dh_size,written, mask;
  	/* Supported HIP and ESP transforms. */
@@ -382,6 +383,15 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 		goto out_err;
 	}
 	
+	/* check for the used algorithm */
+	if (hip_get_host_id_algo(host_id_pub) == HIP_HI_RSA) {
+			use_rsa = 1;
+	} else if (hip_get_host_id_algo(host_id_pub) != HIP_HI_DSA) {
+			HIP_ERROR("Unsupported algorithm:%d\n", 
+					  hip_get_host_id_algo(host_id_pub));
+			goto out_err;
+	}
+
 	signature = kmalloc(MAX(HIP_DSA_SIGNATURE_LEN,HIP_RSA_SIGNATURE_LEN), 
 			    GFP_KERNEL);
 	if(!signature) {
@@ -472,10 +482,18 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
- 	err = hip_build_param_signature2_contents(msg,
- 						 signature,
- 						 HIP_DSA_SIGNATURE_LEN,
- 						 HIP_SIG_DSA);
+	if (use_rsa) {
+			err = hip_build_param_signature2_contents(msg,
+													  signature,
+													  HIP_RSA_SIGNATURE_LEN,
+													  HIP_SIG_RSA);
+	} else {
+			err = hip_build_param_signature2_contents(msg,
+													  signature,
+													  HIP_DSA_SIGNATURE_LEN,
+													  HIP_SIG_DSA);
+	}
+	
  	if (err) {
  		HIP_ERROR("Building of signature failed (%d) on R1\n", err);
  		goto out_err;

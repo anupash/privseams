@@ -60,19 +60,39 @@ int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type)
 {
 	int err = 0;
+	u8 digest[HIP_AH_SHA_LEN];
 
+	char *key_rr = (char *) (host_id + 1); /* skip the header, 
+											  Is this right? */
+
+	/* hit excludes rdata but it is included in hi_length;
+	   subtract rdata */
+	unsigned int key_rr_len = ntohs(host_id->hi_length) -
+			sizeof(struct hip_host_id_key_rdata);
+	
+	HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+	
 	if (hit_type != HIP_HIT_TYPE_HASH126) {
 		err = -ENOSYS;
 		goto out_err;
 	}
+
+	_HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+	
+	err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest);
+	if (err) {
+			HIP_ERROR("Building of digest failed\n");
+			goto out_err;
+	}
 	
 	/* XX FIXME: THIS WRONG (JUST FOR RSA TESTING) */
 
-	memcpy(hit, host_id + sizeof(struct hip_host_id),
-	       sizeof(struct in6_addr));
+	memcpy(hit,  digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
+		   sizeof(struct in6_addr));
 
 	hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
 	hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_126;
+ 
  out_err:
 	return err;
 }
@@ -151,11 +171,43 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 				   struct in6_addr *hit, int hit_type)
 {
 	int err = 0;
+	struct hip_host_id *host_id_pub = NULL;
+	int contents_len;
+	int total_len;
+
+	contents_len = hip_get_param_contents_len(host_id);
+	total_len = hip_get_param_total_len(host_id);
 	
 	/* XX FIX: REMOVE PRIVATE KEY? */
 
-	err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+	/* Allocate space for public key */
+	host_id_pub = kmalloc(total_len, GFP_KERNEL);
+	if (!host_id_pub) {
+		err = -EFAULT;
+		goto out_err;
+	}
+	memset(host_id_pub, 0, total_len);
 
+	/* How do we extract the public key from the hip_host_id 
+	   struct? TODO: CHECK THIS */
+	memcpy(host_id_pub, host_id,
+	       sizeof(struct hip_tlv_common) + contents_len);
+
+	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
+				 hip_get_param_total_len(host_id_pub));
+
+	err = hip_rsa_host_id_to_hit(host_id_pub, hit, hit_type);
+
+	if (err) {
+			HIP_ERROR("Failed to convert HI to HIT.\n");
+			goto out_err;
+	}
+
+ out_err:
+	
+	if (host_id_pub)
+			kfree(host_id_pub);
+	
 	return err;
 }
 
