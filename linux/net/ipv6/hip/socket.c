@@ -1871,6 +1871,34 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 	return err;
 }
 
+int hip_socket_handle_are_eid_equal(struct hip_common *msg, int is_localhost)
+{
+	int err = 0;
+	struct sockaddr_eid *saddr_eid1, *saddr_eid2;
+
+	saddr_eid1 = hip_get_nth_param(msg, HIP_PARAM_EID_SOCKADDR, 1);
+	if (!saddr_eid1) {
+		HIP_ERROR("No sockaddr EID in the message\n");
+		goto out_er;
+	}
+
+	saddr_eid2 = hip_get_nth_param(msg, HIP_PARAM_EID_SOCKADDR, 2);
+	if (!saddr_eid2) {
+		HIP_ERROR("No sockaddr EID in the message\n");
+		goto out_er;
+	}
+
+	XX FIXME; // fetch and compare the HITs corresponding to the EIDs
+	if (is_localhost) {
+	} else {
+	}
+
+ out_err:
+
+	return err;
+}
+
+
 /*
  * The socket options that need a return value.
  */
@@ -1912,7 +1940,7 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 		goto out_err;		
 	}
 
-	/* XX FIX: we make the assumtion here that the socket option return
+	/* XX FIX: we make the assumption here that the socket option return
 	   value has enough space... */
 
 	switch(hip_get_msg_type(msg)) {
@@ -1927,6 +1955,12 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 		break;
 	case SO_HIP_GET_PEER_LIST:
 		err = hip_socket_handle_get_peer_list(msg);
+		break;
+	case SO_HIP_ARE_LOCALHOST_EID_EQUAL:
+		err = hip_socket_handle_are_eid_equal(msg, 1);
+		break;
+	case SO_HIP_ARE_PEER_EID_EQUAL:
+		err = hip_socket_handle_is_eid_equal(msg, 0);
 		break;
 	default:
 		err = -ESOCKTNOSUPPORT;

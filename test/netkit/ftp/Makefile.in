@@ -1,35 +1,34 @@
-# Generated automatically from Makefile.in by configure.
 ##
 ## settings
 ##
-prefix=/usr/local/v6
-exec_prefix=${prefix}
-sbindir=${exec_prefix}/sbin
-bindir=${exec_prefix}/bin
-mandir=${prefix}/man
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+sbindir=@sbindir@
+bindir=@bindir@
+mandir=@mandir@
 
 ##
 ## autoconf
 ##
-CPP=gcc -E
+CPP=@CPP@
 CXXCPP=@CXXCPP@
-CC=gcc
+CC=@CC@
 CXX=@CXX@
-DEFS=-D_USAGI -DINET6  
-CFLAGS=-I../libinet6/include -g -O2 $(DEFS)
-CXXFLAGS= $(DEFS)
+DEFS=-D_USAGI -DINET6 @DEFS@
+CFLAGS=@CFLAGS@ $(DEFS)
+CXXFLAGS=@CXXFLAGS@ $(DEFS)
 
 OBJS=
 LIBOBJS=@LIBOBJS@
-LDFLAGS=
-LIBS=-L../libinet6 -linet6 
+LDFLAGS=@LDFLAGS@
+LIBS=@LIBS@
 
-INSTALL=/usr/bin/install -c
-INSTALL_PROG=${INSTALL}
-INSTALL_DATA=${INSTALL} -m 644
-INSTALL_DIR=${INSTALL} -d
+INSTALL=@INSTALL@
+INSTALL_PROG=@INSTALL_PROGRAM@
+INSTALL_DATA=@INSTALL_DATA@
+INSTALL_DIR=@INSTALL_DIR@
 
-LN_S=ln -s
+LN_S=@LN_S@
 
 ##
 ## targets

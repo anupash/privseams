@@ -45,6 +45,9 @@
 /* BEGIN HIPL PATCH */
 #include <net/if.h>
 #include <net/hip.h>
+
+#define LOCALHOST_EID_ARE_EQUAL(e1, e2) eid_are_equal(e1, e2, 1)
+#define PEER_EID_ARE_EQUAL(e1, e2) eid_are_equal(e1, e2, 0)
 /* END HIPL PATCH */
 
 /* Absolute file name for network data base files.  */
@@ -563,6 +566,10 @@ extern void freeaddrinfo (struct addrinfo *__ai) __THROW;
 
 /* Convert error return from getaddrinfo() to a string.  */
 extern __const char *gai_strerror (int __ecode) __THROW;
+
+extern int eid_are_equal(__const struct sockaddr_eid *saddr_eid1,
+			 __const struct sockaddr_eid *saddr_eid2,
+			 int is_localhost) __THROW;
 
 /* Translate a socket address to a location and service name.  */
 extern int getnameinfo (__const struct sockaddr *__restrict __sa,

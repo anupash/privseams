@@ -84,6 +84,10 @@ int logout(const char *line);
 
 #include <netinet/in.h>
 
+#ifdef HIP
+#include <netdb.h>
+#endif
+
 union sockunion {
 	struct sockinet {
 #ifdef __linux__
@@ -97,17 +101,19 @@ union sockunion {
 	} su_si;
 	struct	sockaddr		su_sa;
 	struct	sockaddr_in		su_sin;
+#ifdef HIP
+	struct	sockaddr_eid		su_eid;
+#endif
 #ifdef INET6
 	struct	sockaddr_in6		su_sin6;
 #endif
 };
-#ifdef HIP
-	struct	sockaddr_eid		su_eid;
-#endif
 #define	su_family	su_sa.sa_family
 #define	su_port		su_si.si_port
 
-#ifdef INET6
+#ifdef HIP
+/* FIX ME*/
+#elif INET6
 #define ex_prot2af(p) (p == 1 ? AF_INET : (p == 2 ? AF_INET6 : -1))
 #define ex_af2prot(a) (a == AF_INET ? 1 : (a == AF_INET6 ? 2 : 0))
 #else

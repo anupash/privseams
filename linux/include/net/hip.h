@@ -44,8 +44,10 @@
 typedef uint16_t in_port_t;
 
 #else
+
 #include <sys/ioctl.h>
 #include <netinet/in.h>
+#include <stdint.h>
 
 #endif /* __KERNEL__ */
 
@@ -95,6 +97,8 @@ typedef uint16_t in_port_t;
 #define SO_HIP_UNIT_TEST                        14
 #define SO_HIP_BOS                              15
 #define SO_HIP_GET_PEER_LIST                    16
+#define SO_HIP_ARE_PEER_EID_EQUAL               17
+#define SO_HIP_ARE_LOCALHOST_EID_EQUAL          18
 
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 
@@ -321,6 +325,26 @@ struct hip_lhi
 	struct in6_addr    hit;
 } __attribute__ ((packed));
 
+/* RFC2535 3.1 KEY RDATA format */
+struct hip_host_id_key_rdata {
+	uint16_t flags;
+	uint8_t protocol;
+	uint8_t algorithm;
+
+	/* fixed part ends */
+} __attribute__ ((packed));
+
+struct hip_host_id {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+
+	uint16_t     hi_length;
+	uint16_t     di_type_length;
+
+	struct hip_host_id_key_rdata rdata;
+	/* fixed part ends */
+} __attribute__ ((packed));
+
 
 /*
  * Use accessor functions defined in hip_build.h, do not access members
@@ -346,14 +370,6 @@ struct hip_i1 {
 } __attribute__ ((packed));
 #endif
 
-struct hip_keymat_keymat
-{
-	size_t offset;      /* Offset into the key material */
-	size_t keymatlen;   /* Length of the key material */
-
-	void *keymatdst; /* Pointer to beginning of key material */
-};
-
 /*
  * Used in executing a unit test case in a test suite in the kernel module.
  */
@@ -363,6 +379,16 @@ struct hip_unit_test {
 	uint16_t           suiteid;
 	uint16_t           caseid;
 } __attribute__ ((packed));
+
+#ifdef __KERNEL__
+
+struct hip_keymat_keymat
+{
+	size_t offset;      /* Offset into the key material */
+	size_t keymatlen;   /* Length of the key material */
+
+	void *keymatdst; /* Pointer to beginning of key material */
+};
 
 struct hip_spi {
 	hip_tlv_type_t      type;
@@ -435,26 +461,6 @@ struct hip_any_transform {
 		/* XX TODO: replace with MAX(HIP, ESP) */
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX +
 				       HIP_TRANSFORM_ESP_MAX];
-} __attribute__ ((packed));
-
-/* RFC2535 3.1 KEY RDATA format */
-struct hip_host_id_key_rdata {
-	uint16_t flags;
-	uint8_t protocol;
-	uint8_t algorithm;
-
-	/* fixed part ends */
-} __attribute__ ((packed));
-
-struct hip_host_id {
-	hip_tlv_type_t     type;
-	hip_tlv_len_t      length;
-
-	uint16_t     hi_length;
-	uint16_t     di_type_length;
-
-	struct hip_host_id_key_rdata rdata;
-	/* fixed part ends */
 } __attribute__ ((packed));
 
 struct hip_encrypted_3des_sha1 {
@@ -606,6 +612,8 @@ struct hip_echo_response {
 	hip_tlv_len_t  length;
 	/* opaque */
 } __attribute__ ((packed));
+
+#endif /* Kernel */
 
 /* Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the

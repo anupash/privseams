@@ -1164,3 +1164,72 @@ const char *gepi_strerror(int errcode)
 {
   return "HIP native resolver failed"; /* XX FIXME */
 }
+
+/**
+ * Returns 1 if the EIDs are equal, 0 if they are not equal and negative on error.
+ *
+ */
+int eid_are_equal(const struct sockaddr_eid *saddr_eid1,
+		  const struct sockaddr_eid *saddr_eid2,
+		  int is_localhost)
+{
+  struct hip_common *msg = NULL;
+  int err = 0;
+
+  if (saddr_eid1->eid_val != AF_HIP || saddr_eid2->eid_val != AF_HIP) {
+    err = -ENOSYS;
+    goto out_err;
+  }
+
+  msg = hip_msg_alloc();
+  if (!msg) {
+    err = -EEI_MEMORY;
+    goto out_err;
+  }
+
+  if (is_localhost)
+    hip_build_user_hdr(msg, SO_HIP_ARE_LOCALHOST_EID_EQUAL, 0);
+  else
+    hip_build_user_hdr(msg, SO_HIP_ARE_PEER_EID_EQUAL, 0);
+
+  err = hip_build_param_eid_sockaddr(msg, (struct sockaddr *) saddr_eid1,
+				     sizeof(struct sockaddr_eid));
+  if (err) {
+    err = -EEI_MEMORY;
+    goto out_err;
+  }
+
+  err = hip_build_param_eid_sockaddr(msg, (struct sockaddr *) saddr_eid2,
+				     sizeof(struct sockaddr_eid));
+  if (err) {
+    err = -EEI_MEMORY;
+    goto out_err;
+  }
+
+  err = hip_get_global_option(msg);
+  if (err) {
+    err = -EEI_SYSTEM;
+    HIP_ERROR("Failed to send msg\n");
+    goto out_err;
+  }
+
+  /* The error value in the message header is interpreted as follows:
+   * - 0 means that the EIDs matched
+   * - 1 means that the EIDs did not match
+   * Upon return we invert the value to satisfy the logic in the actual function name
+   */
+  err = hip_get_msg_err(msg);
+  if (err) {
+    err = 0;
+  } else {
+    err = 1;
+  }
+
+ out_err:
+
+  if (msg)
+    free(msg);
+
+  return err;
+}
+

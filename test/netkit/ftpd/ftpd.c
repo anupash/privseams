@@ -337,7 +337,7 @@ main(int argc, char *argv[], char **envp)
 	const char *argstr = "AdDhlMSt:T:u:UvP46H";
 	int family = PF_HIP;
 	int enable_v4 = 0;
-#else if INET6
+#elif INET6
 	const char *argstr = "AdDhlMSt:T:u:UvP46";
 	int family = AF_UNSPEC;
 	int enable_v4 = 0;
@@ -451,14 +451,14 @@ main(int argc, char *argv[], char **envp)
 			if (family == AF_UNSPEC)
 				family = AF_INET;
 			break;
-#ifdef INET6
-		case '6':
-			family = AF_INET6;
-			break;
-#endif
 #ifdef HIP
+			/* Note: HIP overrides INET6; both cannot be used */
 		case 'H':
 			family = PF_HIP;
+			break;
+#elif INET6
+		case '6':
+			family = AF_INET6;
 			break;
 #endif
 
@@ -515,8 +515,8 @@ main(int argc, char *argv[], char **envp)
 			exit(1);
 		}
 		family = res->ei_family;
-		memcpy(&server_addr, res->ei_addr, res->ei_endpointlen);
-		freeendpointinfo(res);
+		memcpy(&server_addr, res->ei_endpoint, res->ei_endpointlen);
+		free_endpointinfo(res);
 #else
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = family == AF_UNSPEC ? AF_INET : family;
@@ -703,9 +703,9 @@ main(int argc, char *argv[], char **envp)
 	/* Make sure hostname is fully qualified. */
 	memset(&hints, 0, sizeof(hints));
 	hints.ei_flags = EI_CANONNAME;
-	if (endpointfino(hostname, NULL, &hints, &res) == 0) {
+	if (getendpointinfo(hostname, NULL, &hints, &res) == 0) {
 		strcpy(hostname, res->ei_canonname);
-		freeendpointinfo(res);
+		free_endpointinfo(res);
 	}
 #else
 	/* Make sure hostname is fully qualified. */
@@ -1425,15 +1425,14 @@ static FILE * dataconn(const char *name, off_t size, const char *mode)
 		if ((from.su_family == AF_INET &&
 			from.su_sin.sin_addr.s_addr !=
 			  his_addr.su_sin.sin_addr.s_addr)
-#ifdef INET6
+#ifdef HIP
+		  || (from.su_family == PF_HIP &&
+			!EID_ARE_EQUAL(&from.su_eid,
+					&his_addr.su_eid))
+#elif INET6
 		  || (from.su_family == AF_INET6 &&
 			!IN6_ARE_ADDR_EQUAL(&from.su_sin6.sin6_addr,
 					&his_addr.su_sin6.sin6_addr))
-#endif
-#ifdef HIP
-		  || (from.su_family == PF_HIP &&
-			!EID_ARE_EQUAL(&from.su_eid.eid_val,
-					&his_addr.su_eid.eid_val))
 #endif
 		) {
 			perror_reply(435, "Can't build data connection"); 
@@ -1492,15 +1491,14 @@ static FILE * dataconn(const char *name, off_t size, const char *mode)
 	if ((data_dest.su_family == AF_INET &&
 		data_dest.su_sin.sin_addr.s_addr !=
 			his_addr.su_sin.sin_addr.s_addr)
-#ifdef INET6
+#ifdef HIP
+	  || (data_dest.su_family == PF_HIP &&
+		!EID_ARE_EQUAL(&data_dest.su_eid,
+					&his_addr.su_eid))
+#elif INET6
 	  || (data_dest.su_family == AF_INET6 &&
 		!IN6_ARE_ADDR_EQUAL(&data_dest.su_sin6.sin6_addr,
 					&his_addr.su_sin6.sin6_addr))
-#endif
-#ifdef HIP
-	  || (data_dest.su_family == PF_HIP &&
-		!EID_ARE_EQUAL(&data_dest.su_eid.eid_val,
-					&his_addr.su_eid.eid_val))
 #endif
 	) {
 		perror_reply(435, "Can't build data connection");
@@ -1831,17 +1829,16 @@ printstataddrinfo(void)
 		a = (u_char *) &su->su_sin.sin_addr;
 		alen = sizeof(su->su_sin.sin_addr);
 		af = 4;
-#ifdef INET6
-	} else if (su->su_family == AF_INET6) {
-		a = (u_char *) &su->su_sin6.sin6_addr;
-		alen = sizeof(su->su_sin6.sin6_addr);
-		af = 6;
-#else
 #ifdef HIP
 	} else if (su->su_family == PF_HIP) {
 		a = (u_char *) &su->su_eid.eid_val;
 		alen = sizeof(su->su_eid.eid_val);
 		af = 8;
+#elif INET6
+	} else if (su->su_family == AF_INET6) {
+		a = (u_char *) &su->su_sin6.sin6_addr;
+		alen = sizeof(su->su_sin6.sin6_addr);
+		af = 6;
 #endif
 	}
 
@@ -2314,6 +2311,13 @@ long_passive(const char *cmd, int pf)
 		  "Entering Long Passive Mode (%u,%u,%u,%u,%u,%u,%u,%u,%u)",
 				4, 4, a[0], a[1], a[2], a[3], 2, p[0], p[1]);
 #ifdef INET6
+			/* XX CHECK: IS THIS CORRECT? */
+		} else if (pasv_addr.su_family == AF_HIP) {
+			a = (u_char *) &pasv_addr.su_eid.eid_val;
+			reply(228,
+		  "Entering Long Passive Mode (%u,%u,%u,%u,%u,%u,%u,%u,%u)",
+				4, 4, a[0], a[1], a[2], a[3], 2, p[0], p[1]);
+#elif HIP
 		} else if (pasv_addr.su_family == AF_INET6) {
 			a = (u_char *) &pasv_addr.su_sin6.sin6_addr;
 			reply(228,
@@ -2322,13 +2326,6 @@ long_passive(const char *cmd, int pf)
 			  6, 16, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
 			  a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15],
 			  2, p[0], p[1]);
-#endif
-#ifdef HIP
-		} else if (pasv_addr.su_family == AF_HIP) {
-			a = (u_char *) &pasv_addr.su_eid.eid_val;
-			reply(228,
-		  "Entering Long Passive Mode (%u,%u,%u,%u,%u,%u,%u,%u,%u)",
-				4, 4, a[0], a[1], a[2], a[3], 2, p[0], p[1]);
 #endif
 		} else {
 			goto pasv_error;
@@ -2420,7 +2417,7 @@ extended_port(const char *arg)
 			syslog(LOG_DEBUG, "ai_addrlen large");
 		goto parsefail;
 	}
-	memcpy(&data_dest, res->ei_addr, res->ei_endpointlen);
+	memcpy(&data_dest, res->ei_endpoint, res->ei_endpointlen);
 #else
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = ex_prot2af((int)proto);
@@ -2449,11 +2446,10 @@ extended_port(const char *arg)
 	}
 #endif
 	if (port_check("EPRT") == 1) {
-#ifdef INET6
-	} else if (port_check_v6("EPRT") == 1) {
-#endif
 #ifdef HIP
 	} else if (port_check_hip("EPRT") == 1) {
+#elif INET6
+	} else if (port_check_v6("EPRT") == 1) {
 #endif
 	} else {
 		goto parsefail;
@@ -2463,7 +2459,7 @@ extended_port(const char *arg)
 		free(tmp);
 #ifdef HIP
 	if (res)
-		freeendpointinfo(res);
+		free_endpointinfo(res);
 #else
 	if (res)
 		freeaddrinfo(res);
@@ -2477,7 +2473,7 @@ parsefail:
 		free(tmp);
 #ifdef HIP
 	if (res)
-		freeendpointinfo(res);
+		free_endpointinfo(res);
 #else
 	if (res)
 		freeaddrinfo(res);
@@ -2492,7 +2488,7 @@ protounsupp:
 		free(tmp);
 #ifdef HIP
 	if (res)
-		freeendpointinfo(res);
+		free_endpointinfo(res);
 #else
 	if (res)
 		freeaddrinfo(res);
@@ -2534,64 +2530,13 @@ port_check(const char *pcmd)
 	return 0;
 }
 
-#ifdef INET6
-/* Return 1, if port check is done. Return 0, if not yet. */
-int
-port_check_v6(const char *pcmd)
-{
-	if (his_addr.su_family == AF_INET6) {
-		if (data_dest.su_family != AF_INET6) {
-			usedefault = 1;
-			reply(500, "Invalid address rejected.");
-			return 1;
-		}
-		if (portcheck &&
-		    ntohs(data_dest.su_port) < IPPORT_RESERVED) {
-			usedefault = 1;
-			reply(500,
-			    "Illegal PORT rejected (reserved port).");
-		} else if (portcheck && !IN6_ARE_ADDR_EQUAL(
-					&data_dest.su_sin6.sin6_addr,
-					&his_addr.su_sin6.sin6_addr)) {
-			usedefault = 1;
-			reply(500,
-			    "Illegal PORT rejected (address wrong).");
-		} else {
-			usedefault = 0;
-			if (pdata >= 0) {
-				(void) close(pdata);
-				pdata = -1;
-			}
-			reply(200, "%s command successful.", pcmd);
-		}
-		return 1;
-	}
-	return 0;
-}
-#endif
-
-#ifdef HIP
+#if defined(HIP) || defined(INET6)
 /* Return 1, if port check is done. Return 0, if not yet. */
 int
 port_check_hip(const char *pcmd)
 {
-	XX CONTINUE HERE;
-
-	/*
-	 * XX TODO MIIKA:
-	 * Replace
-	 *  ifdef INET6 
-	 *  endif
-	 *  ifdef HIP
-	 *  endif
-	 * with
-	 *  ifdef HIP
-	 *  else if INET6
-	 *  endif
-	 */
-
-	if (his_addr.su_family == AF_INET6) {
-		if (data_dest.su_family != AF_INET6) {
+	if (his_addr.su_family == AF_HIP) {
+		if (data_dest.su_family != AF_HIP) {
 			usedefault = 1;
 			reply(500, "Invalid address rejected.");
 			return 1;
@@ -2601,12 +2546,21 @@ port_check_hip(const char *pcmd)
 			usedefault = 1;
 			reply(500,
 			    "Illegal PORT rejected (reserved port).");
+#ifdef HIP
+		} else if (portcheck && !EID_ARE_EQUAL(
+					&data_dest.su_eid,
+					&his_addr.su_eid)) {
+			usedefault = 1;
+			reply(500,
+			    "Illegal PORT rejected (address wrong).");
+#elif INET6
 		} else if (portcheck && !IN6_ARE_ADDR_EQUAL(
 					&data_dest.su_sin6.sin6_addr,
 					&his_addr.su_sin6.sin6_addr)) {
 			usedefault = 1;
 			reply(500,
 			    "Illegal PORT rejected (address wrong).");
+#endif
 		} else {
 			usedefault = 0;
 			if (pdata >= 0) {

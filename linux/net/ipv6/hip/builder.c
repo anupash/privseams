@@ -247,50 +247,6 @@ void hip_set_param_type(void *tlv_common, hip_tlv_type_t type) {
 }
 
 /**
- * hip_get_diffie_hellman_param_public_value_contents - get dh public value contents
- * @tlv_common: pointer to the dh parameter
- *
- * Returns: pointer to the public value of Diffie-Hellman parameter
- */
-void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common) {
-	return (void *) tlv_common + sizeof(struct hip_diffie_hellman);
-}
-
-/**
- * hip_get_diffie_hellman_param_public_value_len - get dh public value real length
- * @dh: pointer to the Diffie-Hellman parameter
- *
- * Returns: the length of the public value Diffie-Hellman parameter in bytes
- *          (in host byte order).
- */
-hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
-{
-	return hip_get_param_contents_len(dh) - sizeof(uint8_t);
-}
-
-/**
- * hip_set_param_spi_value - set the spi value in spi_lsi parameter
- * @spi_lsi: the spi_lsi parameter
- * @spi:     the value of the spi in the spi_lsi value in host byte order
- *
- */
-void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi)
-{
-	hspi->spi = htonl(spi);
-}
-
-/**
- * hip_get_param_spi_value - get the spi value from spi_lsi parameter
- * @spi_lsi: the spi_lsi parameter
- *
- * Returns: the spi value in host byte order
- */
-uint32_t hip_get_param_spi_value(const struct hip_spi *hspi)
-{
-	return ntohl(hspi->spi);
-}
-
-/**
  * hip_get_unit_test_suite_param_id - get suite id from unit test parameter
  * @test: pointer to the unit test parameter
  *
@@ -837,114 +793,6 @@ int hip_check_userspace_msg(const struct hip_common *msg) {
 	return err;
 }
 
-/**
- * hip_check_network_param_attributes - check parameter attributes
- * @param: the parameter to checked
- *
- * This is the function where one can test special attributes such as algo,
- * groupid, suiteid, etc of a HIP parameter. If the parameter does not require
- * other than just the validation of length and type fields, one should not
- * add any checks for that parameter here.
- *
- * Returns: zero if the message was ok, or negative error value on error.
- *
- * XX TODO: this function may be unneccessary because the input handlers
- * already do some checking. Currently they are double checked..
- */
-int hip_check_network_param_attributes(const struct hip_tlv_common *param)
-{
-	hip_tlv_type_t type = hip_get_param_type(param);
-	int err = 0;
-
-	_HIP_DEBUG("type=%u\n", type);
-
-	switch(type) {
-	case HIP_PARAM_HIP_TRANSFORM:
-	case HIP_PARAM_ESP_TRANSFORM:
-	{
-		/* Search for one supported transform */
-		hip_transform_suite_t suite;
-
- 		HIP_DEBUG("Checking %s transform\n",
- 			  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
-		suite = hip_get_param_transform_suite_id(param, 0);
-		if (suite == 0) {
-			HIP_ERROR("Could not find suitable %s transform\n",
-				  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
-			err = -EPROTONOSUPPORT;
-		}
-		break;
-	}
-	case HIP_PARAM_HOST_ID:
-	{
-		uint8_t algo = 
-			hip_get_host_id_algo((struct hip_host_id *) param);
-		if (algo != HIP_HI_DSA) {
-			err = -EPROTONOSUPPORT;
-			HIP_ERROR("Host id algo %d not supported\n", algo);
-		}
-		break;
-	}
-	}
-	_HIP_DEBUG("err=%d\n", err);
-	return err;
-}
-
-/**
- * hip_check_network_msg - check network message for integrity
- * @msg: the message to be verified for integrity
- *
- * Returns: zero if the message was ok, or negative error value on error.
- */
-int hip_check_network_msg(const struct hip_common *msg)
-{
-	struct hip_tlv_common *current_param = NULL;
-	hip_tlv_type_t current_param_type = 0, prev_param_type = 0;
-	int err = 0;
-
-	/* Checksum of the message header is verified in input.c */
-
-	if (!hip_check_network_msg_type(msg)) {
-		err = -EINVAL;
-		HIP_ERROR("bad msg type (%d)\n", hip_get_msg_type(msg));
-		goto out;
-	}
-
-	if (!hip_check_msg_len(msg)) {
-		err = -EMSGSIZE;
-		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
-		goto out;
-	}
-
-	/* Checking of param types, lengths and ordering. */
-	while((current_param = hip_get_next_param(msg, current_param))
-	      != NULL) {
-		current_param_type = hip_get_param_type(current_param);
-		if(!hip_check_param_contents_len(msg, current_param)) {
-			err = -EMSGSIZE;
-			HIP_ERROR("bad param len\n");
-			break;
-		} else if (!hip_check_network_param_type(current_param)) {
-			err = -EINVAL;
-			HIP_ERROR("bad param type, current param=%u\n",
-				  hip_get_param_type(current_param));
-			break;
-		} else if (current_param_type < prev_param_type) {
-			err = -ENOMSG;
-			HIP_ERROR("Wrong order of parameters (%d, %d)\n",
-				  prev_param_type, current_param_type);
-			break;
-		} else if (hip_check_network_param_attributes(current_param)) {
-			HIP_ERROR("bad param attributes\n");
-			err = -EINVAL;
-			break;
-		}
-		prev_param_type = current_param_type;
-	}
-
- out:
-	return err;
-}
 
 /**
  * hip_build_generic_param - build and insert a parameter into the message
@@ -1176,7 +1024,455 @@ int hip_build_user_hdr(struct hip_common *msg,
 	return err;
 }
 
+/**
+ * hip_build_param_unit_test - build and insert an unit test parameter
+ * @msg:     the message where the parameter will be appended
+ * @suiteid: the id of the test suite
+ * @caseid:  the id of the test case
+ *
+ * This parameter is used for triggering the unit test suite in the kernel.
+ * It is only for implementation internal purposes only.
+ *
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
+			      uint16_t caseid)
+{
+	int err = 0;
+	struct hip_unit_test ut;
+
+	hip_set_param_type(&ut, HIP_PARAM_UNIT_TEST);
+	hip_calc_generic_param_len(&ut, sizeof(struct hip_unit_test), 0);
+	ut.suiteid = htons(suiteid);
+	ut.caseid = htons(caseid);
+
+	err = hip_build_param(msg, &ut);
+	return err;
+}
+
+
+void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
+				 const char *hostname,
+				 hip_tlv_len_t rr_data_len,
+                                 uint8_t algorithm)
+{
+	uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
+	uint16_t fqdn_len;
+
+        /* reserve 1 byte for NULL termination */
+	if (hostname)
+		fqdn_len = (strlen(hostname) + 1) & 0x0FFF;
+	else
+		fqdn_len = 0;
+
+	host_id_hdr->hi_length = htons(hi_len);
+	/* length = 12 bits, di_type = 4 bits */
+	host_id_hdr->di_type_length = htons(fqdn_len | 0x1000);
+	/* if the length is 0, then the type should also be zero */
+	if (host_id_hdr->di_type_length == ntohs(0x1000))
+		host_id_hdr->di_type_length = 0;
+
+        hip_set_param_type(host_id_hdr, HIP_PARAM_HOST_ID);
+        hip_calc_generic_param_len(host_id_hdr, sizeof(struct hip_host_id),
+				   hi_len -
+				   sizeof(struct hip_host_id_key_rdata) +
+				   fqdn_len);
+
+        host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
+        host_id_hdr->rdata.protocol = 0xFF; /* RFC 2535 */
+	/* algo is 8 bits, no htons */
+        host_id_hdr->rdata.algorithm = algorithm;
+
+	HIP_DEBUG("hilen=%d totlen=%d contlen=%d\n",
+		  ntohs(host_id_hdr->hi_length),
+		  hip_get_param_contents_len(host_id_hdr),
+		  hip_get_param_total_len(host_id_hdr));
+}
+
+void hip_build_param_host_id_only(struct hip_host_id *host_id,
+				    const void *rr_data,
+				    const char *fqdn)
+{
+	unsigned int rr_len = ntohs(host_id->hi_length) -
+		sizeof(struct hip_host_id_key_rdata);
+	char *ptr = (char *) (host_id + 1);
+	uint16_t fqdn_len;
+
+	HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
+
+	HIP_DEBUG("Copying %d bytes\n", rr_len);
+
+	memcpy(ptr, rr_data, rr_len);
+	ptr += rr_len;
+
+	fqdn_len = ntohs(host_id->di_type_length) & 0x0FFF;
+	HIP_DEBUG("fqdn len: %d\n", fqdn_len);
+	if (fqdn_len)
+		memcpy(ptr, fqdn, fqdn_len);
+}
+
+/**
+ * hip_build_param_host_id - build and append host id into message
+ * @XXTODO:        XX TODO
+ * @algorithm:     the crypto algorithm used for the host id (as in the drafts)
+ *
+ */
+int hip_build_param_host_id(struct hip_common *msg,
+			    struct hip_host_id *host_id_hdr,
+			    const void *rr_data,
+			    const char *fqdn)
+{
+	int err = 0;
+	hip_build_param_host_id_only(host_id_hdr, rr_data, fqdn);
+        err = hip_build_param(msg, host_id_hdr);
+	return err;
+}
+
+int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len)
+{
+	int type;
+	static char *debuglist[3] = {"none", "FQDN", "NAI"};
+
+	type = ntohs(host->di_type_length);
+	*len = type & 0x0FFF;
+	type = (type & 0xF000) >> 12;
+
+	if (type > 2) {
+		HIP_ERROR("Illegal DI-type: %d\n",type);
+		return -1;
+	}
+
+	*id = debuglist[type];
+	return 0;
+}
+
+char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
+{
+	int hilen;
+	char *ptr;
+
+	hilen = ntohs(hostid->hi_length) - sizeof(struct hip_host_id_key_rdata);
+	HIP_DEBUG("Hilen: %d\n",hilen);
+	ptr = (char *)(hostid + 1) + hilen;
+	return ptr;
+}
+
+/*
+ * - endpoint is not padded
+ */
+void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
+			    const char *hostname,
+			    se_hip_flags_t endpoint_flags,
+			    uint8_t host_id_algo,
+			    unsigned int rr_data_len)
+{
+	hip_build_param_host_id_hdr(&endpoint_hdr->id.host_id,
+				    hostname, rr_data_len, host_id_algo);
+	endpoint_hdr->family = PF_HIP;
+	/* The length is not hip-length-padded, so it has be calculated
+	   manually. sizeof(hip_host_id) is already included both in the
+	   sizeof(struct endpoint_hip) and get_total_len(), so it has be
+	   subtracted once. */
+	endpoint_hdr->length = sizeof(struct endpoint_hip) +
+		hip_get_param_total_len(&endpoint_hdr->id.host_id) -
+		sizeof(struct hip_host_id);
+	endpoint_hdr->flags = endpoint_flags;
+	HIP_DEBUG("%d %d %d\n",
+		  sizeof(struct endpoint_hip),
+		  hip_get_param_total_len(&endpoint_hdr->id.host_id),
+		  sizeof(struct hip_host_id));
+	HIP_DEBUG("endpoint hdr length: %d\n", endpoint_hdr->length);
+}
+
+/*
+ * - endpoint is not padded
+ * - caller is responsible of reserving enough mem for endpoint
+ */
+void hip_build_endpoint(struct endpoint_hip *endpoint,
+			const struct endpoint_hip *endpoint_hdr,
+			const char *hostname,
+			const unsigned char *key_rr,
+			unsigned int key_rr_len)
+{
+	HIP_DEBUG("len=%d ep=%d rr=%d hostid=%d\n",
+		  endpoint_hdr->length,
+		  sizeof(struct endpoint_hip),
+		  key_rr_len,
+		  sizeof(struct hip_host_id));
+	HIP_ASSERT(endpoint_hdr->length == sizeof(struct endpoint_hip) +
+		   hip_get_param_total_len(&endpoint_hdr->id.host_id) -
+		   sizeof(struct hip_host_id));
+	memcpy(endpoint, endpoint_hdr, sizeof(struct endpoint_hip));
+	hip_build_param_host_id_only(&endpoint->id.host_id, key_rr, hostname);
+}
+
+int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
+					   const struct endpoint_hip *endpoint)
+{
+	int err = 0;
+
+	HIP_ASSERT(!(endpoint->flags & HIP_ENDPOINT_FLAG_HIT));
+
+	err = hip_build_param_contents(msg, endpoint, HIP_PARAM_EID_ENDPOINT,
+				       endpoint->length);
+	return err;
+}
+
+int hip_build_param_eid_endpoint_from_hit(struct hip_common *msg,
+					  const struct endpoint_hip *endpoint)
+{
+	struct hip_eid_endpoint eid_endpoint;
+	int err = 0;
+
+	HIP_ASSERT(endpoint->flags & HIP_ENDPOINT_FLAG_HIT);
+
+	hip_set_param_type(&eid_endpoint, HIP_PARAM_EID_ENDPOINT);
+
+	hip_calc_param_len(&eid_endpoint,
+			   sizeof(struct hip_eid_endpoint) -
+			   sizeof (struct hip_tlv_common));
+
+	memcpy(&eid_endpoint.endpoint, endpoint, sizeof(struct endpoint_hip));
+
+	err = hip_build_param(msg, &eid_endpoint);
+
+	return err;
+}
+
+/* 
+ * hip_build_param_eid_endpoint - build eid endpoint parameter
+ * @msg: the message where the eid endpoint paramater will be appended
+ * @endpoint: the endpoint to be wrapped into the eid endpoint structure
+ * @port: the dst/src port used for the endpoint 
+ * 
+ * Used for passing endpoints to the kernel. The endpoint is wrapped into
+ * an eid endpoint structure because endpoint_hip is not padded but all
+ * parameter need to be padded in the builder interface.
+ */
+int hip_build_param_eid_endpoint(struct hip_common *msg,
+				 const struct endpoint_hip *endpoint)
+{
+	int err = 0;
+
+	if (endpoint->flags & HIP_ENDPOINT_FLAG_HIT) {
+		err = hip_build_param_eid_endpoint_from_hit(msg, endpoint);
+	} else {
+		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
+	}
+	HIP_DEBUG("err=%d\n", err);
+	return err;
+}
+
+int hip_build_param_eid_iface(struct hip_common *msg,
+			      hip_eid_iface_type_t if_index)
+{
+	int err = 0;
+	struct hip_eid_iface param;
+
+	hip_set_param_type(&param, HIP_PARAM_EID_IFACE);
+	hip_calc_generic_param_len(&param, sizeof(param), 0);
+	param.if_index = htons(if_index);
+	err = hip_build_param(msg, &param);
+
+	return err;
+}
+
+int hip_build_param_eid_sockaddr(struct hip_common *msg,
+                                 struct sockaddr *sockaddr,
+                                 size_t sockaddr_len)
+{
+        int err = 0;
+	_HIP_DEBUG("build family=%d, len=%d\n", sockaddr->sa_family,
+		   sockaddr_len);
+        err = hip_build_param_contents(msg, sockaddr, HIP_PARAM_EID_SOCKADDR,
+                                       sockaddr_len);
+        return err;
+}
+
 #ifdef __KERNEL__
+/**
+ * hip_build_param_notify - build the HIP NOTIFY parameter
+ * @msg:     the message where the parameter will be appended
+ * @msgtype: Notify Message Type
+ * @notification_data: the Notification data that will contained in the HIP NOTIFY
+ *           parameter
+ * @notification_data_len: length of @notification_data
+ *
+ * Returns: zero on success, or negative on failure
+ */
+int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
+			   void *notification_data, size_t notification_data_len)
+{
+	int err = 0;
+	struct hip_notify notify;
+
+	hip_set_param_type(&notify, HIP_PARAM_NOTIFY);
+	hip_calc_param_len(&notify, sizeof(struct hip_notify) -
+			   sizeof(struct hip_tlv_common) +
+			   notification_data_len);
+	notify.reserved = 0;
+	notify.msgtype = htons(msgtype);
+
+	err = hip_build_generic_param(msg, &notify,
+				      sizeof(struct hip_notify),
+				      notification_data);
+	return err;
+}
+
+/**
+ * hip_check_network_param_attributes - check parameter attributes
+ * @param: the parameter to checked
+ *
+ * This is the function where one can test special attributes such as algo,
+ * groupid, suiteid, etc of a HIP parameter. If the parameter does not require
+ * other than just the validation of length and type fields, one should not
+ * add any checks for that parameter here.
+ *
+ * Returns: zero if the message was ok, or negative error value on error.
+ *
+ * XX TODO: this function may be unneccessary because the input handlers
+ * already do some checking. Currently they are double checked..
+ */
+
+int hip_check_network_param_attributes(const struct hip_tlv_common *param)
+{
+	hip_tlv_type_t type = hip_get_param_type(param);
+	int err = 0;
+
+	_HIP_DEBUG("type=%u\n", type);
+
+	switch(type) {
+	case HIP_PARAM_HIP_TRANSFORM:
+	case HIP_PARAM_ESP_TRANSFORM:
+	{
+		/* Search for one supported transform */
+		hip_transform_suite_t suite;
+
+ 		HIP_DEBUG("Checking %s transform\n",
+ 			  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
+		suite = hip_get_param_transform_suite_id(param, 0);
+		if (suite == 0) {
+			HIP_ERROR("Could not find suitable %s transform\n",
+				  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
+			err = -EPROTONOSUPPORT;
+		}
+		break;
+	}
+	case HIP_PARAM_HOST_ID:
+	{
+		uint8_t algo = 
+			hip_get_host_id_algo((struct hip_host_id *) param);
+		if (algo != HIP_HI_DSA) {
+			err = -EPROTONOSUPPORT;
+			HIP_ERROR("Host id algo %d not supported\n", algo);
+		}
+		break;
+	}
+	}
+	_HIP_DEBUG("err=%d\n", err);
+	return err;
+}
+
+/**
+ * hip_check_network_msg - check network message for integrity
+ * @msg: the message to be verified for integrity
+ *
+ * Returns: zero if the message was ok, or negative error value on error.
+ */
+int hip_check_network_msg(const struct hip_common *msg)
+{
+	struct hip_tlv_common *current_param = NULL;
+	hip_tlv_type_t current_param_type = 0, prev_param_type = 0;
+	int err = 0;
+
+	/* Checksum of the message header is verified in input.c */
+
+	if (!hip_check_network_msg_type(msg)) {
+		err = -EINVAL;
+		HIP_ERROR("bad msg type (%d)\n", hip_get_msg_type(msg));
+		goto out;
+	}
+
+	if (!hip_check_msg_len(msg)) {
+		err = -EMSGSIZE;
+		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
+		goto out;
+	}
+
+	/* Checking of param types, lengths and ordering. */
+	while((current_param = hip_get_next_param(msg, current_param))
+	      != NULL) {
+		current_param_type = hip_get_param_type(current_param);
+		if(!hip_check_param_contents_len(msg, current_param)) {
+			err = -EMSGSIZE;
+			HIP_ERROR("bad param len\n");
+			break;
+		} else if (!hip_check_network_param_type(current_param)) {
+			err = -EINVAL;
+			HIP_ERROR("bad param type, current param=%u\n",
+				  hip_get_param_type(current_param));
+			break;
+		} else if (current_param_type < prev_param_type) {
+			err = -ENOMSG;
+			HIP_ERROR("Wrong order of parameters (%d, %d)\n",
+				  prev_param_type, current_param_type);
+			break;
+		} else if (hip_check_network_param_attributes(current_param)) {
+			HIP_ERROR("bad param attributes\n");
+			err = -EINVAL;
+			break;
+		}
+		prev_param_type = current_param_type;
+	}
+
+ out:
+	return err;
+}
+
+/**
+ * hip_get_diffie_hellman_param_public_value_contents - get dh public value contents
+ * @tlv_common: pointer to the dh parameter
+ *
+ * Returns: pointer to the public value of Diffie-Hellman parameter
+ */
+void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common) {
+	return (void *) tlv_common + sizeof(struct hip_diffie_hellman);
+}
+
+/**
+ * hip_get_diffie_hellman_param_public_value_len - get dh public value real length
+ * @dh: pointer to the Diffie-Hellman parameter
+ *
+ * Returns: the length of the public value Diffie-Hellman parameter in bytes
+ *          (in host byte order).
+ */
+hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
+{
+	return hip_get_param_contents_len(dh) - sizeof(uint8_t);
+}
+
+/**
+ * hip_set_param_spi_value - set the spi value in spi_lsi parameter
+ * @spi_lsi: the spi_lsi parameter
+ * @spi:     the value of the spi in the spi_lsi value in host byte order
+ *
+ */
+void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi)
+{
+	hspi->spi = htonl(spi);
+}
+
+/**
+ * hip_get_param_spi_value - get the spi value from spi_lsi parameter
+ * @spi_lsi: the spi_lsi parameter
+ *
+ * Returns: the spi value in host byte order
+ */
+uint32_t hip_get_param_spi_value(const struct hip_spi *hspi)
+{
+	return ntohl(hspi->spi);
+}
+
 /**
  * hip_build_network_hdr - write network header into message
  * @msg:          the message where the HIP network should be written
@@ -1256,8 +1552,6 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
  out_err:
 	return err;
 }
-
-#endif /* __KERNEL__ */
 
 /**
  * hip_build_param_signature2_contents - build HIP signature2
@@ -1771,32 +2065,6 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
 }
 
 /**
- * hip_build_param_unit_test - build and insert an unit test parameter
- * @msg:     the message where the parameter will be appended
- * @suiteid: the id of the test suite
- * @caseid:  the id of the test case
- *
- * This parameter is used for triggering the unit test suite in the kernel.
- * It is only for implementation internal purposes only.
- *
- * Returns: 0 on success, otherwise < 0.
- */
-int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
-			      uint16_t caseid)
-{
-	int err = 0;
-	struct hip_unit_test ut;
-
-	hip_set_param_type(&ut, HIP_PARAM_UNIT_TEST);
-	hip_calc_generic_param_len(&ut, sizeof(struct hip_unit_test), 0);
-	ut.suiteid = htons(suiteid);
-	ut.caseid = htons(caseid);
-
-	err = hip_build_param(msg, &ut);
-	return err;
-}
-
-/**
  * hip_build_param_spi_lsi - build the SPI_LSI parameter
  * @msg: the message where the parameter will be appended
  * @lsi: the value of the lsi (in host byte order)
@@ -1880,269 +2148,4 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
  	return err;
 }
 
-void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
-				 const char *hostname,
-				 hip_tlv_len_t rr_data_len,
-                                 uint8_t algorithm)
-{
-	uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
-	uint16_t fqdn_len;
-
-        /* reserve 1 byte for NULL termination */
-	if (hostname)
-		fqdn_len = (strlen(hostname) + 1) & 0x0FFF;
-	else
-		fqdn_len = 0;
-
-	host_id_hdr->hi_length = htons(hi_len);
-	/* length = 12 bits, di_type = 4 bits */
-	host_id_hdr->di_type_length = htons(fqdn_len | 0x1000);
-	/* if the length is 0, then the type should also be zero */
-	if (host_id_hdr->di_type_length == ntohs(0x1000))
-		host_id_hdr->di_type_length = 0;
-
-        hip_set_param_type(host_id_hdr, HIP_PARAM_HOST_ID);
-        hip_calc_generic_param_len(host_id_hdr, sizeof(struct hip_host_id),
-				   hi_len -
-				   sizeof(struct hip_host_id_key_rdata) +
-				   fqdn_len);
-
-        host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
-        host_id_hdr->rdata.protocol = 0xFF; /* RFC 2535 */
-	/* algo is 8 bits, no htons */
-        host_id_hdr->rdata.algorithm = algorithm;
-
-	HIP_DEBUG("hilen=%d totlen=%d contlen=%d\n",
-		  ntohs(host_id_hdr->hi_length),
-		  hip_get_param_contents_len(host_id_hdr),
-		  hip_get_param_total_len(host_id_hdr));
-}
-
-void hip_build_param_host_id_only(struct hip_host_id *host_id,
-				    const void *rr_data,
-				    const char *fqdn)
-{
-	unsigned int rr_len = ntohs(host_id->hi_length) -
-		sizeof(struct hip_host_id_key_rdata);
-	char *ptr = (char *) (host_id + 1);
-	uint16_t fqdn_len;
-
-	HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
-
-	HIP_DEBUG("Copying %d bytes\n", rr_len);
-
-	memcpy(ptr, rr_data, rr_len);
-	ptr += rr_len;
-
-	fqdn_len = ntohs(host_id->di_type_length) & 0x0FFF;
-	HIP_DEBUG("fqdn len: %d\n", fqdn_len);
-	if (fqdn_len)
-		memcpy(ptr, fqdn, fqdn_len);
-}
-
-/**
- * hip_build_param_host_id - build and append host id into message
- * @XXTODO:        XX TODO
- * @algorithm:     the crypto algorithm used for the host id (as in the drafts)
- *
- */
-int hip_build_param_host_id(struct hip_common *msg,
-			    struct hip_host_id *host_id_hdr,
-			    const void *rr_data,
-			    const char *fqdn)
-{
-	int err = 0;
-	hip_build_param_host_id_only(host_id_hdr, rr_data, fqdn);
-        err = hip_build_param(msg, host_id_hdr);
-	return err;
-}
-
-int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len)
-{
-	int type;
-	static char *debuglist[3] = {"none", "FQDN", "NAI"};
-
-	type = ntohs(host->di_type_length);
-	*len = type & 0x0FFF;
-	type = (type & 0xF000) >> 12;
-
-	if (type > 2) {
-		HIP_ERROR("Illegal DI-type: %d\n",type);
-		return -1;
-	}
-
-	*id = debuglist[type];
-	return 0;
-}
-
-char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
-{
-	int hilen;
-	char *ptr;
-
-	hilen = ntohs(hostid->hi_length) - sizeof(struct hip_host_id_key_rdata);
-	HIP_DEBUG("Hilen: %d\n",hilen);
-	ptr = (char *)(hostid + 1) + hilen;
-	return ptr;
-}
-
-/*
- * - endpoint is not padded
- */
-void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
-			    const char *hostname,
-			    se_hip_flags_t endpoint_flags,
-			    uint8_t host_id_algo,
-			    unsigned int rr_data_len)
-{
-	hip_build_param_host_id_hdr(&endpoint_hdr->id.host_id,
-				    hostname, rr_data_len, host_id_algo);
-	endpoint_hdr->family = PF_HIP;
-	/* The length is not hip-length-padded, so it has be calculated
-	   manually. sizeof(hip_host_id) is already included both in the
-	   sizeof(struct endpoint_hip) and get_total_len(), so it has be
-	   subtracted once. */
-	endpoint_hdr->length = sizeof(struct endpoint_hip) +
-		hip_get_param_total_len(&endpoint_hdr->id.host_id) -
-		sizeof(struct hip_host_id);
-	endpoint_hdr->flags = endpoint_flags;
-	HIP_DEBUG("%d %d %d\n",
-		  sizeof(struct endpoint_hip),
-		  hip_get_param_total_len(&endpoint_hdr->id.host_id),
-		  sizeof(struct hip_host_id));
-	HIP_DEBUG("endpoint hdr length: %d\n", endpoint_hdr->length);
-}
-
-/*
- * - endpoint is not padded
- * - caller is responsible of reserving enough mem for endpoint
- */
-void hip_build_endpoint(struct endpoint_hip *endpoint,
-			const struct endpoint_hip *endpoint_hdr,
-			const char *hostname,
-			const unsigned char *key_rr,
-			unsigned int key_rr_len)
-{
-	HIP_DEBUG("len=%d ep=%d rr=%d hostid=%d\n",
-		  endpoint_hdr->length,
-		  sizeof(struct endpoint_hip),
-		  key_rr_len,
-		  sizeof(struct hip_host_id));
-	HIP_ASSERT(endpoint_hdr->length == sizeof(struct endpoint_hip) +
-		   hip_get_param_total_len(&endpoint_hdr->id.host_id) -
-		   sizeof(struct hip_host_id));
-	memcpy(endpoint, endpoint_hdr, sizeof(struct endpoint_hip));
-	hip_build_param_host_id_only(&endpoint->id.host_id, key_rr, hostname);
-}
-
-int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
-					   const struct endpoint_hip *endpoint)
-{
-	int err = 0;
-
-	HIP_ASSERT(!(endpoint->flags & HIP_ENDPOINT_FLAG_HIT));
-
-	err = hip_build_param_contents(msg, endpoint, HIP_PARAM_EID_ENDPOINT,
-				       endpoint->length);
-	return err;
-}
-
-int hip_build_param_eid_endpoint_from_hit(struct hip_common *msg,
-					  const struct endpoint_hip *endpoint)
-{
-	struct hip_eid_endpoint eid_endpoint;
-	int err = 0;
-
-	HIP_ASSERT(endpoint->flags & HIP_ENDPOINT_FLAG_HIT);
-
-	hip_set_param_type(&eid_endpoint, HIP_PARAM_EID_ENDPOINT);
-
-	hip_calc_param_len(&eid_endpoint,
-			   sizeof(struct hip_eid_endpoint) -
-			   sizeof (struct hip_tlv_common));
-
-	memcpy(&eid_endpoint.endpoint, endpoint, sizeof(struct endpoint_hip));
-
-	err = hip_build_param(msg, &eid_endpoint);
-
-	return err;
-}
-
-/* 
- * hip_build_param_eid_endpoint - build eid endpoint parameter
- * @msg: the message where the eid endpoint paramater will be appended
- * @endpoint: the endpoint to be wrapped into the eid endpoint structure
- * @port: the dst/src port used for the endpoint 
- * 
- * Used for passing endpoints to the kernel. The endpoint is wrapped into
- * an eid endpoint structure because endpoint_hip is not padded but all
- * parameter need to be padded in the builder interface.
- */
-int hip_build_param_eid_endpoint(struct hip_common *msg,
-				 const struct endpoint_hip *endpoint)
-{
-	int err = 0;
-
-	if (endpoint->flags & HIP_ENDPOINT_FLAG_HIT) {
-		err = hip_build_param_eid_endpoint_from_hit(msg, endpoint);
-	} else {
-		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
-	}
-	HIP_DEBUG("err=%d\n", err);
-	return err;
-}
-
-int hip_build_param_eid_iface(struct hip_common *msg,
-			      hip_eid_iface_type_t if_index)
-{
-	int err = 0;
-	struct hip_eid_iface param;
-
-	hip_set_param_type(&param, HIP_PARAM_EID_IFACE);
-	hip_calc_generic_param_len(&param, sizeof(param), 0);
-	param.if_index = htons(if_index);
-	err = hip_build_param(msg, &param);
-
-	return err;
-}
-
-int hip_build_param_eid_sockaddr(struct hip_common *msg,
-                                 struct sockaddr *sockaddr,
-                                 size_t sockaddr_len)
-{
-        int err = 0;
-	_HIP_DEBUG("build family=%d, len=%d\n", sockaddr->sa_family,
-		   sockaddr_len);
-        err = hip_build_param_contents(msg, sockaddr, HIP_PARAM_EID_SOCKADDR,
-                                       sockaddr_len);
-        return err;
-}
-
-/**
- * hip_build_param_notify - build the HIP NOTIFY parameter
- * @msg:     the message where the parameter will be appended
- * @msgtype: Notify Message Type
- * @notification_data: the Notification data that will contained in the HIP NOTIFY
- *           parameter
- * @notification_data_len: length of @notification_data
- *
- * Returns: zero on success, or negative on failure
- */
-int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
-			   void *notification_data, size_t notification_data_len)
-{
-	int err = 0;
-	struct hip_notify notify;
-
-	hip_set_param_type(&notify, HIP_PARAM_NOTIFY);
-	hip_calc_param_len(&notify, sizeof(struct hip_notify) -
-			   sizeof(struct hip_tlv_common) +
-			   notification_data_len);
-	notify.reserved = 0;
-	notify.msgtype = htons(msgtype);
-
-	err = hip_build_generic_param(msg, &notify,
-				      sizeof(struct hip_notify),
-				      notification_data);
-	return err;
-}
+#endif /* __KERNEL__ */

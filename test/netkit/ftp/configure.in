@@ -1,0 +1,36 @@
+AC_INIT(ftp.c)
+AC_PREFIX_DEFAULT(/usr/local/v6)
+
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+INSTALL_LIB="\${INSTALL_DATA}"
+AC_SUBST(INSTALL_LIB)
+INSTALL_DIR="\${INSTALL} -d"
+AC_SUBST(INSTALL_DIR)
+AC_PROG_LN_S
+
+AC_CHECK_HEADERS(readline/readline.h readline/tilde.h)
+
+AC_MSG_CHECKING([whether to enable readline support])
+AC_ARG_WITH(readline,
+  [  --without-readline      disable readline support],,[
+    if test x"$ac_cv_header_readline_readline_h" == x"yes" -a \
+            x"$ac_cv_header_readline_tilde_h" == x"yes"; then
+      with_readline=yes
+    else
+      with_readline=no
+    fi
+  ])
+if test x"$with_readline" != x"no"; then
+  AC_MSG_RESULT(yes)
+  AC_DEFINE(__USE_READLINE__)
+  LIBS="$LIBS -lreadline -ltermcap"
+else
+  AC_MSG_RESULT(no)
+fi
+
+CFLAGS="-I../libinet6/include $CFLAGS"
+LIBS="-L../libinet6 -linet6 $LIBS"
+
+AC_OUTPUT(Makefile)
