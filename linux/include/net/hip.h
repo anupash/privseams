@@ -61,13 +61,15 @@ typedef uint16_t in_port_t;
 #define HIP_R1  2
 #define HIP_I2  3
 #define HIP_R2  4
-#define HIP_UPDATE 5
-#define HIP_REA 6 /* xxx */
-#define HIP_BOS 7
-#define HIP_CER 8
-#define HIP_NOTIFY 9
-#define HIP_AC 15   /* conflicts now with notify packet */
-#define HIP_ACR 16 /* moved from 10 -> 16 */
+#define HIP_CER 5
+#define HIP_UPDATE 6
+#define HIP_NOTIFY 7
+#define HIP_CLOSE 8
+#define HIP_CLOSE_ACK 9
+#define HIP_REA 10     /* removed from ietf-hip-mm-00   */
+#define HIP_BOS 11     /* removed from ietf-hip-base-01 */
+#define HIP_AC 12      /* removed from ietf-hip-mm-00   */
+#define HIP_ACR 13     /* removed from ietf-hip-mm-00   */
 #define HIP_PAYLOAD 64 /* xxx */
 
 #define SO_HIP_GLOBAL_OPT 1
