@@ -422,7 +422,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	unsigned long lf;
 	int t;
 
-	result = kmalloc(1024, GFP_KERNEL);
+	result = kmalloc(1024, GFP_ATOMIC);
 	if (!result) {
 		HIP_ERROR("no memory\n");
 		return NULL;
@@ -464,20 +464,21 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 struct hip_host_id *hip_get_any_localhost_host_id(int algo)
 {
 	struct hip_host_id *result;
-
+	/* XX TODO: use the algo */
 	result = hip_get_host_id(&hip_local_hostid_db,NULL);
 	return result;
 }
 
+
 /**
- * hip_get_any_locahost_public_key - Self documenting.
+ * hip_get_any_localhost_dsa_public_key - Self documenting.
  *
  * NOTE: Remember to free the return value.
  *
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-struct hip_host_id *hip_get_any_localhost_public_key(int algo)
+struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 {
 	struct hip_host_id *tmp;
 	hip_tlv_len_t len;
@@ -540,6 +541,90 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 	_HIP_HEXDUMP("HOSTID... (public)", tmp, hip_get_param_total_len(tmp));
 
 	return tmp;
+}
+
+
+/**
+ * hip_get_any_localhost_rsa_public_key - Self documenting.
+ *
+ * NOTE: Remember to free the return value.
+ *
+ * Returns newly allocated area that contains the public key part of
+ * the localhost host identity. %NULL is returned if errors detected.
+ */
+struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
+{
+	struct hip_host_id *tmp;
+	hip_tlv_len_t len;
+	uint16_t dilen;
+	char *from, *to;
+
+	tmp = hip_get_host_id(&hip_local_hostid_db,NULL);
+	if (tmp == NULL) {
+		HIP_ERROR("No host id for localhost\n");
+		return NULL;
+	}
+
+	/* XX TODO: check some value in the RSA key? */
+      
+	_HIP_HEXDUMP("HOSTID...",tmp, hip_get_param_total_len(tmp));
+	
+	len = hip_get_param_contents_len(tmp);
+
+	_HIP_DEBUG("Host ID len before cut-off: %d\n",
+		  hip_get_param_total_len(tmp));
+
+	/* the secret component of the RSA key is always d+p+q bytes */
+	/* note: it's assumed that RSA key length is 1024 bits */
+
+	tmp->hi_length = htons(ntohs(tmp->hi_length) - (128+64+64));
+
+	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
+
+	/* Move the hostname d+p+q bytes earlier */
+
+	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
+
+	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
+	from = to + (128+64+64);
+	memmove(to, from, dilen);
+
+	hip_set_param_contents_len(tmp, (len - (128+64+64)));
+
+	_HIP_DEBUG("Host ID len after cut-off: %d\n",
+		  hip_get_param_total_len(tmp));
+
+	/* make sure that the padding is zero (and not to reveal any bytes of the
+	   private key */
+	to = (char *)tmp + hip_get_param_contents_len(tmp) + sizeof(struct hip_tlv_common);
+	memset(to, 0, 8);
+
+	_HIP_HEXDUMP("HOSTID... (public)", tmp, hip_get_param_total_len(tmp));
+
+	return tmp;
+
+}
+
+/**
+ * hip_get_any_locahost_public_key - Self documenting.
+ *
+ * NOTE: Remember to free the return value.
+ *
+ * Returns newly allocated area that contains the public key part of
+ * the localhost host identity. %NULL is returned if errors detected.
+ */
+struct hip_host_id *hip_get_any_localhost_public_key(int algo) {
+	
+	struct hip_host_id *hi = NULL;
+
+	if(algo == HIP_HI_DSA) {
+		hi = hip_get_any_localhost_dsa_public_key();
+	} else if (algo == HIP_HI_RSA) {
+		hi = hip_get_any_localhost_rsa_public_key();
+	} else {
+	  HIP_ERROR("unknown hi algo: (%d)",algo);
+	}
+	return hi;
 }
 
 

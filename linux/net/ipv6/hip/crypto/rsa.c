@@ -373,7 +373,6 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	}
 	HIP_HEXDUMP("RSA public N", c, len);
 
-
 	buf = kmalloc(mpi_get_nbits(rpk.n) / 8, GFP_KERNEL);
 	if (buf) {
 		HIP_ERROR("Hajoo homo aamuihis 2\n");

@@ -5,8 +5,6 @@
 #include <net/ipv6.h>
 #include <net/hip.h>
 
-//#include "debug.h"
-
 #define HIP_WO_TYPE_INCOMING 1
 #define HIP_WO_TYPE_OUTGOING 2
 #define HIP_WO_TYPE_MSG      3
@@ -29,7 +27,6 @@
 
 /* subtypes from 201 to 300 reserved for HIP_WO_TYPE_MSG */
 
-#define HIP_WO_SUBTYPE_STOP       201 // stop kernel thread
 #define HIP_WO_SUBTYPE_ADDMAP     202
 #define HIP_WO_SUBTYPE_DELMAP     203
 #define HIP_WO_SUBTYPE_FLUSHMAPS  204 // flush states
@@ -43,7 +40,6 @@
 
 extern struct semaphore hip_work;
 
-void hip_stop_khipd(void);
 int hip_init_workqueue(void);
 void hip_uninit_workqueue(void);
 int hip_insert_work_order(struct hip_work_order *hwo);

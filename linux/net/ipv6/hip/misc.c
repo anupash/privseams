@@ -29,7 +29,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
        unsigned int key_rr_len = ntohs(host_id->hi_length) -
  	 sizeof(struct hip_host_id_key_rdata);
 
-       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
 
        if (hit_type != HIP_HIT_TYPE_HASH126) {
                err = -ENOSYS;
@@ -59,42 +59,9 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type)
 {
-	int err = 0;
-	u8 digest[HIP_AH_SHA_LEN];
-
-	char *key_rr = (char *) (host_id + 1); /* skip the header, 
-											  Is this right? */
-
-	/* hit excludes rdata but it is included in hi_length;
-	   subtract rdata */
-	unsigned int key_rr_len = ntohs(host_id->hi_length) -
-			sizeof(struct hip_host_id_key_rdata);
-	
-	HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
-	
-	if (hit_type != HIP_HIT_TYPE_HASH126) {
-		err = -ENOSYS;
-		goto out_err;
-	}
-
-	_HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
-	
-	err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest);
-	if (err) {
-			HIP_ERROR("Building of digest failed\n");
-			goto out_err;
-	}
-	
-	/* XX FIXME: THIS WRONG (JUST FOR RSA TESTING) */
-
-	memcpy(hit,  digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
-		   sizeof(struct in6_addr));
-
-	hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
-	hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_126;
- 
- out_err:
-	return err;
+  int err;
+  err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+  return err;
 }
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,

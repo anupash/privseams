@@ -151,7 +151,7 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 		HIP_ERROR("NULL calc_index\n");
 
 	_HIP_DEBUG("keymat index_nbr=%u\n", index_nbr);
-	HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
+	_HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
 	if (shabuffer)
 		kfree(shabuffer);
 
@@ -344,8 +344,8 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 	/* must have the hadb lock when calling this function */
 	entry->current_keymat_index = new_keymat_index;
 	entry->keymat_calc_index = new_calc_index;
-	HIP_DEBUG("New Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
-		  entry->current_keymat_index, entry->keymat_calc_index);
+	_HIP_DEBUG("New Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
+		   entry->current_keymat_index, entry->keymat_calc_index);
 	if (new_current_keymat) {
 		memcpy(entry->current_keymat_K, new_current_keymat, HIP_AH_SHA_LEN);
 		_HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);

@@ -230,7 +230,7 @@ int handle_hi(struct hip_common *msg,
   char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
   int fmt;
 
-  HIP_INFO("action=%d optc=%d\n", action, optc);
+  _HIP_INFO("action=%d optc=%d\n", action, optc);
 
   /* Check min/max amount of args */
   if (optc < 1 || optc > 3) {
@@ -415,7 +415,6 @@ int handle_hi(struct hip_common *msg,
     HIP_HEXDUMP("Calculated HIT: ", &dsa_lhi.hit,
 		sizeof(struct in6_addr));
 
-#if 0 // XX TODO
     err = rsa_to_hit(rsa_key_rr, HIP_HIT_TYPE_HASH126, &rsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
@@ -423,7 +422,6 @@ int handle_hi(struct hip_common *msg,
     }
     HIP_HEXDUMP("Calculated HIT: ", &rsa_lhi.hit,
 		sizeof(struct in6_addr));
-#endif
     break;
   case ACTION_DEL:
     numeric_action = SO_HIP_DEL_LOCAL_HI;
@@ -682,7 +680,7 @@ int main(int argc, char *argv[]) {
     HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
     goto out;
   }
-  HIP_INFO("action=%d\n", action);
+  _HIP_INFO("action=%d\n", action);
 
   if (argc-2 < check_action_argc(action)) {
     err = -EINVAL;
@@ -707,7 +705,7 @@ int main(int argc, char *argv[]) {
 	  HIP_ERROR("Invalid type argument '%s'\n", argv[type_arg]);
 	  goto out;
   }
-  HIP_INFO("type=%d\n", type);
+  _HIP_INFO("type=%d\n", type);
 
 
   msg = malloc(HIP_MAX_PACKET);

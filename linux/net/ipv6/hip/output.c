@@ -71,7 +71,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	smp_wmb();
 	state = entry->state;
 
-       	_HIP_DEBUG("hadb entry state is %s\n", HIP_DEBUG_STATE_STR(state));
+       	_HIP_DEBUG("hadb entry state is %s\n", hip_state_str(state));
 
 	switch(state) {
 	case HIP_STATE_NONE:
@@ -132,7 +132,8 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 		if (!skb) {
-			HIP_ERROR("Established state and no SKB!");
+			HIP_ERROR("Established state and no SKB!\n");
+			HIP_ERROR("Called by xfrm state re-acquire ? do BEX again ?\n");
 			err = -EADDRNOTAVAIL;
 			goto out;
 		}
@@ -265,7 +266,7 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	buf->checksum = htons(0);
         len = hip_get_msg_total_len(buf);
 	csum = csum_partial((char*) buf, len, 0);
-	HIP_DEBUG("csum test=0x%x\n", csum);
+	_HIP_DEBUG("csum test=0x%x\n", csum);
 
 	lock_sock(hip_output_socket->sk);
 

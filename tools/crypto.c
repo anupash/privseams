@@ -133,10 +133,10 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
   //  HIP_INFO("Use given HIT\n");
   //  goto out_err
 
-  HIP_INFO("Create HIT from HI\n");
+  _HIP_INFO("Create HIT from HI\n");
   
   if (type == HIP_HIT_TYPE_HASH126) {
-    HIP_DEBUG("HIT type is HASH126\n");
+    _HIP_DEBUG("HIT type is HASH126\n");
   } else if (type == HIP_HIT_TYPE_HAA_HASH) {
     HIP_ERROR("HIT type HAA hash not implemented\n");
     err = -ENOSYS;
@@ -158,11 +158,11 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
     goto out_err;
   }
 
-  HIP_HEXDUMP("dsa: ", dsa, pubkey_len);
+  _HIP_HEXDUMP("dsa: ", dsa, pubkey_len);
   
   _HIP_DEBUG("sha_p=%p sha_hash_p=%p\n", sha, &sha_hash);
-  HIP_HEXDUMP("hit hash:     ", &sha_hash, SHA_DIGEST_LENGTH);
-  HIP_HEXDUMP("hit trunc hash:       ",
+  _HIP_HEXDUMP("hit hash:     ", &sha_hash, SHA_DIGEST_LENGTH);
+  _HIP_HEXDUMP("hit trunc hash:       ",
 	      (unsigned char *)&sha_hash+(SHA_DIGEST_LENGTH-128/8), 128/8);
   _HIP_DEBUG("pos=%d\n", SHA_DIGEST_LENGTH - 128/8);
   
@@ -175,14 +175,14 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
     goto out_err;
   }
 
-  HIP_DEBUG("hit hash 128, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
+  _HIP_DEBUG("hit hash 128, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
   
   if (!BN_clear_bit(bn, 127) || !BN_set_bit(bn, 126)) {
     HIP_ERROR("bn set/clear bit failed\n");
     err = -EINVAL;
     goto out_err;
   }
-  HIP_DEBUG("hit hash 126, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
+  _HIP_DEBUG("hit hash 126, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
   
   tmp = BN_new();
   /* store result to parameter hit */
@@ -210,7 +210,7 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
   }
 
   inet_ntop(AF_INET6, hit, addrstr, sizeof(addrstr));
-  HIP_DEBUG("*** HIT %s ***\n", addrstr);
+  HIP_DEBUG("HIT is %s\n", addrstr);
   
  out_err:
 
@@ -220,6 +220,9 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
   return err;
 }
 
+int rsa_to_hit(char *rsa, int type, struct in6_addr *hit) {
+  return dsa_to_hit(rsa, type, hit); 
+}
 
 /**
  * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
@@ -284,12 +287,12 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   if (dsa->priv_key) {
     dsa_key_rr_len += 20; /* private key hack */
-    HIP_DEBUG("Private key included\n");
+    _HIP_DEBUG("Private key included\n");
   } else {
-    HIP_DEBUG("No private key\n");
+    _HIP_DEBUG("No private key\n");
   }
 
-  HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
+  _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
   *dsa_key_rr = malloc(dsa_key_rr_len);
   if (!*dsa_key_rr) {
     HIP_ERROR("malloc\n");
@@ -306,7 +309,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   /* set T */
   memset(p, t, 1); // XX FIX: WTF MEMSET?
   p += 1;
-  HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
 
   /* minimum number of bytes needed to store P, G or Y */
   bn_buf_len = BN_num_bytes(dsa->p);
@@ -334,7 +337,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   HIP_ASSERT(bn2bin_len == 20);
   memcpy(p, bn_buf, bn2bin_len);
   p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
 
   /* add given dsa_param to the *dsa_key_rr */
 #define DSA_ADD_PGY_PARAM_TO_RR(dsa_param)   \
@@ -352,13 +355,13 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   /* padding + P */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->p);
-  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + G */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->g);
-  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + Y */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key);
-  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + X */
 
 #undef DSA_ADD_PGY_PARAM_TO_RR
@@ -367,7 +370,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   memcpy(p,bn_buf,bn2bin_len);
 
   p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
 
   /*  _HIP_DEBUG("q len=%d\n", bn2bin_len);
   if (!bn2bin_len) {
@@ -424,7 +427,12 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
   *rsa_key_rr = NULL;
 
-  /* length(e), e, n, d, p, q (n=d, p=q=n/2) */
+  HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
+	    BN_num_bytes(rsa->n),BN_num_bytes(rsa->d),BN_num_bytes(rsa->p),
+	    BN_num_bytes(rsa->q));
+
+  /* e=3, n=128, d=128, p=64, q=64 (n=d, p=q=n/2) */
+  /* the u component does not exist in libgcrypt? */
   rsa_key_rr_len = 3 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;
 
   HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
@@ -699,7 +707,7 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
 
   fp = fopen(filenamebase, "rb");
   if (!fp) {
-    HIP_ERROR("Couldn't open public key file %s for reading\n", filenamebase);
+    HIP_ERROR("Could not open public key file %s for reading\n", filenamebase);
     err = -ENOMEM;
     goto out_err;
   }
@@ -723,11 +731,11 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
     goto out_err;
   }
   
-  HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
-  HIP_INFO("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
-  HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+  _HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
+  _HIP_INFO("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
+  _HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
 
