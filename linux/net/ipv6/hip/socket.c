@@ -1268,7 +1268,7 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 
 	/* The message was destined to TCP or IP - forward */
 	if (level != IPPROTO_HIP) {
-		err = socket_handler->setsockopt(sock, level, optname, optval,
+		err = socket_handler->getsockopt(sock, level, optname, optval,
 						 optlen);
 		goto out_err;
 	}
