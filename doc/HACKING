@@ -141,6 +141,27 @@ Some points in the branch quality assurance:
 - the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
 
+UPGRADING THE KERNEL
+====================
+
+% <get the patch to ~/down>
+% cd hipl--fix--2.6/linux
+% patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
+% grep ^patching /tmp/PATCH_LOG|cut -d' ' -f3 >/tmp/CHANGES
+% for i in `cat /tmp/CHANGES`; do tla id $i 2>&1; done >/tmp/TLA_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_LOG`
+% tla delete `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+  (/error finding file id \(2: No such file or directory\)/)' \
+    </tmp/TLA_LOG|cut -d' ' -f3`
+% find . -type d|grep -v .arch-ids >/tmp/LINUX_DIRS
+% for i in `cat /tmp/LINUX_DIRS`; do tla id $i 2>&1; done
+    >/tmp/TLA_DIR_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_DIR_LOG`
+
+Check HUNK messages from PATCH_LOG manually.
+
 DEBUGGING
 =========
 
