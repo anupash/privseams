@@ -121,12 +121,14 @@ int hip_delete_esp(hip_ha_t *entry)
 //	HIP_UNLOCK_HA(entry);
 
 	hip_delete_sa(entry->spi_out, &entry->hit_peer);
-	hip_delete_sa(entry->spi_in, &entry->hit_our);
+	//	hip_delete_sa(entry->spi_in, &entry->hit_our);
 	hip_delete_sa(entry->new_spi_out, &entry->hit_peer);
-	hip_delete_sa(entry->new_spi_in, &entry->hit_our);
+	//	hip_delete_sa(entry->new_spi_in, &entry->hit_our);
 
-	hip_hadb_deactivate_hs_spi(entry->spi_in);
-	hip_hadb_deactivate_hs_spi(entry->new_spi_in);
+	// hip_hadb_deactivate_hs_spi(entry->spi_in);
+	// hip_hadb_deactivate_hs_spi(entry->new_spi_in);
+
+	hip_hadb_delete_inbound_spis(entry);
 
 	/* unlinks entry from our HIT-SPI table */
 #if 0
@@ -144,9 +146,9 @@ int hip_delete_esp(hip_ha_t *entry)
 
 //	HIP_LOCK_HA(entry);
 	entry->spi_out = 0;
-	entry->spi_in = 0;
+	// entry->spi_in = 0;
 	entry->new_spi_out = 0;
-	entry->new_spi_in = 0;
+	// entry->new_spi_in = 0;
 
 	HIP_UNLOCK_HA(entry);
 	return 0;

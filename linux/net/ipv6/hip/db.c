@@ -813,7 +813,12 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 	return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
 }
 
-
+void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
+{
+	HIP_DEBUG("spi=0x%x ifindex=%d\n", spi, ifindex);
+	HIP_ERROR("TODO\n");
+}
+#if 0
 /* inbound IPsec SA mappings to devices, each netdev has its own SA */
 
 /* assumes locked HA */
@@ -932,7 +937,7 @@ void hip_ifindex2spi_map_delete_all(hip_ha_t *entry)
 	}
 	return;
 }
-
+#endif
 
 #undef HIP_READ_LOCK_DB
 #undef HIP_WRITE_LOCK_DB

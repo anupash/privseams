@@ -173,7 +173,7 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 			return NULL;
 		}
 		ipv6_addr_copy(&hit, &hs->hit);
-		_hip_print_hit("HIT of HIT-SPI map", &hit);
+		//hip_print_hit("HIT of HIT-SPI map", &hit);
 		hip_hadb_put_hs(hs);
 		ha = hip_hadb_find_byhit(&hit);
 		if (ha) {
@@ -280,9 +280,11 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
 		}
 		atomic_set(&new_item->refcnt, 0);
 		spin_lock_init(&new_item->lock);
+
 		new_item->spi = spi;
 		ipv6_addr_copy(&new_item->hit, &hit);
 		new_item->is_active = 1;
+
 		hip_ht_add(&hadb_spi_list, new_item);
 		HIP_DEBUG("SPI added to ht spi_list\n");
 	} else {
@@ -313,16 +315,16 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	HIP_DEBUG("ha=0x%p\n", ha);
 	/* Delete SAs */
 	hip_delete_sa(ha->spi_out, &ha->hit_peer);
-	hip_delete_sa(ha->spi_in, &ha->hit_our);
+//	hip_delete_sa(ha->spi_in, &ha->hit_our);
 	hip_delete_sa(ha->new_spi_out, &ha->hit_peer);
-	hip_delete_sa(ha->new_spi_in, &ha->hit_our);
+//	hip_delete_sa(ha->new_spi_in, &ha->hit_our);
 	/* todo: foreach spis_in spis_out: delete_sa */
 
 //	HIP_ERROR("hip_hadb_delete_inbound_spis(ha);\n");
 	hip_hadb_delete_inbound_spis(ha);
 
 	hip_hadb_delete_peer_addrlist(ha);
-	hip_ifindex2spi_map_delete_all(ha);
+//	hip_ifindex2spi_map_delete_all(ha);
 	/* keymat & mm stuff */
 
 	if (ha->dh_shared_key)
@@ -351,7 +353,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	INIT_LIST_HEAD(&entry->next_spi_list);
 	INIT_LIST_HEAD(&entry->peer_addr_list);
 	INIT_LIST_HEAD(&entry->peer_spi_list);
-	INIT_LIST_HEAD(&entry->ifindex2spi_map);
+//	INIT_LIST_HEAD(&entry->ifindex2spi_map);
 	INIT_LIST_HEAD(&entry->spis_in);
 	INIT_LIST_HEAD(&entry->spis_out);
 
@@ -945,11 +947,15 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 
 /* mm-02 test */
 
-int hip_hadb_add_inbound_spi(hip_ha_t *entry, uint32_t spi_in)
+int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 {
 	int err = 0;
-	struct hip_spi_list_item *item, *tmp;
+	struct hip_spi_in_item *item, *tmp;
+	uint32_t spi_in;
 
+	spi_in = data->spi;
+
+	HIP_DEBUG("SPI=0x%x\n", spi_in);
 	/* no locking (?) */
 	HIP_LOCK_HA(entry);
 	HIP_DEBUG("SPI_in=0x%x\n", spi_in);
@@ -960,34 +966,72 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, uint32_t spi_in)
 		}
         }
 
-	item = kmalloc(sizeof(struct hip_spi_list_item), GFP_ATOMIC);
+	item = kmalloc(sizeof(struct hip_spi_in_item), GFP_ATOMIC);
 	if (!item) {
 		HIP_ERROR("item kmalloc failed\n");
 		err = -ENOMEM;
 		goto out_err;
 	}
-
-	item->spi = spi_in;
-	item->new_spi = 0;
-	item->direction = 0; /* check: remove ?*/
+	memcpy(item, data, sizeof(struct hip_spi_in_item));
+	item->timestamp = jiffies;
 	list_add(&item->list, &entry->spis_in);
 	HIP_DEBUG("added SPI 0x%x to the inbound SPI list, item=0x%p\n", spi_in, item);
 	// hip_hold_ha(entry); ?
+
+	HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
+	err = hip_hadb_insert_state_spi_list(entry, spi_in);
+	if (err == -EEXIST)
+		err = 0;
  out_err:
  out:
 	HIP_UNLOCK_HA(entry);
 	return err;
 }
 
+int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
+{
+	int err = 0;
+	struct hip_spi_out_item *item, *tmp;
+	uint32_t spi_out;
+
+	spi_out = data->spi;
+
+	HIP_DEBUG("SPI=0x%x\n", spi_out);
+	err = -ENOSYS;
+	return err;
+}
+
+//int hip_hadb_add_spi(hip_ha_t *entry, int direction, uint32_t spi)
+int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data)
+{
+	int err = 0;
+
+	HIP_DEBUG("direction=%d\n", direction);
+
+	if (direction == HIP_SPI_DIRECTION_IN)
+		err = hip_hadb_add_inbound_spi(entry, data);
+	else if (direction == HIP_SPI_DIRECTION_OUT)
+		err = hip_hadb_add_outbound_spi(entry, data);
+	else {
+		HIP_ERROR("bug, invalid direction %d\n", direction);
+		err = -EINVAL;
+	}
+	return err;
+}
+
+
 void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
 {
-	struct hip_spi_list_item *item, *tmp;
+	struct hip_spi_in_item *item, *tmp;
 
 	HIP_DEBUG("entry=0x%p\n", entry);
 
 	HIP_LOCK_HA(entry);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("deleting SPI_in=0x%x from inbound list, item=0x%p\n", item->spi, item);
+		HIP_ERROR("TODO: REMOVE SPI FROM HIT-SPI HT\n");
+		hip_delete_sa(item->spi, &entry->hit_our);
+		hip_delete_sa(item->new_spi, &entry->hit_our);
 		list_del(&item->list);
 		kfree(item);
 		// hip_put_ha(entry); ?
@@ -995,8 +1039,26 @@ void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
 	HIP_UNLOCK_HA(entry);
 }
 
+/* kludge for removing old entry->spi_in code to the new code */
+uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
+{
+	struct hip_spi_in_item *item, *tmp;
+	uint32_t spi = 0;
+	unsigned int now = jiffies;
+	unsigned long t = ULONG_MAX;
 
+	HIP_LOCK_HA(entry);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		if (now - item->timestamp < t) {
+			spi = item->spi;
+			t = now - item->timestamp;
+		}
+        }
 
+	HIP_UNLOCK_HA(entry);
+	HIP_DEBUG("newest spi_in is 0x%x", spi);
+	return spi;
+}
 
 /*
 
@@ -1355,6 +1417,16 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 		goto error;
 
 	if ( (len += snprintf(page+len, count-len,
+			      " 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x %s",
+			      entry->spi_out,
+			      entry->new_spi_out, entry->default_spi_out, entry->lsi_our, entry->lsi_peer,
+			      entry->esp_transform <=
+			      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
+			      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
+		goto error;
+
+#if 0
+	if ( (len += snprintf(page+len, count-len,
 			      " 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x %s",
 			      entry->spi_in, entry->spi_out, entry->new_spi_in,
 			      entry->new_spi_out, entry->default_spi_out, entry->lsi_our, entry->lsi_peer,
@@ -1362,6 +1434,7 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 			      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
 			      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
 		goto error;
+#endif
 
 	if ( (len += snprintf(page+len, count-len,
 			      " 0x%llx %u %u %u %u %u\n",
@@ -1479,7 +1552,8 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 
 	ps.len = snprintf(page, count,
 		       "state hastate refcnt peer_controls hit_our hit_peer "
-		       "spi_in spi_out new_spi_in new_spi_out default_spi_out lsi_our lsi_peer esp_transform "
+//		       "spi_in spi_out new_spi_in new_spi_out default_spi_out lsi_our lsi_peer esp_transform "
+		       "spi_out new_spi_out default_spi_out lsi_our lsi_peer esp_transform "
 		       "birthday keymat_index keymat_calc_index "
 		       "update_id_in update_id_out dh_len\n");
 

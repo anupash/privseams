@@ -943,7 +943,8 @@ static int hip_send_rea(hip_ha_t *entry, int interface_id,
 	ipv6_addr_copy(&dst_hit, &entry->hit_peer);
 	// memcpy(&hmac_our, &entry->hmac_our, sizeof(hmac_our));
 	memcpy(&hmac_our, &entry->hip_hmac_out, sizeof(hmac_our));
-	spi_in = entry->spi_in;
+	//spi_in = entry->spi_in;
+	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	spi_out = entry->spi_out;
 	HIP_UNLOCK_HA(entry);
 

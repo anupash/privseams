@@ -782,26 +782,41 @@ struct hip_peer_spi_list_item
 #define PEER_ADDR_STATE_REACHABLE 1
 #define PEER_ADDR_STATE_UNREACHABLE 2
 
+#define HIP_SPI_DIRECTION_OUT 1
+#define HIP_SPI_DIRECTION_IN 2
+
+/* for HIT-SPI hashtable only */
 struct hip_hit_spi {
 	struct list_head list;
 	spinlock_t       lock;
 	atomic_t         refcnt;
 	hip_hit_t        hit;
 	uint32_t         spi; /* this SPI spi belongs to the HIT hit */
-	int              is_active;
+	int              is_active; /* maybe useless */
 };
 
+#if 0
 /* inbound IPsec SA SPI mappings */
 struct hip_ifindex2spi_map {
 	struct list_head list;
-	int ifindex;
+
 	uint32_t spi;
 };
+#endif
 
-struct hip_spi_list_item
+struct hip_spi_in_item
 {
 	struct list_head list;
-	int              direction; /* inbound or outbound, useless ? */
+	uint32_t         spi;
+	uint32_t         new_spi; /* SPI is changed to this when rekeying */
+	int              ifindex; /* ifindex if the netdev to which this is related to */
+	unsigned long timestamp;
+	// int update_state_flags; /* TODO: move from hadb_state to here */
+};
+
+struct hip_spi_out_item
+{
+	struct list_head list;
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
 	// int update_state_flags; /* TODO: move from hadb_state to here */
@@ -826,10 +841,10 @@ struct hip_hadb_state
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
 
-  //	uint32_t             spi_out;        /* outbound IPsec SA SPI */
+  	uint32_t             spi_out;        /* outbound IPsec SA SPI */
   //	uint32_t             spi_in;         /* inbound IPsec SA SPI */
-	uint32_t             new_spi_out;    /* new outbound IPsec SA SPI received in UPDATE */
-	uint32_t             new_spi_in;     /* new inbound IPsec SA SPI when rekey was initiated */
+  	uint32_t             new_spi_out;    /* new outbound IPsec SA SPI received in UPDATE */
+  //	uint32_t             new_spi_in;     /* new inbound IPsec SA SPI when rekey was initiated */
 
 	/* test code for multiple SA support, will replace (new)spi_in and (new)spi_out */
 	struct list_head     spis_in;        /* SPIs for inbound and outbound SAs */
@@ -837,7 +852,7 @@ struct hip_hadb_state
 
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address;
-	struct list_head     ifindex2spi_map;/* inbound IPsec SA SPI mapping data */
+//	struct list_head     ifindex2spi_map;/* inbound IPsec SA SPI mapping data */
 
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;

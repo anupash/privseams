@@ -701,6 +701,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_diffie_hellman *dh_req;
 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	int x;
+	struct hip_spi_in_item spi_in_data;
 	HIP_DEBUG("\n");
 
 	HIP_ASSERT(entry);
@@ -1024,9 +1025,12 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
       	/********** I2 packet complete **********/
 
+	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
+	spi_in_data.spi = spi_in;
+//	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr); /* ok ? */
 	HIP_LOCK_HA(entry);
-	entry->spi_in = spi_in;
-	err = hip_hadb_add_inbound_spi(entry, spi_in);
+//	entry->spi_in = spi_in;
+	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
 		goto out_err;
@@ -1405,7 +1409,8 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
  	/********** SPI_LSI **********/
 	barrier();
-	spi_in = entry->spi_in;
+//	spi_in = entry->spi_in;
+	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 
 	err = hip_build_param_spi(r2, spi_in);
  	if (err) {
@@ -1547,7 +1552,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	int esptfm;
 	uint32_t spi_in, spi_out;
 	int ifindex = 0;
-
+	struct hip_spi_in_item spi_in_data;
  	HIP_DEBUG("\n");
 
 	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
@@ -1855,22 +1860,25 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	entry->default_spi_out = spi_out;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
 
+//	entry->spi_in = spi_in;
+	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
+	spi_in_data.spi = spi_in;
+	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
+	if (spi_in_data.ifindex) {
+		HIP_DEBUG("ifindex=%d\n", spi_in_data.ifindex);
+//		hip_ifindex2spi_map_add(entry, spi_in, ifindex);
+	} else
+		HIP_ERROR("Couldn't get device ifindex of address\n");
+
 	HIP_LOCK_HA(entry);
-	entry->spi_in = spi_in;
-	err = hip_hadb_add_inbound_spi(entry, spi_in);
+	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
 		goto out_err;
 	}
-	ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
-	if (ifindex) {
-		HIP_DEBUG("ifindex=%d\n", ifindex);
-		hip_ifindex2spi_map_add(entry, spi_in, ifindex);
-	} else
-		HIP_ERROR("Couldn't get device ifindex of address\n");
+	/* todo: move to hadb_add_inbound_spi */
 	err = hip_store_base_exchange_keys(entry, ctx, 0);
 	HIP_UNLOCK_HA(entry);
-
 	if (err) {
 		HIP_DEBUG("hip_store_base_exchange_keys failed\n");
 		goto out_err;
@@ -1878,13 +1886,14 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	HIP_DEBUG("INSERTING STATE\n");
 	hip_hadb_insert_state(entry);
+#if 0
 	HIP_DEBUG("INSERTING STATE TO SPI LIST\n");
 	err = hip_hadb_insert_state_spi_list(entry, spi_in);
 	if (err && err != -EEXIST) {
 		HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
 		goto out_err;
 	}
-
+#endif
 	err = hip_create_r2(ctx, entry);
 	HIP_DEBUG("hip_handle_r2 returned %d\n", err);
 	if (err) {
@@ -2107,7 +2116,8 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		entry->spi_out = spi_recvd;
 		memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
 		memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
-		spi_in = entry->spi_in;
+		//spi_in = entry->spi_in;
+		spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		tfm = entry->esp_transform;
 
 		HIP_DEBUG("TODO: move HIP_UNLOCK_HA here ?\n");
@@ -2122,13 +2132,14 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		}
 		/* XXX: Check for -EAGAIN */
 		HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
-
+#if 0
 		HIP_DEBUG("INSERTING STATE TO SPI LIST\n");
 		err = hip_hadb_insert_state_spi_list(entry, spi_in);
 		if (err && err != -EEXIST) {
 			HIP_ERROR("Could not insert SPI 0x%x to inbound SPI list\n", spi_in);
 			goto out_err;
 		}
+#endif
 		/* source IPv6 address is implicitly the preferred
 		 * address after the base exchange */
 		err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,
