@@ -573,7 +573,7 @@ is given in the figure.
 \end{figure}
 
 \setlongtables
-\begin{longtable}{|p{0.05\textwidth}|p{0.25\textwidth}|p{0.6\textwidth}|}
+\begin{longtable}{|p{0.05\textwidth}|p{0.30\textwidth}|p{0.6\textwidth}|}
 \hline
 \endhead
 \endfoot
@@ -603,14 +603,18 @@ d & \verb|hip_trigger_bex| &
 
 A hook to trigger the base exchange. \\
 
-e & \verb|hip_handle_ipv6_dad_c| &
+e & \verb|hip_handle_ipv6_dad_compl| &
 
 This hook is called when a new IPv6 address is added. When the kernel
 has performed the \ac{DAD} successfully, we call this hook and notify
 active \ac{HIP} peers about the new address. Events caused by link
 local addresses are ignored. \\
 
-f & \verb|hip_get_addr| &
+f & \verb|hip_handle_inet6_addr_del| &
+
+This hook is called when an IPv6 address is deleted.\\
+
+g & \verb|hip_get_addr| &
   
 A small modification in routing and neighbor discovery is needed
 because they behave in a rather odd way in Linux: transport protocols
