@@ -63,7 +63,7 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 		}
 	}
 #ifdef CONFIG_HIP_DEBUG
-	printk(KERN_DEBUG "SA lookup (spi: %x) failed\n", spi);
+	printk(KERN_DEBUG "SA lookup (spi: %x) failed\n", ntohl(spi));
 #endif
 	return NULL;
 }

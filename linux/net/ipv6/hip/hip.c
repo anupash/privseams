@@ -1173,6 +1173,32 @@ void hip_ifindex2spi_map_add(struct in6_addr *peer_hit, uint32_t spi, int ifinde
 	return;
 }
 
+
+void hip_ifindex2spi_map_del(struct in6_addr *peer_hit, uint32_t spi)
+{
+	struct hip_ifindex2spi_map *m;
+	unsigned long flags = 0;
+	struct list_head *pos, *tmp;
+
+	HIP_DEBUG("spi=0x%x\n", spi);
+
+	spin_lock_irqsave(&hip_ifindex2spi_map_list_lock, flags);
+	list_for_each_safe(pos, tmp, &hip_ifindex2spi_map_list) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		if (m->spi == spi && !ipv6_addr_cmp(&m->peer_hit, peer_hit)) {
+			HIP_DEBUG("found\n");
+			list_del(&m->list);
+			kfree(m);
+			goto out;
+		}
+	}
+
+ out:
+	spin_unlock_irqrestore(&hip_ifindex2spi_map_list_lock, flags);
+	return;
+}
+
+
 uint32_t hip_ifindex2spi_get_spi(struct in6_addr *peer_hit, int ifindex)
 {
 	struct list_head *pos, *n;
