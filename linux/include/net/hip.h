@@ -781,15 +781,14 @@ struct hip_spi_list_item
 	int              direction; /* inbound or outbound */
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
+	// int update_state_flags; /* TODO: move from hadb_state to here */
 };
 
 struct hip_hadb_state
 {
 	uint8_t              type;         /* RVAs and HAs are stored in the same hash table */
 	struct list_head     next_hit;
-//	struct list_head     next_spi;
 	struct list_head     next_spi_list;
-
 
 	spinlock_t           lock;
 	atomic_t             refcnt;

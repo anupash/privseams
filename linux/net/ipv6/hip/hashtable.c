@@ -25,16 +25,15 @@ void *hip_ht_find(HIP_HASHTABLE *ht, void *key)
 	int hash;
 
 	hash = ht->hash(key, ht->hashsize);
-	HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
+	_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
 	HIP_LOCK_HT(ht);
 	{
 		list_for_each(chain, &ht->head[hash]) {
 			entry = hip_ht_get_content(void, chain, ht->offset);
 
 			key_to_be_matched = ht->get_key(entry);
-			HIP_DEBUG("entry=0x%p key=0x%p\n", entry, key_to_be_matched);
+			_HIP_DEBUG("entry=0x%p key=0x%p\n", entry, key_to_be_matched);
 			if (ht->compare(key, key_to_be_matched)) {
-				/* true = match */
 				ht->hold(entry);
 				HIP_UNLOCK_HT(ht);
 				return entry;
@@ -58,7 +57,7 @@ void *hip_ht_find(HIP_HASHTABLE *ht, void *key)
 int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
 {
 	int hash = ht->hash(ht->get_key(entry), ht->hashsize);
-	HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
+	_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
 	HIP_LOCK_HT(ht);
 	list_add(hip_ht_get_list(entry, ht->offset), &ht->head[hash]);
 	ht->hold(entry);
@@ -106,7 +105,7 @@ int hip_ht_init(HIP_HASHTABLE *ht)
 	HIP_ASSERT(ht);
 	HIP_ASSERT(ht->head);
 	HIP_ASSERT(ht->hashsize);
-	// HIP_ASSERT(ht->offset); will fail if list_head field is first in the struct */
+	/* HIP_ASSERT(ht->offset); would fail if list_head field is first in the struct */
 	HIP_ASSERT(ht->hash);
 	HIP_ASSERT(ht->compare);
 	HIP_ASSERT(ht->hold);
@@ -133,7 +132,6 @@ void hip_ht_uninit(HIP_HASHTABLE *ht)
 	int i;
 	struct list_head *item, *tmp;
 
-
 	for(i=0;i<ht->hashsize;i++) {
 		list_for_each_safe(item, tmp, &ht->head[i]) {
 			list_del(item);
@@ -141,4 +139,3 @@ void hip_ht_uninit(HIP_HASHTABLE *ht)
 		}
 	}
 }
-

@@ -9,11 +9,9 @@
 
 
 HIP_HASHTABLE hadb_hit;
-//HIP_HASHTABLE hadb_spi;
 HIP_HASHTABLE hadb_spi_list;
 
 static struct list_head hadb_byhit[HIP_HADB_SIZE];
-//static struct list_head hadb_byspi[HIP_HADB_SIZE];
 static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 
 /*
@@ -51,29 +49,6 @@ static int hip_hadb_match_spi(void *key_1, void *key_2)
 	return (spi1 == spi2);
 }
 
-#if 0
-static int hip_hadb_match_spi_list(void *key_1, void *key_2)
-{
-	uint32_t spi_to_match;
-	struct list_head *inbound_spis;
-	struct hip_spi_list_item *spi_in, *tmp;
-
-	spi_to_match = (uint32_t)key_1;
-	inbound_spis = (struct list_head *)key_2;
-
-	HIP_DEBUG("SPI to match 0x%x\n", spi_to_match);
-	list_for_each_entry_safe(spi_in, tmp, inbound_spis, list) {
-		HIP_DEBUG("testing SPI 0x%x\n", spi_in->spi);
-		if (spi_in->spi == spi_to_match) {
-			HIP_DEBUG("match\n");
-			return 1;
-		}
-	}
-	HIP_DEBUG("no match\n");
-	return 0;
-}
-#endif
-
 static void hip_hadb_hold_entry(void *entry)
 {
 	hip_ha_t *ha = (hip_ha_t *)entry;
@@ -107,8 +82,6 @@ void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 	kfree(hs);
 }
 
-#if 1
-/* now in hadb.h */
 static void hip_hadb_put_hs(void *entry)
 {
 	struct hip_hit_spi *hs = (struct hip_hit_spi *) entry;
@@ -123,10 +96,7 @@ static void hip_hadb_put_hs(void *entry)
 		HIP_DEBUG("HS: %p, refcnt decremented to: %d\n", hs, atomic_read(&hs->refcnt));
         }
 }
-#endif
 
-#if 1
-/* now in hadb.h */
 static void hip_hadb_hold_hs(void *entry)
 {
 	struct hip_hit_spi *hs = (struct hip_hit_spi *) entry;
@@ -136,7 +106,6 @@ static void hip_hadb_hold_hs(void *entry)
 	atomic_inc(&hs->refcnt);
 	HIP_DEBUG("HS: %p, refcnt incremented to: %d\n", hs, atomic_read(&hs->refcnt));
 }
-#endif
 
 void hip_hadb_remove_hs(struct hip_hit_spi *hs)
 {
@@ -163,45 +132,12 @@ static void *hip_hadb_get_key_hit(void *entry)
 	return (void *)&(((hip_ha_t *)entry)->hit_peer);
 }
 
-#if 0
-static void *hip_hadb_get_key_spi(void *entry)
-{
-	return (void *)(((hip_ha_t *)entry)->spi_in);
-}
-#endif
-
-static void *hip_hadb_get_key_spi_test(void *entry)
+static void *hip_hadb_get_key_spi_list(void *entry)
 {
 	return (void *)(((struct hip_hit_spi *)entry)->spi);
 }
 
 #if 0
-static void *hip_hadb_get_key_spi_list(void *entry)
-{
-	HIP_DEBUG("spis_in=0x%p\n", &(((hip_ha_t *)entry)->spis_in));
-	return (void *)&(((hip_ha_t *)entry)->spis_in);
-}
-#endif
-
-#if 0
-/**
- * hip_hadb_rem_state_spi - Remove HA from SPI table
- * @entry: HA
- *
- * HA must be locked.
- */
-static inline void hip_hadb_rem_state_spi(void *entry)
-
-{
-	hip_ha_t *ha = (hip_ha_t *)entry;
-
-	ha->hastate &= ~HIP_HASTATE_SPIOK;
-	hip_hadb_delete_spi_list_all(entry); // check
-	HIP_DEBUG("set entry->default_spi_out to 0 ?\n");
-	hip_ht_delete(&hadb_spi, entry);
-}
-#endif
-
 /**
  * hip_hadb_rem_state_spi_list - Remove HA from SPI list table
  * @entry: HA
@@ -211,25 +147,9 @@ static inline void hip_hadb_rem_state_spi(void *entry)
 static inline void hip_hadb_rem_state_spi_list(void *entry)
 
 {
-#if 0
-	struct hip_spi_list_item *spi_in, *tmp;
 
-	hip_ha_t *ha = (hip_ha_t *)entry;
-
-	HIP_DEBUG("\n");
-//	ha->hastate &= ~HIP_HASTATE_SPIOK; /* must be changed, usecount-- ? */
-	list_for_each_entry_safe(spi_in, tmp, &ha->spis_in, list) {
-		HIP_DEBUG("deleting SPI 0x%x\n", spi_in->spi);
-		list_del(&spi_in->list);
-		kfree(spi_in);
-	}
-
-	hip_hadb_delete_spi_list_all(ha); // check
-	HIP_ERROR("TODO: hip_hadb_delete_spis_in_list_all(entry)\n");
-	HIP_DEBUG("set entry->default_spi_out to 0 ?\n");
-	hip_ht_delete(&hadb_spi_list, ha);
-#endif
 }
+#endif
 
 /**
  * hip_hadb_rem_state_hit - Remove HA from HIT table
@@ -255,14 +175,6 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 
 
 /*********************** PRIMITIVES ***************************/
-
-
-#if 0
-hip_ha_t *hip_hadb_find_byspi(u32 spi)
-{
-	return (hip_ha_t *)hip_ht_find(&hadb_spi, (void *)spi);
-}
-#endif
 
 hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 {
@@ -302,38 +214,6 @@ hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
 	return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)hit);
 }
 
-#if 0
-/**
- * hip_hadb_remove_state_spi - Remove HA from SPI hash table.
- * @ha: HA
- */
-void hip_hadb_remove_state_spi(hip_ha_t *ha)
-{
-	HIP_LOCK_HA(ha);
-	if ((ha->hastate & HIP_HASTATE_SPIOK) == HIP_HASTATE_SPIOK) {
-		hip_hadb_rem_state_spi(ha);
-	}
-	HIP_UNLOCK_HA(ha);
-}
-#endif
-
-#if 0
-/**
- * hip_hadb_remove_state_spi_list - Remove HA from SPI list hash table.
- * @ha: HA
- */
-void hip_hadb_remove_state_spi_list(hip_ha_t *ha)
-{
-	HIP_LOCK_HA(ha);
-	if (list_empty(&ha->spis_in)) {
-		HIP_DEBUG("SPI_in list empty, call hip_hadb_rem_state_spi_list\n");
-		hip_hadb_rem_state_spi_list(ha);
-	} else
-		HIP_DEBUG("SPI list not empty, not calling hip_hadb_rem_state_spi_list\n");
-	HIP_UNLOCK_HA(ha);
-}
-#endif
-
 /**
  * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
  * @ha: HA
@@ -372,24 +252,10 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	hip_hastate_t st;
 	hip_ha_t *tmp;
 
-//	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer) &&
-//		     (ha->spi_in == 0)));
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
 
 	HIP_LOCK_HA(ha);
 	st = ha->hastate;
-#if 0
-	if (ha->spi_in != 0 && !(st & HIP_HASTATE_SPIOK)) {
-		tmp = hip_ht_find(&hadb_spi, (void *)ha->spi_in);
-		if (!tmp) {
-			hip_ht_add(&hadb_spi, ha);
-			st |= HIP_HASTATE_SPIOK;
-		} else {
-			hip_put_ha(tmp);
-			HIP_DEBUG("SPI already taken\n");
-		}
-	}
-#endif
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
 		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hit_peer));
@@ -498,7 +364,6 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	memset(entry, 0, sizeof(*entry));
 
-//	INIT_LIST_HEAD(&entry->next_spi);
 	INIT_LIST_HEAD(&entry->next_spi_list);
 	INIT_LIST_HEAD(&entry->next_hit);
 	INIT_LIST_HEAD(&entry->peer_addr_list);
@@ -531,11 +396,6 @@ void hip_hadb_remove_state(hip_ha_t *ha)
 
 	r = atomic_read(&ha->refcnt);
 
-#if 0
-	if ((ha->hastate & HIP_HASTATE_SPIOK) && ha->spi_in > 0)
-		hip_hadb_rem_state_spi(ha);
-#endif
-
 	HIP_DEBUG("TODO: FIX SPI LIST DELETE ?\n");
 #if 0
 	if (!list_empty(&ha->spis_in))
@@ -553,46 +413,9 @@ void hip_hadb_remove_state(hip_ha_t *ha)
 	HIP_UNLOCK_HA(ha);
 }
 
-#if 0
-/**
- * hip_hadb_exists_entry - Check if a certain HA exists in HADB hash table
- * @arg: Key to HA (depending on the @type)
- * @type: Type of the key
- *
- * Valid values for @type: HIP_ARG_HIT and HIP_ARG_SPI
- *
- * Returns 1 if the entry exists _AND_ its state is VALID.
- *         0 if the previous conditions are not true.
- */
-int hip_hadb_exists_entry(void *arg, int type)
-{
-	int ok = 0;
-	void *ha;
-	HIP_DEBUG("type=%d\n", type);
-	if (type == HIP_ARG_HIT)
-		ha = hip_ht_find(&hadb_hit, arg);
-	else {
-//		ha = hip_ht_find(&hadb_spi, arg);
-//		if (!ha)
-		ha = hip_ht_find(&hadb_spi_list, arg);
-	}
-
-	if (ha) {
-		if (type == HIP_ARG_HIT) {
-			if (((hip_ha_t *)ha)->hastate == HIP_HASTATE_VALID)
-				ok = 1;
-		} else
-			ok = 1; /* for HIT-SPI mapping, ok ? */
-		hip_hadb_put_entry(ha);
-	}
-	return ok;
-}
-#endif
-
 /************** END OF PRIMITIVE FUNCTIONS **************/
 
 
-// tmp
 struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 
 /**
@@ -610,7 +433,6 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	int err = 0;
         struct hip_peer_addr_list_item *s, *candidate = NULL;
 	struct timeval latest, dt;
-//	struct hip_peer_spi_list_item *spi_list;
 
 #ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
@@ -653,10 +475,6 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 		}
 	}
 #endif
-//	HIP_UNLOCK_HA(entry);
-
-//#else
-//	HIP_LOCK_HA(entry);
 
 	/* we get here if we do not know the default outbound SPI to use */
 	/* later peer_addr_list will be removed */
@@ -707,7 +525,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 #endif
 	}
 
-#endif // 0
+#endif
  out:
         return err;
 }
@@ -1223,8 +1041,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 
 	HIP_DEBUG("spi=0x%x is_preferred_addr=%d\n", spi, is_preferred_addr);
 
-//	HIP_LOCK_HA(entry);
-
 	/* if we already know of peer's SPI, then add the address to
 	 * it, else create a new SPI list */
 	spi_list = hip_hadb_get_spi_list(entry, spi);
@@ -1286,7 +1102,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 
  out_err:
-//	HIP_UNLOCK_HA(entry);
 	HIP_DEBUG("returning, err=%d\n", err);
 	return err;
 }
@@ -1826,39 +1641,6 @@ void hip_hadb_dump_hits(void)
 	kfree(string);
 }
 
-#if 0
-void hip_hadb_dump_spis(void)
-{
-	int i;
-	hip_ha_t *entry;
-	struct hip_peer_spi_list_item *spi_list, *tmp;
-	char str[INET6_ADDRSTRLEN];
-
-	HIP_DEBUG("\n");
-	HIP_LOCK_HT(&hadb_spi);
-
-	for(i=0; i < HIP_HADB_SIZE; i++) {
-		if (!list_empty(&hadb_byspi[i])) {
-			HIP_DEBUG("HT[%d]\n", i);
-			list_for_each_entry(entry, &hadb_byspi[i], next_spi) {
-				hip_hold_ha(entry);
-				list_for_each_entry_safe(spi_list, tmp, &entry->peer_spi_list, list) {
-					_HIP_DEBUG("SPI list=0x%p\n", spi_list);
-					hip_in6_ntop(&spi_list->preferred_address, str);
-					HIP_DEBUG("SPI=0x%x preferred address=%s\n", spi_list->spi, str);
-				}
-				hip_put_ha(entry);
-			}
-		}
-	}
-
-	HIP_UNLOCK_HT(&hadb_spi);
-	HIP_DEBUG("end\n");
-}
-#endif
-
-
-
 
 void hip_hadb_dump_spi_lists(void)
 {
@@ -1887,13 +1669,9 @@ void hip_hadb_dump_spi_lists(void)
 }
 
 
-
-
-
 void hip_init_hadb(void)
 {
 	memset(&hadb_hit,0,sizeof(hadb_hit));
-//	memset(&hadb_spi,0,sizeof(hadb_spi));
 	memset(&hadb_spi_list,0,sizeof(hadb_spi_list));
 
 	hadb_hit.head =      hadb_byhit;
@@ -1908,36 +1686,19 @@ void hip_init_hadb(void)
 	strncpy(hadb_hit.name,"HADB_BY_HIT", 15);
 	hadb_hit.name[15] = 0;
 
-#if 0
-	hadb_spi.head =      hadb_byspi;
-	hadb_spi.hashsize =  HIP_HADB_SIZE;
-	hadb_spi.offset =    offsetof(hip_ha_t, next_spi);
-	hadb_spi.hash =      hip_hash_spi;
-	hadb_spi.compare =   hip_hadb_match_spi;
-	hadb_spi.hold =      hip_hadb_hold_entry;
-	hadb_spi.put =       hip_hadb_put_entry;
-	hadb_spi.get_key =   hip_hadb_get_key_spi;
-
-	strncpy(hadb_spi.name,"HADB_BY_SPI", 15);
-	hadb_spi.name[15] = 0;
-#endif
 	hadb_spi_list.head =      hadb_byspi_list;
 	hadb_spi_list.hashsize =  HIP_HADB_SIZE;
-//	hadb_spi_list.offset =    offsetof(hip_ha_t, next_spi_list);
 	hadb_spi_list.offset =    offsetof(struct hip_hit_spi, list);
 	hadb_spi_list.hash =      hip_hash_spi;
-//	hadb_spi_list.compare =   hip_hadb_match_spi_list;
 	hadb_spi_list.compare =   hip_hadb_match_spi;
 	hadb_spi_list.hold =      hip_hadb_hold_hs;
 	hadb_spi_list.put =       hip_hadb_put_hs;
-//	hadb_spi_list.get_key =   hip_hadb_get_key_spi_list;
-	hadb_spi_list.get_key =   hip_hadb_get_key_spi_test;
+	hadb_spi_list.get_key =   hip_hadb_get_key_spi_list;
 
 	strncpy(hadb_spi_list.name,"HADB_BY_SPI_LIST", 15);
 	hadb_spi_list.name[15] = 0;
 
 	hip_ht_init(&hadb_hit);
-//	hip_ht_init(&hadb_spi);
 	hip_ht_init(&hadb_spi_list);
 }
 
@@ -1961,18 +1722,7 @@ void hip_uninit_hadb()
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
 			hip_hadb_remove_state(ha);
 		}
-#if 0
-		list_for_each_entry_safe(ha, tmp, &hadb_byspi[i], next_spi) {
-			if (atomic_read(&ha->refcnt) > 1)
-				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
-			hip_hadb_remove_state(ha);
-		}
-#endif
-//		list_for_each_entry_safe(ha, tmp, &hadb_byspi_list[i], next_spi_list) {
-//			if (atomic_read(&ha->refcnt) > 1)
-//				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
-//			hip_hadb_remove_state(ha);
-//		}
+
 		list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
 			if (atomic_read(&hs->refcnt) > 1)
 				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
