@@ -1,4 +1,3 @@
-
 Warning
 =======
 
@@ -24,6 +23,10 @@ Requirements
     HIPL documentation)
   * java compiler for "jip" (java hip resolver) if you want to build
     HIP enabled java programs
+
+The HIPL patched kernel is based on the official Linux kernel and it
+should be distribution independent. The kernel has been tested on the
+Debian Linux (Woody, Sarge) distribution.
 
 Building the Documentation
 ==========================
