@@ -901,7 +901,7 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		goto out_err;
 	}
 
-	HIP_DEBUG("enc_len=%d\n", enc_len);
+	_HIP_DEBUG("enc_len=%d\n", enc_len);
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
 		if (iv) {

@@ -252,7 +252,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
-void hip_hadb_dump_spi_lists(void);
+//void hip_hadb_dump_spi_lists(void);
 
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
@@ -263,7 +263,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
 	struct hip_hit_spi *tmp;
 	hip_hit_t hit;
 
-	HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", ha, spi);
+	_HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", ha, spi);
 	HIP_LOCK_HA(ha);
 	ipv6_addr_copy(&hit, &ha->hit_peer);
 	HIP_UNLOCK_HA(ha);
@@ -293,8 +293,8 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
 		err = -EEXIST;
 	}
 
-	HIP_DEBUG("HS TABLE:\n");
-	hip_hadb_dump_spi_lists();	
+	_HIP_DEBUG("HS TABLE:\n");
+	//hip_hadb_dump_spi_lists();	
  out_err:
 	return err;
 }
@@ -1015,7 +1015,7 @@ int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data)
 {
 	int err = 0;
 
-	HIP_DEBUG("direction=%d\n", direction);
+	_HIP_DEBUG("direction=%d\n", direction);
 
 	if (direction == HIP_SPI_DIRECTION_IN)
 		err = hip_hadb_add_inbound_spi(entry, (struct hip_spi_in_item *) data);
@@ -1051,31 +1051,18 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	HIP_UNLOCK_HA(entry);
 }
 
-void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
-{
-	struct hip_spi_in_item *item, *tmp;
-
-	HIP_DEBUG("entry=0x%p\n", entry);
-
-	/* assume locked entry ? */
-//	HIP_LOCK_HA(entry);
-        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		hip_hadb_delete_inbound_spi(entry, item->spi);
-        }
-//	HIP_UNLOCK_HA(entry);
-}
-
 void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_out_item *item, *tmp;
 
 	HIP_DEBUG("entry=0x%p\n", entry);
+
+	/* todo: must be called with HA lock already held ? */
 	HIP_LOCK_HA(entry);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 		if (item->spi == spi) {
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
-			HIP_ERROR("TODO: REMOVE SPI FROM HIT-SPI HT\n");
 			hip_delete_sa(item->spi, &entry->hit_peer);
 			hip_delete_sa(item->new_spi, &entry->hit_peer);
 			list_del(&item->list);
@@ -1085,12 +1072,28 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 	HIP_UNLOCK_HA(entry);
 }
 
+
+/* delete all entry's inbound SAs */
+void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
+{
+	struct hip_spi_in_item *item, *tmp;
+
+	HIP_DEBUG("entry=0x%p\n", entry);
+	/* assume locked entry ? */
+//	HIP_LOCK_HA(entry);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		hip_hadb_delete_inbound_spi(entry, item->spi);
+        }
+//	HIP_UNLOCK_HA(entry);
+}
+
+
+/* delete all entry's outbound SAs */
 void hip_hadb_delete_outbound_spis(hip_ha_t *entry)
 {
 	struct hip_spi_out_item *item, *tmp;
 
 	HIP_DEBUG("entry=0x%p\n", entry);
-
 	/* assume locked entry ? */
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 		hip_hadb_delete_outbound_spi(entry, item->spi);
@@ -1851,14 +1854,15 @@ void hip_hadb_dump_spi_lists(void)
 void hip_hadb_dump_spis_in(hip_ha_t *entry)
 {
 	struct hip_spi_in_item *item, *tmp;
+	unsigned long now = jiffies;
 
 	HIP_DEBUG("start\n");
 	HIP_LOCK_HA(entry);
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("SPI=0x%x new_SPI=0x%x nes_SPI_out=0x%x ifindex=%d "
+		HIP_DEBUG(" SPI=0x%x new_SPI=0x%x nes_SPI_out=0x%x ifindex=%d "
 			  "ts=%lu updating=%d keymat_index=%u upd_flags=0x%x seq_update_id=%u NES=old 0x%x,new 0x%x,km %u\n",
 			  item->spi, item->new_spi, item->nes_spi_out, item->ifindex,
-			  item->timestamp, item->updating, item->keymat_index,
+			  now - item->timestamp, item->updating, item->keymat_index,
 			  item->update_state_flags, item->seq_update_id,
 			  item->stored_received_nes.old_spi,
 			  item->stored_received_nes.old_spi,
@@ -1875,7 +1879,7 @@ void hip_hadb_dump_spis_out(hip_ha_t *entry)
 	HIP_DEBUG("start\n");
 	HIP_LOCK_HA(entry);
 	list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		HIP_DEBUG("SPI=0x%x new_SPI=0x%x seq_update_id=%u\n",
+		HIP_DEBUG(" SPI=0x%x new_SPI=0x%x seq_update_id=%u\n",
 			  item->spi, item->new_spi, item->seq_update_id);
 	}
 	HIP_UNLOCK_HA(entry);

@@ -228,10 +228,7 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 	}
 
 	_HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
-
-	HIP_DEBUG("buffer_length=%d\n", buffer_length);
-
-	HIP_DEBUG("buffer_length=%d\n", buffer_length);
+	_HIP_DEBUG("buffer_length=%d\n", buffer_length);
 
 	if (hip_build_digest(HIP_DIGEST_SHA1,buffer_start,buffer_length,sha1_digest)) {
 		HIP_ERROR("Could not calculate SHA1 digest\n");
@@ -2536,7 +2533,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	int err = 0;
 	uint16_t csum;
 
-	HIP_DEBUG("skb len=%d, v6hdr payload_len=%d/hip hdr pkt total len=%d\n",
+	_HIP_DEBUG("skb len=%d, v6hdr payload_len=%d/hip hdr pkt total len=%d\n",
 		  (*skb)->len, ntohs((*skb)->nh.ipv6h->payload_len),
 		  (hip_common->payload_len+1)*8);
 

@@ -505,14 +505,14 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 	/* assuming all local keys are full DSA keys */
 	len = hip_get_param_contents_len(tmp);
 
-	HIP_DEBUG("Host ID len before cut-off: %d\n",
+	_HIP_DEBUG("Host ID len before cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
 
 	/* the secret component of the DSA key is always 20 bytes */
 
 	tmp->hi_length = htons(ntohs(tmp->hi_length) - 20);
 
-	HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
+	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
 
 	/* Move the hostname 20 bytes earlier */
 
@@ -524,7 +524,7 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 
 	hip_set_param_contents_len(tmp, (len - 20));
 
-	HIP_DEBUG("Host ID len after cut-off: %d\n",
+	_HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
 
 	/* make sure that the padding is zero (and not to reveal any bytes of the
@@ -899,26 +899,6 @@ uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 	return spi;
 }
 
-#if 0
-/* just pick one, kludge test */
-uint32_t hip_get_spi_to_update(hip_ha_t *entry)
-{
-	struct hip_spi_in_item *item, *tmp;
-	uint32_t spi = 0;
-
-	/* lock ? */
-        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
-		if (!item->updating) {
-			item->updating = 1;
-			spi = item->spi;
-			break;
-		}
-        }
-	HIP_DEBUG("returning spi 0x%x\n", spi);
-	return spi;
-}
-#endif
 
 /* test: get the SPI of the SA belonging to the interface through
    which we received the UPDATE */
@@ -1041,8 +1021,9 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set
 			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
 			   uint16_t keymat_index)
 {
-	HIP_DEBUG("spi=0x%x direction=%d update_id=%u update_flags_or=0x%x keymat_index=%u\n",
-		  spi, direction, update_id, update_flags_or, keymat_index);
+	HIP_DEBUG("spi=0x%x direction=%s update_id=%u update_flags_or=0x%x keymat_index=%u\n",
+		  spi, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT",
+		  update_id, update_flags_or, keymat_index);
 
 	if (direction == HIP_SPI_DIRECTION_IN) {
 		struct hip_spi_in_item *item, *tmp;
@@ -1063,11 +1044,12 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set
 				if (set_flags & 0x8)
 					item->keymat_index = keymat_index;
 
-				break;
+				return;
 			}
 		}
 	}
 
+	HIP_ERROR("SPI not found\n");
 }
 
 int hip_update_get_spi_status(hip_ha_t *entry, uint32_t spi)
@@ -1091,13 +1073,13 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			       int direction, int test_new_spi)
 {
 	int found = 0;
-	HIP_DEBUG("spi=0x%x direction=%d test_new_spi=%d\n",
+	_HIP_DEBUG("spi=0x%x direction=%d test_new_spi=%d\n",
 		  spi, direction, test_new_spi);
 	/* lock or not ? */
 	if (direction == HIP_SPI_DIRECTION_IN) {
 		struct hip_spi_in_item *item, *tmp;
 		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-			HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
+			_HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
 				  item->spi, item->new_spi);
 			if ( (item->spi == spi && !test_new_spi) ||
 			     (item->new_spi == spi && test_new_spi) ) {
@@ -1108,7 +1090,7 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
         } else {
 		struct hip_spi_out_item *item, *tmp;
 		list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-			HIP_DEBUG("test item: spi_out=0x%x new_spi=0x%x\n",
+			_HIP_DEBUG("test item: spi_out=0x%x new_spi=0x%x\n",
 				  item->spi, item->new_spi);
 			if ( (item->spi == spi && !test_new_spi) ||
 			     (item->new_spi == spi && test_new_spi) ) {
@@ -1134,28 +1116,22 @@ void hip_update_handle_ack(hip_ha_t *entry, uint32_t peer_update_id)
 		if (item->seq_update_id == peer_update_id) {
 			HIP_DEBUG("SEQ and ACK match\n");
 			item->update_state_flags |= 0x1; /* recv'd ACK */
-			break;
 		}
 	}
 }
 
-/* assumes that reply UPDATE contains both NES and ACK */
-/* nes contains values in network byte order */
-void hip_update_handle_nes(hip_ha_t *entry, struct hip_nes *nes, uint32_t peer_update_id)
+void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id)
 {
-	struct hip_spi_out_item *item, *tmp;
+	struct hip_spi_in_item *item, *tmp;
 
 	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
 
-	list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		HIP_DEBUG("test item: spi_out=0x%x seq=%u\n",
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
 			  item->spi, item->seq_update_id);
-		if (item->spi == ntohl(nes->old_spi)) {
-			HIP_DEBUG("Change Old SPI to New SPI\n");
-			HIP_DEBUG("TODO: delete Old SPI\n");
-			item->spi = ntohl(nes->new_spi);
-			item->new_spi = 0;
-			break;
+		if (item->seq_update_id == peer_update_id) {
+			HIP_DEBUG("received peer's NES\n");
+			item->update_state_flags |= 0x2; /* recv'd NES */
 		}
 	}
 }

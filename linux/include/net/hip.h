@@ -855,8 +855,8 @@ struct hip_hadb_state
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
 
-	struct list_head     spis_in;        /* SPIs for inbound and outbound SAs */
-	struct list_head     spis_out;
+	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
+	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
 
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address;

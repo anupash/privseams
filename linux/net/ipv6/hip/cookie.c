@@ -43,6 +43,7 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 	return (base) % HIP_R1TABLESIZE;
 }
 
+#if 0
 /**
  * hip_create_new_puzzle - Create/Change the puzzle in R1
  * @pz: Old puzzle
@@ -69,6 +70,7 @@ static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
 	pz->opaque[1] = ((tv->tv_sec >> 8) & 0xFF);
 	pz->opaque[2] = ((tv->tv_sec >> 16) & 0xFF);		
 }
+#endif
 
 /**
  * hip_fetch_cookie_entry - Get an R1entry structure
@@ -353,7 +355,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r)
 int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			  uint64_t birthday)
 {
-	uint64_t generation;
+	/* uint64_t generation; */
 	struct hip_r1entry *r1e;
 
 	r1e = hip_fetch_cookie_entry(ip_i, ip_r);
