@@ -730,8 +730,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 	entry->dh_shared_key_len = ctx->dh_shared_key_len;
 	memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
-	HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
-
+	_HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
 	_HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
 	return err;
 

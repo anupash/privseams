@@ -191,20 +191,20 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
  * @key_len: length of @key in bytes
  * @kij: Kij, shared key
  * @kij_len: length of @kij in bytes
- * @keymat_offset: Keymat Index
+ * @keymat_index: Keymat Index
  * @calc_index: the one byte offset value used in the Kn
  * @calc_index_keymat: Kn, where n = calc_index
  *
  * This function gets next @key_len bytes of KEYMAT to @key starting
- * from requested offset @keymat_offset. On successful return
- * @keymat_offset and @calc_index contain the values used in the last
+ * from requested offset @keymat_index. On successful return
+ * @keymat_index and @calc_index contain the values used in the last
  * round of calculating Kn of KEYMAT and @calc_index_keymat contains
  * the last Kn.
  *
  * Returns: 0 on success, < 0 otherwise.
 */
 int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
-		       uint16_t *keymat_offset, uint8_t *calc_index,
+		       uint16_t *keymat_index, uint8_t *calc_index,
 		       unsigned char *calc_index_keymat)
 {
 	/* must have the hadb lock when calling this function */
@@ -214,8 +214,8 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	u8 *tmp_data = NULL;
 	size_t tmp_data_len;
 
-	_HIP_DEBUG("key_len=%d, requested keymat_offset=%u calc_index=%u\n",
-		  key_len, *keymat_offset, *calc_index);
+	HIP_DEBUG("key_len=%d, requested keymat_index=%u calc_index=%u\n",
+		  key_len, *keymat_index, *calc_index);
 	_HIP_HEXDUMP("calc_index_keymat", calc_index_keymat, HIP_AH_SHA_LEN);
 
  	if (key_len == 0 || kij_len == 0) {
@@ -228,13 +228,13 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	_HIP_DEBUG("Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
 		  entry->current_keymat_index, entry->keymat_calc_index);
 
-	_HIP_DEBUG("byte index: keymat_offset / HIP_AH_SHA_LEN + 1 = %d\n",
-		  *keymat_offset / HIP_AH_SHA_LEN + 1);
-	tmp = HIP_AH_SHA_LEN - (*keymat_offset % HIP_AH_SHA_LEN);
-	/* requested keymat_offset belongs to the one byte offset at
-	 * "keymat_offset / HIP_AH_SHA_LEN + 1" */
+	_HIP_DEBUG("byte index: keymat_index / HIP_AH_SHA_LEN + 1 = %d\n",
+		  *keymat_index / HIP_AH_SHA_LEN + 1);
+	tmp = HIP_AH_SHA_LEN - (*keymat_index % HIP_AH_SHA_LEN);
+	/* requested keymat_index belongs to the one byte offset at
+	 * "keymat_index / HIP_AH_SHA_LEN + 1" */
 	_HIP_DEBUG("tmp=%d\n", tmp);
-	if ( tmp > 0 && (*keymat_offset / HIP_AH_SHA_LEN + 1) == *calc_index ) {
+	if ( tmp > 0 && (*keymat_index / HIP_AH_SHA_LEN + 1) == *calc_index ) {
 		_HIP_DEBUG("test: can copy %d bytes from the end of sha K\n", tmp);
 		memcpy(key, calc_index_keymat + HIP_AH_SHA_LEN - tmp, tmp);
 		copied += tmp;
@@ -284,9 +284,9 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		_HIP_HEXDUMP("", calc_index_keymat, HIP_AH_SHA_LEN);
 #endif
 #endif
-		if (*calc_index < (*keymat_offset / HIP_AH_SHA_LEN + 1)) {
+		if (*calc_index < (*keymat_index / HIP_AH_SHA_LEN + 1)) {
 			_HIP_DEBUG("skip until we are at right calc_index %d (now at %u)\n",
-				  *keymat_offset / HIP_AH_SHA_LEN + 1, *calc_index);
+				  *keymat_index / HIP_AH_SHA_LEN + 1, *calc_index);
 			continue;
 		}
 
@@ -308,8 +308,8 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 
  out:
 	_HIP_HEXDUMP("CALCULATED KEY", key, key_len);
-	_HIP_DEBUG("at end: *keymat_offset=%u *calc_index=%u\n",
-		   *keymat_offset, *calc_index);
+	HIP_DEBUG("at end: *keymat_index=%u *calc_index=%u\n",
+		   *keymat_index, *calc_index);
 
  out_err:
 	if(tmp_data)

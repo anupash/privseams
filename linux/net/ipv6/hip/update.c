@@ -381,7 +381,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	int err = 0;
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_nes *nes;
-	struct hip_seq *seq = NULL;
+	struct hip_seq *seq;
 	struct hip_rea_info_mm02 *rea;
 	int esp_transform = -1;
 	struct hip_crypto_key espkey_gl, authkey_gl;
@@ -391,7 +391,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	uint32_t new_spi_in = 0;  /* inbound IPsec SA SPI */
 	uint32_t new_spi_out = 0; /* outbound IPsec SA SPI */
 	struct hip_common *update_packet = NULL;
-	uint16_t our_current_keymat_index; /* current or prev ? */
+	uint16_t keymat_index;
 	struct in6_addr daddr;
 	struct hip_dh_fixed *dh;
 	struct hip_host_id *host_id_private;
@@ -447,25 +447,28 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	   Keymat Index to zero. */
 	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
 	if (dh || dh_key_generated) {
-		_HIP_DEBUG("would generate new keymat\n");
-		/* generate_new_keymat(); */
-		our_current_keymat_index = 0;
+		HIP_DEBUG("would generate new keymat\n");
+		/* todo: generate_new_keymat(); */
+		keymat_index = 0;
 	} else {
 		/* Otherwise, the NES Keymat Index MUST be larger or
 		   equal to the index of the next byte to be drawn from the
-		   current KEYMAT.  In this case, it is RECOMMENDED that the host
-		   use the Keymat Index requested by the peer in the received
-		   NES. */
-		if (ntohs(nes->keymat_index) < (entry->current_keymat_index + 1)) {
-			HIP_ERROR("NES Keymat Index (%u) < current KEYMAT+1 %u\n",
-				  ntohs(nes->keymat_index), entry->current_keymat_index + 1);
+		   current KEYMAT. */
+		if (ntohs(nes->keymat_index) < entry->current_keymat_index) {
+			HIP_ERROR("NES Keymat Index (%u) < current KEYMAT %u\n",
+				  ntohs(nes->keymat_index), entry->current_keymat_index);
 			goto out_err;
 		}
+		/* In this case, it is RECOMMENDED that the host use the
+		   Keymat Index requested by the peer in the received NES. */
+
+		/* here we could set the keymat index to use, but we
+		 * follow the recommendation */
 		HIP_DEBUG("Using Keymat Index from NES\n");
-		our_current_keymat_index = ntohs(nes->keymat_index);	
+		keymat_index = ntohs(nes->keymat_index);	
 	}
 
-	HIP_DEBUG("our_current_keymat_index=%d\n", our_current_keymat_index);
+	HIP_DEBUG("keymat_index=%d\n", keymat_index);
 	{
 		uint8_t calc_index_new;
 		uint16_t keymat_offset_new;
@@ -477,20 +480,24 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 		HIP_DEBUG("we are: HIT%c\n", we_are_HITg ? 'g' : 'l');
 		esp_transform = entry->esp_transform; /* needed below */
 		calc_index_new = entry->keymat_calc_index;
-		keymat_offset_new = ntohs(nes->keymat_index);
-		if (our_current_keymat_index != 0 &&
-		    keymat_offset_new > our_current_keymat_index)
-			our_current_keymat_index = keymat_offset_new;
+//		keymat_offset_new = ntohs(nes->keymat_index);
+		keymat_offset_new = keymat_index;
+		if (keymat_index != 0 &&
+		    keymat_offset_new > keymat_index)
+			keymat_index = keymat_offset_new;
 
 		/* todo: if testing keymat_offset_new += random */
 		memcpy(Kn, entry->current_keymat_K, HIP_AH_SHA_LEN);
 		err = hip_update_get_sa_keys(entry, &keymat_offset_new, &calc_index_new, Kn,
 					     &espkey_gl, &authkey_gl, &espkey_lg, &authkey_lg);
 		HIP_DEBUG("get_sa_keys ret err=%d\n", err);
+#if 0
 		/* todo: update entry keymat later */
 		hip_update_entry_keymat(entry, keymat_offset_new, calc_index_new, Kn);
 		if (err)
 			goto out_err;
+#endif
+
 #if 0
 		/* set up new outgoing IPsec SA */
 
@@ -573,10 +580,10 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 
 
 //	if (nes->old_spi != nes->new_spi)
-		err = hip_build_param_nes(update_packet, our_current_keymat_index,
+		err = hip_build_param_nes(update_packet, keymat_index,
 					  prev_spi_in, new_spi_in);
 //	else /* ack to rea update */
-//		err = hip_build_param_nes(update_packet, our_current_keymat_index, 
+//		err = hip_build_param_nes(update_packet, keymat_index, 
 //					  entry->spi_in, entry->spi_in);
 	if (err) {
 		HIP_ERROR("Building of NES failed\n");
@@ -699,10 +706,12 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry)
 
 	/* 2. .. If the system did not generate new KEYMAT, it uses
 	   the lowest Keymat Index of the two NES parameters. */
-	if (entry->current_keymat_index+1 < entry->stored_received_nes.keymat_index)
-		keymat_index = entry->current_keymat_index+1;
+	HIP_DEBUG("entry keymat index=%u\n", entry->current_keymat_index);
+	if (entry->current_keymat_index < entry->stored_received_nes.keymat_index)
+		keymat_index = entry->current_keymat_index;
 	else
 		keymat_index = entry->stored_received_nes.keymat_index;
+	HIP_DEBUG("lowest keymat_index=%u\n", keymat_index);
 
 	/* 3. The system draws keys for new incoming and outgoing ESP
 	   SAs, starting from the Keymat Index, and prepares new incoming
@@ -890,7 +899,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 			err = -ENOMEM;
 			goto out_err;
 		}
-		HIP_DEBUG("update_packet=%p\n\n", update_packet);
+		_HIP_DEBUG("update_packet=%p\n\n", update_packet);
 		hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 
 		err = hip_build_param_ack(update_packet, ntohl(seq->update_id));
@@ -898,8 +907,8 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 			HIP_ERROR("Building of ACK param failed\n");
 			goto out_err;
 		}
-		HIP_DEBUG("ack+\n");
-		HIP_DUMP_MSG(update_packet);
+		_HIP_DEBUG("ack+\n");
+		_HIP_DUMP_MSG(update_packet);
 	}
 
 	/* .. Additionally, if the UPDATE packet contained an ACK of the
@@ -1161,8 +1170,8 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		HIP_ERROR("Building of HMAC failed (%d)\n", err);
 		goto out_err;
 	}
-	HIP_DEBUG("hmac+\n");
-	HIP_DUMP_MSG(update_packet);
+	_HIP_DEBUG("hmac+\n");
+	_HIP_DUMP_MSG(update_packet);
 
 	/* Add SIGNATURE */
 	host_id_private = hip_get_any_localhost_host_id();
@@ -1178,8 +1187,8 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		err = -EINVAL;
 		goto out_err;
 	}
-	HIP_DEBUG("up=%p s=%p\n", update_packet, signature);
-	HIP_DUMP_MSG(update_packet);
+	_HIP_DEBUG("up=%p s=%p\n", update_packet, signature);
+	_HIP_DUMP_MSG(update_packet);
 
 	err = hip_build_param_signature_contents(update_packet, signature,
 						 HIP_DSA_SIGNATURE_LEN,
@@ -1188,9 +1197,9 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
  		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
  		goto out_err;
  	}
-	HIP_DEBUG("SIGNATURE added\n");
-	HIP_DEBUG("sig+\n");
-	HIP_DUMP_MSG(update_packet);
+	_HIP_DEBUG("SIGNATURE added\n");
+	_HIP_DEBUG("sig+\n");
+	_HIP_DUMP_MSG(update_packet);
 
         err = hip_hadb_get_peer_addr(entry, &daddr);
         if (err) {
@@ -1390,7 +1399,7 @@ int hip_receive_update(struct sk_buff *skb)
 	   parameter, the received Keymat Index MUST be zero. If this
 	   test fails, the packet SHOULD be dropped and the system
 	   SHOULD log an error message. */
-	HIP_DEBUG("packet keymat_index=%u\n", keymat_index);
+	// if (nes) HIP_DEBUG("packet keymat_index=%u\n", keymat_index);
 	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
 	if (dh) {
 		HIP_DEBUG("packet contains DH\n");
@@ -1422,7 +1431,7 @@ int hip_receive_update(struct sk_buff *skb)
 	if (err) {
 		HIP_ERROR("Verification of UPDATE signature failed\n");
 		_HIP_DEBUG("ignoring SIGNATURE fail\n");
-//		goto out_err;
+		goto out_err;
 	}
         _HIP_DEBUG("SIGNATURE ok\n");
 
@@ -1434,7 +1443,12 @@ int hip_receive_update(struct sk_buff *skb)
 		HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", pkt_update_id);
 	}
 
-	/* todo: check that Old SPI value exists ? */
+	/* check that Old SPI value exists */
+	if (nes && (ntohl(nes->old_spi) != entry->spi_out)) {
+		HIP_ERROR("Old SPI value 0x%x in NES parameter does not belong to the currentSPI 0x%x in HA\n",
+			  ntohl(nes->old_spi), entry->spi_out);
+		goto out_err;
+	}
 
 	/* cases 7-8: */
 	if (state == HIP_STATE_ESTABLISHED) {
@@ -1568,10 +1582,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 	if (addr_list && addr_count > 0) /* mm02-pre3 5.2 Host multihoming */
-		err = hip_build_param_nes(update_packet, entry->current_keymat_index+1,
+		err = hip_build_param_nes(update_packet, entry->current_keymat_index,
 					  new_spi_in, new_spi_in); 
 	else /* plain UPDATE */
-		err = hip_build_param_nes(update_packet, entry->current_keymat_index+1,
+		err = hip_build_param_nes(update_packet, entry->current_keymat_index,
 					  entry->spi_in, new_spi_in); 
 	if (err) {
 		HIP_ERROR("Building of NES param failed\n");
