@@ -41,9 +41,9 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	struct hip_crypto_key espkey_lg, authkey_lg;
 //	int getlist[3];
 //	void *setlist[3];
-	uint32_t our_prev_spi = 0;//, peer_prev_spi;
-	uint32_t our_new_spi = 0;  /* inbound IPsec SA SPI */
-	uint32_t peer_new_spi = 0; /* outbound IPsec SA SPI */
+	uint32_t prev_spi_in = 0;
+	uint32_t new_spi_in = 0;  /* inbound IPsec SA SPI */
+	uint32_t new_spi_out = 0; /* outbound IPsec SA SPI */
 //	uint32_t spi_gl, spi_lg;
 	struct hip_common *update_packet = NULL;
 	uint16_t our_current_keymat_index; /* current or prev ? */
@@ -215,7 +215,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		/* update entry keymat later */
 		hip_update_entry_keymat(entry, keymat_offset_new, calc_index_new, Kn);
 HIP_DEBUG("km, spi values curr new: 0x%08x 0x%08x 0x%08x 0x%08x\n",
-	  entry->spi_our, entry->spi_peer, entry->new_spi_our, entry->new_spi_peer);
+	  entry->spi_in, entry->spi_out, entry->new_spi_in, entry->new_spi_out);
 	qwe:
 		hip_hadb_release_ex_db_access(flags);
 		if (err)
@@ -230,9 +230,9 @@ HIP_DEBUG("km, spi values curr new: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 	/* (The system MUST NOT start using the new outgoing SA
 	   before it receives traffic on the new incoming SA.) */
 	HIP_DEBUG("Try to set up new outgoing SA\n");
-	peer_new_spi = ntohl(nes->new_spi);
+	new_spi_out = ntohl(nes->new_spi);
 	err = hip_setup_sa(hitr, hits,
-			   &peer_new_spi, esp_transform,
+			   &new_spi_out, esp_transform,
 			   we_are_HITg ? &espkey_gl : &espkey_lg,
 			   we_are_HITg ? &authkey_gl : &authkey_lg,
 			   0);
@@ -241,27 +241,27 @@ HIP_DEBUG("km, spi values curr new: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 			  we_are_HITg ? "gl" : "lg", err);
 		goto out_err;
 	}
-	HIP_DEBUG("Set up new outgoing SA, peer_new_spi=0x%x\n", peer_new_spi);
+	HIP_DEBUG("Set up new outgoing SA, new_spi_out=0x%x\n", new_spi_out);
 
-	/* store peer_new_spi in hadb */
+	/* store new_spi_out in hadb */
 	/* old comment: it is changed when data is received from the new SPI */
-	if (hip_hadb_set_info(hits, &peer_new_spi,
-			      HIP_HADB_PEER_NEW_SPI|HIP_ARG_HIT) != 1) {
-		HIP_ERROR("Could not store SPI value 0x%x to hadb (peer_new_spi)\n", peer_new_spi);
+	if (hip_hadb_set_info(hits, &new_spi_out,
+			      HIP_HADB_NEW_SPI_OUT|HIP_ARG_HIT) != 1) {
+		HIP_ERROR("Could not store SPI value 0x%x to hadb (new_spi_out)\n", new_spi_out);
 		err = -EINVAL;
 		goto out_err;
 	}
-	HIP_DEBUG("Stored SPI 0x%x to peer_new_spi for future use\n", peer_new_spi);
+	HIP_DEBUG("Stored SPI 0x%x to new_spi_out for future use\n", new_spi_out);
 
-	hip_finalize_sa(hits, peer_new_spi);	/* move below */
+	hip_finalize_sa(hits, new_spi_out);	/* move below */
 
 	{
-		uint32_t our_spi, peer_spi, our_new_spi, peer_new_spi;
- 		int getlist[4] = { HIP_HADB_OWN_SPI, HIP_HADB_PEER_SPI, HIP_HADB_OWN_NEW_SPI, HIP_HADB_PEER_NEW_SPI };
- 		void *setlist[4] = { &our_spi, &peer_spi, &our_new_spi, &peer_new_spi };
+		uint32_t our_spi, peer_spi, new_spi_in, new_spi_out;
+ 		int getlist[4] = { HIP_HADB_SPI_IN, HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_IN, HIP_HADB_NEW_SPI_OUT };
+ 		void *setlist[4] = { &our_spi, &peer_spi, &new_spi_in, &new_spi_out };
 		hip_hadb_multiget(hits, 4, getlist, setlist, HIP_ARG_HIT);
-		HIP_DEBUG("after peer_new_spi: our=0x%08x peer=0x%08x ournew=0x%08x peernew=0x%08x\n",
-			  our_spi, peer_spi, our_new_spi, peer_new_spi);
+		HIP_DEBUG("after new_spi_out: our=0x%08x peer=0x%08x ournew=0x%08x peernew=0x%08x\n",
+			  our_spi, peer_spi, new_spi_in, new_spi_out);
 	}
 
 
@@ -271,17 +271,17 @@ HIP_DEBUG("km, spi values curr new: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 
 #if 1
 	/* Old SPI value to put in NES tlv */
-	if (hip_hadb_get_info(hits, &our_prev_spi,
-			      HIP_HADB_OWN_SPI|HIP_ARG_HIT) != 1) {
+	if (hip_hadb_get_info(hits, &prev_spi_in,
+			      HIP_HADB_SPI_IN|HIP_ARG_HIT) != 1) {
 		HIP_ERROR("prev our spi, get info (err=%d)\n", err);
 		err = -EINVAL;
 		goto out_err;
 	}
 #endif
 
-	our_new_spi = 0;
+	new_spi_in = 0;
 	err = hip_setup_sa(hits, hitr,
-			   &our_new_spi, esp_transform,
+			   &new_spi_in, esp_transform,
 			   we_are_HITg ? &espkey_lg : &espkey_gl,
 			   we_are_HITg ? &authkey_lg : &authkey_gl,
 			   1);
@@ -289,57 +289,57 @@ HIP_DEBUG("km, spi values curr new: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 		HIP_ERROR("Setting up new incoming IPsec SA failed (%d)\n", err);
 		goto out_err;
 	}
-	HIP_DEBUG("Set up new incoming SA, our_new_spi=0x%x\n", our_new_spi);
+	HIP_DEBUG("Set up new incoming SA, new_spi_in=0x%x\n", new_spi_in);
 
-	/* store our_new_spi in hadb, it is changed when data is received from the new SPI */
-	if (hip_hadb_set_info(hits, &our_new_spi,
-			      HIP_HADB_OWN_NEW_SPI|HIP_ARG_HIT) != 1) {
-		HIP_ERROR("Could not store New SPI value to hadb (our_new_spi)\n");
+	/* store new_spi_in in hadb, it is changed when data is received from the new SPI */
+	if (hip_hadb_set_info(hits, &new_spi_in,
+			      HIP_HADB_NEW_SPI_IN|HIP_ARG_HIT) != 1) {
+		HIP_ERROR("Could not store New SPI value to hadb (new_spi_in)\n");
 		err = -EINVAL;
 		goto out_err;
 	}
-	HIP_DEBUG("Stored SPI 0x%x to our_new_spi for future use\n", our_new_spi);
+	HIP_DEBUG("Stored SPI 0x%x to new_spi_in for future use\n", new_spi_in);
 
 	/* move below */
-	hip_finalize_sa(hitr, our_new_spi);
+	hip_finalize_sa(hitr, new_spi_in);
 
 
 #if 0
 	/* update our SPI in hadb */
-	if (hip_hadb_set_info(hits, &our_new_spi,
-			      HIP_HADB_OWN_SPI|HIP_ARG_HIT) != 1) {
-		/* swap interpretation of HIP_HADB_PEER_SPI and OWN_SPI */
+	if (hip_hadb_set_info(hits, &new_spi_in,
+			      HIP_HADB_SPI_IN|HIP_ARG_HIT) != 1) {
+		/* swap interpretation of HIP_HADB_SPI_OUT and OWN_SPI */
 		HIP_ERROR("Updating hadb entry failed (%d)\n", err);
 		goto out_err;
 	}
-	HIP_DEBUG("updated outbound SPI, our_new_spi=0x%x\n", our_new_spi);
+	HIP_DEBUG("updated outbound SPI, new_spi_in=0x%x\n", new_spi_in);
 	err = 0;
 #endif
 
 	{
-		uint32_t our_spi, peer_spi, our_new_spi, peer_new_spi;
- 		int getlist[4] = { HIP_HADB_OWN_SPI, HIP_HADB_PEER_SPI, HIP_HADB_OWN_NEW_SPI, HIP_HADB_PEER_NEW_SPI };
- 		void *setlist[4] = { &our_spi, &peer_spi, &our_new_spi, &peer_new_spi };
+		uint32_t our_spi, peer_spi, new_spi_in, new_spi_out;
+ 		int getlist[4] = { HIP_HADB_SPI_IN, HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_IN, HIP_HADB_NEW_SPI_OUT };
+ 		void *setlist[4] = { &our_spi, &peer_spi, &new_spi_in, &new_spi_out };
 		hip_hadb_multiget(hits, 4, getlist, setlist, HIP_ARG_HIT);
-		HIP_DEBUG("after our_new_spi: our=0x%08x peer=0x%08x ournew=0x%08x peernew=0x%08x\n",
-			  our_spi, peer_spi, our_new_spi, peer_new_spi);
+		HIP_DEBUG("after new_spi_in: our=0x%08x peer=0x%08x ournew=0x%08x peernew=0x%08x\n",
+			  our_spi, peer_spi, new_spi_in, new_spi_out);
 	}
 
 #if 0
 	/* MUST NOT DO THIS, BUT THIS IS JUST TEST CODE. */
-	if (hip_hadb_set_info(hits, &our_new_spi,
-			      HIP_HADB_PEER_SPI|HIP_ARG_HIT) != 1) {
+	if (hip_hadb_set_info(hits, &new_spi_in,
+			      HIP_HADB_SPI_OUT|HIP_ARG_HIT) != 1) {
 		HIP_ERROR("Updating hadb entry failed (%d), our new spi\n", err);
 		goto out_err;
 	}
-	HIP_DEBUG("TESTING: ALREADY SET PEER OUTBOUND SPI TO 0x%x\n", our_new_spi);
+	HIP_DEBUG("TESTING: ALREADY SET PEER OUTBOUND SPI TO 0x%x\n", new_spi_in);
 	err = 0;
 #endif
 
 #if 0
 	/* set to dying/drop old IPsec SA ? */
-	HIP_DEBUG("HACK: REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", our_prev_spi);
-	err = hip_delete_sa(our_prev_spi, hitr, hits);
+	HIP_DEBUG("HACK: REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
+	err = hip_delete_sa(prev_spi_in, hitr, hits);
 	HIP_DEBUG("delete_sa retval=%d\n", err );
 	err = 0;
 
@@ -373,7 +373,7 @@ HIP_DEBUG("km, spi values curr new: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 	err = hip_build_param_nes(update_packet, 1,
 				  our_current_keymat_index, ntohs(nes->update_id),
-				  our_prev_spi, our_new_spi);
+				  prev_spi_in, new_spi_in);
 	if (err) {
 		HIP_ERROR("Building of NES failed\n");
 		goto out_err;
@@ -436,8 +436,8 @@ HIP_DEBUG("km, spi values curr new: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 	if (update_packet)
 		kfree(update_packet);
 	/* TODO: REMOVE IPSEC SAs */
-	if (err && our_new_spi)
-		hip_delete_sa(our_new_spi, hits);
+	if (err && new_spi_in)
+		hip_delete_sa(new_spi_in, hits);
 	return err;
 }
 
@@ -468,8 +468,8 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 //	int need_to_generate_key;
 	int dh_key_generated = 0, new_keymat_generated;
 	uint16_t current_keymat_index;
-	uint32_t our_new_spi = 0;  /* inbound IPsec SA SPI */
-	uint32_t peer_new_spi = 0; /* outbound IPsec SA SPI */
+	uint32_t new_spi_in = 0;  /* inbound IPsec SA SPI */
+	uint32_t new_spi_out = 0; /* outbound IPsec SA SPI */
 //	uint32_t peer_prev_spi;
 	int hadb_state;
 	int we_are_HITg = 0;
@@ -603,9 +603,9 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 
 
 	/* set up new outbound IPsec SA */
-	peer_new_spi = ntohl(nes->new_spi);
+	new_spi_out = ntohl(nes->new_spi);
 	err = hip_setup_sa(hitr, hits,
-			   &peer_new_spi, esp_transform,
+			   &new_spi_out, esp_transform,
 			   we_are_HITg ? &espkey_gl : &espkey_lg,
 			   we_are_HITg ? &authkey_gl : &authkey_lg,
 			   1);
@@ -613,22 +613,22 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 		HIP_ERROR("Setting up new outbound IPsec failed (%d)\n", err);
 		goto out_err;
 	}
-	HIP_DEBUG("Set up new outbound IPsec SA, SPI=0x%x\n", peer_new_spi);
+	HIP_DEBUG("Set up new outbound IPsec SA, SPI=0x%x\n", new_spi_out);
 
-	hip_finalize_sa(hits, peer_new_spi);	/* move below */
+	hip_finalize_sa(hits, new_spi_out);	/* move below */
 
 	{
-		uint32_t our_spi, peer_spi, our_new_spi, peer_new_spi;
- 		int getlist[4] = { HIP_HADB_OWN_SPI, HIP_HADB_PEER_SPI, HIP_HADB_OWN_NEW_SPI, HIP_HADB_PEER_NEW_SPI };
- 		void *setlist[4] = { &our_spi, &peer_spi, &our_new_spi, &peer_new_spi };
+		uint32_t our_spi, peer_spi, new_spi_in, new_spi_out;
+ 		int getlist[4] = { HIP_HADB_SPI_IN, HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_IN, HIP_HADB_NEW_SPI_OUT };
+ 		void *setlist[4] = { &our_spi, &peer_spi, &new_spi_in, &new_spi_out };
 		hip_hadb_multiget(hits, 4, getlist, setlist, HIP_ARG_HIT);
-		HIP_DEBUG("after peer_new_spi: our=0x%08x peer=0x%08x ournew=0x%08x peernew=0x%08x\n",
-			  our_spi, peer_spi, our_new_spi, peer_new_spi);
+		HIP_DEBUG("after new_spi_out: our=0x%08x peer=0x%08x ournew=0x%08x peernew=0x%08x\n",
+			  our_spi, peer_spi, new_spi_in, new_spi_out);
 	}
 
 #if 0
 	if (!hip_hadb_get_info(hits, &prev_peer_spi,
-			       HIP_HADB_PEER_SPI|HIP_ARG_HIT)) {
+			       HIP_HADB_SPI_OUT|HIP_ARG_HIT)) {
 		HIP_ERROR("No prev peer SPI found\n");
 		err = -ENOENT;
 		goto out_err;
@@ -641,25 +641,25 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 #endif
 
 	/* update peer SPI in hadb */
-	if (0 && hip_hadb_set_info(hits, &peer_new_spi, HIP_HADB_PEER_SPI|HIP_ARG_HIT) != 1) {
+	if (0 && hip_hadb_set_info(hits, &new_spi_out, HIP_HADB_SPI_OUT|HIP_ARG_HIT) != 1) {
 		HIP_ERROR("Updating hadb entry failed (%d)\n", err);
 		goto out_err;
 	}
-	HIP_DEBUG("updated outbound SPI, peer_new_spi=0x%x\n", peer_new_spi);
+	HIP_DEBUG("updated outbound SPI, new_spi_out=0x%x\n", new_spi_out);
 	err = 0;
 
 	/* use the new inbound IPsec SA created when rekeying started */
-	if (hip_hadb_get_info(hits, &our_new_spi,
-			      HIP_HADB_OWN_NEW_SPI|HIP_ARG_HIT) != 1) {
+	if (hip_hadb_get_info(hits, &new_spi_in,
+			      HIP_HADB_NEW_SPI_IN|HIP_ARG_HIT) != 1) {
 		HIP_ERROR("No own new SPI found\n");
 		err = -ENOENT;
 		goto out_err;
 	}
-	HIP_DEBUG("switching to new updated inbound SPI=0x%x, new_spi_our\n", our_new_spi);
+	HIP_DEBUG("switching to new updated inbound SPI=0x%x, new_spi_in\n", new_spi_in);
 
 	HIP_DEBUG("copying keys to new updated inbound SA\n");
-	HIP_DEBUG("Searching for spi: %x (%x)\n", our_new_spi, htonl(our_new_spi));
-	xs = xfrm_state_lookup((xfrm_address_t *)hitr, htonl(our_new_spi),
+	HIP_DEBUG("Searching for spi: %x (%x)\n", new_spi_in, htonl(new_spi_in));
+	xs = xfrm_state_lookup((xfrm_address_t *)hitr, htonl(new_spi_in),
 			       IPPROTO_ESP, AF_INET6);
 	if (!xs) {
 		HIP_ERROR("Did not find SA\n");
@@ -685,8 +685,8 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	spin_unlock_bh(&xs->lock);
 	xfrm_state_put(xs);
 
-	if (0 && hip_hadb_set_info(hits, &our_new_spi,
-			      HIP_HADB_OWN_SPI|HIP_ARG_HIT) != 1) {
+	if (0 && hip_hadb_set_info(hits, &new_spi_in,
+			      HIP_HADB_SPI_IN|HIP_ARG_HIT) != 1) {
 		HIP_ERROR("Could not set our SPI value to hadb\n");
 		err = -EINVAL;
 		goto out_err;
@@ -1070,13 +1070,13 @@ int hip_send_update(struct hip_hadb_state *entry)
 
 #if 1
 	if (hip_hadb_set_info(&entry->hit_peer, &new_spi,
-			      HIP_HADB_OWN_NEW_SPI|HIP_ARG_HIT) != 1) {
-		HIP_ERROR("Could not set New SPI value to hadb, our_new_spi\n");
+			      HIP_HADB_NEW_SPI_IN|HIP_ARG_HIT) != 1) {
+		HIP_ERROR("Could not set New SPI value to hadb, new_spi_in\n");
 		err = -EINVAL;
 		goto out_err;
 	}
 #endif
-	HIP_DEBUG("stored New SPI for future use (OUR_NEW_SPI=0x%x)\n", new_spi);
+	HIP_DEBUG("stored New SPI for future use (NEW_SPI_IN=0x%x)\n", new_spi);
 	_HIP_DEBUG("** TODO: update entry keys **\n");
 
 	/* start building UPDATE packet */
@@ -1108,7 +1108,7 @@ int hip_send_update(struct hip_hadb_state *entry)
         HIP_DEBUG("Stored peer's outgoing UPDATE ID %u\n", update_id_out);
 
 	err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index,
-				  update_id_out, entry->spi_our, new_spi); 
+				  update_id_out, entry->spi_in, new_spi); 
 	if (err) {
 		HIP_ERROR("Building of NES param failed\n");
 		goto out_err;
@@ -1156,7 +1156,7 @@ int hip_send_update(struct hip_hadb_state *entry)
 	/* todo: add UPDATE to sent list */
 
 	HIP_DEBUG("spi values when sending update: 0x%08x 0x%08x 0x%08x 0x%08x\n",
-		  entry->spi_our, entry->spi_peer, entry->new_spi_our, entry->new_spi_peer);
+		  entry->spi_in, entry->spi_out, entry->new_spi_in, entry->new_spi_out);
 	/* send UPDATE */
         HIP_DEBUG("Sending UPDATE packet\n");
         err = hip_hadb_get_peer_address(&entry->hit_peer, &daddr, HIP_ARG_HIT);
