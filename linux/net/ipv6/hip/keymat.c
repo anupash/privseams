@@ -27,7 +27,6 @@ u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len,
 		requiredmem = kij_len + 2 * sizeof(struct in6_addr) +
 			sizeof(u8);
 
-
 	buffer = kmalloc(requiredmem, GFP_KERNEL);
 	if (!buffer) {
 		HIP_ERROR("Out of memory\n");
@@ -149,7 +148,9 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 		HIP_ERROR("NULL calc_index\n");
 
 	HIP_DEBUG("keymat index_nbr=%u\n", index_nbr);
-	_HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
+	HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
+	if (shabuffer)
+		kfree(shabuffer);
 
 	return;
 }
@@ -210,7 +211,7 @@ int hip_keymat_get_new(struct hip_hadb_state *entry, void *key, size_t key_len,
 
 	HIP_DEBUG("key_len=%d, requested keymat_offset=%u calc_index=%u\n",
 		  key_len, *keymat_offset, *calc_index);
-	HIP_HEXDUMP("calc_index_keymat",calc_index_keymat , HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("calc_index_keymat", calc_index_keymat, HIP_AH_SHA_LEN);
  	if (key_len == 0 || kij_len == 0) {
 		HIP_ERROR("key_len = 0 or kij_len = 0\n");
 		err = -EINVAL;

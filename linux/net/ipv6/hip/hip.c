@@ -597,7 +597,6 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 		       hip_hmac_key_length(entry->esp_transform));
 	}
 
-	/* TODO: just reuse the keymatdst pointer, do not kmalloc */
 	hip_update_entry_keymat(entry, ctx->current_keymat_index,
 				ctx->keymat_calc_index, ctx->current_keymat_K);
 
@@ -607,6 +606,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	}
 
 	entry->dh_shared_key_len = 0;
+	/* todo: reuse pointer, no kmalloc */
 	entry->dh_shared_key = kmalloc(ctx->dh_shared_key_len, GFP_KERNEL);
 	if (!entry->dh_shared_key) {
 		HIP_ERROR("entry dh_shared kmalloc failed\n");

@@ -602,8 +602,10 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 #undef KEYMAT_DRAW_AND_COPY
 
-	ctx->current_keymat_index = keymat_len_min; /* test: remove assignment from make_keymat ? */
+	ctx->current_keymat_index = keymat_len_min;
 	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
+
+	memcpy(ctx->current_keymat_K, keymat+(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
 	HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
 		  ctx->keymat_calc_index, ctx->current_keymat_index);
