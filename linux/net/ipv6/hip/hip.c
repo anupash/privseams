@@ -232,7 +232,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 		return -EFAULT;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages\n");
+	_HIP_DEBUG("Mapping virtual to pages\n");
 
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1 ) {
@@ -240,7 +240,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 		return -EFAULT;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages successful\n");
+	_HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	crypto_digest_init(impl);
 	crypto_digest_digest(impl, sg, nsg, out);
@@ -303,7 +303,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 		return 0;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages\n");
+	_HIP_DEBUG("Mapping virtual to pages\n");
 
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1) {
@@ -311,7 +311,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 		return 0;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages successful\n");
+	_HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	crypto_hmac(impl, key, &keylen, sg, nsg, out);
 
@@ -891,7 +891,7 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		goto out_err;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages\n");
+	_HIP_DEBUG("Mapping virtual to pages\n");
 
 //	err = hip_map_virtual_to_pages(src_sg, &src_nsg, data, enc_len);
 	err = hip_map_virtual_to_pages(src_sg, &src_nsg, result, enc_len);
@@ -901,7 +901,7 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		goto out_err;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages successful\n");
+	_HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	/* we will write over the source */
 
@@ -1373,7 +1373,7 @@ static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 	} else {
 		/* send UPDATEs if there are addresses to be informed to the peers */
 		if (idev_addr_count > 0 && addr_list)
-			hip_send_update_all(addr_list, idev_addr_count, ifindex);
+			hip_send_update_all(addr_list, idev_addr_count, ifindex, 0x0);
 		else
 			HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
 	}

@@ -1425,6 +1425,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	hip_ha_t *entry = ha;
 	int esptfm;
 	uint32_t spi_in, spi_out;
+	int ifindex = 0;
 
  	HIP_DEBUG("\n");
 
@@ -1733,10 +1734,14 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	entry->default_spi_out = spi_out;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
 
-	/* this is a delayed "insertion" from some 20 lines above */
 	HIP_LOCK_HA(entry);
 	entry->spi_in = spi_in;
-
+	ifindex = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
+	if (ifindex) {
+		HIP_DEBUG("ifindex=%d\n", ifindex);
+		hip_ifindex2spi_map_add(entry, spi_in, ifindex);
+	} else
+		HIP_ERROR("Couldn't get device ifindex of address\n");
 	err = hip_store_base_exchange_keys(entry, ctx, 0);
 	HIP_UNLOCK_HA(entry);
 
@@ -1745,7 +1750,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 
-	HIP_ERROR("INSERTING STATE\n");
+	HIP_DEBUG("INSERTING STATE\n");
 	hip_hadb_insert_state(entry);
 
 	err = hip_create_r2(ctx, entry);

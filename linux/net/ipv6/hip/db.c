@@ -653,7 +653,7 @@ int hip_proc_send_update(char *page, char **start, off_t off,
 			 int count, int *eof, void *data)
 {
 	HIP_DEBUG("\n");
-	hip_send_update_all(NULL, 0, 0);
+	hip_send_update_all(NULL, 0, 0, 0);
 	*eof = 1;
 
 	return 0;
@@ -853,6 +853,7 @@ void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_ifindex2spi_map *m;
 	struct list_head *pos, *tmp;
+	char str[INET6_ADDRSTRLEN];
 
 	HIP_DEBUG("spi=0x%x\n", spi);
 
@@ -867,6 +868,14 @@ void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi)
 	}
 
  out:
+	hip_in6_ntop(&entry->hit_peer, str);
+	HIP_DEBUG("Current ifindex->SPI mappings for %s:\n", str);
+	list_for_each_safe(pos, tmp, &entry->ifindex2spi_map) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		HIP_DEBUG("SPI=0x%x ifindex=%d\n", m->spi, m->ifindex);
+	}
+	HIP_DEBUG("End of mapping list\n");
+
 	return;
 }
 
@@ -882,12 +891,31 @@ uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex)
 	list_for_each_safe(pos, n, &entry->ifindex2spi_map) {
 		m = list_entry(pos, struct hip_ifindex2spi_map, list);
 		if (m->ifindex == ifindex) {
-			HIP_DEBUG("found\n");
+			_HIP_DEBUG("found\n");
 			spi = m->spi;
 			break;
 		}
 	}
 	return spi;
+}
+
+/* assumes locked HA */
+int hip_ifindex2spi_get_ifindex(hip_ha_t *entry, uint32_t spi)
+{
+	struct list_head *pos, *n;
+	struct hip_ifindex2spi_map *m = NULL;
+	int ifindex = 0;
+
+	HIP_DEBUG("spi=0x%x\n", spi);
+	list_for_each_safe(pos, n, &entry->ifindex2spi_map) {
+		m = list_entry(pos, struct hip_ifindex2spi_map, list);
+		if (m->spi == spi) {
+			_HIP_DEBUG("found\n");
+			ifindex = m->ifindex;
+			break;
+		}
+	}
+	return ifindex;
 }
 
 /* assumes locked HA */

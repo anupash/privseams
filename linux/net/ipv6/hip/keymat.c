@@ -101,8 +101,8 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 
 	_HIP_HEXDUMP("bigger hit", bigger_hit, 16);
 	_HIP_HEXDUMP("smaller hit", smaller_hit, 16);
-	HIP_HEXDUMP("index_nbr", (char *) &index_nbr,
-		    HIP_KEYMAT_INDEX_NBR_SIZE);
+	_HIP_HEXDUMP("index_nbr", (char *) &index_nbr,
+		     HIP_KEYMAT_INDEX_NBR_SIZE);
 
 	shabuffer = hip_create_keymat_buffer(kij, kij_len, HIP_AH_SHA_LEN,
 					     smaller_hit, bigger_hit);
@@ -220,7 +220,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 
 	HIP_DEBUG("key_len=%d, requested keymat_index=%u calc_index=%u Kn_is_at=%u\n",
 		  key_len, *keymat_index, *calc_index, *Kn_is_at);
-	HIP_HEXDUMP("calc_index_keymat", calc_index_keymat, HIP_AH_SHA_LEN);
+	_HIP_HEXDUMP("calc_index_keymat", calc_index_keymat, HIP_AH_SHA_LEN);
 
  	if (key_len == 0 || kij_len == 0) {
 		HIP_ERROR("key_len = 0 or kij_len = 0\n");
@@ -246,7 +246,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	 */
 	if (*keymat_index - *Kn_is_at < HIP_AH_SHA_LEN) {
 		int tmp = HIP_AH_SHA_LEN - (*keymat_index - *Kn_is_at);
-		HIP_DEBUG("test: can copy %d bytes from the end of sha K\n", tmp);
+		_HIP_DEBUG("test: can copy %d bytes from the end of sha K\n", tmp);
 		if (tmp > HIP_AH_SHA_LEN) {
 			HIP_ERROR("bug: tmp > 20\n");
 			err = -EINVAL;
@@ -259,15 +259,15 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		}
 	}
 
-	HIP_DEBUG("copied=%d\n", copied);
-	HIP_HEXDUMP("KEY (0)", key, copied);
+	_HIP_DEBUG("copied=%d\n", copied);
+	_HIP_HEXDUMP("KEY (0)", key, copied);
 
 	if (copied == key_len) {
 		HIP_DEBUG("copied all, return\n");
 		goto out;
 	}
 
-	HIP_DEBUG("need %d bytes more data\n", key_len-copied);
+	_HIP_DEBUG("need %d bytes more data\n", key_len-copied);
 
 	tmp_data_len = kij_len + HIP_AH_SHA_LEN + 1;
 	tmp_data = kmalloc(tmp_data_len, GFP_KERNEL);
@@ -281,7 +281,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 
 	while (copied < key_len) {
 		(*calc_index)++;
-		HIP_DEBUG("calc_index=%u\n", *calc_index);
+		_HIP_DEBUG("calc_index=%u\n", *calc_index);
 		/* create Kn = SHA-1( Kij | Kn-1 | calc_index) */
 
 		/* Kij | Kn-1 */
@@ -296,7 +296,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		}
 		*Kn_is_at += HIP_AH_SHA_LEN;
 #if 1
-		HIP_DEBUG("keymat K%u from offset %u\n", *calc_index, *Kn_is_at);
+		_HIP_DEBUG("keymat K%u from offset %u\n", *calc_index, *Kn_is_at);
 		HIP_HEXDUMP("", calc_index_keymat, HIP_AH_SHA_LEN);
 #endif
 		if (*Kn_is_at + HIP_AH_SHA_LEN < *keymat_index) {
@@ -304,26 +304,26 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 			continue;
 		}
 
-		HIP_DEBUG("copied=%u, key_len=%u calc_index=%u dst to 0x%p\n", copied, key_len, *calc_index, key+copied);
+		_HIP_DEBUG("copied=%u, key_len=%u calc_index=%u dst to 0x%p\n", copied, key_len, *calc_index, key+copied);
 		if (copied + HIP_AH_SHA_LEN <= key_len) {
-			HIP_DEBUG("copy whole sha block\n");
+			_HIP_DEBUG("copy whole sha block\n");
 			memcpy(key+copied, calc_index_keymat, HIP_AH_SHA_LEN);
 			copied += HIP_AH_SHA_LEN;
 		} else {
 			int t = HIP_AH_SHA_LEN - key_len % HIP_AH_SHA_LEN;
 			t = key_len - copied;
-			HIP_DEBUG("copy partial %d bytes\n", t);
+			_HIP_DEBUG("copy partial %d bytes\n", t);
 			memcpy(key+copied, calc_index_keymat, t);
 			copied += t;
 		}
 	}
 
-	HIP_DEBUG("end: copied=%u\n", copied);
+	_HIP_DEBUG("end: copied=%u\n", copied);
 
  out:
-	HIP_HEXDUMP("CALCULATED KEY", key, key_len);
-	HIP_DEBUG("at end: *keymat_index=%u *calc_index=%u\n",
-		  *keymat_index, *calc_index);
+	_HIP_HEXDUMP("CALCULATED KEY", key, key_len);
+	_HIP_DEBUG("at end: *keymat_index=%u *calc_index=%u\n",
+		   *keymat_index, *calc_index);
  out_err:
 	if(tmp_data)
 		kfree(tmp_data);
@@ -349,6 +349,6 @@ void hip_update_entry_keymat(struct hip_hadb_state *entry,
 		  entry->current_keymat_index, entry->keymat_calc_index);
 	if (new_current_keymat) {
 		memcpy(entry->current_keymat_K, new_current_keymat, HIP_AH_SHA_LEN);
-		HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);
+		_HIP_HEXDUMP("new_current_keymat", new_current_keymat, HIP_AH_SHA_LEN);
 	}
 }
