@@ -1016,7 +1016,6 @@ int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data)
 	int err = 0;
 
 	_HIP_DEBUG("direction=%d\n", direction);
-
 	if (direction == HIP_SPI_DIRECTION_IN)
 		err = hip_hadb_add_inbound_spi(entry, (struct hip_spi_in_item *) data);
 	else if (direction == HIP_SPI_DIRECTION_OUT)
@@ -1051,6 +1050,27 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	HIP_UNLOCK_HA(entry);
 }
 
+/* delete all entry's inbound SAs */
+void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
+{
+	struct hip_spi_in_item *item, *tmp;
+
+	HIP_DEBUG("entry=0x%p\n", entry);
+	/* assume locked entry ? */
+//	HIP_LOCK_HA(entry);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
+			  item->spi, item->new_spi, item);
+		HIP_ERROR("TODO: REMOVE SPI FROM HIT-SPI HT\n");
+		hip_delete_sa(item->spi, &entry->hit_our);
+		hip_delete_sa(item->new_spi, &entry->hit_our);
+		list_del(&item->list);
+		kfree(item);
+//		hip_hadb_delete_inbound_spi(entry, item->spi);
+        }
+//	HIP_UNLOCK_HA(entry);
+}
+
 void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_out_item *item, *tmp;
@@ -1073,21 +1093,6 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 }
 
 
-/* delete all entry's inbound SAs */
-void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
-{
-	struct hip_spi_in_item *item, *tmp;
-
-	HIP_DEBUG("entry=0x%p\n", entry);
-	/* assume locked entry ? */
-//	HIP_LOCK_HA(entry);
-        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		hip_hadb_delete_inbound_spi(entry, item->spi);
-        }
-//	HIP_UNLOCK_HA(entry);
-}
-
-
 /* delete all entry's outbound SAs */
 void hip_hadb_delete_outbound_spis(hip_ha_t *entry)
 {
@@ -1096,12 +1101,15 @@ void hip_hadb_delete_outbound_spis(hip_ha_t *entry)
 	HIP_DEBUG("entry=0x%p\n", entry);
 	/* assume locked entry ? */
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		hip_hadb_delete_outbound_spi(entry, item->spi);
+		HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
+			  item->spi, item->new_spi, item);
+		hip_delete_sa(item->spi, &entry->hit_peer);
+		hip_delete_sa(item->new_spi, &entry->hit_peer);
+		list_del(&item->list);
+		kfree(item);
+//		hip_hadb_delete_outbound_spi(entry, item->spi);
         }
-
 }
-
-
 
 
 /* kludge for removing old entry->spi_in code to the new code */

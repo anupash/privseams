@@ -1,25 +1,11 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
-//#include <linux/in6.h>
-//#include <linux/socket.h>
-//#include <linux/sched.h>
-//#include <linux/random.h>
-
 #include <linux/list.h>
 #include <linux/spinlock.h>
 #include <net/ipv6.h>
 #include <net/hip.h>
-
-
 #include "hip.h"
-//#include "debug.h"
-//#include "misc.h"
-//#include "security.h"
-//#include "daemon.h"
-//#include "builder.h"
-//#include "socket.h"
-
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
@@ -50,45 +36,6 @@ struct hip_db_struct {
 
 #define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
 #define HIP_DB_PEER_HID    (&hip_peer_hostid_db)
-
-#if 0
-/* HADB functions */
-#define hip_hadb_get_birthday_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_BIRTHDAY|HIP_ARG_HIT))
-#define hip_hadb_get_esp_tfm_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_ESP_TRANSFORM|HIP_ARG_HIT))
-#define hip_hadb_get_own_hit_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_OWN_HIT|HIP_ARG_HIT))
-#define hip_hadb_get_own_hmac_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_OWN_HMAC|HIP_ARG_HIT))
-#define hip_hadb_get_keymat_index_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_KEYMAT_INDEX|HIP_ARG_HIT))
-#define hip_hadb_get_our_new_spi_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_OUR_NEW_SPI|HIP_ARG_HIT))
-#define hip_hadb_get_update_id_in_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_OWN_UPDATE_ID_IN|HIP_ARG_HIT))
-#define hip_hadb_get_update_id_out_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_OWN_UPDATE_ID_OUT|HIP_ARG_HIT))
-#define hip_hadb_get_peer_spi_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_SPI_OUT|HIP_ARG_HIT))
-#define hip_hadb_get_peer_new_spi_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_NEW_SPI_OUT|HIP_ARG_HIT))
-#define hip_hadb_get_state_by_hit(hit,a) \
-            (hip_hadb_get_info(hit,a,HIP_HADB_STATE|HIP_ARG_HIT))
-
-
-#define hip_hadb_get_spis_by_hit(hit,list,a,b) \
-            (hip_hadb_multiget(hit,list,2,a,b,NULL,NULL,HIP_ARG_HIT))
-#define hip_hadb_set_lsis_by_hit(hit,list,a,b) \
-            (hip_hadb_multiset(hit,list,2,a,b,NULL,NULL,HIP_ARG_HIT))
-
-
-#define hip_hadb_set_update_id_in_by_hit(hit,list,a) \
-            (hip_hadb_multiset(hit,list,1,a,NULL,NULL,NULL,HIP_ARG_HIT))
-#define hip_hadb_set_update_id_out_by_hit(hit,list,a) \
-            (hip_hadb_multiset(hit,list,1,a,NULL,NULL,NULL,HIP_ARG_HIT))
-
-#endif
 
 #define HIP_READ_LOCK_DB(db) do { \
 	KRISU_START_TIMER(KMM_SPINLOCK);\
@@ -124,54 +71,6 @@ struct hip_hadb_multi {
 };
 
 typedef struct hip_host_id HIP_HID;
-
-#if 0
-void hip_hadb_free_kludge(struct in6_addr *hit);
-int hip_hadb_flush_states(struct in6_addr *hit);
-void hip_hadb_acquire_ex_db_access(unsigned long *flags);
-void hip_hadb_release_ex_db_access(unsigned long flags);
-void hip_hadb_acquire_db_access(unsigned long *flags);
-void hip_hadb_release_db_access(unsigned long flags);
-struct hip_hadb_state *hip_hadb_access_db(void *arg, int type);
-int hip_hadb_reinitialize_state(void *arg, int type);
-
-struct hip_hadb_multi *hip_hadb_add_multi(struct hip_hadb_multi *target,
-					  void *arg, int type, int gfpmask);
-
-int        hip_hadb_add_peer_address(void *, struct in6_addr *, uint32_t, 
-				     uint32_t, int);
-int        hip_hadb_copy_addr_by_spi(uint32_t, struct in6_addr *, 
-				     struct in6_addr *);
-int hip_add_peer_info_nolock(struct in6_addr *hit, struct in6_addr *addr);
-
-HIP_STATE *hip_hadb_create_entry(void);
-void hip_hadb_delete_peer_addr_iface(void *arg, uint32_t interface_id, int);
-void hip_hadb_delete_peer_addr_not_in_list(void *arg, void *addrlist,
-					   int n_addrs,
-					   uint32_t iface, int type);
-void       hip_hadb_delete_peer_address_list(void *arg, int type);
-void       hip_hadb_delete_peer_address_list_one(void *,
-						 struct in6_addr *, int);
-void hip_hadb_destroy_multi(struct hip_hadb_multi *m);
-int        hip_hadb_exists_entry(void *arg, int type);
-int hip_hadb_get_peer_address_info(void *arg, struct in6_addr *addr, 
-				   uint32_t *interface_id, uint32_t *lifetime,
-				   struct timeval *modified_time, int type);
-int hip_hadb_get_peer_address(void *arg, struct in6_addr *addr, int type);
-void       hip_hadb_insert_entry(struct hip_hadb_state *entry);
-int hip_hadb_set_peer_address_info(void *arg,struct in6_addr *,
-				   uint32_t *interface_id,
-				   uint32_t *lifetime,int type);
-int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
-
-int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int type);
-int hip_hadb_get_info(void *arg, void *dst, int type);
-int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int type);
-int hip_hadb_set_info(void *arg, void *dst, int type);
-int hip_hadb_save_sk(struct in6_addr *hit, struct sock *sk);
-void hip_hadb_free_socks(struct in6_addr *arg, int error);
-
-#endif
 
 // host id functions
 int hip_get_any_local_hit(struct in6_addr *dst);
@@ -237,6 +136,7 @@ int hip_update_get_spi_status(hip_ha_t *entry, uint32_t spi);
 void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi, uint32_t spi_out);
 void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi);
 uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t spi);
+void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi);
 void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
 			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
 			   uint16_t keymat_index);

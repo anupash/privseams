@@ -840,7 +840,7 @@ void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
 void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi)
 {
 	HIP_DEBUG("spi=0x%x\n", spi);
-	HIP_ERROR("TODO\n");
+	HIP_ERROR("TODO: remove SPI from HIT-SPI HT\n");
 }
 
 int hip_ifindex2spi_get_ifindex(hip_ha_t *entry, uint32_t spi)
@@ -856,6 +856,8 @@ int hip_ifindex2spi_get_ifindex(hip_ha_t *entry, uint32_t spi)
 			break;
 		}
         }
+	if (!ifindex)
+		HIP_DEBUG("not found\n");
 	return ifindex;
 }
 
@@ -873,22 +875,21 @@ uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex)
 			break;
 		}
         }
+	if (!spi)
+		HIP_DEBUG("not found\n");
 	return spi;
 }
 
 /* bad name */
-//uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi_out)
 uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
 	uint32_t spi = 0;
 
-	//	HIP_DEBUG("prev_spi_out=0x%x\n", prev_spi_out);
 	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x nes_spi_out=0x%x\n",
-			  item->ifindex, item->spi, item->nes_spi_out);
-		//if (item->nes_spi_out == prev_spi_out) {
+		HIP_DEBUG("test item: ifindex=%d spi=0x%x nes_spi_out=0x%x seq_id=%u\n",
+			  item->ifindex, item->spi, item->nes_spi_out, item->seq_update_id);
 		if (item->seq_update_id == peer_update_id) {
 			HIP_DEBUG("found\n");
 			spi = item->spi;
@@ -959,14 +960,11 @@ void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
 				HIP_ERROR("SA update not in progress, continuing anyway\n");
 			}
 			if (item->new_spi) {
-				HIP_ERROR("previous new_spi is not zero: 0x%x\n", item->new_spi);
-				HIP_ERROR("todo: delete previous new_spi\n");
+				HIP_ERROR("warning: previous new_spi is not zero: 0x%x\n",
+					  item->new_spi);
 			}
 			item->new_spi = new_spi;
-			if (spi_out)
-				item->nes_spi_out = spi_out; /* maybe useless */
-			else
-				HIP_DEBUG("not setting nes_spi_out\n");
+			item->nes_spi_out = spi_out; /* maybe useless */
 			break;
 		}
         }
@@ -1017,13 +1015,40 @@ uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 	return new_spi;
 }
 
+
+/* switch from Old SPI to New SPI */
+/* caller must delete the Old SPI */
+void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi)
+{
+	struct hip_spi_in_item *item, *tmp;
+
+	HIP_DEBUG("old_spi=0x%x\n", old_spi);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("test item: ifindex=%d spi=0x%x new_spi=0x%x nes_spi_out=0x%x seq_id=%u\n",
+			  item->ifindex, item->spi, item->new_spi,
+			  item->nes_spi_out, item->seq_update_id);
+		if (item->spi == old_spi) {
+			HIP_DEBUG("switching\n");
+			item->spi = item->new_spi;
+			item->new_spi = 0;
+			item->nes_spi_out = 0;
+			break;
+		}
+        }
+	HIP_DEBUG("returning\n");
+}
+
+
+
+
+
 void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set_flags,
 			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
 			   uint16_t keymat_index)
 {
-	HIP_DEBUG("spi=0x%x direction=%s update_id=%u update_flags_or=0x%x keymat_index=%u\n",
+	HIP_DEBUG("spi=0x%x direction=%s update_id=%u update_flags_or=0x%x keymat_index=%u nes=0x%p\n",
 		  spi, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT",
-		  update_id, update_flags_or, keymat_index);
+		  update_id, update_flags_or, keymat_index, nes);
 
 	if (direction == HIP_SPI_DIRECTION_IN) {
 		struct hip_spi_in_item *item, *tmp;
@@ -1245,6 +1270,8 @@ uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex)
 			break;
 		}
 	}
+	if (!spi)
+		HIP_DEBUG("not found\n");
 	return spi;
 }
 
@@ -1264,6 +1291,8 @@ int hip_ifindex2spi_get_ifindex(hip_ha_t *entry, uint32_t spi)
 			break;
 		}
 	}
+	if (!ifindex)
+		HIP_DEBUG("not found\n");
 	return ifindex;
 }
 

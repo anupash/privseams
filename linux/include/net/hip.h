@@ -810,11 +810,11 @@ struct hip_spi_in_item
 	uint32_t         spi;
 	uint32_t         new_spi; /* SPI is changed to this when rekeying */
 	int              ifindex; /* ifindex if the netdev to which this is related to */
-	unsigned long    timestamp;
+	unsigned long    timestamp; /* when SA was created */
 	int              updating; /* UPDATE is in progress */
 	uint32_t         nes_spi_out; /* UPDATE, the stored outbound
 				       * SPI related to the inbound
-				       * SPI we sent in reply (?) */
+				       * SPI we sent in reply (useless ?) */
 	uint16_t         keymat_index; /* advertized keymat index */
 	int              update_state_flags; /* 0x1=received ack for
 						sent SEQ, 0x2=received
@@ -895,10 +895,12 @@ struct hip_hadb_state
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
 
 	/* new update specs testing */
+#if 0
 	int update_state_flags; /* 0x1=received ack, 0x2=received nes
 				   -> 0x3=can move back to established */
 	uint32_t stored_sent_update_id; /* the SEQ to wait ACK for */
 	struct hip_nes stored_received_nes;
+#endif
 };
 
 struct hip_cookie_entry {
