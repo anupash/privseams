@@ -219,6 +219,10 @@ typedef uint16_t in_port_t;
 
 #define HIP_HI_DSA                    3
 #define HIP_SIG_DSA                   3
+#define HIP_HI_RSA                    5
+#define HIP_SIG_RSA                   5
+#define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
+#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_DSA
 
 #define HIP_DIGEST_MD5                1
 #define HIP_DIGEST_SHA1               2
@@ -237,6 +241,9 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
 #define HIP_DSA_SIGNATURE_LEN        41
+/* Assume that RSA key is 1024 bits. RSA signature is as long as the key
+   (1024 bits -> 128 bytes) */
+#define HIP_RSA_SIGNATURE_LEN       128
 
 #define ENOTHIT                     666
 
@@ -705,6 +712,7 @@ struct hip_context
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
 	uint16_t keymat_index; /* KEYMAT offset */
+	uint8_t host_id_algo; /* used in create_r2 */
 };
 
 struct hip_context_dh_sig

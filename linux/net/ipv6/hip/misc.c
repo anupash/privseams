@@ -18,13 +18,14 @@
  * XX TODO: HAA
  * XX TODO: which one to use: this or the function just below?
  */
-int hip_host_id_to_hit(const struct hip_host_id *host_id,
+int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type)
 {
        int err = 0;
        u8 digest[HIP_AH_SHA_LEN];
        char *key_rr = (char *) (host_id + 1); /* skip the header */
-       /* hit excludes rdata but it is included in hi_length; subtract rdata */
+       /* hit excludes rdata but it is included in hi_length;
+	  subtract rdata */
        unsigned int key_rr_len = ntohs(host_id->hi_length) -
  	 sizeof(struct hip_host_id_key_rdata);
 
@@ -55,8 +56,35 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
        return err;
 }
 
-int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
-			       struct in6_addr *hit, int hit_type)
+int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
+			   struct in6_addr *hit, int hit_type)
+{
+  int err;
+  err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+  return err;
+}
+
+int hip_host_id_to_hit(const struct hip_host_id *host_id,
+		       struct in6_addr *hit, int hit_type)
+{
+	int algo = hip_get_host_id_algo(host_id);
+	int err = 0;
+
+	if (algo == HIP_HI_DSA) {
+		err = hip_dsa_host_id_to_hit(host_id, hit,
+						     hit_type);
+	} else if (algo == HIP_HI_RSA) {
+		err = hip_rsa_host_id_to_hit(host_id, hit,
+						     hit_type);
+	} else {
+		err = -ENOSYS;
+	}
+
+	return err;
+}
+
+int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+				   struct in6_addr *hit, int hit_type)
 {
 	int err = 0;
 	struct hip_host_id *host_id_pub = NULL;
@@ -92,7 +120,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
 		     hip_get_param_total_len(host_id_pub));
 
-	err = hip_host_id_to_hit(host_id_pub, hit, hit_type);
+	err = hip_dsa_host_id_to_hit(host_id_pub, hit, hit_type);
 	if (err) {
 		HIP_ERROR("Failed to convert HI to HIT.\n");
 		goto out_err;
@@ -102,6 +130,72 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 
 	if (host_id_pub)
 		kfree(host_id_pub);
+
+	return err;
+}
+
+int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
+				   struct in6_addr *hit, int hit_type)
+{
+	int err = 0;
+	struct hip_host_id *host_id_pub = NULL;
+	int contents_len;
+	int total_len;
+
+	contents_len = hip_get_param_contents_len(host_id);
+	total_len = hip_get_param_total_len(host_id);
+	
+	/* XX FIX: REMOVE PRIVATE KEY? */
+
+	/* Allocate space for public key */
+	host_id_pub = kmalloc(total_len, GFP_KERNEL);
+	if (!host_id_pub) {
+		err = -EFAULT;
+		goto out_err;
+	}
+	memset(host_id_pub, 0, total_len);
+
+	/* How do we extract the public key from the hip_host_id 
+	   struct? TODO: CHECK THIS */
+	memcpy(host_id_pub, host_id,
+	       sizeof(struct hip_tlv_common) + contents_len - 128 * 2);
+
+	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - 128*2);
+	hip_set_param_contents_len(host_id_pub, contents_len - 128*2);	
+
+	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
+				 hip_get_param_total_len(host_id_pub));
+
+	err = hip_rsa_host_id_to_hit(host_id_pub, hit, hit_type);
+
+	if (err) {
+			HIP_ERROR("Failed to convert HI to HIT.\n");
+			goto out_err;
+	}
+
+ out_err:
+	
+	if (host_id_pub)
+			kfree(host_id_pub);
+	
+	return err;
+}
+
+int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
+			       struct in6_addr *hit, int hit_type)
+{
+	int algo = hip_get_host_id_algo(host_id);
+	int err = 0;
+
+	if (algo == HIP_HI_DSA) {
+		err = hip_private_dsa_host_id_to_hit(host_id, hit,
+						     hit_type);
+	} else if (algo == HIP_HI_RSA) {
+		err = hip_private_rsa_host_id_to_hit(host_id, hit,
+						     hit_type);
+	} else {
+		err = -ENOSYS;
+	}
 
 	return err;
 }

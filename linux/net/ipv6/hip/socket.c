@@ -690,14 +690,15 @@ int hip_socket_add_local_hi(const struct hip_host_id *host_identity,
 	/* If adding localhost id failed because there was a duplicate, we
 	   won't precreate anything (and void causing dagling memory
 	   pointers) */
-
+#if 0	
 	HIP_DEBUG("hip: Generating a new R1 now\n");
 
-	if (!hip_precreate_r1(&lhi->hit)) {
+       	if (!hip_precreate_r1(&lhi->hit)) {
 		HIP_ERROR("Unable to precreate R1s... failing\n");
 		err = -ENOENT;
 		goto out_err;
 	}
+#endif
 
  out_err:
 	return err;
@@ -712,9 +713,10 @@ int hip_socket_add_local_hi(const struct hip_host_id *host_identity,
 int hip_socket_handle_add_local_hi(const struct hip_common *input)
 {
 	int err = 0;
-	struct hip_host_id *host_identity = NULL;
-	struct hip_lhi lhi;
-
+	struct hip_host_id *dsa_host_identity, *rsa_host_identity = NULL;
+	struct hip_lhi dsa_lhi, rsa_lhi;
+	struct in6_addr hit_our;
+	
 	HIP_DEBUG("\n");
 
 	if ((err = hip_get_msg_err(input)) != 0) {
@@ -724,21 +726,47 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 
 	_HIP_DUMP_MSG(response);
 
-	host_identity = hip_get_param(input, HIP_PARAM_HOST_ID);
-        if (!host_identity) {
-		HIP_ERROR("no host identity pubkey in response\n");
+	dsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 1);
+        if (!dsa_host_identity) {
+		HIP_ERROR("no dsa host identity pubkey in response\n");
 		err = -ENOENT;
 		goto out_err;
 	}
 
-	err = hip_private_host_id_to_hit(host_identity, &lhi.hit,
-					 HIP_HIT_TYPE_HASH126);
-	if (err) {
-		HIP_ERROR("host id to hit conversion failed\n");
+	rsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 2);
+        if (!rsa_host_identity) {
+		HIP_ERROR("no rsa host identity pubkey in response\n");
+		err = -ENOENT;
 		goto out_err;
 	}
 
-	err = hip_socket_add_local_hi(host_identity, &lhi);
+	_HIP_HEXDUMP("rsa host id\n", rsa_host_identity,
+		    hip_get_param_total_len(rsa_host_identity));
+
+	err = hip_private_host_id_to_hit(dsa_host_identity, &dsa_lhi.hit,
+					 HIP_HIT_TYPE_HASH126);
+	if (err) {
+		HIP_ERROR("dsa host id to hit conversion failed\n");
+		goto out_err;
+	}
+
+	err = hip_private_host_id_to_hit(rsa_host_identity, &rsa_lhi.hit,
+					 HIP_HIT_TYPE_HASH126);
+	if (err) {
+		HIP_ERROR("rsa host id to hit conversion failed\n");
+		goto out_err;
+	}
+
+	/* XX FIX: Note: currently the order of insertion of host ids makes a
+	   difference. */
+
+	err = hip_socket_add_local_hi(rsa_host_identity, &rsa_lhi);
+	if (err) {
+		HIP_ERROR("Failed to add HIP localhost identity\n");
+		goto out_err;
+	}
+
+	err = hip_socket_add_local_hi(dsa_host_identity, &dsa_lhi);
 	if (err) {
 		HIP_ERROR("Failed to add HIP localhost identity\n");
 		goto out_err;
@@ -746,8 +774,22 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 
 	HIP_DEBUG("Adding of HIP localhost identity was successful\n");
 
+	HIP_DEBUG("hip: Generating a new R1 now\n");
+	
+        /* XX TODO: precreate R1s for both algorithms, not just the default */ 
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
+		HIP_ERROR("Didn't find HIT for R1 precreation\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+       	if (!hip_precreate_r1(&hit_our)) {
+		HIP_ERROR("Unable to precreate R1s... failing\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+	
  out_err:
-
+	
 	return err;
 }
 
@@ -984,14 +1026,14 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HOST ID public key */
-	host_id_pub = hip_get_any_localhost_public_key();
+	host_id_pub = hip_get_any_localhost_public_key(0);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;
 	}
 
 	/* Determine our HOST ID private key */
-	host_id_private = hip_get_any_localhost_host_id();
+	host_id_private = hip_get_any_localhost_host_id(0);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");

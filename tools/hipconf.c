@@ -220,14 +220,15 @@ int handle_hi(struct hip_common *msg,
   int anon = 0;
   int use_default = 0;
   char addrstr[INET6_ADDRSTRLEN];
-  char *filebasename = NULL;
-  int fmt;
-  struct hip_lhi lhi;
-  struct hip_host_id *host_id = NULL;
-  unsigned char *dsa_key_rr = NULL;
-  int dsa_key_rr_len;
+  char *dsa_filenamebase = NULL, *rsa_filenamebase = NULL;
+  struct hip_lhi rsa_lhi, dsa_lhi;
+  struct hip_host_id *dsa_host_id = NULL, *rsa_host_id = NULL;
+  unsigned char *dsa_key_rr = NULL, *rsa_key_rr = NULL;
+  int dsa_key_rr_len, rsa_key_rr_len;
   DSA *dsa_key = NULL;
+  RSA *rsa_key = NULL;
   char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+  int fmt;
 
   _HIP_INFO("action=%d optc=%d\n", action, optc);
 
@@ -273,48 +274,78 @@ int handle_hi(struct hip_common *msg,
 
   HIP_INFO("Using hostname: %s\n", hostname);
 
-  fmt = HIP_KEYFILE_FMT_HIP_DSA_PEM;
-  if (!use_default && strcmp(opt[OPT_HI_FMT], "hip-pem-dsa")) {
-    HIP_ERROR("Only PEM encoded HIP DSA keys are supported\n");
+  fmt = HIP_KEYFILE_FMT_HIP_PEM;
+  if (!use_default && strcmp(opt[OPT_HI_FMT], "hip-pem")) {
+    HIP_ERROR("Only PEM encoded HIP keys are supported\n");
     err = -ENOSYS;
     goto out;
   }
 
-  /* Set filebasename (depending on whether the user supplied a filebasename or not) */
+  /* Set filenamebase (depending on whether the user supplied a
+     filenamebase or not) */
   if (use_default == 0) {
+    /* XX FIXME: does not work with RSA?! */
     HIP_ERROR("Only default HIs are currently supported\n");
-    filebasename = malloc(strlen(opt[OPT_HI_FILE]) + 1);
-    memcpy(filebasename, opt[OPT_HI_FILE], strlen(opt[OPT_HI_FILE]));
-  } else { /* create dynamically default filebasename */
-    int filebasename_len, ret;
-    HIP_ERROR("No key file given, use default\n");
-    filebasename_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+    HIP_ASSERT(0);
+
+    dsa_filenamebase = malloc(strlen(opt[OPT_HI_FILE]) + 1);
+    memcpy(dsa_filenamebase, opt[OPT_HI_FILE], strlen(opt[OPT_HI_FILE]));
+
+    rsa_filenamebase = malloc(strlen(opt[OPT_HI_FILE]) + 1);
+    memcpy(rsa_filenamebase, opt[OPT_HI_FILE], strlen(opt[OPT_HI_FILE]));
+  } else { /* create dynamically default filenamebase */
+    int rsa_filenamebase_len, dsa_filenamebase_len, ret;
+
+    HIP_INFO("No key file given, use default\n");
+
+    dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
       strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
-    filebasename = malloc(filebasename_len);
-    if (!filebasename) {
-      HIP_ERROR("Could not allocate DSA file name\n");
+    rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+      strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
+
+    dsa_filenamebase = malloc(dsa_filenamebase_len);
+    if (!dsa_filenamebase) {
+      HIP_ERROR("Could allocate DSA file name\n");
       err = -ENOMEM;
       goto out;
     }
-    ret = snprintf(filebasename, filebasename_len, "%s/%s", DEFAULT_CONFIG_DIR,
+    rsa_filenamebase = malloc(rsa_filenamebase_len);
+    if (!rsa_filenamebase) {
+      HIP_ERROR("Could allocate RSA file name\n");
+      err = -ENOMEM;
+      goto out;
+    }
+    ret = snprintf(dsa_filenamebase, dsa_filenamebase_len, "%s/%s",
+                   DEFAULT_CONFIG_DIR,
 		   DEFAULT_HOST_DSA_KEY_FILE_BASE);
+    if (ret <= 0) {
+      err = -EINVAL;
+      goto out;
+    }
+    ret = snprintf(rsa_filenamebase, rsa_filenamebase_len, "%s/%s",
+                   DEFAULT_CONFIG_DIR,
+		   DEFAULT_HOST_RSA_KEY_FILE_BASE);
     if (ret <= 0) {
       err = -EINVAL;
       goto out;
     }
   }
 
-  lhi.anonymous = htons(anon); // XX FIX: htons() needed?
+  dsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
+  rsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
 
-  _HIP_DEBUG("Using filebasename: %s\n", filebasename);
+  HIP_DEBUG("Using dsa filenamebase: %s\n", dsa_filenamebase);
+  HIP_DEBUG("Using rsa filenamebase: %s\n", rsa_filenamebase);
   
   switch(action) {
   case ACTION_NEW:
-    numeric_action = 0; /* zero means "do not send any message to kernel */
+    /* zero means "do not send any message to kernel */
+    numeric_action = 0;
 
     /* Default directory is created only in "hipconf new default hi" */
     if (use_default) {
-      err = check_and_create_dir(DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_DIR_MODE);
+      err = check_and_create_dir(DEFAULT_CONFIG_DIR,
+				 DEFAULT_CONFIG_DIR_MODE);
       if (err) {
 	HIP_ERROR("Could not create default directory\n", err);
 	goto out;
@@ -328,18 +359,37 @@ int handle_hi(struct hip_common *msg,
       goto out;  
     }
 
-    err = save_dsa_private_key(filebasename, dsa_key);
+    rsa_key = create_rsa_key(RSA_KEY_DEFAULT_BITS);
+    if (!rsa_key) {
+      HIP_ERROR("creation of rsa key failed\n");
+      err = -EINVAL;
+      goto out;  
+    }
+
+    err = save_dsa_private_key(dsa_filenamebase, dsa_key);
     if (err) {
       HIP_ERROR("saving of dsa key failed\n");
+      goto out;
+    }
+
+    err = save_rsa_private_key(rsa_filenamebase, rsa_key);
+    if (err) {
+      HIP_ERROR("saving of rsa key failed\n");
       goto out;
     }
     break;
   case ACTION_ADD:
     numeric_action = SO_HIP_ADD_LOCAL_HI;
 
-    err = load_dsa_private_key(filebasename, &dsa_key);
+    err = load_dsa_private_key(dsa_filenamebase, &dsa_key);
     if (err) {
       HIP_ERROR("Loading of the DSA key failed\n");
+      goto out;
+    }
+
+    err = load_rsa_private_key(rsa_filenamebase, &rsa_key);
+    if (err) {
+      HIP_ERROR("Loading of the RSA key failed\n");
       goto out;
     }
 
@@ -350,12 +400,28 @@ int handle_hi(struct hip_common *msg,
       goto out;
     }
 
-    err = dsa_to_hit(dsa_key_rr, HIP_HIT_TYPE_HASH126, &lhi.hit);
+    rsa_key_rr_len = rsa_to_dns_key_rr(rsa_key, &rsa_key_rr);
+    if (rsa_key_rr_len <= 0) {
+      HIP_ERROR("rsa_key_rr_len <= 0\n");
+      err = -EFAULT;
+      goto out;
+    }
+
+    err = dsa_to_hit(dsa_key_rr, HIP_HIT_TYPE_HASH126, &dsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
     }
-    _HIP_HEXDUMP("Calculated HIT: ", &lhi.hit, sizeof(struct in6_addr));
+    HIP_HEXDUMP("Calculated HIT: ", &dsa_lhi.hit,
+		sizeof(struct in6_addr));
+
+    err = rsa_to_hit(rsa_key_rr, HIP_HIT_TYPE_HASH126, &rsa_lhi.hit);
+    if (err) {
+      HIP_ERROR("Conversion from RSA to HIT failed\n");
+      goto out;
+    }
+    HIP_HEXDUMP("Calculated HIT: ", &rsa_lhi.hit,
+		sizeof(struct in6_addr));
     break;
   case ACTION_DEL:
     numeric_action = SO_HIP_DEL_LOCAL_HI;
@@ -373,13 +439,25 @@ int handle_hi(struct hip_common *msg,
   if (numeric_action == ACTION_DEL)
     goto skip_host_id;
 
-  err = alloc_and_set_host_id_param_hdr(&host_id, dsa_key_rr_len, HIP_HI_DSA,
-					hostname);
+  err = alloc_and_set_host_id_param_hdr(&dsa_host_id, dsa_key_rr_len,
+					HIP_HI_DSA, hostname);
   if (err) {
     goto out;
   }
 
-  err = hip_build_param_host_id(msg, host_id, dsa_key_rr, hostname);
+  err = alloc_and_set_host_id_param_hdr(&rsa_host_id, rsa_key_rr_len,
+					HIP_HI_RSA, hostname);
+  if (err) {
+    goto out;
+  }
+
+  err = hip_build_param_host_id(msg, dsa_host_id, dsa_key_rr, hostname);
+  if (err) {
+    HIP_ERROR("Building of host id failed\n");
+    goto out;
+  }
+
+  err = hip_build_param_host_id(msg, rsa_host_id, rsa_key_rr, hostname);
   if (err) {
     HIP_ERROR("Building of host id failed\n");
     goto out;
@@ -397,14 +475,22 @@ int handle_hi(struct hip_common *msg,
 
  out:
 
-  if (host_id)
-    free(host_id);
+  if (dsa_host_id)
+    free(dsa_host_id);
+  if (rsa_host_id)
+    free(rsa_host_id);
   if (dsa_key)
     DSA_free(dsa_key);
+  if (rsa_key)
+    RSA_free(rsa_key);
   if (dsa_key_rr)
     free(dsa_key_rr);
-  if (filebasename)
-    free(filebasename);
+  if (rsa_key_rr)
+    free(rsa_key_rr);
+  if (dsa_filenamebase)
+    free(dsa_filenamebase);
+  if (rsa_filenamebase)
+    free(rsa_filenamebase);
 
   return err;
 }

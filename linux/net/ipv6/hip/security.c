@@ -229,7 +229,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	size_t akeylen, ekeylen; /* in bits */
 
 	HIP_DEBUG("SPI=0x%x alg=%d already_acquired=%d direction=%s\n",
-		  *spi, alg, already_acquired,
+		  *spi, alg, already_acquired, 
 		  direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
 	akeylen = ekeylen = 0;
 	err = -EEXIST;

@@ -408,6 +408,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 {
  	struct hip_common *msg;
  	int err = 0;
+	int use_rsa = 0;
  	u8 *dh_data = NULL;
  	int dh_size,written, mask;
  	/* Supported HIP and ESP transforms. */
@@ -417,7 +418,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  						       HIP_ESP_NULL_SHA1 };
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
- 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+ 	u8 *signature = NULL;
 
  	msg = hip_msg_alloc();
  	if (!msg) {
@@ -440,21 +441,40 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
   	}
 	memset(dh_data, 0, dh_size);
 
+	_HIP_DEBUG("dh_size=%d\n", dh_size);
  	/* Get a localhost identity, allocate memory for the public key part
  	   and extract the public key from the private key. The public key is
  	   needed for writing the host id parameter in R1. */
-	host_id_private = hip_get_any_localhost_host_id();
+
+	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
  	if (!host_id_private) {
  		HIP_ERROR("Could not acquire localhost host id\n");
  		goto out_err;
  	}
+	HIP_DEBUG("GOTID:%d",hip_get_param_total_len(host_id_private));
 
-	host_id_pub = hip_get_any_localhost_public_key();
+	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;
 	}
+	
+	/* check for the used algorithm */
+	if (hip_get_host_id_algo(host_id_pub) == HIP_HI_RSA) {
+			use_rsa = 1;
+	} else if (hip_get_host_id_algo(host_id_pub) != HIP_HI_DSA) {
+			HIP_ERROR("Unsupported algorithm:%d\n", 
+					  hip_get_host_id_algo(host_id_pub));
+			goto out_err;
+	}
 
+	signature = kmalloc(MAX(HIP_DSA_SIGNATURE_LEN,HIP_RSA_SIGNATURE_LEN), 
+			    GFP_KERNEL);
+	if(!signature) {
+		HIP_ERROR("Could not allocate signature \n");
+		goto out_err;
+	}
+	
  	/* Ready to begin building of the R1 packet */
 	mask = HIP_CONTROL_NONE;
 #ifdef CONFIG_HIP_RVS
@@ -513,7 +533,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
  	/********** Host_id **********/
 
-	_HIP_DEBUG("This HOST ID belongs to: %s\n", hip_get_param_host_id_hostname(host_id_pub));
+	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
+		   hip_get_param_host_id_hostname(host_id_pub));
 	err = hip_build_param(msg, host_id_pub);
  	if (err) {
  		HIP_ERROR("Building of host id failed\n");
@@ -533,10 +554,18 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
- 	err = hip_build_param_signature2_contents(msg,
- 						 signature,
- 						 HIP_DSA_SIGNATURE_LEN,
- 						 HIP_SIG_DSA);
+	if (use_rsa) {
+	  err = hip_build_param_signature2_contents(msg,	     
+						    signature,
+						    HIP_RSA_SIGNATURE_LEN,
+						    HIP_SIG_RSA);
+	} else {
+	  err = hip_build_param_signature2_contents(msg,
+						    signature,
+						    HIP_DSA_SIGNATURE_LEN,
+						    HIP_SIG_DSA);
+	}
+	
  	if (err) {
  		HIP_ERROR("Building of signature failed (%d) on R1\n", err);
  		goto out_err;
@@ -576,6 +605,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	return msg;
 
   out_err:
+	if (signature) 
+		kfree(signature);
 	if (host_id_pub)
 		kfree(host_id_pub);
  	if (host_id_private)

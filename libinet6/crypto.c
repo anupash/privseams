@@ -71,6 +71,42 @@ DSA *create_dsa_key(int bits) {
 }
 
 /**
+ * create_rsa_key - generate RSA parameters and a new key pair
+ * @bits: length of the prime
+ *
+ * The caller is responsible for freeing the allocated RSA key.
+ *
+ * Returns: the created RSA structure, otherwise NULL.
+ *
+ */
+RSA *create_rsa_key(int bits) {
+  RSA *rsa = NULL;
+  int ok;
+
+  if (bits < 1 || bits > HIP_MAX_RSA_KEY_LEN) {
+    HIP_ERROR("create_rsa_key failed (illegal bits value %d)\n", bits);
+    goto err_out;
+  }
+
+  /* generate private and public keys */
+  rsa = RSA_generate_key(bits, RSA_F4, NULL, NULL);
+  if (!rsa) {
+    HIP_ERROR("create_rsa_key failed (RSA_generate_key): %s\n",
+	     ERR_error_string(ERR_get_error(), NULL));
+    goto err_out;
+  }
+
+  return rsa;
+
+ err_out:
+
+  if (rsa)
+    RSA_free(rsa);
+
+  return NULL;
+}
+
+/**
  * dsa_to_hit - create HIT from DSA parameters
  * @dsa:            contains the DSA parameters from where the HIT is
  *                  calculated
@@ -184,6 +220,9 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
   return err;
 }
 
+int rsa_to_hit(char *rsa, int type, struct in6_addr *hit) {
+  return dsa_to_hit(rsa, type, hit); 
+}
 
 /**
  * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
@@ -205,9 +244,6 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   unsigned char *bn_buf = NULL;
   int bn_buf_len;
   int bn2bin_len;
-
-  /* RFC2535 section 3.1 */
-  //  char dsa_key_rr_hdr[] = {0x02, 0x00, 0xff, 0x03}; /* fix */
 
   HIP_ASSERT(dsa != NULL); /* should not happen */
 
@@ -269,12 +305,9 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   /* copy header */
   p = *dsa_key_rr;
-  //  memcpy(p, &dsa_key_rr_hdr, sizeof(dsa_key_rr_hdr));
-  //  p += sizeof(dsa_key_rr_hdr);
-  //HIP_HEXDUMP("DSA KEY RR after header:", *dsa_key_rr, p-*dsa_key_rr);
 
   /* set T */
-  memset(p, t, 1);
+  memset(p, t, 1); // XX FIX: WTF MEMSET?
   p += 1;
   _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
 
@@ -366,6 +399,82 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   }
  out_err:
   return dsa_key_rr_len;
+}
+
+/**
+ * rsa_to_dns_key_rr - create DNS KEY RR record from host RSA key
+ * @rsa:        the RSA structure from where the KEY RR record is to be created
+ * @rsa_key_rr: where the resultin KEY RR is stored
+ *
+ * Caller must free @rsa_key_rr when it is not used anymore.
+ *
+ * Returns: On successful operation, the length of the KEY RR buffer is
+ * returned (greater than zero) and pointer to the buffer containing
+ * DNS KEY RR is stored at @rsa_key_rr. On error function returns negative
+ * and sets @rsa_key_rr to NULL.
+ */
+int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
+  int err = 0, len;
+  int rsa_key_rr_len = -1;
+  signed char t; /* in units of 8 bytes */
+  unsigned char *p;
+  unsigned char *bn_buf = NULL;
+  int bn_buf_len;
+  int bn2bin_len;
+  unsigned char *c;
+
+  /* see RFC 2537 */
+
+  HIP_ASSERT(rsa != NULL); /* should not happen */
+
+  *rsa_key_rr = NULL;
+
+  HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
+	    BN_num_bytes(rsa->n),BN_num_bytes(rsa->d),BN_num_bytes(rsa->p),
+	    BN_num_bytes(rsa->q));
+
+  HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
+  /* e=3, n=128, d=128, p=64, q=64 (n=d, p=q=n/2) */
+  /* the u component does not exist in libgcrypt? */
+  /*rsa_key_rr_len = 3 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;*/
+  //rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;
+  rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) +
+    BN_num_bytes(rsa->d) + BN_num_bytes(rsa->p) + BN_num_bytes(rsa->q);
+  
+  HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
+  *rsa_key_rr = malloc(rsa_key_rr_len);
+  if (!*rsa_key_rr) {
+    HIP_ERROR("malloc\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  memset(*rsa_key_rr, 0, rsa_key_rr_len);
+
+  c = *rsa_key_rr;
+  *c = (unsigned char) BN_num_bytes(rsa->e);
+  c++; // = e_length 
+
+  len = BN_bn2bin(rsa->e, c);
+  c += len;
+
+  len = BN_bn2bin(rsa->n, c);
+  c += len;  
+
+  len = BN_bn2bin(rsa->d, c);
+  c += len;
+
+  len = BN_bn2bin(rsa->p, c);
+  c += len;
+
+  len = BN_bn2bin(rsa->q, c);
+  c += len;
+
+  rsa_key_rr_len = c - *rsa_key_rr;
+
+ out_err:
+
+  return rsa_key_rr_len;
 }
 
 
@@ -461,6 +570,101 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
 }
 
 /**
+ * save_rsa_private_key - save host RSA keys to disk
+ * @filenamebase: the filename base where RSA key should be saved
+ * @rsa:      the RSA key structure
+ *
+ * The RSA keys from @rsa are saved in PEM format, public key to file
+ * filenamebase.pub, private key to file @filenamebase and RSA
+ * parameters to file @filenamebase.params. If any of the files cannot
+ * be saved, all files are deleted.
+ *
+ * XX FIXME: change filenamebase to filename! There is no need for a
+ * filenamebase!!!
+ *
+ * Returns: 0 if all files were saved successfully, or non-zero if an
+ * error occurred.
+ */
+int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
+  int err = 0;
+  char *pubfilename;
+  int pubfilename_len;
+  FILE *fp;
+
+  if (!filenamebase) {
+    HIP_ERROR("NULL filenamebase\n");
+    return 1;
+  }
+
+  pubfilename_len =
+    strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+  pubfilename = malloc(pubfilename_len);
+  if (!pubfilename) {
+    HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
+    goto out_err;
+  }
+
+  /* check retval */
+  snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
+	   DEFAULT_PUB_FILE_SUFFIX);
+
+  HIP_INFO("Saving RSA keys to: pub='%s' priv='%s'\n", pubfilename,
+	   filenamebase);
+  HIP_INFO("Saving host RSA n=%s\n", BN_bn2hex(rsa->n));
+  HIP_INFO("Saving host RSA e=%s\n", BN_bn2hex(rsa->e));
+  HIP_INFO("Saving host RSA d=%s\n", BN_bn2hex(rsa->d));
+  HIP_INFO("Saving host RSA p=%s\n", BN_bn2hex(rsa->p));
+  HIP_INFO("Saving host RSA q=%s\n", BN_bn2hex(rsa->q));
+
+  /* rewrite using PEM_write_PKCS8PrivateKey */
+
+  fp = fopen(pubfilename, "wb" /* mode */);
+  if (!fp) {
+    HIP_ERROR("Couldn't open public key file %s for writing\n",
+	      filenamebase);
+    goto out_err;
+  }
+
+  err = PEM_write_RSA_PUBKEY(fp, rsa);
+  if (!err) {
+    HIP_ERROR("Write failed for %s\n", pubfilename);
+    fclose(fp); /* add error check */
+    goto out_err_pub;
+  }
+  fclose(fp); /* add error check */
+
+  fp = fopen(filenamebase, "wb" /* mode */);
+  if (!fp) {
+    HIP_ERROR("Couldn't open private key file %s for writing\n",
+	      filenamebase);
+    goto out_err_pub;
+  }
+
+  err = PEM_write_RSAPrivateKey(fp, rsa, NULL, NULL, 0, NULL, NULL);
+  if (!err) {
+    HIP_ERROR("Write failed for %s\n", filenamebase);
+    fclose(fp); /* add error check */
+    goto out_err_priv;
+  }
+  fclose(fp); /* add error check */
+
+  free(pubfilename);
+
+  return 0;
+
+ out_err_priv:
+   unlink(filenamebase); /* add error check */
+ out_err_pub:
+   unlink(pubfilename); /* add error check */
+
+   free(pubfilename);
+ out_err:
+  return 1;
+}
+
+
+
+/**
  * load_dsa_private_key - load host DSA private keys from disk
  * @filenamebase: the file name base of the host DSA key
  *
@@ -545,6 +749,95 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
     DSA_free(dsa_tmp);
   if (err && *dsa)
     DSA_free(*dsa);
+
+  return err;
+}
+
+/**
+ * load_rsa_private_key - load host RSA private keys from disk
+ * @filenamebase: the file name base of the host RSA key
+ *
+ * Loads RSA public and private keys from the given files, public key
+ * from file @filenamebase.pub and private key from file @filenamebase. RSA
+ * struct will be allocated dynamically and it is the responsibility
+ * of the caller to free it with RSA_free.
+ *
+ * XX FIXME: change filenamebase to filename! There is no need for a
+ * filenamebase!!!
+ *
+ * Returns: NULL if the key could not be loaded (not in PEM format or file
+ * not found, etc).
+ */
+int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
+  RSA *rsa_tmp = NULL;
+  char *pubfilename = NULL;
+  int pubfilename_len;
+  char *paramsfilename = NULL;
+  int paramsfilename_len;
+  FILE *fp = NULL;
+  int err = 0;
+
+  *rsa = NULL;
+
+  if (!filenamebase) {
+    HIP_ERROR("NULL filename\n");
+    err = -ENOENT;
+    goto out_err;
+  }
+
+  *rsa = RSA_new();
+  if (!*rsa) {
+    HIP_ERROR("!rsa\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+  rsa_tmp = RSA_new();
+  if (!rsa_tmp) {
+    HIP_ERROR("!rsa_tmp\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  fp = fopen(filenamebase, "rb");
+  if (!fp) {
+    HIP_ERROR("Couldn't open public key file %s for reading\n", filenamebase);
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  rsa_tmp = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
+  if (!rsa_tmp) {
+    HIP_ERROR("Read failed for %s\n", filenamebase);
+    err = -EINVAL;
+    goto out_err;
+  }
+
+  (*rsa)->n = BN_dup(rsa_tmp->n);
+  (*rsa)->e = BN_dup(rsa_tmp->e);
+  (*rsa)->d = BN_dup(rsa_tmp->d);
+  (*rsa)->p = BN_dup(rsa_tmp->p);
+  (*rsa)->q = BN_dup(rsa_tmp->q);
+  if (!(*rsa)->n || !(*rsa)->e || !(*rsa)->d || !(*rsa)->p ||
+      !(*rsa)->q) {
+    HIP_ERROR("BN_copy\n");
+    err = -EINVAL;
+    goto out_err;
+  }
+  
+  HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+  HIP_INFO("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
+  HIP_INFO("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
+  HIP_INFO("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
+
+ out_err:
+
+  if (fp)
+    err = fclose(fp);
+  if (rsa_tmp)
+    RSA_free(rsa_tmp);
+  if (err && *rsa)
+    RSA_free(*rsa);
 
   return err;
 }

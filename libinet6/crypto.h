@@ -24,16 +24,19 @@
 // wrapper functions for -lcrypto
 
 #define HIP_MAX_DSA_KEY_LEN 4096
+#define HIP_MAX_RSA_KEY_LEN 4096
 
 #define DSA_KEY_DEFAULT_BITS    (128 * 8)
+#define RSA_KEY_DEFAULT_BITS    1024
 
 #define DEFAULT_CONFIG_DIR        "/etc/hip"
 #define DEFAULT_CONFIG_DIR_MODE   0755
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE "hip_host_dsa_key"
+#define DEFAULT_HOST_RSA_KEY_FILE_BASE "hip_host_rsa_key"
 #define DEFAULT_PUB_FILE_SUFFIX ".pub"
 
 /* Only one crypto-filefmt supported */
-#define HIP_KEYFILE_FMT_HIP_DSA_PEM 1
+#define HIP_KEYFILE_FMT_HIP_PEM 1
 
 #ifdef CONFIG_HIP_DEBUG
 void keygen_callback(int a, int b, void* arg);
@@ -46,6 +49,7 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 
 DSA *create_dsa_key(int bits);
+RSA *create_rsa_key(int bits);
 int save_dsa_private_key(const char *filenamebase, DSA *dsa);
 int load_dsa_private_key(const char *filenamebase, DSA **dsa);
 int load_dsa_public_key(const char *filenamebase, DSA **dsa);

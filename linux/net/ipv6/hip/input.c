@@ -30,6 +30,7 @@
 #ifdef CONFIG_HIP_RVS
 #include "rvs.h"
 #endif
+#include "crypto/rsa.h"
 
 static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac, 
 			   void *hmac_key, int hmac_type);
@@ -124,13 +125,16 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 			 struct hip_host_id *host_id, u8 *signature)
 {
 	int err = 0;
+	int use_rsa = 0;
 	u8 sha1_digest[HIP_AH_SHA_LEN];
-
+	
 	/* this has to be modified so that other signature algorithms
 	   are accepted
 	*/
 
-	if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
+	if (hip_get_host_id_algo(host_id) == HIP_HI_RSA)
+		use_rsa = 1;
+	else if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
 		HIP_ERROR("Unsupported algorithm:%d\n", hip_get_host_id_algo(host_id));
 		goto out_err;
 	}
@@ -145,19 +149,33 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 		goto out_err;
 	}
 
-	_HIP_HEXDUMP("create digest", sha1_digest, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("create digest", sha1_digest, HIP_AH_SHA_LEN);
 	_HIP_HEXDUMP("dsa key", (u8 *)(host_id + 1), ntohs(host_id->hi_length));
 
-	err = hip_dsa_sign(sha1_digest,(u8 *)(host_id + 1),signature);
+	if (use_rsa) {
+	  err = hip_rsa_sign(sha1_digest, (u8 *)(host_id + 1), signature, 
+			     3+128*2+64+64
+			     /*e+n+d+p+q*/
+			     /*1 + 3 + 128 * 3*/ );
+	} else {
+		err = hip_dsa_sign(sha1_digest,(u8 *)(host_id + 1), signature);
+	}
+
 	if (err) {
 		HIP_ERROR("DSA Signing error\n");
 		return 0;
 	}
 
-	/* 1 + 20 + 20 */
-	_HIP_HEXDUMP("signature",signature,41);
+	
+	if(use_rsa) {
+	  _HIP_HEXDUMP("signature",signature,HIP_RSA_SIGNATURE_LEN);
+	} else {
+	  /* 1 + 20 + 20 */
+	  _HIP_HEXDUMP("signature",signature,HIP_DSA_SIGNATURE_LEN);
+	}
 
 	err = 1;
+
  out_err:
 	return err;
 }
@@ -172,23 +190,24 @@ int hip_create_signature(void *buffer_start, int buffer_length,
  * @host_id: Pointer to HOST_ID (as specified by the HIP draft).
  * @signature: Pointer to the signature
  *
- * Returns true (1) if ok, false (0) otherwise.
+ * Returns 1 if the signature was ok, else 0
  */
 int hip_verify_signature(void *buffer_start, int buffer_length, 
 			 struct hip_host_id *host_id, u8 *signature)
 {
 	u8 *public_key = (u8 *) (host_id + 1);
-	int tmp, err;
+	int tmp, ok = 0;
 	unsigned char sha1_digest[HIP_AH_SHA_LEN];
-	size_t public_key_len;
-
-	err = 0;
+	int use_rsa = 0;
 
 	/* check for all algorithms */
 
-	if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
-		HIP_ERROR("Unsupported algorithm:%d\n", hip_get_host_id_algo(host_id));
-		return 0;
+	if (hip_get_host_id_algo(host_id) == HIP_HI_RSA) {
+		use_rsa = 1;
+	} else if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
+		HIP_ERROR("Unsupported algorithm:%d\n",
+			  hip_get_host_id_algo(host_id));
+		goto out_err;
 	}
 
 	_HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
@@ -200,36 +219,50 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 		goto out_err;
 	}
 
-	_HIP_HEXDUMP("Verify hexdump", sha1_digest, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("Verify hexdump", sha1_digest, HIP_AH_SHA_LEN);
 
-	public_key_len = hip_get_param_contents_len(host_id) - 4;
-	public_key_len = ntohs(host_id->hi_length);
+	//public_key_len = hip_get_param_contents_len(host_id) - 4;
 
 	_HIP_HEXDUMP("verify key", public_key, public_key_len);
 
-	_HIP_HEXDUMP("Verify hexdump sig **", signature, 42);
-
-	tmp = hip_dsa_verify(sha1_digest, public_key, signature);
-
+	if (use_rsa) {
+		size_t public_key_len;
+		public_key_len = ntohs(host_id->hi_length) - 
+			sizeof(struct hip_host_id_key_rdata);
+		_HIP_HEXDUMP("Verify hexdump sig **", signature, 
+			     HIP_RSA_SIGNATURE_LEN);
+		tmp = hip_rsa_verify(sha1_digest, public_key, signature, 
+				     public_key_len);
+		HIP_HEXDUMP("public key",public_key,public_key_len);
+	} else {
+		_HIP_HEXDUMP("Verify hexdump sig **", signature, 
+			     HIP_DSA_SIGNATURE_LEN);
+		tmp = hip_dsa_verify(sha1_digest, public_key, signature);
+	}
+	
 	switch(tmp) {
 	case 0:
-		HIP_DEBUG("Signature: [CORRECT]\n");
+		HIP_INFO("Signature: [CORRECT]\n");
+		ok = 1;
 		break;
 	case 1:
-		HIP_ERROR("Signature: [INCORRECT]\n");
-		HIP_HEXDUMP("digest",sha1_digest,20);
-		HIP_HEXDUMP("signature",signature,41);
-		HIP_HEXDUMP("public key",public_key,public_key_len);
+		HIP_INFO("Signature: [INCORRECT]\n");
+		HIP_HEXDUMP("digest",sha1_digest, HIP_AH_SHA_LEN);
+		if(use_rsa) {
+			HIP_HEXDUMP("signature", signature, 
+				    HIP_RSA_SIGNATURE_LEN);
+		} else {
+			HIP_HEXDUMP("signature", signature, 
+				    HIP_DSA_SIGNATURE_LEN);
+		}
 		break;
 	default:
 		HIP_ERROR("Signature verification failed: %d\n", tmp);
-		goto out_err;
+		break;
 	}
 
-	err = 1;
-
  out_err:
-	return err;
+	return ok;
 }
 
 /**
@@ -243,7 +276,7 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 {
 	int err;
-	int len;
+	int len, orig_len;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 
@@ -256,6 +289,10 @@ int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 	}
 	_HIP_DEBUG("HMAC found\n");
 
+	/* hmac verification modifies the msg length temporarile, so we have
+	   to restore the length */
+	orig_len = hip_get_msg_total_len(msg);
+
 	len = (u8 *) hmac - (u8*) msg;
 	hip_set_msg_total_len(msg, len);
 
@@ -267,6 +304,8 @@ int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 		HIP_ERROR("HMAC validation failed\n");
 		goto out_err;
 	} 
+
+	hip_set_msg_total_len(msg, orig_len);
 
  out_err:
 	return err;
@@ -489,7 +528,8 @@ int hip_produce_keying_material(struct hip_common *msg,
 	if (keymat_len % HIP_AH_SHA_LEN)
 		keymat_len += HIP_AH_SHA_LEN - (keymat_len % HIP_AH_SHA_LEN);
 
-	_HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min, keymat_len);
+	HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min, 
+		  keymat_len);
 
 	keymat = kmalloc(keymat_len, GFP_KERNEL);
 	if (!keymat) {
@@ -633,7 +673,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_common *i2 = NULL;
 	struct hip_param *param;
 	struct hip_diffie_hellman *dh_req;
-	u8 signature[HIP_DSA_SIGNATURE_LEN];
+	int algo;
+	u8 *signature = NULL;
+//	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_spi_in_item spi_in_data;
 	HIP_DEBUG("\n");
 
@@ -660,24 +702,53 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		err = -ENOMEM;
 		goto out_err;
 	}
-
+	
+	{
+		struct hip_host_id *mofo;
+		mofo = hip_get_param(ctx->input, HIP_PARAM_HOST_ID);
+		
+		algo = hip_get_host_id_algo(mofo);
+	}
+	
 	/* Get a localhost identity, allocate memory for the public key part
 	   and extract the public key from the private key. The public key is
 	   needed in the ESP-ENC below. */
-	host_id_pub = hip_get_any_localhost_public_key();
+	host_id_pub = hip_get_any_localhost_public_key(algo);
 	if (host_id_pub == NULL) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost public key found\n");
 		goto out_err;
 	}
 
-	host_id_private = hip_get_any_localhost_host_id();
+	host_id_private = hip_get_any_localhost_host_id(algo);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
 		goto out_err;
 	}
 
+	{
+		int sigsize;
+		
+		switch(algo) {
+		case HIP_HI_RSA:
+			sigsize = HIP_RSA_SIGNATURE_LEN;
+			break;
+		case HIP_HI_DSA:
+			sigsize = HIP_DSA_SIGNATURE_LEN;
+			break;
+		default:
+			HIP_ERROR("Unknown HI algo: %d\n",algo);
+			err = -EINVAL;
+			goto out_err;
+		}
+		signature = kmalloc(sigsize,GFP_KERNEL);
+		if (!signature) {
+			HIP_ERROR("No memory for signature\n");
+			err = -ENOMEM;
+			goto out_err;
+		}
+	}
 	/* TLV sanity checks are are already done by the caller of this
 	   function. Now, begin to build I2 piece by piece. */
 
@@ -867,8 +938,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		/* let the setup routine give us a SPI. */
 		spi_in = 0;
 		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
-				    &spi_in, transform_esp_suite, 
-				    &ctx->esp_in.key, &ctx->auth_in.key, 0, HIP_SPI_DIRECTION_IN);
+				   &spi_in, transform_esp_suite, 
+				   &ctx->esp_in.key, &ctx->auth_in.key, 
+				   0, HIP_SPI_DIRECTION_IN);
 
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
@@ -939,11 +1011,18 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	/* Only DSA supported currently */
-	HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
-	err = hip_build_param_signature_contents(i2,
-					signature,
-					HIP_DSA_SIGNATURE_LEN,
-					HIP_SIG_DSA);
+//	HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
+
+	if (algo == HIP_HI_RSA) {
+		err = hip_build_param_signature_contents(i2,signature,
+							 128, HIP_SIG_RSA);
+	} else {
+		err = hip_build_param_signature_contents(i2,
+							 signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+	}
+
 	if (err) {
 		HIP_ERROR("Building of signature failed (%d)\n", err);
 		goto out_err;
@@ -1009,6 +1088,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_DEBUG("moving to state I2_SENT\n");
 
  out_err:
+	if (signature)
+		kfree(signature);
 	if (host_id_private)
 		kfree(host_id_private);
 	if (host_id_pub)
@@ -1165,7 +1246,8 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 		char *str;
 		int len;
 
-		if (hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0)
+		if (hip_get_param_host_id_di_type_len(peer_host_id, &str, 
+						      &len) < 0)
 			goto out_err;
 		HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
 			  str, len, hip_get_param_host_id_hostname(peer_host_id));
@@ -1240,6 +1322,7 @@ int hip_receive_r1(struct sk_buff *skb)
 	}
 
 	entry = hip_hadb_find_byhit(&hip_common->hits);
+	HIP_DEBUG_HIT("RECEIVE R1 SENDER HIT: ", &hip_common->hits);
 	if (!entry) {
 		err = -EFAULT;
 		HIP_ERROR("Received R1 with no local state. Dropping\n");
@@ -1255,7 +1338,7 @@ int hip_receive_r1(struct sk_buff *skb)
 
 	{
 		struct in6_addr daddr;
-
+		
 		hip_hadb_get_peer_addr(entry, &daddr);
 		if (ipv6_addr_cmp(&daddr, &skb->nh.ipv6h->saddr) != 0) {
 			HIP_DEBUG("Mapped address didn't match received address\n");
@@ -1263,10 +1346,12 @@ int hip_receive_r1(struct sk_buff *skb)
 			HIP_HEXDUMP("Mapping", &daddr, 16);
 			HIP_HEXDUMP("Received", &skb->nh.ipv6h->saddr, 16);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			hip_hadb_add_peer_addr(entry, &skb->nh.ipv6h->saddr, 0, 0,
+			hip_hadb_add_peer_addr(entry, &skb->nh.ipv6h->saddr, 
+					       0, 
+					       0,
 					       PEER_ADDR_STATE_ACTIVE);
 		}
-
+		
 	}
 
 	/* since the entry is in the hit-list and since the previous
@@ -1331,8 +1416,10 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	struct hip_common *r2 = NULL;
 	struct hip_common *i2;
  	int err = 0;
+	//int algo = 0;
 	int clear = 0;
- 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+	u8 *signature;
+// 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
@@ -1414,13 +1501,46 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		}
 	}
 
+#if 0
 	/********** SIGNATURE *********/
-	host_id_private = hip_get_any_localhost_host_id();
+	{
+		struct hip_host_id *hitmp;
+
+		HIP_DUMP_MSG(ctx->input);
+
+		hitmp = hip_get_param(ctx->input, HIP_PARAM_HOST_ID);
+		if (!hitmp) {
+			HIP_ERROR("Voihan jojo\n");
+			err = -EINVAL;
+			goto out_err;
+		}
+	
+		//algo = hip_get_host_id_algo(hitmp);
+	}
+	//algo = HIP_HI_RSA;
+#endif
+
+	host_id_private = hip_get_any_localhost_host_id(ctx->host_id_algo);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
 	}
 
+	if (ctx->host_id_algo == HIP_HI_RSA) {
+		signature = kmalloc(HIP_RSA_SIGNATURE_LEN, GFP_KERNEL);
+	} else if (ctx->host_id_algo == HIP_HI_DSA) {
+		signature = kmalloc(HIP_DSA_SIGNATURE_LEN, GFP_KERNEL);
+	} else {
+		HIP_ERROR("Unknown host id algo: %d\n", ctx->host_id_algo);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	if (!signature) {
+		HIP_ERROR("No mem\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
 	if (!hip_create_signature(r2, hip_get_msg_total_len(r2),
 				  host_id_private, signature)) {
 		HIP_ERROR("Could not sign R2. Failing\n");
@@ -1428,9 +1548,19 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		goto out_err;
 	}
 
-	err = hip_build_param_signature_contents(r2, signature,
-						 HIP_DSA_SIGNATURE_LEN,
- 						 HIP_SIG_DSA);
+	if (ctx->host_id_algo == HIP_HI_RSA) {
+		err = hip_build_param_signature_contents(r2, signature,
+							 HIP_RSA_SIGNATURE_LEN,
+							 HIP_SIG_RSA);
+	} else if (ctx->host_id_algo == HIP_HI_DSA) {
+		err = hip_build_param_signature_contents(r2, signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+	} else {
+		HIP_ERROR("Unsupported Host ID algo: %d\n", ctx->host_id_algo);
+		err = -ENOENT;
+	}
+
  	if (err) {
  		HIP_ERROR("Building of signature failed (%d)\n", err);
  		goto out_err;
@@ -1588,7 +1718,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	 * We have a function that calculates sha1 digest and then verifies the
 	 * signature. But since the sha1 digest in I2 must be calculated over
 	 * the encrypted data, and the signature requires that the encrypted
-	 * data to be decrypted (it contains peer's host identity (DSA key)),
+	 * data to be decrypted (it contains peer's host identity),
 	 * we are forced to do some temporary copying...
 	 * If ultimate speed is required, then calculate the digest here as
 	 * usual and feed it to signature verifier. 
@@ -1680,6 +1810,11 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	_HIP_DEBUG("SIGNATURE in I2 ok\n");
 
 	/* do the rest */
+
+
+	/* store host_id algo for create_r2 */
+	ctx->host_id_algo = hip_get_host_id_algo(host_id_in_enc);
+
   	/* Add peer's host id to peer_id database (is there need to
   	   do this?) */
 	{
@@ -2031,8 +2166,10 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	}
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->skb_in = skb;
-        ctx->input = (struct hip_common*) skb->h.raw;
+        ctx->input = (struct hip_common *) skb->h.raw;
 	r2 = ctx->input;
+
+	HIP_DUMP_MSG(r2);
 
 	sender = &r2->hits;
 
@@ -2044,13 +2181,18 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	}
 	_HIP_DEBUG("HMAC in R2 ok\n");
 
+	HIP_DUMP_MSG(r2);
+
 	/* signature validation */
 
  	sig = hip_get_param(r2, HIP_PARAM_HIP_SIGNATURE);
  	if (!sig) {
  		err = -ENOENT;
+		HIP_ERROR("No signature found\n");
  		goto out_err;
  	}
+
+	HIP_DUMP_MSG(r2);
 
  	hip_zero_msg_checksum(r2);
  	len = (u8*) sig - (u8*) r2;
