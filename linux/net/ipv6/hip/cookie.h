@@ -2,11 +2,16 @@
 #define HIP_COOKIE_H
 
 #ifdef __KERNEL__
-#include <linux/types.h>
-#include <net/ipv6.h>
+#  include <linux/types.h>
+#  include <linux/random.h>
+#  include <asm/scatterlist.h>
+#  include <net/ipv6.h>
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>
+#include "debug.h"
+#include "hip.h"
+#include "builder.h"
 
 struct hip_r1entry {
 	struct hip_common *r1;

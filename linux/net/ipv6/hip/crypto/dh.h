@@ -1,12 +1,15 @@
 #ifndef DH_H
 #define DH_H
 
-#include <linux/types.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/errno.h>
-
-#include "kernel-interface.h"
+#ifdef __KERNEL__
+#  include <linux/types.h>
+#  include <linux/kernel.h>
+#  include <linux/module.h>
+#  include <linux/errno.h>
+#  include "kernel-interface.h"
+#else
+#  include <gcrypt.h>
+#endif /* __KERNEL__ */
 
 typedef struct DH_str {
 	MPI p;

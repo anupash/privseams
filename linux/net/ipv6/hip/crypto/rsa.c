@@ -24,13 +24,6 @@
    patent into the public domain on Sep 6th, 2000.
 */
 
-#include <net/hip.h>
-
-#ifdef __KERNEL__
-#include "kernel-interface.h"
-#endif /* __KERNEL__ */
-
-#include "gcrypt.h"
 #include "rsa.h"
 
 

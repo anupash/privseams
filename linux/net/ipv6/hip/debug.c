@@ -8,7 +8,6 @@
  */
 
 #include "debug.h"
-#include "misc.h"
 
 inline void hip_debug_skb(const struct ipv6hdr *hdr, const struct sk_buff *skb)
 {

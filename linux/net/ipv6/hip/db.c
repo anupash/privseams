@@ -8,16 +8,7 @@
  *
  */
 
-#ifdef __KERNEL__
-#  include <net/ipv6.h>
-#endif /* __KERNEL__ */
-
 #include "db.h"
-#include "misc.h"
-#include "builder.h"
-#include "socket.h"
-#include "output.h"
-#include "update.h"
 
 /*
  * Do not access these databases directly: use the accessors in this file.

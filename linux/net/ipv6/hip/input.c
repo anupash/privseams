@@ -10,30 +10,7 @@
  *
  */
 
-#ifdef __KERNEL__
-#  include <net/ipv6.h>
-#  include <net/checksum.h>
-#endif /* __KERNEL__ */
-
 #include "input.h"
-#include "debug.h"
-#include "xfrm.h"
-#include "hadb.h"
-#include "keymat.h"
-#include "crypto/dsa.h"
-#include "builder.h"
-#include "hip.h"
-#include "dh.h"
-#include "misc.h"
-#include "workqueue.h"
-#include "db.h"
-#include "cookie.h"
-#include "output.h"
-#include "socket.h"
-#ifdef CONFIG_HIP_RVS
-#include "rvs.h"
-#endif
-#include "crypto/rsa.h"
 
 static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac, 
 			   void *hmac_key, int hmac_type);

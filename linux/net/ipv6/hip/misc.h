@@ -7,6 +7,10 @@
 #  include <net/hip.h>
 #endif /* __KERNEL__ */
 
+#include "debug.h"
+#include "builder.h"
+#include "hip.h"
+
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id *host_id,

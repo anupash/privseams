@@ -10,21 +10,6 @@
  */
 
 #include "output.h"
-#include "debug.h"
-#include "misc.h"
-#include "hip.h"
-#include "hadb.h"
-#include "db.h"
-#include "builder.h"
-#include "cookie.h"
-#include "builder.h"
-
-#include <net/checksum.h>
-#include <net/addrconf.h>
-#include <net/xfrm.h>
-#include <linux/netfilter.h>
-#include <linux/skbuff.h>
-#include <net/ip6_route.h>
 
 /**
  * hip_csum_verify - verify HIP header checksum

@@ -1,9 +1,13 @@
 #ifndef HIP_HASHTABLE_H
 #define HIP_HASHTABLE_H
 
-#include <linux/types.h>
-#include <linux/spinlock.h>
-#include <linux/list.h>
+#ifdef __KERNEL__
+#  include <linux/types.h>
+#  include <linux/spinlock.h>
+#  include <linux/list.h>
+#  include <linux/interrupt.h>
+#  include <linux/list.h>
+#endif /* __KERNEL__ */
 
 struct hip_ht_common {
 	struct list_head *head;

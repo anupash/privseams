@@ -47,10 +47,11 @@ typedef uint16_t in_port_t;
 
 #  include <sys/ioctl.h>
 #  include <stdint.h>
+#  include <netinet/in.h>
 
-typedef uint8_t  u8;
-
-#include <netinet/in.h>
+typedef uint8_t   u8;
+typedef uint16_t  u16;
+typedef uint32_t  u32;
 
 #endif /* __KERNEL__ */
 
@@ -715,16 +716,6 @@ struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
 };
 
-#ifdef __KERNEL__
-
-struct hip_packet_dh_sig
-{
-	struct hip_common *common; 
-	struct hip_diffie_hellman *dh;
-	struct hip_host_id *host_id;
-	struct hip_sig2 *hsig2;
-};
-
 struct hip_context
 {
 	//struct sk_buff *skb_in;         /* received skbuff */
@@ -749,6 +740,16 @@ struct hip_context
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
 	uint16_t keymat_index; /* KEYMAT offset */
+};
+
+#ifdef __KERNEL__
+
+struct hip_packet_dh_sig
+{
+	struct hip_common *common; 
+	struct hip_diffie_hellman *dh;
+	struct hip_host_id *host_id;
+	struct hip_sig2 *hsig2;
 };
 
 struct hip_context_dh_sig

@@ -1,21 +1,57 @@
 #ifndef HIP_HIP_H
 #define HIP_HIP_H
 
-#include "crypto/dh.h"
+#ifdef __KERNEL__
+#  include <linux/time.h>
+#  include <linux/spinlock.h>
+#  include <linux/crypto.h>
+#  include <linux/list.h>
+#  include <linux/socket.h>
+#  include <asm/scatterlist.h>
+#  include <linux/proc_fs.h>
+#  include <linux/notifier.h>
+#  include <linux/spinlock.h>
+#  include <linux/xfrm.h>
+#  include <linux/crypto.h>
+#  include <net/protocol.h>
+#  include <net/checksum.h>
+#  include <net/hip_glue.h>
+#  include <net/addrconf.h>
+#  include <net/xfrm.h>
+#  include <linux/suspend.h>
+#  include <linux/completion.h>
+#  include <linux/cpumask.h>
+#  ifdef CONFIG_SYSCTL
+#    include <linux/sysctl.h>
+#  endif
+#endif /* __KERNEL__ */
 
-#include <linux/time.h>
-#include <linux/spinlock.h>
-#include <linux/crypto.h>
-#include <linux/list.h>
-#include <linux/socket.h>
 #include <net/hip.h>
-#include <asm/scatterlist.h>
+#include "hadb.h"
+#include "input.h"
+#include "builder.h"
+#include "db.h"
+#include "cookie.h"
+#include "keymat.h"
+#include "dh.h"
+#include "misc.h"
+#include "output.h"
+#include "workqueue.h"
+#include "socket.h"
+#include "update.h"
+#include "crypto/dh.h"
+#ifdef CONFIG_HIP_RVS
+#include "rvs.h"
+#endif
+
+/* used by hip worker to announce completion of work order */
+#define KHIPD_OK                   0
+#define KHIPD_QUIT                -1
+#define KHIPD_ERROR               -2
+#define KHIPD_UNRECOVERABLE_ERROR -3
+#define HIP_MAX_SCATTERLISTS       5 // is this enough?
 
 #ifdef KRISUS_THESIS
-
-extern int kmm; // hip.c
-extern struct timeval gtv_start, gtv_stop, gtv_result;
-extern int gtv_inuse;
 
 #define KMM_GLOBAL 1
 #define KMM_PARTIAL 2
@@ -45,20 +81,22 @@ extern int gtv_inuse;
 
 #endif /* KRISUS_THESIS */
 
-/* used by hip worker to announce completion of work order */
-#define KHIPD_OK                   0
-#define KHIPD_QUIT                -1
-#define KHIPD_ERROR               -2
-#define KHIPD_UNRECOVERABLE_ERROR -3
-#define HIP_MAX_SCATTERLISTS       5 // is this enough?
+extern int kmm; // hip.c
+extern struct timeval gtv_start, gtv_stop, gtv_result;
+extern int gtv_inuse;
 
+#ifdef __KERNEL__
+extern spinlock_t dh_table_lock;
+
+int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
+			    int nsg, void *out);
+int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
+			     const u8 *addr, const u32 size);
+#endif /* __KERNEL__ */
 
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
-int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
-			    int nsg, void *out);
-
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
 int hip_auth_key_length_esp(int tid);
@@ -71,8 +109,6 @@ int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
 int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
-int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
-			     const u8 *addr, const u32 size);
 int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
@@ -81,7 +117,6 @@ extern struct crypto_tfm *impl_sha1;
 //extern struct semaphore hip_work;
 extern struct socket *hip_output_socket;
 //extern spinlock_t hip_workqueue_lock;
-extern spinlock_t dh_table_lock;
 extern time_t load_time;
 
 #ifdef CONFIG_SYSCTL

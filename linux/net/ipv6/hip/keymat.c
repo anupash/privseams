@@ -8,17 +8,7 @@
  *
  */
 
-#ifdef __KERNEL__
-#  include <linux/crypto.h>
-#  include <asm/scatterlist.h>
-#endif /* __KERNEL__ */
-
-
 #include "keymat.h"
-#include "misc.h"
-#include "debug.h"
-#include "hip.h"
-
 
 u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len, 
 			     struct in6_addr *smaller_hit,

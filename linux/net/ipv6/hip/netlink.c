@@ -1,3 +1,5 @@
+#include "netlink.h"
+
 static sock *nl_sk = NULL;
 u32 hipd_pid;
 

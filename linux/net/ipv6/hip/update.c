@@ -4,23 +4,7 @@
  * - Mika Kousa <mkousa@cc.hut.fi>
  */
 
-#ifdef __KERNEL__
-#  include <linux/xfrm.h>
-#  include <net/xfrm.h>
-#endif /* __KERNEL__ */
-
-#include <net/hip.h>
 #include "update.h"
-#include "hip.h"
-#include "dh.h"
-#include "input.h"
-#include "hadb.h"
-#include "db.h"
-#include "keymat.h"
-#include "builder.h"
-#include "misc.h"
-#include "output.h"
-
 
 /* SPI waitlist stuff is not currently used */
 

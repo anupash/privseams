@@ -8,17 +8,7 @@
  * - Kristian Slavov <ksl@iki.fi>
  */ 
 
-#ifdef __KERNEL__
-#  include <linux/in6.h>
-#  include <linux/xfrm.h>
-#  include <net/xfrm.h>
-#  include <net/ipv6.h>
-#endif /* __KERNEL__ */
-
 #include "dh.h"
-#include "crypto/dh.h"
-#include "hip.h"
-#include "debug.h"
 
 spinlock_t dh_table_lock = SPIN_LOCK_UNLOCKED;
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};

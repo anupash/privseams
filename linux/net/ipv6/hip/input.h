@@ -4,10 +4,30 @@
 #ifdef __KERNEL__
 #  include <asm/atomic.h>
 #  include <linux/skbuff.h>
+#  include <net/ipv6.h>
+#  include <net/checksum.h>
 #endif /* __KERNEL__ */ 
 
 #include <net/hip.h>
 #include "workqueue.h"
+#include "debug.h"
+#include "xfrm.h"
+#include "hadb.h"
+#include "keymat.h"
+#include "crypto/dsa.h"
+#include "builder.h"
+#include "hip.h"
+#include "dh.h"
+#include "misc.h"
+#include "workqueue.h"
+#include "db.h"
+#include "cookie.h"
+#include "output.h"
+#include "socket.h"
+#ifdef CONFIG_HIP_RVS
+#include "rvs.h"
+#endif
+#include "crypto/rsa.h"
 
 #ifdef __KERNEL__
 void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr);

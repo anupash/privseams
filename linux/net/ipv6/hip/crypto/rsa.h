@@ -21,6 +21,13 @@
 #ifndef G10_RSA_H
 #define G10_RSA_H
 
+#ifdef __KERNEL__
+#include <net/hip.h>
+#include "kernel-interface.h"
+#endif /* __KERNEL__ */
+
+#include "gcrypt.h"
+
 int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		 int priv_klen);
 int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature,

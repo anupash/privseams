@@ -1,12 +1,6 @@
 // FIXME: whenever something that is replicated in beet db is
 // modified, the modifications must be written there too.
 #include "hadb.h"
-#include "debug.h"
-#include "misc.h"
-#include "db.h"
-#include "dh.h"
-#include "hashtable.h"
-#include "builder.h"
 
 #ifdef __KERNEL__
 #  include <net/ipv6.h>

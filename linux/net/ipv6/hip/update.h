@@ -3,9 +3,20 @@
 
 #ifdef __KERNEL__
 #  include <net/ipv6.h>
+#  include <linux/xfrm.h>
+#  include <net/xfrm.h>
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>
+#include "hip.h"
+#include "dh.h"
+#include "input.h"
+#include "hadb.h"
+#include "db.h"
+#include "keymat.h"
+#include "builder.h"
+#include "misc.h"
+#include "output.h"
 
 /* int hip_update_spi_waitlist_ispending(uint32_t spi); */
 /* void hip_update_spi_waitlist_delete_all(void); */

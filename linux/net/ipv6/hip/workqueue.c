@@ -12,19 +12,7 @@
  * adding to. This is ensured by local_irq_save().
  *
  */
-#ifdef __KERNEL__
-#include <asm/semaphore.h>
-#include <asm/percpu.h>
-#include <asm/system.h>
-#include <linux/list.h>
-#include <linux/interrupt.h>
-#endif
-
-#include "list.h"
 #include "workqueue.h"
-#include "netlink.h" /* hip_netlink_* functions */
-#include "debug.h"
-#include "builder.h"
 
 #ifdef __KERNEL__
 /* HIP Per Cpu WorkQueue */

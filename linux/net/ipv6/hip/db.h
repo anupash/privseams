@@ -2,13 +2,18 @@
 #define _HIP_DB
 
 #ifdef __KERNEL__
+
 #  include <linux/list.h>
 #  include <linux/spinlock.h>
 #  include <net/ipv6.h>
 #  include <net/hip.h>
-#endif /* __KERNEL__ */
 
 #include "hip.h"
+#include "misc.h"
+#include "builder.h"
+#include "socket.h"
+#include "output.h"
+#include "update.h"
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
@@ -22,6 +27,19 @@ struct hip_db_struct {
         rwlock_t          db_lock;
 	char *            db_name;
         int               db_cnt;
+};
+
+struct hip_entry_list {
+        struct list_head list;
+        struct in6_addr peer_hit;
+        /* These two _MUST_ be left untouched. Feel free to add more
+         * to the end */
+};
+
+struct hip_hadb_multi {
+	struct list_head m_head;
+	void *           m_arg;
+	int              m_type;
 };
 
 #define HIP_INIT_DB(name,id) \
@@ -60,24 +78,10 @@ struct hip_db_struct {
         } while(0)
 
 
-struct hip_entry_list {
-        struct list_head list;
-        struct in6_addr peer_hit;
-        /* These two _MUST_ be left untouched. Feel free to add more
-         * to the end */
-};
-
-struct hip_hadb_multi {
-	struct list_head m_head;
-	void *           m_arg;
-	int              m_type;
-};
-
 typedef struct hip_host_id HIP_HID;
 
 // host id functions
 int hip_get_any_local_hit(struct in6_addr *dst, uint8_t algo);
-
 int        hip_add_host_id(struct hip_db_struct *db,const struct hip_lhi *lhi,
 			   const struct hip_host_id *host_id);
 int        hip_add_localhost_id(const struct hip_lhi *lhi,
@@ -131,4 +135,5 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 extern struct hip_db_struct hip_peer_hostid_db;
 extern struct hip_db_struct hip_local_hostid_db;
 
+#endif /* __KERNEL__ */
 #endif /* _HIP_DB */

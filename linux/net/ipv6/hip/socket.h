@@ -1,5 +1,7 @@
 #ifndef HIP_SOCKET_H
 #define HIP_SOCKET_H
+#ifndef __KERNEL__
+#else
 
 #include <linux/types.h>
 #include <linux/net.h>
@@ -7,6 +9,20 @@
 #include <linux/mm.h>
 #include <net/sock.h>
 #include <net/hip.h>
+#include <linux/net.h>
+#include <net/addrconf.h>
+
+#include "debug.h"
+#include "db.h"
+#include "builder.h"
+#include "misc.h"
+#include "workqueue.h"
+#include "misc.h"
+#include "cookie.h"
+#include "unit.h"
+#include "input.h"
+#include "output.h"
+#include "debug.h"
 
 int hip_init_socket_handler(void);
 void hip_uninit_socket_handler(void);
@@ -48,4 +64,5 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 				   const struct in6_addr *ip,
 				   int insert, int rvs);
 
+#endif /* __KERNEL__ */
 #endif /* HIP_SOCKET_H */

@@ -2,11 +2,19 @@
 #define HIP_WORKQUEUE
 
 #ifdef __KERNEL__
-//#include <linux/spinlock.h>
-#include <net/ipv6.h>
+#  include <asm/semaphore.h>
+#  include <asm/percpu.h>
+#  include <asm/system.h>
+#  include <linux/list.h>
+#  include <linux/interrupt.h>
+#  include <net/ipv6.h>
+#  include <net/hip.h>
 #endif
 
-#include <net/hip.h>
+#include "list.h"
+#include "netlink.h" /* hip_netlink_* functions */
+#include "debug.h"
+#include "builder.h"
 
 #define HIP_WO_TYPE_INCOMING 1
 #define HIP_WO_TYPE_OUTGOING 2

@@ -7,14 +7,7 @@
  * - Mika Kousa <mkousa@cc.hut.fi>
  */
 
-#ifdef __KERNEL__
-#  include <net/ipv6.h>
-#endif /* __KERNEL__ */
-
 #include "misc.h"
-#include "debug.h"
-#include "builder.h"
-#include "hip.h"
 
 /*
  * XX TODO: HAA

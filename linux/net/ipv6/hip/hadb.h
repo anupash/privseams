@@ -1,8 +1,14 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
+#ifndef __KERNEL__
+#else
 
 #include <net/hip.h>
 #include "debug.h"
+#include "misc.h"
+#include "db.h"
+#include "hashtable.h"
+#include "builder.h"
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
@@ -109,7 +115,7 @@ int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 			     int count, int *eof, void *data);
 int hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
 				  int count, int *eof, void *data);
-/**************** other useful ******************/
+/**************** other useful utilities ******************/
 void hip_hadb_delete_state(hip_ha_t *ha);
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 void hip_hadb_deactivate_hs_spi(uint32_t spi);
@@ -135,4 +141,5 @@ void hip_hadb_dump_hs_ht(void);
 } while(0)
 #endif
 
+#endif /* __KERNEL__ */
 #endif /* HIP_HADB_H */

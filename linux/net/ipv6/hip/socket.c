@@ -9,20 +9,6 @@
  */
 
 #include "socket.h"
-#include "debug.h"
-#include "db.h"
-#include "builder.h"
-#include "misc.h"
-#include "workqueue.h"
-#include "misc.h"
-#include "cookie.h"
-#include "unit.h"
-#include "input.h"
-#include "output.h"
-#include "debug.h"
-
-#include <linux/net.h>
-#include <net/addrconf.h>
 
 extern struct net_proto_family hip_family_ops;
 extern struct proto_ops inet_stream_ops;

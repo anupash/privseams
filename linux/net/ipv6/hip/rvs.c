@@ -7,15 +7,7 @@
  * Licence: GNU/GPL
  */
 
-#ifdef __KERNEL__
-#  include <linux/list.h>
-#  include <linux/spinlock.h>
-#endif /* __KERNEL__ */
-
 #include "rvs.h"
-#include "misc.h"
-#include "builder.h"
-#include "output.h"
 
 HIP_HASHTABLE rva_table;
 

@@ -10,42 +10,6 @@
  */
 
 #include "hip.h"
-#include "hadb.h"
-#include "input.h"
-#include "builder.h"
-#include "db.h"
-#include "cookie.h"
-#include "keymat.h"
-#include "dh.h"
-#include "misc.h"
-#include "output.h"
-#include "workqueue.h"
-#include "socket.h"
-#include "update.h"
-#ifdef CONFIG_HIP_RVS
-#include "rvs.h"
-#endif
-
-#ifdef __KERNEL__
-#  include <linux/proc_fs.h>
-#  include <linux/notifier.h>
-#  include <linux/spinlock.h>
-#  include <linux/xfrm.h>
-#  include <linux/crypto.h>
-#  include <net/protocol.h>
-#  include <net/checksum.h>
-#  include <net/hip_glue.h>
-#  include <net/addrconf.h>
-#  include <net/xfrm.h>
-#  include <linux/suspend.h>
-#  include <linux/completion.h>
-#  include <linux/cpumask.h>
-#  ifdef CONFIG_SYSCTL
-#    include <linux/sysctl.h>
-#  endif
-#endif /* __KERNEL__ */
-
-#  include <net/hip.h>
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
