@@ -2296,13 +2296,18 @@ int hip_receive_i1(struct sk_buff *skb)
 	case HIP_STATE_I2_SENT:
 		err = hip_handle_i1(skb, entry);
 		break;
+	case HIP_STATE_R2_SENT:
+		err = hip_handle_i1(skb, entry);
+		HIP_DEBUG("Received I1 in state R2_SENT. Sent R1\n");
+		break;
 	case HIP_STATE_ESTABLISHED:
 		err = hip_handle_i1(skb, entry);
 		break;
 	case HIP_STATE_REKEYING:
-
+		err = hip_handle_i1(skb, entry);
 		break;
 	default:
+		/* should not happen */
 		HIP_ERROR("DEFAULT CASE, UNIMPLEMENTED STATE HANDLING OR A BUG\n");
 		err = -EINVAL;
 		break;
