@@ -35,8 +35,8 @@ diff -Nru tcpdump-3.7.2/interface.h tcpdump-3.7.2-hip/interface.h
  
 diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 --- tcpdump-3.7.2/print-hip.c	1970-01-01 02:00:00.000000000 +0200
-+++ tcpdump-3.7.2-hip/print-hip.c	2004-03-24 17:24:46.000000000 +0200
-@@ -0,0 +1,491 @@
++++ tcpdump-3.7.2-hip/print-hip.c	2004-05-18 16:31:16.000000000 +0300
+@@ -0,0 +1,511 @@
 +/*
 + * Copyright (c) 1988, 1989, 1990, 1991, 1992, 1993, 1994
 + *	The Regents of the University of California.  All rights reserved.
@@ -361,9 +361,29 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +
 +void hip_print_param_rea_info(const struct hip_tlv_common *tlv) {
 +	struct hip_rea_info *p = (struct hip_rea_info *) tlv;
-+	printf("(Interface ID=0x%x,spi_rev=0x%x,spi=0x%x,new_spi=0x%x,keymat_index=0x%x,REA ID=%u)",
++	u_int tlv_len;
++	unsigned int addrlist_len, n_addrs;
++	int i;
++	void *a;
++
++	printf("(Interface ID=0x%x,spi_rev=0x%x,spi=0x%x,new_spi=0x%x,keymat_index=0x%x,REA ID=%u",
 +	       p->interface_id, ntohl(p->current_spi_rev), ntohl(p->current_spi),
 +	       ntohl(p->new_spi), p->keymat_index, ntohs(p->rea_id));
++
++	tlv_len = HIP_LEN_PAD(sizeof(struct hip_tlv_common) +
++			      ntohs(((const struct hip_tlv_common *) tlv)->length));
++	addrlist_len = tlv_len - sizeof(struct hip_rea_info_addr_item);
++	n_addrs = addrlist_len / sizeof(struct hip_rea_info_addr_item);
++
++	a = (void*)p+sizeof(struct hip_rea_info);
++	for (i = 0; i < n_addrs; i++, a += sizeof(struct hip_rea_info_addr_item)) {
++	  struct hip_rea_info_addr_item *addr = (struct hip_rea_info_addr_item *) a;
++	  char addrstr[INET6_ADDRSTRLEN];
++
++	  inet_ntop(AF_INET6, &addr->address, addrstr, sizeof(addrstr));
++	  printf(" address=%s/lifetime=0x%x", addrstr, ntohl(addr->lifetime));
++	}
++	printf(")");
 +}
 +
 +void hip_print_param_spi_lsi(const struct hip_tlv_common *tlv) {
