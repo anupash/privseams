@@ -774,9 +774,10 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 	return 0;
 }
 
+/* Practically called only by when adding a HIT-IP mapping before bex */
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 {
-	int err;
+	int err = 0;
 	hip_ha_t *entry;
 	char str[INET6_ADDRSTRLEN];
 
@@ -798,7 +799,6 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			return -1;
 		}
 		_HIP_DEBUG("created a new sdb entry\n");
-
 		ipv6_addr_copy(&entry->hit_peer, hit);
 
 		/* XXX: This is wrong. As soon as we have native socket API, we
@@ -812,15 +812,18 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		hip_hold_ha(entry); /* released at the end */
 	}
 
-	/* TODO: move this inside !entry */
-	err = hip_hadb_add_peer_addr(entry, addr, 0, 0, PEER_ADDR_STATE_ACTIVE);
-	if (err) {
-		HIP_ERROR("error while adding a new peer address\n");
-		err = -2;
-		goto out;
-	}
-	_HIP_DEBUG("peer address add ok\n");
-
+	/* add initial HIT-IP mapping */
+	if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
+		err = hip_hadb_add_peer_addr(entry, addr, 0, 0,
+					     PEER_ADDR_STATE_ACTIVE);
+		if (err) {
+			HIP_ERROR("error while adding a new peer address\n");
+			err = -2;
+			goto out;
+		}
+	} else
+		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
+			  hip_state_str(entry->state));
  out:
 	if (entry)
 		hip_put_ha(entry);
