@@ -113,12 +113,12 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		//err = hip_hadb_get_peer_addr(entry, &hdr->daddr);
 		//FIXME: tkoponen, is it ok to assume the xs to have a
 		//single address that is always used if such exists?
-		if (ipv6_addr_any(&xs->preferred_address)) {
+		if (ipv6_addr_any(&xs->preferred_peer_addr)) {
 			HIP_ERROR("Could not find peer address\n");
 			err = -EADDRNOTAVAIL;
 			goto out;
 		}
-		ipv6_addr_copy(&hdr->daddr, &xs->preferred_address);
+		ipv6_addr_copy(&hdr->daddr, &xs->preferred_peer_addr);
 		    
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 		if (!skb) {

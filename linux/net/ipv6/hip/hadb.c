@@ -823,13 +823,11 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
 			  hip_state_str(entry->state));
 
-#ifndef __KERNEL__ 
-	/* Send the mapping from the userspace daemon to the kernel */
+	/* Synchronize the kernel BEET database */
 	err = hip_xfrm_dst_init(hit, addr);
 	if (err) {
 		HIP_ERROR("Failed to send HI to the kernelspace\n");
 	}
-#endif
 
  out:
 	if (entry)

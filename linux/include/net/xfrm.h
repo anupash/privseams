@@ -118,6 +118,10 @@ struct xfrm_state
 		int		trailer_len;
 	} props;
 
+#if defined(CONFIG_ESPBEET)
+        xfrm_address_t   outeraddr;
+#endif
+
 	struct xfrm_lifetime_cfg lft;
 
 	/* Data for transformer */
@@ -150,6 +154,11 @@ struct xfrm_state
 	/* Private data of this transformer, format is opaque,
 	 * interpreted by xfrm_type methods. */
 	void			*data;
+	
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+        hip_hit_t src_hit;
+        hip_hit_t dst_hit;
+#endif
 };
 
 enum {
@@ -163,7 +172,8 @@ enum {
 
 enum {
 	XFRM_MODE_TRANSPORT=0,
-	XFRM_MODE_TUNNEL
+	XFRM_MODE_TUNNEL,
+        XFRM_MODE_BEET
 };
 
 struct xfrm_type;

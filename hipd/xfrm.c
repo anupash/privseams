@@ -1,4 +1,4 @@
-#include "xfrmapi.h"
+#include "xfrm.h"
 
 #include "netlink.h"
 
@@ -26,6 +26,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst) {
 	req.hdr.arg1 = spi;
 	ret = hip_netlink_send(&req);
 	if (!ret) {
+		HIP_ERROR("Unable to send over netlink");
 		return ret;
 	}
 
@@ -40,6 +41,7 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
 	ipv6_addr_copy(&req.hdr.dst_addr, dsthit);	
 	ipv6_addr_copy(&req.hdr.src_addr, srchit);
 	if (!hip_netlink_send(&req)) {
+		HIP_ERROR("Unable to send over netlink");
 		return 0;
 	}
 	
@@ -62,7 +64,57 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi) {
 	req.hdr.arg1 = spi;
 	if (!hip_netlink_send(&req)) {
 		HIP_ERROR("Unable to send over netlink");
+		return;
 	}
 
-	 hip_get_response();
+	hip_get_response();
+}
+
+int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
+	struct hip_work_order req;
+	
+	req.hdr.type = HIP_WO_TYPE_OUTGOING;
+	req.hdr.subtype = HIP_WO_SUBTYPE_XFRM_INIT;	
+	ipv6_addr_copy(&req.hdr.dst_addr, dst_addr);
+	ipv6_addr_copy(&req.hdr.src_addr, dst_hit);
+	if (!hip_netlink_send(&req)) {
+		HIP_ERROR("Unable to send over netlink");
+		return;
+	}
+
+	return hip_get_response();
+}
+
+int hip_xfrm_update(uint32_t spi, struct in6_addr * dst_addr, int state,
+		    int dir) {
+  	struct hip_work_order req;
+	
+	req.hdr.type = HIP_WO_TYPE_OUTGOING;
+	req.hdr.subtype = HIP_WO_SUBTYPE_XFRM_UPD;
+	ipv6_addr_copy(&req.hdr.dst_addr, dst_addr);
+	req.hdr.arg1 = spi;
+	*((int *)(&req.hdr.src_addr)) = state;
+	req.hdr.arg2 = dir;
+	if (!hip_netlink_send(&req)) {
+		HIP_ERROR("Unable to send over netlink");
+		return;
+	}
+
+	return hip_get_response();
+}
+
+int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
+  	struct hip_work_order req;
+	
+	req.hdr.type = HIP_WO_TYPE_OUTGOING;
+	req.hdr.subtype = HIP_WO_SUBTYPE_XFRM_DEL;
+	ipv6_addr_copy(&req.hdr.src_addr, hit);
+	req.hdr.arg1 = spi;
+	req.hdr.arg2 = dir;
+	if (!hip_netlink_send(&req)) {
+		HIP_ERROR("Unable to send over netlink");
+		return;
+	}
+
+	return hip_get_response();
 }

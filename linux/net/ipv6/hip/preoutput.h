@@ -9,7 +9,7 @@
 #endif
 
 #include <net/hip.h>
-#include "xfrmapi.h"
+#include "beet.h"
 #include "misc.h"
 #include "debug.h"
 

@@ -38,6 +38,10 @@
 #define HIP_WO_SUBTYPE_ACQSPI      105
 #define HIP_WO_SUBTYPE_DELSA       106
 #define HIP_WO_SUBTYPE_FINSA       107
+#define HIP_WO_SUBTYPE_XFRM_INIT   108
+#define HIP_WO_SUBTYPE_XFRM_DEL    109
+#define HIP_WO_SUBTYPE_XFRM_UPD    110
+
 
 /* subtypes from 201 to 300 reserved for HIP_WO_TYPE_MSG */
 

@@ -330,7 +330,7 @@ int hip_do_work(struct hip_work_order *job)
 		break;
 	case HIP_WO_TYPE_OUTGOING:
 	{			
-		struct hip_work_order * resp;
+		struct hip_work_order * resp = NULL;
 
 		switch(job->hdr.subtype) {
 #ifdef __KERNEL__
