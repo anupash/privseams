@@ -14,6 +14,7 @@ typedef struct { } rwlock_t;
 
 #endif /* __KERNEL__ */
 
+#include "debug.h"
 #include "hip.h"
 #include "misc.h"
 #include "builder.h"

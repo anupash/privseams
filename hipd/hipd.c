@@ -18,6 +18,7 @@
 #include <net/hip.h>
 
 #include "hipd.h"
+#include "workqueue.h"
 #include "debug.h"
 
 void usage() {
@@ -106,11 +107,11 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			
+			/* Process and discard the job */
 			hip_do_work(job);
-			hip_free_work_order(job);
 		} else {
-			HIP_INFO("unknown socket activity.");
-		} /* select */
+			HIP_INFO("Unknown socket activity.");
+		}
 	}
 
 	/* Never enters here...*/
