@@ -1126,6 +1126,89 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
  * @event_dev: the network device which caused the event
  * @event: the event
  *
+ * This function does the actual work (sending of UPDATE, that is).
+ *
+ * Events caused by loopback devices are ignored.
+ *
+ * XXXX REMOVE ?: NOTE: this uses our own REA parameter extension (REA parameter containing no addresses)
+ *
+ * @event_src is 0 if @event to be handled came from hip_handle_ipv6_dad_completed,
+ * or 1 if @event came from netdevice_notifier.
+ */
+static void hip_net_event_handle(int event_src, struct net_device *event_dev,
+				 unsigned long event)
+{
+        int err = 0;
+        struct inet6_dev *idev;
+        int idev_addr_count = 0;
+        struct hip_rea_info_addr_item *addr_list = NULL;
+
+	/* hip_net_event checks validity of event_dev */
+
+        if (! (event_src == EVENTSRC_INET6 || event_src == EVENTSRC_NETDEV) ) {
+                HIP_ERROR("unknown event source %d\n", event_src);
+                return;
+        }
+
+        read_lock(&addrconf_lock);
+
+	HIP_DEBUG("event_src=%d(%s) event=%lu dev=%s ifindex=%d\n",
+		  event_src, event_src == EVENTSRC_INET6 ? "inet6" : "netdev",
+		  event, event_dev->name, event_dev->ifindex);
+
+        /* skip events caused by loopback (as long as we do not have
+           loopback support) */
+        if (event_dev->flags & IFF_LOOPBACK) {
+                HIP_DEBUG("ignoring event from loopback device\n");
+		goto out;
+        }
+
+	idev = in6_dev_get(event_dev);
+	if (!idev) {
+		HIP_DEBUG("NULL idev on event %ld (no IPv6 addrs)\n", event);
+		goto out;
+	}
+	read_lock(&idev->lock);
+
+	/* When a network device gets NETDEV_DOWN, create a 0 address REA parameter,
+	 * else (an IPv6 address was added or deleted or
+	 * network device came up) send "all addresses REA" */
+	if (event_src != EVENTSRC_NETDEV) {
+		err = hip_create_device_addrlist(idev, &addr_list,
+						 &idev_addr_count);
+		if (err) {
+			HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
+			goto out_err;
+		}
+	}
+
+	if (idev_addr_count > 0)
+		hip_send_update_all(addr_list, idev_addr_count);
+	else
+		HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+
+ out_err:
+	read_unlock(&idev->lock);
+	in6_dev_put(idev);
+	if (addr_list)
+		kfree(addr_list);
+
+ out:
+        read_unlock(&addrconf_lock);
+        return;
+}
+
+
+
+
+
+#if 0
+/**
+ * hip_net_event_handle - finish netdev and inet6 event handling
+ * @event_src: event source
+ * @event_dev: the network device which caused the event
+ * @event: the event
+ *
  * This function does the actual work (sending of REA, that is) after
  * the event type was inspected in XXXX OLD hip_inet6addr_event_handler or
  * hip_netdev_event_handler.
@@ -1134,7 +1217,7 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
  *
  * NOTE: this uses our own REA extension (REA containing no addresses)
  *
- * @event_src is 0 if @event to be handled came from hip_handle_ipv6_ifa_notify,
+ * @event_src is 0 if @event to be handled came from hip_handle_ipv6_dad_completed,
  * or 1 if @event came from netdevice_notifier.
  */
 static void hip_net_event_handle(int event_src, struct net_device *event_dev,
@@ -1148,14 +1231,14 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
 
 	/* hip_net_event checks validity of event_dev */
 
+	HIP_DEBUG("event_src=%s event=%lu dev=%s ifindex=%d\n",
+		  event_src == EVENTSRC_INET6 ? "ipv6_ifa" : "netdev",
+		  event, event_dev->name, event_dev->ifindex);
+
         if (! (event_src == EVENTSRC_INET6 || event_src == EVENTSRC_NETDEV) ) {
                 HIP_ERROR("unknown event source %d\n", event_src);
                 return;
         }
-
-	HIP_DEBUG("event_src=%d(%s) event=%lu dev=%s ifindex=%d\n",
-		  event_src, event_src == EVENTSRC_INET6 ? "ipv6_ifa" : "netdev",
-		  event, event_dev->name, event_dev->ifindex);
 
         /* skip events caused by loopback (as long as we do not have
            loopback support) */
@@ -1234,41 +1317,24 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
         read_unlock(&dev_base_lock);
         return;
 }
+#endif
 
 /**
- * hip_handle_ipv6_ifa_notify - handle IPv6 address events
+ * hip_handle_ipv6_dad_completed - handle IPv6 address events
  * @ifa: IPv6 address of an interface which caused the event
- * @event: the event
  *
- * This function gets the same event as ipv6_ifa_notify. Because
- * ipv6_ifa_notify seems to use netlink and we do not have a netlink
- * socket, we just change ipv6_ifa_notify to call this function when
- * an address is added or deleted.
- *
+ * This function gets notification when DAD procedure has finished
+ * successfully for an address @ifa.
  */
-//void hip_handle_ipv6_ifa_notify(struct inet6_ifaddr *ifa, int event) {
 void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 	struct net_device *event_dev = NULL;
 	struct inet6_dev *idev = NULL;
 	struct hip_work_order *hwo;
 
-	int event = NETDEV_UP;
-
-	HIP_DEBUG("ifa=0x%p\n", ifa);
-
-//	return; /////////
-
-
 	if (!ifa) {
 		HIP_ERROR("ifa is NULL\n");
 		goto out;
 	}
-#if 0
-        if (! (event == RTM_NEWADDR || event == RTM_DELADDR) ) {
-                HIP_DEBUG("Ignore ipv6_ifa event %d\n", event);
-		goto out;
-        }
-#endif
 
 	in6_ifa_hold(ifa);
 	hip_print_hit("ifa address", &ifa->addr);
@@ -1285,14 +1351,7 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 		goto out_idev_put;
         }
 	dev_hold(event_dev);
-#if 0
-	if (event == RTM_NEWADDR)
-		event = NETDEV_UP;
-	else
-		event = NETDEV_DOWN;
 
-	HIP_DEBUG("RTM->NETDEV event=%d\n", event);
-#endif
   	hwo = hip_init_job(GFP_ATOMIC);
   	if (!hwo) {
 		HIP_ERROR("No memory to handle ifa event\n");
@@ -1302,7 +1361,7 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 	hwo->type = HIP_WO_TYPE_MSG;
 	hwo->subtype = HIP_WO_SUBTYPE_IN6_EVENT;
 	hwo->arg1 = (void *)event_dev->ifindex;
-	hwo->arg2 = (void *)event;
+	hwo->arg2 = (void *)NETDEV_UP;
 	hwo->destructor = NULL;
 
 	hip_insert_work_order(hwo);
@@ -1319,12 +1378,14 @@ void hip_handle_ipv6_dad_completed(struct inet6_ifaddr *ifa) {
 	return;
 }
 
-static void hip_net_event(int ifindex, uint32_t event_src,
- 			  uint32_t event)
+/* workqueue runs this function when job's subtype is
+ * HIP_WO_SUBTYPE_IN6_EVENT or IP_WO_SUBTYPE_DEV_EVENT */
+static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 {
-	struct net_device *event_dev = dev_get_by_index(ifindex);
+	struct net_device *event_dev;
 
 	HIP_DEBUG("ifindex=%d event_src=%u event=%u\n", ifindex, event_src, event);
+	event_dev = dev_get_by_index(ifindex);
 	if (!event_dev) {
 		HIP_DEBUG("Network interface (ifindex=%d) does not exist anymore\n",
 			  ifindex);
@@ -1335,6 +1396,7 @@ static void hip_net_event(int ifindex, uint32_t event_src,
 	dev_put(event_dev);
 }
 
+/* Handle address deletion requests coming from IPv6 code */
 void hip_handle_inet6_addr_del(int ifindex) {
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 	hip_net_event(ifindex, EVENTSRC_INET6, NETDEV_DOWN);

@@ -214,7 +214,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	u8 *tmp_data = NULL;
 	size_t tmp_data_len;
 
-	HIP_DEBUG("key_len=%d, requested keymat_offset=%u calc_index=%u\n",
+	_HIP_DEBUG("key_len=%d, requested keymat_offset=%u calc_index=%u\n",
 		  key_len, *keymat_offset, *calc_index);
 	_HIP_HEXDUMP("calc_index_keymat", calc_index_keymat, HIP_AH_SHA_LEN);
 
@@ -285,7 +285,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 #endif
 #endif
 		if (*calc_index < (*keymat_offset / HIP_AH_SHA_LEN + 1)) {
-			HIP_DEBUG("skip until we are at right calc_index %d (now at %u)\n",
+			_HIP_DEBUG("skip until we are at right calc_index %d (now at %u)\n",
 				  *keymat_offset / HIP_AH_SHA_LEN + 1, *calc_index);
 			continue;
 		}
@@ -308,8 +308,8 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 
  out:
 	_HIP_HEXDUMP("CALCULATED KEY", key, key_len);
-	HIP_DEBUG("at end: *keymat_offset=%u *calc_index=%u\n",
-		  *keymat_offset, *calc_index);
+	_HIP_DEBUG("at end: *keymat_offset=%u *calc_index=%u\n",
+		   *keymat_offset, *calc_index);
 
  out_err:
 	if(tmp_data)

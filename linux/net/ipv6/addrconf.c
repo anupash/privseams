@@ -1972,7 +1972,7 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 	struct inet6_dev *idev;
 	struct inet6_ifaddr *ifa, **bifa;
 	int i;
-	printk(KERN_DEBUG "device %d is going down\n", dev->ifindex);
+
 	ASSERT_RTNL();
 
 	rt6_ifdown(dev);
@@ -2073,7 +2073,7 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 		neigh_parms_release(&nd_tbl, idev->nd_parms);
 		in6_dev_put(idev);
 	}
-	printk(KERN_DEBUG "device is down\n");
+
 	return 0;
 }
 
@@ -2241,7 +2241,6 @@ static void addrconf_dad_completed(struct inet6_ifaddr *ifp)
 			ipv6_dev_ac_inc(ifp->idev->dev, &addr);
 	}
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	printk(KERN_DEBUG "DAD completed %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(ifp->addr));
 	HIP_CALLFUNC(hip_handle_ipv6_dad_completed, 0)(ifp);
 #endif
 }

@@ -301,6 +301,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	HIP_DEBUG(" REA has %d addresses, rea param len=%d\n", n_addrs, hip_get_param_total_len(rea));
 	if (n_addrs == 0) {
 		HIP_ERROR("REA (SPI=0x%x) contains no addresses\n", spi);
+		/* err is 0, no error */
 		goto out_err;
 	}
 
@@ -460,6 +461,11 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 
 	HIP_LOCK_HA(entry);
 	our_current_keymat_index = entry->current_keymat_index;
+	HIP_DEBUG("our_current_keymat_index=%d\n", our_current_keymat_index);
+
+	/* test code, not in specs*/
+	if (nes->old_spi != nes->new_spi)
+	{
 
 	/* 3. If the system generated new KEYMAT in the previous step,
 	 * it sets Keymat Index to zero, independent on whether the
@@ -467,8 +473,6 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	if (new_keymat_generated) {
 		our_current_keymat_index = 0;
 	}
-
-	HIP_DEBUG("our_current_keymat_index=%d\n", our_current_keymat_index);
 
 	/* 4. The system draws keys for new incoming and outgoing ESP
 	 * SAs, starting from the Keymat Index, and prepares new
@@ -506,6 +510,8 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		if (err)
 			goto out_err;
 	}
+	} else
+		HIP_DEBUG("not touching keymat data in entry\n");
 
 	/* testing REA parameters in UPDATE */
 	while (	(rea = hip_get_nth_param(msg, HIP_PARAM_REA_INFO, rea_i)) != NULL) {
@@ -515,6 +521,10 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		err = 0;
 		rea_i++;
 	}
+
+	/* test code, not in specs*/
+	if (nes->old_spi != nes->new_spi)
+	{
 
 	/* set up new outgoing IPsec SA */
 
@@ -567,6 +577,10 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 
 	hip_update_spi_waitlist_add(new_spi_in, hits, NULL /*rea*/);
 
+	}
+	else {
+		HIP_DEBUG("testing Old SPI == New SPI\n)");
+	}
 #if 0
 	/* delete old incoming SA */
 	/* todo: set to dying/drop old IPsec SA ? */
@@ -599,9 +613,15 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	}
 
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
-	err = hip_build_param_nes(update_packet, 1,
-				  our_current_keymat_index, ntohs(nes->update_id),
-				  prev_spi_in, new_spi_in);
+	/* test code, not in specs*/
+	if (nes->old_spi != nes->new_spi)
+		err = hip_build_param_nes(update_packet, 1,
+					  our_current_keymat_index, ntohs(nes->update_id),
+					  prev_spi_in, new_spi_in);
+	else /* ack to rea update */
+		err = hip_build_param_nes(update_packet, 1,
+					  our_current_keymat_index+1 /* TEST */, ntohs(nes->update_id),
+					  entry->spi_in, entry->spi_in);
 	if (err) {
 		HIP_ERROR("Building of NES failed\n");
 		goto out_err;
@@ -743,6 +763,11 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	}
 
 	HIP_DEBUG("current_keymat_index=%u\n", current_keymat_index);
+
+	/* test code, not in specs*/
+	if (nes->old_spi != nes->new_spi)
+	{
+
 
 	/* 3. The system draws keys for new incoming and outgoing ESP
 	 * SAs, starting from the Keymat Index, and prepares new
@@ -889,7 +914,11 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	HIP_DEBUG("finalizing the new outbound SA, SPI=0x%x\n", new_spi_out);
 	hip_finalize_sa(hits, new_spi_out);
 
-
+	} /* if (nes->old_spi != nes->new_spi) */
+	else {
+		HIP_DEBUG("UPDATE was ack to REA UPDATE\n");
+	}
+		
 	/* Go back to ESTABLISHED state */
 	entry->state = HIP_STATE_ESTABLISHED;
 	HIP_DEBUG("Went back to ESTABLISHED state\n");
@@ -950,6 +979,20 @@ int hip_receive_update(struct sk_buff *skb)
 	state = entry->state; /* todo: remove variable state */
 
 	HIP_DEBUG("Received UPDATE in state %s\n", hip_state_str(state));
+
+#if 0
+	/* in state R2-SENT: Receive UPDATE, go to ESTABLISHED and
+	 * process from ESTABLISHED state */
+	if (state == HIP_STATE_R2_SENT) {
+		state = entry->state = HIP_STATE_ESTABLISHED;
+		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
+	}
+#endif
+
+	if (! (state == HIP_STATE_ESTABLISHED || state == HIP_STATE_REKEYING) ) {
+		HIP_DEBUG("received UPDATE when not on established or rekeying state\n");
+		goto out_err;
+	}
 
 	nes = hip_get_param(msg, HIP_PARAM_NES);
 	if (!nes) {
@@ -1124,16 +1167,18 @@ int hip_receive_update(struct sk_buff *skb)
 	}
 
  out_err:
-	HIP_UNLOCK_HA(entry);
-	if (entry)
+	if (entry) {
+		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
+	}
 
 	return err;
 }
 
-
-int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item *addr_list, int addr_count)
+int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item *addr_list,
+		    int addr_count /*, int flags*/)
 {
+	/* todo: add flags: create_sa, add_rea_param */
 	int err = 0;
 	uint16_t update_id_out;
 	uint32_t new_spi_in = 0;
@@ -1143,12 +1188,23 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_crypto_key null_key;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("addr_count=%d\n", addr_count);
+
 	if (!entry) {
 		HIP_ERROR("null entry\n");
 		err = -EINVAL;
 		goto out_err;
 	}
+
+	/* start building UPDATE packet */
+	update_packet = hip_msg_alloc();
+	if (!update_packet) {
+		HIP_ERROR("update_packet alloc failed\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
 
 	hip_print_hit("sending UPDATE to", &entry->hit_peer);
 
@@ -1173,18 +1229,18 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	}
 	HIP_DEBUG("New SA created with New SPI (in)=0x%x\n", new_spi_in);
 
-	entry->new_spi_in = new_spi_in;
-	HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
-
-	/* start building UPDATE packet */
-	update_packet = hip_msg_alloc();
-	if (!update_packet) {
-		HIP_ERROR("update_packet alloc failed\n");
-		err = -ENOMEM;
-		goto out_err;
+	if (addr_list && addr_count > 0) {
+		/* mm02 rea test */
+//		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, addr_list, addr_count);
+		err = hip_build_param_rea_info_mm02(update_packet, entry->spi_in, addr_list, addr_count);
+		if (err) {
+			HIP_ERROR("Building of REA param failed\n");
+			goto out_err;
+		}
 	}
 
-	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
+	entry->new_spi_in = new_spi_in;
+	HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
 
 	update_id_out = hip_get_new_update_id();
 	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
@@ -1195,33 +1251,13 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
-	if (addr_list && addr_count > 0) {
-		/* mm02 rea test */
-#if 0
-		struct hip_rea_info_addr_item addresses[2];
-
-		int idev_addr_count = 0;
-		struct hip_rea_info_addr_item *addr_list = NULL;
-
-		addresses[0].lifetime = htonl(0x1234);
-		addresses[0].reserved = htonl(1 << 31); // preferred address
-		ipv6_addr_set(&addresses[0].address, htons(0x3ffe), 0, 0, htonl(2));
-
-		addresses[1].lifetime = htonl(0x5678);
-		addresses[1].reserved = 0;
-		ipv6_addr_set(&addresses[1].address, htons(0xfe80), 0, 0, htonl(2));
-#endif
-//		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, &addresses[0], 2);
-		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, addr_list, addr_count);
-		if (err) {
-			HIP_ERROR("Building of REA param failed\n");
-			goto out_err;
-		}
-	}
-
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
-	err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
-				  update_id_out, entry->spi_in, new_spi_in); 
+	if (addr_list && addr_count > 0) /* net event initiated update, needs still ifindex2spi map */
+		err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
+					  update_id_out, entry->spi_in, entry->spi_in); 
+	else
+		err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
+					  update_id_out, entry->spi_in, new_spi_in); 
 	if (err) {
 		HIP_ERROR("Building of NES param failed\n");
 		goto out_err;
