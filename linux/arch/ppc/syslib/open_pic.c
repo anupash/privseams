@@ -16,6 +16,7 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/sysdev.h>
+#include <linux/errno.h>
 #include <asm/ptrace.h>
 #include <asm/signal.h>
 #include <asm/io.h>
@@ -24,7 +25,6 @@
 #include <asm/sections.h>
 #include <asm/open_pic.h>
 #include <asm/i8259.h>
-#include <asm/hardirq.h>
 
 #include "open_pic_defs.h"
 
@@ -412,7 +412,7 @@ void __init openpic_init(int offset)
 
 	/* Initialize the spurious interrupt */
 	if (ppc_md.progress) ppc_md.progress("openpic: spurious",0x3bd);
-	openpic_set_spurious(OPENPIC_VEC_SPURIOUS+offset);
+	openpic_set_spurious(OPENPIC_VEC_SPURIOUS);
 	openpic_disable_8259_pass_through();
 #ifdef CONFIG_EPIC_SERIAL_MODE
 	openpic_eicr_set_clk(7);	/* Slowest value until we know better */
@@ -865,7 +865,7 @@ openpic_get_irq(struct pt_regs *regs)
 			irq = cirq;
 			openpic_eoi();
 		}
-        } else if (irq == OPENPIC_VEC_SPURIOUS + open_pic_irq_offset)
+	} else if (irq == OPENPIC_VEC_SPURIOUS)
 		irq = -1;
 	return irq;
 }
@@ -988,9 +988,9 @@ int openpic_resume(struct sys_device *sysdev)
 
 	/* OpenPIC sometimes seem to need some time to be fully back up... */
 	do {
-		openpic_set_spurious(OPENPIC_VEC_SPURIOUS+open_pic_irq_offset);
+		openpic_set_spurious(OPENPIC_VEC_SPURIOUS);
 	} while(openpic_readfield(&OpenPIC->Global.Spurious_Vector, OPENPIC_VECTOR_MASK)
-			!= (OPENPIC_VEC_SPURIOUS + open_pic_irq_offset));
+			!= OPENPIC_VEC_SPURIOUS);
 	
 	openpic_disable_8259_pass_through();
 

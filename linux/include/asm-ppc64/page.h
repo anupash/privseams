@@ -30,11 +30,12 @@
 #define ESID_MASK	0xfffffffff0000000UL
 #define GET_ESID(x)     (((x) >> SID_SHIFT) & SID_MASK)
 
-#ifdef CONFIG_HUGETLB_PAGE
-
 #define HPAGE_SHIFT	24
 #define HPAGE_SIZE	((1UL) << HPAGE_SHIFT)
 #define HPAGE_MASK	(~(HPAGE_SIZE - 1))
+
+#ifdef CONFIG_HUGETLB_PAGE
+
 #define HUGETLB_PAGE_ORDER	(HPAGE_SHIFT - PAGE_SHIFT)
 
 /* For 64-bit processes the hugepage range is 1T-1.5T */
@@ -181,8 +182,7 @@ static inline int get_order(unsigned long size)
 
 #define __pa(x) ((unsigned long)(x)-PAGE_OFFSET)
 
-/* Not 100% correct, for use by /dev/mem only */
-extern int page_is_ram(unsigned long physaddr);
+extern int page_is_ram(unsigned long pfn);
 
 #endif /* __ASSEMBLY__ */
 
@@ -202,9 +202,9 @@ extern int page_is_ram(unsigned long physaddr);
 /*             to change!                               */
 #define PAGE_OFFSET     ASM_CONST(0xC000000000000000)
 #define KERNELBASE      PAGE_OFFSET
-#define VMALLOCBASE     0xD000000000000000UL
-#define IOREGIONBASE    0xE000000000000000UL
-#define EEHREGIONBASE   0xA000000000000000UL
+#define VMALLOCBASE     ASM_CONST(0xD000000000000000)
+#define IOREGIONBASE    ASM_CONST(0xE000000000000000)
+#define EEHREGIONBASE   ASM_CONST(0xA000000000000000)
 
 #define IO_REGION_ID       (IOREGIONBASE>>REGION_SHIFT)
 #define EEH_REGION_ID      (EEHREGIONBASE>>REGION_SHIFT)
@@ -212,17 +212,6 @@ extern int page_is_ram(unsigned long physaddr);
 #define KERNEL_REGION_ID   (KERNELBASE>>REGION_SHIFT)
 #define USER_REGION_ID     (0UL)
 #define REGION_ID(X)	   (((unsigned long)(X))>>REGION_SHIFT)
-
-/*
- * Define valid/invalid EA bits (for all ranges)
- */
-#define VALID_EA_BITS   (0x000001ffffffffffUL)
-#define INVALID_EA_BITS (~(REGION_MASK|VALID_EA_BITS))
-
-#define IS_VALID_REGION_ID(x) \
-        (((x) == USER_REGION_ID) || ((x) >= KERNEL_REGION_ID))
-#define IS_VALID_EA(x) \
-        ((!((x) & INVALID_EA_BITS)) && IS_VALID_REGION_ID(REGION_ID(x)))
 
 #define __bpn_to_ba(x) ((((unsigned long)(x))<<PAGE_SHIFT) + KERNELBASE)
 #define __ba_to_bpn(x) ((((unsigned long)(x)) & ~REGION_MASK) >> PAGE_SHIFT)
@@ -240,6 +229,7 @@ extern int page_is_ram(unsigned long physaddr);
 #endif
 
 #define virt_to_page(kaddr)	pfn_to_page(__pa(kaddr) >> PAGE_SHIFT)
+#define pfn_to_kaddr(pfn)	__va((pfn) << PAGE_SHIFT)
 
 #define virt_addr_valid(kaddr)	pfn_valid(__pa(kaddr) >> PAGE_SHIFT)
 

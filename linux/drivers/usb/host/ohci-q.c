@@ -136,7 +136,7 @@ static void periodic_link (struct ohci_hcd *ohci, struct ed *ed)
 
 	for (i = ed->branch; i < NUM_INTS; i += ed->interval) {
 		struct ed	**prev = &ohci->periodic [i];
-		u32		*prev_p = &ohci->hcca->int_table [i];
+		__le32		*prev_p = &ohci->hcca->int_table [i];
 		struct ed	*here = *prev;
 
 		/* sorting each branch by period (slow before fast)
@@ -156,7 +156,7 @@ static void periodic_link (struct ohci_hcd *ohci, struct ed *ed)
 				ed->hwNextED = *prev_p;
 			wmb ();
 			*prev = ed;
-			*prev_p = cpu_to_le32p (&ed->dma);
+			*prev_p = cpu_to_le32(ed->dma);
 			wmb();
 		}
 		ohci->load [i] += ed->load;
@@ -257,7 +257,7 @@ static void periodic_unlink (struct ohci_hcd *ohci, struct ed *ed)
 	for (i = ed->branch; i < NUM_INTS; i += ed->interval) {
 		struct ed	*temp;
 		struct ed	**prev = &ohci->periodic [i];
-		u32		*prev_p = &ohci->hcca->int_table [i];
+		__le32		*prev_p = &ohci->hcca->int_table [i];
 
 		while (*prev && (temp = *prev) != ed) {
 			prev_p = &temp->hwNextED;
@@ -427,20 +427,21 @@ static struct ed *ed_get (
 	 */
   	if (ed->state == ED_IDLE) {
 		u32	info;
+		__le32	hw_info;
 
 		info = usb_pipedevice (pipe);
 		info |= (ep >> 1) << 7;
 		info |= usb_maxpacket (udev, pipe, is_out) << 16;
-		info = cpu_to_le32 (info);
+		hw_info = cpu_to_le32 (info);
 		if (udev->speed == USB_SPEED_LOW)
-			info |= ED_LOWSPEED;
+			hw_info |= ED_LOWSPEED;
 		/* only control transfers store pids in tds */
 		if (type != PIPE_CONTROL) {
-			info |= is_out ? ED_OUT : ED_IN;
+			hw_info |= is_out ? ED_OUT : ED_IN;
 			if (type != PIPE_BULK) {
 				/* periodic transfers... */
 				if (type == PIPE_ISOCHRONOUS)
-					info |= ED_ISO;
+					hw_info |= ED_ISO;
 				else if (interval > 32)	/* iso can be bigger */
 					interval = 32;
 				ed->interval = interval;
@@ -451,7 +452,7 @@ static struct ed *ed_get (
 						/ 1000;
 			}
 		}
-		ed->hwINFO = info;
+		ed->hwINFO = hw_info;
 	}
 
 done:
@@ -751,12 +752,6 @@ static void td_done (struct ohci_hcd *ohci, struct urb *urb, struct td *td)
 
   		cc = TD_CC_GET (tdINFO);
 
-		/* control endpoints only have soft stalls */
-  		if (type != PIPE_CONTROL && cc == TD_CC_STALL)
-			usb_endpoint_halt (urb->dev,
-				usb_pipeendpoint (urb->pipe),
-				usb_pipeout (urb->pipe));
-
 		/* update packet status if needed (short is normally ok) */
 		if (cc == TD_DATAUNDERRUN
 				&& !(urb->transfer_flags & URB_SHORT_NOT_OK))
@@ -795,7 +790,7 @@ ed_halted (struct ohci_hcd *ohci, struct td *td, int cc, struct td *rev)
   	struct urb		*urb = td->urb;
 	struct ed		*ed = td->ed;
 	struct list_head	*tmp = td->td_list.next;
-	u32			toggle = ed->hwHeadP & ED_C;
+	__le32			toggle = ed->hwHeadP & ED_C;
 
 	/* clear ed halt; this is the td that caused it, but keep it inactive
 	 * until its urb->complete() has a chance to clean up.
@@ -810,7 +805,7 @@ ed_halted (struct ohci_hcd *ohci, struct td *td, int cc, struct td *rev)
 	 */
 	while (tmp != &ed->td_list) {
 		struct td	*next;
-		u32		info;
+		__le32		info;
 
 		next = list_entry (tmp, struct td, td_list);
 		tmp = next->td_list.next;
@@ -906,9 +901,6 @@ static struct td *dl_reverse_done_list (struct ohci_hcd *ohci)
 
 /*-------------------------------------------------------------------------*/
 
-/* wrap-aware logic stolen from <linux/jiffies.h> */
-#define tick_before(t1,t2) ((((s16)(t1))-((s16)(t2))) < 0)
-
 /* there are some urbs/eds to unlink; called in_irq(), with HCD locked */
 static void
 finish_unlinks (struct ohci_hcd *ohci, u16 tick, struct pt_regs *regs)
@@ -919,7 +911,7 @@ rescan_all:
 	for (last = &ohci->ed_rm_list, ed = *last; ed != NULL; ed = *last) {
 		struct list_head	*entry, *tmp;
 		int			completed, modified;
-		u32			*prev;
+		__le32			*prev;
 
 		/* only take off EDs that the HC isn't using, accounting for
 		 * frame counter wraps and EDs with partially retired TDs
@@ -937,7 +929,7 @@ skip_ed:
 
 				td = list_entry (ed->td_list.next, struct td,
 							td_list);
-				head = cpu_to_le32 (ed->hwHeadP) & TD_MASK;
+				head = le32_to_cpu (ed->hwHeadP) & TD_MASK;
 
 				/* INTR_WDH may need to clean up first */
 				if (td->td_dma != head)
@@ -968,7 +960,7 @@ rescan_this:
 			struct td	*td;
 			struct urb	*urb;
 			urb_priv_t	*urb_priv;
-			u32		savebits;
+			__le32		savebits;
 
 			td = list_entry (entry, struct td, td_list);
 			urb = td->urb;

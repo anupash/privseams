@@ -53,9 +53,12 @@
  * If blkfactor is zero then the user's request was aligned to the filesystem's
  * blocksize.
  *
- * needs_locking is set for regular files on direct-IO-naive filesystems.  It
- * determines whether we need to do the fancy locking which prevents direct-IO
- * from being able to read uninitialised disk blocks.
+ * lock_type is DIO_LOCKING for regular files on direct-IO-naive filesystems.
+ * This determines whether we need to do the fancy locking which prevents
+ * direct-IO from being able to read uninitialised disk blocks.  If its zero
+ * (blockdev) this locking is not done, and if it is DIO_OWN_LOCKING i_sem is
+ * not held for the entire direct write (taken briefly, initially, during a
+ * direct read though, but its never held for the duration of a direct-IO).
  */
 
 struct dio {
@@ -63,7 +66,7 @@ struct dio {
 	struct bio *bio;		/* bio under assembly */
 	struct inode *inode;
 	int rw;
-	int needs_locking;		/* doesn't change */
+	int lock_type;			/* doesn't change */
 	unsigned blkbits;		/* doesn't change */
 	unsigned blkfactor;		/* When we're using an alignment which
 					   is finer than the filesystem's soft
@@ -212,7 +215,7 @@ static void dio_complete(struct dio *dio, loff_t offset, ssize_t bytes)
 {
 	if (dio->end_io && dio->result)
 		dio->end_io(dio->inode, offset, bytes, dio->map_bh.b_private);
-	if (dio->needs_locking)
+	if (dio->lock_type != DIO_NO_LOCKING)
 		up_read(&dio->inode->i_alloc_sem);
 }
 
@@ -235,7 +238,8 @@ static void finished_one_bio(struct dio *dio)
 			dio_complete(dio, dio->block_in_file << dio->blkbits,
 					dio->result);
 			/* Complete AIO later if falling back to buffered i/o */
-			if (dio->result == dio->size || dio->rw == READ) {
+			if (dio->result == dio->size ||
+				((dio->rw == READ) && dio->result)) {
 				aio_complete(dio->iocb, dio->result, 0);
 				kfree(dio);
 				return;
@@ -492,7 +496,7 @@ static int get_more_blocks(struct dio *dio)
 	unsigned long fs_count;	/* Number of filesystem-sized blocks */
 	unsigned long dio_count;/* Number of dio_block-sized blocks */
 	unsigned long blkmask;
-	int beyond_eof = 0;
+	int create;
 
 	/*
 	 * If there was a memory error and we've overwritten all the
@@ -510,10 +514,13 @@ static int get_more_blocks(struct dio *dio)
 		if (dio_count & blkmask)	
 			fs_count++;
 
-		if (dio->needs_locking) {
-			if (dio->block_in_file >= (i_size_read(dio->inode) >>
+		create = dio->rw == WRITE;
+		if (dio->lock_type == DIO_LOCKING) {
+			if (dio->block_in_file < (i_size_read(dio->inode) >>
 							dio->blkbits))
-				beyond_eof = 1;
+				create = 0;
+		} else if (dio->lock_type == DIO_NO_LOCKING) {
+			create = 0;
 		}
 		/*
 		 * For writes inside i_size we forbid block creations: only
@@ -522,7 +529,7 @@ static int get_more_blocks(struct dio *dio)
 		 * writes.
 		 */
 		ret = (*dio->get_blocks)(dio->inode, fs_startblk, fs_count,
-				map_bh, (dio->rw == WRITE) && beyond_eof);
+						map_bh, create);
 	}
 	return ret;
 }
@@ -561,7 +568,11 @@ static int dio_bio_add_page(struct dio *dio)
 	ret = bio_add_page(dio->bio, dio->cur_page,
 			dio->cur_page_len, dio->cur_page_offset);
 	if (ret == dio->cur_page_len) {
-		dio->pages_in_io--;
+		/*
+		 * Decrement count only, if we are done with this page
+		 */
+		if ((dio->cur_page_len + dio->cur_page_offset) == PAGE_SIZE)
+			dio->pages_in_io--;
 		page_cache_get(dio->cur_page);
 		dio->final_block_in_bio = dio->cur_page_block +
 			(dio->cur_page_len >> dio->blkbits);
@@ -953,9 +964,21 @@ direct_io_worker(int rw, struct kiocb *iocb, struct inode *inode,
 	dio->bio_list = NULL;
 	dio->waiter = NULL;
 
-	dio->pages_in_io = 0;
-	for (seg = 0; seg < nr_segs; seg++) 
-		dio->pages_in_io += (iov[seg].iov_len >> blkbits) + 2; 
+	/*
+	 * In case of non-aligned buffers, we may need 2 more
+	 * pages since we need to zero out first and last block.
+	 */
+	if (unlikely(dio->blkfactor))
+		dio->pages_in_io = 2;
+	else
+		dio->pages_in_io = 0;
+
+	for (seg = 0; seg < nr_segs; seg++) {
+		user_addr = (unsigned long)iov[seg].iov_base;
+		dio->pages_in_io +=
+			((user_addr+iov[seg].iov_len +PAGE_SIZE-1)/PAGE_SIZE
+				- user_addr/PAGE_SIZE);
+	}
 
 	for (seg = 0; seg < nr_segs; seg++) {
 		user_addr = (unsigned long)iov[seg].iov_base;
@@ -1024,7 +1047,7 @@ direct_io_worker(int rw, struct kiocb *iocb, struct inode *inode,
 	 * we can let i_sem go now that its achieved its purpose
 	 * of protecting us from looking up uninitialized blocks.
 	 */
-	if ((rw == READ) && dio->needs_locking)
+	if ((rw == READ) && (dio->lock_type == DIO_LOCKING))
 		up(&dio->inode->i_sem);
 
 	/*
@@ -1111,7 +1134,7 @@ ssize_t
 __blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 	struct block_device *bdev, const struct iovec *iov, loff_t offset, 
 	unsigned long nr_segs, get_blocks_t get_blocks, dio_iodone_t end_io,
-	int needs_special_locking)
+	int dio_lock_type)
 {
 	int seg;
 	size_t size;
@@ -1122,7 +1145,6 @@ __blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 	ssize_t retval = -EINVAL;
 	loff_t end = offset;
 	struct dio *dio;
-	int needs_locking;
 
 	if (bdev)
 		bdev_blkbits = blksize_bits(bdev_hardsect_size(bdev));
@@ -1155,13 +1177,15 @@ __blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 		goto out;
 
 	/*
-	 * For regular files,
+	 * For regular files using DIO_LOCKING,
 	 *	readers need to grab i_sem and i_alloc_sem
 	 *	writers need to grab i_alloc_sem only (i_sem is already held)
+	 * For regular files using DIO_OWN_LOCKING,
+	 *	both readers and writers need to grab i_alloc_sem
+	 *	neither readers nor writers hold i_sem on entry (nor exit)
 	 */
-	needs_locking = 0;
-	if (S_ISREG(inode->i_mode) && needs_special_locking) {
-		needs_locking = 1;
+	dio->lock_type = dio_lock_type;
+	if (dio_lock_type != DIO_NO_LOCKING) {
 		if (rw == READ) {
 			struct address_space *mapping;
 
@@ -1173,10 +1197,13 @@ __blockdev_direct_IO(int rw, struct kiocb *iocb, struct inode *inode,
 				kfree(dio);
 				goto out;
 			}
+			down_read(&inode->i_alloc_sem);
+			if (dio_lock_type == DIO_OWN_LOCKING)
+				up(&inode->i_sem);
+		} else {
+			down_read(&inode->i_alloc_sem);
 		}
-		down_read(&inode->i_alloc_sem);
 	}
-	dio->needs_locking = needs_locking;
 	/*
 	 * For file extending writes updating i_size before data
 	 * writeouts complete can expose uninitialized blocks. So

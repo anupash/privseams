@@ -83,10 +83,6 @@
 #undef  CYCLOM_16Y_HACK
 #define  CYCLOM_ENABLE_MONITORING
 
-#ifndef MIN
-#define MIN(a,b)	((a) < (b) ? (a) : (b))
-#endif
-
 #define WAKEUP_CHARS 256
 
 #define STD_COM_FLAGS (0)
@@ -760,11 +756,7 @@ do_softint(void *private_)
 	wake_up_interruptible(&info->open_wait);
     }
     if (test_and_clear_bit(Cy_EVENT_WRITE_WAKEUP, &info->event)) {
-	if((tty->flags & (1<< TTY_DO_WRITE_WAKEUP))
-	&& tty->ldisc.write_wakeup){
-	    (tty->ldisc.write_wakeup)(tty);
-	}
-	wake_up_interruptible(&tty->write_wait);
+    	tty_wakeup(tty);
     }
 } /* do_softint */
 
@@ -1238,8 +1230,8 @@ cy_write(struct tty_struct * tty, int from_user,
     if (from_user) {
 	    down(&tmp_buf_sem);
 	    while (1) {
-		    c = MIN(count, MIN(SERIAL_XMIT_SIZE - info->xmit_cnt - 1,
-				       SERIAL_XMIT_SIZE - info->xmit_head));
+		    c = min_t(int, count, min(SERIAL_XMIT_SIZE - info->xmit_cnt - 1,
+					      SERIAL_XMIT_SIZE - info->xmit_head));
 		    if (c <= 0)
 			    break;
 
@@ -1251,8 +1243,8 @@ cy_write(struct tty_struct * tty, int from_user,
 		    }
 
 		    local_irq_save(flags);
-		    c = MIN(c, MIN(SERIAL_XMIT_SIZE - info->xmit_cnt - 1,
-				   SERIAL_XMIT_SIZE - info->xmit_head));
+		    c = min_t(int, c, min(SERIAL_XMIT_SIZE - info->xmit_cnt - 1,
+					  SERIAL_XMIT_SIZE - info->xmit_head));
 		    memcpy(info->xmit_buf + info->xmit_head, tmp_buf, c);
 		    info->xmit_head = (info->xmit_head + c) & (SERIAL_XMIT_SIZE-1);
 		    info->xmit_cnt += c;
@@ -1266,8 +1258,8 @@ cy_write(struct tty_struct * tty, int from_user,
     } else {
 	    while (1) {
 		    local_irq_save(flags);
-		    c = MIN(count, MIN(SERIAL_XMIT_SIZE - info->xmit_cnt - 1,
-				       SERIAL_XMIT_SIZE - info->xmit_head));
+		    c = min_t(int, count, min(SERIAL_XMIT_SIZE - info->xmit_cnt - 1,
+					      SERIAL_XMIT_SIZE - info->xmit_head));
 		    if (c <= 0) {
 			    local_irq_restore(flags);
 			    break;
@@ -1343,10 +1335,7 @@ cy_flush_buffer(struct tty_struct *tty)
     local_irq_save(flags);
 	info->xmit_cnt = info->xmit_head = info->xmit_tail = 0;
     local_irq_restore(flags);
-    wake_up_interruptible(&tty->write_wait);
-    if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP))
-    && tty->ldisc.write_wakeup)
-	(tty->ldisc.write_wakeup)(tty);
+    tty_wakeup(tty);
 } /* cy_flush_buffer */
 
 
@@ -1846,18 +1835,9 @@ cy_close(struct tty_struct * tty, struct file * filp)
     shutdown(info);
     if (tty->driver->flush_buffer)
 	tty->driver->flush_buffer(tty);
-    if (tty->ldisc.flush_buffer)
-	tty->ldisc.flush_buffer(tty);
+    tty_ldisc_flush(tty);
     info->event = 0;
     info->tty = 0;
-    if (tty->ldisc.num != ldiscs[N_TTY].num) {
-	if (tty->ldisc.close)
-	    (tty->ldisc.close)(tty);
-	tty->ldisc = ldiscs[N_TTY];
-	tty->termios->c_line = N_TTY;
-	if (tty->ldisc.open)
-	    (tty->ldisc.open)(tty);
-    }
     if (info->blocked_open) {
 	if (info->close_delay) {
 	    current->state = TASK_INTERRUPTIBLE;
@@ -2379,7 +2359,7 @@ scrn[1] = '\0';
                                        | CyPARITY| CyFRAME| CyOVERRUN;
 		/* info->timeout */
 
-		printk("ttyS%1d ", info->line);
+		printk("ttyS%d ", info->line);
 		port_num++;info++;
 		if(!(port_num & 7)){
 		    printk("\n               ");

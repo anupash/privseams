@@ -50,6 +50,7 @@ static struct pci_controller *u3_agp;
 #endif /* CONFIG_POWER4 */
 
 extern u8 pci_cache_line_size;
+extern int pcibios_assign_bus_offset;
 
 struct pci_dev *k2_skiplist[2];
 
@@ -315,6 +316,10 @@ u3_ht_read_config(struct pci_bus *bus, unsigned int devfn, int offset,
 	unsigned int addr;
 	int i;
 
+	struct device_node *np = pci_busdev_to_OF_node(bus, devfn);
+	if (np == NULL)
+		return PCIBIOS_DEVICE_NOT_FOUND;
+
 	/*
 	 * When a device in K2 is powered down, we die on config
 	 * cycle accesses. Fix that here.
@@ -362,6 +367,9 @@ u3_ht_write_config(struct pci_bus *bus, unsigned int devfn, int offset,
 	unsigned int addr;
 	int i;
 
+	struct device_node *np = pci_busdev_to_OF_node(bus, devfn);
+	if (np == NULL)
+		return PCIBIOS_DEVICE_NOT_FOUND;
 	/*
 	 * When a device in K2 is powered down, we die on config
 	 * cycle accesses. Fix that here.
@@ -565,6 +573,14 @@ pmac_find_bridges(void)
 
 	init_p2pbridge();
 	fixup_nec_usb2();
+	
+	/* We are still having some issues with the Xserve G4, enabling
+	 * some offset between bus number and domains for now when we
+	 * assign all busses should help for now
+	 */
+	if (pci_assign_all_busses)
+		pcibios_assign_bus_offset = 0x10;
+
 #ifdef CONFIG_POWER4 
 	/* There is something wrong with DMA on U3/HT. I haven't figured out
 	 * the details yet, but if I set the cache line size to 128 bytes like
@@ -707,7 +723,7 @@ setup_u3_ht(struct pci_controller* hose, struct reg_property *addr)
 	 * properties or figuring out the U3 address space decoding logic and
 	 * then read its configuration register (if any).
 	 */
-	hose->io_base_phys = 0xf4000000 + 0x00400000;
+	hose->io_base_phys = 0xf4000000;
 	hose->io_base_virt = ioremap(hose->io_base_phys, 0x00400000);
 	isa_io_base = (unsigned long) hose->io_base_virt;
 	hose->io_resource.name = np->full_name;
@@ -1034,6 +1050,8 @@ void pmac_pci_fixup_cardbus(struct pci_dev* dev)
 	}
 }
 
+DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_TI, PCI_ANY_ID, pmac_pci_fixup_cardbus);
+
 void pmac_pci_fixup_pciata(struct pci_dev* dev)
 {
        u8 progif = 0;
@@ -1074,6 +1092,8 @@ void pmac_pci_fixup_pciata(struct pci_dev* dev)
 			printk(KERN_ERR "Rewrite of PROGIF failed !\n");
 	}
 }
+DECLARE_PCI_FIXUP_FINAL(PCI_ANY_ID, PCI_ANY_ID, pmac_pci_fixup_pciata);
+
 
 /*
  * Disable second function on K2-SATA, it's broken
@@ -1104,3 +1124,4 @@ void __pmac pmac_pci_fixup_k2_sata(struct pci_dev* dev)
 		}
 	}
 }
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_SERVERWORKS, 0x0240, pmac_pci_fixup_k2_sata);

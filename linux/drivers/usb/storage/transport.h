@@ -44,7 +44,8 @@
 #include <linux/config.h>
 #include <linux/blkdev.h>
 #include "usb.h"
-#include "scsi.h"
+
+struct scsi_cmnd;
 
 /* Protocols */
 
@@ -82,9 +83,9 @@
 
 /* command block wrapper */
 struct bulk_cb_wrap {
-	__u32	Signature;		/* contains 'USBC' */
+	__le32	Signature;		/* contains 'USBC' */
 	__u32	Tag;			/* unique per command id */
-	__u32	DataTransferLength;	/* size of data */
+	__le32	DataTransferLength;	/* size of data */
 	__u8	Flags;			/* direction in bit 0 */
 	__u8	Lun;			/* LUN normally 0 */
 	__u8	Length;			/* of of the CDB */
@@ -98,9 +99,9 @@ struct bulk_cb_wrap {
 
 /* command status wrapper */
 struct bulk_cs_wrap {
-	__u32	Signature;		/* should = 'USBS' */
+	__le32	Signature;		/* should = 'USBS' */
 	__u32	Tag;			/* same as original command */
-	__u32	Residue;		/* amount not transferred */
+	__le32	Residue;		/* amount not transferred */
 	__u8	Status;			/* see below */
 	__u8	Filler[18];
 };
@@ -150,16 +151,16 @@ struct bulk_cs_wrap {
 
 #define US_CBI_ADSC		0
 
-extern int usb_stor_CBI_transport(Scsi_Cmnd*, struct us_data*);
+extern int usb_stor_CBI_transport(struct scsi_cmnd *, struct us_data*);
 
-extern int usb_stor_CB_transport(Scsi_Cmnd*, struct us_data*);
+extern int usb_stor_CB_transport(struct scsi_cmnd *, struct us_data*);
 extern int usb_stor_CB_reset(struct us_data*);
 
-extern int usb_stor_Bulk_transport(Scsi_Cmnd*, struct us_data*);
+extern int usb_stor_Bulk_transport(struct scsi_cmnd *, struct us_data*);
 extern int usb_stor_Bulk_max_lun(struct us_data*);
 extern int usb_stor_Bulk_reset(struct us_data*);
 
-extern void usb_stor_invoke_transport(Scsi_Cmnd*, struct us_data*);
+extern void usb_stor_invoke_transport(struct scsi_cmnd *, struct us_data*);
 extern void usb_stor_stop_transport(struct us_data*);
 
 extern int usb_stor_control_msg(struct us_data *us, unsigned int pipe,

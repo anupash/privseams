@@ -170,7 +170,7 @@ static int ntfs_read_block(struct page *page)
 	LCN lcn;
 	ntfs_inode *ni;
 	ntfs_volume *vol;
-	run_list_element *rl;
+	runlist_element *rl;
 	struct buffer_head *bh, *head, *arr[MAX_BUF_PER_PAGE];
 	sector_t iblock, lblock, zblock;
 	unsigned int blocksize, vcn_ofs;
@@ -196,8 +196,8 @@ static int ntfs_read_block(struct page *page)
 	zblock = (ni->initialized_size + blocksize - 1) >> blocksize_bits;
 
 #ifdef DEBUG
-	if (unlikely(!ni->run_list.rl && !ni->mft_no && !NInoAttr(ni)))
-		panic("NTFS: $MFT/$DATA run list has been unmapped! This is a "
+	if (unlikely(!ni->runlist.rl && !ni->mft_no && !NInoAttr(ni)))
+		panic("NTFS: $MFT/$DATA runlist has been unmapped! This is a "
 				"very serious bug! Cannot continue...");
 #endif
 
@@ -225,14 +225,14 @@ static int ntfs_read_block(struct page *page)
 					vol->cluster_size_mask;
 			if (!rl) {
 lock_retry_remap:
-				down_read(&ni->run_list.lock);
-				rl = ni->run_list.rl;
+				down_read(&ni->runlist.lock);
+				rl = ni->runlist.rl;
 			}
 			if (likely(rl != NULL)) {
 				/* Seek to element containing target vcn. */
 				while (rl->length && rl[1].vcn <= vcn)
 					rl++;
-				lcn = vcn_to_lcn(rl, vcn);
+				lcn = ntfs_vcn_to_lcn(rl, vcn);
 			} else
 				lcn = (LCN)LCN_RL_NOT_MAPPED;
 			/* Successful remap. */
@@ -252,29 +252,29 @@ lock_retry_remap:
 			/* It is a hole, need to zero it. */
 			if (lcn == LCN_HOLE)
 				goto handle_hole;
-			/* If first try and run list unmapped, map and retry. */
+			/* If first try and runlist unmapped, map and retry. */
 			if (!is_retry && lcn == LCN_RL_NOT_MAPPED) {
 				is_retry = TRUE;
 				/*
-				 * Attempt to map run list, dropping lock for
+				 * Attempt to map runlist, dropping lock for
 				 * the duration.
 				 */
-				up_read(&ni->run_list.lock);
-				if (!map_run_list(ni, vcn))
+				up_read(&ni->runlist.lock);
+				if (!ntfs_map_runlist(ni, vcn))
 					goto lock_retry_remap;
 				rl = NULL;
 			}
 			/* Hard error, zero out region. */
 			SetPageError(page);
-			ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%llx) failed "
-					"with error code 0x%llx%s.",
+			ntfs_error(vol->sb, "ntfs_vcn_to_lcn(vcn = 0x%llx) "
+					"failed with error code 0x%llx%s.",
 					(unsigned long long)vcn,
 					(unsigned long long)-lcn,
 					is_retry ? " even after retrying" : "");
 			// FIXME: Depending on vol->on_errors, do something.
 		}
 		/*
-		 * Either iblock was outside lblock limits or vcn_to_lcn()
+		 * Either iblock was outside lblock limits or ntfs_vcn_to_lcn()
 		 * returned error. Just zero that portion of the page and set
 		 * the buffer uptodate.
 		 */
@@ -291,7 +291,7 @@ handle_zblock:
 
 	/* Release the lock if we took it. */
 	if (rl)
-		up_read(&ni->run_list.lock);
+		up_read(&ni->runlist.lock);
 
 	/* Check we have at least one buffer ready for i/o. */
 	if (nr) {
@@ -348,7 +348,7 @@ int ntfs_readpage(struct file *file, struct page *page)
 	s64 attr_pos;
 	ntfs_inode *ni, *base_ni;
 	u8 *kaddr;
-	attr_search_context *ctx;
+	ntfs_attr_search_ctx *ctx;
 	MFT_RECORD *mrec;
 	u32 attr_len;
 	int err = 0;
@@ -393,20 +393,19 @@ int ntfs_readpage(struct file *file, struct page *page)
 
 	/* Map, pin, and lock the mft record. */
 	mrec = map_mft_record(base_ni);
-	if (unlikely(IS_ERR(mrec))) {
+	if (IS_ERR(mrec)) {
 		err = PTR_ERR(mrec);
 		goto err_out;
 	}
-	ctx = get_attr_search_ctx(base_ni, mrec);
+	ctx = ntfs_attr_get_search_ctx(base_ni, mrec);
 	if (unlikely(!ctx)) {
 		err = -ENOMEM;
 		goto unm_err_out;
 	}
-	if (unlikely(!lookup_attr(ni->type, ni->name, ni->name_len,
-			CASE_SENSITIVE, 0, NULL, 0, ctx))) {
-		err = -ENOENT;
+	err = ntfs_attr_lookup(ni->type, ni->name, ni->name_len,
+			CASE_SENSITIVE, 0, NULL, 0, ctx);
+	if (unlikely(err))
 		goto put_unm_err_out;
-	}
 
 	/* Starting position of the page within the attribute value. */
 	attr_pos = page->index << PAGE_CACHE_SHIFT;
@@ -433,7 +432,7 @@ int ntfs_readpage(struct file *file, struct page *page)
 
 	SetPageUptodate(page);
 put_unm_err_out:
-	put_attr_search_ctx(ctx);
+	ntfs_attr_put_search_ctx(ctx);
 unm_err_out:
 	unmap_mft_record(base_ni);
 err_out:
@@ -473,7 +472,7 @@ static int ntfs_write_block(struct writeback_control *wbc, struct page *page)
 	struct inode *vi;
 	ntfs_inode *ni;
 	ntfs_volume *vol;
-	run_list_element *rl;
+	runlist_element *rl;
 	struct buffer_head *bh, *head;
 	unsigned int blocksize, vcn_ofs;
 	int err;
@@ -631,14 +630,14 @@ static int ntfs_write_block(struct writeback_control *wbc, struct page *page)
 				vol->cluster_size_mask;
 		if (!rl) {
 lock_retry_remap:
-			down_read(&ni->run_list.lock);
-			rl = ni->run_list.rl;
+			down_read(&ni->runlist.lock);
+			rl = ni->runlist.rl;
 		}
 		if (likely(rl != NULL)) {
 			/* Seek to element containing target vcn. */
 			while (rl->length && rl[1].vcn <= vcn)
 				rl++;
-			lcn = vcn_to_lcn(rl, vcn);
+			lcn = ntfs_vcn_to_lcn(rl, vcn);
 		} else
 			lcn = (LCN)LCN_RL_NOT_MAPPED;
 		/* Successful remap. */
@@ -659,22 +658,22 @@ lock_retry_remap:
 			err = -EOPNOTSUPP;
 			break;
 		}
-		/* If first try and run list unmapped, map and retry. */
+		/* If first try and runlist unmapped, map and retry. */
 		if (!is_retry && lcn == LCN_RL_NOT_MAPPED) {
 			is_retry = TRUE;
 			/*
-			 * Attempt to map run list, dropping lock for
+			 * Attempt to map runlist, dropping lock for
 			 * the duration.
 			 */
-			up_read(&ni->run_list.lock);
-			err = map_run_list(ni, vcn);
+			up_read(&ni->runlist.lock);
+			err = ntfs_map_runlist(ni, vcn);
 			if (likely(!err))
 				goto lock_retry_remap;
 			rl = NULL;
 		}
 		/* Failed to map the buffer, even after retrying. */
 		bh->b_blocknr = -1UL;
-		ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%llx) failed "
+		ntfs_error(vol->sb, "ntfs_vcn_to_lcn(vcn = 0x%llx) failed "
 				"with error code 0x%llx%s.",
 				(unsigned long long)vcn,
 				(unsigned long long)-lcn,
@@ -687,7 +686,7 @@ lock_retry_remap:
 
 	/* Release the lock if we took it. */
 	if (rl)
-		up_read(&ni->run_list.lock);
+		up_read(&ni->runlist.lock);
 
 	/* For the error case, need to reset bh to the beginning. */
 	bh = head;
@@ -1030,7 +1029,7 @@ static int ntfs_writepage(struct page *page, struct writeback_control *wbc)
 	struct inode *vi;
 	ntfs_inode *ni, *base_ni;
 	char *kaddr;
-	attr_search_context *ctx;
+	ntfs_attr_search_ctx *ctx;
 	MFT_RECORD *m;
 	u32 attr_len, bytes;
 	int err;
@@ -1111,22 +1110,21 @@ static int ntfs_writepage(struct page *page, struct writeback_control *wbc)
 
 	/* Map, pin, and lock the mft record. */
 	m = map_mft_record(base_ni);
-	if (unlikely(IS_ERR(m))) {
+	if (IS_ERR(m)) {
 		err = PTR_ERR(m);
 		m = NULL;
 		ctx = NULL;
 		goto err_out;
 	}
-	ctx = get_attr_search_ctx(base_ni, m);
+	ctx = ntfs_attr_get_search_ctx(base_ni, m);
 	if (unlikely(!ctx)) {
 		err = -ENOMEM;
 		goto err_out;
 	}
-	if (unlikely(!lookup_attr(ni->type, ni->name, ni->name_len,
-			CASE_SENSITIVE, 0, NULL, 0, ctx))) {
-		err = -ENOENT;
+	err = ntfs_attr_lookup(ni->type, ni->name, ni->name_len,
+			CASE_SENSITIVE, 0, NULL, 0, ctx);
+	if (unlikely(err))
 		goto err_out;
-	}
 
 	/* Starting position of the page within the attribute value. */
 	attr_pos = page->index << PAGE_CACHE_SHIFT;
@@ -1201,7 +1199,7 @@ static int ntfs_writepage(struct page *page, struct writeback_control *wbc)
 	/* Mark the mft record dirty, so it gets written back. */
 	mark_mft_record_dirty(ctx->ntfs_ino);
 
-	put_attr_search_ctx(ctx);
+	ntfs_attr_put_search_ctx(ctx);
 	unmap_mft_record(base_ni);
 	return 0;
 err_out:
@@ -1221,7 +1219,7 @@ err_out:
 	}
 	unlock_page(page);
 	if (ctx)
-		put_attr_search_ctx(ctx);
+		ntfs_attr_put_search_ctx(ctx);
 	if (m)
 		unmap_mft_record(base_ni);
 	return err;
@@ -1240,7 +1238,7 @@ static int ntfs_prepare_nonresident_write(struct page *page,
 	struct inode *vi;
 	ntfs_inode *ni;
 	ntfs_volume *vol;
-	run_list_element *rl;
+	runlist_element *rl;
 	struct buffer_head *bh, *head, *wait[2], **wait_bh = wait;
 	unsigned int vcn_ofs, block_start, block_end, blocksize;
 	int err;
@@ -1397,14 +1395,14 @@ static int ntfs_prepare_nonresident_write(struct page *page,
 			is_retry = FALSE;
 			if (!rl) {
 lock_retry_remap:
-				down_read(&ni->run_list.lock);
-				rl = ni->run_list.rl;
+				down_read(&ni->runlist.lock);
+				rl = ni->runlist.rl;
 			}
 			if (likely(rl != NULL)) {
 				/* Seek to element containing target vcn. */
 				while (rl->length && rl[1].vcn <= vcn)
 					rl++;
-				lcn = vcn_to_lcn(rl, vcn);
+				lcn = ntfs_vcn_to_lcn(rl, vcn);
 			} else
 				lcn = (LCN)LCN_RL_NOT_MAPPED;
 			if (unlikely(lcn < 0)) {
@@ -1439,11 +1437,11 @@ lock_retry_remap:
 						lcn == LCN_RL_NOT_MAPPED) {
 					is_retry = TRUE;
 					/*
-					 * Attempt to map run list, dropping
+					 * Attempt to map runlist, dropping
 					 * lock for the duration.
 					 */
-					up_read(&ni->run_list.lock);
-					err = map_run_list(ni, vcn);
+					up_read(&ni->runlist.lock);
+					err = ntfs_map_runlist(ni, vcn);
 					if (likely(!err))
 						goto lock_retry_remap;
 					rl = NULL;
@@ -1453,9 +1451,9 @@ lock_retry_remap:
 				 * retrying.
 				 */
 				bh->b_blocknr = -1UL;
-				ntfs_error(vol->sb, "vcn_to_lcn(vcn = 0x%llx) "
-						"failed with error code "
-						"0x%llx%s.",
+				ntfs_error(vol->sb, "ntfs_vcn_to_lcn(vcn = "
+						"0x%llx) failed with error "
+						"code 0x%llx%s.",
 						(unsigned long long)vcn,
 						(unsigned long long)-lcn,
 						is_retry ? " even after "
@@ -1530,7 +1528,7 @@ lock_retry_remap:
 
 	/* Release the lock if we took it. */
 	if (rl) {
-		up_read(&ni->run_list.lock);
+		up_read(&ni->runlist.lock);
 		rl = NULL;
 	}
 
@@ -1576,7 +1574,7 @@ err_out:
 	if (is_retry)
 		flush_dcache_page(page);
 	if (rl)
-		up_read(&ni->run_list.lock);
+		up_read(&ni->runlist.lock);
 	return err;
 }
 
@@ -1683,9 +1681,9 @@ static int ntfs_prepare_write(struct file *file, struct page *page,
 	 * We thus defer the uptodate bringing of the page region outside the
 	 * region written to to ntfs_commit_write(). The reason for doing this
 	 * is that we save one round of:
-	 *	map_mft_record(), get_attr_search_ctx(), lookup_attr(),
-	 *	kmap_atomic(), kunmap_atomic(), put_attr_search_ctx(),
-	 *	unmap_mft_record().
+	 *	map_mft_record(), ntfs_attr_get_search_ctx(),
+	 *	ntfs_attr_lookup(), kmap_atomic(), kunmap_atomic(),
+	 *	ntfs_attr_put_search_ctx(), unmap_mft_record().
 	 * Which is obviously a very worthwhile save.
 	 *
 	 * Thus we just return success now...
@@ -1804,7 +1802,7 @@ static int ntfs_commit_write(struct file *file, struct page *page,
 	struct inode *vi;
 	ntfs_inode *ni, *base_ni;
 	char *kaddr, *kattr;
-	attr_search_context *ctx;
+	ntfs_attr_search_ctx *ctx;
 	MFT_RECORD *m;
 	u32 attr_len, bytes;
 	int err;
@@ -1885,22 +1883,21 @@ static int ntfs_commit_write(struct file *file, struct page *page,
 
 	/* Map, pin, and lock the mft record. */
 	m = map_mft_record(base_ni);
-	if (unlikely(IS_ERR(m))) {
+	if (IS_ERR(m)) {
 		err = PTR_ERR(m);
 		m = NULL;
 		ctx = NULL;
 		goto err_out;
 	}
-	ctx = get_attr_search_ctx(base_ni, m);
+	ctx = ntfs_attr_get_search_ctx(base_ni, m);
 	if (unlikely(!ctx)) {
 		err = -ENOMEM;
 		goto err_out;
 	}
-	if (unlikely(!lookup_attr(ni->type, ni->name, ni->name_len,
-			CASE_SENSITIVE, 0, NULL, 0, ctx))) {
-		err = -ENOENT;
+	err = ntfs_attr_lookup(ni->type, ni->name, ni->name_len,
+			CASE_SENSITIVE, 0, NULL, 0, ctx);
+	if (unlikely(err))
 		goto err_out;
-	}
 
 	/* Starting position of the page within the attribute value. */
 	attr_pos = page->index << PAGE_CACHE_SHIFT;
@@ -1966,7 +1963,7 @@ static int ntfs_commit_write(struct file *file, struct page *page,
 	/* Mark the mft record dirty, so it gets written back. */
 	mark_mft_record_dirty(ctx->ntfs_ino);
 
-	put_attr_search_ctx(ctx);
+	ntfs_attr_put_search_ctx(ctx);
 	unmap_mft_record(base_ni);
 	ntfs_debug("Done.");
 	return 0;
@@ -1993,7 +1990,7 @@ err_out:
 		SetPageError(page);
 	}
 	if (ctx)
-		put_attr_search_ctx(ctx);
+		ntfs_attr_put_search_ctx(ctx);
 	if (m)
 		unmap_mft_record(base_ni);
 	return err;

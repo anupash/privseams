@@ -708,7 +708,7 @@ void audit_log_d_path(struct audit_buffer *ab, const char *prefix,
 		audit_log_move(ab);
 	avail = sizeof(ab->tmp) - ab->len;
 	p = d_path(dentry, vfsmnt, ab->tmp + ab->len, avail);
-	if (p == ERR_PTR(-ENAMETOOLONG)) {
+	if (IS_ERR(p)) {
 		/* FIXME: can we save some information here? */
 		audit_log_format(ab, "<toolong>");
 	} else {
@@ -810,16 +810,3 @@ void audit_log(struct audit_context *ctx, const char *fmt, ...)
 		audit_log_end(ab);
 	}
 }
-
-EXPORT_SYMBOL_GPL(audit_set_rate_limit);
-EXPORT_SYMBOL_GPL(audit_set_backlog_limit);
-EXPORT_SYMBOL_GPL(audit_set_enabled);
-EXPORT_SYMBOL_GPL(audit_set_failure);
-
-EXPORT_SYMBOL_GPL(audit_log_start);
-EXPORT_SYMBOL_GPL(audit_log_format);
-EXPORT_SYMBOL_GPL(audit_log_end_irq);
-EXPORT_SYMBOL_GPL(audit_log_end_fast);
-EXPORT_SYMBOL_GPL(audit_log_end);
-EXPORT_SYMBOL_GPL(audit_log);
-EXPORT_SYMBOL_GPL(audit_log_d_path);

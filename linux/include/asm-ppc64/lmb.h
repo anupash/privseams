@@ -20,12 +20,6 @@ extern unsigned long reloc_offset(void);
 
 #define MAX_LMB_REGIONS 128
 
-union lmb_reg_property { 
-	struct reg_property32	 addr32[MAX_LMB_REGIONS];
-	struct reg_property64	 addr64[MAX_LMB_REGIONS];
-	struct reg_property_pmac addrPM[MAX_LMB_REGIONS];
-};
-
 #define LMB_ALLOC_ANYWHERE	0
 
 struct lmb_property {
@@ -47,7 +41,7 @@ struct lmb {
 	struct lmb_region reserved;
 };
 
-extern struct lmb lmb __initdata;
+extern struct lmb lmb;
 
 extern void __init lmb_init(void);
 extern void __init lmb_analyze(void);
@@ -59,6 +53,8 @@ extern unsigned long __init lmb_alloc_base(unsigned long, unsigned long,
 extern unsigned long __init lmb_phys_mem_size(void);
 extern unsigned long __init lmb_end_of_DRAM(void);
 extern unsigned long __init lmb_abs_to_phys(unsigned long);
+
+extern void lmb_dump_all(void);
 
 extern unsigned long io_hole_start;
 

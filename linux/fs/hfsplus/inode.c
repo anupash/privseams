@@ -308,6 +308,7 @@ struct file_operations hfsplus_file_operations = {
 	.read		= generic_file_read,
 	.write		= generic_file_write,
 	.mmap		= generic_file_mmap,
+	.sendfile	= generic_file_sendfile,
 	.fsync		= file_fsync,
 	.open		= hfsplus_file_open,
 	.release	= hfsplus_file_release,
@@ -483,22 +484,22 @@ int hfsplus_cat_read_inode(struct inode *inode, struct hfs_find_data *fd)
 	return res;
 }
 
-void hfsplus_cat_write_inode(struct inode *inode)
+int hfsplus_cat_write_inode(struct inode *inode)
 {
 	struct hfs_find_data fd;
 	hfsplus_cat_entry entry;
 
 	if (HFSPLUS_IS_RSRC(inode)) {
 		mark_inode_dirty(HFSPLUS_I(inode).rsrc_inode);
-		return;
+		return 0;
 	}
 
 	if (!inode->i_nlink)
-		return;
+		return 0;
 
 	if (hfs_find_init(HFSPLUS_SB(inode->i_sb).cat_tree, &fd))
 		/* panic? */
-		return;
+		return -EIO;
 
 	if (hfsplus_find_cat(inode->i_sb, inode->i_ino, &fd))
 		/* panic? */
@@ -546,4 +547,5 @@ void hfsplus_cat_write_inode(struct inode *inode)
 	}
 out:
 	hfs_find_exit(&fd);
+	return 0;
 }

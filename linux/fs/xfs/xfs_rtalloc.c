@@ -1966,7 +1966,8 @@ xfs_growfs_rt(
 	/*
 	 * Calculate new parameters.  These are the final values to be reached.
 	 */
-	nrextents = do_div(nrblocks, in->extsize);
+	nrextents = nrblocks;
+	do_div(nrextents, in->extsize);
 	nrbmblocks = roundup_64(nrextents, NBBY * sbp->sb_blocksize);
 	nrextslog = xfs_highbit32(nrextents);
 	nrsumlevels = nrextslog + 1;
@@ -2021,7 +2022,8 @@ xfs_growfs_rt(
 			XFS_RTMIN(nrblocks,
 				  nsbp->sb_rbmblocks * NBBY *
 				  nsbp->sb_blocksize * nsbp->sb_rextsize);
-		nsbp->sb_rextents = do_div(nsbp->sb_rblocks, nsbp->sb_rextsize);
+		nsbp->sb_rextents = nsbp->sb_rblocks;
+		do_div(nsbp->sb_rextents, nsbp->sb_rextsize);
 		nsbp->sb_rextslog = xfs_highbit32(nsbp->sb_rextents);
 		nrsumlevels = nmp->m_rsumlevels = nsbp->sb_rextslog + 1;
 		nrsumsize =
@@ -2353,13 +2355,7 @@ xfs_rtmount_inodes(
 	ASSERT(sbp->sb_rsumino != NULLFSINO);
 	error = xfs_iget(mp, NULL, sbp->sb_rsumino, 0, &mp->m_rsumip, 0);
 	if (error) {
-		vnode_t		*rbmvp;		/* vnode for bitmap file */
-		vmap_t		vmap;		/* vmap to delete vnode */
-
-		rbmvp = XFS_ITOV(mp->m_rbmip);
-		VMAP(rbmvp, vmap);
-		VN_RELE(rbmvp);
-		vn_purge(rbmvp, &vmap);
+		VN_RELE(XFS_ITOV(mp->m_rbmip));
 		return error;
 	}
 	ASSERT(mp->m_rsumip != NULL);

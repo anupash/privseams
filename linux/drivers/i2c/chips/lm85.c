@@ -308,9 +308,6 @@ static int ZONE_TO_REG( int zone )
  * version of the driver.
  */
 
-/* Typically used with Pentium 4 systems v9.1 VRM spec */
-#define LM85_INIT_VRM  91
-
 /* Chip sampling rates
  *
  * Some sensors are not updated more frequently than once per second
@@ -468,7 +465,7 @@ static ssize_t show_vid_reg(struct device *dev, char *buf)
 	return sprintf(buf, "%ld\n", (long) vid_from_reg(data->vid, data->vrm));
 }
 
-static DEVICE_ATTR(in0_ref, S_IRUGO, show_vid_reg, NULL);
+static DEVICE_ATTR(cpu0_vid, S_IRUGO, show_vid_reg, NULL);
 
 static ssize_t show_vrm_reg(struct device *dev, char *buf)
 {
@@ -832,7 +829,7 @@ int lm85_detect(struct i2c_adapter *adapter, int address,
 		goto ERROR1;
 
 	/* Set the VRM version */
-	data->vrm = LM85_INIT_VRM ;
+	data->vrm = i2c_which_vrm();
 
 	/* Initialize the LM85 chip */
 	lm85_init_client(new_client);
@@ -877,7 +874,7 @@ int lm85_detect(struct i2c_adapter *adapter, int address,
 	device_create_file(&new_client->dev, &dev_attr_temp2_max);
 	device_create_file(&new_client->dev, &dev_attr_temp3_max);
 	device_create_file(&new_client->dev, &dev_attr_vrm);
-	device_create_file(&new_client->dev, &dev_attr_in0_ref);
+	device_create_file(&new_client->dev, &dev_attr_cpu0_vid);
 	device_create_file(&new_client->dev, &dev_attr_alarms);
 
 	return 0;

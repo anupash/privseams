@@ -1,7 +1,7 @@
 /* linux/arch/arm/mach-s3c2410/irq.c
  *
- * Copyright (c) 2003 Simtec Electronics
- * Ben Dooks <ben@simtec.co.uk>
+ * Copyright (c) 2003,2004 Simtec Electronics
+ *	Ben Dooks <ben@simtec.co.uk>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,23 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- */
+ * Changelog:
+ *
+ *   22-Jul-2004  Ben Dooks <ben@simtec.co.uk>
+ *                Fixed compile warnings
+ *
+ *   22-Jul-2004  Roc Wu <cooloney@yahoo.com.cn>
+ *                Fixed s3c_extirq_type
+ *
+ *   21-Jul-2004  Arnaud Patard (Rtp) <arnaud.patard@rtp-net.org>
+ *                Addition of ADC/TC demux
+ *
+ *   04-Oct-2004  Klaus Fetscher <k.fetscher@fetron.de>
+ *		  Fix for set_irq_type() on low EINT numbers
+ *
+ *   05-Oct-2004  Ben Dooks <ben@simtec.co.uk>
+ *		  Tidy up KF's patch and sort out new release
+*/
 
 
 #include <linux/init.h>
@@ -34,11 +50,8 @@
 #include <asm/mach/irq.h>
 
 #include <asm/arch/regs-irq.h>
-#include <asm/arch/regs-lcd.h>
+#include <asm/arch/regs-gpio.h>
 
-#if 0
-#include <asm/debug-ll.h>
-#endif
 
 #define irqdbf(x...)
 #define irqdbf2(x...)
@@ -177,12 +190,84 @@ s3c_irqext_unmask(unsigned int irqno)
 	s3c_irq_unmask((irqno <= (IRQ_EINT7 - EXTINT_OFF)) ? IRQ_EINT4t7 : IRQ_EINT8t23);
 }
 
-/* todo - put type handler in here */
-
 static int
 s3c_irqext_type(unsigned int irq, unsigned int type)
 {
-	irqdbf("s3c_irqext_type: called for irq %d, type %d\n", irq, type);
+	unsigned long extint_reg;
+	unsigned long gpcon_reg;
+	unsigned long gpcon_offset, extint_offset;
+	unsigned long newvalue = 0, value;
+
+	if ((irq >= IRQ_EINT0) && (irq <= IRQ_EINT3))
+	{
+		gpcon_reg = S3C2410_GPFCON;
+		extint_reg = S3C2410_EXTINT0;
+		gpcon_offset = (irq - IRQ_EINT0) * 2;
+		extint_offset = (irq - IRQ_EINT0) * 4;
+	}
+	else if ((irq >= IRQ_EINT4) && (irq <= IRQ_EINT7))
+	{
+		gpcon_reg = S3C2410_GPFCON;
+		extint_reg = S3C2410_EXTINT0;
+		gpcon_offset = (irq - (EXTINT_OFF)) * 2;
+		extint_offset = (irq - (EXTINT_OFF)) * 4;
+	}
+	else if ((irq >= IRQ_EINT8) && (irq <= IRQ_EINT15))
+	{
+		gpcon_reg = S3C2410_GPGCON;
+		extint_reg = S3C2410_EXTINT1;
+		gpcon_offset = (irq - IRQ_EINT8) * 2;
+		extint_offset = (irq - IRQ_EINT8) * 4;
+	}
+	else if ((irq >= IRQ_EINT16) && (irq <= IRQ_EINT23))
+	{
+		gpcon_reg = S3C2410_GPGCON;
+		extint_reg = S3C2410_EXTINT2;
+		gpcon_offset = (irq - IRQ_EINT8) * 2;
+		extint_offset = (irq - IRQ_EINT16) * 4;
+	} else
+		return -1;
+
+	/* Set the GPIO to external interrupt mode */
+	value = __raw_readl(gpcon_reg);
+	value = (value & ~(3 << gpcon_offset)) | (0x02 << gpcon_offset);
+	__raw_writel(value, gpcon_reg);
+
+	/* Set the external interrupt to pointed trigger type */
+	switch (type)
+	{
+		case IRQT_NOEDGE:
+			printk(KERN_WARNING "No edge setting!\n");
+			break;
+
+		case IRQT_RISING:
+			newvalue = S3C2410_EXTINT_RISEEDGE;
+			break;
+
+		case IRQT_FALLING:
+			newvalue = S3C2410_EXTINT_FALLEDGE;
+			break;
+
+		case IRQT_BOTHEDGE:
+			newvalue = S3C2410_EXTINT_BOTHEDGE;
+			break;
+
+		case IRQT_LOW:
+			newvalue = S3C2410_EXTINT_LOWLEV;
+			break;
+
+		case IRQT_HIGH:
+			newvalue = S3C2410_EXTINT_HILEV;
+			break;
+
+		default:
+			printk(KERN_ERR "No such irq type %d", type);
+			return -1;
+	}
+
+	value = __raw_readl(extint_reg);
+	value = (value & ~(7 << extint_offset)) | (newvalue << extint_offset);
+	__raw_writel(value, extint_reg);
 
 	return 0;
 }
@@ -192,6 +277,13 @@ static struct irqchip s3c_irqext_chip = {
 	.unmask	    = s3c_irqext_unmask,
 	.ack	    = s3c_irqext_ack,
 	.type	    = s3c_irqext_type
+};
+
+static struct irqchip s3c_irq_eint0t4 = {
+	.ack	   = s3c_irq_ack,
+	.mask	   = s3c_irq_mask,
+	.unmask	   = s3c_irq_unmask,
+	.type	   = s3c_irqext_type
 };
 
 /* mask values for the parent registers for each of the interrupt types */
@@ -368,36 +460,36 @@ static struct irqchip s3c_irq_adc = {
 	.ack	    = s3c_irq_adc_ack,
 };
 
-#if 0
-/* LCD (todo) */
-
-static void
-s3c_irq_lcd_mask(unsigned int irqno)
+/* irq demux for adc */
+static void s3c_irq_demux_adc(unsigned int irq,
+			      struct irqdesc *desc,
+			      struct pt_regs *regs)
 {
+	unsigned int subsrc, submsk;
+	unsigned int offset = 9;
+	struct irqdesc *mydesc;
 
+	/* read the current pending interrupts, and the mask
+	 * for what it is available */
+
+	subsrc = __raw_readl(S3C2410_SUBSRCPND);
+	submsk = __raw_readl(S3C2410_INTSUBMSK);
+
+	subsrc &= ~submsk;
+	subsrc >>= offset;
+	subsrc &= 3;
+
+	if (subsrc != 0) {
+		if (subsrc & 1) {
+			mydesc = irq_desc + IRQ_TC;
+			mydesc->handle( IRQ_TC, mydesc, regs);
+		}
+		if (subsrc & 2) {
+			mydesc = irq_desc + IRQ_ADC;
+			mydesc->handle(IRQ_ADC, mydesc, regs);
+		}
+	}
 }
-
-static void
-s3c_irq_lcd_unmask(unsigned int irqno)
-{
-
-}
-
-static void
-s3c_irq_lcd_ack(unsigned int irqno)
-{
-
-}
-
-static struct irqchip s3c_irq_lcd = {
-	.mask	    = s3c_irq_lcd_mask,
-	.unmask	    = s3c_irq_lcd_unmask,
-	.ack	    = s3c_irq_lcd_ack,
-};
-#endif
-
-/* irq demux */
-
 
 static void s3c_irq_demux_uart(unsigned int start,
 			       struct pt_regs *regs)
@@ -466,11 +558,15 @@ s3c_irq_demux_uart2(unsigned int irq,
 	s3c_irq_demux_uart(IRQ_S3CUART_RX2, regs);
 }
 
-
+/* s3c2410_init_irq
+ *
+ * Initialise S3C2410 IRQ system
+*/
 
 void __init s3c2410_init_irq(void)
 {
 	unsigned long pend;
+	unsigned long last;
 	int irqno;
 	int i;
 
@@ -478,48 +574,51 @@ void __init s3c2410_init_irq(void)
 
 	/* first, clear all interrupts pending... */
 
+	last = 0;
 	for (i = 0; i < 4; i++) {
 		pend = __raw_readl(S3C2410_EINTPEND);
-		if (pend == 0)
+
+		if (pend == 0 || pend == last)
 			break;
+
 		__raw_writel(pend, S3C2410_EINTPEND);
 		printk("irq: clearing pending ext status %08x\n", (int)pend);
+		last = pend;
 	}
 
+	last = 0;
 	for (i = 0; i < 4; i++) {
 		pend = __raw_readl(S3C2410_INTPND);
-		if (pend == 0)
+
+		if (pend == 0 || pend == last)
 			break;
+
 		__raw_writel(pend, S3C2410_SRCPND);
 		__raw_writel(pend, S3C2410_INTPND);
 		printk("irq: clearing pending status %08x\n", (int)pend);
+		last = pend;
 	}
 
+	last = 0;
 	for (i = 0; i < 4; i++) {
 		pend = __raw_readl(S3C2410_SUBSRCPND);
 
-		if (pend == 0)
+		if (pend == 0 || pend == last)
 			break;
 
 		printk("irq: clearing subpending status %08x\n", (int)pend);
 		__raw_writel(pend, S3C2410_SUBSRCPND);
+		last = pend;
 	}
 
 	/* register the main interrupts */
 
 	irqdbf("s3c2410_init_irq: registering s3c2410 interrupt handlers\n");
 
-	for (irqno = IRQ_EINT0; irqno < IRQ_ADCPARENT; irqno++) {
+	for (irqno = IRQ_BATT_FLT; irqno <= IRQ_ADCPARENT; irqno++) {
 		/* set all the s3c2410 internal irqs */
 
 		switch (irqno) {
-
-		case IRQ_EINT4t7:
-		case IRQ_EINT8t23:
-			/* these are already dealt with, so should never
-			 * appear */
-			break;
-
 			/* deal with the special IRQs (cascaded) */
 
 		case IRQ_UART0:
@@ -549,11 +648,17 @@ void __init s3c2410_init_irq(void)
 	set_irq_chained_handler(IRQ_UART0, s3c_irq_demux_uart0);
 	set_irq_chained_handler(IRQ_UART1, s3c_irq_demux_uart1);
 	set_irq_chained_handler(IRQ_UART2, s3c_irq_demux_uart2);
-	//set_irq_chained_handler(IRQ_LCD, s3c_irq_demux_);
-	//set_irq_chained_handler(IRQ_ADCPARENT, s3c_irq_demux_);
+	set_irq_chained_handler(IRQ_ADCPARENT, s3c_irq_demux_adc);
 
 
 	/* external interrupts */
+
+	for (irqno = IRQ_EINT0; irqno <= IRQ_EINT3; irqno++) {
+		irqdbf("registering irq %d (ext int)\n", irqno);
+		set_irq_chip(irqno, &s3c_irq_eint0t4);
+		set_irq_handler(irqno, do_edge_IRQ);
+		set_irq_flags(irqno, IRQF_VALID);
+	}
 
 	for (irqno = IRQ_EINT4; irqno <= IRQ_EINT23; irqno++) {
 		irqdbf("registering irq %d (extended s3c irq)\n", irqno);

@@ -477,8 +477,8 @@ static void error(mddev_t *mddev, mdk_rdev_t *rdev)
 
 	if (!rdev->faulty) {
 		mddev->sb_dirty = 1;
-		conf->working_disks--;
 		if (rdev->in_sync) {
+			conf->working_disks--;
 			mddev->degraded++;
 			conf->failed_disks++;
 			rdev->in_sync = 0;
@@ -1071,7 +1071,8 @@ static void handle_stripe(struct stripe_head *sh)
 					PRINTK("Reading block %d (sync=%d)\n", 
 						i, syncing);
 					if (syncing)
-						md_sync_acct(conf->disks[i].rdev, STRIPE_SECTORS);
+						md_sync_acct(conf->disks[i].rdev->bdev,
+							     STRIPE_SECTORS);
 				}
 			}
 		}
@@ -1256,7 +1257,7 @@ static void handle_stripe(struct stripe_head *sh)
  
 		if (rdev) {
 			if (test_bit(R5_Syncio, &sh->dev[i].flags))
-				md_sync_acct(rdev, STRIPE_SECTORS);
+				md_sync_acct(rdev->bdev, STRIPE_SECTORS);
 
 			bi->bi_bdev = rdev->bdev;
 			PRINTK("for %llu schedule op %ld on disc %d\n",
@@ -1337,6 +1338,39 @@ static void raid5_unplug_device(request_queue_t *q)
 	spin_unlock_irqrestore(&conf->device_lock, flags);
 
 	unplug_slaves(mddev);
+}
+
+static int raid5_issue_flush(request_queue_t *q, struct gendisk *disk,
+			     sector_t *error_sector)
+{
+	mddev_t *mddev = q->queuedata;
+	raid5_conf_t *conf = mddev_to_conf(mddev);
+	int i, ret = 0;
+
+	for (i=0; i<mddev->raid_disks; i++) {
+		mdk_rdev_t *rdev = conf->disks[i].rdev;
+		if (rdev && !rdev->faulty) {
+			struct block_device *bdev = rdev->bdev;
+			request_queue_t *r_queue;
+
+			if (!bdev)
+				continue;
+
+			r_queue = bdev_get_queue(bdev);
+			if (!r_queue)
+				continue;
+
+			if (!r_queue->issue_flush_fn) {
+				ret = -EOPNOTSUPP;
+				break;
+			}
+
+			ret = r_queue->issue_flush_fn(r_queue, bdev->bd_disk, error_sector);
+			if (ret)
+				break;
+		}
+	}
+	return ret;
 }
 
 static inline void raid5_plug_device(raid5_conf_t *conf)
@@ -1545,6 +1579,7 @@ static int run (mddev_t *mddev)
 	atomic_set(&conf->preread_active_stripes, 0);
 
 	mddev->queue->unplug_fn = raid5_unplug_device;
+	mddev->queue->issue_flush_fn = raid5_issue_flush;
 
 	PRINTK("raid5: run(%s) called.\n", mdname(mddev));
 

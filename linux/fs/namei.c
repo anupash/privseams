@@ -868,29 +868,31 @@ static int __emul_lookup_dentry(const char *name, struct nameidata *nd)
 		return 0;		/* something went wrong... */
 
 	if (!nd->dentry->d_inode || S_ISDIR(nd->dentry->d_inode->i_mode)) {
-		struct nameidata nd_root;
+		struct dentry *old_dentry = nd->dentry;
+		struct vfsmount *old_mnt = nd->mnt;
+		struct qstr last = nd->last;
+		int last_type = nd->last_type;
 		/*
 		 * NAME was not found in alternate root or it's a directory.  Try to find
 		 * it in the normal root:
 		 */
-		nd_root.last_type = LAST_ROOT;
-		nd_root.flags = nd->flags;
-		nd_root.depth = 0;
-		memcpy(&nd_root.intent, &nd->intent, sizeof(nd_root.intent));
+		nd->last_type = LAST_ROOT;
 		read_lock(&current->fs->lock);
-		nd_root.mnt = mntget(current->fs->rootmnt);
-		nd_root.dentry = dget(current->fs->root);
+		nd->mnt = mntget(current->fs->rootmnt);
+		nd->dentry = dget(current->fs->root);
 		read_unlock(&current->fs->lock);
-		if (path_walk(name, &nd_root))
-			return 1;
-		if (nd_root.dentry->d_inode) {
+		if (path_walk(name, nd) == 0) {
+			if (nd->dentry->d_inode) {
+				dput(old_dentry);
+				mntput(old_mnt);
+				return 1;
+			}
 			path_release(nd);
-			nd->dentry = nd_root.dentry;
-			nd->mnt = nd_root.mnt;
-			nd->last = nd_root.last;
-			return 1;
 		}
-		path_release(&nd_root);
+		nd->dentry = old_dentry;
+		nd->mnt = old_mnt;
+		nd->last = last;
+		nd->last_type = last_type;
 	}
 	return 1;
 }
@@ -943,8 +945,7 @@ int fastcall path_lookup(const char *name, unsigned int flags, struct nameidata 
 		}
 		nd->mnt = mntget(current->fs->rootmnt);
 		nd->dentry = dget(current->fs->root);
-	}
-	else{
+	} else {
 		nd->mnt = mntget(current->fs->pwdmnt);
 		nd->dentry = dget(current->fs->pwd);
 	}
@@ -1094,8 +1095,12 @@ static inline int check_sticky(struct inode *dir, struct inode *inode)
 static inline int may_delete(struct inode *dir,struct dentry *victim,int isdir)
 {
 	int error;
-	if (!victim->d_inode || victim->d_parent->d_inode != dir)
+
+	if (!victim->d_inode)
 		return -ENOENT;
+
+	BUG_ON(victim->d_parent->d_inode != dir);
+
 	error = permission(dir,MAY_WRITE | MAY_EXEC, NULL);
 	if (error)
 		return error;
@@ -1659,7 +1664,7 @@ out:
  * if it cannot handle the case of removing a directory
  * that is still in use by something else..
  */
-static void d_unhash(struct dentry *dentry)
+void dentry_unhash(struct dentry *dentry)
 {
 	dget(dentry);
 	spin_lock(&dcache_lock);
@@ -1689,7 +1694,7 @@ int vfs_rmdir(struct inode *dir, struct dentry *dentry)
 	DQUOT_INIT(dir);
 
 	down(&dentry->d_inode->i_sem);
-	d_unhash(dentry);
+	dentry_unhash(dentry);
 	if (d_mountpoint(dentry))
 		error = -EBUSY;
 	else {
@@ -1820,13 +1825,12 @@ asmlinkage long sys_unlink(const char __user * pathname)
 		dput(dentry);
 	}
 	up(&nd.dentry->d_inode->i_sem);
+	if (inode)
+		iput(inode);	/* truncate the inode here */
 exit1:
 	path_release(&nd);
 exit:
 	putname(name);
-
-	if (inode)
-		iput(inode);	/* truncate the inode here */
 	return error;
 
 slashes:
@@ -2032,7 +2036,7 @@ int vfs_rename_dir(struct inode *old_dir, struct dentry *old_dentry,
 	target = new_dentry->d_inode;
 	if (target) {
 		down(&target->i_sem);
-		d_unhash(new_dentry);
+		dentry_unhash(new_dentry);
 	}
 	if (d_mountpoint(old_dentry)||d_mountpoint(new_dentry))
 		error = -EBUSY;
@@ -2299,12 +2303,8 @@ int page_readlink(struct dentry *dentry, char __user *buffer, int buflen)
 int page_follow_link_light(struct dentry *dentry, struct nameidata *nd)
 {
 	struct page *page;
-	char *s = page_getlink(dentry, &page);
-	if (!IS_ERR(s)) {
-		nd_set_link(nd, s);
-		s = NULL;
-	}
-	return PTR_ERR(s);
+	nd_set_link(nd, page_getlink(dentry, &page));
+	return 0;
 }
 
 void page_put_link(struct dentry *dentry, struct nameidata *nd)
@@ -2410,4 +2410,5 @@ EXPORT_SYMBOL(vfs_rename);
 EXPORT_SYMBOL(vfs_rmdir);
 EXPORT_SYMBOL(vfs_symlink);
 EXPORT_SYMBOL(vfs_unlink);
+EXPORT_SYMBOL(dentry_unhash);
 EXPORT_SYMBOL(generic_readlink);

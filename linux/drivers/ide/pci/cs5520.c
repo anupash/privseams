@@ -290,7 +290,10 @@ static int __devinit cs5520_init_one(struct pci_dev *dev, const struct pci_devic
 		return 1;
 	}
 	pci_set_master(dev);
-	pci_set_dma_mask(dev, 0xFFFFFFFF);
+	if (pci_set_dma_mask(dev, 0xFFFFFFFF)) {
+		printk(KERN_WARNING "cs5520: No suitable DMA available.\n");
+		return -ENODEV;
+	}
 	init_chipset_cs5520(dev, d->name);
 
 	index.all = 0xf0f0;
@@ -319,7 +322,7 @@ static struct pci_device_id cs5520_pci_tbl[] = {
 MODULE_DEVICE_TABLE(pci, cs5520_pci_tbl);
 
 static struct pci_driver driver = {
-	.name		= "CyrixIDE",
+	.name		= "Cyrix_IDE",
 	.id_table	= cs5520_pci_tbl,
 	.probe		= cs5520_init_one,
 };

@@ -314,10 +314,10 @@ int cap_vm_enough_memory(long pages)
 	/*
 	 * Sometimes we want to use more memory than we have
 	 */
-	if (sysctl_overcommit_memory == 1)
+	if (sysctl_overcommit_memory == OVERCOMMIT_ALWAYS)
 		return 0;
 
-	if (sysctl_overcommit_memory == 0) {
+	if (sysctl_overcommit_memory == OVERCOMMIT_GUESS) {
 		unsigned long n;
 
 		free = get_page_cache_size();
@@ -357,6 +357,11 @@ int cap_vm_enough_memory(long pages)
 
 	allowed = (totalram_pages - hugetlb_total_pages())
 	       	* sysctl_overcommit_ratio / 100;
+	/*
+	 * Leave the last 3% for root
+	 */
+	if (!capable(CAP_SYS_ADMIN))
+		allowed -= allowed / 32;
 	allowed += total_swap_pages;
 
 	if (atomic_read(&vm_committed_space) < allowed)

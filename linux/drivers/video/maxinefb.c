@@ -126,6 +126,9 @@ int __init maxinefb_init(void)
 	unsigned long fb_start;
 	int i;
 
+	if (fb_get_options("maxinefb", NULL))
+		return -ENODEV;
+
 	/* Validate we're on the proper machine type */
 	if (mips_machtype != MACH_DS5000_XX) {
 		return -EINVAL;
@@ -159,7 +162,7 @@ int __init maxinefb_init(void)
 	fb_info.screen_base = (char *) maxinefb_fix.smem_start;
 	fb_info.var = maxinefb_defined;
 	fb_info.fix = maxinefb_fix;
-	fb_info.flags = FBINFO_FLAG_DEFAULT;
+	fb_info.flags = FBINFO_DEFAULT;
 
 	fb_alloc_cmap(&fb_info.cmap, 256, 0);
 
@@ -175,7 +178,7 @@ static void __exit maxinefb_exit(void)
 
 #ifdef MODULE
 MODULE_LICENSE("GPL");
-module_init(maxinefb_init);
 #endif
+module_init(maxinefb_init);
 module_exit(maxinefb_exit);
 

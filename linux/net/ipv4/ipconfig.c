@@ -720,6 +720,8 @@ static void __init ic_bootp_send_if(struct ic_device *d, unsigned long jiffies_d
 		b->htype = dev->type;
 	else if (dev->type == ARPHRD_IEEE802_TR) /* fix for token ring */
 		b->htype = ARPHRD_IEEE802;
+	else if (dev->type == ARPHRD_FDDI)
+		b->htype = ARPHRD_ETHER;
 	else {
 		printk("Unknown ARP type 0x%04x for device %s\n", dev->type, dev->name);
 		b->htype = dev->type; /* can cause undefined behavior */
@@ -966,6 +968,9 @@ static int __init ic_bootp_recv(struct sk_buff *skb, struct net_device *dev, str
 				break;
 
 			case DHCPACK:
+				if (memcmp(dev->dev_addr, b->hw_addr, dev->addr_len) != 0)
+					goto drop_unlock;
+
 				/* Yeah! */
 				break;
 

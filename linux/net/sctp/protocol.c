@@ -81,8 +81,6 @@ static struct sctp_af *sctp_af_v6_specific;
 kmem_cache_t *sctp_chunk_cachep;
 kmem_cache_t *sctp_bucket_cachep;
 
-extern struct net_proto_family inet_family_ops;
-
 extern int sctp_snmp_proc_init(void);
 extern int sctp_snmp_proc_exit(void);
 extern int sctp_eps_proc_init(void);
@@ -148,13 +146,12 @@ static void sctp_v4_copy_addrlist(struct list_head *addrlist,
 	struct in_ifaddr *ifa;
 	struct sctp_sockaddr_entry *addr;
 
-	read_lock(&inetdev_lock);
+	rcu_read_lock();
 	if ((in_dev = __in_dev_get(dev)) == NULL) {
-		read_unlock(&inetdev_lock);
+		rcu_read_unlock();
 		return;
 	}
 
-	read_lock(&in_dev->lock);
 	for (ifa = in_dev->ifa_list; ifa; ifa = ifa->ifa_next) {
 		/* Add the address to the local list.  */
 		addr = t_new(struct sctp_sockaddr_entry, GFP_ATOMIC);
@@ -166,8 +163,7 @@ static void sctp_v4_copy_addrlist(struct list_head *addrlist,
 		}
 	}
 
-	read_unlock(&in_dev->lock);
-	read_unlock(&inetdev_lock);
+	rcu_read_unlock();
 }
 
 /* Extract our IP addresses from the system and stash them in the
@@ -558,8 +554,8 @@ struct sock *sctp_v4_create_accept_sk(struct sock *sk,
 	struct inet_opt *inet = inet_sk(sk);
 	struct inet_opt *newinet;
 
-	newsk = sk_alloc(PF_INET, GFP_KERNEL, sizeof(struct sctp_sock),
-			 sk->sk_slab);
+	newsk = sk_alloc(PF_INET, GFP_KERNEL, sk->sk_prot->slab_obj_size,
+			 sk->sk_prot->slab);
 	if (!newsk)
 		goto out;
 
@@ -966,23 +962,29 @@ static void cleanup_sctp_mibs(void)
 __init int sctp_init(void)
 {
 	int i;
-	int status = 0;
+	int status = -EINVAL;
 	unsigned long goal;
 	int order;
 
 	/* SCTP_DEBUG sanity check. */
 	if (!sctp_sanity_check())
-		return -EINVAL;
+		goto out;
+
+	status = sk_alloc_slab(&sctp_prot, "sctp_sock");
+	if (status)
+		goto out;
 
 	/* Add SCTP to inet_protos hash table.  */
+	status = -EAGAIN;
 	if (inet_add_protocol(&sctp_protocol, IPPROTO_SCTP) < 0)
-		return -EAGAIN;
+		goto err_add_protocol;
 
 	/* Add SCTP(TCP and UDP style) to inetsw linked list.  */
 	inet_register_protosw(&sctp_seqpacket_protosw);
 	inet_register_protosw(&sctp_stream_protosw);
 
 	/* Allocate a cache pools. */
+	status = -ENOBUFS;
 	sctp_bucket_cachep = kmem_cache_create("sctp_bind_bucket",
 					       sizeof(struct sctp_bind_bucket),
 					       0, SLAB_HWCACHE_ALIGN,
@@ -1158,8 +1160,11 @@ __init int sctp_init(void)
 	sctp_get_local_addr_list();
 
 	__unsafe(THIS_MODULE);
-	return 0;
-
+	status = 0;
+out:
+	return status;
+err_add_protocol:
+	sk_free_slab(&sctp_prot);
 err_ctl_sock_init:
 	sctp_v6_exit();
 err_v6_init:
@@ -1187,7 +1192,7 @@ err_bucket_cachep:
 	inet_del_protocol(&sctp_protocol, IPPROTO_SCTP);
 	inet_unregister_protosw(&sctp_seqpacket_protosw);
 	inet_unregister_protosw(&sctp_stream_protosw);
-	return status;
+	goto out;
 }
 
 /* Exit handler for the SCTP protocol.  */
@@ -1228,6 +1233,7 @@ __exit void sctp_exit(void)
 	inet_del_protocol(&sctp_protocol, IPPROTO_SCTP);
 	inet_unregister_protosw(&sctp_seqpacket_protosw);
 	inet_unregister_protosw(&sctp_stream_protosw);
+	sk_free_slab(&sctp_prot);
 }
 
 module_init(sctp_init);

@@ -79,6 +79,14 @@
 		.endm
 		.macro	writeb, rb
 		str	\rb, [r3, #0]
+#elif defined(CONFIG_ARCH_IXP2000)
+		.macro	loadsp, rb
+		mov	\rb, #0xc0000000
+		orr	\rb, \rb, #0x00030000
+		.endm
+		.macro	writeb, rb
+		str	\rb, [r3, #0]
+		.endm
 #elif defined(CONFIG_ARCH_LH7A40X)
 		.macro	loadsp, rb
 		ldr	\rb, =0x80000700	@ UART2 UARTBASE
@@ -99,6 +107,15 @@
 		.endm
 		.macro	writeb, rb
 		strb	\rb, [r3]
+		.endm
+#elif defined(CONFIG_ARCH_IOP331)
+		.macro loadsp, rb
+                mov   	\rb, #0xff000000
+                orr     \rb, \rb, #0x00ff0000
+                orr     \rb, \rb, #0x0000f700   @ location of the UART
+		.endm
+		.macro	writeb, rb
+		str	\rb, [r3, #0]
 		.endm
 #else
 #error no serial architecture defined
@@ -331,6 +348,14 @@ LC0:		.word	LC0			@ r1
 		.word	user_stack+4096		@ sp
 LC1:		.word	reloc_end - reloc_start
 		.size	LC0, . - LC0
+
+#ifdef CONFIG_ARCH_RPC
+		.globl	params
+params:		ldr	r0, =params_phys
+		mov	pc, lr
+		.ltorg
+		.align
+#endif
 
 /*
  * Turn on the cache.  We need to setup some page tables so that we
@@ -568,6 +593,12 @@ proc_types:
 		b	__armv4_cache_off
 		b	__armv4_cache_flush
 
+		.word	0x00070000		@ ARMv6
+		.word	0x000f0000
+		b	__armv4_cache_on
+		b	__armv4_cache_off
+		b	__armv6_cache_flush
+
 		.word	0			@ unrecognised type
 		.word	0
 		mov	pc, lr
@@ -626,6 +657,14 @@ __armv3_cache_off:
 cache_clean_flush:
 		mov	r3, #16
 		b	call_cache_fn
+
+__armv6_cache_flush:
+		mov	r1, #0
+		mcr	p15, 0, r1, c7, c14, 0	@ clean+invalidate D
+		mcr	p15, 0, r1, c7, c5, 0	@ invalidate I+BTB
+		mcr	p15, 0, r1, c7, c15, 0	@ clean+invalidate unified
+		mcr	p15, 0, r1, c7, c10, 4	@ drain WB
+		mov	pc, lr
 
 __armv4_cache_flush:
 		mov	r2, #64*1024		@ default: 32K dcache size (*2)

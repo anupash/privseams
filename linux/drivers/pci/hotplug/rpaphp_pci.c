@@ -186,7 +186,7 @@ static struct pci_dev *
 rpaphp_pci_config_slot(struct device_node *dn, struct pci_bus *bus)
 {
 	struct device_node *eads_first_child = dn->child;
-	struct pci_dev *dev;
+	struct pci_dev *dev = NULL;
 	int num;
 	
 	dbg("Enter %s: dn=%s bus=%s\n", __FUNCTION__, dn->full_name, bus->name);
@@ -341,7 +341,6 @@ exit:
 	return rc;
 }
 
-
 static void rpaphp_eeh_remove_bus_device(struct pci_dev *dev)
 {
 	eeh_remove_device(dev);
@@ -363,7 +362,7 @@ static void rpaphp_eeh_remove_bus_device(struct pci_dev *dev)
 int rpaphp_unconfig_pci_adapter(struct slot *slot)
 {
 	int retval = 0;
-	struct list_head *ln;
+	struct list_head *ln, *tmp;
 
 	dbg("Entry %s: slot[%s]\n", __FUNCTION__, slot->name);
 	if (list_empty(&slot->dev.pci_funcs)) {
@@ -374,7 +373,7 @@ int rpaphp_unconfig_pci_adapter(struct slot *slot)
 		goto exit;
 	}
 	/* remove the devices from the pci core */
-	list_for_each (ln, &slot->dev.pci_funcs) {
+	list_for_each_safe (ln, tmp, &slot->dev.pci_funcs) {
 		struct rpaphp_pci_func *func;
 	
 		func = list_entry(ln, struct rpaphp_pci_func, sibling);
@@ -430,10 +429,26 @@ static int setup_pci_slot(struct slot *slot)
 				__FUNCTION__, slot->name);
 			goto exit_rc;
 		}
-		if (init_slot_pci_funcs(slot)) {
-			err("%s: init_slot_pci_funcs failed\n", __FUNCTION__);
+
+		if (slot->hotplug_slot->info->adapter_status == NOT_CONFIGURED) {
+			dbg("%s CONFIGURING pci adapter in slot[%s]\n",  
+				__FUNCTION__, slot->name);
+			if (rpaphp_config_pci_adapter(slot)) {
+				err("%s: CONFIG pci adapter failed\n", __FUNCTION__);
+				goto exit_rc;		
+			}
+		} else if (slot->hotplug_slot->info->adapter_status == CONFIGURED) {
+			if (init_slot_pci_funcs(slot)) {
+				err("%s: init_slot_pci_funcs failed\n", __FUNCTION__);
+				goto exit_rc;
+			}
+
+		} else {
+			err("%s: slot[%s]'s adapter_status is NOT_VALID.\n",
+				__FUNCTION__, slot->name);
 			goto exit_rc;
 		}
+		
 		print_slot_pci_funcs(slot);
 		if (!list_empty(&slot->dev.pci_funcs)) {
 			slot->state = CONFIGURED;

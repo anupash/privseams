@@ -12,7 +12,7 @@
 #include <linux/init.h>
 #include <linux/timer.h>
 #include <linux/vmalloc.h>
-#include <asm/hardirq.h>
+#include <linux/interrupt.h>
 #include <linux/bitops.h>
 #include <asm/semaphore.h>
 
@@ -235,6 +235,8 @@ firmware_data_write(struct kobject *kobj,
 	struct firmware *fw;
 	ssize_t retval;
 
+	if (!capable(CAP_SYS_RAWIO))
+		return -EPERM;
 	down(&fw_lock);
 	fw = fw_priv->fw;
 	if (test_bit(FW_STATUS_DONE, &fw_priv->status)) {

@@ -53,11 +53,12 @@ static struct early_node_data mem_data[NR_NODES] __initdata;
 static void __init reassign_cpu_only_nodes(void)
 {
 	struct node_memblk_s *p;
-	int i, j, k, nnode, nid, cpu, cpunid;
+	int i, j, k, nnode, nid, cpu, cpunid, pxm;
 	u8 cslit, slit;
 	static DECLARE_BITMAP(nodes_with_mem, NR_NODES) __initdata;
 	static u8 numa_slit_fix[MAX_NUMNODES * MAX_NUMNODES] __initdata;
 	static int node_flip[NR_NODES] __initdata;
+	static int old_nid_map[NR_CPUS] __initdata;
 
 	for (nnode = 0, p = &node_memblk[0]; p < &node_memblk[num_node_memblks]; p++)
 		if (!test_bit(p->nid, (void *) nodes_with_mem)) {
@@ -104,9 +105,14 @@ static void __init reassign_cpu_only_nodes(void)
 
 		for (cpu = 0; cpu < NR_CPUS; cpu++)
 			if (node_cpuid[cpu].nid == i) {
-				/* For nodes not being reassigned just fix the cpu's nid. */
+				/*
+				 * For nodes not being reassigned just
+				 * fix the cpu's nid and reverse pxm map
+				 */
 				if (cpunid < numnodes) {
-					node_cpuid[cpu].nid = cpunid;
+					pxm = nid_to_pxm_map[i];
+					pxm_to_nid_map[pxm] =
+					          node_cpuid[cpu].nid = cpunid;
 					continue;
 				}
 
@@ -126,6 +132,8 @@ static void __init reassign_cpu_only_nodes(void)
 						}
 					}
 
+				/* save old nid map so we can update the pxm */
+				old_nid_map[cpu] = node_cpuid[cpu].nid;
 				node_cpuid[cpu].nid = k;
 			}
 	}
@@ -134,14 +142,19 @@ static void __init reassign_cpu_only_nodes(void)
 	 * Fixup temporary nid values for CPU-only nodes.
 	 */
 	for (cpu = 0; cpu < NR_CPUS; cpu++)
-		if (node_cpuid[cpu].nid == (numnodes + numnodes))
-			node_cpuid[cpu].nid = nnode - 1;
-		else
-			for (i = 0; i < nnode; i++)
-				if (node_flip[i] == (node_cpuid[cpu].nid - numnodes)) {
-					node_cpuid[cpu].nid = i;
-					break;
-				}
+		if (node_cpuid[cpu].nid == (numnodes + numnodes)) {
+			pxm = nid_to_pxm_map[old_nid_map[cpu]];
+			pxm_to_nid_map[pxm] = node_cpuid[cpu].nid = nnode - 1;
+		} else {
+			for (i = 0; i < nnode; i++) {
+				if (node_flip[i] != (node_cpuid[cpu].nid - numnodes))
+					continue;
+
+				pxm = nid_to_pxm_map[old_nid_map[cpu]];
+				pxm_to_nid_map[pxm] = node_cpuid[cpu].nid = i;
+				break;
+			}
+		}
 
 	/*
 	 * Fix numa_slit by compressing from larger
@@ -492,14 +505,17 @@ void *per_cpu_init(void)
  */
 void show_mem(void)
 {
-	int i, reserved = 0;
-	int shared = 0, cached = 0;
+	int i, total_reserved = 0;
+	int total_shared = 0, total_cached = 0;
+	unsigned long total_present = 0;
 	pg_data_t *pgdat;
 
 	printk("Mem-info:\n");
 	show_free_areas();
 	printk("Free swap:       %6ldkB\n", nr_swap_pages<<(PAGE_SHIFT-10));
 	for_each_pgdat(pgdat) {
+		unsigned long present = pgdat->node_present_pages;
+		int shared = 0, cached = 0, reserved = 0;
 		printk("Node ID: %d\n", pgdat->node_id);
 		for(i = 0; i < pgdat->node_spanned_pages; i++) {
 			if (!ia64_pfn_valid(pgdat->node_start_pfn+i))
@@ -511,11 +527,19 @@ void show_mem(void)
 			else if (page_count(pgdat->node_mem_map+i))
 				shared += page_count(pgdat->node_mem_map+i)-1;
 		}
-		printk("\t%ld pages of RAM\n", pgdat->node_present_pages);
+		total_present += present;
+		total_reserved += reserved;
+		total_cached += cached;
+		total_shared += shared;
+		printk("\t%ld pages of RAM\n", present);
 		printk("\t%d reserved pages\n", reserved);
 		printk("\t%d pages shared\n", shared);
 		printk("\t%d pages swap cached\n", cached);
 	}
+	printk("%ld pages of RAM\n", total_present);
+	printk("%d reserved pages\n", total_reserved);
+	printk("%d pages shared\n", total_shared);
+	printk("%d pages swap cached\n", total_cached);
 	printk("Total of %ld pages in page table cache\n", pgtable_cache_size);
 	printk("%d free buffer pages\n", nr_free_buffer_pages());
 }
@@ -607,12 +631,10 @@ void paging_init(void)
 	unsigned long max_dma;
 	unsigned long zones_size[MAX_NR_ZONES];
 	unsigned long zholes_size[MAX_NR_ZONES];
-	unsigned long max_gap, pfn_offset = 0;
+	unsigned long pfn_offset = 0;
 	int node;
 
 	max_dma = virt_to_phys((void *) MAX_DMA_ADDRESS) >> PAGE_SHIFT;
-	max_gap = 0;
-	efi_memmap_walk(find_largest_hole, &max_gap);
 
 	/* so min() will work in count_node_pages */
 	for (node = 0; node < numnodes; node++)
@@ -664,8 +686,8 @@ void paging_init(void)
 
 		pfn_offset = mem_data[node].min_pfn;
 
-		free_area_init_node(node, NODE_DATA(node),
-				    vmem_map + pfn_offset, zones_size,
+		NODE_DATA(node)->node_mem_map = vmem_map + pfn_offset;
+		free_area_init_node(node, NODE_DATA(node), zones_size,
 				    pfn_offset, zholes_size);
 	}
 

@@ -31,6 +31,7 @@
 #include <asm/e820.h>
 #include <asm/setup.h>
 #include <asm/mmzone.h>
+#include <bios_ebda.h>
 
 struct pglist_data *node_data[MAX_NUMNODES];
 bootmem_data_t node0_bdata;
@@ -219,6 +220,17 @@ static unsigned long calculate_numa_remap_pages(void)
 	return reserve_pages;
 }
 
+/*
+ * workaround for Dell systems that neglect to reserve EBDA
+ */
+static void __init reserve_ebda_region_node(void)
+{
+	unsigned int addr;
+	addr = get_bios_ebda();
+	if (addr)
+		reserve_bootmem_node(NODE_DATA(0), addr, PAGE_SIZE);
+}
+
 unsigned long __init setup_memory(void)
 {
 	int nid;
@@ -318,6 +330,9 @@ unsigned long __init setup_memory(void)
 	 */
 	reserve_bootmem_node(NODE_DATA(0), PAGE_SIZE, PAGE_SIZE);
 
+	/* reserve EBDA region, it's a 4K region */
+	reserve_ebda_region_node();
+
 #ifdef CONFIG_ACPI_SLEEP
 	/*
 	 * Reserve low memory region for sleep support.
@@ -402,15 +417,15 @@ void __init zone_sizes_init(void)
 		 * remapped KVA area - mbligh
 		 */
 		if (!nid)
-			free_area_init_node(nid, NODE_DATA(nid), 0, 
-				zones_size, start, zholes_size);
+			free_area_init_node(nid, NODE_DATA(nid),
+					zones_size, start, zholes_size);
 		else {
 			unsigned long lmem_map;
 			lmem_map = (unsigned long)node_remap_start_vaddr[nid];
 			lmem_map += sizeof(pg_data_t) + PAGE_SIZE - 1;
 			lmem_map &= PAGE_MASK;
-			free_area_init_node(nid, NODE_DATA(nid), 
-				(struct page *)lmem_map, zones_size, 
+			NODE_DATA(nid)->node_mem_map = (struct page *)lmem_map;
+			free_area_init_node(nid, NODE_DATA(nid), zones_size,
 				start, zholes_size);
 		}
 	}

@@ -15,29 +15,34 @@
 
 KERNELLOAD	:= 0xc000000000000000
 
-HAS_BIARCH      := $(shell if $(CC) -m64 -S -o /dev/null -xc /dev/null > /dev/null 2>&1; then echo y; else echo n; fi;)
+HAS_BIARCH      := $(call cc-option-yn, -m64)
 ifeq ($(HAS_BIARCH),y)
 AS              := $(AS) -a64
 LD              := $(LD) -m elf64ppc
 CC		:= $(CC) -m64
 endif
 
-CHECK		:= $(CHECK) -m64 -D__powerpc__=1
+new_nm := $(shell if $(NM) --help 2>&1 | grep -- '--synthetic' > /dev/null; then echo y; else echo n; fi)
+
+ifeq ($(new_nm),y)
+NM		:= $(NM) --synthetic
+endif
+
+CHECKFLAGS	+= -m64 -D__powerpc__
 
 LDFLAGS		:= -m elf64ppc
 LDFLAGS_vmlinux	:= -Bstatic -e $(KERNELLOAD) -Ttext $(KERNELLOAD)
-CFLAGS		+= -msoft-float -pipe -Wno-uninitialized -mminimal-toc \
-		   -mtraceback=none
+CFLAGS		+= -msoft-float -pipe -mminimal-toc -mtraceback=none
 
 ifeq ($(CONFIG_POWER4_ONLY),y)
-	CFLAGS += $(call check_gcc,-mcpu=power4,)
+	CFLAGS += $(call cc-option,-mcpu=power4)
 else
-	CFLAGS += $(call check_gcc,-mtune=power4,)
+	CFLAGS += $(call cc-option,-mtune=power4)
 endif
 
 # Enable unit-at-a-time mode when possible. It shrinks the
 # kernel considerably.
-CFLAGS += $(call check_gcc,-funit-at-a-time,)
+CFLAGS += $(call cc-option,-funit-at-a-time)
 
 head-y := arch/ppc64/kernel/head.o
 

@@ -788,6 +788,15 @@ static unsigned int __init init_chipset_sis5513 (struct pci_dev *dev, const char
 			if (trueid == 0x5518) {
 				printk(KERN_INFO "SIS5513: SiS 962/963 MuTIOL IDE UDMA133 controller\n");
 				chipset_family = ATA_133;
+
+				/* Check for 5513 compability mapping
+				 * We must use this, else the port enabled code will fail,
+				 * as it expects the enablebits at 0x4a.
+				 */
+				if ((idemisc & 0x40000000) == 0) {
+					pci_write_config_dword(dev, 0x54, idemisc | 0x40000000);
+					printk(KERN_INFO "SIS5513: Switching to 5513 register mapping\n");
+				}
 			}
 	}
 
@@ -963,12 +972,13 @@ static int __devinit sis5513_init_one(struct pci_dev *dev, const struct pci_devi
 
 static struct pci_device_id sis5513_pci_tbl[] = {
 	{ PCI_VENDOR_ID_SI, PCI_DEVICE_ID_SI_5513, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
+	{ PCI_VENDOR_ID_SI, PCI_DEVICE_ID_SI_5518, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
 	{ 0, },
 };
 MODULE_DEVICE_TABLE(pci, sis5513_pci_tbl);
 
 static struct pci_driver driver = {
-	.name		= "SIS IDE",
+	.name		= "SIS_IDE",
 	.id_table	= sis5513_pci_tbl,
 	.probe		= sis5513_init_one,
 };

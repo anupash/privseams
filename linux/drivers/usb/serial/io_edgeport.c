@@ -479,7 +479,7 @@ static void get_boot_desc		(struct edgeport_serial *edge_serial);
 static void load_application_firmware	(struct edgeport_serial *edge_serial);
 
 
-static void unicode_to_ascii		(char *string, short *unicode, int unicode_size);
+static void unicode_to_ascii		(char *string, __le16 *unicode, int unicode_size);
 
 
 
@@ -504,7 +504,7 @@ static void update_edgeport_E2PROM (struct edgeport_serial *edge_serial)
 	__u32 BootNewVer;
 	__u8 BootMajorVersion;                  
 	__u8 BootMinorVersion;                  
-	__u16 BootBuildNumber;
+	__le16 BootBuildNumber;
 	__u8 *BootImage;      
 	__u32 BootSize;
 	struct edge_firmware_image_record *record;
@@ -653,7 +653,7 @@ static void get_product_info(struct edgeport_serial *edge_serial)
 
 	memset (product_info, 0, sizeof(struct edgeport_product_info));
 
-	product_info->ProductId		= (__u16)(edge_serial->serial->dev->descriptor.idProduct & ~ION_DEVICE_ID_GENERATION_2);
+	product_info->ProductId		= (__u16)(edge_serial->serial->dev->descriptor.idProduct & ~ION_DEVICE_ID_80251_NETCHIP);
 	product_info->NumPorts		= edge_serial->manuf_descriptor.NumPorts;
 	product_info->ProdInfoVer	= 0;
 
@@ -669,7 +669,7 @@ static void get_product_info(struct edgeport_serial *edge_serial)
 	memcpy(product_info->ManufactureDescDate, edge_serial->manuf_descriptor.DescDate, sizeof(edge_serial->manuf_descriptor.DescDate));
 
 	// check if this is 2nd generation hardware
-	if (edge_serial->serial->dev->descriptor.idProduct & ION_DEVICE_ID_GENERATION_2) {
+	if (edge_serial->serial->dev->descriptor.idProduct & ION_DEVICE_ID_80251_NETCHIP) {
 		product_info->FirmwareMajorVersion	= OperationalCodeImageVersion_GEN2.MajorVersion;
 		product_info->FirmwareMinorVersion	= OperationalCodeImageVersion_GEN2.MinorVersion;
 		product_info->FirmwareBuildNumber	= cpu_to_le16(OperationalCodeImageVersion_GEN2.BuildNumber);
@@ -900,12 +900,7 @@ static void edge_bulk_out_data_callback (struct urb *urb, struct pt_regs *regs)
 
 	if (tty && edge_port->open) {
 		/* let the tty driver wakeup if it has a special write_wakeup function */
-		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup) {
-			(tty->ldisc.write_wakeup)(tty);
-		}
-
-		/* tell the tty driver that something has changed */
-		wake_up_interruptible(&tty->write_wait);
+		tty_wakeup(tty);
 	}
 
 	// Release the Write URB
@@ -1389,7 +1384,7 @@ static void send_more_port_data(struct edgeport_serial *edge_serial, struct edge
 	//	to bother queueing a write. If it's too small, say a few bytes,
 	//	it's better to wait for more credits so we can do a larger
 	//	write.
-	if (edge_port->txCredits < EDGE_FW_GET_TX_CREDITS_SEND_THRESHOLD(edge_port->maxTxCredits)) {
+	if (edge_port->txCredits < EDGE_FW_GET_TX_CREDITS_SEND_THRESHOLD(edge_port->maxTxCredits,EDGE_FW_BULK_MAX_PACKET_SIZE)) {
 		dbg("%s(%d) Not enough credit - fifo %d TxCredit %d", __FUNCTION__, edge_port->port->number, fifo->count, edge_port->txCredits );
 		return;
 	}
@@ -2747,7 +2742,7 @@ static void change_port_settings (struct edgeport_port *edge_port, struct termio
  *	ASCII range, but it's only for debugging...
  *	NOTE: expects the unicode in LE format
  ****************************************************************************/
-static void unicode_to_ascii (char *string, short *unicode, int unicode_size)
+static void unicode_to_ascii (char *string, __le16 *unicode, int unicode_size)
 {
 	int i;
 	for (i = 0; i < unicode_size; ++i) {
@@ -3007,9 +3002,6 @@ static void edge_shutdown (struct usb_serial *serial)
 static int __init edgeport_init(void)
 {
 	int retval;
-	retval = usb_serial_register(&edgeport_1port_device);
-	if (retval) 
-		goto failed_1port_device_register;
 	retval = usb_serial_register(&edgeport_2port_device);
 	if (retval)
 		goto failed_2port_device_register;
@@ -3031,8 +3023,6 @@ failed_8port_device_register:
 failed_4port_device_register:
 	usb_serial_deregister(&edgeport_2port_device);
 failed_2port_device_register:
-	usb_serial_deregister(&edgeport_1port_device);
-failed_1port_device_register:
 	return retval;
 }
 
@@ -3045,7 +3035,6 @@ failed_1port_device_register:
 static void __exit edgeport_exit (void)
 {
 	usb_deregister (&io_driver);
-	usb_serial_deregister (&edgeport_1port_device);
 	usb_serial_deregister (&edgeport_2port_device);
 	usb_serial_deregister (&edgeport_4port_device);
 	usb_serial_deregister (&edgeport_8port_device);

@@ -74,7 +74,6 @@
 #define DIGIINFOMAJOR       35  /* For Digi specific ioctl */ 
 
 
-#define MIN(a,b)	((a) < (b) ? (a) : (b))
 #define MAXCARDS 7
 #define epcaassert(x, msg)  if (!(x)) epca_error(__LINE__, msg)
 
@@ -551,9 +550,7 @@ static void pc_close(struct tty_struct * tty, struct file * filp)
 		if (tty->driver->flush_buffer)
 			tty->driver->flush_buffer(tty);
 
-		if (tty->ldisc.flush_buffer)
-			tty->ldisc.flush_buffer(tty);
-
+		tty_ldisc_flush(tty);
 		shutdown(ch);
 		tty->closing = 0;
 		ch->event = 0;
@@ -657,10 +654,7 @@ static void pc_hangup(struct tty_struct *tty)
 		cli();
 		if (tty->driver->flush_buffer)
 			tty->driver->flush_buffer(tty);
-
-		if (tty->ldisc.flush_buffer)
-			tty->ldisc.flush_buffer(tty);
-
+		tty_ldisc_flush(tty);
 		shutdown(ch);
 
 		ch->tty   = NULL;
@@ -826,7 +820,7 @@ static int pc_write(struct tty_struct * tty, int from_user,
 			bytesAvailable will then take on this newly calculated value.
 		---------------------------------------------------------------------- */
 
-		bytesAvailable = MIN(dataLen, bytesAvailable);
+		bytesAvailable = min(dataLen, bytesAvailable);
 
 		/* First we read the data in from the file system into a temp buffer */
 
@@ -912,7 +906,7 @@ static int pc_write(struct tty_struct * tty, int from_user,
 			space; reduce the amount of data to fit the space.
 	---------------------------------------------------------------------- */
 
-	bytesAvailable = MIN(remain, bytesAvailable);
+	bytesAvailable = min(remain, bytesAvailable);
 
 	txwinon(ch);
 	while (bytesAvailable > 0) 
@@ -923,7 +917,7 @@ static int pc_write(struct tty_struct * tty, int from_user,
 			data copy fills to the end of card buffer.
 		------------------------------------------------------------------- */
 
-		dataLen = MIN(bytesAvailable, dataLen);
+		dataLen = min(bytesAvailable, dataLen);
 		memcpy(ch->txptr + head, buf, dataLen);
 		buf += dataLen;
 		head += dataLen;
@@ -1120,8 +1114,7 @@ static void pc_flush_buffer(struct tty_struct *tty)
 	restore_flags(flags);
 
 	wake_up_interruptible(&tty->write_wait);
-	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup)
-		(tty->ldisc.write_wakeup)(tty);
+	tty_wakeup(tty);
 
 } /* End pc_flush_buffer */
 
@@ -2262,9 +2255,7 @@ static void doevent(int crd)
 				{ /* Begin if LOWWAIT */
 
 					ch->statusflags &= ~LOWWAIT;
-					if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-						  tty->ldisc.write_wakeup)
-						(tty->ldisc.write_wakeup)(tty);
+					tty_wakeup(tty);
 					wake_up_interruptible(&tty->write_wait);
 
 				} /* End if LOWWAIT */
@@ -2281,9 +2272,7 @@ static void doevent(int crd)
 				{ /* Begin if EMPTYWAIT */
 
 					ch->statusflags &= ~EMPTYWAIT;
-					if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-						  tty->ldisc.write_wakeup)
-						(tty->ldisc.write_wakeup)(tty);
+					tty_wakeup(tty);
 
 					wake_up_interruptible(&tty->write_wait);
 
@@ -3136,6 +3125,7 @@ static int pc_ioctl(struct tty_struct *tty, struct file * file,
 			}
 			else 
 			{
+				/* ldisc lock already held in ioctl */
 				if (tty->ldisc.flush_buffer)
 					tty->ldisc.flush_buffer(tty);
 			}
@@ -3307,7 +3297,6 @@ static void do_softint(void *private_)
 		}
 
 	} /* End EPCA_MAGIC */
-	MOD_DEC_USE_COUNT;
 } /* End do_softint */
 
 /* ------------------------------------------------------------

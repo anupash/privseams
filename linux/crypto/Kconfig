@@ -67,6 +67,18 @@ config CRYPTO_SHA512
 	  This code also includes SHA-384, a 384 bit hash with 192 bits
 	  of security against collision attacks.
 
+config CRYPTO_WP512
+	tristate "Whirlpool digest algorithms"
+	depends on CRYPTO
+	help
+	  Whirlpool hash algorithm 512, 384 and 256-bit hashes
+
+	  Whirlpool-512 is part of the NESSIE cryptographic primtives.
+	  Whirlpool will be part of the ISO/IEC 10118-3:2003(E) standard
+
+	  See also:
+	  http://planeta.terra.com.br/informatica/paulobarreto/WhirlpoolPage.html
+
 config CRYPTO_DES
 	tristate "DES and Triple DES EDE cipher algorithms"
 	depends on CRYPTO
@@ -182,7 +194,7 @@ config CRYPTO_TEA
 	  many rounds for security.  It is very fast and uses
 	  little memory.
 
-	  Xtendend Tiny Encryption Algorithm is a modifcation to
+	  Xtendend Tiny Encryption Algorithm is a modification to
 	  the TEA algorithm to address a potential key weakness
 	  in the TEA algorithm.
 

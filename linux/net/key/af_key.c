@@ -683,6 +683,8 @@ static struct sk_buff * pfkey_xfrm_state2msg(struct xfrm_state *x, int add_keys,
 	sa->sadb_sa_flags = 0;
 	if (x->props.flags & XFRM_STATE_NOECN)
 		sa->sadb_sa_flags |= SADB_SAFLAGS_NOECN;
+	if (x->props.flags & XFRM_STATE_DECAP_DSCP)
+		sa->sadb_sa_flags |= SADB_SAFLAGS_DECAP_DSCP;
 
 	/* hard time */
 	if (hsc & 2) {
@@ -965,6 +967,8 @@ static struct xfrm_state * pfkey_msg2xfrm_state(struct sadb_msg *hdr,
 	x->props.replay_window = sa->sadb_sa_replay;
 	if (sa->sadb_sa_flags & SADB_SAFLAGS_NOECN)
 		x->props.flags |= XFRM_STATE_NOECN;
+	if (sa->sadb_sa_flags & SADB_SAFLAGS_DECAP_DSCP)
+		x->props.flags |= XFRM_STATE_DECAP_DSCP;
 
 	lifetime = (struct sadb_lifetime*) ext_hdrs[SADB_EXT_LIFETIME_HARD-1];
 	if (lifetime != NULL) {
@@ -1075,15 +1079,6 @@ static struct xfrm_state * pfkey_msg2xfrm_state(struct sadb_msg *hdr,
 		n_type = ext_hdrs[SADB_X_EXT_NAT_T_TYPE-1];
 		natt->encap_type = n_type->sadb_x_nat_t_type_type;
 
-		switch (natt->encap_type) {
-		case UDP_ENCAP_ESPINUDP:
-		case UDP_ENCAP_ESPINUDP_NON_IKE:
-			break;
-		default:
-			err = -ENOPROTOOPT;
-			goto out;
-		}
-
 		if (ext_hdrs[SADB_X_EXT_NAT_T_SPORT-1]) {
 			struct sadb_x_nat_t_port* n_port =
 				ext_hdrs[SADB_X_EXT_NAT_T_SPORT-1];
@@ -1165,7 +1160,16 @@ static int pfkey_getspi(struct sock *sk, struct sk_buff *skb, struct sadb_msg *h
 		break;
 #endif
 	}
-	if (xdaddr)
+
+	if (hdr->sadb_msg_seq) {
+		x = xfrm_find_acq_byseq(hdr->sadb_msg_seq);
+		if (x && xfrm_addr_cmp(&x->id.daddr, xdaddr, family)) {
+			xfrm_state_put(x);
+			x = NULL;
+		}
+	}
+
+	if (!x)
 		x = xfrm_find_acq(mode, reqid, proto, xdaddr, xsaddr, 1, family);
 
 	if (x == NULL)

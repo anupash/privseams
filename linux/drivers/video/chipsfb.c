@@ -362,7 +362,7 @@ static void __init init_chips(struct fb_info *p, unsigned long addr)
 	p->var = chipsfb_var;
 
 	p->fbops = &chipsfb_ops;
-	p->flags = FBINFO_FLAG_DEFAULT;
+	p->flags = FBINFO_DEFAULT;
 
 	fb_alloc_cmap(&p->cmap, 256, 0);
 
@@ -462,8 +462,13 @@ static struct pci_driver chipsfb_driver = {
 
 int __init chips_init(void)
 {
+	if (fb_get_options("chipsfb", NULL))
+		return -ENODEV;
+
 	return pci_module_init(&chipsfb_driver);
 }
+
+module_init(chips_init);
 
 static void __exit chipsfb_exit(void)
 {

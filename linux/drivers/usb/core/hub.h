@@ -60,8 +60,8 @@
  * See USB 2.0 spec Table 11-19 and Table 11-20
  */
 struct usb_port_status {
-	__u16 wPortStatus;
-	__u16 wPortChange;	
+	__le16 wPortStatus;
+	__le16 wPortChange;	
 } __attribute__ ((packed));
 
 /* 
@@ -103,8 +103,8 @@ struct usb_port_status {
 #define HUB_CHAR_PORTIND        0x0080 /* D7       */
 
 struct usb_hub_status {
-	__u16 wHubStatus;
-	__u16 wHubChange;
+	__le16 wHubStatus;
+	__le16 wHubChange;
 } __attribute__ ((packed));
 
 /*
@@ -190,8 +190,8 @@ struct usb_hub {
 	struct usb_device	*hdev;
 	struct urb		*urb;		/* for interrupt polling pipe */
 
-	/* buffer for urb ... 1 bit each for hub and children, rounded up */
-	char			(*buffer)[(USB_MAXCHILDREN + 1 + 7) / 8];
+	/* buffer for urb ... with extra space in case of babble */
+	char			(*buffer)[8];
 	dma_addr_t		buffer_dma;	/* DMA address for buffer */
 	union {
 		struct usb_hub_status	hub;
@@ -213,6 +213,8 @@ struct usb_hub {
 	struct usb_tt		tt;		/* Transaction Translator */
 
 	u8			power_budget;	/* in 2mA units; or zero */
+
+	unsigned		quiescing:1;
 
 	unsigned		has_indicators:1;
 	enum hub_led_mode	indicator[USB_MAXCHILDREN];

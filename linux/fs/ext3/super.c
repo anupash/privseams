@@ -118,8 +118,6 @@ void ext3_journal_abort_handle(const char *caller, const char *err_fn,
 		handle->h_err = err;
 }
 
-static char error_buf[1024];
-
 /* Deal with the reporting of failure conditions on a filesystem such as
  * inconsistencies detected or read IO failures.
  *
@@ -140,7 +138,7 @@ static void ext3_handle_error(struct super_block *sb)
 	struct ext3_super_block *es = EXT3_SB(sb)->s_es;
 
 	EXT3_SB(sb)->s_mount_state |= EXT3_ERROR_FS;
-	es->s_state |= cpu_to_le32(EXT3_ERROR_FS);
+	es->s_state |= cpu_to_le16(EXT3_ERROR_FS);
 
 	if (sb->s_flags & MS_RDONLY)
 		return;
@@ -166,12 +164,11 @@ void ext3_error (struct super_block * sb, const char * function,
 {
 	va_list args;
 
-	va_start (args, fmt);
-	vsprintf (error_buf, fmt, args);
-	va_end (args);
-
-	printk (KERN_CRIT "EXT3-fs error (device %s): %s: %s\n",
-		sb->s_id, function, error_buf);
+	va_start(args, fmt);
+	printk(KERN_CRIT "EXT3-fs error (device %s): %s: ",sb->s_id, function);
+	vprintk(fmt, args);
+	printk("\n");
+	va_end(args);
 
 	ext3_handle_error(sb);
 }
@@ -240,21 +237,19 @@ void ext3_abort (struct super_block * sb, const char * function,
 
 	printk (KERN_CRIT "ext3_abort called.\n");
 
-	va_start (args, fmt);
-	vsprintf (error_buf, fmt, args);
-	va_end (args);
+	va_start(args, fmt);
+	printk(KERN_CRIT "EXT3-fs error (device %s): %s: ",sb->s_id, function);
+	vprintk(fmt, args);
+	printk("\n");
+	va_end(args);
 
-	if (test_opt (sb, ERRORS_PANIC))
-		panic ("EXT3-fs panic (device %s): %s: %s\n",
-		       sb->s_id, function, error_buf);
-
-	printk (KERN_CRIT "EXT3-fs abort (device %s): %s: %s\n",
-		sb->s_id, function, error_buf);
+	if (test_opt(sb, ERRORS_PANIC))
+		panic("EXT3-fs panic from previous error\n");
 
 	if (sb->s_flags & MS_RDONLY)
 		return;
 
-	printk (KERN_CRIT "Remounting filesystem read-only\n");
+	printk(KERN_CRIT "Remounting filesystem read-only\n");
 	EXT3_SB(sb)->s_mount_state |= EXT3_ERROR_FS;
 	sb->s_flags |= MS_RDONLY;
 	EXT3_SB(sb)->s_mount_opt |= EXT3_MOUNT_ABORT;
@@ -272,15 +267,16 @@ NORET_TYPE void ext3_panic (struct super_block * sb, const char * function,
 {
 	va_list args;
 
-	va_start (args, fmt);
-	vsprintf (error_buf, fmt, args);
-	va_end (args);
+	va_start(args, fmt);
+	printk(KERN_CRIT "EXT3-fs error (device %s): %s: ",sb->s_id, function);
+	vprintk(fmt, args);
+	printk("\n");
+	va_end(args);
 
 	/* this is to prevent panic from syncing this filesystem */
 	/* AKPM: is this sufficient? */
 	sb->s_flags |= MS_RDONLY;
-	panic ("EXT3-fs panic (device %s): %s: %s\n",
-	       sb->s_id, function, error_buf);
+	panic ("EXT3-fs panic forced\n");
 }
 
 void ext3_warning (struct super_block * sb, const char * function,
@@ -288,11 +284,12 @@ void ext3_warning (struct super_block * sb, const char * function,
 {
 	va_list args;
 
-	va_start (args, fmt);
-	vsprintf (error_buf, fmt, args);
-	va_end (args);
-	printk (KERN_WARNING "EXT3-fs warning (device %s): %s: %s\n",
-		sb->s_id, function, error_buf);
+	va_start(args, fmt);
+	printk(KERN_WARNING "EXT3-fs warning (device %s): %s: ",
+	       sb->s_id, function);
+	vprintk(fmt, args);
+	printk("\n");
+	va_end(args);
 }
 
 void ext3_update_dynamic_rev(struct super_block *sb)
@@ -380,7 +377,7 @@ static void dump_orphan_list(struct super_block *sb, struct ext3_sb_info *sbi)
 		       "inode %s:%ld at %p: mode %o, nlink %d, next %d\n",
 		       inode->i_sb->s_id, inode->i_ino, inode,
 		       inode->i_mode, inode->i_nlink, 
-		       le32_to_cpu(NEXT_ORPHAN(inode)));
+		       NEXT_ORPHAN(inode));
 	}
 }
 
@@ -394,7 +391,7 @@ void ext3_put_super (struct super_block * sb)
 	journal_destroy(sbi->s_journal);
 	if (!(sb->s_flags & MS_RDONLY)) {
 		EXT3_CLEAR_INCOMPAT_FEATURE(sb, EXT3_FEATURE_INCOMPAT_RECOVER);
-		es->s_state = le16_to_cpu(sbi->s_mount_state);
+		es->s_state = cpu_to_le16(sbi->s_mount_state);
 		BUFFER_TRACE(sbi->s_sbh, "marking dirty");
 		mark_buffer_dirty(sbi->s_sbh);
 		ext3_commit_super(sb, es, 1);
@@ -480,7 +477,7 @@ static int init_inodecache(void)
 {
 	ext3_inode_cachep = kmem_cache_create("ext3_inode_cache",
 					     sizeof(struct ext3_inode_info),
-					     0, SLAB_HWCACHE_ALIGN|SLAB_RECLAIM_ACCOUNT,
+					     0, SLAB_RECLAIM_ACCOUNT,
 					     init_once, NULL);
 	if (ext3_inode_cachep == NULL)
 		return -ENOMEM;
@@ -587,7 +584,7 @@ enum {
 	Opt_abort, Opt_data_journal, Opt_data_ordered, Opt_data_writeback,
 	Opt_usrjquota, Opt_grpjquota, Opt_offusrjquota, Opt_offgrpjquota,
 	Opt_jqfmt_vfsold, Opt_jqfmt_vfsv0,
-	Opt_ignore, Opt_err,
+	Opt_ignore, Opt_barrier, Opt_err,
 };
 
 static match_table_t tokens = {
@@ -632,6 +629,7 @@ static match_table_t tokens = {
 	{Opt_ignore, "noquota"},
 	{Opt_ignore, "quota"},
 	{Opt_ignore, "usrquota"},
+	{Opt_barrier, "barrier=%u"},
 	{Opt_err, NULL}
 };
 
@@ -897,6 +895,14 @@ clear_qf_name:
 		case Opt_abort:
 			set_opt(sbi->s_mount_opt, ABORT);
 			break;
+		case Opt_barrier:
+			if (match_int(&args[0], &option))
+				return 0;
+			if (option)
+				set_opt(sbi->s_mount_opt, BARRIER);
+			else
+				clear_opt(sbi->s_mount_opt, BARRIER);
+			break;
 		case Opt_ignore:
 			break;
 		default:
@@ -958,8 +964,7 @@ static int ext3_setup_super(struct super_block *sb, struct ext3_super_block *es,
 	es->s_state = cpu_to_le16(le16_to_cpu(es->s_state) & ~EXT3_VALID_FS);
 #endif
 	if (!(__s16) le16_to_cpu(es->s_max_mnt_count))
-		es->s_max_mnt_count =
-			(__s16) cpu_to_le16(EXT3_DFL_MAX_MNT_COUNT);
+		es->s_max_mnt_count = cpu_to_le16(EXT3_DFL_MAX_MNT_COUNT);
 	es->s_mnt_count=cpu_to_le16(le16_to_cpu(es->s_mnt_count) + 1);
 	es->s_mtime = cpu_to_le32(get_seconds());
 	ext3_update_dynamic_rev(sb);
@@ -1215,6 +1220,7 @@ static int ext3_fill_super (struct super_block *sb, void *data, int silent)
 	int db_count;
 	int i;
 	int needs_recovery;
+	__le32 features;
 
 	sbi = kmalloc(sizeof(*sbi), GFP_KERNEL);
 	if (!sbi)
@@ -1307,17 +1313,18 @@ static int ext3_fill_super (struct super_block *sb, void *data, int silent)
 	 * previously didn't change the revision level when setting the flags,
 	 * so there is a chance incompat flags are set on a rev 0 filesystem.
 	 */
-	if ((i = EXT3_HAS_INCOMPAT_FEATURE(sb, ~EXT3_FEATURE_INCOMPAT_SUPP))) {
+	features = EXT3_HAS_INCOMPAT_FEATURE(sb, ~EXT3_FEATURE_INCOMPAT_SUPP);
+	if (features) {
 		printk(KERN_ERR "EXT3-fs: %s: couldn't mount because of "
 		       "unsupported optional features (%x).\n",
-		       sb->s_id, i);
+		       sb->s_id, le32_to_cpu(features));
 		goto failed_mount;
 	}
-	if (!(sb->s_flags & MS_RDONLY) &&
-	    (i = EXT3_HAS_RO_COMPAT_FEATURE(sb, ~EXT3_FEATURE_RO_COMPAT_SUPP))){
+	features = EXT3_HAS_RO_COMPAT_FEATURE(sb, ~EXT3_FEATURE_RO_COMPAT_SUPP);
+	if (!(sb->s_flags & MS_RDONLY) && features) {
 		printk(KERN_ERR "EXT3-fs: %s: couldn't mount RDWR because of "
 		       "unsupported optional features (%x).\n",
-		       sb->s_id, i);
+		       sb->s_id, le32_to_cpu(features));
 		goto failed_mount;
 	}
 	blocksize = BLOCK_SIZE << le32_to_cpu(es->s_log_block_size);
@@ -1354,7 +1361,7 @@ static int ext3_fill_super (struct super_block *sb, void *data, int silent)
 		}
 		es = (struct ext3_super_block *)(((char *)bh->b_data) + offset);
 		sbi->s_es = es;
-		if (es->s_magic != le16_to_cpu(EXT3_SUPER_MAGIC)) {
+		if (es->s_magic != cpu_to_le16(EXT3_SUPER_MAGIC)) {
 			printk (KERN_ERR 
 				"EXT3-fs: Magic mismatch, very weird !\n");
 			goto failed_mount;
@@ -1599,16 +1606,23 @@ out_fail:
  * initial mount, once the journal has been initialised but before we've
  * done any recovery; and again on any subsequent remount. 
  */
-static void ext3_init_journal_params(struct ext3_sb_info *sbi, 
-				     journal_t *journal)
+static void ext3_init_journal_params(struct super_block *sb, journal_t *journal)
 {
+	struct ext3_sb_info *sbi = EXT3_SB(sb);
+
 	if (sbi->s_commit_interval)
 		journal->j_commit_interval = sbi->s_commit_interval;
 	/* We could also set up an ext3-specific default for the commit
 	 * interval here, but for now we'll just fall back to the jbd
 	 * default. */
-}
 
+	spin_lock(&journal->j_state_lock);
+	if (test_opt(sb, BARRIER))
+		journal->j_flags |= JFS_BARRIER;
+	else
+		journal->j_flags &= ~JFS_BARRIER;
+	spin_unlock(&journal->j_state_lock);
+}
 
 static journal_t *ext3_get_journal(struct super_block *sb, int journal_inum)
 {
@@ -1646,7 +1660,7 @@ static journal_t *ext3_get_journal(struct super_block *sb, int journal_inum)
 		return NULL;
 	}
 	journal->j_private = sb;
-	ext3_init_journal_params(EXT3_SB(sb), journal);
+	ext3_init_journal_params(sb, journal);
 	return journal;
 }
 
@@ -1724,14 +1738,14 @@ static journal_t *ext3_get_dev_journal(struct super_block *sb,
 		printk(KERN_ERR "EXT3-fs: I/O error on journal device\n");
 		goto out_journal;
 	}
-	if (ntohl(journal->j_superblock->s_nr_users) != 1) {
+	if (be32_to_cpu(journal->j_superblock->s_nr_users) != 1) {
 		printk(KERN_ERR "EXT3-fs: External journal has more than one "
 					"user (unsupported) - %d\n",
-			ntohl(journal->j_superblock->s_nr_users));
+			be32_to_cpu(journal->j_superblock->s_nr_users));
 		goto out_journal;
 	}
 	EXT3_SB(sb)->journal_bdev = bdev;
-	ext3_init_journal_params(EXT3_SB(sb), journal);
+	ext3_init_journal_params(sb, journal);
 	return journal;
 out_journal:
 	journal_destroy(journal);
@@ -2028,7 +2042,7 @@ int ext3_remount (struct super_block * sb, int * flags, char * data)
 
 	es = sbi->s_es;
 
-	ext3_init_journal_params(sbi, sbi->s_journal);
+	ext3_init_journal_params(sb, sbi->s_journal);
 
 	if ((*flags & MS_RDONLY) != (sb->s_flags & MS_RDONLY)) {
 		if (sbi->s_mount_opt & EXT3_MOUNT_ABORT)
@@ -2052,13 +2066,13 @@ int ext3_remount (struct super_block * sb, int * flags, char * data)
 
 			ext3_mark_recovery_complete(sb, es);
 		} else {
-			int ret;
+			__le32 ret;
 			if ((ret = EXT3_HAS_RO_COMPAT_FEATURE(sb,
 					~EXT3_FEATURE_RO_COMPAT_SUPP))) {
 				printk(KERN_WARNING "EXT3-fs: %s: couldn't "
 				       "remount RDWR because of unsupported "
 				       "optional features (%x).\n",
-				       sb->s_id, ret);
+				       sb->s_id, le32_to_cpu(ret));
 				return -EROFS;
 			}
 			/*

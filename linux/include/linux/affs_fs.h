@@ -32,7 +32,6 @@ extern int	affs_copy_name(unsigned char *bstr, struct dentry *dentry);
 
 /* bitmap. c */
 
-extern u32	affs_count_free_bits(u32 blocksize, const void *data);
 extern u32	affs_count_free_blocks(struct super_block *s);
 extern void	affs_free_block(struct super_block *sb, u32 block);
 extern u32	affs_alloc_block(struct inode *inode, u32 goal);
@@ -63,7 +62,7 @@ extern void			 affs_put_inode(struct inode *inode);
 extern void			 affs_delete_inode(struct inode *inode);
 extern void			 affs_clear_inode(struct inode *inode);
 extern void			 affs_read_inode(struct inode *inode);
-extern void			 affs_write_inode(struct inode *inode, int);
+extern int			 affs_write_inode(struct inode *inode, int);
 extern int			 affs_add_entry(struct inode *dir, struct inode *inode, struct dentry *dentry, s32 type);
 
 /* super.c */

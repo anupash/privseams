@@ -398,7 +398,7 @@ static void cg3_init_one(struct sbus_dev *sdev)
 		sbus_ioremap(&sdev->resource[0], CG3_REGS_OFFSET,
 			     sizeof(struct cg3_regs), "cg3 regs");
 
-	all->info.flags = FBINFO_FLAG_DEFAULT;
+	all->info.flags = FBINFO_DEFAULT;
 	all->info.fbops = &cg3_ops;
 #ifdef CONFIG_SPARC32
 	all->info.screen_base = (char *)
@@ -444,6 +444,9 @@ int __init cg3_init(void)
 	struct sbus_bus *sbus;
 	struct sbus_dev *sdev;
 
+	if (fb_get_options("cg3fb", NULL))
+		return -ENODEV;
+
 	for_all_sbusdev(sdev, sbus) {
 		if (!strcmp(sdev->prom_name, "cgthree") ||
 		    !strcmp(sdev->prom_name, "cgRDI"))
@@ -473,8 +476,9 @@ cg3_setup(char *arg)
 	return 0;
 }
 
-#ifdef MODULE
 module_init(cg3_init);
+
+#ifdef MODULE
 module_exit(cg3_exit);
 #endif
 

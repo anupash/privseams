@@ -103,7 +103,7 @@ typedef struct pccard_mem_map {
     u_char	map;
     u_char	flags;
     u_short	speed;
-    u_long	sys_start, sys_stop;
+    u_long	static_start;
     u_int	card_start;
     struct resource *res;
 } pccard_mem_map;
@@ -176,7 +176,7 @@ struct pcmcia_socket {
 	u_short				lock_count;
 	client_handle_t			clients;
 	pccard_mem_map			cis_mem;
-	u_char				*cis_virt;
+	void __iomem 			*cis_virt;
 	struct config_t			*config;
 	struct {
 		u_int			AssignedIRQ;
@@ -227,7 +227,7 @@ struct pcmcia_socket {
 	/* cardbus (32-bit) */
 #ifdef CONFIG_CARDBUS
 	struct resource *		cb_cis_res;
-	u_char				*cb_cis_virt;
+	void __iomem			*cb_cis_virt;
 #endif
 
 	/* socket device */

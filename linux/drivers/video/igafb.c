@@ -357,7 +357,7 @@ static int __init iga_init(struct fb_info *info, struct iga_par *par)
                 video_cmap_len = 256;
 
 	info->fbops = &igafb_ops;
-	info->flags = FBINFO_FLAG_DEFAULT;
+	info->flags = FBINFO_DEFAULT;
 
 	fb_alloc_cmap(&info->cmap, video_cmap_len, 0);
 
@@ -380,6 +380,9 @@ int __init igafb_init(void)
         struct iga_par *par;
 	unsigned long addr;
 	int size, iga2000 = 0;
+
+	if (fb_get_options("igafb", NULL))
+		return -ENODEV;
 
         /* Do not attach when we have a serial console. */
         if (!con_is_present())
@@ -572,4 +575,5 @@ int __init igafb_setup(char *options)
     return 0;
 }
 
+module_init(igafb_init);
 MODULE_LICENSE("GPL");

@@ -89,14 +89,12 @@
 #define NET_CALLER(arg) __builtin_return_address(0)
 #endif
 
+struct net_device;
+
 #ifdef CONFIG_NETFILTER
 struct nf_conntrack {
 	atomic_t use;
 	void (*destroy)(struct nf_conntrack *);
-};
-
-struct nf_ct_info {
-	struct nf_conntrack *master;
 };
 
 #ifdef CONFIG_BRIDGE_NETFILTER
@@ -184,6 +182,7 @@ struct skb_shared_info {
  *	@nfmark: Can be used for communication between hooks
  *	@nfcache: Cache info
  *	@nfct: Associated connection, if any
+ *	@nfctinfo: Relationship of this skb to the connection
  *	@nf_debug: Netfilter debugging
  *	@nf_bridge: Saved data about a bridged frame - see br_netfilter.c
  *      @private: Data which is private to the HIPPI implementation
@@ -220,7 +219,6 @@ struct sk_buff {
 	} nh;
 
 	union {
-	  	struct ethhdr	*ethernet;
 	  	unsigned char 	*raw;
 	} mac;
 
@@ -251,7 +249,8 @@ struct sk_buff {
 #ifdef CONFIG_NETFILTER
         unsigned long		nfmark;
 	__u32			nfcache;
-	struct nf_ct_info	*nfct;
+	__u32			nfctinfo;
+	struct nf_conntrack	*nfct;
 #ifdef CONFIG_NETFILTER_DEBUG
         unsigned int		nf_debug;
 #endif
@@ -269,7 +268,7 @@ struct sk_buff {
 #ifdef CONFIG_NET_CLS_ACT
 	__u32           tc_verd;               /* traffic control verdict */
 	__u32           tc_classid;            /* traffic control classid */
- #endif
+#endif
 
 #endif
 
@@ -1105,6 +1104,20 @@ extern void	       skb_copy_and_csum_dev(const struct sk_buff *skb, u8 *to);
 extern void	       skb_split(struct sk_buff *skb,
 				 struct sk_buff *skb1, const u32 len);
 
+static inline void *skb_header_pointer(const struct sk_buff *skb, int offset,
+				       int len, void *buffer)
+{
+	int hlen = skb_headlen(skb);
+
+	if (offset + len <= hlen)
+		return skb->data + offset;
+
+	if (skb_copy_bits(skb, offset, buffer, len) < 0)
+		return NULL;
+
+	return buffer;
+}
+
 extern void skb_init(void);
 extern void skb_add_mtu(int mtu);
 
@@ -1125,20 +1138,26 @@ extern int skb_iter_next(const struct sk_buff *skb, struct skb_iter *i);
 extern void skb_iter_abort(const struct sk_buff *skb, struct skb_iter *i);
 
 #ifdef CONFIG_NETFILTER
-static inline void nf_conntrack_put(struct nf_ct_info *nfct)
+static inline void nf_conntrack_put(struct nf_conntrack *nfct)
 {
-	if (nfct && atomic_dec_and_test(&nfct->master->use))
-		nfct->master->destroy(nfct->master);
+	if (nfct && atomic_dec_and_test(&nfct->use))
+		nfct->destroy(nfct);
 }
-static inline void nf_conntrack_get(struct nf_ct_info *nfct)
+static inline void nf_conntrack_get(struct nf_conntrack *nfct)
 {
 	if (nfct)
-		atomic_inc(&nfct->master->use);
+		atomic_inc(&nfct->use);
 }
 static inline void nf_reset(struct sk_buff *skb)
 {
 	nf_conntrack_put(skb->nfct);
 	skb->nfct = NULL;
+#ifdef CONFIG_NETFILTER_DEBUG
+	skb->nf_debug = 0;
+#endif
+}
+static inline void nf_reset_debug(struct sk_buff *skb)
+{
 #ifdef CONFIG_NETFILTER_DEBUG
 	skb->nf_debug = 0;
 #endif

@@ -53,6 +53,9 @@
 #define ACPI_LOBYTE(l)                  ((u8)(u16)(l))
 #define ACPI_HIBYTE(l)                  ((u8)((((u16)(l)) >> 8) & 0xFF))
 
+#define ACPI_SET_BIT(target,bit)        ((target) |= (bit))
+#define ACPI_CLEAR_BIT(target,bit)      ((target) &= ~(bit))
+
 
 #if ACPI_MACHINE_WIDTH == 16
 
@@ -97,7 +100,7 @@
  * printf() format helpers
  */
 
-/* Split 64-bit integer into two 32-bit values. use with %8,8_x%8.8X */
+/* Split 64-bit integer into two 32-bit values. Use with %8.8X%8.8X */
 
 #define ACPI_FORMAT_UINT64(i)           ACPI_HIDWORD(i),ACPI_LODWORD(i)
 
@@ -360,24 +363,6 @@
 #define ACPI_MASK_BITS_BELOW(position)       ((ACPI_INTEGER_MAX) << ((u32) (position)))
 
 #define ACPI_IS_OCTAL_DIGIT(d)               (((char)(d) >= '0') && ((char)(d) <= '7'))
-
-/* Macros for GAS addressing */
-
-#if ACPI_MACHINE_WIDTH != 16
-
-#define ACPI_PCI_DEVICE(a)              (u16) ((ACPI_HIDWORD ((a))) & 0x0000FFFF)
-#define ACPI_PCI_FUNCTION(a)            (u16) ((ACPI_LODWORD ((a))) >> 16)
-#define ACPI_PCI_REGISTER(a)            (u16) ((ACPI_LODWORD ((a))) & 0x0000FFFF)
-
-#else
-
-/* No support for GAS and PCI IDs in 16-bit mode  */
-
-#define ACPI_PCI_FUNCTION(a)            (u16) ((a) & 0xFFFF0000)
-#define ACPI_PCI_DEVICE(a)              (u16) ((a) & 0x0000FFFF)
-#define ACPI_PCI_REGISTER(a)            (u16) ((a) & 0x0000FFFF)
-
-#endif
 
 
 /* Bitfields within ACPI registers */

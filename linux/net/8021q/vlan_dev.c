@@ -211,7 +211,7 @@ int vlan_skb_recv(struct sk_buff *skb, struct net_device *dev,
 		 * This allows the VLAN to have a different MAC than the underlying
 		 * device, and still route correctly.
 		 */
-		if (memcmp(skb->mac.ethernet->h_dest, skb->dev->dev_addr, ETH_ALEN) == 0) {
+		if (memcmp(eth_hdr(skb)->h_dest, skb->dev->dev_addr, ETH_ALEN) == 0) {
 			/* It is for our (changed) MAC-address! */
 			skb->pkt_type = PACKET_HOST;
 		}
@@ -244,7 +244,7 @@ int vlan_skb_recv(struct sk_buff *skb, struct net_device *dev,
 			/* TODO:  Add a more specific counter here. */
 			stats->rx_errors++;
 		}
-		rcu_read_lock();
+		rcu_read_unlock();
 		return 0;
 	}
 
@@ -772,7 +772,7 @@ int vlan_dev_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	case SIOCGMIIREG:
 	case SIOCSMIIREG:
 		if (real_dev->do_ioctl && netif_device_present(real_dev)) 
-			err = real_dev->do_ioctl(dev, &ifrr, cmd);
+			err = real_dev->do_ioctl(real_dev, &ifrr, cmd);
 		break;
 
 	case SIOCETHTOOL:

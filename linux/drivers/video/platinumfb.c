@@ -311,7 +311,7 @@ static void __devinit platinum_init_info(struct fb_info *info, struct fb_info_pl
 	/* Fill fb_info */
 	info->fbops = &platinumfb_ops;
 	info->pseudo_palette = pinfo->pseudo_palette;
-        info->flags = FBINFO_FLAG_DEFAULT;
+        info->flags = FBINFO_DEFAULT;
 	info->screen_base = (char *) pinfo->frame_buffer + 0x20;
 
 	fb_alloc_cmap(&info->cmap, 256, 0);
@@ -667,6 +667,13 @@ static struct of_platform_driver platinum_driver =
 
 int __init platinumfb_init(void)
 {
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("platinumfb", &option))
+		return -ENODEV;
+	platinumfb_setup(option);
+#endif
 	of_register_driver(&platinum_driver);
 
 	return 0;
@@ -679,8 +686,8 @@ void __exit platinumfb_exit(void)
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("framebuffer driver for Apple Platinum video");
+module_init(platinumfb_init);
 
 #ifdef MODULE
-module_init(platinumfb_init);
 module_exit(platinumfb_exit);
 #endif

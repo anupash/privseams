@@ -132,6 +132,9 @@ static struct timer_list addr_chk_timer =
 			TIMER_INITIALIZER(addrconf_verify, 0, 0);
 static spinlock_t addrconf_verify_lock = SPIN_LOCK_UNLOCKED;
 
+static void addrconf_join_anycast(struct inet6_ifaddr *ifp);
+static void addrconf_leave_anycast(struct inet6_ifaddr *ifp);
+
 static int addrconf_ifdown(struct net_device *dev, int how);
 
 static void addrconf_dad_start(struct inet6_ifaddr *ifp, int flags);
@@ -423,33 +426,28 @@ static void dev_forward_change(struct inet6_dev *idev)
 			ipv6_dev_mc_dec(dev, &addr);
 	}
 	for (ifa=idev->addr_list; ifa; ifa=ifa->if_next) {
-		ipv6_addr_prefix(&addr, &ifa->addr, ifa->prefix_len);
-		if (ipv6_addr_any(&addr))
-			continue;
 		if (idev->cnf.forwarding)
-			ipv6_dev_ac_inc(idev->dev, &addr);
+			addrconf_join_anycast(ifa);
 		else
-			ipv6_dev_ac_dec(idev->dev, &addr);
+			addrconf_leave_anycast(ifa);
 	}
 }
 
 
-static void addrconf_forward_change(struct inet6_dev *idev)
+static void addrconf_forward_change(void)
 {
 	struct net_device *dev;
-
-	if (idev) {
-		dev_forward_change(idev);
-		return;
-	}
+	struct inet6_dev *idev;
 
 	read_lock(&dev_base_lock);
 	for (dev=dev_base; dev; dev=dev->next) {
 		read_lock(&addrconf_lock);
 		idev = __in6_dev_get(dev);
 		if (idev) {
+			int changed = (!idev->cnf.forwarding) ^ (!ipv6_devconf.forwarding);
 			idev->cnf.forwarding = ipv6_devconf.forwarding;
-			dev_forward_change(idev);
+			if (changed)
+				dev_forward_change(idev);
 		}
 		read_unlock(&addrconf_lock);
 	}
@@ -476,6 +474,8 @@ void inet6_ifa_finish_destroy(struct inet6_ifaddr *ifp)
 		printk("Freeing alive inet6 address %p\n", ifp);
 		return;
 	}
+	dst_release(&ifp->rt->u.dst);
+
 	inet6_ifa_count--;
 	kfree(ifp);
 }
@@ -487,25 +487,33 @@ static struct inet6_ifaddr *
 ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr, int pfxlen,
 	      int scope, unsigned flags)
 {
-	struct inet6_ifaddr *ifa;
+	struct inet6_ifaddr *ifa = NULL;
+	struct rt6_info *rt;
 	int hash;
 	static spinlock_t lock = SPIN_LOCK_UNLOCKED;
+	int err = 0;
 
 	spin_lock_bh(&lock);
 
 	/* Ignore adding duplicate addresses on an interface */
 	if (ipv6_chk_same_addr(addr, idev->dev)) {
-		spin_unlock_bh(&lock);
 		ADBG(("ipv6_add_addr: already assigned\n"));
-		return ERR_PTR(-EEXIST);
+		err = -EEXIST;
+		goto out;
 	}
 
 	ifa = kmalloc(sizeof(struct inet6_ifaddr), GFP_ATOMIC);
 
 	if (ifa == NULL) {
-		spin_unlock_bh(&lock);
 		ADBG(("ipv6_add_addr: malloc failed\n"));
-		return ERR_PTR(-ENOBUFS);
+		err = -ENOBUFS;
+		goto out;
+	}
+
+	rt = addrconf_dst_alloc(idev, addr, 0);
+	if (IS_ERR(rt)) {
+		err = PTR_ERR(rt);
+		goto out;
 	}
 
 	memset(ifa, 0, sizeof(struct inet6_ifaddr));
@@ -522,9 +530,8 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr, int pfxlen,
 	read_lock(&addrconf_lock);
 	if (idev->dead) {
 		read_unlock(&addrconf_lock);
-		spin_unlock_bh(&lock);
-		kfree(ifa);
-		return ERR_PTR(-ENODEV);	/*XXX*/
+		err = -ENODEV;	/*XXX*/
+		goto out;
 	}
 
 	inet6_ifa_count++;
@@ -558,12 +565,20 @@ ipv6_add_addr(struct inet6_dev *idev, const struct in6_addr *addr, int pfxlen,
 	}
 #endif
 
+	ifa->rt = rt;
+
 	in6_ifa_hold(ifa);
 	write_unlock_bh(&idev->lock);
 	read_unlock(&addrconf_lock);
+out:
 	spin_unlock_bh(&lock);
 
-	notifier_call_chain(&inet6addr_chain,NETDEV_UP,ifa);
+	if (unlikely(err == 0))
+		notifier_call_chain(&inet6addr_chain, NETDEV_UP, ifa);
+	else {
+		kfree(ifa);
+		ifa = ERR_PTR(err);
+	}
 
 	return ifa;
 }
@@ -1051,17 +1066,34 @@ void addrconf_join_solict(struct net_device *dev, struct in6_addr *addr)
 	ipv6_dev_mc_inc(dev, &maddr);
 }
 
-void addrconf_leave_solict(struct net_device *dev, struct in6_addr *addr)
+void addrconf_leave_solict(struct inet6_dev *idev, struct in6_addr *addr)
 {
 	struct in6_addr maddr;
 
-	if (dev->flags&(IFF_LOOPBACK|IFF_NOARP))
+	if (idev->dev->flags&(IFF_LOOPBACK|IFF_NOARP))
 		return;
 
 	addrconf_addr_solict_mult(addr, &maddr);
-	ipv6_dev_mc_dec(dev, &maddr);
+	__ipv6_dev_mc_dec(idev, &maddr);
 }
 
+void addrconf_join_anycast(struct inet6_ifaddr *ifp)
+{
+	struct in6_addr addr;
+	ipv6_addr_prefix(&addr, &ifp->addr, ifp->prefix_len);
+	if (ipv6_addr_any(&addr))
+		return;
+	ipv6_dev_ac_inc(ifp->idev->dev, &addr);
+}
+
+void addrconf_leave_anycast(struct inet6_ifaddr *ifp)
+{
+	struct in6_addr addr;
+	ipv6_addr_prefix(&addr, &ifp->addr, ifp->prefix_len);
+	if (ipv6_addr_any(&addr))
+		return;
+	__ipv6_dev_ac_dec(ifp->idev, &addr);
+}
 
 static int ipv6_generate_eui64(u8 *eui, struct net_device *dev)
 {
@@ -1463,8 +1495,7 @@ ok:
 				spin_unlock(&ifp->lock);
 
 				if (!(flags&IFA_F_TENTATIVE))
-					ipv6_ifa_notify((flags&IFA_F_DEPRECATED) ?
-							0 : RTM_NEWADDR, ifp);
+					ipv6_ifa_notify(0, ifp);
 			} else
 				spin_unlock(&ifp->lock);
 
@@ -2072,6 +2103,7 @@ static int addrconf_ifdown(struct net_device *dev, int how)
 		neigh_sysctl_unregister(idev->nd_parms);
 #endif
 		neigh_parms_release(&nd_tbl, idev->nd_parms);
+		neigh_ifdown(&nd_tbl, dev);
 		in6_dev_put(idev);
 	}
 
@@ -2108,21 +2140,13 @@ static void addrconf_rs_timer(unsigned long data)
 
 		ndisc_send_rs(ifp->idev->dev, &ifp->addr, &all_routers);
 	} else {
-		struct in6_rtmsg rtmsg;
-
 		spin_unlock(&ifp->lock);
-
+		/*
+		 * Note: we do not support deprecated "all on-link"
+		 * assumption any longer.
+		 */
 		printk(KERN_DEBUG "%s: no IPv6 routers present\n",
 		       ifp->idev->dev->name);
-
-		memset(&rtmsg, 0, sizeof(struct in6_rtmsg));
-		rtmsg.rtmsg_type = RTMSG_NEWROUTE;
-		rtmsg.rtmsg_metric = IP6_RT_PRIO_ADDRCONF;
-		rtmsg.rtmsg_flags = (RTF_ALLONLINK | RTF_DEFAULT | RTF_UP);
-
-		rtmsg.rtmsg_ifindex = ifp->idev->dev->ifindex;
-
-		ip6_route_add(&rtmsg, NULL, NULL);
 	}
 
 out:
@@ -2234,13 +2258,6 @@ static void addrconf_dad_completed(struct inet6_ifaddr *ifp)
 		spin_unlock_bh(&ifp->lock);
 	}
 
-	if (ifp->idev->cnf.forwarding) {
-		struct in6_addr addr;
-
-		ipv6_addr_prefix(&addr, &ifp->addr, ifp->prefix_len);
-		if (!ipv6_addr_any(&addr))
-			ipv6_dev_ac_inc(ifp->idev->dev, &addr);
-	}
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	HIP_CALLFUNC(hip_handle_ipv6_dad_completed, 0)(ifp);
 #endif
@@ -3002,19 +3019,21 @@ static void ipv6_ifa_notify(int event, struct inet6_ifaddr *ifp)
 
 	switch (event) {
 	case RTM_NEWADDR:
-		ip6_rt_addr_add(&ifp->addr, ifp->idev->dev, 0);
+		dst_hold(&ifp->rt->u.dst);
+		if (ip6_ins_rt(ifp->rt, NULL, NULL))
+			dst_release(&ifp->rt->u.dst);
+		if (ifp->idev->cnf.forwarding)
+			addrconf_join_anycast(ifp);
 		break;
 	case RTM_DELADDR:
-		addrconf_leave_solict(ifp->idev->dev, &ifp->addr);
-		if (ifp->idev->cnf.forwarding) {
-			struct in6_addr addr;
-
-			ipv6_addr_prefix(&addr, &ifp->addr, ifp->prefix_len);
-			if (!ipv6_addr_any(&addr))
-				ipv6_dev_ac_dec(ifp->idev->dev, &addr);
-		}
-		if (!ipv6_chk_addr(&ifp->addr, ifp->idev->dev, 1))
-			ip6_rt_addr_del(&ifp->addr, ifp->idev->dev);
+		if (ifp->idev->cnf.forwarding)
+			addrconf_leave_anycast(ifp);
+		addrconf_leave_solict(ifp->idev, &ifp->addr);
+		dst_hold(&ifp->rt->u.dst);
+		if (ip6_del_rt(ifp->rt, NULL, NULL))
+			dst_free(&ifp->rt->u.dst);
+		else
+			dst_release(&ifp->rt->u.dst);
 		break;
 	}
 }
@@ -3031,18 +3050,18 @@ int addrconf_sysctl_forward(ctl_table *ctl, int write, struct file * filp,
 
 	ret = proc_dointvec(ctl, write, filp, buffer, lenp, ppos);
 
-	if (write && *valp != val && valp != &ipv6_devconf_dflt.forwarding) {
-		struct inet6_dev *idev = NULL;
-
+	if (write && valp != &ipv6_devconf_dflt.forwarding) {
 		if (valp != &ipv6_devconf.forwarding) {
-			idev = (struct inet6_dev *)ctl->extra1;
-			if (idev == NULL)
-				return ret;
-		} else
+			if ((!*valp) ^ (!val)) {
+				struct inet6_dev *idev = (struct inet6_dev *)ctl->extra1;
+				if (idev == NULL)
+					return ret;
+				dev_forward_change(idev);
+			}
+		} else {
 			ipv6_devconf_dflt.forwarding = ipv6_devconf.forwarding;
-
-		addrconf_forward_change(idev);
-
+			addrconf_forward_change();
+		}
 		if (*valp)
 			rt6_purge_dflt_routers(0);
 	}
@@ -3083,15 +3102,19 @@ static int addrconf_sysctl_forward_strategy(ctl_table *table,
 	}
 
 	if (valp != &ipv6_devconf_dflt.forwarding) {
-		struct inet6_dev *idev;
 		if (valp != &ipv6_devconf.forwarding) {
-			idev = (struct inet6_dev *)table->extra1;
+			struct inet6_dev *idev = (struct inet6_dev *)table->extra1;
+			int changed;
 			if (unlikely(idev == NULL))
 				return -ENODEV;
-		} else
-			idev = NULL;
-		*valp = new;
-		addrconf_forward_change(idev);
+			changed = (!*valp) ^ (!new);
+			*valp = new;
+			if (changed)
+				dev_forward_change(idev);
+		} else {
+			*valp = new;
+			addrconf_forward_change();
+		}
 
 		if (*valp)
 			rt6_purge_dflt_routers(0);

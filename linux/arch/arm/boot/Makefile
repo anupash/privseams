@@ -47,10 +47,19 @@ endif
 params_phys-$(CONFIG_ARCH_SA1100)	:= 0xc0000100
 initrd_phys-$(CONFIG_ARCH_SA1100)	:= 0xc0800000
    zreladdr-$(CONFIG_ARCH_PXA)		:= 0xa0008000
+   zreladdr-$(CONFIG_ARCH_MX1ADS)	:= 0x08008000
    zreladdr-$(CONFIG_ARCH_IOP3XX)	:= 0xa0008000
 params_phys-$(CONFIG_ARCH_IOP3XX)	:= 0xa0000100
+initrd_phys-$(CONFIG_ARCH_IOP3XX)   	:= 0xa0800000
+ifeq ($(CONFIG_ARCH_IOP331),y)
+   zreladdr-$(CONFIG_ARCH_IOP3XX)      	:= 0x00008000
+params_phys-$(CONFIG_ARCH_IOP3XX)      	:= 0x00000100
+initrd_phys-$(CONFIG_ARCH_IOP3XX)      	:= 0x00800000
+endif
    zreladdr-$(CONFIG_ARCH_IXP4XX)	:= 0x00008000
 params-phys-$(CONFIG_ARCH_IXP4XX)	:= 0x00000100
+   zreladdr-$(CONFIG_ARCH_IXP2000)	:= 0x00008000
+params-phys-$(CONFIG_ARCH_IXP2000)	:= 0x00000100
    zreladdr-$(CONFIG_ARCH_OMAP)		:= 0x10008000
 params_phys-$(CONFIG_ARCH_OMAP)		:= 0x10000100
 initrd_phys-$(CONFIG_ARCH_OMAP)		:= 0x10800000
@@ -62,6 +71,7 @@ params_phys-$(CONFIG_ARCH_S3C2410)	:= 0x30000100
    zreladdr-$(CONFIG_ARCH_VERSATILE_PB)	:= 0x00008000
 params_phys-$(CONFIG_ARCH_VERSATILE_PB)	:= 0x00000100
 initrd_phys-$(CONFIG_ARCH_VERSATILE_PB)	:= 0x00800000
+   zreladdr-$(CONFIG_ARCH_H720X)	:= 0x40008000
 
 ZRELADDR    := $(zreladdr-y)
 PARAMS_PHYS := $(params_phys-y)

@@ -115,6 +115,9 @@ int __init hpfb_init_one(unsigned long base)
 {
 	unsigned long fboff;
 
+	if (fb_get_options("hpfb", NULL))
+		return -ENODEV;
+
 	fboff = (in_8(base + TOPCAT_FBOMSB) << 8) | in_8(base + TOPCAT_FBOLSB);
 
 	hpfb_fix.smem_start = 0xf0000000 | (in_8(base + fboff) << 16);
@@ -151,7 +154,7 @@ int __init hpfb_init_one(unsigned long base)
 	 *	Let there be consoles..
 	 */
 	fb_info.fbops = &hpfb_ops;
-	fb_info.flags = FBINFO_FLAG_DEFAULT;
+	fb_info.flags = FBINFO_DEFAULT;
 	fb_info.var   = hpfb_defined;
 	fb_info.fix   = hpfb_fix;
 	fb_info.screen_base = (char *)hpfb_fix.smem_start;	// FIXME
@@ -211,4 +214,5 @@ int __init hpfb_init(void)
 	return 0;
 }
 
+module_init(hpfb_init);
 MODULE_LICENSE("GPL");

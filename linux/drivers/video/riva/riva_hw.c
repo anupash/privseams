@@ -1274,6 +1274,7 @@ static void CalcStateExt
             break;
         case NV_ARCH_10:
         case NV_ARCH_20:
+        case NV_ARCH_30:
             if((chip->Chipset == NV_CHIP_IGEFORCE2) ||
                (chip->Chipset == NV_CHIP_0x01F0))
             {
@@ -1299,9 +1300,10 @@ static void CalcStateExt
             break;
     }
 
-    /* Paul Richards: below if block borks things in kernel for some reason */
-    /* if((bpp != 8) && (chip->Architecture != NV_ARCH_03))
-    state->general |= 0x00000030; */
+     /* Paul Richards: below if block borks things in kernel for some reason */
+     /* Tony: Below is needed to set hardware in DirectColor */
+    if((bpp != 8) && (chip->Architecture != NV_ARCH_03))
+	    state->general |= 0x00000030;
 
     state->vpll     = (p << 16) | (n << 8) | m;
     state->repaint0 = (((width/8)*pixelDepth) & 0x700) >> 3;
@@ -1349,6 +1351,7 @@ static void UpdateFifoState
             break;
         case NV_ARCH_10:
         case NV_ARCH_20:
+        case NV_ARCH_30:
             /*
              * Initialize state for the RivaTriangle3D05 routines.
              */
@@ -1458,6 +1461,7 @@ static void LoadStateExt
             break;
         case NV_ARCH_10:
         case NV_ARCH_20:
+        case NV_ARCH_30:
             if(chip->twoHeads) {
                VGA_WR08(chip->PCIO, 0x03D4, 0x44);
                VGA_WR08(chip->PCIO, 0x03D5, state->crtcOwner);
@@ -1754,6 +1758,7 @@ static void UnloadStateExt
             break;
         case NV_ARCH_10:
         case NV_ARCH_20:
+        case NV_ARCH_30:
             state->offset0  = chip->PGRAPH[0x00000640/4];
             state->offset1  = chip->PGRAPH[0x00000644/4];
             state->offset2  = chip->PGRAPH[0x00000648/4];
@@ -2184,6 +2189,7 @@ int RivaGetConfig
             break;
         case NV_ARCH_10:
         case NV_ARCH_20:
+        case NV_ARCH_30:
             nv10GetConfig(chip, chipset);
             break;
         default:

@@ -135,10 +135,6 @@
 	 ASYNC_SPD_HI       | ASYNC_SPEED_VHI    | ASYNC_SESSION_LOCKOUT | \
 	 ASYNC_PGRP_LOCKOUT | ASYNC_CALLOUT_NOHUP)
 
-#ifndef MIN
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
-
 #undef RS_EVENT_WRITE_WAKEUP
 #define RS_EVENT_WRITE_WAKEUP	0
 
@@ -159,7 +155,7 @@ static struct specialix_board sx_board[SX_NBOARD] =  {
 };
 
 static struct specialix_port sx_port[SX_NBOARD * SX_NPORT];
-		
+
 
 #ifdef SPECIALIX_TIMER
 static struct timer_list missed_irq_timer;
@@ -715,7 +711,7 @@ static inline void sx_transmit(struct specialix_board * bp)
 				sx_out(bp, CD186x_TDR, CD186x_C_SBRK);
 				port->COR2 &= ~COR2_ETC;
 			}
-			count = MIN(port->break_length, 0xff);
+			count = min_t(int, port->break_length, 0xff);
 			sx_out(bp, CD186x_TDR, CD186x_C_ESC);
 			sx_out(bp, CD186x_TDR, CD186x_C_DELAY);
 			sx_out(bp, CD186x_TDR, count);
@@ -1468,8 +1464,7 @@ static void sx_close(struct tty_struct * tty, struct file * filp)
 	sx_shutdown_port(bp, port);
 	if (tty->driver->flush_buffer)
 		tty->driver->flush_buffer(tty);
-	if (tty->ldisc.flush_buffer)
-		tty->ldisc.flush_buffer(tty);
+	tty_ldisc_flush(tty);
 	tty->closing = 0;
 	port->event = 0;
 	port->tty = NULL;
@@ -1506,7 +1501,7 @@ static int sx_write(struct tty_struct * tty, int from_user,
 	if (from_user) {
 		down(&tmp_buf_sem);
 		while (1) {
-			c = MIN(count, MIN(SERIAL_XMIT_SIZE - port->xmit_cnt - 1,
+			c = min_t(int, count, min(SERIAL_XMIT_SIZE - port->xmit_cnt - 1,
 					   SERIAL_XMIT_SIZE - port->xmit_head));
 			if (c <= 0)
 				break;
@@ -1519,7 +1514,7 @@ static int sx_write(struct tty_struct * tty, int from_user,
 			}
 
 			cli();
-			c = MIN(c, MIN(SERIAL_XMIT_SIZE - port->xmit_cnt - 1,
+			c = min_t(int, c, min(SERIAL_XMIT_SIZE - port->xmit_cnt - 1,
 				       SERIAL_XMIT_SIZE - port->xmit_head));
 			memcpy(port->xmit_buf + port->xmit_head, tmp_buf, c);
 			port->xmit_head = (port->xmit_head + c) & (SERIAL_XMIT_SIZE-1);
@@ -1534,7 +1529,7 @@ static int sx_write(struct tty_struct * tty, int from_user,
 	} else {
 		while (1) {
 			cli();
-			c = MIN(count, MIN(SERIAL_XMIT_SIZE - port->xmit_cnt - 1,
+			c = min_t(int, count, min(SERIAL_XMIT_SIZE - port->xmit_cnt - 1,
 					   SERIAL_XMIT_SIZE - port->xmit_head));
 			if (c <= 0) {
 				restore_flags(flags);
@@ -1646,10 +1641,8 @@ static void sx_flush_buffer(struct tty_struct *tty)
 	port->xmit_cnt = port->xmit_head = port->xmit_tail = 0;
 	restore_flags(flags);
 	
+	tty_wakeup(tty);
 	wake_up_interruptible(&tty->write_wait);
-	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-	    tty->ldisc.write_wakeup)
-		(tty->ldisc.write_wakeup)(tty);
 }
 
 
@@ -2052,12 +2045,8 @@ static void do_softint(void *private_)
 	if(!(tty = port->tty)) 
 		return;
 
-	if (test_and_clear_bit(RS_EVENT_WRITE_WAKEUP, &port->event)) {
-		if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) &&
-		    tty->ldisc.write_wakeup)
-			(tty->ldisc.write_wakeup)(tty);
-		wake_up_interruptible(&tty->write_wait);
-	}
+	if (test_and_clear_bit(RS_EVENT_WRITE_WAKEUP, &port->event))
+		tty_wakeup(tty);
 }
 
 static struct tty_operations sx_ops = {

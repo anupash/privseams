@@ -556,6 +556,11 @@ static void control_set_hardware(struct fb_info_control *p, struct fb_par_contro
 int __init control_init(void)
 {
 	struct device_node *dp;
+	char *option = NULL;
+
+	if (fb_get_options("controlfb", &option))
+		return -ENODEV;
+	control_setup(option);
 
 	dp = find_devices("control");
 	if (dp != 0 && !control_of_init(dp))
@@ -564,6 +569,7 @@ int __init control_init(void)
 	return -ENXIO;
 }
 
+module_init(control_init);
 
 /* Work out which banks of VRAM we have installed. */
 /* danj: I guess the card just ignores writes to nonexistant VRAM... */
@@ -1010,7 +1016,7 @@ static void __init control_init_info(struct fb_info *info, struct fb_info_contro
 	info->par = &p->par;
 	info->fbops = &controlfb_ops;
 	info->pseudo_palette = p->pseudo_palette;
-        info->flags = FBINFO_FLAG_DEFAULT;
+        info->flags = FBINFO_DEFAULT | FBINFO_HWACCEL_YPAN;
 	info->screen_base = (char *) p->frame_buffer + CTRLFB_OFF;
 
 	fb_alloc_cmap(&info->cmap, 256, 0);

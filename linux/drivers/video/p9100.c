@@ -297,7 +297,7 @@ static void p9100_init_one(struct sbus_dev *sdev)
 		sbus_ioremap(&sdev->resource[0], 0,
 			     sizeof(struct p9100_regs), "p9100 regs");
 
-	all->info.flags = FBINFO_FLAG_DEFAULT;
+	all->info.flags = FBINFO_DEFAULT;
 	all->info.fbops = &p9100_ops;
 #ifdef CONFIG_SPARC32
 	all->info.screen_base = (char *)
@@ -340,6 +340,9 @@ int __init p9100_init(void)
 	struct sbus_bus *sbus;
 	struct sbus_dev *sdev;
 
+	if (fb_get_options("p9100fb", NULL))
+		return -ENODEV;
+
 	for_all_sbusdev(sdev, sbus) {
 		if (!strcmp(sdev->prom_name, "p9100"))
 			p9100_init_one(sdev);
@@ -368,8 +371,9 @@ p9100_setup(char *arg)
 	return 0;
 }
 
-#ifdef MODULE
 module_init(p9100_init);
+
+#ifdef MODULE
 module_exit(p9100_exit);
 #endif
 

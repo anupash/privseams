@@ -31,6 +31,7 @@
 
 #include <linux/netfilter_ipv4/ip_conntrack.h>
 #include <linux/netfilter_ipv4/ip_conntrack_core.h>
+#include <linux/netfilter_ipv4/ip_conntrack_protocol.h>
 #include <linux/netfilter_ipv4/ip_nat.h>
 #include <linux/netfilter_ipv4/ip_nat_core.h>
 #include <linux/netfilter_ipv4/listhelp.h>
@@ -144,7 +145,8 @@ check_for_demasq(struct sk_buff **pskb)
 	switch ((*pskb)->nh.iph->protocol) {
 	case IPPROTO_ICMP:
 		/* ICMP errors. */
-		ct = icmp_error_track(*pskb, &ctinfo, NF_IP_PRE_ROUTING);
+		protocol->error(*pskb, &ctinfo, NF_IP_PRE_ROUTING);
+		ct = (struct ip_conntrack *)(*pskb)->nfct;
 		if (ct) {
 			/* We only do SNAT in the compatibility layer.
 			   So we can manipulate ICMP errors from
@@ -165,7 +167,8 @@ check_for_demasq(struct sk_buff **pskb)
 	case IPPROTO_UDP:
 		IP_NF_ASSERT(((*pskb)->nh.iph->frag_off & htons(IP_OFFSET)) == 0);
 
-		if (!get_tuple((*pskb)->nh.iph, *pskb, (*pskb)->nh.iph->ihl*4, &tuple, protocol)) {
+		if (!ip_ct_get_tuple((*pskb)->nh.iph, *pskb,
+				     (*pskb)->nh.iph->ihl*4, &tuple, protocol)) {
 			if (net_ratelimit())
 				printk("ip_fw_compat_masq: Can't get tuple\n");
 			return NF_ACCEPT;
@@ -184,7 +187,7 @@ check_for_demasq(struct sk_buff **pskb)
 				      NULL, NULL, NULL);
 
 		/* Put back the reference gained from find_get */
-		nf_conntrack_put(&h->ctrack->infos[0]);
+		nf_conntrack_put(&h->ctrack->ct_general);
 		if (ret == NF_ACCEPT) {
 			struct ip_conntrack *ct;
 			ct = ip_conntrack_get(*pskb, &ctinfo);
@@ -203,7 +206,7 @@ check_for_demasq(struct sk_buff **pskb)
 	} else {
 		if (h)
 			/* Put back the reference gained from find_get */
-			nf_conntrack_put(&h->ctrack->infos[0]);
+			nf_conntrack_put(&h->ctrack->ct_general);
 		ret = NF_ACCEPT;
 	}
 

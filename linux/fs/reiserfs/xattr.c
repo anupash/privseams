@@ -589,8 +589,14 @@ open_file:
             break;
     }
 
-    inode->i_ctime = CURRENT_TIME;
-    mark_inode_dirty (inode);
+    /* We can't mark the inode dirty if it's not hashed. This is the case
+     * when we're inheriting the default ACL. If we dirty it, the inode
+     * gets marked dirty, but won't (ever) make it onto the dirty list until
+     * it's synced explicitly to clear I_DIRTY. This is bad. */
+    if (!hlist_unhashed(&inode->i_hash)) {
+        inode->i_ctime = CURRENT_TIME;
+        mark_inode_dirty (inode);
+    }
 
 out_filp:
     up (&xinode->i_sem);
@@ -760,6 +766,11 @@ reiserfs_xattr_del (struct inode *inode, const char *name)
 
     err = __reiserfs_xattr_del (dir, name, strlen (name));
     dput (dir);
+
+    if (!err) {
+        inode->i_ctime = CURRENT_TIME;
+        mark_inode_dirty (inode);
+    }
 
 out:
     return err;
@@ -1240,8 +1251,10 @@ xattr_lookup_poison (struct dentry *dentry, struct qstr *q1, struct qstr *name)
         name->hash == priv_root->d_name.hash &&
         !memcmp (name->name, priv_root->d_name.name, name->len)) {
             return -ENOENT;
-    }
-    return 0;
+    } else if (q1->len == name->len &&
+               !memcmp(q1->name, name->name, name->len))
+        return 0;
+    return 1;
 }
 
 static struct dentry_operations xattr_lookup_poison_ops = {

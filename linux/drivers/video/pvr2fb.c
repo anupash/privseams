@@ -795,7 +795,7 @@ static int __init pvr2fb_common_init(void)
 	fb_info->fix		= pvr2_fix;
 	fb_info->par		= currentpar;
 	fb_info->pseudo_palette	= (void *)(fb_info->par + 1);
-	fb_info->flags		= FBINFO_FLAG_DEFAULT;
+	fb_info->flags		= FBINFO_DEFAULT | FBINFO_HWACCEL_YPAN;
 
 	if (video_output == VO_VGA)
 		defmode = DEFMODE_VGA;
@@ -1057,6 +1057,13 @@ int __init pvr2fb_init(void)
 	int i, ret = -ENODEV;
 	int size;
 
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("pvr2fb", &option))
+		return -ENODEV;
+	pvr2fb_setup(option);
+#endif
 	size = sizeof(struct fb_info) + sizeof(struct pvr2fb_par) + 16 * sizeof(u32);
 
 	fb_info = kmalloc(size, GFP_KERNEL);
@@ -1108,9 +1115,7 @@ static void __exit pvr2fb_exit(void)
 	kfree(fb_info);
 }
 
-#ifdef MODULE
 module_init(pvr2fb_init);
-#endif
 module_exit(pvr2fb_exit);
 
 MODULE_AUTHOR("Paul Mundt <lethal@linux-sh.org>, M. R. Brown <mrbrown@0xd6.org>");

@@ -3,6 +3,7 @@
 
 #include <linux/compiler.h>
 #include <linux/types.h>
+#include <linux/resource.h>
 
 typedef union sigval {
 	int sival_int;

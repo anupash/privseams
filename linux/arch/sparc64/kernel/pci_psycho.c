@@ -1076,17 +1076,17 @@ static void __init psycho_register_error_handlers(struct pci_controller_info *p)
 	 * bits for each PBM.
 	 */
 	tmp = psycho_read(base + PSYCHO_PCIA_CTRL);
-	tmp |= (PSYCHO_PCICTRL_SBH_ERR |
-		PSYCHO_PCICTRL_SERR |
-		PSYCHO_PCICTRL_SBH_INT |
+	tmp |= (PSYCHO_PCICTRL_SERR |
+		PSYCHO_PCICTRL_SBH_ERR |
 		PSYCHO_PCICTRL_EEN);
+	tmp &= ~(PSYCHO_PCICTRL_SBH_INT);
 	psycho_write(base + PSYCHO_PCIA_CTRL, tmp);
 		     
 	tmp = psycho_read(base + PSYCHO_PCIB_CTRL);
-	tmp |= (PSYCHO_PCICTRL_SBH_ERR |
-		PSYCHO_PCICTRL_SERR |
-		PSYCHO_PCICTRL_SBH_INT |
+	tmp |= (PSYCHO_PCICTRL_SERR |
+		PSYCHO_PCICTRL_SBH_ERR |
 		PSYCHO_PCICTRL_EEN);
+	tmp &= ~(PSYCHO_PCICTRL_SBH_INT);
 	psycho_write(base + PSYCHO_PCIB_CTRL, tmp);
 }
 
@@ -1241,6 +1241,14 @@ static void __init psycho_iommu_init(struct pci_controller_info *p)
 	 * in pci_iommu.c
 	 */
 
+	iommu->dummy_page = __get_free_pages(GFP_KERNEL, 0);
+	if (!iommu->dummy_page) {
+		prom_printf("PSYCHO_IOMMU: Error, gfp(dummy_page) failed.\n");
+		prom_halt();
+	}
+	memset((void *)iommu->dummy_page, 0, PAGE_SIZE);
+	iommu->dummy_page_pa = (unsigned long) __pa(iommu->dummy_page);
+
 	/* Using assumed page size 8K with 128K entries we need 1MB iommu page
 	 * table (128K ioptes * 8 bytes per iopte).  This is
 	 * page order 7 on UltraSparc.
@@ -1254,7 +1262,7 @@ static void __init psycho_iommu_init(struct pci_controller_info *p)
 	iommu->page_table_sz_bits = 17;
 	iommu->page_table_map_base = 0xc0000000;
 	iommu->dma_addr_mask = 0xffffffff;
-	memset((char *)tsbbase, 0, IO_TSB_SIZE);
+	pci_iommu_table_init(iommu, IO_TSB_SIZE);
 
 	/* We start with no consistent mappings. */
 	iommu->lowest_consistent_map =
@@ -1479,22 +1487,18 @@ void __init psycho_init(int node, char *model_name)
 	struct linux_prom64_registers pr_regs[3];
 	struct pci_controller_info *p;
 	struct pci_iommu *iommu;
-	unsigned long flags;
 	u32 upa_portid;
 	int is_pbm_a, err;
 
 	upa_portid = prom_getintdefault(node, "upa-portid", 0xff);
 
-	spin_lock_irqsave(&pci_controller_lock, flags);
 	for(p = pci_controller_root; p; p = p->next) {
 		if (p->pbm_A.portid == upa_portid) {
-			spin_unlock_irqrestore(&pci_controller_lock, flags);
 			is_pbm_a = (p->pbm_A.prom_node == 0);
 			psycho_pbm_init(p, node, is_pbm_a);
 			return;
 		}
 	}
-	spin_unlock_irqrestore(&pci_controller_lock, flags);
 
 	p = kmalloc(sizeof(struct pci_controller_info), GFP_ATOMIC);
 	if (!p) {
@@ -1510,10 +1514,8 @@ void __init psycho_init(int node, char *model_name)
 	memset(iommu, 0, sizeof(*iommu));
 	p->pbm_A.iommu = p->pbm_B.iommu = iommu;
 
-	spin_lock_irqsave(&pci_controller_lock, flags);
 	p->next = pci_controller_root;
 	pci_controller_root = p;
-	spin_unlock_irqrestore(&pci_controller_lock, flags);
 
 	p->pbm_A.portid = upa_portid;
 	p->pbm_B.portid = upa_portid;

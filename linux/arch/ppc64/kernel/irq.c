@@ -41,6 +41,7 @@
 #include <linux/proc_fs.h>
 #include <linux/random.h>
 #include <linux/kallsyms.h>
+#include <linux/profile.h>
 
 #include <asm/uaccess.h>
 #include <asm/bitops.h>
@@ -362,14 +363,16 @@ skip:
 int handle_irq_event(int irq, struct pt_regs *regs, struct irqaction *action)
 {
 	int status = 0;
-	int retval = 0;
+	int ret, retval = 0;
 
 	if (!(action->flags & SA_INTERRUPT))
 		local_irq_enable();
 
 	do {
-		status |= action->flags;
-		retval |= action->handler(irq, action->dev_id, regs);
+		ret = action->handler(irq, action->dev_id, regs);
+		if (ret == IRQ_HANDLED)
+			status |= action->flags;
+		retval |= ret;
 		action = action->next;
 	} while (action);
 	if (status & SA_SAMPLE_RANDOM)
@@ -586,13 +589,13 @@ void do_IRQ(struct pt_regs *regs)
 	irq_enter();
 
 #ifdef CONFIG_DEBUG_STACKOVERFLOW
-	/* Debugging check for stack overflow: is there less than 4KB free? */
+	/* Debugging check for stack overflow: is there less than 2KB free? */
 	{
 		long sp;
 
 		sp = __get_SP() & (THREAD_SIZE-1);
 
-		if (unlikely(sp < (sizeof(struct thread_info) + 4096))) {
+		if (unlikely(sp < (sizeof(struct thread_info) + 2048))) {
 			printk("do_IRQ: stack overflow: %ld\n",
 				sp - sizeof(struct thread_info));
 			dump_stack();
@@ -629,13 +632,13 @@ void do_IRQ(struct pt_regs *regs)
 	irq_enter();
 
 #ifdef CONFIG_DEBUG_STACKOVERFLOW
-	/* Debugging check for stack overflow: is there less than 4KB free? */
+	/* Debugging check for stack overflow: is there less than 2KB free? */
 	{
 		long sp;
 
 		sp = __get_SP() & (THREAD_SIZE-1);
 
-		if (unlikely(sp < (sizeof(struct thread_info) + 4096))) {
+		if (unlikely(sp < (sizeof(struct thread_info) + 2048))) {
 			printk("do_IRQ: stack overflow: %ld\n",
 				sp - sizeof(struct thread_info));
 			dump_stack();
@@ -673,6 +676,8 @@ unsigned int probe_irq_mask(unsigned long irqs)
 {
 	return 0;
 }
+
+EXPORT_SYMBOL(probe_irq_mask);
 
 void __init init_IRQ(void)
 {
@@ -757,44 +762,6 @@ out:
 	return ret;
 }
 
-static int prof_cpu_mask_read_proc (char *page, char **start, off_t off,
-			int count, int *eof, void *data)
-{
-	int len = cpumask_scnprintf(page, count, *(cpumask_t *)data);
-	if (count - len < 2)
-		return -EINVAL;
-	len += sprintf(page + len, "\n");
-	return len;
-}
-
-static int prof_cpu_mask_write_proc (struct file *file, const char __user *buffer,
-					unsigned long count, void *data)
-{
-	cpumask_t *mask = (cpumask_t *)data;
-	unsigned long full_count = count, err;
-	cpumask_t new_value;
-
-	err = cpumask_parse(buffer, count, new_value);
-	if (err)
-		return err;
-
-	*mask = new_value;
-
-#ifdef CONFIG_PPC_ISERIES
-	{
-		unsigned i;
-		for (i=0; i<NR_CPUS; ++i) {
-			if ( paca[i].prof_buffer && cpu_isset(i, new_value) )
-				paca[i].prof_enabled = 1;
-			else
-				paca[i].prof_enabled = 0;
-		}
-	}
-#endif
-
-	return full_count;
-}
-
 #define MAX_NAMELEN 10
 
 static void register_irq_proc (unsigned int irq)
@@ -824,26 +791,15 @@ static void register_irq_proc (unsigned int irq)
 	smp_affinity_entry[irq] = entry;
 }
 
-unsigned long prof_cpu_mask = -1;
-
 void init_irq_proc (void)
 {
-	struct proc_dir_entry *entry;
 	int i;
 
 	/* create /proc/irq */
 	root_irq_dir = proc_mkdir("irq", NULL);
 
 	/* create /proc/irq/prof_cpu_mask */
-	entry = create_proc_entry("prof_cpu_mask", 0600, root_irq_dir);
-
-	if (!entry)
-		return;
-
-	entry->nlink = 1;
-	entry->data = (void *)&prof_cpu_mask;
-	entry->read_proc = prof_cpu_mask_read_proc;
-	entry->write_proc = prof_cpu_mask_write_proc;
+	create_prof_cpu_mask(root_irq_dir);
 
 	/*
 	 * Create entries for all existing IRQs.
@@ -977,7 +933,7 @@ void irq_ctx_init(void)
 	struct thread_info *tp;
 	int i;
 
-	for (i = 0; i < NR_CPUS; i++) {
+	for_each_cpu(i) {
 		memset((void *)softirq_ctx[i], 0, THREAD_SIZE);
 		tp = softirq_ctx[i];
 		tp->cpu = i;

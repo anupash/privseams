@@ -26,6 +26,8 @@
 
 #include <asm/paca.h>
 
+extern int boot_cpuid;
+
 #ifdef CONFIG_SMP
 
 extern void smp_send_debugger_break(int cpu);
@@ -36,22 +38,7 @@ extern void smp_message_recv(int, struct pt_regs *);
 #define smp_processor_id() (get_paca()->paca_index)
 #define hard_smp_processor_id() (get_paca()->hw_cpu_id)
 
-/*
- * Retrieve the state of a CPU:
- * online:          CPU is in a normal run state
- * possible:        CPU is a candidate to be made online
- * available:       CPU is candidate for the 'possible' pool
- *                  Used to get SMT threads started at boot time.
- * present_at_boot: CPU was available at boot time.  Used in DLPAR
- *                  code to handle special cases for processor start up.
- */
-extern cpumask_t cpu_present_at_boot;
-extern cpumask_t cpu_online_map;
-extern cpumask_t cpu_possible_map;
-extern cpumask_t cpu_available_map;
-
-#define cpu_present_at_boot(cpu) cpu_isset(cpu, cpu_present_at_boot)
-#define cpu_available(cpu)       cpu_isset(cpu, cpu_available_map) 
+extern cpumask_t cpu_sibling_map[NR_CPUS];
 
 /* Since OpenPIC has only 4 IPIs, we use slightly different message numbers.
  *
@@ -73,11 +60,14 @@ void smp_init_pSeries(void);
 extern int __cpu_disable(void);
 extern void __cpu_die(unsigned int cpu);
 extern void cpu_die(void) __attribute__((noreturn));
+extern int query_cpu_stopped(unsigned int pcpu);
 #endif /* !(CONFIG_SMP) */
 
 #define get_hard_smp_processor_id(CPU) (paca[(CPU)].hw_cpu_id)
 #define set_hard_smp_processor_id(CPU, VAL) \
-	do { (paca[(CPU)].hw_proc_num = (VAL)); } while (0)
+	do { (paca[(CPU)].hw_cpu_id = (VAL)); } while (0)
+
+extern int smt_enabled_at_boot;
 
 #endif /* __ASSEMBLY__ */
 

@@ -192,13 +192,14 @@ static void cpc_tty_signal_on(pc300dev_t *pc300dev, unsigned char signal)
  */
 void cpc_tty_init(pc300dev_t *pc300dev)
 {
-	int port, aux;
+	unsigned long port;
+	int aux;
 	st_cpc_tty_area * cpc_tty;
 
 	/* hdlcX - X=interface number */
 	port = pc300dev->dev->name[4] - '0';
 	if (port >= CPC_TTY_NPORTS) {
-		printk("%s-tty: invalid interface selected (0-%i): %i", 
+		printk("%s-tty: invalid interface selected (0-%i): %li",
 			pc300dev->dev->name,
 			CPC_TTY_NPORTS-1,port);
 		return;
@@ -634,14 +635,8 @@ static void cpc_tty_flush_buffer(struct tty_struct *tty)
 	}
 
 	CPC_TTY_DBG("%s: call wake_up_interruptible\n",cpc_tty->name);
-	
-	wake_up_interruptible(&tty->write_wait); 
 
-	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup){
-		CPC_TTY_DBG("%s: call line disc. wake up\n",cpc_tty->name);
-		tty->ldisc.write_wakeup(tty); 
-	} 
-
+	tty_wakeup(tty);	
 	return; 
 } 
 
@@ -688,25 +683,32 @@ static void cpc_tty_hangup(struct tty_struct *tty)
  */
 static void cpc_tty_rx_work(void * data)
 {
-	int port, i, j;
+	unsigned long port;
+	int i, j;
 	st_cpc_tty_area *cpc_tty; 
 	volatile st_cpc_rx_buf * buf;
 	char flags=0,flg_rx=1; 
+	struct tty_ldisc *ld;
 
 	if (cpc_tty_cnt == 0) return;
 
+	
 	for (i=0; (i < 4) && flg_rx ; i++) {
 		flg_rx = 0;
-		port = (int) data;
+		port = (unsigned long)data;
 		for (j=0; j < CPC_TTY_NPORTS; j++) {
 			cpc_tty = &cpc_tty_area[port];
 		
 			if ((buf=cpc_tty->buf_rx.first) != 0) {
-															
-				if (cpc_tty->tty && (cpc_tty->tty->ldisc.receive_buf)) { 
-					CPC_TTY_DBG("%s: call line disc. receive_buf\n",cpc_tty->name);
-					cpc_tty->tty->ldisc.receive_buf(cpc_tty->tty, (char *)(buf->data), 
-					&flags, buf->size);
+				if(cpc_tty->tty) {
+					ld = tty_ldisc_ref(cpc_tty->tty);
+					if(ld) {
+						if (ld->receive_buf) {
+							CPC_TTY_DBG("%s: call line disc. receive_buf\n",cpc_tty->name);
+							ld->receive_buf(cpc_tty->tty, (char *)(buf->data), &flags, buf->size);
+						}
+						tty_ldisc_deref(ld);
+					}
 				}	
 				cpc_tty->buf_rx.first = cpc_tty->buf_rx.first->next;
 				kfree((unsigned char *)buf);
@@ -760,7 +762,7 @@ void cpc_tty_receive(pc300dev_t *pc300dev)
 	int rx_len, rx_aux; 
 	volatile unsigned char status; 
 	unsigned short first_bd = pc300chan->rx_first_bd;
-	st_cpc_rx_buf	*new;
+	st_cpc_rx_buf	*new=NULL;
 	unsigned char dsr_rx;
 
 	if (pc300dev->cpc_tty == NULL) { 
@@ -788,6 +790,10 @@ void cpc_tty_receive(pc300dev_t *pc300dev)
 				/* update EDA */ 
 				cpc_writel(card->hw.scabase + DRX_REG(EDAL, ch), 
 						RX_BD_ADDR(ch, pc300chan->rx_last_bd)); 
+			}
+			if (new) {
+				kfree(new);
+				new = NULL;
 			}
 			return; 
 		}
@@ -834,7 +840,8 @@ void cpc_tty_receive(pc300dev_t *pc300dev)
 						cpc_tty->name);
 				cpc_tty_rx_disc_frame(pc300chan);
 				rx_len = 0;
-				kfree((unsigned char *)new);
+				kfree(new);
+				new = NULL;
 				break; /* read next frame - while(1) */
 			}
 
@@ -843,7 +850,8 @@ void cpc_tty_receive(pc300dev_t *pc300dev)
 				cpc_tty_rx_disc_frame(pc300chan);
 				stats->rx_dropped++; 
 				rx_len = 0; 
-				kfree((unsigned char *)new);
+				kfree(new);
+				new = NULL;
 				break; /* read next frame - while(1) */
 			}
 
@@ -910,13 +918,7 @@ static void cpc_tty_tx_work(void *data)
 		CPC_TTY_DBG("%s: the interface is not opened\n",cpc_tty->name);
 		return; 
 	}
-
-	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup){
-		CPC_TTY_DBG("%s:call line disc. wakeup\n",cpc_tty->name);
-		tty->ldisc.write_wakeup (tty); 
-	}
-
-	wake_up_interruptible(&tty->write_wait); 
+	tty_wakeup(tty);
 }
 
 /*

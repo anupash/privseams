@@ -47,6 +47,7 @@
 #define DUMP_OFFSET(x)
 #endif
 
+static LIST_HEAD(helpers);
 DECLARE_LOCK(ip_nat_seqofs_lock);
 
 /* Setup TCP sequence correction given this change at this sequence */
@@ -72,7 +73,7 @@ adjust_tcp_sequence(u32 seq,
 
 	LOCK_BH(&ip_nat_seqofs_lock);
 
-	/* SYN adjust. If it's uninitialized, of this is after last
+	/* SYN adjust. If it's uninitialized, or this is after last
 	 * correction, record it: we don't handle more than one
 	 * adjustment in the window, but do deal with common case of a
 	 * retransmit */
@@ -346,7 +347,7 @@ ip_nat_sack_adjust(struct sk_buff **pskb,
 	return 1;
 }
 
-/* TCP sequence number adjustment.  Returns true or false.  */
+/* TCP sequence number adjustment.  Returns 1 on success, 0 on failure */
 int
 ip_nat_seq_adjust(struct sk_buff **pskb, 
 		  struct ip_conntrack *ct, 
@@ -395,7 +396,12 @@ ip_nat_seq_adjust(struct sk_buff **pskb,
 	tcph->seq = newseq;
 	tcph->ack_seq = newack;
 
-	return ip_nat_sack_adjust(pskb, tcph, ct, ctinfo);
+	if (!ip_nat_sack_adjust(pskb, tcph, ct, ctinfo))
+		return 0;
+
+	ip_conntrack_tcp_update(*pskb, ct, dir);
+
+	return 1;
 }
 
 static inline int
@@ -417,6 +423,24 @@ int ip_nat_helper_register(struct ip_nat_helper *me)
 	WRITE_UNLOCK(&ip_nat_lock);
 
 	return ret;
+}
+
+struct ip_nat_helper *
+__ip_nat_find_helper(const struct ip_conntrack_tuple *tuple)
+{
+	return LIST_FIND(&helpers, helper_cmp, struct ip_nat_helper *, tuple);
+}
+
+struct ip_nat_helper *
+ip_nat_find_helper(const struct ip_conntrack_tuple *tuple)
+{
+	struct ip_nat_helper *h;
+
+	READ_LOCK(&ip_nat_lock);
+	h = __ip_nat_find_helper(tuple);
+	READ_UNLOCK(&ip_nat_lock);
+
+	return h;
 }
 
 static int

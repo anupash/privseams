@@ -1,6 +1,6 @@
 /*
  *
- * linux/drivers/s390/net/qeth_main.c ($Revision: 1.130 $)
+ * linux/drivers/s390/net/qeth_main.c ($Revision: 1.145 $)
  *
  * Linux on zSeries OSA Express and HiperSockets support
  *
@@ -12,7 +12,7 @@
  *			  Frank Pavlic (pavlic@de.ibm.com) and
  *		 	  Thomas Spatzier <tspat@de.ibm.com>
  *
- *    $Revision: 1.130 $	 $Date: 2004/08/05 11:21:50 $
+ *    $Revision: 1.145 $	 $Date: 2004/10/08 15:08:40 $
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,12 +73,13 @@ qeth_eyecatcher(void)
 #include <linux/reboot.h>
 #include <asm/qeth.h>
 #include <linux/mii.h>
+#include <linux/rcupdate.h>
 
 #include "qeth.h"
 #include "qeth_mpc.h"
 #include "qeth_fs.h"
 
-#define VERSION_QETH_C "$Revision: 1.130 $"
+#define VERSION_QETH_C "$Revision: 1.145 $"
 static const char *version = "qeth S/390 OSA-Express driver";
 
 /**
@@ -2147,7 +2148,7 @@ qeth_type_trans(struct sk_buff *skb, struct net_device *dev)
 
 	skb->mac.raw = skb->data;
 	skb_pull(skb, ETH_ALEN * 2 + sizeof (short));
-	eth = skb->mac.ethernet;
+	eth = eth_hdr(skb);
 
 	if (*eth->h_dest & 1) {
 		if (memcmp(eth->h_dest, dev->broadcast, ETH_ALEN) == 0)
@@ -3834,6 +3835,7 @@ qeth_do_send_packet(struct qeth_card *card, struct qeth_qdio_out_q *queue,
 				/* return EBUSY because we sent old packet, not
 				 * the current one */
 				rc = -EBUSY;
+				atomic_set(&queue->state, QETH_OUT_Q_UNLOCKED);
 				goto out;
 			}
 		}
@@ -4372,12 +4374,13 @@ qeth_snmp_command(struct qeth_card *card, char *udata)
 	/* skip 4 bytes (data_len struct member) to get req_len */
 	if (copy_from_user(&req_len, udata + sizeof(int), sizeof(int)))
 		return -EFAULT;
-	ureq = kmalloc(req_len, GFP_KERNEL);
+	ureq = kmalloc(req_len+sizeof(struct qeth_snmp_ureq_hdr), GFP_KERNEL);
 	if (!ureq) {
 		QETH_DBF_TEXT(trace, 2, "snmpnome");
 		return -ENOMEM;
 	}
-	if (copy_from_user(ureq, udata, req_len)){
+	if (copy_from_user(ureq, udata,
+			req_len+sizeof(struct qeth_snmp_ureq_hdr))){
 		kfree(ureq);
 		return -EFAULT;
 	}
@@ -4546,7 +4549,8 @@ qeth_do_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 	if (!card)
 		return -ENODEV;
 
-	if (card->state != CARD_STATE_UP)
+	if ((card->state != CARD_STATE_UP) &&
+            (card->state != CARD_STATE_SOFTSETUP))
 		return -ENODEV;
 
 	switch (cmd){
@@ -4733,9 +4737,10 @@ qeth_free_vlan_addresses4(struct qeth_card *card, unsigned short vid)
 	QETH_DBF_TEXT(trace, 4, "frvaddr4");
 	if (!card->vlangrp)
 		return;
-	in_dev = in_dev_get(card->vlangrp->vlan_devices[vid]);
+	rcu_read_lock();
+	in_dev = __in_dev_get(card->vlangrp->vlan_devices[vid]);
 	if (!in_dev)
-		return;
+		goto out;
 	for (ifa = in_dev->ifa_list; ifa; ifa = ifa->ifa_next){
 		addr = qeth_get_addr_buffer(QETH_PROT_IPV4);
 		if (addr){
@@ -4746,7 +4751,8 @@ qeth_free_vlan_addresses4(struct qeth_card *card, unsigned short vid)
 				kfree(addr);
 		}
 	}
-	in_dev_put(in_dev);
+out:
+	rcu_read_unlock();
 }
 
 static void
@@ -4918,9 +4924,9 @@ qeth_add_vlan_mc(struct qeth_card *card)
 		in_dev = in_dev_get(vg->vlan_devices[i]);
 		if (!in_dev)
 			continue;
-		read_lock(&in_dev->lock);
+		read_lock(&in_dev->mc_list_lock);
 		qeth_add_mc(card,in_dev);
-		read_unlock(&in_dev->lock);
+		read_unlock(&in_dev->mc_list_lock);
 		in_dev_put(in_dev);
 	}
 #endif
@@ -4935,10 +4941,10 @@ qeth_add_multicast_ipv4(struct qeth_card *card)
 	in4_dev = in_dev_get(card->dev);
 	if (in4_dev == NULL)
 		return;
-	read_lock(&in4_dev->lock);
+	read_lock(&in4_dev->mc_list_lock);
 	qeth_add_mc(card, in4_dev);
 	qeth_add_vlan_mc(card);
-	read_unlock(&in4_dev->lock);
+	read_unlock(&in4_dev->mc_list_lock);
 	in_dev_put(in4_dev);
 }
 
@@ -5739,7 +5745,7 @@ qeth_start_ipa_ip_fragmentation(struct qeth_card *card)
 	QETH_DBF_TEXT(trace,3,"ipaipfrg");
 
 	if (!qeth_is_supported(card, IPA_IP_FRAGMENTATION)) {
-		PRINT_INFO("IP fragmentation not supported on %s\n",
+		PRINT_INFO("Hardware IP fragmentation not supported on %s\n",
 			   card->info.if_name);
 		return  -EOPNOTSUPP;
 	}
@@ -5747,11 +5753,11 @@ qeth_start_ipa_ip_fragmentation(struct qeth_card *card)
 	rc = qeth_send_simple_setassparms(card, IPA_IP_FRAGMENTATION,
 					  IPA_CMD_ASS_START, 0);
 	if (rc) {
-		PRINT_WARN("Could not start IP fragmentation "
+		PRINT_WARN("Could not start Hardware IP fragmentation "
 			   "assist on %s: 0x%x\n",
 			   card->info.if_name, rc);
 	} else
-		PRINT_INFO("IP fragmentation enabled \n");
+		PRINT_INFO("Hardware IP fragmentation enabled \n");
 	return rc;
 }
 
@@ -6706,19 +6712,26 @@ static int
 qeth_arp_constructor(struct neighbour *neigh)
 {
 	struct net_device *dev = neigh->dev;
-	struct in_device *in_dev = in_dev_get(dev);
+	struct in_device *in_dev;
+	struct neigh_parms *parms;
 
-	if (in_dev == NULL)
-		return -EINVAL;
 	if (!qeth_verify_dev(dev)) {
-		in_dev_put(in_dev);
 		return qeth_old_arp_constructor(neigh);
 	}
 
+	rcu_read_lock();
+	in_dev = rcu_dereference(__in_dev_get(dev));
+	if (in_dev == NULL) {
+		rcu_read_unlock();
+		return -EINVAL;
+	}
+
+	parms = in_dev->arp_parms;
+	__neigh_parms_put(neigh->parms);
+	neigh->parms = neigh_parms_clone(parms);
+	rcu_read_unlock();
+
 	neigh->type = inet_addr_type(*(u32 *) neigh->primary_key);
-	if (in_dev->arp_parms)
-		neigh->parms = in_dev->arp_parms;
-	in_dev_put(in_dev);
 	neigh->nud_state = NUD_NOARP;
 	neigh->ops = arp_direct_ops;
 	neigh->output = neigh->ops->queue_xmit;

@@ -210,14 +210,14 @@ void hfs_delete_inode(struct inode *inode)
 	dprint(DBG_INODE, "delete_inode: %lu\n", inode->i_ino);
 	if (S_ISDIR(inode->i_mode)) {
 		HFS_SB(sb)->folder_count--;
-		if (HFS_I(inode)->cat_key.ParID == be32_to_cpu(HFS_ROOT_CNID))
+		if (HFS_I(inode)->cat_key.ParID == cpu_to_be32(HFS_ROOT_CNID))
 			HFS_SB(sb)->root_dirs--;
 		set_bit(HFS_FLG_MDB_DIRTY, &HFS_SB(sb)->flags);
 		sb->s_dirt = 1;
 		return;
 	}
 	HFS_SB(sb)->file_count--;
-	if (HFS_I(inode)->cat_key.ParID == be32_to_cpu(HFS_ROOT_CNID))
+	if (HFS_I(inode)->cat_key.ParID == cpu_to_be32(HFS_ROOT_CNID))
 		HFS_SB(sb)->root_files--;
 	if (S_ISREG(inode->i_mode)) {
 		if (!inode->i_nlink) {
@@ -230,9 +230,10 @@ void hfs_delete_inode(struct inode *inode)
 }
 
 void hfs_inode_read_fork(struct inode *inode, struct hfs_extent *ext,
-			 u32 log_size, u32 phys_size, u32 clump_size)
+			 __be32 __log_size, __be32 phys_size, u32 clump_size)
 {
 	struct super_block *sb = inode->i_sb;
+	u32 log_size = be32_to_cpu(__log_size);
 	u16 count;
 	int i;
 
@@ -241,7 +242,6 @@ void hfs_inode_read_fork(struct inode *inode, struct hfs_extent *ext,
 		count += be16_to_cpu(ext[i].count);
 	HFS_I(inode)->first_blocks = count;
 
-	log_size = be32_to_cpu(log_size);
 	inode->i_size = HFS_I(inode)->phys_size = log_size;
 	inode->i_blocks = (log_size + sb->s_blocksize - 1) >> sb->s_blocksize_bits;
 	HFS_I(inode)->alloc_blocks = be32_to_cpu(phys_size) /
@@ -370,7 +370,7 @@ struct inode *hfs_iget(struct super_block *sb, struct hfs_cat_key *key, hfs_cat_
 }
 
 void hfs_inode_write_fork(struct inode *inode, struct hfs_extent *ext,
-			  u32 *log_size, u32 *phys_size)
+			  __be32 *log_size, __be32 *phys_size)
 {
 	memcpy(ext, HFS_I(inode)->first_extents, sizeof(hfs_extent_rec));
 
@@ -381,7 +381,7 @@ void hfs_inode_write_fork(struct inode *inode, struct hfs_extent *ext,
 					 HFS_SB(inode->i_sb)->alloc_blksz);
 }
 
-void hfs_write_inode(struct inode *inode, int unused)
+int hfs_write_inode(struct inode *inode, int unused)
 {
 	struct hfs_find_data fd;
 	hfs_cat_rec rec;
@@ -395,27 +395,27 @@ void hfs_write_inode(struct inode *inode, int unused)
 			break;
 		case HFS_EXT_CNID:
 			hfs_btree_write(HFS_SB(inode->i_sb)->ext_tree);
-			return;
+			return 0;
 		case HFS_CAT_CNID:
 			hfs_btree_write(HFS_SB(inode->i_sb)->cat_tree);
-			return;
+			return 0;
 		default:
 			BUG();
-			return;
+			return -EIO;
 		}
 	}
 
 	if (HFS_IS_RSRC(inode)) {
 		mark_inode_dirty(HFS_I(inode)->rsrc_inode);
-		return;
+		return 0;
 	}
 
 	if (!inode->i_nlink)
-		return;
+		return 0;
 
 	if (hfs_find_init(HFS_SB(inode->i_sb)->cat_tree, &fd))
 		/* panic? */
-		return;
+		return -EIO;
 
 	fd.search_key->cat = HFS_I(inode)->cat_key;
 	if (hfs_brec_find(&fd))
@@ -460,6 +460,7 @@ void hfs_write_inode(struct inode *inode, int unused)
 	}
 out:
 	hfs_find_exit(&fd);
+	return 0;
 }
 
 static struct dentry *hfs_file_lookup(struct inode *dir, struct dentry *dentry,
@@ -609,6 +610,7 @@ struct file_operations hfs_file_operations = {
 	.read		= generic_file_read,
 	.write		= generic_file_write,
 	.mmap		= generic_file_mmap,
+	.sendfile	= generic_file_sendfile,
 	.fsync		= file_fsync,
 	.open		= hfs_file_open,
 	.release	= hfs_file_release,

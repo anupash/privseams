@@ -146,6 +146,8 @@ static int get_nodes(unsigned long *nodes, unsigned long __user *nmask,
 	/* When the user specified more nodes than supported just check
 	   if the non supported part is all zero. */
 	if (nlongs > BITS_TO_LONGS(MAX_NUMNODES)) {
+		if (nlongs > PAGE_SIZE/sizeof(long))
+			return -EINVAL;
 		for (k = BITS_TO_LONGS(MAX_NUMNODES); k < nlongs; k++) {
 			unsigned long t;
 			if (get_user(t,  nmask + k))
@@ -438,7 +440,7 @@ static int lookup_node(struct mm_struct *mm, unsigned long addr)
 
 	err = get_user_pages(current, mm, addr & PAGE_MASK, 1, 0, 0, &p, NULL);
 	if (err >= 0) {
-		err = page_zone(p)->zone_pgdat->node_id;
+		err = page_to_nid(p);
 		put_page(p);
 	}
 	return err;
@@ -526,20 +528,82 @@ asmlinkage long sys_get_mempolicy(int __user *policy,
 }
 
 #ifdef CONFIG_COMPAT
-/* The other functions are compatible */
+
 asmlinkage long compat_get_mempolicy(int __user *policy,
-				  unsigned __user *nmask, unsigned  maxnode,
-				  unsigned addr, unsigned  flags)
+				     compat_ulong_t __user *nmask,
+				     compat_ulong_t maxnode,
+				     compat_ulong_t addr, compat_ulong_t flags)
 {
 	long err;
 	unsigned long __user *nm = NULL;
+	unsigned long nr_bits, alloc_size;
+	DECLARE_BITMAP(bm, MAX_NUMNODES);
+
+	nr_bits = min_t(unsigned long, maxnode-1, MAX_NUMNODES);
+	alloc_size = ALIGN(nr_bits, BITS_PER_LONG) / 8;
+
 	if (nmask)
-		nm = compat_alloc_user_space(ALIGN(maxnode-1, 64) / 8);
-	err = sys_get_mempolicy(policy, nm, maxnode, addr, flags);
-	if (!err && copy_in_user(nmask, nm, ALIGN(maxnode-1, 32)/8))
-		err = -EFAULT;
+		nm = compat_alloc_user_space(alloc_size);
+
+	err = sys_get_mempolicy(policy, nm, nr_bits+1, addr, flags);
+
+	if (!err && nmask) {
+		err = copy_from_user(bm, nm, alloc_size);
+		/* ensure entire bitmap is zeroed */
+		err |= clear_user(nmask, ALIGN(maxnode-1, 8) / 8);
+		err |= compat_put_bitmap(nmask, bm, nr_bits);
+	}
+
 	return err;
 }
+
+asmlinkage long compat_set_mempolicy(int mode, compat_ulong_t __user *nmask,
+				     compat_ulong_t maxnode)
+{
+	long err = 0;
+	unsigned long __user *nm = NULL;
+	unsigned long nr_bits, alloc_size;
+	DECLARE_BITMAP(bm, MAX_NUMNODES);
+
+	nr_bits = min_t(unsigned long, maxnode-1, MAX_NUMNODES);
+	alloc_size = ALIGN(nr_bits, BITS_PER_LONG) / 8;
+
+	if (nmask) {
+		err = compat_get_bitmap(bm, nmask, nr_bits);
+		nm = compat_alloc_user_space(alloc_size);
+		err |= copy_to_user(nm, bm, alloc_size);
+	}
+
+	if (err)
+		return -EFAULT;
+
+	return sys_set_mempolicy(mode, nm, nr_bits+1);
+}
+
+asmlinkage long compat_mbind(compat_ulong_t start, compat_ulong_t len,
+			     compat_ulong_t mode, compat_ulong_t __user *nmask,
+			     compat_ulong_t maxnode, compat_ulong_t flags)
+{
+	long err = 0;
+	unsigned long __user *nm = NULL;
+	unsigned long nr_bits, alloc_size;
+	DECLARE_BITMAP(bm, MAX_NUMNODES);
+
+	nr_bits = min_t(unsigned long, maxnode-1, MAX_NUMNODES);
+	alloc_size = ALIGN(nr_bits, BITS_PER_LONG) / 8;
+
+	if (nmask) {
+		err = compat_get_bitmap(bm, nmask, nr_bits);
+		nm = compat_alloc_user_space(alloc_size);
+		err |= copy_to_user(nm, bm, alloc_size);
+	}
+
+	if (err)
+		return -EFAULT;
+
+	return sys_mbind(start, len, mode, nm, nr_bits+1, flags);
+}
+
 #endif
 
 /* Return effective policy for a VMA */

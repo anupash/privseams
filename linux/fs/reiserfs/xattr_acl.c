@@ -289,8 +289,14 @@ reiserfs_set_acl(struct inode *inode, int type, struct posix_acl *acl)
             error = reiserfs_xattr_set(inode, name, value, size, 0);
 	} else {
             error = reiserfs_xattr_del (inode, name);
-            if (error == -ENODATA)
+            if (error == -ENODATA) {
+                /* This may seem odd here, but it means that the ACL was set
+                 * with a value representable with mode bits. If there was
+                 * an ACL before, reiserfs_xattr_del already dirtied the inode.
+                 */
+                mark_inode_dirty (inode);
                 error = 0;
+            }
         }
 
 	if (value)
@@ -502,11 +508,11 @@ posix_acl_access_list (struct inode *inode, const char *name, int namelen, char 
 }
 
 struct reiserfs_xattr_handler posix_acl_access_handler = {
-    prefix: XATTR_NAME_ACL_ACCESS,
-    get: posix_acl_access_get,
-    set: posix_acl_access_set,
-    del: posix_acl_access_del,
-    list: posix_acl_access_list,
+	.prefix = XATTR_NAME_ACL_ACCESS,
+	.get = posix_acl_access_get,
+	.set = posix_acl_access_set,
+	.del = posix_acl_access_del,
+	.list = posix_acl_access_list,
 };
 
 static int
@@ -555,9 +561,9 @@ posix_acl_default_list (struct inode *inode, const char *name, int namelen, char
 }
 
 struct reiserfs_xattr_handler posix_acl_default_handler = {
-    prefix: XATTR_NAME_ACL_DEFAULT,
-    get: posix_acl_default_get,
-    set: posix_acl_default_set,
-    del: posix_acl_default_del,
-    list: posix_acl_default_list,
+	.prefix = XATTR_NAME_ACL_DEFAULT,
+	.get = posix_acl_default_get,
+	.set = posix_acl_default_set,
+	.del = posix_acl_default_del,
+	.list = posix_acl_default_list,
 };

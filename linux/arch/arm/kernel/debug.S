@@ -411,10 +411,16 @@
 
 		.macro	addruart,rx
 		mov	\rx, #0xfe000000	@ physical
-#ifdef CONFIG_ARCH_IQ80310
-		orr	\rx, \rx, #0x00810000	@ location of the UART
-#elif defined(CONFIG_ARCH_IQ80321)
+#if defined(CONFIG_ARCH_IQ80321) || defined(CONFIG_ARCH_IQ31244)
 		orr	\rx, \rx, #0x00800000	@ location of the UART
+#elif defined(CONFIG_ARCH_IOP331)
+		mrc	p15, 0, \rx, c1, c0
+		tst	\rx, #1			@ MMU enabled?
+		moveq	\rx, #0x000fe000	@ Physical Base
+		movne	\rx, #0
+		orr	\rx, \rx, #0xfe000000
+		orr	\rx, \rx, #0x00f00000	@ Virtual Base
+		orr	\rx, \rx, #0x00001700   @ location of the UART
 #else
 #error Unknown IOP3XX implementation
 #endif
@@ -432,7 +438,7 @@
 		.endm
 
 		.macro	waituart,rd,rx
-#ifndef	CONFIG_ARCH_IQ80321
+#if !defined(CONFIG_ARCH_IQ80321) || !defined(CONFIG_ARCH_IQ31244) || !defined(CONFIG_ARCH_IQ80331)
 1001:		ldrb	\rd, [\rx, #0x6]
 		tst	\rd, #0x10
 		beq	1001b
@@ -463,6 +469,36 @@
 
                 .macro  busyuart,rd,rx
                 .endm
+
+#elif defined(CONFIG_ARCH_IXP2000)
+
+		.macro  addruart,rx
+		mrc	p15, 0, \rx, c1, c0
+		tst	\rx, #1			@ MMU enabled?
+		moveq	\rx, #0xc0000000	@ Physical base
+		movne	\rx, #0xfe000000	@ virtual base
+		orrne	\rx, \rx, #0x00f00000
+		orr	\rx, \rx, #0x00030000
+#ifdef	__ARMEB__
+		orr	\rx, \rx, #0x00000003
+#endif
+		.endm 
+		
+		.macro	senduart,rd,rx
+		strb	\rd, [\rx]
+		.endm
+
+		.macro	busyuart,rd,rx
+1002:		ldrb	\rd, [\rx, #0x14]
+		tst	\rd, #0x20       
+		beq	1002b
+		.endm
+
+		.macro	waituart,rd,rx
+		nop
+		nop
+		nop
+		.endm
 
 #elif defined(CONFIG_ARCH_OMAP)
 
@@ -614,6 +650,60 @@
 1001:		ldr	\rd, [\rx, #0x18]	@ UARTFLG
 		tst	\rd, #1 << 3		@ UARTFLGUBUSY - 1 when busy
 		bne	1001b
+		.endm
+
+#elif defined(CONFIG_ARCH_IMX)
+
+		.macro	addruart,rx
+		mrc	p15, 0, \rx, c1, c0
+		tst	\rx, #1			@ MMU enabled?
+		moveq	\rx, #0x00000000	@ physical
+		movne	\rx, #0xe0000000	@ virtual
+		orr	\rx, \rx, #0x00200000
+		orr	\rx, \rx, #0x00006000	@ UART1 offset
+		.endm
+
+		.macro	senduart,rd,rx
+		str	\rd, [\rx, #0x40]	@ TXDATA
+		.endm
+
+		.macro	waituart,rd,rx
+		.endm
+
+		.macro	busyuart,rd,rx
+1002:		ldr	\rd, [\rx, #0x98]	@ SR2
+		tst	\rd, #1 << 3		@ TXDC
+		beq	1002b			@ wait until transmit done
+		.endm
+
+#elif defined(CONFIG_ARCH_H720X)
+
+		.equ    io_virt, IO_BASE
+		.equ    io_phys, IO_START
+
+		.macro  addruart,rx
+		mrc     p15, 0, \rx, c1, c0
+		tst     \rx, #1  	       @ MMU enabled?
+		moveq   \rx, #io_phys	       @ physical base address
+		movne   \rx, #io_virt	       @ virtual address
+		add     \rx, \rx, #0x00020000   @ UART1
+		.endm
+
+		.macro  senduart,rd,rx
+		str     \rd, [\rx, #0x0]        @ UARTDR
+
+		.endm
+
+		.macro  waituart,rd,rx
+1001:		ldr     \rd, [\rx, #0x18]       @ UARTFLG
+		tst     \rd, #1 << 5	       @ UARTFLGUTXFF - 1 when full
+		bne     1001b
+		.endm
+
+		.macro  busyuart,rd,rx
+1001:		ldr     \rd, [\rx, #0x18]       @ UARTFLG
+		tst     \rd, #1 << 3	       @ UARTFLGUBUSY - 1 when busy
+		bne     1001b
 		.endm
 #else
 #error Unknown architecture

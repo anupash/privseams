@@ -243,6 +243,7 @@ void __iget(struct inode * inode)
  */
 void clear_inode(struct inode *inode)
 {
+	might_sleep();
 	invalidate_inode_buffers(inode);
        
 	if (inode->i_data.nrpages)
@@ -485,8 +486,9 @@ static int shrink_icache_memory(int nr, unsigned int gfp_mask)
 		 * and we don't want to recurse into the FS that called us
 		 * in clear_inode() and friends..
 	 	 */
-		if (gfp_mask & __GFP_FS)
-			prune_icache(nr);
+		if (!(gfp_mask & __GFP_FS))
+			return -1;
+		prune_icache(nr);
 	}
 	return (inodes_stat.nr_unused / 100) * sysctl_vfs_cache_pressure;
 }
@@ -1372,8 +1374,7 @@ void __init inode_init(unsigned long mempages)
 
 	/* inode slab cache */
 	inode_cachep = kmem_cache_create("inode_cache", sizeof(struct inode),
-				0, SLAB_HWCACHE_ALIGN|SLAB_PANIC, init_once,
-				NULL);
+				0, SLAB_PANIC, init_once, NULL);
 	set_shrinker(DEFAULT_SEEKS, shrink_icache_memory);
 }
 

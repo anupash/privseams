@@ -52,7 +52,6 @@
 #include <asm/system.h>
 #include <asm/sections.h>
 #include <asm/irq.h>
-#include <asm/hardirq.h>
 #include <asm/pmac_feature.h>
 #include <asm/uaccess.h>
 #include <asm/mmu_context.h>
@@ -138,7 +137,6 @@ static int data_len;
 static volatile int adb_int_pending;
 static volatile int disable_poll;
 static struct adb_request bright_req_1, bright_req_2;
-static unsigned long async_req_locks;
 static struct device_node *vias;
 static int pmu_kind = PMU_UNKNOWN;
 static int pmu_fully_inited = 0;
@@ -155,6 +153,7 @@ static int drop_interrupts;
 static int option_lid_wakeup = 1;
 static int sleep_in_progress;
 static int can_sleep;
+static unsigned long async_req_locks;
 #endif /* CONFIG_PMAC_PBOOK */
 static unsigned int pmu_irq_stats[11];
 
@@ -494,12 +493,9 @@ static int __init via_pmu_dev_init(void)
 	/* Create /proc/pmu */
 	proc_pmu_root = proc_mkdir("pmu", NULL);
 	if (proc_pmu_root) {
-		int i;
-		proc_pmu_info = create_proc_read_entry("info", 0, proc_pmu_root,
-					proc_get_info, NULL);
-		proc_pmu_irqstats = create_proc_read_entry("interrupts", 0, proc_pmu_root,
-					proc_get_irqstats, NULL);
 #ifdef CONFIG_PMAC_PBOOK
+		int i;
+
 		for (i=0; i<pmu_battery_count; i++) {
 			char title[16];
 			sprintf(title, "battery_%d", i);
@@ -507,6 +503,11 @@ static int __init via_pmu_dev_init(void)
 						proc_get_batt, (void *)i);
 		}
 #endif /* CONFIG_PMAC_PBOOK */
+
+		proc_pmu_info = create_proc_read_entry("info", 0, proc_pmu_root,
+					proc_get_info, NULL);
+		proc_pmu_irqstats = create_proc_read_entry("interrupts", 0, proc_pmu_root,
+					proc_get_irqstats, NULL);
 		proc_pmu_options = create_proc_entry("options", 0600, proc_pmu_root);
 		if (proc_pmu_options) {
 			proc_pmu_options->nlink = 1;
@@ -746,6 +747,8 @@ done_battery_state_smart(struct adb_request* req)
 		pmu_power_flags &= ~PMU_PWR_AC_PRESENT;
 
 
+	capa = max = amperage = voltage = 0;
+	
 	if (req->reply[1] & 0x04) {
 		bat_flags |= PMU_BATT_PRESENT;
 		switch(req->reply[0]) {
@@ -765,8 +768,7 @@ done_battery_state_smart(struct adb_request* req)
 					req->reply_len, req->reply[0], req->reply[1], req->reply[2], req->reply[3]);
 				break;
 		}
-	} else
-		capa = max = amperage = voltage = 0;
+	}
 
 	if ((req->reply[1] & 0x01) && (amperage > 0))
 		bat_flags |= PMU_BATT_CHARGING;
@@ -1445,7 +1447,7 @@ static struct adb_request* __pmac
 pmu_sr_intr(struct pt_regs *regs)
 {
 	struct adb_request *req;
-	int bite;
+	int bite = 0;
 
 	if (via[B] & TREQ) {
 		printk(KERN_ERR "PMU: spurious SR intr (%x)\n", via[B]);

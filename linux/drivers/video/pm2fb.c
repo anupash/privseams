@@ -1124,7 +1124,8 @@ static int __devinit pm2fb_probe(struct pci_dev *pdev,
 	info->fbops		= &pm2fb_ops;
 	info->fix		= pm2fb_fix; 	
 	info->pseudo_palette	= (void *)(default_par + 1); 
-	info->flags		= FBINFO_FLAG_DEFAULT;
+	info->flags		= FBINFO_DEFAULT |
+                                  FBINFO_HWACCEL_YPAN;
 
 #ifndef MODULE
 	if (!mode)
@@ -1214,8 +1215,18 @@ MODULE_DEVICE_TABLE(pci, pm2fb_id_table);
  *  Initialization
  */
 
+int __init pm2fb_setup(char *options);
+
 int __init pm2fb_init(void)
 {
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("pm2fb", &option))
+		return -ENODEV;
+	pm2fb_setup(option);
+#endif
+
 	return pci_module_init(&pm2fb_driver);
 }
 
@@ -1265,9 +1276,7 @@ int __init pm2fb_setup(char *options)
 
 
 
-#ifdef MODULE
 module_init(pm2fb_init);
-#endif 
 module_exit(pm2fb_exit);
 
 MODULE_PARM(mode,"s");

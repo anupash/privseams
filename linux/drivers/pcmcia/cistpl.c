@@ -103,7 +103,7 @@ void release_cis_mem(struct pcmcia_socket *s)
  * If flags & MAP_ATTRIB, map the attribute space, otherwise
  * map the memory space.
  */
-static unsigned char *
+static void __iomem *
 set_cis_map(struct pcmcia_socket *s, unsigned int card_offset, unsigned int flags)
 {
     pccard_mem_map *mem = &s->cis_mem;
@@ -114,8 +114,6 @@ set_cis_map(struct pcmcia_socket *s, unsigned int card_offset, unsigned int flag
 	    printk(KERN_NOTICE "cs: unable to map card memory!\n");
 	    return NULL;
 	}
-	mem->sys_start = mem->res->start;
-	mem->sys_stop = mem->res->end;
 	s->cis_virt = ioremap(mem->res->start, s->map_size);
     }
     mem->card_start = card_offset;
@@ -124,7 +122,7 @@ set_cis_map(struct pcmcia_socket *s, unsigned int card_offset, unsigned int flag
     if (s->features & SS_CAP_STATIC_MAP) {
 	if (s->cis_virt)
 	    iounmap(s->cis_virt);
-	s->cis_virt = ioremap(mem->sys_start, s->map_size);
+	s->cis_virt = ioremap(mem->static_start, s->map_size);
     }
     return s->cis_virt;
 }
@@ -143,7 +141,8 @@ set_cis_map(struct pcmcia_socket *s, unsigned int card_offset, unsigned int flag
 int read_cis_mem(struct pcmcia_socket *s, int attr, u_int addr,
 		 u_int len, void *ptr)
 {
-    u_char *sys, *end, *buf = ptr;
+    void __iomem *sys, *end;
+    unsigned char *buf = ptr;
     
     cs_dbg(s, 3, "read_cis_mem(%d, %#x, %u)\n", attr, addr, len);
 
@@ -206,7 +205,8 @@ int read_cis_mem(struct pcmcia_socket *s, int attr, u_int addr,
 void write_cis_mem(struct pcmcia_socket *s, int attr, u_int addr,
 		   u_int len, void *ptr)
 {
-    u_char *sys, *end, *buf = ptr;
+    void __iomem *sys, *end;
+    unsigned char *buf = ptr;
     
     cs_dbg(s, 3, "write_cis_mem(%d, %#x, %u)\n", attr, addr, len);
 

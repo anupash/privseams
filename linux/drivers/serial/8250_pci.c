@@ -83,7 +83,7 @@ struct pci_serial_quirk {
 
 struct serial_private {
 	unsigned int		nr;
-	void			*remapped_bar[PCI_NUM_BAR_RESOURCES];
+	void __iomem		*remapped_bar[PCI_NUM_BAR_RESOURCES];
 	struct pci_serial_quirk	*quirk;
 	int			line[0];
 };
@@ -243,7 +243,8 @@ static int __devinit pci_inteli960ni_init(struct pci_dev *dev)
  */
 static int __devinit pci_plx9050_init(struct pci_dev *dev)
 {
-	u8 *p, irq_config;
+	u8 irq_config;
+	void __iomem *p;
 
 	if ((pci_resource_flags(dev, 0) & IORESOURCE_MEM) == 0) {
 		moan_device("no memory in bar 0", dev);
@@ -272,12 +273,12 @@ static int __devinit pci_plx9050_init(struct pci_dev *dev)
 	p = ioremap(pci_resource_start(dev, 0), 0x80);
 	if (p == NULL)
 		return -ENOMEM;
-	writel(irq_config, (unsigned long)p + 0x4c);
+	writel(irq_config, p + 0x4c);
 
 	/*
 	 * Read the register back to ensure that it took effect.
 	 */
-	readl((unsigned long)p + 0x4c);
+	readl(p + 0x4c);
 	iounmap(p);
 
 	return 0;
@@ -397,7 +398,8 @@ static void __devexit sbs_exit(struct pci_dev *dev)
 
 static int pci_siig10x_init(struct pci_dev *dev)
 {
-	u16 data, *p;
+	u16 data;
+	void __iomem *p;
 
 	switch (dev->device & 0xfff8) {
 	case PCI_DEVICE_ID_SIIG_1S_10x:	/* 1S */
@@ -415,8 +417,8 @@ static int pci_siig10x_init(struct pci_dev *dev)
 	if (p == NULL)
 		return -ENOMEM;
 
-	writew(readw((unsigned long) p + 0x28) & data, (unsigned long) p + 0x28);
-	readw((unsigned long)p + 0x28);
+	writew(readw(p + 0x28) & data, p + 0x28);
+	readw(p + 0x28);
 	iounmap(p);
 	return 0;
 }
@@ -1068,6 +1070,9 @@ enum pci_board_num_t {
 	pbn_computone_6,
 	pbn_computone_8,
 	pbn_sbsxrsio,
+	pbn_exar_XR17C152,
+	pbn_exar_XR17C154,
+	pbn_exar_XR17C158,
 };
 
 /*
@@ -1488,7 +1493,30 @@ static struct pci_board pci_boards[] __devinitdata = {
 		.base_baud	= 460800,
 		.uart_offset	= 256,
 		.reg_shift	= 4,
-	}
+	},
+	/*
+	 * Exar Corp. XR17C15[248] Dual/Quad/Octal UART
+	 *  Only basic 16550A support.
+	 *  XR17C15[24] are not tested, but they should work.
+	 */
+	[pbn_exar_XR17C152] = {
+		.flags		= FL_BASE0,
+		.num_ports	= 2,
+		.base_baud	= 921600,
+		.uart_offset	= 0x200,
+	},
+	[pbn_exar_XR17C154] = {
+		.flags		= FL_BASE0,
+		.num_ports	= 4,
+		.base_baud	= 921600,
+		.uart_offset	= 0x200,
+	},
+	[pbn_exar_XR17C158] = {
+		.flags		= FL_BASE0,
+		.num_ports	= 8,
+		.base_baud	= 921600,
+		.uart_offset	= 0x200,
+	},
 };
 
 /*
@@ -2146,6 +2174,22 @@ static struct pci_device_id serial_pci_tbl[] = {
 	{	PCI_VENDOR_ID_DCI, PCI_DEVICE_ID_DCI_PCCOM8,
 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
 		pbn_b3_8_115200 },
+
+	/*
+	 * Exar Corp. XR17C15[248] Dual/Quad/Octal UART
+	 */
+	{	PCI_VENDOR_ID_EXAR, PCI_DEVICE_ID_EXAR_XR17C152,
+		PCI_ANY_ID, PCI_ANY_ID,
+		0,
+		0, pbn_exar_XR17C152 },
+	{	PCI_VENDOR_ID_EXAR, PCI_DEVICE_ID_EXAR_XR17C154,
+		PCI_ANY_ID, PCI_ANY_ID,
+		0,
+		0, pbn_exar_XR17C154 },
+	{	PCI_VENDOR_ID_EXAR, PCI_DEVICE_ID_EXAR_XR17C158,
+		PCI_ANY_ID, PCI_ANY_ID,
+		0,
+		0, pbn_exar_XR17C158 },
 
 	/*
 	 * These entries match devices with class COMMUNICATION_SERIAL,

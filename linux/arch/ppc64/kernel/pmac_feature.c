@@ -44,9 +44,9 @@
 #undef DEBUG_FEATURE
 
 #ifdef DEBUG_FEATURE
-#define DBG(fmt,...) printk(KERN_DEBUG fmt)
+#define DBG(fmt...) printk(KERN_DEBUG fmt)
 #else
-#define DBG(fmt,...)
+#define DBG(fmt...)
 #endif
 
 /*
@@ -343,6 +343,10 @@ static struct pmac_mb_def pmac_mb_defs[] __pmacdata = {
 		PMAC_TYPE_POWERMAC_G5,		g5_features,
 		0,
 	},
+	{	"PowerMac7,3",			"PowerMac G5",
+		PMAC_TYPE_POWERMAC_G5,		g5_features,
+		0,
+	},
 	{       "RackMac3,1",                   "XServe G5",
 		PMAC_TYPE_POWERMAC_G5,          g5_features,
 		0,
@@ -611,7 +615,7 @@ int __init pmac_feature_late_init(void)
 
 device_initcall(pmac_feature_late_init);
 
-
+#if 0
 static void dump_HT_speeds(char *name, u32 cfg, u32 frq)
 {
 	int	freqs[16] = { 200,300,400,500,600,800,1000,0,0,0,0,0,0,0,0,0 };
@@ -625,6 +629,7 @@ static void dump_HT_speeds(char *name, u32 cfg, u32 frq)
 		       name, freqs[freq],
 		       bits[(cfg >> 28) & 0x7], bits[(cfg >> 24) & 0x7]);
 }
+#endif
 
 void __init pmac_check_ht_link(void)
 {

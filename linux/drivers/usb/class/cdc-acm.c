@@ -142,7 +142,7 @@ static void acm_ctrl_irq(struct urb *urb, struct pt_regs *regs)
 
 		case ACM_IRQ_LINE_STATE:
 
-			newctrl = le16_to_cpu(get_unaligned((__u16 *) data));
+			newctrl = le16_to_cpu(get_unaligned((__le16 *) data));
 
 			if (acm->tty && !acm->clocal && (acm->ctrlin & ~newctrl & ACM_CTRL_DCD)) {
 				dbg("calling hangup");
@@ -248,16 +248,11 @@ out:
 static void acm_softint(void *private)
 {
 	struct acm *acm = private;
-	struct tty_struct *tty = acm->tty;
 	dbg("Entering acm_softint.\n");
 	
 	if (!ACM_READY(acm))
 		return;
-
-	if ((tty->flags & (1 << TTY_DO_WRITE_WAKEUP)) && tty->ldisc.write_wakeup)
-		(tty->ldisc.write_wakeup)(tty);
-
-	wake_up_interruptible(&tty->write_wait);
+	tty_wakeup(acm->tty);
 }
 
 /*
@@ -367,7 +362,7 @@ static int acm_tty_write(struct tty_struct *tty, int from_user, const unsigned c
 	acm->writeurb->dev = acm->dev;
 
 	acm->ready_for_write = 0;
-	stat = usb_submit_urb(acm->writeurb, GFP_NOIO);
+	stat = usb_submit_urb(acm->writeurb, from_user ? GFP_KERNEL : GFP_ATOMIC);
 	if (stat < 0) {
 		dbg("usb_submit_urb(write bulk) failed");
 		acm->ready_for_write = 1;
@@ -583,19 +578,25 @@ next_desc:
 	}
 
 	if (!union_header) {
-		dev_dbg(&intf->dev,"No union descriptor, giving up\n");
-		return -ENODEV;
-	}
-
-	control_interface = usb_ifnum_to_if(usb_dev, union_header->bMasterInterface0);
-	data_interface = usb_ifnum_to_if(usb_dev, (data_interface_num = union_header->bSlaveInterface0));
-	if (!control_interface || !data_interface) {
-		dev_dbg(&intf->dev,"no interfaces\n");
-		return -ENODEV;
+		if (call_interface_num > 0) {
+			dev_dbg(&intf->dev,"No union descriptor, using call management descriptor\n");
+			data_interface = usb_ifnum_to_if(usb_dev, (data_interface_num = call_interface_num));
+			control_interface = intf;
+		} else {
+			dev_dbg(&intf->dev,"No union descriptor, giving up\n");
+			return -ENODEV;
+		}
+	} else {
+		control_interface = usb_ifnum_to_if(usb_dev, union_header->bMasterInterface0);
+		data_interface = usb_ifnum_to_if(usb_dev, (data_interface_num = union_header->bSlaveInterface0));
+		if (!control_interface || !data_interface) {
+			dev_dbg(&intf->dev,"no interfaces\n");
+			return -ENODEV;
+		}
 	}
 	
-	if (data_interface_num != call_interface_num)
-		dev_dbg(&intf->dev,"Seperate call control interface. That is not fully supported.");
+		if (data_interface_num != call_interface_num)
+			dev_dbg(&intf->dev,"Seperate call control interface. That is not fully supported.");
 
 	if (usb_interface_claimed(data_interface)) { /* valid in this context */
 		dev_dbg(&intf->dev,"The data interface isn't available\n");

@@ -58,7 +58,7 @@ DECLARE_COMPLETION(jfsIOwait);
 
 #ifdef CONFIG_JFS_DEBUG
 int jfsloglevel = JFS_LOGLEVEL_WARN;
-module_param(jfsloglevel, int, 644);
+module_param(jfsloglevel, int, 0644);
 MODULE_PARM_DESC(jfsloglevel, "Specify JFS loglevel (0, 1 or 2)");
 #endif
 
@@ -77,7 +77,7 @@ extern int jfs_sync(void *);
 extern void jfs_read_inode(struct inode *inode);
 extern void jfs_dirty_inode(struct inode *inode);
 extern void jfs_delete_inode(struct inode *inode);
-extern void jfs_write_inode(struct inode *inode, int wait);
+extern int jfs_write_inode(struct inode *inode, int wait);
 
 extern struct dentry *jfs_get_parent(struct dentry *dentry);
 extern int jfs_extendfs(struct super_block *, s64, int);

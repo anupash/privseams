@@ -282,7 +282,7 @@ static void __devexit radeon_unmap_ROM(struct radeonfb_info *rinfo, struct pci_d
 
 static int __devinit radeon_map_ROM(struct radeonfb_info *rinfo, struct pci_dev *dev)
 {
-	void *rom;
+	void __iomem *rom;
 	struct resource *r;
 	u16 dptr;
 	u8 rom_type;
@@ -395,13 +395,13 @@ static int  __devinit radeon_find_mem_vbios(struct radeonfb_info *rinfo)
 	 * if we end up having conflicts
 	 */
         u32  segstart;
-        unsigned char *rom_base = NULL;
+	void __iomem *rom_base = NULL;
                                                 
         for(segstart=0x000c0000; segstart<0x000f0000; segstart+=0x00001000) {
-                rom_base = (char *)ioremap(segstart, 0x10000);
+                rom_base = ioremap(segstart, 0x10000);
 		if (rom_base == NULL)
 			return -ENOMEM;
-                if ((*rom_base == 0x55) && (((*(rom_base + 1)) & 0xff) == 0xaa))
+                if (readb(rom_base) == 0x55 && readb(rom_base + 1) == 0xaa)
 	                break;
                 iounmap(rom_base);
 		rom_base = NULL;
@@ -1702,68 +1702,6 @@ int radeonfb_set_par(struct fb_info *info)
 }
 
 
-
-static ssize_t radeonfb_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
-{
-	unsigned long p = *ppos;
-	struct inode *inode = file->f_dentry->d_inode;
-	int fbidx = iminor(inode);
-	struct fb_info *info = registered_fb[fbidx];
-	struct radeonfb_info *rinfo = info->par;
-	
-	if (p >= rinfo->mapped_vram)
-	    return 0;
-	if (count >= rinfo->mapped_vram)
-	    count = rinfo->mapped_vram;
-	if (count + p > rinfo->mapped_vram)
-		count = rinfo->mapped_vram - p;
-	radeonfb_sync(info);
-	if (count) {
-	    char *base_addr;
-
-	    base_addr = info->screen_base;
-	    count -= copy_to_user(buf, base_addr+p, count);
-	    if (!count)
-		return -EFAULT;
-	    *ppos += count;
-	}
-	return count;
-}
-
-static ssize_t radeonfb_write(struct file *file, const char __user *buf, size_t count,
-			      loff_t *ppos)
-{
-	unsigned long p = *ppos;
-	struct inode *inode = file->f_dentry->d_inode;
-	int fbidx = iminor(inode);
-	struct fb_info *info = registered_fb[fbidx];
-	struct radeonfb_info *rinfo = info->par;
-	int err;
-
-	if (p > rinfo->mapped_vram)
-	    return -ENOSPC;
-	if (count >= rinfo->mapped_vram)
-	    count = rinfo->mapped_vram;
-	err = 0;
-	if (count + p > rinfo->mapped_vram) {
-	    count = rinfo->mapped_vram - p;
-	    err = -ENOSPC;
-	}
-	radeonfb_sync(info);
-	if (count) {
-	    char *base_addr;
-
-	    base_addr = info->screen_base;
-	    count -= copy_from_user(base_addr+p, buf, count);
-	    *ppos += count;
-	    err = -EFAULT;
-	}
-	if (count)
-		return count;
-	return err;
-}
-
-
 static struct fb_ops radeonfb_ops = {
 	.owner			= THIS_MODULE,
 	.fb_check_var		= radeonfb_check_var,
@@ -1776,8 +1714,6 @@ static struct fb_ops radeonfb_ops = {
 	.fb_fillrect		= radeonfb_fillrect,
 	.fb_copyarea		= radeonfb_copyarea,
 	.fb_imageblit		= radeonfb_imageblit,
-	.fb_read		= radeonfb_read,
-	.fb_write		= radeonfb_write,
 	.fb_cursor		= soft_cursor,
 };
 
@@ -1795,8 +1731,8 @@ static int __devinit radeon_set_fbinfo (struct radeonfb_info *rinfo)
 		    | FBINFO_HWACCEL_XPAN
 		    | FBINFO_HWACCEL_YPAN;
 	info->fbops = &radeonfb_ops;
-	info->screen_base = (char *)rinfo->fb_base;
-
+	info->screen_base = rinfo->fb_base;
+	info->screen_size = rinfo->mapped_vram;
 	/* Fill fix common fields */
 	strlcpy(info->fix.id, rinfo->name, sizeof(info->fix.id));
         info->fix.smem_start = rinfo->fb_base_phys;
@@ -1932,7 +1868,7 @@ static int radeon_set_backlight_level(int level, void *data)
 #undef SET_MC_FB_FROM_APERTURE
 static void fixup_memory_mappings(struct radeonfb_info *rinfo)
 {
-	u32 save_crtc_gen_cntl, save_crtc2_gen_cntl;
+	u32 save_crtc_gen_cntl, save_crtc2_gen_cntl = 0;
 	u32 save_crtc_ext_cntl;
 	u32 aper_base, aper_size;
 	u32 agp_base;
@@ -2069,19 +2005,22 @@ static int radeonfb_pci_register (struct pci_dev *pdev,
 	struct fb_info *info;
 	struct radeonfb_info *rinfo;
 	u32 tmp;
+	int ret;
 
 	RTRACE("radeonfb_pci_register BEGIN\n");
 	
 	/* Enable device in PCI config */
-	if (pci_enable_device(pdev) != 0) {
+	ret = pci_enable_device(pdev);
+	if (ret < 0) {
 		printk(KERN_ERR "radeonfb: Cannot enable PCI device\n");
-		return -ENODEV;
+		goto err_out;
 	}
 
 	info = framebuffer_alloc(sizeof(struct radeonfb_info), &pdev->dev);
 	if (!info) {
 		printk (KERN_ERR "radeonfb: could not allocate memory\n");
-		return -ENODEV;
+		ret = -ENOMEM;
+		goto err_disable;
 	}
 	rinfo = info->par;
 	rinfo->info = info;	
@@ -2106,23 +2045,19 @@ static int radeonfb_pci_register (struct pci_dev *pdev,
 	rinfo->mmio_base_phys = pci_resource_start (pdev, 2);
 
 	/* request the mem regions */
-	if (!request_mem_region (rinfo->fb_base_phys,
-				 pci_resource_len(pdev, 0), "radeonfb")) {
-		printk (KERN_ERR "radeonfb: cannot reserve FB region\n");
-		goto free_rinfo;
-	}
-
-	if (!request_mem_region (rinfo->mmio_base_phys,
-				 pci_resource_len(pdev, 2), "radeonfb")) {
-		printk (KERN_ERR "radeonfb: cannot reserve MMIO region\n");
-		goto release_fb;
+	ret = pci_request_regions(pdev, "radeonfb");
+	if (ret < 0) {
+		printk( KERN_ERR "radeonfb: cannot reserve PCI regions."
+			"  Someone already got them?\n");
+		goto err_release_fb;
 	}
 
 	/* map the regions */
-	rinfo->mmio_base = (unsigned long) ioremap (rinfo->mmio_base_phys, RADEON_REGSIZE);
+	rinfo->mmio_base = ioremap(rinfo->mmio_base_phys, RADEON_REGSIZE);
 	if (!rinfo->mmio_base) {
-		printk (KERN_ERR "radeonfb: cannot map MMIO\n");
-		goto release_mmio;
+		printk(KERN_ERR "radeonfb: cannot map MMIO\n");
+		ret = -EIO;
+		goto err_release_pci;
 	}
 
 	/* On PPC, the firmware sets up a memory mapping that tends
@@ -2226,32 +2161,23 @@ static int radeonfb_pci_register (struct pci_dev *pdev,
 
 	RTRACE("radeonfb: probed %s %ldk videoram\n", (rinfo->ram_type), (rinfo->video_ram/1024));
 
-	rinfo->mapped_vram = MAX_MAPPED_VRAM;
-	if (rinfo->video_ram < rinfo->mapped_vram)
-		rinfo->mapped_vram = rinfo->video_ram;
-	for (;;) {
-		rinfo->fb_base = (unsigned long) ioremap (rinfo->fb_base_phys,
-							  rinfo->mapped_vram);
-		if (rinfo->fb_base == 0 && rinfo->mapped_vram > MIN_MAPPED_VRAM) {
-			rinfo->mapped_vram /= 2;
-			continue;
-		}
-		memset_io(rinfo->fb_base, 0, rinfo->mapped_vram);
-		break;
-	}
+	rinfo->mapped_vram = min_t(unsigned long, MAX_MAPPED_VRAM, rinfo->video_ram);
 
-	if (!rinfo->fb_base) {
+	do {
+		rinfo->fb_base = ioremap (rinfo->fb_base_phys,
+					  rinfo->mapped_vram);
+	} while (   rinfo->fb_base == 0 &&
+		  ((rinfo->mapped_vram /=2) >= MIN_MAPPED_VRAM) );
+
+	if (rinfo->fb_base)
+		memset_io(rinfo->fb_base, 0, rinfo->mapped_vram);
+	else {
 		printk (KERN_ERR "radeonfb: cannot map FB\n");
-		goto unmap_rom;
+		ret = -EIO;
+		goto err_unmap_rom;
 	}
 
 	RTRACE("radeonfb: mapped %ldk videoram\n", rinfo->mapped_vram/1024);
-
-
-	/* Argh. Scary arch !!! */
-#ifdef CONFIG_PPC64
-	rinfo->fb_base = IO_TOKEN_TO_ADDR(rinfo->fb_base);
-#endif
 
 	/*
 	 * Check for required workaround for PLL accesses
@@ -2330,9 +2256,10 @@ static int radeonfb_pci_register (struct pci_dev *pdev,
 		printk("radeonfb: Power Management enabled for Mobility chipsets\n");
 	}
 
-	if (register_framebuffer(info) < 0) {
+	ret = register_framebuffer(info);
+	if (ret < 0) {
 		printk (KERN_ERR "radeonfb: could not register framebuffer\n");
-		goto unmap_fb;
+		goto err_unmap_fb;
 	}
 
 #ifdef CONFIG_MTRR
@@ -2358,30 +2285,30 @@ static int radeonfb_pci_register (struct pci_dev *pdev,
 	RTRACE("radeonfb_pci_register END\n");
 
 	return 0;
-unmap_fb:
-	iounmap ((void*)rinfo->fb_base);
-unmap_rom:	
+err_unmap_fb:
+	iounmap(rinfo->fb_base);
+err_unmap_rom:
 	if (rinfo->mon1_EDID)
 	    kfree(rinfo->mon1_EDID);
 	if (rinfo->mon2_EDID)
 	    kfree(rinfo->mon2_EDID);
 	if (rinfo->mon1_modedb)
 		fb_destroy_modedb(rinfo->mon1_modedb);
+	fb_dealloc_cmap(&info->cmap);
 #ifdef CONFIG_FB_RADEON_I2C
 	radeon_delete_i2c_busses(rinfo);
 #endif
 	if (rinfo->bios_seg)
 		radeon_unmap_ROM(rinfo, pdev);
-	iounmap ((void*)rinfo->mmio_base);
-release_mmio:
-	release_mem_region (rinfo->mmio_base_phys,
-			    pci_resource_len(pdev, 2));
-release_fb:	
-	release_mem_region (rinfo->fb_base_phys,
-			    pci_resource_len(pdev, 0));
-free_rinfo:	
+	iounmap(rinfo->mmio_base);
+err_release_pci:
+	pci_release_regions(pdev);
+err_release_fb:
 	framebuffer_release(info);
-	return -ENODEV;
+err_disable:
+	pci_disable_device(pdev);
+err_out:
+	return ret;
 }
 
 
@@ -2410,13 +2337,10 @@ static void __devexit radeonfb_pci_unregister (struct pci_dev *pdev)
 
         unregister_framebuffer(info);
 
-        iounmap ((void*)rinfo->mmio_base);
-        iounmap ((void*)rinfo->fb_base);
+        iounmap(rinfo->mmio_base);
+        iounmap(rinfo->fb_base);
  
-	release_mem_region (rinfo->mmio_base_phys,
-			    pci_resource_len(pdev, 2));
-	release_mem_region (rinfo->fb_base_phys,
-			    pci_resource_len(pdev, 0));
+ 	pci_release_regions(pdev);
 
 	if (rinfo->mon1_EDID)
 		kfree(rinfo->mon1_EDID);
@@ -2427,7 +2351,9 @@ static void __devexit radeonfb_pci_unregister (struct pci_dev *pdev)
 #ifdef CONFIG_FB_RADEON_I2C
 	radeon_delete_i2c_busses(rinfo);
 #endif        
+	fb_dealloc_cmap(&info->cmap);
         framebuffer_release(info);
+	pci_disable_device(pdev);
 }
 
 
@@ -2442,9 +2368,17 @@ static struct pci_driver radeonfb_driver = {
 #endif /* CONFIG_PM */
 };
 
+int __init radeonfb_setup (char *options);
 
 int __init radeonfb_init (void)
 {
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("radeonfb", &option))
+		return -ENODEV;
+	radeonfb_setup(option);
+#endif
 	return pci_module_init (&radeonfb_driver);
 }
 
@@ -2489,9 +2423,9 @@ int __init radeonfb_setup (char *options)
 	return 0;
 }
 
+module_init(radeonfb_init);
 
 #ifdef MODULE
-module_init(radeonfb_init);
 module_exit(radeonfb_exit);
 #endif
 

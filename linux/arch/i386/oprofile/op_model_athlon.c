@@ -70,7 +70,7 @@ static void athlon_setup_ctrs(struct op_msrs const * const msrs)
 
 	/* enable active counters */
 	for (i = 0; i < NUM_COUNTERS; ++i) {
-		if (counter_config[i].event) {
+		if (counter_config[i].enabled) {
 			reset_value[i] = counter_config[i].count;
 
 			CTR_WRITE(counter_config[i].count, msrs, i);
@@ -96,7 +96,7 @@ static int athlon_check_ctrs(unsigned int const cpu,
 {
 	unsigned int low, high;
 	int i;
-	unsigned long eip = instruction_pointer(regs);
+	unsigned long eip = profile_pc(regs);
 	int is_kernel = !user_mode(regs);
 
 	for (i = 0 ; i < NUM_COUNTERS; ++i) {

@@ -74,12 +74,12 @@ void
 show_stack (struct task_struct *task, unsigned long *sp)
 {
 	if (!task)
-		unw_init_running(ia64_do_show_stack, 0);
+		unw_init_running(ia64_do_show_stack, NULL);
 	else {
 		struct unw_frame_info info;
 
 		unw_init_from_blocked_task(&info, task);
-		ia64_do_show_stack(&info, 0);
+		ia64_do_show_stack(&info, NULL);
 	}
 }
 
@@ -138,7 +138,7 @@ show_regs (struct pt_regs *regs)
 		ndirty = (regs->loadrs >> 19);
 		bsp = ia64_rse_skip_regs((unsigned long *) regs->ar_bspstore, ndirty);
 		for (i = 0; i < sof; ++i) {
-			get_user(val, ia64_rse_skip_regs(bsp, i));
+			get_user(val, (unsigned long __user *) ia64_rse_skip_regs(bsp, i));
 			printk("r%-3u:%c%016lx%s", 32 + i, is_nat ? '*' : ' ', val,
 			       ((i == sof - 1) || (i % 3) == 2) ? "\n" : " ");
 		}
@@ -228,18 +228,26 @@ cpu_idle (void *unused)
 
 	/* endless idle loop with no priority at all */
 	while (1) {
-		void (*idle)(void) = pm_idle;
-		if (!idle)
-			idle = default_idle;
-
 #ifdef CONFIG_SMP
 		if (!need_resched())
 			min_xtp();
 #endif
 		while (!need_resched()) {
+			void (*idle)(void);
+
 			if (mark_idle)
 				(*mark_idle)(1);
+			/*
+			 * Mark this as an RCU critical section so that
+			 * synchronize_kernel() in the unload path waits
+			 * for our completion.
+			 */
+			rcu_read_lock();
+			idle = pm_idle;
+			if (!idle)
+				idle = default_idle;
 			(*idle)();
+			rcu_read_unlock();
 		}
 
 		if (mark_idle)
@@ -602,16 +610,18 @@ dump_fpu (struct pt_regs *pt, elf_fpregset_t dst)
 }
 
 asmlinkage long
-sys_execve (char *filename, char **argv, char **envp, struct pt_regs *regs)
+sys_execve (char __user *filename, char __user * __user *argv, char __user * __user *envp,
+	    struct pt_regs *regs)
 {
+	char *fname;
 	int error;
 
-	filename = getname(filename);
-	error = PTR_ERR(filename);
-	if (IS_ERR(filename))
+	fname = getname(filename);
+	error = PTR_ERR(fname);
+	if (IS_ERR(fname))
 		goto out;
-	error = do_execve(filename, argv, envp, regs);
-	putname(filename);
+	error = do_execve(fname, argv, envp, regs);
+	putname(fname);
 out:
 	return error;
 }
@@ -743,7 +753,7 @@ cpu_halt (void)
 void
 machine_restart (char *restart_cmd)
 {
-	(*efi.reset_system)(EFI_RESET_WARM, 0, 0, 0);
+	(*efi.reset_system)(EFI_RESET_WARM, 0, 0, NULL);
 }
 
 EXPORT_SYMBOL(machine_restart);

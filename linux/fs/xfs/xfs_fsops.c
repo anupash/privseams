@@ -142,6 +142,7 @@ xfs_growfs_data_private(
 	int			dpct;
 	int			error;
 	xfs_agnumber_t		nagcount;
+	xfs_agnumber_t		nagimax = 0;
 	xfs_rfsblock_t		nb, nb_mod;
 	xfs_rfsblock_t		new;
 	xfs_rfsblock_t		nfree;
@@ -183,7 +184,7 @@ xfs_growfs_data_private(
 		memset(&mp->m_perag[oagcount], 0,
 			(nagcount - oagcount) * sizeof(xfs_perag_t));
 		mp->m_flags |= XFS_MOUNT_32BITINODES;
-		xfs_initialize_perag(mp, nagcount);
+		nagimax = xfs_initialize_perag(mp, nagcount);
 		up_write(&mp->m_peraglock);
 	}
 	tp = xfs_trans_alloc(mp, XFS_TRANS_GROWFS);
@@ -372,6 +373,9 @@ xfs_growfs_data_private(
 	if (error) {
 		return error;
 	}
+	/* New allocation groups fully initialized, so update mount struct */
+	if (nagimax)
+		mp->m_maxagi = nagimax;
 	if (mp->m_sb.sb_imax_pct) {
 		__uint64_t icount = mp->m_sb.sb_dblocks * mp->m_sb.sb_imax_pct;
 		do_div(icount, 100);
@@ -507,9 +511,9 @@ xfs_reserve_blocks(
 	__uint64_t              *inval,
 	xfs_fsop_resblks_t      *outval)
 {
-	__uint64_t              lcounter, delta;
-	__uint64_t              request;
-	unsigned long s;
+	__int64_t		lcounter, delta;
+	__uint64_t		request;
+	unsigned long		s;
 
 	/* If inval is null, report current values and return */
 
@@ -536,8 +540,7 @@ xfs_reserve_blocks(
 		mp->m_resblks = request;
 	} else {
 		delta = request - mp->m_resblks;
-		lcounter = mp->m_sb.sb_fdblocks;
-		lcounter -= delta;
+		lcounter = mp->m_sb.sb_fdblocks - delta;
 		if (lcounter < 0) {
 			/* We can't satisfy the request, just get what we can */
 			mp->m_resblks += mp->m_sb.sb_fdblocks;
@@ -587,9 +590,6 @@ xfs_fs_goingdown(
 	xfs_mount_t	*mp,
 	__uint32_t	inflags)
 {
-	if (!capable(CAP_SYS_ADMIN))
-		return -EPERM;
-
 	switch (inflags) {
 	case XFS_FSOP_GOING_FLAGS_DEFAULT: {
 		struct vfs *vfsp = XFS_MTOVFS(mp);
@@ -599,7 +599,7 @@ xfs_fs_goingdown(
 			xfs_force_shutdown(mp, XFS_FORCE_UMOUNT);
 			thaw_bdev(sb->s_bdev, sb);
 		}
-
+	
 		break;
 	}
 	case XFS_FSOP_GOING_FLAGS_LOGFLUSH:

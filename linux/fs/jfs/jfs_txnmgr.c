@@ -165,7 +165,6 @@ struct {
  * external references
  */
 extern int lmGroupCommit(struct jfs_log *, struct tblock *);
-extern void lmSync(struct jfs_log *);
 extern int jfs_commit_inode(struct inode *, int);
 extern int jfs_stop_threads;
 
@@ -2621,8 +2620,6 @@ void txAbort(tid_t tid, int dirty)
 	struct metapage *mp;
 	struct tblock *tblk = tid_to_tblock(tid);
 	struct tlock *tlck;
-
-	jfs_warn("txAbort: tid:%d dirty:0x%x", tid, dirty);
 
 	/*
 	 * free tlocks of the transaction

@@ -8,7 +8,7 @@
  *	(C) Copyright 2000 Linuxcare, Inc.
  * 	(C) Copyright 2000 Linuxcare Canada, Inc.
  *	(C) Copyright 2000 Martin K. Petersen <mkp@linuxcare.com>
- * 	(C) Copyright 2000 Alex deVries <alex@linuxcare.com>
+ * 	(C) Copyright 2000 Alex deVries <alex@onefishtwo.ca>
  *      (C) Copyright 2001 John Marvin <jsm fc hp com>
  *      (C) Copyright 2003 Grant Grundler <grundler parisc-linux org>
  *
@@ -484,6 +484,7 @@ void superio_fixup_pci(struct pci_dev *pdev)
 	pci_read_config_byte(pdev, PCI_CLASS_PROG, &prog);
 	printk("PCI: Enabled native mode for NS87415 (pif=0x%x)\n", prog);
 }
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_NS, PCI_DEVICE_ID_NS_87415, superio_fixup_pci);
 
 /* Because of a defect in Super I/O, all reads of the PCI DMA status 
  * registers, IDE status register and the IDE select register need to be 

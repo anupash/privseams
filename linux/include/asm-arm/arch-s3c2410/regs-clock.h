@@ -1,6 +1,6 @@
 /* linux/include/asm/arch-s3c2410/regs-clock.h
  *
- * Copyright (c) 2003 Simtec Electronics <linux@simtec.co.uk>
+ * Copyright (c) 2003,2004 Simtec Electronics <linux@simtec.co.uk>
  *		      http://www.simtec.co.uk/products/SWLINUX/
  *
  * This program is free software; you can redistribute it and/or modify
@@ -10,11 +10,12 @@
  * S3C2410 clock register definitions
  *
  *  Changelog:
- *    19-06-2003     BJD     Created file
- *    12-03-2004     BJD     Updated include protection
+ *    18-Aug-2004 Ben Dooks      Added 2440 definitions
+ *    08-Aug-2004 Herbert Pötzl  Added CLKCON definitions
+ *    19-06-2003  Ben Dooks      Created file
+ *    12-03-2004  Ben Dooks      Updated include protection
+ *    29-Sep-2004 Ben Dooks	 Fixed usage for assembly inclusion
  */
-
-
 
 #ifndef __ASM_ARM_REGS_CLOCK
 #define __ASM_ARM_REGS_CLOCK "$Id: clock.h,v 1.4 2003/04/30 14:50:51 ben Exp $"
@@ -29,6 +30,24 @@
 #define S3C2410_CLKCON	    S3C2410_CLKREG(0x0C)
 #define S3C2410_CLKSLOW	    S3C2410_CLKREG(0x10)
 #define S3C2410_CLKDIVN	    S3C2410_CLKREG(0x14)
+
+#define S3C2410_CLKCON_IDLE	     (1<<2)
+#define S3C2410_CLKCON_POWER	     (1<<3)
+#define S3C2410_CLKCON_NAND	     (1<<4)
+#define S3C2410_CLKCON_LCDC	     (1<<5)
+#define S3C2410_CLKCON_USBH	     (1<<6)
+#define S3C2410_CLKCON_USBD	     (1<<7)
+#define S3C2410_CLKCON_PWMT	     (1<<8)
+#define S3C2410_CLKCON_SDI	     (1<<9)
+#define S3C2410_CLKCON_UART0	     (1<<10)
+#define S3C2410_CLKCON_UART1	     (1<<11)
+#define S3C2410_CLKCON_UART2	     (1<<12)
+#define S3C2410_CLKCON_GPIO	     (1<<13)
+#define S3C2410_CLKCON_RTC	     (1<<14)
+#define S3C2410_CLKCON_ADC	     (1<<15)
+#define S3C2410_CLKCON_IIC	     (1<<16)
+#define S3C2410_CLKCON_IIS	     (1<<17)
+#define S3C2410_CLKCON_SPI	     (1<<18)
 
 #define S3C2410_PLLCON_MDIVSHIFT     12
 #define S3C2410_PLLCON_PDIVSHIFT     4
@@ -53,6 +72,8 @@
 #define S3C2410_CLKDIVN_PDIVN	     (1<<0)
 #define S3C2410_CLKDIVN_HDIVN	     (1<<1)
 
+#ifndef __ASSEMBLY__
+
 static inline unsigned int
 s3c2410_get_pll(int pllval, int baseclk)
 {
@@ -68,5 +89,32 @@ s3c2410_get_pll(int pllval, int baseclk)
 
   return (baseclk * (mdiv + 8)) / ((pdiv + 2) << sdiv);
 }
+
+#endif /* __ASSEMBLY__ */
+
+#ifdef CONFIG_CPU_S3C2440
+
+/* extra registers */
+#define S3C2440_CAMDIVN	    S3C2410_CLKREG(0x14)
+
+#define S3C2440_CLKCON_CAMERA        (1<<19)
+#define S3C2440_CLKCON_AC97          (1<<20)
+
+#define S3C2440_CLKDIVN_PDIVN	     (1<<0)
+#define S3C2440_CLKDIVN_HDIVN_MASK   (3<<1)
+#define S3C2440_CLKDIVN_HDIVN_1      (0<<1)
+#define S3C2440_CLKDIVN_HDIVN_2      (1<<1)
+#define S3C2440_CLKDIVN_HDIVN_4_8    (2<<1)
+#define S3C2440_CLKDIVN_HDIVN_3_6    (3<<1)
+#define S3C2440_CLKDIVN_UCLK         (1<<3)
+
+#define S3C2440_CAMDIVN_CAMCLK_MASK  (0xf<<0)
+#define S3C2440_CAMDIVN_CAMCLK_SEL   (1<<4)
+#define S3C2440_CAMDIVN_HCLK3_HALF   (1<<8)
+#define S3C2440_CAMDIVN_HCLK4_HALF   (1<<9)
+#define S3C2440_CAMDIVN_DVSEN        (1<<12)
+
+#endif /* CONFIG_CPU_S3C2440 */
+
 
 #endif /* __ASM_ARM_REGS_CLOCK */

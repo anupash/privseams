@@ -190,10 +190,10 @@ fh_verify(struct svc_rqst *rqstp, struct svc_fh *fhp, int type, int access)
 			dentry = dget(exp->ex_dentry);
 		else {
 			struct export_operations *nop = exp->ex_mnt->mnt_sb->s_export_op;
-				dentry = CALL(nop,decode_fh)(exp->ex_mnt->mnt_sb,
-							     datap, data_left,
-							     fileid_type,
-							     nfsd_acceptable, exp);
+			dentry = CALL(nop,decode_fh)(exp->ex_mnt->mnt_sb,
+						     datap, data_left,
+						     fileid_type,
+						     nfsd_acceptable, exp);
 		}
 		if (dentry == NULL)
 			goto out;
@@ -339,13 +339,16 @@ fh_compose(struct svc_fh *fhp, struct svc_export *exp, struct dentry *dentry, st
 			ref_fh_fsid_type = ref_fh->fh_handle.fh_fsid_type;
 		if (ref_fh_fsid_type > 3)
 			ref_fh_fsid_type = 0;
-	}
-	/* make sure ref_fh type works for given export */
-	if (ref_fh_fsid_type == 1 &&
-	    !(exp->ex_flags & NFSEXP_FSID)) {
-		/* if we don't have an fsid, we cannot provide one... */
-		ref_fh_fsid_type = 0;
-	}
+
+		/* make sure ref_fh type works for given export */
+		if (ref_fh_fsid_type == 1 &&
+		    !(exp->ex_flags & NFSEXP_FSID)) {
+			/* if we don't have an fsid, we cannot provide one... */
+			ref_fh_fsid_type = 0;
+		}
+	} else if (exp->ex_flags & NFSEXP_FSID)
+		ref_fh_fsid_type = 1;
+
 	if (!old_valid_dev(ex_dev) && ref_fh_fsid_type == 0) {
 		/* for newer device numbers, we must use a newer fsid format */
 		ref_fh_version = 1;

@@ -270,6 +270,9 @@ int __init hitfb_init(void)
 	unsigned short lcdclor, ldr3, ldvndr;
 	int size;
 
+	if (fb_get_options("hitfb", NULL))
+		return -ENODEV;
+
 	hitfb_fix.smem_start = CONFIG_HD64461_IOBASE + 0x02000000;
 	hitfb_fix.smem_len = (MACH_HP690) ? 1024 * 1024 : 512 * 1024;
 
@@ -321,7 +324,7 @@ int __init hitfb_init(void)
 	fb_info.var = hitfb_var;
 	fb_info.fix = hitfb_fix;
 	fb_info.pseudo_palette = pseudo_palette;
-	fb_info.flags = FBINFO_FLAG_DEFAULT;
+	fb_info.flags = FBINFO_DEFAULT | FBINFO_HWACCEL_YPAN;
 
 	fb_info.screen_base = (void *)hitfb_fix.smem_start;
 
@@ -341,8 +344,9 @@ static void __exit hitfb_exit(void)
 	unregister_framebuffer(&fb_info);
 }
 
-#ifdef MODULE
 module_init(hitfb_init);
+
+#ifdef MODULE
 module_exit(hitfb_exit);
 #endif
 

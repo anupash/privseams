@@ -29,7 +29,7 @@
 
 #define	MIP_BUSY		1
 #define	MIP_SPIN		0xf0000
-#define	MIP_VALID		0x0100000000000000
+#define	MIP_VALID		0x0100000000000000ULL
 #define	MIP_PORT(VALUE)	((VALUE >> 32) & 0xffff)
 
 #define	MIP_RD_LO(VALUE)	(VALUE & 0xffffffff)   
@@ -103,6 +103,13 @@ struct mip_reg {
 
 #define	MIP_SW_APIC		0x1020b
 #define	MIP_FUNC(VALUE) 	(VALUE & 0xff)
+
+#if defined(CONFIG_X86_IO_APIC) && (defined(CONFIG_ACPI_INTERPRETER) || defined(CONFIG_ACPI_BOOT))
+#define IOAPIC_GSI_BOUND(ioapic) ((ioapic+1) * (nr_ioapic_registers[ioapic]-1))
+#define MAX_GSI_MAPSIZE 32
+#endif
+
+extern unsigned long io_apic_irqs;
 
 extern int parse_unisys_oem (char *oemptr, int oem_entries);
 extern int find_unisys_acpi_oem_table(unsigned long *oem_addr, int *length);

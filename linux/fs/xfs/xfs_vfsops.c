@@ -431,6 +431,16 @@ xfs_mount(
 	logdev = rtdev = NULL;
 
 	/*
+	 * Setup xfs_mount function vectors from available behaviors
+	 */
+	p = vfs_bhv_lookup(vfsp, VFS_POSITION_DM);
+	mp->m_dm_ops = p ? *(xfs_dmops_t *) vfs_bhv_custom(p) : xfs_dmcore_stub;
+	p = vfs_bhv_lookup(vfsp, VFS_POSITION_QM);
+	mp->m_qm_ops = p ? *(xfs_qmops_t *) vfs_bhv_custom(p) : xfs_qmcore_stub;
+	p = vfs_bhv_lookup(vfsp, VFS_POSITION_IO);
+	mp->m_io_ops = p ? *(xfs_ioops_t *) vfs_bhv_custom(p) : xfs_iocore_xfs;
+
+	/*
 	 * Open real time and log devices - order is important.
 	 */
 	if (args->logname[0]) {
@@ -455,68 +465,73 @@ xfs_mount(
 	}
 
 	/*
-	 * Setup xfs_mount function vectors from available behaviors
-	 */
-	p = vfs_bhv_lookup(vfsp, VFS_POSITION_DM);
-	mp->m_dm_ops = p ? *(xfs_dmops_t *) vfs_bhv_custom(p) : xfs_dmcore_stub;
-	p = vfs_bhv_lookup(vfsp, VFS_POSITION_QM);
-	mp->m_qm_ops = p ? *(xfs_qmops_t *) vfs_bhv_custom(p) : xfs_qmcore_stub;
-	p = vfs_bhv_lookup(vfsp, VFS_POSITION_IO);
-	mp->m_io_ops = p ? *(xfs_ioops_t *) vfs_bhv_custom(p) : xfs_iocore_xfs;
-
-	/*
 	 * Setup xfs_mount buffer target pointers
 	 */
+	error = ENOMEM;
 	mp->m_ddev_targp = xfs_alloc_buftarg(ddev);
-	if (rtdev)
+	if (!mp->m_ddev_targp) {
+		xfs_blkdev_put(logdev);
+		xfs_blkdev_put(rtdev);
+		return error;
+	}
+	if (rtdev) {
 		mp->m_rtdev_targp = xfs_alloc_buftarg(rtdev);
+		if (!mp->m_rtdev_targp)
+			goto error0;
+	}
 	mp->m_logdev_targp = (logdev && logdev != ddev) ?
 				xfs_alloc_buftarg(logdev) : mp->m_ddev_targp;
+	if (!mp->m_logdev_targp)
+		goto error0;
 
 	/*
 	 * Setup flags based on mount(2) options and then the superblock
 	 */
 	error = xfs_start_flags(vfsp, args, mp);
 	if (error)
-		goto error;
+		goto error1;
 	error = xfs_readsb(mp);
 	if (error)
-		goto error;
+		goto error1;
 	error = xfs_finish_flags(vfsp, args, mp);
-	if (error) {
-		xfs_freesb(mp);
-		goto error;
-	}
+	if (error)
+		goto error2;
 
 	/*
 	 * Setup xfs_mount buffer target pointers based on superblock
 	 */
-	xfs_setsize_buftarg(mp->m_ddev_targp, mp->m_sb.sb_blocksize,
-			    mp->m_sb.sb_sectsize);
-	if (logdev && logdev != ddev) {
+	error = xfs_setsize_buftarg(mp->m_ddev_targp, mp->m_sb.sb_blocksize,
+				    mp->m_sb.sb_sectsize);
+	if (!error && logdev && logdev != ddev) {
 		unsigned int	log_sector_size = BBSIZE;
 
 		if (XFS_SB_VERSION_HASSECTOR(&mp->m_sb))
 			log_sector_size = mp->m_sb.sb_logsectsize;
-		xfs_setsize_buftarg(mp->m_logdev_targp, mp->m_sb.sb_blocksize,
-				    log_sector_size);
+		error = xfs_setsize_buftarg(mp->m_logdev_targp,
+					    mp->m_sb.sb_blocksize,
+					    log_sector_size);
 	}
-	if (rtdev)
-		xfs_setsize_buftarg(mp->m_rtdev_targp, mp->m_sb.sb_blocksize,
-				    mp->m_sb.sb_blocksize);
+	if (!error && rtdev)
+		error = xfs_setsize_buftarg(mp->m_rtdev_targp,
+					    mp->m_sb.sb_blocksize,
+					    mp->m_sb.sb_sectsize);
+	if (error)
+		goto error2;
 
-	if (!(error = XFS_IOINIT(vfsp, args, flags)))
+	error = XFS_IOINIT(vfsp, args, flags);
+	if (!error)
 		return 0;
-
- error:
+error2:
+	if (mp->m_sb_bp)
+		xfs_freesb(mp);
+error1:
 	xfs_binval(mp->m_ddev_targp);
-	if (logdev != NULL && logdev != ddev) {
+	if (logdev && logdev != ddev)
 		xfs_binval(mp->m_logdev_targp);
-	}
-	if (rtdev != NULL) {
+	if (rtdev)
 		xfs_binval(mp->m_rtdev_targp);
-	}
-	xfs_unmountfs_close(mp, NULL);
+error0:
+	xfs_unmountfs_close(mp, credp);
 	return error;
 }
 
@@ -1037,6 +1052,11 @@ xfs_sync_inodes(
 				xfs_iunlock(ip, XFS_ILOCK_EXCL);
 				ip = ip->i_mnext;
 			}
+			continue;
+		}
+
+		if (VN_BAD(vp)) {
+			ip = ip->i_mnext;
 			continue;
 		}
 
@@ -1567,31 +1587,35 @@ xfs_vget(
 	vnode_t		**vpp,
 	fid_t		*fidp)
 {
-	xfs_fid_t	*xfid;
+	xfs_mount_t	*mp = XFS_BHVTOM(bdp);
+	xfs_fid_t	*xfid = (struct xfs_fid *)fidp;
 	xfs_inode_t	*ip;
 	int		error;
 	xfs_ino_t	ino;
 	unsigned int	igen;
-	xfs_mount_t	*mp;
 
-	xfid  = (struct xfs_fid *)fidp;
-	if (xfid->xfs_fid_len == sizeof(*xfid) - sizeof(xfid->xfs_fid_len)) {
-		ino  = xfid->xfs_fid_ino;
-		igen = xfid->xfs_fid_gen;
-	} else {
-		/*
-		 * Invalid.  Since handles can be created in user space
-		 * and passed in via gethandle(), this is not cause for
-		 * a panic.
-		 */
+	/*
+	 * Invalid.  Since handles can be created in user space and passed in
+	 * via gethandle(), this is not cause for a panic.
+	 */
+	if (xfid->xfs_fid_len != sizeof(*xfid) - sizeof(xfid->xfs_fid_len))
 		return XFS_ERROR(EINVAL);
-	}
-	mp = XFS_BHVTOM(bdp);
+
+	ino  = xfid->xfs_fid_ino;
+	igen = xfid->xfs_fid_gen;
+
+	/*
+	 * NFS can sometimes send requests for ino 0.  Fail them gracefully.
+	 */
+	if (ino == 0)
+		return XFS_ERROR(ESTALE);
+
 	error = xfs_iget(mp, NULL, ino, XFS_ILOCK_SHARED, &ip, 0);
 	if (error) {
 		*vpp = NULL;
 		return error;
 	}
+
 	if (ip == NULL) {
 		*vpp = NULL;
 		return XFS_ERROR(EIO);

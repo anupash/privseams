@@ -43,6 +43,7 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/uaccess.h>
+#include <asm/arch/pxa-regs.h>
 #include <asm/arch/bitfield.h>
 #include <asm/arch/pxafb.h>
 
@@ -1040,7 +1041,7 @@ static struct pxafb_info * __init pxafb_init_fbinfo(struct device *dev)
 	fbi->fb.var.vmode	= FB_VMODE_NONINTERLACED;
 
 	fbi->fb.fbops		= &pxafb_ops;
-	fbi->fb.flags		= FBINFO_FLAG_DEFAULT;
+	fbi->fb.flags		= FBINFO_DEFAULT;
 	fbi->fb.node		= -1;
 	fbi->fb.currcon		= -1;
 
@@ -1359,11 +1360,6 @@ static struct device_driver pxafb_driver = {
 #endif
 };
 
-int __devinit pxafb_init(void)
-{
-	return driver_register(&pxafb_driver);
-}
-
 #ifndef MODULE
 int __devinit pxafb_setup(char *options)
 {
@@ -1373,12 +1369,25 @@ int __devinit pxafb_setup(char *options)
 	return 0;
 }
 #else
-module_init(pxafb_init);
 # ifdef CONFIG_FB_PXA_PARAMETERS
 module_param_string(options, g_options, sizeof(g_options), 0);
 MODULE_PARM_DESC(options, "LCD parameters (see Documentation/fb/pxafb.txt)");
 # endif
 #endif
+
+int __devinit pxafb_init(void)
+{
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("pxafb", &option))
+		return -ENODEV;
+	pxafb_setup(option);
+#endif
+	return driver_register(&pxafb_driver);
+}
+
+module_init(pxafb_init);
 
 MODULE_DESCRIPTION("loadable framebuffer driver for PXA");
 MODULE_LICENSE("GPL");

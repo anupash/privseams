@@ -323,7 +323,7 @@ static void bw2_init_one(struct sbus_dev *sdev)
 		resp = &res;
 		all->info.var.xres = all->info.var.xres_virtual = 1152;
 		all->info.var.yres = all->info.var.yres_virtual = 900;
-		all->info.bits_per_pixel = 1;
+		all->info.var.bits_per_pixel = 1;
 		linebytes = 1152 / 8;
 	} else
 #else
@@ -337,6 +337,10 @@ static void bw2_init_one(struct sbus_dev *sdev)
 					       all->info.var.xres);
 	}
 #endif
+	all->info.var.red.length = all->info.var.green.length =
+		all->info.var.blue.length = all->info.var.bits_per_pixel;
+	all->info.var.red.offset = all->info.var.green.offset =
+		all->info.var.blue.offset = 0;
 
 	all->par.regs = (struct bw2_regs *)
 		sbus_ioremap(resp, BWTWO_REGISTER_OFFSET,
@@ -347,7 +351,7 @@ static void bw2_init_one(struct sbus_dev *sdev)
 
 	all->par.fbsize = PAGE_ALIGN(linebytes * all->info.var.yres);
 
-	all->info.flags = FBINFO_FLAG_DEFAULT;
+	all->info.flags = FBINFO_DEFAULT;
 	all->info.fbops = &bw2_ops;
 #if defined(CONFIG_SPARC32)
 	if (sdev)
@@ -382,6 +386,9 @@ int __init bw2_init(void)
 	struct sbus_bus *sbus;
 	struct sbus_dev *sdev;
 
+	if (fb_get_options("bw2fb", &option))
+		return -ENODEV;
+
 #ifdef CONFIG_SUN4
 	bw2_init_one(NULL);
 #endif
@@ -412,8 +419,9 @@ bw2_setup(char *arg)
 	return 0;
 }
 
-#ifdef MODULE
 module_init(bw2_init);
+
+#ifdef MODULE
 module_exit(bw2_exit);
 #endif
 

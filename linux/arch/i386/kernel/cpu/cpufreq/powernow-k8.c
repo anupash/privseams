@@ -32,7 +32,7 @@
 #include <asm/io.h>
 #include <asm/delay.h>
 
-#if defined(CONFIG_ACPI_PROCESSOR) || defined(CONFIG_ACPI_PROCESSOR_MODULE)
+#ifdef CONFIG_X86_POWERNOW_K8_ACPI
 #include <linux/acpi.h>
 #include <acpi/processor.h>
 #endif
@@ -664,7 +664,7 @@ static int find_psb_table(struct powernow_k8_data *data)
 	return -ENODEV;
 }
 
-#if defined(CONFIG_ACPI_PROCESSOR) || defined(CONFIG_ACPI_PROCESSOR_MODULE)
+#ifdef CONFIG_X86_POWERNOW_K8_ACPI
 static void powernow_k8_acpi_pst_values(struct powernow_k8_data *data, unsigned int index)
 {
 	if (!data->acpi_data.state_count)
@@ -948,13 +948,13 @@ static int __init powernowk8_cpu_init(struct cpufreq_policy *pol)
 		 * an UP version, and is deprecated by AMD.
 		 */
 
-		if (pol->cpu != 0) {
-			printk(KERN_ERR PFX "init not cpu 0\n");
+		if ((num_online_cpus() != 1) || (num_possible_cpus() != 1)) {
+			printk(KERN_INFO PFX "MP systems not supported by PSB BIOS structure\n");
 			kfree(data);
 			return -ENODEV;
 		}
-		if ((num_online_cpus() != 1) || (num_possible_cpus() != 1)) {
-			printk(KERN_INFO PFX "MP systems not supported by PSB BIOS structure\n");
+		if (pol->cpu != 0) {
+			printk(KERN_ERR PFX "init not cpu 0\n");
 			kfree(data);
 			return -ENODEV;
 		}
@@ -1024,7 +1024,7 @@ err_out:
 	return -ENODEV;
 }
 
-static int __exit powernowk8_cpu_exit (struct cpufreq_policy *pol)
+static int __devexit powernowk8_cpu_exit (struct cpufreq_policy *pol)
 {
 	struct powernow_k8_data *data = powernow_data[pol->cpu];
 
@@ -1076,7 +1076,7 @@ static struct cpufreq_driver cpufreq_amd64_driver = {
 	.verify = powernowk8_verify,
 	.target = powernowk8_target,
 	.init = powernowk8_cpu_init,
-	.exit = powernowk8_cpu_exit,
+	.exit = __devexit_p(powernowk8_cpu_exit),
 	.get = powernowk8_get,
 	.name = "powernow-k8",
 	.owner = THIS_MODULE,

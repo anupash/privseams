@@ -7,13 +7,9 @@
  *
  * CODE STATUS HIGHLIGHTS
  *
- * Used with a gadget driver like "zero.c" this enumerates fine to Windows
- * or Linux hosts; handles disconnect, reconnect, and reset, for full or
- * high speed operation; and passes USB-IF "chapter 9" tests.
- *
- * Handles standard stress loads from the Linux "usbtest" driver, with
- * either DMA (default) or PIO (use_dma=n) used for ep-{a,b,c,d}.  Testing
- * with "ttcp" (and the "ether.c" driver) behaves nicely too.
+ * This driver should work well with most "gadget" drivers, including
+ * the File Storage, Serial, and Ethernet/RNDIS gadget drivers
+ * as well as Gadget Zero and Gadgetfs.
  *
  * DMA is enabled by default.  Drivers using transfer queues might use
  * DMA chaining to remove IRQ latencies between transfers.  (Except when
@@ -257,7 +253,7 @@ net2280_enable (struct usb_ep *_ep, const struct usb_endpoint_descriptor *desc)
 	return 0;
 }
 
-static int handshake (u32 *ptr, u32 mask, u32 done, int usec)
+static int handshake (u32 __iomem *ptr, u32 mask, u32 done, int usec)
 {
 	u32	result;
 
@@ -276,7 +272,7 @@ static int handshake (u32 *ptr, u32 mask, u32 done, int usec)
 
 static struct usb_ep_ops net2280_ep_ops;
 
-static void ep_reset (struct net2280_regs *regs, struct net2280_ep *ep)
+static void ep_reset (struct net2280_regs __iomem *regs, struct net2280_ep *ep)
 {
 	u32		tmp;
 
@@ -307,14 +303,16 @@ static void ep_reset (struct net2280_regs *regs, struct net2280_ep *ep)
 	/* init to our chosen defaults, notably so that we NAK OUT
 	 * packets until the driver queues a read (+note erratum 0112)
 	 */
-	writel (  (1 << SET_NAK_OUT_PACKETS_MODE)
+	tmp = (1 << SET_NAK_OUT_PACKETS_MODE)
 		| (1 << SET_NAK_OUT_PACKETS)
 		| (1 << CLEAR_EP_HIDE_STATUS_PHASE)
-		| (1 << CLEAR_INTERRUPT_MODE)
-		| (1 << CLEAR_CONTROL_STATUS_PHASE_HANDSHAKE)
-		| (1 << CLEAR_ENDPOINT_TOGGLE)
-		| (1 << CLEAR_ENDPOINT_HALT)
-		, &ep->regs->ep_rsp);
+		| (1 << CLEAR_INTERRUPT_MODE);
+
+	if (ep->num != 0) {
+		tmp |= (1 << CLEAR_ENDPOINT_TOGGLE)
+			| (1 << CLEAR_ENDPOINT_HALT);
+	}
+	writel (tmp, &ep->regs->ep_rsp);
 
 	/* scrub most status bits, and flush any fifo state */
 	writel (  (1 << TIMEOUT)
@@ -517,7 +515,7 @@ net2280_free_buffer (
 static void
 write_fifo (struct net2280_ep *ep, struct usb_request *req)
 {
-	struct net2280_ep_regs	*regs = ep->regs;
+	struct net2280_ep_regs	__iomem *regs = ep->regs;
 	u8			*buf;
 	u32			tmp;
 	unsigned		count, total;
@@ -577,7 +575,8 @@ write_fifo (struct net2280_ep *ep, struct usb_request *req)
  */
 static void out_flush (struct net2280_ep *ep)
 {
-	u32	*statp, tmp;
+	u32	__iomem *statp;
+	u32	tmp;
 
 	ASSERT_OUT_NAKING (ep);
 
@@ -610,7 +609,7 @@ static void out_flush (struct net2280_ep *ep)
 static int
 read_fifo (struct net2280_ep *ep, struct net2280_request *req)
 {
-	struct net2280_ep_regs	*regs = ep->regs;
+	struct net2280_ep_regs	__iomem *regs = ep->regs;
 	u8			*buf = req->req.buf + req->req.actual;
 	unsigned		count, tmp, is_short;
 	unsigned		cleanup = 0, prevent = 0;
@@ -678,7 +677,7 @@ read_fifo (struct net2280_ep *ep, struct net2280_request *req)
 	}
 	if (count) {
 		tmp = readl (&regs->ep_data);
-		cpu_to_le32s (&tmp);
+		/* LE conversion is implicit here: */
 		do {
 			*buf++ = (u8) tmp;
 			tmp >>= 8;
@@ -737,12 +736,12 @@ static const u32 dmactl_default =
 		/* erratum 0116 workaround part 2 (no AUTOSTART) */
 		| (1 << DMA_ENABLE);
 
-static inline void spin_stop_dma (struct net2280_dma_regs *dma)
+static inline void spin_stop_dma (struct net2280_dma_regs __iomem *dma)
 {
 	handshake (&dma->dmactl, (1 << DMA_ENABLE), 0, 50);
 }
 
-static inline void stop_dma (struct net2280_dma_regs *dma)
+static inline void stop_dma (struct net2280_dma_regs __iomem *dma)
 {
 	writel (readl (&dma->dmactl) & ~(1 << DMA_ENABLE), &dma->dmactl);
 	spin_stop_dma (dma);
@@ -750,7 +749,7 @@ static inline void stop_dma (struct net2280_dma_regs *dma)
 
 static void start_queue (struct net2280_ep *ep, u32 dmactl, u32 td_dma)
 {
-	struct net2280_dma_regs	*dma = ep->dma;
+	struct net2280_dma_regs	__iomem *dma = ep->dma;
 
 	writel ((1 << VALID_BIT) | (ep->is_in << DMA_DIRECTION),
 			&dma->dmacount);
@@ -771,7 +770,7 @@ static void start_queue (struct net2280_ep *ep, u32 dmactl, u32 td_dma)
 static void start_dma (struct net2280_ep *ep, struct net2280_request *req)
 {
 	u32			tmp;
-	struct net2280_dma_regs	*dma = ep->dma;
+	struct net2280_dma_regs	__iomem *dma = ep->dma;
 
 	/* FIXME can't use DMA for ZLPs */
 
@@ -1419,10 +1418,34 @@ static int net2280_set_selfpowered (struct usb_gadget *_gadget, int value)
 	return 0;
 }
 
+static int net2280_pullup(struct usb_gadget *_gadget, int is_on)
+{
+	struct net2280  *dev;
+	u32             tmp;
+	unsigned long   flags;
+
+	if (!_gadget)
+		return -ENODEV;
+	dev = container_of (_gadget, struct net2280, gadget);
+
+	spin_lock_irqsave (&dev->lock, flags);
+	tmp = readl (&dev->usb->usbctl);
+	dev->softconnect = (is_on != 0);
+	if (is_on)
+		tmp |= (1 << USB_DETECT_ENABLE);
+	else
+		tmp &= ~(1 << USB_DETECT_ENABLE);
+	writel (tmp, &dev->usb->usbctl);
+	spin_unlock_irqrestore (&dev->lock, flags);
+
+	return 0;
+}
+
 static const struct usb_gadget_ops net2280_ops = {
 	.get_frame	= net2280_get_frame,
 	.wakeup		= net2280_wakeup,
 	.set_selfpowered = net2280_set_selfpowered,
+	.pullup		= net2280_pullup,
 };
 
 /*-------------------------------------------------------------------------*/
@@ -1807,8 +1830,6 @@ static void usb_reset (struct net2280 *dev)
 {
 	u32	tmp;
 
-	/* force immediate bus disconnect, and synch through pci */
-	writel (0, &dev->usb->usbctl);
 	dev->gadget.speed = USB_SPEED_UNKNOWN;
 	(void) readl (&dev->usb->usbctl);
 
@@ -1902,10 +1923,8 @@ static void ep0_start (struct net2280 *dev)
 		, &dev->usb->stdrsp);
 	writel (  (1 << USB_ROOT_PORT_WAKEUP_ENABLE)
 		| (1 << SELF_POWERED_USB_DEVICE)
-		/* erratum 0102 workaround */
-		| ((dev->chiprev == 0100) ? 0 : 1) << SUSPEND_IMMEDIATELY
 		| (1 << REMOTE_WAKEUP_SUPPORT)
-		| (1 << USB_DETECT_ENABLE)
+		| (dev->softconnect << USB_DETECT_ENABLE)
 		| (1 << SELF_POWERED_STATUS)
 		, &dev->usb->usbctl);
 
@@ -1957,6 +1976,7 @@ int usb_gadget_register_driver (struct usb_gadget_driver *driver)
 		dev->ep [i].irqs = 0;
 
 	/* hook up the driver ... */
+	dev->softconnect = 1;
 	driver->driver.bus = NULL;
 	dev->driver = driver;
 	dev->gadget.dev.driver = &driver->driver;
@@ -2027,6 +2047,8 @@ int usb_gadget_unregister_driver (struct usb_gadget_driver *driver)
 	spin_lock_irqsave (&dev->lock, flags);
 	stop_activity (dev, driver);
 	spin_unlock_irqrestore (&dev->lock, flags);
+
+	net2280_pullup (&dev->gadget, 0);
 
 	driver->unbind (&dev->gadget);
 	dev->gadget.dev.driver = NULL;
@@ -2492,15 +2514,23 @@ next_endpoints:
 static void handle_stat1_irqs (struct net2280 *dev, u32 stat)
 {
 	struct net2280_ep	*ep;
-	u32			tmp, num, scratch;
+	u32			tmp, num, mask, scratch;
 
 	/* after disconnect there's nothing else to do! */
 	tmp = (1 << VBUS_INTERRUPT) | (1 << ROOT_PORT_RESET_INTERRUPT);
+	mask = (1 << HIGH_SPEED) | (1 << FULL_SPEED);
+
+	/* VBUS disconnect is indicated by VBUS_PIN and VBUS_INTERRUPT set.
+	 * Root Port Reset is indicated by ROOT_PORT_RESET_INTERRRUPT set and
+	 * both HIGH_SPEED and FULL_SPEED clear (as ROOT_PORT_RESET_INTERRUPT 
+	 * only indicates a change in the reset state).
+	 */
 	if (stat & tmp) {
 		writel (tmp, &dev->regs->irqstat1);
-		if (((stat & (1 << ROOT_PORT_RESET_INTERRUPT)) != 0
-			|| (readl (&dev->usb->usbctl) & (1 << VBUS_PIN)) == 0
-			) && dev->gadget.speed != USB_SPEED_UNKNOWN) {
+		if ((((stat & (1 << ROOT_PORT_RESET_INTERRUPT)) && 
+				((readl (&dev->usb->usbstat) & mask) == 0))
+				|| ((readl (&dev->usb->usbctl) & (1 << VBUS_PIN)) == 0) 
+			    ) && ( dev->gadget.speed != USB_SPEED_UNKNOWN)) {
 			DEBUG (dev, "disconnect %s\n",
 					dev->driver->driver.name);
 			stop_activity (dev, dev->driver);
@@ -2525,8 +2555,6 @@ static void handle_stat1_irqs (struct net2280 *dev, u32 stat)
 		if (stat & (1 << SUSPEND_REQUEST_INTERRUPT)) {
 			if (dev->driver->suspend)
 				dev->driver->suspend (&dev->gadget);
-			/* we use SUSPEND_IMMEDIATELY */
-			stat &= ~(1 << SUSPEND_REQUEST_INTERRUPT);
 		} else {
 			if (dev->driver->resume)
 				dev->driver->resume (&dev->gadget);
@@ -2553,7 +2581,7 @@ static void handle_stat1_irqs (struct net2280 *dev, u32 stat)
 	stat &= ~DMA_INTERRUPTS;
 	scratch >>= 9;
 	for (num = 0; scratch; num++) {
-		struct net2280_dma_regs	*dma;
+		struct net2280_dma_regs	__iomem *dma;
 
 		tmp = 1 << num;
 		if ((tmp & scratch) == 0)
@@ -2722,7 +2750,7 @@ static int net2280_probe (struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	struct net2280		*dev;
 	unsigned long		resource, len;
-	void			*base = NULL;
+	void			__iomem *base = NULL;
 	int			retval, i;
 	char			buf [8], *bufp;
 
@@ -2780,14 +2808,15 @@ static int net2280_probe (struct pci_dev *pdev, const struct pci_device_id *id)
 		retval = -EFAULT;
 		goto done;
 	}
-	dev->regs = (struct net2280_regs *) base;
-	dev->usb = (struct net2280_usb_regs *) (base + 0x0080);
-	dev->pci = (struct net2280_pci_regs *) (base + 0x0100);
-	dev->dma = (struct net2280_dma_regs *) (base + 0x0180);
-	dev->dep = (struct net2280_dep_regs *) (base + 0x0200);
-	dev->epregs = (struct net2280_ep_regs *) (base + 0x0300);
+	dev->regs = (struct net2280_regs __iomem *) base;
+	dev->usb = (struct net2280_usb_regs __iomem *) (base + 0x0080);
+	dev->pci = (struct net2280_pci_regs __iomem *) (base + 0x0100);
+	dev->dma = (struct net2280_dma_regs __iomem *) (base + 0x0180);
+	dev->dep = (struct net2280_dep_regs __iomem *) (base + 0x0200);
+	dev->epregs = (struct net2280_ep_regs __iomem *) (base + 0x0300);
 
 	/* put into initial config, link up all endpoints */
+	writel (0, &dev->usb->usbctl);
 	usb_reset (dev);
 	usb_reinit (dev);
 

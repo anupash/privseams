@@ -373,7 +373,10 @@ int __devinit pci_scan_bridge(struct pci_bus *bus, struct pci_dev * dev, int max
 		child->bridge_ctl = bctl;
 
 		cmax = pci_scan_child_bus(child);
-		if (cmax > max) max = cmax;
+		if (cmax > max)
+			max = cmax;
+		if (child->subordinate > max)
+			max = child->subordinate;
 	} else {
 		/*
 		 * We need to assign a number to this bus which we always
@@ -571,6 +574,11 @@ static int pci_cfg_space_size(struct pci_dev *dev)
 	return PCI_CFG_SPACE_SIZE;
 }
 
+static void pci_release_bus_bridge_dev(struct device *dev)
+{
+	kfree(dev);
+}
+
 /*
  * Read the config data for a PCI device, sanity-check it
  * and fill in the dev structure...
@@ -640,7 +648,7 @@ pci_scan_single_device(struct pci_bus *bus, int devfn)
 		return NULL;
 	
 	/* Fix up broken headers */
-	pci_fixup_device(PCI_FIXUP_HEADER, dev);
+	pci_fixup_device(pci_fixup_header, dev);
 
 	/*
 	 * Add the device to our list of discovered devices
@@ -772,6 +780,7 @@ struct pci_bus * __devinit pci_scan_bus_parented(struct device *parent, int bus,
 
 	memset(dev, 0, sizeof(*dev));
 	dev->parent = parent;
+	dev->release = pci_release_bus_bridge_dev;
 	sprintf(dev->bus_id, "pci%04x:%02x", pci_domain_nr(b), bus);
 	device_register(dev);
 	b->bridge = get_device(dev);

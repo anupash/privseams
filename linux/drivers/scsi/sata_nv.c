@@ -20,6 +20,10 @@
  *  If you do not delete the provisions above, a recipient may use your
  *  version of this file under either the OSL or the GPL.
  *
+ *  0.03
+ *     - Fixed a bug where the hotplug handlers for non-CK804/MCP04 were using
+ *       mmio_base, which is only set for the CK804/MCP04 case.
+ *
  *  0.02
  *     - Added support for CK804 SATA controller.
  *
@@ -40,13 +44,12 @@
 #include <linux/libata.h>
 
 #define DRV_NAME			"sata_nv"
-#define DRV_VERSION			"0.02"
+#define DRV_VERSION			"0.03"
 
 #define NV_PORTS			2
 #define NV_PIO_MASK			0x1f
+#define NV_MWDMA_MASK			0x07
 #define NV_UDMA_MASK			0x7f
-#define NV_PORT0_BMDMA_REG_OFFSET	0x00
-#define NV_PORT1_BMDMA_REG_OFFSET	0x08
 #define NV_PORT0_SCR_REG_OFFSET		0x00
 #define NV_PORT1_SCR_REG_OFFSET		0x40
 
@@ -177,11 +180,12 @@ static struct pci_driver nv_pci_driver = {
 static Scsi_Host_Template nv_sht = {
 	.module			= THIS_MODULE,
 	.name			= DRV_NAME,
+	.ioctl			= ata_scsi_ioctl,
 	.queuecommand		= ata_scsi_queuecmd,
 	.eh_strategy_handler	= ata_scsi_error,
 	.can_queue		= ATA_DEF_QUEUE,
 	.this_id		= ATA_SHT_THIS_ID,
-	.sg_tablesize		= ATA_MAX_PRD,
+	.sg_tablesize		= LIBATA_MAX_PRD,
 	.max_sectors		= ATA_MAX_SECTORS,
 	.cmd_per_lun		= ATA_SHT_CMD_PER_LUN,
 	.emulated		= ATA_SHT_EMULATED,
@@ -194,13 +198,14 @@ static Scsi_Host_Template nv_sht = {
 
 static struct ata_port_operations nv_ops = {
 	.port_disable		= ata_port_disable,
-	.tf_load		= ata_tf_load_pio,
-	.tf_read		= ata_tf_read_pio,
-	.exec_command		= ata_exec_command_pio,
-	.check_status		= ata_check_status_pio,
+	.tf_load		= ata_tf_load,
+	.tf_read		= ata_tf_read,
+	.exec_command		= ata_exec_command,
+	.check_status		= ata_check_status,
+	.dev_select		= ata_std_dev_select,
 	.phy_reset		= sata_phy_reset,
-	.bmdma_setup		= ata_bmdma_setup_pio,
-	.bmdma_start		= ata_bmdma_start_pio,
+	.bmdma_setup		= ata_bmdma_setup,
+	.bmdma_start		= ata_bmdma_start,
 	.qc_prep		= ata_qc_prep,
 	.qc_issue		= ata_qc_issue_prot,
 	.eng_timeout		= ata_eng_timeout,
@@ -211,6 +216,18 @@ static struct ata_port_operations nv_ops = {
 	.port_start		= ata_port_start,
 	.port_stop		= ata_port_stop,
 	.host_stop		= nv_host_stop,
+};
+
+static struct ata_port_info nv_port_info = {
+	.sht		= &nv_sht,
+	.host_flags	= ATA_FLAG_SATA |
+			  ATA_FLAG_SATA_RESET |
+			  ATA_FLAG_SRST |
+			  ATA_FLAG_NO_LEGACY,
+	.pio_mask	= NV_PIO_MASK,
+	.mwdma_mask	= NV_MWDMA_MASK,
+	.udma_mask	= NV_UDMA_MASK,
+	.port_ops	= &nv_ops,
 };
 
 MODULE_AUTHOR("NVIDIA");
@@ -293,6 +310,7 @@ static int nv_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	static int printed_version = 0;
 	struct nv_host *host;
+	struct ata_port_info *ppi;
 	struct ata_probe_ent *probe_ent = NULL;
 	int rc;
 
@@ -314,7 +332,8 @@ static int nv_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (rc)
 		goto err_out_regions;
 
-	probe_ent = kmalloc(sizeof(*probe_ent), GFP_KERNEL);
+	ppi = &nv_port_info;
+	probe_ent = ata_pci_init_native_mode(pdev, &ppi);
 	if (!probe_ent) {
 		rc = -ENOMEM;
 		goto err_out_regions;
@@ -328,39 +347,6 @@ static int nv_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	host->host_desc = &nv_device_tbl[ent->driver_data];
 
-	memset(probe_ent, 0, sizeof(*probe_ent));
-	INIT_LIST_HEAD(&probe_ent->node);
-
-	probe_ent->pdev = pdev;
-	probe_ent->sht = &nv_sht;
-	probe_ent->host_flags = ATA_FLAG_SATA |
-				ATA_FLAG_SATA_RESET |
-				ATA_FLAG_SRST |
-				ATA_FLAG_NO_LEGACY;
-
-	probe_ent->port_ops = &nv_ops;
-	probe_ent->n_ports = NV_PORTS;
-	probe_ent->irq = pdev->irq;
-	probe_ent->irq_flags = SA_SHIRQ;
-	probe_ent->pio_mask = NV_PIO_MASK;
-	probe_ent->udma_mask = NV_UDMA_MASK;
-
-	probe_ent->port[0].cmd_addr = pci_resource_start(pdev, 0);
-	ata_std_ports(&probe_ent->port[0]);
-	probe_ent->port[0].altstatus_addr =
-	probe_ent->port[0].ctl_addr =
-		pci_resource_start(pdev, 1) | ATA_PCI_CTL_OFS;
-	probe_ent->port[0].bmdma_addr =
-		pci_resource_start(pdev, 4) | NV_PORT0_BMDMA_REG_OFFSET;
-
-	probe_ent->port[1].cmd_addr = pci_resource_start(pdev, 2);
-	ata_std_ports(&probe_ent->port[1]);
-	probe_ent->port[1].altstatus_addr =
-	probe_ent->port[1].ctl_addr =
-		pci_resource_start(pdev, 3) | ATA_PCI_CTL_OFS;
-	probe_ent->port[1].bmdma_addr =
-		pci_resource_start(pdev, 4) | NV_PORT1_BMDMA_REG_OFFSET;
-
 	probe_ent->private_data = host;
 
 	if (host->host_desc->host_flags & NV_HOST_FLAGS_SCR_MMIO) {
@@ -369,7 +355,7 @@ static int nv_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 		probe_ent->mmio_base = ioremap(pci_resource_start(pdev, 5),
 				pci_resource_len(pdev, 5));
 		if (probe_ent->mmio_base == NULL)
-			goto err_out_free_ent;
+			goto err_out_iounmap;
 
 		base = (unsigned long)probe_ent->mmio_base;
 
@@ -393,11 +379,15 @@ static int nv_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	rc = ata_device_add(probe_ent);
 	if (rc != NV_PORTS)
-		goto err_out_free_ent;
+		goto err_out_iounmap;
 
 	kfree(probe_ent);
 
 	return 0;
+
+err_out_iounmap:
+	if (host->host_desc->host_flags & NV_HOST_FLAGS_SCR_MMIO)
+		iounmap(probe_ent->mmio_base);
 
 err_out_free_ent:
 	kfree(probe_ent);
@@ -415,33 +405,33 @@ static void nv_enable_hotplug(struct ata_probe_ent *probe_ent)
 	u8 intr_mask;
 
 	outb(NV_INT_STATUS_HOTPLUG,
-		(unsigned long)probe_ent->mmio_base + NV_INT_STATUS);
+		probe_ent->port[0].scr_addr + NV_INT_STATUS);
 
-	intr_mask = inb((unsigned long)probe_ent->mmio_base + NV_INT_ENABLE);
+	intr_mask = inb(probe_ent->port[0].scr_addr + NV_INT_ENABLE);
 	intr_mask |= NV_INT_ENABLE_HOTPLUG;
 
-	outb(intr_mask, (unsigned long)probe_ent->mmio_base + NV_INT_ENABLE);
+	outb(intr_mask, probe_ent->port[0].scr_addr + NV_INT_ENABLE);
 }
 
 static void nv_disable_hotplug(struct ata_host_set *host_set)
 {
 	u8 intr_mask;
 
-	intr_mask = inb((unsigned long)host_set->mmio_base + NV_INT_ENABLE);
+	intr_mask = inb(host_set->ports[0]->ioaddr.scr_addr + NV_INT_ENABLE);
 
 	intr_mask &= ~(NV_INT_ENABLE_HOTPLUG);
 
-	outb(intr_mask, (unsigned long)host_set->mmio_base + NV_INT_ENABLE);
+	outb(intr_mask, host_set->ports[0]->ioaddr.scr_addr + NV_INT_ENABLE);
 }
 
 static void nv_check_hotplug(struct ata_host_set *host_set)
 {
 	u8 intr_status;
 
-	intr_status = inb((unsigned long)host_set->mmio_base + NV_INT_STATUS);
+	intr_status = inb(host_set->ports[0]->ioaddr.scr_addr + NV_INT_STATUS);
 
 	// Clear interrupt status.
-	outb(0xff, (unsigned long)host_set->mmio_base + NV_INT_STATUS);
+	outb(0xff, host_set->ports[0]->ioaddr.scr_addr + NV_INT_STATUS);
 
 	if (intr_status & NV_INT_STATUS_HOTPLUG) {
 		if (intr_status & NV_INT_STATUS_PDEV_ADDED)
