@@ -239,6 +239,9 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
 #define HIP_DSA_SIGNATURE_LEN        41
+/* Assume that RSA key is 1024 bits. RSA signature is as long as the key
+   (1024 bits -> 128 bytes) */
+#define HIP_RSA_SIGNATURE_LEN       128
 
 #define ENOTHIT                     666
 

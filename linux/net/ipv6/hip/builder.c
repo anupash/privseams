@@ -510,8 +510,6 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 
 	next_param = (struct hip_tlv_common *) pos;
 
-	_HIP_DEBUG("Next param is at slot: %d\n", (pos - (void *) msg));
-
 	/* check that the next parameter does not point
 	   a) out of the buffer with check_param_contents_len()
 	      - or - 
@@ -529,6 +527,8 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 
  out:
 	return next_param;
+
+
 }
 
 /**

@@ -222,7 +222,7 @@ int handle_hi(struct hip_common *msg,
   char addrstr[INET6_ADDRSTRLEN];
   char *dsa_filenamebase = NULL, *rsa_filenamebase = NULL;
   struct hip_lhi rsa_lhi, dsa_lhi;
-  struct hip_host_id *dsa_host_id, *rsa_host_id = NULL;
+  struct hip_host_id *dsa_host_id = NULL, *rsa_host_id = NULL;
   unsigned char *dsa_key_rr = NULL, *rsa_key_rr = NULL;
   int dsa_key_rr_len, rsa_key_rr_len;
   DSA *dsa_key = NULL;

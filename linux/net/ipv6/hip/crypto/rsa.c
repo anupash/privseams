@@ -232,7 +232,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	MPI data, msig;
 	int err = 0, len, slice;
 	u8 *c = private_key;
-	u8 *buf;
+	u8 *buf = NULL;
 	u8 asn_prefix[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B,
 			    0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04,
 			    0x14};
@@ -323,10 +323,10 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	secret(msig, data, &rsk);
 
 	len = mpi_get_nbits(rsk.n) / 8;
-	/ 8 must not be 27, it should be always 28. This should be
+	/* 8 must not be 27, it should be always 28. This should be
 	    handled better */
-	len += 1; /* rsk.n
-	if (gcry_mpi_print(GCRYMPI_FMT_USG, signature, 
+	len += 1; /* rsk.n */
+        if (gcry_mpi_print(GCRYMPI_FMT_USG, signature, 
 			   &len, msig) != 0) {
 		log_error("Error encoding RSA signature\n");
 		goto cleanup;
@@ -342,12 +342,12 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 {
 	int err = 0;
-	MPI result;
+	MPI result = NULL;
 	MPI data;
 	MPI orig;
 	RSA_public_key rpk = {0};
 	int len, slice;
-	u8 *c;
+	u8 *c = NULL;
 	u8 *buf;
 	u8 asn_prefix[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B,
 			    0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04,

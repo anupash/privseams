@@ -341,7 +341,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  						       HIP_ESP_NULL_SHA1 };
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
- 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+ 	u8 *signature = NULL;
 
  	msg = hip_msg_alloc();
  	if (!msg) {
@@ -374,13 +374,21 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		HIP_ERROR("Could not acquire localhost host id\n");
  		goto out_err;
  	}
+	HIP_DEBUG("GOTID:%d",hip_get_param_total_len(host_id_private));
 
 	host_id_pub = hip_get_any_localhost_public_key(0);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;
 	}
-
+	
+	signature = kmalloc(MAX(HIP_DSA_SIGNATURE_LEN,HIP_RSA_SIGNATURE_LEN), 
+			    GFP_KERNEL);
+	if(!signature) {
+		HIP_ERROR("Could not allocate signature \n");
+		goto out_err;
+	}
+	
  	/* Ready to begin building of the R1 packet */
 	mask = HIP_CONTROL_NONE;
 #ifdef CONFIG_HIP_RVS
@@ -513,6 +521,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	return msg;
 
   out_err:
+	if (signature) 
+		kfree(signature);
 	if (host_id_pub)
 		kfree(host_id_pub);
  	if (host_id_private)
