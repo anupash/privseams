@@ -90,6 +90,8 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
 void hip_update_clear_status(hip_ha_t *entry, uint32_t spi);
 int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			  int direction, int test_new_spi);
+void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
+				   struct hip_peer_addr_list_item *addr);
 void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 			   struct hip_echo_response *echo_esp);
 void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id);
@@ -98,7 +100,7 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t spi);
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
-			     int is_preferred_addr, uint32_t update_id);
+			     int is_preferred_addr);
 uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
 
 /***********************************************/

@@ -404,6 +404,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 
 	HIP_LOCK_HA(entry);
 
+	hip_print_hit("entry def addr", &entry->preferred_address);
 	if (ipv6_addr_any(&entry->preferred_address)) {
 		HIP_DEBUG("no preferred address\n");
 	} else {
@@ -1136,7 +1137,7 @@ void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
 			if (!item->updating) {
 				HIP_ERROR("SA update not in progress, continuing anyway\n");
 			}
-			if (item->new_spi) {
+			if ((item->spi != item->new_spi) && item->new_spi) {
 				HIP_ERROR("warning: previous new_spi is not zero: 0x%x\n",
 					  item->new_spi);
 			}
@@ -1297,6 +1298,16 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 	return 0;
 }
 
+void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
+				   struct hip_peer_addr_list_item *addr)
+{
+	HIP_DEBUG("testing kludge, setting address as default out addr\n");
+	ipv6_addr_copy(&spi_out->preferred_address, &addr->address);
+	HIP_DEBUG("setting default SPI out to 0x%x\n", spi_out->spi);
+	entry->default_spi_out = spi_out->spi;
+	ipv6_addr_copy(&entry->preferred_address, &addr->address);
+}
+
 /* have_nes is 1, if there is NES in the same packet as the ACK was */
 void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 			   struct hip_echo_response *echo_resp)
@@ -1357,15 +1368,19 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 						HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
 						continue;
 					}
-					HIP_DEBUG("addr: ack = addr seq, setting state to ACTIVE\n");
+					HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
 					addr->address_state = PEER_ADDR_STATE_ACTIVE;
+					do_gettimeofday(&addr->modified_time);
 
 					if (addr->is_preferred) {
+						hip_hadb_set_default_out_addr(entry, out_item, addr);
+#if 0
 						HIP_DEBUG("testing kludge, setting address as default out addr\n");
 						ipv6_addr_copy(&out_item->preferred_address, &addr->address);
 						HIP_DEBUG("setting default SPI out to 0x%x\n", out_item->spi);
 						entry->default_spi_out = out_item->spi;
 						ipv6_addr_copy(&entry->preferred_address, &addr->address);
+#endif
 					} else
 						HIP_DEBUG("address was not set as preferred address in REA\n");
 				}
@@ -1447,7 +1462,7 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 /* or update old values */
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int is_bex_address, uint32_t lifetime,
-			     int is_preferred_addr, uint32_t update_id)
+			     int is_preferred_addr)
 {
 	/* no locking */
 	int err = 0;
@@ -1512,6 +1527,9 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			/* workaround for special case */
 			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
 			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
+			HIP_DEBUG("setting bex addr as preferred address\n");
+			ipv6_addr_copy(&entry->preferred_address, addr);
+			new_addr->seq_update_id = 0;
 		} else {
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 			HIP_DEBUG("set initial address state UNVERIFIED\n");
@@ -1519,7 +1537,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 
 	do_gettimeofday(&new_addr->modified_time);
-	new_addr->seq_update_id = 0;
 	new_addr->is_preferred = is_preferred_addr;
 
 #if 0
@@ -1720,11 +1737,11 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 			hip_timeval_diff(&now, &s->modified_time, &addr_age);
 			if ( (len += snprintf(page+len, count-len,
 					      "\n  %s state=%s lifetime=0x%x "
-					      "age=%ld.%01ld seq=%u",
+					      "age=%ld.%01ld seq=%u REA_preferred=%d",
 					      addr_str, state_name[s->address_state],
 					      s->lifetime, addr_age.tv_sec,
 					      addr_age.tv_usec / 100000 /* show 1/10th sec */,
-					      s->seq_update_id)
+					      s->seq_update_id, s->is_preferred)
 				     ) >= count)
 				goto error;
 

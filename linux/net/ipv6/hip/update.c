@@ -312,6 +312,11 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 		goto out_err;
 	}
 
+	HIP_DEBUG("Clearing old preferred flags of th SPI\n");
+	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
+		a->is_preferred = 0;
+	}
+
 	rea_address_item = (void *)rea+sizeof(struct hip_rea_mm02);
 	for(i = 0; i < n_addrs; i++, rea_address_item++) {
 		struct in6_addr *rea_address = &rea_address_item->address;
@@ -345,7 +350,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 		//entry->update_id_out++;
 		//seq_id = entry->update_id_out;
 		err = hip_hadb_add_addr_to_spi(entry, spi, rea_address, 0,
-					       lifetime, is_preferred, 0 /*seq_id*/);
+					       lifetime, is_preferred);
 		if (err) {
 			HIP_DEBUG("failed to add/update address to the SPI list\n");
 			goto out_err;
@@ -358,11 +363,11 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
 		int spi_addr_is_in_rea = 0;
 
-		hip_print_hit("testing SPI address", &a->address);
+		//hip_print_hit("testing SPI address", &a->address);
 		rea_address_item = (void *)rea+sizeof(struct hip_rea_mm02);
 		for(i = 0; i < n_addrs; i++, rea_address_item++) {
 			struct in6_addr *rea_address = &rea_address_item->address;
-			hip_print_hit(" against REA address", rea_address);
+			//hip_print_hit(" against REA address", rea_address);
 			if (!ipv6_addr_cmp(&a->address, rea_address)) {
 				spi_addr_is_in_rea = 1;
 				break;
@@ -370,13 +375,16 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_mm02 *rea/*,
 
 		}
 		if (spi_addr_is_in_rea) {
-			HIP_DEBUG("SPI address was in REA, not deprecating\n");
+			//HIP_DEBUG("SPI address was in REA, not deprecating\n");
 			continue;
 		}
-		HIP_DEBUG("SPI address was not in REA, deprecating\n");
+
+		hip_print_hit("deprecating address", &a->address);
+		_HIP_DEBUG("SPI address was not in REA, deprecating\n");
 		/* deprecate the address */
 		a->address_state = PEER_ADDR_STATE_DEPRECATED;
 	}
+	HIP_DEBUG("done\n");
 
  out_err:
 	return err;
@@ -1106,11 +1114,22 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
-		if (addr->address_state != PEER_ADDR_STATE_UNVERIFIED) {
-			HIP_DEBUG("addr state not unverified, skipping\n");
+		hip_print_hit("new addr to check", &addr->address);
+
+		if (addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
+			HIP_DEBUG("addr state is DEPRECATED, not verifying\n");
 			continue;
 		}
-		hip_print_hit("new addr to check", &addr->address);
+
+		if (addr->address_state == PEER_ADDR_STATE_ACTIVE) {
+			HIP_DEBUG("not verifying already active address\n"); 
+			if (addr->is_preferred) {
+				HIP_DEBUG("TEST: setting already active address and set as preferred to default addr\n");
+				hip_hadb_set_default_out_addr(entry, spi_out, addr);
+			}
+			continue;
+		}
+
 		hip_msg_init(update_packet);
 		hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 
