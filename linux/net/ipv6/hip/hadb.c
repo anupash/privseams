@@ -26,8 +26,7 @@ static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 
   (functions hip_ .. _hs)
 */
-
-static int hip_hadb_match_spi(void *key_1, void *key_2)
+int hip_hadb_match_spi(void *key_1, void *key_2)
 {
 	uint32_t spi1,spi2;
 
@@ -38,29 +37,12 @@ static int hip_hadb_match_spi(void *key_1, void *key_2)
 
 static void hip_hadb_hold_entry(void *entry)
 {
-	hip_ha_t *ha = (hip_ha_t *)entry;
-
-	if (!entry)
-		return;
-
-	atomic_inc(&ha->refcnt);
-	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n", ha, atomic_read(&ha->refcnt));
+	HIP_DB_HOLD_ENTRY(entry, hip_ha_t);
 }
 
 static void hip_hadb_put_entry(void *entry)
 {
-	hip_ha_t *ha = (hip_ha_t *)entry;
-
-	if (!entry)
-		return;
-
-	if (atomic_dec_and_test(&ha->refcnt)) {
-                HIP_DEBUG("HA: refcnt decremented to 0, deleting %p\n", ha);
-		hip_hadb_delete_state(ha);
-                HIP_DEBUG("HA: %p deleted\n", ha);
-	} else {
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, atomic_read(&ha->refcnt));
-        }
+	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
 }
 
 void hip_hadb_delete_hs(struct hip_hit_spi *hs)
@@ -71,27 +53,12 @@ void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 
 static void hip_hadb_put_hs(void *entry)
 {
-	struct hip_hit_spi *hs = (struct hip_hit_spi *) entry;
-       	if (!hs)
-		return;
-
-	if (atomic_dec_and_test(&hs->refcnt)) {
-                HIP_DEBUG("HS: refcnt decremented to 0, deleting %p\n", hs);
-		hip_hadb_delete_hs(hs);
-                HIP_DEBUG("HS: %p deleted\n", hs);
-	} else {
-		_HIP_DEBUG("HS: %p, refcnt decremented to: %d\n", hs, atomic_read(&hs->refcnt));
-        }
+	HIP_DB_PUT_ENTRY(entry, struct hip_hit_spi, hip_hadb_delete_hs);
 }
 
 static void hip_hadb_hold_hs(void *entry)
 {
-	struct hip_hit_spi *hs = (struct hip_hit_spi *) entry;
-      	if (!hs)
-		return;
-
-	atomic_inc(&hs->refcnt);
-	_HIP_DEBUG("HS: %p, refcnt incremented to: %d\n", hs, atomic_read(&hs->refcnt));
+	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
 }
 
 
@@ -130,7 +97,7 @@ void hip_hadb_remove_hs2(struct hip_hit_spi *hs)
 
 static void *hip_hadb_get_key_hit(void *entry)
 {
-	return (void *)&(((hip_ha_t *)entry)->hit_peer);
+	return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
 }
 
 static void *hip_hadb_get_key_spi_list(void *entry)

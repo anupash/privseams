@@ -31,6 +31,34 @@
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
 
+#define HIP_DB_HOLD_ENTRY(entry, entry_type)                  \
+    do {                                                      \
+        entry_type *ha = (entry_type *)entry;                 \
+	if (!entry)                                           \
+		return;                                       \
+	atomic_inc(&ha->refcnt);                              \
+	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n", ha, \
+		   atomic_read(&ha->refcnt));                 \
+    } while(0)
+
+#define HIP_DB_PUT_ENTRY(entry, entry_type, destructor)                      \
+    do {                                                                     \
+	entry_type *ha = (entry_type *)entry;                                \
+	if (!entry)                                                          \
+		return;                                                      \
+	if (atomic_dec_and_test(&ha->refcnt)) {                              \
+                HIP_DEBUG("HA: refcnt decremented to 0, deleting %p\n", ha); \
+		destructor(ha);                                              \
+                HIP_DEBUG("HA: %p deleted\n", ha);                           \
+	} else {                                                             \
+                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha,        \
+			   atomic_read(&ha->refcnt));                        \
+        }                                                                    \
+    } while(0);
+
+#define HIP_DB_GET_KEY_HIT(entry, entry_type) \
+            (void *)&(((entry_type *)entry)->hit_peer);
+
 /*************** BASE FUNCTIONS *******************/
 
 /* Initialization functions */
@@ -50,6 +78,9 @@ void hip_hadb_remove_hs(uint32_t spi);
 
 /* existence */
 int hip_hadb_exists_entry(void *key, int type);
+
+/* matching */
+int hip_hadb_match_spi(void *key_1, void *key_2);
 
 /* debugging */
 void hip_hadb_dump_hits(void);

@@ -13,6 +13,7 @@
 #include <net/hip.h>
 #include "workqueue.h"
 #include "debug.h"
+#include "hadb.h"
 
 #define HIP_BEETDB_SIZE 53
 
@@ -20,6 +21,9 @@
 
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
+	struct list_head     next;
+	spinlock_t           lock;
+	atomic_t             refcnt;
         uint32_t             spi;                 /* SPI either in or
                                                      out */
 	int                  dir;                 /* Direction */
@@ -48,7 +52,8 @@ struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit);
  * manage the replica of HADB within the kernel.
  */
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
-int hip_xfrm_update(uint32_t spi, struct in6_addr * dst_addr, int state, int dir);
+int hip_xfrm_update(uint32_t spi, struct in6_addr * dst_addr, int state,
+		    int dir);
 int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir);
 
 #endif /* HIP_BEET_H */
