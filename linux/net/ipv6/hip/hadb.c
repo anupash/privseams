@@ -173,6 +173,7 @@ void hip_hadb_remove_state_hit(hip_ha_t *ha)
 int hip_hadb_insert_state(hip_ha_t *ha)
 {
 	hip_hastate_t st;
+	hip_ha_t *tmp;
  
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer) &&
 		     (ha->spi_in == 0)));
@@ -183,21 +184,25 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 
 	if (ha->spi_in != 0 && !(st & HIP_HASTATE_SPIOK)) {
 		
-		if (!hip_ht_find(&hadb_spi, (void *)ha->spi_in)) {
+		tmp = hip_ht_find(&hadb_spi, (void *)ha->spi_in);
+		if (!tmp) {
 			hip_ht_add(&hadb_spi, ha);
 			st |= HIP_HASTATE_SPIOK;
 		} else {
-			hip_put_ha(ha);
+			hip_put_ha(tmp);
+			HIP_DEBUG("SPI already taken\n");
 		}
 	}
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
 
-		if (!hip_ht_find(&hadb_hit, (void *)&(ha->hit_peer))) {
+		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hit_peer));
+		if (!tmp) {
 			hip_ht_add(&hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 		} else {
-			hip_put_ha(ha);
+			hip_put_ha(tmp);
+			HIP_DEBUG("HIT already taken\n");
 		}
 	}
 

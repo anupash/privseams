@@ -111,8 +111,8 @@ inline const char *hip_state_str(unsigned int state)
 	const char *str = "UNKNOWN";
 	static const char *states[] =
 		{ "NONE", "UNASSOCIATED", "I1_SENT",
-		  "I2_SENT", "ESTABLISHED", "REKEYING",
-		  "RESYNC" };
+		  "I2_SENT", "R2_SENT", "ESTABLISHED", "REKEYING",
+		  "FAILED" };
 	if (state <= (sizeof(states)/sizeof(states[0])))
 		str = states[state];
 

@@ -301,20 +301,9 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_dif
  * @spi:     the value of the spi in the spi_lsi value in host byte order
  *
  */
-void hip_set_param_spi_value(struct hip_spi_lsi *spi_lsi, uint32_t spi)
+void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi)
 {
-	spi_lsi->spi = htonl(spi);
-}
-
-/**
- * hip_set_param_lsi_value - set the lsi value in spi_lsi parameter
- * @spi_lsi: the spi_lsi parameter
- * @lsi:     the value of the lsi in the spi_lsi value in host byte order
- *
- */
-void hip_set_param_lsi_value(struct hip_spi_lsi *spi_lsi, uint32_t lsi)
-{
-	spi_lsi->lsi = htonl(lsi);
+	hspi->spi = htonl(spi);
 }
 
 /**
@@ -323,36 +312,9 @@ void hip_set_param_lsi_value(struct hip_spi_lsi *spi_lsi, uint32_t lsi)
  *
  * Returns: the spi value in host byte order
  */
-uint32_t hip_get_param_spi_value(const struct hip_spi_lsi *spi_lsi)
+uint32_t hip_get_param_spi_value(const struct hip_spi *hspi)
 {
-	return ntohl(spi_lsi->spi);
-}
-
-/**
- * hip_get_param_lsi_value - get the lsi value from spi_lsi parameter
- * @spi_lsi: the spi_lsi parameter
- *
- * Returns: the lsi value in host byte order
- */
-uint32_t hip_get_param_lsi_value(const struct hip_spi_lsi *spi_lsi)
-{
-	return ntohl(spi_lsi->lsi);
-}
-
-/**
- * hip_get_param_birthday - get birthday value
- *
- * Returns: the birthday value in host byte order
- */
-uint64_t hip_get_param_birthday(const struct hip_birthday_cookie *bc)
-{
-	return ntoh64(bc->birthday);
-}
-
-uint64_t hip_get_param_i_val(const struct hip_birthday_cookie *bc)
-{
-	return ntoh64(bc->val_i);
-
+	return ntohl(hspi->spi);
 }
 
 /**
@@ -476,22 +438,38 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
-			HIP_PARAM_SPI_LSI,
-			HIP_PARAM_BIRTHDAY_COOKIE_R1,
-			HIP_PARAM_BIRTHDAY_COOKIE_I2,
-			HIP_PARAM_DIFFIE_HELLMAN,
+			HIP_PARAM_SPI,
+			HIP_PARAM_R1_COUNTER,
+			HIP_PARAM_PUZZLE,
+			HIP_PARAM_SOLUTION,
 			HIP_PARAM_NES,
+			HIP_PARAM_SEQ,
+			HIP_PARAM_ACK,
+			HIP_PARAM_DIFFIE_HELLMAN,
 			HIP_PARAM_HIP_TRANSFORM,
 			HIP_PARAM_ESP_TRANSFORM,
 			HIP_PARAM_ENCRYPTED,
 			HIP_PARAM_HOST_ID,
 			HIP_PARAM_CERT,
+			HIP_PARAM_RVA_REQUEST,
+			HIP_PARAM_RVA_REPLY,
 			HIP_PARAM_REA_INFO,
 			HIP_PARAM_AC_INFO,
 			HIP_PARAM_FA_INFO,
+			HIP_PARAM_NOTIFY,
+			HIP_PARAM_ECHO_REQUEST_SIGN,
+			HIP_PARAM_ECHO_RESPONSE_SIGN,
+			HIP_PARAM_FROM_SIGN,
+			HIP_PARAM_TO_SIGN,
 			HIP_PARAM_HMAC,
 			HIP_PARAM_HIP_SIGNATURE2,
-			HIP_PARAM_HIP_SIGNATURE
+			HIP_PARAM_HIP_SIGNATURE,
+			HIP_PARAM_ECHO_REQUEST,
+			HIP_PARAM_ECHO_RESPONSE,
+			HIP_PARAM_FROM,
+			HIP_PARAM_TO,
+			HIP_PARAM_HMAC,
+			HIP_PARAM_VIA_RVS
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -615,6 +593,8 @@ void *hip_get_param(const struct hip_common *msg,
 	struct hip_tlv_common *current_param = NULL;
 
 	_HIP_DEBUG("searching for type %d\n", param_type);
+
+/* XXX: Optimize: stop when next parameter's type is greater than the searched one */
 
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
@@ -1439,6 +1419,86 @@ int hip_build_param_signature_contents(struct hip_common *msg,
 	return err;
 }
 
+int hip_build_param_echo_response(struct hip_common *msg,
+				  struct hip_echo_request *ping, int sign)
+{
+	struct hip_echo_response pong;
+	int len, err;
+
+	hip_set_param_type(&pong, sign ? HIP_PARAM_ECHO_RESPONSE_SIGN : HIP_PARAM_ECHO_RESPONSE);
+
+	len = hip_get_param_contents_len(ping);
+	hip_set_param_contents_len(&pong, len);
+
+	memcpy((&pong + 1), ping + 1, len);
+	err = hip_build_generic_param(msg, &pong, sizeof(struct hip_echo_response), 
+				      &pong + 1);
+
+	return err;
+}
+
+
+int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
+{
+	struct hip_r1_counter r1gen;
+	int err = 0;
+
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&r1gen,
+				   sizeof(struct hip_r1_counter) -
+				   sizeof(struct hip_tlv_common));
+	/* Type 2 (in R1) or 3 (in I2) */
+	hip_set_param_type(&r1gen, HIP_PARAM_R1_COUNTER);
+
+	/* only the random_j_k is in host byte order */
+	r1gen.generation = generation;
+
+	err = hip_build_param(msg, &r1gen);
+	return err;
+}
+
+/**
+ * hip_build_param_puzzle - build and append a HIP puzzle into the message
+ * @msg:        the message where the cookie is to be appended
+ * @solved:     1 if the cookie is already a solved cookie (as in I2),
+ *              or 0 if the cookie is to be solved (as in R1)
+ * @birthday:   birthday value for the cookie (in host byte order)
+ * @random_i:   random i value for the cookie (in host byte order)
+ * @random_j_k: random j/k value for the cookie (in host byte order)
+ *
+ * The cookie mechanism assumes that every value is in network byte order
+ * except for the hip_birthday_cookie.cv union, where the value is in
+ * host byte order. This is an exception to the normal builder rules, where
+ * input arguments are normally always in host byte order.
+ * 
+ * Returns: zero for success, or non-zero on error
+ */
+int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
+			   uint32_t opaque, uint64_t random_i)
+{
+	struct hip_puzzle puzzle;
+	int err = 0;
+
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&puzzle,
+				   sizeof(struct hip_puzzle) -
+				   sizeof(struct hip_tlv_common));
+	/* Type 2 (in R1) or 3 (in I2) */
+	hip_set_param_type(&puzzle, HIP_PARAM_PUZZLE);
+
+	/* only the random_j_k is in host byte order */
+	puzzle.K = val_K;
+	puzzle.opaque[0] = opaque & 0xFF;
+	puzzle.opaque[1] = (opaque & 0xFF00) >> 8;
+	puzzle.opaque[2] = (opaque & 0xFF0000) >> 8;
+
+        err = hip_build_generic_param(msg, &puzzle,
+				      sizeof(struct hip_tlv_common),
+				      hip_get_param_contents_direct(&puzzle));
+	return err;
+
+}
+
 /**
  * hip_build_param_cookie - build and append a HIP cookie into the message
  * @msg:        the message where the cookie is to be appended
@@ -1455,25 +1515,22 @@ int hip_build_param_signature_contents(struct hip_common *msg,
  * 
  * Returns: zero for success, or non-zero on error
  */
-int hip_build_param_cookie(struct hip_common *msg, int solved,
-			   uint64_t birthday, uint64_t random_i,
-			   uint64_t random_j_k)
+int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
+			     uint64_t val_J)
 {
-	struct hip_birthday_cookie cookie;
+	struct hip_solution cookie;
 	int err = 0;
 
 	/* note: the length cannot be calculated with calc_param_len() */
 	hip_set_param_contents_len(&cookie,
-				   sizeof(struct hip_birthday_cookie) -
+				   sizeof(struct hip_solution) -
 				   sizeof(struct hip_tlv_common));
 	/* Type 2 (in R1) or 3 (in I2) */
-	hip_set_param_type(&cookie, (solved ? HIP_PARAM_BIRTHDAY_COOKIE_I2 :
-			   HIP_PARAM_BIRTHDAY_COOKIE_R1));
+	hip_set_param_type(&cookie, HIP_PARAM_SOLUTION);
 
-	/* only the random_j_k is in host byte order */
-	cookie.birthday = ntoh64(birthday);
-	cookie.val_i    = ntoh64(random_i);
-	cookie.val_jk   = ntoh64(random_j_k);
+	cookie.J = hton64(val_J);
+	memcpy(&cookie.K, &pz->K, 12); // copy: K (1), opaque (3) and I (8 bytes).
+
         err = hip_build_generic_param(msg, &cookie,
 				      sizeof(struct hip_tlv_common),
 				      hip_get_param_contents_direct(&cookie));
@@ -1762,7 +1819,7 @@ int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
  * Returns: 0 on success, otherwise < 0.
  */
 int hip_build_param_nes(struct hip_common *msg, int is_reply,
-			uint16_t keymat_index, uint16_t update_id,
+			uint16_t keymat_index,
 			uint32_t old_spi, uint32_t new_spi)
 {
 	int err = 0;
@@ -1776,7 +1833,6 @@ int hip_build_param_nes(struct hip_common *msg, int is_reply,
 		nes.keymat_index = htons(0x7fff & keymat_index); /* highest bit not set */
 
 	_HIP_DEBUG("nes.keymat_index host=%u\n", ntohs(nes.keymat_index));
-	nes.update_id = htons(update_id);
 	nes.old_spi = htonl(old_spi);
 	nes.new_spi = htonl(new_spi);
 	err = hip_build_param(msg, &nes);
@@ -1817,18 +1873,16 @@ int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
  * 
  * Returns: zero on success, or negative on failure
  */
-int hip_build_param_spi_lsi(struct hip_common *msg, uint32_t lsi, uint32_t spi)
+int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
 {
 	int err = 0;
-	struct hip_spi_lsi spi_lsi;
+	struct hip_spi hspi;
 
-	hip_set_param_type(&spi_lsi, HIP_PARAM_SPI_LSI);
-	hip_calc_generic_param_len(&spi_lsi, sizeof(struct hip_spi_lsi), 0);
-	spi_lsi.reserved = htonl(0);
-	spi_lsi.lsi = htonl(lsi);
-	spi_lsi.spi = htonl(spi);
+	hip_set_param_type(&hspi, HIP_PARAM_SPI);
+	hip_calc_generic_param_len(&hspi, sizeof(struct hip_spi), 0);
+	hspi.spi = htonl(spi);
 
-	err = hip_build_param(msg, &spi_lsi);
+	err = hip_build_param(msg, &hspi);
 	return err;
 }
 
@@ -1855,8 +1909,10 @@ int hip_build_param_encrypted(struct hip_common *msg,
 			   sizeof(struct hip_tlv_common) +
 			   hip_get_param_total_len(host_id));
 	enc.reserved = htonl(0);
-	memset(enc.iv, 0x00, HIP_PARAM_ENCRYPTED_IV_LEN);
 
+	/* copy the IV *IF* needed, and then the encrypted data */
+	
+	
 	err = hip_build_generic_param(msg, &enc,
 				      sizeof(struct hip_encrypted),
 				      host_id);
@@ -1869,10 +1925,12 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
                                  uint8_t algorithm)
 {
 	uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
-	uint16_t fqdn_len = strlen(hostname);
+	uint16_t fqdn_len = strlen(hostname) + 1; 
+        /* reserve 1 byte for NULL termination */
 
 	host_id_hdr->hi_length = htons(hi_len);
-	host_id_hdr->fqdn_length = htons(fqdn_len);
+	/* length = 12 bits, di_type = 4 bits */
+	host_id_hdr->di_type_length = htons((fqdn_len & 0x0FFF) | 0x1000);
 
         hip_set_param_type(host_id_hdr, HIP_PARAM_HOST_ID);
         hip_calc_generic_param_len(host_id_hdr, sizeof(struct hip_host_id),
@@ -1906,9 +1964,9 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
 	memcpy(ptr, rr_data, rr_len);
 	ptr += rr_len;
 
-	memcpy(ptr, fqdn, ntohs(host_id->fqdn_length));
+	HIP_DEBUG("fqdn len: %d\n", ntohs(host_id->di_type_length) & 0x0FFF);
+	memcpy(ptr, fqdn, ntohs(host_id->di_type_length) & 0x0FFF);
 
-	HIP_DEBUG("fqdn len: %d\n", ntohs(host_id->fqdn_length));
 }
 
 /**
@@ -1926,6 +1984,17 @@ int hip_build_param_host_id(struct hip_common *msg,
 	hip_build_param_host_id_only(host_id_hdr, rr_data, fqdn);
         err = hip_build_param(msg, host_id_hdr);
 	return err;
+}
+
+char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
+{
+	int hilen;
+	char *ptr;
+
+	hilen = ntohs(hostid->hi_length) - sizeof(struct hip_host_id_key_rdata);
+	HIP_DEBUG("Hilen: %d\n",hilen);
+	ptr = (char *)(hostid + 1) + hilen;
+	return ptr;
 }
 
 /*

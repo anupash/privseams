@@ -74,11 +74,13 @@ typedef uint16_t in_port_t;
 #define HIP_I2  3
 #define HIP_R2  4
 #define HIP_UPDATE 5
-#define HIP_REA 6
+#define HIP_REA 6 /* xxx */
 #define HIP_BOS 7
 #define HIP_CER 8
+#define HIP_NOTIFY 9
 #define HIP_AC 9   /* check */
 #define HIP_ACR 10 /* check */
+#define HIP_PAYLOAD 64 /* xxx */
 
 /* Extended message types for the userspace */
 #define HIP_USER_BASE_MIN                  15 /* exclusive */
@@ -112,14 +114,12 @@ typedef uint16_t in_port_t;
 #define HIP_HOST_ID_RR_Y_BASE_SIZE             20
 #define HIP_HOST_ID_RR_DSA_PRIV_KEY_SIZE       20
 
-#define HIP_PAYLOAD 64
+//#define HIP_CONTROL_PIGGYBACK_ALLOW 0x4000   /* Host accepts piggybacked ESP in I2 and R2 */
 
-
-#define HIP_CONTROL_PIGGYBACK_ALLOW 0x4000   /* Host accepts piggybacked ESP in I2 and R2 */
-#define HIP_CONTROL_CERTIFICATES    0x2000   /* Certificate packets follow */
-#define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
+//#define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
 #define HIP_CONTROL_RVS_CAPABLE              /* not yet defined */
 #define HIP_CONTROL_CONCEAL_IP               /* still undefined */
+#define HIP_CONTROL_CERTIFICATES    0x0002   /* Certificate packets follow */
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
 #define HIP_CONTROL_NONE            0x0000
 
@@ -131,31 +131,35 @@ typedef uint16_t in_port_t;
 #define HIP_STATE_UNASSOCIATED      1      /* ex-E0 */
 #define HIP_STATE_I1_SENT           2      /* ex-E1 */
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
-#define HIP_STATE_ESTABLISHED       4      /* ex-E3 */
-#define HIP_STATE_REKEYING          5      /* ex-E4 */
-#define HIP_STATE_RESYNC            6
+#define HIP_STATE_R2_SENT           4
+#define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
+#define HIP_STATE_REKEYING          6      /* ex-E4 */
+#define HIP_STATE_FAILED            7
 
-#define HIP_PARAM_MIN                -1 /* exclusive */
-#define HIP_PARAM_SPI_LSI             1
-#define HIP_PARAM_BIRTHDAY_COOKIE_R1  3
-#define HIP_PARAM_BIRTHDAY_COOKIE_I2  5
-#define HIP_PARAM_NES                9
-#define HIP_PARAM_DIFFIE_HELLMAN     13
-#define HIP_PARAM_HIP_TRANSFORM      17
-#define HIP_PARAM_ESP_TRANSFORM      19
-#define HIP_PARAM_ENCRYPTED          21
-#define HIP_PARAM_HOST_ID            35
-#define HIP_PARAM_CERT               64
-#define HIP_PARAM_RVA_REQUEST       100
-#define HIP_PARAM_RVA_REPLY         102
+#define HIP_PARAM_MIN                 -1 /* exclusive */
+#define HIP_PARAM_SPI                  1
+#define HIP_PARAM_R1_COUNTER           2
+#define HIP_PARAM_PUZZLE               5
+#define HIP_PARAM_SOLUTION             7
+#define HIP_PARAM_NES                  9
+#define HIP_PARAM_SEQ                 11
+#define HIP_PARAM_ACK                 13
+#define HIP_PARAM_DIFFIE_HELLMAN      15
+#define HIP_PARAM_HIP_TRANSFORM       17
+#define HIP_PARAM_ESP_TRANSFORM       19
+#define HIP_PARAM_ENCRYPTED           21
+#define HIP_PARAM_HOST_ID             35
+#define HIP_PARAM_CERT                64
+#define HIP_PARAM_RVA_REQUEST        100
+#define HIP_PARAM_RVA_REPLY          102
 
-#define HIP_PARAM_REA_INFO          8   /* *** TEMPORARY TYPE VALUE, mm-02 CONFLICTS WITH base-00 *** */
-#define HIP_PARAM_AC_INFO           129 /* mm-01: to be removed */
-#define HIP_PARAM_FA_INFO           130 /* mm-01: to be removed */
+#define HIP_PARAM_REA_INFO           128
+#define HIP_PARAM_AC_INFO            129 /* mm-01: to be removed */
+#define HIP_PARAM_FA_INFO            130 /* mm-01: to be removed */
 
-#define HIP_PARAM_NOTIFY            256
-#define HIP_PARAM_ECHO_REQUEST_SIG 1022
-#define HIP_PARAM_ECHO_REPLY_SIG   1024
+#define HIP_PARAM_NOTIFY             256
+#define HIP_PARAM_ECHO_REQUEST_SIGN    1022
+#define HIP_PARAM_ECHO_RESPONSE_SIGN   1024
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
@@ -170,13 +174,13 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_EID_ADDR              32777
 /* End of HIPL private parameters. */
 
-#define HIP_PARAM_FROM_SIG        65100
-#define HIP_PARAM_TO_SIG          65102
+#define HIP_PARAM_FROM_SIGN       65100
+#define HIP_PARAM_TO_SIGN         65102
 #define HIP_PARAM_HMAC            65245
 #define HIP_PARAM_HIP_SIGNATURE2  65277
 #define HIP_PARAM_HIP_SIGNATURE   65279
 #define HIP_PARAM_ECHO_REQUEST    65281
-#define HIP_PARAM_ECHO_REPLY      65283
+#define HIP_PARAM_ECHO_RESPONSE   65283
 #define HIP_PARAM_FROM            65300
 #define HIP_PARAM_TO              65302
 #define HIP_PARAM_RVA_HMAC        65320
@@ -234,6 +238,11 @@ typedef uint16_t in_port_t;
 #define HIP_DSA_SIGNATURE_LEN        41
 
 #define ENOTHIT                     666
+
+/* Domain Identifiers (to be used in HOST_ID TLV) */
+#define HIP_DI_NONE                   0
+#define HIP_DI_FQDN                   1
+#define HIP_DI_NAI                    2
 
 
 /* Returns length of TLV option (contents) with padding. */
@@ -343,26 +352,40 @@ struct hip_unit_test {
 	uint16_t           caseid;
 } __attribute__ ((packed));
 
-struct hip_spi_lsi {
+struct hip_spi {
 	hip_tlv_type_t      type;
 	hip_tlv_len_t      length;
 
-	uint32_t      reserved;
-
 	uint32_t      spi;
-	uint32_t      lsi;
 } __attribute__ ((packed));
 
 
-struct hip_birthday_cookie {
+struct hip_r1_counter {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+
+	uint32_t           reserved;
+	uint64_t           generation;
+} __attribute__ ((packed));
+
+
+struct hip_puzzle {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t     length;
+
+	uint8_t           K;
+	uint8_t           opaque[3];
+	uint64_t          I;
+} __attribute__ ((packed));
+
+struct hip_solution {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
 	
-	uint32_t     reserved;
-
-	uint64_t     birthday;
-	uint64_t     val_i;
-	uint64_t     val_jk;
+	uint8_t           K;
+	uint8_t           opaque[3];
+	uint64_t          I;
+	uint64_t          J;
 } __attribute__ ((packed));
 
 struct hip_diffie_hellman {
@@ -391,16 +414,6 @@ struct hip_esp_transform {
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
 
-struct hip_auth_transform {
-	hip_tlv_type_t     type;
-	hip_tlv_len_t     length;
-
-	uint8_t      transform_id;
-	uint16_t     transform_length;
-
-	/* fixed part ends */
-} __attribute__ ((packed));
-
 struct hip_any_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
@@ -423,7 +436,7 @@ struct hip_host_id {
 	hip_tlv_len_t      length;
 
 	uint16_t     hi_length;
-	uint16_t     fqdn_length;
+	uint16_t     di_type_length;
 
 	struct hip_host_id_key_rdata rdata;
 	/* fixed part ends */
@@ -432,8 +445,8 @@ struct hip_host_id {
 struct hip_encrypted {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
+
         uint32_t     reserved;
-	uint8_t      iv[8];
 	/* fixed part ends */
 } __attribute__ ((packed));
 
@@ -458,12 +471,35 @@ struct hip_sig2 {
 struct hip_nes {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
+	uint16_t reserved;
 	uint16_t keymat_index;
-	uint16_t update_id;
 	uint32_t old_spi;
 	uint32_t new_spi;
 } __attribute__ ((packed));
 
+
+struct hip_seq {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+
+	uint32_t update_id;
+} __attribute__ ((packed));
+
+struct hip_ack {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+
+	uint32_t peer_update_id;
+} __attribute__ ((packed));
+
+struct hip_notify {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+
+	uint16_t reserved;
+	uint16_t msgtype;
+	/* end of fixed part */
+} __attribute__ ((packed));
 
 struct hip_rea_info_addr_item {
 	uint32_t lifetime;
@@ -506,7 +542,11 @@ struct hip_ac_info { /* mm-01: to be removed */
 struct hip_cert {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	/* XX TODO */
+
+	uint8_t  cert_count;
+	uint8_t  cert_id;
+	uint8_t  cert_type;
+	/* end of fixed part */
 } __attribute__ ((packed));
 
 /************* RVS *******************/
@@ -522,7 +562,7 @@ struct hip_rva_reply {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
 	uint32_t       lifetime;
-	/* RVA typess */
+	/* RVA types */
 } __attribute__ ((packed));
 
 struct hip_rva_hmac {
@@ -556,7 +596,7 @@ struct hip_echo_request {
 	/* opaque */
 } __attribute__ ((packed));
 
-struct hip_echo_reply {
+struct hip_echo_response {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
 	/* opaque */

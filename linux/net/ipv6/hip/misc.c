@@ -12,7 +12,7 @@
  * XX TODO: which one to use: this or the function just below?
  */
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
-                      struct in6_addr *hit, int hit_type)
+		       struct in6_addr *hit, int hit_type)
 {
        int err = 0;
        u8 digest[HIP_AH_SHA_LEN];

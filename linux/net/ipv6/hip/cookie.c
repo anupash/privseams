@@ -36,16 +36,82 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 	return (base) % HIP_R1TABLESIZE;
 }
 
+static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
+				  struct timeval *tv)
+{
+	uint64_t random_i;
+
+	r1->Ck = pz->K;
+	r1->Ci = pz->I;
+	memcpy(r1->Copaque, pz->opaque, 3);
+
+	get_random_bytes(&random_i, sizeof(uint64_t));
+	pz->I = random_i;
+	tv->tv_sec &= 0xFFFFFF;
+	pz->opaque[0] = (tv->tv_sec & 0xFF);
+	pz->opaque[1] = ((tv->tv_sec >> 8) & 0xFF);
+	pz->opaque[2] = ((tv->tv_sec >> 16) & 0xFF);		
+	
+
+}
+
 static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 						  struct in6_addr *ip_r)
 {
-	int idx;
+
+	struct timeval tv;
+	struct hip_puzzle *pz;
+	struct hip_r1entry *r1;
+	int diff, ts;
+	int idx;	
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r);
 
 	HIP_DEBUG("Calculated index: %d\n", idx);
 
-	return &hip_r1table[idx];
+	r1 = &hip_r1table[idx];
+
+	/* the code under #if 0 periodically changes the puzzle. It is not included
+	   in compilation as there is currently no easy way of signing the R1 packet
+	   after having changed its puzzle.
+	*/
+#if 0
+	/* generating opaque data */
+
+	do_gettimeofday(&tv);
+	
+	/* extract the puzzle */
+	pz = hip_get_param(r1->r1, HIP_PARAM_PUZZLE);
+	if (!pz) {
+		HIP_ERROR("Internal error: Could not find PUZZLE parameter in precreated R1 packet\n");
+		return NULL;
+	}
+
+	ts = pz->opaque[0];
+	ts |= ((int)pz->opaque[1] << 8);
+	ts |= ((int)pz->opaque[2] << 16);
+	
+	if (ts != 0) {
+
+		/* check if the cookie is too old */
+
+		diff = (tv.tv_sec & 0xFFFFFF) - ts;
+		if (diff < 0)
+			diff += 0x1000000;
+		
+		HIP_DEBUG("Old puzzle still valid\n");
+		if (diff <= HIP_PUZZLE_MAX_LIFETIME)
+			return r1;
+	}
+
+	/* either ts == 0 or diff > HIP_PUZZLE_MAX_LIFETIME */
+
+	HIP_DEBUG("Creating new puzzle\n");
+	hip_create_new_puzzle(pz, r1, &tv);
+
+	/* XXX: sign the R1 */
+#endif
+	return r1;
 }
 
 
@@ -67,53 +133,49 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
  *
  * Returns: 1 if success (= ?), otherwise 0
  */
-int hip_solve_puzzle(struct hip_birthday_cookie *puzzle, 
-		     struct hip_common *hdr, uint64_t *param, int mode)
+uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr, 
+			  int mode)
 {
-	uint64_t rand_jk;
 	uint64_t mask;
 	uint64_t randval;
 	uint64_t maxtries;
 	uint64_t digest;
 	u8 cookie[48];
-	int bit = 0;
 	struct scatterlist sg[2];
 	unsigned int nsg = 2;
 	int err;
+	union {
+		struct hip_puzzle pz;
+		struct hip_solution sl;
+	} *u;
 
 	/* pre-create cookie */
-	HIP_DEBUG("Received I=%llx\n", puzzle->val_i);
 
-	memcpy(cookie,(u8 *)&puzzle->val_i, sizeof(uint64_t)); // 8
+	u = puzzle_or_solution;
 
-	if (mode == HIP_VERIFY_PUZZLE) 
+	if (u->pz.K > 60) {
+		HIP_ERROR("Difficulty factor over 60 not supported\n");
+		return 0;
+	}
+
+	mask = hton64((1ULL << u->pz.K) - 1);
+
+	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
+
+	if (mode == HIP_VERIFY_PUZZLE)
 	{
-		memcpy(cookie + 8, &hdr->hits, sizeof(struct in6_addr));
-		memcpy(cookie + 24, &hdr->hitr, sizeof(struct in6_addr));
-		randval = puzzle->val_jk;
-		mask = hton64(*param == 64ULL ? 0xffffffffffffffffULL : (1ULL << * param) - 1);
+		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hits);
+		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hitr);
+		randval = ntoh64(u->sl.J);
 		maxtries = 1;
 	} 
 	else if (mode == HIP_SOLVE_PUZZLE)
 	{
-		rand_jk = ntoh64(puzzle->val_jk);
-		if (rand_jk > 64) 
-		{
-			HIP_ERROR("Puzzle difficulty factor too large! (%lld)\n",rand_jk);
-			goto out_err;
-		}
-
-		mask = hton64(rand_jk == 64ULL ? 0xffffffffffffffffULL: (1ULL << rand_jk)-1);
-		memcpy(cookie + 8, &hdr->hitr, sizeof(struct in6_addr)); // 16
-		memcpy(cookie + 24, &hdr->hits, sizeof(struct in6_addr)); // 16
-
-		HIP_HEXDUMP("cookie buffer", cookie, 40);
+		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);
+		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hits);
+		maxtries = 1ULL << (u->pz.K + 2);
 		get_random_bytes(&randval,sizeof(u_int64_t));
-		if (rand_jk + 2 >= 64)
-			maxtries = 0xffffffffffffffffULL;
-		else
-			maxtries = (1ULL << (rand_jk + 2));
-	}
+	}	
 	else
 	{
 		HIP_ERROR("Unknown mode: %x\n",mode);
@@ -161,12 +223,7 @@ int hip_solve_puzzle(struct hip_birthday_cookie *puzzle,
 		 */
 		if ((digest & mask) == 0) {
 			HIP_DEBUG("*** Puzzle solved ***: %llx\n",randval);
-			bit = 1;
-			if (mode == HIP_SOLVE_PUZZLE)
-#if 0
-				*param = hton64(randval);
-#endif
-				*param = (randval);
+			return randval;
 			break;
 		}
 
@@ -180,14 +237,8 @@ int hip_solve_puzzle(struct hip_birthday_cookie *puzzle,
 		randval++;
 	}
 		
-	if (bit == 0)
-	{
-		HIP_ERROR("Could not solve the puzzle\n");
-		return 0;
-	}
-	
-	return 1; /*ok*/
  out_err:
+	HIP_ERROR("Could not solve the puzzle\n");
 	return 0;
 }
 
@@ -256,6 +307,12 @@ void hip_uninit_r1(void)
 }
 
 
+/**
+ * hip_get_r1 - Fetch a precreated R1 and return it.
+ * @ip_i: Initiator's IPv6 address
+ * @ip_r: Responder's IPv6 address
+ * 
+ */
 struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r)
 {
 	struct hip_r1entry *r1e;
@@ -264,20 +321,43 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r)
 	if (r1e == NULL)
 		return NULL;
 
-	/* lock r1e */
-	r1e->used++;
-	/* unlock r1e */
-
 	return r1e->r1;
 }
 
+int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			  uint64_t birthday)
+{
+	uint64_t generation;
+	struct hip_r1entry *r1e;
 
+	r1e = hip_fetch_cookie_entry(ip_i, ip_r);
+	if (r1e == NULL)
+		return -ENOENT;
+
+	/* if we some day support changing the puzzle, we could take
+	   the generation into account when veifrying packets etc...
+	*/
+#if 0
+	generation = ((uint64_t)load_time) << 32 | r1e->generation;
+
+	if (birthday + 1 < generation) {
+		HIP_ERROR("R1 generation too old\n");
+		return -EINVAL;
+	}
+
+	if (birthday > generation) {
+		HIP_ERROR("R1 generation from future\n");
+		return -EINVAL;
+	}
+#endif
+	return 0;
+}
 
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
 		      struct hip_common *hdr,
-		      struct hip_birthday_cookie *cookie)
+		      struct hip_solution *solution)
 {
-	struct hip_birthday_cookie *oldcookie;
+	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
 	int res;
 
@@ -287,27 +367,52 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 		return 0;
 	}
 
-	oldcookie = hip_get_param(result->r1, HIP_PARAM_BIRTHDAY_COOKIE_R1);
-	if (!oldcookie) {
+	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
+	if (!puzzle) {
 		HIP_ERROR("Internal error: could not find the cookie\n");
 		return 0;
 	}
 
-	if (cookie->val_i == oldcookie->val_i) {
-		res = hip_solve_puzzle(cookie, hdr, &oldcookie->val_jk,
-				       HIP_VERIFY_PUZZLE);
-		if (!res)
-			HIP_ERROR("Puzzle incorrectly solved\n");
+	if (solution->K != puzzle->K) {
+		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
+			 solution->K, puzzle->K);
+		
+		if (solution->K != result->Ck) {
+			HIP_ERROR("Solution's K did not match any sent Ks.\n");
+			return 0;
+		}
 
-	} else 	if (cookie->val_i == result->Ci) {
-		res = hip_solve_puzzle(cookie,hdr, &result->Ck,
-				       HIP_VERIFY_PUZZLE);
+		if (solution->I != result->Ci) {
+			HIP_ERROR("Solution's I did not match the sent I\n");
+			return 0;
+		}
+
+		if (memcmp(solution->opaque, result->Copaque, 3) != 0) {
+			HIP_ERROR("Solution's opaque data does not match sent opaque data\n");
+			return 0;
+		}
+
+		HIP_DEBUG("Received solution to an old puzzle\n");
+
+		res = hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE);
+
 		if (!res)
 			HIP_ERROR("Old puzzle incorrectly solved\n");
-
 	} else {
-		HIP_ERROR("WARNING: Unknown cookie\n");
-		return 0;
+		if (solution->I != puzzle->I) {
+			HIP_ERROR("Solution's I did not match the sent I\n");
+			return 0;
+		}
+		
+		if (memcmp(solution->opaque, puzzle->opaque, 3) != 0) {
+			HIP_ERROR("Solution's opaque data does not match the opaque data sent\n");
+			return 0;
+		}
+
+		res = hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE);
+		if (!res)
+			HIP_ERROR("Puzzle incorrectly solved\n");
 	}
+
 	return res;
 }

@@ -101,7 +101,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			do_gettimeofday(&gtv_start);
 		}
 #endif
-		smp_rmb();
+		barrier();
 		entry->state = HIP_STATE_I1_SENT;
 
 		err = hip_send_i1(&hdr->daddr, entry);
@@ -109,6 +109,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			HIP_ERROR("Sending of I1 failed (%d)\n", err);
 			err = -ENOMEM;
 
+			barrier();
 			entry->state = HIP_STATE_UNASSOCIATED;
 			goto out;
 		}

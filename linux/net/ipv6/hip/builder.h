@@ -48,12 +48,10 @@ hip_tlv_type_t hip_get_param_type(const void *tlv_common);
 void hip_set_param_type(void *tlv_common, hip_tlv_type_t type);
 void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common);
 hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh);
-void hip_set_param_spi_value(struct hip_spi_lsi *spi_lsi, uint32_t spi);
-void hip_set_param_lsi_value(struct hip_spi_lsi *spi_lsi, uint32_t lsi);
-uint32_t hip_get_param_spi_value(const struct hip_spi_lsi *spi_lsi);
-uint32_t hip_get_param_lsi_value(const struct hip_spi_lsi *spi_lsi);
-uint64_t hip_get_param_birthday(const struct hip_birthday_cookie *bc);
-uint64_t hip_get_param_i_val(const struct hip_birthday_cookie *bc);
+void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi);
+void hip_set_param_lsi_value(struct hip_spi *hspi, uint32_t lsi);
+uint32_t hip_get_param_spi_value(const struct hip_spi *hspi);
+uint32_t hip_get_param_lsi_value(const struct hip_spi *hspi);
 uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *test);
 uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id);
@@ -94,9 +92,6 @@ int hip_build_param_signature_contents(struct hip_common *msg,
 				      const void *contents,
 				      hip_tlv_len_t contents_size,
 				      uint8_t algorithm);
-int hip_build_param_cookie(struct hip_common *msg, int solved,
-			   uint64_t birthday, uint64_t random_i,
-			   uint64_t random_j_k);
 int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 				      uint8_t group_id,
 				      void *pubkey,
@@ -122,12 +117,11 @@ int hip_build_param_rea_info_mm02(struct hip_common *msg,
 int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
 			    uint16_t rea_id, uint32_t rtt);
 int hip_build_param_nes(struct hip_common *msg, int is_reply,
-			uint16_t keymat_index, uint16_t update_id,
+			uint16_t keymat_index,
 			uint32_t old_spi, uint32_t new_spi);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
-int hip_build_param_spi_lsi(struct hip_common *msg, uint32_t lsi,
-			    uint32_t spi);
+int hip_build_param_spi(struct hip_common *msg, uint32_t spi);
 int hip_build_param_encrypted(struct hip_common *msg,
 			      struct hip_host_id *host_id);
 int hip_build_param_eid_endpoint(struct hip_common *msg,
@@ -147,4 +141,18 @@ int hip_build_param_eid_iface(struct hip_common *msg,
 int hip_build_param_eid_sockaddr(struct hip_common *msg,
                                  struct sockaddr *sockaddr,
                                  size_t sockaddr_len);
+
+int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
+			   uint32_t opaque, uint64_t random_i);
+
+int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *puzzle,
+			     uint64_t val_J);
+
+int hip_build_param_echo_response(struct hip_common *msg,
+				  struct hip_echo_request *ping, int sign);
+
+int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
+
+char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
+
 #endif /* HIP_BUILDER */

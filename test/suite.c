@@ -129,60 +129,6 @@ struct hip_unit_test_suite unit_test_suite_kernel = {
   }
 };
 
-
-/****************************** Crypto ***************************************/
-
-HIP_UNIT_TEST_CASE(test_solve_puzzle)
-{
-  struct in6_addr init,resp;
-  struct hip_birthday_cookie bc;
-  struct hip_birthday_cookie cookie;
-  uint64_t i=0;
-  int result;
-
-  return;
-  /* This test is currently invalid, as the cookie code is in the kernel.
-     The user space implementation will be removed shortly.
-   */
-#if 0
-  init.s6_addr32[0] = htonl(0x3FFE0000);
-  init.s6_addr32[1] = htonl(0x00000000);
-  init.s6_addr32[2] = htonl(0x020103FF);
-  init.s6_addr32[3] = htonl(0x6495AFB2);
-
-  resp.s6_addr32[0] = htonl(0x20010180);
-  resp.s6_addr32[1] = htonl(0x840000D1);
-  resp.s6_addr32[2] = htonl(0x020103FF);
-  resp.s6_addr32[3] = htonl(0x986734A1);
-
-  bc.val_i = 0x78525DA0BFD7AD14ULL;
-  cookie.val_i = bc.val_i;
-  for(i=0;i<20;i++) {
-    bc.val_jk = i;
-    cookie.val_jk = bc.val_jk;
-
-    result = solve_puzzle(&bc,&init,&resp);
-    if (result != 0) {
-      HIP_ERROR("Failed to solve the cookie with I value = %llx\n",i);
-      HIP_UNIT_ASSERT(0);
-    }
-
-    result = validate_cookie(&cookie,&bc,&init,&resp);
-    if (result != 0) {
-      HIP_ERROR("Failed to verify cookie with I value = %llx\n",i);
-      HIP_UNIT_ASSERT(0);
-    }
-  }
-#endif
-};
-
-struct hip_unit_test_suite unit_test_suite_crypto = {
-  1,
-  {
-    test_solve_puzzle
-  }
-};
-
 /*************************** All Test Suites ********************************/
 
 /*
@@ -194,7 +140,6 @@ struct hip_unit_test_suite_list unit_test_suite_list_userspace = {
   {
     &unit_test_suite_internal,
     &unit_test_suite_hipconf,
-    &unit_test_suite_crypto,
     &unit_test_suite_builder
   }
 };
