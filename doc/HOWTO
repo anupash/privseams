@@ -215,6 +215,13 @@ to have the nc6 tool which can be found from e.g. "www.freshmeat.net".
   crash # <type some text and press enter>
   oops  # <the text that you typed in crash should appear in oops console>
 
+Do not use link local addresses for the mobility scenarios for the
+hosts, unless you know what you are doing! For example, you are asking
+for trouble if you establish HIP SA between the mobile and
+correspondent node using link local addresses, and move the mobile
+node to a different network. The readdressing fails, because either
+node has no way of reaching the other node.
+
 Compiling Java Applications
 ===========================
 
