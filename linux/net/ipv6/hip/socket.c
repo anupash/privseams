@@ -257,6 +257,7 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 		HIP_ERROR("Failed to get socket eid info.\n");
 		goto out_err;
 	}
+	HIP_DEBUG_HIT("hip socket bound to HIT", &lhi.hit);
 
 	/* Clear out the flowinfo, etc from sockaddr_in6 */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
@@ -267,7 +268,7 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	/* Use in6_addr_any (= all zeroes) for bind. Offering a HIT to bind
 	   does not work without modifications into the bind code because
 	   bind_v6 returns an error when it does address type checks. */
-	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
+	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 
@@ -1356,6 +1357,14 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	
 	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
 	
+	HIP_DEBUG("hip: Generating a new R1 now\n");
+	
+	if (!hip_precreate_r1(&lhi.hit)) {
+	  HIP_ERROR("Unable to precreate R1s for host identity...failing\n");
+	  err = -ENOENT;
+	  goto out_err;
+	}
+
 	/* Iterate through the interfaces */
 	while((param = hip_get_next_param(msg, param)) != NULL) {
 		/* Skip other parameters (only the endpoint should

@@ -211,6 +211,11 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 	_HIP_DEBUG("Calculated index: %d\n", idx);
 
 	entry = hip_r1_find(hit);
+	if(!entry) {
+		HIP_ERROR("Couldn't find precreated R1 packet\n");
+		return NULL;
+	}
+
 	r1 = &(entry->r1table[idx]);
 	/* the code under #if 0 periodically changes the puzzle. It is not included
 	   in compilation as there is currently no easy way of signing the R1 packet
