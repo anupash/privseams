@@ -419,7 +419,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
 	if (!seq) {
 		HIP_ERROR("No SEQ parameter in packet\n");
-		goto out_err;
+		goto out_err_nolock;
 	}
 
 	/* 8.11.1  Processing an UPDATE packet in state ESTABLISHED */
@@ -443,7 +443,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 	entry = hip_hadb_find_byhit(hits);
 	if (!entry) {
 		HIP_ERROR("Entry not found\n");
-		goto out_err;
+		goto out_err_nolock;
 	}
 
 	HIP_LOCK_HA(entry);
@@ -532,21 +532,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 
 		hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in, ntohl(nes->old_spi));
 		_HIP_DEBUG("Stored SPI 0x%x to new_spi_in\n", new_spi_in);
-		//hip_finalize_sa(hitr, new_spi_in); /* move below */
-		//hip_update_spi_waitlist_add(new_spi_in, hits, NULL /*rea*/); /* move away ? */
 	}
-
-#if 0
-		{
-			//int ifindex = hip_ifindex2spi_get_ifindex(entry, entry->spi_in);
-			int ifindex = hip_ifindex2spi_get_ifindex(entry, prev_spi_in);
-			HIP_DEBUG("ifindex to map=%u\n", ifindex);
-			if (ifindex)
-				hip_ifindex2spi_map_add(entry, new_spi_in, ifindex);
-			else
-				HIP_DEBUG("ifindex not found\n");
-		}
-#endif
 
 	/* mm-02 test */
 	if (nes->old_spi == nes->new_spi) {
@@ -558,13 +544,11 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 		spi_out_data.seq_update_id = ntohl(seq->update_id);
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
 		if (err) {
-			HIP_UNLOCK_HA(entry);
 			goto out_err;
 		}
 		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created yet)\n",
 			  ntohl(nes->new_spi));
 	}
-
 
 	/*  3. The system increments its outgoing Update ID by one. */
 	entry->update_id_out++;
@@ -670,6 +654,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 
  out_err:
 	HIP_UNLOCK_HA(entry);
+ out_err_nolock:
 	if (update_packet)
 		kfree(update_packet);
 	if (err) {
@@ -687,6 +672,7 @@ int hip_handle_update_established(struct hip_common *msg, struct in6_addr *src_i
 
 /* 8.11.3 Leaving REKEYING state */
 /* @nes is the NES param to be handled in the received UPDATE in host byte order */
+/* @entry is locked when this function is called */
 int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			       struct hip_nes *nes)
 {
@@ -835,13 +821,11 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 		spi_in_data.spi = new_spi_in;
 		spi_in_data.ifindex = hip_ifindex2spi_get_ifindex(entry, prev_spi_in); /* already set before ? check */
-		HIP_LOCK_HA(entry);
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 		if (err) {
-			HIP_UNLOCK_HA(entry);
+
 			goto out_err;
 		}
-		HIP_UNLOCK_HA(entry);
 	} else
 		HIP_DEBUG("Old SPI <> New SPI, not adding a new inbound SA\n");
 
@@ -891,7 +875,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	} else
 		HIP_DEBUG("prev SPI = new SPI, not deleting the inbound SA\n");
 
-	/* clear out the saved new_spi value from hadb */
+	//hip_update_spi_waitlist_add(new_spi_in, hits, NULL /*rea*/);
 
  out_err:
 	return err;
@@ -927,7 +911,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 	entry = hip_hadb_find_byhit(hits);
 	if (!entry) {
 		HIP_ERROR("Entry not found\n");
-		goto out_err;
+		goto out_err_nolock;
 	}
 	HIP_LOCK_HA(entry);
 
@@ -939,14 +923,12 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 		/* 1. If the packet contains a SEQ and NES parameters, then the system
 		   generates a new UPDATE packet with an ACK of the peer's Update ID
 		   as received in the SEQ parameter. .. */
-
 		update_packet = hip_msg_alloc();
 		if (!update_packet) {
 			HIP_DEBUG("update_packet alloc failed\n");
 			err = -ENOMEM;
 			goto out_err;
 		}
-		_HIP_DEBUG("update_packet=%p\n\n", update_packet);
 		hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
 
 		err = hip_build_param_ack(update_packet, ntohl(seq->update_id));
@@ -971,6 +953,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 	   8.11.3. If the ACK of the outstanding Update ID has not been
 	   received, stay in state REKEYING after storing the recived NES
 	   and (optional) DIFFIE_HELLMAN. */
+#if 0
 	if (ack) {
 		size_t n, i;
 		uint32_t *peer_update_id;
@@ -993,7 +976,13 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 				hip_update_handle_nes(entry, puid); /* kludge */
 		}
 	}
+#endif
+	if (ack)
+		hip_update_handle_ack(entry, ack, nes ? 1 : 0);
+//	if (nes)
+//		hip_update_handle_nes(entry, puid); /* kludge */
 
+	/* finish SAs if we have received ACK and NES */
 	{
 		struct hip_spi_in_item *item, *tmp;
 
@@ -1002,7 +991,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 				  item->spi, item->seq_update_id, item->update_state_flags);
 			if (item->update_state_flags == 0x3) {
 				err = hip_update_finish_rekeying(msg, entry, &item->stored_received_nes);
-				HIP_DEBUG("stored nes param handling ret %d\n", err);
+				HIP_DEBUG("update_finish handling ret err=%d\n", err);
 			}
 		}
 		err = 0;
@@ -1066,6 +1055,7 @@ int hip_handle_update_rekeying(struct hip_common *msg, struct in6_addr *src_ip)
 
  out_err:
 	HIP_UNLOCK_HA(entry);
+ out_err_nolock:
 	/* if (err) move to state = ? */
 	if (update_packet)
 		kfree(update_packet);

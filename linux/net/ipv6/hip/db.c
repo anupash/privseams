@@ -1168,21 +1168,45 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 	return found;
 }
 
-
-void hip_update_handle_ack(hip_ha_t *entry, uint32_t peer_update_id)
+/* have_nes is 1, if there is NES in the same packet as the ACK was */
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes)
 {
-	struct hip_spi_in_item *item, *tmp;
+	size_t n, i;
+	uint32_t *peer_update_id;
 
-	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
+	HIP_DEBUG("have_nes=%d\n", have_nes);
 
-	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
-			  item->spi, item->seq_update_id);
-		if (item->seq_update_id == peer_update_id) {
-			HIP_DEBUG("SEQ and ACK match\n");
-			item->update_state_flags |= 0x1; /* recv'd ACK */
+	if (!ack) {
+		HIP_ERROR("NULL ack\n");
+		goto out_err;
+	}
+
+	if (hip_get_param_contents_len(ack) % sizeof(uint32_t)) {
+		HIP_ERROR("ACK param length not divisible by 4 (%u)\n",
+			  hip_get_param_contents_len(ack));
+		goto out_err;
+	}
+
+	n = hip_get_param_contents_len(ack) / sizeof(uint32_t);
+	HIP_DEBUG("%d pUIDs in ACK param\n", n);
+	peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
+	for (i = 0; i < n; i++, peer_update_id++) {
+		struct hip_spi_in_item *item, *tmp;
+		uint32_t puid = ntohl(*peer_update_id);
+
+		HIP_DEBUG("peer Update ID=%u\n", puid);
+		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+			HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
+				  item->spi, item->seq_update_id);
+			if (item->seq_update_id == puid) {
+				HIP_DEBUG("SEQ and ACK match\n");
+				item->update_state_flags |= 0x1; /* recv'd ACK */
+				if (have_nes)
+					item->update_state_flags |= 0x2; /* recv'd also NES */
+			}
 		}
 	}
+ out_err:
 }
 
 void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id)
