@@ -1966,30 +1966,31 @@ void hip_hadb_dump_hits(void)
 
 void hip_hadb_dump_hs_ht(void)
 {
-	int i;
-	struct hip_hit_spi *hs, *tmp_hs;
-	char str[INET6_ADDRSTRLEN];
+        int i;
+        struct hip_hit_spi *hs, *tmp_hs;
+        char str[INET6_ADDRSTRLEN];
 
-	HIP_DEBUG("start\n");
-	HIP_LOCK_HT(&hadb_spi_list);
+        HIP_DEBUG("start\n");
+        HIP_LOCK_HT(&hadb_spi_list);
 
-	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		if (!list_empty(&hadb_byspi_list[i])) {
-			_HIP_DEBUG("HT[%d]\n", i);
-			list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
-				hip_hadb_hold_hs(hs);
-				hip_in6_ntop(&hs->hit, str);
-				HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
-					  str, hs->spi, atomic_read(&hs->refcnt));
-				hip_hadb_put_hs(hs);
-			}
-		}
-	}
+        for(i = 0; i < HIP_HADB_SIZE; i++) {
+                if (!list_empty(&hadb_byspi_list[i])) {
+                        _HIP_DEBUG("HT[%d]\n", i);
+                        list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i]
+, list) {
+                                hip_hadb_hold_hs(hs);
+                                hip_in6_ntop(&hs->hit, str);
+                                HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
+                                          str, hs->spi, atomic_read(&hs->refcnt)
+);
+                                hip_hadb_put_hs(hs);
+                        }
+                }
+        }
 
-	HIP_UNLOCK_HT(&hadb_spi_list);
-	HIP_DEBUG("end\n");
+        HIP_UNLOCK_HT(&hadb_spi_list);
+        HIP_DEBUG("end\n");
 }
-
 
 void hip_hadb_dump_spis_in(hip_ha_t *entry)
 {

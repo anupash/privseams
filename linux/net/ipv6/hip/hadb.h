@@ -165,21 +165,27 @@ void hip_hadb_deactivate_hs_spi(uint32_t spi);
 void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
+void hip_hadb_remove_hs2(struct hip_hit_spi *hs);
 
 #define hip_hold_ha(ha) do { \
 	atomic_inc(&ha->refcnt); \
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
 } while(0)
 
-#define hip_put_ha(ha) do { \
+#define hip_db_put_ha(ha, destructor) do { \
 	if (atomic_dec_and_test(&ha->refcnt)) { \
                 HIP_DEBUG("HA: deleting %p\n", ha); \
-		hip_hadb_delete_state(ha); \
+		destructor(ha); \
                 HIP_DEBUG("HA: %p deleted\n", ha); \
 	} else { \
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, atomic_read(&ha->refcnt)); \
+                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
+                           atomic_read(&ha->refcnt)); \
         } \
 } while(0)
+
+#define hip_put_ha(ha) hip_db_put_ha(ha, hip_hadb_delete_state)
+#define hip_put_xfrm(ha) hip_db_put_ha(ha, hip_beetdb_delete_state)
+
 
 //#endif /* __KERNEL__ */
 #endif /* HIP_HADB_H */

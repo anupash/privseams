@@ -34,11 +34,6 @@ static void *hip_beetdb_get_key_hit(void *entry)
 	return HIP_DB_GET_KEY_HIT(entry, hip_xfrm_t);
 }
 
-static void *hip_beetdb_get_key_spi(void *entry)
-{
-	return (void *)(((hip_xfrm_t *)entry)->spi);
-}
-
 static void hip_beetdb_hold_hs(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
@@ -49,15 +44,13 @@ static void hip_beetdb_put_hs(void *entry)
 	HIP_DB_PUT_ENTRY(entry, struct hip_hit_spi, hip_beetdb_delete_hs);
 }
 
-static void hip_beetdb_get_key_spi(void *entry)
+static void *hip_beetdb_get_key_spi(void *entry)
 {
 	return (void *)(((struct hip_hit_spi *)entry)->spi);
 }
 
 void hip_init_beetdb(void)
 {
-	// XX FIXME: this does not work
-
 	memset(&hip_beetdb_hit,0,sizeof(hip_beetdb_hit));
 	memset(&hip_beetdb_spi_list,0,sizeof(hip_beetdb_spi_list));
 
@@ -88,18 +81,17 @@ void hip_init_beetdb(void)
 	hip_ht_init(&hip_beetdb_hit);
 	hip_ht_init(&hip_beetdb_spi_list);
 }
-
 void hip_uninit_beetdb(void)
 {
 	// XX FIXME: this does not work
 	int i;
-	hip_ha_t *ha, *tmp;
+	hip_xfrm_t *ha, *tmp;
 	struct hip_hit_spi *hs, *tmp_hs;
 
 	HIP_DEBUG("\n");
 
 	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
-	hip_beetdb_dump_hs_ht();
+	//hip_beetdb_dump_hs_ht();
 
 	/* I think this is not very safe deallocation.
 	 * Locking the hip_beetdb_spi and hip_beetdb_hit could be one option, but I'm not
@@ -110,12 +102,12 @@ void hip_uninit_beetdb(void)
 	 */
 	HIP_DEBUG("DELETING HA HT\n");
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
-		list_for_each_entry_safe(ha, tmp, &hip_beetdb_byhit[i], next_hit) {
+		list_for_each_entry_safe(ha, tmp, &hip_beetdb_byhit[i], next) {
 			if (atomic_read(&ha->refcnt) > 2)
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
 			hip_hold_ha(ha);
 			hip_beetdb_delete_state(ha);
-			hip_put_ha(ha);
+			hip_put_xfrm(ha);
 		}
 	}
 
@@ -130,7 +122,7 @@ void hip_uninit_beetdb(void)
 				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
 			hip_beetdb_hold_hs(hs);
 			//hip_beetdb_delete_hs(hs);
-			hip_beetdb_remove_hs2(hs);
+			hip_hadb_remove_hs2(hs);
 			hip_beetdb_put_hs(hs);
 			//} else
 			//	HIP_DEBUG("HS refcnt < 1, BUG ?\n");
