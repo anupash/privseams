@@ -51,20 +51,25 @@ gcry_mpi_cmp( MPI u, MPI v )
     _gcry_mpi_normalize( v );
     usize = u->nlimbs;
     vsize = v->nlimbs;
-    if( !u->sign && v->sign )
-	return 1;
+
+    if( !u->sign && v->sign ) {
+	    return 1;
+    }
     if( u->sign && !v->sign )
 	return -1;
     if( usize != vsize && !u->sign && !v->sign )
 	return usize - vsize;
-    if( usize != vsize && u->sign && v->sign )
+    if( usize != vsize && u->sign && v->sign ) 
 	return vsize + usize;
-    if( !usize )
+    if( !usize ) {
 	return 0;
-    if( !(cmp = _gcry_mpih_cmp( u->d, v->d, usize )) )
+    }
+    if( !(cmp = _gcry_mpih_cmp( u->d, v->d, usize )) ) {
 	return 0;
-    if( (cmp < 0?1:0) == (u->sign?1:0))
+    }
+    if( (cmp < 0?1:0) == (u->sign?1:0)) {
 	return 1;
+    }
     return -1;
 }
 

@@ -182,10 +182,15 @@ int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen)
 {
 	size_t len;
 
+
+	_HIP_HEXDUMP("DH pubkey", dh->pub_key->d, dh->pub_key->nlimbs*4);
+
 	if (gcry_mpi_print(GCRYMPI_FMT_USG, NULL, &len, dh->pub_key) != 0) {
 		log_error("Could not process the public key: %d\n",(int)dh->pub_key);
 		return -EINVAL;
 	}
+
+	_HIP_DEBUG("We need %d bytes for DH key\n",len);
 
 	if (outlen < len) {
 		log_error("Output buffer too small. %d bytes required\n",len);
