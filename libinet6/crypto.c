@@ -118,12 +118,12 @@ RSA *create_rsa_key(int bits) {
  *
  * Returns: 0 if HIT was created successfully, else negative.
  */
-int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
-  int err = 0, pubkey_len = 405; // XX FIX
+int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit) {
+  int err = 0, pubkey_len = 0; // pubkey_len should be 405, calculated below
   //unsigned char *pubkey = NULL;
   char addrstr[INET6_ADDRSTRLEN];
   unsigned char *sha, sha_hash[SHA_DIGEST_LENGTH];
-  int i;
+  int i, t;
   BIGNUM *bn, *tmp = NULL;
 
   /// XX FIXME -- WHAT WAS THIS?
@@ -132,6 +132,16 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
   //if (!IN6_IS_ADDR_UNSPECIFIED(&lhi->hit)) {
   //  HIP_INFO("Use given HIT\n");
   //  goto out_err
+
+  t = (BN_num_bytes(dsa_key->p) - 64) / 8;
+  if (t < 0 || t > 8) {
+    HIP_ERROR("t=%d < 0 || t > 8\n", t);
+    err = -EINVAL;
+    goto out_err;
+  }
+  pubkey_len = 1 + 20 + 3 * (64 + t * 8); /* RFC 2536 section 2 */
+
+  _HIP_DEBUG("DSA pubkey length=%d\n", pubkey_len);
 
   _HIP_INFO("Create HIT from HI\n");
   
@@ -225,8 +235,8 @@ int dsa_to_hit(char *dsa, int type, struct in6_addr *hit) {
  * XX TODO: similar to the dsa_to_hit except from the pubkey_len,
  *          this is not very elegant...
  */
-int rsa_to_hit(char *rsa, int type, struct in6_addr *hit) {
-  int err = 0, pubkey_len = 132; // XX FIX
+int rsa_to_hit(RSA *rsa_key, char *rsa, int type, struct in6_addr *hit) {
+  int err = 0, pubkey_len = 0; 
   //unsigned char *pubkey = NULL;
   char addrstr[INET6_ADDRSTRLEN];
   unsigned char *sha, sha_hash[SHA_DIGEST_LENGTH];
@@ -240,6 +250,10 @@ int rsa_to_hit(char *rsa, int type, struct in6_addr *hit) {
   //  HIP_INFO("Use given HIT\n");
   //  goto out_err
   
+  /* calculate public key length, RFC 2537, section 2 */
+  pubkey_len = 1 + BN_num_bytes(rsa_key->e) + BN_num_bytes(rsa_key->n);
+  _HIP_DEBUG("RSA pub key length = %d\n", pubkey_len);
+
   _HIP_INFO("Create HIT from HI\n");
   
   if (type == HIP_HIT_TYPE_HASH126) {
