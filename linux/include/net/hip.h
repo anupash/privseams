@@ -826,7 +826,10 @@ struct hip_hadb_state
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
 
-	uint32_t stored_sent_update_id; /* new update specs testing */
+	/* new update specs testing */
+	int update_state_flags; /* 0x1=received ack, 0x2=received nes
+				   -> 0x3=can move back to established */
+	uint32_t stored_sent_update_id; /* the SEQ to wait ACK for */
 	struct hip_nes stored_received_nes;
 };
 
