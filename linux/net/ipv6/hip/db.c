@@ -635,7 +635,7 @@ int hip_proc_send_update(char *page, char **start, off_t off,
 {
 	HIP_DEBUG("\n");
 #if 1
-	hip_send_update_all();
+	hip_send_update_all(NULL, 0);
 #endif
 	*eof = 1;
 

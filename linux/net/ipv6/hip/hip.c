@@ -1216,8 +1216,9 @@ static void hip_net_event_handle(int event_src, struct net_device *event_dev,
 		} else {
 			rea_netdev = REA_OUT_NETDEV_ANY;
 		}
-		hip_send_rea_all(dev->ifindex, addr_list,
-				 idev_addr_count, rea_netdev);
+		hip_send_update_all(addr_list, idev_addr_count);
+  //		hip_send_rea_all(dev->ifindex, addr_list,
+  //				 idev_addr_count, rea_netdev);
 
         out_err:
                 read_unlock(&idev->lock);

@@ -235,7 +235,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	 * "keymat_offset / HIP_AH_SHA_LEN + 1" */
 	_HIP_DEBUG("tmp=%d\n", tmp);
 	if ( tmp > 0 && (*keymat_offset / HIP_AH_SHA_LEN + 1) == *calc_index ) {
-		HIP_DEBUG("test: can copy %d bytes from the end of sha K\n", tmp);
+		_HIP_DEBUG("test: can copy %d bytes from the end of sha K\n", tmp);
 		memcpy(key, calc_index_keymat + HIP_AH_SHA_LEN - tmp, tmp);
 		copied += tmp;
 	}
@@ -307,7 +307,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	_HIP_DEBUG("end: copied=%u\n", copied);
 
  out:
-	HIP_HEXDUMP("CALCULATED KEY", key, key_len);
+	_HIP_HEXDUMP("CALCULATED KEY", key, key_len);
 	HIP_DEBUG("at end: *keymat_offset=%u *calc_index=%u\n",
 		  *keymat_offset, *calc_index);
 

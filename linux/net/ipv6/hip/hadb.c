@@ -899,9 +899,9 @@ int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi)
 
         list_for_each_entry_safe(item, tmp, &entry->peer_spi_list, list) {
 		i++;
-		HIP_DEBUG("spi %d=0x%x\n", i, item->spi);
+		_HIP_DEBUG("spi %d=0x%x\n", i, item->spi);
 		if (item->spi == spi) {
-			_HIP_DEBUG("not adding duplicate SPI\n");
+			HIP_DEBUG("not adding duplicate SPI\n");
 			goto out;
 		}
         }
@@ -917,7 +917,7 @@ int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi)
 	INIT_LIST_HEAD(&item->peer_addr_list);
 	ipv6_addr_copy(&item->preferred_address, &in6addr_any);
 	list_add(&item->list, &entry->peer_spi_list);
-
+	HIP_DEBUG("added SPI to the SPI list\n");
  out_err:
  out:
 	return err;
@@ -1043,7 +1043,7 @@ int hip_hadb_dump_spi_list(hip_ha_t *entry, void *unused)
 		i = 1;
 		list_for_each_entry_safe(addr, tmp2, &spi_list->peer_addr_list, list) {
 			hip_in6_ntop(&addr->address, str);
-			HIP_DEBUG(" address %d: %s if=0x%x state=0x%x lifetime=0x%x modified sec=%ld,usec=%ld\n", i, str,
+			HIP_DEBUG(" address %d: %s if=0x%x state=0x%x lifetime=0x%x modified mod=%ld.%06ld\n", i, str,
 				  addr->interface_id, addr->address_state, addr->lifetime,
 				  addr->modified_time.tv_sec, addr->modified_time.tv_usec);
 			i++;
@@ -1407,7 +1407,7 @@ static int hip_proc_read_hadb_spi_list_func(hip_ha_t *entry, void *opaque)
 			goto error;
 		list_for_each_entry(a, &spi_list->peer_addr_list, list) {
 			hip_in6_ntop(&a->address, addr_str);
-			if ( (len += snprintf(page+len, count-len, "\n  addr=%s state=0x%x lifetime=0x%x modified sec=%ld,usec=%ld",
+			if ( (len += snprintf(page+len, count-len, "\n  addr=%s state=0x%x lifetime=0x%x mod=%ld/%06ld",
 					      addr_str, a->address_state, a->lifetime,
 					      a->modified_time.tv_sec, a->modified_time.tv_usec)
 				     ) >= count)

@@ -52,6 +52,7 @@ void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_
 
 	s->spi = spi;
 	ipv6_addr_copy(&s->hit, hit);
+#if 0
 	if (rea)
 		ipv6_addr_copy(&s->v6addr_test, (struct in6_addr *)&(
 
@@ -61,6 +62,7 @@ void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_
 ->address)
 
 );
+#endif
 
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 	list_add(&s->list, &hip_update_spi_waitlist);
@@ -178,7 +180,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 
 		/* test, todo: addr from rea */
 //		hip_print_hit("v6addr_test", &s->v6addr_test);
-		hip_hadb_add_addr_to_spi(entry, entry->default_spi_out, &s->v6addr_test, 0, PEER_ADDR_STATE_ACTIVE, 0, 0);
+//		hip_hadb_add_addr_to_spi(entry, entry->default_spi_out, &s->v6addr_test, PEER_ADDR_STATE_ACTIVE, 0, 0);
 
 //		hip_hadb_insert_state(entry);
 		hip_print_hit("finalizing", &s->hit);
@@ -232,40 +234,40 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	esp_transform = entry->esp_transform;
 	esp_transf_length = hip_enc_key_length(esp_transform);
 	auth_transf_length = hip_auth_key_length_esp(esp_transform);
-	HIP_DEBUG("enckeylen=%d authkeylen=%d\n", esp_transf_length, auth_transf_length);
+	_HIP_DEBUG("enckeylen=%d authkeylen=%d\n", esp_transf_length, auth_transf_length);
 
 	memcpy(Kn, Kn_out, HIP_AH_SHA_LEN);
 
 	/* SA-gl */
 	err = hip_keymat_get_new(espkey_gl->key, esp_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn);
-	HIP_DEBUG("enckey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
+	_HIP_DEBUG("enckey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
-	HIP_HEXDUMP("ENC KEY gl", espkey_gl->key, esp_transf_length);
+	_HIP_HEXDUMP("ENC KEY gl", espkey_gl->key, esp_transf_length);
 	k += esp_transf_length;
 	err = hip_keymat_get_new(authkey_gl->key, auth_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn);
-	HIP_DEBUG("authkey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
+	_HIP_DEBUG("authkey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
-	HIP_HEXDUMP("AUTH KEY gl", authkey_gl->key, auth_transf_length);
+	_HIP_HEXDUMP("AUTH KEY gl", authkey_gl->key, auth_transf_length);
 	k += auth_transf_length;
 
 	/* SA-lg */
 	err = hip_keymat_get_new(espkey_lg->key, esp_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn);
-	HIP_DEBUG("enckey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
+	_HIP_DEBUG("enckey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
-	HIP_HEXDUMP("ENC KEY lg", espkey_lg->key, esp_transf_length);
+	_HIP_HEXDUMP("ENC KEY lg", espkey_lg->key, esp_transf_length);
 	k += esp_transf_length;
 	err = hip_keymat_get_new(authkey_lg->key, auth_transf_length, entry->dh_shared_key,
 				 entry->dh_shared_key_len, &k, &c, Kn);
-	HIP_DEBUG("authkey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
+	_HIP_DEBUG("authkey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
 	if (err)
 		goto out_err;
-	HIP_HEXDUMP("AUTH KEY lg", authkey_lg->key, auth_transf_length);
+	_HIP_HEXDUMP("AUTH KEY lg", authkey_lg->key, auth_transf_length);
 	k += auth_transf_length;
 
 	HIP_DEBUG("at end: k=%u c=%u\n", k, c);
@@ -281,9 +283,10 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	/* assume that caller has the entry lock */
 	int err = 0;
 	uint32_t spi;
-	struct hip_rea_info_addr_item *rea_addr_item;
-	int i = 0, n_addrs;
-
+	struct hip_rea_info_addr_item *rea_address_item;
+	int i, n_addrs;
+	struct hip_peer_spi_list_item *spi_list;
+	struct hip_peer_addr_list_item *a, *tmp;
 	/* mm-02-pre1 8.2 Handling received REAs */
 
 	spi = ntohl(rea->spi);
@@ -298,43 +301,74 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	HIP_DEBUG(" REA has %d addresses, rea param len=%d\n", n_addrs, hip_get_param_total_len(rea));
 	if (n_addrs == 0) {
 		HIP_ERROR("REA (SPI=0x%x) contains no addresses\n", spi);
-		return 0;
+		goto out_err;
 	}
 
 	/* 1.  The host checks if the SPI listed is a new one.  If it
 	   is a new one, it creates a new SPI that contains no addresses. */
-	if (!hip_hadb_get_spi_list(entry, spi)) {
+	spi_list = hip_hadb_get_spi_list(entry, spi);
+	if (!spi_list) {
 		err = hip_hadb_add_peer_spi(entry, spi);
 		if (err) {
 			HIP_DEBUG("failed to create a new SPI list\n");
 			goto out_err;
 		}
+		spi_list = hip_hadb_get_spi_list(entry, spi);
+		if (!spi_list) {
+			HIP_ERROR("Couldn't get newly created SPI list\n"); /* weird */
+			goto out_err;
+		}
 		HIP_DEBUG("created a new SPI list\n");
 	}
 
-	rea_addr_item = (void *)rea+sizeof(struct hip_rea_info_mm02);
-	for(; i < n_addrs; i++, rea_addr_item++) {
-		struct in6_addr *address = &rea_addr->address;
-		uint32_t lifetime = ntohl(rea_addr->lifetime);
-		int is_preferred = ntohl(rea_addr->reserved) == 1 << 31;
-		hip_print_hit("REA address", address);
+	rea_address_item = (void *)rea+sizeof(struct hip_rea_info_mm02);
+	for(i = 0; i < n_addrs; i++, rea_address_item++) {
+		struct in6_addr *rea_address = &rea_address_item->address;
+		uint32_t lifetime = ntohl(rea_address_item->lifetime);
+		int is_preferred = ntohl(rea_address_item->reserved) == 1 << 31;
+		hip_print_hit("REA address", rea_address);
 		HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
-			   is_preferred ? "yes" : "no", ntohl(rea_addr->reserved),
+			   is_preferred ? "yes" : "no", ntohl(rea_address_item->reserved),
 			  lifetime);
 		/* 2. check that the address is a legal unicast or anycast address */
-		if (! (ipv6_addr_type(address) & IPV6_ADDR_UNICAST) ) {
+		if (! (ipv6_addr_type(rea_address) & IPV6_ADDR_UNICAST) ) {
 			HIP_DEBUG("skipping non-unicast address\n");
 			continue;
 		}
 		/* 3. check if the address is already bound to the SPI + add/update address */
-		err = hip_hadb_add_addr_to_spi(entry, spi, address, PEER_ADDR_STATE_UNVERIFIED,
-					       lifetime, is_preferrer);
+		err = hip_hadb_add_addr_to_spi(entry, spi, rea_address, PEER_ADDR_STATE_UNVERIFIED,
+					       lifetime, is_preferred);
 		if (err) {
 			HIP_DEBUG("failed to add/update address to the SPI list\n");
 			goto out_err;
 		}
-		/* 4. Mark all addresses on the SPI that were NOT listed in the REA
-		   parameter as DEPRECATED. */
+	}
+
+	/* 4. Mark all addresses on the SPI that were NOT listed in the REA
+	   parameter as DEPRECATED. */
+
+	HIP_DEBUG("deprecating not listed address from the SPI list\n");
+	list_for_each_entry_safe(a, tmp, &spi_list->peer_addr_list, list) {
+		int spi_addr_is_in_rea = 0;
+		
+		hip_print_hit("testing SPI address", &a->address);
+		rea_address_item = (void *)rea+sizeof(struct hip_rea_info_mm02);
+		for(i = 0; i < n_addrs; i++, rea_address_item++) {
+			struct in6_addr *rea_address = &rea_address_item->address;
+			hip_print_hit(" against REA address", rea_address);
+			if (!ipv6_addr_cmp(&a->address, rea_address)) {
+				spi_addr_is_in_rea = 1;
+				break;
+			}
+
+		}
+		if (spi_addr_is_in_rea) {
+			HIP_DEBUG("SPI address was in REA\n");
+			continue;
+		}
+		HIP_DEBUG("SPI address was not in REA\n");
+		/* deprecate the address */
+		a->address_state = PEER_ADDR_STATE_DEPRECATED;
 	}
 
  out_err:
@@ -473,35 +507,14 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 			goto out_err;
 	}
 
-
+	/* testing REA parameters in UPDATE */
 	while (	(rea = hip_get_nth_param(msg, HIP_PARAM_REA_INFO, rea_i)) != NULL) {
 		HIP_DEBUG("Found REA parameter [%d]\n", rea_i);
 		err = hip_update_handle_rea_parameter(entry, rea);
 		HIP_DEBUG("rea param handling ret %d\n", err);
 		err = 0;
-#if 0
-		struct hip_rea_info_addr_item *rea_addr;
-		int i = 0, n_addrs;
-
-		HIP_DEBUG("Found REA parameter [%d]\n", rea_i);
-		HIP_DEBUG(" SPI=0x%x\n", ntohl(rea->spi));
-		HIP_DEBUG("%d %d %d\n", hip_get_param_total_len(rea), sizeof(struct hip_rea_info_mm02), sizeof(struct hip_rea_info_addr_item));
-		if ((hip_get_param_total_len(rea) - sizeof(struct hip_rea_info_mm02)) % sizeof(struct hip_rea_info_addr_item))
-			HIP_ERROR("addr item list len modulo not zero, (len=%d)\n", rea->length);
-		n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea_info_mm02)) / sizeof(struct hip_rea_info_addr_item);
-		HIP_DEBUG(" REA has %d addresses, rea param len=%d\n", n_addrs, hip_get_param_total_len(rea));
-		while (i < n_addrs) {
-			rea_addr = (void *)rea+sizeof(struct hip_rea_info_mm02)+i*sizeof(struct hip_rea_info_addr_item);
-			HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
-				  ntohl(rea_addr->reserved) == 1 << 31 ? "yes" : "no", ntohl(rea_addr->reserved),
-				  ntohl(rea_addr->lifetime));
-			hip_print_hit("rea addr", &rea_addr->address);
-			i++;
-		}
-#endif
 		rea_i++;
 	}
-
 
 	/* set up new outgoing IPsec SA */
 
@@ -552,7 +565,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	HIP_DEBUG("Stored SPI 0x%x to spi_in\n", new_spi_in);
 	hip_finalize_sa(hitr, new_spi_in); /* move below */
 
-	hip_update_spi_waitlist_add(new_spi_in, hits, rea);
+	hip_update_spi_waitlist_add(new_spi_in, hits, NULL /*rea*/);
 
 #if 0
 	/* delete old incoming SA */
@@ -795,7 +808,9 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 
 	entry->default_spi_out = entry->spi_out;
 	HIP_DEBUG("set default SPI out=0x%x\n", entry->default_spi_out);
-	hip_hadb_add_addr_to_spi(entry, entry->spi_out, src_ip, 0, PEER_ADDR_STATE_ACTIVE, 0, 1);
+#if 0
+	hip_hadb_add_addr_to_spi(entry, entry->spi_out, src_ip, PEER_ADDR_STATE_ACTIVE, 0, 1);
+#endif
 
 #if 0
 	/* todo: set SA state to dying */
@@ -1117,7 +1132,7 @@ int hip_receive_update(struct sk_buff *skb)
 }
 
 
-int hip_send_update(struct hip_hadb_state *entry)
+int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item *addr_list, int addr_count)
 {
 	int err = 0;
 	uint16_t update_id_out;
@@ -1180,9 +1195,13 @@ int hip_send_update(struct hip_hadb_state *entry)
 		goto out_err;
 	}
 
-	{
+	if (addr_list && addr_count > 0) {
 		/* mm02 rea test */
+#if 0
 		struct hip_rea_info_addr_item addresses[2];
+
+		int idev_addr_count = 0;
+		struct hip_rea_info_addr_item *addr_list = NULL;
 
 		addresses[0].lifetime = htonl(0x1234);
 		addresses[0].reserved = htonl(1 << 31); // preferred address
@@ -1191,8 +1210,9 @@ int hip_send_update(struct hip_hadb_state *entry)
 		addresses[1].lifetime = htonl(0x5678);
 		addresses[1].reserved = 0;
 		ipv6_addr_set(&addresses[1].address, htons(0xfe80), 0, 0, htonl(2));
-
-		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, &addresses[0], 2);
+#endif
+//		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, &addresses[0], 2);
+		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, addr_list, addr_count);
 		if (err) {
 			HIP_ERROR("Building of REA param failed\n");
 			goto out_err;
@@ -1323,7 +1343,8 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
  *
  * TODO: retransmission timers
  */
-void hip_send_update_all(void)
+//void hip_send_update_all(void)
+void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_count)
 {
 	int err = 0, i;
 
@@ -1345,7 +1366,7 @@ void hip_send_update_all(void)
 
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
-			hip_send_update(rk.array[i]);
+			hip_send_update(rk.array[i], addr_list, addr_count);
 			hip_put_ha(rk.array[i]);
 		}
 	}
