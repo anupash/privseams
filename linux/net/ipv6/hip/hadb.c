@@ -1265,6 +1265,9 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set
 	HIP_DEBUG("spi=0x%x direction=%s update_id=%u update_flags_or=0x%x keymat_index=%u nes=0x%p\n",
 		  spi, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT",
 		  update_id, update_flags_or, keymat_index, nes);
+	if (nes)
+		HIP_DEBUG("NES: old_spi=0x%x new_spi=0x%x keymat_index=%u\n",
+			  ntohl(nes->old_spi), ntohl(nes->new_spi), ntohs(nes->keymat_index));
 
 	if (direction == HIP_SPI_DIRECTION_IN) {
 		struct hip_spi_in_item *item, *tmp;
@@ -1288,7 +1291,8 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set
 				return;
 			}
 		}
-	}
+	} else
+		HIP_ERROR("unknown direction %d, REMOVE ?\n", direction);
 
 	HIP_ERROR("SPI not found\n");
 }
