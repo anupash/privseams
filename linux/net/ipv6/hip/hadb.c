@@ -430,6 +430,7 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry,
 				modified_time->tv_sec = s->modified_time.tv_sec;
 				modified_time->tv_usec = s->modified_time.tv_usec;
 			}
+			HIP_UNLOCK_HA(entry);
 			return 1;
 		}
 		i++;
@@ -487,6 +488,7 @@ int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				HIP_DEBUG("updating lifetime 0x%x -> 0x%x\n", s->lifetime, *lifetime);
 				s->lifetime = *lifetime;
 			}
+			HIP_LOCK_HA(entry);
 			return 1;
 		}
 		i++;
