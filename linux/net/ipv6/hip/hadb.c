@@ -448,17 +448,13 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 {
 	int err = 0;
-        struct hip_peer_addr_list_item *s, *candidate = NULL;
-	struct timeval latest, dt;
-	struct hip_spi_out_item *spi_out;//, *tmp;
-#ifdef CONFIG_HIP_DEBUG
-	char addrstr[INET6_ADDRSTRLEN];
-#endif
+	struct hip_spi_out_item *spi_out;
 
 	HIP_LOCK_HA(entry);
 
 	//hip_print_hit("entry def addr", &entry->preferred_address);
 	if (ipv6_addr_any(&entry->preferred_address)) {
+		/* possibly ongoing bex */
 		HIP_DEBUG("no preferred address\n");
 	} else {
 		ipv6_addr_copy(addr, &entry->preferred_address);
@@ -467,7 +463,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	}
 
 	if (entry->default_spi_out == 0) {
-		HIP_DEBUG("default SPI out is 0, use the bex address\n");
+		HIP_DEBUG("default SPI out is 0, try to use the bex address\n");
 		if (ipv6_addr_any(&entry->bex_address)) {
 			HIP_DEBUG("no bex address\n");
 			err = -EINVAL;
@@ -478,9 +474,8 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 
 	/* try to select a peer address among the ones belonging to
 	 * the default outgoing SPI */
-//	err = hip_hadb_select_spi_addr(entry, entry->default_spi_out, addr);
+	//err = hip_hadb_select_spi_addr(entry, entry->default_spi_out, addr);
 
-#if 1
 	spi_out = hip_hadb_get_spi_list(entry, entry->default_spi_out);
 	if (!spi_out) {
 		HIP_ERROR("did not find SPI list for default_spi_out 0x%x\n",
@@ -488,22 +483,8 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 		err = -EEXIST;
 		goto out;
 	}
-#if 0
-        list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
-		if (spi_out->spi == entry->default_spi_out) {
-			found_spi_list = 1;
-			break;
-		}
-        }
-
-	if (!found_spi_list) {
-		HIP_ERROR("did not find SPI list for default_spi_out 0x%x\n",
-			  entry->default_spi_out);
-		err = -EEXIST;
-		goto out;
-	}
-
-	/* not tested yet */
+#if 1
+	/* not tested well yet */
 	if (!ipv6_addr_any(&spi_out->preferred_address)) {
 		HIP_DEBUG("TEST CODE\n");
 		HIP_DEBUG("found preferred address for SPI 0x%x\n",
@@ -511,11 +492,9 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 		ipv6_addr_copy(addr, &spi_out->preferred_address);
 		goto out;		
 	}
+	err = -EINVAL; /* usable address not found */
+	HIP_ERROR("Did not find an usable peer address\n");
 #endif
-
-#endif
-
-
  out:
 	HIP_UNLOCK_HA(entry);
         return err;
@@ -1951,7 +1930,7 @@ void hip_hadb_dump_hs_ht(void)
 
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		if (!list_empty(&hadb_byspi_list[i])) {
-			HIP_DEBUG("HT[%d]\n", i);
+			_HIP_DEBUG("HT[%d]\n", i);
 			list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
 				hip_hadb_hold_hs(hs);
 				hip_in6_ntop(&hs->hit, str);

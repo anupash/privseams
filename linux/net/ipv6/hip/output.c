@@ -178,20 +178,16 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 	_HIP_DEBUG("entry default spi 0x%x\n", entry->default_spi_out);
 #ifdef CONFIG_NETFILTER
-	if (skb && entry->skbtest) {
-//		struct rt6_info *rt;
+	if (0 && skb && entry->skbtest) {
 		HIP_DEBUG("skbtest is 1\n");
-
 		hip_print_hit("hdr->saddr", &(hdr->saddr));
 		hip_print_hit("hdr->daddr", &(hdr->daddr));
-
 		hip_print_hit("skb->nh.ipv6h.saddr", &(skb->nh.ipv6h->saddr));
 		hip_print_hit("skb->nh.ipv6h.daddr", &(skb->nh.ipv6h->daddr));
 		HIP_DEBUG("skb->dst %p\n", skb->dst);
-
-	entry->skbtest = 0;
-	err = 5;
-	goto out;
+		entry->skbtest = 0;
+		err = 5;
+		goto out;
 
 		if (skb->dst) {
 			int err;
@@ -219,21 +215,16 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 				skb->dst = NULL;
 			}
 #if 1
-
-
 			HIP_DEBUG("skb->dst %p\n", skb->dst);
 //			dst_release(skb->dst);
 //			skb->dst = NULL;
-
 			memset(&fl, 0 , sizeof(struct flowi));
 			fl.oif = 0;
 			fl.fl6_flowlabel = 0;
 //			ipv6_addr_copy(&fl.fl6_src, &(hdr->saddr));
 //			ipv6_addr_copy(&fl.fl6_dst, &(hdr->daddr));
-
 			ipv6_addr_copy(&fl.fl6_src, &entry->hit_our);
 			ipv6_addr_copy(&fl.fl6_dst, &entry->hit_peer);
-
 			err = ip6_dst_lookup(skb->sk, &skb->dst, &fl);
 			if (err) {
 				HIP_ERROR("ip6_dst_lookup err=%d\n", err);
@@ -249,7 +240,6 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			fl.fl6_dst = r;
 			fl.oif = 0;
 			fl.fl6_flowlabel = 0;
-
 			/* copypaste from tcp_v6_xmit, might be very wrong */
 			sk_dst_reset(skb->sk);
 			err = ip6_dst_lookup(skb->sk, &dst_tmp, &fl);
@@ -454,7 +444,6 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	hip_in6_ntop(&fl.fl6_dst, addrstr);
 	HIP_DEBUG("pkt out: dst IPv6 addr: %s\n", addrstr);
 #endif
-
 
 	buf->checksum = csum_ipv6_magic(&fl.fl6_src, &fl.fl6_dst, len,
 					fl.proto, csum);

@@ -49,6 +49,8 @@ static int esp6_output(struct sk_buff *skb)
 	struct xfrm_state *x  = dst->xfrm;
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	struct xfrm_state *x_tmp = NULL, *x_orig = x;
+	uint32_t default_spi;
+	int state_ok = 0;
 #endif
 	struct ipv6hdr *top_iph;
 	struct ipv6_esp_hdr *esph;
@@ -61,35 +63,31 @@ static int esp6_output(struct sk_buff *skb)
 	int nfrags;
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	/* I know, this is a huge performance drawback. Currently we
-	 * forget the cached SA from dst until I know how to fix the
-	 * problem without kernel panic. */
-	uint32_t default_spi;
-	int state_ok = 0;
-//	printk(KERN_DEBUG "esp6_output\n");
+	/* Because the SAs are cached somewhere deep in
+	   skb/skb->dst/skb->dst->xfrm and currently I do not know how
+	   to relookup them while the socket is open, we have to
+	   lookup the current SA every time when sending out ESP. */
 
-	default_spi = HIP_CALLFUNC(hip_get_default_spi_out, 0)(&x->dst_hit, &state_ok);
-	if (!default_spi) {
-		printk(KERN_DEBUG "default_spi not found\n");
-		err = -EINVAL;
-		goto error;
-	}
-	if (!state_ok) {
-		printk(KERN_DEBUG "spi state not ok\n");
-		err = -EINVAL;
-		goto error;
-	}
+	/* I know that this is a huge performance drawback. Currently we
+	   forget the cached SA from dst until I know how to fix the
+	   problem without kernel panic. */
+	if (ipv6_addr_is_hit(&x->dst_hit)) {
+		default_spi = HIP_CALLFUNC(hip_get_default_spi_out, 0)(&x->dst_hit, &state_ok);
+		if (!default_spi || !state_ok) {
+			printk(KERN_DEBUG "default_spi not found or SPI state not ok\n");
+			err = -EINVAL;
+			goto error;
+		}
 
-	x_tmp = xfrm_state_lookup((xfrm_address_t *)&x->dst_hit, htonl(default_spi),
-			      IPPROTO_ESP, AF_INET6);
-	if (!x_tmp) {
-		printk(KERN_DEBUG "spi 0x%x not found\n", default_spi);
-		err = -EINVAL;
-		goto error;
+		x_tmp = xfrm_state_lookup((xfrm_address_t *)&x->dst_hit, htonl(default_spi),
+					  IPPROTO_ESP, AF_INET6);
+		if (!x_tmp) {
+			printk(KERN_DEBUG "spi 0x%x not found\n", default_spi);
+			err = -EINVAL;
+			goto error;
+		}
+		x = x_tmp;
 	}
-
-//	printk(KERN_DEBUG "esp6_output, x_tmp: spi=0x%x oseq+1=0x%x\n", ntohl(x_tmp->id.spi), x_tmp->replay.oseq+1);
-	x = x_tmp;
 #endif
 
 	esp = x->data;

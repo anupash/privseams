@@ -813,12 +813,15 @@ if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
 			if (err < 0)
 				goto error;
 		}
+		// printk(KERN_DEBUG "tmpl_resolve ret nx=%d\n", nx);
 		if (nx == 0) {
 			/* Flow passes not transformed. */
 			xfrm_pol_put(policy);
 			return 0;
 		}
 
+#if 0
+/* if 0'd due to lookup in esp6.c */
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 		/* this is not ok, but until this is fixed .. */
 
@@ -844,6 +847,7 @@ if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
 			} else
 				printk(KERN_DEBUG "HIT not in ok state, SPI not changed\n"); /* other states ? */
 		}
+#endif
 #endif
 		dst = dst_orig;
 		err = xfrm_bundle_create(policy, xfrm, nx, fl, &dst, family);
