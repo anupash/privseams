@@ -863,8 +863,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			goto out_err;
 		}
 		/* XXX: -EAGAIN */
-
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+		err = hip_ipv6_devaddr2ifindex(&ctx->skb_in->nh.ipv6h->daddr);
+		if (err != 0) {
+			HIP_DEBUG("ifindex=%d\n", err);
+			hip_ifindex2spi_map_add(&i2->hits, spi_in, err);
+		} else
+			HIP_ERROR("Couldn't get device ifindex of address\n");
+		err = 0;
 	}
 
 	/* update SPI_LSI parameter because it has not been filled with SPI
@@ -1356,6 +1362,14 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
 		hip_finalize_sa(&i2->hits, spi_out);
 		hip_finalize_sa(&i2->hitr, spi_in);
+
+		err = hip_ipv6_devaddr2ifindex(&ctx->skb_in->nh.ipv6h->daddr);
+		if (err != 0) {
+			HIP_DEBUG("ifindex=%d\n", err);
+			hip_ifindex2spi_map_add(&i2->hits, spi_in, err);
+		} else
+			HIP_ERROR("Couldn't get device ifindex of address\n");
+		err = 0;
 	}
 
 	HIP_DEBUG("Reached ESTABLISHED state\n");
@@ -1864,6 +1878,14 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 		HIP_DEBUG("add spi err ret=%d\n", err);
 		hip_hadb_dump_spi_list(entry, NULL);
+
+		err = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
+		if (err != 0) {
+			HIP_DEBUG("ifindex=%d\n", err);
+			hip_ifindex2spi_map_add(&entry->hit_peer, spi_in, err);
+		} else
+			HIP_ERROR("Couldn't get device ifindex of address\n");
+		err = 0;
 		HIP_UNLOCK_HA(entry);
 
 		smp_rmb();

@@ -970,6 +970,7 @@ struct inet6_ifaddr * ipv6_get_ifaddr(struct in6_addr *addr, struct net_device *
 
 	return ifp;
 }
+EXPORT_SYMBOL(ipv6_get_ifaddr);
 
 int ipv6_rcv_saddr_equal(const struct sock *sk, const struct sock *sk2)
 {

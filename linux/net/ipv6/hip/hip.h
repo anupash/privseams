@@ -114,6 +114,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 			     const u8 *addr, const u32 size);
 void hip_ifindex2spi_map_add(struct in6_addr *peer_hit, uint32_t spi, int ifindex);
 uint32_t hip_ifindex2spi_get_spi(struct in6_addr *peer_hit, int ifindex);
+int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
 extern struct crypto_tfm *impl_sha1;
