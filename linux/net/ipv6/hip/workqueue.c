@@ -111,7 +111,7 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 		return -1;
 	}
 
-	HIP_DEBUG("hwo=0x%p cpu=%d\n", hwo, cpu);
+	_HIP_DEBUG("hwo=0x%p cpu=%d\n", hwo, cpu);
 	local_irq_save(eflags);
 
 	/* get_cpu_var / put_cpu_var ? */

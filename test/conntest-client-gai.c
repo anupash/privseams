@@ -113,7 +113,8 @@ int main(int argc,char *argv[]) {
     return(1);
   }
 
-  printf("got gai addresses:\n");
+#if 0
+  //printf("got gai addresses:\n");
   for(ai = res; ai != NULL; ai = ai->ai_next) {
     if (ai->ai_family == AF_INET6) {
       struct sockaddr_in6 *s = (struct sockaddr_in6 *)ai->ai_addr;
@@ -131,6 +132,7 @@ int main(int argc,char *argv[]) {
     }
   }
   printf("\n\n");
+#endif
 
   sock = create_socket(proto);
 
@@ -150,6 +152,7 @@ int main(int argc,char *argv[]) {
   /* send and receive data */
   if (proto == IPPROTO_TCP || proto == IPPROTO_UDP) {
     gettimeofday(&stats_before, NULL);
+    /* TODO: for (ai = res; ai; ai = res->next) connect .. */
     if (connect(sock, res->ai_addr, sizeof(struct sockaddr_in6)) < 0) {
       perror("connect");
       goto out;
@@ -158,7 +161,7 @@ int main(int argc,char *argv[]) {
     stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
     stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
 
-    printf("connect took %.10f sec\n", (stats_diff_sec+stats_diff_usec)/1000000.0);
+    printf("connect took %.3f sec\n", (stats_diff_sec+stats_diff_usec)/1000000.0);
 
     while((datasent < datalen) || (datareceived < datalen)) { // lähetä kaikki
 

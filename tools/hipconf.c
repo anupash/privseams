@@ -229,7 +229,7 @@ int handle_hi(struct hip_common *msg,
   DSA *dsa_key = NULL;
   char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
-  HIP_INFO("action=%d optc=%d\n", action, optc);
+  _HIP_INFO("action=%d optc=%d\n", action, optc);
 
   /* Check min/max amount of args */
   if (optc < 1 || optc > 3) {
@@ -292,7 +292,7 @@ int handle_hi(struct hip_common *msg,
       strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
     filebasename = malloc(filebasename_len);
     if (!filebasename) {
-      HIP_ERROR("Could allocate DSA file name\n");
+      HIP_ERROR("Could not allocate DSA file name\n");
       err = -ENOMEM;
       goto out;
     }
@@ -306,7 +306,7 @@ int handle_hi(struct hip_common *msg,
 
   lhi.anonymous = htons(anon); // XX FIX: htons() needed?
 
-  HIP_DEBUG("Using filebasename: %s\n", filebasename);
+  _HIP_DEBUG("Using filebasename: %s\n", filebasename);
   
   switch(action) {
   case ACTION_NEW:
@@ -355,7 +355,7 @@ int handle_hi(struct hip_common *msg,
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
     }
-    HIP_HEXDUMP("Calculated HIT: ", &lhi.hit, sizeof(struct in6_addr));
+    _HIP_HEXDUMP("Calculated HIT: ", &lhi.hit, sizeof(struct in6_addr));
     break;
   case ACTION_DEL:
     numeric_action = SO_HIP_DEL_LOCAL_HI;
@@ -594,7 +594,7 @@ int main(int argc, char *argv[]) {
     HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
     goto out;
   }
-  HIP_INFO("action=%d\n", action);
+  _HIP_INFO("action=%d\n", action);
 
   if (argc-2 < check_action_argc(action)) {
     err = -EINVAL;
@@ -619,7 +619,7 @@ int main(int argc, char *argv[]) {
 	  HIP_ERROR("Invalid type argument '%s'\n", argv[type_arg]);
 	  goto out;
   }
-  HIP_INFO("type=%d\n", type);
+  _HIP_INFO("type=%d\n", type);
 
 
   msg = malloc(HIP_MAX_PACKET);

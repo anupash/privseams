@@ -153,7 +153,7 @@ int hip_select_socket_handler(struct socket *sock,
 
 	HIP_ASSERT(sock && sock->sk);
 
-	HIP_DEBUG("sock_type=%d  sk_proto=%d\n",
+	HIP_DEBUG("sock_type=%d sk_proto=%d\n",
 		  sock->sk->sk_type, sock->sk->sk_protocol);
 
 	/* XX FIXME: How to handle IPPROTO_RAW? */

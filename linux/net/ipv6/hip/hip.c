@@ -744,7 +744,7 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 	if(tid == 0)
 		HIP_ERROR("None HIP transforms accepted\n");
 	else
-		HIP_DEBUG("Chose HIP transform: %d\n", tid);
+		_HIP_DEBUG("Chose HIP transform: %d\n", tid);
 
 	return tid;
 }
@@ -796,7 +796,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	}
 
  out:
-	HIP_DEBUG("Took ESP transform %d\n", tid);
+	_HIP_DEBUG("Took ESP transform %d\n", tid);
 
 	if(tid == 0)
 		HIP_ERROR("Faulty ESP transform\n");
@@ -1132,7 +1132,7 @@ static void hip_get_load_time(void)
 
 	do_gettimeofday(&tv);
 	load_time =  tv.tv_sec;
-	HIP_DEBUG("load_time=0x%lx\n", load_time);
+	_HIP_DEBUG("load_time=0x%lx\n", load_time);
 	return;
 }
 
@@ -2013,7 +2013,7 @@ static int __init hip_init(void)
 		hip_kthreads[cpu].cpu = cpu;
 		init_completion(&hip_kthreads[cpu].kthread_work);
 		hip_kthreads[cpu].killed = 0;
-		pid = kernel_thread(hip_worker, (void *) &hip_kthreads[cpu],
+		pid = kernel_thread(hip_worker, &hip_kthreads[cpu],
 				    CLONE_KERNEL | SIGCHLD);
 		if (IS_ERR(ERR_PTR(pid))) {
 			hip_kthreads[cpu].pid = 0;
@@ -2094,7 +2094,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_output);
 	HIP_INVALIDATE(hip_get_default_spi_out);
 
-	/* kill kernel threads */
+	/* kill kernel threads and wait for them to complete */
 	for(i = 0; i < num_possible_cpus() /* ARRAY_SIZE(hip_kthreads) */; i++) {
 		pid = hip_kthreads[i].pid;
 		cpu = hip_kthreads[i].cpu;
@@ -2111,7 +2111,6 @@ static void __exit hip_cleanup(void)
 		} else
 			HIP_DEBUG("Invalid HIP kernel thread pid=%d on cpu=%d\n", pid, cpu);
 	}
-
 	HIP_DEBUG("All HIP threads finished\n");
 
 	hip_delete_sp(XFRM_POLICY_IN);

@@ -865,8 +865,8 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		/* Search for one supported transform */
 		hip_transform_suite_t suite;
 
- 		HIP_DEBUG("Checking %s transform\n",
- 			  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
+ 		_HIP_DEBUG("Checking %s transform\n",
+			   type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
 		suite = hip_get_param_transform_suite_id(param, 0);
 		if (suite == 0) {
 			HIP_ERROR("Could not find suitable %s transform\n",
@@ -1634,7 +1634,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  	uint16_t *tfm;
  	int table_n = 0, pkt_tfms = 0, i;
 
- 	HIP_DEBUG("tfm len = %d\n", hip_get_param_contents_len(transform_tlv));
+ 	_HIP_DEBUG("tfm len = %d\n", hip_get_param_contents_len(transform_tlv));
 
  	type = hip_get_param_type(transform_tlv);
  	if (type == HIP_PARAM_HIP_TRANSFORM) {
@@ -1654,10 +1654,10 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 
  	for (i = 0; i < pkt_tfms; i++, tfm++) {
  		int j;
- 		HIP_DEBUG("testing pkt tfm=%u\n", ntohs(*tfm));
+ 		_HIP_DEBUG("testing pkt tfm=%u\n", ntohs(*tfm));
  		for (j = 0; j < table_n; j++) {
  			if (ntohs(*tfm) == table[j]) {
- 				HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
+ 				_HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
  					  table[j], i);
  				return table[j];
  			}
@@ -1912,10 +1912,10 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
 	/* algo is 8 bits, no htons */
         host_id_hdr->rdata.algorithm = algorithm;
 
-	HIP_DEBUG("hilen=%d totlen=%d contlen=%d\n",
-		  ntohs(host_id_hdr->hi_length),
-		  hip_get_param_contents_len(host_id_hdr),
-		  hip_get_param_total_len(host_id_hdr));
+	_HIP_DEBUG("hilen=%d totlen=%d contlen=%d\n",
+		   ntohs(host_id_hdr->hi_length),
+		   hip_get_param_contents_len(host_id_hdr),
+		   hip_get_param_total_len(host_id_hdr));
 }
 
 void hip_build_param_host_id_only(struct hip_host_id *host_id,
@@ -1927,15 +1927,14 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
 	char *ptr = (char *) (host_id + 1);
 	uint16_t fqdn_len;
 
-	HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
-
-	HIP_DEBUG("Copying %d bytes\n", rr_len);
+	_HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
+	_HIP_DEBUG("Copying %d bytes\n", rr_len);
 
 	memcpy(ptr, rr_data, rr_len);
 	ptr += rr_len;
 
 	fqdn_len = ntohs(host_id->di_type_length) & 0x0FFF;
-	HIP_DEBUG("fqdn len: %d\n", fqdn_len);
+	_HIP_DEBUG("fqdn len: %d\n", fqdn_len);
 	if (fqdn_len)
 		memcpy(ptr, fqdn, fqdn_len);
 }
@@ -1981,7 +1980,7 @@ char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
 	char *ptr;
 
 	hilen = ntohs(hostid->hi_length) - sizeof(struct hip_host_id_key_rdata);
-	HIP_DEBUG("Hilen: %d\n",hilen);
+	_HIP_DEBUG("Hilen: %d\n",hilen);
 	ptr = (char *)(hostid + 1) + hilen;
 	return ptr;
 }
