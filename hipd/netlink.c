@@ -1,4 +1,4 @@
-#include <linux/netlink.h>
+#include "netlink.h"
 
 static int nl_sequence_number = 0;
 

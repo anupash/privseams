@@ -10,11 +10,11 @@ include $(HIPL)/Makefile.am.global
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-#CFLAGS  = -I$(HIPL_LINUX_INCLUDE)
-#CFLAGS  += -I$(HIPL_LINUX_MODULE) -I$(HIPL) -DCONFIG_HIP_DEBUG
-#CFLAGS  += -DHIP_LOGFMT_LONG -g -L$(HIPL_LIBINET6_LIB)
+CFLAGS  = -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_LIBINET6)
+CFLAGS  += -I$(HIPL_LINUX_MODULE) -I$(HIPL) -DCONFIG_HIP_DEBUG
+CFLAGS  += -DHIP_LOGFMT_LONG -g -L$(HIPL_LIBINET6_LIB)
 
-include_HEADERS = hipd.h
+include_HEADERS = hipd.h netlink.h
 #INCLUDES = -Ii3/i3_client -Ii3/utils -Ii3/i3 -Ikeynote
 
 sbin_PROGRAMS = hipd
@@ -31,10 +31,10 @@ hipd_SOURCES = hipd.c netlink.c
 #builder.c: builder.h
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
 
-debug.h:
-	$(LN_S) -f $(HIPL_LIBINET6)/debug.h .
-debug.c:
-	$(LN_S) -f $(HIPL_LIBINET6)/debug.c .
+#debug.h:
+#	$(LN_S) -f $(HIPL_LIBINET6)/debug.h .
+#debug.c:
+#	$(LN_S) -f $(HIPL_LIBINET6)/debug.c .
 
 #$(HIPL_LIBINET6_LIB_STATIC):
 #	$(MAKE) -C $(HIPL_LIBINET6)
