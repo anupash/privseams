@@ -6,6 +6,7 @@
  * - Janne Lundberg <jlu@tcs.hut.fi>
  *
  * TODO:
+ * - implement this stuff using PF_HIP???
  * - async messages should have a return message
  * - is the get function really atomic...
  * - optimize: only INPUT_READY is really needed (as Pekka told)

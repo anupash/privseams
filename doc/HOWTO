@@ -52,11 +52,6 @@ The HIPL kernel module documentation will appear on the following files
 The building of kernel documentation may take a while, so please be
 patient.
 
-Userspace API:
-
-  % cd hipl/doc
-  % make hipl-userspace-api.sgml hipl-userspace-api.pdf hipl-userspace-api.ps
-
 Compiling the Kernel
 ====================
 
