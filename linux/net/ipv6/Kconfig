@@ -79,7 +79,7 @@ config IPV6_TUNNEL
 
 config HIP
 	tristate "Host Identity Protocol"
-	depends on IPV6=y && EXPERIMENTAL && X86_PC && REGPARM=n
+	depends on IPV6 && EXPERIMENTAL && X86_PC && REGPARM=n
 	default m
 	select INET6_ESP
 	select CRYPTO_NULL
