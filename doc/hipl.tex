@@ -711,6 +711,7 @@ is given in the figure.
 % hip_handle_inet6_addr_del
 % .. mutta näitä ei voi oikein laittaa kuvaan, koska ne ovat ulkoisia tapahtumia
 % ->selostettu yläpuolella
+% tai oikeastaan nämä kuuluvatkin tuohon Address configiin
 
 \begin{figure}
    \begin{minipage}[b]{0.4\textwidth}
@@ -728,11 +729,6 @@ is given in the figure.
       \label{fig:output_hooks}
    \end{minipage}%
 \end{figure}
-
-% XX FIX MIKA:
-% - add description of the missing hooks (DAD, what else did you add? esp?)
-%
-% ks. ed.
 
 \setlongtables
 \begin{longtable}{|c|p{0.2\textwidth}|p{0.6\textwidth}|}
@@ -801,14 +797,6 @@ HIT.\\
 
 \subsection{Mobility and Multihoming}
 \label{sec:mobility_and_multihoming_architecture}
-
-% XX FIX Mika
-% - update the text to cover the new mm mechism and remove old stuff
-% - tell more about the CURRENT implementation
-%   - changes in the hadb
-%   - SA pair / interface (was previously SA pair / host)
-%   - ESP changes
-%   - what else was changed?
 
 The implementation has some level of support for the mobility and
 multihoming features defined in the draft
@@ -1350,11 +1338,59 @@ due to the kernel based architecture (see
 
 \subsection{Mobility and Multihoming}
 
-% XX FIX: Mika
-% - the about the difficulties in the implementation
-%   - what was difficult in the old mm draft to implement?
-%   - what was difficult in the new mm draft to implement?
-% - was something easy to implement?
+When the actual plans to implement the UPDATE packet and support for
+\cite{hip-ietf-mm-00} type of mobility and multihoming were realized,
+we assumed that the amount of work needed would be a couple of
+months. But in reality, the total amount of work was much more, around
+six months.
+
+A part of this considerable delay can be explained with other tasks,
+such as project documentation deadlines, preparing and participating
+in IETF meetings, and other implementation tasks not related to the
+UPDATE packet or mobility.
+
+A major problem in the previous HIPL implementation was the design of
+the \ac{HADB}. It was designed in such a way that there could be only
+one \ac{SPI} at the time, and the IPv6 address lists were stored in a
+unrelated data structure. This meant that whereever \acp{SPI} and IPV6
+addresses were handled in the code, that code had to be rewritten
+completely. Because \ac{SPI} was stored in an integer variable and the
+current implementation uses linked lists, the change was not just a
+simple ``search and replace'' procedure. IPv6 addresses of the peer
+were stored in a separate list, but now they had to be bound into an
+\ac{SPI}, meaning that there is actually list of lists. \ac{SPI} and
+IPv6 address list handling functions had to rewritten from scratch
+which took quite a lot of time to implement and debug.
+
+Another slowdown was caused by immature state of the mobility draft
+at the time we were implementing. The draft were sometimes even
+ambiguous or they did not tell what should really be done. Lots of
+time was spent on reading between the lines and trying to figure out
+what should be the best way to implement required functionality.
+
+However, the unfinished state of the draft was not only a bad
+thing. HIPL developers raised some problem issues and proposed
+solutions in the Hipsec mailing list. In practise, almost all of the
+mobility draft related discussion was between HIPL and the draft
+authors. Implementation gave insight what was missing from the
+previous draft versions and what could be added into the next
+versions.
+
+We can compare the effort required to implement the current and the
+previous mobility code even though the basic design of the both
+versions is different. Practically, both had to written from
+scratch. Some old code could be reused, but the amount was fairly
+minimal. Old code was still useful, because it had general and
+reusable ideas on how to implement similar data structures and
+functionality. If there would not have been any previous work, a lots
+of time would have been needed to overcome the same implementation
+problems.
+
+Mobility management is still in its first phase. High level issues
+such as source address selection and the selection of the preferred
+peer address have not been considered so much yet. These are the
+similar kind of issues that many other IETF working groups
+(e.g. multi6 WG) are trying to solve, too.
 
 \subsection{Working Queues}
 \label{sec:working_queue_lessons}
@@ -1506,9 +1542,6 @@ be researched.
 Implementation work was first focused on the base exchange, but
 currently there is more interest to implement \ac{HIP} mobility and
 multihoming features according to the \cite{hip-ietf-mm-00} draft.
-%The implementation for mobility and multihoming support is at a highly
-%experimental level at the current moment, partly because the
-%specifications are far from complete yet.
 
 An automated unit testing framework has been created for testing the
 userspace and kernelspace code. Some of the functions related to the
@@ -1535,9 +1568,17 @@ the kernel.
 % - what else?
 
 The general problem of selecting ``the best'' destination address for
-a peer is also present in the implementation. Currently, any reachable
-address is selected non-deterministically and used as the destination
-address. This approach might result in degraded performance if an
+a peer is also present in the implementation. Currently, we try to use
+the address which peer has advertised us to be the preferred
+address. If that becomes unreachable, an another available address
+belonging to the same \ac{SA} is used. When a \ac{SA} has no usable
+addresses, we try to use some address from an another outbound
+\ac{SA}.
+
+
+%any reachable
+%address is selected non-deterministically and used as the destination
+%address. %This approach might result in degraded performance if an
 address with low \ac{QoS} characteristics is selected for the
 destination address. However, the \ac{QoS} service is issues are out
 of the scope.
@@ -1617,8 +1658,15 @@ are used merely for routing purposes.
 
 The purpose of the \ac{HIP} base exchange is to perform end-to-end
 authentication and to establish \ac{IPsec} \acp{SA}.
+
 % XX FIX MIKA:
 % - add to this paragraph something about the mm stuff
+
+HIP mobility draft shows that it is possible to extend the basic HIP
+functionality by introducing new parameters and adding related changes
+to the packet handling without breaking the base specifications. Our
+working implementation proves that HIP mobility is feasible to implement.
+
 
 As part of this document, we presented our IPv6 based implementation
 of \ac{HIP} for Linux. Our implementation is the only completely
