@@ -731,6 +731,7 @@ struct hip_hadb_state
 	uint32_t             new_spi_in;    /* new inbound IPsec SA SPI when rekey was initiated */
 
 	uint32_t             default_spi_out;
+	struct in6_addr      preferred_address;
 
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;

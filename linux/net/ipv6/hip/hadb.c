@@ -83,7 +83,7 @@ static inline void hip_hadb_rem_state_spi(void *entry)
 
 	ha->hastate &= ~HIP_HASTATE_SPIOK;
 	hip_ht_delete(&hadb_spi, entry);
-	hip_hadb_delete_spi_list(ha, ha->spi_in); // check
+//	hip_hadb_delete_spi_list(ha, ha->spi_in); // check
 }
 
 /*
@@ -353,6 +353,20 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 #if 1
 	HIP_LOCK_HA(entry);
 
+	if (ipv6_addr_any(&entry->preferred_address)) {
+		_HIP_DEBUG("no preferred address\n");
+		err = -ENOMSG;
+		err = 0;
+	} else {
+		ipv6_addr_copy(addr, &entry->preferred_address);
+		_HIP_DEBUG("found preferred address\n");
+		HIP_UNLOCK_HA(entry);
+		goto out;
+	}
+#if 0
+
+	hip_hadb_dump_spi_list_all();
+
 	if (entry->default_spi_out) {
 		HIP_DEBUG("default spi = 0x%x\n", entry->default_spi_out);
 		/* we get here after the base exchange */
@@ -372,7 +386,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 			}
 		}
 	}
-
+#endif
 //	HIP_UNLOCK_HA(entry);
 
 //#else
@@ -906,7 +920,7 @@ struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t s
 
 	/* no locking */
         list_for_each_entry_safe(item, tmp, &entry->peer_spi_list, list) {
-		HIP_DEBUG("item=0x%p\n", item);
+		_HIP_DEBUG("item=0x%p\n", item);
 		if (item->spi == spi)
 			return item;
         }
@@ -975,8 +989,10 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	new_addr->address_state = address_state;
 	do_gettimeofday(&new_addr->modified_time);
 
-	if (is_preferred_addr)
+	if (is_preferred_addr) {
 		ipv6_addr_copy(&spi_list->preferred_address, addr);
+		ipv6_addr_copy(&entry->preferred_address, addr); // test
+	}
 
 	if (new) {
 		HIP_DEBUG("adding new addr to list\n");

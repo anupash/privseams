@@ -128,7 +128,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 	struct list_head *pos, *n;
 	int i = 1;
 
-	/* todo: atomic_t ispending */
+	/* todo: change list_for_each to atomic_t ispending, return is_pending */
 
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 
@@ -162,14 +162,26 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 		old_spi_out = entry->spi_out;
 		hip_hadb_remove_state_spi(entry);
 		entry->spi_out = entry->new_spi_out;
+
+		entry->default_spi_out = entry->spi_out;
+		HIP_DEBUG("set default SPI out=0x%x\n", entry->default_spi_out);
+
+		{
+			struct in6_addr a;
+			ipv6_addr_set(&a, htonl(0x3ffe), 0 , 0, 2);
+hip_hadb_add_addr_to_spi(entry, entry->spi_out, &a, 0, PEER_ADDR_STATE_ACTIVE, 0, 0);
+		}
+
 		hip_hadb_insert_state(entry);
 		hip_print_hit("finalizing", &s->hit);
 		hip_finalize_sa(&s->hit, entry->new_spi_out);
+#if 0
 		HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", old_spi_out);
 		err = hip_delete_sa(old_spi_out, &s->hit);
 		if (err)
 			HIP_DEBUG("delete_sa ret err=%d\n", err);
 		entry->new_spi_out = 0;
+#endif
 
 		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
@@ -438,13 +450,14 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 
 	hip_update_spi_waitlist_add(new_spi_in, hits);
 
+#if 0
 	/* delete old incoming SA */
 	/* todo: set to dying/drop old IPsec SA ? */
 	HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", prev_spi_in);
 	err = hip_delete_sa(prev_spi_in, hitr);
 	HIP_DEBUG("delete_sa retval=%d\n", err ); /* ignore error ? */
 	err = 0;
-
+#endif
 
 	_HIP_DEBUG("after new_spi_out: out=0x%08x in=0x%08x new_in=0x%08x new_out=0x%08x\n",
 		  entry->spi_in, entry->spi_out, entry->new_spi_in, entry->new_spi_out);
@@ -676,11 +689,16 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 
 	HIP_DEBUG("updated outbound SPI (SPI_OUT), new_spi_out=0x%x\n", new_spi_out);
 
+	entry->default_spi_out = entry->spi_out;
+	HIP_DEBUG("set default SPI out=0x%x\n", entry->default_spi_out);
+	hip_hadb_add_addr_to_spi(entry, entry->spi_out, src_ip, 0, PEER_ADDR_STATE_ACTIVE, 0, 1);
+
+#if 0
 	/* todo: set SA state to dying */
 	HIP_DEBUG("REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", prev_spi_out);
 	err = hip_delete_sa(prev_spi_out, hits);
 	HIP_DEBUG("delete_sa retval=%d\n", err);
-
+#endif
 	err = 0;
 
 	/* clear out spi value from hadb */
@@ -726,12 +744,14 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 
 	prev_spi_in = entry->spi_in;
 
+#if 0
 	/* delete old inbound SA */
 	/* todo: set SA state to dying */
 	HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
 	err = hip_delete_sa(prev_spi_in, hitr);
 	HIP_DEBUG("delete_sa retval=%d\n", err);
 	err = 0;
+#endif
 
 	HIP_DEBUG("switching to new updated inbound SPI=0x%x, new_spi_in\n", new_spi_in);
 
