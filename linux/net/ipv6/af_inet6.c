@@ -526,6 +526,7 @@ static struct net_proto_family inet6_family_ops = {
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 EXPORT_SYMBOL(inet6_family_ops);
 EXPORT_SYMBOL(inet6_stream_ops);
+EXPORT_SYMBOL(inet6_dgram_ops);
 EXPORT_SYMBOL(inet6_create);
 #endif /* CONFIG_HIP */
 
