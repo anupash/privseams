@@ -85,6 +85,12 @@ information is logged using syslog's facility "kernel" and priority
 "debug". Remember to set up your /etc/syslog.conf correctly if you do
 not see the log messages (see syslog.conf manual page for more info).
 
+Turn the option CONFIG_REGPARM OFF! It segfaults HIP module upon
+loading! You can find it from here:
+
+  Processor type and features
+  -> Use register arguments (EXPERIMENTAL)
+
 Compiling Userland Applications
 =================================
 
