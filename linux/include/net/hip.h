@@ -533,7 +533,7 @@ struct hip_rea {
 	/* fixed part ends */
 } __attribute__ ((packed));
 
-struct hip_rea_info {
+struct hip_rea_info { /* TODO: remove, only tcpdump patch seems to use this */
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint32_t interface_id;
@@ -550,7 +550,7 @@ struct hip_hmac {
 	uint8_t hmac_data[HIP_AH_SHA_LEN];
 } __attribute__ ((packed));
 
-struct hip_ac_info { /* mm-02: to be removed */
+struct hip_ac_info { /* mm: to be removed */
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
 	uint16_t ac_id;
@@ -820,10 +820,6 @@ struct hip_hadb_state
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
 
-	/* TODO: REMOVE peer_addr_list and peer_spi_list (spis_in and spis_out) */
-
-//	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
-
 	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
 	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
 
@@ -917,10 +913,6 @@ struct hip_eid_db_entry {
 	struct sockaddr_eid        eid; /* XX FIXME: the port is unneeded */
 	struct hip_lhi             lhi;
 };
-
-
-
-
 
 #define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200
 #endif /* __KERNEL__ */

@@ -1699,6 +1699,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  	return 0;
 }
 
+#if 0
 /**
  * hip_build_param_rea_info00 - build HIP REA_INFO parameter
  *
@@ -1753,6 +1754,7 @@ int hip_build_param_rea_info00(struct hip_common *msg,
 
 	return err;
 }
+#endif
 
 /**
  * hip_build_param_rea - build HIP REA parameter

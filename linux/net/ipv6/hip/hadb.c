@@ -457,7 +457,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	//hip_print_hit("entry def addr", &entry->preferred_address);
 	if (ipv6_addr_any(&entry->preferred_address)) {
 		/* possibly ongoing bex */
-		HIP_DEBUG("no preferred address\n");
+		HIP_DEBUG("no preferred address set\n");
 	} else {
 		ipv6_addr_copy(addr, &entry->preferred_address);
 		_HIP_DEBUG("found preferred address\n");
@@ -1273,9 +1273,11 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
 int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			       int direction, int test_new_spi)
 {
+	/* assumes locked entry  */
+
 	_HIP_DEBUG("spi=0x%x direction=%d test_new_spi=%d\n",
 		  spi, direction, test_new_spi);
-	/* assumes locked entry  */
+
 	if (direction == HIP_SPI_DIRECTION_IN) {
 		struct hip_spi_in_item *item, *tmp;
 		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
@@ -1309,6 +1311,8 @@ uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry)
 	uint32_t spi = 0;
 	struct hip_spi_out_item *spi_out, *spi_out_tmp;
 
+	/* assumes locked entry  */
+
 	HIP_DEBUG("\n");
 	/* latest outbound SPIs are usually in the beginning of the list */
 	list_for_each_entry_safe(spi_out, spi_out_tmp, &entry->spis_out, list) {
@@ -1332,6 +1336,10 @@ uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry)
 	return spi;
 }
 
+/* if add is non-NULL, set addr as the default address for both
+ * entry's default address and outbound SPI list's default address*/
+
+/* if addr is null, select some address from the SPI list */
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
 				   struct in6_addr *addr)
 {
@@ -1365,6 +1373,8 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 {
 	size_t n, i;
 	uint32_t *peer_update_id;
+
+	/* assumes locked entry  */
 
 	HIP_DEBUG("have_nes=%d\n", have_nes);
 
@@ -1424,6 +1434,8 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 						do_gettimeofday(&addr->modified_time);
 
 						if (addr->is_preferred) {
+							/* maybe we should do this default address selection
+							   after handling the REA .. */
 							hip_hadb_set_default_out_addr(entry, out_item, &addr->address);
 						} else
 							HIP_DEBUG("address was not set as preferred address in REA\n");

@@ -1,5 +1,5 @@
 diff -Nru tcpdump-3.8.3/Makefile.in tcpdump-3.8.3-hip/Makefile.in
---- tcpdump-3.8.3/Makefile.in	2004-03-29 00:25:02.000000000 +0300
+--- tcpdump-3.8.3/Makefile.in	2004-11-19 10:46:48.000000000 +0200
 +++ tcpdump-3.8.3-hip/Makefile.in	2004-11-17 16:18:21.000000000 +0200
 @@ -72,7 +72,7 @@
  	print-chdlc.c print-cip.c print-cnfp.c print-decnet.c \
@@ -35,8 +35,8 @@ diff -Nru tcpdump-3.8.3/interface.h tcpdump-3.8.3-hip/interface.h
  extern u_int16_t in_cksum_shouldbe(u_int16_t, u_int16_t);
 diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 --- tcpdump-3.8.3/print-hip.c	1970-01-01 02:00:00.000000000 +0200
-+++ tcpdump-3.8.3-hip/print-hip.c	2004-11-18 10:35:47.000000000 +0200
-@@ -0,0 +1,620 @@
++++ tcpdump-3.8.3-hip/print-hip.c	2004-11-25 17:23:19.000000000 +0200
+@@ -0,0 +1,612 @@
 +/*
 + * Copyright (c) 1988, 1989, 1990, 1991, 1992, 1993, 1994
 + *	The Regents of the University of California.  All rights reserved.
@@ -157,6 +157,10 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +
 +void hip_hexdump(u_char *data, int len) {
 +	int i;
++
++	if (data == NULL || len < 1)
++		return;
++
 +	for (i = 0; i < len; i++)
 +		printf("%02x", data[i]);
 +}
@@ -217,27 +221,30 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +
 +void hip_print_param_diffie_hellman(const struct hip_tlv_common *tlv) {
 +	struct hip_diffie_hellman *p = (struct hip_diffie_hellman *) tlv;
++
 +	printf("(group_id=%s(%u),public value=0x",
 +	       tok2str(hip_dh_group_id_types, NULL, p->group_id), p->group_id);
 +	hip_hexdump((u_char *)p+sizeof(struct hip_tlv_common)+sizeof(uint8_t),
 +		    ntohs(p->length) - sizeof(uint8_t));
 +	printf(")");
-+
 +}
 +
 +void hip_print_param_encrypted(const struct hip_tlv_common *tlv) {
-+	//struct hip_encrypted *p = (struct hip_encrypted *) tlv;
 +	int i;
 +	u_char *cp;
++
 +	cp = (u_char *)tlv + sizeof(struct hip_tlv_common) + sizeof(u_int32_t);
 +	printf("(IV=0x");
-+	for (i = 0; i < 8; i++)
-+		printf("%02x", *cp++);
++	hip_hexdump(cp, 8);
++	/*for (i = 0; i < 8; i++)*/
++	/*	printf("%02x", *cp++);*/
++	cp += 8;
 +	printf(",encrypted=0x");
 +	hip_hexdump(cp, ntohs(tlv->length) - sizeof(u_int32_t) - 8);
 +	printf(")");
 +}
 +
++/* TODO: combine hip_print_param_esp_transform and hip_print_param_hip_transform */
 +void hip_print_param_esp_transform(const struct hip_tlv_common *tlv) {
 +	struct hip_esp_transform *p = (struct hip_esp_transform *) tlv;
 +	int i, n;
@@ -268,7 +275,6 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +	printf(")");
 +}
 +
-+
 +void hip_print_param_hip_transform(const struct hip_tlv_common *tlv) {
 +	struct hip_hip_transform *p = (struct hip_hip_transform *) tlv;
 +	u_int16_t *id;
@@ -295,8 +301,6 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +	}
 +
 +	printf(")");
-+
-+
 +}
 +
 +void hip_print_param_host_id(const struct hip_tlv_common *tlv) {
@@ -307,7 +311,6 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +	int i;
 +	int di_type, di_length;
 +
-+	//	di_type = ntohs(p->di_type_length) & 0xf000;
 +	di_type = ntohs(p->di_type_length) >> 12;
 +	di_length = ntohs(p->di_type_length) & 0x0fff;
 +	printf("(HI Length=%d, DI Type-Length=%d (DI-type=%d, DI Length=%d), ",
@@ -353,11 +356,6 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 + print_di:
 +	printf(" DI=0x");
 +	hip_hexdump(cp, di_length);
-+#if 0
-+	printf("=");
-+	for (i = 0; i < di_length; i++)
-+		printf("%c", *(cp+i));
-+#endif
 +	printf(")");
 +}
 +
@@ -402,14 +400,9 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +	}
 +	printf(")");
 + out_err:
-+
 +}
 +
-+#undef HAVE_MM_02
-+/* uncomment this if you have ietf-hip-mm support */
-+#define HAVE_MM_02 1
-+
-+#ifdef HAVE_MM_02
++/* new draft-ietf-hip-mm style REA */
 +void hip_print_param_rea(const struct hip_tlv_common *tlv) {
 +	struct hip_rea *p = (struct hip_rea *) tlv;
 +	u_int tlv_len;
@@ -426,16 +419,17 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +
 +	a = (void*)p+sizeof(struct hip_rea);
 +	for (i = 0; i < n_addrs; i++, a += sizeof(struct hip_rea_info_addr_item)) {
-+	  struct hip_rea_info_addr_item *addr = (struct hip_rea_info_addr_item *) a;
-+	  char addrstr[INET6_ADDRSTRLEN];
++		struct hip_rea_info_addr_item *addr = (struct hip_rea_info_addr_item *) a;
++		char addrstr[INET6_ADDRSTRLEN];
 +
-+	  inet_ntop(AF_INET6, &addr->address, addrstr, sizeof(addrstr));
-+	  printf(" address=%s%s/lifetime=0x%x", addrstr,
-+		 ntohl(addr->reserved) == 1 << 31 ? "(preferred)" : "", ntohl(addr->lifetime));
++		inet_ntop(AF_INET6, &addr->address, addrstr, sizeof(addrstr));
++		printf(" address=%s%s/lifetime=0x%x", addrstr,
++		       ntohl(addr->reserved) == 1 << 31 ? "(preferred)" : "", ntohl(addr->lifetime));
 +	}
 +	printf(")");
 +}
-+#else
++
++/* old style REA_INFO */
 +void hip_print_param_rea_info(const struct hip_tlv_common *tlv) {
 +	struct hip_rea_info *p = (struct hip_rea_info *) tlv;
 +	u_int tlv_len;
@@ -454,23 +448,24 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +
 +	a = (void*)p+sizeof(struct hip_rea_info);
 +	for (i = 0; i < n_addrs; i++, a += sizeof(struct hip_rea_info_addr_item)) {
-+	  struct hip_rea_info_addr_item *addr = (struct hip_rea_info_addr_item *) a;
-+	  char addrstr[INET6_ADDRSTRLEN];
++		struct hip_rea_info_addr_item *addr = (struct hip_rea_info_addr_item *) a;
++		char addrstr[INET6_ADDRSTRLEN];
 +
-+	  inet_ntop(AF_INET6, &addr->address, addrstr, sizeof(addrstr));
-+	  printf(" address=%s/lifetime=0x%x", addrstr, ntohl(addr->lifetime));
++		inet_ntop(AF_INET6, &addr->address, addrstr, sizeof(addrstr));
++		printf(" address=%s/lifetime=0x%x", addrstr, ntohl(addr->lifetime));
 +	}
 +	printf(")");
 +}
-+#endif
 +
 +void hip_print_param_spi(const struct hip_tlv_common *tlv) {
 +	struct hip_spi *p = (struct hip_spi *) tlv;
++
 +	printf("(SPI=0x%x)", ntohl(p->spi));
 +}
 +
 +void hip_print_param_hip_signature2(const struct hip_tlv_common *tlv) {
 +	struct hip_sig2 *p = (struct hip_sig2 *) tlv;
++
 +	/* draft: same algorithm as in ESP_TRANSFORM */
 +	printf("(algorithm=%s(%u),signature=0x",
 +	       tok2str(hip_rdata_algorithms, NULL, p->algorithm), p->algorithm);
@@ -481,6 +476,7 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +
 +void hip_print_param_notify(const struct hip_tlv_common *tlv) {
 +	struct hip_notify *p = (struct hip_notify *) tlv;
++
 +	printf("(Reserved=%x,Message Type=%u,Notification data=0x",
 +	       ntohs(p->reserved), ntohs(p->msgtype)); 
 +	hip_hexdump((u_char *)p + sizeof(struct hip_tlv_common) + 
@@ -546,7 +542,6 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +	/* print common header */
 +	(void)printf("HIP %s > %s: ", ip6addr_string(&hip->hits),
 +		     ip6addr_string(&hip->hitr));
-+
 +	if (vflag) {
 +	     (void)printf("len=%d (%d bytes),type=%d,ver_res=0x%x,control=0x%x,checksum=0x%x (checksum_host=0x%x) ",
 +			  hip->payload_len, 8*hip->payload_len, hip->type_hdr,
@@ -563,7 +558,7 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +	}
 +	if (!token->s) {
 +		printf("unknown-packet-type-%d", type);
-+		return;		
++		return;
 +	}
 +	printf("%s", tok2str(hip_types, NULL, type));
 +
@@ -582,8 +577,8 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +	    printf("\n");
 +
 +	    if (cp + tlv_len > snapend) {
-+	      printf(" TLV type=%d exceeds packet\n", tlv_type);
-+	      goto trunc;
++		    printf(" TLV type=%d exceeds packet\n", tlv_type);
++		    goto trunc;
 +	    }
 +
 +	    printf(" TLV type=%d,len=%d: %s", tlv_type, tlv_len,
@@ -621,14 +616,11 @@ diff -Nru tcpdump-3.8.3/print-hip.c tcpdump-3.8.3-hip/print-hip.c
 +	    case HIP_PARAM_HOST_ID:
 +	      hip_print_param_host_id(tlv);
 +	      break;
-+#ifdef HAVE_MM_02
 +	    case HIP_PARAM_REA:
 +	      hip_print_param_rea(tlv);
 +	      break;
-+#else
 +	    case HIP_PARAM_REA_INFO:
 +	      hip_print_param_rea_info(tlv);
-+#endif
 +	      break;
 +	    case HIP_PARAM_NES:
 +	      hip_print_param_nes(tlv);

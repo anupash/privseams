@@ -288,6 +288,35 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	return err;
 }
 
+/* Returns 1 if address is ok to be used as a peer address, otherwise 0. */
+int hip_update_test_rea_addr(struct in6_addr *addr)
+{
+	int addr_type = ipv6_addr_type(addr);
+
+	if (addr_type == IPV6_ADDR_ANY) {
+		HIP_DEBUG("skipping IPV6_ADDR_ANY address\n");
+		return 0;
+	}
+	if (addr_type & IPV6_ADDR_LOOPBACK) {
+		HIP_DEBUG("skipping loopback address, not supported\n");
+		return 0;
+	}
+	if (addr_type & IPV6_ADDR_LINKLOCAL) {
+		HIP_DEBUG("skipping link local address, not supported\n");
+		return 0;
+	}
+	if (addr_type & IPV6_ADDR_SITELOCAL) {
+		HIP_DEBUG("skipping site local address, not supported\n");
+		return 0;
+	}
+	if (! (addr_type & IPV6_ADDR_UNICAST) ) {
+		HIP_DEBUG("skipping non-unicast address\n");
+		return 0;
+	}
+
+	return 1;
+}
+
 int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 {
 	int err = 0;
@@ -328,7 +357,6 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 		goto out_err;
 	}
 
-	/* is this right, maybe not ? */
 	HIP_DEBUG("Clearing old preferred flags of the SPI\n");
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
 		a->is_preferred = 0;
@@ -345,16 +373,8 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 			   is_preferred ? "yes" : "no", ntohl(rea_address_item->reserved),
 			  lifetime);
 		/* 2. check that the address is a legal unicast or anycast address */
-		/* todo: test anycast */
-		if (! (ipv6_addr_type(rea_address) & IPV6_ADDR_UNICAST) ) {
-			HIP_DEBUG("skipping non-unicast address\n");
+		if (!hip_update_test_rea_addr(rea_address))
 			continue;
-		}
-
-		if (ipv6_addr_type(rea_address) & IPV6_ADDR_LINKLOCAL) {
-			HIP_DEBUG("skipping link local address, not supported\n");
-			continue;
-		}
 
 		if (i > 0) {
 			/* preferred address allowed only for the first address */
@@ -374,6 +394,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 	/* 4. Mark all addresses on the SPI that were NOT listed in the REA
 	   parameter as DEPRECATED. */
 	HIP_DEBUG("deprecating not listed address from the SPI list\n");
+
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
 		int spi_addr_is_in_rea = 0;
 
@@ -387,19 +408,16 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 			}
 
 		}
-		if (spi_addr_is_in_rea) {
-			/* HIP_DEBUG("SPI address was in REA, not deprecating\n");*/
-			continue;
+		if (!spi_addr_is_in_rea) {
+			/* deprecate the address */
+			hip_print_hit("deprecating address", &a->address);
+			a->address_state = PEER_ADDR_STATE_DEPRECATED;
 		}
-
-		hip_print_hit("deprecating address", &a->address);
-		_HIP_DEBUG("SPI address was not in REA, deprecating\n");
-		/* deprecate the address */
-		a->address_state = PEER_ADDR_STATE_DEPRECATED;
 	}
 
 	if (n_addrs == 0) /* our own extension, use some other SPI */
 		(void)hip_hadb_relookup_default_out(entry);
+	/* relookup always ? */
 
 	HIP_DEBUG("done\n");
  out_err:
@@ -853,8 +871,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	} else
 		HIP_DEBUG("prev SPI_in = new SPI_in, not deleting the inbound SA\n");
 
-
-	/* start verifing addresses */
+	/* start verifying addresses */
 	HIP_DEBUG("start verifing addresses for new spi 0x%x\n", new_spi_out);
 	err = hip_update_send_addr_verify(entry, msg, NULL /* ok ? */, new_spi_out);
 
