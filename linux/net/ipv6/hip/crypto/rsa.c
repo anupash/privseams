@@ -438,16 +438,6 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 		goto cleanup;
 	}
 
-#if 0
-	/* added this, is this correct? */
-	len = mpi_get_nbits(rpk.n) / 8;
-	if (gcry_mpi_scan(&result, GCRYMPI_FMT_USG, signature, &len) != 0)
-	{
-		log_error("Error reading signature data\n");
-		goto cleanup;
-	}
-#endif
-
 	len = (mpi_get_nbits(rpk.n) + 7) / 8;
 	if (gcry_mpi_scan(&orig, GCRYMPI_FMT_USG, signature, &len) != 0)
 	{
@@ -458,9 +448,9 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	HIP_HEXDUMP("original signature", signature, len);
 	HIP_HEXDUMP("orig.num", orig->d, len);
 
-	public(result, /*data*/ orig, &rpk); 
-	HIP_HEXDUMP("calculated signature", result->d, len);
-	HIP_HEXDUMP("original data:", data->d, len);
+	public(result, orig, &rpk); 
+	HIP_HEXDUMP("public result", result->d, len);
+	HIP_HEXDUMP("data to be verified:", data->d, len);
 
 	err = mpi_cmp(data, result);
 

@@ -277,7 +277,7 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		goto out_err;
 	}
 
-	_HIP_DUMP_MSG(buf);
+	HIP_DUMP_MSG(buf);
 	HIP_DEBUG("pkt out: len=%d proto=%d csum=0x%x\n", len, ofl->proto, csum);
 	HIP_DEBUG_IN6ADDR("pkt out: src IPv6 addr: ", &(ofl->fl6_src));
  	HIP_DEBUG_IN6ADDR("pkt out: dst IPv6 addr: ", &(ofl->fl6_dst));

@@ -276,7 +276,7 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 {
 	int err;
-	int len;
+	int len, orig_len;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 
@@ -289,6 +289,10 @@ int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 	}
 	_HIP_DEBUG("HMAC found\n");
 
+	/* hmac verification modifies the msg length temporarile, so we have
+	   to restore the length */
+	orig_len = hip_get_msg_total_len(msg);
+
 	len = (u8 *) hmac - (u8*) msg;
 	hip_set_msg_total_len(msg, len);
 
@@ -300,6 +304,8 @@ int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 		HIP_ERROR("HMAC validation failed\n");
 		goto out_err;
 	} 
+
+	hip_set_msg_total_len(msg, orig_len);
 
  out_err:
 	return err;
@@ -2159,8 +2165,10 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	}
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->skb_in = skb;
-        ctx->input = (struct hip_common*) skb->h.raw;
+        ctx->input = (struct hip_common *) skb->h.raw;
 	r2 = ctx->input;
+
+	HIP_DUMP_MSG(r2);
 
 	sender = &r2->hits;
 
@@ -2172,6 +2180,8 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	}
 	_HIP_DEBUG("HMAC in R2 ok\n");
 
+	HIP_DUMP_MSG(r2);
+
 	/* signature validation */
 
  	sig = hip_get_param(r2, HIP_PARAM_HIP_SIGNATURE);
@@ -2180,6 +2190,8 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		HIP_ERROR("No signature found\n");
  		goto out_err;
  	}
+
+	HIP_DUMP_MSG(r2);
 
  	hip_zero_msg_checksum(r2);
  	len = (u8*) sig - (u8*) r2;
