@@ -8,6 +8,7 @@
 #include "keymat.h"
 #include "misc.h"
 
+#if 0
 /**
  * keymat_hit_is_bigger - compare two HITs
  * @hit1: the first HIT to be compared
@@ -29,6 +30,7 @@ int keymat_hit_is_bigger(const struct in6_addr *hit1,
 
 	return 0;
 }
+#endif
 
 u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len, 
 			     struct in6_addr *smaller_hit,
@@ -81,7 +83,6 @@ void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
  * @hit1:    source HIT
  * @hit2:    destination HIT
  *
- * Dstbuflen must be a multiple of 32.
  */
 void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat, 
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
@@ -98,10 +99,14 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
 
-	/* XX TODO: is this the correct one to test for 32 bit multiplicity? */
+ 	if (dstbuflen < HIP_AH_SHA_LEN) {
+ 		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
+ 		return;
+ 	}
+ 
 	HIP_ASSERT(sizeof(index_nbr) == HIP_KEYMAT_INDEX_NBR_SIZE);
 
-	hit1_is_bigger = keymat_hit_is_bigger(hit1, hit2);
+	hit1_is_bigger = hip_hit_is_bigger(hit1, hit2);
 
 	bigger_hit =  hit1_is_bigger ? hit1 : hit2;
 	smaller_hit = hit1_is_bigger ? hit2 : hit1;
