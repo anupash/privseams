@@ -445,21 +445,6 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	public(result, data, &rpk); 
 	HIP_HEXDUMP("calculated signature", result, len);
 
-#if 0
-	debug_signature = kmalloc(mpi_get_nbits(rpk.n) / 8, GFP_KERNEL);
-	if (!debug_signature) {
-		log_error("kmalloc failed\n");
-		goto cleanup;
-	}
-		
-        if (gcry_mpi_print(GCRYMPI_FMT_USG, debug_signature, 
-			   &len, result) != 0) {
-		log_error("Error encoding RSA signature\n");
-		goto cleanup;
-	}
-	HIP_HEXDUMP("calculated signature", debug_signature, len);
-#endif
-
 	len = mpi_get_nbits(rpk.n) / 8;
 	if (gcry_mpi_scan(&orig, GCRYMPI_FMT_USG, signature, &len) != 0)
 	{
