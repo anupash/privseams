@@ -107,21 +107,9 @@ sign(MPI r, MPI s, MPI hash, DSA_secret_key *skey )
     gcry_mpi_powm( r, skey->g, k, skey->p );
     mpi_fdiv_r( r, r, skey->q );
 
-    if (!(mpi_cmp( r, skey->q ) < 0)) {
-	    log_error("DSA Signing created odd results\n");
-	    HIP_HEXDUMP("R", r->d, r->nlimbs*4);
-	    HIP_DEBUG("R is signed: %d\n",r->sign);
-	    HIP_HEXDUMP("Q", skey->q->d, skey->q->nlimbs*4);
-	    HIP_DEBUG("Q is signed: %d\n",r->sign);
-    }
-
     /* kinv = k^(-1) mod q */
     kinv = mpi_alloc( mpi_get_nlimbs(k) );
     mpi_invm(kinv, k, skey->q );
-
-/* XXX: krisu? 
-   mpi_mulm( z, k, kinv, skey->q)
- */
 
     /* s = (kinv * ( hash + x * r)) mod q */
     tmp = mpi_alloc( mpi_get_nlimbs(skey->p) );
@@ -151,12 +139,17 @@ verify(MPI r, MPI s, MPI hash, DSA_public_key *pkey )
 	    log_error("assertion 0 < r failed\n");
 	    return 0;
     }
-    if ( !(mpi_cmp( r, pkey->q ) < 0) ) {
+    if( !(mpi_cmp( r, pkey->q ) < 0) ) {
 	    log_error("assertion r < q  failed\n");
 	    return 0; /* assertion	0 < r < q  failed */
     }
-    if( !(mpi_cmp_ui( s, 0 ) > 0 && mpi_cmp( s, pkey->q ) < 0) ) {
-	    log_error("assertion	0 < s < q  failed\n");
+    if( !(mpi_cmp_ui( s, 0 ) > 0) ) {
+	    log_error("assertion 0 < s failed\n");
+	    return 0;
+    }
+	
+    if( !(mpi_cmp( s, pkey->q ) < 0) ) {
+	    log_error("assertion s < q  failed\n");
 	    return 0;
     }
 
@@ -181,8 +174,6 @@ verify(MPI r, MPI s, MPI hash, DSA_public_key *pkey )
     mpi_mulpowm( v, base, exp, pkey->p );
     mpi_fdiv_r( v, v, pkey->q );
 
-    _HIP_HEXDUMP("v...", v->d, v->nlimbs*4);
-    _HIP_HEXDUMP("r...", r->d, r->nlimbs*4);
     rc = !mpi_cmp( v, r );
 
     mpi_free(w);
@@ -260,10 +251,17 @@ int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	r = mpi_alloc(mpi_get_nlimbs(sk.p));
 	s = mpi_alloc(mpi_get_nlimbs(sk.p));
 
+	_HIP_DEBUG("Using following numbers for signing:\n");
+	_HIP_HEXDUMP("Q", sk.q->d, sk.q->nlimbs*4);
+	_HIP_HEXDUMP("P", sk.p->d, sk.p->nlimbs*4);
+	_HIP_HEXDUMP("G", sk.g->d, sk.g->nlimbs*4);
+	_HIP_HEXDUMP("Y", sk.y->d, sk.y->nlimbs*4);
+	_HIP_HEXDUMP("X", sk.x->d, sk.x->nlimbs*4);
+	
 	sign(r,s,m,&sk);
 
-	_HIP_HEXDUMP("ärrä",r->d,r->nlimbs*4);
-	_HIP_HEXDUMP("ässä",s->d,s->nlimbs*4);
+	_HIP_HEXDUMP("R",r->d,r->nlimbs*4);
+	_HIP_HEXDUMP("S",s->d,s->nlimbs*4);
 
 	/* encode now */
 
@@ -366,7 +364,6 @@ int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 		goto cleanup;
 	}
 
-	_HIP_HEXDUMP("ärrä",r->d,r->nlimbs*4);
 
 	tmp = 20;
 	if (gcry_mpi_scan(&s,GCRYMPI_FMT_USG,signature+21,&tmp) != 0) {
@@ -374,7 +371,14 @@ int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 		goto cleanup;
 	}
 
-	_HIP_HEXDUMP("ässä",s->d,s->nlimbs*4);
+
+	_HIP_DEBUG("Using following numbers for signing:\n");
+	_HIP_HEXDUMP("Q", sk.q->d, sk.q->nlimbs*4);
+	_HIP_HEXDUMP("P", sk.p->d, sk.p->nlimbs*4);
+	_HIP_HEXDUMP("G", sk.g->d, sk.g->nlimbs*4);
+	_HIP_HEXDUMP("Y", sk.y->d, sk.y->nlimbs*4);
+	_HIP_HEXDUMP("R", r->d, r->nlimbs*4);
+	_HIP_HEXDUMP("S", s->d, s->nlimbs*4);
 
 	if (verify(r,s,m,&sk))
 		err = 0;

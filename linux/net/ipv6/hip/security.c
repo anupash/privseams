@@ -111,7 +111,7 @@ int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 	void *setlist[4];
 	int k;
 
-	hip_hirmu_kludge(1);
+//	hip_hirmu_kludge(1);
 
 	getlist[0] = HIP_HADB_PEER_SPI;
 	getlist[1] = HIP_HADB_OWN_SPI;

@@ -254,10 +254,15 @@ do_get_buffer( MPI a, unsigned *nbytes, int *sign, int force_secure )
       #endif
     }
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+    return buffer;
+    /* we don't want to shift/lose our 0x00 bytes */
+#endif
+
     /* this is sub-optimal but we need to do the shift oepration because
      * the caller has to free the returned buffer */
     for(p=buffer; !*p && *nbytes; p++, --*nbytes )
-	;
+	    ;
     if( p != buffer )
 	memmove(buffer,p, *nbytes);
     return buffer;

@@ -150,7 +150,7 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 	}
 
 
-	HIP_HEXDUMP("Signature data (create)", buffer_start, buffer_length);
+	_HIP_HEXDUMP("Signature data (create)", buffer_start, buffer_length);
 
 	if (hip_build_digest(HIP_DIGEST_SHA1, buffer_start, buffer_length,
 			     sha1_digest) < 0)
@@ -161,7 +161,7 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 
 	HIP_HEXDUMP("create digest", sha1_digest, HIP_AH_SHA_LEN);
 
-	HIP_HEXDUMP("dsa key", (u8 *)(host_id + 1), hip_get_param_contents_len(host_id) - 4);
+	_HIP_HEXDUMP("dsa key", (u8 *)(host_id + 1), ntohs(host_id->hi_length));
 
 	err = hip_dsa_sign(sha1_digest,(u8 *)(host_id + 1),signature);
 	if (err) {
@@ -169,7 +169,8 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 		return 0;
 	}
 
-	HIP_HEXDUMP("signature",signature,42);
+	/* 1 + 20 + 20 */
+	HIP_HEXDUMP("signature",signature,41);
 
 	err = 1;
  out_err:
@@ -205,7 +206,7 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 		return 0;
 	}
 
-	HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
+	_HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
 
 	if (hip_build_digest(HIP_DIGEST_SHA1,buffer_start,buffer_length,sha1_digest)) 
 	{
@@ -213,13 +214,14 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 		goto out_err;
 	}
 
-	HIP_HEXDUMP("Verify hexdump", sha1_digest, HIP_AH_SHA_LEN);
+	_HIP_HEXDUMP("Verify hexdump", sha1_digest, HIP_AH_SHA_LEN);
 
 	public_key_len = hip_get_param_contents_len(host_id) - 4;
+	public_key_len = ntohs(host_id->hi_length);
 
-	HIP_HEXDUMP("verify key", public_key, public_key_len);
+	_HIP_HEXDUMP("verify key", public_key, public_key_len);
 
-	HIP_HEXDUMP("Verify hexdump sig **", signature, 42);
+	_HIP_HEXDUMP("Verify hexdump sig **", signature, 42);
 
 	tmp = hip_dsa_verify(sha1_digest, public_key, signature);
 
@@ -231,7 +233,7 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 	case 1:
 		HIP_INFO("Signature: [INCORRECT]\n");
 		HIP_HEXDUMP("digest",sha1_digest,20);
-		HIP_HEXDUMP("signature",signature,42);
+		HIP_HEXDUMP("signature",signature,41);
 		HIP_HEXDUMP("public key",public_key,public_key_len);
 		//break; // uncomment if you don't care about the correctness of the DSA signature
 	default:
