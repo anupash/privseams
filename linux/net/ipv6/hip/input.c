@@ -1343,7 +1343,6 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
 		hip_finalize_sa(&i2->hits, spi_out);
 		hip_finalize_sa(&i2->hitr, spi_in);
-
 	}
 
 	HIP_DEBUG("Reached ESTABLISHED state\n");

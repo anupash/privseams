@@ -17,69 +17,65 @@ atomic_t hip_update_id = ATOMIC_INIT(0);
 spinlock_t hip_update_id_lock = SPIN_LOCK_UNLOCKED;
 
 /* List of SPIs which are waiting for data to come through */
+/* See draft's section "Processing an initial UPDATE packet" */
 LIST_HEAD(hip_update_spi_waitlist);
 spinlock_t hip_update_spi_waitlist_lock = SPIN_LOCK_UNLOCKED;
 
 struct hip_update_spi_waitlist_item {
 	struct list_head list;
 	uint32_t spi;
-	int direction;
 	struct in6_addr hit;
 };
 
 
-/*
- * Used in UPDATE R=0: receive data on incoming SA -> activate outgoing SA
- *
- * direction: true in, false out
- *
- * SPI is given in host byte order
+/**
+ * hip_update_spi_waitlist_add - add a SPI to SPI waitlist
+ * @spi: the inbound SPI to be added in host byte order
+ * @hit: the HIT for which the @spi is related to
  */
-void hip_update_spi_waitlist_add(uint32_t spi, int direction, struct in6_addr *hit)
+void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit)
 {
 	struct hip_update_spi_waitlist_item *s;
 	unsigned long flags = 0;
 	struct list_head *pos, *n;
 	int i = 1;
 
-	HIP_DEBUG("spi=0x%x direction=%s\n", spi, direction ? "in" : "out");
+	HIP_DEBUG("spi=0x%x\n", spi);
 
 	s = kmalloc(sizeof(struct hip_update_spi_waitlist_item), GFP_ATOMIC);
 	if (!s) {
 		HIP_ERROR("kmalloc failed\n");
-		goto out_err;
+		return;
 	}
 
 	s->spi = spi;
-	s->direction = direction;
 	ipv6_addr_copy(&s->hit, hit);
 
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 	list_add(&s->list, &hip_update_spi_waitlist);
-
+	HIP_DEBUG("Current SPI waitlist:\n");
 	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
 		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
-		HIP_DEBUG("SPI waitlist %d: SPI=0x%x direction=%s\n", i, s->spi, s->direction ? "in" : "out");
+		HIP_DEBUG("SPI waitlist %d: SPI=0x%x\n", i, s->spi);
 		i++;
 	}
-
- out_err:
 	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
+	return;
 }
 
-/*
- * SPI is given in host byte order
+/**
+ * hip_update_spi_waitlist_delete - delete a SPI from SPI waitlist
+ * @spi: SPI in host byte order
  */
 void hip_update_spi_waitlist_delete(uint32_t spi)
 {
 	struct list_head *pos, *n;
 	struct hip_update_spi_waitlist_item *s = NULL;
-	unsigned long flags = 0;
 	int i = 1;
 
-	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
-	HIP_DEBUG("spi=0x%x\n", spi);
-
+	HIP_DEBUG("deleting spi=0x%x\n", spi);
+	/* hip_update_spi_waitlist_ispending holds the
+	 * hip_update_spi_waitlist_lock */
 	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
 		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
 		if (s->spi == spi) {
@@ -90,11 +86,12 @@ void hip_update_spi_waitlist_delete(uint32_t spi)
 		}
 		i++;
 	}
-
-	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
 	return;
 }
 
+/**
+ * hip_update_spi_waitlist_delete_all - delete all SPIs from the SPI waitlist
+ */
 void hip_update_spi_waitlist_delete_all(void)
 {
 	struct list_head *pos, *n;
@@ -112,20 +109,26 @@ void hip_update_spi_waitlist_delete_all(void)
 	return;
 }
 
-/* returns 1 if @spi is in the SPI waitlist
+/**
+ * hip_update_spi_waitlist_ispending - test if SPI is on the SPI waitlist
+ * @spi: SPI in host byte order
  *
- * direction: true in, false out
+ * Called from xfrm6_rcv.
  *
- * SPI is given in host byte order
+ * When data is received on the new incoming SA the new outgoing SA is
+ * activated and old SA is deleted.
+ *
+ * Returns 1 if @spi is in the SPI waitlist, otherwise 0.
  */
 int hip_update_spi_waitlist_ispending(uint32_t spi)
 {
-	int found = 0;
+	int err = 0, found = 0;
 	struct hip_update_spi_waitlist_item *s = NULL;
 	unsigned long flags = 0;
-
 	struct list_head *pos, *n;
 	int i = 1;
+
+	/* todo: atomic_t ispending */
 
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 
@@ -139,13 +142,11 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 		i++;
 	}
 
-	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
-
 	/* If the SPI was in pending list, switch the NEW_SPI to be
 	 * the current active SPI. Delete also the old SA and remove
 	 * the SPI from the pending list.*/
 	if (found) {
-		uint32_t spi_out, new_spi_out;
+		uint32_t old_spi_out;
 		hip_ha_t *entry;
 		HIP_DEBUG("spi=0x%x : pending=yes\n", spi);
 
@@ -154,32 +155,29 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 			HIP_ERROR("Entry not found\n");
 			goto out;
 		}
+		HIP_LOCK_HA(entry);
 
-		spi_out = entry->spi_out;
-		new_spi_out = entry->new_spi_out;
-
-		HIP_DEBUG("Switching from SPI_OUT=0x%x to NEW_SPI_OUT=0x%x\n", spi_out, new_spi_out);
-		entry->spi_out = new_spi_out;
-		// or just entry->spi_out = entry->new_spi_out;
-		{
-			int err;//, tmp = 0;
-			hip_print_hit("finalizing", &s->hit);
-			hip_finalize_sa(&s->hit, new_spi_out);
-			HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", spi_out);
-			err = hip_delete_sa(spi_out, &s->hit);
+		HIP_DEBUG("Switching from SPI_OUT=0x%x to NEW_SPI_OUT=0x%x\n",
+			  old_spi_out, entry->new_spi_out);
+		old_spi_out = entry->spi_out;
+		hip_hadb_remove_state_spi(entry);
+		entry->spi_out = entry->new_spi_out;
+		hip_hadb_insert_state(entry);
+		hip_print_hit("finalizing", &s->hit);
+		hip_finalize_sa(&s->hit, entry->new_spi_out);
+		HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", old_spi_out);
+		err = hip_delete_sa(old_spi_out, &s->hit);
+		if (err)
 			HIP_DEBUG("delete_sa ret err=%d\n", err);
-			/* clear out the new spi value from hadb */
-			entry->new_spi_out = 0;
-		}
-	hip_hadb_remove_state_spi(entry);
-	hip_hadb_insert_state(entry);
+		entry->new_spi_out = 0;
 
+		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
-		HIP_DEBUG("deleting SPI from waitlist\n");
 		hip_update_spi_waitlist_delete(spi);
 	}
 
  out:
+	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
 	return found;
 }
 
@@ -339,6 +337,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		goto out_err;
 	}
 
+	HIP_LOCK_HA(entry);
 	our_current_keymat_index = entry->current_keymat_index;
 
 	/* 3. If the system generated new KEYMAT in the previous step,
@@ -428,11 +427,16 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		goto out_err;
 	}
 	HIP_DEBUG("Set up new incoming SA, new_spi_in=0x%x\n", new_spi_in);
+
+	hip_hadb_remove_state_spi(entry);
 	entry->spi_in = new_spi_in;
+	hip_hadb_insert_state(entry);
+
 	HIP_DEBUG("Stored SPI 0x%x to spi_in\n", new_spi_in);
 	hip_finalize_sa(hitr, new_spi_in); /* move below */
 
-	hip_update_spi_waitlist_add(new_spi_in, 1, hits);
+
+	hip_update_spi_waitlist_add(new_spi_in, hits);
 
 	/* delete old incoming SA */
 	/* todo: set to dying/drop old IPsec SA ? */
@@ -441,8 +445,6 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	HIP_DEBUG("delete_sa retval=%d\n", err ); /* ignore error ? */
 	err = 0;
 
-	hip_hadb_remove_state_spi(entry);
-	hip_hadb_insert_state(entry);
 
 	_HIP_DEBUG("after new_spi_out: out=0x%08x in=0x%08x new_in=0x%08x new_out=0x%08x\n",
 		  entry->spi_in, entry->spi_out, entry->new_spi_in, entry->new_spi_out);
@@ -457,7 +459,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	 * REKEYING, the new Diffie-Hellman key was probably generated and
 	 * sent already earlier, in which case it MUST NOT be included into
 	 * the reply packet. */
-	
+
 	/* create and send reply UPDATE packet */
 	update_packet = hip_msg_alloc();
 	if (!update_packet) {
@@ -524,8 +526,9 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	}
 
  out_err:
+	HIP_UNLOCK_HA(entry);
 	if (entry)
-		hip_put_ha(entry); /* try to do this earlier */
+		hip_put_ha(entry);
 	if (update_packet)
 		kfree(update_packet);
 	if (err) {
@@ -598,6 +601,7 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 		HIP_ERROR("Entry not found\n");
 		goto out_err;
 	}
+	HIP_LOCK_HA(entry);
 
 	/* 2. If the system generated new KEYMAT in the previous step,
 	 * it sets Keymat Index to zero, independent on whether the
@@ -730,7 +734,10 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	err = 0;
 
 	HIP_DEBUG("switching to new updated inbound SPI=0x%x, new_spi_in\n", new_spi_in);
+
+	hip_hadb_remove_state_spi(entry);
 	entry->spi_in = new_spi_in;
+	hip_hadb_insert_state(entry);
 
 	HIP_DEBUG("switch ok\n");
 
@@ -743,14 +750,13 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	HIP_DEBUG("finalizing the new outbound SA, SPI=0x%x\n", new_spi_out);
 	hip_finalize_sa(hits, new_spi_out);
 
-	hip_hadb_remove_state_spi(entry);
-	hip_hadb_insert_state(entry);
 
 	/* Go back to ESTABLISHED state */
 	entry->state = HIP_STATE_ESTABLISHED;
 	HIP_DEBUG("Went back to ESTABLISHED state\n");
 
  out_err:
+	HIP_UNLOCK_HA(entry);
 	if (entry)
 		hip_put_ha(entry); /* try to do this earlier */
 	/* if (err) move to state = ? */
@@ -800,6 +806,7 @@ int hip_receive_update(struct sk_buff *skb)
 		HIP_ERROR("Entry not found\n");
 		goto out_err;
 	}
+	HIP_LOCK_HA(entry);
 
 	state = entry->state; /* todo: remove variable state */
 
@@ -935,7 +942,7 @@ int hip_receive_update(struct sk_buff *skb)
 			goto out_err;
 		}
 	}
- 
+
         HIP_DEBUG("SIGNATURE ok\n");
 
 	/* 7. The system MUST record the UPDATE ID in the received
@@ -978,8 +985,9 @@ int hip_receive_update(struct sk_buff *skb)
 	}
 
  out_err:
+	HIP_UNLOCK_HA(entry);
 	if (entry)
-		hip_put_ha(entry); /* try to do this earlier */
+		hip_put_ha(entry);
 
 	return err;
 }
@@ -1078,7 +1086,7 @@ int hip_send_update(struct hip_hadb_state *entry)
 		err = -EINVAL;
 		goto out_err;
 	}
-	    
+
 	err = hip_build_param_signature_contents(update_packet, signature,
 						 HIP_DSA_SIGNATURE_LEN,
  						 HIP_SIG_DSA);
@@ -1185,7 +1193,7 @@ void hip_send_update_all(void)
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-	
+
 	err = hip_for_each_ha(hip_update_get_all_valid, &rk);
 	if (err) {
 		HIP_ERROR("for_each_ha err=%d\n", err);
