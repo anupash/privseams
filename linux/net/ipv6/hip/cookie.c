@@ -170,6 +170,8 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		struct hip_solution sl;
 	} *u;
 
+	HIP_DEBUG("\n");
+
 	/* pre-create cookie */
 
 	u = puzzle_or_solution;
@@ -187,7 +189,9 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	{
 		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hits);
 		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hitr);
-		randval = ntoh64(u->sl.J);
+		//randval = ntoh64(u->sl.J);
+		randval = u->sl.J;
+		HIP_DEBUG("u->sl.J: 0x%llx", u->sl.J);
 		maxtries = 1;
 	} 
 	else if (mode == HIP_SOLVE_PUZZLE)
@@ -210,8 +214,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		return 0; // !ok
 	}
 	
-
-
 	/* while loops should work even if the maxtries is unsigned
 	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
 	 * the next round while (0 > 0) [maxtries > 0 now]
@@ -227,7 +229,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 				
                 /* copy the last 8 bytes for checking */
 		memcpy(&digest, sha_digest + 12, 8);
-		
+
 		/* now, in order to be able to do correctly the bitwise
 		 * AND-operation we have to remember that little endian
 		 * processors will interpret the digest and mask reversely.
@@ -244,6 +246,9 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		 */
 		if ((digest & mask) == 0) {
 			HIP_DEBUG("*** Puzzle solved ***: %llx\n",randval);
+			HIP_HEXDUMP("digest", sha_digest, HIP_AH_SHA_LEN);
+			HIP_HEXDUMP("cookie", cookie, sizeof(cookie));
+			//return ntoh64(randval);
 			return randval;
 			break;
 		}
@@ -257,6 +262,8 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 
 		randval++;
 	}
+
+	HIP_DEBUG("Puzzle was successfully solved\n");
 		
  out_err:
 	HIP_ERROR("Could not solve the puzzle\n");
@@ -406,6 +413,13 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 		HIP_ERROR("Internal error: could not find the cookie\n");
 		return 0;
 	}
+
+	HIP_HEXDUMP("opaque in solution", solution->opaque, 3);
+	HIP_HEXDUMP("opaque in result", result->Copaque, 3);
+	HIP_HEXDUMP("opaque in puzzle", puzzle->opaque, 3);
+
+	HIP_DEBUG("Solution's I (0x%llx), sent I (0x%llx)\n",
+		  solution->I, puzzle->I);
 
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",

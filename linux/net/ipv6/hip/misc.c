@@ -21,6 +21,8 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
        unsigned int key_rr_len = ntohs(host_id->hi_length) -
 	       sizeof(struct hip_host_id_key_rdata);
 
+       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+
        if (hit_type != HIP_HIT_TYPE_HASH126) {
                err = -ENOSYS;
                goto out_err;

@@ -232,11 +232,15 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 		return -EFAULT;
 	}
 
+	HIP_DEBUG("Mapping virtual to pages\n");
+
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1 ) {
 		HIP_ERROR("Error mapping virtual addresses to physical pages\n");
 		return -EFAULT;
 	}
+
+	HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	crypto_digest_init(impl);
 	crypto_digest_digest(impl, sg, nsg, out);
@@ -299,11 +303,15 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 		return 0;
 	}
 
+	HIP_DEBUG("Mapping virtual to pages\n");
+
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1) {
 		HIP_ERROR("Mapping failed\n");
 		return 0;
 	}
+
+	HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	crypto_hmac(impl, key, &keylen, sg, nsg, out);
 
@@ -875,6 +883,17 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 	struct scatterlist src_sg[HIP_MAX_SCATTERLISTS];
 	unsigned int src_nsg = HIP_MAX_SCATTERLISTS;
 
+	/* We cannot use the same memory are for en/decryption? */
+	void *result = NULL;
+	result = kmalloc(enc_len, GFP_KERNEL);
+	if (!result) {
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	memcpy(result, data, enc_len);
+
+	HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, enc_len);
 	switch(enc_alg) {
 	case HIP_TRANSFORM_3DES:
 		impl = impl_3des_cbc;
@@ -886,14 +905,21 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		break;
 	default:
 		HIP_ERROR("Attempted to use unknown CI (enc_alg=%d)\n", enc_alg);
-		return -EFAULT;
+		err = -EFAULT;
+		goto out_err;
 	}
 
-	err = hip_map_virtual_to_pages(src_sg, &src_nsg, data, enc_len);
+	HIP_DEBUG("Mapping virtual to pages\n");
+
+//	err = hip_map_virtual_to_pages(src_sg, &src_nsg, data, enc_len);
+	err = hip_map_virtual_to_pages(src_sg, &src_nsg, result, enc_len);
 	if (err || src_nsg < 1) {
 		HIP_ERROR("Error mapping source data\n");
-		return -EFAULT;
+		err = -EFAULT;
+		goto out_err;
 	}
+
+	HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	/* we will write over the source */
 
@@ -904,19 +930,24 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 			HIP_HEXDUMP("3DES key", enc_key, key_len);
 		}
 		HIP_ERROR("Could not set encryption/decryption key\n");
-		return -EFAULT;
+		err = -EFAULT;
+		goto out_err;
 	}
 
+	HIP_DEBUG("enc_len=%d\n", enc_len);
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
 		if (iv) {
 			err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg, enc_len, iv);
+			memset(iv,0,8);
+			//err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg, enc_len, iv);		
 		} else {
 			err = crypto_cipher_encrypt(impl, src_sg, src_sg, enc_len);
 		}
 		if (err) {
 			HIP_ERROR("Encryption failed\n");
-			return -EFAULT;
+			err = -EFAULT;
+			goto out_err;
 		}
 			
 		break;
@@ -928,17 +959,32 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		}
 		if (err) {
 			HIP_ERROR("Decryption failed\n");
-			return -EFAULT;
+			err = -EFAULT;
+			goto out_err;
 		}
 		break;
 	default:
 		HIP_ERROR("Undefined direction (%d)\n", direction);
-		err = -2;
+		err = -EINVAL;
 		break;
 	}
 
-	return 0;
+	HIP_ASSERT(iv);
+	//	memcpy(data, result, enc_len);
+	//if (direction == HIP_DIRECTION_ENCRYPT)
+	memcpy(data, result, enc_len); // XX DOES NOT WORK IF IV IS NULL
+
+		//else
+		//	memcpy(iv+8, result, enc_len); // XX DOES NOT WORK IF IV IS NULL
+
+	//memset(iv, 0, 8);
+
+ out_err:
+	if (result)
+		kfree(result);
+	return err;
 }
+
 
 /**
  * hip_unknown_spi - handle an unknown SPI by sending R1

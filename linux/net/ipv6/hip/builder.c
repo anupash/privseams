@@ -1426,15 +1426,15 @@ int hip_build_param_echo_response(struct hip_common *msg,
 	struct hip_echo_response pong;
 	int len, err;
 
-	hip_set_param_type(&pong, sign ? HIP_PARAM_ECHO_RESPONSE_SIGN : HIP_PARAM_ECHO_RESPONSE);
+	hip_set_param_type(&pong, sign ? HIP_PARAM_ECHO_RESPONSE_SIGN :
+			   HIP_PARAM_ECHO_RESPONSE);
 
 	len = hip_get_param_contents_len(ping);
 	hip_set_param_contents_len(&pong, len);
 
-	memcpy((&pong + 1), ping + 1, len);
-	err = hip_build_generic_param(msg, &pong, sizeof(struct hip_echo_response), 
-				      &pong + 1);
-
+	err = hip_build_generic_param(msg, &pong,
+				      sizeof(struct hip_echo_response), 
+				      ping);
 	return err;
 }
 
@@ -1942,9 +1942,9 @@ int hip_build_param_encrypted(struct hip_common *msg,
 			   sizeof(struct hip_tlv_common) +
 			   hip_get_param_total_len(host_id));
 	enc.reserved = htonl(0);
+	memset(&enc.iv, 0, 8);
 
 	/* copy the IV *IF* needed, and then the encrypted data */
-	
 	
 	err = hip_build_generic_param(msg, &enc,
 				      sizeof(struct hip_encrypted),
