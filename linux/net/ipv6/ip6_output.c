@@ -864,6 +864,7 @@ out_err_release:
 	*dst = NULL;
 	return err;
 }
+EXPORT_SYMBOL(ip6_dst_lookup);
 
 int ip6_append_data(struct sock *sk, int getfrag(void *from, char *to, int offset, int len, int odd, struct sk_buff *skb),
 		    void *from, int length, int transhdrlen,

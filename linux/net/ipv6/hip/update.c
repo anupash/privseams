@@ -133,7 +133,6 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 	}
 
 	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
-	HIP_DEBUG("spi=0x%x : pending=%s\n", spi, found ? "yes" : "no");
 
 	/* If the SPI was in pending list, switch the NEW_SPI to be
 	 * the current active SPI. Delete also the old SA and remove
@@ -142,6 +141,8 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 		uint32_t spi_out, new_spi_out;
  		int getlist[2] = { HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_OUT };
  		void *setlist[2] = { &spi_out, &new_spi_out };
+
+		HIP_DEBUG("spi=0x%x : pending=yes\n", spi);
 
 		if (hip_hadb_multiget(&s->hit, 2, getlist, setlist, HIP_ARG_HIT) != 2) {
 			HIP_ERROR("Couldn't find SPI values\n");
@@ -357,7 +358,6 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 			goto db_err;
 		}
 
-		//we_are_HITg = hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
 		we_are_HITg = hip_hit_is_bigger(hitr, hits);
 		HIP_DEBUG("we are: HIT%c\n", we_are_HITg ? 'g' : 'l');
 
@@ -411,9 +411,6 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		goto out_err;
 	}
 	HIP_DEBUG("Stored SPI 0x%x to new_spi_out for future use\n", new_spi_out);
-
-/* activate when receving data on newspiout*/
-//	hip_finalize_sa(hits, new_spi_out); /* shouldn't do this yet */
 
 	{
 		uint32_t spi_in, spi_out, new_spi_in, new_spi_out;
@@ -687,7 +684,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 			goto qwe;
 		}
 
-		//		we_are_HITg = hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
 		we_are_HITg = hip_hit_is_bigger(hitr, hits);
 		HIP_DEBUG("we are: HIT%c\n", we_are_HITg ? 'g' : 'l');
 
@@ -712,7 +708,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 		/* todo: update entry keymat later */
 		hip_update_entry_keymat(entry, keymat_offset_new, calc_index_new, Kn);
 	qwe:
-		//HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 		hip_hadb_release_ex_db_access(flags);
 		if (err)
 			goto out_err;
@@ -1099,11 +1094,21 @@ int hip_send_update(struct hip_hadb_state *entry)
 	uint32_t new_spi_in = 0;
 	struct hip_common *update_packet = NULL;
 	struct in6_addr daddr;
-	struct hip_crypto_key hmac;
 	struct hip_host_id *host_id_private;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
-	struct hip_crypto_key espkey_new, authkey_new;
+	struct hip_crypto_key null_key;
 
+	struct in6_addr hit_our, hit_peer;
+	int esp_transform;
+	uint16_t current_keymat_index;
+	uint32_t spi_in, spi_out;
+	struct hip_crypto_key hmac;
+
+	int getlist[7] = { HIP_HADB_OWN_HIT, HIP_HADB_PEER_HIT, HIP_HADB_ESP_TRANSFORM,
+			  HIP_HADB_KEYMAT_INDEX, HIP_HADB_SPI_IN, HIP_HADB_SPI_OUT,
+			  HIP_HADB_OWN_HMAC };
+	void *setlist[7] = { &hit_our, &hit_peer, &esp_transform, &current_keymat_index,
+			     &spi_in, &spi_out, &hmac };
 
 	HIP_DEBUG("\n");
 	if (!entry) {
@@ -1111,13 +1116,18 @@ int hip_send_update(struct hip_hadb_state *entry)
 		err = -EINVAL;
 		goto out_err;
 	}
-	hip_print_hit("sending UPDATE to", &entry->hit_peer);
+
+	if (hip_hadb_multiget(&entry->hit_peer, 7, getlist, setlist, HIP_ARG_HIT) != 7) {
+		HIP_ERROR("Couldn't get information on peer HIT\n");
+		goto out_err;
+	}
+
+	hip_print_hit("sending UPDATE to", &hit_peer);
 
 	/* we can not know yet from where we should start to draw keys
-	   from the keymat, so we just zero the keys and fill in
+	   from the keymat, so we just zero a key and fill in
 	   the keys later */
-	memset(&espkey_new.key, 0, HIP_MAX_KEY_LEN);
-	memset(&authkey_new.key, 0, HIP_MAX_KEY_LEN);
+	memset(&null_key.key, 0, HIP_MAX_KEY_LEN);
 
 	/* The specifications does not say that new incoming SA should be done
 	 * here, but it is needed because of the New SPI value */
@@ -1125,24 +1135,22 @@ int hip_send_update(struct hip_hadb_state *entry)
 	/* get a New SPI to use in the UPDATE packet and prepare a new
 	 * incoming IPsec SA */
 	new_spi_in = 0;
-	err = hip_setup_sa(&entry->hit_peer, &entry->hit_our,
-			   &new_spi_in, entry->esp_transform,
-			   &espkey_new.key, &authkey_new.key, 0); /* sa state is inactive */
+	err = hip_setup_sa(&hit_peer, &hit_our,
+			   &new_spi_in, esp_transform,
+			   &null_key.key, &null_key.key, 0);
 	/* todo: if failed try again a couple of times ? */
 	if (err) {
 		HIP_ERROR("Error while setting up new IPsec SA (err=%d)\n", err);
 		goto out_err;
 	}
-
 	HIP_DEBUG("New SA created with New SPI (in)=0x%x\n", new_spi_in);
 
-	if (hip_hadb_set_info(&entry->hit_peer, &new_spi_in,
+	if (hip_hadb_set_info(&hit_peer, &new_spi_in,
 			      HIP_HADB_NEW_SPI_IN|HIP_ARG_HIT) != 1) {
 		HIP_ERROR("Could not set New SPI value to hadb, new_spi_in\n");
 		err = -EINVAL;
 		goto out_err;
 	}
-
 	HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
 
 	/* start building UPDATE packet */
@@ -1153,7 +1161,7 @@ int hip_send_update(struct hip_hadb_state *entry)
 		goto out_err;
 	}
 
-	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
+	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &hit_our, &hit_peer);
 
 	update_id_out = hip_get_new_update_id();
 	HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
@@ -1164,9 +1172,9 @@ int hip_send_update(struct hip_hadb_state *entry)
 		goto out_err;
 	}
 
-	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
-	err = hip_build_param_nes(update_packet, 0, entry->current_keymat_index+1,
-				  update_id_out, entry->spi_in, new_spi_in); 
+	HIP_DEBUG("entry->current_keymat_index=%u\n", current_keymat_index);
+	err = hip_build_param_nes(update_packet, 0, current_keymat_index+1,
+				  update_id_out, spi_in, new_spi_in); 
 	if (err) {
 		HIP_ERROR("Building of NES param failed\n");
 		goto out_err;
@@ -1174,12 +1182,14 @@ int hip_send_update(struct hip_hadb_state *entry)
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
+#if 0
 	if (!hip_hadb_get_info(&entry->hit_peer, &hmac,
 			       HIP_HADB_OWN_HMAC|HIP_ARG_HIT)) {
 		HIP_ERROR("could not get own HMAC\n");
 		err = -ENOENT;
 		goto out_err;
 	}
+#endif
 	err = hip_build_param_hmac_contents(update_packet, &hmac);
 	if (err) {
 		HIP_ERROR("Building of HMAC failed (%d)\n", err);
@@ -1210,24 +1220,23 @@ int hip_send_update(struct hip_hadb_state *entry)
  	}
 	HIP_DEBUG("SIGNATURE added\n");
 
-	/* todo: start SA timer, ipsec_sa_mod_timer ? */
-	/* todo: add UPDATE to sent list */
 
 	HIP_DEBUG("spi values when sending update: 0x%08x 0x%08x 0x%08x 0x%08x\n",
 		  entry->spi_in, entry->spi_out, entry->new_spi_in, entry->new_spi_out);
 
 	/* send UPDATE */
         HIP_DEBUG("Sending UPDATE packet\n");
-        err = hip_hadb_get_peer_address(&entry->hit_peer, &daddr, HIP_ARG_HIT);
+        err = hip_hadb_get_peer_address(&hit_peer, &daddr, HIP_ARG_HIT);
         if (err) {
                 HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
                 goto out_err;
         }
 
 	/* Store the last UPDATE ID value sent from us */
-	if (hip_hadb_set_info(&entry->hit_peer, &update_id_out,
+	if (hip_hadb_set_info(&hit_peer, &update_id_out,
 			      HIP_HADB_OWN_UPDATE_ID_OUT|HIP_ARG_HIT) != 1) {
-		HIP_ERROR("Could not set outgoing UPDATE ID value (%u) for HIT\n", update_id_out);
+		HIP_ERROR("Could not set outgoing UPDATE ID value (%u) for HIT\n",
+			  update_id_out);
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -1246,6 +1255,7 @@ int hip_send_update(struct hip_hadb_state *entry)
 		goto out_err;
 	}
 
+	/* todo: add UPDATE to sent list */
 	/* todo: start retransmission timer */
 	goto out;
 
@@ -1253,6 +1263,8 @@ int hip_send_update(struct hip_hadb_state *entry)
 	/* delete IPsec SA on failure */
 	if (new_spi_in)
 		hip_delete_sa(new_spi_in, &entry->hit_our);
+	new_spi_in = 0;
+	hip_hadb_set_info(&hit_our, &new_spi_in, HIP_HADB_NEW_SPI_IN|HIP_ARG_HIT);
 
  out:
 	if (update_packet)

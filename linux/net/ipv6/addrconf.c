@@ -482,6 +482,7 @@ void inet6_ifa_finish_destroy(struct inet6_ifaddr *ifp)
 	inet6_ifa_count--;
 	kfree(ifp);
 }
+EXPORT_SYMBOL(inet6_ifa_finish_destroy);
 
 /* On success it returns ifp with increased reference count */
 
