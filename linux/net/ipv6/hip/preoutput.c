@@ -1,4 +1,4 @@
-// FIXME: headers
+#include "preoutput.h"
 
 /**
  * hip_handle_output - handle outgoing IPv6 packets
