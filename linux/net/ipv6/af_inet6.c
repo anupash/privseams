@@ -111,6 +111,7 @@ kmem_cache_t *raw6_sk_cachep;
 #include <net/hip_glue.h>
 /* Placeholder for HIP hooks */
 struct hip_callable_functions hip_functions;
+EXPORT_SYMBOL(hip_functions);
 #endif
 
 /* The inetsw table contains everything that inet_create needs to
@@ -541,6 +542,7 @@ struct proto_ops inet6_stream_ops = {
 	.mmap =		sock_no_mmap,
 	.sendpage =	tcp_sendpage
 };
+EXPORT_SYMBOL(inet6_stream_ops);
 
 struct proto_ops inet6_dgram_ops = {
 	.family =	PF_INET6,
@@ -562,12 +564,14 @@ struct proto_ops inet6_dgram_ops = {
 	.mmap =		sock_no_mmap,
 	.sendpage =	sock_no_sendpage,
 };
+EXPORT_SYMBOL(inet6_dgram_ops);
 
 struct net_proto_family inet6_family_ops = {
 	.family = PF_INET6,
 	.create = inet6_create,
 	.owner	= THIS_MODULE,
 };
+EXPORT_SYMBOL(inet6_family_ops);
 
 #ifdef MODULE
 #if 0 /* FIXME --RR */

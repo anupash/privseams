@@ -2,9 +2,24 @@
 # Makefile for the HIP for Linux.
 #
 
-#EXTRA_CFLAGS := -DKRISUS_THESIS
-
-obj-$(CONFIG_HIP) += crypto/ hipmod.o
+obj-$(CONFIG_HIP) += hipmod.o
 
 hipmod-objs := hip.o daemon.o ioctl.o builder.o keymat.o unit.o test.o input.o output.o \
 	       db.o debug.o cookie.o workqueue.o misc.o security.o socket.o
+
+CRYPTOOBJS := mpi-bit.o mpi-div.o mpi-inline.o mpi-mpow.o mpi-pow.o \
+mpicoder.o mpih-mul.o mpi-add.o mpi-cmp.o mpi-gcd.o mpi-inv.o \
+mpi-mul.o mpi-scan.o mpih-div.o mpiutil.o kernel-interface.o \
+dh.o dsa.o
+
+ASMFILES := mpih-add1.o mpih-lshift.o mpih-mul1.o mpih-mul2.o mpih-mul3.o
+ASMFILES += mpih-rshift.o mpih-sub1.o
+
+ifneq ($(SUBARCH),)
+REALARCH := $(SUBARCH)
+else
+REALARCH := $(ARCH)
+endif
+
+hipmod-objs += $(addprefix crypto/, $(CRYPTOOBJS))
+hipmod-objs += $(addprefix crypto/$(REALARCH)/, $(ASMFILES))
