@@ -2,12 +2,14 @@
 #define HIP_UNIT
 
 #ifdef __KERNEL__
-#include <linux/kernel.h>
-#include <linux/types.h>
-#include <net/hip.h>
+#  include <linux/kernel.h>
+#  include <linux/types.h>
+#  include <net/hip.h>
+#  include "debug.h"
 #else
-#include <stdio.h>
-#include <stdint.h>
+#  include <stdio.h>
+#  include <stdint.h>
+#  include "libinet6/debug.h"
 #endif /* __KERNEL__ */
 
 

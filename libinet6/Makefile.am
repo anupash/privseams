@@ -1,0 +1,74 @@
+# $USAGI: Makefile.in,v 1.34 2003/06/21 04:17:42 yoshfuji Exp $
+#
+# Makefile.am for USAGI libinet6. Conversion from ".in" to ".am" by
+# miika@iki.fi.
+#
+# Copyright (C) 2000-2001 USAGI/WIDE Project.
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the project nor the names of its contributors
+#    may be used to endorse or promote products derived from this software
+#    without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+
+AUTOMAKE_OPTIONS = foreign
+
+# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
+# is invoked manually directly in this dir. The global include file uses the
+# HIPL variable to setup some HIPL_* variables.
+# 
+HIPL = $(PWD)/..
+include $(HIPL)/Makefile.am.global
+
+# XX TODO: How to make autoconf link libcrypto.a to libinet6.a?
+
+lib_LTLIBRARIES = libinet6.la
+
+# Original sources
+libinet6_la_SOURCES  = usagi.c getaddrinfo.c getnameinfo.c ip6opt.c rthdr.c
+libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
+libinet6_la_SOURCES += sa_len.c tempname.c
+
+# HIP additions
+libinet6_la_SOURCES += builder.c debug.c message.c getendpointinfo.c crypto.c
+
+# Original flags.
+CFLAGS  = -D_LIBC_REENTRANT -D_IO_MTSAFE_IO -D_USAGI -D_GNU_SOURCE
+CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
+CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
+
+# HIP additions to the flags.
+CFLAGS += -g -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_TOOLS) -I$(HIPL)
+CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE)
+
+# Enable the following option if you want to compile HIP enabled apps without
+# no changes to code using the legacy HIP API (assuming that the code uses
+# only getendpointinfo).
+#
+#libinet6_la_CFLAGS += -DHIP_TRANSPARENT_API
+
+# Kludge: builder rule makes also the "include" symlink
+builder.h:
+	$(LN_S) $(HIPL_LINUX_MODULE)/builder.h .
+builder.c:
+	$(LN_S) $(HIPL_LINUX_MODULE)/builder.c .
+	$(LN_S) include_glibc$(usagi_libc) include

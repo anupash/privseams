@@ -58,94 +58,88 @@ CODING CONVENTIONS
   userspace code. This rule may be relaxed in the kernel code because
   the space is very limited due to the 8 character indentation.
 
-CVS POLICY
-==========
+QUICK-AND-DIRTY ARCH INSTRUCTIONS FOR DEVELOPERS
+================================================
 
-There are no long-term branches in the HIPL project other than the
-MAIN branch. The MAIN branch contains always bleeding edge development
-code but some quality assurance must be done by the developer before
-any code can be committed to CVS:
+These instructions assume that you want to access the HIPL source code
+using ssh. Also, the tla usage is optimized using hard-linked revision
+libraries.
 
-- the code should compile as it is without errors
+# Register an account:
+#
+tla register-archive hipl-dev@freelists.org--hipl \
+       sftp://mkomu@hipl.hiit.fi/var/archive/hipl
+tla my-default-archive hipl-dev@freelists.org--hipl
+
+# Make a revision library (otherwise e.g. commit and changes take up to
+# 15 mins!)
+#
+mkdir ~/.tla-rev-lib
+tla my-revision-library ~/.tla-rev-lib/
+tla library-config --greedy --sparse ~/.tla-rev-lib/
+
+# Get a working copy from the main branch:
+#
+tla get --link hipl--main--2.6 hipl--main--2.6
+
+# Copy the tla hook if you want to get your commit logs to the mailing list:
+#
+cp hipl--main--2.6/test/tla-hook ~/.arch-params/hook
+
+# Different ways to commit code:
+#
+a) tla commit # Open's your default editor and commits.
+b) emacs `tla make-log`; tla commit
+c) tla commit -s "Explanation jaada jaada"
+
+# How to check what your have modified in the tree
+#
+tla changes
+
+# How to make a branch from the current version of the main branch
+#
+tla my-default archive # Make sure that you are accessing the HIPL archive
+tla archive setup hipl--mybranch--2.6
+tla tag hipl--main--2.6 hipl--mybranch--2.6
+
+# Get the new branch
+#
+tla get --link hipl--mybranch--2.6 hipl--mybranch--2.6
+
+# How to synchronize branches... remember to make clean commits, i.e. do
+# NOT commit a merge and local modifications in the same commit!
+#
+cd hipl--mybranch--2.6
+tla changes # Check that the tree is unmodified
+tla star-merge hipl--main--2.6
+
+# Run the command below in your working copy (e.g. monthly) if you
+# experience a serious slow-down in the commit speed:
+#
+cd hipl--main--2.6
+tla changes --link
+
+ARCH POLICY
+===========
+
+*** Important: see that your umask is 0002 before you make any commits ***
+
+hipl--main--2.6 is the "stable" branch for HIPL code. Do not put any
+experimental code in there because other people are relying on that
+the code works! Commit only minor bugfixes directly to the stable
+branch, and use/create other branches to develop experimental
+code. When you have tested and are sure that code works, you can merge
+it into the stable branch.
+
+Some points in the branch quality assurance:
+
+- the code must compile as it is without errors
 - compiler warning messages must be taken seriously and must not be ignored
   unless you really know what the message means. And we REALLY mean really.
 - the base exchange should be manually tested between two hosts
-- all existing unit tests should be run without any errors (see TESTING)
-
-Tag names:
-
-    Use the format PROJECT_NAME_TYPE_DATE for TAG names, where...
-
-    PROJECT = HIPL:      the tag is related to change in the HIP code
-              FUEGOCORE: the tag is related to Fuego-Core
-              LINUX:     the tag is related to the upgrade of kernel version
-              IETF:      changes in IETF
-
-    NAME = A short identification name (CRYPTO_MOD, KERNEL_2_6_UPGRADE, etc)
-           for the tag.
-  
-    TYPE = DEV or BUG or something else?. DEV should be used when the branch
-           was created for developing new feature / functionality. BUG =
-           branch was created to fix bugs, errors, etc...
-
-    DATE = yyyymmdd (the day the branch is created). 
-
-  Do not use your own name in the tags.
-
-Branch names:
-
-  Create the branch with the name PROJECT_NAME
-  The project and name are the same as in the tags.
-  Do not use your own name in the branch name.
-
-Merging:
-
-  There branches that need to be synchronized to/from the
-  HEAD. Synchronization is done using CVS merge but there are some
-  pitfalls in the merging process. There are only two simple rules to
-  keep you out of trouble (indepently of the direction of the merge):
-
-  +------------------------------------------------+
-  | Tag the branch and the HEAD _before_ merge.    |
-  | Tag the branch and the HEAD _after_ the merge. |
-  +------------------------------------------------+
-
-You will need to supply the "cvs merge" command with two branch names
-so that cvs can "diff" the only the updates that haven't been
-merged. This is where the tag names before and after the last merge
-become handy. Otherwise you will get CVS conficts! You cannot rely on
-CVS internal dates with merging because they really don't work in
-practice.
-
-Add the following line to the changetags.txt in the doc directory
-after merging:
-
-  BRANCHPOINT_TAG BRANCH_TAG SHORT DESCRIPTION
-  The short description should be without any formatting symbols so that it
-  can be nicely parsed with a tool. Naturally the file should not be branched.
-  E.g. HIPL_CRYPTO_BUG_20030831 HIPL_CRYPTO fixed deadlock situation in xxx
-
-- Benefits:
-  + The branch point tag enables us to easily get the
-    sources before the bug fixing started.
-  + The merging tag brings us back to the moment just before the 
-    merging occured. So that, if the merge turned out to be complete crap, we
-    can unroll the whole source tree easily (otherwise manually checking
-    version history of every file).
-  + The changetags.txt serves as a quick loopup table for:
-    TAG <-> reason for the branch. Also the starting date and point can be 
-    looked up easily.
-
-- Problems:
-  - The merging tag and the actual merge is not an atomic operation. This might
-    lead to a situation where there is a merging tag, a normal commit and a
-    merge. Any ideas to improve the situation are appreciated.
-  - Manual updating of the changetags.txt
-
-- Not yet decided:
-  + Should the branching be done to the whole project, or only to the 
-    "subproject/subdirs"?
-
+- UPDATE packet exchange should work
+- the code should not leak memory or do bad locking
+- (all existing unit tests should be run without any errors (see TESTING))
 
 DEBUGGING
 =========

@@ -33,7 +33,7 @@
 #endif
 #include <signal.h>
 
-#include "tools/debug.h"
+#include "libinet6/debug.h"
 
 static void sig_handler(int signo) {
   if (signo == SIGTERM) {
@@ -47,14 +47,10 @@ static void sig_handler(int signo) {
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *res = NULL;
   struct sockaddr_eid peer_eid;
-  char *port_name;
-  char mylovemostdata[IP_MAXPACKET];
-  int recvnum, sendnum;
-  int serversock = 0, sockfd = 0;
-  int err = 0;
-  int socktype;
+  char *port_name, mylovemostdata[IP_MAXPACKET];
+  int recvnum, sendnum, serversock = 0, sockfd = 0, err = 0, on = 1;
+  int socktype, endpoint_family = PF_HIP;
   socklen_t peer_eid_len;
-  int endpoint_family = PF_HIP;
 
   hip_set_logtype(LOGTYPE_STDERR);
 
@@ -88,6 +84,8 @@ int main(int argc,char *argv[]) {
     goto out;
   }
 
+  setsockopt(serversock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+
   memset(&hints, 0, sizeof(struct endpointinfo));
   hints.ei_family = endpoint_family;
   hints.ei_socktype = socktype;
@@ -119,10 +117,12 @@ int main(int argc,char *argv[]) {
 	err = 1;
 	goto out;
       }
-      
+
       while((recvnum = recv(sockfd, mylovemostdata,
 			    sizeof(mylovemostdata), 0)) > 0 ) {
 	mylovemostdata[recvnum] = '\0';
+	printf("%s", mylovemostdata);
+	fflush(stdout);
 	if (recvnum == 0) {
 	  break;
 	}
@@ -142,7 +142,8 @@ int main(int argc,char *argv[]) {
 			       (struct sockaddr *)& peer_eid,
 			       &peer_eid_len) > 0) {
 	mylovemostdata[recvnum] = '\0';
-	HIP_ERROR("%s", mylovemostdata);
+	printf("%s", mylovemostdata);
+	fflush(stdout);
 	if (recvnum == 0) {
 	  break;
 	}

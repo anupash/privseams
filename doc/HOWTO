@@ -18,7 +18,7 @@ software bundle:
   * Linux Operating System
   * OpenSSL-library and developer headers
   * GNU make
-  * the latest versions of autoconf and automake
+  * the latest versions of autoconf, automake, autoreconf and libtool
   * perl, lorder
 
 * Optional
@@ -60,6 +60,18 @@ patient.
 
 Compiling the Kernel
 ====================
+
+If you haven't configured linux kernel before, please consult
+hipl/linux/README before doing that. We have some example
+configurations files in hipl/test/configs for "typical" systems. You
+can use one of those as a template, and modify it to suite the needs
+of your system. Read hipl/test/configs/README before doing so.
+
+If you haven't configured linux kernel before, please consult
+hipl/linux/README before doing that. We have some example
+configurations files in hipl/test/configs for "typical" systems. You
+can use one of those as a template, and modify it to suite the needs
+of your system. Read hipl/test/configs/README before doing so.
 
 If you haven't configured linux kernel before, please consult
 hipl/linux/README before doing that. We have some example
@@ -129,35 +141,26 @@ loading! You can find it from here:
   Processor type and features
   -> Use register arguments (EXPERIMENTAL)
 
-Compiling Userland Applications
+Compiling Userspace Applications
 =================================
 
 After you have successfully compiled and installed the HIP kernel and
-rebooted both of the hosts, you need to compile the HIP command line
-configurator (hipconf). Hipconf is located in hipl/tools folder and it
-is compiled simply as follows:
+rebooted both of the hosts, you need to compile the userspace
+applications in order to use HIP. Start by invoking the autogen.sh at
+the top level directory:
 
-  cd hipl/tools
-  ./configure
-  make
+  cd hipl
+  ./autogen.sh
 
-You should have an IPv6 application for creating a connection between
-hosts. There is also a very simple application in hipl/test
-folder. You can compile it as follows:
+Next, build the libinet6, tools and test directory as follows:
 
-  cd hipl/libinet6
-  ./configure
-  make
-  cd ../test
-  ./configure
-  make conntest-client-gai conntest-server
+  ./configure && make
 
 It is not necessary to "make install" the applications. You can
-execute them straight from their source directories.
-
-If you experience weird problems when executing configure script, try
-invoking "autoreconf". See also that the versions of your automake and
-autoconf tools are up-to-date.
+execute them straight from their source directories. Note that making
+from the top directory does not currently build e.g. java libraries or
+telnet. Follow the instructions presented later in this document to
+build them.
 
 Testing a HIP connection between two hosts
 ==========================================
@@ -201,9 +204,10 @@ crash:
   <type some text in crash, press enter and ctrl+d and you
    should see some text appearing in the output of the hosts>
 
-This will setup a HIP connection between the two hosts. You should
-replace HIT_OF_XXX with the HIT of the host XXX. The host default HI
-is generated with the command "hipconf new hi default" (only needed on
+This will setup a HIP connection between the two hosts (it may take a
+while if you are using virtual machines). You should replace
+HIT_OF_XXX with the HIT of the host XXX. The host default HI is
+generated with the command "hipconf new hi default" (only needed on
 the first run) and sent to the kernel module with ".hipconf add hi
 default" The value of the HIT can be found from file
 /proc/net/hip/lhi. You can see information on current HIP connections
@@ -402,7 +406,9 @@ hipconf rvs <hit> <ip>
 
 For now it is best if all the hosts involved in communications have
 the Rendezvous Mechanism option enabled. Although, for the initiator
-this should not be a requirement.
+this should not be a requirement. Also, you should have run the base
+exchange once without rendezvous server to get familiar how the
+/etc/hosts and /etc/hip/hosts are configured.
 
 The participants:
 
@@ -410,8 +416,10 @@ The participants:
   RVS = The Rendezvous server
   R = Responder
 
-The idea is that I wants to connect to R, but only knows RVS's IP
-address (and that RVS is representing R).
+The idea is that I wants to connect to R's HIT but only knows RVS's IP
+address (and that RVS is representing R). We'll show how to use RVS
+the native HIP example applications (although you can do it with
+nc6 or the other conntest test applications).
 
 Steps:
 -----
@@ -421,34 +429,29 @@ Steps:
   each-host # modprobe hipmod
   each-host # hipl/tools/hipconf add hi default
 
-2. R has to tell the RVS that it would like to use RVS's services:
+2. At the initiator, you must modify the "/etc/hosts" file. In the file,
+   responder's hostname must be mapped to the IPv6 address of the rendezvous
+   server. It must not be mapped to the responder's IPv6 address, or otherwise
+   the rendezvous server is not used at all!
+
+   The "/etc/hip/hosts" file should contain the hostname and HIT of the
+   responder as in the normal base exchange execution.
+
+3. R has to tell the RVS that it would like to use RVS's services:
 
   responder # hipconf rvs <RVS-hit> <RVS-ip>
 
-3. Send a TCP packet to the RVS-hit (to run the base exchange):
-
-  responder # nc6 <RVS-hit> 12345 
-
-  The port number does not matter. There need not be anything listening
-  to that port.
-
-  Now the Rendezvous Association is established.
+  This will establish a HIP SA between the rendezvous server and the responder.
 
 4. Put some server listening at R:
 
-  responder # nc6 -l -p 5000
+  responder # test/conntest-server-native tcp 5000
 
-5. Now the initiator will have to do the IP-HIT mapping:
+5. Start a connection at I:
 
-  initiator # hipconf add map <R-hit> <RVS-ip>
+  initiator # test/conntest-client-native <responder-hostname> tcp 5000
 
-  (alternatively, you can use the HIP enabled resolver libary)
-
-6. Start a connection at I:
-
-  initiator # nc6 <R-hit> 5000
-
-7. Type some text...
+6. Type some text...
 
 Notes:
 

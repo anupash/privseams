@@ -1,27 +1,11 @@
 /*
  * HIP output
  *
+ * Licence: GNU/GPL
  * Authors: Janne Lundberg <jlu@tcs.hut.fi>
  *          Miika Komu <miika@iki.fi>
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
- *
- * TODO:
- * - If a function returns a value, we MUST NOT ignore it
- * - make null-cipher optional, so that the module can be loaded without it
- * - timeouts to cookies
- * - LOCKING TO REA/AC sent lists
- * - AC/ACR: more accurate RTT timing than jiffies ?
- * - hip_send_rea_all: test with multiple REA_INFO payloads (mm-00 sec 6.1.1)
- * - document hip_getfrag using docbook
- * - rename hip_rea_delete_sent_list_one -> hip_rea_delete_sent_list
- * - remove duplicate code, REA/AC list
- * - adding of HMAC/signature to the packet: own functions
- *
- * BUGS:
- * - It should be signalled somehow when building of R1 is 100 % 
- *   complete. Otherwise an incomplete packet could be sent for
- *   the initiator?
  *
  */
 
@@ -148,7 +132,8 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 		if (!skb) {
-			HIP_ERROR("Established state and no SKB!");
+			HIP_ERROR("ESTABLISHED state and no skb!\n");
+			HIP_ERROR("Called by xfrm state re-acquire ? do BEX again ?\n");
 			err = -EADDRNOTAVAIL;
 			goto out;
 		}
@@ -220,21 +205,20 @@ int hip_csum_verify(struct sk_buff *skb)
 	int csum;
 
 	hip_common = (struct hip_common*) skb->h.raw;
-	len = hip_common->payload_len;
+        len = hip_get_msg_total_len(hip_common);
 
-	_HIP_HEXDUMP("hip_csum_verify data", skb->h.raw, (len + 1) << 3);
+	_HIP_HEXDUMP("hip_csum_verify data", skb->h.raw, len);
 	_HIP_DEBUG("len=%d\n", len);
 	_HIP_HEXDUMP("saddr", &(skb->nh.ipv6h->saddr),
 		     sizeof(struct in6_addr));
 	_HIP_HEXDUMP("daddr", &(skb->nh.ipv6h->daddr),
 		     sizeof(struct in6_addr));
-	csum = csum_partial(skb->h.raw, (len + 1) << 3, 0);
+
+        csum = csum_partial((char *) hip_common, len, 0);
 
 	return csum_ipv6_magic(&(skb->nh.ipv6h->saddr),
 			       &(skb->nh.ipv6h->daddr),
-			       (len + 1) << 3,
-			       IPPROTO_HIP,
-			       csum);
+			       len, IPPROTO_HIP, csum);
 }
 
 /**
@@ -264,9 +248,6 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	struct flowi fl, *ofl;
 	unsigned int csum;
 	unsigned int len;
-#ifdef CONFIG_HIP_DEBUG
-	char addrstr[INET6_ADDRSTRLEN];
-#endif
 
 	if (out_fl == NULL) {
 		fl.proto = IPPROTO_HIP;
@@ -283,8 +264,9 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	}
 
 	buf->checksum = htons(0);
-	len = (buf->payload_len + 1) << 3;
+        len = hip_get_msg_total_len(buf);
 	csum = csum_partial((char*) buf, len, 0);
+	_HIP_DEBUG("csum test=0x%x\n", csum);
 
 	lock_sock(hip_output_socket->sk);
 
@@ -295,14 +277,10 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		goto out_err;
 	}
 
-#ifdef CONFIG_HIP_DEBUG
 	_HIP_DUMP_MSG(buf);
-	HIP_DEBUG("pkt out: len=%d proto=%d\n", len, ofl->proto);
-	hip_in6_ntop(&(ofl->fl6_src), addrstr);
-	HIP_DEBUG("pkt out: src IPv6 addr: %s\n", addrstr);
-	hip_in6_ntop(&(ofl->fl6_dst), addrstr);
-	HIP_DEBUG("pkt out: dst IPv6 addr: %s\n", addrstr);
-#endif
+	HIP_DEBUG("pkt out: len=%d proto=%d csum=0x%x\n", len, ofl->proto, csum);
+	HIP_DEBUG_IN6ADDR("pkt out: src IPv6 addr: ", &(ofl->fl6_src));
+ 	HIP_DEBUG_IN6ADDR("pkt out: dst IPv6 addr: ", &(ofl->fl6_dst));
 
 	buf->checksum = csum_ipv6_magic(&(ofl->fl6_src), &(ofl->fl6_dst), len,
 					ofl->proto, csum);
@@ -312,15 +290,22 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	if (buf->checksum == 0)
 		buf->checksum = -1;
 
+	_HIP_HEXDUMP("whole packet", buf, len);
+
  	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, ofl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err) {
- 		HIP_ERROR("ip6_append_data failed (err=%d)\n", err);
+ 		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);
 		ip6_flush_pending_frames(hip_output_socket->sk);
-	} else
+	} else {
 		err = ip6_push_pending_frames(hip_output_socket->sk);
+		if (err)
+			HIP_ERROR("Pushing of pending frames failed (%d)\n",
+				  err);
+	}
 
 	release_sock(hip_output_socket->sk);
+
  out_err:
 	return err;
 }
@@ -496,7 +481,6 @@ void hip_send_notify(hip_ha_t *entry)
 	return;
 }
 
-/* copied from rea.c */
 struct hip_rea_kludge {
 	hip_ha_t **array;
 	int count;
@@ -523,8 +507,6 @@ static int hip_get_all_valid(hip_ha_t *entry, void *op)
 void hip_send_notify_all(void)
 {
         int err = 0, i;
-
-        /* code ripped from rea.c */
         hip_ha_t *entries[HIP_MAX_HAS] = {0};
         struct hip_rea_kludge rk;
 

@@ -80,7 +80,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/hip.h>
 
 #include "builder.h"
-#include "tools/crypto.h"
+#include "libinet6/crypto.h"
 
 int convert_port_string_to_number(const char *servname, in_port_t *port)
 {
@@ -889,7 +889,7 @@ int get_peer_endpointinfo(const char *hostsfile,
 			  const struct endpointinfo *hints,
 			  struct endpointinfo **res)
 {
-  int err = 0;
+  int err, match_found = 0;
   unsigned int lineno = 0;
   FILE *hosts = NULL;
   char hi_str[GEPI_HI_STR_VAL_MAX+1], fqdn_str[GEPI_FQDN_STR_VAL_MAX+1];
@@ -926,8 +926,7 @@ int get_peer_endpointinfo(const char *hostsfile,
      element of the endpointinfo linked lists. */
   err = getaddrinfo(nodename, servname, &ai_hints, &ai_res);
   if (err) {
-    HIP_ERROR("getaddrinfo failed: %s", gai_strerror(err));
-    /* goto out_err; */
+    HIP_ERROR("getaddrinfo failed: %s\n", gai_strerror(err));
     goto fallback;
   }
 
@@ -951,10 +950,12 @@ int get_peer_endpointinfo(const char *hostsfile,
 	strcmp(fqdn_str, nodename) == 0) {
       /* XX FIX: foobar should match to foobar.org, depending on resolv.conf */
       HIP_DEBUG("Nodename match on line %d\n", lineno);
+      match_found = 1;
     } else if(hints->ei_endpointlen && hints->ei_endpoint &&
 	      hi_str_len == hints->ei_endpointlen &&
 	      (strcmp(hi_str, (char *) hints->ei_endpoint) == 0)) {
       HIP_DEBUG("Endpoint match on line %d\n", lineno);
+      match_found = 1;
     } else {
       HIP_DEBUG("No match on line %d, skipping\n", lineno);
       continue;
@@ -1052,12 +1053,26 @@ int get_peer_endpointinfo(const char *hostsfile,
   
   HIP_DEBUG("Scanning ended\n");
 
+ 
  fallback:
   /* If no entries are found, fallback on the kernel's list */
   if (!*res) {
     HIP_DEBUG("No entries found, calling kernel for entries\n");
     err = get_kernel_peer_list(nodename, servname, hints, res, 1);
+    if (err) {
+      HIP_ERROR("Failed to get kernel peer list (%d)\n", err);
+      goto out_err;
+    }
     HIP_DEBUG("Done with kernel entries\n");
+    if (*res) {
+      match_found = 1;
+    }
+  }
+
+  HIP_ASSERT(err == 0);
+
+  if (!match_found) {
+    err = EEI_NONAME;
   }
   
  out_err:
@@ -1066,7 +1081,7 @@ int get_peer_endpointinfo(const char *hostsfile,
     freeaddrinfo(ai_res);
   
   if (hosts)
-    err = fclose(hosts);
+    fclose(hosts);
 
   /* Free all of the reserved memory on error */
   if (err) {
@@ -1147,6 +1162,5 @@ int getendpointinfo(const char *nodename, const char *servname,
 
 const char *gepi_strerror(int errcode)
 {
-  HIP_DEBUG("\n");
-  return __FUNCTION__ " not implemented yet";
+  return "HIP native resolver failed"; /* XX FIXME */
 }

@@ -84,7 +84,7 @@ int        hip_copy_any_localhost_hit(struct in6_addr *target);
 HIP_HID   *hip_get_any_localhost_host_id(void);
 int        hip_insert_any_localhost_public_key(uint8_t *target);
 struct hip_host_id *hip_get_any_localhost_public_key(void);
-
+int hip_hit_is_our(struct in6_addr *hit);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
 				    struct hip_lhi *lhi);
 int        hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,

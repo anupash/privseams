@@ -268,7 +268,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 
 	/* assume already locked entry */
 
-	HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", entry, spi);
+	_HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", entry, spi);
 	ipv6_addr_copy(&hit, &entry->hit_peer);
 
 	tmp = hip_ht_find(&hadb_spi_list, (void *)spi);
@@ -291,7 +291,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 	ipv6_addr_copy(&new_item->hit, &hit);
 
 	hip_ht_add(&hadb_spi_list, new_item);
-	HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item);
+	_HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item);
 	_HIP_DEBUG("HS TABLE:\n");
 	//hip_hadb_dump_hs_ht();
  out_err:
@@ -385,7 +385,9 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 	int err = 0;
         struct hip_peer_addr_list_item *s, *candidate = NULL;
 	struct timeval latest, dt;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 
         list_for_each_entry(s, &spi_out->peer_addr_list, list) {
 #ifdef CONFIG_HIP_DEBUG
@@ -457,7 +459,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	//hip_print_hit("entry def addr", &entry->preferred_address);
 	if (ipv6_addr_any(&entry->preferred_address)) {
 		/* possibly ongoing bex */
-		HIP_DEBUG("no preferred address set\n");
+		_HIP_DEBUG("no preferred address set\n");
 	} else {
 		ipv6_addr_copy(addr, &entry->preferred_address);
 		_HIP_DEBUG("found preferred address\n");
@@ -517,7 +519,9 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				struct timeval *modified_time)
 {
 	struct hip_peer_addr_list_item *s;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 	int i = 1;
 	struct hip_spi_out_item *spi_out, *tmp;
 
@@ -573,7 +577,9 @@ int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 
 	struct hip_peer_addr_list_item *s;
 	int i = 1;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 	struct hip_spi_out_item *spi_out, *tmp;
 
 	HIP_ERROR("USELESS/DEPRECATED ?\n");
@@ -711,7 +717,9 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 {
 	struct hip_peer_addr_list_item *item, *tmp;
 	int i = 1;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 	struct hip_spi_out_item *spi_out, *spi_tmp;
 
 	/* possibly deprecated function .. */
@@ -766,15 +774,19 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 	return 0;
 }
 
+/* Practically called only by when adding a HIT-IP mapping before bex */
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 {
-	int err;
+	int err = 0;
 	hip_ha_t *entry;
 	char str[INET6_ADDRSTRLEN];
 
-	/* old comment ? note: can't lock here or else hip_sdb_add_peer_address will block
+	/* old comment ? note: can't lock here or else
+	 * hip_sdb_add_peer_address will block
+	 *
 	 * unsigned long flags = 0;
-	 * spin_lock_irqsave(&hip_sdb_lock, flags); */
+	 * spin_lock_irqsave(&hip_sdb_lock, flags);
+	 */
 
 	hip_in6_ntop(hit, str);
 	HIP_DEBUG("called: HIT %s\n", str);
@@ -786,29 +798,32 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			HIP_ERROR("Unable to create a new entry\n");
 			return -1;
 		}
-		HIP_DEBUG("created a new sdb entry\n");
-
+		_HIP_DEBUG("created a new sdb entry\n");
 		ipv6_addr_copy(&entry->hit_peer, hit);
 
 		/* XXX: This is wrong. As soon as we have native socket API, we
 		 * should enter here the correct sender... (currently unknown).
 		 */
 		if (hip_get_any_local_hit(&entry->hit_our) == 0)
-			HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
+			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
 		else 
-			HIP_INFO("Could not assign local hit... continuing\n");
+			HIP_INFO("Could not assign local hit, continuing\n");
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry); /* released at the end */
 	}
 
-	err = hip_hadb_add_peer_addr(entry, addr, 0, 0, PEER_ADDR_STATE_ACTIVE);
-	if (err) {
-		HIP_ERROR("error while adding a new peer address\n");
-		err = -2;
-		goto out;
-	}
-	HIP_DEBUG("peer address add ok\n");
-
+	/* add initial HIT-IP mapping */
+	if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
+		err = hip_hadb_add_peer_addr(entry, addr, 0, 0,
+					     PEER_ADDR_STATE_ACTIVE);
+		if (err) {
+			HIP_ERROR("error while adding a new peer address\n");
+			err = -2;
+			goto out;
+		}
+	} else
+		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
+			  hip_state_str(entry->state));
  out:
 	if (entry)
 		hip_put_ha(entry);
@@ -825,10 +840,10 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	spi_in = data->spi;
 
 	/* assumes locked entry */
-	HIP_DEBUG("SPI_in=0x%x\n", spi_in);
+	_HIP_DEBUG("SPI_in=0x%x\n", spi_in);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		if (item->spi == spi_in) {
-			HIP_DEBUG("not adding duplicate SPI\n");
+			HIP_DEBUG("not adding duplicate SPI 0x%x\n", spi_in);
 			goto out;
 		}
         }
@@ -842,10 +857,10 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	memcpy(item, data, sizeof(struct hip_spi_in_item));
 	item->timestamp = jiffies;
 	list_add(&item->list, &entry->spis_in);
-	HIP_DEBUG("added SPI 0x%x to the inbound SPI list, item=0x%p\n", spi_in, item);
+	HIP_DEBUG("added SPI 0x%x to the inbound SPI list\n", spi_in);
 	// hip_hold_ha(entry); ?
 
-	HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
+	_HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
 	err = hip_hadb_insert_state_spi_list(entry, spi_in);
 	if (err == -EEXIST)
 		err = 0;
@@ -865,10 +880,10 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 
 	spi_out = data->spi;
 
-	HIP_DEBUG("SPI_out=0x%x\n", spi_out);
+	_HIP_DEBUG("SPI_out=0x%x\n", spi_out);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 		if (item->spi == spi_out) {
-			HIP_DEBUG("not adding duplicate SPI\n");
+			HIP_DEBUG("not adding duplicate SPI 0x%x\n", spi_out);
 			goto out;
 		}
         }
@@ -883,7 +898,7 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 	INIT_LIST_HEAD(&item->peer_addr_list);
 	ipv6_addr_copy(&item->preferred_address, &in6addr_any);
 	list_add(&item->list, &entry->spis_out);
-	HIP_DEBUG("added SPI 0x%x to the outbound SPI list, item=0x%p\n", spi_out, item);
+	HIP_DEBUG("added SPI 0x%x to the outbound SPI list\n", spi_out);
 
  out_err:
  out:
@@ -912,7 +927,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 
 	/* assumes locked entry */
 
-	HIP_DEBUG("entry=0x%p SPI=0x%x\n", entry, spi);
+	HIP_DEBUG("SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		if (item->spi == spi) {
 			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
@@ -934,7 +949,7 @@ void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
 	struct hip_spi_in_item *item, *tmp;
 
 	/* assumes locked entry */
-	HIP_DEBUG("entry=0x%p\n", entry);
+	_HIP_DEBUG("entry=0x%p\n", entry);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
 			  item->spi, item->new_spi, item);
@@ -980,7 +995,7 @@ void hip_hadb_delete_outbound_spis(hip_ha_t *entry)
 
 	/* assumes locked entry */
 
-	HIP_DEBUG("entry=0x%p\n", entry);
+	_HIP_DEBUG("entry=0x%p\n", entry);
         list_for_each_entry_safe(spi_out, spi_tmp, &entry->spis_out, list) {
 		struct hip_peer_addr_list_item *addr_item, *addr_tmp;
 
@@ -1007,7 +1022,7 @@ void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex)
 	/* assumes that inbound spi already exists in ha's spis_in */
 	HIP_DEBUG("SPI=0x%x ifindex=%d\n", spi, ifindex);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		_HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->spi == spi) {
 			HIP_DEBUG("found updated spi-ifindex mapping\n");
 			item->ifindex = ifindex;
@@ -1022,15 +1037,15 @@ int hip_hadb_get_spi_ifindex(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("spi=0x%x\n", spi);
+	_HIP_DEBUG("spi=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		_HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->spi == spi || item->new_spi == spi) {
-			HIP_DEBUG("found\n");
+			_HIP_DEBUG("found\n");
 			return item->ifindex;
 		}
         }
-	HIP_DEBUG("ifindex not found for the SPI\n");
+	HIP_DEBUG("ifindex not found for the SPI 0x%x\n", spi);
 	return 0;
 }
 
@@ -1083,7 +1098,7 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 		return 0;
 
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		_HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->ifindex == ifindex) {
 			item->updating = 1;
 			return item->spi;
@@ -1100,8 +1115,8 @@ void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
 
 	HIP_DEBUG("spi=0x%x set=%d\n", spi, set);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x updating=%d\n",
-			  item->ifindex, item->spi, item->updating);
+		_HIP_DEBUG("test item: ifindex=%d spi=0x%x updating=%d\n",
+			   item->ifindex, item->spi, item->updating);
 		if (item->spi == spi) {
 			HIP_DEBUG("setting updating status to %d\n", set);
 			item->updating = set;
@@ -1114,11 +1129,11 @@ void hip_update_clear_status(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("spi=0x%x\n", spi);
+	_HIP_DEBUG("spi=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: spi=0x%x\n", item->spi);
+		_HIP_DEBUG("test item: spi=0x%x\n", item->spi);
 		if (item->spi == spi) {
-			HIP_DEBUG("clearing SPI status\n");
+			_HIP_DEBUG("clearing SPI status\n");
 			item->update_state_flags = 0;
 			memset(&item->stored_received_nes, 0, sizeof(struct hip_nes));
 			break;
@@ -1131,11 +1146,11 @@ void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
 			       uint32_t spi_out /* test */)
 {
 	struct hip_spi_in_item *item, *tmp;
-	HIP_DEBUG("spi=0x%x new_spi=0x%x spi_out=0x%x\n", spi, new_spi, spi_out);
+	_HIP_DEBUG("spi=0x%x new_spi=0x%x spi_out=0x%x\n", spi, new_spi, spi_out);
 
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
-			  item->spi, item->new_spi);
+		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
+			   item->spi, item->new_spi);
 		if (item->spi == spi) {
 			HIP_DEBUG("setting new_spi\n");
 			if (!item->updating) {
@@ -1157,12 +1172,12 @@ void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi)
 {
 	struct hip_spi_out_item *item, *tmp;
 
-	HIP_DEBUG("spi=0x%x new_spi=0x%x\n", spi, new_spi);
+	_HIP_DEBUG("spi=0x%x new_spi=0x%x\n", spi, new_spi);
 	list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
+		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
 			  item->spi, item->new_spi);
 		if (item->spi == spi) {
-			HIP_DEBUG("setting new_spi\n");
+			_HIP_DEBUG("setting new_spi\n");
 			if (item->new_spi) {
 				HIP_ERROR("previous new_spi is not zero: 0x%x\n", item->new_spi);
 				HIP_ERROR("todo: delete previous new_spi\n");
@@ -1178,9 +1193,9 @@ uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
+	_HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
+		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
 			  item->spi, item->new_spi);
 		if (item->seq_update_id == peer_update_id) {
 			return item->new_spi;
@@ -1197,20 +1212,20 @@ void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi)
 {
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("old_spi=0x%x\n", old_spi);
+	_HIP_DEBUG("old_spi=0x%x\n", old_spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: ifindex=%d spi=0x%x new_spi=0x%x nes_spi_out=0x%x seq_id=%u\n",
-			  item->ifindex, item->spi, item->new_spi,
-			  item->nes_spi_out, item->seq_update_id);
+		_HIP_DEBUG("test item: ifindex=%d spi=0x%x new_spi=0x%x nes_spi_out=0x%x seq_id=%u\n",
+			   item->ifindex, item->spi, item->new_spi,
+			   item->nes_spi_out, item->seq_update_id);
 		if (item->spi == old_spi) {
-			HIP_DEBUG("switching\n");
+			_HIP_DEBUG("switching\n");
 			item->spi = item->new_spi;
 			item->new_spi = 0;
 			item->nes_spi_out = 0;
 			break;
 		}
         }
-	HIP_DEBUG("returning\n");
+	_HIP_DEBUG("returning\n");
 }
 
 /* switch from Old SPI to New SPI (outbound SA) */
@@ -1219,18 +1234,18 @@ void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi)
 {
 	struct hip_spi_out_item *item, *tmp;
 
-	HIP_DEBUG("old_spi=0x%x\n", old_spi);
+	_HIP_DEBUG("old_spi=0x%x\n", old_spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		HIP_DEBUG("test item: spi=0x%x new_spi=0x%x seq_id=%u\n",
-			  item->spi, item->new_spi, item->seq_update_id);
+		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x seq_id=%u\n",
+			   item->spi, item->new_spi, item->seq_update_id);
 		if (item->spi == old_spi) {
-			HIP_DEBUG("switching\n");
+			_HIP_DEBUG("switching\n");
 			item->spi = item->new_spi;
 			item->new_spi = 0;
 			break;
 		}
         }
-	HIP_DEBUG("returning\n");
+	_HIP_DEBUG("returning\n");
 }
 
 
@@ -1240,17 +1255,17 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
 {
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("spi=0x%x update_id=%u update_flags_or=0x%x keymat_index=%u nes=0x%p\n",
-		  spi, update_id, update_flags_or, keymat_index, nes);
+	_HIP_DEBUG("spi=0x%x update_id=%u update_flags_or=0x%x keymat_index=%u nes=0x%p\n",
+		   spi, update_id, update_flags_or, keymat_index, nes);
 	if (nes)
-		HIP_DEBUG("NES: old_spi=0x%x new_spi=0x%x keymat_index=%u\n",
-			  ntohl(nes->old_spi), ntohl(nes->new_spi), ntohs(nes->keymat_index));
+		_HIP_DEBUG("NES: old_spi=0x%x new_spi=0x%x keymat_index=%u\n",
+			   ntohl(nes->old_spi), ntohl(nes->new_spi), ntohs(nes->keymat_index));
 
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
-			  item->spi, item->new_spi);
+		_HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
+			   item->spi, item->new_spi);
 		if (item->spi == spi) {
-			HIP_DEBUG("setting new values\n");
+			_HIP_DEBUG("setting new values\n");
 			if (set_flags & 0x1)
 				item->seq_update_id = update_id;
 			if (set_flags & 0x2)
@@ -1322,7 +1337,7 @@ uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry)
 		int ret;
 		struct in6_addr addr;
 
-		HIP_DEBUG("checking SPI 0x%x\n", spi_out->spi);
+		_HIP_DEBUG("checking SPI 0x%x\n", spi_out->spi);
 		ret = hip_hadb_select_spi_addr(entry, spi_out, &addr);
 		if (ret == 0) {
 			hip_hadb_set_default_out_addr(entry, spi_out, &addr);
@@ -1359,7 +1374,7 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 		/* useless ? */
 		struct in6_addr a;
 		int err = hip_hadb_select_spi_addr(entry, spi_out, &a);
-		HIP_DEBUG("selected setting address as default out addr\n");
+		_HIP_DEBUG("setting address as default out addr\n");
 		if (!err) {
 			ipv6_addr_copy(&spi_out->preferred_address, &a);
 			ipv6_addr_copy(&entry->preferred_address, &a);
@@ -1379,7 +1394,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 
 	/* assumes locked entry  */
 
-	HIP_DEBUG("have_nes=%d\n", have_nes);
+	_HIP_DEBUG("have_nes=%d\n", have_nes);
 
 	if (!ack) {
 		HIP_ERROR("NULL ack\n");
@@ -1393,14 +1408,14 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 	}
 
 	n = hip_get_param_contents_len(ack) / sizeof(uint32_t);
-	HIP_DEBUG("%d pUIDs in ACK param\n", n);
+	_HIP_DEBUG("%d pUIDs in ACK param\n", n);
 	peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
 	for (i = 0; i < n; i++, peer_update_id++) {
 		struct hip_spi_in_item *in_item, *in_tmp;
 		struct hip_spi_out_item *out_item, *out_tmp;
 		uint32_t puid = ntohl(*peer_update_id);
 
-		HIP_DEBUG("peer Update ID=%u\n", puid);
+		_HIP_DEBUG("peer Update ID=%u\n", puid);
 
 		/* see if your NES is acked and maybe if corresponging NES was received */
 		list_for_each_entry_safe(in_item, in_tmp, &entry->spis_in, list) {
@@ -1432,7 +1447,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 							HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
 							continue;
 						}
-						HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
+						_HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
 						addr->address_state = PEER_ADDR_STATE_ACTIVE;
 						do_gettimeofday(&addr->modified_time);
 
@@ -1446,7 +1461,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 				}
 			}
 			entry->skbtest = 1;
-			HIP_DEBUG("set skbtest to 1\n");
+			_HIP_DEBUG("set skbtest to 1\n");
 		} else {
 			HIP_DEBUG("no ECHO_RESPONSE in same packet with ACK\n");
 		}
@@ -1459,12 +1474,12 @@ void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
+	_HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		_HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
 			   item->spi, item->seq_update_id);
 		if (item->seq_update_id == peer_update_id) {
-			HIP_DEBUG("received peer's NES\n");
+			_HIP_DEBUG("received peer's NES\n");
 			item->update_state_flags |= 0x2; /* recv'd NES */
 		}
 	}
@@ -1475,10 +1490,10 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
+	_HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("test item: spi_in=0x%x seq_update_id=%u keymat_index=%u\n",
-			  item->spi, item->seq_update_id, item->keymat_index);
+		_HIP_DEBUG("test item: spi_in=0x%x seq_update_id=%u keymat_index=%u\n",
+			   item->spi, item->seq_update_id, item->keymat_index);
 		if (item->seq_update_id == peer_update_id) {
 			return item->keymat_index;
 		}
@@ -1503,7 +1518,7 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 		}
         }
 
-	HIP_DEBUG("newest spi_in is 0x%x\n", spi);
+	_HIP_DEBUG("newest spi_in is 0x%x\n", spi);
 	return spi;
 }
 
@@ -1514,7 +1529,7 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 
 	/* assumes already locked entry */
 
-	HIP_DEBUG("SPI=0x%x\n", spi);
+	_HIP_DEBUG("SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
 		if (item->spi == spi)
 			return item;
@@ -1555,7 +1570,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 
 	if (new) {
-		HIP_DEBUG("create new addr item to SPI list\n");
+		_HIP_DEBUG("create new addr item to SPI list\n");
 		/* SPI list does not contain the address, add the address to the SPI list */
 		new_addr = kmalloc(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
 		if (!new_addr) {
@@ -1564,7 +1579,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			goto out_err;
 		}
 	} else
-		HIP_DEBUG("update old addr item\n");
+		_HIP_DEBUG("update old addr item\n");
 
 	new_addr->lifetime = lifetime;
 	if (new)
@@ -1597,7 +1612,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			new_addr->seq_update_id = 0;
 		} else {
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			HIP_DEBUG("set initial address state UNVERIFIED\n");
+			_HIP_DEBUG("set initial address state UNVERIFIED\n");
 		}
 	}
 
@@ -1611,12 +1626,12 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 #endif
 	if (new) {
-		HIP_DEBUG("adding new addr to SPI list\n");
+		_HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
 	}
 
  out_err:
-	HIP_DEBUG("returning, err=%d\n", err);
+	_HIP_DEBUG("returning, err=%d\n", err);
 	return err;
 }
 
@@ -1666,23 +1681,18 @@ uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
  */
 int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 {
-	int i, fail;
+	int i, fail = 0;
 	hip_ha_t *this, *tmp;
 
 	if (!func)
 		return -EINVAL;
 
-	fail = 0;
-
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
 			hip_hold_ha(this);
-
 			fail = func(this, opaque);
-
 			hip_put_ha(this);
-
 			if (fail)
 				break;
 		}
@@ -1718,7 +1728,8 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 	HIP_LOCK_HA(entry);
 
 	if ( (len += snprintf(page+len, count-len, "%s 0x%x %d 0x%x",
-			      hip_state_str(entry->state), entry->hastate, 
+			      hip_state_str(entry->state),
+			      entry->hastate, 
 			      atomic_read(&entry->refcnt), 
 			      entry->peer_controls)) >= count)
 		goto error;
@@ -1731,13 +1742,15 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 	if ( (len += snprintf(page+len, count-len, " %s", addr_str)) >= count)
 		goto error;
 
-	if ( (len += snprintf(page+len, count-len,
-			      " 0x%08x 0x%08x 0x%08x %s",
-			      entry->default_spi_out, entry->lsi_our, entry->lsi_peer,
-			      entry->esp_transform <=
-			      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
-			      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
-		goto error;
+       if ( (len += snprintf(page+len, count-len,
+			     " 0x%08x 0x%08x 0x%08x %s",
+			     entry->default_spi_out, entry->lsi_our,
+			     entry->lsi_peer,
+			     entry->esp_transform <=
+			     (sizeof(esp_transforms)/sizeof(esp_transforms[0]))
+			     ? esp_transforms[entry->esp_transform] :
+			     "UNKNOWN")) >= count)
+	       goto error;
 
 	if ( (len += snprintf(page+len, count-len,
 			      " 0x%llx %u %u %u %u %u\n",
@@ -1784,6 +1797,14 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 	hip_in6_ntop(&entry->hit_peer, addr_str);
 	if ( (len += snprintf(page+len, count-len, "HIT %s", addr_str)) >= count)
 		goto error;
+
+	if (entry->default_spi_out == 0) {
+		/* extra check for addr_any ? */
+		hip_in6_ntop(&entry->bex_address, addr_str);
+		if ( (len += snprintf(page+len, count-len,
+				      "\n SPI 0x0\n  %s", addr_str)) >= count)
+			goto error;
+	}
 
 	list_for_each_entry_safe(spi_out, spi_tmp, &entry->spis_out, list) {
 		int n_addrs = 0;
@@ -1999,7 +2020,9 @@ void hip_hadb_dump_hs_ht(void)
 void hip_hadb_dump_spis_in(hip_ha_t *entry)
 {
 	struct hip_spi_in_item *item, *tmp;
+#ifdef CONFIG_HIP_DEBUG
 	unsigned long now = jiffies;
+#endif
 
 	HIP_DEBUG("start\n");
 	HIP_LOCK_HA(entry);

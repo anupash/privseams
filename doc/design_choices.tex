@@ -2,7 +2,6 @@
 
 %%%%%%%%%%%%%%%%%%%% GENERAL TODO SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% - Put all of the figs into ``fig'' directory
 % - Merge Torsten's comments in this paper
 %   - Long sections should be split into smaller
 %     - Example: \textbf{Keyword} begins this section..
@@ -40,20 +39,22 @@
 %\usepackage{enumerate}
 \usepackage{varioref}
 \usepackage{hyperref}       % keep this as the last one
+\usepackage{acronym}
 \begin{document}
 
 \input{design_choices_macros}
 
 \title{Host Identity Protocol for Linux}
-\author{Catharina Candolin, \texttt{candolin@tml.hut.fi} \\
-        Miika Komu, \texttt{miika.komu@hiit.fi} \\
+\author{
 	Mika Kousa, \texttt{mika.kousa@hiit.fi} \\
-	Janne Lundberg, \texttt{jlu@tcs.hut.fi} \\
+        Miika Komu, \texttt{miika.komu@hiit.fi} \\
 	Kristian Slavov, \texttt{kristian.slavov@hiit.fi} \\
+        Catharina Candolin, \texttt{candolin@tml.hut.fi} \\
+	Janne Lundberg, \texttt{jlu@tcs.hut.fi} \\
 	\\
         Helsinki Institute for Information Technology \\       
         Helsinki University of Technology: \\
-        Department of Computer Science and Engineering}
+        Telecommunications Software and Multimedia Laboratory}
 \maketitle
 
 
@@ -69,32 +70,45 @@
 \section*{Acknowledgements}
 
 This research is funded by the National Technology Agency of Finland
-(TEKES), Elisa Communications, Ericsson, Nokia, TeliaSonera,
-Creanor, and More Magic Software. We thank Jukka Ylitalo, Jorma Wall,
-Petri Jokela, and especially Pekka Nikander from Ericsson Research for
+(TEKES), Elisa Communications, Ericsson, Nokia, TeliaSonera, Creanor,
+and More Magic Software. We thank Jukka Ylitalo, Jorma Wall, Petri
+Jokela, and especially Pekka Nikander from Ericsson Research for
 fruitful cooperation and interoperability testing with their
-implementation of HIP for BSD. Furthermore, we are grateful for the
-valuable discussions and comments we have had with Andrew McGregor and
-Thomas Henderson. Torsten R{\"u}ger (HIIT) and Jouni Korhonen
-(TeliaSonera) gave also some valuable comments on this document.
+implementation of HIP for FreeBSD. Furthermore, we are grateful for
+the valuable discussions and comments we have had with Andrew
+McGregor, Thomas Henderson, and Jeff Ahrenholz. Torsten R{\"u}ger
+(HIIT) and Jouni Korhonen (TeliaSonera) gave also some valuable
+comments on this document. Jaakko Kangasharju has kindly provided some
+editorial comments.
 
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%% DOCUMENT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{abstract}
-One of the main problems with IP has been its lack of
-security. Although IPSec and DNSSec have provided some level of
-security to IP, the notion of a true identity for hosts is still
-missing. Typically, the IP address of the host has been used as the
-host identity, regardless of the fact that it is nothing more than
-routing information. The purpose of the Host Identity Payload/Protocol
-(HIP) architecture is to add a cryptographically based name space, the
-Host Identity, to the IP protocol. The Host Identity serves as the
-identity of the host, whereas the IP address is merely used for
-routing purposes.  In this document, we describe the HIP architecture
-further, and present our IPv6 based implementation of HIP for Linux.
+
+One of the main problems with IP has been its lack of security.
+Although IPsec and DNSSEC have provided some level of security to IP,
+the notion of a endpoint identity for hosts is still missing.
+Typically, the IP address of the host has been used as the host
+identity in the transport layer, regardless of the fact that it is
+nothing more than routing information.  The purpose of the Host
+Identity Protocol (HIP) architecture is to enhance the IP protocol
+with a new cryptographically based namespace. The Host Identity serves
+as the identity of the host at the transport layer, whereas the IP
+address at the network layer is merely used for routing purposes.  The
+separation of the transport and network layer identifiers facilitates
+the support of end-host mobility and multihoming.  Further, the
+cryptographic nature of the new namespace makes it possible to support
+end-host mobility and multihoming in secure way.  In this document, we
+briefly describe the HIP architecture, and present our implementation
+of HIP for Linux.
+
 \end{abstract}
+
+\clearpage
+
+\input{acronyms.tex}
 
 \input{hipl.tex}
 

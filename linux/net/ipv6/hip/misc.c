@@ -1,6 +1,13 @@
 /*
  * Miscellaneous functions
+ *
+ * Licence: GNU/GPL
+ * Authors:
+ * - Miika Komu <miika@iki.fi>
+ * - Mika Kousa <mkousa@cc.hut.fi>
  */
+
+#include <net/ipv6.h>
 
 #include "misc.h"
 #include "debug.h"
@@ -21,7 +28,7 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
        unsigned int key_rr_len = ntohs(host_id->hi_length) -
  	 sizeof(struct hip_host_id_key_rdata);
 
-       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
 
        if (hit_type != HIP_HIT_TYPE_HASH126) {
                err = -ENOSYS;
@@ -161,7 +168,7 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 int hip_lhi_are_equal(const struct hip_lhi *lhi1,
 		      const struct hip_lhi *lhi2) 
 {
-	return !memcmp(&lhi1->hit, &lhi2->hit, sizeof(struct in6_addr));
+	return !ipv6_addr_cmp(&lhi1->hit, &lhi2->hit);
 }
 
 /*
@@ -187,7 +194,7 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2)
 {
-	return (memcmp(hit1, hit2, sizeof(struct in6_addr)) > 0);
+	return (ipv6_addr_cmp(hit1, hit2) > 0);
 }
 
 

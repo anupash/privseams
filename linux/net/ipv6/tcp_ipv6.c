@@ -64,10 +64,6 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#endif
-
 static void	tcp_v6_send_reset(struct sk_buff *skb);
 static void	tcp_v6_or_send_ack(struct sk_buff *skb, struct open_request *req);
 static void	tcp_v6_send_check(struct sock *sk, struct tcphdr *th, int len, 

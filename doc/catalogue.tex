@@ -42,11 +42,11 @@ context switch in the Linux kernel is known to be lower than in many other
 operating systems (\cite{unixbenchmark}).
 \\&
 The small exchanges of information in the kernel based implementation
-imply ``chained'' code in the kernel. The chained code requires saving
-and restoring of the current state of the HIP header being
-processed. The chained code is a bit awkward to use but it is
-necessary in the kernel based approach. \TODO{XX EXPLAIN WHAT CHAINED
-CODE MEANS}
+imply ``bump-in-the-stack'' code in the kernel, meaning that the control
+flow bounces back and forth between userspace and kernelspace. The
+chained code requires saving and restoring of the current state of the
+HIP header being processed. The chained code is a bit awkward to use but
+it is necessary in the kernel based approach.
 \\&
 On the other hand, the daemon based implementation captures HIP
 headers in the kernel and forwards them as they are to the daemon for
@@ -72,13 +72,11 @@ source of a bug is harder to trace if the operating system crashes
 before debugging messages appear on a terminal or a disk device.}
 
 \revision{On 20031016, the kernel based approach was revised. The DSA and
-Diffie-Hellman functionality in OpenSSL, that was used in the HIP
-daemon, were ported into kernelspace. This reduces the need for a HIP
-daemon to a minimum and should accelerate the performance of the HIP
-kernel module a bit. The most important benifit is that the kernel
-module code could be simplified by removing the chained
-code. Asymmetric crypto represents some challenges related to the
-scheduling of the kernel which haven't been solved yet completely.}
+Diffie-Hellman functionality, that was used in the HIP daemon, were
+ported into kernelspace. This obviates the need for userspace
+callbacks. The most important benifit is that the kernel module code
+could be simplified because the control flow is more linear in this
+style.}
 
 \end{designchoice}
 
@@ -116,69 +114,24 @@ outbound network traffic. The layout of hooking model is visualized in
 
 \comparison{ The interface with the Linux networking stack was
 selected to be based on the hooks for two reasons. First reason was
-that unifying the interfaces by refactoring did not succeed. Reasons
-for the unification's failure are explained in more detail in
-\autoref{sec:networking_stack_lessons}.
-The second reason was that MIPL \cite{mipl} project
-had already had positive experience with hooks in their
-experimentations with the Linux networking stack.  }
+that unifying the interfaces by refactoring did not succeed because
+it would have been too time consuming. The second reason was that
+MIPL \cite{mipl} project had already had positive experience with
+hooks in their experimentations with the Linux networking stack.  }
 
 \revision{The implementation was revised by moving the hooks from the
 TCP layer to the IPv6 layer. It simplified the implementation and UDP
 support was gained with no extra effort.}
 
-\revision{XX TODO: Kristian, explain what hooks were changed because of
-the transition 2.6 and why.}
+\revision{20040501 Some of the hooks were changed due to transition to the
+          Linux kernel 2.6 series.}
 
 \end{designchoice}
 
-% XX TODO: Kristian, is still valid, or do we need a fourth solution?
-%
-\begin{designchoice}{Problems associated with locking of state structures}
+% XX FIXME: Add Kristian's thesis stuff here
+% - implementation.tex, \section{HIP modifications}, summary
 
-\alt{Solution one, two and three}
-
-\select{Third solution}
-
-\record{20021115}
-
-\background{ Structure hip\_sdb\_state (see
-\autoref{tbl:struct_hip_sdb_state}) is needed to save the current state of
-the base exchange during the daemon calls and to put the userspace
-process to sleep during the base exchange. State machine maintains a
-hip\_sdb\_state for each host with which it has a state. There are
-some problems with the lock, such as when the base exchange takes too
-long and the TCP layer tries to retransmit SYN packets. }
-
-\comparison{
-\textbf{Solution one}: lock the sdb entry when a packet is being processed and
-release the lock after completing the user space calls. Packets that are
-received for a locked entry are dropped.
-\\&
-\textbf{Solution two}: detect conflicts and drop packets as they
-occur using an atomic counter.
-\\&
-\textbf{Solution three}. At any time, there can be only one I1, I2, R1
-or R2 packet being handled. Otherwise packets are queued to wait their turn
-to be served. }
-
-%\revision{None.}
-
-\end{designchoice}
-
-\begin{struct}{Members of \textit{hip\_sdb\_state} structure}
-\label{tbl:struct_hip_sdb_state}
-\member{struct hip\_sdb\_state *}{next}{Link to the next state in list}
-\member{int}{state}{State of HIP state machine}
-\member{uint16\_t}{peer\_controls}{Controls received from the peer}
-\member{struct in6\_addr}{hit\_our}{Local HIT}
-\member{struct in6\_addr}{hit\_their}{Peer's HIT address}
-\member{struct in6\_addr}{peer\_addr}{Peer's IPv6 address}
-\member{uint32\_t}{peer\_spi}{Peer SPI}
-\member{uint32\_t}{our\_spi}{Local SPI}
-\end{struct}
-
-\appsection{Network Socket API}
+\appsection{Sockets API}
 
 \begin{designchoice}{HIT socket structure}
 
@@ -190,10 +143,10 @@ to be served. }
 
 \background{ Two different alternatives to store HITs were
 considered. First alternative was to recycle the structure used for
-storing IPv6 addresses, \textit{sockaddr\_in6}, because HIT address size
-equals IPv6 address size. The second alternative was to
-create a new structure, \textit{sockaddr\_hip}, for storing HITs. The
-new structure had also some extra space to store a mapping to an IPv6
+storing IPv6 addresses, \textit{sockaddr\_in6}, because HIT address
+size equals IPv6 address size. The second alternative was to create a
+new structure, \textit{sockaddr\_hip}, for storing HITs. The new
+structure had also some extra space to store a mapping to an IPv6
 address. }
 
 \comparison{
@@ -211,11 +164,12 @@ way to store HITs. Transparent mode (see
 page~\pageref{sec:api_architecture}) would have been virtually impossible to
 implement if \textit{sockaddr\_hip} had been used. }
 
-%\revision{xx}
+\revision{20040901 Native HIP API \cite{hipapithesis} was finished. It is the
+          cleanest way to use the sockets API.}
 
 \end{designchoice}
 
-\appsection{Mapping}
+\appsection{Mappings}
 
 \begin{designchoice}{Poisoning of mapping tables}
 
@@ -317,6 +271,7 @@ same. One single message builder/parser saves development time and
 increases code quality.
 }
 
-%\revision{xx}
+\revision{20041101 The userspace applications communication using
+          \texttt{PF\_HIP} sockets with the kernelspace.}
 
 \end{designchoice}

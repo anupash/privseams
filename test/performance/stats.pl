@@ -3,9 +3,13 @@
 # name:      stats.pl
 # purpose:   generate statistics from a logfile encoded in {type,val} format
 # usage:     see gethelp sub or run with no args
-# version:   $Id: stats.pl,v 1.5 2003/10/14 15:50:31 krisu Exp $
 # author:    miika@iki.fi
 # licence:   GNU/GPL
+#
+# requires:  Statics::Distribution. This is how you can install it:
+#            adamo# perl -MCPAN -e shell
+#            # Are you ready for manual configuration? [yes] no
+#            cpan> install Statistics::Distributions
 #
 # todo:
 # - replace map_confidence with the corresponding perl module
@@ -24,7 +28,8 @@ use Statistics::Distributions qw(udistr);
 # and value from the data input lines. If value occurs before type in the
 # line, change the type to $2 and value to $1 in %regexp_order.
 #
-my $regexp       = 'hipd call type=(\S+):\s(\S+) secs';
+#my $regexp       = 'hipd call type=(\S+):\s(\S+) secs';
+my $regexp       = '(\S+)\s+(\S+)';
 my %regexp_order = ( 'type' => '$1', 'value' => '$2' );
 
 my $confidence   = 0;  # confidence interval in procents
@@ -135,7 +140,8 @@ print($outputfd "Sums:\n\t"  .
 #
 sub gethelp {
     return "Usage: stats <confidence_interval_in_procents>\n" .
-	"The data to be analyzed is read from stdin.\n";
+	"The data to be analyzed is read from stdin.\n" .
+        "Edit the regexp and regexp_order parameters to suite your needs.\n";
 }
 
 # Purpose: Get, check and parse the arguments given for the program

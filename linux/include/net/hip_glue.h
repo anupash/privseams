@@ -4,12 +4,10 @@
 #ifdef __KERNEL__
 
 #include <linux/skbuff.h>
-
 #include <net/ip.h>
 #include <net/ipv6.h>
 #include <net/sock.h>
 #include <net/flow.h>
-//#include <net/sadb.h>
 
 #define HIP_CALLPROC(X) if(hip_functions.X) hip_functions.X
 #define HIP_CALLFUNC(X,Y) (!hip_functions.X)?(Y):hip_functions.X
@@ -24,8 +22,6 @@ struct hip_callable_functions {
 	int (*hip_get_addr) (struct in6_addr *hit, struct in6_addr *addr);
 	int (*hip_get_saddr) (struct flowi *fl, struct in6_addr *hit_storage);
 	void (*hip_unknown_spi) (struct sk_buff *skb, uint32_t spi);
-        /* void (*hip_handle_icmp) (struct sk_buff *skb, int type, int code, u32 info);*/
-	int (*hip_trigger_bex) (struct in6_addr *dsthit);
 	void (*hip_handle_ipv6_dad_completed)(int ifindex);
 	void (*hip_handle_inet6_addr_del)(int ifindex);
 	/* int (*hip_update_spi_waitlist_ispending)(uint32_t spi); */
@@ -35,8 +31,5 @@ struct hip_callable_functions {
 extern struct hip_callable_functions hip_functions;
 
 #endif /* __KERNEL__ */
-
-/* Returns true if addr is a HIT */
-
 
 #endif /* _NET_HIP_GLUE_H */

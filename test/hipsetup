@@ -223,8 +223,8 @@ setup_hip() {
     #
     set +e
     modprobe -v hipmod
-    sleep 3
     set -e
+    sleep 3
 
     $HIPL_DIR/tools/hipconf add hi default
     sleep 2
@@ -306,6 +306,8 @@ case $MODE in
 	# Localhost acts as the initiator in the base exchange
 	#
 	echo "Initiator mode"
+	# wait a few secs for HIP socket handlers and addition of local host ID setup
+	sleep 3
 	echo "Connecting to peer host $PEER_NAME"
 	$HIPL_DIR/test/conntest-client-gai $PEER_NAME $PROTO $PORT < /dev/null
 	check_hip_state_established $PEER_NAME

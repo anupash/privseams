@@ -19,6 +19,7 @@
 #include <linux/ipsec.h>
 #include <asm/uaccess.h>
 
+/* these need to be moved elsewhere */
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 #include <net/hip_glue.h>
 /* Placeholder for HIP hooks */
@@ -158,9 +159,7 @@ resched:
 	goto out;
 
 expired:
-	printk(KERN_DEBUG "EXPIRED SPI 0x%x\n", x->id.spi);
 	if (x->km.state == XFRM_STATE_ACQ && x->id.spi == 0) {
-		printk(KERN_DEBUG "STATE ACQ IS EXPIRED\n");
 		x->km.state = XFRM_STATE_EXPIRED;
 		wake_up(&km_waitq);
 		next = 2;
@@ -169,7 +168,6 @@ expired:
 	if (x->id.spi != 0)
 		km_state_expired(x, 1);
 	__xfrm_state_delete(x);
-	printk(KERN_DEBUG "STATE IS DELETED\n");
 out:
 	spin_unlock(&x->lock);
 	xfrm_state_put(x);
@@ -791,16 +789,6 @@ int km_query(struct xfrm_state *x, struct xfrm_tmpl *t, struct xfrm_policy *pol)
 	int err = -EINVAL;
 	struct xfrm_mgr *km;
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	printk(KERN_DEBUG "TODO: remove this from km_query\n");
-	if (pol->selector.daddr.a6[0] == htonl(0x40000000) &&
-	    pol->selector.prefixlen_d == 2) {
-		/* this must trigger Base Exchange */
-		err = HIP_CALLFUNC(hip_trigger_bex,0)((struct in6_addr *)x->id.daddr.a6);
-		if (!err)
-			return 0;
-	}
-#endif
 	read_lock(&xfrm_km_lock);
 	list_for_each_entry(km, &xfrm_km_list, list) {
 		err = km->acquire(x, t, pol, XFRM_POLICY_OUT);

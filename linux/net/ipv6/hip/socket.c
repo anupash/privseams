@@ -1,14 +1,11 @@
 /*
  * HIP socket handler - handle PF_HIP type sockets
  *
+ * Licence: GNU/GPL
  * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Anthony D. Joseph <adj@hiit.fi>
- *
- * Todo:
- * - Do we need separate proto ops for dgrams?
- * - What functions should return just zero?
- *
+ *          Miika Komu <miika@iki.fi>
+ *          Anthony D. Joseph <adj@hiit.fi>
+ *          Mika Kousa <mkousa@cc.hut.fi>
  */
 
 #include "socket.h"
@@ -22,42 +19,14 @@
 #include "unit.h"
 #include "input.h"
 #include "output.h"
+#include "debug.h"
 
 #include <linux/net.h>
 #include <net/addrconf.h>
 
 extern struct net_proto_family hip_family_ops;
-//extern struct net_proto_family inet_family_ops;
 extern struct proto_ops inet_stream_ops;
 extern struct proto_ops inet_dgram_ops;
-//extern struct net_proto_family inet6_family_ops;
-extern struct proto_ops inet6_stream_ops;
-extern struct proto_ops inet6_dgram_ops;
-extern int inet6_create(struct socket *sock, int protocol);
-
-extern struct net_proto_family hip_family_ops;
-//extern struct net_proto_family inet_family_ops;
-extern struct proto_ops inet_stream_ops;
-extern struct proto_ops inet_dgram_ops;
-//extern struct net_proto_family inet6_family_ops;
-extern struct proto_ops inet6_stream_ops;
-extern struct proto_ops inet6_dgram_ops;
-extern int inet6_create(struct socket *sock, int protocol);
-
-extern struct net_proto_family hip_family_ops;
-//extern struct net_proto_family inet_family_ops;
-extern struct proto_ops inet_stream_ops;
-extern struct proto_ops inet_dgram_ops;
-//extern struct net_proto_family inet6_family_ops;
-extern struct proto_ops inet6_stream_ops;
-extern struct proto_ops inet6_dgram_ops;
-extern int inet6_create(struct socket *sock, int protocol);
-
-extern struct net_proto_family hip_family_ops;
-//extern struct net_proto_family inet_family_ops;
-extern struct proto_ops inet_stream_ops;
-extern struct proto_ops inet_dgram_ops;
-//extern struct net_proto_family inet6_family_ops;
 extern struct proto_ops inet6_stream_ops;
 extern struct proto_ops inet6_dgram_ops;
 extern int inet6_create(struct socket *sock, int protocol);
@@ -184,7 +153,7 @@ int hip_select_socket_handler(struct socket *sock,
 
 	HIP_ASSERT(sock && sock->sk);
 
-	HIP_DEBUG("sock_type=%d  sk_proto=%d\n",
+	HIP_DEBUG("sock_type=%d sk_proto=%d\n",
 		  sock->sk->sk_type, sock->sk->sk_protocol);
 
 	/* XX FIXME: How to handle IPPROTO_RAW? */
@@ -800,7 +769,6 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
         return err;
 }
 
-/* static */
 int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 					  const struct in6_addr *ip,
 					  int insert, int rvs)
@@ -866,9 +834,9 @@ static int hip_do_work(const struct hip_common *input, int rvs)
 	}
 
 	hip_in6_ntop(hit, buf);
-	HIP_INFO("map HIT: %s\n", buf);
+	HIP_DEBUG("map HIT: %s\n", buf);
 	hip_in6_ntop(ip, buf);
-	HIP_INFO("map IP: %s\n", buf);
+	HIP_DEBUG("map IP: %s\n", buf);
 	
  	err = hip_insert_peer_map_work_order(hit, ip, 1, rvs);
  	if (err) {
@@ -964,7 +932,7 @@ int hip_socket_handle_rst(const struct hip_common *input)
 #define MAX_SRC_ADDRS 128
 
 /**
- * hip_socket_handle_bos - handle generation of a BOS packet
+ * hip_socket_send_bos - send a BOS packet
  * @msg: input message (should be empty)
  *
  * Generate a signed HIP BOS packet containing our HIT, and send
@@ -973,12 +941,11 @@ int hip_socket_handle_rst(const struct hip_common *input)
  *
  * Returns: zero on success, or negative error value on failure
  */
-int hip_socket_handle_bos(const struct hip_common *msg)
+int hip_socket_send_bos(const struct hip_common *msg)
 {
 	int err = 0;
 	struct hip_common *bos = NULL;
 	struct in6_addr hit_our;
- 	struct in6_addr dst_hit;
 	struct in6_addr daddr;
  	int i, mask;
  	struct hip_host_id  *host_id_pub = NULL;
@@ -989,7 +956,6 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 	struct in6_addr saddr[MAX_SRC_ADDRS];
 	int if_idx[MAX_SRC_ADDRS];
 	int addr_count = 0;
-	char addrstr[INET6_ADDRSTRLEN];
 	struct flowi fl;
 	struct inet6_ifaddr *ifa = NULL;
 
@@ -1037,14 +1003,14 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 	    IP ( HIP ( HOST_ID,
               HIP_SIGNATURE ) )
 	 */
- 	memset(&dst_hit, 0, sizeof(struct in6_addr));
 	mask = HIP_CONTROL_NONE;
 
- 	hip_build_network_hdr(bos, HIP_BOS, mask, &hit_our, &dst_hit);
+ 	hip_build_network_hdr(bos, HIP_BOS, mask, &hit_our, NULL);
 
 	/********** HOST_ID *********/
 
-	_HIP_DEBUG("This HOST ID belongs to: %s\n", hip_get_param_host_id_hostname(host_id_pub));
+	_HIP_DEBUG("This HOST ID belongs to: %s\n",
+		   hip_get_param_host_id_hostname(host_id_pub));
 	err = hip_build_param(bos, host_id_pub);
  	if (err) {
  		HIP_ERROR("Building of host id failed\n");
@@ -1078,14 +1044,10 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 	}
 
  	/************** BOS packet ready ***************/
-
 	HIP_DEBUG("sending BOS\n");
-
-
-	/* Use Global Scope All Nodes Addr [RFC2373] FF0E:0:0:0:0:0:0:1 */
- 	memset(&daddr, 0, sizeof(struct in6_addr));
-	ipv6_addr_set(&daddr, htonl(0xFF0E0000), htonl(0x00000000),
-		      htonl(0x00000000), htonl(0x00000001));
+	/* Use All Nodes Addresses (link-local) RFC2373
+ 	   FF02:0:0:0:0:0:0:1 as the destination multicast address */
+ 	ipv6_addr_all_nodes(&daddr);
 
 	/* Iterate through all the network devices, recording source
 	 * addresses for BOS packets */
@@ -1141,14 +1103,13 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 				goto out_idev_unlock;
 			}
 		        spin_lock_bh(&ifa->lock);
-			hip_in6_ntop(&ifa->addr, addrstr);
-			HIP_DEBUG("addr %d: %s\n", i, addrstr);
+			HIP_DEBUG_IN6ADDR("addr", &ifa->addr);
 			if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL){
-			       HIP_DEBUG("not counting link local address\n");
+				HIP_DEBUG("not counting link local address\n");
 			} else {
 				if_idx[addr_count] = saddr_dev->ifindex;
-			        ipv6_addr_copy(&(saddr[addr_count++]), 
-					       &ifa->addr);
+			        ipv6_addr_copy(&(saddr[addr_count]), &ifa->addr);
+				addr_count++;
 			}
 			spin_unlock_bh(&ifa->lock);
 		}
@@ -1164,15 +1125,13 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 
 	HIP_DEBUG("final address list count=%d\n", addr_count);
 
-	hip_in6_ntop(&daddr, addrstr);
-	HIP_DEBUG("dest address=%s\n", addrstr);
+	HIP_DEBUG_IN6ADDR("dest mc address", &daddr);
 
 	/* Loop through the saved addresses, sending the BOS packets 
 	   out the correct interface */
 	for (i = 0; i < addr_count; i++) {
 	        /* got a source addresses, send BOS */
-	        hip_in6_ntop(&(saddr[i]), addrstr);
-		HIP_DEBUG("selected source address: %s\n", addrstr);
+	        HIP_DEBUG_IN6ADDR("selected source address", &(saddr[i]));
 
 		/* Set up the routing structure to use the correct
 		   interface, source addr, and destination addr */
@@ -1182,9 +1141,10 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 		fl.fl6_dst = daddr;
 		fl.fl6_src = saddr[i];
 
+		HIP_DEBUG("pre csum totlen=%u\n", hip_get_msg_total_len(bos));
 		/* Send it! */
 		err = hip_csum_send_fl(&(saddr[i]), &daddr, bos, &fl);
-		if (err) 
+		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
 	
@@ -1251,8 +1211,8 @@ int hip_socket_handle_unit_test(const struct hip_common *msg)
 }
 
 /*
- * This function is similar to hip_socket_handle_add_local_hi but there are three
- * major differences:
+ * This function is similar to hip_socket_handle_add_local_hi but there are
+ * three major differences:
  * - this function is used by native HIP sockets (not hipconf)
  * - HIP sockets require EID handling which is done here
  * - this function DOES NOT call hip_precreate_r1, so you need launch
@@ -1485,6 +1445,46 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 }
 
 /**
+* hip_list_peers_add - private function to add an entry to the peer list
+* @addr: IPv6 address
+* @entry: peer list entry
+* @last: pointer to pointer to end of peer list linked list
+*
+* Add an IPv6 address (if valid) to the peer list and update the tail
+* pointer.
+*
+* Returns: zero on success, or negative error value on failure
+*/
+static int hip_list_peers_add(struct in6_addr *address,
+			      hip_peer_entry_opaque_t *entry,
+			      hip_peer_addr_opaque_t **last)
+{
+	hip_peer_addr_opaque_t *addr;
+
+	HIP_DEBUG_IN6ADDR("## SPI is 0, found bex address:", address);
+	
+	/* Allocate an entry for the address */
+	addr = kmalloc(sizeof(hip_peer_addr_opaque_t), GFP_ATOMIC);
+	if (!addr) {
+		HIP_ERROR("No memory to create peer addr entry\n");
+		return -ENOMEM;
+	}
+	addr->next = NULL;
+	/* Record the peer addr */
+	ipv6_addr_copy(&addr->addr, address);
+	
+	if (*last == NULL) {  /* First entry? Add to head and tail */
+		entry->addr_list = addr;
+	} else {             /* Otherwise, add to tail */
+		(*last)->next = addr;
+	}
+	*last = addr;
+	entry->count++;   /* Increment count in peer entry */
+	return 0;
+}
+
+
+/**
  * hip_hadb_list_peers_func - private function to process a hadb entry
  * @entry: hadb table entry
  * @opaque: private data for the function (contains record keeping structure)
@@ -1496,13 +1496,14 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 {
 	hip_peer_opaque_t *op = (hip_peer_opaque_t *)opaque;
-	hip_peer_entry_opaque_t *peer_entry;
-	hip_peer_addr_opaque_t *addr, *last = NULL;
+	hip_peer_entry_opaque_t *peer_entry = NULL;
+	hip_peer_addr_opaque_t *last = NULL;
 	struct hip_peer_addr_list_item *s;
 	struct hip_spi_out_item *spi_out, *tmp;
 	char buf[46];
 	struct hip_lhi lhi;
 	int err = 0;
+	int found_addrs = 0;
 
 	/* Start by locking the entry */
 	HIP_LOCK_HA(entry);
@@ -1521,51 +1522,59 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 		goto error;
 	}
 	peer_entry->count = 0;    /* Initialize the number of addrs to 0 */
+	peer_entry->host_id = NULL;
+	/* Record the peer hit */
+	ipv6_addr_copy(&(peer_entry->hit), &(lhi.hit));
+	peer_entry->addr_list = NULL;
 	peer_entry->next = NULL; 
 
-	/* Record the peer hit */
-	memcpy(&(peer_entry->hit), &(lhi.hit), sizeof(struct in6_addr));
-
 	if (!op->head) {          /* Save first list entry as head and tail */
-	  op->head = peer_entry;
-	  op->end = peer_entry;
+		op->head = peer_entry;
+		op->end = peer_entry;
 	} else {                  /* Add entry to the end */
-	  op->end->next = peer_entry;
-	  op->end = peer_entry;
+		op->end->next = peer_entry;
+		op->end = peer_entry;
 	}
 
 	/* Record each peer address */
-	//list_for_each_entry(s, &entry->peer_addr_list, list) {
+	
+	if (entry->default_spi_out == 0) {
+		if (!ipv6_addr_any(&entry->bex_address)) {
+			err = hip_list_peers_add(&entry->bex_address,
+						 peer_entry, &last);
+			if (err != 0)
+				goto error;
+			found_addrs = 1;
+		}
+		goto done;
+	}
+
 	list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
 		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
-			hip_in6_ntop(&(s->address), buf);
-			HIP_DEBUG("## Got a peer address: %s\n", buf);
-
-			/* Allocate an entry for the address */
-			addr = kmalloc(sizeof(hip_peer_addr_opaque_t),GFP_ATOMIC);
-			if (!addr) {
-				HIP_ERROR("No memory to create peer addr entry\n");
-				err = -ENOMEM;
+			err = hip_list_peers_add(&(s->address), peer_entry,
+						 &last);
+			if (err != 0)
 				goto error;
-			}
-			addr->next = NULL;
-
-			/* Record the peer addr */
-			memcpy(&(addr->addr), &(s->address),sizeof(struct in6_addr));
-		
-			if (last == NULL) {  /* First entry? Add to head and tail */
-				peer_entry->addr_list = addr;
-			} else {             /* Otherwise, add to tail */
-				last->next = addr;
-			}
-			last = addr;
-
-			peer_entry->count++;   /* Increment count in peer entry */
+			found_addrs = 1;
 		}
 	}
-	op->count++;               /* Increment count of entries */
+
+ done:
+
+	/* Increment count of entries and connect the address list to
+	 * peer entry only if addresses were copied */
+	if (!found_addrs) {
+		err = -ENOMSG;
+		HIP_DEBUG("entry has no usable addresses\n");
+	}
+
+	op->count++; /* increment count on error also so err handling works */
 		
  error:
+	//HIP_DEBUG("*** TODO: on error, kfree kmalloced addresses here ? ***\n");
+	_HIP_DEBUG("op->end->next=0x%p\n", op->end->next);
+	_HIP_DEBUG("op->end=0x%p\n", op->end);
+
 	HIP_UNLOCK_HA(entry);
 	return err;
 }
@@ -1591,6 +1600,9 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 	hip_peer_addr_opaque_t *addr, *anext;
 	
 	HIP_DEBUG("\n");
+
+	/* Initialize the data structure for the peer list */
+	memset(&pr, 0, sizeof(hip_peer_opaque_t));
 	
 	/* Extra consistency test */
 	if (hip_get_msg_type(msg) != SO_HIP_GET_PEER_LIST) {
@@ -1599,9 +1611,6 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 		goto out_err;
 	}
 
-	/* Initialize the data structure for the peer list */
-	memset(&pr, 0, sizeof(hip_peer_opaque_t));
-
 	/* Iterate through the hadb db entries, collecting addresses */
 	fail = hip_for_each_ha(hip_hadb_list_peers_func, &pr);
 	if (fail) {
@@ -1609,7 +1618,12 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 		HIP_ERROR("Peer list creation failed\n");
 		goto out_err;
 	}
-
+	HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
+	if (pr.count <= 0) {
+		HIP_ERROR("No usable entries found\n");
+		err = -EINVAL;
+		goto out_err;
+	}
 	/* Complete the list by iterating through the list and
 	   recording the peer host id. This is done separately from
 	   list creation because it involves calling a function that
@@ -1674,7 +1688,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 
 	        /********** HIT *********/
 
-		err = hip_build_param_contents(msg, &(entry->hit),
+		err = hip_build_param_contents(msg, &entry->hit,
 					       HIP_PARAM_HIT,
 					       sizeof(struct in6_addr));
  	        if (err) {
@@ -1685,7 +1699,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 
 		/********** IP ADDR LIST COUNT *********/
 
-		err = hip_build_param_contents(msg, &(entry->count), 
+		err = hip_build_param_contents(msg, &entry->count, 
 					       HIP_PARAM_UINT,
 					       sizeof(unsigned int));
 		if (err) {
@@ -1698,7 +1712,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 		for (j = 0; j < entry->count; j++, addr = addr->next) {
 		        /********** IP ADDR *********/
 
-		        err=hip_build_param_contents(msg, &(addr->addr),
+		        err=hip_build_param_contents(msg, &addr->addr,
 						     HIP_PARAM_IPV6_ADDR, 
 						     sizeof(struct in6_addr));
 			if (err) {
@@ -1712,20 +1726,26 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
  out_err:
 	/* Recurse through structure, freeing memory */
 	entry = pr.head;
+	_HIP_DEBUG("free mem, pr.head=0x%p\n", pr.head);
 	while (entry) {
-	     next = entry->next;
-	     if (entry->host_id)
-	       kfree(entry->host_id);
-	     addr = entry->addr_list;
-	     while (addr) {
-	       anext = addr->next;
-	       kfree(addr);
-	       addr = anext;
-	     }
-	     kfree(entry);
-	     entry = next;
+		_HIP_DEBUG("entry=0x%p\n", entry);
+		next = entry->next;
+		_HIP_DEBUG("next=0x%p\n", next);
+		_HIP_DEBUG("entry->host_id=0x%p\n", entry->host_id);
+		if (entry->host_id)
+			kfree(entry->host_id);
+		addr = entry->addr_list;
+		_HIP_DEBUG("addrlist=0x%p\n", addr);
+		while (addr) {
+			_HIP_DEBUG("addr=0x%p\n", addr);
+			anext = addr->next;
+			kfree(addr);
+			addr = anext;
+		}
+		kfree(entry);
+		entry = next;
 	}
-
+	_HIP_DEBUG("done freeing mem, err = %d\n", err);
 	return err;
 }
 
@@ -1787,7 +1807,7 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 		err = hip_socket_handle_rvs(msg);
 		break;
 	case SO_HIP_BOS:
-		err = hip_socket_handle_bos(msg);
+		err = hip_socket_send_bos(msg);
 		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
