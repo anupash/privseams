@@ -1176,6 +1176,7 @@ int hip_build_user_hdr(struct hip_common *msg,
 	return err;
 }
 
+#ifdef __KERNEL__
 /**
  * hip_build_network_hdr - write network header into message
  * @msg:          the message where the HIP network should be written
@@ -1224,7 +1225,6 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 	ipv6_addr_copy(&msg->hitr, hit_receiver ? hit_receiver : &in6addr_any);
 }
 
-#ifdef __KERNEL__
 /**
  * hip_build_param_hmac_contents - build and append a HIP hmac parameter
  * @msg:  the message where the hmac parameter will be appended
