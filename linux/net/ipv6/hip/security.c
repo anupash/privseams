@@ -356,6 +356,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		goto out;
 	}
 
+	/* memory leak ? */
 	if (xs->type->init_state(xs, NULL)) {
 		HIP_ERROR("Could not initialize XFRM type\n");
 		goto out;

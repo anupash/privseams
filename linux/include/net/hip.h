@@ -623,9 +623,11 @@ struct hip_peer_addr_list_item
 					   added or updated */
 };
 
-/* peer address is assumed to be currently reachable */
+#define PEER_ADDR_STATE_UNVERIFIED 1
+#define PEER_ADDR_STATE_ACTIVE 2
+#define PEER_ADDR_STATE_DEPRECATED 3
+
 #define PEER_ADDR_STATE_REACHABLE 1
-/* peer address is assumed not to be currently reachable */
 #define PEER_ADDR_STATE_UNREACHABLE 2
 
 struct hip_hadb_state

@@ -143,7 +143,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 	}
 
 
-	HIP_DEBUG("Virtual addresses: %p, size: %d\n",addr,size);
+	_HIP_DEBUG("Virtual addresses: %p, size: %d\n",addr,size);
 
 	offset = 0;
 	while(offset < size) {
@@ -157,7 +157,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 		pleft = PAGE_SIZE - slist[elt].offset;
 		HIP_ASSERT(pleft > 0 && pleft <= PAGE_SIZE);
 
-		HIP_DEBUG("offset: %ld, space on current page: %ld\n",offset,pleft);
+		_HIP_DEBUG("offset: %ld, space on current page: %ld\n",offset,pleft);
 		if (pleft + offset >= size) {
 			slist[elt].length = size - offset;
 			break;
@@ -175,7 +175,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 
 #ifdef CONFIG_HIP_DEBUG
 	for(i=0;i<=elt;i++) {
-		HIP_DEBUG("Scatterlist: %x, page: %x, offset: %x, length: %x\n",
+		_HIP_DEBUG("Scatterlist: %x, page: %x, offset: %x, length: %x\n",
 			  i, (int)slist[i].page, slist[i].offset, slist[i].length);
 	}
 #endif

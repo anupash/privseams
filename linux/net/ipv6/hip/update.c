@@ -128,6 +128,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 	struct list_head *pos, *n;
 	int i = 1;
 
+_HIP_DEBUG("spi init=0x%x\n", spi);
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 
 	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
@@ -148,7 +149,7 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 	if (found) {
 		uint32_t spi_out, new_spi_out;
 		hip_ha_t *entry;
-		// 		int getlist[2] = { HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_OUT };
+		//int getlist[2] = { HIP_HADB_SPI_OUT, HIP_HADB_NEW_SPI_OUT };
  		//void *setlist[2] = { &spi_out, &new_spi_out };
 		HIP_DEBUG("spi=0x%x : pending=yes\n", spi);
 
@@ -189,6 +190,8 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 #endif
 			entry->new_spi_out = 0;
 		}
+	hip_hadb_remove_state_spi(entry);
+	hip_hadb_insert_state(entry);
 
 		hip_put_ha(entry);
 		HIP_DEBUG("deleting SPI from waitlist\n");
@@ -356,7 +359,6 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		goto out_err;
 	}
 
-	our_current_keymat_index = entry->current_keymat_index;
 #if 0
 	if (!hip_hadb_get_keymat_index_by_hit(hits, &our_current_keymat_index)) {
 		HIP_ERROR("Could not get our_current_keymat_index\n");
@@ -364,6 +366,8 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 		goto out_err;
 	}
 #endif
+	our_current_keymat_index = entry->current_keymat_index;
+
 	/* 3. If the system generated new KEYMAT in the previous step,
 	 * it sets Keymat Index to zero, independent on whether the
 	 * received UPDATE included a Diffie-Hellman key or not. */
@@ -508,17 +512,22 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	/* todo: add new_spi_out to SPI waitlist and when receiving
 	 * data on the new incoming SPI set new_spi_out to SPI_OUT in
 	 * hadb */
-	hip_update_spi_waitlist_add(new_spi_in, 0, hits);
+	hip_update_spi_waitlist_add(new_spi_in, 1, hits);
 
 #endif
 
 
+#if 1
 	/* delete old incoming SA */
 	/* todo: set to dying/drop old IPsec SA ? */
 	HIP_DEBUG("Removing old inbound IPsec SA, SPI=0x%x\n", prev_spi_in);
 	err = hip_delete_sa(prev_spi_in, hitr);
 	HIP_DEBUG("delete_sa retval=%d\n", err ); /* ignore error ? */
 	err = 0;
+#endif
+
+	hip_hadb_remove_state_spi(entry);
+	hip_hadb_insert_state(entry);
 
 #if 0
 	{
@@ -545,7 +554,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 #if 0
 	/* set to dying/drop old IPsec SA ? */
 	peer_prev_spi = htonl(nes->old_spi);
-	HIP_DEBUG("HACK: REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", peer_prev_spi);
+	HIP_DEBUG("HACK: RE2MOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", peer_prev_spi);
 	err = hip_delete_sa(peer_prev_spi, hits, hitr);
 	HIP_DEBUG("delete_sa retval=%d\n", err );
 	err = 0;
@@ -722,7 +731,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	if (new_keymat_generated) {
 		current_keymat_index = 0;
 	} else {
-		current_keymat_index = entry->current_keymat_index;
 #if 0
 		if (!hip_hadb_get_keymat_index_by_hit(hits, &current_keymat_index)) {
 			HIP_ERROR("Could not get current_keymat_index\n");
@@ -730,6 +738,7 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 			goto out_err;
 		}
 #endif
+		current_keymat_index = entry->current_keymat_index;
 	}
 
 	HIP_DEBUG("current_keymat_index=%u\n", current_keymat_index);
@@ -835,6 +844,10 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	HIP_DEBUG("REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", prev_spi_out);
 	err = hip_delete_sa(prev_spi_out, hits);
 	HIP_DEBUG("delete_sa retval=%d\n", err);
+
+
+	//	hip_hadb_remove_state_spi(entry);
+
 	err = 0;
 
 	/* clear out spi value from hadb */
@@ -856,12 +869,12 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 		goto out_err;
 	}
 #endif
-	new_spi_in = entry->new_spi_out;
+	new_spi_in = entry->new_spi_in;
 
 	HIP_DEBUG("copying keys to new updated inbound SA\n");
 
 	/* todo: move this to security.c */
-	HIP_DEBUG("Searching for spi: %x (%x)\n", new_spi_in, htonl(new_spi_in));
+	HIP_DEBUG("Searching for spi: 0x%x (0x%x)\n", new_spi_in, htonl(new_spi_in));
 	xs = xfrm_state_lookup((xfrm_address_t *)hitr, htonl(new_spi_in),
 			       IPPROTO_ESP, AF_INET6);
 	if (!xs) {
@@ -929,8 +942,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	if (hip_hadb_set_info(hits, &tmp, HIP_HADB_NEW_SPI_IN|HIP_ARG_HIT) != 1) {
 		goto out_err;
 	}
-
-	/* TODO: multiset all SPIs */
 #endif
 	entry->new_spi_in = 0;
 
@@ -939,6 +950,9 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	hip_finalize_sa(hitr, new_spi_in);
 	HIP_DEBUG("finalizing the new outbound SA, SPI=0x%x\n", new_spi_out);
 	hip_finalize_sa(hits, new_spi_out);
+
+	hip_hadb_remove_state_spi(entry);
+	hip_hadb_insert_state(entry);
 
 	/* Go back to ESTABLISHED state */
 #if 0
@@ -1207,7 +1221,6 @@ int hip_receive_update(struct sk_buff *skb)
 	if (entry)
 		hip_put_ha(entry); /* try to do this earlier */
 
-	kfree_skb(skb);
 	return err;
 }
 

@@ -115,7 +115,7 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 
 	ha = hip_hadb_find_byspi(spi);
 	if (!ha) {
-		HIP_INFO("Unknown SPI: %x\n",spi);
+		HIP_INFO("Unknown SPI: 0x%x\n",spi);
 		return;
 	}
 

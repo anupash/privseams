@@ -25,6 +25,7 @@
 #include "misc.h"
 #include "builder.h"
 #include "socket.h"
+#include "update.h"
 
 /*
  * Do not access these databases directly: use the accessors in this file.
