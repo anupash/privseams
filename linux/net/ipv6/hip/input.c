@@ -190,25 +190,24 @@ int hip_create_signature(void *buffer_start, int buffer_length,
  * @host_id: Pointer to HOST_ID (as specified by the HIP draft).
  * @signature: Pointer to the signature
  *
- * Returns true (1) if ok, false (0) otherwise.
+ * Returns 1 if the signature was ok, else 0
  */
 int hip_verify_signature(void *buffer_start, int buffer_length, 
 			 struct hip_host_id *host_id, u8 *signature)
 {
 	u8 *public_key = (u8 *) (host_id + 1);
-	int tmp, err;
+	int tmp, ok = 0;
 	unsigned char sha1_digest[HIP_AH_SHA_LEN];
 	int use_rsa = 0;
-
-	err = 0;
 
 	/* check for all algorithms */
 
 	if (hip_get_host_id_algo(host_id) == HIP_HI_RSA) {
 		use_rsa = 1;
 	} else if (hip_get_host_id_algo(host_id) != HIP_HI_DSA) {
-		HIP_ERROR("Unsupported algorithm:%d\n", hip_get_host_id_algo(host_id));
-		return 0;
+		HIP_ERROR("Unsupported algorithm:%d\n",
+			  hip_get_host_id_algo(host_id));
+		goto out_err;
 	}
 
 	_HIP_HEXDUMP("Signature data (verify)",buffer_start,buffer_length);
@@ -244,6 +243,7 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 	switch(tmp) {
 	case 0:
 		HIP_INFO("Signature: [CORRECT]\n");
+		ok = 1;
 		break;
 	case 1:
 		HIP_INFO("Signature: [INCORRECT]\n");
@@ -258,13 +258,11 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 		break;
 	default:
 		HIP_ERROR("Signature verification failed: %d\n", tmp);
-		goto out_err;
+		break;
 	}
 
-	err = 1;
-
  out_err:
-	return err;
+	return ok;
 }
 
 /**

@@ -449,7 +449,6 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	}
 	HIP_HEXDUMP("mpi scan", debug_signature, len);
 
-
 	len = mpi_get_nbits(rpk.n) / 8;
 	if (gcry_mpi_scan(&orig, GCRYMPI_FMT_USG, signature, &len) != 0)
 	{
@@ -458,14 +457,14 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	}
 	/* XX TODO: free result */
 	if (buf)
-	  kfree(buf);
+		kfree(buf);
 
 	return (mpi_cmp(orig, result));
 
  cleanup:
 	/* XX TODO: free result */
 	if (buf)
-	  kfree(buf);
+		kfree(buf);
 	
 	return -1;
 }

@@ -158,7 +158,10 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	/* How do we extract the public key from the hip_host_id 
 	   struct? TODO: CHECK THIS */
 	memcpy(host_id_pub, host_id,
-	       sizeof(struct hip_tlv_common) + contents_len);
+	       sizeof(struct hip_tlv_common) + contents_len - 128 * 2);
+
+	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - 128*2);
+	hip_set_param_contents_len(host_id_pub, contents_len - 128*2);	
 
 	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
 				 hip_get_param_total_len(host_id_pub));
