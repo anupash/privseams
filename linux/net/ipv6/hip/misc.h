@@ -5,6 +5,8 @@
 #  include <linux/types.h>
 #  include <net/ipv6.h>
 #  include <net/hip.h>
+#else
+#  include "list.h" /* userspace list implementation */
 #endif /* __KERNEL__ */
 
 #include "debug.h"

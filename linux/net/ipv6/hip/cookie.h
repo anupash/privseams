@@ -8,6 +8,7 @@
 #  include <net/ipv6.h>
 #endif /* __KERNEL__ */
 
+#include "list.h"
 #include <net/hip.h>
 #include "debug.h"
 #include "hip.h"

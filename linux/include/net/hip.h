@@ -825,13 +825,15 @@ struct hip_spi_out_item
 	struct list_head peer_addr_list; /* Peer's IPv6 addresses */
 	struct in6_addr  preferred_address; /* check */
 };
+#endif /* __KERNEL__ */
 
 struct hip_hadb_state
 {
 	struct list_head     next_hit;
-
+#ifdef __KERNEL__
 	spinlock_t           lock;
 	atomic_t             refcnt;
+#endif
 	hip_hastate_t        hastate;
 	int                  state;
 	uint16_t             local_controls;
@@ -884,7 +886,6 @@ struct hip_cookie_entry {
 	struct in6_addr initiator;
 	struct in6_addr responder;
 };
-#endif /* __KERNEL__ */
 
 struct hip_work_order_hdr {
 	int type;

@@ -5,6 +5,8 @@
 #  include <linux/types.h>
 #  include <linux/crypto.h>
 #  include <asm/scatterlist.h>
+#else
+#  include "list.h"
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>
