@@ -63,8 +63,6 @@ static struct crypto_tfm *impl_aes_cbc = NULL;
 struct socket *hip_output_socket;
 struct crypto_tfm *impl_null = NULL;
 struct crypto_tfm *impl_sha1 = NULL;
-spinlock_t dh_table_lock = SPIN_LOCK_UNLOCKED;
-DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
 
 #ifdef KRISUS_THESIS
 struct timeval gtv_start;
@@ -166,31 +164,6 @@ void hip_init_sys_config(void)
 	hip_sys_config.hip_cookie_max_k_r1 = 20;
 }
 #endif
-
-/**
- * hip_get_dh_size - determine the size for required to store DH shared secret
- * @hip_dh_group_type: the group type from DIFFIE_HELLMAN parameter
- *
- * Returns: 0 on failure, or the size for storing DH shared secret in bytes
- */
-uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
-{
-	/* the same values as are supported ? HIP_DH_.. */
-	int dh_size[] = { 0, 384, 768, 1536, 3072, 6144, 8192 };
-	uint16_t ret = -1;
-
-	_HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
-	if (hip_dh_group_type == 0) 
-		HIP_ERROR("Trying to use reserved DH group type 0\n");
-	else if (hip_dh_group_type == HIP_DH_384)
-		HIP_ERROR("draft-09: Group ID 1 does not exist yet\n");
-	else if (hip_dh_group_type > ARRAY_SIZE(dh_size))
-		HIP_ERROR("Unknown/unsupported MODP group %d\n", hip_dh_group_type);
-	else
-		ret = dh_size[hip_dh_group_type] / 8;
-
-	return ret + 1;
-}
 
 /**
  * hip_map_virtual_to_pages - Maps virtual addresses to physical page addresses
@@ -1813,12 +1786,7 @@ static void hip_uninit_cipher(void)
 	 * not require freeing, although it seems possible to unregister them...
 	 * Really weird. Something is broken somewhere.
 	 */
-	for(i=1;i<HIP_MAX_DH_GROUP_ID;i++) {
-		if (dh_table[i] != NULL) {
-			hip_free_dh_structure(dh_table[i]);
-			dh_table[i] = NULL;
-		}
-	}
+	hip_dh_uninit();
 
 	if (impl_sha1)
 		crypto_free_tfm(impl_sha1);

@@ -1,4 +1,4 @@
-// FIXME: this really wont compile yet, at least the headers are missing.
+#include "xfrm.h"
 
 /**
  * hip_delete_spd - delete an SPD entry suitable for HIP

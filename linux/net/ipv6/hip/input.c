@@ -459,39 +459,6 @@ int hip_verify_packet_signature2(struct hip_common *msg,
 
 
 /**
- * hip_calculate_shared_secret - Creates a shared secret based on the
- * public key of the peer (passed as an argument) and own DH private key
- * (created beforehand).
- * @dhf: Peer's Diffie-Hellman public key
- * @buffer: Buffer that holds enough space for the shared secret.
- *
- * Returns the length of the shared secret in octets if successful,
- * or -1 if an error occured.
- */
-int hip_calculate_shared_secret(struct hip_diffie_hellman *dhf, u8* buffer, 
-				int bufsize)
-{
-	signed int len;
-	int err;
-
-	if (dh_table[dhf->group_id] == NULL) {
-		HIP_ERROR("Unsupported DH group: %d\n",dhf->group_id);
-		return -1;
-        }
-
-	len = hip_get_param_contents_len(dhf) - 1;
-	_HIP_HEXDUMP("PEER DH key:",(dhf + 1),len);
-	err = hip_gen_dh_shared_key(dh_table[dhf->group_id], (u8*)(dhf+1), len,
-				    buffer, bufsize);
-	if (err < 0) {
-                HIP_ERROR("Could not create shared secret\n");
-		return -1;
-        }
-
-	return err;
-}
-
-/**
  * hip_produce_keying_material - Create shared secret and produce keying material 
  * @msg: the HIP packet received from the peer
  * @ctx: context
