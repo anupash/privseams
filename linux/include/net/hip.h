@@ -86,6 +86,8 @@ typedef uint16_t in_port_t;
 #define SO_HIP_SET_MY_EID                       10
 #define SO_HIP_GET_PEER_EID                     11
 #define SO_HIP_SET_PEER_EID                     12
+#define SO_HIP_NULL_OP                          13
+#define SO_HIP_UNIT_TEST                        14
 
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 

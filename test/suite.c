@@ -37,7 +37,7 @@ HIP_UNIT_TEST_CASE(test_hip_user_null_op) {
   input_msg = malloc(HIP_MAX_PACKET);
   hip_msg_init(input_msg);
   HIP_UNIT_ASSERT(input_msg);
-  err = hip_build_user_hdr(input_msg, HIP_USER_NULL_OPERATION, 0);
+  err = hip_build_user_hdr(input_msg, SO_HIP_NULL_OP, 0);
   HIP_UNIT_ASSERT(!err);
 
   free(input_msg);
@@ -107,13 +107,13 @@ HIP_UNIT_TEST_CASE(test_kernel) {
     HIP_UNIT_ASSERT(msg);
     hip_msg_init(msg);
     
-    err = hip_build_user_hdr(msg, HIP_USER_UNIT_TEST, 0);
+    err = hip_build_user_hdr(msg, SO_HIP_UNIT_TEST, 0);
     HIP_UNIT_ASSERT(!err);
 
     err = hip_build_param_unit_test(msg, suiteid, caseid);
     HIP_UNIT_ASSERT(!err);
 
-    err = send_msg(msg);
+    err = hip_set_global_option(msg);
     HIP_UNIT_ASSERT(!err);
     HIP_UNIT_ASSERT(!hip_get_msg_err(msg));
 }
