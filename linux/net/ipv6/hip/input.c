@@ -2059,7 +2059,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
 	HIP_DEBUG("Entering handle_r2\n");
 
-	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
+	ctx = kmalloc(sizeof(struct hip_context), GFP_ATOMIC);
 	if (!ctx) {
 		err = -ENOMEM;
 		goto out_err;
@@ -2673,7 +2673,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	int err = 0;
 	u8 *hmac_res = NULL;
 
-	hmac_res = kmalloc(HIP_AH_SHA_LEN, GFP_KERNEL);
+	hmac_res = kmalloc(HIP_AH_SHA_LEN, GFP_ATOMIC);
 	if (!hmac_res) {
 		HIP_ERROR("kmalloc failed\n");
 		err = -ENOMEM;

@@ -422,7 +422,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	unsigned long lf;
 	int t;
 
-	result = kmalloc(1024, GFP_KERNEL);
+	result = kmalloc(1024, GFP_ATOMIC);
 	if (!result) {
 		HIP_ERROR("no memory\n");
 		return NULL;

@@ -24,8 +24,8 @@
 
 /* HIP Per Cpu WorkQueue */
 struct hip_pc_wq {
-	struct semaphore *worklock;
-	struct list_head *workqueue;
+	struct semaphore worklock;
+	struct list_head workqueue;
 };
 
 static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
@@ -48,35 +48,35 @@ struct hip_work_order *hip_get_work_order(void)
 	struct hip_work_order *result;
 	int locked;
 
+	/* get_cpu_var / put_cpu_var ? */
 	wq = &__get_cpu_var(hip_workqueue);
 
 	/* Wait for job */
-	locked = down_interruptible(wq->worklock);
+	locked = down_interruptible(&wq->worklock);
 	if (locked) {
-		HIP_DEBUG("couldn't get work lock semaphore, interrupted=%s (locked=%d)\n",
-			  locked == -EINTR ? "yes" : "no", locked);
+		if (locked == -EINTR)
+			HIP_DEBUG("interrupted while trying to get lock\n");
 		return NULL;
 	}
 
 	/* every processor has its own worker thread, so
-	   spin lock is not needed. Only local irq disabling
-	*/
+	   spin lock is not needed. Only local irq disabling */
 	local_irq_save(eflags); 
 
-	if (list_empty(wq->workqueue)) {
+	if (list_empty(&wq->workqueue)) {
 		HIP_ERROR("Work queue empty?\n");
 		result = NULL;
 		goto err;
 	}
 
-	result = list_entry(wq->workqueue->next, struct hip_work_order, queue);
+	result = list_entry((&wq->workqueue)->next, struct hip_work_order, queue);
 	if (!result) {
 		HIP_ERROR("Couldn't extract the main structure from the list\n");
 		result = NULL;
 		goto err;
 	}
 
-	list_del(wq->workqueue->next);
+	list_del((&wq->workqueue)->next);
 
  err:	
 	local_irq_restore(eflags);
@@ -100,7 +100,6 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	unsigned long eflags;
 	struct hip_pc_wq *wq;
-	int warn = 0;
 
 	if (cpu >= NR_CPUS) {
 		HIP_ERROR("Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
@@ -115,26 +114,13 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 	HIP_DEBUG("hwo=0x%p cpu=%d\n", hwo, cpu);
 	local_irq_save(eflags);
 
+	/* get_cpu_var / put_cpu_var ? */
 	wq = &per_cpu(hip_workqueue, cpu);
-	if (wq->workqueue)
-		list_add_tail(&hwo->queue, wq->workqueue);
-	else
-		warn++;
-
-	local_irq_restore(eflags);
+	list_add_tail(&hwo->queue, &wq->workqueue);
 	/* what is the correct order of these two, l_i_r and up ? */
-	if (wq->worklock)
-		up(wq->worklock);
-	else {
-		HIP_ERROR("wq has no lock\n");
-		warn++;
-	}
-	if (!warn)
-		return 1;
-	else
-		HIP_ERROR("warn=%d > 0, has khipd/%d died ?\n",
-			  warn, smp_processor_id());
-	return -1;
+	up(&wq->worklock);
+	local_irq_restore(eflags);
+	return 1;
 }
 
 /**
@@ -159,26 +145,17 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 
 int hip_init_workqueue()
 {
-	struct list_head *lh;
-	struct semaphore *sem;
 	struct hip_pc_wq *wq;
+	unsigned long eflags;
 
-	lh = kmalloc(sizeof(struct list_head), GFP_KERNEL);
-	if (!lh)
-		return -ENOBUFS;
+	local_irq_save(eflags);
 
-	sem = kmalloc(sizeof(struct semaphore), GFP_KERNEL);
-	if (!sem) {
-		kfree(lh);
-		return -ENOBUFS;
-	}
+	wq = &get_cpu_var(hip_workqueue);
+	INIT_LIST_HEAD(&wq->workqueue);
+	init_MUTEX_LOCKED(&wq->worklock);
+	put_cpu_var(hip_workqueue);
+	local_irq_restore(eflags);
 
-	INIT_LIST_HEAD(lh);
-	init_MUTEX_LOCKED(sem);
-
-	wq = &__get_cpu_var(hip_workqueue);
-	wq->worklock = sem;
-	wq->workqueue = lh;
 	return 0;
 }
 
@@ -187,20 +164,19 @@ void hip_uninit_workqueue()
 	struct list_head *pos,*iter;
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
+	unsigned long eflags;
 
-	local_bh_disable();
+	local_irq_save(eflags);
+	//local_bh_disable();
+	/* get_cpu_var / put_cpu_var ? */
 	wq = &__get_cpu_var(hip_workqueue);
-
-	list_for_each_safe(pos, iter, wq->workqueue) {
+	list_for_each_safe(pos, iter, &wq->workqueue) {
 		hwo = list_entry(pos,struct hip_work_order,queue);
 		hip_free_work_order(hwo);
 		list_del(pos);
 	}
-	kfree(wq->workqueue);
-	wq->workqueue = NULL;
-	kfree(wq->worklock);
-	wq->worklock = NULL;
-	local_bh_enable();
+
+	local_irq_restore(eflags);
 }
 
 /**

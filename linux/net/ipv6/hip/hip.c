@@ -23,7 +23,7 @@
 #include "socket.h"
 #include "update.h"
 #ifdef CONFIG_HIP_RVS
-# include "rvs.h"
+#include "rvs.h"
 #endif
 
 #include <linux/proc_fs.h>
@@ -39,6 +39,7 @@
 #include <net/xfrm.h>
 #include <linux/suspend.h>
 #include <linux/completion.h>
+#include <linux/cpumask.h>
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -71,6 +72,7 @@ struct hip_kthread_data {
 	int cpu;
 	pid_t pid;
 	struct completion kthread_work;
+	int killed;
 };
 
 struct hip_kthread_data hip_kthreads[NR_CPUS];
@@ -1912,12 +1914,14 @@ static int hip_worker(void *t)
 	int result = 0;
 	struct hip_kthread_data *thr = (struct hip_kthread_data *) t;
 	int cpu = thr->cpu;
-	pid_t pid = current->pid;
+	pid_t pid;
 
+	thr->pid = pid = current->pid;
 	/* set up this kernel thread */
 	daemonize("khipd/%d", cpu);
+	flush_signals(current);
 	allow_signal(SIGKILL);
-	set_cpus_allowed(current, cpumask_of_cpu(cpu));
+	set_cpus_allowed(current, cpumask_of_cpu(cpu)); /* TODO: check return value */
 
 	//set_user_nice(current, 0); //XXX: Set this as you please
 
@@ -1926,12 +1930,15 @@ static int hip_worker(void *t)
 	atomic_inc(&hip_working);
 	/* work loop */
 
+	HIP_DEBUG("HIP kernel thread %s pid=%d started\n", current->comm, pid);
+
 	while(1) {
 		if (signal_pending(current)) {
 			HIP_INFO("HIP thread pid %d on cpu %d got SIGKILL\n", pid, cpu);
 			/* zero thread pid so we do not kill other
 			 * process having the same pid later by accident */
 			thr->pid = 0;
+			thr->killed = 1;
 			_HIP_DEBUG("signalled, flushing signals\n");
 			flush_signals(current);
 			break;
@@ -1956,11 +1963,12 @@ static int hip_worker(void *t)
 		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 
+	complete(&thr->kthread_work);
+
 	/* cleanup */
 	hip_uninit_workqueue();
 	atomic_dec(&hip_working);
 	HIP_DEBUG("HIP kernel thread %d exiting on cpu %d\n", pid, cpu);
-	complete(&thr->kthread_work);
 
 	return 0;
 }
@@ -1968,10 +1976,12 @@ static int hip_worker(void *t)
 
 static int __init hip_init(void)
 {
-  int cpu, pid;
+	int cpu, pid;
 
 	HIP_INFO("Initializing HIP module\n");
 	hip_get_load_time();
+
+	memset(&hip_kthreads, 0, sizeof(hip_kthreads));
 
 	if(!hip_init_r1())
 		goto out;
@@ -1999,18 +2009,19 @@ static int __init hip_init(void)
 	if (hip_setup_sp(XFRM_POLICY_IN) < 0)
 		goto out;
 
-	for(cpu = 0; cpu < NR_CPUS; cpu++) {
+	for(cpu = 0; cpu < num_possible_cpus() /* not NR_CPUS */; cpu++) {
 		hip_kthreads[cpu].cpu = cpu;
 		init_completion(&hip_kthreads[cpu].kthread_work);
-		pid = kernel_thread(hip_worker, (void *) &hip_kthreads[cpu], CLONE_KERNEL | SIGCHLD);
+		hip_kthreads[cpu].killed = 0;
+		pid = kernel_thread(hip_worker, (void *) &hip_kthreads[cpu],
+				    CLONE_KERNEL | SIGCHLD);
 		if (IS_ERR(ERR_PTR(pid))) {
 			hip_kthreads[cpu].pid = 0;
 			HIP_ERROR("Failed to set up a kernel thread for HIP "
 				  "(cpu=%d, ret=%d)\n", cpu, pid);
 			goto out;
 		}
-		hip_kthreads[cpu].pid = pid;
-		HIP_INFO("Set up a kernel thread for HIP (cpu=%d,pid=%d)\n",
+		_HIP_INFO("Set up a kernel thread for HIP (cpu=%d,pid=%d)\n",
 			 cpu, pid);
 	}
 
@@ -2084,7 +2095,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_get_default_spi_out);
 
 	/* kill kernel threads */
-	for(i = 0; i < ARRAY_SIZE(hip_kthreads); i++) {
+	for(i = 0; i < num_possible_cpus() /* ARRAY_SIZE(hip_kthreads) */; i++) {
 		pid = hip_kthreads[i].pid;
 		cpu = hip_kthreads[i].cpu;
 		if (pid > 0) {
@@ -2092,7 +2103,11 @@ static void __exit hip_cleanup(void)
 			kill_proc(pid, SIGKILL, 1);
 			wait_for_completion(&hip_kthreads[i].kthread_work);
 		} else if (pid == 0) {
-			HIP_DEBUG("Already killed HIP kernel thread on cpu=%d ?\n", cpu);
+			_HIP_DEBUG("Already killed HIP kernel thread on cpu=%d ?\n", cpu);
+			if (hip_kthreads[i].killed) {
+				HIP_DEBUG("Waiting killed thread to complete on cpu=%d\n", cpu);
+				wait_for_completion(&hip_kthreads[i].kthread_work);
+			}
 		} else
 			HIP_DEBUG("Invalid HIP kernel thread pid=%d on cpu=%d\n", pid, cpu);
 	}
