@@ -1257,8 +1257,6 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 	return err;
 }
 
-#ifdef __KERNEL__
-
 /**
  * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter
  * @msg:     the message where the parameter will be appended
@@ -1387,7 +1385,6 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	return err;
 }
 
-#endif /* __KERNEL__ */
 
 /**
  * hip_build_param_signature2_contents - build HIP signature2

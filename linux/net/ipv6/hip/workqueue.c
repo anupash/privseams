@@ -274,12 +274,14 @@ int hip_do_work(struct hip_work_order *job)
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R2");
 			KRISU_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 			break;
+#ifdef __KERNEL__ /* XX FIXME: not supported yet... */
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_update(job->msg, &job->hdr.src_addr,
 						 &job->hdr.dst_addr);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
+#endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_RECV_NOTIFY:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_notify(job->msg, &job->hdr.src_addr,

@@ -13,9 +13,6 @@
 #include "misc.h"
 #include "debug.h"
 
-#ifndef __KERNEL__
-#endif
-
 // FIXME: hip_csum_send should be moved into its own file to make this
 // file kernel only.
 

@@ -429,7 +429,6 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 
 	return err;
 }
-#endif
 
 /**
  * hip_hadb_get_peer_addr - Get some of the peer's usable IPv6 address
@@ -454,7 +453,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 
 	/* assume already locked entry */
 
-	//hip_print_hit("entry def addr", &entry->preferred_address);
+	HIP_DEBUG_HIT("entry def addr", &entry->preferred_address);
 	if (ipv6_addr_any(&entry->preferred_address)) {
 		/* possibly ongoing bex */
 		_HIP_DEBUG("no preferred address set\n");
@@ -1083,6 +1082,7 @@ uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 	return 0;
 }
 
+#ifdef __KERNEL__ /* XX FIXME: not supported yet it the userspace impl ... */
 /* Get the SPI of the SA belonging to the interface through
    which we received the UPDATE */
 /* also sets updating flag of SPI to 1 */
@@ -1091,7 +1091,7 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 	struct hip_spi_in_item *item, *tmp;
 	int ifindex;
 
-	hip_print_hit("dst dev_addr", dev_addr);
+	HIP_DEBUG_HIT("dst dev_addr", dev_addr);
 	ifindex = hip_ipv6_devaddr2ifindex(dev_addr);
 	HIP_DEBUG("ifindex of dst dev=%d\n", ifindex);
 	if (!ifindex)
@@ -1108,6 +1108,7 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 	HIP_DEBUG("SPI not found for ifindex\n");
 	return 0;
 }
+#endif /* __KERNEL__ */
 
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
 {
