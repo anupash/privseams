@@ -247,11 +247,6 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	struct flowi fl, *ofl;
 	unsigned int csum;
 	unsigned int len;
-#ifdef CONFIG_HIP_DEBUG
-	char addrstr[INET6_ADDRSTRLEN];
-#endif
-	int mc_loop_prev = 0;
-	struct ipv6_pinfo *np;
 
 	if (out_fl == NULL) {
 		fl.proto = IPPROTO_HIP;
@@ -280,14 +275,9 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		goto out_err;
 	}
 
-#ifdef CONFIG_HIP_DEBUG
 	_HIP_DUMP_MSG(buf);
-	HIP_DEBUG("pkt out: len=%d proto=%d\n", len, ofl->proto);
-	hip_in6_ntop(&(ofl->fl6_src), addrstr);
-	HIP_DEBUG("pkt out: src IPv6 addr: %s\n", addrstr);
-	hip_in6_ntop(&(ofl->fl6_dst), addrstr);
-	HIP_DEBUG("pkt out: dst IPv6 addr: %s\n", addrstr);
-#endif
+	HIP_DEBUG_IN6ADDR("pkt out: src IPv6 addr: ", &(ofl->fl6_src));
+	HIP_DEBUG_IN6ADDR("pkt out: dst IPv6 addr: ", &(ofl->fl6_dst));
 
 	buf->checksum = csum_ipv6_magic(&(ofl->fl6_src), &(ofl->fl6_dst), len,
 					ofl->proto, csum);
@@ -299,19 +289,6 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	_HIP_HEXDUMP("whole packet", buf, len);
 
-	/* setting of mc_loop to 0 seems to fix a bug when
-	 * sending/receiving multicast packets, todo. check why this
-	 * is the case ..*/
-
-	/* TODO: move this to sk creation */
-	np = inet6_sk(hip_output_socket->sk);
-	if (np) {
-		mc_loop_prev = np->mc_loop;
-		_HIP_DEBUG("mc_loop_prev=%d\n", mc_loop_prev);
-		np->mc_loop = 0;
-	} else
-		HIP_ERROR("hmm..no np\n");
-
  	err = ip6_append_data(hip_output_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, ofl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err) {
@@ -319,9 +296,6 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		ip6_flush_pending_frames(hip_output_socket->sk);
 	} else
 		err = ip6_push_pending_frames(hip_output_socket->sk);
-
-	if (0 && np) /* restore previous mc_loop setting */
-		np->mc_loop = mc_loop_prev;
 
 	release_sock(hip_output_socket->sk);
  out_err:
