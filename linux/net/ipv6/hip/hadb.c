@@ -988,7 +988,7 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	return err;
 }
 
-int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
+int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 {
 	int err = 0;
 	struct hip_spi_out_item *item, *tmp;
@@ -1001,7 +1001,7 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	return err;
 }
 
-//int hip_hadb_add_spi(hip_ha_t *entry, int direction, uint32_t spi)
+
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data)
 {
 	int err = 0;
@@ -1009,9 +1009,9 @@ int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data)
 	HIP_DEBUG("direction=%d\n", direction);
 
 	if (direction == HIP_SPI_DIRECTION_IN)
-		err = hip_hadb_add_inbound_spi(entry, data);
+		err = hip_hadb_add_inbound_spi(entry, (struct hip_spi_in_item *) data);
 	else if (direction == HIP_SPI_DIRECTION_OUT)
-		err = hip_hadb_add_outbound_spi(entry, data);
+		err = hip_hadb_add_outbound_spi(entry, (struct hip_spi_out_item *) data);
 	else {
 		HIP_ERROR("bug, invalid direction %d\n", direction);
 		err = -EINVAL;

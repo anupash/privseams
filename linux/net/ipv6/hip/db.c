@@ -813,11 +813,99 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 	return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
 }
 
+
+/* MOVE TO HADB.C */
 void hip_ifindex2spi_map_add(hip_ha_t *entry, uint32_t spi, int ifindex)
 {
+	struct hip_spi_in_item *item, *tmp;
+	/* assumes that spi already exists */
 	HIP_DEBUG("spi=0x%x ifindex=%d\n", spi, ifindex);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		if (item->spi == spi) {
+			HIP_DEBUG("updated spi-ifindex mapping\n");
+			item->ifindex = ifindex;
+			break;
+		}
+		if (item->new_spi == spi) {
+			HIP_DEBUG("test: new_spi matches, updated spi-ifindex mapping\n");
+			item->ifindex = ifindex;
+			break;
+		}
+        }
+	HIP_DEBUG("returning\n");
+}
+
+void hip_ifindex2spi_map_del(hip_ha_t *entry, uint32_t spi)
+{
+	HIP_DEBUG("spi=0x%x\n", spi);
 	HIP_ERROR("TODO\n");
 }
+
+int hip_ifindex2spi_get_ifindex(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_spi_in_item *item, *tmp;
+	int ifindex = 0;
+
+	HIP_DEBUG("spi=0x%x\n", spi);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		if (item->spi == spi || item->new_spi == spi) {
+			ifindex = item->ifindex;
+			break;
+		}
+        }
+	return ifindex;
+}
+
+uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex)
+{
+	struct hip_spi_in_item *item, *tmp;
+	uint32_t spi = 0;
+
+	HIP_DEBUG("ifindex=%d\n", ifindex);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		if (item->ifindex == ifindex) {
+			spi = item->spi;
+			break;
+		}
+        }
+	return spi;
+}
+
+/* just pick one */
+uint32_t hip_get_spi_to_update(hip_ha_t *entry)
+{
+	struct hip_spi_in_item *item, *tmp;
+	uint32_t spi = 0;
+
+	/* lock ? */
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		if (!item->updating) {
+			item->updating = 1;
+			spi = item->spi;
+			break;
+		}
+        }
+	HIP_DEBUG("returning spi 0x%x\n", spi);
+	return spi;
+}
+
+void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
+{
+	struct hip_spi_in_item *item, *tmp;
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("item: ifindex=%d spi=0x%x updating=%d\n",
+			  item->ifindex, item->spi, item->updating);
+		if (item->spi == spi) {
+			item->updating = set;
+			break;
+		}
+        }
+}
+
 #if 0
 /* inbound IPsec SA mappings to devices, each netdev has its own SA */
 

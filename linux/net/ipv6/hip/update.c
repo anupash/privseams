@@ -1352,8 +1352,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			goto out_err;
 		}
 		HIP_DEBUG("New inbound SA created with New SPI (in)=0x%x\n", new_spi_in);
-		entry->new_spi_in = new_spi_in;
-		HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
+		// entry->new_spi_in = new_spi_in;
+		// HIP_DEBUG("stored New SPI (NEW_SPI_IN=0x%x)\n", new_spi_in);
 	} else
 		HIP_DEBUG("not creating a new SA\n");
 
@@ -1393,7 +1393,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		} else {
 			HIP_DEBUG("adding NES, Old SPI <> New SPI\n");
 			/* plain UPDATE or readdress with rekeying */
-			nes_old_spi = entry->spi_in;
+			//	nes_old_spi = entry->spi_in;
+			nes_old_spi = hip_get_spi_to_update(entry);
 			nes_new_spi = new_spi_in;
 		}
 
@@ -1471,11 +1472,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
  	}
 	_HIP_DEBUG("SIGNATURE added\n");
 
-	entry->state = HIP_STATE_REKEYING;
-	HIP_DEBUG("moved to state REKEYING\n");
-
 	/* send UPDATE */
-        HIP_DEBUG("Sending UPDATE packet\n");
         err = hip_hadb_get_peer_addr(entry, &daddr);
         if (err) {
                 HIP_DEBUG("hip_sdb_get_peer_addr err=%d\n", err);
@@ -1485,6 +1482,13 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	/* Store the last UPDATE ID value sent from us */
 	entry->update_id_out = update_id_out;
         HIP_DEBUG("Stored peer's outgoing UPDATE ID %u\n", update_id_out);
+
+	hip_set_spi_update_status(entry, nes_spi_old, 1);
+
+        HIP_DEBUG("Sending UPDATE packet\n");
+
+	entry->state = HIP_STATE_REKEYING;
+	HIP_DEBUG("moved to state REKEYING\n");
 
 	err = hip_csum_send(NULL, &daddr, update_packet);
 	if (err) {
@@ -1505,6 +1509,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
  out_err:
 	entry->state = HIP_STATE_ESTABLISHED;
 	HIP_DEBUG("fallbacked to state REKEYING (ok ?)\n");
+	hip_set_spi_update_status(entry, nes_spi_old, 0);
 	/* delete IPsec SA on failure */
 	if (new_spi_in)
 		hip_delete_sa(new_spi_in, &entry->hit_our);

@@ -810,7 +810,8 @@ struct hip_spi_in_item
 	uint32_t         spi;
 	uint32_t         new_spi; /* SPI is changed to this when rekeying */
 	int              ifindex; /* ifindex if the netdev to which this is related to */
-	unsigned long timestamp;
+	unsigned long    timestamp;
+	int              updating; /* UPDATE is in progress */
 	// int update_state_flags; /* TODO: move from hadb_state to here */
 };
 
