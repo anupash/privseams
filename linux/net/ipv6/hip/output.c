@@ -55,7 +55,7 @@
  *
  * The @skb will be freed if the return value is not zero.
  *
- * Returns: an nagative error value on failure. This will be interpreted as
+ * Returns: a negative error value on failure. This will be interpreted as
  *          "drop the packet".
  *          Zero if the destination address
  *          was an ordinary IPv6 address or the state was already established.
@@ -180,13 +180,14 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 #ifdef CONFIG_NETFILTER
 	if (skb && entry->skbtest) {
 //		struct rt6_info *rt;
+		HIP_DEBUG("skbtest is 1\n");
 
 		hip_print_hit("hdr->saddr", &(hdr->saddr));
 		hip_print_hit("hdr->daddr", &(hdr->daddr));
 
 		hip_print_hit("skb->nh.ipv6h.saddr", &(skb->nh.ipv6h->saddr));
 		hip_print_hit("skb->nh.ipv6h.daddr", &(skb->nh.ipv6h->daddr));
-		HIP_DEBUG("dst %p\n", skb->dst);
+		HIP_DEBUG("skb->dst %p\n", skb->dst);
 
 	entry->skbtest = 0;
 	err = 5;

@@ -37,12 +37,19 @@
 #include <net/ipv6.h>
 #include <linux/icmpv6.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 int esp6_output(struct sk_buff **pskb)
 {
 	int err;
 	int hdr_len;
 	struct dst_entry *dst = (*pskb)->dst;
 	struct xfrm_state *x  = dst->xfrm;
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	struct xfrm_state *x_tmp = NULL, *x_orig = x;
+#endif
 	struct ipv6hdr *top_iph;
 	struct ipv6_esp_hdr *esph;
 	struct crypto_tfm *tfm;
@@ -53,7 +60,38 @@ int esp6_output(struct sk_buff **pskb)
 	int alen;
 	int nfrags;
 
-printk(KERN_DEBUG "esp6_output, dst %p\n", dst);
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	/* I know, this is a huge performance drawback. Currently we
+	 * forget the cached SA from dst until I know how to fix the
+	 * problem without kernel panic. */
+	uint32_t default_spi;
+	int state_ok = 0;
+//	printk(KERN_DEBUG "esp6_output\n");
+
+	default_spi = HIP_CALLFUNC(hip_get_default_spi_out, 0)(&x->dst_hit, &state_ok);
+	if (!default_spi) {
+		printk(KERN_DEBUG "default_spi not found\n");
+		err = -EINVAL;
+		goto error;
+	}
+	if (!state_ok) {
+		printk(KERN_DEBUG "spi state not ok\n");
+		err = -EINVAL;
+		goto error;
+	}
+
+	x_tmp = xfrm_state_lookup((xfrm_address_t *)&x->dst_hit, htonl(default_spi),
+			      IPPROTO_ESP, AF_INET6);
+	if (!x_tmp) {
+		printk(KERN_DEBUG "spi 0x%x not found\n", default_spi);
+		err = -EINVAL;
+		goto error;
+	}
+
+//	printk(KERN_DEBUG "esp6_output, x_tmp: spi=0x%x oseq+1=0x%x\n", ntohl(x_tmp->id.spi), x_tmp->replay.oseq+1);
+	x = x_tmp;
+#endif
+
 	esp = x->data;
 	hdr_len = (*pskb)->h.raw - (*pskb)->data +
 		sizeof(*esph) + esp->conf.ivlen;
@@ -104,7 +142,7 @@ printk(KERN_DEBUG "esp6_output, dst %p\n", dst);
 #endif
 
 	esph->spi = x->id.spi;
-printk(KERN_DEBUG "esp6_output esph spi 0x%x\n", ntohl(esph->spi));
+//printk(KERN_DEBUG "esp6_output esph spi 0x%x\n", ntohl(esph->spi));
 	esph->seq_no = htonl(++x->replay.oseq);
 
 	if (esp->conf.ivlen)
@@ -138,6 +176,11 @@ printk(KERN_DEBUG "esp6_output esph spi 0x%x\n", ntohl(esph->spi));
 	err = 0;
 
 error:
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	if (x_tmp)
+		xfrm_state_put(x_tmp);
+	dst->xfrm = x_orig;
+#endif
 	return err;
 }
 
