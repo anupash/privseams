@@ -274,7 +274,6 @@ int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg,
 	return 0;
 }
 
-
 /**
  * hip_write_hmac - calculate hmac
  * @type: Type (digest algorithm) of HMAC
@@ -318,555 +317,108 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 }
 
 /**
- * hip_get_current_birthday - set the current birthday counter into the cookie
- * @bc: cookie where the birthday field is set to
+ * hip_unknown_spi - handle an unknown SPI by sending R1
+ * @daddr: destination IPv6 address of the R1 to be sent
  *
- * Birthday is stored in network byte order.
+ * IPsec input code calls this when it does not know about the SPI
+ * received. We reply by sending a R1 containing NULL destination HIT
+ * to the peer which sent the packet containing the unknown SPI.
  *
- * This function never touches the other fields of the cookie @bc.
+ * No we don't anymore :) [if this is in draft, then the impl. is now
+ * officially broken].
  */
-uint64_t hip_get_current_birthday(void)
+void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 {
-	return ((uint64_t)load_time << 32) | jiffies;
-}
+	if (!hip_is_hit(&(skb->nh.ipv6h->saddr)))
+		return;
 
-/**
- * hip_birthday_success - compare two birthday counters
- * @old_bd: birthday counter
- * @new_bd: birthday counter used when comparing against @old_bd
- *
- * Returns: 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
- */
-int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
-{
-	return new_bd > old_bd;
-}
-
-/**
- * hip_create_r1 - construct a new R1-payload
- * @src_hit: source HIT used in the packet
- *
- * Returns 0 on success, or negative on error
- */
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
-{
- 	struct hip_common *msg;
- 	int err = 0;
-	int use_rsa = 0;
- 	u8 *dh_data = NULL;
- 	int dh_size,written, mask;
- 	/* Supported HIP and ESP transforms. */
- 	hip_transform_suite_t transform_hip_suite[] = {
-		HIP_HIP_AES_SHA1,
-		HIP_HIP_3DES_SHA1,
-		HIP_HIP_NULL_SHA1
-
-};
- 	hip_transform_suite_t transform_esp_suite[] = {
-		HIP_ESP_AES_SHA1,
-		HIP_ESP_NULL_SHA1,
-		HIP_ESP_3DES_SHA1
-
-};
- 	struct hip_host_id  *host_id_private = NULL;
- 	struct hip_host_id  *host_id_pub = NULL;
- 	u8 *signature = NULL;
-
- 	msg = hip_msg_alloc();
- 	if (!msg) {
-		err = -ENOMEM;
-		HIP_ERROR("msg alloc failed\n");
-		goto out_err;
+	/* draft: If the R1 is a response to an ESP packet with an unknown
+	   SPI, the Initiator HIT SHOULD be zero. */
+	HIP_DEBUG("Received Unknown SPI: 0x%x\n", ntohl(spi));
+	HIP_DEBUG("TODO: rekey old SA ?\n");  /* and/or TODO: send NOTIFY ? */
+	return;
+#if 0
+	/* We cannot know the destination HIT */
+	err = hip_xmit_r1(skb, NULL);
+	if (err) {
+		HIP_ERROR("hip_xmit_r1 failed (%d)\n", err);
 	}
-
- 	/* allocate memory for writing Diffie-Hellman shared secret */
- 	dh_size = hip_get_dh_size(HIP_DEFAULT_DH_GROUP_ID);
- 	if (dh_size == 0) {
- 		HIP_ERROR("Could not get dh size\n");
- 		goto out_err;
- 	}
-
- 	dh_data = HIP_MALLOC(dh_size, GFP_ATOMIC);
- 	if (!dh_data) {
- 		HIP_ERROR("Failed to alloc memory for dh_data\n");
-  		goto out_err;
-  	}
-	memset(dh_data, 0, dh_size);
-
-	_HIP_DEBUG("dh_size=%d\n", dh_size);
- 	/* Get a localhost identity, allocate memory for the public key part
- 	   and extract the public key from the private key. The public key is
- 	   needed for writing the host id parameter in R1. */
-
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
- 	if (!host_id_private) {
- 		HIP_ERROR("Could not acquire localhost host id\n");
- 		goto out_err;
- 	}
-
-	HIP_DEBUG("private hi len: %d\n",
-		  hip_get_param_total_len(host_id_private));
-
-	HIP_HEXDUMP("Our pri host id\n", host_id_private,
-		    hip_get_param_total_len(host_id_private));
-
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
-	if (!host_id_pub) {
-		HIP_ERROR("Could not acquire localhost public key\n");
-		goto out_err;
-	}
-
-	HIP_HEXDUMP("Our pub host id\n", host_id_pub,
-		    hip_get_param_total_len(host_id_pub));
-	
-	/* check for the used algorithm */
-	if (hip_get_host_id_algo(host_id_pub) == HIP_HI_RSA) {
-			use_rsa = 1;
-	} else if (hip_get_host_id_algo(host_id_pub) != HIP_HI_DSA) {
-			HIP_ERROR("Unsupported algorithm:%d\n", 
-					  hip_get_host_id_algo(host_id_pub));
-			goto out_err;
-	}
-
-	signature = HIP_MALLOC(MAX(HIP_DSA_SIGNATURE_LEN,
-				HIP_RSA_SIGNATURE_LEN), 
-			    GFP_KERNEL);
-	if(!signature) {
-		HIP_ERROR("Could not allocate signature \n");
-		goto out_err;
-	}
-	
- 	/* Ready to begin building of the R1 packet */
-	//mask = HIP_CONTROL_NONE;
-	//mask = HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK;
-	mask = HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT;
-	HIP_DEBUG("mask 1=0x%x\n", mask);
-	mask |= HIP_CONTROL_DHT_TYPE1 << HIP_CONTROL_DHT_SHIFT;
-	HIP_DEBUG("mask 2=0x%x\n", mask);
-#ifdef CONFIG_HIP_RVS
-	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
-	HIP_DEBUG("mask 3=0x%x\n", mask);
- 	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
-
-	/********** R1_COUNTER (OPTIONAL) *********/
-
- 	/********** PUZZLE ************/
-	{
-		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K,
-					     42 /* 2^(42-32) sec lifetime */, 0, 0);
-		if (err) {
-			HIP_ERROR("Cookies were burned. Bummer!\n");
-			goto out_err;
-		}
-	}
-
- 	/********** Diffie-Hellman **********/
-	written = hip_insert_dh(dh_data,dh_size,HIP_DEFAULT_DH_GROUP_ID);
-	if (written < 0) {
- 		HIP_ERROR("Could not extract DH public key\n");
- 		goto out_err;
- 	} 
-
- 	err = hip_build_param_diffie_hellman_contents(msg,
-						      HIP_DEFAULT_DH_GROUP_ID,
-						      dh_data, written);
- 	if (err) {
- 		HIP_ERROR("Building of DH failed (%d)\n", err);
- 		goto out_err;
- 	}
-
- 	/********** HIP transform. **********/
- 	err = hip_build_param_transform(msg,
- 					HIP_PARAM_HIP_TRANSFORM,
- 					transform_hip_suite,
- 					sizeof(transform_hip_suite) /
- 					sizeof(hip_transform_suite_t));
- 	if (err) {
- 		HIP_ERROR("Building of HIP transform failed\n");
- 		goto out_err;
- 	}
-
- 	/********** ESP-ENC transform. **********/
- 	err = hip_build_param_transform(msg,
- 					HIP_PARAM_ESP_TRANSFORM,
- 					transform_esp_suite,
- 					sizeof(transform_esp_suite) /
- 					sizeof(hip_transform_suite_t));
- 	if (err) {
- 		HIP_ERROR("Building of ESP transform failed\n");
- 		goto out_err;
- 	}
-
- 	/********** Host_id **********/
-
-	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
-		   hip_get_param_host_id_hostname(host_id_pub));
-	err = hip_build_param(msg, host_id_pub);
- 	if (err) {
- 		HIP_ERROR("Building of host id failed\n");
- 		goto out_err;
- 	}
-
-	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
-
- 	/********** Signature 2 **********/
- 	if (!hip_create_signature(msg,
- 				  hip_get_msg_total_len(msg),
- 				  host_id_private,
- 				  signature)) {
- 		HIP_ERROR("Signing of R1 failed.\n");
- 		goto out_err;
- 	}		
-
-	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
-
-	if (use_rsa) {
-	  err = hip_build_param_signature2_contents(msg,	     
-						    signature,
-						    HIP_RSA_SIGNATURE_LEN,
-						    HIP_SIG_RSA);
-	} else {
-	  err = hip_build_param_signature2_contents(msg,
-						    signature,
-						    HIP_DSA_SIGNATURE_LEN,
-						    HIP_SIG_DSA);
-	}
-	
- 	if (err) {
- 		HIP_ERROR("Building of signature failed (%d) on R1\n", err);
- 		goto out_err;
- 	}
-
-	/********** ECHO_REQUEST (OPTIONAL) *********/
-
-	/* Fill puzzle parameters */
-	{
-		struct hip_puzzle *pz;
-		uint64_t random_i;
-
-		pz = hip_get_param(msg, HIP_PARAM_PUZZLE);
-		if (!pz) {
-			HIP_ERROR("Internal error\n");
-			goto out_err;
-		}
-
-		// FIX ME: this does not always work:
-		//get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
-
-		/* hardcode kludge */
-		pz->opaque[0] = 'H';
-		pz->opaque[1] = 'I';
-		//pz->opaque[2] = 'P';
-		/* todo: remove random_i variable */
-		get_random_bytes(&random_i,sizeof(random_i));
-		pz->I = random_i;
-	}
-
- 	/************** Packet ready ***************/
-
- 	if (host_id_pub)
- 		kfree(host_id_pub);
- 	if (dh_data)
- 		kfree(dh_data);
-
-	HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
-
-	return msg;
-
-  out_err:
-	if (signature) 
-		kfree(signature);
-	if (host_id_pub)
-		kfree(host_id_pub);
- 	if (host_id_private)
- 		kfree(host_id_private);
- 	if (msg)
- 		kfree(msg);
- 	if (dh_data)
- 		kfree(dh_data);
-
-  	return NULL;
 }
 
 /**
- * hip_enc_key_length - get encryption key length of a transform
- * @tid: transform
+ * hip_init_sock - initialize HIP control socket
  *
- * Returns: the encryption key length based on the chosen transform,
- * otherwise < 0 on error.
+ * Returns: 0 if successful, else < 0.
  */
-int hip_enc_key_length(int tid)
-{
-	int ret = -1;
-
-	switch(tid) {
-	case HIP_ESP_AES_SHA1:
-		ret = 16;
-		break;
-	case HIP_ESP_3DES_SHA1:
-		ret = 24;
-		break;
-	case HIP_ESP_NULL_SHA1:
-	case HIP_ESP_NULL_NULL:
-		ret = 0;
-		break;
-	default:
-		HIP_ERROR("unknown tid=%d\n", tid);
-		HIP_ASSERT(0);
-		break;
-	}
-
-	return ret;
-}
-
-
-int hip_hmac_key_length(int tid)
-{
-	int ret = -1;
-	switch(tid) {
-       	case HIP_ESP_AES_SHA1:
-	  //		ret = 16;
-	  //		break;
-	case HIP_ESP_3DES_SHA1:
-	case HIP_ESP_NULL_SHA1:
-		ret = 20;
-		break;
-	case HIP_ESP_NULL_NULL:
-		ret = 0;
-		break;
-	default:
-		HIP_ERROR("unknown tid=%d\n", tid);
-		HIP_ASSERT(0);
-		break;
-	}
-
-	return ret;
-}
-
-/**
- * hip_transform_key_length - get transform key length of a transform
- * @tid: transform
- *
- * Returns: the transform key length based on the chosen transform,
- * otherwise < 0 on error.
- */
-int hip_transform_key_length(int tid)
-{
-	int ret = -1;
-
-	switch(tid) {
-	case HIP_HIP_AES_SHA1:
-		ret = 16;
-		break;
-	case HIP_HIP_3DES_SHA1:
-		ret = 24;
-		break;
-	case HIP_HIP_NULL_SHA1: // XX FIXME: SHOULD BE NULL_SHA1? 
-		ret = 0;
-		break;
-	default:
-		HIP_ERROR("unknown tid=%d\n", tid);
-		HIP_ASSERT(0);
-		break;
-	}
-
-	return ret;
-}
-
-
-/**
- * hip_auth_key_length_esp - get authentication key length of a transform
- * @tid: transform
- *
- * Returns: the authentication key length based on the chosen transform.
- * otherwise < 0 on error.
- */
-int hip_auth_key_length_esp(int tid)
-{
-	int ret = -1;
-
-	switch(tid) {
-	case HIP_ESP_AES_SHA1:
-		//ret = 16;
-		//break;
-	case HIP_ESP_NULL_SHA1:
-	case HIP_ESP_3DES_SHA1:
-		ret = 20;
-		break;
-	case HIP_ESP_NULL_NULL:
-		ret = 0;
-		break;
-	default:
-		HIP_ERROR("unknown tid=%d\n", tid);
-		HIP_ASSERT(0);
-		break;
-	}
-
-	return ret;
-}
-
-/**
- * hip_store_base_exchange_keys - store the keys negotiated in base exchange
- * @ctx:             the context inside which the key data will copied around
- * @is_initiator:    true if the localhost is the initiator, or false if
- *                   the localhost is the responder
- *
- * Returns: 0 if everything was stored successfully, otherwise < 0.
- */
-int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
-				  struct hip_context *ctx, int is_initiator)
+static int hip_init_output_socket(void)
 {
 	int err = 0;
-	int hmac_key_len, enc_key_len, auth_key_len;
+	struct ipv6_pinfo *np;
 
-	hmac_key_len = hip_hmac_key_length(entry->esp_transform);
-	enc_key_len = hip_enc_key_length(entry->esp_transform);
-	auth_key_len = hip_auth_key_length_esp(entry->esp_transform);
-
-	memcpy(&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
-	memcpy(&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
-
-	memcpy(&entry->esp_in.key, &ctx->esp_in.key, enc_key_len);
-	memcpy(&entry->auth_in.key, &ctx->auth_in.key, auth_key_len);
-
-	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
-	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
-
-	hip_update_entry_keymat(entry, ctx->current_keymat_index,
-				ctx->keymat_calc_index, ctx->current_keymat_K);
-
-	if (entry->dh_shared_key) {
-		HIP_DEBUG("kfreeing old dh_shared_key\n");
-		kfree(entry->dh_shared_key);
+	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_output_socket);
+	if (err) {
+		HIP_ERROR("Failed to allocate the HIP control socket (err=%d)\n", err);
+		goto out;
 	}
 
-	entry->dh_shared_key_len = 0;
-	/* todo: reuse pointer, no HIP_MALLOC */
-	entry->dh_shared_key = HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
-	if (!entry->dh_shared_key) {
-		HIP_ERROR("entry dh_shared HIP_MALLOC failed\n");
-		err = -ENOMEM;
-		goto out_err;
+	/* prevent multicast packets sent out coming back to us */
+	np = inet6_sk(hip_output_socket->sk);
+	if (!np) {
+		HIP_ERROR("Could not get inet6 sock of HIP control socket\n");
+		err = -EFAULT;
+		goto out;
+	} else {
+		np->mc_loop = 0;
 	}
-
-	entry->dh_shared_key_len = ctx->dh_shared_key_len;
-	memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
-	_HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
-	_HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
-	return err;
-
- out_err:
-	if (entry->dh_shared_key)
-		kfree(entry->dh_shared_key);
-
+	/* TODO: same for IPv4 ? */
+ out:
 	return err;
 }
 
 /**
- * hip_select_hip_transform - select a HIP transform to use
- * @ht: HIP_TRANSFORM payload where the transform is selected from
- *
- * Returns: the first acceptable Transform-ID, otherwise < 0 if no
- * acceptable transform was found. The return value is in host byte order.
+ * hip_uninit_sock - uninitialize HIP control socket
  */
-hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
+void hip_uninit_output_socket(void)
 {
-	hip_transform_suite_t tid = 0;
-	int i;
-	int length;
-	hip_transform_suite_t *suggestion;
-
-	length = ntohs(ht->length);
-	suggestion = (hip_transform_suite_t *) &ht->suite_id[0];
-
-	if ( (length >> 1) > 6) {
-		HIP_ERROR("Too many transforms (%d)\n", length >> 1);
-		goto out;
-	}
-
-	for (i=0; i<length; i++) {
-		switch(ntohs(*suggestion)) {
-
-		case HIP_HIP_AES_SHA1:
-		case HIP_HIP_3DES_SHA1:
-		case HIP_HIP_NULL_SHA1:
-			tid = ntohs(*suggestion);
-			goto out;
-			break;
-
-		default:
-			/* Specs don't say what to do when unknown are found. 
-			 * We ignore.
-			 */
-			HIP_ERROR("Unknown HIP suite id suggestion (%u)\n",
-				  ntohs(*suggestion));
-			break;
-		}
-		suggestion++;
-	}
-
- out:
-	if(tid == 0)
-		HIP_ERROR("None HIP transforms accepted\n");
-	else
-		HIP_DEBUG("Chose HIP transform: %d\n", tid);
-
-	return tid;
+	sock_release(hip_output_socket);
+	return;
 }
 
-
 /**
- * hip_select_esp_transform - select an ESP transform to use
- * @ht: ESP_TRANSFORM payload where the transform is selected from
+ * hip_get_addr - get an IPv6 address of given HIT
+ * @hit: HIT of which IPv6 address is to be copied
+ * @addr: where the IPv6 address is copied to
  *
- * Returns: the first acceptable Suite-ID. otherwise < 0 if no
- * acceptable Suite-ID was found.
+ * Returns: 1 if successful (a peer address was copied to @addr),
+ * else 0.
  */
-hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
+int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 {
-	hip_transform_suite_t tid = 0;
-	int i;
-	int length;
-	hip_transform_suite_t *suggestion;
+	hip_ha_t *entry;
+	char str[INET6_ADDRSTRLEN];
 
-	length = hip_get_param_contents_len(ht);
-	suggestion = (uint16_t*) &ht->suite_id[0];
+	if (!hip_is_hit(hit))
+		return 0;
 
-	if (length > sizeof(struct hip_esp_transform) -
-	    sizeof(struct hip_common)) {
-		HIP_ERROR("Too many transforms\n");
-		goto out;
+	hip_in6_ntop(hit,str);
+
+	entry = hip_hadb_find_byhit(hit);
+	if (!entry) {
+		HIP_ERROR("Unknown HIT: %s\n", str);
+		return 0;
 	}
 
-	for (i=0; i<length; i++) {
-		switch(ntohs(*suggestion)) {
-
-		case HIP_ESP_AES_SHA1:
-		case HIP_ESP_NULL_NULL:
-		case HIP_ESP_3DES_SHA1:
-		case HIP_ESP_NULL_SHA1:
-			tid = ntohs(*suggestion);
-			goto out;
-			break;
-		default:
-			/* Specs don't say what to do when unknowns are found. 
-			 * We ignore.
-			 */
-			HIP_ERROR("Unknown ESP suite id suggestion (%u)\n",
-				  ntohs(*suggestion));
-			break;
-		}
-		suggestion++;
+	if (hip_hadb_get_peer_addr(entry, addr) < 0) {
+		hip_put_ha(entry);
+		return 0;
 	}
+	hip_put_ha(entry);
 
- out:
-	_HIP_DEBUG("Took ESP transform %d\n", tid);
+	hip_in6_ntop(addr, str);
+	_HIP_DEBUG("selected dst addr: %s\n", str);
 
-	if(tid == 0)
-		HIP_ERROR("Faulty ESP transform\n");
-
-	return tid;
+	return 1;
 }
 
 /**
@@ -1016,113 +568,6 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 		kfree(result);
 	return err;
 }
-
-
-/**
- * hip_unknown_spi - handle an unknown SPI by sending R1
- * @daddr: destination IPv6 address of the R1 to be sent
- *
- * IPsec input code calls this when it does not know about the SPI
- * received. We reply by sending a R1 containing NULL destination HIT
- * to the peer which sent the packet containing the unknown SPI.
- *
- * No we don't anymore :) [if this is in draft, then the impl. is now
- * officially broken].
- */
-void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
-{
-	if (!hip_is_hit(&(skb->nh.ipv6h->saddr)))
-		return;
-
-	/* draft: If the R1 is a response to an ESP packet with an unknown
-	   SPI, the Initiator HIT SHOULD be zero. */
-	HIP_DEBUG("Received Unknown SPI: 0x%x\n", ntohl(spi));
-	HIP_DEBUG("TODO: rekey old SA ?\n");  /* and/or TODO: send NOTIFY ? */
-	return;
-#if 0
-	/* We cannot know the destination HIT */
-	err = hip_xmit_r1(skb, NULL);
-	if (err) {
-		HIP_ERROR("hip_xmit_r1 failed (%d)\n", err);
-	}
-#endif
-}
-
-/**
- * hip_init_sock - initialize HIP control socket
- *
- * Returns: 0 if successful, else < 0.
- */
-static int hip_init_output_socket(void)
-{
-	int err = 0;
-	struct ipv6_pinfo *np;
-
-	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_output_socket);
-	if (err) {
-		HIP_ERROR("Failed to allocate the HIP control socket (err=%d)\n", err);
-		goto out;
-	}
-
-	/* prevent multicast packets sent out coming back to us */
-	np = inet6_sk(hip_output_socket->sk);
-	if (!np) {
-		HIP_ERROR("Could not get inet6 sock of HIP control socket\n");
-		err = -EFAULT;
-		goto out;
-	} else {
-		np->mc_loop = 0;
-	}
-	/* TODO: same for IPv4 ? */
- out:
-	return err;
-}
-
-/**
- * hip_uninit_sock - uninitialize HIP control socket
- */
-void hip_uninit_output_socket(void)
-{
-	sock_release(hip_output_socket);
-	return;
-}
-
-/**
- * hip_get_addr - get an IPv6 address of given HIT
- * @hit: HIT of which IPv6 address is to be copied
- * @addr: where the IPv6 address is copied to
- *
- * Returns: 1 if successful (a peer address was copied to @addr),
- * else 0.
- */
-int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
-{
-	hip_ha_t *entry;
-	char str[INET6_ADDRSTRLEN];
-
-	if (!hip_is_hit(hit))
-		return 0;
-
-	hip_in6_ntop(hit,str);
-
-	entry = hip_hadb_find_byhit(hit);
-	if (!entry) {
-		HIP_ERROR("Unknown HIT: %s\n", str);
-		return 0;
-	}
-
-	if (hip_hadb_get_peer_addr(entry, addr) < 0) {
-		hip_put_ha(entry);
-		return 0;
-	}
-	hip_put_ha(entry);
-
-	hip_in6_ntop(addr, str);
-	_HIP_DEBUG("selected dst addr: %s\n", str);
-
-	return 1;
-}
-
 
 /**
  * hip_get_hits - get this host's HIT to be used in source HIT

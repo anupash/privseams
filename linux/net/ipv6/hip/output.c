@@ -114,6 +114,253 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 }
 
 /**
+ * hip_create_r1 - construct a new R1-payload
+ * @src_hit: source HIT used in the packet
+ *
+ * Returns 0 on success, or negative on error
+ */
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
+{
+ 	struct hip_common *msg;
+ 	int err = 0;
+	int use_rsa = 0;
+ 	u8 *dh_data = NULL;
+ 	int dh_size,written, mask;
+ 	/* Supported HIP and ESP transforms. */
+ 	hip_transform_suite_t transform_hip_suite[] = {
+		HIP_HIP_AES_SHA1,
+		HIP_HIP_3DES_SHA1,
+		HIP_HIP_NULL_SHA1
+
+};
+ 	hip_transform_suite_t transform_esp_suite[] = {
+		HIP_ESP_AES_SHA1,
+		HIP_ESP_NULL_SHA1,
+		HIP_ESP_3DES_SHA1
+
+};
+ 	struct hip_host_id  *host_id_private = NULL;
+ 	struct hip_host_id  *host_id_pub = NULL;
+ 	u8 *signature = NULL;
+
+ 	msg = hip_msg_alloc();
+ 	if (!msg) {
+		err = -ENOMEM;
+		HIP_ERROR("msg alloc failed\n");
+		goto out_err;
+	}
+
+ 	/* allocate memory for writing Diffie-Hellman shared secret */
+ 	dh_size = hip_get_dh_size(HIP_DEFAULT_DH_GROUP_ID);
+ 	if (dh_size == 0) {
+ 		HIP_ERROR("Could not get dh size\n");
+ 		goto out_err;
+ 	}
+
+ 	dh_data = HIP_MALLOC(dh_size, GFP_ATOMIC);
+ 	if (!dh_data) {
+ 		HIP_ERROR("Failed to alloc memory for dh_data\n");
+  		goto out_err;
+  	}
+	memset(dh_data, 0, dh_size);
+
+	_HIP_DEBUG("dh_size=%d\n", dh_size);
+ 	/* Get a localhost identity, allocate memory for the public key part
+ 	   and extract the public key from the private key. The public key is
+ 	   needed for writing the host id parameter in R1. */
+
+	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+ 	if (!host_id_private) {
+ 		HIP_ERROR("Could not acquire localhost host id\n");
+ 		goto out_err;
+ 	}
+
+	HIP_DEBUG("private hi len: %d\n",
+		  hip_get_param_total_len(host_id_private));
+
+	HIP_HEXDUMP("Our pri host id\n", host_id_private,
+		    hip_get_param_total_len(host_id_private));
+
+	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+	if (!host_id_pub) {
+		HIP_ERROR("Could not acquire localhost public key\n");
+		goto out_err;
+	}
+
+	HIP_HEXDUMP("Our pub host id\n", host_id_pub,
+		    hip_get_param_total_len(host_id_pub));
+	
+	/* check for the used algorithm */
+	if (hip_get_host_id_algo(host_id_pub) == HIP_HI_RSA) {
+			use_rsa = 1;
+	} else if (hip_get_host_id_algo(host_id_pub) != HIP_HI_DSA) {
+			HIP_ERROR("Unsupported algorithm:%d\n", 
+					  hip_get_host_id_algo(host_id_pub));
+			goto out_err;
+	}
+
+	signature = HIP_MALLOC(MAX(HIP_DSA_SIGNATURE_LEN,
+				HIP_RSA_SIGNATURE_LEN), 
+			    GFP_KERNEL);
+	if(!signature) {
+		HIP_ERROR("Could not allocate signature \n");
+		goto out_err;
+	}
+	
+ 	/* Ready to begin building of the R1 packet */
+	//mask = HIP_CONTROL_NONE;
+	//mask = HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK;
+	mask = HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT;
+	HIP_DEBUG("mask 1=0x%x\n", mask);
+	mask |= HIP_CONTROL_DHT_TYPE1 << HIP_CONTROL_DHT_SHIFT;
+	HIP_DEBUG("mask 2=0x%x\n", mask);
+#ifdef CONFIG_HIP_RVS
+	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
+#endif
+	HIP_DEBUG("mask 3=0x%x\n", mask);
+ 	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
+
+	/********** R1_COUNTER (OPTIONAL) *********/
+
+ 	/********** PUZZLE ************/
+	{
+		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K,
+					     42 /* 2^(42-32) sec lifetime */, 0, 0);
+		if (err) {
+			HIP_ERROR("Cookies were burned. Bummer!\n");
+			goto out_err;
+		}
+	}
+
+ 	/********** Diffie-Hellman **********/
+	written = hip_insert_dh(dh_data,dh_size,HIP_DEFAULT_DH_GROUP_ID);
+	if (written < 0) {
+ 		HIP_ERROR("Could not extract DH public key\n");
+ 		goto out_err;
+ 	} 
+
+ 	err = hip_build_param_diffie_hellman_contents(msg,
+						      HIP_DEFAULT_DH_GROUP_ID,
+						      dh_data, written);
+ 	if (err) {
+ 		HIP_ERROR("Building of DH failed (%d)\n", err);
+ 		goto out_err;
+ 	}
+
+ 	/********** HIP transform. **********/
+ 	err = hip_build_param_transform(msg,
+ 					HIP_PARAM_HIP_TRANSFORM,
+ 					transform_hip_suite,
+ 					sizeof(transform_hip_suite) /
+ 					sizeof(hip_transform_suite_t));
+ 	if (err) {
+ 		HIP_ERROR("Building of HIP transform failed\n");
+ 		goto out_err;
+ 	}
+
+ 	/********** ESP-ENC transform. **********/
+ 	err = hip_build_param_transform(msg,
+ 					HIP_PARAM_ESP_TRANSFORM,
+ 					transform_esp_suite,
+ 					sizeof(transform_esp_suite) /
+ 					sizeof(hip_transform_suite_t));
+ 	if (err) {
+ 		HIP_ERROR("Building of ESP transform failed\n");
+ 		goto out_err;
+ 	}
+
+ 	/********** Host_id **********/
+
+	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
+		   hip_get_param_host_id_hostname(host_id_pub));
+	err = hip_build_param(msg, host_id_pub);
+ 	if (err) {
+ 		HIP_ERROR("Building of host id failed\n");
+ 		goto out_err;
+ 	}
+
+	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
+
+ 	/********** Signature 2 **********/
+ 	if (!hip_create_signature(msg,
+ 				  hip_get_msg_total_len(msg),
+ 				  host_id_private,
+ 				  signature)) {
+ 		HIP_ERROR("Signing of R1 failed.\n");
+ 		goto out_err;
+ 	}		
+
+	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
+
+	if (use_rsa) {
+	  err = hip_build_param_signature2_contents(msg,	     
+						    signature,
+						    HIP_RSA_SIGNATURE_LEN,
+						    HIP_SIG_RSA);
+	} else {
+	  err = hip_build_param_signature2_contents(msg,
+						    signature,
+						    HIP_DSA_SIGNATURE_LEN,
+						    HIP_SIG_DSA);
+	}
+	
+ 	if (err) {
+ 		HIP_ERROR("Building of signature failed (%d) on R1\n", err);
+ 		goto out_err;
+ 	}
+
+	/********** ECHO_REQUEST (OPTIONAL) *********/
+
+	/* Fill puzzle parameters */
+	{
+		struct hip_puzzle *pz;
+		uint64_t random_i;
+
+		pz = hip_get_param(msg, HIP_PARAM_PUZZLE);
+		if (!pz) {
+			HIP_ERROR("Internal error\n");
+			goto out_err;
+		}
+
+		// FIX ME: this does not always work:
+		//get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
+
+		/* hardcode kludge */
+		pz->opaque[0] = 'H';
+		pz->opaque[1] = 'I';
+		//pz->opaque[2] = 'P';
+		/* todo: remove random_i variable */
+		get_random_bytes(&random_i,sizeof(random_i));
+		pz->I = random_i;
+	}
+
+ 	/************** Packet ready ***************/
+
+ 	if (host_id_pub)
+ 		kfree(host_id_pub);
+ 	if (dh_data)
+ 		kfree(dh_data);
+
+	HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
+
+	return msg;
+
+  out_err:
+	if (signature) 
+		kfree(signature);
+	if (host_id_pub)
+		kfree(host_id_pub);
+ 	if (host_id_private)
+ 		kfree(host_id_private);
+ 	if (msg)
+ 		kfree(msg);
+ 	if (dh_data)
+ 		kfree(dh_data);
+
+  	return NULL;
+}
+
+/**
  * hip_xmit_r1 - transmit an R1 packet to the network
  * @dst_addr: the destination IPv6 address where the R1 should be sent
  * @dst_hit:  the destination HIT of peer

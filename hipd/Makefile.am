@@ -11,7 +11,7 @@ include $(HIPL)/Makefile.am.global
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE
 
-include_HEADERS = hipd.h
+include_HEADERS = hipd.h crypto.h netlink.h
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 

@@ -36,4 +36,17 @@ int hip_hash_spi(void *spi, int range);
 int hip_match_hit(void *hitA, void *hitB);
 const char *hip_algorithm_to_string(int algo);
 
+uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
+hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
+hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
+int hip_auth_key_length_esp(int tid);
+int hip_transform_key_length(int tid);
+int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
+				  struct hip_context *ctx, int is_initiator);
+int hip_hmac_key_length(int tid);
+int hip_enc_key_length(int tid);
+int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
+uint64_t hip_get_current_birthday(void);
+
 #endif /* HIP_MISC_H */

@@ -91,31 +91,18 @@ extern int kmm; // hip.c
 extern struct timeval gtv_start, gtv_stop, gtv_result;
 extern int gtv_inuse;
 
-#ifdef __KERNEL__
 extern spinlock_t dh_table_lock;
 
+#ifdef __KERNEL__
 int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
 			    int nsg, void *out);
 int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
 			     const u8 *addr, const u32 size);
 #endif /* __KERNEL__ */
-
-uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
-hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
-hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
-int hip_auth_key_length_esp(int tid);
-int hip_transform_key_length(int tid);
-int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
-				  struct hip_context *ctx, int is_initiator);
-int hip_hmac_key_length(int tid);
-int hip_enc_key_length(int tid);
-int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
-int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
-uint64_t hip_get_current_birthday(void);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
+int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
 
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
 extern struct crypto_tfm *impl_sha1;

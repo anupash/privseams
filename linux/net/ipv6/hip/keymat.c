@@ -68,11 +68,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		     struct in6_addr *hit2, u8 *calc_index)
 {
 	int err;
-#ifdef __KERNEL__
 	struct crypto_tfm *sha = impl_sha1;
-#else
-	struct crypto_tfm *sha = impl_sha1;
-#endif /* __KERNEL__ */
 	uint8_t index_nbr = 1;
 	int dstoffset = 0;
 	void *seedkey;
@@ -116,7 +112,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 
 	crypto_digest_digest(sha, sg, nsg, dstbuf);
 #else
-	// FIXME: is this correct
+	// XX FIXME: is this correct
 	crypto_digest_digest(sha, shabuffer, 0, dstbuf);
 #endif
 
@@ -163,7 +159,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	_HIP_DEBUG("keymat index_nbr=%u\n", index_nbr);
 	_HIP_HEXDUMP("GENERATED KEYMAT: ", dstbuf, dstbuflen);
 	if (shabuffer)
-		kfree(shabuffer);
+		HIP_FREE(shabuffer);
 
 	return;
 }
@@ -335,7 +331,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		   *keymat_index, *calc_index);
  out_err:
 	if(tmp_data)
-		kfree(tmp_data);
+		HIP_FREE(tmp_data);
 	return err;
 }
 

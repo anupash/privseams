@@ -366,3 +366,309 @@ const char *hip_algorithm_to_string(int algo)
 		str = algos[1];
 	return str;
 }
+
+/**
+ * hip_get_current_birthday - set the current birthday counter into the cookie
+ * @bc: cookie where the birthday field is set to
+ *
+ * Birthday is stored in network byte order.
+ *
+ * This function never touches the other fields of the cookie @bc.
+ */
+uint64_t hip_get_current_birthday(void)
+{
+	return ((uint64_t)load_time << 32) | jiffies;
+}
+
+/**
+ * hip_birthday_success - compare two birthday counters
+ * @old_bd: birthday counter
+ * @new_bd: birthday counter used when comparing against @old_bd
+ *
+ * Returns: 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
+ */
+int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
+{
+	return new_bd > old_bd;
+}
+
+
+/**
+ * hip_enc_key_length - get encryption key length of a transform
+ * @tid: transform
+ *
+ * Returns: the encryption key length based on the chosen transform,
+ * otherwise < 0 on error.
+ */
+int hip_enc_key_length(int tid)
+{
+	int ret = -1;
+
+	switch(tid) {
+	case HIP_ESP_AES_SHA1:
+		ret = 16;
+		break;
+	case HIP_ESP_3DES_SHA1:
+		ret = 24;
+		break;
+	case HIP_ESP_NULL_SHA1:
+	case HIP_ESP_NULL_NULL:
+		ret = 0;
+		break;
+	default:
+		HIP_ERROR("unknown tid=%d\n", tid);
+		HIP_ASSERT(0);
+		break;
+	}
+
+	return ret;
+}
+
+
+int hip_hmac_key_length(int tid)
+{
+	int ret = -1;
+	switch(tid) {
+       	case HIP_ESP_AES_SHA1:
+	  //		ret = 16;
+	  //		break;
+	case HIP_ESP_3DES_SHA1:
+	case HIP_ESP_NULL_SHA1:
+		ret = 20;
+		break;
+	case HIP_ESP_NULL_NULL:
+		ret = 0;
+		break;
+	default:
+		HIP_ERROR("unknown tid=%d\n", tid);
+		HIP_ASSERT(0);
+		break;
+	}
+
+	return ret;
+}
+
+/**
+ * hip_transform_key_length - get transform key length of a transform
+ * @tid: transform
+ *
+ * Returns: the transform key length based on the chosen transform,
+ * otherwise < 0 on error.
+ */
+int hip_transform_key_length(int tid)
+{
+	int ret = -1;
+
+	switch(tid) {
+	case HIP_HIP_AES_SHA1:
+		ret = 16;
+		break;
+	case HIP_HIP_3DES_SHA1:
+		ret = 24;
+		break;
+	case HIP_HIP_NULL_SHA1: // XX FIXME: SHOULD BE NULL_SHA1? 
+		ret = 0;
+		break;
+	default:
+		HIP_ERROR("unknown tid=%d\n", tid);
+		HIP_ASSERT(0);
+		break;
+	}
+
+	return ret;
+}
+
+
+/**
+ * hip_auth_key_length_esp - get authentication key length of a transform
+ * @tid: transform
+ *
+ * Returns: the authentication key length based on the chosen transform.
+ * otherwise < 0 on error.
+ */
+int hip_auth_key_length_esp(int tid)
+{
+	int ret = -1;
+
+	switch(tid) {
+	case HIP_ESP_AES_SHA1:
+		//ret = 16;
+		//break;
+	case HIP_ESP_NULL_SHA1:
+	case HIP_ESP_3DES_SHA1:
+		ret = 20;
+		break;
+	case HIP_ESP_NULL_NULL:
+		ret = 0;
+		break;
+	default:
+		HIP_ERROR("unknown tid=%d\n", tid);
+		HIP_ASSERT(0);
+		break;
+	}
+
+	return ret;
+}
+
+/**
+ * hip_store_base_exchange_keys - store the keys negotiated in base exchange
+ * @ctx:             the context inside which the key data will copied around
+ * @is_initiator:    true if the localhost is the initiator, or false if
+ *                   the localhost is the responder
+ *
+ * Returns: 0 if everything was stored successfully, otherwise < 0.
+ */
+int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
+				  struct hip_context *ctx, int is_initiator)
+{
+	int err = 0;
+	int hmac_key_len, enc_key_len, auth_key_len;
+
+	hmac_key_len = hip_hmac_key_length(entry->esp_transform);
+	enc_key_len = hip_enc_key_length(entry->esp_transform);
+	auth_key_len = hip_auth_key_length_esp(entry->esp_transform);
+
+	memcpy(&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
+	memcpy(&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
+
+	memcpy(&entry->esp_in.key, &ctx->esp_in.key, enc_key_len);
+	memcpy(&entry->auth_in.key, &ctx->auth_in.key, auth_key_len);
+
+	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
+	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
+
+	hip_update_entry_keymat(entry, ctx->current_keymat_index,
+				ctx->keymat_calc_index, ctx->current_keymat_K);
+
+	if (entry->dh_shared_key) {
+		HIP_DEBUG("kfreeing old dh_shared_key\n");
+		kfree(entry->dh_shared_key);
+	}
+
+	entry->dh_shared_key_len = 0;
+	/* todo: reuse pointer, no HIP_MALLOC */
+	entry->dh_shared_key = HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
+	if (!entry->dh_shared_key) {
+		HIP_ERROR("entry dh_shared HIP_MALLOC failed\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	entry->dh_shared_key_len = ctx->dh_shared_key_len;
+	memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
+	_HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
+	_HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
+	return err;
+
+ out_err:
+	if (entry->dh_shared_key)
+		kfree(entry->dh_shared_key);
+
+	return err;
+}
+
+/**
+ * hip_select_hip_transform - select a HIP transform to use
+ * @ht: HIP_TRANSFORM payload where the transform is selected from
+ *
+ * Returns: the first acceptable Transform-ID, otherwise < 0 if no
+ * acceptable transform was found. The return value is in host byte order.
+ */
+hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
+{
+	hip_transform_suite_t tid = 0;
+	int i;
+	int length;
+	hip_transform_suite_t *suggestion;
+
+	length = ntohs(ht->length);
+	suggestion = (hip_transform_suite_t *) &ht->suite_id[0];
+
+	if ( (length >> 1) > 6) {
+		HIP_ERROR("Too many transforms (%d)\n", length >> 1);
+		goto out;
+	}
+
+	for (i=0; i<length; i++) {
+		switch(ntohs(*suggestion)) {
+
+		case HIP_HIP_AES_SHA1:
+		case HIP_HIP_3DES_SHA1:
+		case HIP_HIP_NULL_SHA1:
+			tid = ntohs(*suggestion);
+			goto out;
+			break;
+
+		default:
+			/* Specs don't say what to do when unknown are found. 
+			 * We ignore.
+			 */
+			HIP_ERROR("Unknown HIP suite id suggestion (%u)\n",
+				  ntohs(*suggestion));
+			break;
+		}
+		suggestion++;
+	}
+
+ out:
+	if(tid == 0)
+		HIP_ERROR("None HIP transforms accepted\n");
+	else
+		HIP_DEBUG("Chose HIP transform: %d\n", tid);
+
+	return tid;
+}
+
+
+/**
+ * hip_select_esp_transform - select an ESP transform to use
+ * @ht: ESP_TRANSFORM payload where the transform is selected from
+ *
+ * Returns: the first acceptable Suite-ID. otherwise < 0 if no
+ * acceptable Suite-ID was found.
+ */
+hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
+{
+	hip_transform_suite_t tid = 0;
+	int i;
+	int length;
+	hip_transform_suite_t *suggestion;
+
+	length = hip_get_param_contents_len(ht);
+	suggestion = (uint16_t*) &ht->suite_id[0];
+
+	if (length > sizeof(struct hip_esp_transform) -
+	    sizeof(struct hip_common)) {
+		HIP_ERROR("Too many transforms\n");
+		goto out;
+	}
+
+	for (i=0; i<length; i++) {
+		switch(ntohs(*suggestion)) {
+
+		case HIP_ESP_AES_SHA1:
+		case HIP_ESP_NULL_NULL:
+		case HIP_ESP_3DES_SHA1:
+		case HIP_ESP_NULL_SHA1:
+			tid = ntohs(*suggestion);
+			goto out;
+			break;
+		default:
+			/* Specs don't say what to do when unknowns are found. 
+			 * We ignore.
+			 */
+			HIP_ERROR("Unknown ESP suite id suggestion (%u)\n",
+				  ntohs(*suggestion));
+			break;
+		}
+		suggestion++;
+	}
+
+ out:
+	_HIP_DEBUG("Took ESP transform %d\n", tid);
+
+	if(tid == 0)
+		HIP_ERROR("Faulty ESP transform\n");
+
+	return tid;
+}
