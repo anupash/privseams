@@ -474,6 +474,8 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 {
 	struct hip_host_id *tmp;
 	hip_tlv_len_t len;
+	uint16_t dilen;
+	char *from, *to;
 	u8 T;
 
 	/* T could easily have been an int, since the compiler will
@@ -497,6 +499,7 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 		HIP_DEBUG("T-value in DSA-key not 8 (0x%x)!\n",T);
 	}
 
+	_HIP_HEXDUMP("HOSTID...",tmp, hip_get_param_total_len(tmp));
 	/* assuming all local keys are full DSA keys */
 	len = hip_get_param_contents_len(tmp);
 
@@ -504,14 +507,30 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 		  hip_get_param_total_len(tmp));
 
 	/* the secret component of the DSA key is always 20 bytes */
+
+	tmp->hi_length = htons(ntohs(tmp->hi_length) - 20);
+
+	HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
+
+	/* Move the hostname 20 bytes earlier */
+	
+	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
+
+	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
+	from = to + 20;
+	memmove(to, from, dilen);
+
 	hip_set_param_contents_len(tmp, (len - 20));
 
 	HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
 
-	tmp->hi_length = htons(ntohs(tmp->hi_length) - 20);
+	/* make sure that the padding is zero (and not to reveal any bytes of the
+	   private key */
+	to = (char *)tmp + hip_get_param_contents_len(tmp) + sizeof(struct hip_tlv_common);
+	memset(to, 0, 8);
 
-	HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
+	_HIP_HEXDUMP("HOSTID... (public)", tmp, hip_get_param_total_len(tmp));
 
 	return tmp;
 }

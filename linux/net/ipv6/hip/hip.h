@@ -121,5 +121,5 @@ extern struct semaphore hip_work;
 extern struct socket *hip_output_socket;
 extern spinlock_t hip_workqueue_lock;
 extern spinlock_t dh_table_lock;
-
+extern time_t load_time;
 #endif /* HIP_HIP_H */

@@ -8,6 +8,75 @@ Sometimes the items are as notes elsewhere in the source file if the
 there is specific line of the source code that needs fixing. Search
 for the strings "XX" or "TODO" to locate the file specific TODO items.
 
+IETF 60 action items
+====================
+
+--- diff 09 - 10pre1 ---
+
+[TODO] During IETF58, Thomas said that birthday count is quite huge. It should
+       be incremental from zero?
+
+[TODO] (LSI collision)
+
+[TODO] 5.4.2 HIP State Processes
+
+  UNASSOCIATED
+  Receive I2, process
+        if successful, send R2 and go to *R2-SENT* <- changed
+        if fail, stay at UNASSOCIATED
+
+  I1-SENT
+  Receive I2, process
+        if successful, send R2 and go to *R2-SENT* <- changed
+        if fail, stay at I1-SENT
+
+  I2-SENT
+  Receive I2, process
+        if successful, send R2 and go to *R2-SENT* <- changed
+        if fail, stay at I2-SENT
+
+  R2-SENT
+  Receive I2 ... <- changed
+  if failed, stay at R2-SENT <- changed
+  Should not ever need rekey <- changed
+
+  ESTABLISHED <- changed
+
+  REKEYING <- check
+
+6.2 HIP parameters
+
+  SPI_LSI: renamed to SPI
+
+  NOTIFY            256
+
+6.2.3 SPI
+
+  Reserved and LSI fields removed from the earlier SPI_LSI name
+
+6.2.5 DIFFIE_HELLMAN
+
+  384-bit group                    1
+
+6.2.8 HOST_ID
+
+  format changed (DI-type, DI-length, FQDN, Domain Identifier)
+
+  Add the DI types
+
+  If there is no Domain Identifier, i.e. the DI-type field is zero,
+   also the DI Length field is set to zero.
+
+6.2.15 NOTIFY
+
+   - completely new
+   - add types, handling and sending?
+7.5
+  - "UPDATE" packet
+
+<<<<< CONTNUE 8. Packet processing >>>>
+
+
 IETF 59 action items
 ====================
 

@@ -7,14 +7,13 @@
 
 struct hip_r1entry {
 	struct hip_common *r1;
+	uint32_t generation;
 	uint64_t Ci;
-	uint64_t Ck;
-	int used;
+	uint8_t Ck;
+	uint8_t Copaque[3];
 };
 
-#define HIP_COOKIE_LT 7
-#define HIP_COOKIE_LIFETIME (1<<HIP_COOKIE_LT)
-#define HIP_COOKIE_LTMASK (~(HIP_COOKIE_LIFETIME-1))
+#define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
 #define HIP_R1TABLESIZE 10
 #define HIP_DEFAULT_COOKIE_K 10ULL
 
@@ -24,9 +23,10 @@ void hip_uninit_r1(void);
 int hip_precreate_r1(const struct in6_addr *src_hit);
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
 		      struct hip_common *hdr,
-		      struct hip_birthday_cookie *cookie);
-int hip_solve_puzzle(struct hip_birthday_cookie *puzzle, 
-		     struct hip_common *hdr, uint64_t *param, int mode);
+		      struct hip_solution *cookie);
+uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			  uint64_t birthday);
 
 
 #endif /* HIP_COOKIE_H */

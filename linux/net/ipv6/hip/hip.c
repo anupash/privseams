@@ -52,7 +52,8 @@
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
-static time_t load_time;          /* Wall clock time at module load XXX: why? */
+time_t load_time;
+
 
 #if 0
 static struct notifier_block hip_notifier_block;
@@ -317,7 +318,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 {
  	struct hip_common *msg;
  	struct in6_addr dst_hit;
- 	uint64_t random_i;
  	int err = 0;
  	u8 *dh_data = NULL;
  	int dh_size,written;
@@ -369,21 +369,39 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	}
 
  	/* Ready to begin building of the R1 packet */
+	/*
+	    IP ( HIP ( [ R1_COUNTER, ]
+              PUZZLE,
+              DIFFIE_HELLMAN,
+              HIP_TRANSFORM,
+              ESP_TRANSFORM,
+              HOST_ID,
+              [ ECHO_REQUEST, ]
+              HIP_SIGNATURE_2 )
+              [, ECHO_REQUEST ])
+	 */
 
-         /* The destination HIT is unkown because R1s are prebuilt */
+
  	memset(&dst_hit, 0, sizeof(struct in6_addr));
  	hip_build_network_hdr(msg, HIP_R1, HIP_CONTROL_NONE, src_hit,
  			      &dst_hit);
 
- 	/********** Birthday and cookie **********/
+	/********** R1_COUNTER (OPTIONAL) *********/
 
- 	get_random_bytes(&random_i, sizeof(uint64_t));
- 	err = hip_build_param_cookie(msg, 0, hip_get_current_birthday(), 
-				     random_i, HIP_DEFAULT_COOKIE_K);
- 	if (err) {
- 		HIP_ERROR("Cookies were burned. Bummer!\n");
- 		goto out_err;
- 	}
+	while(0);
+
+ 	/********** PUZZLE ************/
+
+	{
+		uint64_t random_i;
+
+		get_random_bytes(&random_i,sizeof(uint64_t));
+		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K, 0x1337, random_i);
+		if (err) {
+			HIP_ERROR("Cookies were burned. Bummer!\n");
+			goto out_err;
+		}
+	}
  
  	/********** Diffie-Hellman **********/
 
@@ -427,11 +445,16 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
  	/********** Host_id **********/
 
+	_HIP_DEBUG("This HOST ID belongs to: %s\n", hip_get_param_host_id_hostname(host_id_pub));
 	err = hip_build_param(msg, host_id_pub);
  	if (err) {
  		HIP_ERROR("Building of host id failed\n");
  		goto out_err;
  	}
+
+	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
+
+	while(0);
 
  	/********** Signature 2 **********/
 
@@ -451,7 +474,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		goto out_err;
  	}
 
- 	/* Packet ready */
+
+	/********** ECHO_REQUEST (OPTIONAL) *********/
+
+	while(0);
+
+ 	/************** Packet ready ***************/
 
  	if (host_id_pub)
  		kfree(host_id_pub);
@@ -815,14 +843,23 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
-		err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg, enc_len, iv);
+		if (iv) {
+			err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg, enc_len, iv);
+		} else {
+			err = crypto_cipher_encrypt(impl, src_sg, src_sg, enc_len);
+		}
 		if (err) {
 			HIP_ERROR("Encryption failed\n");
 			return -EFAULT;
 		}
+			
 		break;
 	case HIP_DIRECTION_DECRYPT:
-		err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg, enc_len, iv);
+		if (iv) {
+			err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg, enc_len, iv);
+		} else {
+			err = crypto_cipher_decrypt(impl, src_sg, src_sg, enc_len);
+		}
 		if (err) {
 			HIP_ERROR("Decryption failed\n");
 			return -EFAULT;
@@ -902,16 +939,12 @@ void hip_uninit_output_socket(void)
 int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 {
 	hip_ha_t *entry;
-
-#ifdef CONFIG_HIP_DEBUG
 	char str[INET6_ADDRSTRLEN];
-#endif
+
 	if (!hip_is_hit(hit))
 		return 0;
 
-#ifdef CONFIG_HIP_DEBUG
 	hip_in6_ntop(hit,str);
-#endif
 	
 	entry = hip_hadb_find_byhit(hit);
 	if (!entry) {
@@ -925,10 +958,8 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 	}
 	hip_put_ha(entry);
 
-#ifdef CONFIG_HIP_DEBUG
 	hip_in6_ntop(addr, str);
 	HIP_DEBUG("selected dst addr: %s\n", str);
-#endif
 
 	return 1;
 }
