@@ -525,9 +525,7 @@ struct hip_rea_info_addr_item {
 struct hip_rea {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-	uint32_t spi;
-	uint32_t lifetime;
-	uint32_t reserved; /* MSB is used for "the first address is the preferred one */
+  	uint32_t spi;
 	/* fixed part ends */
 } __attribute__ ((packed));
 
