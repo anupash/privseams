@@ -489,6 +489,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
  	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
 	int need_to_generate_key = 0, dh_key_generated = 0; //, new_keymat_generated;
 	int nes_i = 1;
+	struct hip_lhi lhi;
 	
 	/* assume already locked entry */
 	uint16_t mask;
@@ -666,8 +667,11 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		goto out_err;
 	}
 
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+	memcpy(&(lhi.hit), &entry->hit_our ,sizeof(struct in6_addr));
+
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get our host identity. Can not sign data\n");
 		goto out_err;
@@ -680,7 +684,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		goto out_err;
 	}
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	if (hip_get_host_id_algo(host_id_private) == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(update_packet,
 							 signature,
 							 HIP_RSA_SIGNATURE_LEN,
@@ -951,6 +955,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	struct hip_host_id *host_id_private;
 	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
 	uint16_t mask;
+	struct hip_lhi lhi;
 	/* assume already locked entry */
 
 	/* 8.11.2  Processing an UPDATE packet in state REKEYING */
@@ -1032,8 +1037,11 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 		goto out_err;
 	}
 
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+	memcpy(&(lhi.hit), &entry->hit_our ,sizeof(struct in6_addr));
+
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get our host identity. Can not sign data\n");
 		goto out_err;
@@ -1046,7 +1054,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 		goto out_err;
 	}
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	if (hip_get_host_id_algo(host_id_private) == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(update_packet,
 							 signature,
 							 HIP_RSA_SIGNATURE_LEN,
@@ -1102,7 +1110,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_peer_addr_list_item *addr, *tmp;
 	struct hip_common *update_packet = NULL;
 	uint16_t mask;
-
+	struct hip_lhi lhi;
 	/* assume already locked entry */
 
 	HIP_DEBUG("SPI=0x%x\n", spi);
@@ -1174,8 +1182,11 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			continue;
 		}
 
+		memset(&lhi, 0, sizeof(struct hip_lhi));
+		memcpy(&(lhi.hit), &entry->hit_our ,sizeof(struct in6_addr));
+
 		/* Add SIGNATURE */
-		host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+		host_id_private = hip_get_localhost_host_id(&lhi);
 		if (!host_id_private) {
 			HIP_ERROR("Could not get own host identity. Can not sign data\n");
 			continue;
@@ -1187,7 +1198,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			continue;
 		}
 
-		if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+		if (hip_get_host_id_algo(host_id_private) == HIP_HI_RSA) {
 			err = hip_build_param_signature_contents(update_packet,
 								 signature,
 							 HIP_RSA_SIGNATURE_LEN,
@@ -1301,7 +1312,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
  	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA > DSA */
 	struct hip_host_id *host_id_private;
 	uint16_t mask;
-
+	struct hip_lhi lhi;
 	/* assume already locked entry */
 
 	HIP_DEBUG("\n");
@@ -1343,8 +1354,11 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		goto out_err;
 	}
 
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+	memcpy(&(lhi.hit), &entry->hit_our ,sizeof(struct in6_addr));
+
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
@@ -1358,7 +1372,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		goto out_err;
 	}
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	if (hip_get_host_id_algo(host_id_private) == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(update_packet,
 							 signature,
 							 HIP_RSA_SIGNATURE_LEN,
@@ -1705,6 +1719,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	int add_nes = 0, add_rea;
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 	uint16_t mask;
+	struct hip_lhi lhi;
 
 	add_rea = flags & SEND_UPDATE_REA;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
@@ -1886,8 +1901,11 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+	memcpy(&(lhi.hit), &entry->hit_our ,sizeof(struct in6_addr));
+
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
@@ -1900,7 +1918,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	if (hip_get_host_id_algo(host_id_private) == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(update_packet,
 							 signature,
 							 HIP_RSA_SIGNATURE_LEN,
