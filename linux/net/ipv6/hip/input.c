@@ -1944,8 +1944,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	HIP_DEBUG("Reached R2_SENT state\n");
 
-	hip_hadb_dump_spis_in(entry);
-	hip_hadb_dump_spis_out(entry);
+	//hip_hadb_dump_spis_in(entry);
+	//hip_hadb_dump_spis_out(entry);
 
  out_err:
 	/* ha is not NULL if hip_receive_i2() fetched the HA for us.
@@ -2200,8 +2200,8 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	}
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 
-	hip_hadb_dump_spis_in(entry);
-	hip_hadb_dump_spis_out(entry);
+	//hip_hadb_dump_spis_in(entry);
+	//hip_hadb_dump_spis_out(entry);
 
  out_err:
 	if (ctx)

@@ -34,25 +34,33 @@ tcpdump -s10000 -i netdevtolisten -v 'proto 99'
 
 
 
-HIP support for Ethereal 0.9.15
--------------------------------
+HIP support for Ethereal
+------------------------
+
+Provided by Jeff Ahrenholz and Thomas Henderson from Boeing. See the 
+webpage below for the most recent patches:
+
+http://hipserver.mct.phantomworks.org/
 
 Status: experimental, not supported actively, might even be broken
         or show incorrect values
 
 Installation instructions:
 
-Get Ethereal 0.9.15 from http://www.ethereal.com/download.html#sources
-Unpack it: tar xfvz ethereal-0.9.15.tar.gz
-Patch Ethereal: patch -p0 < /location/of/ethereal-0.9.15-hip.patch
-Change to the newly created directory: cd ethereal-0.9.15
+Get Ethereal 0.10.7 from http://www.ethereal.com/download.html#sources
+Unpack it: tar xfvz ethereal-0.10.7.tar.gz
+Patch Ethereal: patch -p0 < /location/of/ethereal-0.10.7-hip.patch
+Change to the newly created directory: cd ethereal-0.10.7
 
 The rest of the installation proceeds as is written in the Ethereal
 INSTALL file.
 
 
-UML patches exist for the 2.4.20 HIP kernel
-and the 2.6.3 HIP kernel.
+UML patches for the 2.4.20 HIP kernel and the 2.6.3 HIP kernel.
+---------------------------------------------------------------
+
+(deprecated)
+
 For 2.4.20 we have two patches. First one (hip-uml-2.4.20.patch) is
 intended for Debian Woody. The second one for Debian Sarge that has
 2.6 kernel headers installed).
@@ -63,6 +71,8 @@ http://user-mode-linux.sourceforge.net.
 
 UML patch for 2.4.20 with HIP support
 -------------------------------------
+
+(depracated)
 
 Status: Basically works, Further changes to HIP might require some
 	additional changes in linux/arch/um/*

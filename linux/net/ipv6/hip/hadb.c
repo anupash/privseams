@@ -289,8 +289,8 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi)
 
 	hip_ht_add(&hadb_spi_list, new_item);
 	HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item);
-	HIP_DEBUG("HS TABLE:\n");
-	hip_hadb_dump_hs_ht();
+	_HIP_DEBUG("HS TABLE:\n");
+	//hip_hadb_dump_hs_ht();
  out_err:
 	return err;
 }
