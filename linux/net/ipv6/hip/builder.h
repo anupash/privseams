@@ -18,9 +18,9 @@
 
 #include <asm/types.h>
 #include <sys/errno.h>
-#include <netinet/ip6.h>
+//#include <linux/in6.h>
 #include <net/hip.h>
-#include <sys/socket.h>
+//#include <sys/socket.h>
 #include "misc.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */

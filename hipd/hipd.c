@@ -10,16 +10,24 @@
  * GNU General Public License for more details.
  */
 
-#include <errno.h>      /* errno */
 #include <signal.h>     /* signal() */
-#include <stdio.h>      /* stderr and others */
-#include <sys/socket.h> /* socket functions */
-#include <sys/select.h> /* select */
 #include <net/hip.h>
+//#include <linux/socket.h> /* sa_family_t */
+#include <stdio.h>      /* stderr and others */
+//#include <iproute/libnetlink.h> /* netlink connectivity */
+#include <errno.h>      /* errno */
+//#include <linux/time.h> /* struct timeval */
+
+//#include <sys/socket.h> /* socket functions */
+//#include <sys/select.h> /* select */
+
+
 
 #include "hipd.h"
 #include "workqueue.h"
 #include "debug.h"
+
+struct rtnl_handle *rtnl;
 
 void usage() {
      fprintf(stderr, "hipl usage\n");
@@ -31,7 +39,7 @@ void usage() {
  */
 void hip_exit(int signal) {
 	hip_uninit_workqueue();
-	hip_netlink_close();
+	rtnl_close(rtnl);
 	exit(signal);
 }
 
@@ -70,13 +78,14 @@ int main(int argc, char *argv[]) {
 	signal(SIGSEGV, hip_exit);
 	
 	/* Open the netlink socket for kernel communication */
-	if (hip_netlink_open(&s_net) < 0) {
+	if (rtnl_open(rtnl, 0) < 0) {
 		HIP_ERROR("Netlink socket error: %s\n", strerror(errno));
 		return(1);
 	}
+
 	/* For now useless, but keep record of the highest fd for
 	 * future purposes (multiple sockets to select from) */
-	highest_descriptor = s_net;
+	highest_descriptor = rtnl->fd;
 	
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
@@ -99,16 +108,8 @@ int main(int argc, char *argv[]) {
 			
 		} else if (FD_ISSET(s_net, &read_fdset)) {
 			/* Something on Netlink socket */
-			struct hip_work_order *job;
-			
-			job = hip_get_work_order();
-			if (!job) {
-				/* The queue logged the error */
-				continue;
-			}
-			
-			/* Process and discard the job */
-			hip_do_work(job);
+			hip_netlink_receive();
+
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}

@@ -9,6 +9,8 @@
 #  include <linux/interrupt.h>
 #  include <net/ipv6.h>
 #  include <net/hip.h>
+#else
+#  include <stdio.h>
 #endif
 
 #include "timer.h"

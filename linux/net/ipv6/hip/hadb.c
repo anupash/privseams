@@ -244,7 +244,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 		goto out_err;
 	}
 
-	new_item = HIP_MALLOC(sizeof(struct hip_hit_spi), GFP_ATOMIC);
+	new_item = (struct hip_hit_spi *)HIP_MALLOC(sizeof(struct hip_hit_spi), GFP_ATOMIC);
 	if (!new_item) {
 		HIP_ERROR("new_item HIP_MALLOC failed\n");
 		err = -ENOMEM;
@@ -296,7 +296,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
 	hip_ha_t *entry = NULL;
 
-	entry = HIP_MALLOC(sizeof(struct hip_hadb_state), gfpmask);
+	entry = (hip_ha_t *)HIP_MALLOC(sizeof(struct hip_hadb_state), gfpmask);
 	if (!entry)
 		return NULL;
 
@@ -651,7 +651,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 		goto out_err;
 	}
 
-	item = HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+	item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
 	if (!item) {
 		HIP_ERROR("item HIP_MALLOC failed\n");
 		err = -ENOMEM;
@@ -815,7 +815,7 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 		}
         }
 
-	item = HIP_MALLOC(sizeof(struct hip_spi_in_item), GFP_ATOMIC);
+	item = (struct hip_spi_in_item *)HIP_MALLOC(sizeof(struct hip_spi_in_item), GFP_ATOMIC);
 	if (!item) {
 		HIP_ERROR("item HIP_MALLOC failed\n");
 		err = -ENOMEM;
@@ -855,7 +855,7 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 		}
         }
 
-	item = HIP_MALLOC(sizeof(struct hip_spi_out_item), GFP_ATOMIC);
+	item = (struct hip_spi_out_item *)HIP_MALLOC(sizeof(struct hip_spi_out_item), GFP_ATOMIC);
 	if (!item) {
 		HIP_ERROR("item HIP_MALLOC failed\n");
 		err = -ENOMEM;
@@ -1541,7 +1541,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	if (new) {
 		_HIP_DEBUG("create new addr item to SPI list\n");
 		/* SPI list does not contain the address, add the address to the SPI list */
-		new_addr = HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+		new_addr = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
 		if (!new_addr) {
 			HIP_ERROR("item HIP_MALLOC failed\n");
 			err = -ENOMEM;
@@ -1925,7 +1925,7 @@ void hip_hadb_dump_hits(void)
 	char *string;
 	int cnt, k;
 
-	string = HIP_MALLOC(4096,GFP_ATOMIC);
+	string = (char *)HIP_MALLOC(4096,GFP_ATOMIC);
 	if (!string) {
 		HIP_ERROR("Cannot dump HADB... out of memory\n");
 		return;

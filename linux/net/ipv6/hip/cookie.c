@@ -267,8 +267,8 @@ int hip_init_r1(void)
 {
 	int res=0;
 
-	hip_r1table = HIP_MALLOC(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE,
-			      GFP_KERNEL);
+	hip_r1table = (struct hip_r1entry *)HIP_MALLOC(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE,
+						       GFP_KERNEL);
 	if (!hip_r1table) {
 		HIP_ERROR("Could not allocate memory for R1 table\n");
 		goto err_out;

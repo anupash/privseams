@@ -17,8 +17,8 @@
 #define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
 #define HIP_UNLOCK_HS(hs) do { spin_unlock_bh(&hs->lock); } while(0)
 #else
-#include <sys/time.h>
-#include <time.h>
+//#include <sys/time.h>
+//#include <time.h>
 
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)

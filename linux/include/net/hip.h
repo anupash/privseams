@@ -45,9 +45,15 @@ typedef uint16_t in_port_t;
 
 #else
 
+//#  include <linux/socket.h>
+//#  include <linux/types.h>
+#  include <netinet/in.h>
+//#  include <linux/time.h>
+#  include <sys/time.h>
 #  include <sys/ioctl.h>
 #  include <stdint.h>
-#  include <netinet/in.h>
+//#  include <linux/in6.h>
+#   include <stdint.h>
 
 typedef uint8_t   u8;
 typedef uint16_t  u16;
@@ -939,6 +945,7 @@ struct hip_work_order {
 	struct hip_work_order_hdr hdr;
 	struct hip_common *msg;
 #ifdef __KERNEL__
+	
 	struct list_head queue;
 #endif
 	void (*destructor)(struct hip_work_order *hwo);

@@ -4,84 +4,134 @@
 #include "debug.h" /* logging facilities */
 #include "netlink.h"
 
-static int netlink_fd;
+static struct rtnl_handle *rtnl;
 
 /* base exchange IPv6 addresses need to be put into ifindex2spi map,
  * so a function is needed which gets the ifindex of the network
  * device which has the address @addr */
 int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
 {
+	HIP_ERROR("hip_ipv6_devaddr2ifindex, oh crap.\n");
 	exit(1);
 	return 1;
 }
 
-struct hip_work_order *hip_netlink_receive(void) {
+/* Processes a received netlink message */
+static int accept_msg(const struct sockaddr_nl *who,
+		      const struct nlmsghdr *n, void *arg)
+{
+	struct hip_work_order *hwo;
+	int msg_len;
+	
+	hwo = (struct hip_work_order *)malloc(sizeof(struct hip_work_order));
+	if (!hwo) {
+		HIP_ERROR("Out of memory.\n");
+		return -1;
+	}
+
+	memcpy(hwo, NLMSG_DATA(n), sizeof(struct hip_work_order_hdr));
+	msg_len = hip_get_msg_total_len((const struct hip_common *)&((struct hip_work_order *)NLMSG_DATA(n))->msg);	
+	hwo->msg = (struct hip_common *)malloc(msg_len);
+	if (!hwo->msg) {
+		HIP_ERROR("Out of memory.\n");
+		free(hwo);
+		return -1;
+	}
+	
+	memcpy(hwo->msg, &((struct hip_work_order *)NLMSG_DATA(n))->msg, msg_len);
+
+	return hip_do_work(hwo);
+}
+
+/* 
+ * Unfortunately libnetlink does not provide a generic receive a
+ * message function. This is a modified version of the rtnl_listen
+ * function that processes only a finite amount of messages and then
+ * returns. 
+*/
+int hip_netlink_receive() {
 	struct hip_work_order *result = NULL;
 	struct hip_work_order *hwo;
-	struct nlmsghdr *nlh = NULL;
+	struct nlmsghdr *h;
 	struct sockaddr_nl nladdr;
-	struct msghdr msg;
 	struct iovec iov;
-	int msg_len;
-     
-	nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(HIP_MAX_NETLINK_PACKET));
-	if (!nlh) {
-		HIP_ERROR("Out of memory.\n");
-		goto err;
-	}
+        struct msghdr msg = {
+                (void*)&nladdr, sizeof(nladdr),
+                &iov,   1,
+                NULL,   0,
+                0
+        };
+	int msg_len, status;
+	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
-	memset(nlh, 0, NLMSG_SPACE(HIP_MAX_NETLINK_PACKET));
-	iov.iov_base = (void *)nlh;
-	iov.iov_len = 1;
-	msg.msg_name = (void *)&(nladdr);
-	msg.msg_namelen = sizeof(nladdr);
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	recvmsg(netlink_fd, &msg, 0);
-	/** FIXME error handling */
+        memset(&nladdr, 0, sizeof(nladdr));
+        nladdr.nl_family = AF_NETLINK;
+        nladdr.nl_pid = 0;
+        nladdr.nl_groups = 0;
+	iov.iov_base = buf;
 	
-	result = HIP_MALLOC(sizeof(struct hip_work_order), GFP_KERNEL);
-	if (!result) {
-		HIP_ERROR("Out of memory.\n");
-		goto err;
-	}
-	
-	hwo = (struct hip_work_order *)NLMSG_DATA(nlh);
+	while (1) {
+                iov.iov_len = sizeof(buf);
+                status = recvmsg(rtnl->fd, &msg, 0);
 
-	memcpy(result, hwo, sizeof(struct hip_work_order_hdr));
+                if (status < 0) {
+                        if (errno == EINTR)
+                                continue;
+			HIP_ERROR("Netlink overrun.\n");
+                        continue;
+                }
+                if (status == 0) {
+                        HIP_ERROR("EOF on netlink\n");
+                        return -1;
+                }
+                if (msg.msg_namelen != sizeof(nladdr)) {
+                        HIP_ERROR("Sender address length == %d\n", msg.msg_namelen);
+                        exit(1);
+                }
+		for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
+                        int err;
+                        int len = h->nlmsg_len;
+                        int l = len - sizeof(*h);
 
-	msg_len = hip_get_msg_total_len((const struct hip_common *)&(hwo->msg));	
-	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
-	if (!result->msg) {
-		HIP_ERROR("Out of memory.\n");
-		HIP_FREE(result);
-		result = NULL;
-		goto err;
+                        if (l<0 || len>status) {
+                                if (msg.msg_flags & MSG_TRUNC) {
+                                        HIP_ERROR("Truncated netlink message\n");
+                                        return -1;
+                                }
+
+                                HIP_ERROR("Malformed netlink message: len=%d\n", len);
+                                exit(1);
+                        }
+
+                        err = accept_msg(&nladdr, h, NULL);
+                        if (err < 0)
+                                return err;
+
+                        status -= NLMSG_ALIGN(len);
+                        h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
+                }
+                if (msg.msg_flags & MSG_TRUNC) {
+                        HIP_ERROR("Message truncated\n");
+                        break;
+                }
+
+                if (status) {
+                        HIP_ERROR("Remnant of size %d\n", status);
+                        exit(1);
+                }
+
+		/* All messages processed */
+		break;
 	}
-	
-	memcpy(result->msg, &(hwo->msg), msg_len);
-	
- err:
-	if (nlh)
-		HIP_FREE(nlh);
-	
-	return result;
 }
 
 int hip_netlink_send(struct hip_work_order *hwo) 
 {
 	struct hip_work_order *h;
-	struct sockaddr_nl dest_addr;
-	struct msghdr msg;
-	struct nlmsghdr *nlh = NULL;
-	struct iovec iov;
-	int msg_len;
+	struct nlmsghdr *nlh;
+	int msg_len, ret;
 
 	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
-	memset(&dest_addr, 0, sizeof(dest_addr));
-	dest_addr.nl_family = AF_NETLINK;
-	dest_addr.nl_pid = 0; /* For Linux Kernel */
-	dest_addr.nl_groups = 0; /* unicast */
 	nlh = (struct nlmsghdr *)HIP_MALLOC(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)), 0);
 	if (!nlh) {
 		HIP_ERROR("Out of memory.\n");
@@ -89,7 +139,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	}
 
 	/* Fill the netlink message header */
-	nlh->nlmsg_len = NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr));
+	nlh->nlmsg_len = NLMSG_LENGTH(msg_len + sizeof(struct hip_work_order_hdr));
 	nlh->nlmsg_pid = getpid(); /* self pid */
 	nlh->nlmsg_flags = 0;
 	
@@ -98,50 +148,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
 	memcpy(&h->msg, hwo->msg, msg_len);
 
-	/* Send */
-	iov.iov_base = (void *)nlh;
-	iov.iov_len = nlh->nlmsg_len;
-	msg.msg_name = (void *)&dest_addr;
-	msg.msg_namelen = sizeof(dest_addr);
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	sendmsg(netlink_fd, &msg, 0);
-	/* FIXME: errors of sendmsg */
-
-	// FIXME: ack processing, if so requested.
-
+        ret = rtnl_send(rtnl, (char*)nlh, nlh->nlmsg_len) <= 0;
 	HIP_FREE(nlh);
-	return 0;
-}
-
-/*
- * function hip_netlink_open()
- *
- * Opens and binds a Netlink socket, setting *s_net.
- *
- * Returns 0 on success, -1 otherwise.
- */
-int hip_netlink_open(int *fd)
-{
-	struct sockaddr_nl local;
-        
-	if (*fd)
-		close(*fd);
-	if ((*fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_HIP)) < 0)
-		return(-1);
-	
-	memset(&local, 0, sizeof(local));
-	local.nl_family = AF_NETLINK;
-	/* subscribe to link, IPv4/IPv6 address notifications */
-	local.nl_groups = 0; // FIXME: HIP -types
-        
-	if (bind(*fd, (struct sockaddr *)&local, sizeof(local)) < 0)
-		return(-1);
-        
-	netlink_fd = *fd;
-	return(0);
-}
-
-void hip_netlink_close() {
-	close(netlink_fd);
+	return ret;
 }

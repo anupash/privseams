@@ -23,9 +23,10 @@
 #  include <linux/cpumask.h>
 #  include "sysctl.h"
 #else
-#  include "list.h"
-#include <stdlib.h>
+
+//#include <stdlib.h>
 #define jiffies random()
+#include "list.h"
 
 #define atomic_inc(x) \
          (++(*x).counter)

@@ -6,11 +6,11 @@
 #include <stdarg.h>
 #include <syslog.h>
 #include <string.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 #include <assert.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+//#include <sys/socket.h>
+//#include <netinet/in.h>
+//#include <arpa/inet.h>
 
 /* includes filename, line number and max(debug_prefix[]) */
 #define DEBUG_PREFIX_MAX  64

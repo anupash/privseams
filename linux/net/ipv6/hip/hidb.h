@@ -9,6 +9,8 @@
 #  include "hip.h"
 #else
 
+#  include <sys/socket.h>
+
 typedef struct { } rwlock_t;
 #define RW_LOCK_UNLOCKED (rwlock_t) { }
 

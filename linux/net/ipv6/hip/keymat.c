@@ -24,7 +24,7 @@ u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len,
 		requiredmem = kij_len + 2 * sizeof(struct in6_addr) +
 			sizeof(u8);
 
-	buffer = HIP_MALLOC(requiredmem, GFP_KERNEL);
+	buffer = (u8 *)HIP_MALLOC(requiredmem, GFP_KERNEL);
 	if (!buffer) {
 		HIP_ERROR("Out of memory\n");
 		return buffer;
@@ -275,7 +275,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 	_HIP_DEBUG("need %d bytes more data\n", key_len-copied);
 
 	tmp_data_len = kij_len + HIP_AH_SHA_LEN + 1;
-	tmp_data = HIP_MALLOC(tmp_data_len, GFP_KERNEL);
+	tmp_data = (u8 *)HIP_MALLOC(tmp_data_len, GFP_KERNEL);
 	if (!tmp_data) {
 		HIP_ERROR("HIP_MALLOC failed\n");
 		err = -ENOMEM;

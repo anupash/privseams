@@ -99,7 +99,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
 	/* Allocate enough space for host id; there will be 20 bytes extra
 	   to avoid hassle with padding. */
-	host_id_pub = HIP_MALLOC(total_len, GFP_KERNEL);
+	host_id_pub = (struct hip_host_id *)HIP_MALLOC(total_len, GFP_KERNEL);
 	if (!host_id_pub) {
 		err = -EFAULT;
 		goto out_err;
@@ -143,7 +143,7 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	/* XX FIX: REMOVE PRIVATE KEY? */
 
 	/* Allocate space for public key */
-	host_id_pub = HIP_MALLOC(total_len, GFP_KERNEL);
+	host_id_pub = (struct hip_host_id *)HIP_MALLOC(total_len, GFP_KERNEL);
 	if (!host_id_pub) {
 		err = -EFAULT;
 		goto out_err;
@@ -547,7 +547,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 	entry->dh_shared_key_len = 0;
 	/* todo: reuse pointer, no HIP_MALLOC */
-	entry->dh_shared_key = HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
+	entry->dh_shared_key = (char *)HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
 	if (!entry->dh_shared_key) {
 		HIP_ERROR("entry dh_shared HIP_MALLOC failed\n");
 		err = -ENOMEM;

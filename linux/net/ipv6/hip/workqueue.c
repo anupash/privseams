@@ -102,15 +102,12 @@ static inline struct hip_work_order *hip_get_work_order_cpu(void)
  * 
  * Returns work order or NULL, if an error occurs.
  */
+#ifdef __KERNEL__
 struct hip_work_order *hip_get_work_order(void)
 {
-#ifdef __KERNEL__
      return hip_get_work_order_cpu();
-#else
-     return hip_netlink_receive();
-#endif
 }
-
+#endif
 /**
  * hip_insert_work_order_cpu - Insert a work order on a particular CPU's workqueue
  * @hwo: Work order to be inserted
@@ -264,7 +261,7 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 {
 	struct hip_work_order *hwo;
 
-	hwo = HIP_MALLOC(sizeof(struct hip_work_order), gfp_mask);
+	hwo = (struct hip_work_order *)HIP_MALLOC(sizeof(struct hip_work_order), gfp_mask);
 	if (hwo)
 		memset(hwo, 0, sizeof(struct hip_work_order));		
 	else

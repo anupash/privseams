@@ -16,7 +16,7 @@ INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = hashtable.c keymat.c cookie.c misc.c dh.c hipd.c netlink.c
+hipd_SOURCES = hipd.c hashtable.c keymat.c cookie.c misc.c dh.c netlink.c
 hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
 hipd_SOURCES += input.c output.c xfrm.c hidb.c beet.c
 
@@ -27,6 +27,8 @@ hipd_SOURCES += input.c output.c xfrm.c hidb.c beet.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD    = ../libinet6/.libs/libinet6.a
+hipd_LDADD    += /usr/lib/libnetlink.a
+
 hipd_LDFLAGS  = -lcrypto
 
 # The sources depend on builder, but it is located elsewhere. Linking is
@@ -89,6 +91,8 @@ output.c: output.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/output.c .
 input.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.h .
+timer.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/timer.h .
 preoutput.c: preoutput.h
 preoutput.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/preoutput.h .

@@ -8,6 +8,7 @@ int hip_get_response(void) {
         resp = hip_netlink_receive();
 	if (!resp) {
 		return 0;
+
 	}
 
 	ret =  resp->hdr.arg1;

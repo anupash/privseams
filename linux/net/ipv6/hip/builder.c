@@ -1358,7 +1358,7 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 	if (rem) {
 		HIP_DEBUG("Adjusting host id size to AES block size\n");
 
-		host_id_padded = HIP_MALLOC(host_id_len + rem, GFP_KERNEL);
+		host_id_padded = (char *)HIP_MALLOC(host_id_len + rem, GFP_KERNEL);
 		if (!host_id_padded) {
 			err = -ENOMEM;
 			goto out_err;
