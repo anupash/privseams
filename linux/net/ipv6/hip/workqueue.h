@@ -60,6 +60,7 @@ struct hip_work_order *hip_get_work_order(void);
 //					       const struct in6_addr *hit);
 struct hip_work_order *hip_init_job(int mask);
 void hip_free_work_order(struct hip_work_order *hwo);
+int hip_do_work(struct hip_work_order *job);
 
 //void hwo_default_destructor(struct hip_work_order *hwo);
 #endif /* HIP_WORKQUEUE */
