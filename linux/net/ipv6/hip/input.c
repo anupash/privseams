@@ -1835,7 +1835,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 			HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 			HIP_DEBUG("TODO: what to do ? currently ignored\n");
 		} else 	if (err) {
-			HIP_ERROR("hip_setup_esp failed, peer:dst (err=%d)\n", err);
+			HIP_ERROR("hip_setup_sa failed, peer:dst (err=%d)\n", err);
 			HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
 		}
 		/* XXX: Check for -EAGAIN */

@@ -405,45 +405,6 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
       
 
 /**
- * hip_setup_esp - setup IPsec SPD and SA entries having given parameters
- * @dst: destination address
- * @src: source address
- * @spi: SPI value
- * @encalg: encryption algorithm to use
- * @enckey: encryption key
- * @authkey: authentication key
- *
- * Returns error codes. 
- * 0         = no error
- * -ENOMEM   = Memory allocation error
- * -EEXISTS  = Requested SPI already in use
- * -EAGAIN   = Couldn't assign any SPI. Try again?
- * -ENOENT   = Could find requested element (transform states etc.)
- */
-#if 0
-int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
-		  uint32_t *spi, int alg, void *enckey, void *authkey, 
-		  int is_active)
-{
-	int err;
-
-	err = hip_setup_sa(srchit, dsthit, spi, alg, enckey,
-			   authkey, is_active);
-	if (err) {
-		HIP_DEBUG("Setting up %s SA: [FAILED] (err=%d)\n",
-			  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", 
-			  err);
-		return err;
-	}
-
-	HIP_DEBUG("Setting up %s SA: [OK] (SPI=%x)\n",
-		  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", *spi);
-
-	return 0;
-}
-#endif
-
-/**
  * hip_insert_dh - Insert the current DH-key into the buffer
  *
  * If a DH-key does not exist, we will create one.
