@@ -1477,6 +1477,7 @@ static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt,
 	return;
 }
 
+#if 0
 /**
  * hip_handle_icmp - ICMPv6 handler
  * @skb: sk_buff containing the received ICMPv6 packet
@@ -1535,6 +1536,7 @@ void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 	return;
 #endif
 }
+#endif
 
 /* Handler which is notified when SA state has changes.
    TODO: send UPDATE when SA lifetime has expired. */
@@ -1542,6 +1544,7 @@ static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
 {
 	HIP_DEBUG("x=0x%p hard=%d\n", x, hard);
 	HIP_DEBUG("x: SPI=0x%x state=%d\n", ntohl(x->id.spi), x->km.state);
+	HIP_DEBUG("TODO..\n");
 #if 0
 	if (SA is HIP SA) {
 		hip_ha_t *entry;
@@ -1558,20 +1561,6 @@ static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
 
 	return 0;
 }
-
-//static int xfrm_send_acquire(struct xfrm_state *x, struct xfrm_tmpl *xt,
-//			     struct xfrm_policy *xp, int dir)
-//{
-//	HIP_DEBUG("dir=%d\n", dir);
-//	HIP_DEBUG("x SPI=0x%x\n", ntohl(x->id.spi));
-//	return 0;
-//}
-
-//struct xfrm_policy *hip_xfrm_handler_compile_policy(u16 family, int opt,
-//						    u8 *data, int len, int *dir)
-//{
-//	HIP_DEBUG("dir=%d\n", dir);
-//}
 
 #if 0
 /* TODO: remove kludge from km_query and use this as the handler when HITs are acquired */
@@ -1593,14 +1582,15 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs, struct xfrm_tmpl *xtm
 static int hip_xfrm_handler_policy_notify(struct xfrm_policy *xp, int dir, int hard)
 {
 	HIP_DEBUG("xp=0x%p dir=%d hard=%d\n", xp, dir, hard);
+	HIP_DEBUG("TODO..\n");
 	return 0;
 }
 
 static struct xfrm_mgr hip_xfrm_km_mgr = {
 	.id		= "HIP",
 	.notify		= hip_xfrm_handler_notify,
-//	.acquire	= hip_xfrm_handler_acquire, /* when km_query is fixed */
-//	.compile_policy	= hip_xfrm_handler_compile_policy,
+	/* .acquire	= hip_xfrm_handler_acquire, fix this when km_query is fixed */
+	/* .compile_policy = hip_xfrm_handler_compile_policy, */
 	.notify_policy	= hip_xfrm_handler_policy_notify,
 };
 
@@ -1608,10 +1598,8 @@ static struct xfrm_mgr hip_xfrm_km_mgr = {
 int hip_register_xfrm_km_handler(void)
 {
 	int err;
-	HIP_DEBUG("registering\n");
-
+	HIP_DEBUG("registering XFRM key management handler\n");
 	err = xfrm_register_km(&hip_xfrm_km_mgr);
-
 	return err;
 }
 
@@ -1733,14 +1721,10 @@ static int hip_init_procfs(void)
 	if (!create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
 			       hip_proc_read_hadb_peer_addrs, NULL))
 		goto out_err_sdb_state;
-	//	if (!create_proc_read_entry("sdb_peer_spi_list", 0, hip_proc_root,
-	//		       hip_proc_read_hadb_peer_spi_list, NULL))
-	//	goto out_err_peer_addrs;
 	/* a simple way to trigger sending of UPDATE packet to all peers */
 	if (!create_proc_read_entry("send_update", 0, hip_proc_root,
 			       hip_proc_send_update, NULL))
 		goto out_err_peer_addrs;
-	//		goto out_err_spi_list;
 	/* for testing dummy NOTIFY packets */
 	if (!create_proc_read_entry("send_notify", 0, hip_proc_root,
 			       hip_proc_send_notify, NULL))
@@ -1751,8 +1735,6 @@ static int hip_init_procfs(void)
 
  out_err_send_update:
 	remove_proc_entry("send_update", hip_proc_root);
-	//out_err_spi_list:
-	//remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
  out_err_peer_addrs:
 	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
  out_err_sdb_state:
@@ -1777,7 +1759,6 @@ static void hip_uninit_procfs(void)
 	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
 	remove_proc_entry("send_update", hip_proc_root);
 	remove_proc_entry("send_notify", hip_proc_root);
-	//remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
 	remove_proc_entry("hip", proc_net);
 }
 #endif /* CONFIG_PROC_FS */
@@ -1970,7 +1951,6 @@ static int hip_worker(void *cpu_id)
 }
 
 
-
 static int __init hip_init(void)
 {
 	int i,pid;
@@ -2023,7 +2003,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_get_addr);
 	HIP_SETCALL(hip_get_saddr);
 	HIP_SETCALL(hip_unknown_spi);
-	HIP_SETCALL(hip_handle_icmp);
+	//HIP_SETCALL(hip_handle_icmp);
 	HIP_SETCALL(hip_trigger_bex);
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
@@ -2035,10 +2015,12 @@ static int __init hip_init(void)
 		goto out;
 	}
 
+#if 0
 	if (hip_register_xfrm_km_handler()) {
 		HIP_ERROR("Could not register XFRM key manager for HIP\n");
 		goto out;
 	}
+#endif
 
 	HIP_INFO("HIP module initialized successfully\n");
 	return 0;
@@ -2057,7 +2039,7 @@ static void __exit hip_cleanup(void)
 	HIP_INFO("uninitializing HIP module\n");
 
 	/* unregister XFRM km handler */
-	xfrm_unregister_km(&hip_xfrm_km_mgr);
+	//xfrm_unregister_km(&hip_xfrm_km_mgr);
 
 	/* disable callback for HIP packets */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
@@ -2067,7 +2049,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
 	HIP_INVALIDATE(hip_trigger_bex);
-	HIP_INVALIDATE(hip_handle_icmp);
+	//HIP_INVALIDATE(hip_handle_icmp);
 	HIP_INVALIDATE(hip_unknown_spi);
 	HIP_INVALIDATE(hip_get_saddr);
 	HIP_INVALIDATE(hip_get_addr);

@@ -1465,7 +1465,7 @@ int hip_receive_update(struct sk_buff *skb)
 
 	HIP_DEBUG("handle_upd=%d\n", handle_upd);
 	if (handle_upd > 1) {
-		HIP_DEBUG("MM-02 kludge\n");
+		HIP_DEBUG("MM-02 UPDATE\n");
 	}
 
 	hmac = hip_get_param(msg, HIP_PARAM_HMAC);

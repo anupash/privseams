@@ -282,6 +282,7 @@ int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 
+	/* assumes already locked entry */
 	hmac = hip_get_param(msg, HIP_PARAM_HMAC);
 	if (!hmac) {
 		HIP_ERROR("Packet contained no HMAC parameter\n");
@@ -295,9 +296,9 @@ int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry)
 
 	_HIP_HEXDUMP("HMACced data", msg, len);
 
-	HIP_LOCK_HA(entry);
+//	HIP_LOCK_HA(entry);
 	memcpy(&tmpkey, &entry->hip_hmac_in, sizeof(tmpkey));
-	HIP_UNLOCK_HA(entry);
+//	HIP_UNLOCK_HA(entry);
 
 	err = hip_verify_hmac(msg, hmac->hmac_data,
 			      tmpkey.key, HIP_DIGEST_SHA1_HMAC);
@@ -1424,7 +1425,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	/********** SPI_LSI **********/
 	barrier();
 //	spi_in = entry->spi_in;
-	HIP_DEBUG("entry should have only one spi_in now, fix\n");
+	//HIP_DEBUG("entry should have only one spi_in now, fix\n");
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 
 	err = hip_build_param_spi(r2, spi_in);
@@ -2079,13 +2080,15 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
  	struct hip_sig *sig = NULL;
 	struct hip_common *r2 = NULL;
 	struct hip_spi_out_item spi_out_data;
+	int tfm;
+	uint32_t spi_recvd, spi_in;
 
 	HIP_DEBUG("Entering handle_r2\n");
 
 	ctx = kmalloc(sizeof(struct hip_context), GFP_KERNEL);
 	if (!ctx) {
 		err = -ENOMEM;
-		goto out_err;
+		goto out_err_no_lock;
 	}
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->skb_in = skb;
@@ -2093,6 +2096,8 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	r2 = ctx->input;
 
 	sender = &r2->hits;
+
+	HIP_LOCK_HA(entry);
 
         /* verify HMAC */
 	err = hip_verify_packet_hmac(r2,entry);
@@ -2139,71 +2144,67 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
  		goto out_err;
  	}
 
-	{
-		int tfm;
-		uint32_t spi_recvd, spi_in;
-
-		spi_recvd = ntohl(hspi->spi);
-		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-		spi_out_data.spi = spi_recvd;
-		HIP_LOCK_HA(entry);
-		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
-		if (err) {
-			HIP_UNLOCK_HA(entry);
-			goto out_err;
-		}
-		memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
-		memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
-		HIP_ERROR("entry should have only one spi_in now, fix\n");
-		spi_in = hip_hadb_get_latest_inbound_spi(entry);
-		tfm = entry->esp_transform;
-
-		HIP_DEBUG("TODO: move HIP_UNLOCK_HA here ?\n");
-		err = hip_setup_sa(&r2->hitr, sender, &spi_recvd, tfm,
-				   &ctx->esp_out.key, &ctx->auth_out.key, 0, HIP_SPI_DIRECTION_OUT);
-		if (err == -EEXIST) {
-			HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
-			HIP_DEBUG("TODO: what to do ? currently ignored\n");
-		} else 	if (err) {
-			HIP_ERROR("hip_setup_sa failed, peer:dst (err=%d)\n", err);
-			HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
-		}
-		/* XXX: Check for -EAGAIN */
-		HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
-
-		/* source IPv6 address is implicitly the preferred
-		 * address after the base exchange */
-		err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,
-					       1, 0, 1);
-		entry->default_spi_out = spi_recvd;
-		HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
-		HIP_DEBUG("add spi err ret=%d\n", err);
-		//hip_hadb_dump_spi_list(entry, NULL);
-
-		err = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
-		if (err != 0) {
-			HIP_DEBUG("ifindex=%d\n", err);
-			hip_hadb_set_spi_ifindex(entry, spi_in, err);
-		} else
-			HIP_ERROR("Couldn't get device ifindex of address\n");
-		err = 0;
-
-		HIP_DEBUG("clearing the address used during the bex\n");
-		ipv6_addr_copy(&entry->bex_address, &in6addr_any);
-		HIP_UNLOCK_HA(entry);
-
-		hip_hadb_insert_state(entry);
-		/* these will change SAs' state from ACQUIRE to VALID, and
-		 * wake up any transport sockets waiting for a SA */
-		hip_finalize_sa(&r2->hits, spi_recvd);
-		hip_finalize_sa(&r2->hitr, spi_in);
+	spi_recvd = ntohl(hspi->spi);
+	memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
+	spi_out_data.spi = spi_recvd;
+	//HIP_LOCK_HA(entry); moved above
+	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
+	if (err) {
+		//HIP_UNLOCK_HA(entry);
+		goto out_err;
 	}
-	HIP_DEBUG("Reached ESTABLISHED state\n");
+	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
+	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
+	HIP_ERROR("entry should have only one spi_in now, fix\n");
+	spi_in = hip_hadb_get_latest_inbound_spi(entry);
+	tfm = entry->esp_transform;
 
+	err = hip_setup_sa(&r2->hitr, sender, &spi_recvd, tfm,
+			   &ctx->esp_out.key, &ctx->auth_out.key, 0, HIP_SPI_DIRECTION_OUT);
+	if (err == -EEXIST) {
+		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
+		HIP_DEBUG("TODO: what to do ? currently ignored\n");
+	} else 	if (err) {
+		HIP_ERROR("hip_setup_sa failed, peer:dst (err=%d)\n", err);
+		HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
+	}
+	/* XXX: Check for -EAGAIN */
+	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
+
+	/* source IPv6 address is implicitly the preferred
+	 * address after the base exchange */
+	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,
+				       1, 0, 1);
+	entry->default_spi_out = spi_recvd;
+	HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
+	HIP_DEBUG("add spi err ret=%d\n", err);
+	//hip_hadb_dump_spi_list(entry, NULL);
+
+	err = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
+	if (err != 0) {
+		HIP_DEBUG("ifindex=%d\n", err);
+		hip_hadb_set_spi_ifindex(entry, spi_in, err);
+	} else
+		HIP_ERROR("Couldn't get device ifindex of address\n");
+	err = 0;
+
+	HIP_DEBUG("clearing the address used during the bex\n");
+	ipv6_addr_copy(&entry->bex_address, &in6addr_any);
+	//HIP_UNLOCK_HA(entry);
+
+	hip_hadb_insert_state(entry);
+	/* these will change SAs' state from ACQUIRE to VALID, and
+	 * wake up any transport sockets waiting for a SA */
+	hip_finalize_sa(&r2->hits, spi_recvd);
+	hip_finalize_sa(&r2->hitr, spi_in);
+
+	//HIP_DEBUG("Reached ESTABLISHED state\n"); moved to receive_r2
 	//hip_hadb_dump_spis_in(entry);
 	//hip_hadb_dump_spis_out(entry);
 
  out_err:
+	HIP_UNLOCK_HA(entry);
+ out_err_no_lock:
 	if (ctx)
 		kfree(ctx);
 	return err;
@@ -2406,9 +2407,11 @@ int hip_receive_r2(struct sk_buff *skb)
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
  		err = hip_handle_r2(skb, entry);
+		/* MOVE LOCK_HA ABOVE handle_r2 (and remove lock from handle_r2) ? */
 		HIP_LOCK_HA(entry);
 		if (!err) {
 			entry->state = HIP_STATE_ESTABLISHED;
+			HIP_DEBUG("Reached ESTABLISHED state\n");
 		} else {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
  		}

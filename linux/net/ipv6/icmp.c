@@ -556,8 +556,10 @@ static void icmpv6_notify(struct sk_buff *skb, int type, int code, u32 info)
 	}
 	read_unlock(&raw_v6_lock);
 
+#if 0
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	HIP_CALLFUNC(hip_handle_icmp, 0)(skb, type, code, info);
+#endif
 #endif
 }
   
