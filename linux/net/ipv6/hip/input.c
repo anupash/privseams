@@ -55,6 +55,7 @@
 #include "db.h"
 #include "cookie.h"
 #include "output.h"
+#include "socket.h"
 #ifdef CONFIG_HIP_RVS
 # include "rvs.h"
 #endif
@@ -2502,6 +2503,183 @@ int hip_receive_notify(struct sk_buff *skb)
 }
 
 /**
+ * hip_handle_bos - handle incoming BOS packet
+ * @skb: sk_buff where the HIP packet is in
+ * @entry: HA
+ *
+ * This function is the actual point from where the processing of BOS
+ * is started.
+ *
+ * On success (BOS payloads are checked) 0 is returned, otherwise < 0.
+ */
+int hip_handle_bos(struct sk_buff *skb, hip_ha_t *entry)
+{
+	int err = 0;
+	struct hip_host_id *peer_host_id;
+	struct hip_common *bos = NULL;
+	struct hip_lhi peer_lhi;
+	struct in6_addr peer_hit;
+	char *str;
+	int len;
+  	struct ipv6hdr *ip6hdr;
+	struct in6_addr *dstip;
+	char src[INET6_ADDRSTRLEN];
+
+	HIP_DEBUG("\n");
+
+	bos = (struct hip_common*) skb->h.raw;
+
+	/* according to the section 8.6 of the base draft,
+	 * we must first check signature
+	 */
+
+	peer_host_id = hip_get_param(bos, HIP_PARAM_HOST_ID);
+ 	if (!peer_host_id) {
+ 		HIP_ERROR("No HOST_ID found in BOS\n");
+ 		err = -ENOENT;
+ 		goto out_err;
+ 	}
+
+	err = hip_verify_packet_signature(bos, peer_host_id);
+	if (err) {
+ 		HIP_ERROR("Verification of BOS signature failed\n");
+		err = -EINVAL;
+ 		goto out_err;
+	}
+
+	HIP_DEBUG("SIGNATURE in BOS ok\n");
+
+	/* validate HIT against received host id */	
+	hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH126);
+
+	if (ipv6_addr_cmp(&peer_hit, &bos->hits) != 0) {
+	        HIP_ERROR("Sender HIT does not match the advertised host_id\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	/* Everything ok, first save host id to db */
+	if (hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0)
+	        goto out_err;
+	HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
+		  str, len, hip_get_param_host_id_hostname(peer_host_id));
+
+ 	peer_lhi.anonymous = 0;
+	ipv6_addr_copy(&peer_lhi.hit, &bos->hits);
+ 	
+ 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id);
+ 	if (err == -EEXIST) {
+ 		HIP_INFO("Host id already exists. Ignoring.\n");
+ 		err = 0;
+ 	} else if (err) {
+ 		HIP_ERROR("Failed to add peer host id to the database\n");
+ 		goto out_err;
+  	}
+
+	/* Now save the peer IP address */
+	ip6hdr = skb->nh.ipv6h;
+	dstip = (struct in6_addr *)&ip6hdr->saddr;
+	hip_in6_ntop(dstip, src);
+	HIP_DEBUG("BOS sender IP: saddr %s\n", src);
+
+	if (entry) {
+		struct in6_addr daddr;
+			
+		/* The entry may contain the wrong address mapping... */
+		HIP_DEBUG("Updating existing entry\n");
+		hip_hadb_get_peer_addr(entry, &daddr);
+		if (ipv6_addr_cmp(&daddr, dstip) != 0) {
+			HIP_DEBUG("Mapped address doesn't match received address\n");
+			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
+			HIP_HEXDUMP("Mapping", &daddr, 16);
+			HIP_HEXDUMP("Received", dstip, 16);
+			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			hip_hadb_add_peer_addr(entry, dstip, 0, 0);
+		}
+	} else {
+		HIP_DEBUG("Adding new peer entry\n");
+                hip_in6_ntop(&bos->hits, src);
+		HIP_DEBUG("map HIT: %s\n", src);
+		hip_in6_ntop(dstip, src);
+		HIP_DEBUG("map IP: %s\n", src);
+	
+		err = hip_insert_peer_map_work_order(&bos->hits, dstip, 1, 0);
+		if (err) {
+		        HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
+		  goto out_err;
+		}
+	}
+
+	HIP_INFO("BOS Successfully received\n");
+ 	
+ out_err:
+	return err;
+}
+
+/**
+ * hip_receive_bos - receive BOS packet
+ * @skb: sk_buff where the HIP packet is in
+ *
+ * This function is called when a BOS packet is received. We add the
+ * received HIT and HOST_ID to the database.
+ *
+ * Returns always 0.
+ *
+ * TODO: check if it is correct to return always 0 
+ */
+int hip_receive_bos(struct sk_buff *skb) 
+{
+	struct hip_common *bos;
+	int err = 0;
+	hip_ha_t *entry;
+	int state;
+
+	bos = (struct hip_common*) (skb)->h.raw;
+
+	HIP_DEBUG("\n");
+
+	if (ipv6_addr_any(&bos->hits)) {
+		HIP_ERROR("Received NULL sender HIT in BOS. Dropping\n");
+		goto out;
+	}
+
+	if (!ipv6_addr_any(&bos->hitr)) {
+		HIP_ERROR("Received non-NULL receiver HIT in BOS. Dropping\n");
+		goto out;
+	}
+
+	entry = hip_hadb_find_byhit(&bos->hits);
+	if (!entry) {
+		state = HIP_STATE_UNASSOCIATED;
+	} else {
+		HIP_DEBUG("Received BOS packet from already known sender\n");
+		state = entry->state;
+	}
+
+ 	switch(state) {
+ 	case HIP_STATE_UNASSOCIATED:
+		/* possibly no state created yet */
+		err = hip_handle_bos(skb, NULL);
+		break;
+	case HIP_STATE_I1_SENT:
+	case HIP_STATE_I2_SENT:
+	case HIP_STATE_R2_SENT:
+ 	case HIP_STATE_ESTABLISHED:
+ 	case HIP_STATE_REKEYING:
+ 		err = hip_handle_bos(skb, entry);
+	default:
+		HIP_ERROR("Internal state (%d) is incorrect\n", state);
+		break;
+	}
+
+	if (entry)
+		hip_put_ha(entry);
+ out:
+	return err;
+}
+
+
+/**
  * hip_verify_hmac - verify HMAC
  * @buffer: the packet data used in HMAC calculation
  * @hmac: the HMAC to be verified
@@ -2723,6 +2901,10 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	case HIP_ACR:
 		HIP_DEBUG("Received HIP ACR packet\n");
 		hwo->subtype = HIP_WO_SUBTYPE_RECV_ACR;
+		break;
+	case HIP_BOS:
+		HIP_DEBUG("Received HIP BOS packet\n");
+		hwo->subtype = HIP_WO_SUBTYPE_RECV_BOS;
 		break;
 	default:
 		HIP_ERROR("Received HIP packet of unknown/unimplemented type %d\n",

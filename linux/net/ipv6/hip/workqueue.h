@@ -22,6 +22,7 @@
 #define HIP_WO_SUBTYPE_RECV_REA     7
 #define HIP_WO_SUBTYPE_RECV_AC      8
 #define HIP_WO_SUBTYPE_RECV_ACR     9
+#define HIP_WO_SUBTYPE_RECV_BOS    10
 
 /* subtypes from 101 to 200 reserved for HIP_WO_TYPE_OUTGOING */
 

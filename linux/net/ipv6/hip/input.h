@@ -18,6 +18,7 @@ int hip_receive_i2(struct sk_buff *skb);
 int hip_receive_i1(struct sk_buff *skb);
 int hip_receive_r2(struct sk_buff *skb);
 int hip_receive_notify(struct sk_buff *skb);
+int hip_receive_bos(struct sk_buff *skb); 
 
 void hip_hwo_input_destructor(struct hip_work_order *hwo);
 

@@ -454,3 +454,28 @@ Notes:
       implementation, except for bugs. :)
     * The rendezvous mechanism is not yet guaranteed to be interoperable 
       with other implementations than HIPL
+
+Using HIP BOS support
+=====================
+    * To generate a BOS packet (sent to the global multicast address
+      on all interfaces), use the following command:
+	hipconf BOS
+      BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
+
+
+Accessing the kernel peer list
+==============================
+    * You can access the kernel's list of known HIP peers using the native
+      getendpointinfo name resolution interface.
+    * By default, the interface first checks the /etc/hip/hosts file for
+      a matching host. If one is not found, the kernel is queried for its
+      list of known HIP peers and the list is examined for matches.
+    * To only check the kernel list, set the hints.ei_flags to 
+      AI_HIP | AI_KERNEL_LIST. This will use only the kernel list and will
+      not check the hosts file.
+    * To retrieve the list of known peers from the kernel, set the 
+      hints.ei_flags to AI_HIP | AI_KERNEL_LIST and the nodename to NULL.
+      This will query the kernel for the list and return the entire list.
+
+    
+

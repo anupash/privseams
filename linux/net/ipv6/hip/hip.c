@@ -1783,6 +1783,11 @@ static int hip_do_work(void)
 			res = hip_receive_ac_or_acr(job->arg1,HIP_ACR);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"ACR");
 			break;
+		case HIP_WO_SUBTYPE_RECV_BOS:
+			KRISU_START_TIMER(KMM_PARTIAL);
+			res = hip_receive_bos(job->arg1);
+			KRISU_STOP_TIMER(KMM_PARTIAL,"BOS");
+			break;
 		default:
 			HIP_ERROR("Unknown subtype: %d\n",job->subtype);
 			break;

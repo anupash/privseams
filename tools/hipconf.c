@@ -5,6 +5,7 @@
  * - Janne Lundberg <jlu@tcs.hut.fi>
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Anthony D. Joseph <adj@hiit.fi>
  *
  * Licence: GNU/GPL
  *
@@ -25,6 +26,7 @@ const char *usage = "new|add|del hi default\n"
                     "add|del map hit ipv6\n"
                     "rst all|hit\n"
                     "rvs hit ipv6\n"
+                    "bos\n"
 ;
 
 
@@ -37,7 +39,8 @@ int (*action_handler[])(struct hip_common *, int action,
   handle_hi,
   handle_map,
   handle_rst,
-  handle_rvs
+  handle_rvs,
+  handle_bos
 };
 
 /**
@@ -60,6 +63,8 @@ int get_action(char *text) {
     ret = ACTION_NEW;
   else if (!strcmp("rvs", text))
 	  ret = ACTION_RVS;
+  else if (!strcmp("bos", text))
+    ret = ACTION_BOS;
   return ret;
 }
 
@@ -67,7 +72,7 @@ int get_action(char *text) {
  * check_action_argc - get minimum amount of arguments needed to be given to the action
  * @action: action type
  *
- * Returns: how many arguments needs to be given ta least
+ * Returns: how many arguments needs to be given at least
  */
 int check_action_argc(int action) {
   int count = -1;
@@ -80,6 +85,9 @@ int check_action_argc(int action) {
     break;
   case ACTION_RST:
     count = 1;
+    break;
+  case ACTION_BOS:
+    count = 0;
     break;
   }
 
@@ -103,6 +111,8 @@ int get_type(char *text) {
     ret = TYPE_RST;
   else if (!strcmp("rvs", text))
 	  ret = TYPE_RVS;
+  else if (!strcmp("bos", text))
+    ret = TYPE_BOS;
   return ret;
 }
 
@@ -527,12 +537,45 @@ int handle_rst(struct hip_common *msg, int action,
 	return err;
 }
 
+/**
+ * handle_bos - generate a BOS message
+ * @msg:    the buffer where the message for kernel will be written
+ * @action: the action (add/del) to performed (should be empty)
+ * @opt:    an array of pointers to the command line arguments after
+ *          the action and type (should be empty)
+ * @optc:   the number of elements in the array (=0, no extra arguments)
+ *
+ * Returns: zero on success, else non-zero.
+ */
+int handle_bos(struct hip_common *msg, int action,
+	       const char *opt[], int optc) 
+{
+	int err;
+
+	/* Check that there are no extra args */
+	if (optc != 0) {
+		HIP_ERROR("Extra arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	/* Build the message header */
+	err = hip_build_user_hdr(msg, SO_HIP_BOS, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+
+ out:
+	return err;
+}
+
 /* Parse command line arguments and send the appropiate message to
  * the kernel module
  */
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
-  int err = 0;
+  int type_arg, err = 0;
   long int action, type;
   struct hip_common *msg;
 
@@ -562,17 +605,22 @@ int main(int argc, char *argv[]) {
   /* XX FIXME: THE RVS/RST HANDLING IS FUNKY. REWRITE */
 
   if (action != ACTION_RST &&
-      action != ACTION_RVS) 
+      action != ACTION_RVS &&
+      action != ACTION_BOS) 
   {
-
-	  type = get_type(argv[2]);
-	  if (type <= 0 || type >= TYPE_MAX) {
-		  err = -EINVAL;
-		  HIP_ERROR("Invalid type argument '%s'\n", argv[2]);
-		  goto out;
-	  }
-	  HIP_INFO("type=%d\n", type);
+	  type_arg = 2;
+  } else {
+	  type_arg = 1;
   }
+
+  type = get_type(argv[type_arg]);
+  if (type <= 0 || type >= TYPE_MAX) {
+	  err = -EINVAL;
+	  HIP_ERROR("Invalid type argument '%s'\n", argv[type_arg]);
+	  goto out;
+  }
+  HIP_INFO("type=%d\n", type);
+
 
   msg = malloc(HIP_MAX_PACKET);
   if (!msg) {
@@ -581,17 +629,25 @@ int main(int argc, char *argv[]) {
   }
   hip_msg_init(msg);
 
-  if (action == ACTION_RVS) {
-	  err = (*action_handler[TYPE_RVS])(msg, ACTION_RST, (const char **) &argv[2],
-					    argc - 2);
-  } else {
-	  if (action != ACTION_RST) {
-		  err = (*action_handler[type])(msg, action, (const char **) &argv[3],
-						argc - 3);
-	  } else {
-		  err = (*action_handler[TYPE_RST])(msg, ACTION_RST, (const char **) &argv[2],
-						    argc - 2);
-	  }
+
+  switch (action) {
+  case ACTION_RVS:
+    err = (*action_handler[TYPE_RVS])(msg, ACTION_RST,
+				      (const char **) &argv[2], argc - 2);
+    break;
+  case ACTION_ADD:
+  case ACTION_DEL:
+  case ACTION_NEW:
+    err = (*action_handler[type])(msg, action, (const char **) &argv[3],
+				  argc - 3);
+    break;
+  case ACTION_RST:
+    err = (*action_handler[TYPE_RST])(msg, ACTION_RST,
+				      (const char **) &argv[2], argc - 2);
+    break;
+  case ACTION_BOS:
+    err = (*action_handler[type])(msg, action, (const char **) NULL, 0);
+    break;
   }
 
   if (err) {
