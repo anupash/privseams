@@ -121,20 +121,15 @@ int hip_is_our_spi(uint32_t spi, struct in6_addr *hit)
  */
 void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 {
-	int tlist[2];
+	int tlist[2] = { HIP_HADB_OWN_HIT, HIP_HADB_PEER_HIT };
+	void *setlist[2] = { &hdr->daddr, &hdr->saddr };
 	int k;
 
-	if (hdr->nexthdr == IPPROTO_ESP) {
+	/* we are only called, if the protocol is ESP */
 
-		tlist[0] = HIP_HADB_OWN_HIT;
-		tlist[1] = HIP_HADB_PEER_HIT;
-
-		k = hip_hadb_multiget((void *)spi,tlist,2,&hdr->daddr,&hdr->saddr,
-				      NULL,NULL,HIP_ARG_SPI);
-		if (k < 3) {
-			HIP_DEBUG("Could not copy HITs, or SPI (%x) not ours\n",spi);
-			return;
-		}
+	k = hip_hadb_multiget((void *)spi, 2, tlist, setlist, HIP_ARG_SPI);
+	if (k < 3) {
+		HIP_DEBUG("Could not copy HITs, or SPI (%x) not ours\n",spi);
 	}
 	return;
 }
@@ -1763,35 +1758,37 @@ int hip_handle_r2(struct sk_buff *skb)
  	}
 
 	{
-		int tmp_list[4];
 		int tfm;
 		int tmp_lsi;
 		uint32_t spi_recvd;
+		int state;
+
+ 		int getlist[3] = { HIP_HADB_PEER_SPI, HIP_HADB_PEER_LSI };
+ 		void *setlist[3] = { &spi_recvd, &tmp_lsi };
 
 		spi_recvd = ntohl(spi_lsi->spi);
 		tmp_lsi = ntohl(spi_lsi->lsi);
 
-		tmp_list[0] = HIP_HADB_PEER_SPI;
-		tmp_list[1] = HIP_HADB_PEER_LSI;
-
-		hip_hadb_multiset(sender,tmp_list,2,&spi_recvd,&tmp_lsi,NULL,
-				  NULL,HIP_ARG_HIT);
+		hip_hadb_multiset(sender, 2, getlist, setlist, HIP_ARG_HIT);
 
         /* Set up outbound IPsec SA (inbound SA was already set up
 	 * earlier when I2 was sent) */
-		tmp_list[0] = HIP_HADB_ESP_TRANSFORM;
-		tmp_list[1] = HIP_HADB_OWN_ESP;
-		tmp_list[2] = HIP_HADB_OWN_AUTH;
+		getlist[0] = HIP_HADB_ESP_TRANSFORM;
+		getlist[1] = HIP_HADB_OWN_ESP;
+		getlist[2] = HIP_HADB_OWN_AUTH;
 
-		hip_hadb_multiget(sender,tmp_list,3,&tfm,&ctx->hip_espi,
-				  &ctx->hip_authi,NULL,HIP_ARG_HIT);
+		setlist[0] = &tfm;
+		setlist[1] = &ctx->hip_espi;
+		setlist[2] = &ctx->hip_authi;
+
+		hip_hadb_multiget(sender, 3, getlist, setlist, HIP_ARG_HIT);
 
 /*
 		err = hip_setup_esp(sender, &r2->hitr, &spi_recvd, tfm,
 				    &ctx->hip_espi.key,
 				    &ctx->hip_authi.key);
 */
-		HIP_DEBUG("Setting out-policy SPI=0x%x (host)\n",spi_recvd);
+		_HIP_DEBUG("Setting out-policy SPI=0x%x (host)\n",spi_recvd);
 
 		spi_recvd = htonl(spi_recvd); // apparently XFRM wants in big endian
 
@@ -1808,27 +1805,32 @@ int hip_handle_r2(struct sk_buff *skb)
 		}
 		/* XXX: Check for -EAGAIN */
 
-		tfm = HIP_STATE_ESTABLISHED;
-		hip_hadb_set_info(sender,&tfm,HIP_HADB_STATE|HIP_ARG_HIT);
+		state = HIP_STATE_ESTABLISHED;
+		hip_hadb_set_info(sender, &state, HIP_HADB_STATE|HIP_ARG_HIT);
 		HIP_DEBUG("Reached ESTABLISHED state\n");
 	}
 
 	/* Now, if we have cached SK, use it */
 	{
-		int tlist[1];
+		int tlist[1] = { HIP_HADB_SK };
 		struct hip_kludge *kg = NULL;
 		struct dst_entry *dst;
+		void *setlist[1] = { &kg };
 
-		tlist[0] = HIP_HADB_SK;
-		if (hip_hadb_multiget(&ctx->input->hits, tlist, 1, &kg, NULL, NULL, 
-				      NULL, HIP_ARG_HIT)) 
+		if (hip_hadb_multiget(&ctx->input->hits, 1, tlist, setlist, 
+				      HIP_ARG_HIT)) 
 		{
 			HIP_INFO("SK found %p!\n",kg->sk);
-			HIP_HEXDUMP("FL", &kg->fl, sizeof(struct flowi));
+			_HIP_HEXDUMP("FL", &kg->fl, sizeof(struct flowi));
 
+			lock_sock(kg->sk);
+
+			__sk_dst_reset(kg->sk);
 			ip6_dst_lookup(kg->sk, &dst, &kg->fl); // route
-			sk_dst_reset(kg->sk);
-			sk_dst_set(kg->sk, dst);
+			__sk_dst_set(kg->sk, dst);
+
+			release_sock(kg->sk);
+
 			if (tcp_connect(kg->sk)) {
 				HIP_ERROR("Error while connecting TCP socket\n");
 				tcp_set_state(kg->sk, TCP_CLOSE);

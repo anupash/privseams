@@ -1998,37 +1998,45 @@ void hip_hadb_free_entry(void *arg, int type)
 		hip_hadb_entry_free(entry));
 }
 
-int hip_hadb_multiget(void *arg, int *getlist, int amount, void *arg1,
-		      void *arg2, void *arg3, void *arg4, int type)
+/** hip_hadb_multiget - get information on given HIT or SPI
+ * @arg: pointer to HIT or SPI depending on @type
+ * @amount: number of elements to be fetched
+ * @getlist: list containing the element types to be fetched
+ * @setlist: list of pointers where the results are stored
+ * @type: HIP_ARG_HIT or HIP_ARG_SPI
+ *
+ * Returns: On success @amount, on error -EINVAL
+*/
+int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int type)
 {
 	HIP_HADB_WRAP_BEGIN(int);
-	void *target = arg1;
+	void *target;
 	int num = 0;
+	int err = 0;
+	_HIP_DEBUG("amount=%d getlist=0x%p setlist=0x%p\n", amount, getlist, setlist);
 
-	if (amount>4 || amount <= 0)
-		return 0;
+	if (amount <= 0) {
+		HIP_ERROR("invalid amount %d\n", amount);
+		return -EINVAL;
+	}
+
+	if (!getlist || !setlist) {
+		HIP_ERROR("getlist or setlist is null\n");
+		return -EINVAL;
+	}
 
 	HIP_HADB_WRAP_R_ACCESS(0);
 
-	while(num++ < amount) {
-		switch(num) {
-		case 1:
-			target = arg1;
-			break;
-		case 2:
-			target = arg2;
-			break;
-		case 3:
-			target = arg3;
-			break;
-		case 4:
-			target = arg4;
-			break;
-		default:
-			HIP_ERROR("Internal error: %x\n",num);
+	while(num < amount) {
+		target = setlist[num];
+		_HIP_DEBUG("index=%d request=0x%x getlist=0x%p target=0x%p\n",
+			   num, *getlist, getlist, target);
+		if (!target) {
+			HIP_ERROR("null target at index %d\n", num);
+			err = -EINVAL;
+			goto out_err;
 		}
-
-		switch((*getlist)) {
+		switch(*getlist) {
 		case HIP_HADB_OWN_SPI:
 			*((uint32_t *)target) = entry->spi_our;
 			break;
@@ -2057,78 +2065,98 @@ int hip_hadb_multiget(void *arg, int *getlist, int amount, void *arg1,
 			*((uint16_t *)target) = entry->peer_controls;
 			break;
 		case HIP_HADB_OWN_HIT:
-			ipv6_addr_copy(target,&entry->hit_our);
+			ipv6_addr_copy(target, &entry->hit_our);
 			break;
 		case HIP_HADB_PEER_HIT:
-			ipv6_addr_copy(target,&entry->hit_peer);
+			ipv6_addr_copy(target, &entry->hit_peer);
 			break;
 		case HIP_HADB_OWN_ESP:
-			memcpy(target,&entry->esp_our,sizeof(struct hip_crypto_key));
+			memcpy(target, &entry->esp_our, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_PEER_ESP:
-			memcpy(target,&entry->esp_peer,sizeof(struct hip_crypto_key));
+			memcpy(target, &entry->esp_peer, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_OWN_AUTH:
-			memcpy(target,&entry->auth_our,sizeof(struct hip_crypto_key));
+			memcpy(target, &entry->auth_our, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_PEER_AUTH:
-			memcpy(target,&entry->auth_peer,sizeof(struct hip_crypto_key));
+			memcpy(target, &entry->auth_peer, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_OWN_HMAC:
-			memcpy(target,&entry->hmac_our,sizeof(struct hip_crypto_key));
+			memcpy(target, &entry->hmac_our, sizeof(struct hip_crypto_key));
 			break;
 		case HIP_HADB_PEER_HMAC:
-			memcpy(target,&entry->hmac_peer,sizeof(struct hip_crypto_key));
+			memcpy(target, &entry->hmac_peer, sizeof(struct hip_crypto_key));
 			break;
 		default:
-			HIP_ERROR("Unknown request: %x\n",*getlist);
+			HIP_ERROR("Unknown request 0x%x at index %d\n", *getlist, num);
+			err = -EINVAL;
+			goto out_err;
 			break;
 		}
+		num++;
 		getlist++;
 	}
 
-	res = num;
+ out_err:
+	res = err ? err : amount;
+	_HIP_DEBUG("err=%d res=%d amount=%d\n", err, res, amount);
 	HIP_HADB_WRAP_R_END;
 }
 
-int hip_hadb_get_info(void *arg, void *arg1, int type)
+/** hip_hadb_get_info - get given information on HIT or SPI
+ * @arg: pointer to HIT or SPI depending on @type
+ * @dst: pointer where the result is stored to
+ * @type: contains request type and type for @arg
+ *
+ * Returns: 1 on success, on error -EINVAL
+ */
+int hip_hadb_get_info(void *arg, void *dst, int type)
 {
 	int itype = (type & (~HIP_HADB_ACCESS_ARGS));
 	int res;
 
-	res = hip_hadb_multiget(arg,&itype,1,arg1,NULL,NULL,NULL,
-				(type & HIP_HADB_ACCESS_ARGS));
+	res = hip_hadb_multiget(arg, 1, &itype, &dst, type & HIP_HADB_ACCESS_ARGS);
 	return res;
 }
 
-int hip_hadb_multiset(void *arg, int *getlist, int amount, void *arg1,
-		      void *arg2, void *arg3, void *arg4, int type)
+/** hip_hadb_multiset - set information on given HIT or SPI
+ * @arg: pointer to HIT or SPI depending on @type
+ * @amount: number of elements to be fetched
+ * @getlist: list containing the element types to be set
+ * @setlist: list of pointers containing the information to be stored
+ * @type: HIP_ARG_HIT or HIP_ARG_SPI
+ *
+ * Returns: On success @amount, on error -EINVAL
+*/
+int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int type)
 {
 	HIP_HADB_WRAP_BEGIN(int);
-	void *target = arg1;
-	int num = 0;
+	void *target;
+	int num = 0, err = 0;
 
-	if (amount > 4 || amount <= 0)
-		return 0;
+	_HIP_DEBUG("amount=%d getlist=0x%p setlist=0x%p\n", amount, getlist, setlist);
+
+	if (amount <= 0) {
+		HIP_ERROR("invalid amount %d\n", amount);
+		return -EINVAL;
+	}
+
+	if (!getlist || !setlist) {
+		HIP_ERROR("getlist or setlist is null\n");
+		return -EINVAL;
+	}
 
 	HIP_HADB_WRAP_W_ACCESS(0);
 
-	while(++num <= amount) {
-		switch(num) {
-		case 1:
-			target = arg1;
-			break;
-		case 2:
-			target = arg2;
-			break;
-		case 3:
-			target = arg3;
-			break;
-		case 4:
-			target = arg4;
-			break;
-		default:
-			HIP_ERROR("Internal error: %x\n",num);
+	while(num < amount) {
+		target = setlist[num];
+		_HIP_DEBUG("index=%d request=0x%x getlist=0x%p target=0x%p\n",
+			   num, *getlist, getlist, target);
+		if (!target) {
+			HIP_ERROR("null target at index %d\n", num);
+			err = -EINVAL;
+			goto out_err;
 		}
 
 		switch((*getlist)) {
@@ -2184,23 +2212,35 @@ int hip_hadb_multiset(void *arg, int *getlist, int amount, void *arg1,
 			memcpy(&entry->hmac_peer,target,sizeof(struct hip_crypto_key));
 			break;
 		default:
-			HIP_ERROR("Unknown request: %x\n",*getlist);
+			HIP_ERROR("Unknown request 0x%x at index %d\n", *getlist, num);
+			err = -EINVAL;
+			goto out_err;
 			break;
 		}
+		num++;
 		getlist++;
 	}
 
-	res = num;
+ out_err:
+
+	res = err ? err : amount;
+	HIP_DEBUG("err=%d res=%d amount=%d\n", err, res, amount);
 	HIP_HADB_WRAP_W_END;
 }
 
-int hip_hadb_set_info(void *arg, void *arg1, int type)
+/** hip_hadb_set_info - set given information on HIT or SPI
+ * @arg: pointer to HIT or SPI depending on @type
+ * @dst: pointer to where the stored information is at
+ * @type: contains element type and type for @arg
+ *
+ * Returns: 1 on success, on error -EINVAL
+ */
+int hip_hadb_set_info(void *arg, void *dst, int type)
 {
 	int itype = (type & (~HIP_HADB_ACCESS_ARGS));
 	int res;
 
-	res = hip_hadb_multiset(arg,&itype,1,arg1,NULL,NULL,NULL,
-				(type & HIP_HADB_ACCESS_ARGS));
+	res = hip_hadb_multiset(arg, 1, &itype, &dst, type & HIP_HADB_ACCESS_ARGS);
 	return res;
 }
 

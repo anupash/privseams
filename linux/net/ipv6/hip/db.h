@@ -91,10 +91,13 @@ struct hip_db_struct {
             (hip_hadb_get_info(hit,a,HIP_HADB_OWN_HIT|HIP_ARG_HIT))
 #define hip_hadb_get_own_hmac_by_hit(hit,a) \
             (hip_hadb_get_info(hit,a,HIP_HADB_OWN_HMAC|HIP_ARG_HIT))
+
+#if 0
 #define hip_hadb_get_spis_by_hit(hit,list,a,b) \
             (hip_hadb_multiget(hit,list,2,a,b,NULL,NULL,HIP_ARG_HIT))
 #define hip_hadb_set_lsis_by_hit(hit,list,a,b) \
             (hip_hadb_multiset(hit,list,2,a,b,NULL,NULL,HIP_ARG_HIT))
+#endif
 
 #define HIP_READ_LOCK_DB(db) do { \
 	KRISU_START_TIMER(KMM_SPINLOCK);\
@@ -172,14 +175,12 @@ void       hip_hadb_insert_entry(struct hip_hadb_state *entry);
 int hip_hadb_set_peer_address_info(void *arg,struct in6_addr *,
 				   uint32_t *interface_id,
 				   uint32_t *lifetime,int type);
-int hip_hadb_multiget(void *arg, int *getlist, int amount, void *arg1,
-		      void *arg2, void *arg3, void *arg4, int type);
-int hip_hadb_get_info(void *arg, void *arg1, int type);
-
-int hip_hadb_multiset(void *arg, int *getlist, int amount, void *arg1,
-		      void *arg2, void *arg3, void *arg4, int type);
-int hip_hadb_set_info(void *arg, void *arg1, int type);
 int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
+
+int hip_hadb_multiget(void *arg, int amount, int *getlist, void **setlist, int type);
+int hip_hadb_get_info(void *arg, void *dst, int type);
+int hip_hadb_multiset(void *arg, int amount, int *getlist, void **setlist, int type);
+int hip_hadb_set_info(void *arg, void *dst, int type);
 
 // host id functions
 int hip_get_any_local_hit(struct in6_addr *dst);

@@ -72,17 +72,18 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
  */
 int hip_delete_esp(struct in6_addr *own, struct in6_addr *peer)
 {
-	uint32_t spi_peer,spi_our;
-	int tlist[2];
+	uint32_t spi_peer, spi_our;
+	int getlist[2];
+	void *setlist[2];
 	int k;
 
-	tlist[0] = HIP_HADB_PEER_SPI;
-	tlist[1] = HIP_HADB_OWN_SPI;
-
-	k = hip_hadb_multiget(peer,tlist,2,&spi_peer,&spi_our,NULL,NULL,
-			  HIP_ARG_HIT);
-	if (k < 2) {
-		HIP_ERROR("Could not get spis from db\n");
+	getlist[0] = HIP_HADB_PEER_SPI;
+	getlist[1] = HIP_HADB_OWN_SPI;
+	setlist[0] = &spi_peer;
+	setlist[1] = &spi_our;
+	k = hip_hadb_multiget(peer, 2, getlist, setlist, HIP_ARG_HIT);
+	if (k != 2) {
+		HIP_ERROR("Could not get SPIs from db\n");
 		return -EINVAL;
 	}
 

@@ -879,6 +879,7 @@ static int hip_send_rea(struct in6_addr *dst_hit,int interface_id,
 	struct hip_common *rea_packet = NULL;
 	uint32_t spi_our, spi_peer;
 	int tmplist[4];
+	void *setlist[4];
 	uint16_t rea_id;
 	struct in6_addr daddr;
 	struct in6_addr hit_our;
@@ -897,10 +898,12 @@ static int hip_send_rea(struct in6_addr *dst_hit,int interface_id,
 	tmplist[1] = HIP_HADB_OWN_SPI;
 	tmplist[2] = HIP_HADB_PEER_SPI;
 	tmplist[3] = HIP_HADB_OWN_HMAC;
-
-	err = hip_hadb_multiget(dst_hit, tmplist, 4, &hit_our, &spi_our,
-				&spi_peer, &hmac_our, HIP_ARG_HIT);
-	if (err < 4) {
+	setlist[0] = &hit_our;
+	setlist[1] = &spi_our;
+	setlist[2] = &spi_peer;
+	setlist[3] = &hmac_our;
+	err = hip_hadb_multiget(dst_hit, 4, tmplist, setlist, HIP_ARG_HIT);
+	if (err != 4) {
 		HIP_ERROR("DB error\n");
 		goto out_err;
 	}

@@ -304,37 +304,37 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   HIP_ASSERT(bn2bin_len == 20);
   memcpy(p, bn_buf, bn2bin_len);
   p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p - *dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
 
   /* add given dsa_param to the *dsa_key_rr */
-#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param)     \
-  bn2bin_len = BN_bn2bin(dsa_param, bn_buf);   \
-  _HIP_DEBUG("len=%d\n", bn2bin_len);          \
-  if (!bn2bin_len) {                           \
-    HIP_ERROR("bn2bin\n");                     \
-    err = -ENOMEM;                             \
-    goto out_err_free_rr;                      \
-  }                                            \
-  HIP_ASSERT(bn_buf_len - bn2bin_len >= 0);    \
-  p += bn_buf_len - bn2bin_len; /* skip pad */ \
-  memcpy(p, bn_buf, bn2bin_len);               \
+#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param)   \
+  bn2bin_len = BN_bn2bin(dsa_param, bn_buf); \
+  _HIP_DEBUG("len=%d\n", bn2bin_len);         \
+  if (!bn2bin_len) {                         \
+    HIP_ERROR("bn2bin\n");                   \
+    err = -ENOMEM;                           \
+    goto out_err_free_rr;                    \
+  }                                          \
+  HIP_ASSERT(bn_buf_len-bn2bin_len >= 0);    \
+  p += bn_buf_len-bn2bin_len; /* skip pad */ \
+  memcpy(p, bn_buf, bn2bin_len);             \
   p += bn2bin_len;
 
   /* padding + P */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->p);
-  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p - *dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + G */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->g);
-  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p - *dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + Y */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key);
-  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p - *dsa_key_rr);
+  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + X */
 
-  if (dsa->priv_key) {
-    bn2bin_len = BN_bn2bin(dsa->priv_key, bn_buf);
-    memcpy(p, bn_buf, bn2bin_len);
-  }
+#undef DSA_ADD_PGY_PARAM_TO_RR
+
+  bn2bin_len = BN_bn2bin(dsa->priv_key, bn_buf);
+  memcpy(p,bn_buf,bn2bin_len);
 
   p += bn2bin_len;
   HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
@@ -352,8 +352,6 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   */
 
   goto out_err;
-
-#undef DSA_ADD_PGY_PARAM_TO_RR
 
  out_err_free_rr:
   if (*dsa_key_rr)
