@@ -28,7 +28,7 @@ void hip_hadb_remove_state(hip_ha_t *ha);
 void hip_hadb_remove_state_spi(hip_ha_t *ha);
 void hip_hadb_remove_state_hit(hip_ha_t *ha);
 
-/* existance */
+/* existence */
 int hip_hadb_exists_entry(void *key, int type);
 
 /* debugging */

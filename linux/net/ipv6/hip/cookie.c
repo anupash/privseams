@@ -17,6 +17,13 @@
 
 struct hip_r1entry *hip_r1table;
 
+/**
+ * hip_calc_cookie_idx - get an index
+ * @ip_i: Initiator's IPv6 address
+ * @ip_r: Responder's IPv6 address
+ *
+ * Return 0 <= x < HIP_R1TABLESIZE
+ */
 static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 {
 	register u32 base=0;
@@ -36,6 +43,16 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 	return (base) % HIP_R1TABLESIZE;
 }
 
+/**
+ * hip_create_new_puzzle - Create/Change the puzzle in R1
+ * @pz: Old puzzle
+ * @r1: R1entry 
+ * @tv: Timevalue, that is inserted into the opaque field in puzzle
+ *
+ * Stores the old K, I and opaque values and generates new ones.
+ * Storing is required since we need to support puzzles sent just before
+ * we decide to change the puzzle.
+ */
 static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
 				  struct timeval *tv)
 {
@@ -55,14 +72,24 @@ static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
 
 }
 
+/**
+ * hip_fetch_cookie_entry - Get an R1entry structure
+ * @ip_i: Initiator's IPv6
+ * @ip_r: Responder's IPv6
+ *
+ * Comments for the #if 0 code are inlined below. 
+ * 
+ * Returns NULL if error.
+ */
 static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 						  struct in6_addr *ip_r)
 {
-
+#if 0
 	struct timeval tv;
 	struct hip_puzzle *pz;
-	struct hip_r1entry *r1;
 	int diff, ts;
+#endif
+	struct hip_r1entry *r1;
 	int idx;	
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r);
@@ -117,21 +144,15 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 
 /**
  * hip_solve_puzzle - Solve puzzle.
- * @puzzle: the puzzle
+ * @puzzle_or_solution: Either a pointer to hip_puzzle or hip_solution structure
  * @hdr: The incoming R1/I2 packet header.
- * @param: Pointer to 64-bit value, that is used according to the mode.
- *         The value is interpreted as beeing in network byte order.
  * @mode: Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
  *
- * If @mode is %HIP_VERIFY_PUZZLE, then @param is the difficulty factor.
- * In @mode %HIP_SOLVE_PUZZLE, the @param variable is used as
- * call-by-value-result argument. After the call the @param contains the
- * value that solves the puzzle.
+ * The K and I is read from the @puzzle_or_solution. 
  *
- * When verifying the puzzle, the puzzle argument must consist of
- * the J value, that supposedly solves the puzzle.
- *
- * Returns: 1 if success (= ?), otherwise 0
+ * The J that solves the puzzle is returned, or 0 to indicate an error.
+ * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
+ * odds are 1/2^64 to try 0, I don't see the point in improving this now.
  */
 uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr, 
 			  int mode)
@@ -353,6 +374,19 @@ int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	return 0;
 }
 
+/**
+ * hip_verify_cookie - Verify solution to the puzzle
+ * @ip_i: Initiator's IPv6
+ * @ip_r: Responder's IPv6
+ * @hdr: Received HIP packet
+ * @solution: Solution structure
+ *
+ * First we check that K and I are the same as in the puzzle we sent.
+ * If not, then we check the previous ones (since the puzzle might just
+ * have been expired). 
+ *
+ * Returns 1 if puzzle ok, 0 if !ok.
+ */ 
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
 		      struct hip_common *hdr,
 		      struct hip_solution *solution)

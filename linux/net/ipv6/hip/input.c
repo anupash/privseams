@@ -590,7 +590,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	if (we_are_HITg) {
 		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
-		(void) hip_keymat_draw(&km, hip_transf_length);
+		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_in.key, hmac_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->esp_out.key, esp_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->auth_out.key, auth_transf_length);
@@ -599,7 +599,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	} else {
 	 	KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_in.key, hmac_transf_length);
-		(void) hip_keymat_draw(&km, hip_transf_length);
+		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->esp_in.key, esp_transf_length);
 		KEYMAT_DRAW_AND_COPY(&ctx->auth_in.key, auth_transf_length);
@@ -615,46 +615,6 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_HEXDUMP("SA-gl ESP authentication key", &ctx->auth_out.key, auth_transf_length);
 	HIP_HEXDUMP("SA-lg ESP encryption key", &ctx->esp_in.key, esp_transf_length);
 	HIP_HEXDUMP("SA-lg ESP authentication key", &ctx->auth_in.key, auth_transf_length);
-#if 0
-	/* HIP-gl encryption key */
-	KEYMAT_DRAW_AND_COPY(&ctx->hip_i.key, hip_transf_length);
-	_HIP_HEXDUMP("HIP-IR encryption", &ctx->hip_i.key, hip_transf_length);
-	
-	/* HIP-IR integrity (HMAC) key */
-	KEYMAT_DRAW_AND_COPY(&ctx->hip_hmaci.key, hmac_transf_length);
-	_HIP_HEXDUMP("HIP-IR integrity (HMAC) key", &ctx->hip_hmaci.key,
-		    hmac_transf_length);
-
-	/* HIP-RI encryption key (currently unused). Discard the
-	 * result. */
-	(void) hip_keymat_draw(&km, hip_transf_length);
-	_HIP_DEBUG("skipping HIP_RI encryption key, %u bytes\n", hip_transf_length);
-
-	/* HIP-RI integrity (HMAC) key */
-	KEYMAT_DRAW_AND_COPY(&ctx->hip_hmacr.key, hmac_transf_length);
-	_HIP_HEXDUMP("HIP-RI integrity (HMAC) key", &ctx->hip_hmacr.key,
-		    hmac_transf_length);
-
-	/* SA-IR ESP encryption key */
-	KEYMAT_DRAW_AND_COPY(&ctx->hip_espi.key, esp_transf_length);
-	_HIP_HEXDUMP("SA-IR ESP encryption key", &ctx->hip_espi.key,
-		     esp_transf_length);
-
-	/* SA-IR ESP authentication key */
-	KEYMAT_DRAW_AND_COPY(&ctx->hip_authi.key, auth_transf_length);
-	_HIP_HEXDUMP("SA-IR ESP authentication key", &ctx->hip_authi.key,
-		     auth_transf_length);
-
-	/* SA-RI ESP encryption key */
-	KEYMAT_DRAW_AND_COPY(&ctx->hip_espr.key, esp_transf_length);
-	_HIP_HEXDUMP("SA-RI ESP encryption key", &ctx->hip_espr.key,
-		     esp_transf_length);
-
-	/* SA-RI ESP authentication key */
-	KEYMAT_DRAW_AND_COPY(&ctx->hip_authr.key, auth_transf_length);
-	_HIP_HEXDUMP("SA-RI ESP authentication key", &ctx->hip_authr.key,
-		     auth_transf_length);
-#endif
 
 #undef KEYMAT_DRAW_AND_COPY
 
@@ -923,7 +883,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	err = hip_crypto_encrypted(host_id_in_enc,
 				   NULL, /* IV: This is algorithm dependant, but we suck */
-				   /* hip transform was selected above */
 				   transform_hip_suite,
 				   hip_get_param_total_len(host_id_in_enc),
 				   &ctx->hip_enc_out.key,
@@ -950,7 +909,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
 				    &spi_in, transform_esp_suite, 
-//				    &ctx->hip_espr.key, &ctx->hip_authr.key, 1);
 				    &ctx->esp_in.key, &ctx->auth_in.key, 1);
 
 		if (err) {
@@ -1773,7 +1731,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		spi_in = 0;
 
 		err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_in, esptfm, 
-//				   &ctx->hip_espi.key, &ctx->hip_authi.key, 1);
 				   &ctx->esp_in.key, &ctx->auth_in.key, 1);
 
 		if (err) {
@@ -1794,7 +1751,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_out, esptfm, 
 			   &ctx->esp_out.key, &ctx->auth_out.key, 1);
-//			   &ctx->hip_espr.key, &ctx->hip_authr.key, 1);
 
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
@@ -2047,8 +2003,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
 		HIP_LOCK_HA(entry);
 		entry->spi_out = spi_recvd;
-//		memcpy(&ctx->hip_espi, &entry->esp_our, sizeof(ctx->hip_espi));
-//		memcpy(&ctx->hip_authi, &entry->auth_our, sizeof(ctx->hip_authi));
 		memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
 		memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 		spi_in = entry->spi_in;
@@ -2057,7 +2011,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 
 		err = hip_setup_sa(&r2->hitr, sender, &spi_recvd, tfm, 
 				   &ctx->esp_out.key, &ctx->auth_out.key, 1);
-//				   &ctx->hip_espi.key, &ctx->hip_authi.key, 1);
 		if (err == -EEXIST) {
 			HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 			HIP_DEBUG("TODO: what to do ? currently ignored\n");

@@ -2,6 +2,12 @@
  * Work queue functions for HIP
  * Authors: Kristian Slavov <ksl@iki.fi>
  *
+ * Common comments: __get_cpu_var() is used instead of the get_cpu_var() since
+ * each workqueue "listener" is bound to a certain cpu. Workorder is always inserted
+ * into the workqueue of the sender. This is actually the only place where we would
+ * like the adder to be in the same cpu as the workqueue he is adding to.
+ * This is ensured by local_irq_save().
+ *
  */
 #include "workqueue.h"
 #include "debug.h"
@@ -12,6 +18,7 @@
 #include <linux/list.h>
 #include <linux/interrupt.h>
 
+/* HIP Per Cpu WorkQueue */
 struct hip_pc_wq {
 	struct semaphore *worklock;
 	struct list_head *workqueue;
@@ -19,7 +26,17 @@ struct hip_pc_wq {
 
 static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
 
-/* SLEEPS! */
+/**
+ * hip_get_work_order - Get one work order from workqueue
+ * 
+ * HIP kernel daemons call this function when waiting for
+ * work. They will sleep until a work order is received, which
+ * is signalled by up()ing semaphore.
+ * The received work order is removed from the workqueue and
+ * returned to the kernel daemon for processing.
+ * 
+ * Returns work order or NULL, if an error occurs.
+ */
 struct hip_work_order *hip_get_work_order(void)
 {
 	unsigned long eflags;
@@ -57,26 +74,53 @@ struct hip_work_order *hip_get_work_order(void)
 
 }
 
-int hip_insert_work_order(struct hip_work_order *hwo)
+/**
+ * hip_insert_work_order_cpu - Insert a work order on a particular CPU's workqueue
+ * @hwo: Work order to be inserted
+ * @cpu: Cpu number
+ *
+ * Adds the work order into @cpu CPU's HIP workqueue. Mainly useful to send messages
+ * to another kernel daemons from one kernel daemon or user thread (ioctl etc)
+ * This function is static in purpose. Normally this shouldn't be used. Instead use
+ * the variant below.
+ *
+ * Returns 1, if ok. -1 if error
+ */
+static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	unsigned long eflags;
 	struct hip_pc_wq *wq;
 
+	if (cpu >= NR_CPUS) {
+		HIP_ERROR("Invalid CPU number: %d (max cpus: %d)\n",cpu, NR_CPUS);
+		return -1;
+	}
+
+	local_irq_save(eflags);
+
+	wq = &per_cpu(hip_workqueue, cpu);
+	list_add_tail(&hwo->queue, wq->workqueue);
+	
+	local_irq_restore(eflags);
+	up(wq->worklock);
+	/* what is the correct order of these two? */
+	return 1;
+}
+
+/**
+ * hip_insert_work_order - Insert work order into the HIP working queue of the current CPU.
+ * @hwo: Work order
+ *
+ * Returns 1 if ok, < 0 if error
+ */
+int hip_insert_work_order(struct hip_work_order *hwo)
+{
 	/* sanity check? */
 
 	if (hwo->type < 0 || hwo->type > HIP_MAX_WO_TYPES)
 		return -1;
 
-	wq = &__get_cpu_var(hip_workqueue);
-
-
-	local_irq_save(eflags);
-
-	list_add_tail(&hwo->queue,wq->workqueue);
-
-	up(wq->worklock); // tell the worker, that there is work
-	local_irq_restore(eflags);
-	return 1;
+	return hip_insert_work_order_cpu(hwo, smp_processor_id());
 }
 
 
@@ -116,13 +160,7 @@ void hip_uninit_workqueue()
 
 	list_for_each_safe(pos, iter, wq->workqueue) {
 		hwo = list_entry(pos,struct hip_work_order,queue);
-		if (hwo) {
-			if (hwo->arg1)
-				kfree(hwo->arg1);
-			if (hwo->arg2)
-				kfree(hwo->arg2);
-			kfree(hwo);
-		}
+		hip_free_work_order(hwo);
 		list_del(pos);
 	}
 	kfree(wq->workqueue);
@@ -130,21 +168,55 @@ void hip_uninit_workqueue()
 	local_bh_enable();
 }
 
-/* XXX: Redesign this one, to enable killing all the threads. */
+/**
+ * hip_free_work_order - Free work order structure
+ * @hwo: Work order to be freed
+ *
+ * Don't use @hwo after this function. The memory is freed.
+ */
+void hip_free_work_order(struct hip_work_order *hwo)
+{
+	if (hwo) {
+		if (hwo->destructor)
+			hwo->destructor(hwo);
+		kfree(hwo);
+	}
+}
+
+/**
+ * hip_stop_khipd - Kill all khipd threads.
+ *
+ * Sends a kill message to all khipd threads. They will process them as soon as they
+ * have the time. Another option would be to store all pids of khids and send them
+ * a signal.
+ */
 void hip_stop_khipd()
 {
 	struct hip_work_order *hwo;
+	int i;
+	
+	for(i=0; i<NR_CPUS; i++) {
+		hwo = hip_init_job(GFP_KERNEL);
+		if (!hwo) {
+			HIP_ERROR("Could not allocate memory to send kill message to kernel thread. Reboot\n");
+			BUG();
+			return;
+		}
 
-	hwo = hip_init_job(GFP_KERNEL);
-	if (!hwo)
-		return;
+		hwo->type = HIP_WO_TYPE_MSG;
+		hwo->subtype = HIP_WO_SUBTYPE_STOP;
 
-	hwo->type = HIP_WO_TYPE_MSG;
-	hwo->subtype = HIP_WO_SUBTYPE_STOP;
-
-	hip_insert_work_order(hwo);
+		hip_insert_work_order_cpu(hwo,i);
+	}
 }
 
+/**
+ * hip_init_job - Allocate and initialize work order
+ * @gfp_mask: Mask for memory allocation
+ *
+ * Returns work order struct, with all fields zeroed. Or NULL in case
+ * of error.
+ */
 struct hip_work_order *hip_init_job(int gfp_mask)
 {
 	struct hip_work_order *hwo;
@@ -158,6 +230,14 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 	return hwo;
 }
 
+/**
+ * hip_create_job_with_hit - Create work order and add HIT as a first argument
+ * @gfp_mask: Mask for memory allocation
+ * @hit: HIT to be added
+ *
+ * Allocates and initializes work order with HIT as the first argument.
+ * The memory for HIT is also allocated and the HIT is copied.
+ */
 struct hip_work_order *hip_create_job_with_hit(int gfp_mask, 
 					       const struct in6_addr *hit)
 {
@@ -180,6 +260,12 @@ struct hip_work_order *hip_create_job_with_hit(int gfp_mask,
 	return hwo;
 }
 
+/**
+ * hwo_default_destructor - Default destructor for work order
+ *
+ * Simple... if you don't understand, then you shouldn't be
+ * dealing with the kernel.
+ */
 void hwo_default_destructor(struct hip_work_order *hwo)
 {
 	if (hwo) {

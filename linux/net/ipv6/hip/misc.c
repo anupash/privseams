@@ -188,51 +188,6 @@ int hip_hit_is_bigger(const struct in6_addr *hit1,
 	return (memcmp(hit1, hit2, sizeof(struct in6_addr)) > 0);
 }
 
-#if 0
-/* Extract only the "public key" part of the local host identify.
- * Enables to store the whole key in one record (secret key).
- * This function should be extended with different functionality depending on
- * the algorithm (so it should check the algorithm field).
- * The extraction is performed so that the key (and the relevant hip_host_id
- * structure) is copied to the place that the buffer argument points to.
- *
- * Return value is buffer + struct hip_host_id + public key data or NULL if failed
- */
-u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data)
-{
-	u8 *buf;
-	u8 t;
-	int len;
-
-	if (!data)
-		return NULL;
-
-	buf = (u8 *)(data + 1); // skip the header
-	t = *buf; /* T */
-
-	if (t > 8) { /* error */
-		HIP_ERROR("Invalid T-value in DSA key (0x%x)\n", t);
-		return NULL; 
-	}
-
-	if (!hip_host_id_contains_private_key(data)) {
-		/* no private key */
-		memcpy(buffer, data, len);
-		buffer += hip_get_param_total_len(data);
-		HIP_DEBUG("No private key\n");
-	} else {
-		memcpy(buffer, data,
-		       sizeof(struct hip_tlv_common) + 
-		       (len - 20));
-		hip_set_param_contents_len(buffer,
-				(len - 20));
-		HIP_HEXDUMP("own host_id",data,sizeof(struct hip_tlv_common));
-		buffer += hip_get_param_total_len(buffer);
-		HIP_DEBUG("Private key\n");
-	}
-	return buffer;
-}
-#endif
 
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
 {
@@ -264,6 +219,13 @@ int hip_is_hit(const hip_hit_t *hit)
 	return ipv6_addr_is_hit((struct in6_addr *)hit);
 }
 
+/**
+ * hip_hash_spi - calculate a hash from SPI value
+ * @key: 32-bit SPI value
+ * @range: range of the hash
+ *
+ * Returns value in range: 0 <= x < @range
+ */
 int hip_hash_spi(void *key, int range)
 {
 	u32 spi = (u32) key;
@@ -271,6 +233,13 @@ int hip_hash_spi(void *key, int range)
 	return spi % range;
 }
 
+/**
+ * hip_hash_hit - calculate a hash from a HIT
+ * @key: pointer to a HIT
+ * @range: range of the hash
+ *
+ * Returns value in range: 0 <= x < range
+ */
 int hip_hash_hit(void *key, int range)
 {
 	hip_hit_t *hit = (hip_hit_t *)key;

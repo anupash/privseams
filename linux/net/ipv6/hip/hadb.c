@@ -73,8 +73,11 @@ static void *hip_hadb_get_key_spi(void *entry)
 }
 
 
-/*
- * @ha must be locked.
+/**
+ * hip_hadb_rem_state_spi - Remove HA from SPI table
+ * @entry: HA
+ *
+ * HA must be locked.
  */
 static inline void hip_hadb_rem_state_spi(void *entry)
 
@@ -85,8 +88,10 @@ static inline void hip_hadb_rem_state_spi(void *entry)
 	hip_ht_delete(&hadb_spi, entry);
 }
 
-/*
- * @ha must be locked.
+/**
+ * hip_hadb_rem_state_hit - Remove HA from HIT table
+ * @entry: HA
+ * HA must be locked.
  */
 static inline void hip_hadb_rem_state_hit(void *entry)
 {
@@ -108,6 +113,7 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 
 /*********************** PRIMITIVES ***************************/
 
+
 hip_ha_t *hip_hadb_find_byspi(u32 spi)
 {
 	return (hip_ha_t *)hip_ht_find(&hadb_spi, (void *)spi);
@@ -121,10 +127,7 @@ hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
 
 /**
  * hip_hadb_remove_state_spi - Remove HA from SPI hash table.
- *
- * @ha must be unlocked.
- * 
- * HA is unlocked after the function.
+ * @ha: HA
  */
 void hip_hadb_remove_state_spi(hip_ha_t *ha)
 {
@@ -137,8 +140,7 @@ void hip_hadb_remove_state_spi(hip_ha_t *ha)
 
 /**
  * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
- *
- * @ha should be unlocked.
+ * @ha: HA
  */
 void hip_hadb_remove_state_hit(hip_ha_t *ha)
 {
@@ -216,10 +218,14 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 
 /** 
  * hip_hadb_delete_state - Delete HA state (and deallocate memory)
- * 
- * ASSERT: @ha must be unlinked from the global hadb hash tables.
- * This function should only be called when absolutely sure that
- * nobody else has a reference to it.
+ * @ha: HA
+ *
+ * Deletes all associates IPSEC SAs and frees the memory occupied
+ * by the HA state.
+ *
+ * ASSERT: The HA must be unlinked from the global hadb hash tables
+ * (SPI and HIT). This function should only be called when absolutely 
+ * sure that nobody else has a reference to it.
  */
 void hip_hadb_delete_state(hip_ha_t *ha)
 {
@@ -241,7 +247,6 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 
 /**
  * hip_hadb_create_state - Allocates and initializes a new HA structure
- *
  * @gfpmask - passed directly to kmalloc().
  *
  * Return NULL if memory allocation failed, otherwise the HA.
@@ -271,26 +276,15 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 }
 
 /**
- * hip_hadb_remove_state - Removes the HA from the hash tables.
+ * hip_hadb_remove_state - Removes the HA from either or both hash tables.
+ * @ha: HA
  *
- * After calling this function, the refcnt should be 1, and when
- * the called calls hip_put_ha(), the HA will be freed.
- * Alternatively the caller can hip_put_ha() just before calling this
- * function. This will result in the HA freed in this function.
- * The precondition for above is, of course, that nobody else holds
- * references to this HA.
- * Otherwise the HA will be deleted as soon as the other user 
- * hip_ha_put()s the HA.
- *
+ * The caller should have one reference (as he is calling us). That
+ * prevents deletion of HA structure from happening under spin locks.
  */
 void hip_hadb_remove_state(hip_ha_t *ha)
 {
-
-	/* increasing refcnt so that we wouldn't do releasing
-	 * of resources with bh locked
-	 */
-	hip_hold_ha(ha); 
-
+	HIP_ASSERT(atomic_read(&ha->refcnt) >= 1);
 	HIP_LOCK_HA(ha);
 
 	if ((ha->hastate & HIP_HASTATE_SPIOK) && ha->spi_in > 0)
@@ -301,12 +295,21 @@ void hip_hadb_remove_state(hip_ha_t *ha)
 
 	HIP_UNLOCK_HA(ha);
 
-	/* now, we can free HA */
-	HIP_DEBUG("Removing HA %p from HADB. Refcnt: %d\n", ha, atomic_read(&ha->refcnt));
-	hip_put_ha(ha);
+	HIP_DEBUG("Removed HA: %p from HADB hash tables. References remaining: %d\n",
+		  ha, atomic_read(&ha->refcnt));
 }
 
 
+/**
+ * hip_hadb_exists_entry - Check if a certain HA exists in HADB hash table
+ * @arg: Key to HA (depending on the @type)
+ * @type: Type of the key
+ *
+ * Valid values for @type: HIP_ARG_HIT and HIP_ARG_SPI
+ *
+ * Returns 1 if the entry exists _AND_ its state is VALID.
+ *         0 if the previous conditions are not true.
+ */
 int hip_hadb_exists_entry(void *arg, int type)
 {
 	int ok = 0;
@@ -819,6 +822,20 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 
 }
 
+/**
+ * hip_for_each_ha - Map function @func to every HA in HIT hash table
+ * @func: Mapper function
+ * @opaque: Opaque data for the mapper function.
+ *
+ * The hash table is LOCKED while we process all the entries. This means
+ * that the mapper function MUST be very short and _NOT_ do any operations
+ * that might sleep!
+ *
+ * Returns negative if an error occurs. If an error occurs during traversal of
+ * a the HIT hash table, then the traversal is stopped and function returns.
+ * Returns the last return value of applying the mapper function to the last
+ * element in the hash table.
+ */
 int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 {
 	int i, fail;
@@ -862,8 +879,6 @@ typedef struct {
 static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 {
 	hip_proc_opaque_t *op = (hip_proc_opaque_t *)opaque;
-//	struct hip_peer_addr_list_item *s;
-//      struct in6_addr addr;
 	char *esp_transforms[] = { "none/reserved", "aes-sha1", "3des-sha1", "3des-md5",
 				   "blowfish-sha1", "null-sha1", "null-md5" };
 	char addr_str[INET6_ADDRSTRLEN];

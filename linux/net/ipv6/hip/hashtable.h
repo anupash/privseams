@@ -39,8 +39,3 @@ void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
 
 #endif
 
-#define hip_ht_get_content(type, ptr, offset) \
-        (type *)((u8 *)ptr - offset)
-
-#define hip_ht_get_list(ptr, offset) \
-        (struct list_head *)((u8 *)ptr + offset)
