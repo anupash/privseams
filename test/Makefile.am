@@ -14,6 +14,7 @@ CFLAGS += -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
 CFLAGS += -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_LINUX_MODULE)
 CFLAGS += -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
 CFLAGS += -L$(HIPL_LIBINET6_LIB)
+CFLAGS += -g
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD  = ../libinet6/.libs/libinet6.a
@@ -29,6 +30,7 @@ bin_PROGRAMS += conntest-server-native
 bin_PROGRAMS += unittest
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
+bin_PROGRAMS += getaddrinfotest
 
 align_SOURCES = align.c
 checksum_SOURCES = checksum.c checksum.h
@@ -40,6 +42,7 @@ conntest_client_native_user_key_SOURCES = \
 conntest_server_native_SOURCES = conntest-server-native.c
 conntest_server_SOURCES = conntest-server.c
 libinet6test_SOURCES = libinet6test.c
+getaddrinfotest_SOURCES = getaddrinfotest.c
 listifaces_SOURCES = listifaces.c
 unittest_SOURCES = unit.c unittest.c unittest.h hipconf.c suite.c
 

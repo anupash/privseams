@@ -547,7 +547,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
   *rsa_key_rr = NULL;
 
-  HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
+  _HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
 	    BN_num_bytes(rsa->n),BN_num_bytes(rsa->d),BN_num_bytes(rsa->p),
 	    BN_num_bytes(rsa->q));
 
@@ -559,7 +559,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) +
     BN_num_bytes(rsa->d) + BN_num_bytes(rsa->p) + BN_num_bytes(rsa->q);
   
-  HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
+  _HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
   *rsa_key_rr = malloc(rsa_key_rr_len);
   if (!*rsa_key_rr) {
     HIP_ERROR("malloc\n");
@@ -942,11 +942,11 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
     goto out_err;
   }
   
-  HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-  HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
-  HIP_INFO("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
-  HIP_INFO("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
-  HIP_INFO("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
+  _HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  _HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+  _HIP_INFO("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
+  _HIP_INFO("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
+  _HIP_INFO("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
 
  out_err:
 

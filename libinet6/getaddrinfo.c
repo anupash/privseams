@@ -68,6 +68,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
+#include "util.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
@@ -92,14 +93,16 @@ struct gaih_servtuple
 
 static const struct gaih_servtuple nullserv;
 
-struct gaih_addrtuple
-  {
-    struct gaih_addrtuple *next;
-    int family;
-    char addr[16];
-    uint32_t scopeid;
-  };
+/* Moved to util.h
 
+  struct gaih_addrtuple
+  {
+  struct gaih_addrtuple *next;
+  int family;
+  char addr[16];
+  uint32_t scopeid;
+  };
+*/
 struct gaih_typeproto
   {
     int socktype;
@@ -437,7 +440,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
   int rc;
   int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
 		 (req->ai_flags & AI_V4MAPPED);
-
+  HIP_DEBUG("gaih_inet()\n");
   if (service)
     _HIP_DEBUG("name='%s' service->name='%s' service->num=%d'\n", name, service->name, service->num);
   else 
@@ -770,11 +773,14 @@ gaih_inet (const char *name, const struct gaih_service *service,
     }
   else
     {
+      struct gaih_addrtuple **pat = &at;
       struct gaih_addrtuple *atr;
       atr = at = __alloca (sizeof (struct gaih_addrtuple));
       memset (at, '\0', sizeof (struct gaih_addrtuple));
 
       _HIP_DEBUG(">> name == NULL\n");
+      /* TODO: find the local HIs here and add the HITs to atr */
+      get_local_hits(service->name, pat);
 
       if (req->ai_family == 0)
 	{
@@ -797,7 +803,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    *(uint32_t *) atr->addr = htonl (INADDR_LOOPBACK);
 	}
     }
-
+  
   if (pai == NULL) {
     _HIP_DEBUG("pai == NULL\n");
     return 0;
@@ -880,7 +886,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    *pai = malloc (sizeof (struct addrinfo) + socklen + namelen);
 	    if (*pai == NULL)
 	      return -EAI_MEMORY;
-
+	    
 	    (*pai)->ai_flags = req->ai_flags;
 	    (*pai)->ai_family = family;
 	    (*pai)->ai_socktype = st2->socktype;
@@ -962,9 +968,9 @@ getaddrinfo (const char *name, const char *service,
   struct gaih *g = gaih, *pg = NULL;
   struct gaih_service gaih_service, *pservice;
   int hip_transparent_mode;
-
-  _HIP_DEBUG("flags=%d\n", hints->ai_flags);
-  _HIP_DEBUG("name='%s' service='%s'\n", name, service);
+  
+  HIP_DEBUG("flags=%d\n", hints->ai_flags);
+  HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
     _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   else
@@ -1004,7 +1010,7 @@ getaddrinfo (const char *name, const char *service,
 #else
   hip_transparent_mode = 0;
 #endif
-
+  HIP_DEBUG("transparent mode?:%d\n",hip_transparent_mode);
   if (service && service[0])
     {
       char *c;
