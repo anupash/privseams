@@ -665,7 +665,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
         /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
-	while (1) {
+	{
 		int err;
 		/* TODO: move this to hip_handle_r1 */
 
@@ -673,6 +673,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
  		 * set before hip_handle_r1 was called
  		 * &ctx->hip_espr.key and &ctx->hip_authr.key are already set
  		 * by hip_produce_keying_material called in hip_handle_r1 */
+
+		/* let the setup routine give us a spi. */
+		spi_our = 0;
 
 		err = hip_setup_esp(&ctx->input->hitr, 
 				    &ctx->input->hits,
@@ -685,9 +688,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 			/* hip_delete_spd/hip_delete_sa ? */
 			goto out_err;
 		}
+		/* XXX: -EAGAIN */
 
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x\n", spi_our);
-		break;
 	}
 
 	/* update SPI_LSI parameter because it has not been filled with SPI
@@ -1163,7 +1166,9 @@ int hip_create_r2(struct hip_context *ctx)
 	}
 
 	/* Set up IPsec associations */
-	while (1) {
+	{
+		spi_our = 0;
+
 		err = hip_setup_esp(&i2->hitr, &i2->hits,
 				    &spi_our,
 				    esptfm,
@@ -1174,14 +1179,14 @@ int hip_create_r2(struct hip_context *ctx)
 			hip_delete_esp(&i2->hitr,&i2->hits);
 			goto out_err;
 		}
+		/* XXX: Check -EAGAIN */
 
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x\n", spi_our);
 		/* ok, found an unused SPI to use */
-		break;
 	}
 
 	/* XXX: Krisu check this SPI setting! */
-	hip_hadb_get_peer_spi_by_hit(&i2->hits,&spi_peer);
+	hip_hadb_get_peer_spi_by_hit(&i2->hits, &spi_peer);
 	
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x\n", spi_peer);
 	err = hip_setup_esp(&i2->hits, &i2->hitr,
@@ -1198,6 +1203,8 @@ int hip_create_r2(struct hip_context *ctx)
 		hip_delete_esp(&i2->hitr,&i2->hits);
 		goto out_err;
 	}
+	/* XXX: Check if err = -EAGAIN... */
+
 
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_peer);
 
@@ -1740,7 +1747,7 @@ int hip_handle_r2(struct sk_buff *skb)
 		hip_hadb_multiget(sender,tmp_list,3,&tfm,&ctx->hip_espi,
 				  &ctx->hip_authi,NULL,HIP_ARG_HIT);
 
-		err = hip_setup_esp(sender, &r2->hitr, spi_recvd, tfm,
+		err = hip_setup_esp(sender, &r2->hitr, &spi_recvd, tfm,
 				    &ctx->hip_espi.key,
 				    &ctx->hip_authi.key);
 		if (err == -EEXIST) {
@@ -1750,6 +1757,7 @@ int hip_handle_r2(struct sk_buff *skb)
 			HIP_ERROR("hip_setup_esp failed, peer:dst (err=%d)\n", err);
 			HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
 		}
+		/* XXX: Check for -EAGAIN */
 
 		tfm = HIP_STATE_ESTABLISHED;
 		hip_hadb_set_info(sender,&tfm,HIP_HADB_STATE|HIP_ARG_HIT);

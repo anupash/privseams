@@ -151,7 +151,12 @@ static int hip_setup_sp(struct in6_addr *dst, struct in6_addr *src)
  * @enckey: encryption key
  * @authkey: authentication key
  *
- * Returns: 0 if successful, else < 0.
+ * Returns error codes. 
+ * 0         = no error
+ * -ENOMEM   = Memory allocation error
+ * -EEXISTS  = Requested SPI already in use
+ * -EAGAIN   = Couldn't assign any SPI. Try again?
+ * -ENOENT   = Could find requested element (transform states etc.)
  */
 int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 		   uint32_t *spi, int encalg, void *enckey,
@@ -164,23 +169,39 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 	size_t 	akeylen,ekeylen;
 
 	akeylen = ekeylen = 0;
+	err = -ENOMEM;
 
 	xs = xfrm_state_alloc();
 	if (!xs) {
 		HIP_ERROR("No memory\n");
-		return -ENOBUFS;
 	}
 	
 	/* will fill like a pfkey_add would fill */
 
 	xs->id.proto = IPPROTO_ESP;
-	xfrm_alloc_spi(xs, 256, 0xFFFFFFFF); // XXX: ok spi values?
+	if (*spi != 0) 
+		xfrm_alloc_spi(xs, *spi, *spi);
+	else
+		xfrm_alloc_spi(xs, 256, 0xFFFFFFFF); // XXX: ok spi values?
+
+	if (xs->id.spi == 0) {
+		if (*spi != 0) {
+			err = -EEXIST;
+			goto out_free;
+		} else {
+			err = -EAGAIN;
+			goto out_free;
+		}
+	}
+		
 	*spi = xs->id.spi; 
 	xs->props.replay_window = 0; // XXX: Is this the size of the replay window in bits? 
 	
 
 	switch (encalg) {
 	case HIP_ESP_3DES_SHA1:
+		err = -ENOENT;
+
 		ead = xfrm_ealg_get_byid(SADB_EALG_3DESCBC);
 		if (!ead) {
 			HIP_ERROR("3DES not supported\n");
@@ -193,7 +214,7 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 			goto out_free;
 		}
 
-		err = -ENOBUFS;
+		err = -ENOMEM;
 		xs->ealg = kmalloc(sizeof(struct xfrm_algo) + 192/8, GFP_KERNEL);
 		if (!xs->ealg)
 			goto out_free;
@@ -208,6 +229,7 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 
 		break;
 	case HIP_ESP_NULL_SHA1:
+		err = -ENOENT;
 		ead = xfrm_ealg_get_byid(SADB_EALG_NONE);
 		if (!ead) {
 			HIP_ERROR("3DES not supported\n");
@@ -220,7 +242,7 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 			goto out_free;
 		}
 
-		err = -ENOBUFS;
+		err = -ENOMEM;
 		xs->ealg = kmalloc(sizeof(struct xfrm_algo),GFP_KERNEL);
 		if (!xs->ealg)
 			goto out_free;
@@ -235,7 +257,7 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 
 	default:
 		ead = aad = NULL;
-		HIP_ERROR("Not supported type: 0x%x\n",encalg);
+		HIP_ERROR("Unsupported type: 0x%x\n",encalg);
 		HIP_ASSERT(0);
 	}
 
@@ -250,6 +272,7 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 	memcpy(&xs->props.saddr, src, sizeof(struct in6_addr));
 	xs->props.mode = 0; //transport
 
+	err = -ENOENT;
 	xs->type = xfrm_get_type(IPPROTO_ESP, AF_INET6);
 	if (xs->type == NULL) {
 		HIP_ERROR("COuld not get XFRM type\n");
@@ -289,7 +312,8 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 		kfree(xs);
 	}
 
-	return -EINVAL;
+	HIP_DEBUG("Esp setup: [FAILED]\n");
+	return err;
 }
 
 
