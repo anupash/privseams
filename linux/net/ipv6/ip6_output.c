@@ -287,8 +287,7 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 			goto end_hip;
 #if 1
 		if (ret == 5) {  /* THIS IS NOT WORKING well */
-			//struct dst_entry *dst_tmp;
-			struct dst_entry **dst_tmp2 = NULL;
+			struct dst_entry **dst_tmp;
 			int err2;
 			struct flowi fl_tmp;
 
@@ -301,8 +300,8 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
  			ipv6_addr_copy(&fl_tmp.fl6_src, &src_hit);
  			ipv6_addr_copy(&fl_tmp.fl6_dst, &dst_hit);
 
+			dst->obsolete++; // ?
 //			dst_release(dst); // try sk_dt_reset instead
-//			skb->dst->obsolete++; ?
 
 // xfrm_sk_policy_insert:
 // old_pol = xfrm_sk_policy_lookup(sk, XFRM_POLICY_OUT, &fl_tmp)
@@ -318,26 +317,30 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 
 // xfrm_flush_bundles(); ?
 
-			err2 = ip6_dst_lookup(sk, dst_tmp2, &fl_tmp);
+			err2 = ip6_dst_lookup(sk, dst_tmp, &fl_tmp);
 			if (err2) {
 				printk(KERN_DEBUG "ip6_dst_lookup failed, err2=%d\n", err2);
 			} else {
- 				printk(KERN_DEBUG "ip6_xmit dst_tmp2 post lookup=%p\n", *dst_tmp2);
+ 				printk(KERN_DEBUG "ip6_xmit dst_tmp post lookup=%p\n", *dst_tmp);
+				if (!*dst_tmp)
+					goto end_hip;
+
 				//printk(KERN_DEBUG "do ip6_dst_store\n");
  				//sk_dst_reset(sk); ?
 
  				printk(KERN_DEBUG "ip6_xmit pre skb dst release=%p\n", dst);
- 				dst_release(dst); // try sk_dt_reset instead
+				//	dst_release(dst); // try sk_dt_reset instead
  				// or dst_release(skb->dst); ?
 
-				dst = skb->dst = dst_clone(*dst_tmp2);
-				if (!dst)
-					printk(KERN_DEBUG "HIP test code: !dst\n");
-// 				ip6_dst_store(sk, *dst_tmp2, NULL /* ? */);
- 				printk(KERN_DEBUG "ip6_xmit skb dst 0=%p\n", skb->dst);
-
- 				
- 				printk(KERN_DEBUG "ip6_xmit, skb->dst 2 %p\n", skb->dst);
+				/*dst = skb->dst =*/
+				dst_clone(*dst_tmp);
+				//if (!dst)
+				//	printk(KERN_DEBUG "HIP test code: !dst\n");
+ 				printk(KERN_DEBUG "ip6_xmit dst 0=%p\n", dst);
+ 				//ip6_dst_store(sk, *dst_tmp, NULL /* ? */);
+				sk_dst_set(sk, *dst_tmp);
+				dst = *dst_tmp; // ?
+ 				printk(KERN_DEBUG "ip6_xmit, dst 2 %p\n", dst);
  			}
 		}
 #endif /* 0 */
