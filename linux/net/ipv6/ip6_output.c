@@ -269,11 +269,92 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 	ipv6_addr_copy(&hdr->daddr, first_hop);
 
 	mtu = dst_pmtu(dst);
+
 	if ((skb->len <= mtu) || ipfragok) {
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0)
-			goto end_hip;
+		int ret;
+#if 1
+ 		struct in6_addr src_hit, dst_hit;
+ 		ipv6_addr_copy(&src_hit, &hdr->saddr);
+ 		ipv6_addr_copy(&dst_hit, &hdr->daddr);
 #endif
+		if (dst && dst->xfrm) { /* store HITs for later use in esp6.c */
+ 			ipv6_addr_copy(&dst->xfrm->src_hit, &hdr->saddr);
+ 			ipv6_addr_copy(&dst->xfrm->dst_hit, &hdr->daddr);
+ 		}
+ 		ret = HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb);
+		if (ret < 0)
+			goto end_hip;
+#if 0
+		/* netfilter.c ip_route, test this:
+		   if (ip_route_output_key(&rt, &fl) != 0)
+		     return -1;
+		     // Drop old route.
+		     dst_release((*pskb)->dst);
+		     (*pskb)->dst = &rt->u.dst;
+		*/
+
+		if (ret == 5) {  /* THIS IS NOT WORKING well */
+			struct dst_entry **dst_tmp;
+			int err2;
+			struct flowi fl_tmp;
+
+ 			printk(KERN_DEBUG "sk_state=%d, is established=%s\n", sk->sk_state,
+			       sk->sk_state == TCP_ESTABLISHED ? "yes" : "no");
+ 			printk(KERN_DEBUG "ip6_xmit, skb->dst 1 %p\n", skb->dst);
+
+ 			/* fl must be HITs ? */
+ 			memcpy(&fl_tmp, fl, sizeof(struct flowi));
+ 			ipv6_addr_copy(&fl_tmp.fl6_src, &src_hit);
+ 			ipv6_addr_copy(&fl_tmp.fl6_dst, &dst_hit);
+
+			dst->obsolete++; // ?
+//			dst_release(dst); // try sk_dt_reset instead
+
+// xfrm_sk_policy_insert:
+// old_pol = xfrm_sk_policy_lookup(sk, XFRM_POLICY_OUT, &fl_tmp)
+// xfrm_policy_delete(old_pol, XFRM_POLICY_OUT);
+// xfrm_pol_put(old); drop sk lookup ref
+
+// = (
+// write_lock_bh(&xfrm_policy_lock);
+// __xfrm_policy_unlink(old_pol, XFRM_POLICY_MAX+dir);
+// write_unlock_bh(&xfrm_policy_lock);
+// xfrm_policy_kill(old_pol);
+// )
+
+// xfrm_flush_bundles(); ?
+
+			// dst_tmp = ip6_route_output(sk, &fl_tmp); ?
+
+			err2 = ip6_dst_lookup(sk, dst_tmp, &fl_tmp);
+			if (err2) {
+				printk(KERN_DEBUG "ip6_dst_lookup failed, err2=%d\n", err2);
+			} else {
+ 				printk(KERN_DEBUG "ip6_xmit dst_tmp post lookup=%p\n", *dst_tmp);
+				if (!*dst_tmp)
+					goto end_hip;
+
+				//printk(KERN_DEBUG "do ip6_dst_store\n");
+ 				//sk_dst_reset(sk); ?
+
+ 				printk(KERN_DEBUG "ip6_xmit pre skb dst release=%p\n", dst);
+				//	dst_release(dst); // try sk_dt_reset instead
+ 				// or dst_release(skb->dst); ?
+
+				/*dst = skb->dst =*/
+				dst_clone(*dst_tmp);
+				//if (!dst)
+				//	printk(KERN_DEBUG "HIP test code: !dst\n");
+ 				printk(KERN_DEBUG "ip6_xmit dst 0=%p\n", dst);
+ 				//ip6_dst_store(sk, *dst_tmp, NULL /* ? */);
+				sk_dst_set(sk, *dst_tmp);
+				dst = *dst_tmp; // ?
+ 				printk(KERN_DEBUG "ip6_xmit, dst 2 %p\n", dst);
+ 			}
+		}
+#endif /* 0 */
+#endif /* CONFIG_HIP */
 		IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);
 		return NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, dst->dev, ip6_maybe_reroute);
 	}
@@ -283,8 +364,10 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 	skb->dev = dst->dev;
 	icmpv6_send(skb, ICMPV6_PKT_TOOBIG, 0, mtu, skb->dev);
 	IP6_INC_STATS(IPSTATS_MIB_FRAGFAILS);
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
  end_hip:
 	kfree_skb(skb);
+#endif
 	return -EMSGSIZE;
 }
 
@@ -836,6 +919,8 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 				err = -ENETUNREACH;
 				goto out_err_release;
 			}
+			/* daddr is now destination HIT */
+			/* fl->fl6_dst and fl->fl6_dst are HITs */
 		}
 #endif
 		*dst = ip6_route_output(sk, fl);

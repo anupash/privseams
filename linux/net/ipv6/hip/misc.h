@@ -1,18 +1,9 @@
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
-//#include <linux/time.h>
-//#include <linux/in6.h>
-//#include <linux/socket.h>
 #include <linux/types.h>
-//#include <linux/sched.h>
 #include <net/ipv6.h>
 #include <net/hip.h>
-
-/*#include "debug.h"
-#include "builder.h"
-#include "hip.h"
-*/
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);
@@ -36,5 +27,4 @@ int hip_hash_hit(void *hit, int range);
 int hip_hash_spi(void *spi, int range);
 int hip_match_hit(void *hitA, void *hitB);
 
- 
 #endif /* HIP_MISC_H */

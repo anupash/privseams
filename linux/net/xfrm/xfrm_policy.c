@@ -24,6 +24,10 @@
 #include <net/xfrm.h>
 #include <net/ip.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 DECLARE_MUTEX(xfrm_cfg_sem);
 
 static rwlock_t xfrm_policy_lock = RW_LOCK_UNLOCKED;
@@ -612,6 +616,8 @@ xfrm_tmpl_resolve(struct xfrm_policy *policy, struct flowi *fl,
 	xfrm_address_t *daddr = xfrm_flowi_daddr(fl, family);
 	xfrm_address_t *saddr = xfrm_flowi_saddr(fl, family);
 
+	//printk(KERN_DEBUG "xfrm_tmpl_resolve: policy->xfrm_nr=%d\n", policy->xfrm_nr);
+
 	for (nx=0, i = 0; i < policy->xfrm_nr; i++) {
 		struct xfrm_state *x;
 		xfrm_address_t *remote = daddr;
@@ -625,10 +631,31 @@ xfrm_tmpl_resolve(struct xfrm_policy *policy, struct flowi *fl,
 
 		x = xfrm_state_find(remote, local, fl, tmpl, policy, &error, family);
 
+#if 0
+		// todo: for IPPROTO_ESP:
+		if (0 && x) {
+			printk(KERN_DEBUG "xfrm_tmpl_resolve: x SPI 0x%x\n", ntohl(x->id.spi));
+			printk(KERN_DEBUG "xfrm_tmpl_resolve: x proto %d\n", x->id.proto);
+			printk(KERN_DEBUG "xfrm_tmpl_resolve: x = xfrm_state_lookup for defalt spi and break for HITs ?\n");
+		}
+
+		if (0 && ipv6_addr_is_hit(&fl->fl6_dst)) {
+			uint32_t default_spi;
+			int state_ok = 0;
+
+			default_spi = HIP_CALLFUNC(hip_get_default_spi_out, 0)(&fl->fl6_dst, &state_ok);
+			if (!default_spi || !state_ok)
+				printk(KERN_DEBUG "xfrm_tmpl_resolve: default_spi not found or SPI state not ok\n");
+			else
+				printk(KERN_DEBUG "xfrm_tmpl_resolve: default spi 0x%x\n", default_spi);
+		}
+#endif
+
 		if (x && x->km.state == XFRM_STATE_VALID) {
 			xfrm[nx++] = x;
 			daddr = remote;
 			saddr = local;
+// for HIT & ESP: check following test for x and break ?
 			continue;
 		}
 		if (x) {
@@ -716,6 +743,7 @@ int xfrm_lookup(struct dst_entry **dst_p, struct flowi *fl,
 	int err;
 	u32 genid;
 	u16 family = dst_orig->ops->family;
+
 restart:
 	genid = atomic_read(&flow_cache_genid);
 	policy = NULL;
@@ -748,6 +776,13 @@ restart:
 			/* Flow passes not transformed. */
 			xfrm_pol_put(policy);
 			return 0;
+		}
+
+		if (ipv6_addr_is_hit(&fl->fl6_src) || ipv6_addr_is_hit(&fl->fl6_dst)) {
+			//printk(KERN_DEBUG "xfrm_lookup ALLOW:"
+			//"fl6_src=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_src));
+			//printk(KERN_DEBUG "xfrm_lookup ALLOW:"
+			//"fl6_dst=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", NIP6(fl->fl6_dst));
 		}
 
 		/* Try to find matching bundle.
@@ -793,6 +828,7 @@ restart:
 			if (err < 0)
 				goto error;
 		}
+
 		if (nx == 0) {
 			/* Flow passes not transformed. */
 			xfrm_pol_put(policy);
@@ -828,6 +864,7 @@ restart:
 		dst_hold(dst);
 		write_unlock_bh(&policy->lock);
 	}
+
 	*dst_p = dst;
 	dst_release(dst_orig);
 	xfrm_pol_put(policy);

@@ -51,29 +51,6 @@ int hip_delete_sp(int dir)
 extern struct list_head *xfrm_state_bydst;
 extern struct list_head *xfrm_state_byspi;
 
-/* don't use this... probably will crash */
-void hip_hirmu_kludge(int byspi)
-{
-	int i;
-	char str[256] = {0};
-	char meep[64] = {0};
-	struct xfrm_state *xs;
-
-	HIP_DEBUG("DUMPING SPI TABLE\n");
-	for(i = 0; i < 1024; i++) {
-		if (!list_empty(&xfrm_state_byspi[i])) {
-			sprintf(meep, "%d: ", i);
-			strcat(str, meep);
-			list_for_each_entry(xs, &xfrm_state_byspi[i], byspi) {
-				sprintf(meep, "-> 0x%x [%s] ", xs->id.spi, xs->km.state == XFRM_STATE_VALID ? " OK" : "NOK");
-				strcat(str, meep);
-			}
-			HIP_DEBUG("%s\n",str);
-			memset(str,0,256);
-		}
-	}
-	HIP_DEBUG("END-OF-DUMP\n");
-}
 /**
  * hip_delete_sa - delete a SA
  * @spi: SPI value of SA
@@ -97,41 +74,23 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 
 	xs = xfrm_state_lookup(xaddr, htonl(spi), IPPROTO_ESP, AF_INET6);
 	if (!xs) {
-		HIP_ERROR("Could not find SA!\n");
+		HIP_ERROR("Could not find SA for SPI 0x%x!\n", spi);
 		return -ENOENT;
 	}
-	/* xfrm_state_put ? (xfrm_state_lookup incs xs's refcount) */
-	xfrm_state_delete(xs);
 	
+	xfrm_state_put(xs); /* as in xfrm_user.c, xfrm_del_sa xfrm_state_lookup incs xs's refcount */
+	xfrm_state_delete(xs);
+
 	return 0;
 }
 
 /* this probably is not used anymore? */
 int hip_delete_esp(hip_ha_t *entry)
 {
-	uint32_t spi_out, spi_in, new_spi_out, new_spi_in;
+	/* assumes already locked entry */
 
-	HIP_LOCK_HA(entry);
-	spi_out = entry->spi_out;
-	spi_in = entry->spi_in;
-	new_spi_out = entry->new_spi_out;
-	new_spi_in = entry->new_spi_in;
-	HIP_UNLOCK_HA(entry);
-
-	hip_delete_sa(spi_out, &entry->hit_peer);
-	hip_delete_sa(spi_in, &entry->hit_our);
-	hip_delete_sa(new_spi_out, &entry->hit_peer);
-	hip_delete_sa(new_spi_in, &entry->hit_our);
-
-	/* unlinks entry from our SPI table */
-	hip_hadb_remove_state_spi(entry);
-
-	HIP_LOCK_HA(entry);
-	entry->spi_out = 0;
-	entry->spi_in = 0;
-	entry->new_spi_out = 0;
-	entry->new_spi_in = 0;
-	HIP_UNLOCK_HA(entry);
+	hip_hadb_delete_inbound_spis(entry);
+	hip_hadb_delete_outbound_spis(entry);
 
 	return 0;
 }
@@ -180,11 +139,10 @@ int hip_setup_sp(int dir)
 	xp->flags = 0;
 	xp->dead = 0;
 	xp->xfrm_nr = 1; // one transform? 
-	
+
 	tmpl = &xp->xfrm_vec[0];
 
 	tmpl->id.proto = IPPROTO_ESP;
-
 	tmpl->reqid = 0;
 	tmpl->mode = XFRM_MODE_TRANSPORT;
 	tmpl->share = 0; // unique. Is this the correct number?
@@ -207,15 +165,46 @@ int hip_setup_sp(int dir)
 	return 0;
 }
 
+/* returns 0 if SPI could not  be allocated, SPI is in host byte order */
+uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
+{
+	struct xfrm_state *xs;
+	uint32_t spi = 0;
+
+	HIP_DEBUG("acquiring a new SPI\n");
+	xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
+			   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
+			   1, AF_INET6);
+	if (!xs) {
+		HIP_ERROR("Error while acquiring an SA\n");
+		goto out_err_noput;
+	}
+
+	xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
+	spi = ntohl(xs->id.spi);
+	if (!spi) {
+		HIP_ERROR("Could not get SPI value for the SA\n");
+		goto out_err;
+	}
+	_HIP_DEBUG("Got SPI value for the SA 0x%x\n", spi);
+	
+ out_err:
+	xfrm_state_put(xs);
+ out_err_noput:
+	return spi;
+}
+
+
 /**
  * hip_setup_sa - set up a new IPsec SA
  * @srcit: source HIT
  * @dsthit: destination HIT
- * @dstip: destination IPv6 address USELESS ?
- * @spi: SPI value in HOST BYTE ORDER!!!
+ * @spi: SPI value in host byte order
  * @alg: ESP algorithm to use
  * @enckey: ESP encryption key
  * @authkey: authentication key
+ * @already_acquired: true if @spi was already acquired
+ * @direction: direction of SA
  *
  * @spi is a value-result parameter. If @spi is 0 the kernel gets a
  * free SPI value for us. If @spi is non-zero we try to get the new SA
@@ -224,33 +213,52 @@ int hip_setup_sp(int dir)
  * On success IPsec security association is set up @spi contains the
  * SPI.
  *
+ * problems: The SA can be in acquire state, or it can already have timed out.
+ *
  * Returns: 0 if successful, else < 0.
- */
-
-/* problems: The SA can be in acquire state, or it can already have timeouted.
  */
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 uint32_t *spi, int alg, void *enckey, void *authkey, 
-		 int is_active)
+		 int already_acquired, int direction)
 {
 	int err;
-	struct xfrm_state *xs;
+	struct xfrm_state *xs = NULL;
 	struct xfrm_algo_desc *ead;
 	struct xfrm_algo_desc *aad;
 	size_t akeylen, ekeylen; /* in bits */
 
-	HIP_DEBUG("*spi=0x%x alg=%d is_active=%d\n", *spi, alg, is_active);
+	HIP_DEBUG("SPI=0x%x alg=%d already_acquired=%d direction=%s\n",
+		  *spi, alg, already_acquired, direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
 	akeylen = ekeylen = 0;
-	err = -ENOMEM;
+	err = -EEXIST;
 
-	xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
-			   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
-			   1, AF_INET6);
+	//hip_print_hit("srchit", srchit);
+	//hip_print_hit("dsthit", dsthit);
+	if (already_acquired) {
+		if (!*spi) {
+			HIP_ERROR("No SPI for already acquired SA\n");
+			err = -EINVAL;
+			goto out;
+		}
+		/* should be found (unless expired) */
+		xs = xfrm_state_lookup(direction == HIP_SPI_DIRECTION_IN ?
+				       (xfrm_address_t *)dsthit : (xfrm_address_t *)srchit,
+				       htonl(*spi), IPPROTO_ESP, AF_INET6);
+	} else {
+		xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
+				   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
+				   1, AF_INET6);
+	}
+
 	if (!xs) {
-		HIP_ERROR("Error while acquiring an SA: %d\n", err);
+		HIP_ERROR("Error while acquiring xfrm state: err=%d\n", err);
+		err = -EEXIST;
 		return err;
 	}
 
+	err = 0;
+
+	/* old comments, todo */
 	/* xs is either newly-created or an old one */
 
 	/* allocation of SPI, will wake up possibly sleeping transport layer, but
@@ -263,29 +271,34 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	/* should we lock the state? */
 
-	if (*spi != 0) {
-		*spi = htonl(*spi);
-		xfrm_alloc_spi(xs, *spi, *spi);
-	} else {
-		/* Try to find a suitable random SPI within the range
-		 * in RFC 2406 section 2.1 */
-		xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
-	}
+	HIP_DEBUG("xs->id.spi=0x%x\n", ntohl(xs->id.spi));
 
-	if (xs->id.spi == 0) {
-		HIP_ERROR("Could not get SPI value for the SA\n");
-		if (*spi != 0) {
-			err = -EEXIST;
-			goto out;
+	if (!already_acquired) {
+		HIP_DEBUG("allocate SPI\n");
+		if (*spi) {
+			*spi = htonl(*spi);
+			xfrm_alloc_spi(xs, *spi, *spi);
 		} else {
-			err = -EAGAIN;
-			goto out;
+			/* Try to find a suitable random SPI within the range
+			 * in RFC 2406 section 2.1 */
+			xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
 		}
+
+		HIP_DEBUG("allocated xs->id.spi=0x%x\n", ntohl(xs->id.spi));
+		if (xs->id.spi == 0) {
+			HIP_ERROR("Could not allocate SPI value for the SA\n");
+			if (*spi != 0) {
+				err = -EEXIST;
+				goto out;
+			} else {
+				err = -EAGAIN;
+				goto out;
+			}
+		}
+		*spi = ntohl(xs->id.spi);
 	}
 
-	*spi = ntohl(xs->id.spi);
-
-	HIP_DEBUG("SPI setup ok, trying to setup enc/auth algos\n");
+	_HIP_DEBUG("SPI setup ok, trying to setup enc/auth algos\n");
 
 	err = -ENOENT;
 	switch (alg) {
@@ -360,6 +373,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		goto out;
 	}
 
+	/* memory leak ? */
 	if (xs->type->init_state(xs, NULL)) {
 		HIP_ERROR("Could not initialize XFRM type\n");
 		goto out;
@@ -395,7 +409,7 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 {
 	struct xfrm_state *xs;
 
-	HIP_DEBUG("Searching for spi: %x (%x)\n",spi, htonl(spi));
+	HIP_DEBUG("Searching for spi: 0x%x (net 0x%x)\n", spi, htonl(spi));
 
 	xs = xfrm_state_lookup((xfrm_address_t *)hit, htonl(spi),
 			       IPPROTO_ESP, AF_INET6);
@@ -404,7 +418,7 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 		/* do what? */
 		return;
 	}
-	
+
 	spin_lock_bh(&xs->lock);
 	xs->km.state = XFRM_STATE_VALID;
 	xs->lft.hard_add_expires_seconds = 0;
@@ -413,7 +427,8 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 	xfrm_state_put(xs);
 	wake_up(&km_waitq);
 }
-      
+
+
 /**
  * hip_insert_dh - Insert the current DH-key into the buffer
  *

@@ -10,9 +10,10 @@
 #define ESP_3DES_KEY_BITS 192
 
 int hip_delete_esp(hip_ha_t *entry);
+uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		 uint32_t *spi, int alg,
-		 void *enckey, void *authkey, int is_active);
+		 void *enckey, void *authkey, int already_acquired, int direction);
 
 int hip_insert_dh(u8 *buffer, int bufsize, int group_id);
 int hip_generate_shared_secret(int group_id, u8* peerkey, size_t peer_len, u8 *out, size_t outlen);

@@ -2,8 +2,8 @@
  * HIP socket handler - handle PF_HIP type sockets
  *
  * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Anthony D. Joseph <adj@hiit.fi>
+ *          Miika Komu <miika@iki.fi>
+ *          Anthony D. Joseph <adj@hiit.fi>
  *
  * Todo:
  * - Do we need separate proto ops for dgrams?
@@ -25,6 +25,24 @@
 
 #include <linux/net.h>
 #include <net/addrconf.h>
+
+extern struct net_proto_family hip_family_ops;
+//extern struct net_proto_family inet_family_ops;
+extern struct proto_ops inet_stream_ops;
+extern struct proto_ops inet_dgram_ops;
+//extern struct net_proto_family inet6_family_ops;
+extern struct proto_ops inet6_stream_ops;
+extern struct proto_ops inet6_dgram_ops;
+extern int inet6_create(struct socket *sock, int protocol);
+
+extern struct net_proto_family hip_family_ops;
+//extern struct net_proto_family inet_family_ops;
+extern struct proto_ops inet_stream_ops;
+extern struct proto_ops inet_dgram_ops;
+//extern struct net_proto_family inet6_family_ops;
+extern struct proto_ops inet6_stream_ops;
+extern struct proto_ops inet6_dgram_ops;
+extern int inet6_create(struct socket *sock, int protocol);
 
 extern struct net_proto_family hip_family_ops;
 //extern struct net_proto_family inet_family_ops;
@@ -283,7 +301,7 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
-	
+
 	/* XX FIX: check access permissions from eid_owner_info */
 
 	err = socket_handler->bind(sock, (struct sockaddr *) &sockaddr_in6,
@@ -328,7 +346,7 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 
 	/* Note: connect calls autobind if the application has not already
 	   called bind manually. */
-	
+
 	/* XX CHECK: what about autobind src eid ? */
 
 	/* XX CHECK: check does the autobind actually bind to an IPv6 address
@@ -396,7 +414,7 @@ int hip_socket_accept(struct socket *sock, struct socket *newsock,
 	/* XX FIXME: do something to the newsock? */
 
  out_err:
-	
+
 	return err;
 }
 
@@ -489,7 +507,7 @@ unsigned int hip_socket_poll(struct file *file, struct socket *sock,
 	mask = socket_handler->poll(file, sock, wait);
 
  out_err:
-	
+
 	return mask;
 }
 
@@ -536,7 +554,7 @@ int hip_socket_listen(struct socket *sock, int backlog)
 	}
 
  out_err:
-	
+
 	return err;
 }
 
@@ -634,7 +652,7 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 	}
 
  out_err:
-	
+
 	return err;
 }
 
@@ -1482,6 +1500,7 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	hip_peer_entry_opaque_t *peer_entry;
 	hip_peer_addr_opaque_t *addr, *last = NULL;
 	struct hip_peer_addr_list_item *s;
+	struct hip_spi_out_item *spi_out, *tmp;
 	char buf[46];
 	struct hip_lhi lhi;
 	int err = 0;
@@ -1517,30 +1536,33 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	}
 
 	/* Record each peer address */
-	list_for_each_entry(s, &entry->peer_addr_list, list) {
-	        hip_in6_ntop(&(s->address), buf);
-		HIP_DEBUG("## Got a peer address: %s\n", buf);
+	//list_for_each_entry(s, &entry->peer_addr_list, list) {
+	list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
+		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
+			hip_in6_ntop(&(s->address), buf);
+			HIP_DEBUG("## Got a peer address: %s\n", buf);
 
-		/* Allocate an entry for the address */
-		addr = kmalloc(sizeof(hip_peer_addr_opaque_t),GFP_ATOMIC);
-		if (!addr) {
-		         HIP_ERROR("No memory to create peer addr entry\n");
-			 err = -ENOMEM;
-			 goto error;
-		}
-		addr->next = NULL;
+			/* Allocate an entry for the address */
+			addr = kmalloc(sizeof(hip_peer_addr_opaque_t),GFP_ATOMIC);
+			if (!addr) {
+				HIP_ERROR("No memory to create peer addr entry\n");
+				err = -ENOMEM;
+				goto error;
+			}
+			addr->next = NULL;
 
-		/* Record the peer addr */
-		memcpy(&(addr->addr), &(s->address),sizeof(struct in6_addr));
+			/* Record the peer addr */
+			memcpy(&(addr->addr), &(s->address),sizeof(struct in6_addr));
 		
-		if (last == NULL) {  /* First entry? Add to head and tail */
-		  peer_entry->addr_list = addr;
-		} else {             /* Otherwise, add to tail */
-		  last->next = addr;
-		}
-		last = addr;
+			if (last == NULL) {  /* First entry? Add to head and tail */
+				peer_entry->addr_list = addr;
+			} else {             /* Otherwise, add to tail */
+				last->next = addr;
+			}
+			last = addr;
 
-		peer_entry->count++;   /* Increment count in peer entry */
+			peer_entry->count++;   /* Increment count in peer entry */
+		}
 	}
 	op->count++;               /* Increment count of entries */
 		

@@ -36,23 +36,23 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 	spin_lock_init(&res->rva_lock);
 	res->lifetime = 0;
 	memset(res->ip_addrs, 0, HIP_RVA_MAX_IPS*sizeof(struct in6_addr));
-	
+
 	return res;
 }
-
 /**
  * hip_ha_to_rva - Create a Rendezvous Association from Host Association
- * @ha: HA
- * @gfpmask: Mask for kmalloc(). Used to allocate memory for the RVA.
- *
- * Returns the newly created RVA, with information from HA copied to it.
- * NULL if there was an error (out of memory).
- */
+  * @ha: HA
+  * @gfpmask: Mask for kmalloc(). Used to allocate memory for the RVA.
+  *
+  * Returns the newly created RVA, with information from HA copied to it.
+  * NULL if there was an error (out of memory).
+  */
 HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 {
 	HIP_RVA *rva;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;
+	struct hip_spi_out_item *spi_out, *spi_tmp;
 
 	rva = hip_rva_allocate(gfpmask);
 	if (!rva)
@@ -64,17 +64,30 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 	ipv6_addr_copy(&rva->hit, &ha->hit_peer);
 
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
-	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
+ 	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
 
-	list_for_each_entry(item, &ha->peer_addr_list, list) {
-		if (item->address_state != PEER_ADDR_STATE_REACHABLE)
-			continue;
+	if (!ipv6_addr_any(&ha->bex_address)) {
+		HIP_DEBUG("copying bex address\n");
+			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->bex_address);
+			ipcnt++;
+			if (ipcnt >= HIP_RVA_MAX_IPS)
+				goto out;
+	}
 
-		ipv6_addr_copy(&rva->ip_addrs[ipcnt], &item->address);
-		ipcnt++;
+	list_for_each_entry_safe(spi_out, spi_tmp, &ha->spis_out, list) {
+		list_for_each_entry(item, &spi_out->peer_addr_list, list) {
+			if (item->address_state != PEER_ADDR_STATE_ACTIVE)
+				continue;
+
+			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &item->address);
+			ipcnt++;
+			if (ipcnt >= HIP_RVA_MAX_IPS)
+				break;
+		}
 		if (ipcnt >= HIP_RVA_MAX_IPS)
 			break;
 	}
+ out:
 	HIP_UNLOCK_HA(ha);
 
 	return rva;
@@ -94,22 +107,24 @@ HIP_RVA *hip_rva_find(struct in6_addr *hit)
 	HIP_RVA *rva;
 
 	rva = hip_ht_find(&rva_table, hit);
-	return rva;
+ 	return rva;
 }
 
 HIP_RVA *hip_rva_find_valid(struct in6_addr *hit)
 {
 	HIP_RVA *rva;
-	rva = hip_ht_find(&rva_table, hit);
-	if (rva) {
-		if ((rva->rvastate & HIP_RVASTATE_VALID) == 0) {
+
+ 	rva = hip_ht_find(&rva_table, hit);
+ 	if (rva) {
+ 		if ((rva->rvastate & HIP_RVASTATE_VALID) == 0) {
 			HIP_ERROR("RVA state not valid\n");
-			hip_put_rva(rva);
-			rva = NULL;
-		}
-	}
+ 			hip_put_rva(rva);
+ 			rva = NULL;
+ 		}
+ 	}
 	return rva;
 }
+
 /**
  * hip_rva_insert_ip_n - Insert/update/overwrite one IP in the RVA.
  * @rva: RVA
@@ -121,11 +136,11 @@ HIP_RVA *hip_rva_find_valid(struct in6_addr *hit)
  */
 void hip_rva_insert_ip_n(HIP_RVA *rva, struct in6_addr *ip, unsigned int n)
 {
-	HIP_ASSERT(n < HIP_RVA_MAX_IPS);
+ 	HIP_ASSERT(n < HIP_RVA_MAX_IPS);
 
-	HIP_LOCK_RVA(rva);
-	ipv6_addr_copy(&rva->ip_addrs[n], ip);
-	HIP_UNLOCK_RVA(rva);
+ 	HIP_LOCK_RVA(rva);
+ 	ipv6_addr_copy(&rva->ip_addrs[n], ip);
+ 	HIP_UNLOCK_RVA(rva);
 }
 
 /**

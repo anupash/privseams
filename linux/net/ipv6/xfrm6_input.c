@@ -48,7 +48,7 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 	seq = 0;
 	if (!spi && (err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) != 0)
 		goto drop;
-	
+
 	do {
 		struct ipv6hdr *iph = skb->nh.ipv6h;
 
@@ -67,20 +67,21 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			 *
 			 * This could lead to DoSes... if birthday check is omitted.
 			 */
-//			HIP_CALLPROC(hip_unknown_spi)(skb,spi);
+			//HIP_CALLPROC(hip_unknown_spi)(skb,spi);
 #endif
 			goto drop;
 		}
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		//HIP_CALLFUNC(hip_update_spi_waitlist_ispending, 0)(ntohl(spi));
+#endif
 		spin_lock(&x->lock);
 		if (unlikely(x->km.state != XFRM_STATE_VALID))
 			goto drop_unlock;
-
 		if (x->props.replay_window && xfrm_replay_check(x, seq))
 			goto drop_unlock;
-
 		if (xfrm_state_check_expire(x))
 			goto drop_unlock;
-
 		nexthdr = x->type->input(x, &(xfrm_vec[xfrm_nr].decap), skb);
 		if (nexthdr <= 0)
 			goto drop_unlock;
@@ -115,6 +116,7 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			decaps = 1;
 			break;
 		} else if (x->props.mode == XFRM_MODE_BEET) {
+			//printk(KERN_DEBUG "mode is BEET\n");
 			/* this should be us */
 			ipv6_addr_copy(&iph->daddr, (struct in6_addr *)&x->id.daddr);
 			/* the original sender */
@@ -138,7 +140,6 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 
 	if (xfrm_nr + skb->sp->len > XFRM_MAX_DEPTH)
 		goto drop;
-
 	memcpy(skb->sp->x+skb->sp->len, xfrm_vec, xfrm_nr*sizeof(struct sec_decap_state));
 	skb->sp->len += xfrm_nr;
 	skb->ip_summed = CHECKSUM_NONE;

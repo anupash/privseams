@@ -1,42 +1,6 @@
 #ifndef HIP_HIP_H
 #define HIP_HIP_H
 
-/*
-#include <linux/spinlock.h>
-#include <linux/crypto.h>
-#include <linux/net.h>
-#include <linux/proc_fs.h>
-
-#include <net/hip_glue.h>
-#include <net/addrconf.h>
-#include <net/ipv6.h>
-#include <net/hip.h>
-#include <net/sock.h>
-#include <net/protocol.h>
-
-#include <asm/scatterlist.h>
-#include <asm/io.h>
-
-
-#include "workqueue.h"
-#include "debug.h"
-#include "cookie.h"
-#include "input.h"
-#include "output.h"
-#include "builder.h"
-#include "crypto/dh.h"
-#include "crypto/dsa.h"
-#include "misc.h"
-#include "socket.h"
-#include "hadb.h"
-*/
-
-/*
-#include "misc.h"
-#include "hadb.h"
-#include "output.h"
-#include "input.h"
-*/
 #include "crypto/dh.h"
 
 #include <linux/time.h>
@@ -109,6 +73,7 @@ uint64_t hip_get_current_birthday(void);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
 			     const u8 *addr, const u32 size);
+int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
 extern struct crypto_tfm *impl_sha1;

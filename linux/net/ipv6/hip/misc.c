@@ -19,7 +19,7 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
        char *key_rr = (char *) (host_id + 1); /* skip the header */
        /* hit excludes rdata but it is included in hi_length; subtract rdata */
        unsigned int key_rr_len = ntohs(host_id->hi_length) -
-	 sizeof(struct hip_host_id_key_rdata);
+ 	 sizeof(struct hip_host_id_key_rdata);
 
        HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
 
@@ -28,7 +28,7 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
                goto out_err;
        }
 
-       HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
        err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest);
        if (err) {
@@ -173,7 +173,7 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 	uint16_t len = hip_get_param_contents_len(host_id);
 	u8 *buf = (u8 *)(host_id + 1);
 	u8 t = *buf;
-	
+
 	return len >= 3 * (64 + 8 * t) + 2 * 20; /* PQGXY 3*(64+8*t) + 2*20 */
 }
 

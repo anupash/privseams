@@ -5,7 +5,7 @@
  *          Miika Komu <miika@iki.fi>
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
- *
+ *          Anthony D. Joseph <adj@hiit.fi>
  *
  * TODO:
  * - sdb accessors and locking
@@ -36,6 +36,7 @@
 #include "rea.h"
 #include "workqueue.h"
 #include "socket.h"
+#include "update.h"
 #ifdef CONFIG_HIP_RVS
 # include "rvs.h"
 #endif
@@ -57,9 +58,6 @@ static atomic_t hip_working = ATOMIC_INIT(0);
 time_t load_time;
 
 
-#if 0
-static struct notifier_block hip_notifier_block;
-#endif
 static struct notifier_block hip_netdev_notifier;
 static void hip_uninit_cipher(void); // forward decl.
 static void hip_cleanup(void);
@@ -93,18 +91,16 @@ LIST_HEAD(hip_sent_rea_info_pkts);
 LIST_HEAD(hip_sent_ac_info_pkts);
 
 
-/*
-	void	(*err_handler)(struct sk_buff *skb,
-			       struct inet6_skb_parm *opt,
-			       int type, int code, int offset,
-			       __u32 info);
-*/
+static void hip_err_handler(struct sk_buff *skb,
+			    struct inet6_skb_parm *opt,
+			    int type, int code, int offset,
+			    __u32 info);
+
 static struct inet6_protocol hip_protocol = {
 	.handler     = hip_inbound,
-//	.err_handler = hip_errhand,
+	.err_handler = hip_err_handler,
 	.flags       = INET6_PROTO_NOPOLICY,
 };
-
 
 /**
  * hip_get_dh_size - determine the size for required to store DH shared secret
@@ -165,7 +161,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 	}
 
 
-	HIP_DEBUG("Virtual addresses: %p, size: %d\n",addr,size);
+	_HIP_DEBUG("Virtual addresses: %p, size: %d\n",addr,size);
 
 	offset = 0;
 	while(offset < size) {
@@ -173,13 +169,13 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 		slist[elt].dma_address = 0;
 		slist[elt].page = virt_to_page(addr+offset);
 		slist[elt].offset = (unsigned long) (addr+offset) % PAGE_SIZE;
-		
+
 		/* page left */
 		/* pleft = how many bytes there are for us in current page */
 		pleft = PAGE_SIZE - slist[elt].offset;
 		HIP_ASSERT(pleft > 0 && pleft <= PAGE_SIZE);
 
-		HIP_DEBUG("offset: %ld, space on current page: %ld\n",offset,pleft);
+		_HIP_DEBUG("offset: %ld, space on current page: %ld\n",offset,pleft);
 		if (pleft + offset >= size) {
 			slist[elt].length = size - offset;
 			break;
@@ -197,7 +193,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 
 #ifdef CONFIG_HIP_DEBUG
 	for(i=0;i<=elt;i++) {
-		HIP_DEBUG("Scatterlist: %x, page: %x, offset: %x, length: %x\n",
+		_HIP_DEBUG("Scatterlist: %x, page: %x, offset: %x, length: %x\n",
 			  i, (int)slist[i].page, slist[i].offset, slist[i].length);
 	}
 #endif
@@ -235,7 +231,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 		return -EFAULT;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages\n");
+	_HIP_DEBUG("Mapping virtual to pages\n");
 
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1 ) {
@@ -243,7 +239,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 		return -EFAULT;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages successful\n");
+	_HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	crypto_digest_init(impl);
 	crypto_digest_digest(impl, sg, nsg, out);
@@ -306,7 +302,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 		return 0;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages\n");
+	_HIP_DEBUG("Mapping virtual to pages\n");
 
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1) {
@@ -314,7 +310,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 		return 0;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages successful\n");
+	_HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	crypto_hmac(impl, key, &keylen, sg, nsg, out);
 
@@ -367,7 +363,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
- 
+
  	msg = hip_msg_alloc();
  	if (!msg) {
 		err = -ENOMEM;
@@ -393,13 +389,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	/* Get a localhost identity, allocate memory for the public key part
  	   and extract the public key from the private key. The public key is
  	   needed for writing the host id parameter in R1. */
- 
+
 	host_id_private = hip_get_any_localhost_host_id();
  	if (!host_id_private) {
  		HIP_ERROR("Could not acquire localhost host id\n");
  		goto out_err;
  	}
- 	
+
 	host_id_pub = hip_get_any_localhost_public_key();
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
@@ -407,19 +403,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	}
 
  	/* Ready to begin building of the R1 packet */
-	/*
-	    IP ( HIP ( [ R1_COUNTER, ]
-              PUZZLE,
-              DIFFIE_HELLMAN,
-              HIP_TRANSFORM,
-              ESP_TRANSFORM,
-              HOST_ID,
-              [ ECHO_REQUEST, ]
-              HIP_SIGNATURE_2 )
-              [, ECHO_REQUEST ])
-	 */
-
-
  	memset(&dst_hit, 0, sizeof(struct in6_addr));
 
 	mask = HIP_CONTROL_NONE;
@@ -432,10 +415,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 
-	while(0);
-
  	/********** PUZZLE ************/
-
 	{
 		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K, 0, 0);
 		if (err) {
@@ -443,9 +423,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 			goto out_err;
 		}
 	}
- 
- 	/********** Diffie-Hellman **********/
 
+ 	/********** Diffie-Hellman **********/
 	written = hip_insert_dh(dh_data,dh_size,HIP_DEFAULT_DH_GROUP_ID);
 	if (written < 0) {
  		HIP_ERROR("Could not extract DH public key\n");
@@ -507,7 +486,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		goto out_err;
  	}		
 
-	HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
+	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
  	err = hip_build_param_signature2_contents(msg,
  						 signature,
@@ -554,8 +533,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		kfree(host_id_pub);
  	if (dh_data)
  		kfree(dh_data);
- 
- 	return msg;
+
+	return msg;
 
   out_err:
 	if (host_id_pub)
@@ -594,7 +573,7 @@ int hip_enc_key_length(int tid)
 		HIP_ASSERT(0);
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -615,7 +594,7 @@ int hip_hmac_key_length(int tid)
 		HIP_ASSERT(0);
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -642,7 +621,7 @@ int hip_transform_key_length(int tid)
 		HIP_ASSERT(0);
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -671,7 +650,7 @@ int hip_auth_key_length_esp(int tid)
 		HIP_ASSERT(0);
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -702,8 +681,6 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
 	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
 
-	/* TODO: just reuse the keymatdst pointer, do not kmalloc */
-
 	hip_update_entry_keymat(entry, ctx->current_keymat_index,
 				ctx->keymat_calc_index, ctx->current_keymat_K);
 
@@ -713,6 +690,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	}
 
 	entry->dh_shared_key_len = 0;
+	/* todo: reuse pointer, no kmalloc */
 	entry->dh_shared_key = kmalloc(ctx->dh_shared_key_len, GFP_ATOMIC);
 	if (!entry->dh_shared_key) {
 		HIP_ERROR("entry dh_shared kmalloc failed\n");
@@ -722,8 +700,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 	entry->dh_shared_key_len = ctx->dh_shared_key_len;
 	memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
-	HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
-
+	_HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
 	_HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
 	return err;
 
@@ -764,7 +741,7 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 			tid = ntohs(*suggestion);
 			goto out;
 			break;
-			
+
 		default:
 			/* Specs don't say what to do when unknown are found. 
 			 * We ignore.
@@ -820,7 +797,6 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 			tid = ntohs(*suggestion);
 			goto out;
 			break;
-			
 		default:
 			/* Specs don't say what to do when unknowns are found. 
 			 * We ignore.
@@ -888,7 +864,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 
 	memcpy(result, data, enc_len);
 
-	HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, enc_len);
+	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, enc_len);
 	switch(enc_alg) {
 	case HIP_HIP_3DES_SHA1:
 		impl = impl_3des_cbc;
@@ -912,7 +888,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 		goto out_err;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages\n");
+	_HIP_DEBUG("Mapping virtual to pages\n");
 
 	err = hip_map_virtual_to_pages(src_sg, &src_nsg, result, enc_len);
 	if (err || src_nsg < 1) {
@@ -921,7 +897,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 		goto out_err;
 	}
 
-	HIP_DEBUG("Mapping virtual to pages successful\n");
+	_HIP_DEBUG("Mapping virtual to pages successful\n");
 
 	/* we will write over the source */
 
@@ -936,7 +912,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 		goto out_err;
 	}
 
-	HIP_DEBUG("enc_len=%d\n", enc_len);
+	_HIP_DEBUG("enc_len=%d\n", enc_len);
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
 		if (iv_copy) {
@@ -953,7 +929,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 			err = -EFAULT;
 			goto out_err;
 		}
-			
+
 		break;
 	case HIP_DIRECTION_DECRYPT:
 		if (iv_copy) {
@@ -1057,7 +1033,7 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 		return 0;
 
 	hip_in6_ntop(hit,str);
-	
+
 	entry = hip_hadb_find_byhit(hit);
 	if (!entry) {
 		HIP_ERROR("Unknown HIT: %s\n", str);
@@ -1071,7 +1047,7 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 	hip_put_ha(entry);
 
 	hip_in6_ntop(addr, str);
-	HIP_DEBUG("selected dst addr: %s\n", str);
+	_HIP_DEBUG("selected dst addr: %s\n", str);
 
 	return 1;
 }
@@ -1085,6 +1061,8 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 int hip_trigger_bex(struct in6_addr *dsthit)
 {
 	struct ipv6hdr hdr = {0};
+
+	HIP_ERROR("TODO: MOVE THIS TO XFRM KM HANDLER AND REMOVE STUFF FROM xfrm_state.c/km_query\n");
 
 	ipv6_addr_copy(&hdr.daddr, dsthit);
 	hip_handle_output(&hdr, NULL);
@@ -1108,7 +1086,7 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
 		goto out;
 
 	return 1;
-		
+
  out:
 	return 0;
 }
@@ -1156,198 +1134,116 @@ static void hip_get_load_time(void)
 	return;
 }
 
+
+/* base exchange IPv6 addresses need to be put into ifindex2spi map,
+ * so a function is needed which gets the ifindex of the network
+ * device which has the address @addr */
+int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
+{
+	int ifindex = 0;
+	struct inet6_ifaddr *ifp = ipv6_get_ifaddr(addr, NULL, 1);
+	if (ifp) {
+		ifindex = ifp->idev->dev->ifindex;
+		in6_ifa_put(ifp);
+	}
+	return ifindex;
+}
+
+/* Returns 1 if address can be added into REA parameter. Currently all
+ * other than link locals are accepted. */
+static inline int hip_rea_addr_ok(struct in6_addr *addr)
+{
+	if (ipv6_addr_type(addr) & IPV6_ADDR_LINKLOCAL)
+		return 0;
+	return 1;
+}
+
+
 /**
  * hip_create_device_addrlist - get interface addresses
- * @idev: inet6 device of which addresses are retrieved
+ * @event_dev: network device of which addresses are retrieved from
  * @addr_list: where the pointer to address list is stored
  * @idev_addr_count: number of addresses in @addr_list
  *
  * Caller is responsible for kfreeing @addr_list.
- * This function assumes that we have the device lock.
  *
  * Returns: 0 if addresses were retrieved successfully. If there was
  * no error but interface has no IPv6 addresses, @addr_list is NULL
  * and 0 is returned. Else < 0 is returned and @addr_list contains
  * NULL.
  */
-static int hip_create_device_addrlist(struct inet6_dev *idev,
+static int hip_create_device_addrlist(struct net_device *event_dev,
 				       struct hip_rea_info_addr_item **addr_list,
 				       int *idev_addr_count)
 {
-	/* TODO: idev -> ifindex, devgetbyifindex, idev */
-
-	/* TODO: return list_head */
+	struct inet6_dev *idev;
 	struct inet6_ifaddr *ifa = NULL;
 	char addrstr[INET6_ADDRSTRLEN];
 	int i = 0;
 	int err = 0;
 	struct hip_rea_info_addr_item *tmp_list = NULL;
+	int n_addrs = 0;
 
 	*idev_addr_count = 0;
 
+        read_lock(&addrconf_lock);
+	idev = in6_dev_get(event_dev);
 	if (!idev) {
-		HIP_ERROR("NULL idev\n");
-		return -EINVAL;
+		HIP_DEBUG("event_dev has no IPv6 addrs, returning\n");
+		goto out;
 	}
-		
-	HIP_DEBUG("idev=%s ifindex=%d\n", idev->dev->name, idev->dev->ifindex);
+	read_lock(&idev->lock);
 
-	for (ifa = idev->addr_list; ifa; (*idev_addr_count)++, ifa = ifa->if_next) {
+	for (ifa = idev->addr_list; ifa; ifa = ifa->if_next) {
 		spin_lock_bh(&ifa->lock);
 		hip_in6_ntop(&ifa->addr, addrstr);
-		HIP_DEBUG("addr %d: %s\n", *idev_addr_count+1, addrstr);
-		if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL) {
-			HIP_DEBUG("not counting link local address\n");
-			(*idev_addr_count)--;
-		}
+		HIP_DEBUG("addr %d: %s flags=0x%x valid_lft=%u jiffies-ifa_timestamp=%lu\n",
+			  n_addrs+1, addrstr, ifa->flags,
+			  ifa->valid_lft, (jiffies-ifa->tstamp)/HZ);
+		if (!hip_rea_addr_ok(&ifa->addr)) {
+			HIP_DEBUG("address not accepted into REA\n");
+		} else
+			n_addrs++;
 		spin_unlock_bh(&ifa->lock);
 	}
-	HIP_DEBUG("address list count=%d\n", *idev_addr_count);
+	HIP_DEBUG("address list count=%d\n", n_addrs);
 
-	if (*idev_addr_count > 0) {
+	if (n_addrs > 0) {
 		/* create address list for building of REA */
-
-		/* todo: convert to struct list_head ? */
-		tmp_list = kmalloc(*idev_addr_count * sizeof(struct hip_rea_info_addr_item), GFP_ATOMIC);
+		tmp_list = kmalloc(n_addrs * sizeof(struct hip_rea_info_addr_item), GFP_ATOMIC);
 		if (!tmp_list) {
 			HIP_DEBUG("addr_list creation failed\n");
 			err = -ENOMEM;
-			goto out_err;
+			goto out_in6_unlock;
 		}
 
-		/* todo: skip addresses which we don't want/need to include into
-		 * the REA packet, localhost address, multicast addresses etc
-		 *
-		 * this list is maybe better to be created for each of
-		 * the peers, policy ?
-		 */
 		for (i = 0, ifa = idev->addr_list;
-		     ifa && i < *idev_addr_count; ifa = ifa->if_next) {
+		     ifa && i < n_addrs; ifa = ifa->if_next, i++) {
 			spin_lock_bh(&ifa->lock);
-			if (!(ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL)) {
+			if (hip_rea_addr_ok(&ifa->addr)) {
 				ipv6_addr_copy(&tmp_list[i].address, &ifa->addr);
-				tmp_list[i].lifetime = htonl(0);
-				tmp_list[i].reserved = 0;
-				i++;
+				/* lifetime: select prefered_lft or valid_lft ? */
+				tmp_list[i].lifetime = htonl(ifa->valid_lft); /* or: (jiffies-ifp->tstamp)/HZ ? */
+				if (i == 0)
+					tmp_list[i].reserved = htonl(1 << 31); /* for testing preferred address */
+				else
+					tmp_list[i].reserved = 0;
 			} else {
 				HIP_DEBUG("not adding link local address\n");
 			}
 			spin_unlock_bh(&ifa->lock);
-			/* todo: how to calculate address lifetime */
 		}
 	}
 
 	*addr_list = tmp_list;
+	*idev_addr_count = n_addrs;
 
- out_err:
+ out_in6_unlock:
+	read_unlock(&idev->lock);
+	in6_dev_put(idev);
+ out:
+	read_unlock(&addrconf_lock);
 	return err;
-}
-
-/**
- * hip_net_event_handle - finish netdev and inet6 event handling
- * @event_src: event source
- * @event_dev: the network device which caused the event
- * @event: the event
- *
- * This function does the actual work (sending of REA, that is) after
- * the event type was inspected in hip_inet6addr_event_handler or
- * hip_netdev_event_handler.
- *
- * Events caused by loopback devices are ignored.
- *
- * NOTE: this uses our own REA extension (REA containing no addresses)
- *
- * @event_src is 0 if @event to be handled came from hip_handle_ipv6_ifa_notify,
- * or 1 if @event came from netdevice_notifier.
- */
-static void hip_net_event_handle(int event_src, struct net_device *event_dev,
-				 unsigned long event)
-{
-        int err = 0;
-        struct net_device *dev;
-        struct inet6_dev *idev;
-        int idev_addr_count = 0;
-        struct hip_rea_info_addr_item *addr_list = NULL;
-
-	/* hip_net_event checks validity of event_dev */
-
-        if (! (event_src == 0 || event_src == 1) ) {
-                HIP_ERROR("unknown event source %d\n", event_src);
-                return;
-        }
-
-	HIP_DEBUG("event_src=%d(%s) event=%lu dev=%s ifindex=%d\n",
-		  event_src, event_src == 0 ? "ipv6_ifa" : "netdev",
-		  event, event_dev->name, event_dev->ifindex);
-
-        read_lock(&dev_base_lock);
-        read_lock(&addrconf_lock);
-
-	/* send separate REAs for each network interface (todo: one REA) */
-        for (dev = dev_base; dev; dev = dev->next) {
-		int rea_netdev;
-                HIP_DEBUG("dev loop: dev=%s ifindex=%d\n", dev->name, dev->ifindex);
-
-                /* skip loopback devices */
-                if (dev->flags & IFF_LOOPBACK) {
-                        HIP_DEBUG("skipping loopback device\n");
-                        continue;
-                }
-                idev = in6_dev_get(dev);
-                if (!idev) {
-                        HIP_DEBUG("NULL idev on event %ld (no IPv6 addrs), skipping\n", event);
-                        continue;
-                }
-                read_lock(&idev->lock);
-
-                idev_addr_count = 0;
-                addr_list = NULL;
-
-		/* When a network device gets NETDEV_DOWN, create a 0
-		 * address REA if dev is the device which went down,
-		 * else (an IPv6 address was added or deleted or
-		 * network device came up) send "all addresses REA" */
-                if (event_src == 1 && dev->ifindex == event_dev->ifindex) {
-			idev_addr_count = 0;
-			addr_list = NULL;
-		} else {
-			err = hip_create_device_addrlist(idev, &addr_list,
-							 &idev_addr_count);
-			if (err) {
-				HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
-				goto out_err;
-			}
-			HIP_ASSERT(idev_addr_count >= 0);
-#if 0
-			/* we don't want to send REA with 0 entries, or do we? */
-			if (idev_addr_count == 0)
-				goto out_err;
-#endif
-		}
-		/* Now we have the addresses to be included in the REA, send REAs */
-
-		/* When an IPv6 address was added, try to use the same
-		 * interface for sending out the REA as which caused
-		 * the event. Else we let the kernel dedice the
-		 * interface to use. */
-                if (event_src == 0 && event == NETDEV_UP) {
-			rea_netdev = REA_OUT_NETDEV_GIVEN;
-		} else {
-			rea_netdev = REA_OUT_NETDEV_ANY;
-		}
-		hip_send_rea_all(dev->ifindex, addr_list,
-				 idev_addr_count, rea_netdev);
-
-        out_err:
-                read_unlock(&idev->lock);
-                in6_dev_put(idev);
-                if (addr_list)
-                        kfree(addr_list);
-        }
-
-        read_unlock(&addrconf_lock);
-        read_unlock(&dev_base_lock);
-        return;
 }
 
 /* helper function for creating and initializing work order for
@@ -1396,6 +1292,8 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
 #define EVENTSRC_INET6 0
 #define EVENTSRC_NETDEV 1
 
+#define SEND_UPDATE_NES (1 << 0)
+#define SEND_UPDATE_REA (1 << 1)
 /** hip_net_event - start handling the network device event
  * @ifindex: the device which caused the event
  * @event_src: 0 for IPv6 address events and 1 for network device related events
@@ -1406,11 +1304,14 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
  */
 static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 {
+	int err = 0;
 	struct net_device *event_dev;
+        int idev_addr_count = 0;
+        struct hip_rea_info_addr_item *addr_list = NULL;
 
 	HIP_DEBUG("\n");
 
-	if (! (event_src == EVENTSRC_INET6 || event_src == EVENTSRC_NETDEV) ) {
+        if (! (event_src == EVENTSRC_INET6 || event_src == EVENTSRC_NETDEV) ) {
                 HIP_ERROR("unknown event source %d\n", event_src);
                 return;
         }
@@ -1422,6 +1323,7 @@ static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 		return;
 	}
 	/* dev_get_by_index does a dev_hold */
+
 	HIP_DEBUG("event_src=%s dev=%s ifindex=%d event=%u\n",
 		  event_src == EVENTSRC_INET6 ? "inet6" : "netdev",
 		  event_dev->name, ifindex, event);
@@ -1434,8 +1336,21 @@ static void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 		return;
         }
 
-	hip_net_event_handle(event_src, event_dev, event);
+	err = hip_create_device_addrlist(event_dev, &addr_list, &idev_addr_count);
 	dev_put(event_dev);
+
+	if (err) {
+		HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
+	} else {
+		/* send UPDATEs if there are addresses to be informed to the peers */
+		//if (idev_addr_count > 0 && addr_list)
+		hip_send_update_all(addr_list, idev_addr_count, ifindex, SEND_UPDATE_REA);
+		//else
+		//HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+	}
+
+	if (addr_list)
+		kfree(addr_list);
 }
 
 /**
@@ -1459,6 +1374,7 @@ void hip_handle_inet6_addr_del(int ifindex) {
 	return;
 }
 
+
 /**
  * hip_netdev_event_handler - handle network device events
  * @notifier_block: device notifier chain
@@ -1476,11 +1392,17 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 	struct hip_work_order *hwo;
 
         if (! (event == NETDEV_DOWN || event == NETDEV_UNREGISTER)) {
-                HIP_DEBUG("Ignoring event %lu\n", event);
+                _HIP_DEBUG("Ignoring event %lu\n", event);
                 return NOTIFY_DONE;
         }
 
 	HIP_DEBUG("got event NETDEV_%s\n", event == NETDEV_DOWN ? "DOWN" : "UNREGISTER");
+
+        if (event == NETDEV_UNREGISTER) {
+		/* avoid sending rapidly consecutive UPDATEs */
+                HIP_DEBUG("not handling UNREGISTER event, assuming already handled DOWN\n");
+                return NOTIFY_DONE;
+        }
 
         event_dev = (struct net_device *) ptr;
         if (!event_dev) {
@@ -1491,10 +1413,10 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 
 	hwo = hip_net_event_prepare_hwo(HIP_WO_SUBTYPE_DEV_EVENT,
 					event_dev->ifindex, event);
-	if (!hwo) {
-		HIP_ERROR("No memory to handle address event\n");
+  	if (!hwo) {
+		HIP_ERROR("Unable to handle address event\n");
 		goto out;
-	}
+  	}
 	hip_insert_work_order(hwo);
 
  out:
@@ -1502,8 +1424,62 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 	return NOTIFY_DONE;
 }
 
+
+/* ICMP errors caused by HIP packets are handled by this function */
+static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt, 
+			    int type, int code, int offset, __u32 info)
+{
+	struct icmp6hdr *hdr;
+	struct ipv6hdr *invoking_hdr; /* RFC 2463 sec 3.1 */
+        struct in6_addr *saddr, *daddr;
+	char strs[INET6_ADDRSTRLEN];
+	char strd[INET6_ADDRSTRLEN];
+
+	hdr = (struct icmp6hdr *) skb->h.raw;
+	invoking_hdr = (struct ipv6hdr *) (hdr+1); /* check */
+
+	saddr = &skb->nh.ipv6h->saddr;
+        daddr = &skb->nh.ipv6h->daddr;
+	hip_in6_ntop(saddr, strs);
+	hip_in6_ntop(daddr, strd);
+	HIP_DEBUG("icmp6: src=%s dst=%s type=%d code=%d offset=%d info=%u skb->len=%d\n",
+		  strs, strd, type, code,  offset, info, skb->len);
+	hip_in6_ntop(&invoking_hdr->saddr, strs);
+	hip_in6_ntop(&invoking_hdr->daddr, strd);
+	HIP_DEBUG("invoking_hdr ip6: src=%s dst=%s\n", strs, strd);
+
+	switch (type) {
+	case ICMPV6_DEST_UNREACH:
+		HIP_DEBUG("got DEST_UNREACH\n");
+		switch(code) {
+		case ICMPV6_NOROUTE:
+		case ICMPV6_ADM_PROHIBITED:
+		case ICMPV6_ADDR_UNREACH:
+			HIP_DEBUG("TODO: handle ICMP DU code %d\n", code);
+			/* todo: deactivate invoking_hdr->daddr from every sdb
+			 * entry peer addr list */
+			break;
+		default:
+			HIP_DEBUG("ICMP DU code %d not handled\n", code);
+			break;
+		}
+		break;
+	case ICMPV6_PARAMPROB:
+		HIP_DEBUG("got PARAMPROB\n");
+		break;
+	case ICMPV6_TIME_EXCEED:
+		HIP_DEBUG("got TIME_EXCEED\n");
+		break;
+	default:
+		HIP_DEBUG("unhandled type %d\n", type);
+	}
+
+	return;
+}
+
+#if 0
 /**
- * hip_handle_dst_unreachable - ICMPv6 Destination Unreachable message handler
+ * hip_handle_icmp - ICMPv6 handler
  * @skb: sk_buff containing the received ICMPv6 packet
  *
  * This function does currently nothing useful. Later we should mark
@@ -1511,19 +1487,21 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
  * Unreachable caused by a packet which was sent to some of the peer
  * addresses we know of.
  */
-void hip_handle_dst_unreachable(struct sk_buff *skb)
+void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 {
+	HIP_DEBUG("icmp6: type=%d code=%d skb->len=%d\n",
+		  type, code, skb->len);
+	HIP_DEBUG("RETURNING, hip_err_handler should handle this ICMP\n");
+	return;
+#if 0
 	struct icmp6hdr *hdr;
 	struct ipv6hdr *invoking_hdr; /* RFC 2463 sec 3.1 */
-#ifdef CONFIG_HIP_DEBUG
         struct in6_addr *saddr, *daddr;
 	char strs[INET6_ADDRSTRLEN];
 	char strd[INET6_ADDRSTRLEN];
-#endif
 
 	/* todo: option to allow/disallow icmpv6 handling */
-
-	if (!pskb_may_pull(skb, 4+sizeof(struct ipv6hdr))) {
+	if (!pskb_may_pull(skb, 4+sizeof(struct ipv6hdr))) { /* already checked in icmpv6_rcv/icmpv6_notify ? */
 		/* RFC 2463 sec 3.1 */
 		HIP_DEBUG("Too short an ICMP packet\n");
 		return;
@@ -1531,7 +1509,6 @@ void hip_handle_dst_unreachable(struct sk_buff *skb)
 
 	hdr = (struct icmp6hdr *) skb->h.raw;
 	invoking_hdr = (struct ipv6hdr *) (hdr+1); /* check */
-#ifdef CONFIG_HIP_DEBUG
 	saddr = &skb->nh.ipv6h->saddr;
         daddr = &skb->nh.ipv6h->daddr;
 	hip_in6_ntop(saddr, strs);
@@ -1542,7 +1519,6 @@ void hip_handle_dst_unreachable(struct sk_buff *skb)
 	hip_in6_ntop(&invoking_hdr->saddr, strs);
 	hip_in6_ntop(&invoking_hdr->daddr, strd);
 	HIP_DEBUG("invoking_hdr ip6: src=%s dst=%s\n", strs, strd);
-#endif
 
 	switch(hdr->icmp6_code) {
 	case ICMPV6_NOROUTE:
@@ -1558,6 +1534,74 @@ void hip_handle_dst_unreachable(struct sk_buff *skb)
 	}
 
 	return;
+#endif
+}
+#endif
+
+/* Handler which is notified when SA state has changes.
+   TODO: send UPDATE when SA lifetime has expired. */
+static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
+{
+	HIP_DEBUG("x=0x%p hard=%d\n", x, hard);
+	HIP_DEBUG("x: SPI=0x%x state=%d\n", ntohl(x->id.spi), x->km.state);
+	HIP_DEBUG("TODO..\n");
+#if 0
+	if (SA is HIP SA) {
+		hip_ha_t *entry;
+		/* was this event caused by inbound SA ?*/
+		entry = hip_hadb_find_byspi(ntohl(x->id.spi));
+		if (entry) {
+			hip_send_update(entry, NULL, 0, 0, 0); /* non-mm UPDATE */
+			hip_ha_put(entry);
+		} else {
+			/* check if SA was outbound .. */
+		}
+	}
+#endif
+
+	return 0;
+}
+
+#if 0
+/* TODO: remove kludge from km_query and use this as the handler when HITs are acquired */
+static int hip_xfrm_handler_acquire(struct xfrm_state *xs, struct xfrm_tmpl *xtmpl,
+			     struct xfrm_policy *pol, int dir)
+{
+	int err = -EINVAL; /* ? */
+
+	if (pol->selector.daddr == htonl(0x40000000) &&
+	    pol->selector.prefixlen_d == 2) {
+		/* this must trigger Base Exchange */
+		err = hip_trigger_bex((struct in6_addr *)&(xs->id.daddr));
+	}
+	HIP_DEBUG("err=%d\n", err);
+	return err;
+}
+#endif
+
+static int hip_xfrm_handler_policy_notify(struct xfrm_policy *xp, int dir, int hard)
+{
+	HIP_DEBUG("xp=0x%p dir=%d hard=%d\n", xp, dir, hard);
+	HIP_DEBUG("TODO..\n");
+	return 0;
+}
+
+static struct xfrm_mgr hip_xfrm_km_mgr = {
+	.id		= "HIP",
+	.notify		= hip_xfrm_handler_notify,
+	/* .acquire	= hip_xfrm_handler_acquire, fix this when km_query is fixed */
+	/* .compile_policy = hip_xfrm_handler_compile_policy, */
+	.notify_policy	= hip_xfrm_handler_policy_notify,
+};
+
+/* Handler for XFRM key management calls */
+/* TODO */
+int hip_register_xfrm_km_handler(void)
+{
+	int err;
+	HIP_DEBUG("registering XFRM key management handler\n");
+	err = xfrm_register_km(&hip_xfrm_km_mgr);
+	return err;
 }
 
 /**
@@ -1669,20 +1713,40 @@ static int hip_init_procfs(void)
 	if (!hip_proc_root)
 		return -1;
 
-	create_proc_read_entry("lhi", 0, hip_proc_root, hip_proc_read_lhi, NULL);
-	create_proc_read_entry("sdb_state", 0, hip_proc_root,
-			       hip_proc_read_hadb_state, NULL);
-	create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
-			       hip_proc_read_hadb_peer_addrs, NULL);
-
+	/* todo: set file permission modes */
+	if (!create_proc_read_entry("lhi", 0, hip_proc_root, hip_proc_read_lhi, NULL))
+		goto out_err_root;
+	if (!create_proc_read_entry("sdb_state", 0, hip_proc_root,
+			       hip_proc_read_hadb_state, NULL))
+		goto out_err_lhi;
+	if (!create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
+			       hip_proc_read_hadb_peer_addrs, NULL))
+		goto out_err_sdb_state;
 	/* a simple way to trigger sending of UPDATE packet to all peers */
-	create_proc_read_entry("send_update", 0, hip_proc_root,
-			       hip_proc_send_update, NULL);
+	if (!create_proc_read_entry("send_update", 0, hip_proc_root,
+			       hip_proc_send_update, NULL))
+		goto out_err_peer_addrs;
 	/* for testing dummy NOTIFY packets */
-	create_proc_read_entry("send_notify", 0, hip_proc_root,
-			       hip_proc_send_notify, NULL);
+	if (!create_proc_read_entry("send_notify", 0, hip_proc_root,
+			       hip_proc_send_notify, NULL))
+		goto out_err_send_update;
+
+	HIP_DEBUG("profcs init successful\n");
 	return 1;
 
+ out_err_send_update:
+	remove_proc_entry("send_update", hip_proc_root);
+ out_err_peer_addrs:
+	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
+ out_err_sdb_state:
+	remove_proc_entry("sdb_state", hip_proc_root);
+ out_err_lhi:
+	remove_proc_entry("lhi", hip_proc_root);
+ out_err_root:
+	remove_proc_entry("net/hip", NULL);
+
+	HIP_ERROR("profcs init failed\n");
+	return -1;
 }
 
 /**
@@ -1697,15 +1761,13 @@ static void hip_uninit_procfs(void)
 	remove_proc_entry("send_update", hip_proc_root);
 	remove_proc_entry("send_notify", hip_proc_root);
 	remove_proc_entry("hip", proc_net);
-	return;
 }
 #endif /* CONFIG_PROC_FS */
-
 
 int hip_init_netdev_notifier(void)
 {
 	HIP_DEBUG("\n");
-	hip_netdev_notifier.notifier_call =  hip_netdev_event_handler;
+	hip_netdev_notifier.notifier_call = hip_netdev_event_handler;
 	hip_netdev_notifier.next = NULL;
         hip_netdev_notifier.priority = 0;
         return register_netdevice_notifier(&hip_netdev_notifier);
@@ -1729,6 +1791,8 @@ static int hip_do_work(void)
 		goto out_err;
 	}
 
+	HIP_DEBUG("New job: type=%d subtype=%d\n", job->type, job->subtype);
+
 	switch (job->type) {
 	case HIP_WO_TYPE_INCOMING:
 		switch(job->subtype) {
@@ -1736,31 +1800,30 @@ static int hip_do_work(void)
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i1(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I1");
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_R1:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r1(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R1");
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_I2:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i2(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I2");
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_R2:
 			KRISU_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r2(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R2");
 			KRISU_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = 0;
-//			res = hip_receive_update(job->arg1);
+			res = hip_receive_update(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
 		case HIP_WO_SUBTYPE_RECV_NOTIFY:
@@ -1816,7 +1879,7 @@ static int hip_do_work(void)
 			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
 			if (res < 0)
 				res = KHIPD_ERROR;
-			hip_hadb_dump_hits();
+			//hip_hadb_dump_hits();
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
@@ -1847,7 +1910,7 @@ static int hip_do_work(void)
 			goto out_err;
 		}
 	}
-		
+
  out_err:
 	hip_free_work_order(job);
 	return res;
@@ -1862,7 +1925,7 @@ static int hip_worker(void *cpu_id)
 	daemonize("khipd/%d",cid);
 	set_cpus_allowed(current, cpumask_of_cpu(cid));
 
-	//set_user_nice(current, 0); //XXX: Set this as you please 
+	//set_user_nice(current, 0); //XXX: Set this as you please
 
 	/* initialize */
 	hip_init_workqueue();
@@ -1894,14 +1957,13 @@ static int hip_worker(void *cpu_id)
 }
 
 
-
 static int __init hip_init(void)
 {
 	int i,pid;
 
 	HIP_INFO("Initializing HIP module\n");
 	hip_get_load_time();
-	
+
 	if(!hip_init_r1())
 		goto out;
 
@@ -1922,8 +1984,6 @@ static int __init hip_init(void)
 		goto out;
 #endif /* CONFIG_PROC_FS */
 
-	/* comment this to disable network device event handler
-	   (crashed sometimes) */
 	if (hip_init_netdev_notifier() < 0)
 		goto out;
 
@@ -1947,19 +2007,27 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_get_addr);
 	HIP_SETCALL(hip_get_saddr);
 	HIP_SETCALL(hip_unknown_spi);
-	HIP_SETCALL(hip_handle_dst_unreachable);
+	//HIP_SETCALL(hip_handle_icmp);
 	HIP_SETCALL(hip_trigger_bex);
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
+	//HIP_SETCALL(hip_update_spi_waitlist_ispending);
+	HIP_SETCALL(hip_get_default_spi_out);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
 		HIP_ERROR("Could not add HIP protocol\n");
 		goto out;
 	}
 
+#if 0
+	if (hip_register_xfrm_km_handler()) {
+		HIP_ERROR("Could not register XFRM key manager for HIP\n");
+		goto out;
+	}
+#endif
+
 	HIP_INFO("HIP module initialized successfully\n");
 	return 0;
-
 
  out:
 	hip_cleanup();
@@ -1974,37 +2042,43 @@ static void __exit hip_cleanup(void)
 {
 	HIP_INFO("uninitializing HIP module\n");
 
+	/* unregister XFRM km handler */
+	//xfrm_unregister_km(&hip_xfrm_km_mgr);
+
 	/* disable callback for HIP packets */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
 	
 	/* disable hooks to call our code */
+	//HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
 	HIP_INVALIDATE(hip_trigger_bex);
-	HIP_INVALIDATE(hip_handle_dst_unreachable);
+	//HIP_INVALIDATE(hip_handle_icmp);
 	HIP_INVALIDATE(hip_unknown_spi);
 	HIP_INVALIDATE(hip_get_saddr);
 	HIP_INVALIDATE(hip_get_addr);
 	HIP_INVALIDATE(hip_handle_esp);
 	HIP_INVALIDATE(hip_handle_output);
+	HIP_INVALIDATE(hip_get_default_spi_out);
 
 	/* kill threads */
 	if (atomic_read(&hip_working) != 0) {
 		hip_stop_khipd(); /* tell the hip kernel thread(s) to stop */
-		
+
 		while(atomic_read(&hip_working)) {
-			HIP_DEBUG("%d HIP threads left\n",
-				  atomic_read(&hip_working));
+			if (net_ratelimit())
+				HIP_DEBUG("%d HIP threads left\n",
+					  atomic_read(&hip_working));
 			schedule(); /* wait until stopped */
 		}
 	}
-	
-	HIP_DEBUG("Thread(s) finished\n");
-	
+
+	HIP_DEBUG("All HIP threads finished\n");
+
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
-	
-	hip_uninit_netdev_notifier(); /* comment this if network device event causes troubles */
+
+	hip_uninit_netdev_notifier();
 
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();
@@ -2022,6 +2096,7 @@ static void __exit hip_cleanup(void)
 
 	hip_rea_delete_sent_list();
 	hip_ac_delete_sent_list();
+	/* update_spi_waitlist_delete_all(); */
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }
@@ -2035,4 +2110,3 @@ MODULE_PARM_DESC(kmm, "Measuring mode: 1 = Global timing, 2 = {I,R}{1,2} timing,
 #endif
 module_init(hip_init);
 module_exit(hip_cleanup);
-

@@ -20,6 +20,10 @@
 
 extern struct semaphore xfrm_cfg_sem;
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip.h>
+#endif
+
 /* Organization of SPD aka "XFRM rules"
    ------------------------------------
 
@@ -149,6 +153,11 @@ struct xfrm_state
 	/* Private data of this transformer, format is opaque,
 	 * interpreted by xfrm_type methods. */
 	void			*data;
+
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	hip_hit_t src_hit;
+	hip_hit_t dst_hit;
+#endif
 };
 
 enum {

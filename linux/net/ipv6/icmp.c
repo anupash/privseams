@@ -67,6 +67,10 @@
 #include <asm/uaccess.h>
 #include <asm/system.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 DEFINE_SNMP_STAT(struct icmpv6_mib, icmpv6_statistics);
 
 /*
@@ -551,6 +555,12 @@ static void icmpv6_notify(struct sk_buff *skb, int type, int code, u32 info)
 		}
 	}
 	read_unlock(&raw_v6_lock);
+
+#if 0
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	HIP_CALLFUNC(hip_handle_icmp, 0)(skb, type, code, info);
+#endif
+#endif
 }
   
 /*

@@ -11,6 +11,8 @@
  *  - Kristian Slavov <kslavov@hiit.fi>
  *
  *  TODO:
+ *  - split this file into net/hip.h (packet structs etc) and linux/hip.h
+ *    (implementation specific stuff)
  *  - hip_local_hi and hip_lhid contain reduntantly the anonymous bit?
  *  - hip_tlv_common should be packed?
  *  - the packing of the structures could be hidden in the builder
@@ -37,12 +39,13 @@
 #  include <linux/timer.h>
 #  include <linux/time.h>
 #  include <linux/ioctl.h>
+#  include <linux/list.h>
 
 typedef uint16_t in_port_t;
 
 #else
-#  include <sys/ioctl.h>
-#  include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
 
 #endif /* __KERNEL__ */
 
@@ -149,7 +152,7 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_RVA_REQUEST        100
 #define HIP_PARAM_RVA_REPLY          102
 
-#define HIP_PARAM_REA_INFO           128
+#define HIP_PARAM_REA_INFO           8 /* mm-02: Type: TBD (to be determined) */
 #define HIP_PARAM_AC_INFO            129 /* mm-01: to be removed */
 #define HIP_PARAM_FA_INFO            130 /* mm-01: to be removed */
 
@@ -189,7 +192,6 @@ typedef uint16_t in_port_t;
 #define HIP_HIP_AES_SHA1                1
 #define HIP_HIP_3DES_SHA1               2
 #define HIP_HIP_3DES_MD5                3
-#define HIP_HIP_NULL_SHA1               5
 #define HIP_HIP_NULL_SHA1               5
 
 #define HIP_TRANSFORM_HIP_MAX           6
@@ -346,7 +348,7 @@ struct hip_keymat_keymat
 {
 	size_t offset;      /* Offset into the key material */
 	size_t keymatlen;   /* Length of the key material */
-	
+
 	void *keymatdst; /* Pointer to beginning of key material */
 };
 
@@ -389,7 +391,7 @@ struct hip_puzzle {
 struct hip_solution {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-	
+
 	uint8_t           K;
 	uint8_t           opaque[3];
 	uint64_t          I;
@@ -409,7 +411,7 @@ typedef uint16_t hip_transform_suite_t;
 struct hip_hip_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
-	
+
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX];
 } __attribute__ ((packed));
 
@@ -484,7 +486,7 @@ struct hip_sig2 {
 	hip_tlv_len_t     length;
 
 	uint8_t      algorithm;
-	
+
 	/* fixed part end */
 } __attribute__ ((packed));
 
@@ -509,7 +511,7 @@ struct hip_ack {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 
-	uint32_t peer_update_id;
+	uint32_t peer_update_id; /* n items */
 } __attribute__ ((packed));
 
 struct hip_notify {
@@ -530,11 +532,11 @@ struct hip_rea_info_addr_item {
 struct hip_rea {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-  	uint32_t spi;
+	uint32_t spi;
 	/* fixed part ends */
 } __attribute__ ((packed));
 
-struct hip_rea_info {
+struct hip_rea_info { /* TODO: remove, only tcpdump patch seems to use this */
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint32_t interface_id;
@@ -551,7 +553,7 @@ struct hip_hmac {
 	uint8_t hmac_data[HIP_AH_SHA_LEN];
 } __attribute__ ((packed));
 
-struct hip_ac_info { /* mm-01: to be removed */
+struct hip_ac_info { /* mm: to be removed */
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
 	uint16_t ac_id;
@@ -702,16 +704,7 @@ struct hip_context
 	struct sk_buff *skb_in;         /* received skbuff */
 	struct hip_common *input;       /* received packet */
 	struct hip_common *output;      /* packet to be built and sent */
-  /*
-    struct hip_crypto_key hip_i;
-    struct hip_crypto_key hip_r;
-    struct hip_crypto_key hip_espi;
-    struct hip_crypto_key hip_espr;
-    struct hip_crypto_key hip_authi;
-    struct hip_crypto_key hip_authr;
-    struct hip_crypto_key hip_hmaci;
-    struct hip_crypto_key hip_hmacr;
-  */
+
 	struct hip_crypto_key hip_enc_out;
 	struct hip_crypto_key hip_hmac_out;
 	struct hip_crypto_key esp_out;
@@ -746,31 +739,77 @@ struct hip_context_rea_sig
 };
 
 /* flags for struct hip_context_rea_sig */
-#define REA_OUT_NETDEV_ANY 0   /* REA can be sent out from any interface */
-#define REA_OUT_NETDEV_GIVEN 1 /* REA must be sent out from given interface */
+//#define REA_OUT_NETDEV_ANY 0   /* REA can be sent out from any interface */
+//#define REA_OUT_NETDEV_GIVEN 1 /* REA must be sent out from given interface */
 
 struct hip_peer_addr_list_item
 {
 	struct list_head list;
-	uint32_t         interface_id;
+
 	struct in6_addr  address;
-	int address_state;              /* current state of the
+	int              address_state; /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */
+	int              is_preferred;  /* 1 if this address was set as preferred address in the REA*/
 	uint32_t         lifetime;
 	struct timeval   modified_time; /* time when this address was
 					   added or updated */
+	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
+					   this address is related to */
+	uint8_t          echo_data[4];     /* data put into the ECHO_REQUEST parameter */
 };
 
-/* peer address is assumed to be currently reachable */
-#define PEER_ADDR_STATE_REACHABLE 1
-/* peer address is assumed not to be currently reachable */
-#define PEER_ADDR_STATE_UNREACHABLE 2
+#define PEER_ADDR_STATE_UNVERIFIED 1
+#define PEER_ADDR_STATE_ACTIVE 2
+#define PEER_ADDR_STATE_DEPRECATED 3
+
+#define HIP_SPI_DIRECTION_OUT 1
+#define HIP_SPI_DIRECTION_IN 2
+
+/* for HIT-SPI hashtable only */
+struct hip_hit_spi {
+	struct list_head list;
+	spinlock_t       lock;
+	atomic_t         refcnt;
+	hip_hit_t        hit;
+	uint32_t         spi; /* this SPI spi belongs to the HIT hit */
+};
+
+struct hip_spi_in_item
+{
+	struct list_head list;
+	uint32_t         spi;
+	uint32_t         new_spi; /* SPI is changed to this when rekeying */
+	int              ifindex; /* ifindex if the netdev to which this is related to */
+	unsigned long    timestamp; /* when SA was created */
+	int              updating; /* UPDATE is in progress */
+	uint32_t         nes_spi_out; /* UPDATE, the stored outbound
+				       * SPI related to the inbound
+				       * SPI we sent in reply (useless ?) */
+	uint16_t         keymat_index; /* advertized keymat index */
+	int              update_state_flags; /* 0x1=received ack for
+						sent SEQ, 0x2=received
+						peer's NES,
+						both=0x3=can move back
+						to established */
+	uint32_t seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
+	struct hip_nes stored_received_nes; /* the corresponding NES of peer */
+};
+
+struct hip_spi_out_item
+{
+	struct list_head list;
+	uint32_t         spi;
+	uint32_t         new_spi;   /* spi is changed to this when rekeying */
+	uint32_t         seq_update_id; /* USELESS, IF SEQ ID WILL BE RELATED TO ADDRESS ITEMS,
+					 * NOT OUTBOUND SPIS *//* the Update ID in SEQ parameter these SPI are related to */
+
+	struct list_head peer_addr_list; /* Peer's IPv6 addresses */
+	struct in6_addr  preferred_address; /* check */
+};
 
 struct hip_hadb_state
 {
 	struct list_head     next_hit;
-	struct list_head     next_spi;
-
 
 	spinlock_t           lock;
 	atomic_t             refcnt;
@@ -779,16 +818,19 @@ struct hip_hadb_state
 	int                  state;
 
 	uint16_t             local_controls;
-	uint16_t             peer_controls;  
+	uint16_t             peer_controls;
 
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
-	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 
-	uint32_t             spi_out;       /* outbound IPsec SA SPI */
-	uint32_t             spi_in;        /* inbound IPsec SA SPI */
-	uint32_t             new_spi_out;   /* new outbound IPsec SA SPI received in UPDATE */
-	uint32_t             new_spi_in;    /* new inbound IPsec SA SPI when rekey was initiated */
+	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
+	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
+
+	uint32_t             default_spi_out;
+	struct in6_addr      preferred_address; /* preferred dst address to use when
+						 * sending data to peer */
+
+	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;
@@ -796,7 +838,7 @@ struct hip_hadb_state
 	int                  esp_transform;
 
 	uint64_t             birthday;
-	
+
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
 
@@ -804,14 +846,6 @@ struct hip_hadb_state
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.
 	 */
-#if 0
-	struct hip_crypto_key esp_our; //espi_key;
-	struct hip_crypto_key esp_peer; //spr_key;
-	struct hip_crypto_key auth_our; //authi_key;
-	struct hip_crypto_key auth_peer; //authr_key;
-	struct hip_crypto_key hmac_our;
-	struct hip_crypto_key hmac_peer;
-#endif
 	struct hip_crypto_key hip_enc_out; /* outgoing HIP packets */
 	struct hip_crypto_key hip_hmac_out;
 	struct hip_crypto_key esp_out;  /* outgoing ESP packets */
@@ -830,6 +864,8 @@ struct hip_hadb_state
 
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
+
+	int skbtest;
 };
 
 struct hip_cookie_entry {
@@ -841,27 +877,6 @@ struct hip_cookie_entry {
 	uint64_t hash_target;
 	struct in6_addr initiator;
 	struct in6_addr responder;
-};
-
-struct hip_sent_rea_info {
-	struct list_head list;
-	uint16_t rea_id; /* sent REA ID in network byte order */
-	struct in6_addr hit; /* HIT where this REA was sent to*/
-	atomic_t use_count;
-	struct timer_list timer;
-};
-
-struct hip_sent_ac_info { /* mm-01: to be removed */
-	struct list_head list;
-	uint16_t ac_id; /* sent AC ID in network byte order */
-	uint16_t rea_id; /* corresponding REA ID in network byte order */
-	struct in6_addr ip; /* IPv6 address where this REA was sent to */
-	uint32_t interface_id;
-	uint32_t lifetime;
-	uint32_t rtt_sent;
-	/* struct timeval rtt_sent ?*/
-	//unsigned long rtt_sent; /* jiffies value when this packet was sent out */
-	struct timer_list timer;
 };
 
 struct hip_work_order {
@@ -901,10 +916,6 @@ struct hip_eid_db_entry {
 	struct sockaddr_eid        eid; /* XX FIXME: the port is unneeded */
 	struct hip_lhi             lhi;
 };
-
-
-
-
 
 #define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200
 #endif /* __KERNEL__ */

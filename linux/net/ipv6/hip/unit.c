@@ -42,12 +42,12 @@ uint16_t hip_run_unit_test_case(struct hip_unit_test_suite_list *list,
 	   access into the corresponding arrays */
 	uint16_t first_suite, current_suite, last_suite;
 	uint16_t first_case, current_case, last_case;
-	
+
 	first_suite = (suiteid == 0) ? 0 : suiteid - 1;
 	last_suite = (suiteid == 0) ?
 		list->nbr - 1 : suiteid - 1;
 	first_case = (caseid == 0) ? 0 : caseid - 1;
-		
+
 	_HIP_DEBUG("for1 index: %d-%d\n", suiteid, first_suite, last_suite);
 
 	if (last_suite > list->nbr - 1) {
@@ -141,7 +141,7 @@ uint16_t hip_run_unit_test_space(struct hip_unit_test_space *unit_space,
 		((char *)err_log)[0] = '\0';
 
 	_HIP_DEBUG("for index: %d-%d\n", first_space, last_space);
-	
+
 	for (current_space = first_space; current_space <= last_space;
 	     current_space++) {
 		space_left = ((void *)err_log) - err_index + err_max;

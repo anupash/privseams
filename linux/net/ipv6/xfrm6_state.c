@@ -64,7 +64,7 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 
 #ifdef CONFIG_HIP_DEBUG
 	if (ipv6_addr_is_hit((struct in6_addr *) daddr))
-		printk(KERN_DEBUG "SA lookup (SPI %x) failed\n", ntohl(spi));
+		printk(KERN_DEBUG "SA lookup (SPI 0x%x) failed\n", ntohl(spi));
 #endif
 	return NULL;
 }

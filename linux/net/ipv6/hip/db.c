@@ -15,7 +15,6 @@
  * - host id accessors and locking
  *   - use the lock macro!
  *   - use the get_first and get_next accessors, not directly!
- * - cookie functions to support draft -07
  *
  * BUGS:
  * - hip_built_r1 has no acquire_lock
@@ -26,6 +25,7 @@
 #include "builder.h"
 #include "socket.h"
 #include "output.h"
+#include "update.h"
 
 /*
  * Do not access these databases directly: use the accessors in this file.
@@ -85,14 +85,14 @@ void hip_uninit_eid_db(struct hip_db_struct *db)
 	struct list_head *curr, *iter;
 	struct hip_host_id_entry *tmp;
 	unsigned long lf;
-	
+
 	HIP_WRITE_LOCK_DB(db);
-	
+
 	list_for_each_safe(curr,iter,&db->db_head) {
 		tmp = list_entry(curr, struct hip_host_id_entry, next);
 		kfree(tmp);
 	}
-	
+
 	HIP_WRITE_UNLOCK_DB(db);
 }
 
@@ -180,7 +180,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	struct hip_host_id_entry *id_entry;
 	struct hip_host_id_entry *old_entry;
 	unsigned long lf;
-	
+
 	_HIP_HEXDUMP("adding host id",lhi,sizeof(struct hip_lhi));
 
 	HIP_ASSERT(lhi != NULL);
@@ -199,7 +199,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 		err = -ENOMEM;
 		goto out_err;
 	}
-	
+
 	/* copy lhi and host_id (host_id is already in network byte order) */
 	id_entry->lhi.anonymous = lhi->anonymous;
 	ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
@@ -306,7 +306,7 @@ int hip_copy_any_localhost_hit(struct in6_addr *target)
 		err=-ENOENT;
 		goto out;
 	}
-		
+
 	ipv6_addr_copy(target,&entry->lhi.hit);
 	err = 0;
 
@@ -369,7 +369,7 @@ static struct hip_lhi *hip_get_any_hit(struct hip_db_struct *db)
 	}
 
 	memcpy(res, &tmp->lhi, sizeof(struct hip_lhi));
-	
+
 	HIP_READ_UNLOCK_DB(db);
 
 	return res;
@@ -415,7 +415,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	struct hip_host_id *result;
 	unsigned long lf;
 	int t;
-	
+
 	result = kmalloc(1024, GFP_KERNEL);
 	if (!result) {
 		HIP_ERROR("no memory\n");
@@ -504,17 +504,17 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 	/* assuming all local keys are full DSA keys */
 	len = hip_get_param_contents_len(tmp);
 
-	HIP_DEBUG("Host ID len before cut-off: %d\n",
+	_HIP_DEBUG("Host ID len before cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
 
 	/* the secret component of the DSA key is always 20 bytes */
 
 	tmp->hi_length = htons(ntohs(tmp->hi_length) - 20);
 
-	HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
+	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
 
 	/* Move the hostname 20 bytes earlier */
-	
+
 	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
 
 	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
@@ -523,7 +523,7 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 
 	hip_set_param_contents_len(tmp, (len - 20));
 
-	HIP_DEBUG("Host ID len after cut-off: %d\n",
+	_HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
 
 	/* make sure that the padding is zero (and not to reveal any bytes of the
@@ -535,56 +535,6 @@ struct hip_host_id *hip_get_any_localhost_public_key()
 
 	return tmp;
 }
-
-#if 0
-/**
- * hip_insert_any_localhost_public_key - Copy any localhost public key into 
- * the @target.
- * @target: Where to copy the public key
- *
- * Returns 0 if ok. Negative if errors.
- */
-
-int hip_insert_any_localhost_public_key(u8 *target)
-{
-	struct hip_host_id *tmp = NULL;
-	hip_tlv_len_t len;
-	u8 *buf;
-	int err = 0;
-
-	tmp = hip_get_host_id(&hip_local_hostid_db,NULL);
-	if (!tmp) {
-		HIP_ERROR("No host id for localhost\n");
-		err=-ENOENT;
-		goto end_err;
-	}
-	
-	buf = (u8 *)(tmp + 1); // skip header
-	
-	if (*buf > 8) { /* T is over 8... error */
-		HIP_ERROR("Invalid T-value in DSA key (%x)\n",*buf);
-		err=-EBADMSG;
-		goto end_err;
-
-	}
-
-	if (*buf != 8) {
-		HIP_DEBUG("T-value in DSA-key something else than 8!\n");
-	}
-
-	len = hip_get_param_contents_len(tmp);
-	memcpy(target, tmp, sizeof(struct hip_tlv_common) + (len - 20));
-	hip_set_param_contents_len(target,(len - 20));
-
-	// XX BUG: set also host_id->hi_length
-
- end_err:
-	if (tmp)
-		kfree(tmp);
-	return err;
-}
-#endif
-
 
 
 /* PROC_FS FUNCTIONS */
@@ -652,10 +602,8 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
 int hip_proc_send_update(char *page, char **start, off_t off,
 			 int count, int *eof, void *data)
 {
-	HIP_DEBUG("this is currently disabled\n");
-#if 0
-	hip_send_update_all();
-#endif
+	HIP_DEBUG("\n");
+	hip_send_update_all(NULL, 0, 0, 0);
 	*eof = 1;
 
 	return 0;
@@ -686,7 +634,7 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_hit_no_lock(struct hip_db_stru
 				   (struct in6_addr *) &lhi->hit))
 			return entry;
 	}
-	
+
 	return NULL;
 }
 
@@ -701,7 +649,7 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_eid_no_lock(struct hip_db_stru
 		if (entry->eid.eid_val == eid->eid_val)
 			    return entry;
 	}
-	
+
 	return NULL;
 }
 
@@ -793,7 +741,7 @@ int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
 	memcpy(lhi, &entry->lhi, sizeof(struct hip_lhi));
 	memcpy(owner_info, &entry->owner_info,
 	       sizeof(struct hip_eid_owner_info));
-	
+
  out_err:
 	HIP_READ_UNLOCK_DB(db);
 
@@ -819,4 +767,3 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 #undef HIP_WRITE_LOCK_DB
 #undef HIP_READ_UNLOCK_DB
 #undef HIP_WRITE_UNLOCK_DB
-

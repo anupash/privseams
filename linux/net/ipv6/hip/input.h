@@ -7,7 +7,6 @@
 
 #include "workqueue.h"
 
-//extern struct cipher_context *own_dh_cx;
 uint16_t hip_get_next_atomic_val_16(atomic_t *a, spinlock_t *lock);
 int hip_create_signature(void *buffer_start, int buffer_length, 
 			 struct hip_host_id *host_id, u8 *signature);

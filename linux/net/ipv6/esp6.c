@@ -37,12 +37,23 @@
 #include <net/ipv6.h>
 #include <linux/icmpv6.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 static int esp6_output(struct sk_buff *skb)
 {
 	int err;
 	int hdr_len;
 	struct dst_entry *dst = skb->dst;
 	struct xfrm_state *x  = dst->xfrm;
+#if 1
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	struct xfrm_state *x_tmp = NULL, *x_orig = x;
+	uint32_t default_spi;
+	int state_ok = 0;
+#endif
+#endif
 	struct ipv6hdr *top_iph;
 	struct ipv6_esp_hdr *esph;
 	struct crypto_tfm *tfm;
@@ -52,6 +63,35 @@ static int esp6_output(struct sk_buff *skb)
 	int clen;
 	int alen;
 	int nfrags;
+#if 1
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	/* Because the SAs are cached somewhere deep in
+	   skb/skb->dst/skb->dst->xfrm and currently I do not know how
+	   to relookup them while the socket is open, we have to
+	   lookup the current SA every time when sending out ESP. */
+
+	/* I know that this is a huge performance drawback. Currently we
+	   forget the cached SA from dst until I know how to fix the
+	   problem without kernel panic. */
+	if (ipv6_addr_is_hit(&x->dst_hit)) {
+		default_spi = HIP_CALLFUNC(hip_get_default_spi_out, 0)(&x->dst_hit, &state_ok);
+		if (!default_spi || !state_ok) {
+			printk(KERN_DEBUG "default_spi not found or SPI state not ok\n");
+			err = -EINVAL;
+			goto error;
+		}
+
+		x_tmp = xfrm_state_lookup((xfrm_address_t *)&x->dst_hit, htonl(default_spi),
+					  IPPROTO_ESP, AF_INET6);
+		if (!x_tmp) {
+			printk(KERN_DEBUG "spi 0x%x not found\n", default_spi);
+			err = -EINVAL;
+			goto error;
+		}
+		x = x_tmp;
+	}
+#endif
+#endif
 
 	esp = x->data;
 	hdr_len = skb->h.raw - skb->data +
@@ -103,6 +143,7 @@ static int esp6_output(struct sk_buff *skb)
 #endif
 
 	esph->spi = x->id.spi;
+//printk(KERN_DEBUG "esp6_output esph spi 0x%x\n", ntohl(esph->spi));
 	esph->seq_no = htonl(++x->replay.oseq);
 
 	if (esp->conf.ivlen)
@@ -136,6 +177,13 @@ static int esp6_output(struct sk_buff *skb)
 	err = 0;
 
 error:
+#if 1
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+	if (x_tmp)
+		xfrm_state_put(x_tmp);
+	dst->xfrm = x_orig;
+#endif
+#endif
 	return err;
 }
 
@@ -158,12 +206,12 @@ static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, stru
 		ret = -EINVAL;
 		goto out_nofree;
 	}
-
+	//printk(KERN_DEBUG "maypull ok\n");
 	if (elen <= 0 || (elen & (blksize-1))) {
 		ret = -EINVAL;
 		goto out_nofree;
 	}
-
+	//printk(KERN_DEBUG "elen ok\n");
 	tmp_hdr = kmalloc(hdr_len, GFP_ATOMIC);
 	if (!tmp_hdr) {
 		ret = -ENOMEM;
@@ -175,6 +223,7 @@ static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, stru
         if (esp->auth.icv_full_len) {
 		u8 sum[esp->auth.icv_full_len];
 		u8 sum1[alen];
+//printk(KERN_DEBUG "test icv alen=%d\n", alen);
 
 		esp->auth.icv(esp, skb, 0, skb->len-alen, sum);
 
@@ -188,11 +237,12 @@ static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, stru
 		}
 	}
 
+//printk(KERN_DEBUG "pre skb cow\n");
 	if ((nfrags = skb_cow_data(skb, 0, &trailer)) < 0) {
 		ret = -EINVAL;
 		goto out;
 	}
-
+//printk(KERN_DEBUG "skb cow ok\n");
 	skb->ip_summed = CHECKSUM_NONE;
 
 	esph = (struct ipv6_esp_hdr*)skb->data;
@@ -226,6 +276,7 @@ static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, stru
 		if (padlen+2 >= elen) {
 			LIMIT_NETDEBUG(
 				printk(KERN_WARNING "ipsec esp packet is garbage padlen=%d, elen=%d\n", padlen+2, elen));
+printk(KERN_DEBUG "padlen ok\n");
 			ret = -EINVAL;
 			goto out;
 		}

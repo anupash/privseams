@@ -428,11 +428,9 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
-#ifdef CONFIG_HIP_RVS
-			HIP_PARAM_REA,
-#endif
 			HIP_PARAM_SPI,
 			HIP_PARAM_R1_COUNTER,
+			HIP_PARAM_REA,
 			HIP_PARAM_PUZZLE,
 			HIP_PARAM_SOLUTION,
 			HIP_PARAM_NES,
@@ -542,7 +540,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 		pos += sizeof(struct hip_common);
 	else
 		pos += hip_get_param_total_len(current_param);
-	
+
 	next_param = (struct hip_tlv_common *) pos;
 
 	_HIP_DEBUG("Next param is at slot: %d\n", (pos - (void *) msg));
@@ -636,6 +634,36 @@ void *hip_get_param_contents_direct(const void *tlv_common) {
 	return ((void *)tlv_common) + sizeof(struct hip_tlv_common);
 }
 
+
+/* hip_get_nth_param - get nth parameter of given type from the message
+ * @msg:        pointer to the beginning of the message header
+ * @param_type: the type of the parameter to be searched from @msg
+ *              (in host byte order)
+ * @n: index number to be get
+ *
+ * Returns: the nth parameter from the message if found, else %NULL.
+ */
+void *hip_get_nth_param(const struct hip_common *msg,
+			hip_tlv_type_t param_type, int n)
+{
+	struct hip_tlv_common *param = NULL;
+	int i = 0;
+
+	if (n < 1) {
+		HIP_ERROR("n < 1 (n=%d)\n", n);
+		return NULL;
+	}
+
+	while((param = hip_get_next_param(msg, param))) {
+		if (hip_get_param_type(param) == param_type) {
+			i++;
+			if (i == n)
+				return param;
+		}
+	}
+	return NULL;
+}
+
 /**
  * hip_find_free_param - find the first free position in message
  * @msg: pointer to the beginning of the message header
@@ -670,16 +698,15 @@ void *hip_find_free_param(const struct hip_common *msg)
 		free_pos = first_pos;
 		goto out;
 	}
-	    
+
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
 		last_used_pos = current_param;
 		_HIP_DEBUG("not free: type=%d, contents_len=%d\n",
 			  hip_get_param_type(current_param),
 			  hip_get_param_contents_len(current_param));
-			  
 	}
-	
+
 	if (last_used_pos == NULL) {
 		free_pos = NULL; /* the message was full */
 	} else {
@@ -794,13 +821,13 @@ void hip_dump_msg(const struct hip_common *msg)
 	struct hip_tlv_common *current_param = NULL;
 	void *contents = NULL;
 
-	_HIP_DEBUG("msg: type=%d, len=%d, err=%d\n",
+	HIP_DEBUG("msg: type=%d, len=%d, err=%d\n",
 		 hip_get_msg_type(msg), hip_get_msg_total_len(msg),
 		 hip_get_msg_err(msg));
 
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		_HIP_DEBUG("param: type=%d, len=%d\n",
+		HIP_DEBUG("param: type=%d, len=%d\n",
 			 hip_get_param_type(current_param),
 			 hip_get_param_contents_len(current_param));
 		contents = hip_get_param_contents_direct(current_param);
@@ -862,31 +889,17 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 	hip_tlv_type_t type = hip_get_param_type(param);
 	int err = 0;
 
-	HIP_DEBUG("type=%u\n", type);
+	_HIP_DEBUG("type=%u\n", type);
 
 	switch(type) {
 	case HIP_PARAM_HIP_TRANSFORM:
 	case HIP_PARAM_ESP_TRANSFORM:
 	{
 		/* Search for one supported transform */
-		//uint16_t i;
 		hip_transform_suite_t suite;
 
-		HIP_DEBUG("Checking %s transform\n",
-			  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
-#if 0
-		for (i = 0; i < HIP_TRANSFORM_HIP_MAX; i++) {
-			suite = hip_get_param_transform_suite_id(param, i);
-			if (suite == HIP_TRANSFORM_3DES ||
-			    suite == HIP_TRANSFORM_NULL) {
-				err = 0;
-				HIP_DEBUG("Matched suite: %d\n", suite);
-				break;
-			} else {
-				HIP_DEBUG("Skipping suite: %d\n", suite);
-			}
-		}
-#endif
+ 		HIP_DEBUG("Checking %s transform\n",
+ 			  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
 		suite = hip_get_param_transform_suite_id(param, 0);
 		if (suite == 0) {
 			HIP_ERROR("Could not find suitable %s transform\n",
@@ -895,34 +908,6 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		}
 		break;
 	}
-#if 0
-	case HIP_PARAM_ESP_TRANSFORM:
-	{
-		/* Search for one supported transform */
-		uint16_t i;
-		hip_transform_suite_t suite;
-		err = -EPROTONOSUPPORT;
-		HIP_DEBUG("Checking ESP transform\n");
-		HIP_HEXDUMP("ESP transform", (char *) param,
-			    hip_get_param_total_len(param));
-#if 0
-		for (i = 0; i < HIP_TRANSFORM_ESP_MAX; i++) {
-			suite = hip_get_param_transform_suite_id(param, i);
-			if (suite ==  HIP_ESP_3DES_SHA1 ||
-			    suite == HIP_ESP_NULL_SHA1) {
-				err = 0;
-				break;
-			}
-		}
-#endif
-		suite = hip_get_param_transform_suite_id(param, i);
-		if (suite == 0) {
-			HIP_ERROR("Could not find suitable ESP transform\n");
-			err = -1;
-		}
-		break;
-	}
-#endif
 	case HIP_PARAM_HOST_ID:
 	{
 		uint8_t algo = 
@@ -934,7 +919,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		break;
 	}
 	}
-	HIP_DEBUG("err=%d\n", err);
+	_HIP_DEBUG("err=%d\n", err);
 	return err;
 }
 
@@ -963,7 +948,7 @@ int hip_check_network_msg(const struct hip_common *msg)
 		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
 		goto out;
 	}
-	
+
 	/* Checking of param types, lengths and ordering. */
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
@@ -1052,7 +1037,7 @@ int hip_build_generic_param(struct hip_common *msg,
 	}
 
 	_HIP_DEBUG("found free: %d\n", dst - ((void *)msg));
-       
+
 	if (dst + hip_get_param_total_len(param) > max_dst) {
 		err = -EMSGSIZE;
 		HIP_ERROR("hipd build param: contents size (%d) too long\n",
@@ -1090,7 +1075,7 @@ int hip_build_generic_param(struct hip_common *msg,
 	_HIP_HEXDUMP("build msg: ", (void *) msg,
 		     hip_get_msg_total_len(msg));
  out:
-	
+
 	return err;
 }
 
@@ -1118,7 +1103,7 @@ int hip_build_param_contents(struct hip_common *msg,
 
 	hip_set_param_type(&param, param_type);
 	hip_set_param_contents_len(&param, contents_size);
-	
+
 	return hip_build_generic_param(msg, &param,
 				       sizeof(struct hip_tlv_common),
 				       contents);
@@ -1186,7 +1171,7 @@ int hip_build_user_hdr(struct hip_common *msg,
 	int err = 0;
 
 	_HIP_DEBUG("\n");
-	
+
 	hip_set_msg_type(msg, base_type);
 	hip_set_msg_err(msg, err_val);
 	/* Note: final header length is usually calculated by the
@@ -1656,7 +1641,6 @@ int hip_build_param_transform(struct hip_common *msg,
 
  out_err:
 	return err;
-    
 }
 
 /**
@@ -1671,52 +1655,54 @@ int hip_build_param_transform(struct hip_common *msg,
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv, const uint16_t index)
 {
 	/* XX FIXME: WHY DO WE HAVE HIP_SELECT_ESP_TRANSFORM SEPARATELY??? */
+
 	hip_tlv_type_t type;
-	uint16_t supported_hip_tf[] = { HIP_HIP_NULL_SHA1,
-					HIP_HIP_3DES_SHA1,
-					HIP_HIP_AES_SHA1};
-	uint16_t supported_esp_tf[] = { HIP_ESP_NULL_SHA1,
-					HIP_ESP_3DES_SHA1,
-					HIP_ESP_AES_SHA1 };
-	uint16_t *table = NULL;
-	uint16_t *tfm;
-	int table_n = 0, pkt_tfms = 0, i;
+ 	uint16_t supported_hip_tf[] = { HIP_HIP_NULL_SHA1,
+ 					HIP_HIP_3DES_SHA1,
+ 					HIP_HIP_AES_SHA1};
+ 	uint16_t supported_esp_tf[] = { HIP_ESP_NULL_SHA1,
+ 					HIP_ESP_3DES_SHA1,
+ 					HIP_ESP_AES_SHA1 };
+ 	uint16_t *table = NULL;
+ 	uint16_t *tfm;
+ 	int table_n = 0, pkt_tfms = 0, i;
 
-	HIP_DEBUG("tfm len = %d\n", hip_get_param_contents_len(transform_tlv));
+ 	HIP_DEBUG("tfm len = %d\n", hip_get_param_contents_len(transform_tlv));
 
-	type = hip_get_param_type(transform_tlv);
-	if (type == HIP_PARAM_HIP_TRANSFORM) {
-	  table = supported_hip_tf;
-	  table_n = sizeof(supported_hip_tf)/sizeof(uint16_t);
-	  tfm = (void *)transform_tlv+sizeof(struct hip_tlv_common);
-	  pkt_tfms = hip_get_param_contents_len(transform_tlv)/sizeof(uint16_t);
-	} else if (type == HIP_PARAM_ESP_TRANSFORM) {
-	  table = supported_esp_tf;
-	  table_n = sizeof(supported_esp_tf)/sizeof(uint16_t);
-	  tfm = (void *)transform_tlv+sizeof(struct hip_tlv_common)+sizeof(uint16_t);
-	  pkt_tfms = (hip_get_param_contents_len(transform_tlv)-sizeof(uint16_t))/sizeof(uint16_t);
-	} else {
-	  HIP_ERROR("Invalid type %u\n", type);
-	  return 0;
-	}
+ 	type = hip_get_param_type(transform_tlv);
+ 	if (type == HIP_PARAM_HIP_TRANSFORM) {
+		table = supported_hip_tf;
+		table_n = sizeof(supported_hip_tf)/sizeof(uint16_t);
+		tfm = (void *)transform_tlv+sizeof(struct hip_tlv_common);
+		pkt_tfms = hip_get_param_contents_len(transform_tlv)/sizeof(uint16_t);
+ 	} else if (type == HIP_PARAM_ESP_TRANSFORM) {
+		table = supported_esp_tf;
+		table_n = sizeof(supported_esp_tf)/sizeof(uint16_t);
+		tfm = (void *)transform_tlv+sizeof(struct hip_tlv_common)+sizeof(uint16_t);
+		pkt_tfms = (hip_get_param_contents_len(transform_tlv)-sizeof(uint16_t))/sizeof(uint16_t);
+ 	} else {
+		HIP_ERROR("Invalid type %u\n", type);
+		return 0;
+ 	}
 
-	for (i = 0; i < pkt_tfms; i++, tfm++) {
-		int j;
-		HIP_DEBUG("testing pkt tfm=%u\n", ntohs(*tfm));
-		for (j = 0; j < table_n; j++) {
-			if (ntohs(*tfm) == table[j]) {
-				HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
-					  table[j], i);
-				return table[j];
-			}
-		}
-	}
-	HIP_ERROR("usable suite not found\n");
-	return 0;
+ 	for (i = 0; i < pkt_tfms; i++, tfm++) {
+ 		int j;
+ 		HIP_DEBUG("testing pkt tfm=%u\n", ntohs(*tfm));
+ 		for (j = 0; j < table_n; j++) {
+ 			if (ntohs(*tfm) == table[j]) {
+ 				HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
+ 					  table[j], i);
+ 				return table[j];
+ 			}
+ 		}
+ 	}
+ 	HIP_ERROR("usable suite not found\n");
+ 	return 0;
 }
 
+#if 0
 /**
- * hip_build_param_rea_info - build HIP REA_INFO parameter
+ * hip_build_param_rea_info00 - build HIP REA_INFO parameter
  *
  * @msg:             the message where the rea will be appended
  * @interface_id:    Interface ID
@@ -1728,17 +1714,17 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  * @addresses:       list of addresses
  * @address_count:   number of addresses in @addresses
  *
- * Returns: Currently always 0.
+ * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_rea_info(struct hip_common *msg,
-			     uint32_t interface_id,
-			     uint32_t current_spi_rev,
-			     uint32_t current_spi,
-			     uint32_t new_spi,
-			     uint16_t keymat_index,
-			     uint16_t rea_id,
-			     struct hip_rea_info_addr_item *addresses,
-			     int address_count)
+int hip_build_param_rea_info00(struct hip_common *msg,
+			       uint32_t interface_id,
+			       uint32_t current_spi_rev,
+			       uint32_t current_spi,
+			       uint32_t new_spi,
+			       uint16_t keymat_index,
+			       uint16_t rea_id,
+			       struct hip_rea_info_addr_item *addresses,
+			       int address_count)
 {
 	int err = 0;
 	struct hip_rea_info rea_info;
@@ -1749,7 +1735,6 @@ int hip_build_param_rea_info(struct hip_common *msg,
 	hip_calc_generic_param_len(&rea_info,
 				   sizeof(struct hip_rea_info),
 				   addrs_len);
-
 	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea_info) -
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len);
@@ -1760,6 +1745,49 @@ int hip_build_param_rea_info(struct hip_common *msg,
 	rea_info.keymat_index = htons(keymat_index);
 	rea_info.rea_id = htons(rea_id);
 	err = hip_build_param(msg, &rea_info);
+	if (err)
+		return err;
+	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
+		   addrs_len);
+	if (addrs_len > 0)
+		memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+		       addresses, addrs_len);
+
+	return err;
+}
+#endif
+
+/**
+ * hip_build_param_rea - build HIP REA parameter
+ *
+ * @msg:             the message where the REA will be appended
+ * @spi:             SPI
+ * @addresses:       list of addresses
+ * @address_count:   number of addresses in @addresses
+ *
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_rea(struct hip_common *msg,
+			uint32_t spi,
+			struct hip_rea_info_addr_item *addresses,
+			int address_count)
+{
+	int err = 0;
+	struct hip_rea rea_info;
+	int addrs_len = address_count *
+		(sizeof(struct hip_rea_info_addr_item));
+
+	hip_set_param_type(&rea_info, HIP_PARAM_REA);
+	hip_calc_generic_param_len(&rea_info,
+				   sizeof(struct hip_rea),
+				   addrs_len);
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea) -
+		   sizeof(struct hip_tlv_common) +
+		   addrs_len);
+	rea_info.spi = htonl(spi);
+	err = hip_build_param(msg, &rea_info);
+	if (err)
+		return err;
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
 	if (addrs_len > 0)
@@ -1769,6 +1797,7 @@ int hip_build_param_rea_info(struct hip_common *msg,
 	return err;
 }
 
+#if 0
 /**
  * hip_build_param_ac_info - build and append HIP AC parameter
  * @msg:    the message where the parameter will be appended
@@ -1794,13 +1823,13 @@ int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
 	err = hip_build_param(msg, &ac);
 	return err;
 }
+#endif
 
 /**
  * hip_build_param_nes - build and append HIP NES parameter
  * @msg: the message where the parameter will be appended
  * @is_reply: 1 if this packet is a reply to another UPDATE
  * @keymat_index: Keymat Index in host byte order
- * @update_id: UPDATE ID in host byte order
  * @old_spi: Old SPI value in host byte order
  * @new_spi: New SPI value in host byte order
  * 
@@ -1849,14 +1878,14 @@ int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
  */
 int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
 {
-	int err = 0;
-	struct hip_ack ack;
+        int err = 0;
+        struct hip_ack ack;
 
-	hip_set_param_type(&ack, HIP_PARAM_ACK);
-	hip_calc_generic_param_len(&ack, sizeof(struct hip_ack), 0);
-	ack.peer_update_id = htonl(peer_update_id);
-	err = hip_build_param(msg, &ack);
-	return err;
+        hip_set_param_type(&ack, HIP_PARAM_ACK);
+        hip_calc_generic_param_len(&ack, sizeof(struct hip_ack), 0);
+        ack.peer_update_id = htonl(peer_update_id);
+        err = hip_build_param(msg, &ack);
+        return err;
 }
 
 /**
@@ -1932,7 +1961,7 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
 	memset(&enc.iv, 0, 8);
 
 	/* copy the IV *IF* needed, and then the encrypted data */
-	
+
 	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
 
 	return err;
@@ -1951,22 +1980,22 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
  * Returns: zero on success, or negative on failure
  */
 int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
-					struct hip_host_id *host_id)
+ 					struct hip_host_id *host_id)
 {
 	int err = 0;
-	struct hip_encrypted_null_sha1 enc;
+ 	struct hip_encrypted_null_sha1 enc;
 
-	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
-	hip_calc_param_len(&enc, sizeof(enc) -
-			   sizeof(struct hip_tlv_common) +
-			   hip_get_param_total_len(host_id));
-	enc.reserved = htonl(0);
+ 	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
+ 	hip_calc_param_len(&enc, sizeof(enc) -
+ 			   sizeof(struct hip_tlv_common) +
+ 			   hip_get_param_total_len(host_id));
+ 	enc.reserved = htonl(0);
 
-	/* copy the IV *IF* needed, and then the encrypted data */
-	
-	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
+ 	/* copy the IV *IF* needed, and then the encrypted data */
 
-	return err;
+ 	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
+
+ 	return err;
 }
 
 void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
@@ -2017,7 +2046,7 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
 	uint16_t fqdn_len;
 
 	HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
-	
+
 	HIP_DEBUG("Copying %d bytes\n", rr_len);
 
 	memcpy(ptr, rr_data, rr_len);
@@ -2054,7 +2083,7 @@ int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *
 	type = ntohs(host->di_type_length);
 	*len = type & 0x0FFF;
 	type = (type & 0xF000) >> 12;
-	
+
 	if (type > 2) {
 		HIP_ERROR("Illegal DI-type: %d\n",type);
 		return -1;
@@ -2130,10 +2159,9 @@ int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
 	int err = 0;
 
 	HIP_ASSERT(!(endpoint->flags & HIP_ENDPOINT_FLAG_HIT));
-	
+
 	err = hip_build_param_contents(msg, endpoint, HIP_PARAM_EID_ENDPOINT,
 				       endpoint->length);
-
 	return err;
 }
 
@@ -2178,7 +2206,7 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 	} else {
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
-	
+	HIP_DEBUG("err=%d\n", err);
 	return err;
 }
 

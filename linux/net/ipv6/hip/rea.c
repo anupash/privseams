@@ -1,3 +1,25 @@
+#if 1
+#include <linux/skbuff.h>
+
+int hip_receive_rea(struct sk_buff *skb)
+{
+  return -1;
+}
+
+int hip_receive_ac_or_acr(struct sk_buff *skb, int pkt_type)
+{
+  return -1;
+}
+
+void hip_rea_delete_sent_list(void)
+{
+}
+
+void hip_ac_delete_sent_list(void)
+{
+}
+#else
+
 #include "rea.h"
 #include "debug.h"
 #include "output.h"
@@ -325,7 +347,7 @@ int hip_handle_rea_finish(struct hip_rea_info *rea_info, hip_ha_t *entry,
 
 	/* todo: convert to struct list_head */
 	addrlist_len = hip_get_param_total_len(rea_info) -
-		sizeof(struct hip_rea_info_addr_item);
+		sizeof(struct hip_rea_info_addr_item); /* wrong ? -sizeof(struct hip_rea_info) */
 	n_addrs = addrlist_len / sizeof(struct hip_rea_info_addr_item);
 	_HIP_DEBUG("addlistlen=%d naddrs=%d\n", addrlist_len, n_addrs);
 	HIP_DEBUG("REA-in contains %d addresses\n", n_addrs);
@@ -525,7 +547,7 @@ int hip_handle_rea(struct sk_buff *skb, hip_ha_t *entry)
  *
  * Returns 0 is successful, otherwise < 0.
  */
-int hip_receive_rea(struct sk_buff *skb) 
+int hip_receive_rea(struct sk_buff *skb)
 {
 	struct hip_common *hip_common;
 	int state = 0;
@@ -633,11 +655,11 @@ static void hip_rea_delete_sent_list_one(int delete_all, uint16_t rea_id)
 {
 	struct hip_sent_rea_info *sent_rea, *tmp;
 	int i = 1;
-	
+
 	spin_lock_bh(&hip_sent_rea_info_lock);
 	_HIP_DEBUG("delete_all=%d rea_id=%u (net=%u)\n",
 		   delete_all, rea_id, htons(rea_id));
-	
+
 	list_for_each_entry_safe(sent_rea, tmp, &hip_sent_rea_info_pkts, list) {
 		if (delete_all || (sent_rea->rea_id == rea_id)) {
 			_HIP_DEBUG("%d: pos=0x%p, sent_rea=0x%p rea_id=%u\n",
@@ -656,7 +678,8 @@ static void hip_rea_delete_sent_list_one(int delete_all, uint16_t rea_id)
 /**
  * hip_rea_delete_sent_list - delete all sent REA packets
  */
-void hip_rea_delete_sent_list(void) {
+void hip_rea_delete_sent_list(void)
+{
 	hip_rea_delete_sent_list_one(1, 0);
 	HIP_DEBUG("deleted all sent REAs\n");
 	return;
@@ -769,16 +792,16 @@ static void hip_ac_sent_id_expired(unsigned long val)
 	/* (if above declaration is used) DANGEROUS: sent_ac might be
 	 * kfree'd at any time if ACR is received at the same time
 	 * when this functions is called, fix */
-	
+
 	/* A simple way to fix the problem is that if we trust that we
 	 * don't have two sent ACs with same AC IDs -> use val as the
 	 * ac id (that is, we don't have > 65535 sent AC packet within
 	 * the AC timeout period) */
-	
+
 	/* kludge workaround test */
 	uint16_t ac_id = (uint16_t) ((val & 0xffff0000) >> 16);
 	uint16_t rea_id = (uint16_t) (val & 0xffff);
-	
+
 	HIP_DEBUG("ac_id=%u rea_id=%u\n", ac_id, rea_id);
 	hip_ac_delete_sent_list_one(0, rea_id, ac_id);
 	return;
@@ -808,7 +831,7 @@ static int hip_ac_add_to_sent_list(uint16_t rea_id, uint16_t ac_id,
 {
 	int err = 0;
 	struct hip_sent_ac_info *sent_ac;
- 
+
 	spin_lock_bh(&hip_sent_ac_info_lock);
 	_HIP_DEBUG("\n");
 
@@ -943,7 +966,8 @@ static int hip_send_rea(hip_ha_t *entry, int interface_id,
 	ipv6_addr_copy(&dst_hit, &entry->hit_peer);
 	// memcpy(&hmac_our, &entry->hmac_our, sizeof(hmac_our));
 	memcpy(&hmac_our, &entry->hip_hmac_out, sizeof(hmac_our));
-	spi_in = entry->spi_in;
+	//spi_in = entry->spi_in;
+	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	spi_out = entry->spi_out;
 	HIP_UNLOCK_HA(entry);
 
@@ -952,12 +976,12 @@ static int hip_send_rea(hip_ha_t *entry, int interface_id,
 			      &hit_our, &dst_hit);
 	rea_id = hip_get_new_rea_id();
 
-	err = hip_build_param_rea_info(rea_packet, interface_id,
-				       spi_in, spi_out, 
-				       0x11223344, /* todo: new spi */
-				       0x5566, /* todo: keymat index */
-				       rea_id,
-				       addresses, address_count);
+	err = hip_build_param_rea_info00(rea_packet, interface_id,
+					 spi_in, spi_out, 
+					 0x11223344, /* todo: new spi */
+					 0x5566, /* todo: keymat index */
+					 rea_id,
+					 addresses, address_count);
 	if (err) {
 		HIP_ERROR("Building of REA_INFO failed\n");
 		goto out_err;
@@ -1178,7 +1202,7 @@ void hip_send_rea_all(int interface_id, struct hip_rea_info_addr_item *addresses
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-	
+
 	err = hip_for_each_ha(hip_get_all_valid, &rk);
 
 	for (i=0; i<rk.count; i++) {
@@ -1188,7 +1212,7 @@ void hip_send_rea_all(int interface_id, struct hip_rea_info_addr_item *addresses
 			hip_put_ha(rk.array[i]);
 		}
 	}
-		
+
 	return;
 }
 
@@ -1333,3 +1357,5 @@ int hip_send_ac_or_acr(int pkt_type, hip_ha_t *entry,
 		kfree(msg);
 	return err;
 }
+
+#endif
