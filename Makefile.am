@@ -10,5 +10,5 @@ EXTRA_DIST += doc/README doc/design_choices.bib test/configs test/patch
 
 # Note: doc and linux are not included
 #
-SUBDIRS = hipd
-#libinet6 tools hipd test
+SUBDIRS = libinet6 tools hipd test
+

@@ -1,8 +1,10 @@
 #include "hashtable.h"
 #include "debug.h"
 
-#include <linux/interrupt.h>
-#include <linux/list.h>
+#ifdef __KERNEL__
+#  include <linux/interrupt.h>
+#  include <linux/list.h>
+#endif /* __KERNEL__ */
 
 #define hip_ht_get_content(type, ptr, offset) \
         (type *)((u8 *)ptr - offset)

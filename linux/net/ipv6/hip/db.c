@@ -8,7 +8,9 @@
  *
  */
 
-#include <net/ipv6.h>
+#ifdef __KERNEL__
+#  include <net/ipv6.h>
+#endif /* __KERNEL__ */
 
 #include "db.h"
 #include "misc.h"

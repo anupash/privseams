@@ -13,14 +13,16 @@
  *
  */
 
+#ifdef __KERNEL__
+#  include <asm/semaphore.h>
+#  include <asm/percpu.h>
+#  include <asm/system.h>
+#  include <linux/list.h>
+#  include <linux/interrupt.h>
+#endif /* __KERNEL__ */
+
 #include "workqueue.h"
 #include "debug.h"
-
-#include <asm/semaphore.h>
-#include <asm/percpu.h>
-#include <asm/system.h>
-#include <linux/list.h>
-#include <linux/interrupt.h>
 
 /* HIP Per Cpu WorkQueue */
 struct hip_pc_wq {

@@ -10,8 +10,10 @@
  *
  */
 
-#include <net/ipv6.h>
-#include <net/checksum.h>
+#ifdef __KERNEL__
+#  include <net/ipv6.h>
+#  include <net/checksum.h>
+#endif /* __KERNEL__ */
 
 #include "input.h"
 #include "debug.h"
@@ -1226,12 +1228,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  * On success (R1 payloads are checked and daemon is called) 0 is
  * returned, otherwise < 0.
  */
-int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
+int hip_handle_r1(struct hip_common *r1, hip_ha_t *entry)
 {
 	int err = 0;
 	uint64_t solved_puzzle;
 
-	struct hip_common *r1 = NULL;
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *peer_host_id;
 	struct hip_r1_counter *r1cntr;
@@ -1247,7 +1248,6 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 	}
 	memset(ctx, 0, sizeof(struct hip_context));
 
-	r1 = (struct hip_common*) skb->h.raw;
 	ctx->input = r1;
 	ctx->skb_in = skb;
 
@@ -1411,16 +1411,13 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
  *
  * Always frees the skb
  */
-int hip_receive_r1(struct sk_buff *skb)
+int hip_receive_r1(struct hip_common *hip_common)
 {
-	struct hip_common *hip_common;
 	hip_ha_t *entry;
 	int state, mask;
 	int err = 0;
 
 	HIP_DEBUG("Received R1\n");
-
-	hip_common = (struct hip_common*) (skb)->h.raw;
 
 	if (ipv6_addr_any(&hip_common->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
@@ -1718,10 +1715,9 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  * On success (I2 payloads are checked and R2 is created and sent) 0 is
  * returned, otherwise < 0.
  */
-int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
+int hip_handle_i2(struct hip_common *i2, hip_ha_t *ha)
 {
 	int err = 0;
-	struct hip_common *i2 = NULL;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
 	char *tmp_enc = NULL, *enc = NULL;
@@ -1748,7 +1744,6 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	memset(ctx, 0, sizeof(struct hip_context));
 
 	ctx->skb_in = skb;
-	i2 = (struct hip_common*) skb->h.raw;
 	ctx->input = (struct hip_common*) skb->h.raw;
 
 	/* Check packet validity */
@@ -2184,15 +2179,12 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
  *
  * TODO: check if it is correct to return always 0 
  */
-int hip_receive_i2(struct sk_buff *skb) 
+int hip_receive_i2(struct hip_common *i2) 
 {
-	struct hip_common *i2;
 	int state = 0;
 	int err = 0;
 	hip_ha_t *entry;
 	uint16_t mask;
-
-	i2 = (struct hip_common*) (skb)->h.raw;
 
 	HIP_DEBUG("\n");
 
@@ -2270,7 +2262,7 @@ int hip_receive_i2(struct sk_buff *skb)
  * On success (payloads are created and IPsec is set up) 0 is
  * returned, otherwise < 0.
  */
-int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
+int hip_handle_r2(struct hip_common *r2, hip_ha_t *entry)
 {
 	int err = 0;
 	uint16_t len;
@@ -2280,7 +2272,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
  	struct hip_lhi peer_lhi;
  	struct hip_spi *hspi = NULL;
  	struct hip_sig *sig = NULL;
-	struct hip_common *r2 = NULL;
 	struct hip_spi_out_item spi_out_data;
 	int tfm;
 	uint32_t spi_recvd, spi_in;
@@ -2297,7 +2288,6 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->skb_in = skb;
         ctx->input = (struct hip_common *) skb->h.raw;
-	r2 = ctx->input;
 
 	sender = &r2->hits;
 
@@ -2414,17 +2404,14 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	return err;
 }
 
-int hip_handle_i1(struct sk_buff *skb, hip_ha_t *entry)
+int hip_handle_i1(struct hip_common *i1, hip_ha_t *entry)
 {
 	int err;
-	struct hip_common *i1;
 #ifdef CONFIG_HIP_RVS
   	struct hip_from *from;
 #endif
 	struct in6_addr *dst;
 	struct in6_addr *dstip;
-
-	i1 = (struct hip_common *)skb->h.raw;
 
 	dst = &i1->hits;
 	dstip = NULL;
@@ -2467,9 +2454,8 @@ int hip_handle_i1(struct sk_buff *skb, hip_ha_t *entry)
  *
  * Returns: zero on success, or negative error value on error.
  */
-int hip_receive_i1(struct sk_buff *skb) 
+int hip_receive_i1(struct hip_common *hip_i1) 
 {
-	struct hip_common *hip_i1 = (struct hip_common*) skb->h.raw;
 	int err = 0;
 	int state;
 	hip_ha_t *entry;
@@ -2575,15 +2561,12 @@ int hip_receive_i1(struct sk_buff *skb)
  *
  * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
  */
-int hip_receive_r2(struct sk_buff *skb) 
+int hip_receive_r2(struct hip_common *hip_common) 
 {
-	struct hip_common *hip_common;
 	hip_ha_t *entry = NULL;
 	int err = 0;
 	int state;
 	uint16_t mask;
-
-	hip_common = (struct hip_common *)skb->h.raw;
 
 	if (ipv6_addr_any(&hip_common->hitr)) {
 		HIP_ERROR("Received NULL receiver HIT in R2. Dropping\n");
@@ -2668,15 +2651,12 @@ int hip_receive_r2(struct sk_buff *skb)
  *
  * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
  */
-int hip_receive_notify(struct sk_buff *skb) 
+int hip_receive_notify(struct hip_common *hip_common) 
 {
-	struct hip_common *hip_common;
 	hip_ha_t *entry = NULL;
 	int err = 0;
 	struct hip_notify *notify_param;
 	uint16_t mask;
-
-	hip_common = (struct hip_common *)skb->h.raw;
 
 	HIP_HEXDUMP("Incoming NOTIFY", hip_common,
 		    hip_get_msg_total_len(hip_common));
@@ -2724,11 +2704,10 @@ int hip_receive_notify(struct sk_buff *skb)
  *
  * On success (BOS payloads are checked) 0 is returned, otherwise < 0.
  */
-int hip_handle_bos(struct sk_buff *skb, hip_ha_t *entry)
+int hip_handle_bos(struct hip_common *bos, hip_ha_t *entry)
 {
 	int err = 0;
 	struct hip_host_id *peer_host_id;
-	struct hip_common *bos = NULL;
 	struct hip_lhi peer_lhi;
 	struct in6_addr peer_hit;
 	char *str;
@@ -2738,8 +2717,6 @@ int hip_handle_bos(struct sk_buff *skb, hip_ha_t *entry)
 	char src[INET6_ADDRSTRLEN];
 
 	HIP_DEBUG("\n");
-
-	bos = (struct hip_common*) skb->h.raw;
 
 	/* according to the section 8.6 of the base draft,
 	 * we must first check signature
@@ -2842,14 +2819,11 @@ int hip_handle_bos(struct sk_buff *skb, hip_ha_t *entry)
  *
  * TODO: check if it is correct to return always 0 
  */
-int hip_receive_bos(struct sk_buff *skb) 
+int hip_receive_bos(struct hip_common *bos) 
 {
-	struct hip_common *bos;
 	int err = 0;
 	hip_ha_t *entry;
 	int state = 0;
-
-	bos = (struct hip_common*) (skb)->h.raw;
 
 	HIP_DEBUG("\n");
 
@@ -2987,7 +2961,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 		err = -EOPNOTSUPP;
 		goto out_err;
 	}
-
+	
 	if ((hip_common->ver_res & HIP_VER_MASK) != HIP_VER_RES) {
 		HIP_ERROR("Invalid version in received packet. Dropping\n");
 		err = -EPROTOTYPE;
@@ -3038,17 +3012,17 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	}
 
         /* Check checksum. */
-	/* jlu XXX: We should not write into received skbuffs! */
-	csum = hip_common->checksum;
-	hip_zero_msg_checksum(hip_common);
+        /* jlu XXX: We should not write into received skbuffs! */
+        csum = hip_common->checksum;
+        hip_zero_msg_checksum(hip_common);
 	/* Interop with Julien: no htons here */
-	if (hip_csum_verify(*skb) != csum) {
+        if (hip_csum_verify(*skb) != csum) {
 	       HIP_ERROR("HIP checksum failed (0x%x). Should have been: 0x%x\n", 
 			 csum, ntohs(hip_csum_verify(*skb)) );
 		err = -EBADMSG;
 	}
 
- out_err:
+  out_err:
 	return err;
 }
 
@@ -3071,14 +3045,14 @@ int hip_verify_network_header(struct hip_common *hip_common,
 int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 {
         struct hip_common *hip_common;
-	struct hip_work_order *hwo;
+        struct hip_work_order *hwo;
 	int err = 0;
 
 	/* See if there is at least the HIP header in the packet */
 	if (!pskb_may_pull(*skb, sizeof(struct hip_common))) {
 		HIP_ERROR("Received packet too small. Dropping\n");
 		goto out_err;
-	}
+        }
 
         hip_common = (struct hip_common*) (*skb)->h.raw;
         /* TODO: use hip_state_str */
@@ -3115,7 +3089,8 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 
 	_HIP_DEBUG("Entering switch\n");
 	hwo->type = HIP_WO_TYPE_INCOMING;
-	hwo->arg1 = *skb;
+        //hwo->arg1 = *skb;
+        hwo->msg = hip_common;
 
 	switch(hip_get_msg_type(hip_common)) {
 	case HIP_I1:
@@ -3174,9 +3149,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 void hip_hwo_input_destructor(struct hip_work_order *hwo)
 {
 	if (hwo) {
-		if (hwo->arg1)
-			kfree_skb(hwo->arg1);
-		if (hwo->arg2)
-			kfree(hwo->arg2);
+		if (hwo->msg)
+			kfree(msg);
 	}
 }

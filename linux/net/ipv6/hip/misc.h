@@ -1,9 +1,11 @@
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
-#include <linux/types.h>
-#include <net/ipv6.h>
-#include <net/hip.h>
+#ifdef __KERNEL__
+#  include <linux/types.h>
+#  include <net/ipv6.h>
+#  include <net/hip.h>
+#endif /* __KERNEL__ */
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);

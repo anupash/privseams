@@ -722,7 +722,7 @@ struct hip_packet_dh_sig
 
 struct hip_context
 {
-	struct sk_buff *skb_in;         /* received skbuff */
+	//struct sk_buff *skb_in;         /* received skbuff */
 	struct hip_common *input;       /* received packet */
 	struct hip_common *output;      /* packet to be built and sent */
 
@@ -880,13 +880,7 @@ struct hip_cookie_entry {
 struct hip_work_order {
 	int type;
 	int subtype;
-	void *arg1;
-	void *arg2;
-	union {
-		char ch[8];
-		uint32_t u32[2];
-		uint64_t u64;
-	} arg;
+	struct hip_common *msg;
 	struct list_head queue;
 	void (*destructor)(struct hip_work_order *hwo);
 };

@@ -26,23 +26,26 @@
 #include "rvs.h"
 #endif
 
-#include <linux/proc_fs.h>
-#include <linux/notifier.h>
-#include <linux/spinlock.h>
-#include <linux/xfrm.h>
-#include <linux/crypto.h>
-#include <net/protocol.h>
-#include <net/hip.h>
-#include <net/checksum.h>
-#include <net/hip_glue.h>
-#include <net/addrconf.h>
-#include <net/xfrm.h>
-#include <linux/suspend.h>
-#include <linux/completion.h>
-#include <linux/cpumask.h>
-#ifdef CONFIG_SYSCTL
-#include <linux/sysctl.h>
-#endif
+#ifdef __KERNEL__
+#  include <linux/proc_fs.h>
+#  include <linux/notifier.h>
+#  include <linux/spinlock.h>
+#  include <linux/xfrm.h>
+#  include <linux/crypto.h>
+#  include <net/protocol.h>
+#  include <net/checksum.h>
+#  include <net/hip_glue.h>
+#  include <net/addrconf.h>
+#  include <net/xfrm.h>
+#  include <linux/suspend.h>
+#  include <linux/completion.h>
+#  include <linux/cpumask.h>
+#  ifdef CONFIG_SYSCTL
+#    include <linux/sysctl.h>
+#  endif
+#endif /* __KERNEL__ */
+
+#  include <net/hip.h>
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -1937,38 +1940,38 @@ static int hip_do_work(void)
 		switch(job->subtype) {
 		case HIP_WO_SUBTYPE_RECV_I1:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_i1(job->arg1);
+			res = hip_receive_i1(job->msg);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I1");
 			break;
 		case HIP_WO_SUBTYPE_RECV_R1:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_r1(job->arg1);
+			res = hip_receive_r1(job->msg);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R1");
 			break;
 		case HIP_WO_SUBTYPE_RECV_I2:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_i2(job->arg1);
+			res = hip_receive_i2(job->msg);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"I2");
 			break;
 		case HIP_WO_SUBTYPE_RECV_R2:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_r2(job->arg1);
+			res = hip_receive_r2(job->msg);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"R2");
 			KRISU_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 			break;
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_update(job->arg1);
+			res = hip_receive_update(job->msg);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
 		case HIP_WO_SUBTYPE_RECV_NOTIFY:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_notify(job->arg1);
+			res = hip_receive_notify(job->msg);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"NOTIFY");
 			break;
 		case HIP_WO_SUBTYPE_RECV_BOS:
 			KRISU_START_TIMER(KMM_PARTIAL);
-			res = hip_receive_bos(job->arg1);
+			res = hip_receive_bos(job->msg);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"BOS");
 			break;
 		default:

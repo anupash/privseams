@@ -1,8 +1,11 @@
 #ifndef HIP_WORKQUEUE
 #define HIP_WORKQUEUE
 
-#include <linux/spinlock.h>
-#include <net/ipv6.h>
+#ifdef __KERNEL__
+#  include <linux/spinlock.h>
+#  include <net/ipv6.h>
+#endif /* __KERNEL__ */
+
 #include <net/hip.h>
 
 #define HIP_WO_TYPE_INCOMING 1
