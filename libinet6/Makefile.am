@@ -60,15 +60,20 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += -g -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_TOOLS) -I$(HIPL)
 CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE)
 
+include_HEADERS = libc-compat.h debug.h crypto.h message.h
+
+EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23
+
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses
 # only getendpointinfo).
 #
 #libinet6_la_CFLAGS += -DHIP_TRANSPARENT_API
 
-# Kludge: builder rule makes also the "include" symlink
+# Some symlink kludges
 builder.h:
 	$(LN_S) $(HIPL_LINUX_MODULE)/builder.h .
+include/netdb.h:
+	$(LN_S) include_glibc$(usagi_libc) include
 builder.c:
 	$(LN_S) $(HIPL_LINUX_MODULE)/builder.c .
-	$(LN_S) include_glibc$(usagi_libc) include

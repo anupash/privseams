@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.53)
-AC_INIT
-AC_CONFIG_SRCDIR([cookietest.c])
-AM_INIT_AUTOMAKE(hiptest, 1.3.11)
+AC_INIT(hipl-test, main)
+AC_CONFIG_SRCDIR([conntest-client-native.c])
+AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
 # Checks for programs.
