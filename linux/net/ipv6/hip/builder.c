@@ -393,6 +393,7 @@ int hip_check_network_msg_type(const struct hip_common *msg) {
 			HIP_I2,
 			HIP_R2,
 			HIP_UPDATE,
+			HIP_NOTIFY,
 			HIP_REA,
 			HIP_AC,
 			HIP_ACR
@@ -1460,7 +1461,8 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 	puzzle.K = val_K;
 	puzzle.opaque[0] = opaque & 0xFF;
 	puzzle.opaque[1] = (opaque & 0xFF00) >> 8;
-	puzzle.opaque[2] = (opaque & 0xFF0000) >> 8;
+	puzzle.opaque[2] = (opaque & 0xFF0000) >> 16;
+	puzzle.I = random_i;
 
         err = hip_build_generic_param(msg, &puzzle,
 				      sizeof(struct hip_tlv_common),
@@ -1747,8 +1749,7 @@ int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
  * 
  * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_nes(struct hip_common *msg, int is_reply,
-			uint16_t keymat_index,
+int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
 			uint32_t old_spi, uint32_t new_spi)
 {
 	int err = 0;
@@ -1756,15 +1757,48 @@ int hip_build_param_nes(struct hip_common *msg, int is_reply,
 
 	hip_set_param_type(&nes, HIP_PARAM_NES);
 	hip_calc_generic_param_len(&nes, sizeof(struct hip_nes), 0);
-	if (is_reply)
-		nes.keymat_index = htons(0x8000 | keymat_index); /* highest bit set */
-	else
-		nes.keymat_index = htons(0x7fff & keymat_index); /* highest bit not set */
-
-	_HIP_DEBUG("nes.keymat_index host=%u\n", ntohs(nes.keymat_index));
+	nes.keymat_index = htons(keymat_index);
 	nes.old_spi = htonl(old_spi);
 	nes.new_spi = htonl(new_spi);
 	err = hip_build_param(msg, &nes);
+	return err;
+}
+
+/**
+ * hip_build_param_seq - build and append HIP SEQ parameter
+ * @msg: the message where the parameter will be appended
+ * @seq: Update ID
+ * 
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
+{
+	int err = 0;
+	struct hip_seq seq;
+
+	hip_set_param_type(&seq, HIP_PARAM_SEQ);
+	hip_calc_generic_param_len(&seq, sizeof(struct hip_seq), 0);
+	seq.update_id = htonl(update_id);
+	err = hip_build_param(msg, &seq);
+	return err;
+}
+
+/**
+ * hip_build_param_ack - build and append HIP ACK parameter
+ * @msg: the message where the parameter will be appended
+ * @peer_update_id: peer Update ID
+ * 
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
+{
+	int err = 0;
+	struct hip_ack ack;
+
+	hip_set_param_type(&ack, HIP_PARAM_ACK);
+	hip_calc_generic_param_len(&ack, sizeof(struct hip_ack), 0);
+	ack.peer_update_id = htonl(peer_update_id);
+	err = hip_build_param(msg, &ack);
 	return err;
 }
 
@@ -1854,12 +1888,20 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
                                  uint8_t algorithm)
 {
 	uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
-	uint16_t fqdn_len = strlen(hostname) + 1; 
+	uint16_t fqdn_len;
+
         /* reserve 1 byte for NULL termination */
+	if (hostname)
+		fqdn_len = (strlen(hostname) + 1) & 0x0FFF;
+	else
+		fqdn_len = 0;
 
 	host_id_hdr->hi_length = htons(hi_len);
 	/* length = 12 bits, di_type = 4 bits */
-	host_id_hdr->di_type_length = htons((fqdn_len & 0x0FFF) | 0x1000);
+	host_id_hdr->di_type_length = htons(fqdn_len | 0x1000);
+	/* if the length is 0, then the type should also be zero */
+	if (host_id_hdr->di_type_length == ntohs(0x1000))
+		host_id_hdr->di_type_length = 0;
 
         hip_set_param_type(host_id_hdr, HIP_PARAM_HOST_ID);
         hip_calc_generic_param_len(host_id_hdr, sizeof(struct hip_host_id),
@@ -1885,6 +1927,7 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
 	unsigned int rr_len = ntohs(host_id->hi_length) -
 		sizeof(struct hip_host_id_key_rdata);
 	char *ptr = (char *) (host_id + 1);
+	uint16_t fqdn_len;
 
 	HIP_DEBUG("hi len: %d\n", ntohs(host_id->hi_length));
 	
@@ -1893,9 +1936,10 @@ void hip_build_param_host_id_only(struct hip_host_id *host_id,
 	memcpy(ptr, rr_data, rr_len);
 	ptr += rr_len;
 
-	HIP_DEBUG("fqdn len: %d\n", ntohs(host_id->di_type_length) & 0x0FFF);
-	memcpy(ptr, fqdn, ntohs(host_id->di_type_length) & 0x0FFF);
-
+	fqdn_len = ntohs(host_id->di_type_length) & 0x0FFF;
+	HIP_DEBUG("fqdn len: %d\n", fqdn_len);
+	if (fqdn_len)
+		memcpy(ptr, fqdn, fqdn_len);
 }
 
 /**
@@ -1913,6 +1957,24 @@ int hip_build_param_host_id(struct hip_common *msg,
 	hip_build_param_host_id_only(host_id_hdr, rr_data, fqdn);
         err = hip_build_param(msg, host_id_hdr);
 	return err;
+}
+
+int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len)
+{
+	int type;
+	static char *debuglist[3] = {"none", "FQDN", "NAI"};
+
+	type = ntohs(host->di_type_length);
+	*len = type & 0x0FFF;
+	type = (type & 0xF000) >> 12;
+	
+	if (type > 2) {
+		HIP_ERROR("Illegal DI-type: %d\n",type);
+		return -1;
+	}
+
+	*id = debuglist[type];
+	return 0;
 }
 
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid)
@@ -2057,4 +2119,33 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
         err = hip_build_param_contents(msg, sockaddr, HIP_PARAM_EID_SOCKADDR,
                                        sockaddr_len);
         return err;
+}
+
+/**
+ * hip_build_param_notify - build the HIP NOTIFY parameter
+ * @msg:     the message where the parameter will be appended
+ * @msgtype: Notify Message Type
+ * @notification_data: the Notification data that will contained in the HIP NOTIFY
+ *           parameter
+ * @notification_data_len: length of @notification_data
+ *
+ * Returns: zero on success, or negative on failure
+ */
+int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
+			   void *notification_data, size_t notification_data_len)
+{
+	int err = 0;
+	struct hip_notify notify;
+
+	hip_set_param_type(&notify, HIP_PARAM_NOTIFY);
+	hip_calc_param_len(&notify, sizeof(struct hip_notify) -
+			   sizeof(struct hip_tlv_common) +
+			   notification_data_len);
+	notify.reserved = 0;
+	notify.msgtype = htons(msgtype);
+
+	err = hip_build_generic_param(msg, &notify,
+				      sizeof(struct hip_notify),
+				      notification_data);
+	return err;
 }

@@ -14,5 +14,6 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* buf);
 int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry);
 int hip_send_r1(struct sk_buff *skb);
+void hip_send_notify_all(void);
 
 #endif /* HIP_OUTPUT_H */

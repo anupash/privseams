@@ -76,8 +76,8 @@ typedef uint16_t in_port_t;
 #define HIP_BOS 7
 #define HIP_CER 8
 #define HIP_NOTIFY 9
-#define HIP_AC 9   /* check */
-#define HIP_ACR 10 /* check */
+#define HIP_AC 15   /* conflicts now with notify packet */
+#define HIP_ACR 16 /* moved from 10 -> 16 */
 #define HIP_PAYLOAD 64 /* xxx */
 
 /* Extended message types for the userspace */
@@ -219,9 +219,6 @@ typedef uint16_t in_port_t;
 #define HIP_DIGEST_SHA1               2
 #define HIP_DIGEST_SHA1_HMAC          3
 #define HIP_DIGEST_MD5_HMAC           4
-
-#define HIP_PARAM_BIRTHDAY_LEN (sizeof(struct hip_birthday_cookie))
-#define HIP_PARAM_SPI_LSI_LEN (sizeof(struct hip_spi_lsi))
 
 #define HIP_DIRECTION_ENCRYPT         1
 #define HIP_DIRECTION_DECRYPT         2
@@ -673,15 +670,25 @@ struct hip_context
 	struct sk_buff *skb_in;         /* received skbuff */
 	struct hip_common *input;       /* received packet */
 	struct hip_common *output;      /* packet to be built and sent */
+  /*
+    struct hip_crypto_key hip_i;
+    struct hip_crypto_key hip_r;
+    struct hip_crypto_key hip_espi;
+    struct hip_crypto_key hip_espr;
+    struct hip_crypto_key hip_authi;
+    struct hip_crypto_key hip_authr;
+    struct hip_crypto_key hip_hmaci;
+    struct hip_crypto_key hip_hmacr;
+  */
+	struct hip_crypto_key hip_enc_out;
+	struct hip_crypto_key hip_hmac_out;
+	struct hip_crypto_key esp_out;
+	struct hip_crypto_key auth_out;
 
-	struct hip_crypto_key hip_i;
-	struct hip_crypto_key hip_r;
-	struct hip_crypto_key hip_espi;
-	struct hip_crypto_key hip_espr;
-	struct hip_crypto_key hip_authi;
-	struct hip_crypto_key hip_authr;
-	struct hip_crypto_key hip_hmaci;
-	struct hip_crypto_key hip_hmacr;
+	struct hip_crypto_key hip_enc_in;
+	struct hip_crypto_key hip_hmac_in;
+	struct hip_crypto_key esp_in;
+	struct hip_crypto_key auth_in;
 
 	char   *dh_shared_key;
 	size_t dh_shared_key_len;
@@ -690,9 +697,7 @@ struct hip_context
 	unsigned char current_keymat_K[HIP_AH_SHA_LEN];
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
-
 	uint16_t keymat_index; /* KEYMAT offset */
-  //	struct hip_keymat_keymat keymat; /* TEST */
 };
 
 struct hip_context_dh_sig
@@ -770,19 +775,29 @@ struct hip_hadb_state
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.
 	 */
+#if 0
 	struct hip_crypto_key esp_our; //espi_key;
 	struct hip_crypto_key esp_peer; //spr_key;
 	struct hip_crypto_key auth_our; //authi_key;
 	struct hip_crypto_key auth_peer; //authr_key;
 	struct hip_crypto_key hmac_our;
 	struct hip_crypto_key hmac_peer;
+#endif
+	struct hip_crypto_key hip_enc_out; /* outgoing HIP packets */
+	struct hip_crypto_key hip_hmac_out;
+	struct hip_crypto_key esp_out;  /* outgoing ESP packets */
+	struct hip_crypto_key auth_out;
+
+	struct hip_crypto_key hip_enc_in; /* incoming HIP packets */
+	struct hip_crypto_key hip_hmac_in;
+	struct hip_crypto_key esp_in; /* incoming ESP packets */
+	struct hip_crypto_key auth_in;
+
 
 	uint16_t current_keymat_index; /* the byte offset index in draft chapter HIP KEYMAT */
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
 	unsigned char current_keymat_K[HIP_AH_SHA_LEN]; /* last Kn, where n is keymat_calc_index */
-
-  //	struct hip_keymat_keymat keymat; /* KEYMAT starting from index current_keymat_index */
 
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */

@@ -17,10 +17,11 @@
 #define HIP_WO_SUBTYPE_RECV_R1      2
 #define HIP_WO_SUBTYPE_RECV_I2      3
 #define HIP_WO_SUBTYPE_RECV_R2      4
-#define HIP_WO_SUBTYPE_RECV_UPDATE     5
-#define HIP_WO_SUBTYPE_RECV_REA     6
-#define HIP_WO_SUBTYPE_RECV_AC      7
-#define HIP_WO_SUBTYPE_RECV_ACR     8
+#define HIP_WO_SUBTYPE_RECV_UPDATE  5
+#define HIP_WO_SUBTYPE_RECV_NOTIFY  6
+#define HIP_WO_SUBTYPE_RECV_REA     7
+#define HIP_WO_SUBTYPE_RECV_AC      8
+#define HIP_WO_SUBTYPE_RECV_ACR     9
 
 /* subtypes from 101 to 200 reserved for HIP_WO_TYPE_OUTGOING */
 

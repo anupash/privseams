@@ -25,6 +25,7 @@
 #include "misc.h"
 #include "builder.h"
 #include "socket.h"
+#include "output.h"
 
 /*
  * Do not access these databases directly: use the accessors in this file.
@@ -657,6 +658,15 @@ int hip_proc_send_update(char *page, char **start, off_t off,
 #endif
 	*eof = 1;
 
+	return 0;
+}
+
+/* only during testing */
+int hip_proc_send_notify(char *page, char **start, off_t off,
+			 int count, int *eof, void *data)
+{
+	hip_send_notify_all();
+	*eof = 1;
 	return 0;
 }
 

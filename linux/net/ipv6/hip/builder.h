@@ -110,9 +110,10 @@ int hip_build_param_rea_info(struct hip_common *msg,
 			     int address_count);
 int hip_build_param_ac_info(struct hip_common *msg, uint16_t ac_id,
 			    uint16_t rea_id, uint32_t rtt);
-int hip_build_param_nes(struct hip_common *msg, int is_reply,
-			uint16_t keymat_index,
+int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
 			uint32_t old_spi, uint32_t new_spi);
+int hip_build_param_seq(struct hip_common *msg, uint32_t update_id);
+int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
 int hip_build_param_spi(struct hip_common *msg, uint32_t spi);
@@ -147,6 +148,8 @@ int hip_build_param_echo_response(struct hip_common *msg,
 
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
 
+int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len);
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
-
+int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
+			   void *notification_data, size_t notification_data_len);
 #endif /* HIP_BUILDER */

@@ -393,10 +393,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	/********** PUZZLE ************/
 
 	{
-		uint64_t random_i;
-
-		get_random_bytes(&random_i,sizeof(uint64_t));
-		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K, 0x1337, random_i);
+		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K, 0, 0);
 		if (err) {
 			HIP_ERROR("Cookies were burned. Bummer!\n");
 			goto out_err;
@@ -465,6 +462,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		HIP_ERROR("Signing of R1 failed.\n");
  		goto out_err;
  	}		
+
+	HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
+
  	err = hip_build_param_signature2_contents(msg,
  						 signature,
  						 HIP_DSA_SIGNATURE_LEN,
@@ -478,6 +478,27 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	/********** ECHO_REQUEST (OPTIONAL) *********/
 
 	while(0);
+
+
+	/* Fill puzzle parameters */
+
+	{
+		struct hip_puzzle *pz;
+		uint64_t random_i;
+
+		pz = hip_get_param(msg, HIP_PARAM_PUZZLE);
+		if (!pz) {
+			HIP_ERROR("Internal error\n");
+			goto out_err;
+		}
+
+		pz->opaque[0] = '.';
+		pz->opaque[1] = '!';
+		pz->opaque[2] = '.';
+
+		get_random_bytes(&random_i,sizeof(random_i));
+		pz->I = random_i;
+	}
 
  	/************** Packet ready ***************/
 
@@ -618,9 +639,24 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 				  struct hip_context *ctx, int is_initiator)
 {
 	int err = 0;
+	int hmac_key_len, enc_key_len, auth_key_len;
 
+	hmac_key_len = hip_hmac_key_length(entry->esp_transform);
+	enc_key_len = hip_enc_key_length(entry->esp_transform);
+	auth_key_len = hip_auth_key_length_esp(entry->esp_transform);
+
+	memcpy(&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
+	memcpy(&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
+
+	memcpy(&entry->esp_in.key, &ctx->esp_in.key, enc_key_len);
+	memcpy(&entry->auth_in.key, &ctx->auth_in.key, auth_key_len);
+
+	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
+	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
+
+#if 0
 	if (is_initiator) {
-		memcpy(&entry->esp_our.key, &ctx->hip_espi.key,
+		memcpy(&entry->esp_our.key, &ctx->espi.key,
 		       hip_enc_key_length(entry->esp_transform));
 		memcpy(&entry->esp_peer.key, &ctx->hip_espr.key,
 		       hip_enc_key_length(entry->esp_transform));
@@ -646,6 +682,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 		memcpy(&entry->hmac_peer, &ctx->hip_hmaci,
 		       hip_hmac_key_length(entry->esp_transform));
 	}
+#endif
 
 	/* TODO: just reuse the keymatdst pointer, do not kmalloc */
 
@@ -1570,8 +1607,10 @@ static int hip_init_procfs(void)
 	create_proc_read_entry("net/hip/sdb_peer_addrs", 0, 0,
 			       hip_proc_read_hadb_peer_addrs, NULL);
 
-/* a simple way to trigger sending of UPDATE packet to all peers */
+	/* a simple way to trigger sending of UPDATE packet to all peers */
 	create_proc_read_entry("net/hip/send_update", 0, 0, hip_proc_send_update, NULL);
+	/* for testing dummy NOTIFY packets */
+	create_proc_read_entry("net/hip/send_notify", 0, 0, hip_proc_send_notify, NULL);
 	return 1;
 
 }
@@ -1586,6 +1625,7 @@ static void hip_uninit_procfs(void)
 	remove_proc_entry("net/hip/sdb_state", hip_proc_root);
 	remove_proc_entry("net/hip/sdb_peer_addrs", hip_proc_root);
 	remove_proc_entry("net/hip/send_update", hip_proc_root);
+	remove_proc_entry("net/hip/send_notify", hip_proc_root);
 	remove_proc_entry("net/hip", NULL);
 	return;
 }
@@ -1652,6 +1692,11 @@ static int hip_do_work(void)
 			res = 0;
 //			res = hip_receive_update(job->arg1);
 			KRISU_STOP_TIMER(KMM_PARTIAL,"UPDATE");
+			break;
+		case HIP_WO_SUBTYPE_RECV_NOTIFY:
+			KRISU_START_TIMER(KMM_PARTIAL);
+			res = hip_receive_notify(job->arg1);
+			KRISU_STOP_TIMER(KMM_PARTIAL,"NOTIFY");
 			break;
 		case HIP_WO_SUBTYPE_RECV_REA:
 			KRISU_START_TIMER(KMM_PARTIAL);

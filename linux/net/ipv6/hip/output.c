@@ -432,3 +432,96 @@ int hip_send_r1(struct sk_buff *skb)
 	return err;
 }
 
+
+void hip_send_notify(hip_ha_t *entry)
+{
+	int err = 0; /* actually not needed, because we can't do
+		      * anything if packet sending fails */
+	struct hip_common *notify_packet;
+	struct in6_addr daddr;
+
+	HIP_DEBUG("\n");
+
+	notify_packet = hip_msg_alloc();
+	if (!notify_packet) {
+		HIP_DEBUG("notify_packet alloc failed\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0,
+			      &entry->hit_our, &entry->hit_peer);
+
+	err = hip_build_param_notify(notify_packet, 1234, "ABCDEFGHIJ", 10);
+	if (err) {
+		HIP_ERROR("building of NOTIFY failed (err=%d)\n", err);
+		goto out_err;
+	}
+
+        err = hip_hadb_get_peer_addr(entry, &daddr);
+        if (err) {
+                HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
+                goto out_err;
+        }
+        HIP_DEBUG("Sending NOTIFY packet\n");
+	err = hip_csum_send(NULL, &daddr, notify_packet);
+
+ out_err:
+	if (notify_packet)
+		kfree(notify_packet);
+	return;
+}
+
+/* copied from rea.c */
+struct hip_rea_kludge {
+	hip_ha_t **array;
+	int count;
+	int length;
+};
+
+static int hip_get_all_valid(hip_ha_t *entry, void *op)
+{
+	struct hip_rea_kludge *rk = op;
+
+	if (rk->count >= rk->length)
+		return -1;
+
+	/* should we check the established status also? */
+
+	if ((entry->hastate & HIP_HASTATE_VALID) == HIP_HASTATE_VALID) {
+		rk->array[rk->count] = entry;
+		hip_hold_ha(entry);
+		rk->count++;
+	}
+
+	return 0;
+}
+
+void hip_send_notify_all(void)
+{
+        int err = 0, i;
+
+        /* code ripped from rea.c */
+        hip_ha_t *entries[HIP_MAX_HAS] = {0};
+        struct hip_rea_kludge rk;
+
+        HIP_DEBUG("\n");
+
+        rk.array = entries;
+        rk.count = 0;
+        rk.length = HIP_MAX_HAS;
+
+        err = hip_for_each_ha(hip_get_all_valid, &rk);
+        if (err) {
+                HIP_ERROR("for_each_ha err=%d\n", err);
+                return;
+        }
+
+        for (i = 0; i < rk.count; i++) {
+                if (rk.array[i] != NULL) {
+                        hip_send_notify(rk.array[i]);
+                        hip_put_ha(rk.array[i]);
+                }
+        }
+
+        return;
+}

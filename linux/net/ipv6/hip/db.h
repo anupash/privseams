@@ -198,6 +198,9 @@ int        hip_proc_read_lhi(char *page, char **start, off_t off,
 /* for update packet testing */
 int hip_proc_send_update(char *page, char **start, off_t off,
 			 int count, int *eof, void *data);
+/* for notify packet testing */
+int hip_proc_send_notify(char *page, char **start, off_t off,
+			 int count, int *eof, void *data);
 
 void       hip_uninit_host_id_dbs(void);
 void       hip_uninit_all_eid_db(void);
