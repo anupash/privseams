@@ -24,12 +24,12 @@ checksum_SOURCES = checksum.c checksum.h
 conntest_client_SOURCES = conntest-client.c debug.c
 conntest_client_gai_SOURCES = conntest-client-gai.c
 conntest_client_gai_LDADD = ../libinet6/libinet6.a
-conntest_client_native_SOURCES = conntest-client-native.c debug.c
+conntest_client_native_SOURCES = conntest-client-native.c debug.c crypto.c
 conntest_client_native_LDADD = ../libinet6/libinet6.a
 conntest_client_native_user_key_SOURCES = \
-                               conntest-client-native-user-key.c debug.c
+                               conntest-client-native-user-key.c debug.c crypto.c
 conntest_client_native_user_key_LDADD = ../libinet6/libinet6.a
-conntest_server_native_SOURCES = conntest-server-native.c debug.c
+conntest_server_native_SOURCES = conntest-server-native.c debug.c crypto.c
 conntest_server_native_LDADD = ../libinet6/libinet6.a
 conntest_server_SOURCES = conntest-server.c debug.c
 libinet6test_SOURCES = libinet6test.c
