@@ -1854,7 +1854,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
 	err = hip_hadb_add_addr_to_spi(entry, spi_out, &ctx->skb_in->nh.ipv6h->saddr,
-				       PEER_ADDR_STATE_ACTIVE, 0, 1);
+				       PEER_ADDR_STATE_ACTIVE, 0, 1, 0);
 	HIP_DEBUG("add spi err ret=%d\n", err);
 	if (err) {
 		HIP_ERROR("failed to add an address to SPI list\n");
@@ -2140,7 +2140,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		/* source IPv6 address is implicitly the preferred
 		 * address after the base exchange */
 		err = hip_hadb_add_addr_to_spi(entry, spi_recvd, &skb->nh.ipv6h->saddr,
-					       PEER_ADDR_STATE_ACTIVE, 0, 1);
+					       PEER_ADDR_STATE_ACTIVE, 0, 1, 0);
 		entry->default_spi_out = spi_recvd;
 		HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 		HIP_DEBUG("add spi err ret=%d\n", err);

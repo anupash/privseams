@@ -97,7 +97,7 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t spi);
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
-			     int is_preferred_addr);
+			     int is_preferred_addr, uint32_t update_id);
 uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
 
 /***********************************************/

@@ -1355,18 +1355,38 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes)
 	HIP_DEBUG("%d pUIDs in ACK param\n", n);
 	peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
 	for (i = 0; i < n; i++, peer_update_id++) {
-		struct hip_spi_in_item *item, *tmp;
+		struct hip_spi_in_item *in_item, *in_tmp;
+		struct hip_spi_out_item *out_item, *out_tmp;
 		uint32_t puid = ntohl(*peer_update_id);
 
 		HIP_DEBUG("peer Update ID=%u\n", puid);
-		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		list_for_each_entry_safe(in_item, in_tmp, &entry->spis_in, list) {
 			HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
-				  item->spi, item->seq_update_id);
-			if (item->seq_update_id == puid) {
+				  in_item->spi, in_item->seq_update_id);
+			if (in_item->seq_update_id == puid) {
 				HIP_DEBUG("SEQ and ACK match\n");
-				item->update_state_flags |= 0x1; /* recv'd ACK */
+				in_item->update_state_flags |= 0x1; /* recv'd ACK */
 				if (have_nes)
-					item->update_state_flags |= 0x2; /* recv'd also NES */
+					in_item->update_state_flags |= 0x2; /* recv'd also NES */
+			}
+		}
+
+		/* see if the ACK was response to address verification */
+		list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
+			struct hip_peer_addr_list_item *addr, *addr_tmp;
+
+			list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
+				HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
+				if (addr->seq_update_id == puid) {
+					HIP_DEBUG("addr: ack = addr seq, setting state to ACTIVE\n");
+					addr->address_state = PEER_ADDR_STATE_ACTIVE;
+
+					HIP_DEBUG("testing kludge, setting address as default out addr\n");
+					ipv6_addr_copy(&out_item->preferred_address, &addr->address);
+					HIP_DEBUG("setting default SPI out to 0x%x\n", out_item->spi);
+					entry->default_spi_out = out_item->spi;
+					ipv6_addr_copy(&entry->preferred_address, &addr->address);
+				}
 			}
 		}
 	}
@@ -1461,7 +1481,7 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 /* or update old values */
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
-			     int is_preferred_addr)
+			     int is_preferred_addr, uint32_t update_id)
 {
 	/* no locking */
 	int err = 0;
@@ -1509,6 +1529,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 	new_addr->address_state = address_state;
 	do_gettimeofday(&new_addr->modified_time);
+	new_addr->seq_update_id = update_id;
 
 	if (is_preferred_addr) {
 		ipv6_addr_copy(&spi_list->preferred_address, addr);
@@ -1707,10 +1728,11 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 			hip_timeval_diff(&now, &s->modified_time, &addr_age);
 			if ( (len += snprintf(page+len, count-len,
 					      "\n  %s state=%s lifetime=0x%x "
-					      "age=%ld.%01ld",
+					      "age=%ld.%01ld seq=%u",
 					      addr_str, state_name[s->address_state],
 					      s->lifetime, addr_age.tv_sec,
-					      addr_age.tv_usec / 100000 /* show 1/10th sec */)
+					      addr_age.tv_usec / 100000 /* show 1/10th sec */,
+					      s->seq_update_id)
 				     ) >= count)
 				goto error;
 

@@ -511,17 +511,6 @@ struct hip_rea_info_addr_item {
 	struct in6_addr address;
 }  __attribute__ ((packed));
 
-#if 0
-struct hip_rea {
-	hip_tlv_type_t type;
-	hip_tlv_len_t length;
-	uint32_t spi;
-	uint32_t lifetime;
-	uint32_t reserved; /* MSB is used for "the first address is the preferred one */
-	/* fixed part ends */
-} __attribute__ ((packed));
-#endif
-
 struct hip_rea_info00 {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
@@ -744,18 +733,8 @@ struct hip_peer_addr_list_item
 	uint32_t         lifetime;
 	struct timeval   modified_time; /* time when this address was
 					   added or updated */
+	uint32_t seq_update_id; /* the Update ID in SEQ parameter this address is related to */
 };
-
-#if 0
-/* mm-02 test */
-struct hip_peer_spi_list_item
-{
-	struct list_head list;
-	uint32_t         spi;
-	struct list_head peer_addr_list; /* Peer's IPv6 addresses belonging to the SPI */
-	struct in6_addr  preferred_address;
-};
-#endif
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
@@ -799,7 +778,8 @@ struct hip_spi_out_item
 	struct list_head list;
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
-	uint32_t         seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
+	uint32_t         seq_update_id; /* USELESS, IF SEQ ID WILL BE RELATED TO ADDRESS ITEMS,
+					 * NOT OUTBOUND SPIS *//* the Update ID in SEQ parameter these SPI are related to */
 
 	struct list_head peer_addr_list; /* Peer's IPv6 addresses */
 	struct in6_addr  preferred_address; /* check */
@@ -878,29 +858,6 @@ struct hip_cookie_entry {
 	struct in6_addr initiator;
 	struct in6_addr responder;
 };
-
-#if 0
-struct hip_sent_rea_info {
-	struct list_head list;
-	uint16_t rea_id; /* sent REA ID in network byte order */
-	struct in6_addr hit; /* HIT where this REA was sent to*/
-	atomic_t use_count;
-	struct timer_list timer;
-};
-
-struct hip_sent_ac_info { /* mm-01: to be removed */
-	struct list_head list;
-	uint16_t ac_id; /* sent AC ID in network byte order */
-	uint16_t rea_id; /* corresponding REA ID in network byte order */
-	struct in6_addr ip; /* IPv6 address where this REA was sent to */
-	uint32_t interface_id;
-	uint32_t lifetime;
-	uint32_t rtt_sent;
-	/* struct timeval rtt_sent ?*/
-	//unsigned long rtt_sent; /* jiffies value when this packet was sent out */
-	struct timer_list timer;
-};
-#endif
 
 struct hip_work_order {
 	int type;

@@ -239,8 +239,7 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	}
 
 	*spi = ntohl(xs->id.spi);
-
-	HIP_DEBUG("SPI setup ok, trying to setup enc/auth algos\n");
+	_HIP_DEBUG("SPI setup ok, trying to setup enc/auth algos\n");
 
 	err = -ENOENT;
 	switch (alg) {
