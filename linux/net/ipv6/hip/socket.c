@@ -834,9 +834,9 @@ static int hip_do_work(const struct hip_common *input, int rvs)
 	}
 
 	hip_in6_ntop(hit, buf);
-	HIP_INFO("map HIT: %s\n", buf);
+	HIP_DEBUG("map HIT: %s\n", buf);
 	hip_in6_ntop(ip, buf);
-	HIP_INFO("map IP: %s\n", buf);
+	HIP_DEBUG("map IP: %s\n", buf);
 	
  	err = hip_insert_peer_map_work_order(hit, ip, 1, rvs);
  	if (err) {

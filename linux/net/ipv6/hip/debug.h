@@ -32,7 +32,6 @@
 #define _HIP_DEBUG_IN6ADDR(str, in6)
 #define _HIP_DEBUG_HIT(str, hit)
 #define _HIP_DEBUG_SKB(hdr, skb)
-#define _HIP_DEBUG_STATE_STR(state)
 
 /* Debugging messages are only printed in development code */
 #ifdef CONFIG_HIP_DEBUG
@@ -45,7 +44,6 @@
 #  define HIP_DEBUG_SKB(hdr, skb) hip_debug_skb(hdr, skb)
 #  define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
 #  define HIP_DEBUG_HIT(str, hit) hip_print_hit(str, hit)
-#  define HIP_DEBUG_STATE_STR(state) hip_state_str(state)
 
 #else
 
@@ -55,7 +53,6 @@
   #define HIP_DEBUG_SKB(hdr, skb) do { } while(0)
   #define HIP_DEBUG_IN6ADDR(str, in6) do { } while(0)
   #define HIP_DEBUG_HIT(str, hit) do { } while(0)
-  #define HIP_DEBUG_STATE_STR(state) ""
 
 #endif /* CONFIG_HIP_DEBUG  */
 

@@ -1050,7 +1050,7 @@ int hip_trigger_bex(struct in6_addr *dsthit)
 {
 	struct ipv6hdr hdr = {0};
 
-	HIP_ERROR("TODO: MOVE THIS TO XFRM KM HANDLER AND REMOVE STUFF FROM xfrm_state.c/km_query\n");
+	HIP_DEBUG("TODO: MOVE THIS TO XFRM KM HANDLER AND REMOVE STUFF FROM xfrm_state.c/km_query\n");
 
 	ipv6_addr_copy(&hdr.daddr, dsthit);
 	hip_handle_output(&hdr, NULL);

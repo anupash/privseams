@@ -385,7 +385,9 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 	int err = 0;
         struct hip_peer_addr_list_item *s, *candidate = NULL;
 	struct timeval latest, dt;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 
         list_for_each_entry(s, &spi_out->peer_addr_list, list) {
 #ifdef CONFIG_HIP_DEBUG
@@ -517,7 +519,9 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				struct timeval *modified_time)
 {
 	struct hip_peer_addr_list_item *s;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 	int i = 1;
 	struct hip_spi_out_item *spi_out, *tmp;
 
@@ -573,7 +577,9 @@ int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 
 	struct hip_peer_addr_list_item *s;
 	int i = 1;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 	struct hip_spi_out_item *spi_out, *tmp;
 
 	HIP_ERROR("USELESS/DEPRECATED ?\n");
@@ -711,7 +717,9 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 {
 	struct hip_peer_addr_list_item *item, *tmp;
 	int i = 1;
+#ifdef CONFIG_HIP_DEBUG
 	char addrstr[INET6_ADDRSTRLEN];
+#endif
 	struct hip_spi_out_item *spi_out, *spi_tmp;
 
 	/* possibly deprecated function .. */
@@ -1716,7 +1724,7 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 	HIP_LOCK_HA(entry);
 
 	if ( (len += snprintf(page+len, count-len, "%s 0x%x %d 0x%x",
-			      HIP_DEBUG_STATE_STR(entry->state),
+			      hip_state_str(entry->state),
 			      entry->hastate, 
 			      atomic_read(&entry->refcnt), 
 			      entry->peer_controls)) >= count)
@@ -2006,7 +2014,9 @@ void hip_hadb_dump_hs_ht(void)
 void hip_hadb_dump_spis_in(hip_ha_t *entry)
 {
 	struct hip_spi_in_item *item, *tmp;
+#ifdef CONFIG_HIP_DEBUG
 	unsigned long now = jiffies;
+#endif
 
 	HIP_DEBUG("start\n");
 	HIP_LOCK_HA(entry);

@@ -1363,7 +1363,7 @@ int hip_receive_update(struct sk_buff *skb)
 
 	state = entry->state; /* todo: remove variable state */
 
-	HIP_DEBUG("Received UPDATE in state %s\n", HIP_DEBUG_STATE_STR(state));
+	HIP_DEBUG("Received UPDATE in state %s\n", hip_state_str(state));
 
 	/* in state R2-SENT: Receive UPDATE, go to ESTABLISHED and
 	 * process from ESTABLISHED state */
@@ -1375,7 +1375,7 @@ int hip_receive_update(struct sk_buff *skb)
 	if (! (state == HIP_STATE_ESTABLISHED ||
 	       state == HIP_STATE_REKEYING) ) {
 		HIP_DEBUG("Received UPDATE in illegal state %s. Dropping\n",
-			  HIP_DEBUG_STATE_STR(state));
+			  hip_state_str(state));
 		err = -EINVAL;
 		goto out_err;
 	}

@@ -214,10 +214,10 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 
 	switch(tmp) {
 	case 0:
-		HIP_INFO("Signature: [CORRECT]\n");
+		HIP_DEBUG("Signature: [CORRECT]\n");
 		break;
 	case 1:
-		HIP_INFO("Signature: [INCORRECT]\n");
+		HIP_ERROR("Signature: [INCORRECT]\n");
 		HIP_HEXDUMP("digest",sha1_digest,20);
 		HIP_HEXDUMP("signature",signature,41);
 		HIP_HEXDUMP("public key",public_key,public_key_len);
@@ -1213,7 +1213,7 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
 
 	entry->peer_controls = ntohs(r1->control);
 	
-	HIP_INFO("R1 Successfully received\n");
+	HIP_DEBUG("R1 Successfully received\n");
 
  	err = hip_create_i2(ctx, solved_puzzle, entry);
  	if (err) {
@@ -1305,7 +1305,7 @@ int hip_receive_r1(struct sk_buff *skb)
 	wmb();
 	state = entry->state;
 
-	HIP_DEBUG("entry->state is %s\n", HIP_DEBUG_STATE_STR(state));
+	HIP_DEBUG("entry->state is %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
@@ -1919,7 +1919,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 #endif /* CONFIG_HIP_RVS */
 	}
 
-	HIP_DEBUG("Reached %s state\n", HIP_DEBUG_STATE_STR(entry->state));
+	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 
 	//hip_hadb_dump_spis_in(entry);
 	//hip_hadb_dump_spis_out(entry);
@@ -2288,7 +2288,7 @@ int hip_receive_i1(struct sk_buff *skb)
 
 	HIP_DEBUG("HIP_LOCK_HA ?\n");
 
-	HIP_DEBUG("Received I1 in state %s\n", HIP_DEBUG_STATE_STR(state));
+	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_NONE:
  		err = hip_handle_i1(skb, NULL);
@@ -2624,7 +2624,7 @@ int hip_receive_bos(struct sk_buff *skb)
 		/* TODO: should return right now */
 		state = entry->state;
 	}
-	HIP_DEBUG("Received BOS packet in state %s\n", HIP_DEBUG_STATE_STR(state));
+	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
 
 	if (entry)
 		HIP_DEBUG("---LOCKING---\n");
@@ -2639,7 +2639,7 @@ int hip_receive_bos(struct sk_buff *skb)
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
  	case HIP_STATE_REKEYING:
-		HIP_DEBUG("BOS not handled in state %s\n", HIP_DEBUG_STATE_STR(state));
+		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -2834,7 +2834,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	}
 
         hip_common = (struct hip_common*) (*skb)->h.raw;
-        /* TODO: use HIP_DEBUG_STATE_STR */
+        /* TODO: use hip_state_str */
 	HIP_DEBUG("Received HIP packet type %d\n", hip_common->type_hdr);
 	_HIP_DEBUG_SKB((*skb)->nh.ipv6h, skb);
 	_HIP_HEXDUMP("HIP PACKET", hip_common,
