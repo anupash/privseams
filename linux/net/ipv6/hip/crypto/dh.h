@@ -7,11 +7,11 @@
 #  include <linux/module.h>
 #  include <linux/errno.h>
 #  include "kernel-interface.h"
+#  include "mpi-internal.h"
+#  include "gcrypt.h"
 #else
 #  include <gcrypt.h>
 #endif /* __KERNEL__ */
-
-#include <net/hip.h>
 
 typedef struct DH_str {
 	MPI p;
@@ -19,6 +19,8 @@ typedef struct DH_str {
 	MPI pub_key;
 	MPI priv_key;
 } DH;
+
+#include <net/hip.h>
 
 /* this should be consistent with the table length in dh.c */
 #define HIP_MAX_DH_GROUP_ID 7 

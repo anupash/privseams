@@ -2,6 +2,12 @@
 #define HIP_XFRMAPI_H
 
 #include <net/hip.h>
+#ifdef __KERNEL__
+#include <linux/xfrm.h>
+#include <net/xfrm.h>
+#endif
+#include "debug.h"
+#include "hadb.h"
 
 int hip_delete_sp(int dir);
 int hip_delete_sa(u32 spi, struct in6_addr *dst);

@@ -41,7 +41,7 @@ struct hip_work_order *hip_netlink_receive(void) {
 
 	memcpy(result, hwo, sizeof(struct hip_work_order_hdr));
 
-	msg_len = hip_get_msg_total_len(&(hwo->msg));	
+	msg_len = hip_get_msg_total_len((const struct hip_common *)&(hwo->msg));	
 	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
 	if (!result->msg) {
 		HIP_ERROR("Out of memory.\n");
@@ -68,7 +68,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	struct iovec iov;
 	int msg_len;
 
-	msg_len = hip_get_msg_total_len(&hwo->msg);
+	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
 	memset(&dest_addr, 0, sizeof(dest_addr));
 	dest_addr.nl_family = AF_NETLINK;
 	dest_addr.nl_pid = 0; /* For Linux Kernel */

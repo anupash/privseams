@@ -72,7 +72,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	struct nlmsghdr *nlh;
 	int msg_len;
 
-	msg_len = hip_get_msg_total_len(&hwo->msg);
+	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
 	skb = alloc_skb(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)), GFP_KERNEL);	
 	if (!skb) {
 		HIP_ERROR("Out of memory.\n");

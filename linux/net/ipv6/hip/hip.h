@@ -139,7 +139,7 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
 void hip_net_event(int ifindex, uint32_t event_src, uint32_t event);
 
-extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
+//extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
 extern struct crypto_tfm *impl_sha1;
 //extern struct semaphore hip_work;
 extern struct socket *hip_output_socket;

@@ -66,7 +66,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 // useless function, must be. (tkoponen)
 /*int hip_delete_esp(hip_ha_t *entry)
 {
-	/* assumes already locked entry */
+// assumes already locked entry 
 	hip_hadb_delete_inbound_spis(entry);
 	hip_hadb_delete_outbound_spis(entry);
 	return 0;
