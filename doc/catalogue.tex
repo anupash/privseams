@@ -45,9 +45,8 @@ The small exchanges of information in the kernel based implementation
 imply ``chained'' code in the kernel. The chained code requires saving
 and restoring of the current state of the HIP header being
 processed. The chained code is a bit awkward to use but it is
-necessary in the kernel based approach. See
-\autoref{sec:daemon_architecture} for a more detailed description of the
-chained code.
+necessary in the kernel based approach. \TODO{XX EXPLAIN WHAT CHAINED
+CODE MEANS}
 \\&
 On the other hand, the daemon based implementation captures HIP
 headers in the kernel and forwards them as they are to the daemon for
@@ -74,13 +73,12 @@ before debugging messages appear on a terminal or a disk device.}
 
 \revision{On 20031016, the kernel based approach was revised. The DSA and
 Diffie-Hellman functionality in OpenSSL, that was used in the HIP
-daemon, were ported into kernelspace as a separate crypto module. This
-reduces the need for a HIP daemon to a minimum and should accelerate
-the performance of the HIP kernel module a bit. The most important
-benifit is that the kernel module code could be simplified by removing
-the chained code. Asymmetric crypto represents some challenges related
-to the scheduling of the kernel which haven't been solved yet
-completely.}
+daemon, were ported into kernelspace. This reduces the need for a HIP
+daemon to a minimum and should accelerate the performance of the HIP
+kernel module a bit. The most important benifit is that the kernel
+module code could be simplified by removing the chained
+code. Asymmetric crypto represents some challenges related to the
+scheduling of the kernel which haven't been solved yet completely.}
 
 \end{designchoice}
 
@@ -129,9 +127,13 @@ experimentations with the Linux networking stack.  }
 TCP layer to the IPv6 layer. It simplified the implementation and UDP
 support was gained with no extra effort.}
 
+\revision{XX TODO: Kristian, explain what hooks were changed because of
+the transition 2.6 and why.}
+
 \end{designchoice}
 
-
+% XX TODO: Kristian, is still valid, or do we need a fourth solution?
+%
 \begin{designchoice}{Problems associated with locking of state structures}
 
 \alt{Solution one, two and three}
@@ -175,67 +177,6 @@ to be served. }
 \member{uint32\_t}{peer\_spi}{Peer SPI}
 \member{uint32\_t}{our\_spi}{Local SPI}
 \end{struct}
-
-\appsection{Userspace Daemon}
-
-\begin{designchoice}{Daemon messaging format}
-
-\alt{Extended HIP TLV format, extended \textit{PF\_KEY} format or in-house}
-
-\select{Extended HIP TLV format}
-
-\record{20020723}
-
-\background{ The daemon and the kernel need to communicate information
-somehow. Four different alternatives were considered. The first
-alternative, \textit{PF\_KEY}, was already present in USAGI and it was
-mainly used for exchanging cryptographic key information with the
-kernel and an userspace IKE daemon. The second alternative, HIP packet
-format \cite{hip}, could also be recycled for this task. Both
-\textit{PF\_KEY} and HIP packet format would have required some
-extensioning to fit for the job. The third option would have been to
-invent an ``in-house'' format optimized for the task. The fourth
-alternative would have been \textit{NETLINK} \cite{netlink}.}
-
-\comparison{ An in-house format specialized to sharing information
-between the kernel and the userspace could have been more efficient
-and compact than the other alternatives. It was mainly dropped because
-it seemed that it was not worth to reinvent the wheel. The other
-alternatives were more attractive because they could be used with just
-some minor extensions to accommodate the task.
-\\&
-\textit{PF\_KEY} was considered for two reasons in the beginning of
-the project: it was already available in the USAGI project and there
-seemed to be a need to communicate key material related to IPSec
-between the HIP daemon and the kernel. \textit{PF\_KEY} was dropped
-because it would have needed too many changes to accommodate for the
-task because it was just used for exchanging key information. It was
-also noticed later when base exchange was almost finished that IPSec
-related \textit{PF\_KEY} keying operations could be done directly
-inside the kernel. The reason for this was the kernel-oriented model
-that was discussed in \autoref{sec:kernel_model_architecture}.
-\\&
-\textit{NETLINK} can only be used for transferring network packets
-between the userspace and the kernel. It was rejected in the design
-for two reasons. First, the userspace daemon does not need to know
-anything about the network packets headers, such as IPv6 headers, and
-the unneeded headers would also cause more overhead. Second, the
-request-response scheme used in the daemon architecture requires also
-something more than just the packet headers.
-\\&
-HIP packet format was selected for two reasons. First, the information
-communicated between the kernel and the userspace contained mainly the
-same parameters used in HIP \cite{hip}. The second reason is a
-consequence of the first one: it would have been silly to develop
-separate message builders and parsers for kernel-to-daemon and
-peer-to-peer communication if the message format was essentially the
-same. One single message builder/parser saves development time and
-increases code quality.
-}
-
-%\revision{xx}
-
-\end{designchoice}
 
 \appsection{Network Socket API}
 
@@ -314,6 +255,67 @@ alternative was considered to be small. Direct communication with the
 kernel can then use existing interfaces that the daemon already
 used. Creating a new interface for listening for incoming mappings can
 be also avoided in the daemon. }
+
+%\revision{xx}
+
+\end{designchoice}
+
+% XX TODO: Miika, fix this. Add also the HIP socket option.
+%
+\begin{designchoice}{Userspace messaging format}
+
+\alt{Extended HIP TLV format, extended \textit{PF\_KEY} format or in-house}
+
+\select{Extended HIP TLV format}
+
+\record{20020723}
+
+\background{ The daemon and the kernel need to communicate information
+somehow. Four different alternatives were considered. The first
+alternative, \textit{PF\_KEY}, was already present in USAGI and it was
+mainly used for exchanging cryptographic key information with the
+kernel and an userspace IKE daemon. The second alternative, HIP packet
+format \cite{hip}, could also be recycled for this task. Both
+\textit{PF\_KEY} and HIP packet format would have required some
+extensioning to fit for the job. The third option would have been to
+invent an ``in-house'' format optimized for the task. The fourth
+alternative would have been \textit{NETLINK} \cite{netlink}.}
+
+\comparison{ An in-house format specialized to sharing information
+between the kernel and the userspace could have been more efficient
+and compact than the other alternatives. It was mainly dropped because
+it seemed that it was not worth to reinvent the wheel. The other
+alternatives were more attractive because they could be used with just
+some minor extensions to accommodate the task.
+\\&
+\textit{PF\_KEY} was considered for two reasons in the beginning of
+the project: it was already available in the USAGI project and there
+seemed to be a need to communicate key material related to IPSec
+between the HIP daemon and the kernel. \textit{PF\_KEY} was dropped
+because it would have needed too many changes to accommodate for the
+task because it was just used for exchanging key information. It was
+also noticed later when base exchange was almost finished that IPSec
+related \textit{PF\_KEY} keying operations could be done directly
+inside the kernel. The reason for this was the kernel-oriented model
+that was discussed in \autoref{sec:kernel_model_architecture}.
+\\&
+\textit{NETLINK} can only be used for transferring network packets
+between the userspace and the kernel. It was rejected in the design
+for two reasons. First, the userspace daemon does not need to know
+anything about the network packets headers, such as IPv6 headers, and
+the unneeded headers would also cause more overhead. Second, the
+request-response scheme used in the daemon architecture requires also
+something more than just the packet headers.
+\\&
+HIP packet format was selected for two reasons. First, the information
+communicated between the kernel and the userspace contained mainly the
+same parameters used in HIP \cite{hip}. The second reason is a
+consequence of the first one: it would have been silly to develop
+separate message builders and parsers for kernel-to-daemon and
+peer-to-peer communication if the message format was essentially the
+same. One single message builder/parser saves development time and
+increases code quality.
+}
 
 %\revision{xx}
 
