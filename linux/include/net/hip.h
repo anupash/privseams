@@ -282,6 +282,13 @@ typedef uint32_t  u32;
 #define HIP_RVA_RELAY_ESP_I1          5
 #define HIP_RVA_REDIRECT_I1           6
 
+#define PEER_ADDR_STATE_UNVERIFIED 1
+#define PEER_ADDR_STATE_ACTIVE 2
+#define PEER_ADDR_STATE_DEPRECATED 3
+
+#define HIP_SPI_DIRECTION_OUT 1
+#define HIP_SPI_DIRECTION_IN 2
+
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
@@ -776,13 +783,6 @@ struct hip_peer_addr_list_item
 					   this address is related to */
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
 };
-
-#define PEER_ADDR_STATE_UNVERIFIED 1
-#define PEER_ADDR_STATE_ACTIVE 2
-#define PEER_ADDR_STATE_DEPRECATED 3
-
-#define HIP_SPI_DIRECTION_OUT 1
-#define HIP_SPI_DIRECTION_IN 2
 
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
