@@ -314,71 +314,53 @@ deleting mappings from the \ac{HADB}.
 
 \subsection{Internal data structures}
 
-\ac{HIPL} contains a couple of global data structures. In this section
-we describe their intended use and locking policies.
+\ac{HIPL} contains a couple of global data structures. In this
+section, we describe their intended use and locking policies.
 
 \subsubsection{Host Association Data Base}
 \label{sec:hadb}
 
-The \ac{HADB} maintains a collection of Host Associations (HA). Each
-\ac{HA} holds necessary information to establish and maintain a
-\ac{HIP} association between the two hosts. \acp{HA} consist of both
-parties' \acp{HIT}, \ac{SPI} values required for \ac{ESP} traffic,
-IPv6 addresses, security keys, keying material to derive new keys and
-some state information.  The \acp{HA} are distinguished by peer's
-\ac{HIT} and inbound \ac{SPI} values (ie. the \ac{SPI} value that appears
-in \ac{ESP} encapsulated packets destined to us).  To be able to
-access the \acp{HIT} efficiently, they are stored in two different
-hash tables: one using peer's \ac{HIT} as the hash key, and one
-SPI-HIT table which maps \ac{SPI} values to \acp{HIT}. The SPI-HIT
-table is needed for multiple \ac{IPsec} \ac{SA} support.
-
-The former is required, when either we are sending some transport
+The \ac{HADB} is a container for \acp{HA}. A \ac{HA} holds the
+necessary information to establish and maintain a \ac{HIP} association
+between the localhost and a peer. It consist of both parties'
+\acp{HIT}, \ac{SPI} values required for \ac{ESP} traffic, IPv6
+addresses, security keys, keying material to derive new keys and some
+state information. It is needed when sending or receiving \ac{IPsec}
 data, or due to \ac{HIP} control messages (base exchange, readdressing
-etc). The latter is used only when an incoming \ac{ESP} encapsulated
-arrives. We need to map it to a certain \ac{HIP} connection. At that
-time, we are not aware of the \acp{HIT} involved, but only the
-\ac{SPI} value. When \ac{ESP} is received, the received looks up the
-corresponding \ac{HIT}, and after that the host can get the correct
-\ac{HA} by using the retrieved \ac{HIT} as the hash key.
-
-% WAAAAAAAAAAAAAS ? The \ac{HA} consists of XX.
-
-%The \ac{HA} has internal state. This state varies between
-%\verb|HIP_HASTATE_VALID|, \verb|HIP_HASTATE_SPIOK| and
-%\verb|HIP_HASTATE_HITOK|, meaning that the HA is inserted in both hash
-%tables, inserted in the SPI hash table and inserted in the HIT hash
-%table, respectively.
+etc).
 
 The \ac{HA} has internal state. This state varies between
 \verb|HIP_HASTATE_INVALID| and \verb|HIP_HASTATE_HITOK|, meaning that
-\ac{HA} is not fully usable yet or it is inserted in the HIT hash table,
-respectively.
+\ac{HA} is not fully usable yet or it is inserted in the HIT hash
+table, respectively.
 
-% oh * .. multiple SA support breaks this
-%Although there are two hash tables, there are only one set of
-%\acp{HA}. This entity, that holds \acp{HA} in one or two hash tables,
-%is called the \ac{HADB}.
-%changed to:
-The entity that holds \acp{HA} in hash tables, is called the \ac{HADB}.
-
-There is a reference counter in every \ac{HA}. This counter must be
-incremented using \verb|hip_hold_ha()| macro whenever we receive a
-reference to the \ac{HA}. Obviously the reverse holds for decrementing
-the counter using \verb|hip_put_ha()|. When the reference counter
-reaches zero, the resources allocated for the \ac{HA} are automatically
-deleted.
+The \acp{HA} is implemented as hash table to support fast
+searching. The hash table is indexed by \ac{HIT}. However, the support
+for multiple \ac{IPsec} \ac{SA} support cannot be supported
+efficiently just by indexing using \acp{HIT}. Therefore, the HIP
+module as an auxiliary hash table that maps inbound \ac{SPI} numbers
+to peer \acp{HIT}. It is used only when an incoming \ac{ESP} envelope
+arrives and the HIP module need to map it to a certain \ac{HIP}
+\ac{SA}. At that moment, the module is not aware of the \acp{HIT}
+involved, but knows only the \ac{SPI} value from \ac{ESP} packet. The
+host looks up the corresponding \ac{HIT} from auxiliary hash table,
+and after that the host can get the correct \ac{HA} by using the
+retrieved \ac{HIT} as the hash key.
 
 \subsubsection{HADB Locking}
 
-To maintain integrity across the operations involving the \ac{HADB} or
-the \acp{HA} added to the \ac{HADB}, we use a couple of techniques.
+To maintain integrity of the \ac{HADB}, we use a couple of techniques.
+First, the \ac{HA} hash table has a global spin lock. Certain
+\ac{HADB} functions use these to isolate the critical sections. The
+basic policy is to use these locks only when operating (reading or
+writing) on the hash table itself. The macros that do the job are:
+\verb|HIP_LOCK_HT| and \verb|HIP_UNLOCK_HT|.
 
-First, we guarantee that no \ac{HA} can be deleted accidentally while
-some other thread/process uses it. This is accomplished by having
-reference counters in each \ac{HA}. This counter must be incremented
-using \verb|hip_hold_ha()| macro whenever we receive a reference to
-the \ac{HA}. Obviously the reverse holds for decrementing the counter
+Second, we guarantee that no \ac{HA} can be deleted accidentally while
+some other thread/process uses it. This is accomplished by having a
+reference counter in each \ac{HA}. This counter must be incremented
+using \verb|hip_hold_ha()| macro whenever we reference the
+\ac{HA}. Obviously the reverse holds for decrementing the counter
 using \verb|hip_put_ha()|. When the reference counter reaches zero,
 the memory allocated for the \ac{HA} is automatically deleted.  A
 reference to a \ac{HA} can only be acquired through certain \ac{HADB}
@@ -386,104 +368,62 @@ functions. These guarantee that there cannot be a situation where we
 would be deleting the \ac{HA} (due to its reference counter reaching
 zero), and some other thread wanting to acquire the \ac{HA}.
 
-Second, each \ac{HA} has its own spin lock. This lock must be locked
+Third, each \ac{HA} has its own spin lock. This lock must be held
 when the information in \ac{HA} is accessed, either for reading of
-writing.  The two macros (\verb|HIP_LOCK_HA| and \verb|HIP_UNLOCK_HA|)
+writing.  The two macros \verb|HIP_LOCK_HA| and \verb|HIP_UNLOCK_HA|
 provide the correct means to handle \acp{HA}.  These macros use
 \verb|spin_lock_bh| and \verb|spin_unlock_bh|, respectively, to
 acquire and release the locks and at the same time to disable and
 enable bottom handlers.
 
-Third, the two hash tables in \ac{HADB} both have a global spin
-lock. Certain \ac{HADB} functions use these to isolate the critical
-sections. The basic policy is to use these locks only when operating
-(reading or writing) on the hash table itself. The macros that do the
-job are: \verb|HIP_LOCK_HT| and \verb|HIP_UNLOCK_HT|.
-
-% Miika: mihinköhän tämän laittaisi?
-
-Due to the architecture of \ac{HIPL}, there are 3 different contexts,
-in which the \ac{HIP} code is executed: bottom handler/softirq, kernel
+The reason why the specifically bottom handler lock is used is related
+to the contexts in which \ac{HIP} code is executed in the kernel.  Due
+to the architecture of \ac{HIPL}, there are 3 different contexts, in
+which the \ac{HIP} code is executed: bottom handler/softirq, kernel
 thread and user context.  The softirq context is used when receiving
-packet from the network. It has the highest priority. A \ac{HIP}
+packet from the network and it has the highest priority. A \ac{HIP}
 worker thread is operating in the kernel thread context.  Userspace
-\ac{HIP} configuration tools, \ac{HIP} sockets API etc. run in user
-context.  An incoming network packet will preempt every other
+\ac{HIP} configuration tools, \ac{HIP} sockets API etc. run in the
+user context.  An incoming network packet will preempt every other
 context. If a process/thread in a lower priority context has acquired
-a lock, it will not be able to release it.
-
-
-
-% XX TODO Kristian:
-% - describe how the locks work
-% - explain when we are in user mode, when in interrupt, etc
-% - how does the current mode affect the locking
-% - there was one special case when when use HADB without locks..
-% - copy-paste from thesis?
+a lock, it will not be able to release it. Thus, to avoid deadlocks,
+we need to disable soft irqs, as it is the highest priority in which
+\ac{HIP} code is executed.
 
 \subsection{HIP Work Queue}
 \label{sec:work_queue_architecture}
 
-The purpose of a working queue in \ac{HIP} is to defer processing of
-HIP-related messages. The main functionality is executed by a \ac{HIP}
-kernel thread. Networking stack defers packets to the \ac{HIP} thread
-for further processing.  Originally there were two reasons for this.
-The first one was to simplify accessing the internal data structures,
-and the second one to enable \ac{HIP} module to be more controllable.
-For example, \ac{HIP} thread's priority can be raised or lowered,
-giving it more or less \ac{CPU} time.
+The purpose of a work queue in is to defer processing of HIP-related
+messages. The work queue is maintained by a \ac{HIP} kernel
+thread. Networking stack defers the processing of \ac{HIP} packets by
+inserting them as work orders for the kernel thread.
 
-Currently, the data structures are accessible to everybody (and in
-every context), thus the first reason does not hold anymore.
+Working queue is simple linked list \footnote{At the moment it is not
+bounded, but it definitely should be, if the code is ever used in a
+real, production server}. The list is protected by a semaphore. The
+kernel thread sleeps in the semaphore until some entity (usually the
+networking stack) defers some work order to it. Basically, this
+follows the producer-consumer model, where the networking stack and
+user configuration tools produce work orders for the kernel thread to
+consume. The work order is usually related to the \ac{HIP} base
+exchange, or other control traffic.  Normal data transfer does not insert
+any work orders in the work queue.
 
-Working queue is simple linked list. At the moment it is not bounded,
-but it definitely should be, if the code is ever used in a real,
-production server. The list is protected by a semaphore. The worker
-thread sleeps in the semaphore until (usually the networking stack)
-defers some job to it.  Basically, this is a producer consumer
-model. Where the networking stack and user configuration tools produce
-jobs for the kernel thread to consume.  The job is usually related to
-the \ac{HIP} base exchange, or other control traffic.  The normal data
-transfer does not defer execution to later, so it does not use the
-working queue.
-
-% XXX Miika: Etsi tälle parempi paikka
-
-Due to the architecture of \ac{HIPL}, there are three different
-contexts, in which the \ac{HIP} code is executed: bottom
-handler/softirq, kernel thread and user context.  The softirq context
-is used when receiving packet from the network. It has the highest
-priority. A \ac{HIP} worker thread is operating in the kernel thread
-context.  Userspace \ac{HIP} configuration tools, \ac{HIP} sockets API
-etc. run in the user context.
+Originally, there were two reasons for using the kernel thread
+model. The first one was to simplify accessing the internal data
+structures. The second one was to make the \ac{HIP} module to be more
+controllable.  For example, \ac{HIP} thread's priority can be raised
+or lowered, giving it more or less \ac{CPU} time.  Currently, the data
+structures are accessible to everybody (and in every context), thus
+the first reason does not hold anymore.
 
 \subsection{Asymmetric Cryptography Support in the Linux Kernel}
 
-% XX TODO: It is not a separate module anymore
-
-A generic asymmetric cryptophic module was developed to handle HIP's
-needs of the \ac{DSA} and \ac{DH} algorithms. The main reason
-for this was that the implementation architecture was revised to be
-more kernel orientated. The cryptographic module a ripped off version
-of the GNU cryptographic library (libgcrypt) version 1.12.
-\autoref{tbl:asymmetric_crypto_ops}.
-
-\begin{table}[htb]
-\centering
-\begin{tabular}{|l|}\hline
-Cryptographic Operation \\\hline
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Create cookie  \\
-Solve cookie \\
-Validate cookie \\
-Sign packet with DSA \\
-Verify DSA signature \\
-Create DH shared secret \\
-\hline
-\end{tabular}
-\caption{The operations supported in the asymmetric cryptophic module}
-\label{tbl:asymmetric_crypto_ops}
-\end{table}
+The implementation architecture was revised to be completely kernel
+orientated and asymmetric cryptography was integrated to make the
+\ac{DSA} and \ac{DH} algorithms available in the kernelspace. The
+cryptographic routines were merged from the GNU cryptographic library
+(libgcrypt) version 1.12.
 
 \subsection{Networking Stack}
 \label{sec:networking_stack_architecture}
@@ -545,15 +485,6 @@ Input and output side of the hooks are visualized in
 \autoref{tbl:hook_descriptions} explains each numbered point in the
 figures. An interface name in code and an explanation for each point
 is given in the figure. 
-
-% XX FIX MIKA:
-% - add the missing hooks (DAD, what else did you add? esp?) to the figures
-%
-% hip_handle_ipv6_dad_completed
-% hip_handle_inet6_addr_del
-% .. mutta näitä ei voi oikein laittaa kuvaan, koska ne ovat ulkoisia tapahtumia
-% ->selostettu yläpuolella
-% tai oikeastaan nämä kuuluvatkin tuohon Address configiin
 
 \begin{figure}
    \begin{minipage}[b]{0.5\textwidth}
@@ -634,22 +565,20 @@ corresponding to the HIT. \\
 
 \subsection{IPsec Usage}
 
-When the \ac{HIP} code starts, it registers two \acp{SP}, one incoming
-and one outgoing. We use \verb|4000::/2| as a source and destination
-IPv6 addresses. This is the range that is preallocated for \ac{HIP}
-use, although it is not yet officially allocated by the Internet
-Assigned Numbers Authority (IANA).  Actually there is also a ``type
-2'' HIT defined as \verb|8000::/2|, but it is not in use, and we do
-not support it currently.
+When the \ac{HIP} module is initialized, it registers two \acp{SP},
+one for incoming and one for outgoing network traffic. The prefix
+\verb|4000::/2| is preallocated for \ac{HIP} use, although it is not
+officially allocated by the Internet Assigned Numbers Authority
+(IANA). There is also a ``type 2'' HIT defined as \verb|8000::/2|, but
+it is not in use, and we do not support it currently.
 
-When an ordinary\footnote{destination address belonging to the IPv6
-address range approved by the \ac{IANA}} network connection is being
-established, the \ac{IPsec} does not match the \ac{HIP} \ac{SP}, and
-thus no \ac{HIP} action will be performed. When a \ac{HIP} network
-connection is initiated, the \ac{HIP} \ac{SP} will match, and
-\ac{IPsec} will query for a \ac{SA}. If there is no ready \ac{SA}
-available, as is the case when we first connect to the peer, the
-\ac{HIP} module will start the \ac{HIP} base exchange.
+When plain IPv6 network traffic is sent, the \ac{IPsec} does not match
+the \ac{HIP} \ac{SP}, and thus no \ac{HIP} action will be
+performed. When a \ac{HIP} network connection is initiated, the
+\ac{HIP} \ac{SP} will match, and \ac{IPsec} will query for a
+\ac{SA}. If there is no ready \ac{SA} available, as is the case when
+we first connect to the peer, the \ac{HIP} module will start the
+\ac{HIP} base exchange.
 
 The caller process will be put to sleep until the \ac{SA} is valid, or
 has timeouted.  Default timeout period is 30 seconds\footnote{This is
