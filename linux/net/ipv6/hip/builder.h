@@ -117,8 +117,10 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
 int hip_build_param_spi(struct hip_common *msg, uint32_t spi);
-int hip_build_param_encrypted(struct hip_common *msg,
-			      struct hip_host_id *host_id);
+int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
+				      struct hip_host_id *host_id);
+int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
+					struct hip_host_id *host_id);
 int hip_build_param_eid_endpoint(struct hip_common *msg,
 				 const struct endpoint_hip *endpoint);
 void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,

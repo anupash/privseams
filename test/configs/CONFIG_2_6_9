@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.9
-# Thu Nov  4 14:51:44 2004
+# Mon Nov 15 12:51:19 2004
 #
 CONFIG_X86=y
 CONFIG_MMU=y
@@ -475,7 +475,7 @@ CONFIG_VORTEX=y
 # CONFIG_NET_TULIP is not set
 # CONFIG_HP100 is not set
 CONFIG_NET_PCI=y
-# CONFIG_PCNET32 is not set
+CONFIG_PCNET32=y
 # CONFIG_AMD8111_ETH is not set
 # CONFIG_ADAPTEC_STARFIRE is not set
 # CONFIG_B44 is not set

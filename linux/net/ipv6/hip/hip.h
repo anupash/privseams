@@ -103,7 +103,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 				  struct hip_context *ctx, int is_initiator);
 int hip_hmac_key_length(int tid);
 int hip_enc_key_length(int tid);
-int hip_crypto_encrypted(void *, void *, int, int, void*, int);
+int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
 int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
