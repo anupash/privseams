@@ -19,6 +19,7 @@
 #include "unit.h"
 #include "input.h"
 #include "output.h"
+#include "debug.h"
 
 #include <linux/net.h>
 #include <net/addrconf.h>
@@ -1444,6 +1445,46 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 }
 
 /**
+* hip_list_peers_add - private function to add an entry to the peer list
+* @addr: IPv6 address
+* @entry: peer list entry
+* @last: pointer to pointer to end of peer list linked list
+*
+* Add an IPv6 address (if valid) to the peer list and update the tail
+* pointer.
+*
+* Returns: zero on success, or negative error value on failure
+*/
+static int hip_list_peers_add(struct in6_addr *address,
+			      hip_peer_entry_opaque_t *entry,
+			      hip_peer_addr_opaque_t **last)
+{
+	hip_peer_addr_opaque_t *addr;
+
+	HIP_DEBUG_IN6ADDR("## SPI is 0, found bex address:", address);
+	
+	/* Allocate an entry for the address */
+	addr = kmalloc(sizeof(hip_peer_addr_opaque_t), GFP_ATOMIC);
+	if (!addr) {
+		HIP_ERROR("No memory to create peer addr entry\n");
+		return -ENOMEM;
+	}
+	addr->next = NULL;
+	/* Record the peer addr */
+	ipv6_addr_copy(&addr->addr, address);
+	
+	if (*last == NULL) {  /* First entry? Add to head and tail */
+		entry->addr_list = addr;
+	} else {             /* Otherwise, add to tail */
+		(*last)->next = addr;
+	}
+	*last = addr;
+	entry->count++;   /* Increment count in peer entry */
+	return 0;
+}
+
+
+/**
  * hip_hadb_list_peers_func - private function to process a hadb entry
  * @entry: hadb table entry
  * @opaque: private data for the function (contains record keeping structure)
@@ -1456,7 +1497,7 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 {
 	hip_peer_opaque_t *op = (hip_peer_opaque_t *)opaque;
 	hip_peer_entry_opaque_t *peer_entry = NULL;
-	hip_peer_addr_opaque_t *addr, *last = NULL;
+	hip_peer_addr_opaque_t *last = NULL;
 	struct hip_peer_addr_list_item *s;
 	struct hip_spi_out_item *spi_out, *tmp;
 	char buf[46];
@@ -1482,7 +1523,8 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	}
 	peer_entry->count = 0;    /* Initialize the number of addrs to 0 */
 	peer_entry->host_id = NULL;
-	ipv6_addr_copy(&(peer_entry->hit), &(lhi.hit)); /* Record the peer hit */
+	/* Record the peer hit */
+	ipv6_addr_copy(&(peer_entry->hit), &(lhi.hit));
 	peer_entry->addr_list = NULL;
 	peer_entry->next = NULL; 
 
@@ -1496,35 +1538,28 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 
 	/* Record each peer address */
 	
-	HIP_DEBUG("TODO: test bex_address if default_spi_out is 0\n");
+	if (entry->default_spi_out == 0) {
+		if (!ipv6_addr_any(&entry->bex_address)) {
+			err = hip_list_peers_add(&entry->bex_address,
+						 peer_entry, &last);
+			if (err != 0)
+				goto error;
+			found_addrs = 1;
+		}
+		goto done;
+	}
 
 	list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
 		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
-			hip_in6_ntop(&(s->address), buf);
-			HIP_DEBUG("## Got a peer address: %s\n", buf);
-
-			/* Allocate an entry for the address */
-			addr = kmalloc(sizeof(hip_peer_addr_opaque_t),GFP_ATOMIC);
-			if (!addr) {
-				HIP_ERROR("No memory to create peer addr entry\n");
-				err = -ENOMEM;
+			err = hip_list_peers_add(&(s->address), peer_entry,
+						 &last);
+			if (err != 0)
 				goto error;
-			}
-			addr->next = NULL;
-			/* Record the peer addr */
-			ipv6_addr_copy(&addr->addr, &s->address);
-		
-			if (last == NULL) {  /* First entry? Add to head and tail */
-				peer_entry->addr_list = addr;
-			} else {             /* Otherwise, add to tail */
-				last->next = addr;
-			}
-			last = addr;
-
-			peer_entry->count++;   /* Increment count in peer entry */
 			found_addrs = 1;
 		}
 	}
+
+ done:
 
 	/* Increment count of entries and connect the address list to
 	 * peer entry only if addresses were copied */
