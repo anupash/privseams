@@ -227,11 +227,12 @@ use in your java applications to enable HIP. You can also run "make
 apidoc" to build the Javadoc documentation into the directory
 path-to-hipl/doc/jip-api.
 
-There are two example java applications in "test" directory that you
+There are three example java applications in "test" directory that you
 can compile with the following procedure:
 
 # cd ../test
 # javac -classpath ../jip/jip.jar HipClient.java
+# javac -classpath ../jip/jip.jar HipUserkeyClient.java
 # javac -classpath ../jip/jip.jar HipServer.java
 
 You should have setup your networking environment as explained in
@@ -263,6 +264,10 @@ oops # ./java HipClient crash 12345 oops 54321
 The shell script "test/java" contains some LD_PRELOAD, library and
 class path information necessary for executing the HIP enabled java
 applications.
+
+The HipUserkeyClient class is otherwise the same as the HipClient
+class, except that its optional fourth argument is the name of a file
+from which to read an application-specified endpoint.
 
 HIP Enabled Telnet
 =========================

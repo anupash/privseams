@@ -177,7 +177,7 @@ Java_jip_HipSocketImpl_bind (JNIEnv *env, jobject obj, jobject addr, jint port)
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
     eid_addr.eid_family = PF_HIP;
-    eid_addr.eid_port = port;
+    eid_addr.eid_port = htons(port);
     eid_addr.eid_val = (*env)->GetShortField(env, addr, ha_value_id);
     CHECK(bind(fd, (struct sockaddr *) &eid_addr, sizeof eid_addr),
 	  "Bind failed");
@@ -194,7 +194,7 @@ Java_jip_HipSocketImpl_connect (JNIEnv *env, jobject obj, jobject address,
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
     eid_addr.eid_family = PF_HIP;
-    eid_addr.eid_port = port;
+    eid_addr.eid_port = htons(port);
     eid_addr.eid_val = (*env)->GetShortField(env, address, ha_value_id);
     CHECK(connect(fd, (struct sockaddr *) &eid_addr, sizeof eid_addr),
 	  "Connect failed");
