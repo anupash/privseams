@@ -31,7 +31,7 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
-#include "tools/debug.h"
+#include "libinet6/debug.h"
 
 int create_socket(int proto) {
   int fd;

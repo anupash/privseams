@@ -21,20 +21,20 @@ JAVA_CLASSES=$(patsubst %.java,jip/%.class,$(JAVA_SOURCES))
 JAVA_HEADERS=jip_HipAddress.h jip_HipSocketImpl.h jip_HipSocket.h jip_NativeInputStream.h jip_NativeOutputStream.h
 CFLAGS+=-Wall -W -I../tools -I../libinet6/include -I.. -I../linux/include -I../linux/net/ipv6/hip -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux
 
-LDFLAGS+=-L../libinet6
+LDFLAGS+=-L../libinet6/.libs
 
 APIDOCDIR=../doc/jip-api
 
 all: jip.jar libjip.so
 
-../libinet6/libinet6.so:
+../libinet6/.libs/libinet6.so:
 	make -C ../libinet6 libinet6.so
 
 jip.jar: $(JAVA_SOURCES)
 	javac $(JAVA_SOURCES)
 	cd ..; jar cf jip/jip.jar $(JAVA_CLASSES)
 
-libjip.so: $(C_SOURCES) $(JAVA_HEADERS) ../libinet6/libinet6.so
+libjip.so: $(C_SOURCES) $(JAVA_HEADERS) ../libinet6/.libs/libinet6.so
 	gcc $(CFLAGS) $(LDFLAGS) -shared $(C_SOURCES) -linet6 -lcrypto -o $@
 
 $(JAVA_HEADERS): jip_%.h: jip.jar %.class

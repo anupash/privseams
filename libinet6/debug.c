@@ -44,7 +44,7 @@
  *
  */
 
-#include "tools/debug.h"
+#include "libinet6/debug.h"
 
 /* differentiate between die(), error() and debug() error levels */
 enum debug_level { DEBUG_LEVEL_DIE,
@@ -124,8 +124,8 @@ void hip_handle_log_error(int logtype) {
  * This function is to be used only from the hip_debug(), hip_info(), etc
  * debugging functions.
  */
-void hip_vlog(int debug_level, char *file, int line, char *function,
-	      char *fmt, va_list args) {
+void hip_vlog(int debug_level, const char *file, const int line,
+	      const char *function, const char *fmt, va_list args) {
   char syslog_msg[DEBUG_MSG_MAX_LEN] = "";
   int syslog_level = debug2syslog_map[debug_level];
   char prefix[DEBUG_PREFIX_MAX] = "\0";
@@ -192,7 +192,8 @@ void hip_vlog(int debug_level, char *file, int line, char *function,
  * Do not call this function from the outside of the debug module,
  * use the HIP_INFO macro instead.
  */
-void hip_info(char *file, int line, char *function, char *fmt, ...) {
+void hip_info(const char *file, int line, const char *function,
+	      const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hip_vlog(DEBUG_LEVEL_INFO, file, line, function, fmt, args);
@@ -210,7 +211,8 @@ void hip_info(char *file, int line, char *function, char *fmt, ...) {
  * Do not call this function from the outside of the debug module,
  * use the HIP_DEBUG macro instead.
  */
-void hip_debug(char *file, int line, char *function, char *fmt, ...) {
+void hip_debug(const char *file, int line, const char *function,
+	       const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hip_vlog(DEBUG_LEVEL_DEBUG, file, line, function, fmt, args);
@@ -228,7 +230,8 @@ void hip_debug(char *file, int line, char *function, char *fmt, ...) {
  * Do not call this function from the outside of the debug module,
  * use the HIP_DIE macro instead.
  */
-void hip_die(char *file, int line, char *function, char *fmt, ...) {
+void hip_die(const char *file, int line, const char *function,
+	     const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hip_vlog(DEBUG_LEVEL_DIE, file, line, function, fmt, args);
@@ -247,7 +250,8 @@ void hip_die(char *file, int line, char *function, char *fmt, ...) {
  * Do not call this function from the outside of the debug module,
  * use the HIP_ERROR macro instead.
  */
-void hip_error(char *file, int line, char *function, char *fmt, ...) {
+void hip_error(const char *file, int line, const char *function,
+	       const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   hip_vlog(DEBUG_LEVEL_ERROR, file, line, function, fmt, args);
@@ -265,7 +269,8 @@ void hip_error(char *file, int line, char *function, char *fmt, ...) {
  * the perror(3) syntax. Do not call this function from the outside of the
  * debug module, use the HIP_PERROR macro instead.
  */
-void hip_perror_wrapper(char *file, int line, char *function, char *s) {
+void hip_perror_wrapper(const char *file, int line, const char *function,
+			const char *s) {
   hip_error(file, line, function, "%s %s\n", s, strerror(errno));
 }
 
@@ -281,8 +286,8 @@ void hip_perror_wrapper(char *file, int line, char *function, char *s) {
  * Do not call this function from the outside of the debug module,
  * use the HIP_HEXDUMP macro instead.
  */
-void hip_hexdump(char *file, int line, char *function, char *prefix,
-		 void *str, int len) {
+void hip_hexdump(const char *file, int line, const char *function,
+		 const char *prefix, const void *str, int len) {
   int hexdump_max_size = 0;
   int hexdump_count = 0;
   char *hexdump = NULL;
@@ -334,9 +339,9 @@ void hip_hexdump(char *file, int line, char *function, char *prefix,
  * HIP_DEBUG_SOCKADDR macro instead. Currently this function supports
  * only INET and INET6 addresses. 
  */
-void hip_print_sockaddr(char *file, int line, char *function,
-			char *prefix, sa_family_t family,
-			struct sockaddr *sockaddr) {
+void hip_print_sockaddr(const char *file, int line, const char *function,
+			const char *prefix, sa_family_t family,
+			const struct sockaddr *sockaddr) {
       char *default_str = "<unknown>";
       int maxlen;
       void *addr;

@@ -1742,13 +1742,15 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 	if ( (len += snprintf(page+len, count-len, " %s", addr_str)) >= count)
 		goto error;
 
-	if ( (len += snprintf(page+len, count-len,
-			      " 0x%08x 0x%08x 0x%08x %s",
-			      entry->default_spi_out, entry->lsi_our, entry->lsi_peer,
-			      entry->esp_transform <=
-			      (sizeof(esp_transforms)/sizeof(esp_transforms[0])) ?
-			      esp_transforms[entry->esp_transform] : "UNKNOWN")) >= count)
-		goto error;
+       if ( (len += snprintf(page+len, count-len,
+			     " 0x%08x 0x%08x 0x%08x %s",
+			     entry->default_spi_out, entry->lsi_our,
+			     entry->lsi_peer,
+			     entry->esp_transform <=
+			     (sizeof(esp_transforms)/sizeof(esp_transforms[0]))
+			     ? esp_transforms[entry->esp_transform] :
+			     "UNKNOWN")) >= count)
+	       goto error;
 
 	if ( (len += snprintf(page+len, count-len,
 			      " 0x%llx %u %u %u %u %u\n",

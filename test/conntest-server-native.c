@@ -33,7 +33,7 @@
 #endif
 #include <signal.h>
 
-#include "tools/debug.h"
+#include "libinet6/debug.h"
 
 static void sig_handler(int signo) {
   if (signo == SIGTERM) {

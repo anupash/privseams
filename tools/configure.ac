@@ -10,9 +10,6 @@ AM_CONFIG_HEADER(config.h)
 # Checks for programs.
 AC_PROG_CC
 
-# Checks for libraries.
-AC_CHECK_LIB([crypto], [DSA_generate_key])
-
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/socket.h syslog.h unistd.h])
@@ -25,13 +22,13 @@ AC_TYPE_MODE_T
 AC_PROG_LN_S
 
 # Checks for library functions.
+AC_CHECK_LIB([crypto], [DSA_generate_key])
 AC_FUNC_ERROR_AT_LINE
-AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MALLOC
 AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([memset mkdir strdup strerror])
+AC_CHECK_FUNCS([memset mkdir strdup strerror gethostname])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

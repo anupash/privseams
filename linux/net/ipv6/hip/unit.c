@@ -11,7 +11,7 @@
  */
 
 #include "unit.h"
-#include "debug.h"
+#include "libinet6/debug.h"
 
 /**
  * hip_run_unit_test_case - run a single or multiple HIP unit test cases.
