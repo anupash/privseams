@@ -2,12 +2,12 @@
 
 Network Working Group                                        P. Nikander
 Internet-Draft                                                  J. Arkko
-Expires: May 31, 2004                      Ericsson Research Nomadic Lab
-                                                           December 2003
+Expires: October 14, 2004                  Ericsson Research Nomadic Lab
+                                                          April 15, 2004
 
 
      End-Host Mobility and Multi-Homing with Host Identity Protocol
-                        draft-nikander-hip-mm-01
+                     draft-nikander-hip-mm-02-pre1
 
 Status of this Memo
 
@@ -29,11 +29,11 @@ Status of this Memo
    The list of Internet-Draft Shadow Directories can be accessed at
    http://www.ietf.org/shadow.html.
 
-   This Internet-Draft will expire on May 31, 2004.
+   This Internet-Draft will expire on October 14, 2004.
 
 Copyright Notice
 
-   Copyright (C) The Internet Society (2003). All Rights Reserved.
+   Copyright (C) The Internet Society (2004). All Rights Reserved.
 
 Abstract
 
@@ -52,9 +52,9 @@ Abstract
 
 
 
-Nikander & Arkko          Expires May 31, 2004                  [Page 1]
+Nikander & Arkko        Expires October 14, 2004                [Page 1]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 Table of Contents
@@ -71,34 +71,33 @@ Table of Contents
    5.  Overview of HIP basic mobility and multi-homing
        functionality  . . . . . . . . . . . . . . . . . . . . . . . .  9
    5.1 Informing the peer about multiple or changed address(es) . . .  9
-   5.2 Address verification . . . . . . . . . . . . . . . . . . . . . 10
+   5.2 Address verification . . . . . . . . . . . . . . . . . . . . . 11
    5.3 Address data structure and status  . . . . . . . . . . . . . . 11
-   6.  Protocol overview  . . . . . . . . . . . . . . . . . . . . . . 12
-   6.1 Initiating the protocol in NES . . . . . . . . . . . . . . . . 13
-   6.2 Initiating the protocol in R1 or I2  . . . . . . . . . . . . . 13
-   6.3 Explicit address check . . . . . . . . . . . . . . . . . . . . 15
-   7.  Parameter and packet formats . . . . . . . . . . . . . . . . . 16
-   7.1 REA parameter  . . . . . . . . . . . . . . . . . . . . . . . . 16
-   7.2 Modified NES_INFO parameter  . . . . . . . . . . . . . . . . . 17
-   7.3 NES packet with included REA . . . . . . . . . . . . . . . . . 18
-   7.4 R1 and I2 packets with included REA  . . . . . . . . . . . . . 18
-   8.  Processing rules . . . . . . . . . . . . . . . . . . . . . . . 19
-   8.1 Sending REAs . . . . . . . . . . . . . . . . . . . . . . . . . 19
-   8.2 Handling received REAs . . . . . . . . . . . . . . . . . . . . 20
-   8.3 Verifying address reachability . . . . . . . . . . . . . . . . 20
-   8.4 Changing the preferred address . . . . . . . . . . . . . . . . 21
-   9.  Policy considerations  . . . . . . . . . . . . . . . . . . . . 23
-   10. Security Considerations  . . . . . . . . . . . . . . . . . . . 24
-   11. IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 25
-   12. Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 26
-       Normative references . . . . . . . . . . . . . . . . . . . . . 27
-       Informative references . . . . . . . . . . . . . . . . . . . . 28
-       Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . 28
-   A.  Changes from previous versions . . . . . . . . . . . . . . . . 29
-   A.1 From -00 to -01  . . . . . . . . . . . . . . . . . . . . . . . 29
-   A.2 From -01 to -02  . . . . . . . . . . . . . . . . . . . . . . . 29
-   B.  Implementation experiences . . . . . . . . . . . . . . . . . . 30
-       Intellectual Property and Copyright Statements . . . . . . . . 31
+   6.  Protocol overview  . . . . . . . . . . . . . . . . . . . . . . 13
+   6.1 Initiating the protocol in UPDATE  . . . . . . . . . . . . . . 14
+   6.2 Initiating the protocol in R1 or I2  . . . . . . . . . . . . . 15
+   6.3 Explicit address check . . . . . . . . . . . . . . . . . . . . 16
+   7.  Parameter and packet formats . . . . . . . . . . . . . . . . . 18
+   7.1 REA parameter  . . . . . . . . . . . . . . . . . . . . . . . . 18
+   7.2 UPDATE packet with included REA  . . . . . . . . . . . . . . . 19
+   7.3 R1 and I2 packets with included REA  . . . . . . . . . . . . . 19
+   8.  Processing rules . . . . . . . . . . . . . . . . . . . . . . . 21
+   8.1 Sending REAs . . . . . . . . . . . . . . . . . . . . . . . . . 21
+   8.2 Handling received REAs . . . . . . . . . . . . . . . . . . . . 22
+   8.3 Verifying address reachability . . . . . . . . . . . . . . . . 22
+   8.4 Changing the preferred address . . . . . . . . . . . . . . . . 23
+   9.  Policy considerations  . . . . . . . . . . . . . . . . . . . . 25
+   10. Security Considerations  . . . . . . . . . . . . . . . . . . . 26
+   11. IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 27
+   12. Acknowledgments  . . . . . . . . . . . . . . . . . . . . . . . 28
+       Normative references . . . . . . . . . . . . . . . . . . . . . 29
+       Informative references . . . . . . . . . . . . . . . . . . . . 30
+       Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . 30
+   A.  Changes from previous versions . . . . . . . . . . . . . . . . 31
+   A.1 From -00 to -01  . . . . . . . . . . . . . . . . . . . . . . . 31
+   A.2 From -01 to -02  . . . . . . . . . . . . . . . . . . . . . . . 31
+   B.  Implementation experiences . . . . . . . . . . . . . . . . . . 32
+       Intellectual Property and Copyright Statements . . . . . . . . 33
 
 
 
@@ -108,9 +107,10 @@ Table of Contents
 
 
 
-Nikander & Arkko          Expires May 31, 2004                  [Page 2]
+
+Nikander & Arkko        Expires October 14, 2004                [Page 2]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 1. Introduction
@@ -119,23 +119,23 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    [3] (HIP). The extension provides a simple and efficient means for
    hosts to keep their communications on-going while having multiple IP
    addresses, either at the same time or one after another.  That is,
-   the extension provides basic support for multi-homing, mobility, and
-   simultaneous multi-homing and mobility. Additionally, the extension
-   allows communications to continue even when multi-homing or mobility
-   causes a change of the IP version that is available in the network;
-   that is, if one of the communicating hosts has both IPv4 and IPv6
-   connectivity, either directly or through a proxy, the other host can
-   alternate between IPv4 and IPv6, without needing to tear down and
-   re-establish upper layer protocol connections or associations. In
-   other words, the way upper layer protocols need to react to
-   cross-IP-version handovers does not differ from the way they need to
-   react intra-IP-version handovers.
+   the extension provides basic end-to-end support for multi-homing,
+   mobility, and simultaneous multi-homing and mobility. Additionally,
+   the extension allows communications to continue even when
+   multi-homing or mobility causes a change of the IP version that is
+   available in the network; that is, if one of the communicating hosts
+   has both IPv4 and IPv6 connectivity, either directly or through a
+   proxy, the other host can alternate between IPv4 and IPv6, without
+   needing to tear down and re-establish upper layer protocol
+   connections or associations. In other words, the way upper layer
+   protocols need to react to cross-IP-version handovers does not differ
+   from the way they need to react to intra-IP-version handovers.
 
    This document does not specify any rendezvous or proxy services.
    Those are subject to other specifications.  Hence, this document
    alone does not necessarily allow two mobile hosts to communicate,
-   unless they have other means for initial rendezvous and solving the
-   simultaneous movement problem.
+   unless they have other means for initial rendezvous and for solving
+   the simultaneous movement problem.
 
    The Host Identity Protocol [3] (HIP) defines a mechanism that
    decouples the transport layer (TCP, UDP, etc) from the
@@ -147,7 +147,7 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    mapping into a dynamic one-to-many mapping, thereby enabling end-host
    mobility and multi-homing.
 
-   In practice, the HIP base exchange [3]creates a pair of IPsec
+   In practice, the HIP base exchange [3] creates a pair of IPsec
    Security Associations (SA) between a pair of HIP enabled hosts.
    These SAs are not bound to IP addresses, but to the Host Identifiers
    (public keys) used to create them.  However, the hosts must also know
@@ -157,28 +157,36 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    Since the SAs are not bound to IP addresses, the host is able to
    receive packets that are protected using a HIP created ESP SA from
    any address.  Thus, a host can change its IP address and continue to
-   send packets to its peers.  However, the peers are not able to reply
-   before they can reliably and securely update the set of addresses
-   that they associate with the sending host.
+   send packets to its peers.  However, unless the host is sufficiently
+   trusted, the peers are not able to reply before they can reliably and
+   securely update the set of addresses that they associate with the
+   sending host.  Furthermore, mobility may change the path
 
 
 
-
-Nikander & Arkko          Expires May 31, 2004                  [Page 3]
+Nikander & Arkko        Expires October 14, 2004                [Page 3]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
+
+   characteristics in such a manner that reordering occurs and packets
+   fall outside the ESP anti-replay window.
 
    This document specifies a mechanism that allows a HIP host to update
    the set of addresses that its peers associate with it. The address
    update is implemented with new HIP parameter types. Due to the danger
    of flooding attacks (see [4]), the peers must always check the
-   reachability of the host at a new address before it can use the new
-   addresses.  The reachability check is implemented by the challenger
-   creating a new SPI, announcing the new SPI, and waiting for traffic
-   on the new SPI.  In addition to initiating the reachability check,
-   announcing the new SPI also acts as an acknowledgement for a
-   preceding address change.
+   reachability of the host at a new address, unless sufficient level of
+   trust exists between the hosts.  The reachability check is
+   implemented by the challenger creating a new SPI, announcing the new
+   SPI in an UPDATE packet sent to the new address, and waiting for
+   either traffic on the new SPI or a reply to the UPDATE.
+
+   The reachability check is implemented by the challenger creating a
+   new SPI, announcing the new SPI, and waiting for traffic on the new
+   SPI.  In addition to initiating the reachability check, announcing
+   the new SPI also acts as an acknowledgement for a preceding address
+   change.
 
    There are a number of situations where the simple end-to-end
    readdressing functionality is not sufficient.  These include the
@@ -187,6 +195,11 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    situations there is a need for some helper functionality in the
    network.  This document does not address those needs.
 
+   Finally, making underlying IP mobility transparent to the transport
+   layer has implications on the proper response of transport congestion
+   control, path MTU selection, and QoS. Transport-layer mobility
+   triggers, and the proper transport response to a HIP mobility or
+   multi-homing address change, are outside the scope of this document.
 
 
 
@@ -207,22 +220,9 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-Nikander & Arkko          Expires May 31, 2004                  [Page 4]
+Nikander & Arkko        Expires October 14, 2004                [Page 4]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 2. Conventions used in this document
@@ -276,14 +276,14 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                  [Page 5]
+Nikander & Arkko        Expires October 14, 2004                [Page 5]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 3. Terminology
 
-   Preferred address An address that a host prefers to receive data.
+   Preferred address An address on which a host prefers to receive data.
 
    New preferred address A new preferred address sent by a host to its
       peers.  The reachability of the new preferred address often needs
@@ -292,11 +292,6 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
       used, and a new preferred address, whose reachability is being
       verified.
 
-   Address group A logical concept used to group IP addresses together.
-      If a host announces multiple address groups, each address group
-      will be associated with a different incoming Security Association.
-      Typically, but not necessarily, the address groups will match with
-      the physical interfaces that the hosts has.
 
 
 
@@ -332,9 +327,14 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                  [Page 6]
+
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004                [Page 6]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 4. Usage scenarios
@@ -388,9 +388,9 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                  [Page 7]
+Nikander & Arkko        Expires October 14, 2004                [Page 7]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
    multiple upper Internet Service Providers, or just because the site
@@ -444,19 +444,20 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                  [Page 8]
+Nikander & Arkko        Expires October 14, 2004                [Page 8]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 5. Overview of HIP basic mobility and multi-homing functionality
 
    HIP mobility and multi-homing is fundamentally based on the HIP
    architecture [4], where the transport and internetworking layers are
-   insulated from each other with the new host identity protocol layer.
-   In the HIP architecture, the transport layer sockets are bound to the
-   Host Identifiers (through HIT or LSI in the case of legacy APIs), and
-   the Host Identifiers are translated to the actual IP address.
+   decoupled from each other by an interposed host identity protocol
+   layer.  In the HIP architecture, the transport layer sockets are
+   bound to the Host Identifiers (through HIT or LSI in the case of
+   legacy APIs), and the Host Identifiers are translated to the actual
+   IP address.
 
    In the HIP base protocol specification [3], it is defined how two
    hosts exchange their Host Identifiers and establish a pair of ESP
@@ -472,7 +473,7 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    specification and nothing else must retain the ability to receive
    packets at their primary IP address; that is, those systems cannot
    change the IP address they are using without causing loss of
-   connectivity.
+   connectivity until a base exchange is performed from the new address.
 
 5.1 Informing the peer about multiple or changed address(es)
 
@@ -480,91 +481,141 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    parameter (see Section 7.1), that allows the hosts to exchange
    information about their IP address(es), and any changes in their
    address(es).  The logical structure created with REA parameters has
-   three levels: hosts, address groups, and addresses.  This is
-   illustrated in Figure 1.
+   three levels: hosts, IPsec Security Associations (SAs) indexed by
+   Security Parameter Indices (SPIs), and addresses.
+
+   The relation between these entities for an association negotiated as
+   defined in the base specification [3] is illustrated in Figure 1.
+
+              -<- SPI1a --                         -- SPI2a ->-
+      host1 <              > addr1a <---> addr2a <              > host2
+              ->- SPI2a --                         -- SPI1a -<-
+
+      Figure 1: Relation between hosts, SPIs, and addresses (base
+                             specification)
+
+   In Figure 1, host1 and host2 negotiate two IPsec SAs, and each host
+   selects the SPI value for its inbound SA.  The addresses addr1a and
+   addr2a are the source addresses that each host uses in the HIP
+
+
+
+Nikander & Arkko        Expires October 14, 2004                [Page 9]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
+
+   negotiation. These are the "preferred" (and only) addresses conveyed
+   to the peer for each SA; even though packets sent to any of the
+   hosts' interfaces can arrive on an inbound SPI, when a host sends
+   packets to the peer on an outbound SPI, it knows of a single
+   destination address (for host1, it uses addr2a to reach host2),
+   unless other mechanisms exist to learn of new addresses.
+
+   In general, the bindings that exist in an implementation
+   corresponding to this draft can be depicted as shown in Figure 2.  In
+   this figure, a host can have multiple inbound SPIs (and, not shown,
+   multiple outbound SPIs) between itself and another host.
+   Furthermore, each SPI may have multiple addresses associated with it.
+   These addresses bound to an SPI are not necessarily used as IPsec
+   selectors.  Rather, the addresses are those addresses that are
+   provided to the peer host, as hints for which addresses to use to
+   reach the host on that SPI.  The REA parameter is used to change the
+   set of addresses that a peer associates with a particular SPI.
 
                             address11
                           /
-                   group1 - address12
+                   SPI1   - address12
                  /
                 /           address21
-           host -- group2 <
+           host -- SPI2   <
                 \           address22
                  \
-                   group3 - address31
+                   SPI3   - address31
                           \
                             address32
 
-                                Figure 1
+  Figure 2: Relation between hosts, SPIs, and addresses (general case)
+
+   A host may establish any number of security associations (or SPIs)
+   with a peer.  The main purpose of having multiple SPIs is to group
+   the addresses into collections that are likely to experience fate
+   sharing.  For example, if the host needs to change its addresses on
+   SPI2, it is likely that both address21 and address22 will
+   simultaneously become obsolete.  In a typical case, such SPIs may
+   correspond with physical interfaces; see below.  Note, however, that
+   especially in the case of site multi-homing one of the addresses may
+   become unreachable while the other one still works.  In the typical
+   case, however, this does not require the host to inform its peers
+   about the situation, since even the non-working address still
+   logically exists.
+
+   In the usual case, the latencies experienced on distinct physical
+   interfaces may be considerably different.  Therefore, if multiple
+   interfaces were to share an SA, it would become fairly likely that
 
 
 
-
-Nikander & Arkko          Expires May 31, 2004                  [Page 9]
+Nikander & Arkko        Expires October 14, 2004               [Page 10]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
-   A host may claim to have any number of address group.  The purpose
-   this is to group the addresses into collections that are likely to
-   experience fate sharing.  For example, if the host needs to change
-   its addresses on group2, it is likely that both address21 and
-   address22 will simultaneously become obsolete.  In a typical case,
-   such groups may correspond with physical interfaces; see below.
-   Note, however, that especially in the case of site multi-homing one
-   of the addresses may become unreachable while the other one still
-   works.  In the typical case, however, this does not require the host
-   to inform its peers about the situation, since even the non-working
-   address still logically exists.
+   some of the packets would be discarded due to appearing to have been
+   received outside of the ESP reordering window.  Therefore, each
+   physical interface SHOULD have a separate SA, unless the ESP
+   reordering window is loose.
 
-   All addresses on a single group share an SA.  Each group has its own
-   SA.  Each physical interface SHOULD have a separate address group.
-   However, if a host really wants to share an SA between multiple
-   interfaces for a specific reason, a conforming host MAY group
-   together the addresses on two interfaces.
+   An address may appear on more than one SPI.  This creates no
+   ambiguity since the receiver will ignore the IP addresses as IPsec
+   selectors anyway.
 
-   In the usual case, the latencies experienced on distinct interfaces
-   may be considerably different.  Therefore, if multiple interfaces
-   were to share an SA, it would become fairly likely that some of the
-   packets would be discarded due to appearing to have been received
-   outside of the ESP reordering window.
+   A single REA parameter contains data only about one SPI. To signal
+   simultaneously changes on several SPIs, it is necessary to send
+   several REA parameters.  The packet structure supports this.
 
-   An address may appear on more than one group.  This creates no
-   ambiguity since each group must have a different SPI, and since the
-   receiver will ignore the IP addresses anyway.
-
-   A single REA parameter contains data only about one address group.
-   To signal simultaneously changes on several groups, it is necessary
-   to send several REA parameters.  The packet structure supports this.
-
-   If the REA parameter is sent in a NES packet and the sender wants to
-   receive an acknowledgement, it must explicitly indicate so.
-   Otherwise the recipient of the REA parameter may consider the REA as
+   If the REA parameter is sent in an UPDATE packet, then the receiver
+   will respond with an UPDATE response.  If the REA parameter is sent
+   in a NOTIFY packet, then the recipient may consider the REA as
    informational, and act only when it needs to activate a new address.
 
 5.2 Address verification
 
-   When a HIP host receives a group of IP addresses from another HIP
-   host in a REA, it does not necessarily know whether the other host is
+   When a HIP host receives a set of IP addresses from another HIP host
+   in a REA, it does not necessarily know whether the other host is
    actually reachable at the claimed addresses.  In fact, a malicious
    peer host may be intentionally giving a bogus addresses in order to
    cause a packet flood towards the given address [7].  Thus, before the
    HIP host can actually use a new address, it must first check that the
-   peer is reachable at the new address.  This is implemented by
-   requesting the peer to create a new outgoing SA, using a new random
-   SPI value, and waiting for data to appear on this new SA.
+   peer is reachable at the new address.
 
+   A simple technique to verify addresses is to send an UPDATE to the
+   host at the new address.  The UPDATE packet may include a NES
+   parameter if the host desires to establish a new SPI, possibly
+   because it determines that the new path may cause packets to fall
+   outside of the ESP reordering window.  Either the UPDATE reply or the
+   arrival of packets on the new SPI can be used to verify the address.
+   Alternatively, the UPDATE packet may only contain the UPDATE_ID
+   parameter, in which case the parameter is serving as a simple nonce
+   to test reachability.
 
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 10]
-
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
-
+   In certain networking scenarios, hosts may be trusted enough to
+   bypass performing address verification.  In such a case, the host MAY
+   bypass the address verification step and put the addresses into
+   immediate service.
 
 5.3 Address data structure and status
 
    In a typical implementation, each remote address is represented as a
    piece of state that contains the following data:
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 11]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
 
       the actual bit pattern representing the IPv4 or IPv6 address,
 
@@ -575,10 +626,10 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    The status is used to track the reachability of the address:
 
    UNVERIFIED indicates that the reachability of the address has not
-      been checked yet,
+      been yet,
 
    ACTIVE indicates that the reachability of the address has been
-      checked and the address has not been deprecated,
+      verified and the address has not been deprecated,
 
    DEPRECATED indicates that the address lifetime has expired
 
@@ -600,8 +651,11 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    DEPRECATED to UNVERIFIED The host receives a new lifetime for the
       address.
 
-   A DEPRECATED address MUST NOT be changed to ACTIVE without first
-   verifying its reachability.
+   If a host is verifying reachability with another host, a DEPRECATED
+   address MUST NOT be changed to ACTIVE without first verifying its
+   reachability.  If reachability is not being verified, then the
+   UNVERIFIED state is a transient state that transitions immediately to
+   ACTIVE.
 
 
 
@@ -612,39 +666,70 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 11]
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 12]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 6. Protocol overview
 
    The readdressing protocol is designed to be piggybacked on a number
    of existing HIP exchanges.  The main packets on which the REA
-   parameters are expected to be carried on are New SPI (NES) packets.
+   parameters are expected to be carried on are UPDATE packets.
    However, some implementations may want to experiment with sending REA
-   parameters also on other packets, such as R1 and I2.
+   parameters also on other packets, such as R1, I2, and NOTIFY.
 
    The protocol is an asymmetric protocol where one host, called the
    Mobile Host, informs another host, called the Peer host, about
-   changes of IP addresses on one of its address groups.  The protocol
-   consists of three steps, illustrated in Figure 2.
+   changes of IP addresses on one of its SPIs.  The protocol consists of
+   two or three steps, illustrated in Figure 3.
 
-   1.  The Mobile Host sends a REA parameter to the Peer host.
+   1.  The Mobile Host sends a REA parameter to the Peer Host.
 
-   2.  The Peer Host initiates an address check procedure by sending a
-       new SPI value to a new address.  Any packet that contains a new
-       SPI may be used, including NES, I2 and R2.  The new SPI value
-       MUST be random, i.e., the Mobile Host MUST NOT be able to guess
-       it.  When the Mobile Host receives the new SPI value, it creates
-       a new outgoing SA and starts sending data on it.
+   2.  If policy at the Peer Host does not dictate an address check, the
+       Peer Host updates its address bindings and immediately starts to
+       use the new addresses.  It also sends an UPDATE reply if the REA
+       arrived in an UPDATE packet. If policy dictates an address check,
+       the Peer Host initiates an address check procecure.  One way to
+       perform this check is to send a NES parameter to a new address.
+       Any packet that contains a NES may be used, including UPDATE, I2
+       and R2.  The new SPI value MUST be random, i.e., the Mobile Host
+       MUST NOT be able to guess it.  When the Mobile Host receives the
+       new SPI value, it creates a new outgoing SA and starts sending
+       data on it.
 
    3.  The Peer Host waits for new data to arrive on the new SA,
        indicated by the SPI.  Once it has succesfully received data on
-       the SA, it marks the new address as reachable.
+       the SA or a reply to its HIP packet, it marks the new address as
+       reachable.
 
 
-     Mobile host                         Peer host
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 13]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
+
+     Mobile Host                         Peer Host
 
                    REA parameter
         ----------------------------------->
@@ -652,48 +737,61 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
                       new SPI
         <-----------------------------------
 
-                   data on new SA
+            data on new SA, or UPDATE reply
         ----------------------------------->
 
-                                Figure 2
+                      Figure 3: Protocol overview
 
-   The idea of the address check procedure is that if the Mobile Host is
-   able to succesfully construct the new outgoing SA, using the new SPI
-   value, and send data on that SA, then it must have received the
-   second message in the protocol, and therefore it must be reachable at
-   the said address.
+   The idea of the address check procedure using incoming data is that
+   if the Mobile Host is able to succesfully construct the new outgoing
+   SA, using the new SPI value, and send data on that SA, then it must
+   have received the second message in the protocol, and therefore it
+   must be reachable at the said address.
 
-   XXX: Residual threat: The Mobile Host able to anticipate the KEY
-   index and guess the SPI value by trying out all?  Not really, I
+6.1 Initiating the protocol in UPDATE
 
-
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 12]
-
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
-
-
-   think, since it would require about 2^31 packets on the average...
-
-6.1 Initiating the protocol in NES
-
-   The most common case is to carry the readdress protocol on NES
+   The most common case is to carry the readdress protocol on UPDATE
    packets.  In this case, the Mobile Host initiates rekey (usually
    using the current Diffie-Hellman keys) and includes a REA parameter
-   on the initial NES packet.  The Peer host replies to this with a
-   reply NES packet, sent to the new preferred address.  As the Mobile
-   Host receives the reply NES, it starts using the new outgoing SA.
-   Finally, as the Peer Host receives traffic on the new incoming SA, it
-   marks the new address as valid and switches over to use the new
-   outgoing SA, associated with the new address.
+   on the initial UPDATE packet.  The Peer host replies to this with a
+   reply UPDATE packet, sent to the new preferred address.  As the
+   Mobile Host receives the reply UPDATE, it starts using the new
+   outgoing SA.  Finally, as the Peer Host receives traffic on the new
+   incoming SA, it marks the new address as valid and switches over to
+   use the new outgoing SA, associated with the new address.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 14]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
 
        Mobile host                                   Peer host
 
-                             NES with REA
+                             UPDATE with REA
                   ----------------------------------->
                                                      record additional addresses
                                                      (prepare new incoming SA)
-                      NES with new SPI in NES_INFO
+                      UPDATE with new SPI in NES
                   <-----------------------------------
    (prepare new incoming SA)
    (switch to new outgoing SA)
@@ -707,33 +805,41 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
              performed anyway, as a part of NES processing, and not
              new to the REA processing.
 
-                                Figure 3
+                     Figure 4: Protocol over UPDATE
 
-   Basically, the processing structure is equal to the current NES
-   processing other than that the Peer host records the additional
-   addresses from the REA parameter, sends the NES reply to the new
-   preferred address instead of the current preferred address, and
-   updates the preferred address as soon as it receives data on the new
-   SA.
 
 6.2 Initiating the protocol in R1 or I2
 
    A Responder host MAY include one or more REA parameters in the R1
    packet that it sends to the Initiator.  These parameters MUST be
    protected by the R1 signature.  If the R1 packet contains REA
-
-
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 13]
-
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
-
-
    parameters, the Initiator SHOULD send the I2 packet to the new
    preferred address.  The Responder MUST make sure that the puzzle
    solution is valid BOTH for the initial IP destination address used
    for I1 and for the new preferred address.  The I1 destination address
    and the new preferred address may be identical.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 15]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
 
             Initiator                                Responder
 
@@ -742,18 +848,14 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    record additional addresses
    change responder address
 
-                        I2 with new SPI in SPI_LSI
+                     I2 with new SPI in SPI parameter
                   ----------------------------------->
                                                      (process normally)
                                   R2
                   <-----------------------------------
    (process normally)
 
-                                Figure 4
-
-   XXX: What about R1 source address?  Most probably we want to allow it
-   to be any address to allow an optimized rendezvous server to send an
-   R1 instead of the actual host?
+                       Figure 5: Protocol over R1
 
    An Initiator MAY include one or more REA parameters in the I2 packet,
    independent on whether there was REA parameter(s) in the R1 or not.
@@ -768,7 +870,7 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
                   ----------------------------------->
                                                      (process normally)
                                                      record additional addresses
-                       R2 with new SPI in LSI_SPI
+                       R2 with new SPI in SPI parameter
                   <-----------------------------------
    (process normally)
 
@@ -776,69 +878,79 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
                   ------------------------------------>
                                                       (process normally)
 
-                                Figure 5
-
-
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 14]
-
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+                       Figure 6: Protocol over I2
 
 
 6.3 Explicit address check
 
    When the Peer Host wants to use a new address that has not yet been
-   checked, it must first run check the reachability of the address
+   checked, it SHOULD first run check the reachability of the address
    before sending any large amounts of data to the address.  See Section
    8.3.
 
+   This MAY be administratively overridden on specific HITs. Such
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 15]
+Nikander & Arkko        Expires October 14, 2004               [Page 16]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
+
+   administrative override MUST NOT be used in the public Internet when
+   the hosts belong to different administrative domains.  In other
+   words, XXX.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 17]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 7. Parameter and packet formats
@@ -850,11 +962,11 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        |             Type              |            Length             |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |P|         Reserved            |       Address Group ID        |
+       |                              SPI                              |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        |                       Address Lifetime                        |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                           Reserved                            |
+       |P|                          Reserved                           |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        |                            Address                            |
        |                                                               |
@@ -879,41 +991,36 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
    Length Length in octets, excluding Type and Length fields.
 
+   SPI Security Parameter Index (SPI) corresponding to Addresses
+
    P  Preferred address.  The first address in this REA is the new
       preferred address.
 
    Reserved Zero when sent, ignored when received.
 
-   Address Group ID Address Group ID, as defined by the sending host.
-      The Address Group IDs may have any values, and need not be
-      consequtively allocated.
-
-
-
-
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 16]
-
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
-
-
    Address Lifetime Address lifetime, in seconds.
 
-   Reserved Zero when sent, ignored when received.
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 18]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
 
    Address An IPv6 address or an IPv4-in-IPv6 format IPv4 address [2].
 
-   The Address Group ID field identifies the address group that this
-   parameter applies to.  It is implicitly qualified by the Host
-   Identity of the sending host.  The sending host is free to introduce
-   new Address Group IDs at will.  That is, if a received REA has a new
-   Address Group ID, it means that all the old addresses, assigned to
-   the other Address Groups, are also supposed to still work, while the
-   new addresses in the newly received REA are supposed to be associated
-   with a new Address Group.  On the other hand, if a received REA has
-   an Address Group ID that the receiver already knows about, it would
-   replace (all) the address(es) currently associated with the Address
-   Group with the new one(s).
+   The SPI field identifies the SPI that this parameter applies to.  It
+   is implicitly qualified by the Host Identity of the sending host.
+   The sending host is free to introduce new SPIs at will.  That is, if
+   a received REA has a new SPI, it means that all the old addresses,
+   assigned to the other SPIs, are also supposed to still work, while
+   the new addresses in the newly received REA are supposed to be
+   associated with a new SPI.  On the other hand, if a received REA has
+   an SPI that the receiver already knows about, it would replace (all)
+   the address(es) currently associated with the SPI with the new
+   one(s).
 
    The Address Lifetime indicates how long the following address is
    expected to be valid.  The lifetime is expressed in seconds. Each
@@ -929,59 +1036,34 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    IPv4-in-IPv6 format [2].  The latter format denotes a plain IPv4
    address that can be used to reach the Mobile Host.
 
-7.2 Modified NES_INFO parameter
+7.2 UPDATE packet with included REA
 
-   The NES_INFO parameter is defined in the base specification [3].  The
-   R-bit is defined to indicate wheter a NES is a reply to another NES
-   or not.  If a NES is not a reply, the receiver must reply.  If a NES
-   is an unexpected reply, the packet is simply dropped.
+   A single REA is included in an UPDATE packet before the NES and HMAC
+   parameters:
 
-   This specification changes the semantics of the R-bit slightly.  (It
-   is expected that this change may be later incorporated to the base
-   specification.)  The new semantics of the R-bit are defined as
-   follows.
-
-      R              Zero if the sender is requesting an explicit
-                     NES_INFO as a reply, one if no reply is needed.
-
-   Processing NES packets currently defines the following behaviour.
-
-
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 17]
-
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
-
-
-      If the system is in state E3 and the NES has the R-bit set, the
-      packet is silently dropped.
-
-   The new behaviour is defined as follows.
-
-      If the system is in state E3 and the NES_INFO has the R-bit set,
-      the system initiates unidirectional rekeying, as defined in
-      Section 8.3.
-
-
-7.3 NES packet with included REA
-
-   A single REA is included in a NES packet between the NES_INFO and
-   HMAC parameters:
-
-      IP ( HIP ( REA, NES_INFO, [ DIFFIE_HELLMAN, ] HMAC, HIP_SIGNATURE ) )
+      IP ( HIP ( REA, NES, [ DIFFIE_HELLMAN, ] HMAC, HIP_SIGNATURE ) )
 
    If there are multiple REA parameters to be sent in a single NES, each
-   of them must be matched with a NES_INFO parameter:
+   of them must be matched with a NES parameter:
 
-      IP ( HIP ( REA1, REA2, NES_INFO1, NES_INFO2, [ DH, ] ... ) )
+      IP ( HIP ( REA1, REA2, NES1, NES2, [ DH, ] ... ) )
 
 
-7.4 R1 and I2 packets with included REA
+7.3 R1 and I2 packets with included REA
 
    The REA parameter is included early in the R1 and I2 packets, since
    middle boxes may be interested in inspecting them.  If a REA is not
    present, a typical middle box is only interested in the SPI_LSI
    parameter and the signature.
+
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 19]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
 
       IP ( HIP ( REA,
                  BIRTHDAY_COOKIE,
@@ -992,21 +1074,51 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
                  HIP_SIGNATURE_2 ) )
 
 
-      IP ( HIP ( SPI_LSI,
+      IP ( HIP ( SPI,
                  REA,
                  BIRTHDAY_COOKIE,
                  DIFFIE_HELLMAN,
                  HIP_TRANSFORM,
                  ESP_TRANSFORM,
-                 ENCRYPTED { HOST_ID | HOST_ID_FQDN },
+                 ENCRYPTED { HOST_ID },
                  HIP_SIGNATURE ) )
 
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 18]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 20]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 8. Processing rules
@@ -1023,9 +1135,9 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
    When a host decided to inform its Peers about changes in its IP
    addresses, it has to decide how to group the various addresses into
-   groups, and whether to include any addresses on multiple groups.
-   Since each group is associated with a different Security Association,
-   the grouping policy may be based on IPsec replay protection
+   groups, and whether to include any addresses on multiple SPIs.  Since
+   each SPI is associated with a different Security Association, the
+   grouping policy may be based on IPsec replay protection
    considerations.  In the typical case, simply basing the grouping on
    actual kernel level physical and logical interfaces is often the best
    policy.  Virtual interfaces, such as IPsec tunnel interfaces or
@@ -1060,9 +1172,9 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 19]
+Nikander & Arkko        Expires October 14, 2004               [Page 21]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
    completed.
@@ -1075,9 +1187,8 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    When a host receives a REA parameter, it first performs the following
    operations:
 
-   1.  The host checks if the Address Group ID listed is a new one.  If
-       it is a new one, it creates a new logical address group that
-       contains no addresses.
+   1.  The host checks if the SPI listed is a new one.  If it is a new
+       one, it creates a new SPI that contains no addresses.
 
    2.  For each address listed in the REA parameter, check that the
        address is a legal unicast or anycast address. That is, the
@@ -1086,22 +1197,22 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
        host, since it may be allowed that the host runs HIP with itself.
 
    3.  For each address listed in the REA parameter, check if the
-       address is already listed at the address group.  If the address
-       is listed, its lifetime is updated.  If the status of the address
-       is DEPRECATED, the status is changed to UNVERIFIED.  If the
-       address is not listed, the address is added, and its status is
-       set to UNVERIFIED.
+       address is already bound to the SPI.  If the address is listed,
+       its lifetime is updated.  If the status of the address is
+       DEPRECATED, the status is changed to UNVERIFIED.  If the address
+       is not listed, the address is added, and its status is set to
+       UNVERIFIED.
 
-   4.  Mark all addresses at the address group that were NOT listed in
-       the REA parameter as DEPRECATED.
+   4.  Mark all addresses on the SPI that were NOT listed in the REA
+       parameter as DEPRECATED.
 
-   As a result, the address group now contains any addresses listed in
-   the REA parameter either as UNVERIFIED or ACTIVE, and any old
-   addresses not listed in the REA parameter as DEPRECATED.
+   As a result, the SPI now contains any addresses listed in the REA
+   parameter either as UNVERIFIED or ACTIVE, and any old addresses not
+   listed in the REA parameter as DEPRECATED.
 
-   Once the host has updated the address group, if the REA parameter
-   contains a new preferred address, the host SHOULD initiate a change
-   of the preferred address.  This usually requires that the host first
+   Once the host has updated the SPI, if the REA parameter contains a
+   new preferred address, the host SHOULD initiate a change of the
+   preferred address.  This usually requires that the host first
    verifies reachability of the address, and only then changes the
    address.  See Section 8.4.
 
@@ -1111,25 +1222,22 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
    at any time.  However, the exact method of verification depends on
    whether the host will next send a packet that contains a new SPI
    value or not.  That is, if the host is replying to a R1 with an I2,
-   to an I2 with an R2, or to a initial NES with a reply NES, then the
-   verification is piggybacked on the I2, R2, or reply NES packet.
+   to an I2 with an R2, or to a initial UPDATE with a reply UPDATE, then
+   the verification is piggybacked on the I2, R2, or reply UPDATE
+   packet.
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 20]
+Nikander & Arkko        Expires October 14, 2004               [Page 22]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
-   Otherwise the verification is initiated by sending an unidirectional
-   NES packet containing REA and NES_INFO parameters.
-
-   Any of the I2, R2, NES-reply or unidirectional-NES packets cause
-   either the creation or change of the outgoing SA in the Mobile Host.
-   Furthermore, as part of the process to send R2, NES-reply or
-   unidirectional-NES, the Peer Host MUST prepare a new incoming SA,
-   using the SPI value included in R2 or NES, so that it is prepared to
-   receive traffic on the new SA.
+   Any of the I2, R2, or UPDATE reply packets cause either the creation
+   or change of the outgoing SA in the Mobile Host.  Furthermore, as
+   part of the process to send R2, or UPDATE-reply, the Peer Host MUST
+   prepare a new incoming SA, using the SPI value included in R2 or
+   UPDATE, so that it is prepared to receive traffic on the new SA.
 
    Note that in the case of receiving a REA on an R1 and replying with
    an I2, receiving the corresponding R2 is sufficient for marking the
@@ -1141,7 +1249,7 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
      Mobile host                                   Peer host
 
                                                    prepare incoming SA
-                      new SPI in R2, or NES
+                      new SPI in R2, or UPDATE
                 <-----------------------------------
    switch to new outgoing SA
 
@@ -1169,18 +1277,18 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
        non-deprecated addresses as a new preferred address and
        continues.
 
-
-
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 21]
-
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
-
-
    3.  If the new preferred address has ACTIVE status, the preferred
        address is changed and the procedure succeeds.
 
    4.  If the new preferred address has UNVERIFIED status, the host
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 23]
+
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
+
+
        starts to verify its reachability.  Once the verification has
        succeeded, the preferred address change is completed, unless a
        new change has been initiated in the mean while.
@@ -1228,9 +1336,13 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 22]
+
+
+
+
+Nikander & Arkko        Expires October 14, 2004               [Page 24]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 9. Policy considerations
@@ -1284,9 +1396,9 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 23]
+Nikander & Arkko        Expires October 14, 2004               [Page 25]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 10. Security Considerations
@@ -1340,9 +1452,9 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 24]
+Nikander & Arkko        Expires October 14, 2004               [Page 26]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 11. IANA Considerations
@@ -1396,9 +1508,9 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 25]
+Nikander & Arkko        Expires October 14, 2004               [Page 27]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 12. Acknowledgments
@@ -1452,9 +1564,9 @@ Internet-Draft       HIP Mobility and Multi-Homing         December 2003
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 26]
+Nikander & Arkko        Expires October 14, 2004               [Page 28]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 Normative references
@@ -1466,8 +1578,8 @@ Normative references
         Architecture", RFC 2373, July 1998.
 
    [3]  Moskowitz, R., Nikander, P. and P. Jokela, "Host Identity
-        Protocol", draft-moskowitz-hip-08 (work in progress), October
-        2003.
+        Protocol", draft-moskowitz-hip-09 (work in progress), February
+        2004.
 
    [4]  Moskowitz, R., "Host Identity Protocol Architecture",
         draft-moskowitz-hip-arch-05 (work in progress), October 2003.
@@ -1508,9 +1620,9 @@ Normative references
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 27]
+Nikander & Arkko        Expires October 14, 2004               [Page 29]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 Informative references
@@ -1564,9 +1676,9 @@ Authors' Addresses
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 28]
+Nikander & Arkko        Expires October 14, 2004               [Page 30]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 Appendix A. Changes from previous versions
@@ -1587,9 +1699,14 @@ A.1 From -00 to -01
 
 A.2 From -01 to -02
 
-   The "interface" was renamed to "address group" to emphasize that the
-   logical address groups, as represented in REAs, do not necessarily
-   correspond to the physical interfaces the host has.
+   The "logical interface" concept was dropped, and the SA/SPI was
+   identified as the protocol component to which a HIP association binds
+   addresses to.
+
+   The RR was (again) made recommended, not mandatory, able to be
+   administratively overridden.
+
+   Alignment with base-10 draft (use of UPDATE and NOTIFY packets
 
 
 
@@ -1615,14 +1732,9 @@ A.2 From -01 to -02
 
 
 
-
-
-
-
-
-Nikander & Arkko          Expires May 31, 2004                 [Page 29]
+Nikander & Arkko        Expires October 14, 2004               [Page 31]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 Appendix B. Implementation experiences
@@ -1676,9 +1788,9 @@ Appendix B. Implementation experiences
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 30]
+Nikander & Arkko        Expires October 14, 2004               [Page 32]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
 Intellectual Property Statement
@@ -1706,7 +1818,7 @@ Intellectual Property Statement
 
 Full Copyright Statement
 
-   Copyright (C) The Internet Society (2003). All Rights Reserved.
+   Copyright (C) The Internet Society (2004). All Rights Reserved.
 
    This document and translations of it may be copied and furnished to
    others, and derivative works that comment on or otherwise explain it
@@ -1732,16 +1844,16 @@ Full Copyright Statement
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 31]
+Nikander & Arkko        Expires October 14, 2004               [Page 33]
 
-Internet-Draft       HIP Mobility and Multi-Homing         December 2003
+Internet-Draft       HIP Mobility and Multi-Homing            April 2004
 
 
    HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF
    MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
 
 
-Acknowledgement
+Acknowledgment
 
    Funding for the RFC Editor function is currently provided by the
    Internet Society.
@@ -1788,5 +1900,5 @@ Acknowledgement
 
 
 
-Nikander & Arkko          Expires May 31, 2004                 [Page 32]
+Nikander & Arkko        Expires October 14, 2004               [Page 34]
 
