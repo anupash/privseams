@@ -237,10 +237,14 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 			    0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04,
 			    0x14};
 
-	if (*c == 0)
-		len = 3;
-	else
-		len = 1;
+
+	HIP_DEBUG("private key len: %d\n",priv_klen);
+	//	if (*c == 0)
+	//len = 3;
+	//else
+	//len = 1;
+	HIP_ASSERT(*c!=0);
+	len = *c;
 
 	if (gcry_mpi_scan(&rsk.e, GCRYMPI_FMT_USG, c, &len) != 0) {
 		log_error("Error parsing RSA private e\n");
@@ -250,7 +254,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	c += len;
 
 	slice = (priv_klen - len) / 6;
-
+	HIP_DEBUG("slice:%d\n",slice);
 	len = 2 * slice;
 	if (gcry_mpi_scan(&rsk.n, GCRYMPI_FMT_USG, c, &len) != 0) {
 		log_error("Error parsing RSA private n\n");
@@ -332,8 +336,9 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		goto cleanup;
 	}
 	HIP_HEXDUMP("mpi scan", signature, len);
-	
+
  cleanup:
+	/* XX TODO: free msig */
 	if (buf)
 	  kfree(buf);
 	return err;
@@ -349,15 +354,17 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	RSA_public_key rpk = {0};
 	int len, slice;
 	u8 *c = public_key; /* XX FIXME: IS THIS CORRECT? */
-	u8 *buf = NULL;
+	u8 *buf = NULL, *debug_signature=NULL;
 	u8 asn_prefix[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B,
 			    0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04,
 			    0x14};
-
-	if (*c == 0) /* XX FIXME: WHAT'S THIS? */
-		len = 3;
-	else
-		len = 1;
+	HIP_DEBUG("public key len: %d\n",pub_klen);
+	//if (*c == 0) /* XX FIXME: WHAT'S THIS? */
+	//len = 3;
+	//else
+	//len = 1;
+	HIP_ASSERT(*c!=0);
+	len = *c;
 
 	if (gcry_mpi_scan(&rpk.e, GCRYMPI_FMT_USG, c, &len) != 0) {
 		log_error("Error parsing RSA public e\n");
@@ -367,16 +374,22 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	HIP_HEXDUMP("RSA public E", c, len);
 	c += len;
 
-	slice = (pub_klen - len);
+	/* XX CHECK: should this be divided by 6 ?*/
+	/*slice = (pub_klen - len);*/
+	/* XX CHECK: should slice affect len ? */
+	slice = (pub_klen - len) / 2;
+	len = 2 * slice;
+
+	HIP_DEBUG("slice:%d\n",slice);
 
 	if (gcry_mpi_scan(&rpk.n, GCRYMPI_FMT_USG, c, &len) != 0) {
 		log_error("Error parsing RSA public n\n");
 		goto cleanup;
 	}
 	HIP_HEXDUMP("RSA public N", c, len);
-
+	HIP_DEBUG("mpi_get_nbits:%d\n",mpi_get_nbits(rpk.n));
 	buf = kmalloc(mpi_get_nbits(rpk.n) / 8, GFP_KERNEL);
-	if (buf) {
+	if (!buf) {
 		HIP_ERROR("kmalloc failed\n");
 		err = -1;
 		goto cleanup;
@@ -385,12 +398,13 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	/* shalen + asn prefix len + 01 00 */
 	len = HIP_AH_SHA_LEN + 15 + 2;
 	slice = mpi_get_nbits(rpk.n) / 8 - len;
+	HIP_DEBUG("slice:%d,mpi_get_nbits:%d\n",slice,mpi_get_nbits(rpk.n));
 
 	c = buf;
 	*c = 1;
 	c++;
 
-	memset(c, 0xff, slice);
+	memset(c, 0xff, slice); 
 	c += slice;
 
 	*c = 0;
@@ -406,9 +420,32 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 		log_error("Error parsing signature data\n");
 		goto cleanup;
 	}
+
 	HIP_HEXDUMP("Signature data", buf, len);
 
-	public(result, data, &rpk);
+	result = mpi_alloc(mpi_get_nlimbs(rpk.n));
+	/* XX TODO: check return value */
+
+	/* added this, is this correct? */
+	len = mpi_get_nbits(rpk.n) / 8;
+	if (gcry_mpi_scan(&result, GCRYMPI_FMT_USG, signature, &len) != 0)
+	{
+		log_error("Error reading signature data\n");
+		goto cleanup;
+	}
+
+	public(result, data, &rpk); 
+
+	debug_signature = kmalloc(mpi_get_nbits(rpk.n) / 8, GFP_KERNEL);
+        /* XX TODO: check return value and free mem */
+	
+        if (gcry_mpi_print(GCRYMPI_FMT_USG, debug_signature, 
+			   &len, result) != 0) {
+		log_error("Error encoding RSA signature\n");
+		goto cleanup;
+	}
+	HIP_HEXDUMP("mpi scan", debug_signature, len);
+
 
 	len = mpi_get_nbits(rpk.n) / 8;
 	if (gcry_mpi_scan(&orig, GCRYMPI_FMT_USG, signature, &len) != 0)
@@ -416,15 +453,16 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 		log_error("Error reading signature data\n");
 		goto cleanup;
 	}
-
+	/* XX TODO: free result */
 	if (buf)
 	  kfree(buf);
 
 	return (mpi_cmp(orig, result));
 
  cleanup:
+	/* XX TODO: free result */
 	if (buf)
 	  kfree(buf);
-
+	
 	return -1;
 }

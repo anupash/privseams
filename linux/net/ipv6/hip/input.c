@@ -149,7 +149,7 @@ int hip_create_signature(void *buffer_start, int buffer_length,
 		goto out_err;
 	}
 
-	_HIP_HEXDUMP("create digest", sha1_digest, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("create digest", sha1_digest, HIP_AH_SHA_LEN);
 	_HIP_HEXDUMP("dsa key", (u8 *)(host_id + 1), ntohs(host_id->hi_length));
 
 	if (use_rsa) {
@@ -198,7 +198,6 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 	u8 *public_key = (u8 *) (host_id + 1);
 	int tmp, err;
 	unsigned char sha1_digest[HIP_AH_SHA_LEN];
-	size_t public_key_len;
 	int use_rsa = 0;
 
 	err = 0;
@@ -221,18 +220,21 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 		goto out_err;
 	}
 
-	_HIP_HEXDUMP("Verify hexdump", sha1_digest, HIP_AH_SHA_LEN);
+	HIP_HEXDUMP("Verify hexdump", sha1_digest, HIP_AH_SHA_LEN);
 
-	public_key_len = hip_get_param_contents_len(host_id) - 4;
-	public_key_len = ntohs(host_id->hi_length);
+	//public_key_len = hip_get_param_contents_len(host_id) - 4;
 
 	_HIP_HEXDUMP("verify key", public_key, public_key_len);
 
 	if (use_rsa) {
+		size_t public_key_len;
+		public_key_len = ntohs(host_id->hi_length) - 
+			sizeof(struct hip_host_id_key_rdata);
 		_HIP_HEXDUMP("Verify hexdump sig **", signature, 
 			     HIP_RSA_SIGNATURE_LEN);
 		tmp = hip_rsa_verify(sha1_digest, public_key, signature, 
 				     public_key_len);
+		HIP_HEXDUMP("public key",public_key,public_key_len);
 	} else {
 		_HIP_HEXDUMP("Verify hexdump sig **", signature, 
 			     HIP_DSA_SIGNATURE_LEN);
@@ -253,7 +255,6 @@ int hip_verify_signature(void *buffer_start, int buffer_length,
 			HIP_HEXDUMP("signature", signature, 
 				    HIP_DSA_SIGNATURE_LEN);
 		}
-		HIP_HEXDUMP("public key",public_key,public_key_len);
 		break;
 	default:
 		HIP_ERROR("Signature verification failed: %d\n", tmp);

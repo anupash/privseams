@@ -423,6 +423,8 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   int bn2bin_len;
   unsigned char *c;
 
+  /* see RFC 2537 */
+
   HIP_ASSERT(rsa != NULL); /* should not happen */
 
   *rsa_key_rr = NULL;
@@ -431,10 +433,14 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 	    BN_num_bytes(rsa->n),BN_num_bytes(rsa->d),BN_num_bytes(rsa->p),
 	    BN_num_bytes(rsa->q));
 
+  HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
   /* e=3, n=128, d=128, p=64, q=64 (n=d, p=q=n/2) */
   /* the u component does not exist in libgcrypt? */
-  rsa_key_rr_len = 3 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;
-
+  /*rsa_key_rr_len = 3 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;*/
+  //rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;
+  rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) +
+    BN_num_bytes(rsa->d) + BN_num_bytes(rsa->p) + BN_num_bytes(rsa->q);
+  
   HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
   *rsa_key_rr = malloc(rsa_key_rr_len);
   if (!*rsa_key_rr) {
@@ -445,11 +451,9 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
   memset(*rsa_key_rr, 0, rsa_key_rr_len);
 
-  HIP_ASSERT(BN_num_bytes(rsa->e) < 255);
-
   c = *rsa_key_rr;
   *c = (unsigned char) BN_num_bytes(rsa->e);
-  c++;
+  c++; // = e_length 
 
   len = BN_bn2bin(rsa->e, c);
   c += len;
