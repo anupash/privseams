@@ -89,8 +89,10 @@ output.c: output.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/output.c .
 input.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.h .
+preoutput.c: preoutput.h
 preoutput.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/preoutput.h .
+xfrm.c: xfrm.h
 xfrm.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/xfrm.h .
 #rsa.h:

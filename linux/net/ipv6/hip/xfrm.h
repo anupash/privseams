@@ -1,13 +1,15 @@
-#ifndef HIP_XFRMAPI_H
-#define HIP_XFRMAPI_H
+#ifndef HIP_XFRM_H
+#define HIP_XFRM_H
 
-#include <net/hip.h>
 #ifdef __KERNEL__
-#include <linux/xfrm.h>
-#include <net/xfrm.h>
+#  include <linux/xfrm.h>
+#  include <net/xfrm.h>
+#else
+#  include "netlink.h"
 #endif
-#include "debug.h"
+#include <net/hip.h>
 #include "hadb.h"
+#include "debug.h"
 
 #ifdef __KERNEL__
 /* For now, only the kernel module inserts the security policy */
@@ -31,5 +33,5 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi);
 
 int hip_delete_sa(u32 spi, struct in6_addr *dst);
 
-#endif /* HIP_XFRMAPI_H */
+#endif /* HIP_XFRM_H */
 

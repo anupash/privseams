@@ -6,9 +6,11 @@
 #ifndef HIP_BEET_H
 #define HIP_BEET_H
 
-#include <linux/in6.h>  /* struct in6_addr */
-#include <linux/list.h> /* struct list */
-#include "debug.h"
+#ifdef __KERNEL__
+#  include <linux/in6.h>  /* struct in6_addr */
+#  include <linux/list.h> /* struct list */
+#  include "debug.h"
+#endif /* __KERNEL__ */
 
 #define HIP_BEETDB_SIZE 53
 

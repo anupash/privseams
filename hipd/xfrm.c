@@ -1,6 +1,5 @@
 #include "xfrm.h"
-
-#include "netlink.h"
+#include "debug.h"
 
 static int hip_get_response(void) {
 	struct hip_work_order * resp;

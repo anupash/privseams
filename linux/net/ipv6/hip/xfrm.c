@@ -1,6 +1,6 @@
 #include "xfrm.h"
 
-// FIXME: this file is to be replace with an API to NETLINK_XFRM.
+// FIXME: this file is to be replaced with an API to NETLINK_XFRM.
 
 /**
  * hip_delete_spd - delete an SPD entry suitable for HIP
