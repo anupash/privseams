@@ -314,6 +314,10 @@ Note: the username must be non-root.
 Testing HIP Rendezvous Server/Mechanism
 =======================================
 
+The rendezvous server is similar to the home agent in Mobile IP. The
+rendezvous server provides a stable IP for the responder and forwards
+the initial I1 packet to the current location of the responder.
+
 Prerequisites:
 Kernel must be compiled with the following extra option(s) included.
 [*]  HIP: Rendezvous Mechanism 
@@ -321,39 +325,58 @@ Kernel must be compiled with the following extra option(s) included.
 The hipconf tool must support rvs option:
 hipconf rvs <hit> <ip>
 
-For now it is best if all the hosts involved in communications
-have the Rendezvous Mechanism option enabled. Although, for initiator
+For now it is best if all the hosts involved in communications have
+the Rendezvous Mechanism option enabled. Although, for the initiator
 this should not be a requirement.
 
 The participants:
-I = Initiator
-RVS = The Rendezvous server
-R = Responder
 
-The idea is that I wants to connect to R, but only knows RVS's IP address (and
-that RVS is representing R).
+  I = Initiator
+  RVS = The Rendezvous server
+  R = Responder
+
+The idea is that I wants to connect to R, but only knows RVS's IP
+address (and that RVS is representing R).
 
 Steps:
 -----
-1. R has to tell the RVS that it would like to use RVS's services.
-> hipconf rvs <RVS-hit> <RVS-ip>
 
-2. Send a TCP packet to the RVS-hit (to run the base exchange):
-> nc6 <RVS-hit> 12345 
-The port number does not matter. There need not be anything listening to that
-port.
+1. Start and initialize HIP module in each host:
 
-Now the Rendezvous Association is established.
+  each-host # modprobe hipmod
+  each-host # hipl/tools/hipconf add hi default
 
-3. Now the I will have to do the IP-HIT mapping:
-> hipconf add map <R-hit> <RVS-ip>
+2. R has to tell the RVS that it would like to use RVS's services:
+
+  responder # hipconf rvs <RVS-hit> <RVS-ip>
+
+3. Send a TCP packet to the RVS-hit (to run the base exchange):
+
+  responder # nc6 <RVS-hit> 12345 
+
+  The port number does not matter. There need not be anything listening
+  to that port.
+
+  Now the Rendezvous Association is established.
 
 4. Put some server listening at R:
-> nc6 -l -p 5000
 
-5. Start a connection at I:
-> nc6 <R-hit> 5000
+  responder # nc6 -l -p 5000
 
-6. Type some text...
+5. Now the initiator will have to do the IP-HIT mapping:
 
+  initiator # hipconf add map <R-hit> <RVS-ip>
 
+  (alternatively, you can use the HIP enabled resolver libary)
+
+6. Start a connection at I:
+
+  initiator # nc6 <R-hit> 5000
+
+7. Type some text...
+
+Notes:
+
+  * "double jump" scenario does not work yet with the implementation
+  * the rendezvous mechanism is not yet guaranteed to be interoperable with
+    other implementations than HIPL
