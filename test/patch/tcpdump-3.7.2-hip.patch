@@ -377,7 +377,7 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +	printf("(UPDATE ID=%u)", ntohs(p->update_id));
 +}
 +
-+#if 0
++#if 1
 +void hip_print_param_rea_info(const struct hip_tlv_common *tlv) {
 +	struct hip_rea_info *p = (struct hip_rea_info *) tlv;
 +	u_int tlv_len;
