@@ -98,6 +98,9 @@ void hip_hadb_delete_state(hip_ha_t *ha);
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 void hip_hadb_deactivate_hs_spi(uint32_t spi);
 
+void hip_hadb_dump_spis_in(hip_ha_t *entry);
+void hip_hadb_dump_spis_out(hip_ha_t *entry);
+
 #define hip_hold_ha(ha) do { \
 	atomic_inc(&ha->refcnt); \
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \

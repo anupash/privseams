@@ -855,7 +855,7 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 
 	memcpy(result, data, enc_len);
 
-	HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, enc_len);
+	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, enc_len);
 	switch(enc_alg) {
 	case HIP_TRANSFORM_3DES:
 		impl = impl_3des_cbc;

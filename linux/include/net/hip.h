@@ -838,7 +838,6 @@ struct hip_spi_out_item
 struct hip_hadb_state
 {
 	struct list_head     next_hit;
-	struct list_head     next_spi_list;
 
 	spinlock_t           lock;
 	atomic_t             refcnt;
@@ -851,21 +850,16 @@ struct hip_hadb_state
 
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
+
+	/* TODO: REMOVE peer_addr_list and peer_spi_list (spis_in and spis_out) */
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
 
-//  	uint32_t             spi_out;        /* outbound IPsec SA SPI */
-//	uint32_t             spi_in;         /* inbound IPsec SA SPI */
-//      uint32_t             new_spi_out;    /* new outbound IPsec SA SPI received in UPDATE */
-//	uint32_t             new_spi_in;     /* new inbound IPsec SA SPI when rekey was initiated */
-
-	/* test code for multiple SA support, will replace (new)spi_in and (new)spi_out */
 	struct list_head     spis_in;        /* SPIs for inbound and outbound SAs */
 	struct list_head     spis_out;
 
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address;
-//	struct list_head     ifindex2spi_map;/* inbound IPsec SA SPI mapping data */
 
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;

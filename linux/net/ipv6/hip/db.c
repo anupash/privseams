@@ -877,21 +877,25 @@ uint32_t hip_ifindex2spi_get_spi(hip_ha_t *entry, int ifindex)
 }
 
 /* bad name */
-uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi_out)
+//uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t prev_spi_out)
+uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
 	uint32_t spi = 0;
 
-	HIP_DEBUG("prev_spi_out=0x%x\n", prev_spi_out);
+	//	HIP_DEBUG("prev_spi_out=0x%x\n", prev_spi_out);
+	HIP_DEBUG("peer_update_id=%u\n", peer_update_id);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		HIP_DEBUG("test item: ifindex=%d spi=0x%x nes_spi_out=0x%x\n",
 			  item->ifindex, item->spi, item->nes_spi_out);
-		if (item->nes_spi_out == prev_spi_out) {
+		//if (item->nes_spi_out == prev_spi_out) {
+		if (item->seq_update_id == peer_update_id) {
 			HIP_DEBUG("found\n");
 			spi = item->spi;
 			break;
 		}
         }
+	HIP_DEBUG("returning SPI 0x%x\n", spi);
 	return spi;
 }
 
@@ -988,6 +992,7 @@ void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
         }
 }
 
+/* just sets the new_spi field */
 void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi)
 {
 	struct hip_spi_out_item *item, *tmp;
@@ -1015,7 +1020,7 @@ void hip_update_set_new_spi_out(hip_ha_t *entry, uint32_t spi, uint32_t new_spi)
 
 
 
-uint32_t hip_update_get_new_spi(hip_ha_t *entry, uint32_t peer_update_id)
+uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 {
 	struct hip_spi_in_item *item, *tmp;
 	uint32_t new_spi = 0;
@@ -1051,9 +1056,9 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int direction, int set
 				if (set_flags & 0x2)
 					item->update_state_flags |= update_flags_or;
 				if (nes && (set_flags & 0x4)) {
-					item->stored_received_nes.old_spi = nes->old_spi;
-					item->stored_received_nes.new_spi = nes->new_spi;
-					item->stored_received_nes.keymat_index = nes->keymat_index;
+					item->stored_received_nes.old_spi = ntohl(nes->old_spi);
+					item->stored_received_nes.new_spi = ntohl(nes->new_spi);
+					item->stored_received_nes.keymat_index = ntohs(nes->keymat_index);
 				}
 				if (set_flags & 0x8)
 					item->keymat_index = keymat_index;

@@ -335,7 +335,7 @@ int hip_verify_packet_signature(struct hip_common *msg,
  		goto out_err;
  	}
 
-	HIP_HEXDUMP("SIG", sig, hip_get_param_total_len(sig));
+	_HIP_HEXDUMP("SIG", sig, hip_get_param_total_len(sig));
 
  	len = ((u8 *) sig) - ((u8 *) msg);
  	hip_zero_msg_checksum(msg);
@@ -871,7 +871,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	/************ Encrypted ***********/
-	HIP_HEXDUMP("enc(host_id)", host_id_pub,
+	_HIP_HEXDUMP("enc(host_id)", host_id_pub,
 		    hip_get_param_total_len(host_id_pub));
 
 	err = hip_build_param_encrypted(i2, host_id_pub);
@@ -886,13 +886,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
  	host_id_in_enc = (char *) (enc_in_msg + 1);
 
-	HIP_HEXDUMP("hostidinmsg", host_id_in_enc,
+	_HIP_HEXDUMP("hostidinmsg", host_id_in_enc,
 		    hip_get_param_total_len(host_id_in_enc));
 	x = hip_get_param_total_len(host_id_in_enc);
-	HIP_HEXDUMP("encinmsg", enc_in_msg,
+	_HIP_HEXDUMP("encinmsg", enc_in_msg,
 		    hip_get_param_total_len(enc_in_msg));
-	HIP_HEXDUMP("enc key", &ctx->hip_enc_out.key, HIP_MAX_KEY_LEN);
-	HIP_HEXDUMP("IV", enc_in_msg->iv, 8);
+	_HIP_HEXDUMP("enc key", &ctx->hip_enc_out.key, HIP_MAX_KEY_LEN);
+	_HIP_HEXDUMP("IV", enc_in_msg->iv, 8);
 	err = hip_crypto_encrypted(host_id_in_enc,
 				   enc_in_msg->iv, /* IV: This is algorithm dependant, but we suck */
 				   transform_hip_suite,
@@ -903,8 +903,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_ERROR("Building of param encrypted failed %d\n", err);
 		goto out_err;
 	}
-	HIP_HEXDUMP("encinmsg 2", enc_in_msg, hip_get_param_total_len(enc_in_msg));
-	HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
+	_HIP_HEXDUMP("encinmsg 2", enc_in_msg, hip_get_param_total_len(enc_in_msg));
+	_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 
 	/* it appears as the crypto function overwrites the IV field, which
 	 * definitely breaks our 2.4 responder... Perhaps 2.6 and 2.4 cryptos
@@ -1647,7 +1647,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
 
 	/* Decrypt ENCRYPTED field*/
-	HIP_HEXDUMP("Recv. Key", &ctx->hip_enc_in.key, 24);
+	_HIP_HEXDUMP("Recv. Key", &ctx->hip_enc_in.key, 24);
 	param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM);
 	if (!param) {
 		err = -ENOENT;
@@ -1677,7 +1677,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 
-	HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
+	_HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
 		    hip_get_param_total_len(host_id_in_enc));
 
 	/* Verify sender HIT */
@@ -1922,6 +1922,10 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	}
 
 	HIP_DEBUG("Reached R2_SENT state\n");
+
+	hip_hadb_dump_spis_in(entry);
+	hip_hadb_dump_spis_out(entry);
+
  out_err:
 	/* ha is not NULL if hip_receive_i2() fetched the HA for us.
 	 * In that case we must not release our reference to it.
@@ -2075,8 +2079,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		HIP_ERROR("HMAC validation on R2 failed\n");
 		goto out_err;
 	}
-
-	HIP_DEBUG("HMAC in R2 ok\n");
+	_HIP_DEBUG("HMAC in R2 ok\n");
 
 	/* signature validation */
 
@@ -2165,7 +2168,7 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		entry->default_spi_out = spi_recvd;
 		HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 		HIP_DEBUG("add spi err ret=%d\n", err);
-		hip_hadb_dump_spi_list(entry, NULL);
+		//hip_hadb_dump_spi_list(entry, NULL);
 
 		err = hip_ipv6_devaddr2ifindex(&skb->nh.ipv6h->daddr);
 		if (err != 0) {
@@ -2183,6 +2186,9 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 		hip_finalize_sa(&r2->hitr, spi_in);
 	}
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+
+	hip_hadb_dump_spis_in(entry);
+	hip_hadb_dump_spis_out(entry);
 
  out_err:
 	if (ctx)
