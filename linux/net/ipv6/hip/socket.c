@@ -5,7 +5,7 @@
  * Authors:
  *          Miika Komu <miika@iki.fi>
  *          Anthony D. Joseph <adj@hiit.fi>
- *
+ *          Mika Kousa <mkousa@cc.hut.fi>
  */
 
 #include "socket.h"
@@ -1457,13 +1457,14 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 {
 	hip_peer_opaque_t *op = (hip_peer_opaque_t *)opaque;
-	hip_peer_entry_opaque_t *peer_entry;
+	hip_peer_entry_opaque_t *peer_entry = NULL;
 	hip_peer_addr_opaque_t *addr, *last = NULL;
 	struct hip_peer_addr_list_item *s;
 	struct hip_spi_out_item *spi_out, *tmp;
 	char buf[46];
 	struct hip_lhi lhi;
 	int err = 0;
+	int found_addrs = 0;
 
 	/* Start by locking the entry */
 	HIP_LOCK_HA(entry);
@@ -1482,21 +1483,23 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 		goto error;
 	}
 	peer_entry->count = 0;    /* Initialize the number of addrs to 0 */
+	peer_entry->host_id = NULL;
+	ipv6_addr_copy(&(peer_entry->hit), &(lhi.hit)); /* Record the peer hit */
+	peer_entry->addr_list = NULL;
 	peer_entry->next = NULL; 
 
-	/* Record the peer hit */
-	memcpy(&(peer_entry->hit), &(lhi.hit), sizeof(struct in6_addr));
-
 	if (!op->head) {          /* Save first list entry as head and tail */
-	  op->head = peer_entry;
-	  op->end = peer_entry;
+		op->head = peer_entry;
+		op->end = peer_entry;
 	} else {                  /* Add entry to the end */
-	  op->end->next = peer_entry;
-	  op->end = peer_entry;
+		op->end->next = peer_entry;
+		op->end = peer_entry;
 	}
 
 	/* Record each peer address */
-	//list_for_each_entry(s, &entry->peer_addr_list, list) {
+	
+	HIP_DEBUG("TODO: test bex_address if default_spi_out is 0\n");
+
 	list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
 		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
 			hip_in6_ntop(&(s->address), buf);
@@ -1510,9 +1513,8 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 				goto error;
 			}
 			addr->next = NULL;
-
 			/* Record the peer addr */
-			memcpy(&(addr->addr), &(s->address),sizeof(struct in6_addr));
+			ipv6_addr_copy(&addr->addr, &s->address);
 		
 			if (last == NULL) {  /* First entry? Add to head and tail */
 				peer_entry->addr_list = addr;
@@ -1522,11 +1524,24 @@ static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 			last = addr;
 
 			peer_entry->count++;   /* Increment count in peer entry */
+			found_addrs = 1;
 		}
 	}
-	op->count++;               /* Increment count of entries */
+
+	/* Increment count of entries and connect the address list to
+	 * peer entry only if addresses were copied */
+	if (!found_addrs) {
+		err = -ENOMSG;
+		HIP_DEBUG("entry has no usable addresses\n");
+	}
+
+	op->count++; /* increment count on error also so err handling works */
 		
  error:
+	//HIP_DEBUG("*** TODO: on error, kfree kmalloced addresses here ? ***\n");
+	_HIP_DEBUG("op->end->next=0x%p\n", op->end->next);
+	_HIP_DEBUG("op->end=0x%p\n", op->end);
+
 	HIP_UNLOCK_HA(entry);
 	return err;
 }
@@ -1552,6 +1567,9 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 	hip_peer_addr_opaque_t *addr, *anext;
 	
 	HIP_DEBUG("\n");
+
+	/* Initialize the data structure for the peer list */
+	memset(&pr, 0, sizeof(hip_peer_opaque_t));
 	
 	/* Extra consistency test */
 	if (hip_get_msg_type(msg) != SO_HIP_GET_PEER_LIST) {
@@ -1560,9 +1578,6 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 		goto out_err;
 	}
 
-	/* Initialize the data structure for the peer list */
-	memset(&pr, 0, sizeof(hip_peer_opaque_t));
-
 	/* Iterate through the hadb db entries, collecting addresses */
 	fail = hip_for_each_ha(hip_hadb_list_peers_func, &pr);
 	if (fail) {
@@ -1570,7 +1585,12 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 		HIP_ERROR("Peer list creation failed\n");
 		goto out_err;
 	}
-
+	HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
+	if (pr.count <= 0) {
+		HIP_ERROR("No usable entries found\n");
+		err = -EINVAL;
+		goto out_err;
+	}
 	/* Complete the list by iterating through the list and
 	   recording the peer host id. This is done separately from
 	   list creation because it involves calling a function that
@@ -1635,7 +1655,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 
 	        /********** HIT *********/
 
-		err = hip_build_param_contents(msg, &(entry->hit),
+		err = hip_build_param_contents(msg, &entry->hit,
 					       HIP_PARAM_HIT,
 					       sizeof(struct in6_addr));
  	        if (err) {
@@ -1646,7 +1666,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 
 		/********** IP ADDR LIST COUNT *********/
 
-		err = hip_build_param_contents(msg, &(entry->count), 
+		err = hip_build_param_contents(msg, &entry->count, 
 					       HIP_PARAM_UINT,
 					       sizeof(unsigned int));
 		if (err) {
@@ -1659,7 +1679,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 		for (j = 0; j < entry->count; j++, addr = addr->next) {
 		        /********** IP ADDR *********/
 
-		        err=hip_build_param_contents(msg, &(addr->addr),
+		        err=hip_build_param_contents(msg, &addr->addr,
 						     HIP_PARAM_IPV6_ADDR, 
 						     sizeof(struct in6_addr));
 			if (err) {
@@ -1673,20 +1693,26 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
  out_err:
 	/* Recurse through structure, freeing memory */
 	entry = pr.head;
+	_HIP_DEBUG("free mem, pr.head=0x%p\n", pr.head);
 	while (entry) {
-	     next = entry->next;
-	     if (entry->host_id)
-	       kfree(entry->host_id);
-	     addr = entry->addr_list;
-	     while (addr) {
-	       anext = addr->next;
-	       kfree(addr);
-	       addr = anext;
-	     }
-	     kfree(entry);
-	     entry = next;
+		_HIP_DEBUG("entry=0x%p\n", entry);
+		next = entry->next;
+		_HIP_DEBUG("next=0x%p\n", next);
+		_HIP_DEBUG("entry->host_id=0x%p\n", entry->host_id);
+		if (entry->host_id)
+			kfree(entry->host_id);
+		addr = entry->addr_list;
+		_HIP_DEBUG("addrlist=0x%p\n", addr);
+		while (addr) {
+			_HIP_DEBUG("addr=0x%p\n", addr);
+			anext = addr->next;
+			kfree(addr);
+			addr = anext;
+		}
+		kfree(entry);
+		entry = next;
 	}
-
+	_HIP_DEBUG("done freeing mem, err = %d\n", err);
 	return err;
 }
 

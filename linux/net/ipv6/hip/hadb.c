@@ -1666,23 +1666,18 @@ uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
  */
 int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 {
-	int i, fail;
+	int i, fail = 0;
 	hip_ha_t *this, *tmp;
 
 	if (!func)
 		return -EINVAL;
 
-	fail = 0;
-
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
 			hip_hold_ha(this);
-
 			fail = func(this, opaque);
-
 			hip_put_ha(this);
-
 			if (fail)
 				break;
 		}

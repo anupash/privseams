@@ -92,11 +92,16 @@ int main(int argc,char *argv[]) {
   /* Use the following flags to use only the kernel list for name resolution
    *   hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
    */
+hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
 
   /* lookup host */
   err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
   if (err) {
     HIP_ERROR("getaddrinfo failed (%d): %s\n", err, gepi_strerror(err));
+    goto out;
+  }
+  if (!res) {
+    HIP_ERROR("NULL result, TODO\n");
     goto out;
   }
 
