@@ -391,8 +391,8 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 	struct in6_addr *own_addr;
 	struct in6_addr *dst_addr;
 	int err = 0;
-	struct in6_addr *rcv_hit;
-
+	struct in6_addr *rcv_hit, *sender_hit;
+       
 	HIP_DEBUG("\n");
 
 	own_addr = &skb->nh.ipv6h->daddr;
@@ -402,8 +402,10 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 		dst_addr = dst_ip;
 	}
 
+	sender_hit = &(((struct hip_common *)skb->h.raw)->hits);
 	rcv_hit = &(((struct hip_common *)skb->h.raw)->hitr);
-	HIP_DEBUG_HIT("XMITR1, receiver_hit: ", rcv_hit);
+	//hip_print_hit("XMITR1, receiver_hit: \n", rcv_hit);
+	//hip_print_hit("XMITR1, sender_hit: \n",sender_hit);
 
 	/* dst_addr is the IP address of the Initiator... */
 	r1pkt = hip_get_r1(dst_addr, own_addr, rcv_hit);

@@ -419,6 +419,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
  	u8 *signature = NULL;
+	struct hip_lhi lhi;
+	
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+	memcpy(&(lhi.hit), src_hit,sizeof(struct in6_addr));
+	//ipv6_addr_copy(&lhi.hit, src_hit);
 
  	msg = hip_msg_alloc();
  	if (!msg) {
@@ -446,14 +451,16 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	   and extract the public key from the private key. The public key is
  	   needed for writing the host id parameter in R1. */
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
+	//host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
  	if (!host_id_private) {
  		HIP_ERROR("Could not acquire localhost host id\n");
  		goto out_err;
  	}
 	HIP_DEBUG("GOTID:%d",hip_get_param_total_len(host_id_private));
 
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+	host_id_pub = hip_get_localhost_public_key(&lhi);
+	//host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;

@@ -677,6 +677,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	u8 *signature = NULL;
 //	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_spi_in_item spi_in_data;
+	
 	HIP_DEBUG("\n");
 
 	HIP_ASSERT(entry);
@@ -1323,6 +1324,7 @@ int hip_receive_r1(struct sk_buff *skb)
 
 	entry = hip_hadb_find_byhit(&hip_common->hits);
 	HIP_DEBUG_HIT("RECEIVE R1 SENDER HIT: ", &hip_common->hits);
+	HIP_DEBUG_HIT("RECEIVE R1 RECEIVER HIT: ", &hip_common->hitr);
 	if (!entry) {
 		err = -EFAULT;
 		HIP_ERROR("Received R1 with no local state. Dropping\n");
@@ -1794,6 +1796,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
  	
  	if (ipv6_addr_cmp(&hit, &i2->hits) != 0) {
  		HIP_ERROR("Sender's HIT does not match advertised public key\n");
+		//HIP_DEBUG_HIT("hit1", &hit);
+		//HIP_DEBUG_HIT("hit2", &i2->hits);
  		err = -EINVAL;
  		goto out_err;
 	}

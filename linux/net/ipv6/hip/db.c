@@ -550,6 +550,12 @@ struct hip_host_id *hip_get_any_localhost_host_id(int algo)
 	return result;
 }
 
+struct hip_host_id *hip_get_localhost_host_id(struct hip_lhi *lhi)
+{
+	struct hip_host_id *result;
+	result = hip_get_host_id(&hip_local_hostid_db, lhi);
+	return result;
+}
 
 /**
  * hip_get_any_localhost_dsa_public_key - Self documenting.
@@ -708,6 +714,20 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo) {
 	return hi;
 }
 
+struct hip_host_id *hip_get_localhost_public_key(struct hip_lhi *lhi)
+{
+	struct hip_host_id *result = NULL;
+	struct hip_host_id *hi_pub = NULL;
+	result = hip_get_host_id(&hip_local_hostid_db, lhi);
+	if (hip_get_host_id_algo(result) == HIP_HI_RSA) {
+		hi_pub = hip_get_any_localhost_rsa_public_key();
+	} else if (hip_get_host_id_algo(result) == HIP_HI_DSA) {
+		hi_pub = hip_get_any_localhost_dsa_public_key();
+	} else
+		HIP_ERROR("Unsupported algorithm:%d\n", 
+			  hip_get_host_id_algo(result));
+	return hi_pub;
+} 
 
 /* PROC_FS FUNCTIONS */
 
