@@ -879,22 +879,21 @@ struct hip_cookie_entry {
 };
 #endif /* __KERNEL__ */
 
-struct hip_work_order {
+struct hip_work_order_hdr {
 	int type;
 	int subtype;
-     struct hip_common *msg;
+	struct in6_addr src_addr, dst_addr;
+};
+
+struct hip_work_order {
+	struct hip_work_order_hdr hdr;
+	struct hip_common *msg;
 #ifdef __KERNEL__
 #ifndef CONFIG_HIP_USERSPACE
 	struct list_head queue;
 #endif
 #endif
 	void (*destructor)(struct hip_work_order *hwo);
-};
-
-struct hip_work_order_hdr {
-	int type;
-	int subtype;
-     struct hip_common msg;
 };
 
 #ifdef __KERNEL__

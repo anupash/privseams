@@ -13,6 +13,7 @@ CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE
 
 include_HEADERS = hipd.h
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES += -I$(HIPL_LIBINET6)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = hipd.c netlink.c debug.c workqueue.c builder.c
