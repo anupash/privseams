@@ -14,11 +14,12 @@ import java.net.SocketAddress;
 import java.net.InetSocketAddress;
 
 /**
- * A socket implementation using HIP as its protocol.  This class
- * implements a HIP-specific socket in the standard Java manner, by
- * extending the {@link SocketImpl} class.  An application should
- * never create objects of this class directly, but rather install the
- * {@link HipSocketImplFactory} as the socket creator.
+ * A socket implementation using HIP as its protocol.  This class is
+ * for use with the JIP global API.  It implements a HIP-specific
+ * socket in the standard Java manner, by extending the {@link
+ * SocketImpl} class.  An application should never create objects of
+ * this class directly, but rather install the {@link
+ * HipSocketImplFactory} as the socket creator.
  *
  * @author Jaakko Kangasharju
  */
@@ -68,9 +69,23 @@ public class HipSocketImpl extends SocketImpl {
 
     public native void create (boolean stream);
 
-    private native void bind (HipAddress address, int port);
+    /**
+     * Bind this socket to a HIP endpoint and a port.  This is the
+     * lowest-level method for binding in this class.
+     *
+     * @param address the HIP endpoint to bind to
+     * @param port the port number to bind to
+     */
+    public native void bind (HipAddress address, int port);
 
-    private native void connect (HipAddress address, int port);
+    /**
+     * Connect this socket to a HIP endpoint and a port.  This is the
+     * lowest-level method for connecting in this class.
+     *
+     * @param address the HIP endpoint to connect to
+     * @param port the port number to connect to
+     */
+    public native void connect (HipAddress address, int port);
 
     public void bind (InetAddress address, int port) {
 	bind(HipAddress.getByAddress(address), port);

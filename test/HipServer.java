@@ -6,20 +6,32 @@ import java.io.OutputStream;
 import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.io.InputStreamReader;
+import javax.net.ServerSocketFactory;
 import jip.HipSocketImplFactory;
+import jip.HipServerSocketFactory;
 
 public class HipServer {
 
     public static void main (String[] args) {
 	try {
-	    ServerSocket.setSocketFactory(new HipSocketImplFactory());
-	    Socket.setSocketImplFactory(new HipSocketImplFactory());
+	    // begin GLOB
+	    //ServerSocket.setSocketFactory(new HipSocketImplFactory());
+	    //Socket.setSocketImplFactory(new HipSocketImplFactory());
+	    // end GLOB
+	    // begin PC
+	    ServerSocketFactory hipFactory = new HipServerSocketFactory();
+	    // end PC
 	    if (args.length != 1) {
 		System.err.println("Usage: HipServer <port>");
 		System.exit(1);
 	    }
 	    int port = Integer.parseInt(args[0]);
-	    ServerSocket ss = new ServerSocket();
+	    // begin GLOB
+	    //ServerSocket ss = new ServerSocket();
+	    // end GLOB
+	    // begin PC
+	    ServerSocket ss = hipFactory.createServerSocket();
+	    // end PC
 	    ss.bind(new InetSocketAddress("", port));
 	    System.out.println(ss.toString());
 	    Socket s = ss.accept();

@@ -7,10 +7,12 @@ import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.io.InputStreamReader;
 import javax.net.SocketFactory;
+import jip.HipSocket;
+import jip.HipAddress;
 import jip.HipSocketImplFactory;
 import jip.HipSocketFactory;
 
-public class HipClient {
+public class HipUserkeyClient {
 
     public static void main (String[] args) {
 	try {
@@ -20,21 +22,26 @@ public class HipClient {
 	    // begin PC
 	    SocketFactory hipFactory = new HipSocketFactory();
 	    // end PC
-	    if (args.length != 3) {
+	    String file = "/etc/hip/hip_host_dsa_key";
+	    if (args.length < 3 || args.length > 4) {
 		System.err.println("Usage: HipClient <host> <port> "
-				   + "<localport>");
+				   + "<localport> [<keyfile>]");
 		System.exit(1);
 	    }
 	    String host = args[0];
 	    int port = Integer.parseInt(args[1]);
 	    int localport = Integer.parseInt(args[2]);
+	    if (args.length == 4) {
+		file = args[3];
+	    }
 	    // begin GLOB
 	    //Socket s = new Socket();
 	    // end GLOB
 	    // begin PC
-	    Socket s = hipFactory.createSocket();
+	    HipSocket s = (HipSocket) hipFactory.createSocket();
 	    // end PC
-	    s.bind(new InetSocketAddress("", localport));
+	    HipAddress addr = HipAddress.getOwnFromFile(file);
+	    s.bind(addr, localport);
 	    s.connect(new InetSocketAddress(host, port));
 	    System.out.println(s.toString());
 	    InputStream is = s.getInputStream();

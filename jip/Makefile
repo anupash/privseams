@@ -12,10 +12,13 @@ ifndef JAVA_HOME
 JAVA_HOME=/usr/lib/j2se/1.4
 endif
 
-JAVA_SOURCES=HipAddress.java HipSocketImpl.java HipSocketImplFactory.java NativeInputStream.java NativeOutputStream.java
-C_SOURCES=hip-address.c hip-socket-impl.c native-stream.c
+JAVA_SOURCES=HipAddress.java HipSocket.java HipSocketFactory.java \
+	HipServerSocket.java HipServerSocketFactory.java HipSocketImpl.java \
+	HipSocketImplFactory.java NativeInputStream.java \
+	NativeOutputStream.java
+C_SOURCES=hip-address.c hip-socket-impl.c hip-socket.c native-stream.c
 JAVA_CLASSES=$(patsubst %.java,jip/%.class,$(JAVA_SOURCES))
-JAVA_HEADERS=jip_HipAddress.h jip_HipSocketImpl.h jip_NativeInputStream.h jip_NativeOutputStream.h
+JAVA_HEADERS=jip_HipAddress.h jip_HipSocketImpl.h jip_HipSocket.h jip_NativeInputStream.h jip_NativeOutputStream.h
 CFLAGS+=-Wall -W -I../tools -I../libinet6/include -I.. -I../linux/include -I../linux/net/ipv6/hip -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux
 
 LDFLAGS+=-L../libinet6
@@ -39,11 +42,12 @@ $(JAVA_HEADERS): jip_%.h: jip.jar %.class
 
 apidoc: $(APIDOCDIR)/index.html
 
-$(APIDOCDIR)/index.html: $(JAVA_SOURCES)
+$(APIDOCDIR)/index.html: $(JAVA_SOURCES) package.html
 	mkdir -p $(APIDOCDIR)
-	javadoc -d $(APIDOCDIR) -use -author -doctitle "The HIPL Java API" \
-		-windowtitle "The HIPL Java API" -linkoffline \
-		http://java.sun.com/j2se/1.4/docs/api . $(JAVA_SOURCES)
+	cd ..; javadoc -d jip/$(APIDOCDIR) -use -author -doctitle \
+		"The HIPL Java API" -windowtitle "The HIPL Java API" \
+		-linkoffline http://java.sun.com/j2se/1.4/docs/api jip \
+		-sourcepath . jip
 
 clean:
 	rm -f *.class jip.jar libjip.so jip_*.h

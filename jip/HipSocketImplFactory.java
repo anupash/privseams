@@ -9,18 +9,10 @@ import java.net.SocketImpl;
 import java.net.SocketImplFactory;
 
 /**
- * A socket factory to use for getting HIP sockets.  An application
- * wishing to use HIP needs to install an object of this class as the
- * socket factory to use when creating new sockets.  For any network
- * application this requires code like
- * <pre>
- * HipSocketImplFactory factory = new HipSocketImplFactory();
- * Socket.setSocketImplFactory(factory);
- * </pre>
- * Code using a {@link java.net.ServerSocket} also requires
- * <pre>
- * ServerSocket.setSocketFactory(factory);
- * </pre>
+ * A socket factory for getting HIP socket implementations.  This
+ * class is for use with the JIP global API.  It creates {@link
+ * SocketImpl} objects according to the socket extensibility interface
+ * in the {@link java.net} package.
  *
  * @author Jaakko Kangasharju
  */
