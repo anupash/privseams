@@ -2377,7 +2377,7 @@ int hip_handle_i1(struct hip_common *i1,
  *
  * Returns: zero on success, or negative error value on error.
  */
-int hip_receive_i1(struct hip_common *hip_i1
+int hip_receive_i1(struct hip_common *hip_i1,
 		   struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr)
 {
@@ -2869,6 +2869,6 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 void hip_hwo_input_destructor(struct hip_work_order *hwo)
 {
 	if (hwo && hwo->msg) {
-		kfree(msg);
+		kfree(hwo);
 	}
 }
