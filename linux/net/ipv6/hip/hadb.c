@@ -6,7 +6,9 @@
 #include "hashtable.h"
 #include "builder.h"
 
-#include <net/ipv6.h>
+#ifdef __KERNEL__
+#  include <net/ipv6.h>
+#endif /* __KERNEL__ */
 
 
 HIP_HASHTABLE hadb_hit;

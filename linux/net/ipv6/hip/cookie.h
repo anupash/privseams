@@ -1,8 +1,11 @@
 #ifndef HIP_COOKIE_H
 #define HIP_COOKIE_H
 
+#ifdef __KERNEL__
 #include <linux/types.h>
 #include <net/ipv6.h>
+#endif /* __KERNEL__ */
+
 #include <net/hip.h>
 
 struct hip_r1entry {

@@ -4,10 +4,12 @@
  * - Mika Kousa <mkousa@cc.hut.fi>
  */
 
-#include <net/hip.h>
-#include <linux/xfrm.h>
-#include <net/xfrm.h>
+#ifdef __KERNEL__
+#  include <linux/xfrm.h>
+#  include <net/xfrm.h>
+#endif /* __KERNEL__ */
 
+#include <net/hip.h>
 #include "update.h"
 #include "hip.h"
 #include "security.h"

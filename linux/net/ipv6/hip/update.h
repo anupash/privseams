@@ -1,8 +1,11 @@
 #ifndef HIP_UPDATE_H
 #define HIP_UPDATE_H
 
+#ifdef __KERNEL__
+#  include <net/ipv6.h>
+#endif /* __KERNEL__ */
+
 #include <net/hip.h>
-#include <net/ipv6.h>
 
 /* int hip_update_spi_waitlist_ispending(uint32_t spi); */
 /* void hip_update_spi_waitlist_delete_all(void); */

@@ -297,6 +297,13 @@ typedef uint16_t in_port_t;
 
 #endif /* __KERNEL__ */
 
+#ifdef __KERNEL__
+#  define HIP_MALLOC(size, flags)  kmalloc(size, flags)
+#  define HIP_FREE(obj)            kfree(obj)
+#else /* userspace */
+#  define HIP_MALLOC(size, flags)  malloc(size)
+#  define HIP_FREE(obj)            free(obj)
+#endif /* __KERNEL__ */
 
 #define HIP_AH_SHA_LEN                 20
 
@@ -715,7 +722,7 @@ struct hip_packet_dh_sig
 
 struct hip_context
 {
-	struct sk_buff *skb_in;         /* received skbuff */
+	//struct sk_buff *skb_in;         /* received skbuff */
 	struct hip_common *input;       /* received packet */
 	struct hip_common *output;      /* packet to be built and sent */
 
@@ -869,22 +876,27 @@ struct hip_cookie_entry {
 	struct in6_addr initiator;
 	struct in6_addr responder;
 };
+#endif /* __KERNEL__ */
 
 struct hip_work_order {
 	int type;
 	int subtype;
-	void *arg1;
-	void *arg2;
-	union {
-		char ch[8];
-		uint32_t u32[2];
-		uint64_t u64;
-	} arg;
+     struct hip_common *msg;
+#ifdef __KERNEL__
+#ifndef CONFIG_HIP_USERSPACE
 	struct list_head queue;
+#endif
+#endif
 	void (*destructor)(struct hip_work_order *hwo);
 };
 
+struct hip_work_order_hdr {
+	int type;
+	int subtype;
+     struct hip_common msg;
+};
 
+#ifdef __KERNEL__
 struct hip_host_id_entry {
 /* this needs to be first (list_for_each_entry, list 
    head being of different type) */

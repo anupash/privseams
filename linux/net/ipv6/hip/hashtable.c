@@ -1,8 +1,10 @@
 #include "hashtable.h"
 #include "debug.h"
 
-#include <linux/interrupt.h>
-#include <linux/list.h>
+#ifdef __KERNEL__
+#  include <linux/interrupt.h>
+#  include <linux/list.h>
+#endif /* __KERNEL__ */
 
 #define hip_ht_get_content(type, ptr, offset) \
         (type *)((u8 *)ptr - offset)
@@ -32,7 +34,7 @@ void *hip_ht_find(HIP_HASHTABLE *ht, void *key)
 			entry = hip_ht_get_content(void, chain, ht->offset);
 
 			key_to_be_matched = ht->get_key(entry);
-			_HIP_DEBUG("entry=0x%p key=0x%p\n", entry, key_to_be_matched);
+			HIP_DEBUG("entry=0x%p key=0x%p\n", entry, key_to_be_matched);
 			if (ht->compare(key, key_to_be_matched)) {
 				ht->hold(entry);
 				HIP_UNLOCK_HT(ht);

@@ -8,12 +8,12 @@
  * - Kristian Slavov <ksl@iki.fi>
  */ 
 
-
-#include <linux/in6.h>
-#include <linux/xfrm.h>
-#include <net/xfrm.h>
-#include <net/ipv6.h>
-
+#ifdef __KERNEL__
+#  include <linux/in6.h>
+#  include <linux/xfrm.h>
+#  include <net/xfrm.h>
+#  include <net/ipv6.h>
+#endif /* __KERNEL__ */
 
 #include "security.h"
 #include "crypto/dh.h"
