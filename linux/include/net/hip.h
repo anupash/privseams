@@ -489,7 +489,7 @@ struct hip_ack {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 
-	uint32_t peer_update_id;
+	uint32_t peer_update_id; /* n items */
 } __attribute__ ((packed));
 
 struct hip_notify {

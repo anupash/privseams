@@ -1853,6 +1853,7 @@ int hip_build_param_seq(struct hip_common *msg, uint32_t update_id)
 	hip_set_param_type(&seq, HIP_PARAM_SEQ);
 	hip_calc_generic_param_len(&seq, sizeof(struct hip_seq), 0);
 	seq.update_id = htonl(update_id);
+	HIP_DEBUG("update_id=%u\n", update_id);
 	err = hip_build_param(msg, &seq);
 	return err;
 }
