@@ -264,7 +264,7 @@ An example mobility exchange is depicted in figure
 
 
 
-\subsection{HIPL Implementation}
+\subsection{About the HIPL Project}
 
 Linux was selected as the platform for implementing \ac{HIP}. It was a
 natural choice because the developers were already familiar with
@@ -306,29 +306,11 @@ performance are not in the main focus of the project.
 \label{sec:implementation_architecture}
 
 This section describes the architecture of the implementation as it
-is. The requirements for the implementation architecture cannot be
-found from this document because the requirements are already
-specified in the \ac{HIP} drafts~\cite{hiparch,hip,hip-ietf-mm-00}. The most
-important design decisions of the architecture are explained in
-\autoref{sec:catalogue}. The outcomes of the project are further
-evaluated in \autoref{sec:lessons_learned} and
-\autoref{sec:future_work}.
-
-A general model of operation is first discussed in
-\autoref{sec:kernel_model_architecture} because it affects the design
-of all components in the system. Each individual component is then
-explained in the rest of the sections.
-
-The networking stack component (in
-\autoref{sec:networking_stack_architecture}) is used to create, inject
-and remove \ac{HIP} headers from network traffic. The stack component
-includes a work queue mechanism that is described separately in
-section \autoref{sec:work_queue_architecture}. The resolver component
-is described in \autoref{sec:resolver_architecture}. The network
-application point of view is described in
-\autoref{sec:application_architecture}. Finally,
-\autoref{sec:collaboration_of_architecture_components} concludes with
-collaboration of all components.
+is. A general model of operation is first discussed because it affects
+the design of all components in the system. The components of the
+architecture is are the explained. The section is concluded with an
+practical example that shows how the components interact with each
+other.
 
 \subsection{HIP module}
 \label{sec:kernel_model_architecture}
@@ -357,106 +339,6 @@ calls to send information to the \ac{HIP} module. All \verb|ioctl|
 information is passed to the \ac{HIP} thread by work orders. Usually
 that information consists of adding/deleting mappings from the
 \ac{HADB}.
-
-\subsection{The Location of HIP in the Kernel}
-\label{sec:loc_hip_kernel}
-
-% XX TODO Kristian: this stuff is already in Networking Stack chapter!?
-
-The \ac{HIP} layer is located conceptually between the transport and
-the network layer in the networking stack. One of our goals has been
-not to affect the transport layers at all or with minimal changes if
-it is absolutely necessary. We have achieved this goal quite well,
-only some few line long changes needed to be done to other layer code.
-
-The \ac{HIP} protocol handler is registered with IPv6 on bootup (or
-when the module is loaded into the kernel). This enables us to use the
-kernel's built-in functionality of passing the IPv6 packets with a
-\ac{HIP} header straight to our code.
-
-Since the actual data, that flows after \ac{HIP} connection setup,
-does not use \ac{HIP} protocol headers, we have added hooks to some
-receiving/transmitting functions in the Linux network stack. Currently
-we have the following hooks in the underlying IPv6 code:
-
-\begin{description}
-
-\item[hip\_handle\_esp] When an incoming \ac{ESP} packet arrives, we need to
-  rewrite its IPv6 source and destination addresses with the
-  corresponding \acp{HIT}. To do IPv6 to \ac{HIT} mapping we have to consult our
-  \ac{HADB}. Correct \ac{HA} is found by using the \ac{SPI}
-  value in the \ac{ESP} packet as the search key.
-% .. ? .. This function is called just
-% before we look up the Security Association (SA) from SAD.
-
-\item[hip\_handle\_output] An outgoing \ac{ESP} packet has \acp{HIT} in the
-  IPv6 header's source and destination address fields. In this
-  function we do the \ac{HIT} to IPv6 mapping.  Again, we need to
-  consult our \ac{HA} database. This function is called just before
-  IPv6 passes the packet to the lower layer functions.
-%  \verb|dst\_output|.
-% dst_output / maybe_reroute, depends..change
-% --> right before the packet is passed to lower layer.
-
-\item[hip\_get\_addr]
-This function selects an address from the set of the usable IPv6 addresses of
-the peer. The selected address is used as the destination address of
-the outgoing packet.
-
-\item[hip\_get\_saddr]
-Selects the source HIT when an outbound packet is to be sent
-containing only the destination HIT.
-
-\item[hip\_unknown\_spi] This hook is related to an ongoing discussion about
-  what to do if an \ac{ESP} packet with an unknown \ac{SPI} value
-  arrives at the host. It has been proposed that a NOTIFY packet is
-  sent. Current implementation does not do anything.
-% If enabled, we assume that the peer has rebooted and send R1.
-
-\item[hip\_trigger\_bex] A hook to trigger the base exchange (connection
-      setup).
-% to be removed and moved to xfrm code (register xfrm key manager and set
-% callback function for .acquire)
-
-\item[hip\_handle\_ipv6\_dad\_completed] Used when a new IPv6 address
-is added. When the kernel has performed the \ac{DAD} successfully, we
-call this hook and notify active \ac{HIP} peers about the new
-address. Events caused by link local addresses are ignored.
-\end{description}
-
-\subsection{IPsec Usage}
-
-When the \ac{HIP} code starts, it registers two \acp{SP}, one incoming
-and one outgoing. We use \verb|4000::/2| as a source and destination
-IPv6 addresses. This is the range that is preallocated for \ac{HIP}
-use, although it is not yet officially allocated by the Internet
-Assigned Numbers Authority (IANA).  Actually there is also a ``type
-2'' HIT defined as \verb|8000::/2|, but it is not in use, and we do
-not support it currently.
-
-When an ordinary\footnote{destination address belonging to the IPv6
-address range approved by the \ac{IANA}} network connection is being
-established, the \ac{IPsec} does not match the \ac{HIP} \ac{SP}, and
-thus no \ac{HIP} action will be performed. When a \ac{HIP} network
-connection is initiated, the \ac{HIP} \ac{SP} will match, and
-\ac{IPsec} will query for a \ac{SA}. If there is no ready \ac{SA}
-available, as is the case when we first connect to the peer, the
-\ac{HIP} module will start the \ac{HIP} base exchange.
-
-The caller process will be put to sleep until the \ac{SA} is valid, or
-has timeouted.  Default timeout period is 30 seconds\footnote{This is
-defined by the Linux 2.6 IPsec stack.}. The process will sleep even if
-the socket is a non-blocking one.
-\footnote{Perhaps we should do something to alleviate this minor
-problem?}
-% timeout .. in ACQ state ?
-
-If the \ac{HIP} base exchange procedure is successful, we have 2 valid
-SAs: one outgoing and one incoming. All the sleepers waiting for the
-outgoing \ac{SA} will be now waked up. Now the calling process
-(usually \verb|connect()|), can proceed with transport layer
-connection establishment (\ac{TCP} handshake). This part will no
-longer sleep, if the socket has been set to non-blocking.
 
 \subsection{Internal data structures}
 
@@ -553,7 +435,7 @@ in which the \ac{HIP} code is executed: bottom handler/softirq, kernel
 thread and user context.  The softirq context is used when receiving
 packet from the network. It has the highest priority. A \ac{HIP}
 worker thread is operating in the kernel thread context.  Userspace
-\ac{HIP} configuration tools, \ac{HIP} socket API etc. run in user
+\ac{HIP} configuration tools, \ac{HIP} sockets API etc. run in user
 context.  An incoming network packet will preempt every other
 context. If a process/thread in a lower priority context has acquired
 a lock, it will not be able to release it.
@@ -593,54 +475,43 @@ the \ac{HIP} base exchange, or other control traffic.  The normal data
 transfer does not defer execution to later, so it does not use the
 working queue.
 
-
 % XXX Miika: Etsi tälle parempi paikka
 
-Due to the architecture of \ac{HIPL}, there are theree different
+Due to the architecture of \ac{HIPL}, there are three different
 contexts, in which the \ac{HIP} code is executed: bottom
 handler/softirq, kernel thread and user context.  The softirq context
 is used when receiving packet from the network. It has the highest
 priority. A \ac{HIP} worker thread is operating in the kernel thread
-context.  Userspace \ac{HIP} configuration tools, \ac{HIP} socket API
+context.  Userspace \ac{HIP} configuration tools, \ac{HIP} sockets API
 etc. run in the user context.
 
+\subsection{Asymmetric Cryptography Support in the Linux Kernel}
 
-% XX TODO: Kristian, write a section of this
-% - explain the working queue stuff (copy-paste from thesis?)
-% - how does the locking work in the work queues
+% XX TODO: It is not a separate module anymore
 
-\subsection{Rendezvous Mechanism/Server}
-\label{sec:rendezvous_server}
+A generic asymmetric cryptophic module was developed to handle HIP's
+needs of the \ac{DSA} and \ac{DH} algorithms. The main reason
+for this was that the implementation architecture was revised to be
+more kernel orientated. The cryptographic module a ripped off version
+of the GNU cryptographic library (libgcrypt) version 1.12.
+\autoref{tbl:asymmetric_crypto_ops}.
 
-% XXX Miika: Ei kai tähän tarvita introa reiskasta?
-
-For the rendezvous server functionality, we had to add a new hash
-table, where we store the RendezVous Associations (RVA). The hash
-table uses peer's HIT as a key, just like one of the HADB hash tables.
-
-We define few terms to lessen the readibility and comprehensivity of
-the rest of the subchapter.  Responder means the host that asks the
-rendezvous server for the rendezvous service. Server means the
-Rendezvous Server. Initiator means the host that tries to contact the
-Reponder, but does not have its real IP address, but the IP address of
-the Server instead.
-
-First, the Responder needs to inform the Server, and ask for
-rendezvous service. This is accomplished by adding a special control
-bit (RVS\_CAPABLE) in I1 packet, as specified in \cite{rvs-00}.  To
-the I2 packet, we add an optional RVA\_REQUEST parameter, \textbf{if}
-and only if, the Server also used the RVS\_CAPABLE bit in R1 packet.
-Otherwise, the Server signals that is not capable of providing the
-rendezvous service we asked for. We then end the base exchange.
-
-Having added the RVA\_REQUEST parameter to the I2, we proceed with the
-rest steps of building the I2 packet, and send it. Then rest goes as
-in the normal base exchange procedure.
-
-On the Server's side, the process is slightly different. Always when a
-Server receives I1 packet, it has to check if it is destined for
-itself, or if it belongs to a \ac{HIP} node, that it is serving.
-
+\begin{table}[htb]
+\centering
+\begin{tabular}{|l|}\hline
+Cryptographic Operation \\\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Create cookie  \\
+Solve cookie \\
+Validate cookie \\
+Sign packet with DSA \\
+Verify DSA signature \\
+Create DH shared secret \\
+\hline
+\end{tabular}
+\caption{The operations supported in the asymmetric cryptophic module}
+\label{tbl:asymmetric_crypto_ops}
+\end{table}
 
 \subsection{Networking Stack}
 \label{sec:networking_stack_architecture}
@@ -692,11 +563,10 @@ handler.
 Additional functions not directly related to sending or receiving
 packets were also needed for effective \ac{HIP}. Address events are
 these kind of things which needed to be modified. A host wants to know
-if it has a new IPv6 address or an IPv6 address is deleted. As
-described in \ref{sec:loc_hip_kernel},
-function \verb|hip_handle_ipv6_dad_completed| handles
-\ac{DAD} events and function \verb|hip_handle_inet6_addr_del| handles the
-events caused by single address deletion.
+if it has a new IPv6 address or an IPv6 address is deleted. The
+function \verb|hip_handle_ipv6_dad_completed| handles \ac{DAD} events
+and function \verb|hip_handle_inet6_addr_del| handles the events
+caused by single address deletion.
 
 Input and output side of the hooks are visualized in
 \autoref{fig:input_hooks} and \autoref{fig:output_hooks}.
@@ -795,6 +665,40 @@ HIT.\\
 \label{tbl:hook_descriptions}
 \end{longtable}
 
+\subsection{IPsec Usage}
+
+When the \ac{HIP} code starts, it registers two \acp{SP}, one incoming
+and one outgoing. We use \verb|4000::/2| as a source and destination
+IPv6 addresses. This is the range that is preallocated for \ac{HIP}
+use, although it is not yet officially allocated by the Internet
+Assigned Numbers Authority (IANA).  Actually there is also a ``type
+2'' HIT defined as \verb|8000::/2|, but it is not in use, and we do
+not support it currently.
+
+When an ordinary\footnote{destination address belonging to the IPv6
+address range approved by the \ac{IANA}} network connection is being
+established, the \ac{IPsec} does not match the \ac{HIP} \ac{SP}, and
+thus no \ac{HIP} action will be performed. When a \ac{HIP} network
+connection is initiated, the \ac{HIP} \ac{SP} will match, and
+\ac{IPsec} will query for a \ac{SA}. If there is no ready \ac{SA}
+available, as is the case when we first connect to the peer, the
+\ac{HIP} module will start the \ac{HIP} base exchange.
+
+The caller process will be put to sleep until the \ac{SA} is valid, or
+has timeouted.  Default timeout period is 30 seconds\footnote{This is
+defined by the Linux 2.6 IPsec stack.}. The process will sleep even if
+the socket is a non-blocking one.
+\footnote{Perhaps we should do something to alleviate this minor
+problem?}
+% timeout .. in ACQ state ?
+
+If the \ac{HIP} base exchange procedure is successful, we have 2 valid
+SAs: one outgoing and one incoming. All the sleepers waiting for the
+outgoing \ac{SA} will be now waked up. Now the calling process
+(usually \verb|connect()|), can proceed with transport layer
+connection establishment (\ac{TCP} handshake). This part will no
+longer sleep, if the socket has been set to non-blocking.
+
 \subsection{Mobility and Multihoming}
 \label{sec:mobility_and_multihoming_architecture}
 
@@ -841,36 +745,45 @@ When a change occurs in an interface, the HIP module selects the
 addresses within the interface and proceeds as described in
 \autoref{sec:mm-ext}.
 
-\subsection{Asymmetric Cryptography Support in the Linux Kernel}
+\subsection{Rendezvous Mechanism/Server}
+\label{sec:rendezvous_server}
 
-% XX TODO: It is not a separate module anymore
+% XXX Miika: Ei kai tähän tarvita introa reiskasta?
 
-A generic asymmetric cryptophic module was developed to handle HIP's
-needs of the \ac{DSA} and \ac{DH} algorithms. The main reason
-for this was that the implementation architecture was revised to be
-more kernel orientated. The cryptographic module a ripped off version
-of the GNU cryptographic library (libgcrypt) version 1.12.
-\autoref{tbl:asymmetric_crypto_ops}.
+For the rendezvous server functionality, we had to add a new hash
+table, where we store the RendezVous Associations (RVA). The hash
+table uses peer's HIT as a key, just like one of the HADB hash tables.
 
-\begin{table}[htb]
-\centering
-\begin{tabular}{|l|}\hline
-Cryptographic Operation \\\hline
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Create cookie  \\
-Solve cookie \\
-Validate cookie \\
-Sign packet with DSA \\
-Verify DSA signature \\
-Create DH shared secret \\
-\hline
-\end{tabular}
-\caption{The operations supported in the asymmetric cryptophic module}
-\label{tbl:asymmetric_crypto_ops}
-\end{table}
+We define few terms to lessen the readibility and comprehensivity of
+the rest of the subchapter.  Responder means the host that asks the
+rendezvous server for the rendezvous service. Server means the
+Rendezvous Server. Initiator means the host that tries to contact the
+Reponder, but does not have its real IP address, but the IP address of
+the Server instead.
 
-\subsection{Resolver}
-\label{sec:resolver_architecture}
+First, the Responder needs to inform the Server, and ask for
+rendezvous service. This is accomplished by adding a special control
+bit (RVS\_CAPABLE) in I1 packet, as specified in \cite{rvs-00}.  To
+the I2 packet, we add an optional RVA\_REQUEST parameter, \textbf{if}
+and only if, the Server also used the RVS\_CAPABLE bit in R1 packet.
+Otherwise, the Server signals that is not capable of providing the
+rendezvous service we asked for. We then end the base exchange.
+
+Having added the RVA\_REQUEST parameter to the I2, we proceed with the
+rest steps of building the I2 packet, and send it. Then rest goes as
+in the normal base exchange procedure.
+
+On the Server's side, the process is slightly different. Always when a
+Server receives I1 packet, it has to check if it is destined for
+itself, or if it belongs to a \ac{HIP} node, that it is serving.
+
+\subsection{HIP Bootstrap Support}
+\label{sec:bos_architecture}
+
+% XX FIX: MIIKA
+
+\subsection{Sockets API}
+\label{sec:api_architecture}
 
 A typical network application makes a connection to a peer by using
 the \ac{FQDN} of the peer. The \ac{FQDN} is queried from \ac{DNS} to
@@ -903,8 +816,8 @@ example. Performance reasons could be a reason to deny usage of
 \ac{HIP}, for example, in a small device with a limited computing
 capacity.
 
-\subsubsection{Network Socket API}
-\label{sec:api_architecture}
+\subsubsection{Legacy Sockets API}
+\label{sec:legacy_api_architecture}
 
 % XX TODO: Miika, mention about the native HIP API
 
@@ -962,7 +875,7 @@ flag would be a \ac{HIP} aware application that needs end-to-end
 authentication and security or mobility features provided by
 \ac{HIP}. A source code example for such an application is shown in
 \autoref{tbl:ai_hip_example}. Legacy applications cannot use this
-option because it is an extension to the existing network socket API.
+option because it is an extension to the existing network sockets API.
 
 \begin{table}[hbt]
 \begin{verbatim}
@@ -1024,7 +937,12 @@ explicitly set. Legacy applications are not \ac{HIP} aware but the
 administrator of the system has enabled \ac{HIP} transparency mode so
 that even legacy applications can use \ac{HIP}.
 
-\subsubsection{Mapping}
+\subsubsection{Native Sockets API}
+\label{sec:native_api_architecture}
+
+% XX FIX MIIKA
+
+\subsubsection{Mappings}
 \label{sec:mapping_architecture}
 
 This section discusses a modification in the resolver that is not
@@ -1101,16 +1019,17 @@ corresponding IPv6 address is not known. The only option to handle
 this problem in the implementation is manual mapping which can be
 performed using a command line tool.
 
-\subsection{Userspace Network Applications}
+\subsubsection{Userspace Network Applications}
 \label{sec:application_architecture}
+
+% XX FIX MIIKA
+% - should I remove this?
 
 New \ac{HIP} aware applications may require the use of \ac{HIP} or may
 deny the use of it for performance reasons, for example. Legacy
 applications should be able to use \ac{HIP} without any changes to
 source code. This is not always true for legacy applications and the
-restrictions are discussed in this section. This section is closely
-related to \autoref{sec:resolver_architecture} but the viewpoint is in
-the network applications.
+restrictions are discussed in this section.
 
 \ac{HIP} aware applications may require or deny the use of \ac{HIP}. A
 reason to require \ac{HIP} would be to benefit from multihoming,
@@ -1255,243 +1174,6 @@ specific and not connection specific. This means that packets related
 to other connections between the same hosts do not require a new base
 exchange.
 
-\section{Lessons Learned}
-\label{sec:lessons_learned}
-
-\subsection{Kernel Model}
-\label{sec:kernel_model_lessons}
-
-The kernel model in \ac{HIPL} project is very different from the other
-\ac{HIP} implementation projects presented in
-\autoref{sec:related_work}. \ac{HIPL} project chose a kernel-oriented
-approach whereas other projects seem to have adopted a daemon-oriented
-approach. A short comparison of both of the approaches was given in
-\autoref{sec:kernel_model_architecture}.
-
-The \ac{HIP} protocol is implemented mainly in the kernel. The main
-reason for the existence of the daemon is to store and send the
-\ac{HI} configuration to the kernel module.
-
-A common reason to implement a research protocol, such as \ac{HIP}, in
-userspace is that the development process itself is easier. Bugs are
-always present during development and tracing bugs is easier in
-userspace. Nevertheless, tracing bugs has generally been only a bit
-more harder in the kernel than in userspace. One of the reasons for
-this may be that the base exchange itself has acted as a coarse
-grained regression test which is run every time before any new code is
-shared with the other developers.
-
-It is probably easier to refactor the \ac{HIPL} implementation to a
-daemon-oriented version than vice versa if that is someday
-required. Anyway, it is educational to have implementation experience
-from different kind of implementation architectures while \ac{HIP} is
-more research than reality.
-
-\subsection{Networking Stack}
-\label{sec:networking_stack_lessons}
-
-The \ac{HIP} layer had to be added between the transport and the
-network layers in the Linux networking stack. This was considered a
-difficult task because the interfaces between the layers were vague in
-Linux. Before the \ac{HIP} layer could have been added, the interfaces
-between the transport and the network layers would have had to be
-refactored. Clean and unified interfaces would have then made it
-easier to add the \ac{HIP} layer into the networking
-stack. Refactoring failed because of a couple of reasons.
-
-At the time when refactoring was considered, the code was based on
-Linux 2.4 series with USAGI patches. Quality of the code in the input
-side of the networking stack was good, but quality of the output side
-of the IPv6 stack code was generally poor. Building of IPv6 headers in
-the output side is an example of bad quality code: both \ac{TCP} and
-\ac{UDP} layers have their own functions to build the same IP
-headers. Interfaces to the builder functions have totally different
-semantics depending on the protocol used and unifying them would have
-meant that the \ac{TCP} and all other protocols (\ac{UDP}, neighbor
-discovery, \ac{ICMP}, \ac{MLD}, etc) would have to be rewritten from
-scratch.
-
-An obvious consequence of such a complete refactoring attempt would
-have been a delayed schedule in the implementation of the actual
-\ac{HIP} protocol because the refactoring itself had had lasted far
-too long. A complete refactoring of the networking stack would have
-probably produced too many bugs. As a consequence, the official Linux
-kernel maintainers would have accepted our patches to the Linux
-kernel. Further, keeping our code base synchronized with the Linux
-kernel and the separate USAGI patches would have been difficult.
-
-Hooks were an appealing alternative to refactoring the networking
-stack because hooks were fast to implement and they were already
-successfully used in the \ac{MIPL} project~\cite{mipl}. Originally
-some of the hooks were placed in \ac{TCP} \verb|connect| call handler
-in the kernel but the hooks were moved down to the IPv6 layer. This
-simplified the code and \ac{UDP} support was also achieved with no
-extra effort.
-
-The current implementation is based on the Linux 2.6 series. USAGI
-patches are not used anymore. Linux 2.6 series \ac{IPsec} works as it
-is without any changes except for the hook in the input handler of
-\ac{ESP} explained in \autoref{sec:networking_stack_architecture}.
-Security associations can also be set up directly inside the kernel
-due to the kernel based architecture (see
-\autoref{sec:kernel_model_architecture}).
-
-\subsection{Mobility and Multihoming}
-
-When the actual plans to implement the UPDATE packet and support for
-\cite{hip-ietf-mm-00} type of mobility and multihoming were realized,
-we assumed that the amount of work needed would be a couple of
-months. But in reality, the total amount of work was much more, around
-six months.
-
-A part of this considerable delay can be explained with other tasks,
-such as project documentation deadlines, preparing and participating
-in IETF meetings, and other implementation tasks not related to the
-UPDATE packet or mobility.
-
-A major problem in the previous HIPL implementation was the design of
-the \ac{HADB}. It was designed in such a way that there could be only
-one \ac{SPI} at the time, and the IPv6 address lists were stored in a
-unrelated data structure. This meant that whereever \acp{SPI} and IPV6
-addresses were handled in the code, that code had to be rewritten
-completely. Because \ac{SPI} was stored in an integer variable and the
-current implementation uses linked lists, the change was not just a
-simple ``search and replace'' procedure. IPv6 addresses of the peer
-were stored in a separate list, but now they had to be bound into an
-\ac{SPI}, meaning that there is actually list of lists. \ac{SPI} and
-IPv6 address list handling functions had to rewritten from scratch
-which took quite a lot of time to implement and debug.
-
-Another slowdown was caused by immature state of the mobility draft
-at the time we were implementing. The draft were sometimes even
-ambiguous or they did not tell what should really be done. Lots of
-time was spent on reading between the lines and trying to figure out
-what should be the best way to implement required functionality.
-
-However, the unfinished state of the draft was not only a bad
-thing. HIPL developers raised some problem issues and proposed
-solutions in the Hipsec mailing list. In practise, almost all of the
-mobility draft related discussion was between HIPL and the draft
-authors. Implementation gave insight what was missing from the
-previous draft versions and what could be added into the next
-versions.
-
-We can compare the effort required to implement the current and the
-previous mobility code even though the basic design of the both
-versions is different. Practically, both had to written from
-scratch. Some old code could be reused, but the amount was fairly
-minimal. Old code was still useful, because it had general and
-reusable ideas on how to implement similar data structures and
-functionality. If there would not have been any previous work, a lots
-of time would have been needed to overcome the same implementation
-problems.
-
-Mobility management is still in its first phase. High level issues
-such as source address selection and the selection of the preferred
-peer address have not been considered so much yet. These are the
-similar kind of issues that many other IETF working groups
-(e.g. multi6 WG) are trying to solve, too.
-
-\subsection{Working Queues}
-\label{sec:working_queue_lessons}
-
-The most important ingredient in the design of the daemon architecture
-is kernel orientation. Kernel orientation means a ``master-slave''
-relationship between the kernel and the daemon. This results in quite
-a simple implementation of the daemon mainly because the daemon needs
-no state information.
-
-The interface between the kernel and the daemon is unambiguous. Main
-reason for this is the kernel orientation. For example,
-\verb|PF_KEY|~\cite{rfc2367} messages are not needed to be sent to the
-daemon. The unambiguous interface is also achieved by using the same
-parameters as in the \ac{HIP} drafts to avoid redundant packet parsing
-code. Excluding threads in the daemon has simplified also the actual
-implementation of the interface because there is no need for ordering
-and multiplexing of the messages in the kernel.
-
-\subsection{Asymmetric Crypto Module}
-
-To move all cryptographic functions to kernel, some cryptographic
-functions had to be ported. The natural choice was to port OpenSSL's
-implementations of \ac{DH}, \ac{DSA} and big number library.
-This required stripping off most of the outputting functions. Also all
-modularity that was present in the original version, was stripped off.
-This was done to simplify and flatten the code. The less code in
-kernel the less chances for bugs and the easier to debug.
-
-The ported algorithms were added to the crypto \ac{API} interface.
-The algorithms can be installed as modules, although at the moment
-this is not yet supported. The kernel module does not really care
-about which implementation of the \ac{DH} and/or the \ac{DSA}
-algorithms it uses.
-
-The licence on the OpenSSL algorithms and on the ported parts
-(crypto api modules) is a BSD variant, but not \ac{GPL} compatible.
-Since the kernel module does not directly use the algorithms, but
-rather through the crypto api, it can be released under \ac{GPL}
-licence.
-
-\subsection{Resolver}
-
-\subsubsection{Network Socket API}
-\label{sec:api_lessons}
-
-The network \ac{API} presented \vpageref{sec:api_architecture} was a
-result of several iterations. The specification was originally overly
-complex and it was simplified radically. Especially the transparent
-\ac{API} was considered a good way to make the adoption of \ac{HIP}
-easier by supporting legacy applications. Supporting both efficiency
-and security critical applications was also considered important in
-\ac{API} design as it can be seen from
-\autoref{tbl:getaddrinfo_combo}.
-
-\subsubsection{Mapping}
-\label{sec:mapping_lessons}
-
-A weakness in the way mappings are communicated to the kernel was
-discovered even before communication of the mappings was even
-implemented. Tagging the mapping messages with the \ac{UID} of the
-application user was presented as a solution for the problem and it
-was selected from a couple of proposals. The reason for its selection
-was that it was straightforward, efficient and easy to implement.
-
-Sending the mappings to the kernel as a side effect of a resolver call
-is not architecturally clean, but it is currently the only way to do
-it. Connection attempts without resolver calls are problematic because
-\ac{HIP} can only be used with manual keying in such situations. A
-solution to this problem would be that \acp{HIT} could be used to
-query IPv6 addresses from \ac{DNS} or some other directory. This
-remains to be a research problem.
-
-\subsection{Practical Lessons}
-\label{sec:practical_lessons}
-
-This project has been a been a good practical introduction to kernel
-programming in general. The networking stack modifications were mainly
-done by the project architect and it would have been better for the
-other members to participate more in networking stack
-modifications. The time constraints in the project led to
-specialization and partition of the jobs to the networking stack, the
-daemon and the resolver. Increasing the amount of pair/group
-programming would have provided more cross knowledge about each
-working area but it would have required more time.
-
-The base exchange has acted as a white box regression test for the
-whole system. Daemon and resolver have some existing unit test code
-but more emphasis should be placed on unit testing of all components
-in the system to catch bugs as early as possible. Unit testing of
-kernel functionality is generally very difficult but some unit testing
-could be embedded in the kernel using the existing daemon calling
-mechanism. This is described in more detail in
-\autoref{sec:networking_stack_future_work}.
-
-Term ``rewrite code'' is not a good substitute for the term ``refactor
-code''~\cite{refactoring} because refactoring always includes unit
-testing whereas rewriting necessarily does not. Still, code rewriting
-has been done frequently during this project. Lack of experience and
-hasty planning can be seen as the root causes of rewriting code.
-
 \section{Future Work}
 \label{sec:future_work}
 
@@ -1587,16 +1269,9 @@ A forwarding agent~\cite{hiparch,hip-mm} and related packets (FAQ,
 FAA) must also be implemented for gain a full support for the mobility
 and multihoming features.
 
-\subsection{Userspace-Kernelspace Communication Mechanism}
-\label{sec:future_com_mechanism}
+\subsection{Sockets API}
 
-\TODO{Miika, write this}
-
-\subsection{Resolver}
-\label{sec:resolver_future_work}
-
-\subsubsection{Network Socket API}
-\label{sec:api_future_work}
+\subsubsection{Legacy Sockets API}
 
 The lack of an socket \ac{API} specified for \ac{HIP} is a problem for
 the \ac{API}. An official draft should be created to force the
@@ -1626,6 +1301,8 @@ legacy applications should not be altered.
 Transparent mode may break existing applications, such as IP
 integrated applications. This should be investigated and tested with
 existing applications.
+
+\subsubsection{Native Sockets API}
 
 \subsubsection{Mapping}
 \label{sec:mapping_future_work}

@@ -116,12 +116,10 @@ outbound network traffic. The layout of hooking model is visualized in
 
 \comparison{ The interface with the Linux networking stack was
 selected to be based on the hooks for two reasons. First reason was
-that unifying the interfaces by refactoring did not succeed. Reasons
-for the unification's failure are explained in more detail in
-\autoref{sec:networking_stack_lessons}.
-The second reason was that MIPL \cite{mipl} project
-had already had positive experience with hooks in their
-experimentations with the Linux networking stack.  }
+that unifying the interfaces by refactoring did not succeed because
+it would have been too time consuming. The second reason was that
+MIPL \cite{mipl} project had already had positive experience with
+hooks in their experimentations with the Linux networking stack.  }
 
 \revision{The implementation was revised by moving the hooks from the
 TCP layer to the IPv6 layer. It simplified the implementation and UDP
@@ -180,7 +178,7 @@ to be served. }
 \member{uint32\_t}{our\_spi}{Local SPI}
 \end{struct}
 
-\appsection{Network Socket API}
+\appsection{Sockets API}
 
 \begin{designchoice}{HIT socket structure}
 
@@ -217,7 +215,7 @@ implement if \textit{sockaddr\_hip} had been used. }
 
 \end{designchoice}
 
-\appsection{Mapping}
+\appsection{Mappings}
 
 \begin{designchoice}{Poisoning of mapping tables}
 
