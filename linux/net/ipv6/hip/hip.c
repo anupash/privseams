@@ -102,7 +102,7 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 }
 
 int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
-			     const u8 *addr, const u8 size)
+			     const u8 *addr, const u32 size)
 {
 	int err = -1;
 	unsigned long offset,pleft;
@@ -117,17 +117,23 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 		return err;
 	}
 
+
+	HIP_DEBUG("Virtual addresses: %x, size: %d\n",addr,size);
+
 	offset = 0;
 	while(offset < size) {
+
 		slist[elt].dma_address = 0;
 		slist[elt].page = virt_to_page(addr+offset);
 		slist[elt].offset = (unsigned long) (addr+offset) % PAGE_SIZE;
 		
 		/* page left */
+		/* pleft = how many bytes there are for us in current page */
 		pleft = PAGE_SIZE - slist[elt].offset;
 		HIP_ASSERT(pleft > 0 && pleft <= PAGE_SIZE);
 
-		if (pleft + offset < size) {
+		HIP_DEBUG("offset: %d, space on current page: %d\n",offset,pleft);
+		if (pleft + offset >= size) {
 			slist[elt].length = size - offset;
 			break;
 		}
@@ -151,6 +157,7 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 	*slistcnt = elt+1;
 	return 0;
 }
+
 /**
  * hip_build_digest - calculate a digest over given data
  * @type: the type of digest, e.g. "sha1"
@@ -192,6 +199,20 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 
 	return 0;
 }
+/**
+ * hip_build_digest_repeat - Calculate digest repeatedly
+ * 
+ * Use this function instead of the one above when you need to do repeated
+ * calculations *IN THE SAME MEMORY SPACE (SIZE _AND_ ADDRESS)*
+ */
+int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
+			    int nsg, void *out)
+{
+	crypto_digest_init(dgst); // is this necessary always?
+	crypto_digest_digest(dgst, sg, nsg, out);
+	return 0;
+}
+
 
 /**
  * hip_write_hmac - calculate hmac
@@ -1264,6 +1285,10 @@ static int hip_init_cipher(void)
 	   missing...
 	*/
 	hip_regen_dh_keys(supported_groups);	
+
+	/* instruct the "IPsec" to check for available algorithms */
+	xfrm_probe_algs();
+
 	return 0;
 
  out_err:

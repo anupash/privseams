@@ -230,9 +230,9 @@ int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 		break;
 	case HIP_ESP_NULL_SHA1:
 		err = -ENOENT;
-		ead = xfrm_ealg_get_byid(SADB_EALG_NONE);
+		ead = xfrm_ealg_get_byid(SADB_EALG_NULL);
 		if (!ead) {
-			HIP_ERROR("3DES not supported\n");
+			HIP_ERROR("NULL not supported\n");
 			goto out_free;
 		}
 

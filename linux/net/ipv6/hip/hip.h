@@ -74,6 +74,9 @@ extern int gtv_inuse;
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 struct hip_common *hip_create_r1(struct in6_addr *src_hit);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
+int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
+			    int nsg, void *out);
+
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
 int hip_auth_key_length_esp(int tid);
@@ -87,7 +90,7 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
-			     const u8 *addr, const u8 size);
+			     const u8 *addr, const u32 size);
 
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
 extern struct crypto_tfm *impl_sha1;

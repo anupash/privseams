@@ -79,7 +79,10 @@ int hip_solve_puzzle(struct hip_birthday_cookie *puzzle,
 	uint64_t digest;
 	u8 cookie[48];
 	int bit = 0;
-		
+	struct scatterlist sg[2];
+	unsigned int nsg = 2;
+	int err;
+
 	/* pre-create cookie */
 	HIP_DEBUG("Received I=%llx\n", puzzle->val_i);
 
@@ -119,6 +122,15 @@ int hip_solve_puzzle(struct hip_birthday_cookie *puzzle,
 		goto out_err;
 	}
 
+	/* pre map the memory region (for SHA) */
+	err = hip_map_virtual_to_pages(sg, &nsg, cookie, 48);
+	if (err || nsg < 1 ) {
+		HIP_ERROR("Error mapping virtual addresses to physical pages\n");
+		return 0; // !ok
+	}
+	
+
+
 	/* while loops should work even if the maxtries is unsigned
 	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
 	 * the next round while (0 > 0) [maxtries > 0 now]
@@ -130,11 +142,7 @@ int hip_solve_puzzle(struct hip_birthday_cookie *puzzle,
 		/* must be 8 */
 		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
 
-		if (hip_build_digest(HIP_DIGEST_SHA1,cookie,48,sha_digest))
-		{
-			HIP_ERROR("SHA1 failed while solving puzzle\n");
-			goto out_err;
-		}
+		hip_build_digest_repeat(impl_sha1, sg, nsg, sha_digest);
 				
                 /* copy the last 8 bytes for checking */
 		memcpy(&digest, sha_digest + 12, 8);

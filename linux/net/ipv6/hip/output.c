@@ -47,9 +47,11 @@ spinlock_t hip_nes_id_lock = SPIN_LOCK_UNLOCKED;
  *
  * The @skb will be freed if the return value is not zero.
  *
- * Returns: Negative error value on failure. Positive value if the
- *          destination address was a HIT. Zero if the destination address
+ * Returns: an nagative error value on failure. This will be interpreted as
+ *          "drop the packet".
+ *          Zero if the destination address
  *          was an ordinary IPv6 address or the state was already established.
+ *
  */
 int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 {
@@ -64,7 +66,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	int state = 0; 
 	
 
-	if (!hip_is_hit(&hdr->daddr)) {
+	if (!ipv6_addr_is_hit(&hdr->daddr)) {
 		/* The address was an IPv6 address, ignore. */
 		err = 0;
 		goto out;
@@ -135,6 +137,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			goto out;
 		}
 
+		err = -1; // drop the TCP/UDP packet
 		break;
 	case HIP_STATE_INITIATING:
 		HIP_DEBUG("I1 retransmission\n");
@@ -147,10 +150,12 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			HIP_ERROR("I1 retransmission failed");
 			goto out;
 		}
+		err = -1; // just something to drop the TCP packet;
 		break;
 	case HIP_STATE_WAIT_FINISH:
 		/* XX TODO: Should the packet be buffered instead? */
 		HIP_INFO("Not established yet. Dropping the packet.\n");
+		err = -1;
 		break;
 	case HIP_STATE_ESTABLISHED:
 		/* State is already established; just rewrite HITs to IPv6
@@ -177,7 +182,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	case HIP_STATE_ESTABLISHED_REKEY:
 		/* XX TODO: Should the packet be buffered instead? */
 		HIP_INFO("Rekey pending. Dropping the packet.\n");
-		err = 1;
+		err = -1;
 		break;
 	default:
 		HIP_ERROR("Unknown HIP state %d\n", state);
@@ -212,12 +217,16 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
  */
 static int hip_getfrag(void *from, char *to, int offset, int len, int odd, struct sk_buff *skb)
 {
-	if (skb->ip_summed == CHECKSUM_HW) {
-		memcpy(to, ((u8 *)from)+offset, len);
-	} else {
-		HIP_ERROR("HIPL does not support checksum calculation in SW yet\n");
-		return -EFAULT;
+
+	memcpy(to, ((u8 *)from)+offset, len);	
+
+	if (skb->ip_summed != CHECKSUM_HW) {
+		unsigned int csum;
+
+		csum = csum_partial((u8 *)from+offset, len, 0);
+		skb->csum = csum_block_add(skb->csum, csum, odd);
 	}
+
 	return 0;
 }
 
@@ -337,6 +346,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		goto out_err;
 	}
 
+	
 	lock_sock(hip_socket->sk);
  	err = ip6_append_data(hip_socket->sk, hip_getfrag, buf, len, 0,
 			      0xFF, NULL, &fl, (struct rt6_info *)dst, MSG_DONTWAIT);
