@@ -1026,7 +1026,8 @@ int hip_socket_handle_bos(const struct hip_common *msg)
 
 	/********** HOST_ID *********/
 
-	_HIP_DEBUG("This HOST ID belongs to: %s\n", hip_get_param_host_id_hostname(host_id_pub));
+	_HIP_DEBUG("This HOST ID belongs to: %s\n",
+		   hip_get_param_host_id_hostname(host_id_pub));
 	err = hip_build_param(bos, host_id_pub);
  	if (err) {
  		HIP_ERROR("Building of host id failed\n");

@@ -119,10 +119,12 @@ int main(int argc,char *argv[]) {
 	err = 1;
 	goto out;
       }
-      
+
       while((recvnum = recv(sockfd, mylovemostdata,
 			    sizeof(mylovemostdata), 0)) > 0 ) {
 	mylovemostdata[recvnum] = '\0';
+	printf("%s", mylovemostdata);
+	fflush(stdout);
 	if (recvnum == 0) {
 	  break;
 	}
@@ -142,7 +144,8 @@ int main(int argc,char *argv[]) {
 			       (struct sockaddr *)& peer_eid,
 			       &peer_eid_len) > 0) {
 	mylovemostdata[recvnum] = '\0';
-	HIP_ERROR("%s", mylovemostdata);
+	printf("%s", mylovemostdata);
+	fflush(stdout);
 	if (recvnum == 0) {
 	  break;
 	}

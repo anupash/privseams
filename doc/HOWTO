@@ -189,9 +189,10 @@ crash:
   <type some text in crash, press enter and ctrl+d and you
    should see some text appearing in the output of the hosts>
 
-This will setup a HIP connection between the two hosts. You should
-replace HIT_OF_XXX with the HIT of the host XXX. The host default HI
-is generated with the command "hipconf new hi default" (only needed on
+This will setup a HIP connection between the two hosts (it may take a
+while if you are using virtual machines). You should replace
+HIT_OF_XXX with the HIT of the host XXX. The host default HI is
+generated with the command "hipconf new hi default" (only needed on
 the first run) and sent to the kernel module with ".hipconf add hi
 default" The value of the HIT can be found from file
 /proc/net/hip/lhi. You can see information on current HIP connections
