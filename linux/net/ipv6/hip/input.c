@@ -729,7 +729,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 	   function. Now, begin to build I2 piece by piece. */
 
 	/* Delete old SPDs and SAs, if present */
-	hip_delete_ipsec(&ctx->input->hitr,&ctx->input->hits);
+	hip_delete_esp(&ctx->input->hitr,&ctx->input->hits);
 
 	hip_build_network_hdr(i2, HIP_I2, 0,
 			      &(ctx->input->hitr),
@@ -882,7 +882,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 		err = hip_setup_esp(&ctx->input->hits, &ctx->input->hitr,
 				    &ctx->skb_in->nh.ipv6h->saddr, &spi_our,
 				    transform_esp_suite, &ctx->hip_espr.key,
-				    &ctx->hip_authr.key, XFRM_POLICY_IN);
+				    &ctx->hip_authr.key, XFRM_POLICY_IN,1);
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
 			/* hip_delete_spd/hip_delete_sa ? */
@@ -1319,7 +1319,7 @@ int hip_create_r2(struct hip_context *ctx)
 	/* If we have old SAs and SPDs with these HITs delete them
 	 * ignoring the return value */
 	/* keep this here or move this to prev else ? */
-	hip_delete_ipsec(&i2->hitr, &i2->hits);
+	hip_delete_esp(&i2->hitr, &i2->hits);
 
  	param = hip_get_param(ctx->input, HIP_PARAM_BIRTHDAY_COOKIE_I2);
  	if (!param) {
@@ -1394,7 +1394,7 @@ int hip_create_r2(struct hip_context *ctx)
 		err = hip_setup_esp(&i2->hits, &i2->hitr, 
 				    &ctx->skb_in->nh.ipv6h->saddr, &spi_our,
 				    esptfm, &ctx->hip_espi.key, &ctx->hip_authi.key,
-				    XFRM_POLICY_IN);
+				    XFRM_POLICY_IN,1);
 
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
@@ -1416,7 +1416,7 @@ int hip_create_r2(struct hip_context *ctx)
 	spi_peer = htonl(spi_peer);
 	err = hip_setup_esp(&i2->hitr, &i2->hits, &ctx->skb_in->nh.ipv6h->saddr,
 			    &spi_peer, esptfm, &ctx->hip_espr.key,
-			    &ctx->hip_authr.key, XFRM_POLICY_OUT);
+			    &ctx->hip_authr.key, XFRM_POLICY_OUT,1);
 
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_peer);
@@ -1947,7 +1947,7 @@ int hip_handle_r2(struct sk_buff *skb)
 
 		err = hip_setup_esp(&r2->hitr, sender, &ctx->skb_in->nh.ipv6h->saddr,
 				    &spi_recvd, tfm, &ctx->hip_espi.key,
-				    &ctx->hip_authi.key, XFRM_POLICY_OUT);
+				    &ctx->hip_authi.key, XFRM_POLICY_OUT,1);
 		if (err == -EEXIST) {
 			HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 			HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -1969,6 +1969,8 @@ int hip_handle_r2(struct sk_buff *skb)
 		int tlist[1] = { HIP_HADB_SK };
 		void *setlist[1] = { kg };
 
+		kg = NULL;
+
 		val = hip_hadb_multiget(&ctx->input->hits, 1, tlist, setlist, 
 					HIP_ARG_HIT);
 		if (val == 0) 
@@ -1989,12 +1991,12 @@ int hip_handle_r2(struct sk_buff *skb)
 				HIP_ERROR("Error while connecting TCP socket\n");
 				tcp_set_state(kg_curr->sk, TCP_CLOSE);
 				__sk_dst_reset(kg_curr->sk);
-				kg_curr->sk_route_caps = 0;
+				kg_curr->sk->sk_route_caps = 0;
 				/* we should set dport to 0 too... */
 			}
 
 			if (kg_curr->sk->sk_socket && 
-			    kg_curr->sk->sk_socket->file->flags & O_NONBLOCKING) {
+			    kg_curr->sk->sk_socket->file->f_flags & O_NONBLOCK) {
 				/* if our socket is nonblocking, then it most probably
 				 * has already released the lock and we just acquired it,
 				 * so we will release it.

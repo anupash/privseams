@@ -346,7 +346,7 @@ int hip_setup_esp(struct in6_addr *srchit, struct in6_addr *dsthit,
 	int err;
 
 	err = hip_setup_sa(srchit, dsthit, dstip, spi, alg, enckey,
-			   authkey);
+			   authkey, is_active);
 	if (err) {
 		HIP_DEBUG("Setting up %s SA: [FAILED] (err=%d)",
 			  (dir == XFRM_POLICY_OUT) ? "outgoing" : "incoming", 

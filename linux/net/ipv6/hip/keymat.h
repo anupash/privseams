@@ -1,14 +1,6 @@
 #ifndef HIP_KEYMAT_H
 #define HIP_KEYMAT_H
 
-#ifndef __KERNEL__
-#  define __KERNEL__
-#endif
-
-#ifndef MODULE
-#  define MODULE
-#endif
-
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <asm/byteorder.h>
