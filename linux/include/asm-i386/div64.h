@@ -33,10 +33,7 @@
  *
  * Warning, this will do an exception if X overflows.
  */
-#ifndef SUBARCH
-/* it seems that there is a problem with UML and gcc */
 #define div_long_long_rem(a,b,c) div_ll_X_l_rem(a,b,c)
-#endif
 
 extern inline long
 div_ll_X_l_rem(long long divs, long div, long *rem)
