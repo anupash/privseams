@@ -4,8 +4,6 @@
 /*
  * HIP header and parameter related constants and structures.
  *
- * $Id: hip.h,v 1.98.2.1 2003/11/03 17:09:32 krisu Exp $
- *
  *  Authors:
  *  - Janne Lundberg <jlu@tcs.hut.fi>
  *  - Miika Komu <miika@iki.fi>
@@ -118,10 +116,10 @@
 #define HIP_PARAM_UNIT_TEST             32773
 /* End of HIPL private parameters. */
 
-#define HIP_PARAM_HMAC            65501
-#define HIP_PARAM_HIP_SIGNATURE2  65533
+#define HIP_PARAM_HMAC            65245
+#define HIP_PARAM_HIP_SIGNATURE2  65277
 
-#define HIP_PARAM_HIP_SIGNATURE   65535
+#define HIP_PARAM_HIP_SIGNATURE   65279
 #define HIP_PARAM_MAX             65536 /* exclusive */
 
 #define HIP_TRANSFORM_RESERVED          0

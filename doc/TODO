@@ -1,11 +1,15 @@
-$Id: TODO,v 1.145 2003/10/30 16:48:33 mkomu Exp $
-
 This file contains some of the things to do for the
 implementation. The rest of the TODO items are scattered in source
 files: mainly as a list in the beginning of the source file.
 Sometimes the items are as notes elsewhere in the source file if the
 there is specific line of the source code that needs fixing. Search
 for the strings "XX" or "TODO" to locate the file specific TODO items.
+
+IETF 59 action items
+====================
+
+[MIKA] Host ID
+[DONE] Type constants for parameters.
 
 IETF 58 action items
 ====================
@@ -273,12 +277,32 @@ field is IPPROTO_NONE (decimal 59).
 - REMOVED: The SA MUST include the random # I that was used when the
 SA was created.  It is used for replay protection.
 
+Bug reports
+===========
+
+Date: Thu, 19 Feb 2004 11:20:02 +0000
+From: Simon Schuetz <simon.schuetz@netlab.nec.de>
+Reply-To: hipl-users@freelists.org
+
+Started connest-server on remote machine. Then conntest-gai-client on local 
+machine. Then:
+
+$ ifconfig eth0 del 3ffe::2/64
+$ ifconfig eth0 add 3ffe::3/64
+
+Sometimes I did not even get to enter the 2nd line before the machine died.
+
+> And
+> could show the output of "ifconfig" and "/proc/net/hip/*" before the
+> handover? Thanks.
+
 
 action items:
 =============
 
 * Mika
-  * remove chained code from REA/AC/ACR
+  * UPDATE parameter
+  * transition to draft-mm-01 or draft-mm-02
   * /proc/net/hip/sdb_peer_addr: list addresses so that the first one is the
     one that will be "active"
   * multihoming: try multiple addresses of the peer if xmit fails?
@@ -304,6 +328,7 @@ action items:
   * random seed to files using OpenSSL (RAND_seed)
 
 * Miika
+  * HIP native API
   * remove include/net/keymat.h
   * remove hip_get_any_localhost_any and replace with select_any_id
   * clean up the state machine handling
@@ -384,17 +409,8 @@ action items:
   * write a draft about HIP API issues?
 
 * Kristian
-  * see "removal of chained code" in my TODO list and think if it can
-    can help the implementation part of your thesis
-  * read literature/code about kernel programming and crypto
-  * port to kernel [from OpenSSL?]
-    * almost all of the functionality implementeted in hipd/crypto.c
-    * DSA: [create a new key], sign, verify
-    * DH, creation of new key, computation of shared secret
-    * puzzle solving (puzzle specs will be slightly changed soon)
-    * [ X.509 certificates ]
-  * pre-emptive support is an option in 2.5 kernel, should both modes
-    be supported?
+  * transition to the 2.6 kernel series
+  * rendezvous server
   * unit test suite for the ported crypto
 
 * Janne:
@@ -449,91 +465,4 @@ action items:
   * fixed size arrays -> change to use struct list_head
   * common functions/macros for variables of type struct list_head
   * status page: collect all MUST/SHOULD/etc from drafts and see if we comply to the drafts
-
-* Pekka's comments:
-
-(this example code is very old, it does not seem to be compliant to
-the new specs)
-
-  - hip_handle_flowlabel extracts the SPI value from IPv6
-    flowlabel.  ESP is not used.  This is a kludge.
-
-  - if the receiver has an HIP state already with a peer
-    and it receives I1 (or I2) from the peer, there are
-    basically three possibilities:
-    - the peer has crashed or otherwise lost its HIP state
-    - somebody is trying to launch a DoS or other attack
-    - the peer is faulty -- this can be considered as a DoS
-      attack, since it's the peer's fault
-
-  - consider: remove some error prosessing from I1 (and only I1).
-    I1 prosessing should be as fast as possible, to minimize
-    the amount of resources spend on a DoS.
-
-        if (!spin_try_lock(XXX))
-            return;  /* Drop the received I1 */
-        ... /* Send R1 */
-        spin_unlock(XXX);
-
-  - a simple test-and-set lock around handling I1, then use just a
-    static data structure for the R1 packet
-    - malloc/free becomes unnecessary
-    - just on thread at time sending R1 -> automatic rate limitation
-      of I1 handling
-  - consider: only three entry points to HIP code from TCP/IP side:
-    - ip6_output: trigger HIP whenever sending a packet
-    - ip6_input: trigger HIP through extension header handling (as now)
-    - ip6_input: trigger HIP through ESP SPI handling (now uses flowlabel for
-this)
-
-  - outline for ip6_output algorithm:
-
-     if (destination address is not HIT)
-         return and allow IP to function as before
-
-     entry = lookup_database(destination address); /* XXX: lock(entry) */
-
-     if (there is no entry)
-         return EHOSTUNREACHABLE;
-
-     switch (entry->state) {
-     case NEVER_USED:
-         send_i1
-         entry->state = I1_SENT;
-     case I1_SENT:
-     case I2_SENT:
-         queue_packet_to_entry
-         unlock(entry);
-         return without sending the packet
-     case ESTABLISHED:
-         unlock(entry);
-         replace destination address (HIT) with a real destination address
-         return and send the packet
-     }
-
-  - outline for hip_process_r1:
-
-     entry = lookup_database(destination HIT from R1)
-
-     if (there is no entry)
-        drop packet and return
-
-     switch (entry->state) {
-     case NEVER_USED:
-        unlock(entry)
-        drop packet
-        return
-     case I1_SENT:
-        send I2 with the queued packet as piggybacked payload
-        entry->state = I2_SENT:
-        unlock(entry);
-        return
-     case I2_SENT:
-        resend I2 ?????
-        unlock(entry)
-        return;
-     case ESTABLISHED:
-        XXX: consider an error message or something like that,
-        anyway, potentially need to resy
-     }
 
