@@ -34,7 +34,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst);
 #ifdef __KERNEL__
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
-        struct               spi;
+        struct               spi;                 /* Either in or out */
 	hip_hit_t            hit_our;             /* The HIT we use with
 						   * this host */
 	hip_hit_t            hit_peer;            /* Peer's HIT */    
@@ -53,8 +53,13 @@ struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit);
 
 #endif /* __KERNEL__ */
 
-int hip_xfrm_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
-int hip_xfrm_update(uint32 spi, struct in6_addr * dst_addr, int state, int dir);
+/*
+ * These are wrappers to netlink calls (from the userspace daemon to the
+ * kernelspace).
+ */
+int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
+int hip_xfrm_update(uint32 spi, struct in6_addr * dst_addr, int state,
+		    int dir);
 int hip_xfrm_delete(uint32 spi, struct in6_addr * hit, int dir);
 
 #endif /* HIP_XFRMAPI_H */

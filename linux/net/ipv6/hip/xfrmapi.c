@@ -3,11 +3,14 @@
 HIP_HASHTABLE hip_xfrmdb_hit;
 HIP_HASHTABLE hip_xfrmdb_spi_list;
 
+/* byhit and byspi list contain also both local and peer SPI lists */
 static struct list_head hip_xfrmdb_byhit[HIP_HIP_XFRMDB_SIZE];
 static struct list_head hip_xfrmdb_byspi_list[HIP_HIP_XFRMDB_SIZE];
 
 void hip_init_hadb(void)
 {
+	// XX FIXME: this does not work
+
 	memset(&hip_xfrmdb_hit,0,sizeof(hip_xfrmdb_hit));
 	memset(&hip_xfrmdb_spi_list,0,sizeof(hip_xfrmdb_spi_list));
 
@@ -41,6 +44,7 @@ void hip_init_hadb(void)
 
 void hip_uninit_hadb()
 {
+	// XX FIXME: this does not work
 	int i;
 	hip_ha_t *ha, *tmp;
 	struct hip_hit_spi *hs, *tmp_hs;
@@ -533,11 +537,13 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 
 struct hip_xfrm_state * hip_xfrm_find_by_spi(uint32_t spi)
 {
-	return NULL; // XX FIXME
+	// XX FIXME: search the hashtable 
+	return NULL;
 }
 
 struct hip_xfrm_state * hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
 {
-	return NULL; // XX FIXME;
+        // XX FIXME: 
+	return NULL;
 }
 
