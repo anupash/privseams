@@ -225,7 +225,7 @@ int hip_keymat_get_new(struct hip_hadb_state *entry, void *key, size_t key_len,
 		goto out_err;
 	}
 
-	memset(key, 0, key_len); /* during testing only */
+//	memset(key, 0, key_len); /* during testing only */
 
 	/* test if we already have needed amount of ready keymat */
 	HIP_DEBUG("Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",

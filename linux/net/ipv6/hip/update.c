@@ -1,3 +1,5 @@
+#include <net/xfrm.h>
+
 #include "update.h"
 #include "hip.h"
 #include "security.h"
@@ -473,6 +475,7 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	int we_are_HITg = 0;
 	int esp_transf_length = 0;
 	int auth_transf_length = 0;
+	struct xfrm_state *xs;
 
 	/* draft-09 8.10.2 Processing a reply UPDATE packet */
 
@@ -519,7 +522,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 
 	{
 		/* E X P E R I M E N T A L */
-		//uint16_t ki = 0x7fff & ntohs(nes->keymat_index);
 		unsigned long int flags = 0;
 		struct hip_hadb_state *entry;
 		uint8_t calc_index_new;
@@ -555,7 +557,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 		memcpy(Kn, entry->current_keymat_K, HIP_AH_SHA_LEN);
 
 		/* SA-gl */
-//		err = hip_keymat_get_new(entry, &espkey_own.key, esp_transf_length, entry->dh_shared_key,
 		err = hip_keymat_get_new(entry, &espkey_gl.key, esp_transf_length, entry->dh_shared_key,
 					 entry->dh_shared_key_len, &keymat_offset_new, &calc_index_new, Kn);
 		HIP_DEBUG("enckey_gl hip_keymat_get_new ret err=%d keymat_offset_new=%u calc_index_new=%u\n",
@@ -564,7 +565,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 			HIP_HEXDUMP("ENC KEY gl", &espkey_gl.key, esp_transf_length);
 
 		keymat_offset_new += esp_transf_length;
-//		err = hip_keymat_get_new(entry, &authkey_own.key, auth_transf_length, entry->dh_shared_key,
 		err = hip_keymat_get_new(entry, &authkey_gl.key, auth_transf_length, entry->dh_shared_key,
 					 entry->dh_shared_key_len, &keymat_offset_new, &calc_index_new, Kn);
 		HIP_DEBUG("authkey_gl hip_keymat_get_new ret err=%d keymat_offset_new=%u calc_index_new=%u\n",
@@ -575,7 +575,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 		keymat_offset_new += auth_transf_length;
 
 		/* SA-lg */
-//		err = hip_keymat_get_new(entry, &espkey_own.key, esp_transf_length, entry->dh_shared_key,
 		err = hip_keymat_get_new(entry, &espkey_lg.key, esp_transf_length, entry->dh_shared_key,
 					 entry->dh_shared_key_len, &keymat_offset_new, &calc_index_new, Kn);
 		HIP_DEBUG("enckey_lg hip_keymat_get_new ret err=%d keymat_offset_new=%u calc_index_new=%u\n",
@@ -584,7 +583,6 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 			HIP_HEXDUMP("ENC KEY lg", &espkey_lg.key, esp_transf_length);
 
 		keymat_offset_new += esp_transf_length;
-//		err = hip_keymat_get_new(entry, &authkey_own.key, auth_transf_length, entry->dh_shared_key,
 		err = hip_keymat_get_new(entry, &authkey_lg.key, auth_transf_length, entry->dh_shared_key,
 					 entry->dh_shared_key_len, &keymat_offset_new, &calc_index_new, Kn);
 		HIP_DEBUG("authkey_lg hip_keymat_get_new ret err=%d keymat_offset_new=%u calc_index_new=%u\n",
@@ -659,9 +657,33 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	}
 	HIP_DEBUG("switching to new updated inbound SPI=0x%x, new_spi_our\n", our_new_spi);
 
-	HIP_DEBUG("TODO: copy keys to new updated inbound SA\n");
-	HIP_HEXDUMP("todo: SA enc key", we_are_HITg ? &espkey_lg : &espkey_gl, esp_transf_length);
-	HIP_HEXDUMP("todo: SA auth key", we_are_HITg ?  &authkey_lg : &authkey_gl, auth_transf_length);
+	HIP_DEBUG("copying keys to new updated inbound SA\n");
+	HIP_DEBUG("Searching for spi: %x (%x)\n", our_new_spi, htonl(our_new_spi));
+	xs = xfrm_state_lookup((xfrm_address_t *)hitr, htonl(our_new_spi),
+			       IPPROTO_ESP, AF_INET6);
+	if (!xs) {
+		HIP_ERROR("Did not find SA\n");
+		goto out_err;
+	}
+	
+	spin_lock_bh(&xs->lock);
+	HIP_HEXDUMP("current xs enc key", xs->ealg->alg_key, xs->ealg->alg_key_len / 8);
+	HIP_HEXDUMP("current xs auth key", xs->aalg->alg_key, xs->aalg->alg_key_len / 8);
+	if (xs->ealg->alg_key_len / 8 != esp_transf_length ||
+	    xs->aalg->alg_key_len / 8 != auth_transf_length) {
+		/* weird .. shouldn't happen, but check anyway */
+		HIP_ERROR("Sizes for enc/auth keys differ, current xs a/e=%d/%d vs. %d/%d\n",
+			  xs->aalg->alg_key_len / 8, xs->ealg->alg_key_len / 8,
+			  auth_transf_length, esp_transf_length);
+		err = -EINVAL;
+	} else {
+		memcpy(xs->ealg->alg_key, we_are_HITg ? &espkey_lg  : &espkey_gl,  esp_transf_length);
+		memcpy(xs->aalg->alg_key, we_are_HITg ? &authkey_lg : &authkey_gl, auth_transf_length);
+		HIP_DEBUG("Copied new keys to SA\n");
+	}
+
+	spin_unlock_bh(&xs->lock);
+	xfrm_state_put(xs);
 
 	if (0 && hip_hadb_set_info(hits, &our_new_spi,
 			      HIP_HADB_OWN_SPI|HIP_ARG_HIT) != 1) {
@@ -677,6 +699,7 @@ int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int
 	hip_hadb_set_info(hits, &hadb_state, HIP_HADB_STATE|HIP_ARG_HIT);
 
  out_err:
+	/* if (err) move to state = ? */
 	if (update_packet)
 		kfree(update_packet);
 	/* TODO: REMOVE IPSEC SAs */
