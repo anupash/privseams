@@ -67,6 +67,18 @@ configurations files in hipl/test/configs for "typical" systems. You
 can use one of those as a template, and modify it to suite the needs
 of your system. Read hipl/test/configs/README before doing so.
 
+If you haven't configured linux kernel before, please consult
+hipl/linux/README before doing that. We have some example
+configurations files in hipl/test/configs for "typical" systems. You
+can use one of those as a template, and modify it to suite the needs
+of your system. Read hipl/test/configs/README before doing so.
+
+If you haven't configured linux kernel before, please consult
+hipl/linux/README before doing that. We have some example
+configurations files in hipl/test/configs for "typical" systems. You
+can use one of those as a template, and modify it to suite the needs
+of your system. Read hipl/test/configs/README before doing so.
+
 The 2.6 kernel series should be compilable with both gcc 2.9x and 3.x
 series. We recommend the latter.
 
@@ -165,7 +177,6 @@ oops:
     HIT_OF_CRASH crash
 
   ifconfig eth0 inet6 add 3ffe::2/64
-  mknod /dev/hip c 126 0
   modprobe hipmod
   cd somewhere/hipl
   tools/hipconf new hi default # only the first time when you run hip

@@ -285,7 +285,7 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
  		ret = HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb);
 		if (ret < 0)
 			goto end_hip;
-#if 1
+#if 0
 		if (ret == 5) {  /* THIS IS NOT WORKING well */
 			struct dst_entry **dst_tmp;
 			int err2;
@@ -316,6 +316,8 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 // )
 
 // xfrm_flush_bundles(); ?
+
+			// dst_tmp = ip6_route_output(sk, &fl_tmp); ?
 
 			err2 = ip6_dst_lookup(sk, dst_tmp, &fl_tmp);
 			if (err2) {

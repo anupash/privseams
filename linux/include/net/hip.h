@@ -182,12 +182,23 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_VIA_RVS         65500
 #define HIP_PARAM_MAX             65536 /* exclusive */
 
+#if 0
 #define HIP_TRANSFORM_RESERVED          0
 #define HIP_TRANSFORM_NULL              1
 #define HIP_TRANSFORM_3DES              2
 #define HIP_TRANSFORM_AES_128           3
+#endif
 
-#define HIP_TRANSFORM_HIP_MAX           3
+/*
+ * XX FIXME: SHOULD BE SIMILAR TO THE ESP TRANSFORMS!!!
+ */
+#define HIP_TRANSFORM_RESERVED          0
+#define HIP_TRANSFORM_NULL              5
+#define HIP_TRANSFORM_3DES              2
+#define HIP_TRANSFORM_AES_128           1
+
+/* XX FIX ME */
+#define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6
 
 #define HIP_ESP_RESERVED                0
@@ -417,6 +428,9 @@ struct hip_esp_transform {
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
 
+/*
+ * XX FIXME: HIP AND ESP TRANSFORM ARE NOT SYMMETRIC (RESERVED)
+ */
 struct hip_any_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;

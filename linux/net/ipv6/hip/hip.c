@@ -356,10 +356,15 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	u8 *dh_data = NULL;
  	int dh_size,written, mask;
  	/* Supported HIP and ESP transforms */
+#if 1
  	hip_transform_suite_t transform_hip_suite[] = {HIP_TRANSFORM_3DES,
  						       HIP_TRANSFORM_NULL };
  	hip_transform_suite_t transform_esp_suite[] = {HIP_ESP_3DES_SHA1,
  						       HIP_ESP_NULL_SHA1 };
+#else /* XX FIXME: does not work */
+ 	hip_transform_suite_t transform_hip_suite[] = {HIP_TRANSFORM_NULL};
+ 	hip_transform_suite_t transform_esp_suite[] = {HIP_ESP_NULL_SHA1 };
+#endif
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
@@ -777,11 +782,14 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	int length;
 	hip_transform_suite_t *suggestion;
 
-	length = ntohs(ht->length);
+	length = hip_get_param_contents_len(ht);
+	//length = ntohs(ht->length);
 	suggestion = (uint16_t*) &ht->suite_id[0];
 
-	if ( (length >> 1) > 6) {
-		HIP_ERROR("Too many transforms (%d)\n", length >> 1);
+	//if ( (length >> 1) > 6) {
+	if (length > sizeof(struct hip_esp_transform) -
+	    sizeof(struct hip_common)) {
+		HIP_ERROR("Too many transforms\n");
 		goto out;
 	}
 
@@ -939,7 +947,6 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 	} else {
 		HIP_ASSERT(iv); /* Not tested/interoperated without iv */
 	}
-
 
  out_err:
 	if (result)

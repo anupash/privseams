@@ -1547,7 +1547,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
  	struct hip_host_id *host_id_in_enc = NULL;
 	struct hip_spi *hspi = NULL;
 	hip_ha_t *entry = ha;
-	int esptfm;
+	hip_transform_suite_t esptfm, hiptfm;
 	uint32_t spi_in, spi_out;
 	struct hip_spi_in_item spi_in_data;
  	HIP_DEBUG("\n");
@@ -1654,10 +1654,17 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	/* Get the encapsulated host id in the encrypted parameter */
 	host_id_in_enc = (struct hip_host_id *) (tmp_enc + 1);
 
+ 	hiptfm = hip_get_param_transform_suite_id(param, 0);
+ 	if (hiptfm == 0) {
+		HIP_ERROR("Bad HIP transform\n");
+ 		err = -EFAULT;
+ 		goto out_err;
+ 	}
+
 	HIP_DEBUG("\n");
 	err = hip_crypto_encrypted(host_id_in_enc,
 				   tmp_enc->iv, /* IV */
-				   hip_get_param_transform_suite_id(param, 0),
+				   hiptfm,
 				   /* 4 = reserved, 8 = iv */
 				   hip_get_param_contents_len(enc) - 4 - 8,
 				   &ctx->hip_enc_in.key, HIP_DIRECTION_DECRYPT);
@@ -1673,7 +1680,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		goto out_err;
 	}
 
-	_HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
+	HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
 		    hip_get_param_total_len(host_id_in_enc));
 
 	/* Verify sender HIT */
@@ -1685,6 +1692,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 			err = -1;
 			goto out_err;
 		}
+
+		hip_print_hit("id to hit", &hit);
 
 		if (ipv6_addr_cmp(&hit, &i2->hits) != 0) {
 			HIP_ERROR("Sender's HIT does not match advertised public key\n");

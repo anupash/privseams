@@ -632,12 +632,12 @@ printk(KERN_DEBUG "xfrm_tmpl_resolve: policy->xfrm_nr=%d\n", policy->xfrm_nr);
 		x = xfrm_state_find(remote, local, fl, tmpl, policy, &error, family);
 
 		// todo: for IPPROTO_ESP:
-		if (x) {
+		if (0 && x) {
 			printk(KERN_DEBUG "xfrm_tmpl_resolve: x SPI 0x%x\n", ntohl(x->id.spi));
 			printk(KERN_DEBUG "xfrm_tmpl_resolve: x proto %d\n", x->id.proto);
 			printk(KERN_DEBUG "xfrm_tmpl_resolve: x = xfrm_state_lookup for defalt spi and break for HITs ?\n");
 		}
-if (ipv6_addr_is_hit(&fl->fl6_dst)) {
+if (ipv6_addr_is_hit(0 && &fl->fl6_dst)) {
 	 uint32_t default_spi;
 	 int state_ok = 0;
 

@@ -888,15 +888,19 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 	hip_tlv_type_t type = hip_get_param_type(param);
 	int err = 0;
 
+	HIP_DEBUG("type=%u\n", type);
+
 	switch(type) {
 	case HIP_PARAM_HIP_TRANSFORM:
+	case HIP_PARAM_ESP_TRANSFORM:
 	{
 		/* Search for one supported transform */
 		uint16_t i;
 		hip_transform_suite_t suite;
-		err = -EPROTONOSUPPORT;
 
-		HIP_DEBUG("Checking HIP transform\n");
+ 		HIP_DEBUG("Checking %s transform\n",
+ 			  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
+#if 0
 		for (i = 0; i < HIP_TRANSFORM_HIP_MAX; i++) {
 			suite = hip_get_param_transform_suite_id(param, i);
 			if (suite == HIP_TRANSFORM_3DES ||
@@ -908,10 +912,16 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 				HIP_DEBUG("Skipping suite: %d\n", suite);
 			}
 		}
-		if (err)
-			HIP_ERROR("Could not find suitable HIP transform\n");
+#endif
+		suite = hip_get_param_transform_suite_id(param, 0);
+		if (suite == 0) {
+			HIP_ERROR("Could not find suitable %s transform\n",
+				  type == HIP_PARAM_HIP_TRANSFORM ? "HIP" : "ESP");
+			err = -EPROTONOSUPPORT;
+		}
 		break;
 	}
+#if 0
 	case HIP_PARAM_ESP_TRANSFORM:
 	{
 		/* Search for one supported transform */
@@ -921,6 +931,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		HIP_DEBUG("Checking ESP transform\n");
 		HIP_HEXDUMP("ESP transform", (char *) param,
 			    hip_get_param_total_len(param));
+#if 0
 		for (i = 0; i < HIP_TRANSFORM_ESP_MAX; i++) {
 			suite = hip_get_param_transform_suite_id(param, i);
 			if (suite ==  HIP_ESP_3DES_SHA1 ||
@@ -929,10 +940,15 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 				break;
 			}
 		}
-		if (err)
+#endif
+		suite = hip_get_param_transform_suite_id(param, i);
+		if (suite == 0) {
 			HIP_ERROR("Could not find suitable ESP transform\n");
+			err = -1;
+		}
 		break;
 	}
+#endif
 	case HIP_PARAM_HOST_ID:
 	{
 		uint8_t algo = 
@@ -944,7 +960,7 @@ int hip_check_network_param_attributes(const struct hip_tlv_common *param)
 		break;
 	}
 	}
-
+	HIP_DEBUG("err=%d\n", err);
 	return err;
 }
 
@@ -993,6 +1009,7 @@ int hip_check_network_msg(const struct hip_common *msg)
 				  prev_param_type, current_param_type);
 			break;
 		} else if (hip_check_network_param_attributes(current_param)) {
+			HIP_ERROR("bad param attributes\n");
 			err = -EINVAL;
 			break;
 		}
@@ -1672,26 +1689,112 @@ int hip_build_param_transform(struct hip_common *msg,
  * @transform_tlv: the transform structure
  * @index: the index of the suite id in @transform_tlv
  *
+ * XX FIXME: REMOVE INDEX, XX RENAME
+ *
  * Returns: the suite id on @transform_tlv on index @index
  */
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv, const uint16_t index)
 {
+	/* XX FIXME: WHY DO WE HAVE HIP_SELECT_ESP_TRANSFORM SEPARATELY??? */
 	hip_transform_suite_t suite = 0;
 	hip_tlv_type_t type;
 	uint16_t transform_max;
+ 	const struct hip_hip_transform *hip_tf =
+ 		(const struct hip_hip_transform *) transform_tlv;
+ 	const struct hip_esp_transform *esp_tf =
+ 		(const struct hip_esp_transform *) transform_tlv;
+ 	uint16_t actual;
+
+ 	uint16_t supported_hip_tf[] = { HIP_TRANSFORM_NULL,
+ 					HIP_TRANSFORM_3DES,
+ 					HIP_TRANSFORM_AES_128};
+ 	uint16_t supported_esp_tf[] = { HIP_ESP_NULL_SHA1,
+ 					HIP_ESP_3DES_SHA1,
+ 					HIP_ESP_AES_SHA1 };
+ 	////////////
+ 	uint16_t *table = NULL;
+ 	uint16_t *tfm;
+ 	int table_n = 0, pkt_tfms = 0, i;
+
+ 	HIP_DEBUG("tfm len = %d\n", hip_get_param_contents_len(transform_tlv));
+
+ 	type = hip_get_param_type(transform_tlv);
+ 	if (type == HIP_PARAM_HIP_TRANSFORM) {
+		table = supported_hip_tf;
+		table_n = sizeof(supported_hip_tf)/sizeof(uint16_t);
+		tfm = (void *)transform_tlv+sizeof(struct hip_tlv_common);
+		pkt_tfms = hip_get_param_contents_len(transform_tlv)/sizeof(uint16_t);
+ 	} else if (type == HIP_PARAM_ESP_TRANSFORM) {
+		table = supported_esp_tf;
+		table_n = sizeof(supported_esp_tf)/sizeof(uint16_t);
+		tfm = (void *)transform_tlv+sizeof(struct hip_tlv_common)+sizeof(uint16_t);
+		pkt_tfms = (hip_get_param_contents_len(transform_tlv)-sizeof(uint16_t))/sizeof(uint16_t);
+ 	} else {
+		HIP_ERROR("Invalid type %u\n", type);
+		return 0;
+ 	}
+
+ 	for (i = 0; i < pkt_tfms; i++, tfm++) {
+ 		int j;
+ 		HIP_DEBUG("testing pkt tfm=%u\n", ntohs(*tfm));
+ 		for (j = 0; j < table_n; j++) {
+ 			if (ntohs(*tfm) == table[j]) {
+ 				HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
+ 					  table[j], i);
+ 				return table[j];
+ 			}
+ 		}
+ 	}
+ 	HIP_DEBUG("usable suite not found\n");
+ 	return 0;
+
+#if 0
+
+ 	// XX FIXME: CRASHES WITH NULL HIP TRANSFORM
+#if 0
 	const struct hip_any_transform *tf =
 		(const struct hip_any_transform *) transform_tlv;
+#endif
 
-	type = hip_get_param_type(tf); 
+ 	HIP_DEBUG("transform %p, index %d\n", transform_tlv, index);
+
+ 	type = hip_get_param_type(transform_tlv);
 	transform_max = hip_get_transform_max(type);
+
+	if (type == HIP_PARAM_HIP_TRANSFORM) {
+ 		actual = hip_get_param_contents_len(transform_tlv) /
+ 			sizeof(hip_transform_suite_t);
+ 	} else if (type == HIP_PARAM_ESP_TRANSFORM) {
+ 		actual = (hip_get_param_contents_len(transform_tlv) -
+ 			  /* reserved */ sizeof(uint16_t)) /
+ 			sizeof(hip_transform_suite_t);
+ 	} else {
+ 		HIP_ERROR("Bad transform type (%d)\n", type);
+ 		goto out_err;
+ 	}
+
+ 	transform_max = (actual < transform_max) ? actual : transform_max;
+
+ 	HIP_DEBUG("yeah babe yeah %d\n", actual);
 
 	/* Check that the maximum number of transforms is not overflowed */
 	if (transform_max > 0 && index > transform_max) {
 		HIP_ERROR("Illegal range for transform (%d) for type %d.\n",
 			  index, type);
 	} else {
-		suite = ntohs(tf->suite_id[index]);
+ 		if (type == HIP_PARAM_HIP_TRANSFORM) {
+ 			HIP_DEBUG("ding\n");
+ 			//return 0;
+ 			suite = ntohs(hip_tf->suite_id[index]);
+ 		} else if (type == HIP_PARAM_ESP_TRANSFORM) {
+ 			suite = ntohs(esp_tf->suite_id[index]);
+ 		} else {
+ 			HIP_ERROR("\n");
+ 		}
 	}
+
+out_err:
+#endif
 
 	return suite;
 }

@@ -16,12 +16,10 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
 {
        int err = 0;
        u8 digest[HIP_AH_SHA_LEN];
-       char *key_rr = (char *) (host_id + 1); /* skip the header */
+       char *key_rr = (char *) (host_id + 1);
+       //sizeof(struct hip_host_id_key_rdata); /* skip the header */
        /* hit excludes rdata but it is included in hi_length; subtract rdata */
-       unsigned int key_rr_len = ntohs(host_id->hi_length) -
-	       sizeof(struct hip_host_id_key_rdata);
-
-       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       unsigned int key_rr_len = ntohs(host_id->hi_length);
 
        HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
 
@@ -30,7 +28,7 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
                goto out_err;
        }
 
-       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
        err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest);
        if (err) {
