@@ -116,9 +116,12 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 
 	/* get_cpu_var / put_cpu_var ? */
 	wq = &per_cpu(hip_workqueue, cpu);
-	list_add_tail(&hwo->queue, &wq->workqueue);
-	/* what is the correct order of these two, l_i_r and up ? */
-	up(&wq->worklock);
+	if (wq) {
+		list_add_tail(&hwo->queue, &wq->workqueue);
+		/* what is the correct order of these two, l_i_r and up ? */
+		up(&wq->worklock);
+	} else
+		HIP_ERROR("NULL wq, aieee!\n");
 
 	local_irq_restore(eflags);
 	return 1;
