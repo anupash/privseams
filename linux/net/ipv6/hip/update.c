@@ -279,7 +279,8 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	uint32_t spi;
 	struct hip_rea_info_addr_item *rea_address_item;
 	int i, n_addrs;
-	struct hip_peer_spi_list_item *spi_list;
+//	struct hip_peer_spi_list_item *spi_list;
+	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
 	/* mm-02-pre1 8.2 Handling received REAs */
 
@@ -308,15 +309,15 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 
 	/* 1.  The host checks if the SPI listed is a new one.  If it
 	   is a new one, it creates a new SPI that contains no addresses. */
-	spi_list = hip_hadb_get_spi_list(entry, spi);
-	if (!spi_list) {
+	spi_out = hip_hadb_get_spi_list(entry, spi);
+	if (!spi_out) {
 		err = hip_hadb_add_peer_spi(entry, spi);
 		if (err) {
 			HIP_DEBUG("failed to create a new SPI list\n");
 			goto out_err;
 		}
-		spi_list = hip_hadb_get_spi_list(entry, spi);
-		if (!spi_list) {
+		spi_out = hip_hadb_get_spi_list(entry, spi);
+		if (!spi_out) {
 			HIP_ERROR("Couldn't get newly created SPI list\n"); /* weird */
 			goto out_err;
 		}
@@ -351,7 +352,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea_info_mm02 *r
 	   parameter as DEPRECATED. */
 
 	HIP_DEBUG("deprecating not listed address from the SPI list\n");
-	list_for_each_entry_safe(a, tmp, &spi_list->peer_addr_list, list) {
+	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
 		int spi_addr_is_in_rea = 0;
 
 		hip_print_hit("testing SPI address", &a->address);

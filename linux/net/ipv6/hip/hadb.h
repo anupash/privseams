@@ -44,18 +44,18 @@ int hip_hadb_exists_entry(void *arg, int type);
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr, 
-				uint32_t *interface_id, uint32_t *lifetime, 
+				uint32_t *spi, uint32_t *lifetime,
 				struct timeval *modified_time);
 
 int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
-				uint32_t *interface_id, uint32_t *lifetime);
+				uint32_t *lifetime);
 
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime);
 
 void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
-void hip_hadb_delete_peer_addr_if(hip_ha_t *entry, uint32_t interface_id);
+void hip_hadb_delete_peer_addr_spi(hip_ha_t *entry, uint32_t spi);
 
 void hip_hadb_delete_peer_addr_not_in_list(hip_ha_t *entry, void *addrlist,
 					   int n_addrs, uint32_t iface);
@@ -76,7 +76,8 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
 void hip_hadb_delete_outbound_spis(hip_ha_t *entry);
 
 int hip_hadb_add_peer_spi(hip_ha_t *entry, uint32_t spi);
-struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
+//struct hip_peer_spi_list_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
+struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
 			     int is_preferred_addr);

@@ -555,7 +555,7 @@ struct hip_hmac {
 	uint8_t hmac_data[HIP_AH_SHA_LEN];
 } __attribute__ ((packed));
 
-struct hip_ac_info { /* mm-01: to be removed */
+struct hip_ac_info { /* mm-02: to be removed */
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
 	uint16_t ac_id;
@@ -706,16 +706,7 @@ struct hip_context
 	struct sk_buff *skb_in;         /* received skbuff */
 	struct hip_common *input;       /* received packet */
 	struct hip_common *output;      /* packet to be built and sent */
-  /*
-    struct hip_crypto_key hip_i;
-    struct hip_crypto_key hip_r;
-    struct hip_crypto_key hip_espi;
-    struct hip_crypto_key hip_espr;
-    struct hip_crypto_key hip_authi;
-    struct hip_crypto_key hip_authr;
-    struct hip_crypto_key hip_hmaci;
-    struct hip_crypto_key hip_hmacr;
-  */
+
 	struct hip_crypto_key hip_enc_out;
 	struct hip_crypto_key hip_hmac_out;
 	struct hip_crypto_key esp_out;
@@ -756,16 +747,16 @@ struct hip_context_rea_sig
 struct hip_peer_addr_list_item
 {
 	struct list_head list;
-	uint32_t         interface_id;
-	uint32_t         spi;
+
 	struct in6_addr  address;
-	int address_state;              /* current state of the
+	int              address_state; /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */
 	uint32_t         lifetime;
 	struct timeval   modified_time; /* time when this address was
 					   added or updated */
 };
 
+#if 0
 /* mm-02 test */
 struct hip_peer_spi_list_item
 {
@@ -774,6 +765,7 @@ struct hip_peer_spi_list_item
 	struct list_head peer_addr_list; /* Peer's IPv6 addresses belonging to the SPI */
 	struct in6_addr  preferred_address;
 };
+#endif
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
@@ -794,15 +786,6 @@ struct hip_hit_spi {
 	uint32_t         spi; /* this SPI spi belongs to the HIT hit */
 	int              is_active; /* maybe useless */
 };
-
-#if 0
-/* inbound IPsec SA SPI mappings */
-struct hip_ifindex2spi_map {
-	struct list_head list;
-
-	uint32_t spi;
-};
-#endif
 
 struct hip_spi_in_item
 {
@@ -831,8 +814,9 @@ struct hip_spi_out_item
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
 	uint32_t         seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
-	// int update_state_flags; /* TODO: move from hadb_state to here */
-	// peer addresses
+
+	struct list_head peer_addr_list; /* Peer's IPv6 addresses */
+	struct in6_addr  preferred_address; /* check */
 };
 
 struct hip_hadb_state
@@ -846,14 +830,14 @@ struct hip_hadb_state
 	int                  state;
 
 	uint16_t             local_controls;
-	uint16_t             peer_controls;  
+	uint16_t             peer_controls;
 
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
 
 	/* TODO: REMOVE peer_addr_list and peer_spi_list (spis_in and spis_out) */
-	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
-	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
+
+//	struct list_head     peer_spi_list;  /* Peer's (outbound) SPI values, mm-02 */
 
 	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
 	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
@@ -893,14 +877,6 @@ struct hip_hadb_state
 
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
-
-	/* new update specs testing */
-#if 0
-	int update_state_flags; /* 0x1=received ack, 0x2=received nes
-				   -> 0x3=can move back to established */
-	uint32_t stored_sent_update_id; /* the SEQ to wait ACK for */
-	struct hip_nes stored_received_nes;
-#endif
 };
 
 struct hip_cookie_entry {
