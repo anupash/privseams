@@ -267,9 +267,6 @@
       &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
       </para>
     <para>
-      &nbsp;mknod /dev/hip c 126 0
-    </para>
-    <para>
       &nbsp;modprobe hipmod
     </para>
     <para>
