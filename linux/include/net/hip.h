@@ -149,7 +149,7 @@ typedef uint16_t in_port_t;
 #define HIP_PARAM_RVA_REQUEST       100
 #define HIP_PARAM_RVA_REPLY         102
 
-#define HIP_PARAM_REA_INFO          128
+#define HIP_PARAM_REA_INFO          8   /* *** TEMPORARY TYPE VALUE, mm-02 CONFLICTS WITH base-00 *** */
 #define HIP_PARAM_AC_INFO           129 /* mm-01: to be removed */
 #define HIP_PARAM_FA_INFO           130 /* mm-01: to be removed */
 
@@ -480,6 +480,12 @@ struct hip_rea_info {
 	uint32_t new_spi;
 	uint16_t keymat_index;
 	uint16_t rea_id;
+} __attribute__ ((packed));
+
+struct hip_rea_info_mm02 {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	uint32_t spi;
 } __attribute__ ((packed));
 
 struct hip_hmac {

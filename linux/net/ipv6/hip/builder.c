@@ -1642,7 +1642,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  * @addresses:       list of addresses
  * @address_count:   number of addresses in @addresses
  *
- * Returns: Currently always 0.
+ * Returns: 0 on success, otherwise < 0.
  */
 int hip_build_param_rea_info(struct hip_common *msg,
 			     uint32_t interface_id,
@@ -1663,7 +1663,6 @@ int hip_build_param_rea_info(struct hip_common *msg,
 	hip_calc_generic_param_len(&rea_info,
 				   sizeof(struct hip_rea_info),
 				   addrs_len);
-
 	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea_info) -
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len);
@@ -1674,6 +1673,48 @@ int hip_build_param_rea_info(struct hip_common *msg,
 	rea_info.keymat_index = htons(keymat_index);
 	rea_info.rea_id = htons(rea_id);
 	err = hip_build_param(msg, &rea_info);
+	if (err)
+		return err;
+	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
+		   addrs_len);
+	if (addrs_len > 0)
+		memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+		       addresses, addrs_len);
+
+	return err;
+}
+
+/**
+ * hip_build_param_rea_info_mm02 - build HIP REA_INFO parameter
+ *
+ * @msg:             the message where the rea will be appended
+ * @spi:             SPI
+ * @addresses:       list of addresses
+ * @address_count:   number of addresses in @addresses
+ *
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_rea_info_mm02(struct hip_common *msg,
+			     uint32_t spi,
+			     struct hip_rea_info_addr_item *addresses,
+			     int address_count)
+{
+	int err = 0;
+	struct hip_rea_info_mm02 rea_info;
+	int addrs_len = address_count *
+		(sizeof(struct hip_rea_info_addr_item));
+
+	hip_set_param_type(&rea_info, HIP_PARAM_REA_INFO);
+	hip_calc_generic_param_len(&rea_info,
+				   sizeof(struct hip_rea_info_mm02),
+				   addrs_len);
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea_info_mm02) -
+		   sizeof(struct hip_tlv_common) +
+		   addrs_len);
+	rea_info.spi = htonl(spi);
+	err = hip_build_param(msg, &rea_info);
+	if (err)
+		return err;
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
 	if (addrs_len > 0)

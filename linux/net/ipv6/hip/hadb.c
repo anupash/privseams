@@ -1534,7 +1534,7 @@ void hip_hadb_dump_spis(void)
 	HIP_DEBUG("\n");
 	HIP_LOCK_HT(&hadb_spi);
 
-	for(i=0;i<HIP_HADB_SIZE;i++) {
+	for(i=0; i < HIP_HADB_SIZE; i++) {
 		if (!list_empty(&hadb_byspi[i])) {
 			HIP_DEBUG("HT[%d]\n", i);
 			list_for_each_entry(entry, &hadb_byspi[i], next_spi) {

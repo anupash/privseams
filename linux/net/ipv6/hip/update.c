@@ -25,6 +25,8 @@ struct hip_update_spi_waitlist_item {
 	struct list_head list;
 	uint32_t spi;
 	struct in6_addr hit;
+	struct in6_addr v6addr_test;
+	/* REA stuff ? address list */
 };
 
 
@@ -33,7 +35,7 @@ struct hip_update_spi_waitlist_item {
  * @spi: the inbound SPI to be added in host byte order
  * @hit: the HIT for which the @spi is related to
  */
-void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit)
+void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit, struct hip_rea_info_mm02 *rea)
 {
 	struct hip_update_spi_waitlist_item *s;
 	unsigned long flags = 0;
@@ -50,6 +52,15 @@ void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit)
 
 	s->spi = spi;
 	ipv6_addr_copy(&s->hit, hit);
+	if (rea)
+		ipv6_addr_copy(&s->v6addr_test, (struct in6_addr *)&(
+
+((struct hip_rea_info_addr_item*)
+ ((void *)rea+sizeof(struct hip_rea_info_mm02))
+ )
+->address)
+
+);
 
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 	list_add(&s->list, &hip_update_spi_waitlist);
@@ -65,7 +76,7 @@ void hip_update_spi_waitlist_add(uint32_t spi, struct in6_addr *hit)
 
 /**
  * hip_update_spi_waitlist_delete - delete a SPI from SPI waitlist
- * @spi: SPI in host byte order
+ * @spi: SPI in host byte order to be deleted
  */
 void hip_update_spi_waitlist_delete(uint32_t spi)
 {
@@ -122,13 +133,11 @@ void hip_update_spi_waitlist_delete_all(void)
  */
 int hip_update_spi_waitlist_ispending(uint32_t spi)
 {
-	int err = 0, found = 0;
+	int /*err = 0,*/ found = 0;
 	struct hip_update_spi_waitlist_item *s = NULL;
 	unsigned long flags = 0;
 	struct list_head *pos, *n;
 	int i = 1;
-
-	/* todo: change list_for_each to atomic_t ispending, return is_pending */
 
 	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
 
@@ -166,11 +175,9 @@ int hip_update_spi_waitlist_ispending(uint32_t spi)
 		entry->default_spi_out = entry->spi_out;
 		HIP_DEBUG("set default SPI out=0x%x\n", entry->default_spi_out);
 
-		{
-			struct in6_addr a;
-			ipv6_addr_set(&a, htonl(0x3ffe), 0 , 0, 2);
-hip_hadb_add_addr_to_spi(entry, entry->spi_out, &a, 0, PEER_ADDR_STATE_ACTIVE, 0, 0);
-		}
+		/* test, todo: addr from rea */
+		hip_print_hit("v6addr_test", &s->v6addr_test);
+		hip_hadb_add_addr_to_spi(entry, entry->default_spi_out, &s->v6addr_test, 0, PEER_ADDR_STATE_ACTIVE, 0, 0);
 
 		hip_hadb_insert_state(entry);
 		hip_print_hit("finalizing", &s->hit);
@@ -298,6 +305,8 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	int need_to_generate_key = 0, dh_key_generated = 0, new_keymat_generated;
 	int we_are_HITg = 0;
 	hip_ha_t *entry = NULL;
+	struct hip_rea_info_mm02 *rea;
+	int rea_i = 1;
 
 	HIP_DEBUG("state=%s\n", hip_state_str(state));
 	nes = hip_get_param(msg, HIP_PARAM_NES);
@@ -398,6 +407,26 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 			goto out_err;
 	}
 
+
+	while (	(rea = hip_get_nth_param(msg, HIP_PARAM_REA_INFO, rea_i)) != NULL) {
+		struct hip_rea_info_addr_item *rea_addr;
+		int i = 0, n_addrs;
+		HIP_DEBUG("Found REA parameter [%d]\n", rea_i);
+		HIP_DEBUG(" SPI=0x%x\n", ntohl(rea->spi));
+		if ((ntohs(rea->length) - sizeof(struct hip_rea_info_mm02)) % sizeof(struct hip_rea_info_addr_item))
+			HIP_ERROR("addr item list len modulo not zero, (len=%d)\n", rea->length);
+		n_addrs = (ntohs(rea->length) - sizeof(struct hip_rea_info_mm02)) / sizeof(struct hip_rea_info_addr_item);
+		HIP_DEBUG(" REA has %d addresses, rea->length=%d\n", n_addrs, ntohs(rea->length));
+		while (i < n_addrs) {
+//			rea_addr = (void *)rea+sizeof(struct hip_rea_info_mm02)+i*sizeof(struct hip_rea_info_addr_item);
+//			HIP_DEBUG(" addr %d: lifetime=0x%x\n", i, ntohl(rea_addr->lifetime));
+//			hip_print_hit("rea addr", &rea_addr->address);
+			i++;
+		}
+		rea_i++;
+	}
+
+
 	/* set up new outgoing IPsec SA */
 
 	/* draft: The system MUST NOT start using the new outgoing SA
@@ -447,8 +476,7 @@ int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, i
 	HIP_DEBUG("Stored SPI 0x%x to spi_in\n", new_spi_in);
 	hip_finalize_sa(hitr, new_spi_in); /* move below */
 
-
-	hip_update_spi_waitlist_add(new_spi_in, hits);
+	hip_update_spi_waitlist_add(new_spi_in, hits, rea);
 
 #if 0
 	/* delete old incoming SA */
@@ -1074,6 +1102,20 @@ int hip_send_update(struct hip_hadb_state *entry)
 		HIP_ERROR("outgoing UPDATE ID overflowed back to 0, bug ?\n");
 		err = -EINVAL;
 		goto out_err;
+	}
+
+	{
+		/* mm02 rea test */
+		struct hip_rea_info_addr_item addresses;
+		addresses.lifetime = 0;
+		addresses.reserved = 0;
+		ipv6_addr_set(&addresses.address, htonl(0x3ffe), 0, 0, htonl(1));
+
+		err = hip_build_param_rea_info_mm02(update_packet, new_spi_in, &addresses, 1);
+		if (err) {
+			HIP_ERROR("Building of REA param failed\n");
+			goto out_err;
+		}
 	}
 
 	HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);

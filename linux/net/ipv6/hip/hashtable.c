@@ -18,8 +18,8 @@ void *hip_ht_find(HIP_HASHTABLE *ht, void *key)
 		list_for_each(chain, &ht->head[hash]) {
 			entry = hip_ht_get_content(void, chain, ht->offset);
 
-			key_to_be_matched = ht->get_key(entry);
-			if (ht->compare(key, key_to_be_matched)) {
+			key_to_be_matched = ht->get_key(entry); // key_to_be_matched -> 1->n
+			if (ht->compare(key, key_to_be_matched)) { // compare: lista / eri funktio(=eri hash)
 				/* true = match */
 				ht->hold(entry);
 				HIP_UNLOCK_HT(ht);
@@ -46,10 +46,6 @@ int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
 
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry)
 {
-	int hash;
-
-	hash = ht->hash(ht->get_key(entry), ht->hashsize);
-
 	HIP_LOCK_HT(ht);
 	list_del(hip_ht_get_list(entry, ht->offset));
 	ht->put(entry);
