@@ -2751,15 +2751,23 @@ int hip_verify_network_header(struct hip_common *hip_common,
 		goto out_err;
 	}
 
+	/*
+	 * XX FIXME: handle the RVS case better
+	 */
 	if (ipv6_addr_any(&hip_common->hitr)) {
 		/* Required for e.g. BOS */
 		HIP_DEBUG("Received opportunistic HIT\n");
+#ifdef CONFIG_HIP_RVS
+	} else
+		HIP_DEBUG("Received HIT is ours or we are RVS\n");
+#else
 	} else if (!hip_hit_is_our(&hip_common->hitr)) {
 		HIP_ERROR("Receiver HIT is not ours\n");
 		err = -EFAULT;
 		goto out_err;
 	} else
 		HIP_DEBUG("Receiver HIT is ours\n");
+#endif
 
 	if (!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr)) {
 		HIP_DEBUG("Dropping HIP packet. Loopback not supported.\n");
