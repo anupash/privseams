@@ -217,20 +217,17 @@ static struct hip_hadb_state *hip_hadb_find_by_hit(struct in6_addr *hit)
 
 static int hip_hadb_delete_by_hit(struct in6_addr *hit)
 {
-	struct hip_hadb_state *tmp, *entry;
+	struct hip_hadb_state *entry;
 
 	if (list_empty(&hip_hadb.db_head))
 		return -EINVAL;
 
-	list_for_each_entry_safe(entry, tmp, &hip_hadb.db_head, next) {
-		if (!ipv6_addr_cmp(&entry->hit_peer, hit)) {
-			list_del(&entry->next);
-			hip_hadb_delete_entry_nolock(entry);
-			return 0;
-		}
-	}
+	entry = hip_hadb_access_db(hit, HIP_ARG_HIT);
+	if (!entry)
+		return -EINVAL;
 
-	return -EINVAL;
+	hip_hadb_delete_entry_nolock(entry);
+	return 0;
 }
 
 /**
@@ -717,11 +714,9 @@ static void hip_hadb_entry_free(struct hip_hadb_state *entry)
 {
 	/* IPsec */
 	if (likely(entry->spi_peer)) {
-		hip_delete_spd(&entry->hit_our, &entry->hit_peer, XFRM_POLICY_OUT);
 		hip_delete_sa(entry->spi_peer, &entry->hit_our);
 	}
 	if (likely(entry->spi_our)) {
-		hip_delete_spd(&entry->hit_peer, &entry->hit_our, XFRM_POLICY_IN);
 		hip_delete_sa(entry->spi_our, &entry->hit_peer);
 	}
 	if (unlikely(entry->new_spi_peer))

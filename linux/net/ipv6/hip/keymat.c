@@ -99,7 +99,6 @@ void hip_make_keymat(char *kij, size_t kij_len, struct hip_keymat_keymat *keymat
 	int nsg = HIP_MAX_SCATTERLISTS;
 
 	/* XX TODO: is this the correct one to test for 32 bit multiplicity? */
-	HIP_ASSERT(dstbuflen % 32 == 0);
 	HIP_ASSERT(sizeof(index_nbr) == HIP_KEYMAT_INDEX_NBR_SIZE);
 
 	hit1_is_bigger = keymat_hit_is_bigger(hit1, hit2);

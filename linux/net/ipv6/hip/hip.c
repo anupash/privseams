@@ -25,7 +25,7 @@
 
 #include "hip.h"
 #include "keymat.h"
-
+#include "security.h"
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -1750,6 +1750,12 @@ static int __init hip_init(void)
 	if (hip_init_socket_handler() < 0)
 		goto out;
 
+	if (hip_setup_sp(XFRM_POLICY_OUT) < 0)
+		goto out;
+
+	if (hip_setup_sp(XFRM_POLICY_IN) < 0)
+		goto out;
+
 	for(i=0;i<NR_CPUS;i++) {
 		pid = kernel_thread(hip_worker, (void *) i, CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD);
 		if (IS_ERR(ERR_PTR(pid)))
@@ -1813,6 +1819,8 @@ static void __exit hip_cleanup(void)
 
 	HIP_DEBUG("Thread(s) finished\n");
 
+	hip_delete_sp(XFRM_POLICY_IN);
+	hip_delete_sp(XFRM_POLICY_OUT);
 	hip_uninit_netdev_notifier(); 	/* comment this if network device event */
 	hip_uninit_register_inet6addr_notifier();
 	hip_uninit_ioctl();

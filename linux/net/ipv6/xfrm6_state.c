@@ -57,11 +57,12 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 	struct xfrm_state *x;
 	int res;
 
-	printk("__xfrm6_state_lookup: hashed=%d\n",h);
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
 		res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
+#if 0
 		if (!res)
 			printk("Requested SPI: %x, SA's SPI: %x and protos: %x / %x\n",spi,x->id.spi,proto,x->id.proto);
+#endif
 		if (x->props.family == AF_INET6 && spi == x->id.spi && !res &&
 		    proto == x->id.proto)
 		{

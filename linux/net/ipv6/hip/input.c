@@ -881,10 +881,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 		/* let the setup routine give us a spi. */
 		spi_our = 0;
 
-		err = hip_setup_esp(&ctx->input->hits, &ctx->input->hitr,
-				    &ctx->skb_in->nh.ipv6h->saddr, &spi_our,
-				    transform_esp_suite, &ctx->hip_espr.key,
-				    &ctx->hip_authr.key, XFRM_POLICY_IN,1);
+		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
+				    &spi_our, transform_esp_suite, 
+				    &ctx->hip_espr.key, &ctx->hip_authr.key, 1);
+
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
 			/* hip_delete_spd/hip_delete_sa ? */
@@ -1393,10 +1393,8 @@ int hip_create_r2(struct hip_context *ctx)
 	{
 		spi_our = 0;
 
-		err = hip_setup_esp(&i2->hits, &i2->hitr, 
-				    &ctx->skb_in->nh.ipv6h->saddr, &spi_our,
-				    esptfm, &ctx->hip_espi.key, &ctx->hip_authi.key,
-				    XFRM_POLICY_IN,1);
+		err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_our, esptfm, 
+				   &ctx->hip_espi.key, &ctx->hip_authi.key, 1);
 
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
@@ -1416,9 +1414,8 @@ int hip_create_r2(struct hip_context *ctx)
 	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_peer);
 
 	spi_peer = htonl(spi_peer);
-	err = hip_setup_esp(&i2->hitr, &i2->hits, &ctx->skb_in->nh.ipv6h->saddr,
-			    &spi_peer, esptfm, &ctx->hip_espr.key,
-			    &ctx->hip_authr.key, XFRM_POLICY_OUT,1);
+	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_peer, esptfm, 
+			   &ctx->hip_espr.key, &ctx->hip_authr.key, 1);
 
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_peer);
@@ -1947,9 +1944,8 @@ int hip_handle_r2(struct sk_buff *skb)
 		spi_recvd = htonl(spi_recvd); // apparently XFRM wants in big endian
 
 
-		err = hip_setup_esp(&r2->hitr, sender, &ctx->skb_in->nh.ipv6h->saddr,
-				    &spi_recvd, tfm, &ctx->hip_espi.key,
-				    &ctx->hip_authi.key, XFRM_POLICY_OUT,1);
+		err = hip_setup_sa(&r2->hitr, sender, &spi_recvd, tfm, 
+				   &ctx->hip_espi.key, &ctx->hip_authi.key, 1);
 		if (err == -EEXIST) {
 			HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 			HIP_DEBUG("TODO: what to do ? currently ignored\n");
