@@ -8,6 +8,12 @@ testing HIPL.
 Requirements
 ============
 
+As the first requirement, you also need know the basics on Linux kernel
+compilation and usage. Refer to linux/README for further instructions.
+
+You need the following software to build and run the HIPL 
+software bundle:
+
 * Mandatory
   * Linux Operating System
   * OpenSSL-library and developer headers
@@ -28,8 +34,8 @@ The HIPL patched kernel is based on the official Linux kernel and it
 should be distribution independent. The kernel has been tested on the
 Debian Linux (Woody, Sarge) distribution.
 
-Building the Documentation
-==========================
+Building the HIPL Documentation
+===============================
 
 Architectural documentation:
 
