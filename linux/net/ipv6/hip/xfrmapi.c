@@ -436,12 +436,12 @@ void hip_finalize_sa(struct in6_addr *hit, u32 spi)
 	wake_up_all(&km_waitq);
 }
 
-struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi)
+struct hip_xfrm_state * hip_xfrm_find_by_spi(uint32_t spi)
 {
 	return NULL; // XX FIXME
 }
 
-struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
+struct hip_xfrm_state * hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
 {
 	return NULL; // XX FIXME;
 }

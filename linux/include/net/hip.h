@@ -922,11 +922,9 @@ struct hip_work_order_hdr {
 struct hip_work_order {
 	struct hip_work_order_hdr hdr;
 	struct hip_common *msg;
-//#ifdef __KERNEL__
-#ifndef CONFIG_HIP_USERSPACE
+#ifdef __KERNEL__
 	struct list_head queue;
 #endif
-//#endif
 	void (*destructor)(struct hip_work_order *hwo);
 };
 

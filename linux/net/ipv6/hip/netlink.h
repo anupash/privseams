@@ -4,6 +4,7 @@
 #include <net/hip.h> /* struct hip_work_order */
 #ifdef __KERNEL__
 #include <net/sock.h> /* struct sock */
+#include "workqueue.h"
 #endif
 #include "builder.h"
 #include "debug.h"
@@ -11,6 +12,8 @@
 int hip_netlink_open(int *fd);
 void hip_netlink_close(void);
 int hip_netlink_send(struct hip_work_order *hwo);
+#ifndef __KERNEL__
 struct hip_work_order *hip_netlink_receive(void);
+#endif
 
 #endif /* _HIP_NETLINK_H */

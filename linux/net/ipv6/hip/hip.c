@@ -1322,7 +1322,7 @@ static int hip_worker(void *t)
 
 	/* work loop */
 	while(1) {
-          struct hip_work_order *job;
+		struct hip_work_order *job;
 
 		if (signal_pending(current)) {
 			HIP_INFO("HIP thread pid %d got SIGKILL, cleaning up\n", pid);
@@ -1341,14 +1341,14 @@ static int hip_worker(void *t)
 			refrigerator(PF_FREEZE);
 		}
 
-          job = hip_get_work_order();
-          if (!job) {
-               HIP_DEBUG("Did not get anything from the work queue\n");
-               result = KHIPD_ERROR;
-          } else {         
-               HIP_DEBUG("New job: type=%d subtype=%d\n", job->hdr.type, job->hdr.subtype);
-               result = hip_do_work(job);
-          }
+		job = hip_get_work_order();
+		if (!job) {
+			HIP_DEBUG("Did not get anything from the work queue\n");
+			result = KHIPD_ERROR;
+		} else {         
+			HIP_DEBUG("New job: type=%d subtype=%d\n", job->hdr.type, job->hdr.subtype);
+			result = hip_do_work(job);
+		}
 		if (result < 0) {
 			if (result == KHIPD_ERROR)
 				HIP_INFO("Recoverable error occured (%d)\n", result);
@@ -1359,6 +1359,7 @@ static int hip_worker(void *t)
 				break;
 			}
 		}
+
 		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 

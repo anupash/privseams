@@ -108,6 +108,8 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	sendmsg(netlink_fd, &msg, 0);
 	/* FIXME: errors of sendmsg */
 
+	// FIXME: ack processing!
+
 	HIP_FREE(nlh);
 	return 0;
 }

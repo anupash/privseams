@@ -47,7 +47,7 @@ void hwo_default_destructor(struct hip_work_order *hwo)
  * 
  * Returns work order or NULL, if an error occurs.
  */
-#ifndef CONFIG_HIP_USERSPACE
+#ifdef __KERNEL__
 static inline struct hip_work_order *hip_get_work_order_cpu(void)
 {
 	struct hip_work_order *result;
@@ -104,7 +104,7 @@ static inline struct hip_work_order *hip_get_work_order_cpu(void)
  */
 struct hip_work_order *hip_get_work_order(void)
 {
-#ifndef CONFIG_HIP_USERSPACE
+#ifdef __KERNEL__
      return hip_get_work_order_cpu();
 #else
      return hip_netlink_receive();
@@ -123,7 +123,7 @@ struct hip_work_order *hip_get_work_order(void)
  *
  * Returns 1, if ok. -1 if error
  */
-#ifndef CONFIG_HIP_USERSPACE
+#ifdef __KERNEL__
 static inline int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	unsigned long eflags;
@@ -178,6 +178,20 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 	return hip_netlink_send(hwo);
 #endif
 }
+
+#ifdef __KERNEL__
+int hip_insert_work_order_kthread(struct hip_work_order *hwo) 
+{
+	if (!hwo) {
+		HIP_ERROR("NULL hwo\n");
+		return -1;
+	}
+
+	if (hwo->hdr.type < 0 || hwo->hdr.type > HIP_MAX_WO_TYPES)
+		return -1;
+	return hip_insert_work_order_cpu(hwo, smp_processor_id());
+}
+#endif
 
 int hip_init_workqueue()
 {

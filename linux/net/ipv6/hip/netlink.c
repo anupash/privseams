@@ -3,16 +3,91 @@
 static struct sock *nl_sk = NULL;
 static u32 hipd_pid;
 
-/* Signal handler to wakeup the blocking datagram receiver */
-void nl_data_ready (struct sock *sk, int len)
+/* Insert the received message to the queue */
+static int hip_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err)
 {
-	wake_up_interruptible(sk->sk_sleep);
+	struct hip_work_order *hwo = NULL;
+	struct hip_work_order *result = NULL;
+	uint16_t msg_len;
+
+	*err = -1;
+	hipd_pid = nlh->nlmsg_pid;
+	
+	result = HIP_MALLOC(sizeof(struct hip_work_order), GFP_KERNEL);
+	if (!result) {
+		HIP_ERROR("Out of memory.\n");
+		return -1;
+	}
+	
+	hwo = (struct hip_work_order *)NLMSG_DATA(nlh);
+	memcpy(result, hwo, sizeof(struct hip_work_order_hdr));
+
+	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);	
+	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
+	if (!result->msg) {
+		HIP_ERROR("Out of memory.\n");
+		HIP_FREE(result);
+		return -1;
+	}
+	
+	memcpy(result->msg, &hwo->msg, msg_len);
+	hip_insert_work_order_kthread(result);
+
+	*err = 0;
+	return 0;
+}
+
+static int hip_rcv_skb(struct sk_buff *skb)
+{
+	int err;
+	struct nlmsghdr *nlh;
+
+	while (skb->len >= NLMSG_SPACE(0)) {
+		u32 rlen;
+
+		nlh = (struct nlmsghdr *) skb->data;
+		if (nlh->nlmsg_len < sizeof(*nlh) ||
+		    skb->len < nlh->nlmsg_len)
+			return 0;
+		rlen = NLMSG_ALIGN(nlh->nlmsg_len);
+		if (rlen > skb->len)
+			rlen = skb->len;
+		if (hip_rcv_msg(skb, nlh, &err) < 0) {
+			if (err == 0)
+				return -1;
+			netlink_ack(skb, nlh, err);
+		} else if (nlh->nlmsg_flags & NLM_F_ACK)
+			netlink_ack(skb, nlh, 0);
+		skb_pull(skb, rlen);
+	}
+
+	return 0;
+}
+
+static void hip_netlink_rcv(struct sock *sk, int len) {
+	do {
+		struct sk_buff *skb;
+		
+		while ((skb = skb_dequeue(&sk->sk_receive_queue)) != NULL) {
+			if (hip_rcv_skb(skb)) {
+				if (skb->len)
+					skb_queue_head(&sk->sk_receive_queue,
+						       skb);
+				else
+					kfree_skb(skb);
+				break;
+			}
+			kfree_skb(skb);
+		}
+		
+	} while (nl_sk && nl_sk->sk_receive_queue.qlen);
 }
 
 int hip_netlink_open(int *fd) {
-	nl_sk = netlink_kernel_create(NETLINK_HIP, 
-				      nl_data_ready);
-	/** FIXME: error processing */
+	nl_sk = netlink_kernel_create(NETLINK_HIP, hip_netlink_rcv);
+	if (nl_sk == NULL)
+		return -ENOMEM;
+
 	return 0;
 }
 
@@ -21,7 +96,7 @@ void hip_netlink_close() {
 		sock_release(nl_sk->sk_socket);
 }
 
-struct hip_work_order *hip_netlink_receive(void)
+/*struct hip_work_order *hip_netlink_receive(void)
 {
 	struct hip_work_order *result;
 	struct sk_buff *skb = NULL;
@@ -30,9 +105,9 @@ struct hip_work_order *hip_netlink_receive(void)
 	uint16_t msg_len;
 	int err;
 
-	/* wait for message coming down from user-space */
+	// wait for message coming down from user-space
 	skb = skb_recv_datagram(nl_sk, 0, 0, &err);     
-	/** FIXME: error check */
+	// FIXME: error check
 	nlh = (struct nlmsghdr *)skb->data;
 	hipd_pid = nlh->nlmsg_pid;
 	
@@ -63,7 +138,7 @@ struct hip_work_order *hip_netlink_receive(void)
 	
  err:
 	return result;
-}
+}*/
 
 int hip_netlink_send(struct hip_work_order *hwo) 
 {
