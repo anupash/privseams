@@ -435,6 +435,7 @@ static void dev_forward_change(struct inet6_dev *idev)
 			ipv6_dev_ac_dec(idev->dev, &addr);
 	}
 }
+EXPORT_SYMBOL(inet6_ifa_finish_destroy);
 
 
 static void addrconf_forward_change(struct inet6_dev *idev)
@@ -458,6 +459,7 @@ static void addrconf_forward_change(struct inet6_dev *idev)
 	}
 	read_unlock(&dev_base_lock);
 }
+EXPORT_SYMBOL(inet6_ifa_finish_destroy);
 
 
 /* Nobody refers to this ifaddr, destroy it */
