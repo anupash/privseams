@@ -603,7 +603,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		spi_out_data.seq_update_id = ntohl(seq->update_id);
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
 		if (err) {
-			goto out_err; /* or nes_i++ and goto handle_nes; ? */
+			goto out_err;
 		}
 		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created yet)\n",
 			  ntohl(nes->new_spi));
@@ -617,21 +617,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 			HIP_ERROR("SPI 0x%x in REA is not equal to the New SPI 0x%x in NES\n",
 				  ntohl(rea->spi), ntohl(nes->new_spi));
 		} else {
-			/* NES+REA: we need to setup information on
-			 * SPI before we can add addresses from the REA */
-			if (!hip_hadb_get_spi_list(entry, ntohl(rea->spi))) {
-				struct hip_spi_out_item spi_out_data;
-
-				HIP_DEBUG("TEST: REA SPI 0x%x unknown, add it\n",
-					  ntohl(rea->spi));
-				memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-				spi_out_data.spi = ntohl(rea->spi);
-				spi_out_data.seq_update_id = ntohl(seq->update_id);
-				err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
-				//if (err)
-				//nes_i++ and goto handle_nes; ?
-			}
-
 			err = hip_update_handle_rea_parameter(entry, rea);
 			_HIP_DEBUG("rea param handling ret %d\n", err);
 			err = 0;
@@ -1783,10 +1768,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		add_nes = 1;
 	}
 
-	/* interops: force adding NES */
-	make_new_sa = 1;
-	add_nes = 1;
-
 	HIP_DEBUG("add_nes=%d make_new_sa=%d\n", add_nes, make_new_sa);
 
 	if (make_new_sa) {
@@ -1834,8 +1815,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		}
 	} else
 		HIP_DEBUG("not adding REA\n");
-
-	make_new_sa = 0; /* interops test */
 
 	if (add_nes) {
 		if (addr_list) {
