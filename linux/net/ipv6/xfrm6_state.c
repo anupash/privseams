@@ -51,17 +51,26 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 {
 	unsigned h = __xfrm6_spi_hash(daddr, spi, proto);
 	struct xfrm_state *x;
-	int res;
-
+	/* BEGIN HIPL PATCH */
+	int cmp, is_hit;
+	
+	/* XX FIXME: DOES THIS AFFECT ORDINARY ESP TRAFFIC WITHOUT HIP? */
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
-		res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
-		if (x->props.family == AF_INET6 && spi == x->id.spi && !res &&
-		    (ipv6_addr_is_hit((struct in6_addr *)daddr) || proto == x->id.proto))
+		cmp = ipv6_addr_cmp((struct in6_addr *)daddr,
+				    (struct in6_addr *)&x->id.daddr);
+		is_hit = ipv6_addr_is_hit((struct in6_addr *) daddr);
+		if (x->props.family == AF_INET6 && spi == x->id.spi &&
+		    !cmp && (is_hit || proto == x->id.proto))
 		{
+		        printk(KERN_DEBUG "SPI found\n");
 			xfrm_state_hold(x);
 			return x;
 		}
 	}
+	/* END HIPL PATCH */
+
+	return NULL;
+
 #ifdef CONFIG_HIP_DEBUG
 	printk(KERN_DEBUG "SA lookup (spi: %x) failed\n", spi);
 #endif
