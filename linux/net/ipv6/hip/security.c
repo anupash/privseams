@@ -53,6 +53,7 @@ int hip_delete_sp(int dir)
 extern struct list_head *xfrm_state_bydst;
 extern struct list_head *xfrm_state_byspi;
 
+#if 0
 void hip_hirmu_kludge(int byspi)
 {
 	int i;
@@ -75,6 +76,8 @@ void hip_hirmu_kludge(int byspi)
 	}
 	HIP_DEBUG("END-OF-DUMP\n");
 }
+#endif
+
 /**
  * hip_delete_sa - delete HIP SA which has SPI of @spi
  * @spi: SPI value of SA
