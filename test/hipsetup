@@ -25,9 +25,9 @@ then
 fi
 
 CHECK_HIPL_DIRS=". linux tools test"
-CHECK_HIPL_APPS="tools/hipconf test/conntest-client-gai"
+CHECK_HIPL_APPS="tools/hipconf test/conntest-client-gai test/conntest-server"
 CHECK_HIPL_HOSTS="/etc/hosts /etc/hip/hosts"
-CHECK_PATH_DEP="nc6 make pidof sleep rmmod modprobe grep ssh perl echo\
+CHECK_PATH_DEP="make pidof sleep rmmod modprobe grep ssh perl echo\
                 ping6 awk"
 INSTALL_MODULES="0"
 LOCALHOST=`hostname`
@@ -316,11 +316,11 @@ case $MODE in
 	# Localhost acts as the responder in the base exchange
 	#
 	echo "Responder mode"
-	if pidof nc6 >/dev/null
+	if pidof conntest-server >/dev/null
 	then
-	    killall nc6
+	    killall conntest-server
 	fi
-	nc6 -n -vv -l -p $PORT
+	$HIPL_DIR/test/conntest-server $PROTO $PORT
 	check_hip_state_established $PEER_NAME
     ;;
     base-exchange-ssh)
@@ -331,11 +331,11 @@ case $MODE in
 	# to do it the other way around because of synchronization problems.
 	#
 	echo "Initiator-responder mode"
-	if pidof nc6 >/dev/null
+	if pidof conntest-server >/dev/null
 	then
-	    killall nc6
+	    killall conntest-server
 	fi
-	nc6 -n -vv -l -p $PORT &
+	$HIPL_DIR/test/conntest-server $PROTO $PORT &
 	ssh "$REMOTE_USER@$PEER_NAME" `convert_ssh_remote_command $0 $@`
 	check_hip_state_established $PEER_NAME
     ;;

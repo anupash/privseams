@@ -229,7 +229,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		 int priv_klen)
 {
 	RSA_secret_key rsk = {0};
-	MPI data, msig; /* tmp_mpi  */
+	MPI data = NULL, msig = NULL; /* tmp_mpi  */
 	int err = 0, len, slice;
 	u8 *c = private_key;
 	u8 *buf = NULL;
@@ -300,9 +300,6 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		goto cleanup;
 	}
 
-	//Mar  3 23:44:05 localhost kernel: hip_rsa_sign: slice: 105, rsk.n 128
-
-
 	/* shalen + asn prefix len + 01 00 */
 	len = HIP_AH_SHA_LEN + 15;// + 2;
 	// 128 - 20 - 3 = 105
@@ -311,8 +308,6 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		  keylen);
 
 	c = buf;
-        //*c = 0;
-	//c++;
 
 	*c = 1;
 	c++;
@@ -362,7 +357,22 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	HIP_HEXDUMP("calculated signature", signature, len);
 
  cleanup:
-	/* XX FIXME: FREE msig, rsk elements, etc */
+	if(rsk.e)
+		mpi_free(rsk.e);
+	if(rsk.n)
+		mpi_free(rsk.n);
+	if(rsk.d)
+		mpi_free(rsk.d);
+	if(rsk.p)
+		mpi_free(rsk.p);
+	if(rsk.q)
+		mpi_free(rsk.q);
+	if(rsk.u)
+		mpi_free(rsk.u);
+	if(data)
+		mpi_free(data);
+	if (msig)
+		mpi_free(msig);
 	if (buf)
 		kfree(buf);
 	return err;
@@ -372,18 +382,18 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 {
 	MPI result = NULL;
-	MPI data, orig;
+	MPI data = NULL, orig = NULL;
 	RSA_public_key rpk = {0};
 	int len, slice, err = -1;
-	u8 *c = public_key; /* XX FIXME: IS THIS CORRECT? */
-	u8 *buf = NULL; //, *debug_signature = NULL;
+	u8 *c = public_key;
+	u8 *buf = NULL;
 	u8 asn_prefix[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B,
 			    0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04,
 			    0x14};
 	int keylen = 0;
 
 	HIP_DEBUG("public key len: %d\n",pub_klen);
-	//if (*c == 0) /* XX FIXME: WHAT'S THIS? */
+	//if (*c == 0)
 	//len = 3;
 	//else
 	//len = 1;
@@ -429,8 +439,6 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	_HIP_DEBUG("slice:%d,mpi_get_nbits:%d\n",slice,mpi_get_nbits(rpk.n));
 
 	c = buf;
-	//*c = 0;
-	//c++;
 
 	*c = 1;
 	c++;
@@ -488,8 +496,10 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 		mpi_free(rpk.e);
 	if (rpk.n)
 		mpi_free(rpk.n);
-	//if (debug_signature)
-	//kfree(debug_signature);
+	if (data)
+		mpi_free(data);
+	if (orig)
+		mpi_free(orig);
 	if (buf)
 		kfree(buf);
 	

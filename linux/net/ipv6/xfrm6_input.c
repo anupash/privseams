@@ -73,7 +73,8 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 		}
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		//HIP_CALLFUNC(hip_update_spi_waitlist_ispending, 0)(ntohl(spi));
+		/* old code
+		   HIP_CALLFUNC(hip_update_spi_waitlist_ispending, 0)(ntohl(spi)); */
 #endif
 		spin_lock(&x->lock);
 		if (unlikely(x->km.state != XFRM_STATE_VALID))
@@ -115,14 +116,16 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			skb->nh.raw = skb->data;
 			decaps = 1;
 			break;
-		} else if (x->props.mode == XFRM_MODE_BEET) {
-			//printk(KERN_DEBUG "mode is BEET\n");
+		}
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+		else if (x->props.mode == XFRM_MODE_BEET) {
+			/* printk(KERN_DEBUG "mode is BEET\n");*/
 			/* this should be us */
 			ipv6_addr_copy(&iph->daddr, (struct in6_addr *)&x->id.daddr);
 			/* the original sender */
 			ipv6_addr_copy(&iph->saddr, (struct in6_addr *)&x->props.saddr);
 		}
-
+#endif
 		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
 			goto drop;
 	} while (!err);

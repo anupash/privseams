@@ -1186,7 +1186,7 @@ int hip_build_user_hdr(struct hip_common *msg,
  * hip_build_network_hdr - write network header into message
  * @msg:          the message where the HIP network should be written
  * @type_hdr:     the type of the HIP header as specified in the drafts
- * @control:      HIP control bits
+ * @control:      HIP control bits in host byte order
  * @hit_sender:   source HIT in network byte order
  * @hit_receiver: destination HIT in network byte order
  *
@@ -1372,7 +1372,6 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	}
 
 	HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
-
 	HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
 	if (!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
@@ -1473,6 +1472,14 @@ int hip_build_param_signature_contents(struct hip_common *msg,
 	return err;
 }
 
+/**
+ * hip_build_param_from - build HIP FROM parameter
+ * @msg:  the message 
+ * @addr: An IPv6 address or an IPv4-in-IPv6 format IPv4 address
+ * @sign: true if parameter is under signature, false otherwise
+ *
+ * Returns: zero for success, or non-zero on error
+ */
 int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr, int sign)
 {
 	struct hip_from from;
@@ -1486,7 +1493,16 @@ int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr, int sign
 	return err;
 }
 
-
+/**
+ * hip_build_param_echo - build HIP ECHO parameter
+ * @msg:     the message 
+ * @opaque:  opaque data copied to the parameter
+ * len:      the length of the parameter
+ * @sign:    true if parameter is under signature, false otherwise
+ * @request: true if parameter is ECHO_REQUEST, otherwise parameter is ECHO_RESPONSE
+ *
+ * Returns: zero for success, or non-zero on error
+ */
 int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 			 int sign, int request)
 {
@@ -1504,6 +1520,13 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 	return err;
 }
 
+/**
+ * hip_build_param_r1_counter - build HIP R1_COUNTER parameter
+ * @msg:        the message 
+ * @generation: R1 generation counter
+ *
+ * Returns: zero for success, or non-zero on error
+ */
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 {
 	struct hip_r1_counter r1gen;
@@ -1523,6 +1546,16 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 	return err;
 }
 
+/**
+ * hip_build_param_rva - build HIP RVA parameter
+ * @msg:       the message
+ * @lifetime:  lifetime in seconds in host bute order
+ * @type_list: list of types (in host byte order) to be appended
+ * @cnt:       number of addresses in @type_list
+ * @request: true if parameter is RVA_REQUEST, otherwise parameter is RVA_REPLY
+ *
+ * Returns: zero for success, or non-zero on error
+ */
 int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 			int *type_list, int cnt, int request)
 {
@@ -1751,7 +1784,8 @@ int hip_build_param_transform(struct hip_common *msg,
  *
  * Returns: the suite id on @transform_tlv on index @index
  */
-hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv, const uint16_t index)
+hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv,
+						       const uint16_t index)
 {
 	/* XX FIXME: WHY DO WE HAVE HIP_SELECT_ESP_TRANSFORM SEPARATELY??? */
 
@@ -1803,7 +1837,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  * hip_build_param_rea - build HIP REA parameter
  *
  * @msg:             the message where the REA will be appended
- * @spi:             SPI
+ * @spi:             SPI in host byte order
  * @addresses:       list of addresses
  * @address_count:   number of addresses in @addresses
  *
@@ -2297,6 +2331,17 @@ int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 	return err;
 }
 
+/**
+ * hip_create_control_flags - create control flags to HIP packet header
+ * @anon: true if anonymous flag is set
+ * @cert: true if certificate flag is set
+ * @sht: value to be put into the SHT field
+ * @dht: value to be put into the DHT field
+ *
+ * SHT and DHT are maximum three bits long.
+ *
+ * Returns: the control flag value.
+ */
 uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht)
 {
 	uint16_t flags = HIP_CONTROL_NONE;

@@ -79,11 +79,12 @@ config IPV6_TUNNEL
 
 config HIP
 	tristate "Host Identity Protocol"
-        depends on IPV6 && EXPERIMENTAL && X86_PC && REGPARM=n
+	depends on IPV6 && EXPERIMENTAL && X86_PC && REGPARM=n
 	default m
 	select INET6_ESP
 	select CRYPTO_NULL
         select CRYPTO_AES
+	select PREEMPT
 	---help---
 	  Support for Host Identity Protocol. HIP creates an additional layer
 	  between networking and transport layers. Application are supposed to
@@ -100,6 +101,9 @@ config HIP
 	  Even if you say Y to HIP, the kernel will still run the ordinary
           TCP/IP. To use HIP features you will need the proper userspace
           tools, which for are available from <http://gaijin.iki.fi/hipl/>.
+
+          Currently the module does not work with CONFIG_REGPARAM. Also, you
+          need IPv6 support to be built-in.
 
 	  Most probably you should say N.
 
