@@ -772,9 +772,12 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	hip_ha_t *entry;
 	char str[INET6_ADDRSTRLEN];
 
-	/* old comment ? note: can't lock here or else hip_sdb_add_peer_address will block
+	/* old comment ? note: can't lock here or else
+	 * hip_sdb_add_peer_address will block
+	 *
 	 * unsigned long flags = 0;
-	 * spin_lock_irqsave(&hip_sdb_lock, flags); */
+	 * spin_lock_irqsave(&hip_sdb_lock, flags);
+	 */
 
 	hip_in6_ntop(hit, str);
 	HIP_DEBUG("called: HIT %s\n", str);
@@ -1713,7 +1716,8 @@ static int hip_proc_hadb_state_func(hip_ha_t *entry, void *opaque)
 	HIP_LOCK_HA(entry);
 
 	if ( (len += snprintf(page+len, count-len, "%s 0x%x %d 0x%x",
-			      hip_state_str(entry->state), entry->hastate, 
+			      HIP_DEBUG_STATE_STR(entry->state),
+			      entry->hastate, 
 			      atomic_read(&entry->refcnt), 
 			      entry->peer_controls)) >= count)
 		goto error;

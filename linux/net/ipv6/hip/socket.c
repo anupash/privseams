@@ -932,7 +932,7 @@ int hip_socket_handle_rst(const struct hip_common *input)
 #define MAX_SRC_ADDRS 128
 
 /**
- * hip_socket_handle_bos - handle generation of a BOS packet
+ * hip_socket_send_bos - send a BOS packet
  * @msg: input message (should be empty)
  *
  * Generate a signed HIP BOS packet containing our HIT, and send
@@ -941,7 +941,7 @@ int hip_socket_handle_rst(const struct hip_common *input)
  *
  * Returns: zero on success, or negative error value on failure
  */
-int hip_socket_handle_bos(const struct hip_common *msg)
+int hip_socket_send_bos(const struct hip_common *msg)
 {
 	int err = 0;
 	struct hip_common *bos = NULL;
@@ -1807,7 +1807,7 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 		err = hip_socket_handle_rvs(msg);
 		break;
 	case SO_HIP_BOS:
-		err = hip_socket_handle_bos(msg);
+		err = hip_socket_send_bos(msg);
 		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);

@@ -1702,7 +1702,8 @@ static int hip_init_procfs(void)
 		return -1;
 
 	/* todo: set file permission modes */
-	if (!create_proc_read_entry("lhi", 0, hip_proc_root, hip_proc_read_lhi, NULL))
+	if (!create_proc_read_entry("lhi", 0, hip_proc_root,
+				    hip_proc_read_lhi, NULL))
 		goto out_err_root;
 	if (!create_proc_read_entry("sdb_state", 0, hip_proc_root,
 			       hip_proc_read_hadb_state, NULL))
@@ -1718,7 +1719,8 @@ static int hip_init_procfs(void)
 	/* for testing dummy NOTIFY packets */
 	if (!create_proc_read_entry("send_notify", 0, hip_proc_root,
 			       hip_proc_send_notify, NULL))
-#endif		goto out_err_send_update;
+		goto out_err_send_update;
+#endif
 
 	HIP_DEBUG("profcs init successful\n");
 	return 1;
@@ -1868,6 +1870,9 @@ static int hip_do_work(void)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			hip_rvs_set_request_flag(job->arg1);
+			res = hip_trigger_bex(job->arg1);
+			if (res < 0)
+				res = KHIPD_ERROR;
 			break;
 #endif
 		case HIP_WO_SUBTYPE_FLUSHMAPS:

@@ -1305,7 +1305,7 @@ int hip_receive_r1(struct sk_buff *skb)
 	wmb();
 	state = entry->state;
 
-	HIP_DEBUG("entry->state is %s\n", hip_state_str(state));
+	HIP_DEBUG("entry->state is %s\n", HIP_DEBUG_STATE_STR(state));
 	switch(state) {
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
@@ -1581,7 +1581,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 			goto out_err;
 		}
 
-		if (!hip_verify_cookie(&skb->nh.ipv6h->saddr, &skb->nh.ipv6h->daddr, 
+		if (!hip_verify_cookie(&skb->nh.ipv6h->saddr,
+				       &skb->nh.ipv6h->daddr, 
 				       i2, sol)) {
 			HIP_ERROR("Cookie solution rejected\n");
 			err = -ENOMSG;
@@ -1716,7 +1717,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		char *str;
 		int len;
 
-		if (hip_get_param_host_id_di_type_len(host_id_in_enc, &str, &len) < 0)
+		if (hip_get_param_host_id_di_type_len(host_id_in_enc, &str,
+						      &len) < 0)
 			goto out_err;
 
 		HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
@@ -1793,7 +1795,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(hspi->spi);
-		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
+		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
+				       &spi_out_data);
 		if (err) {
 			goto out_err;
 		}
@@ -1806,8 +1809,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		}
 	}
 
-	err = hip_hadb_add_peer_addr(entry, &(ctx->skb_in->nh.ipv6h->saddr), 0, 0,
-				     PEER_ADDR_STATE_ACTIVE);
+	err = hip_hadb_add_peer_addr(entry, &(ctx->skb_in->nh.ipv6h->saddr),
+				     0, 0, PEER_ADDR_STATE_ACTIVE);
 	if (err) {
 		HIP_ERROR("error while adding a new peer address\n");
 		goto out_err;
@@ -1817,7 +1820,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	{
 		spi_in = 0;
 		err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_in, esp_tfm, 
-				   &ctx->esp_in.key, &ctx->auth_in.key, 0, HIP_SPI_DIRECTION_IN);
+				   &ctx->esp_in.key, &ctx->auth_in.key, 0,
+				   HIP_SPI_DIRECTION_IN);
 
 		if (err) {
 			HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
@@ -1828,16 +1832,19 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		/* XXX: Check -EAGAIN */
 
 		/* ok, found an unused SPI to use */
-		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n",
+			  spi_in);
 	}
 
 	barrier();
 	spi_out = ntohl(hspi->spi);
 
-	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_out);
+	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n",
+		  spi_out);
 
 	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_out, esp_tfm, 
-			   &ctx->esp_out.key, &ctx->auth_out.key, 0, HIP_SPI_DIRECTION_OUT);
+			   &ctx->esp_out.key, &ctx->auth_out.key, 0,
+			   HIP_SPI_DIRECTION_OUT);
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
 		HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -1852,7 +1859,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
-	err = hip_hadb_add_addr_to_spi(entry, spi_out, &ctx->skb_in->nh.ipv6h->saddr,
+	err = hip_hadb_add_addr_to_spi(entry, spi_out,
+				       &ctx->skb_in->nh.ipv6h->saddr,
 				       1, 0, 1);
 	HIP_DEBUG("add spi err ret=%d\n", err);
 	if (err) {
@@ -1897,15 +1905,21 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	hip_finalize_sa(&i2->hits, spi_out);
 	hip_finalize_sa(&i2->hitr, spi_in);
 
-	/* we cannot do this outside (in hip_receive_i2) since we don't have the
-	   entry there and looking it up there would be unneccesary waste of cycles
-	*/
+	/* we cannot do this outside (in hip_receive_i2) since we don't have
+	   the entry there and looking it up there would be unneccesary waste
+	   of cycles */
 	if (!ha && entry) {
 		wmb();
+#ifdef CONFIG_HIP_RVS
+		/* XX FIX: this should be dynamic (the rvs information should
+		   be stored in the HADB) instead of static */
+		entry->state = HIP_STATE_ESTABLISHED;
+#else
 		entry->state = HIP_STATE_R2_SENT;
+#endif /* CONFIG_HIP_RVS */
 	}
 
-	HIP_DEBUG("Reached R2_SENT state\n");
+	HIP_DEBUG("Reached %s state\n", HIP_DEBUG_STATE_STR(entry->state));
 
 	//hip_hadb_dump_spis_in(entry);
 	//hip_hadb_dump_spis_out(entry);
@@ -1913,12 +1927,13 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
  out_err:
 	/* ha is not NULL if hip_receive_i2() fetched the HA for us.
 	 * In that case we must not release our reference to it.
-	 * Otherwise, if 'ha' is NULL, then we created the HIP HA in this function
-	 * and we should free the reference.
+	 * Otherwise, if 'ha' is NULL, then we created the HIP HA in this
+	 * function and we should free the reference.
 	 */
 	if (!ha) {
 		if (entry) {
-			HIP_UNLOCK_HA(entry); /* unlock the entry created in this function */
+			/* unlock the entry created in this function */
+			HIP_UNLOCK_HA(entry);
 			hip_put_ha(entry);
 		}
 	}
@@ -2273,7 +2288,7 @@ int hip_receive_i1(struct sk_buff *skb)
 
 	HIP_DEBUG("HIP_LOCK_HA ?\n");
 
-	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
+	HIP_DEBUG("Received I1 in state %s\n", HIP_DEBUG_STATE_STR(state));
 	switch(state) {
 	case HIP_STATE_NONE:
  		err = hip_handle_i1(skb, NULL);
@@ -2609,7 +2624,7 @@ int hip_receive_bos(struct sk_buff *skb)
 		/* TODO: should return right now */
 		state = entry->state;
 	}
-	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
+	HIP_DEBUG("Received BOS packet in state %s\n", HIP_DEBUG_STATE_STR(state));
 
 	if (entry)
 		HIP_DEBUG("---LOCKING---\n");
@@ -2624,7 +2639,7 @@ int hip_receive_bos(struct sk_buff *skb)
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
  	case HIP_STATE_REKEYING:
-		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
+		HIP_DEBUG("BOS not handled in state %s\n", HIP_DEBUG_STATE_STR(state));
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -2808,7 +2823,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
  */
 int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 {
-	struct hip_common *hip_common;
+        struct hip_common *hip_common;
 	struct hip_work_order *hwo;
 	int err = 0;
 
@@ -2818,8 +2833,9 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 		goto out_err;
 	}
 
-	hip_common = (struct hip_common*) (*skb)->h.raw;
-	HIP_DEBUG("Received HIP packet type %d\n", hip_common->type_hdr); /* TODO: use hip_state_str */
+        hip_common = (struct hip_common*) (*skb)->h.raw;
+        /* TODO: use HIP_DEBUG_STATE_STR */
+	HIP_DEBUG("Received HIP packet type %d\n", hip_common->type_hdr);
 	_HIP_DEBUG_SKB((*skb)->nh.ipv6h, skb);
 	_HIP_HEXDUMP("HIP PACKET", hip_common,
 		     hip_get_msg_total_len(hip_common));

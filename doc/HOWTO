@@ -403,7 +403,9 @@ hipconf rvs <hit> <ip>
 
 For now it is best if all the hosts involved in communications have
 the Rendezvous Mechanism option enabled. Although, for the initiator
-this should not be a requirement.
+this should not be a requirement. Also, you should have run the base
+exchange once without rendezvous server to get familiar how the
+/etc/hosts and /etc/hip/hosts are configured.
 
 The participants:
 
@@ -411,8 +413,10 @@ The participants:
   RVS = The Rendezvous server
   R = Responder
 
-The idea is that I wants to connect to R, but only knows RVS's IP
-address (and that RVS is representing R).
+The idea is that I wants to connect to R's HIT but only knows RVS's IP
+address (and that RVS is representing R). We'll show how to use RVS
+the native HIP example applications (although you can do it with
+nc6 or the other conntest test applications).
 
 Steps:
 -----
@@ -422,34 +426,29 @@ Steps:
   each-host # modprobe hipmod
   each-host # hipl/tools/hipconf add hi default
 
-2. R has to tell the RVS that it would like to use RVS's services:
+2. At the initiator, you must modify the "/etc/hosts" file. In the file,
+   responder's hostname must be mapped to the IPv6 address of the rendezvous
+   server. It must not be mapped to the responder's IPv6 address, or otherwise
+   the rendezvous server is not used at all!
+
+   The "/etc/hip/hosts" file should contain the hostname and HIT of the
+   responder as in the normal base exchange execution.
+
+3. R has to tell the RVS that it would like to use RVS's services:
 
   responder # hipconf rvs <RVS-hit> <RVS-ip>
 
-3. Send a TCP packet to the RVS-hit (to run the base exchange):
-
-  responder # nc6 <RVS-hit> 12345 
-
-  The port number does not matter. There need not be anything listening
-  to that port.
-
-  Now the Rendezvous Association is established.
+  This will establish a HIP SA between the rendezvous server and the responder.
 
 4. Put some server listening at R:
 
-  responder # nc6 -l -p 5000
+  responder # test/conntest-server-native tcp 5000
 
-5. Now the initiator will have to do the IP-HIT mapping:
+5. Start a connection at I:
 
-  initiator # hipconf add map <R-hit> <RVS-ip>
+  initiator # test/conntest-client-native <responder-hostname> tcp 5000
 
-  (alternatively, you can use the HIP enabled resolver libary)
-
-6. Start a connection at I:
-
-  initiator # nc6 <R-hit> 5000
-
-7. Type some text...
+6. Type some text...
 
 Notes:
 

@@ -90,9 +90,8 @@ int main(int argc,char *argv[]) {
   hints.ei_socktype = socktype;
   hints.ei_family = endpoint_family;
   /* Use the following flags to use only the kernel list for name resolution
-   *   hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
+   * hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
    */
-hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
 
   /* lookup host */
   err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
