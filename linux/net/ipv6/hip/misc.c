@@ -251,3 +251,13 @@ int hip_hash_hit(void *key, int range)
 	/* HITs are random. (at least the 64 LSBs)  */
 	return (hit->s6_addr32[2] ^ hit->s6_addr32[3]) % range;
 }
+
+int hip_match_hit(void *hitA, void *hitB)
+{
+	hip_hit_t *key_1, *key_2;
+
+	key_1 = (hip_hit_t *)hitA;
+	key_2 = (hip_hit_t *)hitB;
+
+	return !ipv6_addr_cmp(key_1, key_2);
+}

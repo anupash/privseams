@@ -29,16 +29,6 @@ static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
   (functions hip_ .. _hs)
 */
 
-static int hip_hadb_match_hit(void *key_1, void *key_2)
-{
-	hip_hit_t *key1, *key2;
-
-	key1 = (hip_hit_t *)key_1;
-	key2 = (hip_hit_t *)key_2;
-
-	return !ipv6_addr_cmp(key_1, key_2);
-}
-
 static int hip_hadb_match_spi(void *key_1, void *key_2)
 {
 	uint32_t spi1,spi2;
@@ -627,6 +617,8 @@ int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				HIP_DEBUG("updating lifetime 0x%x -> 0x%x\n", s->lifetime, *lifetime);
 				s->lifetime = *lifetime;
 			}
+			HIP_UNLOCK_HA(entry);
+			HIP_LOCK_HA(entry);
 			return 1;
 		}
 		i++;
@@ -1678,7 +1670,7 @@ void hip_init_hadb(void)
 	hadb_hit.hashsize =  HIP_HADB_SIZE;
 	hadb_hit.offset =    offsetof(hip_ha_t, next_hit);
 	hadb_hit.hash =      hip_hash_hit;
-	hadb_hit.compare =   hip_hadb_match_hit;
+	hadb_hit.compare =   hip_match_hit;
 	hadb_hit.hold =      hip_hadb_hold_entry;
 	hadb_hit.put =       hip_hadb_put_entry;
 	hadb_hit.get_key =   hip_hadb_get_key_hit;
@@ -1720,13 +1712,17 @@ void hip_uninit_hadb()
 		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
 			if (atomic_read(&ha->refcnt) > 2)
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
+			hip_hold_ha(ha);
 			hip_hadb_remove_state(ha);
+			hip_put_ha(ha);
 		}
 
 		list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
 			if (atomic_read(&hs->refcnt) > 1)
 				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
+			hip_hadb_hold_hs(hs);
 			hip_hadb_delete_hs(hs);
+			hip_hadb_put_hs(hs);
 		}
 	}
 }

@@ -364,6 +364,8 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	xs->sel.sport_mask = 0;
 	/* XXX: sel.ifindex... could we fail because of this? */
 
+	xs->sel.proto = 0; /* all protos */
+
 	err = -ENOENT;
 	xs->type = xfrm_get_type(IPPROTO_ESP, AF_INET6);
 	if (xs->type == NULL) {

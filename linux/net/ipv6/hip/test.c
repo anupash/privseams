@@ -33,6 +33,7 @@
 HIP_UNIT_TEST_CASE(hip_test_internal) {
   int i = 1;
   HIP_UNIT_ASSERT(i);
+  HIP_DEBUG("Unit test environment is working in the kernel\n");
 }
 
 static struct hip_unit_test_suite hip_unit_test_suite_internal = {

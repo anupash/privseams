@@ -573,10 +573,11 @@ action items:
   * random seed to files using OpenSSL (RAND_seed)
 
 * Miika
+  * a generic NOTIFY mechanism
+  * convert ioctl to hip socket
   * remove warnings from tla commit
   * hipd_handle_async_unit_test is broken
   * remove include/net/keymat.h
-  * HIP native API
   * Checks in the kernel that the HIT matches to the HI to prevent HI ownership
     forging. I will need this anyway in the Native API...
   * remove include/net/keymat.h
@@ -669,13 +670,15 @@ action items:
 * unassigned/all:
   * handle ESP code is almost the same for initiator and responder; unifify
   * check: HIP_DEBUG must not expand to empty string if debugging is disabled
-    (if (x) HIP_DEBUG(..) may be erroneous), expand to do { } while (0); instead
+    (if (x) HIP_DEBUG(..) may be erroneous), expand to do { } while (0);
+    instead
   * we should have different kind of dh keys (one for each group because
     the responder effectively decides the group number)
   * the dh keys should be recreated at some time points
   * timers for base exchange and rea
   * the first packet sent is always dropped: implement one packet buffer
-  * Validate state transitions and whether to send a reply or not according to the state
+  * Validate state transitions and whether to send a reply or not according
+    to the state
   * hip_sdb -> hip_hadb (hip host association database)
   * piggypacking to R2/I2
   * unify storing format (network byte order vs. host by order) of sdb
@@ -716,4 +719,3 @@ action items:
   * fixed size arrays -> change to use struct list_head
   * common functions/macros for variables of type struct list_head
   * status page: collect all MUST/SHOULD/etc from drafts and see if we comply to the drafts
-

@@ -39,6 +39,9 @@
 #include "daemon.h"
 #include "socket.h"
 #include "update.h"
+#ifdef CONFIG_HIP_RVS
+# include "rvs.h"
+#endif
 
 #include <linux/proc_fs.h>
 #include <linux/notifier.h>
@@ -355,7 +358,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	struct in6_addr dst_hit;
  	int err = 0;
  	u8 *dh_data = NULL;
- 	int dh_size,written;
+ 	int dh_size,written, mask;
  	/* Supported HIP and ESP transforms */
  	hip_transform_suite_t transform_hip_suite[] = {HIP_TRANSFORM_3DES,
  						       HIP_TRANSFORM_NULL };
@@ -405,7 +408,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
  	/* Ready to begin building of the R1 packet */
  	memset(&dst_hit, 0, sizeof(struct in6_addr));
- 	hip_build_network_hdr(msg, HIP_R1, HIP_CONTROL_NONE, src_hit,
+
+	mask = HIP_CONTROL_NONE;
+#ifdef CONFIG_HIP_RVS
+	mask |= HIP_CONTROL_RVS_CAPABLE;
+#endif
+
+ 	hip_build_network_hdr(msg, HIP_R1, mask, src_hit,
  			      &dst_hit);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
@@ -510,9 +519,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 			goto out_err;
 		}
 
-		pz->opaque[0] = '.';
-		pz->opaque[1] = '!';
-		pz->opaque[2] = '.';
+		get_random_bytes(pz->opaque, HIP_PUZZLE_OPAQUE_LEN);
 
 		get_random_bytes(&random_i,sizeof(random_i));
 		pz->I = random_i;
@@ -672,36 +679,6 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
 	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
 
-#if 0
-	if (is_initiator) {
-		memcpy(&entry->esp_our.key, &ctx->espi.key,
-		       hip_enc_key_length(entry->esp_transform));
-		memcpy(&entry->esp_peer.key, &ctx->hip_espr.key,
-		       hip_enc_key_length(entry->esp_transform));
-		memcpy(&entry->auth_our.key, &ctx->hip_authi.key,
-		       hip_auth_key_length_esp(entry->esp_transform)); 
-		memcpy(&entry->auth_peer.key, &ctx->hip_authr.key,
-		       hip_auth_key_length_esp(entry->esp_transform));
-		memcpy(&entry->hmac_our, &ctx->hip_hmaci,
-		       hip_hmac_key_length(entry->esp_transform));
-		memcpy(&entry->hmac_peer, &ctx->hip_hmacr,
-		       hip_hmac_key_length(entry->esp_transform));
-	} else {
-		memcpy(&entry->esp_our.key, &ctx->hip_espr.key,
-		       hip_enc_key_length(entry->esp_transform));
-		memcpy(&entry->esp_peer.key, &ctx->hip_espi.key,
-		       hip_enc_key_length(entry->esp_transform));
-		memcpy(&entry->auth_our.key, &ctx->hip_authr.key,
-		       hip_auth_key_length_esp(entry->esp_transform));
-		memcpy(&entry->auth_peer.key, &ctx->hip_authi.key,
-		       hip_auth_key_length_esp(entry->esp_transform));
-		memcpy(&entry->hmac_our, &ctx->hip_hmacr,
-		       hip_hmac_key_length(entry->esp_transform));
-		memcpy(&entry->hmac_peer, &ctx->hip_hmaci,
-		       hip_hmac_key_length(entry->esp_transform));
-	}
-#endif
-
 	hip_update_entry_keymat(entry, ctx->current_keymat_index,
 				ctx->keymat_calc_index, ctx->current_keymat_K);
 
@@ -712,7 +689,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 	entry->dh_shared_key_len = 0;
 	/* todo: reuse pointer, no kmalloc */
-	entry->dh_shared_key = kmalloc(ctx->dh_shared_key_len, GFP_KERNEL);
+	entry->dh_shared_key = kmalloc(ctx->dh_shared_key_len, GFP_ATOMIC);
 	if (!entry->dh_shared_key) {
 		HIP_ERROR("entry dh_shared kmalloc failed\n");
 		err = -ENOMEM;
@@ -896,7 +873,6 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 
 	_HIP_DEBUG("Mapping virtual to pages\n");
 
-//	err = hip_map_virtual_to_pages(src_sg, &src_nsg, data, enc_len);
 	err = hip_map_virtual_to_pages(src_sg, &src_nsg, result, enc_len);
 	if (err || src_nsg < 1) {
 		HIP_ERROR("Error mapping source data\n");
@@ -923,11 +899,13 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
 		if (iv) {
-			err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg, enc_len, iv);
-			memset(iv,0,8);
-			//err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg, enc_len, iv);		
+			err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg,
+						       enc_len, iv);
+			/* The encrypt function writes crap on iv */
+			memset(iv, 0, 8);
 		} else {
-			err = crypto_cipher_encrypt(impl, src_sg, src_sg, enc_len);
+			err = crypto_cipher_encrypt(impl, src_sg, src_sg,
+						    enc_len);
 		}
 		if (err) {
 			HIP_ERROR("Encryption failed\n");
@@ -954,15 +932,12 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		break;
 	}
 
-	HIP_ASSERT(iv);
-	//	memcpy(data, result, enc_len);
-	//if (direction == HIP_DIRECTION_ENCRYPT)
-	memcpy(data, result, enc_len); // XX DOES NOT WORK IF IV IS NULL
+	if (iv) {
+		memcpy(data, result, enc_len);
+	} else {
+		HIP_ASSERT(iv); /* Not tested/interoperated without iv */
+	}
 
-		//else
-		//	memcpy(iv+8, result, enc_len); // XX DOES NOT WORK IF IV IS NULL
-
-	//memset(iv, 0, 8);
 
  out_err:
 	if (result)
@@ -1604,7 +1579,7 @@ static void hip_uninit_cipher(void)
 static int hip_init_procfs(void)
 {
 	HIP_DEBUG("procfs init\n");
-	hip_proc_root = create_proc_entry("net/hip", S_IFDIR, NULL);
+	hip_proc_root = create_proc_entry("hip", S_IFDIR, proc_net);
 	if (!hip_proc_root)
 		return -1;
 
@@ -1661,7 +1636,7 @@ static void hip_uninit_procfs(void)
 	remove_proc_entry("send_update", hip_proc_root);
 	remove_proc_entry("send_notify", hip_proc_root);
 	remove_proc_entry("sdb_peer_spi_list", hip_proc_root);
-	remove_proc_entry("net/hip", NULL);
+	remove_proc_entry("hip", proc_net);
 }
 #endif /* CONFIG_PROC_FS */
 
@@ -1781,6 +1756,13 @@ static int hip_do_work(void)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
+		case HIP_WO_SUBTYPE_ADDRVS:
+			/* arg1 = d-hit, arg2=ipv6 */
+			res = hip_hadb_add_peer_info(job->arg1, job->arg2);
+			if (res < 0)
+				res = KHIPD_ERROR;
+			hip_rvs_set_request_flag(job->arg1);
+			break;
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
 		case HIP_WO_SUBTYPE_ADDHI:
 		case HIP_WO_SUBTYPE_DELHI:
@@ -1862,7 +1844,7 @@ static int __init hip_init(void)
 	hip_init_hadb();
 
 #ifdef CONFIG_HIP_RVS
-	hip_init_rvdb();
+	hip_init_rvadb();
 #endif
 
 #ifdef CONFIG_PROC_FS
@@ -1973,7 +1955,7 @@ static void __exit hip_cleanup(void)
 	hip_uninit_socket_handler();
 	hip_uninit_host_id_dbs();
 #ifdef CONFIG_HIP_RVS
-	hip_uninit_rvdb();
+	hip_uninit_rvadb();
 #endif
 	hip_uninit_hadb();
 	hip_uninit_all_eid_db();
@@ -1988,7 +1970,7 @@ static void __exit hip_cleanup(void)
 	return;
 }
 
-MODULE_AUTHOR("HIPL <hipl@gaijin.tky.hut.fi>");
+MODULE_AUTHOR("HIPL <hipl-dev@freelists.org>");
 MODULE_DESCRIPTION("HIP development module");
 MODULE_LICENSE("GPL");
 #ifdef KRISUS_THESIS

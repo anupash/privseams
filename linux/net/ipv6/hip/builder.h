@@ -149,13 +149,23 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *puzzle,
 			     uint64_t val_J);
 
-int hip_build_param_echo_response(struct hip_common *msg,
-				  struct hip_echo_request *ping, int sign);
-
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
+
+int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
+			int *type_list, int cnt, int request);
+
+int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
+			 int sign, int request);
+
+int hip_build_param_rea(struct hip_common *msg, uint32_t spi, uint32_t lifetime,
+			struct in6_addr *addrs, int cnt);
+
+int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr, int sign);
 
 int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len);
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
 int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 			   void *notification_data, size_t notification_data_len);
+
+
 #endif /* HIP_BUILDER */

@@ -55,6 +55,9 @@
 #include "db.h"
 #include "cookie.h"
 #include "output.h"
+#ifdef CONFIG_HIP_RVS
+# include "rvs.h"
+#endif
 
 #ifdef MAX
 #undef MAX
@@ -84,7 +87,11 @@ int hip_controls_sane(u16 controls, u16 legal)
 	u16 known;
 
 	known = controls & ( HIP_CONTROL_CERTIFICATES |
-			     HIP_CONTROL_HIT_ANON );
+			     HIP_CONTROL_HIT_ANON
+#ifdef CONFIG_HIP_RVS
+			     | HIP_CONTROL_RVS_CAPABLE
+#endif
+			     );
 
 	if ((known | legal) != legal)
 		return 0;
@@ -938,6 +945,28 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/* LSI not created, as it is local, and we do not support IPv4 */
 
+#ifdef CONFIG_HIP_RVS
+	/************ RVA_REQUEST (OPTIONAL) ***************/
+	
+	{
+		/* we've requested RVS, and the peer is rvs capable */
+		int type = HIP_RVA_RELAY_I1;
+
+		if (!(entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
+			goto next_echo_resp;
+
+		if (!(entry->peer_controls & HIP_CONTROL_RVS_CAPABLE))
+			goto next_echo_resp;
+
+		err = hip_build_param_rva(i2, 0, &type, 1, 1);
+		if (err) {
+			HIP_ERROR("Could not build RVA_REQUEST parameter\n");
+			goto out_err;
+		}
+	}
+ next_echo_resp:
+
+#endif
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
 	/* must reply... */
 	{
@@ -945,7 +974,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST_SIGN);
 		if (ping) {
-			err = hip_build_param_echo_response(i2, ping, 1);
+			int ln;
+
+			ln = hip_get_param_contents_len(ping);
+			err = hip_build_param_echo(i2, ping + 1, ln, 1, 0);
 			if (err) {
 				HIP_ERROR("Error while creating echo reply parameter\n");
 				goto out_err;
@@ -987,7 +1019,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST);
 		if (ping) {
-			err = hip_build_param_echo_response(i2, ping, 0);
+			int ln;
+
+			ln = hip_get_param_contents_len(ping);
+			err = hip_build_param_echo(i2, (ping + 1), ln, 0, 0);
 			if (err) {
 				HIP_ERROR("Error while creating echo reply parameter\n");
 				goto out_err;
@@ -1201,6 +1236,8 @@ int hip_handle_r1(struct sk_buff *skb, hip_ha_t *entry)
  		goto out_err;
   	}
 
+	entry->peer_controls = ntohs(r1->control);
+	
 	HIP_INFO("R1 Successfully received\n");
 
  	err = hip_create_i2(ctx, solved_puzzle, entry);
@@ -1234,7 +1271,7 @@ int hip_receive_r1(struct sk_buff *skb)
 {
 	struct hip_common *hip_common;
 	hip_ha_t *entry;
-	int state;
+	int state, mask;
 	int err = 0;
 
 	HIP_DEBUG("Received R1\n");
@@ -1245,8 +1282,10 @@ int hip_receive_r1(struct sk_buff *skb)
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
 	}
 
-	if (!hip_controls_sane(ntohs(hip_common->control),
-			       HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON)) {
+ 	mask = HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
+	       HIP_CONTROL_RVS_CAPABLE;
+
+ 	if (!hip_controls_sane(ntohs(hip_common->control), mask)) {
 		HIP_ERROR("Received illegal controls in R1: 0x%x Dropping\n",
 			  ntohs(hip_common->control));
 		goto out_drop;
@@ -1257,6 +1296,28 @@ int hip_receive_r1(struct sk_buff *skb)
 		err = -EFAULT;
 		HIP_ERROR("Received R1 with no local state. Dropping\n");
 		goto out_drop;
+	}
+
+	/* An implicit and insecure REA. If sender's address is different than
+	 * the one that was mapped, then we will overwrite the mapping with
+	 * the newer address.
+	 * This enables us to use the rendezvous server, while not supporting
+	 * the REA TLV.
+	 */
+
+	{
+		struct in6_addr daddr;
+
+		hip_hadb_get_peer_addr(entry, &daddr);
+		if (ipv6_addr_cmp(&daddr, &skb->nh.ipv6h->saddr) != 0) {
+			HIP_DEBUG("Mapped address didn't match received address\n");
+			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
+			HIP_HEXDUMP("Mapping", &daddr, 16);
+			HIP_HEXDUMP("Received", &skb->nh.ipv6h->saddr, 16);
+			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			hip_hadb_add_peer_addr(entry, &skb->nh.ipv6h->saddr, 0, 0);
+		}
+
 	}
 
 	/* since the entry is in the hit-list and since the previous
@@ -1323,6 +1384,9 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	int err = 0;
 	int clear = 0;
  	u8 signature[HIP_DSA_SIGNATURE_LEN];
+#ifdef CONFIG_HIP_RVS
+	int create_rva = 0;
+#endif
 
 	HIP_DEBUG("\n");
 
@@ -1352,7 +1416,42 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  		goto out_err;
 	}
 
-	/*********** HMAC ************/
+#ifdef CONFIG_HIP_RVS
+ 	/* Do the Rendezvous functionality */
+ 	{
+ 		struct hip_rva_request *rreq;
+ 		int rva_types[4] = {0};
+ 		int num;
+ 		uint32_t lifetime;
+
+ 		rreq = hip_get_param(i2, HIP_PARAM_RVA_REQUEST);
+ 		if (!rreq)
+ 			goto next_hmac;
+
+ 		num = hip_select_rva_types(rreq, rva_types, 4);
+ 		if (!num) {
+ 			HIP_ERROR("None of the RVA types were accepted. Abandoning connection\n");
+ 			rva_types[0] = 0;
+			num = 1;
+ 		}
+
+ 		lifetime = ntohl(rreq->lifetime);
+ 		if (lifetime > HIP_DEFAULT_RVA_LIFETIME)
+			lifetime = HIP_DEFAULT_RVA_LIFETIME;
+
+ 		err = hip_build_param_rva(r2, lifetime, rva_types, num, 0);
+ 		if (err) {
+ 			HIP_ERROR("Building of RVA_REPLY failed\n");
+ 			goto out_err;
+ 		}
+
+ 		create_rva = 1;
+ 	}
+
+ next_hmac:
+#endif
+
+ 	/*********** HMAC ************/
 	{
 		struct hip_crypto_key hmac;
 
@@ -1398,6 +1497,24 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		HIP_ERROR("csum_send failed\n");
 	}
 
+#ifdef CONFIG_HIP_RVS
+	if (create_rva) {
+		HIP_RVA *rva;
+
+		rva = hip_ha_to_rva(entry, GFP_KERNEL);
+		if (!rva) {
+			/* RVA could not be created... notify the initiator */
+			err = -ENOSYS;
+			goto out_err;
+		}
+
+		err = hip_rva_insert(rva);
+		if (err) 
+			HIP_ERROR("Error while inserting RVA into hash table\n");
+		
+		hip_put_rva(rva);
+	}
+#endif
  out_err:
 	if (r2)
 		kfree(r2);
@@ -1667,7 +1784,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 		HIP_LOCK_HA(entry);
 		if (r1cntr)
 			entry->birthday = r1cntr->generation;
-		entry->peer_controls = ntohs(i2->control);
+		entry->peer_controls |= ntohs(i2->control);
 		ipv6_addr_copy(&entry->hit_our, &i2->hitr);
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		entry->spi_out = ntohl(hspi->spi);
@@ -1836,7 +1953,8 @@ int hip_receive_i2(struct sk_buff *skb)
 	}
 
 	if (!hip_controls_sane(ntohs(i2->control),
-			       HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON)) {
+			       HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
+			       HIP_CONTROL_RVS_CAPABLE)) {
 		HIP_ERROR("Received illegal controls in I2: 0x%x. Dropping\n",
 			  ntohs(i2->control));
 		goto out;
@@ -2041,6 +2159,47 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
 	return err;
 }
 
+int hip_handle_i1(struct sk_buff *skb, hip_ha_t *entry)
+{
+	int err;
+	struct hip_common *i1;
+	struct hip_from *from;
+	struct in6_addr *dst;
+	struct in6_addr *dstip;
+
+	i1 = (struct hip_common *)skb->h.raw;
+
+	dst = &i1->hits;
+	dstip = NULL;
+
+#ifdef CONFIG_HIP_RVS
+	from = hip_get_param(i1, HIP_PARAM_FROM);
+	if (from) {
+		HIP_DEBUG("Found FROM parameter in I1\n");
+		dstip = (struct in6_addr *)&from->address;
+		if (entry) {
+			struct in6_addr daddr;
+			
+			/* The entry contains wrong address mapping...
+			   instead of the real IP, it has RVS's IP.
+			   The RVS should probably be saved into the entry.
+			   We need the RVS's IP in double-jump case.
+			*/
+			hip_hadb_get_peer_addr(entry, &daddr);
+			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			hip_hadb_add_peer_addr(entry, dst, 0, 0);
+		}
+	} else {
+		HIP_DEBUG("Didn't find FROM parameter in I1\n");
+	}
+	
+#endif
+
+	err = hip_xmit_r1(skb, dstip, dst);
+	return err;
+}
+
+
 /**
  * hip_receive_i1 - receive I1 packet
  * @skb: sk_buff where the HIP packet is in
@@ -2054,64 +2213,88 @@ int hip_handle_r2(struct sk_buff *skb, hip_ha_t *entry)
  */
 int hip_receive_i1(struct sk_buff *skb) 
 {
-	struct hip_i1 *hip_i1 = (struct hip_i1*) skb->h.raw;
-	struct hip_common *r1;
-	int ok = 0;
+	struct hip_common *hip_i1 = (struct hip_common*) skb->h.raw;
 	int err = 0;
 	int state;
 	hip_ha_t *entry;
+ 	int mask;
+#ifdef CONFIG_HIP_RVS
+ 	HIP_RVA *rva;
+#endif
 
 	HIP_DEBUG("\n");
 
-	r1 = (struct hip_common*) (skb)->h.raw;
-	if (ipv6_addr_any(&r1->hitr)) {
+	if (ipv6_addr_any(&hip_i1->hitr)) {
 		HIP_ERROR("Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
 		err = -EPROTONOSUPPORT;
 		goto out;
 	}
+	/* we support checking whether we are rvs capable even with RVS support not enabled */
+	mask = HIP_CONTROL_NONE | HIP_CONTROL_RVS_CAPABLE;
 
-	if (!hip_controls_sane(ntohs(hip_i1->control),
-			       HIP_CONTROL_NONE)) {
-		HIP_ERROR("Received illegal controls in I1: 0x%x. Dropping\n",ntohs(hip_i1->control));
+ 	if (!hip_controls_sane(ntohs(hip_i1->control), mask)) {
+ 		HIP_ERROR("Received illegal controls in I1: 0x%x. Dropping\n",
+ 			  ntohs(hip_i1->control));
 		goto out;
 	}
 
-	entry = hip_hadb_find_byhit(&r1->hits);
+	entry = hip_hadb_find_byhit(&hip_i1->hits);
 	if (entry) {
-		smp_wmb();
+		wmb();
 		state = entry->state;
 		hip_put_ha(entry);
-	} else
+	} else {
+#ifdef CONFIG_HIP_RVS
+ 		HIP_DEBUG("Doing RVA check\n");
+ 		rva = hip_rva_find_valid(&hip_i1->hitr);
+ 		if (rva) {
+ 			/* we should now relay the I1.
+ 			   We have two options: Rewrite destination address or
+ 			   rewrite both destination and source addresses.
+ 			   We'll try to do the former if the destination is in the
+ 			   same subnet, and we'll fall back to the latter in other
+ 			   cases.
+ 			*/
+
+ 			err = hip_relay_i1(skb, rva);
+ 			if (err)
+ 				HIP_ERROR("Relaying I1 failed\n");
+ 			else
+ 				HIP_DEBUG("Relayed I1\n");
+ 			return err;
+ 		}
+#endif
 		state = HIP_STATE_NONE;
+	}
 
 	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_NONE:
-		ok = hip_send_r1(skb);
+ 		err = hip_handle_i1(skb, NULL);
 		break;
 	case HIP_STATE_UNASSOCIATED:
-		ok = hip_send_r1(skb);
+		err = hip_handle_i1(skb, entry);
 		break;
 	case HIP_STATE_I1_SENT:
-		ok = hip_send_r1(skb);
+		err = hip_handle_i1(skb, entry);
 		break;
 	case HIP_STATE_I2_SENT:
-		ok = hip_send_r1(skb);
+		err = hip_handle_i1(skb, entry);
 		break;
 	case HIP_STATE_ESTABLISHED:
-		ok = hip_send_r1(skb);
+		err = hip_handle_i1(skb, entry);
 		break;
 	case HIP_STATE_REKEYING:
-		ok = hip_send_r1(skb);
+
 		break;
 	default:
 		HIP_ERROR("DEFAULT CASE, UNIMPLEMENTED STATE HANDLING OR A BUG\n");
-		ok = -EINVAL;
+		err = -EINVAL;
 		break;
 	}
 
  out:
-	return ok;
+	return err;
 }
 
 /**
@@ -2139,7 +2322,8 @@ int hip_receive_r2(struct sk_buff *skb)
 	}
 
 	if (!hip_controls_sane(ntohs(hip_common->control),
-			       HIP_CONTROL_NONE)) {
+			       HIP_CONTROL_NONE | HIP_CONTROL_RVS_CAPABLE))
+	{
 		HIP_ERROR("Received illegal controls in R2: 0x%x. Dropping\n", ntohs(hip_common->control));
 		goto out_err;
 	}

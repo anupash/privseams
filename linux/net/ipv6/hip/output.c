@@ -147,6 +147,12 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 
+		if (!skb) {
+			HIP_ERROR("Established state and no SKB!");
+			err = -EADDRNOTAVAIL;
+			goto out;
+		}
+
 		err = ipv6_get_saddr(skb->dst, &hdr->daddr, &hdr->saddr);
 		if (err) {
 			HIP_ERROR("Couldn't get a source address\n");
@@ -318,9 +324,10 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  */
 int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 {
-	struct hip_i1 i1;
+	struct hip_common i1;
 	struct in6_addr daddr;
 	struct in6_addr hit_our;
+	int mask;
 	int err = 0;
 
 	HIP_DEBUG("\n");
@@ -331,12 +338,17 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 		goto out_err;
 	}
 
+	mask = HIP_CONTROL_NONE;
+#ifdef CONFIG_HIP_RVS
+	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
+		mask |= HIP_CONTROL_RVS_CAPABLE;
+#endif
 
 	hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
-			      HIP_CONTROL_NONE, &hit_our,
+			      mask, &hit_our,
 			      dsthit);
 	/* Eight octet units, not including first */
-	i1.payload_len = (sizeof(struct hip_i1) >> 3) - 1;
+	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
 
 	HIP_HEXDUMP("HIT SOURCE in send_i1", &i1.hits,
 		    sizeof(struct in6_addr));
@@ -367,19 +379,25 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
  *
  * Returns: zero on success, or negative error value on error.
  */
-int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_hit)
+int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
+		struct in6_addr *dst_hit)
 {
 	struct hip_common *r1pkt;
-	struct in6_addr *src_addr;
+	struct in6_addr *own_addr;
 	struct in6_addr *dst_addr;
 	int err = 0;
 
 	HIP_DEBUG("\n");
 
-	src_addr = &skb->nh.ipv6h->saddr;
-	dst_addr = &skb->nh.ipv6h->daddr;
+	own_addr = &skb->nh.ipv6h->daddr;
+	if (!dst_ip || ipv6_addr_any(dst_ip)) {
+		dst_addr = &skb->nh.ipv6h->saddr;
+	} else {
+		dst_addr = dst_ip;
+	}
 
-	r1pkt = hip_get_r1(src_addr, dst_addr);
+	/* dst_addr is the IP address of the Initiator... */
+	r1pkt = hip_get_r1(dst_addr, own_addr);
 	if (!r1pkt)
 	{
 		HIP_ERROR("No precreated R1\n");
@@ -396,7 +414,7 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_hit)
 
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-	err = hip_csum_send(NULL, src_addr, r1pkt);	
+	err = hip_csum_send(NULL, dst_addr, r1pkt);	
 	if (err) {
 		HIP_ERROR("hip_csum_send failed, err=%d\n", err);
 		goto out_err;
@@ -425,7 +443,7 @@ int hip_send_r1(struct sk_buff *skb)
 	struct in6_addr *dst;
 	dst = &(((struct hip_common *)skb->h.raw)->hits);
 
-	err = hip_xmit_r1(skb, dst);
+	err = hip_xmit_r1(skb, NULL, dst);
 
 	return err;
 }

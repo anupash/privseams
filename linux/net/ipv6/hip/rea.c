@@ -4,6 +4,7 @@
 #include "builder.h"
 #include "input.h"
 #include "misc.h"
+#include "rvs.h"
 
 #include <asm/atomic.h>
 #include <linux/spinlock.h>
@@ -268,6 +269,18 @@ int hip_receive_ac_or_acr(struct sk_buff *skb, int pkt_type)
 			goto out_err;
 		}
 
+#ifdef CONFIG_HIP_RVS
+		/* If we are the RVS, we need to update the RVA also. */
+		{
+			HIP_RVA *rva;
+
+			rva = hip_rva_find_valid(&entry->hit_peer);
+			if (rva) {
+				hip_rva_insert_ip(rva, &addr);
+				hip_put_rva(rva);
+			}
+		}
+#endif
 		/* ***** todo: CANCEL SENT REA TIMER ***** */
 		hip_ac_delete_sent_list_one(0, ntohs(ac_info->rea_id), ntohs(ac_info->ac_id));
 	}

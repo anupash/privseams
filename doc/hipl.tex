@@ -5,8 +5,8 @@
 {\large This document is in process of being rewritten. Many parts
 contain information that is inaccurate and/or wrong. Also some
 chapters are half-written.  To get the old document, where the
-chapters were complete, checkout any version below patch-53 from the
-main archives. The document will be updated during fall/winter 2004.}
+chapters were complete, checkout any version before patch-53 from the
+main archives. This document will be updated during fall/winter 2004.}
 \vspace{2in}
 
 The lack of security has been one of the main problems with
@@ -368,20 +368,30 @@ describe their intended use and locking policies.
 
 \subsubsection{Host Association Data Base (HADB)}
 
-The HADB contains information about HIP connection states. For every
-known peer, distinguished by their HIT, we have an entry (HA) in
-HADB. In practice, every time an IPv6 -> HIT mapping is
+The HADB maintains a collection of Host Associations (HA). Each HA holds
+necessary information to establish and maintain an HIP association between
+two peer hosts. 
+HAs consist of both parties' HITs, SPI numbers required for ESP traffic,
+security keys, keying material to derive new keys and some state information.
+The HAs are distinguished by peer's HIT and own SPI number
+(ie. the SPI number that appears in ESP encapsulated packets destined to us).
+To be able to access the HAs efficiently, they are stored in two different 
+hash tables: one using peer's HIT, and one own SPI number as hash table key.
 
-HIP HAs contain the state of the known connections. HAs are stored in
-two hash tables: one using peer's HIT as a key, the other using our
-SPI number as a key.
+The former is required, when either we are sending some transport data, or
+due to HIP control messages (base exchange, readdressing etc). The latter is
+used only when an incoming ESP encapsulated arrives. We need to map it to a
+certain HIP connection. At that time, we are not aware of the HITs involved,
+but only the SPI number.
 
-The two keys are needed because normally we access the HA database by
-the peer's HIT, but for example, when we receive an ESP packet from
-the network, we don't know which peer has sent the packet. Luckily the
-ESP packet contains our SPI number, and we can find the corresponding
-HA from the hash table. Now we can do the IPv6 -> HIT mapping that is
-required before we process the ESP packet.
+The HA consists of 
+The HA has internal state. This state varies between \verb|HIP_HASTATE_VALID|,
+\verb|HIP_HASTATE_SPIOK| and \verb|HIP_HASTATE_HITOK|, meaning that the HA
+is inserted in both hash tables, inserted in the SPI hash table and inserted 
+in the HIT hash table, respectively.
+
+Althogh there are two hash tables, there are only one set of HAs. This entity,
+that holds HAs in one or two hash tables, is called the HADB.
 
 There is a reference counter in every HA. This counter must be
 incremented using \verb|hip\_hold\_ha()| macro whenever we receive a
@@ -389,11 +399,47 @@ reference to the HA. Obviously the reverse holds for decrementing the
 counter using \verb|hip\_put\_ha()|. When the reference counter reaches
 zero, the memory allocates for the HA is automatically deleted.
 
-The HA is VALID, if and only if it is stored in \bf{both} the SPI and
-HIT hash tables. q This can be verified by checking if \verb|hastate|
-field of the HA equals \verb|HIP_HASTATE_VALID|.
-
 \subsubsection{HADB Locking}
+
+To maintain integrity across the operations involving the HADB or the HAs
+added to the HADB, we use a couple of techniques.
+
+First, we guanrantee that no HA can be deleted accidentally while some other
+thread/process uses it. This is accomplished by having reference counters in
+each HA. This counter must be incremented using \verb|hip\_hold\_ha()| macro 
+whenever we receive a reference to the HA. Obviously the reverse holds for 
+decrementing the counter using \verb|hip\_put\_ha()|. When the reference 
+counter reaches zero, the memory allocated for the HA is automatically deleted.
+A reference to a HA can only be acquired through certain HADB functions. These
+guarantee that there cannot be a situation where we would be deleting the
+HA (due to its reference counter reaching zero), and some other thread wanting
+to acquire the HA.
+
+Second, each HA has its own spin lock. This lock must be locked when the
+information in HA is accessed, either for reading of writing.
+The two macros (\verb|HIP_LOCK_HA| and \verb|HIP_UNLOCK_HA|) provide the
+correct means to handle HAs.
+These macros use \verb|spin_lock_bh| and \verb|spin_unlock_bh|, respectively, to
+acquire and release the locks and at the same time to disable and enable bottom
+handlers.
+
+Third, the two hash tables in HADB both have a global spin lock. Certain HADB
+functions use these to isolate the critical sections. The basic policy is to
+use these locks only when operating (reading or writing) on the hash table 
+itself. The macros that do the job are: \verb|HIP_LOCK_HT| and \verb|HIP_UNLOCK_HT|.
+
+Miika: mihinköhän tämän laittaisi?
+
+Due to the architecture of HIPL, there are 3 different contexts, in which the
+HIP code is executed: bottom handler/softirq, kernel thread and user context.
+The softirq context is used when receiving packet from the network. It has the
+highest priority. A HIP worker thread is operating in the kernel thread context.
+Userspace HIP configuration tools, HIP socket API etc. run in user context.
+An incoming network packet will preempt every other context. If a process/thread
+in a lower priority context has acquired a lock, it will not be able to release
+it.
+
+
 
 % XX TODO Kristian:
 % - describe how the locks work
@@ -402,12 +448,82 @@ field of the HA equals \verb|HIP_HASTATE_VALID|.
 % - there was one special case when when use HADB without locks..
 % - copy-paste from thesis?
 
-\subsection{HIP Work Queues}
+\subsection{HIP Work Queue}
 \label{sec:work_queue_architecture}
+
+The purpose of a working queue in HIP is to defer processing of
+HIP-related messages. The main functionality is executed by a
+HIP kernel thread. Networking stack defers packets to
+the HIP thread for further processing.
+Originally there were two reasons for this.
+The first one was to simplify accessing the internal data structures,
+and the second one to enable HIP module to be more controllable.
+For example, HIP thread's priority can be raised or lowered, giving
+it more or less CPU time.
+
+Currently, the data structures are accessible to everybody (and in
+every context), thus the first reason does not hold anymore.
+
+Working queue is simple linked list. At the moment it is not bounded, but
+it definitely should be, if the code is ever used in a real, production
+server. The list is protected by a semaphore. The worker thread sleeps in
+the semaphore until (usually the networking stack) defers some job to it.
+Basically, this is a producer consumer model. Where the networking stack and
+user configuration tools produce jobs for the kernel thread to consume.
+The job is usually related to the HIP base exchange, or other control traffic.
+The normal data transfer does not defer execution to later, so it does not
+use the working queue.
+
+
+
+
+XXX Miika: Etsi tälle parempi paikka
+
+Due to the architecture of HIPL, there are theree different contexts, 
+in which the
+HIP code is executed: bottom handler/softirq, kernel thread and user context.
+The softirq context is used when receiving packet from the network. It has the
+highest priority. A HIP worker thread is operating in the kernel thread context.
+Userspace HIP configuration tools, HIP socket API etc. run in the user context.
+
 
 % XX TODO: Kristian, write a section of this
 % - explain the working queue stuff (copy-paste from thesis?)
 % - how does the locking work in the work queues
+
+\subsection{Rendezvous Mechanism/Server}
+\label{sec:rendezvous_server}
+
+XXX Miika: Ei kai tähän tarvita introa reiskasta?
+
+For the rendezvous server functionality, we had to add a new hash table,
+where we store the RendezVous Associations (RVA). The hash table
+uses peer's HIT as a key, just like one of the HADB hash tables.
+
+We define few terms to lessen the readibility and comprehensivity of the
+rest of the subchapter.
+Responder means the host that
+asks the rendezvous server for the rendezvous service. Server means the
+Rendezvous Server. Initiator means the host that tries to contact the
+Reponder, but does not have its real IP-address, but the IP-address of
+the Server instead.
+
+First, the Responder needs to inform the Server, and ask for rendezvous
+service. This is accomplished by adding a special control bit (RVS_CAPABLE)
+in I1 packet, as specified in \cite{RVS}.
+To the I2 packet, we add an optional RVA_REQUEST parameter, \textbf{if} and
+only if, the Server also used the RVS_CAPABLE bit in R1 packet.
+Otherwise, the Server signals that is not capable of providing the rendezvous
+service we asked for. We then end the base exchange.
+
+Having added the RVA_REQUEST parameter to the I2, we proceed with the rest
+steps of building the I2 packet, and send it. Then rest goes as in the normal
+base exchange procedure.
+
+On the Server's side, the process is slightly different. Always when a Server
+receives I1 packet, it has to check if it is destined for itself, or if it
+belongs to a HIP node, that it is serving.
+
 
 \subsection{Networking Stack}
 \label{sec:networking_stack_architecture}

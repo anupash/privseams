@@ -412,9 +412,18 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 		return 0;
 	}
 
-	HIP_HEXDUMP("opaque in solution", solution->opaque, 3);
-	HIP_HEXDUMP("opaque in result", result->Copaque, 3);
-	HIP_HEXDUMP("opaque in puzzle", puzzle->opaque, 3);
+	HIP_HEXDUMP("opaque in solution", solution->opaque,
+		    HIP_PUZZLE_OPAQUE_LEN);
+	HIP_HEXDUMP("opaque in result", result->Copaque,
+		    HIP_PUZZLE_OPAQUE_LEN);
+	HIP_HEXDUMP("opaque in puzzle", puzzle->opaque,
+		    HIP_PUZZLE_OPAQUE_LEN);
+
+	if (memcmp(solution->opaque, puzzle->opaque,
+		   HIP_PUZZLE_OPAQUE_LEN) != 0) {
+	  HIP_ERROR("Received cookie opaque does not match the sent opaque\n");
+	  return 0;
+	}
 
 	HIP_DEBUG("Solution's I (0x%llx), sent I (0x%llx)\n",
 		  solution->I, puzzle->I);

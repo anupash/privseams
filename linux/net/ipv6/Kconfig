@@ -83,7 +83,7 @@ config HIP
 	depends on IPV6
 	default m
 	select INET6_ESP
-	select ESPBEET
+#	select ESPBEET
 	select CRYPTO_NULL
 	---help---
 	  Support for Host Identity Protocol. HIP creates an additional layer
@@ -102,6 +102,16 @@ config HIP
 	  To use HIP features you will need proper tools, which for now are available
 	  from <http://gaijin.iki.fi/hipl/>.
 	  Most probably you should say N.
+
+config HIP_RVS
+	bool "HIP: Rendezvous Mechanism"
+	depends on HIP
+	---help---
+	  Enables the host to act as an HIP Rendezvous Server. Mobile clients can
+	  update their location to the Rendezvous Server enabling other clients to
+	  reach them.
+
+	  If you're not testing HIP, say N.
 
 config HIP_DEBUG
 	bool "HIP: Debugging code"

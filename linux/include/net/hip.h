@@ -94,7 +94,8 @@ typedef uint16_t in_port_t;
 #define HIP_USER_RST                       22
 #define HIP_USER_SET_MY_EID                23
 #define HIP_USER_SET_PEER_EID              24
-#define HIP_USER_BASE_MAX                  25 /* exclusive */
+#define HIP_USER_ADD_RVS                   25
+#define HIP_USER_BASE_MAX                  26 /* exclusive */
 /* End of extended messages for the userspace */
 
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
@@ -117,8 +118,9 @@ typedef uint16_t in_port_t;
 
 //#define HIP_CONTROL_PIGGYBACK_ALLOW 0x4000   /* Host accepts piggybacked ESP in I2 and R2 */
 
+#define HIP_PSEUDO_CONTROL_REQ_RVS  0x8000
 //#define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
-#define HIP_CONTROL_RVS_CAPABLE              /* not yet defined */
+#define HIP_CONTROL_RVS_CAPABLE     0x8000    /* not yet defined */
 #define HIP_CONTROL_CONCEAL_IP               /* still undefined */
 #define HIP_CONTROL_CERTIFICATES    0x0002   /* Certificate packets follow */
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
@@ -138,8 +140,12 @@ typedef uint16_t in_port_t;
 #define HIP_STATE_FAILED            7
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
+
 #define HIP_PARAM_SPI                  1
 #define HIP_PARAM_R1_COUNTER           2
+#ifdef CONFIG_HIP_RVS
+# define HIP_PARAM_REA                  3
+#endif
 #define HIP_PARAM_PUZZLE               5
 #define HIP_PARAM_SOLUTION             7
 #define HIP_PARAM_NES                  9
@@ -230,6 +236,7 @@ typedef uint16_t in_port_t;
 
 #define HIP_VERIFY_PUZZLE             0
 #define HIP_SOLVE_PUZZLE              1
+#define HIP_PUZZLE_OPAQUE_LEN         3
 
 #define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
@@ -242,6 +249,14 @@ typedef uint16_t in_port_t;
 #define HIP_DI_FQDN                   1
 #define HIP_DI_NAI                    2
 
+
+/* Rendezvous types */
+#define HIP_RVA_RELAY_I1              1
+#define HIP_RVA_RELAY_I1R1            2
+#define HIP_RVA_RELAY_I1R1I2          3
+#define HIP_RVA_RELAY_I1R1I2R2        4
+#define HIP_RVA_RELAY_ESP_I1          5
+#define HIP_RVA_REDIRECT_I1           6
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
@@ -319,6 +334,7 @@ struct hip_tlv_common {
 	hip_tlv_len_t      length;
 } __attribute__ ((packed));
 
+#if 0
 struct hip_i1 {
 	uint8_t         payload_proto;
 	hip_hdr_len_t   payload_len;
@@ -331,6 +347,7 @@ struct hip_i1 {
 	struct in6_addr hits;  /* Sender HIT   */
 	struct in6_addr hitr;  /* Receiver HIT */
 } __attribute__ ((packed));
+#endif
 
 struct hip_keymat_keymat
 {
@@ -372,7 +389,7 @@ struct hip_puzzle {
 	hip_tlv_len_t     length;
 
 	uint8_t           K;
-	uint8_t           opaque[3];
+	uint8_t           opaque[HIP_PUZZLE_OPAQUE_LEN];
 	uint64_t          I;
 } __attribute__ ((packed));
 
@@ -505,6 +522,15 @@ struct hip_rea_info_addr_item {
 	uint32_t reserved;
 	struct in6_addr address;
 }  __attribute__ ((packed));
+
+struct hip_rea {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	uint32_t spi;
+	uint32_t lifetime;
+	uint32_t reserved; /* MSB is used for "the first address is the preferred one */
+	/* fixed part ends */
+} __attribute__ ((packed));
 
 struct hip_rea_info {
 	hip_tlv_type_t type;
@@ -756,9 +782,6 @@ struct hip_peer_spi_list_item
 #define PEER_ADDR_STATE_REACHABLE 1
 #define PEER_ADDR_STATE_UNREACHABLE 2
 
-#define HIP_TYPE_HA    1
-#define HIP_TYPE_RVA   2
-
 struct hip_hit_spi {
 	struct list_head list;
 	spinlock_t       lock;
@@ -786,7 +809,6 @@ struct hip_spi_list_item
 
 struct hip_hadb_state
 {
-	uint8_t              type;         /* RVAs and HAs are stored in the same hash table */
 	struct list_head     next_hit;
 	struct list_head     next_spi_list;
 
@@ -796,7 +818,8 @@ struct hip_hadb_state
 
 	int                  state;
 
-	uint16_t             peer_controls;  /* Controls received from the peer */
+	uint16_t             local_controls;
+	uint16_t             peer_controls;  
 
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
@@ -937,5 +960,5 @@ struct hip_eid_db_entry {
 #define HIP_DEFAULT_HIP_ENCR         HIP_ENCR_3DES   /* HIP transform in R1 */
 #define HIP_DEFAULT_ESP_ENCR         HIP_ENCR_3DES   /* ESP transform in R1 */
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
-
+#define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
 #endif /* _NET_HIP */

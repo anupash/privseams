@@ -85,6 +85,12 @@ information is logged using syslog's facility "kernel" and priority
 "debug". Remember to set up your /etc/syslog.conf correctly if you do
 not see the log messages (see syslog.conf manual page for more info).
 
+Turn the option CONFIG_REGPARM OFF! It segfaults HIP module upon
+loading! You can find it from here:
+
+  Processor type and features
+  -> Use register arguments (EXPERIMENTAL)
+
 Compiling Userland Applications
 =================================
 
@@ -303,3 +309,85 @@ oops  # telnetd/telnetd -debug 12345
 crash # telnet/telnet -l username oops 12345
 
 Note: the username must be non-root.
+
+
+Testing HIP Rendezvous Server/Mechanism
+=======================================
+
+The rendezvous server is similar to the home agent in Mobile IP. The
+rendezvous server provides a stable IP for the responder and forwards
+the initial I1 packet to the current location of the responder.
+
+Prerequisites:
+Kernel must be compiled with the following extra option(s) included.
+[*]  HIP: Rendezvous Mechanism 
+
+The hipconf tool must support rvs option:
+hipconf rvs <hit> <ip>
+
+For now it is best if all the hosts involved in communications have
+the Rendezvous Mechanism option enabled. Although, for the initiator
+this should not be a requirement.
+
+The participants:
+
+  I = Initiator
+  RVS = The Rendezvous server
+  R = Responder
+
+The idea is that I wants to connect to R, but only knows RVS's IP
+address (and that RVS is representing R).
+
+Steps:
+-----
+
+1. Start and initialize HIP module in each host:
+
+  each-host # modprobe hipmod
+  each-host # hipl/tools/hipconf add hi default
+
+2. R has to tell the RVS that it would like to use RVS's services:
+
+  responder # hipconf rvs <RVS-hit> <RVS-ip>
+
+3. Send a TCP packet to the RVS-hit (to run the base exchange):
+
+  responder # nc6 <RVS-hit> 12345 
+
+  The port number does not matter. There need not be anything listening
+  to that port.
+
+  Now the Rendezvous Association is established.
+
+4. Put some server listening at R:
+
+  responder # nc6 -l -p 5000
+
+5. Now the initiator will have to do the IP-HIT mapping:
+
+  initiator # hipconf add map <R-hit> <RVS-ip>
+
+  (alternatively, you can use the HIP enabled resolver libary)
+
+6. Start a connection at I:
+
+  initiator # nc6 <R-hit> 5000
+
+7. Type some text...
+
+Notes:
+
+  * The implemented mechanism is simple forwarding of I1 packet with 
+    source and  destination IPv6 addresses rewritten.
+  * No changes were  made to the REA / mm-code,  which means that, for 
+    example, the double jump scenario does not work.
+    * Changes will be made when upgrade from mm-00 to mm-02 is finished.
+  * The mechanism  does not comply 100% with the RVS draft.
+    * We don't use REA TLV in R1 (from responder to initiator). The same 
+      functionality is achieved by using the sender's IP address of 
+      the R1 packet.
+    * The VIA_RVS TLV is also left out, since it is meant only for 
+      diagnostic purposes, and doesn't really add anything to the
+      implementation, except for bugs. :)
+    * The rendezvous mechanism is not yet guaranteed to be interoperable 
+      with other implementations than HIPL

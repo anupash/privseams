@@ -56,7 +56,7 @@ __xfrm6_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto)
 	list_for_each_entry(x, xfrm6_state_afinfo.state_byspi+h, byspi) {
 		res = ipv6_addr_cmp((struct in6_addr *)daddr, (struct in6_addr *)&x->id.daddr);
 		if (x->props.family == AF_INET6 && spi == x->id.spi && !res &&
-		    proto == x->id.proto)
+		    (ipv6_addr_is_hit((struct in6_addr *)daddr) || proto == x->id.proto))
 		{
 			xfrm_state_hold(x);
 			return x;
