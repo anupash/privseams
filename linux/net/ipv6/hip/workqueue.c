@@ -367,13 +367,29 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 
 		case HIP_WO_SUBTYPE_XFRM_INIT:
-//			hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
+			resp = hip_init_job(GFP_KERNEL);
+			if (!resp) 
+				break;
+
+			res = resp->hdr.arg1 = hip_xfrm_dst_init(&job->hdr.src_addr, &job->hdr.dst_addr);
 			break;
 
 		case HIP_WO_SUBTYPE_XFRM_UPD:
+			resp = hip_init_job(GFP_KERNEL);
+			if (!resp) 
+				break;
+
+			res = resp->hdr.arg1 = hip_xfrm_update(job->hdr.arg1, &job->hdr.dst_addr, 
+							       *((int *)(&job->hdr.src_addr)),
+							       job->hdr.arg2);
 			break;
 
 		case HIP_WO_SUBTYPE_XFRM_DEL:
+			resp = hip_init_job(GFP_KERNEL);
+			if (!resp) 
+				break;
+
+			res = resp->hdr.arg1 = hip_xfrm_delete(job->hdr.arg1, &job->hdr.src_addr, job->hdr.arg2);
 			break;
 #endif
 		default:

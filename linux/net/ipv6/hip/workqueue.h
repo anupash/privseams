@@ -14,6 +14,7 @@
 #include "netlink.h" /* hip_netlink_* functions */
 #include "debug.h"
 #include "builder.h"
+#include "beet.h"
 
 #define HIP_WO_TYPE_INCOMING 1
 #define HIP_WO_TYPE_OUTGOING 2
