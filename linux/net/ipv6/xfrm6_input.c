@@ -14,6 +14,10 @@
 #include <net/ipv6.h>
 #include <net/xfrm.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 static inline void ipip6_ecn_decapsulate(struct ipv6hdr *iph,
 					 struct sk_buff *skb)
 {
@@ -49,10 +53,10 @@ int xfrm6_rcv(struct sk_buff **pskb, unsigned int *nhoffp)
 
 		x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nexthdr, AF_INET6);
 		if (x == NULL) {
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 			/* try HITs */
 			HIP_CALLPROC(hip_handle_esp)(skb->nh.ipv6h);
-			x = xfdm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nextdr, AF_INET6);
+			x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nexthdr, AF_INET6);
 			if (x == NULL) {
 				/* Try to send R1 */
 				HIP_CALLPROC(hip_unknown_spi)(skb);

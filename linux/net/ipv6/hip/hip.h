@@ -4,12 +4,18 @@
 #include <linux/spinlock.h>
 #include <linux/crypto.h>
 #include <linux/hip_ioctl.h>
+#include <linux/net.h>
+#include <linux/proc_fs.h>
+
 #include <net/hip_glue.h>
 #include <net/addrconf.h>
 #include <net/ipv6.h>
 #include <net/hip.h>
+#include <net/sock.h>
 
-#include "../../key/pfkey_v2_msg.h"
+#include <asm/scatterlist.h>
+#include <asm/io.h>
+
 #include "workqueue.h"
 #include "daemon.h"
 #include "debug.h"
@@ -21,15 +27,6 @@
 #include "crypto/dh.h"
 #include "crypto/dsa.h"
 
-/*
-#ifndef __KERNEL__
-#  define __KERNEL__
-#endif
-
-#ifndef MODULE
-#  define MODULE
-#endif
-*/
 
 #ifdef KRISUS_THESIS
 
@@ -70,6 +67,7 @@ extern int gtv_inuse;
 #define KHIPD_QUIT                -1
 #define KHIPD_ERROR               -2
 #define KHIPD_UNRECOVERABLE_ERROR -3
+#define HIP_MAX_SCATTERLISTS       5 // is this enough?
 
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 struct hip_common *hip_create_r1(struct in6_addr *src_hit);
@@ -86,12 +84,12 @@ int hip_crypto_encrypted(void *, void *, int, int, void*, int);
 int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
+int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
+			     const u8 *addr, const u8 size);
 
 extern DH *dh_table[HIP_MAX_DH_GROUP_ID];  // see crypto/dh.[ch]
-extern struct cipher_implementation *impl_null;
-extern struct cipher_implementation *impl_dsa;
-extern struct cipher_implementation *impl_dh;
-extern struct digest_implementation *impl_sha1;
+extern struct crypto_tfm *impl_sha1;
+extern struct crypto_tfm *impl_sha1;
 extern struct list_head hip_sent_rea_info_pkts;
 extern struct list_head hip_sent_ac_info_pkts;
 extern struct semaphore hip_work;

@@ -55,6 +55,11 @@
 #include <net/icmp.h>
 #include <net/xfrm.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
+
 static int ip6_fragment(struct sk_buff *skb, int (*output)(struct sk_buff*));
 
 static __inline__ void ipv6_select_ident(struct sk_buff *skb, struct frag_hdr *fhdr)
@@ -257,6 +262,7 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0)
+		goto end_hip;
 #endif
 	mtu = dst_pmtu(dst);
 	if ((skb->len <= mtu) || ipfragok) {
@@ -774,7 +780,7 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 	if (ipv6_addr_any(&fl->fl6_src)) {
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		if(HIP_CALLFUNC(hip_get_hits, 0)(daddr, saddr)) {
+		if(HIP_CALLFUNC(hip_get_hits, 0)(&fl->fl6_dst, &fl->fl6_src)) {
 			/* we'll skip the ipv6_get_addr() as we do not
 			   need the source address yet... [perhaps we're
 			   missing an important thing here? Other than

@@ -46,6 +46,9 @@
 #include <net/addrconf.h>
 #include <net/xfrm.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
 
 
 static inline int ip6_rcv_finish( struct sk_buff *skb) 

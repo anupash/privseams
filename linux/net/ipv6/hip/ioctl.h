@@ -1,14 +1,6 @@
 #ifndef HIP_KERNEL_IOCTL
 #define HIP_KERNEL_IOCTL
 
-#ifndef __KERNEL__
-#  define __KERNEL__
-#endif
-
-#ifndef MODULE
-#  define MODULE
-#endif
-
 #include <net/ip.h>
 #include <net/ipv6.h>
 #include <net/sock.h>

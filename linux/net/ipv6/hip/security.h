@@ -1,15 +1,16 @@
 #ifndef HIP_SECURITY_H
 #define HIP_SECURITY_H
 
-#include <net/spd.h>
 #include <linux/pfkeyv2.h>
 #include <linux/in6.h>
 #include <net/hip.h>
 #include <net/ipv6.h>
 
-#include "../../key/pfkey_v2_msg.h"
 #include "debug.h"
 #include "db.h"
+
+
+#define ESP_3DES_KEY_BITS 192
 
 int hip_setup_esp(struct in6_addr *dst, struct in6_addr *src,
 		  uint32_t spi, int encalg, void *enckey,

@@ -66,3 +66,35 @@ config IPV6_TUNNEL
 
 	  If unsure, say N.
 
+config HIP
+	bool "Host Identity Protocol"
+	depends on IPV6
+	select INET6_ESP
+	---help---
+	  Support for Host Identity Protocol. HIP creates an additional layer
+	  between networking and transport layers. Application are supposed to see
+	  HITs (Host Identity Tags), not the underlying IPv6 addresses. This
+	  decoupling allows the IP address to change dynamically without either the
+	  application or the transport protocol noticing. 
+	  The ultimate goal is to provide mobility and multihoming with security to
+	  all network connections.
+
+	  This project is incomplete, unstable and very much experimental. It will
+	  probably crash your kernel, so do NOT use it on computer that has any
+	  valuable information!
+
+	  Even if you say Y to HIP, the kernel will still run the ordinary TCP/IP.
+	  To use HIP features you will need proper tools, which for now are available
+	  from <http://gaijin.iki.fi/hipl/>.
+	  Most probably you should say N.
+
+config HIP_DEBUG
+	bool "HIP: Debugging code"
+	depends on HIP
+	select HIP
+	---help---
+	  This option adds debugging code to the HIP. It should only be used to
+	  develop and debug the HIP.
+
+	  Unless you are going to develop HIP and/or gather debugging information to
+	  report bugs, you should say N.

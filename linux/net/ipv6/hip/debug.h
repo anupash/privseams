@@ -11,9 +11,9 @@
 
 /* Informational and error messages are always logged */
 #define HIP_INFO(fmt, args...) \
-     printk(KERN_DEBUG __FUNCTION__ ": " fmt, ## args)
+     printk(KERN_DEBUG "%s: " fmt , __FUNCTION__ , ##args)
 #define HIP_ERROR(fmt, args...) \
-     printk(KERN_DEBUG __FUNCTION__ ":error: " fmt, ## args)
+     printk(KERN_DEBUG "%s: error: " fmt , __FUNCTION__ , ##args)
 #define HIP_ASSERT(s) do {\
      if (!(s)) {                                                 \
          HIP_ERROR("assertation failed on line %d\n", __LINE__); \
@@ -26,6 +26,7 @@
 #define _HIP_DEBUG(fmt, args...)
 #define _HIP_ERROR(fmt, args...)
 #define _HIP_HEXDUMP(tag, data, len)
+
 #define _HIP_DUMP_MSG(msg)
 #define _HIP_ASSERT(s)
 #define _HIP_DEBUG_IN6ADDR(str, in6)

@@ -7,12 +7,8 @@
 #include <linux/random.h>
 #include <linux/list.h>
 #include <net/ipv6.h>
-#include <net/spd.h>
-#include <net/pfkeyv2.h>
-#include <net/hip.h>
 #include <net/hip.h>
 
-#include "../../key/pfkey_v2_msg.h"
 #include "debug.h"
 #include "misc.h"
 #include "security.h"

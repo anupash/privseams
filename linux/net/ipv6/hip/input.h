@@ -9,14 +9,12 @@
 #  define MODULE
 #endif
 
-#include <net/keymat.h>
 #include <linux/sched.h>
 #include <net/ipv6.h>
 
 #include "db.h"
 #include "debug.h"
 #include "hip.h"
-/*#include "db.h"*/
 #include "security.h"
 
 

@@ -9,7 +9,7 @@
 #include <net/ipv6.h>
 #include <net/sock.h>
 #include <net/flow.h>
-#include <net/sadb.h>
+//#include <net/sadb.h>
 
 #define HIP_CALLPROC(X) if(hip_functions.X) hip_functions.X
 #define HIP_CALLFUNC(X,Y) (!hip_functions.X)?(Y):hip_functions.X

@@ -111,3 +111,15 @@ u8 *host_id_extract_public_key(u8 *buffer, struct hip_host_id *data)
 	return buffer;
 }
 
+char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
+{
+        if (!buf)
+                return NULL;
+        sprintf(buf,
+                "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
+                ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
+                ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
+                ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
+        return buf;
+}

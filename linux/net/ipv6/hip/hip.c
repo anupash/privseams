@@ -31,15 +31,16 @@ static time_t         load_time;          /* Wall clock time at module load */
 
 static struct notifier_block hip_notifier_block;
 static struct notifier_block hip_netdev_notifier;
+static void hip_uninit_cipher(void); // forward decl.
 
 /* All cipher and digest implementations we support. */
-static struct cipher_implementation *impl_3des_cbc = NULL;
+static struct crypto_tfm *impl_3des_cbc = NULL;
 
 
 /* global variables */
 struct socket *hip_socket;
-struct cipher_implementation *impl_null = NULL;
-struct digest_implementation *impl_sha1 = NULL;
+struct crypto_tfm *impl_null = NULL;
+struct crypto_tfm *impl_sha1 = NULL;
 spinlock_t dh_table_lock = SPIN_LOCK_UNLOCKED;
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
 #ifdef KRISUS_THESIS
@@ -74,7 +75,7 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 	uint16_t ret = -1;
 
 	HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
-	if (hip_dh_group_type == 0)
+	if (hip_dh_group_type == 0) 
 		HIP_ERROR("Trying to use reserved DH group type 0\n");
 	else if (hip_dh_group_type == HIP_DH_384)
 		HIP_ERROR("draft-09: Group ID 1 does not exist yet\n");
@@ -86,6 +87,56 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
 	return ret + 1;
 }
 
+int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
+			     const u8 *addr, const u8 size)
+{
+	int err = -1;
+	unsigned long offset,pleft;
+	unsigned int elt = 0;
+	int slcnt = *slistcnt;
+#ifdef CONFIG_HIP_DEBUG
+	unsigned int i;
+#endif
+
+	if (slcnt < 1) {
+		HIP_ERROR("Illegal use of function\n");
+		return err;
+	}
+
+	offset = 0;
+	while(offset < size) {
+		slist[elt].dma_address = 0;
+		slist[elt].page = virt_to_page(addr+offset);
+		slist[elt].offset = (unsigned long) (addr+offset) % PAGE_SIZE;
+		
+		/* page left */
+		pleft = PAGE_SIZE - slist[elt].offset;
+		HIP_ASSERT(pleft > 0 && pleft <= PAGE_SIZE);
+
+		if (pleft + offset < size) {
+			slist[elt].length = size - offset;
+			break;
+		}
+		slist[elt].length = pleft;
+
+		elt++;
+		if (elt >= slcnt) {
+			HIP_ERROR("Not enough room for scatterlist vector\n");
+			err = -ENOMEM;
+			return err;
+		}
+		offset += pleft;
+	}
+
+#ifdef CONFIG_HIP_DEBUG
+	for(i=0;i<=elt;i++) {
+		HIP_DEBUG("Scatterlist: %d, page: %d, offset: %d, length: %d\n",
+			  i, slist[i].page, slist[i].offset, slist[i].length);
+	}
+#endif
+	*slistcnt = elt+1;
+	return 0;
+}
 /**
  * hip_build_digest - calculate a digest over given data
  * @type: the type of digest, e.g. "sha1"
@@ -100,11 +151,11 @@ uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
  */
 int hip_build_digest(const int type, const void *in, int in_len, void *out)
 {
-        struct digest_implementation *impl = NULL;
-        struct digest_context *cx = NULL;
+	struct crypto_tfm *impl = NULL;
+	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
+	unsigned int nsg = HIP_MAX_SCATTERLISTS;
 
 	int err = 0;
-
 	switch(type) {
 	case HIP_DIGEST_SHA1:
 		impl = impl_sha1;
@@ -113,40 +164,19 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 		HIP_DEBUG("Not implemented\n");
 	default:
 		HIP_ERROR("Unknown digest: %x\n",type);
-		goto err_out;
+		return -EFAULT;
 	}
 
-	cx = impl->realloc_context(NULL, impl);
-	if (!cx) {
-		err = -EFAULT;
-		HIP_ERROR("realloc_context failed\n");
-		goto err_out;
+	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
+	if (err || nsg < 1 ) {
+		HIP_ERROR("Error mapping virtual addresses to physical pages\n");
+		return -EFAULT;
 	}
 
-	err = impl->open(cx);
-	if (err < 0) {
-		HIP_ERROR("open failed\n");
-		goto err_out;
-	}
-	
+	crypto_digest_init(impl);
+	crypto_digest_digest(impl, sg, nsg, out);
 
-        err = impl->update(cx, in, in_len);
-	if (err < 0) {
-		HIP_ERROR("update failed\n");
-		goto err_out;
-	}
-
-	/* save the digest to out */
-        err = impl->close(cx, out);
-	if (err < 0) {
-		HIP_ERROR("close failed\n");
-		goto err_out;
-	}
-
- err_out:
-	if (cx)
-		impl->free_context(cx);
-	return err;
+	return 0;
 }
 
 /**
@@ -162,39 +192,31 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out)
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {
 	int err = 0;
-	int keylen;
-	struct digest_implementation *di = NULL;
-	struct digest_context *dx = NULL;
+	int keylen = 20; // anticipating HIP_DIGEST_SHA1_HMAC
+	struct crypto_tfm *impl = NULL;
+	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
+	int nsg = HIP_MAX_SCATTERLISTS;
 
 	switch(type) {
 	case HIP_DIGEST_SHA1_HMAC:
-		di = impl_sha1;
-		keylen = 20;
+		impl = impl_sha1;
 		break;
 	case HIP_DIGEST_MD5_HMAC:
 		HIP_DEBUG("MD5_HMAC not implemented\n");
 	default:
 		HIP_ERROR("Unknown HMAC type 0x%x\n",type);
-		return err;
+		return 0;
 	}
 
-	dx = di->realloc_context(NULL,di);
-	if (!dx) {
-		HIP_ERROR("Could not allocate context\n");
-		return err;
+	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
+	if (err || nsg < 1) {
+		HIP_ERROR("Mapping failed\n");
+		return 0;
 	}
 
-	err = di->hmac(dx, key, keylen, in, in_len, out);
-	if (err) {
-		HIP_ERROR("Could not calculate HMAC\n");
-		goto out_err;
-	}
+	crypto_hmac(impl, key, &keylen, sg, nsg, out);
 
-	err = 1;
- out_err:
-	if (dx)
-		di->free_context(dx);
-	return err;
+	return 1;
 }
 
 /**
@@ -658,42 +680,52 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 {
 	int err = 0;
 	int key_len;  /* in bytes */
-	struct cipher_context *cx = NULL;
-	struct cipher_implementation *ci = NULL;
+	struct crypto_tfm *impl = NULL;
+	struct scatterlist src_sg[HIP_MAX_SCATTERLISTS];
+	unsigned int src_nsg = HIP_MAX_SCATTERLISTS;
 
 	switch(enc_alg) {
 	case HIP_TRANSFORM_3DES:
-		ci = impl_3des_cbc;
+		impl = impl_3des_cbc;
 		key_len = ESP_3DES_KEY_BITS >> 3;
 		break;
 	case HIP_TRANSFORM_NULL:
-		ci = impl_null;
+		impl = impl_null;
 		key_len = 0;
 		break;
 	default:
 		HIP_ERROR("Attempted to use unknown CI (enc_alg=%d)\n", enc_alg);
-		HIP_ASSERT(0);
-		ci = NULL;
-		err = -1;
-		goto out_err;
-		break;
+		return -EFAULT;
 	}
 
-	cx = ci->realloc_context(NULL, ci, -1);
-	err = ci->set_key(cx, enc_key, key_len); 
-	if (err < 0) {
-		HIP_ERROR("set_key failed\n");
-		goto out_err2;
+	err = hip_map_virtual_to_pages(src_sg, &src_nsg, data, enc_len);
+	if (err || src_nsg < 1) {
+		HIP_ERROR("Error mapping source data\n");
+		return -EFAULT;
+	}
+
+	/* we will write over the source */
+
+	err = crypto_cipher_setkey(impl, enc_key, key_len);
+	if (err) {
+		HIP_ERROR("Could not set encryption/decryption key\n");
+		return -EFAULT;
 	}
 
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
-		ci->encrypt_atomic_iv(cx, (const u8*) data, (u8*) data,
-				      enc_len, (const u8*) iv);
+		err = crypto_cipher_encrypt_iv(impl, src_sg, src_sg, enc_len, iv);
+		if (err) {
+			HIP_ERROR("Encryption failed\n");
+			return -EFAULT;
+		}
 		break;
 	case HIP_DIRECTION_DECRYPT:
-		ci->decrypt_atomic_iv(cx, (const u8*) data, (u8*) data,
-				      enc_len, (const u8*) iv);
+		err = crypto_cipher_decrypt_iv(impl, src_sg, src_sg, enc_len, iv);
+		if (err) {
+			HIP_ERROR("Decryption failed\n");
+			return -EFAULT;
+		}
 		break;
 	default:
 		HIP_ERROR("Undefined direction (%d)\n", direction);
@@ -701,10 +733,7 @@ int hip_crypto_encrypted(void *data, void *iv, int enc_alg, int enc_len,
 		break;
 	}
 
- out_err2:
-	ci->free_context(cx);
- out_err:
-	return err;
+	return 0;
 }
 
 /**
@@ -741,36 +770,14 @@ void hip_unknown_spi(struct sk_buff *skb)
 static int hip_init_sock(void)
 {
 	int err = 0;
-	struct sock *sk;
 
-	hip_socket = sock_alloc();
-	if (hip_socket == NULL) {
+	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_socket);
+	if (err) {
 		HIP_ERROR("Failed to allocate the HIP control socket\n");
-		goto out_err1;
+		return err;
 	}
-
-	hip_socket->inode->i_uid = 0;
-	hip_socket->inode->i_gid = 0;
-	hip_socket->type = SOCK_RAW;
-
-	err = inet6_family_ops.create(hip_socket, IPPROTO_NONE);
-	if (err < 0) {
-		HIP_ERROR("Failed to initialize the HIP control socket, err=%d\n", err);
-		goto out_err2;
-	}
-
-	sk = hip_socket->sk;
-	sk->allocation = GFP_ATOMIC;
-	sk->sndbuf = SK_WMEM_MAX*2;
-	sk->prot->unhash(sk);
-	sk->protinfo.af_inet.hdrincl = 0;
 
 	return 0;
-
- out_err2:
-	sock_release(hip_socket);
- out_err1:
-	return -1;
 }
 
 /**
@@ -850,10 +857,10 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
  */
 void hip_get_saddr_udp(struct flowi *fl, struct in6_addr *hit_storage)
 {
-	if (!hip_is_hit(fl->fl6_dst))
+	if (!hip_is_hit(&fl->fl6_dst))
 		goto out;
 
-	if (!hip_hadb_get_own_hit_by_hit(fl->fl6_dst, hit_storage)) {
+	if (!hip_hadb_get_own_hit_by_hit(&fl->fl6_dst, hit_storage)) {
 		HIP_ERROR("Could not get own hit, corresponding to the peer hit\n");
 	}
  out:
@@ -916,7 +923,7 @@ static int hip_create_device_addrlist(struct inet6_dev *idev,
 
 	for (ifa = idev->addr_list; ifa; (*idev_addr_count)++, ifa = ifa->if_next) {
 		spin_lock_bh(&ifa->lock);
-		in6_ntop(&ifa->addr, addrstr);
+		hip_in6_ntop(&ifa->addr, addrstr);
 		HIP_DEBUG("addr %d: %s\n", *idev_addr_count+1, addrstr);
 		spin_unlock_bh(&ifa->lock);
 	}
@@ -1211,35 +1218,29 @@ void hip_handle_dst_unreachable(struct sk_buff *skb)
 static int hip_init_cipher(void)
 {
 	int err = 0;
-	int i;
 	u32 supported_groups;
 
 	/* Get implementations for all the ciphers we support */
-	impl_3des_cbc = find_cipher_by_name("3des-cbc",1);
+	impl_3des_cbc = crypto_alloc_tfm("des3_ede", CRYPTO_TFM_MODE_CBC);
 	if (!impl_3des_cbc) {
 		HIP_ERROR("Unable to register 3DES cipher\n");
 		err = -1;
 		goto out_err;
 	}
-	impl_3des_cbc->lock();
 
-	impl_null = find_cipher_by_name("null-ecb", 1);
+	impl_null = crypto_alloc_tfm("cipher_null", CRYPTO_TFM_MODE_ECB);
 	if (!impl_null) {
 		HIP_ERROR("Unable to register NULL cipher\n");
 		err = -1;
 		goto out_err;
 	}
 
-	impl_null->lock();
-
-	impl_sha1 = find_digest_by_name("sha1", 1);
+	impl_sha1 = crypto_alloc_tfm("sha1", 0);
 	if (!impl_sha1) {
 		HIP_ERROR("Unable to register SHA1 digest\n");
 		err = -1;
 		goto out_err;
 	}
-
-	impl_sha1->lock();
 
 	supported_groups = (1 << HIP_DH_OAKLEY_1 | 
 			    1 << HIP_DH_OAKLEY_5);
@@ -1253,20 +1254,7 @@ static int hip_init_cipher(void)
 	return 0;
 
  out_err:
-	for(i=1;i<HIP_MAX_DH_GROUP_ID;i++) {
-		if (dh_table[i] != NULL) {
-			hip_free_dh_structure(dh_table[i]);
-			dh_table[i] = NULL;
-		}
-	}
-
-	if (impl_sha1)
-		impl_sha1->unlock();
-	if (impl_null)
-		impl_null->unlock();
-	if (impl_3des_cbc)
-		impl_3des_cbc->unlock();
-
+	hip_uninit_cipher();
 	return err;
 }
 
@@ -1285,7 +1273,7 @@ static void hip_uninit_cipher(void)
 	 * not require freeing, although it seems possible to unregister them...
 	 * Really weird. Something is broken somewhere.
 	 */
-	for(i=1;i<=HIP_MAX_DH_GROUP_ID;i++) {
+	for(i=1;i<HIP_MAX_DH_GROUP_ID;i++) {
 		if (dh_table[i] != NULL) {
 			hip_free_dh_structure(dh_table[i]);
 			dh_table[i] = NULL;
@@ -1293,11 +1281,12 @@ static void hip_uninit_cipher(void)
 	}
 
 	if (impl_sha1)
-		impl_sha1->unlock();
+		crypto_free_tfm(impl_sha1);
 	if (impl_null)
-		impl_null->unlock();
+		crypto_free_tfm(impl_null);
 	if (impl_3des_cbc)
-		impl_3des_cbc->unlock();
+		crypto_free_tfm(impl_3des_cbc);
+
 	return;
 }
 
@@ -1310,7 +1299,7 @@ static void hip_uninit_cipher(void)
 static int hip_init_procfs(void)
 {
 	HIP_DEBUG("procfs init\n");
-	hip_proc_root = proc_mkdir("net/hip", NULL);
+	hip_proc_root = create_proc_entry("net/hip", S_IFDIR, NULL);
 	if (!hip_proc_root)
 		return -1;
 
@@ -1528,8 +1517,7 @@ static int hip_worker(void *unused)
 	int result = 0;
 
 	hip_working = 1;
-	daemonize();
-	strncpy(current->comm,"khipd\0",6);
+	daemonize("khipd");
 
 	/* initialize */
 

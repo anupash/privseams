@@ -205,9 +205,9 @@ int hipd_handle_async_add_map_hit_ip(const struct hip_common *msg)
 		goto out;
 	}
 
-	in6_ntop(hit, buf);
+	hip_in6_ntop(hit, buf);
 	HIP_INFO("map HIT: %s\n", buf);
-	in6_ntop(ip, buf);
+	hip_in6_ntop(ip, buf);
 	HIP_INFO("map IP: %s\n", buf);
 	
 	hwo = hip_create_job_with_hit(GFP_KERNEL,hit); // i think KERNEL is ok here
