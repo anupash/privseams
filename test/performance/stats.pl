@@ -25,7 +25,7 @@ use Statistics::Distributions qw(udistr);
 # line, change the type to $2 and value to $1 in %regexp_order.
 #
 #my $regexp       = 'hipd call type=(\S+):\s(\S+) secs';
-my $regexp       = '(\S+)\s(\S+)';
+my $regexp       = '(\S+)\s+(\S+)';
 my %regexp_order = ( 'type' => '$1', 'value' => '$2' );
 
 my $confidence   = 0;  # confidence interval in procents
