@@ -26,7 +26,7 @@
 #include "builder.h"
 #include "crypto/dh.h"
 #include "crypto/dsa.h"
-
+#include "misc.h"
 
 #ifdef KRISUS_THESIS
 
@@ -68,6 +68,7 @@ extern int gtv_inuse;
 #define KHIPD_ERROR               -2
 #define KHIPD_UNRECOVERABLE_ERROR -3
 #define HIP_MAX_SCATTERLISTS       5 // is this enough?
+
 
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 struct hip_common *hip_create_r1(struct in6_addr *src_hit);

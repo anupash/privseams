@@ -1,14 +1,6 @@
 #ifndef HIP_INPUT_H
 #define HIP_INPUT_H
 
-#ifndef __KERNEL__
-#  define __KERNEL__
-#endif
-
-#ifndef MODULE
-#  define MODULE
-#endif
-
 #include <linux/sched.h>
 #include <net/ipv6.h>
 
@@ -16,8 +8,8 @@
 #include "debug.h"
 #include "hip.h"
 #include "security.h"
-
-
+#include "keymat.h"
+#include "misc.h"
 
 extern struct cipher_context *own_dh_cx;
 uint16_t hip_get_next_atomic_val_16(atomic_t *a, spinlock_t *lock);

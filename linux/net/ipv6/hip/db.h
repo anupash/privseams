@@ -16,13 +16,6 @@
 #include "daemon.h"
 #include "builder.h"
 
-#ifndef __KERNEL__
-#  define __KERNEL__
-#endif
-
-#ifndef MODULE
-#  define MODULE
-#endif
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */

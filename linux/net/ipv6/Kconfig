@@ -91,7 +91,6 @@ config HIP
 config HIP_DEBUG
 	bool "HIP: Debugging code"
 	depends on HIP
-	select HIP
 	---help---
 	  This option adds debugging code to the HIP. It should only be used to
 	  develop and debug the HIP.

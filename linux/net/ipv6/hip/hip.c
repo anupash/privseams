@@ -130,8 +130,8 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 
 #ifdef CONFIG_HIP_DEBUG
 	for(i=0;i<=elt;i++) {
-		HIP_DEBUG("Scatterlist: %d, page: %d, offset: %d, length: %d\n",
-			  i, slist[i].page, slist[i].offset, slist[i].length);
+		HIP_DEBUG("Scatterlist: %x, page: %x, offset: %x, length: %x\n",
+			  i, (int)slist[i].page, slist[i].offset, slist[i].length);
 	}
 #endif
 	*slistcnt = elt+1;
@@ -806,14 +806,14 @@ int hip_get_addr(struct in6_addr *hit, struct in6_addr *addr)
 		return 0;
 
 #ifdef CONFIG_HIP_DEBUG
-	in6_ntop(hit,str);
+	hip_in6_ntop(hit,str);
 #endif
 	if (hip_hadb_get_peer_address(hit,addr,HIP_ARG_HIT) < 0) {
 		return 0;
 	}
 
 #ifdef CONFIG_HIP_DEBUG
-	in6_ntop(addr, str);
+	hip_in6_ntop(addr, str);
 	HIP_DEBUG("selected dst addr: %s\n", str);
 #endif
 
@@ -1181,13 +1181,13 @@ void hip_handle_dst_unreachable(struct sk_buff *skb)
 #ifdef CONFIG_HIP_DEBUG
 	saddr = &skb->nh.ipv6h->saddr;
         daddr = &skb->nh.ipv6h->daddr;
-	in6_ntop(saddr, strs);
-	in6_ntop(daddr, strd);
+	hip_in6_ntop(saddr, strs);
+	hip_in6_ntop(daddr, strd);
 	HIP_DEBUG("icmp6: src=%s dst=%s type=%d code=%d skb->len=%d\n",
 		  strs, strd, hdr->icmp6_type, hdr->icmp6_code, skb->len);
 	_HIP_HEXDUMP("received icmp6 Dest Unreachable", hdr, skb->len);
-	in6_ntop(&invoking_hdr->saddr, strs);
-	in6_ntop(&invoking_hdr->daddr, strd);
+	hip_in6_ntop(&invoking_hdr->saddr, strs);
+	hip_in6_ntop(&invoking_hdr->daddr, strd);
 	HIP_DEBUG("invoking_hdr ip6: src=%s dst=%s\n", strs, strd);
 #endif
 

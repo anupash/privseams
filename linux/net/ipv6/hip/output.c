@@ -166,7 +166,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 		HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
 
-		err = ipv6_get_saddr(NULL, &hdr->daddr, &hdr->saddr, 0);
+		err = ipv6_get_saddr(NULL, &hdr->daddr, &hdr->saddr);
 		if (err) {
 			HIP_ERROR("Could get a source address\n");
 			err = -EADDRNOTAVAIL;
@@ -210,10 +210,14 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
  *
  * Returns: always 0.
  */
-static int hip_getfrag(const void *data, struct in6_addr *saddr, 
-		       char *buff, unsigned int offset, unsigned int len)
+static int hip_getfrag(void *from, char *to, int offset, int len, int odd, struct sk_buff *skb)
 {
-	memcpy(buff, ((char*)data)+offset, len);
+	if (skb->ip_summed == CHECKSUM_HW) {
+		memcpy(to, ((u8 *)from)+offset, len);
+	} else {
+		HIP_ERROR("HIPL does not support checksum calculation in SW yet\n");
+		return -EFAULT;
+	}
 	return 0;
 }
 
@@ -264,7 +268,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 {
 	int err = 0;
 	struct in6_addr saddr;
-
+	struct dst_entry *dst;
 
 	struct flowi fl;
 	unsigned int csum;
@@ -272,22 +276,22 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	char addrstr[INET6_ADDRSTRLEN];
 
 	fl.proto = IPPROTO_HIP;
-	fl.fl6_dst = peer_addr;
+	fl.fl6_dst = *peer_addr;
 	fl.oif = 0;
 	fl.fl6_flowlabel = 0;
 
 	if (!src_addr) {
 		HIP_DEBUG("null src_addr, get src addr\n");
-		err = ipv6_get_saddr(NULL, fl.fl6_dst, &saddr, 0);
+		err = ipv6_get_saddr(NULL, &fl.fl6_dst, &saddr);
 		if (err) {
-			in6_ntop(peer_addr, addrstr);
+			hip_in6_ntop(peer_addr, addrstr);
 			HIP_ERROR("Couldn't get source IPv6 address for dst address %s\n", addrstr);
 			goto out_err;
 		}
-		fl.fl6_src = &saddr;
+		fl.fl6_src = saddr;
 	} else {
 		HIP_DEBUG("use given src addr\n");
-		fl.fl6_src = src_addr;
+		fl.fl6_src = *src_addr;
 	}
 
 	buf->checksum = htons(0);
@@ -311,27 +315,37 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	//#ifdef CONFIG_HIP_DEBUG
 	_HIP_HEXDUMP("***CHECKSUM DATA", buf, len);
 	HIP_DEBUG("pkt out: len=%d proto=%d\n", len, fl.proto);
-	in6_ntop(fl.fl6_src, addrstr);
+	hip_in6_ntop(&fl.fl6_src, addrstr);
 	HIP_DEBUG("pkt out: src IPv6 addr: %s\n", addrstr);
-	in6_ntop(fl.fl6_dst, addrstr);
+	hip_in6_ntop(&fl.fl6_dst, addrstr);
 	HIP_DEBUG("pkt out: dst IPv6 addr: %s\n", addrstr);
 	//#endif
 
 	/* Interop with Julien: no htons here */
 	csum = csum_partial((char*) buf, len, 0);
-	buf->checksum = csum_ipv6_magic(fl.fl6_src, fl.fl6_dst, len,
-					      fl.proto, csum);
+	buf->checksum = csum_ipv6_magic(&fl.fl6_src, &fl.fl6_dst, len,
+					fl.proto, csum);
 	HIP_DEBUG("pkt out: checksum value (host order): 0x%x\n",
 		  ntohs(buf->checksum));
 
 	if (buf->checksum == 0)
 		buf->checksum = -1;
 
-	err = ip6_build_xmit(hip_socket->sk, hip_getfrag, buf, &fl, len,
-			     NULL, 0xFF, -1, MSG_DONTWAIT);
+	err = ip6_dst_lookup(hip_socket->sk, &dst, &fl);
+	if (err) {
+		HIP_ERROR("Unable to route HIP packet\n");
+		goto out_err;
+	}
+
+	lock_sock(hip_socket->sk);
+ 	err = ip6_append_data(hip_socket->sk, hip_getfrag, buf, len, 0,
+			      0xFF, NULL, &fl, (struct rt6_info *)dst, MSG_DONTWAIT);
 	if (err)
 		HIP_ERROR("ip6_build_xmit failed (err=%d)\n", err);
+	else
+		err = ip6_push_pending_frames(hip_socket->sk);
 
+	release_sock(hip_socket->sk);
  out_err:
 	return err;
 }
@@ -502,7 +516,7 @@ static void hip_list_sent_rea_packets(char *str)
 	HIP_DEBUG("\n");
 	list_for_each_safe(pos, n, &hip_sent_rea_info_pkts) {
 		s = list_entry(pos, struct hip_sent_rea_info, list);
-		in6_ntop(&s->hit, peer_hit);
+		hip_in6_ntop(&s->hit, peer_hit);
 		HIP_DEBUG("sent REA %d (%s): hit=%s REA ID=%u (net=%u)\n",
 			  i, str, peer_hit, s->rea_id, htons(s->rea_id));
 		i++;
@@ -655,7 +669,7 @@ void hip_list_sent_ac_packets(char *str)
 //	spin_lock_irqsave(&hip_sent_ac_info_lock, flags);
 	list_for_each_safe(pos, n, &hip_sent_ac_info_pkts) {
 		s = list_entry(pos, struct hip_sent_ac_info, list);
-		in6_ntop(&s->ip, addr);
+		hip_in6_ntop(&s->ip, addr);
 		HIP_DEBUG("sent AC %d (%s): addr=%s REA=%u (net=%u) AC=%u (net=%u) interface_id=0x%x lifetime=0x%x/dec %u rtt_sent=0x%x\n",
 			  i, str, addr, s->rea_id, htons(s->rea_id), s->ac_id,
 			  htons(s->ac_id), s->interface_id, s->lifetime, s->lifetime, s->rtt_sent);
@@ -1015,13 +1029,13 @@ static int hip_send_rea(struct in6_addr *dst_hit,int interface_id,
                 memset(&de, 0, sizeof(struct dst_entry));
                 /* do we need to set some other fields, too ? */
                 de.dev = daddr_dev;
-                in6_ntop(&daddr, addrstr);
+                hip_in6_ntop(&daddr, addrstr);
                 HIP_DEBUG("dest address=%s\n", addrstr);
-                err = ipv6_get_saddr(&de, &daddr, &saddr, 0);
+                err = ipv6_get_saddr(&de, &daddr, &saddr);
                 _HIP_DEBUG("ipv6_get_saddr err=%d\n", err);
                 if (!err) {
                         /* got a source address, send REA */
-                        in6_ntop(&saddr, addrstr);
+                        hip_in6_ntop(&saddr, addrstr);
                         _HIP_DEBUG("selected source address: %s\n", addrstr);
                         err = hip_csum_send(&saddr, &daddr, rea_packet);
 			if (err)
@@ -1131,7 +1145,7 @@ int hip_send_ac_or_acr(int pkt_type, struct in6_addr *src_hit, struct in6_addr *
 	char addrstr[INET6_ADDRSTRLEN];
 //	struct hip_hadb_state *entry;
 
-	in6_ntop(dst_addr, addrstr);
+	hip_in6_ntop(dst_addr, addrstr);
 	HIP_DEBUG("dst_addr=%s pkt_type=%d ac_id=%u rea_id=%u rtt=0x%x interface_id=0x%x lifetime=0x%x\n",
 		  addrstr, pkt_type, ac_id, rea_id, rtt, interface_id, lifetime);
 

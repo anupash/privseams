@@ -132,6 +132,7 @@ struct in6_flowlabel_req
 #define IPPROTO_ICMPV6		58	/* ICMPv6			*/
 #define IPPROTO_NONE		59	/* IPv6 no next header		*/
 #define IPPROTO_DSTOPTS		60	/* IPv6 destination options	*/
+#define IPPTOTO_HIP             99      /* temporary */
 
 /*
  *	IPv6 TLV options.

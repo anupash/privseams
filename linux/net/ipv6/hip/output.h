@@ -1,14 +1,6 @@
 #ifndef HIP_OUTPUT_H
 #define HIP_OUTPUT_H
 
-#ifndef __KERNEL__
-#  define __KERNEL__
-#endif
-
-#ifndef MODULE
-#  define MODULE
-#endif
-
 #include <linux/types.h>
 #include <linux/skbuff.h>
 #include <linux/inet.h>
@@ -25,6 +17,7 @@
 #include "input.h"
 #include "daemon.h"
 #include "builder.h"
+#include "misc.h"
 
 int hip_send_i1(struct in6_addr *dsthit);
 int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_hit);

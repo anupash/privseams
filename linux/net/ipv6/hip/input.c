@@ -2079,7 +2079,7 @@ int hip_rea_check_received_ac_id(uint16_t rea_id, uint16_t ac_id,
 		char addrstr[INET6_ADDRSTRLEN];
 
 		sent_ac = list_entry(pos, struct hip_sent_ac_info, list);
-		in6_ntop(&sent_ac->ip, addrstr);
+		hip_in6_ntop(&sent_ac->ip, addrstr);
 		if (sent_ac->rea_id == rea_id && sent_ac->ac_id == ac_id &&
 		    !ipv6_addr_cmp(&sent_ac->ip, src_ip)) {
 			ipv6_addr_copy(ip, &sent_ac->ip);
@@ -2328,7 +2328,7 @@ int hip_handle_rea_finish(struct hip_rea_info *rea_info,
 		char addrstr[INET6_ADDRSTRLEN];
 		uint32_t current_time, prev_if;
 
-		in6_ntop(&addr->address, addrstr);
+		hip_in6_ntop(&addr->address, addrstr);
 		HIP_DEBUG("item %d: lifetime=0x%x address=%s\n",
 			  i+1, ntohl(addr->lifetime), addrstr);
 

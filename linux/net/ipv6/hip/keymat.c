@@ -14,8 +14,6 @@
 
 /****************************** SHA-1 ********************************/
 
-#define SHA1HANDSOFF /* Copies data before messing with it. */
-
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <asm/byteorder.h>
@@ -24,6 +22,7 @@
 
 #include "debug.h"
 #include "hip.h"
+#include "keymat.h"
 
 /**
  * keymat_hit_is_bigger - compare two HITs
