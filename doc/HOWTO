@@ -18,7 +18,9 @@ Requirements
   * perl, lorder
 
 * Optional
-  * USAGI Toolkit (contains ping6, pfkey and netcat6)
+  * iputils-ping (or netkit-ping): ping, ping6
+  * ipsec-tools: setkey
+  * netcat6
   * latex, dvips, dvipdf, fig2dev, docbook-utils (for building the
     HIPL documentation)
   * java compiler for "jip" (java hip resolver) if you want to build
@@ -56,9 +58,8 @@ Userspace API:
 Compiling the Kernel
 ====================
 
-The 2.4 kernel series compiles only with gcc 2.9x series. Do not use
-gcc 3.x because it won't compile the kernel. Check your default gcc
-version version with "gcc --version".
+The 2.6 kernel series should be compilable with both gcc 2.9x and 3.x
+series.
 
 HIPL kernel is in hipl/linux folder. Compile the kernel with the
 following options:
@@ -68,27 +69,15 @@ following options:
   Code maturity level options
   [*] Prompt for development and/or incomplete code/drivers
 
-  Cryptography support (CryptoAPI)
-  [*] CryptoAPI support
-  [*] Cipher Algorithms
-  --- 64 bit blocksize
-  <*> 3DES cipher
-  --- Deprecated
-  <*> NULL cipher
-  [*] Digest Algorithms
-  <*>  SHA1 digest
-
-  Networking options 
+  Device Drivers ---> Networking support ---> Networking options
   [*] TCP/IP networking
-  [*] The IPsec protocol (EXPERIMENTAL)
   <*> The IPv6 protocol (EXPERIMENTAL)
-  [*] IPv6: IP Security Support (EXPERIMENTAL)
-  <M> HIP (EXPERIMENTAL)
+  <*> Host Identity Protocol
   [*]   HIP: debugging (NEW)
 
-The HIP option will not be visible if all the options presented in the 
-list above are not included into the kernel. For the moment DSA and DH
-will not work if compiled as modules.
+IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
+dependencies. Currently, it is only possible to compile HIP support as
+built-in. Module capability is not supported yet.
 
 HIP debugging is not mandatory, but use of it is highly recommended in
 order to get more information when problems arise. HIP debugging
@@ -96,25 +85,21 @@ information is logged using syslog's facility "kernel" and priority
 "debug". Remember to set up your /etc/syslog.conf correctly if you do
 not see the log messages (see syslog.conf manual page for more info).
 
-For more information about USAGI modules, download a USAGI kernel and
-see files usagi/doc/CONFIG.linux24 and usagi/doc/HOWTO/IPsec. You do
-not need an USAGI pluto daemon for HIP to work.
-
 Compiling Userland Applications
 =================================
 
-After you have successfully compiled and installed USAGI kernel and
+After you have successfully compiled and installed the HIP kernel and
 rebooted both of the hosts, you need to compile the HIP command line
-configurator (hipconf). Hipconf is located in hipl/tools folder and
-it is compiled simply as follows:
+configurator (hipconf). Hipconf is located in hipl/tools folder and it
+is compiled simply as follows:
 
   cd hipl/tools
   ./configure
   make
 
 You should have an IPv6 application for creating a connection between
-hosts. USAGI toolkit includes such tools but there is also a very
-simple application in hipl/test folder. You can compile it as follows:
+hosts. There is also a very simple application in hipl/test
+folder. You can compile it as follows:
 
   cd hipl/libinet6
   ./configure
@@ -151,7 +136,7 @@ oops:
 
   ifconfig eth0 inet6 add 3ffe::2/64
   mknod /dev/hip c 126 0
-  modprobe hipmod
+  (modprobe hipmod)
   cd somewhere/hipl
   tools/hipconf new hi default # only the first time when you run hip
   tools/hipconf add hi default
@@ -161,7 +146,7 @@ crash:
 
   ifconfig eth0 inet6 add 3ffe::1/64
   mknod /dev/hip c 126 0
-  modprobe hipmod
+  (modprobe hipmod)
   cd somewhere/hipl
   tools/hipconf new hi default # only the first time when you run hip
   tools/hipconf add hi default &
@@ -266,12 +251,12 @@ resolver methods in the HipAddress class as is done in the example.
 Run the example applications as follows:
 
 crash # cd path-to-hipl/test
-crash # modprobe hipmod
+crash # (modprobe hipmod)
 crash # ../tools/hipconf add hi default
 crash # ./java HipServer crash 12345
 
 oops # cd test
-oops # modprobe hipmod
+oops # (modprobe hipmod)
 oops # ../tools/hipconf add hi default
 oops # ./java HipClient crash 12345 oops 54321
 <wait for the prompt, type some text and press enter>

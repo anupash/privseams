@@ -181,7 +181,6 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 }
 
 /** hip_keymat_get_new - calculate new keying material
- * @entry: HADB entry
  * @key: buffer where the created KEYMAT is stored
  * @key_len: length of @key in bytes
  * @kij: Kij, shared key
@@ -198,9 +197,9 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
  *
  * Returns: 0 on success, < 0 otherwise.
 */
-int hip_keymat_get_new(/*struct hip_hadb_state *entry,*/ void *key, size_t key_len,
-		       char *kij, size_t kij_len, uint16_t *keymat_offset,
-		       uint8_t *calc_index, unsigned char *calc_index_keymat)
+int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
+		       uint16_t *keymat_offset, uint8_t *calc_index,
+		       unsigned char *calc_index_keymat)
 {
 	/* must have the hadb lock when calling this function */
 	int err = 0;
@@ -212,13 +211,12 @@ int hip_keymat_get_new(/*struct hip_hadb_state *entry,*/ void *key, size_t key_l
 	HIP_DEBUG("key_len=%d, requested keymat_offset=%u calc_index=%u\n",
 		  key_len, *keymat_offset, *calc_index);
 	HIP_HEXDUMP("calc_index_keymat", calc_index_keymat, HIP_AH_SHA_LEN);
+
  	if (key_len == 0 || kij_len == 0) {
 		HIP_ERROR("key_len = 0 or kij_len = 0\n");
 		err = -EINVAL;
 		goto out_err;
 	}
-
- 	/* memset(key, 0, key_len); during testing only */
 
 	/* test if we already have needed amount of ready keymat */
 	_HIP_DEBUG("Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",

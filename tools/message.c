@@ -44,12 +44,12 @@ int close_hip(int hipfd) {
  * Returns: zero on successful operation, or negative on error
  */
 int send_msg(const struct hip_common *msg) {
-  int err, hipfd;
+  int err = 0, hipfd = -1;
 
   hipfd = open_hip(); // sets also errno
   if (hipfd < 0) {
     HIP_PERROR("hip device " HIP_DEV_NAME ":");
-    err = errno;
+    err = -errno;
     goto out;
   }
 

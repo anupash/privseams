@@ -32,9 +32,6 @@ static atomic_t hip_working = ATOMIC_INIT(0);
 
 static time_t load_time;          /* Wall clock time at module load XXX: why? */
 
-#if 0
-static struct notifier_block hip_notifier_block;
-#endif
 static struct notifier_block hip_netdev_notifier;
 static void hip_uninit_cipher(void); // forward decl.
 static void hip_cleanup(void);
@@ -1286,82 +1283,6 @@ void hip_handle_ipv6_ifa_notify(struct inet6_ifaddr *ifa, int event) {
 }
 
 
-#if 0
-/**
- * hip_inet6addr_event_handler - handle IPv6 address events
- * @notifier_block: device notifier chain
- * @event: the event
- * @ptr: pointer to the IPv6 address which caused the event
- *
- * Currently we handle only NETDEV_UP (an address was added) and
- * NETDEV_DOWN (an address was deleted).
- *
- * Returns: always NOTIFY_DONE.
- */
-static int hip_inet6addr_event_handler(struct notifier_block *notifier_block,
-                                      unsigned long event,
-                                      void *ptr)
-{
-        struct net_device *event_dev;
-	struct inet6_ifaddr *ifa;
-
-/*
-	struct inet6_dev *idev;
-	int idev_addr_count = 0;
-	char addrstr[INET6_ADDRSTRLEN];
-
-	ifa = (struct inet6_ifaddr *) ptr;
-	if (!ifa) {
-		HIP_ERROR("ifa is NULL\n");
-		return NOTIFY_DONE;
-	}
-
-	in6_ifa_hold(ifa);
-	event_dev = ifa->idev->dev;
-	idev = in6_dev_get(event_dev);
-	dev_hold(event_dev);
-	in6_ifa_put(ifa);
-
-	for (ifa = idev->addr_list; ifa; ifa = ifa->if_next) {
-		spin_lock_bh(&ifa->lock);
-		hip_in6_ntop(&ifa->addr, addrstr);
-		HIP_DEBUG("addr %d: %s flags=0x%x\n", idev_addr_count+1, addrstr, ifa->flags);
-		spin_unlock_bh(&ifa->lock);
-	}
-	in6_dev_put(idev);
-
-	HIP_DEBUG("returning, event=%d\n", event);
-        return NOTIFY_DONE;
-*/
-
-        if (! (event == NETDEV_UP || event == NETDEV_DOWN) ) {
-                HIP_DEBUG("Ignore inet6 event %lu\n", event);
-                return NOTIFY_DONE;
-        }
-
-	ifa = (struct inet6_ifaddr *) ptr;
-	if (!ifa) {
-		HIP_ERROR("ifa is NULL\n");
-		return NOTIFY_DONE;
-	}
-	in6_ifa_hold(ifa);
-	event_dev = ifa->idev->dev;
-	dev_hold(event_dev);
-	in6_ifa_put(ifa);
-
-        if (!event_dev) {
-                HIP_ERROR("NULL event_dev, shouldn't happen ?\n");
-		dev_put(event_dev);
-                return NOTIFY_DONE;
-        }
-
-	/* event_dev -> event_dev->ifindex ? */
-        hip_net_event_handle(0, event_dev, event);
-	dev_put(event_dev);
-	return NOTIFY_DONE;
-}
-#endif
-
 /**
  * hip_netdev_event_handler - handle network device events
  * @notifier_block: device notifier chain
@@ -1589,36 +1510,6 @@ void hip_test_csum(void *data, int len)
 	HIP_HEXDUMP("CSUM DATA", data, len);
 	csum = csum_partial(data, len, 0);
 	HIP_DEBUG("csum=0x%x ntohs=0x%x\n", csum, ntohs(csum));
-}
-#endif
-
-#if 0
-/**
- * hip_init_register_inet6addr_notifier - initialize IPv6 address event handler
- *
- * This function adds this module to the notifier list which receives
- * event related to changes in IPv6 addresses such as addition or
- * deletion of an IPv6 address.
- *
- * Returns: currently always 0.
- */
-int hip_init_register_inet6addr_notifier(void)
-{
-	HIP_DEBUG("\n");
-	hip_notifier_block.notifier_call = hip_inet6addr_event_handler;
-	hip_notifier_block.next = NULL;
-	hip_notifier_block.priority = 0;
-	return register_inet6addr_notifier(&hip_notifier_block);
-}
-
-/**
- * hip_uninit_register_inet6addr_notifier - uninitialize IPv6 address event handler
- *
- * Returns: currently always 0.
- */
-int hip_uninit_register_inet6addr_notifier(void)
-{
-	return unregister_inet6addr_notifier(&hip_notifier_block);
 }
 #endif
 
@@ -1871,11 +1762,6 @@ static int __init hip_init(void)
 	if (hip_init_ioctl() < 0)
 		goto out;
 
-#if 0
-	if (hip_init_register_inet6addr_notifier() < 0)
-		goto out;
-#endif
-
 	/* comment this to disable network device event handler
 	   (crashed sometimes) */
 	if (hip_init_netdev_notifier() < 0)
@@ -1954,9 +1840,7 @@ static void __exit hip_cleanup(void)
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
 	hip_uninit_netdev_notifier(); 	/* comment this if network device event causes troubles */
-#if 0
-	hip_uninit_register_inet6addr_notifier();
-#endif
+
 	hip_uninit_ioctl();
 	hip_uninit_user();
 
@@ -1971,10 +1855,9 @@ static void __exit hip_cleanup(void)
 	hip_uninit_output_socket();
 	hip_uninit_r1();
 
-	/* XXX: Mika are these in correct place? */
 	hip_rea_delete_sent_list();
 	hip_ac_delete_sent_list();
-	HIP_ERROR("TODO: UPDATE SPI waitlist delete\n");
+	hip_update_spi_waitlist_delete_all();
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

@@ -31,10 +31,8 @@ void hip_update_spi_waitlist_add(uint32_t spi, int direction, struct in6_addr *h
 {
 	struct hip_update_spi_waitlist_item *s;
 	unsigned long flags = 0;
-
 	struct list_head *pos, *n;
 	int i = 1;
-
 
 	HIP_DEBUG("spi=0x%x direction=%s\n", spi, direction ? "in" : "out");
 
@@ -86,6 +84,23 @@ void hip_update_spi_waitlist_delete(uint32_t spi)
 		i++;
 	}
 
+	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
+	return;
+}
+
+void hip_update_spi_waitlist_delete_all(void)
+{
+	struct list_head *pos, *n;
+	struct hip_update_spi_waitlist_item *s = NULL;
+	unsigned long flags = 0;
+
+	HIP_DEBUG("\n");
+	spin_lock_irqsave(&hip_update_spi_waitlist_lock, flags);
+	list_for_each_safe(pos, n, &hip_update_spi_waitlist) {
+		s = list_entry(pos, struct hip_update_spi_waitlist_item, list);
+		list_del(&s->list);
+		kfree(s);
+	}
 	spin_unlock_irqrestore(&hip_update_spi_waitlist_lock, flags);
 	return;
 }

@@ -4,6 +4,7 @@
 #include <net/hip.h>
 
 int hip_update_spi_waitlist_ispending(uint32_t spi);
+void hip_update_spi_waitlist_delete_all(void);
 int hip_handle_update_initial(struct hip_common *msg, struct in6_addr *src_ip, int state);
 int hip_handle_update_reply(struct hip_common *msg, struct in6_addr *src_ip, int state);
 int hip_receive_update(struct sk_buff *skb);
