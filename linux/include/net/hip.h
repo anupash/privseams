@@ -680,6 +680,12 @@ struct hip_eid_endpoint {
 	struct endpoint_hip endpoint;
 } __attribute__ ((packed));
 
+struct hip_hit {
+	hip_tlv_type_t      type;
+	hip_tlv_len_t       length;
+	struct in6_addr     hit;
+} __attribute__ ((packed));
+
 typedef uint16_t hip_eid_iface_type_t;
 
 struct hip_eid_iface {

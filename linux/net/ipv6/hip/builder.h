@@ -144,7 +144,6 @@ int hip_build_param_eid_iface(struct hip_common *msg,
 int hip_build_param_eid_sockaddr(struct hip_common *msg,
                                  struct sockaddr *sockaddr,
                                  size_t sockaddr_len);
-
 int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 			   uint8_t lifetime, uint32_t opaque, uint64_t random_i);
 
@@ -166,5 +165,5 @@ char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
 int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 			   void *notification_data, size_t notification_data_len);
 uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht);
-
+int hip_build_param_hit(struct hip_common *msg, const struct in6_addr *hit);
 #endif /* HIP_BUILDER */

@@ -40,7 +40,8 @@ int (*action_handler[])(struct hip_common *, int action,
   handle_map,
   handle_rst,
   handle_rvs,
-  handle_bos
+  handle_bos,
+  handle_del
 };
 
 /**
@@ -79,11 +80,12 @@ int check_action_argc(int action) {
 
   switch (action) {
   case ACTION_ADD:
-  case ACTION_DEL:
+    //case ACTION_DEL:
   case ACTION_NEW:
     count = 2;
     break;
   case ACTION_RST:
+  case ACTION_DEL:
     count = 1;
     break;
   case ACTION_BOS:
@@ -110,9 +112,11 @@ int get_type(char *text) {
   else if (!strcmp("rst", text))
     ret = TYPE_RST;
   else if (!strcmp("rvs", text))
-	  ret = TYPE_RVS;
+    ret = TYPE_RVS;
   else if (!strcmp("bos", text))
     ret = TYPE_BOS;
+  else if (!strcmp("del", text))
+    ret = TYPE_DEL;
   return ret;
 }
 
@@ -231,6 +235,7 @@ int handle_hi(struct hip_common *msg,
   int fmt;
   struct endpoint_hip *endpoint_dsa_hip = NULL;
   struct endpoint_hip *endpoint_rsa_hip = NULL;
+  struct in6_addr *dsa_hit = NULL;
 
   _HIP_INFO("action=%d optc=%d\n", action, optc);
 
@@ -240,7 +245,7 @@ int handle_hi(struct hip_common *msg,
     err = -EINVAL;
     goto out;
   }
-
+  
   if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
     anon = 0;
   } else if(!strcmp(opt[OPT_HI_TYPE], "anon")) {
@@ -252,7 +257,7 @@ int handle_hi(struct hip_common *msg,
     err = -EINVAL;
     goto out;
   }  
-
+    
   if (use_default) {
     if (optc != 1) {
       HIP_ERROR("Wrong number of args for default\n");
@@ -443,8 +448,31 @@ int handle_hi(struct hip_common *msg,
     break;
   case ACTION_DEL:
     numeric_action = SO_HIP_DEL_LOCAL_HI;
-    HIP_ERROR("Deletion of HI not implemented yet\n");
-    err = -ENOSYS;
+
+    /* NOTE: ACTION_DEL is currently handled by the handle_del() */
+    err = load_dsa_private_key(dsa_filenamebase, &dsa_key);
+    if (err) {
+      HIP_ERROR("Loading of the DSA key failed\n");
+      goto out;
+    }
+
+    dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
+    if (dsa_key_rr_len <= 0) {
+      HIP_ERROR("dsa_key_rr_len <= 0\n");
+      err = -EFAULT;
+      goto out;
+    }
+
+    err = dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH126, &dsa_lhi.hit);
+    if (err) {
+      HIP_ERROR("Conversion from DSA to HIT failed\n");
+      goto out;
+    }
+    HIP_HEXDUMP("Calculated DSA HIT for deleting it: ", &dsa_lhi.hit,
+		sizeof(struct in6_addr));
+    memset(&dsa_hit, 0, sizeof(struct in6_addr));
+    memcpy(&dsa_hit, &dsa_lhi.hit ,sizeof(struct in6_addr));
+
     break;
   }
 
@@ -454,8 +482,15 @@ int handle_hi(struct hip_common *msg,
   /* The host id is not used for deletion for two reasons:
      1) The private key is also <hack>included in the dsa_key_rr</hack>.
      2) Lhi should be enough to do the deletion. */
-  if (numeric_action == ACTION_DEL)
+  if (numeric_action == SO_HIP_DEL_LOCAL_HI) {
+    err = hip_build_param_hit(msg, &dsa_hit); 
+    if (err) {
+      HIP_ERROR("Building of HIT parameter failed\n");
+      goto out;
+    } 
+
     goto skip_host_id;
+  }
   /*
   err = alloc_and_set_host_id_param_hdr(&dsa_host_id, dsa_key_rr_len,
 					HIP_HI_DSA, hostname);
@@ -484,7 +519,6 @@ int handle_hi(struct hip_common *msg,
   }
 
  skip_host_id:
-
   err = hip_build_user_hdr(msg, numeric_action, 0);
   if (err) {
     HIP_ERROR("build hdr error %d\n", err);
@@ -597,6 +631,52 @@ int handle_map(struct hip_common *msg, int action,
  out:
   return err;
 }
+
+int handle_del(struct hip_common *msg, int action,
+	       const char *opt[], int optc) 
+{
+	int err;
+	int ret;
+	struct in6_addr hit;
+	
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	
+	ret = inet_pton(AF_INET6, opt[0], &hit);
+	if (ret < 0 && errno == EAFNOSUPPORT) {
+	  HIP_PERROR("inet_pton: not a valid address family\n");
+	  err = -EAFNOSUPPORT;
+	  goto out;
+	} else if (ret == 0) {
+	  HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+	  err = -EINVAL;
+	  goto out;
+	}
+
+	HIP_HEXDUMP("HIT to delete: ", &hit,
+		    sizeof(struct in6_addr));
+
+	err = hip_build_param_hit(msg, &hit); 
+
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0);
+	if (err) {
+	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+	  goto out;
+	}
+	
+ out:
+	return err;
+}
+
 
 int handle_rst(struct hip_common *msg, int action,
 	       const char *opt[], int optc) 
@@ -712,6 +792,7 @@ int main(int argc, char *argv[]) {
 
   if (action != ACTION_RST &&
       action != ACTION_RVS &&
+      action != ACTION_DEL &&
       action != ACTION_BOS) 
   {
 	  type_arg = 2;
@@ -741,8 +822,12 @@ int main(int argc, char *argv[]) {
     err = (*action_handler[TYPE_RVS])(msg, ACTION_RST,
 				      (const char **) &argv[2], argc - 2);
     break;
-  case ACTION_ADD:
+
   case ACTION_DEL:
+    err = (*action_handler[TYPE_DEL])(msg, ACTION_DEL,
+				      (const char **) &argv[2], argc - 2);
+    break;
+  case ACTION_ADD:
   case ACTION_NEW:
     err = (*action_handler[type])(msg, action, (const char **) &argv[3],
 				  argc - 3);
