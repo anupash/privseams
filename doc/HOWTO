@@ -301,6 +301,11 @@ from which to read an application-specified endpoint.
 HIP Enabled Telnet
 =========================
 
+We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
+support native HIP API. HIP is a compile time option, so that you can
+see the required modifications to the code (ifdef USE_HIP). Here's how
+you compile the telnet applications:
+
 # cd libinet
 # ./configure
 # make
@@ -316,6 +321,35 @@ crash # telnet/telnet -l username oops 12345
 
 Note: the username must be non-root.
 
+
+How to Use HIP in Other C Based Applications?
+=============================================
+
+Use on the following methods:
+
+1. Port it to use the native HIP API. See the telnet code for a
+   practical example. The API is documented in url:
+   http://hipl.hiit.fi/hipl/hip-native-api-final.pdf
+
+2. Relink the application to use the libinet6 library provided in the HIPL
+   software bundle. Then, use either of the following methods:
+
+   a) Set the AI_HIP flag in the getaddrinfo call. This will make the
+      getaddrinfo function to return only HITs in the place of IP addresses
+      (no IP addresses are returned). Also, the getaddrinfo function sends
+      the HIT-to-IPv6-address mapping to the kernel.
+   b) You are using the transparent mode in the resolver (see the
+      HIP_TRANSPARENT_API compilation flag in libinet6/Makefile.in). Only
+      relinking is required, no changes are needed in the application.
+
+3. Override the getaddrinfo function from the command line:
+   http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln=
+
+Note! Methods two and three assume two prequisites! First, the
+application must be IPv6 enabled because the implementation currently
+supports only IPv6. Second, the application must really use the
+getaddrinfo interface because otherwise the getaddrinfo hack
+(i.e. sending HIT-to-IPv6 mapping to the HIP module) does not work.
 
 Testing HIP Rendezvous Server/Mechanism
 =======================================
