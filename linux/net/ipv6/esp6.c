@@ -158,12 +158,12 @@ int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_b
 		ret = -EINVAL;
 		goto out_nofree;
 	}
-printk(KERN_DEBUG "maypull ok\n");
+	//printk(KERN_DEBUG "maypull ok\n");
 	if (elen <= 0 || (elen & (blksize-1))) {
 		ret = -EINVAL;
 		goto out_nofree;
 	}
-printk(KERN_DEBUG "elen ok\n");
+	//printk(KERN_DEBUG "elen ok\n");
 	tmp_hdr = kmalloc(hdr_len, GFP_ATOMIC);
 	if (!tmp_hdr) {
 		ret = -ENOMEM;
@@ -172,10 +172,10 @@ printk(KERN_DEBUG "elen ok\n");
 	memcpy(tmp_hdr, skb->nh.raw, hdr_len);
 
 	/* If integrity check is required, do this. */
-        if (esp->auth.icv_full_len) {
+        if (0 && esp->auth.icv_full_len) {
 		u8 sum[esp->auth.icv_full_len];
 		u8 sum1[alen];
-printk(KERN_DEBUG "test icv\n");
+printk(KERN_DEBUG "test icv alen=%d\n", alen);
 
 		esp->auth.icv(esp, skb, 0, skb->len-alen, sum);
 
@@ -189,12 +189,12 @@ printk(KERN_DEBUG "test icv\n");
 		}
 	}
 
-printk(KERN_DEBUG "pre skb cow\n");
+//printk(KERN_DEBUG "pre skb cow\n");
 	if ((nfrags = skb_cow_data(skb, 0, &trailer)) < 0) {
 		ret = -EINVAL;
 		goto out;
 	}
-printk(KERN_DEBUG "skb cow ok\n");
+//printk(KERN_DEBUG "skb cow ok\n");
 	skb->ip_summed = CHECKSUM_NONE;
 
 	esph = (struct ipv6_esp_hdr*)skb->data;
