@@ -1911,8 +1911,20 @@ static int hip_do_work(struct hip_work_order *job)
 			res = KHIPD_ERROR;
 		break;
 	case HIP_WO_TYPE_OUTGOING:
-		HIP_INFO("Nothing for outgoing stuff\n");
-		// FIXME: implement HIP packet sending subtype (HIP_WO_SUBTYPE_SEND_PACKET);
+		switch(job->hdr.subtype) {
+		case HIP_WO_SUBTYPE_SEND_PACKET:
+			res = hip_csum_send(&job->hdr.src_addr, &job->hdr.dst_addr, 
+					    job->msg)
+			break;
+		default:
+			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
+				  job->subtype, job->type);
+			break;
+		}
+		if (res < 0)
+			res = KHIPD_ERROR;
+		break;
+
 		break;
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {

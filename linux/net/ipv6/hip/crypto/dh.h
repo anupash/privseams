@@ -8,6 +8,7 @@
 #  include <linux/errno.h>
 #  include "kernel-interface.h"
 #else
+#  include <hip.h>
 #  include <gcrypt.h>
 #endif /* __KERNEL__ */
 
