@@ -25,7 +25,7 @@ struct hip_callable_functions {
 	int (*hip_get_addr) (struct in6_addr *hit, struct in6_addr *addr);
 	int (*hip_get_saddr) (struct flowi *fl, struct in6_addr *hit_storage);
 	void (*hip_unknown_spi) (struct sk_buff *skb, uint32_t spi);
-	void (*hip_handle_dst_unreachable) (struct sk_buff *skb);
+	void (*hip_handle_icmp) (struct sk_buff *skb, int type, int code, u32 info);
 	int (*hip_trigger_bex) (struct in6_addr *dsthit);
 	void (*hip_handle_ipv6_dad_completed)(int ifindex);
 	void (*hip_handle_inet6_addr_del)(int ifindex);

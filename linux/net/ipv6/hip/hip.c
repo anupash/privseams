@@ -1410,7 +1410,7 @@ static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt,
 }
 
 /**
- * hip_handle_dst_unreachable - ICMPv6 Destination Unreachable message handler
+ * hip_handle_icmp - ICMPv6 handler
  * @skb: sk_buff containing the received ICMPv6 packet
  *
  * This function does currently nothing useful. Later we should mark
@@ -1418,7 +1418,7 @@ static void hip_err_handler(struct sk_buff *skb, struct inet6_skb_parm *opt,
  * Unreachable caused by a packet which was sent to some of the peer
  * addresses we know of.
  */
-void hip_handle_dst_unreachable(struct sk_buff *skb)
+void hip_handle_icmp(struct sk_buff *skb, int type, int code, u32 info)
 {
 	struct icmp6hdr *hdr;
 	struct ipv6hdr *invoking_hdr; /* RFC 2463 sec 3.1 */
@@ -1874,7 +1874,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_get_addr);
 	HIP_SETCALL(hip_get_saddr);
 	HIP_SETCALL(hip_unknown_spi);
-	HIP_SETCALL(hip_handle_dst_unreachable);
+	HIP_SETCALL(hip_handle_icmp);
 	HIP_SETCALL(hip_trigger_bex);
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
@@ -1911,7 +1911,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
 	HIP_INVALIDATE(hip_trigger_bex);
-	HIP_INVALIDATE(hip_handle_dst_unreachable);
+	HIP_INVALIDATE(hip_handle_icmp);
 	HIP_INVALIDATE(hip_unknown_spi);
 	HIP_INVALIDATE(hip_get_saddr);
 	HIP_INVALIDATE(hip_get_addr);

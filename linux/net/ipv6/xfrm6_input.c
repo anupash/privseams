@@ -67,27 +67,22 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			 *
 			 * This could lead to DoSes... if birthday check is omitted.
 			 */
-//			HIP_CALLPROC(hip_unknown_spi)(skb,spi);
+			//HIP_CALLPROC(hip_unknown_spi)(skb,spi);
 #endif
-//			printk(KERN_DEBUG "x = NULL\n");
 			goto drop;
 		}
 
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		//		HIP_CALLFUNC(hip_update_spi_waitlist_ispending, 0)(ntohl(spi));
+		//HIP_CALLFUNC(hip_update_spi_waitlist_ispending, 0)(ntohl(spi));
 #endif
 		spin_lock(&x->lock);
 		if (unlikely(x->km.state != XFRM_STATE_VALID))
 			goto drop_unlock;
-//	printk(KERN_DEBUG "kmstate ok\n");
 		if (x->props.replay_window && xfrm_replay_check(x, seq))
 			goto drop_unlock;
-//	printk(KERN_DEBUG "replay ok\n");
 		if (xfrm_state_check_expire(x))
 			goto drop_unlock;
-//	printk(KERN_DEBUG "expire ok\n");
 		nexthdr = x->type->input(x, &(xfrm_vec[xfrm_nr].decap), skb);
-//		printk(KERN_DEBUG "nexthdr=%d\n", nexthdr);
 		if (nexthdr <= 0)
 			goto drop_unlock;
 
@@ -103,7 +98,6 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 
 		xfrm_vec[xfrm_nr++].xvec = x;
 
-//	printk(KERN_DEBUG "pre mode check\n");
 		if (x->props.mode == XFRM_MODE_TUNNEL) { 
 			if (nexthdr != IPPROTO_IPV6)
 				goto drop;
@@ -122,26 +116,23 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			decaps = 1;
 			break;
 		} else if (x->props.mode == XFRM_MODE_BEET) {
-//			printk(KERN_DEBUG "mode is BEET\n");
+			//printk(KERN_DEBUG "mode is BEET\n");
 			/* this should be us */
 			ipv6_addr_copy(&iph->daddr, (struct in6_addr *)&x->id.daddr);
 			/* the original sender */
 			ipv6_addr_copy(&iph->saddr, (struct in6_addr *)&x->props.saddr);
 		}
 
-//		printk(KERN_DEBUG "pre parse spi\n");
 		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
 			goto drop;
-//	printk(KERN_DEBUG "while\n");
 	} while (!err);
-//	printk(KERN_DEBUG "post while\n");
+
 	/* Allocate new secpath or COW existing one. */
 	if (!skb->sp || atomic_read(&skb->sp->refcnt) != 1) {
 		struct sec_path *sp;
 		sp = secpath_dup(skb->sp);
 		if (!sp)
 			goto drop;
-//		printk(KERN_DEBUG "have sp\n");
 		if (skb->sp)
 			secpath_put(skb->sp);
 		skb->sp = sp;
@@ -149,7 +140,6 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 
 	if (xfrm_nr + skb->sp->len > XFRM_MAX_DEPTH)
 		goto drop;
-//	printk(KERN_DEBUG "pre memcpy\n");
 	memcpy(skb->sp->x+skb->sp->len, xfrm_vec, xfrm_nr*sizeof(struct sec_decap_state));
 	skb->sp->len += xfrm_nr;
 	skb->ip_summed = CHECKSUM_NONE;
@@ -160,19 +150,15 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			skb->dst = NULL;
 		}
 		netif_rx(skb);
-//		printk(KERN_DEBUG "return -1\n");
 		return -1;
 	} else {
-//		printk(KERN_DEBUG "return 1\n");
 		return 1;
 	}
 
 drop_unlock:
-//	printk(KERN_DEBUG "drop_unlock\n");
 	spin_unlock(&x->lock);
 	xfrm_state_put(x);
 drop:
-//	printk(KERN_DEBUG "drop err=%d\n", err);
 	while (--xfrm_nr >= 0)
 		xfrm_state_put(xfrm_vec[xfrm_nr].xvec);
 	kfree_skb(skb);
