@@ -155,7 +155,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 {
 	uint64_t mask;
 	uint64_t randval;
-	uint64_t maxtries;
+	uint64_t maxtries = 0;
 	uint64_t digest;
 	u8 cookie[48];
 	struct scatterlist sg[2];
@@ -167,18 +167,19 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	} *u;
 
 	_HIP_DEBUG("\n");
-
 	/* pre-create cookie */
-
 	u = puzzle_or_solution;
 
-	if (u->pz.K > 60) {
-		HIP_ERROR("Difficulty factor over 60 not supported\n");
+	HIP_DEBUG("current hip_cookie_max_k_r1=%d\n",
+		  hip_sys_config.hip_cookie_max_k_r1);
+	if (u->pz.K > hip_sys_config.hip_cookie_max_k_r1) {
+		HIP_ERROR("Cookie K %u is higher than we are willing to calculate"
+			  " (current max K=%d)\n",
+			  u->pz.K, hip_sys_config.hip_cookie_max_k_r1);
 		return 0;
 	}
 
 	mask = hton64((1ULL << u->pz.K) - 1);
-
 	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
 
 	if (mode == HIP_VERIFY_PUZZLE) {
@@ -191,10 +192,10 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	} else if (mode == HIP_SOLVE_PUZZLE) {
 		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);
 		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hits);
-		maxtries = 1ULL << (u->pz.K + 2);
-		get_random_bytes(&randval,sizeof(u_int64_t));
+		maxtries = 1ULL << (u->pz.K + 2); /* fix */
+		get_random_bytes(&randval, sizeof(u_int64_t));
 	} else {
-		HIP_ERROR("Unknown mode: %x\n",mode);
+		HIP_ERROR("Unknown mode: %x\n", mode);
 		goto out_err;
 	}
 
@@ -205,6 +206,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		return 0; // !ok
 	}
 
+	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
 	/* while loops should work even if the maxtries is unsigned
 	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
 	 * the next round while (0 > 0) [maxtries > 0 now]
@@ -214,9 +216,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 
 		/* must be 8 */
 		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
-
 		hip_build_digest_repeat(impl_sha1, sg, nsg, sha_digest);
-
                 /* copy the last 8 bytes for checking */
 		memcpy(&digest, sha_digest + 12, 8);
 
@@ -239,7 +239,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 			_HIP_HEXDUMP("digest", sha_digest, HIP_AH_SHA_LEN);
 			_HIP_HEXDUMP("cookie", cookie, sizeof(cookie));
 			return randval;
-			break;
 		}
 
 		/* It seems like the puzzle was not correctly solved */
@@ -247,15 +246,11 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 			HIP_ERROR("Puzzle incorrect\n");
 			return 0;
 		}
-
 		randval++;
 	}
 
-	_HIP_DEBUG("Puzzle was successfully solved\n");
-	//goto out;	
  out_err:
-	HIP_ERROR("Could not solve the puzzle\n");
-	//out:
+	HIP_ERROR("Could not solve the puzzle, no solution found\n");
 	return 0;
 }
 

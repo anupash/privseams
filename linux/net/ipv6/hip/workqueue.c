@@ -119,6 +119,7 @@ static int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 	list_add_tail(&hwo->queue, &wq->workqueue);
 	/* what is the correct order of these two, l_i_r and up ? */
 	up(&wq->worklock);
+
 	local_irq_restore(eflags);
 	return 1;
 }

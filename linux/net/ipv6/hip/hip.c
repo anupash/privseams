@@ -101,14 +101,21 @@ static struct inet6_protocol hip_protocol = {
 int sysctl_hip_test = 0;
 static struct ctl_table_header *hip_sysctl_header = NULL;
 
+static int zero = 0, max_k = 64;  /* sysctl table wants pointers to ranges */
+
+struct hip_sys_config hip_sys_config;
+
 static ctl_table hip_table[] = {
 	{
-		.ctl_name	= NET_HIP_TEST,
-		.procname	= "test",
-		.data		= &sysctl_hip_test,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec
+		.ctl_name	= NET_HIP_COOKIE_MAX_K_R1,
+		.procname	= "cookie_max_k_r1",
+		.data		= &hip_sys_config.hip_cookie_max_k_r1,
+		.maxlen		= sizeof (int),
+		.mode		= 0600,
+		.proc_handler	= &proc_dointvec_minmax,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &zero,
+		.extra2		= &max_k
 	},
 	{ .ctl_name = 0 }
 };
@@ -145,6 +152,14 @@ void hip_unregister_sysctl(void)
 	HIP_DEBUG("\n");
 	if (hip_sysctl_header)
 		unregister_sysctl_table(hip_sysctl_header);
+}
+
+/**
+ * hip_init_sys_config - Initialize HIP related sysctl variables to default values
+ */
+void hip_init_sys_config(void)
+{
+	hip_sys_config.hip_cookie_max_k_r1 = 20;
 }
 #endif
 
@@ -2027,6 +2042,7 @@ static int __init hip_init(void)
 
 	HIP_INFO("Initializing HIP module\n");
 	hip_get_load_time();
+	hip_init_sys_config();
 
 	memset(&hip_kthreads, 0, sizeof(hip_kthreads));
 
