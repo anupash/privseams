@@ -153,10 +153,7 @@
     <para>
       IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
       dependencies after you have selected HIP. We recommend that you
-      compile HIP as a kernel module. Currently, there is bug in the HIP
-      module compilation. IPv6 must compiled as built in. Otherwise, the
-      compilation of the HIP module fails (with an error message "undefined
-      reference to hip_functions").
+      compile HIP as a kernel module, and the IPv6 support as built-in.
     </para>
     <para>
       HIP debugging is not mandatory, but use of it is highly recommended in

@@ -2,7 +2,7 @@ Version numbering
 =================
 
 This file contains the release note for HIPL version 0.1.2
-(hipl--main--2.6--patch-40).
+(hipl--main--2.6--patch-41).
 
 Features
 ========
