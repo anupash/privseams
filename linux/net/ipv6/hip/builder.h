@@ -14,7 +14,6 @@
 #include <net/ipv6.h>
 #include <net/hip.h>
 
-
 #else /* not __KERNEL__ */
 
 #include <asm/types.h>
@@ -85,14 +84,12 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common);
 int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 	hip_hdr_err_t err_val);
 
-#ifdef __KERNEL__
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_build_param_hmac2_contents(struct hip_common *msg,
 				   struct hip_crypto_key *key,
 				   struct hip_host_id *host_id);
 int hip_build_param_hmac_contents(struct hip_common *msg,
 				  struct hip_crypto_key *key);
-#endif /* __KERNEL__ */
 
 int hip_build_param_signature2_contents(struct hip_common *msg,
 				      const void *contents,

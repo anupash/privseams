@@ -1293,7 +1293,7 @@ int hip_handle_r1(struct hip_common *r1,
 	
 	HIP_DEBUG("R1 Successfully received\n");
 
- 	err = hip_create_i2(ctx, solved_puzzle, entry);
+ 	err = hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry);
  	if (err) {
  		HIP_ERROR("Creation of I2 failed (%d)\n", err);
 		goto out_err;

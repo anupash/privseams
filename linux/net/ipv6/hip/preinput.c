@@ -135,7 +135,7 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	  - xs->state is read-only in the kernel
 	  - this can be removed if the state machine transitions directly
 	    to established
-	  - currently this is may break things...
+	  - currently this is may break things?
 	*/
 
 #if 0
@@ -148,9 +148,7 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	ipv6_addr_copy(&hdr->daddr, &xs->hit_our);
 	ipv6_addr_copy(&hdr->saddr, &xs->hit_peer);
 
-	/* hip_hadb_find_byspi_list gets are reference to the HA, so it needs
-	   to be decremented here - there is no other way to do this */
-#if 0 /* XX FIXME: probably breaks something? */
+#if 0
 	hip_put_ha(ha);
 #endif
 	return;

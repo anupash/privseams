@@ -2,11 +2,15 @@
 #define _HIP_DB
 
 #ifdef __KERNEL__
-
 #  include <linux/list.h>
 #  include <linux/spinlock.h>
 #  include <net/ipv6.h>
 #  include <net/hip.h>
+#else
+
+typedef struct { } rwlock_t;
+
+#endif /* __KERNEL__ */
 
 #include "hip.h"
 #include "misc.h"
@@ -89,7 +93,7 @@ int        hip_add_localhost_id(const struct hip_lhi *lhi,
 int        hip_add_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 int        hip_copy_any_localhost_hit(struct in6_addr *target);
 int        hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo);
-HIP_HID   *hip_get_any_localhost_host_id(int);
+struct hip_host_id *hip_get_any_localhost_host_id(int);
 int        hip_insert_any_localhost_public_key(uint8_t *target);
 struct hip_host_id *hip_get_any_localhost_public_key(int);
 int hip_hit_is_our(struct in6_addr *hit);
@@ -135,5 +139,4 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 extern struct hip_db_struct hip_peer_hostid_db;
 extern struct hip_db_struct hip_local_hostid_db;
 
-#endif /* __KERNEL__ */
 #endif /* _HIP_DB */

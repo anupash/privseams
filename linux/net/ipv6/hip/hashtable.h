@@ -14,9 +14,7 @@
 
 struct hip_ht_common {
 	struct list_head *head;
-#ifdef __KERNEL__
 	spinlock_t lock;
-#endif
 	int hashsize;
 	int offset;
 	int (*hash)(void *key, int range);
