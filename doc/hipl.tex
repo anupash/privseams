@@ -147,7 +147,7 @@ becomes possible to perform authentication based on the \acp{HI}. In
 \cite{ndss-inthip}, the concept of integrating security, mobility, and
 multihoming based on \ac{HIP} is discussed further.
 
-\subsection{Host Identity Protocol}
+\subsection{Base Exchange}
 
 \ac{HIP} is a signaling protocol between the communicating
 endpoints. The main purpose of the protocol is to perform mutual
@@ -193,6 +193,18 @@ and \ac{HIT}.
 
 % XX FIX: move BOS here ?
 
+\subsection{Mobility and Multihoming Extentension}
+
+% XX FIX Mika:
+% - draw a picture/pictures of the basic update stuff?
+% - fix the cite
+% - move the ``theory'' stuff from 3.8 to here
+%   - picture
+%   - explanation of the readdressing mechanism
+% - update the text to cover the new mm mechism and remove old stuff
+%   - tell also the reason why there is now one SA pair / interface;
+%     the reason is replay window
+
 There are some other message types in the \ac{HIP}. The UPDATE Packet
 provides the peer system with its new \ac{SPI}, provides possibly a
 new \ac{DH} key to produce new keying material, and provides any
@@ -205,7 +217,6 @@ SEQ, and ACK parameters, and possibly DIFFIE\_HELLMAN parameter. If
 the packet contains a NES parameter, rekeying is performed. The
 existence of these parameters depend on desired mobility scenario
 described in \cite{hip-mm}.
-
 
 \subsection{HIPL Implementation}
 
@@ -625,6 +636,9 @@ Input and output side of the hooks are visualized in
 figures. An interface name in code and an explanation for each point
 is given in the figure.
 
+% XX FIX MIKA:
+% - add the missing hooks (DAD, what else did you add? esp?) to the figures
+%
 \begin{figure}
    \begin{minipage}[b]{0.4\textwidth}
       \centering
@@ -642,6 +656,9 @@ is given in the figure.
    \end{minipage}%
 \end{figure}
 
+% XX FIX MIKA:
+% - add description of the missing hooks (DAD, what else did you add? esp?)
+%
 \setlongtables
 \begin{longtable}{|c|p{0.2\textwidth}|p{0.6\textwidth}|}
 \\\hline
@@ -709,6 +726,16 @@ HIT.\\
 
 \subsection{Mobility and Multihoming}
 \label{sec:mobility_and_multihoming_architecture}
+
+% XX FIX Mika
+% - move the readdressing ``theory'' to section 2 (mobility and multihoming
+%   extensions)
+% - update the text to cover the new mm mechism and remove old stuff
+% - tell more about the CURRENT implementation
+%   - changes in the hadb
+%   - SA pair / interface (was previously SA pair / host)
+%   - ESP changes
+%   - what else was changed?
 
 The implementation has some level of support for the mobility and
 multihoming features defined in the draft \cite{hip-mm}. Scenarios
@@ -1257,6 +1284,14 @@ Security associations can also be set up directly inside the kernel
 due to the kernel based architecture (see
 \autoref{sec:kernel_model_architecture}).
 
+\subsection{Mobility and Multihoming}
+
+% XX FIX: Mika
+% - the about the difficulties in the implementation
+%   - what was difficult in the old mm draft to implement?
+%   - what was difficult in the new mm draft to implement?
+% - was something easy to implement?
+
 \subsection{Working Queues}
 \label{sec:working_queue_lessons}
 
@@ -1425,6 +1460,14 @@ the kernel.
 \subsection{Mobility and Multihoming}
 \label{sec:future_mobility_and_multihoming}
 
+% XX TODO MIKA:
+% - update this section
+% - QoS stuff could be done with RTT estimation
+% - optimization of the ESP output (?) traffic (skb cache)
+% - our demo apps sometimes stall (pressing enter on nc6)
+% - better integration to TCP (timeouts)
+% - what else?
+
 The general problem of selecting ``the best'' destination address for
 a peer is also present in the implementation. Currently, any reachable
 address is selected non-deterministically and used as the destination
@@ -1506,16 +1549,15 @@ will have at least one \ac{HI} assigned to its networking kernel or
 stack. As the \ac{HI} is used to identify the hosts, the IP addresses
 are used merely for routing purposes.
 
-The purpose of the \ac{HIP} is to perform mutual end-to-end
-authentication and to establish \ac{IPsec} \acp{SA}. \ac{HIP} consists
-of seven message types, of which four are part of the \ac{HIP} base
-exchange.
+The purpose of the \ac{HIP} base exchange is to perform end-to-end
+authentication and to establish \ac{IPsec} \acp{SA}.
+% XX FIX MIKA:
+% - add to this paragraph something about the mm stuff
 
 As part of this document, we presented our IPv6 based implementation
-of \ac{HIP} for Linux. \ac{HIP} is implemented as a kernel module,
-which uses a user space daemon process to perform some cryptographic
-operations. The advantage of our approach is that the kernel can
-remain as intact as possible, with only minor
+of \ac{HIP} for Linux. Our implementation is the only completely
+kernel based \ac{HIP} implementation.  The advantage of our approach
+is that the kernel can remain as intact as possible, with only minor
 modifications. Furthermore, the modifications are backwards compatible
 so that the host is able to do networking without \ac{HIP}. Our
 implementation is based on Linux kernel 2.6 series.
