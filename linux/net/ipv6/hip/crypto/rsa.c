@@ -237,7 +237,6 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 			    0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04,
 			    0x14};
 
-
 	HIP_DEBUG("private key len: %d\n",priv_klen);
 	//	if (*c == 0)
 	//len = 3;
@@ -245,6 +244,8 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	//len = 1;
 	HIP_ASSERT(*c!=0);
 	len = *c;
+
+	c++;
 
 	if (gcry_mpi_scan(&rsk.e, GCRYMPI_FMT_USG, c, &len) != 0) {
 		log_error("Error parsing RSA private e\n");
@@ -365,6 +366,8 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	//len = 1;
 	HIP_ASSERT(*c!=0);
 	len = *c;
+
+	c++;
 
 	if (gcry_mpi_scan(&rpk.e, GCRYMPI_FMT_USG, c, &len) != 0) {
 		log_error("Error parsing RSA public e\n");
