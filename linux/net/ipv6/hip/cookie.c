@@ -230,7 +230,7 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 
 	ts = pz->opaque[0];
 	ts |= ((int)pz->opaque[1] << 8);
-	ts |= ((int)pz->opaque[2] << 16);
+	//ts |= ((int)pz->opaque[2] << 16);
 
 	if (ts != 0) {
 		/* check if the cookie is too old */
@@ -310,7 +310,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		maxtries = 1ULL << (u->pz.K + 2); /* fix */
 		get_random_bytes(&randval, sizeof(u_int64_t));
 	} else {
-		HIP_ERROR("Unknown mode: %x\n", mode);
+		HIP_ERROR("Unknown mode: %d\n", mode);
 		goto out_err;
 	}
 

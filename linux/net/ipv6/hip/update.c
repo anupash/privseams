@@ -486,11 +486,12 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	uint16_t keymat_index = 0;
 	struct hip_common *update_packet = NULL;
 	//struct in6_addr daddr;
- 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+ 	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
 	int need_to_generate_key = 0, dh_key_generated = 0; //, new_keymat_generated;
 	int nes_i = 1;
-
+	
 	/* assume already locked entry */
+	uint16_t mask;
 
 	HIP_DEBUG("\n");
 
@@ -529,7 +530,9 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		err = -ENOMEM;
 		goto out_err;
 	}
-	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+					HIP_CONTROL_DHT_TYPE1);
+	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/*  3. The system increments its outgoing Update ID by one. */
 	entry->update_id_out++;
@@ -600,7 +603,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		spi_out_data.seq_update_id = ntohl(seq->update_id);
 		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
 		if (err) {
-			goto out_err;
+			goto out_err; /* or nes_i++ and goto handle_nes; ? */
 		}
 		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created yet)\n",
 			  ntohl(nes->new_spi));
@@ -614,6 +617,21 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 			HIP_ERROR("SPI 0x%x in REA is not equal to the New SPI 0x%x in NES\n",
 				  ntohl(rea->spi), ntohl(nes->new_spi));
 		} else {
+			/* NES+REA: we need to setup information on
+			 * SPI before we can add addresses from the REA */
+			if (!hip_hadb_get_spi_list(entry, ntohl(rea->spi))) {
+				struct hip_spi_out_item spi_out_data;
+
+				HIP_DEBUG("TEST: REA SPI 0x%x unknown, add it\n",
+					  ntohl(rea->spi));
+				memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
+				spi_out_data.spi = ntohl(rea->spi);
+				spi_out_data.seq_update_id = ntohl(seq->update_id);
+				err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
+				//if (err)
+				//nes_i++ and goto handle_nes; ?
+			}
+
 			err = hip_update_handle_rea_parameter(entry, rea);
 			_HIP_DEBUG("rea param handling ret %d\n", err);
 			err = 0;
@@ -664,7 +682,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	}
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(0);
+	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get our host identity. Can not sign data\n");
 		goto out_err;
@@ -677,9 +695,18 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		goto out_err;
 	}
 
-	err = hip_build_param_signature_contents(update_packet, signature,
-						 HIP_DSA_SIGNATURE_LEN,
- 						 HIP_SIG_DSA);
+	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+		err = hip_build_param_signature_contents(update_packet,
+							 signature,
+							 HIP_RSA_SIGNATURE_LEN,
+							 HIP_SIG_RSA);
+	} else {
+		err = hip_build_param_signature_contents(update_packet,
+							 signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+	}
+
  	if (err) {
  		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
  		goto out_err;
@@ -937,8 +964,8 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	struct hip_ack *ack = NULL;
 	struct in6_addr daddr;
 	struct hip_host_id *host_id_private;
-	u8 signature[HIP_DSA_SIGNATURE_LEN];
-
+	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
+	uint16_t mask;
 	/* assume already locked entry */
 
 	/* 8.11.2  Processing an UPDATE packet in state REKEYING */
@@ -959,7 +986,9 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 			err = -ENOMEM;
 			goto out_err;
 		}
-		hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
+		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+						HIP_CONTROL_DHT_TYPE1);
+		hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 		err = hip_build_param_ack(update_packet, ntohl(seq->update_id));
 		if (err) {
@@ -1019,7 +1048,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	}
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(0);
+	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get our host identity. Can not sign data\n");
 		goto out_err;
@@ -1032,9 +1061,18 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 		goto out_err;
 	}
 
-	err = hip_build_param_signature_contents(update_packet, signature,
-						 HIP_DSA_SIGNATURE_LEN,
- 						 HIP_SIG_DSA);
+	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+		err = hip_build_param_signature_contents(update_packet,
+							 signature,
+							 HIP_RSA_SIGNATURE_LEN,
+							 HIP_SIG_RSA);
+	} else {
+		err = hip_build_param_signature_contents(update_packet,
+							 signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+	}
+
  	if (err) {
  		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
  		goto out_err;
@@ -1078,6 +1116,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *addr, *tmp;
 	struct hip_common *update_packet = NULL;
+	uint16_t mask;
 
 	/* assume already locked entry */
 
@@ -1097,10 +1136,13 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		err = -ENOMEM;
 		goto out_err;
 	}
-	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
+
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+					HIP_CONTROL_DHT_TYPE1);
+	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
-		u8 signature[HIP_DSA_SIGNATURE_LEN];
+		u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA > DSA */
 		struct hip_host_id *host_id_private;
 
 		hip_print_hit("new addr to check", &addr->address);
@@ -1120,7 +1162,9 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		}
 
 		hip_msg_init(update_packet);
-		hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
+		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+						HIP_CONTROL_DHT_TYPE1);
+		hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 		err = hip_build_param_spi(update_packet, 0x11223344); /* test */
 		if (err) {
@@ -1146,7 +1190,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		}
 
 		/* Add SIGNATURE */
-		host_id_private = hip_get_any_localhost_host_id(0);
+		host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
 		if (!host_id_private) {
 			HIP_ERROR("Could not get own host identity. Can not sign data\n");
 			continue;
@@ -1158,9 +1202,18 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			continue;
 		}
 
-		err = hip_build_param_signature_contents(update_packet, signature,
+		if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+			err = hip_build_param_signature_contents(update_packet,
+								 signature,
+							 HIP_RSA_SIGNATURE_LEN,
+							 HIP_SIG_RSA);
+		} else {
+			err = hip_build_param_signature_contents(update_packet,
+								 signature,
 							 HIP_DSA_SIGNATURE_LEN,
-							 HIP_SIG_DSA);
+								 HIP_SIG_DSA);
+		}
+
 		if (err) {
 			HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
 			continue;
@@ -1205,6 +1258,7 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	struct hip_seq *seq;
 	struct hip_rea *rea;
+	uint16_t mask;
 
 	/* assume already locked entry */
 
@@ -1216,7 +1270,10 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 		err = -ENOMEM;
 		goto out_err_nolock;
 	}
-	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
+
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+					HIP_CONTROL_DHT_TYPE1);
+	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/* ACK the received UPDATE SEQ */
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
@@ -1232,6 +1289,7 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
 	}
+
 
 	rea = hip_get_param(msg, HIP_PARAM_REA);
 	hip_update_handle_rea_parameter(entry, rea);
@@ -1255,15 +1313,25 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_echo_request *echo = NULL;
- 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+ 	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA > DSA */
 	struct hip_host_id *host_id_private;
+	uint16_t mask;
 
 	/* assume already locked entry */
 
 	HIP_DEBUG("\n");
 
 	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
+	if (!echo) {
+		HIP_ERROR("ECHO not found\n");
+		goto out_err;
+	}
+
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
+	if (!seq) {
+		HIP_ERROR("SEQ not found\n");
+		goto out_err;
+	}
 
 	update_packet = hip_msg_alloc();
 	if (!update_packet) {
@@ -1271,11 +1339,12 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		err = -ENOMEM;
 		goto out_err;
 	}
-	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, hitr, hits);
+
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+					HIP_CONTROL_DHT_TYPE1);
+	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/* reply with UPDATE(ACK, ECHO_RESPONSE) */
-
-	seq = hip_get_param(msg, HIP_PARAM_SEQ);
 	err = hip_build_param_ack(update_packet, ntohl(seq->update_id));
 	if (err) {
 		HIP_ERROR("Building of ACK failed\n");
@@ -1290,30 +1359,42 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	}
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(0);
+	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
 	}
 
-	if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+	if (!hip_create_signature(update_packet,
+				  hip_get_msg_total_len(update_packet),
 				  host_id_private, signature)) {
 		HIP_ERROR("Could not sign UPDATE. Failing\n");
 		err = -EINVAL;
 		goto out_err;
 	}
 
-	err = hip_build_param_signature_contents(update_packet, signature,
-						 HIP_DSA_SIGNATURE_LEN,
- 						 HIP_SIG_DSA);
+	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+		err = hip_build_param_signature_contents(update_packet,
+							 signature,
+							 HIP_RSA_SIGNATURE_LEN,
+							 HIP_SIG_RSA);
+	} else {	
+		err = hip_build_param_signature_contents(update_packet,
+							 signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+	}
+
  	if (err) {
  		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
  		goto out_err;
  	}
 
 	/* ECHO_RESPONSE (no sign) */
-	_HIP_DEBUG("echo opaque data len=%d\n", hip_get_param_contents_len(echo));
-	err = hip_build_param_echo(update_packet, (void *)echo+sizeof(struct hip_tlv_common),
+	HIP_DEBUG("echo opaque data len=%d\n",
+		   hip_get_param_contents_len(echo));
+	err = hip_build_param_echo(update_packet,
+				   (void *)echo+sizeof(struct hip_tlv_common),
 				   hip_get_param_contents_len(echo), 0, 0);
 	if (err) {
 		HIP_ERROR("Building of ECHO_RESPONSE failed\n");
@@ -1332,7 +1413,6 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		kfree(update_packet);
 	return err;
 }
-
 
 
 /**
@@ -1493,7 +1573,7 @@ int hip_receive_update(struct sk_buff *skb)
 		}
 	}
 
-	_HIP_DEBUG("handle_upd=%d\n", handle_upd);
+	HIP_DEBUG("handle_upd=%d\n", handle_upd);
 	if (handle_upd > 1) {
 		_HIP_DEBUG("MM-02 UPDATE\n");
 	}
@@ -1502,7 +1582,7 @@ int hip_receive_update(struct sk_buff *skb)
 	if (hmac) {
 		/* 3. The system MUST verify the HMAC in the UPDATE packet.
 		   If the verification fails, the packet MUST be dropped. */
-		err = hip_verify_packet_hmac(msg, entry);
+		err = hip_verify_packet_hmac(msg, &entry->hip_hmac_in);
 		if (err) {
 			HIP_ERROR("HMAC validation on UPDATE failed\n");
 			goto out_err;
@@ -1572,7 +1652,7 @@ int hip_receive_update(struct sk_buff *skb)
 			  ntohl(nes->old_spi));
 		goto out_err;
 	}
-	
+
 	if (handle_upd == 2) {
 		/* REA, SEQ */
 		err = hip_handle_update_plain_rea(entry, msg, src_ip, dst_ip);
@@ -1586,14 +1666,14 @@ int hip_receive_update(struct sk_buff *skb)
 		/* base draft cases 7-8: */
 		if (state == HIP_STATE_ESTABLISHED) {
 			if (nes && seq) {
-				_HIP_DEBUG("case 7: in ESTABLISHED and has NES and SEQ\n");
+				HIP_DEBUG("case 7: in ESTABLISHED and has NES and SEQ\n");
 				err = hip_handle_update_established(entry, msg, src_ip, dst_ip);
 			} else {
-				_HIP_ERROR("in ESTABLISHED but no both NES and SEQ\n");
+				HIP_ERROR("in ESTABLISHED but no both NES and SEQ\n");
 				err = -EINVAL;
 			}
 		} else {
-			_HIP_DEBUG("case 8: in REKEYING\n");
+			HIP_DEBUG("case 8: in REKEYING\n");
 			err = hip_handle_update_rekeying(entry, msg, src_ip);
 		}
 	}
@@ -1635,10 +1715,11 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	struct hip_common *update_packet = NULL;
 	struct in6_addr daddr;
 	struct hip_host_id *host_id_private;
- 	u8 signature[HIP_DSA_SIGNATURE_LEN];
+ 	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA > DSA */
 	int make_new_sa = 0;
 	int add_nes = 0, add_rea;
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
+	uint16_t mask;
 
 	add_rea = flags & SEND_UPDATE_REA;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
@@ -1662,8 +1743,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	HIP_LOCK_HA(entry);
 
 	hip_print_hit("sending UPDATE to", &entry->hit_peer);
-	hip_build_network_hdr(update_packet, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
-
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+					HIP_CONTROL_DHT_TYPE1);
+	hip_build_network_hdr(update_packet, HIP_UPDATE, mask,
+			      &entry->hit_our, &entry->hit_peer);
 	if (add_rea) {
 		/* mm stuff, per-ifindex SA */
 		/* reuse old SA if we have one, else create a new SA */
@@ -1700,6 +1783,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		add_nes = 1;
 	}
 
+	/* interops: force adding NES */
+	make_new_sa = 1;
+	add_nes = 1;
+
 	HIP_DEBUG("add_nes=%d make_new_sa=%d\n", add_nes, make_new_sa);
 
 	if (make_new_sa) {
@@ -1708,7 +1795,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			HIP_ERROR("Error while acquiring a SPI\n");
 			goto out_err;
 		}
-		_HIP_DEBUG("Got SPI value for the SA 0x%x\n", new_spi_in);
+		HIP_DEBUG("Got SPI value for the SA 0x%x\n", new_spi_in);
 
 		/* TODO: move to rekeying_finish */
 		if (!mapped_spi) {
@@ -1748,21 +1835,24 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	} else
 		HIP_DEBUG("not adding REA\n");
 
+	make_new_sa = 0; /* interops test */
+
 	if (add_nes) {
 		if (addr_list) {
 			if (make_new_sa) {
 				/* mm02 5.2 Host multihoming */
-				_HIP_DEBUG("mm-02, adding NES, Old SPI == New SPI\n");
+				HIP_DEBUG("mm-02, adding NES, Old SPI == New SPI\n");
 				/* notify the peer about new interface */
 				nes_old_spi = new_spi_in;
 				nes_new_spi = new_spi_in;
 
 			} else {
+				HIP_DEBUG("mm-02, !makenewsa\n");
 				nes_old_spi = mapped_spi;
 				nes_new_spi = new_spi_in;
 			}
 		} else {
-			_HIP_DEBUG("adding NES, Old SPI <> New SPI\n");
+			HIP_DEBUG("adding NES, Old SPI <> New SPI\n");
 			/* plain UPDATE or readdress with rekeying */
 			/* update the SA of the interface which caused the event */
 			nes_old_spi = hip_hadb_get_spi(entry, ifindex);
@@ -1818,7 +1908,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	}
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(0);
+	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
@@ -1831,9 +1921,18 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
-	err = hip_build_param_signature_contents(update_packet, signature,
-						 HIP_DSA_SIGNATURE_LEN,
- 						 HIP_SIG_DSA);
+	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+		err = hip_build_param_signature_contents(update_packet,
+							 signature,
+							 HIP_RSA_SIGNATURE_LEN,
+							 HIP_SIG_RSA);
+	} else {
+		err = hip_build_param_signature_contents(update_packet,
+							 signature,
+							 HIP_DSA_SIGNATURE_LEN,
+							 HIP_SIG_DSA);
+	}
+
  	if (err) {
  		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
  		goto out_err;

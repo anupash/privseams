@@ -73,7 +73,7 @@ struct hip_hadb_multi {
 typedef struct hip_host_id HIP_HID;
 
 // host id functions
-int hip_get_any_local_hit(struct in6_addr *dst);
+int hip_get_any_local_hit(struct in6_addr *dst, uint8_t algo);
 
 int        hip_add_host_id(struct hip_db_struct *db,const struct hip_lhi *lhi,
 			   const struct hip_host_id *host_id);

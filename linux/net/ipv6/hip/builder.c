@@ -42,6 +42,8 @@
  *
  */
 
+#include <net/hip.h>
+
 #include "builder.h"
 #include "debug.h"
 
@@ -420,6 +422,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_FROM_SIGN,
 			HIP_PARAM_TO_SIGN,
 			HIP_PARAM_HMAC,
+			HIP_PARAM_HMAC2,
 			HIP_PARAM_HIP_SIGNATURE2,
 			HIP_PARAM_HIP_SIGNATURE,
 			HIP_PARAM_ECHO_REQUEST,
@@ -511,11 +514,13 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 	next_param = (struct hip_tlv_common *) pos;
 
 	/* check that the next parameter does not point
-	   a) out of the buffer with check_param_contents_len()
-	      - or - 
-	   b) to an empty slot in the message */
-	if (!hip_check_param_contents_len(msg, next_param) || /* a */
-	    hip_get_param_contents_len(next_param) == 0) {    /* b */
+	   a) outside of the message
+	   b) out of the buffer with check_param_contents_len()
+	   c) to an empty slot in the message */
+	if (((char *) next_param) - ((char *) msg) >=
+	    hip_get_msg_total_len(msg) || /* a */
+	    !hip_check_param_contents_len(msg, next_param) || /* b */
+	    hip_get_param_contents_len(next_param) == 0) {    /* c */
 		_HIP_DEBUG("no more parameters found\n");
 		next_param = NULL;
 	} else {
@@ -1257,6 +1262,135 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 	return err;
 }
 
+/**
+ * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter
+ * @msg:     the message where the parameter will be appended
+ * @host_id: the host id parameter that will contained in the hip_encrypted
+ *           parameter
+ * 
+ * Note that this function does not actually encrypt anything, it just builds
+ * the parameter. The @host_id that will be encapsulated in the hip_encrypted
+ * parameter has to be encrypted using a different function call.
+ *
+ * Returns: zero on success, or negative on failure
+ */
+int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
+					struct hip_host_id *host_id)
+{
+	int rem, err = 0;
+	struct hip_encrypted_aes_sha1 enc;
+	int host_id_len = hip_get_param_total_len(host_id);
+	struct hip_host_id *hid = host_id;
+	char *host_id_padded = NULL;
+
+	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
+	enc.reserved = htonl(0);
+	memset(&enc.iv, 0, 16);
+
+	/* copy the IV *IF* needed, and then the encrypted data */
+
+	/* AES block size must be multiple of 16 bytes */
+	rem = host_id_len % 16;
+	if (rem) {
+		HIP_DEBUG("Adjusting host id size to AES block size\n");
+
+		host_id_padded = kmalloc(host_id_len + rem, GFP_KERNEL);
+		if (!host_id_padded) {
+			err = -ENOMEM;
+			goto out_err;
+		}
+
+		/* this kind of padding works against Ericsson/OpenSSL
+		   (method 4: RFC2630 method) */
+		/* http://www.di-mgt.com.au/cryptopad.html#exampleaes */
+		memcpy(host_id_padded, host_id, host_id_len);
+		memset(host_id_padded + host_id_len, rem, rem);
+
+		hid = (struct hip_host_id *) host_id_padded;
+		host_id_len += rem;
+	}
+
+	hip_calc_param_len(&enc, sizeof(enc) -
+			   sizeof(struct hip_tlv_common) +
+			   host_id_len);
+
+	err = hip_build_generic_param(msg, &enc, sizeof(enc), hid);
+
+ out_err:
+
+	if (host_id_padded)
+		kfree(host_id_padded);
+		
+	return err;
+}
+
+/**
+ * hip_build_param_hmac2_contents - build and append a HIP hmac2 parameter
+ * @msg:  the message where the hmac parameter will be appended
+ * @key:  pointer to a key used for HMAC
+ *
+ * This function calculates the also the HMAC value from the whole message
+ * as specified in the drafts. Assumes that the hmac includes only the header
+ * and host id.
+ *
+ * Returns: 0 on success, otherwise < 0.
+ */
+int hip_build_param_hmac2_contents(struct hip_common *msg,
+				   struct hip_crypto_key *key,
+				   struct hip_host_id *host_id)
+{
+	int err = 0;
+	struct hip_hmac hmac2;
+	struct hip_common *tmp = NULL;
+	struct hip_spi *spi;
+
+	tmp = hip_msg_alloc();
+	if (!tmp) {
+		err = -ENOMEM;
+		goto out_err;
+	}
+
+	memcpy(tmp, msg, sizeof(struct hip_common));
+	hip_set_msg_total_len(tmp, 0);
+	/* assume no checksum yet */
+
+	spi = hip_get_param(msg, HIP_PARAM_SPI);
+	HIP_ASSERT(spi);
+	err = hip_build_param(tmp, spi);
+	if (err) {
+		err = -EFAULT;
+		goto out_err;
+	}
+
+	hip_set_param_type(&hmac2, HIP_PARAM_HMAC2);
+	hip_calc_generic_param_len(&hmac2, sizeof(struct hip_hmac), 0);
+
+	err = hip_build_param(tmp, host_id);
+	if (err) {
+		HIP_ERROR("Failed to append pseudo host id to R2\n");
+		goto out_err;
+	}
+
+	HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
+
+	HIP_HEXDUMP("HMAC key\n", key->key, 20);
+
+	if (!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
+			    hip_get_msg_total_len(tmp),
+			    hmac2.hmac_data)) {
+		HIP_ERROR("Error while building HMAC\n");
+		err = -EFAULT;
+		goto out_err;
+	}
+
+	err = hip_build_param(msg, &hmac2);
+ out_err:
+	if (tmp)
+		kfree(tmp);
+
+	return err;
+}
+
 #endif /* __KERNEL__ */
 
 /**
@@ -1412,14 +1546,13 @@ int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 
 /**
  * hip_build_param_puzzle - build and append a HIP puzzle into the message
- * @msg:        the message where the cookie is to be appended
- * @solved:     1 if the cookie is already a solved cookie (as in I2),
- *              or 0 if the cookie is to be solved (as in R1)
- * @birthday:   birthday value for the cookie (in host byte order)
- * @random_i:   random i value for the cookie (in host byte order)
- * @random_j_k: random j/k value for the cookie (in host byte order)
+ * @msg:        the message where the puzzle is to be appended
+ * @val_K:      the K value for the puzzle
+ * @lifetime:   lifetime field of the puzzle
+ * @opaque:     the opaque value for the puzzle
+ * @random_i:   random I value for the puzzle (in host byte order)
  *
- * The cookie mechanism assumes that every value is in network byte order
+ * The puzzle mechanism assumes that every value is in network byte order
  * except for the hip_birthday_cookie.cv union, where the value is in
  * host byte order. This is an exception to the normal builder rules, where
  * input arguments are normally always in host byte order.
@@ -1427,7 +1560,7 @@ int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
  * Returns: zero for success, or non-zero on error
  */
 int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
-			   uint32_t opaque, uint64_t random_i)
+			   uint8_t lifetime, uint32_t opaque, uint64_t random_i)
 {
 	struct hip_puzzle puzzle;
 	int err = 0;
@@ -1441,9 +1574,10 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 
 	/* only the random_j_k is in host byte order */
 	puzzle.K = val_K;
+	puzzle.lifetime = lifetime;
 	puzzle.opaque[0] = opaque & 0xFF;
 	puzzle.opaque[1] = (opaque & 0xFF00) >> 8;
-	puzzle.opaque[2] = (opaque & 0xFF0000) >> 16;
+	/* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
 	puzzle.I = random_i;
 
         err = hip_build_generic_param(msg, &puzzle,
@@ -1454,15 +1588,12 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 }
 
 /**
- * hip_build_param_cookie - build and append a HIP cookie into the message
- * @msg:        the message where the cookie is to be appended
- * @solved:     1 if the cookie is already a solved cookie (as in I2),
- *              or 0 if the cookie is to be solved (as in R1)
- * @birthday:   birthday value for the cookie (in host byte order)
- * @random_i:   random i value for the cookie (in host byte order)
- * @random_j_k: random j/k value for the cookie (in host byte order)
+ * hip_build_param_solution - build and append a HIP solution into the message
+ * @msg:   the message where the solution is to be appended
+ * @pz:    values from the corresponding puzzle copied to the solution
+ * @val_J: J value for the solution (in host byte order)
  *
- * The cookie mechanism assumes that every value is in network byte order
+ * The puzzle mechanism assumes that every value is in network byte order
  * except for the hip_birthday_cookie.cv union, where the value is in
  * host byte order. This is an exception to the normal builder rules, where
  * input arguments are normally always in host byte order.
@@ -1483,8 +1614,9 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
 	hip_set_param_type(&cookie, HIP_PARAM_SOLUTION);
 
 	cookie.J = hton64(val_J);
-	memcpy(&cookie.K, &pz->K, 12); // copy: K (1), opaque (3) and I (8 bytes).
-
+	memcpy(&cookie.K, &pz->K, 12); /* copy: K (1), reserved (1),
+					  opaque (2) and I (8 bytes). */
+	cookie.reserved = 0;
         err = hip_build_generic_param(msg, &cookie,
 				      sizeof(struct hip_tlv_common),
 				      hip_get_param_contents_direct(&cookie));
@@ -1818,7 +1950,7 @@ int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
 }
 
 /**
- * hip_build_param_encrypted_with_iv - build the hip_encrypted parameter
+ * hip_build_param_encrypted_3des_sha1 - build the hip_encrypted parameter
  * @msg:     the message where the parameter will be appended
  * @host_id: the host id parameter that will contained in the hip_encrypted
  *           parameter
@@ -1850,7 +1982,7 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_encrypted_XX - build the hip_encrypted parameter
+ * hip_build_param_encrypted_null_sha1 - build the hip_encrypted parameter
  * @msg:     the message where the parameter will be appended
  * @host_id: the host id parameter that will contained in the hip_encrypted
  *           parameter
@@ -1907,7 +2039,7 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
 				   sizeof(struct hip_host_id_key_rdata) +
 				   fqdn_len);
 
-        host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
+        host_id_hdr->rdata.flags = htons(0x0202); /* key is for a host */
         host_id_hdr->rdata.protocol = 0xFF; /* RFC 2535 */
 	/* algo is 8 bits, no htons */
         host_id_hdr->rdata.algorithm = algorithm;
@@ -2144,4 +2276,21 @@ int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 				      sizeof(struct hip_notify),
 				      notification_data);
 	return err;
+}
+
+uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht)
+{
+	uint16_t flags = HIP_CONTROL_NONE;
+
+	if (anon)
+		flags |= HIP_CONTROL_HIT_ANON;
+	if (cert)
+		flags |= HIP_CONTROL_CERTIFICATES;
+	if (sht)
+		flags |= (sht << HIP_CONTROL_SHT_SHIFT);
+	if (dht)
+		flags |= (dht << HIP_CONTROL_DHT_SHIFT);
+
+	HIP_DEBUG("flags=0x%x\n", flags);
+	return flags;
 }

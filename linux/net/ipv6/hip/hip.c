@@ -54,6 +54,7 @@ static void hip_cleanup(void);
 
 /* All cipher and digest implementations we support. */
 static struct crypto_tfm *impl_3des_cbc = NULL;
+static struct crypto_tfm *impl_aes_cbc = NULL;
 
 /* global variables */
 struct socket *hip_output_socket;
@@ -363,6 +364,9 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 		return 0;
 	}
 
+	_HIP_HEXDUMP("HMAC key", key, keylen);
+	_HIP_HEXDUMP("write hmac", in, in_len);
+
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1) {
 		HIP_ERROR("Mapping failed\n");
@@ -412,10 +416,18 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	u8 *dh_data = NULL;
  	int dh_size,written, mask;
  	/* Supported HIP and ESP transforms. */
- 	hip_transform_suite_t transform_hip_suite[] = {HIP_HIP_3DES_SHA1,
- 						       HIP_HIP_NULL_SHA1 };
- 	hip_transform_suite_t transform_esp_suite[] = {HIP_ESP_3DES_SHA1,
- 						       HIP_ESP_NULL_SHA1 };
+ 	hip_transform_suite_t transform_hip_suite[] = {
+		HIP_HIP_AES_SHA1,
+		HIP_HIP_3DES_SHA1,
+		HIP_HIP_NULL_SHA1
+
+};
+ 	hip_transform_suite_t transform_esp_suite[] = {
+		HIP_ESP_AES_SHA1,
+		HIP_ESP_NULL_SHA1,
+		HIP_ESP_3DES_SHA1
+
+};
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
  	u8 *signature = NULL;
@@ -475,7 +487,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 			goto out_err;
 	}
 
-	signature = kmalloc(MAX(HIP_DSA_SIGNATURE_LEN,HIP_RSA_SIGNATURE_LEN), 
+	signature = kmalloc(MAX(HIP_DSA_SIGNATURE_LEN,
+				HIP_RSA_SIGNATURE_LEN), 
 			    GFP_KERNEL);
 	if(!signature) {
 		HIP_ERROR("Could not allocate signature \n");
@@ -483,18 +496,24 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	}
 	
  	/* Ready to begin building of the R1 packet */
-	mask = HIP_CONTROL_NONE;
+	//mask = HIP_CONTROL_NONE;
+	//mask = HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK;
+	mask = HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT;
+	HIP_DEBUG("mask 1=0x%x\n", mask);
+	mask |= HIP_CONTROL_DHT_TYPE1 << HIP_CONTROL_DHT_SHIFT;
+	HIP_DEBUG("mask 2=0x%x\n", mask);
 #ifdef CONFIG_HIP_RVS
-	mask |= HIP_CONTROL_RVS_CAPABLE;
+	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
-
+	HIP_DEBUG("mask 3=0x%x\n", mask);
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 
  	/********** PUZZLE ************/
 	{
-		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K, 0, 0);
+		err = hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K,
+					     42 /* 2^(42-32) sec lifetime */, 0, 0);
 		if (err) {
 			HIP_ERROR("Cookies were burned. Bummer!\n");
 			goto out_err;
@@ -597,7 +616,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 		/* hardcode kludge */
 		pz->opaque[0] = 'H';
 		pz->opaque[1] = 'I';
-		pz->opaque[2] = 'P';
+		//pz->opaque[2] = 'P';
+		/* todo: remove random_i variable */
 		get_random_bytes(&random_i,sizeof(random_i));
 		pz->I = random_i;
 	}
@@ -608,6 +628,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  		kfree(host_id_pub);
  	if (dh_data)
  		kfree(dh_data);
+
+	HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
 
 	return msg;
 
@@ -638,6 +660,9 @@ int hip_enc_key_length(int tid)
 	int ret = -1;
 
 	switch(tid) {
+	case HIP_ESP_AES_SHA1:
+		ret = 16;
+		break;
 	case HIP_ESP_3DES_SHA1:
 		ret = 24;
 		break;
@@ -659,6 +684,9 @@ int hip_hmac_key_length(int tid)
 {
 	int ret = -1;
 	switch(tid) {
+       	case HIP_ESP_AES_SHA1:
+	  //		ret = 16;
+	  //		break;
 	case HIP_ESP_3DES_SHA1:
 	case HIP_ESP_NULL_SHA1:
 		ret = 20;
@@ -687,6 +715,9 @@ int hip_transform_key_length(int tid)
 	int ret = -1;
 
 	switch(tid) {
+	case HIP_HIP_AES_SHA1:
+		ret = 16;
+		break;
 	case HIP_HIP_3DES_SHA1:
 		ret = 24;
 		break;
@@ -715,6 +746,9 @@ int hip_auth_key_length_esp(int tid)
 	int ret = -1;
 
 	switch(tid) {
+	case HIP_ESP_AES_SHA1:
+		//ret = 16;
+		//break;
 	case HIP_ESP_NULL_SHA1:
 	case HIP_ESP_3DES_SHA1:
 		ret = 20;
@@ -813,6 +847,7 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 	for (i=0; i<length; i++) {
 		switch(ntohs(*suggestion)) {
 
+		case HIP_HIP_AES_SHA1:
 		case HIP_HIP_3DES_SHA1:
 		case HIP_HIP_NULL_SHA1:
 			tid = ntohs(*suggestion);
@@ -834,7 +869,7 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 	if(tid == 0)
 		HIP_ERROR("None HIP transforms accepted\n");
 	else
-		_HIP_DEBUG("Chose HIP transform: %d\n", tid);
+		HIP_DEBUG("Chose HIP transform: %d\n", tid);
 
 	return tid;
 }
@@ -866,6 +901,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	for (i=0; i<length; i++) {
 		switch(ntohs(*suggestion)) {
 
+		case HIP_ESP_AES_SHA1:
 		case HIP_ESP_NULL_NULL:
 		case HIP_ESP_3DES_SHA1:
 		case HIP_ESP_NULL_SHA1:
@@ -936,6 +972,16 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 
 	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, enc_len);
 	switch(enc_alg) {
+	case HIP_HIP_AES_SHA1:
+		impl = impl_aes_cbc;
+		key_len = ESP_AES_KEY_BITS >> 3;
+		iv_copy = kmalloc(16, GFP_KERNEL);
+		if (!iv_copy) {
+			err = -ENOMEM;
+			goto out_err;
+		}
+		memcpy(iv_copy, iv, 16);
+		break;
 	case HIP_HIP_3DES_SHA1:
 		impl = impl_3des_cbc;
 		key_len = ESP_3DES_KEY_BITS >> 3;
@@ -973,15 +1019,15 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 	err = crypto_cipher_setkey(impl, enc_key, key_len);
 	if (err) {
 		if (impl->crt_flags & CRYPTO_TFM_RES_BAD_KEY_SCHED) {
-			HIP_ERROR("3DES key is weak.\n");
-			HIP_HEXDUMP("3DES key", enc_key, key_len);
+			HIP_ERROR("key is weak.\n");
+			HIP_HEXDUMP("key", enc_key, key_len);
 		}
 		HIP_ERROR("Could not set encryption/decryption key\n");
 		err = -EFAULT;
 		goto out_err;
 	}
 
-	_HIP_DEBUG("enc_len=%d\n", enc_len);
+	HIP_DEBUG("enc_len=%d\n", enc_len);
 	switch(direction) {
 	case HIP_DIRECTION_ENCRYPT:
 		if (iv_copy) {
@@ -995,7 +1041,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 		}
 		if (err) {
 			HIP_ERROR("Encryption failed\n");
-			err = -EFAULT;
+			//err = -EFAULT;
 			goto out_err;
 		}
 
@@ -1010,7 +1056,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 		}
 		if (err) {
 			HIP_ERROR("Decryption failed\n");
-			err = -EFAULT;
+			//err = -EFAULT;
 			goto out_err;
 		}
 		break;
@@ -1681,7 +1727,7 @@ int hip_register_xfrm_km_handler(void)
  * There is no need to delay initialization and locking of these
  * algorithms since we require their use. Some optional algorithms
  * may be initialized later.
- * Currently we use 3DES-CBC, NULL-ECB?, SHA1(+HMAC), DSA, DH
+ * Currently we use AES, 3DES-CBC, NULL-ECB?, SHA1(+HMAC), DSA, DH
  * Returns: 1 if all algorithms were initialized, otherwise < 0.
  */
 static int hip_init_cipher(void)
@@ -1691,6 +1737,14 @@ static int hip_init_cipher(void)
 
 	/* instruct the "IPsec" to check for available algorithms */
 	xfrm_probe_algs();
+
+	/* Get implementations for all the ciphers we support */
+	impl_aes_cbc = crypto_alloc_tfm("aes", CRYPTO_TFM_MODE_CBC);
+	if (!impl_aes_cbc) {
+		HIP_ERROR("Unable to register AES cipher\n");
+		err = -1;
+		goto out_err;
+	}
 
 	/* Get implementations for all the ciphers we support */
 	impl_3des_cbc = crypto_alloc_tfm("des3_ede", CRYPTO_TFM_MODE_CBC);
@@ -1768,6 +1822,8 @@ static void hip_uninit_cipher(void)
 		crypto_free_tfm(impl_null);
 	if (impl_3des_cbc)
 		crypto_free_tfm(impl_3des_cbc);
+	if (impl_aes_cbc)
+		crypto_free_tfm(impl_aes_cbc);
 
 	return;
 }

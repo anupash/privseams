@@ -804,7 +804,8 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		/* XXX: This is wrong. As soon as we have native socket API, we
 		 * should enter here the correct sender... (currently unknown).
 		 */
-		if (hip_get_any_local_hit(&entry->hit_our) == 0)
+		if (hip_get_any_local_hit(&entry->hit_our,
+					  HIP_HI_DEFAULT_ALGO) == 0)
 			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
 		else 
 			HIP_INFO("Could not assign local hit, continuing\n");
@@ -1394,7 +1395,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 
 	/* assumes locked entry  */
 
-	_HIP_DEBUG("have_nes=%d\n", have_nes);
+	HIP_DEBUG("have_nes=%d\n", have_nes);
 
 	if (!ack) {
 		HIP_ERROR("NULL ack\n");
@@ -1408,7 +1409,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 	}
 
 	n = hip_get_param_contents_len(ack) / sizeof(uint32_t);
-	_HIP_DEBUG("%d pUIDs in ACK param\n", n);
+	HIP_DEBUG("%d pUIDs in ACK param\n", n);
 	peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
 	for (i = 0; i < n; i++, peer_update_id++) {
 		struct hip_spi_in_item *in_item, *in_tmp;

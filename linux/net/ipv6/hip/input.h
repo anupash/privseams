@@ -21,7 +21,8 @@ int hip_receive_bos(struct sk_buff *skb);
 
 void hip_hwo_input_destructor(struct hip_work_order *hwo);
 
-int hip_verify_packet_hmac(struct hip_common *msg, hip_ha_t *entry);
+int hip_verify_packet_hmac(struct hip_common *msg,
+			   struct hip_crypto_key *crypto_key);
 int hip_verify_packet_signature(struct hip_common *msg,
 				struct hip_host_id *hid);
 int hip_verify_signature(void *buffer_start, int buffer_length, 
