@@ -636,11 +636,10 @@ struct hip_hadb_state
 	struct in6_addr      hit_peer;       /* Peer's HIT */
 	struct list_head     peer_addr_list; /* Peer's IPv6 addresses */
 
-	/* SWAP SPI COMMENTS ? */
-	uint32_t             spi_peer;       /* outbound IPsec SA SPI */
-	uint32_t             spi_our;        /* inbound IPsec SA SPI */
-	uint32_t             new_spi_peer;   /* new outbound IPsec SA SPI received in UPDATE */
-	uint32_t             new_spi_our;    /* new inbound IPsec SA SPI when rekey was initiated */
+	uint32_t             spi_out;       /* outbound IPsec SA SPI */
+	uint32_t             spi_in;        /* inbound IPsec SA SPI */
+	uint32_t             new_spi_out;   /* new outbound IPsec SA SPI received in UPDATE */
+	uint32_t             new_spi_in;    /* new inbound IPsec SA SPI when rekey was initiated */
 
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;

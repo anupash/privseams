@@ -641,7 +641,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 {
 	int err = 0;
-	uint32_t spi_our = 0;
+	uint32_t spi_in = 0;
 	int dh_size = 0;
 	int written;
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
@@ -854,10 +854,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
  		 * by hip_produce_keying_material called in hip_handle_r1 */
 
 		/* let the setup routine give us a spi. */
-		spi_our = 0;
+		spi_in = 0;
 
 		err = hip_setup_sa(&ctx->input->hits, &ctx->input->hitr,
-				    &spi_our, transform_esp_suite, 
+				    &spi_in, transform_esp_suite, 
 				    &ctx->hip_espr.key, &ctx->hip_authr.key, 1);
 
 		if (err) {
@@ -867,14 +867,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 		}
 		/* XXX: -EAGAIN */
 
-		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_our);
+		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 	}
 
 	/* update SPI_LSI parameter because it has not been filled with SPI
 	 * and LSI values yet */
  	spi_lsi = hip_get_param(i2, HIP_PARAM_SPI_LSI);
  	HIP_ASSERT(spi_lsi); /* Builder internal error */
- 	hip_set_param_spi_value(spi_lsi, spi_our);
+ 	hip_set_param_spi_value(spi_lsi, spi_in);
  	hip_set_param_lsi_value(spi_lsi, 0x01000000 |
  		 (ntohl(ctx->input->hitr.in6_u.u6_addr32[3]) & 0x00ffffff));
 
@@ -936,7 +936,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle)
 			goto out_err;
 		}
 
-		entry->spi_our = hip_get_param_spi_value(spi_lsi);
+		entry->spi_in = hip_get_param_spi_value(spi_lsi);
 		entry->lsi_our = hip_get_param_lsi_value(spi_lsi);
 		entry->birthday = ntoh64(bc->birthday);
 		entry->esp_transform = transform_esp_suite;
@@ -1247,7 +1247,7 @@ int hip_receive_r1(struct sk_buff *skb)
 int hip_create_r2(struct hip_context *ctx)
 {
 	struct in6_addr tmp_hitr;
-	uint32_t spi_our, spi_peer;
+	uint32_t spi_in, spi_out;
 	uint32_t lsi;
 	int esptfm, ok;
  	struct hip_host_id *host_id_private;
@@ -1334,7 +1334,7 @@ int hip_create_r2(struct hip_context *ctx)
 		/* todo: check if this is really our HIT? */
 		ipv6_addr_copy(&entry->hit_our, &tmp_hitr);
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		entry->spi_peer = ntohl(spi_lsi->spi);
+		entry->spi_out = ntohl(spi_lsi->spi);
 		entry->lsi_peer = ntohl(spi_lsi->lsi);
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		esptfm = entry->esp_transform;
@@ -1361,9 +1361,9 @@ int hip_create_r2(struct hip_context *ctx)
 
 	/* Set up IPsec associations */
 	{
-		spi_our = 0;
+		spi_in = 0;
 
-		err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_our, esptfm, 
+		err = hip_setup_sa(&i2->hits, &i2->hitr, &spi_in, esptfm, 
 				   &ctx->hip_espi.key, &ctx->hip_authi.key, 1);
 
 		if (err) {
@@ -1373,20 +1373,20 @@ int hip_create_r2(struct hip_context *ctx)
 		}
 		/* XXX: Check -EAGAIN */
 
-		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_our);
+		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 		/* ok, found an unused SPI to use */
 	}
 
 	/* XXX: Krisu check this SPI setting! */
-	hip_hadb_get_peer_spi_by_hit(&i2->hits, &spi_peer);
+	hip_hadb_get_peer_spi_by_hit(&i2->hits, &spi_out);
 	
-	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_peer);
+	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x (host [db])\n", spi_out);
 
-	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_peer, esptfm, 
+	err = hip_setup_sa(&i2->hitr, &i2->hits, &spi_out, esptfm, 
 			   &ctx->hip_espr.key, &ctx->hip_authr.key, 1);
 
 	if (err == -EEXIST) {
-		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_peer);
+		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
 		HIP_DEBUG("TODO: what to do ? currently ignored\n");
 	} else if (err) {
 		HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:dst (err=%d)\n", err);
@@ -1397,7 +1397,7 @@ int hip_create_r2(struct hip_context *ctx)
 	/* XXX: Check if err = -EAGAIN... */
 
 
-	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_peer);
+	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
 	{
 		struct hip_hadb_state *entry;
@@ -1412,7 +1412,7 @@ int hip_create_r2(struct hip_context *ctx)
 			goto out_err;
 		}
 		/* this is a delayed "insertion" from some 20 lines above */
-		entry->spi_our = spi_our;
+		entry->spi_in = spi_in;
 		entry->state = HIP_STATE_ESTABLISHED;
 
 		err = hip_store_base_exchange_keys(entry, ctx, 0);
@@ -1422,8 +1422,8 @@ int hip_create_r2(struct hip_context *ctx)
 			goto out_err;
 		}
 
-		hip_finalize_sa(&i2->hits, spi_peer);
-		hip_finalize_sa(&i2->hitr, spi_our);
+		hip_finalize_sa(&i2->hits, spi_out);
+		hip_finalize_sa(&i2->hitr, spi_in);
 
 	}
 
@@ -1451,7 +1451,7 @@ int hip_create_r2(struct hip_context *ctx)
 
 	hip_hadb_set_info(&ctx->input->hits, &lsi,
 			  HIP_HADB_OWN_LSI|HIP_ARG_HIT);
-	err = hip_build_param_spi_lsi(r2, lsi, spi_our);
+	err = hip_build_param_spi_lsi(r2, lsi, spi_in);
  	if (err) {
  		HIP_ERROR("building of SPI_LSI failed (err=%d)\n", err);
  		goto out_err;
@@ -1885,10 +1885,10 @@ int hip_handle_r2(struct sk_buff *skb)
 	{
 		int tfm;
 		int tmp_lsi;
-		uint32_t spi_recvd, spi_our;
+		uint32_t spi_recvd, spi_in;
 		int state;
 
- 		int getlist[4] = { HIP_HADB_PEER_SPI, HIP_HADB_PEER_LSI };
+ 		int getlist[4] = { HIP_HADB_SPI_OUT, HIP_HADB_PEER_LSI };
  		void *setlist[4] = { &spi_recvd, &tmp_lsi };
 
 		spi_recvd = ntohl(spi_lsi->spi);
@@ -1896,17 +1896,17 @@ int hip_handle_r2(struct sk_buff *skb)
 
 		hip_hadb_multiset(sender, 2, getlist, setlist, HIP_ARG_HIT);
 
-        /* Set up outbound IPsec SA (inbound SA was already set up
-	 * earlier when I2 was sent) */
+		/* Set up outbound IPsec SA (inbound SA was already set up
+		 * earlier when I2 was sent) */
 		getlist[0] = HIP_HADB_ESP_TRANSFORM;
 		getlist[1] = HIP_HADB_OWN_ESP;
 		getlist[2] = HIP_HADB_OWN_AUTH;
-		getlist[3] = HIP_HADB_OWN_SPI;
+		getlist[3] = HIP_HADB_SPI_IN;
 
 		setlist[0] = &tfm;
 		setlist[1] = &ctx->hip_espi;
 		setlist[2] = &ctx->hip_authi;
-		setlist[3] = &spi_our;
+		setlist[3] = &spi_in;
 
 		hip_hadb_multiget(sender, 4, getlist, setlist, HIP_ARG_HIT);
 
@@ -1931,7 +1931,7 @@ int hip_handle_r2(struct sk_buff *skb)
 		 * wake up any transport sockets waiting for a SA
 		 */
 		hip_finalize_sa(&r2->hits, spi_recvd);
-		hip_finalize_sa(&r2->hitr, spi_our);
+		hip_finalize_sa(&r2->hitr, spi_in);
 
 	}
 
