@@ -157,15 +157,13 @@ static void abort_remote(FILE *din);
 FILE *cin, *cout;
 static FILE *dataconn(const char *);
 
+#ifdef HIP_NATIVE
 char *
 hookup(const char *host, const char *port)
 {
 	int s, tos, error;
 	socklen_t len;
 	static char hostnamebuf[256];
-#if 0
-	struct addrinfo hints, *res, *res0;
-#endif
 	struct endpointinfo hints, *res, *res0;
 	char hbuf[MAXHOSTNAMELEN], pbuf[NI_MAXSERV];
 	char *cause = "ftp: unknown";
@@ -178,18 +176,10 @@ hookup(const char *host, const char *port)
 	}
 	memset(&hisctladdr, 0, sizeof(hisctladdr));
 	memset(&hints, 0, sizeof(hints));
-#ifdef HIP_NATIVE
 	hints.ei_flags = EI_CANONNAME;
 	hints.ei_socktype = SOCK_STREAM;
+
 	error = getendpointinfo(host, pbuf, &hints, &res0);
-#else
-#  ifdef HIP_LEGACY
-	hints.ai_flags = AI_CANONNAME;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags |= AI_HIP;
-#  endif
-	error = getaddrinfo(host, pbuf, &hints, &res0);
-#endif
 	if (error) {
 		if (port) {
 			strcpy(hbuf, " ");
@@ -198,22 +188,17 @@ hookup(const char *host, const char *port)
 			pbuf[0] = '\0';
 		}
 		fprintf(stderr, "ftp: %s%s%s: %s\n", host, hbuf, pbuf,
-#ifdef HIP_NATIVE
 						gepi_strerror(error));
-#else
-						gai_strerror(error));
-#endif
 		code = -1;
 		return (0);
 	}
 
-#ifdef HIP_NATIVE
 	if (res0->ei_canonname) {
 		struct endpointinfo h, *a;
 		memset(&h, 0, sizeof(h));
-		h.ei_family = PF_HIP;
+		h.ei_family = PF_UNSPEC;
 		h.ei_socktype = SOCK_STREAM;
-		h.ei_flags = AI_NUMERICHOST; // XX FIXME: EI_
+		h.ei_flags = AI_NUMERICHOST; // XX FIXME: AI_XX
 
 		if (!getendpointinfo(res0->ei_canonname, NULL, &h, &a)) {
 			strncpy(hostnamebuf, res0->ei_canonname, sizeof(hostnamebuf));
@@ -221,30 +206,13 @@ hookup(const char *host, const char *port)
 		} else
 			strncpy(hostnamebuf, host, sizeof(hostnamebuf));
 	}
-#else
-	if (res0->ai_canonname) {
-		struct addrinfo h, *a;
-		memset(&h, 0, sizeof(h));
-		h.ai_family = PF_UNSPEC;
-		h.ai_socktype = SOCK_STREAM;
-		h.ai_flags = AI_NUMERICHOST;
-#ifdef HIP_LEGACY /* XX FIX ME: does not work */
-		hints.ai_flags |= AI_HIP;
-#endif
-		if (!getaddrinfo(res0->ai_canonname, NULL, &h, &a)) {
-			strncpy(hostnamebuf, res0->ai_canonname, sizeof(hostnamebuf));
-			freeaddrinfo(a);
-		} else
-			strncpy(hostnamebuf, host, sizeof(hostnamebuf));
-	}
-#endif
+
 	else
 		strncpy(hostnamebuf, host, sizeof(hostnamebuf));
 	hostnamebuf[sizeof(hostnamebuf) - 1] = '\0';
 	hostname = hostnamebuf;
 	
 	s = -1;
-#ifdef HIP_NATIVE
 	for (res = res0; res; res = res->ei_next) {
 		if (!ex_af2prot(res->ei_family)) {
 			cause = "ftp: mismatch address family";
@@ -256,9 +224,9 @@ hookup(const char *host, const char *port)
 			errno = EPROTO;
 			continue;
 		}
-		if (getendpointaddrinfo(res->ei_endpoint, res->ei_endpointlen,
-					hbuf, sizeof(hbuf), NULL, 0,
-					NI_NUMERICHOST))
+		if (getnameinfo(res->ei_endpoint, res->ei_endpointlen,
+				hbuf, sizeof(hbuf), NULL, 0,
+				NI_NUMERICHOST))
 			strcpy(hbuf, "???");
 		if (res0->ei_next)	/* if we have multiple possibilities */
 			fprintf(stdout, "Trying %s...\n", hbuf);
@@ -296,58 +264,6 @@ hookup(const char *host, const char *port)
 	len = res->ei_endpointlen;
 	memcpy(&hisctladdr, res->ei_endpoint, len);
 	free_endpointinfo(res0);
-#else
-	for (res = res0; res; res = res->ai_next) {
-		if (!ex_af2prot(res->ai_family)) {
-			cause = "ftp: mismatch address family";
-			errno = EPROTONOSUPPORT;
-			continue;
-		}
-		if ((size_t)res->ai_addrlen > sizeof(hisctladdr)) {
-			cause = "ftp: mismatch struct sockaddr size";
-			errno = EPROTO;
-			continue;
-		}
-		if (getnameinfo(res->ai_addr, res->ai_addrlen,
-				hbuf, sizeof(hbuf), NULL, 0,
-				NI_NUMERICHOST))
-			strcpy(hbuf, "???");
-		if (res0->ai_next)	/* if we have multiple possibilities */
-			fprintf(stdout, "Trying %s...\n", hbuf);
-		s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (s < 0) {
-			cause = "ftp: socket";
-			continue;
-		}
-		while ((error = connect(s, res->ai_addr, res->ai_addrlen)) < 0
-				&& errno == EINTR) {
-			;
-		}
-		if (error) {
-			/* this "if" clause is to prevent print warning twice */
-			if (res->ai_next) {
-				fprintf(stderr,
-					"ftp: connect to address %s", hbuf);
-				perror("");
-			}
-			cause = "ftp: connect";
-			close(s);
-			s = -1;
-			continue;
-		}
-		/* finally we got one */
-		break;
-	}
-	if (s < 0) {
-		perror(cause);
-		code = -1;
-		freeaddrinfo(res0);
-		return NULL;
-	}
-	len = res->ai_addrlen;
-	memcpy(&hisctladdr, res->ai_addr, len);
-	freeaddrinfo(res0);
-#endif
 
 	if (getsockname(s, (struct sockaddr *)&myctladdr, &len) < 0) {
 		perror("ftp: getsockname");
@@ -399,6 +315,168 @@ bad:
 	(void) close(s);
 	return ((char *)0);
 }
+#else
+char *
+hookup(const char *host, const char *port)
+{
+	int s, tos, error;
+	socklen_t len;
+	static char hostnamebuf[256];
+	struct addrinfo hints, *res, *res0;
+	char hbuf[MAXHOSTNAMELEN], pbuf[NI_MAXSERV];
+	char *cause = "ftp: unknown";
+
+	if (port) {
+		strncpy(pbuf, port, sizeof(pbuf) - 1);
+		pbuf[sizeof(pbuf) - 1] = '\0';
+	} else {
+		sprintf(pbuf, "%d", ntohs(ftp_port));
+	}
+	memset(&hisctladdr, 0, sizeof(hisctladdr));
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_CANONNAME;
+	hints.ai_socktype = SOCK_STREAM;
+#ifdef HIP_LEGACY
+	hints.ai_flags |= AI_HIP;
+#endif
+	error = getaddrinfo(host, pbuf, &hints, &res0);
+	if (error) {
+		if (port) {
+			strcpy(hbuf, " ");
+		} else {
+			hbuf[0] = '\0';
+			pbuf[0] = '\0';
+		}
+		fprintf(stderr, "ftp: %s%s%s: %s\n", host, hbuf, pbuf,
+						gai_strerror(error));
+		code = -1;
+		return (0);
+	}
+
+	if (res0->ai_canonname) {
+		struct addrinfo h, *a;
+		memset(&h, 0, sizeof(h));
+		h.ai_family = PF_UNSPEC;
+		h.ai_socktype = SOCK_STREAM;
+		h.ai_flags = AI_NUMERICHOST;
+#ifdef HIP_LEGACY /* XX FIX ME: does not work */
+		hints.ai_flags |= AI_HIP;
+#endif
+		if (!getaddrinfo(res0->ai_canonname, NULL, &h, &a)) {
+			strncpy(hostnamebuf, res0->ai_canonname, sizeof(hostnamebuf));
+			freeaddrinfo(a);
+		} else
+			strncpy(hostnamebuf, host, sizeof(hostnamebuf));
+	}
+
+	else
+		strncpy(hostnamebuf, host, sizeof(hostnamebuf));
+	hostnamebuf[sizeof(hostnamebuf) - 1] = '\0';
+	hostname = hostnamebuf;
+	
+	s = -1;
+	for (res = res0; res; res = res->ai_next) {
+		if (!ex_af2prot(res->ai_family)) {
+			cause = "ftp: mismatch address family";
+			errno = EPROTONOSUPPORT;
+			continue;
+		}
+		if ((size_t)res->ai_addrlen > sizeof(hisctladdr)) {
+			cause = "ftp: mismatch struct sockaddr size";
+			errno = EPROTO;
+			continue;
+		}
+		if (getnameinfo(res->ai_addr, res->ai_addrlen,
+				hbuf, sizeof(hbuf), NULL, 0,
+				NI_NUMERICHOST))
+			strcpy(hbuf, "???");
+		if (res0->ai_next)	/* if we have multiple possibilities */
+			fprintf(stdout, "Trying %s...\n", hbuf);
+		s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (s < 0) {
+			cause = "ftp: socket";
+			continue;
+		}
+		while ((error = connect(s, res->ai_addr, res->ai_addrlen)) < 0
+				&& errno == EINTR) {
+			;
+		}
+		if (error) {
+			/* this "if" clause is to prevent print warning twice */
+			if (res->ai_next) {
+				fprintf(stderr,
+					"ftp: connect to address %s", hbuf);
+				perror("");
+			}
+			cause = "ftp: connect";
+			close(s);
+			s = -1;
+			continue;
+		}
+		/* finally we got one */
+		break;
+	}
+	if (s < 0) {
+		perror(cause);
+		code = -1;
+		freeaddrinfo(res0);
+		return NULL;
+	}
+	len = res->ai_addrlen;
+	memcpy(&hisctladdr, res->ai_addr, len);
+	freeaddrinfo(res0);
+
+	if (getsockname(s, (struct sockaddr *)&myctladdr, &len) < 0) {
+		perror("ftp: getsockname");
+		code = -1;
+		goto bad;
+	}
+#ifdef IP_TOS
+	if (hisctladdr.su_family == AF_INET)
+	{
+	tos = IPTOS_LOWDELAY;
+	if (setsockopt(s, IPPROTO_IP, IP_TOS, (char *)&tos, sizeof(int)) < 0)
+		perror("ftp: setsockopt TOS (ignored)");
+	}
+#endif
+	cin = fdopen(s, "r");
+	cout = fdopen(s, "w");
+	if (cin == NULL || cout == NULL) {
+		fprintf(stderr, "ftp: fdopen failed.\n");
+		if (cin)
+			(void) fclose(cin);
+		if (cout)
+			(void) fclose(cout);
+		code = -1;
+		goto bad;
+	}
+	if (verbose)
+		printf("Connected to %s (%s).\n", hostname, hbuf);
+	if (getreply(0) > 2) { 	/* read startup message from server */
+		if (cin)
+			(void) fclose(cin);
+		if (cout)
+			(void) fclose(cout);
+		code = -1;
+		goto bad;
+	}
+#ifdef SO_OOBINLINE
+	{
+	int on = 1;
+
+	if (setsockopt(s, SOL_SOCKET, SO_OOBINLINE, (char *)&on, sizeof(on))
+		< 0 && debug) {
+			perror("ftp: setsockopt");
+		}
+	}
+#endif /* SO_OOBINLINE */
+
+	return (hostname);
+bad:
+	(void) close(s);
+	return ((char *)0);
+}
+#endif
 
 int
 dologin(const char *host)
@@ -1570,7 +1648,7 @@ noport:
 #endif
 #ifdef HIP_NATIVE
 		case AF_HIP:
-			XX FIXME;
+		        XX FIXME;
 			break;
 #endif
 
