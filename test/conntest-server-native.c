@@ -27,6 +27,10 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <net/if.h>
+/* Workaround for some compilation problems on Debian */
+#ifndef __user
+#  define __user
+#endif
 #include <signal.h>
 
 #include "tools/debug.h"
@@ -42,16 +46,16 @@ static void sig_handler(int signo) {
 
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *res = NULL;
-  struct if_nameindex *ifaces = NULL;
-  struct sockaddr_eid my_eid, peer_eid;
+  struct sockaddr_eid peer_eid;
   char *port_name;
   char mylovemostdata[IP_MAXPACKET];
   int recvnum, sendnum;
   int serversock = 0, sockfd = 0;
   int err = 0;
   int port;
-  int proto;
+  int socktype;
   socklen_t peer_eid_len;
+  int endpoint_family = PF_HIP;
 
   hip_set_logtype(LOGTYPE_STDERR);
 
@@ -67,11 +71,11 @@ int main(int argc,char *argv[]) {
   }
   
   if (strcmp(argv[1], "tcp") == 0) {
-    proto = IPPROTO_TCP;
+    socktype = SOCK_STREAM;
   } else if (strcmp(argv[1], "udp") == 0) {
-    proto = IPPROTO_UDP;
+    socktype = SOCK_DGRAM;
   } else {
-    HIP_ERROR("error: protonum != tcp|udp\n");
+    HIP_ERROR("error: uknown socket type\n");
     err = 1;
     goto out;
   }
@@ -84,11 +88,7 @@ int main(int argc,char *argv[]) {
     goto out;
   }
 
-  if (proto == IPPROTO_TCP) {
-    serversock = socket(PF_HIP, SOCK_STREAM, 0);
-  } else {
-    serversock = socket(PF_HIP, SOCK_DGRAM, 0);
-  }
+  serversock = socket(endpoint_family, socktype, 0);
   if (serversock < 0) {
     HIP_PERROR("socket");
     err = 1;
@@ -96,44 +96,29 @@ int main(int argc,char *argv[]) {
   }
 
   memset(&hints, 0, sizeof(struct endpointinfo));
-  hints.ei_family = PF_HIP;
+  hints.ei_family = endpoint_family;
+  hints.ei_socktype = socktype;
+
   err = getendpointinfo(NULL, port_name, &hints, &res);
   if (err) {
     HIP_ERROR("Resolving of peer identifiers failed (%d)\n", err);
     goto out;
   }
-  ifaces = if_nameindex();
-  if (ifaces == NULL || (ifaces->if_index == 0)) {
-    HIP_ERROR("%s\n", (ifaces == NULL) ? "Iface error" : "No ifaces.");
-    err = 1;
-    goto out;
-  }
 
-  err = setmyeid(serversock, &my_eid, port_name, res->ei_endpoint, ifaces);
-  if (err) {
-    HIP_ERROR("Failed to set up my EID (%d)\n", err);
-    err = 1;
-    goto out;
-  }
-
-  HIP_DEBUG("family=%d value=%d\n", my_eid.eid_family,
-	    ntohs(my_eid.eid_val));
-
-  if (bind(serversock, (struct sockaddr *) &my_eid,
-	   sizeof(my_eid)) < 0) {
+  if (bind(serversock, res->ei_endpoint, res->ei_endpointlen) < 0) {
     HIP_PERROR("bind");
     err = 1;
     goto out;
   }
 
-  if (proto == IPPROTO_TCP && listen(serversock, 1) < 0) {
+  if (socktype == SOCK_STREAM && listen(serversock, 1) < 0) {
       HIP_PERROR("listen");
       err = 1;
       goto out;
   }
 
   while(1) {
-    if (proto == IPPROTO_TCP) {
+    if (socktype == SOCK_STREAM) {
       sockfd = accept(serversock, (struct sockaddr *) &peer_eid,
 		      &peer_eid_len);
       if (sockfd < 0) {
@@ -183,8 +168,6 @@ int main(int argc,char *argv[]) {
 
  out:
 
-  if (ifaces)
-    if_freenameindex(ifaces);
   if (res)
     free_endpointinfo(res);
 

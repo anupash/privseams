@@ -34,37 +34,9 @@
 #include <net/if.h>
 #include "tools/debug.h"
 
-void debug_endpoint(struct endpointinfo *res)
-{
-  struct endpointinfo *ei;
-  struct addrinfo *ai;
-
-  HIP_DEBUG("Endpoint info:\n");
-
-  for(ei = res; ei != NULL; ei = ei->ei_next) {
-    struct endpoint_hip *eph;
-    eph = (struct endpoint_hip *) ei->ei_endpoint;
-    HIP_DEBUG("endpoint properties: %d, family: %d, len: %d\n",
-	      ei->ei_flags, ei->ei_family, ei->ei_endpointlen);
-    HIP_ASSERT(ei->ei_family == PF_HIP);
-    HIP_ASSERT(eph->flags & HIP_ENDPOINT_FLAG_HIT);
-    HIP_HEXDUMP("HIP endpoint keydata: ", &eph->id.hit,
-		sizeof(struct in6_addr));
-    for(ai = &ei->ei_addrlist; ai != NULL; ai = ai->ai_next) {
-      int i = 0;
-      HIP_DEBUG("GAI: ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d ",
-		ai->ai_flags, ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-      HIP_DEBUG("ai_addrlen=%d ai_canonname=%s\n",
-		ai->ai_addrlen, ai->ai_canonname);
-      HIP_DEBUG_SOCKADDR("address: ", ai->ai_family, ai->ai_addr);
-    }
-    HIP_DEBUG("\n\n");
-  }
-}
-
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *res = NULL;
-  struct sockaddr_eid my_eid, peer;
+  struct sockaddr_eid my_eid;
   struct timeval stats_before, stats_after;
   unsigned long stats_diff_sec, stats_diff_usec;
   char mylovemostdata[IP_MAXPACKET];
@@ -122,37 +94,35 @@ int main(int argc,char *argv[]) {
     goto out;
   }
 
-  err = setmyeid(sockfd, &my_eid, "", endpoint, NULL);
+  err = setmyeid(&my_eid, "", endpoint, NULL);
   if (err) {
     HIP_ERROR("Failed to set up my EID (%d)\n", err);
     err = 1;
     goto out;
   }
 
-  /* set up host lookup information  */
-  memset(&hints, 0, sizeof(hints));
-  hints.ei_family = PF_HIP;
-  hints.ei_addrlist.ai_family = AF_INET6;
-  hints.ei_addrlist.ai_socktype = socktype;
-  hints.ei_addrlist.ai_protocol = proto;
+  /* We have to bind to the EID to use it. */
+  err = bind(sockfd, (struct sockaddr *) &my_eid, sizeof(struct sockaddr_eid));
+  if (err) {
+    HIP_PERROR("bind failed");
+    goto out;
+  }
 
-  /* lookup host */
+  /* set up endpoint lookup information  */
+  memset(&hints, 0, sizeof(struct endpointinfo));
+  hints.ei_socktype = socktype;
+  hints.ei_family = endpoint_family;
+
+  /* Lookup endpoint. We do not need to call setpeereid because
+     getendpointinfo does it automatically. */
   err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
   if (err) {
-    HIP_ERROR("getaddrinfo failed (%d): %s\n", err, gepi_strerror(err));
+    HIP_ERROR("getendpointinfo failed (%d): %s\n", err, gepi_strerror(err));
     goto out;
   }
 
-  debug_endpoint(res);
-
-  err = setpeereid(&peer, peer_port_name, res->ei_endpoint, &res->ei_addrlist);
-  if (err) {
-    HIP_ERROR("association failed (%d): %s\n", err);
-    goto out;
-  }
-
-  HIP_DEBUG("family=%d value=%d\n", peer.eid_family,
-	    ntohs(peer.eid_val));
+  HIP_DEBUG("family=%d value=%d\n", res->ei_family,
+	    ntohs(((struct sockaddr_eid *) res->ei_endpoint)->eid_val));
 
   // data from stdin to buffer
   bzero(receiveddata, IP_MAXPACKET);
@@ -168,7 +138,7 @@ int main(int argc,char *argv[]) {
 
   gettimeofday(&stats_before, NULL);
 
-  err = connect(sockfd, (struct sockaddr *) &peer, sizeof(peer));
+  err = connect(sockfd, res->ei_endpoint, res->ei_endpointlen);
   if (err) {
     HIP_PERROR("connect");
     goto out;

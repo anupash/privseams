@@ -180,13 +180,13 @@ int hip_socket_release(struct socket *sock)
 
 	HIP_DEBUG("\n");
 
+	if (sock->sk == NULL)
+		goto out_err;
+
 	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
 		goto out_err;
 	}
-
-	if (sock->sk == NULL)
-		goto out_err;
 
 	err = socket_handler->release(sock);
 	if (err) {
@@ -512,123 +512,6 @@ int hip_socket_shutdown(struct socket *sock, int flags)
 	return err;
 }
 
-int hip_socket_set_my_eid(struct hip_common *request,
-			  struct hip_common *response)
-{
-	int err = 0;
-	struct sockaddr_eid eid;
-	struct hip_tlv_common *param = NULL;
-	struct hip_eid_iface *iface;
-	struct hip_eid_endpoint *eid_endpoint;
-	struct hip_lhi lhi;
-	struct hip_eid_owner_info owner_info;
-	struct hip_host_id *host_id;
-	
-	HIP_DEBUG("\n");
-	
-	/* Extra consistency test */
-	if (hip_get_msg_type(request) != HIP_USER_SET_MY_EID) {
-		err = -EINVAL;
-		HIP_ERROR("Bad message type\n");
-		goto out_err;
-	}
-	
-	eid_endpoint = hip_get_param(request, HIP_PARAM_EID_ENDPOINT);
-	if (!eid_endpoint) {
-		err = -ENOENT;
-		HIP_ERROR("Could not find eid endpoint\n");
-		goto out_err;
-	}
-
-	if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
-		err = -EAFNOSUPPORT;
-		HIP_ERROR("setmyeid does not support HITs, only HIs\n");
-		goto out_err;
-	}
-	
-	HIP_DEBUG("hi len %d\n",
-		  ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
-
-	HIP_HEXDUMP("eid endpoint", eid_endpoint,
-		    hip_get_param_total_len(eid_endpoint));
-
-	host_id = &eid_endpoint->endpoint.id.host_id;
-
-	owner_info.uid = current->uid;
-	owner_info.gid = current->gid;
-	
-	/*
-	 * The resolver sends here only public keys, but it is possible for
-	 * the applications to send also their private keys here.
-	 */
-	if (hip_host_id_contains_private_key(host_id)) {
-		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
-						 HIP_HIT_TYPE_HASH126);
-		if (err) {
-			HIP_ERROR("Failed to calculate HIT from HI.");
-			goto out_err;
-		}
-	
-		/* XX TODO: check UID/GID permissions before adding */
-		err = hip_add_localhost_id(&lhi, host_id);
-		if (err) {
-			HIP_ERROR("Adding of localhost id failed");
-			goto out_err;
-		}
-	} else {
-		/* Only public key */
-		err = hip_host_id_to_hit(host_id,
-					 &lhi.hit, HIP_HIT_TYPE_HASH126);
-	}
-	
-	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
-	
-	/* Iterate through the interfaces */
-	while((param = hip_get_next_param(request, param)) != NULL) {
-		/* Skip other parameters (only the endpoint should
-		   really be there). */
-		if (hip_get_param_type(param) != HIP_PARAM_EID_IFACE)
-			continue;
-		iface = (struct hip_eid_iface *) param;
-		/* XX TODO: convert and store the iface somewhere?? */
-		/* XX TODO: check also the UID permissions for storing
-		   the ifaces before actually storing them */
-	}
-	
-	/* The eid port information will be filled by the resolver. It is not
-	   really meaningful in the eid db. */
-	eid.eid_port = htons(0);
-	
-	lhi.anonymous =
-	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
-		1 : 0;
-	
-	/* XX TODO: check UID/GID permissions before adding ? */
-	err = hip_db_set_my_eid(&eid, &lhi, &owner_info);
-	if (err) {
-		HIP_ERROR("Could not set my eid into the db\n");
-		goto out_err;
-	}
-
-	HIP_DEBUG("EID value was set to %d\n", ntohs(eid.eid_val));
-
-	/* Clear the response (in the case it is the same as the request) and
-	   write a return message */
-	
-	hip_msg_init(response);
-	hip_build_user_hdr(response, HIP_USER_SET_MY_EID, err);
-	err = hip_build_param_eid_sockaddr(response,
-					   (struct sockaddr *) &eid,
-					   sizeof(eid));
-	if (err) {
-		HIP_ERROR("Could not build eid sockaddr\n");
-		goto out_err;
-	}
-	
- out_err:
-	return err;
-}
-
 /*
  * Currently we just fall back to IPv6.
  */
@@ -660,76 +543,23 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 			  char *optval, int *optlen)
 {
 	int err = 0;
-	struct hip_common *msg = (struct hip_common *) optval;
-	
+	struct proto_ops *socket_handler;
+
 	HIP_DEBUG("\n");
 
-	/* Check if the socket option really belongs to the actual socket
-	   handler */
-	if (optname != SO_HIP_SET_MY_EID) {
-		struct proto_ops *socket_handler;
-		
-		HIP_DEBUG("\n");
-		
-		err = hip_select_socket_handler(sock, &socket_handler);
-		if (err) {
-			goto out_err;
-		}		
-		err = socket_handler->getsockopt(sock, level, optname, optval,
-						 optlen);
-		if (err) {
-			HIP_ERROR("Inet socket handler failed (%d)\n", err);
-			goto out_err;
-		}
-		/* Skip the HIP socket option code */
-		goto out_err;
-	}
-
-	/* XX CHECK: what happens when the the optval buffer is overflowed? */
-
-	err = hip_check_userspace_msg(msg);
+	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
-		HIP_ERROR("Userspace msg invalid\n");
-		goto out_err;
-	}
-	
-	if (hip_get_msg_total_len(msg) != *optlen) {
-		err = -EMSGSIZE;
-		HIP_ERROR("Bad message size\n");
 		goto out_err;
 	}
 
-	/*
-	 * Note: there is no HIP_SOCK_OPT_SET_PEER_EID because peer mappings
-	 * are not socket specific; they are global and sent using the same
-	 * interface that hipconf uses.
-	 */
-	switch(optname) {
-	  /*
-	   * XX TODO: setting my eid may be subject to some race conditions
-	   *
-	   */
-	case SO_HIP_SET_MY_EID:
-	  err = hip_socket_set_my_eid(msg, msg);
-	  if (err) {
-		  HIP_ERROR("Setting of my eid failed\n");
-		  goto out_err;
-	  }
-	  break;
-	default:
-		HIP_ERROR("Unknown optname %d\n", optname);
-		err = -ENOSYS;
+	err = socket_handler->getsockopt(sock, level, optname, optval, optlen);
+	if (err) {
+		HIP_ERROR("Inet socket handler failed (%d)\n", err);
+		goto out_err;
 	}
-	
+
  out_err:
-	/* Build an error message in case of an error. Errors caused a goto
-	   here in the previous switch-case handler. */
-	if (err) {
-		hip_hdr_type_t msg_type = hip_get_msg_type(msg);
-		hip_msg_init(msg);
-		hip_build_user_hdr(msg, msg_type, err);
-	}
-	
+
 	return err;
 }
 

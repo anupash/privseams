@@ -438,6 +438,14 @@ struct gaicb
 /* BEGIN HIPL PATCH */
 # define AI_HIP		0x0800  /* Return only HIT addresses */
 # define AI_HIP_NATIVE  0x1000  /* For getaddrinfo internal use only  */
+# define AI_RENDEZVOUS  XX_FIX_ME /* The address belongs to rendezvous */
+
+/* XX TODO: begin these flags from where the AI_XX ends */
+# define EI_PASSIVE	0x0001	/* Socket address is intended for `bind'.  */
+# define EI_CANONNAME	0x0002	/* Request for canonical name.  */
+# define EI_ANON        XX_FIX_ME /* Return only anonymous endpoints */
+# define EI_NOLOCATORS  XX_FIX_ME /* Do not resolve IP addresses */
+# define EI_FALLBACK    XX_FIX_ME /* Fall back to plain TCP/IP is ok */
 
 /* Error values for `getendpointinfo' function */
 
@@ -502,14 +510,17 @@ struct gaicb
 #define GEPI_FQDN_STR_MAX      "255" /* Max number of chars in FQDN string */
 #define GEPI_FQDN_STR_VAL_MAX   255
 
+/* XX COMMENT ME: WHY THIS RESEMBLES ADDRINFO? */
 struct endpointinfo
 {
-  int                   ei_flags;       /* Input flags.                     */
-  se_family_t           ei_family;      /* Endpoint socket protocol family. */
-  se_length_t           ei_endpointlen; /* Length of socket endpoint.       */
-  struct endpoint       *ei_endpoint;   /* Socket endpoint for socket.      */
-  struct addrinfo       ei_addrlist;    /* Socket locator address list      */
-  struct endpointinfo   *ei_next;       /* Pointer to next in list.         */
+  int ei_flags;                 /* Input flags.                         */
+  int ei_family;                /* Endpoint socket protocol family.     */
+  int ei_socktype;              /* Socket type.                         */
+  int ei_protocol;              /* Protocol for socket.                 */
+  size_t ei_endpointlen;        /* Length of socket endpoint.           */
+  struct sockaddr *ei_endpoint; /* Endpoint socket address              */
+  char *ei_canonname;           /* Canonical name for service location. */
+  struct endpointinfo *ei_next; /* Pointer to next in list.             */
 };
 
 /* Translate the name of a service name to a set of identifiers and locators.*/
@@ -525,16 +536,16 @@ extern void free_endpointinfo (struct endpointinfo *__ei) __THROW;
 extern __const char *gepi_strerror (int __ecode) __THROW;
 
 /* Associate an local enpoint and local interface(s) to a socket. */
-extern int setmyeid(int sockfd, struct sockaddr_eid *my_eid,
+extern int setmyeid(struct sockaddr_eid *my_eid,
 		    const char *servname,
-		    struct endpoint *endpoint,
-		    struct if_nameindex *ifaces);
+		    const struct endpoint *endpoint,
+		    const struct if_nameindex *ifaces);
 
 /* Associate the endpoint of the peer to the address(es) of the peer. */
 int setpeereid(struct sockaddr_eid *peer_eid,
 	       const char *servname,
-	       struct endpoint *endpoint,
-	       struct addrinfo *addrinfo);
+	       const struct endpoint *endpoint,
+	       const struct addrinfo *addrinfo);
 
 /* END HIPL PATCH */
 

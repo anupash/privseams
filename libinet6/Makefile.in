@@ -75,7 +75,7 @@ OBJS = usagi.o \
 # Note: -I.. is included because "tools/debug.h" is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-CFLAGS += -g -I../linux/include -I../tools -I..
+CFLAGS += -g -I../linux/include -I../tools -I.. -DCONFIG_HIP_DEBUG
 CFLAGS += -I../linux/net/ipv6/hip
 OBJS += debug.o builder.o message.o getendpointinfo.o crypto.o
 

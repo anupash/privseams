@@ -278,6 +278,6 @@ HIP Enabled Telnet
 # make
 
 oops  # telnetd/telnetd -debug 12345
-crash # telnet/telnet oops username 12345
+crash # telnet/telnet -l username oops 12345
 
-Note: username must be non-root.
+Note: the username must be non-root.

@@ -1620,13 +1620,12 @@ int tn(int argc, const char *argv[]) {
     const char *portp = NULL;
     char *hostp = NULL;
     char *resolv_hostp;
-#ifdef USE_HIP
     struct sockaddr_in sn;
+#ifdef USE_HIP
     struct endpointinfo hints;
     struct endpointinfo *hostaddr = 0;
     struct endpointinfo *tmpaddr;
 #else /* !USE_HIP */
-    struct sockaddr_in sn;
     struct addrinfo hints;
     struct addrinfo *hostaddr = 0;
     struct addrinfo *tmpaddr;
@@ -1749,12 +1748,11 @@ int tn(int argc, const char *argv[]) {
     }
 
     /* We only understand SOCK_STREAM sockets. */
-#ifdef USE_HIP
     memset(&hints, 0, sizeof(hints));
+#ifdef USE_HIP
     hints.ei_family = PF_HIP;
-    hints.ei_addrlist.ai_socktype = SOCK_STREAM;
-    hints.ei_addrlist.ai_flags = AI_CANONNAME;
-    hints.ei_addrlist.ai_family = family;    
+    hints.ei_socktype = SOCK_STREAM;
+    hints.ei_flags = EI_CANONNAME;
 
     /* Resolve both the host and service simultaneously. */
     if ((res = getendpointinfo(resolv_hostp, portp, &hints, &hostaddr)) ||
@@ -1765,7 +1763,6 @@ int tn(int argc, const char *argv[]) {
     }
 
 #else /* !USE_HIP */
-    memset(&hints, 0, sizeof(hints));
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_CANONNAME;
     hints.ai_family = family;
@@ -1814,8 +1811,8 @@ nextaddr:
 #endif /* USE_HIP */
 
 #ifdef USE_HIP
-	printf("Trying HIP connection to %s\n", resolv_hostp);
-	x = nlink.connect(debug, hostaddr, portp, srp, srlen, tos);
+	printf("Trying HIP enabled telnet connection to %s\n", resolv_hostp);
+	x = nlink.connect(debug, tmpaddr, srp, srlen, tos);
 #else /* !USE_HIP */
 	getnameinfo(tmpaddr->ai_addr, tmpaddr->ai_addrlen,
 		    name, sizeof(name), service, sizeof(service),
@@ -1833,7 +1830,7 @@ nextaddr:
 	connected++;
     } while (connected == 0);
 #ifdef USE_HIP
-    if (hostaddr->ei_addrlist.ai_canonname == 0) {
+    if (hostaddr->ei_canonname == 0) {
 #else /* !USE_HIP */
     if (hostaddr->ai_canonname == 0) {
 #endif /* USE_HIP */
@@ -1842,14 +1839,14 @@ nextaddr:
     }
     else {
 #ifdef USE_HIP
-	hostname = new char[strlen(hostaddr->ei_addrlist.ai_canonname)+1];
-	strcpy(hostname, hostaddr->ei_addrlist.ai_canonname);
+	hostname = new char[strlen(hostaddr->ei_canonname)+1];
+	strcpy(hostname, hostaddr->ei_canonname);
 #else /* !USE_HIP */
 	hostname = new char[strlen(hostaddr->ai_canonname)+1];
 	strcpy(hostname, hostaddr->ai_canonname);
 #endif /* USE_HIP */
     }
-
+    
     cmdrc(hostp, hostname);
 
 #ifdef USE_HIP

@@ -31,7 +31,6 @@
 #define DEFAULT_CONFIG_DIR_MODE   0755
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE "hip_host_dsa_key"
 #define DEFAULT_PUB_FILE_SUFFIX ".pub"
-#define DEFAULT_PARAMS_FILE_SUFFIX ".params"
 
 /* Only one crypto-filefmt supported */
 #define HIP_KEYFILE_FMT_HIP_DSA_PEM 1

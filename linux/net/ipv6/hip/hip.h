@@ -92,7 +92,7 @@ extern int gtv_inuse;
 
 
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
-struct hip_common *hip_create_r1(struct in6_addr *src_hit);
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
 			    int nsg, void *out);
