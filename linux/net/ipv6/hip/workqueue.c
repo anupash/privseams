@@ -73,6 +73,8 @@ static inline struct hip_work_order *hip_get_work_order_cpu(void)
 	/* every processor has its own worker thread, so
 	   spin lock is not needed. Only local irq disabling */
 	local_irq_save(eflags);
+#else
+	wq = &hip_workqueue;
 #endif
 
 	if (list_empty(&wq->workqueue)) {
@@ -193,15 +195,18 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 
 int hip_init_workqueue()
 {
-  //#ifndef CONFIG_HIP_USERSPACE
-#ifdef __KERNEL__
 	struct hip_pc_wq *wq;
+#ifdef __KERNEL__
 	unsigned long eflags;
 
 	local_irq_save(eflags);
 
  	wq = &get_cpu_var(hip_workqueue);
+#else
+	wq = &hip_workqueue;
+#endif
  	INIT_LIST_HEAD(&wq->workqueue);
+#ifdef __KERNEL__
  	init_MUTEX_LOCKED(&wq->worklock);
  	put_cpu_var(hip_workqueue);
  	local_irq_restore(eflags);
@@ -211,11 +216,10 @@ int hip_init_workqueue()
 
 void hip_uninit_workqueue()
 {
-#ifdef __KERNEL__
-  //#ifndef CONFIG_HIP_USERSPACE
 	struct list_head *pos,*iter;
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
+#ifdef __KERNEL__
 	unsigned long eflags;
 
 	local_irq_save(eflags);
@@ -223,11 +227,15 @@ void hip_uninit_workqueue()
  	/* get_cpu_var / put_cpu_var ? */
 	//	wq = &__get_cpu_var(hip_workqueue);
 	wq = &get_cpu_var(hip_workqueue);
+#else
+	wq = &hip_workqueue;
+#endif
 	list_for_each_safe(pos, iter, &wq->workqueue) {
 		hwo = list_entry(pos, struct hip_work_order, queue);
 		hip_free_work_order(hwo);
 		list_del(pos);
 	}
+#ifdef __KERNEL__
  	put_cpu_var(hip_workqueue); // test
 	local_irq_restore(eflags);
 #endif
