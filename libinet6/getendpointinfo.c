@@ -1267,7 +1267,12 @@ int getendpointinfo(const char *nodename, const char *servname,
   }
   
  err_out:
-
+  
+  if(filenamebase_len)
+    free(filenamebase);
+  if(listpointer)
+    clear_list(listpointer);
+  
   return err;
 }
 
@@ -1451,7 +1456,16 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
   return hit;
 }
 
-
+/**
+ * get_local_hits - Query about local HITs and add the corresponding HIs into
+ * kernel database. This function is used by getaddrinfo() in getaddrinfo.c
+ *
+ * @servname:  the service port name (e.g. "http" or "12345")
+ * @adr:       the result of the query - HITs in a linked list
+ *
+ * Returns: zero on success, or negative error value on failure
+ *
+ */
 int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   int err = 0;
   struct hip_lhi hit;
@@ -1460,7 +1474,8 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   listelement *listpointer = NULL;
   struct endpointinfo modified_hints;
   struct endpointinfo *new; 
-
+  
+  _HIP_DEBUG("SERVNAME %s\n", servname);
   /* assign default hints */
   memset(&modified_hints, 0, sizeof(struct endpointinfo));
   modified_hints.ei_family = PF_HIP;
@@ -1494,7 +1509,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     HIP_HEXDUMP("Got HIT: ", &hit.hit, sizeof(struct in6_addr));
 
     if (*adr == NULL) {
-      *adr = alloca (sizeof(struct gaih_addrtuple));
+      *adr = malloc(sizeof(struct gaih_addrtuple));
       (*adr)->scopeid = 0;
     }				
     (*adr)->next = NULL;			
@@ -1505,7 +1520,11 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     listpointer = (listelement *)listpointer -> link; 
   }
  err_out:
-  
+  if(filenamebase_len)
+    free(filenamebase);
+  if(listpointer)
+    clear_list(listpointer);
+
   return err;
   
 }

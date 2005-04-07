@@ -1,7 +1,6 @@
 /*
  * getaddrinfo test program
  *
- * $Id: libinet6test.c,v 1.7 2003/06/26 20:31:12 mkomu Exp $
  */
 
 #if HAVE_CONFIG_H
@@ -25,7 +24,7 @@ int main(int argc, char **argv) {
   struct addrinfo *ai;
 
   if (argc != 2) {
-    printf("%s hostname\n", argv[0]);
+    printf("%s servname\n", argv[0]);
     exit(2);
   }
 

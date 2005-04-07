@@ -1,6 +1,16 @@
 
 #include "util.h"
 
+void free_gaih_addrtuple(struct gaih_addrtuple *tuple) {
+  struct gaih_addrtuple *tmp;
+  
+  while(tuple) {
+    tmp = tuple;
+    tuple = tmp->next;
+    free(tmp);
+  }
+}
+
 /*
  * Checks if a string contains a particular substring.
  *

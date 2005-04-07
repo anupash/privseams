@@ -351,7 +351,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
       for (i = 0; h->h_addr_list[i]; i++)			\
 	{							\
 	  if (*pat == NULL) {					\
-	    *pat = __alloca (sizeof(struct gaih_addrtuple));	\
+	    *pat = malloc(sizeof(struct gaih_addrtuple));	\
 	    (*pat)->scopeid = 0;				\
 	  }							\
 	  (*pat)->next = NULL;					\
@@ -406,7 +406,7 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
 	_HIP_DEBUG("** match on line %d **\n", lineno);			\
 	found_hits = 1;							\
 	if (*pat == NULL) {						\
-	  *pat = __alloca(sizeof(struct gaih_addrtuple));		\
+	  *pat = malloc(sizeof(struct gaih_addrtuple));		\
 	  (*pat)->scopeid = 0;						\
 	}								\
 	(*pat)->next = NULL;						\
@@ -440,7 +440,6 @@ gaih_inet (const char *name, const struct gaih_service *service,
   int rc;
   int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
 		 (req->ai_flags & AI_V4MAPPED);
-  HIP_DEBUG("gaih_inet()\n");
   if (service)
     _HIP_DEBUG("name='%s' service->name='%s' service->num=%d'\n", name, service->name, service->num);
   else 
@@ -569,7 +568,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
     {
       _HIP_DEBUG(">> name != NULL\n");
 
-      at = __alloca (sizeof (struct gaih_addrtuple));
+      at = malloc(sizeof (struct gaih_addrtuple));
 
       at->family = AF_UNSPEC;
       at->scopeid = 0;
@@ -774,17 +773,33 @@ gaih_inet (const char *name, const struct gaih_service *service,
   else
     {
       struct gaih_addrtuple **pat = &at;
-      struct gaih_addrtuple *atr;
-      atr = at = __alloca (sizeof (struct gaih_addrtuple));
+      struct gaih_addrtuple *atr, *attr;
+      atr = at = malloc (sizeof (struct gaih_addrtuple));
       memset (at, '\0', sizeof (struct gaih_addrtuple));
 
       _HIP_DEBUG(">> name == NULL\n");
       /* TODO: find the local HIs here and add the HITs to atr */
-      get_local_hits(service->name, pat);
+      if (req->ai_flags & AI_HIP) {
+	HIP_DEBUG("AI_HIP set: get only local hits.\n");     
+	get_local_hits(service->name, pat); /* TODO: free mem (pat) */
+      } 
+      /* TODO: transparent mode and !AI_HIP -> hits before ipv6 addresses? */
+      if (hip_transparent_mode && !(req->ai_flags & AI_HIP)) {
+	HIP_DEBUG("HIP_TRANSPARENT_MODE, AI_HIP not set:"); 
+	HIP_DEBUG("get HITs before IPv6 address\n");
+	get_local_hits(service->name, pat); /* TODO: free mem (pat) */
+	attr = at;
+	while(attr->next != NULL) {
+	  attr = attr->next;
+	}
+	attr->next = malloc(sizeof (struct gaih_addrtuple));
+	memset (attr->next, '\0', sizeof (struct gaih_addrtuple));
+	attr->next->family = AF_INET6;
+      }
 
       if (req->ai_family == 0)
 	{
-	  at->next = __alloca (sizeof (struct gaih_addrtuple));
+	  at->next = malloc(sizeof (struct gaih_addrtuple));
 	  memset (at->next, '\0', sizeof (struct gaih_addrtuple));
 	}
 
@@ -946,7 +961,15 @@ gaih_inet (const char *name, const struct gaih_service *service,
 
 	at2 = at2->next;
       }
+    /* changed __alloca:s for the linked list 'at' to mallocs, 
+       free malloced memory from at */
+    if (at) {
+      free_gaih_addrtuple(at);
+      /* In case the caller of tries to free at again */
+      at = NULL;
+    }
   }
+
   return 0;
 }
 
@@ -970,9 +993,9 @@ getaddrinfo (const char *name, const char *service,
   int hip_transparent_mode;
   
   HIP_DEBUG("flags=%d\n", hints->ai_flags);
-  HIP_DEBUG("name='%s' service='%s'\n", name, service);
+  _HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
-    _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
+    HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   else
     _HIP_DEBUG("hints=NULL\n");
 
@@ -1005,6 +1028,7 @@ getaddrinfo (const char *name, const char *service,
     return EAI_BADFLAGS;
 
 #ifdef HIP_TRANSPARENT_MODE
+  _HIP_DEBUG("HIP_TRANSPARENT_MODE DEFINED\n");
   /* Transparent mode does not work with HIP native resolver */
   hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
 #else

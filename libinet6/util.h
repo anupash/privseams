@@ -26,6 +26,8 @@ struct gaih_addrtuple
     uint32_t scopeid;
 };
 
+void free_gaih_addrtuple(struct gaih_addrtuple *tuple);
+
 /* very simple linked list */
 typedef struct {
   char data[MAX_ITEM_LEN];
