@@ -75,10 +75,10 @@ getendpointinfo.c: include/netdb.h
 
 # Some symlink kludges
 list.h:
-	$(LN_S) $(HIPL_HIPD)/list.h .
+	$(LN_S) -f $(HIPL_HIPD)/list.h .
 builder.h:
-	$(LN_S) $(HIPL_LINUX_MODULE)/builder.h .
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
 include/netdb.h:
-	$(LN_S) include_glibc$(usagi_libc) include
+	$(LN_S) -f include_glibc$(usagi_libc) include
 builder.c: builder.h
-	$(LN_S) $(HIPL_LINUX_MODULE)/builder.c .
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .

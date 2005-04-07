@@ -32,9 +32,6 @@
       &nbsp;* OpenSSL-library and developer headers
     </para>
     <para>
-      &nbsp;* gcrypt-library and developer headers
-    </para>
-    <para>
       &nbsp;* GNU make
     </para>
     <para>
@@ -42,6 +39,9 @@
     </para>
     <para>
       &nbsp;* perl, lorder
+    </para>
+    <para>
+      &nbsp;* iproute and its development headers
     </para>
     <para>
       * Optional
