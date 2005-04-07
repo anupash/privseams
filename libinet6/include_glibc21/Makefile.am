@@ -1,4 +1,4 @@
-# $USAGI: Makefile.in,v 1.2 2002/12/04 14:27:16 yoshfuji Exp $
+# $USAGI: Makefile.in,v 1.10 2001/02/11 08:07:35 yoshfuji Exp $
 
 # Copyright (C) 2001 USAGI/WIDE Project.
 # All rights reserved.
@@ -31,7 +31,7 @@ LN_S = @LN_S@
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
-INSTALL_DATA = @INSTALL_DATA@
+#INSTALL_DATA = @INSTALL_DATA@
 INSTALL_LIBRARY = @INSTALL_LIBRARY@
 INSTALL_DIR = @INSTALL_DIR@
 
@@ -39,15 +39,16 @@ oldincludedir=@oldincludedir@
 
 MODE=0644
 
-INCLUDES = netdb.h \
-	bits/in.h bits/socket.h bits/sockaddr.h \
+INCLUDES = ifaddrs.h netdb.h \
+	bits/in.h bits/socket.h \
+	net/if.h \
 	netinet/icmp6.h netinet/in.h netinet/ip6.h
 
 INCLUDES_SUBDIRS = bits net netinet 
 
 .PHONY: all install install-includes clean distclean
 
-all: 
+all: includes
 includes: $(INCLUDES)
 install:
 install-includes:
@@ -60,15 +61,13 @@ install-includes:
 		$(INSTALL_DATA) $$file $(oldincludedir)/$$file; \
 	done
 clean:
-	-rm -f bits/in.h bits/sockaddr.h \
+	-rm -f bits/in.h \
 		netinet/icmp6.h netinet/ip6.h
 distclean: clean
 	-rm -f Makefile
 
 bits/in.h: ../include_glibc/bits/in.h
 	$(LN_S) -f ../../include_glibc/bits/in.h bits
-bits/sockaddr.h: ../include_glibc/bits/sockaddr.h
-	$(LN_S) -f ../../include_glibc/bits/sockaddr.h bits
 netinet/icmp6.h: ../include_glibc/netinet/icmp6.h
 	$(LN_S) -f ../../include_glibc/netinet/icmp6.h netinet
 netinet/ip6.h: ../include_glibc/netinet/ip6.h

@@ -31,7 +31,7 @@ LN_S = @LN_S@
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
-INSTALL_DATA = @INSTALL_DATA@
+#INSTALL_DATA = @INSTALL_DATA@
 INSTALL_LIBRARY = @INSTALL_LIBRARY@
 INSTALL_DIR = @INSTALL_DIR@
 
@@ -48,7 +48,7 @@ INCLUDES_SUBDIRS = bits net netinet
 
 .PHONY: all install install-includes clean distclean
 
-all: 
+all: includes
 includes: $(INCLUDES)
 install:
 install-includes:

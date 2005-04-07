@@ -118,10 +118,6 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi(struct hip_db_struct *db,
 	return NULL;
 }
 
-/**
- *
- *
- */
 static
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
 							       const struct hip_lhi *lhi,
@@ -544,7 +540,8 @@ struct hip_host_id *hip_get_host_id_by_algo(struct hip_db_struct *db,
 }
 
 /**
- * hip_get_any_localhost_host_id - Self documenting.
+ * hip_get_any_localhost_host_id - get any Host ID of the local host
+ * @algo: algorithm to use
  *
  * NOTE: Remember to free the host id structure after use.
  *
@@ -706,6 +703,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(struct hip_lhi *lhi)
 
 /**
  * hip_get_any_localhost_public_key - Self documenting.
+ * @algo: algorithm to use
  *
  * NOTE: Remember to free the return value.
  *

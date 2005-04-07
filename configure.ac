@@ -109,6 +109,9 @@ AC_SUBST(usagi_libc)
 
 AC_CONFIG_FILES([Makefile
                 libinet6/Makefile
+                libinet6/include_glibc21/Makefile
+                libinet6/include_glibc22/Makefile
+                libinet6/include_glibc23/Makefile
                 tools/Makefile
                 test/Makefile])
 AC_OUTPUT

@@ -348,6 +348,10 @@ int hip_update_test_rea_addr(struct in6_addr *addr)
  * @entry: corresponding hadb entry of the peer
  * @rea: the REA parameter in the packet
  *
+ * ietf-mm-02 7.2 Handling received REAs
+ *
+ * @entry must be is locked when this function is called.
+ *
  * Returns: 0 if the REA parameter was processed successfully,
  * otherwise < 0.
  */
@@ -359,10 +363,6 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 	int i, n_addrs;
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
-
-	/* assume already locked entry */
-
-	/* ietf-mm-02 7.2 Handling received REAs */
 
 	spi = ntohl(rea->spi);
 	HIP_DEBUG("REA SPI=0x%x\n", spi);
@@ -468,6 +468,8 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
  *
  * This function handles case 7 in section 8.11 Processing UPDATE
  * packets of the base draft.
+ *
+ * @entry must be is locked when this function is called.
  *
  * Returns: 0 if successful, otherwise < 0.
  */
@@ -743,9 +745,22 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				struct in6_addr *src_ip, uint32_t spi);
 
 
-/* 8.11.3 Leaving REKEYING state */
-/* @nes is the NES param to be handled in the received UPDATE in host byte order */
-/* @entry is locked when this function is called */
+/** hip_update_finish_rekeying - finish handling of REKEYING state
+ * @msg: the HIP packet
+ * @entry: hadb entry corresponding to the peer
+ * @nes: the NES param to be handled in the received UPDATE
+ * 
+ * Performs items described in 8.11.3 Leaving REKEYING state of he
+ * base draft-01.
+ *
+ * Parameters in @nes are host byte order.
+ * @entry must be is locked when this function is called.
+ *
+ * On success new IPsec SAs are created. Old SAs are deleted if the
+ * UPDATE was not the multihoming case.
+ *
+ * Returns: 0 if successful, otherwise < 0.
+ */
 int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			       struct hip_nes *nes)
 {
@@ -766,8 +781,6 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	struct hip_spi_in_item spi_in_data;
 	struct hip_ack *ack;
 	uint16_t kmindex_saved;
-
-	/* assume already locked entry */
 
 	HIP_DEBUG("\n");
 	ack = hip_get_param(msg, HIP_PARAM_ACK);
@@ -934,16 +947,19 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 /**
  * hip_handle_update_rekeying - handle incoming UPDATE packet received in REKEYING state
- * 
+ * @entry: hadb entry corresponding to the peer
  * @msg: the HIP packet
  * @src_ip: source IPv6 address from where the UPDATE was sent
  *
  * This function handles case 8 in section 8.11 Processing UPDATE
  * packets of the base draft.
  *
+ * @entry must be is locked when this function is called.
+ *
  * Returns: 0 if successful, otherwise < 0.
  */
-int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct in6_addr *src_ip)
+int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
+			       struct in6_addr *src_ip)
 {
 	int err = 0;
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
@@ -1100,7 +1116,18 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	return err;
 }
 
-/* src_ip = our addr to use when sending update */
+
+/**
+ * hip_update_send_addr_verify - send address verification UPDATE
+ * @entry: hadb entry corresponding to the peer
+ * @msg: the HIP packet
+ * @src_ip: source IPv6 address to use in the UPDATE to be sent out
+ * @spi: outbound SPI in host byte order
+ *
+ * @entry must be is locked when this function is called.
+ *
+ * Returns: 0 if successful, otherwise < 0.
+ */
 int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				struct in6_addr *src_ip, uint32_t spi)
 {
@@ -1244,8 +1271,19 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 }
 
 
-/* handle UPDATE(REA, SEQ) */
-/* reply with ACK and UPDATE(SPI, SEQ, ACK, ECHO_REQUEST) for each addr in REA */
+/** hip_handle_update_plain_rea - handle UPDATE(REA, SEQ)
+ * @entry: hadb entry corresponding to the peer
+ * @msg: the HIP packet
+ * @src_ip: source IPv6 address to use in the UPDATE to be sent out
+ * @dst_ip: destination IPv6 address to use in the UPDATE to be sent out
+ *
+ * @entry must be is locked when this function is called.
+ *
+ * For each address in the REA, we reply with ACK and
+ * UPDATE(SPI, SEQ, ACK, ECHO_REQUEST)
+ *
+ * Returns: 0 if successful, otherwise < 0.
+ */
 int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 				struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
@@ -1255,8 +1293,6 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_seq *seq;
 	struct hip_rea *rea;
 	uint16_t mask;
-
-	/* assume already locked entry */
 
 	HIP_DEBUG("\n");
 
@@ -1298,9 +1334,19 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 }
 
 
-/* handle UPDATE(SPI, SEQ, ACK, ECHO_REQUEST) */
-/* or ? */
-/* handle UPDATE(SPI, SEQ, ECHO_REQUEST) */
+/** hip_handle_update_addr_verify - handle address verification UPDATE
+ * @entry: hadb entry corresponding to the peer
+ * @msg: the HIP packet
+ * @src_ip: source IPv6 address to use in the UPDATE to be sent out
+ * @dst_ip: destination IPv6 address to use in the UPDATE to be sent out
+ *
+ * @entry must be is locked when this function is called.
+ *
+ * handle UPDATE(SPI, SEQ, ACK, ECHO_REQUEST) or handle UPDATE(SPI,
+ * SEQ, ECHO_REQUEST)
+ *
+ * Returns: 0 if successful, otherwise < 0.
+ */
 int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				  struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
@@ -1417,7 +1463,6 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 /**
  * hip_receive_update - receive UPDATE packet
  * @skb: sk_buff where the HIP packet is in
- * @hip_common: pointer to HIP header
  *
  * This is the initial function which is called when an UPDATE packet
  * is received. The validity of the packet is checked and then this
@@ -1435,7 +1480,7 @@ int hip_receive_update(struct sk_buff *skb)
 	struct hip_nes *nes = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
-	struct hip_rea *rea;
+	struct hip_rea *rea = NULL;
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
 	struct hip_hmac *hmac = NULL;
@@ -1614,7 +1659,6 @@ int hip_receive_update(struct sk_buff *skb)
 	/* 5. The system MAY verify the SIGNATURE in the UPDATE
 	   packet. If the verification fails, the packet SHOULD be
 	   dropped and an error message logged. */
-
 	signature = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE);
 	if (signature) {
 		peer_lhi.anonymous = 0;
@@ -1677,10 +1721,6 @@ int hip_receive_update(struct sk_buff *skb)
 		}
 	}
 
-	//hip_hadb_dump_spis_in(entry);
-	//hip_hadb_dump_spis_out(entry);
-	//hip_hadb_dump_hs_ht();
-
  out_err:
 	if (err)
 		HIP_ERROR("UPDATE handler failed, err=%d\n", err);
@@ -1697,6 +1737,7 @@ int hip_receive_update(struct sk_buff *skb)
 #define SEND_UPDATE_REA (1 << 1)
 
 /** hip_send_update - send initial UPDATE packet to the peer
+ * @entry: hadb entry corresponding to the peer
  * @addr_list: if non-NULL, REA parameter is added to the UPDATE
  * @addr_count: number of addresses in @addr_list
  * @ifindex: if non-zero, the ifindex value of the interface which caused the event
@@ -1704,7 +1745,8 @@ int hip_receive_update(struct sk_buff *skb)
  *
  * Returns: 0 if UPDATE was sent, otherwise < 0.
  */
-int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item *addr_list,
+int hip_send_update(struct hip_hadb_state *entry,
+		    struct hip_rea_info_addr_item *addr_list,
 		    int addr_count, int ifindex, int flags)
 {
 	int err = 0;
@@ -1969,9 +2011,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		goto out_err;
 	}
 
-	//hip_hadb_dump_spis_in(entry);
-	//hip_hadb_dump_spis_out(entry);
-
 	/* todo: 5. The system SHOULD start a timer whose timeout value should be ..*/
 	goto out;
 
@@ -1995,7 +2034,7 @@ struct hip_update_kludge {
 	int length;
 };
 
-/* from rea.c */
+/* Internal function copied originally from rea.c */
 static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 {
 	struct hip_update_kludge *rk = op;
@@ -2018,22 +2057,18 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
  * @addr_list: if non-NULL, REA parameter is added to the UPDATE
  * @addr_count: number of addresses in @addr_list
  * @ifindex: if non-zero, the ifindex value of the interface which caused the event
- * @flags: TODO comment
+ * @flags: flags passed to @hip_send_update
  *
  * UPDATE is sent to the peer only if the peer is in established
  * state.
  *
  * Add REA parameter if @addr_list is non-null. @ifindex tells which
  * device caused the network device event.
- *
- * TODO: retransmission timers
  */
 void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_count,
 			 int ifindex, int flags)
 {
 	int err = 0, i;
-
-	/* code ripped from rea.c */
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
 
