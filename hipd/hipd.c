@@ -27,7 +27,7 @@
 #include "workqueue.h"
 #include "debug.h"
 
-struct rtnl_handle *rtnl;
+struct rtnl_handle rtnl;
 
 void usage() {
      fprintf(stderr, "hipl usage\n");
@@ -39,7 +39,7 @@ void usage() {
  */
 void hip_exit(int signal) {
 	hip_uninit_workqueue();
-	rtnl_close(rtnl);
+	rtnl_close(&rtnl);
 	exit(signal);
 }
 
@@ -76,16 +76,16 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);
 	signal(SIGSEGV, hip_exit);
-	
+
 	/* Open the netlink socket for kernel communication */
-	if (rtnl_open(rtnl, 0) < 0) {
+	if (rtnl_open(&rtnl, 0) < 0) {
 		HIP_ERROR("Netlink socket error: %s\n", strerror(errno));
 		return(1);
 	}
 
 	/* For now useless, but keep record of the highest fd for
 	 * future purposes (multiple sockets to select from) */
-	highest_descriptor = rtnl->fd;
+	highest_descriptor = rtnl.fd;
 	
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
@@ -123,6 +123,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	/* Never enters here...*/
-	return(0);
+ out_err:
+	/* never enters here */
+	return (1);
 }
