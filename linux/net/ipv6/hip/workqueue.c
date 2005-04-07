@@ -55,7 +55,6 @@ static inline struct hip_work_order *hip_get_work_order_cpu(void)
 {
 	struct hip_work_order *result;
 	struct hip_pc_wq *wq;
-
 #ifdef __KERNEL__
 	unsigned long eflags;
 	int locked;
@@ -194,7 +193,8 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 
 int hip_init_workqueue()
 {
-#ifndef CONFIG_HIP_USERSPACE
+  //#ifndef CONFIG_HIP_USERSPACE
+#ifdef __KERNEL__
 	struct hip_pc_wq *wq;
 	unsigned long eflags;
 
@@ -211,7 +211,8 @@ int hip_init_workqueue()
 
 void hip_uninit_workqueue()
 {
-#ifndef CONFIG_HIP_USERSPACE
+#ifdef __KERNEL__
+  //#ifndef CONFIG_HIP_USERSPACE
 	struct list_head *pos,*iter;
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
