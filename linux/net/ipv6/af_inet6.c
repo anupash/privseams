@@ -63,6 +63,10 @@
 #include <asm/uaccess.h>
 #include <asm/system.h>
 
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
+#include <net/hip_glue.h>
+#endif
+
 MODULE_AUTHOR("Cast of dozens");
 MODULE_DESCRIPTION("IPv6 protocol stack for Linux");
 MODULE_LICENSE("GPL");
@@ -283,6 +287,16 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 		goto out;
 	}
 
+	/* If the address is a HIT, check that it really exists locally */
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)	
+	if(ipv6_addr_is_hit(&addr->sin6_addr)) {
+		if(!(HIP_CALLFUNC(hip_hit_is_our,0) (&addr->sin6_addr))) {
+			err = -EADDRNOTAVAIL;
+			goto out;
+		}
+	}
+#endif
+
 	/* Check if the address belongs to the host. */
 	if (addr_type == IPV6_ADDR_MAPPED) {
 		v4addr = addr->sin6_addr.s6_addr32[3];
@@ -322,7 +336,9 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 			if (!(addr_type & IPV6_ADDR_MULTICAST))	{
 				/* For HIP implementation: If we have a HIT 
 				   then skip the address check */
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)	
 				if(!ipv6_addr_is_hit(&addr->sin6_addr)) 
+#endif
 					if (!ipv6_chk_addr(&addr->sin6_addr, 
 							   dev, 0)) {
 						if (dev)

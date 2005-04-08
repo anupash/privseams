@@ -2162,6 +2162,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_handle_inet6_addr_del);
 	/* HIP_SETCALL(hip_update_spi_waitlist_ispending); */
 	HIP_SETCALL(hip_get_default_spi_out);
+	HIP_SETCALL(hip_hit_is_our);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
 		HIP_ERROR("Could not add HIP protocol\n");
