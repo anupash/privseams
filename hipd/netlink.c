@@ -3,8 +3,7 @@
 
 #include "debug.h" /* logging facilities */
 #include "netlink.h"
-
-static struct rtnl_handle *rtnl;
+#include "hipd.h"
 
 /* base exchange IPv6 addresses need to be put into ifindex2spi map,
  * so a function is needed which gets the ifindex of the network
@@ -73,7 +72,7 @@ int hip_netlink_receive() {
 	
 	while (1) {
                 iov.iov_len = sizeof(buf);
-                status = recvmsg(rtnl->fd, &msg, 0);
+                status = recvmsg(rtnl.fd, &msg, 0);
 
                 if (status < 0) {
                         if (errno == EINTR)
@@ -148,7 +147,7 @@ int hip_netlink_talk(struct hip_work_order *req,
 
 	/* Let the talk insert any non-responses to our queue so that
            they will be processed later */
-	if (rtnl_talk(rtnl, &tx.n, 0, 0, &rx.n, receive_work_order, NULL) < 0) {
+	if (rtnl_talk(&rtnl, &tx.n, 0, 0, &rx.n, receive_work_order, NULL) < 0) {
 		HIP_ERROR("Unable to talk over netlink.\n");
 		return -1;
 	}
@@ -189,7 +188,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
 	memcpy(&h->msg, hwo->msg, msg_len);
 
-        ret = rtnl_send(rtnl, (char*)nlh, nlh->nlmsg_len) <= 0;
+        ret = rtnl_send(&rtnl, (char*)nlh, nlh->nlmsg_len) <= 0;
 	HIP_FREE(nlh);
 	return ret;
 }
