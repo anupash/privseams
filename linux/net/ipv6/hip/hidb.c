@@ -14,6 +14,7 @@
  * Do not access these databases directly: use the accessors in this file.
  */
 
+/* XX FIXME: these should hashes instead of plain linked lists */
 HIP_INIT_DB(hip_peer_hostid_db, "peer_hid");
 HIP_INIT_DB(hip_local_hostid_db, "local_hid");
 
@@ -157,15 +158,17 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	HIP_ASSERT(lhi != NULL);
 
-	id_entry = (struct hip_host_id_entry *)HIP_MALLOC(sizeof(id_entry), GFP_KERNEL);
+	id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(id_entry),
+							  GFP_KERNEL);
 	if (id_entry == NULL) {
 		HIP_ERROR("No memory available for host id\n");
 		err = -ENOMEM;
 		goto out_err;
 	}
 
-	id_entry->host_id = (struct hip_host_id *)HIP_MALLOC(hip_get_param_total_len(host_id),
-							     GFP_KERNEL);
+	id_entry->host_id = (struct hip_host_id *)
+	  HIP_MALLOC(hip_get_param_total_len(host_id),
+		     GFP_KERNEL);
 	if (!id_entry->host_id) {
 		HIP_ERROR("lhost_id mem alloc failed\n");
 		err = -ENOMEM;

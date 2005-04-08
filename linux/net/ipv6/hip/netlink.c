@@ -84,7 +84,7 @@ static void hip_netlink_rcv(struct sock *sk, int len) {
 	} while (nl_sk && nl_sk->sk_receive_queue.qlen);
 }
 
-int hip_netlink_open(int *fd) {
+int hip_netlink_open(void) {
 	nl_sk = netlink_kernel_create(NETLINK_HIP, hip_netlink_rcv);
 	if (nl_sk == NULL)
 		return -ENOMEM;
@@ -92,8 +92,8 @@ int hip_netlink_open(int *fd) {
 	return 0;
 }
 
-void hip_netlink_close() {
-	if (!nl_sk) 
+void hip_netlink_close(void) {
+	if (nl_sk)
 		sock_release(nl_sk->sk_socket);
 }
 

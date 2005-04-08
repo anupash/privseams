@@ -258,6 +258,7 @@ struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 	ipv6_addr_copy(&hit, &hs->hit);
 	hip_beetdb_put_hs(hs);
 
+	/* searches based on the dst HIT? is this correct? */
 	ha = hip_xfrm_find_by_hit(&hit);
 	if (!ha) {
 		HIP_DEBUG("HA not found for SPI=0x%x\n", spi_in);

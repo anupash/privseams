@@ -525,21 +525,29 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
  */
 int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
-	hip_ha_t *entry;
+	hip_xfrm_t *entry;
 
 	if (!ipv6_addr_is_hit(&fl->fl6_dst)) {
 		HIP_ERROR("dst not a HIT\n");
 		return 0;
 	}
 
-	entry = hip_hadb_find_byhit((hip_hit_t *)&fl->fl6_dst);
+	entry = hip_xfrm_find_by_hit(&fl->fl6_dst);
 	if (!entry) {
 		HIP_ERROR("Unknown destination HIT\n");
 		return 0;
 	}
 
+	if (ipv6_addr_any(&entry->hit_our)) {
+		/* No src HIT specified yet, fill one */
+		if (hip_get_any_local_hit(&entry->hit_our,
+					  HIP_HI_DEFAULT_ALGO) < 0) {
+			return 0;
+		}
+	}
+
 	ipv6_addr_copy(hit_storage, &entry->hit_our);
-	hip_put_ha(entry);
+	hip_put_xfrm(entry);
 
 	return 1;
 }
@@ -1233,13 +1241,21 @@ static int hip_worker(void *t)
 
 	/* set up thread */
 	thr->pid = pid = current->pid;
-	hip_netlink_open(0);
 	hip_init_workqueue();
 	atomic_inc(&hip_working);
 	daemonize("khipd/%d", cpu);
 	allow_signal(SIGKILL);
 	flush_signals(current);
-	set_cpus_allowed(current, cpumask_of_cpu(cpu));/* TODO: check return value */
+	result = hip_netlink_open();
+	if (!result) {
+		HIP_ERROR("Failed to open netlink\n");
+		goto out;
+	}
+	result =  set_cpus_allowed(current, cpumask_of_cpu(cpu));
+	if (result != 0) {
+		HIP_ERROR("Failed to set allowed CPUs\n");
+		goto out;
+	}
 	//set_user_nice(current, 0); //XXX: Set this as you please
 
 	HIP_DEBUG("HIP kernel thread %s pid=%d started\n", current->comm, pid);
@@ -1286,6 +1302,8 @@ static int hip_worker(void *t)
 
 		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
+
+ out:
 
 	/* cleanup and finish thread */
 	hip_uninit_workqueue();
