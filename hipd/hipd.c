@@ -12,16 +12,8 @@
 
 #include <signal.h>     /* signal() */
 #include <net/hip.h>
-//#include <linux/socket.h> /* sa_family_t */
 #include <stdio.h>      /* stderr and others */
-//#include <iproute/libnetlink.h> /* netlink connectivity */
 #include <errno.h>      /* errno */
-//#include <linux/time.h> /* struct timeval */
-
-//#include <sys/socket.h> /* socket functions */
-//#include <sys/select.h> /* select */
-
-
 
 #include "hipd.h"
 #include "workqueue.h"
@@ -38,6 +30,7 @@ void usage() {
  * resource allocations.
  */
 void hip_exit(int signal) {
+	HIP_ERROR("Signal: %d", signal);
 	hip_uninit_workqueue();
 	rtnl_close(&rtnl);
 	exit(signal);
@@ -52,6 +45,7 @@ int main(int argc, char *argv[]) {
 	int s_net;
 	int err;
 	struct timeval timeout;
+	struct hip_work_order ping;
 	
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "f")) != -1) {
@@ -89,7 +83,21 @@ int main(int argc, char *argv[]) {
 	
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
+
+	HIP_DEBUG("Pinging...\n");
 	
+	/* Ping kernel and announce our PID */
+	INIT_WORK_ORDER_HDR(ping.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_PING, NULL, NULL, getpid(), 0);
+	ping.msg = hip_msg_alloc();
+	if (!hip_netlink_talk(&ping, &ping)) {
+		HIP_ERROR("Unable to send over netlink.\n");
+		return(1);
+	}
+
+	hip_msg_free(ping.msg);
+	
+	HIP_DEBUG("Pinged...\n");
+
 	/* Enter to the select-loop */
 	for (;;) {
 		struct hip_work_order *hwo;

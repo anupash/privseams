@@ -57,6 +57,7 @@
 #define HIP_WO_SUBTYPE_XFRM_DEL    109
 #define HIP_WO_SUBTYPE_XFRM_UPD    110
 #define HIP_WO_SUBTYPE_ADDSA       111
+#define HIP_WO_SUBTYPE_PING        112
 
 
 /* subtypes from 201 to 300 reserved for HIP_WO_TYPE_MSG */

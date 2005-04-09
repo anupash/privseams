@@ -1058,6 +1058,7 @@ static int hip_init_cipher(void)
 	/* instruct the "IPsec" to check for available algorithms */
 	xfrm_probe_algs();
 
+// FIXME: tkoponen, none of the below is needed if hipd is in userspace?
 	/* Get implementations for all the ciphers we support */
 	impl_aes_cbc = crypto_alloc_tfm("aes", CRYPTO_TFM_MODE_CBC);
 	if (!impl_aes_cbc) {
@@ -1247,7 +1248,7 @@ static int hip_worker(void *t)
 	allow_signal(SIGKILL);
 	flush_signals(current);
 	result = hip_netlink_open();
-	if (!result) {
+	if (result != 0) {
 		HIP_ERROR("Failed to open netlink\n");
 		goto out;
 	}

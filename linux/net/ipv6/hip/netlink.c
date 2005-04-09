@@ -108,6 +108,11 @@ int hip_netlink_send(struct hip_work_order *hwo)
 		HIP_ERROR("Netlink socket not open.\n");
 		return -1;
 	}
+	
+	if (!hipd_pid) {
+		HIP_ERROR("No hipd userspace daemon running.\n");
+		return -1;
+	}
 
 	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
 	skb = alloc_skb(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)), GFP_KERNEL);	
@@ -134,10 +139,16 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	netlink_unicast(nl_sk, skb, hipd_pid, MSG_DONTWAIT);
 	/* FIXME: errors of unicast */
 
+	HIP_DEBUG("Sent a netlink message.");
+
 	// FIXME: ack processing...
 
 	kfree_skb(skb);
 	return 1;
+}
+
+void hip_netlink_ping(int pid) {
+	hipd_pid = pid;
 }
 
 

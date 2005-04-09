@@ -422,6 +422,17 @@ int hip_do_work(struct hip_work_order *job)
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_xfrm_delete(job->hdr.arg1, &job->hdr.src_addr, job->hdr.arg2);
 			break;
+
+		case HIP_WO_SUBTYPE_PING:
+			resp = hip_init_job(GFP_KERNEL);
+			if (!resp) 
+				break;
+
+			hip_netlink_ping(job->hdr.arg1);
+
+			resp->seq = job->seq;
+			res = resp->hdr.arg1 = 0;
+			break;
 #endif
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",

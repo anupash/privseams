@@ -810,11 +810,12 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 	int err = 0;
 	struct hip_work_order *hwo;
 
-	hwo = hip_init_job(GFP_KERNEL); // tkoponen: why this was this ATOMIC?
-	if (!hwo)
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (!hwo) {
 		HIP_ERROR("No memory for hit <-> ip mapping\n");
 		err = -ENOMEM;
 		goto out_err;
+	}
 
 	/* a slight kludge: the hit is carried in the dst IP address
 	   field since it is not needed for anything */
