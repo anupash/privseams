@@ -21,7 +21,7 @@
 #define NETLINK_TAPBASE		16	/* 16 to 31 are ethertap */
 #define NETLINK_HIP           99   /* Host Identity Protocol signalling messages */
 
-#define MAX_LINKS 32		
+#define MAX_LINKS 100
 
 struct sockaddr_nl
 {

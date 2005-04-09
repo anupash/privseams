@@ -97,56 +97,17 @@ void hip_netlink_close(void) {
 		sock_release(nl_sk->sk_socket);
 }
 
-/*struct hip_work_order *hip_netlink_receive(void)
-{
-	struct hip_work_order *result;
-	struct sk_buff *skb = NULL;
-	struct nlmsghdr *nlh = NULL;
-	struct hip_work_order *hwo = NULL;
-	uint16_t msg_len;
-	int err;
-
-	// wait for message coming down from user-space
-	skb = skb_recv_datagram(nl_sk, 0, 0, &err);     
-	// FIXME: error check
-	nlh = (struct nlmsghdr *)skb->data;
-	hipd_pid = nlh->nlmsg_pid;
-	
-	result = HIP_MALLOC(sizeof(struct hip_work_order), GFP_KERNEL);
-	if (!result) {
-		HIP_ERROR("Out of memory.\n");
-		kfree_skb(skb);
-		result = NULL;
-		goto err;
-	}
-	
-	hwo = (struct hip_work_order *)NLMSG_DATA(nlh);
-	memcpy(result, hwo, sizeof(struct hip_work_order_hdr));
-
-	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);	
-	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
-	if (!result->msg) {
-		HIP_ERROR("Out of memory.\n");
-		kfree_skb(skb);
-		HIP_FREE(hwo);
-		result = NULL;
-		goto err;
-	}
-	
-	memcpy(result->msg, &hwo->msg, msg_len);
-	result = hwo;
-	kfree_skb(skb);
-	
- err:
-	return result;
-}*/
-
 int hip_netlink_send(struct hip_work_order *hwo) 
 {
 	struct hip_work_order *h;
 	struct sk_buff *skb = NULL;
 	struct nlmsghdr *nlh;
 	int msg_len;
+
+	if (!nl_sk) {
+		HIP_ERROR("Netlink socket not open.\n");
+		return -1;
+	}
 
 	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
 	skb = alloc_skb(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)), GFP_KERNEL);	
@@ -169,6 +130,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	NETLINK_CB(skb).pid = 0; /* from kernel */
 	NETLINK_CB(skb).dst_pid = hipd_pid;
 	NETLINK_CB(skb).dst_groups = 0; /* unicast */
+
 	netlink_unicast(nl_sk, skb, hipd_pid, MSG_DONTWAIT);
 	/* FIXME: errors of unicast */
 

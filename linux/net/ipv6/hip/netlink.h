@@ -14,7 +14,7 @@
 #include "debug.h"
 
 #ifdef __KERNEL__
-int hip_netlink_open();
+int hip_netlink_open(void);
 void hip_netlink_close(void);
 #else
 int hip_netlink_receive();

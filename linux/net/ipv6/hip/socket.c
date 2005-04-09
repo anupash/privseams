@@ -810,7 +810,7 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 	int err = 0;
 	struct hip_work_order *hwo;
 
-	hwo = hip_init_job(GFP_ATOMIC);
+	hwo = hip_init_job(GFP_KERNEL); // tkoponen: why this was this ATOMIC?
 	if (!hwo)
 		HIP_ERROR("No memory for hit <-> ip mapping\n");
 		err = -ENOMEM;

@@ -1340,6 +1340,8 @@ static int __init hip_init(void)
 
 #ifndef CONFIG_HIP_USERSPACE
 	hip_init_hadb();	
+#else
+	hip_init_beetdb();
 #endif
 
 #ifdef CONFIG_HIP_RVS
@@ -1476,6 +1478,8 @@ static void __exit hip_cleanup(void)
 #ifndef CONFIG_HIP_USERSPACE
 	hip_uninit_host_id_dbs();
 	hip_uninit_hadb();
+#else
+	hip_uninit_beetdb();
 #endif
 	hip_uninit_all_eid_db();
 	hip_uninit_output_socket();
