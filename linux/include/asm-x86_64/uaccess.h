@@ -172,7 +172,7 @@ do {									\
 
 /* FIXME: this hack is definitely wrong -AK */
 struct __large_struct { unsigned long buf[100]; };
-#define __m(x) (*(struct __large_struct *)(x))
+#define __m(x) (*(struct __large_struct __user *)(x))
 
 /*
  * Tell gcc we read from memory instead of writing: this is because
@@ -198,7 +198,7 @@ struct __large_struct { unsigned long buf[100]; };
 #define __get_user_nocheck(x,ptr,size)				\
 ({								\
 	int __gu_err;						\
-	long __gu_val;						\
+	unsigned long __gu_val;					\
 	__get_user_size(__gu_val,(ptr),(size),__gu_err);	\
 	(x) = (__typeof__(*(ptr)))__gu_val;			\
 	__gu_err;						\

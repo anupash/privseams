@@ -40,7 +40,6 @@
 #include <linux/adb.h>
 #include <linux/module.h>
 #include <linux/delay.h>
-
 #include <linux/irq.h>
 #include <linux/seq_file.h>
 #include <linux/root_dev.h>
@@ -56,16 +55,15 @@
 #include <asm/dma.h>
 #include <asm/machdep.h>
 #include <asm/irq.h>
-#include <asm/naca.h>
 #include <asm/time.h>
 #include <asm/nvram.h>
-
-#include "i8259.h"
+#include <asm/plpar_wrappers.h>
 #include <asm/xics.h>
-#include <asm/ppcdebug.h>
 #include <asm/cputable.h>
 
+#include "i8259.h"
 #include "mpic.h"
+#include "pci.h"
 
 #ifdef DEBUG
 #define DBG(fmt...) udbg_printf(fmt)
@@ -73,24 +71,24 @@
 #define DBG(fmt...)
 #endif
 
-extern void find_and_init_phbs(void);
 extern void pSeries_final_fixup(void);
 
 extern void pSeries_get_boot_time(struct rtc_time *rtc_time);
 extern void pSeries_get_rtc_time(struct rtc_time *rtc_time);
 extern int  pSeries_set_rtc_time(struct rtc_time *rtc_time);
 extern void find_udbg_vterm(void);
-extern void SystemReset_FWNMI(void), MachineCheck_FWNMI(void);	/* from head.S */
-extern void generic_find_legacy_serial_ports(unsigned int *default_speed);
+extern void system_reset_fwnmi(void);	/* from head.S */
+extern void machine_check_fwnmi(void);	/* from head.S */
+extern void generic_find_legacy_serial_ports(u64 *physport,
+		unsigned int *default_speed);
 
 int fwnmi_active;  /* TRUE if an FWNMI handler is present */
 
-unsigned long  virtPython0Facilities = 0;  // python0 facility area (memory mapped io) (64-bit format) VIRTUAL address.
-
-extern unsigned long loops_per_jiffy;
-
 extern unsigned long ppc_proc_freq;
 extern unsigned long ppc_tb_freq;
+
+extern void pSeries_system_reset_exception(struct pt_regs *regs);
+extern int pSeries_machine_check_exception(struct pt_regs *regs);
 
 static volatile void __iomem * chrp_int_ack_special;
 struct mpic *pSeries_mpic;
@@ -118,8 +116,8 @@ static void __init fwnmi_init(void)
 	if (ibm_nmi_register == RTAS_UNKNOWN_SERVICE)
 		return;
 	ret = rtas_call(ibm_nmi_register, 2, 1, NULL,
-			__pa((unsigned long)SystemReset_FWNMI),
-			__pa((unsigned long)MachineCheck_FWNMI));
+			__pa((unsigned long)system_reset_fwnmi),
+			__pa((unsigned long)machine_check_fwnmi));
 	if (ret == 0)
 		fwnmi_active = 1;
 }
@@ -196,7 +194,7 @@ static void __init pSeries_setup_mpic(void)
 static void __init pSeries_setup_arch(void)
 {
 	/* Fixup ppc_md depending on the type of interrupt controller */
-	if (naca->interrupt_controller == IC_OPEN_PIC) {
+	if (ppc64_interrupt_controller == IC_OPEN_PIC) {
 		ppc_md.init_IRQ       = pSeries_init_mpic; 
 		ppc_md.get_irq        = mpic_get_irq;
 		/* Allocate the mpic now, so that find_and_init_phbs() can
@@ -225,7 +223,7 @@ static void __init pSeries_setup_arch(void)
 	fwnmi_init();
 
 	/* Find and initialize PCI host bridges */
-	/* iSeries needs to be done much later. */
+	init_pci_config_tokens();
 	eeh_init();
 	find_and_init_phbs();
 
@@ -308,15 +306,15 @@ static  void __init pSeries_discover_pic(void)
 	 * to properly parse the OF interrupt tree & do the virtual irq mapping
 	 */
 	__irq_offset_value = NUM_ISA_INTERRUPTS;
-	naca->interrupt_controller = IC_INVALID;
+	ppc64_interrupt_controller = IC_INVALID;
 	for (np = NULL; (np = of_find_node_by_name(np, "interrupt-controller"));) {
 		typep = (char *)get_property(np, "compatible", NULL);
 		if (strstr(typep, "open-pic"))
-			naca->interrupt_controller = IC_OPEN_PIC;
+			ppc64_interrupt_controller = IC_OPEN_PIC;
 		else if (strstr(typep, "ppc-xicp"))
-			naca->interrupt_controller = IC_PPC_XIC;
+			ppc64_interrupt_controller = IC_PPC_XIC;
 		else
-			printk("initialize_naca: failed to recognize"
+			printk("pSeries_discover_pic: failed to recognize"
 			       " interrupt-controller\n");
 		break;
 	}
@@ -344,6 +342,7 @@ static void __init pSeries_init_early(void)
 	void *comport;
 	int iommu_off = 0;
 	unsigned int default_speed;
+	u64 physport;
 
 	DBG(" -> pSeries_init_early()\n");
 
@@ -357,13 +356,13 @@ static void __init pSeries_init_early(void)
 			     get_property(of_chosen, "linux,iommu-off", NULL));
 	}
 
-	generic_find_legacy_serial_ports(&default_speed);
+	generic_find_legacy_serial_ports(&physport, &default_speed);
 
 	if (systemcfg->platform & PLATFORM_LPAR)
 		find_udbg_vterm();
-	else if (naca->serialPortAddr) {
+	else if (physport) {
 		/* Map the uart for udbg. */
-		comport = (void *)__ioremap(naca->serialPortAddr, 16, _PAGE_NO_CACHE);
+		comport = (void *)__ioremap(physport, 16, _PAGE_NO_CACHE);
 		udbg_init_uart(comport, default_speed);
 
 		ppc_md.udbg_putc = udbg_putc;
@@ -373,10 +372,7 @@ static void __init pSeries_init_early(void)
 	}
 
 
-	if (iommu_off)
-		pci_dma_init_direct();
-	else
-		tce_init_pSeries();
+	iommu_init_early_pSeries();
 
 	pSeries_discover_pic();
 
@@ -391,7 +387,7 @@ static void pSeries_progress(char *s, unsigned short hex)
 	char *os;
 	static int display_character, set_indicator;
 	static int max_width;
-	static spinlock_t progress_lock = SPIN_LOCK_UNLOCKED;
+	static DEFINE_SPINLOCK(progress_lock);
 	static int pending_newline = 0;  /* did last write end with unprinted newline? */
 
 	if (!rtas.base)
@@ -610,4 +606,6 @@ struct machdep_calls __initdata pSeries_md = {
 	.calibrate_decr		= pSeries_calibrate_decr,
 	.progress		= pSeries_progress,
 	.check_legacy_ioport	= pSeries_check_legacy_ioport,
+	.system_reset_exception = pSeries_system_reset_exception,
+	.machine_check_exception = pSeries_machine_check_exception,
 };

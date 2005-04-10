@@ -200,7 +200,7 @@ void show_stack(struct task_struct *tsk, unsigned long *sp)
 	barrier();
 }
 
-spinlock_t die_lock = SPIN_LOCK_UNLOCKED;
+DEFINE_SPINLOCK(die_lock);
 
 /*
  * This function is protected against re-entrancy.
@@ -241,7 +241,7 @@ void die_if_kernel(const char *str, struct pt_regs *regs, int err)
 }
 
 static LIST_HEAD(undef_hook);
-static spinlock_t undef_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(undef_lock);
 
 void register_undef_hook(struct undef_hook *hook)
 {
@@ -393,6 +393,7 @@ do_cache_op(unsigned long start, unsigned long end, int flags)
 #define NR(x) ((__ARM_NR_##x) - __ARM_NR_BASE)
 asmlinkage int arm_syscall(int no, struct pt_regs *regs)
 {
+	struct thread_info *thread = current_thread_info();
 	siginfo_t info;
 
 	if ((no >> 16) != 0x9f)
@@ -444,6 +445,17 @@ asmlinkage int arm_syscall(int no, struct pt_regs *regs)
 			break;
 		regs->ARM_cpsr |= MODE32_BIT;
 		return regs->ARM_r0;
+
+	case NR(set_tls):
+		thread->tp_value = regs->ARM_r0;
+		/*
+		 * Our user accessible TLS ptr is located at 0xffff0ffc.
+		 * On SMP read access to this address must raise a fault
+		 * and be emulated from the data abort handler.
+		 * m
+		 */
+		*((unsigned long *)0xffff0ffc) = thread->tp_value;
+		return 0;
 
 	default:
 		/* Calls 9f00xx..9f07ff are defined to return -ENOSYS

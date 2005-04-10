@@ -92,7 +92,7 @@ static struct nbd_device nbd_dev[MAX_NBD];
  *    a single lock.
  * Thanks go to Jens Axboe and Al Viro for their LKML emails explaining this!
  */
-static spinlock_t nbd_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(nbd_lock);
 
 #ifndef NDEBUG
 static const char *ioctl_cmd_to_ascii(int cmd)
@@ -726,6 +726,6 @@ MODULE_DESCRIPTION("Network Block Device");
 MODULE_LICENSE("GPL");
 
 #ifndef NDEBUG
-MODULE_PARM(debugflags, "i");
+module_param(debugflags, int, 0644);
 MODULE_PARM_DESC(debugflags, "flags for controlling debug output");
 #endif

@@ -163,7 +163,7 @@ prism54_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (rvalue || !mem_addr) {
 		printk(KERN_ERR "%s: PCI device memory region not configured; fix your BIOS or CardBus bridge/drivers\n",
 		       DRV_NAME);
-		goto do_pci_disable_device;
+		goto do_pci_release_regions;
 	}
 
 	/* enable PCI bus-mastering */
@@ -291,6 +291,8 @@ prism54_resume(struct pci_dev *pdev)
 	struct net_device *ndev = pci_get_drvdata(pdev);
 	islpci_private *priv = ndev ? netdev_priv(ndev) : NULL;
 	BUG_ON(!priv);
+
+	pci_enable_device(pdev);
 
 	printk(KERN_NOTICE "%s: got resume request\n", ndev->name);
 

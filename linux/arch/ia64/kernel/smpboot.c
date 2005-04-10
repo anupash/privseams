@@ -68,7 +68,7 @@
 #define NUM_ROUNDS	64	/* magic value */
 #define NUM_ITERS	5	/* likewise */
 
-static spinlock_t itc_sync_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(itc_sync_lock);
 static volatile unsigned long go[SLAVE + 1];
 
 #define DEBUG_ITC_SYNC	0
@@ -343,8 +343,6 @@ smp_callin (void)
 int __devinit
 start_secondary (void *unused)
 {
-	extern int cpu_idle (void);
-
 	/* Early console may use I/O ports */
 	ia64_set_kr(IA64_KR_IO_BASE, __pa(ia64_iobase));
 
@@ -353,7 +351,8 @@ start_secondary (void *unused)
 	cpu_init();
 	smp_callin();
 
-	return cpu_idle();
+	cpu_idle();
+	return 0;
 }
 
 struct pt_regs * __devinit idle_regs(struct pt_regs *regs)
@@ -613,8 +612,7 @@ void __cpu_die(unsigned int cpu)
 			 */
 			return;
 		}
-		current->state = TASK_UNINTERRUPTIBLE;
-		schedule_timeout(HZ/10);
+		msleep(100);
 	}
  	printk(KERN_ERR "CPU %u didn't die...\n", cpu);
 }

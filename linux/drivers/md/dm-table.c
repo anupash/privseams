@@ -58,7 +58,7 @@ struct dm_table {
 /*
  * Similar to ceiling(log_size(n))
  */
-static unsigned int int_log(unsigned long n, unsigned long base)
+static unsigned int int_log(unsigned int n, unsigned int base)
 {
 	int result = 0;
 
@@ -849,16 +849,30 @@ int dm_table_get_mode(struct dm_table *t)
 	return t->mode;
 }
 
-void dm_table_suspend_targets(struct dm_table *t)
+static void suspend_targets(struct dm_table *t, unsigned postsuspend)
 {
-	int i;
+	int i = t->num_targets;
+	struct dm_target *ti = t->targets;
 
-	for (i = 0; i < t->num_targets; i++) {
-		struct dm_target *ti = t->targets + i;
+	while (i--) {
+		if (postsuspend) {
+			if (ti->type->postsuspend)
+				ti->type->postsuspend(ti);
+		} else if (ti->type->presuspend)
+			ti->type->presuspend(ti);
 
-		if (ti->type->suspend)
-			ti->type->suspend(ti);
+		ti++;
 	}
+}
+
+void dm_table_presuspend_targets(struct dm_table *t)
+{
+	return suspend_targets(t, 0);
+}
+
+void dm_table_postsuspend_targets(struct dm_table *t)
+{
+	return suspend_targets(t, 1);
 }
 
 void dm_table_resume_targets(struct dm_table *t)

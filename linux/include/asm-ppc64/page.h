@@ -93,7 +93,7 @@
 
 #ifdef __KERNEL__
 #ifndef __ASSEMBLY__
-#include <asm/naca.h>
+#include <asm/cache.h>
 
 #undef STRICT_MM_TYPECHECKS
 
@@ -106,8 +106,8 @@ static __inline__ void clear_page(void *addr)
 {
 	unsigned long lines, line_size;
 
-	line_size = systemcfg->dCacheL1LineSize; 
-	lines = naca->dCacheL1LinesPerPage;
+	line_size = ppc64_caches.dline_size;
+	lines = ppc64_caches.dlines_per_page;
 
 	__asm__ __volatile__(
 	"mtctr  	%1	# clear_page\n\
@@ -183,6 +183,8 @@ static inline int get_order(unsigned long size)
 
 extern int page_is_ram(unsigned long pfn);
 
+extern u64 ppc64_pft_size;		/* Log 2 of page table size */
+
 #endif /* __ASSEMBLY__ */
 
 #ifdef MODULE
@@ -203,10 +205,8 @@ extern int page_is_ram(unsigned long pfn);
 #define KERNELBASE      PAGE_OFFSET
 #define VMALLOCBASE     ASM_CONST(0xD000000000000000)
 #define IOREGIONBASE    ASM_CONST(0xE000000000000000)
-#define EEHREGIONBASE   ASM_CONST(0xA000000000000000)
 
 #define IO_REGION_ID       (IOREGIONBASE>>REGION_SHIFT)
-#define EEH_REGION_ID      (EEHREGIONBASE>>REGION_SHIFT)
 #define VMALLOC_REGION_ID  (VMALLOCBASE>>REGION_SHIFT)
 #define KERNEL_REGION_ID   (KERNELBASE>>REGION_SHIFT)
 #define USER_REGION_ID     (0UL)

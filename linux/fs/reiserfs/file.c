@@ -54,7 +54,7 @@ static int reiserfs_file_release (struct inode * inode, struct file * filp)
     /* freeing preallocation only involves relogging blocks that
      * are already in the current transaction.  preallocation gets
      * freed at the end of each transaction, so it is impossible for
-     * us to log any additional blocks
+     * us to log any additional blocks (including quota blocks)
      */
     err = journal_begin(&th, inode->i_sb, 1);
     if (err) {
@@ -147,7 +147,7 @@ static int reiserfs_sync_file(
 /* Allocates blocks for a file to fulfil write request.
    Maps all unmapped but prepared pages from the list.
    Updates metadata with newly allocated blocknumbers as needed */
-int reiserfs_allocate_blocks_for_region(
+static int reiserfs_allocate_blocks_for_region(
 				struct reiserfs_transaction_handle *th,
 				struct inode *inode, /* Inode we work with */
 				loff_t pos, /* Writing position */
@@ -201,7 +201,7 @@ int reiserfs_allocate_blocks_for_region(
     /* If we came here, it means we absolutely need to open a transaction,
        since we need to allocate some blocks */
     reiserfs_write_lock(inode->i_sb); // Journaling stuff and we need that.
-    res = journal_begin(th, inode->i_sb, JOURNAL_PER_BALANCE_CNT * 3 + 1); // Wish I know if this number enough
+    res = journal_begin(th, inode->i_sb, JOURNAL_PER_BALANCE_CNT * 3 + 1 + 2 * REISERFS_QUOTA_TRANS_BLOCKS); // Wish I know if this number enough
     if (res)
         goto error_exit;
     reiserfs_update_inode_transaction(inode) ;
@@ -576,7 +576,7 @@ error_exit:
         int err;
         // update any changes we made to blk count
         reiserfs_update_sd(th, inode);
-        err = journal_end(th, inode->i_sb, JOURNAL_PER_BALANCE_CNT * 3 + 1);
+        err = journal_end(th, inode->i_sb, JOURNAL_PER_BALANCE_CNT * 3 + 1 + 2 * REISERFS_QUOTA_TRANS_BLOCKS);
         if (err)
             res = err;
     }
@@ -587,8 +587,8 @@ error_exit:
 }
 
 /* Unlock pages prepared by reiserfs_prepare_file_region_for_write */
-void reiserfs_unprepare_pages(struct page **prepared_pages, /* list of locked pages */
-			      int num_pages /* amount of pages */) {
+static void reiserfs_unprepare_pages(struct page **prepared_pages, /* list of locked pages */
+			      size_t num_pages /* amount of pages */) {
     int i; // loop counter
 
     for (i=0; i < num_pages ; i++) {
@@ -602,7 +602,7 @@ void reiserfs_unprepare_pages(struct page **prepared_pages, /* list of locked pa
 
 /* This function will copy data from userspace to specified pages within
    supplied byte range */
-int reiserfs_copy_from_user_to_file_region(
+static int reiserfs_copy_from_user_to_file_region(
 				loff_t pos, /* In-file position */
 				int num_pages, /* Number of pages affected */
 				int write_bytes, /* Amount of bytes to write */
@@ -619,7 +619,7 @@ int reiserfs_copy_from_user_to_file_region(
     int offset; // offset in page
 
     for ( i = 0, offset = (pos & (PAGE_CACHE_SIZE-1)); i < num_pages ; i++,offset=0) {
-	int count = min_t(int,PAGE_CACHE_SIZE-offset,write_bytes); // How much of bytes to write to this page
+	size_t count = min_t(size_t,PAGE_CACHE_SIZE-offset,write_bytes); // How much of bytes to write to this page
 	struct page *page=prepared_pages[i]; // Current page we process.
 
 	fault_in_pages_readable( buf, count);
@@ -714,12 +714,12 @@ drop_write_lock:
 /* Submit pages for write. This was separated from actual file copying
    because we might want to allocate block numbers in-between.
    This function assumes that caller will adjust file size to correct value. */
-int reiserfs_submit_file_region_for_write(
+static int reiserfs_submit_file_region_for_write(
 				struct reiserfs_transaction_handle *th,
 				struct inode *inode,
 				loff_t pos, /* Writing position offset */
-				int num_pages, /* Number of pages to write */
-				int write_bytes, /* number of bytes to write */
+				size_t num_pages, /* Number of pages to write */
+				size_t write_bytes, /* number of bytes to write */
 				struct page **prepared_pages /* list of pages */
 				)
 {
@@ -795,7 +795,7 @@ int reiserfs_submit_file_region_for_write(
 
 /* Look if passed writing region is going to touch file's tail
    (if it is present). And if it is, convert the tail to unformatted node */
-int reiserfs_check_for_tail_and_convert( struct inode *inode, /* inode to deal with */
+static int reiserfs_check_for_tail_and_convert( struct inode *inode, /* inode to deal with */
 					 loff_t pos, /* Writing position */
 					 int write_bytes /* amount of bytes to write */
 				        )
@@ -851,12 +851,12 @@ int reiserfs_check_for_tail_and_convert( struct inode *inode, /* inode to deal w
    append), it is zeroed, then. 
    Returns number of unallocated blocks that should be allocated to cover
    new file data.*/
-int reiserfs_prepare_file_region_for_write(
+static int reiserfs_prepare_file_region_for_write(
 				struct inode *inode /* Inode of the file */,
 				loff_t pos, /* position in the file */
-				int num_pages, /* number of pages to
+				size_t num_pages, /* number of pages to
 					          prepare */
-				int write_bytes, /* Amount of bytes to be
+				size_t write_bytes, /* Amount of bytes to be
 						    overwritten from
 						    @pos */
 				struct page **prepared_pages /* pointer to array
@@ -1148,7 +1148,7 @@ failed_read:
    Future Features: providing search_by_key with hints.
 
 */
-ssize_t reiserfs_file_write( struct file *file, /* the file we are going to write into */
+static ssize_t reiserfs_file_write( struct file *file, /* the file we are going to write into */
                              const char __user *buf, /*  pointer to user supplied data
 (in userspace) */
                              size_t count, /* amount of bytes to write */
@@ -1252,10 +1252,9 @@ ssize_t reiserfs_file_write( struct file *file, /* the file we are going to writ
     while ( count > 0) {
 	/* This is the main loop in which we running until some error occures
 	   or until we write all of the data. */
-	int num_pages;/* amount of pages we are going to write this iteration */
-	int write_bytes; /* amount of bytes to write during this iteration */
-	int blocks_to_allocate; /* how much blocks we need to allocate for
-				   this iteration */
+	size_t num_pages;/* amount of pages we are going to write this iteration */
+	size_t write_bytes; /* amount of bytes to write during this iteration */
+	size_t blocks_to_allocate; /* how much blocks we need to allocate for this iteration */
         
         /*  (pos & (PAGE_CACHE_SIZE-1)) is an idiom for offset into a page of pos*/
 	num_pages = !!((pos+count) & (PAGE_CACHE_SIZE - 1)) + /* round up partial
@@ -1269,7 +1268,7 @@ ssize_t reiserfs_file_write( struct file *file, /* the file we are going to writ
 	    /* If we were asked to write more data than we want to or if there
 	       is not that much space, then we shorten amount of data to write
 	       for this iteration. */
-	    num_pages = min_t(int, REISERFS_WRITE_PAGES_AT_A_TIME, reiserfs_can_fit_pages(inode->i_sb));
+	    num_pages = min_t(size_t, REISERFS_WRITE_PAGES_AT_A_TIME, reiserfs_can_fit_pages(inode->i_sb));
 	    /* Also we should not forget to set size in bytes accordingly */
 	    write_bytes = (num_pages << PAGE_CACHE_SHIFT) - 
 			    (pos & (PAGE_CACHE_SIZE-1));
@@ -1295,7 +1294,7 @@ ssize_t reiserfs_file_write( struct file *file, /* the file we are going to writ
 	    // But overwriting files on absolutelly full volumes would not
 	    // be very efficient. Well, people are not supposed to fill
 	    // 100% of disk space anyway.
-	    write_bytes = min_t(int, count, inode->i_sb->s_blocksize - (pos & (inode->i_sb->s_blocksize - 1)));
+	    write_bytes = min_t(size_t, count, inode->i_sb->s_blocksize - (pos & (inode->i_sb->s_blocksize - 1)));
 	    num_pages = 1;
 	    // No blocks were claimed before, so do it now.
 	    reiserfs_claim_blocks_to_be_allocated(inode->i_sb, 1 << (PAGE_CACHE_SHIFT - inode->i_blkbits));

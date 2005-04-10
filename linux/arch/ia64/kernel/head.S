@@ -5,7 +5,7 @@
  * to set up the kernel's global pointer and jump to the kernel
  * entry point.
  *
- * Copyright (C) 1998-2001, 2003 Hewlett-Packard Co
+ * Copyright (C) 1998-2001, 2003, 2005 Hewlett-Packard Co
  *	David Mosberger-Tang <davidm@hpl.hp.com>
  *	Stephane Eranian <eranian@hpl.hp.com>
  * Copyright (C) 1999 VA Linux Systems
@@ -65,10 +65,27 @@ start_ap:
 	;;
 	/*
 	 * Initialize kernel region registers:
+	 *	rr[0]: VHPT enabled, page size = PAGE_SHIFT
+	 *	rr[1]: VHPT enabled, page size = PAGE_SHIFT
+	 *	rr[2]: VHPT enabled, page size = PAGE_SHIFT
+	 *	rr[3]: VHPT enabled, page size = PAGE_SHIFT
+	 *	rr[4]: VHPT enabled, page size = PAGE_SHIFT
 	 *	rr[5]: VHPT enabled, page size = PAGE_SHIFT
 	 *	rr[6]: VHPT disabled, page size = IA64_GRANULE_SHIFT
 	 *	rr[7]: VHPT disabled, page size = IA64_GRANULE_SHIFT
+	 * We initialize all of them to prevent inadvertently assuming
+	 * something about the state of address translation early in boot.
 	 */
+	mov r6=((ia64_rid(IA64_REGION_ID_KERNEL, (0<<61)) << 8) | (PAGE_SHIFT << 2) | 1)
+	movl r7=(0<<61)
+	mov r8=((ia64_rid(IA64_REGION_ID_KERNEL, (1<<61)) << 8) | (PAGE_SHIFT << 2) | 1)
+	movl r9=(1<<61)
+	mov r10=((ia64_rid(IA64_REGION_ID_KERNEL, (2<<61)) << 8) | (PAGE_SHIFT << 2) | 1)
+	movl r11=(2<<61)
+	mov r12=((ia64_rid(IA64_REGION_ID_KERNEL, (3<<61)) << 8) | (PAGE_SHIFT << 2) | 1)
+	movl r13=(3<<61)
+	mov r14=((ia64_rid(IA64_REGION_ID_KERNEL, (4<<61)) << 8) | (PAGE_SHIFT << 2) | 1)
+	movl r15=(4<<61)
 	mov r16=((ia64_rid(IA64_REGION_ID_KERNEL, (5<<61)) << 8) | (PAGE_SHIFT << 2) | 1)
 	movl r17=(5<<61)
 	mov r18=((ia64_rid(IA64_REGION_ID_KERNEL, (6<<61)) << 8) | (IA64_GRANULE_SHIFT << 2))
@@ -76,6 +93,11 @@ start_ap:
 	mov r20=((ia64_rid(IA64_REGION_ID_KERNEL, (7<<61)) << 8) | (IA64_GRANULE_SHIFT << 2))
 	movl r21=(7<<61)
 	;;
+	mov rr[r7]=r6
+	mov rr[r9]=r8
+	mov rr[r11]=r10
+	mov rr[r13]=r12
+	mov rr[r15]=r14
 	mov rr[r17]=r16
 	mov rr[r19]=r18
 	mov rr[r21]=r20
@@ -210,21 +232,6 @@ start_ap:
 	;;
 (isBP)	st8 [r2]=r28		// save the address of the boot param area passed by the bootloader
 
-#ifdef CONFIG_IA64_EARLY_PRINTK
-	.rodata
-alive_msg:
-	stringz "I'm alive and well\n"
-alive_msg_end:
-	.previous
-
-	alloc r2=ar.pfs,0,0,2,0
-	movl out0=alive_msg
-	movl out1=alive_msg_end-alive_msg-1
-	;;
-	br.call.sptk.many rp=early_printk
-1:	// force new bundle
-#endif /* CONFIG_IA64_EARLY_PRINTK */
-
 #ifdef CONFIG_SMP
 (isAP)	br.call.sptk.many rp=start_secondary
 .ret0:
@@ -245,7 +252,9 @@ alive_msg_end:
 	;;
 	ld8 out0=[r3]
 	br.call.sptk.many b0=console_print
-self:	br.sptk.many self		// endless loop
+
+self:	hint @pause
+	br.sptk.many self		// endless loop
 END(_start)
 
 GLOBAL_ENTRY(ia64_save_debug_regs)
@@ -949,6 +958,8 @@ GLOBAL_ENTRY(ia64_spinlock_contention_pre3_4)
 (p14)	br.cond.sptk.few .wait
 (p15)	rsm psr.i		// disable interrupts if we reenabled them
 	br.cond.sptk.few b6	// lock is now free, try to acquire
+	.global ia64_spinlock_contention_pre3_4_end	// for kernprof
+ia64_spinlock_contention_pre3_4_end:
 END(ia64_spinlock_contention_pre3_4)
 
 #else

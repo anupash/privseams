@@ -94,8 +94,6 @@ static ssize_t property_read(struct file *filp, char __user *buf,
 	openprom_property *op;
 	char buffer[64];
 	
-	if (*ppos >= 0xffffff || count >= 0xffffff)
-		return -EINVAL;
 	if (!filp->private_data) {
 		node = nodes[(u16)((long)inode->u.generic_ip)].node;
 		i = ((u32)(long)inode->u.generic_ip) >> 16;
@@ -168,6 +166,8 @@ static ssize_t property_read(struct file *filp, char __user *buf,
 		op = (openprom_property *)filp->private_data;
 	if (!count || !(op->len || (op->flag & OPP_ASCIIZ)))
 		return 0;
+	if (*ppos >= 0xffffff || count >= 0xffffff)
+		return -EINVAL;
 	if (op->flag & OPP_STRINGLIST) {
 		for (k = 0, p = op->value; p < op->value + op->len; p++)
 			if (!*p)
@@ -1039,6 +1039,7 @@ static int openprom_fill_super(struct super_block *s, void *data, int silent)
 	s->s_blocksize_bits = 10;
 	s->s_magic = OPENPROM_SUPER_MAGIC;
 	s->s_op = &openprom_sops;
+	s->s_time_gran = 1;
 	root_inode = iget(s, OPENPROM_ROOT_INO);
 	if (!root_inode)
 		goto out_no_root;

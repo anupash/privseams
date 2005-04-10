@@ -98,8 +98,8 @@ static struct sock *audit_sock;
  * The second list is a list of pre-allocated audit buffers (if more
  * than AUDIT_MAXFREE are in use, the audit buffer is freed instead of
  * being placed on the freelist). */
-static spinlock_t  audit_txlist_lock = SPIN_LOCK_UNLOCKED;
-static spinlock_t  audit_freelist_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(audit_txlist_lock);
+static DEFINE_SPINLOCK(audit_freelist_lock);
 static int	   audit_freelist_count = 0;
 static LIST_HEAD(audit_txlist);
 static LIST_HEAD(audit_freelist);
@@ -145,6 +145,11 @@ struct audit_buffer {
 	int		     count; /* Times requeued */
 };
 
+void audit_set_type(struct audit_buffer *ab, int type)
+{
+	ab->type = type;
+}
+
 struct audit_entry {
 	struct list_head  list;
 	struct audit_rule rule;
@@ -160,7 +165,7 @@ static void audit_panic(const char *message)
 		printk(KERN_ERR "audit: %s\n", message);
 		break;
 	case AUDIT_FAIL_PANIC:
-		panic(message);
+		panic("audit: %s\n", message);
 		break;
 	}
 }
@@ -169,7 +174,7 @@ static inline int audit_rate_check(void)
 {
 	static unsigned long	last_check = 0;
 	static int		messages   = 0;
-	static spinlock_t	lock	   = SPIN_LOCK_UNLOCKED;
+	static DEFINE_SPINLOCK(lock);
 	unsigned long		flags;
 	unsigned long		now;
 	unsigned long		elapsed;
@@ -199,7 +204,7 @@ static inline int audit_rate_check(void)
 void audit_log_lost(const char *message)
 {
 	static unsigned long	last_msg = 0;
-	static spinlock_t	lock     = SPIN_LOCK_UNLOCKED;
+	static DEFINE_SPINLOCK(lock);
 	unsigned long		flags;
 	unsigned long		now;
 	int			print;
@@ -300,21 +305,53 @@ nlmsg_failure:			/* Used by NLMSG_PUT */
 		kfree_skb(skb);
 }
 
+/*
+ * Check for appropriate CAP_AUDIT_ capabilities on incoming audit
+ * control messages.
+ */
+static int audit_netlink_ok(kernel_cap_t eff_cap, u16 msg_type)
+{
+	int err = 0;
+
+	switch (msg_type) {
+	case AUDIT_GET:
+	case AUDIT_LIST:
+	case AUDIT_SET:
+	case AUDIT_ADD:
+	case AUDIT_DEL:
+		if (!cap_raised(eff_cap, CAP_AUDIT_CONTROL))
+			err = -EPERM;
+		break;
+	case AUDIT_USER:
+		if (!cap_raised(eff_cap, CAP_AUDIT_WRITE))
+			err = -EPERM;
+		break;
+	default:  /* bad msg */
+		err = -EINVAL;
+	}
+
+	return err;
+}
+
 static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 {
 	u32			uid, pid, seq;
 	void			*data;
 	struct audit_status	*status_get, status_set;
-	struct audit_login	*login;
-	int			err = 0;
+	int			err;
 	struct audit_buffer	*ab;
+	u16			msg_type = nlh->nlmsg_type;
+
+	err = audit_netlink_ok(NETLINK_CB(skb).eff_cap, msg_type);
+	if (err)
+		return err;
 
 	pid  = NETLINK_CREDS(skb)->pid;
 	uid  = NETLINK_CREDS(skb)->uid;
 	seq  = nlh->nlmsg_seq;
 	data = NLMSG_DATA(nlh);
 
-	switch (nlh->nlmsg_type) {
+	switch (msg_type) {
 	case AUDIT_GET:
 		status_set.enabled	 = audit_enabled;
 		status_set.failure	 = audit_failure;
@@ -323,12 +360,12 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		status_set.backlog_limit = audit_backlog_limit;
 		status_set.lost		 = atomic_read(&audit_lost);
 		status_set.backlog	 = atomic_read(&audit_backlog);
-		audit_send_reply(pid, seq, AUDIT_GET, 0, 0,
+		audit_send_reply(NETLINK_CB(skb).pid, seq, AUDIT_GET, 0, 0,
 				 &status_set, sizeof(status_set));
 		break;
 	case AUDIT_SET:
-		if (!capable(CAP_SYS_ADMIN))
-			return -EPERM;
+		if (nlh->nlmsg_len < sizeof(struct audit_status))
+			return -EINVAL;
 		status_get   = (struct audit_status *)data;
 		if (status_get->mask & AUDIT_STATUS_ENABLED) {
 			err = audit_set_enabled(status_get->enabled);
@@ -363,33 +400,15 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		ab->pid  = pid;
 		audit_log_end(ab);
 		break;
-	case AUDIT_LOGIN:
-		if (!capable(CAP_SYS_ADMIN))
-			return -EPERM;
-		login = (struct audit_login *)data;
-		ab = audit_log_start(NULL);
-		if (ab) {
-			audit_log_format(ab, "login pid=%d uid=%d loginuid=%d"
-					 " length=%d msg='%.1024s'",
-					 pid, uid,
-					 login->loginuid,
-					 login->msglen,
-					 login->msg);
-			ab->type = AUDIT_LOGIN;
-			ab->pid  = pid;
-			audit_log_end(ab);
-		}
-#ifdef CONFIG_AUDITSYSCALL
-		err = audit_set_loginuid(current->audit_context,
-					 login->loginuid);
-#endif
-		break;
-	case AUDIT_LIST:
 	case AUDIT_ADD:
 	case AUDIT_DEL:
+		if (nlh->nlmsg_len < sizeof(struct audit_rule))
+			return -EINVAL;
+		/* fallthrough */
+	case AUDIT_LIST:
 #ifdef CONFIG_AUDITSYSCALL
-		err = audit_receive_filter(nlh->nlmsg_type, pid, uid, seq,
-					   data);
+		err = audit_receive_filter(nlh->nlmsg_type, NETLINK_CB(skb).pid,
+					   uid, seq, data);
 #else
 		err = -EOPNOTSUPP;
 #endif
@@ -419,7 +438,7 @@ static int audit_receive_skb(struct sk_buff *skb)
 		if (rlen > skb->len)
 			rlen = skb->len;
 		if ((err = audit_receive_msg(skb, nlh))) {
-			netlink_ack(skb, nlh, -err);
+			netlink_ack(skb, nlh, err);
 		} else if (nlh->nlmsg_flags & NLM_F_ACK)
 			netlink_ack(skb, nlh, 0);
 		skb_pull(skb, rlen);
@@ -456,6 +475,10 @@ static void audit_log_move(struct audit_buffer *ab)
 	struct sk_buff	*skb;
 	char		*start;
 	int		extra = ab->nlh ? 0 : NLMSG_SPACE(0);
+
+	/* possible resubmission */
+	if (ab->len == 0)
+		return;
 
 	skb = skb_peek(&ab->sklist);
 	if (!skb || skb_tailroom(skb) <= ab->len + extra) {
@@ -498,6 +521,7 @@ static inline int audit_log_drain(struct audit_buffer *ab)
 		}
 		if (retval == -EAGAIN && ab->count < 5) {
 			++ab->count;
+			skb_queue_tail(&ab->sklist, skb);
 			audit_log_end_irq(ab);
 			return 1;
 		}
@@ -621,10 +645,10 @@ struct audit_buffer *audit_log_start(struct audit_context *ctx)
 
 	if (!ab)
 		ab = kmalloc(sizeof(*ab), GFP_ATOMIC);
-	if (!ab)
-		audit_log_lost("audit: out of memory in audit_log_start");
-	if (!ab)
+	if (!ab) {
+		audit_log_lost("out of memory in audit_log_start");
 		return NULL;
+	}
 
 	atomic_inc(&audit_backlog);
 	skb_queue_head_init(&ab->sklist);

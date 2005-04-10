@@ -67,6 +67,7 @@
 #include <asm/io.h>
 
 #ifdef CONFIG_PPC_PMAC
+#include <asm/pmac_feature.h>
 #include <asm/prom.h>
 #include <asm/pci-bridge.h>
 #include "../macmodes.h"
@@ -167,6 +168,7 @@ static int aty128_probe(struct pci_dev *pdev,
 static void aty128_remove(struct pci_dev *pdev);
 static int aty128_pci_suspend(struct pci_dev *pdev, u32 state);
 static int aty128_pci_resume(struct pci_dev *pdev);
+static int aty128_do_resume(struct pci_dev *pdev);
 
 /* supported Rage128 chipsets */
 static struct pci_device_id aty128_pci_tbl[] = {
@@ -452,7 +454,6 @@ static int aty128_decode_var(struct fb_var_screeninfo *var,
 static void __init aty128_get_pllinfo(struct aty128fb_par *par,
 				      void __iomem *bios);
 static void __init __iomem *aty128_map_ROM(struct pci_dev *pdev, const struct aty128fb_par *par);
-static void __init aty128_unmap_ROM(struct pci_dev *dev, void __iomem * rom);
 #endif
 static void aty128_timings(struct aty128fb_par *par);
 static void aty128_init_engine(struct aty128fb_par *par);
@@ -788,30 +789,12 @@ static u32 depth_to_dst(u32 depth)
 
 
 #ifndef __sparc__
-static void __init aty128_unmap_ROM(struct pci_dev *dev, void __iomem * rom)
-{
-	struct resource *r = &dev->resource[PCI_ROM_RESOURCE];
-	
-	iounmap(rom);
-	
-	/* Release the ROM resource if we used it in the first place */
-	if (r->parent && r->flags & PCI_ROM_ADDRESS_ENABLE) {
-		release_resource(r);
-		r->flags &= ~PCI_ROM_ADDRESS_ENABLE;
-		r->end -= r->start;
-		r->start = 0;
-	}
-	/* This will disable and set address to unassigned */
-	pci_write_config_dword(dev, dev->rom_base_reg, 0);
-}
-
-
 static void __iomem * __init aty128_map_ROM(const struct aty128fb_par *par, struct pci_dev *dev)
 {
-	struct resource *r;
 	u16 dptr;
 	u8 rom_type;
 	void __iomem *bios;
+	size_t rom_size;
 
     	/* Fix from ATI for problem with Rage128 hardware not leaving ROM enabled */
     	unsigned int temp;
@@ -821,26 +804,13 @@ static void __iomem * __init aty128_map_ROM(const struct aty128fb_par *par, stru
 	aty_st_le32(RAGE128_MPP_TB_CONFIG, temp);
 	temp = aty_ld_le32(RAGE128_MPP_TB_CONFIG);
 
-	/* no need to search for the ROM, just ask the card where it is. */
-	r = &dev->resource[PCI_ROM_RESOURCE];
+	bios = pci_map_rom(dev, &rom_size);
 
-	/* assign the ROM an address if it doesn't have one */
-	if (r->parent == NULL)
-		pci_assign_resource(dev, PCI_ROM_RESOURCE);
-	
-	/* enable if needed */
-	if (!(r->flags & PCI_ROM_ADDRESS_ENABLE)) {
-		pci_write_config_dword(dev, dev->rom_base_reg,
-				       r->start | PCI_ROM_ADDRESS_ENABLE);
-		r->flags |= PCI_ROM_ADDRESS_ENABLE;
-	}
-	
-	bios = ioremap(r->start, r->end - r->start + 1);
 	if (!bios) {
 		printk(KERN_ERR "aty128fb: ROM failed to map\n");
 		return NULL;
 	}
-	
+
 	/* Very simple test to make sure it appeared */
 	if (BIOS_IN16(0) != 0xaa55) {
 		printk(KERN_ERR "aty128fb: Invalid ROM signature %x should be 0xaa55\n",
@@ -899,7 +869,7 @@ static void __iomem * __init aty128_map_ROM(const struct aty128fb_par *par, stru
 	return bios;
 
  failed:
-	aty128_unmap_ROM(dev, bios);
+	pci_unmap_rom(dev, bios);
 	return NULL;
 }
 
@@ -1737,6 +1707,18 @@ int __init aty128fb_setup(char *options)
  *  Initialisation
  */
 
+#ifdef CONFIG_PPC_PMAC
+static void aty128_early_resume(void *data)
+{
+        struct aty128fb_par *par = data;
+
+	if (try_acquire_console_sem())
+		return;
+	aty128_do_resume(par->pdev);
+	release_console_sem();
+}
+#endif /* CONFIG_PPC_PMAC */
+
 static int __init aty128_init(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	struct fb_info *info = pci_get_drvdata(pdev);
@@ -1781,6 +1763,13 @@ static int __init aty128_init(struct pci_dev *pdev, const struct pci_device_id *
 	var = default_var;
 #ifdef CONFIG_PPC_PMAC
 	if (_machine == _MACH_Pmac) {
+		/* Indicate sleep capability */
+		if (par->chip_gen == rage_M3) {
+			pmac_call_feature(PMAC_FTR_DEVICE_CAN_WAKE, NULL, 0, 1);
+			pmac_set_early_video_resume(aty128_early_resume, par);
+		}
+
+		/* Find default mode */
 		if (mode_option) {
 			if (!mac_find_mode(&var, info, mode_option, 8))
 				var = default_var;
@@ -1959,7 +1948,7 @@ static int __init aty128_probe(struct pci_dev *pdev, const struct pci_device_id 
 	else {
 		printk(KERN_INFO "aty128fb: Rage128 BIOS located\n");
 		aty128_get_pllinfo(par, bios);
-		aty128_unmap_ROM(pdev, bios);
+		pci_unmap_rom(pdev, bios);
 	}
 #endif /* __sparc__ */
 
@@ -2397,15 +2386,13 @@ static int aty128_pci_suspend(struct pci_dev *pdev, u32 state)
 	return 0;
 }
 
-static int aty128_pci_resume(struct pci_dev *pdev)
+static int aty128_do_resume(struct pci_dev *pdev)
 {
 	struct fb_info *info = pci_get_drvdata(pdev);
 	struct aty128fb_par *par = info->par;
 
 	if (pdev->dev.power.power_state == 0)
 		return 0;
-
-	acquire_console_sem();
 
 	/* Wakeup chip */
 	if (pdev->dev.power.power_state == 2)
@@ -2426,14 +2413,24 @@ static int aty128_pci_resume(struct pci_dev *pdev)
 	par->lock_blank = 0;
 	aty128fb_blank(0, info);
 
-	release_console_sem();
-
 	pdev->dev.power.power_state = 0;
 
 	printk(KERN_DEBUG "aty128fb: resumed !\n");
 
 	return 0;
 }
+
+static int aty128_pci_resume(struct pci_dev *pdev)
+{
+	int rc;
+
+	acquire_console_sem();
+	rc = aty128_do_resume(pdev);
+	release_console_sem();
+
+	return rc;
+}
+
 
 int __init aty128fb_init(void)
 {
@@ -2462,10 +2459,10 @@ MODULE_AUTHOR("(c)1999-2003 Brad Douglas <brad@neruo.com>");
 MODULE_DESCRIPTION("FBDev driver for ATI Rage128 / Pro cards");
 MODULE_LICENSE("GPL");
 module_param(mode_option, charp, 0);
-MODULE_PARM_DESC(mode, "Specify resolution as \"<xres>x<yres>[-<bpp>][@<refresh>]\" ");
+MODULE_PARM_DESC(mode_option, "Specify resolution as \"<xres>x<yres>[-<bpp>][@<refresh>]\" ");
 #ifdef CONFIG_MTRR
 module_param_named(nomtrr, mtrr, invbool, 0);
-MODULE_PARM_DESC(mtrr, "bool: Disable MTRR support (0 or 1=disabled) (default=0)");
+MODULE_PARM_DESC(nomtrr, "bool: Disable MTRR support (0 or 1=disabled) (default=0)");
 #endif
 #endif
 

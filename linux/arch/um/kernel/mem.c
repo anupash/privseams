@@ -25,7 +25,7 @@ extern char __binary_start;
 /* Changed during early boot */
 unsigned long *empty_zero_page = NULL;
 unsigned long *empty_bad_page = NULL;
-pgd_t swapper_pg_dir[1024];
+pgd_t swapper_pg_dir[PTRS_PER_PGD];
 unsigned long highmem;
 int kmalloc_ok = 0;
 
@@ -49,8 +49,6 @@ static void setup_highmem(unsigned long highmem_start,
 	unsigned long highmem_pfn;
 	int i;
 
-	highmem_start_page = virt_to_page(highmem_start);
-
 	highmem_pfn = __pa(highmem_start) >> PAGE_SHIFT;
 	for(i = 0; i < highmem_len >> PAGE_SHIFT; i++){
 		page = &mem_map[highmem_pfn + i];
@@ -67,9 +65,6 @@ void mem_init(void)
 	unsigned long start;
 
 	max_low_pfn = (high_physmem - uml_physmem) >> PAGE_SHIFT;
-#ifdef CONFIG_HIGHMEM
-	highmem_start_page = phys_page(__pa(high_physmem));
-#endif
 
         /* clear the zero-page */
         memset((void *) empty_zero_page, 0, PAGE_SIZE);
@@ -84,7 +79,7 @@ void mem_init(void)
 	uml_reserved = brk_end;
 
 	/* Fill in any hole at the start of the binary */
-	start = (unsigned long) &__binary_start;
+	start = (unsigned long) &__binary_start & PAGE_MASK;
 	if(uml_physmem != start){
 		map_memory(uml_physmem, __pa(uml_physmem), start - uml_physmem,
 			   1, 1, 0);
@@ -135,12 +130,13 @@ static void __init fixrange_init(unsigned long start, unsigned long end,
 	}
 }
 
-#if CONFIG_HIGHMEM
+#ifdef CONFIG_HIGHMEM
 pte_t *kmap_pte;
 pgprot_t kmap_prot;
 
 #define kmap_get_fixmap_pte(vaddr)					\
-	pte_offset(pmd_offset(pgd_offset_k(vaddr), (vaddr)), (vaddr))
+	pte_offset_kernel(pmd_offset(pud_offset(pgd_offset_k(vaddr), (vaddr)),\
+ 			  (vaddr)), (vaddr))
 
 void __init kmap_init(void)
 {
@@ -156,6 +152,7 @@ void __init kmap_init(void)
 static void init_highmem(void)
 {
 	pgd_t *pgd;
+	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
 	unsigned long vaddr;
@@ -167,13 +164,41 @@ static void init_highmem(void)
 	fixrange_init(vaddr, vaddr + PAGE_SIZE*LAST_PKMAP, swapper_pg_dir);
 
 	pgd = swapper_pg_dir + pgd_index(vaddr);
-	pmd = pmd_offset(pgd, vaddr);
+	pud = pud_offset(pgd, vaddr);
+	pmd = pmd_offset(pud, vaddr);
 	pte = pte_offset_kernel(pmd, vaddr);
 	pkmap_page_table = pte;
 
 	kmap_init();
 }
 #endif /* CONFIG_HIGHMEM */
+
+static void __init fixaddr_user_init( void)
+{
+#if CONFIG_ARCH_REUSE_HOST_VSYSCALL_AREA
+	long size = FIXADDR_USER_END - FIXADDR_USER_START;
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	unsigned long paddr, vaddr = FIXADDR_USER_START;
+
+	if (  ! size )
+		return;
+
+	fixrange_init( FIXADDR_USER_START, FIXADDR_USER_END, swapper_pg_dir);
+	paddr = (unsigned long)alloc_bootmem_low_pages( size);
+	memcpy( (void *)paddr, (void *)FIXADDR_USER_START, size);
+	paddr = __pa(paddr);
+	for ( ; size > 0; size-=PAGE_SIZE, vaddr+=PAGE_SIZE, paddr+=PAGE_SIZE){
+		pgd = swapper_pg_dir + pgd_index(vaddr);
+		pud = pud_offset(pgd, vaddr);
+		pmd = pmd_offset(pud, vaddr);
+		pte = pte_offset_kernel(pmd, vaddr);
+		pte_set_val( (*pte), paddr, PAGE_READONLY);
+	}
+#endif
+}
 
 void paging_init(void)
 {
@@ -195,6 +220,8 @@ void paging_init(void)
 	vaddr = __fix_to_virt(__end_of_fixed_addresses - 1) & PMD_MASK;
 	fixrange_init(vaddr, FIXADDR_TOP, swapper_pg_dir);
 
+	fixaddr_user_init();
+
 #ifdef CONFIG_HIGHMEM
 	init_highmem();
 #endif
@@ -212,7 +239,7 @@ struct page *arch_validate(struct page *page, int mask, int order)
 	addr = (unsigned long) page_address(page);
 	for(i = 0; i < (1 << order); i++){
 		current->thread.fault_addr = (void *) addr;
-		if(__do_copy_to_user((void *) addr, &zero,
+		if(__do_copy_to_user((void __user *) addr, &zero,
 				     sizeof(zero),
 				     &current->thread.fault_addr,
 				     &current->thread.fault_catcher)){
@@ -221,6 +248,7 @@ struct page *arch_validate(struct page *page, int mask, int order)
 		}
 		addr += PAGE_SIZE;
 	}
+
 	if(i == (1 << order)) return(page);
 	page = alloc_pages(mask, order);
 	goto again;
@@ -307,9 +335,7 @@ pte_t *pte_alloc_one_kernel(struct mm_struct *mm, unsigned long address)
 {
 	pte_t *pte;
 
-	pte = (pte_t *)__get_free_page(GFP_KERNEL|__GFP_REPEAT);
-	if (pte)
-		clear_page(pte);
+	pte = (pte_t *)__get_free_page(GFP_KERNEL|__GFP_REPEAT|__GFP_ZERO);
 	return pte;
 }
 
@@ -317,9 +343,7 @@ struct page *pte_alloc_one(struct mm_struct *mm, unsigned long address)
 {
 	struct page *pte;
    
-	pte = alloc_pages(GFP_KERNEL|__GFP_REPEAT, 0);
-	if (pte)
-		clear_highpage(pte);
+	pte = alloc_page(GFP_KERNEL|__GFP_REPEAT|__GFP_ZERO);
 	return pte;
 }
 

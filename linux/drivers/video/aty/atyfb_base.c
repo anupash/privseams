@@ -2279,9 +2279,12 @@ static int __init aty_init(struct fb_info *info, const char *name)
 		par->dac_ops = &aty_dac_ct;
 		par->pll_ops = &aty_pll_ct;
 		par->bus_type = PCI;
+#ifdef CONFIG_FB_ATY_XL_INIT
+		if (IS_XL(par->pci_id))
+			atyfb_xl_init(info);
+#endif
 		par->ram_type = (aty_ld_le32(CONFIG_STAT0, par) & 0x07);
 		ramname = aty_ct_ram[par->ram_type];
-
 		/* for many chips, the mclk is 67 MHz for SDRAM, 63 MHz otherwise */
 		if (par->pll_limits.mclk == 67 && par->ram_type < SDRAM)
 			par->pll_limits.mclk = 63;
@@ -2508,7 +2511,15 @@ static int __init aty_init(struct fb_info *info, const char *name)
 		}
 	} else
 #endif /* !CONFIG_PPC */
-	if (!fb_find_mode(&var, info, mode, NULL, 0, &defmode, 8))
+	if (
+#if defined(CONFIG_SPARC32) || defined(CONFIG_SPARC64)
+	   /* On Sparc, unless the user gave a specific mode
+	    * specification, use the PROM probed values in
+	    * default_var.
+	    */
+	    !mode ||
+#endif
+	    !fb_find_mode(&var, info, mode, NULL, 0, &defmode, 8))
 		var = default_var;
 
 	if (noaccel)

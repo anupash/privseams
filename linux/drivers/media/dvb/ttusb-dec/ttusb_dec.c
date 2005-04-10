@@ -756,7 +756,7 @@ static void ttusb_dec_stop_iso_xfer(struct ttusb_dec *dec)
 
 	if (!dec->iso_stream_count) {
 		for (i = 0; i < ISO_BUF_COUNT; i++)
-			usb_unlink_urb(dec->iso_urb[i]);
+			usb_kill_urb(dec->iso_urb[i]);
 	}
 
 	up(&dec->iso_sem);
@@ -821,7 +821,7 @@ static int ttusb_dec_start_iso_xfer(struct ttusb_dec *dec)
 				       "error %d\n", __FUNCTION__, i, result);
 
 				while (i) {
-					usb_unlink_urb(dec->iso_urb[i - 1]);
+					usb_kill_urb(dec->iso_urb[i - 1]);
 					i--;
 				}
 
@@ -1090,7 +1090,7 @@ static int ttusb_dec_alloc_iso_urbs(struct ttusb_dec *dec)
 
 static void ttusb_dec_init_tasklet(struct ttusb_dec *dec)
 {
-	dec->urb_frame_list_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dec->urb_frame_list_lock);
 	INIT_LIST_HEAD(&dec->urb_frame_list);
 	tasklet_init(&dec->urb_tasklet, ttusb_dec_process_urb_frame_list,
 		     (unsigned long)dec);
@@ -1379,7 +1379,7 @@ static void ttusb_dec_exit_usb(struct ttusb_dec *dec)
 	dec->iso_stream_count = 0;
 
 	for (i = 0; i < ISO_BUF_COUNT; i++)
-		usb_unlink_urb(dec->iso_urb[i]);
+		usb_kill_urb(dec->iso_urb[i]);
 
 	ttusb_dec_free_iso_urbs(dec);
 }
@@ -1401,7 +1401,7 @@ static void ttusb_dec_exit_tasklet(struct ttusb_dec *dec)
 static void ttusb_dec_init_filters(struct ttusb_dec *dec)
 {
 	INIT_LIST_HEAD(&dec->filter_info_list);
-	dec->filter_info_list_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dec->filter_info_list_lock);
 }
 
 static void ttusb_dec_exit_filters(struct ttusb_dec *dec)
@@ -1447,7 +1447,7 @@ static int ttusb_dec_probe(struct usb_interface *intf,
 
 	memset(dec, 0, sizeof(struct ttusb_dec));
 
-	switch (id->idProduct) {
+	switch (le16_to_cpu(id->idProduct)) {
 		case 0x1006:
 		ttusb_dec_set_model(dec, TTUSB_DEC3000S);
 			break;
@@ -1471,7 +1471,7 @@ static int ttusb_dec_probe(struct usb_interface *intf,
 	ttusb_dec_init_dvb(dec);
 
 	dec->adapter->priv = dec;
-	switch (id->idProduct) {
+	switch (le16_to_cpu(id->idProduct)) {
 	case 0x1006:
 		dec->fe = ttusbdecfe_dvbs_attach(&fe_config);
 		break;
@@ -1484,8 +1484,8 @@ static int ttusb_dec_probe(struct usb_interface *intf,
 
 	if (dec->fe == NULL) {
 		printk("dvb-ttusb-dec: A frontend driver was not found for device %04x/%04x\n",
-		       dec->udev->descriptor.idVendor,
-		       dec->udev->descriptor.idProduct);
+		       le16_to_cpu(dec->udev->descriptor.idVendor),
+		       le16_to_cpu(dec->udev->descriptor.idProduct));
 	} else {
 		if (dvb_register_frontend(dec->adapter, dec->fe)) {
 			printk("budget-ci: Frontend registration failed!\n");

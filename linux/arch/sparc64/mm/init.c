@@ -59,7 +59,7 @@ unsigned long pfn_base;
 static unsigned long bootmap_base;
 
 /* get_new_mmu_context() uses "cache + 1".  */
-spinlock_t ctx_alloc_lock = SPIN_LOCK_UNLOCKED;
+DEFINE_SPINLOCK(ctx_alloc_lock);
 unsigned long tlb_context_cache = CTX_FIRST_VERSION - 1;
 #define CTX_BMAP_SLOTS (1UL << (CTX_VERSION_SHIFT - 6))
 unsigned long mmu_context_bmap[CTX_BMAP_SLOTS];
@@ -1462,7 +1462,8 @@ void __init paging_init(void)
 	memset(swapper_pmd_dir, 0, sizeof(swapper_pmd_dir));
 
 	/* Now can init the kernel/bad page tables. */
-	pgd_set(&swapper_pg_dir[0], swapper_pmd_dir + (shift / sizeof(pgd_t)));
+	pud_set(pud_offset(&swapper_pg_dir[0], 0),
+		swapper_pmd_dir + (shift / sizeof(pgd_t)));
 	
 	sparc64_vpte_patchme1[0] |=
 		(((unsigned long)pgd_val(init_mm.pgd[0])) >> 10);
@@ -1687,13 +1688,12 @@ void __init mem_init(void)
 	 * Set up the zero page, mark it reserved, so that page count
 	 * is not manipulated when freeing the page from user ptes.
 	 */
-	mem_map_zero = alloc_pages(GFP_KERNEL, 0);
+	mem_map_zero = alloc_pages(GFP_KERNEL|__GFP_ZERO, 0);
 	if (mem_map_zero == NULL) {
 		prom_printf("paging_init: Cannot alloc zero page.\n");
 		prom_halt();
 	}
 	SetPageReserved(mem_map_zero);
-	clear_page(page_address(mem_map_zero));
 
 	codepages = (((unsigned long) _etext) - ((unsigned long) _start));
 	codepages = PAGE_ALIGN(codepages) >> PAGE_SHIFT;

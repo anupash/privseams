@@ -34,7 +34,7 @@ typedef union sigval32 {
         __u32   sival_ptr;
 } sigval_t32;
                  
-typedef struct siginfo32 {
+typedef struct compat_siginfo {
 	int	si_signo;
 	int	si_errno;
 	int	si_code;
@@ -50,9 +50,10 @@ typedef struct siginfo32 {
 
 		/* POSIX.1b timers */
 		struct {
-			unsigned int	_timer1;
-			unsigned int	_timer2;
-                
+			timer_t _tid;		/* timer id */
+			int _overrun;		/* overrun count */
+			sigval_t _sigval;	/* same as below */
+			int _sys_private;       /* not to be passed to user */
 		} _timer;
 
 		/* POSIX.1b signals */
@@ -82,7 +83,7 @@ typedef struct siginfo32 {
 			int	_fd;
 		} _sigpoll;
 	} _sifields;
-} siginfo_t32;  
+} compat_siginfo_t;
 
 /*
  * How these fields are to be accessed.
@@ -98,6 +99,8 @@ typedef struct siginfo32 {
 #define si_addr		_sifields._sigfault._addr
 #define si_band		_sifields._sigpoll._band
 #define si_fd		_sifields._sigpoll._fd    
+#define si_tid		_sifields._timer._tid
+#define si_overrun	_sifields._timer._overrun
 
 /* asm/sigcontext.h */
 typedef union
@@ -213,8 +216,5 @@ struct sigevent32 {
 		} _sigev_thread;
 	} _sigev_un;
 };
-
-extern int copy_siginfo_to_user32(siginfo_t32 __user *to, siginfo_t *from);
-extern int copy_siginfo_from_user32(siginfo_t *to, siginfo_t32 __user *from);
 
 #endif /* _ASM_S390X_S390_H */

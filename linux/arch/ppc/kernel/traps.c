@@ -41,6 +41,7 @@
 #ifdef CONFIG_PMAC_BACKLIGHT
 #include <asm/backlight.h>
 #endif
+#include <asm/perfmon.h>
 
 #ifdef CONFIG_XMON
 void (*debugger)(struct pt_regs *regs) = xmon;
@@ -71,8 +72,7 @@ void (*debugger_fault_handler)(struct pt_regs *regs);
  * Trap & Exception support
  */
 
-
-spinlock_t die_lock = SPIN_LOCK_UNLOCKED;
+DEFINE_SPINLOCK(die_lock);
 
 void die(const char * str, struct pt_regs * fp, long err)
 {
@@ -199,6 +199,15 @@ static inline int check_io_access(struct pt_regs *regs)
 #define clear_single_step(regs)	((regs)->msr &= ~MSR_SE)
 #endif
 
+/*
+ * This is "fall-back" implementation for configurations
+ * which don't provide platform-specific machine check info
+ */
+void __attribute__ ((weak))
+platform_machine_check(struct pt_regs *regs)
+{
+}
+
 void MachineCheckException(struct pt_regs *regs)
 {
 	unsigned long reason = get_mc_reason(regs);
@@ -322,6 +331,12 @@ void MachineCheckException(struct pt_regs *regs)
 		printk("Unknown values in msr\n");
 	}
 #endif /* CONFIG_4xx */
+
+	/*
+	 * Optional platform-provided routine to print out
+	 * additional info, e.g. bus error registers.
+	 */
+	platform_machine_check(regs);
 
 	debugger(regs);
 	die("machine check", regs, SIGBUS);
@@ -566,7 +581,7 @@ void ProgramCheckException(struct pt_regs *regs)
 
 void SingleStepException(struct pt_regs *regs)
 {
-	regs->msr &= ~MSR_SE;  /* Turn off 'trace' bit */
+	regs->msr &= ~(MSR_SE | MSR_BE);  /* Turn off 'trace' bits */
 	if (debugger_sstep(regs))
 		return;
 	_exception(SIGTRAP, regs, TRAP_TRACE, 0);
@@ -725,6 +740,11 @@ void AltivecAssistException(struct pt_regs *regs)
 	}
 }
 #endif /* CONFIG_ALTIVEC */
+
+void PerformanceMonitorException(struct pt_regs *regs)
+{
+	perf_irq(regs);
+}
 
 #ifdef CONFIG_FSL_BOOKE
 void CacheLockingException(struct pt_regs *regs, unsigned long address,

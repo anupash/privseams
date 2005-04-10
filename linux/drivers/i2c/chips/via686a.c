@@ -613,7 +613,7 @@ static int via686a_detect(struct i2c_adapter *adapter, int address, int kind)
 	}
 
 	/* Reserve the ISA region */
-	if (!request_region(address, VIA686A_EXTENT, "via686a-sensor")) {
+	if (!request_region(address, VIA686A_EXTENT, via686a_driver.name)) {
 		dev_err(&adapter->dev,"region 0x%x already in use!\n",
 		       address);
 		return -ENODEV;
@@ -786,14 +786,11 @@ static struct via686a_data *via686a_update_device(struct device *dev)
 }
 
 static struct pci_device_id via686a_pci_ids[] = {
-       {
-	       .vendor 		= PCI_VENDOR_ID_VIA, 
-	       .device 		= PCI_DEVICE_ID_VIA_82C686_4, 
-	       .subvendor	= PCI_ANY_ID, 
-	       .subdevice	= PCI_ANY_ID, 
-       },
+       { PCI_DEVICE(PCI_VENDOR_ID_VIA, PCI_DEVICE_ID_VIA_82C686_4) },
        { 0, }
 };
+
+MODULE_DEVICE_TABLE(pci, via686a_pci_ids);
 
 static int __devinit via686a_pci_probe(struct pci_dev *dev,
                                       const struct pci_device_id *id)
@@ -818,20 +815,24 @@ static int __devinit via686a_pci_probe(struct pci_dev *dev,
                return -ENODEV;
        }
        normal_isa[0] = addr;
-       s_bridge = dev;
-       return i2c_add_driver(&via686a_driver);
-}
 
-static void __devexit via686a_pci_remove(struct pci_dev *dev)
-{
-       i2c_del_driver(&via686a_driver);
+	s_bridge = pci_dev_get(dev);
+	if (i2c_add_driver(&via686a_driver)) {
+		pci_dev_put(s_bridge);
+		s_bridge = NULL;
+	}
+
+	/* Always return failure here.  This is to allow other drivers to bind
+	 * to this pci device.  We don't really want to have control over the
+	 * pci device, we only wanted to read as few register values from it.
+	 */
+	return -ENODEV;
 }
 
 static struct pci_driver via686a_pci_driver = {
        .name		= "via686a",
        .id_table	= via686a_pci_ids,
        .probe		= via686a_pci_probe,
-       .remove		= __devexit_p(via686a_pci_remove),
 };
 
 static int __init sm_via686a_init(void)
@@ -841,7 +842,12 @@ static int __init sm_via686a_init(void)
 
 static void __exit sm_via686a_exit(void)
 {
-       pci_unregister_driver(&via686a_pci_driver);
+	pci_unregister_driver(&via686a_pci_driver);
+	if (s_bridge != NULL) {
+		i2c_del_driver(&via686a_driver);
+		pci_dev_put(s_bridge);
+		s_bridge = NULL;
+	}
 }
 
 MODULE_AUTHOR("Kyösti Mälkki <kmalkki@cc.hut.fi>, "

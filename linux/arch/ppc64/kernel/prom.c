@@ -44,7 +44,6 @@
 #include <asm/system.h>
 #include <asm/mmu.h>
 #include <asm/pgtable.h>
-#include <asm/naca.h>
 #include <asm/pci.h>
 #include <asm/iommu.h>
 #include <asm/bootinfo.h>
@@ -96,7 +95,7 @@ static struct device_node *allnodes = NULL;
 /* use when traversing tree through the allnext, child, sibling,
  * or parent members of struct device_node.
  */
-static rwlock_t devtree_lock = RW_LOCK_UNLOCKED;
+static DEFINE_RWLOCK(devtree_lock);
 
 /* export that to outside world */
 struct device_node *of_chosen;
@@ -557,7 +556,7 @@ void __init finish_device_tree(void)
 
 	DBG(" -> finish_device_tree\n");
 
-	if (naca->interrupt_controller == IC_INVALID) {
+	if (ppc64_interrupt_controller == IC_INVALID) {
 		DBG("failed to configure interrupt controller type\n");
 		panic("failed to configure interrupt controller type\n");
 	}
@@ -718,6 +717,7 @@ static unsigned long __init unflatten_dt_node(unsigned long mem,
 				dad->next->sibling = np;
 			dad->next = np;
 		}
+		kref_init(&np->kref);
 	}
 	while(1) {
 		u32 sz, noff;
@@ -844,12 +844,12 @@ static int __init early_init_dt_scan_cpus(unsigned long node,
 
 	/* On LPAR, look for the first ibm,pft-size property for the  hash table size
 	 */
-	if (systemcfg->platform == PLATFORM_PSERIES_LPAR && naca->pftSize == 0) {
+	if (systemcfg->platform == PLATFORM_PSERIES_LPAR && ppc64_pft_size == 0) {
 		u32 *pft_size;
 		pft_size = (u32 *)get_flat_dt_prop(node, "ibm,pft-size", NULL);
 		if (pft_size != NULL) {
 			/* pft_size[0] is the NUMA CEC cookie */
-			naca->pftSize = pft_size[1];
+			ppc64_pft_size = pft_size[1];
 		}
 	}
 
@@ -1018,7 +1018,7 @@ void __init early_init_devtree(void *params)
 	initial_boot_params = params;
 
 	/* By default, hash size is not set */
-	naca->pftSize = 0;
+	ppc64_pft_size = 0;
 
 	/* Retreive various informations from the /chosen node of the
 	 * device-tree, including the platform type, initrd location and
@@ -1047,7 +1047,7 @@ void __init early_init_devtree(void *params)
 	/* If hash size wasn't obtained above, we calculate it now based on
 	 * the total RAM size
 	 */
-	if (naca->pftSize == 0) {
+	if (ppc64_pft_size == 0) {
 		unsigned long rnd_mem_size, pteg_count;
 
 		/* round mem_size up to next power of 2 */
@@ -1056,12 +1056,12 @@ void __init early_init_devtree(void *params)
 			rnd_mem_size <<= 1;
 
 		/* # pages / 2 */
-		pteg_count = (rnd_mem_size >> (12 + 1));
+		pteg_count = max(rnd_mem_size >> (12 + 1), 1UL << 11);
 
-		naca->pftSize = __ilog2(pteg_count << 7);
+		ppc64_pft_size = __ilog2(pteg_count << 7);
 	}
 
-	DBG("Hash pftSize: %x\n", (int)naca->pftSize);
+	DBG("Hash pftSize: %x\n", (int)ppc64_pft_size);
 	DBG(" <- early_init_devtree()\n");
 }
 
@@ -1476,24 +1476,31 @@ EXPORT_SYMBOL(of_get_next_child);
  *	@node:	Node to inc refcount, NULL is supported to
  *		simplify writing of callers
  *
- *	Returns the node itself or NULL if gone.
+ *	Returns node.
  */
 struct device_node *of_node_get(struct device_node *node)
 {
-	if (node && !OF_IS_STALE(node)) {
-		atomic_inc(&node->_users);
-		return node;
-	}
-	return NULL;
+	if (node)
+		kref_get(&node->kref);
+	return node;
 }
 EXPORT_SYMBOL(of_node_get);
 
-/**
- *	of_node_cleanup - release a dynamically allocated node
- *	@arg:  Node to be released
- */
-static void of_node_cleanup(struct device_node *node)
+static inline struct device_node * kref_to_device_node(struct kref *kref)
 {
+	return container_of(kref, struct device_node, kref);
+}
+
+/**
+ *	of_node_release - release a dynamically allocated node
+ *	@kref:  kref element of the node to be released
+ *
+ *	In of_node_put() this function is passed to kref_put()
+ *	as the destructor.
+ */
+static void of_node_release(struct kref *kref)
+{
+	struct device_node *node = kref_to_device_node(kref);
 	struct property *prop = node->properties;
 
 	if (!OF_IS_DYNAMIC(node))
@@ -1519,19 +1526,8 @@ static void of_node_cleanup(struct device_node *node)
  */
 void of_node_put(struct device_node *node)
 {
-	if (!node)
-		return;
-
-	WARN_ON(0 == atomic_read(&node->_users));
-
-	if (OF_IS_STALE(node)) {
-		if (atomic_dec_and_test(&node->_users)) {
-			of_node_cleanup(node);
-			return;
-		}
-	}
-	else
-		atomic_dec(&node->_users);
+	if (node)
+		kref_put(&node->kref, of_node_release);
 }
 EXPORT_SYMBOL(of_node_put);
 
@@ -1744,17 +1740,6 @@ static int of_finish_dynamic_node(struct device_node *node)
 		node->devfn = (regs[0] >> 8) & 0xff;
 	}
 
-	/* fixing up iommu_table */
-
-#ifdef CONFIG_PPC_PSERIES
-	if (strcmp(node->name, "pci") == 0 &&
-	    get_property(node, "ibm,dma-window", NULL)) {
-		node->bussubno = node->busno;
-		iommu_devnode_init_pSeries(node);
-	} else
-		node->iommu_table = parent->iommu_table;
-#endif /* CONFIG_PPC_PSERIES */
-
 out:
 	of_node_put(parent);
 	return err;
@@ -1785,6 +1770,7 @@ int of_add_node(const char *path, struct property *proplist)
 
 	np->properties = proplist;
 	OF_MARK_DYNAMIC(np);
+	kref_init(&np->kref);
 	of_node_get(np);
 	np->parent = derive_parent(path);
 	if (!np->parent) {
@@ -1821,8 +1807,9 @@ static void of_cleanup_node(struct device_node *np)
 }
 
 /*
- * Remove an OF device node from the system.
- * Caller should have already "gotten" np.
+ * "Unplug" a node from the device tree.  The caller must hold
+ * a reference to the node.  The memory associated with the node
+ * is not freed until its refcount goes to zero.
  */
 int of_remove_node(struct device_node *np)
 {
@@ -1840,7 +1827,6 @@ int of_remove_node(struct device_node *np)
 	of_cleanup_node(np);
 
 	write_lock(&devtree_lock);
-	OF_MARK_STALE(np);
 	remove_node_proc_entries(np);
 	if (allnodes == np)
 		allnodes = np->allnext;
@@ -1865,6 +1851,7 @@ int of_remove_node(struct device_node *np)
 	}
 	write_unlock(&devtree_lock);
 	of_node_put(parent);
+	of_node_put(np); /* Must decrement the refcount */
 	return 0;
 }
 

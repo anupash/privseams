@@ -645,8 +645,11 @@ int siocdevprivate_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg)
 	/* Don't check these user accesses, just let that get trapped
 	 * in the ioctl handler instead.
 	 */
-	copy_to_user(&u_ifreq64->ifr_ifrn.ifrn_name[0], &tmp_buf[0], IFNAMSIZ);
-	__put_user(data64, &u_ifreq64->ifr_ifru.ifru_data);
+	if (copy_to_user(&u_ifreq64->ifr_ifrn.ifrn_name[0], &tmp_buf[0],
+			 IFNAMSIZ))
+		return -EFAULT;
+	if (__put_user(data64, &u_ifreq64->ifr_ifru.ifru_data))
+		return -EFAULT;
 
 	return sys_ioctl(fd, cmd, (unsigned long) u_ifreq64);
 }
@@ -684,6 +687,11 @@ static int dev_ifsioc(unsigned int fd, unsigned int cmd, unsigned long arg)
 	set_fs (old_fs);
 	if (!err) {
 		switch (cmd) {
+		/* TUNSETIFF is defined as _IOW, it should be _IORW
+		 * as the data is copied back to user space, but that
+		 * cannot be fixed without breaking all existing apps.
+		 */
+		case TUNSETIFF:
 		case SIOCGIFFLAGS:
 		case SIOCGIFMETRIC:
 		case SIOCGIFMTU:
@@ -2343,7 +2351,9 @@ put_dirent32 (struct dirent *d, struct compat_dirent __user *d32)
         __put_user(d->d_ino, &d32->d_ino);
         __put_user(d->d_off, &d32->d_off);
         __put_user(d->d_reclen, &d32->d_reclen);
-        __copy_to_user(d32->d_name, d->d_name, d->d_reclen);
+        if (__copy_to_user(d32->d_name, d->d_name, d->d_reclen))
+		return -EFAULT;
+
         return ret;
 }
 
@@ -2486,7 +2496,8 @@ static int serial_struct_ioctl(unsigned fd, unsigned cmd, unsigned long arg)
         if (cmd == TIOCSSERIAL) {
                 if (verify_area(VERIFY_READ, ss32, sizeof(SS32)))
                         return -EFAULT;
-                __copy_from_user(&ss, ss32, offsetof(SS32, iomem_base));
+                if (__copy_from_user(&ss, ss32, offsetof(SS32, iomem_base)))
+			return -EFAULT;
                 __get_user(udata, &ss32->iomem_base);
                 ss.iomem_base = compat_ptr(udata);
                 __get_user(ss.iomem_reg_shift, &ss32->iomem_reg_shift);
@@ -2499,7 +2510,8 @@ static int serial_struct_ioctl(unsigned fd, unsigned cmd, unsigned long arg)
         if (cmd == TIOCGSERIAL && err >= 0) {
                 if (verify_area(VERIFY_WRITE, ss32, sizeof(SS32)))
                         return -EFAULT;
-                __copy_to_user(ss32,&ss,offsetof(SS32,iomem_base));
+                if (__copy_to_user(ss32,&ss,offsetof(SS32,iomem_base)))
+			return -EFAULT;
                 __put_user((unsigned long)ss.iomem_base  >> 32 ?
                             0xffffffff : (unsigned)(unsigned long)ss.iomem_base,
                             &ss32->iomem_base);
@@ -2841,48 +2853,42 @@ struct i2c_smbus_ioctl_data32 {
 	compat_caddr_t data; /* union i2c_smbus_data *data */
 };
 
+struct i2c_rdwr_aligned {
+	struct i2c_rdwr_ioctl_data cmd;
+	struct i2c_msg msgs[0];
+};
+
 static int do_i2c_rdwr_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg)
 {
-	struct i2c_rdwr_ioctl_data	__user *tdata;
-	struct i2c_rdwr_ioctl_data32	__user *udata;
+	struct i2c_rdwr_ioctl_data32	__user *udata = compat_ptr(arg);
+	struct i2c_rdwr_aligned		__user *tdata;
 	struct i2c_msg			__user *tmsgs;
 	struct i2c_msg32		__user *umsgs;
 	compat_caddr_t			datap;
 	int				nmsgs, i;
 
-	tdata = compat_alloc_user_space(sizeof(*tdata));
-	if (tdata == NULL)
-		return -ENOMEM;
-	if (verify_area(VERIFY_WRITE, tdata, sizeof(*tdata)))
-		return -EFAULT;
-
-	udata = compat_ptr(arg);
-	if (verify_area(VERIFY_READ, udata, sizeof(*udata)))
-		return -EFAULT;
-	if (__get_user(nmsgs, &udata->nmsgs) || __put_user(nmsgs, &tdata->nmsgs))
+	if (get_user(nmsgs, &udata->nmsgs))
 		return -EFAULT;
 	if (nmsgs > I2C_RDRW_IOCTL_MAX_MSGS)
 		return -EINVAL;
-	if (__get_user(datap, &udata->msgs))
+
+	if (get_user(datap, &udata->msgs))
 		return -EFAULT;
 	umsgs = compat_ptr(datap);
-	if (verify_area(VERIFY_READ, umsgs, sizeof(struct i2c_msg) * nmsgs))
+
+	tdata = compat_alloc_user_space(sizeof(*tdata) +
+				      nmsgs * sizeof(struct i2c_msg));
+	tmsgs = &tdata->msgs[0];
+
+	if (put_user(nmsgs, &tdata->cmd.nmsgs) ||
+	    put_user(tmsgs, &tdata->cmd.msgs))
 		return -EFAULT;
 
-	tmsgs = compat_alloc_user_space(sizeof(struct i2c_msg) * nmsgs);
-	if (tmsgs == NULL)
-		return -ENOMEM;
-	if (verify_area(VERIFY_WRITE, tmsgs, sizeof(struct i2c_msg) * nmsgs))
-		return -EFAULT;
-	if (__put_user(tmsgs, &tdata->msgs))
-		return -ENOMEM;
 	for (i = 0; i < nmsgs; i++) {
-		if (__copy_in_user(&tmsgs[i].addr,
-				   &umsgs[i].addr,
-				   3 * sizeof(u16)))
+		if (copy_in_user(&tmsgs[i].addr, &umsgs[i].addr, 3*sizeof(u16)))
 			return -EFAULT;
-		if (__get_user(datap, &umsgs[i].buf) ||
-		    __put_user(compat_ptr(datap), &tmsgs[i].buf))
+		if (get_user(datap, &umsgs[i].buf) ||
+		    put_user(compat_ptr(datap), &tmsgs[i].buf))
 			return -EFAULT;
 	}
 	return sys_ioctl(fd, cmd, (unsigned long)tdata);

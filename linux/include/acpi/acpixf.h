@@ -6,7 +6,7 @@
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2004, R. Byron Moore
+ * Copyright (C) 2000 - 2005, R. Byron Moore
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -345,11 +345,11 @@ acpi_disable_event (
 	u32                             event,
 	u32                             flags);
 
-#ifdef ACPI_FUTURE_USAGE
 acpi_status
 acpi_clear_event (
 	u32                             event);
 
+#ifdef ACPI_FUTURE_USAGE
 acpi_status
 acpi_get_event_status (
 	u32                             event,

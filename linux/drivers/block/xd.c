@@ -123,7 +123,7 @@ static unsigned int xd_bases[] __initdata =
 	0xE0000
 };
 
-static spinlock_t xd_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(xd_lock);
 
 static struct gendisk *xd_gendisk[2];
 
@@ -1054,9 +1054,9 @@ static void __init xd_setparam (u_char command,u_char drive,u_char heads,u_short
 
 #ifdef MODULE
 
-MODULE_PARM(xd, "1-4i");
-MODULE_PARM(xd_geo, "3-6i");
-MODULE_PARM(nodma, "i");
+module_param_array(xd, int, NULL, 0);
+module_param_array(xd_geo, int, NULL, 0);
+module_param(nodma, bool, 0);
 
 MODULE_LICENSE("GPL");
 

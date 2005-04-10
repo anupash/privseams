@@ -250,6 +250,8 @@ static const struct pnp_device_id pnp_dev_table[] = {
 	/* Kortex International */
 	/* KORTEX 14400 Externe PnP */
 	{	"ROK0100",		0	},
+	/* Rockwell 28.8 */
+	{	"ROK4120",		0	},
 	/* Viking Components, Inc */
 	/* Viking 28.8 INTERNAL Fax+Data+Voice PnP */
 	{	"ROK4920",		0	},
@@ -419,14 +421,14 @@ serial_pnp_probe(struct pnp_dev * dev, const struct pnp_device_id *dev_id)
 	line = serial8250_register_port(&port);
 
 	if (line >= 0)
-		pnp_set_drvdata(dev, (void *)(line + 1));
+		pnp_set_drvdata(dev, (void *)((long)line + 1));
 	return line >= 0 ? 0 : -ENODEV;
 
 }
 
 static void __devexit serial_pnp_remove(struct pnp_dev * dev)
 {
-	int line = (int)pnp_get_drvdata(dev);
+	long line = (long)pnp_get_drvdata(dev);
 	if (line)
 		serial8250_unregister_port(line - 1);
 }

@@ -134,12 +134,12 @@ static inline void __writel(u32 l, volatile void __iomem *addr)
 #define inl_p(__addr)		inl(__addr)
 #define outl_p(__l, __addr)	outl(__l, __addr)
 
-extern void outsb(unsigned long addr, const void *src, unsigned long cnt);
-extern void outsw(unsigned long addr, const void *src, unsigned long cnt);
-extern void outsl(unsigned long addr, const void *src, unsigned long cnt);
-extern void insb(unsigned long addr, void *dst, unsigned long count);
-extern void insw(unsigned long addr, void *dst, unsigned long count);
-extern void insl(unsigned long addr, void *dst, unsigned long count);
+void outsb(unsigned long addr, const void *src, unsigned long cnt);
+void outsw(unsigned long addr, const void *src, unsigned long cnt);
+void outsl(unsigned long addr, const void *src, unsigned long cnt);
+void insb(unsigned long addr, void *dst, unsigned long count);
+void insw(unsigned long addr, void *dst, unsigned long count);
+void insl(unsigned long addr, void *dst, unsigned long count);
 
 #define IO_SPACE_LIMIT 0xffffffff
 

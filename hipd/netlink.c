@@ -310,6 +310,3 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	HIP_FREE(nlh);
 	return ret;
 }
-
-
-

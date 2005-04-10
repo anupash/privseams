@@ -16,13 +16,14 @@ config VIDEO_BT848
 	select VIDEO_BUF
 	select VIDEO_IR
 	select VIDEO_TUNER
+	select VIDEO_TVEEPROM
 	---help---
 	  Support for BT848 based frame grabber/overlay boards. This includes
 	  the Miro, Hauppauge and STB boards. Please read the material in
 	  <file:Documentation/video4linux/bttv/> for more information.
 
 	  If you say Y or M here, you need to say Y or M to "I2C support" and
-	  "I2C bit-banging interfaces" in the character device section.
+	  "I2C bit-banging interfaces" in the device drivers section.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called bttv.
@@ -145,7 +146,8 @@ config TUNER_3036
 
 config VIDEO_VINO
 	tristate "SGI Vino Video For Linux (EXPERIMENTAL)"
-	depends on EXPERIMENTAL && VIDEO_DEV && SGI
+	depends on VIDEO_DEV && I2C && SGI_IP22 && EXPERIMENTAL
+	select I2C_ALGO_SGI
 	help
 	  Say Y here to build in support for the Vino video input system found
 	  on SGI Indy machines.

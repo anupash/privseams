@@ -121,10 +121,10 @@
 
 int sysctl_unix_max_dgram_qlen = 10;
 
-kmem_cache_t *unix_sk_cachep;
+static kmem_cache_t *unix_sk_cachep;
 
 struct hlist_head unix_socket_table[UNIX_HASH_SIZE + 1];
-rwlock_t unix_table_lock = RW_LOCK_UNLOCKED;
+DEFINE_RWLOCK(unix_table_lock);
 static atomic_t unix_nr_socks = ATOMIC_INIT(0);
 
 #define unix_sockets_unbound	(&unix_socket_table[UNIX_HASH_SIZE])
@@ -1850,15 +1850,22 @@ static int unix_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
 		case SIOCINQ:
 		{
 			struct sk_buff *skb;
+
 			if (sk->sk_state == TCP_LISTEN) {
 				err = -EINVAL;
 				break;
 			}
 
 			spin_lock(&sk->sk_receive_queue.lock);
-			skb = skb_peek(&sk->sk_receive_queue);
-			if (skb)
-				amount=skb->len;
+			if (sk->sk_type == SOCK_STREAM ||
+			    sk->sk_type == SOCK_SEQPACKET) {
+				skb_queue_walk(&sk->sk_receive_queue, skb)
+					amount += skb->len;
+			} else {
+				skb = skb_peek(&sk->sk_receive_queue);
+				if (skb)
+					amount=skb->len;
+			}
 			spin_unlock(&sk->sk_receive_queue.lock);
 			err = put_user(amount, (int __user *)arg);
 			break;

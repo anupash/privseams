@@ -74,7 +74,7 @@ asmlinkage void spurious_interrupt_bug(void);
 asmlinkage void call_debug(void);
 
 struct notifier_block *die_chain;
-static spinlock_t die_notifier_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(die_notifier_lock);
 
 int register_die_notifier(struct notifier_block *nb)
 {
@@ -324,7 +324,7 @@ void out_of_line_bug(void)
 	BUG(); 
 } 
 
-static spinlock_t die_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(die_lock);
 static int die_owner = -1;
 
 void oops_begin(void)
@@ -403,15 +403,6 @@ void die_nmi(char *str, struct pt_regs *regs)
 	printk("console shuts up ...\n");
 	oops_end();
 	do_exit(SIGSEGV);
-}
-
-static inline unsigned long get_cr2(void)
-{
-	unsigned long address;
-
-	/* get the address */
-	__asm__("movq %%cr2,%0":"=r" (address));
-	return address;
 }
 
 static void do_trap(int trapnr, int signr, char *str, 
@@ -556,8 +547,9 @@ asmlinkage void do_general_protection(struct pt_regs * regs, long error_code)
 			regs->rip = fixup->fixup;
 			return;
 		}
-		notify_die(DIE_GPF, "general protection fault", regs, error_code,
-			   13, SIGSEGV); 
+		if (notify_die(DIE_GPF, "general protection fault", regs,
+					error_code, 13, SIGSEGV) == NOTIFY_STOP)
+			return;
 		die("general protection fault", regs, error_code);
 	}
 }
@@ -690,7 +682,9 @@ asmlinkage void *do_debug(struct pt_regs * regs, unsigned long error_code)
 	tsk->thread.debugreg6 = condition;
 
 	/* Mask out spurious TF errors due to lazy TF clearing */
-	if (condition & DR_STEP) {
+	if ((condition & DR_STEP) &&
+	    (notify_die(DIE_DEBUGSTEP, "debugstep", regs, condition,
+			1, SIGTRAP) != NOTIFY_STOP)) {
 		/*
 		 * The TF error should be masked out only if the current
 		 * process is not traced and if the TRAP flag has been set
@@ -882,6 +876,10 @@ asmlinkage void do_spurious_interrupt_bug(struct pt_regs * regs)
 {
 }
 
+asmlinkage void __attribute__((weak)) smp_thermal_interrupt(void)
+{
+}
+
 /*
  *  'math_state_restore()' saves the current math information in the
  * old math state array, and gets the new ones from the current task
@@ -894,7 +892,7 @@ asmlinkage void math_state_restore(void)
 	struct task_struct *me = current;
 	clts();			/* Allow maths ops (or we recurse) */
 
-	if (!me->used_math)
+	if (!used_math())
 		init_fpu(me);
 	restore_fpu_checking(&me->thread.i387.fxsave);
 	me->thread_info->status |= TS_USEDFPU;
@@ -910,7 +908,7 @@ void __init trap_init(void)
 	set_intr_gate(0,&divide_error);
 	set_intr_gate_ist(1,&debug,DEBUG_STACK);
 	set_intr_gate_ist(2,&nmi,NMI_STACK);
-	set_intr_gate(3,&int3);
+	set_system_gate(3,&int3);
 	set_system_gate(4,&overflow);	/* int4-5 can be called from all */
 	set_system_gate(5,&bounds);
 	set_intr_gate(6,&invalid_op);

@@ -488,7 +488,8 @@ struct fb_cursor_user {
 #define FB_EVENT_GET_CONSOLE_MAP        0x06
 /*      set console to framebuffer mapping */
 #define FB_EVENT_SET_CONSOLE_MAP        0x07
-
+/*      A display blank is requested       */
+#define FB_EVENT_BLANK                  0x08
 
 struct fb_event {
 	struct fb_info *info;
@@ -582,6 +583,10 @@ struct fb_ops {
 	/* perform fb specific ioctl (optional) */
 	int (*fb_ioctl)(struct inode *inode, struct file *file, unsigned int cmd,
 			unsigned long arg, struct fb_info *info);
+
+	/* Handle 32bit compat ioctl (optional) */
+	int (*fb_compat_ioctl)(struct file *f, unsigned cmd, unsigned long arg,
+			       struct fb_info *info);
 
 	/* perform fb specific mmap */
 	int (*fb_mmap)(struct fb_info *info, struct file *file, struct vm_area_struct *vma);
@@ -690,7 +695,7 @@ struct fb_tile_ops {
 #define FBINFO_HWACCEL_YPAN		0x2000 /* optional */
 #define FBINFO_HWACCEL_YWRAP		0x4000 /* optional */
 
-#define FBINFO_MISC_MODECHANGEUSER     0x10000 /* mode change request
+#define FBINFO_MISC_USEREVENT          0x10000 /* event request
 						  from userspace */
 #define FBINFO_MISC_MODESWITCH         0x20000 /* mode switch */
 #define FBINFO_MISC_MODESWITCHLATE     0x40000 /* init hardware later */
@@ -857,7 +862,6 @@ extern void fb_destroy_modedb(struct fb_videomode *modedb);
 
 /* drivers/video/modedb.c */
 #define VESA_MODEDB_SIZE 34
-extern const struct fb_videomode vesa_modes[];
 extern void fb_var_to_videomode(struct fb_videomode *mode,
 				struct fb_var_screeninfo *var);
 extern void fb_videomode_to_var(struct fb_var_screeninfo *var,
@@ -901,6 +905,8 @@ struct fb_videomode {
 	u32 vmode;
 	u32 flag;
 };
+
+extern const struct fb_videomode vesa_modes[];
 
 struct fb_modelist {
 	struct list_head list;

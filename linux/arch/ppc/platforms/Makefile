@@ -11,7 +11,7 @@ obj-$(CONFIG_PCI)		+= apus_pci.o
 endif
 obj-$(CONFIG_PPC_PMAC)		+= pmac_pic.o pmac_setup.o pmac_time.o \
 					pmac_feature.o pmac_pci.o pmac_sleep.o \
-					pmac_low_i2c.o
+					pmac_low_i2c.o pmac_cache.o
 obj-$(CONFIG_PPC_CHRP)		+= chrp_setup.o chrp_time.o chrp_pci.o
 obj-$(CONFIG_PPC_PREP)		+= prep_pci.o prep_setup.o
 ifeq ($(CONFIG_PPC_PMAC),y)
@@ -23,10 +23,13 @@ obj-$(CONFIG_PREP_RESIDUAL)	+= residual.o
 obj-$(CONFIG_ADIR)		+= adir_setup.o adir_pic.o adir_pci.o
 obj-$(CONFIG_PQ2ADS)		+= pq2ads.o
 obj-$(CONFIG_TQM8260)		+= tqm8260_setup.o
-obj-$(CONFIG_EV64260)		+= ev64260_setup.o
+obj-$(CONFIG_CPCI690)		+= cpci690.o
+obj-$(CONFIG_EV64260)		+= ev64260.o
+obj-$(CONFIG_CHESTNUT)		+= chestnut.o
 obj-$(CONFIG_GEMINI)		+= gemini_pci.o gemini_setup.o gemini_prom.o
 obj-$(CONFIG_K2)		+= k2.o
 obj-$(CONFIG_LOPEC)		+= lopec.o
+obj-$(CONFIG_KATANA)		+= katana.o
 obj-$(CONFIG_MCPN765)		+= mcpn765.o
 obj-$(CONFIG_MENF1)		+= menf1_setup.o menf1_pci.o
 obj-$(CONFIG_MVME5100)		+= mvme5100.o

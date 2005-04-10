@@ -29,6 +29,7 @@
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv4/ipt_CLUSTERIP.h>
 #include <linux/netfilter_ipv4/ip_conntrack.h>
+#include <linux/netfilter_ipv4/lockhelp.h>
 
 #define CLUSTERIP_VERSION "0.6"
 
@@ -66,7 +67,7 @@ static LIST_HEAD(clusterip_configs);
 
 /* clusterip_lock protects the clusterip_configs list _AND_ the configurable
  * data within all structurses (num_local_nodes, local_nodes[]) */
-DECLARE_RWLOCK(clusterip_lock);
+static DECLARE_RWLOCK(clusterip_lock);
 
 #ifdef CONFIG_PROC_FS
 static struct file_operations clusterip_proc_fops;

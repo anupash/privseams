@@ -115,7 +115,7 @@ static int ip_dev_loopback_xmit(struct sk_buff *newskb)
 	return 0;
 }
 
-static inline int ip_select_ttl(struct inet_opt *inet, struct dst_entry *dst)
+static inline int ip_select_ttl(struct inet_sock *inet, struct dst_entry *dst)
 {
 	int ttl = inet->uc_ttl;
 
@@ -131,7 +131,7 @@ static inline int ip_select_ttl(struct inet_opt *inet, struct dst_entry *dst)
 int ip_build_and_send_pkt(struct sk_buff *skb, struct sock *sk,
 			  u32 saddr, u32 daddr, struct ip_options *opt)
 {
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct rtable *rt = (struct rtable *)skb->dst;
 	struct iphdr *iph;
 
@@ -297,7 +297,7 @@ int ip_output(struct sk_buff *skb)
 int ip_queue_xmit(struct sk_buff *skb, int ipfragok)
 {
 	struct sock *sk = skb->sk;
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct ip_options *opt = inet->opt;
 	struct rtable *rt;
 	struct iphdr *iph;
@@ -389,6 +389,7 @@ static void ip_copy_metadata(struct sk_buff *to, struct sk_buff *from)
 	to->priority = from->priority;
 	to->protocol = from->protocol;
 	to->security = from->security;
+	dst_release(to->dst);
 	to->dst = dst_clone(from->dst);
 	to->dev = from->dev;
 
@@ -504,6 +505,7 @@ int ip_fragment(struct sk_buff *skb, int (*output)(struct sk_buff*))
 			/* Prepare header of the next frame,
 			 * before previous one went down. */
 			if (frag) {
+				frag->ip_summed = CHECKSUM_NONE;
 				frag->h.raw = frag->data;
 				frag->nh.raw = __skb_push(frag, hlen);
 				memcpy(frag->nh.raw, iph, hlen);
@@ -712,7 +714,7 @@ int ip_append_data(struct sock *sk,
 		   struct ipcm_cookie *ipc, struct rtable *rt,
 		   unsigned int flags)
 {
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct sk_buff *skb;
 
 	struct ip_options *opt = NULL;
@@ -973,7 +975,7 @@ error:
 ssize_t	ip_append_page(struct sock *sk, struct page *page,
 		       int offset, size_t size, int flags)
 {
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct sk_buff *skb;
 	struct rtable *rt;
 	struct ip_options *opt = NULL;
@@ -1112,7 +1114,7 @@ int ip_push_pending_frames(struct sock *sk)
 {
 	struct sk_buff *skb, *tmp_skb;
 	struct sk_buff **tail_skb;
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct ip_options *opt = NULL;
 	struct rtable *rt = inet->cork.rt;
 	struct iphdr *iph;
@@ -1217,7 +1219,7 @@ error:
  */
 void ip_flush_pending_frames(struct sock *sk)
 {
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct sk_buff *skb;
 
 	while ((skb = __skb_dequeue_tail(&sk->sk_write_queue)) != NULL)
@@ -1260,7 +1262,7 @@ static int ip_reply_glue_bits(void *dptr, char *to, int offset,
 void ip_send_reply(struct sock *sk, struct sk_buff *skb, struct ip_reply_arg *arg,
 		   unsigned int len)
 {
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct {
 		struct ip_options	opt;
 		char			data[40];

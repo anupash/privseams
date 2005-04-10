@@ -23,7 +23,6 @@
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/wait.h>
-#include <linux/version.h>
 #include <linux/ipv6.h>
 #include <linux/pagemap.h>
 #include <linux/ctype.h>
@@ -1489,6 +1488,8 @@ cifs_mount(struct super_block *sb, struct cifs_sb_info *cifs_sb,
 			sb->s_maxbytes = (u64) 1 << 31;	/* 2 GB */
 	}
 
+	sb->s_time_gran = 100;
+
 /* on error free sesinfo and tcon struct if needed */
 	if (rc) {
 		/* if session setup failed, use count is zero but
@@ -1645,7 +1646,7 @@ CIFSSessSetup(unsigned int xid, struct cifsSesInfo *ses,
 				  32, nls_codepage);
 		bcc_ptr += 2 * bytes_returned;
 		bytes_returned =
-		    cifs_strtoUCS((wchar_t *) bcc_ptr, UTS_RELEASE, 32,
+		    cifs_strtoUCS((wchar_t *) bcc_ptr, system_utsname.release, 32,
 				  nls_codepage);
 		bcc_ptr += 2 * bytes_returned;
 		bcc_ptr += 2;
@@ -1672,8 +1673,8 @@ CIFSSessSetup(unsigned int xid, struct cifsSesInfo *ses,
 		}
 		strcpy(bcc_ptr, "Linux version ");
 		bcc_ptr += strlen("Linux version ");
-		strcpy(bcc_ptr, UTS_RELEASE);
-		bcc_ptr += strlen(UTS_RELEASE) + 1;
+		strcpy(bcc_ptr, system_utsname.release);
+		bcc_ptr += strlen(system_utsname.release) + 1;
 		strcpy(bcc_ptr, CIFS_NETWORK_OPSYS);
 		bcc_ptr += strlen(CIFS_NETWORK_OPSYS) + 1;
 	}
@@ -1889,7 +1890,7 @@ CIFSSpnegoSessSetup(unsigned int xid, struct cifsSesInfo *ses,
 				  32, nls_codepage);
 		bcc_ptr += 2 * bytes_returned;
 		bytes_returned =
-		    cifs_strtoUCS((wchar_t *) bcc_ptr, UTS_RELEASE, 32,
+		    cifs_strtoUCS((wchar_t *) bcc_ptr, system_utsname.release, 32,
 				  nls_codepage);
 		bcc_ptr += 2 * bytes_returned;
 		bcc_ptr += 2;
@@ -1914,8 +1915,8 @@ CIFSSpnegoSessSetup(unsigned int xid, struct cifsSesInfo *ses,
 		}
 		strcpy(bcc_ptr, "Linux version ");
 		bcc_ptr += strlen("Linux version ");
-		strcpy(bcc_ptr, UTS_RELEASE);
-		bcc_ptr += strlen(UTS_RELEASE) + 1;
+		strcpy(bcc_ptr, system_utsname.release);
+		bcc_ptr += strlen(system_utsname.release) + 1;
 		strcpy(bcc_ptr, CIFS_NETWORK_OPSYS);
 		bcc_ptr += strlen(CIFS_NETWORK_OPSYS) + 1;
 	}
@@ -2178,7 +2179,7 @@ CIFSNTLMSSPNegotiateSessSetup(unsigned int xid,
 				  32, nls_codepage);
 		bcc_ptr += 2 * bytes_returned;
 		bytes_returned =
-		    cifs_strtoUCS((wchar_t *) bcc_ptr, UTS_RELEASE, 32,
+		    cifs_strtoUCS((wchar_t *) bcc_ptr, system_utsname.release, 32,
 				  nls_codepage);
 		bcc_ptr += 2 * bytes_returned;
 		bcc_ptr += 2;	/* null terminate Linux version */
@@ -2195,8 +2196,8 @@ CIFSNTLMSSPNegotiateSessSetup(unsigned int xid,
 	} else {		/* ASCII */
 		strcpy(bcc_ptr, "Linux version ");
 		bcc_ptr += strlen("Linux version ");
-		strcpy(bcc_ptr, UTS_RELEASE);
-		bcc_ptr += strlen(UTS_RELEASE) + 1;
+		strcpy(bcc_ptr, system_utsname.release);
+		bcc_ptr += strlen(system_utsname.release) + 1;
 		strcpy(bcc_ptr, CIFS_NETWORK_OPSYS);
 		bcc_ptr += strlen(CIFS_NETWORK_OPSYS) + 1;
 		bcc_ptr++;	/* empty domain field */
@@ -2563,7 +2564,7 @@ CIFSNTLMSSPAuthSessSetup(unsigned int xid, struct cifsSesInfo *ses,
 				  32, nls_codepage);
 		bcc_ptr += 2 * bytes_returned;
 		bytes_returned =
-		    cifs_strtoUCS((wchar_t *) bcc_ptr, UTS_RELEASE, 32,
+		    cifs_strtoUCS((wchar_t *) bcc_ptr, system_utsname.release, 32,
 				  nls_codepage);
 		bcc_ptr += 2 * bytes_returned;
 		bcc_ptr += 2;	/* null term version string */
@@ -2615,8 +2616,8 @@ CIFSNTLMSSPAuthSessSetup(unsigned int xid, struct cifsSesInfo *ses,
 
 		strcpy(bcc_ptr, "Linux version ");
 		bcc_ptr += strlen("Linux version ");
-		strcpy(bcc_ptr, UTS_RELEASE);
-		bcc_ptr += strlen(UTS_RELEASE) + 1;
+		strcpy(bcc_ptr, system_utsname.release);
+		bcc_ptr += strlen(system_utsname.release) + 1;
 		strcpy(bcc_ptr, CIFS_NETWORK_OPSYS);
 		bcc_ptr += strlen(CIFS_NETWORK_OPSYS) + 1;
 		bcc_ptr++;	/* null domain */

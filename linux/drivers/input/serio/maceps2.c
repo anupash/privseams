@@ -62,8 +62,8 @@ static int maceps2_write(struct serio *dev, unsigned char val)
 	unsigned int timeout = MACE_PS2_TIMEOUT;
 
 	do {
-		if (mace_read(port->status) & PS2_STATUS_TX_EMPTY) {
-			mace_write(val, port->tx);
+		if (port->status & PS2_STATUS_TX_EMPTY) {
+			port->tx = val;
 			return 0;
 		}
 		udelay(50);
@@ -72,14 +72,15 @@ static int maceps2_write(struct serio *dev, unsigned char val)
 	return -1;
 }
 
-static irqreturn_t maceps2_interrupt(int irq, void *dev_id, struct pt_regs *regs)
+static irqreturn_t maceps2_interrupt(int irq, void *dev_id,
+				     struct pt_regs *regs)
 {
 	struct serio *dev = dev_id;
 	struct mace_ps2port *port = ((struct maceps2_data *)dev->port_data)->port;
-	unsigned int byte;
+	unsigned long byte;
 
-	if (mace_read(port->status) & PS2_STATUS_RX_FULL) {
-		byte = mace_read(port->rx);
+	if (port->status & PS2_STATUS_RX_FULL) {
+		byte = port->rx;
 		serio_interrupt(dev, byte & 0xff, 0, regs);
         }
 
@@ -90,19 +91,19 @@ static int maceps2_open(struct serio *dev)
 {
 	struct maceps2_data *data = (struct maceps2_data *)dev->port_data;
 
-	if (request_irq(data->irq, maceps2_interrupt, 0, "PS/2 port", dev)) {
+	if (request_irq(data->irq, maceps2_interrupt, 0, "PS2 port", dev)) {
 		printk(KERN_ERR "Could not allocate PS/2 IRQ\n");
 		return -EBUSY;
 	}
 
 	/* Reset port */
-	mace_write(PS2_CONTROL_TX_CLOCK_DISABLE | PS2_CONTROL_RESET,
-		   data->port->control);
+	data->port->control = PS2_CONTROL_TX_CLOCK_DISABLE | PS2_CONTROL_RESET;
 	udelay(100);
 
         /* Enable interrupts */
-	mace_write(PS2_CONTROL_RX_CLOCK_ENABLE | PS2_CONTROL_TX_ENABLE |
-		   PS2_CONTROL_RX_INT_ENABLE, data->port->control);
+	data->port->control = PS2_CONTROL_RX_CLOCK_ENABLE |
+			      PS2_CONTROL_TX_ENABLE |
+			      PS2_CONTROL_RX_INT_ENABLE;
 
 	return 0;
 }
@@ -111,8 +112,7 @@ static void maceps2_close(struct serio *dev)
 {
 	struct maceps2_data *data = (struct maceps2_data *)dev->port_data;
 
-	mace_write(PS2_CONTROL_TX_CLOCK_DISABLE | PS2_CONTROL_RESET,
-		   data->port->control);
+	data->port->control = PS2_CONTROL_TX_CLOCK_DISABLE | PS2_CONTROL_RESET;
 	udelay(100);
 	free_irq(data->irq, dev);
 }

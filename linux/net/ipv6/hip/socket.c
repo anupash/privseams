@@ -388,7 +388,7 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 	struct hip_eid_owner_info owner_info;
 	struct sock *sk = sock->sk;
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct sockaddr_in6 sockaddr_in6_tmp;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uaddr;
 	int sockaddr_in6_tmp_len;
@@ -549,7 +549,7 @@ int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock,
 	int err = 0;
 	struct proto_ops *socket_handler;
 	struct sock *sk = sock->sk;
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 
 	HIP_DEBUG("\n");
@@ -585,7 +585,7 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 {
 	int err = 0;
 	struct sock *sk = sock->sk;
-	struct inet_opt *inet = inet_sk(sk);
+	struct inet_sock *inet = inet_sk(sk);
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 	struct proto_ops *socket_handler;
 

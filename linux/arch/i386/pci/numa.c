@@ -4,6 +4,7 @@
 
 #include <linux/pci.h>
 #include <linux/init.h>
+#include <linux/nodemask.h>
 #include "pci.h"
 
 #define BUS2QUAD(global) (mp_bus_id_to_node[global])
@@ -112,14 +113,15 @@ static int __init pci_numa_init(void)
 		return 0;
 
 	pci_root_bus = pcibios_scan_root(0);
-	if (numnodes > 1) {
-		for (quad = 1; quad < numnodes; ++quad) {
+	if (num_online_nodes() > 1)
+		for_each_online_node(quad) {
+			if (quad == 0)
+				continue;
 			printk("Scanning PCI bus %d for quad %d\n", 
 				QUADLOCAL2BUS(quad,0), quad);
 			pci_scan_bus(QUADLOCAL2BUS(quad,0), 
 				&pci_root_ops, NULL);
 		}
-	}
 	return 0;
 }
 

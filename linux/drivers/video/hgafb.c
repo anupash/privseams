@@ -103,7 +103,7 @@ static char *hga_type_name;
 
 /* Global locks */
 
-static spinlock_t hga_reg_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(hga_reg_lock);
 
 /* Framebuffer driver structures */
 
@@ -618,7 +618,7 @@ MODULE_AUTHOR("Ferenc Bakonyi (fero@drama.obuda.kando.hu)");
 MODULE_DESCRIPTION("FBDev driver for Hercules Graphics Adaptor");
 MODULE_LICENSE("GPL");
 
-MODULE_PARM(nologo, "i");
+module_param(nologo, bool, 0);
 MODULE_PARM_DESC(nologo, "Disables startup logo if != 0 (default=0)");
 module_init(hgafb_init);
 

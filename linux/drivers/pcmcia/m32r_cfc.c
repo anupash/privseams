@@ -61,7 +61,7 @@ typedef struct pcc_socket {
 	u_short			type, flags;
 	struct pcmcia_socket	socket;
 	unsigned int		number;
- 	ioaddr_t		ioaddr;
+ 	kio_addr_t		ioaddr;
 	u_long			mapaddr;
 	u_long			base;	/* PCC register base */
 	u_char			cs_irq1, cs_irq2, intr;
@@ -86,7 +86,7 @@ static pcc_socket_t socket[M32R_MAX_PCC] = {
 static unsigned int pcc_get(u_short, unsigned int);
 static void pcc_set(u_short, unsigned int , unsigned int );
 
-static spinlock_t pcc_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(pcc_lock);
 
 #if !defined(CONFIG_PLAT_USRV)
 static inline u_long pcc_port2addr(unsigned long port, int size) {
@@ -239,6 +239,7 @@ void pcc_iowrite_word(int sock, unsigned long port, void *buf, size_t size,
 
 /*====================================================================*/
 
+#define IS_REGISTERED		0x2000
 #define IS_ALIVE		0x8000
 
 typedef struct pcc_t {
@@ -300,7 +301,7 @@ static int __init is_alive(u_short sock)
 	return 0;
 }
 
-static void add_pcc_socket(ulong base, int irq, ulong mapaddr, ioaddr_t ioaddr)
+static void add_pcc_socket(ulong base, int irq, ulong mapaddr, kio_addr_t ioaddr)
 {
 	pcc_socket_t *t = &socket[pcc_sockets];
 
@@ -568,7 +569,7 @@ static int _pcc_set_io_map(u_short sock, struct pccard_io_map *io)
 	u_char map;
 
 	debug(3, "m32r_cfc: SetIOMap(%d, %d, %#2.2x, %d ns, "
-		  "%#4.4x-%#4.4x)\n", sock, io->map, io->flags,
+		  "%#lx-%#lx)\n", sock, io->map, io->flags,
 		  io->speed, io->start, io->stop);
 	map = io->map;
 
@@ -585,7 +586,7 @@ static int _pcc_set_mem_map(u_short sock, struct pccard_mem_map *mem)
 	pcc_socket_t *t = &socket[sock];
 
 	debug(3, "m32r_cfc: SetMemMap(%d, %d, %#2.2x, %d ns, "
-		 "%#5.5lx, %#5.5x)\n", sock, map, mem->flags,
+		 "%#lx, %#x)\n", sock, map, mem->flags,
 		 mem->speed, mem->static_start, mem->card_start);
 
 	/*
@@ -807,7 +808,7 @@ static int __init init_m32r_pcc(void)
 #else	/* CONFIG_PLAT_USRV */
 	{
 		ulong base, mapaddr;
-		ioaddr_t ioaddr;
+		kio_addr_t ioaddr;
 
 		for (i = 0 ; i < M32R_MAX_PCC ; i++) {
 			base = (ulong)PLD_CFRSTCR;
@@ -831,14 +832,13 @@ static int __init init_m32r_pcc(void)
 	for (i = 0 ; i < pcc_sockets ; i++) {
 		socket[i].socket.dev.dev = &pcc_device.dev;
 		socket[i].socket.ops = &pcc_operations;
+		socket[i].socket.resource_ops = &pccard_static_ops;
 		socket[i].socket.owner = THIS_MODULE;
 		socket[i].number = i;
 		ret = pcmcia_register_socket(&socket[i].socket);
-		if (ret && i--) {
-			for (; i>= 0; i--)
-				pcmcia_unregister_socket(&socket[i].socket);
-			break;
-		}
+		if (!ret)
+			socket[i].flags |= IS_REGISTERED;
+
 #if 0	/* driver model ordering issue */
 		class_device_create_file(&socket[i].socket.dev,
 					 &class_device_attr_info);
@@ -864,7 +864,8 @@ static void __exit exit_m32r_pcc(void)
 	int i;
 
 	for (i = 0; i < pcc_sockets; i++)
-		pcmcia_unregister_socket(&socket[i].socket);
+		if (socket[i].flags & IS_REGISTERED)
+			pcmcia_unregister_socket(&socket[i].socket);
 
 	platform_device_unregister(&pcc_device);
 	if (poll_interval != 0)

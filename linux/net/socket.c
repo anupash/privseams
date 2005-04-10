@@ -104,7 +104,7 @@ static int sock_mmap(struct file *file, struct vm_area_struct * vma);
 static int sock_close(struct inode *inode, struct file *file);
 static unsigned int sock_poll(struct file *file,
 			      struct poll_table_struct *wait);
-static int sock_ioctl(struct inode *inode, struct file *file,
+static long sock_ioctl(struct file *file,
 		      unsigned int cmd, unsigned long arg);
 static int sock_fasync(int fd, struct file *filp, int on);
 static ssize_t sock_readv(struct file *file, const struct iovec *vector,
@@ -126,7 +126,7 @@ static struct file_operations socket_file_ops = {
 	.aio_read =	sock_aio_read,
 	.aio_write =	sock_aio_write,
 	.poll =		sock_poll,
-	.ioctl =	sock_ioctl,
+	.unlocked_ioctl = sock_ioctl,
 	.mmap =		sock_mmap,
 	.open =		sock_no_open,	/* special open code to disallow open via /proc */
 	.release =	sock_close,
@@ -144,7 +144,7 @@ static struct net_proto_family *net_families[NPROTO];
 
 #if defined(CONFIG_SMP) || defined(CONFIG_PREEMPT)
 static atomic_t net_family_lockct = ATOMIC_INIT(0);
-static spinlock_t net_family_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(net_family_lock);
 
 /* The strategy is: modifications net_family vector are short, do not
    sleep and veeery rare, but read access should be free of any exclusive
@@ -736,8 +736,9 @@ ssize_t sock_sendpage(struct file *file, struct page *page,
 	return sock->ops->sendpage(sock, page, offset, size, flags);
 }
 
-int sock_readv_writev(int type, struct inode * inode, struct file * file,
-		      const struct iovec * iov, long count, size_t size)
+static int sock_readv_writev(int type, struct inode * inode,
+			     struct file * file, const struct iovec * iov,
+			     long count, size_t size)
 {
 	struct msghdr msg;
 	struct socket *sock;
@@ -828,15 +829,13 @@ EXPORT_SYMBOL(dlci_ioctl_set);
  *	what to do with it - that's up to the protocol still.
  */
 
-static int sock_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
-		      unsigned long arg)
+static long sock_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 {
 	struct socket *sock;
 	void __user *argp = (void __user *)arg;
 	int pid, err;
 
-	unlock_kernel();
-	sock = SOCKET_I(inode);
+	sock = SOCKET_I(file->f_dentry->d_inode);
 	if (cmd >= SIOCDEVPRIVATE && cmd <= (SIOCDEVPRIVATE + 15)) {
 		err = dev_ioctl(cmd, argp);
 	} else
@@ -902,8 +901,6 @@ static int sock_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 			err = sock->ops->ioctl(sock, cmd, arg);
 			break;
 	}
-	lock_kernel();
-
 	return err;
 }
 
@@ -1073,7 +1070,6 @@ int sock_wake_async(struct socket *sock, int how, int band)
 
 static int __sock_create(int family, int type, int protocol, struct socket **res, int kern)
 {
-	int i;
 	int err;
 	struct socket *sock;
 
@@ -1118,7 +1114,7 @@ static int __sock_create(int family, int type, int protocol, struct socket **res
 
 	net_family_read_lock();
 	if (net_families[family] == NULL) {
-		i = -EAFNOSUPPORT;
+		err = -EAFNOSUPPORT;
 		goto out;
 	}
 
@@ -1128,10 +1124,9 @@ static int __sock_create(int family, int type, int protocol, struct socket **res
  *	default.
  */
 
-	if (!(sock = sock_alloc())) 
-	{
+	if (!(sock = sock_alloc())) {
 		printk(KERN_WARNING "socket: no more sockets\n");
-		i = -ENFILE;		/* Not exactly a match, but its the
+		err = -ENFILE;		/* Not exactly a match, but its the
 					   closest posix thing */
 		goto out;
 	}
@@ -1142,11 +1137,11 @@ static int __sock_create(int family, int type, int protocol, struct socket **res
 	 * We will call the ->create function, that possibly is in a loadable
 	 * module, so we have to bump that loadable module refcnt first.
 	 */
-	i = -EAFNOSUPPORT;
+	err = -EAFNOSUPPORT;
 	if (!try_module_get(net_families[family]->owner))
 		goto out_release;
 
-	if ((i = net_families[family]->create(sock, protocol)) < 0)
+	if ((err = net_families[family]->create(sock, protocol)) < 0)
 		goto out_module_put;
 	/*
 	 * Now to bump the refcnt of the [loadable] module that owns this
@@ -1166,7 +1161,7 @@ static int __sock_create(int family, int type, int protocol, struct socket **res
 
 out:
 	net_family_read_unlock();
-	return i;
+	return err;
 out_module_put:
 	module_put(net_families[family]->owner);
 out_release:
@@ -2031,15 +2026,6 @@ extern void sk_init(void);
 
 void __init sock_init(void)
 {
-	int i;
-
-	/*
-	 *	Initialize all address (protocol) families. 
-	 */
-	 
-	for (i = 0; i < NPROTO; i++) 
-		net_families[i] = NULL;
-
 	/*
 	 *	Initialize sock SLAB cache.
 	 */

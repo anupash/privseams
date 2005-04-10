@@ -35,7 +35,6 @@
 #include <asm/machdep.h>
 #include <asm/pci-bridge.h>
 #include <asm/ppcdebug.h>
-#include <asm/naca.h>
 #include <asm/iommu.h>
 
 #include <asm/iSeries/HvCallPci.h>
@@ -47,8 +46,6 @@
 #include <asm/iSeries/mf.h>
 
 #include "pci.h"
-
-extern int panic_timeout;
 
 extern unsigned long io_page_mask;
 
@@ -99,7 +96,7 @@ static u8 *iobar_table;
  * Static and Global variables
  */
 static char *pci_io_text = "iSeries PCI I/O";
-static spinlock_t iomm_table_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(iomm_table_lock);
 
 /*
  * iomm_table_initialize
