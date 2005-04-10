@@ -125,6 +125,124 @@ int hip_netlink_receive() {
 	}
 }
 
+int talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
+	 unsigned groups, struct nlmsghdr *answer,
+	 rtnl_filter_t junk,
+	 void *jarg)
+{
+        int status;
+        unsigned seq;
+        struct nlmsghdr *h;
+        struct sockaddr_nl nladdr;
+        struct iovec iov = { (void*)n, n->nlmsg_len };
+        char   buf[16384];
+        struct msghdr msg = {
+                (void*)&nladdr, sizeof(nladdr),
+                &iov,   1,
+                NULL,   0,
+                0
+        };
+
+        memset(&nladdr, 0, sizeof(nladdr));
+        nladdr.nl_family = AF_NETLINK;
+        nladdr.nl_pid = peer;
+        nladdr.nl_groups = groups;
+
+        n->nlmsg_seq = seq = ++rtnl->seq;
+
+        if (answer == NULL)
+                n->nlmsg_flags |= NLM_F_ACK;
+
+        status = sendmsg(rtnl->fd, &msg, 0);
+
+        if (status < 0) {
+                perror("Cannot talk to rtnetlink");
+                return -1;
+        }
+
+        memset(buf,0,sizeof(buf));
+
+        iov.iov_base = buf;
+
+        while (1) {
+                iov.iov_len = sizeof(buf);
+                status = recvmsg(rtnl->fd, &msg, MSG_WAITALL);
+
+                if (status < 0) {
+                        if (errno == EINTR)
+                                continue;
+                        perror("OVERRUN");
+                        continue;
+                }
+		if (status == 0) {
+                        fprintf(stderr, "EOF on netlink... grr!\n");
+                        return -1;
+                }
+                if (msg.msg_namelen != sizeof(nladdr)) {
+                        fprintf(stderr, "sender address length == %d\n", msg.msg_namelen);
+                        exit(1);
+                }
+                for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
+                        int err;
+                        int len = h->nlmsg_len;
+                        int l = len - sizeof(*h);
+
+                        if (l<0 || len>status) {
+                                if (msg.msg_flags & MSG_TRUNC) {
+                                        fprintf(stderr, "Truncated message\n");
+                                        return -1;
+                                }
+                                fprintf(stderr, "!!!malformed message: len=%d\n", len);
+                                exit(1);
+                        }
+
+                        if (nladdr.nl_pid != peer ||
+                            h->nlmsg_pid != rtnl->local.nl_pid ||
+                            h->nlmsg_seq != seq) {
+                                if (junk) {
+                                        err = junk(&nladdr, h, jarg);
+                                        if (err < 0)
+                                                return err;
+                                }
+                                continue;
+                        }
+
+                        if (h->nlmsg_type == NLMSG_ERROR) {
+                                struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
+                                if (l < sizeof(struct nlmsgerr)) {
+                                        fprintf(stderr, "ERROR truncated\n");
+                                } else {
+                                        errno = -err->error;
+                                        if (errno == 0) {
+                                                if (answer)
+                                                        memcpy(answer, h, h->nlmsg_len);
+                                                return 0;
+                                        }
+                                        perror("RTNETLINK answers");
+                                }
+                                return -1;
+                        }
+                        if (answer) {
+                                memcpy(answer, h, h->nlmsg_len);
+                                return 0;
+                        }
+
+                        fprintf(stderr, "Unexpected reply!!!\n");
+
+                        status -= NLMSG_ALIGN(len);
+                        h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
+                }
+                if (msg.msg_flags & MSG_TRUNC) {
+                        fprintf(stderr, "Message truncated\n");
+                        continue;
+                }
+                if (status) {
+                        fprintf(stderr, "!!!Remnant of size %d\n", status);
+                        exit(1);
+                }
+        }
+}
+
 int hip_netlink_talk(struct hip_work_order *req, 
 		     struct hip_work_order *resp) 
 {
@@ -147,7 +265,7 @@ int hip_netlink_talk(struct hip_work_order *req,
 
 	/* Let the talk insert any non-responses to our queue so that
            they will be processed later */
-	if (rtnl_talk(&rtnl, &tx.n, 0, 0, &rx.n, receive_work_order, NULL) < 0) {
+	if (talk(&rtnl, &tx.n, 0, 0, &rx.n, receive_work_order, NULL) < 0) {
 		HIP_ERROR("Unable to talk over netlink.\n");
 		return -1;
 	}
