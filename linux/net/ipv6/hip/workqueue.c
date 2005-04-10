@@ -37,7 +37,7 @@ static struct hip_pc_wq hip_workqueue;
 void hwo_default_destructor(struct hip_work_order *hwo)
 {
 	if (hwo && hwo->msg)
-          HIP_FREE(hwo->msg);
+		HIP_FREE(hwo->msg);
 }
 
 /**
@@ -427,8 +427,6 @@ int hip_do_work(struct hip_work_order *job)
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
 				break;
-
-			hip_netlink_ping(job->hdr.arg1);
 
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = 0;

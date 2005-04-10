@@ -30,9 +30,9 @@ void usage() {
  * resource allocations.
  */
 void hip_exit(int signal) {
-	HIP_ERROR("Signal: %d", signal);
-	hip_uninit_workqueue();
-	rtnl_close(&rtnl);
+	HIP_ERROR("Signal: %d\n", signal);
+//	hip_uninit_workqueue();
+//	rtnl_close(&rtnl);
 	exit(signal);
 }
 
@@ -69,10 +69,10 @@ int main(int argc, char *argv[]) {
 	/* Register signal handlers */
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);
-	signal(SIGSEGV, hip_exit);
+//	signal(SIGSEGV, hip_exit);
 
 	/* Open the netlink socket for kernel communication */
-	if (rtnl_open(&rtnl, 0) < 0) {
+	if (rtnl_open_byproto(&rtnl, 0, NETLINK_HIP) < 0) {
 		HIP_ERROR("Netlink socket error: %s\n", strerror(errno));
 		return(1);
 	}
@@ -84,8 +84,6 @@ int main(int argc, char *argv[]) {
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
 
-	HIP_DEBUG("Pinging...\n");
-	
 	/* Ping kernel and announce our PID */
 	INIT_WORK_ORDER_HDR(ping.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_PING, NULL, NULL, getpid(), 0);
 	ping.msg = hip_msg_alloc();
@@ -95,8 +93,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	hip_msg_free(ping.msg);
-	
-	HIP_DEBUG("Pinged...\n");
 
 	/* Enter to the select-loop */
 	for (;;) {
@@ -131,7 +127,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
- out_err:
 	/* never enters here */
 	return (1);
 }

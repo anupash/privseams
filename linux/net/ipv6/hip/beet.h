@@ -37,6 +37,12 @@ struct hip_xfrm_state {
 	int                  state;               /* state */
 };
 
+/* Initialize */
+void hip_init_beetdb(void);
+
+/* Uninitialize */
+void hip_uninit_beetdb(void);
+
 /* For inbound packet processing (SPI->(HITd,HITs) mapping) */
 struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi);
 

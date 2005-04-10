@@ -1247,11 +1247,6 @@ static int hip_worker(void *t)
 	daemonize("khipd/%d", cpu);
 	allow_signal(SIGKILL);
 	flush_signals(current);
-	result = hip_netlink_open();
-	if (result != 0) {
-		HIP_ERROR("Failed to open netlink\n");
-		goto out;
-	}
 	result =  set_cpus_allowed(current, cpumask_of_cpu(cpu));
 	if (result != 0) {
 		HIP_ERROR("Failed to set allowed CPUs\n");
@@ -1308,7 +1303,6 @@ static int hip_worker(void *t)
 
 	/* cleanup and finish thread */
 	hip_uninit_workqueue();
-	hip_netlink_close();
 
 	atomic_dec(&hip_working);
 	HIP_DEBUG("HIP kernel thread %d exiting on cpu %d\n", pid, cpu);
@@ -1373,6 +1367,13 @@ static int __init hip_init(void)
 			goto out;
 		}
 	}
+
+#ifdef CONFIG_HIP_USERSPACE
+	if (hip_netlink_open()) {
+		HIP_ERROR("Failed to open netlink\n");
+		goto out;
+	}
+#endif
 
 	HIP_SETCALL(hip_handle_output);
 	HIP_SETCALL(hip_handle_esp);
@@ -1467,6 +1468,10 @@ static void __exit hip_cleanup(void)
 
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
+
+#ifndef CONFIG_HIP_USERSPACE
+	hip_netlink_close();
+#endif
 
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();

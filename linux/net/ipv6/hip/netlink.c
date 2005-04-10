@@ -34,6 +34,8 @@ static int hip_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err)
 	memcpy(result->msg, &hwo->msg, msg_len);
 	hip_insert_work_order_cpu(result, smp_processor_id());
 
+	HIP_DEBUG("Inserted a work order.\n");
+
 	*err = 0;
 	return 0;
 }
@@ -42,6 +44,8 @@ static int hip_rcv_skb(struct sk_buff *skb)
 {
 	int err;
 	struct nlmsghdr *nlh;
+
+	HIP_DEBUG("A netlink message #2.\n");
 
 	while (skb->len >= NLMSG_SPACE(0)) {
 		u32 rlen;
@@ -57,8 +61,9 @@ static int hip_rcv_skb(struct sk_buff *skb)
 			if (err == 0)
 				return -1;
 //			netlink_ack(skb, nlh, err);
-		} else if (nlh->nlmsg_flags & NLM_F_ACK)
-//			netlink_ack(skb, nlh, 0);
+		} else if (nlh->nlmsg_flags & NLM_F_ACK) {
+		  //			netlink_ack(skb, nlh, 0);
+		}
 		skb_pull(skb, rlen);
 	}
 
@@ -69,6 +74,8 @@ static void hip_netlink_rcv(struct sock *sk, int len) {
 	do {
 		struct sk_buff *skb;
 		
+		HIP_DEBUG("A netlink message #1.\n");
+
 		while ((skb = skb_dequeue(&sk->sk_receive_queue)) != NULL) {
 			if (hip_rcv_skb(skb)) {
 				if (skb->len)
@@ -89,6 +96,8 @@ int hip_netlink_open(void) {
 	if (nl_sk == NULL)
 		return -ENOMEM;
 
+	HIP_DEBUG("HIP netlink socket created.");
+	
 	return 0;
 }
 
@@ -137,18 +146,12 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	NETLINK_CB(skb).dst_groups = 0; /* unicast */
 
 	netlink_unicast(nl_sk, skb, hipd_pid, MSG_DONTWAIT);
-	/* FIXME: errors of unicast */
-
-	HIP_DEBUG("Sent a netlink message.");
+	/* FIXME: errors of unicast? */
 
 	// FIXME: ack processing...
 
-	kfree_skb(skb);
+	/* Kernel frees the skb */
 	return 1;
-}
-
-void hip_netlink_ping(int pid) {
-	hipd_pid = pid;
 }
 
 

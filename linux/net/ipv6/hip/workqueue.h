@@ -16,8 +16,8 @@
 	do { \
 		work_order_hdr.type = hwo_type; \
 		work_order_hdr.subtype = hwo_subtype; \
-		if (!hwo_dst) ipv6_addr_copy(&work_order_hdr.dst_addr, hwo_dst); \
-		if (!hwo_src) ipv6_addr_copy(&work_order_hdr.src_addr, hwo_src); \
+		if (hwo_dst) ipv6_addr_copy(&work_order_hdr.dst_addr, hwo_dst); \
+		if (hwo_src) ipv6_addr_copy(&work_order_hdr.src_addr, hwo_src); \
 		work_order_hdr.arg1 = hwo_arg1; \
 		work_order_hdr.arg2 = hwo_arg2; \
 		} while(0)
