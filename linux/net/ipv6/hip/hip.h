@@ -24,7 +24,6 @@
 #  include "sysctl.h"
 #else
 
-//#include <stdlib.h>
 #define jiffies random()
 #include "list.h"
 

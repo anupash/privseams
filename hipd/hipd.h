@@ -1,6 +1,6 @@
 #ifndef HIPD_H
 #define HIPD_H
 
-extern struct rtnl_handle rtnl;
+extern struct hip_nl_handle nl;
 
 #endif /* HIPD_H */

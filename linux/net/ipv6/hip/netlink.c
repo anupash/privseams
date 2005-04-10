@@ -100,7 +100,8 @@ void hip_netlink_close(void) {
 
 int hip_netlink_send(struct hip_work_order *hwo) 
 {
-	struct hip_work_order *h;
+	struct hip_work_order_hdr *h;
+	struct hip_common *msg;
 	struct sk_buff *skb = NULL;
 	struct nlmsghdr *nlh;
 	int msg_len;
@@ -122,25 +123,27 @@ int hip_netlink_send(struct hip_work_order *hwo)
 		return -1;
 	}
      
-	nlh = (struct nlmsghdr *)skb->data;
+	nlh = (struct nlmsghdr *)skb_put(skb, NLMSG_SPACE(0));
 	nlh->nlmsg_len = NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr));
 	nlh->nlmsg_pid = 0; /* from kernel */
 	nlh->nlmsg_flags = 0;
+	nlh->nlmsg_seq = hwo->seq;
 	
 	/* Copy the payload */
-	h = NLMSG_DATA(nlh);
+	h = (struct hip_work_order_hdr *)skb_put(skb, sizeof(struct hip_work_order_hdr));
 	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
-	memcpy(&h->msg, hwo->msg, msg_len);
+	msg = (struct hip_common *)skb_put(skb, msg_len);
+	memcpy(msg, hwo->msg, msg_len);
 	
 	NETLINK_CB(skb).groups = 0; /* not in mcast group */
 	NETLINK_CB(skb).pid = 0; /* from kernel */
 	NETLINK_CB(skb).dst_pid = hipd_pid;
 	NETLINK_CB(skb).dst_groups = 0; /* unicast */
 
-	netlink_unicast(nl_sk, skb, hipd_pid, MSG_DONTWAIT);
+	msg_len = netlink_unicast(nl_sk, skb, hipd_pid, MSG_DONTWAIT);
 	/* FIXME: errors of unicast? */
 
-	// FIXME: ack processing...
+	HIP_DEBUG("Sent %d bytes to PID %d\n", msg_len, hipd_pid);
 
 	/* Kernel frees the skb */
 	return 1;

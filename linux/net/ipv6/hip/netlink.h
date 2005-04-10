@@ -7,7 +7,19 @@
 #include "workqueue.h"
 #else
 #include <stdio.h>
-#include <iproute/libnetlink.h> /* struct rtnl* */
+#include <linux/netlink.h>
+
+struct hip_nl_handle
+{
+        int                     fd;
+        struct sockaddr_nl      local;
+        struct sockaddr_nl      peer;
+        __u32                   seq;
+        __u32                   dump;
+};
+
+typedef int (*hip_filter_t)(const struct sockaddr_nl *, const struct nlmsghdr *n, int len);
+
 #endif
 
 #include "builder.h"
@@ -17,6 +29,7 @@
 int hip_netlink_open(void);
 void hip_netlink_close(void);
 #else
+int hip_netlink_open(struct hip_nl_handle *nl, unsigned subscriptions, int protocol);
 int hip_netlink_receive();
 #endif
 int hip_netlink_send(struct hip_work_order *hwo);

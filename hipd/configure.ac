@@ -20,9 +20,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stdlib.h string.h sy
 
 dnl check xml2 installation
 AC_CHECK_PROG(XML2_CONFIG, xml2-config, yes, no)
-AC_CHECK_LIB([netlink], [rtnl_open])
 AC_CHECK_LIB([crypto], [DSA_generate_key])
-#AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 
 if test x$XML2_CONFIG = xno
 then

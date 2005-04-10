@@ -14,12 +14,14 @@
 #include <net/hip.h>
 #include <stdio.h>      /* stderr and others */
 #include <errno.h>      /* errno */
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "hipd.h"
 #include "workqueue.h"
 #include "debug.h"
 
-struct rtnl_handle rtnl;
+struct hip_nl_handle nl;
 
 void usage() {
      fprintf(stderr, "hipl usage\n");
@@ -69,17 +71,16 @@ int main(int argc, char *argv[]) {
 	/* Register signal handlers */
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);
-//	signal(SIGSEGV, hip_exit);
 
 	/* Open the netlink socket for kernel communication */
-	if (rtnl_open_byproto(&rtnl, 0, NETLINK_HIP) < 0) {
+	if (hip_netlink_open(&nl, 0, NETLINK_HIP) < 0) {
 		HIP_ERROR("Netlink socket error: %s\n", strerror(errno));
 		return(1);
 	}
 
 	/* For now useless, but keep record of the highest fd for
 	 * future purposes (multiple sockets to select from) */
-	highest_descriptor = rtnl.fd;
+	highest_descriptor = nl.fd;
 	
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
@@ -87,14 +88,12 @@ int main(int argc, char *argv[]) {
 	/* Ping kernel and announce our PID */
 	INIT_WORK_ORDER_HDR(ping.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_PING, NULL, NULL, getpid(), 0);
 	ping.msg = hip_msg_alloc();
-	if (!hip_netlink_talk(&ping, &ping)) {
-		HIP_ERROR("Unable to send over netlink.\n");
+	if (hip_netlink_talk(&ping, &ping)) {
+		HIP_ERROR("Unable to connect to the kernel HIP daemon over netlink.\n");
 		return(1);
 	}
-
-	hip_msg_free(ping.msg);
 	
-	HIP_DEBUG("Entering to the select loop.\n");
+	hip_msg_free(ping.msg);
 
 	/* Enter to the select-loop */
 	for (;;) {
@@ -125,10 +124,9 @@ int main(int argc, char *argv[]) {
 
 		while (hwo = hip_get_work_order()) {
 			hip_do_work(hwo);
-			HIP_DEBUG("Work done\n");
 		}
 	}
 
-	/* never enters here */
+	/* Never enters here */
 	return (1);
 }

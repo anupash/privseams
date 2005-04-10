@@ -27,7 +27,6 @@ hipd_SOURCES += input.c output.c xfrm.c hidb.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD    = ../libinet6/.libs/libinet6.a
-hipd_LDADD    += /usr/lib/libnetlink.a
 
 hipd_LDFLAGS  = -lcrypto
 
