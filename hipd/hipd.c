@@ -93,6 +93,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	hip_msg_free(ping.msg);
+	
+	HIP_DEBUG("Entering to the select loop.\n");
 
 	/* Enter to the select-loop */
 	for (;;) {

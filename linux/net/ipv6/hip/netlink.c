@@ -13,9 +13,7 @@ static int hip_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err)
 	*err = -1;
 	hipd_pid = nlh->nlmsg_pid;
 	
-	result = HIP_MALLOC(sizeof(struct hip_work_order), GFP_KERNEL);
-	if (!result) {
-		HIP_ERROR("Out of memory.\n");
+	if (!(result = hip_init_job(GFP_KERNEL))) {
 		return -1;
 	}
 	
