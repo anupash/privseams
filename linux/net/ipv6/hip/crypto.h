@@ -24,15 +24,6 @@ extern struct crypto_tfm *impl_sha1;
 #  include <openssl/err.h> 
 #  include "debug.h"
 
-typedef enum {
-        KEY_LEN_NULL = 0, /* RFC 2410 */
-        KEY_LEN_MD5 = 16, /* 128 bits per RFC 2403 */
-        KEY_LEN_SHA1 = 20, /* 160 bits per RFC 2404 */
-        KEY_LEN_3DES = 24, /* 192 bits (3x64-bit keys) RFC 2451 */
-        KEY_LEN_AES = 16, /* 128 bits per RFC 3686; also 192, 256-bits */
-        KEY_LEN_BLOWFISH = 16, /* 128 bits per RFC 2451 */
-} HIP_KEYLENS;
-
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
 
@@ -47,8 +38,6 @@ typedef enum {
 #define HIP_DH_OAKLEY_18              6 /* 8192-bit MODP group */
 #define HIP_DEFAULT_DH_GROUP_ID       HIP_DH_OAKLEY_5
 #define HIP_MAX_DH_GROUP_ID 7 
-
-extern time_t load_time;
 
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 #ifdef __KERNEL__

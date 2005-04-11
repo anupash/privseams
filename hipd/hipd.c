@@ -24,6 +24,7 @@
 #include "debug.h"
 
 struct hip_nl_handle nl;
+time_t load_time; /* XX FIX: INITIALIZE THIS */
 
 void usage() {
      fprintf(stderr, "hipl usage\n");

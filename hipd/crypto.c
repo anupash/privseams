@@ -7,10 +7,6 @@
  * */
 #include "crypto.h"
 
-struct crypto_tfm *impl_sha1; /* XX FIX: FILL THIS STRUCTURE */
-
-time_t load_time; /* XX FIX: INITIALIZE THIS */
-
 /*
  * Diffie-Hellman primes
  */
@@ -325,7 +321,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
         case HIP_DIGEST_SHA1_HMAC:
                 HMAC(EVP_sha1(), 
                      key,
-		     KEY_LEN_SHA1,
+		     hip_hmac_key_length(type),
 		     in, in_len,
 		     out, NULL);
                 break;
@@ -333,7 +329,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
         case HIP_DIGEST_MD5_HMAC:
                 HMAC(EVP_md5(), 
 		     key,
-		     KEY_LEN_MD5,
+		     hip_hmac_key_length(type),
 		     in, in_len,
 		     out, NULL);
                 break;
@@ -381,7 +377,7 @@ int hip_crypto_encrypted(void *data, const void *iv, int alg, int len,
         switch(alg) {
         case HIP_HIP_AES_SHA1:
                 /* AES key must be 128, 192, or 256 bits in length */
-                if ((err = AES_set_encrypt_key(key, 8 * KEY_LEN_AES, &aes_key)) != 0) {
+                if ((err = AES_set_encrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0) {
                         HIP_ERROR("Unable to use calculated DH secret for AES key (%d)\n", err);
                         goto err;
                 }
@@ -391,9 +387,9 @@ int hip_crypto_encrypted(void *data, const void *iv, int alg, int len,
                 break;
 
         case HIP_HIP_3DES_SHA1:
-		memcpy(&secret_key1, key, KEY_LEN_3DES / 3);
-                memcpy(&secret_key2, key+8, KEY_LEN_3DES / 3);
-                memcpy(&secret_key3, key+16, KEY_LEN_3DES / 3);
+		memcpy(&secret_key1, key, hip_transform_key_length(alg) / 3);
+                memcpy(&secret_key2, key+8, hip_transform_key_length(alg) / 3);
+                memcpy(&secret_key3, key+16, hip_transform_key_length(alg) / 3);
 
 		des_set_odd_parity((des_cblock *)&secret_key1);
                 des_set_odd_parity((des_cblock *)&secret_key2);

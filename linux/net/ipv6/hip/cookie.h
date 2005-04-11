@@ -7,8 +7,10 @@
 #  include <asm/scatterlist.h>
 #  include <net/ipv6.h>
 #  include "sysctl.h"
+#  include "hip.h"
 #else
 #include "list.h"
+#include "hipd.h"
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>

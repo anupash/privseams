@@ -375,10 +375,12 @@ const char *hip_algorithm_to_string(int algo)
  *
  * This function never touches the other fields of the cookie @bc.
  */
+#if 0
 uint64_t hip_get_current_birthday(void)
 {
 	return ((uint64_t)load_time << 32) | jiffies;
 }
+#endif
 
 /**
  * hip_birthday_success - compare two birthday counters
