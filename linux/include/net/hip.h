@@ -563,6 +563,7 @@ struct hip_sig {
 	hip_tlv_len_t     length;
 
 	uint8_t      algorithm;
+	uint8_t      signature[0]; /* variable length */
 
 	/* fixed part end */
 } __attribute__ ((packed));
@@ -572,6 +573,7 @@ struct hip_sig2 {
 	hip_tlv_len_t     length;
 
 	uint8_t      algorithm;
+	uint8_t      signature[0]; /* variable length */
 
 	/* fixed part end */
 } __attribute__ ((packed));

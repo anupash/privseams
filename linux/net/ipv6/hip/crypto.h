@@ -25,6 +25,9 @@ struct crypto_tfm {
   // OpenSSL context?
 };
 
+#define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
+#define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
+
 #endif /* __KERNEL__ */
 
 /* These should be consistent with the table length in crypto.c and crypto/dh.c */

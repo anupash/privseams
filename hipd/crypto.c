@@ -329,9 +329,26 @@ int hip_build_digest_repeat(struct crypto_tfm *dgst, char *data, int ignore,
  */
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {
-	// i2/r2 processing
-	HIP_ERROR("Not implemented.\n");
-	exit(1); /* XX FIXME */
+	switch(type) {
+        case HIP_DIGEST_SHA1_HMAC:
+                HMAC(   EVP_sha1(), 
+                        get_key(hip_a, HIP_INTEGRITY, FALSE),
+                        auth_key_len(hip_a->hip_transform),
+                        data, location,
+                        hmac_md, &hmac_md_len  );
+                break;
+        case HIP_DIGEST_MD5_HMAC:
+                HMAC(   EVP_md5(), 
+                        get_key(hip_a, HIP_INTEGRITY, FALSE),
+                        auth_key_len(hip_a->hip_transform),
+                        data, location,
+                        hmac_md, &hmac_md_len  );
+                break;
+        default:
+                HIP_ERROR("Unknown HMAC type 0x%x\n",type);
+                return 0;
+        }
+
 	return 1;
 }
 
@@ -365,37 +382,222 @@ void get_random_bytes(void *buf, int n)
 	RAND_bytes(buf, n);
 }
 
+/*
+ * function bn2bin_safe(BIGNUM *dest)
+ *
+ * BN_bin2bn() chops off the leading zero(es) of the BIGNUM,
+ * so numbers end up being left shifted.
+ * This fixes that by enforcing an expected destination length.
+ */
+static int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
+{
+        int padlen = len - BN_num_bytes(a);
+        /* add leading zeroes when needed */
+        if (padlen > 0)
+                memset(to, 0, padlen);
+        BN_bn2bin(a, &to[padlen]);
+        /* return value from BN_bn2bin() may differ from length */
+        return(len);
+}
+
+/*
+ * return 0 on success.
+ */
 int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 {
-	// i2/r2
-	HIP_ERROR("Not implemeted.\n");
-	exit(1); /* XX FIXME */
-	return 1;
+	DSA_SIG *dsa_sig;
+	DSA *dsa;
+	int offset = 0, err = 1;
+	int t = private_key[offset++];
+	int len;
+
+	if (t > 8) {
+                HIP_ERROR("Illegal DSA key\n");
+                goto err;
+        }
+
+	dsa = DSA_new();
+	len = DSA_PRIV;
+	dsa->q = BN_bin2bn(&private_key[offset], len, 0);
+	offset += len;
+
+	len = 64+8*t;
+	dsa->p = BN_bin2bn(&private_key[offset], len, 0);
+	offset += len;
+
+	len = 64+8*t;
+	dsa->g = BN_bin2bn(&private_key[offset], len, 0);
+	offset += len;
+
+	len = 64+8*t;
+	dsa->pub_key = BN_bin2bn(&private_key[offset], len, 0);
+	offset += len;
+
+	len = DSA_PRIV;
+	dsa->priv_key = BN_bin2bn(&private_key[offset], len, 0);
+	offset += len;
+
+	memset(signature, 0, HIP_DSA_SIG_SIZE);
+	signature[0] = 8;
+	/* calculate the DSA signature of the message hash */   
+	dsa_sig = DSA_do_sign(digest, SHA_DIGEST_LENGTH, dsa);
+	/* build signature from DSA_SIG struct */
+	bn2bin_safe(dsa_sig->r, &signature[1], 20);
+	bn2bin_safe(dsa_sig->s, &signature[21], 20);
+	DSA_SIG_free(dsa_sig);
+ 	err = 0;
+
+ err:
+	if (dsa)
+		DSA_free(dsa);
+
+	return err;
 }
 
+/*
+ * @public_key pointer to host_id + 1
+ * @signature pointer to tlv_start + 1
+ */
 int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 {
-	HIP_ERROR("Not implemeted.\n");
-	exit(1); /* XX FIXME */
+	DSA_SIG dsa_sig;
+	DSA *dsa;
+	struct hip_sig *sig = (struct hip_sig *)(signature - 1);
+	int offset = 0;
+	int err;
+	u8 t = *public_key;
+	int key_len = 64 + (t * 8);
 
-	return 1;
+	/* Build the public key */
+	dsa = DSA_new();
+	/* get Q, P, G, and Y */
+	dsa->q = BN_bin2bn(&public_key[offset], DSA_PRIV, 0);
+	offset += DSA_PRIV;
+	dsa->p = BN_bin2bn(&public_key[offset], key_len, 0);
+	offset += key_len;
+	dsa->g = BN_bin2bn(&public_key[offset], key_len, 0);
+	offset += key_len;
+	dsa->pub_key = BN_bin2bn(&public_key[offset], key_len, 0);
+
+	/* build the DSA structure */
+	dsa_sig.r = BN_bin2bn(&sig->signature[1], 20, NULL);
+	dsa_sig.s = BN_bin2bn(&sig->signature[21], 20, NULL);
+	/* verify the DSA signature */
+	err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, &dsa_sig, dsa);
+	BN_free(dsa_sig.r);
+	BN_free(dsa_sig.s);
+	DSA_free(dsa);
+	
+	return err == 0 ? 1 : 0;
 }
 
+/*
+ * return 0 on success.
+ */
 int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
 {
-	// i2/r2
-	HIP_ERROR("Not implemeted.\n");
-	exit(1); /* XX FIXME */
+	RSA *rsa;
+	BN_CTX *ctx;
+	u8 *data = private_key;
+	int offset = 0;
+	int len = data[offset++];
+	int slice, sig_len, err, res = 1;
+	
+	/* Build the private key */
+	rsa = RSA_new();
+	if (!rsa) {
+		goto err;
+	}
 
-	return 1;
+	rsa->e = BN_bin2bn(&data[offset], len, 0);
+	offset += len;
+
+        slice = (priv_klen - len) / 6;
+        len = 2 * slice;
+	rsa->n = BN_bin2bn(&data[offset], len, 0);
+	offset += len;
+
+        len = 2 * slice;
+	rsa->d = BN_bin2bn(&data[offset], len, 0);
+	offset += len;
+
+        len = slice;
+	rsa->p = BN_bin2bn(&data[offset], len, 0);
+	offset += len;
+
+        len = slice;
+	rsa->q = BN_bin2bn(&data[offset], len, 0);
+	offset += len;
+
+	ctx = BN_CTX_new();
+	if (!ctx) {
+		goto err;
+	}
+
+	rsa->iqmp = BN_mod_inverse(NULL, rsa->p, rsa->q, ctx);
+	if (!rsa->iqmp) {
+		HIP_ERROR("Unable to invert.\n");
+		goto err;
+	}
+
+	/* assuming RSA_sign() uses PKCS1 - RFC 3110/2437
+	 * hash = SHA1 ( data )
+	 * prefix = 30 21 30 09 06 05 2B 0E 03 02 1A 05 00 04 14 
+	 * signature = ( 00 | FF* | 00 | prefix | hash) ** e (mod n)
+	 */
+	sig_len = RSA_size(rsa);
+	memset(signature, 0, sig_len);
+	err = RSA_sign(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
+		       &sig_len, rsa);
+	res = err == 0 ? 1 : 0;
+
+ err:
+	if (rsa)
+		RSA_free(rsa);
+	if (ctx)
+		BN_CTX_free(ctx);
+
+	return res;
 }
 
 int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 {
-	HIP_ERROR("Not implemeted.\n");
-	exit(1); /* XX FIXME */
+	RSA *rsa;
+	struct hip_sig *sig = (struct hip_sig *)(signature - 1);
+	u8 *data = public_key;
+	int offset = 0;
+	int e_len, key_len, sig_len, err;
 
-	return 1;
+	e_len = data[offset++];
+	if (e_len == 0) {
+		e_len = (u16) data[offset];
+		e_len = ntohs(e_len);
+		offset += 2;
+	}
+
+	if (e_len > 512) { /* RFC 3110 limits this field to 4096 bits */
+		HIP_ERROR("RSA HI has invalid exponent length of %u\n",
+			  e_len);
+		return(-1);
+	}
+
+	key_len = pub_klen - (e_len + ((e_len > 255) ? 3 : 1));
+
+	/* Build the public key */
+	rsa = RSA_new();
+	rsa->e = BN_bin2bn(&data[offset], e_len, 0);
+	offset += e_len;
+	rsa->n = BN_bin2bn(&data[offset], key_len, 0);
+
+	sig_len = ntohs(sig->length) - 1; /* exclude algorithm */
+
+	/* verify the RSA signature */
+	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH,
+			 sig->signature, sig_len, rsa);
+
+	RSA_free(rsa);
+
+	return err == 0 ? 1 : 0;
 }
 
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *dh_shared_key,
