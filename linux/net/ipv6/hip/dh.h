@@ -10,7 +10,7 @@
 #endif
 
 #include "hadb.h"
-#include "crypto/dh.h"
+#include "crypto.h"
 #include "debug.h"
 
 int hip_insert_dh(u8 *buffer, int bufsize, int group_id);

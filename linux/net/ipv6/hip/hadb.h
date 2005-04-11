@@ -1,9 +1,6 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
 
-//#ifndef __KERNEL__
-//#include "hashtable.h"
-//#else
 #include <net/hip.h>
 #include "debug.h"
 #include "misc.h"
@@ -17,16 +14,13 @@
 #define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
 #define HIP_UNLOCK_HS(hs) do { spin_unlock_bh(&hs->lock); } while(0)
 #else
-//#include <sys/time.h>
-//#include <time.h>
-
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)
 #define HIP_LOCK_HS(hs) 
 #define HIP_UNLOCK_HS(hs)
 
 #define do_gettimeofday(x) gettimeofday(x, NULL)
-#endif
+#endif /* __KERNEL__ */
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
@@ -186,5 +180,4 @@ void hip_hadb_remove_hs2(struct hip_hit_spi *hs);
 #define hip_put_ha(ha) hip_db_put_ha(ha, hip_hadb_delete_state)
 #define hip_put_xfrm(ha) hip_db_put_ha(ha, hip_beetdb_delete_state)
 
-//#endif /* __KERNEL__ */
 #endif /* HIP_HADB_H */

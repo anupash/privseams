@@ -7,7 +7,7 @@
 
 #include "debug.h"
 #include "workqueue.h"
-#include "beet.h"
+//#include "beet.h"
   
 void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr);
 int hip_inbound(struct sk_buff **skb, unsigned int *nhoff);

@@ -7,9 +7,7 @@
 #  include <net/checksum.h>
 #  include <net/addrconf.h>
 #  include <net/xfrm.h>
-#  include <linux/netfilter.h>
 #  include <linux/skbuff.h>
-#  include <net/ip6_route.h>
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>

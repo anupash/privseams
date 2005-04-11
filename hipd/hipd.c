@@ -34,6 +34,9 @@ void usage() {
 void hip_exit(int signal) {
 	HIP_ERROR("Signal: %d\n", signal);
 //	hip_uninit_workqueue();
+	//        hip_uninit_host_id_dbs();
+        //hip_uninit_hadb();
+	// hip_uninit_beetdb();
 //	rtnl_close(&rtnl);
 	exit(signal);
 }

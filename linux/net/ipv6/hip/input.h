@@ -14,7 +14,7 @@
 #include "xfrm.h"
 #include "hadb.h"
 #include "keymat.h"
-#include "crypto/dsa.h"
+#include "crypto.h"
 #include "builder.h"
 #include "hip.h"
 #include "misc.h"
@@ -26,7 +26,6 @@
 #ifdef CONFIG_HIP_RVS
 #include "rvs.h"
 #endif
-#include "crypto/rsa.h"
 
 #ifdef __KERNEL__
 void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr);

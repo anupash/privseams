@@ -5,6 +5,7 @@
 #  include <linux/types.h>
 #  include <linux/crypto.h>
 #  include <asm/scatterlist.h>
+#  include <linux/in6.h>
 #else
 #  include "list.h"
 #endif /* __KERNEL__ */
@@ -12,12 +13,13 @@
 #include <net/hip.h>
 #include "misc.h"
 #include "debug.h"
-#include "hip.h"
+//#include "hip.h"
+#include "crypto.h"
 
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat,
-		    void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
-		    struct in6_addr *hit2, u8 *calc_index);
+		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
+		     struct in6_addr *hit2, u8 *calc_index);
 void hip_update_entry_keymat(struct hip_hadb_state *entry,
 			     uint16_t new_keymat_index,
 			     uint8_t new_calc_index,

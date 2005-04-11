@@ -302,3 +302,4 @@ DH *hip_dh_clone(DH *src)
 	hip_free_dh_structure(tgt);
 	return NULL;
 }
+

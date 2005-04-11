@@ -22,9 +22,6 @@ typedef struct DH_str {
 
 #include <net/hip.h>
 
-/* this should be consistent with the table length in dh.c */
-#define HIP_MAX_DH_GROUP_ID 7 
-
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *out, size_t outlen);
 int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen);
 DH *hip_generate_dh_key(int group_id);

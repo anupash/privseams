@@ -26,7 +26,6 @@
 
 #include "rsa.h"
 
-
 typedef struct {
     MPI n;	    /* modulus */
     MPI e;	    /* exponent */
@@ -41,7 +40,6 @@ typedef struct {
     MPI q;	    /* prime  q. */
     MPI u;	    /* inverse of p mod q. */
 } RSA_secret_key;
-
 
 static void public(MPI output, MPI input, RSA_public_key *skey );
 static void secret(MPI output, MPI input, RSA_secret_key *skey );

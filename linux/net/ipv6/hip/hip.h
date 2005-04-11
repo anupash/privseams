@@ -4,7 +4,7 @@
 #ifdef __KERNEL__
 #  include <linux/time.h>
 #  include <linux/spinlock.h>
-#  include <linux/crypto.h>
+//#  include <linux/crypto.h>
 #  include <linux/list.h>
 #  include <linux/socket.h>
 #  include <asm/scatterlist.h>
@@ -12,7 +12,7 @@
 #  include <linux/notifier.h>
 #  include <linux/spinlock.h>
 #  include <linux/xfrm.h>
-#  include <linux/crypto.h>
+//#  include <linux/crypto.h>
 #  include <net/protocol.h>
 #  include <net/checksum.h>
 #  include <net/hip_glue.h>
@@ -22,6 +22,7 @@
 #  include <linux/completion.h>
 #  include <linux/cpumask.h>
 #  include "sysctl.h"
+//#  include "crypto.h"
 #else
 
 #define jiffies random()
@@ -61,7 +62,7 @@
 #endif /* __KERNEL__ */
 
 #include <net/hip.h>
-#include "hadb.h"
+//#include "hadb.h"
 #include "input.h"
 #include "builder.h"
 #include "hidb.h"
@@ -84,19 +85,21 @@
 #define HIP_MAX_SCATTERLISTS       5 // is this enough?
 
 #ifdef __KERNEL__
-int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
-			    int nsg, void *out);
+//int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
+//			    int nsg, void *out);
 int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt, 
 			     const u8 *addr, const u32 size);
 #endif /* __KERNEL__ */
-int hip_build_digest(const int type, const void *in, int in_len, void *out);
-int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
+//int hip_build_digest(const int type, const void *in, int in_len, void *out);
+//int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
-int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
+//int hip_crypto_encrypted(void *, const void *, int, int, void*, int);
 void hip_net_event(int ifindex, uint32_t event_src, uint32_t event);
 
-extern struct crypto_tfm *impl_sha1;
+//extern struct crypto_tfm *impl_sha1;
 extern struct socket *hip_output_socket;
 extern time_t load_time;
 
 #endif /* HIP_HIP_H */
+
+

@@ -25,14 +25,13 @@
    }\
  } while(0)
 
+extern int kmm; // timer.c
+extern struct timeval gtv_start, gtv_stop, gtv_result;
+extern int gtv_inuse;
 #else
 
 #define HIP_START_TIMER(x)
 #define HIP_STOP_TIMER(x,y)
 
 #endif /* HIP_TIMING */
-
-extern int kmm; // timer.c
-extern struct timeval gtv_start, gtv_stop, gtv_result;
-extern int gtv_inuse;
 #endif

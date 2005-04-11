@@ -11,9 +11,9 @@
 #  include <linux/list.h> /* struct list */
 #endif /* __KERNEL__ */
 #include <net/hip.h>
-#include "workqueue.h"
 #include "debug.h"
 #include "hadb.h"
+#include "workqueue.h"
 
 #define HIP_BEETDB_SIZE 53
 
@@ -48,6 +48,8 @@ struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi);
 
 /* For outbound packet processing (HITd->(SPI, IP) mapping */
 struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit);
+
+void hip_beetdb_delete_state(hip_xfrm_t *x);
 
 #endif /* __KERNEL__ */
 

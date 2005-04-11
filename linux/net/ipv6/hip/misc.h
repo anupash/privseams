@@ -30,7 +30,7 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 #endif /* __KERNEL__ */
 
 #include "debug.h"
-#include "builder.h"
+//#include "builder.h"
 #include "hip.h"
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,

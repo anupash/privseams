@@ -42,8 +42,8 @@ cookie.c: cookie.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.c .
 cookie.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.h .
-crypto:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto .
+crypto.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto.h .
 hidb.c: hidb.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.c .
 hidb.h:

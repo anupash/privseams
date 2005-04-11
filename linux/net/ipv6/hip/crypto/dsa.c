@@ -27,7 +27,6 @@ typedef struct {
     MPI y;	    /* g^x mod p */
 } DSA_public_key;
 
-
 typedef struct {
     MPI p;	    /* prime */
     MPI q;	    /* group order */
@@ -36,11 +35,9 @@ typedef struct {
     MPI x;	    /* secret exponent */
 } DSA_secret_key;
 
-
 static MPI gen_k( MPI q );
 static void sign(MPI r, MPI s, MPI input, DSA_secret_key *skey);
 static int  verify(MPI r, MPI s, MPI input, DSA_public_key *pkey);
-
 
 /****************
  * Generate a random secret exponent k less than q
@@ -183,7 +180,12 @@ verify(MPI r, MPI s, MPI hash, DSA_public_key *pkey )
     return rc;
 }
 
-
+unsigned int
+_gcry_dsa_get_nbits( int algo, MPI *pkey )
+{
+	algo = 1;
+	return mpi_get_nbits( pkey[0] );
+}
 
 int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 {
@@ -402,11 +404,6 @@ int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 	return err;
 }
 
-unsigned int
-_gcry_dsa_get_nbits( int algo, MPI *pkey )
-{
-	algo = 1;
-	return mpi_get_nbits( pkey[0] );
-}
+
 
 
