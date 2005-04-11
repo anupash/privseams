@@ -1247,11 +1247,13 @@ static int hip_worker(void *t)
 	daemonize("khipd/%d", cpu);
 	allow_signal(SIGKILL);
 	flush_signals(current);
+#ifdef CONFIG_SMP
 	result =  set_cpus_allowed(current, cpumask_of_cpu(cpu));
 	if (result != 0) {
 		HIP_ERROR("Failed to set allowed CPUs\n");
 		goto out;
 	}
+#endif /* CONFIG_SMP */
 	//set_user_nice(current, 0); //XXX: Set this as you please
 
 	HIP_DEBUG("HIP kernel thread %s pid=%d started\n", current->comm, pid);
@@ -1299,7 +1301,7 @@ static int hip_worker(void *t)
 		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 
- out:
+	//out:
 
 	/* cleanup and finish thread */
 	hip_uninit_workqueue();
