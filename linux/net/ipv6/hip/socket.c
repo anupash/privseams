@@ -781,18 +781,10 @@ int hip_socket_handle_rvs(const struct hip_common *input)
  *
  * Returns: zero on success, or negative error value on failure
  */
-#ifdef CONFIG_HIP_USERSPACE
-int hip_socket_handle_add_peer_map_hit_ip(const struct hip_common *input)
-{
-	// XX FIX: do a work order an send to userspace
-	return -1;
-}
-#else
 int hip_socket_handle_add_peer_map_hit_ip(const struct hip_common *input)
 {
 	return do_work(input, 0);
 }
-#endif
 
 /**
  * hipd_handle_async_del_map_hit_ip - handle deletion of a mapping
@@ -1672,7 +1664,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 #ifdef CONFIG_HIP_USERSPACE
 int hip_socket_handle_add_local_hi(const struct hip_common *input)
 {
-	// XX FIX: do a work order an send to userspace
+	// XX FIX: do a work order an send to userspace: call
 	return -1;
 }
 #else
