@@ -16,6 +16,8 @@
 //#include "hip.h"
 #include "crypto.h"
 
+extern struct crypto_tfm *impl_sha1;
+
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat,
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
