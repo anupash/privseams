@@ -923,9 +923,8 @@ int get_peer_endpointinfo(const char *hostsfile,
 			  struct endpointinfo **res)
 {
   int err, match_found = 0, ret = 0, i=0;
-  unsigned int lineno = 0;
+  unsigned int lineno = 0, fqdn_str_len = 0;
   FILE *hosts = NULL;
-  //char hi_str[GEPI_HI_STR_VAL_MAX+1], fqdn_str[GEPI_FQDN_STR_VAL_MAX+1];
   char *hi_str, *fqdn_str;
   struct endpointinfo *einfo = NULL, *current = NULL, *new = NULL;
   struct addrinfo ai_hints, *ai_res = NULL;
@@ -980,8 +979,6 @@ int get_peer_endpointinfo(const char *hostsfile,
     extractsubstrings(line,&mylist);
     printf("L=%d\n",length(&mylist));
     
-    unsigned int fqdn_str_len = strlen(fqdn_str); 
-
     lineno++;
 
     /* find out the fqdn string amongst the HITS - 
