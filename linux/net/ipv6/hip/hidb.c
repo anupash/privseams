@@ -208,6 +208,98 @@ int hip_add_host_id(struct hip_db_struct *db,
 }
 
 /**
+ * hip_handle_local_add_hi - handle adding of a localhost host identity
+ * @input: contains the hi parameter in fqdn format (includes private key)
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_handle_add_local_hi(const struct hip_common *input)
+{
+	int err = 0;
+	struct hip_host_id *dsa_host_identity, *rsa_host_identity = NULL;
+	struct hip_lhi dsa_lhi, rsa_lhi;
+	struct in6_addr hit_our;
+	
+	HIP_DEBUG("\n");
+
+	if ((err = hip_get_msg_err(input)) != 0) {
+		HIP_ERROR("daemon failed (%d)\n", err);
+		goto out_err;
+	}
+
+	_HIP_DUMP_MSG(response);
+
+	dsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 1);
+        if (!dsa_host_identity) {
+		HIP_ERROR("no dsa host identity pubkey in response\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+
+	rsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 2);
+        if (!rsa_host_identity) {
+		HIP_ERROR("no rsa host identity pubkey in response\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+
+	_HIP_HEXDUMP("rsa host id\n", rsa_host_identity,
+		    hip_get_param_total_len(rsa_host_identity));
+
+	err = hip_private_host_id_to_hit(dsa_host_identity, &dsa_lhi.hit,
+					 HIP_HIT_TYPE_HASH126);
+	if (err) {
+		HIP_ERROR("dsa host id to hit conversion failed\n");
+		goto out_err;
+	}
+
+	err = hip_private_host_id_to_hit(rsa_host_identity, &rsa_lhi.hit,
+					 HIP_HIT_TYPE_HASH126);
+	if (err) {
+		HIP_ERROR("rsa host id to hit conversion failed\n");
+		goto out_err;
+	}
+
+	/* XX FIX: Note: currently the order of insertion of host ids makes a
+	   difference. */
+
+	err = hip_add_localhost_id(&rsa_lhi, rsa_host_identity);
+	if (err) {
+		HIP_ERROR("adding of local host identity failed\n");
+		goto out_err;
+	}
+
+	err = hip_add_localhost_id(&dsa_lhi, dsa_host_identity);
+	if (err) {
+		HIP_ERROR("adding of local host identity failed\n");
+		goto out_err;
+	}
+
+	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
+
+	HIP_DEBUG("hip: Generating a new R1 now\n");
+	
+        /* XX TODO: precreate R1s for both algorithms, not just the default */ 
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our,
+					       HIP_HI_DEFAULT_ALGO) < 0) {
+		HIP_ERROR("Didn't find HIT for R1 precreation\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	/* XX FIX: only RSA R1s are precreated - solved on the multi branch */
+       	if (!hip_precreate_r1(&hit_our)) {
+		HIP_ERROR("Unable to precreate R1s... failing\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+	
+ out_err:
+	
+	return err;
+}
+
+/**
  * hip_add_localhost_id - add a localhost id to the databases
  * @lhi: the HIT of the host
  * @host_id: the host id of the host

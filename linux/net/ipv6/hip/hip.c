@@ -962,16 +962,19 @@ static int __init hip_init(void)
 		goto out;
 #endif
 
+#ifndef CONFIG_HIP_USERSPACE
 	if (hip_init_output_socket() < 0)
 		goto out;
+#endif
 
-#ifndef CONFIG_HIP_USERSPACE
 	if (hip_init_cipher() < 0)
 		goto out;
 
+#ifdef CONFIG_HIP_USERSPACE
+	hip_init_beetdb();
+#else
 	hip_init_hadb();	
 #endif
-	hip_init_beetdb();
 
 #ifdef CONFIG_HIP_RVS
 	hip_init_rvadb();
@@ -1027,7 +1030,6 @@ static int __init hip_init(void)
 	if (hip_init_socket_handler() < 0)
 		goto out;
 
-
 	if (hip_init_netdev_notifier() < 0)
 		goto out;
 
@@ -1045,7 +1047,7 @@ static int __init hip_init(void)
 	return 0;
 
  out:
-	hip_cleanup();
+	//hip_cleanup();
 	HIP_ERROR("Failed to init module\n");
 	return -EINVAL;
 }
@@ -1103,7 +1105,7 @@ static void __exit hip_cleanup(void)
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
 
-#ifndef CONFIG_HIP_USERSPACE
+#ifdef CONFIG_HIP_USERSPACE
 	hip_netlink_close();
 #endif
 
@@ -1115,12 +1117,12 @@ static void __exit hip_cleanup(void)
 #ifdef CONFIG_HIP_RVS
 	hip_uninit_rvadb();
 #endif
-#ifndef CONFIG_HIP_USERSPACE
-	hip_uninit_host_id_dbs();
+#ifdef CONFIG_HIP_USERSPACE
+	hip_uninit_beetdb();
+#else
 	hip_uninit_hadb();
 #endif
-	hip_uninit_beetdb();
-
+	hip_uninit_host_id_dbs();
 	hip_uninit_all_eid_db();
 	hip_uninit_output_socket();
 #ifndef CONFIG_HIP_USERSPACE

@@ -64,11 +64,12 @@ int main(int argc, char *argv[]) {
 			return(0);
 		}
 	}
-	
+
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (!foreground) {
 		if (fork() > 0)
 			return(0);
+		hip_set_logtype(LOGTYPE_SYSLOG);
 	}
 	
 	/* Register signal handlers */
@@ -126,6 +127,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		while (hwo = hip_get_work_order()) {
+			HIP_DEBUG("Processing work order\n");
 			hip_do_work(hwo);
 		}
 	}

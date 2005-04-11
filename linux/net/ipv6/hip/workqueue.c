@@ -497,6 +497,7 @@ int hip_do_work(struct hip_work_order *job)
 #endif
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
 		case HIP_WO_SUBTYPE_ADDHI:
+			break;
 		case HIP_WO_SUBTYPE_DELHI:
 		case HIP_WO_SUBTYPE_FLUSHHIS:
 		case HIP_WO_SUBTYPE_NEWDH:
