@@ -106,4 +106,7 @@ beet.h:
 #rsa.c: rsa.h
 #	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto/rsa.c
 
+tags:
+	etags $(hipd_SOURCES) $(include_HEADERS)
+
 #SUBDIRS = keynote i3 # Teemu, fork these features to a separate branch
