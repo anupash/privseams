@@ -222,8 +222,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 #ifdef __KERNEL__
 		hip_build_digest_repeat(impl_sha1, sg, nsg, sha_digest);
 #else
-		// FIXME: is this ok, use the same func. header.
-		hip_build_digest_repeat(impl_sha1, cookie, 0, sha_digest);
+		hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
 #endif
                 /* copy the last 8 bytes for checking */
 		memcpy(&digest, sha_digest + 12, 8);

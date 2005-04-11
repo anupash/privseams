@@ -1,3 +1,10 @@
+/*
+ * HIP userspace crypto functions (for OpenSSL). Code is a combination
+ * of original HIPL kernel functions and Boeing HIPD crypto functions.
+ *
+ * Authors: Teemu Koponen <tkoponen@iki.fi>
+ *          
+ * */
 #include "crypto.h"
 
 struct crypto_tfm *impl_sha1; /* XX FIX: FILL THIS STRUCTURE */
@@ -265,13 +272,6 @@ int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
 
 unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = {0,0x02,0x02,0x02,0x02,0x02,0x02};
 
-void crypto_digest_digest(struct crypto_tfm *tfm, char *src_buf, int ignore,
-			  char *dst_buf) {
-	// i2/r1 processing
-	HIP_ERROR("Not implemented.\n");
-	exit(1); /* XX FIXME */
-}
-
 /**
  * hip_build_digest - calculate a digest over given data
  * @type: the type of digest, e.g. "sha1"
@@ -285,36 +285,28 @@ void crypto_digest_digest(struct crypto_tfm *tfm, char *src_buf, int ignore,
  * Returns: 0 on success, otherwise < 0.
  */
 int hip_build_digest(const int type, const void *in, int in_len, void *out) {
-	// i2/r2
-	HIP_ERROR("Not implemented.\n");
-	exit(1); /* XX FIXME */
-	return 1;
-}
+	SHA_CTX sha;
+	MD5_CTX md5;
 
-/**
- * hip_build_digest_repeat - Calculate digest repeatedly
- * @dgst: Digest transform
- * @sg: Valid scatterlist array
- * @nsg: Number of scatterlists in the @sg array.
- * @out: Output buffer. Should contain enough bytes for the digest.
- * 
- * Use this function instead of the one above when you need to do repeated
- * calculations *IN THE SAME MEMORY SPACE (SIZE _AND_ ADDRESS)*
- * This is an optimization for cookie solving. There we do a lots of digests
- * in the same memory block and its size is constant.
- * So instead of calling N times hip_map_virtual_to_pages() the caller maps
- * once and all the digest iterations use the same pages.
- * This improves the speed greatly.
- *
- * Returns 0 always. The digest is written to @out.
-*/
-int hip_build_digest_repeat(struct crypto_tfm *dgst, char *data, int ignore,
-			    void *out)
-{
-	// puzzle solving
-	HIP_ERROR("Not implemented!\n");
-	exit(1); /* XX FIXME */
-	return 1;
+	switch(type) {
+	case HIP_DIGEST_SHA1:
+		SHA1_Init(&sha);
+		SHA1_Update(&sha, in, in_len);
+		SHA1_Final(out, &sha);
+		break;
+
+	case HIP_DIGEST_MD5:
+		MD5_Init(&md5);
+		MD5_Update(&md5, in, in_len);
+		MD5_Final(out, &md5);
+		break;
+
+	default:
+		HIP_ERROR("Unknown digest: %x\n",type);
+		return -EFAULT;
+	}
+
+	return 0;
 }
 
 /**
@@ -331,21 +323,22 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {
 	switch(type) {
         case HIP_DIGEST_SHA1_HMAC:
-                HMAC(   EVP_sha1(), 
-                        get_key(hip_a, HIP_INTEGRITY, FALSE),
-                        auth_key_len(hip_a->hip_transform),
-                        data, location,
-                        hmac_md, &hmac_md_len  );
+                HMAC(EVP_sha1(), 
+                     key,
+		     KEY_LEN_SHA1,
+		     in, in_len,
+		     out, NULL);
                 break;
+
         case HIP_DIGEST_MD5_HMAC:
-                HMAC(   EVP_md5(), 
-                        get_key(hip_a, HIP_INTEGRITY, FALSE),
-                        auth_key_len(hip_a->hip_transform),
-                        data, location,
-                        hmac_md, &hmac_md_len  );
+                HMAC(EVP_md5(), 
+		     key,
+		     KEY_LEN_MD5,
+		     in, in_len,
+		     out, NULL);
                 break;
         default:
-                HIP_ERROR("Unknown HMAC type 0x%x\n",type);
+                HIP_ERROR("Unknown HMAC type 0x%x\n", type);
                 return 0;
         }
 
@@ -368,13 +361,76 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
  *
  * Returns: 0 is encryption/decryption was successful, otherwise < 0.
  */
-int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
-			 void* enc_key, int direction)
+int hip_crypto_encrypted(void *data, const void *iv, int alg, int len,
+			 void* key, int direction)
 {
-	// i2 creation/processing
-	HIP_ERROR("Not implemeted.\n");
-	exit(1); /* XX FIXME */
-	return 1;
+        void *result = NULL;
+	int err = -1;
+	AES_KEY aes_key;
+	BF_KEY bf_key;
+	des_key_schedule ks1, ks2, ks3;
+	u8 secret_key1[8], secret_key2[8], secret_key3[8];
+
+        result = malloc(len);
+	if (!result) {
+		HIP_ERROR("Out of memory.\n");
+		return -1;
+	}
+	
+	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
+        switch(alg) {
+        case HIP_HIP_AES_SHA1:
+                /* AES key must be 128, 192, or 256 bits in length */
+                if ((err = AES_set_encrypt_key(key, 8 * KEY_LEN_AES, &aes_key)) != 0) {
+                        HIP_ERROR("Unable to use calculated DH secret for AES key (%d)\n", err);
+                        goto err;
+                }
+
+		AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, 
+				direction == HIP_DIRECTION_ENCRYPT ? AES_ENCRYPT : AES_DECRYPT);
+                break;
+
+        case HIP_HIP_3DES_SHA1:
+		memcpy(&secret_key1, key, KEY_LEN_3DES / 3);
+                memcpy(&secret_key2, key+8, KEY_LEN_3DES / 3);
+                memcpy(&secret_key3, key+16, KEY_LEN_3DES / 3);
+
+		des_set_odd_parity((des_cblock *)&secret_key1);
+                des_set_odd_parity((des_cblock *)&secret_key2);
+                des_set_odd_parity((des_cblock *)&secret_key3);
+
+		if ( ((err = des_set_key_checked((
+			(des_cblock *)&secret_key1), ks1)) != 0) ||
+		     ((err = des_set_key_checked((
+			     (des_cblock *)&secret_key2), ks2)) != 0) ||
+		     ((err = des_set_key_checked((
+			     (des_cblock *)&secret_key3), ks3)) != 0)) {
+                        HIP_ERROR("Unable to use calculated DH secret for 3DES key (%d)\n", err);
+			goto err;
+                }
+
+                des_ede3_cbc_encrypt(data, result, len,
+				     ks1, ks2, ks3, (des_cblock*)iv, 
+				     direction == HIP_DIRECTION_ENCRYPT ? DES_ENCRYPT : DES_DECRYPT);
+                break;
+
+        case HIP_HIP_NULL_SHA1:
+                break;
+
+        default:
+                HIP_ERROR("Attempted to use unknown CI (alg = %d)\n", alg);
+                err = -EFAULT;
+                goto err;
+        }
+
+	memcpy(data, result, len);
+	err = 0;
+
+ err:
+        if (result)
+                free(result);
+
+        return err;
 }
 
 void get_random_bytes(void *buf, int n)
@@ -695,5 +751,19 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
 		ret = dhprime_len[hip_dh_group_type];
 
 	return ret + 1;
+}
 
+int hip_init_cipher(void)
+{
+	int err = 0;
+	u32 supported_groups;
+
+	supported_groups = (1 << HIP_DH_OAKLEY_1 |
+                            1 << HIP_DH_OAKLEY_5 |
+			    1 << HIP_DH_384);
+
+	HIP_DEBUG("Generating DH keys\n");
+	hip_regen_dh_keys(supported_groups);
+
+	return 1;
 }

@@ -68,7 +68,6 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		     struct in6_addr *hit2, u8 *calc_index)
 {
 	int err;
-	struct crypto_tfm *sha = impl_sha1;
 	uint8_t index_nbr = 1;
 	int dstoffset = 0;
 	void *seedkey;
@@ -76,6 +75,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	int hit1_is_bigger;
 	u8 *shabuffer;
 #ifdef __KERNEL__
+	struct crypto_tfm *sha = impl_sha1;
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
 #endif
@@ -113,7 +113,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	crypto_digest_digest(sha, sg, nsg, dstbuf);
 #else
 	// XX FIXME: is this correct
-	crypto_digest_digest(sha, shabuffer, 0, dstbuf);
+	hip_build_digest(HIP_DIGEST_SHA1, shabuffer, 0, dstbuf);
 #endif
 
 	dstoffset = HIP_AH_SHA_LEN;
@@ -138,7 +138,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 #ifdef __KERNEL__
 		crypto_digest_digest(sha, sg, nsg, dstbuf + dstoffset);
 #else
-		crypto_digest_digest(sha, shabuffer, 0, dstbuf + dstoffset);
+		hip_build_digest(HIP_DIGEST_SHA1, shabuffer, kij_len + HIP_AH_SHA_LEN + 1, dstbuf + dstoffset);
 #endif
 		seedkey = dstbuf + dstoffset;
 		dstoffset += HIP_AH_SHA_LEN;

@@ -7,6 +7,9 @@
 #  include "crypto/rsa.h"
 #  include "crypto/dsa.h"
 #  include "hip.h"
+
+extern struct crypto_tfm *impl_sha1;
+
 #else
 #  include <sys/time.h>
 #  include <time.h>
@@ -20,10 +23,15 @@
 #  include <openssl/pem.h>
 #  include <openssl/err.h> 
 #  include "debug.h"
-struct crypto_tfm {
-  /* XX FIXME */
-  // OpenSSL context?
-};
+
+typedef enum {
+        KEY_LEN_NULL = 0, /* RFC 2410 */
+        KEY_LEN_MD5 = 16, /* 128 bits per RFC 2403 */
+        KEY_LEN_SHA1 = 20, /* 160 bits per RFC 2404 */
+        KEY_LEN_3DES = 24, /* 192 bits (3x64-bit keys) RFC 2451 */
+        KEY_LEN_AES = 16, /* 128 bits per RFC 3686; also 192, 256-bits */
+        KEY_LEN_BLOWFISH = 16, /* 128 bits per RFC 2451 */
+} HIP_KEYLENS;
 
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
@@ -40,19 +48,12 @@ struct crypto_tfm {
 #define HIP_DEFAULT_DH_GROUP_ID       HIP_DH_OAKLEY_5
 #define HIP_MAX_DH_GROUP_ID 7 
 
-extern struct crypto_tfm *impl_sha1;
 extern time_t load_time;
 
-// this is from kernel...
-//void crypto_digest_digest(struct crypto_tfm *tfm, char *src_buf, int ignore,
-//			  char *dst_buf);
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 #ifdef __KERNEL__
 int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
 			    int nsg, void *out);
-#else
-int hip_build_digest_repeat(struct crypto_tfm *dgst, char *data, 
-			    int ignore, void *out);
 #endif
 
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);

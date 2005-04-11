@@ -18,6 +18,8 @@
 #include <fcntl.h>
 
 #include "hipd.h"
+#include "crypto.h"
+#include "cookie.h"
 #include "workqueue.h"
 #include "debug.h"
 
@@ -34,10 +36,14 @@ void usage() {
 void hip_exit(int signal) {
 	HIP_ERROR("Signal: %d\n", signal);
 //	hip_uninit_workqueue();
+#ifdef CONFIG_HIP_RVS
+        hip_uninit_rvadb();
+#endif
 	//        hip_uninit_host_id_dbs();
         //hip_uninit_hadb();
 	// hip_uninit_beetdb();
 //	rtnl_close(&rtnl);
+	//	hip_uninit_r1();
 	exit(signal);
 }
 
@@ -64,13 +70,14 @@ int main(int argc, char *argv[]) {
 			return(0);
 		}
 	}
-
+	
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (!foreground) {
 		if (fork() > 0)
 			return(0);
-		hip_set_logtype(LOGTYPE_SYSLOG);
 	}
+
+	hip_set_logtype(LOGTYPE_SYSLOG);
 	
 	/* Register signal handlers */
 	signal(SIGINT, hip_exit);
@@ -85,7 +92,23 @@ int main(int argc, char *argv[]) {
 	/* For now useless, but keep record of the highest fd for
 	 * future purposes (multiple sockets to select from) */
 	highest_descriptor = nl.fd;
-	
+
+        if(!hip_init_r1()) {
+		HIP_ERROR("Unable to init R1.\n");
+		return(1);
+	}
+
+        if (hip_init_cipher() < 0) {
+		HIP_ERROR("Unable to init ciphers.\n");
+		return(1);
+	}
+
+        hip_init_hadb();
+
+#ifdef CONFIG_HIP_RVS
+        hip_init_rvadb();
+#endif	
+
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
 

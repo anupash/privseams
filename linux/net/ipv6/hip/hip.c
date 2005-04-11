@@ -954,25 +954,21 @@ static int __init hip_init(void)
 #if defined(CONFIG_SYSCTL) || defined(CONFIG_SYSCTL_MODULE)
 	hip_init_sys_config();
 #endif
-
 	memset(&hip_kthreads, 0, sizeof(hip_kthreads));
 
 #ifndef CONFIG_HIP_USERSPACE
 	if(!hip_init_r1())
 		goto out;
 #endif
-
-#ifndef CONFIG_HIP_USERSPACE
 	if (hip_init_output_socket() < 0)
 		goto out;
-#endif
 
 	if (hip_init_cipher() < 0)
 		goto out;
 
-#ifdef CONFIG_HIP_USERSPACE
 	hip_init_beetdb();
-#else
+
+#ifndef CONFIG_HIP_USERSPACE
 	hip_init_hadb();	
 #endif
 
@@ -1117,12 +1113,11 @@ static void __exit hip_cleanup(void)
 #ifdef CONFIG_HIP_RVS
 	hip_uninit_rvadb();
 #endif
-#ifdef CONFIG_HIP_USERSPACE
 	hip_uninit_beetdb();
-#else
+#ifndef CONFIG_HIP_USERSPACE
 	hip_uninit_hadb();
-#endif
 	hip_uninit_host_id_dbs();
+#endif
 	hip_uninit_all_eid_db();
 	hip_uninit_output_socket();
 #ifndef CONFIG_HIP_USERSPACE
