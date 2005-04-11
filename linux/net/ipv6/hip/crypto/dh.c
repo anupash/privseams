@@ -175,7 +175,7 @@ DH *hip_generate_dh_key(int group_id)
 
 	return dh;
  cleanup:
-	hip_free_dh_structure(dh);
+	hip_free_dh(dh);
 	return NULL;
 }
 
@@ -250,7 +250,7 @@ int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *out, size_t
 }
 
 
-void hip_free_dh_structure(DH *target)
+void hip_free_dh(DH *target)
 {
 	if (target) {
 		if (target->p)
@@ -299,7 +299,34 @@ DH *hip_dh_clone(DH *src)
 
 	return tgt;
  cleanup:
-	hip_free_dh_structure(tgt);
+	hip_free_dh(tgt);
 	return NULL;
 }
+
+/**
+ * hip_get_dh_size - determine the size for required to store DH shared secret
+ * @hip_dh_group_type: the group type from DIFFIE_HELLMAN parameter
+ *
+ * Returns: 0 on failure, or the size for storing DH shared secret in bytes
+ */
+u16 hip_get_dh_size(u8 hip_dh_group_type)
+{
+	/* the same values as are supported ? HIP_DH_.. */
+	int dh_size[] = { 0, 384, 768, 1536, 3072, 6144, 8192 };
+	u16 ret = -1;
+
+	_HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
+	if (hip_dh_group_type == 0) 
+		HIP_ERROR("Trying to use reserved DH group type 0\n");
+	else if (hip_dh_group_type == HIP_DH_384)
+		HIP_ERROR("draft-09: Group ID 1 does not exist yet\n");
+	else if (hip_dh_group_type > ARRAY_SIZE(dh_size))
+		HIP_ERROR("Unknown/unsupported MODP group %d\n", hip_dh_group_type);
+	else
+		ret = dh_size[hip_dh_group_type] / 8;
+
+	return ret + 1;
+}
+
+
 

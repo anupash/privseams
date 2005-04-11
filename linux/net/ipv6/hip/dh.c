@@ -48,6 +48,7 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 		}
 	}
 
+#ifdef __KERNEL__
 	/* race condition problem... */
 	tmp = hip_dh_clone(dh_table[group_id]);
 
@@ -55,58 +56,23 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 		HIP_ERROR("Could not clone DH-key\n");
 		return -2;
 	}
+#else
+	tmp = dh_table[group_id];
+#endif
 
 	res = hip_encode_dh_publickey(tmp,buffer,bufsize);
 	if (res < 0) {
 		HIP_ERROR("Encoding error\n");
-		hip_free_dh_structure(tmp);
-		return -3;
+		res = -3;
+		goto err_free;
 	}
 
-	hip_free_dh_structure(tmp);
+ err_free:
+#ifdef __KERNEL__
+	hip_free_dh(tmp);
+#endif
 	return res;
 }
-
-
-
-/**
- * hip_generate_shared_secret - Generate Diffie-Hellman shared secret
- * @group_id: DH group id
- * @peerkey: Peer's DH public key
- * @peer_len: Length of the peer's DH public key
- * @out: Shared secret buffer
- * @outlen: Length of the output buffer
- *
- * Returns 0, if ok, <0 if error occurs.
- */
-int hip_generate_shared_secret(int group_id, u8* peerkey, size_t peer_len, u8 *out, size_t outlen)
-{
-	DH *tmp;
-	int k;
-
-	if (dh_table[group_id] == NULL) {
-		HIP_ERROR("No DH-key found for group_id: %d\n",group_id);
-		return -1;
-	}
-
-	/* race */
-	tmp = hip_dh_clone(dh_table[group_id]);
-
-	if (!tmp) {
-		HIP_ERROR("Error cloning DH key\n");
-		return -3;
-	}
-
-	k = hip_gen_dh_shared_key(tmp,peerkey,peer_len,out,outlen);
-	if (k < 0) {
-		HIP_ERROR("Shared key failed\n");
-		hip_free_dh_structure(tmp);
-		return -2;
-	}
-
-	hip_free_dh_structure(tmp);
-	return k;
-}       
 
 /**
  * hip_calculate_shared_secret - Creates a shared secret based on the
@@ -175,7 +141,7 @@ void hip_regen_dh_keys(u32 bitmask)
 			spin_unlock(&dh_table_lock);
 #endif
 
-			hip_free_dh_structure(okey);
+			hip_free_dh(okey);
 
 			cnt++;
 
@@ -185,36 +151,11 @@ void hip_regen_dh_keys(u32 bitmask)
 	HIP_DEBUG("%d keys generated\n",cnt);
 }
 
-/**
- * hip_get_dh_size - determine the size for required to store DH shared secret
- * @hip_dh_group_type: the group type from DIFFIE_HELLMAN parameter
- *
- * Returns: 0 on failure, or the size for storing DH shared secret in bytes
- */
-uint16_t hip_get_dh_size(uint8_t hip_dh_group_type)
-{
-	/* the same values as are supported ? HIP_DH_.. */
-	int dh_size[] = { 0, 384, 768, 1536, 3072, 6144, 8192 };
-	uint16_t ret = -1;
-
-	_HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
-	if (hip_dh_group_type == 0) 
-		HIP_ERROR("Trying to use reserved DH group type 0\n");
-	else if (hip_dh_group_type == HIP_DH_384)
-		HIP_ERROR("draft-09: Group ID 1 does not exist yet\n");
-	else if (hip_dh_group_type > ARRAY_SIZE(dh_size))
-		HIP_ERROR("Unknown/unsupported MODP group %d\n", hip_dh_group_type);
-	else
-		ret = dh_size[hip_dh_group_type] / 8;
-
-	return ret + 1;
-}
-
 void hip_dh_uninit(void) {
 	int i;
 	for(i=1;i<HIP_MAX_DH_GROUP_ID;i++) {
 		if (dh_table[i] != NULL) {
-			hip_free_dh_structure(dh_table[i]);
+			hip_free_dh(dh_table[i]);
 			dh_table[i] = NULL;
 		}
 	}	

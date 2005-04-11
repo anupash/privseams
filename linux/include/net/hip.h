@@ -264,14 +264,6 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 /* Only for testing!!! */
 #define HIP_ESP_NULL_NULL            0x0
 
-#define HIP_DH_384                    1 /* 384-bit group */
-#define HIP_DH_OAKLEY_1               2 /* 768-bit OAKLEY well known group 1 */
-#define HIP_DH_OAKLEY_5               3 /* 1536-bit MODP group */
-#define HIP_DH_OAKLEY_15              4 /* 3072-bit MODP group */
-#define HIP_DH_OAKLEY_17              5 /* 6144-bit MODP group */
-#define HIP_DH_OAKLEY_18              6 /* 8192-bit MODP group */
-#define HIP_DEFAULT_DH_GROUP_ID       HIP_DH_OAKLEY_5
-
 #define HIP_HI_DSA                    3
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5

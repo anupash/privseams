@@ -19,6 +19,7 @@
 #  include <openssl/bio.h>
 #  include <openssl/pem.h>
 #  include <openssl/err.h> 
+#  include "debug.h"
 struct crypto_tfm {
   /* XX FIXME */
   // OpenSSL context?
@@ -26,7 +27,14 @@ struct crypto_tfm {
 
 #endif /* __KERNEL__ */
 
-/* this should be consistent with the table length in dh.c */
+/* These should be consistent with the table length in crypto.c and crypto/dh.c */
+#define HIP_DH_384                    1 /* 384-bit group */
+#define HIP_DH_OAKLEY_1               2 /* 768-bit OAKLEY well known group 1 */
+#define HIP_DH_OAKLEY_5               3 /* 1536-bit MODP group */
+#define HIP_DH_OAKLEY_15              4 /* 3072-bit MODP group */
+#define HIP_DH_OAKLEY_17              5 /* 6144-bit MODP group */
+#define HIP_DH_OAKLEY_18              6 /* 8192-bit MODP group */
+#define HIP_DEFAULT_DH_GROUP_ID       HIP_DH_OAKLEY_5
 #define HIP_MAX_DH_GROUP_ID 7 
 
 extern struct crypto_tfm *impl_sha1;
@@ -51,21 +59,21 @@ int hip_init_cipher(void);
 void hip_uninit_cipher(void);
 
 #ifndef __KERNEL__
-/* In kernel these come from crypto/dsa.h, above */
+/* In kernel these come from crypto/dsa.h, included above */
 int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature);
 int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
 
-/* In kernel these come from crypto/rsa.h, above */
+/* In kernel these come from crypto/rsa.h, included above */
 int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen);
 int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
 
-/* In kernel these come from crypto/dh.h, above */
+/* In kernel these come from crypto/dh.h, included above */
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *out,
 			  size_t outlen);
 int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
-DH *hip_dh_clone(DH *src);
-void hip_free_dh_structure(DH *target);
+void hip_free_dh(DH *target);
+u16 hip_get_dh_size(u8 hip_dh_group_type);
 #endif
 
 #endif /* HIP_CRYPTO_H */
