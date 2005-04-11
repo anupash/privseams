@@ -28,13 +28,14 @@ int main(int argc, char **argv) {
     exit(2);
   }
 
-  hints.ai_flags = AI_HIP | AI_PASSIVE;
+  hints.ai_flags = AI_HIP;// AI_HIP | AI_PASSIVE;
   hints.ai_family = AF_INET6;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_protocol = 0;
 
-  a = getaddrinfo(NULL, argv[1], &hints, &res);
-
+  //a = getaddrinfo(NULL, argv[1], &hints, &res);
+  a = getaddrinfo(argv[1], NULL, &hints, &res);
+  
   if (a != 0) {
     printf("*** ERROR: %s ***\n", gai_strerror(a));
     return(1);

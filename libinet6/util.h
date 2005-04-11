@@ -28,19 +28,30 @@ struct gaih_addrtuple
 
 void free_gaih_addrtuple(struct gaih_addrtuple *tuple);
 
-/* very simple linked list */
-typedef struct {
-  char data[MAX_ITEM_LEN];
-  struct listelement *link;
-} listelement;
+struct listitem { 
+  char data[256];
+  struct listitem *next;
+};
 
-listelement * add_list_item(listelement * listpointer, char *data);
-listelement * remove_list_item(listelement * listpointer);
-void print_list(listelement * listpointer);
-void clear_list(listelement * listpointer);
+typedef struct listitem Listitem;
 
-char *findsubstring(string, substring);
-listelement *findkeyfiles(char *path, listelement *file1);
+struct list {
+  Listitem *head;
+};
+
+typedef struct list  List;
+
+void initlist(List *);  
+void insert(List *, char *data);
+void destroy(List *);
+int length(List *);
+char *getitem(List *, int n);
+
+char *getwithoutnewline(char *buffer, int count, FILE *f);
+
+char *findsubstring(char *string, char *substring);
+void findkeyfiles(char *path, List *list);
+void extractsubstrings(char *string, List *list);
 
 /* from getendpointinfo.c, make another header file? */
 int get_local_hits(const char *servname, struct gaih_addrtuple **adr);

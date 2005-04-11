@@ -2224,6 +2224,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_esp);
 	HIP_INVALIDATE(hip_handle_output);
 	HIP_INVALIDATE(hip_get_default_spi_out);
+	HIP_INVALIDATE(hip_hit_is_our);
 
 	/* kill kernel threads and wait for them to complete */
 	for(i = 0; i < num_possible_cpus(); i++) {

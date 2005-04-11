@@ -12,17 +12,30 @@ void free_gaih_addrtuple(struct gaih_addrtuple *tuple) {
 }
 
 /*
+ * Works like fgets() but removes '\n' from the end.
+ */
+char *getwithoutnewline(char *buffer, int count, FILE *f) {
+  char *result = buffer, *np;
+  if ((buffer == NULL) || (count < 1))
+    result = NULL;
+  else if (count == 1)
+    *result = '\0';
+  else if ((result = fgets(buffer, count, f)) != NULL)
+    if (np = strchr(buffer, '\n'))
+      *np = '\0';
+  return result;
+}
+
+
+/*
  * Checks if a string contains a particular substring.
  *
  * If string contains substring, the return value is the location of
  * the first matching instance of substring in string.  If string doesn't
  * contain substring, the return value is NULL.  
  */
-char *findsubstring(string, substring)
-     register char *string;		
-     char *substring;
-{
-  register char *a, *b;
+char *findsubstring(char *string, char *substring) {
+  char *a, *b;
   
   for (b = substring; *string != 0; string += 1) {
     if (*string != *b)
@@ -40,10 +53,30 @@ char *findsubstring(string, substring)
 }
 
 /*
+ * Extracts substrings (delimited by ' ') from the string and adds 
+ * them into the list.
+ */
+void extractsubstrings(char *string, List *list) {
+
+  char *sub_string;
+  _HIP_DEBUG("extractsubstrings\n");
+  sub_string = strtok(string, " ");
+  //HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
+  insert(list, sub_string);
+  sub_string = NULL;
+  while( (sub_string=strtok(NULL, " ")) != NULL) {
+    //HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
+    insert(list, sub_string);
+    sub_string = NULL;
+  }
+  
+}
+
+/*
  * Finds HIP key files from the directory specified by 'path'.
  * Stores the file names into linked list (type listelement).
  */ 
-listelement *findkeyfiles(char *path, listelement *files) {
+void findkeyfiles(char *path, List *files) {
   
   struct dirent *entry;	     
   struct stat file_status;   
@@ -68,7 +101,7 @@ listelement *findkeyfiles(char *path, listelement *files) {
 	    !findsubstring(entry->d_name, ".pub") &&
 	    findsubstring(entry->d_name, "hip_host_")) {
 	  _HIP_DEBUG("Private key file: %s \n",entry->d_name);
-	  files = add_list_item(files, entry->d_name);
+	  insert(files, entry->d_name);
 	  
 	}
       }
@@ -79,61 +112,61 @@ listelement *findkeyfiles(char *path, listelement *files) {
     perror("closedir failure");
     exit(1);
   }
-  
-  return files;	
 }
 
 
-/* utility functions for simple linked list */
+/* functions for simple linked list */
 
-listelement *add_list_item(listelement * listpointer, char *data) {
-  listelement * lp = listpointer;
+void initlist(List *ilist) {
+  ilist->head = NULL;
+}
 
-  if (listpointer != NULL) {
-    while (listpointer -> link != NULL)
-      listpointer = listpointer -> link;
-    listpointer -> link = (struct listelement  *) 
-      malloc (sizeof (listelement));
-    listpointer = listpointer -> link;
-    listpointer -> link = NULL;
-    strcpy(listpointer -> data, data);
-    _HIP_DEBUG("inserted %s\n",listpointer->data);
-    return lp;
+void insert(List *ilist, char *data) {
+  Listitem *new;
+  new = (Listitem *)malloc(sizeof(Listitem));
+  new->next = ilist->head;
+  strncpy(new->data, data, MAX_ITEM_LEN);
+  ilist->head = new;
+}
+
+int length(List *ilist) {
+  Listitem *ptr;
+  int count = 1;
+
+  if(!ilist->head) return 0;
+  ptr = ilist->head;
+  while (ptr->next) {
+    ptr = ptr->next;
+    count++;
   }
-  
-  else {
-    listpointer = (listelement  *) malloc (sizeof (listelement));
-    listpointer -> link = NULL;
-    strcpy(listpointer -> data, data);
-    _HIP_DEBUG("inserted %s\n",listpointer->data);
-    return listpointer;
+  return count;
+}
+
+void destroy(List *ilist) {
+  Listitem *ptr1,*ptr2;
+  if(!ilist) return;
+  ptr1 = ilist->head;
+  while (ptr1) {
+    ptr2 = ptr1;
+    ptr1 = ptr1->next;
+    free(ptr2);
   }
+  ilist->head = NULL;
 }
 
-listelement *remove_list_item(listelement * listpointer) {
+char *getitem(List *ilist, int n) {
+  Listitem *ptr;
+  int count = 0;
 
-    listelement * tempp;
-    HIP_DEBUG ("Element removed is %s\n", listpointer -> data);
-    free(listpointer->data);
-    tempp = listpointer -> link;
-    free (listpointer);
-    return tempp;
-}
-
-void print_list(listelement * listpointer) {
-  
-  if (listpointer == NULL)
-    HIP_DEBUG ("queue is empty!\n");
-  else
-    while (listpointer != NULL) {
-      HIP_DEBUG ("%s\n", listpointer -> data);
-      listpointer = listpointer -> link;
-    }
-}
-
-void clear_list(listelement * listpointer) {
-  
-  while (listpointer != NULL) {
-    listpointer = remove_list_item (listpointer);
+  if (!ilist->head) return NULL;
+  ptr = ilist->head;
+  if (n==0) return ptr->data;
+  while(ptr->next) {
+    ptr=ptr->next;
+    count++;
+    if(n==count)
+      return ptr->data;
   }
+  return NULL;
 }
+

@@ -319,7 +319,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
 
   return 0;
 }
-
+ 
 #define gethosts(_family, _type)				\
  {								\
   int i, herrno;						\
@@ -363,7 +363,6 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
     }								\
  }
 
-
 /*
  * Returns true if address is a HIT 
  */
@@ -382,51 +381,50 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
  {									\
   struct in6_addr hit;							\
   FILE *fp = NULL;							\
-  char fqdn_str[255+1];							\
-  char hit_str[INET6_ADDRSTRLEN+1];					\
-  int lineno = 1;							\
+  char *fqdn_str;                                                       \
+  char *hit_str;                                                        \
+  int lineno = 1, i=0;                                                  \
+  char line[500];							\
+  List list;                                                            \
 									\
   /* TODO: check return values */					\
   fp = fopen(_PATH_HIP_HOSTS, "r");					\
 									\
-  while (fp) {								\
+  while (getwithoutnewline(line, 500, fp) != NULL) {			\
     int c;								\
     int ret;								\
-    memset(fqdn_str, 0, sizeof(fqdn_str));				\
-    memset(hit_str, 0, sizeof(hit_str));				\
-    ret = fscanf(fp, "%46s %255s", hit_str, fqdn_str);			\
-    if (ret == 2) {							\
-      _HIP_DEBUG("line %d hit=%s fqdn=%s\n", lineno, hit_str, fqdn_str);\
-      if (inet_pton(AF_INET6, hit_str, &hit) <= 0) {			\
-	HIP_DEBUG("hiphosts invalid hit\n");			        \
-        break;                                                          \
-      }									\
-      if ((strlen(_name) == strlen(fqdn_str)) &&			\
-	  strcmp(_name, fqdn_str) == 0) {				\
-	_HIP_DEBUG("** match on line %d **\n", lineno);			\
-	found_hits = 1;							\
-	if (*pat == NULL) {						\
-	  *pat = malloc(sizeof(struct gaih_addrtuple));		\
-	  (*pat)->scopeid = 0;						\
-	}								\
-	(*pat)->next = NULL;						\
-	(*pat)->family = AF_INET6;					\
-	memcpy((*pat)->addr, &hit, sizeof(struct in6_addr));		\
-	pat = &((*pat)->next);						\
-      }									\
-    } else if (ret == EOF) {						\
-      _HIP_DEBUG("hiphosts EOF on line %d\n", lineno);			\
-      break;						                \
-    } else {								\
-      HIP_DEBUG("hiphosts fscanf ret != 2 on line %d\n", lineno);	\
-      break;		    		 		                \
+    initlist(&list);                                                    \
+    extractsubstrings(line,&list);                                      \
+    for(i=0;i<length(&list);i++) {                                      \
+      if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		\
+	fqdn_str = getitem(&list,i);	               		        \
+      }                                                                 \
     }									\
-									\
+    if ((strlen(_name) == strlen(fqdn_str)) &&		         	\
+      strcmp(_name, fqdn_str) == 0) {				        \
+      HIP_DEBUG("** match on line %d **\n", lineno);			\
+      found_hits = 1;                                                   \
+                                                                        \
+      /* add every HIT to linked list */				\
+      for(i=0;i<length(&list);i++) {                                    \
+        ret = inet_pton(AF_INET6, getitem(&list,i), &hit);              \
+        if (ret < 1) continue;                                          \
+        if (*pat == NULL) {						\
+	  *pat = malloc(sizeof(struct gaih_addrtuple));		        \
+          (*pat)->scopeid = 0;						\
+        }								\
+        (*pat)->next = NULL;						\
+        (*pat)->family = AF_INET6;					\
+        memcpy((*pat)->addr, &hit, sizeof(struct in6_addr));		\
+        pat = &((*pat)->next);						\
+      }									\
+     }	                                                                \
     lineno++;								\
-  }									\
+    destroy(&list);                                                     \
+  }	              							\
   if (fp)                                                               \
-    fclose(fp);								\
-}
+    fclose(fp);			        				\
+}                                                                     
 
 
 static int
