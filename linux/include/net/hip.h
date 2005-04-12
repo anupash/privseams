@@ -72,21 +72,15 @@ struct list_head {
 
 #endif /* __KERNEL__ */
 
-/* BEGIN HIPL PATCH */
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
 	int t;
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 	t = a->s6_addr[0] & 0xC0;
-#else
-	t = 0;
-#endif
 	return ((t == 0x40) ||
 		(t == 0x80));
 
 }
-/* END HIPL PATCH */
 
 #define HIP_MAX_PACKET 2048
 #define HIP_MAX_NETLINK_PACKET 3072

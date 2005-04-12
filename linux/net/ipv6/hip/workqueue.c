@@ -184,12 +184,12 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 	if (hwo->hdr.type < 0 || hwo->hdr.type > HIP_MAX_WO_TYPES)
 		return -1;
 
-#ifndef CONFIG_HIP_USERSPACE
-	return hip_insert_work_order_cpu(hwo, smp_processor_id());
-#else
+#ifdef CONFIG_HIP_USERSPACE
 	ret = hip_netlink_send(hwo);
 	hip_free_work_order(hwo);
 	return ret;
+#else
+	return hip_insert_work_order_cpu(hwo, smp_processor_id());
 #endif
 }
 
@@ -279,6 +279,9 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 int hip_do_work(struct hip_work_order *job)
 {
 	int res = 0;
+
+	HIP_DEBUG("type=%d, subtype=%d\n", job->hdr.type, job->hdr.subtype);
+
 	switch (job->hdr.type) {
 	case HIP_WO_TYPE_INCOMING:
 		switch(job->hdr.subtype) {
@@ -461,6 +464,7 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 #endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_ADDMAP:
+#ifndef CONFIG_HIP_USERSPACE
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(&job->hdr.dst_addr,
 						     &job->hdr.src_addr);
@@ -468,6 +472,7 @@ int hip_do_work(struct hip_work_order *job)
 				res = KHIPD_ERROR;
 				break;
 			}
+#endif
 			/* Synchronize the kernel BEET database */
 			res = hip_xfrm_dst_init(&job->hdr.dst_addr,
 						&job->hdr.src_addr);

@@ -723,7 +723,6 @@ int hip_handle_peer_map_work_order(const struct in6_addr *hit,
 static int hip_add_peer_map(const struct hip_common *input, int rvs)
 {
 	struct in6_addr *hit, *ip;
-	char buf[46];
 	int err = 0;
 
 	hit = (struct in6_addr *)
@@ -742,10 +741,8 @@ static int hip_add_peer_map(const struct hip_common *input, int rvs)
 		goto out;
 	}
 
-	hip_in6_ntop(hit, buf);
-	HIP_DEBUG("map HIT: %s\n", buf);
-	hip_in6_ntop(ip, buf);
-	HIP_DEBUG("map IP: %s\n", buf);
+	HIP_DEBUG_HIT("map HIT: %s\n", hit);
+	HIP_DEBUG_IN6ADDR("map IP: %s\n", ip);
 	
  	err = hip_handle_peer_map_work_order(hit, ip, 1, rvs);
  	if (err) {
@@ -782,6 +779,7 @@ int hip_socket_handle_rvs(const struct hip_common *input)
  */
 int hip_socket_handle_add_peer_map_hit_ip(const struct hip_common *input)
 {
+	HIP_DEBUG("\n");
 	return hip_add_peer_map(input, 0);
 }
 

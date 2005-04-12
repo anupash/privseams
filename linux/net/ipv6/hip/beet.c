@@ -191,10 +191,13 @@ int hip_beetdb_insert_state(hip_xfrm_t *x)
 int hip_xfrm_dst_init(struct in6_addr *dst_hit, struct in6_addr *dst_addr) {
 	int err = 0;
 	hip_xfrm_t *entry;
+
+	HIP_DEBUG("\n");
 	
 	entry = hip_xfrm_find_by_hit(dst_hit);
 	if (entry) {
 		/* initialized already */
+		HIP_DEBUG("Initialized already\n");
 		goto out_err;
 	}
 
@@ -238,6 +241,7 @@ int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
 
 hip_xfrm_t *hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
 {
+	HIP_DEBUG("\n");
 	return (hip_xfrm_t *)hip_ht_find(&hip_beetdb_hit, (void *)dst_hit);
 }
 

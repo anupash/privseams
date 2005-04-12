@@ -360,21 +360,6 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
     }								\
  }
 
-
-/*
- * Returns true if address is a HIT 
- */
-/*static inline int ipv6_addr_is_hit(struct in6_addr *addr) 
-{
-        int bits;
-        bits = addr->s6_addr[0] & 0xC0;
-        if (bits == 0x80 || bits == 0x40)
-                return 1;
-
-        return 0;
-}*/
-
-
 #define gethosts_hit(_name)						\
  {									\
   struct in6_addr hit;							\
@@ -702,6 +687,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		//printf(" is not HIT\n");
 		continue;
 	      }
+
 	      //printf(" is HIT -> map\n");
 	      for(at_ipv6 = orig_at; at_ipv6 != NULL; at_ipv6 = at_ipv6->next) {
 		//printf("\ttest ipv6:");
@@ -712,6 +698,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		  //printf(": skip, is hit or same\n");
 		  continue;
 		}
+
 		//printf(": MAP\n");
 		hip_msg_init(msg);	
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
