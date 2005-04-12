@@ -4,7 +4,7 @@
 int hip_delete_sa(u32 spi, struct in6_addr *dst) {
 	struct hip_work_order req, resp;
 
-	INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_DELSA, NULL, dst, spi, 0);
+	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_DELSA, NULL, dst, spi, 0);
 	req.msg = hip_msg_alloc();
 	if (!req.msg) {
 		return -1;
@@ -12,7 +12,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst) {
 	hip_build_user_hdr(req.msg, 0, 0);
 
 	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
-		HIP_ERROR("Unable to send over netlink");
+		HIP_ERROR("Unable to send over netlink\n");
 		return 0;
 	}
 
@@ -25,7 +25,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst) {
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
 	struct hip_work_order req, resp;
 
-	INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_ACQSPI, srchit, dsthit, 0, 0);
+	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_ACQSPI, srchit, dsthit, 0, 0);
 	req.msg = hip_msg_alloc();
 	if (!req.msg) {
 		return -1;
@@ -34,7 +34,7 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
 	hip_build_user_hdr(req.msg, 0, 0);
 
 	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
-		HIP_ERROR("Unable to send over netlink");
+		HIP_ERROR("Unable to send over netlink\n");
 		return 0;
 	}
 
@@ -49,7 +49,7 @@ int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	       int already_acquired, int direction) {
 	struct hip_work_order req, resp;
 
-	INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_ADDSA, srchit, dsthit, 0, 0);
+	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_ADDSA, srchit, dsthit, 0, 0);
 	req.msg = hip_msg_alloc();
 	if (!req.msg) {
 		return -1;
@@ -61,7 +61,7 @@ int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	}
 
 	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
-		HIP_ERROR("Unable to send over netlink");
+		HIP_ERROR("Unable to send over netlink\n");
 		return 0;
 	}
 
@@ -74,7 +74,7 @@ int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 int hip_finalize_sa(struct in6_addr *hit, u32 spi) {
 	struct hip_work_order req, resp;
 
-	INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_FINSA, NULL, hit, spi, 0);
+	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_FINSA, NULL, hit, spi, 0);
 	req.msg = hip_msg_alloc();
 	if (!req.msg) {
 		return -1;
@@ -83,7 +83,7 @@ int hip_finalize_sa(struct in6_addr *hit, u32 spi) {
 	hip_build_user_hdr(req.msg, 0, 0);
 
 	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
-		HIP_ERROR("Unable to send over netlink");
+		HIP_ERROR("Unable to send over netlink\n");
 		return 0;
 	}
 

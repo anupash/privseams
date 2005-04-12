@@ -260,6 +260,7 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
                         exit(1);
                 }
         }
+	HIP_DEBUG("Cheng\n");
 }
 
 /*

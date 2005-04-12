@@ -12,7 +12,7 @@
 #else
 #  include <stdio.h>
 
-#define INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_src, hwo_dst, hwo_arg1, hwo_arg2) \
+#define HIP_INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_src, hwo_dst, hwo_arg1, hwo_arg2) \
 	do { \
 		work_order_hdr.type = hwo_type; \
 		work_order_hdr.subtype = hwo_subtype; \
