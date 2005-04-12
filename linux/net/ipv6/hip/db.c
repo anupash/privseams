@@ -405,6 +405,7 @@ int hip_get_any_hit(struct hip_db_struct *db, struct hip_lhi *res,
 			return 0;
 		}
 	}
+	HIP_READ_UNLOCK_DB(db);
 	return -EINVAL;
 }
 
