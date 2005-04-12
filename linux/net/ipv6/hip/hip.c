@@ -19,7 +19,7 @@ static struct notifier_block hip_netdev_notifier;
 static void hip_cleanup(void);
 
 /* global variables */
-struct socket *hip_output_socket;
+struct socket *hip_output_socket = NULL;
 
 struct hip_kthread_data {
 	int cpu;
@@ -160,9 +160,11 @@ static int hip_init_output_socket(void)
 	int err = 0;
 	struct ipv6_pinfo *np;
 
-	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE, &hip_output_socket);
+	err = sock_create(AF_INET6, SOCK_RAW, IPPROTO_NONE,
+			  &hip_output_socket);
 	if (err) {
-		HIP_ERROR("Failed to allocate the HIP control socket (err=%d)\n", err);
+		HIP_ERROR("Failed to allocate the HIP control socket (%d)\n",
+			  err);
 		goto out;
 	}
 
@@ -185,8 +187,9 @@ static int hip_init_output_socket(void)
  */
 void hip_uninit_output_socket(void)
 {
+  if (hip_output_socket)
 	sock_release(hip_output_socket);
-	return;
+  return;
 }
 
 /**

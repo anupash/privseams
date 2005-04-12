@@ -76,10 +76,11 @@ int main(int argc, char *argv[]) {
 	if (!foreground) {
 		if (fork() > 0)
 			return(0);
+		hip_set_logtype(LOGTYPE_SYSLOG);
+	} else {
+		hip_set_logtype(LOGTYPE_STDERR);
 	}
 
-	hip_set_logtype(LOGTYPE_SYSLOG);
-	
 	/* Register signal handlers */
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);

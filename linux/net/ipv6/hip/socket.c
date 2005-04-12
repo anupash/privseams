@@ -683,7 +683,7 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
         return err;
 }
 
-int hip_insert_peer_map_work_order(const struct in6_addr *hit,
+int hip_handle_peer_map_work_order(const struct in6_addr *hit,
 				   const struct in6_addr *ip,
 				   int insert, int rvs)
 {
@@ -720,12 +720,11 @@ int hip_insert_peer_map_work_order(const struct in6_addr *hit,
 	return err;
 }
 
-static int do_work(const struct hip_common *input, int rvs)
+static int hip_add_peer_map(const struct hip_common *input, int rvs)
 {
 	struct in6_addr *hit, *ip;
 	char buf[46];
 	int err = 0;
-
 
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
@@ -748,7 +747,7 @@ static int do_work(const struct hip_common *input, int rvs)
 	hip_in6_ntop(ip, buf);
 	HIP_DEBUG("map IP: %s\n", buf);
 	
- 	err = hip_insert_peer_map_work_order(hit, ip, 1, rvs);
+ 	err = hip_handle_peer_map_work_order(hit, ip, 1, rvs);
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	}
@@ -768,7 +767,7 @@ static int do_work(const struct hip_common *input, int rvs)
  */
 int hip_socket_handle_rvs(const struct hip_common *input)
 {
-	return do_work(input, 1);
+	return (input, 1);
 }
 
 
@@ -783,7 +782,7 @@ int hip_socket_handle_rvs(const struct hip_common *input)
  */
 int hip_socket_handle_add_peer_map_hit_ip(const struct hip_common *input)
 {
-	return do_work(input, 0);
+	return hip_add_peer_map(input, 0);
 }
 
 /**
@@ -821,7 +820,7 @@ int hip_socket_handle_del_peer_map_hit_ip(const struct hip_common *input)
 	hip_in6_ntop(ip, buf);
 	HIP_INFO("map IP: %s\n", buf);
 	
- 	err = hip_insert_peer_map_work_order(hit, ip, 0, 0);
+ 	err = hip_handle_peer_map_work_order(hit, ip, 0, 0);
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	}
@@ -1327,7 +1326,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 
 		/* XX FIX: the mapping should be tagged with an uid */
 
-		err = hip_insert_peer_map_work_order(&lhi.hit,
+		err = hip_handle_peer_map_work_order(&lhi.hit,
 						     &sockaddr->sin6_addr,1,0);
 		if (err) {
 			HIP_ERROR("Failed to insert map work order (%d)\n",
@@ -1661,18 +1660,32 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 	return err;
 }
 
+int hip_socket_handle_add_local_hi(const struct hip_common *input)
+{
 #ifdef CONFIG_HIP_USERSPACE
-int hip_socket_handle_add_local_hi(const struct hip_common *input)
-{
-	// XX FIX: do a work order an send to userspace: call
-	return -1;
-}
+		struct hip_work_order *hwo;
+		int err = 0;
+
+		hwo = hip_init_job(GFP_ATOMIC);
+		if (!hwo) {
+		        HIP_ERROR("Failed to insert hi work order (%d)\n",
+				  err);
+			err = -EFAULT;
+			goto out_err;
+		}			   
+		hwo->destructor = hwo_default_destructor;
+		memset(&hwo->hdr.src_addr, 0, sizeof(struct in6_addr));
+		memset(&hwo->hdr.dst_addr, 0, sizeof(struct in6_addr));
+		hwo->hdr.type = HIP_WO_TYPE_MSG;		
+		hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDHI;
+		hip_insert_work_order(hwo);
+
+ out_err:
+		return err;
 #else
-int hip_socket_handle_add_local_hi(const struct hip_common *input)
-{
-	return hip_handle_add_local_hi(input);
-}
+		return hip_handle_add_local_hi(input);
 #endif
+}
 
 /*
  * The socket options that do not need a return value.

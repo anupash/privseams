@@ -60,9 +60,6 @@ int hip_socket_mmap(struct file *file, struct socket *sock,
 		    struct vm_area_struct * vma);
 ssize_t hip_socket_sendpage(struct socket *sock, struct page *page, int offset,
 			    size_t size, int flags);
-int hip_insert_peer_map_work_order(const struct in6_addr *hit,
-				   const struct in6_addr *ip,
-				   int insert, int rvs);
 
 #endif /* __KERNEL__ */
 #endif /* HIP_SOCKET_H */
