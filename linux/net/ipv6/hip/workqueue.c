@@ -483,7 +483,8 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
-			res = hip_del_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
+			res = hip_del_peer_info(&job->hdr.dst_addr,
+						&job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;

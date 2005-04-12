@@ -3,7 +3,8 @@
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
 	struct hip_work_order req, resp;
 
-	INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_XFRM_INIT, dst_hit, dst_addr, 0, 0);
+	INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING,
+			    HIP_WO_SUBTYPE_XFRM_INIT, dst_hit, dst_addr, 0, 0);
 	req.msg = hip_msg_alloc();
 	if (!req.msg) {
 		return -1;

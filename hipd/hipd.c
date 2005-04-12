@@ -147,11 +147,12 @@ int main(int argc, char *argv[]) {
 
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
-		FD_SET(nl_khipd.fd, &read_fdset);
+		FD_SET(nl.fd, &read_fdset);
 		FD_SET(nl_ifaddr.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
-		
+
+		HIP_DEBUG("select\n");
 		/* wait for socket activity */
 		if ((err = select((highest_descriptor + 1), &read_fdset, 
 				  NULL, NULL, &timeout)) < 0) {
@@ -160,15 +161,17 @@ int main(int argc, char *argv[]) {
 		} else if (err == 0) { 
 			/* idle cycle - select() timeout */               
 			
-		} else if (FD_ISSET(nl_khipd.fd, &read_fdset)) {
-			/* Something on kernel daemon netlink socket, fetch it to
-                           the queue */
-			hip_netlink_receive(&nl_khipd, hip_netlink_receive_workorder, NULL);
-
-		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
-			/* Something on IF and address event netlink socket, fetch it. */
-			hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
-
+               } else if (FD_ISSET(nl_khipd.fd, &read_fdset)) {
+                       /* Something on kernel daemon netlink socket, fetch it
+			  to the queue */
+                       hip_netlink_receive(&nl_khipd,
+					   hip_netlink_receive_workorder,
+					   NULL);
+ 
+               } else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
+                       /* Something on IF and address event netlink socket,
+			  fetch it. */
+                       hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}

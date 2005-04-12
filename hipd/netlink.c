@@ -314,6 +314,7 @@ int hip_netlink_talk(struct hip_nl_handle *nl,
 	/* Copy the response payload */
 	memcpy(&resp->hdr, &rx.hdr, sizeof(struct hip_work_order_hdr));
 	memcpy(resp->msg, rx.msg, msg_len);
+
 	return 0;
 }
 
