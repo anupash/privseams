@@ -6,6 +6,22 @@
 
 #include "update.h"
 
+#ifndef __KERNEL__
+/**
+ * hip_print_hit - print a HIT
+ * @str: string to be printed before the HIT
+ * @hit: the HIT to be printed
+ */
+static inline void hip_print_hit(const char *str, const struct in6_addr *hit)
+{
+	char dst[INET6_ADDRSTRLEN];
+
+	hip_in6_ntop(hit, dst);
+	HIP_DEBUG("%s: %s\n", str, dst);
+	return;
+}
+#endif
+
 /** hip_update_get_sa_keys - Get keys needed by UPDATE
  * @entry: corresponding hadb entry of the peer
  * @keymat_offset_new: value-result parameter for keymat index used
@@ -103,8 +119,8 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 */
 int hip_update_test_rea_addr(struct in6_addr *addr)
 {
+#ifdef __KERNEL__
 	int addr_type = ipv6_addr_type(addr);
-
 	if (addr_type == IPV6_ADDR_ANY) {
 		HIP_DEBUG("skipping IPV6_ADDR_ANY address\n");
 		return 0;
@@ -127,6 +143,13 @@ int hip_update_test_rea_addr(struct in6_addr *addr)
 	}
 
 	return 1;
+#else
+	return !(IN6_IS_ADDR_UNSPECIFIED(addr) ||
+		 IN6_IS_ADDR_LOOPBACK(addr) ||
+		 IN6_IS_ADDR_LINKLOCAL(addr) ||
+		 IN6_IS_ADDR_SITELOCAL(addr) ||
+		 IN6_IS_ADDR_MULTICAST(addr));
+#endif
 }
 
 /** hip_update_handle_rea_parameter - Process REA parameters in the UPDATE

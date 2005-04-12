@@ -17,17 +17,6 @@
  * libnetlink functions (the originals were buggy...).
  */
 
-/* base exchange IPv6 addresses need to be put into ifindex2spi map,
- * so a function is needed which gets the ifindex of the network
- * device which has the address @addr 
- */
-int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
-{
-	HIP_ERROR("hip_ipv6_devaddr2ifindex, oh crap.\n");
-	exit(1);
-	return 1;
-}
-
 /* Processes a received netlink message(s) */
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
 {

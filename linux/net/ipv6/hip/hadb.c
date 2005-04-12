@@ -1050,7 +1050,6 @@ uint32_t hip_update_get_prev_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 	return 0;
 }
 
-#ifdef __KERNEL__ /* XX FIXME: not supported yet it the userspace impl ... */
 /* Get the SPI of the SA belonging to the interface through
    which we received the UPDATE */
 /* also sets updating flag of SPI to 1 */
@@ -1076,7 +1075,6 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 	HIP_DEBUG("SPI not found for ifindex\n");
 	return 0;
 }
-#endif /* __KERNEL__ */
 
 void hip_set_spi_update_status(hip_ha_t *entry, uint32_t spi, int set)
 {

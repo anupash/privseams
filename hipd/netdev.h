@@ -25,6 +25,7 @@ struct netdev_address {
 	int if_index;
 };
 
+int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct hip_nl_handle *nl);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
 

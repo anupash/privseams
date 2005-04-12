@@ -42,6 +42,35 @@ static void delete_address_from_list(struct sockaddr *addr, int ifi)
         }
 }
 
+int hip_netdev_find_if(struct sockaddr *addr)
+{
+        struct netdev_address *n;
+	list_for_each_entry(n, &addresses, next) {
+		if ((n->addr.ss_family == addr->sa_family) &&
+		    (memcmp(SA2IP(&n->addr), SA2IP(addr),
+			    SAIPLEN(addr))==0)) {
+			return n->if_index;
+		}
+	}
+	
+	/* No matching address found */
+	return 0;
+}
+
+/* base exchange IPv6 addresses need to be put into ifindex2spi map,
+ * so a function is needed which gets the ifindex of the network
+ * device which has the address @addr 
+ */
+/* FIXME: The caller of this shoul be generalized to both IPv4 and
+   IPv6 so that this function can be removed (tkoponen) */
+int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
+{
+	struct sockaddr_in6 a;
+	a.sin6_family = AF_INET6;
+	ipv6_addr_copy(&a.sin6_addr, addr);
+	return hip_netdev_find_if((struct sockaddr *)&a);
+}
+
 int static add_address(const struct nlmsghdr *h, int len, void *arg) {
         struct sockaddr_storage ss_addr;
         struct sockaddr *addr = (struct sockaddr*) &ss_addr;
@@ -243,9 +272,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
 			}
 
-#if 0 // FIXME: include once updates are here...
 			hip_send_update_all(reas, address_count, ifa->ifa_index, SEND_UPDATE_REA);
-#endif
 			free(reas);
 			break;
 		default:
