@@ -11,7 +11,7 @@ int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
 
 	hip_build_user_hdr(req.msg, 0, 0);
 
-	if (!hip_netlink_talk(&req, &resp)) {
+	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
 		HIP_ERROR("Unable to send over netlink");
 		return 0;
 	}
@@ -34,7 +34,7 @@ int hip_xfrm_update(uint32_t spi, struct in6_addr * dst_addr, int state,
 
 	hip_build_user_hdr(req.msg, 0, 0);
 
-	if (!hip_netlink_talk(&req, &resp)) {
+	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
 		HIP_ERROR("Unable to send over netlink");
 		return 0;
 	}
@@ -56,7 +56,7 @@ int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
 
 	hip_build_user_hdr(req.msg, 0, 0);
 
-	if (!hip_netlink_talk(&req, &resp)) {
+	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
 		HIP_ERROR("Unable to send over netlink");
 		return 0;
 	}

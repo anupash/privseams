@@ -1463,10 +1463,6 @@ int hip_receive_update(struct hip_common *msg,
 	return err;
 }
 
-
-#define SEND_UPDATE_NES (1 << 0)
-#define SEND_UPDATE_REA (1 << 1)
-
 /** hip_send_update - send initial UPDATE packet to the peer
  * @addr_list: if non-NULL, REA parameter is added to the UPDATE
  * @addr_count: number of addresses in @addr_list

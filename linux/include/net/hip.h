@@ -309,6 +309,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_SPI_DIRECTION_OUT 1
 #define HIP_SPI_DIRECTION_IN 2
 
+#define SEND_UPDATE_NES (1 << 0)
+#define SEND_UPDATE_REA (1 << 1)
+
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))

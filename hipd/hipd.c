@@ -16,15 +16,19 @@
 #include <errno.h>      /* errno */
 #include <unistd.h>
 #include <fcntl.h>
+#include <linux/netlink.h>      /* get_my_addresses() support   */
+#include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 
 #include "hipd.h"
 #include "crypto.h"
 #include "cookie.h"
 #include "workqueue.h"
 #include "debug.h"
+#include "netdev.h"
 
-struct hip_nl_handle nl;
-time_t load_time; /* XX FIX: INITIALIZE THIS */
+struct hip_nl_handle nl_khipd;
+struct hip_nl_handle nl_ifaddr;
+time_t load_time;
 
 void usage() {
      fprintf(stderr, "hipl usage\n");
@@ -80,20 +84,33 @@ int main(int argc, char *argv[]) {
 	} else {
 		hip_set_logtype(LOGTYPE_STDERR);
 	}
+	
+	time(&load_time);
 
+	hip_set_logtype(LOGTYPE_SYSLOG);
+	
 	/* Register signal handlers */
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);
 
+	/* Open the netlink socket for address and IF events */
+	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR, NETLINK_ROUTE) < 0) {
+		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
+		return(1);
+	}
+	highest_descriptor = nl_ifaddr.fd;
+
+	/* Resolve our current addresses, afterwards the events from
+           kernel will maintain the list */
+	hip_netdev_init_addresses(&nl_ifaddr);
+
 	/* Open the netlink socket for kernel communication */
-	if (hip_netlink_open(&nl, 0, NETLINK_HIP) < 0) {
-		HIP_ERROR("Netlink socket error: %s\n", strerror(errno));
+	if (hip_netlink_open(&nl_khipd, 0, NETLINK_HIP) < 0) {
+		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
 		return(1);
 	}
 
-	/* For now useless, but keep record of the highest fd for
-	 * future purposes (multiple sockets to select from) */
-	highest_descriptor = nl.fd;
+	highest_descriptor = nl_khipd.fd > highest_descriptor ? nl_khipd.fd : highest_descriptor;
 
         if(!hip_init_r1()) {
 		HIP_ERROR("Unable to init R1.\n");
@@ -117,7 +134,7 @@ int main(int argc, char *argv[]) {
 	/* Ping kernel and announce our PID */
 	INIT_WORK_ORDER_HDR(ping.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_PING, NULL, NULL, getpid(), 0);
 	ping.msg = hip_msg_alloc();
-	if (hip_netlink_talk(&ping, &ping)) {
+	if (hip_netlink_talk(&nl_khipd, &ping, &ping)) {
 		HIP_ERROR("Unable to connect to the kernel HIP daemon over netlink.\n");
 		return(1);
 	}
@@ -130,7 +147,8 @@ int main(int argc, char *argv[]) {
 
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
-		FD_SET(s_net, &read_fdset);
+		FD_SET(nl_khipd.fd, &read_fdset);
+		FD_SET(nl_ifaddr.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		
@@ -142,10 +160,14 @@ int main(int argc, char *argv[]) {
 		} else if (err == 0) { 
 			/* idle cycle - select() timeout */               
 			
-		} else if (FD_ISSET(s_net, &read_fdset)) {
-			/* Something on Netlink socket, fetch it to
+		} else if (FD_ISSET(nl_khipd.fd, &read_fdset)) {
+			/* Something on kernel daemon netlink socket, fetch it to
                            the queue */
-			hip_netlink_receive();
+			hip_netlink_receive(&nl_khipd, hip_netlink_receive_workorder, NULL);
+
+		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
+			/* Something on IF and address event netlink socket, fetch it. */
+			hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
 
 		} else {
 			HIP_INFO("Unknown socket activity.");

@@ -15,10 +15,6 @@
 #include "debug.h"
 #include "crypto.h"
 
-#ifdef __KERNEL__
-//extern struct crypto_tfm *impl_sha1;
-#endif
-
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat,
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,

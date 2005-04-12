@@ -11,7 +11,7 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst) {
 	}
 	hip_build_user_hdr(req.msg, 0, 0);
 
-	if (!hip_netlink_talk(&req, &resp)) {
+	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
 		HIP_ERROR("Unable to send over netlink");
 		return 0;
 	}
@@ -33,7 +33,7 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
 
 	hip_build_user_hdr(req.msg, 0, 0);
 
-	if (!hip_netlink_talk(&req, &resp)) {
+	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
 		HIP_ERROR("Unable to send over netlink");
 		return 0;
 	}
@@ -60,7 +60,7 @@ int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		return -1;
 	}
 
-	if (!hip_netlink_talk(&req, &resp)) {
+	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
 		HIP_ERROR("Unable to send over netlink");
 		return 0;
 	}
@@ -82,7 +82,7 @@ int hip_finalize_sa(struct in6_addr *hit, u32 spi) {
 
 	hip_build_user_hdr(req.msg, 0, 0);
 
-	if (!hip_netlink_talk(&req, &resp)) {
+	if (!hip_netlink_talk(&nl_khipd, &req, &resp)) {
 		HIP_ERROR("Unable to send over netlink");
 		return 0;
 	}

@@ -18,8 +18,6 @@
 #include "misc.h"
 #include "output.h"
 
-/* int hip_update_spi_waitlist_ispending(uint32_t spi); */
-/* void hip_update_spi_waitlist_delete_all(void); */
 int hip_receive_update(struct hip_common *msg,
 		       struct in6_addr *update_saddr,
 		       struct in6_addr *update_daddr);

@@ -453,7 +453,8 @@ int hip_do_work(struct hip_work_order *job)
 
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
-#ifdef __KERNEL__ /* this has to be done differently in the userspace */
+#ifdef __KERNEL__ 
+#ifndef CONFIG_HIP_USERSPACE
 		case HIP_WO_SUBTYPE_IN6_EVENT:
 			hip_net_event((int)job->hdr.arg1, 0, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
@@ -462,7 +463,8 @@ int hip_do_work(struct hip_work_order *job)
 			hip_net_event((int)job->hdr.arg1, 1, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
 			break;
-#endif /* __KERNEL__ */
+#endif
+#endif
 		case HIP_WO_SUBTYPE_ADDMAP:
 #ifndef CONFIG_HIP_USERSPACE
 			/* arg1 = d-hit, arg2=ipv6 */

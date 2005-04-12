@@ -15,7 +15,9 @@ static atomic_t hip_working = ATOMIC_INIT(0);
 
 time_t load_time;
 
+#ifndef CONFIG_HIP_USERSPACE
 static struct notifier_block hip_netdev_notifier;
+#endif
 static void hip_cleanup(void);
 
 /* global variables */
@@ -339,6 +341,7 @@ static inline int hip_rea_addr_ok(struct in6_addr *addr)
  * and 0 is returned. Else < 0 is returned and @addr_list contains
  * NULL.
  */
+#ifndef CONFIG_HIP_USERSPACE
 static int hip_create_device_addrlist(struct net_device *event_dev,
 				       struct hip_rea_info_addr_item **addr_list,
 				       int *idev_addr_count)
@@ -432,6 +435,7 @@ static struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
 	hwo->destructor = NULL;
 	return hwo;
 }
+#endif
 
 /**
  * hip_handle_ipv6_dad_completed - handle IPv6 address events
@@ -441,6 +445,7 @@ static struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
  * successfully for an address in the network device @ifindex.
  */
 void hip_handle_ipv6_dad_completed(int ifindex) {
+#ifndef CONFIG_HIP_USERSPACE
 	struct hip_work_order *hwo;
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
@@ -456,13 +461,12 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
   	} else
 		hip_insert_work_order(hwo);
 	return;
+#endif
 }
 
 #define EVENTSRC_INET6 0
 #define EVENTSRC_NETDEV 1
 
-#define SEND_UPDATE_NES (1 << 0)
-#define SEND_UPDATE_REA (1 << 1)
 /** hip_net_event - start handling the network device event
  * @ifindex: the device which caused the event
  * @event_src: 0 for IPv6 address events and 1 for network device related events
@@ -471,6 +475,7 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
  * Workqueue runs this function when it is assigned a job related to
  * networking events.
  */
+#ifndef CONFIG_HIP_USERSPACE
 void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 {
 	int err = 0;
@@ -521,12 +526,14 @@ void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 	if (addr_list)
 		HIP_FREE(addr_list);
 }
+#endif
 
 /**
  * hip_handle_inet6_addr_del - handle IPv6 address deletion events
  * @ifindex: the interface index of the network device which caused the event
  */
 void hip_handle_inet6_addr_del(int ifindex) {
+#ifndef CONFIG_HIP_USERSPACE
 	struct hip_work_order *hwo;
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
@@ -541,6 +548,7 @@ void hip_handle_inet6_addr_del(int ifindex) {
 
  out:
 	return;
+#endif
 }
 
 
@@ -554,6 +562,7 @@ void hip_handle_inet6_addr_del(int ifindex) {
  *
  * Returns: always %NOTIFY_DONE.
  */
+#ifndef CONFIG_HIP_USERSPACE
 static int hip_netdev_event_handler(struct notifier_block *notifier_block,
                                     unsigned long event, void *ptr)
 {
@@ -592,7 +601,7 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 	dev_put(event_dev);
 	return NOTIFY_DONE;
 }
-
+#endif
 
 /**
  * hip_err_handler - ICMPv6 handler
@@ -851,6 +860,7 @@ static void hip_uninit_procfs(void)
 /* Init/uninit network interface event notifier. When a network event
    causes an event (e.g. it goes up or down, or is unregistered from
    the system), hip_netdev_event_handler is called. */
+#ifndef CONFIG_HIP_USERSPACE
 int hip_init_netdev_notifier(void)
 {
 	HIP_DEBUG("\n");
@@ -865,6 +875,7 @@ void hip_uninit_netdev_notifier(void)
 	HIP_DEBUG("\n");
         unregister_netdevice_notifier(&hip_netdev_notifier);
 }
+#endif
 
 /* HIP kernel thread, arg t is per-cpu thread data */
 static int hip_worker(void *t)
@@ -1029,8 +1040,10 @@ static int __init hip_init(void)
 	if (hip_init_socket_handler() < 0)
 		goto out;
 
+#ifndef CONFIG_HIP_USERSPACE
 	if (hip_init_netdev_notifier() < 0)
 		goto out;
+#endif
 
 	if (hip_register_xfrm_km_handler()) {
 		HIP_ERROR("Could not register XFRM key manager for HIP\n");
@@ -1068,7 +1081,9 @@ static void __exit hip_cleanup(void)
 
 	/* disable callbacks for HIP packets and notifier chains */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
+#ifndef CONFIG_HIP_USERSPACE
 	hip_uninit_netdev_notifier();
+#endif
 
 	/* disable hooks to call our code */
 	//HIP_INVALIDATE(hip_update_spi_waitlist_ispending);

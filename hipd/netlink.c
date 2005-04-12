@@ -6,6 +6,13 @@
 #include "hipd.h"
 
 /*
+ * Events: dad_completed  - RTM_NEWADDR -> HIP_WO_SUBTYPE_IN6_EVENT -> create IF addr list -> REA
+ *         addr_del       - RTM_DELADDR (for every address) - IP address deleted, but if still has addresses left after deletion -> create IF addr list -> REA
+ *         
+ *         
+ */
+
+/*
  * Note that most of the functions are modified versions of
  * libnetlink functions (the originals were buggy...).
  */
@@ -22,8 +29,7 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
 }
 
 /* Processes a received netlink message(s) */
-static int receive_work_order(const struct sockaddr_nl *who,
-			      const struct nlmsghdr *n, int len)
+int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
 {
 	struct hip_work_order *hwo;
 	struct nlmsghdr *tail = n + len;
@@ -64,7 +70,10 @@ static int receive_work_order(const struct sockaddr_nl *who,
  * function that processes only a finite amount of messages and then
  * returns. 
 */
-int hip_netlink_receive() {
+int hip_netlink_receive(struct hip_nl_handle *nl, 
+			hip_filter_t handler,
+			void *arg) 
+{
 	struct hip_work_order *result = NULL;
 	struct hip_work_order *hwo;
 	struct nlmsghdr *h;
@@ -87,7 +96,7 @@ int hip_netlink_receive() {
 	
 	while (1) {
                 iov.iov_len = sizeof(buf);
-                status = recvmsg(nl.fd, &msg, 0);
+                status = recvmsg(nl->fd, &msg, 0);
 
                 if (status < 0) {
                         if (errno == EINTR)
@@ -118,7 +127,7 @@ int hip_netlink_receive() {
                                 exit(1);
                         }
 
-                        err = receive_work_order(&nladdr, h, len);
+                        err = handler(h, len, arg);
                         if (err < 0)
                                 return err;
 
@@ -136,7 +145,7 @@ int hip_netlink_receive() {
                 }
 
 		/* All messages processed */
-		break;
+		return 0;
 	}
 }
 
@@ -147,7 +156,7 @@ int hip_netlink_receive() {
  */
 static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			unsigned groups, struct nlmsghdr *answer,
-			hip_filter_t junk)
+			hip_filter_t junk, void *arg)
 {
         int status;
         unsigned seq;
@@ -218,7 +227,7 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
                         if (nladdr.nl_pid != peer ||
                             h->nlmsg_seq != seq) {
                                 if (junk) {
-                                        err = junk(&nladdr, h, len);
+                                        err = junk(h, len, arg);
                                         if (err < 0)
                                                 return err;
                                 }
@@ -267,7 +276,8 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
 /*
  * Sends and receives a work order.
  */
-int hip_netlink_talk(struct hip_work_order *req, 
+int hip_netlink_talk(struct hip_nl_handle *nl,
+		     struct hip_work_order *req, 
 		     struct hip_work_order *resp) 
 {
 	struct {
@@ -289,7 +299,7 @@ int hip_netlink_talk(struct hip_work_order *req,
 
 	/* Let the talk insert any non-responses to our queue so that
            they will be processed later */
-	if (netlink_talk(&nl, &tx.n, 0, 0, &rx.n, receive_work_order) < 0) {
+	if (netlink_talk(nl, &tx.n, 0, 0, &rx.n, hip_netlink_receive_workorder, NULL) < 0) {
 		HIP_ERROR("Unable to talk over netlink.\n");
 		return -1;
 	}
@@ -307,7 +317,7 @@ int hip_netlink_talk(struct hip_work_order *req,
 	return 0;
 }
 
-static int nl_send(struct hip_nl_handle *rth, const char *buf, int len)
+int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
 {
         struct sockaddr_nl nladdr;
 
@@ -318,7 +328,7 @@ static int nl_send(struct hip_nl_handle *rth, const char *buf, int len)
 }
 
 /*
- * Sends a work order.
+ * Sends a work order to kernel daemon.
  */
 int hip_netlink_send(struct hip_work_order *hwo) 
 {
@@ -343,7 +353,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
 	memcpy(&h->msg, hwo->msg, msg_len);
 
-        ret = nl_send(&nl, (char*)nlh, nlh->nlmsg_len) <= 0;
+        ret = hip_netlink_send_buf(&nl_khipd, (char*)nlh, nlh->nlmsg_len) <= 0;
 	HIP_FREE(nlh);
 	return ret;
 }
@@ -358,7 +368,7 @@ int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int prot
 
         rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
         if (rth->fd < 0) {
-                perror("Cannot open netlink socket");
+                perror("Cannot open a netlink socket");
                 return -1;
         }
 
@@ -377,7 +387,7 @@ int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int prot
         rth->local.nl_groups = subscriptions;
 
         if (bind(rth->fd, (struct sockaddr*)&rth->local, sizeof(rth->local)) < 0) {
-                perror("Cannot bind netlink socket");
+                perror("Cannot bind a netlink socket");
                 return -1;
         }
         addr_len = sizeof(rth->local);
