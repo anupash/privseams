@@ -329,22 +329,51 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 int load_hip_endpoint_pem(const char *filename,
 			  struct endpoint **endpoint)
 {
-  int err = 0;
+  int err = 0, algo = 0;
+  char first_key_line[30];
   DSA *dsa = NULL;
+  RSA *rsa = NULL;
+  FILE* fp;
 
   *endpoint = NULL;
 
-  err = load_dsa_private_key(filename, &dsa);
+  /* check the algorithm from PEM format private key */
+  fp = fopen(filename, "rb");
+  if (!fp) {
+    HIP_ERROR("Couldn't open key file %s for reading\n", filename);
+    err = -ENOMEM;
+    goto out_err;
+  }
+  fgets(first_key_line,30,fp);  //read first line. TODO: do this by filename?
+  _HIP_DEBUG("1st key line: %s", first_key_line);
+  fclose(fp);
+
+  if(findsubstring(first_key_line, "RSA"))
+    algo = HIP_HI_RSA;
+  else if(findsubstring(first_key_line, "DSA"))
+    algo = HIP_HI_DSA;
+  else {
+    HIP_ERROR("Wrong kind of key file: %s\n",basename);
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  if(algo == HIP_HI_RSA)
+    err = load_rsa_private_key(filename, &rsa);
+  else
+    err = load_dsa_private_key(filename, &dsa);
   if (err) {
-    HIP_ERROR("Failed to load DSA public key (%d)\n", err);
+    HIP_ERROR("Failed to load private key %s (%d)\n",filename, err);
     goto out_err;
   }
 
   // XX FIX: host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
-
-  err = dsa_to_hip_endpoint(dsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+  if(algo == HIP_HI_RSA)
+    err = rsa_to_hip_endpoint(rsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+  else
+    err = dsa_to_hip_endpoint(dsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
   if (err) {
-    HIP_ERROR("Failed to convert DSA key to HIP endpoint (%d)\n", err);
+    HIP_ERROR("Failed to convert private key to HIP endpoint (%d)\n", err);
     goto out_err;
   }
 
@@ -352,6 +381,8 @@ int load_hip_endpoint_pem(const char *filename,
 
   if (dsa)
     DSA_free(dsa);
+  if (rsa)
+    RSA_free(rsa);
   if (err && *endpoint)
     free(*endpoint);
 
