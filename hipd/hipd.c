@@ -77,18 +77,17 @@ int main(int argc, char *argv[]) {
 	}
 	
 	/* Configuration is valid! Fork a daemon, if so configured */
-	if (!foreground) {
+	if (foreground) {
+		printf("foreground\n");
+		hip_set_logtype(LOGTYPE_STDERR);
+	} else {
 		if (fork() > 0)
 			return(0);
 		hip_set_logtype(LOGTYPE_SYSLOG);
-	} else {
-		hip_set_logtype(LOGTYPE_STDERR);
 	}
 	
 	time(&load_time);
 
-	hip_set_logtype(LOGTYPE_SYSLOG);
-	
 	/* Register signal handlers */
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);
@@ -147,7 +146,7 @@ int main(int argc, char *argv[]) {
 
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
-		FD_SET(nl.fd, &read_fdset);
+		FD_SET(nl_khipd.fd, &read_fdset);
 		FD_SET(nl_ifaddr.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
