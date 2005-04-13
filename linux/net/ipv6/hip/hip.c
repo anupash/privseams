@@ -118,6 +118,17 @@ static ctl_table hip_table[] = {
 		.extra1		= &zero,
 		.extra2		= &max_k
 	},
+	{
+		.ctl_name	= NET_HIP_HI_DEFAULT_ALGO,
+		.procname	= "hi_default_algo",
+		.data		= &hip_sys_config.hip_hi_default_algo,
+		.maxlen		= sizeof (int),
+		.mode		= 0600,
+		.proc_handler	= &proc_dointvec_minmax,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &zero,
+		.extra2		= &max_k
+	},
 	{ .ctl_name = 0 }
 };
 
@@ -161,6 +172,7 @@ void hip_unregister_sysctl(void)
 void hip_init_sys_config(void)
 {
 	hip_sys_config.hip_cookie_max_k_r1 = 20;
+	hip_sys_config.hip_hi_default_algo = HIP_HI_RSA;
 }
 #endif
 

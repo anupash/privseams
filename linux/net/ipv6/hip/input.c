@@ -798,7 +798,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   and extract the public key from the private key. The public key is
 	   needed in the ESP-ENC below. */
 	host_id_pub = hip_get_localhost_public_key(&lhi);
-		//hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+
 	if (host_id_pub == NULL) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost public key found\n");
@@ -806,7 +806,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	host_id_private = hip_get_localhost_host_id(&lhi); 
-		//hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
@@ -1632,7 +1632,6 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 
 		host_id_public =
 			hip_get_localhost_public_key(&lhi);
-		        //hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 
 		HIP_HEXDUMP("host id for HMAC2", host_id_public,
 			    hip_get_param_total_len(host_id_public));
@@ -1647,7 +1646,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 	}
 
 	host_id_private = hip_get_localhost_host_id(&lhi);
-        //hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;

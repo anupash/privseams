@@ -341,8 +341,9 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 
 	HIP_DEBUG("\n");
 
-	/* TODO: we must use the same algorithm that is used in the dsthit */
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our, 
+					       hip_sys_config.
+					       hip_hi_default_algo) < 0) {
 		HIP_ERROR("Out HIT not found\n");
 		err = -EINVAL;
 		goto out_err;

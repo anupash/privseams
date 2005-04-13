@@ -653,6 +653,7 @@ enum {
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
 enum {
 	NET_HIP_COOKIE_MAX_K_R1 = 1, /* max value of K to calculate received cookie */
+	NET_HIP_HI_DEFAULT_ALGO = 2,
 };
 #endif
 

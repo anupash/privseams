@@ -87,6 +87,7 @@ extern time_t load_time;
 #ifdef CONFIG_SYSCTL
 struct hip_sys_config {
 	int hip_cookie_max_k_r1;
+	int hip_hi_default_algo;
 };
 extern struct hip_sys_config hip_sys_config;
 #endif

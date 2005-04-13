@@ -1041,8 +1041,9 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HIT */
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our,
-					       HIP_HI_DEFAULT_ALGO) < 0) {
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our, 
+					       hip_sys_config.
+					       hip_hi_default_algo) < 0) {
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;

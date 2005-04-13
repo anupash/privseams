@@ -839,7 +839,8 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		 * should enter here the correct sender... (currently unknown).
 		 */
 		if (hip_get_any_local_hit(&entry->hit_our,
-					  HIP_HI_DEFAULT_ALGO) == 0)
+					  hip_sys_config.hip_hi_default_algo) 
+		    == 0)
 			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
 		else 
 			HIP_INFO("Could not assign local hit, continuing\n");
