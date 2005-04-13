@@ -11,9 +11,7 @@
 #include "debug.h"
 #include "workqueue.h"
 #if defined CONFIG_HIP_HI3 && !defined __KERNEL__
-#include "i3.h"
 #include "i3_client_api.h"
-#include "i3_client_id.h"
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -46,14 +44,35 @@ struct pseudo_header
 };
 #endif
 
+/**
+ * Gets name for a message type
+ * @type: the msg type
+ *
+ * Returns: HIP message type as a string.
+ */
+static inline const char *hip_msg_type_str(int type) 
+{
+        const char *str = "UNKNOWN";
+        static const char *types[] =
+	{ "", "I1", "R1", "I2", "R2", "CER", "UPDATE", 
+	  "NOTIFY", "CLOSE", "CLOSE_ACK", "UNKNOWN", "BOS" };
+        if (type >= 1 && type < ARRAY_SIZE(types))
+                str = types[type];
+        else if (type == HIP_PAYLOAD) {
+		str = "PAYLOAD";
+	}
+
+	return str;
+}
+
 #ifdef __KERNEL__  
 void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr);
 int hip_inbound(struct sk_buff **skb, unsigned int *nhoff);
 #else
 #ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
-#endif
 u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
+#endif
 #endif
 
 #endif /* HIP_PREINPUT_H */

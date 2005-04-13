@@ -2,8 +2,8 @@
 #define HIP_MISC_H
 
 #ifdef __KERNEL__
-#  include <linux/types.h>
 #  include <net/ipv6.h>
+#  include <linux/types.h>
 #  include <net/hip.h>
 #  include "hip.h"
 #else

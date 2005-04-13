@@ -221,12 +221,9 @@ int hip_wrap_handle_add_local_hi(const struct hip_common *input)
 			goto out_err;
 		}			   
 
-		hwo->destructor = hwo_default_destructor;
- 
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
 					HIP_WO_SUBTYPE_ADDHI, NULL, NULL,
 					0, 0);
-                hwo->destructor = hwo_default_destructor;
 		hwo->msg = input;
 		hip_insert_work_order(hwo);
 
@@ -275,6 +272,11 @@ static int insert_trigger(struct in6_addr *hit,
 	bzero(&id, ID_LEN);
 	memcpy(&id, hit, sizeof(hit));
 	get_random_bytes(id.x, ID_LEN);	
+#if 0
+ FIXME: should these be here or not...
+	cl_set_private_id(&id);
+	cl_set_private_id(&ida);
+#endif 
 
 	/* Note: ida will be updated as ida.key = h_r(id.key) */
 	t1 = cl_create_trigger_id(&id, ID_LEN_BITS, &ida,
@@ -389,8 +391,10 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	}
 
 #ifdef CONFIG_HIP_HI3
-	insert_trigger(&rsa_lhi.hit, hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &rsa_lhi.hit));
-	insert_trigger(&dsa_lhi.hit, hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &dsa_lhi.hit));
+	insert_trigger(&rsa_lhi.hit, (struct hip_host_id_entry *)
+		       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &rsa_lhi.hit));
+	insert_trigger(&dsa_lhi.hit, (struct hip_host_id_entry *)
+		       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &dsa_lhi.hit));
 #endif
  out_err:
 	

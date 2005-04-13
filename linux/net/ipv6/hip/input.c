@@ -1103,7 +1103,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   send I2 and go to E2. */
 	err = hip_csum_send(NULL, &daddr, i2);
 	if (err) {
-		HIP_ERROR("sending of I2 failed, err=%d\n", err);
 		goto out_err;
 	}
 
@@ -1446,10 +1445,9 @@ int hip_create_r2(struct hip_context *ctx,
 	//int algo = 0;
 	int clear = 0;
 	u8 *signature;
-// 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	uint16_t mask;
 #ifdef CONFIG_HIP_RVS
-	  int create_rva = 0;
+	int create_rva = 0;
 #endif
 
 	HIP_DEBUG("\n");
@@ -1580,11 +1578,9 @@ int hip_create_r2(struct hip_context *ctx,
  	/* Send the packet */
 	HIP_DEBUG("R2 created successfully, sending\n");
 	err = hip_csum_send(NULL, i2_saddr, r2);
-	if (err) {
-		HIP_ERROR("csum_send failed\n");
-	}
-
+	
 #ifdef CONFIG_HIP_RVS
+	// FIXME: Should this be skipped if an error occurs? (tkoponen)
 	if (create_rva) {
 		HIP_RVA *rva;
 
@@ -2732,13 +2728,8 @@ int hip_handle_bos(struct hip_common *bos,
 		        HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 			goto out_err;
 		}			   
-		
-		ipv6_addr_copy(&hwo->hdr.dst_addr, &bos->hits);
-		ipv6_addr_copy(&hwo->hdr.src_addr, dstip);
-		hwo->destructor = hwo_default_destructor;
 
-		hwo->hdr.type = HIP_WO_TYPE_MSG;		
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDMAP;
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_ADDMAP, dstip, &bos->hits, 0, 0);
 		hip_insert_work_order(hwo);
 	}
 
@@ -2868,16 +2859,3 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	return err;
 }
 
-/**
- * hip_hwo_input_destructor - remove resources allocated by the work order
- * @hwo: work order
- *
- * Assumes that @arg1 (if non-null) is a skb and @arg2 (if non-null)
- * any other allocated pointer.
- */
-void hip_hwo_input_destructor(struct hip_work_order *hwo)
-{
-	if (hwo && hwo->msg) {
-		HIP_FREE(hwo);
-	}
-}

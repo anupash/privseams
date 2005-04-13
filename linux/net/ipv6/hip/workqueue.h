@@ -73,7 +73,6 @@
 #define HIP_WO_SUBTYPE_DEV_EVENT  210
 #define HIP_WO_SUBTYPE_ADDRVS     211
 
-void hwo_default_destructor(struct hip_work_order *hwo);
 int hip_init_workqueue(void);
 void hip_uninit_workqueue(void);
 int hip_insert_work_order(struct hip_work_order *hwo);

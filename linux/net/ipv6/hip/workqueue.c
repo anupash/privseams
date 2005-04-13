@@ -34,7 +34,7 @@ static struct hip_pc_wq hip_workqueue;
  * Simple... if you don't understand, then you shouldn't be
  * dealing with the kernel.
  */
-void hwo_default_destructor(struct hip_work_order *hwo)
+static void hwo_default_destructor(struct hip_work_order *hwo)
 {
 	if (hwo && hwo->msg)
 		HIP_FREE(hwo->msg);
@@ -51,7 +51,7 @@ void hwo_default_destructor(struct hip_work_order *hwo)
  * 
  * Returns work order or NULL, if an error occurs.
  */
-static inline struct hip_work_order *hip_get_work_order_cpu(void)
+struct hip_work_order *hip_get_work_order(void)
 {
 	struct hip_work_order *result;
 	struct hip_pc_wq *wq;
@@ -96,22 +96,6 @@ static inline struct hip_work_order *hip_get_work_order_cpu(void)
 	local_irq_restore(eflags);
 #endif
 	return result;
-}
-
-/**
- * hip_get_work_order - Get one work order from workqueue
- * 
- * HIP daemons call this function when waiting for
- * work. They will sleep until a work order is received, which
- * is signalled by up()ing semaphore.
- * The received work order is removed from the workqueue and
- * returned to the kernel daemon for processing.
- * 
- * Returns work order or NULL, if an error occurs.
- */
-struct hip_work_order *hip_get_work_order(void)
-{
-     return hip_get_work_order_cpu();
 }
 
 /**
@@ -268,10 +252,12 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 	struct hip_work_order *hwo;
 
 	hwo = (struct hip_work_order *)HIP_MALLOC(sizeof(struct hip_work_order), gfp_mask);
-	if (hwo)
+	if (hwo) {
 		memset(hwo, 0, sizeof(struct hip_work_order));		
-	else
+		hwo->destructor = hwo_default_destructor;
+	} else {
 		HIP_ERROR("No memory for work order\n");
+	}
 
 	return hwo;
 }
@@ -279,63 +265,48 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 int hip_do_work(struct hip_work_order *job)
 {
 	int res = 0;
-
 	HIP_DEBUG("type=%d, subtype=%d\n", job->hdr.type, job->hdr.subtype);
 
 	switch (job->hdr.type) {
 	case HIP_WO_TYPE_INCOMING:
+		HIP_START_TIMER(KMM_PARTIAL);
 		switch(job->hdr.subtype) {
 		case HIP_WO_SUBTYPE_RECV_I1:
-			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i1(job->msg, &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
-			HIP_STOP_TIMER(KMM_PARTIAL,"I1");
 			break;
 		case HIP_WO_SUBTYPE_RECV_R1:
-			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r1(job->msg, &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
-			HIP_STOP_TIMER(KMM_PARTIAL,"R1");
 			break;
 		case HIP_WO_SUBTYPE_RECV_I2:
-			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_i2(job->msg, 
 					     &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
-			HIP_STOP_TIMER(KMM_PARTIAL,"I2");
 			break;
 		case HIP_WO_SUBTYPE_RECV_R2:
-			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_r2(job->msg, &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
-			HIP_STOP_TIMER(KMM_PARTIAL,"R2");
 			HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 			break;
-#ifdef __KERNEL__ /* XX FIXME: not supported yet... */
 		case HIP_WO_SUBTYPE_RECV_UPDATE:
-			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_update(job->msg, &job->hdr.src_addr,
 						 &job->hdr.dst_addr);
-			HIP_STOP_TIMER(KMM_PARTIAL,"UPDATE");
 			break;
-#endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_RECV_NOTIFY:
-			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_notify(job->msg, &job->hdr.src_addr,
 						 &job->hdr.dst_addr);
-			HIP_STOP_TIMER(KMM_PARTIAL,"NOTIFY");
 			break;
 		case HIP_WO_SUBTYPE_RECV_BOS:
-			HIP_START_TIMER(KMM_PARTIAL);
 			res = hip_receive_bos(job->msg, &job->hdr.src_addr,
 					      &job->hdr.dst_addr);
-			HIP_STOP_TIMER(KMM_PARTIAL,"BOS");
 			break;
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
 			break;
 		}
+		HIP_STOP_TIMER(KMM_PARTIAL, hip_msg_type_str(job->hdr.type));
 		if (res < 0)
 			res = KHIPD_ERROR;
 		break;
@@ -349,7 +320,6 @@ int hip_do_work(struct hip_work_order *job)
 		case HIP_WO_SUBTYPE_SEND_PACKET:
 			res = hip_csum_send(&job->hdr.src_addr, &job->hdr.dst_addr, 
 					    job->msg);
-			
 			break;
 			
 		case HIP_WO_SUBTYPE_ACQSPI:
@@ -358,8 +328,7 @@ int hip_do_work(struct hip_work_order *job)
 				break;
 
 			resp->seq = job->seq;
-			res = resp->hdr.arg1 = hip_acquire_spi(&job->hdr.src_addr, &job->hdr.dst_addr);
-			
+			res = resp->hdr.arg1 = hip_acquire_spi(&job->hdr.src_addr, &job->hdr.dst_addr);		       
 			break;
 
 		case HIP_WO_SUBTYPE_ADDSA:
@@ -453,8 +422,7 @@ int hip_do_work(struct hip_work_order *job)
 
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
-#ifdef __KERNEL__ 
-#ifndef CONFIG_HIP_USERSPACE
+#if defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE
 		case HIP_WO_SUBTYPE_IN6_EVENT:
 			hip_net_event((int)job->hdr.arg1, 0, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
@@ -463,7 +431,6 @@ int hip_do_work(struct hip_work_order *job)
 			hip_net_event((int)job->hdr.arg1, 1, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
 			break;
-#endif
 #endif
 		case HIP_WO_SUBTYPE_ADDMAP:
 #ifndef CONFIG_HIP_USERSPACE
@@ -503,13 +470,13 @@ int hip_do_work(struct hip_work_order *job)
 			res = 0;
 			break;
 #endif
-		case HIP_WO_SUBTYPE_FLUSHMAPS:
 #ifndef __KERNEL__
 		case HIP_WO_SUBTYPE_ADDHI:
 			HIP_DEBUG("Adding \n");
 			res = hip_wrap_handle_add_local_hi(job->msg);
 			break;
 #endif /* __KERNEL__ */
+		case HIP_WO_SUBTYPE_FLUSHMAPS:
 		case HIP_WO_SUBTYPE_DELHI:
 		case HIP_WO_SUBTYPE_FLUSHHIS:
 		case HIP_WO_SUBTYPE_NEWDH:

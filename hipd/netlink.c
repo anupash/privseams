@@ -6,13 +6,6 @@
 #include "hipd.h"
 
 /*
- * Events: dad_completed  - RTM_NEWADDR -> HIP_WO_SUBTYPE_IN6_EVENT -> create IF addr list -> REA
- *         addr_del       - RTM_DELADDR (for every address) - IP address deleted, but if still has addresses left after deletion -> create IF addr list -> REA
- *         
- *         
- */
-
-/*
  * Note that most of the functions are modified versions of
  * libnetlink functions (the originals were buggy...).
  */

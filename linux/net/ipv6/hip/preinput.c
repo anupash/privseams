@@ -203,7 +203,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 {
         struct hip_common *hip_common;
         struct hip_work_order *hwo;
-	int len;
+	int len, type;
 	int err = 0;
 
 	/* See if there is at least the HIP header in the packet */
@@ -248,7 +248,6 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	}
 	
 	memcpy(hwo->msg, hip_common, len);
-	hwo->destructor = hip_hwo_input_destructor;
 	hwo->hdr.type = HIP_WO_TYPE_INCOMING;
 
 	/* should we do some early state processing now?
@@ -260,45 +259,36 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	   may need them later */
         ipv6_addr_copy(&hwo->hdr.src_addr, &(*skb)->nh.ipv6h->saddr);
         ipv6_addr_copy(&hwo->hdr.dst_addr, &(*skb)->nh.ipv6h->daddr);
-
-	_HIP_DEBUG("Entering switch\n");
-        switch(hip_get_msg_type(hip_common)) {
+	
+	type = hip_get_msg_type(hip_common);
+	HIP_DEBUG("Received HIP %s packet\n", hip_msg_type_str(type));
+        switch(type) {
 	case HIP_I1:
-		HIP_DEBUG("Received HIP I1 packet\n");
 		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I1;
 		break;
 	case HIP_R1:
-		HIP_DEBUG("Received HIP R1 packet\n");
 		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_R1;
 		break;
 	case HIP_I2:
-		HIP_DEBUG("Received HIP I2 packet\n");
 		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I2;
 		break;
 	case HIP_R2:
-		HIP_DEBUG("Received HIP R2 packet\n");
 		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_R2;
 		break;
 	case HIP_UPDATE:
-		HIP_DEBUG("Received HIP UPDATE packet\n");
 		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_UPDATE;
 		break;
 	case HIP_NOTIFY:
-		HIP_DEBUG("Received HIP NOTIFY packet\n");
 		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_NOTIFY;
 		break;
 	case HIP_BOS:
-		HIP_DEBUG("Received HIP BOS packet\n");
 		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_BOS;
 		break;
 	default:
-		HIP_ERROR("Received HIP packet of unknown/unimplemented type %d\n",
-			  hip_common->type_hdr);
 		kfree_skb(*skb);  /* sic */
 		HIP_FREE(hwo);
 		/*  KRISUXXX: return value? */
 		return -1;
-                break;
         }
 
         hip_insert_work_order(hwo);

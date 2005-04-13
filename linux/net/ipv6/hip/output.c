@@ -374,7 +374,6 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 
 	err = hip_csum_send(NULL, dst_addr, r1pkt);	
 	if (err) {
-		HIP_ERROR("hip_csum_send failed, err=%d\n", err);
 		goto out_err;
 	}
 

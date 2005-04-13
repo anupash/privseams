@@ -415,26 +415,6 @@ static int hip_create_device_addrlist(struct net_device *event_dev,
 	read_unlock(&addrconf_lock);
 	return err;
 }
-
-/* helper function for creating and initializing work order for
- * network events */
-static struct hip_work_order *hip_net_event_prepare_hwo(int subtype,
-						 int ifindex, int event)
-{
-	struct hip_work_order *hwo;
-
-	hwo = hip_init_job(GFP_ATOMIC);
-	if (!hwo)
-		return NULL;
-
-	hwo->hdr.type = HIP_WO_TYPE_MSG;
-	hwo->hdr.subtype = subtype;
-	hwo->hdr.arg1 = ifindex;
-	hwo->hdr.arg2 = event;
-	hwo->msg = NULL;
-	hwo->destructor = NULL;
-	return hwo;
-}
 #endif
 
 /**
@@ -454,12 +434,14 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
 		return;
 	}
 
-	hwo = hip_net_event_prepare_hwo(HIP_WO_SUBTYPE_IN6_EVENT,
-					ifindex, NETDEV_UP);
-  	if (!hwo) {
-		HIP_ERROR("Unable to handle address event\n");
-  	} else
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (hwo) {	  
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_IN6_EVENT, NULL, NULL, ifindex, NETDEV_UP);
 		hip_insert_work_order(hwo);
+	} else {
+		HIP_ERROR("Unable to handle address event\n");
+	}
+
 	return;
 #endif
 }
@@ -538,16 +520,13 @@ void hip_handle_inet6_addr_del(int ifindex) {
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 
-	hwo = hip_net_event_prepare_hwo(HIP_WO_SUBTYPE_IN6_EVENT,
-					ifindex, NETDEV_DOWN);
-  	if (!hwo) {
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (hwo) {	  
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_IN6_EVENT, NULL, NULL, ifindex, NETDEV_DOWN);
+		hip_insert_work_order(hwo);
+  	} else {
 		HIP_ERROR("Unable to handle address event\n");
-		goto out;
   	}
-	hip_insert_work_order(hwo);
-
- out:
-	return;
 #endif
 }
 
@@ -589,15 +568,15 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
         }
 	dev_hold(event_dev);
 
-	hwo = hip_net_event_prepare_hwo(HIP_WO_SUBTYPE_DEV_EVENT,
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (hwo) {	  
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_DEV_EVENT, NULL, NULL, 
 					event_dev->ifindex, event);
-  	if (!hwo) {
+		hip_insert_work_order(hwo);
+	} else {
 		HIP_ERROR("Unable to handle address event\n");
-		goto out;
   	}
-	hip_insert_work_order(hwo);
 
- out:
 	dev_put(event_dev);
 	return NOTIFY_DONE;
 }
@@ -863,7 +842,6 @@ static void hip_uninit_procfs(void)
 #ifndef CONFIG_HIP_USERSPACE
 int hip_init_netdev_notifier(void)
 {
-	HIP_DEBUG("\n");
 	hip_netdev_notifier.notifier_call = hip_netdev_event_handler;
 	hip_netdev_notifier.next = NULL;
         hip_netdev_notifier.priority = 0;
@@ -872,7 +850,6 @@ int hip_init_netdev_notifier(void)
 
 void hip_uninit_netdev_notifier(void)
 {
-	HIP_DEBUG("\n");
         unregister_netdevice_notifier(&hip_netdev_notifier);
 }
 #endif
@@ -1029,7 +1006,6 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_unknown_spi);
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
-	/* HIP_SETCALL(hip_update_spi_waitlist_ispending); */
 	HIP_SETCALL(hip_get_default_spi_out);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
@@ -1086,7 +1062,6 @@ static void __exit hip_cleanup(void)
 #endif
 
 	/* disable hooks to call our code */
-	//HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
 	HIP_INVALIDATE(hip_unknown_spi);

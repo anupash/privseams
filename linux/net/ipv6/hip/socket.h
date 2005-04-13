@@ -1,15 +1,13 @@
 #ifndef HIP_SOCKET_H
 #define HIP_SOCKET_H
-#ifndef __KERNEL__
-#else
-
+#ifdef __KERNEL__
 #include <linux/types.h>
 #include <linux/net.h>
 #include <linux/socket.h>
 #include <linux/mm.h>
 #include <net/sock.h>
 #include <net/hip.h>
-#include <linux/net.h>
+#include <net/ipv6.h>
 #include <net/addrconf.h>
 
 #include "debug.h"

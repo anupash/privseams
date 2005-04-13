@@ -2,7 +2,7 @@
 #define HIP_OUTPUT_H
 
 #ifdef __KERNEL__
-#  include <linux/ipv6.h>
+#  include <net/ipv6.h>
 #  include <linux/skbuff.h>
 #  include <net/checksum.h>
 #  include <net/addrconf.h>

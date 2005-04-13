@@ -699,12 +699,10 @@ int hip_handle_peer_map_work_order(const struct in6_addr *hit,
 
 	/* a slight kludge: the hit is carried in the dst IP address
 	   field since it is not needed for anything */
-	hwo->destructor = hwo_default_destructor;
 	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, 
 				(rvs ? HIP_WO_SUBTYPE_ADDRVS : 
 				 (insert ? HIP_WO_SUBTYPE_ADDMAP : HIP_WO_SUBTYPE_DELMAP)),
 				ip, hit, 0, 0);
-
 	hip_insert_work_order(hwo);
 
  out_err:
