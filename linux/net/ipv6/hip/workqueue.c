@@ -504,8 +504,12 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 #endif
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
+#ifndef __KERNEL__
 		case HIP_WO_SUBTYPE_ADDHI:
+			HIP_DEBUG("Adding \n");
+			res = hip_wrap_handle_add_local_hi(job->msg);
 			break;
+#endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_DELHI:
 		case HIP_WO_SUBTYPE_FLUSHHIS:
 		case HIP_WO_SUBTYPE_NEWDH:

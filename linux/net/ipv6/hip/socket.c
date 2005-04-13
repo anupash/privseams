@@ -1170,7 +1170,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
 #if 0 /* XX FIXME: figure out socket handler - user daemon interaction */
 		/* XX TODO: check UID/GID permissions before adding */
-		err = hip_socket_add_local_hi(host_id, &lhi);
+		err = hip_wrap_add_local_hi(host_id, &lhi);
 		if (err == -EEXIST) {
 			HIP_INFO("Host id exists already, ignoring\n");
 			err = 0;
@@ -1650,32 +1650,6 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 	return err;
 }
 
-int hip_socket_handle_add_local_hi(const struct hip_common *input)
-{
-#ifdef CONFIG_HIP_USERSPACE
-		struct hip_work_order *hwo;
-		int err = 0;
-
-		hwo = hip_init_job(GFP_ATOMIC);
-		if (!hwo) {
-		        HIP_ERROR("Failed to insert hi work order (%d)\n",
-				  err);
-			err = -EFAULT;
-			goto out_err;
-		}			   
-
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_ADDHI, NULL, NULL, 0, 0);
-		hwo->destructor = hwo_default_destructor;
-		hwo->msg = input;
-		hip_insert_work_order(hwo);
-
- out_err:
-		return err;
-#else
-		return hip_handle_add_local_hi(input);
-#endif
-}
-
 /*
  * The socket options that do not need a return value.
  */
@@ -1716,7 +1690,7 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 	msg_type = hip_get_msg_type(msg);
 	switch(msg_type) {
 	case SO_HIP_ADD_LOCAL_HI:
-		err = hip_socket_handle_add_local_hi(msg);
+		err = hip_wrap_handle_add_local_hi(msg);
 		break;
 	case SO_HIP_DEL_LOCAL_HI:
 		err = hip_socket_handle_del_local_hi(msg);

@@ -207,6 +207,36 @@ int hip_add_host_id(struct hip_db_struct *db,
 	return err;
 }
 
+int hip_wrap_handle_add_local_hi(const struct hip_common *input)
+{
+#if defined(CONFIG_HIP_USERSPACE) && defined(__KERNEL__)
+		struct hip_work_order *hwo;
+		int err = 0;
+
+		hwo = hip_init_job(GFP_ATOMIC);
+		if (!hwo) {
+		        HIP_ERROR("Failed to insert hi work order (%d)\n",
+				  err);
+			err = -EFAULT;
+			goto out_err;
+		}			   
+
+		hwo->destructor = hwo_default_destructor;
+ 
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+					HIP_WO_SUBTYPE_ADDHI, NULL, NULL,
+					0, 0);
+                hwo->destructor = hwo_default_destructor;
+		hwo->msg = input;
+		hip_insert_work_order(hwo);
+
+ out_err:
+		return err;
+#else
+		return hip_handle_add_local_hi(input);
+#endif /* CONFIG_HIP_USERSPACE && __KERNEL__ */
+}
+
 #ifdef CONFIG_HIP_HI3
 /* 
  * i3 callbacks for trigger management
