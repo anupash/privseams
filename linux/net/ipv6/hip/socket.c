@@ -823,6 +823,8 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
 		HIP_ERROR("deleting of local host identity failed\n");
 		goto out_err;
 	}
+	HIP_DEBUG_HIT("removing associations from hadb by hit: ", &lhi.hit);
+	hip_remove_hadb_entries(&lhi.hit);
 	
 	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
 	
