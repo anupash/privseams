@@ -12,9 +12,7 @@
 #include "beet.h"
 #include "misc.h"
 #include "debug.h"
-
-// FIXME: hip_csum_send should be moved into its own file to make this
-// file kernel only.
+#include "preinput.h"
 
 #ifdef __KERNEL__
 /* Called by transport layer */

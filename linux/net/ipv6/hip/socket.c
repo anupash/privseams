@@ -699,19 +699,11 @@ int hip_handle_peer_map_work_order(const struct in6_addr *hit,
 
 	/* a slight kludge: the hit is carried in the dst IP address
 	   field since it is not needed for anything */
-	ipv6_addr_copy(&hwo->hdr.dst_addr, hit);
 	hwo->destructor = hwo_default_destructor;
-	
-	ipv6_addr_copy(&hwo->hdr.src_addr, ip);
-	hwo->hdr.type = HIP_WO_TYPE_MSG;
-	if (rvs)
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDRVS;
-	else {
-		if (insert)
-			hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDMAP;
-		else
-			hwo->hdr.subtype = HIP_WO_SUBTYPE_DELMAP;
-	}
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, 
+				(rvs ? HIP_WO_SUBTYPE_ADDRVS : 
+				 (insert ? HIP_WO_SUBTYPE_ADDMAP : HIP_WO_SUBTYPE_DELMAP)),
+				ip, hit, 0, 0);
 
 	hip_insert_work_order(hwo);
 
@@ -1671,11 +1663,10 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 			err = -EFAULT;
 			goto out_err;
 		}			   
+
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_ADDHI, NULL, NULL, 0, 0);
 		hwo->destructor = hwo_default_destructor;
-		memset(&hwo->hdr.src_addr, 0, sizeof(struct in6_addr));
-		memset(&hwo->hdr.dst_addr, 0, sizeof(struct in6_addr));
-		hwo->hdr.type = HIP_WO_TYPE_MSG;		
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_ADDHI;
+		hwo->msg = input;
 		hip_insert_work_order(hwo);
 
  out_err:

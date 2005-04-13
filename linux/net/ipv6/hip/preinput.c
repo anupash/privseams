@@ -6,7 +6,7 @@
  *
  * Returns: the checksum of the HIP header.
  */
-int hip_csum_verify(struct sk_buff *skb)
+static int hip_csum_verify(struct sk_buff *skb)
 {
 	struct hip_common *hip_common;
 	int len;
@@ -37,8 +37,8 @@ int hip_csum_verify(struct sk_buff *skb)
  * Returns: zero if the HIP message header was ok, or negative error value on
  *          failure
  */
-int hip_verify_network_header(struct hip_common *hip_common,
-			      struct sk_buff **skb)
+static int hip_verify_network_header(struct hip_common *hip_common,
+				     struct sk_buff **skb)
 {
 	int err = 0;
 	uint16_t csum;
@@ -115,10 +115,8 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	}
 
         /* Check checksum. */
-        /* jlu XXX: We should not write into received skbuffs! */
         csum = hip_common->checksum;
         hip_zero_msg_checksum(hip_common);
-	/* Interop with Julien: no htons here */
         if (hip_csum_verify(*skb) != csum) {
 	       HIP_ERROR("HIP checksum failed (0x%x). Should have been: 0x%x\n", 
 			 csum, ntohs(hip_csum_verify(*skb)) );
@@ -205,6 +203,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 {
         struct hip_common *hip_common;
         struct hip_work_order *hwo;
+	int len;
 	int err = 0;
 
 	/* See if there is at least the HIP header in the packet */
@@ -239,22 +238,30 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 		goto out_err;
 	}
 
+	len = hip_get_msg_total_len(hip_common);
+        hwo->msg = HIP_MALLOC(len, GFP_ATOMIC);
+	if (!hwo->msg) {
+		HIP_ERROR("No memory, dropping packet\n");
+		HIP_FREE(hwo);
+		err = -ENOMEM;
+		goto out_err;
+	}
+	
+	memcpy(hwo->msg, hip_common, len);
 	hwo->destructor = hip_hwo_input_destructor;
+	hwo->hdr.type = HIP_WO_TYPE_INCOMING;
 
 	/* should we do some early state processing now?
 	 * we could prevent further DoSsing by dropping
 	 * illegal packets right now.
 	 */
 
-	_HIP_DEBUG("Entering switch\n");
-	hwo->hdr.type = HIP_WO_TYPE_INCOMING;
-        hwo->msg = hip_common;
-
         /* We need to save the addresses because the actual input handlers
 	   may need them later */
         ipv6_addr_copy(&hwo->hdr.src_addr, &(*skb)->nh.ipv6h->saddr);
         ipv6_addr_copy(&hwo->hdr.dst_addr, &(*skb)->nh.ipv6h->daddr);
 
+	_HIP_DEBUG("Entering switch\n");
         switch(hip_get_msg_type(hip_common)) {
 	case HIP_I1:
 		HIP_DEBUG("Received HIP I1 packet\n");
@@ -297,7 +304,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
         hip_insert_work_order(hwo);
 
  out_err:
-	/* We must not use HIP_FREE_skb here... (worker thread releases) */
+	kfree_skb(*skb);
 	return 0;
 }
 

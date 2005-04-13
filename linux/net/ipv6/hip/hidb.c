@@ -207,6 +207,70 @@ int hip_add_host_id(struct hip_db_struct *db,
 	return err;
 }
 
+#ifdef CONFIG_HIP_HI3
+/* 
+ * i3 callbacks for trigger management
+ */
+static void constraint_failed(cl_trigger *t, void *data, void *fun_ctx) {
+	/* This should never occur if the infrastructure works */
+	HIP_ERROR("Trigger constraint failed\n");
+}
+
+static void trigger_inserted(cl_trigger *t, void *data, void *fun_ctx) {	
+	HIP_DEBUG("Trigger inserted\n");
+}
+
+static void trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
+	/* FIXME: A small delay before trying again? */
+	HIP_ERROR("Trigger failed, reinserting...\n");
+	
+	/* Reinsert trigger */
+	cl_insert_trigger(t, 0);
+}
+#endif
+
+#ifdef CONFIG_HIP_HI3
+static int insert_trigger(struct in6_addr *hit, 
+			  struct hip_host_id_entry *entry) {
+	ID id, ida;
+	cl_trigger *t1, *t2;
+	Key key;
+
+	HIP_ASSERT(entry);
+
+	/*
+	 * Create and insert triggers (id, ida), and (ida, R), respectively.
+	 * All triggers are r-constrained (right constrained)
+	 */
+	bzero(&id, ID_LEN);
+	memcpy(&id, hit, sizeof(hit));
+	get_random_bytes(id.x, ID_LEN);	
+
+	/* Note: ida will be updated as ida.key = h_r(id.key) */
+	t1 = cl_create_trigger_id(&id, ID_LEN_BITS, &ida,
+				  CL_TRIGGER_CFLAG_R_CONSTRAINT);
+	t2  = cl_create_trigger(&ida, ID_LEN_BITS, &key,
+				CL_TRIGGER_CFLAG_R_CONSTRAINT);
+
+	/* associate callbacks with the inserted trigger */
+	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_CONSTRAINT_FAILED,
+				     constraint_failed, NULL);
+	cl_register_trigger_callback(t2, CL_CBK_RECEIVE_PAYLOAD,
+				     hip_inbound, NULL);
+	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_INSERTED,
+				     trigger_inserted, NULL);
+	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_REFRESH_FAILED,
+				     trigger_failure, NULL);
+
+	/* Insert triggers */
+	cl_insert_trigger(t2, 0);
+	cl_insert_trigger(t1, 0);
+
+	entry->t1 = t1;
+	entry->t2 = t2;
+}
+#endif       
+
 /**
  * hip_handle_local_add_hi - handle adding of a localhost host identity
  * @input: contains the hi parameter in fqdn format (includes private key)
@@ -293,7 +357,11 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		err = -ENOENT;
 		goto out_err;
 	}
-	
+
+#ifdef CONFIG_HIP_HI3
+	insert_trigger(&rsa_lhi.hit, hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &rsa_lhi.hit));
+	insert_trigger(&dsa_lhi.hit, hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &dsa_lhi.hit));
+#endif
  out_err:
 	
 	return err;
@@ -311,7 +379,6 @@ int hip_add_localhost_id(const struct hip_lhi *lhi,
 {
 	return hip_add_host_id(&hip_local_hostid_db, lhi, host_id);
 }
-
 
 /**
  * hip_del_host_id - delete the given HI (network byte order) from the database.
@@ -352,6 +419,17 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 	return err;
 }
 
+/**
+ * hip_add_localhost_id - add a localhost id to the databases
+ * @lhi: the HIT of the host
+ * @host_id: the host id of the host
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_del_localhost_id(const struct hip_lhi *lhi)
+{
+	return hip_del_host_id(&hip_local_hostid_db, (struct hip_lhi *)lhi);
+}
 
 /**
  * hip_copy_any_locahost_hit - Copy to the the @target the first 

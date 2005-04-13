@@ -11,6 +11,7 @@
 #  include <net/hip.h>
 #else
 #  include <stdio.h>
+#endif
 
 #define HIP_INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_src, hwo_dst, hwo_arg1, hwo_arg2) \
 	do { \
@@ -21,8 +22,6 @@
 		work_order_hdr.arg1 = hwo_arg1; \
 		work_order_hdr.arg2 = hwo_arg2; \
 		} while(0)
-
-#endif
 
 #include "timer.h"
 #include "netlink.h" /* hip_netlink_* functions */

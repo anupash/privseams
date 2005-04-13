@@ -25,13 +25,22 @@
 #include "workqueue.h"
 #include "debug.h"
 #include "netdev.h"
+#ifdef CONFIG_HIP_HI3
+#include "i3_client_api.h"
+#endif
 
 struct hip_nl_handle nl_khipd;
 struct hip_nl_handle nl_ifaddr;
 time_t load_time;
 
 void usage() {
-     fprintf(stderr, "hipl usage\n");
+	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
+        fprintf(stderr, "Usage: hipd [options]\n\n");
+	fprintf(stderr, "  -f run in foreground\n");
+#ifdef CONFIG_HIP_HI3
+	fprintf(stderr, "  -3 <i3 client configuration file>\n");
+#endif
+	fprintf(stderr, "\n");
 }
 
 /*
@@ -40,21 +49,27 @@ void usage() {
  */
 void hip_exit(int signal) {
 	HIP_ERROR("Signal: %d\n", signal);
-//	hip_uninit_workqueue();
+#ifdef CONFIG_HIP_HI3
+	cl_exit();
+#endif
+	//hip_uninit_workqueue();
 #ifdef CONFIG_HIP_RVS
         hip_uninit_rvadb();
 #endif
-	//        hip_uninit_host_id_dbs();
-        //hip_uninit_hadb();
+	// hip_uninit_host_id_dbs();
+        // hip_uninit_hadb();
 	// hip_uninit_beetdb();
-//	rtnl_close(&rtnl);
-	//	hip_uninit_r1();
+	// rtnl_close(&rtnl);
+	// hip_uninit_r1();
 	exit(signal);
 }
 
 int main(int argc, char *argv[]) {
 	char ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
+#ifdef CONFIG_HIP_HI3
+	char *i3_config = NULL;
+#endif
 	fd_set read_fdset;
 	int foreground = 0;
 	int highest_descriptor;
@@ -64,17 +79,30 @@ int main(int argc, char *argv[]) {
 	struct hip_work_order ping;
 	
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, "f")) != -1) {
-		switch (ch) {
+	while ((ch = getopt(argc, argv, "f")) != -1) {		
+ 		switch (ch) {
 		case 'f':
 			foreground = 1;
 			break;
+#ifdef CONFIG_HIP_HI3
+		case '3':
+			i3_config = strdup(optarg);
+			break;
+#endif
 		case '?':
 		default:
 			usage();
 			return(0);
 		}
 	}
+
+#ifdef CONFIG_HIP_HI3
+	if (!i3_config) {
+		fprintf(stderr, "Please do pass a valid i3 configuration file.\n");
+		return 1;
+	}
+#endif
+	
 	
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground) {
@@ -140,6 +168,10 @@ int main(int argc, char *argv[]) {
 	
 	hip_msg_free(ping.msg);
 
+#ifdef CONFIG_HIP_HI3
+	cl_init(i3_config);
+#endif
+
 	/* Enter to the select-loop */
 	for (;;) {
 		struct hip_work_order *hwo;
@@ -153,8 +185,14 @@ int main(int argc, char *argv[]) {
 
 		HIP_DEBUG("select\n");
 		/* wait for socket activity */
+#ifndef CONFIG_HIP_HI3
 		if ((err = select((highest_descriptor + 1), &read_fdset, 
 				  NULL, NULL, &timeout)) < 0) {
+#else
+		if ((err = cl_select((highest_descriptor + 1), &read_fdset, 
+				     NULL, NULL, &timeout)) < 0) {
+
+#endif
 			HIP_INFO("select() error: %s.\n", strerror(errno));
 			
 		} else if (err == 0) { 

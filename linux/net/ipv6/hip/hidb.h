@@ -8,8 +8,11 @@
 #  include <net/hip.h>
 #  include "hip.h"
 #else
-
 #  include <sys/socket.h>
+#  ifdef CONFIG_HIP_HI3
+#     include "preinput.h"
+#     include "i3_client_api.h"
+#  endif
 
 typedef struct { } rwlock_t;
 #define RW_LOCK_UNLOCKED (rwlock_t) { }

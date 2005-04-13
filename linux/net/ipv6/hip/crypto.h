@@ -67,6 +67,7 @@ int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
 void hip_free_dh(DH *target);
 u16 hip_get_dh_size(u8 hip_dh_group_type);
+void get_random_bytes(void *buf, int n);
 #endif
 
 #endif /* HIP_CRYPTO_H */

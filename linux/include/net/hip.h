@@ -45,15 +45,11 @@ typedef uint16_t in_port_t;
 
 #else
 
-//#  include <linux/socket.h>
-//#  include <linux/types.h>
 #  include <netinet/in.h>
-//#  include <linux/time.h>
 #  include <sys/time.h>
 #  include <sys/ioctl.h>
 #  include <stdint.h>
-//#  include <linux/in6.h>
-#   include <stdint.h>
+#  include <stdint.h>
 
 typedef uint8_t   u8;
 typedef uint16_t  u16;
@@ -81,6 +77,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 		(t == 0x80));
 
 }
+
+#define HIPL_VERSION 0.2
 
 #define HIP_MAX_PACKET 2048
 #define HIP_MAX_NETLINK_PACKET 3072
@@ -790,8 +788,6 @@ struct hip_context
 	uint16_t keymat_index; /* KEYMAT offset */
 };
 
-//#ifdef __KERNEL__
-
 struct hip_packet_dh_sig
 {
 	struct hip_common *common; 
@@ -864,7 +860,6 @@ struct hip_spi_out_item
 	struct list_head peer_addr_list; /* Peer's IPv6 addresses */
 	struct in6_addr  preferred_address; /* check */
 };
-//#endif /* __KERNEL__ */
 
 struct hip_hadb_state
 {
@@ -940,7 +935,13 @@ struct hip_work_order {
 	void (*destructor)(struct hip_work_order *hwo);
 };
 
-//#ifdef __KERNEL__
+/* Do not move this before the definition of struct endpoint, as i3
+   headers refer to libinet6 headers which in turn require the
+   definition of the struct. */
+#ifdef CONFIG_HIP_HI3
+#   include "i3_client_api.h" 
+#endif
+
 struct hip_host_id_entry {
 /* this needs to be first (list_for_each_entry, list 
    head being of different type) */
@@ -950,6 +951,9 @@ struct hip_host_id_entry {
 	/* struct in_addr lsi; */
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
+#ifdef CONFIG_HIP_HI3
+	cl_trigger *t1, *t2;
+#endif
 };
 
 struct hip_eid_owner_info {
@@ -965,11 +969,8 @@ struct hip_eid_db_entry {
 };
 
 #define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200
-//#endif /* __KERNEL__ */
 
 /* Some default settings for HIPL */
-//#define HIP_DEFAULT_HIP_ENCR         HIP_ENCR_3DES  /* HIP transform in R1 */
-//#define HIP_DEFAULT_ESP_ENCR         HIP_ENCR_3DES  /* ESP transform in R1 */
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
 #endif /* _NET_HIP */
