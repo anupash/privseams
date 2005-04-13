@@ -127,6 +127,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_UNIT_TEST                        14
 #define SO_HIP_BOS                              15
 #define SO_HIP_GET_PEER_LIST                    16
+#define SO_HIP_NETLINK_DUMMY                    17
 
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 
@@ -929,7 +930,7 @@ struct hip_work_order_hdr {
 
 struct hip_work_order {
 	struct hip_work_order_hdr hdr;
-	struct hip_common *msg;
+	struct hip_common *msg; /* NOTE: reference only with &hwo->msg ! */
 	uint32_t seq;
 	struct list_head queue;
 	void (*destructor)(struct hip_work_order *hwo);

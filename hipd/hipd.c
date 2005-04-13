@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 	char *i3_config = NULL;
 #endif
 	fd_set read_fdset;
-	int foreground = 0;
+	int foreground = 1;
 	int highest_descriptor;
 	int s_net;
 	int err;
@@ -81,8 +81,8 @@ int main(int argc, char *argv[]) {
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "f")) != -1) {		
  		switch (ch) {
-		case 'f':
-			foreground = 1;
+		case 'd':
+			foreground = 0;
 			break;
 #ifdef CONFIG_HIP_HI3
 		case '3':
@@ -136,9 +136,9 @@ int main(int argc, char *argv[]) {
 		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
 		return(1);
 	}
-
+	
 	highest_descriptor = nl_khipd.fd > highest_descriptor ? nl_khipd.fd : highest_descriptor;
-
+	
         if(!hip_init_r1()) {
 		HIP_ERROR("Unable to init R1.\n");
 		return(1);
@@ -175,50 +175,51 @@ int main(int argc, char *argv[]) {
 	/* Enter to the select-loop */
 	for (;;) {
 		struct hip_work_order *hwo;
-
+		
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
 		FD_SET(nl_khipd.fd, &read_fdset);
 		FD_SET(nl_ifaddr.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
-
+		
 		HIP_DEBUG("select\n");
 		/* wait for socket activity */
 #ifndef CONFIG_HIP_HI3
 		if ((err = select((highest_descriptor + 1), &read_fdset, 
 				  NULL, NULL, &timeout)) < 0) {
 #else
-		if ((err = cl_select((highest_descriptor + 1), &read_fdset, 
+	        if ((err = cl_select((highest_descriptor + 1), &read_fdset, 
 				     NULL, NULL, &timeout)) < 0) {
-
+				
 #endif
 			HIP_INFO("select() error: %s.\n", strerror(errno));
 			
 		} else if (err == 0) { 
-			/* idle cycle - select() timeout */               
-			
-               } else if (FD_ISSET(nl_khipd.fd, &read_fdset)) {
-                       /* Something on kernel daemon netlink socket, fetch it
-			  to the queue */
-                       hip_netlink_receive(&nl_khipd,
-					   hip_netlink_receive_workorder,
-					   NULL);
- 
-               } else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
-                       /* Something on IF and address event netlink socket,
-			  fetch it. */
-                       hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
+				/* idle cycle - select() timeout */               
+				
+		} else if (FD_ISSET(nl_khipd.fd, &read_fdset)) {
+				/* Something on kernel daemon netlink socket, fetch it
+				   to the queue */
+			hip_netlink_receive(&nl_khipd,
+					    hip_netlink_receive_workorder,
+					    NULL);
+				
+		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
+				/* Something on IF and address event netlink socket,
+				   fetch it. */
+			hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}
-
+			
 		while (hwo = hip_get_work_order()) {
 			HIP_DEBUG("Processing work order\n");
 			hip_do_work(hwo);
 		}
+		
+		}
+		/* Never enters here */
+		return 1;
+	
 	}
-
-	/* Never enters here */
-	return (1);
-}

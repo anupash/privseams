@@ -70,6 +70,8 @@ int hip_netlink_receive(struct hip_nl_handle *nl,
 	int msg_len, status;
 	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
+	HIP_DEBUG("Received a netlink message\n");
+
         memset(&nladdr, 0, sizeof(nladdr));
         nladdr.nl_family = AF_NETLINK;
         nladdr.nl_pid = 0;
@@ -320,9 +322,26 @@ int hip_netlink_send(struct hip_work_order *hwo)
 {
 	struct hip_work_order *h;
 	struct nlmsghdr *nlh;
+	struct hip_common *dummy = NULL;
 	int msg_len, ret;
 
-	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
+	HIP_DEBUG("Sending a netlink message\n");
+
+	/* No message: allocate memory and create a dummy message */
+	if (!hwo->msg) {
+		/* assert: hip_insert_work_order frees this memory */
+		dummy = hip_msg_alloc();
+		if (!dummy) {
+			return -1;
+		}
+		if (!hip_build_netlink_dummy_header(dummy)) {
+			return -1;
+		}
+		hwo->msg = dummy;
+	}
+
+	msg_len = hip_get_msg_total_len((const struct hip_common *)hwo->msg);
+
 	nlh = (struct nlmsghdr *)
 	  HIP_MALLOC(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)),
 		     0);
@@ -338,8 +357,8 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	
 	/* Fill in the netlink message payload */
 	h = (struct hip_work_order *)NLMSG_DATA(nlh);
-	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
-	memcpy(&h->msg, hwo->msg, msg_len);
+	memcpy(&h, hwo, sizeof(struct hip_work_order_hdr));
+	memcpy(h->msg, hwo->msg, msg_len);
 
         ret = hip_netlink_send_buf(&nl_khipd, (char*)nlh, nlh->nlmsg_len) <= 0;
 	HIP_FREE(nlh);

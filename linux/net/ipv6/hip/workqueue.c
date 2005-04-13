@@ -473,7 +473,7 @@ int hip_do_work(struct hip_work_order *job)
 #ifndef __KERNEL__
 		case HIP_WO_SUBTYPE_ADDHI:
 			HIP_DEBUG("Adding \n");
-			res = hip_wrap_handle_add_local_hi(job->msg);
+			res = hip_handle_add_local_hi(job->msg);
 			break;
 #endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
@@ -496,9 +496,5 @@ int hip_do_work(struct hip_work_order *job)
 		hip_free_work_order(job);
 	return res;
 }
-
-
-
-
 
 

@@ -754,7 +754,7 @@ static int hip_add_peer_map(const struct hip_common *input, int rvs)
  */
 int hip_socket_handle_rvs(const struct hip_common *input)
 {
-	return (input, 1);
+	return hip_add_peer_map(input, 1);
 }
 
 
@@ -1684,6 +1684,8 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 		HIP_ERROR("HIP socket option was invalid\n");
 		goto out_err;
 	}
+
+	HIP_DEBUG("AIII: %d\n", hip_get_msg_total_len(msg));
 
 	msg_type = hip_get_msg_type(msg);
 	switch(msg_type) {

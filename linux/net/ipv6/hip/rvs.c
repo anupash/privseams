@@ -388,7 +388,8 @@ int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
 	return j;
 }
 
-int hip_relay_i1(struct sk_buff *skb, HIP_RVA *rva)
+int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
+		 struct in6_addr *i1_daddr, HIP_RVA *rva)
 {
 	struct in6_addr *final_dst;
 	struct in6_addr *original_src;
@@ -406,8 +407,8 @@ int hip_relay_i1(struct sk_buff *skb, HIP_RVA *rva)
 	}
 
 	
-	old_i1 = (struct hip_common*) skb->h.raw;
-	original_src = &skb->nh.ipv6h->saddr;
+	old_i1 = i1;
+	original_src = i1_saddr;
 
 	new_i1 = hip_msg_alloc();
 	if (!new_i1) {
@@ -448,7 +449,7 @@ int hip_relay_i1(struct sk_buff *skb, HIP_RVA *rva)
 		HIP_ERROR("Sending the modified I1 (RVS) failed: %d\n",err);
 	else {
 		hip_in6_ntop(final_dst, ipv6dst);
-		HIP_INFO("Relayed I1 to %s\n",ipv6dst);
+		HIP_INFO("Relayed I1 to %s\n", ipv6dst);
 	}
 		
  out:

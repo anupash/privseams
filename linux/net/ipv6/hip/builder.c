@@ -2367,3 +2367,8 @@ uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht)
 	HIP_DEBUG("flags=0x%x\n", flags);
 	return flags;
 }
+
+int hip_build_netlink_dummy_header(struct hip_common *msg)
+{
+	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
+}

@@ -20,7 +20,7 @@ static int hip_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh, int *err)
 	hwo = (struct hip_work_order *)NLMSG_DATA(nlh);
 	memcpy(result, hwo, sizeof(struct hip_work_order_hdr));
 
-	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);		
+	msg_len = hip_get_msg_total_len((struct hip_common *) &hwo->msg);
 	result->seq = nlh->nlmsg_seq;
 	result->msg = HIP_MALLOC(msg_len, GFP_KERNEL);
 	if (!result->msg) {
@@ -98,12 +98,13 @@ void hip_netlink_close(void) {
 		sock_release(nl_sk->sk_socket);
 }
 
-int hip_netlink_send(struct hip_work_order *hwo) 
+int hip_netlink_send(struct hip_work_order *hwo)
 {
 	struct hip_work_order_hdr *h;
 	struct hip_common *msg;
 	struct sk_buff *skb = NULL;
 	struct nlmsghdr *nlh;
+	struct hip_common *dummy = NULL;
 	int msg_len;
 
 	if (!nl_sk) {
@@ -116,21 +117,39 @@ int hip_netlink_send(struct hip_work_order *hwo)
 		return -1;
 	}
 
-	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
-	skb = alloc_skb(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)), GFP_KERNEL);	
+	/* No message: allocate memory and create a dummy message */
+	if (!hwo->msg) {
+		/* assert: hip_insert_work_order frees this memory */
+		dummy = hip_msg_alloc();
+		if (!dummy) {
+			return -1;
+		}
+		if (hip_build_netlink_dummy_header(dummy)) {
+			return -1;
+		}
+		hwo->msg = dummy;
+	}
+
+	msg_len = hip_get_msg_total_len(hwo->msg);
+
+	skb = alloc_skb(NLMSG_SPACE(msg_len +
+				    sizeof(struct hip_work_order_hdr)),
+			GFP_KERNEL);	
 	if (!skb) {
 		HIP_ERROR("Out of memory.\n");
 		return -1;
 	}
      
 	nlh = (struct nlmsghdr *)skb_put(skb, NLMSG_SPACE(0));
-	nlh->nlmsg_len = NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr));
+	nlh->nlmsg_len = NLMSG_SPACE(msg_len +
+				     sizeof(struct hip_work_order_hdr));
 	nlh->nlmsg_pid = 0; /* from kernel */
 	nlh->nlmsg_flags = 0;
 	nlh->nlmsg_seq = hwo->seq;
 	
 	/* Copy the payload */
-	h = (struct hip_work_order_hdr *)skb_put(skb, sizeof(struct hip_work_order_hdr));
+	h = (struct hip_work_order_hdr *)
+		skb_put(skb, sizeof(struct hip_work_order_hdr));
 	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
 	msg = (struct hip_common *)skb_put(skb, msg_len);
 	memcpy(msg, hwo->msg, msg_len);
@@ -146,7 +165,8 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	HIP_DEBUG("Sent %d bytes to PID %d\n", msg_len, hipd_pid);
 
 	/* Kernel frees the skb */
-	return 1;
+
+	return 0;
 }
 
 

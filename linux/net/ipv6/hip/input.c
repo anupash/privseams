@@ -2422,7 +2422,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
  			   cases.
  			*/
 
- 			err = hip_relay_i1(hip_i1, rva);
+ 			err = hip_relay_i1(hip_i1, i1_saddr, i1_daddr, rva);
  			if (err)
  				HIP_ERROR("Relaying I1 failed\n");
  			else
