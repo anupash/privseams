@@ -21,11 +21,11 @@
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
 {
 	struct hip_work_order *hwo;
-	struct nlmsghdr *tail = n + len;
+	struct nlmsghdr *tail = (struct nlmsghdr *) (((char *) n) + len);
 	int msg_len, ret;
 	
 	while (n < tail) {
-		hwo = (struct hip_work_order *)malloc(sizeof(struct hip_work_order));
+		hwo = (struct hip_work_order *)hip_init_job(GFP_KERNEL);
 		if (!hwo) {
 			HIP_ERROR("Out of memory.\n");
 			return -1;
@@ -33,7 +33,7 @@ int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
 
 		memcpy(hwo, NLMSG_DATA(n), sizeof(struct hip_work_order_hdr));
 		msg_len = hip_get_msg_total_len((const struct hip_common *)&((struct hip_work_order *)NLMSG_DATA(n))->msg);	
-		hwo->msg = (struct hip_common *)malloc(msg_len);
+		hwo->msg = (struct hip_common *) HIP_MALLOC(msg_len, 0);
 		if (!hwo->msg) {
 			HIP_ERROR("Out of memory.\n");
 			free(hwo);
@@ -171,9 +171,8 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
                 n->nlmsg_flags |= NLM_F_ACK;
 
         status = sendmsg(nl->fd, &msg, 0);
-
         if (status < 0) {
-                perror("Cannot talk to rtnetlink");
+                HIP_PERROR("Cannot talk to rtnetlink");
                 return -1;
         }
 
@@ -188,7 +187,7 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
                 if (status < 0) {
                         if (errno == EINTR)
                                 continue;
-                        perror("OVERRUN");
+                        HIP_PERROR("OVERRUN");
                         continue;
                 }
 		if (status == 0) {
@@ -196,7 +195,8 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
                         return -1;
                 }
                 if (msg.msg_namelen != sizeof(nladdr)) {
-                        HIP_ERROR("sender address length == %d\n", msg.msg_namelen);
+                        HIP_ERROR("sender address length == %d\n",
+				  msg.msg_namelen);
                         exit(1);
                 }
                 for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
@@ -227,7 +227,8 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
                         }
 
                         if (h->nlmsg_type == NLMSG_ERROR) {
-                                struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
+                                struct nlmsgerr *err = 
+					(struct nlmsgerr*)NLMSG_DATA(h);
                                 if (l < sizeof(struct nlmsgerr)) {
                                         HIP_ERROR("Truncated\n");
                                 } else {
@@ -237,7 +238,7 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
                                                         memcpy(answer, h, h->nlmsg_len);
                                                 return 0;
                                         }
-                                        perror("RTNETLINK answers");
+                                        HIP_PERROR("RTNETLINK answers");
                                 }
                                 return -1;
                         }
@@ -260,7 +261,6 @@ static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer
                         exit(1);
                 }
         }
-	HIP_DEBUG("Cheng\n");
 }
 
 /*
@@ -283,19 +283,21 @@ int hip_netlink_talk(struct hip_nl_handle *nl,
 	memcpy(tx.msg, req->msg, msg_len);
 
 	/* Fill the header */
-	tx.n.nlmsg_len = NLMSG_LENGTH(msg_len + sizeof(struct hip_work_order_hdr));
+	tx.n.nlmsg_len = NLMSG_LENGTH(msg_len +
+				      sizeof(struct hip_work_order_hdr));
         tx.n.nlmsg_pid = getpid(); /* self pid */
         tx.n.nlmsg_flags = 0;
 
 	/* Let the talk insert any non-responses to our queue so that
            they will be processed later */
-	if (netlink_talk(nl, &tx.n, 0, 0, &rx.n, hip_netlink_receive_workorder, NULL) < 0) {
+	if (netlink_talk(nl, &tx.n, 0, 0, &rx.n,
+			 hip_netlink_receive_workorder, NULL) < 0) {
 		HIP_ERROR("Unable to talk over netlink.\n");
 		return -1;
 	}
 	
 	msg_len = hip_get_msg_total_len((const struct hip_common *)rx.msg);
-	resp->msg = (struct hip_common *)malloc(msg_len);
+	resp->msg = (struct hip_common *) HIP_MALLOC(msg_len, 0);
 	if (!resp->msg) {
 		HIP_ERROR("Out of memory!\n");
 		return -1;
@@ -328,7 +330,9 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	int msg_len, ret;
 
 	msg_len = hip_get_msg_total_len((const struct hip_common *)&hwo->msg);
-	nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)));
+	nlh = (struct nlmsghdr *)
+	  HIP_MALLOC(NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr)),
+		     0);
 	if (!nlh) {
 		HIP_ERROR("Out of memory.\n");
 		return -1;
@@ -359,17 +363,17 @@ int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int prot
 
         rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
         if (rth->fd < 0) {
-                perror("Cannot open a netlink socket");
+                HIP_PERROR("Cannot open a netlink socket");
                 return -1;
         }
 
         if (setsockopt(rth->fd,SOL_SOCKET,SO_SNDBUF,&sndbuf,sizeof(sndbuf)) < 0) {
-                perror("SO_SNDBUF");
+                HIP_PERROR("SO_SNDBUF");
                 return -1;
         }
 
         if (setsockopt(rth->fd,SOL_SOCKET,SO_RCVBUF,&rcvbuf,sizeof(rcvbuf)) < 0) {
-                perror("SO_RCVBUF");
+                HIP_PERROR("SO_RCVBUF");
                 return -1;
         }
 
@@ -378,12 +382,12 @@ int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int prot
         rth->local.nl_groups = subscriptions;
 
         if (bind(rth->fd, (struct sockaddr*)&rth->local, sizeof(rth->local)) < 0) {
-                perror("Cannot bind a netlink socket");
+                HIP_PERROR("Cannot bind a netlink socket");
                 return -1;
         }
         addr_len = sizeof(rth->local);
         if (getsockname(rth->fd, (struct sockaddr*)&rth->local, &addr_len) < 0) {
-                perror("Cannot getsockname");
+                HIP_PERROR("Cannot getsockname");
                 return -1;
         }
         if (addr_len != sizeof(rth->local)) {
