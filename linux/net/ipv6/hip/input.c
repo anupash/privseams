@@ -733,8 +733,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   function. Now, begin to build I2 piece by piece. */
 
 	/* Delete old SPDs and SAs, if present */
-	hip_hadb_delete_inbound_spis(entry);
-	hip_hadb_delete_outbound_spis(entry);
+	hip_hadb_delete_inbound_spi(entry, 0);
+	hip_hadb_delete_outbound_spi(entry, 0);
 
 	/* create I2 */
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
@@ -1900,8 +1900,8 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 
 	/* If we have old SAs with these HITs delete them */
-	hip_hadb_delete_inbound_spis(entry);
-	hip_hadb_delete_outbound_spis(entry);
+	hip_hadb_delete_inbound_spi(entry, 0);
+	hip_hadb_delete_outbound_spi(entry, 0);
 
 	{
 		struct hip_esp_transform *esp_tf;
@@ -1964,8 +1964,8 @@ int hip_handle_i2(struct hip_common *i2,
 		if (err == -EEXIST)
 			HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
 				  spi_in);
-          hip_hadb_delete_inbound_spis(entry);
-          hip_hadb_delete_outbound_spis(entry);
+          hip_hadb_delete_inbound_spi(entry, 0);
+          hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
 	}
 	/* XXX: Check -EAGAIN */
@@ -1987,8 +1987,8 @@ int hip_handle_i2(struct hip_common *i2,
 	} else if (err) {
 		HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:dst (err=%d)\n", err);
 		/* delete all IPsec related SPD/SA for this entry */
-          hip_hadb_delete_inbound_spis(entry);
-          hip_hadb_delete_outbound_spis(entry);
+          hip_hadb_delete_inbound_spi(entry, 0);
+          hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
 	}
 	/* XXX: Check if err = -EAGAIN... */

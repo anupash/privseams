@@ -279,8 +279,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	HIP_DEBUG("ha=0x%p\n", ha);
 
 	/* Delete SAs */
-	hip_hadb_delete_inbound_spis(ha);
-	hip_hadb_delete_outbound_spis(ha);
+	hip_hadb_delete_inbound_spi(ha, 0);
+	hip_hadb_delete_outbound_spi(ha, 0);
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
 	HIP_FREE(ha);
@@ -724,8 +724,8 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 	}
 
 	if (ipv6_addr_any(addr)) {
-		hip_hadb_delete_inbound_spis(ha);
-		hip_hadb_delete_outbound_spis(ha);
+		hip_hadb_delete_inbound_spi(ha, 0);
+		hip_hadb_delete_outbound_spi(ha, 0);
 		hip_hadb_remove_state_hit(ha);
 		/* by now, if everything is according to plans, the refcnt
 		   should be 1 */
@@ -888,15 +888,15 @@ int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data)
 }
 
 
+/* Delete given inbound SPI, and all if spi == 0 */
 void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_in_item *item, *tmp;
 
 	/* assumes locked entry */
-
 	HIP_DEBUG("SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if (item->spi == spi) {
+		if (!spi || item->spi == spi) {
 			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
 			HIP_ERROR("remove SPI from HIT-SPI HT\n");
@@ -910,25 +910,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
         }
 }
 
-/* delete all entry's inbound SAs */
-void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
-{
-	struct hip_spi_in_item *item, *tmp;
-
-	/* assumes locked entry */
-	_HIP_DEBUG("entry=0x%p\n", entry);
-        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
-			  item->spi, item->new_spi, item);
-		HIP_DEBUG("remove SPI from HIT-SPI HT\n");
-		hip_hadb_remove_hs(item->spi);
-		hip_delete_sa(item->spi, &entry->hit_our);
-		hip_delete_sa(item->new_spi, &entry->hit_our);
-		list_del(&item->list);
-		HIP_FREE(item);
-        }
-}
-
+/* Delete given outbound SPI, and all if spi == 0 */
 void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_out_item *item, *tmp;
@@ -936,7 +918,7 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 	/* assumes locked entry */
 	HIP_DEBUG("entry=0x%p SPI=0x%x\n", entry, spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		if (item->spi == spi) {
+		if (!spi || item->spi == spi) {
 			struct hip_peer_addr_list_item *addr_item, *addr_tmp;
 
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
@@ -953,33 +935,6 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 		}
         }
 }
-
-
-/* delete all entry's outbound SAs */
-void hip_hadb_delete_outbound_spis(hip_ha_t *entry)
-{
-	struct hip_spi_out_item *spi_out, *spi_tmp;
-
-	/* assumes locked entry */
-
-	_HIP_DEBUG("entry=0x%p\n", entry);
-        list_for_each_entry_safe(spi_out, spi_tmp, &entry->spis_out, list) {
-		struct hip_peer_addr_list_item *addr_item, *addr_tmp;
-
-		HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, spi_out=0x%p\n",
-			  spi_out->spi, spi_out->new_spi, spi_out);
-		hip_delete_sa(spi_out->spi, &entry->hit_peer);
-		hip_delete_sa(spi_out->new_spi, &entry->hit_peer);
-		/* delete peer's addresses */
-		list_for_each_entry_safe(addr_item, addr_tmp, &spi_out->peer_addr_list, list) {
-			list_del(&addr_item->list);
-			HIP_FREE(addr_item);
-		}
-		list_del(&spi_out->list);
-		HIP_FREE(spi_out);
-        }
-}
-
 
 /* Set the ifindex of given SPI */
 /* assumes locked HA */
