@@ -31,14 +31,14 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 	HIP_DEBUG("\n");
 
 	/* TODO: we must use the same algorithm that is used in the dsthit */
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
+	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
 		HIP_ERROR("Out HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
 	}
 	HIP_DEBUG_HIT("DEFAULT ALGO HIT: ", &hit_our);
 #if 0
-	if (hip_copy_any_localhost_hit(&hit_our) < 0) {
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_ANY_ALGO) < 0) {
 		HIP_ERROR("Out HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
@@ -136,7 +136,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	   and extract the public key from the private key. The public key is
  	   needed for writing the host id parameter in R1. */
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
  	if (!host_id_private) {
  		HIP_ERROR("Could not acquire localhost host id\n");
  		goto out_err;

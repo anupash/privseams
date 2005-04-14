@@ -68,9 +68,6 @@ struct hip_hadb_multi {
 #define HIP_ARG_SPI                 0x000002
 #define HIP_HADB_ACCESS_ARGS        (HIP_ARG_HIT | HIP_ARG_SPI)
 
-#define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
-#define HIP_DB_PEER_HID    (&hip_peer_hostid_db)
-
 #define HIP_READ_LOCK_DB(db) do { \
 	HIP_START_TIMER(KMM_SPINLOCK);\
         read_lock_irqsave(&(db)->db_lock,lf); \
@@ -93,21 +90,18 @@ struct hip_hadb_multi {
 
 typedef struct hip_host_id HIP_HID;
 
-// host id functions
-int hip_get_any_local_hit(struct in6_addr *dst, uint8_t algo);
+/* Use these to point your target while accessing a database */
+#define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
+#define HIP_DB_PEER_HID    (&hip_peer_hostid_db)
+
+int hip_get_any_localhost_hit(struct in6_addr *target, int algo);
+struct hip_host_id *hip_get_any_localhost_public_key(int algo);
+struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
+				    struct hip_lhi *lhi, int algo);
 int hip_add_host_id(struct hip_db_struct *db,const struct hip_lhi *lhi,
 		    const struct hip_host_id *host_id);
-int hip_add_localhost_id(const struct hip_lhi *lhi,
-			 const struct hip_host_id *host_id);
-int hip_add_peer_info(struct in6_addr *hit, struct in6_addr *addr);
-int hip_copy_any_localhost_hit(struct in6_addr *target);
-int hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo);
-struct hip_host_id *hip_get_any_localhost_host_id(int);
-int hip_insert_any_localhost_public_key(uint8_t *target);
-struct hip_host_id *hip_get_any_localhost_public_key(int);
 int hip_hit_is_our(struct in6_addr *hit);
-struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
-				    struct hip_lhi *lhi);
+
 void hip_uninit_host_id_dbs(void);
 
 extern struct hip_db_struct hip_peer_hostid_db;

@@ -706,7 +706,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		goto out_err;
 	}
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
@@ -1536,7 +1536,7 @@ int hip_create_r2(struct hip_context *ctx,
 		}
 	}
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
@@ -2210,7 +2210,7 @@ int hip_handle_r2(struct hip_common *r2,
  	peer_lhi.anonymous = 0;
  	ipv6_addr_copy(&peer_lhi.hit, &r2->hits);
 
- 	peer_id = hip_get_host_id(HIP_DB_PEER_HID, &peer_lhi);
+ 	peer_id = hip_get_host_id(HIP_DB_PEER_HID, &peer_lhi, HIP_ANY_ALGO);
  	if (!peer_id) {
  		HIP_ERROR("Unknown peer (no identity found)\n");
  		err = -EINVAL;

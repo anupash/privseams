@@ -63,28 +63,9 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
  * @lhi: the local host id to be searched 
  *
  * If lhi is null, finds the first used host id. 
+ * If algo is HIP_ANY_ALGO, ignore algore comparison.
  *
  * Returns: %NULL, if failed or non-NULL if succeeded.
- */
-static 
-struct hip_host_id_entry *hip_get_hostid_entry_by_lhi(struct hip_db_struct *db,
-						      const struct hip_lhi *lhi)
-{
-	struct hip_host_id_entry *id_entry;
-
-	/* should (id->used == used) test be binaric? */
-
-	list_for_each_entry(id_entry,&db->db_head,next) {
-		if ((lhi == NULL || hip_lhi_are_equal(&id_entry->lhi, lhi)))
-			return id_entry;
-	}
-
-	return NULL;
-}
-
-/**
- *
- *
  */
 static
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
@@ -93,9 +74,9 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 {
 	struct hip_host_id_entry *id_entry;
 
-	list_for_each_entry(id_entry,&db->db_head,next) {
-		if ((lhi == NULL || hip_lhi_are_equal(&id_entry->lhi, lhi)) &&
-		    (hip_get_host_id_algo(*(&id_entry->host_id))==algo))
+	list_for_each_entry(id_entry, &db->db_head, next) {
+	  if ((lhi == NULL || hip_lhi_are_equal(&id_entry->lhi, lhi)) &&
+	      (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
 			return id_entry;
 	}
 	return NULL;
@@ -183,7 +164,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	HIP_WRITE_LOCK_DB(db);
 
 	/* check for duplicates */
-	old_entry = hip_get_hostid_entry_by_lhi(db, lhi);
+	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, lhi, HIP_ANY_ALGO);
 	if (old_entry != NULL) {
 		HIP_WRITE_UNLOCK_DB(db);
 		HIP_ERROR("Trying to add duplicate lhi\n");
@@ -206,35 +187,6 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	return err;
 }
-
-#if defined(CONFIG_HIP_USERSPACE) && defined(__KERNEL__)
-int hip_wrap_handle_add_local_hi(const struct hip_common *input)
-{
-		struct hip_work_order *hwo;
-		int err = 0;
-
-		HIP_DEBUG("Sending new HI to userspace daemon\n");
-		hwo = hip_init_job(GFP_ATOMIC);
-		if (!hwo) {
-		        HIP_ERROR("Failed to insert hi work order (%d)\n",
-				  err);
-			err = -EFAULT;
-			goto out_err;
-		}			   
-
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
-					HIP_WO_SUBTYPE_ADDHI, NULL, NULL,
-					0, 0);
-		/* override the destructor; socket handler deletes the msg
-		   by itself */
-		hwo->destructor = NULL;
-		hwo->msg = (struct hip_common *) input;
-		hip_insert_work_order(hwo);
-
- out_err:
-		return err;
-}
-#endif /* CONFIG_HIP_USERSPACE && __KERNEL__ */
 
 #ifdef CONFIG_HIP_HI3
 /* 
@@ -360,14 +312,13 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	/* XX FIX: Note: currently the order of insertion of host ids makes a
 	   difference. */
-
-	err = hip_add_localhost_id(&rsa_lhi, rsa_host_identity);
+	err = hip_add_host_id(HIP_DB_LOCAL_HID, &rsa_lhi, rsa_host_identity);
 	if (err) {
 		HIP_ERROR("adding of local host identity failed\n");
 		goto out_err;
 	}
 
-	err = hip_add_localhost_id(&dsa_lhi, dsa_host_identity);
+	err = hip_add_host_id(HIP_DB_LOCAL_HID, &dsa_lhi, dsa_host_identity);
 	if (err) {
 		HIP_ERROR("adding of local host identity failed\n");
 		goto out_err;
@@ -378,8 +329,8 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	HIP_DEBUG("hip: Generating a new R1 now\n");
 	
         /* XX TODO: precreate R1s for both algorithms, not just the default */ 
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our,
-					       HIP_HI_DEFAULT_ALGO) < 0) {
+	if (hip_get_any_localhost_hit(&hit_our,
+				      HIP_HI_DEFAULT_ALGO) < 0) {
 		HIP_ERROR("Didn't find HIT for R1 precreation\n");
 		err = -EINVAL;
 		goto out_err;
@@ -404,19 +355,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 }
 
 /**
- * hip_add_localhost_id - add a localhost id to the databases
- * @lhi: the HIT of the host
- * @host_id: the host id of the host
- *
- * Returns: zero on success, or negative error value on failure
- */
-int hip_add_localhost_id(const struct hip_lhi *lhi,
-			 const struct hip_host_id *host_id)
-{
-	return hip_add_host_id(&hip_local_hostid_db, lhi, host_id);
-}
-
-/**
  * hip_del_host_id - delete the given HI (network byte order) from the database.
  * @db: Database from which to delete
  * @lhi: the HIT to be deleted from the database
@@ -435,7 +373,7 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 
 	HIP_WRITE_LOCK_DB(db);
 
-	id = hip_get_hostid_entry_by_lhi(db, lhi);
+	id = hip_get_hostid_entry_by_lhi_and_algo(db, lhi, HIP_ANY_ALGO);
 	if (id == NULL) {
 		HIP_WRITE_UNLOCK_DB(db);
 		HIP_ERROR("lhi not found\n");
@@ -468,35 +406,14 @@ int hip_del_localhost_id(const struct hip_lhi *lhi)
 }
 
 /**
- * hip_copy_any_locahost_hit - Copy to the the @target the first 
+ * hip_get_any_locahost_hit - Copy to the the @target the first 
  * local HIT that is found.
  * @target: Placeholder for the target
+ * @param algo the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
  *
  * Returns 0 if ok, and negative if failed.
  */
-int hip_copy_any_localhost_hit(struct in6_addr *target)
-{
-	struct hip_host_id_entry *entry;
-	int err = 0;
-	unsigned long lf;
-
-	HIP_READ_LOCK_DB(&hip_local_hostid_db);
-
-	entry = hip_get_hostid_entry_by_lhi(&hip_local_hostid_db,NULL);
-	if (!entry) {
-		err=-ENOENT;
-		goto out;
-	}
-
-	ipv6_addr_copy(target,&entry->lhi.hit);
-	err = 0;
-
- out:
-	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
-	return err;
-}
-
-int hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo)
+int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 {
 	struct hip_host_id_entry *entry;
 	int err = 0;
@@ -517,7 +434,6 @@ int hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo)
 	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
 	return err;
 }
-
 
 /**
  * hip_copy_different_localhost_hit - Copy HIT that is not the same as the
@@ -549,48 +465,6 @@ int hip_copy_different_localhost_hit(struct in6_addr *target,
 	return err;
 } 
 
-/* Get a LHI from given DB @db */
-/* @res must be previously allocated */
-/* Returns: 0 if a lhi was copied successfully to @res, < 0 otherwise. */
-int hip_get_any_hit(struct hip_db_struct *db, struct hip_lhi *res,
-		    uint8_t algo)
-{
-	struct hip_host_id_entry *entry;
-	unsigned long lf;
-
-	if (!res)
-		return -EINVAL;
-	if (list_empty(&db->db_head))
-		return -EINVAL;
-	
-	HIP_READ_LOCK_DB(db);
-
-	list_for_each_entry(entry, db->db_head.next, next) {
-		if (hip_get_host_id_algo(entry->host_id) == algo) {
-	                memcpy(res, &entry->lhi, sizeof(struct hip_lhi));
-			HIP_READ_UNLOCK_DB(db);
-			return 0;
-		}
-	}
-	return -EINVAL;
-}
-
-int hip_get_any_local_hit(struct in6_addr *dst, uint8_t algo)
-{
-	struct hip_lhi lhi;
-
-	if (!dst) {
-		HIP_ERROR("NULL dst\n");
-		return -EINVAL;
-	}
-	if (hip_get_any_hit(&hip_local_hostid_db, &lhi, algo) != 0) {
-		HIP_ERROR("Could not retrieve any local HIT\n");
-		return -ENOENT;
-	}
-	ipv6_addr_copy(dst, &lhi.hit);
-	return 0;
-}
-
 int hip_hit_is_our(struct in6_addr *hit)
 {
 	struct hip_host_id_entry *entry;
@@ -613,23 +487,20 @@ int hip_hit_is_our(struct in6_addr *hit)
 }
 
 /**
- * hip_get_host_id - Copies the host id into newly allocated memory
- * and returns it to the caller.
- * @db: Database
- * @lhi: HIT that is used as a database search key
+ * NOTE: Remember to free the host id structure after use.
  *
- * NOTE: Remember to free the returned host id structure.
- * This function should be only called by the HIP thread as it allocates
- * GFP_KERNEL memory. 
- * XXX: The memory that is allocated is 1024 bytes. If the key is longer,
+ * Returns pointer to newly allocated area that contains a localhost
+ * HI. %NULL is returned is problems are encountered. 
+ *
+ * NOTE: The memory that is allocated is 1024 bytes. If the key is longer,
  * we fail.
- * 
- * Returns hip_host_id structure, or %NULL, if the entry was not found.
+ *
+ * @param lhi HIT to match, if null, any.
+ * @param algo algorithm to match, if HIP_ANY_ALGO, any.
  */
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
-				    struct hip_lhi *lhi)
+				    struct hip_lhi *lhi, int algo)
 {
-
 	struct hip_host_id_entry *tmp;
 	struct hip_host_id *result;
 	unsigned long lf;
@@ -637,47 +508,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 
 	result = (struct hip_host_id *)HIP_MALLOC(1024, GFP_ATOMIC);
 	if (!result) {
-		HIP_ERROR("no memory\n");
-		return NULL;
-	}
-
-	memset(result, 0, 1024);
-
-	HIP_READ_LOCK_DB(db);
-
-	tmp = hip_get_hostid_entry_by_lhi(db, lhi);
-	if (!tmp) {
-		HIP_READ_UNLOCK_DB(db);
-		HIP_ERROR("No host id found\n");
-		return NULL;
-	}
-
-	t = hip_get_param_total_len(tmp->host_id);
-	if (t > 1024) {
-		HIP_READ_UNLOCK_DB(db);
-		HIP_FREE(result);
-		return NULL;
-	}
-
-	memcpy(result, tmp->host_id, t);
-
-	HIP_READ_UNLOCK_DB(db);
-
-	return result;
-}
-
-struct hip_host_id *hip_get_host_id_by_algo(struct hip_db_struct *db, 
-					    struct hip_lhi *lhi, int algo)
-{
-
-	struct hip_host_id_entry *tmp;
-	struct hip_host_id *result;
-	unsigned long lf;
-	int t;
-
-	result = (struct hip_host_id *)HIP_MALLOC(1024, GFP_ATOMIC);
-	if (!result) {
-		HIP_ERROR("no memory\n");
+		HIP_ERROR("Out of memory.\n");
 		return NULL;
 	}
 
@@ -714,13 +545,13 @@ struct hip_host_id *hip_get_host_id_by_algo(struct hip_db_struct *db,
  * Returns pointer to newly allocated area that contains a localhost
  * HI. %NULL is returned is problems are encountered. 
  */
-struct hip_host_id *hip_get_any_localhost_host_id(int algo)
+/*struct hip_host_id *hip_get_any_localhost_host_id(int algo)
 {
 	struct hip_host_id *result;
-	/* XX TODO: use the algo */
+	// XX TODO: use the algo
 	result = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL, algo);
 	return result;
-}
+}*/
 
 
 /**
@@ -742,7 +573,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	/* T could easily have been an int, since the compiler will
 	   probably add 3 alignment bytes here anyway. */
 
-	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL,HIP_HI_DSA);
+	tmp = hip_get_host_id(&hip_local_hostid_db,NULL,HIP_HI_DSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
@@ -812,7 +643,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	uint16_t dilen;
 	char *from, *to;
 
-	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL, HIP_HI_RSA);
+	tmp = hip_get_host_id(&hip_local_hostid_db,NULL, HIP_HI_RSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;

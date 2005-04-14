@@ -237,7 +237,7 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
 	if (!ipv6_addr_is_hit(hitd))
 		goto out;
 
-	if (hip_copy_any_localhost_hit(hits) < 0)
+	if (hip_get_any_localhost_hit(hits, HIP_ANY_ALGO) < 0)
 		goto out;
 
 	return 1;
@@ -272,8 +272,8 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 
 	if (ipv6_addr_any(&entry->hit_our)) {
 		/* No src HIT specified yet, fill one */
-		if (hip_get_any_local_hit(&entry->hit_our,
-					  HIP_HI_DEFAULT_ALGO) < 0) {
+		if (hip_get_any_localhost_hit(&entry->hit_our,
+					      HIP_HI_DEFAULT_ALGO) < 0) {
 			return 0;
 		}
 	}

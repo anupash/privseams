@@ -475,7 +475,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	}
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get our host identity. Can not sign data\n");
 		goto out_err;
@@ -841,7 +841,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	}
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get our host identity. Can not sign data\n");
 		goto out_err;
@@ -983,7 +983,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		}
 
 		/* Add SIGNATURE */
-		host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+		host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
 		if (!host_id_private) {
 			HIP_ERROR("Could not get own host identity. Can not sign data\n");
 			continue;
@@ -1152,7 +1152,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	}
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
@@ -1414,7 +1414,7 @@ int hip_receive_update(struct hip_common *msg,
 		peer_lhi.anonymous = 0;
 		memcpy(&peer_lhi.hit, &msg->hits, sizeof(struct in6_addr));
 		// FIXME: tkoponen, the following peer_id is not free'ed anywhere. Memory leak!
-		peer_id = hip_get_host_id(HIP_DB_PEER_HID, &peer_lhi);
+		peer_id = hip_get_host_id(HIP_DB_PEER_HID, &peer_lhi, HIP_ANY_ALGO);
 		if (!peer_id) {
 			HIP_ERROR("Unknown peer (no identity found)\n");
 			err = -EINVAL;
@@ -1692,7 +1692,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	}
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;

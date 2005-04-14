@@ -873,7 +873,7 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HIT */
-	if (hip_copy_any_localhost_hit(&hit_our) < 0) {
+	if (hip_get_any_localhost_hit(&hit_our, HIP_ANY_ALGO) < 0) {
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
@@ -887,7 +887,7 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HOST ID private key */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
@@ -1106,6 +1106,35 @@ int hip_socket_handle_unit_test(const struct hip_common *msg)
 
 	return err;
 }
+
+#if defined(CONFIG_HIP_USERSPACE) && defined(__KERNEL__)
+int hip_wrap_handle_add_local_hi(const struct hip_common *input)
+{
+		struct hip_work_order *hwo;
+		int err = 0;
+
+		HIP_DEBUG("Sending new HI to userspace daemon\n");
+		hwo = hip_init_job(GFP_ATOMIC);
+		if (!hwo) {
+		        HIP_ERROR("Failed to insert hi work order (%d)\n",
+				  err);
+			err = -EFAULT;
+			goto out_err;
+		}			   
+
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+					HIP_WO_SUBTYPE_ADDHI, NULL, NULL,
+					0, 0);
+		/* override the destructor; socket handler deletes the msg
+		   by itself */
+		hwo->destructor = NULL;
+		hwo->msg = (struct hip_common *) input;
+		hip_insert_work_order(hwo);
+
+ out_err:
+		return err;
+}
+#endif /* CONFIG_HIP_USERSPACE && __KERNEL__ */
 
 /*
  * This function is similar to hip_socket_handle_add_local_hi but there are
@@ -1533,7 +1562,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 	        memcpy(&(lhi.hit),&(entry->hit),sizeof(struct in6_addr));
 
 		/* Look up HOST ID */
-		peer_host_id = hip_get_host_id(HIP_DB_PEER_HID, &lhi);
+		peer_host_id = hip_get_host_id(HIP_DB_PEER_HID, &lhi, HIP_ANY_ALGO);
 		if (peer_host_id == NULL) {
 	                hip_in6_ntop(&(lhi.hit), buf);
 			HIP_DEBUG("Peer host id for hit (%s) not found!\n",
