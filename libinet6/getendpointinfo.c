@@ -167,7 +167,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
 	   port = rand();
   }
 
-  HIP_DEBUG("port=%d\n", port);
+  _HIP_DEBUG("port=%d\n", port);
   
   hip_build_user_hdr(msg, SO_HIP_SET_MY_EID, 0);
   
@@ -325,6 +325,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
  * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  * XX FIXME: grep for public / private word from the filename and
  * call either load_private or load_public correspondingly.
+ * Are application specified identities always anonymous?
  */
 int load_hip_endpoint_pem(const char *filename,
 			  struct endpoint **endpoint)
@@ -441,7 +442,7 @@ void free_endpointinfo(struct endpointinfo *res)
  */
 int get_localhost_endpointinfo(const char *basename,
 			       const char *servname,
-			       const struct endpointinfo *hints,
+			       struct endpointinfo *hints,
 			       struct endpointinfo **res)
 {
   int err = 0, algo = 0;
@@ -465,6 +466,10 @@ int get_localhost_endpointinfo(const char *basename,
     err = EEI_NONAME;
     goto out_err;
   }
+
+  /* select between anonymous/public HI based on the file name */
+  if(!findsubstring(basename, "_pub"))
+    hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
 
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
@@ -1303,11 +1308,6 @@ int getendpointinfo(const char *nodename, const char *servname,
       current->ei_next = new;
       current = new;
       
-      /* TODO: Are all the key files in /etc/hip/ pub HIs? what 
-	 about anonymous ones? 
-      */
-      //modified_hints.ei_flags |= HIP_ENDPOINT_FLAG_ANON;
-      
     }
     
     *res = first;
@@ -1334,7 +1334,7 @@ const char *gepi_strerror(int errcode)
 
 struct hip_lhi get_localhost_endpoint(const char *basename,
 			   const char *servname,
-			   const struct endpointinfo *hints,
+			   struct endpointinfo *hints,
 			   struct endpointinfo **res)
 {
   struct hip_lhi hit;
@@ -1351,7 +1351,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
 
   //*res = NULL;
 
-  HIP_DEBUG("get_localhost_endpoint()\n");
+  _HIP_DEBUG("get_localhost_endpoint()\n");
   HIP_ASSERT(hints);
 
   // XX TODO: check flags?
@@ -1362,6 +1362,10 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
     err = EEI_NONAME;
     goto out_err;
   }
+
+  /* select between anonymous/public HI based on the file name */
+  if(!findsubstring(basename, "_pub"))
+    hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
 
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
@@ -1533,9 +1537,9 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   initlist(&list);
   /* find key files from /etc/hosts */
   findkeyfiles(DEFAULT_CONFIG_DIR, &list);
-  HIP_DEBUG("LEN:%d\n",length(&list));
+  _HIP_DEBUG("LEN:%d\n",length(&list));
   for(i=0; i<length(&list); i++) {
-    HIP_DEBUG("%s\n",getitem(&list,i));
+    _HIP_DEBUG("%s\n",getitem(&list,i));
     filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
       strlen(getitem(&list,i)) + 1;
     
@@ -1555,7 +1559,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     
     hit = get_localhost_endpoint(filenamebase, servname,
 				 &modified_hints, &new);
-    HIP_HEXDUMP("Got HIT: ", &hit.hit, sizeof(struct in6_addr));
+    _HIP_HEXDUMP("Got HIT: ", &hit.hit, sizeof(struct in6_addr));
 
     if (*adr == NULL) {
       *adr = malloc(sizeof(struct gaih_addrtuple));

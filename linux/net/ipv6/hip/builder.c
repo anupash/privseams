@@ -2276,7 +2276,7 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 	} else {
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
-	HIP_DEBUG("err=%d\n", err);
+	_HIP_DEBUG("err=%d\n", err);
 	return err;
 }
 

@@ -402,7 +402,7 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
     }									\
     if ((strlen(_name) == strlen(fqdn_str)) &&		         	\
       strcmp(_name, fqdn_str) == 0) {				        \
-      HIP_DEBUG("** match on line %d **\n", lineno);			\
+      _HIP_DEBUG("** match on line %d **\n", lineno);			\
       found_hits = 1;                                                   \
                                                                         \
       /* add every HIT to linked list */				\
@@ -767,7 +767,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
       _HIP_DEBUG(">> name == NULL\n");
       /* Find the local HIs here and add the HITs to atr */
       if (req->ai_flags & AI_HIP) {
-	HIP_DEBUG("AI_HIP set: get only local hits.\n");     
+	_HIP_DEBUG("AI_HIP set: get only local hits.\n");     
 	get_local_hits(service->name, pat);
       } 
       /* Transparent mode and !AI_HIP -> hits before ipv6 addresses? */
@@ -979,10 +979,10 @@ getaddrinfo (const char *name, const char *service,
   struct gaih_service gaih_service, *pservice;
   int hip_transparent_mode;
   
-  HIP_DEBUG("flags=%d\n", hints->ai_flags);
+  _HIP_DEBUG("flags=%d\n", hints->ai_flags);
   _HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
-    HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
+    _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   else
     _HIP_DEBUG("hints=NULL\n");
 
@@ -1018,7 +1018,7 @@ getaddrinfo (const char *name, const char *service,
 #else
   hip_transparent_mode = 0;
 #endif
-  HIP_DEBUG("transparent mode?:%d\n",hip_transparent_mode);
+  _HIP_DEBUG("transparent mode?:%d\n",hip_transparent_mode);
   if (service && service[0])
     {
       char *c;
