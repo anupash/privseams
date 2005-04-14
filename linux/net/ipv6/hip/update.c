@@ -1413,6 +1413,7 @@ int hip_receive_update(struct hip_common *msg,
 	if (signature) {
 		peer_lhi.anonymous = 0;
 		memcpy(&peer_lhi.hit, &msg->hits, sizeof(struct in6_addr));
+		// FIXME: tkoponen, the following peer_id is not free'ed anywhere. Memory leak!
 		peer_id = hip_get_host_id(HIP_DB_PEER_HID, &peer_lhi);
 		if (!peer_id) {
 			HIP_ERROR("Unknown peer (no identity found)\n");

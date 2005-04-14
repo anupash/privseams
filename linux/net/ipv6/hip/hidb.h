@@ -108,29 +108,7 @@ struct hip_host_id *hip_get_any_localhost_public_key(int);
 int hip_hit_is_our(struct in6_addr *hit);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
 				    struct hip_lhi *lhi);
-
 void hip_uninit_host_id_dbs(void);
-void hip_uninit_all_eid_db(void);
-int hip_db_set_eid(struct sockaddr_eid *eid,
-		   const struct hip_lhi *lhi,
-		   const struct hip_eid_owner_info *owner_info,
-		   int is_local);
-int hip_db_set_my_eid(struct sockaddr_eid *eid,
-		      const struct hip_lhi *lhi,
-		      const struct hip_eid_owner_info *owner_info);
-int hip_db_set_peer_eid(struct sockaddr_eid *eid,
-			const struct hip_lhi *lhi,
-			const struct hip_eid_owner_info *owner_info);
-int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
-			  struct hip_lhi *lhi,
-			  struct hip_eid_owner_info *owner_info,
-			  int is_local);
-int hip_db_get_peer_lhi_by_eid(const struct sockaddr_eid *eid,
-			  struct hip_lhi *lhi,
-			       struct hip_eid_owner_info *owner_info);
-int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
-			     struct hip_lhi *lhi,
-			     struct hip_eid_owner_info *owner_info);
 
 extern struct hip_db_struct hip_peer_hostid_db;
 extern struct hip_db_struct hip_local_hostid_db;

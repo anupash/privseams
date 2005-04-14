@@ -58,6 +58,27 @@ int hip_socket_mmap(struct file *file, struct socket *sock,
 		    struct vm_area_struct * vma);
 ssize_t hip_socket_sendpage(struct socket *sock, struct page *page, int offset,
 			    size_t size, int flags);
+void hip_uninit_all_eid_db(void);
+int hip_db_set_eid(struct sockaddr_eid *eid,
+		   const struct hip_lhi *lhi,
+		   const struct hip_eid_owner_info *owner_info,
+		   int is_local);
+int hip_db_set_my_eid(struct sockaddr_eid *eid,
+		      const struct hip_lhi *lhi,
+		      const struct hip_eid_owner_info *owner_info);
+int hip_db_set_peer_eid(struct sockaddr_eid *eid,
+			const struct hip_lhi *lhi,
+			const struct hip_eid_owner_info *owner_info);
+int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
+			  struct hip_lhi *lhi,
+			  struct hip_eid_owner_info *owner_info,
+			  int is_local);
+int hip_db_get_peer_lhi_by_eid(const struct sockaddr_eid *eid,
+			  struct hip_lhi *lhi,
+			       struct hip_eid_owner_info *owner_info);
+int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
+			     struct hip_lhi *lhi,
+			     struct hip_eid_owner_info *owner_info);
 
 #endif /* __KERNEL__ */
 #endif /* HIP_SOCKET_H */
