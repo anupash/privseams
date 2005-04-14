@@ -148,12 +148,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			     int is_preferred_addr);
 uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
 
-/***********************************************/
-int hip_proc_read_hadb_state(char *page, char **start, off_t off,
-			     int count, int *eof, void *data);
-int hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
-				  int count, int *eof, void *data);
-/**************** other useful utilities ******************/
+/* Utilities */
 void hip_hadb_delete_state(hip_ha_t *ha);
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 void hip_hadb_deactivate_hs_spi(uint32_t spi);

@@ -32,11 +32,6 @@ struct hip_kthread_data {
 
 struct hip_kthread_data hip_kthreads[NR_CPUS];
 
-#ifdef CONFIG_PROC_FS
-static struct proc_dir_entry *hip_proc_root = NULL;
-#endif /* CONFIG_PROC_FS */
-
-
 static void hip_err_handler(struct sk_buff *skb,
 			    struct inet6_skb_parm *opt,
 			    int type, int code, int offset,
@@ -764,77 +759,6 @@ int hip_register_xfrm_km_handler(void)
 		HIP_DEBUG("Registration of XFRM km handler failed, err=%d\n", err);
 	return err;
 }
-
-#ifdef CONFIG_PROC_FS
-/**
- * hip_init_procfs - initialize HIP procfs support
- *
- * Returns: 1 if procfs was initialized successfully, otherwise -1.
- */
-static int hip_init_procfs(void)
-{
-	HIP_DEBUG("procfs init\n");
-	hip_proc_root = create_proc_entry("hip", S_IFDIR, proc_net);
-	if (!hip_proc_root)
-		return -1;
-
-	/* todo: set file permission modes */
-	if (!create_proc_read_entry("lhi", 0, hip_proc_root,
-				    hip_proc_read_lhi, NULL))
-		goto out_err_root;
-	if (!create_proc_read_entry("sdb_state", 0, hip_proc_root,
-			       hip_proc_read_hadb_state, NULL))
-		goto out_err_lhi;
-	if (!create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
-			       hip_proc_read_hadb_peer_addrs, NULL))
-		goto out_err_sdb_state;
-#if 0
-	/* a simple way to trigger sending of UPDATE packet to all peers */
-	if (!create_proc_read_entry("send_update", 0, hip_proc_root,
-			       hip_proc_send_update, NULL))
-		goto out_err_peer_addrs;
-	/* for testing dummy NOTIFY packets */
-	if (!create_proc_read_entry("send_notify", 0, hip_proc_root,
-			       hip_proc_send_notify, NULL))
-		goto out_err_send_update;
-#endif
-
-	HIP_DEBUG("profcs init successful\n");
-	return 1;
-
-#if 0
- out_err_send_update:
-	remove_proc_entry("send_update", hip_proc_root);
- out_err_peer_addrs:
-	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
-#endif
- out_err_sdb_state:
-	remove_proc_entry("sdb_state", hip_proc_root);
- out_err_lhi:
-	remove_proc_entry("lhi", hip_proc_root);
- out_err_root:
-	remove_proc_entry("net/hip", NULL);
-
-	HIP_ERROR("profcs init failed\n");
-	return -1;
-}
-
-/**
- * hip_uninit_procfs - uninitialize HIP procfs support
- */
-static void hip_uninit_procfs(void)
-{
-	HIP_DEBUG("\n");
-	remove_proc_entry("lhi", hip_proc_root);
-	remove_proc_entry("sdb_state", hip_proc_root);
-	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
-#if 0
-	remove_proc_entry("send_update", hip_proc_root);
-	remove_proc_entry("send_notify", hip_proc_root);
-#endif
-	remove_proc_entry("hip", proc_net);
-}
-#endif /* CONFIG_PROC_FS */
 
 /* Init/uninit network interface event notifier. When a network event
    causes an event (e.g. it goes up or down, or is unregistered from

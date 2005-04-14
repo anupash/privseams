@@ -953,7 +953,7 @@ struct hip_host_id_entry {
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
 #ifdef CONFIG_HIP_HI3
-	cl_trigger *t1, *t2;
+	cl_trigger *t1, *t2; // HANDLER
 #endif
 };
 

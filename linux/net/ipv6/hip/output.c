@@ -75,8 +75,8 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 		goto out_err;
 	}
 
-	_HIP_DEBUG("hip: send I1 packet\n");	
-	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);
+	_HIP_DEBUG("hip: send I1 packet\n");
+	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);	// HANDLER
 
  out_err:
 	return err;
@@ -369,7 +369,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-	err = hip_csum_send(NULL, dst_addr, r1pkt);	
+	err = hip_csum_send(NULL, dst_addr, r1pkt);	// HANDLER
 	if (err) {
 		goto out_err;
 	}
@@ -434,7 +434,7 @@ void hip_send_notify(hip_ha_t *entry)
                 goto out_err;
         }
         HIP_DEBUG("Sending NOTIFY packet\n");
-	err = hip_csum_send(NULL, &daddr, notify_packet);
+	err = hip_csum_send(NULL, &daddr, notify_packet); // HANDLER
 
  out_err:
 	if (notify_packet)

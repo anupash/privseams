@@ -1101,7 +1101,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/* state E1: Receive R1, process. If successful,
 	   send I2 and go to E2. */
-	err = hip_csum_send(NULL, &daddr, i2);
+	err = hip_csum_send(NULL, &daddr, i2); // HANDLER
 	if (err) {
 		goto out_err;
 	}
@@ -1577,7 +1577,7 @@ int hip_create_r2(struct hip_context *ctx,
 
  	/* Send the packet */
 	HIP_DEBUG("R2 created successfully, sending\n");
-	err = hip_csum_send(NULL, i2_saddr, r2);
+	err = hip_csum_send(NULL, i2_saddr, r2); // HANDLER
 	
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)

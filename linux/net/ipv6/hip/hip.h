@@ -20,6 +20,7 @@
 #  include <linux/completion.h>
 #  include <linux/cpumask.h>
 #  include "sysctl.h"
+#  include "proc.h"
 #else
 
 #define jiffies random()

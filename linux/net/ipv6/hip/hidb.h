@@ -95,35 +95,22 @@ typedef struct hip_host_id HIP_HID;
 
 // host id functions
 int hip_get_any_local_hit(struct in6_addr *dst, uint8_t algo);
-int        hip_add_host_id(struct hip_db_struct *db,const struct hip_lhi *lhi,
-			   const struct hip_host_id *host_id);
-int        hip_add_localhost_id(const struct hip_lhi *lhi,
-				const struct hip_host_id *host_id);
-int        hip_add_peer_info(struct in6_addr *hit, struct in6_addr *addr);
-int        hip_copy_any_localhost_hit(struct in6_addr *target);
-int        hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo);
+int hip_add_host_id(struct hip_db_struct *db,const struct hip_lhi *lhi,
+		    const struct hip_host_id *host_id);
+int hip_add_localhost_id(const struct hip_lhi *lhi,
+			 const struct hip_host_id *host_id);
+int hip_add_peer_info(struct in6_addr *hit, struct in6_addr *addr);
+int hip_copy_any_localhost_hit(struct in6_addr *target);
+int hip_copy_any_localhost_hit_by_algo(struct in6_addr *target, int algo);
 struct hip_host_id *hip_get_any_localhost_host_id(int);
-int        hip_insert_any_localhost_public_key(uint8_t *target);
+int hip_insert_any_localhost_public_key(uint8_t *target);
 struct hip_host_id *hip_get_any_localhost_public_key(int);
 int hip_hit_is_our(struct in6_addr *hit);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
 				    struct hip_lhi *lhi);
-int        hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
-					 int count, int *eof, void *data);
-int        hip_proc_read_hadb_state(char *page, char **start, off_t off,
-				    int count, int *eof, void *data);
-int        hip_proc_read_lhi(char *page, char **start, off_t off,
-			     int count, int *eof, void *data);
 
-/* for update packet testing */
-int hip_proc_send_update(char *page, char **start, off_t off,
-			 int count, int *eof, void *data);
-/* for notify packet testing */
-int hip_proc_send_notify(char *page, char **start, off_t off,
-			 int count, int *eof, void *data);
-
-void       hip_uninit_host_id_dbs(void);
-void       hip_uninit_all_eid_db(void);
+void hip_uninit_host_id_dbs(void);
+void hip_uninit_all_eid_db(void);
 int hip_db_set_eid(struct sockaddr_eid *eid,
 		   const struct hip_lhi *lhi,
 		   const struct hip_eid_owner_info *owner_info,
