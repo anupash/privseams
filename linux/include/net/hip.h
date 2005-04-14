@@ -953,9 +953,11 @@ struct hip_host_id_entry {
 	/* struct in_addr lsi; */
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
-#ifdef CONFIG_HIP_HI3
-	cl_trigger *t1, *t2; // HANDLER
-#endif
+	/* Handler to call after insert with an argument, return 0 if OK*/
+	int (*insert)(void **arg);
+	/* Handler to call before remove with an argument, return 0 if OK*/
+	int (*remove)(void **arg);
+	void *arg;
 };
 
 struct hip_eid_owner_info {

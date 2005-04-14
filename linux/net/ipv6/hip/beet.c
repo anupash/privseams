@@ -227,6 +227,7 @@ int hip_xfrm_dst_init(struct in6_addr *dst_hit, struct in6_addr *dst_addr) {
 
 int hip_xfrm_update(uint32_t spi, struct in6_addr *dst_addr, int state,
 		    int dir) {
+        // FIXME
 	return 0;
 }
 
@@ -236,6 +237,7 @@ int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
 //	} else {
 //           return -EFAULT;
 //      }
+        // FIXME
 	return 0;
 }
 

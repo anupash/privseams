@@ -3,7 +3,6 @@
  */
 #include "preinput.h"
 
-#ifdef CONFIG_HIP_HI3
 /*
  * function checksum_packet() 
  *
@@ -84,8 +83,8 @@ u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 	return(checksum);
 }
 
-static int hip_verify_network_header(struct hip_common *hip_common,
-				     struct sockaddr *src, struct sockaddr *dst, int len)
+int hip_verify_network_header(struct hip_common *hip_common,
+			      struct sockaddr *src, struct sockaddr *dst, int len)
 {
 	int err = 0;
         uint16_t csum;
@@ -164,143 +163,3 @@ out_err:
         return err;
 }
 				     
-static int addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
-	struct hi3_ipv4_addr *h4 = (struct hi3_ipv4_addr *)buf;
-	if (len < (h4->sin_family == AF_INET ? sizeof(struct hi3_ipv4_addr) : 
-		   sizeof(struct hi3_ipv6_addr))) {
-		HIP_ERROR("Received packet too small. Dropping\n");
-		*res = 0;
-		return 0;
-	}
-
-	if (h4->sin_family == AF_INET) {
-		((struct sockaddr_in *)in6)->sin_addr = h4->sin_addr;
-		((struct sockaddr_in *)in6)->sin_family = AF_INET;
-		*res = AF_INET;
-		return sizeof(struct hi3_ipv4_addr);
-
-	} else if (h4->sin_family == AF_INET6) {
-		in6->sin6_addr = ((struct hi3_ipv6_addr *)buf)->sin6_addr;
-		in6->sin6_family = AF_INET6;
-		*res = AF_INET6;
-		return sizeof(struct hi3_ipv4_addr);
-	} 
-
-	HIP_ERROR("Illegal family. Dropping\n");
-	return 0;
-}
-
-/**
- * This is the i3 callback to process received data.
- */
-void hip_inbound(cl_trigger *t, void* data, void *fun_ctx) 
-{
-	cl_buf* clb = (cl_buf *)data;
-	struct hip_common *hip_common;
-	struct hip_work_order *hwo;
-	struct sockaddr_in6 src, dst;
-	struct hi3_ipv4_addr *h4;
-	struct hi3_ipv6_addr *h6;
-	int family, l, type;
-	char *buf = clb->data;
-	int len = clb->data_len;
-
-	/* First check the hi3 address header */
-
-	/* Source and destination address */
-	l = addr_parse(buf, &src, len, &family);
-	if (family == 0) goto out_err;
-	len -= l;
-	buf += l;
-
-	l = addr_parse(buf, &dst, len, &family);
-	if (family == 0) goto out_err;
-	len -= l;
-	buf += l;
-
-	/* See if there is at least the HIP header in the packet */
-        if (len < sizeof(struct hip_common)) {
-		HIP_ERROR("Received packet too small. Dropping\n");
-		goto out_err;
-	}
-	
-	hip_common = (struct hip_common*)buf;
-	HIP_DEBUG("Received HIP packet type %d\n", hip_common->type_hdr);
-	_HIP_HEXDUMP("HIP PACKET", hip_common,
-		     hip_get_msg_total_len(hip_common));
-
-        if (hip_verify_network_header(hip_common, 
-				      (struct sockaddr *)&src, 
-				      (struct sockaddr *)&dst,
-				      len)) {
-		HIP_ERROR("Verifying of the network header failed\n");
-		goto out_err;
-	}
-
-	if (hip_check_network_msg(hip_common)) {
-		HIP_ERROR("HIP packet is invalid\n");
-		goto out_err;
-	}
-
-	hwo = hip_init_job(GFP_ATOMIC);
-	if (!hwo) {
-		HIP_ERROR("No memory, dropping packet\n");
-		goto out_err;
-	}
-
-	hwo->hdr.type = HIP_WO_TYPE_INCOMING;
-	len = hip_get_msg_total_len(hip_common);
-        hwo->msg = malloc(len);
-	if (!hwo->msg) {
-		HIP_ERROR("No memory, dropping packet\n");
-		HIP_FREE(hwo);
-		goto out_err;
-	}
-	
-	memcpy(hwo->msg, hip_common, len);
-
-	/* should we do some early state processing now?
-	 * we could prevent further DoSsing by dropping
-	 * illegal packets right now.
-	 */
-	
-        /* We need to save the addresses because the actual input handlers
-	   may need them later */
-	memcpy(&hwo->hdr.src_addr, SA2IP(&src), SAIPLEN(&src));
-	memcpy(&hwo->hdr.dst_addr, SA2IP(&dst), SAIPLEN(&dst));
-
-	type = hip_get_msg_type(hip_common);
-	HIP_DEBUG("Received HIP %s packet\n", hip_msg_type_str(type));
-        switch(type) {
-	case HIP_I1:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I1;
-		break;
-	case HIP_R1:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_R1;
-		break;
-	case HIP_I2:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I2;
-		break;
-	case HIP_R2:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_R2;
-		break;
-	case HIP_UPDATE:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_UPDATE;
-		break;
-	case HIP_NOTIFY:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_NOTIFY;
-		break;
-	case HIP_BOS:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_BOS;
-		break;
-	default:
-		HIP_FREE(hwo);
-		return;
-        }
-
-        hip_insert_work_order_cpu(hwo, 0);
-
- out_err:
-	cl_free_buf(clb);
-}
-#endif

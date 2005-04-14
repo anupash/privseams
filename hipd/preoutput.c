@@ -2,6 +2,7 @@
 
 /* Called by userspace daemon to send a packet to wire */
 #ifndef CONFIG_HIP_HI3
+// FIXME: This ifdef will be removed once the handler support is a bit more generic in hidb.
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* buf)
 {

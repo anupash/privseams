@@ -1278,8 +1278,8 @@ int hip_handle_r1(struct hip_common *r1,
  	peer_lhi.anonymous = 0;
 	ipv6_addr_copy(&peer_lhi.hit, &r1->hits);
 
- 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi,
-			      peer_host_id);
+ 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id, 
+			      NULL, NULL, NULL);
  	if (err == -EEXIST) {
  		HIP_INFO("Host id already exists. Ignoring.\n");
  		err = 0;
@@ -1862,7 +1862,8 @@ int hip_handle_i2(struct hip_common *i2,
  	lhi.anonymous = 0;
 	ipv6_addr_copy(&lhi.hit, &ctx->input->hits);
 
- 	err = hip_add_host_id(HIP_DB_PEER_HID, &lhi, host_id_in_enc);
+ 	err = hip_add_host_id(HIP_DB_PEER_HID, &lhi, host_id_in_enc, 
+			      NULL, NULL, NULL);
  	if (err == -EEXIST) {
  		err = 0;
  		HIP_INFO("Host id already exists. Ignoring.\n");
@@ -2684,7 +2685,8 @@ int hip_handle_bos(struct hip_common *bos,
  	peer_lhi.anonymous = 0;
 	ipv6_addr_copy(&peer_lhi.hit, &bos->hits);
  	
- 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id);
+ 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id,
+			      NULL, NULL, NULL);
  	if (err == -EEXIST) {
  		HIP_INFO("Host ID already exists. Ignoring.\n");
  		err = 0;

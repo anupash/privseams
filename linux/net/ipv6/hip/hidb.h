@@ -9,10 +9,6 @@
 #  include "hip.h"
 #else
 #  include <sys/socket.h>
-#  ifdef CONFIG_HIP_HI3
-#     include "preinput.h"
-#     include "i3_client_api.h"
-#  endif
 
 typedef struct { } rwlock_t;
 #define RW_LOCK_UNLOCKED (rwlock_t) { }
@@ -98,8 +94,12 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo);
 struct hip_host_id *hip_get_any_localhost_public_key(int algo);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
 				    struct hip_lhi *lhi, int algo);
-int hip_add_host_id(struct hip_db_struct *db,const struct hip_lhi *lhi,
-		    const struct hip_host_id *host_id);
+int hip_add_host_id(struct hip_db_struct *db,
+		    const struct hip_lhi *lhi,
+		    const struct hip_host_id *host_id,
+		    int (*insert)(void **arg),		
+		    int (*remove)(void **arg),
+		    void *arg);
 int hip_hit_is_our(struct in6_addr *hit);
 
 void hip_uninit_host_id_dbs(void);

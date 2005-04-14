@@ -120,6 +120,9 @@ void hip_uninit_host_id_dbs(void)
  * @db: Database structure
  * @lhi: HIT
  * @host_id: HI
+ * @insert the handler to call right after the host id is added
+ * @remove the handler to call right before the host id is removed
+ * @arg argument passed for the handlers
  *
  * Checks for duplicates. If one is found, the current HI is _NOT_
  * stored.
@@ -128,7 +131,10 @@ void hip_uninit_host_id_dbs(void)
  */
 int hip_add_host_id(struct hip_db_struct *db,
 		    const struct hip_lhi *lhi,
-		    const struct hip_host_id *host_id)
+		    const struct hip_host_id *host_id,
+		    int (*insert)(void **arg),
+		    int (*remove)(void **arg),
+		    void *arg)
 {
 	int err = 0;
 	struct hip_host_id_entry *id_entry;
@@ -148,8 +154,8 @@ int hip_add_host_id(struct hip_db_struct *db,
 	}
 
 	id_entry->host_id = (struct hip_host_id *)
-	  HIP_MALLOC(hip_get_param_total_len(host_id),
-		     GFP_KERNEL);
+		HIP_MALLOC(hip_get_param_total_len(host_id),
+			   GFP_KERNEL);
 	if (!id_entry->host_id) {
 		HIP_ERROR("lhost_id mem alloc failed\n");
 		err = -ENOMEM;
@@ -172,9 +178,16 @@ int hip_add_host_id(struct hip_db_struct *db,
 		goto out_err;
 	}
 
+	id_entry->insert = insert;
+	id_entry->remove = remove;
+	id_entry->arg = arg;
+
 	list_add(&id_entry->next, &db->db_head);
 
 	HIP_WRITE_UNLOCK_DB(db);
+
+	if (insert) 
+		insert(&arg);
 
 	return err;
 
@@ -188,74 +201,29 @@ int hip_add_host_id(struct hip_db_struct *db,
 	return err;
 }
 
-#ifdef CONFIG_HIP_HI3
-/* 
- * i3 callbacks for trigger management
- */
-static void constraint_failed(cl_trigger *t, void *data, void *fun_ctx) {
-	/* This should never occur if the infrastructure works */
-	HIP_ERROR("Trigger constraint failed\n");
-}
+static int default_hi_initializer(void **arg) {
+	struct in6_addr hit_our;
+	int err = 0;
 
-static void trigger_inserted(cl_trigger *t, void *data, void *fun_ctx) {	
-	HIP_DEBUG("Trigger inserted\n");
-}
-
-static void trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
-	/* FIXME: A small delay before trying again? */
-	HIP_ERROR("Trigger failed, reinserting...\n");
+	HIP_DEBUG("Generating a new R1 now.\n");
 	
-	/* Reinsert trigger */
-	cl_insert_trigger(t, 0);
+	if (hip_get_any_localhost_hit(&hit_our,
+				      HIP_HI_DEFAULT_ALGO) < 0) {
+		HIP_ERROR("Didn't find a HIT for R1 precreation.\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	/* XX FIX: only RSA R1s are precreated - solved on the multi branch */
+       	if (!hip_precreate_r1(&hit_our)) {
+		HIP_ERROR("Unable to precreate R1s.\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+
+ out_err:
+	return err;
 }
-#endif
-
-#ifdef CONFIG_HIP_HI3
-static int insert_trigger(struct in6_addr *hit, 
-			  struct hip_host_id_entry *entry) {
-	ID id, ida;
-	cl_trigger *t1, *t2;
-	Key key;
-
-	HIP_ASSERT(entry);
-
-	/*
-	 * Create and insert triggers (id, ida), and (ida, R), respectively.
-	 * All triggers are r-constrained (right constrained)
-	 */
-	bzero(&id, ID_LEN);
-	memcpy(&id, hit, sizeof(hit));
-	get_random_bytes(id.x, ID_LEN);	
-#if 0
- FIXME: should these be here or not...
-	cl_set_private_id(&id);
-	cl_set_private_id(&ida);
-#endif 
-
-	/* Note: ida will be updated as ida.key = h_r(id.key) */
-	t1 = cl_create_trigger_id(&id, ID_LEN_BITS, &ida,
-				  CL_TRIGGER_CFLAG_R_CONSTRAINT);
-	t2  = cl_create_trigger(&ida, ID_LEN_BITS, &key,
-				CL_TRIGGER_CFLAG_R_CONSTRAINT);
-
-	/* associate callbacks with the inserted trigger */
-	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_CONSTRAINT_FAILED,
-				     constraint_failed, NULL);
-	cl_register_trigger_callback(t2, CL_CBK_RECEIVE_PAYLOAD,
-				     hip_inbound, NULL);
-	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_INSERTED,
-				     trigger_inserted, NULL);
-	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_REFRESH_FAILED,
-				     trigger_failure, NULL);
-
-	/* Insert triggers */
-	cl_insert_trigger(t2, 0);
-	cl_insert_trigger(t1, 0);
-
-	entry->t1 = t1;
-	entry->t2 = t2;
-}
-#endif       
 
 /**
  * hip_handle_local_add_hi - handle adding of a localhost host identity
@@ -268,7 +236,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	int err = 0;
 	struct hip_host_id *dsa_host_identity, *rsa_host_identity = NULL;
 	struct hip_lhi dsa_lhi, rsa_lhi;
-	struct in6_addr hit_our;
 	
 	HIP_DEBUG("\n");
 
@@ -312,13 +279,15 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	/* XX FIX: Note: currently the order of insertion of host ids makes a
 	   difference. */
-	err = hip_add_host_id(HIP_DB_LOCAL_HID, &rsa_lhi, rsa_host_identity);
+	err = hip_add_host_id(HIP_DB_LOCAL_HID, &rsa_lhi, rsa_host_identity, 
+			      NULL, NULL, NULL);
 	if (err) {
 		HIP_ERROR("adding of local host identity failed\n");
 		goto out_err;
 	}
 
-	err = hip_add_host_id(HIP_DB_LOCAL_HID, &dsa_lhi, dsa_host_identity);
+	err = hip_add_host_id(HIP_DB_LOCAL_HID, &dsa_lhi, dsa_host_identity, 
+			      default_hi_initializer, NULL, NULL);
 	if (err) {
 		HIP_ERROR("adding of local host identity failed\n");
 		goto out_err;
@@ -326,29 +295,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
 
-	HIP_DEBUG("hip: Generating a new R1 now\n");
-	
         /* XX TODO: precreate R1s for both algorithms, not just the default */ 
-	if (hip_get_any_localhost_hit(&hit_our,
-				      HIP_HI_DEFAULT_ALGO) < 0) {
-		HIP_ERROR("Didn't find HIT for R1 precreation\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-
-	/* XX FIX: only RSA R1s are precreated - solved on the multi branch */
-       	if (!hip_precreate_r1(&hit_our)) {
-		HIP_ERROR("Unable to precreate R1s... failing\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-
-#ifdef CONFIG_HIP_HI3
-	insert_trigger(&rsa_lhi.hit, (struct hip_host_id_entry *)
-		       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &rsa_lhi.hit));
-	insert_trigger(&dsa_lhi.hit, (struct hip_host_id_entry *)
-		       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &dsa_lhi.hit));
-#endif
  out_err:
 	
 	return err;
@@ -385,24 +332,17 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 
 	HIP_WRITE_UNLOCK_DB(db);
 
+	/* Call the handler to execute whatever required after the
+           host id is no more in the database */
+	if (id->remove) 
+		id->remove(&id->arg);
+
 	/* free the dynamically reserved memory and
 	   set host_id to null to signal that it is free */
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 	err = 0;
 	return err;
-}
-
-/**
- * hip_add_localhost_id - add a localhost id to the databases
- * @lhi: the HIT of the host
- * @host_id: the host id of the host
- *
- * Returns: zero on success, or negative error value on failure
- */
-int hip_del_localhost_id(const struct hip_lhi *lhi)
-{
-	return hip_del_host_id(&hip_local_hostid_db, (struct hip_lhi *)lhi);
 }
 
 /**
@@ -434,36 +374,6 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
 	return err;
 }
-
-/**
- * hip_copy_different_localhost_hit - Copy HIT that is not the same as the
- * argument HIT.
- * @target: Pointer to the area, where the differing HIT is copied.
- * @source: Pointer to the HIT that is used as a reference.
- *
- * If unable to find differing HIT, -ENOENT is returned. Otherwise 0.
- */
-int hip_copy_different_localhost_hit(struct in6_addr *target,
-				     struct in6_addr *source)
-{
-	struct hip_host_id_entry *entry;
-	unsigned long lf;
-	int err = -ENOENT;
-
-	HIP_READ_LOCK_DB(&hip_local_hostid_db);
-
-	list_for_each_entry(entry,&hip_local_hostid_db.db_head,next) {
-		if (ipv6_addr_cmp(&entry->lhi.hit,source)) {
-			HIP_DEBUG("Found different\n");
-			ipv6_addr_copy(target,&entry->lhi.hit);
-			err = 0;
-			break;
-		}
-	}
-
-	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
-	return err;
-} 
 
 int hip_hit_is_our(struct in6_addr *hit)
 {
@@ -536,23 +446,6 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 
 	return result;
 }
-
-/**
- * hip_get_any_localhost_host_id - Self documenting.
- *
- * NOTE: Remember to free the host id structure after use.
- *
- * Returns pointer to newly allocated area that contains a localhost
- * HI. %NULL is returned is problems are encountered. 
- */
-/*struct hip_host_id *hip_get_any_localhost_host_id(int algo)
-{
-	struct hip_host_id *result;
-	// XX TODO: use the algo
-	result = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL, algo);
-	return result;
-}*/
-
 
 /**
  * hip_get_any_localhost_dsa_public_key - Self documenting.
@@ -700,8 +593,8 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-struct hip_host_id *hip_get_any_localhost_public_key(int algo) {
-	
+struct hip_host_id *hip_get_any_localhost_public_key(int algo) 
+{
 	struct hip_host_id *hi = NULL;
 
 	if(algo == HIP_HI_DSA) {

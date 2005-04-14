@@ -28,6 +28,7 @@ SUBDIRS =
 
 # Hi3
 #CFLAGS += -DCONFIG_HIP_HI3
+#hipd_SOURCES += hi3.c
 #INCLUDES += -Ii3/i3_client -Ii3/utils -Ii3/i3
 #hipd_LDADD += i3/i3_client/.libs/libi3client.a i3/aeshash/.libs/libaes.a
 #SUBDIRS += i3

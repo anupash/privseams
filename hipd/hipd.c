@@ -97,6 +97,7 @@ int main(int argc, char *argv[]) {
 	}
 
 #ifdef CONFIG_HIP_HI3
+	/* Note that for now the Hi3 host identities are not loaded in. */
 	if (!i3_config) {
 		fprintf(stderr, "Please do pass a valid i3 configuration file.\n");
 		return 1;
