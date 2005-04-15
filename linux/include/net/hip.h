@@ -359,7 +359,6 @@ typedef uint16_t hip_hdr_err_t;
 typedef uint16_t hip_tlv_type_t;
 typedef uint16_t hip_tlv_len_t;
 typedef struct hip_hadb_state hip_ha_t;
-typedef struct hip_xfrm_state hip_xfrm_t;
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;

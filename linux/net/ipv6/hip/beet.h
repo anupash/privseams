@@ -36,6 +36,8 @@ struct hip_xfrm_state {
 	int                  state;               /* state */
 };
 
+typedef struct hip_xfrm_state hip_xfrm_t;
+
 #ifdef __KERNEL__
 
 /* Initialize */
@@ -54,7 +56,10 @@ void hip_beetdb_delete_state(hip_xfrm_t *x);
 
 uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
 
+int hip_xfrm_hit_is_our(const hip_hit_t *hit);
+
 #define hip_put_xfrm(ha) hip_db_put_ha(ha, hip_beetdb_delete_state)
+
 #endif /* __KERNEL__ */
 
 /*

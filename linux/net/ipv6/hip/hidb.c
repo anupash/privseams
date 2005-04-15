@@ -377,21 +377,6 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 	return err;
 }
 
-int hip_src_hit_is_our(const struct in6_addr *src_hit,
-		       const struct in6_addr *dst_hit)
-{
-	int ret = 0;
-	hip_hit_t tmp_src_hit;
-
-	if (!src_hit) {
-		HIP_ERROR("NULL hit\n");
-		return 0;
-	}
-
-	ret = hip_xfrm_get_src_hit(&tmp_src_hit, dst_hit);
-	return !ret;
-}
-
 /**
  * NOTE: Remember to free the host id structure after use.
  *

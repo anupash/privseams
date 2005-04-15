@@ -25,14 +25,18 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
-	hip_hit_t hit_our;
+	//hip_hit_t hit_our;
 	int mask;
 	int err = 0;
 
-	err = hip_xfrm_get_src_hit(hit_our, dsthit);
+#if 0
+	// this is all useless, as we do have a pointer to HA!
+	//err = //hip_xfrm_get_src_hit(hit_our, dsthit);
 	if (err) {
+		err = -1;
 		goto out_err;
 	}
+#endif
 
 	mask = HIP_CONTROL_NONE;
 #ifdef CONFIG_HIP_RVS
@@ -47,7 +51,7 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
 	hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
-			      mask, &hit_our,
+			      mask, &entry->hit_our,
 			      dsthit);
 	/* Eight octet units, not including first */
 	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
@@ -371,28 +375,6 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	HIP_ERROR("hip_xmit_r1 failed, err=%d\n", err);
 	return err;
 }
-
-#if 0
-/**
- * hip_send_r1 - send an R1 to the peer
- * @skb: the socket buffer for the received I1
- *
- * Send an I1 to the peer. The addresses and HITs will be digged
- * out from the @skb.
- *
- * Returns: zero on success, or a negative error value on failure.
- */
-int hip_send_r1(struct sk_buff *skb)
-{
-	int err = 0;
-	struct in6_addr *dst;
-	dst = &(((struct hip_common *)skb->h.raw)->hits);
-
-	err = hip_xmit_r1(skb, NULL, dst);
-
-	return err;
-}
-#endif
 
 void hip_send_notify(hip_ha_t *entry)
 {

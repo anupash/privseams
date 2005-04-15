@@ -87,6 +87,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			goto out;
 		}
 #endif
+		HIP_ERROR("Miika: create a work order ...\n");
 		err = -1; // drop the TCP/UDP packet (FIXME: tkoponen, dropping does not happen due to blocking happening earlier?)
 		break;
 	case HIP_STATE_I1_SENT:

@@ -460,6 +460,8 @@ int hip_do_work(struct hip_work_order *job)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
+
+			/* FIXME: Synchronize the BEET database */
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */

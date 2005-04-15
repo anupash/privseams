@@ -304,32 +304,19 @@ uint32_t hip_get_default_spi_out(hip_hit_t *hit, int *state_ok)
 	return spi;
 }
 
-int hip_xfrm_get_src_hit(hip_hit_t *src_hit, const hip_hit_t *dst_hit)
+int hip_xfrm_hit_is_our(const hip_hit_t *hit)
 {
-	int err = 0;
-	hip_xfrm_t *x;
+	hip_xfrm_t *x, *tmp;
+	int i;
 
-	HIP_DEBUG_HIT("dst HIT\n", dst_hit);
-
-	if (!dst_hit) {
-		/* XX FIX: could be used to get and alloc any local HIT? */
-		HIP_ERROR("No destination HIT\n");
-		err = -EFAULT;
-		goto out_err;
+	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
+		list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i], next) {
+			if (!ipv6_addr_cmp(&x->hit_our, hit)) {
+				return 1;
+			}
+		}
 	}
 
-	x = hip_xfrm_find_by_hit(dst_hit);
-	if (!x) {
-		HIP_ERROR("Could not find dst HIT\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-	memcpy(src_hit, &x->hit_our, sizeof(hip_hit_t));
-
-	HIP_DEBUG_HIT("src HIT: ", src_hit);
-
- out_err:
-
-	return err;
-
+	return 0;
 }
+

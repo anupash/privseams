@@ -97,15 +97,13 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi);
 void hip_hadb_remove_hs(uint32_t spi);
 
 /* existence */
-int hip_hadb_exists_entry(void *key, int type);
+int hip_hadb_hit_is_our(const hip_hit_t *src);
 
 /* debugging */
 void hip_hadb_dump_hits(void);
 void hip_hadb_dump_spis(void);
 
 /*************** CONSTRUCTS ********************/
-int hip_hadb_exists_entry(void *arg, int type);
-
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr, 

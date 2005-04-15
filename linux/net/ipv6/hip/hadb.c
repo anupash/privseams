@@ -74,6 +74,15 @@ void hip_hadb_remove_hs(uint32_t spi)
 	hip_hadb_put_hs(hs); /* verify that put_hs is safe after unlocking */
 }
 
+static int hit_match(hip_ha_t *entry, void *our) {
+	return ipv6_addr_cmp(our, &entry->hit_our) == 0;
+}
+
+int hip_hadb_hit_is_our(const hip_hit_t *our) {
+	/* FIXME: This full scan is stupid, but we have no hashtables anyway... tkoponen */
+	return hip_for_each_ha(hit_match, our);
+}
+
 static void *hip_hadb_get_key_hit(void *entry)
 {
 	return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
@@ -715,7 +724,8 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 }
 
 /* assume already locked entry */
-int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
+
+static int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 {
 	int err = 0;
 	struct hip_spi_in_item *item, *tmp;
