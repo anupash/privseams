@@ -112,9 +112,6 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				uint32_t *spi, uint32_t *lifetime,
 				struct timeval *modified_time);
 
-int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
-				uint32_t *lifetime);
-
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
 			   int state);
@@ -164,7 +161,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			     int address_state, uint32_t lifetime,
 			     int is_preferred_addr);
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
-				  struct hip_context *ctx, int is_initiator);
+				 struct hip_context *ctx, int is_initiator);
 /* Utilities */
 void hip_hadb_delete_state(hip_ha_t *ha);
 hip_ha_t *hip_hadb_create_state(int gfpmask);
@@ -173,7 +170,6 @@ void hip_hadb_deactivate_hs_spi(uint32_t spi);
 void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
-void hip_hadb_remove_hs2(struct hip_hit_spi *hs);
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 #endif /* HIP_HADB_H */

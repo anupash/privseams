@@ -498,69 +498,6 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 }
 
 /**
- * hip_hadb_set_peer_address_info - set entry's peer address address lifetime
- * @entry: corresponding hadb entry of the peer
- * @addr: the IPv6 address for which the information is to be set
- * @lifetime: address lifetime
- *
- * Set @entry's peer address @addr address lifetime to given
- * values. If @lifetime is non-NULL @addr's lifetime is changed to
- * value pointed to by @lifetime.
- *
- * Returns: if @entry has the address @addr in its peer address list
- * parameters @interface_id and @lifetime were assigned and 1 is
- * returned. Else no values were assigned and 0 is returned.
- */
-int hip_hadb_set_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
-				uint32_t *lifetime)
-{
-	/* XX: Called with sdb lock held ? */
-
-	/* add parameter uint32_t spi */
-
-	struct hip_peer_addr_list_item *s;
-	int i = 1;
-#ifdef CONFIG_HIP_DEBUG
-	char addrstr[INET6_ADDRSTRLEN];
-#endif
-	struct hip_spi_out_item *spi_out, *tmp;
-
-	HIP_ERROR("USELESS/DEPRECATED ?\n");
-
-	HIP_LOCK_HA(entry);
-
-        list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
-		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
-
-			/* todo: update s->modified_time ? if yes, when and where ?
-			 * when SPI/lifetime is changed ?
-			 */
-#ifdef CONFIG_HIP_DEBUG
-			hip_in6_ntop(&s->address, addrstr);
-			_HIP_DEBUG("address %d: %s,  lifetime 0x%x (%u)\n",
-				   i, addrstr, s->lifetime, s->lifetime);
-#endif
-			if (!ipv6_addr_cmp(&s->address, addr)) {
-				if (lifetime) {
-					HIP_DEBUG("updating lifetime 0x%x -> 0x%x\n",
-						  s->lifetime, *lifetime);
-					s->lifetime = *lifetime;
-				}
-				HIP_UNLOCK_HA(entry);
-				return 1;
-			}
-			i++;
-		}
-	}
-	HIP_UNLOCK_HA(entry);
-
-	_HIP_DEBUG("not found\n");
-	return 0;
-}
-
-
-
-/**
  * hip_hadb_add_peer_addr - add a new peer IPv6 address to the entry's list of peer addresses
  * @entry: corresponding hadb entry of the peer
  * @new_addr: IPv6 address to be added
