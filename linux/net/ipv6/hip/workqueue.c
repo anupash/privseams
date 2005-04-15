@@ -271,7 +271,7 @@ int hip_do_work(struct hip_work_order *job)
 	case HIP_WO_TYPE_INCOMING:
 		HIP_START_TIMER(KMM_PARTIAL);
 		switch(job->hdr.subtype) {
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+#if (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
 		case HIP_WO_SUBTYPE_RECV_I1:
 			res = hip_receive_i1(job->msg, &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
@@ -302,7 +302,7 @@ int hip_do_work(struct hip_work_order *job)
 			res = hip_receive_bos(job->msg, &job->hdr.src_addr,
 					      &job->hdr.dst_addr);
 			break;
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
@@ -437,7 +437,7 @@ int hip_do_work(struct hip_work_order *job)
 			res = KHIPD_OK;
 			break;
 #endif
-#if !defined __KERNEL__  || !defined CONFIG_HIP_USERSPACE
+#if (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
 		case HIP_WO_SUBTYPE_ADDMAP:
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(&job->hdr.dst_addr,
@@ -460,7 +460,6 @@ int hip_do_work(struct hip_work_order *job)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
-#endif /* !defined __KERNEL__  || !defined CONFIG_HIP_USERSPACE */
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */
@@ -476,12 +475,10 @@ int hip_do_work(struct hip_work_order *job)
 			res = 0;
 			break;
 #endif
-#ifndef __KERNEL__
 		case HIP_WO_SUBTYPE_ADDHI:
 			HIP_DEBUG("Adding \n");
 			res = hip_handle_add_local_hi(job->msg);
 			break;
-#endif /* __KERNEL__ */
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
 		case HIP_WO_SUBTYPE_DELHI:
 		case HIP_WO_SUBTYPE_FLUSHHIS:
@@ -490,6 +487,7 @@ int hip_do_work(struct hip_work_order *job)
 				 job->hdr.subtype, job->hdr.type);
 			res = KHIPD_ERROR;
 			goto out_err;
+#endif /* (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 		default:
 			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);
 			res = KHIPD_ERROR;

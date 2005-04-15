@@ -6,6 +6,7 @@
 
 #include "update.h"
 
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifndef __KERNEL__
 /**
  * hip_print_hit - print a HIT
@@ -1849,3 +1850,5 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 
 	return;
 }
+
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

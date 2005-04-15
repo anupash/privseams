@@ -25,7 +25,6 @@ typedef struct { } rwlock_t;
 #include "hidb.h"
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 
-#ifdef __KERNEL__
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
         RW_LOCK_UNLOCKED, id, 0}
@@ -48,7 +47,6 @@ typedef struct { } rwlock_t;
 #define HIP_WRITE_UNLOCK_DB(db) do { \
 	write_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
-#endif /* __KERNEL__ */
 
 /* should implement with another data structure. 2.6.x will provide
  * ready code, so for now, the linked-list is fine.
@@ -60,7 +58,7 @@ struct hip_db_struct {
         int               db_cnt;
 };
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+#if !defined __KERNEL__ || defined CONFIG_HIP_USERSPACE
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
