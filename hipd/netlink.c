@@ -280,8 +280,10 @@ int hip_netlink_talk(struct hip_nl_handle *nl,
 	/* Fill the header */
 	tx.n.nlmsg_len = NLMSG_LENGTH(msg_len +
 				      sizeof(struct hip_work_order_hdr));
-        tx.n.nlmsg_pid = getpid(); /* self pid */
+	tx.n.nlmsg_type = 0; // XX FIXME
         tx.n.nlmsg_flags = 0;
+	tx.n.nlmsg_seq = 0; // XX FIXME
+        tx.n.nlmsg_pid = getpid(); /* self pid */
 
 	/* Let the talk insert any non-responses to our queue so that
            they will be processed later */

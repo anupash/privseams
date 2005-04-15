@@ -201,7 +201,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	return err;
 }
 
-static int default_hi_initializer(void **arg) {
+static int hip_default_hi_initializer(void **arg) {
 	struct in6_addr hit_our;
 	int err = 0;
 
@@ -280,14 +280,14 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	/* XX FIX: Note: currently the order of insertion of host ids makes a
 	   difference. */
 	err = hip_add_host_id(HIP_DB_LOCAL_HID, &rsa_lhi, rsa_host_identity, 
-			      NULL, NULL, NULL);
+			      hip_default_hi_initializer, NULL, NULL);
 	if (err) {
 		HIP_ERROR("adding of local host identity failed\n");
 		goto out_err;
 	}
 
 	err = hip_add_host_id(HIP_DB_LOCAL_HID, &dsa_lhi, dsa_host_identity, 
-			      default_hi_initializer, NULL, NULL);
+			      hip_default_hi_initializer, NULL, NULL);
 	if (err) {
 		HIP_ERROR("adding of local host identity failed\n");
 		goto out_err;

@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
 	int err;
 	struct timeval timeout;
 	struct hip_work_order ping;
-	
+
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "f")) != -1) {		
  		switch (ch) {
