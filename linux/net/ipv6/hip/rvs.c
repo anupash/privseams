@@ -8,7 +8,7 @@
  */
 
 #include "rvs.h"
-
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 HIP_HASHTABLE rva_table;
 
 static struct list_head rvadb[HIP_RVA_SIZE];
@@ -29,7 +29,7 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 		return NULL;
 
 	atomic_set(&res->refcnt, 0);
-	spin_lock_init(&res->rva_lock);
+	HIP_LOCK_INIT(res);
 	res->lifetime = 0;
 	memset(res->ip_addrs, 0, HIP_RVA_MAX_IPS*sizeof(struct in6_addr));
 
@@ -134,9 +134,9 @@ void hip_rva_insert_ip_n(HIP_RVA *rva, struct in6_addr *ip, unsigned int n)
 {
  	HIP_ASSERT(n < HIP_RVA_MAX_IPS);
 
- 	HIP_LOCK_RVA(rva);
+ 	HIP_LOCK_HA(rva);
  	ipv6_addr_copy(&rva->ip_addrs[n], ip);
- 	HIP_UNLOCK_RVA(rva);
+ 	HIP_UNLOCK_HA(rva);
 }
 
 /**
@@ -167,9 +167,9 @@ void hip_rva_fetch_ip_n(HIP_RVA *rva, struct in6_addr *dst, unsigned int n)
 	HIP_ASSERT(dst);
 	HIP_ASSERT(n < HIP_RVA_MAX_IPS);
 
-	HIP_LOCK_RVA(rva);
+	HIP_LOCK_HA(rva);
 	ipv6_addr_copy(dst, &rva->ip_addrs[n]);
-	HIP_UNLOCK_RVA(rva);
+	HIP_UNLOCK_HA(rva);
 }
 
 /**
@@ -327,20 +327,20 @@ void hip_rva_remove(HIP_RVA *rva)
 {
 	HIP_ASSERT(rva);
 
-	HIP_LOCK_RVA(rva);
+	HIP_LOCK_HA(rva);
 	if (!(rva->rvastate & HIP_RVASTATE_VALID)) {
 		HIP_DEBUG("RVA not in rva hashtable or state corrupted\n");
 		return;
 	}
 
 	hip_ht_delete(&rva_table, rva);
-	HIP_UNLOCK_RVA(rva);
+	HIP_UNLOCK_HA(rva);
 
 	/* the refcnt should now be at least 1, since we must have
 	   at least two references when calling this function: One in the
 	   hashtable, one in the calling function.
 	   After the delete operation we should have one less, but still over
-	   0 and thus the HIP_UNLOCK_RVA should not cause problems (accessing
+	   0 and thus the HIP_UNLOCK_HA should not cause problems (accessing
 	   deleted memory).
 	*/
 }
@@ -470,3 +470,4 @@ void hip_rvs_set_request_flag(struct in6_addr *hit)
 	entry->local_controls |= HIP_PSEUDO_CONTROL_REQ_RVS;
 	hip_put_ha(entry);
 }
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

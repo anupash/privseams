@@ -244,7 +244,7 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 		goto out_err;
 	}
 	atomic_set(&new_item->refcnt, 0);
-	spin_lock_init(&new_item->lock);
+	HIP_LOCK_INIT(new_item);
 	new_item->spi = spi;
 	ipv6_addr_copy(&new_item->hit, &hit);
 
@@ -299,7 +299,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	INIT_LIST_HEAD(&entry->spis_in);
 	INIT_LIST_HEAD(&entry->spis_out);
 
-	spin_lock_init(&entry->lock);
+	HIP_LOCK_INIT(entry);
 	atomic_set(&entry->refcnt,0);
 
 	entry->state = HIP_STATE_UNASSOCIATED;

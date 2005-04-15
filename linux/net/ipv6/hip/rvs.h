@@ -1,6 +1,7 @@
 #ifndef HIP_RVS_H
 #define HIP_RVS_H
 
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef __KERNEL__
 #  include <linux/spinlock.h>
 #  include <linux/types.h>
@@ -26,7 +27,7 @@ struct hip_rendezvous_association
 	struct list_head      list_hit;
 
 	atomic_t              refcnt;
-	spinlock_t            rva_lock;
+	spinlock_t            lock;
 
 	hip_rvastate_t        rvastate;
 	uint32_t              lifetime;
@@ -78,12 +79,10 @@ void hip_rva_fetch_ip_n(HIP_RVA *rva, struct in6_addr *dst, unsigned int n);
         } \
 } while(0) 
 
-#define HIP_LOCK_RVA(rva) spin_lock(&rva->rva_lock)
-#define HIP_UNLOCK_RVA(rva) spin_unlock(&rva->rva_lock)
-
 /************ constructs *************/
 
 int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen);
 void hip_rvs_set_request_flag(struct in6_addr *hit);
 
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 #endif

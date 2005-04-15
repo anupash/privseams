@@ -8,6 +8,7 @@
 #include "builder.h"
 
 #ifdef __KERNEL__
+#define HIP_LOCK_INIT(ha) do { spin_lock_init(&ha->lock); } while(0)
 #define HIP_LOCK_HA(ha) do { spin_lock_bh(&ha->lock); } while(0)
 #define HIP_UNLOCK_HA(ha) do { spin_unlock_bh(&ha->lock); } while(0)
 #define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
@@ -15,6 +16,7 @@
 #else
 #include "netdev.h"
 
+#define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)
 #define HIP_LOCK_HS(hs) 

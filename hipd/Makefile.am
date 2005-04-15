@@ -16,7 +16,7 @@ INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
+hipd_SOURCES = rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
 hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
 hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c misc.c dh.c netlink.c
 
@@ -108,6 +108,10 @@ update.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.h
 update.c: update.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.c
+rvs.h:
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.h
+rvs.c: rvs.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.c
 
 tags:
 	etags $(hipd_SOURCES) $(include_HEADERS)
