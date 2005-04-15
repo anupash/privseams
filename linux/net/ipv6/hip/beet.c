@@ -242,7 +242,7 @@ int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
 	return 0;
 }
 
-hip_xfrm_t *hip_xfrm_find_by_hit(struct in6_addr *dst_hit)
+hip_xfrm_t *hip_xfrm_find_by_hit(const hip_hit_t *dst_hit)
 {
 	HIP_DEBUG("\n");
 	return (hip_xfrm_t *)hip_ht_find(&hip_beetdb_hit, (void *)dst_hit);
@@ -302,4 +302,34 @@ uint32_t hip_get_default_spi_out(hip_hit_t *hit, int *state_ok)
 	hip_put_xfrm(entry);
 	*state_ok = spi ? 1 : 0;
 	return spi;
+}
+
+int hip_xfrm_get_src_hit(hip_hit_t *src_hit, const hip_hit_t *dst_hit)
+{
+	int err = 0;
+	hip_xfrm_t *x;
+
+	HIP_DEBUG_HIT("dst HIT\n", dst_hit);
+
+	if (!dst_hit) {
+		/* XX FIX: could be used to get and alloc any local HIT? */
+		HIP_ERROR("No destination HIT\n");
+		err = -EFAULT;
+		goto out_err;
+	}
+
+	x = hip_xfrm_find_by_hit(dst_hit);
+	if (!x) {
+		HIP_ERROR("Could not find dst HIT\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+	memcpy(src_hit, &x->hit_our, sizeof(hip_hit_t));
+
+	HIP_DEBUG_HIT("src HIT: ", src_hit);
+
+ out_err:
+
+	return err;
+
 }

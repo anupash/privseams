@@ -11,11 +11,12 @@
 #include "hidb.h"
 
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+
 /*
  * Do not access these databases directly: use the accessors in this file.
  */
 
-/* XX FIXME: these should hashes instead of plain linked lists */
+/* XX FIXME: these should be hashes instead of plain linked lists */
 HIP_INIT_DB(hip_peer_hostid_db, "peer_hid");
 HIP_INIT_DB(hip_local_hostid_db, "local_hid");
 
@@ -376,25 +377,19 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 	return err;
 }
 
-int hip_hit_is_our(struct in6_addr *hit)
+int hip_src_hit_is_our(const struct in6_addr *src_hit,
+		       const struct in6_addr *dst_hit)
 {
-	struct hip_host_id_entry *entry;
-	unsigned long lf;
+	int ret = 0;
+	hip_hit_t tmp_src_hit;
 
-	if (!hit) {
+	if (!src_hit) {
 		HIP_ERROR("NULL hit\n");
 		return 0;
 	}
 
-	HIP_READ_LOCK_DB(&hip_local_hostid_db);
-	list_for_each_entry(entry, &hip_local_hostid_db.db_head, next) {
-		if (!ipv6_addr_cmp(&entry->lhi.hit, hit)) {
-			HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
-			return 1;
-		}
-	}
-	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
-	return 0;
+	ret = hip_xfrm_get_src_hit(&tmp_src_hit, dst_hit);
+	return !ret;
 }
 
 /**
@@ -612,5 +607,4 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 #undef HIP_WRITE_LOCK_DB
 #undef HIP_READ_UNLOCK_DB
 #undef HIP_WRITE_UNLOCK_DB
-
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

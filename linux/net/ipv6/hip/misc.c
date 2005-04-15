@@ -324,7 +324,7 @@ int hip_is_hit(const hip_hit_t *hit)
  *
  * Returns value in range: 0 <= x < @range
  */
-int hip_hash_spi(void *key, int range)
+int hip_hash_spi(const void *key, int range)
 {
 	u32 spi = (u32) key;
 	/* SPIs are random, so simple modulo is enough? */
@@ -338,7 +338,7 @@ int hip_hash_spi(void *key, int range)
  *
  * Returns value in range: 0 <= x < range
  */
-int hip_hash_hit(void *key, int range)
+int hip_hash_hit(const void *key, int range)
 {
 	hip_hit_t *hit = (hip_hit_t *)key;
 
@@ -346,7 +346,7 @@ int hip_hash_hit(void *key, int range)
 	return (hit->s6_addr32[2] ^ hit->s6_addr32[3]) % range;
 }
 
-int hip_match_hit(void *hitA, void *hitB)
+int hip_match_hit(const void *hitA, const void *hitB)
 {
 	hip_hit_t *key_1, *key_2;
 

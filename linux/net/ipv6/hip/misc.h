@@ -52,9 +52,9 @@ u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2);
 
-int hip_hash_hit(void *hit, int range);
-int hip_hash_spi(void *spi, int range);
-int hip_match_hit(void *hitA, void *hitB);
+int hip_hash_hit(const void *hit, int range);
+int hip_hash_spi(const void *spi, int range);
+int hip_match_hit(const void *hitA, const void *hitB);
 const char *hip_algorithm_to_string(int algo);
 
 uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);

@@ -77,7 +77,7 @@
 /*************** BASE FUNCTIONS *******************/
 
 /* Matching */
-static inline int hip_hadb_match_spi(void *key_1, void *key_2)
+static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 {
 	return (uint32_t)key_1 == (uint32_t)key_2;
 }

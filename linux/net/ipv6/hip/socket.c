@@ -855,6 +855,7 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	int addr_count = 0;
 	struct flowi fl;
 	struct inet6_ifaddr *ifa = NULL;
+	struct hip_xfrm_t *x;
 
 	HIP_DEBUG("\n");
 	
@@ -873,12 +874,22 @@ int hip_socket_send_bos(const struct hip_common *msg)
 		goto out_err;
 	}
 
+	x = hip_xfrm_find_by_hit(NULL);
+	if (!x) {
+		HIP_ERROR("Could not find dst HIT\n");
+		err = -ENOENT;
+		goto out_err;
+	}
+	memcpy(&hit_our, xfrm_entry->hit_our, sizeof(hip_hit_t));
+
+#if 0
 	/* Determine our HIT */
 	if (hip_get_any_localhost_hit(&hit_our, HIP_ANY_ALGO) < 0) {
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
 	}
+#endif
 
 	/* Determine our HOST ID public key */
 	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);

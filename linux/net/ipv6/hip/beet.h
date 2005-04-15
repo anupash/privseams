@@ -18,8 +18,6 @@
 
 #define HIP_BEETDB_SIZE 53
 
-#ifdef __KERNEL__
-
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
 	struct list_head     next;
@@ -38,6 +36,8 @@ struct hip_xfrm_state {
 	int                  state;               /* state */
 };
 
+#ifdef __KERNEL__
+
 /* Initialize */
 void hip_init_beetdb(void);
 
@@ -48,7 +48,7 @@ void hip_uninit_beetdb(void);
 struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi);
 
 /* For outbound packet processing (HITd->(SPI, IP) mapping */
-struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit);
+struct hip_xfrm_state *hip_xfrm_find_by_hit(const struct in6_addr *dst_hit);
 
 void hip_beetdb_delete_state(hip_xfrm_t *x);
 

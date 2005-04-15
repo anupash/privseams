@@ -17,8 +17,9 @@ struct hip_ht_common {
 	spinlock_t lock;
 	int hashsize;
 	int offset;
-	int (*hash)(void *key, int range);
-	int (*compare)(void *key_to_match, void *key_to_be_matched);
+	int (*hash)(const void *key, int range);
+	int (*compare)(const void *key_to_match,
+		       const void *key_to_be_matched);
 	void (*hold)(void *entry);
 	void (*put)(void *entry);
 	void *(*get_key)(void *entry);
@@ -32,7 +33,7 @@ typedef struct hip_ht_common HIP_HASHTABLE;
 int hip_ht_init(HIP_HASHTABLE *ht);
 void hip_ht_uninit(HIP_HASHTABLE *ht);
 
-void *hip_ht_find(HIP_HASHTABLE *ht, void *key);
+void *hip_ht_find(HIP_HASHTABLE *ht, const void *key);
 int hip_ht_add(HIP_HASHTABLE *ht, void *entry);
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
 

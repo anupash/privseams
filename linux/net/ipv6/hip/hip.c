@@ -229,17 +229,28 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
  *
  * Returns: 1 if source HIT was copied successfully, otherwise 0.
  */
-int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
+int hip_get_hits(struct in6_addr *dst_hit, struct in6_addr *src_hit)
 {
-	if (!ipv6_addr_is_hit(hitd))
-		goto out;
+	hip_xfrm_t *entry;
 
-	if (hip_get_any_localhost_hit(hits, HIP_ANY_ALGO) < 0)
-		goto out;
+	if (!ipv6_addr_is_hit(dst_hit))
+		goto out_err;
+
+	HIP_DEBUG_HIT("dst HIT", dst_hit);
+
+	entry = hip_xfrm_find_by_hit(dst_hit);
+	if (!entry) {
+		HIP_ERROR("Could not find dst HIT\n");
+		goto out_err;
+	}
+
+	memcpy(src_hit, &entry->hit_our, sizeof(hip_hit_t));
+	
+	HIP_DEBUG_HIT("src HIT", src_hit);
 
 	return 1;
 
- out:
+ out_err:
 	return 0;
 }
 
@@ -265,14 +276,6 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 	if (!entry) {
 		HIP_ERROR("Unknown destination HIT\n");
 		return 0;
-	}
-
-	if (ipv6_addr_any(&entry->hit_our)) {
-		/* No src HIT specified yet, fill one */
-		if (hip_get_any_localhost_hit(&entry->hit_our,
-					      HIP_HI_DEFAULT_ALGO) < 0) {
-			return 0;
-		}
 	}
 
 	ipv6_addr_copy(hit_storage, &entry->hit_our);
@@ -884,8 +887,10 @@ static int __init hip_init(void)
 	hip_init_hadb();	
 #endif
 
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef CONFIG_HIP_RVS
 	hip_init_rvadb();
+#endif
 #endif
 
 #ifdef CONFIG_PROC_FS
@@ -1024,8 +1029,10 @@ static void __exit hip_cleanup(void)
 #endif /* CONFIG_PROC_FS */
 
 	hip_uninit_socket_handler();
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef CONFIG_HIP_RVS
 	hip_uninit_rvadb();
+#endif
 #endif
 	hip_uninit_beetdb();
 #ifndef CONFIG_HIP_USERSPACE

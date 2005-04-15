@@ -21,31 +21,19 @@
  *
  * Returns: 0 on success, otherwise < 0 on error.
  */
-int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
+int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
-	struct in6_addr hit_our;
+	hip_hit_t hit_our;
 	int mask;
 	int err = 0;
 
-	HIP_DEBUG("\n");
+	err = hip_xfrm_get_src_hit(hit_our, dsthit);
+	if (err) {
+		goto out_err;
+	}
 
-	/* TODO: we must use the same algorithm that is used in the dsthit */
-	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
-		HIP_ERROR("Out HIT not found\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-	HIP_DEBUG_HIT("DEFAULT ALGO HIT: ", &hit_our);
-#if 0
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_ANY_ALGO) < 0) {
-		HIP_ERROR("Out HIT not found\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-	HIP_DEBUG_HIT("ANY HIT: ", &hit_our);
-#endif
 	mask = HIP_CONTROL_NONE;
 #ifdef CONFIG_HIP_RVS
 	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))

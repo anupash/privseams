@@ -71,5 +71,7 @@ int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
 	return resp.hdr.arg1;
 }
 
-
-
+int hip_xfrm_get_src_hit(hip_hit_t *src_hit, const hip_hit_t *dst_hit)
+{
+	return -1; // XX FIXME
+}

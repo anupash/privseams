@@ -21,6 +21,7 @@
 #include "cookie.h"
 #include "builder.h"
 #include "preoutput.h"
+#include "beet.h"
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
