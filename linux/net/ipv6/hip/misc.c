@@ -513,63 +513,6 @@ int hip_auth_key_length_esp(int tid)
 }
 
 /**
- * hip_store_base_exchange_keys - store the keys negotiated in base exchange
- * @ctx:             the context inside which the key data will copied around
- * @is_initiator:    true if the localhost is the initiator, or false if
- *                   the localhost is the responder
- *
- * Returns: 0 if everything was stored successfully, otherwise < 0.
- */
-int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
-				  struct hip_context *ctx, int is_initiator)
-{
-	int err = 0;
-	int hmac_key_len, enc_key_len, auth_key_len;
-
-	hmac_key_len = hip_hmac_key_length(entry->esp_transform);
-	enc_key_len = hip_enc_key_length(entry->esp_transform);
-	auth_key_len = hip_auth_key_length_esp(entry->esp_transform);
-
-	memcpy(&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
-	memcpy(&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
-
-	memcpy(&entry->esp_in.key, &ctx->esp_in.key, enc_key_len);
-	memcpy(&entry->auth_in.key, &ctx->auth_in.key, auth_key_len);
-
-	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
-	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
-
-	hip_update_entry_keymat(entry, ctx->current_keymat_index,
-				ctx->keymat_calc_index, ctx->current_keymat_K);
-
-	if (entry->dh_shared_key) {
-		HIP_DEBUG("HIP_FREEing old dh_shared_key\n");
-		HIP_FREE(entry->dh_shared_key);
-	}
-
-	entry->dh_shared_key_len = 0;
-	/* todo: reuse pointer, no HIP_MALLOC */
-	entry->dh_shared_key = (char *)HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
-	if (!entry->dh_shared_key) {
-		HIP_ERROR("entry dh_shared HIP_MALLOC failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-
-	entry->dh_shared_key_len = ctx->dh_shared_key_len;
-	memcpy(entry->dh_shared_key, ctx->dh_shared_key, entry->dh_shared_key_len);
-	_HIP_HEXDUMP("Entry DH SHARED", entry->dh_shared_key, entry->dh_shared_key_len);
-	_HIP_HEXDUMP("Entry Kn", entry->current_keymat_K, HIP_AH_SHA_LEN);
-	return err;
-
- out_err:
-	if (entry->dh_shared_key)
-		HIP_FREE(entry->dh_shared_key);
-
-	return err;
-}
-
-/**
  * hip_select_hip_transform - select a HIP transform to use
  * @ht: HIP_TRANSFORM payload where the transform is selected from
  *

@@ -1,6 +1,7 @@
 #ifndef HIP_COOKIE_H
 #define HIP_COOKIE_H
 
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef __KERNEL__
 #  include <linux/types.h>
 #  include <linux/random.h>
@@ -42,5 +43,5 @@ uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			  uint64_t birthday);
 
-
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 #endif /* HIP_COOKIE_H */

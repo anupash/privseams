@@ -63,8 +63,6 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
 int hip_auth_key_length_esp(int tid);
 int hip_transform_key_length(int tid);
-int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
-				  struct hip_context *ctx, int is_initiator);
 int hip_hmac_key_length(int tid);
 int hip_enc_key_length(int tid);
 int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);

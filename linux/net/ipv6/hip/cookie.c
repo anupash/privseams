@@ -9,6 +9,7 @@
 
 #include "cookie.h"
 
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 struct hip_r1entry *hip_r1table;
 
 /**
@@ -469,3 +470,5 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	return res;
 }
+
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
