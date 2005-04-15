@@ -7,6 +7,7 @@
 #  include "crypto/rsa.h"
 #  include "crypto/dsa.h"
 #  include "hip.h"
+#  include "dh.h"
 
 extern struct crypto_tfm *impl_sha1;
 

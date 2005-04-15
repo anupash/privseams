@@ -27,14 +27,6 @@ static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 
   (functions hip_ .. _hs)
 */
-int hip_hadb_match_spi(void *key_1, void *key_2)
-{
-	uint32_t spi1,spi2;
-
-	spi1 = (uint32_t)key_1;
-	spi2 = (uint32_t)key_2;
-	return (spi1 == spi2);
-}
 
 static void hip_hadb_hold_entry(void *entry)
 {

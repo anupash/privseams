@@ -1,7 +1,5 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
-
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #include <net/hip.h>
 #include "debug.h"
 #include "misc.h"
@@ -58,6 +56,17 @@
 
 /*************** BASE FUNCTIONS *******************/
 
+/* matching */
+static inline int hip_hadb_match_spi(void *key_1, void *key_2)
+{
+	uint32_t spi1,spi2;
+
+	spi1 = (uint32_t)key_1;
+	spi2 = (uint32_t)key_2;
+	return (spi1 == spi2);
+}
+
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 /* Initialization functions */
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
@@ -75,9 +84,6 @@ void hip_hadb_remove_hs(uint32_t spi);
 
 /* existence */
 int hip_hadb_exists_entry(void *key, int type);
-
-/* matching */
-int hip_hadb_match_spi(void *key_1, void *key_2);
 
 /* debugging */
 void hip_hadb_dump_hits(void);

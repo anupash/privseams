@@ -11,6 +11,7 @@
 #  include <linux/list.h> /* struct list */
 #endif /* __KERNEL__ */
 #include <net/hip.h>
+#include "hashtable.h"
 #include "debug.h"
 #include "hadb.h"
 #include "workqueue.h"
