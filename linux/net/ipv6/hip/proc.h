@@ -5,6 +5,7 @@
 #include <linux/types.h>
 #include <net/hip.h>
 #include "hidb.h"
+#include "hadb.h"
 
 int hip_proc_read_hadb_state(char *page, char **start, off_t off,
 			     int count, int *eof, void *data);
