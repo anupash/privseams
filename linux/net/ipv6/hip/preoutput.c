@@ -160,12 +160,10 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	}
 #endif
  out:
-#if 0
-	// FIXME: find_byhit increases the reference count, perhaps it
-	// should be renamed? (tkoponen)
-	if (entry)
-		hip_put_ha(entry);
-#endif
+	/* Find increases the refcnt */
+	if (xs)
+		hip_put_xfrm(xs);
+
 	_HIP_DEBUG("err=%d\n", err);
 	return err;
 }

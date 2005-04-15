@@ -79,7 +79,6 @@ struct hip_hadb_multi {
 /*
  * Note: lhit->hit and hid are stored in network byte order.
  */
-
 #define HIP_ARG_HIT                 0x000001
 #define HIP_ARG_SPI                 0x000002
 #define HIP_HADB_ACCESS_ARGS        (HIP_ARG_HIT | HIP_ARG_SPI)
@@ -87,6 +86,10 @@ struct hip_hadb_multi {
 /* Use these to point your target while accessing a database */
 #define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
 #define HIP_DB_PEER_HID    (&hip_peer_hostid_db)
+
+/* ... and not these! */
+extern struct hip_db_struct hip_peer_hostid_db;
+extern struct hip_db_struct hip_local_hostid_db;
 
 int hip_get_any_localhost_hit(struct in6_addr *target, int algo);
 struct hip_host_id *hip_get_any_localhost_public_key(int algo);
@@ -101,9 +104,6 @@ int hip_add_host_id(struct hip_db_struct *db,
 int hip_hit_is_our(struct in6_addr *hit);
 
 void hip_uninit_host_id_dbs(void);
-
-extern struct hip_db_struct hip_peer_hostid_db;
-extern struct hip_db_struct hip_local_hostid_db;
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 #endif /* _HIP_DB */

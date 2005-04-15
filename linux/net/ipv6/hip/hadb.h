@@ -76,14 +76,10 @@
 
 /*************** BASE FUNCTIONS *******************/
 
-/* matching */
+/* Matching */
 static inline int hip_hadb_match_spi(void *key_1, void *key_2)
 {
-	uint32_t spi1,spi2;
-
-	spi1 = (uint32_t)key_1;
-	spi2 = (uint32_t)key_2;
-	return (spi1 == spi2);
+	return (uint32_t)key_1 == (uint32_t)key_2;
 }
 
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
@@ -98,8 +94,6 @@ hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
 int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi);
-void hip_hadb_remove_state(hip_ha_t *ha);
-void hip_hadb_remove_state_hit(hip_ha_t *ha);
 void hip_hadb_remove_hs(uint32_t spi);
 
 /* existence */

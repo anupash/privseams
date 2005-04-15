@@ -837,6 +837,7 @@ int hip_socket_handle_rst(const struct hip_common *input)
  *
  * Returns: zero on success, or negative error value on failure
  */
+#if 0
 int hip_socket_send_bos(const struct hip_common *msg)
 {
 	int err = 0;
@@ -1057,7 +1058,7 @@ int hip_socket_send_bos(const struct hip_common *msg)
 
 	return err;
 }
-
+#endif
 /**
  * hipd_handle_async_unit_test - handle unit test message
  * @msg: message containing information about which unit tests to execute
@@ -1195,7 +1196,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 			goto out_err;
 		}
 
-#if 0 /* XX FIXME: figure out socket handler - user daemon interaction */
+#if 0 /* XX TODO */ /* XX FIXME: figure out socket handler - user daemon interaction */
 		/* XX TODO: check UID/GID permissions before adding */
 		err = hip_wrap_add_local_hi(host_id, &lhi);
 		if (err == -EEXIST) {
@@ -1383,6 +1384,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 *
 * Returns: zero on success, or negative error value on failure
 */
+#if 0
 static int hip_list_peers_add(struct in6_addr *address,
 			      hip_peer_entry_opaque_t *entry,
 			      hip_peer_addr_opaque_t **last)
@@ -1410,7 +1412,6 @@ static int hip_list_peers_add(struct in6_addr *address,
 	entry->count++;   /* Increment count in peer entry */
 	return 0;
 }
-
 
 /**
  * hip_hadb_list_peers_func - private function to process a hadb entry
@@ -1546,6 +1547,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 		HIP_ERROR("Peer list creation failed\n");
 		goto out_err;
 	}
+
 	HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
 	if (pr.count <= 0) {
 		HIP_ERROR("No usable entries found\n");
@@ -1676,6 +1678,7 @@ int hip_socket_handle_get_peer_list(struct hip_common *msg)
 	_HIP_DEBUG("done freeing mem, err = %d\n", err);
 	return err;
 }
+#endif
 
 /*
  * The socket options that do not need a return value.
@@ -1736,9 +1739,14 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 	case SO_HIP_ADD_RVS:
 		err = hip_socket_handle_rvs(msg);
 		break;
+#if 0 
+// XX TODO: not supported for now, this message should be moved as
+// such to the userspace anyway i.e. create WORKORDER:
+// HIP_WO_SUBTYPE_SEND_BOS:
 	case SO_HIP_BOS:
 		err = hip_socket_send_bos(msg);
 		break;
+#endif
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -1803,9 +1811,11 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	case SO_HIP_SET_PEER_EID:
 		err = hip_socket_handle_set_peer_eid(msg);
 		break;
+#if 0  // XX TODO, not supported
 	case SO_HIP_GET_PEER_LIST:
 		err = hip_socket_handle_get_peer_list(msg);
 		break;
+#endif 
 	default:
 		err = -ESOCKTNOSUPPORT;
 	}

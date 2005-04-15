@@ -41,6 +41,9 @@ static void hip_hadb_put_entry(void *entry)
 void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 {
 	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
+	HIP_LOCK_HS(hs);
+	hip_ht_delete(&hadb_spi_list, hs);
+	HIP_UNLOCK_HS(hs);
 	HIP_FREE(hs);
 }
 
@@ -53,7 +56,6 @@ static void hip_hadb_hold_hs(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
 }
-
 
 void hip_hadb_remove_hs(uint32_t spi)
 {
@@ -70,22 +72,6 @@ void hip_hadb_remove_hs(uint32_t spi)
 	hip_ht_delete(&hadb_spi_list, hs);
 	HIP_UNLOCK_HS(hs);
 	hip_hadb_put_hs(hs); /* verify that put_hs is safe after unlocking */
-}
-
-/* test */
-// FIXME: tkoponen, what is this?
-void hip_hadb_remove_hs2(struct hip_hit_spi *hs)
-{
-	if (!hs) {
-		HIP_ERROR("NULL HS\n");
-                return;
-	}
-
-	HIP_LOCK_HS(hs);
-	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
-	hip_ht_delete(&hadb_spi_list, hs);
-	HIP_ERROR("TODO: CALL HS_PUT ?\n");
-	HIP_UNLOCK_HS(hs);
 }
 
 static void *hip_hadb_get_key_hit(void *entry)
@@ -157,7 +143,7 @@ hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
  * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
  * @ha: HA
  */
-void hip_hadb_remove_state_hit(hip_ha_t *ha)
+static void hip_hadb_remove_state_hit(hip_ha_t *ha)
 {
 	HIP_LOCK_HA(ha);
 	if ((ha->hastate & HIP_HASTATE_HITOK) == HIP_HASTATE_HITOK) {
@@ -205,7 +191,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 			hip_ht_add(&hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 		} else {
-			hip_put_ha(tmp);
+			hip_db_put_ha(tmp, hip_hadb_delete_state);
 			HIP_DEBUG("HIT already taken\n");
 		}
 	}
@@ -315,7 +301,8 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
  * The caller should have one reference (as he is calling us). That
  * prevents deletion of HA structure from happening under spin locks.
  */
-void hip_hadb_remove_state(hip_ha_t *ha)
+#if 0 // tkoponen, this is functionally equivalent to hip_hadb_remove_state_hit
+static void hip_hadb_remove_state(hip_ha_t *ha)
 {
 	int r;
 
@@ -332,7 +319,7 @@ void hip_hadb_remove_state(hip_ha_t *ha)
 		  ha, r);
 	HIP_UNLOCK_HA(ha);
 }
-
+#endif
 /************** END OF PRIMITIVE FUNCTIONS **************/
 
 /* select the preferred address within the addresses of the given SPI */
@@ -722,11 +709,11 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 		hip_hadb_remove_state_hit(ha);
 		/* by now, if everything is according to plans, the refcnt
 		   should be 1 */
-		hip_put_ha(ha);
+		hip_db_put_ha(ha, hip_hadb_delete_state);
 		/* and now zero --> deleted*/
 	} else {
 		hip_hadb_delete_peer_addrlist_one(ha, addr);
-		hip_put_ha(ha);
+		hip_db_put_ha(ha, hip_hadb_delete_state);
 	}
 
 	return 0;
@@ -786,7 +773,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 
  out:
 	if (entry)
-		hip_put_ha(entry);
+		hip_db_put_ha(entry, hip_hadb_delete_state);
 	return err;
 }
 
@@ -1577,7 +1564,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
 			hip_hold_ha(this);
 			fail = func(this, opaque);
-			hip_put_ha(this);
+			hip_db_put_ha(this, hip_hadb_delete_state);
 			if (fail)
 				break;
 		}
@@ -1623,7 +1610,7 @@ void hip_hadb_dump_hits(void)
 
 				k = hip_in6_ntop2(&entry->hit_peer, string+cnt);
 				cnt+=k;
-				hip_put_ha(entry);
+				hip_db_put_ha(entry, hip_hadb_delete_state);
 			}
 			string[cnt] = '\0';
 			HIP_ERROR("%s\n", string);
@@ -1757,9 +1744,9 @@ void hip_uninit_hadb()
 		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
 			if (atomic_read(&ha->refcnt) > 2)
 				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
-			hip_hold_ha(ha);
-			hip_hadb_remove_state(ha);
-			hip_put_ha(ha);
+			//hip_hold_ha(ha); // tkoponen: not needed as we do not call remove_state(...)
+			hip_hadb_remove_state_hit(ha);
+			hip_db_put_ha(ha, hip_hadb_delete_state);
 		}
 	}
 
@@ -1773,11 +1760,13 @@ void hip_uninit_hadb()
 			if (atomic_read(&hs->refcnt) > 1)
 				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
 			hip_hadb_hold_hs(hs);
-			//hip_hadb_delete_hs(hs);
-			hip_hadb_remove_hs2(hs);
+			hip_hadb_delete_hs(hs);
+			//HIP_LOCK_HS(hs);
+			//HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
+			//hip_ht_delete(&hadb_spi_list, hs);
+			//HIP_ERROR("TODO: CALL HS_PUT ?\n");
+			//HIP_UNLOCK_HS(hs);
 			hip_hadb_put_hs(hs);
-			//} else
-			//	HIP_DEBUG("HS refcnt < 1, BUG ?\n");
 		}
 	}
 	HIP_DEBUG("DONE DELETING HS HT\n");

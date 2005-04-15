@@ -17,13 +17,17 @@ static struct list_head hip_beetdb_byspi_list[HIP_BEETDB_SIZE];
 void hip_beetdb_delete_state(hip_xfrm_t *x)
 {
 	HIP_DEBUG("xfrm=0x%p\n", x);
+	HIP_ERROR("Miika: this should be implemented\n");
 	HIP_FREE(x);
 }
 
-void hip_beetdb_delete_hs(struct hip_hit_spi *h)
+void hip_beetdb_delete_hs(struct hip_hit_spi *hs)
 {
-	HIP_DEBUG("xfrm=0x%p\n", h);
-	HIP_FREE(h);
+	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
+	HIP_LOCK_HS(hs);
+	hip_ht_delete(&hip_beetdb_spi_list, hs);
+	HIP_UNLOCK_HS(hs);
+	HIP_FREE(hs);
 }
 
 static void hip_beetdb_hold_entry(void *entry)
@@ -130,14 +134,11 @@ void hip_uninit_beetdb(void)
 			if (atomic_read(&hs->refcnt) > 1)
 				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
 			hip_beetdb_hold_hs(hs);
-			//hip_beetdb_delete_hs(hs);
-			hip_hadb_remove_hs2(hs);
+			hip_beetdb_delete_hs(hs);
 			hip_beetdb_put_hs(hs);
-			//} else
-			//	HIP_DEBUG("HS refcnt < 1, BUG ?\n");
 		}
 	}
-	HIP_DEBUG("DONE DELETING HS HT\n");
+	HIP_DEBUG("Done deleting hs ht\n");
 }
 
 /**
@@ -298,7 +299,7 @@ uint32_t hip_get_default_spi_out(hip_hit_t *hit, int *state_ok)
 	HIP_LOCK_HA(entry);
 	spi = entry->spi;
 	HIP_UNLOCK_HA(entry);
-	hip_put_ha(entry);
+	hip_put_xfrm(entry);
 	*state_ok = spi ? 1 : 0;
 	return spi;
 }
