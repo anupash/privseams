@@ -30,10 +30,14 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	//hip_ha_t *entry;
 	struct hip_xfrm_state *xs;
 
+	HIP_DEBUG("\n");
+
 	if (!ipv6_addr_is_hit(&hdr->daddr)) {
 		/* The address was an IPv6 address, ignore. */
 		return 0;
 	}
+
+	HIP_DEBUG("is HIT\n");
 
         /* XX FIX: the following call breaks kernel-only HIP */
 

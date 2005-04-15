@@ -281,15 +281,14 @@ struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
  *
  * Returns: the SPI value to use in the packet, or 0 on error.
 */
-uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
+uint32_t hip_get_default_spi_out(hip_hit_t *hit, int *state_ok)
 {
-  // FIXME to use the BEET database...
 	uint32_t spi;
-	hip_ha_t *entry;
+	hip_xfrm_t *entry;
 
 	_HIP_DEBUG("\n");
 
-	entry = hip_hadb_find_byhit(hit);
+	entry = hip_xfrm_find_byhit(hit);
 	if (!entry) {
 		HIP_DEBUG("entry not found\n");
 		*state_ok = 0;
@@ -297,7 +296,7 @@ uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
 	}
 
 	HIP_LOCK_HA(entry);
-	spi = entry->default_spi_out;
+	spi = entry->spi;
 	HIP_UNLOCK_HA(entry);
 	hip_put_ha(entry);
 	*state_ok = spi ? 1 : 0;

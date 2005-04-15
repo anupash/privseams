@@ -199,28 +199,25 @@ void hip_uninit_output_socket(void)
  */
 int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 {
-	hip_ha_t *entry;
-	char str[INET6_ADDRSTRLEN];
+	hip_xfrm_t *entry;
+
+	HIP_DEBUG("\n");
 
 	if (!hip_is_hit(hit))
 		return 0;
 
-	hip_in6_ntop(hit,str);
+	HIP_DEBUG_HIT("HIT", hit);
 
-	entry = hip_hadb_find_byhit(hit);
+	entry = hip_xfrm_find_byhit(hit);
 	if (!entry) {
-		HIP_ERROR("Unknown HIT: %s\n", str);
+		HIP_ERROR("Unknown HIT\n");
 		return 0;
 	}
 
-	if (hip_hadb_get_peer_addr(entry, addr) < 0) {
-		hip_put_ha(entry);
-		return 0;
-	}
-	hip_put_ha(entry);
+	//hip_put_ha(entry);
+	memcpy(addr, entry->preferred_peer_addr, sizeof(struct in6_addr))
 
-	hip_in6_ntop(addr, str);
-	_HIP_DEBUG("selected dst addr: %s\n", str);
+	HIP_DEBUG_HIT("selected dst addr", addr);
 
 	return 1;
 }
