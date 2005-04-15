@@ -12,6 +12,7 @@
 
 #include "input.h"
 
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac, 
 			   void *hmac_key, int hmac_type);
 
@@ -2861,3 +2862,4 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	return err;
 }
 
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

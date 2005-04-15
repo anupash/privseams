@@ -10,6 +10,7 @@
  */
 
 #include "output.h"
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 
 /**
  * hip_send_i1 - send an I1 packet to the responder
@@ -493,3 +494,5 @@ void hip_send_notify_all(void)
 
         return;
 }
+
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

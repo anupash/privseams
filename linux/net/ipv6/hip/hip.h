@@ -21,6 +21,10 @@
 #  include <linux/cpumask.h>
 #  include "sysctl.h"
 #  include "proc.h"
+#  include "beet.h"
+#  include "preoutput.h"
+#  include "preinput.h"
+#  include "xfrm.h"
 #else
 
 #define jiffies random()

@@ -2,6 +2,7 @@
 // modified, the modifications must be written there too.
 #include "hadb.h"
 
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef __KERNEL__
 #  include <net/ipv6.h>
 #endif /* __KERNEL__ */
@@ -1557,36 +1558,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	return err;
 }
 
-/** hip_get_default_spi_out - Get the SPI to use in the outbound ESP packet
- * @hit: peer HIT
- * @state_ok: status of SPI lookup
- *
- * On successful return state_ok is 1, on error it is 0.
- *
- * Returns: the SPI value to use in the packet, or 0 on error.
-*/
-uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
-{
-	uint32_t spi;
-	hip_ha_t *entry;
-
-	_HIP_DEBUG("\n");
-
-	entry = hip_hadb_find_byhit(hit);
-	if (!entry) {
-		HIP_DEBUG("entry not found\n");
-		*state_ok = 0;
-		return 0;
-	}
-
-	HIP_LOCK_HA(entry);
-	spi = entry->default_spi_out;
-	HIP_UNLOCK_HA(entry);
-	hip_put_ha(entry);
-	*state_ok = spi ? 1 : 0;
-	return spi;
-}
-
 /**
  * hip_for_each_ha - Map function @func to every HA in HIT hash table
  * @func: Mapper function
@@ -1819,3 +1790,4 @@ void hip_uninit_hadb()
 	}
 	HIP_DEBUG("DONE DELETING HS HT\n");
 }
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

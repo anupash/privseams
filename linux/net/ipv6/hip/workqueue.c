@@ -271,6 +271,7 @@ int hip_do_work(struct hip_work_order *job)
 	case HIP_WO_TYPE_INCOMING:
 		HIP_START_TIMER(KMM_PARTIAL);
 		switch(job->hdr.subtype) {
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 		case HIP_WO_SUBTYPE_RECV_I1:
 			res = hip_receive_i1(job->msg, &job->hdr.src_addr,
 					     &job->hdr.dst_addr);
@@ -301,6 +302,7 @@ int hip_do_work(struct hip_work_order *job)
 			res = hip_receive_bos(job->msg, &job->hdr.src_addr,
 					      &job->hdr.dst_addr);
 			break;
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
@@ -316,7 +318,7 @@ int hip_do_work(struct hip_work_order *job)
 		struct hip_keys *keys;
 
 		switch(job->hdr.subtype) {
-#ifdef __KERNEL__
+#if defined __KERNEL__ && defined CONFIG_HIP_USERSPACE
 		case HIP_WO_SUBTYPE_SEND_PACKET:
 			res = hip_csum_send(&job->hdr.src_addr, &job->hdr.dst_addr, 
 					    job->msg);
@@ -403,17 +405,20 @@ int hip_do_work(struct hip_work_order *job)
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = 0;
 			break;
-#endif
+#endif /* defined __KERNEL__ && defined CONFIG_HIP_USERSPACE */
+
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
 			break;
 		}
 
+#if defined __KERNEL__ && defined CONFIG_HIP_USERSPACE
 		if (resp) {
 			hip_netlink_send(resp);
 			hip_free_work_order(resp);
 		}
+#endif /* defined __KERNEL__ && defined CONFIG_HIP_USERSPACE */
 
 		if (res < 0)
 			res = KHIPD_ERROR;
@@ -432,8 +437,8 @@ int hip_do_work(struct hip_work_order *job)
 			res = KHIPD_OK;
 			break;
 #endif
+#if !defined __KERNEL__  || !defined CONFIG_HIP_USERSPACE
 		case HIP_WO_SUBTYPE_ADDMAP:
-#ifndef CONFIG_HIP_USERSPACE
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(&job->hdr.dst_addr,
 						     &job->hdr.src_addr);
@@ -441,8 +446,8 @@ int hip_do_work(struct hip_work_order *job)
 				res = KHIPD_ERROR;
 				break;
 			}
-#endif
-			/* Synchronize the kernel BEET database */
+
+			/* Synchronize the BEET database */
 			res = hip_xfrm_dst_init(&job->hdr.dst_addr,
 						&job->hdr.src_addr);
 			if (res < 0)
@@ -455,6 +460,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
+#endif /* !defined __KERNEL__  || !defined CONFIG_HIP_USERSPACE */
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */

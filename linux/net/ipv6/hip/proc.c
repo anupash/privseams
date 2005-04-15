@@ -2,6 +2,7 @@
 
 #ifdef CONFIG_PROC_FS
 
+#ifndef CONFIG_HIP_USERSPACE
 typedef struct {
 	char *page;
 	int count;
@@ -316,7 +317,7 @@ int hip_proc_send_notify(char *page, char **start, off_t off,
 	return 0;
 }
 #endif
-
+#endif /* CONFIG_HIP_USERSPACE */
 /**
  * hip_init_procfs - initialize HIP procfs support
  *
@@ -324,6 +325,7 @@ int hip_proc_send_notify(char *page, char **start, off_t off,
  */
 int hip_init_procfs(void)
 {
+#ifndef CONFIG_HIP_USERSPACE
 	HIP_DEBUG("procfs init\n");
 	hip_proc_root = create_proc_entry("hip", S_IFDIR, proc_net);
 	if (!hip_proc_root)
@@ -351,8 +353,10 @@ int hip_init_procfs(void)
 #endif
 
 	HIP_DEBUG("profcs init successful\n");
+#endif /* CONFIG_HIP_USERSPACE */
 	return 1;
 
+#ifndef CONFIG_HIP_USERSPACE
 #if 0
  out_err_send_update:
 	remove_proc_entry("send_update", hip_proc_root);
@@ -368,6 +372,7 @@ int hip_init_procfs(void)
 
 	HIP_ERROR("profcs init failed\n");
 	return -1;
+#endif /* CONFIG_HIP_USERSPACE */
 }
 
 /**
@@ -375,6 +380,7 @@ int hip_init_procfs(void)
  */
 void hip_uninit_procfs(void)
 {
+#ifndef CONFIG_HIP_USERSPACE
 	HIP_DEBUG("\n");
 	remove_proc_entry("lhi", hip_proc_root);
 	remove_proc_entry("sdb_state", hip_proc_root);
@@ -384,6 +390,7 @@ void hip_uninit_procfs(void)
 	remove_proc_entry("send_notify", hip_proc_root);
 #endif
 	remove_proc_entry("hip", proc_net);
+#endif /* CONFIG_HIP_USERSPACE */
 }
 
 #endif /* CONFIG_PROC_FS */

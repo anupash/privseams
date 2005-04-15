@@ -1,6 +1,6 @@
 #ifndef HIP_OUTPUT_H
 #define HIP_OUTPUT_H
-
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef __KERNEL__
 #  include <net/ipv6.h>
 #  include <linux/skbuff.h>
@@ -28,4 +28,5 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry);
 void hip_send_notify_all(void);
 
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 #endif /* HIP_OUTPUT_H */

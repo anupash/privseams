@@ -1,6 +1,7 @@
 #ifndef HIP_INPUT_H
 #define HIP_INPUT_H
 
+#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef __KERNEL__
 #  include <asm/atomic.h>
 #  include <linux/skbuff.h>
@@ -27,11 +28,6 @@
 #include "rvs.h"
 #endif
 
-#ifdef __KERNEL__
-void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr);
-int hip_inbound(struct sk_buff **skb, unsigned int *nhoff);
-#endif /* __KERNEL__ */
-
 int hip_create_signature(void *buffer_start, int buffer_length, 
 			 struct hip_host_id *host_id, u8 *signature);
 int hip_receive_r1(struct hip_common *, struct in6_addr *, struct in6_addr *);
@@ -51,4 +47,5 @@ int hip_verify_packet_signature(struct hip_common *msg,
 				struct hip_host_id *hid);
 int hip_verify_signature(void *buffer_start, int buffer_length, 
 			 struct hip_host_id *host_id, u8 *signature);
+#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 #endif /* HIP_INPUT_H */

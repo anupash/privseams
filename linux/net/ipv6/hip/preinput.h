@@ -8,6 +8,7 @@
 #endif
 
 #include <net/hip.h>
+#include "beet.h"
 #include "debug.h"
 #include "workqueue.h"
 #if defined CONFIG_HIP_HI3 && !defined __KERNEL__

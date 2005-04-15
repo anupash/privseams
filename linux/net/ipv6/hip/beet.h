@@ -51,6 +51,8 @@ struct hip_xfrm_state *hip_xfrm_find_by_hit(struct in6_addr *dst_hit);
 
 void hip_beetdb_delete_state(hip_xfrm_t *x);
 
+uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
+
 #endif /* __KERNEL__ */
 
 /*
