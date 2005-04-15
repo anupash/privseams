@@ -208,14 +208,14 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 
 	HIP_DEBUG_HIT("HIT", hit);
 
-	entry = hip_xfrm_find_byhit(hit);
+	entry = hip_xfrm_find_by_hit(hit);
 	if (!entry) {
 		HIP_ERROR("Unknown HIT\n");
 		return 0;
 	}
 
 	//hip_put_ha(entry);
-	memcpy(addr, entry->preferred_peer_addr, sizeof(struct in6_addr))
+	memcpy(addr, &entry->preferred_peer_addr, sizeof(struct in6_addr));
 
 	HIP_DEBUG_HIT("selected dst addr", addr);
 

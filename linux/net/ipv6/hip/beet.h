@@ -54,6 +54,7 @@ void hip_beetdb_delete_state(hip_xfrm_t *x);
 
 uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok);
 
+#define hip_put_xfrm(ha) hip_db_put_ha(ha, hip_beetdb_delete_state)
 #endif /* __KERNEL__ */
 
 /*

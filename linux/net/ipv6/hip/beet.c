@@ -288,7 +288,7 @@ uint32_t hip_get_default_spi_out(hip_hit_t *hit, int *state_ok)
 
 	_HIP_DEBUG("\n");
 
-	entry = hip_xfrm_find_byhit(hit);
+	entry = hip_xfrm_find_by_hit(hit);
 	if (!entry) {
 		HIP_DEBUG("entry not found\n");
 		*state_ok = 0;

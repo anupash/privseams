@@ -56,6 +56,24 @@
 #define HIP_DB_GET_KEY_HIT(entry, entry_type) \
             (void *)&(((entry_type *)entry)->hit_peer);
 
+#define hip_hold_ha(ha) do { \
+	atomic_inc(&ha->refcnt); \
+	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
+} while(0)
+
+#define hip_db_put_ha(ha, destructor) do { \
+	if (atomic_dec_and_test(&ha->refcnt)) { \
+                HIP_DEBUG("HA: deleting %p\n", ha); \
+		destructor(ha); \
+                HIP_DEBUG("HA: %p deleted\n", ha); \
+	} else { \
+                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
+                           atomic_read(&ha->refcnt)); \
+        } \
+} while(0)
+
+#define hip_put_ha(ha) hip_db_put_ha(ha, hip_hadb_delete_state)
+
 /*************** BASE FUNCTIONS *******************/
 
 /* matching */
@@ -162,25 +180,6 @@ void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
 void hip_hadb_remove_hs2(struct hip_hit_spi *hs);
-
-#define hip_hold_ha(ha) do { \
-	atomic_inc(&ha->refcnt); \
-	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
-} while(0)
-
-#define hip_db_put_ha(ha, destructor) do { \
-	if (atomic_dec_and_test(&ha->refcnt)) { \
-                HIP_DEBUG("HA: deleting %p\n", ha); \
-		destructor(ha); \
-                HIP_DEBUG("HA: %p deleted\n", ha); \
-	} else { \
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
-                           atomic_read(&ha->refcnt)); \
-        } \
-} while(0)
-
-#define hip_put_ha(ha) hip_db_put_ha(ha, hip_hadb_delete_state)
-#define hip_put_xfrm(ha) hip_db_put_ha(ha, hip_beetdb_delete_state)
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 #endif /* HIP_HADB_H */
