@@ -200,8 +200,39 @@ int hip_socket_get_eid_info(struct socket *sock,
 			  (eid_is_local ? "local" : "peer"));
 		goto out_err;
 	}
-
-	/* XX FIXME: CHECK ACCESS RIGHTS FROM OWNER_INFO */
+	HIP_DEBUG("current->uid:%d, current->gid:%d, current->pid:%d\n",
+		  current->uid, current->gid, current->pid);
+	HIP_DEBUG("ED->uid:%d, ED->gid:%d, ED->pid:%d\n",
+		  owner_info.uid, owner_info.gid, owner_info.pid);
+	
+	/* Access control for EDs/HIs  */
+	if(eid_is_local) {
+		HIP_DEBUG("flags:%d\n",owner_info.flags);
+		if(owner_info.flags & HIP_HI_REUSE_ANY) {
+			HIP_DEBUG("Access control check to ED, REUSE_ANY\n");
+			goto out_err;	
+			
+		} else if((owner_info.flags & HIP_HI_REUSE_GID) && 
+			  (current->gid == owner_info.gid)) {
+			HIP_DEBUG("Access control check to ED, REUSE_GID\n");
+			goto out_err;	
+			
+		} else if((owner_info.flags & HIP_HI_REUSE_UID) && 
+			  (current->uid == owner_info.uid)) {
+			HIP_DEBUG("Access control check to ED, REUSE_UID\n");
+			goto out_err;
+			
+		} else if(current->pid == owner_info.pid) {
+			HIP_DEBUG("Access control check to ED, PID ok\n");
+			goto out_err;
+			
+			
+		} else {
+			err = -EACCES;
+			HIP_INFO("Access denied to ED\n");
+			goto out_err;
+		}
+	}
 
  out_err:
 
@@ -258,7 +289,8 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 		goto out_err;
 	}
 	HIP_DEBUG_HIT("hip socket bound to HIT", &lhi.hit);
-
+	HIP_DEBUG("binding to eid with value %d\n",
+		  ntohs(sockaddr_eid->eid_val));
 	/* Clear out the flowinfo, etc from sockaddr_in6 */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 
@@ -272,6 +304,8 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 
+	HIP_DEBUG("using port number %d when binding\n",
+		  ntohs(sockaddr_eid->eid_port));
 	/* XX FIX: check access permissions from eid_owner_info */
 
 	err = socket_handler->bind(sock, (struct sockaddr *) &sockaddr_in6,
@@ -287,7 +321,7 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	       sizeof(struct in6_addr));
 
  out_err:
-
+		
 	return err;
 }
 
@@ -435,6 +469,8 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+	owner_info.pid = current->pid;
+	owner_info.flags = 0;
 
 	memcpy(&lhi.hit, &pinfo->daddr,
 	       sizeof(struct in6_addr));
@@ -1330,6 +1366,8 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+	owner_info.pid = current->pid;
+	owner_info.flags = eid_endpoint->endpoint.flags;
 
 	lhi.anonymous =
 	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
@@ -1347,7 +1385,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 		err = hip_socket_add_local_hi(host_id, &lhi);
 		if (err == -EEXIST) {
 			HIP_INFO("Host id exists already, ignoring\n");
-			err = 0;
+			//err = 0;
 		} else if (err) {
 			HIP_ERROR("Adding of localhost id failed");
 			goto out_err;
@@ -1360,14 +1398,19 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	
 	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
 	
-	HIP_DEBUG("hip: Generating a new R1 now\n");
-	
-	if (!hip_precreate_r1(&lhi.hit)) {
-	  HIP_ERROR("Unable to precreate R1s for host identity...failing\n");
-	  err = -ENOENT;
-	  goto out_err;
+        /* Don't precreate R1s for existing HI */
+	if(err != -EEXIST) {
+		HIP_DEBUG("hip: Generating a new R1 now\n");
+		if (!hip_precreate_r1(&lhi.hit)) {
+			HIP_ERROR("Unable to precreate R1s for host identity...failing\n");
+			err = -ENOENT;
+			goto out_err;
+		}
+	} else {
+		HIP_DEBUG("Skipping the precreation of R1s, the HI exists.\n");
+		err = 0;
 	}
-
+	
 	/* Iterate through the interfaces */
 	while((param = hip_get_next_param(msg, param)) != NULL) {
 		/* Skip other parameters (only the endpoint should
@@ -1456,6 +1499,8 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+	owner_info.pid = current->pid;
+	owner_info.flags = 0;
 	
 	/* The eid port information will be filled by the resolver. It is not
 	   really meaningful in the eid db. */
