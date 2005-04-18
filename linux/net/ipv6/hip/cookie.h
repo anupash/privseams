@@ -52,7 +52,7 @@ void hip_r1_delete(HIP_R1E *entry);
 
 #define hip_hold_r1db(r1e) do { \
 	atomic_inc(&r1e->refcnt); \
-        HIP_DEBUG("R1DB: %p, refcnt increased to: %d\n",rva, atomic_read(&r1e->refcnt)); \
+        HIP_DEBUG("R1DB: %p, refcnt increased to: %d\n",r1e, atomic_read(&r1e->refcnt)); \
 } while(0) 
 
 #define hip_put_r1db(r1e) do { \

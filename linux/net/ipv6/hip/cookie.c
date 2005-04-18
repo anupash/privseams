@@ -28,7 +28,7 @@ static void hip_r1db_hold_entry(void *entry)
 
 	HIP_ASSERT(entry);
 	atomic_inc(&r1e->refcnt);
-	HIP_DEBUG("R1DB: %p, refcnt incremented to: %d\n", r1e, atomic_read(&r1e->refcnt));
+	_HIP_DEBUG("R1DB: %p, refcnt incremented to: %d\n", r1e, atomic_read(&r1e->refcnt));
 }
 
 static void hip_r1db_put_entry(void *entry)
@@ -40,8 +40,8 @@ static void hip_r1db_put_entry(void *entry)
                 HIP_DEBUG("R1DB: %p, refcnt reached zero. Deleting...\n",r1e);
 		hip_r1_delete(r1e);
 	} else {
-                HIP_DEBUG("R1DB: %p, refcnt decremented to: %d\n", r1e, 
-			  atomic_read(&r1e->refcnt));
+                _HIP_DEBUG("R1DB: %p, refcnt decremented to: %d\n", r1e, 
+			   atomic_read(&r1e->refcnt));
 	}
 }
 
@@ -71,8 +71,25 @@ void hip_init_r1db()
 
 void hip_r1_delete(HIP_R1E *entry)
 {
-	HIP_DEBUG("r1 delete\n");
+	int r=0;
 
+	_HIP_DEBUG("r1 delete\n");
+
+	r = atomic_read(&entry->refcnt);
+
+	HIP_ASSERT(atomic_read(&entry->refcnt) >= 1);
+	HIP_ASSERT(entry);
+	
+	HIP_LOCK_R1DB(entry);
+	if(!(entry->r1estate & HIP_R1ESTATE_VALID)) {
+		HIP_DEBUG("R1 not in R1 hashtable or state corrupted\n");
+		return;
+	}
+	HIP_DEBUG("Removed R1: %p from R1DB hash tables. " \
+		  "References remaining before removing: %d\n",
+		  entry, r);
+
+	HIP_UNLOCK_R1DB(entry);
 }
 
 /**
@@ -100,13 +117,13 @@ int hip_r1_insert(HIP_R1E *r1e)
 	HIP_ASSERT(atomic_read(&r1e->refcnt) <= 1); 
 
 	if (ipv6_addr_any(&r1e->hit)) {
-		HIP_ERROR("Cannot insert RVA entry with NULL hit\n");
+		HIP_ERROR("Cannot insert R1 entry with NULL hit\n");
 		return -EINVAL;
 	}
 
 	tmp = hip_ht_find(&r1db_hit, &r1e->hit);
 	if (tmp) {
-		HIP_INFO("Duplicate entry... not adding to RVA table\n");
+		HIP_INFO("Duplicate entry... not adding to R1 table\n");
 		return -EEXIST;
 	}
 
@@ -408,19 +425,18 @@ int hip_precreate_r1(const struct in6_addr *src_hit)
 		HIP_DEBUG("Packet %d created\n",i);
 	}
 	err = hip_r1_insert(entry);
-
-	return 1;
-
+	
  err_out:
-	//if (hip_r1table1) {
-	//	hip_uninit_r1();
-	//}
-	return 0;
+
+	return err;
 }
 
 void hip_uninit_r1(void)
 {
-	//int i;
+	int i;
+	HIP_R1E *en, *tmp;
+		
+	HIP_DEBUG("\n");
 	
 	/* XX TODO: do something;) */
 
@@ -430,14 +446,18 @@ void hip_uninit_r1(void)
 	 * The r1->common is the actual buffer, and r1 is the structure
 	 * holding only pointers to the TLVs.
 	 */
-	/*if (hip_r1table1) {
-	  for(i=0; i < HIP_R1TABLESIZE; i++) {
-	  if (hip_r1table1[i].r1) {
-	  kfree(hip_r1table1[i].r1);
-	  }
-	  }
-	  kfree(hip_r1table1);
-	  }*/
+	HIP_DEBUG("DELETING R1 HT\n");
+
+	for(i = 0; i < HIP_R1DB_SIZE; i++) {
+		list_for_each_entry_safe(en, tmp, &r1db_byhit[i], next_hit) {
+			if (atomic_read(&en->refcnt) > 2)
+				HIP_ERROR("R1 entry: %p, in use while removing it from R1DB\n", en);
+			hip_r1db_hold_entry(en);
+			hip_r1_delete(en);
+			hip_r1db_put_entry(en);
+		}
+	}
+
 }
 
 

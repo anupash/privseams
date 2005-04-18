@@ -727,15 +727,6 @@ int hip_socket_add_local_hi(const struct hip_host_id *host_identity,
 	/* If adding localhost id failed because there was a duplicate, we
 	   won't precreate anything (and void causing dagling memory
 	   pointers) */
-#if 0	
-	HIP_DEBUG("hip: Generating a new R1 now\n");
-
-       	if (!hip_precreate_r1(&lhi->hit)) {
-		HIP_ERROR("Unable to precreate R1s... failing\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-#endif
 
  out_err:
 	return err;
@@ -808,7 +799,8 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 		
 		HIP_DEBUG("hip: Generating a new R1 now\n");
 	
-		if (!hip_precreate_r1(&lhi.hit)) {
+		err = hip_precreate_r1(&lhi.hit);
+		if (err) {
 			HIP_ERROR("Unable to precreate R1s for host identity... failing\n");
 			err = -ENOENT;
 			goto out_err;
@@ -1401,7 +1393,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
         /* Don't precreate R1s for existing HI */
 	if(err != -EEXIST) {
 		HIP_DEBUG("hip: Generating a new R1 now\n");
-		if (!hip_precreate_r1(&lhi.hit)) {
+		if (hip_precreate_r1(&lhi.hit)) {
 			HIP_ERROR("Unable to precreate R1s for host identity...failing\n");
 			err = -ENOENT;
 			goto out_err;

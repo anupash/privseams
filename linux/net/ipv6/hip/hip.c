@@ -2261,6 +2261,8 @@ static void __exit hip_cleanup(void)
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
 
+	hip_uninit_r1();
+
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();
 #endif /* CONFIG_PROC_FS */
@@ -2273,7 +2275,6 @@ static void __exit hip_cleanup(void)
 	hip_uninit_hadb();
 	hip_uninit_all_eid_db();
 	hip_uninit_output_socket();
-	hip_uninit_r1();
 
 	/* update_spi_waitlist_delete_all(); */
 	HIP_INFO("HIP module uninitialized successfully\n");
