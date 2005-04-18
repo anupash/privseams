@@ -44,6 +44,7 @@
 #define HIP_WO_SUBTYPE_RECV_BOS    7
 
 /* subtypes from 101 to 200 reserved for HIP_WO_TYPE_OUTGOING */
+#define HIP_WO_SUBTYPE_SEND_I1     101
 
 #define HIP_WO_SUBTYPE_NEW_CONN    101
 #define HIP_WO_SUBTYPE_DEL_CONN    102 // reinitialize state to start

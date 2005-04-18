@@ -29,6 +29,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	int state = 0;
 	//hip_ha_t *entry;
 	struct hip_xfrm_state *xs;
+	struct hip_work_order *hwo;
 
 	HIP_DEBUG("\n");
 
@@ -72,23 +73,18 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		barrier();
 		//entry->state = HIP_STATE_I1_SENT;
 		xs->state = HIP_STATE_I1_SENT;
-
-#if 0
-		// FIXME: replace this with a work order to workqueue
-		// to send i1 the work order execution then changes
-		// the state in the userspace/hadb too.
-		err = hip_send_i1(&hdr->daddr, entry);
-		if (err < 0) {
-			HIP_ERROR("Sending of I1 failed (%d)\n", err);
+		hwo = hip_init_job(GFP_ATOMIC);
+		if (!hwo) {
+			HIP_ERROR("init job failed");
 			err = -ENOMEM;
-
-			barrier();
-			entry->state = HIP_STATE_UNASSOCIATED;
 			goto out;
 		}
-#endif
-		HIP_ERROR("Miika: create a work order ...\n");
-		err = -1; // drop the TCP/UDP packet (FIXME: tkoponen, dropping does not happen due to blocking happening earlier?)
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr,
+					HIP_WO_TYPE_OUTGOING, 
+					HIP_WO_SUBTYPE_SEND_I1,
+					&hdr->saddr, &hdr->daddr,
+					0, 0);
+		hip_insert_work_order(hwo);
 		break;
 	case HIP_STATE_I1_SENT:
 #if 0

@@ -406,7 +406,26 @@ int hip_do_work(struct hip_work_order *job)
 			res = resp->hdr.arg1 = 0;
 			break;
 #endif /* defined __KERNEL__ && defined CONFIG_HIP_USERSPACE */
-
+#ifndef __KERNEL__
+		case HIP_WO_SUBTYPE_SEND_I1:
+		{
+			hip_ha_t *entry;
+			entry = hip_hadb_find_byhit(&job->hdr.dst_addr);
+			if (!entry) {
+				HIP_ERROR("Unknown HA\n");
+				res = KHIPD_ERROR;
+				break;
+			}
+			res = hip_send_i1(&entry->hit_peer, entry);
+			if (res < 0) {
+				HIP_ERROR("Sending of I1 failed (%d)\n", res);
+				res = KHIPD_ERROR;
+				barrier();
+				entry->state = HIP_STATE_UNASSOCIATED;
+			}
+			break;
+		}
+#endif /* __KERNEL__ */
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
