@@ -1728,8 +1728,6 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 		goto out_err;
 	}
 
-	HIP_DEBUG("AIII: %d\n", hip_get_msg_total_len(msg));
-
 	msg_type = hip_get_msg_type(msg);
 	switch(msg_type) {
 	case SO_HIP_ADD_LOCAL_HI:

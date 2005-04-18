@@ -359,8 +359,8 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	
 	/* Fill in the netlink message payload */
 	h = (struct hip_work_order *)NLMSG_DATA(nlh);
-	memcpy(&h, hwo, sizeof(struct hip_work_order_hdr));
-	memcpy(h->msg, hwo->msg, msg_len);
+	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
+	memcpy(&h->msg, hwo->msg, msg_len);
 
         ret = hip_netlink_send_buf(&nl_khipd, (char*)nlh, nlh->nlmsg_len) <= 0;
 	HIP_FREE(nlh);

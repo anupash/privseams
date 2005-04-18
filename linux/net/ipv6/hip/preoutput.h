@@ -13,6 +13,7 @@
 #include "misc.h"
 #include "debug.h"
 #include "preinput.h"
+#include "workqueue.h"
 
 #ifdef __KERNEL__
 /* Called by transport layer */

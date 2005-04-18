@@ -69,7 +69,7 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	}
 
 	_HIP_DEBUG("hip: send I1 packet\n");
-	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);	// HANDLER
+	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);// HANDLER
 
  out_err:
 	return err;

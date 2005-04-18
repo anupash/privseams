@@ -80,7 +80,7 @@ static int hit_match(hip_ha_t *entry, void *our) {
 
 int hip_hadb_hit_is_our(const hip_hit_t *our) {
 	/* FIXME: This full scan is stupid, but we have no hashtables anyway... tkoponen */
-	return hip_for_each_ha(hit_match, our);
+	return hip_for_each_ha(hit_match, (void *) our);
 }
 
 static void *hip_hadb_get_key_hit(void *entry)
