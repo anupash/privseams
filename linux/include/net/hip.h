@@ -68,6 +68,46 @@ struct list_head {
 
 #endif /* __KERNEL__ */
 
+#define HIP_IFE(func, eval) \
+{ \
+	if (func) { \
+		err = eval; \
+		goto out_err; \
+	} \
+}
+
+#define HIP_IFEL(func, eval, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+		goto out_err; \
+	} \
+}
+
+#define HIP_IFEB(func, eval, finally) \
+{ \
+	if (func) { \
+		err = eval; \
+                finally;\
+		goto out_err; \
+	} else {\
+		finally;\
+        }\
+}
+
+#define HIP_IFEBL(func, eval, finally, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+                finally;\
+		goto out_err; \
+	} else {\
+		finally;\
+        }\
+}
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
 	int t;

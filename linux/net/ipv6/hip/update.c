@@ -42,14 +42,10 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 			   struct hip_crypto_key *espkey_gl, struct hip_crypto_key *authkey_gl,
 			   struct hip_crypto_key *espkey_lg, struct hip_crypto_key *authkey_lg)
 {
-	int err = 0;
        	unsigned char Kn[HIP_AH_SHA_LEN];
-	uint16_t k = *keymat_offset_new;
+	uint16_t k = *keymat_offset_new, Kn_pos;
 	uint8_t c = *calc_index_new;
-	int esp_transform;
-	int esp_transf_length = 0;
-	int auth_transf_length = 0;
-	uint16_t Kn_pos;
+	int err = 0, esp_transform, esp_transf_length = 0, auth_transf_length = 0;
 
 	_HIP_DEBUG("k=%u c=%u\n", k, c);
 
@@ -58,46 +54,30 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	auth_transf_length = hip_auth_key_length_esp(esp_transform);
 	_HIP_DEBUG("enckeylen=%d authkeylen=%d\n", esp_transf_length, auth_transf_length);
 
-	if (*keymat_offset_new + 2*(esp_transf_length+auth_transf_length) > 0xffff) {
-		HIP_ERROR("Can not draw requested amount of new KEYMAT, keymat index=%u, requested amount=%d\n",
-			  *keymat_offset_new, 2*(esp_transf_length+auth_transf_length));
-		err = -EINVAL;
-		goto out_err;
-	}
-
+	HIP_IFEL(*keymat_offset_new + 2*(esp_transf_length+auth_transf_length) > 0xffff, -EINVAL,
+		 "Can not draw requested amount of new KEYMAT, keymat index=%u, requested amount=%d\n",
+		 *keymat_offset_new, 2*(esp_transf_length+auth_transf_length));
 	memcpy(Kn, Kn_out, HIP_AH_SHA_LEN);
 
 	/* SA-gl */
 	Kn_pos = entry->current_keymat_index - (entry->current_keymat_index % HIP_AH_SHA_LEN);
-	err = hip_keymat_get_new(espkey_gl->key, esp_transf_length, entry->dh_shared_key,
-				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
-	_HIP_DEBUG("enckey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
-	if (err)
-		goto out_err;
+	HIP_IFE(hip_keymat_get_new(espkey_gl->key, esp_transf_length, entry->dh_shared_key,
+				   entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos), -1);
 	_HIP_HEXDUMP("ENC KEY gl", espkey_gl->key, esp_transf_length);
 	k += esp_transf_length;
 
-	err = hip_keymat_get_new(authkey_gl->key, auth_transf_length, entry->dh_shared_key,
-				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
-	_HIP_DEBUG("authkey_gl hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
-	if (err)
-		goto out_err;
+	HIP_IFE(hip_keymat_get_new(authkey_gl->key, auth_transf_length, entry->dh_shared_key,
+				   entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos), -1);
 	_HIP_HEXDUMP("AUTH KEY gl", authkey_gl->key, auth_transf_length);
 	k += auth_transf_length;
 
 	/* SA-lg */
-	err = hip_keymat_get_new(espkey_lg->key, esp_transf_length, entry->dh_shared_key,
-				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
-	_HIP_DEBUG("enckey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
-	if (err)
-		goto out_err;
+	HIP_IFE(hip_keymat_get_new(espkey_lg->key, esp_transf_length, entry->dh_shared_key,
+				   entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos), -1);
 	_HIP_HEXDUMP("ENC KEY lg", espkey_lg->key, esp_transf_length);
 	k += esp_transf_length;
-	err = hip_keymat_get_new(authkey_lg->key, auth_transf_length, entry->dh_shared_key,
-				 entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos);
-	_HIP_DEBUG("authkey_lg hip_keymat_get_new ret err=%d k=%u c=%u\n", err, k, c);
-	if (err)
-		goto out_err;
+	HIP_IFE(hip_keymat_get_new(authkey_lg->key, auth_transf_length, entry->dh_shared_key,
+				   entry->dh_shared_key_len, &k, &c, Kn, &Kn_pos), -1);
 	_HIP_HEXDUMP("AUTH KEY lg", authkey_lg->key, auth_transf_length);
 	k += auth_transf_length;
 
@@ -122,28 +102,11 @@ int hip_update_test_rea_addr(struct in6_addr *addr)
 {
 #ifdef __KERNEL__
 	int addr_type = ipv6_addr_type(addr);
-	if (addr_type == IPV6_ADDR_ANY) {
-		HIP_DEBUG("skipping IPV6_ADDR_ANY address\n");
-		return 0;
-	}
-	if (addr_type & IPV6_ADDR_LOOPBACK) {
-		HIP_DEBUG("skipping loopback address, not supported\n");
-		return 0;
-	}
-	if (addr_type & IPV6_ADDR_LINKLOCAL) {
-		HIP_DEBUG("skipping link local address, not supported\n");
-		return 0;
-	}
-	if (addr_type & IPV6_ADDR_SITELOCAL) {
-		HIP_DEBUG("skipping site local address, not supported\n");
-		return 0;
-	}
-	if (! (addr_type & IPV6_ADDR_UNICAST) ) {
-		HIP_DEBUG("skipping non-unicast address\n");
-		return 0;
-	}
-
-	return 1;
+	return !(addr_type == IPV6_ADDR_ANY ||
+		 addr_type & IPV6_ADDR_LOOPBACK ||
+		 addr_type & IPV6_ADDR_LINKLOCAL ||
+		 addr_type & IPV6_ADDR_SITELOCAL ||
+		 !(addr_type & IPV6_ADDR_UNICAST));
 #else
 	return !(IN6_IS_ADDR_UNSPECIFIED(addr) ||
 		 IN6_IS_ADDR_LOOPBACK(addr) ||
@@ -190,20 +153,18 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 
 	/* 1. The host checks if the SPI listed is a new one. If it
 	   is a new one, it creates a new SPI that contains no addresses. */
-	spi_out = hip_hadb_get_spi_list(entry, spi);
-	if (!spi_out) {
-		/* bug: outbound SPI must have been already created by the
-		   corresponding NES in the same UPDATE packet */
-		HIP_ERROR("bug: outbound SPI 0x%x does not exist\n", spi);
-		goto out_err;
-	}
+	/* If following exits, its a bug: outbound SPI must have been
+	   already created by the corresponding NES in the same UPDATE
+	   packet */
+	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
+		 "Bug: outbound SPI 0x%x does not exist\n", spi);
 
 	_HIP_DEBUG("Clearing old preferred flags of the SPI\n");
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
 		a->is_preferred = 0;
 	}
 
-	rea_address_item = (void *)rea+sizeof(struct hip_rea);
+	rea_address_item = (void *)rea + sizeof(struct hip_rea);
 	for(i = 0; i < n_addrs; i++, rea_address_item++) {
 		struct in6_addr *rea_address = &rea_address_item->address;
 		uint32_t lifetime = ntohl(rea_address_item->lifetime);
@@ -224,12 +185,8 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 			is_preferred = 0;
 		}
 		/* 3. check if the address is already bound to the SPI + add/update address */
-		err = hip_hadb_add_addr_to_spi(entry, spi, rea_address, 0,
-					       lifetime, is_preferred);
-		if (err) {
-			HIP_DEBUG("failed to add/update address to the SPI list\n");
-			goto out_err;
-		}
+		HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, rea_address, 0,
+						 lifetime, is_preferred), -1);
 	}
 
 	/* 4. Mark all addresses on the SPI that were NOT listed in the REA
@@ -260,7 +217,6 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 		(void)hip_hadb_relookup_default_out(entry);
 	/* relookup always ? */
 
-	_HIP_DEBUG("done\n");
  out_err:
 	return err;
 }
@@ -281,7 +237,6 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 				  struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
-	int err = 0;
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_nes *nes;
 	struct hip_seq *seq;
@@ -290,22 +245,17 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_host_id *host_id_private;
 	uint32_t update_id_out = 0;
 	uint32_t prev_spi_in = 0, new_spi_in = 0;
-	uint16_t keymat_index = 0;
+	uint16_t keymat_index = 0, mask;
 	struct hip_common *update_packet = NULL;
  	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
-	int need_to_generate_key = 0, dh_key_generated = 0; //, new_keymat_generated;
-	int nes_i = 1;
+	int err = 0, nes_i = 1, need_to_generate_key = 0, dh_key_generated = 0;
 	
-	/* assume already locked entry */
-	uint16_t mask;
+	/* Assume already locked entry */
 
 	HIP_DEBUG("\n");
-
-	seq = hip_get_param(msg, HIP_PARAM_SEQ);
-	if (!seq) {
-		HIP_ERROR("No SEQ parameter in packet\n");
-		goto out_err;
-	}
+	
+	HIP_IFEL(!(seq = hip_get_param(msg, HIP_PARAM_SEQ)), -1, 
+		 "No SEQ parameter in packet\n");
 
 	/* 8.11.1  Processing an UPDATE packet in state ESTABLISHED */
 
@@ -330,30 +280,20 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   and the optional DIFFIE_HELLMAN parameter. The UPDATE packet also
 	   includes the ACK of the Update ID found in the received UPDATE
 	   SEQ parameter. */
-	update_packet = hip_msg_alloc();
-	if (!update_packet) {
-		HIP_ERROR("update_packet alloc failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Update_packet alloc failed\n");
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1, HIP_CONTROL_DHT_TYPE1);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/*  3. The system increments its outgoing Update ID by one. */
 	entry->update_id_out++;
 	update_id_out = entry->update_id_out;
-	_HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
-	if (!update_id_out) { /* todo: handle this case */
-		HIP_ERROR("outgoing UPDATE ID overflowed back to 0, bug ?\n");
-		err = -EINVAL;
-		goto out_err;
-	}
+        /* Todo: handle this case */
+	HIP_IFEL(!update_id_out, -EINVAL, 
+		 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
 
 	/* test: handle multiple NES, not tested well yet */
  handle_nes:
-	nes = hip_get_nth_param(msg, HIP_PARAM_NES, nes_i);
-	if (!nes) {
+	if (!(nes = hip_get_nth_param(msg, HIP_PARAM_NES, nes_i))) {
 		HIP_DEBUG("no more NES params found\n");
 		goto nes_params_handled;
 	}
@@ -371,11 +311,10 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		/* Otherwise, the NES Keymat Index MUST be larger or
 		   equal to the index of the next byte to be drawn from the
 		   current KEYMAT. */
-		if (ntohs(nes->keymat_index) < entry->current_keymat_index) {
-			HIP_ERROR("NES Keymat Index (%u) < current KEYMAT %u\n",
-				  ntohs(nes->keymat_index), entry->current_keymat_index);
-			goto out_err;
-		}
+		HIP_IFEL(ntohs(nes->keymat_index) < entry->current_keymat_index, -1,
+			 "NES Keymat Index (%u) < current KEYMAT %u\n",
+			 ntohs(nes->keymat_index), entry->current_keymat_index);
+
 		/* In this case, it is RECOMMENDED that the host use the
 		   Keymat Index requested by the peer in the received NES. */
 
@@ -386,17 +325,11 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	}
 
 	/* Set up new incoming IPsec SA, (Old SPI value to put in NES tlv) */
-	prev_spi_in = hip_get_spi_to_update_in_established(entry, dst_ip);
-	HIP_DEBUG("Old incoming SA selected for update, prev_spi_in=0x%x\n", prev_spi_in);
-	if (!prev_spi_in)
-		goto out_err;
+	HIP_IFE(!(prev_spi_in = hip_get_spi_to_update_in_established(entry, dst_ip)), -1);
+	HIP_IFEL(!(new_spi_in = hip_acquire_spi(hits, hitr)), -1, 
+		 "Error while acquiring a SPI\n");
 
-	new_spi_in = hip_acquire_spi(hits, hitr);
-	if (!new_spi_in) {
-		HIP_ERROR("Error while acquiring a SPI\n");
-		goto out_err;
-	}
-	HIP_DEBUG("acquired inbound SPI 0x%x\n", new_spi_in);
+	HIP_DEBUG("Acquired inbound SPI 0x%x\n", new_spi_in);
 	hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in, ntohl(nes->old_spi));
 
 	/* draft-hip-mm test */
@@ -407,10 +340,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(nes->new_spi);
 		spi_out_data.seq_update_id = ntohl(seq->update_id);
-		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data);
-		if (err) {
-			goto out_err;
-		}
+		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1); 
 		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created yet)\n",
 			  ntohl(nes->new_spi));
 	}
@@ -443,82 +373,51 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING.  The system stores any received NES and DIFFIE_HELLMAN
 	   parameters. */
-
-	err = hip_build_param_nes(update_packet, keymat_index,
-				  prev_spi_in, new_spi_in);
-	if (err) {
-		HIP_ERROR("Building of NES failed\n");
-		goto out_err;
-	}
-
-	err = hip_build_param_seq(update_packet, update_id_out);
-	if (err) {
-		HIP_ERROR("Building of SEQ failed\n");
-		goto out_err;
-	}
+	HIP_IFEL(hip_build_param_nes(update_packet, keymat_index,
+				     prev_spi_in, new_spi_in), -1, 
+		 "Building of NES failed\n");
+	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
+		 "Building of SEQ failed\n");
 
 	/* ACK the received UPDATE SEQ */
-	err = hip_build_param_ack(update_packet, ntohl(seq->update_id));
-	if (err) {
-		HIP_ERROR("Building of ACK failed\n");
-		goto out_err;
-	}
+	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1, 
+		 "Building of ACK failed\n");
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
-	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
-	if (err) {
-		HIP_ERROR("Building of HMAC failed (%d)\n", err);
-		goto out_err;
-	}
-
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out),
+		 -1, "Building of HMAC failed\n");
+	
 	/* Add SIGNATURE */
-	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-	if (!host_id_private) {
-		HIP_ERROR("Could not get our host identity. Can not sign data\n");
-		goto out_err;
-	}
-
-	if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-				  host_id_private, signature)) {
-		HIP_ERROR("Could not sign UPDATE. Failing\n");
-		err = -EINVAL;
-		goto out_err;
-	}
+	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)),
+		 -1, "Could not get our host identity. Can not sign data\n");
+	HIP_IFEL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+				       host_id_private, signature), -EINVAL,
+		 "Could not sign UPDATE. Failing\n");
 
 	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		err = hip_build_param_signature_contents(update_packet,
-							 signature,
-							 HIP_RSA_SIGNATURE_LEN,
-							 HIP_SIG_RSA);
+		HIP_IFEL(hip_build_param_signature_contents(update_packet,
+							    signature,
+							    HIP_RSA_SIGNATURE_LEN,
+							    HIP_SIG_RSA), -1, 
+			 "Building of SIGNATURE failed\n");
 	} else {
-		err = hip_build_param_signature_contents(update_packet,
-							 signature,
-							 HIP_DSA_SIGNATURE_LEN,
-							 HIP_SIG_DSA);
+		HIP_IFEL(hip_build_param_signature_contents(update_packet,
+							    signature,
+							    HIP_DSA_SIGNATURE_LEN,
+							    HIP_SIG_DSA), -1,
+			 "Building of SIGNATURE failed\n");
 	}
 
- 	if (err) {
- 		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
- 		goto out_err;
- 	}
-	_HIP_DEBUG("SIGNATURE added\n");
-
 #if 0
-        err = hip_hadb_get_peer_addr(entry, &daddr);
-        if (err) {
-                HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
-                goto out_err;
-        }
+        HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 #endif
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");
 
-        HIP_DEBUG("Sending reply UPDATE packet\n");
-	//err = hip_csum_send(NULL, &daddr, update_packet);
-	err = hip_csum_send(NULL, src_ip, update_packet); // HANDLER
+	err = hip_csum_send(NULL, src_ip, update_packet);
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
@@ -561,10 +460,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	uint32_t new_spi_in = 0;  /* inbound IPsec SA SPI */
 	uint32_t new_spi_out = 0; /* outbound IPsec SA SPI */
 	uint32_t prev_spi_in = 0, prev_spi_out = 0;
-	int we_are_HITg = 0;
-	int esp_transform = -1;
-	int esp_transf_length = 0;
-	int auth_transf_length = 0;
+	int we_are_HITg = 0, esp_transform = -1, esp_transf_length = 0, auth_transf_length = 0;
 	struct hip_spi_in_item spi_in_data;
 	struct hip_ack *ack;
 	uint16_t kmindex_saved;
@@ -586,29 +482,20 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	prev_spi_in = hip_update_get_prev_spi_in(entry, ntohl(ack->peer_update_id));
 
 	/* use the new inbound IPsec SA created when rekeying started */
-	new_spi_in = hip_update_get_new_spi_in(entry, ntohl(ack->peer_update_id));
-	if (!new_spi_in) {
-		HIP_ERROR("Did not find related New SPI for peer Update ID %u\n",
-			  ntohl(ack->peer_update_id));
-		goto out_err;
-	}
+	HIP_IFEL(!(new_spi_in = hip_update_get_new_spi_in(entry, ntohl(ack->peer_update_id))), -1,
+		 "Did not find related New SPI for peer Update ID %u\n", ntohl(ack->peer_update_id));
 	HIP_DEBUG("prev_spi_in=0x%x new_spi_in=0x%x prev_spi_out=0x%x new_spi_out=0x%x\n",
 		  prev_spi_in, new_spi_in, prev_spi_out, new_spi_out);
 
-	kmindex_saved = hip_update_get_spi_keymat_index(entry, ntohl(ack->peer_update_id));
-	if (!kmindex_saved) {
-		HIP_ERROR("saved kmindex is 0\n");
-		goto out_err;
-	}
+	HIP_IFEL(!(kmindex_saved = hip_update_get_spi_keymat_index(entry, ntohl(ack->peer_update_id))),
+		 -1, "Saved kmindex is 0\n");
+
 	_HIP_DEBUG("saved kmindex for NES is %u\n", kmindex_saved);
 
 	/* 2. .. If the system did not generate new KEYMAT, it uses
 	   the lowest Keymat Index of the two NES parameters. */
 	_HIP_DEBUG("entry keymat index=%u\n", entry->current_keymat_index);
-	if (kmindex_saved < nes->keymat_index)
-		keymat_index = kmindex_saved;
-	else
-		keymat_index = nes->keymat_index;
+	keymat_index = kmindex_saved < nes->keymat_index ? kmindex_saved : nes->keymat_index;
 	_HIP_DEBUG("lowest keymat_index=%u\n", keymat_index);
 
 	/* 3. The system draws keys for new incoming and outgoing ESP
@@ -623,57 +510,39 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	_HIP_DEBUG("enckeylen=%d authkeylen=%d\n", esp_transf_length, auth_transf_length);
 	calc_index_new = entry->keymat_calc_index;
 	memcpy(Kn, entry->current_keymat_K, HIP_AH_SHA_LEN);
-	err = hip_update_get_sa_keys(entry, &keymat_index, &calc_index_new, Kn,
-					     &espkey_gl, &authkey_gl, &espkey_lg, &authkey_lg);
-	if (err)
-		goto out_err;
+	HIP_IFE(hip_update_get_sa_keys(entry, &keymat_index, &calc_index_new, Kn,
+				       &espkey_gl, &authkey_gl, &espkey_lg, &authkey_lg), -1);
 	/* todo: update entry keymat later */
 	hip_update_entry_keymat(entry, keymat_index, calc_index_new, Kn);
 
 	/* set up new outbound IPsec SA */
 	HIP_DEBUG("Setting new outbound SA, SPI=0x%x\n", new_spi_out);
-	err = hip_add_sa(hitr, hits, &new_spi_out, esp_transform,
-			 we_are_HITg ? &espkey_gl : &espkey_lg,
-			 we_are_HITg ? &authkey_gl : &authkey_lg,
-			 0, HIP_SPI_DIRECTION_OUT);
-	if (err) {
-		HIP_ERROR("Setting up new outbound IPsec failed (%d)\n", err);
-		goto out_err;
-	}
-	HIP_DEBUG("Set up new outbound IPsec SA, SPI=0x%x\n", new_spi_out);
-
-	HIP_DEBUG("Setting new inbound SA, SPI=0x%x\n", new_spi_in);
-	err = hip_add_sa(hits, hitr, &new_spi_in, entry->esp_transform,
-			 we_are_HITg ? &espkey_lg  : &espkey_gl,
-			 we_are_HITg ? &authkey_lg : &authkey_gl,
-			 1, HIP_SPI_DIRECTION_IN);
-	if (err) {
-		HIP_ERROR("Error while setting up new IPsec SA (err=%d)\n", err);
-		goto out_err;
-	}
+	HIP_IFEL(hip_add_sa(hitr, hits, &new_spi_out, esp_transform,
+			    we_are_HITg ? &espkey_gl : &espkey_lg,
+			    we_are_HITg ? &authkey_gl : &authkey_lg,
+			    0, HIP_SPI_DIRECTION_OUT), -1,
+		 "Setting up new outbound IPsec failed\n");
+	HIP_IFEL(hip_add_sa(hits, hitr, &new_spi_in, entry->esp_transform,
+			    we_are_HITg ? &espkey_lg  : &espkey_gl,
+			    we_are_HITg ? &authkey_lg : &authkey_gl,
+			    1, HIP_SPI_DIRECTION_IN), -1,
+		 "Error while setting up new IPsec SA\n");
 	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
 
 	if (prev_spi_in == new_spi_in) {
 		memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 		spi_in_data.spi = new_spi_in;
 		spi_in_data.ifindex = hip_hadb_get_spi_ifindex(entry, prev_spi_in);/* already set ? */
-		err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
-		if (err)
-			goto out_err;
+		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1);
 	} else
 		_HIP_DEBUG("Old SPI <> New SPI, not adding a new inbound SA\n");
 
-	/* activate the new inbound and outbound SAs */
-	_HIP_DEBUG("finalizing the new inbound SA, SPI=0x%x\n", new_spi_in);
+	/* Activate the new inbound and outbound SAs */
 	hip_finalize_sa(hitr, new_spi_in);
-	_HIP_DEBUG("finalizing the new outbound SA, SPI=0x%x\n", new_spi_out);
 	hip_finalize_sa(hits, new_spi_out);
 
-	HIP_DEBUG("switching inbound SPIs: 0x%x -> 0x%x\n", prev_spi_in, new_spi_in);
 	hip_update_switch_spi_in(entry, prev_spi_in);
-
 	hip_update_set_new_spi_out(entry, prev_spi_out, new_spi_out); /* temporary fix */
-	HIP_DEBUG("switching outbound SPIs: 0x%x -> 0x%x\n", prev_spi_out, new_spi_out);
 	hip_update_switch_spi_out(entry, prev_spi_out);
 
 	hip_set_spi_update_status(entry, new_spi_in, 0);
@@ -685,7 +554,6 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* 4.  The system cancels any timers protecting the UPDATE and
 	   transitions to ESTABLISHED. */
 	entry->state = HIP_STATE_ESTABLISHED;
-	HIP_DEBUG("Went back to ESTABLISHED state\n");
 
 	/* delete old SAs */
 	if (prev_spi_out != new_spi_out) {
@@ -762,23 +630,13 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 		/* 1. If the packet contains a SEQ and NES parameters, then the system
 		   generates a new UPDATE packet with an ACK of the peer's Update ID
 		   as received in the SEQ parameter. .. */
-		update_packet = hip_msg_alloc();
-		if (!update_packet) {
-			HIP_DEBUG("update_packet alloc failed\n");
-			err = -ENOMEM;
-			goto out_err;
-		}
+		HIP_IFE(!(update_packet = hip_msg_alloc()), -ENOMEM);
 		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 						HIP_CONTROL_DHT_TYPE1);
 		hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
-
-		err = hip_build_param_ack(update_packet, ntohl(seq->update_id));
-		if (err) {
-			HIP_ERROR("Building of ACK param failed\n");
-			goto out_err;
-		}
+		HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
+			 "Building of ACK param failed\n");
 	}
-
 
 	if (nes && ack) { /* kludge */
 		uint32_t s = hip_update_get_prev_spi_in(entry, ntohl(ack->peer_update_id));
@@ -814,61 +672,36 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 		err = 0;
 	}
 
-	if (!update_packet) {
-		HIP_DEBUG("not sending ACK\n");
-		goto out;
-	}
+	HIP_IFE(!update_packet, -1);
 
-	/* send ACK */
+	/* Send ACK */
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
-	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
-	if (err) {
-		HIP_ERROR("Building of HMAC failed (%d)\n", err);
-		goto out_err;
-	}
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out), -1,
+		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-	if (!host_id_private) {
-		HIP_ERROR("Could not get our host identity. Can not sign data\n");
-		goto out_err;
-	}
-
-	if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-				  host_id_private, signature)) {
-		HIP_ERROR("Could not sign UPDATE. Failing\n");
-		err = -EINVAL;
-		goto out_err;
-	}
+	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)),
+		 -1, "Could not get our host identity. Can not sign data\n");
+	HIP_IFEL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+				       host_id_private, signature), -EINVAL,
+		 "Could not sign UPDATE. Failing\n");
 
 	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		err = hip_build_param_signature_contents(update_packet,
-							 signature,
-							 HIP_RSA_SIGNATURE_LEN,
-							 HIP_SIG_RSA);
+		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
+							    HIP_RSA_SIGNATURE_LEN,
+							    HIP_SIG_RSA), -1, 
+			 "Building of SIGNATURE failed\n");
 	} else {
-		err = hip_build_param_signature_contents(update_packet,
-							 signature,
-							 HIP_DSA_SIGNATURE_LEN,
-							 HIP_SIG_DSA);
+		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
+							    HIP_DSA_SIGNATURE_LEN,
+							    HIP_SIG_DSA), -1,
+			 "Building of SIGNATURE failed\n");
 	}
+	
+        HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
- 	if (err) {
- 		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
- 		goto out_err;
- 	}
-	_HIP_DEBUG("SIGNATURE added\n");
-
-
-        err = hip_hadb_get_peer_addr(entry, &daddr);
-        if (err) {
-                HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
-                goto out_err;
-        }
-
-	HIP_DEBUG("Sending reply UPDATE packet (only ACK)\n");
 	err = hip_csum_send(NULL, &daddr, update_packet); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
@@ -877,7 +710,6 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
                 /* goto out_err; ? */
 	}
 
- out:
  out_err:
 	/* if (err)
 	   TODO: REMOVE IPSEC SAs
@@ -900,24 +732,13 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	uint16_t mask;
 
-	/* assume already locked entry */
-
+	/* Assume already locked entry */
 	HIP_DEBUG("SPI=0x%x\n", spi);
+	HIP_IFE(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1);
 
-	spi_out = hip_hadb_get_spi_list(entry, spi);
-	if (!spi_out) {
-		HIP_DEBUG("bug: outbound SPI 0x%x does not exist\n", spi);
-		goto out_err;
-	}
-
-	/* start checking the addresses */
-
-	update_packet = hip_msg_alloc();
-	if (!update_packet) {
-		HIP_ERROR("update_packet alloc failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
+	/* Start checking the addresses */
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Update_packet alloc failed\n");
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
@@ -947,72 +768,46 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 						HIP_CONTROL_DHT_TYPE1);
 		hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
-
-		err = hip_build_param_spi(update_packet, 0x11223344); /* test */
-		if (err) {
-			HIP_ERROR("Building of SPI failed\n");
-			goto out_err;
-		}
+		HIP_IFEBL(hip_build_param_spi(update_packet, 0x11223344), -1, /* test */
+			  continue, "Building of SPI failed\n");
 
 		entry->update_id_out++;
 		addr->seq_update_id = entry->update_id_out;
 		_HIP_DEBUG("outgoing UPDATE ID for REA addr check=%u\n", addr->seq_update_id);
 		/* todo: handle overflow if (!update_id_out) */
-		err = hip_build_param_seq(update_packet, addr->seq_update_id);
-		if (err) {
-			HIP_ERROR("Building of SEQ failed\n");
-			continue;
-		}
+		HIP_IFEBL(hip_build_param_seq(update_packet, addr->seq_update_id), -1,
+			 continue, "Building of SEQ failed\n");
 
 		/* Add HMAC */
-		err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
-		if (err) {
-			HIP_ERROR("Building of HMAC failed (%d)\n", err);
-			continue;
-		}
+		HIP_IFEBL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out),
+			  -1, continue, "Building of HMAC failed\n");
 
 		/* Add SIGNATURE */
-		host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-		if (!host_id_private) {
-			HIP_ERROR("Could not get own host identity. Can not sign data\n");
-			continue;
-		}
-
-		if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-					  host_id_private, signature)) {
-			HIP_ERROR("Could not sign UPDATE. Failing\n");
-			continue;
-		}
+		HIP_IFEBL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)),
+			  -1, continue, "Could not get own host identity. Can not sign data\n");
+		HIP_IFEBL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+						host_id_private, signature), -1,
+			  continue, "Could not sign UPDATE. Failing\n");
 
 		if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-			err = hip_build_param_signature_contents(update_packet,
-								 signature,
-							 HIP_RSA_SIGNATURE_LEN,
-							 HIP_SIG_RSA);
+			HIP_IFEBL(hip_build_param_signature_contents(update_packet, signature,
+								     HIP_RSA_SIGNATURE_LEN,
+								     HIP_SIG_RSA), -1,
+				  continue, "Building of SIGNATURE failed\n");
 		} else {
-			err = hip_build_param_signature_contents(update_packet,
-								 signature,
-							 HIP_DSA_SIGNATURE_LEN,
-								 HIP_SIG_DSA);
-		}
-
-		if (err) {
-			HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
-			continue;
+			HIP_IFEBL(hip_build_param_signature_contents(update_packet, signature,
+								     HIP_DSA_SIGNATURE_LEN,
+								     HIP_SIG_DSA), -1, 
+				  continue, "Building of SIGNATURE failed\n");
 		}
 
 		get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 		_HIP_HEXDUMP("ECHO_REQUEST in REA addr check",
 			     addr->echo_data, sizeof(addr->echo_data));
-		err = hip_build_param_echo(update_packet, addr->echo_data ,
-					   sizeof(addr->echo_data), 0, 1);
-		if (err) {
-			HIP_ERROR("Building of ECHO_REQUEST failed\n");
-			continue;
-		}
+		HIP_IFEBL(hip_build_param_echo(update_packet, addr->echo_data ,
+					       sizeof(addr->echo_data), 0, 1), -1,
+			  continue, "Building of ECHO_REQUEST failed\n");
 
-
-		HIP_DEBUG("Sending reply UPDATE packet (for REA)\n");
 		/* test: send all addr check from same address */
 		err = hip_csum_send(src_ip, &addr->address, update_packet); // HANDLER
 		if (err) {
@@ -1025,7 +820,6 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	if (update_packet)
 		HIP_FREE(update_packet);
 
-	_HIP_DEBUG("done, err=%d\n", err);
 	return err;
 }
 
@@ -1042,16 +836,9 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_rea *rea;
 	uint16_t mask;
 
-	/* assume already locked entry */
-
-	HIP_DEBUG("\n");
-
-	update_packet = hip_msg_alloc();
-	if (!update_packet) {
-		HIP_ERROR("update_packet alloc failed\n");
-		err = -ENOMEM;
-		goto out_err_nolock;
-	}
+	/* Assume already locked entry */
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, 
+		 "Out of memory.\n");
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
@@ -1059,11 +846,8 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 
 	/* ACK the received UPDATE SEQ */
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
-	err = hip_build_param_ack(update_packet, ntohl(seq->update_id));
-	if (err) {
-		HIP_ERROR("Building of ACK failed\n");
-		goto out_err_nolock;
-	}
+	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1, 
+		 "Building of ACK failed\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (for REA)\n");
 	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
@@ -1072,12 +856,11 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 		HIP_DEBUG("NOT ignored, or should we..\n");
 	}
 
-
 	rea = hip_get_param(msg, HIP_PARAM_REA);
 	hip_update_handle_rea_parameter(entry, rea);
 	err = hip_update_send_addr_verify(entry, msg, dst_ip, ntohl(rea->spi));
 
- out_err_nolock:
+ out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
 	return err;
@@ -1099,89 +882,52 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_host_id *host_id_private;
 	uint16_t mask;
 
-	/* assume already locked entry */
-
-	HIP_DEBUG("\n");
-
-	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
-	if (!echo) {
-		HIP_ERROR("ECHO not found\n");
-		goto out_err;
-	}
-
-	seq = hip_get_param(msg, HIP_PARAM_SEQ);
-	if (!seq) {
-		HIP_ERROR("SEQ not found\n");
-		goto out_err;
-	}
-
-	update_packet = hip_msg_alloc();
-	if (!update_packet) {
-		HIP_ERROR("update_packet alloc failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
+	/* Assume already locked entry */
+	HIP_IFEL(!(echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST)), -1, 
+		 "ECHO not found\n");
+	HIP_IFEL(!(seq = hip_get_param(msg, HIP_PARAM_SEQ)), -1, 
+		 "SEQ not found\n");
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/* reply with UPDATE(ACK, ECHO_RESPONSE) */
-	err = hip_build_param_ack(update_packet, ntohl(seq->update_id));
-	if (err) {
-		HIP_ERROR("Building of ACK failed\n");
-		goto out_err;
-	}
+	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1, 
+		 "Building of ACK failed\n");
 
 	/* Add HMAC */
-	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
-	if (err) {
-		HIP_ERROR("Building of HMAC failed (%d)\n", err);
-		goto out_err;
-	}
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out), -1, 
+		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-	if (!host_id_private) {
-		HIP_ERROR("Could not get own host identity. Can not sign data\n");
-		goto out_err;
-	}
+	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)), 
+		 -1, "Could not get own host identity. Can not sign data\n");
 
-	if (!hip_create_signature(update_packet,
-				  hip_get_msg_total_len(update_packet),
-				  host_id_private, signature)) {
-		HIP_ERROR("Could not sign UPDATE. Failing\n");
-		err = -EINVAL;
-		goto out_err;
-	}
+	HIP_IFEL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+				       host_id_private, signature), -EINVAL,
+		 "Could not sign UPDATE. Failing\n");
 
 	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		err = hip_build_param_signature_contents(update_packet,
-							 signature,
-							 HIP_RSA_SIGNATURE_LEN,
-							 HIP_SIG_RSA);
+		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
+							    HIP_RSA_SIGNATURE_LEN,
+							    HIP_SIG_RSA), -1, 
+			 "Building of SIGNATURE failed\n");
 	} else {	
-		err = hip_build_param_signature_contents(update_packet,
-							 signature,
-							 HIP_DSA_SIGNATURE_LEN,
-							 HIP_SIG_DSA);
-	}
-
- 	if (err) {
- 		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
- 		goto out_err;
+		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
+							    HIP_DSA_SIGNATURE_LEN,
+							    HIP_SIG_DSA), -1, 
+			 "Building of SIGNATURE failed\n");
  	}
 
 	/* ECHO_RESPONSE (no sign) */
 	HIP_DEBUG("echo opaque data len=%d\n",
 		   hip_get_param_contents_len(echo));
-	err = hip_build_param_echo(update_packet,
-				   (void *)echo+sizeof(struct hip_tlv_common),
-				   hip_get_param_contents_len(echo), 0, 0);
-	if (err) {
-		HIP_ERROR("Building of ECHO_RESPONSE failed\n");
-		goto out_err;
-	}
+	HIP_IFEL(hip_build_param_echo(update_packet,
+				      (void *)echo+sizeof(struct hip_tlv_common),
+				      hip_get_param_contents_len(echo), 0, 0), -1,
+		 "Building of ECHO_RESPONSE failed\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
 	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
@@ -1214,7 +960,7 @@ int hip_receive_update(struct hip_common *msg,
 		       struct in6_addr *update_saddr,
 		       struct in6_addr *update_daddr)
 {
-	int err = 0;
+	int err = 0, state = 0, is_retransmission = 0, handle_upd = 0;
 	struct in6_addr *hits;
 	struct hip_nes *nes = NULL;
 	struct hip_seq *seq = NULL;
@@ -1224,32 +970,24 @@ int hip_receive_update(struct hip_common *msg,
 	struct hip_echo_response *echo_response = NULL;
 	struct hip_hmac *hmac = NULL;
 	struct hip_signature *signature = NULL;
-	int state = 0;
 	uint32_t pkt_update_id = 0; /* UPDATE ID in packet */
 	uint32_t update_id_in = 0;  /* stored incoming UPDATE ID */
-	int is_retransmission = 0;
 	uint16_t keymat_index = 0;
 	struct hip_dh_fixed *dh;
 	struct in6_addr *src_ip, *dst_ip;
 	struct hip_lhi peer_lhi;
 	struct hip_host_id *peer_id;
-	int handle_upd = 0;
 	hip_ha_t *entry = NULL;
 
-	HIP_DEBUG("\n");
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
 
 	src_ip = update_saddr;
 	dst_ip = update_daddr;
 	hits = &msg->hits;
 
-	entry = hip_hadb_find_byhit(hits);
-	if (!entry) {
-		HIP_ERROR("Entry not found\n");
-		goto out_err;
-	}
+	HIP_IFEL(!(entry = hip_hadb_find_byhit(hits)), -1,
+		 "Entry not found\n");
 	HIP_LOCK_HA(entry);
-
 	state = entry->state; /* todo: remove variable state */
 
 	HIP_DEBUG("Received UPDATE in state %s\n", hip_state_str(state));
@@ -1364,12 +1102,8 @@ int hip_receive_update(struct hip_common *msg,
 	if (hmac) {
 		/* 3. The system MUST verify the HMAC in the UPDATE packet.
 		   If the verification fails, the packet MUST be dropped. */
-		err = hip_verify_packet_hmac(msg, &entry->hip_hmac_in);
-		if (err) {
-			HIP_ERROR("HMAC validation on UPDATE failed\n");
-			goto out_err;
-		}
-		_HIP_DEBUG("UPDATE HMAC ok\n");
+		HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
+			 "HMAC validation on UPDATE failed\n");
 	} else {
 		HIP_DEBUG("HMAC not found, error ?\n");
 	}
@@ -1381,43 +1115,25 @@ int hip_receive_update(struct hip_common *msg,
 	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
 	if (dh) {
 		HIP_DEBUG("packet contains DH\n");
-		if (!nes) {
-			HIP_ERROR("packet contains DH but not NES\n");
-			goto out_err;
-		}
-		if (keymat_index != 0) {
-			HIP_ERROR("UPDATE contains Diffie-Hellman parameter with non-zero"
-				  "keymat value %u in NES. Dropping\n",
-				  keymat_index);
-			err = -EINVAL;
-			goto out_err;
-		}
+		HIP_IFEL(!nes, -1, "Packet contains DH but not NES\n");
+		HIP_IFEL(keymat_index != 0, -EINVAL,
+			 "UPDATE contains Diffie-Hellman parameter with non-zero"
+			 "keymat value %u in NES. Dropping\n", keymat_index);
 	}
 
 	/* 5. The system MAY verify the SIGNATURE in the UPDATE
 	   packet. If the verification fails, the packet SHOULD be
 	   dropped and an error message logged. */
 
-	signature = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE);
-	if (signature) {
-		peer_lhi.anonymous = 0;
-		memcpy(&peer_lhi.hit, &msg->hits, sizeof(struct in6_addr));
-		// FIXME: tkoponen, the following peer_id is not free'ed anywhere. Memory leak!
-		peer_id = hip_get_host_id(HIP_DB_PEER_HID, &peer_lhi, HIP_ANY_ALGO);
-		if (!peer_id) {
-			HIP_ERROR("Unknown peer (no identity found)\n");
-			err = -EINVAL;
-			goto out_err;
-		}
-		err = hip_verify_packet_signature(msg, peer_id);
-		if (err) {
-			HIP_ERROR("Verification of UPDATE signature failed\n");
-			_HIP_DEBUG("ignoring SIGNATURE fail\n");
-			goto out_err;
-		}
-		_HIP_DEBUG("SIGNATURE ok\n");
-	} else
-		HIP_DEBUG("SIGNATURE not found, error ?\n");
+	HIP_IFE(!(signature = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE)), -1);
+
+	peer_lhi.anonymous = 0;
+	memcpy(&peer_lhi.hit, &msg->hits, sizeof(struct in6_addr));
+	// FIXME: tkoponen, the following peer_id is not free'ed anywhere. Memory leak!
+	HIP_IFEL(!(peer_id = hip_get_host_id(HIP_DB_PEER_HID, &peer_lhi, HIP_ANY_ALGO)), 
+		 -EINVAL, "Unknown peer (no identity found)\n");
+	HIP_IFEL(hip_verify_packet_signature(msg, peer_id), -1, 
+		 "Verification of UPDATE signature failed\n");
 
 	/* 6.  If a new SEQ parameter is being processed, the system MUST record
 	   the Update ID in the received SEQ parameter, for replay
@@ -1428,13 +1144,10 @@ int hip_receive_update(struct hip_common *msg,
 	}
 
 	/* check that Old SPI value exists */
-	if (nes &&
-	    (nes->old_spi != nes->new_spi) && /* mm check */
-	    !hip_update_exists_spi(entry, ntohl(nes->old_spi), HIP_SPI_DIRECTION_OUT, 0)) {
-		HIP_ERROR("Old SPI value 0x%x in NES parameter does not belong to the current list of outbound SPIs in HA\n",
-			  ntohl(nes->old_spi));
-		goto out_err;
-	}
+	HIP_IFEL(nes && (nes->old_spi != nes->new_spi) && /* mm check */
+		 !hip_update_exists_spi(entry, ntohl(nes->old_spi), HIP_SPI_DIRECTION_OUT, 0), -1,
+		 "Old SPI value 0x%x in NES parameter does not belong to the current list of outbound SPIs in HA\n",
+		 ntohl(nes->old_spi));
 
 	if (handle_upd == 2) {
 		/* REA, SEQ */
@@ -1487,7 +1200,7 @@ int hip_receive_update(struct hip_common *msg,
 int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item *addr_list,
 		    int addr_count, int ifindex, int flags)
 {
-	int err = 0;
+	int err = 0, make_new_sa = 0, add_nes = 0, add_rea;
 	uint32_t update_id_out = 0;
 	uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
 	uint32_t new_spi_in = 0;
@@ -1495,8 +1208,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	struct in6_addr daddr;
 	struct hip_host_id *host_id_private;
  	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA > DSA */
-	int make_new_sa = 0;
-	int add_nes = 0, add_rea;
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 	uint16_t mask;
 
@@ -1511,14 +1222,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	else
 		_HIP_DEBUG("Plain UPDATE\n");
 
-	/* start building UPDATE packet */
-	update_packet = hip_msg_alloc();
-	if (!update_packet) {
-		HIP_ERROR("update_packet alloc failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-
+	/* Start building UPDATE packet */
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Out of memory.\n");
 	HIP_LOCK_HA(entry);
 
 	hip_print_hit("sending UPDATE to", &entry->hit_peer);
@@ -1565,11 +1270,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	HIP_DEBUG("add_nes=%d make_new_sa=%d\n", add_nes, make_new_sa);
 
 	if (make_new_sa) {
-		new_spi_in = hip_acquire_spi(&entry->hit_peer, &entry->hit_our);
-		if (!new_spi_in) {
-			HIP_ERROR("Error while acquiring a SPI\n");
-			goto out_err;
-		}
+		HIP_IFEL(!(new_spi_in = hip_acquire_spi(&entry->hit_peer, &entry->hit_our)), 
+			 -1, "Error while acquiring a SPI\n");
 		HIP_DEBUG("Got SPI value for the SA 0x%x\n", new_spi_in);
 
 		/* TODO: move to rekeying_finish */
@@ -1581,11 +1283,8 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			spi_in_data.spi = new_spi_in;
 			spi_in_data.ifindex = ifindex;
 			spi_in_data.updating = 1;
-			err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
-			if (err) {
-				HIP_ERROR("add_spi failed\n");
-				goto out_err;
-			}
+			HIP_IFEL(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, 
+				 "Add_spi failed\n");
 		}
 		else {
 			_HIP_DEBUG("is previously mapped ifindex\n");
@@ -1603,10 +1302,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		else
 			err = hip_build_param_rea(update_packet, new_spi_in,
 							    addr_list, addr_count);
-		if (err) {
-			HIP_ERROR("Building of REA param failed\n");
-			goto out_err;
-		}
+		HIP_IFEL(err, err, "Building of REA param failed\n");
 	} else
 		HIP_DEBUG("not adding REA\n");
 
@@ -1628,22 +1324,16 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 			HIP_DEBUG("adding NES, Old SPI <> New SPI\n");
 			/* plain UPDATE or readdress with rekeying */
 			/* update the SA of the interface which caused the event */
-			nes_old_spi = hip_hadb_get_spi(entry, ifindex);
-			if (!nes_old_spi) {
-				HIP_ERROR("Could not find SPI to use in Old SPI\n");
-				goto out_err;
-			}
+			HIP_IFEL(!(nes_old_spi = hip_hadb_get_spi(entry, ifindex)), -1,
+				 "Could not find SPI to use in Old SPI\n");
 			hip_set_spi_update_status(entry, nes_old_spi, 1); /* here or later ? */
 			nes_new_spi = new_spi_in;
 		}
 
 		HIP_DEBUG("nes_old_spi=0x%x nes_new_spi=0x%x\n", nes_old_spi, nes_new_spi);
-		err = hip_build_param_nes(update_packet, entry->current_keymat_index,
-					  nes_old_spi, nes_new_spi);  
-		if (err) {
-			HIP_ERROR("Building of NES param failed\n");
-			goto out_err;
-		}
+		HIP_IFEL(hip_build_param_nes(update_packet, entry->current_keymat_index,
+					     nes_old_spi, nes_new_spi), -1,
+			 "Building of NES param failed\n");
 	} else {
 		HIP_DEBUG("not adding NES\n");
 		nes_old_spi = nes_new_spi = mapped_spi;
@@ -1654,17 +1344,10 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	entry->update_id_out++;
 	update_id_out = entry->update_id_out;
 	_HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
-	if (!update_id_out) { /* todo: handle this case */
-		HIP_ERROR("outgoing UPDATE ID overflowed back to 0, bug ?\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-
-	err = hip_build_param_seq(update_packet, update_id_out);
-	if (err) {
-		HIP_ERROR("Building of SEQ param failed\n");
-		goto out_err;
-	}
+	/* todo: handle this case */
+	HIP_IFEL(!update_id_out, -EINVAL, "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
+	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
+		 "Building of SEQ param failed\n");
 
 	if (add_nes) {
 		/* remember the update id of this update */
@@ -1674,50 +1357,30 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	}
 
 	/* Add HMAC */
-	err = hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out);
-	if (err) {
-		HIP_ERROR("Building of HMAC failed (%d)\n", err);
-		goto out_err;
-	}
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out), -1,
+		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-	if (!host_id_private) {
-		HIP_ERROR("Could not get own host identity. Can not sign data\n");
-		goto out_err;
-	}
-
-	if (!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-				  host_id_private, signature)) {
-		HIP_ERROR("Could not sign UPDATE. Failing\n");
-		err = -EINVAL;
-		goto out_err;
-	}
+	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)), 
+		 -1, "Could not get own host identity. Can not sign data\n");
+	HIP_IFEL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
+				       host_id_private, signature), -EINVAL,
+		 "Could not sign UPDATE. Failing\n");
 
 	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		err = hip_build_param_signature_contents(update_packet,
-							 signature,
-							 HIP_RSA_SIGNATURE_LEN,
-							 HIP_SIG_RSA);
+		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
+							    HIP_RSA_SIGNATURE_LEN,
+							    HIP_SIG_RSA), -1,
+			 "Building of SIGNATURE failed\n");
 	} else {
-		err = hip_build_param_signature_contents(update_packet,
-							 signature,
+		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
 							 HIP_DSA_SIGNATURE_LEN,
-							 HIP_SIG_DSA);
+							    HIP_SIG_DSA), -1, 
+			 "Building of SIGNATURE failed\n");
 	}
 
- 	if (err) {
- 		HIP_ERROR("Building of SIGNATURE failed (%d)\n", err);
- 		goto out_err;
- 	}
-
-	/* send UPDATE */
-        err = hip_hadb_get_peer_addr(entry, &daddr);
-        if (err) {
-                HIP_DEBUG("hip_sdb_get_peer_addr err=%d\n", err);
-                goto out_err;
-        }
-
+	/* Send UPDATE */
+        HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 #if 0
 	/* Store the last UPDATE ID value sent from us */
 	entry->update_id_out = update_id_out;
@@ -1822,12 +1485,8 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
 
-	err = hip_for_each_ha(hip_update_get_all_valid, &rk);
-	if (err) {
-		HIP_ERROR("for_each_ha err=%d\n", err);
-		return;
-	}
-
+	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
+		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
 			hip_send_update(rk.array[i], addr_list, addr_count, ifindex, flags);
@@ -1835,6 +1494,7 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 		}
 	}
 
+ out_err:
 	return;
 }
 
