@@ -858,6 +858,8 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	memcpy(item, data, sizeof(struct hip_spi_in_item));
 	item->timestamp = jiffies;
 	list_add(&item->list, &entry->spis_in);
+	item->addresses = NULL;
+	item->addresses_n = 0;
 	HIP_DEBUG("added SPI 0x%x to the inbound SPI list\n", spi_in);
 	// hip_hold_ha(entry); ?
 
@@ -931,12 +933,19 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	HIP_DEBUG("SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		if (item->spi == spi) {
-			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
-				  item->spi, item->new_spi, item);
+			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
+				  "inbound list, item=0x%p addresses=0x%p\n",
+				  item->spi, item->new_spi, item, item->addresses);
 			HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
 			hip_delete_sa(item->spi, &entry->hit_our);
-			hip_delete_sa(item->new_spi, &entry->hit_our);
+			if (item->spi != item->new_spi)
+				hip_delete_sa(item->new_spi, &entry->hit_our);
+			if (item->addresses) {
+				HIP_DEBUG("deleting stored addrlist 0x%p\n",
+					  item->addresses);
+				kfree(item->addresses);
+			}
 			list_del(&item->list);
 			kfree(item);
 			break;
@@ -957,7 +966,8 @@ void hip_hadb_delete_inbound_spis(hip_ha_t *entry)
 		HIP_DEBUG("remove SPI from HIT-SPI HT\n");
 		hip_hadb_remove_hs(item->spi);
 		hip_delete_sa(item->spi, &entry->hit_our);
-		hip_delete_sa(item->new_spi, &entry->hit_our);
+		if (item->spi != item->new_spi)
+			hip_delete_sa(item->new_spi, &entry->hit_our);
 		list_del(&item->list);
 		kfree(item);
         }
@@ -1155,7 +1165,7 @@ void hip_update_set_new_spi_in(hip_ha_t *entry, uint32_t spi, uint32_t new_spi,
 		if (item->spi == spi) {
 			HIP_DEBUG("setting new_spi\n");
 			if (!item->updating) {
-				HIP_ERROR("SA update not in progress, continuing anyway\n");
+				_HIP_ERROR("SA update not in progress, continuing anyway\n");
 			}
 			if ((item->spi != item->new_spi) && item->new_spi) {
 				HIP_ERROR("warning: previous new_spi is not zero: 0x%x\n",
@@ -1523,7 +1533,8 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 	return spi;
 }
 
-/* get pointer to the SPI list or NULL if SPI list does not exist */
+/* get pointer to the outbound SPI list or NULL if the outbound SPI
+   list does not exist */
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 {
 	struct hip_spi_out_item *item, *tmp;
@@ -1532,6 +1543,21 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 
 	_HIP_DEBUG("SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
+		if (item->spi == spi)
+			return item;
+        }
+	return NULL;
+}
+
+/* get pointer to the inbound SPI list or NULL if SPI list does not exist */
+struct hip_spi_in_item *hip_hadb_get_spi_in_list(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_spi_in_item *item, *tmp;
+
+	/* assumes already locked entry */
+
+	HIP_DEBUG("SPI=0x%x\n", spi);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
 		if (item->spi == spi)
 			return item;
         }

@@ -44,6 +44,8 @@
 #include <linux/sysctl.h>
 #endif
 
+#include <linux/delay.h>
+
 static atomic_t hip_working = ATOMIC_INIT(0);
 
 time_t load_time;
@@ -1401,6 +1403,7 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
 		HIP_ERROR("Unable to handle address event\n");
   	} else
 		hip_insert_work_order(hwo);
+
 	return;
 }
 

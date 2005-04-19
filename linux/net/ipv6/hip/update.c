@@ -1713,6 +1713,49 @@ int hip_receive_update(struct sk_buff *skb)
 	return err;
 }
 
+/** hip_copy_spi_in_addresses - copy addresses to the inbound SPI
+ * @src: address list
+ * @spi_in: the inbound SPI the addresses are copied to
+ * @count: number of addresses in @src
+ *
+ * A simple helper function to copy interface addresses to the inbound
+ * SPI of. Caller must kfree the allocated memory.
+ *
+ * Returns: 0 on success, < 0 otherwise.
+ */
+int hip_copy_spi_in_addresses(struct hip_rea_info_addr_item *src,
+			      struct hip_spi_in_item *spi_in,
+			      int count) {
+	HIP_DEBUG("src=0x%p count=%d\n", src, count);
+	size_t s = count * sizeof(struct hip_rea_info_addr_item);
+	void *p = NULL;
+
+	if (!spi_in || (src && count <= 0)) {
+ 		HIP_ERROR("!spi_in or src & illegal count (%d)\n", count);
+		return -EINVAL;
+	}
+
+	if (src) {
+		p = kmalloc(s, GFP_ATOMIC);
+		if (!p) {
+			HIP_ERROR("kmalloc failed\n");
+			return -ENOMEM;
+		}
+		memcpy(p, src, s);
+	} else
+		count = 0;
+
+	_HIP_DEBUG("prev addresses_n=%d\n", spi_in->addresses_n);
+	if (spi_in->addresses) {
+		HIP_DEBUG("kfreeing old address list at 0x%p\n",
+			  spi_in->addresses);
+		kfree(spi_in->addresses);
+	}
+
+	spi_in->addresses_n = count;
+	spi_in->addresses = p;
+	return 0;
+}
 
 #define SEND_UPDATE_NES (1 << 0)
 #define SEND_UPDATE_REA (1 << 1)
@@ -1742,6 +1785,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	int add_nes = 0, add_rea;
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 	uint16_t mask;
+	struct hip_spi_in_item *spi_in = NULL;
 
 	add_rea = flags & SEND_UPDATE_REA;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
@@ -1754,6 +1798,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	else
 		_HIP_DEBUG("Plain UPDATE\n");
 
+	HIP_LOCK_HA(entry);
+
 	/* start building UPDATE packet */
 	update_packet = hip_msg_alloc();
 	if (!update_packet) {
@@ -1761,8 +1807,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 		err = -ENOMEM;
 		goto out_err;
 	}
-
-	HIP_LOCK_HA(entry);
 
 	hip_print_hit("sending UPDATE to", &entry->hit_peer);
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
@@ -1892,6 +1936,24 @@ int hip_send_update(struct hip_hadb_state *entry,
 		nes_old_spi = nes_new_spi = mapped_spi;
 	}
 
+
+	/* avoid advertising the same address set */
+	/* (currently assumes that lifetime or reserved field do not
+	 * change, later store only addresses) */
+	spi_in = hip_hadb_get_spi_in_list(entry, nes_old_spi);
+	if (!spi_in) {
+		HIP_ERROR("SPI listaddr list copy failed\n");
+		goto out_err;
+	}
+	if (addr_count == spi_in->addresses_n &&
+	    addr_list && spi_in->addresses &&
+	    memcmp(addr_list, spi_in->addresses,
+		   addr_count*sizeof(struct hip_rea_info_addr_item)) == 0) {
+		HIP_DEBUG("Same address set as before, return\n");
+		goto out;
+	} else
+		HIP_DEBUG("Address set has changed, continue\n");
+
 	hip_update_set_new_spi_in(entry, nes_old_spi, nes_new_spi, 0);
 
 	entry->update_id_out++;
@@ -1985,6 +2047,13 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 		entry->state = HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("fallbacked to state ESTABLISHED due to error (ok ?)\n");
+		goto out_err;
+	}
+
+	/* remember the address set we have advertised to the peer */
+	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
+	if (err) {
+		HIP_ERROR("addr list copy failed\n");
 		goto out_err;
 	}
 
