@@ -183,12 +183,10 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 
 	n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea)) /
 		sizeof(struct hip_rea_info_addr_item);
+	HIP_ASSERT(n_addrs >= 0);
+
 	HIP_DEBUG("REA has %d address(es), rea param len=%d\n",
 		  n_addrs, hip_get_param_total_len(rea));
-	if (n_addrs < 0) {
-		HIP_DEBUG("BUG: n_addrs=%d < 0\n", n_addrs);
-		goto out_err;
-	}
 
 	/* 1. The host checks if the SPI listed is a new one. If it
 	   is a new one, it creates a new SPI that contains no addresses. */
@@ -294,7 +292,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	uint32_t prev_spi_in = 0, new_spi_in = 0;
 	uint16_t keymat_index = 0;
 	struct hip_common *update_packet = NULL;
-	//struct in6_addr daddr;
  	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
 	int need_to_generate_key = 0, dh_key_generated = 0; //, new_keymat_generated;
 	int nes_i = 1;
@@ -583,16 +580,9 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	HIP_DEBUG("handled NES: Keymat Index: %u\n", nes->keymat_index);
 
 	prev_spi_out = nes->old_spi;
-	if (!prev_spi_out) {
-		HIP_ERROR("bug: stored NES Old SPI is 0\n");
-		goto out_err;
-	}
-
 	new_spi_out = nes->new_spi;
-	if (!new_spi_out) {
-		HIP_ERROR("bug: stored NES New SPI is 0\n");
-		goto out_err;
-	}
+	
+	HIP_ASSERT(prev_spi_out != 0 && new_spi_out != 0);
 
 	prev_spi_in = hip_update_get_prev_spi_in(entry, ntohl(ack->peer_update_id));
 
@@ -732,8 +722,6 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* start verifying addresses */
 	_HIP_DEBUG("start verifing addresses for new spi 0x%x\n", new_spi_out);
 	err = hip_update_send_addr_verify(entry, msg, NULL /* ok ? */, new_spi_out);
-
-	/* hip_update_spi_waitlist_add(new_spi_in, hits, NULL); */
 
  out_err:
 	return err;

@@ -245,8 +245,6 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 
 	hip_ht_add(&hadb_spi_list, new_item);
 	_HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item);
-	_HIP_DEBUG("HS TABLE:\n");
-	//hip_hadb_dump_hs_ht();
  out_err:
 	return err;
 }
@@ -1704,6 +1702,7 @@ void hip_uninit_hadb()
 		}
 	}
 
+#if 0
 	/* HIT-SPI mappings should be already deleted by now, but check anyway */
 	HIP_DEBUG("DELETING HS HT\n");
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
@@ -1724,6 +1723,7 @@ void hip_uninit_hadb()
 		}
 	}
 	HIP_DEBUG("DONE DELETING HS HT\n");
+#endif
 }
 
 /**

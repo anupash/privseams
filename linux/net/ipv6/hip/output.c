@@ -25,7 +25,6 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
-	//hip_hit_t hit_our;
 	int mask;
 	int err = 0;
 
@@ -43,11 +42,6 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
 		mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
-
-	//HIP_DEBUG("mask pre=0x%x\n", mask);
-	//mask |= (HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT);
-	//HIP_DEBUG("mask post=0x%x\n", mask);
-
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
 	hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
@@ -68,7 +62,6 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 		goto out_err;
 	}
 
-	_HIP_DEBUG("hip: send I1 packet\n");
 	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);// HANDLER
 
  out_err:
@@ -169,16 +162,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	}
 	
  	/* Ready to begin building of the R1 packet */
-	//mask = HIP_CONTROL_NONE;
-	//mask = HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK;
 	mask = HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT;
-	HIP_DEBUG("mask 1=0x%x\n", mask);
 	mask |= HIP_CONTROL_DHT_TYPE1 << HIP_CONTROL_DHT_SHIFT;
-	HIP_DEBUG("mask 2=0x%x\n", mask);
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
-	HIP_DEBUG("mask 3=0x%x\n", mask);
+	HIP_DEBUG("mask=0x%x\n", mask);
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
@@ -368,7 +357,6 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		goto out_err;
 	}
 
-	HIP_ASSERT(!err);
 	return 0;
 
  out_err:
@@ -405,7 +393,6 @@ void hip_send_notify(hip_ha_t *entry)
                 HIP_DEBUG("hip_sdb_get_peer_address err = %d\n", err);
                 goto out_err;
         }
-        HIP_DEBUG("Sending NOTIFY packet\n");
 	err = hip_csum_send(NULL, &daddr, notify_packet); // HANDLER
 
  out_err:

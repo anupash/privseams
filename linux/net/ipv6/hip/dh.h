@@ -15,7 +15,6 @@
 
 int hip_insert_dh(u8 *buffer, int bufsize, int group_id);
 void hip_regen_dh_keys(u32 bitmask);
-uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 void hip_dh_uninit(void);
 int hip_calculate_shared_secret(struct hip_diffie_hellman *dhf, u8* buffer,
 				int bufsize);

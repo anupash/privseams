@@ -77,7 +77,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 	struct hip_host_id_entry *id_entry;
 
 	list_for_each_entry(id_entry, &db->db_head, next) {
-	  if ((lhi == NULL || hip_lhi_are_equal(&id_entry->lhi, lhi)) &&
+	  if ((lhi == NULL || !ipv6_addr_cmp(&id_entry->lhi, lhi)) &&
 	      (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
 			return id_entry;
 	}

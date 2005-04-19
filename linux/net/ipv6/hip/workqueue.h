@@ -8,9 +8,9 @@
 #  include <linux/list.h>
 #  include <linux/interrupt.h>
 #  include <net/ipv6.h>
-#  include <net/hip.h>
 #else
 #  include <stdio.h>
+#  include "list.h"
 #endif
 
 #define HIP_INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_src, hwo_dst, hwo_arg1, hwo_arg2) \
@@ -23,11 +23,10 @@
 		work_order_hdr.arg2 = hwo_arg2; \
 		} while(0)
 
-#include "timer.h"
-#include "netlink.h" /* hip_netlink_* functions */
+#include <net/hip.h>
 #include "debug.h"
-#include "builder.h"
-#include "misc.h"
+#include "timer.h"
+#include "hip.h"
 
 #define HIP_WO_TYPE_INCOMING 1
 #define HIP_WO_TYPE_OUTGOING 2

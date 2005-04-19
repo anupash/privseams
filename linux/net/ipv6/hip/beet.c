@@ -122,6 +122,7 @@ void hip_uninit_beetdb(void)
 		}
 	}
 
+#if 0
 	/* HIT-SPI mappings should be already deleted by now, but check
 	   anyway */
 	HIP_DEBUG("DELETING HS HT\n");
@@ -139,6 +140,7 @@ void hip_uninit_beetdb(void)
 		}
 	}
 	HIP_DEBUG("Done deleting hs ht\n");
+#endif
 }
 
 /**

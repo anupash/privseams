@@ -9,6 +9,7 @@
 #  include "hip.h"
 #else
 #  include <sys/socket.h>
+#  include "list.h"
 
 typedef struct { } rwlock_t;
 #define RW_LOCK_UNLOCKED (rwlock_t) { }
@@ -17,12 +18,12 @@ typedef struct { } rwlock_t;
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #include "debug.h"
 #include "hip.h"
-#include "misc.h"
-#include "builder.h"
-#include "socket.h"
-#include "output.h"
-#include "update.h"
-#include "hidb.h"
+//#include "misc.h"
+//#include "builder.h"
+//#include "socket.h"
+//#include "output.h"
+//#include "update.h"
+#include "timer.h"
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 
 #define HIP_INIT_DB(name,id) \

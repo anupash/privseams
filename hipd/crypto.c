@@ -499,6 +499,8 @@ int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	DSA_SIG_free(dsa_sig);
  	err = 0;
 
+	_HIP_HEXDUMP("signature",signature,HIP_DSA_SIGNATURE_LEN);
+
  err:
 	if (dsa)
 		DSA_free(dsa);
@@ -603,6 +605,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
 		       &sig_len, rsa);
 	res = err == 0 ? 1 : 0;
 
+	_HIP_HEXDUMP("signature",signature,HIP_RSA_SIGNATURE_LEN);
  err:
 	if (rsa)
 		RSA_free(rsa);

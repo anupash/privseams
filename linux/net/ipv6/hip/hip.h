@@ -68,7 +68,6 @@
 #include "builder.h"
 #include "hidb.h"
 #include "cookie.h"
-//#include "keymat.h"
 #include "crypto.h"
 #include "misc.h"
 #include "output.h"

@@ -40,9 +40,6 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 			       struct in6_addr *hit, int hit_type);
 int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 		     struct timeval *result);
-void hip_set_sockaddr(struct sockaddr_in6 *sin, struct in6_addr *addr);
-int hip_lhi_are_equal(const struct hip_lhi *lhi1,
-		      const struct hip_lhi *lhi2);
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf);
 int hip_in6_ntop2(const struct in6_addr *in6, char *buf);
 char* hip_hit_ntop(const hip_hit_t *hit, char *buf);
@@ -57,7 +54,6 @@ int hip_hash_spi(const void *spi, int range);
 int hip_match_hit(const void *hitA, const void *hitB);
 const char *hip_algorithm_to_string(int algo);
 
-uint16_t hip_get_dh_size(uint8_t hip_dh_group_type);
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);

@@ -266,7 +266,7 @@ int hip_do_work(struct hip_work_order *job)
 {
 	int res = 0;
 	HIP_DEBUG("type=%d, subtype=%d\n", job->hdr.type, job->hdr.subtype);
-
+	
 	switch (job->hdr.type) {
 	case HIP_WO_TYPE_INCOMING:
 		HIP_START_TIMER(KMM_PARTIAL);
@@ -316,7 +316,7 @@ int hip_do_work(struct hip_work_order *job)
 	{			
 		struct hip_work_order * resp = NULL;
 		struct hip_keys *keys;
-
+		
 		switch(job->hdr.subtype) {
 #if defined __KERNEL__ && defined CONFIG_HIP_USERSPACE
 		case HIP_WO_SUBTYPE_SEND_PACKET:
@@ -328,11 +328,11 @@ int hip_do_work(struct hip_work_order *job)
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
 				break;
-
+			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_acquire_spi(&job->hdr.src_addr, &job->hdr.dst_addr);		       
 			break;
-
+			
 		case HIP_WO_SUBTYPE_ADDSA:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
@@ -340,55 +340,55 @@ int hip_do_work(struct hip_work_order *job)
 			keys = hip_get_param(job->msg, HIP_PARAM_KEYS); 
 			if (!keys)
 				break;
-
+			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_add_sa(&job->hdr.src_addr, &job->hdr.dst_addr,
 							  &keys->spi, keys->alg,
 							  &keys->enc, &keys->auth,
 							  keys->acquired, keys->direction);
 			break;
-
+			
 		case HIP_WO_SUBTYPE_DELSA:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
 				break;
-
+			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_delete_sa(job->hdr.arg1, &job->hdr.dst_addr);
 			break;
-
+			
 		case HIP_WO_SUBTYPE_FINSA:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
 				break;
-
+			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_finalize_sa(&job->hdr.dst_addr, job->hdr.arg1);
 			break;
 
-		/* BEET database management functions follow */
+			/* BEET database management functions follow */
 		case HIP_WO_SUBTYPE_XFRM_INIT:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
 				break;
-
+			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 =
 				hip_xfrm_dst_init(&job->hdr.src_addr,
 						  &job->hdr.dst_addr);
 			break;
-
+			
 		case HIP_WO_SUBTYPE_XFRM_UPD:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
 				break;
-
+			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_xfrm_update(job->hdr.arg1, &job->hdr.dst_addr, 
 							       *((int *)(&job->hdr.src_addr)),
 							       job->hdr.arg2);
 			break;
-
+			
 		case HIP_WO_SUBTYPE_XFRM_DEL:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
@@ -397,12 +397,12 @@ int hip_do_work(struct hip_work_order *job)
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_xfrm_delete(job->hdr.arg1, &job->hdr.src_addr, job->hdr.arg2);
 			break;
-
+			
 		case HIP_WO_SUBTYPE_PING:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
 				break;
-
+			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = 0;
 			break;
@@ -433,7 +433,7 @@ int hip_do_work(struct hip_work_order *job)
 				  job->hdr.subtype, job->hdr.type);
 			break;
 		}
-
+		
 #if defined __KERNEL__ && defined CONFIG_HIP_USERSPACE
 		if (resp) {
 			hip_netlink_send(resp);
@@ -445,7 +445,7 @@ int hip_do_work(struct hip_work_order *job)
 			res = KHIPD_ERROR;
 		break;
 	}
-
+	
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
 #if defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE
@@ -485,7 +485,7 @@ int hip_do_work(struct hip_work_order *job)
 			/* FIXME: Synchronize the BEET database */
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
-			/* arg1 = d-hit, arg2=ipv6
+			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;

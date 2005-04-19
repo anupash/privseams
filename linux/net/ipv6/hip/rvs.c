@@ -356,8 +356,7 @@ void hip_rva_remove(HIP_RVA *rva)
 int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
 {
 	uint16_t *types = (uint16_t *)(rreq + 1);
-	int typecnt;
-	int i,j;
+	int typecnt, i, j;
 
 	typecnt = hip_get_param_contents_len(rreq) - sizeof(uint32_t) / 2;
 	/* due to padding, the actual amount of types is either types or types-1 */
@@ -405,8 +404,7 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		HIP_ERROR("Did not find forwarding address\n");
 		return -ENOENT;
 	}
-
-	
+       
 	old_i1 = i1;
 	original_src = i1_saddr;
 
@@ -422,7 +420,6 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			      &(old_i1->hitr));
 
 	/* we need to add FROM field */
-
 	while ((tmp = hip_get_next_param(old_i1, NULL))) {
 		if (from_added || ntohs(tmp->type) <= HIP_PARAM_FROM) {
 			/* copy */
@@ -442,7 +439,6 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	if (!from_added) {
 		hip_build_param_from(new_i1, original_src, 0);
 	}
-		
 
 	err = hip_csum_send(NULL, final_dst, new_i1);
 	if (err)

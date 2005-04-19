@@ -195,23 +195,6 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 	return err;
 }
 
-/**
- * hip_set_sockaddr - init sockaddr and copy given address to it
- * @addr: IPv6 address to be copied
- * @sin: sockaddr where @addr is copied
- */
-void hip_set_sockaddr(struct sockaddr_in6 *sin, struct in6_addr *addr)
-{
-	memset(sin, 0, sizeof(struct sockaddr_in6));
-
-	sin->sin6_family = AF_INET6;
-	sin->sin6_port = 0;  // Is this needed?
-
-	ipv6_addr_copy(&sin->sin6_addr, addr);
-
-	return;
-}
-
 /** hip_timeval_diff - calculate difference between two timevalues
  * @t1: timevalue 1
  * @t2: timevalue 2
@@ -246,18 +229,6 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 	result->tv_usec = _t1.tv_usec - _t2.tv_usec;
 
 	return _t1.tv_sec >= _t2.tv_sec;
-}
-/**
- * hip_lhi_are_equal - compare two LHIs (Localhost Host Identity)
- * @lhi1: the first LHI used in comparison
- * @lhi2: the second LHI used in comparison
- *
- * Returns: 1 if @lhi1 and @lhi2 are equal, else 0.
- */
-int hip_lhi_are_equal(const struct hip_lhi *lhi1,
-		      const struct hip_lhi *lhi2) 
-{
-	return !ipv6_addr_cmp(&lhi1->hit, &lhi2->hit);
 }
 
 /*
