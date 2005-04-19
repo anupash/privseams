@@ -513,7 +513,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 #endif
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING. */
-	// SYNCH
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");
 
@@ -685,7 +684,6 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 	/* 4.  The system cancels any timers protecting the UPDATE and
 	   transitions to ESTABLISHED. */
-	// SYNCH
 	entry->state = HIP_STATE_ESTABLISHED;
 	HIP_DEBUG("Went back to ESTABLISHED state\n");
 
@@ -1259,7 +1257,6 @@ int hip_receive_update(struct hip_common *msg,
 	/* in state R2-SENT: Receive UPDATE, go to ESTABLISHED and
 	 * process from ESTABLISHED state */
 	if (state == HIP_STATE_R2_SENT) {
-		// SYNCH
 		state = entry->state = HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
 	}
@@ -1731,7 +1728,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 
 	/* if UPDATE contains only REA, then do not move state ? */
 	if (add_nes) {
-		// SYNCH
 		entry->state = HIP_STATE_REKEYING;
 		HIP_DEBUG("moved to state REKEYING\n");
 	} else
@@ -1743,7 +1739,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		_HIP_DEBUG("NOT ignored, or should we..\n");
-		// SYNCH
 		entry->state = HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("fallbacked to state ESTABLISHED due to error (ok ?)\n");
 		goto out_err;
@@ -1756,7 +1751,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	goto out;
 
  out_err:
-	// SYNCH
 	entry->state = HIP_STATE_ESTABLISHED;
 	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
 	hip_set_spi_update_status(entry, nes_old_spi, 0);

@@ -70,4 +70,3 @@ int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
 
 	return resp.hdr.arg1;
 }
-

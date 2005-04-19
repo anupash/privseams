@@ -321,4 +321,3 @@ int hip_xfrm_hit_is_our(const hip_hit_t *hit)
 
 	return 0;
 }
-

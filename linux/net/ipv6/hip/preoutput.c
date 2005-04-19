@@ -55,7 +55,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	//state = entry->state;
 	state = xs->state;
 	
-	_HIP_DEBUG("hadb entry state is %s\n", hip_state_str(state));
+	HIP_DEBUG("hadb entry state is %s\n", hip_state_str(state));
 
 	switch(state) {
 	case HIP_STATE_NONE:

@@ -272,35 +272,10 @@ int hip_do_work(struct hip_work_order *job)
 		HIP_START_TIMER(KMM_PARTIAL);
 		switch(job->hdr.subtype) {
 #if (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
-		case HIP_WO_SUBTYPE_RECV_I1:
-			res = hip_receive_i1(job->msg, &job->hdr.src_addr,
-					     &job->hdr.dst_addr);
-			break;
-		case HIP_WO_SUBTYPE_RECV_R1:
-			res = hip_receive_r1(job->msg, &job->hdr.src_addr,
-					     &job->hdr.dst_addr);
-			break;
-		case HIP_WO_SUBTYPE_RECV_I2:
-			res = hip_receive_i2(job->msg, 
-					     &job->hdr.src_addr,
-					     &job->hdr.dst_addr);
-			break;
-		case HIP_WO_SUBTYPE_RECV_R2:
-			res = hip_receive_r2(job->msg, &job->hdr.src_addr,
-					     &job->hdr.dst_addr);
-			HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
-			break;
-		case HIP_WO_SUBTYPE_RECV_UPDATE:
-			res = hip_receive_update(job->msg, &job->hdr.src_addr,
-						 &job->hdr.dst_addr);
-			break;
-		case HIP_WO_SUBTYPE_RECV_NOTIFY:
-			res = hip_receive_notify(job->msg, &job->hdr.src_addr,
-						 &job->hdr.dst_addr);
-			break;
-		case HIP_WO_SUBTYPE_RECV_BOS:
-			res = hip_receive_bos(job->msg, &job->hdr.src_addr,
-					      &job->hdr.dst_addr);
+		case HIP_WO_SUBTYPE_RECV_CONTROL:
+			res = hip_receive_control_packet(job->msg,
+							 &job->hdr.src_addr,
+							 &job->hdr.dst_addr);
 			break;
 #endif /* (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 		default:
@@ -422,8 +397,16 @@ int hip_do_work(struct hip_work_order *job)
 				HIP_ERROR("Sending of I1 failed (%d)\n", res);
 				res = KHIPD_ERROR;
 				barrier();
-				// SYNCH
 				entry->state = HIP_STATE_UNASSOCIATED;
+				break;
+			}
+			/* Synchronize beet state (may be changed) */
+			res = hip_hadb_update_xfrm(entry);
+			if (res) {
+				HIP_ERROR("XFRM out synchronization failed\n");
+				entry->state = HIP_STATE_FAILED;
+				res = KHIPD_ERROR;
+				break;
 			}
 			break;
 		}
@@ -487,15 +470,21 @@ int hip_do_work(struct hip_work_order *job)
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
-			if (res < 0)
+			if (res < 0) {
 				res = KHIPD_ERROR;
+				break;
+			}
 			hip_rvs_set_request_flag(&job->hdr.dst_addr);
 			{
 				struct ipv6hdr hdr = {0};
 				ipv6_addr_copy(&hdr.daddr, &job->hdr.dst_addr);
 				hip_handle_output(&hdr, NULL);
 			}
-			res = 0;
+			/* Synchronize the BEET database */
+			res = hip_xfrm_dst_init(&job->hdr.dst_addr,
+						&job->hdr.src_addr);
+			if (res < 0)
+				res = KHIPD_ERROR;
 			break;
 #endif
 		case HIP_WO_SUBTYPE_ADDHI:

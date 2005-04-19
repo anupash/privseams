@@ -591,6 +591,66 @@ int hip_produce_keying_material(struct hip_common *msg,
  *                           PACKET/PROTOCOL HANDLING                        *
  *****************************************************************************/
 
+int hip_receive_control_packet(struct hip_common *msg,
+			       struct in6_addr *src_addr,
+			       struct in6_addr *dst_addr)
+{
+	hip_ha_t *entry;
+	int err = 0, type;
+
+	entry = hip_hadb_find_byhit(&msg->hits);
+	if (!entry) {
+		HIP_ERROR("Did not find dst entry\n");
+		err = -EFAULT;
+		goto out_err;
+	}
+
+	type = hip_get_msg_type(msg);
+	
+	switch(type) {
+	case HIP_I1:
+		err = hip_receive_i1(msg, src_addr, dst_addr);
+		break;
+	case HIP_R1:
+		err = hip_receive_r1(msg, src_addr, dst_addr);
+		break;
+	case HIP_I2:
+		err = hip_receive_i2(msg, src_addr, dst_addr);
+		break;
+	case HIP_R2:
+		err = hip_receive_r2(msg, src_addr, dst_addr);
+		HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
+		break;
+	case HIP_UPDATE:
+		err = hip_receive_update(msg, src_addr, dst_addr);
+		break;
+	case HIP_NOTIFY:
+		err = hip_receive_notify(msg, src_addr, dst_addr);
+		break;
+	case HIP_BOS:
+		err = hip_receive_bos(msg, src_addr, dst_addr);
+		break;
+	default:
+		HIP_ERROR("Unknown packet %d\n", type);
+		err = -ENOSYS;
+	}
+
+	if (err) {
+		goto out_err;
+	}
+
+	/* Synchronize beet state (may be changed) */
+	err = hip_hadb_update_xfrm(entry);
+	if (err) {
+		HIP_ERROR("XFRM out synchronization failed\n");
+		err = -EFAULT;
+		goto out_err;
+	}
+
+ out_err:
+	return err;
+}
+
 /**
  * hip_create_i2 - Create I2 packet and send it
  * @ctx: Context that includes the incoming R1 packet
@@ -1151,7 +1211,7 @@ int hip_handle_r1(struct hip_common *r1,
 				if (entry->birthday < r1cntr->generation) {
 					/* perhaps changing the state should be performed somewhere else. */
 					entry->state = HIP_STATE_I1_SENT;
-					// SYNCH not needed?
+					// XX FIX: SYNCH not needed?
 				} else {
 					/* dropping due to generation check */
 					HIP_UNLOCK_HA(entry);
@@ -1356,7 +1416,6 @@ int hip_receive_r1(struct hip_common *hip_common,
 			HIP_ERROR("Handling of R1 failed\n");
 		else {
 			if (state == HIP_STATE_I1_SENT) {
-				// SYNCH
 				entry->state = HIP_STATE_I2_SENT;
 			}
 		}
@@ -1987,10 +2046,8 @@ int hip_handle_i2(struct hip_common *i2,
 #ifdef CONFIG_HIP_RVS
 		/* XX FIX: this should be dynamic (the rvs information should
 		   be stored in the HADB) instead of static */
-		// SYNCH
 		entry->state = HIP_STATE_ESTABLISHED;
 #else
-		// SYNCH
 		entry->state = HIP_STATE_R2_SENT;
 #endif /* CONFIG_HIP_RVS */
 	}
@@ -2076,26 +2133,29 @@ int hip_receive_i2(struct hip_common *i2,
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err) {
-			// SYNCH
-			entry->state = HIP_STATE_R2_SENT;
+		if (err) {
+			HIP_ERROR("Handling of i2 failed\n");
+			goto out;
 		}
+		entry->state = HIP_STATE_R2_SENT;
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err) {
-			// SYNCH
-			entry->state = HIP_STATE_R2_SENT;
+		if (err) {
+			HIP_ERROR("Handling of i2 failed\n");
+			goto out;
 		}
+		entry->state = HIP_STATE_R2_SENT;
  		break;
  	case HIP_STATE_REKEYING:
 		HIP_DEBUG("Received I2 in state REKEYING\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err) {
-			entry->state = HIP_STATE_R2_SENT;
-			// SYNCH
+		if (err) {
+			HIP_ERROR("Handling of i2 failed\n");
+			goto out;
 		}
+		entry->state = HIP_STATE_R2_SENT;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
 		break;
@@ -2250,6 +2310,8 @@ int hip_handle_r2(struct hip_common *r2,
 	hip_finalize_sa(&r2->hits, spi_recvd);
 	hip_finalize_sa(&r2->hitr, spi_in);
 
+	entry->state = HIP_STATE_ESTABLISHED;
+	HIP_DEBUG("Reached ESTABLISHED state\n");
  out_err:
 	if (peer_id)
 		HIP_FREE(peer_id);
@@ -2444,14 +2506,11 @@ int hip_receive_r2(struct hip_common *hip_common,
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
  		err = hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
-		if (!err) {
-			entry->state = HIP_STATE_ESTABLISHED;
-			// SYNCH
-			HIP_DEBUG("Reached ESTABLISHED state\n");
-		} else {
+		if (err) {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
+			goto out_err;
  		}
- 		break;
+	break;
 
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:

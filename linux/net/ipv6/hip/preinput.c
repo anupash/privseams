@@ -265,35 +265,8 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	
 	type = hip_get_msg_type(hip_common);
 	HIP_DEBUG("Received HIP %s packet\n", hip_msg_type_str(type));
-        switch(type) {
-	case HIP_I1:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I1;
-		break;
-	case HIP_R1:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_R1;
-		break;
-	case HIP_I2:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I2;
-		break;
-	case HIP_R2:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_R2;
-		break;
-	case HIP_UPDATE:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_UPDATE;
-		break;
-	case HIP_NOTIFY:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_NOTIFY;
-		break;
-	case HIP_BOS:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_BOS;
-		break;
-	default:
-		kfree_skb(*skb);  /* sic */
-		HIP_FREE(hwo);
-		/*  KRISUXXX: return value? */
-		return -1;
-        }
 
+	hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_CONTROL;
         hip_insert_work_order(hwo);
 
  out_err:
