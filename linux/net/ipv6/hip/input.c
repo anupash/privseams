@@ -1191,10 +1191,11 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_LOCK_HA(entry);
 		if (entry->state == HIP_STATE_I2_SENT) {
 			if (entry->birthday) {
-				if (entry->birthday < r1cntr->generation)
+				if (entry->birthday < r1cntr->generation) {
 					/* perhaps changing the state should be performed somewhere else. */
 					entry->state = HIP_STATE_I1_SENT;
-				else {
+					// SYNCH not needed?
+				} else {
 					/* dropping due to generation check */
 					HIP_UNLOCK_HA(entry);
 					HIP_INFO("Dropping R1 due to the generation counter being too small\n");
@@ -1397,8 +1398,10 @@ int hip_receive_r1(struct hip_common *hip_common,
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
 		else {
-			if (state == HIP_STATE_I1_SENT)
+			if (state == HIP_STATE_I1_SENT) {
+				// SYNCH
 				entry->state = HIP_STATE_I2_SENT;
+			}
 		}
 		HIP_UNLOCK_HA(entry);
 		break;
@@ -2050,8 +2053,10 @@ int hip_handle_i2(struct hip_common *i2,
 #ifdef CONFIG_HIP_RVS
 		/* XX FIX: this should be dynamic (the rvs information should
 		   be stored in the HADB) instead of static */
+		// SYNCH
 		entry->state = HIP_STATE_ESTABLISHED;
 #else
+		// SYNCH
 		entry->state = HIP_STATE_R2_SENT;
 #endif /* CONFIG_HIP_RVS */
 	}
@@ -2139,20 +2144,26 @@ int hip_receive_i2(struct hip_common *i2,
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
+		if (!err) {
+			// SYNCH
 			entry->state = HIP_STATE_R2_SENT;
+		}
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
+		if (!err) {
+			// SYNCH
 			entry->state = HIP_STATE_R2_SENT;
+		}
  		break;
  	case HIP_STATE_REKEYING:
 		HIP_DEBUG("Received I2 in state REKEYING\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
+		if (!err) {
 			entry->state = HIP_STATE_R2_SENT;
+			// SYNCH
+		}
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
 		break;
@@ -2534,6 +2545,7 @@ int hip_receive_r2(struct hip_common *hip_common,
  		err = hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
 		if (!err) {
 			entry->state = HIP_STATE_ESTABLISHED;
+			// SYNCH
 			HIP_DEBUG("Reached ESTABLISHED state\n");
 		} else {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);

@@ -280,6 +280,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
  *
  * Return NULL if memory allocation failed, otherwise the HA.
  */
+// SYNCH
 hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
 	hip_ha_t *entry = NULL;
@@ -725,6 +726,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 
 /* assume already locked entry */
 
+// SYNCH
 static int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 {
 	int err = 0;
@@ -764,6 +766,7 @@ static int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *dat
 }
 
 /* assume already locked entry */
+// SYNCH
 int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 {
 	int err = 0;
@@ -1207,6 +1210,7 @@ uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry)
  * entry's default address and outbound SPI list's default address*/
 
 /* if addr is null, select some address from the SPI list */
+// SYNCH
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
 				   struct in6_addr *addr)
 {
@@ -1388,6 +1392,7 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 
 /* add an address belonging to the SPI list */
 /* or update old values */
+// SYNCH
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr)
@@ -1457,6 +1462,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
 			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
 			HIP_DEBUG("setting bex addr as preferred address\n");
+			// SYNCH
 			ipv6_addr_copy(&entry->preferred_address, addr);
 			new_addr->seq_update_id = 0;
 		} else {
@@ -1466,6 +1472,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 
 	do_gettimeofday(&new_addr->modified_time);
+	// SYNCH if preferred
 	new_addr->is_preferred = is_preferred_addr;
 
 #if 0

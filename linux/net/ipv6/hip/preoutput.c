@@ -40,7 +40,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 
 	HIP_DEBUG("is HIT\n");
 
-        /* XX FIX: the following call breaks kernel-only HIP */
+        /* XX FIX: the following call breaks kernel-only HIP (Miika) No it doesnt. (tkoponen) */
 
 	/* The source address is not yet a HIT, just the dst address. */
 	//entry = hip_hadb_find_byhit(&hdr->daddr);
@@ -72,7 +72,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 #endif
 		barrier();
 		//entry->state = HIP_STATE_I1_SENT;
-		xs->state = HIP_STATE_I1_SENT;
+		xs->state = HIP_STATE_I1_SENT; // FIXME: this is useless... 
 		hwo = hip_init_job(GFP_ATOMIC);
 		if (!hwo) {
 			HIP_ERROR("init job failed");

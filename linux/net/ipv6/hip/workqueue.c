@@ -366,6 +366,7 @@ int hip_do_work(struct hip_work_order *job)
 			res = resp->hdr.arg1 = hip_finalize_sa(&job->hdr.dst_addr, job->hdr.arg1);
 			break;
 
+		/* BEET database management functions follow */
 		case HIP_WO_SUBTYPE_XFRM_INIT:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
@@ -421,6 +422,7 @@ int hip_do_work(struct hip_work_order *job)
 				HIP_ERROR("Sending of I1 failed (%d)\n", res);
 				res = KHIPD_ERROR;
 				barrier();
+				// SYNCH
 				entry->state = HIP_STATE_UNASSOCIATED;
 			}
 			break;
@@ -483,7 +485,7 @@ int hip_do_work(struct hip_work_order *job)
 			/* FIXME: Synchronize the BEET database */
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
-			/* arg1 = d-hit, arg2=ipv6 */
+			/* arg1 = d-hit, arg2=ipv6
 			res = hip_hadb_add_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;
