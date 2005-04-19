@@ -87,77 +87,43 @@ int hip_verify_network_header(struct hip_common *hip_common,
 			      struct sockaddr *src, struct sockaddr *dst, int len)
 {
 	int err = 0;
-        uint16_t csum;
-
-        if (len != hip_get_msg_total_len(hip_common)) {
-                HIP_ERROR("Invalid HIP packet length. Dropping\n");
-                err = -EINVAL;
-                goto out_err;
-        }
 
         /* Currently no support for piggybacking */
-        if (hip_common->payload_proto != IPPROTO_NONE) {
-                HIP_ERROR("Protocol in packet (%u) was not IPPROTO_NONE. Dropping\n",
-                          hip_common->payload_proto);
-                err = -EOPNOTSUPP;
-                goto out_err;
-        }
+        HIP_IFEL(len != hip_get_msg_total_len(hip_common), -EINVAL, 
+		 "Invalid HIP packet length. Dropping\n");
+        HIP_IFEL(hip_common->payload_proto != IPPROTO_NONE, -EOPNOTSUPP,
+		 "Protocol in packet (%u) was not IPPROTO_NONE. Dropping\n",
+		 hip_common->payload_proto);
+	HIP_IFEL(hip_common->ver_res & HIP_VER_MASK != HIP_VER_RES, -EPROTOTYPE,
+		 "Invalid version in received packet. Dropping\n");
+	HIP_IFEL(!hip_is_hit(&hip_common->hits), -EAFNOSUPPORT,
+		 "Received a non-HIT in HIT-source. Dropping\n");
+	HIP_IFEL(!hip_is_hit(&hip_common->hitr) && !ipv6_addr_any(&hip_common->hitr),
+		 -EAFNOSUPPORT, "Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
+	HIP_IFEL(ipv6_addr_any(&hip_common->hits), -EAFNOSUPPORT,
+		 "Received a NULL in HIT-sender. Dropping\n");
 
-        if ((hip_common->ver_res & HIP_VER_MASK) != HIP_VER_RES) {
-                HIP_ERROR("Invalid version in received packet. Dropping\n");
-                err = -EPROTOTYPE;
-                goto out_err;
-        }
-	if (!hip_is_hit(&hip_common->hits)) {
-                HIP_ERROR("Received a non-HIT in HIT-source. Dropping\n");
-                err = -EAFNOSUPPORT;
-                goto out_err;
-        }
-
-        if (!hip_is_hit(&hip_common->hitr) &&
-            !ipv6_addr_any(&hip_common->hitr)) {
-                HIP_ERROR("Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
-                err = -EAFNOSUPPORT;
-                goto out_err;
-        }
-	
-        if (ipv6_addr_any(&hip_common->hits)) {
-                HIP_ERROR("Received a NULL in HIT-sender. Dropping\n");
-                err = -EAFNOSUPPORT;
-                goto out_err;
-        }
         /*
          * XX FIXME: handle the RVS case better
          */
         if (ipv6_addr_any(&hip_common->hitr)) {
                 /* Required for e.g. BOS */
                 HIP_DEBUG("Received opportunistic HIT\n");
-	}
-#ifdef CONFIG_HIP_RVS
-        else {
-                HIP_DEBUG("Received HIT is ours or we are RVS\n");
-	}
-#else
-	else if (!hip_hadb_hit_is_our(&hip_common->hitr)) {
-		HIP_ERROR("Receiver HIT is not ours\n");
-		err = -EFAULT;
-		goto out_err;
 	} else {
-		_HIP_DEBUG("Receiver HIT is ours\n");
-	}
+#ifdef CONFIG_HIP_RVS
+                HIP_DEBUG("Received HIT is ours or we are RVS\n");
+#else
+		HIP_IFEL(!hip_hadb_hit_is_our(&hip_common->hitr), -EFAULT,
+			 "Receiver HIT is not ours\n");
 #endif
-
-        if (!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr)) {
-		HIP_DEBUG("Dropping HIP packet. Loopback not supported.\n");
-		err = -ENOSYS;
-		goto out_err;
 	}
+
+        HIP_IFEL(!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr), -ENOSYS,
+		 "Dropping HIP packet. Loopback not supported.\n");
 
         /* Check checksum. */
-	if (checksum_packet((char*)hip_common, src, dst)) {
-		HIP_ERROR("HIP checksum failed.\n");
-		err = -EBADMSG;
-	}
+	HIP_IFEL(checksum_packet((char*)hip_common, src, dst), -EBADMSG, 
+		 "HIP checksum failed.\n");
 	
 out_err:
         return err;

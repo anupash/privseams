@@ -9,8 +9,7 @@
 static int hip_csum_verify(struct sk_buff *skb)
 {
 	struct hip_common *hip_common;
-	int len;
-	int csum;
+	int len, csum;
 
 	hip_common = (struct hip_common*) skb->h.raw;
         len = hip_get_msg_total_len(hip_common);
@@ -48,47 +47,24 @@ static int hip_verify_network_header(struct hip_common *hip_common,
 		  ntohs((*skb)->nh.ipv6h->payload_len),
 		  hip_get_msg_total_len(hip_common));
 
-	if (ntohs((*skb)->nh.ipv6h->payload_len) !=
-	     hip_get_msg_total_len(hip_common)) {
-		HIP_ERROR("Invalid HIP packet length (IPv6 hdr payload_len=%d/HIP pkt payloadlen=%d). Dropping\n",
-			  ntohs((*skb)->nh.ipv6h->payload_len),
-			  hip_get_msg_total_len(hip_common));
-		err = -EINVAL;
-		goto out_err;
-	}
+	HIP_IFEL(ntohs((*skb)->nh.ipv6h->payload_len) !=
+		 hip_get_msg_total_len(hip_common), -EINVAL,
+		 "Invalid HIP packet length (IPv6 hdr payload_len=%d/HIP pkt payloadlen=%d). Dropping\n",
+		 ntohs((*skb)->nh.ipv6h->payload_len),
+		 hip_get_msg_total_len(hip_common));
 
 	/* Currently no support for piggybacking */
-	if (hip_common->payload_proto != IPPROTO_NONE) {
-		HIP_ERROR("Protocol in packet (%u) was not IPPROTO_NONE. Dropping\n", 
-			  hip_common->payload_proto);
-		err = -EOPNOTSUPP;
-		goto out_err;
-	}
-	
-	if ((hip_common->ver_res & HIP_VER_MASK) != HIP_VER_RES) {
-		HIP_ERROR("Invalid version in received packet. Dropping\n");
-		err = -EPROTOTYPE;
-		goto out_err;
-	}
-
-	if (!hip_is_hit(&hip_common->hits)) {
-		HIP_ERROR("Received a non-HIT in HIT-source. Dropping\n");
-		err = -EAFNOSUPPORT;
-		goto out_err;
-	}
-
-	if (!hip_is_hit(&hip_common->hitr) &&
-	    !ipv6_addr_any(&hip_common->hitr)) {
-		HIP_ERROR("Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
-		err = -EAFNOSUPPORT;
-		goto out_err;
-	}
-
-	if (ipv6_addr_any(&hip_common->hits)) {
-		HIP_ERROR("Received a NULL in HIT-sender. Dropping\n");
-		err = -EAFNOSUPPORT;
-		goto out_err;
-	}
+	HIP_IFEL(hip_common->payload_proto != IPPROTO_NONE, -EOPNOTSUPP,
+		 "Protocol in packet (%u) was not IPPROTO_NONE. Dropping\n", 
+		 hip_common->payload_proto);
+	HIP_IFEL((hip_common->ver_res & HIP_VER_MASK) != HIP_VER_RES, -EPROTOTYPE,
+		 "Invalid version in received packet. Dropping\n");
+	HIP_IFEL(!hip_is_hit(&hip_common->hits), -EAFNOSUPPORT,
+		 "Received a non-HIT in HIT-source. Dropping\n");
+	HIP_IFEL(!hip_is_hit(&hip_common->hitr) && !ipv6_addr_any(&hip_common->hitr), 
+		 -EAFNOSUPPORT, "Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
+	HIP_IFEL(ipv6_addr_any(&hip_common->hits), -EAFNOSUPPORT,
+		 "Received a NULL in HIT-sender. Dropping\n");
 
 	/*
 	 * XX FIXME: handle the RVS case better
@@ -96,37 +72,26 @@ static int hip_verify_network_header(struct hip_common *hip_common,
 	if (ipv6_addr_any(&hip_common->hitr)) {
 		/* Required for e.g. BOS */
 		HIP_DEBUG("Received opportunistic HIT\n");
-	}
+	} else {
 #ifdef CONFIG_HIP_RVS
-	else
 		HIP_DEBUG("Received HIT is ours or we are RVS\n");
 #else
-	else {
-	        if (!hip_xfrm_hit_is_our(&hip_common->hitr)) {
-			HIP_ERROR("Receiver HIT is not ours\n");
-			err = -EFAULT;
-			goto out_err;
-		} else
-			_HIP_DEBUG("Receiver HIT is ours\n");
-	}
-#endif
+	        HIP_IFEL(!hip_xfrm_hit_is_our(&hip_common->hitr), -EFAULT,
+			 "Receiver HIT is not ours\n");
 
-	if (!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr)) {
-		HIP_DEBUG("Dropping HIP packet. Loopback not supported.\n");
-		err = -ENOSYS;
-		goto out_err;
+#endif
 	}
+
+	HIP_IFEL(!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr), -ENOSYS,
+		 "Dropping HIP packet. Loopback not supported.\n");
 
         /* Check checksum. */
         csum = hip_common->checksum;
         hip_zero_msg_checksum(hip_common);
-        if (hip_csum_verify(*skb) != csum) {
-	       HIP_ERROR("HIP checksum failed (0x%x). Should have been: 0x%x\n", 
-			 csum, ntohs(hip_csum_verify(*skb)) );
-	       err = -EBADMSG;
-	}
-
-  out_err:
+        HIP_IFEL(hip_csum_verify(*skb) != csum, -EBADMSG,
+		 "HIP checksum failed (0x%x). Should have been: 0x%x\n", 
+		 csum, ntohs(hip_csum_verify(*skb)));
+ out_err:
 	return err;
 }
 
@@ -204,72 +169,45 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
  */
 int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 {
-        struct hip_common *hip_common;
-        struct hip_work_order *hwo;
-	int len, type;
-	int err = 0;
+        struct hip_common *hip_common = 
+		(struct hip_common*) (*skb)->h.raw;
+        struct hip_work_order *hwo = NULL;
+	int len, err = 0;
 
+	/* Should we do some early state processing now?  we could
+ 	   prevent further DoSsing by dropping illegal packets right
+ 	   now.  */
 	/* See if there is at least the HIP header in the packet */
-        if (!pskb_may_pull(*skb, sizeof(struct hip_common))) {
-		HIP_ERROR("Received packet too small. Dropping\n");
-		goto out_err;
-        }
-
-        hip_common = (struct hip_common*) (*skb)->h.raw;
+        HIP_IFEL(!pskb_may_pull(*skb, sizeof(struct hip_common)), 0,
+		 "Received packet too small. Dropping\n");
         /* TODO: use hip_state_str */
 	HIP_DEBUG("Received HIP packet type %d\n", hip_common->type_hdr);
 	_HIP_DEBUG_SKB((*skb)->nh.ipv6h, skb);
 	_HIP_HEXDUMP("HIP PACKET", hip_common,
 		     hip_get_msg_total_len(hip_common));
 
-	err = hip_verify_network_header(hip_common, skb);
-	if (err) {
-		HIP_ERROR("Verifying of the network header failed\n");
-		goto out_err;
-	}
-
-	err = hip_check_network_msg(hip_common);
-	if (err) {
-		HIP_ERROR("HIP packet is invalid\n");
-		goto out_err;
-	}
-
-	hwo = hip_init_job(GFP_ATOMIC);
-	if (!hwo) {
-		HIP_ERROR("No memory, dropping packet\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
+	HIP_IFEL(hip_verify_network_header(hip_common, skb), -1, 
+		 "Verifying of the network header failed\n");
+	HIP_IFEL(hip_check_network_msg(hip_common), -1,
+		 "HIP packet is invalid\n");
+	HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -ENOMEM,
+		 "No memory, dropping packet\n");
 
 	len = hip_get_msg_total_len(hip_common);
-        hwo->msg = HIP_MALLOC(len, GFP_ATOMIC);
-	if (!hwo->msg) {
-		HIP_ERROR("No memory, dropping packet\n");
-		HIP_FREE(hwo);
-		err = -ENOMEM;
-		goto out_err;
-	}
-	
+        HIP_IFEL(!(hwo->msg = HIP_MALLOC(len, GFP_ATOMIC)), -ENOMEM,
+		 "Out of memomry, dropping packet\n");
 	memcpy(hwo->msg, hip_common, len);
-	hwo->hdr.type = HIP_WO_TYPE_INCOMING;
 
-	/* should we do some early state processing now?
-	 * we could prevent further DoSsing by dropping
-	 * illegal packets right now.
-	 */
-
-        /* We need to save the addresses because the actual input handlers
-	   may need them later */
-        ipv6_addr_copy(&hwo->hdr.src_addr, &(*skb)->nh.ipv6h->saddr);
-        ipv6_addr_copy(&hwo->hdr.dst_addr, &(*skb)->nh.ipv6h->daddr);
-	
-	type = hip_get_msg_type(hip_common);
-	HIP_DEBUG("Received HIP %s packet\n", hip_msg_type_str(type));
-
-	hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_CONTROL;
+        /* We need to save the addresses because the actual input
+	   handlers may need them later */
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_INCOMING, 
+				HIP_WO_SUBTYPE_RECV_CONTROL, &(*skb)->nh.ipv6h->saddr,
+				&(*skb)->nh.ipv6h->daddr, 0, 0);
         hip_insert_work_order(hwo);
 
  out_err:
+	if (err) 
+		HIP_FREE(hwo);
 	kfree_skb(*skb);
 	return 0;
 }

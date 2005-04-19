@@ -25,13 +25,9 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	   - output buffer to temporarily store outgoing packets during
              base exchange
 	 */
-	int err = 0;
-	int state = 0;
-	//hip_ha_t *entry;
+	int err = 0, state = 0;
 	struct hip_xfrm_state *xs;
 	struct hip_work_order *hwo;
-
-	HIP_DEBUG("\n");
 
 	if (!ipv6_addr_is_hit(&hdr->daddr)) {
 		/* The address was an IPv6 address, ignore. */
@@ -43,20 +39,13 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
         /* XX FIX: the following call breaks kernel-only HIP (Miika) No it doesnt. (tkoponen) */
 
 	/* The source address is not yet a HIT, just the dst address. */
-	//entry = hip_hadb_find_byhit(&hdr->daddr);
 	xs = hip_xfrm_find_by_hit(&hdr->daddr);
-	if (!xs) {
-		HIP_ERROR("Unknown HA\n");
-		err = -EFAULT;
-		goto out;
-	}
+	HIP_IFEL(!xs, -EFAULT, "Unknown HA\n");
 
 	smp_wmb();
-	//state = entry->state;
 	state = xs->state;
 	
 	HIP_DEBUG("hadb entry state is %s\n", hip_state_str(state));
-
 	switch(state) {
 	case HIP_STATE_NONE:
 		HIP_DEBUG("No state with peer\n");
@@ -71,24 +60,16 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		}
 #endif
 		barrier();
-		//entry->state = HIP_STATE_I1_SENT;
-		xs->state = HIP_STATE_I1_SENT; // FIXME: this is useless... 
-		hwo = hip_init_job(GFP_ATOMIC);
-		if (!hwo) {
-			HIP_ERROR("init job failed");
-			err = -ENOMEM;
-			goto out;
-		}
+		HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -ENOMEM, "Out of memory\n");
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr,
 					HIP_WO_TYPE_OUTGOING, 
 					HIP_WO_SUBTYPE_SEND_I1,
-					&hdr->saddr, &hdr->daddr,
-					0, 0);
+					&hdr->saddr, &hdr->daddr, 0, 0);
 		hip_insert_work_order(hwo);
 		break;
 	case HIP_STATE_I1_SENT:
 #if 0
-// FIXME: no i1 retransmission until its properly done.
+		// FIXME: no i1 retransmission until its properly done.
 		HIP_DEBUG("I1 retransmission\n");
 		/* XX TODO: we should have timers on HIP layer and
 		   not depend on transport layer timeouts? In that case
@@ -110,32 +91,14 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	case HIP_STATE_ESTABLISHED:
 		/* State is already established; just rewrite HITs to IPv6
 		   addresses and continue normal IPv6 packet processing. */
-		/* first get peer IPv6 addr */
-		//err = hip_hadb_get_peer_addr(entry, &hdr->daddr);
-		//FIXME: tkoponen, is it ok to assume the xs to have a
-		//single address that is always used if such exists?
-		if (ipv6_addr_any(&xs->preferred_peer_addr)) {
-			HIP_ERROR("Could not find peer address\n");
-			err = -EADDRNOTAVAIL;
-			goto out;
-		}
+		HIP_IFEL(ipv6_addr_any(&xs->preferred_peer_addr), -EADDRNOTAVAIL,
+			 "Could not find peer address\n");
 		ipv6_addr_copy(&hdr->daddr, &xs->preferred_peer_addr);
 		    
 		_HIP_DEBUG_IN6ADDR("dst addr", &hdr->daddr);
-		if (!skb) {
-			HIP_ERROR("ESTABLISHED state and no skb!\n");
-			HIP_ERROR("Called by xfrm state re-acquire ? do BEX again ?\n");
-			err = -EADDRNOTAVAIL;
-			goto out;
-		}
-
-		err = ipv6_get_saddr(skb->dst, &hdr->daddr, &hdr->saddr);
-		if (err) {
-			HIP_ERROR("Couldn't get a source address\n");
-			err = -EADDRNOTAVAIL;
-			goto out;
-		}
-
+		HIP_IFEL(!skb, -EADDRNOTAVAIL, "Established state but no skb.\n");
+		HIP_IFEL(ipv6_get_saddr(skb->dst, &hdr->daddr, &hdr->saddr), -EADDRNOTAVAIL,
+			 "Couldn't get a source address\n");
 		break;
 	case HIP_STATE_REKEYING:
 		/* XX TODO: Should the packet be buffered instead? */
@@ -143,9 +106,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		err = -1;
 		break;
 	default:
-		HIP_ERROR("Unknown HIP state %d\n", state);
-		err = -EFAULT;
-		break;
+		HIP_IFEL(1, -EFAULT, "Unknown HIP state %d\n", state);
 	}
 
 #if 0
@@ -156,12 +117,11 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	        err = 5;
 	}
 #endif
- out:
+ out_err:
 	/* Find increases the refcnt */
 	if (xs)
 		hip_put_xfrm(xs);
 
-	_HIP_DEBUG("err=%d\n", err);
 	return err;
 }
 
@@ -222,10 +182,8 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	int err = 0;
 	struct dst_entry *dst = NULL;
-
 	struct flowi fl, *ofl;
-	unsigned int csum;
-	unsigned int len;
+	unsigned int csum, len;
 
 	if (out_fl == NULL) {
 		fl.proto = IPPROTO_HIP;
@@ -248,12 +206,8 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	lock_sock(hip_output_socket->sk);
 
-	err = ip6_dst_lookup(hip_output_socket->sk, &dst, ofl);
-	if (err) {
-		HIP_ERROR("Unable to route HIP packet\n");
-		release_sock(hip_output_socket->sk);
-		goto out_err;
-	}
+	HIP_IFEL(ip6_dst_lookup(hip_output_socket->sk, &dst, ofl), -1,
+		 "Unable to route HIP packet\n");
 
 	_HIP_DUMP_MSG(buf);
 	HIP_DEBUG("pkt out: len=%d proto=%d csum=0x%x\n", len, ofl->proto, csum);
@@ -282,8 +236,8 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 				  err);
 	}
 
-	release_sock(hip_output_socket->sk);
-
  out_err:
+	release_sock(hip_output_socket->sk);
 	return err;
 }
+
