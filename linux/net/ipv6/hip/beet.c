@@ -229,12 +229,32 @@ int hip_xfrm_dst_init(struct in6_addr *dst_hit, struct in6_addr *dst_addr) {
 }
 
 int hip_xfrm_update(uint32_t spi, struct in6_addr *dst_addr, int state,
-		    int dir) {
-        // FIXME
-	return 0;
+		    int dir)
+{
+	int err = 0;
+	hip_xfrm_t *entry;
+
+	/* XX FIX: deletion of the entry could be done if the state is
+	   XFRM_DELETE; if so, we need the HIT...  */
+
+	/* XX FIX: should we create a new entry if not found? */
+	entry = hip_xfrm_find_by_spi(spi);
+	if (!entry) {
+		/* initialized already */
+		HIP_ERROR("Could not find outbound spi %d\n", spi);
+		err = -ENOENT;
+		goto out_err;
+	}
+
+	memcpy(&entry->preferred_peer_addr, dst_addr, sizeof(struct in6_addr));
+	entry->state = state;
+
+ out_err:
+	
+	return err;
 }
 
-int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir) {
+int hip_xfrm_delete(uint32_t spi, struct in6_addr *hit, int dir) {
 //	if (dir == HIP_FLOW_DIR_IN) {
 //	} else if (dir == HIP_FLOW_DIR_OUT){
 //	} else {
@@ -250,7 +270,7 @@ hip_xfrm_t *hip_xfrm_find_by_hit(const hip_hit_t *dst_hit)
 	return (hip_xfrm_t *)hip_ht_find(&hip_beetdb_hit, (void *)dst_hit);
 }
 
-/* find HA by inbound SPI */
+/* find HA by inbound SPI - actually it could also be outbound too -miika */
 struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 {
 	struct hip_hit_spi *hs;

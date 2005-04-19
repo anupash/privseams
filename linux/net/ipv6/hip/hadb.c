@@ -334,8 +334,21 @@ static void hip_hadb_remove_state(hip_ha_t *ha)
 /************** END OF PRIMITIVE FUNCTIONS **************/
 
 int hip_hadb_update_xfrm_inbound(hip_ha_t *entry) {
-	// XX FIXME: iterate over all inbound SPIs and send them to kernel
-	return -1;
+	struct hip_spi_in_item *item, *tmp;
+	int err = 0;
+
+	/* iterate over all inbound SPIs and send them to kernel */
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		err = hip_xfrm_update(item->spi,
+				      &entry->preferred_address,
+				      entry->state,
+				      HIP_SPI_DIRECTION_IN);
+		if (err)
+			goto out_err;
+	}
+
+ out_err:
+	return err;
 }
 
 int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
