@@ -2164,7 +2164,6 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_unknown_spi);
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
-	/* HIP_SETCALL(hip_update_spi_waitlist_ispending); */
 	HIP_SETCALL(hip_get_default_spi_out);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
@@ -2218,7 +2217,6 @@ static void __exit hip_cleanup(void)
 	hip_uninit_netdev_notifier();
 
 	/* disable hooks to call our code */
-	//HIP_INVALIDATE(hip_update_spi_waitlist_ispending);
 	HIP_INVALIDATE(hip_handle_ipv6_dad_completed);
 	HIP_INVALIDATE(hip_handle_inet6_addr_del);
 	HIP_INVALIDATE(hip_unknown_spi);
@@ -2265,7 +2263,6 @@ static void __exit hip_cleanup(void)
 	hip_uninit_output_socket();
 	hip_uninit_r1();
 
-	/* update_spi_waitlist_delete_all(); */
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

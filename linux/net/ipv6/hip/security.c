@@ -234,8 +234,6 @@ int hip_setup_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	akeylen = ekeylen = 0;
 	err = -EEXIST;
 
-	//hip_print_hit("srchit", srchit);
-	//hip_print_hit("dsthit", dsthit);
 	if (already_acquired) {
 		if (!*spi) {
 			HIP_ERROR("No SPI for already acquired SA\n");
