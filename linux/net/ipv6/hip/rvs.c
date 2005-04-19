@@ -100,10 +100,7 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
  */
 HIP_RVA *hip_rva_find(struct in6_addr *hit)
 {
-	HIP_RVA *rva;
-
-	rva = hip_ht_find(&rva_table, hit);
- 	return rva;
+ 	return hip_ht_find(&rva_table, hit);
 }
 
 HIP_RVA *hip_rva_find_valid(struct in6_addr *hit)
@@ -154,7 +151,6 @@ void hip_rva_insert_ip(HIP_RVA *rva, struct in6_addr *ip)
 	hip_rva_insert_ip_n(rva, ip, 0);
 }
 
-
 /**
  * hip_rva_fetch_ip_n - Fetch Nth IP-address from the RVA to the destination buffer
  * @rva: Rendezvous Association
@@ -196,12 +192,8 @@ void hip_rva_fetch_ip(HIP_RVA *rva, struct in6_addr *dst)
  */
 struct in6_addr *hip_rva_get_ip(HIP_RVA *rva,int gfpmask)
 {
-	struct in6_addr *hit;
-
-	hit = hip_rva_get_ip_n(rva,gfpmask,0);
-	return hit;
+	return hip_rva_get_ip_n(rva,gfpmask,0);
 }
-
 
 /**
  * hip_rva_get_ip - Allocate memory and copy one IP from RVA's list.
@@ -241,27 +233,20 @@ struct in6_addr *hip_rva_get_ip_n(HIP_RVA *rva, int gfpmask, unsigned int n)
  */
 int hip_rva_insert(HIP_RVA *rva)
 {
-	HIP_RVA *tmp;
 	int err;
 
 	/* if assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&rva->refcnt) <= 1); 
 
-	if (ipv6_addr_any(&rva->hit)) {
-		HIP_ERROR("Cannot insert RVA entry with NULL hit\n");
-		return -EINVAL;
-	}
-
-	tmp = hip_ht_find(&rva_table, &rva->hit);
-	if (tmp) {
-		HIP_INFO("Duplicate entry... not adding to RVA table\n");
-		return -EEXIST;
-	}
-
+	HIP_IFEL(ipv6_addr_any(&rva->hit), -EINVAL,
+		 "Cannot insert RVA entry with NULL hit\n");
+	HIP_IFEL(hip_ht_find(&rva_table, &rva->hit), -EEXIST,
+		 "Duplicate RVA entry. Not adding to RVA table\n");
+	
 	err = hip_ht_add(&rva_table, rva);
 	if (!err)
 		rva->rvastate |= HIP_RVASTATE_VALID;
-
+ out_err:
 	return err;
 }
 
@@ -390,31 +375,19 @@ int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
 int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 struct in6_addr *i1_daddr, HIP_RVA *rva)
 {
-	struct in6_addr *final_dst;
-	struct in6_addr *original_src;
-	struct hip_common *old_i1;
-	struct hip_common *new_i1;
+	struct in6_addr *final_dst = NULL, *original_src;
+	struct hip_common *old_i1, *new_i1;
 	struct hip_tlv_common *tmp;
-	int err;
-	int from_added = 0;
+	int err, from_added = 0;
 	char ipv6dst[128] = {0};
 
-	final_dst = hip_rva_get_ip(rva, GFP_KERNEL);
-	if (!final_dst) {
-		HIP_ERROR("Did not find forwarding address\n");
-		return -ENOENT;
-	}
-       
+	HIP_IFEL(!(final_dst = hip_rva_get_ip(rva, GFP_KERNEL)), -ENOENT,
+		 "Did not find forwarding address\n");
 	old_i1 = i1;
 	original_src = i1_saddr;
-
-	new_i1 = hip_msg_alloc();
-	if (!new_i1) {
-		HIP_ERROR("No memory to copy original I1\n");
-		err = -ENOMEM;
-		goto out;
-	}
-
+	
+	HIP_IFEL(!(new_i1 = hip_msg_alloc()), -ENOMEM,
+		 "No memory to copy original I1\n");
 	hip_build_network_hdr(new_i1, HIP_I1, 0,
 			      &(old_i1->hits),
 			      &(old_i1->hitr));
@@ -428,9 +401,7 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		}
 
 		/* FROM parameter not added AND type > FROM... */
-
 		/* add FROM _AND_ copy the tmp parameter */
-
 		hip_build_param_from(new_i1, original_src, 0);
 		hip_build_param(new_i1, tmp);
 		from_added = 1;
@@ -448,8 +419,9 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		HIP_INFO("Relayed I1 to %s\n", ipv6dst);
 	}
 		
- out:
-	HIP_FREE(final_dst);
+ out_err:
+	if (final_dst)
+		HIP_FREE(final_dst);
 	return err;
 }
 

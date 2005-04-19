@@ -53,7 +53,7 @@ static void hwo_default_destructor(struct hip_work_order *hwo)
  */
 struct hip_work_order *hip_get_work_order(void)
 {
-	struct hip_work_order *result;
+	struct hip_work_order *err = NULL;
 	struct hip_pc_wq *wq;
 #ifdef __KERNEL__
 	unsigned long eflags;
@@ -77,25 +77,17 @@ struct hip_work_order *hip_get_work_order(void)
 	wq = &hip_workqueue;
 #endif
 
-	if (list_empty(&wq->workqueue)) {
-		result = NULL;
-		goto err;
-	}
-
-	result = list_entry((&wq->workqueue)->next, struct hip_work_order, queue);
-	if (!result) {
-		HIP_ERROR("Couldn't extract the main structure from the list\n");
-		result = NULL;
-		goto err;
-	}
+	HIP_IFE(list_empty(&wq->workqueue), NULL);
+	HIP_IFEL(!(err = list_entry((&wq->workqueue)->next, struct hip_work_order, queue)),
+		 NULL, "Couldn't extract the main structure from the list\n");
 
 	list_del((&wq->workqueue)->next);
 
- err:	
+ out_err:	
 #ifdef __KERNEL__
 	local_irq_restore(eflags);
 #endif
-	return result;
+	return err;
 }
 
 /**
@@ -112,19 +104,13 @@ struct hip_work_order *hip_get_work_order(void)
  */
 int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
+	int err = 1;
 	unsigned long eflags;
 	struct hip_pc_wq *wq;
 
-	if (!hwo) {
-		HIP_ERROR("NULL hwo\n");
-		return -1;
-	}
-
 #ifdef __KERNEL__
-	if (cpu >= NR_CPUS) {
-		HIP_ERROR("Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
-		return -1;
-	}
+	HIP_IFEL(cpu >= NR_CPUS, -1, 
+		"Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
 
 	_HIP_DEBUG("hwo=0x%p cpu=%d\n", hwo, cpu);
 	local_irq_save(eflags);
@@ -140,13 +126,12 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 #ifdef __KERNEL__
 		up(&wq->worklock);
 #endif
-	} else
-		HIP_ERROR("NULL wq, aieee!\n");
+	}
 
 #ifdef __KERNEL__
 	local_irq_restore(eflags);
 #endif
-	return 1;
+	return err;
 }
 
 /**
@@ -160,11 +145,6 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 #ifdef CONFIG_HIP_USERSPACE
 	int ret;
 #endif
-	if (!hwo) {
-		HIP_ERROR("NULL hwo\n");
-		return -1;
-	}
-
 	if (hwo->hdr.type < 0 || hwo->hdr.type > HIP_MAX_WO_TYPES)
 		return -1;
 
@@ -207,9 +187,6 @@ void hip_uninit_workqueue()
 	unsigned long eflags;
 
 	local_irq_save(eflags);
- 	//local_bh_disable();
- 	/* get_cpu_var / put_cpu_var ? */
-	//	wq = &__get_cpu_var(hip_workqueue);
 	wq = &get_cpu_var(hip_workqueue);
 #else
 	wq = &hip_workqueue;
@@ -256,7 +233,7 @@ struct hip_work_order *hip_init_job(int gfp_mask)
 		memset(hwo, 0, sizeof(struct hip_work_order));		
 		hwo->destructor = hwo_default_destructor;
 	} else {
-		HIP_ERROR("No memory for work order\n");
+		HIP_ERROR("Out of memory\n");
 	}
 
 	return hwo;

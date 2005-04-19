@@ -84,12 +84,12 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 	struct hip_puzzle *pz;
 	int diff, ts;
 #endif
-	struct hip_r1entry *r1;
+	struct hip_r1entry *err;
 	int idx;	
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r);
 	_HIP_DEBUG("Calculated index: %d\n", idx);
-	r1 = &hip_r1table[idx];
+	err = &hip_r1table[idx];
 
 	/* the code under #if 0 periodically changes the puzzle. It is not included
 	   in compilation as there is currently no easy way of signing the R1 packet
@@ -97,15 +97,11 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 	*/
 #if 0
 	/* generating opaque data */
-
 	do_gettimeofday(&tv);
 
 	/* extract the puzzle */
-	pz = hip_get_param(r1->r1, HIP_PARAM_PUZZLE);
-	if (!pz) {
-		HIP_ERROR("Internal error: Could not find PUZZLE parameter in precreated R1 packet\n");
-		return NULL;
-	}
+	if (!(pz = hip_get_param(err->r1, HIP_PARAM_PUZZLE)), NULL, 
+	    "Internal error: Could not find PUZZLE parameter in precreated R1 packet\n");
 
 	ts = pz->opaque[0];
 	ts |= ((int)pz->opaque[1] << 8);
@@ -119,7 +115,7 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 
 		HIP_DEBUG("Old puzzle still valid\n");
 		if (diff <= HIP_PUZZLE_MAX_LIFETIME)
-			return r1;
+			return err;
 	}
 
 	/* either ts == 0 or diff > HIP_PUZZLE_MAX_LIFETIME */
@@ -128,7 +124,8 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 
 	/* XXX: sign the R1 */
 #endif
-	return r1;
+ out_err:	
+	return err;
 }
 
 
@@ -157,7 +154,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	struct scatterlist sg[2];
 	unsigned int nsg = 2;
 #endif
-	int err;
+	int err = 0;
 	union {
 		struct hip_puzzle pz;
 		struct hip_solution sl;
@@ -174,12 +171,9 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	max_k = 20;
 #endif
 	HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
-	if (u->pz.K > max_k) {
-		HIP_ERROR("Cookie K %u is higher than we are willing to calculate"
-			  " (current max K=%d)\n",
-			  u->pz.K, max_k);
-		return 0;
-	}
+	HIP_IFEL(u->pz.K > max_k, 0, 
+		 "Cookie K %u is higher than we are willing to calculate"
+		 " (current max K=%d)\n", u->pz.K, max_k);
 
 	mask = hton64((1ULL << u->pz.K) - 1);
 	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
@@ -197,17 +191,13 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		maxtries = 1ULL << (u->pz.K + 2); /* fix */
 		get_random_bytes(&randval, sizeof(u_int64_t));
 	} else {
-		HIP_ERROR("Unknown mode: %d\n", mode);
-		goto out_err;
+		HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
 	}
 
 #ifdef __KERNEL__
 	/* pre map the memory region (for SHA) */
-	err = hip_map_virtual_to_pages(sg, &nsg, cookie, 48);
-	if (err || nsg < 1 ) {
-		HIP_ERROR("Error mapping virtual addresses to physical pages\n");
-		return 0; // !ok
-	}
+	HIP_IFEL(hip_map_virtual_to_pages(sg, &nsg, cookie, 48) || nsg < 1, 0,
+		 "Error mapping virtual addresses to physical pages\n");
 #endif
 
 	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
@@ -216,8 +206,8 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	 * the next round while (0 > 0) [maxtries > 0 now]
 	 */
 	while(maxtries-- > 0) {
-		u8 sha_digest[HIP_AH_SHA_LEN];
-
+	 	u8 sha_digest[HIP_AH_SHA_LEN];
+		
 		/* must be 8 */
 		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
 #ifdef __KERNEL__
@@ -250,32 +240,25 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		}
 
 		/* It seems like the puzzle was not correctly solved */
-		if (mode == HIP_VERIFY_PUZZLE) {
-			HIP_ERROR("Puzzle incorrect\n");
-			return 0;
-		}
+		HIP_IFEL(mode == HIP_VERIFY_PUZZLE, 0, "Puzzle incorrect\n");
 		randval++;
 	}
 
- out_err:
 	HIP_ERROR("Could not solve the puzzle, no solution found\n");
-	return 0;
+ out_err:
+	return err;
 }
 
 
 int hip_init_r1(void)
 {
-	int res=0;
-
+	int err = 0;
 	hip_r1table = (struct hip_r1entry *)HIP_MALLOC(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE,
 						       GFP_KERNEL);
-	if (!hip_r1table) {
-		HIP_ERROR("Could not allocate memory for R1 table\n");
-		goto err_out;
-	}
-
+	HIP_IFEL(!hip_r1table, 0, "Could not allocate memory for R1 table\n");
 	memset(hip_r1table, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
-	res = 1;
+	err = 1;
+
  err_out:
 	return res;
 }
@@ -324,7 +307,6 @@ void hip_uninit_r1(void)
 		HIP_FREE(hip_r1table);
 	}
 }
-
 
 /**
  * hip_get_r1 - Fetch a precreated R1 and return it.
