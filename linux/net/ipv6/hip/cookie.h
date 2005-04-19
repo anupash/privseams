@@ -47,7 +47,7 @@ int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			  uint64_t birthday, struct in6_addr *hit);
 
 void hip_r1_delete(HIP_R1E *entry);
-
+void hip_r1_delete_by_hit(struct in6_addr *hit);
 /************* macros *****************/
 
 #define hip_hold_r1db(r1e) do { \

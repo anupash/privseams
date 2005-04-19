@@ -134,6 +134,16 @@ int hip_r1_insert(HIP_R1E *r1e)
 	return err;
 }
 
+void hip_r1_delete_by_hit(struct in6_addr *hit) 
+{
+	HIP_R1E *tmp;
+	tmp = hip_ht_find(&r1db_hit, hit);
+	if(!tmp) { 
+		HIP_INFO("Didn't find a R1 entry to delete\n");
+	}
+	hip_ht_delete(&r1db_hit, tmp);
+}
+
 HIP_R1E *hip_allocate_r1db_entry()
 {
 	HIP_R1E *r1e;
