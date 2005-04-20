@@ -319,6 +319,7 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 
 			/* BEET database management functions follow */
+#if 0
 		case HIP_WO_SUBTYPE_XFRM_INIT:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
@@ -329,6 +330,7 @@ int hip_do_work(struct hip_work_order *job)
 				hip_xfrm_dst_init(&job->hdr.src_addr,
 						  &job->hdr.dst_addr);
 			break;
+#endif
 			
 		case HIP_WO_SUBTYPE_XFRM_UPD:
 			resp = hip_init_job(GFP_KERNEL);
@@ -377,6 +379,7 @@ int hip_do_work(struct hip_work_order *job)
 				entry->state = HIP_STATE_UNASSOCIATED;
 				break;
 			}
+#if 0
 			/* Synchronize beet state (may be changed) */
 			res = hip_hadb_update_xfrm(entry);
 			if (res) {
@@ -385,6 +388,7 @@ int hip_do_work(struct hip_work_order *job)
 				res = KHIPD_ERROR;
 				break;
 			}
+#endif
 			break;
 		}
 #endif /* __KERNEL__ */
@@ -428,11 +432,13 @@ int hip_do_work(struct hip_work_order *job)
 				break;
 			}
 
+#if 0
 			/* Synchronize the BEET database */
 			res = hip_xfrm_dst_init(&job->hdr.dst_addr,
 						&job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;
+#endif
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
@@ -457,11 +463,13 @@ int hip_do_work(struct hip_work_order *job)
 				ipv6_addr_copy(&hdr.daddr, &job->hdr.dst_addr);
 				hip_handle_output(&hdr, NULL);
 			}
+#if 0
 			/* Synchronize the BEET database */
 			res = hip_xfrm_dst_init(&job->hdr.dst_addr,
 						&job->hdr.src_addr);
 			if (res < 0)
 				res = KHIPD_ERROR;
+#endif
 			break;
 #endif
 		case HIP_WO_SUBTYPE_ADDHI:

@@ -1,5 +1,6 @@
 #include "beet.h"
 
+#if 0
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
 	struct hip_work_order req, resp;
 
@@ -22,7 +23,7 @@ int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr) {
 
 	return resp.hdr.arg1;
 }
-
+#endif
 int hip_xfrm_update(uint32_t spi, struct in6_addr * dst_addr, int state,
 		    int dir) {
   	struct hip_work_order req, resp;
