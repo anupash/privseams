@@ -101,6 +101,7 @@ void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id);
 int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t spi);
 
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
+struct hip_spi_in_item *hip_hadb_get_spi_in_list(hip_ha_t *entry, uint32_t spi);
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
 			     int is_preferred_addr);
