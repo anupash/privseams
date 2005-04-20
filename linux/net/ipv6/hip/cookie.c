@@ -259,8 +259,8 @@ int hip_init_r1(void)
 	memset(hip_r1table, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
 	err = 1;
 
- err_out:
-	return res;
+ out_err:
+	return err;
 }
 
 int hip_precreate_r1(const struct in6_addr *src_hit)
