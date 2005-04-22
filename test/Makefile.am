@@ -30,6 +30,8 @@ bin_PROGRAMS += unittest
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
 
+bin_SCRIPTS = hipsetup
+
 align_SOURCES = align.c
 checksum_SOURCES = checksum.c checksum.h
 conntest_client_SOURCES = conntest-client.c 
