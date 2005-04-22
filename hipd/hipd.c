@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		
-		HIP_DEBUG("select\n");
+		_HIP_DEBUG("select\n");
 		/* wait for socket activity */
 #ifndef CONFIG_HIP_HI3
 		if ((err = select((highest_descriptor + 1), &read_fdset, 

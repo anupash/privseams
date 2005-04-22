@@ -131,6 +131,8 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 #ifdef __KERNEL__
 	local_irq_restore(eflags);
 #endif
+
+ out_err:
 	return err;
 }
 
