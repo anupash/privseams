@@ -3,9 +3,27 @@
  * The information stored in this database is actually a partial replica of
  * the information stored in the hadb.
  *
+ * XX FIX: there is still some redundant code with hadb.c... use macros!
+ *
  */
 
 #include "beet.h"
+
+/*
+ * hip_beetdb_hit is indexed by peer HIT. Each {our_hit, peer_hit} pair is
+ * listed only once in this list. Each entry contains also the default
+ * outbound SPI. Even if the peer has multiple SPIs, only the default is
+ * included in this hashtable database.
+ *
+ * hip_beetdb_spi_list is indexed with inbound SPIs. Each enty contains the
+ * peer_hit (and inbound SPI, even though it is unnecessary because it is the
+ * key). This list is used when an ESP packet arrives and we need to figure
+ * out the corresponding our_hit and peer_hit (not included in the ESP
+ * envelope!). You should notice that there may be multiple inbound SPIs for
+ * a given {hit_our, hit_peer} pair. However, given one inbound SPI, it will
+ * match to single xfrm entry.
+ *
+ */
 
 HIP_HASHTABLE hip_beetdb_hit;
 HIP_HASHTABLE hip_beetdb_spi_list;
@@ -97,7 +115,6 @@ void hip_uninit_beetdb(void)
 	// XX FIXME: this does not work
 	int i;
 	hip_xfrm_t *ha, *tmp;
-	struct hip_hit_spi *hs, *tmp_hs;
 
 	HIP_DEBUG("\n");
 
@@ -169,6 +186,9 @@ hip_xfrm_t *hip_beetdb_create_state(int gfpmask)
 	return entry;
 }
 
+/*
+ * XX FIXME: create a macro - this is almost the same as in hadb
+ */
 int hip_beetdb_insert_state(hip_xfrm_t *x)
 {
 	hip_xfrm_t *tmp = NULL;
@@ -191,72 +211,139 @@ int hip_beetdb_insert_state(hip_xfrm_t *x)
 	return err;
 }
 
-int hip_xfrm_dst_init(struct in6_addr *dst_hit, struct in6_addr *dst_addr) {
-	int err = 0;
-	hip_xfrm_t *entry;
-
-	HIP_DEBUG("\n");
-	
-	entry = hip_xfrm_find_by_hit(dst_hit);
-	if (entry) {
-		/* initialized already */
-		HIP_DEBUG("Initialized already\n");
-		goto out_err;
-	}
-
-	entry = hip_beetdb_create_state(GFP_KERNEL);
-	if (!entry) {
-		HIP_ERROR("Unable to create a new entry\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-	
-	/* insert IP address before dst HIT to avoid silly locking */
-	ipv6_addr_copy(&entry->preferred_peer_addr, dst_addr);
-	ipv6_addr_copy(&entry->hit_peer, dst_hit);
-
-	/* experimenting here: no source HIT selected at this 
-	   point of time (contrary to hip_hadb_add_peer_info) */
-	
-	err = hip_beetdb_insert_state(entry);
-	if (err) {
-		goto out_err;
-	}
-
- out_err:
-	
-	return err;
-}
-
-int hip_xfrm_update(uint32_t spi, struct in6_addr *dst_addr, int state,
-		    int dir)
+int hip_xfrm_insert_state_spi_list(hip_xfrm_t *entry, uint32_t spi)
 {
 	int err = 0;
-	hip_xfrm_t *entry;
-
-	/* XX FIX: deletion of the entry could be done if the state is
-	   XFRM_DELETE; if so, we need the HIT...  */
-
-	/* XX FIX: should we create a new entry if not found? */
-	entry = hip_xfrm_find_by_spi(spi);
-	if (!entry) {
-		/* initialized already */
-		HIP_ERROR("Could not find outbound spi %d\n", spi);
-		err = -ENOENT;
-		goto out_err;
-	}
-
-	memcpy(&entry->preferred_peer_addr, dst_addr, sizeof(struct in6_addr));
-	entry->state = state;
-
- out_err:
-	
+	HIP_INSERT_STATE_SPI_LIST(&hip_beetdb_spi_list, hip_beetdb_put_entry,
+				  entry, spi);
 	return err;
 }
 
-int hip_xfrm_delete(uint32_t spi, struct in6_addr *hit, int dir) {
-//	if (dir == HIP_FLOW_DIR_IN) {
-//	} else if (dir == HIP_FLOW_DIR_OUT){
+// Inbound (addr = hit_our)
+// 2a) create a new inbound SPI:
+//     - Create and fill spi_list{SPI} with peer hit and peer SPI
+//       (insert_state does this). This way we can match ESP SPIs to HIT-pairs.
+//       Note that peer HIT was already filled in xfrm_update_outbound
+//     - write hit_our (not written by xfrm_update_outbound)
+// 2b) or change the state?
+int hip_xfrm_update_inbound(hip_hit_t *hit_peer, struct in6_addr *hit_our,
+			    int spi_in, int state)
+{
+	hip_xfrm_t *entry;
+	int err = 0;
+
+	HIP_DEBUG("\n");
+
+	entry = hip_xfrm_find_by_spi(spi_in);
+	if (!entry) {
+		/* create a new inbound SPI */
+		err = hip_xfrm_insert_state_spi_list(entry, spi_in);
+		if (err) {
+			HIP_ERROR("Failed to create new SPI entry\n");
+			goto out_err;
+		}
+		entry = hip_xfrm_find_by_spi(spi_in);
+		if (!entry) {
+			err = -EFAULT;
+			HIP_ERROR("Internal error\n");
+			goto out_err;
+		}
+		HIP_DEBUG("Created a new inbound SPI %d\n", spi_in);
+	}
+
+	memcpy(&entry->hit_our, hit_our, sizeof(hip_hit_t));
+
+	HIP_DEBUG_HIT("our hit",  &entry->hit_our);
+	HIP_DEBUG_HIT("peer hit", &entry->hit_peer);
+
+	if (state) {
+		HIP_DEBUG("Changing state from %d to %d\n", entry->state,
+			  state);
+		entry->state = state;
+	}
+
+ out_err:
+
+	return err;
+}
+
+// Outbound
+// 1a) create a dst HIT - dst IP mapping to db_hit (without SPI)
+// 1b) or update default outbound SPI for given dst HIT in db_hit
+// 1c) or update default dst IP for given dst HIT in db_hit
+// 1d) or change the state
+//
+int hip_xfrm_update_outbound(hip_hit_t *hit_peer, struct in6_addr *peer_addr,
+			     int spi_out, int state)
+{
+	hip_xfrm_t *entry;
+	int err = 0;
+
+	HIP_DEBUG("\n");
+
+	entry = hip_xfrm_find_by_hit(hit_peer);
+	if (!entry) {
+		entry = hip_beetdb_create_state(GFP_KERNEL);
+		if (!entry) {
+			HIP_ERROR("Unable to create a new entry\n");
+			err = -ENOMEM;
+			goto out_err;
+		}
+
+		ipv6_addr_copy(&entry->hit_peer, hit_peer);
+
+		err = hip_beetdb_insert_state(entry);
+		if (err) {
+			HIP_ERROR("Failed to insert state\n");
+			goto out_err;
+		}
+		HIP_DEBUG_HIT("created a new outbound entry", hit_peer);
+	}
+
+	if (spi_out && entry->spi != spi_out) {
+		HIP_DEBUG("Changed SPI out from %d to %d\n", entry->spi,
+			  spi_out);
+		entry->spi = spi_out;
+	}
+	if (peer_addr &&
+	    memcmp(&entry->preferred_peer_addr, peer_addr,
+		   sizeof(struct in6_addr))) {
+		HIP_DEBUG_HIT("old peer addr", &entry->preferred_peer_addr);
+		HIP_DEBUG_HIT("new peer addr", peer_addr);
+		memcpy(&entry->preferred_peer_addr, peer_addr,
+		       sizeof(struct in6_addr));
+	}
+	if (state && state != entry->state) {
+		HIP_DEBUG("Changing state from %d to %d\n", state,
+			  entry->state);
+		entry->state = state;
+	}
+	
+ out_err:
+
+	return err;
+}
+
+int hip_xfrm_update(hip_hit_t *hit_peer,
+		    struct in6_addr *peer_addr_or_our_hit,
+		    uint32_t spi, int state, int dir)
+{
+	int err = 0;
+
+	if (dir == HIP_SPI_DIRECTION_IN)
+		err = hip_xfrm_update_inbound(hit_peer, peer_addr_or_our_hit,
+					      spi, state);
+	else
+		err = hip_xfrm_update_outbound(hit_peer, peer_addr_or_our_hit,
+					       spi, state);
+
+	return err;
+}
+
+// XX FIX: this can be done with xfrm_update (select the state appropiately)
+int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir) {
+//	if (dir == HIP_SPI_DIRECTION_IN) {
+//	} else if (dir == HIP_SPI_DIRECTION_OUT){
 //	} else {
 //           return -EFAULT;
 //      }
@@ -270,7 +357,7 @@ hip_xfrm_t *hip_xfrm_find_by_hit(const hip_hit_t *dst_hit)
 	return (hip_xfrm_t *)hip_ht_find(&hip_beetdb_hit, (void *)dst_hit);
 }
 
-/* find HA by inbound SPI - actually it could also be outbound too -miika */
+/* find HA by inbound SPI */
 struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 {
 	struct hip_hit_spi *hs;

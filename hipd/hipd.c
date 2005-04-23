@@ -103,7 +103,8 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 #endif
-	
+
+	hip_set_logfmt(LOGFMT_LONG);
 	
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground) {
@@ -160,7 +161,9 @@ int main(int argc, char *argv[]) {
 	hip_init_workqueue();
 
 	/* Ping kernel and announce our PID */
-	HIP_INIT_WORK_ORDER_HDR(ping.hdr, HIP_WO_TYPE_OUTGOING, HIP_WO_SUBTYPE_PING, NULL, NULL, getpid(), 0);
+	HIP_INIT_WORK_ORDER_HDR(ping.hdr, HIP_WO_TYPE_OUTGOING,
+				HIP_WO_SUBTYPE_PING, NULL, NULL,
+				getpid(), 0, 0);
 	ping.msg = hip_msg_alloc();
 	if (hip_netlink_talk(&nl_khipd, &ping, &ping)) {
 		HIP_ERROR("Unable to connect to the kernel HIP daemon over netlink.\n");

@@ -23,12 +23,11 @@ struct hip_xfrm_state {
 	struct list_head     next;
 	spinlock_t           lock;
 	atomic_t             refcnt;
-        uint32_t             spi;                 /* SPI either in or
-                                                     out */
-	int                  dir;                 /* Direction */
-	hip_hit_t            hit_our;             /* The HIT we use with
-						   * this host */
-	hip_hit_t            hit_peer;            /* Peer's HIT */    
+        uint32_t             spi;                 /* SPI out */
+        //int                  dir;                 /* Direction */
+        hip_hit_t            hit_our;             /* The HIT we use with
+                                                   * this host */
+        hip_hit_t            hit_peer;            /* Peer's HIT */    
 	struct in6_addr      preferred_peer_addr; /* preferred dst
 						   * address to use when
 						   * sending data to
@@ -69,9 +68,9 @@ int hip_xfrm_hit_is_our(const hip_hit_t *hit);
  * manage the replica of HADB within the kernel.
  */
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
-int hip_xfrm_update(uint32_t spi, struct in6_addr * dst_addr, int state,
-		    int dir);
-int hip_xfrm_delete(uint32_t spi, struct in6_addr * hit, int dir);
+int hip_xfrm_update(hip_hit_t *hit, struct in6_addr *addr, uint32_t spi,
+		    int state, int dir);
+int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 
 #endif /* HIP_BEET_H */
 

@@ -61,6 +61,36 @@
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
 } while(0)
 
+#define HIP_INSERT_STATE_SPI_LIST(hashtable, put_hs, entry, spi)             \
+  do {                                                                       \
+	struct hip_hit_spi *tmp;                                             \
+	hip_hit_t hit;                                                       \
+	struct hip_hit_spi *new_item;                                        \
+	/* assume already locked entry */                                    \
+	_HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", entry, spi);        \
+	ipv6_addr_copy(&hit, &entry->hit_peer);                              \
+	tmp = hip_ht_find(hashtable, (void *)spi);                           \
+	if (tmp) {                                                           \
+		put_hs(tmp);                                                 \
+		HIP_ERROR("BUG, SPI already inserted\n");                    \
+		err = -EEXIST;                                               \
+		break;                                                       \
+	}                                                                    \
+	new_item = (struct hip_hit_spi *)                                    \
+           HIP_MALLOC(sizeof(struct hip_hit_spi), GFP_ATOMIC);               \
+	if (!new_item) {                                                     \
+		HIP_ERROR("new_item HIP_MALLOC failed\n");                   \
+		err = -ENOMEM;                                               \
+		break;                                                       \
+	}                                                                    \
+	atomic_set(&new_item->refcnt, 0);                                    \
+	HIP_LOCK_INIT(new_item);                                             \
+	new_item->spi = spi;                                                 \
+	ipv6_addr_copy(&new_item->hit, &hit);                                \
+	hip_ht_add(hashtable, new_item);                                    \
+	_HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item); \
+  } while (0)
+
 #define hip_db_put_ha(ha, destructor) do { \
 	if (atomic_dec_and_test(&ha->refcnt)) { \
                 HIP_DEBUG("HA: deleting %p\n", ha); \

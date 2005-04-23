@@ -36,6 +36,7 @@
 
 /* XX FIXME: implement! */
 #define HIP_DEBUG_HIT(str, hit) do {} while(0)
+#define HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 /* these are used for disabling a debugging command temporarily */
 #define _HIP_DEBUG(...) do {} while(0)

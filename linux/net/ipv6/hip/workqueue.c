@@ -253,8 +253,8 @@ int hip_do_work(struct hip_work_order *job)
 #if (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
 		case HIP_WO_SUBTYPE_RECV_CONTROL:
 			res = hip_receive_control_packet(job->msg,
-							 &job->hdr.src_addr,
-							 &job->hdr.dst_addr);
+							 &job->hdr.id1,
+							 &job->hdr.id2);
 			break;
 #endif /* (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 		default:
@@ -274,7 +274,7 @@ int hip_do_work(struct hip_work_order *job)
 		switch(job->hdr.subtype) {
 #if defined __KERNEL__ && defined CONFIG_HIP_USERSPACE
 		case HIP_WO_SUBTYPE_SEND_PACKET:
-			res = hip_csum_send(&job->hdr.src_addr, &job->hdr.dst_addr, 
+			res = hip_csum_send(&job->hdr.id1, &job->hdr.id2, 
 					    job->msg);
 			break;
 			
@@ -284,7 +284,9 @@ int hip_do_work(struct hip_work_order *job)
 				break;
 			
 			resp->seq = job->seq;
-			res = resp->hdr.arg1 = hip_acquire_spi(&job->hdr.src_addr, &job->hdr.dst_addr);		       
+			res = resp->hdr.arg1 =
+				hip_acquire_spi(&job->hdr.id1,
+						&job->hdr.id2);
 			break;
 			
 		case HIP_WO_SUBTYPE_ADDSA:
@@ -296,10 +298,14 @@ int hip_do_work(struct hip_work_order *job)
 				break;
 			
 			resp->seq = job->seq;
-			res = resp->hdr.arg1 = hip_add_sa(&job->hdr.src_addr, &job->hdr.dst_addr,
-							  &keys->spi, keys->alg,
-							  &keys->enc, &keys->auth,
-							  keys->acquired, keys->direction);
+			res = resp->hdr.arg1 = hip_add_sa(&job->hdr.id1,
+							  &job->hdr.id2,
+							  &keys->spi,
+							  keys->alg,
+							  &keys->enc,
+							  &keys->auth,
+							  keys->acquired,
+							  keys->direction);
 			break;
 			
 		case HIP_WO_SUBTYPE_DELSA:
@@ -308,7 +314,8 @@ int hip_do_work(struct hip_work_order *job)
 				break;
 			
 			resp->seq = job->seq;
-			res = resp->hdr.arg1 = hip_delete_sa(job->hdr.arg1, &job->hdr.dst_addr);
+			res = resp->hdr.arg1 =
+				hip_delete_sa(job->hdr.arg1, &job->hdr.id2);
 			break;
 			
 		case HIP_WO_SUBTYPE_FINSA:
@@ -317,7 +324,9 @@ int hip_do_work(struct hip_work_order *job)
 				break;
 			
 			resp->seq = job->seq;
-			res = resp->hdr.arg1 = hip_finalize_sa(&job->hdr.dst_addr, job->hdr.arg1);
+			res = resp->hdr.arg1 =
+				hip_finalize_sa(&job->hdr.id2,
+						job->hdr.arg1);
 			break;
 
 			/* BEET database management functions follow */
@@ -329,8 +338,8 @@ int hip_do_work(struct hip_work_order *job)
 			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 =
-				hip_xfrm_dst_init(&job->hdr.src_addr,
-						  &job->hdr.dst_addr);
+				hip_xfrm_dst_init(&job->hdr.id1,
+						  &job->hdr.id2);
 			break;
 #endif
 			
@@ -340,9 +349,10 @@ int hip_do_work(struct hip_work_order *job)
 				break;
 			
 			resp->seq = job->seq;
-			res = resp->hdr.arg1 = hip_xfrm_update(job->hdr.arg1, &job->hdr.dst_addr, 
-							       *((int *)(&job->hdr.src_addr)),
-							       job->hdr.arg2);
+			res = resp->hdr.arg1 =
+				hip_xfrm_update(&job->hdr.id1, &job->hdr.id2, 
+						job->hdr.arg1, job->hdr.arg2,
+						job->hdr.arg3);
 			break;
 			
 		case HIP_WO_SUBTYPE_XFRM_DEL:
@@ -351,7 +361,10 @@ int hip_do_work(struct hip_work_order *job)
 				break;
 
 			resp->seq = job->seq;
-			res = resp->hdr.arg1 = hip_xfrm_delete(job->hdr.arg1, &job->hdr.src_addr, job->hdr.arg2);
+			res = resp->hdr.arg1 =
+				hip_xfrm_delete(&job->hdr.id1,
+						job->hdr.arg1,
+						job->hdr.arg2);
 			break;
 			
 		case HIP_WO_SUBTYPE_PING:
@@ -367,7 +380,7 @@ int hip_do_work(struct hip_work_order *job)
 		case HIP_WO_SUBTYPE_SEND_I1:
 		{
 			hip_ha_t *entry;
-			entry = hip_hadb_find_byhit(&job->hdr.dst_addr);
+			entry = hip_hadb_find_byhit(&job->hdr.id2);
 			if (!entry) {
 				HIP_ERROR("Unknown HA\n");
 				res = KHIPD_ERROR;
@@ -427,8 +440,8 @@ int hip_do_work(struct hip_work_order *job)
 #if (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
 		case HIP_WO_SUBTYPE_ADDMAP:
 			/* arg1 = d-hit, arg2=ipv6 */
-			res = hip_hadb_add_peer_info(&job->hdr.dst_addr,
-						     &job->hdr.src_addr);
+			res = hip_hadb_add_peer_info(&job->hdr.id2,
+						     &job->hdr.id1);
 			if (res < 0) {
 				res = KHIPD_ERROR;
 				break;
@@ -436,16 +449,16 @@ int hip_do_work(struct hip_work_order *job)
 
 #if 0
 			/* Synchronize the BEET database */
-			res = hip_xfrm_dst_init(&job->hdr.dst_addr,
-						&job->hdr.src_addr);
+			res = hip_xfrm_dst_init(&job->hdr.id2,
+						&job->hdr.id1);
 			if (res < 0)
 				res = KHIPD_ERROR;
 #endif
 			break;
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
-			res = hip_del_peer_info(&job->hdr.dst_addr,
-						&job->hdr.src_addr);
+			res = hip_del_peer_info(&job->hdr.id2,
+						&job->hdr.id1);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
@@ -454,21 +467,22 @@ int hip_do_work(struct hip_work_order *job)
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */
-			res = hip_hadb_add_peer_info(&job->hdr.dst_addr, &job->hdr.src_addr);
+			res = hip_hadb_add_peer_info(&job->hdr.id2,
+						     &job->hdr.id1);
 			if (res < 0) {
 				res = KHIPD_ERROR;
 				break;
 			}
-			hip_rvs_set_request_flag(&job->hdr.dst_addr);
+			hip_rvs_set_request_flag(&job->hdr.id2);
 			{
 				struct ipv6hdr hdr = {0};
-				ipv6_addr_copy(&hdr.daddr, &job->hdr.dst_addr);
+				ipv6_addr_copy(&hdr.daddr, &job->hdr.id2);
 				hip_handle_output(&hdr, NULL);
 			}
 #if 0
 			/* Synchronize the BEET database */
-			res = hip_xfrm_dst_init(&job->hdr.dst_addr,
-						&job->hdr.src_addr);
+			res = hip_xfrm_dst_init(&job->hdr.id2,
+						&job->hdr.id1);
 			if (res < 0)
 				res = KHIPD_ERROR;
 #endif

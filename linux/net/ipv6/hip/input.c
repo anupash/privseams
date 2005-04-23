@@ -458,17 +458,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr)
 {
-	hip_ha_t *entry;
+	hip_ha_t *entry = NULL;
 	int err = 0, type;
 
-	entry = hip_hadb_find_byhit(&msg->hits);
-	if (!entry) {
-		HIP_ERROR("Did not find dst entry\n");
-		err = -EFAULT;
-		goto out_err;
-	}
-
 	type = hip_get_msg_type(msg);
+
+	HIP_DEBUG("Received packet type %d\n", type);
 	
 	switch(type) {
 	case HIP_I1:
@@ -502,14 +497,21 @@ int hip_receive_control_packet(struct hip_common *msg,
 		goto out_err;
 	}
 
-	/* Synchronize beet state (may be changed) */
+	entry = hip_hadb_find_byhit(&msg->hits);
+	if (!entry) {
+		HIP_ERROR("Did not find dst entry\n");
+		err = -EFAULT;
+		goto out_err;
+	}
+
+	/* Synchronize beet state (may have been altered) */
 	err = hip_hadb_update_xfrm(entry);
 	if (err) {
 		HIP_ERROR("XFRM out synchronization failed\n");
 		err = -EFAULT;
 		goto out_err;
 	}
-
+	
  out_err:
 	return err;
 }
@@ -2026,7 +2028,9 @@ int hip_handle_bos(struct hip_common *bos,
 
 		HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -1, 
 			 "Failed to insert peer map work order\n");
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_ADDMAP, dstip, &bos->hits, 0, 0);
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+					HIP_WO_SUBTYPE_ADDMAP,
+					dstip, &bos->hits, 0, 0, 0);
 		hip_insert_work_order(hwo);
 	}
 

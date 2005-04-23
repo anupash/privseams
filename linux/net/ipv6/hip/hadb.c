@@ -215,37 +215,8 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 {
 	int err = 0;
-	struct hip_hit_spi *tmp;
-	hip_hit_t hit;
-	struct hip_hit_spi *new_item;
-
-	/* assume already locked entry */
-
-	_HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", entry, spi);
-	ipv6_addr_copy(&hit, &entry->hit_peer);
-
-	tmp = hip_ht_find(&hadb_spi_list, (void *)spi);
-	if (tmp) {
-		hip_hadb_put_hs(tmp);
-		HIP_ERROR("BUG, SPI already inserted\n");
-		err = -EEXIST;
-		goto out_err;
-	}
-
-	new_item = (struct hip_hit_spi *)HIP_MALLOC(sizeof(struct hip_hit_spi), GFP_ATOMIC);
-	if (!new_item) {
-		HIP_ERROR("new_item HIP_MALLOC failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-	atomic_set(&new_item->refcnt, 0);
-	HIP_LOCK_INIT(new_item);
-	new_item->spi = spi;
-	ipv6_addr_copy(&new_item->hit, &hit);
-
-	hip_ht_add(&hadb_spi_list, new_item);
-	_HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item);
- out_err:
+	HIP_INSERT_STATE_SPI_LIST(&hadb_spi_list, hip_hadb_put_entry,
+				  entry, spi);
 	return err;
 }
 
@@ -339,8 +310,9 @@ int hip_hadb_update_xfrm_inbound(hip_ha_t *entry) {
 
 	/* iterate over all inbound SPIs and send them to kernel */
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		err = hip_xfrm_update(item->spi,
-				      &entry->preferred_address,
+		err = hip_xfrm_update(&entry->hit_peer,
+				      &entry->hit_our,
+			              item->spi,
 				      entry->state,
 				      HIP_SPI_DIRECTION_IN);
 		if (err)
@@ -352,13 +324,24 @@ int hip_hadb_update_xfrm_inbound(hip_ha_t *entry) {
 }
 
 int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
-	return hip_xfrm_update(entry->default_spi_out,
-			       &entry->preferred_address,
+	struct in6_addr empty;
+	struct in6_addr *addr;
+
+	/* why the address during the base exchange is not preferred? */
+
+	memset(&empty, 0, sizeof(empty));
+	if (memcmp(&empty, &entry->preferred_address, sizeof(empty)))
+		addr = &entry->preferred_address;
+	else
+		addr = &entry->bex_address;
+
+	return hip_xfrm_update(&entry->hit_peer, addr, entry->default_spi_out,
 			       entry->state, HIP_SPI_DIRECTION_OUT);
 }
 
 int hip_hadb_update_xfrm(hip_ha_t *entry) {
 	int err;
+
 	err = hip_hadb_update_xfrm_inbound(entry);
 	if (err) {
 		HIP_ERROR("Failed to update inbound xfrm entries\n");
@@ -712,7 +695,6 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 {
 	int err = 0;
 	hip_ha_t *entry;
-	char str[INET6_ADDRSTRLEN];
 
 	/* old comment ? note: can't lock here or else
 	 * hip_sdb_add_peer_address will block
@@ -721,8 +703,8 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	 * spin_lock_irqsave(&hip_sdb_lock, flags);
 	 */
 
-	hip_in6_ntop(hit, str);
-	HIP_DEBUG("called: HIT %s\n", str);
+	HIP_DEBUG_HIT("HIT", hit);
+	HIP_DEBUG_IN6ADDR("addr", addr);
 
 	entry = hip_hadb_find_byhit(hit);
 	if (!entry) {
@@ -758,6 +740,14 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	} else
 		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
 			  hip_state_str(entry->state));
+
+	/* Synchronize beet state (may be changed) */
+	err = hip_hadb_update_xfrm(entry);
+	if (err) {
+		HIP_ERROR("XFRM out synchronization failed\n");
+		err = -EFAULT;
+		goto out;
+	}
 
  out:
 	if (entry)

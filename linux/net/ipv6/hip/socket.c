@@ -687,7 +687,7 @@ int hip_handle_peer_map_work_order(const struct in6_addr *hit,
 				   const struct in6_addr *ip,
 				   int insert, int rvs)
 {
-	int err = 0;
+	int err = 0, subtype;
 	struct hip_work_order *hwo;
 
 	hwo = hip_init_job(GFP_ATOMIC);
@@ -697,12 +697,11 @@ int hip_handle_peer_map_work_order(const struct in6_addr *hit,
 		goto out_err;
 	}
 
-	/* a slight kludge: the hit is carried in the dst IP address
-	   field since it is not needed for anything */
-	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, 
-				(rvs ? HIP_WO_SUBTYPE_ADDRVS : 
-				 (insert ? HIP_WO_SUBTYPE_ADDMAP : HIP_WO_SUBTYPE_DELMAP)),
-				ip, hit, 0, 0);
+	subtype = (rvs ? HIP_WO_SUBTYPE_ADDRVS : 
+		   (insert ? HIP_WO_SUBTYPE_ADDMAP : HIP_WO_SUBTYPE_DELMAP));
+
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, subtype,
+				ip, hit, 0, 0, 0);
 	hip_insert_work_order(hwo);
 
  out_err:
@@ -731,8 +730,8 @@ static int hip_add_peer_map(const struct hip_common *input, int rvs)
 		goto out;
 	}
 
-	HIP_DEBUG_HIT("map HIT: %s\n", hit);
-	HIP_DEBUG_IN6ADDR("map IP: %s\n", ip);
+	HIP_DEBUG_HIT("add map HIT", hit);
+	HIP_DEBUG_IN6ADDR("add map IP", ip);
 	
  	err = hip_handle_peer_map_work_order(hit, ip, 1, rvs);
  	if (err) {
@@ -784,7 +783,6 @@ int hip_socket_handle_add_peer_map_hit_ip(const struct hip_common *input)
 int hip_socket_handle_del_peer_map_hit_ip(const struct hip_common *input)
 {
 	struct in6_addr *hit, *ip;
-	char buf[46];
 	int err = 0;
 
 	hit = (struct in6_addr *)
@@ -803,11 +801,9 @@ int hip_socket_handle_del_peer_map_hit_ip(const struct hip_common *input)
 		goto out;
 	}
 
-	hip_in6_ntop(hit, buf);
-	HIP_INFO("map HIT: %s\n", buf);
-	hip_in6_ntop(ip, buf);
-	HIP_INFO("map IP: %s\n", buf);
-	
+	HIP_DEBUG_HIT("hit", hit);
+	HIP_DEBUG_IN6ADDR("ip", ip);
+
  	err = hip_handle_peer_map_work_order(hit, ip, 0, 0);
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
@@ -1136,7 +1132,7 @@ int hip_wrap_handle_add_local_hi(const struct hip_common *input)
 
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
 					HIP_WO_SUBTYPE_ADDHI, NULL, NULL,
-					0, 0);
+					0, 0, 0);
 		/* override the destructor; socket handler deletes the msg
 		   by itself */
 		hwo->destructor = NULL;
