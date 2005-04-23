@@ -342,14 +342,17 @@ int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
 int hip_hadb_update_xfrm(hip_ha_t *entry) {
 	int err;
 
-	err = hip_hadb_update_xfrm_inbound(entry);
-	if (err) {
-		HIP_ERROR("Failed to update inbound xfrm entries\n");
-		goto out_err;
-	}
+	/* update outbound xfrm first because inbound has depencies on
+	   outbound  */
+
 	err = hip_hadb_update_xfrm_outbound(entry);
 	if (err) {
 		HIP_ERROR("Failed to update outbound xfrm entries\n");
+		goto out_err;
+	}
+	err = hip_hadb_update_xfrm_inbound(entry);
+	if (err) {
+		HIP_ERROR("Failed to update inbound xfrm entries\n");
 		goto out_err;
 	}
  out_err:
