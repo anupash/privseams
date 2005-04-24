@@ -321,7 +321,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
         case HIP_DIGEST_SHA1_HMAC:
                 HMAC(EVP_sha1(), 
                      key,
-		     hip_hmac_key_length(type),
+		     hip_hmac_key_length(HIP_ESP_AES_SHA1),
 		     in, in_len,
 		     out, NULL);
                 break;
@@ -329,7 +329,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
         case HIP_DIGEST_MD5_HMAC:
                 HMAC(EVP_md5(), 
 		     key,
-		     hip_hmac_key_length(type),
+		     hip_hmac_key_length(HIP_ESP_3DES_MD5),
 		     in, in_len,
 		     out, NULL);
                 break;
@@ -357,36 +357,40 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
  *
  * Returns: 0 is encryption/decryption was successful, otherwise < 0.
  */
-int hip_crypto_encrypted(void *data, const void *iv, int alg, int len,
+int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 			 void* key, int direction)
 {
         void *result = NULL;
 	int err = -1;
 	AES_KEY aes_key;
-	BF_KEY bf_key;
 	des_key_schedule ks1, ks2, ks3;
 	u8 secret_key1[8], secret_key2[8], secret_key3[8];
+	u8 iv[20]; /* OpenSSL modifies the IV it is passed during the encryption/decryption */
 
-        result = malloc(len);
-	if (!result) {
-		HIP_ERROR("Out of memory.\n");
-		return -1;
-	}
-	
-	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
+        HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
+	//HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
         switch(alg) {
         case HIP_HIP_AES_SHA1:
-                /* AES key must be 128, 192, or 256 bits in length */
-                if ((err = AES_set_encrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0) {
-                        HIP_ERROR("Unable to use calculated DH secret for AES key (%d)\n", err);
-                        goto err;
-                }
-
-		AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, 
-				direction == HIP_DIRECTION_ENCRYPT ? AES_ENCRYPT : AES_DECRYPT);
+		/* AES key must be 128, 192, or 256 bits in length */
+		memcpy(iv, iv_orig, 16);
+		if (direction == HIP_DIRECTION_ENCRYPT) {
+			HIP_IFEL((err = AES_set_encrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
+				 "Unable to use calculated DH secret for AES key (%d)\n", err);
+			//HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
+			//HIP_HEXDUMP("AES IV: ", iv, 16);
+			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_ENCRYPT);
+		} else {
+			HIP_IFEL((err = AES_set_decrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
+				 "Unable to use calculated DH secret for AES key (%d)\n", err);
+			//HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
+			//HIP_HEXDUMP("AES IV: ", iv, 16);
+			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_DECRYPT);
+		}
+ 
                 break;
 
         case HIP_HIP_3DES_SHA1:
+		memcpy(iv, iv_orig, 8);
 		memcpy(&secret_key1, key, hip_transform_key_length(alg) / 3);
                 memcpy(&secret_key2, key+8, hip_transform_key_length(alg) / 3);
                 memcpy(&secret_key3, key+16, hip_transform_key_length(alg) / 3);
@@ -395,16 +399,13 @@ int hip_crypto_encrypted(void *data, const void *iv, int alg, int len,
                 des_set_odd_parity((des_cblock *)&secret_key2);
                 des_set_odd_parity((des_cblock *)&secret_key3);
 
-		if ( ((err = des_set_key_checked((
+		HIP_IFEL( ((err = des_set_key_checked((
 			(des_cblock *)&secret_key1), ks1)) != 0) ||
-		     ((err = des_set_key_checked((
-			     (des_cblock *)&secret_key2), ks2)) != 0) ||
-		     ((err = des_set_key_checked((
-			     (des_cblock *)&secret_key3), ks3)) != 0)) {
-                        HIP_ERROR("Unable to use calculated DH secret for 3DES key (%d)\n", err);
-			goto err;
-                }
-
+			  ((err = des_set_key_checked((
+				  (des_cblock *)&secret_key2), ks2)) != 0) ||
+			  ((err = des_set_key_checked((
+				  (des_cblock *)&secret_key3), ks3)) != 0), err, 
+			  "Unable to use calculated DH secret for 3DES key (%d)\n", err);
                 des_ede3_cbc_encrypt(data, result, len,
 				     ks1, ks2, ks3, (des_cblock*)iv, 
 				     direction == HIP_DIRECTION_ENCRYPT ? DES_ENCRYPT : DES_DECRYPT);
@@ -414,15 +415,14 @@ int hip_crypto_encrypted(void *data, const void *iv, int alg, int len,
                 break;
 
         default:
-                HIP_ERROR("Attempted to use unknown CI (alg = %d)\n", alg);
-                err = -EFAULT;
-                goto err;
+                HIP_IFEL(1, -EFAULT, "Attempted to use unknown CI (alg = %d)\n", alg);
         }
 
 	memcpy(data, result, len);
+	//HIP_HEXDUMP("hip_crypto_encrypted decrypt data", data, len);	
 	err = 0;
 
- err:
+ out_err:
         if (result)
                 free(result);
 
@@ -455,18 +455,15 @@ static int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
 /*
  * return 0 on success.
  */
-int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
+int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 {
 	DSA_SIG *dsa_sig;
-	DSA *dsa;
+	DSA *dsa = NULL;
 	int offset = 0, err = 1;
 	int t = private_key[offset++];
 	int len;
 
-	if (t > 8) {
-                HIP_ERROR("Illegal DSA key\n");
-                goto err;
-        }
+	HIP_IFEL(t > 8, 1, "Illegal DSA key\n");
 
 	dsa = DSA_new();
 	len = DSA_PRIV;
@@ -489,10 +486,23 @@ int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	dsa->priv_key = BN_bin2bn(&private_key[offset], len, 0);
 	offset += len;
 
+	//HIP_DEBUG("DSA.q: %s\n", BN_bn2hex(dsa->q));
+	//HIP_DEBUG("DSA.p: %s\n", BN_bn2hex(dsa->p));
+	//HIP_DEBUG("DSA.g: %s\n", BN_bn2hex(dsa->g));
+	//HIP_DEBUG("DSA.pubkey: %s\n", BN_bn2hex(dsa->pub_key));
+	//HIP_DEBUG("DSA.privkey: %s\n", BN_bn2hex(dsa->priv_key));
+
 	memset(signature, 0, HIP_DSA_SIG_SIZE);
 	signature[0] = 8;
+
+	//HIP_HEXDUMP("DSA signing digest", digest, SHA_DIGEST_LENGTH);
+
 	/* calculate the DSA signature of the message hash */   
 	dsa_sig = DSA_do_sign(digest, SHA_DIGEST_LENGTH, dsa);
+
+	//HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig->r));
+	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig->s));
+
 	/* build signature from DSA_SIG struct */
 	bn2bin_safe(dsa_sig->r, &signature[1], 20);
 	bn2bin_safe(dsa_sig->s, &signature[21], 20);
@@ -501,7 +511,7 @@ int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 
 	_HIP_HEXDUMP("signature",signature,HIP_DSA_SIGNATURE_LEN);
 
- err:
+ out_err:
 	if (dsa)
 		DSA_free(dsa);
 
@@ -510,16 +520,14 @@ int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 
 /*
  * @public_key pointer to host_id + 1
- * @signature pointer to tlv_start + 1
+ * @signature pointer to hip_sig->signature
  */
-int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
+int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 {
 	DSA_SIG dsa_sig;
 	DSA *dsa;
-	struct hip_sig *sig = (struct hip_sig *)(signature - 1);
-	int offset = 0;
-	int err;
-	u8 t = *public_key;
+	int offset = 0, err;
+	u8 t = public_key[offset++];
 	int key_len = 64 + (t * 8);
 
 	/* Build the public key */
@@ -533,22 +541,34 @@ int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 	offset += key_len;
 	dsa->pub_key = BN_bin2bn(&public_key[offset], key_len, 0);
 
+	//HIP_DEBUG("DSA.q: %s\n", BN_bn2hex(dsa->q));
+	//HIP_DEBUG("DSA.p: %s\n", BN_bn2hex(dsa->p));
+	//HIP_DEBUG("DSA.g: %s\n", BN_bn2hex(dsa->g));
+	//HIP_DEBUG("DSA.pubkey: %s\n", BN_bn2hex(dsa->pub_key));
+
 	/* build the DSA structure */
-	dsa_sig.r = BN_bin2bn(&sig->signature[1], 20, NULL);
-	dsa_sig.s = BN_bin2bn(&sig->signature[21], 20, NULL);
+	dsa_sig.r = BN_bin2bn(&signature[1], 20, NULL);
+	dsa_sig.s = BN_bin2bn(&signature[21], 20, NULL);
+
+	//HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig.r));
+	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig.s));
+
+	//HIP_HEXDUMP("DSA verifying digest", digest, SHA_DIGEST_LENGTH);
+
 	/* verify the DSA signature */
 	err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, &dsa_sig, dsa);
 	BN_free(dsa_sig.r);
 	BN_free(dsa_sig.s);
 	DSA_free(dsa);
+	//HIP_DEBUG("DSA verify: %d\n", err);
 	
-	return err == 0 ? 1 : 0;
+	return err == 1 ? 0 : 1;
 }
 
 /*
  * return 0 on success.
  */
-int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
+int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
 {
 	RSA *rsa;
 	BN_CTX *ctx;
@@ -615,7 +635,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
 	return res;
 }
 
-int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
+int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 {
 	RSA *rsa;
 	struct hip_sig *sig = (struct hip_sig *)(signature - 1);
@@ -652,47 +672,41 @@ int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	RSA_free(rsa);
 
-	return err == 0 ? 1 : 0;
+	HIP_DEBUG("RSA verify: %d\n", err);
+
+	return err == 1 ? 0 : 1;
 }
 
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *dh_shared_key,
 			  size_t outlen)
 {
-	BIGNUM peer_pub_key;
+	BIGNUM *peer_pub_key = NULL;
 	size_t len;
+	int err;
 
-	if (!dh) {
-		HIP_ERROR("No DH context\n");
-		return -EINVAL;
-	}
+	HIP_IFEL(!dh, -EINVAL, "No DH context\n");
+	HIP_IFEL(!(peer_pub_key = BN_bin2bn(peer_key, peer_len, NULL)), -EINVAL, "Unable to read peer_key\n");
+	HIP_IFEL((len = DH_size(dh)) > outlen, -EINVAL, "Output buffer too small. %d bytes required\n", len);
+	err = DH_compute_key(dh_shared_key, peer_pub_key, dh);
 
-	if (!BN_bin2bn(peer_key, len, &peer_pub_key)) {
-		HIP_ERROR("Unable to read peer_key\n");
-		return -EINVAL;
-	}
+ out_err:
+	if (peer_pub_key) 
+		BN_free(peer_pub_key);
 
-	if ((len = DH_size(dh)) > outlen) {
-		HIP_ERROR("Output buffer too small. %d bytes required\n", len);
-		return -EINVAL;
-	}
-
-	return DH_compute_key(dh_shared_key, &peer_pub_key, dh);
+	return err;
 }
 
 int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen)
 {	
-	int len;
-        if (!dh) {
-                HIP_ERROR("No Diffie Hellman context for DH tlv.\n");
-		return -EINVAL;
-        }
+	int len, err;
+        HIP_IFEL(!dh, -EINVAL, "No Diffie Hellman context for DH tlv.\n");
+        HIP_IFEL(outlen < (len = BN_num_bytes(dh->pub_key)), -EINVAL, 
+		 "Output buffer too small. %d bytes required\n", len);
 
-        if (outlen < (len = BN_num_bytes(dh->pub_key))) {
-                HIP_ERROR("Output buffer too small. %d bytes required\n", len);
-                return -EINVAL;
-        }
+        err = BN_bn2bin(dh->pub_key, out);
 
-        return BN_bn2bin(dh->pub_key, out);
+ out_err:
+	return err;
 }
 
 DH *hip_generate_dh_key(int group_id)

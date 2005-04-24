@@ -59,8 +59,10 @@ static int hip_verify_network_header(struct hip_common *hip_common,
 		 hip_common->payload_proto);
 	HIP_IFEL((hip_common->ver_res & HIP_VER_MASK) != HIP_VER_RES, -EPROTOTYPE,
 		 "Invalid version in received packet. Dropping\n");
+	HIP_DEBUG_HIT("Source: ", &hip_common->hits);
 	HIP_IFEL(!hip_is_hit(&hip_common->hits), -EAFNOSUPPORT,
 		 "Received a non-HIT in HIT-source. Dropping\n");
+	HIP_DEBUG_HIT("Receiver: ", &hip_common->hitr);
 	HIP_IFEL(!hip_is_hit(&hip_common->hitr) && !ipv6_addr_any(&hip_common->hitr), 
 		 -EAFNOSUPPORT, "Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
 	HIP_IFEL(ipv6_addr_any(&hip_common->hits), -EAFNOSUPPORT,
@@ -76,9 +78,10 @@ static int hip_verify_network_header(struct hip_common *hip_common,
 #ifdef CONFIG_HIP_RVS
 		HIP_DEBUG("Received HIT is ours or we are RVS\n");
 #else
+#if 0
 	        HIP_IFEL(!hip_xfrm_hit_is_our(&hip_common->hitr), -EFAULT,
 			 "Receiver HIT is not ours\n");
-
+#endif
 #endif
 	}
 

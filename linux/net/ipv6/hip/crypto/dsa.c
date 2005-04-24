@@ -19,6 +19,7 @@
  */
 
 #include "dsa.h"
+#include "../debug.h"
 
 typedef struct {
     MPI p;	    /* prime */
@@ -187,7 +188,7 @@ _gcry_dsa_get_nbits( int algo, MPI *pkey )
 	return mpi_get_nbits( pkey[0] );
 }
 
-int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
+int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 {
 	DSA_secret_key sk = {0};
 	MPI r=NULL,s=NULL,m;
@@ -308,7 +309,7 @@ int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 }
 
 /* return 0: ok, 1: verify error, -EINVAL: something sucked */
-int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
+int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 {
 	DSA_public_key sk;
 	MPI r=NULL,s=NULL,m;

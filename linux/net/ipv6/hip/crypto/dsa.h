@@ -28,7 +28,7 @@
 
 #include <net/hip.h>
 
-int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature);
-int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
+int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature);
+int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
 
 #endif /*G10_DSA_H*/

@@ -25,12 +25,12 @@
 */
 
 #include "rsa.h"
+#include "../debug.h"
 
 typedef struct {
     MPI n;	    /* modulus */
     MPI e;	    /* exponent */
 } RSA_public_key;
-
 
 typedef struct {
     MPI n;	    /* public modulus */
@@ -219,7 +219,7 @@ _gcry_rsa_get_info( int algo,
     }
 }
 
-int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
+int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		 int priv_klen)
 {
 	RSA_secret_key rsk = {0};
@@ -373,7 +373,7 @@ int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 	
 }
 
-int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
+int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 {
 	MPI result = NULL;
 	MPI data = NULL, orig = NULL;

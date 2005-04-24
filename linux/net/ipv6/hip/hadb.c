@@ -330,10 +330,10 @@ int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
 	/* why the address during the base exchange is not preferred? */
 
 	memset(&empty, 0, sizeof(empty));
-	if (memcmp(&empty, &entry->preferred_address, sizeof(empty)))
-		addr = &entry->preferred_address;
-	else
-		addr = &entry->bex_address;
+	//if (memcmp(&empty, &entry->preferred_address, sizeof(empty)))
+	addr = &entry->preferred_address;
+	//else
+	//addr = &entry->bex_address;
 
 	return hip_xfrm_update(&entry->hit_peer, addr, entry->default_spi_out,
 			       entry->state, HIP_SPI_DIRECTION_OUT);
@@ -421,6 +421,7 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
  * Current destination address selection algorithm:
  * 1. use preferred address of the HA, if any (should be set)
  *
+ * tkoponen: these are useless: ?
  * 2. use preferred address of the default outbound SPI, if any
  * (should be set, suspect bug if we get this far)
  *
@@ -437,12 +438,15 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	/* assume already locked entry */
 
 	HIP_DEBUG_HIT("entry def addr", &entry->preferred_address);
+#if 0
 	if (ipv6_addr_any(&entry->preferred_address)) {
 		/* possibly ongoing bex */
 		_HIP_DEBUG("no preferred address set\n");
 	} else {
+#endif
 		ipv6_addr_copy(addr, &entry->preferred_address);
-		_HIP_DEBUG("found preferred address\n");
+//		_HIP_DEBUG("found preferred address\n");
+#if 0
 		goto out;
 	}
 
@@ -476,6 +480,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	}
 	err = -EINVAL; /* usable address not found */
 	HIP_ERROR("Did not find an usable peer address\n");
+#endif
 #endif
  out:
         return err;
@@ -562,12 +567,20 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	 * exchange */
 	if (spi == 0) {
 		HIP_DEBUG("SPI is 0, set address as the bex address\n");
+#if 0
 		if (!ipv6_addr_any(&entry->bex_address)) {
 			hip_in6_ntop(&entry->bex_address, addrstr);
 			HIP_DEBUG("warning, overwriting existing bex address %s\n",
 				  addrstr);
 		}
 		ipv6_addr_copy(&entry->bex_address, new_addr);
+#endif
+		if (!ipv6_addr_any(&entry->preferred_address)) {
+			hip_in6_ntop(&entry->preferred_address, addrstr);
+			HIP_DEBUG("warning, overwriting existing preferred address %s\n",
+				  addrstr);
+		}
+		ipv6_addr_copy(&entry->preferred_address, new_addr);
 		goto out_err;
 	}
 
@@ -722,8 +735,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		/* XXX: This is wrong. As soon as we have native socket API, we
 		 * should enter here the correct sender... (currently unknown).
 		 */
-		if (hip_get_any_localhost_hit(&entry->hit_our,
-					      HIP_HI_DEFAULT_ALGO) == 0)
+		if (!hip_init_us(entry, NULL))
 			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
 		else 
 			HIP_INFO("Could not assign local hit, continuing\n");
@@ -1110,7 +1122,6 @@ void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi)
 			break;
 		}
         }
-	_HIP_DEBUG("returning\n");
 }
 
 /* switch from Old SPI to New SPI (outbound SA) */
@@ -1130,7 +1141,6 @@ void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi)
 			break;
 		}
         }
-	_HIP_DEBUG("returning\n");
 }
 
 
@@ -1428,14 +1438,12 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr)
 {
-	int err = 0;
+	int err = 0, new = 1;
 	struct hip_spi_out_item *spi_list;
 	struct hip_peer_addr_list_item *new_addr = NULL;
 	struct hip_peer_addr_list_item *a, *tmp;
-	int new = 1;
 
-	/* assumes already locked entry */
-
+	/* Assumes already locked entry */
 	HIP_DEBUG("spi=0x%x is_preferred_addr=%d\n", spi, is_preferred_addr);
 
 	spi_list = hip_hadb_get_spi_list(entry, spi);
@@ -1811,6 +1819,57 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
  out_err:
 	if (entry->dh_shared_key)
 		HIP_FREE(entry->dh_shared_key);
+
+	return err;
+}
+
+/*
+ * @msg for future purposes (KeyNote)
+ */
+int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
+		  struct hip_host_id *peer) {
+	int err = 0;
+	int len = hip_get_param_total_len(peer); 
+	struct in6_addr hit;
+
+	/* Verify sender HIT */
+ 	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH126) ||
+		 ipv6_addr_cmp(&hit, &entry->hit_peer),
+		 -1, "Unable to verify sender's HOST_ID\n");
+	//	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
+	//	 "No HOST_ID found in R1\n");
+	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM, "Out of memory\n");
+	memcpy(entry->peer_pub, peer, len);
+	entry->verify = hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ? 
+		hip_rsa_verify : hip_dsa_verify;
+
+ out_err:
+	return err;
+}
+
+int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
+	int err = 0, len, alg;
+	HIP_IFEL(!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,
+						     HIP_HI_DEFAULT_ALGO)),
+		 -1, "Could not acquire a local host id\n");
+	alg = hip_get_host_id_algo(entry->our_priv);
+	entry->sign = alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign;
+
+	len = hip_get_param_total_len(entry->our_priv);
+	HIP_IFEL(!(entry->our_pub = HIP_MALLOC(len, GFP_KERNEL)), -1, "Could not allocate a public key\n");
+	memcpy(entry->our_pub, entry->our_priv, len);
+	entry->our_pub = hip_get_public_key(entry->our_pub);
+
+	err = alg == HIP_HI_DSA ? 
+		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH126) :
+		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH126);
+	HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
+	
+ out_err:
+	if (err && entry->our_priv) 
+		HIP_FREE(entry->our_priv);
+	if (err && entry->our_pub) 
+		HIP_FREE(entry->our_pub);
 
 	return err;
 }

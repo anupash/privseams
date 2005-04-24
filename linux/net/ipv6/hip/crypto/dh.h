@@ -1,18 +1,14 @@
-#ifndef DH_H
-#define DH_H
+#ifndef HIP_DH_H
+#define HIP_DH_H
 
-// kernel only header
-//#ifdef __KERNEL__
-#  include <linux/types.h>
-#  include <linux/kernel.h>
-#  include <linux/module.h>
-#  include <linux/errno.h>
-#  include "kernel-interface.h"
-#  include "mpi-internal.h"
-#  include "gcrypt.h"
-//#else
-//#  include <gcrypt.h>
-//#endif /* __KERNEL__ */
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/errno.h>
+#include "mpi-defs.h"
+#include "mpi-internal.h"
+#include "gcrypt.h"
+#include "kernel-interface.h"
 
 typedef struct DH_str {
 	MPI p;
@@ -22,6 +18,7 @@ typedef struct DH_str {
 } DH;
 
 #include <net/hip.h>
+#include "../crypto.h"
 
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *out, size_t outlen);
 int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen);
@@ -31,4 +28,4 @@ void hip_free_dh(DH *target);
 u16 hip_get_dh_size(u8 hip_dh_group_type);
 
 
-#endif /* DH_H */
+#endif /* HIP_DH_H */

@@ -18,13 +18,9 @@ typedef struct { } rwlock_t;
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #include "debug.h"
 #include "hip.h"
-//#include "misc.h"
-//#include "builder.h"
-//#include "socket.h"
-//#include "output.h"
-//#include "update.h"
 #include "timer.h"
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#include "cookie.h"
 
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
@@ -84,23 +80,25 @@ struct hip_hadb_multi {
 #define HIP_ARG_SPI                 0x000002
 #define HIP_HADB_ACCESS_ARGS        (HIP_ARG_HIT | HIP_ARG_SPI)
 
-/* Use these to point your target while accessing a database */
+/* Use this to point your target while accessing a database */
 #define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
-#define HIP_DB_PEER_HID    (&hip_peer_hostid_db)
 
-/* ... and not these! */
-extern struct hip_db_struct hip_peer_hostid_db;
+/* ... and not this! */
 extern struct hip_db_struct hip_local_hostid_db;
 
-int hip_get_any_localhost_hit(struct in6_addr *target, int algo);
-struct hip_host_id *hip_get_any_localhost_public_key(int algo);
+struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
+							       const struct in6_addr *hit,
+							       int algo);
+//int hip_get_any_localhost_hit(struct in6_addr *target, int algo);
+//struct hip_host_id *hip_get_any_localhost_public_key(int algo);
+struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
-				    struct hip_lhi *lhi, int algo);
+				    struct in6_addr *hit, int algo);
 int hip_add_host_id(struct hip_db_struct *db,
-		    const struct hip_lhi *lhi,
+		    const struct in6_addr *hit,
 		    const struct hip_host_id *host_id,
-		    int (*insert)(void **arg),		
-		    int (*remove)(void **arg),
+		    int (*insert)(struct hip_host_id_entry *, void **arg),		
+		    int (*remove)(struct hip_host_id_entry *, void **arg),
 		    void *arg);
 int hip_hit_is_our(struct in6_addr *hit);
 

@@ -130,9 +130,8 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 
 #ifdef __KERNEL__
 	local_irq_restore(eflags);
-#endif
-
  out_err:
+#endif
 	return err;
 }
 
@@ -380,7 +379,8 @@ int hip_do_work(struct hip_work_order *job)
 		case HIP_WO_SUBTYPE_SEND_I1:
 		{
 			hip_ha_t *entry;
-			entry = hip_hadb_find_byhit(&job->hdr.id2);
+			// FIXME: create HA here, on the fly if needed (Hi3)
+ 			entry = hip_hadb_find_byhit(&job->hdr.id2);
 			if (!entry) {
 				HIP_ERROR("Unknown HA\n");
 				res = KHIPD_ERROR;

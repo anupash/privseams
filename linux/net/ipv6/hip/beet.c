@@ -115,6 +115,7 @@ void hip_uninit_beetdb(void)
 	// XX FIXME: this does not work
 	int i;
 	hip_xfrm_t *ha, *tmp;
+	//struct hip_hit_spi *hs, *tmp_hs;
 
 	HIP_DEBUG("\n");
 

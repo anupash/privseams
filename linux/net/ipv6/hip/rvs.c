@@ -62,12 +62,14 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
  	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
 
-	if (!ipv6_addr_any(&ha->bex_address)) {
+//	if (!ipv6_addr_any(&ha->bex_address)) {
+	if (!ipv6_addr_any(&ha->preferred_address)) {
 		HIP_DEBUG("copying bex address\n");
-			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->bex_address);
-			ipcnt++;
-			if (ipcnt >= HIP_RVA_MAX_IPS)
-				goto out;
+		//			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->bex_address);
+		ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->preferred_address);
+		ipcnt++;
+		if (ipcnt >= HIP_RVA_MAX_IPS)
+			goto out;
 	}
 
 	list_for_each_entry_safe(spi_out, spi_tmp, &ha->spis_out, list) {

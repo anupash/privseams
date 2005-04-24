@@ -242,7 +242,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_seq *seq;
 	struct hip_rea *rea;
 	struct hip_dh_fixed *dh;
-	struct hip_host_id *host_id_private;
 	uint32_t update_id_out = 0;
 	uint32_t prev_spi_in = 0, new_spi_in = 0;
 	uint16_t keymat_index = 0, mask;
@@ -389,25 +388,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		 -1, "Building of HMAC failed\n");
 	
 	/* Add SIGNATURE */
-	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)),
-		 -1, "Could not get our host identity. Can not sign data\n");
-	HIP_IFEL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-				       host_id_private, signature), -EINVAL,
-		 "Could not sign UPDATE. Failing\n");
-
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		HIP_IFEL(hip_build_param_signature_contents(update_packet,
-							    signature,
-							    HIP_RSA_SIGNATURE_LEN,
-							    HIP_SIG_RSA), -1, 
-			 "Building of SIGNATURE failed\n");
-	} else {
-		HIP_IFEL(hip_build_param_signature_contents(update_packet,
-							    signature,
-							    HIP_DSA_SIGNATURE_LEN,
-							    HIP_SIG_DSA), -1,
-			 "Building of SIGNATURE failed\n");
-	}
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), 
+		 -EINVAL, "Could not sign UPDATE. Failing\n");
 
 #if 0
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
@@ -613,7 +595,6 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
 	struct in6_addr daddr;
-	struct hip_host_id *host_id_private;
 	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
 	uint16_t mask;
 	/* assume already locked entry */
@@ -682,24 +663,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)),
-		 -1, "Could not get our host identity. Can not sign data\n");
-	HIP_IFEL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-				       host_id_private, signature), -EINVAL,
-		 "Could not sign UPDATE. Failing\n");
-
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
-							    HIP_RSA_SIGNATURE_LEN,
-							    HIP_SIG_RSA), -1, 
-			 "Building of SIGNATURE failed\n");
-	} else {
-		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
-							    HIP_DSA_SIGNATURE_LEN,
-							    HIP_SIG_DSA), -1,
-			 "Building of SIGNATURE failed\n");
-	}
-	
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL, "Could not sign UPDATE. Failing\n");
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
 	err = hip_csum_send(NULL, &daddr, update_packet); // HANDLER
@@ -745,9 +709,6 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
-		u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA > DSA */
-		struct hip_host_id *host_id_private;
-
 		hip_print_hit("new addr to check", &addr->address);
 
 		if (addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
@@ -783,23 +744,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			  -1, continue, "Building of HMAC failed\n");
 
 		/* Add SIGNATURE */
-		HIP_IFEBL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)),
-			  -1, continue, "Could not get own host identity. Can not sign data\n");
-		HIP_IFEBL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-						host_id_private, signature), -1,
-			  continue, "Could not sign UPDATE. Failing\n");
-
-		if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-			HIP_IFEBL(hip_build_param_signature_contents(update_packet, signature,
-								     HIP_RSA_SIGNATURE_LEN,
-								     HIP_SIG_RSA), -1,
-				  continue, "Building of SIGNATURE failed\n");
-		} else {
-			HIP_IFEBL(hip_build_param_signature_contents(update_packet, signature,
-								     HIP_DSA_SIGNATURE_LEN,
-								     HIP_SIG_DSA), -1, 
-				  continue, "Building of SIGNATURE failed\n");
-		}
+		HIP_IFEBL(!hip_create_signature(entry, update_packet), 
+			   -1, continue, "Could not sign UPDATE. Failing\n");
 
 		get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 		_HIP_HEXDUMP("ECHO_REQUEST in REA addr check",
@@ -878,8 +824,6 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_echo_request *echo = NULL;
- 	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA > DSA */
-	struct hip_host_id *host_id_private;
 	uint16_t mask;
 
 	/* Assume already locked entry */
@@ -902,24 +846,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)), 
-		 -1, "Could not get own host identity. Can not sign data\n");
-
-	HIP_IFEL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-				       host_id_private, signature), -EINVAL,
-		 "Could not sign UPDATE. Failing\n");
-
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
-							    HIP_RSA_SIGNATURE_LEN,
-							    HIP_SIG_RSA), -1, 
-			 "Building of SIGNATURE failed\n");
-	} else {	
-		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
-							    HIP_DSA_SIGNATURE_LEN,
-							    HIP_SIG_DSA), -1, 
-			 "Building of SIGNATURE failed\n");
- 	}
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL, "Could not sign UPDATE. Failing\n");
 
 	/* ECHO_RESPONSE (no sign) */
 	HIP_DEBUG("echo opaque data len=%d\n",
@@ -975,8 +902,6 @@ int hip_receive_update(struct hip_common *msg,
 	uint16_t keymat_index = 0;
 	struct hip_dh_fixed *dh;
 	struct in6_addr *src_ip, *dst_ip;
-	struct hip_lhi peer_lhi;
-	struct hip_host_id *peer_id;
 	hip_ha_t *entry = NULL;
 
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
@@ -1124,15 +1049,7 @@ int hip_receive_update(struct hip_common *msg,
 	/* 5. The system MAY verify the SIGNATURE in the UPDATE
 	   packet. If the verification fails, the packet SHOULD be
 	   dropped and an error message logged. */
-
-	HIP_IFE(!(signature = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE)), -1);
-
-	peer_lhi.anonymous = 0;
-	memcpy(&peer_lhi.hit, &msg->hits, sizeof(struct in6_addr));
-	// FIXME: tkoponen, the following peer_id is not free'ed anywhere. Memory leak!
-	HIP_IFEL(!(peer_id = hip_get_host_id(HIP_DB_PEER_HID, &peer_lhi, HIP_ANY_ALGO)), 
-		 -EINVAL, "Unknown peer (no identity found)\n");
-	HIP_IFEL(hip_verify_packet_signature(msg, peer_id), -1, 
+	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
 		 "Verification of UPDATE signature failed\n");
 
 	/* 6.  If a new SEQ parameter is being processed, the system MUST record
@@ -1206,8 +1123,6 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	uint32_t new_spi_in = 0;
 	struct hip_common *update_packet = NULL;
 	struct in6_addr daddr;
-	struct hip_host_id *host_id_private;
- 	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA > DSA */
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 	uint16_t mask;
 
@@ -1361,23 +1276,7 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO)), 
-		 -1, "Could not get own host identity. Can not sign data\n");
-	HIP_IFEL(!hip_create_signature(update_packet, hip_get_msg_total_len(update_packet),
-				       host_id_private, signature), -EINVAL,
-		 "Could not sign UPDATE. Failing\n");
-
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
-		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
-							    HIP_RSA_SIGNATURE_LEN,
-							    HIP_SIG_RSA), -1,
-			 "Building of SIGNATURE failed\n");
-	} else {
-		HIP_IFEL(hip_build_param_signature_contents(update_packet, signature,
-							 HIP_DSA_SIGNATURE_LEN,
-							    HIP_SIG_DSA), -1, 
-			 "Building of SIGNATURE failed\n");
-	}
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL, "Could not sign UPDATE. Failing\n");
 
 	/* Send UPDATE */
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);

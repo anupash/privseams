@@ -1,6 +1,7 @@
 /* laitapa defineä kehiin */
 
 #include "kernel-interface.h"
+#include "../debug.h"
 
 void *gcry_random_bytes (size_t nbytes, enum gcry_random_level level)
 {

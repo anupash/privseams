@@ -3,11 +3,9 @@
 
 #ifdef __KERNEL__
 #  include <linux/crypto.h>
-#  include "crypto/dh.h"
-#  include "crypto/rsa.h"
-#  include "crypto/dsa.h"
 #  include "hip.h"
 #  include "dh.h"
+#  include "crypto/dh.h"
 
 extern struct crypto_tfm *impl_sha1;
 
@@ -29,6 +27,7 @@ extern struct crypto_tfm *impl_sha1;
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
 
 #endif /* __KERNEL__ */
+#include "hidb.h"
 
 /* These should be consistent with the table length in crypto.c and crypto/dh.c */
 #define HIP_DH_384                    1 /* 384-bit group */
@@ -44,6 +43,9 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out);
 #ifdef __KERNEL__
 int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
 			    int nsg, void *out);
+#else
+int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
+int ssl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
 #endif
 
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
@@ -51,15 +53,6 @@ int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
 			 void* enc_key, int direction);
 int hip_init_cipher(void);
 void hip_uninit_cipher(void);
-
-#ifndef __KERNEL__
-/* In kernel these come from crypto/dsa.h, included above */
-int hip_dsa_sign(u8 *digest, u8 *private_key, u8 *signature);
-int hip_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
-
-/* In kernel these come from crypto/rsa.h, included above */
-int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen);
-int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
 
 /* In kernel these come from crypto/dh.h, included above */
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *out,
@@ -69,6 +62,5 @@ DH *hip_generate_dh_key(int group_id);
 void hip_free_dh(DH *target);
 u16 hip_get_dh_size(u8 hip_dh_group_type);
 void get_random_bytes(void *buf, int n);
-#endif
 
 #endif /* HIP_CRYPTO_H */

@@ -29,9 +29,9 @@
 
 #include <net/hip.h>
 
-int hip_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
+int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature,
 		 int priv_klen);
-int hip_rsa_verify(u8 *digest, u8 *public_key, u8 *signature,
-		   int pub_klen);
+int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature,
+		    int pub_klen);
 
 #endif /*G10_RSA_H*/

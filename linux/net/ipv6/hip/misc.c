@@ -25,19 +25,10 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
  	 sizeof(struct hip_host_id_key_rdata);
 
        _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
-
-       if (hit_type != HIP_HIT_TYPE_HASH126) {
-               err = -ENOSYS;
-               goto out_err;
-       }
-
+       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH126, -ENOSYS);
        _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
-
-       err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest);
-       if (err) {
-               HIP_ERROR("Building of digest failed\n");
-               goto out_err;
-       }
+       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest)), err, 
+		"Building of digest failed\n");
 
        /* hit_126 := concatenate ( 01 , low_order_bits ( digest, 126 ) ) */
 
@@ -54,9 +45,9 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type)
 {
-  int err;
-  err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-  return err;
+	int err;
+	err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+	return err;
 }
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
@@ -66,11 +57,9 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
 	int err = 0;
 
 	if (algo == HIP_HI_DSA) {
-		err = hip_dsa_host_id_to_hit(host_id, hit,
-						     hit_type);
+		err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 	} else if (algo == HIP_HI_RSA) {
-		err = hip_rsa_host_id_to_hit(host_id, hit,
-						     hit_type);
+		err = hip_rsa_host_id_to_hit(host_id, hit, hit_type);
 	} else {
 		err = -ENOSYS;
 	}
@@ -403,8 +392,6 @@ int hip_hmac_key_length(int tid)
 	int ret = -1;
 	switch(tid) {
        	case HIP_ESP_AES_SHA1:
-	  //		ret = 16;
-	  //		break;
 	case HIP_ESP_3DES_SHA1:
 	case HIP_ESP_NULL_SHA1:
 		ret = 20;
@@ -581,7 +568,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	}
 
  out:
-	_HIP_DEBUG("Took ESP transform %d\n", tid);
+	HIP_DEBUG("Took ESP transform %d\n", tid);
 
 	if(tid == 0)
 		HIP_ERROR("Faulty ESP transform\n");

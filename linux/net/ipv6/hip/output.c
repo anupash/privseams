@@ -35,22 +35,28 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 #endif
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
+
+	/* Assign a local private key, public key and HIT to HA */
+	HIP_IFEL(hip_init_us(entry, NULL), -EINVAL, "Could not assign a local host id\n");
+
 	hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
 			      mask, &entry->hit_our,
 			      dsthit);
 	/* Eight octet units, not including first */
 	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
 
-	HIP_HEXDUMP("HIT SOURCE in send_i1", &i1.hits, sizeof(struct in6_addr));
-	HIP_HEXDUMP("HIT DEST in send_i1", &i1.hitr, sizeof(struct in6_addr));
+	HIP_HEXDUMP("HIT source", &i1.hits, sizeof(struct in6_addr));
+	HIP_HEXDUMP("HIT dest", &i1.hitr, sizeof(struct in6_addr));
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
-		 "hip_sdb_get_peer_address failed.\n");
+		 "No preferred IP address for the peer.\n");
 
-	HIP_DEBUG("hip: send I1 packet\n");
-	//HIP_DEBUG_IN6ADDR("daddr", &daddr);
 	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);// HANDLER
-
+	if (!err) {
+		HIP_LOCK_HA(entry);
+		entry->state = HIP_STATE_I1_SENT;
+		HIP_UNLOCK_HA(entry);
+	}
  out_err:
 	return err;
 }
@@ -61,11 +67,14 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
  *
  * Returns 0 on success, or negative on error
  */
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
+				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
+				 struct hip_host_id *host_id_priv,
+				 const struct hip_host_id *host_id_pub)
 {
  	struct hip_common *msg;
  	int err = 0, use_rsa = 0, dh_size,written, mask;
- 	u8 *dh_data = NULL, *signature = NULL;
+ 	u8 *dh_data = NULL;
  	/* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
 		HIP_HIP_AES_SHA1,
@@ -77,7 +86,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 		HIP_ESP_NULL_SHA1,
 		HIP_ESP_3DES_SHA1
 	};
- 	struct hip_host_id  *host_id_private = NULL, *host_id_pub = NULL;
+	//	struct hip_host_id  *host_id_pub = NULL;
 
  	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
@@ -89,35 +98,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	memset(dh_data, 0, dh_size);
 
 	_HIP_DEBUG("dh_size=%d\n", dh_size);
- 	/* Get a localhost identity, allocate memory for the public key part
- 	   and extract the public key from the private key. The public key is
- 	   needed for writing the host id parameter in R1. */
-	HIP_IFEL(!(host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL,
-						     HIP_HI_DEFAULT_ALGO)),
-		 -1, "Could not acquire localhost host id\n");
-
-	HIP_DEBUG("PrivHI len %d\n", hip_get_param_total_len(host_id_private));
-	HIP_HEXDUMP("Our pri host id\n", host_id_private,
-		    hip_get_param_total_len(host_id_private));
-
-	HIP_IFEL(!(host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO)),
-		 -1, "Could not acquire localhost public key\n");
-	HIP_HEXDUMP("Our pub host id\n", host_id_pub,
-		    hip_get_param_total_len(host_id_pub));
-	
-	/* check for the used algorithm */
-	if (hip_get_host_id_algo(host_id_pub) == HIP_HI_RSA) {
-			use_rsa = 1;
-	} else {
-		HIP_IFEL(hip_get_host_id_algo(host_id_pub) != HIP_HI_DSA, 
-			 -1, "Unsupported algorithm:%d\n", 
-			 hip_get_host_id_algo(host_id_pub));
-	}
-
-	HIP_IFEL(!(signature = HIP_MALLOC(MAX(HIP_DSA_SIGNATURE_LEN,
-					      HIP_RSA_SIGNATURE_LEN), 
-					  GFP_KERNEL)), -1, 
-		 "Could not allocate signature\n");
+	//	HIP_IFEL(!(host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO)),
+	//	 -1, "Could not acquire localhost public key\n");
+	//HIP_HEXDUMP("Our pub host id\n", host_id_pub,
+	//	    hip_get_param_total_len(host_id_pub));
 	
  	/* Ready to begin building of the R1 packet */
 	mask = HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT;
@@ -139,7 +123,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 	}
 
  	/********** Diffie-Hellman **********/
-	HIP_IFEL((written = hip_insert_dh(dh_data,dh_size,HIP_DEFAULT_DH_GROUP_ID)) < 0,
+	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size, HIP_DEFAULT_DH_GROUP_ID)) < 0,
 		 -1, "Could not extract DH public key\n");
 	
 	HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
@@ -170,24 +154,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
- 	/********** Signature 2 **********/
- 	HIP_IFEL(!hip_create_signature(msg, hip_get_msg_total_len(msg),
-				       host_id_private, signature), -1,
-		 "Signing of R1 failed.\n");
+	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
 
+ 	/********** Signature 2 **********/	
+ 	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
-
-	if (use_rsa) {
-		HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
-							     HIP_RSA_SIGNATURE_LEN,
-							     HIP_SIG_RSA), -1,
-			 "Building of signature failed on R1\n");
-	} else {
-		HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
-							     HIP_DSA_SIGNATURE_LEN,
-							     HIP_SIG_DSA), -1,
-			 "Building of signature failed on R1\n");
- 	}
 
 	/********** ECHO_REQUEST (OPTIONAL) *********/
 
@@ -213,22 +184,18 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
 
  	/************** Packet ready ***************/
 
- 	if (host_id_pub)
- 		HIP_FREE(host_id_pub);
+// 	if (host_id_pub)
+	//		HIP_FREE(host_id_pub);
  	if (dh_data)
  		HIP_FREE(dh_data);
 
-	HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
+	//HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
 
 	return msg;
 
   out_err:
-	if (signature) 
-		HIP_FREE(signature);
-	if (host_id_pub)
-		HIP_FREE(host_id_pub);
- 	if (host_id_private)
- 		HIP_FREE(host_id_private);
+	//	if (host_id_pub)
+	//	HIP_FREE(host_id_pub);
  	if (msg)
  		HIP_FREE(msg);
  	if (dh_data)
@@ -247,6 +214,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  * Returns: zero on success, or negative error value on error.
  */
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
+		struct in6_addr *src_hit, 
 		struct in6_addr *dst_ip, struct in6_addr *dst_hit)
 {
 	struct hip_common *r1pkt;
@@ -258,7 +226,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	dst_addr = !dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip;
 
 	/* dst_addr is the IP address of the Initiator... */
-	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr)), -ENOENT, 
+	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit)), -ENOENT, 
 		 "No precreated R1\n");
 
 	if (dst_hit)
@@ -272,6 +240,8 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	HIP_IFEL(hip_csum_send(NULL, dst_addr, r1pkt), -1, 
 		 "hip_xmit_r1 failed.\n");
  out_err:
+	if (r1pkt)
+		HIP_FREE(r1pkt);
 	return err;
 }
 

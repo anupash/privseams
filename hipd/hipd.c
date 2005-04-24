@@ -60,7 +60,6 @@ void hip_exit(int signal) {
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
 	// rtnl_close(&rtnl);
-	// hip_uninit_r1();
 	exit(signal);
 }
 
@@ -141,11 +140,6 @@ int main(int argc, char *argv[]) {
 	
 	highest_descriptor = nl_khipd.fd > highest_descriptor ? nl_khipd.fd : highest_descriptor;
 	
-        if(!hip_init_r1()) {
-		HIP_ERROR("Unable to init R1.\n");
-		return(1);
-	}
-
         if (hip_init_cipher() < 0) {
 		HIP_ERROR("Unable to init ciphers.\n");
 		return(1);

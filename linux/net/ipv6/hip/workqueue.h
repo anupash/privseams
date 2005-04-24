@@ -15,7 +15,7 @@
 
 #define HIP_INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_id1, hwo_id2, hwo_arg1, hwo_arg2, hwo_arg3) \
 	do { \
-                memset(&work_order_hdr, 0, sizeof(struct hip_work_order)); \
+                memset(&work_order_hdr, 0, sizeof(struct hip_work_order_hdr)); \
 		work_order_hdr.type = hwo_type; \
 		work_order_hdr.subtype = hwo_subtype; \
 		if (hwo_id1) ipv6_addr_copy(&work_order_hdr.id1, hwo_id1); \

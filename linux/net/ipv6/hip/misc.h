@@ -9,6 +9,7 @@
 #else
 #  include "list.h" /* userspace list implementation */
 #  include "hipd.h"
+#  include "debug.h"
 
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
@@ -33,6 +34,7 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 
 #include "debug.h"
 #include "hip.h"
+//#include "crypto.h"
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);
@@ -54,7 +56,6 @@ int hip_hash_spi(const void *spi, int range);
 int hip_match_hit(const void *hitA, const void *hitB);
 const char *hip_algorithm_to_string(int algo);
 
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit);
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
 int hip_auth_key_length_esp(int tid);

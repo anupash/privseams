@@ -60,12 +60,14 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 	tmp = dh_table[group_id];
 #endif
 
-	res = hip_encode_dh_publickey(tmp,buffer,bufsize);
+	res = hip_encode_dh_publickey(tmp, buffer, bufsize);
 	if (res < 0) {
 		HIP_ERROR("Encoding error\n");
 		res = -3;
 		goto err_free;
 	}
+
+	//HIP_HEXDUMP("DH public key: ", buffer, res);
 
  err_free:
 #ifdef __KERNEL__
@@ -96,8 +98,7 @@ int hip_calculate_shared_secret(struct hip_diffie_hellman *dhf, u8* buffer,
         }
 
 	len = hip_get_param_contents_len(dhf) - 1;
-	_HIP_HEXDUMP("PEER DH key:",(dhf + 1),len);
-	err = hip_gen_dh_shared_key(dh_table[dhf->group_id], (u8*)(dhf+1), len,
+	err = hip_gen_dh_shared_key(dh_table[dhf->group_id], dhf->public_value, len,
 				    buffer, bufsize);
 	if (err < 0) {
                 HIP_ERROR("Could not create shared secret\n");

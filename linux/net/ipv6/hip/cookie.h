@@ -32,10 +32,14 @@ struct hip_r1entry {
 #define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
 #define HIP_DEFAULT_COOKIE_K 10ULL
 
-struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r);
-int hip_init_r1(void);
-void hip_uninit_r1(void);
-int hip_precreate_r1(const struct in6_addr *src_hit);
+struct hip_common * hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, struct in6_addr *src_hit);
+struct hip_r1entry * hip_init_r1(void);
+void hip_uninit_r1(struct hip_r1entry *);		 
+int hip_precreate_r1(struct hip_r1entry *r1table, 
+		     struct in6_addr *hit, 
+		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
+		     struct hip_host_id *privkey,		     
+		     struct hip_host_id *pubkey);
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
 		      struct hip_common *hdr,
 		      struct hip_solution *cookie);

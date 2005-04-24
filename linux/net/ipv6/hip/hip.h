@@ -68,7 +68,6 @@
 #include "builder.h"
 #include "hidb.h"
 #include "cookie.h"
-#include "crypto.h"
 #include "misc.h"
 #include "output.h"
 #include "workqueue.h"
@@ -77,6 +76,7 @@
 #ifdef CONFIG_HIP_RVS
 #include "rvs.h"
 #endif
+#include "crypto.h"
 
 /* used by hip worker to announce completion of work order */
 #define KHIPD_OK                   0

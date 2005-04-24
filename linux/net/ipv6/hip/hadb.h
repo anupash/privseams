@@ -125,6 +125,9 @@ hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
 int hip_hadb_insert_state(hip_ha_t *ha);
 int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi);
 void hip_hadb_remove_hs(uint32_t spi);
+int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
+		     struct hip_host_id *peer);
+int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
 
 /* existence */
 int hip_hadb_hit_is_our(const hip_hit_t *src);

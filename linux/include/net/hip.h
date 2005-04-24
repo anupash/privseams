@@ -301,8 +301,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
-#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
+#define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
+#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_DSA
 #define HIP_ANY_ALGO                  -1
 
 #define HIP_DIGEST_MD5                1
@@ -509,11 +509,12 @@ struct hip_solution {
 } __attribute__ ((packed));
 
 struct hip_diffie_hellman {
-	hip_tlv_type_t     type;
+	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
 
-	uint8_t      group_id;
+	uint8_t           group_id;  
 	/* fixed part ends */
+        uint8_t           public_value[0];
 } __attribute__ ((packed));
 
 typedef uint16_t hip_transform_suite_t;
@@ -916,7 +917,7 @@ struct hip_hadb_state
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address; /* preferred dst address to use when
 						 * sending data to peer */
-	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
+  //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;
 	int                  esp_transform;
@@ -943,6 +944,15 @@ struct hip_hadb_state
 	unsigned char current_keymat_K[HIP_AH_SHA_LEN]; /* last Kn, where n is keymat_calc_index */
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
+
+	/* Our host identity functions */
+	struct hip_host_id *our_pub;
+	struct hip_host_id *our_priv;
+	int (*sign)(struct hip_host_id *, struct hip_common *);
+	
+	/* Peer host identity functions */
+        struct hip_host_id *peer_pub;
+ 	int (*verify)(struct hip_host_id *, struct hip_common *);
 
 	int skbtest; /* just for testing */
 };
@@ -985,14 +995,15 @@ struct hip_host_id_entry {
    head being of different type) */
 	struct list_head next; 
 
-	struct hip_lhi lhi;
+	struct in6_addr hit; 
 	/* struct in_addr lsi; */
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
+	struct hip_r1entry *r1; /* precreated R1s */
 	/* Handler to call after insert with an argument, return 0 if OK*/
-	int (*insert)(void **arg);
+	int (*insert)(struct hip_host_id_entry *, void **arg);
 	/* Handler to call before remove with an argument, return 0 if OK*/
-	int (*remove)(void **arg);
+	int (*remove)(struct hip_host_id_entry *, void **arg);
 	void *arg;
 };
 

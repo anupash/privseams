@@ -10,8 +10,6 @@
 #include <linux/random.h>
 
 #include "mpi-defs.h"
-
-#include "../debug.h"
 #include "mpi-internal.h"
 
 #define log_error HIP_ERROR

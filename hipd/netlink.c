@@ -311,10 +311,10 @@ int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
 {
         struct sockaddr_nl nladdr;
 
-        memset(&nladdr, 0, sizeof(nladdr));
+        memset(&nladdr, 0, sizeof(struct sockaddr_nl));
         nladdr.nl_family = AF_NETLINK;
 
-        return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(nladdr));
+        return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
 
 /*

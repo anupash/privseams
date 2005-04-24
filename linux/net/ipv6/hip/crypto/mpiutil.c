@@ -19,6 +19,7 @@
  */
 
 #include "kernel-interface.h"
+#include "../debug.h"
 
 /****************
  * Note:  It was a bad idea to use the number of limbs to allocate

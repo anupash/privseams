@@ -10,7 +10,7 @@
 #include "cookie.h"
 
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
-struct hip_r1entry *hip_r1table;
+//struct hip_r1entry *hip_r1table;
 
 /**
  * hip_calc_cookie_idx - get an index
@@ -68,7 +68,7 @@ static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
 #endif
 
 /**
- * hip_fetch_cookie_entry - Get an R1entry structure
+ * hip_fetch_cookie_entry - Get a copy of R1entry structure
  * @ip_i: Initiator's IPv6
  * @ip_r: Responder's IPv6
  *
@@ -76,20 +76,27 @@ static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
  * 
  * Returns NULL if error.
  */
-static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
-						  struct in6_addr *ip_r)
+struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, struct in6_addr *our_hit)
 {
 #if 0
 	struct timeval tv;
 	struct hip_puzzle *pz;
 	int diff, ts;
 #endif
-	struct hip_r1entry *err;
-	int idx;	
+	struct hip_common *err = NULL, *r1 = NULL;
+	struct hip_r1entry * hip_r1table;
+	struct hip_host_id_entry *hid;
+	int idx, len;	
+
+	/* Find the proper R1 table and copy the R1 message from the table */
+	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
+	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO)), 
+		 NULL, "Requested source HIT no more available.\n");
+	hip_r1table = hid->r1;
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r);
-	_HIP_DEBUG("Calculated index: %d\n", idx);
-	err = &hip_r1table[idx];
+	HIP_DEBUG("Calculated index: %d\n", idx);
+	//r1 = &hip_r1table[idx];
 
 	/* the code under #if 0 periodically changes the puzzle. It is not included
 	   in compilation as there is currently no easy way of signing the R1 packet
@@ -124,7 +131,21 @@ static struct hip_r1entry *hip_fetch_cookie_entry(struct in6_addr *ip_i,
 
 	/* XXX: sign the R1 */
 #endif
+	/* Create a copy of the found entry */
+//	r1 = HIP_MALLOC(sizeof(struct hip_r1entry), GFP_KERNEL);
+//	memcpy(r1, &hip_r1table[idx], sizeof(struct hip_r1entry));
+	len = hip_get_msg_total_len(hip_r1table[idx].r1);
+	r1 = HIP_MALLOC(len, GFP_KERNEL);
+	memcpy(r1, hip_r1table[idx].r1, len);
+	err = r1;
+
  out_err:	
+//	if (!err && r1 && r1->r1)
+//		HIP_FREE(r1->r1);
+	if (!err && r1)
+		HIP_FREE(r1);
+
+	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 	return err;
 }
 
@@ -216,7 +237,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
 #endif
                 /* copy the last 8 bytes for checking */
-		memcpy(&digest, sha_digest + 12, 8);
+		memcpy(&digest, sha_digest + 12, sizeof(uint64_t));
 
 		/* now, in order to be able to do correctly the bitwise
 		 * AND-operation we have to remember that little endian
@@ -250,45 +271,44 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 }
 
 
-int hip_init_r1(void)
+struct hip_r1entry * hip_init_r1(void)
 {
-	int err = 0;
-	hip_r1table = (struct hip_r1entry *)HIP_MALLOC(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE,
-						       GFP_KERNEL);
-	HIP_IFEL(!hip_r1table, 0, "Could not allocate memory for R1 table\n");
-	memset(hip_r1table, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
-	err = 1;
+	struct hip_r1entry *err;
+
+	HIP_IFE(!(err = (struct hip_r1entry *)HIP_MALLOC(sizeof(struct hip_r1entry) * HIP_R1TABLESIZE,
+							 GFP_KERNEL)), NULL); 
+	memset(err, 0, sizeof(struct hip_r1entry) * HIP_R1TABLESIZE);
 
  out_err:
 	return err;
 }
 
-int hip_precreate_r1(const struct in6_addr *src_hit)
+/*
+ * @sign the signing function to use
+ */
+int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
+		     int (*sign)(struct hip_host_id *p, struct hip_common *m),
+		     struct hip_host_id *privkey, struct hip_host_id *pubkey)
 {
 	int i=0;
-	struct hip_common *pkt;
 
 	for(i = 0; i < HIP_R1TABLESIZE; i++) {
-		pkt = hip_create_r1(src_hit);
-		if (!pkt) {
+		r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey);
+		if (!r1table[i].r1) {
 			HIP_ERROR("Unable to precreate R1s\n");
 			goto err_out;
 		}
-		hip_r1table[i].r1 = pkt;
-		HIP_DEBUG("Packet %d created\n",i);
+
+		HIP_DEBUG("Packet %d created\n", i);
 	}
 
 	return 1;
 
  err_out:
-	if (hip_r1table) {
-		hip_uninit_r1();
-		hip_r1table = NULL;
-	}
 	return 0;
 }
 
-void hip_uninit_r1(void)
+void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 {
 	int i;
 
@@ -314,17 +334,31 @@ void hip_uninit_r1(void)
  * @ip_r: Responder's IPv6 address
  * 
  */
-struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r)
+#if 0
+struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			      struct in6_addr *our_hit)
 {
-	struct hip_r1entry *r1e;
+	struct hip_r1entry *err;
+	struct hip_host_id_entry *hid;
 
-	r1e = hip_fetch_cookie_entry(ip_i, ip_r);
+	/* Find the proper R1 table */
+	hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO);
+	HIP_IFEL(!hid || !(err = hip_fetch_cookie_entry(hid->r1, ip_i, ip_r)), NULL, 
+		 "No matching entry\n");
+
+ out_err:
+	if (err) {
+		
+	}
+
 	if (r1e == NULL)
 		return NULL;
 
 	return r1e->r1;
 }
+#endif
 
+#if 0
 int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			  uint64_t birthday)
 {
@@ -355,6 +389,7 @@ int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 #endif
 	return 0;
 }
+#endif
 
 /**
  * hip_verify_cookie - Verify solution to the puzzle
@@ -375,19 +410,17 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 {
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
-	int res;
+	struct hip_host_id_entry *hid;
+	int err;
 
-	result = hip_fetch_cookie_entry(ip_i, ip_r);
-	if (result == NULL) {
-		HIP_ERROR("No matching entry\n");
-		return 0;
-	}
+	/* Find the proper R1 table */
+	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO)), 
+		 0, "Requested source HIT not (any more) available.\n");
+	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
-	if (!puzzle) {
-		HIP_ERROR("Internal error: could not find the cookie\n");
-		return 0;
-	}
+	HIP_IFEL(!puzzle, 0, "Internal error: could not find the cookie\n");
 
 	_HIP_HEXDUMP("opaque in solution", solution->opaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
@@ -396,11 +429,9 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	_HIP_HEXDUMP("opaque in puzzle", puzzle->opaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
 
-	if (memcmp(solution->opaque, puzzle->opaque,
-		   HIP_PUZZLE_OPAQUE_LEN) != 0) {
-		HIP_ERROR("Received cookie opaque does not match the sent opaque\n");
-		return 0;
-	}
+	HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
+			HIP_PUZZLE_OPAQUE_LEN), 0, 
+		 "Received cookie opaque does not match the sent opaque\n");
 
 	HIP_DEBUG("Solution's I (0x%llx), sent I (0x%llx)\n",
 		  solution->I, puzzle->I);
@@ -412,45 +443,26 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
 			 solution->K, puzzle->K);
-
-		if (solution->K != result->Ck) {
-			HIP_ERROR("Solution's K did not match any sent Ks.\n");
-			return 0;
-		}
-
-		if (solution->I != result->Ci) {
-			HIP_ERROR("Solution's I did not match the sent I\n");
-			return 0;
-		}
-
-		if (memcmp(solution->opaque, result->Copaque,
-			   HIP_PUZZLE_OPAQUE_LEN) != 0) {
-			HIP_ERROR("Solution's opaque data does not match sent opaque data\n");
-			return 0;
-		}
-
+		
+		HIP_IFEL(solution->K != result->Ck, 0,
+			"Solution's K did not match any sent Ks.\n");
+		HIP_IFEL(solution->I != result->Ci, 0, 
+			 "Solution's I did not match the sent I\n");
+		HIP_IFEL(memcmp(solution->opaque, result->Copaque, HIP_PUZZLE_OPAQUE_LEN), 0,
+			 "Solution's opaque data does not match sent opaque data\n");
 		HIP_DEBUG("Received solution to an old puzzle\n");
 
-		res = hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE);
-		if (!res)
-			HIP_ERROR("Old puzzle incorrectly solved\n");
 	} else {
-		if (solution->I != puzzle->I) {
-			HIP_ERROR("Solution's I did not match the sent I\n");
-			return 0;
-		}
-
-		if (memcmp(solution->opaque, puzzle->opaque, 3) != 0) {
-			HIP_ERROR("Solution's opaque data does not match the opaque data sent\n");
-			return 0;
-		}
-
-		res = hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE);
-		if (!res)
-			HIP_ERROR("Puzzle incorrectly solved\n");
+		HIP_IFEL(solution->I != puzzle->I, 0,
+			 "Solution's I did not match the sent I\n");
+		HIP_IFEL(memcmp(solution->opaque, puzzle->opaque, 3), 0, 
+			 "Solution's opaque data does not match the opaque data sent\n");
 	}
-
-	return res;
+	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 1, 
+		 "Puzzle incorrectly solved\n");
+ out_err:
+	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
+	return err;
 }
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

@@ -369,4 +369,3 @@ void hip_uninit_cipher(void)
 	return;
 }
 
-
