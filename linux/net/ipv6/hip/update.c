@@ -499,15 +499,15 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 	/* set up new outbound IPsec SA */
 	HIP_DEBUG("Setting new outbound SA, SPI=0x%x\n", new_spi_out);
-	HIP_IFEL(hip_add_sa(hitr, hits, &new_spi_out, esp_transform,
-			    we_are_HITg ? &espkey_gl : &espkey_lg,
-			    we_are_HITg ? &authkey_gl : &authkey_lg,
-			    0, HIP_SPI_DIRECTION_OUT), -1,
+	HIP_IFEL(!hip_add_sa(hitr, hits, new_spi_out, esp_transform,
+			     we_are_HITg ? &espkey_gl : &espkey_lg,
+			     we_are_HITg ? &authkey_gl : &authkey_lg,
+			     0, HIP_SPI_DIRECTION_OUT), -1,
 		 "Setting up new outbound IPsec failed\n");
-	HIP_IFEL(hip_add_sa(hits, hitr, &new_spi_in, entry->esp_transform,
-			    we_are_HITg ? &espkey_lg  : &espkey_gl,
-			    we_are_HITg ? &authkey_lg : &authkey_gl,
-			    1, HIP_SPI_DIRECTION_IN), -1,
+	HIP_IFEL(!hip_add_sa(hits, hitr, new_spi_in, entry->esp_transform,
+			     we_are_HITg ? &espkey_lg  : &espkey_gl,
+			     we_are_HITg ? &authkey_lg : &authkey_gl,
+			     1, HIP_SPI_DIRECTION_IN), -1,
 		 "Error while setting up new IPsec SA\n");
 	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
 
@@ -520,8 +520,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		_HIP_DEBUG("Old SPI <> New SPI, not adding a new inbound SA\n");
 
 	/* Activate the new inbound and outbound SAs */
-	hip_finalize_sa(hitr, new_spi_in);
-	hip_finalize_sa(hits, new_spi_out);
+	//hip_finalize_sa(hitr, new_spi_in);
+	//hip_finalize_sa(hits, new_spi_out);
 
 	hip_update_switch_spi_in(entry, prev_spi_in);
 	hip_update_set_new_spi_out(entry, prev_spi_out, new_spi_out); /* temporary fix */
@@ -556,7 +556,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		 * somehow, but we do this or else delete_inbound_spi
 		 * would delete both old and new SPIs */
 		hip_hadb_remove_hs(prev_spi_in);
-		err = hip_hadb_insert_state_spi_list(entry, new_spi_in);
+		err = hip_hadb_insert_state_spi_list(&entry->hit_peer, new_spi_in);
 		if (err == -EEXIST) {
 			HIP_DEBUG("HIT-SPI mapping already exists, hmm ..\n");
 			err = 0;

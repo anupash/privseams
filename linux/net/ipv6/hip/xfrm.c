@@ -182,58 +182,48 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  * @already_acquired: true if @spi was already acquired
  * @direction: direction of SA
  *
- * @spi is a value-result parameter. If @spi is 0 the kernel gets a
+ * If @spi is 0 the kernel gets a
  * free SPI value for us. If @spi is non-zero we try to get the new SA
  * having @spi as its SPI.
  *
- * On success IPsec security association is set up @spi contains the
- * SPI.
+ * On success IPsec security association is set up, and SPI is returned.
  *
  * problems: The SA can be in acquire state, or it can already have timed out.
  *
- * Returns: 0 if successful, else < 0.
+ * Returns: 0 if fail, otherwise spi.
  */
-int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
-	       uint32_t *spi, int alg, struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
-	       int already_acquired, int direction)
+uint32_t hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
+		    uint32_t spi, int alg, struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
+		    int already_acquired, int direction)
 {
-	int err;
+	uint32_t err = 0;
 	struct xfrm_state *xs = NULL;
 	struct xfrm_algo_desc *ead;
 	struct xfrm_algo_desc *aad;
 	size_t akeylen, ekeylen; /* in bits */
 
 	HIP_DEBUG("SPI=0x%x alg=%d already_acquired=%d direction=%s\n",
-		  *spi, alg, already_acquired, 
+		  spi, alg, already_acquired, 
 		  direction == HIP_SPI_DIRECTION_IN ? "IN" : "OUT");
 	akeylen = ekeylen = 0;
-	err = -EEXIST;
 
-	//hip_print_hit("srchit", srchit);
-	//hip_print_hit("dsthit", dsthit);
 	if (already_acquired) {
-		if (!*spi) {
-			HIP_ERROR("No SPI for already acquired SA\n");
-			err = -EINVAL;
-			goto out;
-		}
+		HIP_IFEL(!spi, 0, "No SPI for already acquired SA\n");
+
 		/* should be found (unless expired) */
 		xs = xfrm_state_lookup(direction == HIP_SPI_DIRECTION_IN ?
 				       (xfrm_address_t *)dsthit : (xfrm_address_t *)srchit,
-				       htonl(*spi), IPPROTO_ESP, AF_INET6);
+				       htonl(spi), IPPROTO_ESP, AF_INET6);
+		HIP_HEXDUMP("xfrm_state_lookup hit: ", (direction == HIP_SPI_DIRECTION_IN ?
+							dsthit : srchit), sizeof(struct in6_addr));
 	} else {
 		xs = xfrm_find_acq(XFRM_MODE_TRANSPORT, 0, IPPROTO_ESP,
 				   (xfrm_address_t *)dsthit, (xfrm_address_t *)srchit,
 				   1, AF_INET6);
+		HIP_HEXDUMP("xfrm_find_acq hit: ", dsthit, sizeof(struct in6_addr));
 	}
 
-	if (!xs) {
-		HIP_ERROR("Error while acquiring xfrm state: err=%d\n", err);
-		err = -EEXIST;
-		return err;
-	}
-
-	err = 0;
+	HIP_IFEL(!xs, 0, "Error while acquiring xfrm state.\n");
 
 	/* old comments, todo */
 	/* xs is either newly-created or an old one */
@@ -248,90 +238,60 @@ int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	/* should we lock the state? */
 
-	_HIP_DEBUG("xs->id.spi=0x%x\n", ntohl(xs->id.spi));
+	HIP_DEBUG("xs->id.spi=0x%x\n", ntohl(xs->id.spi));
 
 	if (!already_acquired) {
-		_HIP_DEBUG("allocate SPI\n");
-		if (*spi) {
-			*spi = htonl(*spi);
-			xfrm_alloc_spi(xs, *spi, *spi);
+		HIP_DEBUG("Acquiring SPI\n");
+		if (spi) {
+			xfrm_alloc_spi(xs, htonl(spi), htonl(spi));
 		} else {
 			/* Try to find a suitable random SPI within the range
 			 * in RFC 2406 section 2.1 */
 			xfrm_alloc_spi(xs, htonl(256), htonl(0xFFFFFFFF));
 		}
 
-		_HIP_DEBUG("allocated xs->id.spi=0x%x\n", ntohl(xs->id.spi));
-		if (xs->id.spi == 0) {
-			HIP_ERROR("Could not allocate SPI value for the SA\n");
-			if (*spi != 0) {
-				err = -EEXIST;
-				goto out;
-			} else {
-				err = -EAGAIN;
-				goto out;
-			}
+		HIP_DEBUG("Allocated xs->id.spi=0x%x\n", ntohl(xs->id.spi));
+		if (!xs->id.spi) {
+			HIP_IFEL(spi, 0, "Could not allocate SPI value for the SA\n");
+			HIP_IFEL(1, 0, "Could not allocate SPI value for the SA\n");
 		}
-		*spi = ntohl(xs->id.spi);
+
+		err = ntohl(xs->id.spi);
 	}
 
-	_HIP_DEBUG("SPI setup ok, trying to setup enc/auth algos\n");
+	HIP_DEBUG("SPI setup ok, trying to setup enc/auth algorithms.\n");
 
-	err = -ENOENT;
 	switch (alg) {
 	case HIP_ESP_AES_SHA1:
 		ead = xfrm_ealg_get_byid(SADB_X_EALG_AESCBC);
-		if (!ead) {
-			HIP_ERROR("AES not supported\n");
-			goto out;
-		}
-
+		HIP_IFEL(!ead, 0, "AES not supported\n");
 		aad = xfrm_aalg_get_byid(SADB_AALG_SHA1HMAC);
-		if (!aad) {
-			HIP_ERROR("SHA1 not supported\n");
-			goto out;
-		}
+		HIP_IFEL(!aad, 0, "SHA1 not supported\n");
 
 		xs->props.ealgo = SADB_X_EALG_AESCBC;
 		xs->props.aalgo = SADB_AALG_SHA1HMAC;
 		break;
 	case HIP_ESP_3DES_SHA1:
 		ead = xfrm_ealg_get_byid(SADB_EALG_3DESCBC);
-		if (!ead) {
-			HIP_ERROR("3DES not supported\n");
-			goto out;
-		}
-
+		HIP_IFEL(!ead, 0, "3DES not supported\n");
 		aad = xfrm_aalg_get_byid(SADB_AALG_SHA1HMAC);
-		if (!aad) {
-			HIP_ERROR("SHA1 not supported\n");
-			goto out;
-		}
+		HIP_IFEL(!aad, 0, "SHA1 not supported\n");
 
 		xs->props.ealgo = SADB_EALG_3DESCBC;
 		xs->props.aalgo = SADB_AALG_SHA1HMAC;
 		break;
 	case HIP_ESP_NULL_SHA1:
 		ead = xfrm_ealg_get_byid(SADB_EALG_NULL);
-		if (!ead) {
-			HIP_ERROR("NULL not supported\n");
-			goto out;
-		}
-
+		HIP_IFEL(!ead, 0, "NULL not supported\n");
 		aad = xfrm_aalg_get_byid(SADB_AALG_SHA1HMAC);
-		if (!aad) {
-			HIP_ERROR("SHA1 not supported\n");
-			goto out;
-		}
+		HIP_IFEL(!aad, 0, "SHA1 not supported\n");
 
 		xs->props.ealgo = SADB_EALG_NULL;
 		xs->props.aalgo = SADB_AALG_SHA1HMAC;
 		break;
 	default:
-		err = -EINVAL;
 		ead = aad = NULL;
-		HIP_ERROR("Unsupported algo type: 0x%x\n", alg);
-		HIP_ASSERT(0);
+		HIP_IFEL(1, 0, "Unsupported algo type: 0x%x\n", alg);
 	}
 
 	/*
@@ -344,15 +304,11 @@ int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	HIP_DEBUG("ekeylen=%d, akeylen=%d\n", ekeylen, akeylen);
 
-	err = -ENOMEM;
-	xs->ealg = HIP_MALLOC(sizeof(struct xfrm_algo) + (ekeylen + 7)/8,
-			      GFP_ATOMIC);
-	if (!xs->ealg)
-		goto out;
-	xs->aalg = HIP_MALLOC(sizeof(struct xfrm_algo) + (akeylen + 7)/8,
-			      GFP_ATOMIC);
-	if (!xs->aalg)
-		goto out;
+	xs->ealg = HIP_MALLOC(sizeof(struct xfrm_algo) + (ekeylen + 7)/8, GFP_ATOMIC);
+	HIP_IFEL(!xs->ealg, 0, "Out of memory.\n");
+
+	xs->aalg = HIP_MALLOC(sizeof(struct xfrm_algo) + (akeylen + 7)/8, GFP_ATOMIC);
+	HIP_IFEL(!xs->aalg, 0, "Out of memory.\n");
 
 	strcpy(xs->aalg->alg_name, aad->name);
 	strcpy(xs->ealg->alg_name, ead->name);
@@ -368,23 +324,22 @@ int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 	xs->sel.proto = 0; /* all protos */
 
-	err = -ENOENT;
+//	err = -ENOENT;
 	xs->type = xfrm_get_type(IPPROTO_ESP, AF_INET6);
-	if (xs->type == NULL) {
-		HIP_ERROR("Could not get XFRM type\n");
-		goto out;
-	}
+	HIP_IFEL(!xs->type, 0, "Could not get XFRM type\n");
 
 	/* memory leak ? */
-	if (xs->type->init_state(xs, NULL)) {
-		HIP_ERROR("Could not initialize XFRM type\n");
-		goto out;
-	}
+	HIP_IFEL(xs->type->init_state(xs, NULL), 0, "Could not initialize XFRM type\n");
+
+	//	spin_lock_bh(&xs->lock);
+	xs->km.state = XFRM_STATE_VALID;
+	xs->lft.hard_add_expires_seconds = 0;
+	//spin_unlock_bh(&xs->lock);
 
 	xfrm_state_put(xs);
-	_HIP_DEBUG("New SA added successfully\n");
-	return 0;
- out:
+	HIP_DEBUG("New SA added successfully (%x)\n", err);
+	return err;
+ out_err:
 	if (xs) {
 		if (xs->aalg)
 			HIP_FREE(xs->aalg);
@@ -394,40 +349,6 @@ int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		xfrm_state_put(xs);
 	}
 
-	HIP_DEBUG("returning on error, err=%d\n", err);
-	return err;
-}
-
-/**
- * hip_finalize_sa - Finalize SA (change state to VALID).
- * @hit: Destination HIT of the SA
- * @spi: SPI of the SA in host byte order.
- *
- * As a part of changing the state, we also wake up every
- * sleeper that are waiting for the SA to become VALID.
- *
- */
-int hip_finalize_sa(struct in6_addr *hit, u32 spi)
-{
-	struct xfrm_state *xs;
-
-	_HIP_DEBUG("Searching for spi: 0x%x (net 0x%x)\n", spi, htonl(spi));
-
-	xs = xfrm_state_lookup((xfrm_address_t *)hit, htonl(spi),
-			       IPPROTO_ESP, AF_INET6);
-	if (!xs) {
-		HIP_ERROR("Could not finalize SA for SPI 0x%x\n", spi);
-		/* do what? */
-		return -1;
-	}
-
-	spin_lock_bh(&xs->lock);
-	xs->km.state = XFRM_STATE_VALID;
-	xs->lft.hard_add_expires_seconds = 0;
-	spin_unlock_bh(&xs->lock);
-
-	xfrm_state_put(xs);
-	wake_up_all(&km_waitq);
+	HIP_DEBUG("Returning on error.\n");
 	return 0;
 }
-

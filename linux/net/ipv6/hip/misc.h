@@ -34,7 +34,6 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 
 #include "debug.h"
 #include "hip.h"
-//#include "crypto.h"
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);

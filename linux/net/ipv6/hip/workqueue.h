@@ -22,7 +22,7 @@
 		if (hwo_id2) ipv6_addr_copy(&work_order_hdr.id2, hwo_id2); \
 		work_order_hdr.arg1 = hwo_arg1; \
 		work_order_hdr.arg2 = hwo_arg2; \
-		work_order_hdr.arg2 = hwo_arg3; \
+		work_order_hdr.arg3 = hwo_arg3; \
 		} while(0)
 
 #include <net/hip.h>
@@ -47,7 +47,7 @@
 #define HIP_WO_SUBTYPE_SEND_PACKET 104
 #define HIP_WO_SUBTYPE_ACQSPI      105
 #define HIP_WO_SUBTYPE_DELSA       106
-#define HIP_WO_SUBTYPE_FINSA       107
+//#define HIP_WO_SUBTYPE_FINSA       107
 //#define HIP_WO_SUBTYPE_XFRM_INIT   108
 #define HIP_WO_SUBTYPE_XFRM_DEL    109
 #define HIP_WO_SUBTYPE_XFRM_UPD    110

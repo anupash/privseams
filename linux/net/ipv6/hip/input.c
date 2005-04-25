@@ -309,6 +309,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 		err = -ENOSYS;
 	}
 
+	HIP_DEBUG("Done with control packet (%d).\n", err);
+
 	if (err) {
 		goto out_err;
 	}
@@ -521,11 +523,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 	{
 		/* let the setup routine give us a SPI. */
-		spi_in = 0;
-		HIP_IFEL(hip_add_sa(&ctx->input->hits, &ctx->input->hitr, 
-				    &spi_in, transform_esp_suite, 
-				    &ctx->esp_in, &ctx->auth_in, 
-				    0, HIP_SPI_DIRECTION_IN), -1, 
+		HIP_IFEL(!(spi_in = hip_add_sa(&ctx->input->hits, &ctx->input->hitr, 
+					       0, transform_esp_suite, 
+					       &ctx->esp_in, &ctx->auth_in, 
+					       0, HIP_SPI_DIRECTION_IN)), -1, 
 			 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 		/* XXX: -EAGAIN */
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1121,15 +1122,15 @@ int hip_handle_i2(struct hip_common *i2,
 		 "Error while adding the preferred peer address\n");
 
 	/* Set up IPsec associations */
-	spi_in = 0;
-	err = hip_add_sa(&i2->hits, &i2->hitr, &spi_in, esp_tfm, 
-			 &ctx->esp_in, &ctx->auth_in, 0,
-			 HIP_SPI_DIRECTION_IN);	
-	if (err) {
-		HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:src (err=%d)\n", err);
-		if (err == -EEXIST)
-			HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
-				  spi_in);
+	spi_in = hip_add_sa(&entry->hit_peer, &entry->hit_our, 0, esp_tfm, 
+			    &ctx->esp_in, &ctx->auth_in, 0,
+			    HIP_SPI_DIRECTION_IN);	
+	if (!spi_in) {
+		HIP_ERROR("Failed to setup IPsec SPD/SA entries.\n");
+//		if (err == -EEXIST)
+//			HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
+//				  spi_in);
+		err = -1;
 		hip_hadb_delete_inbound_spi(entry, 0);
 		hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
@@ -1141,16 +1142,17 @@ int hip_handle_i2(struct hip_common *i2,
 		
 	barrier();
 	spi_out = ntohl(hspi->spi);
-	HIP_DEBUG("setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
-	err = hip_add_sa(&i2->hitr, &i2->hits, &spi_out, esp_tfm, 
+	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
+	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out, 0,
 			 HIP_SPI_DIRECTION_OUT);
-	if (err == -EEXIST) {
-		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
-		HIP_DEBUG("TODO: what to do ? currently ignored\n");
-	} else if (err) {
-		HIP_ERROR("failed to setup IPsec SPD/SA entries, peer:dst (err=%d)\n", err);
-		/* delete all IPsec related SPD/SA for this entry */
+	if (!err) {
+//		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
+//		HIP_DEBUG("TODO: what to do ? currently ignored\n");
+//	} else if (err) {
+//		HIP_ERROR("Failed to setup IPsec SPD/SA entries, peer:dst (err=%d)\n", err);
+//		/* delete all IPsec related SPD/SA for this entry */
+		err = -1;
 		hip_hadb_delete_inbound_spi(entry, 0);
 		hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
@@ -1188,8 +1190,8 @@ int hip_handle_i2(struct hip_common *i2,
 		 "Creation of R2 failed\n");
 
 	/* change SA state from ACQ -> VALID, and wake up sleepers */
-	hip_finalize_sa(&i2->hits, spi_out);
-	hip_finalize_sa(&i2->hitr, spi_in);
+	//hip_finalize_sa(&entry->hit_peer, spi_out);
+	//hip_finalize_sa(&entry->hit_our, spi_in);
 
 	/* we cannot do this outside (in hip_receive_i2) since we don't have
 	   the entry there and looking it up there would be unneccesary waste
@@ -1309,7 +1311,7 @@ int hip_handle_r2(struct hip_common *r2,
 {
 	uint16_t len;
 	struct hip_context *ctx = NULL;
-	struct in6_addr *sender;
+	//struct in6_addr *sender;
  	struct hip_spi *hspi = NULL;
  	struct hip_sig *sig = NULL;
 	struct hip_spi_out_item spi_out_data;
@@ -1323,7 +1325,7 @@ int hip_handle_r2(struct hip_common *r2,
 	memset(ctx, 0, sizeof(struct hip_context));
         ctx->input = r2;
 
-	sender = &r2->hits;
+	//	sender = &r2->hits;
 
         /* Verify HMAC */
 	HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_in, entry->peer_pub), -1, 
@@ -1351,15 +1353,18 @@ int hip_handle_r2(struct hip_common *r2,
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
 
-	err = hip_add_sa(&r2->hitr, sender, &spi_recvd, tfm,
+	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, spi_recvd, tfm,
 			 &ctx->esp_out, &ctx->auth_out, 0,
 			 HIP_SPI_DIRECTION_OUT);
-	if (err == -EEXIST) {
-		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
-		HIP_DEBUG("TODO: what to do ? currently ignored\n");
-	} else 	if (err) {
+//	if (err == -EEXIST) {
+//		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
+//		HIP_DEBUG("TODO: what to do ? currently ignored\n");
+//	} else 	if (err) {
+	if (!err) {
 		HIP_ERROR("hip_add_sa failed, peer:dst (err=%d)\n", err);
 		HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
+		err = -1;
+		goto out_err;
 	}
 	/* XXX: Check for -EAGAIN */
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
@@ -1388,8 +1393,8 @@ int hip_handle_r2(struct hip_common *r2,
 	hip_hadb_insert_state(entry);
 	/* these will change SAs' state from ACQUIRE to VALID, and
 	 * wake up any transport sockets waiting for a SA */
-	hip_finalize_sa(&r2->hits, spi_recvd);
-	hip_finalize_sa(&r2->hitr, spi_in);
+	//	hip_finalize_sa(&entry->hit_peer, spi_recvd);
+	//hip_finalize_sa(&entry->hit_our, spi_in);
 
 	entry->state = HIP_STATE_ESTABLISHED;
 	HIP_DEBUG("Reached ESTABLISHED state\n");

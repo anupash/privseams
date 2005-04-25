@@ -175,7 +175,7 @@ hip_xfrm_t *hip_beetdb_create_state(int gfpmask)
 	if (!entry)
 		return NULL;
 
-	memset(entry, 0, sizeof(*entry));
+	memset(entry, 0, sizeof(hip_xfrm_t));
 
 	INIT_LIST_HEAD(&entry->next);
 
@@ -212,11 +212,11 @@ int hip_beetdb_insert_state(hip_xfrm_t *x)
 	return err;
 }
 
-int hip_xfrm_insert_state_spi_list(hip_xfrm_t *entry, uint32_t spi)
+int hip_xfrm_insert_state_spi_list(hip_hit_t *hit_peer, uint32_t spi)
 {
 	int err = 0;
 	HIP_INSERT_STATE_SPI_LIST(&hip_beetdb_spi_list, hip_beetdb_put_entry,
-				  entry, spi);
+				  hit_peer, spi);
 	return err;
 }
 
@@ -237,19 +237,18 @@ int hip_xfrm_update_inbound(hip_hit_t *hit_peer, struct in6_addr *hit_our,
 
 	entry = hip_xfrm_find_by_spi(spi_in);
 	if (!entry) {
-		/* create a new inbound SPI */
-		err = hip_xfrm_insert_state_spi_list(entry, spi_in);
-		if (err) {
-			HIP_ERROR("Failed to create new SPI entry\n");
-			goto out_err;
-		}
+		/* create a new inbound SPI to HIT mapping */
+		HIP_IFEL((err = hip_xfrm_insert_state_spi_list(hit_peer, spi_in)), err, 
+			 "Failed to create new SPI entry\n");
+
 		entry = hip_xfrm_find_by_spi(spi_in);
 		if (!entry) {
 			err = -EFAULT;
-			HIP_ERROR("Internal error\n");
+			HIP_ERROR("Outbound BEET entry was not added first?\n");
 			goto out_err;
 		}
-		HIP_DEBUG("Created a new inbound SPI %d\n", spi_in);
+
+		HIP_DEBUG("Created a new inbound SPI %x\n", spi_in);
 	}
 
 	memcpy(&entry->hit_our, hit_our, sizeof(hip_hit_t));
@@ -257,9 +256,10 @@ int hip_xfrm_update_inbound(hip_hit_t *hit_peer, struct in6_addr *hit_our,
 	HIP_DEBUG_HIT("our hit",  &entry->hit_our);
 	HIP_DEBUG_HIT("peer hit", &entry->hit_peer);
 
-	if (state) {
-		HIP_DEBUG("Changing state from %d to %d\n", entry->state,
-			  state);
+	if (state && state != entry->state) {
+		HIP_DEBUG("Changing state from %s to %s\n", 
+			  hip_state_str(entry->state), hip_state_str(state));
+
 		entry->state = state;
 	}
 
@@ -298,12 +298,11 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, struct in6_addr *peer_addr,
 			HIP_ERROR("Failed to insert state\n");
 			goto out_err;
 		}
-		HIP_DEBUG_HIT("created a new outbound entry", hit_peer);
+		HIP_DEBUG_HIT("Created a new outbound entry for ", hit_peer);
 	}
 
 	if (spi_out && entry->spi != spi_out) {
-		HIP_DEBUG("Changed SPI out from %d to %d\n", entry->spi,
-			  spi_out);
+		HIP_DEBUG("Changed SPI out from %x to %x\n", entry->spi, spi_out);
 		entry->spi = spi_out;
 	}
 	if (peer_addr &&
@@ -315,8 +314,8 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, struct in6_addr *peer_addr,
 		       sizeof(struct in6_addr));
 	}
 	if (state && state != entry->state) {
-		HIP_DEBUG("Changing state from %d to %d\n", state,
-			  entry->state);
+		HIP_DEBUG("Changing state from %s to %s\n", 
+			  hip_state_str(entry->state), hip_state_str(state));
 		entry->state = state;
 	}
 	

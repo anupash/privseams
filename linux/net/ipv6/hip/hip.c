@@ -701,6 +701,9 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
 	int err = -EINVAL;
 	char str[INET6_ADDRSTRLEN];
 	struct ipv6hdr hdr = {0};
+#if 0
+	struct hip_work_order *hwo;
+#endif
 
 	hip_in6_ntop((struct in6_addr *) &(xs->id.daddr), str);
 	HIP_DEBUG("daddr=%s dir=%d\n", str, dir);
@@ -710,14 +713,20 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
 		hip_in6_ntop((struct in6_addr *) &(pol->selector.daddr), str);
 		HIP_ERROR("Policy (pol daddr=%s) is not for HIP, returning\n",
 			  str);
-		goto out;
+		goto out_err;
 	}
 
-	if (!hip_is_hit((struct in6_addr *) &(xs->id.daddr))) {
-		HIP_ERROR("%s not a HIT\n", str);
-		goto out;
-	}
+	HIP_IFEL(!hip_is_hit((struct in6_addr *) &(xs->id.daddr)), -EINVAL, "%s not a HIT\n", str);
 
+#if 0
+        // the right way would be to do the base exchange here
+	HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -ENOMEM, "Out of memory\n");
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr,
+				HIP_WO_TYPE_OUTGOING, 
+				HIP_WO_SUBTYPE_SEND_I1,
+				&hdr.saddr, (struct in6_addr *) &(xs->id.daddr), 0, 0, 0);
+	hip_insert_work_order(hwo);
+#endif
 	ipv6_addr_copy(&hdr.daddr, (struct in6_addr *) &(xs->id.daddr));
 	err = hip_handle_output(&hdr, NULL);
 	if (err)
@@ -725,7 +734,7 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
 	err = 0; /* tell XFRM that we handle this SA acquiring even
 		  * if the previous failed */
 	
-out:
+out_err:
 	HIP_DEBUG("returning, err=%d\n", err);
 	return err;
 }

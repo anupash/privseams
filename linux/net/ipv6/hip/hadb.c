@@ -212,11 +212,11 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
  */
-int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
+int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, uint32_t spi)
 {
 	int err = 0;
 	HIP_INSERT_STATE_SPI_LIST(&hadb_spi_list, hip_hadb_put_entry,
-				  entry, spi);
+				  peer_hit, spi);
 	return err;
 }
 
@@ -310,6 +310,7 @@ int hip_hadb_update_xfrm_inbound(hip_ha_t *entry) {
 
 	/* iterate over all inbound SPIs and send them to kernel */
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		HIP_DEBUG("Inbound SPI update: %x, state %s\n", item->spi, hip_state_str(entry->state));
 		err = hip_xfrm_update(&entry->hit_peer,
 				      &entry->hit_our,
 			              item->spi,
@@ -335,6 +336,8 @@ int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
 	//else
 	//addr = &entry->bex_address;
 
+	HIP_DEBUG("Outbound HIT update, state: %s\n", hip_state_str(entry->state));
+	HIP_HEXDUMP("HIT: ", &entry->hit_peer, sizeof(struct in6_addr));
 	return hip_xfrm_update(&entry->hit_peer, addr, entry->default_spi_out,
 			       entry->state, HIP_SPI_DIRECTION_OUT);
 }
@@ -344,6 +347,7 @@ int hip_hadb_update_xfrm(hip_ha_t *entry) {
 
 	/* update outbound xfrm first because inbound has depencies on
 	   outbound  */
+	HIP_DEBUG("Synchronizing the BEET database.\n");
 
 	err = hip_hadb_update_xfrm_outbound(entry);
 	if (err) {
@@ -802,7 +806,7 @@ static int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *dat
 	// hip_hold_ha(entry); ?
 
 	_HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
-	err = hip_hadb_insert_state_spi_list(entry, spi_in);
+	err = hip_hadb_insert_state_spi_list(&entry->hit_peer, spi_in);
 	if (err == -EEXIST)
 		err = 0;
  out_err:

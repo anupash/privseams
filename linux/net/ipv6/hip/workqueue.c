@@ -299,7 +299,7 @@ int hip_do_work(struct hip_work_order *job)
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = hip_add_sa(&job->hdr.id1,
 							  &job->hdr.id2,
-							  &keys->spi,
+							  keys->spi,
 							  keys->alg,
 							  &keys->enc,
 							  &keys->auth,
@@ -316,7 +316,8 @@ int hip_do_work(struct hip_work_order *job)
 			res = resp->hdr.arg1 =
 				hip_delete_sa(job->hdr.arg1, &job->hdr.id2);
 			break;
-			
+
+#if 0			
 		case HIP_WO_SUBTYPE_FINSA:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
@@ -328,8 +329,7 @@ int hip_do_work(struct hip_work_order *job)
 						job->hdr.arg1);
 			break;
 
-			/* BEET database management functions follow */
-#if 0
+
 		case HIP_WO_SUBTYPE_XFRM_INIT:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 
@@ -341,7 +341,7 @@ int hip_do_work(struct hip_work_order *job)
 						  &job->hdr.id2);
 			break;
 #endif
-			
+			/* BEET database management functions follow */			
 		case HIP_WO_SUBTYPE_XFRM_UPD:
 			resp = hip_init_job(GFP_KERNEL);
 			if (!resp) 

@@ -61,14 +61,13 @@
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
 } while(0)
 
-#define HIP_INSERT_STATE_SPI_LIST(hashtable, put_hs, entry, spi)             \
+#define HIP_INSERT_STATE_SPI_LIST(hashtable, put_hs, hit_peer, spi)          \
   do {                                                                       \
 	struct hip_hit_spi *tmp;                                             \
 	hip_hit_t hit;                                                       \
 	struct hip_hit_spi *new_item;                                        \
 	/* assume already locked entry */                                    \
-	_HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", entry, spi);        \
-	ipv6_addr_copy(&hit, &entry->hit_peer);                              \
+	ipv6_addr_copy(&hit, hit_peer);                                      \
 	tmp = hip_ht_find(hashtable, (void *)spi);                           \
 	if (tmp) {                                                           \
 		put_hs(tmp);                                                 \
@@ -123,7 +122,7 @@ hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
-int hip_hadb_insert_state_spi_list(hip_ha_t *ha, uint32_t spi);
+int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, uint32_t spi);
 void hip_hadb_remove_hs(uint32_t spi);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);

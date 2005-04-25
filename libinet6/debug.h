@@ -89,11 +89,11 @@ static inline const char *hip_state_str(unsigned int state)
 	{ "NONE", "UNASSOCIATED", "I1_SENT",
 	  "I2_SENT", "R2_SENT", "ESTABLISHED", "REKEYING",
 	  "FAILED" };
-        if (state <= ARRAY_SIZE(states))
-	  str = states[state];
+        if (state >= 0 && state <= ARRAY_SIZE(states))
+		str = states[state];
         else
-	  HIP_ERROR("invalid state %u\n", state);
-
+		HIP_ERROR("invalid state %u\n", state);
+	
         return str;
 }
 

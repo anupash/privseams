@@ -47,53 +47,29 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
 	return resp.hdr.arg1;
 }
 
-int hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
-	       uint32_t *spi, int alg, struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
-	       int already_acquired, int direction) {
+uint32_t hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
+		    uint32_t spi, int alg, struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
+		    int already_acquired, int direction) {
 	struct hip_work_order req, resp;
+	int err;
+	req.msg = NULL;
+	resp.msg = NULL;
 
 	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING,
 				HIP_WO_SUBTYPE_ADDSA, srchit, dsthit, 0, 0, 0);
-	req.msg = hip_msg_alloc();
-	if (!req.msg) {
-		return -1;
-	}	
+	HIP_IFE(!(req.msg = hip_msg_alloc()), 0);
 
 	hip_build_user_hdr(req.msg, 0, 0);
-	if (hip_build_param_keys(req.msg, enckey, authkey, *spi, alg, already_acquired, direction)) {
-		return -1;
-	}
+	HIP_IFE(hip_build_param_keys(req.msg, enckey, authkey, spi, alg, already_acquired, direction), 0);
+	HIP_IFEL(hip_netlink_talk(&nl_khipd, &req, &resp), 0, "Unable to send over netlink\n");
 
-	if (hip_netlink_talk(&nl_khipd, &req, &resp)) {
-		HIP_ERROR("Unable to send over netlink\n");
-		return 0;
-	}
+	err = resp.hdr.arg1;
 
-	hip_msg_free(req.msg);
-	hip_msg_free(resp.msg);
+ out_err:
+	if (req.msg)
+		hip_msg_free(req.msg);
+	if (resp.msg)
+		hip_msg_free(resp.msg);
 
-	return resp.hdr.arg1;
-}
-
-int hip_finalize_sa(struct in6_addr *hit, u32 spi) {
-	struct hip_work_order req, resp;
-
-	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING,
-				HIP_WO_SUBTYPE_FINSA, NULL, hit, spi, 0, 0);
-	req.msg = hip_msg_alloc();
-	if (!req.msg) {
-		return -1;
-	}
-
-	hip_build_user_hdr(req.msg, 0, 0);
-
-	if (hip_netlink_talk(&nl_khipd, &req, &resp)) {
-		HIP_ERROR("Unable to send over netlink\n");
-		return 0;
-	}
-
-	hip_msg_free(req.msg);
-	hip_msg_free(resp.msg);
-
-	return resp.hdr.arg1;
+	return err;
 }
