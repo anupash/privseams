@@ -25,6 +25,10 @@ BIBS                   = design_choices.bib
 DESIGN_CHOICES_SOURCES = catalogue.tex design_choices_macros.tex hipl.tex
 DESIGN_CHOICES         = design_choices
 HOWTO                  = HOWTO
+HOWTO_HTML_DIR         = howto-html
+
+DOCDIR_PREFIX = /usr/share/doc
+DOCDIR = $(DOCDIR_PREFIX)/hipl
 
 ### COMPILATION RULESETS ######################################################
 
@@ -53,11 +57,11 @@ HOWTO                  = HOWTO
 	$(XMLTO) txt $<
 
 %.html:  %.xml
-	$(XMLTO) html $<
+	$(XMLTO) -o $(HOWTO_HTML_DIR) html $<
 
 ### TARGETS ##################################################################
 
-all:	$(HOWTO).txt \
+all:	$(HOWTO).txt $(HOWTO).html \
 	$(DESIGN_CHOICES).dvi $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf
 
 $(DESIGN_CHOICES).dvi:	$(DESIGN_CHOICES).tex $(DESIGN_CHOICES_SOURCES) \
@@ -73,7 +77,17 @@ $(HOWTO).html:	$(HOWTO).xml
 
 clean:
 	rm -f *~ *.aux *.log *.toc *.bbl *.blg *.ps *.dvi *.pdf *.out
-	rm -f HOWTO.txt *.html
+	rm -f HOWTO.txt
 	rm -f $(patsubst %.fig, %.eps, $(FIGS))
+	rm -rf $(HOWTO_HTML_DIR)
+
+install: all
+	@echo
+	@echo "** Copying documentation files to $(DOCDIR) **"
+	@echo
+	mkdir -p $(DOCDIR)
+	cp $(HOWTO).txt $(DOCDIR)
+	cp -a $(HOWTO_HTML_DIR) $(DOCDIR)
+	cp $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf $(DESIGN_CHOICES).dvi $(DOCDIR)
 
 .phony: clean
