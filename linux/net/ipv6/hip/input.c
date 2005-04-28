@@ -747,12 +747,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_common *i2 = NULL;
 	struct hip_param *param;
 	struct hip_diffie_hellman *dh_req;
-	//int algo;
+	int algo;
 	u8 *signature = NULL;
 //	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	struct hip_spi_in_item spi_in_data;
 	uint16_t mask;
-
+	struct hip_lhi lhi;
+	
 	HIP_DEBUG("\n");
 
 	HIP_ASSERT(entry);
@@ -779,6 +780,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		goto out_err;
 	}
 	
+	/* dig our hit from host association entry and use it later for 
+	   getting the private and public parts for the right HI */
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+        memcpy(&(lhi.hit), &entry->hit_our, sizeof(struct in6_addr));
+
 #if 0 // does not work correctly with DSA-RSA base exhcange -miika
 	{
 		struct hip_host_id *mofo;
@@ -791,24 +797,28 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* Get a localhost identity, allocate memory for the public key part
 	   and extract the public key from the private key. The public key is
 	   needed in the ESP-ENC below. */
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+	host_id_pub = hip_get_localhost_public_key(&lhi);
+
 	if (host_id_pub == NULL) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost public key found\n");
 		goto out_err;
 	}
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi); 
+
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
 		goto out_err;
 	}
 
+	algo = hip_get_host_id_algo(host_id_private);
+
 	{
 		int sigsize;
 		
-		if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+		if (algo == HIP_HI_RSA) {
 			sigsize = HIP_RSA_SIGNATURE_LEN;
 		} else {
 			sigsize = HIP_DSA_SIGNATURE_LEN;
@@ -1125,7 +1135,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* Only DSA supported currently */
 //	HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	if (algo == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(i2,signature,
 							 HIP_RSA_SIGNATURE_LEN,
 							 HIP_SIG_RSA);
@@ -1440,6 +1450,7 @@ int hip_receive_r1(struct sk_buff *skb)
 
 	entry = hip_hadb_find_byhit(&hip_common->hits);
 	HIP_DEBUG_HIT("RECEIVE R1 SENDER HIT: ", &hip_common->hits);
+	HIP_DEBUG_HIT("RECEIVE R1 RECEIVER HIT: ", &hip_common->hitr);
 	if (!entry) {
 		err = -EFAULT;
 		HIP_ERROR("Received R1 with no local state. Dropping\n");
@@ -1533,16 +1544,22 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
  	struct hip_common *r2 = NULL;
 	struct hip_common *i2;
  	int err = 0;
-	//int algo = 0;
+	int algo = 0;
 	int clear = 0;
 	u8 *signature;
 // 	u8 signature[HIP_DSA_SIGNATURE_LEN];
 	uint16_t mask;
 #ifdef CONFIG_HIP_RVS
-	  int create_rva = 0;
+	int create_rva = 0;
 #endif
+	struct hip_lhi lhi;
 
 	HIP_DEBUG("\n");
+
+	/* dig our hit from host association entry and use it later for 
+	 getting the private and public parts for the right HI */
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+        memcpy(&(lhi.hit), &entry->hit_our, sizeof(struct in6_addr));
 
 	/* assume already locked entry */
 	i2 = ctx->input;
@@ -1614,7 +1631,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		struct hip_crypto_key hmac;
 
 		host_id_public =
-			hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+			hip_get_localhost_public_key(&lhi);
 
 		HIP_HEXDUMP("host id for HMAC2", host_id_public,
 			    hip_get_param_total_len(host_id_public));
@@ -1628,13 +1645,16 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		}
 	}
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
+
 	if (!host_id_private) {
 		HIP_ERROR("Could not get own host identity. Can not sign data\n");
 		goto out_err;
 	}
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	algo = hip_get_host_id_algo(host_id_private);
+
+	if (algo == HIP_HI_RSA) {
 		signature = kmalloc(HIP_RSA_SIGNATURE_LEN, GFP_KERNEL);
 	} else {
 		signature = kmalloc(HIP_DSA_SIGNATURE_LEN, GFP_KERNEL);
@@ -1652,7 +1672,7 @@ int hip_create_r2(struct hip_context *ctx, hip_ha_t *entry)
 		goto out_err;
 	}
 
-	if (HIP_HI_DEFAULT_ALGO == HIP_HI_RSA) {
+	if (algo == HIP_HI_RSA) {
 		err = hip_build_param_signature_contents(r2, signature,
 							 HIP_RSA_SIGNATURE_LEN,
 							 HIP_SIG_RSA);
@@ -1735,6 +1755,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	uint16_t crypto_len;
  	char *iv;
  	struct in6_addr hit;
+	struct in6_addr *rcv_hit;
 	struct hip_spi_in_item spi_in_data;
 
  	HIP_DEBUG("\n");
@@ -1752,6 +1773,9 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 	i2 = (struct hip_common*) skb->h.raw;
 	ctx->input = (struct hip_common*) skb->h.raw;
 
+	rcv_hit = &(((struct hip_common *)skb->h.raw)->hitr);
+	HIP_DEBUG_HIT("HANDLE I2, receiver_hit: ", rcv_hit);
+
 	/* Check packet validity */
 	/* We MUST check that the responder HIT is one of ours. */
 	/* check the generation counter */
@@ -1768,7 +1792,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 	err = hip_verify_generation(&skb->nh.ipv6h->saddr, 
 				    &skb->nh.ipv6h->daddr, 
-				    r1cntr->generation);
+				    r1cntr->generation, 
+				    rcv_hit);
 	if (err) {
 		HIP_ERROR("Birthday check failed\n");
 		goto out_err;
@@ -1789,7 +1814,7 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
 
 		if (!hip_verify_cookie(&skb->nh.ipv6h->saddr,
 				       &skb->nh.ipv6h->daddr, 
-				       i2, sol)) {
+				       i2, sol, rcv_hit)) {
 			HIP_ERROR("Cookie solution rejected\n");
 			err = -ENOMSG;
 			goto out_err;
@@ -1914,6 +1939,8 @@ int hip_handle_i2(struct sk_buff *skb, hip_ha_t *ha)
  	
  	if (ipv6_addr_cmp(&hit, &i2->hits) != 0) {
  		HIP_ERROR("Sender's HIT does not match advertised public key\n");
+		//HIP_DEBUG_HIT("hit1", &hit);
+		//HIP_DEBUG_HIT("hit2", &i2->hits);
  		err = -EINVAL;
  		goto out_err;
 	}

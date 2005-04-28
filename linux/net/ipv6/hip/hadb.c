@@ -774,6 +774,40 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 	return 0;
 }
 
+/**
+ * hip_remove_hadb_entries - removes hadb entries corresponding a local hit. 
+ * 
+ * @our_hit: a local hit 
+ * 
+ */
+void hip_remove_hadb_entries(struct in6_addr *our_hit)
+{
+	int i;
+	hip_ha_t *entry, *tmp;
+	
+	HIP_DEBUG("Removing hadb entries by local hit.\n");
+
+	for(i = 0; i <HIP_HADB_SIZE; i++) {
+	  if (!list_empty(&hadb_byhit[i])) {
+	    list_for_each_entry_safe(entry, tmp, &hadb_byhit[i], next_hit) {
+	      HIP_DEBUG_HIT("going through list:",&entry->hit_our);
+	      if(ipv6_addr_cmp(&entry->hit_our, our_hit)==0) {
+		HIP_DEBUG_HIT("removing entry in hadb for hit:", our_hit);
+		if (atomic_read(&entry->refcnt) > 2)
+		  HIP_ERROR("HA: %p, in use while removing it from HADB\n", 
+			    entry);
+		hip_hold_ha(entry);
+		hip_hadb_remove_state(entry);
+		hip_put_ha(entry);   
+	      }
+	    }
+	     
+	  }
+
+	}	
+}
+
+
 /* Practically called only by when adding a HIT-IP mapping before bex */
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 {
@@ -805,7 +839,8 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		 * should enter here the correct sender... (currently unknown).
 		 */
 		if (hip_get_any_local_hit(&entry->hit_our,
-					  HIP_HI_DEFAULT_ALGO) == 0)
+					  hip_sys_config.hip_hi_default_algo) 
+		    == 0)
 			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
 		else 
 			HIP_INFO("Could not assign local hit, continuing\n");

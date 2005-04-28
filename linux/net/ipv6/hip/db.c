@@ -250,7 +250,6 @@ int hip_add_localhost_id(const struct hip_lhi *lhi,
 	return hip_add_host_id(&hip_local_hostid_db, lhi, host_id);
 }
 
-
 /**
  * hip_del_host_id - delete the given HI (network byte order) from the database.
  * @db: Database from which to delete
@@ -290,6 +289,16 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 	return err;
 }
 
+/**
+ * hip_del_localhost_id - removes a localhost id from the database
+ * @lhi: the HIT of the host
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_del_localhost_id(struct hip_lhi *lhi)
+{
+	return hip_del_host_id(&hip_local_hostid_db, lhi);
+}
 
 /**
  * hip_copy_any_locahost_hit - Copy to the the @target the first 
@@ -389,13 +398,14 @@ int hip_get_any_hit(struct hip_db_struct *db, struct hip_lhi *res,
 	
 	HIP_READ_LOCK_DB(db);
 
-	list_for_each_entry(entry, db->db_head.next, next) {
+	list_for_each_entry(entry, &db->db_head, next) {
 		if (hip_get_host_id_algo(entry->host_id) == algo) {
 	                memcpy(res, &entry->lhi, sizeof(struct hip_lhi));
 			HIP_READ_UNLOCK_DB(db);
 			return 0;
 		}
 	}
+	HIP_READ_UNLOCK_DB(db);
 	return -EINVAL;
 }
 
@@ -547,6 +557,12 @@ struct hip_host_id *hip_get_any_localhost_host_id(int algo)
 	return result;
 }
 
+struct hip_host_id *hip_get_localhost_host_id(struct hip_lhi *lhi)
+{
+	struct hip_host_id *result;
+	result = hip_get_host_id(&hip_local_hostid_db, lhi);
+	return result;
+}
 
 /**
  * hip_get_any_localhost_dsa_public_key - Self documenting.
@@ -556,7 +572,7 @@ struct hip_host_id *hip_get_any_localhost_host_id(int algo)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
+struct hip_host_id *hip_get_any_localhost_dsa_public_key(struct hip_lhi *lhi)
 {
 	struct hip_host_id *tmp;
 	hip_tlv_len_t len;
@@ -567,7 +583,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	/* T could easily have been an int, since the compiler will
 	   probably add 3 alignment bytes here anyway. */
 
-	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL,HIP_HI_DSA);
+	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,lhi,HIP_HI_DSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
@@ -630,14 +646,14 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
+struct hip_host_id *hip_get_any_localhost_rsa_public_key(struct hip_lhi *lhi)
 {
 	struct hip_host_id *tmp;
 	hip_tlv_len_t len;
 	uint16_t dilen;
 	char *from, *to;
 
-	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,NULL, HIP_HI_RSA);
+	tmp = hip_get_host_id_by_algo(&hip_local_hostid_db,lhi, HIP_HI_RSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
@@ -700,15 +716,30 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo) {
 	struct hip_host_id *hi = NULL;
 
 	if(algo == HIP_HI_DSA) {
-		hi = hip_get_any_localhost_dsa_public_key();
+		hi = hip_get_any_localhost_dsa_public_key(NULL);
 	} else if (algo == HIP_HI_RSA) {
-		hi = hip_get_any_localhost_rsa_public_key();
+		hi = hip_get_any_localhost_rsa_public_key(NULL);
 	} else {
 	  HIP_ERROR("unknown hi algo: (%d)",algo);
 	}
 	return hi;
 }
 
+struct hip_host_id *hip_get_localhost_public_key(struct hip_lhi *lhi)
+{
+	/* XX TODO: use lhi when selecting among multiple rsa or dsa keys */
+	struct hip_host_id *result = NULL;
+	struct hip_host_id *hi_pub = NULL;
+	result = hip_get_host_id(&hip_local_hostid_db, lhi);
+	if (hip_get_host_id_algo(result) == HIP_HI_RSA) {
+		hi_pub = hip_get_any_localhost_rsa_public_key(lhi);
+	} else if (hip_get_host_id_algo(result) == HIP_HI_DSA) {
+		hi_pub = hip_get_any_localhost_dsa_public_key(lhi);
+	} else
+		HIP_ERROR("Unsupported algorithm:%d\n", 
+			  hip_get_host_id_algo(result));
+	return hi_pub;
+} 
 
 /* PROC_FS FUNCTIONS */
 
@@ -828,6 +859,47 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_eid_no_lock(struct hip_db_stru
 	return NULL;
 }
 
+/*
+ * Decreases the use_cnt entry in the hip_eid_db_entry struct and deletes
+ * the entry for the given eid_val if use_cnt drops below one.
+ */
+void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db, 
+					sa_eid_t eid_val) 
+{	
+
+	struct hip_eid_db_entry *tmp;
+	struct list_head *curr, *iter;
+	unsigned long lf;
+
+	HIP_WRITE_LOCK_DB(db);
+	
+	list_for_each_safe(curr, iter, &db->db_head){
+		tmp = list_entry(curr ,struct hip_eid_db_entry, next);
+		HIP_DEBUG("comparing %d with %d\n",
+			  ntohs(tmp->eid.eid_val), eid_val);
+		if (ntohs(tmp->eid.eid_val) == eid_val) {
+			tmp->use_cnt--;
+			if(tmp->use_cnt < 1) {
+				kfree(tmp);
+				list_del(curr);
+			}
+			HIP_WRITE_UNLOCK_DB(db);
+			return;
+		}
+	}
+	HIP_WRITE_UNLOCK_DB(db);
+}
+
+void hip_db_dec_eid_use_cnt(sa_eid_t eid_val, int is_local) 
+{
+	struct hip_db_struct *db;
+
+	if(eid_val == 0) return;
+	
+	db = (is_local) ? &hip_local_eid_db : &hip_peer_eid_db;
+	hip_db_dec_eid_use_cnt_by_eid_val(db, eid_val);
+}
+
 int hip_db_set_eid(struct sockaddr_eid *eid,
 		   const struct hip_lhi *lhi,
 		   const struct hip_eid_owner_info *owner_info,
@@ -837,43 +909,46 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 	int err = 0;
 	unsigned long lf;
 	struct hip_eid_db_entry *entry = NULL;
-
+	
 	HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));
 
 	db = (is_local) ? &hip_local_eid_db : &hip_peer_eid_db;
-
+	
 	HIP_WRITE_LOCK_DB(db);
 
-	entry = hip_db_find_eid_entry_by_hit_no_lock(db, lhi);
+        entry = hip_db_find_eid_entry_by_hit_no_lock(db, lhi);
 	if (!entry) {
 		entry = kmalloc(sizeof(struct hip_eid_db_entry), GFP_KERNEL);
 		if (!entry) {
 			err = -ENOMEM;
 			goto out_err;
 		}
-
+		
 		entry->eid.eid_val = ((is_local) ?
-			htons(hip_create_unique_local_eid()) :
-			htons(hip_create_unique_peer_eid()));
+				      htons(hip_create_unique_local_eid()) :
+				      htons(hip_create_unique_peer_eid()));
 		entry->eid.eid_family = PF_HIP;
 		memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
-
+		
 		HIP_DEBUG("Generated eid val %d\n", entry->eid.eid_val);
+		
+		entry->use_cnt = 1;
 
 		memcpy(&entry->lhi, lhi, sizeof(struct hip_lhi));
 		memcpy(&entry->owner_info, owner_info,
 		       sizeof(struct hip_eid_owner_info));
-
+		
 		/* Finished. Add the entry to the list. */
 		list_add(&entry->next, &db->db_head);
 	} else {
 		/* XX TODO: Ownership is not changed here; should it? */
 		memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
+		entry->use_cnt++;
 	}
-
+	
  out_err:
 	HIP_WRITE_UNLOCK_DB(db);
-
+	
 	return err;
 }
 

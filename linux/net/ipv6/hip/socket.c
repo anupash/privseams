@@ -112,6 +112,9 @@ int hip_create_socket(struct socket *sock, int protocol)
 		goto out_err;
 	}
 
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
+	
 	// XX LOCK AND UNLOCK?
 	sock->ops = &hip_socket_ops;
 	/* Note: we cannot set sock->sk->family ever to PF_HIP because it
@@ -200,8 +203,39 @@ int hip_socket_get_eid_info(struct socket *sock,
 			  (eid_is_local ? "local" : "peer"));
 		goto out_err;
 	}
-
-	/* XX FIXME: CHECK ACCESS RIGHTS FROM OWNER_INFO */
+	HIP_DEBUG("current->uid:%d, current->gid:%d, current->pid:%d\n",
+		  current->uid, current->gid, current->pid);
+	HIP_DEBUG("ED->uid:%d, ED->gid:%d, ED->pid:%d\n",
+		  owner_info.uid, owner_info.gid, owner_info.pid);
+	
+	/* Access control for EDs/HIs  */
+	if(eid_is_local) {
+		HIP_DEBUG("flags:%d\n",owner_info.flags);
+		if(owner_info.flags & HIP_HI_REUSE_ANY) {
+			HIP_DEBUG("Access control check to ED, REUSE_ANY\n");
+			goto out_err;	
+			
+		} else if((owner_info.flags & HIP_HI_REUSE_GID) && 
+			  (current->gid == owner_info.gid)) {
+			HIP_DEBUG("Access control check to ED, REUSE_GID\n");
+			goto out_err;	
+			
+		} else if((owner_info.flags & HIP_HI_REUSE_UID) && 
+			  (current->uid == owner_info.uid)) {
+			HIP_DEBUG("Access control check to ED, REUSE_UID\n");
+			goto out_err;
+			
+		} else if(current->pid == owner_info.pid) {
+			HIP_DEBUG("Access control check to ED, PID ok\n");
+			goto out_err;
+			
+			
+		} else {
+			err = -EACCES;
+			HIP_INFO("Access denied to ED\n");
+			goto out_err;
+		}
+	}
 
  out_err:
 
@@ -223,6 +257,9 @@ int hip_socket_release(struct socket *sock)
 		goto out_err;
 	}
 
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
+
 	err = socket_handler->release(sock);
 	if (err) {
 		HIP_ERROR("Socket handler failed (%d)\n", err);
@@ -230,6 +267,16 @@ int hip_socket_release(struct socket *sock)
 	}
 
 	/* XX FIX: RELEASE EID */
+   
+	if(sock->local_ed != 0) { 
+		hip_db_dec_eid_use_cnt(sock->local_ed, 1);
+		sock->local_ed = 0;
+	}
+	if(sock->peer_ed != 0) { 
+		hip_db_dec_eid_use_cnt(sock->peer_ed, 0);
+		sock->peer_ed = 0;
+	}
+
 
 	/* XX FIX: DESTROY HI ? */
 
@@ -257,6 +304,12 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 		HIP_ERROR("Failed to get socket eid info.\n");
 		goto out_err;
 	}
+	HIP_DEBUG_HIT("hip socket bound to HIT", &lhi.hit);
+	HIP_DEBUG("binding to eid with value %d\n",
+		  ntohs(sockaddr_eid->eid_val));
+	sock->local_ed = ntohs(sockaddr_eid->eid_val);
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
 
 	/* Clear out the flowinfo, etc from sockaddr_in6 */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
@@ -267,10 +320,12 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	/* Use in6_addr_any (= all zeroes) for bind. Offering a HIT to bind
 	   does not work without modifications into the bind code because
 	   bind_v6 returns an error when it does address type checks. */
-	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
+	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 
+	HIP_DEBUG("using port number %d when binding\n",
+		  ntohs(sockaddr_eid->eid_port));
 	/* XX FIX: check access permissions from eid_owner_info */
 
 	err = socket_handler->bind(sock, (struct sockaddr *) &sockaddr_in6,
@@ -286,7 +341,7 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	       sizeof(struct in6_addr));
 
  out_err:
-
+		
 	return err;
 }
 
@@ -307,6 +362,12 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 		HIP_ERROR("Failed to get socket eid info.\n");
 		goto out_err;
 	}
+	 
+	HIP_DEBUG("connecting to eid with value %d\n",
+		  ntohs(sockaddr_eid->eid_val));
+	sock->peer_ed = ntohs(sockaddr_eid->eid_val);
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
@@ -434,6 +495,8 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+	owner_info.pid = current->pid;
+	owner_info.flags = 0;
 
 	memcpy(&lhi.hit, &pinfo->daddr,
 	       sizeof(struct in6_addr));
@@ -690,15 +753,6 @@ int hip_socket_add_local_hi(const struct hip_host_id *host_identity,
 	/* If adding localhost id failed because there was a duplicate, we
 	   won't precreate anything (and void causing dagling memory
 	   pointers) */
-#if 0	
-	HIP_DEBUG("hip: Generating a new R1 now\n");
-
-       	if (!hip_precreate_r1(&lhi->hit)) {
-		HIP_ERROR("Unable to precreate R1s... failing\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-#endif
 
  out_err:
 	return err;
@@ -713,79 +767,70 @@ int hip_socket_add_local_hi(const struct hip_host_id *host_identity,
 int hip_socket_handle_add_local_hi(const struct hip_common *input)
 {
 	int err = 0;
-	struct hip_host_id *dsa_host_identity, *rsa_host_identity = NULL;
-	struct hip_lhi dsa_lhi, rsa_lhi;
-	struct in6_addr hit_our;
-	
-	HIP_DEBUG("\n");
+	struct hip_host_id *host_identity = NULL;
+	struct hip_lhi lhi;
+	struct hip_tlv_common *param = NULL;
+	struct hip_eid_endpoint *eid_endpoint = NULL;
 
+	HIP_DEBUG("\n");
+	
 	if ((err = hip_get_msg_err(input)) != 0) {
 		HIP_ERROR("daemon failed (%d)\n", err);
 		goto out_err;
 	}
-
-	_HIP_DUMP_MSG(response);
-
-	dsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 1);
-        if (!dsa_host_identity) {
-		HIP_ERROR("no dsa host identity pubkey in response\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-
-	rsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 2);
-        if (!rsa_host_identity) {
-		HIP_ERROR("no rsa host identity pubkey in response\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-
-	_HIP_HEXDUMP("rsa host id\n", rsa_host_identity,
-		    hip_get_param_total_len(rsa_host_identity));
-
-	err = hip_private_host_id_to_hit(dsa_host_identity, &dsa_lhi.hit,
-					 HIP_HIT_TYPE_HASH126);
-	if (err) {
-		HIP_ERROR("dsa host id to hit conversion failed\n");
-		goto out_err;
-	}
-
-	err = hip_private_host_id_to_hit(rsa_host_identity, &rsa_lhi.hit,
-					 HIP_HIT_TYPE_HASH126);
-	if (err) {
-		HIP_ERROR("rsa host id to hit conversion failed\n");
-		goto out_err;
-	}
-
-	/* XX FIX: Note: currently the order of insertion of host ids makes a
-	   difference. */
-
-	err = hip_socket_add_local_hi(rsa_host_identity, &rsa_lhi);
-	if (err) {
-		HIP_ERROR("Failed to add HIP localhost identity\n");
-		goto out_err;
-	}
-
-	err = hip_socket_add_local_hi(dsa_host_identity, &dsa_lhi);
-	if (err) {
-		HIP_ERROR("Failed to add HIP localhost identity\n");
-		goto out_err;
-	}
-
-	HIP_DEBUG("Adding of HIP localhost identity was successful\n");
-
-	HIP_DEBUG("hip: Generating a new R1 now\n");
 	
-        /* XX TODO: precreate R1s for both algorithms, not just the default */ 
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
-		HIP_ERROR("Didn't find HIT for R1 precreation\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-       	if (!hip_precreate_r1(&hit_our)) {
-		HIP_ERROR("Unable to precreate R1s... failing\n");
-		err = -ENOENT;
-		goto out_err;
+	_HIP_DUMP_MSG(response);
+	
+        /* Iterate through all host identities in the input */
+	while((param = hip_get_next_param(input, param)) != NULL) {
+		
+		/* NOTE: changed to use hip_eid_endpoint structs instead of 
+		   hip_host_id:s when passing IDs from user space to kernel */
+		if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
+                        continue;
+		HIP_DEBUG("host id found in the msg\n");
+		
+		eid_endpoint = (struct hip_eid_endpoint *)param;
+		
+		if (!eid_endpoint) {
+			HIP_ERROR("no host identity pubkey(s) in response\n");
+			err = -ENOENT;
+			goto out_err;
+		}
+		
+		_HIP_HEXDUMP("host id\n", host_identity,
+			     hip_get_param_total_len(host_identity));
+		
+		host_identity = &eid_endpoint->endpoint.id.host_id;
+
+		err = hip_private_host_id_to_hit(host_identity, 
+						 &lhi.hit,
+						 HIP_HIT_TYPE_HASH126);
+		if (err) {
+			HIP_ERROR("host id to hit conversion failed\n");
+			goto out_err;
+		}
+
+		lhi.anonymous =
+			(eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
+			1 : 0;
+		
+		err = hip_socket_add_local_hi(host_identity, &lhi);
+		if (err) {
+			HIP_ERROR("Failed to add HIP localhost identity\n");
+			goto out_err;
+		}
+		
+		HIP_DEBUG("Adding of HIP localhost identity was successful\n");
+		
+		HIP_DEBUG("hip: Generating a new R1 now\n");
+	
+		err = hip_precreate_r1(&lhi.hit);
+		if (err) {
+			HIP_ERROR("Unable to precreate R1s for host identity... failing\n");
+			err = -ENOENT;
+			goto out_err;
+		}
 	}
 	
  out_err:
@@ -794,20 +839,53 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
 }
 
 /**
- * hip_socket_handle_del_local_hi - handle deletion of a localhost host identity
- * @msg: the message containing the lhi to be deleted
- *
- * This function is currently unimplemented.
+ * hip_socket_handle_del_local_hi - handle deletion of a localhost host 
+ * identity
+ * @msg: the message containing the hit to be deleted
  *
  * Returns: zero on success, or negative error value on failure
  */
 int hip_socket_handle_del_local_hi(const struct hip_common *input)
 {
 	int err = 0;
+	struct hip_lhi lhi;
+	struct hip_hit *hip_hit;	
+	struct hip_tlv_common *param = NULL;
+	
+	if (hip_get_msg_type(input) != SO_HIP_DEL_LOCAL_HI) {
+		err = -EINVAL;
+		HIP_ERROR("Bad message type\n");
+		goto out_err;
+	}
+	
+	param = hip_get_next_param(input, param);
+	if  (hip_get_param_type(param) != HIP_PARAM_HIT)
+		HIP_ERROR("host id not found in the msg\n");
+	hip_hit = (struct hip_hit *) param;
+	
+	if (!hip_hit) {
+		err = -ENOENT;
+		HIP_ERROR("Could not find hit from message.\n");
+		goto out_err;
+	}
+	
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+        memcpy(&(lhi.hit), &hip_hit->hit ,sizeof(struct in6_addr));
+	HIP_DEBUG_HIT("deleting hit: ", &lhi.hit);
+	err = hip_del_localhost_id(&lhi);
+	if (err) {
+		HIP_ERROR("deleting of local host identity failed\n");
+		goto out_err;
+	}
+	HIP_DEBUG_HIT("removing associations from hadb by hit: ", &lhi.hit);
+	hip_remove_hadb_entries(&lhi.hit);
 
-	HIP_ERROR("Not implemented\n");
-	err = -ENOSYS;
+	HIP_DEBUG_HIT("removing precreated R1s by hit: ", &lhi.hit);
+	hip_r1_delete_by_hit(&lhi.hit);
 
+	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
+	
+ out_err:
         return err;
 }
 
@@ -1000,7 +1078,8 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	int addr_count = 0;
 	struct flowi fl;
 	struct inet6_ifaddr *ifa = NULL;
-
+	struct hip_lhi lhi;
+	
 	HIP_DEBUG("\n");
 	
 	/* Extra consistency test */
@@ -1019,21 +1098,26 @@ int hip_socket_send_bos(const struct hip_common *msg)
 	}
 
 	/* Determine our HIT */
-	if (hip_copy_any_localhost_hit(&hit_our) < 0) {
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our, 
+					       hip_sys_config.
+					       hip_hi_default_algo) < 0) {
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
 	}
 
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+        memcpy(&(lhi.hit), &hit_our, sizeof(struct in6_addr));
+
 	/* Determine our HOST ID public key */
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+	host_id_pub = hip_get_localhost_public_key(&lhi);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;
 	}
 
 	/* Determine our HOST ID private key */
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
 	if (!host_id_private) {
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
@@ -1303,6 +1387,12 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+	owner_info.pid = current->pid;
+	owner_info.flags = eid_endpoint->endpoint.flags;
+
+	lhi.anonymous =
+	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
+		1 : 0;
 	
 	if (hip_host_id_contains_private_key(host_id)) {
 		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
@@ -1316,7 +1406,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 		err = hip_socket_add_local_hi(host_id, &lhi);
 		if (err == -EEXIST) {
 			HIP_INFO("Host id exists already, ignoring\n");
-			err = 0;
+			//err = 0;
 		} else if (err) {
 			HIP_ERROR("Adding of localhost id failed");
 			goto out_err;
@@ -1328,6 +1418,19 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	}
 	
 	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
+	
+        /* Don't precreate R1s for existing HI */
+	if(err != -EEXIST) {
+		HIP_DEBUG("hip: Generating a new R1 now\n");
+		if (hip_precreate_r1(&lhi.hit)) {
+			HIP_ERROR("Unable to precreate R1s for host identity...failing\n");
+			err = -ENOENT;
+			goto out_err;
+		}
+	} else {
+		HIP_DEBUG("Skipping the precreation of R1s, the HI exists.\n");
+		err = 0;
+	}
 	
 	/* Iterate through the interfaces */
 	while((param = hip_get_next_param(msg, param)) != NULL) {
@@ -1344,10 +1447,6 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	/* The eid port information will be filled by the resolver. It is not
 	   really meaningful in the eid db. */
 	eid.eid_port = htons(0);
-	
-	lhi.anonymous =
-	   (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
-		1 : 0;
 	
 	/* XX TODO: check UID/GID permissions before adding ? */
 	err = hip_db_set_my_eid(&eid, &lhi, &owner_info);
@@ -1421,6 +1520,8 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+	owner_info.pid = current->pid;
+	owner_info.flags = 0;
 	
 	/* The eid port information will be filled by the resolver. It is not
 	   really meaningful in the eid db. */

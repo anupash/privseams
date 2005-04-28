@@ -341,8 +341,9 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 
 	HIP_DEBUG("\n");
 
-	/* TODO: we must use the same algorithm that is used in the dsthit */
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
+	if (hip_copy_any_localhost_hit_by_algo(&hit_our, 
+					       hip_sys_config.
+					       hip_hi_default_algo) < 0) {
 		HIP_ERROR("Out HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
@@ -409,7 +410,8 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 	struct in6_addr *own_addr;
 	struct in6_addr *dst_addr;
 	int err = 0;
-
+	struct in6_addr *rcv_hit, *sender_hit;
+       
 	HIP_DEBUG("\n");
 
 	own_addr = &skb->nh.ipv6h->daddr;
@@ -419,8 +421,13 @@ int hip_xmit_r1(struct sk_buff *skb, struct in6_addr *dst_ip,
 		dst_addr = dst_ip;
 	}
 
+	sender_hit = &(((struct hip_common *)skb->h.raw)->hits);
+	rcv_hit = &(((struct hip_common *)skb->h.raw)->hitr);
+	//hip_print_hit("XMITR1, receiver_hit: \n", rcv_hit);
+	//hip_print_hit("XMITR1, sender_hit: \n",sender_hit);
+
 	/* dst_addr is the IP address of the Initiator... */
-	r1pkt = hip_get_r1(dst_addr, own_addr);
+	r1pkt = hip_get_r1(dst_addr, own_addr, rcv_hit);
 	if (!r1pkt) {
 		HIP_ERROR("No precreated R1\n");
 		err = -ENOENT;

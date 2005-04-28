@@ -100,6 +100,9 @@ typedef uint16_t in_port_t;
 
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
+#define HIP_HI_REUSE_UID                   4
+#define HIP_HI_REUSE_GID                   8
+#define HIP_HI_REUSE_ANY                  16
 /* Other flags: keep them to the power of two! */
 
 #define HIP_HOST_ID_RR_DSA_MAX_T_VAL           8
@@ -680,6 +683,12 @@ struct hip_eid_endpoint {
 	struct endpoint_hip endpoint;
 } __attribute__ ((packed));
 
+struct hip_hit {
+	hip_tlv_type_t      type;
+	hip_tlv_len_t       length;
+	struct in6_addr     hit;
+} __attribute__ ((packed));
+
 typedef uint16_t hip_eid_iface_type_t;
 
 struct hip_eid_iface {
@@ -901,8 +910,10 @@ struct hip_host_id_entry {
 };
 
 struct hip_eid_owner_info {
-	uid_t uid;
-	gid_t gid;
+	uid_t                 uid;
+	gid_t                 gid;
+	pid_t                 pid;
+	se_hip_flags_t      flags;  /* HIP_HI_REUSE_* */
 };
 
 struct hip_eid_db_entry {
@@ -910,6 +921,7 @@ struct hip_eid_db_entry {
 	struct hip_eid_owner_info  owner_info;
 	struct sockaddr_eid        eid; /* XX FIXME: the port is unneeded */
 	struct hip_lhi             lhi;
+	int                        use_cnt;
 };
 
 #define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200

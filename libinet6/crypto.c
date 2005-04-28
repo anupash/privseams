@@ -547,7 +547,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
   *rsa_key_rr = NULL;
 
-  HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
+  _HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
 	    BN_num_bytes(rsa->n),BN_num_bytes(rsa->d),BN_num_bytes(rsa->p),
 	    BN_num_bytes(rsa->q));
 
@@ -559,7 +559,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) +
     BN_num_bytes(rsa->d) + BN_num_bytes(rsa->p) + BN_num_bytes(rsa->q);
   
-  HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
+  _HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
   *rsa_key_rr = malloc(rsa_key_rr_len);
   if (!*rsa_key_rr) {
     HIP_ERROR("malloc\n");
@@ -942,11 +942,11 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
     goto out_err;
   }
   
-  HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-  HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
-  HIP_INFO("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
-  HIP_INFO("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
-  HIP_INFO("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
+  _HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  _HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+  _HIP_INFO("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
+  _HIP_INFO("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
+  _HIP_INFO("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
 
  out_err:
 
@@ -1088,17 +1088,59 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
   }
   memset(*endpoint, 0, endpoint_hdr.length);
 
-  HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
 
   hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
 		     dsa_key_rr, dsa_key_rr_len);
 			   
-  HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
 
  out_err:
 
   if (dsa_key_rr)
     free(dsa_key_rr);
+
+  return err;
+}
+
+int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname)
+{
+  int err = 0;
+  unsigned char *rsa_key_rr = NULL;
+  int rsa_key_rr_len;
+  struct endpoint_hip endpoint_hdr;
+
+  rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
+  if (rsa_key_rr_len <= 0) {
+    HIP_ERROR("rsa_key_rr_len <= 0\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  /* build just an endpoint header to see how much memory is needed for the
+     actual endpoint */
+  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
+			 HIP_HI_RSA, rsa_key_rr_len);
+
+  *endpoint = malloc(endpoint_hdr.length);
+  if (!(*endpoint)) {
+    err = -ENOMEM;
+    goto out_err;
+  }
+  memset(*endpoint, 0, endpoint_hdr.length);
+
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+
+  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
+		     rsa_key_rr, rsa_key_rr_len);
+			   
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+
+ out_err:
+
+  if (rsa_key_rr)
+    free(rsa_key_rr);
 
   return err;
 }

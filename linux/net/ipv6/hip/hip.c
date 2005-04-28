@@ -120,6 +120,17 @@ static ctl_table hip_table[] = {
 		.extra1		= &zero,
 		.extra2		= &max_k
 	},
+	{
+		.ctl_name	= NET_HIP_HI_DEFAULT_ALGO,
+		.procname	= "hi_default_algo",
+		.data		= &hip_sys_config.hip_hi_default_algo,
+		.maxlen		= sizeof (int),
+		.mode		= 0600,
+		.proc_handler	= &proc_dointvec_minmax,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &zero,
+		.extra2		= &max_k
+	},
 	{ .ctl_name = 0 }
 };
 
@@ -163,6 +174,7 @@ void hip_unregister_sysctl(void)
 void hip_init_sys_config(void)
 {
 	hip_sys_config.hip_cookie_max_k_r1 = 20;
+	hip_sys_config.hip_hi_default_algo = HIP_HI_RSA;
 }
 #endif
 
@@ -433,6 +445,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	struct hip_host_id  *host_id_private = NULL;
  	struct hip_host_id  *host_id_pub = NULL;
  	u8 *signature = NULL;
+	struct hip_lhi lhi;
+	
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+	memcpy(&(lhi.hit), src_hit,sizeof(struct in6_addr));
+	//ipv6_addr_copy(&lhi.hit, src_hit);
 
  	msg = hip_msg_alloc();
  	if (!msg) {
@@ -460,26 +477,20 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit)
  	   and extract the public key from the private key. The public key is
  	   needed for writing the host id parameter in R1. */
 
-	host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
+	host_id_private = hip_get_localhost_host_id(&lhi);
+	//host_id_private = hip_get_any_localhost_host_id(HIP_HI_DEFAULT_ALGO);
  	if (!host_id_private) {
  		HIP_ERROR("Could not acquire localhost host id\n");
  		goto out_err;
  	}
+	HIP_DEBUG("GOTID:%d",hip_get_param_total_len(host_id_private));
 
-	HIP_DEBUG("private hi len: %d\n",
-		  hip_get_param_total_len(host_id_private));
-
-	HIP_HEXDUMP("Our pri host id\n", host_id_private,
-		    hip_get_param_total_len(host_id_private));
-
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
+	host_id_pub = hip_get_localhost_public_key(&lhi);
+	//host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_pub) {
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;
 	}
-
-	HIP_HEXDUMP("Our pub host id\n", host_id_pub,
-		    hip_get_param_total_len(host_id_pub));
 	
 	/* check for the used algorithm */
 	if (hip_get_host_id_algo(host_id_pub) == HIP_HI_RSA) {
@@ -2165,6 +2176,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
 	HIP_SETCALL(hip_get_default_spi_out);
+	HIP_SETCALL(hip_hit_is_our);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
 		HIP_ERROR("Could not add HIP protocol\n");
@@ -2225,6 +2237,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_esp);
 	HIP_INVALIDATE(hip_handle_output);
 	HIP_INVALIDATE(hip_get_default_spi_out);
+	HIP_INVALIDATE(hip_hit_is_our);
 
 	/* kill kernel threads and wait for them to complete */
 	for(i = 0; i < num_possible_cpus(); i++) {
@@ -2249,6 +2262,8 @@ static void __exit hip_cleanup(void)
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
 
+	hip_uninit_r1();
+
 #ifdef CONFIG_PROC_FS
 	hip_uninit_procfs();
 #endif /* CONFIG_PROC_FS */
@@ -2261,7 +2276,6 @@ static void __exit hip_cleanup(void)
 	hip_uninit_hadb();
 	hip_uninit_all_eid_db();
 	hip_uninit_output_socket();
-	hip_uninit_r1();
 
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;

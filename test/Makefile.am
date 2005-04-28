@@ -14,6 +14,7 @@ CFLAGS += -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
 CFLAGS += -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_LINUX_MODULE)
 CFLAGS += -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
 CFLAGS += -L$(HIPL_LIBINET6_LIB)
+CFLAGS += -g -DHIP_TRANSPARENT_MODE
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD  = ../libinet6/.libs/libinet6.a
@@ -24,6 +25,8 @@ bin_PROGRAMS += conntest-client-gai
 bin_PROGRAMS += conntest-client-native
 bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
+bin_PROGRAMS += getaddrinfotest
+bin_PROGRAMS += conntest-server-legacy
 
 bin_SCRIPTS = hipsetup
 
@@ -34,6 +37,8 @@ conntest_client_native_user_key_SOURCES = \
                         conntest-client-native-user-key.c
 conntest_server_native_SOURCES = conntest-server-native.c
 conntest_server_SOURCES = conntest-server.c
+conntest_server_legacy_SOURCES = conntest-server-legacy.c
+getaddrinfotest_SOURCES = getaddrinfotest.c
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built
