@@ -18,22 +18,15 @@ CFLAGS += -L$(HIPL_LIBINET6_LIB)
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD  = ../libinet6/.libs/libinet6.a
 
-bin_PROGRAMS  = align
-bin_PROGRAMS += checksum
-bin_PROGRAMS += conntest-client
+bin_PROGRAMS = conntest-client
 bin_PROGRAMS += conntest-server
 bin_PROGRAMS += conntest-client-gai
 bin_PROGRAMS += conntest-client-native
 bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
-bin_PROGRAMS += unittest
-bin_PROGRAMS += libinet6test
-bin_PROGRAMS += listifaces
 
 bin_SCRIPTS = hipsetup
 
-align_SOURCES = align.c
-checksum_SOURCES = checksum.c checksum.h
 conntest_client_SOURCES = conntest-client.c 
 conntest_client_gai_SOURCES = conntest-client-gai.c
 conntest_client_native_SOURCES = conntest-client-native.c
@@ -41,9 +34,6 @@ conntest_client_native_user_key_SOURCES = \
                         conntest-client-native-user-key.c
 conntest_server_native_SOURCES = conntest-server-native.c
 conntest_server_SOURCES = conntest-server.c
-libinet6test_SOURCES = libinet6test.c
-listifaces_SOURCES = listifaces.c
-unittest_SOURCES = unit.c unittest.c unittest.h hipconf.c suite.c
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built
