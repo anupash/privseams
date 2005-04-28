@@ -471,6 +471,14 @@ int get_localhost_endpointinfo(const char *basename,
   if(!findsubstring(basename, "_pub"))
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
 
+  /* System specific HIs should be added into the kernel with the
+     HIP_HI_REUSE_ANY flag set. We set the flag 
+     (specific for setmyeid) 'wrongly' here
+     because this way we make the HIs readable by all processes.
+     This function calls setmyeid() internally.. */
+  hints->ei_flags |= HIP_HI_REUSE_ANY;
+
+
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
   if (!fp) {
@@ -1013,8 +1021,7 @@ int get_peer_endpointinfo(const char *hostsfile,
     
     initlist(&mylist);
     extractsubstrings(line,&mylist);
-    printf("L=%d\n",length(&mylist));
-    
+     
     lineno++;
 
     /* find out the fqdn string amongst the HITS - 
@@ -1033,7 +1040,7 @@ int get_peer_endpointinfo(const char *hostsfile,
     if (fqdn_str_len == strlen(nodename) &&
 	strcmp(fqdn_str, nodename) == 0) {
       /* XX FIX: foobar should match to foobar.org, depending on resolv.conf */
-      HIP_DEBUG("Nodename match on line %d\n", lineno);
+      _HIP_DEBUG("Nodename match on line %d\n", lineno);
       match_found = 1;
     } /* what is endpoint match? */
     //else if(hints->ei_endpointlen && hints->ei_endpoint &&
@@ -1043,7 +1050,7 @@ int get_peer_endpointinfo(const char *hostsfile,
     //match_found = 1;
     //} 
     else {
-      HIP_DEBUG("No match on line %d, skipping\n", lineno);
+      _HIP_DEBUG("No match on line %d, skipping\n", lineno);
       continue;
     }
     
@@ -1149,7 +1156,7 @@ int get_peer_endpointinfo(const char *hostsfile,
     destroy(&mylist);
   }
   
-  HIP_DEBUG("Scanning ended\n");
+  _HIP_DEBUG("Scanning ended\n");
 
  
  fallback:
@@ -1224,7 +1231,11 @@ int getendpointinfo(const char *nodename, const char *servname,
     HIP_ERROR("Only HIP is currently supported\n");
     goto err_out;
   }
-  
+  /* XX:TODO Check flag values from hints!!!
+   E.g. EI_HI_ANY* should cause the resolver to output only a single socket address
+   containing an ED that would be received using the corresponding HIP_HI_*ANY 
+   macro. EI_ANON flag causes the resolver to return only local anonymous ids.
+  */
   if (hints) {
     memcpy(&modified_hints, hints, sizeof(struct endpointinfo));
   } else {

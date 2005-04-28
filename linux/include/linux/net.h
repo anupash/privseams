@@ -114,6 +114,10 @@ struct socket {
 	wait_queue_head_t	wait;
 	short			type;
 	unsigned char		passcred;
+	/* BEGIN HIPL PATCH */
+	uint32_t                local_ed;
+	uint32_t                peer_ed;
+	/* END HIPL PATCH */
 };
 
 struct vm_area_struct;

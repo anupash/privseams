@@ -112,6 +112,9 @@ int hip_create_socket(struct socket *sock, int protocol)
 		goto out_err;
 	}
 
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
+	
 	// XX LOCK AND UNLOCK?
 	sock->ops = &hip_socket_ops;
 	/* Note: we cannot set sock->sk->family ever to PF_HIP because it
@@ -254,6 +257,9 @@ int hip_socket_release(struct socket *sock)
 		goto out_err;
 	}
 
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
+
 	err = socket_handler->release(sock);
 	if (err) {
 		HIP_ERROR("Socket handler failed (%d)\n", err);
@@ -261,6 +267,16 @@ int hip_socket_release(struct socket *sock)
 	}
 
 	/* XX FIX: RELEASE EID */
+   
+	if(sock->local_ed != 0) { 
+		hip_db_dec_eid_use_cnt(sock->local_ed, 1);
+		sock->local_ed = 0;
+	}
+	if(sock->peer_ed != 0) { 
+		hip_db_dec_eid_use_cnt(sock->peer_ed, 0);
+		sock->peer_ed = 0;
+	}
+
 
 	/* XX FIX: DESTROY HI ? */
 
@@ -291,6 +307,10 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	HIP_DEBUG_HIT("hip socket bound to HIT", &lhi.hit);
 	HIP_DEBUG("binding to eid with value %d\n",
 		  ntohs(sockaddr_eid->eid_val));
+	sock->local_ed = ntohs(sockaddr_eid->eid_val);
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
+
 	/* Clear out the flowinfo, etc from sockaddr_in6 */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 
@@ -342,6 +362,12 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 		HIP_ERROR("Failed to get socket eid info.\n");
 		goto out_err;
 	}
+	 
+	HIP_DEBUG("connecting to eid with value %d\n",
+		  ntohs(sockaddr_eid->eid_val));
+	sock->peer_ed = ntohs(sockaddr_eid->eid_val);
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;

@@ -89,8 +89,7 @@ int main(int argc,char *argv[]) {
   memset(&hints, 0, sizeof(struct endpointinfo));
   hints.ei_family = endpoint_family;
   hints.ei_socktype = socktype;
-  hints.ei_flags |= HIP_HI_REUSE_ANY;
-
+  
   err = getendpointinfo(NULL, port_name, &hints, &res);
   if (err) {
     HIP_ERROR("Resolving of peer identifiers failed (%d)\n", err);
