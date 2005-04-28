@@ -68,7 +68,7 @@ EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23
 # no changes to code using the legacy HIP API (assuming that the code uses
 # only getendpointinfo).
 #
-libinet6_la_CFLAGS += -DHIP_TRANSPARENT_MODE
+libinet6_la_CFLAGS = -DHIP_TRANSPARENT_MODE
 
 getendpointinfo.c: include/netdb.h
 
