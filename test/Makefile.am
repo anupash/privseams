@@ -33,6 +33,8 @@ bin_PROGRAMS += listifaces
 bin_PROGRAMS += getaddrinfotest
 bin_PROGRAMS += conntest-server-legacy
 
+bin_SCRIPTS = hipsetup
+
 align_SOURCES = align.c
 checksum_SOURCES = checksum.c checksum.h
 conntest_client_SOURCES = conntest-client.c 
