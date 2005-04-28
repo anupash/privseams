@@ -1293,7 +1293,7 @@ int getendpointinfo(const char *nodename, const char *servname,
     current = first;
     
     for(i=1; i<length(&list); i++) {
-      HIP_DEBUG ("%s\n", getitem(&list,i));
+      _HIP_DEBUG ("%s\n", getitem(&list,i));
       
       filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
 	strlen(getitem(&list,i)) + 1;
@@ -1360,7 +1360,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
   char first_key_line[30];
   FILE* fp;
 
-  //*res = NULL;
+  *res = NULL;
 
   _HIP_DEBUG("get_localhost_endpoint()\n");
   HIP_ASSERT(hints);
@@ -1374,6 +1374,11 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
     goto out_err;
   }
 
+  /* System specific HIs should be added into the kernel with the
+     HIP_HI_REUSE_ANY flag set, because this way we make the HIs
+     readable by all processes. This function calls setmyeid() internally.. */
+  hints->ei_flags |= HIP_HI_REUSE_ANY;
+  
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, "_pub"))
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
