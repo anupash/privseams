@@ -7,35 +7,64 @@
 static int address_count;
 static struct list_head addresses;
 
-static void add_address_to_list(struct sockaddr *addr, int ifi)
+/* Returns 1 if the given address @addr is allowed to be one of the
+   addresses of this host, 0 otherwise */
+static int filter_address(struct sockaddr *addr, int ifindex)
+{
+	HIP_DEBUG("ifindex=%d, address family=%d\n",
+		  ifindex, addr->sa_family);
+	HIP_HEXDUMP("testing address=", SA2IP(addr), SAIPLEN(addr));
+
+	if (addr->sa_family == AF_INET6) {
+		struct sockaddr_in6 *a = SA2IP(addr);
+		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
+		    IN6_IS_ADDR_LOOPBACK(a) ||
+		    IN6_IS_ADDR_MULTICAST(a) ||
+		    IN6_IS_ADDR_LINKLOCAL(a) ||
+		    IN6_IS_ADDR_SITELOCAL(a) ||
+		    IN6_IS_ADDR_V4MAPPED(a) ||
+		    IN6_IS_ADDR_V4COMPAT(a))
+			return 0;
+		return 1;
+	}
+	/* add more filtering tests here */
+	return 0;
+}
+
+static void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
 
-	HIP_DEBUG("TODO: FILTER ADDRESSES HERE\n");
+	if (!filter_address(addr, ifindex)) {
+		HIP_DEBUG("filtering this address\n");
+		return;
+	}
 
-	if (!(n = (struct netdev_address *)malloc(sizeof(struct netdev_address)))) {
+	n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
+	if (!n) {
 		// FIXME; memory error
+		HIP_ERROR("Could not allocate memory\n");
+		return;
 	}
 
         memcpy(&n->addr, addr, SALEN(addr));
-        n->if_index = ifi;
+        n->if_index = ifindex;
 
 	list_add(&n->next, &addresses);
 	address_count++;
-	HIP_DEBUG("address family=%d\n", n->addr.ss_family);
-	HIP_HEXDUMP("address=", SA2IP(addr), SAIPLEN(addr));
+
 	if (n->addr.ss_family == AF_INET6)
 		HIP_DEBUG_IN6ADDR("IPv6 address added\n", SA2IP(addr));
 	HIP_DEBUG("address_count at exit=%d\n", address_count);
 }
 
-static void delete_address_from_list(struct sockaddr *addr, int ifi)
+static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
         struct netdev_address *n, *t;
 	list_for_each_entry_safe(n, t, &addresses, next) {
                 /* remove from list if if_index matches */
                 if (!addr) {
-                        if (n->if_index == ifi) {
+                        if (n->if_index == ifindex) {
 				list_del(&n->next);
 			}
                 } else {
@@ -183,12 +212,12 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
 
         /* send request */
 	if (hip_netlink_send_buf(nl, (const char *)&req, sizeof(req)) < 0) {
-		HIP_ERROR("Netlink: sentdo() error: %s\n", strerror(errno));
+		HIP_ERROR("Netlink: sendto() error: %s\n", strerror(errno));
                 return(-1);
         }
 
-        HIP_DEBUG("Local addresses: \n");
-        
+        HIP_DEBUG("Local addresses:\n");
+
         /* receiving loop 1
          * call recvmsg() repeatedly until we get a message
          * with the NLMSG_DONE flag set
