@@ -11,6 +11,8 @@ static void add_address_to_list(struct sockaddr *addr, int ifi)
 {
 	struct netdev_address *n;
 
+	HIP_DEBUG("TODO: FILTER ADDRESSES HERE\n");
+
 	if (!(n = (struct netdev_address *)malloc(sizeof(struct netdev_address)))) {
 		// FIXME; memory error
 	}
@@ -19,6 +21,12 @@ static void add_address_to_list(struct sockaddr *addr, int ifi)
         n->if_index = ifi;
 
 	list_add(&n->next, &addresses);
+	address_count++;
+	HIP_DEBUG("address family=%d\n", n->addr.ss_family);
+	HIP_HEXDUMP("address=", SA2IP(addr), SAIPLEN(addr));
+	if (n->addr.ss_family == AF_INET6)
+		HIP_DEBUG_IN6ADDR("IPv6 address added\n", SA2IP(addr));
+	HIP_DEBUG("address_count at exit=%d\n", address_count);
 }
 
 static void delete_address_from_list(struct sockaddr *addr, int ifi)
@@ -40,6 +48,8 @@ static void delete_address_from_list(struct sockaddr *addr, int ifi)
                         }
                 }
         }
+	address_count--;
+	HIP_DEBUG("address_count at exit=%d\n", address_count);
 }
 
 int hip_netdev_find_if(struct sockaddr *addr)
@@ -120,7 +130,7 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg) {
 			memcpy(SA2IP(addr), RTA_DATA(tb[IFA_LOCAL]),
 			       RTA_PAYLOAD(tb[IFA_LOCAL]));
                                 add_address_to_list(addr, ifa->ifa_index);
-                                HIP_DEBUG("(%d)%s\n", ifa->ifa_index);
+                                _HIP_DEBUG("ifindex=%d\n", ifa->ifa_index);
 		}
 		h = NLMSG_NEXT(h, len);
 	}
@@ -244,13 +254,15 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				tb[IFA_LOCAL] = tb[IFA_ADDRESS];
 			if (!tb[IFA_ADDRESS])
 				tb[IFA_ADDRESS] = tb[IFA_LOCAL];
-			
+
 			if (!tb[IFA_LOCAL])
 				continue;
 			addr->sa_family = ifa->ifa_family;
 			memcpy(SA2IP(addr), RTA_DATA(tb[IFA_LOCAL]),
 			       RTA_PAYLOAD(tb[IFA_LOCAL]) );
-			HIP_DEBUG("Address %s: (%d) \n", (is_add) ? "added" :
+			if (addr->sa_family == AF_INET6)
+				HIP_DEBUG_IN6ADDR("IPv6 address\n", addr->data);
+			HIP_DEBUG("Address %s: (ifindex=%d) \n", (is_add) ? "added" :
 				  "deleted", ifa->ifa_index);
 			
 			/* update our address list */
@@ -261,6 +273,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			}
 
 			/* handle HIP readdressing */
+			HIP_DEBUG("address_count=%d\n", address_count);
 			reas = (struct hip_rea_info_addr_item *)malloc(address_count * sizeof(struct hip_rea_info_addr_item));
 
 			i = 0;
@@ -270,6 +283,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				reas[i].lifetime = 0; /* FIXME: Is this ok? (tkoponen), for boeing it is... */
 				/* For testing preferred address */
 				reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
+				i++;
 			}
 
 			hip_send_update_all(reas, address_count, ifa->ifa_index, SEND_UPDATE_REA);

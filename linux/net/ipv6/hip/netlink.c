@@ -88,7 +88,7 @@ int hip_netlink_open(void) {
 	if (nl_sk == NULL)
 		return -ENOMEM;
 
-	HIP_DEBUG("HIP netlink socket created.");
+	HIP_DEBUG("HIP netlink socket created.\n");
 	
 	return 0;
 }
