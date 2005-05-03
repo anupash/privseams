@@ -49,23 +49,27 @@ static void add_address_to_list(struct sockaddr *addr, int ifindex)
 
         memcpy(&n->addr, addr, SALEN(addr));
         n->if_index = ifindex;
-
 	list_add(&n->next, &addresses);
 	address_count++;
 
-	if (n->addr.ss_family == AF_INET6)
-		HIP_DEBUG_IN6ADDR("IPv6 address added\n", SA2IP(addr));
-	HIP_DEBUG("address_count at exit=%d\n", address_count);
+	HIP_DEBUG("added address, address_count at exit=%d\n", address_count);
 }
 
 static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
         struct netdev_address *n, *t;
+
+	HIP_HEXDUMP("deleting address=", SA2IP(addr), SAIPLEN(addr));
+	HIP_DEBUG("address_count at entry=%d\n", address_count);
+
 	list_for_each_entry_safe(n, t, &addresses, next) {
+		int deleted = 0;
+
                 /* remove from list if if_index matches */
                 if (!addr) {
                         if (n->if_index == ifindex) {
 				list_del(&n->next);
+				deleted = 1;
 			}
                 } else {
 			/* remove from list if address matches */
@@ -74,11 +78,18 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                                     SAIPLEN(addr))==0)) {
                                 /* address match */
 				list_del(&n->next);
+				deleted = 1;
                         }
                 }
+		if (deleted) {
+			address_count--;
+			HIP_DEBUG("dec address_count to %d\n", address_count);
+		}
         }
-	address_count--;
+
 	HIP_DEBUG("address_count at exit=%d\n", address_count);
+	if (address_count < 0)
+		HIP_ERROR("BUG: address_count < 0\n", address_count);
 }
 
 int hip_netdev_find_if(struct sockaddr *addr)
@@ -289,10 +300,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			addr->sa_family = ifa->ifa_family;
 			memcpy(SA2IP(addr), RTA_DATA(tb[IFA_LOCAL]),
 			       RTA_PAYLOAD(tb[IFA_LOCAL]) );
-			if (addr->sa_family == AF_INET6)
-				HIP_DEBUG_IN6ADDR("IPv6 address\n", addr->data);
-			HIP_DEBUG("Address %s: (ifindex=%d) \n", (is_add) ? "added" :
-				  "deleted", ifa->ifa_index);
+			HIP_DEBUG("Address event=%s ifindex=%d\n",
+				  is_add ? "add" : "del", ifa->ifa_index);
 			
 			/* update our address list */
 			if (is_add) {
