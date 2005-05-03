@@ -311,22 +311,23 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			}
 
 			/* handle HIP readdressing */
-			HIP_DEBUG("address_count=%d\n", address_count);
 			reas = (struct hip_rea_info_addr_item *)malloc(address_count * sizeof(struct hip_rea_info_addr_item));
-
-			i = 0;
-			list_for_each_entry_safe(n, t, &addresses, next) {
-				memcpy(&reas[i].address, SA2IP(&n->addr), SAIPLEN(&n->addr));
-                                /* lifetime: select prefered_lft or valid_lft ? */
-				reas[i].lifetime = 0; /* FIXME: Is this ok? (tkoponen), for boeing it is... */
-				/* For testing preferred address */
-				reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
-				i++;
+			if (reas) {
+				i = 0;
+				list_for_each_entry_safe(n, t, &addresses, next) {
+					memcpy(&reas[i].address, SA2IP(&n->addr),
+					       SAIPLEN(&n->addr));
+					/* lifetime: select prefered_lft or valid_lft ? */
+					/* FIXME: Is this ok? (tkoponen), for boeing it is*/					reas[i].lifetime = 0;
+					/* For testing preferred address */
+					reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
+					i++;
+				}
+				hip_send_update_all(reas, address_count,
+						    ifa->ifa_index, SEND_UPDATE_REA);
+				free(reas);
+				break;
 			}
-
-			hip_send_update_all(reas, address_count, ifa->ifa_index, SEND_UPDATE_REA);
-			free(reas);
-			break;
 		default:
 			break;
 		}

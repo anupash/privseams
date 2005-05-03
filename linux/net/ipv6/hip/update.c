@@ -1345,7 +1345,8 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 		hip_hold_ha(entry);
 		rk->count++;
 	} else
-		HIP_DEBUG("skipping HA entry 0x%p\n", entry);
+		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
+			  entry, hip_state_str(entry->state));
 
 	return 0;
 }

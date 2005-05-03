@@ -899,10 +899,13 @@ int hip_create_r2(struct hip_context *ctx,
  	/* Send the packet */
 	err = hip_csum_send(NULL, i2_saddr, r2); // HANDLER
 
+#if 0
+	// state must be changed in hip_handle_i2, not here
 	// FIXME: locks?
 	if (!err) { 
 		entry->state = HIP_STATE_R2_SENT;
 	}
+#endif
 	
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
@@ -1078,8 +1081,8 @@ int hip_handle_i2(struct hip_common *i2,
 
 		//HIP_DEBUG("HA entry created.");
 	} 
-
-	// FIXME: the above should not be done if signature fails... or it should be canceled
+	/* FIXME: the above should not be done if signature fails...
+	   or it should be cancelled */
 	
 	/* Store peer's public key and HIT to HA */
 	HIP_IFE(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL);		
@@ -1185,7 +1188,7 @@ int hip_handle_i2(struct hip_common *i2,
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
 	hip_hadb_insert_state(entry);
-
+HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	HIP_IFEL(hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
 		 "Creation of R2 failed\n");
 
@@ -1203,7 +1206,13 @@ int hip_handle_i2(struct hip_common *i2,
 		   be stored in the HADB) instead of static */
 		entry->state = HIP_STATE_ESTABLISHED;
 #else
-		entry->state = HIP_STATE_R2_SENT;
+		if (entry->state == HIP_STATE_UNASSOCIATED) {
+			HIP_DEBUG("TODO: should wait for ESP here or "
+				  "wait for implementation specific time, "
+				  "moving to ESTABLISHED\n");
+			entry->state = HIP_STATE_ESTABLISHED;
+		} else
+			entry->state = HIP_STATE_R2_SENT;
 #endif /* CONFIG_HIP_RVS */
 	}
 
@@ -1265,6 +1274,8 @@ int hip_receive_i2(struct hip_common *i2,
 		state = entry->state;
 	}
 
+	HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
+
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
@@ -1273,12 +1284,12 @@ int hip_receive_i2(struct hip_common *i2,
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
  	case HIP_STATE_REKEYING:
-		HIP_DEBUG("Received I2 in state REKEYING\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
 		//if (!err) {
 		//	entry->state = HIP_STATE_R2_SENT;
 		//	// SYNCH
 		//}
+		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
 		break;
