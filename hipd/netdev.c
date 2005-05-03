@@ -256,21 +256,26 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	struct hip_rea_info_addr_item *reas;
 	struct netdev_address *n, *t;
 
+	HIP_DEBUG("\n");
 	addr = (struct sockaddr*) &ss_addr;
 	
 	for (; NLMSG_OK(msg, (u32)len);
 	     msg = NLMSG_NEXT(msg, len)) {
+		HIP_DEBUG("handling msg type %d\n", msg->nlmsg_type);
 		switch(msg->nlmsg_type) {
 		case RTM_NEWLINK:
+			HIP_DEBUG("RTM_NEWLINK\n");
 			/* wait for RTM_NEWADDR to add addresses */
 			break;
 		case RTM_DELLINK:
+			HIP_DEBUG("RTM_DELLINK\n");
 			ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 			delete_address_from_list(NULL, ifinfo->ifi_index);
 			break;
 			/* Add or delete address from addresses */
 		case RTM_NEWADDR:
 		case RTM_DELADDR:
+			HIP_DEBUG("RTM_NEWADDR/DELADDR\n");
 			ifa = (struct ifaddrmsg*)NLMSG_DATA(msg);
 			rta = IFA_RTA(ifa);
 			l = msg->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa));
@@ -329,6 +334,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				break;
 			}
 		default:
+			HIP_DEBUG("unhandled msg type %d\n", msg->nlmsg_type);
 			break;
 		}
 	}

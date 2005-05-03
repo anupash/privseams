@@ -272,6 +272,7 @@ int hip_netlink_talk(struct hip_nl_handle *nl,
         } tx, rx;
 	int msg_len;
 
+	HIP_DEBUG("entered\n");
         /* Fill in the netlink message payload */
 	msg_len = hip_get_msg_total_len((const struct hip_common *)&req->msg);
 	memcpy(&tx.hdr, &req->hdr, sizeof(struct hip_work_order_hdr));

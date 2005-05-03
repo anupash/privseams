@@ -226,16 +226,16 @@ int hip_produce_keying_material(struct hip_common *msg,
  		KEYMAT_DRAW_AND_COPY(&ctx->esp_out.key, esp_transf_length);
  		KEYMAT_DRAW_AND_COPY(&ctx->auth_out.key, auth_transf_length);
  	}
- 	HIP_HEXDUMP("HIP-gl encryption", &ctx->hip_enc_out.key, hip_transf_length);
- 	HIP_HEXDUMP("HIP-gl integrity (HMAC) key", &ctx->hip_hmac_out.key,
+ 	HIP_HEXDUMP("HIP-gl encryption:", &ctx->hip_enc_out.key, hip_transf_length);
+ 	HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
  		    hmac_transf_length);
  	_HIP_DEBUG("skipping HIP-lg encryption key, %u bytes\n", hip_transf_length);
-	HIP_HEXDUMP("HIP-lg encryption", &ctx->hip_enc_in.key, hip_transf_length);
- 	HIP_HEXDUMP("HIP-lg integrity (HMAC) key", &ctx->hip_hmac_in.key, hmac_transf_length);
- 	HIP_HEXDUMP("SA-gl ESP encryption key", &ctx->esp_out.key, esp_transf_length);
- 	HIP_HEXDUMP("SA-gl ESP authentication key", &ctx->auth_out.key, auth_transf_length);
- 	HIP_HEXDUMP("SA-lg ESP encryption key", &ctx->esp_in.key, esp_transf_length);
- 	HIP_HEXDUMP("SA-lg ESP authentication key", &ctx->auth_in.key, auth_transf_length);
+	HIP_HEXDUMP("HIP-lg encryption:", &ctx->hip_enc_in.key, hip_transf_length);
+ 	HIP_HEXDUMP("HIP-lg integrity (HMAC) key:", &ctx->hip_hmac_in.key, hmac_transf_length);
+ 	HIP_HEXDUMP("SA-gl ESP encryption key:", &ctx->esp_out.key, esp_transf_length);
+ 	HIP_HEXDUMP("SA-gl ESP authentication key:", &ctx->auth_out.key, auth_transf_length);
+ 	HIP_HEXDUMP("SA-lg ESP encryption key:", &ctx->esp_in.key, esp_transf_length);
+ 	HIP_HEXDUMP("SA-lg ESP authentication key:", &ctx->auth_in.key, auth_transf_length);
 
 #undef KEYMAT_DRAW_AND_COPY
 

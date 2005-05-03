@@ -133,7 +133,8 @@ void hip_uninit_beetdb(void)
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
 		list_for_each_entry_safe(ha, tmp, &hip_beetdb_byhit[i], next) {
 			if (atomic_read(&ha->refcnt) > 2)
-				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
+				HIP_ERROR("HA: %p, in use while removing it from HADB, refcnt=%d\n",
+					  ha, atomic_read(&ha->refcnt));
 			hip_hold_ha(ha);
 			hip_beetdb_delete_state(ha);
 			hip_put_xfrm(ha);
@@ -151,7 +152,8 @@ void hip_uninit_beetdb(void)
 			HIP_ERROR("BUG: HS NOT ALREADY DELETED, DELETING HS %p, HS SPI=0x%x\n",
 				  hs, hs->spi);
 			if (atomic_read(&hs->refcnt) > 1)
-				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
+				HIP_ERROR("HS: %p, in use while removing it from HADB, refcnt=%d\n",
+					  hs, atomic_read(&hs->refcnt));
 			hip_beetdb_hold_hs(hs);
 			hip_beetdb_delete_hs(hs);
 			hip_beetdb_put_hs(hs);

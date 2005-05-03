@@ -252,6 +252,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/* Assume already locked entry */
 
 	HIP_DEBUG("\n");
+	hip_print_hit("hitr", hitr);
+	hip_print_hit("hits", hits);
 	
 	HIP_IFEL(!(seq = hip_get_param(msg, HIP_PARAM_SEQ)), -1, 
 		 "No SEQ parameter in packet\n");
@@ -281,6 +283,10 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   SEQ parameter. */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Update_packet alloc failed\n");
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1, HIP_CONTROL_DHT_TYPE1);
+
+	hip_print_hit("hitr", hitr);
+	hip_print_hit("hits", hits);
+
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/*  3. The system increments its outgoing Update ID by one. */
@@ -498,17 +504,31 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	hip_update_entry_keymat(entry, keymat_index, calc_index_new, Kn);
 
 	/* set up new outbound IPsec SA */
-	HIP_DEBUG("Setting new outbound SA, SPI=0x%x\n", new_spi_out);
+#if 0
 	HIP_IFEL(!hip_add_sa(hitr, hits, new_spi_out, esp_transform,
 			     we_are_HITg ? &espkey_gl : &espkey_lg,
 			     we_are_HITg ? &authkey_gl : &authkey_lg,
 			     0, HIP_SPI_DIRECTION_OUT), -1,
-		 "Setting up new outbound IPsec failed\n");
-	HIP_IFEL(!hip_add_sa(hits, hitr, new_spi_in, entry->esp_transform,
+		 "Setting up new outbound IPsec SA failed\n");
+	HIP_IFEL(!hip_add_sa(hits, hitr, new_spi_in, esp_transform,
 			     we_are_HITg ? &espkey_lg  : &espkey_gl,
 			     we_are_HITg ? &authkey_lg : &authkey_gl,
 			     1, HIP_SPI_DIRECTION_IN), -1,
-		 "Error while setting up new IPsec SA\n");
+		 "Setting up new inbound IPsec SA failed\n");
+#endif
+	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
+	HIP_IFEL(new_spi_out != hip_add_sa(hitr, hits, new_spi_out, esp_transform,
+					   we_are_HITg ? &espkey_gl : &espkey_lg,
+					   we_are_HITg ? &authkey_gl : &authkey_lg,
+					   0, HIP_SPI_DIRECTION_OUT), -1,
+		 "Setting up new outbound IPsec SA failed\n");
+	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
+	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
+	HIP_IFEL(new_spi_in != hip_add_sa(hits, hitr, new_spi_in, esp_transform,
+					  we_are_HITg ? &espkey_lg  : &espkey_gl,
+					  we_are_HITg ? &authkey_lg : &authkey_gl,
+					  1, HIP_SPI_DIRECTION_IN), -1,
+		 "Setting up new inbound IPsec SA failed\n");
 	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
 
 	if (prev_spi_in == new_spi_in) {
@@ -905,6 +925,8 @@ int hip_receive_update(struct hip_common *msg,
 	hip_ha_t *entry = NULL;
 
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
+
+	HIP_DEBUG("enter\n");
 
 	src_ip = update_saddr;
 	dst_ip = update_daddr;

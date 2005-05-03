@@ -161,9 +161,12 @@ int hip_netlink_send(struct hip_work_order *hwo)
 
 	msg_len = netlink_unicast(nl_sk, skb, hipd_pid, MSG_DONTWAIT);
 	/* FIXME: errors of unicast? */
+	if (msg_len < 0) {
+		HIP_ERROR("netlink_unicast_failed, err=%d\n", msg_len);
+		return -1;
+	}
 
 	HIP_DEBUG("Sent %d bytes to PID %d\n", msg_len, hipd_pid);
-
 	/* Kernel frees the skb */
 
 	return 0;

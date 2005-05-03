@@ -62,12 +62,14 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 	uint8_t opaque[3];
 	uint64_t randi;
 
+	ipv6_addr_copy(&tmpaddr, &msg->hitr); /* so update is handled, too */
+
 	origlen = hip_get_msg_total_len(msg);
 	if (hip_get_msg_type(msg) == HIP_R1) {
 		HIP_IFEL(!(sig = hip_get_param(msg, HIP_PARAM_HIP_SIGNATURE2)), -ENOENT, 
 		 "Could not find signature2\n");
 		
-		ipv6_addr_copy(&tmpaddr, &msg->hitr);
+		//ipv6_addr_copy(&tmpaddr, &msg->hitr);
 		memset(&msg->hitr, 0, sizeof(struct in6_addr));
 		
 		HIP_IFEL(!(pz = hip_get_param(msg, HIP_PARAM_PUZZLE)), -ENOENT, "Illegal R1 packet (puzzle missing)\n");
@@ -84,7 +86,6 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 	}
 
 	//HIP_HEXDUMP("SIG", sig, hip_get_param_total_len(sig));
-
 	len = ((u8 *) sig) - ((u8 *) msg);
 	hip_zero_msg_checksum(msg);
 	HIP_IFEL(len < 0, -ENOENT, "Invalid signature len\n");
@@ -95,7 +96,6 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 		
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest), 
 		 -1, "Could not calculate SHA1 digest\n");
-
 	if (rsa) {
 		int public_key_len = ntohs(peer_pub->hi_length) - 
 			sizeof(struct hip_host_id_key_rdata);
