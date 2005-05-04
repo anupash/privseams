@@ -338,16 +338,18 @@ int handle_hi(struct hip_common *msg,
       goto out;
     }
 
-    ret = snprintf(dsa_filenamebase, dsa_filenamebase_len, "%s/%s",
+    ret = snprintf(dsa_filenamebase, dsa_filenamebase_len+5, "%s/%s",
                    DEFAULT_CONFIG_DIR,
-		   DEFAULT_HOST_DSA_KEY_FILE_BASE);
+		   DEFAULT_HOST_DSA_KEY_FILE_BASE
+		   DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
     if (ret <= 0) {
       err = -EINVAL;
       goto out;
     }
-    ret = snprintf(rsa_filenamebase, rsa_filenamebase_len, "%s/%s",
+    ret = snprintf(rsa_filenamebase, rsa_filenamebase_len+5, "%s/%s",
                    DEFAULT_CONFIG_DIR,
-		   DEFAULT_HOST_RSA_KEY_FILE_BASE);
+		   DEFAULT_HOST_RSA_KEY_FILE_BASE
+		   DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
     if (ret <= 0) {
       err = -EINVAL;
       goto out;
@@ -374,8 +376,8 @@ int handle_hi(struct hip_common *msg,
   dsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
   rsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
 
-  HIP_DEBUG("Using dsa filenamebase: %s\n", dsa_filenamebase);
-  HIP_DEBUG("Using rsa filenamebase: %s\n", rsa_filenamebase);
+  HIP_DEBUG("Using dsa (anon hi) filenamebase: %s\n", dsa_filenamebase);
+  HIP_DEBUG("Using rsa (anon hi) filenamebase: %s\n", rsa_filenamebase);
   HIP_DEBUG("Using dsa (pub hi) filenamebase: %s\n", dsa_filenamebase_pub);
   HIP_DEBUG("Using rsa (pub hi) filenamebase: %s\n", rsa_filenamebase_pub);
   

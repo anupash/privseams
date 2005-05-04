@@ -178,11 +178,14 @@
     <para>
       After you have successfully compiled and installed the HIP kernel and
       rebooted both of the hosts, you need to compile the userspace
-      applications in order to use HIP. Start by invoking the autogen.sh at
-      the top level directory:
+      applications in order to use HIP. Start by moving to the top level directory
+      of HIPL:
       </para>
     <para>
       &nbsp;cd hipl
+    </para>
+    <para>
+      If the file autogen.sh exists (to test type ls autogen.sh), run it:
     </para>
     <para>
       &nbsp;./autogen.sh

@@ -60,8 +60,15 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		return 0;
 	}
 
+	if (ipv6_addr_is_hit(&hdr->saddr)) {
+		_HIP_DEBUG("src addr is a HIT\n");
+		entry = hip_hadb_find_byhits(&hdr->saddr,&hdr->daddr);
+	} else {
+		_HIP_DEBUG("src addr is not a HIT\n");
+		entry = hip_hadb_try_to_find_by_peer_hit(&hdr->daddr);
+	}
 	/* The source address is not yet a HIT, just the dst address. */
-	entry = hip_hadb_find_byhit(&hdr->daddr);
+	//entry = hip_hadb_find_byhit(&hdr->daddr);
 	if (!entry) {
 		HIP_ERROR("Unknown HA\n");
 		err = -EFAULT;

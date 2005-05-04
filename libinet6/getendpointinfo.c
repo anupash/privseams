@@ -1232,10 +1232,12 @@ int getendpointinfo(const char *nodename, const char *servname,
     goto err_out;
   }
   /* XX:TODO Check flag values from hints!!!
-   E.g. EI_HI_ANY* should cause the resolver to output only a single socket address
-   containing an ED that would be received using the corresponding HIP_HI_*ANY 
-   macro. EI_ANON flag causes the resolver to return only local anonymous ids.
+   E.g. EI_HI_ANY* should cause the resolver to output only a single socket 
+   address containing an ED that would be received using the corresponding 
+   HIP_HI_*ANY macro. EI_ANON flag causes the resolver to return only local 
+   anonymous ids.
   */
+
   if (hints) {
     memcpy(&modified_hints, hints, sizeof(struct endpointinfo));
   } else {

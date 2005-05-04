@@ -1448,7 +1448,7 @@ int hip_receive_r1(struct sk_buff *skb)
 		goto out_drop;
 	}
 
-	entry = hip_hadb_find_byhit(&hip_common->hits);
+	entry = hip_hadb_find_byhits(&hip_common->hits, &hip_common->hitr);
 	HIP_DEBUG_HIT("RECEIVE R1 SENDER HIT: ", &hip_common->hits);
 	HIP_DEBUG_HIT("RECEIVE R1 RECEIVER HIT: ", &hip_common->hitr);
 	if (!entry) {
@@ -2245,7 +2245,7 @@ int hip_receive_i2(struct sk_buff *skb)
 		goto out;
 	}
 
-	entry = hip_hadb_find_byhit(&i2->hits);
+	entry = hip_hadb_find_byhits(&i2->hits, &i2->hitr);
 	if (!entry) {
 		state = HIP_STATE_UNASSOCIATED;
 	} else {
@@ -2529,7 +2529,7 @@ int hip_receive_i1(struct sk_buff *skb)
 		goto out;
 	}
 
-	entry = hip_hadb_find_byhit(&hip_i1->hits);
+	entry = hip_hadb_find_byhits(&hip_i1->hits, &hip_i1->hitr);
 	if (entry) {
 		wmb();
 		state = entry->state;
@@ -2633,7 +2633,7 @@ int hip_receive_r2(struct sk_buff *skb)
 		goto out_err;
 	}
 
-	entry = hip_hadb_find_byhit(&hip_common->hits);
+	entry = hip_hadb_find_byhits(&hip_common->hits, &hip_common->hitr);
 	if (!entry) {
 		HIP_ERROR("Received R2 by unknown sender\n");
 		//HIP_PRINT_HIT("Sender", &hip_common->hits);
@@ -2721,7 +2721,7 @@ int hip_receive_notify(struct sk_buff *skb)
 		goto out_err;
 	}
 
-	entry = hip_hadb_find_byhit(&hip_common->hits);
+	entry = hip_hadb_find_byhits(&hip_common->hits, &hip_common->hitr);
 	if (!entry) {
 		HIP_ERROR("Received NOTIFY by unknown sender\n");
 		err = -EFAULT;
@@ -2895,7 +2895,7 @@ int hip_receive_bos(struct sk_buff *skb)
 		goto out;
 	}
 
-	entry = hip_hadb_find_byhit(&bos->hits);
+	entry = hip_hadb_find_byhits(&bos->hits, &bos->hitr);
 	if (!entry) {
 		state = HIP_STATE_UNASSOCIATED;
 	} else {

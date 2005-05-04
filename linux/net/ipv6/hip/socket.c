@@ -883,6 +883,8 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
 	HIP_DEBUG_HIT("removing precreated R1s by hit: ", &lhi.hit);
 	hip_r1_delete_by_hit(&lhi.hit);
 
+	/* XX TODO: close sockets that are bound the corresponding HIT? */
+
 	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
 	
  out_err:
