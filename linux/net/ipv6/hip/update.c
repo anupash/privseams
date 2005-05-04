@@ -252,8 +252,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/* Assume already locked entry */
 
 	HIP_DEBUG("\n");
-	hip_print_hit("hitr", hitr);
-	hip_print_hit("hits", hits);
 	
 	HIP_IFEL(!(seq = hip_get_param(msg, HIP_PARAM_SEQ)), -1, 
 		 "No SEQ parameter in packet\n");
@@ -283,10 +281,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   SEQ parameter. */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Update_packet alloc failed\n");
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1, HIP_CONTROL_DHT_TYPE1);
-
-	hip_print_hit("hitr", hitr);
-	hip_print_hit("hits", hits);
-
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/*  3. The system increments its outgoing Update ID by one. */
@@ -404,6 +398,12 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 	HIP_DEBUG("moved to state REKEYING\n");
+        err = hip_hadb_update_xfrm(entry);
+        if (err) {
+                HIP_ERROR("XFRM synchronization failed\n");
+                err = -EFAULT;
+                goto out_err;
+        }
 
 	err = hip_csum_send(NULL, src_ip, update_packet);
 	if (err) {
@@ -524,11 +524,22 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		 "Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
+/*
 	HIP_IFEL(new_spi_in != hip_add_sa(hits, hitr, new_spi_in, esp_transform,
 					  we_are_HITg ? &espkey_lg  : &espkey_gl,
 					  we_are_HITg ? &authkey_lg : &authkey_gl,
 					  1, HIP_SPI_DIRECTION_IN), -1,
 		 "Setting up new inbound IPsec SA failed\n");
+*/
+	err = hip_add_sa(hits, hitr, new_spi_in, esp_transform,
+			 we_are_HITg ? &espkey_lg  : &espkey_gl,
+			 we_are_HITg ? &authkey_lg : &authkey_gl,
+			 1, HIP_SPI_DIRECTION_IN);
+	HIP_DEBUG("err=%d\n", err);
+	if (err)
+		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");
+
+
 	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
 
 	if (prev_spi_in == new_spi_in) {
@@ -556,6 +567,14 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* 4.  The system cancels any timers protecting the UPDATE and
 	   transitions to ESTABLISHED. */
 	entry->state = HIP_STATE_ESTABLISHED;
+        err = hip_hadb_update_xfrm(entry);
+        if (err) {
+                HIP_ERROR("XFRM synchronization failed\n");
+                err = -EFAULT;
+                goto out_err;
+        }
+
+	HIP_DEBUG("Went back to ESTABLISHED state\n");
 
 	/* delete old SAs */
 	if (prev_spi_out != new_spi_out) {
@@ -588,7 +607,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		_HIP_DEBUG("prev SPI_in = new SPI_in, not deleting the inbound SA\n");
 
 	/* start verifying addresses */
-	_HIP_DEBUG("start verifing addresses for new spi 0x%x\n", new_spi_out);
+	HIP_DEBUG("start verifying addresses for new spi 0x%x\n", new_spi_out);
 	err = hip_update_send_addr_verify(entry, msg, NULL /* ok ? */, new_spi_out);
 
  out_err:
@@ -943,6 +962,12 @@ int hip_receive_update(struct hip_common *msg,
 	 * process from ESTABLISHED state */
 	if (state == HIP_STATE_R2_SENT) {
 		state = entry->state = HIP_STATE_ESTABLISHED;
+		err = hip_hadb_update_xfrm(entry);
+		if (err) {
+			HIP_ERROR("XFRM synchronization failed\n");
+			err = -EFAULT;
+			goto out_err;
+		}
 		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
 	}
 
@@ -965,15 +990,15 @@ int hip_receive_update(struct hip_common *msg,
 		HIP_DEBUG("UPDATE contains (at least one) NES parameter\n");
 		keymat_index = ntohs(nes->keymat_index);
 		HIP_DEBUG("NES: Keymaterial Index: %u\n", keymat_index);
-		HIP_DEBUG("NES: Old SPI: 0x%x\n", ntohl(nes->old_spi));
-		HIP_DEBUG("NES: New SPI: 0x%x\n", ntohl(nes->new_spi));
+		HIP_DEBUG("NES: Old SPI: 0x%x New SPI: 0x%x\n",
+			  ntohl(nes->old_spi), ntohl(nes->new_spi));
 	}
 	if (seq) {
 		pkt_update_id = ntohl(seq->update_id);
 		HIP_DEBUG("SEQ: UPDATE ID: %u\n", pkt_update_id);
 	}
 	if (ack)
-		HIP_DEBUG("ACK found\n");
+		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
 	if (rea)
 		HIP_DEBUG("REA: SPI 0x%x\n", ntohl(rea->spi));
 	if (echo)
@@ -1341,6 +1366,13 @@ int hip_send_update(struct hip_hadb_state *entry, struct hip_rea_info_addr_item 
 	/* delete IPsec SA on failure */
 	HIP_ERROR("TODO: delete SA\n");
  out:
+        err = hip_hadb_update_xfrm(entry);
+        if (err) {
+                HIP_ERROR("XFRM synchronization failed\n");
+                err = -EFAULT;
+                goto out_err;
+        }
+
 	HIP_UNLOCK_HA(entry);
 	if (update_packet)
 		HIP_FREE(update_packet);
