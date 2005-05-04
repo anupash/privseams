@@ -1203,9 +1203,11 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 			goto out_err;
 		}
 
-#if 0 /* XX TODO */ /* XX FIXME: figure out socket handler - user daemon interaction */
+
+		/* XX FIXME: figure out socket handler - user daemon 
+		   interaction */
 		/* XX TODO: check UID/GID permissions before adding */
-		err = hip_wrap_add_local_hi(host_id, &lhi);
+		err = hip_wrap_handle_add_local_hi(msg); 
 		if (err == -EEXIST) {
 			HIP_INFO("Host id exists already, ignoring\n");
 			err = 0;
@@ -1213,7 +1215,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 			HIP_ERROR("Adding of localhost id failed");
 			goto out_err;
 		}
-#endif
+		
 	} else {
 		/* Only public key */
 		err = hip_host_id_to_hit(host_id,

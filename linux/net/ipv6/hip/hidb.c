@@ -145,7 +145,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	_HIP_HEXDUMP("adding host id", hit, sizeof(struct in6_addr));
 
 	HIP_ASSERT(hit != NULL);
-
+	HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
 	HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
 								      GFP_KERNEL)), -ENOMEM,
 		 "No memory available for host id\n");
@@ -218,7 +218,10 @@ int hip_add_host_id(struct hip_db_struct *db,
 int hip_handle_add_local_hi(const struct hip_common *input)
 {
 	int err = 0;
-	struct hip_host_id *dsa_host_identity, *rsa_host_identity = NULL;
+	struct hip_host_id *host_identity = NULL;
+	struct hip_lhi lhi;
+	struct hip_tlv_common *param = NULL;
+	struct hip_eid_endpoint *eid_endpoint = NULL;
 	struct in6_addr dsa_hit, rsa_hit;
 	
 	HIP_DEBUG("\n");
@@ -230,28 +233,40 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	_HIP_DUMP_MSG(response);
 
-	HIP_IFEL(!(dsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 1)), -ENOENT,
-		 "No DSA host identity pubkey in response\n");
-	HIP_IFEL(!(rsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 2)), -ENOENT,
-		 "No RSA host identity pubkey in response\n");
+	/* Iterate through all host identities in the input */
+	while((param = hip_get_next_param(input, param)) != NULL) {
+	  
+	  /* NOTE: changed to use hip_eid_endpoint structs instead of 
+	     hip_host_id:s when passing IDs from user space to kernel */
+	  if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
+	    continue;
+	  HIP_DEBUG("host id found in the msg\n");
+	  
+	  eid_endpoint = (struct hip_eid_endpoint *)param;
 
-	_HIP_HEXDUMP("rsa host id\n", rsa_host_identity,
-		    hip_get_param_total_len(rsa_host_identity));
+	  if (!eid_endpoint) {
+	    HIP_ERROR("No host endpoint in input\n");
+	    err = -ENOENT;
+	    goto out_err;
+	  }
 
-	HIP_IFEL(err = hip_private_host_id_to_hit(dsa_host_identity, &dsa_hit,
-						  HIP_HIT_TYPE_HASH126), err, 
-		 "DSA host id to hit conversion failed\n");
-	HIP_IFEL(err = hip_private_host_id_to_hit(rsa_host_identity, &rsa_hit,
-						  HIP_HIT_TYPE_HASH126), err,
-		 "RSA host id to hit conversion failed\n");
-
-	HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &dsa_hit, dsa_host_identity, 
-				       NULL, NULL, NULL), err,
-		 "adding of local host identity failed\n");
-	HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &rsa_hit, rsa_host_identity, 
-				       NULL, NULL, NULL), err, 
-		 "adding of local host identity failed\n");
-
+	  host_identity = &eid_endpoint->endpoint.id.host_id;
+	  
+	  _HIP_HEXDUMP("host id\n", host_identity,
+		       hip_get_param_total_len(host_identity));
+	  
+	  HIP_IFEL(err = hip_private_host_id_to_hit(host_identity, &lhi.hit,
+						    HIP_HIT_TYPE_HASH126), 
+		   err, 
+		   "Host id to hit conversion failed\n");
+	  
+	  
+	  HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi.hit, 
+					 host_identity, 
+					 NULL, NULL, NULL), err,
+		   "adding of local host identity failed\n");
+	}
+	
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
  out_err:
 	
