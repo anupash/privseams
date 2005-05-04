@@ -34,7 +34,7 @@
 	if (!entry)                                           \
 		return;                                       \
 	atomic_inc(&ha->refcnt);                              \
-	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n", ha, \
+	HIP_DEBUG("HA: %p, refcnt incremented to: %d\n", ha, \
 		   atomic_read(&ha->refcnt));                 \
     } while(0)
 
@@ -48,7 +48,7 @@
 		destructor(ha);                                              \
                 HIP_DEBUG("HA: %p deleted\n", ha);                           \
 	} else {                                                             \
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha,        \
+                HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha,        \
 			   atomic_read(&ha->refcnt));                        \
         }                                                                    \
     } while(0);

@@ -310,7 +310,8 @@ int hip_hadb_update_xfrm_inbound(hip_ha_t *entry) {
 
 	/* iterate over all inbound SPIs and send them to kernel */
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("Inbound SPI update: %x, state %s\n", item->spi, hip_state_str(entry->state));
+		HIP_DEBUG("Inbound SPI update: SPI=0x%x, state=%s\n",
+			  item->spi, hip_state_str(entry->state));
 		err = hip_xfrm_update(&entry->hit_peer,
 				      &entry->hit_our,
 			              item->spi,
@@ -336,7 +337,8 @@ int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
 	//else
 	//addr = &entry->bex_address;
 
-	HIP_DEBUG("Outbound HIT update, state: %s\n", hip_state_str(entry->state));
+	HIP_DEBUG("Outbound HIT update, default SPI=0x%x state=%s\n",
+		  entry->default_spi_out, hip_state_str(entry->state));
 	HIP_HEXDUMP("HIT: ", &entry->hit_peer, sizeof(struct in6_addr));
 	return hip_xfrm_update(&entry->hit_peer, addr, entry->default_spi_out,
 			       entry->state, HIP_SPI_DIRECTION_OUT);

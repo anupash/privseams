@@ -114,7 +114,8 @@ int main(int argc, char *argv[]) {
 			return(0);
 		hip_set_logtype(LOGTYPE_SYSLOG);
 	}
-	
+
+	HIP_INFO("hipd pid=%d starting\n", getpid());
 	time(&load_time);
 
 	/* Register signal handlers */

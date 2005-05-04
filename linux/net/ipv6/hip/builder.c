@@ -80,9 +80,8 @@ struct hip_common *hip_msg_alloc(void)
 #else
         ptr = (struct hip_common *) malloc(HIP_MAX_PACKET);
 #endif /* __KERNEL__ */
-        if (!ptr)
-                return NULL;
-        hip_msg_init(ptr);
+        if (ptr)
+		hip_msg_init(ptr);
         return ptr;
 }
 
@@ -2361,7 +2360,7 @@ uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht)
 	if (dht)
 		flags |= (dht << HIP_CONTROL_DHT_SHIFT);
 
-	HIP_DEBUG("flags=0x%x\n", flags);
+	_HIP_DEBUG("flags=0x%x\n", flags);
 	return flags;
 }
 
