@@ -11,7 +11,8 @@
 #include "misc.h"
 #include "builder.h"
 #include "output.h"
-
+#include "hip.h"
+#include "db.h"
 #include <linux/list.h>
 #include <linux/spinlock.h>
 
@@ -466,12 +467,12 @@ void hip_rvs_set_request_flag(struct in6_addr *hit)
 {
 	hip_ha_t *entry;
 
-	entry = hip_hadb_find_byhit(hit);
+	entry = hip_hadb_try_to_find_by_peer_hit(hit);
 	if (!entry) {
 		HIP_ERROR("Could not set RVS request bit\n");
 		return;
 	}
-
+	
 	entry->local_controls |= HIP_PSEUDO_CONTROL_REQ_RVS;
 	hip_put_ha(entry);
 }

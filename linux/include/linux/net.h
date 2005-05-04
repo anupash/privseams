@@ -115,8 +115,10 @@ struct socket {
 	short			type;
 	unsigned char		passcred;
 	/* BEGIN HIPL PATCH */
+#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE) 
 	uint32_t                local_ed;
 	uint32_t                peer_ed;
+#endif
 	/* END HIPL PATCH */
 };
 

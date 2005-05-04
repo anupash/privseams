@@ -132,7 +132,7 @@ void hip_hadb_remove_hs2(struct hip_hit_spi *hs)
 
 static void *hip_hadb_get_key_hit(void *entry)
 {
-	return (void *)&(((hip_ha_t *)entry)->hit_peer);
+	return (void *)&(((hip_ha_t *)entry)->hash_key);
 }
 
 static void *hip_hadb_get_key_spi_list(void *entry)
@@ -170,7 +170,7 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 {
 	struct hip_hit_spi *hs;
-	hip_hit_t hit;
+	hip_hit_t hit_peer, hit_our;
 	hip_ha_t *ha;
 
 	hs = (struct hip_hit_spi *) hip_ht_find(&hadb_spi_list, (void *)spi);
@@ -179,10 +179,12 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 		return NULL;
 	}
 
-	ipv6_addr_copy(&hit, &hs->hit);
+	ipv6_addr_copy(&hit_peer, &hs->hit_peer);
+	ipv6_addr_copy(&hit_our, &hs->hit_our);
+
 	hip_hadb_put_hs(hs);
 
-	ha = hip_hadb_find_byhit(&hit);
+	ha = hip_hadb_find_byhits(&hit_peer, &hit_our);
 	if (!ha) {
 		HIP_DEBUG("HA not found for SPI=0x%x\n", spi);
 	}
@@ -190,9 +192,47 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 	return ha;
 }
 
-hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
+/**
+ * This function simply goes through all local HIs and tries
+ * to find a HADB entry that matches the current HI and
+ * the given peer hit. First matching HADB entry is then returned.
+ *
+ * XX TODO: find a better solution, see the text below:
+ * This function is needed because we index the HADB now by 
+ * key values calculated from <peer_hit,local_hit> pairs. Unfortunately, in 
+ * some functions like the ipv6 stack hooks hip_get_saddr() and 
+ * hip_handle_output() we just can't know the local_hit so we have to
+ * improvise and just try to find some HA entry. 
+ * 
+ * This temporary hack doesn't work properly if we have multiple HA 
+ * entries with the same peer_hit. 
+ */
+hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit) 
 {
-	return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)hit);
+	struct hip_host_id_entry *item = NULL, *tmp = NULL;
+	hip_ha_t *entry = NULL;
+	hip_hit_t our_hit;
+	
+	list_for_each_entry_safe(item,tmp,&hip_local_hostid_db.db_head, next) {
+		ipv6_addr_copy(&our_hit,&item->lhi.hit);
+		
+		_HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
+		entry = hip_hadb_find_byhits(hit,&our_hit);
+		if (!entry) {
+			continue;
+		} else {
+			return entry;
+		}
+	}
+	return NULL;
+}
+
+
+hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
+{
+	hip_hit_t key;
+	hip_xor_hits(&key, hit, hit2);
+	return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
 }
 
 /**
@@ -242,7 +282,8 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	st = ha->hastate;
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
-		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hit_peer));
+		hip_xor_hits(&ha->hash_key, &ha->hit_our, &ha->hit_peer);
+		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hash_key));
 		if (!tmp) {
 			hip_ht_add(&hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
@@ -263,13 +304,14 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 {
 	int err = 0;
 	struct hip_hit_spi *tmp;
-	hip_hit_t hit;
+	hip_hit_t hit_peer, hit_our;
 	struct hip_hit_spi *new_item;
 
 	/* assume already locked entry */
 
 	_HIP_DEBUG("SPI LIST HT_ADD HA=0x%p SPI=0x%x\n", entry, spi);
-	ipv6_addr_copy(&hit, &entry->hit_peer);
+	ipv6_addr_copy(&hit_peer, &entry->hit_peer);
+	ipv6_addr_copy(&hit_our, &entry->hit_our);
 
 	tmp = hip_ht_find(&hadb_spi_list, (void *)spi);
 	if (tmp) {
@@ -288,7 +330,8 @@ int hip_hadb_insert_state_spi_list(hip_ha_t *entry, uint32_t spi)
 	atomic_set(&new_item->refcnt, 0);
 	spin_lock_init(&new_item->lock);
 	new_item->spi = spi;
-	ipv6_addr_copy(&new_item->hit, &hit);
+	ipv6_addr_copy(&new_item->hit_peer, &hit_peer);
+	ipv6_addr_copy(&new_item->hit_our, &hit_our);
 
 	hip_ht_add(&hadb_spi_list, new_item);
 	_HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item);
@@ -754,8 +797,16 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 {
 	hip_ha_t *ha;
-
-	ha = hip_hadb_find_byhit(hit);
+	hip_hit_t our_hit;
+	
+	/* XX TODO: delete all ha entries that contain a matching peer hi? */
+	if (hip_copy_any_localhost_hit_by_algo(&our_hit,
+					       hip_sys_config.
+					       hip_hi_default_algo) 
+	    != 0)
+		return -1;
+	
+	ha = hip_hadb_find_byhits(hit, &our_hit);
 	if (!ha) {
 		return -ENOENT;
 	}
@@ -814,6 +865,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	int err = 0;
 	hip_ha_t *entry;
 	char str[INET6_ADDRSTRLEN];
+	hip_hit_t our_hit;
 
 	/* old comment ? note: can't lock here or else
 	 * hip_sdb_add_peer_address will block
@@ -825,7 +877,14 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	hip_in6_ntop(hit, str);
 	HIP_DEBUG("called: HIT %s\n", str);
 
-	entry = hip_hadb_find_byhit(hit);
+	/* XX TODO: should we add an entry for all local HIs?? */
+	if (hip_copy_any_localhost_hit_by_algo(&our_hit,
+					       hip_sys_config.
+					       hip_hi_default_algo) 
+	    != 0)
+		return -1;
+	
+	entry = hip_hadb_find_byhits(hit, &our_hit);
 	if (!entry) {
 		entry = hip_hadb_create_state(GFP_KERNEL);
 		if (!entry) {
@@ -844,6 +903,11 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
 		else 
 			HIP_INFO("Could not assign local hit, continuing\n");
+		if(&entry->hit_our) {
+			hip_xor_hits(&entry->hash_key, &entry->hit_our, 
+				     &entry->hit_peer);
+			HIP_DEBUG_HIT("hadb HASH KEY:",&entry->hash_key);
+		}
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry); /* released at the end */
 	}
@@ -1711,8 +1775,9 @@ uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
 	hip_ha_t *entry;
 
 	_HIP_DEBUG("\n");
-
-	entry = hip_hadb_find_byhit(hit);
+	
+	entry = hip_hadb_try_to_find_by_peer_hit(hit);
+	
 	if (!entry) {
 		HIP_DEBUG("entry not found\n");
 		*state_ok = 0;
@@ -2066,7 +2131,7 @@ void hip_hadb_dump_hs_ht(void)
 			_HIP_DEBUG("HT[%d]\n", i);
 			list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
 				hip_hadb_hold_hs(hs);
-				hip_in6_ntop(&hs->hit, str);
+				hip_in6_ntop(&hs->hit_peer, str);
 				HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
 					  str, hs->spi, atomic_read(&hs->refcnt));
 				hip_hadb_put_hs(hs);

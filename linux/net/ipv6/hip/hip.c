@@ -1172,26 +1172,29 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 {
 	hip_ha_t *entry;
 	char str[INET6_ADDRSTRLEN];
+	
+	_HIP_DEBUG("\n");
 
 	if (!hip_is_hit(hit))
 		return 0;
 
 	hip_in6_ntop(hit,str);
-
-	entry = hip_hadb_find_byhit(hit);
-	if (!entry) {
-		HIP_ERROR("Unknown HIT: %s\n", str);
-		return 0;
-	}
-
-	if (hip_hadb_get_peer_addr(entry, addr) < 0) {
+	
+	entry = hip_hadb_try_to_find_by_peer_hit(hit);
+	
+	if(entry) {
+		if (hip_hadb_get_peer_addr(entry, addr) < 0) {
+			hip_put_ha(entry);
+			return 0;
+		}
 		hip_put_ha(entry);
+		
+		hip_in6_ntop(addr, str);
+		_HIP_DEBUG("selected dst addr: %s\n", str);
+	} else {
+		HIP_ERROR("didn't find addr\n");
 		return 0;
 	}
-	hip_put_ha(entry);
-
-	hip_in6_ntop(addr, str);
-	_HIP_DEBUG("selected dst addr: %s\n", str);
 
 	return 1;
 }
@@ -1229,22 +1232,28 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
  */
 int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
-	hip_ha_t *entry;
-
+	hip_ha_t *entry = NULL;
+		
 	if (!ipv6_addr_is_hit(&fl->fl6_dst)) {
 		HIP_ERROR("dst not a HIT\n");
 		return 0;
 	}
-
-	entry = hip_hadb_find_byhit((hip_hit_t *)&fl->fl6_dst);
-	if (!entry) {
-		HIP_ERROR("Unknown destination HIT\n");
+	
+	if (ipv6_addr_is_hit(&fl->fl6_src)) {
+		_HIP_DEBUG("src addr is a HIT\n");
+		entry = hip_hadb_find_byhits(&fl->fl6_src,&fl->fl6_dst);
+	} else {
+		_HIP_DEBUG("src addr is not a HIT\n");
+		entry = hip_hadb_try_to_find_by_peer_hit(&fl->fl6_dst);
+	}
+	
+	if(entry) {
+		ipv6_addr_copy(hit_storage, &entry->hit_our);
+		hip_put_ha(entry);
+	} else {
+		HIP_ERROR("Didn't find src HIT\n");
 		return 0;
 	}
-
-	ipv6_addr_copy(hit_storage, &entry->hit_our);
-	hip_put_ha(entry);
-
 	return 1;
 }
 

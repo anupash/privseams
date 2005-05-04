@@ -1249,7 +1249,7 @@ int hip_receive_update(struct sk_buff *skb)
 	dst_ip = &(skb->nh.ipv6h->daddr);
 	hits = &msg->hits;
 
-	entry = hip_hadb_find_byhit(hits);
+	entry = hip_hadb_find_byhits(hits, &msg->hitr);
 	if (!entry) {
 		HIP_ERROR("Entry not found\n");
 		goto out_err;
