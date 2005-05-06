@@ -142,7 +142,6 @@ int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit) {
   pubkey_len = 1 + 20 + 3 * (64 + t * 8); /* RFC 2536 section 2 */
 
   _HIP_DEBUG("DSA pubkey length=%d\n", pubkey_len);
-
   _HIP_INFO("Create HIT from HI\n");
   
   if (type == HIP_HIT_TYPE_HASH126) {
@@ -169,7 +168,6 @@ int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit) {
   }
 
   _HIP_HEXDUMP("dsa: ", dsa, pubkey_len);
-  
   _HIP_DEBUG("sha_p=%p sha_hash_p=%p\n", sha, &sha_hash);
   _HIP_HEXDUMP("hit hash:     ", &sha_hash, SHA_DIGEST_LENGTH);
   _HIP_HEXDUMP("hit trunc hash:       ",
@@ -253,7 +251,6 @@ int rsa_to_hit(RSA *rsa_key, char *rsa, int type, struct in6_addr *hit) {
   /* calculate public key length, RFC 2537, section 2 */
   pubkey_len = 1 + BN_num_bytes(rsa_key->e) + BN_num_bytes(rsa_key->n);
   _HIP_DEBUG("RSA pub key length = %d\n", pubkey_len);
-
   _HIP_INFO("Create HIT from HI\n");
   
   if (type == HIP_HIT_TYPE_HASH126) {
@@ -547,9 +544,9 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
   *rsa_key_rr = NULL;
 
-  HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
-	    BN_num_bytes(rsa->n),BN_num_bytes(rsa->d),BN_num_bytes(rsa->p),
-	    BN_num_bytes(rsa->q));
+  _HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
+	     BN_num_bytes(rsa->n),BN_num_bytes(rsa->d),BN_num_bytes(rsa->p),
+	     BN_num_bytes(rsa->q));
 
   HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
   /* e=3, n=128, d=128, p=64, q=64 (n=d, p=q=n/2) */
@@ -559,7 +556,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) +
     BN_num_bytes(rsa->d) + BN_num_bytes(rsa->p) + BN_num_bytes(rsa->q);
   
-  HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
+  _HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
   *rsa_key_rr = malloc(rsa_key_rr_len);
   if (!*rsa_key_rr) {
     HIP_ERROR("malloc\n");
@@ -794,11 +791,11 @@ int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
  * XX FIXME: change filenamebase to filename! There is no need for a
  * filenamebase!!!
  *
- * Returns: NULL if the key could not be loaded (not in PEM format or file
- * not found, etc).
+ * Returns: On success *dsa contains the RSA structure. On failure
+ * *dsa contins NULL if the key could not be loaded (not in PEM format
+ * or file not found, etc).
  */
 int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
-  DSA *dsa_tmp = NULL;
   char *pubfilename = NULL;
   int pubfilename_len;
   char *paramsfilename = NULL;
@@ -814,19 +811,6 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
     goto out_err;
   }
 
-  *dsa = DSA_new();
-  if (!*dsa) {
-    HIP_ERROR("!dsa\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  dsa_tmp = DSA_new();
-  if (!dsa_tmp) {
-    HIP_ERROR("!dsa_tmp\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
   fp = fopen(filenamebase, "rb");
   if (!fp) {
     HIP_ERROR("Could not open public key file %s for reading\n", filenamebase);
@@ -834,25 +818,12 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
     goto out_err;
   }
 
-  dsa_tmp = PEM_read_DSAPrivateKey(fp, NULL, NULL, NULL);
-  if (!dsa_tmp) {
+  *dsa = PEM_read_DSAPrivateKey(fp, NULL, NULL, NULL);
+  if (!*dsa) {
     HIP_ERROR("Read failed for %s\n", filenamebase);
     err = -EINVAL;
     goto out_err;
   }
-
-  (*dsa)->pub_key = BN_dup(dsa_tmp->pub_key);
-  (*dsa)->priv_key = BN_dup(dsa_tmp->priv_key);
-  (*dsa)->p = BN_dup(dsa_tmp->p);
-  (*dsa)->q = BN_dup(dsa_tmp->q);
-  (*dsa)->g = BN_dup(dsa_tmp->g);
-  if (!(*dsa)->p || !(*dsa)->q || !(*dsa)->g || !(*dsa)->pub_key ||
-      !(*dsa)->priv_key) {
-    HIP_ERROR("BN_copy\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-  
   _HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
   _HIP_INFO("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
   _HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
@@ -863,10 +834,11 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
 
   if (fp)
     err = fclose(fp);
-  if (dsa_tmp)
-    DSA_free(dsa_tmp);
-  if (err && *dsa)
+  if (err && *dsa) {
+    /* maybe useless */
     DSA_free(*dsa);
+    *dsa = NULL;
+  }
 
   return err;
 }
@@ -883,11 +855,11 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
  * XX FIXME: change filenamebase to filename! There is no need for a
  * filenamebase!!!
  *
- * Returns: NULL if the key could not be loaded (not in PEM format or file
- * not found, etc).
+ * Returns: On success *rsa contains the RSA structure. On failure
+ * *rsa contains NULL if the key could not be loaded (not in PEM
+ * format or file not found, etc).
  */
 int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
-  RSA *rsa_tmp = NULL;
   char *pubfilename = NULL;
   int pubfilename_len;
   char *paramsfilename = NULL;
@@ -903,19 +875,6 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
     goto out_err;
   }
 
-  *rsa = RSA_new();
-  if (!*rsa) {
-    HIP_ERROR("!rsa\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  rsa_tmp = RSA_new();
-  if (!rsa_tmp) {
-    HIP_ERROR("!rsa_tmp\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
   fp = fopen(filenamebase, "rb");
   if (!fp) {
     HIP_ERROR("Couldn't open public key file %s for reading\n", filenamebase);
@@ -923,42 +882,33 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
     goto out_err;
   }
 
-  rsa_tmp = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
-  if (!rsa_tmp) {
+  *rsa = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
+  if (!*rsa) {
     HIP_ERROR("Read failed for %s\n", filenamebase);
     err = -EINVAL;
     goto out_err;
   }
-
-  (*rsa)->n = BN_dup(rsa_tmp->n);
-  (*rsa)->e = BN_dup(rsa_tmp->e);
-  (*rsa)->d = BN_dup(rsa_tmp->d);
-  (*rsa)->p = BN_dup(rsa_tmp->p);
-  (*rsa)->q = BN_dup(rsa_tmp->q);
-  if (!(*rsa)->n || !(*rsa)->e || !(*rsa)->d || !(*rsa)->p ||
-      !(*rsa)->q) {
-    HIP_ERROR("BN_copy\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-  
-  HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-  HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
-  HIP_INFO("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
-  HIP_INFO("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
-  HIP_INFO("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
+  _HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  _HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+  _HIP_INFO("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
+  _HIP_INFO("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
+  _HIP_INFO("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
 
  out_err:
 
   if (fp)
     err = fclose(fp);
-  if (rsa_tmp)
-    RSA_free(rsa_tmp);
-  if (err && *rsa)
+  if (err && *rsa) {
+    /* maybe useless */
     RSA_free(*rsa);
+    *rsa = NULL;
+  }
 
   return err;
 }
+
+#if 0
+/* NOT USED ? */
 
 /**
  * load_dsa_public_key - load host DSA public keys from disk
@@ -990,6 +940,7 @@ int load_dsa_public_key(const char *filenamebase, DSA **dsa) {
     goto out_err;
   }
 
+  /* optimize as in load_rsa_private_key */
   *dsa = DSA_new();
   if (!*dsa) {
     HIP_ERROR("!dsa\n");
@@ -1043,10 +994,10 @@ int load_dsa_public_key(const char *filenamebase, DSA **dsa) {
     goto out_err;
   }
 
-  HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
-  HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+  _HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
+  _HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
   if (err && *dsa)
@@ -1060,6 +1011,7 @@ int load_dsa_public_key(const char *filenamebase, DSA **dsa) {
 
   return err;
 }
+#endif
 
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname)
@@ -1088,12 +1040,10 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
   }
   memset(*endpoint, 0, endpoint_hdr.length);
 
-  HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
-
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
   hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
 		     dsa_key_rr, dsa_key_rr_len);
-			   
-  HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
 
  out_err:
 

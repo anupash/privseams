@@ -2170,11 +2170,11 @@ void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
 		hip_get_param_total_len(&endpoint_hdr->id.host_id) -
 		sizeof(struct hip_host_id);
 	endpoint_hdr->flags = endpoint_flags;
-	HIP_DEBUG("%d %d %d\n",
+	_HIP_DEBUG("%d %d %d\n",
 		  sizeof(struct endpoint_hip),
 		  hip_get_param_total_len(&endpoint_hdr->id.host_id),
 		  sizeof(struct hip_host_id));
-	HIP_DEBUG("endpoint hdr length: %d\n", endpoint_hdr->length);
+	_HIP_DEBUG("endpoint hdr length: %d\n", endpoint_hdr->length);
 }
 
 /*
@@ -2187,7 +2187,7 @@ void hip_build_endpoint(struct endpoint_hip *endpoint,
 			const unsigned char *key_rr,
 			unsigned int key_rr_len)
 {
-	HIP_DEBUG("len=%d ep=%d rr=%d hostid=%d\n",
+	_HIP_DEBUG("len=%d ep=%d rr=%d hostid=%d\n",
 		  endpoint_hdr->length,
 		  sizeof(struct endpoint_hip),
 		  key_rr_len,
@@ -2252,7 +2252,7 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 	} else {
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
-	HIP_DEBUG("err=%d\n", err);
+	_HIP_DEBUG("err=%d\n", err);
 	return err;
 }
 
