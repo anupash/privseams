@@ -173,6 +173,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
+#define HIP_HI_REUSE_UID                   4
+#define HIP_HI_REUSE_GID                   8
+#define HIP_HI_REUSE_ANY                  16
 /* Other flags: keep them to the power of two! */
 
 #define HIP_HOST_ID_RR_DSA_MAX_T_VAL           8

@@ -249,7 +249,7 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 		HIP_ERROR("Failed to get socket eid info.\n");
 		goto out_err;
 	}
-
+	HIP_DEBUG_HIT("hip_socket_bind(): HIT", &lhi.hit);
 	/* Clear out the flowinfo, etc from sockaddr_in6 */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 
@@ -276,9 +276,9 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	       sizeof(struct in6_addr));
 	memcpy(&pinfo->saddr, &lhi.hit,
 	       sizeof(struct in6_addr));
-
+	
  out_err:
-
+	
 	return err;
 }
 
