@@ -208,7 +208,7 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 
 	HIP_DEBUG_HIT("HIT", hit);
 
-	entry = hip_xfrm_find_by_hit(hit);
+	entry = hip_xfrm_try_to_find_by_peer_hit(hit);
 	if (!entry) {
 		HIP_ERROR("Unknown HIT\n");
 		return 0;
@@ -238,7 +238,7 @@ int hip_get_hits(struct in6_addr *dst_hit, struct in6_addr *src_hit)
 
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
 
-	entry = hip_xfrm_find_by_hit(dst_hit);
+	entry = hip_xfrm_try_to_find_by_peer_hit(dst_hit);
 	if (!entry) {
 		HIP_ERROR("Could not find dst HIT\n");
 		goto out_err;
@@ -272,7 +272,7 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 		return 0;
 	}
 
-	entry = hip_xfrm_find_by_hit(&fl->fl6_dst);
+	entry = hip_xfrm_try_to_find_by_peer_hit(&fl->fl6_dst);
 	if (!entry) {
 		HIP_ERROR("Unknown destination HIT\n");
 		return 0;

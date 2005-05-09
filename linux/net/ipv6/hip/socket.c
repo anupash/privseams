@@ -870,7 +870,7 @@ int hip_socket_send_bos(const struct hip_common *msg)
 		goto out_err;
 	}
 
-	x = hip_xfrm_find_by_hit(NULL);
+	x = hip_xfrm_try_to_find_by_peer_hit(NULL);
 	if (!x) {
 		HIP_ERROR("Could not find dst HIT\n");
 		err = -ENOENT;

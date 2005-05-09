@@ -151,6 +151,10 @@ hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
 }
 #endif
 
+/**
+ * This function searches for a hip_ha_t entry from the hip_hadb_hit
+ * by a HIT pair (local,peer).
+ */
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 {
         hip_hit_t key;
@@ -170,8 +174,8 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
  * hip_handle_output() we just can't know the local_hit so we have to
  * improvise and just try to find some HA entry.
  *
- * This temporary hack doesn't work properly if we have multiple HA
- * entries with the same peer_hit.
+ * NOTE: This way of finding HA entries doesn't work properly if we have 
+ * multiple entries with the same peer_hit.
  */
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 {

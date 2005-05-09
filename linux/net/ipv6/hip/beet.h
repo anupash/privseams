@@ -50,7 +50,7 @@ void hip_uninit_beetdb(void);
 struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi);
 
 /* For outbound packet processing (HITd->(SPI, IP) mapping */
-struct hip_xfrm_state *hip_xfrm_find_by_hit(const struct in6_addr *dst_hit);
+//struct hip_xfrm_state *hip_xfrm_find_by_hit(const struct in6_addr *dst_hit);
 struct hip_xfrm_state *hip_xfrm_find_by_hits(const struct in6_addr *src_hit, 
 					     const struct in6_addr *dst_hit);
 struct hip_xfrm_state *hip_xfrm_try_to_find_by_peer_hit(

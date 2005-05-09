@@ -60,7 +60,8 @@ static void hip_beetdb_put_entry(void *entry)
 
 static void *hip_beetdb_get_key_hit(void *entry)
 {
-	return HIP_DB_GET_KEY_HIT(entry, hip_xfrm_t);
+	return (void *)&(((hip_xfrm_t *)entry)->hash_key);
+	//return HIP_DB_GET_KEY_HIT(entry, hip_xfrm_t);
 }
 
 static void hip_beetdb_hold_hs(void *entry)
@@ -202,7 +203,8 @@ int hip_beetdb_insert_state(hip_xfrm_t *x)
 	HIP_ASSERT(!(ipv6_addr_any(&x->hit_peer)));
 
 	if (!ipv6_addr_any(&x->hit_peer)) {
-		tmp = hip_ht_find(&hip_beetdb_hit, (void *)&(x->hit_peer));
+		hip_xor_hits(&x->hash_key, &x->hit_our, &x->hit_peer);
+		tmp = hip_ht_find(&hip_beetdb_hit, (void *)&(x->hash_key));
 		if (!tmp) {
 			err = hip_ht_add(&hip_beetdb_hit, x);
 		} else {
@@ -284,7 +286,7 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, struct in6_addr *peer_addr,
 
 	HIP_DEBUG("\n");
 
-	entry = hip_xfrm_find_by_hit(hit_peer);
+	entry = hip_xfrm_try_to_find_by_peer_hit(hit_peer);
 	if (!entry) {
 		entry = hip_beetdb_create_state(GFP_KERNEL);
 		if (!entry) {
@@ -353,23 +355,18 @@ int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir) {
 	return 0;
 }
 
+#if 0
 hip_xfrm_t *hip_xfrm_find_by_hit(const hip_hit_t *dst_hit)
 {
 	HIP_DEBUG("\n");
 	return (hip_xfrm_t *)hip_ht_find(&hip_beetdb_hit, (void *)dst_hit);
 }
+#endif
 
 /**
- * TODO: Change the hip_xfrm_find_by_hit() function calls either to calls
- * to this function or the function below depending on whether we have both
- * the local and peer HIT available at the time..
- *
- * NOTE: To enable the new hash keys (local hit XOR peer hit), 
- * refactor the hip_beetdb_insert_state() so that the hash value is calculated.
- * Also change the hip_beetdb_get_key_hit() accordingly.
- *
  * This function searches for a hip_xfrm_t entry from the hip_beetdb_hit
- * by HIT pair (local,peer).
+ * by a HIT pair (local,peer).
+ *
  */
 hip_xfrm_t *hip_xfrm_find_by_hits(const hip_hit_t *hit, const hip_hit_t *hit2)
 {
@@ -379,9 +376,6 @@ hip_xfrm_t *hip_xfrm_find_by_hits(const hip_hit_t *hit, const hip_hit_t *hit2)
 }
 
 /**
- * XX TODO: this doesn't work currently - fix it and change the indexation of
- * the beetdb_byhit after that.
- * 
  * This function simply goes through all local xfrm entries and tries
  * to find an entry that matches the given peer hit. First matching xfrm 
  * entry is then returned.
@@ -393,8 +387,8 @@ hip_xfrm_t *hip_xfrm_find_by_hits(const hip_hit_t *hit, const hip_hit_t *hit2)
  * hip_handle_output() we just can't know the local_hit so we have to
  * improvise and just try to find some xfrm entry. 
  * 
- * This temporary hack doesn't work properly if we have multiple xfrm 
- * entries with the same peer_hit. 
+ * NOTE: This way of finding xfrm entries doesn't work properly if we 
+ * have multiple xfrm entries with the same peer_hit..
  */
 hip_xfrm_t *hip_xfrm_try_to_find_by_peer_hit(const hip_hit_t *hit) 
 {
@@ -403,10 +397,11 @@ hip_xfrm_t *hip_xfrm_try_to_find_by_peer_hit(const hip_hit_t *hit)
 	
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
 		if(!list_empty(&hip_beetdb_byhit[i])) {
-			list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i],
-					 	 next) {
+  			list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i],
+						 next) {
 				if(x) 
 					if (!ipv6_addr_cmp(&x->hit_peer, hit)){
+						hip_beetdb_hold_entry(x);
 						return x;
 					}
 			}
@@ -434,7 +429,7 @@ struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 	hip_beetdb_put_hs(hs);
 
 	/* searches based on the dst HIT? is this correct? */
-	ha = hip_xfrm_find_by_hit(&hit);
+	ha = hip_xfrm_try_to_find_by_peer_hit(&hit);
 	if (!ha) {
 		HIP_DEBUG("HA not found for SPI=0x%x\n", spi_in);
 	}
@@ -457,7 +452,7 @@ uint32_t hip_get_default_spi_out(hip_hit_t *hit, int *state_ok)
 
 	_HIP_DEBUG("\n");
 
-	entry = hip_xfrm_find_by_hit(hit);
+	entry = hip_xfrm_try_to_find_by_peer_hit(hit);
 	if (!entry) {
 		HIP_DEBUG("entry not found\n");
 		*state_ok = 0;

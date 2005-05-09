@@ -39,7 +39,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
         /* XX FIX: the following call breaks kernel-only HIP (Miika) No it doesnt. (tkoponen) */
 
 	/* The source address is not yet a HIT, just the dst address. */
-	xs = hip_xfrm_find_by_hit(&hdr->daddr);
+	xs = hip_xfrm_try_to_find_by_peer_hit(&hdr->daddr);
 	HIP_IFEL(!xs, -EFAULT, "Unknown HA\n");
 
 	smp_wmb();
