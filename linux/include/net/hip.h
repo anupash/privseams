@@ -915,6 +915,7 @@ struct hip_hadb_state
 	uint16_t             peer_controls;
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
+	hip_hit_t            hash_key;       /* hit_our XOR hit_peer */
 	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
 	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
 	uint32_t             default_spi_out;

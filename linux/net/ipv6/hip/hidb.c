@@ -142,7 +142,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	struct hip_host_id *pubkey;
 	unsigned long lf;
 
-	_HIP_HEXDUMP("adding host id", hit, sizeof(struct in6_addr));
+	HIP_HEXDUMP("adding host id", hit, sizeof(struct in6_addr));
 
 	HIP_ASSERT(hit != NULL);
 	HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));

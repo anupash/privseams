@@ -85,7 +85,8 @@ int hip_hadb_hit_is_our(const hip_hit_t *our) {
 
 static void *hip_hadb_get_key_hit(void *entry)
 {
-	return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
+	return (void *)&(((hip_ha_t *)entry)->hash_key);
+        //return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
 }
 
 static void *hip_hadb_get_key_spi_list(void *entry)
@@ -135,7 +136,7 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 	ipv6_addr_copy(&hit, &hs->hit);
 	hip_hadb_put_hs(hs);
 
-	ha = hip_hadb_find_byhit(&hit);
+	ha = hip_hadb_try_to_find_by_peer_hit(&hit);
 	if (!ha) {
 		HIP_DEBUG("HA not found for SPI=0x%x\n", spi);
 	}
@@ -143,9 +144,53 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 	return ha;
 }
 
+#if 0
 hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
 {
 	return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)hit);
+}
+#endif
+
+hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
+{
+        hip_hit_t key;
+        hip_xor_hits(&key, hit, hit2);
+        return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
+}
+
+/**
+ * This function simply goes through all local HIs and tries
+ * to find a HADB entry that matches the current HI and
+ * the given peer hit. First matching HADB entry is then returned.
+ *
+ * XX TODO: find a better solution, see the text below:
+ * This function is needed because we index the HADB now by
+ * key values calculated from <peer_hit,local_hit> pairs. Unfortunately, in
+ * some functions like the ipv6 stack hooks hip_get_saddr() and
+ * hip_handle_output() we just can't know the local_hit so we have to
+ * improvise and just try to find some HA entry.
+ *
+ * This temporary hack doesn't work properly if we have multiple HA
+ * entries with the same peer_hit.
+ */
+hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
+{
+        struct hip_host_id_entry *item = NULL, *tmp = NULL;
+        hip_ha_t *entry = NULL;
+        hip_hit_t our_hit;
+
+        list_for_each_entry_safe(item,tmp,&hip_local_hostid_db.db_head, next) {
+                ipv6_addr_copy(&our_hit,&item->hit);
+		
+                _HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
+                entry = hip_hadb_find_byhits(hit,&our_hit);
+                if (!entry) {
+                        continue;
+                } else {
+                        return entry;
+                }
+        }
+        return NULL;
 }
 
 /**
@@ -195,7 +240,8 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	st = ha->hastate;
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
-		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hit_peer));
+		hip_xor_hits(&ha->hash_key, &ha->hit_our, &ha->hit_peer);
+		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hash_key));
 		if (!tmp) {
 			hip_ht_add(&hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
@@ -691,7 +737,8 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 {
 	hip_ha_t *ha;
 
-	ha = hip_hadb_find_byhit(hit);
+	/* XX TODO: delete all ha entries that contain a matching peer hi? */
+	ha = hip_hadb_try_to_find_by_peer_hit(hit);
 	if (!ha) {
 		return -ENOENT;
 	}
@@ -728,7 +775,8 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	HIP_DEBUG_HIT("HIT", hit);
 	HIP_DEBUG_IN6ADDR("addr", addr);
 
-	entry = hip_hadb_find_byhit(hit);
+	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
+	entry = hip_hadb_try_to_find_by_peer_hit(hit);
 	if (!entry) {
 		entry = hip_hadb_create_state(GFP_KERNEL);
 		if (!entry) {

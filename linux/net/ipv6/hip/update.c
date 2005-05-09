@@ -951,7 +951,7 @@ int hip_receive_update(struct hip_common *msg,
 	dst_ip = update_daddr;
 	hits = &msg->hits;
 
-	HIP_IFEL(!(entry = hip_hadb_find_byhit(hits)), -1,
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(hits, &msg->hitr)), -1,
 		 "Entry not found\n");
 	HIP_LOCK_HA(entry);
 	state = entry->state; /* todo: remove variable state */

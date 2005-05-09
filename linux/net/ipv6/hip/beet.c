@@ -359,6 +359,63 @@ hip_xfrm_t *hip_xfrm_find_by_hit(const hip_hit_t *dst_hit)
 	return (hip_xfrm_t *)hip_ht_find(&hip_beetdb_hit, (void *)dst_hit);
 }
 
+/**
+ * TODO: Change the hip_xfrm_find_by_hit() function calls either to calls
+ * to this function or the function below depending on whether we have both
+ * the local and peer HIT available at the time..
+ *
+ * NOTE: To enable the new hash keys (local hit XOR peer hit), 
+ * refactor the hip_beetdb_insert_state() so that the hash value is calculated.
+ * Also change the hip_beetdb_get_key_hit() accordingly.
+ *
+ * This function searches for a hip_xfrm_t entry from the hip_beetdb_hit
+ * by HIT pair (local,peer).
+ */
+hip_xfrm_t *hip_xfrm_find_by_hits(const hip_hit_t *hit, const hip_hit_t *hit2)
+{
+	hip_hit_t key;
+	hip_xor_hits(&key, hit, hit2);
+	return (hip_xfrm_t *)hip_ht_find(&hip_beetdb_hit, (void *)&key);
+}
+
+/**
+ * XX TODO: this doesn't work currently - fix it and change the indexation of
+ * the beetdb_byhit after that.
+ * 
+ * This function simply goes through all local xfrm entries and tries
+ * to find an entry that matches the given peer hit. First matching xfrm 
+ * entry is then returned.
+ *
+ * XX TODO: find a better solution, see the text below:
+ * This function is needed because we index the xfrm now by 
+ * key values calculated from <peer_hit,local_hit> pairs. Unfortunately, in 
+ * some functions like the ipv6 stack hooks hip_get_saddr() and 
+ * hip_handle_output() we just can't know the local_hit so we have to
+ * improvise and just try to find some xfrm entry. 
+ * 
+ * This temporary hack doesn't work properly if we have multiple xfrm 
+ * entries with the same peer_hit. 
+ */
+hip_xfrm_t *hip_xfrm_try_to_find_by_peer_hit(const hip_hit_t *hit) 
+{
+	hip_xfrm_t *x, *tmp;
+	int i;
+	
+	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
+		if(!list_empty(&hip_beetdb_byhit[i])) {
+			list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i],
+					 	 next) {
+				if(x) 
+					if (!ipv6_addr_cmp(&x->hit_peer, hit)){
+						return x;
+					}
+			}
+		}
+	}
+	
+	return NULL;
+}
+
 /* find HA by inbound SPI */
 struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 {

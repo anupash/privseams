@@ -380,7 +380,7 @@ int hip_do_work(struct hip_work_order *job)
 		{
 			hip_ha_t *entry;
 			// FIXME: create HA here, on the fly if needed (Hi3)
- 			entry = hip_hadb_find_byhit(&job->hdr.id2);
+ 			entry = hip_hadb_try_to_find_by_peer_hit(&job->hdr.id2);
 			if (!entry) {
 				HIP_ERROR("Unknown HA\n");
 				res = KHIPD_ERROR;
