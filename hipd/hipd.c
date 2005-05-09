@@ -76,10 +76,11 @@ int main(int argc, char *argv[]) {
 	int err;
 	struct timeval timeout;
 	struct hip_work_order ping;
+	int ret = 0;
 
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "f")) != -1) {		
- 		switch (ch) {
+		switch (ch) {
 		case 'd':
 			foreground = 0;
 			break;
@@ -91,7 +92,7 @@ int main(int argc, char *argv[]) {
 		case '?':
 		default:
 			usage();
-			return(0);
+			goto out;
 		}
 	}
 
@@ -99,7 +100,8 @@ int main(int argc, char *argv[]) {
 	/* Note that for now the Hi3 host identities are not loaded in. */
 	if (!i3_config) {
 		fprintf(stderr, "Please do pass a valid i3 configuration file.\n");
-		return 1;
+		ret = 1;
+		goto out;
 	}
 #endif
 
@@ -110,7 +112,7 @@ int main(int argc, char *argv[]) {
 		printf("foreground\n");
 		hip_set_logtype(LOGTYPE_STDERR);
 	} else {
-		if (fork() > 0)
+		if (fork() > 0) /* check ret val */
 			return(0);
 		hip_set_logtype(LOGTYPE_SYSLOG);
 	}
@@ -125,7 +127,8 @@ int main(int argc, char *argv[]) {
 	/* Open the netlink socket for address and IF events */
 	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR, NETLINK_ROUTE) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
-		return(1);
+		ret = 1;
+		goto out;
 	}
 	highest_descriptor = nl_ifaddr.fd;
 
@@ -136,14 +139,16 @@ int main(int argc, char *argv[]) {
 	/* Open the netlink socket for kernel communication */
 	if (hip_netlink_open(&nl_khipd, 0, NETLINK_HIP) < 0) {
 		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
-		return(1);
+		ret = 1;
+		goto out;
 	}
 	
 	highest_descriptor = nl_khipd.fd > highest_descriptor ? nl_khipd.fd : highest_descriptor;
 	
         if (hip_init_cipher() < 0) {
 		HIP_ERROR("Unable to init ciphers.\n");
-		return(1);
+		ret = 1;
+		goto out;
 	}
 
         hip_init_hadb();
@@ -162,7 +167,8 @@ int main(int argc, char *argv[]) {
 	ping.msg = hip_msg_alloc();
 	if (hip_netlink_talk(&nl_khipd, &ping, &ping)) {
 		HIP_ERROR("Unable to connect to the kernel HIP daemon over netlink.\n");
-		return(1);
+		ret = 1;
+		goto out;
 	}
 	
 	hip_msg_free(ping.msg);
@@ -217,8 +223,14 @@ int main(int argc, char *argv[]) {
 			hip_do_work(hwo);
 		}
 		
-		}
-		/* Never enters here */
-		return 1;
-	
 	}
+
+out:
+	/* free allocated resources */
+	if (nl_ifaddr.fd)
+		close(nl_ifaddr.fd);
+	delete_all_addresses();
+	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), ret);
+	return ret;
+}
+

@@ -105,6 +105,21 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 		HIP_ERROR("BUG: address_count < 0\n", address_count);
 }
 
+void delete_all_addresses(void)
+{
+        struct netdev_address *n, *t;
+
+	HIP_DEBUG("address_count at entry=%d\n", address_count);
+	list_for_each_entry_safe(n, t, &addresses, next) {
+		list_del(&n->next);
+		HIP_FREE(n);
+		address_count--;
+        }
+
+	if (address_count != 0)
+		HIP_ERROR("BUG: address_count != 0\n", address_count);
+}
+
 int hip_netdev_find_if(struct sockaddr *addr)
 {
         struct netdev_address *n;
