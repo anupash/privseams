@@ -216,11 +216,12 @@ int hip_beetdb_insert_state(hip_xfrm_t *x)
 	return err;
 }
 
-int hip_xfrm_insert_state_spi_list(hip_hit_t *hit_peer, uint32_t spi)
+int hip_xfrm_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our, 
+				   uint32_t spi)
 {
 	int err = 0;
 	HIP_INSERT_STATE_SPI_LIST(&hip_beetdb_spi_list, hip_beetdb_put_entry,
-				  hit_peer, spi);
+				  hit_peer, hit_our, spi);
 	return err;
 }
 
@@ -242,7 +243,9 @@ int hip_xfrm_update_inbound(hip_hit_t *hit_peer, struct in6_addr *hit_our,
 	entry = hip_xfrm_find_by_spi(spi_in);
 	if (!entry) {
 		/* create a new inbound SPI to HIT mapping */
-		HIP_IFEL((err = hip_xfrm_insert_state_spi_list(hit_peer, spi_in)), err, 
+		HIP_IFEL((err = hip_xfrm_insert_state_spi_list(hit_peer, 
+							       hit_our, 
+							       spi_in)), err, 
 			 "Failed to create new SPI entry\n");
 
 		entry = hip_xfrm_find_by_spi(spi_in);
@@ -278,7 +281,8 @@ int hip_xfrm_update_inbound(hip_hit_t *hit_peer, struct in6_addr *hit_our,
 // 1c) or update default dst IP for given dst HIT in db_hit
 // 1d) or change the state
 //
-int hip_xfrm_update_outbound(hip_hit_t *hit_peer, struct in6_addr *peer_addr,
+int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our, 
+			     struct in6_addr *peer_addr,
 			     int spi_out, int state)
 {
 	hip_xfrm_t *entry;
@@ -286,7 +290,7 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, struct in6_addr *peer_addr,
 
 	HIP_DEBUG("\n");
 
-	entry = hip_xfrm_try_to_find_by_peer_hit(hit_peer);
+	entry = hip_xfrm_find_by_hits(hit_peer, hit_our);
 	if (!entry) {
 		entry = hip_beetdb_create_state(GFP_KERNEL);
 		if (!entry) {
@@ -296,6 +300,8 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, struct in6_addr *peer_addr,
 		}
 
 		ipv6_addr_copy(&entry->hit_peer, hit_peer);
+		ipv6_addr_copy(&entry->hit_our, hit_our);
+		hip_xor_hits(&entry->hash_key, hit_our, hit_peer);
 
 		err = hip_beetdb_insert_state(entry);
 		if (err) {
@@ -328,19 +334,19 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, struct in6_addr *peer_addr,
 	return err;
 }
 
-int hip_xfrm_update(hip_hit_t *hit_peer,
-		    struct in6_addr *peer_addr_or_our_hit,
+int hip_xfrm_update(hip_hit_t *hit_peer, hip_hit_t *hit_our,
+		    struct in6_addr *peer_addr,
 		    uint32_t spi, int state, int dir)
 {
 	int err = 0;
 
 	if (dir == HIP_SPI_DIRECTION_IN)
-		err = hip_xfrm_update_inbound(hit_peer, peer_addr_or_our_hit,
+		err = hip_xfrm_update_inbound(hit_peer, hit_our,
 					      spi, state);
 	else
-		err = hip_xfrm_update_outbound(hit_peer, peer_addr_or_our_hit,
+		err = hip_xfrm_update_outbound(hit_peer, hit_our, peer_addr,
 					       spi, state);
-
+	
 	return err;
 }
 
@@ -415,7 +421,7 @@ hip_xfrm_t *hip_xfrm_try_to_find_by_peer_hit(const hip_hit_t *hit)
 struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 {
 	struct hip_hit_spi *hs;
-	hip_hit_t hit;
+	hip_hit_t hit_our, hit_peer;
 	hip_xfrm_t *ha;
 
 	hs = (struct hip_hit_spi *) hip_ht_find(&hip_beetdb_spi_list,
@@ -425,11 +431,12 @@ struct hip_xfrm_state *hip_xfrm_find_by_spi(uint32_t spi_in)
 		return NULL;
 	}
 
-	ipv6_addr_copy(&hit, &hs->hit);
+	ipv6_addr_copy(&hit_our, &hs->hit_our);
+	ipv6_addr_copy(&hit_peer, &hs->hit_peer);
 	hip_beetdb_put_hs(hs);
 
 	/* searches based on the dst HIT? is this correct? */
-	ha = hip_xfrm_try_to_find_by_peer_hit(&hit);
+	ha = hip_xfrm_find_by_hits(&hit_our, &hit_peer);
 	if (!ha) {
 		HIP_DEBUG("HA not found for SPI=0x%x\n", spi_in);
 	}

@@ -431,7 +431,7 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
 
 	hwo = hip_init_job(GFP_ATOMIC);
 	if (hwo) {	  
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_IN6_EVENT, NULL, NULL, ifindex, NETDEV_UP);
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_IN6_EVENT, NULL, NULL, NULL, ifindex, NETDEV_UP, 0);
 		hip_insert_work_order(hwo);
 	} else {
 		HIP_ERROR("Unable to handle address event\n");
@@ -517,7 +517,7 @@ void hip_handle_inet6_addr_del(int ifindex) {
 
 	hwo = hip_init_job(GFP_ATOMIC);
 	if (hwo) {	  
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_IN6_EVENT, NULL, NULL, ifindex, NETDEV_DOWN);
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_IN6_EVENT, NULL, NULL, NULL, ifindex, NETDEV_DOWN, 0);
 		hip_insert_work_order(hwo);
   	} else {
 		HIP_ERROR("Unable to handle address event\n");
@@ -565,8 +565,10 @@ static int hip_netdev_event_handler(struct notifier_block *notifier_block,
 
 	hwo = hip_init_job(GFP_ATOMIC);
 	if (hwo) {	  
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, HIP_WO_SUBTYPE_DEV_EVENT, NULL, NULL, 
-					event_dev->ifindex, event);
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, 
+					HIP_WO_SUBTYPE_DEV_EVENT, 
+					NULL, NULL, NULL, 
+					event_dev->ifindex, event, 0);
 		hip_insert_work_order(hwo);
 	} else {
 		HIP_ERROR("Unable to handle address event\n");
@@ -724,7 +726,9 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
 	HIP_INIT_WORK_ORDER_HDR(hwo->hdr,
 				HIP_WO_TYPE_OUTGOING, 
 				HIP_WO_SUBTYPE_SEND_I1,
-				&hdr.saddr, (struct in6_addr *) &(xs->id.daddr), 0, 0, 0);
+				&hdr.saddr, 
+				(struct in6_addr *) &(xs->id.daddr), NULL, 
+				0, 0, 0);
 	hip_insert_work_order(hwo);
 #endif
 	ipv6_addr_copy(&hdr.daddr, (struct in6_addr *) &(xs->id.daddr));

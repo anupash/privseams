@@ -124,7 +124,7 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 {
 	struct hip_hit_spi *hs;
-	hip_hit_t hit;
+	hip_hit_t hit_our, hit_peer;
 	hip_ha_t *ha;
 
 	hs = (struct hip_hit_spi *) hip_ht_find(&hadb_spi_list, (void *)spi);
@@ -133,10 +133,11 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 		return NULL;
 	}
 
-	ipv6_addr_copy(&hit, &hs->hit);
+	ipv6_addr_copy(&hit_our, &hs->hit_our);
+	ipv6_addr_copy(&hit_peer, &hs->hit_peer);
 	hip_hadb_put_hs(hs);
 
-	ha = hip_hadb_try_to_find_by_peer_hit(&hit);
+	ha = hip_hadb_find_byhits(&hit_our, &hit_peer);
 	if (!ha) {
 		HIP_DEBUG("HA not found for SPI=0x%x\n", spi);
 	}
@@ -262,11 +263,12 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
  */
-int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, uint32_t spi)
+int hip_hadb_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our, 
+				   uint32_t spi)
 {
 	int err = 0;
 	HIP_INSERT_STATE_SPI_LIST(&hadb_spi_list, hip_hadb_put_entry,
-				  peer_hit, spi);
+				  hit_our, hit_peer, spi);
 	return err;
 }
 
@@ -364,6 +366,7 @@ int hip_hadb_update_xfrm_inbound(hip_ha_t *entry) {
 			  item->spi, hip_state_str(entry->state));
 		err = hip_xfrm_update(&entry->hit_peer,
 				      &entry->hit_our,
+				      NULL,
 			              item->spi,
 				      entry->state,
 				      HIP_SPI_DIRECTION_IN);
@@ -390,7 +393,8 @@ int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
 	HIP_DEBUG("Outbound HIT update, default SPI=0x%x state=%s\n",
 		  entry->default_spi_out, hip_state_str(entry->state));
 	HIP_HEXDUMP("HIT: ", &entry->hit_peer, sizeof(struct in6_addr));
-	return hip_xfrm_update(&entry->hit_peer, addr, entry->default_spi_out,
+	return hip_xfrm_update(&entry->hit_peer, &entry->hit_our, addr, 
+			       entry->default_spi_out,
 			       entry->state, HIP_SPI_DIRECTION_OUT);
 }
 
@@ -860,7 +864,8 @@ static int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *dat
 	// hip_hold_ha(entry); ?
 
 	_HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
-	err = hip_hadb_insert_state_spi_list(&entry->hit_peer, spi_in);
+	err = hip_hadb_insert_state_spi_list(&entry->hit_peer, &entry->hit_our,
+					     spi_in);
 	if (err == -EEXIST)
 		err = 0;
  out_err:
@@ -1687,7 +1692,7 @@ void hip_hadb_dump_hs_ht(void)
                         list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i]
 , list) {
                                 hip_hadb_hold_hs(hs);
-                                hip_in6_ntop(&hs->hit, str);
+                                hip_in6_ntop(&hs->hit_peer, str);
                                 HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
                                           str, hs->spi, atomic_read(&hs->refcnt)
 );

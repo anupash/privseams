@@ -701,7 +701,7 @@ int hip_handle_peer_map_work_order(const struct in6_addr *hit,
 		   (insert ? HIP_WO_SUBTYPE_ADDMAP : HIP_WO_SUBTYPE_DELMAP));
 
 	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG, subtype,
-				ip, hit, 0, 0, 0);
+				ip, hit, NULL, 0, 0, 0);
 	hip_insert_work_order(hwo);
 
  out_err:
@@ -1131,7 +1131,7 @@ int hip_wrap_handle_add_local_hi(const struct hip_common *input)
 		}			   
 
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
-					HIP_WO_SUBTYPE_ADDHI, NULL, NULL,
+					HIP_WO_SUBTYPE_ADDHI, NULL, NULL, NULL,
 					0, 0, 0);
 		/* override the destructor; socket handler deletes the msg
 		   by itself */

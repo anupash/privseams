@@ -595,7 +595,9 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		 * somehow, but we do this or else delete_inbound_spi
 		 * would delete both old and new SPIs */
 		hip_hadb_remove_hs(prev_spi_in);
-		err = hip_hadb_insert_state_spi_list(&entry->hit_peer, new_spi_in);
+		err = hip_hadb_insert_state_spi_list(&entry->hit_peer, 
+						     &entry->hit_our,
+						     new_spi_in);
 		if (err == -EEXIST) {
 			HIP_DEBUG("HIT-SPI mapping already exists, hmm ..\n");
 			err = 0;

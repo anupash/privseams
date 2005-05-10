@@ -61,13 +61,14 @@
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
 } while(0)
 
-#define HIP_INSERT_STATE_SPI_LIST(hashtable, put_hs, hit_peer, spi)          \
+#define HIP_INSERT_STATE_SPI_LIST(hashtable, put_hs, hit_peer, hit_our, spi) \
   do {                                                                       \
 	struct hip_hit_spi *tmp;                                             \
-	hip_hit_t hit;                                                       \
+	hip_hit_t hit_p, hit_o;                                              \
 	struct hip_hit_spi *new_item;                                        \
 	/* assume already locked entry */                                    \
-	ipv6_addr_copy(&hit, hit_peer);                                      \
+	ipv6_addr_copy(&hit_p, hit_peer);                                    \
+	ipv6_addr_copy(&hit_o, hit_our);                                     \
 	tmp = hip_ht_find(hashtable, (void *)spi);                           \
 	if (tmp) {                                                           \
 		put_hs(tmp);                                                 \
@@ -85,8 +86,9 @@
 	atomic_set(&new_item->refcnt, 0);                                    \
 	HIP_LOCK_INIT(new_item);                                             \
 	new_item->spi = spi;                                                 \
-	ipv6_addr_copy(&new_item->hit, &hit);                                \
-	hip_ht_add(hashtable, new_item);                                    \
+	ipv6_addr_copy(&new_item->hit_peer, &hit_p);                         \
+	ipv6_addr_copy(&new_item->hit_our, &hit_o);                          \
+	hip_ht_add(hashtable, new_item);                                     \
 	_HIP_DEBUG("SPI 0x%x added to HT spi_list, HS=%p\n", spi, new_item); \
   } while (0)
 
@@ -124,7 +126,8 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
-int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, uint32_t spi);
+int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, hip_hit_t *our_hit,
+				   uint32_t spi);
 void hip_hadb_remove_hs(uint32_t spi);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);

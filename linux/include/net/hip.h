@@ -866,7 +866,8 @@ struct hip_hit_spi {
 	struct list_head list;
 	spinlock_t       lock;
 	atomic_t         refcnt;
-	hip_hit_t        hit;
+	hip_hit_t        hit_our;
+	hip_hit_t        hit_peer;
 	uint32_t         spi; /* this SPI spi belongs to the HIT hit */
 };
 
@@ -975,7 +976,7 @@ struct hip_cookie_entry {
 struct hip_work_order_hdr {
 	int type;
 	int subtype;
-	struct in6_addr id1, id2; /* can be a HIT or IP address */
+	struct in6_addr id1, id2, id3; /* can be a HIT or IP address */
 	int arg1, arg2, arg3;
 };
 

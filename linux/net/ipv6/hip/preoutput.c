@@ -63,7 +63,8 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr,
 					HIP_WO_TYPE_OUTGOING, 
 					HIP_WO_SUBTYPE_SEND_I1,
-					&hdr->saddr, &hdr->daddr, 0, 0, 0);
+					&hdr->saddr, &hdr->daddr, NULL,
+					0, 0, 0);
 		hip_insert_work_order(hwo);
 		break;
 	case HIP_STATE_I1_SENT:

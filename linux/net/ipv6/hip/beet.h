@@ -73,8 +73,8 @@ int hip_xfrm_hit_is_our(const hip_hit_t *hit);
  * manage the replica of HADB within the kernel.
  */
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
-int hip_xfrm_update(hip_hit_t *hit, struct in6_addr *addr, uint32_t spi,
-		    int state, int dir);
+int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
+		    uint32_t spi, int state, int dir);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 
 #endif /* HIP_BEET_H */

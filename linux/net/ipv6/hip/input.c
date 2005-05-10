@@ -1741,7 +1741,7 @@ int hip_handle_bos(struct hip_common *bos,
 			 "Failed to insert peer map work order\n");
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
 					HIP_WO_SUBTYPE_ADDMAP,
-					dstip, &bos->hits, 0, 0, 0);
+					dstip, &bos->hits, NULL, 0, 0, 0);
 		hip_insert_work_order(hwo);
 	}
 
