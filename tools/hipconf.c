@@ -40,7 +40,8 @@ int (*action_handler[])(struct hip_common *, int action,
   handle_map,
   handle_rst,
   handle_rvs,
-  handle_bos
+  handle_bos,
+  handle_del
 };
 
 /**
@@ -79,11 +80,11 @@ int check_action_argc(int action) {
 
   switch (action) {
   case ACTION_ADD:
-  case ACTION_DEL:
   case ACTION_NEW:
     count = 2;
     break;
   case ACTION_RST:
+  case ACTION_DEL:
     count = 1;
     break;
   case ACTION_BOS:
@@ -113,6 +114,8 @@ int get_type(char *text) {
 	  ret = TYPE_RVS;
   else if (!strcmp("bos", text))
     ret = TYPE_BOS;
+  else if (!strcmp("del", text))
+    ret = TYPE_DEL;
   return ret;
 }
 
@@ -440,13 +443,8 @@ int handle_hi(struct hip_common *msg,
     HIP_HEXDUMP("Calculated RSA HIT: ", &rsa_lhi.hit,
 		sizeof(struct in6_addr));
     break;
-  case ACTION_DEL:
-    numeric_action = SO_HIP_DEL_LOCAL_HI;
-    HIP_ERROR("Deletion of HI not implemented yet\n");
-    err = -ENOSYS;
-    break;
   }
-
+    
   if (numeric_action == 0)
     goto skip_msg;
 
@@ -572,17 +570,62 @@ int handle_map(struct hip_common *msg, int action,
     break;
   case ACTION_DEL:
 	  err = hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP, 0);
-	  if (err) {
-		  HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		  goto out;
-	  }
-	  break;
+         if (err) {
+                 HIP_ERROR("build hdr failed: %s\n", strerror(err));
+                 goto out;
+         }
+        break;
   }
 
  out:
   return err;
 }
 
+int handle_del(struct hip_common *msg, int action,
+		const char *opt[], int optc) 
+{
+	int err;
+	int ret;
+	struct in6_addr hit;
+	
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+	
+	
+	ret = inet_pton(AF_INET6, opt[0], &hit);
+	if (ret < 0 && errno == EAFNOSUPPORT) {
+		HIP_PERROR("inet_pton: not a valid address family\n");
+		err = -EAFNOSUPPORT;
+		goto out;
+	} else if (ret == 0) {
+		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+		err = -EINVAL;
+		goto out;
+	}
+	
+	HIP_HEXDUMP("HIT to delete: ", &hit,
+		    sizeof(struct in6_addr));
+	
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+	
+	err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+	
+ out:
+	return err;
+}
+ 
 int handle_rst(struct hip_common *msg, int action,
 	       const char *opt[], int optc) 
 {
@@ -697,6 +740,7 @@ int main(int argc, char *argv[]) {
 
   if (action != ACTION_RST &&
       action != ACTION_RVS &&
+      action != ACTION_DEL &&
       action != ACTION_BOS) 
   {
 	  type_arg = 2;
@@ -726,8 +770,11 @@ int main(int argc, char *argv[]) {
     err = (*action_handler[TYPE_RVS])(msg, ACTION_RST,
 				      (const char **) &argv[2], argc - 2);
     break;
-  case ACTION_ADD:
   case ACTION_DEL:
+    err = (*action_handler[TYPE_DEL])(msg, ACTION_DEL,
+				      (const char **) &argv[2], argc - 2);
+   break;	  
+  case ACTION_ADD:
   case ACTION_NEW:
     err = (*action_handler[type])(msg, action, (const char **) &argv[3],
 				  argc - 3);

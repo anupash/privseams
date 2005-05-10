@@ -495,6 +495,9 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
 		case HIP_WO_SUBTYPE_DELHI:
+			HIP_DEBUG("Deleting a HI\n");
+			res = hip_handle_del_local_hi(job->msg);
+			break;
 		case HIP_WO_SUBTYPE_FLUSHHIS:
 		case HIP_WO_SUBTYPE_NEWDH:
 			HIP_INFO("Not implemented subtype: %d (type=%d)\n",

@@ -675,12 +675,29 @@ ssize_t hip_socket_sendpage(struct socket *sock, struct page *page, int offset,
  */
 int hip_socket_handle_del_local_hi(const struct hip_common *input)
 {
+	struct hip_work_order *hwo;
 	int err = 0;
 
-	HIP_ERROR("Not implemented\n");
-	err = -ENOSYS;
+	HIP_DEBUG("Sending a delete HI msg to the userspace daemon\n");
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (!hwo) {
+		HIP_ERROR("Failed to insert hi work order (%d)\n",
+			  err);
+		err = -EFAULT;
+		goto out_err;
+	}			   
 
-        return err;
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+				HIP_WO_SUBTYPE_DELHI, NULL, NULL, NULL,
+				0, 0, 0);
+	/* override the destructor; socket handler deletes the msg
+	   by itself */
+	hwo->destructor = NULL;
+	hwo->msg = (struct hip_common *) input;
+	hip_insert_work_order(hwo);
+	
+ out_err:
+	return err;
 }
 
 int hip_handle_peer_map_work_order(const struct in6_addr *hit,
