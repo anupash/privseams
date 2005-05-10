@@ -1000,7 +1000,7 @@ struct hip_host_id_entry {
    head being of different type) */
 	struct list_head next; 
 
-	struct in6_addr hit; 
+	struct hip_lhi lhi; 
 	/* struct in_addr lsi; */
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */

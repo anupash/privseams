@@ -95,7 +95,7 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
 				    struct in6_addr *hit, int algo);
 int hip_add_host_id(struct hip_db_struct *db,
-		    const struct in6_addr *hit,
+		    const struct hip_lhi *lhi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg),		
 		    int (*remove)(struct hip_host_id_entry *, void **arg),

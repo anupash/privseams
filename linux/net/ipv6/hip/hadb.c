@@ -185,7 +185,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
         hip_hit_t our_hit;
 
         list_for_each_entry_safe(item,tmp,&hip_local_hostid_db.db_head, next) {
-                ipv6_addr_copy(&our_hit,&item->hit);
+                ipv6_addr_copy(&our_hit,&item->lhi.hit);
 		
                 _HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
                 entry = hip_hadb_find_byhits(hit,&our_hit);

@@ -76,7 +76,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 	struct hip_host_id_entry *id_entry;
 
 	list_for_each_entry(id_entry, &db->db_head, next) {
-	  if ((hit == NULL || !ipv6_addr_cmp(&id_entry->hit, hit)) &&
+	  if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
 	      (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
 			return id_entry;
 	}
@@ -130,7 +130,7 @@ void hip_uninit_host_id_dbs(void)
  * On success returns 0, otherwise an negative error value is returned.
  */
 int hip_add_host_id(struct hip_db_struct *db,
-		    const struct in6_addr *hit,
+		    const struct hip_lhi *lhi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg), 
 		    int (*remove)(struct hip_host_id_entry *, void **arg),
@@ -142,9 +142,9 @@ int hip_add_host_id(struct hip_db_struct *db,
 	struct hip_host_id *pubkey;
 	unsigned long lf;
 
-	HIP_HEXDUMP("adding host id", hit, sizeof(struct in6_addr));
+	HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
 
-	HIP_ASSERT(hit != NULL);
+	HIP_ASSERT(&lhi->hit != NULL);
 	HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
 	HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
 								      GFP_KERNEL)), -ENOMEM,
@@ -156,14 +156,16 @@ int hip_add_host_id(struct hip_db_struct *db,
 		 -ENOMEM, "pubkey mem alloc failed\n");
 
 	/* copy lhi and host_id (host_id is already in network byte order) */
-	ipv6_addr_copy(&id_entry->hit, hit);
+	ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
+	id_entry->lhi.anonymous = lhi->anonymous;
 	memcpy(id_entry->host_id, host_id, len);
 	memcpy(pubkey, host_id, len);
 
 	HIP_WRITE_LOCK_DB(db);
 
 	/* check for duplicates */
-	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, HIP_ANY_ALGO);
+	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, 
+							 HIP_ANY_ALGO);
 	if (old_entry != NULL) {
 		HIP_WRITE_UNLOCK_DB(db);
 		HIP_ERROR("Trying to add duplicate lhi\n");
@@ -181,7 +183,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
 	
 	pubkey = hip_get_public_key(pubkey);
-       	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)hit,
+       	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
 				   hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign,
 				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
 
@@ -260,8 +262,12 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		   err, 
 		   "Host id to hit conversion failed\n");
 	  
+	  lhi.anonymous =
+		  (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
+		  ?
+		  1 : 0;
 	  
-	  HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi.hit, 
+	  HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, 
 					 host_identity, 
 					 NULL, NULL, NULL), err,
 		   "adding of local host identity failed\n");
