@@ -2237,25 +2237,6 @@ int hip_build_param_eid_endpoint_from_hit(struct hip_common *msg,
 	return err;
 }
 
-int hip_build_param_hit(struct hip_common *msg,
-			const struct in6_addr *hit)
-{
-	struct hip_hit param_hit;
-	int err = 0;
-
-	hip_set_param_type(&param_hit, HIP_PARAM_HIT);
-
-	hip_calc_param_len(&param_hit,
-			   sizeof(struct hip_hit) -
-			   sizeof (struct hip_tlv_common));
-
-	memcpy(&param_hit.hit, hit, sizeof(struct in6_addr));
-
-	err = hip_build_param(msg, &param_hit);
-
-	return err;
-}
-
 /* 
  * hip_build_param_eid_endpoint - build eid endpoint parameter
  * @msg: the message where the eid endpoint paramater will be appended

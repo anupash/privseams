@@ -847,10 +847,10 @@ int hip_socket_handle_add_local_hi(const struct hip_common *input)
  */
 int hip_socket_handle_del_local_hi(const struct hip_common *input)
 {
-	int err = 0;
+	struct in6_addr *hit;
 	struct hip_lhi lhi;
-	struct hip_hit *hip_hit;	
-	struct hip_tlv_common *param = NULL;
+	char buf[46];
+	int err = 0;
 	
 	if (hip_get_msg_type(input) != SO_HIP_DEL_LOCAL_HI) {
 		err = -EINVAL;
@@ -858,20 +858,19 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
 		goto out_err;
 	}
 	
-	param = hip_get_next_param(input, param);
-	if  (hip_get_param_type(param) != HIP_PARAM_HIT)
-		HIP_ERROR("host id not found in the msg\n");
-	hip_hit = (struct hip_hit *) param;
-	
-	if (!hip_hit) {
-		err = -ENOENT;
-		HIP_ERROR("Could not find hit from message.\n");
+	hit = (struct in6_addr *) 
+		hip_get_param_contents(input, HIP_PARAM_HIT);
+	if (!hit) {
+		HIP_ERROR("no hit\n");
+		err = -ENODATA;
 		goto out_err;
 	}
+
+	hip_in6_ntop(hit, buf);
+	HIP_INFO("deleting HIT: %s\n", buf);
+
+	ipv6_addr_copy(&lhi.hit, hit);
 	
-	memset(&lhi, 0, sizeof(struct hip_lhi));
-        memcpy(&(lhi.hit), &hip_hit->hit ,sizeof(struct in6_addr));
-	HIP_DEBUG_HIT("deleting hit: ", &lhi.hit);
 	err = hip_del_localhost_id(&lhi);
 	if (err) {
 		HIP_ERROR("deleting of local host identity failed\n");

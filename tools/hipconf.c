@@ -570,52 +570,11 @@ int handle_hi(struct hip_common *msg,
     HIP_HEXDUMP("Calculated RSA HIT (pub): ", &rsa_pub_lhi.hit,
 		sizeof(struct in6_addr));
     break;
-  case ACTION_DEL:
-    numeric_action = SO_HIP_DEL_LOCAL_HI;
-
-    /* NOTE: ACTION_DEL is currently handled by the handle_del() */
-    err = load_dsa_private_key(dsa_filenamebase, &dsa_key);
-    if (err) {
-      HIP_ERROR("Loading of the DSA key failed\n");
-      goto out;
-    }
-
-    dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
-    if (dsa_key_rr_len <= 0) {
-      HIP_ERROR("dsa_key_rr_len <= 0\n");
-      err = -EFAULT;
-      goto out;
-    }
-
-    err = dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH126, &dsa_lhi.hit);
-    if (err) {
-      HIP_ERROR("Conversion from DSA to HIT failed\n");
-      goto out;
-    }
-    HIP_HEXDUMP("Calculated DSA HIT for deleting it: ", &dsa_lhi.hit,
-		sizeof(struct in6_addr));
-    memset(&dsa_hit, 0, sizeof(struct in6_addr));
-    memcpy(&dsa_hit, &dsa_lhi.hit ,sizeof(struct in6_addr));
-
-    break;
   }
 
   if (numeric_action == 0)
     goto skip_msg;
 
-  /* The host id is not used for deletion for two reasons:
-     1) The private key is also <hack>included in the dsa_key_rr</hack>.
-     2) Lhi should be enough to do the deletion. */
-  if (numeric_action == SO_HIP_DEL_LOCAL_HI) {
-    err = hip_build_param_hit(msg, &dsa_hit); 
-    if (err) {
-      HIP_ERROR("Building of HIT parameter failed\n");
-      goto out;
-    } 
-
-    goto skip_host_id;
-  }
-  
   err = hip_build_param_eid_endpoint(msg, endpoint_dsa_hip);
   if (err) {
     HIP_ERROR("Building of host id failed\n");
@@ -798,8 +757,9 @@ int handle_del(struct hip_common *msg, int action,
 	HIP_HEXDUMP("HIT to delete: ", &hit,
 		    sizeof(struct in6_addr));
 
-	err = hip_build_param_hit(msg, &hit); 
-
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out;
