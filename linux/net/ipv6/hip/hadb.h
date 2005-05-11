@@ -98,7 +98,7 @@
 		destructor(ha); \
                 HIP_DEBUG("HA: %p deleted\n", ha); \
 	} else { \
-                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
+                HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
                            atomic_read(&ha->refcnt)); \
         } \
 } while(0)

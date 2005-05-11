@@ -32,7 +32,7 @@ void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
 int filter_address(struct sockaddr *addr, int ifindex);
 
-static int address_count;
-static struct list_head addresses;
+extern int address_count;
+extern struct list_head addresses;
 
 #endif /* NETDEV_H */

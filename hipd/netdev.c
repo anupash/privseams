@@ -4,6 +4,9 @@
  */
 #include "netdev.h"
 
+int address_count;
+struct list_head addresses;
+
 static int count_if_addresses(int ifindex)
 {
 	struct netdev_address *n, *t;
@@ -59,9 +62,9 @@ static void add_address_to_list(struct sockaddr *addr, int ifindex)
 
         memcpy(&n->addr, addr, SALEN(addr));
         n->if_index = ifindex;
+	//INIT_LIST_HEAD(&n->next);
 	list_add(&n->next, &addresses);
 	address_count++;
-
 	HIP_DEBUG("added address, address_count at exit=%d\n", address_count);
 }
 
@@ -268,6 +271,8 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
                 }
         } /* end while(!done) - loop 1 */ 
 
+	HIP_DEBUG("found %d usable addresses\n", address_count);
+	HIP_DEBUG("addrs=0x%p\n", &addresses);
         return(0);
 }
 
@@ -403,4 +408,3 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 	return 0;
 }
-

@@ -26,7 +26,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
              base exchange
 	 */
 	int err = 0, state = 0;
-	struct hip_xfrm_state *xs;
+	struct hip_xfrm_state *xs = NULL;
 	struct hip_work_order *hwo;
 
 	if (!ipv6_addr_is_hit(&hdr->daddr)) {
@@ -124,6 +124,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	if (xs)
 		hip_put_xfrm(xs);
 
+	HIP_DEBUG("end\n");
 	return err;
 }
 

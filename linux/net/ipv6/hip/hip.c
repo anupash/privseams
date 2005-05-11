@@ -214,11 +214,10 @@ int hip_get_addr(hip_hit_t *hit, struct in6_addr *addr)
 		return 0;
 	}
 
-	//hip_put_ha(entry);
 	memcpy(addr, &entry->preferred_peer_addr, sizeof(struct in6_addr));
-
 	HIP_DEBUG_HIT("selected dst addr", addr);
-
+	hip_put_xfrm(entry);
+	HIP_DEBUG("end\n");
 	return 1;
 }
 

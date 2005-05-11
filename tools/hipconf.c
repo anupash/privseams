@@ -277,38 +277,38 @@ int handle_hi(struct hip_common *msg,
 		HIP_ERROR("gethostname failed (%d)\n", err);
 		goto out;
 	}
-	
+
 	HIP_INFO("Using hostname: %s\n", hostname);
-	
+
 	fmt = HIP_KEYFILE_FMT_HIP_PEM;
 	if (!use_default && strcmp(opt[OPT_HI_FMT], "hip-pem")) {
 		HIP_ERROR("Only PEM encoded HIP keys are supported\n");
 		err = -ENOSYS;
 		goto out;
 	}
-	
+
 	/* Set filenamebase (depending on whether the user supplied a
 	   filenamebase or not) */
 	if (use_default == 0) {
 		/* XX FIXME: does not work with RSA?! */
 		HIP_ERROR("Only default HIs are currently supported\n");
 		HIP_ASSERT(0);
-		
+
 		dsa_filenamebase = malloc(strlen(opt[OPT_HI_FILE]) + 1);
 		memcpy(dsa_filenamebase, opt[OPT_HI_FILE], strlen(opt[OPT_HI_FILE]));
-		
+
 		rsa_filenamebase = malloc(strlen(opt[OPT_HI_FILE]) + 1);
 		memcpy(rsa_filenamebase, opt[OPT_HI_FILE], strlen(opt[OPT_HI_FILE]));
 	} else { /* create dynamically default filenamebase */
 		int rsa_filenamebase_len, dsa_filenamebase_len, ret;
-		
+
 		HIP_INFO("No key file given, use default\n");
 
 		dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
 			strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
 		rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
 			strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
-		
+
 		dsa_filenamebase = malloc(dsa_filenamebase_len);
 		if (!dsa_filenamebase) {
 			HIP_ERROR("Could allocate DSA file name\n");
@@ -712,16 +712,16 @@ int main(int argc, char *argv[]) {
 	int type_arg, err = 0;
 	long int action, type;
 	struct hip_common *msg;
-	
+
 	if (argc < 2) {
 		err = -EINVAL;
 		//  display_usage();
 		HIP_ERROR("Invalid args.\n%s usage:\n%s\n", argv[0], usage);
 		goto out;
 	}
-	
+
 	hip_set_logtype(LOGTYPE_STDERR); // we don't want log messages via syslog
-	
+
 	action = get_action(argv[1]);
 	if (action <= 0 || action >= ACTION_MAX) {
 		err = -EINVAL;
@@ -756,14 +756,12 @@ int main(int argc, char *argv[]) {
 	}
 	_HIP_INFO("type=%d\n", type);
 
-
 	msg = malloc(HIP_MAX_PACKET);
 	if (!msg) {
 		HIP_ERROR("malloc failed\n");
 		goto out;
 	}
 	hip_msg_init(msg);
-
 
 	switch (action) {
 	case ACTION_RVS:

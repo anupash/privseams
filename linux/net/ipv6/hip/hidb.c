@@ -75,7 +75,6 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 {
 	struct hip_host_id_entry *id_entry;
 	list_for_each_entry(id_entry, &db->db_head, next) {
-		HIP_DEBUG("Listing the entries..... \n");
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
 		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
 			return id_entry;
@@ -367,10 +366,10 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 }
 
 /**
- * hip_get_any_localhost_hit - Copy to the @target the first 
+ * hip_get_any_localhost_hit - Copy to the @target the first
  * local HIT that is found.
  * @target: Placeholder for the target
- * @algo the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
+ * @algo: the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
  *
  * Returns 0 if ok, and negative if failed.
  */
