@@ -168,5 +168,4 @@ char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
 int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 			   void *notification_data, size_t notification_data_len);
 uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht);
-int hip_build_param_hit(struct hip_common *msg, const struct in6_addr *hit);
 #endif /* HIP_BUILDER */
