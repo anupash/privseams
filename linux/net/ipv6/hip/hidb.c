@@ -388,7 +388,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 		goto out;
 	}
 	
-	ipv6_addr_copy(target,&entry->hit);
+	ipv6_addr_copy(target,&entry->lhi.hit);
 	err = 0;
 	
  out:
