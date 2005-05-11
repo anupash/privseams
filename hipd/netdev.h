@@ -30,5 +30,9 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct hip_nl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
+int filter_address(struct sockaddr *addr, int ifindex);
+
+static int address_count;
+static struct list_head addresses;
 
 #endif /* NETDEV_H */

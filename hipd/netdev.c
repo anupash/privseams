@@ -4,9 +4,6 @@
  */
 #include "netdev.h"
 
-static int address_count;
-static struct list_head addresses;
-
 static int count_if_addresses(int ifindex)
 {
 	struct netdev_address *n, *t;
@@ -22,7 +19,7 @@ static int count_if_addresses(int ifindex)
 
 /* Returns 1 if the given address @addr is allowed to be one of the
    addresses of this host, 0 otherwise */
-static int filter_address(struct sockaddr *addr, int ifindex)
+int filter_address(struct sockaddr *addr, int ifindex)
 {
 	HIP_DEBUG("ifindex=%d, address family=%d\n",
 		  ifindex, addr->sa_family);
@@ -235,6 +232,7 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
         };
 
 	/* Initialize address list */
+	HIP_DEBUG("Initializing addresses...\n");
 	INIT_LIST_HEAD(&addresses);
 	address_count = 0;
 

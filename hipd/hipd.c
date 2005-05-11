@@ -134,6 +134,7 @@ int main(int argc, char *argv[]) {
 
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
+	HIP_DEBUG("Initializing the netdev_init_addresses\n");
 	hip_netdev_init_addresses(&nl_ifaddr);
 
 	/* Open the netlink socket for kernel communication */

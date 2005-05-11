@@ -74,10 +74,10 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 							       int algo)
 {
 	struct hip_host_id_entry *id_entry;
-
 	list_for_each_entry(id_entry, &db->db_head, next) {
-	  if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
-	      (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
+		HIP_DEBUG("Listing the entries..... \n");
+		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
+		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
 			return id_entry;
 	}
 	return NULL;
@@ -366,12 +366,11 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 	return err;
 }
 
-#if 0
 /**
- * hip_get_any_localhost_hit - Copy to the the @target the first 
+ * hip_get_any_localhost_hit - Copy to the @target the first 
  * local HIT that is found.
  * @target: Placeholder for the target
- * @param algo the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
+ * @algo the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
  *
  * Returns 0 if ok, and negative if failed.
  */
@@ -382,21 +381,21 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 	unsigned long lf;
 
 	HIP_READ_LOCK_DB(&hip_local_hostid_db);
-
+	
 	entry = hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,NULL,algo);
 	if (!entry) {
 		err=-ENOENT;
 		goto out;
 	}
 	
-	ipv6_addr_copy(target,&entry->lhi.hit);
+	ipv6_addr_copy(target,&entry->hit);
 	err = 0;
 	
  out:
 	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
 	return err;
 }
-#endif
+
 
 /**
  * NOTE: Remember to free the host id structure after use.
@@ -515,7 +514,7 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-#if 0
+//#if 0
 struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 {
 	struct hip_host_id *tmp; 
@@ -533,7 +532,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	  
 	return res;
 }
-#endif
+//#endif
 
 static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 {
@@ -591,7 +590,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-#if 0
+//#if 0
 struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 {
 	struct hip_host_id *tmp, *res;
@@ -608,7 +607,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	  
 	return res;	
 }
-#endif
+//#endif
 
 /* Transforms a private public key pair to a public key, private key
    is deleted. */
@@ -634,7 +633,7 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hid)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-#if 0
+//#if 0
 struct hip_host_id *hip_get_any_localhost_public_key(int algo) 
 {
 	struct hip_host_id *hi = NULL;
@@ -644,11 +643,11 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 	} else if (algo == HIP_HI_RSA) {
 		hi = hip_get_any_localhost_rsa_public_key();
 	} else {
-	  HIP_ERROR("unknown hi algo: (%d)",algo);
+		HIP_ERROR("unknown hi algo: (%d)",algo);
 	}
 	return hi;
 }
-#endif
+//#endif
 
 
 #undef HIP_READ_LOCK_DB

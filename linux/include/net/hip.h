@@ -49,7 +49,6 @@ typedef uint16_t in_port_t;
 #  include <sys/time.h>
 #  include <sys/ioctl.h>
 #  include <stdint.h>
-#  include <stdint.h>
 
 typedef uint8_t   u8;
 typedef uint16_t  u16;

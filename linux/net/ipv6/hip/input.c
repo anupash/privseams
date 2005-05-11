@@ -877,7 +877,7 @@ int hip_create_r2(struct hip_context *ctx,
  		}
 
  		lifetime = ntohl(rreq->lifetime) > HIP_DEFAULT_RVA_LIFETIME ? 
-			IP_DEFAULT_RVA_LIFETIME : ntohl(rreq->lifetime);
+			HIP_DEFAULT_RVA_LIFETIME : ntohl(rreq->lifetime);
  		HIP_IFEL(hip_build_param_rva(r2, lifetime, rva_types, num, 0), -1, 
 			 "Building of RVA_REPLY failed\n");
  		create_rva = 1;

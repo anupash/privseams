@@ -504,6 +504,10 @@ int hip_do_work(struct hip_work_order *job)
 				 job->hdr.subtype, job->hdr.type);
 			res = KHIPD_ERROR;
 			goto out_err;
+		case HIP_WO_SUBTYPE_SEND_BOS:
+			HIP_DEBUG("Sending BOS\n");
+			res = hip_send_bos(job->msg);
+			break;
 #endif /* (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 		default:
 			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);

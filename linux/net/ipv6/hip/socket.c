@@ -837,252 +837,34 @@ int hip_socket_handle_rst(const struct hip_common *input)
 	return -ENOSYS;
 }
 
-/* This is the maximum number of source addresses for sending BOS packets */
-#define MAX_SRC_ADDRS 128
-
-/**
- * hip_socket_send_bos - send a BOS packet
- * @msg: input message (should be empty)
- *
- * Generate a signed HIP BOS packet containing our HIT, and send
- * the packet out each network device interface. Note that there
- * is a limit of MAX_SRC_ADDRS (128) total addresses.
- *
- * Returns: zero on success, or negative error value on failure
- */
-#if 0
-int hip_socket_send_bos(const struct hip_common *msg)
+int hip_socket_bos_wo(const struct hip_common *input)
 {
+	struct hip_work_order *hwo;
 	int err = 0;
-	struct hip_common *bos = NULL;
-	struct in6_addr hit_our;
-	struct in6_addr daddr;
- 	int i, mask;
- 	struct hip_host_id  *host_id_pub = NULL;
-	struct hip_host_id *host_id_private = NULL;
-	u8 signature[HIP_RSA_SIGNATURE_LEN]; // assert RSA > DSA
-	struct net_device *saddr_dev;
-	struct inet6_dev *idev;
-	struct in6_addr saddr[MAX_SRC_ADDRS];
-	int if_idx[MAX_SRC_ADDRS];
-	int addr_count = 0;
-	struct flowi fl;
-	struct inet6_ifaddr *ifa = NULL;
-	struct hip_xfrm_t *x;
-
-	HIP_DEBUG("\n");
 	
-	/* Extra consistency test */
-	if (hip_get_msg_type(msg) != SO_HIP_BOS) {
-		err = -EINVAL;
-		HIP_ERROR("Bad message type\n");
+	HIP_DEBUG("Sending new HI to userspace daemon\n");
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (!hwo) {
+		HIP_ERROR("Failed to insert hi work order (%d)\n",
+			  err);
+		err = -EFAULT;
 		goto out_err;
-	}
+	}			   
 	
-	/* allocate space for new BOS */
-	bos = hip_msg_alloc();
-	if (!bos) {
-		HIP_ERROR("Allocation of BOS failed\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-
-	x = hip_xfrm_try_to_find_by_peer_hit(NULL);
-	if (!x) {
-		HIP_ERROR("Could not find dst HIT\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-	memcpy(&hit_our, xfrm_entry->hit_our, sizeof(hip_hit_t));
-
-#if 0
-	/* Determine our HIT */
-	if (hip_get_any_localhost_hit(&hit_our, HIP_ANY_ALGO) < 0) {
-		HIP_ERROR("Our HIT not found\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-#endif
-
-	/* Determine our HOST ID public key */
-	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
-	if (!host_id_pub) {
-		HIP_ERROR("Could not acquire localhost public key\n");
-		goto out_err;
-	}
-
-	/* Determine our HOST ID private key */
-	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-	if (!host_id_private) {
-		err = -EINVAL;
-		HIP_ERROR("No localhost private key found\n");
-		goto out_err;
-	}
-
- 	/* Ready to begin building the BOS packet */
-	/*
-	    IP ( HIP ( HOST_ID,
-              HIP_SIGNATURE ) )
-	 */
-	mask = HIP_CONTROL_NONE;
-
- 	hip_build_network_hdr(bos, HIP_BOS, mask, &hit_our, NULL);
-
-	/********** HOST_ID *********/
-
-	_HIP_DEBUG("This HOST ID belongs to: %s\n",
-		   hip_get_param_host_id_hostname(host_id_pub));
-	err = hip_build_param(bos, host_id_pub);
- 	if (err) {
- 		HIP_ERROR("Building of host id failed\n");
- 		goto out_err;
- 	}
-
- 	/********** SIGNATURE **********/
-
-	HIP_ASSERT(host_id_private);
-
-	/* Build a digest of the packet built so far. Signature will
-	   be calculated over the digest. */
-
-	if (!hip_create_signature(bos, hip_get_msg_total_len(bos), 
-				  host_id_private, signature)) {
-		HIP_ERROR("Could not create signature\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-
-	/* Only DSA supported currently */
-	_HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
-
-	err = hip_build_param_signature_contents(bos,
-					signature,
-		       ((HIP_SIG_DEFAULT_ALGO == HIP_HI_RSA) ?
-			HIP_RSA_SIGNATURE_LEN  : HIP_DSA_SIGNATURE_LEN),
-					HIP_SIG_DEFAULT_ALGO);
-	if (err) {
-		HIP_ERROR("Building of signature failed (%d)\n", err);
-		goto out_err;
-	}
-
- 	/************** BOS packet ready ***************/
-	HIP_DEBUG("sending BOS\n");
-	/* Use All Nodes Addresses (link-local) RFC2373
- 	   FF02:0:0:0:0:0:0:1 as the destination multicast address */
- 	ipv6_addr_all_nodes(&daddr);
-
-	/* Iterate through all the network devices, recording source
-	 * addresses for BOS packets */
-
-	/* First lock the devices list */
-	read_lock(&dev_base_lock);
-        read_lock(&addrconf_lock);
-
-	/* Now, iterate through the list */
-        for (saddr_dev = dev_base; saddr_dev; saddr_dev = saddr_dev->next) {
-		HIP_DEBUG("Found network interface %d: %s\n", 
-			  saddr_dev->ifindex, saddr_dev->name);
-
-		/* Skip down devices */
-		if (!(saddr_dev->flags & IFF_UP)) {
-		        HIP_DEBUG("Skipping down device\n");
-			continue;
-		}
-
-		/* Skip non-multicast devices */
-		if (!(saddr_dev->flags & IFF_MULTICAST)) {
-		        HIP_DEBUG("Skipping non-multicast device\n");
-			continue;
-		}
-
-		/* Skip loopback devices (as long as we do
-		 * not have loopback support). TODO: skip tunnels etc. */
-		if (saddr_dev->flags & IFF_LOOPBACK) {
-		        HIP_DEBUG("Skipping loopback device\n");
-			continue;
-		}
-
-		/* Skip non-IPv6 devices (as long as we do
-		 * not have IPv4 support). TODO: skip tunnels etc. */
-                idev = in6_dev_get(saddr_dev);
-                if (!idev) {
-                        HIP_DEBUG("Skipping non-IPv6 device\n");
-                        continue;
-                }
-                read_lock(&idev->lock);
-
-                /* test, debug crashing when all IPv6 addresses of 
-		 * interface were deleted */
-                if (idev->dead) {
-                        HIP_DEBUG("dead device\n");
-                        goto out_idev_unlock;
-                }
-
-		/* Record the interface's non-link local IPv6 addresses */
-		for (i=0, ifa=idev->addr_list; ifa; i++, ifa = ifa->if_next) {
-		        if (addr_count >= MAX_SRC_ADDRS) {
-			        HIP_DEBUG("too many source addresses\n");
-				goto out_idev_unlock;
-			}
-		        spin_lock_bh(&ifa->lock);
-			HIP_DEBUG_IN6ADDR("addr", &ifa->addr);
-			if (ipv6_addr_type(&ifa->addr) & IPV6_ADDR_LINKLOCAL){
-				HIP_DEBUG("not counting link local address\n");
-			} else {
-				if_idx[addr_count] = saddr_dev->ifindex;
-			        ipv6_addr_copy(&(saddr[addr_count]), &ifa->addr);
-				addr_count++;
-			}
-			spin_unlock_bh(&ifa->lock);
-		}
-		HIP_DEBUG("address list count=%d\n", addr_count);
-
-	out_idev_unlock:
-                read_unlock(&idev->lock);
-                in6_dev_put(idev);
-	}
-
-        read_unlock(&addrconf_lock);
-        read_unlock(&dev_base_lock);
-
-	HIP_DEBUG("final address list count=%d\n", addr_count);
-
-	HIP_DEBUG_IN6ADDR("dest mc address", &daddr);
-
-	/* Loop through the saved addresses, sending the BOS packets 
-	   out the correct interface */
-	for (i = 0; i < addr_count; i++) {
-	        /* got a source addresses, send BOS */
-	        HIP_DEBUG_IN6ADDR("selected source address", &(saddr[i]));
-
-		/* Set up the routing structure to use the correct
-		   interface, source addr, and destination addr */
-		fl.proto = IPPROTO_HIP;
-		fl.oif = if_idx[i];
-		fl.fl6_flowlabel = 0;
-		fl.fl6_dst = daddr;
-		fl.fl6_src = saddr[i];
-
-		HIP_DEBUG("pre csum totlen=%u\n", hip_get_msg_total_len(bos));
-		/* Send it! */
-		err = hip_csum_send_fl(&(saddr[i]), &daddr, bos, &fl);
-		if (err)
-		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
-	}
-	
-	err = 0;
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+				HIP_WO_SUBTYPE_SEND_BOS, NULL, NULL, NULL,
+				0, 0, 0);
+	/* override the destructor; socket handler deletes the msg
+	   by itself */
+	hwo->destructor = NULL;
+	hwo->msg = (struct hip_common *) input;
+	hip_insert_work_order(hwo);
 
  out_err:
-	if (host_id_private)
-		HIP_FREE(host_id_private);
-	if (host_id_pub)
-		HIP_FREE(host_id_pub);
-	if (bos)
-		HIP_FREE(bos);
-
 	return err;
 }
-#endif
+
+
 /**
  * hipd_handle_async_unit_test - handle unit test message
  * @msg: message containing information about which unit tests to execute
@@ -1135,29 +917,29 @@ int hip_socket_handle_unit_test(const struct hip_common *msg)
 #if defined(CONFIG_HIP_USERSPACE) && defined(__KERNEL__)
 int hip_wrap_handle_add_local_hi(const struct hip_common *input)
 {
-		struct hip_work_order *hwo;
-		int err = 0;
-
-		HIP_DEBUG("Sending new HI to userspace daemon\n");
-		hwo = hip_init_job(GFP_ATOMIC);
-		if (!hwo) {
-		        HIP_ERROR("Failed to insert hi work order (%d)\n",
-				  err);
-			err = -EFAULT;
-			goto out_err;
-		}			   
-
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
-					HIP_WO_SUBTYPE_ADDHI, NULL, NULL, NULL,
-					0, 0, 0);
-		/* override the destructor; socket handler deletes the msg
-		   by itself */
-		hwo->destructor = NULL;
-		hwo->msg = (struct hip_common *) input;
-		hip_insert_work_order(hwo);
+	struct hip_work_order *hwo;
+	int err = 0;
+	
+	HIP_DEBUG("Sending new HI to userspace daemon\n");
+	hwo = hip_init_job(GFP_ATOMIC);
+	if (!hwo) {
+		HIP_ERROR("Failed to insert hi work order (%d)\n",
+			  err);
+		err = -EFAULT;
+		goto out_err;
+	}			   
+	
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+				HIP_WO_SUBTYPE_ADDHI, NULL, NULL, NULL,
+				0, 0, 0);
+	/* override the destructor; socket handler deletes the msg
+	   by itself */
+	hwo->destructor = NULL;
+	hwo->msg = (struct hip_common *) input;
+	hip_insert_work_order(hwo);
 
  out_err:
-		return err;
+	return err;
 }
 #endif /* CONFIG_HIP_USERSPACE && __KERNEL__ */
 
@@ -1763,14 +1545,13 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 	case SO_HIP_ADD_RVS:
 		err = hip_socket_handle_rvs(msg);
 		break;
-#if 0 
 // XX TODO: not supported for now, this message should be moved as
 // such to the userspace anyway i.e. create WORKORDER:
 // HIP_WO_SUBTYPE_SEND_BOS:
 	case SO_HIP_BOS:
-		err = hip_socket_send_bos(msg);
+		err = hip_socket_bos_wo(msg);
+		//err = hip_socket_send_bos(msg);
 		break;
-#endif
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

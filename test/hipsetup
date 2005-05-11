@@ -102,7 +102,7 @@ parse_args() {
 	case $NAME in
 	    h) help; exit 0                                  ;;
 	    m) INSTALL_MODULES=1                             ;;
-	    d) HIPL_DIR="$OPTARG"                              ;;
+	    d) HIPL_DIR="$OPTARG"                            ;;
 	    i) PEER_NAME="$OPTARG"
 	       set_and_check_mode "base-exchange-initiator"  ;;
 	    s) PEER_NAME="$OPTARG"
@@ -134,7 +134,7 @@ check_setup() {
 	    then
 		die "$HIPL_DIR/$DIR does not exist or it is not readable"
 	    fi
-        done
+	done
 
     # Check that HIPL application are compiled
     #

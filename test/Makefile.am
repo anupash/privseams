@@ -27,21 +27,24 @@ bin_PROGRAMS += conntest-client-native
 bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
 bin_PROGRAMS += unittest
+bin_PROGRAMS += hipsetupNew
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
 
 align_SOURCES = align.c
 checksum_SOURCES = checksum.c checksum.h
 conntest_client_SOURCES = conntest-client.c 
-conntest_client_gai_SOURCES = conntest-client-gai.c
-conntest_client_native_SOURCES = conntest-client-native.c
+conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
+conntest_client_native_SOURCES = conntest-client-native.c conntest.c
 conntest_client_native_user_key_SOURCES = \
                         conntest-client-native-user-key.c
-conntest_server_native_SOURCES = conntest-server-native.c
-conntest_server_SOURCES = conntest-server.c
+conntest_server_native_SOURCES = conntest-server-native.c conntest.c
+conntest_server_SOURCES = conntest-server.c conntest.c
 libinet6test_SOURCES = libinet6test.c
 listifaces_SOURCES = listifaces.c
-unittest_SOURCES = unit.c unittest.c unittest.h hipconf.c suite.c
+unittest_SOURCES = unit.c unittest.c hipconf.c suite.c
+hipsetupNew_SOURCES = hipsetupNew.c hipconf.c conntest.c
+
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built
