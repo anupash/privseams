@@ -233,16 +233,16 @@ int handle_hi(struct hip_common *msg,
 	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	int fmt;
 	struct endpoint_hip *endpoint_dsa_hip = NULL, *endpoint_rsa_hip = NULL;
-
+	
 	_HIP_INFO("action=%d optc=%d\n", action, optc);
-
+	
 	/* Check min/max amount of args */
 	if (optc < 1 || optc > 3) {
 		HIP_ERROR("Too few arguments\n");
 		err = -EINVAL;
 		goto out;
 	}
-
+	
 	if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
 		anon = 0;
 	} else if(!strcmp(opt[OPT_HI_TYPE], "anon")) {
@@ -254,7 +254,7 @@ int handle_hi(struct hip_common *msg,
 		err = -EINVAL;
 		goto out;
 	}
-
+	
 	if (use_default) {
 		if (optc != 1) {
 			HIP_ERROR("Wrong number of args for default\n");
@@ -268,7 +268,7 @@ int handle_hi(struct hip_common *msg,
 			goto out;
 		}
 	}
-
+	
 	HIP_INFO("Before memset: \n");
 	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 	HIP_INFO("After memset: \n");
@@ -277,38 +277,38 @@ int handle_hi(struct hip_common *msg,
 		HIP_ERROR("gethostname failed (%d)\n", err);
 		goto out;
 	}
-
+	
 	HIP_INFO("Using hostname: %s\n", hostname);
-
+	
 	fmt = HIP_KEYFILE_FMT_HIP_PEM;
 	if (!use_default && strcmp(opt[OPT_HI_FMT], "hip-pem")) {
 		HIP_ERROR("Only PEM encoded HIP keys are supported\n");
 		err = -ENOSYS;
 		goto out;
 	}
-
+	
 	/* Set filenamebase (depending on whether the user supplied a
 	   filenamebase or not) */
 	if (use_default == 0) {
 		/* XX FIXME: does not work with RSA?! */
 		HIP_ERROR("Only default HIs are currently supported\n");
 		HIP_ASSERT(0);
-
+		
 		dsa_filenamebase = malloc(strlen(opt[OPT_HI_FILE]) + 1);
 		memcpy(dsa_filenamebase, opt[OPT_HI_FILE], strlen(opt[OPT_HI_FILE]));
-
+		
 		rsa_filenamebase = malloc(strlen(opt[OPT_HI_FILE]) + 1);
 		memcpy(rsa_filenamebase, opt[OPT_HI_FILE], strlen(opt[OPT_HI_FILE]));
 	} else { /* create dynamically default filenamebase */
 		int rsa_filenamebase_len, dsa_filenamebase_len, ret;
-
+		
 		HIP_INFO("No key file given, use default\n");
 
 		dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
 			strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
 		rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
 			strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
-
+		
 		dsa_filenamebase = malloc(dsa_filenamebase_len);
 		if (!dsa_filenamebase) {
 			HIP_ERROR("Could allocate DSA file name\n");
@@ -336,13 +336,13 @@ int handle_hi(struct hip_common *msg,
 			goto out;
 		}
 	}
-
+	
 	dsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
 	rsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
-
+	
 	HIP_DEBUG("Using dsa filenamebase: %s\n", dsa_filenamebase);
 	HIP_DEBUG("Using rsa filenamebase: %s\n", rsa_filenamebase);
-  
+	
 	switch(action) {
 	case ACTION_NEW:
 		/* zero means "do not send any message to kernel */
@@ -357,27 +357,27 @@ int handle_hi(struct hip_common *msg,
 				goto out;
 			}
 		}
-
+		
 		dsa_key = create_dsa_key(DSA_KEY_DEFAULT_BITS);
 		if (!dsa_key) {
 			HIP_ERROR("creation of dsa key failed\n");
 			err = -EINVAL;
 			goto out;  
 		}
-
+		
 		rsa_key = create_rsa_key(RSA_KEY_DEFAULT_BITS);
 		if (!rsa_key) {
 			HIP_ERROR("creation of rsa key failed\n");
 			err = -EINVAL;
 			goto out;  
 		}
-
+		
 		err = save_dsa_private_key(dsa_filenamebase, dsa_key);
 		if (err) {
 			HIP_ERROR("saving of dsa key failed\n");
 			goto out;
 		}
-
+		
 		err = save_rsa_private_key(rsa_filenamebase, rsa_key);
 		if (err) {
 			HIP_ERROR("saving of rsa key failed\n");
@@ -386,26 +386,26 @@ int handle_hi(struct hip_common *msg,
 		break;
 	case ACTION_ADD:
 		numeric_action = SO_HIP_ADD_LOCAL_HI;
-
+		
 		err = load_dsa_private_key(dsa_filenamebase, &dsa_key);
 		if (err) {
 			HIP_ERROR("Loading of the DSA key failed\n");
 			goto out;
 		}
-
+		
 		err = load_rsa_private_key(rsa_filenamebase, &rsa_key);
 		if (err) {
 			HIP_ERROR("Loading of the RSA key failed\n");
 			goto out;
 		}
-
+		
 		dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
 		if (dsa_key_rr_len <= 0) {
 			HIP_ERROR("dsa_key_rr_len <= 0\n");
 			err = -EFAULT;
 			goto out;
 		}
-
+		
 		rsa_key_rr_len = rsa_to_dns_key_rr(rsa_key, &rsa_key_rr);
 		if (rsa_key_rr_len <= 0) {
 			HIP_ERROR("rsa_key_rr_len <= 0\n");
@@ -444,6 +444,7 @@ int handle_hi(struct hip_common *msg,
 		HIP_HEXDUMP("Calculated RSA HIT: ", &rsa_lhi.hit,
 			    sizeof(struct in6_addr));
 		break;
+	}
 
 	if (numeric_action == 0)
 		goto skip_msg;
@@ -494,7 +495,6 @@ out:
 		free(dsa_filenamebase);
 	if (rsa_filenamebase)
 		free(rsa_filenamebase);
-
 	return err;
 }
 
@@ -712,16 +712,16 @@ int main(int argc, char *argv[]) {
 	int type_arg, err = 0;
 	long int action, type;
 	struct hip_common *msg;
-
+	
 	if (argc < 2) {
 		err = -EINVAL;
 		//  display_usage();
 		HIP_ERROR("Invalid args.\n%s usage:\n%s\n", argv[0], usage);
 		goto out;
 	}
-  
+	
 	hip_set_logtype(LOGTYPE_STDERR); // we don't want log messages via syslog
-
+	
 	action = get_action(argv[1]);
 	if (action <= 0 || action >= ACTION_MAX) {
 		err = -EINVAL;
@@ -729,15 +729,15 @@ int main(int argc, char *argv[]) {
 		goto out;
 	}
 	_HIP_INFO("action=%d\n", action);
-
+	
 	if (argc-2 < check_action_argc(action)) {
 		err = -EINVAL;
 		HIP_ERROR("Not enough arguments given for the action '%s'\n", argv[1]);
 		goto out;
 	}
-
+	
 	/* XX FIXME: THE RVS/RST HANDLING IS FUNKY. REWRITE */
-
+	
 	if (action != ACTION_RST &&
 	    action != ACTION_RVS &&
 	    action != ACTION_DEL &&
@@ -795,7 +795,7 @@ int main(int argc, char *argv[]) {
 	/* hipconf new hi does not involve any messages to kernel */
 	if (hip_get_msg_type(msg) == 0)
 		goto skip_msg;
-
+	
 	err = hip_set_global_option(msg);
 	if (err) {
 		HIP_ERROR("sending msg failed\n");
@@ -807,7 +807,7 @@ skip_msg:
 out_malloc:
 	free(msg);
 out:
-
+	
 	return err;
 }
 #endif /* HIP_UNITTEST_MODE */
