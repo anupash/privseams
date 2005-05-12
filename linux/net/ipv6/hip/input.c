@@ -273,7 +273,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *dst_addr)
 {
 	hip_ha_t *entry = NULL;
-	int err = 0, type;
+	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
 
@@ -299,11 +299,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_NOTIFY:
 		err = hip_receive_notify(msg, src_addr, dst_addr);
 		break;
-#if 0
 	case HIP_BOS:
 		err = hip_receive_bos(msg, src_addr, dst_addr);
+		skip_sync = 1;
 		break;
-#endif
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);
 		err = -ENOSYS;
@@ -314,7 +313,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 	if (err) {
 		goto out_err;
 	}
-
+	
+	/* The synchronization of the beet database is not done with HIP_BOS */
+	if (skip_sync)
+		goto out_err;
+	
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	if (!entry) {
 		HIP_ERROR("Did not find dst entry\n");
@@ -1646,106 +1649,39 @@ int hip_receive_notify(struct hip_common *hip_common,
 }
 
 /**
- * hip_handle_bos - handle incoming BOS packet
- * @skb: sk_buff where the HIP packet is in
- * @entry: HA
+ * hip_verify_hmac - verify HMAC
+ * @buffer: the packet data used in HMAC calculation
+ * @hmac: the HMAC to be verified
+ * @hmac_key: integrity key used with HMAC
+ * @hmac_type: type of the HMAC digest algorithm.
  *
- * This function is the actual point from where the processing of BOS
- * is started.
+ * Returns: 0 if calculated HMAC is same as @hmac, otherwise < 0. On
+ * error < 0 is returned.
  *
- * On success (BOS payloads are checked) 0 is returned, otherwise < 0.
+ * FIX THE PACKET LEN BEFORE CALLING THIS FUNCTION
  */
-#if 0
-int hip_handle_bos(struct hip_common *bos,
-		   struct in6_addr *bos_saddr,
-		   struct in6_addr *bos_daddr,
-		   hip_ha_t *entry)
+static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
+			   void *hmac_key, int hmac_type)
 {
-	int err = 0, len;
-	struct hip_host_id *peer_host_id;
-	struct hip_lhi peer_lhi;
-	struct in6_addr peer_hit;
-	char *str;
-	struct in6_addr *dstip;
-	char src[INET6_ADDRSTRLEN];
+	int err = 0;
+	u8 *hmac_res = NULL;
 
-	HIP_DEBUG("\n");
+	HIP_IFEL(!(hmac_res = HIP_MALLOC(HIP_AH_SHA_LEN, GFP_ATOMIC)), -ENOMEM,
+		 "HIP_MALLOC failed\n");
 
-	/* according to the section 8.6 of the base draft,
-	 * we must first check signature
-	 */
-	HIP_IFEL(!(peer_host_id = hip_get_param(bos, HIP_PARAM_HOST_ID)), -ENOENT,
-		 "No HOST_ID found in BOS\n");
-#if 0
-	// FIXME: here one should actually create an empty HA entry so that DB_PEER_HID could be scrapped
-	HIP_IFEL(hip_verify_packet_signature(bos, peer_host_id), -EINVAL,
-		 "Verification of BOS signature failed\n");
-#endif
+	_HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
 
-	/* Validate HIT against received host id */	
-	hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH126);
-	HIP_IFEL(ipv6_addr_cmp(&peer_hit, &bos->hits) != 0, -EINVAL,
-		 "Sender HIT does not match the advertised host_id\n");
+	HIP_IFEL(!hip_write_hmac(hmac_type, hmac_key, buffer,
+				 hip_get_msg_total_len(buffer), hmac_res), -EINVAL,
+		 "Could not build hmac\n");
 
-	/* Everything ok, first save host id to db */
-	HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
-	HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
-		  str, len, hip_get_param_host_id_hostname(peer_host_id));
-
-	// FIXME: here one should actually create an empty HA entry so that DB_PEER_HID could be scrapped
-#if 0
- 	peer_lhi.anonymous = 0;
-	ipv6_addr_copy(&peer_lhi.hit, &bos->hits);
- 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id,
-			      NULL, NULL, NULL);
- 	if (err == -EEXIST) {
- 		HIP_INFO("Host ID already exists. Ignoring.\n");
- 		err = 0;
- 	} else {
-		HIP_IFEL(err, -1, "Failed to add peer host id to the database\n");
-  	}
-#endif
-
-	/* Now save the peer IP address */
-	dstip = bos_saddr;
-	hip_in6_ntop(dstip, src);
-	HIP_DEBUG("BOS sender IP: saddr %s\n", src);
-
-	if (entry) {
-		struct in6_addr daddr;
-
-		HIP_DEBUG("I guess we should not even get here ..\n");
-
-		/* The entry may contain the wrong address mapping... */
-		HIP_DEBUG("Updating existing entry\n");
-		hip_hadb_get_peer_addr(entry, &daddr);
-		if (ipv6_addr_cmp(&daddr, dstip) != 0) {
-			HIP_DEBUG("Mapped address doesn't match received address\n");
-			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
-			HIP_HEXDUMP("Mapping", &daddr, 16);
-			HIP_HEXDUMP("Received", dstip, 16);
-			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			HIP_ERROR("assuming we are doing base exchange\n");
-			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0);
-		}
-	} else {
-		// FIXME: just add it here and not via workorder.
-		struct hip_work_order * hwo;
-		HIP_DEBUG("Adding new peer entry\n");
-                hip_in6_ntop(&bos->hits, src);
-		HIP_DEBUG("map HIT: %s\n", src);
-		hip_in6_ntop(dstip, src);
-		HIP_DEBUG("map IP: %s\n", src);
-
-		HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -1, 
-			 "Failed to insert peer map work order\n");
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
-					HIP_WO_SUBTYPE_ADDMAP,
-					dstip, &bos->hits, NULL, 0, 0, 0);
-		hip_insert_work_order(hwo);
-	}
+	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
+	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
 
  out_err:
+	if (hmac_res)
+		HIP_FREE(hmac_res);
+
 	return err;
 }
 
@@ -1797,42 +1733,6 @@ int hip_receive_bos(struct hip_common *bos,
  out_err:
 	return err;
 }
-#endif
-/**
- * hip_verify_hmac - verify HMAC
- * @buffer: the packet data used in HMAC calculation
- * @hmac: the HMAC to be verified
- * @hmac_key: integrity key used with HMAC
- * @hmac_type: type of the HMAC digest algorithm.
- *
- * Returns: 0 if calculated HMAC is same as @hmac, otherwise < 0. On
- * error < 0 is returned.
- *
- * FIX THE PACKET LEN BEFORE CALLING THIS FUNCTION
- */
-static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
-			   void *hmac_key, int hmac_type)
-{
-	int err = 0;
-	u8 *hmac_res = NULL;
 
-	HIP_IFEL(!(hmac_res = HIP_MALLOC(HIP_AH_SHA_LEN, GFP_ATOMIC)), -ENOMEM,
-		 "HIP_MALLOC failed\n");
-
-	_HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
-
-	HIP_IFEL(!hip_write_hmac(hmac_type, hmac_key, buffer,
-				 hip_get_msg_total_len(buffer), hmac_res), -EINVAL,
-		 "Could not build hmac\n");
-
-	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
-	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
-
- out_err:
-	if (hmac_res)
-		HIP_FREE(hmac_res);
-
-	return err;
-}
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

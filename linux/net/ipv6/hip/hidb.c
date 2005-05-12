@@ -430,6 +430,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	if (!tmp) {
 		HIP_READ_UNLOCK_DB(db);
 		HIP_ERROR("No host id found\n");
+		HIP_FREE(result);
 		return NULL;
 	}
 
@@ -441,7 +442,6 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 	}
 
 	memcpy(result, tmp->host_id, t);
-
 	HIP_READ_UNLOCK_DB(db);
 
 	return result;
@@ -528,7 +528,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	res = hip_get_dsa_public_key(tmp);
 	if (!res)
 		HIP_FREE(tmp);
-	  
+
 	return res;
 }
 //#endif
@@ -593,6 +593,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 {
 	struct hip_host_id *tmp, *res;
+	struct in6_addr peer_hit;
 
 	tmp = hip_get_host_id(&hip_local_hostid_db, NULL, HIP_HI_RSA);
 	if (tmp == NULL) {
@@ -603,6 +604,10 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	res = hip_get_rsa_public_key(tmp);
 	if (!res)
 		HIP_FREE(tmp);
+	else {
+		hip_host_id_to_hit(res, &peer_hit, HIP_HIT_TYPE_HASH126);
+		HIP_HEXDUMP("--->peer_hit:", &peer_hit, 16);
+	}
 	  
 	return res;	
 }
