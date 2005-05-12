@@ -195,6 +195,38 @@ int hip_socket_get_eid_info(struct socket *sock,
 
 	/* XX FIXME: CHECK ACCESS RIGHTS FROM OWNER_INFO */
 
+	/* Access control for EDs */
+	if(eid_is_local) {
+		HIP_DEBUG("current->uid:%d, current->gid:%d,current->pid:%d\n",
+			  current->uid, current->gid, current->pid);
+		HIP_DEBUG("ED->uid:%d, ED->gid:%d, ED->pid:%d\n",
+			  owner_info.uid, owner_info.gid, owner_info.pid);
+		HIP_DEBUG("flags:%d\n",owner_info.flags);
+		if(owner_info.flags & HIP_HI_REUSE_ANY) {
+			HIP_DEBUG("Access control check to ED, REUSE_ANY\n");
+			goto out_err;	
+			
+		} else if((owner_info.flags & HIP_HI_REUSE_GID) && 
+			  (current->gid == owner_info.gid)) {
+			HIP_DEBUG("Access control check to ED, REUSE_GID\n");
+			goto out_err;	
+			
+		} else if((owner_info.flags & HIP_HI_REUSE_UID) && 
+			  (current->uid == owner_info.uid)) {
+			HIP_DEBUG("Access control check to ED, REUSE_UID\n");
+			goto out_err;
+			
+		} else if(current->pid == owner_info.pid) {
+			HIP_DEBUG("Access control check to ED, PID ok\n");
+			goto out_err;
+			
+		} else {
+			err = -EACCES;
+			HIP_INFO("Access denied to ED\n");
+			goto out_err;
+		}
+	}
+	
  out_err:
 
 	return err;
@@ -222,6 +254,15 @@ int hip_socket_release(struct socket *sock)
 	}
 
 	/* XX FIX: RELEASE EID */
+		
+	if(sock->local_ed != 0) { 
+		hip_db_dec_eid_use_cnt(sock->local_ed, 1);
+		sock->local_ed = 0;
+	}
+	if(sock->peer_ed != 0) { 
+		hip_db_dec_eid_use_cnt(sock->peer_ed, 0);
+		sock->peer_ed = 0;
+	}
 
 	/* XX FIX: DESTROY HI ? */
 
@@ -250,6 +291,12 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 		goto out_err;
 	}
 	HIP_DEBUG_HIT("hip_socket_bind(): HIT", &lhi.hit);
+	HIP_DEBUG("binding to eid with value %d\n",
+		  ntohs(sockaddr_eid->eid_val));
+	sock->local_ed = ntohs(sockaddr_eid->eid_val);
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
+
 	/* Clear out the flowinfo, etc from sockaddr_in6 */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 
@@ -260,9 +307,10 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 	   does not work without modifications into the bind code because
 	   bind_v6 returns an error when it does address type checks. */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
+	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
-
+	
 	/* XX FIX: check access permissions from eid_owner_info */
 
 	err = socket_handler->bind(sock, (struct sockaddr *) &sockaddr_in6,
@@ -299,6 +347,12 @@ int hip_socket_connect(struct socket *sock, struct sockaddr *uservaddr,
 		HIP_ERROR("Failed to get socket eid info.\n");
 		goto out_err;
 	}
+
+	HIP_DEBUG("connecting to eid with value %d\n",
+		  ntohs(sockaddr_eid->eid_val));
+	sock->peer_ed = ntohs(sockaddr_eid->eid_val);
+	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+		  sock->peer_ed);
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
@@ -426,6 +480,8 @@ int hip_socket_getname(struct socket *sock, struct sockaddr *uaddr,
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+	owner_info.pid = current->pid;
+	owner_info.flags = 0;
 
 	memcpy(&lhi.hit, &pinfo->daddr,
 	       sizeof(struct in6_addr));
@@ -993,7 +1049,13 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
+	owner_info.pid = current->pid;
+	owner_info.flags = eid_endpoint->endpoint.flags;
 	
+	lhi.anonymous =
+		(eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
+		1 : 0;
+
 	if (hip_host_id_contains_private_key(host_id)) {
 		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
 						 HIP_HIT_TYPE_HASH126);
@@ -1689,6 +1751,47 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_eid_no_lock(struct hip_db_stru
 	}
 
 	return NULL;
+}
+
+/*
+ * Decreases the use_cnt entry in the hip_eid_db_entry struct and deletes
+ * the entry for the given eid_val if use_cnt drops below one.
+ */
+void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db, 
+					sa_eid_t eid_val) 
+{	
+
+	struct hip_eid_db_entry *tmp;
+	struct list_head *curr, *iter;
+	unsigned long lf;
+
+	HIP_WRITE_LOCK_DB(db);
+	
+	list_for_each_safe(curr, iter, &db->db_head){
+		tmp = list_entry(curr ,struct hip_eid_db_entry, next);
+		HIP_DEBUG("comparing %d with %d\n",
+			  ntohs(tmp->eid.eid_val), eid_val);
+		if (ntohs(tmp->eid.eid_val) == eid_val) {
+			tmp->use_cnt--;
+			if(tmp->use_cnt < 1) {
+				kfree(tmp);
+				list_del(curr);
+			}
+			HIP_WRITE_UNLOCK_DB(db);
+			return;
+		}
+	}
+	HIP_WRITE_UNLOCK_DB(db);
+}
+
+void hip_db_dec_eid_use_cnt(sa_eid_t eid_val, int is_local) 
+{
+	struct hip_db_struct *db;
+	
+	if(eid_val == 0) return;
+	
+	db = (is_local) ? &hip_local_eid_db : &hip_peer_eid_db;
+	hip_db_dec_eid_use_cnt_by_eid_val(db, eid_val);
 }
 
 int hip_db_set_eid(struct sockaddr_eid *eid,

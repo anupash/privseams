@@ -1012,8 +1012,10 @@ struct hip_host_id_entry {
 };
 
 struct hip_eid_owner_info {
-	uid_t uid;
-	gid_t gid;
+	uid_t            uid;
+	gid_t            gid;
+	pid_t            pid;
+	se_hip_flags_t   flags;  /* HIP_HI_REUSE_* */
 };
 
 struct hip_eid_db_entry {
@@ -1021,6 +1023,7 @@ struct hip_eid_db_entry {
 	struct hip_eid_owner_info  owner_info;
 	struct sockaddr_eid        eid; /* XX FIXME: the port is unneeded */
 	struct hip_lhi             lhi;
+	int                        use_cnt;
 };
 
 #define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200

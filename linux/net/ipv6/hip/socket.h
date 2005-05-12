@@ -80,6 +80,7 @@ int hip_db_get_peer_lhi_by_eid(const struct sockaddr_eid *eid,
 int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 			     struct hip_lhi *lhi,
 			     struct hip_eid_owner_info *owner_info);
+void hip_db_dec_eid_use_cnt(sa_eid_t eid_val, int is_local);
 
 #endif /* __KERNEL__ */
 #endif /* HIP_SOCKET_H */
