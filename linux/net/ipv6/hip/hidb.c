@@ -74,10 +74,9 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 							       int algo)
 {
 	struct hip_host_id_entry *id_entry;
-
 	list_for_each_entry(id_entry, &db->db_head, next) {
-	  if ((hit == NULL || !ipv6_addr_cmp(&id_entry->hit, hit)) &&
-	      (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
+		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
+		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
 			return id_entry;
 	}
 	return NULL;
@@ -130,7 +129,7 @@ void hip_uninit_host_id_dbs(void)
  * On success returns 0, otherwise an negative error value is returned.
  */
 int hip_add_host_id(struct hip_db_struct *db,
-		    const struct in6_addr *hit,
+		    const struct hip_lhi *lhi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg), 
 		    int (*remove)(struct hip_host_id_entry *, void **arg),
@@ -142,10 +141,10 @@ int hip_add_host_id(struct hip_db_struct *db,
 	struct hip_host_id *pubkey;
 	unsigned long lf;
 
-	_HIP_HEXDUMP("adding host id", hit, sizeof(struct in6_addr));
+	HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
 
-	HIP_ASSERT(hit != NULL);
-
+	HIP_ASSERT(&lhi->hit != NULL);
+	HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
 	HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
 								      GFP_KERNEL)), -ENOMEM,
 		 "No memory available for host id\n");
@@ -156,14 +155,16 @@ int hip_add_host_id(struct hip_db_struct *db,
 		 -ENOMEM, "pubkey mem alloc failed\n");
 
 	/* copy lhi and host_id (host_id is already in network byte order) */
-	ipv6_addr_copy(&id_entry->hit, hit);
+	ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
+	id_entry->lhi.anonymous = lhi->anonymous;
 	memcpy(id_entry->host_id, host_id, len);
 	memcpy(pubkey, host_id, len);
 
 	HIP_WRITE_LOCK_DB(db);
 
 	/* check for duplicates */
-	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit, HIP_ANY_ALGO);
+	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, 
+							 HIP_ANY_ALGO);
 	if (old_entry != NULL) {
 		HIP_WRITE_UNLOCK_DB(db);
 		HIP_ERROR("Trying to add duplicate lhi\n");
@@ -181,7 +182,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
 	
 	pubkey = hip_get_public_key(pubkey);
-       	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)hit,
+       	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
 				   hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign,
 				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
 
@@ -218,7 +219,10 @@ int hip_add_host_id(struct hip_db_struct *db,
 int hip_handle_add_local_hi(const struct hip_common *input)
 {
 	int err = 0;
-	struct hip_host_id *dsa_host_identity, *rsa_host_identity = NULL;
+	struct hip_host_id *host_identity = NULL;
+	struct hip_lhi lhi;
+	struct hip_tlv_common *param = NULL;
+	struct hip_eid_endpoint *eid_endpoint = NULL;
 	struct in6_addr dsa_hit, rsa_hit;
 	
 	HIP_DEBUG("\n");
@@ -230,29 +234,88 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	_HIP_DUMP_MSG(response);
 
-	HIP_IFEL(!(dsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 1)), -ENOENT,
-		 "No DSA host identity pubkey in response\n");
-	HIP_IFEL(!(rsa_host_identity = hip_get_nth_param(input, HIP_PARAM_HOST_ID, 2)), -ENOENT,
-		 "No RSA host identity pubkey in response\n");
+	/* Iterate through all host identities in the input */
+	while((param = hip_get_next_param(input, param)) != NULL) {
+	  
+	  /* NOTE: changed to use hip_eid_endpoint structs instead of 
+	     hip_host_id:s when passing IDs from user space to kernel */
+	  if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
+	    continue;
+	  HIP_DEBUG("host id found in the msg\n");
+	  
+	  eid_endpoint = (struct hip_eid_endpoint *)param;
 
-	_HIP_HEXDUMP("rsa host id\n", rsa_host_identity,
-		    hip_get_param_total_len(rsa_host_identity));
+	  if (!eid_endpoint) {
+	    HIP_ERROR("No host endpoint in input\n");
+	    err = -ENOENT;
+	    goto out_err;
+	  }
 
-	HIP_IFEL(err = hip_private_host_id_to_hit(dsa_host_identity, &dsa_hit,
-						  HIP_HIT_TYPE_HASH126), err, 
-		 "DSA host id to hit conversion failed\n");
-	HIP_IFEL(err = hip_private_host_id_to_hit(rsa_host_identity, &rsa_hit,
-						  HIP_HIT_TYPE_HASH126), err,
-		 "RSA host id to hit conversion failed\n");
-
-	HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &dsa_hit, dsa_host_identity, 
-				       NULL, NULL, NULL), err,
-		 "adding of local host identity failed\n");
-	HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &rsa_hit, rsa_host_identity, 
-				       NULL, NULL, NULL), err, 
-		 "adding of local host identity failed\n");
-
+	  host_identity = &eid_endpoint->endpoint.id.host_id;
+	  
+	  _HIP_HEXDUMP("host id\n", host_identity,
+		       hip_get_param_total_len(host_identity));
+	  
+	  HIP_IFEL(err = hip_private_host_id_to_hit(host_identity, &lhi.hit,
+						    HIP_HIT_TYPE_HASH126), 
+		   err, 
+		   "Host id to hit conversion failed\n");
+	  
+	  lhi.anonymous =
+		  (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
+		  ?
+		  1 : 0;
+	  
+	  HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, 
+					 host_identity, 
+					 NULL, NULL, NULL), err,
+		   "adding of local host identity failed\n");
+	}
+	
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
+ out_err:
+	
+	return err;
+}
+
+/**
+ * hip_socket_handle_del_local_hi - handle deletion of a localhost host
+ * identity
+ * @msg: the message containing the hit to be deleted
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_handle_del_local_hi(const struct hip_common *input)
+{
+	struct in6_addr *hit;
+	struct hip_lhi lhi;
+	char buf[46];
+	int err = 0;
+
+	
+	hit = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_HIT);
+	if (!hit) {
+		HIP_ERROR("no hit\n");
+		err = -ENODATA;
+		goto out_err;
+	}
+
+	hip_in6_ntop(hit, buf);
+	HIP_INFO("del HIT: %s\n", buf);
+
+	ipv6_addr_copy(&lhi.hit, hit);
+
+        err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi);
+        if (err) {
+		HIP_ERROR("deleting of local host identity failed\n");
+		goto out_err;
+        }
+        
+	/* XX TODO: remove associations from hadb & beetdb by the deleted HI */
+
+	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
+
  out_err:
 	
 	return err;
@@ -302,12 +365,11 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 	return err;
 }
 
-#if 0
 /**
- * hip_get_any_localhost_hit - Copy to the the @target the first 
+ * hip_get_any_localhost_hit - Copy to the @target the first
  * local HIT that is found.
  * @target: Placeholder for the target
- * @param algo the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
+ * @algo: the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
  *
  * Returns 0 if ok, and negative if failed.
  */
@@ -318,7 +380,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 	unsigned long lf;
 
 	HIP_READ_LOCK_DB(&hip_local_hostid_db);
-
+	
 	entry = hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,NULL,algo);
 	if (!entry) {
 		err=-ENOENT;
@@ -332,7 +394,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
 	return err;
 }
-#endif
+
 
 /**
  * NOTE: Remember to free the host id structure after use.
@@ -451,7 +513,7 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-#if 0
+//#if 0
 struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 {
 	struct hip_host_id *tmp; 
@@ -469,7 +531,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	  
 	return res;
 }
-#endif
+//#endif
 
 static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 {
@@ -527,7 +589,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-#if 0
+//#if 0
 struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 {
 	struct hip_host_id *tmp, *res;
@@ -544,7 +606,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	  
 	return res;	
 }
-#endif
+//#endif
 
 /* Transforms a private public key pair to a public key, private key
    is deleted. */
@@ -570,7 +632,7 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hid)
  * Returns newly allocated area that contains the public key part of
  * the localhost host identity. %NULL is returned if errors detected.
  */
-#if 0
+//#if 0
 struct hip_host_id *hip_get_any_localhost_public_key(int algo) 
 {
 	struct hip_host_id *hi = NULL;
@@ -580,11 +642,11 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 	} else if (algo == HIP_HI_RSA) {
 		hi = hip_get_any_localhost_rsa_public_key();
 	} else {
-	  HIP_ERROR("unknown hi algo: (%d)",algo);
+		HIP_ERROR("unknown hi algo: (%d)",algo);
 	}
 	return hi;
 }
-#endif
+//#endif
 
 
 #undef HIP_READ_LOCK_DB

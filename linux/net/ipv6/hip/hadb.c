@@ -85,7 +85,8 @@ int hip_hadb_hit_is_our(const hip_hit_t *our) {
 
 static void *hip_hadb_get_key_hit(void *entry)
 {
-	return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
+	return (void *)&(((hip_ha_t *)entry)->hash_key);
+        //return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
 }
 
 static void *hip_hadb_get_key_spi_list(void *entry)
@@ -123,7 +124,7 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 {
 	struct hip_hit_spi *hs;
-	hip_hit_t hit;
+	hip_hit_t hit_our, hit_peer;
 	hip_ha_t *ha;
 
 	hs = (struct hip_hit_spi *) hip_ht_find(&hadb_spi_list, (void *)spi);
@@ -132,10 +133,11 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 		return NULL;
 	}
 
-	ipv6_addr_copy(&hit, &hs->hit);
+	ipv6_addr_copy(&hit_our, &hs->hit_our);
+	ipv6_addr_copy(&hit_peer, &hs->hit_peer);
 	hip_hadb_put_hs(hs);
 
-	ha = hip_hadb_find_byhit(&hit);
+	ha = hip_hadb_find_byhits(&hit_our, &hit_peer);
 	if (!ha) {
 		HIP_DEBUG("HA not found for SPI=0x%x\n", spi);
 	}
@@ -143,9 +145,57 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 	return ha;
 }
 
+#if 0
 hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
 {
 	return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)hit);
+}
+#endif
+
+/**
+ * This function searches for a hip_ha_t entry from the hip_hadb_hit
+ * by a HIT pair (local,peer).
+ */
+hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
+{
+        hip_hit_t key;
+        hip_xor_hits(&key, hit, hit2);
+        return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
+}
+
+/**
+ * This function simply goes through all local HIs and tries
+ * to find a HADB entry that matches the current HI and
+ * the given peer hit. First matching HADB entry is then returned.
+ *
+ * XX TODO: find a better solution, see the text below:
+ * This function is needed because we index the HADB now by
+ * key values calculated from <peer_hit,local_hit> pairs. Unfortunately, in
+ * some functions like the ipv6 stack hooks hip_get_saddr() and
+ * hip_handle_output() we just can't know the local_hit so we have to
+ * improvise and just try to find some HA entry.
+ *
+ * NOTE: This way of finding HA entries doesn't work properly if we have 
+ * multiple entries with the same peer_hit.
+ */
+hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
+{
+        struct hip_host_id_entry *item = NULL, *tmp = NULL;
+        hip_ha_t *entry = NULL;
+        hip_hit_t our_hit;
+
+        list_for_each_entry_safe(item,tmp,&hip_local_hostid_db.db_head, next) {
+                ipv6_addr_copy(&our_hit,&item->lhi.hit);
+		
+                _HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
+                entry = hip_hadb_find_byhits(hit,&our_hit);
+                if (!entry) {
+                        continue;
+                } else {
+                        return entry;
+                }
+        }
+        return NULL;
 }
 
 /**
@@ -195,7 +245,8 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	st = ha->hastate;
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
-		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hit_peer));
+		hip_xor_hits(&ha->hash_key, &ha->hit_our, &ha->hit_peer);
+		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hash_key));
 		if (!tmp) {
 			hip_ht_add(&hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
@@ -212,11 +263,12 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
  */
-int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, uint32_t spi)
+int hip_hadb_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our, 
+				   uint32_t spi)
 {
 	int err = 0;
 	HIP_INSERT_STATE_SPI_LIST(&hadb_spi_list, hip_hadb_put_entry,
-				  peer_hit, spi);
+				  hit_our, hit_peer, spi);
 	return err;
 }
 
@@ -310,9 +362,11 @@ int hip_hadb_update_xfrm_inbound(hip_ha_t *entry) {
 
 	/* iterate over all inbound SPIs and send them to kernel */
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("Inbound SPI update: %x, state %s\n", item->spi, hip_state_str(entry->state));
+		HIP_DEBUG("Inbound SPI update: SPI=0x%x, state=%s\n",
+			  item->spi, hip_state_str(entry->state));
 		err = hip_xfrm_update(&entry->hit_peer,
 				      &entry->hit_our,
+				      NULL,
 			              item->spi,
 				      entry->state,
 				      HIP_SPI_DIRECTION_IN);
@@ -336,9 +390,11 @@ int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
 	//else
 	//addr = &entry->bex_address;
 
-	HIP_DEBUG("Outbound HIT update, state: %s\n", hip_state_str(entry->state));
+	HIP_DEBUG("Outbound HIT update, default SPI=0x%x state=%s\n",
+		  entry->default_spi_out, hip_state_str(entry->state));
 	HIP_HEXDUMP("HIT: ", &entry->hit_peer, sizeof(struct in6_addr));
-	return hip_xfrm_update(&entry->hit_peer, addr, entry->default_spi_out,
+	return hip_xfrm_update(&entry->hit_peer, &entry->hit_our, addr, 
+			       entry->default_spi_out,
 			       entry->state, HIP_SPI_DIRECTION_OUT);
 }
 
@@ -689,7 +745,8 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 {
 	hip_ha_t *ha;
 
-	ha = hip_hadb_find_byhit(hit);
+	/* XX TODO: delete all ha entries that contain a matching peer hi? */
+	ha = hip_hadb_try_to_find_by_peer_hit(hit);
 	if (!ha) {
 		return -ENOENT;
 	}
@@ -726,7 +783,8 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	HIP_DEBUG_HIT("HIT", hit);
 	HIP_DEBUG_IN6ADDR("addr", addr);
 
-	entry = hip_hadb_find_byhit(hit);
+	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
+	entry = hip_hadb_try_to_find_by_peer_hit(hit);
 	if (!entry) {
 		entry = hip_hadb_create_state(GFP_KERNEL);
 		if (!entry) {
@@ -806,7 +864,8 @@ static int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *dat
 	// hip_hold_ha(entry); ?
 
 	_HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
-	err = hip_hadb_insert_state_spi_list(&entry->hit_peer, spi_in);
+	err = hip_hadb_insert_state_spi_list(&entry->hit_peer, &entry->hit_our,
+					     spi_in);
 	if (err == -EEXIST)
 		err = 0;
  out_err:
@@ -1633,7 +1692,7 @@ void hip_hadb_dump_hs_ht(void)
                         list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i]
 , list) {
                                 hip_hadb_hold_hs(hs);
-                                hip_in6_ntop(&hs->hit, str);
+                                hip_in6_ntop(&hs->hit_peer, str);
                                 HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
                                           str, hs->spi, atomic_read(&hs->refcnt)
 );

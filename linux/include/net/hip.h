@@ -49,7 +49,6 @@ typedef uint16_t in_port_t;
 #  include <sys/time.h>
 #  include <sys/ioctl.h>
 #  include <stdint.h>
-#  include <stdint.h>
 
 typedef uint8_t   u8;
 typedef uint16_t  u16;
@@ -173,6 +172,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
+#define HIP_HI_REUSE_UID                   4
+#define HIP_HI_REUSE_GID                   8
+#define HIP_HI_REUSE_ANY                  16
 /* Other flags: keep them to the power of two! */
 
 #define HIP_HOST_ID_RR_DSA_MAX_T_VAL           8
@@ -863,7 +865,8 @@ struct hip_hit_spi {
 	struct list_head list;
 	spinlock_t       lock;
 	atomic_t         refcnt;
-	hip_hit_t        hit;
+	hip_hit_t        hit_our;
+	hip_hit_t        hit_peer;
 	uint32_t         spi; /* this SPI spi belongs to the HIT hit */
 };
 
@@ -912,6 +915,7 @@ struct hip_hadb_state
 	uint16_t             peer_controls;
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
 	hip_hit_t            hit_peer;       /* Peer's HIT */
+	hip_hit_t            hash_key;       /* hit_our XOR hit_peer */
 	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
 	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
 	uint32_t             default_spi_out;
@@ -971,7 +975,7 @@ struct hip_cookie_entry {
 struct hip_work_order_hdr {
 	int type;
 	int subtype;
-	struct in6_addr id1, id2; /* can be a HIT or IP address */
+	struct in6_addr id1, id2, id3; /* can be a HIT or IP address */
 	int arg1, arg2, arg3;
 };
 
@@ -995,7 +999,7 @@ struct hip_host_id_entry {
    head being of different type) */
 	struct list_head next; 
 
-	struct in6_addr hit; 
+	struct hip_lhi lhi;
 	/* struct in_addr lsi; */
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
@@ -1008,8 +1012,10 @@ struct hip_host_id_entry {
 };
 
 struct hip_eid_owner_info {
-	uid_t uid;
-	gid_t gid;
+	uid_t            uid;
+	gid_t            gid;
+	pid_t            pid;
+	se_hip_flags_t   flags;  /* HIP_HI_REUSE_* */
 };
 
 struct hip_eid_db_entry {
@@ -1017,6 +1023,7 @@ struct hip_eid_db_entry {
 	struct hip_eid_owner_info  owner_info;
 	struct sockaddr_eid        eid; /* XX FIXME: the port is unneeded */
 	struct hip_lhi             lhi;
+	int                        use_cnt;
 };
 
 #define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200

@@ -4,12 +4,25 @@
  */
 #include "netdev.h"
 
-static int address_count;
-static struct list_head addresses;
+int address_count;
+struct list_head addresses;
+
+static int count_if_addresses(int ifindex)
+{
+	struct netdev_address *n, *t;
+	int i = 0;
+
+	list_for_each_entry_safe(n, t, &addresses, next) {
+		if (n->if_index == ifindex)
+			i++;
+	}
+	return i;
+}
+
 
 /* Returns 1 if the given address @addr is allowed to be one of the
    addresses of this host, 0 otherwise */
-static int filter_address(struct sockaddr *addr, int ifindex)
+int filter_address(struct sockaddr *addr, int ifindex)
 {
 	HIP_DEBUG("ifindex=%d, address family=%d\n",
 		  ifindex, addr->sa_family);
@@ -49,9 +62,9 @@ static void add_address_to_list(struct sockaddr *addr, int ifindex)
 
         memcpy(&n->addr, addr, SALEN(addr));
         n->if_index = ifindex;
+	//INIT_LIST_HEAD(&n->next);
 	list_add(&n->next, &addresses);
 	address_count++;
-
 	HIP_DEBUG("added address, address_count at exit=%d\n", address_count);
 }
 
@@ -90,6 +103,21 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 	HIP_DEBUG("address_count at exit=%d\n", address_count);
 	if (address_count < 0)
 		HIP_ERROR("BUG: address_count < 0\n", address_count);
+}
+
+void delete_all_addresses(void)
+{
+        struct netdev_address *n, *t;
+
+	HIP_DEBUG("address_count at entry=%d\n", address_count);
+	list_for_each_entry_safe(n, t, &addresses, next) {
+		list_del(&n->next);
+		HIP_FREE(n);
+		address_count--;
+        }
+
+	if (address_count != 0)
+		HIP_ERROR("BUG: address_count != 0\n", address_count);
 }
 
 int hip_netdev_find_if(struct sockaddr *addr)
@@ -207,6 +235,7 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
         };
 
 	/* Initialize address list */
+	HIP_DEBUG("Initializing addresses...\n");
 	INIT_LIST_HEAD(&addresses);
 	address_count = 0;
 
@@ -242,6 +271,8 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
                 }
         } /* end while(!done) - loop 1 */ 
 
+	HIP_DEBUG("found %d usable addresses\n", address_count);
+	HIP_DEBUG("addrs=0x%p\n", &addresses);
         return(0);
 }
 
@@ -255,13 +286,19 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	struct sockaddr *addr;
 	struct hip_rea_info_addr_item *reas;
 	struct netdev_address *n, *t;
+	int pre_if_address_count;
 
 	HIP_DEBUG("\n");
 	addr = (struct sockaddr*) &ss_addr;
 	
 	for (; NLMSG_OK(msg, (u32)len);
 	     msg = NLMSG_NEXT(msg, len)) {
-		HIP_DEBUG("handling msg type %d\n", msg->nlmsg_type);
+		int ifindex;
+
+		ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
+		ifindex = ifinfo->ifi_index;
+		HIP_DEBUG("handling msg type %d ifindex=%d\n",
+			  msg->nlmsg_type, ifindex);
 		switch(msg->nlmsg_type) {
 		case RTM_NEWLINK:
 			HIP_DEBUG("RTM_NEWLINK\n");
@@ -269,8 +306,13 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			break;
 		case RTM_DELLINK:
 			HIP_DEBUG("RTM_DELLINK\n");
-			ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
-			delete_address_from_list(NULL, ifinfo->ifi_index);
+			//ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
+			//delete_address_from_list(NULL, ifinfo->ifi_index);
+			delete_address_from_list(NULL, ifindex);
+			/* should do here
+			   hip_send_update_all(NULL, 0, ifindex, SEND_UPDATE_REA);
+			   but ifconfig ethX down never seems to come here
+			*/
 			break;
 			/* Add or delete address from addresses */
 		case RTM_NEWADDR:
@@ -309,30 +351,55 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				  is_add ? "add" : "del", ifa->ifa_index);
 			
 			/* update our address list */
-			if (is_add) {
+			pre_if_address_count = count_if_addresses(ifa->ifa_index);
+			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
+				  pre_if_address_count, ifa->ifa_index);
+			if (is_add)
 				add_address_to_list(addr, ifa->ifa_index);
-			} else {
+			else
 				delete_address_from_list(addr, ifa->ifa_index);
-			}
+			i = count_if_addresses(ifa->ifa_index);
+			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
 			/* handle HIP readdressing */
-			reas = (struct hip_rea_info_addr_item *)malloc(address_count * sizeof(struct hip_rea_info_addr_item));
+
+			if (i == 0 && pre_if_address_count > 0 &&
+			    msg->nlmsg_type == RTM_DELADDR) {
+				/* send 0-address REA is this was deletion of the
+				   last address */			   
+				HIP_DEBUG("sending 0-addr REA\n");
+				hip_send_update_all(NULL, 0, ifa->ifa_index,
+						    SEND_UPDATE_REA);
+			} else if (i == 0) {
+				HIP_DEBUG("no need to readdress\n");
+				goto skip_readdr;
+			}
+
+			reas = (struct hip_rea_info_addr_item *)
+				malloc(i * sizeof(struct hip_rea_info_addr_item));
 			if (reas) {
 				i = 0;
 				list_for_each_entry_safe(n, t, &addresses, next) {
+					/* advertise only the addresses which are in
+					   the same interface which caused the event */
+					if (n->if_index != ifa->ifa_index)
+						continue;
+
 					memcpy(&reas[i].address, SA2IP(&n->addr),
 					       SAIPLEN(&n->addr));
-					/* lifetime: select prefered_lft or valid_lft ? */
 					/* FIXME: Is this ok? (tkoponen), for boeing it is*/					reas[i].lifetime = 0;
 					/* For testing preferred address */
 					reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
 					i++;
 				}
-				hip_send_update_all(reas, address_count,
+				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
+				hip_send_update_all(reas, i,
 						    ifa->ifa_index, SEND_UPDATE_REA);
 				free(reas);
 				break;
 			}
+		skip_readdr:
+			break;
 		default:
 			HIP_DEBUG("unhandled msg type %d\n", msg->nlmsg_type);
 			break;
@@ -341,4 +408,3 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 	return 0;
 }
-

@@ -11,15 +11,44 @@
 #else
 #  include <stdio.h>
 #  include "list.h"
+//#  include <net/ipv6.h>
+
+#include <asm/byteorder.h>
+
+
+
+/* Remove when not necessary, taken from linux/ipv6.h */
+struct ipv6hdr {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+        __u8                    priority:4,
+                                version:4;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+        __u8                    version:4,
+                                priority:4;
+#else
+#error  "Please fix <asm/byteorder.h>"
+#endif
+        __u8                    flow_lbl[3];
+
+        __u16                   payload_len;
+        __u8                    nexthdr;
+        __u8                    hop_limit;
+
+        struct  in6_addr        saddr;
+        struct  in6_addr        daddr;
+};
+
+
 #endif
 
-#define HIP_INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_id1, hwo_id2, hwo_arg1, hwo_arg2, hwo_arg3) \
+#define HIP_INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_id1, hwo_id2, hwo_id3, hwo_arg1, hwo_arg2, hwo_arg3) \
 	do { \
                 memset(&work_order_hdr, 0, sizeof(struct hip_work_order_hdr)); \
 		work_order_hdr.type = hwo_type; \
 		work_order_hdr.subtype = hwo_subtype; \
 		if (hwo_id1) ipv6_addr_copy(&work_order_hdr.id1, hwo_id1); \
 		if (hwo_id2) ipv6_addr_copy(&work_order_hdr.id2, hwo_id2); \
+		if (hwo_id3) ipv6_addr_copy(&work_order_hdr.id3, hwo_id3); \
 		work_order_hdr.arg1 = hwo_arg1; \
 		work_order_hdr.arg2 = hwo_arg2; \
 		work_order_hdr.arg3 = hwo_arg3; \
@@ -29,6 +58,7 @@
 #include "debug.h"
 #include "timer.h"
 #include "hip.h"
+#include "bos.h"
 
 #define HIP_WO_TYPE_INCOMING 1
 #define HIP_WO_TYPE_OUTGOING 2
@@ -66,6 +96,7 @@
 #define HIP_WO_SUBTYPE_IN6_EVENT  209
 #define HIP_WO_SUBTYPE_DEV_EVENT  210
 #define HIP_WO_SUBTYPE_ADDRVS     211
+#define HIP_WO_SUBTYPE_SEND_BOS   212 // sending BOS packet
 
 int hip_init_workqueue(void);
 void hip_uninit_workqueue(void);

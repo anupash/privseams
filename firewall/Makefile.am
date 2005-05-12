@@ -9,20 +9,32 @@ include $(HIPL)/Makefile.am.global
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
-CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE 
+CFLAGS = -DHIP_LOGFMT_LONG -g -CONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE 
 
-include_HEADERS = hipd.h crypto.h netlink.h
+include_HEADERS =  crypto.h netlink.h #hipd.h 
+include_HEADERS += firewall.h conntrack.h file_reader.h helpers.h builder.h misc.h 
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
-INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
+INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)	-I$(HIPL_HIPD)
+INCLUDES += -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include  
 
-sbin_PROGRAMS = hipd
-hipd_SOURCES = pk.c rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
-hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
-hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c misc.c dh.c netlink.c bos.c
+sbin_PROGRAMS = firewall
+#hipd_PROGRAMS = hipd
+firewall_SOURCES = firewall.c conntrack.c file_reader.c helpers.c
+firewall_SOURCES +=  builder.c misc.c crypto.c dh.c
+#pk.c rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
+#firewall_SOURCES += workqueue.c builder.c hadb.c #preoutput.c 
+#firewall_SOURCES += crypto.c input.c output.c xfrm.c 
+#firewall_SOURCES += hidb.c cookie.c misc.c dh.c netlink.c
+#hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
+#hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c misc.c dh.c netlink.c
 
+firewall_LDADD = /usr/lib/libipq.a -lglib-2.0 ../libinet6/.libs/libinet6.a  
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-hipd_LDADD = ../libinet6/.libs/libinet6.a
-hipd_LDFLAGS = -lcrypto
+#firewall_LDFLAGS = -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include  -lglib-2.0  /usr/lib/libipq.a 
+#hipd_LDADD = ../libinet6/.libs/libinet6.a
+##hipd_LDFLAGS = -lcrypto
+
+ 
 
 SUBDIRS =
 
@@ -50,13 +62,19 @@ cookie.c: cookie.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.c .
 cookie.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.h .
-crypto.c: crypto.h
+crypto.c: crypto.h 
+	$(LN_S) -f $(HIPL_HIPD)/crypto.c .
+#crypto.h
 crypto.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto.h .
 hidb.c: hidb.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.c .
 hidb.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.h .
+#debug.c: debug.h
+#	$(LN_S) -f $(HIPL_LINUX_MODULE)/debug.c .
+#debug.h:
+#	$(LN_S) -f $(HIPL_LINUX_MODULE)/debug.h .
 dh.c: dh.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/dh.c .
 dh.h:
@@ -67,7 +85,9 @@ hadb.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.h .
 netlink.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/netlink.h .
-hashtable.c: hashtable.h
+hashtable.c: hashtable.h 
+	$(LN_S) -f $(HIPL_HIPD)/hashtable.h .	
+#hashtable.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.c .
 hashtable.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.h .
@@ -83,10 +103,6 @@ workqueue.c: workqueue.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/workqueue.c .
 workqueue.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/workqueue.h .
-bos.c: 
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/bos.c .
-bos.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/bos.h .
 input.c: input.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.c .
 output.h:
@@ -98,30 +114,34 @@ input.h:
 timer.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/timer.h .
 preoutput.c: preoutput.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/preoutput.c .
 preoutput.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/preoutput.h .
 preinput.c: preinput.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/preinput.c .
 preinput.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/preinput.h .
 xfrm.c: xfrm.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/xfrm.c .
 xfrm.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/xfrm.h .
 beet.c: beet.h
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/beet.c .
 beet.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/beet.h .
 update.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.h .
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.h
 update.c: update.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.c .
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.c
 rvs.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.h .
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.h
 rvs.c: rvs.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.c .
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.c
 pk.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.h .
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.h
 pk.c: pk.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.c .
+	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.c
 
 tags:
-	etags $(hipd_SOURCES) $(include_HEADERS)
+	etags $(firewall_SOURCES) $(include_HEADERS)
 

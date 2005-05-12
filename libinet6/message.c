@@ -22,9 +22,9 @@
  *
  */
 int open_hip(void) {
-  /* we're using the socket only for setting socket options, so the stream
-     option could be anything */
-  return socket(PF_HIP, SOCK_STREAM, 0);
+	/* we're using the socket only for setting socket options, so the stream
+	   option could be anything */
+	return socket(PF_HIP, SOCK_STREAM, 0);
 }
 
 /**
@@ -35,57 +35,57 @@ int open_hip(void) {
  *
  */
 int close_hip(int hipfd) {
-  return close(hipfd);
+	return close(hipfd);
 }
 
 int hip_set_global_option(const struct hip_common *msg) {
-  int err = 0, hipfd = -1;
+	int err = 0, hipfd = -1;
 
-  hipfd = open_hip(); // sets also errno
-  if (hipfd < 0) {
-    HIP_ERROR("Failed to open HIP configuration channel\n");
-    err = -errno;
-    goto out;
-  }
+	hipfd = open_hip(); // sets also errno
+	if (hipfd < 0) {
+		HIP_ERROR("Failed to open HIP configuration channel\n");
+		err = -errno;
+		goto out;
+	}
 
-  err = setsockopt(hipfd, IPPROTO_HIP, SO_HIP_GLOBAL_OPT, msg,
-		   hip_get_msg_total_len(msg));
-  if (err) {
-    HIP_ERROR("setsockopt failed (%d)\n", err);
-    goto out_close;
-  }
+	err = setsockopt(hipfd, IPPROTO_HIP, SO_HIP_GLOBAL_OPT, msg,
+			 hip_get_msg_total_len(msg));
+	if (err) {
+		HIP_ERROR("setsockopt failed (%d)\n", err);
+		goto out_close;
+	}
 
-  _HIP_DUMP_MSG(msg);
+	_HIP_DUMP_MSG(msg);
 
- out_close:
-  close(hipfd);
- out:
-  return err;
+out_close:
+	close(hipfd);
+out:
+	return err;
 }
 
 int hip_get_global_option(struct hip_common *msg) {
-  int err = 0, hipfd = -1;
-  int msg_len = hip_get_msg_total_len(msg);
+	int err = 0, hipfd = -1;
+	int msg_len = hip_get_msg_total_len(msg);
 
-  hipfd = open_hip(); // sets also errno
-  if (hipfd < 0) {
-    HIP_ERROR("Failed to open HIP configuration channel\n");
-    err = -errno;
-    goto out;
-  }
+	hipfd = open_hip(); // sets also errno
+	if (hipfd < 0) {
+		HIP_ERROR("Failed to open HIP configuration channel\n");
+		err = -errno;
+		goto out;
+	}
 
-  /* The return value SHOULD fit into the msg */
-  err = getsockopt(hipfd, IPPROTO_HIP, SO_HIP_GLOBAL_OPT, msg, &msg_len);
-  if (err) {
-    HIP_ERROR("getsockopt failed (%d)\n", err);
-    goto out_close;
-  }
+	/* The return value SHOULD fit into the msg */
+	err = getsockopt(hipfd, IPPROTO_HIP, SO_HIP_GLOBAL_OPT, msg, &msg_len);
+	if (err) {
+		HIP_ERROR("getsockopt failed (%d)\n", err);
+		goto out_close;
+	}
 
-  _HIP_DUMP_MSG(msg);
+	_HIP_DUMP_MSG(msg);
 
- out_close:
-  close(hipfd);
- out:
-  return err;
+out_close:
+	close(hipfd);
+out:
+	return err;
 }
 

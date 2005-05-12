@@ -89,13 +89,15 @@ extern struct hip_db_struct hip_local_hostid_db;
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
 							       const struct in6_addr *hit,
 							       int algo);
-//int hip_get_any_localhost_hit(struct in6_addr *target, int algo);
-//struct hip_host_id *hip_get_any_localhost_public_key(int algo);
+int hip_get_any_localhost_hit(struct in6_addr *target, int algo);
+struct hip_host_id *hip_get_any_localhost_public_key(int algo);
+struct hip_host_id *hip_get_any_localhost_dsa_public_key(void);
+struct hip_host_id *hip_get_any_localhost_rsa_public_key(void);
 struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
 				    struct in6_addr *hit, int algo);
 int hip_add_host_id(struct hip_db_struct *db,
-		    const struct in6_addr *hit,
+		    const struct hip_lhi *lhi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg),		
 		    int (*remove)(struct hip_host_id_entry *, void **arg),

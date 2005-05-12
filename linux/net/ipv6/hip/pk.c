@@ -38,15 +38,14 @@ int hip_dsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 
 	if (hip_get_msg_type(msg) == HIP_R1) {
 		HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
-							     HIP_RSA_SIGNATURE_LEN,
-							     HIP_SIG_RSA), -1,
+							     HIP_DSA_SIGNATURE_LEN,
+							     HIP_SIG_DSA), -1,
 			 "Building of signature failed\n");
 	} else
 		HIP_IFEL(hip_build_param_signature_contents(msg, signature,
-							    HIP_RSA_SIGNATURE_LEN,
-							    HIP_SIG_RSA), -1,
+							    HIP_DSA_SIGNATURE_LEN,
+							    HIP_SIG_DSA), -1,
 			 "Building of signature failed\n");
-	  
  out_err:
 	return err;
 	

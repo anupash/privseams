@@ -205,7 +205,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	   handlers may need them later */
 	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_INCOMING, 
 				HIP_WO_SUBTYPE_RECV_CONTROL, &(*skb)->nh.ipv6h->saddr,
-				&(*skb)->nh.ipv6h->daddr, 0, 0, 0);
+				&(*skb)->nh.ipv6h->daddr, NULL, 0, 0, 0);
         hip_insert_work_order(hwo);
 
  out_err:

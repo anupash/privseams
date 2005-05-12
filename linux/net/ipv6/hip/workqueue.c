@@ -349,7 +349,8 @@ int hip_do_work(struct hip_work_order *job)
 			
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 =
-				hip_xfrm_update(&job->hdr.id1, &job->hdr.id2, 
+				hip_xfrm_update(&job->hdr.id1, &job->hdr.id2,
+						&job->hdr.id3,
 						job->hdr.arg1, job->hdr.arg2,
 						job->hdr.arg3);
 			break;
@@ -380,7 +381,7 @@ int hip_do_work(struct hip_work_order *job)
 		{
 			hip_ha_t *entry;
 			// FIXME: create HA here, on the fly if needed (Hi3)
- 			entry = hip_hadb_find_byhit(&job->hdr.id2);
+ 			entry = hip_hadb_try_to_find_by_peer_hit(&job->hdr.id2);
 			if (!entry) {
 				HIP_ERROR("Unknown HA\n");
 				res = KHIPD_ERROR;
@@ -494,12 +495,19 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 		case HIP_WO_SUBTYPE_FLUSHMAPS:
 		case HIP_WO_SUBTYPE_DELHI:
+			HIP_DEBUG("Deleting a HI\n");
+			res = hip_handle_del_local_hi(job->msg);
+			break;
 		case HIP_WO_SUBTYPE_FLUSHHIS:
 		case HIP_WO_SUBTYPE_NEWDH:
 			HIP_INFO("Not implemented subtype: %d (type=%d)\n",
 				 job->hdr.subtype, job->hdr.type);
 			res = KHIPD_ERROR;
 			goto out_err;
+		case HIP_WO_SUBTYPE_SEND_BOS:
+			HIP_DEBUG("Sending BOS\n");
+			res = hip_send_bos(job->msg);
+			break;
 #endif /* (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 		default:
 			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);

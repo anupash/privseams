@@ -112,5 +112,6 @@ AC_CONFIG_FILES([Makefile
                 libinet6/Makefile
                 tools/Makefile
                 hipd/Makefile
+		firewall/Makefile
                 test/Makefile])
 AC_OUTPUT

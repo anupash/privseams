@@ -315,7 +315,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		goto out_err;
 	}
 
-	entry = hip_hadb_find_byhit(&msg->hits);
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	if (!entry) {
 		HIP_ERROR("Did not find dst entry\n");
 		err = -EFAULT;
@@ -753,7 +753,8 @@ int hip_receive_r1(struct hip_common *hip_common,
  	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), 0, 
 		 "Received illegal controls in R1: 0x%x Dropping\n",
 		 ntohs(hip_common->control));
-	HIP_IFEL(!(entry = hip_hadb_find_byhit(&hip_common->hits)), -EFAULT, 
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits, 
+						&hip_common->hitr)), -EFAULT, 
 		 "Received R1 with no local state. Dropping\n");
 
 	/* An implicit and insecure REA. If sender's address is different than
@@ -876,7 +877,7 @@ int hip_create_r2(struct hip_context *ctx,
  		}
 
  		lifetime = ntohl(rreq->lifetime) > HIP_DEFAULT_RVA_LIFETIME ? 
-			IP_DEFAULT_RVA_LIFETIME : ntohl(rreq->lifetime);
+			HIP_DEFAULT_RVA_LIFETIME : ntohl(rreq->lifetime);
  		HIP_IFEL(hip_build_param_rva(r2, lifetime, rva_types, num, 0), -1, 
 			 "Building of RVA_REPLY failed\n");
  		create_rva = 1;
@@ -1265,7 +1266,7 @@ int hip_receive_i2(struct hip_common *i2,
 	HIP_IFEL(!hip_controls_sane(ntohs(i2->control), mask), 0, 
 		 "Received illegal controls in I2: 0x%x. Dropping\n", ntohs(i2->control));
 
-	entry = hip_hadb_find_byhit(&i2->hits);
+	entry = hip_hadb_find_byhits(&i2->hits, &i2->hitr);
 	if (!entry) {
 		state = HIP_STATE_UNASSOCIATED;
 	} else {
@@ -1482,7 +1483,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
  	HIP_IFEL(!hip_controls_sane(ntohs(hip_i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(hip_i1->control));
 	
-	entry = hip_hadb_find_byhit(&hip_i1->hits);
+	entry = hip_hadb_find_byhits(&hip_i1->hits, &hip_i1->hitr);
 	if (entry) {
 		wmb();
 		state = entry->state;
@@ -1560,7 +1561,8 @@ int hip_receive_r2(struct hip_common *hip_common,
 					HIP_CONTROL_DHT_ALL);
 	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1,
 		 "Received illegal controls in R2: 0x%x. Dropping\n", ntohs(hip_common->control));
-	HIP_IFEL(!(entry = hip_hadb_find_byhit(&hip_common->hits)), -EFAULT,
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits, 
+						&hip_common->hitr)), -EFAULT,
 		 "Received R2 by unknown sender\n");
 
 	HIP_LOCK_HA(entry);
@@ -1621,7 +1623,8 @@ int hip_receive_notify(struct hip_common *hip_common,
 	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1, 
 		 "Received illegal controls in NOTIFY: 0x%x. Dropping\n",
 		 ntohs(hip_common->control));
-	HIP_IFEL(!(entry = hip_hadb_find_byhit(&hip_common->hits)), -EFAULT,
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits, 
+						&hip_common->hitr)), -EFAULT,
 		 "Received NOTIFY by unknown sender\n");
 
 	/* lock here */
@@ -1738,7 +1741,7 @@ int hip_handle_bos(struct hip_common *bos,
 			 "Failed to insert peer map work order\n");
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
 					HIP_WO_SUBTYPE_ADDMAP,
-					dstip, &bos->hits, 0, 0, 0);
+					dstip, &bos->hits, NULL, 0, 0, 0);
 		hip_insert_work_order(hwo);
 	}
 
@@ -1767,7 +1770,7 @@ int hip_receive_bos(struct hip_common *bos,
 	HIP_IFEL(ipv6_addr_any(&bos->hits), 0, "Received NULL sender HIT in BOS.\n");
 	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0, "Received non-NULL receiver HIT in BOS.\n");
 	
-	entry = hip_hadb_find_byhit(&bos->hits);
+	entry = hip_hadb_find_byhits(&bos->hits, &bos->hitr);
 	state = entry ? state = entry->state : HIP_STATE_UNASSOCIATED;
 
 	/* TODO: If received BOS packet from already known sender

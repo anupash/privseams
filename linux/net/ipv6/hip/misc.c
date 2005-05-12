@@ -272,6 +272,14 @@ int hip_in6_ntop2(const struct in6_addr *in6, char *buf)
 		       ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
 }
 
+void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
+{
+	res->s6_addr32[0] = hit1->s6_addr32[0] ^ hit2->s6_addr32[0];
+	res->s6_addr32[1] = hit1->s6_addr32[1] ^ hit2->s6_addr32[1];
+	res->s6_addr32[2] = hit1->s6_addr32[2] ^ hit2->s6_addr32[2];
+	res->s6_addr32[3] = hit1->s6_addr32[3] ^ hit2->s6_addr32[3];
+}
+
 int hip_is_hit(const hip_hit_t *hit) 
 {
 	return ipv6_addr_is_hit((struct in6_addr *)hit);

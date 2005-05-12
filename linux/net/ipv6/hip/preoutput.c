@@ -26,7 +26,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
              base exchange
 	 */
 	int err = 0, state = 0;
-	struct hip_xfrm_state *xs;
+	struct hip_xfrm_state *xs = NULL;
 	struct hip_work_order *hwo;
 
 	if (!ipv6_addr_is_hit(&hdr->daddr)) {
@@ -39,7 +39,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
         /* XX FIX: the following call breaks kernel-only HIP (Miika) No it doesnt. (tkoponen) */
 
 	/* The source address is not yet a HIT, just the dst address. */
-	xs = hip_xfrm_find_by_hit(&hdr->daddr);
+	xs = hip_xfrm_try_to_find_by_peer_hit(&hdr->daddr);
 	HIP_IFEL(!xs, -EFAULT, "Unknown HA\n");
 
 	smp_wmb();
@@ -63,7 +63,8 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr,
 					HIP_WO_TYPE_OUTGOING, 
 					HIP_WO_SUBTYPE_SEND_I1,
-					&hdr->saddr, &hdr->daddr, 0, 0, 0);
+					&hdr->saddr, &hdr->daddr, NULL,
+					0, 0, 0);
 		hip_insert_work_order(hwo);
 		break;
 	case HIP_STATE_I1_SENT:
@@ -123,6 +124,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	if (xs)
 		hip_put_xfrm(xs);
 
+	HIP_DEBUG("end\n");
 	return err;
 }
 
