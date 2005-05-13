@@ -385,7 +385,7 @@ int hip_do_work(struct hip_work_order *job)
 			if (!entry) {
 				HIP_ERROR("Unknown HA\n");
 				res = KHIPD_ERROR;
-				break;
+				goto send_i1_end;
 			}
 			res = hip_send_i1(&entry->hit_peer, entry);
 			if (res < 0) {
@@ -393,7 +393,7 @@ int hip_do_work(struct hip_work_order *job)
 				res = KHIPD_ERROR;
 				barrier();
 				entry->state = HIP_STATE_UNASSOCIATED;
-				break;
+				goto send_i1_end;
 			}
 #if 0
 			/* Synchronize beet state (may be changed) */
@@ -402,9 +402,12 @@ int hip_do_work(struct hip_work_order *job)
 				HIP_ERROR("XFRM out synchronization failed\n");
 				entry->state = HIP_STATE_FAILED;
 				res = KHIPD_ERROR;
-				break;
+				goto send_i1_end;
 			}
 #endif
+		send_i1_end:
+			if (entry)
+				hip_db_put_ha(entry, hip_hadb_delete_state);
 			break;
 		}
 #endif /* __KERNEL__ */

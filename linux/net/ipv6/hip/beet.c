@@ -35,7 +35,10 @@ static struct list_head hip_beetdb_byspi_list[HIP_BEETDB_SIZE];
 void hip_beetdb_delete_state(hip_xfrm_t *x)
 {
 	HIP_DEBUG("xfrm=0x%p\n", x);
-	HIP_ERROR("Miika: this should be implemented\n");
+	_HIP_ERROR("Miika: this should be implemented\n");
+	HIP_LOCK_XF(x);
+	hip_ht_delete(&hip_beetdb_hit, x);
+	HIP_UNLOCK_XF(x);
 	HIP_FREE(x);
 }
 
@@ -271,7 +274,8 @@ int hip_xfrm_update_inbound(hip_hit_t *hit_peer, struct in6_addr *hit_our,
 	}
 
  out_err:
-
+	if (entry)
+		hip_put_xfrm(entry);
 	return err;
 }
 
@@ -285,10 +289,16 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 			     struct in6_addr *peer_addr,
 			     int spi_out, int state)
 {
-	hip_xfrm_t *entry;
+	hip_xfrm_t *entry = NULL;
 	int err = 0;
+	int created = 0;
 
 	HIP_DEBUG("\n");
+
+	if (!hit_peer || !hit_our) {
+		HIP_DEBUG("hit_peer=0x%p hit_our=0x%p\n", hit_peer, hit_our);
+		goto out_err;
+	}
 
 	entry = hip_xfrm_find_by_hits(hit_peer, hit_our);
 	if (!entry) {
@@ -298,7 +308,6 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 			err = -ENOMEM;
 			goto out_err;
 		}
-
 		ipv6_addr_copy(&entry->hit_peer, hit_peer);
 		ipv6_addr_copy(&entry->hit_our, hit_our);
 		hip_xor_hits(&entry->hash_key, hit_our, hit_peer);
@@ -308,6 +317,7 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 			HIP_ERROR("Failed to insert state\n");
 			goto out_err;
 		}
+		created = 1;
 		HIP_DEBUG_HIT("Created a new outbound entry for ", hit_peer);
 	}
 
@@ -330,7 +340,8 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 	}
 	
  out_err:
-
+	if (entry && !created)
+		hip_put_xfrm(entry);
 	return err;
 }
 
@@ -400,7 +411,7 @@ hip_xfrm_t *hip_xfrm_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
 	hip_xfrm_t *x, *tmp;
 	int i;
-	
+
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
 		if(!list_empty(&hip_beetdb_byhit[i])) {
   			list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i],

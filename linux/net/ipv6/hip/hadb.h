@@ -13,6 +13,8 @@
 #define HIP_UNLOCK_HA(ha) do { spin_unlock_bh(&ha->lock); } while(0)
 #define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
 #define HIP_UNLOCK_HS(hs) do { spin_unlock_bh(&hs->lock); } while(0)
+#define HIP_LOCK_XF(xf) do { spin_lock_bh(&xf->lock); } while(0)
+#define HIP_UNLOCK_XF(xf) do { spin_unlock_bh(&xf->lock); } while(0)
 #else
 #include "netdev.h"
 
