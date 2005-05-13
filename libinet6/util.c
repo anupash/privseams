@@ -61,7 +61,10 @@ void extractsubstrings(char *string, List *list) {
   _HIP_DEBUG("extractsubstrings\n");
   sub_string = strtok(string, " ");
   //HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
-  insert(list, sub_string);
+  if(sub_string) 
+    insert(list, sub_string);
+  else 
+    return;
   sub_string = NULL;
   while( (sub_string=strtok(NULL, " ")) != NULL) {
     //HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));

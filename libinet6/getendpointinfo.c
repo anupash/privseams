@@ -1021,12 +1021,11 @@ int get_peer_endpointinfo(const char *hostsfile,
      /etc/hosts file? */
   
   while( getwithoutnewline(line, 500, hosts) != NULL ) {
-    
+    lineno++;
+    if(strlen(line)<=1) continue; 
     initlist(&mylist);
     extractsubstrings(line,&mylist);
      
-    lineno++;
-    
     /* find out the fqdn string amongst the HITS - 
        it's a non-valid ipv6 addr */
     for(i=0;i<length(&mylist);i++) {

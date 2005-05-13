@@ -380,7 +380,9 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
 									\
   while (getwithoutnewline(line, 500, fp) != NULL) {			\
     int c;								\
-    int ret;								\
+    int ret;                                                            \
+    lineno++;								\
+    if(strlen(line)<=1) continue;                                       \
     initlist(&list);                                                    \
     extractsubstrings(line,&list);                                      \
     for(i=0;i<length(&list);i++) {                                      \
@@ -407,7 +409,6 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
         pat = &((*pat)->next);						\
       }									\
      }	                                                                \
-    lineno++;								\
     destroy(&list);                                                     \
   }	              							\
   if (fp)                                                               \
