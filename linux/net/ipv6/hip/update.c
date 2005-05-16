@@ -611,8 +611,12 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* start verifying addresses */
 	HIP_DEBUG("start verifying addresses for new spi 0x%x\n", new_spi_out);
 	err = hip_update_send_addr_verify(entry, msg, NULL /* ok ? */, new_spi_out);
+	if (err)
+		HIP_DEBUG("address verification had errors, err=%d\n", err);
+	err = 0;
 
  out_err:
+	HIP_DEBUG("end, err=%d\n", err);
 	return err;
 }
 
@@ -688,7 +692,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 				  item->spi, item->seq_update_id, item->update_state_flags);
 			if (item->update_state_flags == 0x3) {
 				err = hip_update_finish_rekeying(msg, entry, &item->stored_received_nes);
-				_HIP_DEBUG("update_finish handling ret err=%d\n", err);
+				HIP_DEBUG("update_finish handling ret err=%d\n", err);
 			}
 		}
 		err = 0;
@@ -704,7 +708,8 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL, "Could not sign UPDATE. Failing\n");
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+		 "Could not sign UPDATE. Failing\n");
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
 	err = hip_csum_send(NULL, &daddr, update_packet); // HANDLER
@@ -722,7 +727,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg, struct i
 	*/
 	if (update_packet)
 		HIP_FREE(update_packet);
-	
+	HIP_DEBUG("end, err=%d\n", err);	
 	return err;
 }
 
@@ -750,15 +755,16 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
-		hip_print_hit("new addr to check", &addr->address);
+		hip_print_hit("new addr to check, state=%d", &addr->address,
+			      addr->address_state);
 
 		if (addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
-			_HIP_DEBUG("addr state is DEPRECATED, not verifying\n");
+			HIP_DEBUG("addr state is DEPRECATED, not verifying\n");
 			continue;
 		}
 
 		if (addr->address_state == PEER_ADDR_STATE_ACTIVE) {
-			_HIP_DEBUG("not verifying already active address\n"); 
+			HIP_DEBUG("not verifying already active address\n"); 
 			if (addr->is_preferred) {
 				HIP_DEBUG("TEST (maybe should not do this yet?): setting already active address and set as preferred to default addr\n");
 				hip_hadb_set_default_out_addr(entry, spi_out, &addr->address);
@@ -775,7 +781,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 
 		entry->update_id_out++;
 		addr->seq_update_id = entry->update_id_out;
-		_HIP_DEBUG("outgoing UPDATE ID for REA addr check=%u\n", addr->seq_update_id);
+		HIP_DEBUG("outgoing UPDATE ID for REA addr check=%u\n", addr->seq_update_id);
 		/* todo: handle overflow if (!update_id_out) */
 		HIP_IFEBL(hip_build_param_seq(update_packet, addr->seq_update_id), -1,
 			 continue, "Building of SEQ failed\n");
@@ -794,7 +800,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		HIP_IFEBL(hip_build_param_echo(update_packet, addr->echo_data ,
 					       sizeof(addr->echo_data), 0, 1), -1,
 			  continue, "Building of ECHO_REQUEST failed\n");
-
+		HIP_DEBUG("sending addr verify pkt\n");
 		/* test: send all addr check from same address */
 		err = hip_csum_send(src_ip, &addr->address, update_packet); // HANDLER
 		if (err) {
@@ -806,7 +812,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
  out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
-
+	HIP_DEBUG("end, err=%d\n", err);
 	return err;
 }
 
@@ -836,6 +842,10 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1, 
 		 "Building of ACK failed\n");
 
+	/* Add SIGNATURE */
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+		 "Could not sign UPDATE. Failing\n");
+
 	HIP_DEBUG("Sending reply UPDATE packet (for REA)\n");
 	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
 	if (err) {
@@ -850,6 +860,7 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
  out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
+	HIP_DEBUG("end, err=%d\n", err);
 	return err;
 }
 
@@ -887,7 +898,8 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL, "Could not sign UPDATE. Failing\n");
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+		 "Could not sign UPDATE. Failing\n");
 
 	/* ECHO_RESPONSE (no sign) */
 	HIP_DEBUG("echo opaque data len=%d\n",
@@ -907,6 +919,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
  out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
+	HIP_DEBUG("end, err=%d\n", err);
 	return err;
 }
 

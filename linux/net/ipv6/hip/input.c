@@ -320,7 +320,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	if (!entry) {
-		HIP_ERROR("Did not find dst entry\n");
+		HIP_ERROR("Did not find HA entry\n");
 		err = -EFAULT;
 		goto out_err;
 	}

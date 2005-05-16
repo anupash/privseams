@@ -29,7 +29,7 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 			entry = hip_ht_get_content(void, chain, ht->offset);
 
 			key_to_be_matched = ht->get_key(entry);
-			HIP_DEBUG("entry=0x%p key=0x%p\n", entry, key_to_be_matched);
+			HIP_DEBUG("entry=%p key=%p\n", entry, key_to_be_matched);
 			if (ht->compare(key, key_to_be_matched)) {
 				ht->hold(entry);
 				HIP_UNLOCK_HT(ht);

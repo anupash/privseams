@@ -60,7 +60,8 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst)
 		return -ENOENT;
 	}
 	xfrm_state_put(xs);
-	xfrm_state_delete(xs);
+	xfrm_state_put(xs); /* for removing the ref when SA was created */
+	//xfrm_state_delete(xs);
 
 	return 0;
 }

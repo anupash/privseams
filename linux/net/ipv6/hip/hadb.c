@@ -69,8 +69,9 @@ void hip_hadb_remove_hs(uint32_t spi)
 
 	HIP_LOCK_HS(hs);
 	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
-	hip_ht_delete(&hadb_spi_list, hs);
+	//hip_ht_delete(&hadb_spi_list, hs);
 	HIP_UNLOCK_HS(hs);
+	hip_hadb_put_hs(hs);
 	hip_hadb_put_hs(hs); /* verify that put_hs is safe after unlocking */
 }
 
@@ -1526,7 +1527,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 
 	if (new) {
-		_HIP_DEBUG("create new addr item to SPI list\n");
+		HIP_DEBUG("create new addr item to SPI list\n");
 		/* SPI list does not contain the address, add the address to the SPI list */
 		new_addr = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
 		if (!new_addr) {
@@ -1535,7 +1536,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 			goto out_err;
 		}
 	} else {
-		_HIP_DEBUG("update old addr item\n");
+		HIP_DEBUG("update old addr item\n");
 	}
 	
 	new_addr->lifetime = lifetime;
@@ -1583,12 +1584,12 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	}
 #endif
 	if (new) {
-		_HIP_DEBUG("adding new addr to SPI list\n");
+		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
 	}
 
  out_err:
-	_HIP_DEBUG("returning, err=%d\n", err);
+	HIP_DEBUG("returning, err=%d\n", err);
 	return err;
 }
 
