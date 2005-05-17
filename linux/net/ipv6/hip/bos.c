@@ -1,7 +1,10 @@
 #include "debug.h"
 #include "hidb.h"
+#include "hadb.h"
 
 #include "bos.h"
+
+
 
 #if (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
 
@@ -244,6 +247,8 @@ int hip_handle_bos(struct hip_common *bos,
 	HIP_IFEL(ipv6_addr_cmp(&peer_hit, &bos->hits) != 0, -EINVAL,
 		 "Sender HIT does not match the advertised host_id\n");
 	
+	HIP_HEXDUMP("Advertised HIT:", &bos->hits, 16);
+	
 	/* Everything ok, first save host id to db */
 	HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
 	HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
@@ -290,7 +295,7 @@ int hip_handle_bos(struct hip_common *bos,
 
 		/* we have no previous infomation on the peer, create
 		 * a new HIP HA */		
-		HIP_IFEL((hip_hadb_add_peer_info(dstip, &bos->hits)<0), KHIPD_ERROR,
+		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip)<0), KHIPD_ERROR,
 			 "Failed to insert new peer info");
 		HIP_DEBUG("HA entry created.");
 
@@ -316,3 +321,119 @@ int hip_handle_bos(struct hip_common *bos,
 }
 
 #endif /*(defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
+
+extern int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
+
+/**
+ * hip_socket_handle_get_peer_list - handle creation of list of known peers
+ * @msg: message containing information about which unit tests to execute
+ *
+ * Process a request for the list of known peers
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
+{
+	int err = 0;
+	hip_peer_opaque_t pr;
+	int fail;
+	int i, j;
+//	struct hip_host_id *peer_host_id = NULL;
+	struct hip_lhi lhi;
+	char buf[46];
+        hip_peer_entry_opaque_t *entry, *next;
+	hip_peer_addr_opaque_t *addr, *anext;
+	int socklen = sizeof (struct sockaddr_in6);
+	struct my_addrinfo **end = (struct my_addrinfo **)pai;
+	/* Number of elements allocated in the list */
+	int num_elems = (int)(msg_len / sizeof(struct my_addrinfo));
+	
+	HIP_DEBUG("\n");
+
+	/* Initialize the data structure for the peer list */
+	memset(&pr, 0, sizeof(hip_peer_opaque_t));
+#if 0
+	/* Extra consistency test */
+	if (hip_get_msg_type(msg) != SO_HIP_GET_PEER_LIST) {
+		err = -EINVAL;
+		HIP_ERROR("Bad message type\n");
+		goto out_err;
+	}
+#endif
+	HIP_DEBUG("Got into the handle_bos_peer_list\n");
+
+	/* Iterate through the hadb db entries, collecting addresses */
+	fail = hip_for_each_ha(hip_hadb_list_peers_func, &pr);
+	if (fail) {
+		err = -EINVAL;
+		HIP_ERROR("Peer list creation failed\n");
+		goto out_err;
+	}
+
+	HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
+#if 0
+	if (pr.count <= 0) {
+		HIP_ERROR("No usable entries found\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	/* Complete the list by iterating through the list and
+	   recording the peer host id. This is done separately from
+	   list creation because it involves calling a function that
+	   may sleep (can't be done while holding locks!) */
+	memset(&lhi, 0, sizeof(struct hip_lhi)); /* Zero flags, etc. */
+	for (i = 0, entry = pr.head; i < pr.count; i++, entry = entry->next) {
+
+//		*end = malloc (sizeof (struct addrinfo) + socklen);
+		if (i >= num_elems) {
+			err = -EINVAL;
+			HIP_ERROR("The allocated memory is not enough\n");
+			goto out_err;
+		}
+		(*end)->ai_family = family;
+		(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
+		
+		if (family == AF_INET6) {
+			struct sockaddr_in6 *sin6p =
+				(struct sockaddr_in6 *) (*end)->ai_addr;
+		
+			sin6p->sin6_flowinfo = 0;
+			/* Get the HIT */
+			memcpy (&sin6p->sin6_addr, &(entry->hit), sizeof (struct in6_addr));
+		} else {
+			/* TODO: is there any possibility to get here having family == AF_INET ? */
+		}
+
+		(*end)->ai_next = NULL;
+		end = &((*end)->ai_next);
+	}
+#endif
+ out_err:
+	/* Recurse through structure, freeing memory */
+	entry = pr.head;
+	_HIP_DEBUG("free mem, pr.head=0x%p\n", pr.head);
+	while (entry) {
+		_HIP_DEBUG("entry=0x%p\n", entry);
+		next = entry->next;
+		_HIP_DEBUG("next=0x%p\n", next);
+		_HIP_DEBUG("entry->host_id=0x%p\n", entry->host_id);
+		if (entry->host_id)
+			HIP_FREE(entry->host_id);
+		addr = entry->addr_list;
+		_HIP_DEBUG("addrlist=0x%p\n", addr);
+		while (addr) {
+			_HIP_DEBUG("addr=0x%p\n", addr);
+			anext = addr->next;
+			HIP_FREE(addr);
+			addr = anext;
+		}
+		HIP_FREE(entry);
+		entry = next;
+	}
+	_HIP_DEBUG("done freeing mem, err = %d\n", err);
+
+	return err;
+}
+
+

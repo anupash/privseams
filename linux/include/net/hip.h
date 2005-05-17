@@ -148,6 +148,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define SO_HIP_GLOBAL_OPT 1
 #define SO_HIP_SOCKET_OPT 2
+#define SO_HIP_GET_HIT_LIST 3
 
 /* HIP socket options */
 #define SO_HIP_ADD_LOCAL_HI                     1

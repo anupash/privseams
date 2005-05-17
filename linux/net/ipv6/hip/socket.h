@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "hadb.h"
 
+
 int hip_init_socket_handler(void);
 void hip_uninit_socket_handler(void);
 
@@ -83,4 +84,18 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 void hip_db_dec_eid_use_cnt(sa_eid_t eid_val, int is_local);
 
 #endif /* __KERNEL__ */
+
+struct my_addrinfo
+{
+  int ai_flags;			/* Input flags.  */
+  int ai_family;		/* Protocol family for socket.  */
+  int ai_socktype;		/* Socket type.  */
+  int ai_protocol;		/* Protocol for socket.  */
+  /* The following should be socklen_t but haven't found a correspondent type in kernel space */
+  int ai_addrlen;		/* Length of socket address.  */
+  struct sockaddr *ai_addr;	/* Socket address for socket.  */
+  char *ai_canonname;		/* Canonical name for service location.  */
+  struct my_addrinfo *ai_next;	/* Pointer to next in list.  */
+};
+
 #endif /* HIP_SOCKET_H */

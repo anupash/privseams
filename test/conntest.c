@@ -178,7 +178,10 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	
 	/* lookup host */
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_flags = AI_HIP;
+	hints.ai_flags = AI_HIP; /*AI_KERNEL_LIST*/
+	/* If peer_name is not specified the destionation is looked in the hadb */
+	if (!peer_name)
+		hints.ai_flags |= AI_KERNEL_LIST;
 	hints.ai_family = AF_INET6; /* Legacy API supports only HIT-in-IPv6 */
 	hints.ai_socktype = socktype;
 	hints.ai_protocol = proto;
@@ -421,7 +424,7 @@ out:
 }
 
 /**
- * main_client_native - it handles the functionality of the client-native
+ * main_server_native - it handles the functionality of the client-native
  * @proto: type of protocol
  * @socktype: the type of socket
  * @peer_name: the peer name

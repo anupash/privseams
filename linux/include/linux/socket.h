@@ -16,6 +16,17 @@ struct __kernel_sockaddr_storage {
 				/* _SS_MAXSIZE value minus size of ss_family */
 } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));	/* force desired alignment */
 
+#ifdef __KERNEL__
+
+#include <linux/net.h>
+
+#else
+
+#include <sys/types.h>
+#include <netdb.h>
+
+#endif /* __KERNEL__ */
+
 #if defined(__KERNEL__) || !defined(__GLIBC__) || (__GLIBC__ < 2)
 
 #include <linux/config.h>		/* for CONFIG_COMPAT */

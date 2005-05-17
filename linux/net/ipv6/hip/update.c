@@ -755,8 +755,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
-		hip_print_hit("new addr to check, state=%d", &addr->address,
-			      addr->address_state);
+		hip_print_hit("new addr to check, state=%d", addr->address_state);
 
 		if (addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
 			HIP_DEBUG("addr state is DEPRECATED, not verifying\n");

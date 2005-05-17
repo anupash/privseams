@@ -123,7 +123,10 @@ int main(int argc, char *argv[])
 		case 'i':
 			/* Base Exchange Initiator */
 			printf("Initiator mode\n");
-			peer_name = optarg;
+			if (optarg[0] = "0")
+				peer_name = NULL;
+			else
+				peer_name = optarg;
 			sprintf(buf, "%d",DEFAULT_PORT);
 			main_client_gai(IPPROTO_TCP, SOCK_STREAM, peer_name, buf);
 			break;

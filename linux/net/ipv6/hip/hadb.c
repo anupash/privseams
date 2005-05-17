@@ -2,16 +2,30 @@
 // modified, the modifications must be written there too.
 #include "hadb.h"
 
+HIP_HASHTABLE hadb_hit;
+HIP_HASHTABLE hadb_spi_list;
+
+struct list_head hadb_byhit[HIP_HADB_SIZE];
+struct list_head hadb_byspi_list[HIP_HADB_SIZE];
+
+void hip_hadb_delete_hs(struct hip_hit_spi *hs)
+{
+	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
+	HIP_LOCK_HS(hs);
+	hip_ht_delete(&hadb_spi_list, hs);
+	HIP_UNLOCK_HS(hs);
+	HIP_FREE(hs);
+}
+
+static void hip_hadb_put_hs(void *entry)
+{
+	HIP_DB_PUT_ENTRY(entry, struct hip_hit_spi, hip_hadb_delete_hs);
+}
+
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef __KERNEL__
 #  include <net/ipv6.h>
 #endif /* __KERNEL__ */
-
-HIP_HASHTABLE hadb_hit;
-HIP_HASHTABLE hadb_spi_list;
-
-static struct list_head hadb_byhit[HIP_HADB_SIZE];
-static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 
 /*
   Support for multiple inbound IPsec SAs:
@@ -38,41 +52,9 @@ static void hip_hadb_put_entry(void *entry)
 	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
 }
 
-void hip_hadb_delete_hs(struct hip_hit_spi *hs)
-{
-	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
-	HIP_LOCK_HS(hs);
-	hip_ht_delete(&hadb_spi_list, hs);
-	HIP_UNLOCK_HS(hs);
-	HIP_FREE(hs);
-}
-
-static void hip_hadb_put_hs(void *entry)
-{
-	HIP_DB_PUT_ENTRY(entry, struct hip_hit_spi, hip_hadb_delete_hs);
-}
-
 static void hip_hadb_hold_hs(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
-}
-
-void hip_hadb_remove_hs(uint32_t spi)
-{
-	struct hip_hit_spi *hs;
-
-	hs = (struct hip_hit_spi *) hip_ht_find(&hadb_spi_list, (void *)spi);
-	if (!hs) {
-		HIP_DEBUG("HS not found for SPI=0x%x\n", spi);
-                return;
-        }
-
-	HIP_LOCK_HS(hs);
-	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
-	//hip_ht_delete(&hadb_spi_list, hs);
-	HIP_UNLOCK_HS(hs);
-	hip_hadb_put_hs(hs);
-	hip_hadb_put_hs(hs); /* verify that put_hs is safe after unlocking */
 }
 
 static int hit_match(hip_ha_t *entry, void *our) {
@@ -273,28 +255,7 @@ int hip_hadb_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 	return err;
 }
 
-/** 
- * hip_hadb_delete_state - Delete HA state (and deallocate memory)
- * @ha: HA
- *
- * Deletes all associates IPSEC SAs and frees the memory occupied
- * by the HA state.
- *
- * ASSERT: The HA must be unlinked from the global hadb hash tables
- * (SPI and HIT). This function should only be called when absolutely 
- * sure that nobody else has a reference to it.
- */
-void hip_hadb_delete_state(hip_ha_t *ha)
-{
-	HIP_DEBUG("ha=0x%p\n", ha);
 
-	/* Delete SAs */
-	hip_hadb_delete_inbound_spi(ha, 0);
-	hip_hadb_delete_outbound_spi(ha, 0);
-	if (ha->dh_shared_key)
-		HIP_FREE(ha->dh_shared_key);
-	HIP_FREE(ha);
-}
 
 /**
  * hip_hadb_create_state - Allocates and initializes a new HA structure
@@ -927,54 +888,6 @@ int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data)
 }
 
 
-/* Delete given inbound SPI, and all if spi == 0 */
-void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
-{
-	struct hip_spi_in_item *item, *tmp;
-
-	/* assumes locked entry */
-	HIP_DEBUG("SPI=0x%x\n", spi);
-        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if (!spi || item->spi == spi) {
-			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
-				  item->spi, item->new_spi, item);
-			HIP_ERROR("remove SPI from HIT-SPI HT\n");
-			hip_hadb_remove_hs(item->spi);
-			hip_delete_sa(item->spi, &entry->hit_our);
-			hip_delete_sa(item->new_spi, &entry->hit_our);
-			list_del(&item->list);
-			HIP_FREE(item);
-			break;
-		}
-        }
-}
-
-/* Delete given outbound SPI, and all if spi == 0 */
-void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
-{
-	struct hip_spi_out_item *item, *tmp;
-
-	/* assumes locked entry */
-	HIP_DEBUG("entry=0x%p SPI=0x%x\n", entry, spi);
-        list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		if (!spi || item->spi == spi) {
-			struct hip_peer_addr_list_item *addr_item, *addr_tmp;
-
-			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
-				  item->spi, item->new_spi, item);
-			hip_delete_sa(item->spi, &entry->hit_peer);
-			hip_delete_sa(item->new_spi, &entry->hit_peer);
-			/* delete peer's addresses */
-			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
-				list_del(&addr_item->list);
-				HIP_FREE(addr_item);
-			}
-			list_del(&item->list);
-			HIP_FREE(item);
-		}
-        }
-}
-
 /* Set the ifindex of given SPI */
 /* assumes locked HA */
 void hip_hadb_set_spi_ifindex(hip_ha_t *entry, uint32_t spi, int ifindex)
@@ -1594,44 +1507,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 }
 
 /**
- * hip_for_each_ha - Map function @func to every HA in HIT hash table
- * @func: Mapper function
- * @opaque: Opaque data for the mapper function.
- *
- * The hash table is LOCKED while we process all the entries. This means
- * that the mapper function MUST be very short and _NOT_ do any operations
- * that might sleep!
- *
- * Returns negative if an error occurs. If an error occurs during traversal of
- * a the HIT hash table, then the traversal is stopped and function returns.
- * Returns the last return value of applying the mapper function to the last
- * element in the hash table.
- */
-int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
-{
-	int i, fail = 0;
-	hip_ha_t *this, *tmp;
-
-	if (!func)
-		return -EINVAL;
-
-	HIP_LOCK_HT(&hadb_hit);
-	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
-			hip_hold_ha(this);
-			fail = func(this, opaque);
-			hip_db_put_ha(this, hip_hadb_delete_state);
-			if (fail)
-				break;
-		}
-		if (fail)
-			break;
-	}
-	HIP_UNLOCK_HT(&hadb_hit);
-	return fail;
-}
-
-/**
  * hip_hadb_dump_hits - Dump the contents of the HIT hash table.
  *
  * Should be safe to call from any context. THIS IS FOR DEBUGGING ONLY.
@@ -1939,3 +1814,275 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
 }
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+
+/**
+* hip_list_peers_add - private function to add an entry to the peer list
+* @addr: IPv6 address
+* @entry: peer list entry
+* @last: pointer to pointer to end of peer list linked list
+*
+* Add an IPv6 address (if valid) to the peer list and update the tail
+* pointer.
+*
+* Returns: zero on success, or negative error value on failure
+*/
+
+int hip_list_peers_add(struct in6_addr *address,
+			      hip_peer_entry_opaque_t *entry,
+			      hip_peer_addr_opaque_t **last)
+{
+	hip_peer_addr_opaque_t *addr;
+
+	HIP_DEBUG_IN6ADDR("## SPI is 0, found bex address:", address);
+	
+	/* Allocate an entry for the address */
+	addr = HIP_MALLOC(sizeof(hip_peer_addr_opaque_t), GFP_ATOMIC);
+	if (!addr) {
+		HIP_ERROR("No memory to create peer addr entry\n");
+		return -ENOMEM;
+	}
+	addr->next = NULL;
+	/* Record the peer addr */
+	ipv6_addr_copy(&addr->addr, address);
+	
+	if (*last == NULL) {  /* First entry? Add to head and tail */
+		entry->addr_list = addr;
+	} else {             /* Otherwise, add to tail */
+		(*last)->next = addr;
+	}
+	*last = addr;
+	entry->count++;   /* Increment count in peer entry */
+	return 0;
+}
+
+/**
+ * hip_hadb_list_peers_func - private function to process a hadb entry
+ * @entry: hadb table entry
+ * @opaque: private data for the function (contains record keeping structure)
+ *
+ * Process a hadb entry, extracting the HOST ID, HIT, and IPv6 addresses.
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
+{
+	hip_peer_opaque_t *op = (hip_peer_opaque_t *)opaque;
+	hip_peer_entry_opaque_t *peer_entry = NULL;
+	hip_peer_addr_opaque_t *last = NULL;
+	struct hip_peer_addr_list_item *s;
+	struct hip_spi_out_item *spi_out, *tmp;
+	char buf[46];
+	struct hip_lhi lhi;
+	int err = 0;
+	int found_addrs = 0;
+#if 0
+	/* Start by locking the entry */
+	HIP_LOCK_HA(entry);
+
+	/* Extract HIT */
+	hip_in6_ntop(&(entry->hit_peer), buf);
+	HIP_DEBUG("## Got an entry for peer HIT: %s\n", buf);
+	memset(&lhi, 0, sizeof(struct hip_lhi));
+	memcpy(&(lhi.hit),&(entry->hit_peer),sizeof(struct in6_addr));
+
+	/* Create a new peer list entry */
+	peer_entry = HIP_MALLOC(sizeof(hip_peer_entry_opaque_t),GFP_ATOMIC);
+	if (!peer_entry) {
+		HIP_ERROR("No memory to create peer list entry\n");
+		err = -ENOMEM;
+		goto error;
+	}
+	peer_entry->count = 0;    /* Initialize the number of addrs to 0 */
+	peer_entry->host_id = NULL;
+	/* Record the peer hit */
+	ipv6_addr_copy(&(peer_entry->hit), &(lhi.hit));
+	peer_entry->addr_list = NULL;
+	peer_entry->next = NULL; 
+
+	if (!op->head) {          /* Save first list entry as head and tail */
+		op->head = peer_entry;
+		op->end = peer_entry;
+	} else {                  /* Add entry to the end */
+		op->end->next = peer_entry;
+		op->end = peer_entry;
+	}
+
+	/* Record each peer address */
+	
+	if (entry->default_spi_out == 0) {
+		if (!ipv6_addr_any(&entry->preferred_address)) {
+			err = hip_list_peers_add(&entry->preferred_address,
+						 peer_entry, &last);
+			if (err != 0)
+				goto error;
+			found_addrs = 1;
+		}
+		goto done;
+	}
+
+	list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
+		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
+			err = hip_list_peers_add(&(s->address), peer_entry,
+						 &last);
+			if (err != 0)
+				goto error;
+			found_addrs = 1;
+		}
+	}
+
+ done:
+
+	/* Increment count of entries and connect the address list to
+	 * peer entry only if addresses were copied */
+	if (!found_addrs) {
+		err = -ENOMSG;
+		HIP_DEBUG("entry has no usable addresses\n");
+	}
+
+	op->count++; /* increment count on error also so err handling works */
+		
+ error:
+	//HIP_DEBUG("*** TODO: on error, HIP_FREE HIP_MALLOCed addresses here ? ***\n");
+	_HIP_DEBUG("op->end->next=0x%p\n", op->end->next);
+	_HIP_DEBUG("op->end=0x%p\n", op->end);
+
+	HIP_UNLOCK_HA(entry);
+#endif
+	return err;
+}
+
+
+void hip_hadb_remove_hs(uint32_t spi)
+{
+	struct hip_hit_spi *hs;
+
+	hs = (struct hip_hit_spi *) hip_ht_find(&hadb_spi_list, (void *)spi);
+	if (!hs) {
+		HIP_DEBUG("HS not found for SPI=0x%x\n", spi);
+                return;
+        }
+
+	HIP_LOCK_HS(hs);
+	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
+	//hip_ht_delete(&hadb_spi_list, hs);
+	HIP_UNLOCK_HS(hs);
+	hip_hadb_put_hs(hs);
+	hip_hadb_put_hs(hs); /* verify that put_hs is safe after unlocking */
+}
+
+/* Delete given inbound SPI, and all if spi == 0 */
+void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_spi_in_item *item, *tmp;
+
+	/* assumes locked entry */
+	HIP_DEBUG("SPI=0x%x\n", spi);
+        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		if (!spi || item->spi == spi) {
+			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from inbound list, item=0x%p\n",
+				  item->spi, item->new_spi, item);
+			HIP_ERROR("remove SPI from HIT-SPI HT\n");
+			hip_hadb_remove_hs(item->spi);
+			hip_delete_sa(item->spi, &entry->hit_our);
+			hip_delete_sa(item->new_spi, &entry->hit_our);
+			list_del(&item->list);
+			HIP_FREE(item);
+			break;
+		}
+        }
+}
+
+/* Delete given outbound SPI, and all if spi == 0 */
+void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
+{
+	struct hip_spi_out_item *item, *tmp;
+
+	/* assumes locked entry */
+	HIP_DEBUG("entry=0x%p SPI=0x%x\n", entry, spi);
+        list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
+		if (!spi || item->spi == spi) {
+			struct hip_peer_addr_list_item *addr_item, *addr_tmp;
+
+			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
+				  item->spi, item->new_spi, item);
+			hip_delete_sa(item->spi, &entry->hit_peer);
+			hip_delete_sa(item->new_spi, &entry->hit_peer);
+			/* delete peer's addresses */
+			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
+				list_del(&addr_item->list);
+				HIP_FREE(addr_item);
+			}
+			list_del(&item->list);
+			HIP_FREE(item);
+		}
+        }
+}
+
+/** 
+ * hip_hadb_delete_state - Delete HA state (and deallocate memory)
+ * @ha: HA
+ *
+ * Deletes all associates IPSEC SAs and frees the memory occupied
+ * by the HA state.
+ *
+ * ASSERT: The HA must be unlinked from the global hadb hash tables
+ * (SPI and HIT). This function should only be called when absolutely 
+ * sure that nobody else has a reference to it.
+ */
+void hip_hadb_delete_state(hip_ha_t *ha)
+{
+	HIP_DEBUG("ha=0x%p\n", ha);
+
+	/* Delete SAs */
+	hip_hadb_delete_inbound_spi(ha, 0);
+	hip_hadb_delete_outbound_spi(ha, 0);
+	if (ha->dh_shared_key)
+		HIP_FREE(ha->dh_shared_key);
+	HIP_FREE(ha);
+}
+
+
+/**
+ * hip_for_each_ha - Map function @func to every HA in HIT hash table
+ * @func: Mapper function
+ * @opaque: Opaque data for the mapper function.
+ *
+ * The hash table is LOCKED while we process all the entries. This means
+ * that the mapper function MUST be very short and _NOT_ do any operations
+ * that might sleep!
+ *
+ * Returns negative if an error occurs. If an error occurs during traversal of
+ * a the HIT hash table, then the traversal is stopped and function returns.
+ * Returns the last return value of applying the mapper function to the last
+ * element in the hash table.
+ */
+int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
+{
+	int i, fail = 0;
+	hip_ha_t *this, *tmp;
+
+	if (!func)
+		return -EINVAL;
+
+	if (list_empty(&hadb_byhit[i])) {
+		HIP_DEBUG("hadb_byhit List is empty\n");
+		return -1;
+	}
+#if 0
+	HIP_LOCK_HT(&hadb_hit);
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
+
+			hip_hold_ha(this);
+			fail = func(this, opaque);
+			hip_db_put_ha(this, hip_hadb_delete_state);
+			if (fail)
+				break;
+		}
+		if (fail)
+			break;
+	}
+	HIP_UNLOCK_HT(&hadb_hit);
+#endif
+	return fail;
+}

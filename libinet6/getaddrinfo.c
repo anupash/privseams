@@ -70,11 +70,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "message.h"
 #include "util.h"
 
+#include "bos.h"
+
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
 
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX  108
+#endif
+
+#ifndef NUM_MAX_HITS
+#define NUM_MAX_HITS 50
 #endif
 
 struct gaih_service
@@ -413,7 +419,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
   }	              							\
   if (fp)                                                               \
     fclose(fp);			        				\
-}                  
+}
 
 
 static int
@@ -937,7 +943,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    (*pai)->ai_next = NULL;
 	    pai = &((*pai)->ai_next);
 	  }
-
+	
 	at2 = at2->next;
       }
     /* changed __alloca:s for the linked list 'at' to mallocs, 
@@ -996,7 +1002,7 @@ getaddrinfo (const char *name, const char *service,
 
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
-			  AI_HIP_NATIVE))
+			  AI_HIP_NATIVE|AI_KERNEL_LIST))
     return EAI_BADFLAGS;
 
   if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
@@ -1004,6 +1010,28 @@ getaddrinfo (const char *name, const char *service,
 
   if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
     return EAI_BADFLAGS;
+
+  if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
+    int msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
+    int hipfd = open_hip(); // sets also errno
+    int err;
+    if (hipfd < 0) {
+      HIP_ERROR("Failed to open HIP configuration channel\n");
+      return(-errno);
+    }
+    *pai = malloc(msg_len);
+    if (*pai == NULL) {
+      HIP_ERROR("Unable to allocated memory\n");
+      err = -EAI_MEMORY;
+      return err;
+    }
+    err = getsockopt(hipfd, IPPROTO_HIP, SO_HIP_GET_HIT_LIST, pai, &msg_len);
+    if (err) {
+      HIP_ERROR("getsockopt failed (%d)\n", err);
+    }
+    return err;
+    //    return handle_bos_peer_list(hints->ai_family, pai);
+  }
 
 #ifdef HIP_TRANSPARENT_MODE
   /* Transparent mode does not work with HIP native resolver */

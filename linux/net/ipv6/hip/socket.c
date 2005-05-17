@@ -10,6 +10,9 @@
 
 #include "socket.h"
 
+#include "bos.h"
+
+
 extern struct net_proto_family hip_family_ops;
 extern struct proto_ops inet_stream_ops;
 extern struct proto_ops inet_dgram_ops;
@@ -19,6 +22,10 @@ extern int inet6_create(struct socket *sock, int protocol);
 
 /* kernel module unit tests */
 extern struct hip_unit_test_suite_list hip_unit_test_suite_list;
+
+#ifndef __KERNEL__
+extern int handle_bos_peer_list(int family, struct addrinfo **pai, int msg_len);
+#endif
 
 /*
  * Do not access these databases directly: use the accessors.
@@ -58,26 +65,6 @@ struct net_proto_family hip_family_ops = {
 	family:         PF_HIP,
 	create:         hip_create_socket
 };
-
-typedef struct hip_peer_addr_opaque {
-        struct in6_addr addr;
-        struct hip_peer_addr_opaque *next;
-} hip_peer_addr_opaque_t;         /* Structure to record peer addresses */
-
-typedef struct hip_peer_entry_opaque {
-	unsigned int count;
-        struct hip_host_id *host_id;
-	hip_hit_t hit;
-        hip_peer_addr_opaque_t *addr_list;
-        struct hip_peer_entry_opaque *next;
-} hip_peer_entry_opaque_t;         /* Structure to record kernel peer entry */
-
-typedef struct hip_peer_opaque {
-	unsigned int count;
-        struct hip_peer_entry_opaque *head;
-        struct hip_peer_entry_opaque *end;
-} hip_peer_opaque_t;         /* Structure to record kernel peer list */
-
 
 sa_eid_t hip_create_unique_local_eid(void)
 {
@@ -1243,141 +1230,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 	return err;
 }
 
-/**
-* hip_list_peers_add - private function to add an entry to the peer list
-* @addr: IPv6 address
-* @entry: peer list entry
-* @last: pointer to pointer to end of peer list linked list
-*
-* Add an IPv6 address (if valid) to the peer list and update the tail
-* pointer.
-*
-* Returns: zero on success, or negative error value on failure
-*/
 #if 0
-static int hip_list_peers_add(struct in6_addr *address,
-			      hip_peer_entry_opaque_t *entry,
-			      hip_peer_addr_opaque_t **last)
-{
-	hip_peer_addr_opaque_t *addr;
-
-	HIP_DEBUG_IN6ADDR("## SPI is 0, found bex address:", address);
-	
-	/* Allocate an entry for the address */
-	addr = HIP_MALLOC(sizeof(hip_peer_addr_opaque_t), GFP_ATOMIC);
-	if (!addr) {
-		HIP_ERROR("No memory to create peer addr entry\n");
-		return -ENOMEM;
-	}
-	addr->next = NULL;
-	/* Record the peer addr */
-	ipv6_addr_copy(&addr->addr, address);
-	
-	if (*last == NULL) {  /* First entry? Add to head and tail */
-		entry->addr_list = addr;
-	} else {             /* Otherwise, add to tail */
-		(*last)->next = addr;
-	}
-	*last = addr;
-	entry->count++;   /* Increment count in peer entry */
-	return 0;
-}
-
-/**
- * hip_hadb_list_peers_func - private function to process a hadb entry
- * @entry: hadb table entry
- * @opaque: private data for the function (contains record keeping structure)
- *
- * Process a hadb entry, extracting the HOST ID, HIT, and IPv6 addresses.
- *
- * Returns: zero on success, or negative error value on failure
- */
-static int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
-{
-	hip_peer_opaque_t *op = (hip_peer_opaque_t *)opaque;
-	hip_peer_entry_opaque_t *peer_entry = NULL;
-	hip_peer_addr_opaque_t *last = NULL;
-	struct hip_peer_addr_list_item *s;
-	struct hip_spi_out_item *spi_out, *tmp;
-	char buf[46];
-	struct hip_lhi lhi;
-	int err = 0;
-	int found_addrs = 0;
-
-	/* Start by locking the entry */
-	HIP_LOCK_HA(entry);
-
-	/* Extract HIT */
-	hip_in6_ntop(&(entry->hit_peer), buf);
-	HIP_DEBUG("## Got an entry for peer HIT: %s\n", buf);
-	memset(&lhi, 0, sizeof(struct hip_lhi));
-	memcpy(&(lhi.hit),&(entry->hit_peer),sizeof(struct in6_addr));
-
-	/* Create a new peer list entry */
-	peer_entry = HIP_MALLOC(sizeof(hip_peer_entry_opaque_t),GFP_ATOMIC);
-	if (!peer_entry) {
-		HIP_ERROR("No memory to create peer list entry\n");
-		err = -ENOMEM;
-		goto error;
-	}
-	peer_entry->count = 0;    /* Initialize the number of addrs to 0 */
-	peer_entry->host_id = NULL;
-	/* Record the peer hit */
-	ipv6_addr_copy(&(peer_entry->hit), &(lhi.hit));
-	peer_entry->addr_list = NULL;
-	peer_entry->next = NULL; 
-
-	if (!op->head) {          /* Save first list entry as head and tail */
-		op->head = peer_entry;
-		op->end = peer_entry;
-	} else {                  /* Add entry to the end */
-		op->end->next = peer_entry;
-		op->end = peer_entry;
-	}
-
-	/* Record each peer address */
-	
-	if (entry->default_spi_out == 0) {
-		if (!ipv6_addr_any(&entry->bex_address)) {
-			err = hip_list_peers_add(&entry->bex_address,
-						 peer_entry, &last);
-			if (err != 0)
-				goto error;
-			found_addrs = 1;
-		}
-		goto done;
-	}
-
-	list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
-		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
-			err = hip_list_peers_add(&(s->address), peer_entry,
-						 &last);
-			if (err != 0)
-				goto error;
-			found_addrs = 1;
-		}
-	}
-
- done:
-
-	/* Increment count of entries and connect the address list to
-	 * peer entry only if addresses were copied */
-	if (!found_addrs) {
-		err = -ENOMSG;
-		HIP_DEBUG("entry has no usable addresses\n");
-	}
-
-	op->count++; /* increment count on error also so err handling works */
-		
- error:
-	//HIP_DEBUG("*** TODO: on error, HIP_FREE HIP_MALLOCed addresses here ? ***\n");
-	_HIP_DEBUG("op->end->next=0x%p\n", op->end->next);
-	_HIP_DEBUG("op->end=0x%p\n", op->end);
-
-	HIP_UNLOCK_HA(entry);
-	return err;
-}
-
 /**
  * hip_socket_handle_get_peer_list - handle creation of list of known peers
  * @msg: message containing information about which unit tests to execute
@@ -1633,6 +1486,15 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	int err = 0;
 	struct proto_ops *socket_handler;
 	struct hip_common *msg = (struct hip_common *) optval;
+	HIP_DEBUG("Here I am\n");
+
+	HIP_DEBUG("Here I am 2\n");
+	if (optname == SO_HIP_GET_HIT_LIST) {
+		HIP_DEBUG("Got it\n");
+		struct my_addrinfo **pai = (struct my_addrinfo **)optval;
+		return (handle_bos_peer_list(AF_INET6, pai, *optlen));
+	}
+
 
 	HIP_DEBUG("%d\n", level);
 
@@ -1682,7 +1544,7 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	case SO_HIP_GET_PEER_LIST:
 		err = hip_socket_handle_get_peer_list(msg);
 		break;
-#endif 
+#endif
 	default:
 		err = -ESOCKTNOSUPPORT;
 	}

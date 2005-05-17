@@ -130,7 +130,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
 int hip_hadb_insert_state(hip_ha_t *ha);
 int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, hip_hit_t *our_hit,
 				   uint32_t spi);
-void hip_hadb_remove_hs(uint32_t spi);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);
 int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
@@ -155,7 +154,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 
 void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
-int hip_for_each_ha(int (func)(hip_ha_t *entry, void *opaq), void *opaque);
+
 
 /* Useless? */
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
@@ -163,8 +162,6 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
 int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
 
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
-void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi);
-void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
 
 uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry);
 
@@ -201,7 +198,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
 				 struct hip_context *ctx, int is_initiator);
 /* Utilities */
-void hip_hadb_delete_state(hip_ha_t *ha);
+
 hip_ha_t *hip_hadb_create_state(int gfpmask);
 void hip_hadb_deactivate_hs_spi(uint32_t spi);
 
@@ -210,4 +207,39 @@ void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+
+typedef struct hip_peer_addr_opaque {
+        struct in6_addr addr;
+        struct hip_peer_addr_opaque *next;
+} hip_peer_addr_opaque_t;         /* Structure to record peer addresses */
+
+typedef struct hip_peer_entry_opaque {
+	unsigned int count;
+        struct hip_host_id *host_id;
+	hip_hit_t hit;
+        hip_peer_addr_opaque_t *addr_list;
+        struct hip_peer_entry_opaque *next;
+} hip_peer_entry_opaque_t;         /* Structure to record kernel peer entry */
+
+typedef struct hip_peer_opaque {
+	unsigned int count;
+        struct hip_peer_entry_opaque *head;
+        struct hip_peer_entry_opaque *end;
+} hip_peer_opaque_t;         /* Structure to record kernel peer list */
+
+void hip_hadb_remove_hs(uint32_t spi);
+
+void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi);
+void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi);
+
+void hip_hadb_delete_state(hip_ha_t *ha);
+int hip_for_each_ha(int (func)(hip_ha_t *entry, void *opaq), void *opaque);
+
+int hip_list_peers_add(struct in6_addr *address,
+		       hip_peer_entry_opaque_t *entry,
+		       hip_peer_addr_opaque_t **last);
+
+int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
+
+
 #endif /* HIP_HADB_H */
