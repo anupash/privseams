@@ -1789,9 +1789,13 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 
 int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
 	int err = 0, len, alg;
-	HIP_IFEL(!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,
-						     HIP_HI_DEFAULT_ALGO)),
-		 -1, "Could not acquire a local host id\n");
+	if (!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,HIP_HI_RSA)))
+	{
+		HIP_DEBUG("Could not acquire a local host id with RSA, trying with DSA\n");
+		HIP_IFEL(!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,
+						     HIP_HI_DSA)),
+		 -1, "Could not acquire a local host id with DSA\n");
+	}
 	alg = hip_get_host_id_algo(entry->our_priv);
 	entry->sign = alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign;
 

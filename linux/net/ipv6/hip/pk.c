@@ -99,7 +99,8 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 		int public_key_len = ntohs(peer_pub->hi_length) - 
 			sizeof(struct hip_host_id_key_rdata);
 		err = impl_rsa_verify(sha1_digest, (u8 *) (peer_pub + 1), sig->signature, 
-				      public_key_len);		
+				      public_key_len);
+		_HIP_DEBUG("RSA verify err value: %d \n",err);		
 	} else {
 		err = impl_dsa_verify(sha1_digest, (u8 *) (peer_pub + 1), sig->signature);
 	}

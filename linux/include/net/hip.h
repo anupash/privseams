@@ -304,8 +304,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
-#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_DSA
+#define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
+#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
 #define HIP_ANY_ALGO                  -1
 
 #define HIP_DIGEST_MD5                1

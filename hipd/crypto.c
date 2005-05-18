@@ -3,7 +3,7 @@
  * of original HIPL kernel functions and Boeing HIPD crypto functions.
  *
  * Authors: Teemu Koponen <tkoponen@iki.fi>
- *          
+ *        : Abhinav Pathak <abpathak@iitk.ac.in>  
  * */
 #include "crypto.h"
 
@@ -624,6 +624,12 @@ int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
 	err = RSA_sign(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
 		       &sig_len, rsa);
 	res = err == 0 ? 1 : 0;
+	
+	
+	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
+	_HIP_DEBUG("Siglen %d,signature length %d,  err :%d\n",sig_len,strlen(signature),err);
+	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
+	
 
 	_HIP_HEXDUMP("signature",signature,HIP_RSA_SIGNATURE_LEN);
  err:
@@ -657,6 +663,7 @@ int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	}
 
 	key_len = pub_klen - (e_len + ((e_len > 255) ? 3 : 1));
+	
 
 	/* Build the public key */
 	rsa = RSA_new();
@@ -666,10 +673,31 @@ int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	sig_len = ntohs(sig->length) - 1; /* exclude algorithm */
 
+	//HIP_DEBUG("INSIDE impl_rsa_verfiy :: key_len=%d, sig_len= %d, sig->length = %d\n",key_len,sig_len,sig->length);
 	/* verify the RSA signature */
 	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH,
-			 sig->signature, sig_len, rsa);
+			 signature,RSA_size(rsa) , rsa);
+	/*RSA_verify returns 1 if success.*/
 
+	
+	unsigned long e_code = ERR_get_error();
+	ERR_load_crypto_strings();
+	
+
+		
+	_HIP_DEBUG("***********RSA ERROR*************\n");
+	_HIP_DEBUG("htons %d , RSA_size(rsa) = %d\n",htons(sig->length),RSA_size(rsa));
+	char buf[200];
+	_HIP_DEBUG("Signature length :%d\n",strlen(signature));
+	ERR_error_string(e_code ,buf);
+	//HIP_DEBUG("Signature that has to be verified: %s\n",sig->signature);
+	_HIP_DEBUG("Error string :%s\n",buf);
+	_HIP_DEBUG("LIB error :%s\n",ERR_lib_error_string(e_code));
+	_HIP_DEBUG("func error :%s\n",ERR_func_error_string(e_code));
+	_HIP_DEBUG("Reason error :%s\n",ERR_reason_error_string(e_code));
+	_HIP_DEBUG("***********RSA ERROR*************\n");
+	
+	
 	RSA_free(rsa);
 
 	HIP_DEBUG("RSA verify: %d\n", err);

@@ -890,7 +890,8 @@ int hip_create_r2(struct hip_context *ctx,
  	/*********** HMAC2 ************/
 	{
 		struct hip_crypto_key hmac;
-		HIP_HEXDUMP("host id for HMAC2", entry->our_pub,
+		if (entry->our_pub == NULL) HIP_DEBUG("entry->our_pub is null\n");
+		else HIP_HEXDUMP("host id for HMAC2", entry->our_pub,
 			    hip_get_param_total_len(entry->our_pub));
 
 		memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
