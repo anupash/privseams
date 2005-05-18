@@ -322,7 +322,34 @@ int hip_handle_bos(struct hip_common *bos,
 
 #endif /*(defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 
-extern int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
+//extern int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
+
+/* really ugly hack ripped from rea.c, must convert to list_head asap */
+struct hip_bos_kludge {
+	hip_ha_t **array;
+	int count;
+	int length;
+};
+
+/* from rea.c */
+static int hip_bos_get_all_valid(hip_ha_t *entry, void *op)
+{
+#if 0
+	struct hip_bos_kludge *rk = op;
+	if (rk->count >= rk->length)
+		return -1;
+
+	if (entry->state == HIP_STATE_UNASSOCIATED || entry->state == HIP_STATE_NONE) {
+		rk->array[rk->count] = entry;
+		hip_hold_ha(entry);
+		rk->count++;
+	} else
+		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
+			  entry, hip_state_str(entry->state));
+#endif
+	HIP_DEBUG("Entered hip_bos_get_all_valid.... \n");
+	return 0;
+}
 
 /**
  * hip_socket_handle_get_peer_list - handle creation of list of known peers
@@ -347,30 +374,30 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 	struct my_addrinfo **end = (struct my_addrinfo **)pai;
 	/* Number of elements allocated in the list */
 	int num_elems = (int)(msg_len / sizeof(struct my_addrinfo));
+	hip_ha_t *entries[HIP_MAX_HAS] = {0};
+	struct hip_bos_kludge rk;
 	
 	HIP_DEBUG("\n");
 
 	/* Initialize the data structure for the peer list */
-	memset(&pr, 0, sizeof(hip_peer_opaque_t));
-#if 0
-	/* Extra consistency test */
-	if (hip_get_msg_type(msg) != SO_HIP_GET_PEER_LIST) {
-		err = -EINVAL;
-		HIP_ERROR("Bad message type\n");
-		goto out_err;
-	}
-#endif
+	//	memset(&rk, 0, sizeof(struct hip_bos_kludge));
+
 	HIP_DEBUG("Got into the handle_bos_peer_list\n");
 
+	rk.array = entries;
+	rk.count = 0;
+	rk.length = HIP_MAX_HAS;
+#if 0
 	/* Iterate through the hadb db entries, collecting addresses */
-	fail = hip_for_each_ha(hip_hadb_list_peers_func, &pr);
+	//	fail = hip_for_each_ha(hip_hadb_list_peers_func, &rk);
+	fail = hip_for_each_ha(hip_bos_get_all_valid, &rk);
 	if (fail) {
 		err = -EINVAL;
 		HIP_ERROR("Peer list creation failed\n");
 		goto out_err;
 	}
-
-	HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
+#endif
+	//	HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
 #if 0
 	if (pr.count <= 0) {
 		HIP_ERROR("No usable entries found\n");
@@ -410,8 +437,9 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 	}
 #endif
  out_err:
+#if 0
 	/* Recurse through structure, freeing memory */
-	entry = pr.head;
+	entry = .head;
 	_HIP_DEBUG("free mem, pr.head=0x%p\n", pr.head);
 	while (entry) {
 		_HIP_DEBUG("entry=0x%p\n", entry);
@@ -432,7 +460,7 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 		entry = next;
 	}
 	_HIP_DEBUG("done freeing mem, err = %d\n", err);
-
+#endif
 	return err;
 }
 

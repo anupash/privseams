@@ -5,8 +5,7 @@
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;
 
-struct list_head hadb_byhit[HIP_HADB_SIZE];
-struct list_head hadb_byspi_list[HIP_HADB_SIZE];
+static struct list_head hadb_byhit[HIP_HADB_SIZE];
 
 void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 {
@@ -26,6 +25,8 @@ static void hip_hadb_put_hs(void *entry)
 #ifdef __KERNEL__
 #  include <net/ipv6.h>
 #endif /* __KERNEL__ */
+
+static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 
 /*
   Support for multiple inbound IPsec SAs:
@@ -2068,11 +2069,10 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 		HIP_DEBUG("hadb_byhit List is empty\n");
 		return -1;
 	}
-#if 0
+
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
-
 			hip_hold_ha(this);
 			fail = func(this, opaque);
 			hip_db_put_ha(this, hip_hadb_delete_state);
@@ -2083,6 +2083,5 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 			break;
 	}
 	HIP_UNLOCK_HT(&hadb_hit);
-#endif
 	return fail;
 }
