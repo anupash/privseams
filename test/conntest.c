@@ -211,6 +211,7 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	for(ai = res; ai != NULL; ai = ai->ai_next) {
 		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ai->ai_addr;
 		char addr_str[INET6_ADDRSTRLEN];
+		int e;
 
 		HIP_ASSERT(ai->ai_family == AF_INET6);
 		sock = create_socket(proto);
@@ -228,7 +229,9 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 
 		printf("Trying to connect to %s\n", addr_str);
 
-		if (connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6)) < 0) {
+		e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
+		printf("connect ret=%d errno=%d\n", e, errno);
+		if (e < 0) {
 			close(sock);
 			sock = 0;
 			printf("trying next\n");

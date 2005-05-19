@@ -157,7 +157,7 @@ static int hip_getfrag(void *from, char *to, int offset, int len, int odd, struc
  * @buf: start of the HIP packet
  *
  * If @src_addr is NULL, kernel selects which source IPv6 address to
- * use is the packet.
+ * use in the packet.
  *
  * Returns: 0 if packet was delivered to lower layer, < 0 otherwise.
  */
@@ -175,7 +175,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  * @out_fl: flow containing the source and the destination IPv6 address of the packet
  *
  * If @src_addr is NULL, kernel selects which source IPv6 address to
- * use is the packet.
+ * use in the packet.
  *
  * Returns: 0 if packet was delivered to lower layer, < 0 otherwise.
  */

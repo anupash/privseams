@@ -168,7 +168,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	uint64_t mask;
 	uint64_t randval;
 	uint64_t maxtries = 0;
-	uint64_t digest;
+	uint64_t digest = 0;
 	u8 cookie[48];
 	u8 max_k;
 #ifdef __KERNEL__

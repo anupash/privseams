@@ -695,7 +695,7 @@ int hip_handle_r1(struct hip_common *r1,
 
 	/* solve puzzle */
 	{
-		struct hip_puzzle *pz;
+		struct hip_puzzle *pz = NULL;
 		HIP_IFEL(!(pz = hip_get_param(r1, HIP_PARAM_PUZZLE)), -EINVAL,
 			 "Malformed R1 packet. PUZZLE parameter missing\n");
 		HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 

@@ -1,6 +1,8 @@
 // FIXME: whenever something that is replicated in beet db is
 // modified, the modifications must be written there too.
 #include "hadb.h"
+#include "keymat.h"
+#include "pk.h"
 
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;
@@ -1619,7 +1621,6 @@ void hip_hadb_dump_spis_out(hip_ha_t *entry)
 	HIP_DEBUG("end\n");
 }
 
-
 void hip_init_hadb(void)
 {
 	memset(&hadb_hit,0,sizeof(hadb_hit));
@@ -2063,20 +2064,16 @@ void hip_hadb_delete_state(hip_ha_t *ha)
  */
 int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 {
-	int i, fail = 0;
+	int i = 0, fail = 0;
 	hip_ha_t *this, *tmp;
 
 	if (!func)
 		return -EINVAL;
 
-	if (list_empty(&hadb_byhit[i])) {
-		HIP_DEBUG("hadb_byhit List is empty\n");
-		return -1;
-	}
-
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
+			HIP_DEBUG("this=%p\n", this);
 			hip_hold_ha(this);
 			fail = func(this, opaque);
 			hip_db_put_ha(this, hip_hadb_delete_state);

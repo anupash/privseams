@@ -331,8 +331,7 @@ struct hip_bos_kludge {
 	int length;
 };
 
-/* from rea.c */
-static int hip_bos_get_all_valid(hip_ha_t *entry, void *op)
+int hip_bos_get_all_valid(hip_ha_t *entry, void *op)
 {
 #if 0
 	struct hip_bos_kludge *rk = op;

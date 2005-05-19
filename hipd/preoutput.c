@@ -7,6 +7,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* buf)
 {
 	struct hip_work_order hwo;
+	memset(&hwo, 0, sizeof(struct hip_work_order));
 	HIP_INIT_WORK_ORDER_HDR(hwo.hdr, HIP_WO_TYPE_OUTGOING,
 				HIP_WO_SUBTYPE_SEND_PACKET, src_addr,
 				peer_addr, NULL, 0, 0, 0);
