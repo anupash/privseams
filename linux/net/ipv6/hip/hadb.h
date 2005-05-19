@@ -115,10 +115,11 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 	return (uint32_t)key_1 == (uint32_t)key_2;
 }
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
-/* Initialization functions */
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
+
+// **************** #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+/* Initialization functions */
 
 /* Accessors */
 //hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
@@ -206,7 +207,7 @@ void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
 
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+// ******************** #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 
 typedef struct hip_peer_addr_opaque {
         struct in6_addr addr;

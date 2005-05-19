@@ -309,6 +309,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	}
 
 	HIP_DEBUG("Done with control packet (%d).\n", err);
+	HIP_HEXDUMP("msg->hits = ", &msg->hits, 16);
+	HIP_HEXDUMP("msg->hitr = ", &msg->hitr, 16);
 
 	if (err) {
 		goto out_err;
@@ -317,7 +319,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/* The synchronization of the beet database is not done with HIP_BOS */
 	if (skip_sync)
 		goto out_err;
-	
+
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	if (!entry) {
 		HIP_ERROR("Did not find HA entry\n");

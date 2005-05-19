@@ -197,7 +197,7 @@ int hip_verify_packet_signature(struct hip_common *bos,
 	int err;
 	if (peer_host_id->rdata.algorithm == HIP_HI_DSA){
 		err = hip_dsa_verify(peer_host_id, bos);
-	} else if(peer_host_id->rdata.algorithm == HIP_HI_DSA){
+	} else if(peer_host_id->rdata.algorithm == HIP_HI_RSA){
 		err = hip_rsa_verify(peer_host_id, bos);
 	} else {
 		HIP_ERROR("Unknown algorithm\n");
@@ -294,10 +294,10 @@ int hip_handle_bos(struct hip_common *bos,
 		// FIXME: just add it here and not via workorder.
 
 		/* we have no previous infomation on the peer, create
-		 * a new HIP HA */		
+		 * a new HIP HA */
 		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip)<0), KHIPD_ERROR,
 			 "Failed to insert new peer info");
-		HIP_DEBUG("HA entry created.");
+		HIP_DEBUG("HA entry created.\n");
 
 #if 0
 		struct hip_work_order * hwo;
@@ -333,11 +333,14 @@ struct hip_bos_kludge {
 
 int hip_bos_get_all_valid(hip_ha_t *entry, void *op)
 {
-#if 0
 	struct hip_bos_kludge *rk = op;
-	if (rk->count >= rk->length)
+	HIP_DEBUG("Entered hip_bos_get_all_valid.... \n");
+	if (rk->count >= rk->length) {
+		HIP_DEBUG("rk->count(%d) >= rk->length(%d) \n", rk->count, rk->length);
 		return -1;
-
+	}
+	
+	HIP_DEBUG("entry->state = %d \n", entry->state);
 	if (entry->state == HIP_STATE_UNASSOCIATED || entry->state == HIP_STATE_NONE) {
 		rk->array[rk->count] = entry;
 		hip_hold_ha(entry);
@@ -345,8 +348,6 @@ int hip_bos_get_all_valid(hip_ha_t *entry, void *op)
 	} else
 		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
 			  entry, hip_state_str(entry->state));
-#endif
-	HIP_DEBUG("Entered hip_bos_get_all_valid.... \n");
 	return 0;
 }
 
@@ -365,7 +366,6 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 	int fail;
 	int i, j;
 //	struct hip_host_id *peer_host_id = NULL;
-	struct hip_lhi lhi;
 	char buf[46];
         hip_peer_entry_opaque_t *entry, *next;
 	hip_peer_addr_opaque_t *addr, *anext;
@@ -386,7 +386,7 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-#if 0
+	//#if 0
 	/* Iterate through the hadb db entries, collecting addresses */
 	//	fail = hip_for_each_ha(hip_hadb_list_peers_func, &rk);
 	fail = hip_for_each_ha(hip_bos_get_all_valid, &rk);
@@ -395,9 +395,9 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 		HIP_ERROR("Peer list creation failed\n");
 		goto out_err;
 	}
-#endif
-	//	HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
-#if 0
+	//#endif
+	_HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
+//#if 0
 	if (pr.count <= 0) {
 		HIP_ERROR("No usable entries found\n");
 		err = -EINVAL;
@@ -408,33 +408,38 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 	   recording the peer host id. This is done separately from
 	   list creation because it involves calling a function that
 	   may sleep (can't be done while holding locks!) */
-	memset(&lhi, 0, sizeof(struct hip_lhi)); /* Zero flags, etc. */
-	for (i = 0, entry = pr.head; i < pr.count; i++, entry = entry->next) {
-
-//		*end = malloc (sizeof (struct addrinfo) + socklen);
-		if (i >= num_elems) {
-			err = -EINVAL;
-			HIP_ERROR("The allocated memory is not enough\n");
-			goto out_err;
-		}
-		(*end)->ai_family = family;
-		(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
-		
-		if (family == AF_INET6) {
-			struct sockaddr_in6 *sin6p =
-				(struct sockaddr_in6 *) (*end)->ai_addr;
-		
-			sin6p->sin6_flowinfo = 0;
-			/* Get the HIT */
-			memcpy (&sin6p->sin6_addr, &(entry->hit), sizeof (struct in6_addr));
-		} else {
-			/* TODO: is there any possibility to get here having family == AF_INET ? */
-		}
-
-		(*end)->ai_next = NULL;
-		end = &((*end)->ai_next);
+	HIP_DEBUG("rk.count = %d\n", rk.count);
+	if (rk.count >= num_elems) {
+		err = -EINVAL;
+		HIP_ERROR("The allocated memory is not enough\n");
+		goto out_err;
 	}
-#endif
+	//for (i = 0, entry = pr.head; i < pr.count; i++, entry = entry->next) {
+	for (i = 0; i < rk.count; i++) {
+		HIP_DEBUG("Scrolling rk....\n");
+		if (rk.array[i] != NULL) {
+			HIP_DEBUG("rk.array[%d] not NULL\n", i);
+//		*end = malloc (sizeof (struct addrinfo) + socklen);
+			
+			(*end)->ai_family = family;
+			(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
+			
+			if (family == AF_INET6) {
+				struct sockaddr_in6 *sin6p =
+					(struct sockaddr_in6 *) (*end)->ai_addr;
+				
+				sin6p->sin6_flowinfo = 0;
+				/* Get the HIT */
+				memcpy (&sin6p->sin6_addr, &(entry->hit), sizeof (struct in6_addr));
+			} else {
+				/* TODO: is there any possibility to get here having family == AF_INET ? */
+			}
+			
+			(*end)->ai_next = NULL;
+			end = &((*end)->ai_next);
+		}
+	}
+//#endif
  out_err:
 #if 0
 	/* Recurse through structure, freeing memory */

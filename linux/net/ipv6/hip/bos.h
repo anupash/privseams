@@ -5,8 +5,8 @@
 #include <linux/socket.h>
 
 #include "socket.h"
-#ifdef __KERNEL__
 
+#ifdef __KERNEL__
 #include <linux/net.h>
 #include <linux/socket.h>
 

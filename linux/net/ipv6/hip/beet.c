@@ -136,12 +136,11 @@ void hip_uninit_beetdb(void)
 	HIP_DEBUG("DELETING HA HT\n");
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
 		list_for_each_entry_safe(ha, tmp, &hip_beetdb_byhit[i], next) {
-			if (atomic_read(&ha->refcnt) > 2)
-				HIP_ERROR("HA: %p, in use while removing it from HADB, refcnt=%d\n",
-					  ha, atomic_read(&ha->refcnt));
-			hip_hold_ha(ha);
-			hip_beetdb_delete_state(ha);
-			hip_put_xfrm(ha);
+			//hip_beetdb_hold_entry(ha);
+			//hip_hold_ha(ha);
+			//hip_beetdb_delete_state(ha);
+			//hip_put_xfrm(ha);
+			hip_beetdb_put_entry(ha);
 		}
 	}
 

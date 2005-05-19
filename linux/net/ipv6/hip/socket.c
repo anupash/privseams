@@ -8,9 +8,8 @@
  *          Mika Kousa <mkousa@cc.hut.fi>
  */
 
-#include "socket.h"
-
 #include "bos.h"
+#include "socket.h"
 
 
 extern struct net_proto_family hip_family_ops;
@@ -1490,8 +1489,8 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 
 	HIP_DEBUG("Here I am 2\n");
 	if (optname == SO_HIP_GET_HIT_LIST) {
-		HIP_DEBUG("Got it\n");
 		struct my_addrinfo **pai = (struct my_addrinfo **)optval;
+		HIP_DEBUG("Got it\n");
 		return (handle_bos_peer_list(AF_INET6, pai, *optlen));
 	}
 

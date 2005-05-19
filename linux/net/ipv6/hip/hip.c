@@ -896,9 +896,9 @@ static int __init hip_init(void)
 
 	hip_init_beetdb();
 
-#ifndef CONFIG_HIP_USERSPACE
+	//#ifndef CONFIG_HIP_USERSPACE
 	hip_init_hadb();	
-#endif
+	//#endif
 
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef CONFIG_HIP_RVS
@@ -1048,8 +1048,8 @@ static void __exit hip_cleanup(void)
 #endif
 #endif
 	hip_uninit_beetdb();
-#ifndef CONFIG_HIP_USERSPACE
 	hip_uninit_hadb();
+#ifndef CONFIG_HIP_USERSPACE
 	hip_uninit_host_id_dbs();
 #endif
 	hip_uninit_all_eid_db();

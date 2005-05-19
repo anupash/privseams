@@ -61,7 +61,8 @@ int install_module(struct hip_common *msg)
 	  This function is in hipconf.c and is handle_hi()
 	*/
 	opts[0] = "default";
-	err = handle_hi(msg, ACTION_ADD, (const char *)opts, 1);
+	//err = handle_hi(msg, ACTION_ADD, (const char *)opts, 1);
+	err = handle_hi(msg, ACTION_ADD, "default", 1);
 	return err;
 }
 
@@ -123,7 +124,7 @@ int main(int argc, char *argv[])
 		case 'i':
 			/* Base Exchange Initiator */
 			printf("Initiator mode\n");
-			if (optarg[0] = "0")
+			if (optarg[0] == '0')
 				peer_name = NULL;
 			else
 				peer_name = optarg;

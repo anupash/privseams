@@ -23,12 +23,73 @@ static void hip_hadb_put_hs(void *entry)
 	HIP_DB_PUT_ENTRY(entry, struct hip_hit_spi, hip_hadb_delete_hs);
 }
 
+static void hip_hadb_hold_entry(void *entry)
+{
+	HIP_DB_HOLD_ENTRY(entry, hip_ha_t);
+}
+
+static void hip_hadb_put_entry(void *entry)
+{
+	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
+}
+
+static void *hip_hadb_get_key_hit(void *entry)
+{
+	return (void *)&(((hip_ha_t *)entry)->hash_key);
+        //return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
+}
+
+static void *hip_hadb_get_key_spi_list(void *entry)
+{
+	return (void *)(((struct hip_hit_spi *)entry)->spi);
+}
+
+static void hip_hadb_hold_hs(void *entry)
+{
+	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
+}
+
+static int hit_match(hip_ha_t *entry, void *our) {
+	return ipv6_addr_cmp(our, &entry->hit_our) == 0;
+}
+
+static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
+
+/**
+ * hip_hadb_rem_state_hit - Remove HA from HIT table
+ * @entry: HA
+ * HA must be locked.
+ */
+static inline void hip_hadb_rem_state_hit(void *entry)
+{
+	hip_ha_t *ha = (hip_ha_t *)entry;
+	HIP_DEBUG("*****************GOT into hip_hadb_rem_state_hit*****************\n");
+	ha->hastate &= ~HIP_HASTATE_HITOK;
+	hip_ht_delete(&hadb_hit, entry);
+}
+
+int hip_hadb_hit_is_our(const hip_hit_t *our) {
+	/* FIXME: This full scan is stupid, but we have no hashtables anyway... tkoponen */
+	return hip_for_each_ha(hit_match, (void *) our);
+}
+
+/**
+ * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
+ * @ha: HA
+ */
+static void hip_hadb_remove_state_hit(hip_ha_t *ha)
+{
+	HIP_LOCK_HA(ha);
+	if ((ha->hastate & HIP_HASTATE_HITOK) == HIP_HASTATE_HITOK) {
+		hip_hadb_rem_state_hit(ha);
+	}
+	HIP_UNLOCK_HA(ha);
+}
+
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef __KERNEL__
 #  include <net/ipv6.h>
 #endif /* __KERNEL__ */
-
-static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 
 /*
   Support for multiple inbound IPsec SAs:
@@ -44,54 +105,6 @@ static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 
   (functions hip_ .. _hs)
 */
-
-static void hip_hadb_hold_entry(void *entry)
-{
-	HIP_DB_HOLD_ENTRY(entry, hip_ha_t);
-}
-
-static void hip_hadb_put_entry(void *entry)
-{
-	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
-}
-
-static void hip_hadb_hold_hs(void *entry)
-{
-	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
-}
-
-static int hit_match(hip_ha_t *entry, void *our) {
-	return ipv6_addr_cmp(our, &entry->hit_our) == 0;
-}
-
-int hip_hadb_hit_is_our(const hip_hit_t *our) {
-	/* FIXME: This full scan is stupid, but we have no hashtables anyway... tkoponen */
-	return hip_for_each_ha(hit_match, (void *) our);
-}
-
-static void *hip_hadb_get_key_hit(void *entry)
-{
-	return (void *)&(((hip_ha_t *)entry)->hash_key);
-        //return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
-}
-
-static void *hip_hadb_get_key_spi_list(void *entry)
-{
-	return (void *)(((struct hip_hit_spi *)entry)->spi);
-}
-
-/**
- * hip_hadb_rem_state_hit - Remove HA from HIT table
- * @entry: HA
- * HA must be locked.
- */
-static inline void hip_hadb_rem_state_hit(void *entry)
-{
-	hip_ha_t *ha = (hip_ha_t *)entry;
-
-	ha->hastate &= ~HIP_HASTATE_HITOK;
-	hip_ht_delete(&hadb_hit, entry);
-}
 
 
 /*
@@ -184,19 +197,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
         return NULL;
 }
 
-/**
- * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
- * @ha: HA
- */
-static void hip_hadb_remove_state_hit(hip_ha_t *ha)
-{
-	HIP_LOCK_HA(ha);
-	if ((ha->hastate & HIP_HASTATE_HITOK) == HIP_HASTATE_HITOK) {
-		hip_hadb_rem_state_hit(ha);
-	}
-	HIP_UNLOCK_HA(ha);
-}
-
 
 /**
  * hip_hadb_insert_state - Insert state to hash tables.
@@ -236,6 +236,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		if (!tmp) {
 			hip_ht_add(&hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
+			HIP_DEBUG("New state added\n");
 		} else {
 			hip_db_put_ha(tmp, hip_hadb_delete_state);
 			HIP_DEBUG("HIT already taken\n");
@@ -1556,34 +1557,6 @@ void hip_hadb_dump_hits(void)
 }
 
 
-void hip_hadb_dump_hs_ht(void)
-{
-        int i;
-        struct hip_hit_spi *hs, *tmp_hs;
-        char str[INET6_ADDRSTRLEN];
-
-        HIP_DEBUG("start\n");
-        HIP_LOCK_HT(&hadb_spi_list);
-
-        for(i = 0; i < HIP_HADB_SIZE; i++) {
-                if (!list_empty(&hadb_byspi_list[i])) {
-                        _HIP_DEBUG("HT[%d]\n", i);
-                        list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i]
-, list) {
-                                hip_hadb_hold_hs(hs);
-                                hip_in6_ntop(&hs->hit_peer, str);
-                                HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
-                                          str, hs->spi, atomic_read(&hs->refcnt)
-);
-                                hip_hadb_put_hs(hs);
-                        }
-                }
-        }
-
-        HIP_UNLOCK_HT(&hadb_spi_list);
-        HIP_DEBUG("end\n");
-}
-
 void hip_hadb_dump_spis_in(hip_ha_t *entry)
 {
 	struct hip_spi_in_item *item, *tmp;
@@ -1619,92 +1592,6 @@ void hip_hadb_dump_spis_out(hip_ha_t *entry)
 	}
 	HIP_UNLOCK_HA(entry);
 	HIP_DEBUG("end\n");
-}
-
-void hip_init_hadb(void)
-{
-	memset(&hadb_hit,0,sizeof(hadb_hit));
-	memset(&hadb_spi_list,0,sizeof(hadb_spi_list));
-
-	hadb_hit.head =      hadb_byhit;
-	hadb_hit.hashsize =  HIP_HADB_SIZE;
-	hadb_hit.offset =    offsetof(hip_ha_t, next_hit);
-	hadb_hit.hash =      hip_hash_hit;
-	hadb_hit.compare =   hip_match_hit;
-	hadb_hit.hold =      hip_hadb_hold_entry;
-	hadb_hit.put =       hip_hadb_put_entry;
-	hadb_hit.get_key =   hip_hadb_get_key_hit;
-
-	strncpy(hadb_hit.name,"HADB_BY_HIT", 15);
-	hadb_hit.name[15] = 0;
-
-	hadb_spi_list.head =      hadb_byspi_list;
-	hadb_spi_list.hashsize =  HIP_HADB_SIZE;
-	hadb_spi_list.offset =    offsetof(struct hip_hit_spi, list);
-	hadb_spi_list.hash =      hip_hash_spi;
-	hadb_spi_list.compare =   hip_hadb_match_spi;
-	hadb_spi_list.hold =      hip_hadb_hold_hs;
-	hadb_spi_list.put =       hip_hadb_put_hs;
-	hadb_spi_list.get_key =   hip_hadb_get_key_spi_list;
-
-	strncpy(hadb_spi_list.name,"HADB_BY_SPI_LIST", 15);
-	hadb_spi_list.name[15] = 0;
-
-	hip_ht_init(&hadb_hit);
-	hip_ht_init(&hadb_spi_list);
-}
-
-void hip_uninit_hadb()
-{
-	int i;
-	hip_ha_t *ha, *tmp;
-	struct hip_hit_spi *hs, *tmp_hs;
-
-	HIP_DEBUG("\n");
-
-	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
-	hip_hadb_dump_hs_ht();
-
-	/* I think this is not very safe deallocation.
-	 * Locking the hadb_spi and hadb_hit could be one option, but I'm not
-	 * very sure that it will work, as they are locked later in 
-	 * hip_hadb_remove_state() for a while.
-	 *
-	 * The list traversing is not safe in smp way :(
-	 */
-	HIP_DEBUG("DELETING HA HT\n");
-	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
-			if (atomic_read(&ha->refcnt) > 2)
-				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
-			//hip_hold_ha(ha); // tkoponen: not needed as we do not call remove_state(...)
-			hip_hadb_remove_state_hit(ha);
-			hip_db_put_ha(ha, hip_hadb_delete_state);
-		}
-	}
-
-#if 0
-	/* HIT-SPI mappings should be already deleted by now, but check anyway */
-	HIP_DEBUG("DELETING HS HT\n");
-	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		_HIP_DEBUG("HS HT [%d]\n", i);
-		list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
-			HIP_ERROR("BUG: HS NOT ALREADY DELETED, DELETING HS %p, HS SPI=0x%x\n",
-				  hs, hs->spi);
-			if (atomic_read(&hs->refcnt) > 1)
-				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
-			hip_hadb_hold_hs(hs);
-			hip_hadb_delete_hs(hs);
-			//HIP_LOCK_HS(hs);
-			//HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
-			//hip_ht_delete(&hadb_spi_list, hs);
-			//HIP_ERROR("TODO: CALL HS_PUT ?\n");
-			//HIP_UNLOCK_HS(hs);
-			hip_hadb_put_hs(hs);
-		}
-	}
-	HIP_DEBUG("DONE DELETING HS HT\n");
-#endif
 }
 
 /**
@@ -1820,6 +1707,121 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
 }
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+/******************************************************************************************************/
+
+void hip_hadb_dump_hs_ht(void)
+{
+        int i;
+        struct hip_hit_spi *hs, *tmp_hs;
+        char str[INET6_ADDRSTRLEN];
+
+        HIP_DEBUG("start\n");
+        HIP_LOCK_HT(&hadb_spi_list);
+
+        for(i = 0; i < HIP_HADB_SIZE; i++) {
+                if (!list_empty(&hadb_byspi_list[i])) {
+                        _HIP_DEBUG("HT[%d]\n", i);
+                        list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i]
+, list) {
+                                hip_hadb_hold_hs(hs);
+                                hip_in6_ntop(&hs->hit_peer, str);
+                                HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
+                                          str, hs->spi, atomic_read(&hs->refcnt)
+);
+                                hip_hadb_put_hs(hs);
+                        }
+                }
+        }
+
+        HIP_UNLOCK_HT(&hadb_spi_list);
+        HIP_DEBUG("end\n");
+}
+
+void hip_init_hadb(void)
+{
+	memset(&hadb_hit,0,sizeof(hadb_hit));
+	memset(&hadb_spi_list,0,sizeof(hadb_spi_list));
+
+	hadb_hit.head =      hadb_byhit;
+	hadb_hit.hashsize =  HIP_HADB_SIZE;
+	hadb_hit.offset =    offsetof(hip_ha_t, next_hit);
+	hadb_hit.hash =      hip_hash_hit;
+	hadb_hit.compare =   hip_match_hit;
+	hadb_hit.hold =      hip_hadb_hold_entry;
+	hadb_hit.put =       hip_hadb_put_entry;
+	hadb_hit.get_key =   hip_hadb_get_key_hit;
+
+	strncpy(hadb_hit.name,"HADB_BY_HIT", 15);
+	hadb_hit.name[15] = 0;
+
+	hadb_spi_list.head =      hadb_byspi_list;
+	hadb_spi_list.hashsize =  HIP_HADB_SIZE;
+	hadb_spi_list.offset =    offsetof(struct hip_hit_spi, list);
+	hadb_spi_list.hash =      hip_hash_spi;
+	hadb_spi_list.compare =   hip_hadb_match_spi;
+	hadb_spi_list.hold =      hip_hadb_hold_hs;
+	hadb_spi_list.put =       hip_hadb_put_hs;
+	hadb_spi_list.get_key =   hip_hadb_get_key_spi_list;
+
+	strncpy(hadb_spi_list.name,"HADB_BY_SPI_LIST", 15);
+	hadb_spi_list.name[15] = 0;
+
+	hip_ht_init(&hadb_hit);
+	hip_ht_init(&hadb_spi_list);
+}
+
+void hip_uninit_hadb()
+{
+	int i;
+	hip_ha_t *ha, *tmp;
+	struct hip_hit_spi *hs, *tmp_hs;
+
+	HIP_DEBUG("\n");
+
+	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
+	hip_hadb_dump_hs_ht();
+
+	/* I think this is not very safe deallocation.
+	 * Locking the hadb_spi and hadb_hit could be one option, but I'm not
+	 * very sure that it will work, as they are locked later in 
+	 * hip_hadb_remove_state() for a while.
+	 *
+	 * The list traversing is not safe in smp way :(
+	 */
+	HIP_DEBUG("DELETING HA HT\n");
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
+			if (atomic_read(&ha->refcnt) > 2)
+				HIP_ERROR("HA: %p, in use while removing it from HADB\n", ha);
+			//hip_hold_ha(ha); // tkoponen: not needed as we do not call remove_state(...)
+			hip_hadb_remove_state_hit(ha);
+			hip_db_put_ha(ha, hip_hadb_delete_state);
+		}
+	}
+
+#if 0
+	/* HIT-SPI mappings should be already deleted by now, but check anyway */
+	HIP_DEBUG("DELETING HS HT\n");
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		_HIP_DEBUG("HS HT [%d]\n", i);
+		list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
+			HIP_ERROR("BUG: HS NOT ALREADY DELETED, DELETING HS %p, HS SPI=0x%x\n",
+				  hs, hs->spi);
+			if (atomic_read(&hs->refcnt) > 1)
+				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
+			hip_hadb_hold_hs(hs);
+			hip_hadb_delete_hs(hs);
+			//HIP_LOCK_HS(hs);
+			//HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
+			//hip_ht_delete(&hadb_spi_list, hs);
+			//HIP_ERROR("TODO: CALL HS_PUT ?\n");
+			//HIP_UNLOCK_HS(hs);
+			hip_hadb_put_hs(hs);
+		}
+	}
+	HIP_DEBUG("DONE DELETING HS HT\n");
+#endif
+}
 
 /**
 * hip_list_peers_add - private function to add an entry to the peer list
@@ -2072,8 +2074,10 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit) {
-			HIP_DEBUG("this=%p\n", this);
+		_HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
+		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
+		{
+			_HIP_DEBUG("List_for_each_entry_safe\n");
 			hip_hold_ha(this);
 			fail = func(this, opaque);
 			hip_db_put_ha(this, hip_hadb_delete_state);
