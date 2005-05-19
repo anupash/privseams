@@ -148,9 +148,7 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	ipv6_addr_copy(&hdr->daddr, &xs->hit_our);
 	ipv6_addr_copy(&hdr->saddr, &xs->hit_peer);
 
-#if 0
-	hip_put_ha(ha);
-#endif
+	hip_put_xfrm(xs);
 	return;
 }
 

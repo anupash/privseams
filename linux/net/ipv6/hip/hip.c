@@ -245,9 +245,8 @@ int hip_get_hits(struct in6_addr *dst_hit, struct in6_addr *src_hit)
 	}
 
 	memcpy(src_hit, &entry->hit_our, sizeof(hip_hit_t));
-	
+	hip_put_xfrm(entry);
 	HIP_DEBUG_HIT("src HIT", src_hit);
-
 	return 1;
 
  out_err:
@@ -280,7 +279,6 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 
 	ipv6_addr_copy(hit_storage, &entry->hit_our);
 	hip_put_xfrm(entry);
-
 	return 1;
 }
 
