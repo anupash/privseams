@@ -279,9 +279,10 @@ int hip_socket_release(struct socket *sock)
 
 
 	/* XX FIX: DESTROY HI ? */
+	/* application specified HIs should be deleted when native socket is released.. */
 
  out_err:
-
+	
 	return err;
 }
 
@@ -298,6 +299,9 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 
 	HIP_DEBUG("\n");
 
+	HIP_DEBUG("binding to eid with value %d\n",
+		  ntohs(sockaddr_eid->eid_val));
+	
 	err = hip_socket_get_eid_info(sock, &socket_handler, sockaddr_eid,
 				      1, &lhi);
 	if (err) {
@@ -305,8 +309,6 @@ int hip_socket_bind(struct socket *sock, struct sockaddr *umyaddr,
 		goto out_err;
 	}
 	HIP_DEBUG_HIT("hip socket bound to HIT", &lhi.hit);
-	HIP_DEBUG("binding to eid with value %d\n",
-		  ntohs(sockaddr_eid->eid_val));
 	sock->local_ed = ntohs(sockaddr_eid->eid_val);
 	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
 		  sock->peer_ed);
@@ -882,6 +884,7 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
 	HIP_DEBUG_HIT("removing precreated R1s by hit: ", &lhi.hit);
 	hip_r1_delete_by_hit(&lhi.hit);
 
+	/* XX TODO: remove related ED entry */
 	/* XX TODO: close sockets that are bound the corresponding HIT? */
 
 	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
@@ -1378,14 +1381,27 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 		goto out_err;
 	}
 	
-	HIP_DEBUG("hi len %d\n",
-		  ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
+	/* XX TODO: return right kind of local HI for the flags: */
+	/* NOTE: IF any of the following flags is present the msg doesn't
+	   contain any real endpoint */
+	if ((eid_endpoint->endpoint.flags & HIP_ED_ANY_PUB) ||
+	    (eid_endpoint->endpoint.flags & HIP_ED_ANY_ANON) || 
+	    (eid_endpoint->endpoint.flags & HIP_ED_ANY)) {
+	  HIP_DEBUG("HIP_ED_ANY* FLAG\n");
+	  host_id = hip_get_any_localhost_host_id(hip_sys_config.
+						  hip_hi_default_algo);
 
-	HIP_HEXDUMP("eid endpoint", eid_endpoint,
-		    hip_get_param_total_len(eid_endpoint));
+	} else {
 
-	host_id = &eid_endpoint->endpoint.id.host_id;
-
+	  HIP_DEBUG("hi len %d\n",
+		    ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
+	  
+	  HIP_HEXDUMP("eid endpoint", eid_endpoint,
+		      hip_get_param_total_len(eid_endpoint));
+	  
+	  host_id = &eid_endpoint->endpoint.id.host_id;
+	}
+	
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
 	owner_info.pid = current->pid;
