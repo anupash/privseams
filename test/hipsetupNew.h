@@ -12,9 +12,11 @@
 
 #define DEFAULT_PORT 1111
 
+
 void usage_f();
-int install_module(struct hip_common *msg);
-int init_deamon();
+int install_module();
+void init_deamon();
+int add_hi_default(struct hip_common *msg);
 
 
 #endif /*HIPSETUPNEW_H*/

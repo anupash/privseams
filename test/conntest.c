@@ -228,7 +228,6 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 		}
 
 		printf("Trying to connect to %s\n", addr_str);
-
 		e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
 		printf("connect ret=%d errno=%d\n", e, errno);
 		if (e < 0) {

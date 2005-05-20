@@ -1011,28 +1011,6 @@ getaddrinfo (const char *name, const char *service,
   if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
     return EAI_BADFLAGS;
 
-  if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
-    int msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
-    int hipfd = open_hip(); // sets also errno
-    int err;
-    if (hipfd < 0) {
-      HIP_ERROR("Failed to open HIP configuration channel\n");
-      return(-errno);
-    }
-    *pai = malloc(msg_len);
-    if (*pai == NULL) {
-      HIP_ERROR("Unable to allocated memory\n");
-      err = -EAI_MEMORY;
-      return err;
-    }
-    err = getsockopt(hipfd, IPPROTO_HIP, SO_HIP_GET_HIT_LIST, pai, &msg_len);
-    if (err) {
-      HIP_ERROR("getsockopt failed (%d)\n", err);
-    }
-    return err;
-    //    return handle_bos_peer_list(hints->ai_family, pai);
-  }
-
 #ifdef HIP_TRANSPARENT_MODE
   /* Transparent mode does not work with HIP native resolver */
   hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
@@ -1057,6 +1035,36 @@ getaddrinfo (const char *name, const char *service,
     }
   else
     pservice = NULL;
+
+  if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
+    int msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
+    int hipfd = open_hip(); // sets also errno
+    int err, port;
+    if (hipfd < 0) {
+      HIP_ERROR("Failed to open HIP configuration channel\n");
+      return(-errno);
+    }
+    *pai = malloc(msg_len);
+    if (*pai == NULL) {
+      HIP_ERROR("Unable to allocated memory\n");
+      err = -EAI_MEMORY;
+      return err;
+    }
+    if (!pservice)
+      port = 0;
+    else
+      port = pservice->num;
+    /* This is the case which is used after BOS packet is processed, as a second parameter
+     * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
+     * the struct sockaddr_in6 list
+     */
+    err = getsockopt(hipfd, port, SO_HIP_GET_HIT_LIST, pai, &msg_len);
+    if (err) {
+      HIP_ERROR("getsockopt failed (%d)\n", err);
+    }
+    return err;
+    //    return handle_bos_peer_list(hints->ai_family, pai);
+  }
 
   if (pai)
     end = &p;

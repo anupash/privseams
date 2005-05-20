@@ -17,7 +17,7 @@ void usage_f()
 	printf("Usage:\n%s\n", usage_str);
 }
 
-int init_daemon()
+void init_daemon()
 {
 	/***************************************
 	 * Initialization of hip daemon: not yet considered
@@ -35,7 +35,7 @@ int init_daemon()
 	//system("hipd &");
 }
 
-int install_module(struct hip_common *msg)
+int install_module()
 {
 	
 	int err;
@@ -52,21 +52,27 @@ int install_module(struct hip_common *msg)
 	printf("The hipmod module is being installed...\n");
 	err = system("/sbin/modprobe -v hipmod");
 
-	printf("Initializing the hipd daemon...\n");
-	init_daemon();
-	sleep(3);
+	return err;
+}
+
+int add_hi_default(struct hip_common *msg)
+{	
 	/*
 	  $HIPL_DIR/tools/hipconf add hi default
 	  This function is in hipconf.c and is handle_hi()
 	*/
-	//err = handle_hi(msg, ACTION_ADD, (const char *)opts, 1);
-	err = handle_hi(msg, ACTION_ADD, "default", 1);
+	char *opts[1];
+	int err;
+	opts[0] = "default";
+	printf("Calling handle_hi...\n");
+	err = handle_hi(msg, ACTION_ADD, (const char *)opts, 1);
+	//err = handle_hi(msg, ACTION_ADD, "default", 1);
 	return err;
 }
 
 int main(int argc, char *argv[])
 {
-	int c, ret, err = 0;
+	int c, err = 0;
 	struct hip_common *msg;
 	char *peer_name, buf[20];
 	extern char *optarg;
@@ -92,28 +98,41 @@ int main(int argc, char *argv[])
 			break;
 		case 'm':
 			/* Install the modules */
-			ret = system("whoami | grep -q root");
-			if (!ret)
-				err = install_module(msg);
+			if (!getuid()) {
+				//err = install_module(msg);
+				HIP_IFEL(install_module(), -1, "Error in installing modules\n");
+				/*
+				if (err) {
+					HIP_ERROR("error in installing modules\n");
+					goto out_err;
+				}
+				*/
+				printf("Initializing the hipd daemon...\n");
+				init_daemon();
+				sleep(3);
+				HIP_IFEL(add_hi_default(msg), -1, "Error in add_hi_default\n");
+				//add_hi_default(msg);
+				
+			}
 			else {
 				HIP_ERROR("Installation must be done as root\n");
-				goto out_malloc;
-			}
-			if (err) {
-				HIP_ERROR("failed to handle msg\n");
-				goto out_malloc;
+				goto out_err;
 			}
 
 			/* hipconf new hi does not involve any messages to kernel */
+			HIP_IFE((!hip_get_msg_type(msg)), -1);
+			HIP_IFEL(hip_set_global_option(msg), -1, "sending msg failed\n");
+
+#if 0
 			if (hip_get_msg_type(msg) == 0)
-				goto skip_msg;
+				goto out_err;
 
 			err = hip_set_global_option(msg);
 			if (err) {
 				HIP_ERROR("sending msg failed\n");
-				goto out_malloc;
+				goto out_err;
 			}
-			
+#endif
 			break;
 		case 'd':
 			/* HIPL_DIR */
@@ -141,19 +160,27 @@ int main(int argc, char *argv[])
 		case 'b':
 			/* BOS  */
 			printf("BOS\n");
+#if 0
+			HIP_IFEL(handle_bos(msg, 0, (const char **) NULL, 0), -1, "Failed to handle BOS\n");
+
+			/* hipconf new hi does not involve any messages to kernel */
+			HIP_IFE((hip_get_msg_type(msg)), -1);
+
+			HIP_IFEL(hip_set_global_option(msg), -1, "Sending msg failed\n");
+#endif
 			err = handle_bos(msg, 0, (const char **) NULL, 0);
 			if (err) {
 				HIP_ERROR("failed to handle msg\n");
-				goto out_malloc;
+				goto out_err;
 			}
-			/* hipconf new hi does not involve any messages to kernel */
+			
 			if (hip_get_msg_type(msg) == 0)
-				goto skip_msg;
+				goto out_err;
 			
 			err = hip_set_global_option(msg);
 			if (err) {
 				HIP_ERROR("sending msg failed\n");
-				goto out_malloc;
+				goto out_err;
 			}
 			break;
 		case ':':
@@ -167,9 +194,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-skip_msg:
-	
-out_malloc:
+out_err:
 	free(msg);
 out:
 	return err;

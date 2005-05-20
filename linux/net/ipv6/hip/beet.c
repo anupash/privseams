@@ -51,7 +51,7 @@ void hip_beetdb_delete_hs(struct hip_hit_spi *hs)
 	HIP_FREE(hs);
 }
 
-static void hip_beetdb_hold_entry(void *entry)
+void hip_beetdb_hold_entry(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry, hip_xfrm_t);
 }
@@ -498,4 +498,48 @@ int hip_xfrm_hit_is_our(const hip_hit_t *hit)
 	}
 
 	return 0;
+}
+
+/**
+ * hip_for_each_xfrm - Map function @func to every HA in HIT hash table
+ * @func: Mapper function
+ * @opaque: Opaque data for the mapper function.
+ *
+ * The hash table is LOCKED while we process all the entries. This means
+ * that the mapper function MUST be very short and _NOT_ do any operations
+ * that might sleep!
+ *
+ * Returns negative if an error occurs. If an error occurs during traversal of
+ * a the HIT hash table, then the traversal is stopped and function returns.
+ * Returns the last return value of applying the mapper function to the last
+ * element in the hash table.
+ */
+int hip_for_each_xfrm(int (*func)(hip_xfrm_t *entry, void *opaq), void *opaque)
+{
+	int i = 0, fail = 0;
+	hip_xfrm_t *this, *tmp;
+
+	if (!func)
+		return -EINVAL;
+
+	HIP_LOCK_HT(&hip_beetdb_hit);
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		_HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hip_beetdb_byhit[i]));
+		//list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i], next) {
+		list_for_each_entry_safe(this, tmp, &hip_beetdb_byhit[i], next)
+		{
+			_HIP_DEBUG("List_for_each_entry_safe\n");
+			hip_beetdb_hold_entry(this);
+                        //hip_beetdb_hold_hs(this);
+			fail = func(this, opaque);
+			//hip_beetdb_put_hs(this);
+			hip_beetdb_put_entry(this);
+			if (fail)
+				break;
+		}
+		if (fail)
+			break;
+	}
+	HIP_UNLOCK_HT(&hip_beetdb_hit);
+	return fail;
 }

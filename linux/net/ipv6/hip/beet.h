@@ -38,6 +38,8 @@ struct hip_xfrm_state {
 
 typedef struct hip_xfrm_state hip_xfrm_t;
 
+void hip_beetdb_hold_entry(void *entry);
+
 #ifdef __KERNEL__
 
 /* Initialize */
@@ -76,6 +78,7 @@ int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
 		    uint32_t spi, int state, int dir);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
+int hip_for_each_xfrm(int (*func)(hip_xfrm_t *entry, void *opaq), void *opaque);
 
 #endif /* HIP_BEET_H */
 

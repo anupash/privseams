@@ -272,7 +272,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr)
 {
-	hip_ha_t *entry = NULL;
+	hip_ha_t *entry = NULL, tmp;
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
@@ -301,6 +301,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 	case HIP_BOS:
 		err = hip_receive_bos(msg, src_addr, dst_addr);
+		/*In case of BOS the msg->hitr is null, therefore it is replaced with
+		  our own HIT, so that the beet state can also be synchronized */
+		ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
+		hip_init_us(&tmp, NULL);
+		ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
 		skip_sync = 1;
 		break;
 	default:
@@ -311,31 +316,32 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_DEBUG("Done with control packet (%d).\n", err);
 	_HIP_HEXDUMP("msg->hits=", &msg->hits, 16);
 	_HIP_HEXDUMP("msg->hitr=", &msg->hitr, 16);
+
 	if (err)
 		goto out_err;
 	
 	/* The synchronization of the beet database is not done with HIP_BOS */
 	/* .. it seems that is should be done anyway, BOS createas a new HA */
 	if (!skip_sync) {
-		entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-		if (!entry) {
-			HIP_ERROR("Did not find HA entry\n");
-			err = -EFAULT;
-			goto out_err;
-		}
-
-		/* Synchronize beet state (may have been altered) */
-		err = hip_hadb_update_xfrm(entry);
-		if (err) {
-			HIP_ERROR("XFRM out synchronization failed\n");
-			err = -EFAULT;
-			goto out_err;
-		}
+ 		entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+ 		if (!entry) {
+ 			HIP_ERROR("Did not find HA entry\n");
+ 			err = -EFAULT;
+ 			goto out_err;
+ 		}
+		
+ 		/* Synchronize beet state (may have been altered) */
+ 		err = hip_hadb_update_xfrm(entry);
+ 		if (err) {
+ 			HIP_ERROR("XFRM out synchronization failed\n");
+ 			err = -EFAULT;
+ 			goto out_err;
+ 		}
 	}
-	
+
  out_err:
 	if (entry)
-		hip_hadb_put_entry(entry);
+ 		hip_hadb_put_entry(entry);
 	return err;
 }
 
@@ -1708,7 +1714,7 @@ int hip_receive_bos(struct hip_common *bos,
 
 	HIP_IFEL(ipv6_addr_any(&bos->hits), 0, "Received NULL sender HIT in BOS.\n");
 	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0, "Received non-NULL receiver HIT in BOS.\n");
-	
+	HIP_DEBUG("Entered in hip_receive_bos...\n");
 	entry = hip_hadb_find_byhits(&bos->hits, &bos->hitr);
 	state = entry ? state = entry->state : HIP_STATE_UNASSOCIATED;
 

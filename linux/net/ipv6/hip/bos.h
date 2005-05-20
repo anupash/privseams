@@ -5,6 +5,7 @@
 #include <linux/socket.h>
 
 #include "socket.h"
+#include "beet.h"
 
 #ifdef __KERNEL__
 #include <linux/net.h>
@@ -23,7 +24,9 @@
 #endif
 
 //extern struct my_addrinfo;
-int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len);
+#ifdef __KERNEL__
+int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg_len);
+#endif
 
 #if (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
 

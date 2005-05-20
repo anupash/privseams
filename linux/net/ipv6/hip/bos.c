@@ -324,14 +324,16 @@ int hip_handle_bos(struct hip_common *bos,
 
 //extern int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
 
+#ifdef __KERNEL__
+
 /* really ugly hack ripped from rea.c, must convert to list_head asap */
 struct hip_bos_kludge {
-	hip_ha_t **array;
+	hip_xfrm_t **array;
 	int count;
 	int length;
 };
 
-int hip_bos_get_all_valid(hip_ha_t *entry, void *op)
+int hip_bos_get_all_valid(hip_xfrm_t *entry, void *op)
 {
 	struct hip_bos_kludge *rk = op;
 	HIP_DEBUG("Entered hip_bos_get_all_valid.... \n");
@@ -342,14 +344,15 @@ int hip_bos_get_all_valid(hip_ha_t *entry, void *op)
 	
 	HIP_DEBUG("entry->state = %d \n", entry->state);
 	if (entry->state == HIP_STATE_UNASSOCIATED || entry->state == HIP_STATE_NONE) {
+		hip_beetdb_hold_entry(entry);
 		rk->array[rk->count] = entry;
-		hip_hold_ha(entry);
 		rk->count++;
 	} else
 		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
 			  entry, hip_state_str(entry->state));
 	return 0;
 }
+
 
 /**
  * hip_socket_handle_get_peer_list - handle creation of list of known peers
@@ -359,21 +362,15 @@ int hip_bos_get_all_valid(hip_ha_t *entry, void *op)
  *
  * Returns: zero on success, or negative error value on failure
  */
-int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
+int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg_len)
 {
 	int err = 0;
 	hip_peer_opaque_t pr;
-	int fail;
-	int i, j;
-//	struct hip_host_id *peer_host_id = NULL;
-	char buf[46];
-        hip_peer_entry_opaque_t *entry, *next;
-	hip_peer_addr_opaque_t *addr, *anext;
-	int socklen = sizeof (struct sockaddr_in6);
+	int fail, i;
 	struct my_addrinfo **end = (struct my_addrinfo **)pai;
 	/* Number of elements allocated in the list */
 	int num_elems = (int)(msg_len / sizeof(struct my_addrinfo));
-	hip_ha_t *entries[HIP_MAX_HAS] = {0};
+	hip_xfrm_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_bos_kludge rk;
 	
 	HIP_DEBUG("\n");
@@ -386,18 +383,17 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-	//#if 0
-	/* Iterate through the hadb db entries, collecting addresses */
-	//	fail = hip_for_each_ha(hip_hadb_list_peers_func, &rk);
-	fail = hip_for_each_ha(hip_bos_get_all_valid, &rk);
+
+	/* Iterate through the beet db entries, collecting addresses */
+	fail = hip_for_each_xfrm(hip_bos_get_all_valid, &rk);
 	if (fail) {
 		err = -EINVAL;
 		HIP_ERROR("Peer list creation failed\n");
 		goto out_err;
 	}
-	//#endif
+
 	_HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
-//#if 0
+
 	if (pr.count <= 0) {
 		HIP_ERROR("No usable entries found\n");
 		err = -EINVAL;
@@ -414,58 +410,35 @@ int handle_bos_peer_list(int family, struct my_addrinfo **pai, int msg_len)
 		HIP_ERROR("The allocated memory is not enough\n");
 		goto out_err;
 	}
-	//for (i = 0, entry = pr.head; i < pr.count; i++, entry = entry->next) {
+
 	for (i = 0; i < rk.count; i++) {
 		HIP_DEBUG("Scrolling rk....\n");
-		if (rk.array[i] != NULL) {
-			HIP_DEBUG("rk.array[%d] not NULL\n", i);
-//		*end = malloc (sizeof (struct addrinfo) + socklen);
+		
+		_HIP_DEBUG("rk.array[%d] not NULL\n", i);
 			
-			(*end)->ai_family = family;
-			(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
+		(*end)->ai_family = family;
+		(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
 			
-			if (family == AF_INET6) {
-				struct sockaddr_in6 *sin6p =
-					(struct sockaddr_in6 *) (*end)->ai_addr;
-				
-				sin6p->sin6_flowinfo = 0;
-				/* Get the HIT */
-				memcpy (&sin6p->sin6_addr, &(entry->hit), sizeof (struct in6_addr));
-			} else {
-				/* TODO: is there any possibility to get here having family == AF_INET ? */
-			}
+		if (family == AF_INET6) {
+			struct sockaddr_in6 *sin6p =
+				(struct sockaddr_in6 *) (*end)->ai_addr;
+			sin6p->sin6_flowinfo = 0;
+			sin6p->sin6_family = family;
+			sin6p->sin6_port = htons(port);
+			HIP_HEXDUMP("THE FOUND HIT IS: ", &rk.array[i]->hit_peer, 16);
+			/* Get the HIT */
+			memcpy (&sin6p->sin6_addr, &(rk.array[i]->hit_peer), sizeof (struct in6_addr));
+		} else {
+			/* TODO: is there any possibility to get here having family == AF_INET ? */
+		}
 			
-			(*end)->ai_next = NULL;
+		(*end)->ai_next = NULL;
 			end = &((*end)->ai_next);
-		}
+		hip_beetdb_hold_entry(rk.array[i]);
 	}
-//#endif
  out_err:
-#if 0
-	/* Recurse through structure, freeing memory */
-	entry = .head;
-	_HIP_DEBUG("free mem, pr.head=0x%p\n", pr.head);
-	while (entry) {
-		_HIP_DEBUG("entry=0x%p\n", entry);
-		next = entry->next;
-		_HIP_DEBUG("next=0x%p\n", next);
-		_HIP_DEBUG("entry->host_id=0x%p\n", entry->host_id);
-		if (entry->host_id)
-			HIP_FREE(entry->host_id);
-		addr = entry->addr_list;
-		_HIP_DEBUG("addrlist=0x%p\n", addr);
-		while (addr) {
-			_HIP_DEBUG("addr=0x%p\n", addr);
-			anext = addr->next;
-			HIP_FREE(addr);
-			addr = anext;
-		}
-		HIP_FREE(entry);
-		entry = next;
-	}
-	_HIP_DEBUG("done freeing mem, err = %d\n", err);
-#endif
+
 	return err;
 }
 
-
+#endif

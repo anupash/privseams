@@ -159,6 +159,9 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 {
         hip_hit_t key;
         hip_xor_hits(&key, hit, hit2);
+	HIP_HEXDUMP("hit is: ", hit, 16);
+	HIP_HEXDUMP("hit2 is: ", hit2, 16);
+	HIP_HEXDUMP("the computed key is: ", &key, 16);
         return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
 }
 
@@ -232,6 +235,9 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
 		hip_xor_hits(&ha->hash_key, &ha->hit_our, &ha->hit_peer);
+		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
+		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
+		HIP_HEXDUMP("the hash key is: ", &ha->hash_key, 16);
 		tmp = hip_ht_find(&hadb_hit, (void *)&(ha->hash_key));
 		if (!tmp) {
 			hip_ht_add(&hadb_hit, ha);

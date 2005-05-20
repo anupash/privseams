@@ -242,7 +242,7 @@ int handle_hi(struct hip_common *msg,
 		err = -EINVAL;
 		goto out;
 	}
-	
+
 	if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
 		anon = 0;
 	} else if(!strcmp(opt[OPT_HI_TYPE], "anon")) {
@@ -268,10 +268,10 @@ int handle_hi(struct hip_common *msg,
 			goto out;
 		}
 	}
-	
-	HIP_INFO("Before memset: \n");
+
+	_HIP_INFO("Before memset: \n");
 	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
-	HIP_INFO("After memset: \n");
+	_HIP_INFO("After memset: \n");
 	err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 	if (err) {
 		HIP_ERROR("gethostname failed (%d)\n", err);

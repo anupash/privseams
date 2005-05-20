@@ -1485,13 +1485,12 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	int err = 0;
 	struct proto_ops *socket_handler;
 	struct hip_common *msg = (struct hip_common *) optval;
-	HIP_DEBUG("Here I am\n");
 
-	HIP_DEBUG("Here I am 2\n");
 	if (optname == SO_HIP_GET_HIT_LIST) {
+		/* In this case the level corresponds to the port number */
 		struct my_addrinfo **pai = (struct my_addrinfo **)optval;
 		HIP_DEBUG("Got it\n");
-		return (handle_bos_peer_list(AF_INET6, pai, *optlen));
+		return (handle_bos_peer_list(AF_INET6, level, pai, *optlen));
 	}
 
 
