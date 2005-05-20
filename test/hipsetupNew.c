@@ -39,7 +39,6 @@ int install_module(struct hip_common *msg)
 {
 	
 	int err;
-	char *opts[1];
 	err = system("grep -q hipmod /proc/modules");
 	if (!err){
 		printf("Removing the hipmod module.\n");
@@ -60,7 +59,6 @@ int install_module(struct hip_common *msg)
 	  $HIPL_DIR/tools/hipconf add hi default
 	  This function is in hipconf.c and is handle_hi()
 	*/
-	opts[0] = "default";
 	//err = handle_hi(msg, ACTION_ADD, (const char *)opts, 1);
 	err = handle_hi(msg, ACTION_ADD, "default", 1);
 	return err;

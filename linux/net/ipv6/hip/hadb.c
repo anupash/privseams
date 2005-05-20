@@ -18,17 +18,22 @@ void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 	HIP_FREE(hs);
 }
 
-static void hip_hadb_put_hs(void *entry)
+void hip_hadb_hold_hs(void *entry)
+{
+	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
+}
+
+void hip_hadb_put_hs(void *entry)
 {
 	HIP_DB_PUT_ENTRY(entry, struct hip_hit_spi, hip_hadb_delete_hs);
 }
 
-static void hip_hadb_hold_entry(void *entry)
+void hip_hadb_hold_entry(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry, hip_ha_t);
 }
 
-static void hip_hadb_put_entry(void *entry)
+void hip_hadb_put_entry(void *entry)
 {
 	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
 }
@@ -42,11 +47,6 @@ static void *hip_hadb_get_key_hit(void *entry)
 static void *hip_hadb_get_key_spi_list(void *entry)
 {
 	return (void *)(((struct hip_hit_spi *)entry)->spi);
-}
-
-static void hip_hadb_hold_hs(void *entry)
-{
-	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
 }
 
 static int hit_match(hip_ha_t *entry, void *our) {
@@ -1774,7 +1774,7 @@ void hip_uninit_hadb()
 {
 	int i;
 	hip_ha_t *ha, *tmp;
-	struct hip_hit_spi *hs, *tmp_hs;
+	//struct hip_hit_spi *hs, *tmp_hs;
 
 	HIP_DEBUG("\n");
 

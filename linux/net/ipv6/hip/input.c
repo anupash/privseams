@@ -309,33 +309,33 @@ int hip_receive_control_packet(struct hip_common *msg,
 	}
 
 	HIP_DEBUG("Done with control packet (%d).\n", err);
-	HIP_HEXDUMP("msg->hits = ", &msg->hits, 16);
-	HIP_HEXDUMP("msg->hitr = ", &msg->hitr, 16);
-
-	if (err) {
+	_HIP_HEXDUMP("msg->hits=", &msg->hits, 16);
+	_HIP_HEXDUMP("msg->hitr=", &msg->hitr, 16);
+	if (err)
 		goto out_err;
-	}
 	
 	/* The synchronization of the beet database is not done with HIP_BOS */
-	if (skip_sync)
-		goto out_err;
+	/* .. it seems that is should be done anyway, BOS createas a new HA */
+	if (!skip_sync) {
+		entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+		if (!entry) {
+			HIP_ERROR("Did not find HA entry\n");
+			err = -EFAULT;
+			goto out_err;
+		}
 
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	if (!entry) {
-		HIP_ERROR("Did not find HA entry\n");
-		err = -EFAULT;
-		goto out_err;
-	}
-
-	/* Synchronize beet state (may have been altered) */
-	err = hip_hadb_update_xfrm(entry);
-	if (err) {
-		HIP_ERROR("XFRM out synchronization failed\n");
-		err = -EFAULT;
-		goto out_err;
+		/* Synchronize beet state (may have been altered) */
+		err = hip_hadb_update_xfrm(entry);
+		if (err) {
+			HIP_ERROR("XFRM out synchronization failed\n");
+			err = -EFAULT;
+			goto out_err;
+		}
 	}
 	
  out_err:
+	if (entry)
+		hip_hadb_put_entry(entry);
 	return err;
 }
 

@@ -17,15 +17,6 @@
 #endif
 
 #include <net/hip.h>
-#include "misc.h"
-#include "hip.h"
-#include "dh.h"
-#include "input.h"
-#include "hadb.h"
-#include "hidb.h"
-#include "keymat.h"
-#include "builder.h"
-#include "output.h"
 
 int hip_receive_update(struct hip_common *msg,
 		       struct in6_addr *update_saddr,

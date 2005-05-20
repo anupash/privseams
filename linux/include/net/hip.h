@@ -107,6 +107,15 @@ struct list_head {
         }\
 }
 
+#define HIP_IFEBL2(func, eval, finally, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+                finally;\
+        }\
+}
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
 	int t;

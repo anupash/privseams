@@ -345,10 +345,9 @@ int hip_netlink_send(struct hip_work_order *hwo)
 
 	msg_len = hip_get_msg_total_len((const struct hip_common *)hwo->msg);
 	nlh_len = NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr));
-	HIP_DEBUG("nlh_len=%d\n", nlh_len);
 	nlh = (struct nlmsghdr *) HIP_MALLOC(nlh_len, 0);
 	if (!nlh) {
-		HIP_ERROR("Out of memory.\n");
+		HIP_ERROR("Out of memory\n");
 		return -1;
 	}
 	memset(nlh, 0, nlh_len);

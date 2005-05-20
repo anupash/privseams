@@ -5,6 +5,7 @@
  */
 
 #include "update.h"
+#include "hadb.h"
 
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifndef __KERNEL__
@@ -755,7 +756,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
-		hip_print_hit("new addr to check, state=%d", addr->address_state);
+		HIP_DEBUG_HIT("new addr to check", &addr->address);
+		HIP_DEBUG("address state=%d\n", addr->address_state);
 
 		if (addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
 			HIP_DEBUG("addr state is DEPRECATED, not verifying\n");
@@ -770,33 +772,29 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			}
 			continue;
 		}
-
+		HIP_DEBUG("building verification packet\n");
 		hip_msg_init(update_packet);
 		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 						HIP_CONTROL_DHT_TYPE1);
 		hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
-		HIP_IFEBL(hip_build_param_spi(update_packet, 0x11223344), -1, /* test */
-			  continue, "Building of SPI failed\n");
-
+		HIP_IFEBL2(hip_build_param_spi(update_packet, 0x11223344), -1,
+			   continue, "Building of SPI failed\n");
 		entry->update_id_out++;
 		addr->seq_update_id = entry->update_id_out;
 		HIP_DEBUG("outgoing UPDATE ID for REA addr check=%u\n", addr->seq_update_id);
 		/* todo: handle overflow if (!update_id_out) */
-		HIP_IFEBL(hip_build_param_seq(update_packet, addr->seq_update_id), -1,
+		HIP_IFEBL2(hip_build_param_seq(update_packet, addr->seq_update_id), -1,
 			 continue, "Building of SEQ failed\n");
-
 		/* Add HMAC */
-		HIP_IFEBL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out),
+		HIP_IFEBL2(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out),
 			  -1, continue, "Building of HMAC failed\n");
-
 		/* Add SIGNATURE */
-		HIP_IFEBL(!hip_create_signature(entry, update_packet), 
-			   -1, continue, "Could not sign UPDATE. Failing\n");
-
+		HIP_IFEBL2(entry->sign(entry->our_priv, update_packet), -EINVAL,
+			   continue, "Could not sign UPDATE\n");
 		get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 		_HIP_HEXDUMP("ECHO_REQUEST in REA addr check",
 			     addr->echo_data, sizeof(addr->echo_data));
-		HIP_IFEBL(hip_build_param_echo(update_packet, addr->echo_data ,
+		HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data ,
 					       sizeof(addr->echo_data), 0, 1), -1,
 			  continue, "Building of ECHO_REQUEST failed\n");
 		HIP_DEBUG("sending addr verify pkt\n");
@@ -1409,8 +1407,9 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 		return -1;
 
 	if (entry->hastate == HIP_HASTATE_HITOK && entry->state == HIP_STATE_ESTABLISHED) {
+		hip_hadb_hold_entry(entry);
 		rk->array[rk->count] = entry;
-		hip_hold_ha(entry);
+		//hip_hold_ha(entry);
 		rk->count++;
 	} else
 		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
@@ -1458,7 +1457,8 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
 			hip_send_update(rk.array[i], addr_list, addr_count, ifindex, flags);
-			hip_put_ha(rk.array[i]);
+			hip_hadb_put_entry(rk.array[i]);
+			//hip_put_ha(rk.array[i]);
 		}
 	}
 

@@ -63,6 +63,9 @@
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
 } while(0)
 
+void hip_hadb_hold_entry(void *entry);
+void hip_hadb_put_entry(void *entry);
+
 #define HIP_INSERT_STATE_SPI_LIST(hashtable, put_hs, hit_peer, hit_our, spi) \
   do {                                                                       \
 	struct hip_hit_spi *tmp;                                             \
