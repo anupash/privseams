@@ -141,6 +141,8 @@ int main(int argc, char *argv[])
 		case 'i':
 			/* Base Exchange Initiator */
 			printf("Initiator mode\n");
+			hip_set_logtype(LOGTYPE_STDERR);
+			hip_set_logfmt(LOGFMT_SHORT);
 			if (optarg[0] == '0')
 				peer_name = NULL;
 			else

@@ -465,7 +465,7 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 {
 	int err = 0;
-	struct hip_spi_out_item *spi_out;
+	//	struct hip_spi_out_item *spi_out;
 
 	/* assume already locked entry */
 
@@ -514,7 +514,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	HIP_ERROR("Did not find an usable peer address\n");
 #endif
 #endif
- out:
+	// out:
         return err;
 }
 
@@ -1880,6 +1880,8 @@ int hip_list_peers_add(struct in6_addr *address,
  */
 int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 {
+	int err = 0;
+#if 0
 	hip_peer_opaque_t *op = (hip_peer_opaque_t *)opaque;
 	hip_peer_entry_opaque_t *peer_entry = NULL;
 	hip_peer_addr_opaque_t *last = NULL;
@@ -1887,9 +1889,8 @@ int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 	struct hip_spi_out_item *spi_out, *tmp;
 	char buf[46];
 	struct hip_lhi lhi;
-	int err = 0;
 	int found_addrs = 0;
-#if 0
+
 	/* Start by locking the entry */
 	HIP_LOCK_HA(entry);
 

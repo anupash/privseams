@@ -342,8 +342,9 @@ int hip_bos_get_all_valid(hip_xfrm_t *entry, void *op)
 		return -1;
 	}
 	
-	HIP_DEBUG("entry->state = %d \n", entry->state);
-	if (entry->state == HIP_STATE_UNASSOCIATED || entry->state == HIP_STATE_NONE) {
+	HIP_DEBUG("entry->state is %s\n", hip_state_str(entry->state));
+	/* Practically all the states are valid */
+	if (entry->state != HIP_STATE_FAILED) {
 		hip_beetdb_hold_entry(entry);
 		rk->array[rk->count] = entry;
 		rk->count++;
@@ -353,9 +354,8 @@ int hip_bos_get_all_valid(hip_xfrm_t *entry, void *op)
 	return 0;
 }
 
-
 /**
- * hip_socket_handle_get_peer_list - handle creation of list of known peers
+ * handle_bos_peer_list - handle creation of list of known peers
  * @msg: message containing information about which unit tests to execute
  *
  * Process a request for the list of known peers
@@ -365,7 +365,6 @@ int hip_bos_get_all_valid(hip_xfrm_t *entry, void *op)
 int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg_len)
 {
 	int err = 0;
-	hip_peer_opaque_t pr;
 	int fail, i;
 	struct my_addrinfo **end = (struct my_addrinfo **)pai;
 	/* Number of elements allocated in the list */
@@ -378,7 +377,7 @@ int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg
 	/* Initialize the data structure for the peer list */
 	//	memset(&rk, 0, sizeof(struct hip_bos_kludge));
 
-	HIP_DEBUG("Got into the handle_bos_peer_list\n");
+	_HIP_DEBUG("Got into the handle_bos_peer_list\n");
 
 	rk.array = entries;
 	rk.count = 0;
@@ -394,7 +393,7 @@ int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg
 
 	_HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
 
-	if (pr.count <= 0) {
+	if (rk.count < 0) {
 		HIP_ERROR("No usable entries found\n");
 		err = -EINVAL;
 		goto out_err;
@@ -434,9 +433,12 @@ int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg
 			
 		(*end)->ai_next = NULL;
 			end = &((*end)->ai_next);
-		hip_beetdb_hold_entry(rk.array[i]);
 	}
+	err = rk.count;
  out_err:
+	if (rk.count > 0 && rk.count < num_elems)
+		for (i = 0; i < rk.count; i++)
+			hip_beetdb_put_entry(rk.array[i]);
 
 	return err;
 }

@@ -30,6 +30,7 @@ bin_PROGRAMS += unittest
 bin_PROGRAMS += hipsetupNew
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
+bin_PROGRAMS += first_test
 
 align_SOURCES = align.c
 checksum_SOURCES = checksum.c checksum.h
@@ -44,6 +45,7 @@ libinet6test_SOURCES = libinet6test.c
 listifaces_SOURCES = listifaces.c
 unittest_SOURCES = unit.c unittest.c hipconf.c suite.c
 hipsetupNew_SOURCES = hipsetupNew.c hipconf.c conntest.c
+first_test_SOURCES = first_test.c hipconf.c conntest.c
 
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is

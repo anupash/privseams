@@ -159,52 +159,16 @@ int main_server(int proto, int port)
 }
 
 /**
- * main_client_gai - it handles the functionality of the client-gai
+ * hip_connect_func - allows to connect to the addresses specified by res
  * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @res: list containing the peers addresses
  *
- * Returns: 1 with success, 0 otherwise.
+ * Returns: 0 on error, the sockid on success
  */
-int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name)
+int hip_connect_func(int proto, struct addrinfo *res)
 {
-	struct timeval stats_before, stats_after;
-	unsigned long stats_diff_sec, stats_diff_usec;
-	char mylovemostdata[IP_MAXPACKET], receiveddata[IP_MAXPACKET];
-	int recvnum, sendnum, datalen = 0, port = 0, datasent = 0;
-	int datareceived = 0, ch, gai_err, sock = 0;
-	struct addrinfo hints, *res = NULL, *ai;
-	
-	/* lookup host */
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_flags = AI_HIP; /*AI_KERNEL_LIST*/
-	/* If peer_name is not specified the destionation is looked in the hadb */
-	if (!peer_name)
-		hints.ai_flags |= AI_KERNEL_LIST;
-	hints.ai_family = AF_INET6; /* Legacy API supports only HIT-in-IPv6 */
-	hints.ai_socktype = socktype;
-	hints.ai_protocol = proto;
-
-	gai_err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
-	if (gai_err) {
-		printf("GAI ERROR %d: %s\n", gai_err, gai_strerror(gai_err));
-		return(1);
-	}
-
-	/* data from stdin to buffer */
-	bzero(receiveddata, IP_MAXPACKET);
-	bzero(mylovemostdata, IP_MAXPACKET);
-
-	printf("Input some text, press enter and ctrl+d\n");
-
-	/* horrible code */
-	while ((ch = fgetc(stdin)) != EOF && (datalen < IP_MAXPACKET)) {
-		mylovemostdata[datalen] = (unsigned char) ch;
-		datalen++;
-	}
-
-	gettimeofday(&stats_before, NULL);
+	struct addrinfo *ai, hints;
+	int sock = 0;
 
 	/* connect */
 
@@ -212,7 +176,8 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ai->ai_addr;
 		char addr_str[INET6_ADDRSTRLEN];
 		int e;
-
+		
+		printf("Calling HIP_ASSERT \n");
 		HIP_ASSERT(ai->ai_family == AF_INET6);
 		sock = create_socket(proto);
 		if (sock < 0) {
@@ -244,12 +209,71 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 		goto out_err;
 	}
 
+	
+out_err:
+	return sock;
+}
+
+/**
+ * main_client_gai - it handles the functionality of the client-gai
+ * @proto: type of protocol
+ * @socktype: the type of socket
+ * @peer_name: the peer name
+ * @peer_port_name: the prot number
+ *
+ * Returns: 1 with success, 0 otherwise.
+ */
+int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name)
+{
+	struct timeval stats_before, stats_after;
+	unsigned long stats_diff_sec, stats_diff_usec;
+	char mylovemostdata[IP_MAXPACKET], receiveddata[IP_MAXPACKET];
+	int recvnum, sendnum, datalen = 0, port = 0, datasent = 0;
+	int datareceived = 0, ch, gai_err, sock = 0;
+	struct addrinfo hints, *res = NULL, *ai;
+	
+	/* lookup host */
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_flags = AI_HIP;
+	/* If peer_name is not specified the destination is looked in the hadb */
+	if (!peer_name)
+		hints.ai_flags |= AI_KERNEL_LIST;
+	hints.ai_family = AF_INET6; /* Legacy API supports only HIT-in-IPv6 */
+	hints.ai_socktype = socktype;
+	hints.ai_protocol = proto;
+	
+	gai_err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
+	
+	if (gai_err < 0) {
+		printf("GAI ERROR %d: %s\n", gai_err, gai_strerror(gai_err));
+		return(1);
+	}
+
+	/* data from stdin to buffer */
+	bzero(receiveddata, IP_MAXPACKET);
+	bzero(mylovemostdata, IP_MAXPACKET);
+
+	printf("Input some text, press enter and ctrl+d\n");
+
+	/* horrible code */
+	while ((ch = fgetc(stdin)) != EOF && (datalen < IP_MAXPACKET)) {
+		mylovemostdata[datalen] = (unsigned char) ch;
+		datalen++;
+	}
+	
+	gettimeofday(&stats_before, NULL);
+	/* Connecting... */
+	sock = hip_connect_func(proto, res);
+	if (!sock)
+		goto out_err;
+
 	gettimeofday(&stats_after, NULL);
 	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
 
 	printf("connect took %.3f sec\n",
 	       (stats_diff_sec+stats_diff_usec) / 1000000.0);
+	
 
 	/* send and receive data */
 

@@ -56,7 +56,7 @@ void hip_beetdb_hold_entry(void *entry)
 	HIP_DB_HOLD_ENTRY(entry, hip_xfrm_t);
 }
 
-static void hip_beetdb_put_entry(void *entry)
+void hip_beetdb_put_entry(void *entry)
 {
 	HIP_DB_PUT_ENTRY(entry, hip_xfrm_t, hip_beetdb_delete_state);
 }
