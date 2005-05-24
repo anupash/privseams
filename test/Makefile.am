@@ -28,7 +28,7 @@ bin_PROGRAMS += conntest-server-native
 bin_PROGRAMS += getaddrinfotest
 bin_PROGRAMS += conntest-server-legacy
 
-bin_SCRIPTS = hipsetup
+sbin_SCRIPTS = hipsetup
 
 conntest_client_SOURCES = conntest-client.c 
 conntest_client_gai_SOURCES = conntest-client-gai.c

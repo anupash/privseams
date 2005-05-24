@@ -65,7 +65,7 @@ make -C doc clean
 /usr/local/bin/conntest-client-native
 /usr/local/bin/conntest-server-legacy
 /usr/local/bin/conntest-server-native
-/usr/local/bin/hipsetup
+/usr/local/sbin/hipsetup
 /usr/local/lib/libinet6.a
 /usr/local/lib/libinet6.so
 /usr/local/lib/libinet6.so.0.0.0
