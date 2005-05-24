@@ -1,3 +1,4 @@
+
 /* Copyright (C) 1996,97,98,99,2000,01,02 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
@@ -598,3 +599,4 @@ extern int gai_cancel (struct gaicb *__gaicbp) __THROW;
 __END_DECLS
 
 #endif	/* netdb.h */
+
