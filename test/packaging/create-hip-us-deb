@@ -1,0 +1,81 @@
+#!/bin/sh
+
+MAJOR=1
+MINOR=0
+VERSION="$MAJOR.$MINOR"
+RELEASE=1
+SUFFIX="-$VERSION-$RELEASE"
+
+error_cleanup()
+{
+ if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
+   echo "removing '$PKGDIR'"
+   rm -rf "$PKGDIR"
+ fi
+
+ exit 1
+}
+
+echo "** Creating the directory structure and files for building the"
+echo "** binary Debian package containing HIPL user space software"
+echo "**"
+echo "** Version $VERSION (release $RELEASE)"
+echo "**"
+
+PKGROOT="`pwd`"
+cd ../../
+HIPL=`pwd`
+echo "** Using directory '$HIPL' as the HIPL installation directory"
+
+if [ ! -d "$HIPL" ];then
+  echo "** Error: '$HIPL' is not a directory" 
+  exit 1
+fi
+
+
+# First compile all programs
+cd "$HIPL"
+make
+#make -C doc
+
+cd "$PKGROOT"
+echo "** Package building root is '$PKGROOT'" 
+PKGDIR=$PKGROOT/hipl-userspace-$VERSION-deb
+echo "** Debian package root is '$PKGDIR'" 
+rm -rf "$PKGDIR"
+mkdir "$PKGDIR"
+
+echo "** Copying Debian control files to '$PKGDIR'"
+mkdir $PKGDIR/DEBIAN
+for f in control postinst prerm;do
+  cp -v DEBIAN/$f $PKGDIR/DEBIAN
+done
+echo "** Copying binary files to '$PKGDIR'"
+cd $PKGDIR
+# create directory structure
+mkdir -vp usr/local/sbin/ usr/local/bin/ usr/local/lib/ etc/hip /usr/share/doc
+cd $HIPL
+
+# copy files
+cp -v tools/hipconf $PKGDIR/usr/local/sbin/
+for suffix in "" -gai -native -native-user-key;do
+  cp -v test/conntest-client$suffix $PKGDIR/usr/local/bin/
+done
+for suffix in "" -legacy -native;do
+  cp -v test/conntest-server$suffix $PKGDIR/usr/local/bin/
+done
+cp -v test/hipsetup $PKGDIR/usr/local/sbin/
+for suffix in a so so.0 so.0.0.0;do
+  cp -dv libinet6/.libs/libinet6.$suffix $PKGDIR/usr/local/lib/
+done
+cp -Lv libinet6/.libs/libinet6.la $PKGDIR/usr/local/lib/
+
+cd $HIPL/doc
+DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
+
+cd $PKGROOT
+echo "** Creating the Debian package 'hipl-userspace_${VERSION}-${RELEASE}_i386.deb'"
+dpkg-deb -b "$PKGDIR" hipl-userspace_${VERSION}-${RELEASE}_i386.deb
+echo "** Finished building the binary Debian package"
+
+error_cleanup
