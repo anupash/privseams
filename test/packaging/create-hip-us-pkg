@@ -12,12 +12,10 @@ error_cleanup()
    echo "removing '$PKGDIR'"
    rm -rf "$PKGDIR"
  fi
-
- exit 1
 }
 
 echo "** Creating the directory structure and files for building the"
-echo "** source package needed for RPM and DEB files containing HIPL"
+echo "** source package needed for RPM package containing HIPL"
 echo "** user space software"
 echo "**"
 echo "** Version $VERSION (release $RELEASE)"
@@ -57,7 +55,6 @@ fi
 cp -v $HIPL/linux/include/net/hip.h linux/include/net/
 
 find -name '.arch*' | xargs rm -rf
-#make distclean > /dev/null 2>&1
 
 echo "** Creating source package $PKGROOT/hipl-userspace${SUFFIX}.tgz"
 tar czpf $PKGROOT/hipl-userspace${SUFFIX}.tgz .
@@ -74,5 +71,4 @@ cat <<EOF
 ** /usr/src/rpm/RPMS/i386/hipl-userspace${SUFFIX}.i386.rpm
 EOF
 
-#echo "** Finished successfully"
 error_cleanup

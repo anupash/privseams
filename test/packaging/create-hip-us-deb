@@ -12,8 +12,6 @@ error_cleanup()
    echo "removing '$PKGDIR'"
    rm -rf "$PKGDIR"
  fi
-
- exit 1
 }
 
 echo "** Creating the directory structure and files for building the"
