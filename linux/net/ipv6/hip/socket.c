@@ -267,7 +267,7 @@ int hip_socket_release(struct socket *sock)
 	}
 
 	/* XX FIX: RELEASE EID */
-   
+
 	if(sock->local_ed != 0) { 
 		hip_db_dec_eid_use_cnt(sock->local_ed, 1);
 		sock->local_ed = 0;
@@ -277,9 +277,9 @@ int hip_socket_release(struct socket *sock)
 		sock->peer_ed = 0;
 	}
 
-
 	/* XX FIX: DESTROY HI ? */
-	/* application specified HIs should be deleted when native socket is released.. */
+	/* application specified HIs should be deleted when native socket is 
+	   released.. */
 
  out_err:
 	
@@ -884,7 +884,9 @@ int hip_socket_handle_del_local_hi(const struct hip_common *input)
 	HIP_DEBUG_HIT("removing precreated R1s by hit: ", &lhi.hit);
 	hip_r1_delete_by_hit(&lhi.hit);
 
-	/* XX TODO: remove related ED entry */
+	/* remove related ED entry */
+	hip_db_remove_eid_by_hit(&lhi.hit, 1);
+	
 	/* XX TODO: close sockets that are bound the corresponding HIT? */
 
 	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
@@ -1381,6 +1383,9 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 		goto out_err;
 	}
 	
+	if (eid_endpoint->endpoint.flags & HIP_HI_SYSTEM)	
+	  HIP_DEBUG("System HI\n");
+
 	/* XX TODO: return right kind of local HI for the flags: */
 	/* NOTE: IF any of the following flags is present the msg doesn't
 	   contain any real endpoint */

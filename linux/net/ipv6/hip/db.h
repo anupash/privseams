@@ -89,6 +89,7 @@ HIP_HID   *hip_get_localhost_public_key(struct hip_lhi *lhi);
 int        hip_insert_any_localhost_public_key(uint8_t *target);
 struct hip_host_id *hip_get_any_localhost_public_key(int);
 int hip_hit_is_our(struct in6_addr *hit);
+int hip_check_access_to_local_hit(struct in6_addr *hit);
 struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
 				    struct hip_lhi *lhi);
 int        hip_proc_read_hadb_peer_addrs(char *page, char **start, off_t off,
@@ -128,6 +129,7 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 			     struct hip_lhi *lhi,
 			     struct hip_eid_owner_info *owner_info);
 void hip_db_dec_eid_use_cnt(sa_eid_t eid_val, int is_local);
+void hip_db_remove_eid_by_hit(struct in6_addr *hit, int is_local);
 extern struct hip_db_struct hip_peer_hostid_db;
 extern struct hip_db_struct hip_local_hostid_db;
 

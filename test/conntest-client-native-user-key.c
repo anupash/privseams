@@ -95,7 +95,7 @@ int main(int argc,char *argv[]) {
   }
 
   //err = setmyeid(&my_eid, "", endpoint, NULL);
-  my_eid = getlocaled(endpoint, "", NULL, NULL, HIP_HI_REUSE_ANY);
+  my_eid = getlocaled(endpoint, "", NULL, NULL, NULL);
   //my_eid = getlocaled(NULL, "", NULL, NULL, HIP_ED_ANY);
   if (err) {
     HIP_ERROR("Failed to set up my EID (%d)\n", err);

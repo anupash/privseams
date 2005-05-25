@@ -16,6 +16,7 @@
 #include "socket.h"
 #include "output.h"
 #include "update.h"
+#include "cookie.h"
 
 /*
  * Do not access these databases directly: use the accessors in this file.
@@ -844,6 +845,35 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_hit_no_lock(struct hip_db_stru
 	return NULL;
 }
 
+int hip_db_delete_entry_by_hit(struct hip_db_struct *db, struct in6_addr *hit)
+{
+	struct hip_eid_db_entry *entry;
+	unsigned long lf;
+	struct list_head *curr, *iter;
+
+	HIP_DEBUG("\n");
+	
+
+	if (!hit)
+		return -EINVAL;
+	if (list_empty(&db->db_head))
+		return -EINVAL;
+	
+	HIP_READ_LOCK_DB(db);
+
+	list_for_each_safe(curr, iter, &db->db_head) {
+		entry = list_entry(curr ,struct hip_eid_db_entry, next);
+		if (!ipv6_addr_cmp(&entry->lhi.hit, hit)) {
+			kfree(entry);
+			list_del(curr);
+			HIP_READ_UNLOCK_DB(db);
+			return 0;
+		}
+	}
+	HIP_READ_UNLOCK_DB(db);
+	return -EINVAL;
+}
+
 struct hip_eid_db_entry *hip_db_find_eid_entry_by_eid_no_lock(struct hip_db_struct *db,
 						const struct sockaddr_eid *eid)
 {
@@ -864,9 +894,9 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_eid_no_lock(struct hip_db_stru
  * the entry for the given eid_val if use_cnt drops below one.
  */
 void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db, 
-					sa_eid_t eid_val) 
+					sa_eid_t eid_val, int local) 
 {	
-
+	int err;
 	struct hip_eid_db_entry *tmp;
 	struct list_head *curr, *iter;
 	unsigned long lf;
@@ -878,10 +908,33 @@ void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db,
 		HIP_DEBUG("comparing %d with %d\n",
 			  ntohs(tmp->eid.eid_val), eid_val);
 		if (ntohs(tmp->eid.eid_val) == eid_val) {
+			/* IF a system HI, skip this */
+			if (tmp->owner_info.flags & HIP_HI_SYSTEM) break;
+			
 			tmp->use_cnt--;
 			if(tmp->use_cnt < 1) {
 				kfree(tmp);
 				list_del(curr);
+                                if(local) {
+					/* delete the associated HI 
+					   (an application specified HI) */
+					err = hip_del_localhost_id(&tmp->lhi);
+					if (err) {
+						HIP_ERROR("deleting of local host identity failed\n");
+						
+					}
+
+					if(!err) {
+						HIP_WRITE_UNLOCK_DB(db);
+						HIP_DEBUG_HIT("remove precreated R1s: ", 
+							      &tmp->lhi.hit);
+						hip_r1_delete_by_hit(&tmp->lhi.hit);
+						//HIP_DEBUG_HIT("del associations from hadb: ",
+						//      &tmp->lhi.hit);
+						//hip_remove_hadb_entries(&tmp->lhi.hit);
+						return;
+					}
+				}
 			}
 			HIP_WRITE_UNLOCK_DB(db);
 			return;
@@ -897,7 +950,19 @@ void hip_db_dec_eid_use_cnt(sa_eid_t eid_val, int is_local)
 	if(eid_val == 0) return;
 	
 	db = (is_local) ? &hip_local_eid_db : &hip_peer_eid_db;
-	hip_db_dec_eid_use_cnt_by_eid_val(db, eid_val);
+	hip_db_dec_eid_use_cnt_by_eid_val(db, eid_val, is_local);
+}
+
+void hip_db_remove_eid_by_hit(struct in6_addr *hit, int is_local) 
+{
+	struct hip_db_struct *db;
+	int err;
+	
+	db = (is_local) ? &hip_local_eid_db : &hip_peer_eid_db;
+	err = hip_db_delete_entry_by_hit(db, hit);
+	if (err) {
+		HIP_INFO("Didn't find an entry to delete.\n");
+	}
 }
 
 int hip_db_set_eid(struct sockaddr_eid *eid,
@@ -943,7 +1008,9 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 	} else {
 		/* XX TODO: Ownership is not changed here; should it? */
 		memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
-		entry->use_cnt++;
+		/* IF a system HI, skip use_cnt++ */
+		if (!(entry->owner_info.flags & HIP_HI_SYSTEM))
+			entry->use_cnt++;
 	}
 	
  out_err:
@@ -1012,6 +1079,68 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 {
 	return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
 }
+
+int hip_check_access_to_local_hit(struct in6_addr *hit)
+{
+	struct hip_host_id_entry *hi_entry;
+	struct hip_eid_db_entry *eid_entry;
+	unsigned long lf;
+	struct hip_lhi lhi;
+	
+	HIP_DEBUG("\n");
+
+	if (!hit) {
+		HIP_ERROR("NULL hit\n");
+		return 0;
+	}
+	
+	memcpy(&lhi.hit, hit ,sizeof(struct in6_addr));
+
+	HIP_READ_LOCK_DB(&hip_local_hostid_db);
+	list_for_each_entry(hi_entry, &hip_local_hostid_db.db_head, next) {
+		if (!ipv6_addr_cmp(&hi_entry->lhi.hit, hit)) {
+			break;
+		}
+	}
+	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
+	if(!hi_entry) {
+		HIP_DEBUG("Local HI doesn't exist.\n");
+		return 0;
+	}
+
+	eid_entry = hip_db_find_eid_entry_by_hit_no_lock(&hip_local_eid_db,
+							 &lhi);	
+	if(!eid_entry) 
+		return 1;
+	
+	if (eid_entry->owner_info.flags & HIP_HI_SYSTEM) {
+		HIP_DEBUG("System HI, ok\n");
+		return 1;
+	}
+
+	if(eid_entry->owner_info.flags & HIP_HI_REUSE_ANY) {
+		HIP_DEBUG("Access control check to local HI, REUSE_ANY\n");
+		return 1;
+	}	
+	if((eid_entry->owner_info.flags & HIP_HI_REUSE_GID) && 
+	   (current->gid == eid_entry->owner_info.gid)) {
+		HIP_DEBUG("Access control check to local HI, REUSE_GID\n");
+		return 1;
+	}
+	if((eid_entry->owner_info.flags & HIP_HI_REUSE_UID) && 
+	   (current->uid == eid_entry->owner_info.uid)) {
+		HIP_DEBUG("Access control check to HI, REUSE_UID\n");
+		return 1;
+	}	
+	if(current->pid == eid_entry->owner_info.pid) {
+		HIP_DEBUG("Access control check to HI, PID ok\n");
+		return 1;
+	}
+	/* deny access by default */
+	HIP_DEBUG("Access denied to local HI.\n");
+	return 0;		
+}
+
 
 #undef HIP_READ_LOCK_DB
 #undef HIP_WRITE_LOCK_DB

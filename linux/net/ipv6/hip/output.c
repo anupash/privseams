@@ -358,7 +358,7 @@ int hip_send_i1(struct in6_addr *srchit, struct in6_addr *dsthit, hip_ha_t *entr
 			err = -EINVAL;
 			goto out_err;
 		}
-	HIP_DEBUG_HIT("DEFAULT ALGO HIT: ", &hit_our);
+	HIP_DEBUG_HIT("hip_send_i1: our HIT: ", &hit_our);
 #if 0
 	if (hip_copy_any_localhost_hit(&hit_our) < 0) {
 		HIP_ERROR("Out HIT not found\n");

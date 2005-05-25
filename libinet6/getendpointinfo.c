@@ -165,8 +165,9 @@ struct sockaddr_eid *getlocaled(const struct endpoint *endpoint,
  skip_port_conversion:
 
   /* Handler emphemeral port number */
+  srand((unsigned)time(NULL));
   if (port == 0) {
-    while (port < 1024) /* XX FIXME: CHECK UPPER BOUNDARY */
+    while (port < 1024 || port > 65535) /* XX FIXME: CHECK UPPER BOUNDARY */
 	   port = rand();
   }
 
@@ -285,8 +286,9 @@ int setmyeid(struct sockaddr_eid *my_eid,
  skip_port_conversion:
 
   /* Handler emphemeral port number */
+  srand((unsigned)time(NULL));
   if (port == 0) {
-    while (port < 1024) /* XX FIXME: CHECK UPPER BOUNDARY */
+    while (port < 1024 || port > 65535) /* XX FIXME: CHECK UPPER BOUNDARY */
 	   port = rand();
   }
 
@@ -599,8 +601,7 @@ int get_localhost_endpointinfo(const char *basename,
      (specific for setmyeid) 'wrongly' here
      because this way we make the HIs readable by all processes.
      This function calls setmyeid() internally.. */
-  hints->ei_flags |= HIP_HI_REUSE_ANY;
-
+  hints->ei_flags = HIP_HI_REUSE_ANY | HIP_HI_SYSTEM;
 
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
@@ -1502,8 +1503,8 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
   /* System specific HIs should be added into the kernel with the
      HIP_HI_REUSE_ANY flag set, because this way we make the HIs
      readable by all processes. This function calls setmyeid() internally.. */
-  hints->ei_flags |= HIP_HI_REUSE_ANY;
-  
+  hints->ei_flags = HIP_HI_REUSE_ANY | HIP_HI_SYSTEM;
+
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, "_pub"))
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;

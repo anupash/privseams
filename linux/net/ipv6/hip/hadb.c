@@ -878,11 +878,13 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	hip_in6_ntop(hit, str);
 	HIP_DEBUG("called: HIT %s\n", str);
 
-	/* XX TODO: should we add an entry for all local HIs?? */
-	//if (hip_copy_any_localhost_hit_by_algo(&our_hit, hip_sys_config.
-	//			       hip_hi_default_algo) 
-	//  != 0)
-	//return -1;
+	/* NOTE: a HA entry is added for all local HIs. 
+	   This is needed because a client application might want to bind to
+	   to a local HI(HIT) in order to initiate the BEX with it.
+	   A HA entry must exist for all local HIs since we cannot know 
+	   what specific HI is used in the BEX. The downside is that we create
+	   terribly many not-needed HIT-IP mappings.
+	*/
 	
 	list_for_each_entry_safe(item,tmp,&hip_local_hostid_db.db_head, next) {
 		ipv6_addr_copy(&our_hit, &item->lhi.hit);
@@ -897,15 +899,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			_HIP_DEBUG("created a new sdb entry\n");
 			ipv6_addr_copy(&entry->hit_peer, hit);
 			ipv6_addr_copy(&entry->hit_our, &our_hit);
-			/* XXX: This is wrong. As soon as we have native socket API, we
-			 * should enter here the correct sender... (currently unknown).
-			 */
-			//if (hip_get_any_local_hit(&entry->hit_our,
-			//	  hip_sys_config.hip_hi_default_algo) 
-			//== 0)
-			//_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
-			//else 
-			//HIP_INFO("Could not assign local hit, continuing\n");
+
 			if(&entry->hit_our) {
 				hip_xor_hits(&entry->hash_key, 
 					     &entry->hit_our, 
@@ -916,7 +910,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			hip_hadb_insert_state(entry);
 			hip_hold_ha(entry); /* released at the end */
 		}
-
+		
 		/* add initial HIT-IP mapping */
 		if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
 			err = hip_hadb_add_peer_addr(entry, addr, 0, 0,
@@ -933,9 +927,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		if(entry)
 			hip_put_ha(entry);
 	}
-	//out:
-	//if (entry)
-	//hip_put_ha(entry);
+
 	return err;
 }
 
