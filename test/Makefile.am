@@ -40,6 +40,8 @@ conntest_server_SOURCES = conntest-server.c
 conntest_server_legacy_SOURCES = conntest-server-legacy.c
 getaddrinfotest_SOURCES = getaddrinfotest.c
 
+EXTRA_DIST += $(sbin_SCRIPTS)
+
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built
 # on this directory and we do't want to make reduntant copies.

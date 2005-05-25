@@ -17,8 +17,10 @@ error_cleanup()
 }
 
 echo "** Creating the directory structure and files for building the"
-echo "** RPM and DEB files containing HIPL user space software"
-echo "** version $VERSION (release $RELEASE)"
+echo "** source package needed for RPM and DEB files containing HIPL"
+echo "** user space software"
+echo "**"
+echo "** Version $VERSION (release $RELEASE)"
 echo "**"
 
 PKGROOT="`pwd`"

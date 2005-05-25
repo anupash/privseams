@@ -23,9 +23,13 @@ for the HIPL kernel.
 echo PRE_INSTALL
 
 %post
-#echo "*** DO MKNOD etc HERE ? ***"
-echo "** mknod -m 600 /dev/hip c 126 0 **"
-echo "*** run hipconf new hi default *** ?"
+if test "`echo /etc/hip/hip_host_*_key*`" = "/etc/hip/hip_host_*_key*";then
+ echo "Creating host keys under /etc/hip"
+ hipconf new hi default
+else
+ echo "Not creating host keys under /etc/hip, they already exist"
+fi
+
 
 %prep
 echo PREP
@@ -71,4 +75,5 @@ make -C doc clean
 /usr/local/lib/libinet6.so.0.0.0
 /usr/local/lib/libinet6.la
 /usr/local/lib/libinet6.so.0
+%dir /etc/hip
 %doc /usr/share/doc/hipl
