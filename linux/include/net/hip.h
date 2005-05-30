@@ -899,6 +899,10 @@ struct hip_spi_in_item
 						to established */
 	uint32_t seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
 	struct hip_nes stored_received_nes; /* the corresponding NES of peer */
+	struct hip_rea_info_addr_item *addresses; /* our addresses this SPI is
+						     related to, reuse struct to
+						     ease coding */
+	int addresses_n; /* number of addresses */
 };
 
 struct hip_spi_out_item

@@ -12,6 +12,8 @@
 #include "hip.h"
 #include "hadb.h"
 
+#include <linux/delay.h>
+
 static atomic_t hip_working = ATOMIC_INIT(0);
 
 time_t load_time;
