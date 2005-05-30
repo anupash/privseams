@@ -497,7 +497,7 @@
       support native HIP API. HIP is a compile time option, so that you can
       see the required modifications to the code (ifdef USE_HIP). Here's how
       you compile the telnet applications:
-      </para>
+    </para>
     <para>
 	# cd test/telnetd
     </para>

@@ -633,6 +633,7 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hid)
 
 /**
  * hip_get_any_localhost_public_key - Self documenting.
+ * @algo: algorithm to use
  *
  * NOTE: Remember to free the return value.
  *
