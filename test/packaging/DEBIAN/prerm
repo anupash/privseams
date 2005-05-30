@@ -1,5 +1,3 @@
 #!/bin/sh
 
-cat <<EOF
-prerm: WHAT TO DO HERE ?
-EOF
+exit 0
