@@ -404,9 +404,6 @@
       # cd path-to-hipl/libinet6
     </para>
     <para>
-      # ./configure
-    </para>
-    <para>
       # make libinet6.so
     </para>
     <para>
@@ -502,16 +499,7 @@
       you compile the telnet applications:
       </para>
     <para>
-	# cd libinet
-    </para>
-    <para>
-	# ./configure
-    </para>
-    <para>
-	# make
-    </para>
-    <para>
-	# cd ../test/telnetd
+	# cd test/telnetd
     </para>
     <para>
 	# ./configure
