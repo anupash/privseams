@@ -27,7 +27,7 @@ bin_PROGRAMS += conntest-server-native
 bin_PROGRAMS += hipsetupNew
 bin_PROGRAMS += first_test
 
-bin_SCRIPTS = hipsetup
+sbin_SCRIPTS = hipsetup
 
 conntest_client_SOURCES = conntest-client.c 
 conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
@@ -39,6 +39,8 @@ conntest_server_SOURCES = conntest-server.c conntest.c
 hipsetupNew_SOURCES = hipsetupNew.c hipconf.c conntest.c
 first_test_SOURCES = first_test.c hipconf.c conntest.c
 
+
+EXTRA_DIST += $(sbin_SCRIPTS)
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built

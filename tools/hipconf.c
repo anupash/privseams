@@ -228,8 +228,8 @@ int handle_hi(struct hip_common *msg,
 	struct hip_host_id *dsa_host_id = NULL, *rsa_host_id = NULL;
 	unsigned char *dsa_key_rr = NULL, *rsa_key_rr = NULL;
 	int dsa_key_rr_len, rsa_key_rr_len;
-	DSA *dsa_key = NULL;
-	RSA *rsa_key = NULL;
+	DSA *dsa_key = NULL, *dsa_pub_key = NULL;
+	RSA *rsa_key = NULL, *rsa_pub_key = NULL;
 	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	int fmt;
 	struct endpoint_hip *endpoint_dsa_hip = NULL, *endpoint_rsa_hip = NULL;
