@@ -470,6 +470,11 @@ int get_localhost_endpointinfo(const char *basename,
     goto out_err;
   }
 
+  /* System specific HIs should be added into the kernel with the
+     HIP_HI_REUSE_ANY flag set, because this way we make the HIs
+     readable by all processes. This function calls setmyeid() internally.. */
+  hints->ei_flags |= HIP_HI_REUSE_ANY;
+  
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, pub_suffix))
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
