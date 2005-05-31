@@ -1058,7 +1058,6 @@ static void __exit hip_cleanup(void)
 	hip_uninit_r1();
 #endif
 
-	/* update_spi_waitlist_delete_all(); */
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

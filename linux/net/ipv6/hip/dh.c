@@ -161,4 +161,3 @@ void hip_dh_uninit(void) {
 		}
 	}	
 }
-
