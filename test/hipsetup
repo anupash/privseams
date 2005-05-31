@@ -58,7 +58,7 @@ Examples:
 Establish a base exchange from crash to oops:
 
     oops  # hipsetup -m -d /path/to/hipldir -r
-    crash # hipsetup -m -d /path/to/hipldir -i crash
+    crash # hipsetup -m -d /path/to/hipldir -i oops
 
 Establish a base exchange from crash to oops with just one command:
 

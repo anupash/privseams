@@ -36,6 +36,9 @@
 #define DEFAULT_HOST_RSA_KEY_FILE_BASE "hip_host_rsa_key"
 #define DEFAULT_PUB_FILE_SUFFIX ".pub"
 
+#define DEFAULT_PUB_HI_FILE_NAME_SUFFIX "_pub"
+#define DEFAULT_ANON_HI_FILE_NAME_SUFFIX "_anon"
+
 /* Only one crypto-filefmt supported */
 #define HIP_KEYFILE_FMT_HIP_PEM 1
 
