@@ -29,10 +29,10 @@ int send_bos()
 	}
 	hip_msg_init(msg);
 
-	printf("Sending BOS...\n");
+	printf("Sending BOS... ");
 	err = handle_bos(msg, 0, (const char **) NULL, 0);
 	if (err) {
-		HIP_ERROR("failed to handle msg\n");
+		HIP_ERROR("\nfailed to handle msg\n");
 		goto out_err;
 	}
 	
@@ -43,9 +43,10 @@ int send_bos()
 	
 	err = hip_set_global_option(msg);
 	if (err) {
-		HIP_ERROR("sending msg failed\n");
+		HIP_ERROR("\nsending msg failed\n");
 		goto out_err;
 	}
+	printf(" SENT\n");
 out_err:
 	free(msg);
 out:

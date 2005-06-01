@@ -1,8 +1,9 @@
 #include "misc_install.h"
 
-void init_daemon()
+int init_daemon()
 {
-	/***************************************
+	int err = 0;
+        /***************************************
 	 * Initialization of hip daemon: not yet considered
 	 * This has to be fixed in future, according on how to identify
 	 * the user space is compiled in the kernel
@@ -14,7 +15,10 @@ void init_daemon()
 	 * Later on this will changed to the only command, without specifying the
 	 * path, because we will insert it into $PATH
 	 */
-	system("hipd -f");
+	err = system("hipd -f");
+	if (err == -1)
+		printf("Please run 'make install' in top directory\n");
+		
 }
 
 int install_module()
@@ -65,7 +69,10 @@ int main_install(struct hip_common *msg)
 		  }
 		*/
 		printf("Initializing the hipd daemon...\n");
-		init_daemon();
+		if (init_daemon() == -1) {
+			err = -1;
+			goto out_err;
+		}
 		sleep(3);
 		HIP_IFEL(add_hi_default(msg), -1, "Error in add_hi_default\n");
 		//add_hi_default(msg);

@@ -10,7 +10,7 @@
 #include "libinet6/debug.h"
 #include "libinet6/crypto.h"
 
-void init_daemon();
+int init_daemon();
 int install_module();
 int add_hi_default(struct hip_common *msg);
 int main_install(struct hip_common *msg);
