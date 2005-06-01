@@ -306,7 +306,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
 		hip_init_us(&tmp, NULL);
 		ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
-		skip_sync = 1;
+		skip_sync = 0;
 		break;
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);
@@ -314,8 +314,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	}
 
 	HIP_DEBUG("Done with control packet (%d).\n", err);
-	_HIP_HEXDUMP("msg->hits=", &msg->hits, 16);
-	_HIP_HEXDUMP("msg->hitr=", &msg->hitr, 16);
+	HIP_HEXDUMP("msg->hits=", &msg->hits, 16);
+	HIP_HEXDUMP("msg->hitr=", &msg->hitr, 16);
 
 	if (err)
 		goto out_err;
@@ -1208,7 +1208,7 @@ int hip_handle_i2(struct hip_common *i2,
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
 	hip_hadb_insert_state(entry);
-HIP_DEBUG("state %s\n", hip_state_str(entry->state));
+	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	HIP_IFEL(hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
 		 "Creation of R2 failed\n");
 
@@ -1219,7 +1219,8 @@ HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	/* we cannot do this outside (in hip_receive_i2) since we don't have
 	   the entry there and looking it up there would be unneccesary waste
 	   of cycles */
-	if (!ha && entry) {
+//	if (!ha && entry) {
+	if (entry) {
 		wmb();
 #ifdef CONFIG_HIP_RVS
 		/* XX FIX: this should be dynamic (the rvs information should
@@ -1421,14 +1422,25 @@ int hip_handle_r2(struct hip_common *r2,
 //	HIP_DEBUG("clearing the address used during the bex\n");
 //	ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 
-	hip_hadb_insert_state(entry);
+	
 	/* these will change SAs' state from ACQUIRE to VALID, and
 	 * wake up any transport sockets waiting for a SA */
 	//	hip_finalize_sa(&entry->hit_peer, spi_recvd);
 	//hip_finalize_sa(&entry->hit_our, spi_in);
 
 	entry->state = HIP_STATE_ESTABLISHED;
+	hip_hadb_insert_state(entry);
+
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+	
+	/* Synchronize beet state (may have been altered) */
+	HIP_DEBUG("Synchronizing the BEET database\n");
+	err = hip_hadb_update_xfrm(entry);
+	if (err) {
+		HIP_ERROR("XFRM out synchronization failed\n");
+		err = -EFAULT;
+		goto out_err;
+	}
  out_err:
 	if (ctx)
 		HIP_FREE(ctx);

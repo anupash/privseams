@@ -165,11 +165,18 @@ int main_server(int proto, int port)
  *
  * Returns: 0 on error, the sockid on success
  */
-int hip_connect_func(int proto, struct addrinfo *res)
+int hip_connect_func(int proto, struct addrinfo *res, int save_to_file)
 {
 	struct addrinfo *ai, hints;
 	int sock = 0;
-
+	struct timeval stats_before, stats_after;
+	unsigned long stats_diff_sec, stats_diff_usec;
+	FILE *fp = NULL;
+	if (save_to_file)
+		if ((fp = fopen("/tmp/results.txt", "a")) == NULL) {
+			HIP_ERROR("Error opening file\n");
+			goto out_err;
+		}
 	/* connect */
 
 	for(ai = res; ai != NULL; ai = ai->ai_next) {
@@ -193,13 +200,24 @@ int hip_connect_func(int proto, struct addrinfo *res)
 		}
 
 		printf("Trying to connect to %s\n", addr_str);
+		
+		gettimeofday(&stats_before, NULL);
+		
 		e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
-		printf("connect ret=%d errno=%d\n", e, errno);
+		
+		gettimeofday(&stats_after, NULL);
+		stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
+		stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
+		
+		//printf("connect ret=%d errno=%d\n", e, errno);
 		if (e < 0) {
 			close(sock);
 			sock = 0;
 			printf("trying next\n");
 			continue; /* Try next address */
+		} else {
+			if (save_to_file)
+				fprintf(fp, "%.3f\n", (stats_diff_sec+stats_diff_usec) / 1000000.0);
 		}
 		break; /* Connect succeeded and data can be sent/received. */
 	}
@@ -211,6 +229,8 @@ int hip_connect_func(int proto, struct addrinfo *res)
 
 	
 out_err:
+	if (save_to_file && fp)
+		fclose(fp);
 	return sock;
 }
 
@@ -263,7 +283,7 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
-	sock = hip_connect_func(proto, res);
+	sock = hip_connect_func(proto, res, 1);
 	if (!sock)
 		goto out_err;
 

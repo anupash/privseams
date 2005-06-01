@@ -185,7 +185,10 @@
     <para>
        First, you need to compile the kernel with the CONFIG_HIP_USERSPACE
        option. Then, execute "modprobe hipmod", "hipd/hipd" and
-       "hipconf add hi default" in exactly that order. The rest of the
+       "hipconf add hi default" in exactly that order. In order to run the
+       HIP daemon independently from the path, you might run "make install" in
+       in the top directory. The HIP deamon can be run in background
+       by specifying the option f. The rest of the
        instructions in this manual apply also to the userspace implementation
        with these small changes.
     </para>

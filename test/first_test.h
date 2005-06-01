@@ -10,6 +10,8 @@
 #include "libinet6/debug.h"
 #include "libinet6/crypto.h"
 
+#include "misc_install.h"
+
 #define DEFAULT_PORT 1111
 
 #endif /*HIP_FIRST_TEST_H*/

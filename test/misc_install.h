@@ -1,23 +1,18 @@
-#ifndef HIPSETUPNEW_H
-#define HIPSETUPNEW_H
+#ifndef MISC_INSTALL_H
+#define MISC_INSTALL_H
 
 #include <stdlib.h>
 #include <stdio.h>
 
 #include <unistd.h>
 #include "../tools/hipconf.h"
-//#include "conntest.h"
+#include "conntest.h"
 #include "libinet6/debug.h"
 #include "libinet6/crypto.h"
 
-#include "misc_install.h"
-
-#define DEFAULT_PORT 1111
-
-void usage_f();
+void init_daemon();
 int install_module();
-void init_deamon();
 int add_hi_default(struct hip_common *msg);
+int main_install(struct hip_common *msg);
 
-
-#endif /*HIPSETUPNEW_H*/
+#endif /*MISC_INSTALL_H*/

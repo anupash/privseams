@@ -20,7 +20,7 @@ int create_serversocket(int proto, int port);
 int main_server(int proto, int port);
 int main_server_native(int socktype, char *port_name);
 
-int hip_connect_func(int proto, struct addrinfo *res);
+int hip_connect_func(int proto, struct addrinfo *res, int save_to_file);
 int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name);
 int main_client_native(int proto, int socktype, char *peer_name, char *peer_port_name);
 
