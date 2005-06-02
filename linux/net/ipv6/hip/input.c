@@ -1097,10 +1097,12 @@ int hip_handle_i2(struct hip_common *i2,
 	}  else {
  		/* If the I2 packet is a retransmission, we need reuse the
  		   the SPI that was setup already when the first I2 was
- 		   received */
- 		retransmission = 1;
+ 		   received. However it is a retransmission only if the responder
+		   is in R2-SENT STATE */
+		if (entry->state == HIP_STATE_R2_SENT)
+			retransmission = 1;
   	}
-
+	
 	/* FIXME: the above should not be done if signature fails...
 	   or it should be cancelled */
 	

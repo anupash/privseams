@@ -71,7 +71,6 @@ uint32_t hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 	int err;
 	req.msg = NULL;
 	resp.msg = NULL;
-
 	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING,
 				HIP_WO_SUBTYPE_ADDSA, srchit, dsthit, NULL,
 				0, 0, 0);

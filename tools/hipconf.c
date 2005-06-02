@@ -305,9 +305,12 @@ int handle_hi(struct hip_common *msg,
 		HIP_INFO("No key file given, use default\n");
 
 		dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-			strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
+			strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 6;
 		rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-			strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
+			strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 6;
+		
+		HIP_DEBUG("dsa_filenamebase_len = %d\n", dsa_filenamebase_len);
+		HIP_DEBUG("rsa_filenamebase_len = %d\n", rsa_filenamebase_len);
 
 		dsa_filenamebase = malloc(dsa_filenamebase_len);
 		if (!dsa_filenamebase) {
@@ -321,7 +324,7 @@ int handle_hi(struct hip_common *msg,
 			err = -ENOMEM;
 			goto out;
 		}
-		ret = snprintf(dsa_filenamebase, dsa_filenamebase_len+5, "%s/%s",
+		ret = snprintf(dsa_filenamebase, dsa_filenamebase_len, "%s/%s",
 			       DEFAULT_CONFIG_DIR,
 			       DEFAULT_HOST_DSA_KEY_FILE_BASE
 			       DEFAULT_ANON_HI_FILE_NAME_SUFFIX
@@ -330,7 +333,7 @@ int handle_hi(struct hip_common *msg,
 			err = -EINVAL;
 			goto out;
 		}
-		ret = snprintf(rsa_filenamebase, rsa_filenamebase_len+5, "%s/%s",
+		ret = snprintf(rsa_filenamebase, rsa_filenamebase_len, "%s/%s",
 			       DEFAULT_CONFIG_DIR,
 			       DEFAULT_HOST_RSA_KEY_FILE_BASE
 			       DEFAULT_ANON_HI_FILE_NAME_SUFFIX

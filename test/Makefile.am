@@ -32,8 +32,6 @@ bin_PROGRAMS += first_test
 
 sbin_SCRIPTS = hipsetup
 
-align_SOURCES = align.c
-checksum_SOURCES = checksum.c checksum.h
 conntest_client_SOURCES = conntest-client.c 
 conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
 conntest_client_native_SOURCES = conntest-client-native.c conntest.c
@@ -46,7 +44,7 @@ hipsetupNew_SOURCES = hipsetupNew.c hipconf.c misc_install.c conntest.c
 first_test_SOURCES = first_test.c hipconf.c misc_install.c conntest.c
 
 
-#EXTRA_DIST += $(sbin_SCRIPTS)
+EXTRA_DIST = $(sbin_SCRIPTS)
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built
