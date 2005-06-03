@@ -499,7 +499,7 @@ int handle_hi(struct hip_common *msg,
 	  goto out;
 	}
 	err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip, 
-				  HIP_ENDPOINT_FLAG_ANON, 
+				  anon ? HIP_ENDPOINT_FLAG_ANON : 0, 
 				  hostname);
 	if (err) {
 	  HIP_ERROR("Failed to allocate and build DSA endpoint.\n");
@@ -524,7 +524,7 @@ int handle_hi(struct hip_common *msg,
 	  goto out;
 	}
 	err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip, 
-				  HIP_ENDPOINT_FLAG_ANON,
+				  anon ? HIP_ENDPOINT_FLAG_ANON : 0,
 				  hostname);
 	if (err) {
 	  HIP_ERROR("Failed to allocate and build RSA endpoint.\n");
