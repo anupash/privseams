@@ -213,32 +213,35 @@ int hip_socket_get_eid_info(struct socket *sock,
 		HIP_DEBUG("flags:%d\n",owner_info.flags);
 		if(owner_info.flags & HIP_HI_REUSE_ANY) {
 			HIP_DEBUG("Access control check to ED, REUSE_ANY\n");
-			goto out_err;	
-			
+			hip_db_dec_eid_use_cnt(ntohs(eid->eid_val), 1);
+			goto out_err;
+
 		} else if((owner_info.flags & HIP_HI_REUSE_GID) && 
 			  (current->gid == owner_info.gid)) {
 			HIP_DEBUG("Access control check to ED, REUSE_GID\n");
-			goto out_err;	
-			
+			hip_db_dec_eid_use_cnt(ntohs(eid->eid_val), 1);
+			goto out_err;
+
 		} else if((owner_info.flags & HIP_HI_REUSE_UID) && 
 			  (current->uid == owner_info.uid)) {
 			HIP_DEBUG("Access control check to ED, REUSE_UID\n");
+			hip_db_dec_eid_use_cnt(ntohs(eid->eid_val), 1);
 			goto out_err;
 			
 		} else if(current->pid == owner_info.pid) {
 			HIP_DEBUG("Access control check to ED, PID ok\n");
 			goto out_err;
 			
-			
 		} else {
 			err = -EACCES;
 			HIP_INFO("Access denied to ED\n");
+			hip_db_dec_eid_use_cnt(ntohs(eid->eid_val), 1);
 			goto out_err;
 		}
 	}
-
+	
  out_err:
-
+	
 	return err;
 }
 

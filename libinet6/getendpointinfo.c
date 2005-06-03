@@ -460,6 +460,7 @@ int load_hip_endpoint_pem(const char *filename,
   DSA *dsa = NULL;
   RSA *rsa = NULL;
   FILE* fp;
+  se_hip_flags_t endpoint_flags;
 
   *endpoint = NULL;
 
@@ -493,11 +494,19 @@ int load_hip_endpoint_pem(const char *filename,
     goto out_err;
   }
 
+  /* handle flags */
+  if(!findsubstring(filename, "_pub"))
+    endpoint_flags |= HIP_ENDPOINT_FLAG_ANON;
+  /* System specific HIs should be added into the kernel with the
+     HIP_HI_REUSE_ANY flag set. */
+  if(findsubstring(filename, "/etc/hip/"))
+    endpoint_flags = HIP_HI_REUSE_ANY | HIP_HI_SYSTEM;
+
   // XX FIX: host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
   if(algo == HIP_HI_RSA)
-    err = rsa_to_hip_endpoint(rsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+    err = rsa_to_hip_endpoint(rsa, endpoint, endpoint_flags, "");
   else
-    err = dsa_to_hip_endpoint(dsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+    err = dsa_to_hip_endpoint(dsa, endpoint, endpoint_flags, "");
   if (err) {
     HIP_ERROR("Failed to convert private key to HIP endpoint (%d)\n", err);
     goto out_err;
