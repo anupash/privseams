@@ -24,7 +24,7 @@ struct hip_callable_functions {
 	void (*hip_unknown_spi) (struct sk_buff *skb, uint32_t spi);
 	void (*hip_handle_ipv6_dad_completed)(int ifindex);
 	void (*hip_handle_inet6_addr_del)(int ifindex);
-	uint32_t (*hip_get_default_spi_out) (struct in6_addr *hit, int *state_ok);
+	uint32_t (*hip_get_default_spi_out) (struct in6_addr *hit1, struct in6_addr *hit2, int *state_ok);
 	int (*hip_check_access_to_local_hit) (struct in6_addr *hit);
 };
 

@@ -1770,14 +1770,19 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
  *
  * Returns: the SPI value to use in the packet, or 0 on error.
 */
-uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
+uint32_t hip_get_default_spi_out(struct in6_addr *src_hit,
+				 struct in6_addr *dst_hit, int *state_ok)
 {
 	uint32_t spi;
 	hip_ha_t *entry;
 
 	_HIP_DEBUG("\n");
 	
-	entry = hip_hadb_try_to_find_by_peer_hit(hit);
+	if (ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit)) {
+		_HIP_DEBUG("src and dst are HITs \n");
+		entry = hip_hadb_find_byhits(src_hit, dst_hit);
+	} else 
+		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 	
 	if (!entry) {
 		HIP_DEBUG("entry not found\n");
