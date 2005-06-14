@@ -62,7 +62,7 @@ CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE) -DHIP_TRANSPARENT_MODE
 
 include_HEADERS = libc-compat.h debug.h crypto.h message.h builder.h util.h
 
-EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23
+EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses

@@ -28,7 +28,7 @@ bin_PROGRAMS += conntest-server-native
 bin_PROGRAMS += getaddrinfotest
 bin_PROGRAMS += conntest-server-legacy
 
-bin_SCRIPTS = hipsetup
+sbin_SCRIPTS = hipsetup
 
 conntest_client_SOURCES = conntest-client.c 
 conntest_client_gai_SOURCES = conntest-client-gai.c
@@ -39,6 +39,8 @@ conntest_server_native_SOURCES = conntest-server-native.c
 conntest_server_SOURCES = conntest-server.c
 conntest_server_legacy_SOURCES = conntest-server-legacy.c
 getaddrinfotest_SOURCES = getaddrinfotest.c
+
+EXTRA_DIST += $(sbin_SCRIPTS)
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built
