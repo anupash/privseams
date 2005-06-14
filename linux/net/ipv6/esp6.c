@@ -74,7 +74,7 @@ static int esp6_output(struct sk_buff *skb)
 	   forget the cached SA from dst until I know how to fix the
 	   problem without kernel panic. */
 	if (ipv6_addr_is_hit(&x->dst_hit)) {
-		default_spi = HIP_CALLFUNC(hip_get_default_spi_out, 0)(&x->dst_hit, &state_ok);
+		default_spi = HIP_CALLFUNC(hip_get_default_spi_out, 0)(&x->src_hit, &x->dst_hit, &state_ok);
 		if (!default_spi || !state_ok) {
 			printk(KERN_DEBUG "default_spi not found or SPI state not ok\n");
 			err = -EINVAL;

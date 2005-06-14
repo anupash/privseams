@@ -1233,7 +1233,7 @@ int hip_get_hits(struct in6_addr *hitd, struct in6_addr *hits)
 int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
 	hip_ha_t *entry = NULL;
-		
+	
 	if (!ipv6_addr_is_hit(&fl->fl6_dst)) {
 		HIP_ERROR("dst not a HIT\n");
 		return 0;
@@ -1698,12 +1698,14 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
 			  str);
 		goto out;
 	}
+	HIP_DEBUG_HIT("xfrm_state props saddr", (struct in6_addr *)&(xs->props.saddr));
 
 	if (!hip_is_hit((struct in6_addr *) &(xs->id.daddr))) {
 		HIP_ERROR("%s not a HIT\n", str);
 		goto out;
 	}
-
+	if (hip_is_hit((struct in6_addr *) &(xs->props.saddr)))
+	  ipv6_addr_copy(&hdr.saddr, (struct in6_addr *) &(xs->props.saddr));
 	ipv6_addr_copy(&hdr.daddr, (struct in6_addr *) &(xs->id.daddr));
 	err = hip_handle_output(&hdr, NULL);
 	if (err)
@@ -2185,7 +2187,7 @@ static int __init hip_init(void)
 	HIP_SETCALL(hip_handle_ipv6_dad_completed);
 	HIP_SETCALL(hip_handle_inet6_addr_del);
 	HIP_SETCALL(hip_get_default_spi_out);
-	HIP_SETCALL(hip_hit_is_our);
+	HIP_SETCALL(hip_check_access_to_local_hit);
 
 	if (inet6_add_protocol(&hip_protocol, IPPROTO_HIP) < 0) {
 		HIP_ERROR("Could not add HIP protocol\n");
@@ -2246,7 +2248,7 @@ static void __exit hip_cleanup(void)
 	HIP_INVALIDATE(hip_handle_esp);
 	HIP_INVALIDATE(hip_handle_output);
 	HIP_INVALIDATE(hip_get_default_spi_out);
-	HIP_INVALIDATE(hip_hit_is_our);
+	HIP_INVALIDATE(hip_check_access_to_local_hit);
 
 	/* kill kernel threads and wait for them to complete */
 	for(i = 0; i < num_possible_cpus(); i++) {

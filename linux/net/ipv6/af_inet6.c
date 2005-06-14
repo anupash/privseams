@@ -290,7 +290,7 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	/* If the address is a HIT, check that it really exists locally */
 #if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)	
 	if(ipv6_addr_is_hit(&addr->sin6_addr)) {
-		if(!(HIP_CALLFUNC(hip_hit_is_our,0) (&addr->sin6_addr))) {
+		if(!(HIP_CALLFUNC(hip_check_access_to_local_hit,0) (&addr->sin6_addr))) {
 			err = -EADDRNOTAVAIL;
 			goto out;
 		}

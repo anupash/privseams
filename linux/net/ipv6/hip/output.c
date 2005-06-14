@@ -96,7 +96,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		barrier();
 		entry->state = HIP_STATE_I1_SENT;
 
-		err = hip_send_i1(&hdr->daddr, entry);
+		err = hip_send_i1(&hdr->saddr, &hdr->daddr, entry);
 		if (err < 0) {
 			HIP_ERROR("Sending of I1 failed (%d)\n", err);
 			err = -ENOMEM;
@@ -114,7 +114,7 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		   not depend on transport layer timeouts? In that case
 		   we should not send I1 here. For the time being, this
 		   will act as a poor man's timeout... */
-		err = hip_send_i1(&hdr->daddr, entry);
+		err = hip_send_i1(&hdr->saddr, &hdr->daddr, entry);
 		if (err) {
 			HIP_ERROR("I1 retransmission failed");
 			goto out;
@@ -338,7 +338,7 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  *
  * Returns: 0 on success, otherwise < 0 on error.
  */
-int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
+int hip_send_i1(struct in6_addr *srchit, struct in6_addr *dsthit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
@@ -348,14 +348,17 @@ int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry)
 
 	HIP_DEBUG("\n");
 
-	if (hip_copy_any_localhost_hit_by_algo(&hit_our, 
-					       hip_sys_config.
-					       hip_hi_default_algo) < 0) {
-		HIP_ERROR("Out HIT not found\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-	HIP_DEBUG_HIT("DEFAULT ALGO HIT: ", &hit_our);
+	if (srchit && ipv6_addr_is_hit(srchit)) 
+		ipv6_addr_copy(&hit_our,srchit);
+	else
+		if (hip_copy_any_localhost_hit_by_algo(&hit_our, 
+						       hip_sys_config.
+						       hip_hi_default_algo) < 0) {
+			HIP_ERROR("Out HIT not found\n");
+			err = -EINVAL;
+			goto out_err;
+		}
+	HIP_DEBUG_HIT("hip_send_i1: our HIT: ", &hit_our);
 #if 0
 	if (hip_copy_any_localhost_hit(&hit_our) < 0) {
 		HIP_ERROR("Out HIT not found\n");

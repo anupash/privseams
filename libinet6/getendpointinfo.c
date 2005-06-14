@@ -112,6 +112,130 @@ int convert_port_string_to_number(const char *servname, in_port_t *port)
 
 }
 
+struct sockaddr_eid *getlocaled(const struct endpoint *endpoint,
+				const char *servname,
+				const struct addrinfo *addrs,
+				const struct if_nameindex *ifaces,
+				int flags)
+{
+  int err = 0;
+  struct hip_common *msg = NULL;
+  int iface_num = 0;
+  struct if_nameindex *iface;
+  struct sockaddr_eid *sa_eid;
+  struct sockaddr_eid *my_eid = malloc(sizeof(struct sockaddr_eid));
+  struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
+  in_port_t port;
+  
+  HIP_DEBUG("\n");
+
+  if (ep_hip && ep_hip->family != PF_HIP) {
+    HIP_ERROR("Only HIP endpoints are supported\n");
+    err = EEI_FAMILY;
+    goto out_err;
+  }
+
+  if (ep_hip && ep_hip->flags & HIP_ENDPOINT_FLAG_HIT) {
+    HIP_ERROR("setmyeid does not support HITs yet\n");
+    err = EEI_BADFLAGS;
+    goto out_err;
+  }
+
+  if(ep_hip)
+    _HIP_HEXDUMP("host_id in endpoint: ", &ep_hip->id.host_id,
+		 hip_get_param_total_len(&ep_hip->id.host_id));
+
+  msg = hip_msg_alloc();
+  if (!msg) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+
+  if (servname == NULL || strlen(servname) == 0) {
+    port = 0; /* Ephemeral port */
+    goto skip_port_conversion;
+  }
+
+  err = convert_port_string_to_number(servname, &port);
+  if (err) {
+    HIP_ERROR("Port conversion failed (%d)\n", err);
+    goto out_err;
+  }
+
+ skip_port_conversion:
+
+  /* Handler emphemeral port number */
+  srand((unsigned)time(NULL));
+  if (port == 0) {
+    while (port < 1024 || port > 65535) /* XX FIXME: CHECK UPPER BOUNDARY */
+	   port = rand();
+  }
+
+  HIP_DEBUG("port=%d\n", port);
+  
+  hip_build_user_hdr(msg, SO_HIP_SET_MY_EID, 0);
+  
+  if(!ep_hip) {
+    ep_hip = malloc(sizeof(struct endpoint_hip));
+    ep_hip->length = 20; // bogus value so that we can send a null endpoint
+                         // with possible HIP_ED_*ANY Flags
+  }
+  ep_hip->flags = ep_hip->flags | flags;
+
+  err = hip_build_param_eid_endpoint(msg, ep_hip);
+  if (err) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+
+  for(iface = (struct if_nameindex *) ifaces;
+      iface && iface->if_index != 0; iface++) {
+    err = hip_build_param_eid_iface(msg, iface->if_index);
+    if (err) {
+      err = EEI_MEMORY;
+      goto out_err;
+    }
+  }
+
+  err = hip_get_global_option(msg);
+  if (err) {
+    err = EEI_SYSTEM;
+    HIP_ERROR("Failed to send msg\n");
+    goto out_err;
+  }
+
+  /* getsockopt wrote the corresponding EID into the message, use it */
+
+  err = hip_get_msg_err(msg);
+  if (err) {
+    err = EEI_SYSTEM;
+    goto out_err;
+  }
+
+  sa_eid = hip_get_param_contents(msg, HIP_PARAM_EID_SOCKADDR);
+  if (!sa_eid) {
+    err = EEI_SYSTEM;
+    goto out_err;
+  }
+
+  memcpy(my_eid, sa_eid, sizeof(struct sockaddr_eid));
+
+  /* Fill the port number also because the HIP module did not fill it */
+  my_eid->eid_port = htons(port);
+
+  HIP_DEBUG("eid val=%d, port=%d\n", ntohs(my_eid->eid_val),
+	    ntohs(my_eid->eid_port));
+
+  _HIP_DEBUG("\n");
+  
+ out_err:
+
+  if (msg)
+    hip_msg_free(msg);
+
+  return my_eid;
+}
+
 int setmyeid(struct sockaddr_eid *my_eid,
 	     const char *servname,
 	     const struct endpoint *endpoint,
@@ -121,7 +245,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
   struct hip_common *msg = NULL;
   int iface_num = 0;
   struct if_nameindex *iface;
-  struct hip_sockaddr_eid *sa_eid;
+  struct sockaddr_eid *sa_eid;
   struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
   in_port_t port;
 
@@ -162,8 +286,9 @@ int setmyeid(struct sockaddr_eid *my_eid,
  skip_port_conversion:
 
   /* Handler emphemeral port number */
+  srand((unsigned)time(NULL));
   if (port == 0) {
-    while (port < 1024) /* XX FIXME: CHECK UPPER BOUNDARY */
+    while (port < 1024 || port > 65535) /* XX FIXME: CHECK UPPER BOUNDARY */
 	   port = rand();
   }
 
@@ -335,6 +460,7 @@ int load_hip_endpoint_pem(const char *filename,
   DSA *dsa = NULL;
   RSA *rsa = NULL;
   FILE* fp;
+  se_hip_flags_t endpoint_flags;
 
   *endpoint = NULL;
 
@@ -368,11 +494,19 @@ int load_hip_endpoint_pem(const char *filename,
     goto out_err;
   }
 
+  /* handle flags */
+  if(!findsubstring(filename, "_pub"))
+    endpoint_flags |= HIP_ENDPOINT_FLAG_ANON;
+  /* System specific HIs should be added into the kernel with the
+     HIP_HI_REUSE_ANY flag set. */
+  if(findsubstring(filename, "/etc/hip/"))
+    endpoint_flags = HIP_HI_REUSE_ANY | HIP_HI_SYSTEM;
+
   // XX FIX: host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
   if(algo == HIP_HI_RSA)
-    err = rsa_to_hip_endpoint(rsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+    err = rsa_to_hip_endpoint(rsa, endpoint, endpoint_flags, "");
   else
-    err = dsa_to_hip_endpoint(dsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+    err = dsa_to_hip_endpoint(dsa, endpoint, endpoint_flags, "");
   if (err) {
     HIP_ERROR("Failed to convert private key to HIP endpoint (%d)\n", err);
     goto out_err;
@@ -476,8 +610,7 @@ int get_localhost_endpointinfo(const char *basename,
      (specific for setmyeid) 'wrongly' here
      because this way we make the HIs readable by all processes.
      This function calls setmyeid() internally.. */
-  hints->ei_flags |= HIP_HI_REUSE_ANY;
-
+  hints->ei_flags = HIP_HI_REUSE_ANY | HIP_HI_SYSTEM;
 
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
@@ -1379,8 +1512,8 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
   /* System specific HIs should be added into the kernel with the
      HIP_HI_REUSE_ANY flag set, because this way we make the HIs
      readable by all processes. This function calls setmyeid() internally.. */
-  hints->ei_flags |= HIP_HI_REUSE_ANY;
-  
+  hints->ei_flags = HIP_HI_REUSE_ANY | HIP_HI_SYSTEM;
+
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, "_pub"))
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;

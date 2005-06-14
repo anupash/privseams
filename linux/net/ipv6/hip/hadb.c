@@ -862,8 +862,9 @@ void hip_remove_hadb_entries(struct in6_addr *our_hit)
 /* Practically called only by when adding a HIT-IP mapping before bex */
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 {
+	struct hip_host_id_entry *item = NULL, *tmp = NULL;
 	int err = 0;
-	hip_ha_t *entry;
+	hip_ha_t *entry = NULL;
 	char str[INET6_ADDRSTRLEN];
 	hip_hit_t our_hit;
 
@@ -877,56 +878,56 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	hip_in6_ntop(hit, str);
 	HIP_DEBUG("called: HIT %s\n", str);
 
-	/* XX TODO: should we add an entry for all local HIs?? */
-	if (hip_copy_any_localhost_hit_by_algo(&our_hit,
-					       hip_sys_config.
-					       hip_hi_default_algo) 
-	    != 0)
-		return -1;
+	/* NOTE: a HA entry is added for all local HIs. 
+	   This is needed because a client application might want to bind to
+	   to a local HI(HIT) in order to initiate the BEX with it.
+	   A HA entry must exist for all local HIs since we cannot know 
+	   what specific HI is used in the BEX. The downside is that we create
+	   terribly many not-needed HIT-IP mappings.
+	*/
 	
-	entry = hip_hadb_find_byhits(hit, &our_hit);
-	if (!entry) {
-		entry = hip_hadb_create_state(GFP_KERNEL);
+	list_for_each_entry_safe(item,tmp,&hip_local_hostid_db.db_head, next) {
+		ipv6_addr_copy(&our_hit, &item->lhi.hit);
+		
+		entry = hip_hadb_find_byhits(hit, &our_hit);
 		if (!entry) {
-			HIP_ERROR("Unable to create a new entry\n");
-			return -1;
-		}
-		_HIP_DEBUG("created a new sdb entry\n");
-		ipv6_addr_copy(&entry->hit_peer, hit);
+			entry = hip_hadb_create_state(GFP_KERNEL);
+			if (!entry) {
+				HIP_ERROR("Unable to create a new entry\n");
+				return -1;
+			}
+			_HIP_DEBUG("created a new sdb entry\n");
+			ipv6_addr_copy(&entry->hit_peer, hit);
+			ipv6_addr_copy(&entry->hit_our, &our_hit);
 
-		/* XXX: This is wrong. As soon as we have native socket API, we
-		 * should enter here the correct sender... (currently unknown).
-		 */
-		if (hip_get_any_local_hit(&entry->hit_our,
-					  hip_sys_config.hip_hi_default_algo) 
-		    == 0)
-			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
-		else 
-			HIP_INFO("Could not assign local hit, continuing\n");
-		if(&entry->hit_our) {
-			hip_xor_hits(&entry->hash_key, &entry->hit_our, 
-				     &entry->hit_peer);
-			HIP_DEBUG_HIT("hadb HASH KEY:",&entry->hash_key);
+			if(&entry->hit_our) {
+				hip_xor_hits(&entry->hash_key, 
+					     &entry->hit_our, 
+					     &entry->hit_peer);
+				HIP_DEBUG_HIT("hadb HASH KEY:",
+					      &entry->hash_key);
+			}
+			hip_hadb_insert_state(entry);
+			hip_hold_ha(entry); /* released at the end */
 		}
-		hip_hadb_insert_state(entry);
-		hip_hold_ha(entry); /* released at the end */
+		
+		/* add initial HIT-IP mapping */
+		if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
+			err = hip_hadb_add_peer_addr(entry, addr, 0, 0,
+						     PEER_ADDR_STATE_ACTIVE);
+			if (err) {
+				HIP_ERROR("error while adding a new peer address\n");
+				err = -2;
+				goto out;
+			}
+		} else
+			HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
+				  hip_state_str(entry->state));
+	out:
+		if(entry)
+			hip_put_ha(entry);
 	}
 
-	/* add initial HIT-IP mapping */
-	if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
-		err = hip_hadb_add_peer_addr(entry, addr, 0, 0,
-					     PEER_ADDR_STATE_ACTIVE);
-		if (err) {
-			HIP_ERROR("error while adding a new peer address\n");
-			err = -2;
-			goto out;
-		}
-	} else
-		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
-			  hip_state_str(entry->state));
- out:
-	if (entry)
-		hip_put_ha(entry);
 	return err;
 }
 
@@ -1769,14 +1770,19 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
  *
  * Returns: the SPI value to use in the packet, or 0 on error.
 */
-uint32_t hip_get_default_spi_out(struct in6_addr *hit, int *state_ok)
+uint32_t hip_get_default_spi_out(struct in6_addr *src_hit,
+				 struct in6_addr *dst_hit, int *state_ok)
 {
 	uint32_t spi;
 	hip_ha_t *entry;
 
 	_HIP_DEBUG("\n");
 	
-	entry = hip_hadb_try_to_find_by_peer_hit(hit);
+	if (ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit)) {
+		_HIP_DEBUG("src and dst are HITs \n");
+		entry = hip_hadb_find_byhits(src_hit, dst_hit);
+	} else 
+		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 	
 	if (!entry) {
 		HIP_DEBUG("entry not found\n");

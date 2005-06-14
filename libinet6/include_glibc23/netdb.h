@@ -547,6 +547,12 @@ extern int setmyeid(struct sockaddr_eid *my_eid,
 		    const struct endpoint *endpoint,
 		    const struct if_nameindex *ifaces);
 
+extern struct sockaddr_eid *getlocaled(const struct endpoint *endpoint,
+				       const char *servname,
+				       const struct addrinfo *addrs,
+				       const struct if_nameindex *ifaces,
+				       int flags);
+
 /* Associate the endpoint of the peer to the address(es) of the peer. */
 int setpeereid(struct sockaddr_eid *peer_eid,
 	       const char *servname,

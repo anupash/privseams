@@ -103,6 +103,10 @@ typedef uint16_t in_port_t;
 #define HIP_HI_REUSE_UID                   4
 #define HIP_HI_REUSE_GID                   8
 #define HIP_HI_REUSE_ANY                  16
+#define HIP_ED_ANY                        32
+#define HIP_ED_ANY_PUB                    64
+#define HIP_ED_ANY_ANON                   128
+#define HIP_HI_SYSTEM                     256 /* marks a system HI(/etc/hip/)*/ 
 /* Other flags: keep them to the power of two! */
 
 #define HIP_HOST_ID_RR_DSA_MAX_T_VAL           8
