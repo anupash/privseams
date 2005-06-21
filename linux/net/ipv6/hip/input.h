@@ -37,7 +37,7 @@ int hip_receive_r2(struct hip_common *, struct in6_addr *, struct in6_addr *);
 int hip_receive_notify(struct hip_common *, struct in6_addr *,
 		       struct in6_addr *);
 int hip_receive_bos(struct hip_common *, struct in6_addr *,
-		    struct in6_addr *); 
+		    struct in6_addr *);
 void hip_hwo_input_destructor(struct hip_work_order *hwo);
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

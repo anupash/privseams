@@ -1,0 +1,99 @@
+Compilation:
+Firewall is compiled along with other HIP sources. See doc/HOWTO for 
+compilation. Firewall uses functions from GLib (available with apt or 
+http://www.gtk.org/)
+
+Usage:
+Firewall can be started with "./firewall <file_name>" at firewall 
+directory, where file_name is path of the file containing the firewall rules.
+Rules in the file must be separated with newline. The firewall (currently) 
+prints out debug information from rule parsin test functiona and from 
+filtering packets. 
+
+Rules follow (loosely) the syntax of Linux Iptables with following syntax:
+
+Basic format of rule:
+
+HOOK [match] TARGET
+
+Here HOOK is one of the netfilter hooks: "INPUT", "OUTPUT", "FORWARD".
+Target is either "ACCEPT" or "DROP", whether packet should be allowed or not.
+Match is a combination of filttering option dscribed below.
+
+Filtering options:
+
+-src_hit [!] <hit value> --src_hit <file name> 
+
+Matches source HIT of packet. HI can be given with --src_hi option and by 
+defining path to a public key file as an argument. This causes sender 
+signatures to be verified. The file name must contain either "_rsa_" or 
+"_dsa_" to define whether RSA or DSA is used as algortihm.
+ 
+-dst_hit [!] <hit>
+
+Matches destination HIT of packet.
+
+-type [!] <hip packet type>
+
+Matches HIP packet type. Type is one of following: 
+"I1", "R1", "I2", "R2", "CER", "UPDATE", "NOTIFY", "CLOSE", "CLOSE_ACK"
+
+-i [!] <incoming interface>
+
+Matches incoming interface. Argument contains name of the interface. Can not 
+be used for rules in OUTPUT hook as packet has no incoming interface in that 
+case.
+
+-o [!] <outgoing interface>
+
+Matches outgoing interface. Argument contains name of the interface. Can not 
+be used for rules in INPUT hook as packet has no outgoing interface in that 
+case.
+
+-state [!] <state> --verify_responder
+
+Matches state of HIP association: "NEW" or "ESTABLISHED". ESP packets are also 
+filtered as part of the connection. With "--verify_responder" option the 
+firewall stores responder HI from R1 packet and uses it for verifying 
+signatures in the packets.
+
+
+Managmement interface:
+
+Firewall management interface contains functions for altering rule set of 
+running firewall. Functions are defined in firewall/rule_management.h and 
+implemented in firewall/rule_management.c. Rule_management.c also contains 
+funcitons for copying, comparing and freeing rules, etc. If any functions are 
+needed outside the rule_management they can be defined in the hearder file.
+
+The argument "hook" in the rule is the Netfilter hook for which rule is 
+intended. The hooks are defined in linux/netfilter_ipv6.h as NF_IP6_LOCAL_IN, 
+NF_IP6_FORWARD, NF_IP6_LOCAL_OUT.
+
+The argument rule is structure describing the rule defined in 
+rule_management.h. The structure contains pointers to options. The pointer 
+value must be NULL, when option is not defined. The structures for options are 
+also defined in rule_management.h. Function: rule * parse_rule(char * string)
+can be used for creating a rule structure from a string. This also inspects 
+that the rule syntax is correct. 
+
+void insert_rule(const struct rule * rule, int hook):
+
+Inserts argument rule into with the hook. Insert makes local copy of the 
+argument rule.
+
+int delete_rule(const struct rule * rule, int hook):
+
+Deletes the local rule that is equal to the argument rule. 
+
+GList * list_rules(int hook):
+
+creates a copy of the rule list and returns it. Caller must take care of 
+freeing the returned list.
+
+int flush(int hook):
+
+Clears all rules.
+
+
+ 

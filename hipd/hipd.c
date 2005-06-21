@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "f")) != -1) {		
 		switch (ch) {
-		case 'd':
+		case 'f':
 			foreground = 0;
 			break;
 #ifdef CONFIG_HIP_HI3
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 		case '?':
 		default:
 			usage();
-			goto out;
+			goto out_out;
 		}
 	}
 
@@ -232,6 +232,7 @@ out:
 		close(nl_ifaddr.fd);
 	delete_all_addresses();
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), ret);
+out_out:
 	return ret;
 }
 

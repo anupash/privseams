@@ -12,15 +12,15 @@ include $(HIPL)/Makefile.am.global
 CFLAGS = -DHIP_LOGFMT_LONG -g -CONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE 
 
 include_HEADERS =  crypto.h netlink.h #hipd.h 
-include_HEADERS += firewall.h conntrack.h file_reader.h helpers.h builder.h misc.h 
+include_HEADERS += firewall.h conntrack.h rule_management.h helpers.h builder.h misc.h pk.h  
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)	-I$(HIPL_HIPD)
 INCLUDES += -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include  
 
 sbin_PROGRAMS = firewall
 #hipd_PROGRAMS = hipd
-firewall_SOURCES = firewall.c conntrack.c file_reader.c helpers.c
-firewall_SOURCES +=  builder.c misc.c crypto.c dh.c
+firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c
+firewall_SOURCES +=  builder.c misc.c crypto.c dh.c pk.c
 #pk.c rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
 #firewall_SOURCES += workqueue.c builder.c hadb.c #preoutput.c 
 #firewall_SOURCES += crypto.c input.c output.c xfrm.c 
@@ -140,8 +140,7 @@ rvs.c: rvs.h
 pk.h:
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.h
 pk.c: pk.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.c
-
+	$(LN_S) -f $(HIPL_HIPD)/pk.c
 tags:
 	etags $(firewall_SOURCES) $(include_HEADERS)
 

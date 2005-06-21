@@ -10,6 +10,9 @@
  */
 
 #include "hip.h"
+#include "hadb.h"
+
+#include <linux/delay.h>
 
 static atomic_t hip_working = ATOMIC_INIT(0);
 
@@ -244,9 +247,8 @@ int hip_get_hits(struct in6_addr *dst_hit, struct in6_addr *src_hit)
 	}
 
 	memcpy(src_hit, &entry->hit_our, sizeof(hip_hit_t));
-	
+	hip_put_xfrm(entry);
 	HIP_DEBUG_HIT("src HIT", src_hit);
-
 	return 1;
 
  out_err:
@@ -279,7 +281,6 @@ int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 
 	ipv6_addr_copy(hit_storage, &entry->hit_our);
 	hip_put_xfrm(entry);
-
 	return 1;
 }
 
@@ -895,9 +896,9 @@ static int __init hip_init(void)
 
 	hip_init_beetdb();
 
-#ifndef CONFIG_HIP_USERSPACE
+	//#ifndef CONFIG_HIP_USERSPACE
 	hip_init_hadb();	
-#endif
+	//#endif
 
 #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef CONFIG_HIP_RVS
@@ -1047,8 +1048,8 @@ static void __exit hip_cleanup(void)
 #endif
 #endif
 	hip_uninit_beetdb();
-#ifndef CONFIG_HIP_USERSPACE
 	hip_uninit_hadb();
+#ifndef CONFIG_HIP_USERSPACE
 	hip_uninit_host_id_dbs();
 #endif
 	hip_uninit_all_eid_db();
@@ -1057,7 +1058,6 @@ static void __exit hip_cleanup(void)
 	hip_uninit_r1();
 #endif
 
-	/* update_spi_waitlist_delete_all(); */
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

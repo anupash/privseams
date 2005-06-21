@@ -148,9 +148,7 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	ipv6_addr_copy(&hdr->daddr, &xs->hit_our);
 	ipv6_addr_copy(&hdr->saddr, &xs->hit_peer);
 
-#if 0
-	hip_put_ha(ha);
-#endif
+	hip_put_xfrm(xs);
 	return;
 }
 
@@ -198,7 +196,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 
 	len = hip_get_msg_total_len(hip_common);
         HIP_IFEL(!(hwo->msg = HIP_MALLOC(len, GFP_ATOMIC)), -ENOMEM,
-		 "Out of memomry, dropping packet\n");
+		 "Out of memory, dropping packet\n");
 	memcpy(hwo->msg, hip_common, len);
 
         /* We need to save the addresses because the actual input
@@ -214,8 +212,3 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	kfree_skb(*skb);
 	return 0;
 }
-
-
-
-
-

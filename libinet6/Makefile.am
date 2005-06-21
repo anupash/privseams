@@ -63,13 +63,13 @@ CFLAGS += -I$(HIPL_HIPD)
 
 include_HEADERS = libc-compat.h debug.h crypto.h message.h builder.h util.h
 
-EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23
+EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses
 # only getendpointinfo).
 #
-#libinet6_la_CFLAGS += -DHIP_TRANSPARENT_API
+#libinet6_la_CFLAGS = -DHIP_TRANSPARENT_API
 
 getendpointinfo.c: include/netdb.h
 
@@ -82,3 +82,5 @@ include/netdb.h:
 	$(LN_S) -f include_glibc$(usagi_libc) include
 builder.c: builder.h
 	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
+
+SUBDIRS = include_glibc21 include_glibc22 include_glibc23

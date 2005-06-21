@@ -16,12 +16,8 @@
 #include <linux/netfilter.h>
 #include <libipq/libipq.h>
 #include <netinet/in.h>
-//#include <linux/in6.h>
-//#include <arpa/inet.h>
-//#include <linux/ip.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
-//#include <linux/ipv6.h>
 #include <stdio.h>
 #include <glib.h>
 #include <glib/glist.h>
@@ -29,19 +25,76 @@
 #include <net/hip.h>
 
 #include "firewall.h"
-#include "file_reader.h"
-//#include "misc.h"
+#include "rule_management.h"
 #include "debug.h"
 #include "helpers.h"
 #include "conntrack.h"
 
 
-#define HIP_HEADER_START 128 //bytes
+//#define HIP_HEADER_START 128 //bytes
+#define BUFSIZE 2048 //TODO mistä
 
-#define BUFSIZE 2048
-
-struct GList * rules;
 struct ipq_handle *h;
+int statefulFiltering = 1; 
+
+//currently done at all times, rule_management 
+//delete rule needs checking for state options in 
+//all chains
+void set_stateful_filtering(int v)
+{
+  statefulFiltering = 1;
+  /////TODO  statefulFiltering = v;
+}
+int get_stateful_filtering()
+{
+  return statefulFiltering;
+}
+
+/*-------------PACKET FILTERING FUNCTIONS------------------*/
+int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean){
+  int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
+  HIP_DEBUG("match_hit: rule: %s packet: %s, bool: %d comparison %d\n ", 
+	    addr_to_numeric(&match_hit), 
+	    addr_to_numeric(&packet_hit),
+	    boolean,
+	    i);
+  if(boolean)
+    return i;
+  else 
+    return !i;
+}
+
+//inspects host identity by verifying sender signature
+int match_hi(struct hip_host_id * hi, 
+	     struct hip_common * packet){
+  int value = 0;
+  
+  if(packet->type_hdr == HIP_I1)
+    {
+      HIP_DEBUG("match_hi: I1\n");
+    return 1;
+    }
+  value = verify_packet_signature(hi, packet);
+  HIP_DEBUG("match_hi: verify returned %d", value);
+  return value;
+}
+
+int match_int(int match, int packet, int boolean){
+  if(boolean)
+    return match == packet;
+  else
+    return !(match == packet);
+}
+
+int match_string(const char * match, const char * packet, int boolean){
+  if(boolean)
+    return !strcmp(match, packet);
+  else
+    return strcmp(match, packet);
+}
+
+/*------------------------------------------------*/
+
 
 static void die(struct ipq_handle *h)
 {
@@ -50,18 +103,6 @@ static void die(struct ipq_handle *h)
   ipq_destroy_handle(h);
   exit(1);
 }
-
-
-/*
-int is_hip_packet(char *buf)
-{
-  HIP_DEBUG("is hip packet\n");
-  if(*buf == 0x3b)
-    return 1;
-  else
-    return 0;
-}
-*/
 
 int is_hip_packet(struct ip6_hdr * ip6_hdr)
 {
@@ -79,167 +120,127 @@ int is_esp_packet(struct ip6_hdr * ip6_hdr)
     return 0;
 }
 
-
-
-
-int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean){
-  int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
-  HIP_DEBUG("comparison %d\n ", i);
-  if(boolean)
-    return i;
-  else 
-    return !i;
-  //  return boolean && IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit); 
-}
-
-int match_dst_hit(){
-  return 0;
-}
-
-int match_packet_type(int match_type, int packet_type, int boolean){
-  if(boolean)
-    return match_type == packet_type;
-  else
-    return !(match_type == packet_type);
-}
-
-int filter_hi(/* packet */){
-  //get hit from packet
-  //find matching HI
-  //verify signature
-
-}
-
-
-/*---- rules ----*/
-
-
-//TODO print_rule
-
-
 /* filter hip packet according to rues.
  * return verdict
  */
-int filter_hip(const struct ip6_hdr * ip6_hdr, const struct hip_common *buf)
+int filter_hip(struct ip6_hdr * ip6_hdr, 
+	       struct hip_common *buf, 
+	       unsigned int hook, 
+	       const char * in_if, 
+	       const char * out_if)
 {
-  struct _GList * list = (struct _GList *)rules;
+  struct _GList * list = (struct _GList *) read_rules(hook);
   struct rule * rule = NULL;
   int match = 1; // is the packet still a potential match to current rule
-  int temp = 0;
+  int conntracked = 0;
+  int ret_val = 0;
   while (list != NULL)
     {
-      temp++;
       match = 1;
       rule = (struct rule *) list->data;
-      if(rule->src_hit != NULL)
-	{
-	  //if match and no inverting
-	  // return verdict false immediately 
-	  if(!match_hit(rule->src_hit->value, 
-			buf->hits, 
-			rule->src_hit->boolean))
-	    match = 0;	
-	  HIP_DEBUG("rule src: %s, packet src: %s, %d, packet dst %s, %d, boolean: %d, match: %d\n",
-		 addr_to_numeric(&rule->src_hit->value), 
-		 addr_to_numeric(&buf->hits), &buf->hits, 
-		 addr_to_numeric(&buf->hitr), &buf->hitr,
-		 rule->src_hit->boolean,
-		 match);
-	}
-      if(match && rule->dst_hit != NULL)
-	{
-	  //if match and no inverting
-	  // return verdict false immediately 
-	  //	  struct in6_addr * dst_hit = (struct in6_addr *)(buf->hits + 16);
-	  if(!match_hit(rule->dst_hit->value, 
-			buf->hitr, 
-			rule->dst_hit->boolean))
-	    /*	   
-		  if(!match_hit(rule->dst_hit->value, 
-		  *dst_hit, 
-		  rule->dst_hit->boolean))
+      /////      if(rule->hook == hook){
+	if(match && rule->src_hit != NULL)
+	  {
+	    HIP_DEBUG("filter_hip: src_hit ");
+	    if(!match_hit(rule->src_hit->value, 
+			  buf->hits, 
+			  rule->src_hit->boolean))
+	      match = 0;	
+	    /*	    HIP_DEBUG("rule src: %s, packet src: %s, %d, packet dst %s, %d, boolean: %d, match: %d\n",
+		      addr_to_numeric(&rule->src_hit->value), 
+		      addr_to_numeric(&buf->hits), &buf->hits, 
+		      addr_to_numeric(&buf->hitr), &buf->hitr,
+		      rule->src_hit->boolean,
+		      match);
 	    */
-	    match = 0;	
-	  HIP_DEBUG("rule dst: %s, packet dst: %s, %d, packet src %s, %d, boolean: %d, match: %d\n",
-		 addr_to_numeric(&rule->dst_hit->value), 
-		 addr_to_numeric(&buf->hitr), &buf->hitr,
-		 addr_to_numeric(&buf->hits), &buf->hits,
-		 rule->dst_hit->boolean,
-		 match);
-	  /*
-	  HIP_DEBUG("rule dst: %s, packet dst: %s, packet src %s, boolean: %d, match: %d\n",
-		 addr_to_numeric(&rule->dst_hit->value), 
-		 addr_to_numeric(dst_hit), 
-		 addr_to_numeric(&buf->hits), 
-		 rule->dst_hit->boolean,
-		 match);
-		  */
-	}
-      if(match &&rule->type != NULL)
-	{
-	  if(!match_packet_type(rule->type->value, 
-			buf->type_hdr, 
-			rule->type->boolean))
-	    /*	   
-		  if(!match_hit(rule->dst_hit->value, 
-		  *dst_hit, 
-		  rule->dst_hit->boolean))
+	    //if HIT has matched and HI defined, verify signature 
+	    if(match && rule->src_hi != NULL)
+	      {
+		HIP_DEBUG("filter_hip: src_hi \n");
+		if(!match_hi(rule->src_hi, buf))
+		  match = 0;	
+	      }
+	  }
+	if(match && rule->dst_hit != NULL)
+	  {
+	    HIP_DEBUG("filter_hip: dst_hit \n");
+	    if(!match_hit(rule->dst_hit->value, 
+			  buf->hitr, 
+			  rule->dst_hit->boolean))
+	      match = 0;	
+	    /*
+	    HIP_DEBUG("rule dst: %s, packet dst: %s, %d, packet src %s, %d, boolean: %d, match: %d\n",
+		      addr_to_numeric(&rule->dst_hit->value), 
+		      addr_to_numeric(&buf->hitr), &buf->hitr,
+		      addr_to_numeric(&buf->hits), &buf->hits,
+		      rule->dst_hit->boolean,
+		      match);
 	    */
-	    match = 0;	
-	  HIP_DEBUG("rule type: %d, packet type: %d, boolean: %d, match: %d\n",
-		 rule->type->value, 
-		 buf->type_hdr,
-		 rule->type->boolean,
+	  }
+	if(match &&rule->type != NULL)
+	  {
+	    HIP_DEBUG("filter_hip: type ");
+	    if(!match_int(rule->type->value, 
+			  buf->type_hdr, 
+			  rule->type->boolean))
+	      match = 0;	
+	    HIP_DEBUG("rule type: %d, packet type: %d, boolean: %d, match: %d\n",
+		      rule->type->value, 
+		      buf->type_hdr,
+		      rule->type->boolean,
 		 match);
-	  
-	}
-      //must be last, so accept argument is valid
-      if(match && rule->state != NULL)
-	{
-	  filter_state(ip6_hdr, buf, rule->state, rule->accept);
-	}
-      // if a match, no need to cheack further rules
-      if(match)
-	return rule->accept;
-      
-      //while(rules)
-      //  filter according to rule
-      //  if drop, return verdict drop
-      //return verdict accept
+	    
+	  }      
+	if(match && rule->in_if != NULL)
+	  {
+	    if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
+	      match = 0;
+	    HIP_DEBUG("filter_hip: match in_if rule: %s, packet: %s, match: %d \n",
+		      rule->in_if->value, in_if, match);
+	  }
+	if(match && rule->out_if != NULL)
+	  {
+	    if(!match_string(rule->out_if->value, 
+			     out_if, 
+			     rule->out_if->boolean))
+	      match = 0;
+	    HIP_DEBUG("filter_hip: match out_if rule: %s, packet: %s, match: %d \n",
+		      rule->out_if->value, out_if, match);
+	  }
+	
+	//must be last, so not called if packet is going to be dropped
+	if(match && rule->state != NULL)
+	  {
+	    conntracked = 1;
+	    HIP_DEBUG("filter_hip: state ");
+	    filter_state(ip6_hdr, buf, rule->state, rule->accept);
+	  }
+	// if a match, no need to check further rules
+	if(match){
+	  HIP_DEBUG("filter_hip: match found\n");
+	  break;
+ 	}
+	/////}
       list = list->next;
     }
-  //  HIP_DEBUG("filtering hip packet: %d", hip_get_msg_total_len(buf));
-  //TODO jos tila match
-  /*    filter_state(buf);
-  struct hip_data * data = get_hip_tuple(buf);
-  struct connection * connection = get_connection_by_hip(data);
-  if(!connection)
+  //release rule list
+  if(rule && match)
     {
-      insert_new_connection(data);      
+      HIP_DEBUG("filter_hip:packet matched rule, target %d\n", rule->accept);
+      ret_val = rule->accept; 
     }
   else
-    {
-      //  connection->state = CONN_ESTABLISHED;      
-    }
-  */
-  //  filter_state(buf);
-  return 1;
+    ret_val = 1; 
+  read_rules_exit(0);
+  // if packet will be accepted and connection tracking is used
+  // but the packet has not been analysed by the conntrack module
+  // show the packet to conntracking
+  if(statefulFiltering && ret_val && !conntracked){
+    conntrack(ip6_hdr, buf);
+  }
+  //return the target of the the matched rule
+  return ret_val; 
 }
-
-
-
-/*-------------*/
-
-void print_rule_table(){
-  struct _GList * list = (struct _GList *) rules;
-  while(list != NULL)
-    {
-      struct rule * rule = (struct rule *)list->data;
-      print_rule(rule);
-      list = list->next;
-    }
-}
-
 
 int main(int argc, char **argv)
 {
@@ -254,16 +255,13 @@ int main(int argc, char **argv)
       printf("Invalid argument count. Closing. \n");
       return 1;
     }
-  get_rules(argv[1], &rules);
-  temp_list = (struct _GList *)rules;
-  HIP_DEBUG("printing rule table: \n");
-  print_rule_table();
+  read_file(argv[1]);
+  HIP_DEBUG("rules read, statefulFiltering %d printing rule table: \n", 
+	    statefulFiltering);
+  print_rule_tables();
+  test_parse_copy();
+  test_rule_management();
    
-  //  hipList = NULL; 
-  // espList = NULL; 
-  //  GHashTable * hip_table = g_hash_table_new((*g_int_hash),
-  //				    (*g_int_equal));
-
   HIP_DEBUG("starting up \n");
   
   h = ipq_create_handle(0, PF_INET6);
@@ -273,10 +271,6 @@ int main(int argc, char **argv)
   status = ipq_set_mode(h, IPQ_COPY_PACKET, BUFSIZE);
   if (status < 0)
     die(h);
-
-  //TODO read rules from file
-  //store into CHAIN structure(s)  
-  
 
   do{
     status = ipq_read(h, buf, BUFSIZE, 0);
@@ -291,37 +285,35 @@ int main(int argc, char **argv)
     case IPQM_PACKET: {
       
       struct ip6_hdr * ip6_hdr = NULL;
-      HIP_DEBUG("Received packet\n");
+      HIP_DEBUG("*****Received packet******\n");
       ipq_packet_msg_t *m = ipq_get_packet(buf);
       ip6_hdr = (struct ip6_hdr *) m->payload; 
       
-      //  HIP_HEXDUMP("packet", buf+HIP_HEADER_START, 100);
-
-      //      HIP_DEBUG("Setting verdict to packet\n");
       if(is_hip_packet(ip6_hdr)){
-	//	struct iphdr *ip = (struct iphdr*) m->payload;
-	struct hip_common *hip_common = (struct hip_common*) (ip6_hdr + 
-							      sizeof (struct ip6_hdr)); 
-	  //(m->payload + (4 * ip->ihl));
-
-	hc_ptr = memcpy(&hc, (buf+HIP_HEADER_START), sizeof(struct hip_common));
-	memcpy(&hc.hits, (buf+HIP_HEADER_START+8), sizeof(struct in6_addr));
-	memcpy(&hc.hitr, (buf+HIP_HEADER_START+8+16), sizeof(struct in6_addr));
-	// HIP_HEXDUMP("packet ", (struct hip_common *)m, 150); //TODO ruma
-	HIP_DEBUG("hip_common src %s, %d, dst %s, %d \n", 
-	       addr_to_numeric(&hc.hits), &hc.hits,
-	       addr_to_numeric(&hc.hitr), &hc.hitr);
+	struct hip_common * hip_common = (struct hip_common*) (m->payload + 
+       							      sizeof (struct ip6_hdr));
+	//	struct hip_common * hip_common2 = hip_common;
+	//	struct hip_common * hip_common3 = hip_common2;
 	
-	//	struct sk_buff * skb = (struct sk_buff *)m->payload;
-	//	struct hip_common * hip_common = (struct hip_common*) skb->h.raw;
-	HIP_DEBUG("main: src addr: %s, dst_addr %s\n", 
-	       addr_to_numeric(&ip6_hdr->ip6_src), 
-	       addr_to_numeric(&ip6_hdr->ip6_dst));
-	if(filter_hip(ip6_hdr, (struct hip_common *) (buf + HIP_HEADER_START)))
-	  status = ipq_set_verdict(h, m->packet_id,
-				   NF_ACCEPT, 0, NULL);
-	HIP_DEBUG("packet accepted\n");
-	
+	//	HIP_DEBUG("main: src addr: %s, dst_addr %s\n", 
+	//     addr_to_numeric(&ip6_hdr->ip6_src), 
+	//     addr_to_numeric(&ip6_hdr->ip6_dst));
+	if(filter_hip(ip6_hdr, 
+		      hip_common, //(struct hip_common *) (buf + HIP_HEADER_START),
+		      m->hook,
+		      m->indev_name,
+		      m->outdev_name))
+	  {
+	    status = ipq_set_verdict(h, m->packet_id,
+				     NF_ACCEPT, 0, NULL);
+	    HIP_DEBUG("packet accepted\n");
+	  }
+	else
+	  {
+	    status = ipq_set_verdict(h, m->packet_id,
+				     NF_DROP, 0, NULL);
+	    HIP_DEBUG("packet dropped\n");
+	  }
       } 
       else if (is_esp_packet(ip6_hdr))
 	{
@@ -335,19 +327,25 @@ int main(int argc, char **argv)
 	      status = ipq_set_verdict(h, m->packet_id,
 				       NF_ACCEPT, 0, NULL);
 
-	      HIP_DEBUG("packet accepted, spi %d\n", spi_val); 
+	      HIP_DEBUG("esppacket accepted, spi %d\n", spi_val); 
+	    }
+	  else
+	    {
+	      status = ipq_set_verdict(h, m->packet_id,
+				       NF_DROP, 0, NULL);
+
+	      HIP_DEBUG("esp packet dropped, spi %d\n", spi_val); 
 	    }
 	}
       else{
 	status = ipq_set_verdict(h, m->packet_id,
-				 NF_ACCEPT, 0, NULL);
-	HIP_DEBUG("packet \"dropped\"\n");	
+				 NF_DROP, 0, NULL);
+	HIP_DEBUG("packet dropped \n");	
       }
       if (status < 0)
 	die(h);
       break;
     }
-    
     default:
       HIP_DEBUG("unknown msg\n");
       fprintf(stderr, "Unknown message type!\n");

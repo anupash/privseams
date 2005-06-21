@@ -272,8 +272,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr)
 {
-	hip_ha_t *entry = NULL;
-	int err = 0, type;
+	hip_ha_t *entry = NULL, tmp;
+	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
 
@@ -299,38 +299,49 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_NOTIFY:
 		err = hip_receive_notify(msg, src_addr, dst_addr);
 		break;
-#if 0
 	case HIP_BOS:
 		err = hip_receive_bos(msg, src_addr, dst_addr);
+		/*In case of BOS the msg->hitr is null, therefore it is replaced with
+		  our own HIT, so that the beet state can also be synchronized */
+		ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
+		hip_init_us(&tmp, NULL);
+		ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
+		skip_sync = 0;
 		break;
-#endif
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);
 		err = -ENOSYS;
 	}
 
 	HIP_DEBUG("Done with control packet (%d).\n", err);
+	HIP_HEXDUMP("msg->hits=", &msg->hits, 16);
+	HIP_HEXDUMP("msg->hitr=", &msg->hitr, 16);
 
-	if (err) {
+	if (err)
 		goto out_err;
-	}
-
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	if (!entry) {
-		HIP_ERROR("Did not find dst entry\n");
-		err = -EFAULT;
-		goto out_err;
-	}
-
-	/* Synchronize beet state (may have been altered) */
-	err = hip_hadb_update_xfrm(entry);
-	if (err) {
-		HIP_ERROR("XFRM out synchronization failed\n");
-		err = -EFAULT;
-		goto out_err;
-	}
 	
+	/* The synchronization of the beet database is not done with HIP_BOS */
+	/* .. it seems that is should be done anyway, BOS createas a new HA */
+	if (!skip_sync) {
+ 		entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+ 		if (!entry) {
+ 			HIP_ERROR("Did not find HA entry\n");
+ 			err = -EFAULT;
+ 			goto out_err;
+ 		}
+		
+ 		/* Synchronize beet state (may have been altered) */
+ 		err = hip_hadb_update_xfrm(entry);
+ 		if (err) {
+ 			HIP_ERROR("XFRM out synchronization failed\n");
+ 			err = -EFAULT;
+ 			goto out_err;
+ 		}
+	}
+
  out_err:
+	if (entry)
+ 		hip_hadb_put_entry(entry);
 	return err;
 }
 
@@ -525,8 +536,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		/* let the setup routine give us a SPI. */
 		HIP_IFEL(!(spi_in = hip_add_sa(&ctx->input->hits, &ctx->input->hitr, 
 					       0, transform_esp_suite, 
-					       &ctx->esp_in, &ctx->auth_in, 
-					       0, HIP_SPI_DIRECTION_IN)), -1, 
+					       &ctx->esp_in, &ctx->auth_in, 0,
+					       HIP_SPI_DIRECTION_IN)), -1, 
 			 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 		/* XXX: -EAGAIN */
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -692,7 +703,7 @@ int hip_handle_r1(struct hip_common *r1,
 
 	/* solve puzzle */
 	{
-		struct hip_puzzle *pz;
+		struct hip_puzzle *pz = NULL;
 		HIP_IFEL(!(pz = hip_get_param(r1, HIP_PARAM_PUZZLE)), -EINVAL,
 			 "Malformed R1 packet. PUZZLE parameter missing\n");
 		HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
@@ -887,7 +898,8 @@ int hip_create_r2(struct hip_context *ctx,
  	/*********** HMAC2 ************/
 	{
 		struct hip_crypto_key hmac;
-		HIP_HEXDUMP("host id for HMAC2", entry->our_pub,
+		if (entry->our_pub == NULL) HIP_DEBUG("entry->our_pub is null\n");
+		else HIP_HEXDUMP("host id for HMAC2", entry->our_pub,
 			    hip_get_param_total_len(entry->our_pub));
 
 		memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
@@ -942,7 +954,7 @@ int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_daddr,		  
 		  hip_ha_t *ha)
 {
-	int err = 0;
+	int err = 0, retransmission = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
 	char *tmp_enc = NULL, *enc = NULL, *iv;
@@ -955,6 +967,7 @@ int hip_handle_i2(struct hip_common *i2,
 	uint16_t crypto_len;
  	struct in6_addr hit;
 	struct hip_spi_in_item spi_in_data;
+
  	HIP_DEBUG("\n");
 
 	/* Assume already locked ha, if ha is not NULL */
@@ -1081,7 +1094,15 @@ int hip_handle_i2(struct hip_common *i2,
 		hip_hold_ha(entry);
 
 		//HIP_DEBUG("HA entry created.");
-	} 
+	}  else {
+ 		/* If the I2 packet is a retransmission, we need reuse the
+ 		   the SPI that was setup already when the first I2 was
+ 		   received. However it is a retransmission only if the responder
+		   is in R2-SENT STATE */
+		if (entry->state == HIP_STATE_R2_SENT)
+			retransmission = 1;
+  	}
+	
 	/* FIXME: the above should not be done if signature fails...
 	   or it should be cancelled */
 	
@@ -1127,7 +1148,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	/* Set up IPsec associations */
 	spi_in = hip_add_sa(&entry->hit_peer, &entry->hit_our, 0, esp_tfm, 
-			    &ctx->esp_in, &ctx->auth_in, 0,
+			    &ctx->esp_in, &ctx->auth_in, retransmission,
 			    HIP_SPI_DIRECTION_IN);	
 	if (!spi_in) {
 		HIP_ERROR("Failed to setup IPsec SPD/SA entries.\n");
@@ -1148,8 +1169,8 @@ int hip_handle_i2(struct hip_common *i2,
 	spi_out = ntohl(hspi->spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, spi_out, esp_tfm, 
-			 &ctx->esp_out, &ctx->auth_out, 0,
-			 HIP_SPI_DIRECTION_OUT);
+			 &ctx->esp_out, &ctx->auth_out,
+			 retransmission, HIP_SPI_DIRECTION_OUT);
 	if (!err) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -1189,7 +1210,7 @@ int hip_handle_i2(struct hip_common *i2,
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
 	hip_hadb_insert_state(entry);
-HIP_DEBUG("state %s\n", hip_state_str(entry->state));
+	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	HIP_IFEL(hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
 		 "Creation of R2 failed\n");
 
@@ -1200,7 +1221,8 @@ HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	/* we cannot do this outside (in hip_receive_i2) since we don't have
 	   the entry there and looking it up there would be unneccesary waste
 	   of cycles */
-	if (!ha && entry) {
+//	if (!ha && entry) {
+	if (entry) {
 		wmb();
 #ifdef CONFIG_HIP_RVS
 		/* XX FIX: this should be dynamic (the rvs information should
@@ -1402,14 +1424,25 @@ int hip_handle_r2(struct hip_common *r2,
 //	HIP_DEBUG("clearing the address used during the bex\n");
 //	ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 
-	hip_hadb_insert_state(entry);
+	
 	/* these will change SAs' state from ACQUIRE to VALID, and
 	 * wake up any transport sockets waiting for a SA */
 	//	hip_finalize_sa(&entry->hit_peer, spi_recvd);
 	//hip_finalize_sa(&entry->hit_our, spi_in);
 
 	entry->state = HIP_STATE_ESTABLISHED;
+	hip_hadb_insert_state(entry);
+
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+	
+	/* Synchronize beet state (may have been altered) */
+	HIP_DEBUG("Synchronizing the BEET database\n");
+	err = hip_hadb_update_xfrm(entry);
+	if (err) {
+		HIP_ERROR("XFRM out synchronization failed\n");
+		err = -EFAULT;
+		goto out_err;
+	}
  out_err:
 	if (ctx)
 		HIP_FREE(ctx);
@@ -1646,159 +1679,6 @@ int hip_receive_notify(struct hip_common *hip_common,
 }
 
 /**
- * hip_handle_bos - handle incoming BOS packet
- * @skb: sk_buff where the HIP packet is in
- * @entry: HA
- *
- * This function is the actual point from where the processing of BOS
- * is started.
- *
- * On success (BOS payloads are checked) 0 is returned, otherwise < 0.
- */
-#if 0
-int hip_handle_bos(struct hip_common *bos,
-		   struct in6_addr *bos_saddr,
-		   struct in6_addr *bos_daddr,
-		   hip_ha_t *entry)
-{
-	int err = 0, len;
-	struct hip_host_id *peer_host_id;
-	struct hip_lhi peer_lhi;
-	struct in6_addr peer_hit;
-	char *str;
-	struct in6_addr *dstip;
-	char src[INET6_ADDRSTRLEN];
-
-	HIP_DEBUG("\n");
-
-	/* according to the section 8.6 of the base draft,
-	 * we must first check signature
-	 */
-	HIP_IFEL(!(peer_host_id = hip_get_param(bos, HIP_PARAM_HOST_ID)), -ENOENT,
-		 "No HOST_ID found in BOS\n");
-#if 0
-	// FIXME: here one should actually create an empty HA entry so that DB_PEER_HID could be scrapped
-	HIP_IFEL(hip_verify_packet_signature(bos, peer_host_id), -EINVAL,
-		 "Verification of BOS signature failed\n");
-#endif
-
-	/* Validate HIT against received host id */	
-	hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH126);
-	HIP_IFEL(ipv6_addr_cmp(&peer_hit, &bos->hits) != 0, -EINVAL,
-		 "Sender HIT does not match the advertised host_id\n");
-
-	/* Everything ok, first save host id to db */
-	HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
-	HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
-		  str, len, hip_get_param_host_id_hostname(peer_host_id));
-
-	// FIXME: here one should actually create an empty HA entry so that DB_PEER_HID could be scrapped
-#if 0
- 	peer_lhi.anonymous = 0;
-	ipv6_addr_copy(&peer_lhi.hit, &bos->hits);
- 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id,
-			      NULL, NULL, NULL);
- 	if (err == -EEXIST) {
- 		HIP_INFO("Host ID already exists. Ignoring.\n");
- 		err = 0;
- 	} else {
-		HIP_IFEL(err, -1, "Failed to add peer host id to the database\n");
-  	}
-#endif
-
-	/* Now save the peer IP address */
-	dstip = bos_saddr;
-	hip_in6_ntop(dstip, src);
-	HIP_DEBUG("BOS sender IP: saddr %s\n", src);
-
-	if (entry) {
-		struct in6_addr daddr;
-
-		HIP_DEBUG("I guess we should not even get here ..\n");
-
-		/* The entry may contain the wrong address mapping... */
-		HIP_DEBUG("Updating existing entry\n");
-		hip_hadb_get_peer_addr(entry, &daddr);
-		if (ipv6_addr_cmp(&daddr, dstip) != 0) {
-			HIP_DEBUG("Mapped address doesn't match received address\n");
-			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
-			HIP_HEXDUMP("Mapping", &daddr, 16);
-			HIP_HEXDUMP("Received", dstip, 16);
-			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			HIP_ERROR("assuming we are doing base exchange\n");
-			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0);
-		}
-	} else {
-		// FIXME: just add it here and not via workorder.
-		struct hip_work_order * hwo;
-		HIP_DEBUG("Adding new peer entry\n");
-                hip_in6_ntop(&bos->hits, src);
-		HIP_DEBUG("map HIT: %s\n", src);
-		hip_in6_ntop(dstip, src);
-		HIP_DEBUG("map IP: %s\n", src);
-
-		HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -1, 
-			 "Failed to insert peer map work order\n");
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
-					HIP_WO_SUBTYPE_ADDMAP,
-					dstip, &bos->hits, NULL, 0, 0, 0);
-		hip_insert_work_order(hwo);
-	}
-
- out_err:
-	return err;
-}
-
-/**
- * hip_receive_bos - receive BOS packet
- * @skb: sk_buff where the HIP packet is in
- *
- * This function is called when a BOS packet is received. We add the
- * received HIT and HOST_ID to the database.
- *
- * Returns always 0.
- *
- * TODO: check if it is correct to return always 0 
- */
-int hip_receive_bos(struct hip_common *bos,
-		   struct in6_addr *bos_saddr,
-		   struct in6_addr *bos_daddr)
-{
-	int err = 0, state = 0;
-	hip_ha_t *entry;
-
-	HIP_IFEL(ipv6_addr_any(&bos->hits), 0, "Received NULL sender HIT in BOS.\n");
-	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0, "Received non-NULL receiver HIT in BOS.\n");
-	
-	entry = hip_hadb_find_byhits(&bos->hits, &bos->hitr);
-	state = entry ? state = entry->state : HIP_STATE_UNASSOCIATED;
-
-	/* TODO: If received BOS packet from already known sender
-           should return right now */
-	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
- 	switch(state) {
- 	case HIP_STATE_UNASSOCIATED:
-	case HIP_STATE_I1_SENT:
-	case HIP_STATE_I2_SENT:
-		/* Possibly no state created yet */
-		err = hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
-		break;
-	case HIP_STATE_R2_SENT:
- 	case HIP_STATE_ESTABLISHED:
- 	case HIP_STATE_REKEYING:
-		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
-		break;
-	default:
-		HIP_IFEL(1, 0, "Internal state (%d) is incorrect\n", state);
-	}
-
-	if (entry)
-		hip_put_ha(entry);
- out_err:
-	return err;
-}
-#endif
-/**
  * hip_verify_hmac - verify HMAC
  * @buffer: the packet data used in HMAC calculation
  * @hmac: the HMAC to be verified
@@ -1834,5 +1714,55 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 	return err;
 }
+
+/**
+ * hip_receive_bos - receive BOS packet
+ * @skb: sk_buff where the HIP packet is in
+ *
+ * This function is called when a BOS packet is received. We add the
+ * received HIT and HOST_ID to the database.
+ *
+ * Returns always 0.
+ *
+ * TODO: check if it is correct to return always 0 
+ */
+int hip_receive_bos(struct hip_common *bos,
+		   struct in6_addr *bos_saddr,
+		   struct in6_addr *bos_daddr)
+{
+	int err = 0, state = 0;
+	hip_ha_t *entry;
+
+	HIP_IFEL(ipv6_addr_any(&bos->hits), 0, "Received NULL sender HIT in BOS.\n");
+	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0, "Received non-NULL receiver HIT in BOS.\n");
+	HIP_DEBUG("Entered in hip_receive_bos...\n");
+	entry = hip_hadb_find_byhits(&bos->hits, &bos->hitr);
+	state = entry ? state = entry->state : HIP_STATE_UNASSOCIATED;
+
+	/* TODO: If received BOS packet from already known sender
+           should return right now */
+	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
+ 	switch(state) {
+ 	case HIP_STATE_UNASSOCIATED:
+	case HIP_STATE_I1_SENT:
+	case HIP_STATE_I2_SENT:
+		/* Possibly no state created yet */
+		err = hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
+		break;
+	case HIP_STATE_R2_SENT:
+ 	case HIP_STATE_ESTABLISHED:
+ 	case HIP_STATE_REKEYING:
+		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
+		break;
+	default:
+		HIP_IFEL(1, 0, "Internal state (%d) is incorrect\n", state);
+	}
+
+	if (entry)
+		hip_put_ha(entry);
+ out_err:
+	return err;
+}
+
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

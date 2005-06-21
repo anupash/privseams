@@ -70,11 +70,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "message.h"
 #include "util.h"
 
+#include "bos.h"
+
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
 
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX  108
+#endif
+
+#ifndef NUM_MAX_HITS
+#define NUM_MAX_HITS 50
 #endif
 
 struct gaih_service
@@ -380,7 +386,9 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
 									\
   while (getwithoutnewline(line, 500, fp) != NULL) {			\
     int c;								\
-    int ret;								\
+    int ret;                                                            \
+    lineno++;								\
+    if(strlen(line)<=1) continue;                                       \
     initlist(&list);                                                    \
     extractsubstrings(line,&list);                                      \
     for(i=0;i<length(&list);i++) {                                      \
@@ -407,12 +415,11 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
         pat = &((*pat)->next);						\
       }									\
      }	                                                                \
-    lineno++;								\
     destroy(&list);                                                     \
   }	              							\
   if (fp)                                                               \
     fclose(fp);			        				\
-}                  
+}
 
 
 static int
@@ -936,7 +943,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    (*pai)->ai_next = NULL;
 	    pai = &((*pai)->ai_next);
 	  }
-
+	
 	at2 = at2->next;
       }
     /* changed __alloca:s for the linked list 'at' to mallocs, 
@@ -959,6 +966,16 @@ static struct gaih gaih[] =
     { PF_UNSPEC, NULL }
   };
 
+/**
+ * getaddrinfo - retrieves the info of the specified peer
+ * @msg: message containing information about which unit tests to execute
+ *
+ * Process a request for the list of known peers
+ *
+ * Returns: zero on success, or negative error value on failure
+ * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
+ * database is returned
+ */
 int
 getaddrinfo (const char *name, const char *service,
 	     const struct addrinfo *hints, struct addrinfo **pai)
@@ -995,7 +1012,7 @@ getaddrinfo (const char *name, const char *service,
 
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
-			  AI_HIP_NATIVE))
+			  AI_HIP_NATIVE|AI_KERNEL_LIST))
     return EAI_BADFLAGS;
 
   if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
@@ -1010,7 +1027,7 @@ getaddrinfo (const char *name, const char *service,
 #else
   hip_transparent_mode = 0;
 #endif
-
+  
   if (service && service[0])
     {
       char *c;
@@ -1028,6 +1045,37 @@ getaddrinfo (const char *name, const char *service,
     }
   else
     pservice = NULL;
+
+  if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
+    int msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
+    int hipfd = open_hip(); // sets also errno
+    int err = 0, port, i;
+    if (hipfd < 0) {
+      HIP_ERROR("Failed to open HIP configuration channel\n");
+      return(-errno);
+    }
+    
+    *pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
+    if (*pai == NULL) {
+      HIP_ERROR("Unable to allocated memory\n");
+      err = -EAI_MEMORY;
+      return err;
+    }
+
+    if (!pservice)
+      port = 0;
+    else
+      port = pservice->num;
+    /* This is the case which is used after BOS packet is processed, as a second parameter
+     * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
+     * the struct sockaddr_in6 list
+     */
+    err = getsockopt(hipfd, port, SO_HIP_GET_HIT_LIST, pai, &msg_len);
+    if (err < 0) {
+      HIP_ERROR("getsockopt failed (%d)\n", err);
+    }
+    return err;
+  }
 
   if (pai)
     end = &p;

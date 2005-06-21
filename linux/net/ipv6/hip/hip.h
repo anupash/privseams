@@ -73,6 +73,7 @@
 #include "workqueue.h"
 #include "socket.h"
 #include "update.h"
+#include "hadb.h"
 #ifdef CONFIG_HIP_RVS
 #include "rvs.h"
 #endif

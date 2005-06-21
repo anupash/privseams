@@ -228,8 +228,8 @@ int handle_hi(struct hip_common *msg,
 	struct hip_host_id *dsa_host_id = NULL, *rsa_host_id = NULL;
 	unsigned char *dsa_key_rr = NULL, *rsa_key_rr = NULL;
 	int dsa_key_rr_len, rsa_key_rr_len;
-	DSA *dsa_key = NULL;
-	RSA *rsa_key = NULL;
+	DSA *dsa_key = NULL, *dsa_pub_key = NULL;
+	RSA *rsa_key = NULL, *rsa_pub_key = NULL;
 	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	int fmt;
 	struct endpoint_hip *endpoint_dsa_hip = NULL, *endpoint_rsa_hip = NULL;
@@ -242,7 +242,7 @@ int handle_hi(struct hip_common *msg,
 		err = -EINVAL;
 		goto out;
 	}
-	
+
 	if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
 		anon = 0;
 	} else if(!strcmp(opt[OPT_HI_TYPE], "anon")) {
@@ -268,10 +268,10 @@ int handle_hi(struct hip_common *msg,
 			goto out;
 		}
 	}
-	
-	HIP_INFO("Before memset: \n");
+
+	_HIP_INFO("Before memset: \n");
 	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
-	HIP_INFO("After memset: \n");
+	_HIP_INFO("After memset: \n");
 	err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 	if (err) {
 		HIP_ERROR("gethostname failed (%d)\n", err);
@@ -305,9 +305,12 @@ int handle_hi(struct hip_common *msg,
 		HIP_INFO("No key file given, use default\n");
 
 		dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-			strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
+			strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 6;
 		rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-			strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
+			strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 6;
+		
+		HIP_DEBUG("dsa_filenamebase_len = %d\n", dsa_filenamebase_len);
+		HIP_DEBUG("rsa_filenamebase_len = %d\n", rsa_filenamebase_len);
 
 		dsa_filenamebase = malloc(dsa_filenamebase_len);
 		if (!dsa_filenamebase) {
@@ -323,14 +326,18 @@ int handle_hi(struct hip_common *msg,
 		}
 		ret = snprintf(dsa_filenamebase, dsa_filenamebase_len, "%s/%s",
 			       DEFAULT_CONFIG_DIR,
-			       DEFAULT_HOST_DSA_KEY_FILE_BASE);
+			       DEFAULT_HOST_DSA_KEY_FILE_BASE
+			       DEFAULT_ANON_HI_FILE_NAME_SUFFIX
+			       );
 		if (ret <= 0) {
 			err = -EINVAL;
 			goto out;
 		}
 		ret = snprintf(rsa_filenamebase, rsa_filenamebase_len, "%s/%s",
 			       DEFAULT_CONFIG_DIR,
-			       DEFAULT_HOST_RSA_KEY_FILE_BASE);
+			       DEFAULT_HOST_RSA_KEY_FILE_BASE
+			       DEFAULT_ANON_HI_FILE_NAME_SUFFIX
+			       );
 		if (ret <= 0) {
 			err = -EINVAL;
 			goto out;
@@ -339,10 +346,10 @@ int handle_hi(struct hip_common *msg,
 	
 	dsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
 	rsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
-	
-	HIP_DEBUG("Using dsa filenamebase: %s\n", dsa_filenamebase);
-	HIP_DEBUG("Using rsa filenamebase: %s\n", rsa_filenamebase);
-	
+
+	HIP_DEBUG("Using dsa (anon hi) filenamebase: %s\n", dsa_filenamebase);
+	HIP_DEBUG("Using rsa (anon hi) filenamebase: %s\n", rsa_filenamebase);
+
 	switch(action) {
 	case ACTION_NEW:
 		/* zero means "do not send any message to kernel */

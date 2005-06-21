@@ -107,6 +107,15 @@ struct list_head {
         }\
 }
 
+#define HIP_IFEBL2(func, eval, finally, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+                finally;\
+        }\
+}
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
 	int t;
@@ -148,6 +157,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define SO_HIP_GLOBAL_OPT 1
 #define SO_HIP_SOCKET_OPT 2
+#define SO_HIP_GET_HIT_LIST 3
 
 /* HIP socket options */
 #define SO_HIP_ADD_LOCAL_HI                     1
@@ -303,8 +313,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_SIG_DSA                   3
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
-#define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
-#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_DSA
+#define HIP_HI_DEFAULT_ALGO           HIP_HI_RSA
+#define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
 #define HIP_ANY_ALGO                  -1
 
 #define HIP_DIGEST_MD5                1
@@ -889,6 +899,10 @@ struct hip_spi_in_item
 						to established */
 	uint32_t seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
 	struct hip_nes stored_received_nes; /* the corresponding NES of peer */
+	struct hip_rea_info_addr_item *addresses; /* our addresses this SPI is
+						     related to, reuse struct to
+						     ease coding */
+	int addresses_n; /* number of addresses */
 };
 
 struct hip_spi_out_item

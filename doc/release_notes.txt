@@ -46,6 +46,15 @@ draft-ietf-hip-mm-00.txt:
 
 See also http://infrahip.hiit.fi/bugzilla
 
+Changes to hipconf
+==================
+
+* 'hipconf new hi default' creates 4 HIs: 2 anonymous and 2 public ones.
+  (Anonymous HI key files contain the string "_anon" and public HI key files
+   contain the string "_pub" accordingly.)   
+* 'hipconf add hi default' adds all 4 keys into the kernel database.
+* 'hipconf del <local hit>' deletes a local HI from the kernel database.
+
 Interoperability Status
 =======================
 

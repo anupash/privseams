@@ -1,7 +1,10 @@
 #include "debug.h"
 #include "hidb.h"
+#include "hadb.h"
 
 #include "bos.h"
+
+
 
 #if (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
 
@@ -94,7 +97,7 @@ int hip_send_bos(const struct hip_common *msg)
 #endif
 
 	/* Determine our HIT */
-	if (hip_get_any_localhost_hit(&hit_our, HIP_ANY_ALGO) < 0) {
+	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
@@ -179,4 +182,265 @@ out_err:
 	return err;
 }
 
+
+/** hip_verify_packet_signature - verify the signature in the bos packet
+ * @bos: the bos packet
+ * @peer_host_id: peer host id
+ *
+ * Depending on the algorithm it checks whether the signature is correct
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_verify_packet_signature(struct hip_common *bos, 
+				struct hip_host_id *peer_host_id)
+{
+	int err;
+	if (peer_host_id->rdata.algorithm == HIP_HI_DSA){
+		err = hip_dsa_verify(peer_host_id, bos);
+	} else if(peer_host_id->rdata.algorithm == HIP_HI_RSA){
+		err = hip_rsa_verify(peer_host_id, bos);
+	} else {
+		HIP_ERROR("Unknown algorithm\n");
+		err = -1;
+	}
+	return err;
+}
+
+/**
+ * hip_handle_bos - handle incoming BOS packet
+ * @skb: sk_buff where the HIP packet is in
+ * @entry: HA
+ *
+ * This function is the actual point from where the processing of BOS
+ * is started.
+ *
+ * On success (BOS payloads are checked) 0 is returned, otherwise < 0.
+ */
+
+int hip_handle_bos(struct hip_common *bos,
+		   struct in6_addr *bos_saddr,
+		   struct in6_addr *bos_daddr,
+		   hip_ha_t *entry)
+{
+	int err = 0, len;
+	struct hip_host_id *peer_host_id;
+	struct hip_lhi peer_lhi;
+	struct in6_addr peer_hit;
+	char *str;
+	struct in6_addr *dstip;
+	char src[INET6_ADDRSTRLEN];
+
+	HIP_DEBUG("\n");
+
+	/* according to the section 8.6 of the base draft,
+	 * we must first check signature
+	 */
+	HIP_IFEL(!(peer_host_id = hip_get_param(bos, HIP_PARAM_HOST_ID)), -ENOENT,
+		 "No HOST_ID found in BOS\n");
+
+	HIP_IFEL(hip_verify_packet_signature(bos, peer_host_id), -EINVAL,
+		 "Verification of BOS signature failed\n");
+
+
+	/* Validate HIT against received host id */	
+	hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH126);
+	HIP_IFEL(ipv6_addr_cmp(&peer_hit, &bos->hits) != 0, -EINVAL,
+		 "Sender HIT does not match the advertised host_id\n");
+	
+	HIP_HEXDUMP("Advertised HIT:", &bos->hits, 16);
+	
+	/* Everything ok, first save host id to db */
+	HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
+	HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
+		  str, len, hip_get_param_host_id_hostname(peer_host_id));
+
+#if 0
+ 	peer_lhi.anonymous = 0;
+	ipv6_addr_copy(&peer_lhi.hit, &bos->hits);
+ 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id,
+			      NULL, NULL, NULL);
+ 	if (err == -EEXIST) {
+ 		HIP_INFO("Host ID already exists. Ignoring.\n");
+ 		err = 0;
+ 	} else {
+		HIP_IFEL(err, -1, "Failed to add peer host id to the database\n");
+  	}
+#endif
+
+	/* Now save the peer IP address */
+	dstip = bos_saddr;
+	hip_in6_ntop(dstip, src);
+	HIP_DEBUG("BOS sender IP: saddr %s\n", src);
+
+	if (entry) {
+		struct in6_addr daddr;
+
+		HIP_DEBUG("I guess we should not even get here ...\n");
+		HIP_DEBUG("I think so!\n");
+
+		/* The entry may contain the wrong address mapping... */
+		HIP_DEBUG("Updating existing entry\n");
+		hip_hadb_get_peer_addr(entry, &daddr);
+		if (ipv6_addr_cmp(&daddr, dstip) != 0) {
+			HIP_DEBUG("Mapped address doesn't match received address\n");
+			HIP_DEBUG("Assuming that the mapped address was actually RVS's.\n");
+			HIP_HEXDUMP("Mapping", &daddr, 16);
+			HIP_HEXDUMP("Received", dstip, 16);
+			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			HIP_ERROR("assuming we are doing base exchange\n");
+			hip_hadb_add_peer_addr(entry, dstip, 0, 0, 0);
+		}
+	} else {
+		// FIXME: just add it here and not via workorder.
+
+		/* we have no previous infomation on the peer, create
+		 * a new HIP HA */
+		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip)<0), KHIPD_ERROR,
+			 "Failed to insert new peer info");
+		HIP_DEBUG("HA entry created.\n");
+
+#if 0
+		struct hip_work_order * hwo;
+		HIP_DEBUG("Adding new peer entry\n");
+                hip_in6_ntop(&bos->hits, src);
+		HIP_DEBUG("map HIT: %s\n", src);
+		hip_in6_ntop(dstip, src);
+		HIP_DEBUG("map IP: %s\n", src);
+
+		HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -1, 
+			 "Failed to insert peer map work order\n");
+		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+					HIP_WO_SUBTYPE_ADDMAP,
+					dstip, &bos->hits, NULL, 0, 0, 0);
+		hip_insert_work_order(hwo);
+#endif
+	}
+
+ out_err:
+	return err;
+}
+
 #endif /*(defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
+
+//extern int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
+
+#ifdef __KERNEL__
+
+/* really ugly hack ripped from rea.c, must convert to list_head asap */
+struct hip_bos_kludge {
+	hip_xfrm_t **array;
+	int count;
+	int length;
+};
+
+int hip_bos_get_all_valid(hip_xfrm_t *entry, void *op)
+{
+	struct hip_bos_kludge *rk = op;
+	HIP_DEBUG("Entered hip_bos_get_all_valid.... \n");
+	if (rk->count >= rk->length) {
+		HIP_DEBUG("rk->count(%d) >= rk->length(%d) \n", rk->count, rk->length);
+		return -1;
+	}
+	
+	HIP_DEBUG("entry->state is %s\n", hip_state_str(entry->state));
+	/* Practically all the states are valid */
+	if (entry->state != HIP_STATE_FAILED) {
+		hip_beetdb_hold_entry(entry);
+		rk->array[rk->count] = entry;
+		rk->count++;
+	} else
+		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
+			  entry, hip_state_str(entry->state));
+	return 0;
+}
+
+/**
+ * handle_bos_peer_list - handle creation of list of known peers
+ * @msg: message containing information about which unit tests to execute
+ *
+ * Process a request for the list of known peers
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg_len)
+{
+	int err = 0;
+	int fail, i;
+	struct my_addrinfo **end = (struct my_addrinfo **)pai;
+	/* Number of elements allocated in the list */
+	int num_elems = (int)(msg_len / sizeof(struct my_addrinfo));
+	hip_xfrm_t *entries[HIP_MAX_HAS] = {0};
+	struct hip_bos_kludge rk;
+	
+	HIP_DEBUG("\n");
+
+	/* Initialize the data structure for the peer list */
+	//	memset(&rk, 0, sizeof(struct hip_bos_kludge));
+
+	_HIP_DEBUG("Got into the handle_bos_peer_list\n");
+
+	rk.array = entries;
+	rk.count = 0;
+	rk.length = HIP_MAX_HAS;
+
+	/* Iterate through the beet db entries, collecting addresses */
+	fail = hip_for_each_xfrm(hip_bos_get_all_valid, &rk);
+	if (fail) {
+		err = -EINVAL;
+		HIP_ERROR("Peer list creation failed\n");
+		goto out_err;
+	}
+
+	_HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
+
+	if (rk.count < 0) {
+		HIP_ERROR("No usable entries found\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	/* Complete the list by iterating through the list and
+	   recording the peer host id. This is done separately from
+	   list creation because it involves calling a function that
+	   may sleep (can't be done while holding locks!) */
+	HIP_DEBUG("rk.count = %d\n", rk.count);
+	if (rk.count >= num_elems) {
+		err = -EINVAL;
+		HIP_ERROR("The allocated memory is not enough\n");
+		goto out_err;
+	}
+
+	for (i = 0; i < rk.count; i++) {
+		HIP_DEBUG("Scrolling rk....\n");
+		
+		_HIP_DEBUG("rk.array[%d] not NULL\n", i);
+			
+		(*end)->ai_family = family;
+		(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
+			
+		if (family == AF_INET6) {
+			struct sockaddr_in6 *sin6p =
+				(struct sockaddr_in6 *) (*end)->ai_addr;
+			sin6p->sin6_flowinfo = 0;
+			sin6p->sin6_family = family;
+			sin6p->sin6_port = htons(port);
+			HIP_HEXDUMP("THE FOUND HIT IS: ", &rk.array[i]->hit_peer, 16);
+			/* Get the HIT */
+			memcpy (&sin6p->sin6_addr, &(rk.array[i]->hit_peer), sizeof (struct in6_addr));
+		} else {
+			/* TODO: is there any possibility to get here having family == AF_INET ? */
+		}
+			
+		(*end)->ai_next = NULL;
+			end = &((*end)->ai_next);
+	}
+	err = rk.count;
+ out_err:
+	if (rk.count > 0 && rk.count < num_elems)
+		for (i = 0; i < rk.count; i++)
+			hip_beetdb_put_entry(rk.array[i]);
+
+	return err;
+}
+
+#endif

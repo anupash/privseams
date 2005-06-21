@@ -75,11 +75,7 @@ struct hip_common *hip_msg_alloc(void)
 {
         struct hip_common *ptr;
 
-#ifdef __KERNEL__
-        ptr = (struct hip_common *) HIP_MALLOC(HIP_MAX_PACKET, GFP_ATOMIC);
-#else
-        ptr = (struct hip_common *) malloc(HIP_MAX_PACKET);
-#endif /* __KERNEL__ */
+	ptr = HIP_MALLOC(HIP_MAX_PACKET, GFP_ATOMIC);
         if (ptr)
 		hip_msg_init(ptr);
         return ptr;

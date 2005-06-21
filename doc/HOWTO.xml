@@ -185,7 +185,10 @@
     <para>
        First, you need to compile the kernel with the CONFIG_HIP_USERSPACE
        option. Then, execute "modprobe hipmod", "hipd/hipd" and
-       "hipconf add hi default" in exactly that order. The rest of the
+       "hipconf add hi default" in exactly that order. In order to run the
+       HIP daemon independently from the path, you might run "make install" in
+       in the top directory. The HIP deamon can be run in background
+       by specifying the option f. The rest of the
        instructions in this manual apply also to the userspace implementation
        with these small changes.
     </para>
@@ -195,11 +198,14 @@
     <para>
       After you have successfully compiled and installed the HIP kernel and
       rebooted both of the hosts, you need to compile the userspace
-      applications in order to use HIP. Start by invoking the autogen.sh at
-      the top level directory:
+      applications in order to use HIP. Start by moving to the top level directory
+      of HIPL:
       </para>
     <para>
       &nbsp;cd hipl
+    </para>
+    <para>
+      If the file autogen.sh exists (to test type ls autogen.sh), run it:
     </para>
     <para>
       &nbsp;./autogen.sh
@@ -404,9 +410,6 @@
       # cd path-to-hipl/libinet6
     </para>
     <para>
-      # ./configure
-    </para>
-    <para>
       # make libinet6.so
     </para>
     <para>
@@ -500,18 +503,9 @@
       support native HIP API. HIP is a compile time option, so that you can
       see the required modifications to the code (ifdef USE_HIP). Here's how
       you compile the telnet applications:
-      </para>
-    <para>
-	# cd libinet
     </para>
     <para>
-	# ./configure
-    </para>
-    <para>
-	# make
-    </para>
-    <para>
-	# cd ../test/telnetd
+	# cd test/telnetd
     </para>
     <para>
 	# ./configure

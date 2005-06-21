@@ -35,7 +35,10 @@ static struct list_head hip_beetdb_byspi_list[HIP_BEETDB_SIZE];
 void hip_beetdb_delete_state(hip_xfrm_t *x)
 {
 	HIP_DEBUG("xfrm=0x%p\n", x);
-	HIP_ERROR("Miika: this should be implemented\n");
+	_HIP_ERROR("Miika: this should be implemented\n");
+	HIP_LOCK_XF(x);
+	hip_ht_delete(&hip_beetdb_hit, x);
+	HIP_UNLOCK_XF(x);
 	HIP_FREE(x);
 }
 
@@ -48,12 +51,12 @@ void hip_beetdb_delete_hs(struct hip_hit_spi *hs)
 	HIP_FREE(hs);
 }
 
-static void hip_beetdb_hold_entry(void *entry)
+void hip_beetdb_hold_entry(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry, hip_xfrm_t);
 }
 
-static void hip_beetdb_put_entry(void *entry)
+void hip_beetdb_put_entry(void *entry)
 {
 	HIP_DB_PUT_ENTRY(entry, hip_xfrm_t, hip_beetdb_delete_state);
 }
@@ -133,12 +136,11 @@ void hip_uninit_beetdb(void)
 	HIP_DEBUG("DELETING HA HT\n");
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
 		list_for_each_entry_safe(ha, tmp, &hip_beetdb_byhit[i], next) {
-			if (atomic_read(&ha->refcnt) > 2)
-				HIP_ERROR("HA: %p, in use while removing it from HADB, refcnt=%d\n",
-					  ha, atomic_read(&ha->refcnt));
-			hip_hold_ha(ha);
-			hip_beetdb_delete_state(ha);
-			hip_put_xfrm(ha);
+			//hip_beetdb_hold_entry(ha);
+			//hip_hold_ha(ha);
+			//hip_beetdb_delete_state(ha);
+			//hip_put_xfrm(ha);
+			hip_beetdb_put_entry(ha);
 		}
 	}
 
@@ -271,7 +273,8 @@ int hip_xfrm_update_inbound(hip_hit_t *hit_peer, struct in6_addr *hit_our,
 	}
 
  out_err:
-
+	if (entry)
+		hip_put_xfrm(entry);
 	return err;
 }
 
@@ -285,10 +288,16 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 			     struct in6_addr *peer_addr,
 			     int spi_out, int state)
 {
-	hip_xfrm_t *entry;
+	hip_xfrm_t *entry = NULL;
 	int err = 0;
+	int created = 0;
 
 	HIP_DEBUG("\n");
+
+	if (!hit_peer || !hit_our) {
+		HIP_DEBUG("hit_peer=0x%p hit_our=0x%p\n", hit_peer, hit_our);
+		goto out_err;
+	}
 
 	entry = hip_xfrm_find_by_hits(hit_peer, hit_our);
 	if (!entry) {
@@ -298,7 +307,6 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 			err = -ENOMEM;
 			goto out_err;
 		}
-
 		ipv6_addr_copy(&entry->hit_peer, hit_peer);
 		ipv6_addr_copy(&entry->hit_our, hit_our);
 		hip_xor_hits(&entry->hash_key, hit_our, hit_peer);
@@ -308,6 +316,7 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 			HIP_ERROR("Failed to insert state\n");
 			goto out_err;
 		}
+		created = 1;
 		HIP_DEBUG_HIT("Created a new outbound entry for ", hit_peer);
 	}
 
@@ -330,7 +339,8 @@ int hip_xfrm_update_outbound(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 	}
 	
  out_err:
-
+	if (entry && !created)
+		hip_put_xfrm(entry);
 	return err;
 }
 
@@ -400,7 +410,7 @@ hip_xfrm_t *hip_xfrm_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
 	hip_xfrm_t *x, *tmp;
 	int i;
-	
+
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
 		if(!list_empty(&hip_beetdb_byhit[i])) {
   			list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i],
@@ -488,4 +498,48 @@ int hip_xfrm_hit_is_our(const hip_hit_t *hit)
 	}
 
 	return 0;
+}
+
+/**
+ * hip_for_each_xfrm - Map function @func to every HA in HIT hash table
+ * @func: Mapper function
+ * @opaque: Opaque data for the mapper function.
+ *
+ * The hash table is LOCKED while we process all the entries. This means
+ * that the mapper function MUST be very short and _NOT_ do any operations
+ * that might sleep!
+ *
+ * Returns negative if an error occurs. If an error occurs during traversal of
+ * a the HIT hash table, then the traversal is stopped and function returns.
+ * Returns the last return value of applying the mapper function to the last
+ * element in the hash table.
+ */
+int hip_for_each_xfrm(int (*func)(hip_xfrm_t *entry, void *opaq), void *opaque)
+{
+	int i = 0, fail = 0;
+	hip_xfrm_t *this, *tmp;
+
+	if (!func)
+		return -EINVAL;
+
+	HIP_LOCK_HT(&hip_beetdb_hit);
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		_HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hip_beetdb_byhit[i]));
+		//list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i], next) {
+		list_for_each_entry_safe(this, tmp, &hip_beetdb_byhit[i], next)
+		{
+			_HIP_DEBUG("List_for_each_entry_safe\n");
+			hip_beetdb_hold_entry(this);
+                        //hip_beetdb_hold_hs(this);
+			fail = func(this, opaque);
+			//hip_beetdb_put_hs(this);
+			hip_beetdb_put_entry(this);
+			if (fail)
+				break;
+		}
+		if (fail)
+			break;
+	}
+	HIP_UNLOCK_HT(&hip_beetdb_hit);
+	return fail;
 }
