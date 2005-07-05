@@ -537,7 +537,7 @@
   <chapter>
     <title> How to Use HIP in Other C Based Applications?</title>
     <para>
-      Use on the following methods:
+      Use one the following methods:
     </para>
     <para>
       1. Port it to use the native HIP API. See the telnet code for a
@@ -569,6 +569,11 @@
       supports only IPv6. Second, the application must really use the
       getaddrinfo interface because otherwise the getaddrinfo hack
       (i.e. sending HIT-to-IPv6 mapping to the HIP module) does not work.
+    </para>
+    <para>
+    4. Insert the HIT to /etc/hosts, instead of /etc/hip/hosts. Then, add
+       the HIT-to-IP mapping with "hipconf add hi default". This is the
+       quick-and-dirty method...
     </para>
   </chapter>
   <chapter>
