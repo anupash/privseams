@@ -108,7 +108,7 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 	}
 
 	_HIP_HEXDUMP("HMAC key", key, keylen);
-	_HIP_HEXDUMP("write hmac", in, in_len);
+	_HIP_HEXDUMP("hmac in", in, in_len);
 
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1) {

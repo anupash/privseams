@@ -79,9 +79,9 @@ int main(int argc, char *argv[]) {
 	int ret = 0;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, "f")) != -1) {		
+	while ((ch = getopt(argc, argv, "b")) != -1) {		
 		switch (ch) {
-		case 'f':
+		case 'b':
 			foreground = 0;
 			break;
 #ifdef CONFIG_HIP_HI3

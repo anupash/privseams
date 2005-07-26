@@ -67,7 +67,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
 		     struct in6_addr *hit2, u8 *calc_index)
 {
-	int err;
+	int err, bufsize;
 	uint8_t index_nbr = 1;
 	int dstoffset = 0;
 	void *seedkey;
@@ -105,15 +105,16 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		return;
 	}
 
+	bufsize = kij_len+2*sizeof(struct in6_addr)+1;
+
 #ifdef __KERNEL__
-	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, 
-				       kij_len+2*sizeof(struct in6_addr)+1);
+	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, bufsize);
 	HIP_ASSERT(!err);
 
 	crypto_digest_digest(sha, sg, nsg, dstbuf);
 #else
 	// XX FIXME: is this correct
-	hip_build_digest(HIP_DIGEST_SHA1, shabuffer, 0, dstbuf);
+	hip_build_digest(HIP_DIGEST_SHA1, shabuffer, bufsize);
 #endif
 
 	dstoffset = HIP_AH_SHA_LEN;
