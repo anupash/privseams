@@ -114,7 +114,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	crypto_digest_digest(sha, sg, nsg, dstbuf);
 #else
 	// XX FIXME: is this correct
-	hip_build_digest(HIP_DIGEST_SHA1, shabuffer, bufsize);
+	hip_build_digest(HIP_DIGEST_SHA1, shabuffer, bufsize, dstbuf);
 #endif
 
 	dstoffset = HIP_AH_SHA_LEN;
