@@ -8,6 +8,38 @@ Sometimes the items are as notes elsewhere in the source file if the
 there is specific line of the source code that needs fixing. Search
 for the strings "XX" or "TODO" to locate the file specific TODO items.
 
+IETF 63 action items
+====================
+
+Base draft (diff 02,03):
+
+  - all parameter values changed (section 6.2)
+  - parameter type order strictly enforced, except for 2048-4095 (6.2)
+  - HIT computation has changed -- now they are 120 bits (section 3)
+  - state machine 4.4.2:
+    - state machine changed; there are two instances where you need to
+      compare HITs, etc (Aura et al)
+    - CLOSE handling
+  - nonce I and J should hashed into the DH keymaterial
+  - does not affect interops (?): puzzle storing has changed (see section C)
+  - the HI in I2 can be unencrypted
+  - notify has changed (optional)
+  - check interoperability between user and kernel branches: HMAC fails
+
+ESP-draft:
+
+  - SPI is gone, replaced with ESP_INFO
+
+MM-draft (diff 01,02):
+
+  - SPI and NES are gone, replaced with ESP_INFO
+  - REA is now LOCATOR
+  - keymat_index is now always explicitly specified
+  - an ACK can now be a multi-ACK, containing multiple sequence numbers!
+
+Rendezvous draft:
+  - XX CHECK
+
 IETF 60 action items
 ====================
 
