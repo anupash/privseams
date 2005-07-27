@@ -1964,24 +1964,49 @@ int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 }
 
 /**
+ * hip_build_param_esp_info - build esp_info parameter
+ * @msg: the message where the parameter will be appended
+ * 
+ * Returns: zero on success, or negative on failure
+ */
+int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
+			     uint16_t old_spi, uint16_t new_spi)
+{
+	int err = 0;
+	struct hip_esp_info esp_info;
+
+	hip_set_param_type(&esp_info, HIP_PARAM_SPI);
+	hip_calc_generic_param_len(&esp_info, sizeof(struct hip_esp_info), 0);
+	esp_info.reserved = htonl(0);
+	esp_info.keymat_index = htonl(keymat_index);
+	esp_info.old_spi = htonl(old_spi);
+	esp_info.new_spi = htonl(new_spi);
+
+	err = hip_build_param(msg, &esp_info);
+	return err;
+}
+
+/**
  * hip_build_param_spi_lsi - build the SPI_LSI parameter
  * @msg: the message where the parameter will be appended
  * @lsi: the value of the lsi (in host byte order)
  * @spi: the value of the spi (in host byte order)
  * 
+ * XX FIXME: Obsoleted by esp_info in draft-jokela-hip-00
+ *
  * Returns: zero on success, or negative on failure
  */
 int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
 {
-	int err = 0;
-	struct hip_spi hspi;
+        int err = 0;
+        struct hip_spi hspi;
 
-	hip_set_param_type(&hspi, HIP_PARAM_SPI);
-	hip_calc_generic_param_len(&hspi, sizeof(struct hip_spi), 0);
-	hspi.spi = htonl(spi);
+        hip_set_param_type(&hspi, HIP_PARAM_ESP_INFO);
+        hip_calc_generic_param_len(&hspi, sizeof(struct hip_spi), 0);
+        hspi.spi = htonl(spi);
 
-	err = hip_build_param(msg, &hspi);
-	return err;
+        err = hip_build_param(msg, &hspi);
+        return err;
 }
 
 /**

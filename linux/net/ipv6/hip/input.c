@@ -89,16 +89,16 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 	struct hip_common *msg_copy = NULL;
-	struct hip_spi *spi;
+	struct hip_esp_info *esp_info;
 
 	HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
 	memcpy(msg_copy, msg, sizeof(struct hip_common));
 	hip_set_msg_total_len(msg_copy, 0);
 	hip_zero_msg_checksum(msg_copy);
 
-	spi = hip_get_param(msg, HIP_PARAM_SPI);
-	HIP_ASSERT(spi);
-	HIP_IFE(hip_build_param(msg_copy, spi), -EFAULT);
+	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+	HIP_ASSERT(esp_info);
+	HIP_IFE(hip_build_param(msg_copy, esp_info), -EFAULT);
 	hip_build_param(msg_copy, host_id);
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG, "Packet contained no HMAC parameter\n");
@@ -364,7 +364,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	char *enc_in_msg = NULL, *host_id_in_enc = NULL, *iv = NULL;
 	struct in6_addr daddr;
 	u8 *dh_data = NULL;
-	struct hip_spi *hspi;
+	struct hip_esp_info *esp_info;
 	struct hip_common *i2 = NULL;
 	struct hip_param *param;
 	struct hip_diffie_hellman *dh_req;
@@ -398,9 +398,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			      &(ctx->input->hitr),
 			      &(ctx->input->hits));
 
-	/********** SPI **********/
-	/* SPI and LSI are set below where IPsec is set up */
-	HIP_IFEL(hip_build_param_spi(i2, 0), -1, "building of SPI_LSI failed.\n");
+	/********** ESP_INFO **********/
+	/* SPI is set below */
+	HIP_IFEL(hip_build_param_esp_info(i2, 0, 0, 0), -1, "building of ESP_INFO failed.\n");
 
 	/********** R1 COUNTER (OPTIONAL) ********/
 	/* we build this, if we have recorded some value (from previous R1s) */
@@ -543,9 +543,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 	}
 
- 	hspi = hip_get_param(i2, HIP_PARAM_SPI);
- 	HIP_ASSERT(hspi); /* Builder internal error */
-	hspi->spi = htonl(spi_in);
+ 	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
+ 	HIP_ASSERT(esp_info); /* Builder internal error */
+	esp_info->new_spi = htonl(spi_in);
 
 	/* LSI not created, as it is local, and we do not support IPv4 */
 
@@ -864,10 +864,10 @@ int hip_create_r2(struct hip_context *ctx,
 	hip_build_network_hdr(r2, HIP_R2, mask,
 			      &entry->hit_our, &entry->hit_peer);
 
- 	/********** SPI_LSI **********/
+ 	/********** ESP_INFO **********/
 	barrier();
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
-	HIP_IFEL(hip_build_param_spi(r2, spi_in), -1, "building of SPI_LSI failed.\n");
+	HIP_IFEL(hip_build_param_esp_info(r2, 0, spi_in, 0), -1, "building of ESP_INFO failed.\n");
 
 #ifdef CONFIG_HIP_RVS
  	/* Do the Rendezvous functionality */
@@ -960,7 +960,7 @@ int hip_handle_i2(struct hip_common *i2,
 	char *tmp_enc = NULL, *enc = NULL, *iv;
 	struct hip_host_id *host_id_in_enc = NULL;
 	struct hip_r1_counter *r1cntr;
-	struct hip_spi *hspi = NULL;
+	struct hip_esp_info *esp_info = NULL;
 	hip_ha_t *entry = ha;
 	hip_transform_suite_t esp_tfm, hip_tfm;
 	uint32_t spi_in, spi_out;
@@ -1122,7 +1122,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 		HIP_IFEL(!(esp_tf = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM)), -ENOENT,
 			 "Did not find ESP transform on i2\n");
-		HIP_IFEL(!(hspi = hip_get_param(ctx->input, HIP_PARAM_SPI)), -ENOENT,
+		HIP_IFEL(!(esp_info = hip_get_param(ctx->input, HIP_PARAM_ESP_INFO)), -ENOENT,
 			 "Did not find SPI LSI on i2\n");
 
 		if (r1cntr)
@@ -1136,7 +1136,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
-		spi_out_data.spi = ntohl(hspi->spi);
+		spi_out_data.spi = ntohl(esp_info->new_spi);
 		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		HIP_IFEL((esp_tfm = entry->esp_transform) == 0, -1,
@@ -1166,7 +1166,7 @@ int hip_handle_i2(struct hip_common *i2,
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 		
 	barrier();
-	spi_out = ntohl(hspi->spi);
+	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
@@ -1346,7 +1346,7 @@ int hip_handle_r2(struct hip_common *r2,
 	uint16_t len;
 	struct hip_context *ctx = NULL;
 	//struct in6_addr *sender;
- 	struct hip_spi *hspi = NULL;
+ 	struct hip_esp_info *esp_info = NULL;
  	struct hip_sig *sig = NULL;
 	struct hip_spi_out_item spi_out_data;
 	int tfm, err = 0;
@@ -1373,10 +1373,10 @@ int hip_handle_r2(struct hip_common *r2,
  	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL, "R2 signature verification failed\n");
 
         /* The rest */
- 	HIP_IFEL(!(hspi = hip_get_param(r2, HIP_PARAM_SPI)), -EINVAL,
+ 	HIP_IFEL(!(esp_info = hip_get_param(r2, HIP_PARAM_ESP_INFO)), -EINVAL,
 		 "Parameter SPI not found\n");
 
-	spi_recvd = ntohl(hspi->spi);
+	spi_recvd = ntohl(esp_info->new_spi);
 	memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 	spi_out_data.spi = spi_recvd;
 	HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);

@@ -244,30 +244,27 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
-#define HIP_PARAM_SPI                  1
+#define HIP_PARAM_ESP_INFO             1
+#define HIP_PARAM_SPI                  1 /* XX REMOVE:replaced with ESP_INFO */
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_REA                  3
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
 #define HIP_PARAM_NES                  9
-#define HIP_PARAM_SEQ                 385
-#define HIP_PARAM_ACK                 449
-#define HIP_PARAM_DIFFIE_HELLMAN      513
-#define HIP_PARAM_HIP_TRANSFORM       577
-#define HIP_PARAM_ESP_TRANSFORM       2048 // - incorrect in draft-jokela-esp-00?
-#define HIP_PARAM_ENCRYPTED           641
-#define HIP_PARAM_HOST_ID             705
-#define HIP_PARAM_CERT                768
-#define HIP_PARAM_RVA_REQUEST        100
-#define HIP_PARAM_RVA_REPLY          102
+#define HIP_PARAM_SEQ                  385
+#define HIP_PARAM_ACK                  449
+#define HIP_PARAM_DIFFIE_HELLMAN       513
+#define HIP_PARAM_HIP_TRANSFORM        577
+#define HIP_PARAM_ESP_TRANSFORM        2048
+#define HIP_PARAM_ENCRYPTED            641
+#define HIP_PARAM_HOST_ID              705
+#define HIP_PARAM_CERT                 768
+#define HIP_PARAM_RVA_REQUEST          100
+#define HIP_PARAM_RVA_REPLY            102
 
-//#define HIP_PARAM_REA_INFO           8   /* to be removed */
-//#define HIP_PARAM_AC_INFO            129 /* mm-01: to be removed */
-//#define HIP_PARAM_FA_INFO            130 /* mm-01: to be removed */
-
-#define HIP_PARAM_NOTIFY             832 //256
-#define HIP_PARAM_ECHO_REQUEST_SIGN    897 //1022
-#define HIP_PARAM_ECHO_RESPONSE_SIGN   961 //1024
+#define HIP_PARAM_NOTIFY               832
+#define HIP_PARAM_ECHO_REQUEST_SIGN    897
+#define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
@@ -494,6 +491,7 @@ struct hip_unit_test {
 	uint16_t           caseid;
 } __attribute__ ((packed));
 
+/* XX FIXME: obsoleted by esp_info in draft-ietf-esp-00 */
 struct hip_spi {
 	hip_tlv_type_t      type;
 	hip_tlv_len_t      length;
@@ -501,6 +499,15 @@ struct hip_spi {
 	uint32_t      spi;
 } __attribute__ ((packed));
 
+struct hip_esp_info {
+	hip_tlv_type_t      type;
+	hip_tlv_len_t      length;
+
+	uint16_t reserved;
+	uint16_t keymat_index;
+	uint16_t old_spi;
+	uint16_t new_spi;
+} __attribute__ ((packed));
 
 struct hip_r1_counter {
 	hip_tlv_type_t     type;
@@ -636,6 +643,7 @@ struct hip_sig2 {
 	/* fixed part end */
 } __attribute__ ((packed));
 
+/* XX FIXME: obsoloted by esp_info in draft-esp-00 */
 struct hip_nes {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
