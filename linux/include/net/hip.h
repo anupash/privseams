@@ -145,6 +145,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
+#define HIP_LOWER_TRANSFORM_TYPE 2048
+#define HIP_UPPER_TRANSFORM_TYPE 4095
 
 //#define HIP_HIT_TYPE_HASH126    1
 #define HIP_HIT_TYPE_HASH120    1
@@ -243,19 +245,19 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
 #define HIP_PARAM_SPI                  1
-#define HIP_PARAM_R1_COUNTER           2
+#define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_REA                  3
-#define HIP_PARAM_PUZZLE               5
-#define HIP_PARAM_SOLUTION             7
+#define HIP_PARAM_PUZZLE               257
+#define HIP_PARAM_SOLUTION             321
 #define HIP_PARAM_NES                  9
-#define HIP_PARAM_SEQ                 11
-#define HIP_PARAM_ACK                 13
-#define HIP_PARAM_DIFFIE_HELLMAN      15
-#define HIP_PARAM_HIP_TRANSFORM       17
-#define HIP_PARAM_ESP_TRANSFORM       19
-#define HIP_PARAM_ENCRYPTED           21
-#define HIP_PARAM_HOST_ID             35
-#define HIP_PARAM_CERT                64
+#define HIP_PARAM_SEQ                 385
+#define HIP_PARAM_ACK                 449
+#define HIP_PARAM_DIFFIE_HELLMAN      513
+#define HIP_PARAM_HIP_TRANSFORM       577
+#define HIP_PARAM_ESP_TRANSFORM       2048 // - incorrect in draft-jokela-esp-00?
+#define HIP_PARAM_ENCRYPTED           641
+#define HIP_PARAM_HOST_ID             705
+#define HIP_PARAM_CERT                768
 #define HIP_PARAM_RVA_REQUEST        100
 #define HIP_PARAM_RVA_REPLY          102
 
@@ -263,9 +265,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 //#define HIP_PARAM_AC_INFO            129 /* mm-01: to be removed */
 //#define HIP_PARAM_FA_INFO            130 /* mm-01: to be removed */
 
-#define HIP_PARAM_NOTIFY             256
-#define HIP_PARAM_ECHO_REQUEST_SIGN    1022
-#define HIP_PARAM_ECHO_RESPONSE_SIGN   1024
+#define HIP_PARAM_NOTIFY             832 //256
+#define HIP_PARAM_ECHO_REQUEST_SIGN    897 //1022
+#define HIP_PARAM_ECHO_RESPONSE_SIGN   961 //1024
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
@@ -284,12 +286,12 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_PARAM_FROM_SIGN       65100
 #define HIP_PARAM_TO_SIGN         65102
-#define HIP_PARAM_HMAC            65245
-#define HIP_PARAM_HMAC2           65247
-#define HIP_PARAM_HIP_SIGNATURE2  65277
-#define HIP_PARAM_HIP_SIGNATURE   65279
-#define HIP_PARAM_ECHO_REQUEST    65281
-#define HIP_PARAM_ECHO_RESPONSE   65283
+#define HIP_PARAM_HMAC            61505
+#define HIP_PARAM_HMAC2           61569
+#define HIP_PARAM_HIP_SIGNATURE2  61633
+#define HIP_PARAM_HIP_SIGNATURE   61697
+#define HIP_PARAM_ECHO_REQUEST    63661
+#define HIP_PARAM_ECHO_RESPONSE   65425
 #define HIP_PARAM_FROM            65300
 #define HIP_PARAM_TO              65302
 #define HIP_PARAM_RVA_HMAC        65320

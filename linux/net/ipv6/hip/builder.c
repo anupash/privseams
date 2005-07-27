@@ -929,7 +929,13 @@ int hip_check_network_msg(const struct hip_common *msg)
 			HIP_ERROR("bad param type, current param=%u\n",
 				  hip_get_param_type(current_param));
 			break;
-		} else if (current_param_type < prev_param_type) {
+		} else if (current_param_type < prev_param_type && 
+			   (current_param_type < HIP_LOWER_TRANSFORM_TYPE || 
+			    current_param_type > HIP_UPPER_TRANSFORM_TYPE)) {
+			/* According to draft-ietf-hip-base-03 parameter type order 
+			 * strictly enforced, except for 
+			 * HIP_LOWER_TRANSFORM_TYPE - HIP_UPPER_TRANSFORM_TYPE
+			 */
 			err = -ENOMSG;
 			HIP_ERROR("Wrong order of parameters (%d, %d)\n",
 				  prev_param_type, current_param_type);
