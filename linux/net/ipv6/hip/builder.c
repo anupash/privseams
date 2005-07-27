@@ -265,6 +265,7 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_dif
 	return hip_get_param_contents_len(dh) - sizeof(uint8_t);
 }
 
+
 /**
  * hip_set_param_spi_value - set the spi value in spi_lsi parameter
  * @spi_lsi: the spi_lsi parameter
@@ -286,6 +287,7 @@ uint32_t hip_get_param_spi_value(const struct hip_spi *hspi)
 {
 	return ntohl(hspi->spi);
 }
+
 
 /**
  * hip_get_unit_test_suite_param_id - get suite id from unit test parameter
@@ -929,9 +931,11 @@ int hip_check_network_msg(const struct hip_common *msg)
 			HIP_ERROR("bad param type, current param=%u\n",
 				  hip_get_param_type(current_param));
 			break;
-		} else if (current_param_type < prev_param_type && 
-			   (current_param_type < HIP_LOWER_TRANSFORM_TYPE || 
-			    current_param_type > HIP_UPPER_TRANSFORM_TYPE)) {
+		} else if (current_param_type < prev_param_type &&
+			   ((current_param_type < HIP_LOWER_TRANSFORM_TYPE ||
+			    current_param_type > HIP_UPPER_TRANSFORM_TYPE) &&
+			    (prev_param_type < HIP_LOWER_TRANSFORM_TYPE ||
+			     prev_param_type > HIP_UPPER_TRANSFORM_TYPE))) {
 			/* According to draft-ietf-hip-base-03 parameter type order 
 			 * strictly enforced, except for 
 			 * HIP_LOWER_TRANSFORM_TYPE - HIP_UPPER_TRANSFORM_TYPE
