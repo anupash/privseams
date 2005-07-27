@@ -159,6 +159,8 @@ int hip_produce_keying_material(struct hip_common *msg,
 		  hip_transf_length, hmac_transf_length, esp_transf_length,
 		  auth_transf_length);
 
+	HIP_DEBUG("I=0x%llx J=0x%llx\n", I, J);
+
 	/* Create only minumum amount of KEYMAT for now. From draft
 	 * chapter HIP KEYMAT we know how many bytes we need for all
 	 * keys used in the base exchange. */
@@ -171,7 +173,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 		keymat_len += HIP_AH_SHA_LEN - (keymat_len % HIP_AH_SHA_LEN);
 
 	HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min, keymat_len);
-	HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, GFP_KERNEL)), -ENOMEM, 
+	HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, GFP_KERNEL)), -ENOMEM,
 		 "No memory for KEYMAT\n");
 
 	/* 1024 should be enough for shared secret. The length of the
@@ -535,7 +537,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 	{
 		/* let the setup routine give us a SPI. */
-		HIP_IFEL(!(spi_in = hip_add_sa(&ctx->input->hits, &ctx->input->hitr, 
+		HIP_IFEL(!(spi_in = hip_add_sa(&ctx->input->hits,
+					       &ctx->input->hitr, 
 					       0, transform_esp_suite, 
 					       &ctx->esp_in, &ctx->auth_in, 0,
 					       HIP_SPI_DIRECTION_IN)), -1, 
@@ -706,12 +709,13 @@ int hip_handle_r1(struct hip_common *r1,
 	/* solve puzzle */
 	{
 		struct hip_puzzle *pz = NULL;
+
 		HIP_IFEL(!(pz = hip_get_param(r1, HIP_PARAM_PUZZLE)), -EINVAL,
 			 "Malformed R1 packet. PUZZLE parameter missing\n");
 		HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
 			 -EINVAL, "Solving of puzzle failed\n");
-		I = ((struct hip_solution *)pz)->I;
-		J = ((struct hip_solution *)pz)->J;	
+		I = pz->I;
+		J = solved_puzzle;
 	}
 
 	/* calculate shared secret and create keying material */
@@ -871,7 +875,7 @@ int hip_create_r2(struct hip_context *ctx,
  	/********** ESP_INFO **********/
 	barrier();
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
-	HIP_IFEL(hip_build_param_esp_info(r2, 0, spi_in, 0), -1, "building of ESP_INFO failed.\n");
+	HIP_IFEL(hip_build_param_esp_info(r2, 0, 0, spi_in), -1, "building of ESP_INFO failed.\n");
 
 #ifdef CONFIG_HIP_RVS
  	/* Do the Rendezvous functionality */
@@ -1143,7 +1147,8 @@ int hip_handle_i2(struct hip_common *i2,
 		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(esp_info->new_spi);
-		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
+		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
+					 &spi_out_data), -1);
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
 		HIP_IFEL((esp_tfm = entry->esp_transform) == 0, -1,
 			 "Could not select proper ESP transform\n");
