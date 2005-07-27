@@ -1838,7 +1838,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 /**
  * hip_build_param_rea - build HIP REA parameter
  *
- * XX FIX: depracated, use build_locator
+ * XX FIX: deprecated, use build_locator
  *
  * @msg:             the message where the REA will be appended
  * @spi:             SPI in host byte order
@@ -1983,12 +1983,12 @@ int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
  * Returns: zero on success, or negative on failure
  */
 int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
-			     uint16_t old_spi, uint16_t new_spi)
+			     uint32_t old_spi, uint32_t new_spi)
 {
 	int err = 0;
 	struct hip_esp_info esp_info;
 
-	hip_set_param_type(&esp_info, HIP_PARAM_SPI);
+	hip_set_param_type(&esp_info, HIP_PARAM_ESP_INFO);
 	hip_calc_generic_param_len(&esp_info, sizeof(struct hip_esp_info), 0);
 	esp_info.reserved = htonl(0);
 	esp_info.keymat_index = htonl(keymat_index);

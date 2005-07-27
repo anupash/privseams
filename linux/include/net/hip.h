@@ -506,8 +506,8 @@ struct hip_esp_info {
 
 	uint16_t reserved;
 	uint16_t keymat_index;
-	uint16_t old_spi;
-	uint16_t new_spi;
+	uint32_t old_spi;
+	uint32_t new_spi;
 } __attribute__ ((packed));
 
 struct hip_r1_counter {
