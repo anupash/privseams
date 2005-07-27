@@ -116,13 +116,24 @@ struct list_head {
         }\
 }
 
+#define HIP_HIT_TYPE_MASK_HAA   0x80
+//#define HIP_HIT_TYPE_MASK_126   0x40
+#define HIP_HIT_TYPE_MASK_120   0x40
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
+	/*
+	 * According to draft-ietf-hip-base-03 the mask 
+	 * has to be HIP_HIT_TYPE_MASK_120
+	 */
+#if 0	
 	int t;
 
 	t = a->s6_addr[0] & 0xC0;
 	return ((t == 0x40) ||
 		(t == 0x80));
+#endif
+	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
 
 }
 
@@ -134,10 +145,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
-#define HIP_HIT_TYPE_MASK_HAA   0x80
-#define HIP_HIT_TYPE_MASK_126   0x40
 
-#define HIP_HIT_TYPE_HASH126    1
+//#define HIP_HIT_TYPE_HASH126    1
+#define HIP_HIT_TYPE_HASH120    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 
 #define HIP_I1  1

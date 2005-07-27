@@ -1044,7 +1044,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
 	if (hip_host_id_contains_private_key(host_id)) {
 		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
-						 HIP_HIT_TYPE_HASH126);
+						 HIP_HIT_TYPE_HASH120);
 		if (err) {
 			HIP_ERROR("Failed to calculate HIT from HI.");
 			goto out_err;
@@ -1066,7 +1066,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	} else {
 		/* Only public key */
 		err = hip_host_id_to_hit(host_id,
-					 &lhi.hit, HIP_HIT_TYPE_HASH126);
+					 &lhi.hit, HIP_HIT_TYPE_HASH120);
 	}
 	
 	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
@@ -1149,7 +1149,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 		HIP_DEBUG("host_id len %d\n",
 			 ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
 		err = hip_host_id_to_hit(&eid_endpoint->endpoint.id.host_id,
-					 &lhi.hit, HIP_HIT_TYPE_HASH126);
+					 &lhi.hit, HIP_HIT_TYPE_HASH120);
 		if (err) {
 			HIP_ERROR("Failed to calculate HIT from HI.");
 			goto out_err;
