@@ -30,10 +30,19 @@ struct match {
   int state;
 };
 
+struct esp_address{
+  struct in6_addr dst_addr;
+  uint32_t * update_id; // null or pointer to the update id that announced 
+  //this address when ack with the update id is seen all esp_addresses with
+  //null update_id can be removed. 
+};
+
 struct esp_tuple{
   uint32_t spi;
-  //TODO make a set of addresses
-  struct in6_addr dst_addr;
+  uint32_t new_spi;
+  uint32_t spi_update_id;
+  struct GSList * dst_addr_list;
+  //  struct in6_addr dst_addr;
   struct tuple * tuple;
   //TODO int verified;
 };
@@ -50,7 +59,6 @@ struct hip_tuple {
   struct tuple * tuple;
 };
 
-
 struct tuple {
   struct hip_tuple * hip_tuple;
   struct GSList * esp_tuples;
@@ -62,10 +70,12 @@ struct tuple {
 struct connection {
   struct tuple original;
   struct tuple reply;  
+  //TODO !!!
+  int verify_responder;
   int state; //state for filtering
   int hip_state; //hip protocol state
-};
-/*--------------  CONNECTION TRACKING ------------*/
+  GTimeVal time_stamp;
+};/*--------------  CONNECTION TRACKING ------------*/
 
 //TODO some init module function necessary?
 void print_data(struct hip_data * data);
@@ -73,12 +83,15 @@ void print_data(struct hip_data * data);
 //struct tuple * get_tuple_by_hip(struct hip_data * data);
 //void insert_new_connection(struct hip_data * data);
 int filter_esp_packet(const struct in6_addr * dst_addr, uint32_t spi);
-int filter_state(struct ip6_hdr * ip6_hdr, 
+int filter_state(const struct ip6_hdr * ip6_hdr, 
 		 struct hip_common * buf, 
-		 struct state_option * rule, 
+		 const struct state_option * rule, 
 		 int);
-void conntrack(struct ip6_hdr * ip6_hdr, 
+void conntrack(const struct ip6_hdr * ip6_hdr, 
 	       struct hip_common * buf);
 int verify_packet_signature(struct hip_host_id * hi, 
 			    struct hip_common * common);
+
+void init_timeout_checking(long int timeout_val);
+void stop_timeout_checking();
 #endif

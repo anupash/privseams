@@ -115,7 +115,8 @@ void print_rule(const struct rule * rule){
 	}
       if(rule->src_hi != NULL)
 	{
-	  HIP_HEXDUMP("hi ", 
+	  HIP_DEBUG("src_hi exists ");
+	  _HIP_HEXDUMP("hi ", 
 		      rule->src_hi, 
 		      hip_get_param_total_len(rule->src_hi));
 	}
@@ -186,7 +187,7 @@ void print_rule_tables(){
       print_rule(rule);
       list = list->next;
     }
-  HIP_DEBUG("stateful filtering %d\n", get_stateful_filtering());
+  _HIP_DEBUG("stateful filtering %d\n", get_stateful_filtering());
 }
 
 
@@ -498,7 +499,7 @@ struct hit_option * parse_hit(char * token)
   RSA rsa;
 
   if(!strcmp(token, NEGATE_STR)){
-    HIP_DEBUG("found ! \n");
+    _HIP_DEBUG("found ! \n");
     option->boolean = 0;
     token = (char *)strtok(NULL, " ");
   }
@@ -512,7 +513,7 @@ struct hit_option * parse_hit(char * token)
       return NULL;
     }
   option->value = *hit;
-  HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
+  _HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
   return option;
 }
 
@@ -629,12 +630,12 @@ int dsa_to_public_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   _HIP_DEBUG("numbytes p=%d\n", BN_num_bytes(dsa->p));
   _HIP_DEBUG("numbytes q=%d\n", BN_num_bytes(dsa->q));
   _HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
-  HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key));
+  _HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key));
 
-  HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
+  _HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
   _HIP_DEBUG("q=%s\n", BN_bn2hex(dsa->q));
   _HIP_DEBUG("g=%s\n", BN_bn2hex(dsa->g));
-  HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
+  _HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
 
   /* ***** is use of BN_num_bytes ok ? ***** */
   t = (BN_num_bytes(dsa->p) - 64) / 8;
@@ -659,7 +660,7 @@ int dsa_to_public_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   */
   dsa_key_rr_len = 1 + 20 + 3 * (64 + t * 8);
 
-  HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
+  _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
   *dsa_key_rr = malloc(dsa_key_rr_len);
   if (!*dsa_key_rr) {
     HIP_ERROR("malloc\n");
@@ -676,7 +677,7 @@ int dsa_to_public_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   /* set T */
   memset(p, t, 1); // XX FIX: WTF MEMSET?
   p += 1;
-  HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
 
   /* minimum number of bytes needed to store P, G or Y */
   bn_buf_len = BN_num_bytes(dsa->p);
@@ -695,7 +696,7 @@ int dsa_to_public_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   
   /* Q */
   bn2bin_len = BN_bn2bin(dsa->q, bn_buf);
-  HIP_DEBUG("q len=%d\n", bn2bin_len);
+  _HIP_DEBUG("q len=%d\n", bn2bin_len);
   if (!bn2bin_len) {
     HIP_ERROR("bn2bin\n");
     err = -ENOMEM;
@@ -704,7 +705,7 @@ int dsa_to_public_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   HIP_ASSERT(bn2bin_len == 20);
   memcpy(p, bn_buf, bn2bin_len);
   p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
 
   /* add given dsa_param to the *dsa_key_rr */
 #define DSA_ADD_PGY_PARAM_TO_RR(dsa_param)   \
@@ -722,34 +723,17 @@ int dsa_to_public_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   /* padding + P */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->p);
-  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + G */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->g);
-  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + Y */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key);
-  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + X */
 
 #undef DSA_ADD_PGY_PARAM_TO_RR
 
-  // TODO pois  bn2bin_len = BN_bn2bin(dsa->priv_key, bn_buf);
-  // pois  memcpy(p,bn_buf,bn2bin_len);
-
-  // pois  p += bn2bin_len;
-  //  pois HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
-
-  /*  _HIP_DEBUG("q len=%d\n", bn2bin_len);
-  if (!bn2bin_len) {
-    HIP_ERROR("bn2bin\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  HIP_ASSERT(bn2bin_len == 20);
-  memcpy(p, bn_buf, bn2bin_len);
-  p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
-  */
   goto out_err;
 
  out_err_free_rr:
@@ -770,7 +754,7 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   int rsa_key_rr_len;
   struct endpoint_hip endpoint_hdr;
     
-  HIP_DEBUG("load_rsa_file: \n");  
+  _HIP_DEBUG("load_rsa_file: \n");  
   rsa = RSA_new();
   rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL);
   if(!rsa)
@@ -786,8 +770,6 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   rsa_key_rr = malloc(sizeof(struct hip_host_id) + RSA_size(rsa));
   _HIP_DEBUG("load_rsa_file: size allocated\n");
   rsa_key_rr_len = rsa_to_public_dns_key_rr(rsa, &rsa_key_rr);
-// TODO riittääkö muisti???
-// hip_host_id (inc hip_host_id_key_rdata ) + actual key
   hi = malloc(sizeof(struct hip_host_id) + rsa_key_rr_len);
   _HIP_DEBUG("load_rsa_file: rsa_key_len %d\n", rsa_key_rr_len);
   hip_build_param_host_id_hdr(hi, NULL, rsa_key_rr_len, HIP_HI_RSA);
@@ -804,28 +786,12 @@ struct hip_host_id * load_rsa_file(FILE * fp)
 struct hip_host_id * load_dsa_file(FILE * fp)
 {
   struct hip_host_id * hi = NULL;
-  //  struct hi_option * option = (struct hi_option *)malloc(sizeof(struct hi_option));
-   //  char first_key_line[30];
   DSA * dsa = NULL;
   unsigned char *dsa_key_rr = NULL;
   int dsa_key_rr_len;
   struct endpoint_hip endpoint_hdr;
-  // option->value = NULL;
-
-  /**
-  rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr); crypto
-
-   _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
-	      hip_get_param_total_len(&endpoint_hip->id.host_id));
-
-    err = rsa_to_hip_endpoint(rsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
-    rsa_to_hip_end_point libinet6/crypto.c
-
-    hip_build_endpoint
-    hip_build_param_host_id_only( fqdn = NULL ok?)  builder
-*/
   
-  HIP_DEBUG("load_dsa_file: \n");  
+  _HIP_DEBUG("load_dsa_file: \n");  
   dsa = DSA_new();
   _HIP_DEBUG("load_dsa_file: new\n");  
   dsa = PEM_read_DSA_PUBKEY(fp, &dsa, NULL, NULL);
@@ -873,7 +839,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
   struct hip_host_id * hi = NULL;
   struct in6_addr temp_hit;
   
-  HIP_DEBUG("parse_hi\n");
+  HIP_DEBUG("parse_hi: hi file: %s\n", token);
   fp = fopen(token, "rb");
   if(!fp){
     printf("Invalid filename for HI \n"); 
@@ -888,7 +854,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
       printf("Invalid filename for HI: missing _rsa_ or _dsa_ \n"); 
       return NULL;
     }
-  HIP_DEBUG("parse_hi: algo found %d\n", algo);
+  _HIP_DEBUG("parse_hi: algo found %d\n", algo);
   if(algo == HIP_HI_RSA)
    {
      hi = load_rsa_file(fp);
@@ -906,7 +872,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
   //verify hi => hit
   hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH126);
   if(!ipv6_addr_cmp(&temp_hit, hit))
-    HIP_DEBUG("parse hi: hi-hit match\n");
+    _HIP_DEBUG("parse hi: hi-hit match\n");
   else
     {
     printf("HI in file %s does not match hit %s \n", 
@@ -1033,7 +999,7 @@ struct rule * parse_rule(char * string)
   char * token;
   int option_found = NO_OPTION;
   
-  HIP_DEBUG("parse rule string %s\n", string);
+  HIP_DEBUG("parse rule string: %s\n", string);
   token = (char *) strtok(string, " ");
   if(token == NULL)
     return NULL;
@@ -1042,17 +1008,17 @@ struct rule * parse_rule(char * string)
   if(!strcmp(token, INPUT_STR))
     {
       rule->hook = NF_IP6_LOCAL_IN;
-      HIP_DEBUG("INPUT found \n");
+      _HIP_DEBUG("INPUT found \n");
     }
   else if(!strcmp(token, OUTPUT_STR))
     {
       rule->hook = NF_IP6_LOCAL_OUT;
-      HIP_DEBUG("OUTPUT found \n");
+      _HIP_DEBUG("OUTPUT found \n");
     }
   else if(!strcmp(token, FORWARD_STR))
     {
       rule->hook = NF_IP6_FORWARD;
-      HIP_DEBUG("FORWARD found \n");
+      _HIP_DEBUG("FORWARD found \n");
     }
   else
     {
@@ -1086,7 +1052,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      option_found = SRC_HIT_OPTION;
-	      HIP_DEBUG("src_hit found\n");
+	      _HIP_DEBUG("src_hit found\n");
 	    }
 	  else if(!strcmp(token, DST_HIT_STR))
 	    {  
@@ -1098,7 +1064,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      option_found = DST_HIT_OPTION;
-	      HIP_DEBUG("dst_hit found\n");
+	      _HIP_DEBUG("dst_hit found\n");
 	    }
 	  else if(!strcmp(token, SRC_HI_STR))
 	    {  
@@ -1112,7 +1078,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      option_found = SRC_HI_OPTION;
-	      HIP_DEBUG("src_hi found\n");
+	      _HIP_DEBUG("src_hi found\n");
 	    }
 	  else if(!strcmp(token, TYPE_STR))
 	    {
@@ -1124,7 +1090,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      option_found = TYPE_OPTION;
-	      HIP_DEBUG("type found\n");
+	      _HIP_DEBUG("type found\n");
 	    }
 	  else if(!strcmp(token, STATE_STR))
 	    {
@@ -1136,7 +1102,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      option_found = STATE_OPTION;	
-	      HIP_DEBUG("state found\n");
+	      _HIP_DEBUG("state found\n");
 	    }
 	  else if(!strcmp(token, VERIFY_RESPONDER_STR))
 	    {
@@ -1149,7 +1115,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      rule->state->verify_responder = 1;
-	      HIP_DEBUG("%s found\n", VERIFY_RESPONDER_STR);
+	      _HIP_DEBUG("%s found\n", VERIFY_RESPONDER_STR);
 	    }
 	  else if(!strcmp(token, ACCEPT_MOBILE_STR))
 	    {
@@ -1162,7 +1128,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      rule->state->accept_mobile = 1;
-	      HIP_DEBUG("%s found\n", ACCEPT_MOBILE_STR);
+	      _HIP_DEBUG("%s found\n", ACCEPT_MOBILE_STR);
 	    }
 	  else if(!strcmp(token, IN_IF_STR))
 	    {
@@ -1175,7 +1141,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      option_found = IN_IF_OPTION;	
-	      HIP_DEBUG("if found\n");
+	      _HIP_DEBUG("-i found\n");
 	    }
 	  else if(!strcmp(token, OUT_IF_STR))
 	    {
@@ -1188,7 +1154,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      option_found = OUT_IF_OPTION;	
-	      HIP_DEBUG("if found\n");
+	      _HIP_DEBUG("-o found\n");
 	    }
 	  else if(!strcmp(token, "ACCEPT"))
 	    {
@@ -1200,7 +1166,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      rule->accept = 1;
-	      HIP_DEBUG("accept found \n");
+	      _HIP_DEBUG("accept found \n");
 	      break;
 	    }
 	  else if(!strcmp(token, "DROP"))
@@ -1213,7 +1179,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      rule->accept = 0;
-	      HIP_DEBUG("drop found \n");
+	      _HIP_DEBUG("drop found \n");
 	      break;
 	    }
 	  else 
@@ -1230,7 +1196,7 @@ struct rule * parse_rule(char * string)
 	  if(option_found == SRC_HIT_OPTION)
 	    {
 	      rule->src_hit = parse_hit(token);
-	      HIP_DEBUG("parse_rule : src hit %d %s \n", rule->src_hit, addr_to_numeric(&rule->src_hit->value));
+	      _HIP_DEBUG("parse_rule : src hit %d %s \n", rule->src_hit, addr_to_numeric(&rule->src_hit->value));
 	      if(rule->src_hit == NULL)
 		{
 		  HIP_DEBUG("error parsing rule: src_hit value \n"); 
@@ -1252,7 +1218,7 @@ struct rule * parse_rule(char * string)
 	    }
 	  if(option_found == SRC_HI_OPTION)
 	    {
-	      HIP_DEBUG("parse_rule: src hi \n");
+	      _HIP_DEBUG("parse_rule: src hi \n");
 	      rule->src_hi = parse_hi(token, &rule->src_hit->value);
 	      if(rule->src_hi == NULL)
 		{
@@ -1342,7 +1308,7 @@ struct rule * parse_rule(char * string)
  * (classic readers and writers problem solution)
  */
 void read_enter(int hook){
-  HIP_DEBUG("read_enter\n");
+  _HIP_DEBUG("read_enter\n");
   if(hook == NF_IP6_LOCAL_IN)
     {
       g_static_mutex_lock(&input_mutex3);
@@ -1387,7 +1353,7 @@ void read_enter(int hook){
  */
 void read_exit(int hook)
 {
-  HIP_DEBUG("read_exit, hook %d \n", hook);
+  _HIP_DEBUG("read_exit, hook %d \n", hook);
   if (hook == NF_IP6_LOCAL_IN)
     {
       g_static_mutex_lock(&input_mutex1);
@@ -1420,7 +1386,7 @@ void read_exit(int hook)
  */
 void write_enter(int hook)
 {
-  HIP_DEBUG("write_enter, hook %d \n", hook);
+  _HIP_DEBUG("write_enter, hook %d \n", hook);
   if (hook == NF_IP6_LOCAL_IN)
     {  
       g_static_mutex_lock(&input_mutex2);
@@ -1456,7 +1422,7 @@ void write_enter(int hook)
  */
 void write_exit(int hook)
 {
-  HIP_DEBUG("write_exit, hook %d \n", hook);
+  _HIP_DEBUG("write_exit, hook %d \n", hook);
   if (hook == NF_IP6_LOCAL_IN)
     {
       g_static_mutex_unlock(&input_w);
@@ -1492,10 +1458,9 @@ void write_exit(int hook)
  * !!! read_rules_exit must be called after done with reading
  */
 struct GList * read_rules(int hook){
-  HIP_DEBUG("read_rules\n");
+  _HIP_DEBUG("read_rules\n");
   read_enter(hook); /////
   return get_rule_list(hook);
-  /////return rules;
 }
 
 /**
@@ -1503,7 +1468,7 @@ struct GList * read_rules(int hook){
  * after read_rules.
  */
 void read_rules_exit(int hook){
-  HIP_DEBUG("read_rules_exit\n");
+  _HIP_DEBUG("read_rules_exit\n");
   read_exit(hook); /////
 }
 
@@ -1526,14 +1491,14 @@ void read_file(char * file_name)
   char * original_line = NULL;
   size_t s = 0;
   int state = 0;
-  HIP_DEBUG("read_file\n");
+  HIP_DEBUG("read_file: file %s\n", file_name);
   if(file != NULL)
     {
       while(getline(&line, &s, file ) > 0)	  
 	{
 	  original_line = (char *) malloc(strlen(line) * + sizeof(char) );
 	  original_line = strcpy(original_line, line);
-	  HIP_DEBUG("line read: %s", line);
+	  _HIP_DEBUG("line read: %s", line);
 	  //remove trailing new line
 	  line = (char *) strtok(line, "\n");
 	  rule = parse_rule(line/*, &rule*/);
