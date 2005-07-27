@@ -247,7 +247,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_ESP_INFO             1
 #define HIP_PARAM_SPI                  1 /* XX REMOVE:replaced with ESP_INFO */
 #define HIP_PARAM_R1_COUNTER           128
-#define HIP_PARAM_REA                  3
+#define HIP_PARAM_REA                  3 /* XX REMOVE:replaced with LOCATOR */
+#define HIP_PARAM_LOCATOR              193
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
 #define HIP_PARAM_NES                  9
@@ -677,16 +678,33 @@ struct hip_notify {
 	/* end of fixed part */
 } __attribute__ ((packed));
 
+/* XX FIX: depracated in mm-02, use the locator addr item structure */
 struct hip_rea_info_addr_item {
 	uint32_t lifetime;
 	uint32_t reserved;
 	struct in6_addr address;
 }  __attribute__ ((packed));
 
+struct hip_locator_info_addr_item {
+	uint8_t traffic_type;
+	uint8_t locator_type;
+	uint8_t locator_length;
+	uint8_t reserved;
+	uint32_t lifetime;
+	/* end of fixed part - locator of arbitrary length follows */
+}  __attribute__ ((packed));
+
+/* XX FIX: depracated in mm-02, use the locator structure */
 struct hip_rea {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint32_t spi;
+	/* fixed part ends */
+} __attribute__ ((packed));
+
+struct hip_locator {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
 	/* fixed part ends */
 } __attribute__ ((packed));
 

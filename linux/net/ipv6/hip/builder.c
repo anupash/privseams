@@ -1834,6 +1834,8 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 /**
  * hip_build_param_rea - build HIP REA parameter
  *
+ * XX FIX: depracated, use build_locator
+ *
  * @msg:             the message where the REA will be appended
  * @spi:             SPI in host byte order
  * @addresses:       list of addresses
@@ -1869,6 +1871,13 @@ int hip_build_param_rea(struct hip_common *msg,
 		       addresses, addrs_len);
 
 	return err;
+}
+
+int hip_build_param_locator(struct hip_common *msg,
+			struct hip_locator_info_addr_item *addresses,
+			int address_count)
+{
+	return -1; /* XX FIX: implement similarly as the function above  */
 }
 
 /**
