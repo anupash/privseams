@@ -125,7 +125,9 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
  * Returns zero on success, or negative on error.
  */
 int hip_produce_keying_material(struct hip_common *msg,
-				struct hip_context *ctx)
+				struct hip_context *ctx,
+				uint64_t I,
+				uint64_t J)
 {
 	u8 *dh_shared_key = NULL;
 	int hip_transf_length, hmac_transf_length;
@@ -186,10 +188,9 @@ int hip_produce_keying_material(struct hip_common *msg,
 		 -EINVAL, "Calculation of shared secret failed\n");
 	_HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
 	_HIP_HEXDUMP("DH SHARED KEY", dh_shared_key, dh_shared_len);
-
 	hip_make_keymat(dh_shared_key, dh_shared_len,
 			&km, keymat, keymat_len,
-			&msg->hits, &msg->hitr, &ctx->keymat_calc_index);
+			&msg->hits, &msg->hitr, &ctx->keymat_calc_index, I, J);
 
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */
@@ -643,6 +644,7 @@ int hip_handle_r1(struct hip_common *r1,
 {
 	int err = 0, len;
 	uint64_t solved_puzzle;
+	uint64_t I, J;
 
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *peer_host_id;
@@ -708,11 +710,13 @@ int hip_handle_r1(struct hip_common *r1,
 			 "Malformed R1 packet. PUZZLE parameter missing\n");
 		HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
 			 -EINVAL, "Solving of puzzle failed\n");
+		I = ((struct hip_solution *)pz)->I;
+		J = ((struct hip_solution *)pz)->J;	
 	}
 
 	/* calculate shared secret and create keying material */
 	ctx->dh_shared_key = NULL;
-	HIP_IFEL(hip_produce_keying_material(r1, ctx), -EINVAL,
+	HIP_IFEL(hip_produce_keying_material(r1, ctx, I, J), -EINVAL,
 		 "Could not produce keying material\n");
 
 	/* Everything ok, save host id to HA */
@@ -967,7 +971,7 @@ int hip_handle_i2(struct hip_common *i2,
 	uint16_t crypto_len;
  	struct in6_addr hit;
 	struct hip_spi_in_item spi_in_data;
-
+	uint64_t I, J;
  	HIP_DEBUG("\n");
 
 	/* Assume already locked ha, if ha is not NULL */
@@ -993,11 +997,13 @@ int hip_handle_i2(struct hip_common *i2,
 			 "Invalid I2: SOLUTION parameter missing\n");
 		HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol), -ENOMSG,
 			 "Cookie solution rejected\n");
+		I = sol->I;
+		J = sol->J;
 	}
 
 	/* Check HIP and ESP transforms, and produce keying material  */
 	ctx->dh_shared_key = NULL;
-	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx), -1, 
+	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1, 
 		 "Unable to produce keying material. Dropping I2\n");
 
 	/* verify HMAC */

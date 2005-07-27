@@ -12,18 +12,20 @@
 
 u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len, 
 			     struct in6_addr *smaller_hit,
-			     struct in6_addr *bigger_hit)
+			     struct in6_addr *bigger_hit,
+			     uint64_t I, uint64_t J)
 
 {
 	u8 *buffer;
 	size_t requiredmem;
 
+	HIP_DEBUG("\n");
 	if (2 * sizeof(struct in6_addr) < hash_len)
-		requiredmem = kij_len + hash_len + sizeof(u8);
+		requiredmem = kij_len + hash_len + sizeof(u8) + 2*sizeof(uint64_t);
 	else
 		requiredmem = kij_len + 2 * sizeof(struct in6_addr) +
-			sizeof(u8);
-
+			sizeof(u8) + 2*sizeof(uint64_t);
+	//2*sizeof(uint64_t) added to take care of I and J.
 	buffer = (u8 *)HIP_MALLOC(requiredmem, GFP_KERNEL);
 	if (!buffer) {
 		HIP_ERROR("Out of memory\n");
@@ -34,7 +36,9 @@ u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len,
 	memcpy(buffer+kij_len,(u8 *)smaller_hit,sizeof(struct in6_addr));
 	memcpy(buffer+kij_len+sizeof(struct in6_addr),(u8 *)bigger_hit,
 	       sizeof(struct in6_addr));
-	*(buffer+kij_len+sizeof(struct in6_addr)*2) = 1;
+	memcpy(buffer+kij_len+sizeof(struct in6_addr)*2, &I, sizeof(uint64_t));  
+	memcpy(buffer+kij_len+sizeof(struct in6_addr)*2 + sizeof(uint64_t), &J, sizeof(uint64_t));  
+	*(buffer+kij_len+sizeof(struct in6_addr)*2+sizeof(uint64_t)*2) = 1;
 
 	return buffer;
 }
@@ -65,7 +69,8 @@ void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat, 
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
-		     struct in6_addr *hit2, u8 *calc_index)
+		     struct in6_addr *hit2, u8 *calc_index,
+		     uint64_t I, uint64_t J)
 {
 	int err, bufsize;
 	uint8_t index_nbr = 1;
@@ -79,7 +84,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
 #endif
-
+	HIP_DEBUG("\n");
 	if (dstbuflen < HIP_AH_SHA_LEN) {
 		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
 		return;
@@ -93,19 +98,21 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	bigger_hit =  hit1_is_bigger ? hit1 : hit2;
 	smaller_hit = hit1_is_bigger ? hit2 : hit1;
 
+	HIP_DEBUG("\n");
 	_HIP_HEXDUMP("bigger hit", bigger_hit, 16);
 	_HIP_HEXDUMP("smaller hit", smaller_hit, 16);
 	_HIP_HEXDUMP("index_nbr", (char *) &index_nbr,
 		     HIP_KEYMAT_INDEX_NBR_SIZE);
 
 	shabuffer = hip_create_keymat_buffer(kij, kij_len, HIP_AH_SHA_LEN,
-					     smaller_hit, bigger_hit);
+					     smaller_hit, bigger_hit, I, J);
 	if (!shabuffer) {
 		HIP_ERROR("No memory for keymat\n");
 		return;
 	}
 
-	bufsize = kij_len+2*sizeof(struct in6_addr)+1;
+	bufsize = kij_len+2*sizeof(struct in6_addr)+ 2*sizeof(uint64_t)+1;
+	//bufsize = kij_len+2*sizeof(struct in6_addr)+ 1;
 
 #ifdef __KERNEL__
 	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, bufsize);
