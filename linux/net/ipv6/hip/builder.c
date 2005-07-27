@@ -1282,7 +1282,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	int err = 0;
 	struct hip_hmac hmac2;
 	struct hip_common *tmp = NULL;
-	struct hip_spi *spi;
+	struct hip_esp_info *spi;
 
 	tmp = hip_msg_alloc();
 	if (!tmp) {
@@ -1294,9 +1294,9 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	hip_set_msg_total_len(tmp, 0);
 	/* assume no checksum yet */
 
-	spi = hip_get_param(msg, HIP_PARAM_SPI);
-	HIP_ASSERT(spi);
-	err = hip_build_param(tmp, spi);
+	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+	HIP_ASSERT(esp_info);
+	err = hip_build_param(tmp, esp_info);
 	if (err) {
 		err = -EFAULT;
 		goto out_err;
