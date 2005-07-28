@@ -48,9 +48,12 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 	HIP_DEBUG("hadb entry state is %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_NONE:
+		HIP_DEBUG("No state with peer\n");
 		break;
+	case HIP_STATE_CLOSING:
+	case HIP_STATE_CLOSED:
 	case HIP_STATE_UNASSOCIATED:
-		HIP_DEBUG("Initiating connection\n");
+		HIP_DEBUG("Initiating connection (unassoc/closed/closing)\n");
 #ifdef HIP_TIMING
 		if (!gtv_inuse) {
 			HIP_START_TIMER(KMM_GLOBAL);
@@ -90,6 +93,9 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		err = -1;
 		break;
 	case HIP_STATE_R2_SENT: /* For responder */
+		xs->state = HIP_STATE_ESTABLISHED;
+		HIP_DEBUG("ESTABLISED\n");
+		break;
 	case HIP_STATE_ESTABLISHED:
 		/* State is already established; just rewrite HITs to IPv6
 		   addresses and continue normal IPv6 packet processing. */

@@ -873,10 +873,28 @@ int hip_socket_handle_del_peer_map_hit_ip(const struct hip_common *input)
 	return err;
 }
 
-
 int hip_socket_handle_rst(const struct hip_common *input)
 {
-	return -ENOSYS;
+	struct hip_work_order *hwo;
+	int err = 0;
+
+	HIP_DEBUG("\n");
+	
+	HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -EFAULT,
+		 "Failed to insert hi work order\n");
+	
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+				HIP_WO_SUBTYPE_SEND_CLOSE,
+				NULL, NULL, NULL,
+				0, 0, 0);
+	/* override the destructor; socket handler deletes the msg
+	   by itself */
+	hwo->destructor = NULL;
+	hwo->msg = (struct hip_common *) input;
+	hip_insert_work_order(hwo);
+
+ out_err:
+	return err;
 }
 
 int hip_socket_bos_wo(const struct hip_common *input)

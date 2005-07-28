@@ -311,6 +311,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 		ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
 		skip_sync = 0;
 		break;
+	case HIP_CLOSE:
+		err = hip_receive_close(msg);
+		break;
+	case HIP_CLOSE_ACK:
+		err = hip_receive_close_ack(msg);
+		break;
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);
 		err = -ENOSYS;
@@ -810,6 +816,8 @@ int hip_receive_r1(struct hip_common *hip_common,
 	switch(state) {
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
+	case HIP_STATE_CLOSING:
+	case HIP_STATE_CLOSED:
 		/* E1. The normal case. Process, send I2, goto E2. */
 		err = hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
 		HIP_LOCK_HA(entry);
@@ -1104,13 +1112,12 @@ int hip_handle_i2(struct hip_common *i2,
 		hip_hold_ha(entry);
 
 		//HIP_DEBUG("HA entry created.");
-	}  else {
+	}  else if (entry->state == HIP_STATE_R2_SENT) {
  		/* If the I2 packet is a retransmission, we need reuse the
  		   the SPI that was setup already when the first I2 was
- 		   received. However it is a retransmission only if the responder
-		   is in R2-SENT STATE */
-		if (entry->state == HIP_STATE_R2_SENT)
-			retransmission = 1;
+ 		   received. However it is a retransmission only if the
+		   responder is in R2-SENT STATE */
+		retransmission = 1;
   	}
 	
 	/* FIXME: the above should not be done if signature fails...
@@ -1293,11 +1300,14 @@ int hip_receive_i2(struct hip_common *i2,
 	hip_ha_t *entry;
 	uint16_t mask;
 
-	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0, "Received NULL receiver HIT in I2. Dropping\n");
+	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
+		 "Received NULL receiver HIT in I2. Dropping\n");
 
-	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL, HIP_CONTROL_DHT_ALL);
+	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
+					HIP_CONTROL_DHT_ALL);
 	HIP_IFEL(!hip_controls_sane(ntohs(i2->control), mask), 0, 
-		 "Received illegal controls in I2: 0x%x. Dropping\n", ntohs(i2->control));
+		 "Received illegal controls in I2: 0x%x. Dropping\n",
+		 ntohs(i2->control));
 
 	entry = hip_hadb_find_byhits(&i2->hits, &i2->hitr);
 	if (!entry) {
@@ -1313,10 +1323,36 @@ int hip_receive_i2(struct hip_common *i2,
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
-	case HIP_STATE_I1_SENT:
+		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		break;
 	case HIP_STATE_I2_SENT:
+		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+			HIP_DEBUG("Our HIT is bigger\n");
+			err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+			if (!err)
+				entry->state = HIP_STATE_R2_SENT;
+		} else {
+			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
+		}
+		break;
+	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
+ 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		if (!err)
+			entry->state = HIP_STATE_R2_SENT;
+ 		break;
  	case HIP_STATE_ESTABLISHED:
+ 		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
+ 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		if (!err)
+			entry->state = HIP_STATE_R2_SENT;
+ 		break;
+ 	case HIP_STATE_CLOSING:
+ 	case HIP_STATE_CLOSED:
+		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
+ 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		if (!err)
+			entry->state = HIP_STATE_R2_SENT;
  	case HIP_STATE_REKEYING:
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
 		//if (!err) {
@@ -1562,13 +1598,27 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	switch(state) {
 	case HIP_STATE_NONE:
 		/* entry == NULL */
-	case HIP_STATE_UNASSOCIATED:
+		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		break;
 	case HIP_STATE_I1_SENT:
+                if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+			HIP_DEBUG("Our HIT is bigger\n");
+			err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		} else {
+			HIP_DEBUG("Dropping i1 (two hosts iniating base exchange at the same time?)\n");
+		}
+		break;
+	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
 	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_REKEYING:
 		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		break;
+	case HIP_STATE_CLOSED:
+	case HIP_STATE_CLOSING:
+		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		entry->state = state;
 		break;
 	default:
 		/* should not happen */
@@ -1775,5 +1825,209 @@ int hip_receive_bos(struct hip_common *bos,
 	return err;
 }
 
+int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
+{
+	int err = 0, mask = 0;
+	struct hip_common *close_ack = NULL;
+
+	/* verify HMAC */
+	HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
+		 -ENOENT, "HMAC validation on close failed\n");
+
+	/* verify signature */
+	HIP_IFEL(entry->verify(entry->peer_pub, close), -EINVAL,
+		 "Verification of close signature failed\n");
+
+	HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
+
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+					HIP_CONTROL_DHT_TYPE1);
+	hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
+			      mask, &entry->hit_our,
+			      &entry->hit_peer);
+	hip_calc_hdr_len(close_ack);
+
+	/************* HMAC ************/
+	HIP_IFEL(hip_build_param_hmac_contents(close_ack,
+					       &entry->hip_hmac_out),
+		 -1, "Building of HMAC failed\n");
+
+	/********** Signature **********/
+	HIP_IFEL(entry->sign(entry->our_priv, close_ack), -EINVAL,
+		 "Could not create signature\n");
+
+	HIP_IFE(hip_csum_send(NULL, &entry->preferred_address, close_ack), -1);
+
+	entry->state = HIP_STATE_CLOSED;
+
+	HIP_DEBUG("CLOSED\n");
+
+	/* Note: I had some problems with deletion of peer info. Try to close
+	   a SA and then to re-establish without rmmod or killing
+	   the hipd when you test the CLOSE. -miika */
+
+	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
+				  &entry->preferred_address), -1,
+				   "Deleting peer info failed\n");
+	//hip_hadb_remove_state(entry);
+	//hip_delete_esp(entry);
+
+	/* by now, if everything is according to plans, the refcnt should
+	   be 1 */
+	hip_put_ha(entry);
+
+ out_err:
+
+	if (close_ack)
+		HIP_FREE(close_ack);
+
+	return err;
+}
+
+int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
+{
+	int err = 0;
+
+	/* verify HMAC */
+	HIP_IFEL(hip_verify_packet_hmac(close_ack, &entry->hip_hmac_in),
+		 -ENOENT, "HMAC validation on close ack failed\n");
+
+	/* verify signature */
+	HIP_IFEL(entry->verify(entry->peer_pub, close_ack), -EINVAL,
+		 "Verification of close ack signature failed\n");
+
+	entry->state = HIP_STATE_CLOSED;
+
+	HIP_DEBUG("CLOSED\n");
+
+	/* Note: I had some problems with deletion of peer info. Try to close
+	   a SA and then to re-establish without rmmod or killing
+	   the hipd when you test the CLOSE. -miika */
+
+	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
+				   &entry->preferred_address), -1,
+		 "Deleting peer info failed\n");
+
+	//hip_hadb_remove_state(entry);
+	//hip_delete_esp(entry);
+
+	/* by now, if everything is according to plans, the refcnt should
+	   be 1 */
+	hip_put_ha(entry);
+
+ out_err:
+
+	return err;
+}
+
+int hip_receive_close(struct hip_common *close) 
+{
+	int state = 0;
+	int err = 0;
+	hip_ha_t *entry;
+	uint16_t mask;
+
+	/* XX FIX: CHECK THE SIGNATURE */
+
+	HIP_DEBUG("\n");
+	HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
+		 "Received NULL receiver HIT in CLOSE. Dropping\n");
+
+	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
+					HIP_CONTROL_DHT_ALL);
+	if (!hip_controls_sane(ntohs(close->control), mask
+			  //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
+			  //HIP_CONTROL_RVS_CAPABLE
+			  // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
+		               )) {
+		HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
+			  ntohs(close->control));
+		goto out_err;
+	}
+
+	entry = hip_hadb_find_byhits(&close->hits, &close->hitr);
+	if (!entry) {
+		HIP_DEBUG("No HA for the received close\n");
+		goto out_err;
+	} else {
+		barrier();
+		HIP_LOCK_HA(entry);
+		state = entry->state;
+	}
+
+ 	switch(state) {
+ 	case HIP_STATE_REKEYING: // XX CHECK: CORRECT?
+ 	case HIP_STATE_ESTABLISHED:
+	case HIP_STATE_CLOSING:
+		err = hip_handle_close(close, entry);
+		break;
+	default:
+		HIP_ERROR("Internal state (%d) is incorrect\n", state);
+		break;
+	}
+
+	if (entry) {
+		/* XX CHECK: is the put done twice? once already in handle? */
+		HIP_UNLOCK_HA(entry);
+		hip_put_ha(entry);
+	}
+ out_err:
+	return err;
+}
+
+int hip_receive_close_ack(struct hip_common *close_ack) 
+{
+	int state = 0;
+	int err = 0;
+	hip_ha_t *entry;
+	uint16_t mask;
+
+	/* XX FIX:  */
+
+	HIP_DEBUG("\n");
+
+	HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
+		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
+
+	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
+					HIP_CONTROL_DHT_ALL);
+	if (!hip_controls_sane(ntohs(close_ack->control), mask
+		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
+		       //HIP_CONTROL_RVS_CAPABLE
+		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
+		               )) {
+		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
+			  ntohs(close_ack->control));
+		goto out_err;
+	}
+
+	entry = hip_hadb_find_byhits(&close_ack->hits, &close_ack->hitr);
+	if (!entry) {
+		HIP_DEBUG("No HA for the received close ack\n");
+		goto out_err;
+	} else {
+		barrier();
+		HIP_LOCK_HA(entry);
+		state = entry->state;
+	}
+
+ 	switch(state) {
+	case HIP_STATE_CLOSING:
+	case HIP_STATE_CLOSED:
+		err = hip_handle_close_ack(close_ack, entry);
+		break;
+	default:
+		HIP_ERROR("Internal state (%d) is incorrect\n", state);
+		break;
+	}
+
+	if (entry) {
+		/* XX CHECK: is the put done twice? once already in handle? */
+		HIP_UNLOCK_HA(entry);
+		hip_put_ha(entry);
+	}
+ out_err:
+	return err;
+}
 
 #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */

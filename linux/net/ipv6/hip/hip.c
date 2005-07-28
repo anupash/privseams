@@ -862,7 +862,7 @@ static int hip_worker(void *t)
 
 #ifdef CONFIG_SMP
  out:
-#endif CONFIG_SMP
+#endif /* CONFIG_SMP */
 
 	/* cleanup and finish thread */
 	hip_uninit_workqueue();

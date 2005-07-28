@@ -354,7 +354,9 @@ int hip_check_network_msg_type(const struct hip_common *msg) {
 			HIP_R2,
 			HIP_UPDATE,
 			HIP_NOTIFY,
-			HIP_BOS
+			HIP_BOS,
+			HIP_CLOSE,
+			HIP_CLOSE_ACK
 		};
 	hip_hdr_type_t i;
 	hip_hdr_type_t type = hip_get_msg_type(msg);
