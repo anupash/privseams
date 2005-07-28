@@ -12,29 +12,41 @@
 
 u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len, 
 			     struct in6_addr *smaller_hit,
-			     struct in6_addr *bigger_hit)
+			     struct in6_addr *bigger_hit,
+			     uint64_t I, uint64_t J)
 
 {
-	u8 *buffer;
+	u8 *buffer, *cur;
 	size_t requiredmem;
 
+	HIP_DEBUG("\n");
+	/* 2*sizeof(uint64_t) added to take care of I and J. */
 	if (2 * sizeof(struct in6_addr) < hash_len)
-		requiredmem = kij_len + hash_len + sizeof(u8);
+		requiredmem = kij_len + hash_len + sizeof(u8) + 2*sizeof(uint64_t);
 	else
 		requiredmem = kij_len + 2 * sizeof(struct in6_addr) +
-			sizeof(u8);
-
+			sizeof(u8) + 2*sizeof(uint64_t);
 	buffer = (u8 *)HIP_MALLOC(requiredmem, GFP_KERNEL);
 	if (!buffer) {
 		HIP_ERROR("Out of memory\n");
 		return buffer;
 	}
 
-	memcpy(buffer,kij,kij_len);
-	memcpy(buffer+kij_len,(u8 *)smaller_hit,sizeof(struct in6_addr));
-	memcpy(buffer+kij_len+sizeof(struct in6_addr),(u8 *)bigger_hit,
-	       sizeof(struct in6_addr));
-	*(buffer+kij_len+sizeof(struct in6_addr)*2) = 1;
+	cur = buffer;
+	memcpy(cur, kij, kij_len);
+	cur += kij_len;
+	memcpy(cur, (u8 *)smaller_hit, sizeof(struct in6_addr));
+	cur += sizeof(struct in6_addr);
+	memcpy(cur,(u8 *)bigger_hit, sizeof(struct in6_addr));
+	cur += sizeof(struct in6_addr);
+	memcpy(cur, &I, sizeof(uint64_t)); // XX CHECK: network byte order?
+	cur += sizeof(uint64_t);
+	memcpy(cur, &J, sizeof(uint64_t)); // XX CHECK: network byte order?
+	cur += sizeof(uint64_t);
+	*(cur) = 1;
+	cur += sizeof(u8);
+
+	HIP_HEXDUMP("beginning of keymat", buffer, cur - buffer);
 
 	return buffer;
 }
@@ -65,21 +77,22 @@ void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat, 
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
-		     struct in6_addr *hit2, u8 *calc_index)
+		     struct in6_addr *hit2, u8 *calc_index,
+		     uint64_t I, uint64_t J)
 {
-	int err;
+	int err, bufsize;
 	uint8_t index_nbr = 1;
 	int dstoffset = 0;
 	void *seedkey;
 	struct in6_addr *smaller_hit, *bigger_hit;
 	int hit1_is_bigger;
-	u8 *shabuffer;
+	u8 *shabuffer = NULL;
 #ifdef __KERNEL__
 	struct crypto_tfm *sha = impl_sha1;
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
 #endif
-
+	HIP_DEBUG("\n");
 	if (dstbuflen < HIP_AH_SHA_LEN) {
 		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
 		return;
@@ -93,28 +106,34 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	bigger_hit =  hit1_is_bigger ? hit1 : hit2;
 	smaller_hit = hit1_is_bigger ? hit2 : hit1;
 
+	HIP_DEBUG("\n");
 	_HIP_HEXDUMP("bigger hit", bigger_hit, 16);
 	_HIP_HEXDUMP("smaller hit", smaller_hit, 16);
 	_HIP_HEXDUMP("index_nbr", (char *) &index_nbr,
 		     HIP_KEYMAT_INDEX_NBR_SIZE);
 
 	shabuffer = hip_create_keymat_buffer(kij, kij_len, HIP_AH_SHA_LEN,
-					     smaller_hit, bigger_hit);
+					     smaller_hit, bigger_hit, I, J);
 	if (!shabuffer) {
 		HIP_ERROR("No memory for keymat\n");
 		return;
 	}
 
+	bufsize = kij_len + 2 * sizeof(struct in6_addr) +
+		2 * sizeof(uint64_t) + 1;
+	//bufsize = kij_len+2*sizeof(struct in6_addr)+ 1;
+
 #ifdef __KERNEL__
-	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, 
-				       kij_len+2*sizeof(struct in6_addr)+1);
+	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, bufsize);
 	HIP_ASSERT(!err);
 
 	crypto_digest_digest(sha, sg, nsg, dstbuf);
 #else
 	// XX FIXME: is this correct
-	hip_build_digest(HIP_DIGEST_SHA1, shabuffer, 0, dstbuf);
+	hip_build_digest(HIP_DIGEST_SHA1, shabuffer, bufsize, dstbuf);
 #endif
+
+	_HIP_HEXDUMP("keymat digest", dstbuf, HIP_AH_SHA_LEN);
 
 	dstoffset = HIP_AH_SHA_LEN;
 	index_nbr++;
@@ -130,7 +149,8 @@ void hip_make_keymat(char *kij, size_t kij_len,
 #ifdef __KERNEL__
 	nsg = HIP_MAX_SCATTERLISTS;
 
-	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, kij_len + HIP_AH_SHA_LEN + 1);
+	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer,
+				       kij_len + HIP_AH_SHA_LEN + 1);
 	HIP_ASSERT(!err);
 #endif
 
@@ -138,7 +158,9 @@ void hip_make_keymat(char *kij, size_t kij_len,
 #ifdef __KERNEL__
 		crypto_digest_digest(sha, sg, nsg, dstbuf + dstoffset);
 #else
-		hip_build_digest(HIP_DIGEST_SHA1, shabuffer, kij_len + HIP_AH_SHA_LEN + 1, dstbuf + dstoffset);
+		hip_build_digest(HIP_DIGEST_SHA1, shabuffer,
+				 kij_len + HIP_AH_SHA_LEN + 1,
+				 dstbuf + dstoffset);
 #endif
 		seedkey = dstbuf + dstoffset;
 		dstoffset += HIP_AH_SHA_LEN;

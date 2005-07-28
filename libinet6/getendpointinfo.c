@@ -1448,7 +1448,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH126, &hit.hit);
+    err = rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1462,7 +1462,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH126, &hit.hit);
+    err = dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;

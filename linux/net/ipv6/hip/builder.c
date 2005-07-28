@@ -265,6 +265,7 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_dif
 	return hip_get_param_contents_len(dh) - sizeof(uint8_t);
 }
 
+
 /**
  * hip_set_param_spi_value - set the spi value in spi_lsi parameter
  * @spi_lsi: the spi_lsi parameter
@@ -286,6 +287,7 @@ uint32_t hip_get_param_spi_value(const struct hip_spi *hspi)
 {
 	return ntohl(hspi->spi);
 }
+
 
 /**
  * hip_get_unit_test_suite_param_id - get suite id from unit test parameter
@@ -395,7 +397,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
-			HIP_PARAM_SPI,
+			HIP_PARAM_ESP_INFO,
+			HIP_PARAM_SPI, /* XX FIX: REMOVE */
 			HIP_PARAM_R1_COUNTER,
 			HIP_PARAM_REA,
 			HIP_PARAM_PUZZLE,
@@ -929,7 +932,15 @@ int hip_check_network_msg(const struct hip_common *msg)
 			HIP_ERROR("bad param type, current param=%u\n",
 				  hip_get_param_type(current_param));
 			break;
-		} else if (current_param_type < prev_param_type) {
+		} else if (current_param_type < prev_param_type &&
+			   ((current_param_type < HIP_LOWER_TRANSFORM_TYPE ||
+			    current_param_type > HIP_UPPER_TRANSFORM_TYPE) &&
+			    (prev_param_type < HIP_LOWER_TRANSFORM_TYPE ||
+			     prev_param_type > HIP_UPPER_TRANSFORM_TYPE))) {
+			/* According to draft-ietf-hip-base-03 parameter type order 
+			 * strictly enforced, except for 
+			 * HIP_LOWER_TRANSFORM_TYPE - HIP_UPPER_TRANSFORM_TYPE
+			 */
 			err = -ENOMSG;
 			HIP_ERROR("Wrong order of parameters (%d, %d)\n",
 				  prev_param_type, current_param_type);
@@ -1272,7 +1283,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	int err = 0;
 	struct hip_hmac hmac2;
 	struct hip_common *tmp = NULL;
-	struct hip_spi *spi;
+	struct hip_esp_info *esp_info;
 
 	tmp = hip_msg_alloc();
 	if (!tmp) {
@@ -1284,9 +1295,9 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	hip_set_msg_total_len(tmp, 0);
 	/* assume no checksum yet */
 
-	spi = hip_get_param(msg, HIP_PARAM_SPI);
-	HIP_ASSERT(spi);
-	err = hip_build_param(tmp, spi);
+	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+	HIP_ASSERT(esp_info);
+	err = hip_build_param(tmp, esp_info);
 	if (err) {
 		err = -EFAULT;
 		goto out_err;
@@ -1828,6 +1839,8 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 /**
  * hip_build_param_rea - build HIP REA parameter
  *
+ * XX FIX: deprecated, use build_locator
+ *
  * @msg:             the message where the REA will be appended
  * @spi:             SPI in host byte order
  * @addresses:       list of addresses
@@ -1863,6 +1876,13 @@ int hip_build_param_rea(struct hip_common *msg,
 		       addresses, addrs_len);
 
 	return err;
+}
+
+int hip_build_param_locator(struct hip_common *msg,
+			struct hip_locator_info_addr_item *addresses,
+			int address_count)
+{
+	return -1; /* XX FIX: implement similarly as the function above  */
 }
 
 /**
@@ -1958,24 +1978,49 @@ int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 }
 
 /**
+ * hip_build_param_esp_info - build esp_info parameter
+ * @msg: the message where the parameter will be appended
+ * 
+ * Returns: zero on success, or negative on failure
+ */
+int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
+			     uint32_t old_spi, uint32_t new_spi)
+{
+	int err = 0;
+	struct hip_esp_info esp_info;
+
+	hip_set_param_type(&esp_info, HIP_PARAM_ESP_INFO);
+	hip_calc_generic_param_len(&esp_info, sizeof(struct hip_esp_info), 0);
+	esp_info.reserved = htonl(0);
+	esp_info.keymat_index = htonl(keymat_index);
+	esp_info.old_spi = htonl(old_spi);
+	esp_info.new_spi = htonl(new_spi);
+
+	err = hip_build_param(msg, &esp_info);
+	return err;
+}
+
+/**
  * hip_build_param_spi_lsi - build the SPI_LSI parameter
  * @msg: the message where the parameter will be appended
  * @lsi: the value of the lsi (in host byte order)
  * @spi: the value of the spi (in host byte order)
  * 
+ * XX FIXME: Obsoleted by esp_info in draft-jokela-hip-00
+ *
  * Returns: zero on success, or negative on failure
  */
 int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
 {
-	int err = 0;
-	struct hip_spi hspi;
+        int err = 0;
+        struct hip_spi hspi;
 
-	hip_set_param_type(&hspi, HIP_PARAM_SPI);
-	hip_calc_generic_param_len(&hspi, sizeof(struct hip_spi), 0);
-	hspi.spi = htonl(spi);
+        hip_set_param_type(&hspi, HIP_PARAM_ESP_INFO);
+        hip_calc_generic_param_len(&hspi, sizeof(struct hip_spi), 0);
+        hspi.spi = htonl(spi);
 
-	err = hip_build_param(msg, &hspi);
-	return err;
+        err = hip_build_param(msg, &hspi);
+        return err;
 }
 
 /**

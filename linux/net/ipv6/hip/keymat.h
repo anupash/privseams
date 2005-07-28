@@ -19,7 +19,7 @@
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat,
 		     void *dstbuf, size_t dstbuflen, struct in6_addr *hit1,
-		     struct in6_addr *hit2, u8 *calc_index);
+		     struct in6_addr *hit2, u8 *calc_index, uint64_t I, uint64_t J);
 void hip_update_entry_keymat(struct hip_hadb_state *entry,
 			     uint16_t new_keymat_index,
 			     uint8_t new_calc_index,

@@ -116,13 +116,24 @@ struct list_head {
         }\
 }
 
+#define HIP_HIT_TYPE_MASK_HAA   0x80
+//#define HIP_HIT_TYPE_MASK_126   0x40
+#define HIP_HIT_TYPE_MASK_120   0x40
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
+	/*
+	 * According to draft-ietf-hip-base-03 the mask 
+	 * has to be HIP_HIT_TYPE_MASK_120
+	 */
+#if 0	
 	int t;
 
 	t = a->s6_addr[0] & 0xC0;
 	return ((t == 0x40) ||
 		(t == 0x80));
+#endif
+	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
 
 }
 
@@ -134,10 +145,11 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
-#define HIP_HIT_TYPE_MASK_HAA   0x80
-#define HIP_HIT_TYPE_MASK_126   0x40
+#define HIP_LOWER_TRANSFORM_TYPE 2048
+#define HIP_UPPER_TRANSFORM_TYPE 4095
 
-#define HIP_HIT_TYPE_HASH126    1
+//#define HIP_HIT_TYPE_HASH126    1
+#define HIP_HIT_TYPE_HASH120    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 
 #define HIP_I1  1
@@ -232,30 +244,28 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
-#define HIP_PARAM_SPI                  1
-#define HIP_PARAM_R1_COUNTER           2
-#define HIP_PARAM_REA                  3
-#define HIP_PARAM_PUZZLE               5
-#define HIP_PARAM_SOLUTION             7
+#define HIP_PARAM_ESP_INFO             65
+#define HIP_PARAM_SPI                  1 /* XX REMOVE:replaced with ESP_INFO */
+#define HIP_PARAM_R1_COUNTER           128
+#define HIP_PARAM_REA                  3 /* XX REMOVE:replaced with LOCATOR */
+#define HIP_PARAM_LOCATOR              193
+#define HIP_PARAM_PUZZLE               257
+#define HIP_PARAM_SOLUTION             321
 #define HIP_PARAM_NES                  9
-#define HIP_PARAM_SEQ                 11
-#define HIP_PARAM_ACK                 13
-#define HIP_PARAM_DIFFIE_HELLMAN      15
-#define HIP_PARAM_HIP_TRANSFORM       17
-#define HIP_PARAM_ESP_TRANSFORM       19
-#define HIP_PARAM_ENCRYPTED           21
-#define HIP_PARAM_HOST_ID             35
-#define HIP_PARAM_CERT                64
-#define HIP_PARAM_RVA_REQUEST        100
-#define HIP_PARAM_RVA_REPLY          102
+#define HIP_PARAM_SEQ                  385
+#define HIP_PARAM_ACK                  449
+#define HIP_PARAM_DIFFIE_HELLMAN       513
+#define HIP_PARAM_HIP_TRANSFORM        577
+#define HIP_PARAM_ESP_TRANSFORM        2048
+#define HIP_PARAM_ENCRYPTED            641
+#define HIP_PARAM_HOST_ID              705
+#define HIP_PARAM_CERT                 768
+#define HIP_PARAM_RVA_REQUEST          100
+#define HIP_PARAM_RVA_REPLY            102
 
-//#define HIP_PARAM_REA_INFO           8   /* to be removed */
-//#define HIP_PARAM_AC_INFO            129 /* mm-01: to be removed */
-//#define HIP_PARAM_FA_INFO            130 /* mm-01: to be removed */
-
-#define HIP_PARAM_NOTIFY             256
-#define HIP_PARAM_ECHO_REQUEST_SIGN    1022
-#define HIP_PARAM_ECHO_RESPONSE_SIGN   1024
+#define HIP_PARAM_NOTIFY               832
+#define HIP_PARAM_ECHO_REQUEST_SIGN    897
+#define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
@@ -274,12 +284,12 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_PARAM_FROM_SIGN       65100
 #define HIP_PARAM_TO_SIGN         65102
-#define HIP_PARAM_HMAC            65245
-#define HIP_PARAM_HMAC2           65247
-#define HIP_PARAM_HIP_SIGNATURE2  65277
-#define HIP_PARAM_HIP_SIGNATURE   65279
-#define HIP_PARAM_ECHO_REQUEST    65281
-#define HIP_PARAM_ECHO_RESPONSE   65283
+#define HIP_PARAM_HMAC            61505
+#define HIP_PARAM_HMAC2           61569
+#define HIP_PARAM_HIP_SIGNATURE2  61633
+#define HIP_PARAM_HIP_SIGNATURE   61697
+#define HIP_PARAM_ECHO_REQUEST    63661
+#define HIP_PARAM_ECHO_RESPONSE   65425
 #define HIP_PARAM_FROM            65300
 #define HIP_PARAM_TO              65302
 #define HIP_PARAM_RVA_HMAC        65320
@@ -482,6 +492,7 @@ struct hip_unit_test {
 	uint16_t           caseid;
 } __attribute__ ((packed));
 
+/* XX FIXME: obsoleted by esp_info in draft-ietf-esp-00 */
 struct hip_spi {
 	hip_tlv_type_t      type;
 	hip_tlv_len_t      length;
@@ -489,6 +500,15 @@ struct hip_spi {
 	uint32_t      spi;
 } __attribute__ ((packed));
 
+struct hip_esp_info {
+	hip_tlv_type_t      type;
+	hip_tlv_len_t      length;
+
+	uint16_t reserved;
+	uint16_t keymat_index;
+	uint32_t old_spi;
+	uint32_t new_spi;
+} __attribute__ ((packed));
 
 struct hip_r1_counter {
 	hip_tlv_type_t     type;
@@ -624,6 +644,7 @@ struct hip_sig2 {
 	/* fixed part end */
 } __attribute__ ((packed));
 
+/* XX FIXME: obsoloted by esp_info in draft-esp-00 */
 struct hip_nes {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
@@ -657,16 +678,33 @@ struct hip_notify {
 	/* end of fixed part */
 } __attribute__ ((packed));
 
+/* XX FIX: depracated in mm-02, use the locator addr item structure */
 struct hip_rea_info_addr_item {
 	uint32_t lifetime;
 	uint32_t reserved;
 	struct in6_addr address;
 }  __attribute__ ((packed));
 
+struct hip_locator_info_addr_item {
+	uint8_t traffic_type;
+	uint8_t locator_type;
+	uint8_t locator_length;
+	uint8_t reserved;
+	uint32_t lifetime;
+	/* end of fixed part - locator of arbitrary length follows */
+}  __attribute__ ((packed));
+
+/* XX FIX: depracated in mm-02, use the locator structure */
 struct hip_rea {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint32_t spi;
+	/* fixed part ends */
+} __attribute__ ((packed));
+
+struct hip_locator {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
 	/* fixed part ends */
 } __attribute__ ((packed));
 

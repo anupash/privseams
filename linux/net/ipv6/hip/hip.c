@@ -860,7 +860,9 @@ static int hip_worker(void *t)
 		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 
-	//out:
+#ifdef CONFIG_SMP
+ out:
+#endif CONFIG_SMP
 
 	/* cleanup and finish thread */
 	hip_uninit_workqueue();
