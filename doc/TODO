@@ -30,7 +30,7 @@ ESP-draft:
 
   - SPI is gone, replaced with ESP_INFO
 
-MM-draft (diff 01,02):
+MM-draft (diff 00,02):
 
   - SPI and NES are gone, replaced with ESP_INFO
   - REA is now LOCATOR

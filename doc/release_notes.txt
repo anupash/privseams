@@ -4,8 +4,34 @@ Version numbering
 This file contains the release note for HIPL version 0.1.2
 (hipl--main--2.6--patch-41).
 
+XX FIX:
+
+XX FIX: base-03 was successfully interoperated with Boeing (but not with 
+Ericsson):
+
+Base draft (diff 02,03):
+
+  - all parameter values changed (section 6.2)
+  - parameter type order strictly enforced, except for 2048-4095 (6.2)
+  - HIT computation has changed -- now they are 120 bits (section 3)
+  - state machine 4.4.2 (not done yet):
+    - state machine changed; there are two instances where you need to
+      compare HITs, etc (Aura et al)
+    - CLOSE handling
+  - nonce I and J should hashed into the DH keymaterial
+  - does not affect interops (?): puzzle storing has changed (see 
+    section C) - not done
+  - the HI in I2 can be unencrypted (not done yet)
+  - notify has changed (optional)
+
+ESP-draft:
+
+  - SPI is gone, replaced with ESP_INFO
+
+
 Features
 ========
+
 
 draft-ietf-hip-base-01.txt:
 
