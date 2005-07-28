@@ -244,7 +244,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
-#define HIP_PARAM_ESP_INFO             1
+#define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_SPI                  1 /* XX REMOVE:replaced with ESP_INFO */
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_REA                  3 /* XX REMOVE:replaced with LOCATOR */

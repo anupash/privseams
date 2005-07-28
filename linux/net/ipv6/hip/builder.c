@@ -397,7 +397,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
-			HIP_PARAM_SPI,
+			HIP_PARAM_ESP_INFO,
+			HIP_PARAM_SPI, /* XX FIX: REMOVE */
 			HIP_PARAM_R1_COUNTER,
 			HIP_PARAM_REA,
 			HIP_PARAM_PUZZLE,
@@ -1282,7 +1283,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	int err = 0;
 	struct hip_hmac hmac2;
 	struct hip_common *tmp = NULL;
-	struct hip_esp_info *spi;
+	struct hip_esp_info *esp_info;
 
 	tmp = hip_msg_alloc();
 	if (!tmp) {
