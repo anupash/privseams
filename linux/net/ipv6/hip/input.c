@@ -651,13 +651,20 @@ int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_daddr,
 		  hip_ha_t *entry)
 {
-	int err = 0, len;
+	int err = 0, len, retransmission = 0;
 	uint64_t solved_puzzle;
-	uint64_t I, J;
+	uint64_t I;
 
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *peer_host_id;
 	struct hip_r1_counter *r1cntr;
+
+	if (entry->state == HIP_STATE_I2_SENT) {
+		HIP_DEBUG("Retransmission\n");
+		retransmission = 1;
+	} else {
+		HIP_DEBUG("Not a retransmission\n");
+	}
 
 	HIP_DEBUG("\n");
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)), -ENOMEM,
@@ -712,22 +719,30 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_UNLOCK_HA(entry);
 	}
 
-	/* solve puzzle */
-	{
+	/* solve puzzle: if this is a retransmission, we have to preserve
+	   the old solution */
+	if (!retransmission) {
 		struct hip_puzzle *pz = NULL;
 
 		HIP_IFEL(!(pz = hip_get_param(r1, HIP_PARAM_PUZZLE)), -EINVAL,
 			 "Malformed R1 packet. PUZZLE parameter missing\n");
-		HIP_IFEL((solved_puzzle = hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
+		HIP_IFEL((solved_puzzle =
+			  hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
 			 -EINVAL, "Solving of puzzle failed\n");
 		I = pz->I;
-		J = solved_puzzle;
+		entry->puzzle_solution = solved_puzzle;
+		entry->puzzle_i = pz->I;
+	} else {
+		I = entry->puzzle_i;
+		solved_puzzle = entry->puzzle_solution;
 	}
 
 	/* calculate shared secret and create keying material */
 	ctx->dh_shared_key = NULL;
-	HIP_IFEL(hip_produce_keying_material(r1, ctx, I, J), -EINVAL,
-		 "Could not produce keying material\n");
+	/* note: we could skip keying material generation in the case
+	   of a retransmission but then we'd had to fill ctx->hmac etc */
+	HIP_IFEL(hip_produce_keying_material(r1, ctx, I, solved_puzzle),
+			 -EINVAL, "Could not produce keying material\n");
 
 	/* Everything ok, save host id to HA */
 	{
@@ -1007,20 +1022,35 @@ int hip_handle_i2(struct hip_common *i2,
 		struct hip_solution *sol;
 		HIP_IFEL(!(sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION)), -EINVAL,
 			 "Invalid I2: SOLUTION parameter missing\n");
-		HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol), -ENOMSG,
-			 "Cookie solution rejected\n");
 		I = sol->I;
 		J = sol->J;
+		HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol), -ENOMSG,
+			 "Cookie solution rejected\n");
+	}
+
+	if (entry && (entry->state == HIP_STATE_R2_SENT ||
+		    entry->state == HIP_STATE_ESTABLISHED)) {
+		/* If the I2 packet is a retransmission, we need reuse the
+ 		   the SPI/keymat that was setup already when the first I2 was
+ 		   received. However it is a retransmission only if the
+		   responder is in R2-SENT STATE */
+		retransmission = 1;
+		HIP_DEBUG("Retransmission\n");
+  	} else {
+		HIP_DEBUG("Not a retransmission\n");
 	}
 
 	/* Check HIP and ESP transforms, and produce keying material  */
 	ctx->dh_shared_key = NULL;
-	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1, 
+	/* note: we could skip keying material generation in the case
+	   of a retransmission but then we'd had to fill ctx->hmac etc */
+	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J),
+		 -1,
 		 "Unable to produce keying material. Dropping I2\n");
 
 	/* verify HMAC */
 	HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in), -ENOENT,
-		 "HMAC validation on r1 failed\n");
+		 "HMAC validation on i2 failed\n");
 	
 	/* decrypt the HOST_ID and verify it against the sender HIT */
 	HIP_IFEL(!(enc = hip_get_param(ctx->input, HIP_PARAM_ENCRYPTED)), -ENOENT,
@@ -1112,13 +1142,7 @@ int hip_handle_i2(struct hip_common *i2,
 		hip_hold_ha(entry);
 
 		//HIP_DEBUG("HA entry created.");
-	}  else if (entry->state == HIP_STATE_R2_SENT) {
- 		/* If the I2 packet is a retransmission, we need reuse the
- 		   the SPI that was setup already when the first I2 was
- 		   received. However it is a retransmission only if the
-		   responder is in R2-SENT STATE */
-		retransmission = 1;
-  	}
+	}
 	
 	/* FIXME: the above should not be done if signature fails...
 	   or it should be cancelled */
@@ -1398,6 +1422,14 @@ int hip_handle_r2(struct hip_common *r2,
 	struct hip_spi_out_item spi_out_data;
 	int tfm, err = 0;
 	uint32_t spi_recvd, spi_in;
+	int retransmission = 0;
+
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+		retransmission = 1;
+		HIP_DEBUG("Retransmission\n");
+	} else {
+		HIP_DEBUG("Not a retransmission\n");
+	}
 
 	/* assume already locked entry */
 	HIP_DEBUG("Entering handle_r2\n");
@@ -1435,7 +1467,7 @@ int hip_handle_r2(struct hip_common *r2,
 	tfm = entry->esp_transform;
 
 	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, spi_recvd, tfm,
-			 &ctx->esp_out, &ctx->auth_out, 0,
+			 &ctx->esp_out, &ctx->auth_out, retransmission,
 			 HIP_SPI_DIRECTION_OUT);
 //	if (err == -EEXIST) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
