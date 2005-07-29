@@ -1014,6 +1014,9 @@ struct hip_hadb_state
         struct hip_host_id *peer_pub;
  	int (*verify)(struct hip_host_id *, struct hip_common *);
 
+        uint64_t puzzle_solution; /* For retransmission */
+	uint64_t puzzle_i;        /* For retransmission */
+
 	char echo_data[4]; /* For base exchange or CLOSE, not for UPDATE */
 
 	int skbtest; /* just for testing */
