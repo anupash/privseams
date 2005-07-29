@@ -67,6 +67,8 @@ struct list_head {
 
 #endif /* __KERNEL__ */
 
+/* XX TODO: add a macro that preserves the return value from the function */
+
 #define HIP_IFE(func, eval) \
 { \
 	if (func) { \
@@ -241,6 +243,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_REKEYING          6      /* ex-E4 */
 /* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
+#define HIP_STATE_CLOSING           8
+#define HIP_STATE_CLOSED            9
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
@@ -1009,6 +1013,8 @@ struct hip_hadb_state
 	/* Peer host identity functions */
         struct hip_host_id *peer_pub;
  	int (*verify)(struct hip_host_id *, struct hip_common *);
+
+	char echo_data[4]; /* For base exchange or CLOSE, not for UPDATE */
 
 	int skbtest; /* just for testing */
 };

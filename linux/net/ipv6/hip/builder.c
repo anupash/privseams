@@ -354,7 +354,9 @@ int hip_check_network_msg_type(const struct hip_common *msg) {
 			HIP_R2,
 			HIP_UPDATE,
 			HIP_NOTIFY,
-			HIP_BOS
+			HIP_BOS,
+			HIP_CLOSE,
+			HIP_CLOSE_ACK
 		};
 	hip_hdr_type_t i;
 	hip_hdr_type_t type = hip_get_msg_type(msg);
@@ -1330,8 +1332,6 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 
 	return err;
 }
-
-#endif /* CONFIG_HIP || CONFIG_HIP_MODULE || CONFIG_HIP_USERSPACE */
 
 /**
  * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter

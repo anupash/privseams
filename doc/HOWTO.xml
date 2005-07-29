@@ -339,6 +339,13 @@
     </para>
   </chapter>
   <chapter>
+    <title>Closing HIP Security Associations Manually</title>
+     <para>
+      You can use the hipconf tool to reset HIP SAs manually. Type
+      "hipconf rst all" to close all SAs. 
+     </para>
+  </chapter>
+  <chapter>
     <title>Testing Handover</title>
     <para>
       The handover code is based on draft-nikander-hip-mm-00

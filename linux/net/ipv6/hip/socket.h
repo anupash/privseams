@@ -22,7 +22,7 @@
 #include "output.h"
 #include "debug.h"
 #include "hadb.h"
-
+#include "hip.h"
 
 int hip_init_socket_handler(void);
 void hip_uninit_socket_handler(void);
