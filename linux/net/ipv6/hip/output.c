@@ -326,7 +326,13 @@ int hip_send_close_all_peers(hip_ha_t *entry, void *ignore)
 					HIP_CONTROL_DHT_TYPE1);
 	hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
 			      &entry->hit_peer);
-	hip_calc_hdr_len(close);
+
+	/********ECHO (SIGNED) **********/
+
+	get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
+	HIP_IFEL(hip_build_param_echo(close, entry->echo_data,
+				      sizeof(entry->echo_data), 1, 1), -1,
+		 "Failed to build echo param\n");
 
 	/************* HMAC ************/
 	HIP_IFEL(hip_build_param_hmac_contents(close,

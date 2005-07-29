@@ -1829,6 +1829,8 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 {
 	int err = 0, mask = 0;
 	struct hip_common *close_ack = NULL;
+	struct hip_echo_request *request;
+	int echo_len;
 
 	/* verify HMAC */
 	HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
@@ -1840,12 +1842,20 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
 
+	HIP_IFEL(!(request =
+		   hip_get_param(close, HIP_PARAM_ECHO_REQUEST_SIGN)),
+		 -1, "No echo request under signature\n");
+	echo_len = hip_get_param_contents_len(request);
+
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
 	hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
 			      mask, &entry->hit_our,
 			      &entry->hit_peer);
-	hip_calc_hdr_len(close_ack);
+
+	HIP_IFEL(hip_build_param_echo(close_ack, request + 1,
+				      echo_len, 1, 0), -1,
+		 "Failed to build echo param\n");
 
 	/************* HMAC ************/
 	HIP_IFEL(hip_build_param_hmac_contents(close_ack,
@@ -1887,6 +1897,15 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 {
 	int err = 0;
+	struct hip_echo_request *echo_resp;
+
+	/* verify ECHO */
+	HIP_IFEL(!(echo_resp =
+		   hip_get_param(close_ack, HIP_PARAM_ECHO_RESPONSE_SIGN)),
+		 -1, "Echo response not found\n");
+	HIP_IFEL(memcmp(echo_resp + 1, entry->echo_data,
+			sizeof(entry->echo_data)), -1,
+		 "Echo response did not match request\n");
 
 	/* verify HMAC */
 	HIP_IFEL(hip_verify_packet_hmac(close_ack, &entry->hip_hmac_in),

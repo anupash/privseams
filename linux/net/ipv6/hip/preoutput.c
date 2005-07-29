@@ -244,7 +244,6 @@ int hip_csum_send_fl(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 			HIP_ERROR("Pushing of pending frames failed (%d)\n",
 				  err);
 	}
-
  out_err:
 	release_sock(hip_output_socket->sk);
 	return err;
