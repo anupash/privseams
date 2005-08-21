@@ -27,9 +27,6 @@
 #define DSA_FILE "_dsa_"
 
 //rule
-#define NR_OPTIONS 4;
-#define RULE_MAX_LEN 300; //TODO akateemisempi arvaus 
-#define OPTION_MAX_LEN 100; //TODO akateemisempi arvaus
 #define DROP 0;
 #define ACCEPT 1;
 
@@ -62,13 +59,6 @@ struct hit_option{
   int boolean; //0 if negation, else 1
 };
 
-/*
-struct hi_option{
-  struct hip_host_id * value; //hit value
-  //  int boolean; //0 if negation, else 1
-};
-*/
-
 struct int_option{
   int value; //int value
   int boolean; // 0 if negation, else 1
@@ -86,10 +76,11 @@ struct string_option{
   char * value;
   int boolean;
 };
+
 //Pointer values must be NULL if option is not specified.
 //Use alloc_empty_rule() to allocate rule with pointers set to NULL!!  
 //when updating rule structure, update also (at least) free_rule(), 
-//print_rule(), rules_equal(), copy_rule (), alloc_empty_rule()
+//print_rule(), rules_equal(), copy_rule (), alloc_empty_rule() functions
 struct rule{
   struct hit_option * src_hit;
   struct hit_option * dst_hit;

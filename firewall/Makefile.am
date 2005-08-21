@@ -13,49 +13,19 @@ CFLAGS = -DHIP_LOGFMT_LONG -g -CONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE
 CFLAGS += `pkg-config --cflags --libs glib-2.0` 
 CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 
-include_HEADERS =  crypto.h netlink.h #hipd.h 
+include_HEADERS =  crypto.h netlink.h 
 include_HEADERS += firewall.h conntrack.h rule_management.h helpers.h builder.h misc.h pk.h  
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)	-I$(HIPL_HIPD)
-
-#INCLUDES += `pkg-config --cflags --libs glib-2.0` 
-#-I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include  
-#INCLUDES += -pthread -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include  -pthread -lgthread-2.0 -lglib-2.0
 
 sbin_PROGRAMS = firewall
 
 firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c
 firewall_SOURCES +=  builder.c misc.c crypto.c dh.c pk.c
 
-#pk.c rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
-#firewall_SOURCES += workqueue.c builder.c hadb.c #preoutput.c 
-#firewall_SOURCES += crypto.c input.c output.c xfrm.c 
-#firewall_SOURCES += hidb.c cookie.c misc.c dh.c netlink.c
-#hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
-#hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c misc.c dh.c netlink.c
-
 firewall_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a  
-#firewall_LDADD = /usr/lib/libipq.a -lglib-2.0 ../libinet6/.libs/libinet6.a  
-# For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-#firewall_LDFLAGS = -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include  -lglib-2.0  /usr/lib/libipq.a 
-#hipd_LDADD = ../libinet6/.libs/libinet6.a
-##hipd_LDFLAGS = -lcrypto
-
- 
 
 SUBDIRS =
-
-# Hi3
-#CFLAGS += -DCONFIG_HIP_HI3
-#hipd_SOURCES += hi3.c
-#INCLUDES += -Ii3/i3_client -Ii3/utils -Ii3/i3
-#hipd_LDADD += i3/i3_client/.libs/libi3client.a i3/aeshash/.libs/libaes.a
-#SUBDIRS += i3
-
-# KeyNotev2
-#INCLUDES += -Ikeynote
-#hipd_LDADD += keynote/.libs/libkeynote.a
-#SUBDIRS += keynote
 
 # The sources depend on builder, but it is located elsewhere. Linking is
 # the best way to access it because the object must be built on this

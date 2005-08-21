@@ -19,10 +19,6 @@
 #include "conntrack.h"
 #include "helpers.h"
 
-//static struct GList * rules;
-//TODO more efficient when rules are inseparate lists
-//also mutexes must be tripled
-
 struct GList * input_rules;
 struct GList * output_rules;
 struct GList * forward_rules;
@@ -31,14 +27,6 @@ struct GList * forward_rules;
  * reading and writing of rule list 
  * (from courtois: readers and writers)
  */
-//GStaticMutex mutex1 = G_STATIC_MUTEX_INIT;
-//GStaticMutex mutex2 = G_STATIC_MUTEX_INIT;
-//GStaticMutex mutex3 = G_STATIC_MUTEX_INIT;
-//GStaticMutex w = G_STATIC_MUTEX_INIT;
-//GStaticMutex r = G_STATIC_MUTEX_INIT;
-//static int read_count = 0;
-//static int write_count = 0;
-
 
 GStaticMutex input_mutex1 = G_STATIC_MUTEX_INIT;
 GStaticMutex input_mutex2 = G_STATIC_MUTEX_INIT;
@@ -86,7 +74,6 @@ void set_rule_list(struct GList * list, int hook)
 }
 /*------------- PRINTING -----------------*/
 
-//TODO char * returning version necessary?
 void print_rule(const struct rule * rule){
   if(rule != NULL)
     {
@@ -164,7 +151,7 @@ void print_rule(const struct rule * rule){
  * caller should take care of synchronization
  */
 void print_rule_tables(){
-  struct _GList * list = (struct _GList *) input_rules;/////(struct _GList *) rules;
+  struct _GList * list = (struct _GList *) input_rules;
   struct rule * rule = NULL;
   while(list != NULL)
     {
@@ -172,7 +159,6 @@ void print_rule_tables(){
       print_rule(rule);
       list = list->next;
     }
-  ///////
   list = (struct _GList *) output_rules;
   while(list != NULL)
     {
@@ -190,15 +176,12 @@ void print_rule_tables(){
   _HIP_DEBUG("stateful filtering %d\n", get_stateful_filtering());
 }
 
-
-
 /*------------- COPYING -----------------*/
 /**
  * Allocates a new hit_option structure and copies the 
  * contents of the argument. Copy of the argument 
  * is returned. (if hit_option is NULL, returns NULL)
  */
-//TODO testing
 struct hit_option * copy_hit_option(const struct hit_option * hit)
 {
   struct hit_option * copy = NULL;
@@ -216,8 +199,6 @@ struct hit_option * copy_hit_option(const struct hit_option * hit)
  * contents of the argument. Copy of the argument 
  * is returned. (if int_option is NULL, returns NULL)
  */
-
-//TODO testing
 struct int_option * copy_int_option(const struct int_option * int_option)
 {
   struct int_option * copy = NULL;
@@ -235,8 +216,6 @@ struct int_option * copy_int_option(const struct int_option * int_option)
  * contents of the argument. Copy of the argument 
  * is returned. (if int_option is NULL, returns NULL)
  */
-
-//TODO testing
 struct state_option * copy_state_option(const struct state_option * state)
 {
   struct state_option * copy = NULL;
@@ -256,7 +235,6 @@ struct state_option * copy_state_option(const struct state_option * state)
  * contents of the argument. Copy of the argument 
  * is returned. (if if_option is NULL, returns NULL)
  */
-// TODO testing
 struct string_option * copy_string_option(const struct string_option * string_option)
 {
   struct string_option * copy = NULL;
@@ -275,7 +253,6 @@ struct string_option * copy_string_option(const struct string_option * string_op
  * contents of the rule. Copy of the argument rule 
  * is returned. (if rule is NULL, returns NULL)
  */
-//TODO testing
 struct rule * copy_rule(const struct rule * rule)
 {
   struct rule * copy = NULL;
@@ -519,8 +496,8 @@ struct hit_option * parse_hit(char * token)
 
 
 /**
- * From HIPL code, but does not include private key material in 
- * HI structure.
+ * From HIPL code, but modified version here does not include private key 
+ * material in HI structure, as none available.
  *
  * rsa_to_dns_key_rr - create DNS KEY RR record from host RSA key
  * @rsa:        the RSA structure from where the KEY RR record is to be created
@@ -571,7 +548,7 @@ int rsa_to_public_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
   c = *rsa_key_rr;
   *c = (unsigned char) BN_num_bytes(rsa->e);
-  c++; // = e_length 
+  c++; 
 
   len = BN_bn2bin(rsa->e, c);
   c += len;
@@ -579,16 +556,6 @@ int rsa_to_public_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   len = BN_bn2bin(rsa->n, c);
   c += len;  
 
-  /*pois
-  len = BN_bn2bin(rsa->d, c);
-  c += len;
-
-  len = BN_bn2bin(rsa->p, c);
-  c += len;
-
-  len = BN_bn2bin(rsa->q, c);
-  c += len;
-  */
   rsa_key_rr_len = c - *rsa_key_rr;
 
  out_err:
@@ -598,8 +565,8 @@ int rsa_to_public_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
 
  /**
- * From HIPL code, but does not include private key material in 
- * HI structure.
+ * From HIPL code, but modified version here does not include private key 
+ * material in HI structure, as none available.
  *
  * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
  * @dsa:        the DSA structure from where the KEY RR record is to be created
@@ -761,7 +728,6 @@ struct hip_host_id * load_rsa_file(FILE * fp)
       {
 	printf("reading RSA file failed \n"); 
 	RSA_free(rsa);
-	//	free(option);
 	return NULL;
       }
   _HIP_HEXDUMP("load_rsa_file: rsa : ", rsa,
@@ -778,7 +744,6 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   _HIP_HEXDUMP("load_rsa_file: host identity : ", hi,
 	      hip_get_param_total_len(hi));
 
-  //TODO error handling free hi
   return hi;  
 }
 
@@ -799,7 +764,6 @@ struct hip_host_id * load_dsa_file(FILE * fp)
       {
 	printf("reading RSA file failed \n"); 
 	DSA_free(dsa);
-	//	free(option);
 	return NULL;
       }
   _HIP_HEXDUMP("load_dsa_file: dsa : ", dsa,
@@ -807,10 +771,7 @@ struct hip_host_id * load_dsa_file(FILE * fp)
   _HIP_DEBUG("load_dsa_file: \n");
   dsa_key_rr = malloc(sizeof(struct hip_host_id) + DSA_size(dsa));
   _HIP_DEBUG("load_dsa_file: size allocated\n");
-  //, hip_get_param_total_len(hi));  
   dsa_key_rr_len = dsa_to_public_dns_key_rr(dsa, &dsa_key_rr);
-//TODO riittääkö muisti???
-// hip_host_id (inc hip_host_id_key_rdata ) + actual key
   hi = malloc(sizeof(struct hip_host_id) + dsa_key_rr_len);
   _HIP_DEBUG("load_dsa_file: dsa_key_len %d\n", dsa_key_rr_len);
   hip_build_param_host_id_hdr(hi, NULL, dsa_key_rr_len, HIP_HI_DSA);
@@ -818,8 +779,6 @@ struct hip_host_id * load_dsa_file(FILE * fp)
   hip_build_param_host_id_only(hi, dsa_key_rr, NULL);
   _HIP_HEXDUMP("load_dsa_file: host identity : ", hi,
 	      hip_get_param_total_len(hi));
-
-  //TODO error handling free hi
   return hi;  
 }
 
@@ -833,7 +792,6 @@ struct hip_host_id * load_dsa_file(FILE * fp)
  * Public keys must have _dsa_ or _rsa_ in the file name so algorithm is known
  */
 struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
-  //TODO
   FILE * fp = NULL;
   int err, algo;
   struct hip_host_id * hi = NULL;
@@ -990,7 +948,6 @@ struct string_option * parse_if(char * token)
  * parses argument sring into a rule structure,
  * returns pointer to allocated rule structure or NULL if
  * syntax error
- * TODO g_strsplit
  */
 struct rule * parse_rule(char * string)
 {
@@ -1300,9 +1257,6 @@ struct rule * parse_rule(char * string)
 /*-----------PARSING ----------*/
 /*----------- MUTUAL EXCLUSION ----------*/
 
-//mutual exclusion
-
-
 /**
  * called before reading rule table
  * (classic readers and writers problem solution)
@@ -1459,7 +1413,7 @@ void write_exit(int hook)
  */
 struct GList * read_rules(int hook){
   _HIP_DEBUG("read_rules\n");
-  read_enter(hook); /////
+  read_enter(hook);
   return get_rule_list(hook);
 }
 
@@ -1469,7 +1423,7 @@ struct GList * read_rules(int hook){
  */
 void read_rules_exit(int hook){
   _HIP_DEBUG("read_rules_exit\n");
-  read_exit(hook); /////
+  read_exit(hook);
 }
 
 /*----------- RULE MANAGEMENT -----------*/
@@ -1501,7 +1455,7 @@ void read_file(char * file_name)
 	  _HIP_DEBUG("line read: %s", line);
 	  //remove trailing new line
 	  line = (char *) strtok(line, "\n");
-	  rule = parse_rule(line/*, &rule*/);
+	  rule = parse_rule(line);
 	  if(rule)
 	    {
 	      if(rule->state)
@@ -1524,12 +1478,9 @@ void read_file(char * file_name)
 							  (gpointer) rule);
 		  print_rule((struct rule *)((struct _GList *) forward)->data);
 		}
-	      ////	      list = (struct GList *)g_list_append((struct _GList *) list, 
-	      ////			   (gpointer) rule);
-	      ////print_rule((struct rule *)((struct _GList *) list)->data);
 	      rule = NULL;
 	    }
-	  else //TODO error print?
+	  else 
 	    HIP_DEBUG("unable to parse rule: %s\n", original_line);
 	  free(line);
 	  line = NULL;
@@ -1558,17 +1509,15 @@ void read_file(char * file_name)
  * and inserts rule at the end of the list.
  * rule validity be checked by the caller 
  * (parsing from string)
- * TODO validity check function
+ * some validity check function could be useful, 
+ * but rule validity is ensured when rule is parsed from string
  */
 void insert_rule(const struct rule * rule, int hook){
   HIP_DEBUG("insert_rule\n");
   if(!rule)
     return;
   struct rule * copy = copy_rule(rule);  
-  //TODO make a local copy of the argument?
   write_enter(hook);
-  ////  rules = (struct GList *)g_list_append((struct _GList *) rules, 
-  ////					(gpointer) copy);
   set_rule_list((struct GList *)g_list_append((struct _GList *) get_rule_list(hook), 
   					(gpointer) copy),
 		hook);
@@ -1589,16 +1538,15 @@ int delete_rule(const struct rule * rule, int hook){
   struct rule * r;
   int val = -1, state = 0;
   write_enter(hook);
-  temp = (struct _GList *)get_rule_list(hook);//////(struct _GList *)rules;
+  temp = (struct _GList *)get_rule_list(hook);
   while(temp)
     {
       //delete first match
       if(rules_equal((struct rule *)temp->data, rule))
 	{
 	  free_rule((struct rule *) temp->data);
-	  ////	  rules = (struct GList *) g_list_remove((struct _GList *) rules, temp->data);
 	  HIP_DEBUG("delete_rule freed\n");
-	  set_rule_list((struct GList *)g_list_remove(get_rule_list(hook), 
+	  set_rule_list((struct GList *)g_list_remove((struct _GList *)get_rule_list(hook), 
 						      temp->data),
 			hook);
 	  HIP_DEBUG("delete_rule removed\n");
@@ -1607,21 +1555,6 @@ int delete_rule(const struct rule * rule, int hook){
 	}
       temp = temp->next;
     }
-  //check if state options in any of remaining rules
-  /*  
-///checking for state options 
-  temp = (struct _GList *)get_rule_list(hook);//////(struct _GList *)rules;
-  while(temp)
-    { 
-      r = (struct rule *) temp->data;
-      if(r->state)
-	{
-	  state = 1;
-	  break;
-	}
-	temp = temp->next;
-	}
-  */
   HIP_DEBUG("delete_rule looped\n");
   set_stateful_filtering(state);
   write_exit(hook);
@@ -1637,7 +1570,7 @@ GList * list_rules(int hook)
   HIP_DEBUG("list_rules\n");
   struct _GList * temp = NULL, * ret = NULL;
   read_enter(hook);
-  temp = (struct _GList *) get_rule_list(hook);/////(struct _GList *) rules;
+  temp = (struct _GList *) get_rule_list(hook);
   while(temp)
     {
       
@@ -1645,8 +1578,6 @@ GList * list_rules(int hook)
 			  (gpointer) copy_rule((struct rule *) temp->data)); 
       temp = temp->next;
     }
-  
-  //TODO read each and copy
   read_exit(hook);
   return ret;
 }
@@ -1654,10 +1585,9 @@ GList * list_rules(int hook)
 int flush(int hook)
 {
   HIP_DEBUG("flush\n");
-  struct _GList * temp = (struct _GList *) get_rule_list(hook);/////(struct _GList *) rules;
+  struct _GList * temp = (struct _GList *) get_rule_list(hook);
   write_enter(hook);
   set_rule_list(NULL, hook);
-  /////  rules = NULL;
   set_stateful_filtering(0);
   write_exit(hook);
   while(temp)
