@@ -362,7 +362,7 @@ int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg,
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {
 	int err = 0;
-	int keylen = 20; // anticipating HIP_DIGEST_SHA1_HMAC
+	int keylen = HIP_AH_SHA_LEN; // anticipating HIP_DIGEST_SHA1_HMAC
 	struct crypto_tfm *impl = NULL;
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
@@ -378,9 +378,6 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 		return 0;
 	}
 
-	_HIP_HEXDUMP("HMAC key", key, keylen);
-	_HIP_HEXDUMP("write hmac", in, in_len);
-
 	err = hip_map_virtual_to_pages(sg, &nsg, in, in_len);
 	if (err || nsg < 1) {
 		HIP_ERROR("Mapping failed\n");
@@ -388,6 +385,11 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 	}
 
 	crypto_hmac(impl, key, &keylen, sg, nsg, out);
+
+	HIP_HEXDUMP("HMAC key", key, keylen);
+	HIP_HEXDUMP("hmac input", in, in_len);
+	HIP_HEXDUMP("hmac output", out, HIP_AH_SHA_LEN);
+
 	return 1;
 }
 
