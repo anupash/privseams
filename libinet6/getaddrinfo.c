@@ -390,7 +390,7 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
   /* TODO: check return values */					\
   fp = fopen(_PATH_HIP_HOSTS, "r");					\
 									\
-  while (getwithoutnewline(line, 500, fp) != NULL) {			\
+  while (fp && getwithoutnewline(line, 500, fp) != NULL) {	     	\
     int c;								\
     int ret;								\
     initlist(&list);                                                    \
