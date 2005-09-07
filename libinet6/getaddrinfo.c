@@ -384,7 +384,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
   /* TODO: check return values */					\
   fp = fopen(_PATH_HIP_HOSTS, "r");					\
 									\
-  while (getwithoutnewline(line, 500, fp) != NULL) {			\
+  while (fp && getwithoutnewline(line, 500, fp) != NULL) {		\
     int c;								\
     int ret;                                                            \
     lineno++;								\
