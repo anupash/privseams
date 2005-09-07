@@ -77,8 +77,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define UNIX_PATH_MAX  108
 #endif
 
-#define HIP_HOSTS_LINE_MAX_LEN 500
-
 struct gaih_service
   {
     const char *name;
@@ -392,17 +390,12 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
   /* TODO: check return values */					\
   fp = fopen(_PATH_HIP_HOSTS, "r");					\
 									\
-  while (fp &&                                                          \
-          getwithoutnewline(line, HIP_HOSTS_LINE_MAX_LEN, fp) != NULL) {\
+  while (fp && getwithoutnewline(line, 500, fp) != NULL) {		\
     int c;								\
-    int ret;								\
+    int ret;                                                            \
+    lineno++;								\
+    if(strlen(line)<=1) continue;                                       \
     initlist(&list);                                                    \
-    /* extractsubstrings segfaults if the line is empty.. */            \
-    if (strnlen(line, HIP_HOSTS_LINE_MAX_LEN) == 0) {                   \
-      lineno++;                                                         \
-      destroy(&list);                                                   \
-      continue;                                                         \
-    }                                                                   \
     extractsubstrings(line,&list);                                      \
     for(i=0;i<length(&list);i++) {                                      \
       if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		\
@@ -428,12 +421,11 @@ static inline int ipv6_addr_is_hit(struct in6_addr *addr)
         pat = &((*pat)->next);						\
       }									\
      }	                                                                \
-    lineno++;								\
     destroy(&list);                                                     \
   }	              							\
   if (fp)                                                               \
     fclose(fp);			        				\
-}                                                                     
+}
 
 
 static int
