@@ -1,4 +1,4 @@
-# $USAGI: Makefile.in,v 1.2 2002/12/04 14:27:16 yoshfuji Exp $
+# $USAGI: Makefile.in,v 1.13 2001/12/03 10:03:11 yoshfuji Exp $
 
 # Copyright (C) 2001 USAGI/WIDE Project.
 # All rights reserved.
@@ -31,7 +31,7 @@ LN_S = @LN_S@
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
-INSTALL_DATA = @INSTALL_DATA@
+#INSTALL_DATA = @INSTALL_DATA@
 INSTALL_LIBRARY = @INSTALL_LIBRARY@
 INSTALL_DIR = @INSTALL_DIR@
 
@@ -39,15 +39,16 @@ oldincludedir=@oldincludedir@
 
 MODE=0644
 
-INCLUDES = netdb.h \
+INCLUDES = ifaddrs.h netdb.h \
 	bits/in.h bits/socket.h bits/sockaddr.h \
+	net/if.h \
 	netinet/icmp6.h netinet/in.h netinet/ip6.h
 
 INCLUDES_SUBDIRS = bits net netinet 
 
 .PHONY: all install install-includes clean distclean
 
-all: 
+all: includes
 includes: $(INCLUDES)
 install:
 install-includes:

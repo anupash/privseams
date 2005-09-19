@@ -6,12 +6,13 @@
 
 #include <unistd.h>
 #include "../tools/hipconf.h"
-#include "conntest.h"
+//#include "conntest.h"
 #include "libinet6/debug.h"
 #include "libinet6/crypto.h"
 
-#define DEFAULT_PORT 1111
+#include "misc_install.h"
 
+#define DEFAULT_PORT 1111
 
 void usage_f();
 int install_module();

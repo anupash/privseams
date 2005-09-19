@@ -39,6 +39,7 @@ struct hip_xfrm_state {
 typedef struct hip_xfrm_state hip_xfrm_t;
 
 void hip_beetdb_hold_entry(void *entry);
+void hip_beetdb_put_entry(void *entry);
 
 #ifdef __KERNEL__
 

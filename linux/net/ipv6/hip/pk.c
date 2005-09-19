@@ -57,7 +57,7 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 	struct hip_sig *sig;
 	u8 sha1_digest[HIP_AH_SHA_LEN];
 	struct in6_addr tmpaddr;	
-	struct hip_puzzle *pz;
+	struct hip_puzzle *pz = NULL;
 	uint8_t opaque[3];
 	uint64_t randi;
 

@@ -56,7 +56,7 @@ void hip_beetdb_hold_entry(void *entry)
 	HIP_DB_HOLD_ENTRY(entry, hip_xfrm_t);
 }
 
-static void hip_beetdb_put_entry(void *entry)
+void hip_beetdb_put_entry(void *entry)
 {
 	HIP_DB_PUT_ENTRY(entry, hip_xfrm_t, hip_beetdb_delete_state);
 }
@@ -410,16 +410,22 @@ hip_xfrm_t *hip_xfrm_try_to_find_by_peer_hit(const hip_hit_t *hit)
 {
 	hip_xfrm_t *x, *tmp;
 	int i;
-
+	HIP_DEBUG_HIT("hit=", hit);
 	for(i = 0; i < HIP_BEETDB_SIZE; i++) {
+		HIP_DEBUG("Is list empty?\n");
 		if(!list_empty(&hip_beetdb_byhit[i])) {
+			HIP_DEBUG("List is not empty\n");
   			list_for_each_entry_safe(x, tmp, &hip_beetdb_byhit[i],
 						 next) {
-				if(x) 
+				if(x) {
 					if (!ipv6_addr_cmp(&x->hit_peer, hit)){
 						hip_beetdb_hold_entry(x);
 						return x;
 					}
+				} else {
+					HIP_DEBUG_HIT("hit=", hit);
+					HIP_DEBUG_HIT("&x->hit_peer=", &x->hit_peer);
+				}
 			}
 		}
 	}

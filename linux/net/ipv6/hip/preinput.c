@@ -196,7 +196,7 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 
 	len = hip_get_msg_total_len(hip_common);
         HIP_IFEL(!(hwo->msg = HIP_MALLOC(len, GFP_ATOMIC)), -ENOMEM,
-		 "Out of memomry, dropping packet\n");
+		 "Out of memory, dropping packet\n");
 	memcpy(hwo->msg, hip_common, len);
 
         /* We need to save the addresses because the actual input
@@ -212,8 +212,3 @@ int hip_inbound(struct sk_buff **skb, unsigned int *nhoff)
 	kfree_skb(*skb);
 	return 0;
 }
-
-
-
-
-

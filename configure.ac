@@ -66,7 +66,7 @@ AC_FUNC_STRFTIME
 AC_FUNC_STRNLEN
 AC_FUNC_UTIME_NULL
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
+AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime ipq_create_handle])
 
 AC_MSG_CHECKING([for glibc version])
 AC_EGREP_CPP(%%%yes%%%, [
@@ -110,7 +110,11 @@ AC_SUBST(usagi_libc)
 
 AC_CONFIG_FILES([Makefile
                 libinet6/Makefile
+                libinet6/include_glibc21/Makefile
+                libinet6/include_glibc22/Makefile
+                libinet6/include_glibc23/Makefile
                 tools/Makefile
                 hipd/Makefile
+		firewall/Makefile
                 test/Makefile])
 AC_OUTPUT

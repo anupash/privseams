@@ -112,6 +112,19 @@ int convert_port_string_to_number(const char *servname, in_port_t *port)
 
 }
 
+char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
+{
+        if (!buf)
+                return NULL;
+        sprintf(buf,
+                "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
+                ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
+                ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
+                ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
+        return buf;
+}
+
 int setmyeid(struct sockaddr_eid *my_eid,
 	     const char *servname,
 	     const struct endpoint *endpoint,
@@ -470,6 +483,11 @@ int get_localhost_endpointinfo(const char *basename,
     goto out_err;
   }
 
+  /* System specific HIs should be added into the kernel with the
+     HIP_HI_REUSE_ANY flag set, because this way we make the HIs
+     readable by all processes. This function calls setmyeid() internally.. */
+  hints->ei_flags |= HIP_HI_REUSE_ANY;
+  
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, pub_suffix))
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
@@ -617,19 +635,6 @@ int get_localhost_endpointinfo(const char *basename,
   }
   
   return err;
-}
-
-static char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
-{
-        if (!buf)
-                return NULL;
-        sprintf(buf,
-                "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
-                ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
-                ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
-                ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
-                ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
-        return buf;
 }
 
 /**
@@ -1443,7 +1448,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH126, &hit.hit);
+    err = rsa_to_hit(rsa, (char *) key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1457,7 +1462,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH126, &hit.hit);
+    err = dsa_to_hit(dsa, (char *) key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;

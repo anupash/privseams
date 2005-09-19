@@ -387,6 +387,7 @@ int hip_do_work(struct hip_work_order *job)
 				res = KHIPD_ERROR;
 				goto send_i1_end;
 			}
+			HIP_DEBUG("*-*-*-*-*-*-*-*-*-*CALLING hip_send_i1 ***********\n");
 			res = hip_send_i1(&entry->hit_peer, entry);
 			if (res < 0) {
 				HIP_ERROR("Sending of I1 failed (%d)\n", res);
@@ -510,6 +511,10 @@ int hip_do_work(struct hip_work_order *job)
 		case HIP_WO_SUBTYPE_SEND_BOS:
 			HIP_DEBUG("Sending BOS\n");
 			res = hip_send_bos(job->msg);
+			break;
+		case HIP_WO_SUBTYPE_SEND_CLOSE:
+			HIP_DEBUG("Sending CLOSE\n");
+			res = hip_send_close(job->msg);
 			break;
 #endif /* (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 		default:

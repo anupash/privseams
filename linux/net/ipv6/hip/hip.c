@@ -12,6 +12,8 @@
 #include "hip.h"
 #include "hadb.h"
 
+#include <linux/delay.h>
+
 static atomic_t hip_working = ATOMIC_INIT(0);
 
 time_t load_time;
@@ -858,7 +860,9 @@ static int hip_worker(void *t)
 		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 
-	//out:
+#ifdef CONFIG_SMP
+ out:
+#endif /* CONFIG_SMP */
 
 	/* cleanup and finish thread */
 	hip_uninit_workqueue();
@@ -1056,7 +1060,6 @@ static void __exit hip_cleanup(void)
 	hip_uninit_r1();
 #endif
 
-	/* update_spi_waitlist_delete_all(); */
 	HIP_INFO("HIP module uninitialized successfully\n");
 	return;
 }

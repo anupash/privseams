@@ -873,10 +873,28 @@ int hip_socket_handle_del_peer_map_hit_ip(const struct hip_common *input)
 	return err;
 }
 
-
 int hip_socket_handle_rst(const struct hip_common *input)
 {
-	return -ENOSYS;
+	struct hip_work_order *hwo;
+	int err = 0;
+
+	HIP_DEBUG("\n");
+	
+	HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -EFAULT,
+		 "Failed to insert hi work order\n");
+	
+	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
+				HIP_WO_SUBTYPE_SEND_CLOSE,
+				NULL, NULL, NULL,
+				0, 0, 0);
+	/* override the destructor; socket handler deletes the msg
+	   by itself */
+	hwo->destructor = NULL;
+	hwo->msg = (struct hip_common *) input;
+	hip_insert_work_order(hwo);
+
+ out_err:
+	return err;
 }
 
 int hip_socket_bos_wo(const struct hip_common *input)
@@ -1044,7 +1062,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
 	if (hip_host_id_contains_private_key(host_id)) {
 		err = hip_private_host_id_to_hit(host_id, &lhi.hit,
-						 HIP_HIT_TYPE_HASH126);
+						 HIP_HIT_TYPE_HASH120);
 		if (err) {
 			HIP_ERROR("Failed to calculate HIT from HI.");
 			goto out_err;
@@ -1066,7 +1084,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	} else {
 		/* Only public key */
 		err = hip_host_id_to_hit(host_id,
-					 &lhi.hit, HIP_HIT_TYPE_HASH126);
+					 &lhi.hit, HIP_HIT_TYPE_HASH120);
 	}
 	
 	HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
@@ -1149,7 +1167,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 		HIP_DEBUG("host_id len %d\n",
 			 ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
 		err = hip_host_id_to_hit(&eid_endpoint->endpoint.id.host_id,
-					 &lhi.hit, HIP_HIT_TYPE_HASH126);
+					 &lhi.hit, HIP_HIT_TYPE_HASH120);
 		if (err) {
 			HIP_ERROR("Failed to calculate HIT from HI.");
 			goto out_err;

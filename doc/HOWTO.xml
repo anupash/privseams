@@ -44,6 +44,12 @@
       &nbsp;* iproute and its development headers
     </para>
     <para>
+      &nbsp;* iptables development headers
+    </para>
+    <para>
+      &nbsp;* glib (www.gtk.org) and development headers
+    </para>
+    <para>
       * Optional
     </para>
     <para>
@@ -51,6 +57,10 @@
     </para>
     <para>
       &nbsp;* ipsec-tools: setkey
+    </para>
+    <para>
+      &nbsp;* iptables userspace tools and IPv6 netfilter in the kernel
+              (for the HIP firewall only)
     </para>
     <para>
       &nbsp;* netcat6
@@ -185,7 +195,10 @@
     <para>
        First, you need to compile the kernel with the CONFIG_HIP_USERSPACE
        option. Then, execute "modprobe hipmod", "hipd/hipd" and
-       "hipconf add hi default" in exactly that order. The rest of the
+       "hipconf add hi default" in exactly that order. In order to run the
+       HIP daemon independently from the path, you might run "make install" in
+       in the top directory. The HIP deamon can be run in background
+       by specifying the option f. The rest of the
        instructions in this manual apply also to the userspace implementation
        with these small changes.
     </para>
@@ -195,11 +208,14 @@
     <para>
       After you have successfully compiled and installed the HIP kernel and
       rebooted both of the hosts, you need to compile the userspace
-      applications in order to use HIP. Start by invoking the autogen.sh at
-      the top level directory:
+      applications in order to use HIP. Start by moving to the top level directory
+      of HIPL:
       </para>
     <para>
       &nbsp;cd hipl
+    </para>
+    <para>
+      If the file autogen.sh exists (to test type ls autogen.sh), run it:
     </para>
     <para>
       &nbsp;./autogen.sh
@@ -333,6 +349,13 @@
     </para>
   </chapter>
   <chapter>
+    <title>Closing HIP Security Associations Manually</title>
+     <para>
+      You can use the hipconf tool to reset HIP SAs manually. Type
+      "hipconf rst all" to close all SAs. 
+     </para>
+  </chapter>
+  <chapter>
     <title>Testing Handover</title>
     <para>
       The handover code is based on draft-nikander-hip-mm-00
@@ -402,9 +425,6 @@
     </para>
     <para>
       # cd path-to-hipl/libinet6
-    </para>
-    <para>
-      # ./configure
     </para>
     <para>
       # make libinet6.so
@@ -500,18 +520,9 @@
       support native HIP API. HIP is a compile time option, so that you can
       see the required modifications to the code (ifdef USE_HIP). Here's how
       you compile the telnet applications:
-      </para>
-    <para>
-	# cd libinet
     </para>
     <para>
-	# ./configure
-    </para>
-    <para>
-	# make
-    </para>
-    <para>
-	# cd ../test/telnetd
+	# cd test/telnetd
     </para>
     <para>
 	# ./configure
@@ -543,7 +554,7 @@
   <chapter>
     <title> How to Use HIP in Other C Based Applications?</title>
     <para>
-      Use on the following methods:
+      Use one the following methods:
     </para>
     <para>
       1. Port it to use the native HIP API. See the telnet code for a
@@ -575,6 +586,11 @@
       supports only IPv6. Second, the application must really use the
       getaddrinfo interface because otherwise the getaddrinfo hack
       (i.e. sending HIT-to-IPv6 mapping to the HIP module) does not work.
+    </para>
+    <para>
+    4. Insert the HIT to /etc/hosts, instead of /etc/hip/hosts. Then, add
+       the HIT-to-IP mapping with "hipconf add hi default". This is the
+       quick-and-dirty method...
     </para>
   </chapter>
   <chapter>
@@ -749,5 +765,138 @@
 	</listitem>
 	</itemizedlist>
   </chapter>
+  <chapter>
+    <title>HIP Firewall</title>
+
+        <para>Ip6tables must define that HIP and ESP packets are
+              queued in the user-space.  These rules must be inserted
+              so that they precede any other firewall rules that might
+              concern the HIP and ESP packets. If ESP packet filtering
+              is not necessary the ip6tables rules concerning ESP
+              packets (-p 50) can be left out.</para>
+
+        <para>ip6tables -A FORWARD -p 99 -j QUEUE</para>
+        <para>ip6tables -A FORWARD -p 50 -j QUEUE</para>
+        <para>ip6tables -A INPUT -p 99 -j QUEUE</para>
+        <para>ip6tables -A INPUT -p 50 -j QUEUE</para>
+        <para>ip6tables -A OUTPUT -p 99 -j QUEUE</para>
+        <para>ip6tables -A OUTPUT -p 50 -j QUEUE</para>
+
+        <para>ip6_queue must be loaded with: "modprobe ip6_queue"</para>
+
+        <para>Firewall can be started with "./firewall &lt;file_name&gt;"
+              "timeout value" at firewall directory, where file_name
+              is path of the file containing the firewall rules and
+              timeout value is the connection timeout value in
+              seconds.  If connection timeout is defined as zero or
+              negative, the connection timeout checking is not
+              used. Rules in the file must be separated with
+              newline. The firewall (currently) prints out debug
+              information from rule parsing test functions and from
+              filtering packets.</para>
+
+        <para>Rules follow (loosely) the syntax of Linux Iptables with
+        following syntax:</para>
+
+        <para>Basic format of rule:</para>
+
+        <para>HOOK [match] TARGET</para>
+
+        <para>Here HOOK is one of the netfilter hooks: "INPUT",
+              "OUTPUT", "FORWARD".  Target is either "ACCEPT" or
+              "DROP", whether packet should be allowed or not.  Match
+              is a combination of filtering option described below.</para>
+
+        <para>Filtering options:</para>
+
+        <para>-src_hit [!] &lt;hit value&gt; --src_hi &lt;file name&gt;</para>
+
+        <para>Matches source HIT of packet. HI can be given with
+              --src_hi option and by defining path to a public key
+              file as an argument. This causes sender signatures to be
+              verified. The file name must contain either "_rsa_" or
+              "_dsa_" to define whether RSA or DSA is used as
+              algorithm.</para>
+ 
+        <para>-dst_hit [!] &lt;hit&gt;</para>
+
+        <para>Matches destination HIT of packet.</para>
+
+        <para>-type [!] &lt;hip packet type&gt;</para>
+
+        <para>Matches HIP packet type. Type is one of following: 
+              "I1", "R1", "I2", "R2", "CER", "UPDATE", "NOTIFY", "CLOSE",
+              "CLOSE_ACK"</para>
+
+        <para>-i [!] &lt;incoming interface&gt;</para>
+
+        <para>Matches incoming interface. Argument contains name of
+              the interface. Can not be used for rules in OUTPUT hook
+              as packet has no incoming interface in that case.</para>
+
+        <para>-o [!] &lt;outgoing interface&gt;</para>
+
+        <para>Matches outgoing interface. Argument contains name of
+              the interface. Can not be used for rules in INPUT hook
+              as packet has no outgoing interface in that case.</para>
+
+        <para>-state [!] &lt;state&gt; --verify_responder --accept_mobile</para>
+
+        <para>Matches state of HIP association: "NEW" or
+              "ESTABLISHED". ESP packets are also filtered as part of
+              the connection. With "--verify_responder" option the
+              firewall stores responder HI from R1 packet and uses it
+              for verifying signatures in the packets. With
+              --accept_mobile option, the firewall may establish state
+              for existing connection when a mobile host enters the
+              network protected by the firewall. In practice this
+              requires bringing down the previous interface and
+              bringing up a new one in the new network.</para>
+
+
+        <para>Management interface:</para>
+
+        <para>Firewall management interface contains functions for
+              altering rules of running firewall. Functions are
+              defined in firewall/rule_management.h and implemented in
+              firewall/rule_management.c. Rule_management.c also
+              contains functions for copying, comparing and freeing
+              rules, etc. If any functions are needed outside the
+              rule_management they can be defined in the header file.</para>
+
+        <para>The argument "hook" in the rule is the Netfilter hook
+              for which rule is intended. The hooks are defined in
+              linux/netfilter_ipv6.h as NF_IP6_LOCAL_IN,
+              NF_IP6_FORWARD, NF_IP6_LOCAL_OUT.</para>
+
+        <para>The argument rule is structure describing the rule
+              defined in rule_management.h. The structure contains
+              pointers to options. The pointer value must be NULL,
+              when option is not defined. The structures for options
+              are also defined in rule_management.h. Function: rule *
+              parse_rule(char * string) can be used for creating a
+              rule structure from a string. This also inspects that
+              the rule syntax is correct.</para>
+
+        <para>void insert_rule(const struct rule * rule, int hook):</para>
+
+        <para>Inserts argument rule into with the hook. Insert makes
+              local copy of the argument rule.</para>
+
+        <para>int delete_rule(const struct rule * rule, int hook):</para>
+
+        <para>Deletes the local rule that is equal to the argument
+              rule. </para>
+
+        <para>GList * list_rules(int hook):</para>
+
+        <para>creates a copy of the rule list and returns it. Caller
+               must take care of freeing the returned list.</para>
+
+        <para>int flush(int hook):</para>
+
+        <para>Clears all rules.</para>
+  </chapter>
+
 </book>    
 

@@ -317,6 +317,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out) {
  */
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {
+	HIP_HEXDUMP("Dumping key", key, 20);
 	switch(type) {
         case HIP_DIGEST_SHA1_HMAC:
                 HMAC(EVP_sha1(), 
@@ -337,6 +338,10 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
                 HIP_ERROR("Unknown HMAC type 0x%x\n", type);
                 return 0;
         }
+
+	HIP_HEXDUMP("HMAC key", key, hip_hmac_key_length(HIP_ESP_AES_SHA1));
+	HIP_HEXDUMP("hmac in", in, in_len);
+	HIP_HEXDUMP("hmac out", out, HIP_AH_SHA_LEN);
 
 	return 1;
 }
