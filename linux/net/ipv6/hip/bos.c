@@ -243,7 +243,7 @@ int hip_handle_bos(struct hip_common *bos,
 
 
 	/* Validate HIT against received host id */	
-	hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH126);
+	hip_host_id_to_hit(peer_host_id, &peer_hit, HIP_HIT_TYPE_HASH120);
 	HIP_IFEL(ipv6_addr_cmp(&peer_hit, &bos->hits) != 0, -EINVAL,
 		 "Sender HIT does not match the advertised host_id\n");
 	

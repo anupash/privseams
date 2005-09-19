@@ -185,7 +185,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	/* pre-create cookie */
 	u = puzzle_or_solution;
 
-
 #if defined(CONFIG_SYSCTL) || defined(CONFIG_SYSCTL_MODULE)
 	max_k = hip_sysconfig_get_max_k();
 #else
@@ -204,7 +203,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hitr);
 		//randval = ntoh64(u->sl.J);
 		randval = u->sl.J;
-		_HIP_DEBUG("u->sl.J: 0x%llx\n", u->sl.J);
+		HIP_DEBUG("u->sl.J: 0x%llx\n", randval);
 		maxtries = 1;
 	} else if (mode == HIP_SOLVE_PUZZLE) {
 		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);

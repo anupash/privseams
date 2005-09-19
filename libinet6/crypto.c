@@ -113,7 +113,7 @@ RSA *create_rsa_key(int bits) {
  * @type:           the type of the HIT to be created
  * @hit:            where the resulting HIT is stored
  *
- * Currently only HIP_HIT_TYPE_HASH126 is supported for parameter
+ * Currently only HIP_HIT_TYPE_HASH120 is supported for parameter
  * @type.
  *
  * Returns: 0 if HIT was created successfully, else negative.
@@ -141,10 +141,10 @@ int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit) {
   }
   pubkey_len = 1 + 20 + 3 * (64 + t * 8); /* RFC 2536 section 2 */
 
-  _HIP_DEBUG("DSA pubkey length=%d\n", pubkey_len);
+  HIP_DEBUG("DSA pubkey length=%d, t=%d\n", pubkey_len, t);
   _HIP_INFO("Create HIT from HI\n");
   
-  if (type == HIP_HIT_TYPE_HASH126) {
+  if (type == HIP_HIT_TYPE_HASH120) {
     _HIP_DEBUG("HIT type is HASH126\n");
   } else if (type == HIP_HIT_TYPE_HAA_HASH) {
     HIP_ERROR("HIT type HAA hash not implemented\n");
@@ -184,12 +184,31 @@ int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit) {
   }
 
   _HIP_DEBUG("hit hash 128, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
-  
+
+  /* Clearing the 120-127 bits to zero
+   * and setting 126th bit to one - draft-ietf-hip-base-03 
+   */
+  for (i = 120; i<=127; i++) {
+    int ret = 0;
+    if (i != 126)
+      ret = BN_clear_bit(bn, i);
+    else
+      ret = BN_set_bit(bn, i);
+    if (!ret) {
+      HIP_ERROR("bn set/clear bit %d failed\n", i);
+      err = -EINVAL;
+      goto out_err;
+    }
+  }
+
+#if 0
   if (!BN_clear_bit(bn, 127) || !BN_set_bit(bn, 126)) {
     HIP_ERROR("bn set/clear bit failed\n");
     err = -EINVAL;
     goto out_err;
   }
+#endif
+
   _HIP_DEBUG("hit hash 126, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
   
   tmp = BN_new();
@@ -253,7 +272,7 @@ int rsa_to_hit(RSA *rsa_key, char *rsa, int type, struct in6_addr *hit) {
   _HIP_DEBUG("RSA pub key length = %d\n", pubkey_len);
   _HIP_INFO("Create HIT from HI\n");
   
-  if (type == HIP_HIT_TYPE_HASH126) {
+  if (type == HIP_HIT_TYPE_HASH120) {
     _HIP_DEBUG("HIT type is HASH126\n");
   } else if (type == HIP_HIT_TYPE_HAA_HASH) {
     HIP_ERROR("HIT type HAA hash not implemented\n");
@@ -294,12 +313,32 @@ int rsa_to_hit(RSA *rsa_key, char *rsa, int type, struct in6_addr *hit) {
   }
   
   _HIP_DEBUG("hit hash 128, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
-  
+
+
+  /* Clearing the 120-127 bits to zero
+   * and setting 126th bit to one - draft-ietf-hip-base-03 
+   */
+  for (i = 120; i<=127; i++){
+    int ret = 0;
+    if (i != 126)
+      ret = BN_clear_bit(bn, i);
+    else
+      ret = BN_set_bit(bn, i);
+    if (!ret) {
+      HIP_ERROR("bn set/clear bit %d failed\n", i);
+      err = -EINVAL;
+      goto out_err;
+    }
+  }
+
+#if 0
   if (!BN_clear_bit(bn, 127) || !BN_set_bit(bn, 126)) {
     HIP_ERROR("bn set/clear bit failed\n");
     err = -EINVAL;
     goto out_err;
   }
+#endif
+
   _HIP_DEBUG("hit hash 126, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
   
   tmp = BN_new();

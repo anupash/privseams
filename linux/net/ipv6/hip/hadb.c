@@ -1685,7 +1685,7 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	struct in6_addr hit;
 
 	/* Verify sender HIT */
- 	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH126) ||
+ 	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH120) ||
 		 ipv6_addr_cmp(&hit, &entry->hit_peer),
 		 -1, "Unable to verify sender's HOST_ID\n");
 	//	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
@@ -1717,8 +1717,8 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
 	entry->our_pub = hip_get_public_key(entry->our_pub);
 
 	err = alg == HIP_HI_DSA ? 
-		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH126) :
-		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH126);
+		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH120) :
+		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH120);
 	HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
 	
  out_err:
@@ -2106,7 +2106,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		_HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
+		HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
 		{
 			_HIP_DEBUG("List_for_each_entry_safe\n");

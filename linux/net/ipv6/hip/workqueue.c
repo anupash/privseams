@@ -512,6 +512,10 @@ int hip_do_work(struct hip_work_order *job)
 			HIP_DEBUG("Sending BOS\n");
 			res = hip_send_bos(job->msg);
 			break;
+		case HIP_WO_SUBTYPE_SEND_CLOSE:
+			HIP_DEBUG("Sending CLOSE\n");
+			res = hip_send_close(job->msg);
+			break;
 #endif /* (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
 		default:
 			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);

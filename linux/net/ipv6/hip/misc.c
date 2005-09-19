@@ -25,17 +25,20 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
  	 sizeof(struct hip_host_id_key_rdata);
 
        _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
-       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH126, -ENOSYS);
+       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
        _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
        HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest)), err, 
 		"Building of digest failed\n");
 
-       /* hit_126 := concatenate ( 01 , low_order_bits ( digest, 126 ) ) */
+       /* hit_120 := concatenate ( 01000000 , low_order_bits ( digest, 120 ) ) */
 
        memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
 	      sizeof(struct in6_addr));
-       hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
-       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_126;
+
+       //hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
+
+       hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
+       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
 
  out_err:
 

@@ -41,7 +41,7 @@ int main(int argc,char *argv[]) {
   HIP_ERROR("\n");
   memset(&hit, 0, sizeof(struct in6_addr));
 
-  err = dsa_to_hit(dsa, pk, strlen(pk), HIP_HIT_TYPE_HASH126, &hit);
+  err = dsa_to_hit(dsa, pk, strlen(pk), HIP_HIT_TYPE_HASH120, &hit);
   if (err) {
     HIP_ERROR("dsa_to_hit\n");
     exit(1);

@@ -57,10 +57,15 @@ hip_tlv_type_t hip_get_param_type(const void *tlv_common);
 void hip_set_param_type(void *tlv_common, hip_tlv_type_t type);
 void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common);
 hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh);
+
+
 void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi);
 void hip_set_param_lsi_value(struct hip_spi *hspi, uint32_t lsi);
+
 uint32_t hip_get_param_spi_value(const struct hip_spi *hspi);
 uint32_t hip_get_param_lsi_value(const struct hip_spi *hspi);
+
+
 uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *test);
 uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id);

@@ -144,6 +144,10 @@ Some points in the branch quality assurance:
 UPGRADING THE KERNEL
 ====================
 
+# note: there is a perl script called "hashline" diff which is more
+# convinient to use in upgrading the kernel (to check for added/deleted
+# files)
+
 % <get the patch to ~/down>
 % cd hipl--fix--2.6/linux
 % patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
