@@ -1,6 +1,7 @@
 # Some useful contants that can be used in Makefile.am files
 HIPL_TOOLS                = $(HIPL)/tools
 HIPL_HIPD                 = $(HIPL)/hipd
+HIPL_FIREWALL             = $(HIPL)/firewall
 HIPL_LIBINET6             = $(HIPL)/libinet6
 HIPL_LIBINET6_LIB         = $(HIPL_LIBINET6)/.libs
 HIPL_LIBINET6_LIB_STATIC  = $(HIPL_LIBINET6_LIB)/libinet6.a
