@@ -1332,7 +1332,8 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 
 	return err;
 }
-
+#endif /* defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE) || defined(CONFIG_HIP_USERSPACE) */
+/**
 /**
  * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter
  * @msg:     the message where the parameter will be appended
