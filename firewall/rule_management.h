@@ -3,7 +3,7 @@
 
 #include <glib.h>
 #include <glib/glist.h>
-
+#include "debug.h"
 #include "firewall.h"
 
 //string tokens for rule parsing

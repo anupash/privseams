@@ -568,7 +568,7 @@ int handle_r1(struct hip_common * common,
   if(verify_responder)
     {
       _HIP_DEBUG("handle_r1: verifying responder\n");
-      hip_host_id_to_hit(hi, &hit, HIP_HIT_TYPE_HASH126);
+      hip_host_id_to_hit(hi, &hit, HIP_HIT_TYPE_HASH120);
 
       //verify hi -> hit
       if(!ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit))

@@ -1,6 +1,6 @@
 #include <netinet/in.h>
 #include <linux/netfilter.h>
-#include <libipq.h>
+#include <libipq/libipq.h>
 #include <glib.h>
 #include <glib/glist.h>
 #include <glib/gthread.h>
@@ -499,6 +499,8 @@ struct hit_option * parse_hit(char * token)
  * From HIPL code, but modified version here does not include private key 
  * material in HI structure, as none available.
  *
+ * XX FIX: rewrite for better code reuse (integrate to rsa_to_dns_key_rr)
+ *
  * rsa_to_dns_key_rr - create DNS KEY RR record from host RSA key
  * @rsa:        the RSA structure from where the KEY RR record is to be created
  * @rsa_key_rr: where the resultin KEY RR is stored
@@ -563,10 +565,11 @@ int rsa_to_public_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   return rsa_key_rr_len;
 }
 
-
  /**
  * From HIPL code, but modified version here does not include private key 
  * material in HI structure, as none available.
+ *
+ * XX FIX: rewrite for better code reuse (integrate to dsa_to_dns_key_rr)
  *
  * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
  * @dsa:        the DSA structure from where the KEY RR record is to be created
@@ -828,7 +831,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
     }
 
   //verify hi => hit
-  hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH126);
+  hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH120);
   if(!ipv6_addr_cmp(&temp_hit, hit))
     _HIP_DEBUG("parse hi: hi-hit match\n");
   else
