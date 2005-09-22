@@ -12,6 +12,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 				HIP_WO_SUBTYPE_SEND_PACKET, src_addr,
 				peer_addr, NULL, 0, 0, 0);
 	hwo.msg = buf;
+
 	return hip_netlink_send(&hwo);
 }
 #else

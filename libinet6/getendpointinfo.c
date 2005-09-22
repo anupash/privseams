@@ -1333,6 +1333,13 @@ int getendpointinfo(const char *nodename, const char *servname,
     *res = first;
     
   } else {
+#ifdef CONFIG_HIP_AGENT
+    /* Communicate the name and port output to the agent
+       synchronously with netlink. First send the name + port
+       and then wait for answer (select). The agent filters
+       or modifies the list. The agent implements get_peer_endpointinfo
+       with some filtering. */
+#endif /* add #elseif */
     err = get_peer_endpointinfo(_PATH_HIP_HOSTS, nodename, servname,
 				&modified_hints, res);
   }

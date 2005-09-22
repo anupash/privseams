@@ -116,5 +116,6 @@ AC_CONFIG_FILES([Makefile
                 tools/Makefile
                 hipd/Makefile
 		firewall/Makefile
+		agent/Makefile
                 test/Makefile])
 AC_OUTPUT

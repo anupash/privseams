@@ -111,6 +111,12 @@ int hip_netlink_receive(struct hip_nl_handle *nl,
                                 exit(1);
                         }
 
+#ifdef CONFIG_HIP_AGENT
+			/* Case: receive I1, prompt user for acceptance */
+			/* XX TODO: maybe this is more optimal than checking
+			   the R1 */
+			/* Forward to the agent for parsing */
+#endif /* add #else */
                         err = handler(h, len, arg);
                         if (err < 0)
                                 return err;
@@ -314,6 +320,22 @@ int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
 
         memset(&nladdr, 0, sizeof(struct sockaddr_nl));
         nladdr.nl_family = AF_NETLINK;
+
+#if 0
+#ifdef CONFIG_HIP_AGENT
+	/* Instead of hipd, send the message to the agent. The agent will
+	   then accept the outgoing packet (or drop it) and forward it to
+	   the hipd for sending. */
+	
+	/* There are two ways to guarantee that the message will be consumed
+	   only by the agent and not the daemon:
+	   a) use the agent's pid
+	   b) change the work order type */
+	
+
+	nladdr.nl_pid = <fill in the pid>;
+#endif
+#endif /* note: the following code should be in #else */
 
         return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
