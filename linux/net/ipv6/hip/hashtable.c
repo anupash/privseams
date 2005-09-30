@@ -1,5 +1,4 @@
 #include "hashtable.h"
-#include "debug.h"
 
 #define hip_ht_get_content(type, ptr, offset) \
         (type *)((u8 *)ptr - offset)
@@ -114,7 +113,7 @@ int hip_ht_init(HIP_HASHTABLE *ht)
 	HIP_ASSERT(ht->hold);
 	HIP_ASSERT(ht->put);
 	HIP_ASSERT(ht->get_key);
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 	spin_lock_init(&ht->lock);
 #endif
 

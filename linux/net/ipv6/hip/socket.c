@@ -22,7 +22,7 @@ extern int inet6_create(struct socket *sock, int protocol);
 /* kernel module unit tests */
 extern struct hip_unit_test_suite_list hip_unit_test_suite_list;
 
-#ifndef __KERNEL__
+#if HIP_USER_DAEMON
 extern int handle_bos_peer_list(int family, struct addrinfo **pai, int msg_len);
 #endif
 
@@ -974,7 +974,7 @@ int hip_socket_handle_unit_test(const struct hip_common *msg)
 	return err;
 }
 
-#if defined(CONFIG_HIP_USERSPACE) && defined(__KERNEL__)
+#if HIP_KERNEL_STUB ||HIP_KERNEL_DAEMON
 int hip_wrap_handle_add_local_hi(const struct hip_common *input)
 {
 	struct hip_work_order *hwo;
@@ -1001,7 +1001,7 @@ int hip_wrap_handle_add_local_hi(const struct hip_common *input)
  out_err:
 	return err;
 }
-#endif /* CONFIG_HIP_USERSPACE && __KERNEL__ */
+#endif /* HIP_KERNEL_STUB */
 
 /*
  * This function is similar to hip_socket_handle_add_local_hi but there are
@@ -1247,179 +1247,6 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 	return err;
 }
 
-#if 0
-/**
- * hip_socket_handle_get_peer_list - handle creation of list of known peers
- * @msg: message containing information about which unit tests to execute
- *
- * Process a request for the list of known peers
- *
- * Returns: zero on success, or negative error value on failure
- */
-int hip_socket_handle_get_peer_list(struct hip_common *msg)
-{
-	int err = 0;
-	hip_peer_opaque_t pr;
-	int fail;
-	int i, j;
-	struct hip_host_id *peer_host_id = NULL;
-	struct hip_lhi lhi;
-	char buf[46];
-        hip_peer_entry_opaque_t *entry, *next;
-	hip_peer_addr_opaque_t *addr, *anext;
-	
-	HIP_DEBUG("\n");
-
-	/* Initialize the data structure for the peer list */
-	memset(&pr, 0, sizeof(hip_peer_opaque_t));
-	
-	/* Extra consistency test */
-	if (hip_get_msg_type(msg) != SO_HIP_GET_PEER_LIST) {
-		err = -EINVAL;
-		HIP_ERROR("Bad message type\n");
-		goto out_err;
-	}
-
-	/* Iterate through the hadb db entries, collecting addresses */
-	fail = hip_for_each_ha(hip_hadb_list_peers_func, &pr);
-	if (fail) {
-		err = -EINVAL;
-		HIP_ERROR("Peer list creation failed\n");
-		goto out_err;
-	}
-
-	HIP_DEBUG("pr.count=%d headp=0x%p end=0x%p\n", pr.count, pr.head, pr.end);
-	if (pr.count <= 0) {
-		HIP_ERROR("No usable entries found\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-	/* Complete the list by iterating through the list and
-	   recording the peer host id. This is done separately from
-	   list creation because it involves calling a function that
-	   may sleep (can't be done while holding locks!) */
-	memset(&lhi, 0, sizeof(struct hip_lhi)); /* Zero flags, etc. */
-	for (i = 0, entry = pr.head; i < pr.count; i++, entry = entry->next) {
-	        /* Get the HIT */
-	        memcpy(&(lhi.hit),&(entry->hit),sizeof(struct in6_addr));
-
-		/* Look up HOST ID */
-		peer_host_id = hip_get_host_id(HIP_DB_PEER_HID, &lhi, HIP_ANY_ALGO);
-		if (peer_host_id == NULL) {
-	                hip_in6_ntop(&(lhi.hit), buf);
-			HIP_DEBUG("Peer host id for hit (%s) not found!\n",
-				  buf);
-			err = -EINVAL;
-			goto out_err;
-		}
-		HIP_DEBUG("## Hostname for HOST ID is: %s\n", 
-			  hip_get_param_host_id_hostname(peer_host_id));
-
-		/* Save the HOST ID */
-	        entry->host_id = peer_host_id;
-	}
-
-	/* Finished. Write a return message with the peer list (reuse the
-	   msg for result).
-	   Format is:
-	   <unsigned integer> - Number of entries
-	   [<host id> - Host identifier
-	    <hit> - HIT
-	    <unsigned integer> - Number of addresses
-	    [<ipv6 address> - IPv6 address
-	     ...]
-	   ...]
-	*/
-
-	hip_msg_init(msg);
-	hip_build_user_hdr(msg, SO_HIP_GET_PEER_LIST, -err);
-
-	/********** PEER LIST COUNT *********/
-
-	err = hip_build_param_contents(msg, &(pr.count), HIP_PARAM_UINT,
-				       sizeof(unsigned int));
-	if (err) {
-		HIP_ERROR("Could not build peer list count\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-
-	for (i = 0, entry = pr.head; i < pr.count; i++, entry = entry->next) {
-	        /********** HOST_ID *********/
-
-	        HIP_DEBUG("The HOST ID is: %s\n", 
-			  hip_get_param_host_id_hostname(entry->host_id));
-	        err = hip_build_param(msg, entry->host_id);
- 	        if (err) {
- 		        HIP_ERROR("Building of host id failed\n");
-			err = -EINVAL;
- 		        goto out_err;
- 	        }
-
-	        /********** HIT *********/
-
-		err = hip_build_param_contents(msg, &entry->hit,
-					       HIP_PARAM_HIT,
-					       sizeof(struct in6_addr));
- 	        if (err) {
- 		        HIP_ERROR("Building of hit failed\n");
-			err = -EINVAL;
- 		        goto out_err;
- 	        }
-
-		/********** IP ADDR LIST COUNT *********/
-
-		err = hip_build_param_contents(msg, &entry->count, 
-					       HIP_PARAM_UINT,
-					       sizeof(unsigned int));
-		if (err) {
-		        HIP_ERROR("Could not build peer addr list count\n");
-			err = -EINVAL;
-			goto out_err;
-		}
-
-		addr = entry->addr_list;
-		for (j = 0; j < entry->count; j++, addr = addr->next) {
-		        /********** IP ADDR *********/
-
-		        err=hip_build_param_contents(msg, &addr->addr,
-						     HIP_PARAM_IPV6_ADDR, 
-						     sizeof(struct in6_addr));
-			if (err) {
- 		                HIP_ERROR("Building of IP address failed\n");
-				err = -EINVAL;
-				goto out_err;
-			}
-		}
-	}
-
- out_err:
-	/* Recurse through structure, freeing memory */
-	entry = pr.head;
-	_HIP_DEBUG("free mem, pr.head=0x%p\n", pr.head);
-	while (entry) {
-		_HIP_DEBUG("entry=0x%p\n", entry);
-		next = entry->next;
-		_HIP_DEBUG("next=0x%p\n", next);
-		_HIP_DEBUG("entry->host_id=0x%p\n", entry->host_id);
-		if (entry->host_id)
-			HIP_FREE(entry->host_id);
-		addr = entry->addr_list;
-		_HIP_DEBUG("addrlist=0x%p\n", addr);
-		while (addr) {
-			_HIP_DEBUG("addr=0x%p\n", addr);
-			anext = addr->next;
-			HIP_FREE(addr);
-			addr = anext;
-		}
-		HIP_FREE(entry);
-		entry = next;
-	}
-	_HIP_DEBUG("done freeing mem, err = %d\n", err);
-	return err;
-}
-#endif
-
 /*
  * The socket options that do not need a return value.
  */
@@ -1556,11 +1383,6 @@ int hip_socket_getsockopt(struct socket *sock, int level, int optname,
 	case SO_HIP_SET_PEER_EID:
 		err = hip_socket_handle_set_peer_eid(msg);
 		break;
-#if 0  // XX TODO, not supported
-	case SO_HIP_GET_PEER_LIST:
-		err = hip_socket_handle_get_peer_list(msg);
-		break;
-#endif
 	default:
 		err = -ESOCKTNOSUPPORT;
 	}

@@ -4,9 +4,6 @@
  */
 #include "netdev.h"
 
-int address_count;
-struct list_head addresses;
-
 static int count_if_addresses(int ifindex)
 {
 	struct netdev_address *n, *t;

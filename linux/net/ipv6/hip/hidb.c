@@ -10,7 +10,7 @@
 
 #include "hidb.h"
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 
 // FIXME: all get_any's should be removed (tkoponen)
 
@@ -140,7 +140,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	int err = 0, len;
 	struct hip_host_id_entry *id_entry;
 	struct hip_host_id_entry *old_entry;
-	struct hip_host_id *pubkey;
+	struct hip_host_id *pubkey = NULL;
 	unsigned long lf;
 
 	HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
@@ -258,9 +258,9 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	  _HIP_HEXDUMP("host id\n", host_identity,
 		       hip_get_param_total_len(host_identity));
 	  
-	  HIP_IFEL(err = hip_private_host_id_to_hit(host_identity, &lhi.hit,
-						    HIP_HIT_TYPE_HASH120), 
-		   err, 
+	  HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
+					      HIP_HIT_TYPE_HASH120),
+		   -EFAULT,
 		   "Host id to hit conversion failed\n");
 	  
 	  lhi.anonymous =
@@ -268,9 +268,10 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		  ?
 		  1 : 0;
 	  
-	  HIP_IFEL(err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, 
+	  HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, 
 					 host_identity, 
-					 NULL, NULL, NULL), err,
+					 NULL, NULL, NULL),
+		   -EFAULT,
 		   "adding of local host identity failed\n");
 	}
 	
@@ -661,4 +662,4 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 #undef HIP_WRITE_LOCK_DB
 #undef HIP_READ_UNLOCK_DB
 #undef HIP_WRITE_UNLOCK_DB
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

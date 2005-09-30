@@ -2,12 +2,33 @@
 #define _HIP_NETLINK_H
 
 #include <net/hip.h> /* struct hip_work_order */
+#include "builder.h"
+#include "debug.h"
+#include "hip.h"
+
 #ifdef __KERNEL__
-#include <net/sock.h> /* struct sock */
-#include "workqueue.h"
+#  include <net/sock.h> /* struct sock */
+#  include "workqueue.h"
 #else
-#include <stdio.h>
-#include <linux/netlink.h>
+#  include <stdio.h>
+#  include <linux/netlink.h>
+
+typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
+
+#endif
+
+#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        (void*)&((struct sockaddr_in*)x)->sin_addr : \
+        (void*)&((struct sockaddr_in6*)x)->sin6_addr
+#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
+#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
+
+struct netdev_address {
+	struct list_head next;
+	struct sockaddr_storage addr;
+	int if_index;
+};
 
 struct hip_nl_handle
 {
@@ -17,13 +38,6 @@ struct hip_nl_handle
         __u32                   seq;
         __u32                   dump;
 };
-
-typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
-
-#endif
-
-#include "builder.h"
-#include "debug.h"
 
 #ifdef __KERNEL__
 int hip_netlink_open(void);

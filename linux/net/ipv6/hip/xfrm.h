@@ -7,9 +7,11 @@
 #else
 #  include "netlink.h"
 #endif
+
 #include <net/hip.h>
 #include "hadb.h"
 #include "debug.h"
+#include "hip.h"
 
 #ifdef __KERNEL__
 /* For now, only the kernel module inserts the security policy */

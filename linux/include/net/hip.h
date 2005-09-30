@@ -67,57 +67,6 @@ struct list_head {
 
 #endif /* __KERNEL__ */
 
-/* XX TODO: add a macro that preserves the return value from the function */
-
-#define HIP_IFE(func, eval) \
-{ \
-	if (func) { \
-		err = eval; \
-		goto out_err; \
-	} \
-}
-
-#define HIP_IFEL(func, eval, args...) \
-{ \
-	if (func) { \
-		HIP_ERROR(args); \
-		err = eval; \
-		goto out_err; \
-	} \
-}
-
-#define HIP_IFEB(func, eval, finally) \
-{ \
-	if (func) { \
-		err = eval; \
-                finally;\
-		goto out_err; \
-	} else {\
-		finally;\
-        }\
-}
-
-#define HIP_IFEBL(func, eval, finally, args...) \
-{ \
-	if (func) { \
-		HIP_ERROR(args); \
-		err = eval; \
-                finally;\
-		goto out_err; \
-	} else {\
-		finally;\
-        }\
-}
-
-#define HIP_IFEBL2(func, eval, finally, args...) \
-{ \
-	if (func) { \
-		HIP_ERROR(args); \
-		err = eval; \
-                finally;\
-        }\
-}
-
 #define HIP_HIT_TYPE_MASK_HAA   0x80
 //#define HIP_HIT_TYPE_MASK_126   0x40
 #define HIP_HIT_TYPE_MASK_120   0x40

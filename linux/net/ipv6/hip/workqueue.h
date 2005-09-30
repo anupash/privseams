@@ -1,6 +1,8 @@
 #ifndef HIP_WORKQUEUE
 #define HIP_WORKQUEUE
 
+#include "hip.h"
+
 #ifdef __KERNEL__
 #  include <asm/semaphore.h>
 #  include <asm/percpu.h>
@@ -11,11 +13,7 @@
 #else
 #  include <stdio.h>
 #  include "list.h"
-//#  include <net/ipv6.h>
-
-#include <asm/byteorder.h>
-
-
+#  include <asm/byteorder.h>
 
 /* Remove when not necessary, taken from linux/ipv6.h */
 struct ipv6hdr {

@@ -1,13 +1,13 @@
 #ifndef HIP_KERNEL_DEBUG_H
 #define HIP_KERNEL_DEBUG_H
-#ifndef __KERNEL__
-#else
 
-#include <linux/ipv6.h>
-#include <linux/skbuff.h>
-//#include <linux/inet.h>
-//#include <linux/netdevice.h>
+#ifdef __KERNEL__
+#  include <linux/ipv6.h>
+#  include <linux/skbuff.h>
+
 #include "misc.h"
+#include "debug.h"
+#include "hip.h"
 
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
@@ -67,6 +67,8 @@ extern void hip_debug_skb(const struct ipv6hdr *hdr,
 			  const struct sk_buff *skb);
 extern const char *hip_state_str(unsigned int state);
 
+#else
+#include "libinet6/debug.h"
 #endif /* __KERNEL__ */
 #endif /* HIP_KERNEL_DEBUG_H */
 

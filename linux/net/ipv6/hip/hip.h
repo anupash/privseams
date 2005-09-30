@@ -1,6 +1,75 @@
 #ifndef HIP_HIP_H
 #define HIP_HIP_H
 
+/* True if the code being compiled is for the kernel-only daemon in kernel */
+#define HIP_KERNEL_DAEMON                                 \
+   (defined __KERNEL__ &&                                 \
+   (defined CONFIG_HIP || defined CONFIG_HIP_MODULE) &&   \
+   !defined CONFIG_HIP_USERSPACE)
+
+/* True if the code being compiled is for the user daemon in the userspace */
+#define HIP_USER_DAEMON                                   \
+   (!defined __KERNEL__ &&                                \
+   (!defined CONFIG_HIP && !defined CONFIG_HIP_MODULE) && \
+   defined CONFIG_HIP_USERSPACE)
+
+/* True if the code being compiled is for the kernel stub (with user daemon) */
+#define HIP_KERNEL_STUB                                   \
+   (defined __KERNEL__ &&                                 \
+   (defined CONFIG_HIP || defined CONFIG_HIP_MODULE) &&   \
+   defined CONFIG_HIP_USERSPACE)
+
+/* XX TODO: add a macro that preserves the return value from the function */
+
+#define HIP_IFE(func, eval) \
+{ \
+	if (func) { \
+		err = eval; \
+		goto out_err; \
+	} \
+}
+
+#define HIP_IFEL(func, eval, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+		goto out_err; \
+	} \
+}
+
+#define HIP_IFEB(func, eval, finally) \
+{ \
+	if (func) { \
+		err = eval; \
+                finally;\
+		goto out_err; \
+	} else {\
+		finally;\
+        }\
+}
+
+#define HIP_IFEBL(func, eval, finally, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+                finally;\
+		goto out_err; \
+	} else {\
+		finally;\
+        }\
+}
+
+#define HIP_IFEBL2(func, eval, finally, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+                finally;\
+        }\
+}
+
 #ifdef __KERNEL__
 #  include <linux/time.h>
 #  include <linux/spinlock.h>

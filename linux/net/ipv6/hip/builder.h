@@ -8,20 +8,18 @@
  *
  */
 
+#include "hip.h"
+#include "debug.h"
+
 #ifdef __KERNEL__
-
-#include <linux/types.h>
-#include <net/ipv6.h>
-#include <net/hip.h>
-
+#  include <linux/types.h>
+#  include <net/ipv6.h>
+#  include <net/hip.h>
 #else /* not __KERNEL__ */
-
-#include <asm/types.h>
-#include <sys/errno.h>
-//#include <linux/in6.h>
-#include <net/hip.h>
-//#include <sys/socket.h>
-#include "misc.h"
+#  include <asm/types.h>
+#  include <sys/errno.h>
+#  include <net/hip.h>
+#  include "misc.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE

@@ -117,14 +117,6 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 		HIP_IFEL(1, -EFAULT, "Unknown HIP state %d\n", state);
 	}
 
-#if 0
-	if (entry->skbtest) {
-		/* sock needs to relookup its dst, todo */
-		HIP_DEBUG("skbtest is 1, setting back to 0\n");
-		entry->skbtest = 0;
-	        err = 5;
-	}
-#endif
  out_err:
 	/* Find increases the refcnt */
 	if (xs)

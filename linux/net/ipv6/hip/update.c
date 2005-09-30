@@ -7,22 +7,10 @@
 #include "update.h"
 #include "hadb.h"
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
-#ifndef __KERNEL__
-/**
- * hip_print_hit - print a HIT
- * @str: string to be printed before the HIT
- * @hit: the HIT to be printed
- */
-static inline void hip_print_hit(const char *str, const struct in6_addr *hit)
-{
-	char dst[INET6_ADDRSTRLEN];
 
-	hip_in6_ntop(hit, dst);
-	HIP_DEBUG("%s: %s\n", str, dst);
-	return;
-}
-#endif
+// (!defined __KERNEL__ && !defined HIP_KMOD && defined CONFIG_HIP_USERSPACE)
+
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 
 /** hip_update_get_sa_keys - Get keys needed by UPDATE
  * @entry: corresponding hadb entry of the peer
@@ -99,7 +87,7 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 */
 int hip_update_test_rea_addr(struct in6_addr *addr)
 {
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	int addr_type = ipv6_addr_type(addr);
 	return !(addr_type == IPV6_ADDR_ANY ||
 		 addr_type & IPV6_ADDR_LOOPBACK ||
@@ -168,7 +156,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 		uint32_t lifetime = ntohl(rea_address_item->lifetime);
 		int is_preferred = ntohl(rea_address_item->reserved) == 1 << 31;
 
-		hip_print_hit("REA address", rea_address);
+		HIP_DEBUG_HIT("REA address", rea_address);
 		HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
 			   is_preferred ? "yes" : "no", ntohl(rea_address_item->reserved),
 			  lifetime);
@@ -203,7 +191,7 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
 
 		}
 		if (!spi_addr_is_in_rea) {
-			hip_print_hit("deprecating address", &a->address);
+			HIP_DEBUG_HIT("deprecating address", &a->address);
 			a->address_state = PEER_ADDR_STATE_DEPRECATED;
 		}
 	}
@@ -496,18 +484,6 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	hip_update_entry_keymat(entry, keymat_index, calc_index_new, Kn);
 
 	/* set up new outbound IPsec SA */
-#if 0
-	HIP_IFEL(!hip_add_sa(hitr, hits, new_spi_out, esp_transform,
-			     we_are_HITg ? &espkey_gl : &espkey_lg,
-			     we_are_HITg ? &authkey_gl : &authkey_lg,
-			     0, HIP_SPI_DIRECTION_OUT), -1,
-		 "Setting up new outbound IPsec SA failed\n");
-	HIP_IFEL(!hip_add_sa(hits, hitr, new_spi_in, esp_transform,
-			     we_are_HITg ? &espkey_lg  : &espkey_gl,
-			     we_are_HITg ? &authkey_lg : &authkey_gl,
-			     1, HIP_SPI_DIRECTION_IN), -1,
-		 "Setting up new inbound IPsec SA failed\n");
-#endif
 	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
 	HIP_IFEL(new_spi_out != hip_add_sa(hitr, hits, new_spi_out, esp_transform,
 					   we_are_HITg ? &espkey_gl : &espkey_lg,
@@ -1217,7 +1193,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	/* Start building UPDATE packet */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Out of memory.\n");
 
-	hip_print_hit("sending UPDATE to", &entry->hit_peer);
+	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
 	hip_build_network_hdr(update_packet, HIP_UPDATE, mask,
@@ -1372,12 +1348,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	/* Send UPDATE */
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
-#if 0
-	/* Store the last UPDATE ID value sent from us */
-	entry->update_id_out = update_id_out;
-        _HIP_DEBUG("Stored peer's outgoing UPDATE ID %u\n", update_id_out);
-#endif
-
 	hip_set_spi_update_status(entry, nes_old_spi, 1);
 
 	/* if UPDATE contains only REA, then do not move state ? */
@@ -1542,4 +1512,4 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 	return;
 }
 
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

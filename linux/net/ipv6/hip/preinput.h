@@ -2,16 +2,18 @@
 #define HIP_PREINPUT_H
 
 #ifdef __KERNEL__
-#include <linux/ipv6.h> /* struct ipv6hdr */
-#include <linux/skbuff.h> /* struct sk_buff */
-#include <linux/types.h>
+#  include <linux/ipv6.h> /* struct ipv6hdr */
+#  include <linux/skbuff.h> /* struct sk_buff */
+#  include <linux/types.h>
 #endif
 
 #include <net/hip.h>
 #include "beet.h"
 #include "debug.h"
 #include "workqueue.h"
-#if defined CONFIG_HIP_HI3 && !defined __KERNEL__
+#include "hip.h"
+
+#if defined CONFIG_HIP_HI3 && HIP_USER_DAEMON
 #include "i3_client_api.h"
 
 struct hi3_ipv4_addr {

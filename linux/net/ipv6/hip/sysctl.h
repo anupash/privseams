@@ -6,6 +6,7 @@
 #ifdef CONFIG_SYSCTL
 #include <linux/sysctl.h>
 #include "debug.h"
+#include "hip.h"
 
 struct hip_sys_config {
 	int hip_cookie_max_k_r1;

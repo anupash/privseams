@@ -9,8 +9,7 @@
 
 #include "cookie.h"
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
-//struct hip_r1entry *hip_r1table;
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 
 /**
  * hip_calc_cookie_idx - get an index
@@ -38,55 +37,24 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 	return (base) % HIP_R1TABLESIZE;
 }
 
-#if 0
-/**
- * hip_create_new_puzzle - Create/Change the puzzle in R1
- * @pz: Old puzzle
- * @r1: R1entry 
- * @tv: Timevalue, that is inserted into the opaque field in puzzle
- *
- * Stores the old K, I and opaque values and generates new ones.
- * Storing is required since we need to support puzzles sent just before
- * we decide to change the puzzle.
- */
-static void hip_create_new_puzzle(struct hip_puzzle *pz, struct hip_r1entry *r1,
-				  struct timeval *tv)
-{
-	uint64_t random_i;
-
-	r1->Ck = pz->K;
-	r1->Ci = pz->I;
-	memcpy(r1->Copaque, pz->opaque, 3);
-
-	get_random_bytes(&random_i, sizeof(uint64_t));
-	pz->I = random_i;
-	tv->tv_sec &= 0xFFFFFF;
-	pz->opaque[0] = (tv->tv_sec & 0xFF);
-	pz->opaque[1] = ((tv->tv_sec >> 8) & 0xFF);
-	pz->opaque[2] = ((tv->tv_sec >> 16) & 0xFF);		
-}
-#endif
-
 /**
  * hip_fetch_cookie_entry - Get a copy of R1entry structure
  * @ip_i: Initiator's IPv6
  * @ip_r: Responder's IPv6
  *
- * Comments for the #if 0 code are inlined below. 
+ * Comments for the if 0 code are inlined below. 
  * 
  * Returns NULL if error.
  */
 struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, struct in6_addr *our_hit)
 {
-#if 0
-	struct timeval tv;
-	struct hip_puzzle *pz;
-	int diff, ts;
-#endif
 	struct hip_common *err = NULL, *r1 = NULL;
 	struct hip_r1entry * hip_r1table;
 	struct hip_host_id_entry *hid;
-	int idx, len;	
+	int idx, len;
+#ifdef __KERNEL__
+	unsigned long lf;
+#endif
 
 	/* Find the proper R1 table and copy the R1 message from the table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
@@ -96,9 +64,8 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r);
 	HIP_DEBUG("Calculated index: %d\n", idx);
-	//r1 = &hip_r1table[idx];
 
-	/* the code under #if 0 periodically changes the puzzle. It is not included
+	/* the code under if 0 periodically changes the puzzle. It is not included
 	   in compilation as there is currently no easy way of signing the R1 packet
 	   after having changed its puzzle.
 	*/
@@ -112,7 +79,6 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
 
 	ts = pz->opaque[0];
 	ts |= ((int)pz->opaque[1] << 8);
-	//ts |= ((int)pz->opaque[2] << 16);
 
 	if (ts != 0) {
 		/* check if the cookie is too old */
@@ -132,16 +98,12 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
 	/* XXX: sign the R1 */
 #endif
 	/* Create a copy of the found entry */
-//	r1 = HIP_MALLOC(sizeof(struct hip_r1entry), GFP_KERNEL);
-//	memcpy(r1, &hip_r1table[idx], sizeof(struct hip_r1entry));
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
 	r1 = HIP_MALLOC(len, GFP_KERNEL);
 	memcpy(r1, hip_r1table[idx].r1, len);
 	err = r1;
 
  out_err:	
-//	if (!err && r1 && r1->r1)
-//		HIP_FREE(r1->r1);
 	if (!err && r1)
 		HIP_FREE(r1);
 
@@ -171,10 +133,10 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	uint64_t digest = 0;
 	u8 cookie[48];
 	u8 max_k;
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	struct scatterlist sg[2];
 	unsigned int nsg = 2;
-#endif
+#endif /* HIP_KERNEL_DAEMON  */
 	int err = 0;
 	union {
 		struct hip_puzzle pz;
@@ -214,11 +176,11 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
 	}
 
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	/* pre map the memory region (for SHA) */
 	HIP_IFEL(hip_map_virtual_to_pages(sg, &nsg, cookie, 48) || nsg < 1, 0,
 		 "Error mapping virtual addresses to physical pages\n");
-#endif
+#endif /* HIP_KERNEL_DAEMON */
 
 	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
 	/* while loops should work even if the maxtries is unsigned
@@ -230,11 +192,11 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		
 		/* must be 8 */
 		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 		hip_build_digest_repeat(impl_sha1, sg, nsg, sha_digest);
 #else
 		hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
-#endif
+#endif /* HIP_KERNEL_DAEMON */
                 /* copy the last 8 bytes for checking */
 		memcpy(&digest, sha_digest + 12, sizeof(uint64_t));
 
@@ -328,69 +290,6 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 }
 
 /**
- * hip_get_r1 - Fetch a precreated R1 and return it.
- * @ip_i: Initiator's IPv6 address
- * @ip_r: Responder's IPv6 address
- * 
- */
-#if 0
-struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
-			      struct in6_addr *our_hit)
-{
-	struct hip_r1entry *err;
-	struct hip_host_id_entry *hid;
-
-	/* Find the proper R1 table */
-	hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO);
-	HIP_IFEL(!hid || !(err = hip_fetch_cookie_entry(hid->r1, ip_i, ip_r)), NULL, 
-		 "No matching entry\n");
-
- out_err:
-	if (err) {
-		
-	}
-
-	if (r1e == NULL)
-		return NULL;
-
-	return r1e->r1;
-}
-#endif
-
-#if 0
-int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
-			  uint64_t birthday)
-{
-#if 0
-	uint64_t generation;
-#endif
-	struct hip_r1entry *r1e;
-
-	r1e = hip_fetch_cookie_entry(ip_i, ip_r);
-	if (r1e == NULL)
-		return -ENOENT;
-
-	/* if we some day support changing the puzzle, we could take
-	   the generation into account when veifrying packets etc...
-	*/
-#if 0
-	generation = ((uint64_t)load_time) << 32 | r1e->generation;
-
-	if (birthday + 1 < generation) {
-		HIP_ERROR("R1 generation too old\n");
-		return -EINVAL;
-	}
-
-	if (birthday > generation) {
-		HIP_ERROR("R1 generation from future\n");
-		return -EINVAL;
-	}
-#endif
-	return 0;
-}
-#endif
-
-/**
  * hip_verify_cookie - Verify solution to the puzzle
  * @ip_i: Initiator's IPv6
  * @ip_r: Responder's IPv6
@@ -410,7 +309,10 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
 	struct hip_host_id_entry *hid;
-	int err;
+	int err = 0;
+#ifdef __KERNEL__
+	unsigned long lf;
+#endif
 
 	/* Find the proper R1 table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
@@ -464,4 +366,4 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	return err;
 }
 
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

@@ -11,7 +11,7 @@
  */
 #include "input.h"
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac, 
 			   void *hmac_key, int hmac_type);
 
@@ -688,27 +688,7 @@ int hip_handle_r1(struct hip_common *r1,
 	/* we have problems with creating precreated R1s in reasonable
 	   fashion... so we don't mind about generations */
 	r1cntr = hip_get_param(r1, HIP_PARAM_R1_COUNTER);
-#if 0
-	if (r1cntr) {
-		err = -EINVAL;
-		HIP_LOCK_HA(entry);
-		if (entry->state == HIP_STATE_I2_SENT) {
-			if (entry->birthday) {
-				if (entry->birthday < r1cntr->generation) {
-					/* perhaps changing the state should be performed somewhere else. */
-					entry->state = HIP_STATE_I1_SENT;
-					// XX FIX: SYNCH not needed?
-				} else {
-					/* dropping due to generation check */
-					HIP_UNLOCK_HA(entry);
-					HIP_INFO("Dropping R1 due to the generation counter being too small\n");
-					goto out_err;
-				}
-			}
-		}
-		HIP_UNLOCK_HA(entry);
-	}
-#endif		
+
 	/* Do control bit stuff here... */
 
 	/* We must store the R1 generation counter, _IF_ it exists */
@@ -943,14 +923,6 @@ int hip_create_r2(struct hip_context *ctx,
  	/* Send the packet */
 	err = hip_csum_send(NULL, i2_saddr, r2); // HANDLER
 
-#if 0
-	// state must be changed in hip_handle_i2, not here
-	// FIXME: locks?
-	if (!err) { 
-		entry->state = HIP_STATE_R2_SENT;
-	}
-#endif
-	
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
 	if (create_rva) {
@@ -1011,12 +983,7 @@ int hip_handle_i2(struct hip_common *i2,
 	/* We do not support generation counter (our precreated R1s suck) */
 	ctx->input = i2;
 	r1cntr = hip_get_param(ctx->input, HIP_PARAM_R1_COUNTER);
-#if 0		
-	/* Policy decision to drop the packet if no R1 counter in I2. */
-	HIP_IFE(!r1cntr, -ENOMSG);
-	HIP_IFEL(hip_verify_generation(i2_saddr, i2_daddrl r1cntr->generation), -1, 
-		 "Birthday check failed\n");
-#endif 
+
 	/* check solution for cookie */
 	{
 		struct hip_solution *sol;
@@ -1830,7 +1797,7 @@ int hip_receive_bos(struct hip_common *bos,
 	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0, "Received non-NULL receiver HIT in BOS.\n");
 	HIP_DEBUG("Entered in hip_receive_bos...\n");
 	entry = hip_hadb_find_byhits(&bos->hits, &bos->hitr);
-	state = entry ? state = entry->state : HIP_STATE_UNASSOCIATED;
+	state = entry ? entry->state : HIP_STATE_UNASSOCIATED;
 
 	/* TODO: If received BOS packet from already known sender
            should return right now */
@@ -2081,4 +2048,4 @@ int hip_receive_close_ack(struct hip_common *close_ack)
 	return err;
 }
 
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

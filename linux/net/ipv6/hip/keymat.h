@@ -1,7 +1,6 @@
 #ifndef HIP_KEYMAT_H
 #define HIP_KEYMAT_H
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 #ifdef __KERNEL__
 #  include <linux/types.h>
 #  include <linux/crypto.h>
@@ -13,8 +12,11 @@
 
 #include <net/hip.h>
 #include "misc.h"
-#include "debug.h"
 #include "crypto.h"
+#include "debug.h"
+#include "hip.h"
+
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat,
@@ -28,5 +30,5 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length);
 int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		       uint16_t *keymat_offset, uint8_t *calc_index,
 		       unsigned char *calc_index_keymat, uint16_t *Kn_is_at);
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
 #endif /* HIP_KEYMAT_H */

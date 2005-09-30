@@ -86,10 +86,7 @@ static void hip_hadb_remove_state_hit(hip_ha_t *ha)
 	HIP_UNLOCK_HA(ha);
 }
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
-#ifdef __KERNEL__
-#  include <net/ipv6.h>
-#endif /* __KERNEL__ */
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 
 /*
   Support for multiple inbound IPsec SAs:
@@ -143,13 +140,6 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
 
 	return ha;
 }
-
-#if 0
-hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit)
-{
-	return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)hit);
-}
-#endif
 
 /**
  * This function searches for a hip_ha_t entry from the hip_hadb_hit
@@ -253,6 +243,71 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
+/* Practically called only by when adding a HIT-IP mapping before bex */
+int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
+{
+	int err = 0;
+	hip_ha_t *entry;
+
+	/* old comment ? note: can't lock here or else
+	 * hip_sdb_add_peer_address will block
+	 *
+	 * unsigned long flags = 0;
+	 * spin_lock_irqsave(&hip_sdb_lock, flags);
+	 */
+
+	HIP_DEBUG_HIT("HIT", hit);
+	HIP_DEBUG_IN6ADDR("addr", addr);
+
+	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
+	entry = hip_hadb_try_to_find_by_peer_hit(hit);
+	if (!entry) {
+		entry = hip_hadb_create_state(GFP_KERNEL);
+		if (!entry) {
+			HIP_ERROR("Unable to create a new entry\n");
+			return -1;
+		}
+		_HIP_DEBUG("created a new sdb entry\n");
+		ipv6_addr_copy(&entry->hit_peer, hit);
+
+		/* XXX: This is wrong. As soon as we have native socket API, we
+		 * should enter here the correct sender... (currently unknown).
+		 */
+		if (!hip_init_us(entry, NULL))
+			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
+		else 
+			HIP_INFO("Could not assign local hit, continuing\n");
+		hip_hadb_insert_state(entry);
+		hip_hold_ha(entry); /* released at the end */
+	}
+
+	/* add initial HIT-IP mapping */
+	if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
+		err = hip_hadb_add_peer_addr(entry, addr, 0, 0,
+					     PEER_ADDR_STATE_ACTIVE);
+		if (err) {
+			HIP_ERROR("error while adding a new peer address\n");
+			err = -2;
+			goto out;
+		}
+	} else
+		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
+			  hip_state_str(entry->state));
+
+	/* Synchronize beet state (may be changed) */
+	err = hip_hadb_update_xfrm(entry);
+	if (err) {
+		HIP_ERROR("XFRM out synchronization failed\n");
+		err = -EFAULT;
+		goto out;
+	}
+
+ out:
+	if (entry)
+		hip_db_put_ha(entry, hip_hadb_delete_state);
+	return err;
+}
+
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
  */
@@ -298,33 +353,6 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	return entry;
 }
-
-/**
- * hip_hadb_remove_state - Removes the HA from either or both hash tables.
- * @ha: HA
- *
- * The caller should have one reference (as he is calling us). That
- * prevents deletion of HA structure from happening under spin locks.
- */
-#if 0 // tkoponen, this is functionally equivalent to hip_hadb_remove_state_hit
-static void hip_hadb_remove_state(hip_ha_t *ha)
-{
-	int r;
-
-	HIP_ASSERT(atomic_read(&ha->refcnt) >= 1);
-	HIP_LOCK_HA(ha);
-
-	r = atomic_read(&ha->refcnt);
-
-	if ((ha->hastate & HIP_HASTATE_HITOK) && !ipv6_addr_any(&ha->hit_peer))
-		hip_hadb_rem_state_hit(ha);
-
-	HIP_DEBUG("Removed HA: %p from HADB hash tables. " \
-		  "References remaining before removing: %d\n",
-		  ha, r);
-	HIP_UNLOCK_HA(ha);
-}
-#endif
 
 /************** END OF PRIMITIVE FUNCTIONS **************/
 
@@ -398,18 +426,10 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 	int err = 0;
         struct hip_peer_addr_list_item *s, *candidate = NULL;
 	struct timeval latest, dt;
-#ifdef CONFIG_HIP_DEBUG
-	char addrstr[INET6_ADDRSTRLEN];
-#endif
 
         list_for_each_entry(s, &spi_out->peer_addr_list, list) {
-#ifdef CONFIG_HIP_DEBUG
-		hip_in6_ntop(&s->address, addrstr);
-		_HIP_DEBUG("%s modified_time=%ld.%06ld\n", addrstr,
-			  s->modified_time.tv_sec, s->modified_time.tv_usec);
-#endif
 		if (s->address_state != PEER_ADDR_STATE_ACTIVE) {
-			HIP_DEBUG("skipping non-active address %s\n", addrstr);
+			_HIP_DEBUG("skipping non-active address %s\n",addrstr);
 			continue;
 		}
 
@@ -436,10 +456,6 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 		err = -ENOMSG;
 	} else {
 		ipv6_addr_copy(addr, &candidate->address);
-#ifdef CONFIG_HIP_DEBUG
-		hip_in6_ntop(addr, addrstr);
-		_HIP_DEBUG("select %s from if=0x%x\n", addrstr, s->interface_id);
-#endif
 	}
 
 	return err;
@@ -470,51 +486,7 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 	/* assume already locked entry */
 
 	HIP_DEBUG_HIT("entry def addr", &entry->preferred_address);
-#if 0
-	if (ipv6_addr_any(&entry->preferred_address)) {
-		/* possibly ongoing bex */
-		_HIP_DEBUG("no preferred address set\n");
-	} else {
-#endif
-		ipv6_addr_copy(addr, &entry->preferred_address);
-//		_HIP_DEBUG("found preferred address\n");
-#if 0
-		goto out;
-	}
-
-	if (entry->default_spi_out == 0) {
-		HIP_DEBUG("default SPI out is 0, try to use the bex address\n");
-		if (ipv6_addr_any(&entry->bex_address)) {
-			HIP_DEBUG("no bex address\n");
-			err = -EINVAL;
-		} else
-			ipv6_addr_copy(addr, &entry->bex_address);
-		goto out;
-	}
-
-	/* try to select a peer address among the ones belonging to
-	 * the default outgoing SPI */
-	spi_out = hip_hadb_get_spi_list(entry, entry->default_spi_out);
-	if (!spi_out) {
-		HIP_ERROR("did not find SPI list for default_spi_out 0x%x\n",
-			  entry->default_spi_out);
-		err = -EEXIST;
-		goto out;
-	}
-#if 1
-	/* not tested well yet */
-	if (!ipv6_addr_any(&spi_out->preferred_address)) {
-		HIP_DEBUG("TEST CODE\n");
-		HIP_DEBUG("found preferred address for SPI 0x%x\n",
-			  spi_out->spi);
-		ipv6_addr_copy(addr, &spi_out->preferred_address);
-		goto out;		
-	}
-	err = -EINVAL; /* usable address not found */
-	HIP_ERROR("Did not find an usable peer address\n");
-#endif
-#endif
-	// out:
+	ipv6_addr_copy(addr, &entry->preferred_address);
         return err;
 }
 
@@ -536,9 +508,6 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				struct timeval *modified_time)
 {
 	struct hip_peer_addr_list_item *s;
-#ifdef CONFIG_HIP_DEBUG
-	char addrstr[INET6_ADDRSTRLEN];
-#endif
 	int i = 1;
 	struct hip_spi_out_item *spi_out, *tmp;
 
@@ -546,11 +515,6 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 
         list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
 		list_for_each_entry(s, &spi_out->peer_addr_list, list) {
-#ifdef CONFIG_HIP_DEBUG
-			hip_in6_ntop(&s->address, addrstr);
-			_HIP_DEBUG("address %d: %s, lifetime 0x%x (%u)\n",
-				   i, addrstr, s->lifetime, s->lifetime);
-#endif
 			if (!ipv6_addr_cmp(&s->address, addr)) {
 				_HIP_DEBUG("found\n");
 				if (lifetime)
@@ -599,14 +563,6 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	 * exchange */
 	if (spi == 0) {
 		HIP_DEBUG("SPI is 0, set address as the bex address\n");
-#if 0
-		if (!ipv6_addr_any(&entry->bex_address)) {
-			hip_in6_ntop(&entry->bex_address, addrstr);
-			HIP_DEBUG("warning, overwriting existing bex address %s\n",
-				  addrstr);
-		}
-		ipv6_addr_copy(&entry->bex_address, new_addr);
-#endif
 		if (!ipv6_addr_any(&entry->preferred_address)) {
 			hip_in6_ntop(&entry->preferred_address, addrstr);
 			HIP_DEBUG("warning, overwriting existing preferred address %s\n",
@@ -629,12 +585,6 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 		err = -EEXIST;
 		goto out_err;
 	}
-
-#ifdef CONFIG_HIP_DEBUG
-	hip_in6_ntop(new_addr, addrstr);
-	HIP_DEBUG("new_addr %s, spi 0x%x, lifetime 0x%x (%u)\n",
-		  addrstr, spi, lifetime, lifetime);
-#endif
 
 	err = hip_hadb_get_peer_addr_info(entry, new_addr, &prev_spi, NULL, NULL);
 	if (err) {
@@ -679,9 +629,6 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 {
 	struct hip_peer_addr_list_item *item, *tmp;
 	int i = 1;
-#ifdef CONFIG_HIP_DEBUG
-	char addrstr[INET6_ADDRSTRLEN];
-#endif
 	struct hip_spi_out_item *spi_out, *spi_tmp;
 
 	/* possibly deprecated function .. */
@@ -690,11 +637,6 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 
         list_for_each_entry_safe(spi_out, spi_tmp, &entry->spis_out, list) {
 		list_for_each_entry_safe(item, tmp, &spi_out->peer_addr_list, list) {
-#ifdef CONFIG_HIP_DEBUG
-			hip_in6_ntop(&item->address, addrstr);
-			_HIP_DEBUG("%p: address %d: %s interface_id 0x%x (%u), lifetime 0x%x (%u)\n",
-				   item, i, addrstr,  item->interface_id, item->interface_id, item->lifetime, item->lifetime);
-#endif
 			if (!ipv6_addr_cmp(&item->address, addr)) {
 				_HIP_DEBUG("deleting address\n");
 				list_del(&item->list);
@@ -737,71 +679,6 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 	}
 
 	return 0;
-}
-
-/* Practically called only by when adding a HIT-IP mapping before bex */
-int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
-{
-	int err = 0;
-	hip_ha_t *entry;
-
-	/* old comment ? note: can't lock here or else
-	 * hip_sdb_add_peer_address will block
-	 *
-	 * unsigned long flags = 0;
-	 * spin_lock_irqsave(&hip_sdb_lock, flags);
-	 */
-
-	HIP_DEBUG_HIT("HIT", hit);
-	HIP_DEBUG_IN6ADDR("addr", addr);
-
-	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
-	entry = hip_hadb_try_to_find_by_peer_hit(hit);
-	if (!entry) {
-		entry = hip_hadb_create_state(GFP_KERNEL);
-		if (!entry) {
-			HIP_ERROR("Unable to create a new entry\n");
-			return -1;
-		}
-		_HIP_DEBUG("created a new sdb entry\n");
-		ipv6_addr_copy(&entry->hit_peer, hit);
-
-		/* XXX: This is wrong. As soon as we have native socket API, we
-		 * should enter here the correct sender... (currently unknown).
-		 */
-		if (!hip_init_us(entry, NULL))
-			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
-		else 
-			HIP_INFO("Could not assign local hit, continuing\n");
-		hip_hadb_insert_state(entry);
-		hip_hold_ha(entry); /* released at the end */
-	}
-
-	/* add initial HIT-IP mapping */
-	if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
-		err = hip_hadb_add_peer_addr(entry, addr, 0, 0,
-					     PEER_ADDR_STATE_ACTIVE);
-		if (err) {
-			HIP_ERROR("error while adding a new peer address\n");
-			err = -2;
-			goto out;
-		}
-	} else
-		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
-			  hip_state_str(entry->state));
-
-	/* Synchronize beet state (may be changed) */
-	err = hip_hadb_update_xfrm(entry);
-	if (err) {
-		HIP_ERROR("XFRM out synchronization failed\n");
-		err = -EFAULT;
-		goto out;
-	}
-
- out:
-	if (entry)
-		hip_db_put_ha(entry, hip_hadb_delete_state);
-	return err;
 }
 
 /* assume already locked entry */
@@ -1518,12 +1395,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *add
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
 
-#if 0
-	if (is_preferred_addr) {
-		ipv6_addr_copy(&spi_list->preferred_address, addr);
-		ipv6_addr_copy(&entry->preferred_address, addr); // test
-	}
-#endif
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
@@ -1584,9 +1455,6 @@ void hip_hadb_dump_hits(void)
 void hip_hadb_dump_spis_in(hip_ha_t *entry)
 {
 	struct hip_spi_in_item *item, *tmp;
-#ifdef CONFIG_HIP_DEBUG
-	unsigned long now = jiffies;
-#endif
 
 	HIP_DEBUG("start\n");
 	HIP_LOCK_HA(entry);
@@ -1594,7 +1462,7 @@ void hip_hadb_dump_spis_in(hip_ha_t *entry)
 		HIP_DEBUG(" SPI=0x%x new_SPI=0x%x nes_SPI_out=0x%x ifindex=%d "
 			  "ts=%lu updating=%d keymat_index=%u upd_flags=0x%x seq_update_id=%u NES=old 0x%x,new 0x%x,km %u\n",
 			  item->spi, item->new_spi, item->nes_spi_out, item->ifindex,
-			  now - item->timestamp, item->updating, item->keymat_index,
+			  jiffies - item->timestamp, item->updating, item->keymat_index,
 			  item->update_state_flags, item->seq_update_id,
 			  item->stored_received_nes.old_spi,
 			  item->stored_received_nes.old_spi,
@@ -1822,29 +1690,6 @@ void hip_uninit_hadb()
 			hip_db_put_ha(ha, hip_hadb_delete_state);
 		}
 	}
-
-#if 0
-	/* HIT-SPI mappings should be already deleted by now, but check anyway */
-	HIP_DEBUG("DELETING HS HT\n");
-	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		_HIP_DEBUG("HS HT [%d]\n", i);
-		list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i], list) {
-			HIP_ERROR("BUG: HS NOT ALREADY DELETED, DELETING HS %p, HS SPI=0x%x\n",
-				  hs, hs->spi);
-			if (atomic_read(&hs->refcnt) > 1)
-				HIP_ERROR("HS: %p, in use while removing it from HADB\n", hs);
-			hip_hadb_hold_hs(hs);
-			hip_hadb_delete_hs(hs);
-			//HIP_LOCK_HS(hs);
-			//HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
-			//hip_ht_delete(&hadb_spi_list, hs);
-			//HIP_ERROR("TODO: CALL HS_PUT ?\n");
-			//HIP_UNLOCK_HS(hs);
-			hip_hadb_put_hs(hs);
-		}
-	}
-	HIP_DEBUG("DONE DELETING HS HT\n");
-#endif
 }
 
 /**
