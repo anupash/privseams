@@ -40,7 +40,7 @@
 #ifdef CONFIG_HIP_DEBUG
 
 #  define HIP_DEBUG(fmt, args...) \
-     printk(KERN_DEBUG "%s: " fmt, __FUNCTION__ , ## args)
+	printk(KERN_DEBUG "HIP %s:%s:%d:  " fmt,__FILE__, __FUNCTION__ , __LINE__ , ## args)
 #  define HIP_HEXDUMP(tag, data, len) hip_khexdump(tag, data, len)
 #  define HIP_DUMP_MSG(msg) { printk(KERN_DEBUG " %s dump:\n", __FUNCTION__); \
                             hip_dump_msg(msg); }

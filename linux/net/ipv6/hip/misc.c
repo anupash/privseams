@@ -285,6 +285,7 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
 
 int hip_is_hit(const hip_hit_t *hit) 
 {
+	HIP_DEBUG_IN6ADDR("received hit", (struct in6_addr *)hit);
 	return ipv6_addr_is_hit((struct in6_addr *)hit);
 }
 

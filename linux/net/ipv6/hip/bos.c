@@ -83,7 +83,7 @@ int hip_send_bos(const struct hip_common *msg)
 		err = -EINVAL;
 		goto out_err;
 	}
-
+	HIP_DEBUG_IN6ADDR("hit_our = ", &hit_our);
 	/* Determine our HOST ID public key */
 	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_pub) {
@@ -354,25 +354,27 @@ int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg
 		HIP_DEBUG("Scrolling rk....\n");
 		
 		_HIP_DEBUG("rk.array[%d] not NULL\n", i);
+		if (!ipv6_addr_any(&(rk.array[i]->hit_peer))) {
 			
-		(*end)->ai_family = family;
-		(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
+			(*end)->ai_family = family;
+			(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
 			
-		if (family == AF_INET6) {
-			struct sockaddr_in6 *sin6p =
-				(struct sockaddr_in6 *) (*end)->ai_addr;
-			sin6p->sin6_flowinfo = 0;
-			sin6p->sin6_family = family;
-			sin6p->sin6_port = htons(port);
-			HIP_HEXDUMP("THE FOUND HIT IS: ", &rk.array[i]->hit_peer, 16);
-			/* Get the HIT */
-			memcpy (&sin6p->sin6_addr, &(rk.array[i]->hit_peer), sizeof (struct in6_addr));
-		} else {
-			/* TODO: is there any possibility to get here having family == AF_INET ? */
-		}
+			if (family == AF_INET6) {
+				struct sockaddr_in6 *sin6p =
+					(struct sockaddr_in6 *) (*end)->ai_addr;
+				sin6p->sin6_flowinfo = 0;
+				sin6p->sin6_family = family;
+				sin6p->sin6_port = htons(port);
+				HIP_HEXDUMP("THE FOUND HIT IS: ", &rk.array[i]->hit_peer, 16);
+				/* Get the HIT */
+				memcpy (&sin6p->sin6_addr, &(rk.array[i]->hit_peer), sizeof(struct in6_addr));
+			} else {
+				/* TODO: is there any possibility to get here having family == AF_INET ? */
+			}
 			
-		(*end)->ai_next = NULL;
+			(*end)->ai_next = NULL;
 			end = &((*end)->ai_next);
+		}
 	}
 	err = rk.count;
  out_err:

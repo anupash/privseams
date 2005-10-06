@@ -909,11 +909,12 @@ int hip_socket_bos_wo(const struct hip_common *input)
 			  err);
 		err = -EFAULT;
 		goto out_err;
-	}			   
+	}
 	
 	HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
 				HIP_WO_SUBTYPE_SEND_BOS, NULL, NULL, NULL,
 				0, 0, 0);
+	HIP_DEBUG("hwo->hdr.type = %d, hwo->hdr.subtype = %d\n", hwo->hdr.type, hwo->hdr.subtype);
 	/* override the destructor; socket handler deletes the msg
 	   by itself */
 	hwo->destructor = NULL;

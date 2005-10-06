@@ -309,7 +309,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
 	struct hip_host_id_entry *hid;
-	int err = 0;
+	int ok = 1;
 #ifdef __KERNEL__
 	unsigned long lf;
 #endif
@@ -359,11 +359,11 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 		HIP_IFEL(memcmp(solution->opaque, puzzle->opaque, 3), 0, 
 			 "Solution's opaque data does not match the opaque data sent\n");
 	}
-	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 1, 
+	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 
 		 "Puzzle incorrectly solved\n");
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
-	return err;
+	return ok;
 }
 
 #endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

@@ -1290,7 +1290,7 @@ int hip_receive_i2(struct hip_common *i2,
 	int state = 0, err = 0;
 	hip_ha_t *entry;
 	uint16_t mask;
-
+	HIP_DEBUG("hip_receive_i2\n");
 	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
 		 "Received NULL receiver HIT in I2. Dropping\n");
 
@@ -1501,6 +1501,7 @@ int hip_handle_i1(struct hip_common *i1,
 		  hip_ha_t *entry)
 {
 	int err;
+	HIP_DEBUG("hip_handle_i1\n");
 #ifdef CONFIG_HIP_RVS
   	struct hip_from *from;
 #endif

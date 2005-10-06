@@ -29,6 +29,7 @@ bin_PROGRAMS += hipsetupNew
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
 bin_PROGRAMS += first_test
+bin_PROGRAMS += second_test
 
 sbin_SCRIPTS = hipsetup
 
@@ -42,6 +43,7 @@ conntest_server_SOURCES = conntest-server.c conntest.c
 unittest_SOURCES = unit.c unittest.c hipconf.c suite.c
 hipsetupNew_SOURCES = hipsetupNew.c hipconf.c misc_install.c conntest.c
 first_test_SOURCES = first_test.c hipconf.c misc_install.c conntest.c
+second_test_SOURCES = second_test.c hipconf.c misc_install.c conntest.c
 
 
 EXTRA_DIST = $(sbin_SCRIPTS)
