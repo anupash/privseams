@@ -309,7 +309,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
 	struct hip_host_id_entry *hid;
-	int ok = 1;
+	int err = 1;
 #ifdef __KERNEL__
 	unsigned long lf;
 #endif
@@ -363,7 +363,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 		 "Puzzle incorrectly solved\n");
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
-	return ok;
+	return err;
 }
 
 #endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
