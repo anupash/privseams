@@ -70,8 +70,7 @@ assign_irq_vector (int irq)
 	pos = find_first_zero_bit(ia64_vector_mask, IA64_NUM_DEVICE_VECTORS);
 	vector = IA64_FIRST_DEVICE_VECTOR + pos;
 	if (vector > IA64_LAST_DEVICE_VECTOR)
-		/* XXX could look for sharable vectors instead of panic'ing... */
-		panic("assign_irq_vector: out of interrupt vectors!");
+		return -ENOSPC;
 	if (test_and_set_bit(pos, ia64_vector_mask))
 		goto again;
 	return vector;

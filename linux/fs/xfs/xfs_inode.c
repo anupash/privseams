@@ -135,60 +135,15 @@ xfs_inobp_check(
 	for (i = 0; i < j; i++) {
 		dip = (xfs_dinode_t *)xfs_buf_offset(bp,
 					i * mp->m_sb.sb_inodesize);
-		if (INT_ISZERO(dip->di_next_unlinked, ARCH_CONVERT))  {
+		if (!dip->di_next_unlinked)  {
 			xfs_fs_cmn_err(CE_ALERT, mp,
 				"Detected a bogus zero next_unlinked field in incore inode buffer 0x%p.  About to pop an ASSERT.",
 				bp);
-			ASSERT(!INT_ISZERO(dip->di_next_unlinked, ARCH_CONVERT));
+			ASSERT(dip->di_next_unlinked);
 		}
 	}
 }
 #endif
-
-/*
- * called from bwrite on xfs inode buffers
- */
-void
-xfs_inobp_bwcheck(xfs_buf_t *bp)
-{
-	xfs_mount_t	*mp;
-	int		i;
-	int		j;
-	xfs_dinode_t	*dip;
-
-	ASSERT(XFS_BUF_FSPRIVATE3(bp, void *) != NULL);
-
-	mp = XFS_BUF_FSPRIVATE3(bp, xfs_mount_t *);
-
-
-	j = mp->m_inode_cluster_size >> mp->m_sb.sb_inodelog;
-
-	for (i = 0; i < j; i++)  {
-		dip = (xfs_dinode_t *) xfs_buf_offset(bp,
-						i * mp->m_sb.sb_inodesize);
-		if (INT_GET(dip->di_core.di_magic, ARCH_CONVERT) != XFS_DINODE_MAGIC) {
-			cmn_err(CE_WARN,
-"Bad magic # 0x%x in XFS inode buffer 0x%Lx, starting blockno %Ld, offset 0x%x",
-				INT_GET(dip->di_core.di_magic, ARCH_CONVERT),
-				(__uint64_t)(__psunsigned_t) bp,
-				(__int64_t) XFS_BUF_ADDR(bp),
-				xfs_buf_offset(bp, i * mp->m_sb.sb_inodesize));
-			xfs_fs_cmn_err(CE_WARN, mp,
-				"corrupt, unmount and run xfs_repair");
-		}
-		if (INT_ISZERO(dip->di_next_unlinked, ARCH_CONVERT))  {
-			cmn_err(CE_WARN,
-"Bad next_unlinked field (0) in XFS inode buffer 0x%p, starting blockno %Ld, offset 0x%x",
-				(__uint64_t)(__psunsigned_t) bp,
-				(__int64_t) XFS_BUF_ADDR(bp),
-				xfs_buf_offset(bp, i * mp->m_sb.sb_inodesize));
-			xfs_fs_cmn_err(CE_WARN, mp,
-				"corrupt, unmount and run xfs_repair");
-		}
-	}
-
-	return;
-}
 
 /*
  * This routine is called to map an inode number within a file
@@ -203,7 +158,7 @@ xfs_inobp_bwcheck(xfs_buf_t *bp)
  * Use xfs_imap() to determine the size and location of the
  * buffer to read from disk.
  */
-int
+STATIC int
 xfs_inotobp(
 	xfs_mount_t	*mp,
 	xfs_trans_t	*tp,
@@ -520,8 +475,7 @@ xfs_iformat(
 			}
 
 			di_size = INT_GET(dip->di_core.di_size, ARCH_CONVERT);
-			if (unlikely(di_size >
-			    XFS_DFORK_DSIZE_ARCH(dip, ip->i_mount, ARCH_CONVERT))) {
+			if (unlikely(di_size > XFS_DFORK_DSIZE(dip, ip->i_mount))) {
 				xfs_fs_cmn_err(CE_WARN, ip->i_mount,
 					"corrupt inode %Lu (bad size %Ld for local inode).  Unmount and run xfs_repair.",
 					(unsigned long long) ip->i_ino,
@@ -555,7 +509,7 @@ xfs_iformat(
 	if (error) {
 		return error;
 	}
-	if (!XFS_DFORK_Q_ARCH(dip, ARCH_CONVERT))
+	if (!XFS_DFORK_Q(dip))
 		return 0;
 	ASSERT(ip->i_afp == NULL);
 	ip->i_afp = kmem_zone_zalloc(xfs_ifork_zone, KM_SLEEP);
@@ -563,7 +517,7 @@ xfs_iformat(
 		XFS_IFORK_ASIZE(ip) / (uint)sizeof(xfs_bmbt_rec_t);
 	switch (INT_GET(dip->di_core.di_aformat, ARCH_CONVERT)) {
 	case XFS_DINODE_FMT_LOCAL:
-		atp = (xfs_attr_shortform_t *)XFS_DFORK_APTR_ARCH(dip, ARCH_CONVERT);
+		atp = (xfs_attr_shortform_t *)XFS_DFORK_APTR(dip);
 		size = (int)INT_GET(atp->hdr.totsize, ARCH_CONVERT);
 		error = xfs_iformat_local(ip, dip, XFS_ATTR_FORK, size);
 		break;
@@ -610,11 +564,11 @@ xfs_iformat_local(
 	 * is wrong and we just bail out rather than crash in
 	 * kmem_alloc() or memcpy() below.
 	 */
-	if (unlikely(size > XFS_DFORK_SIZE_ARCH(dip, ip->i_mount, whichfork, ARCH_CONVERT))) {
+	if (unlikely(size > XFS_DFORK_SIZE(dip, ip->i_mount, whichfork))) {
 		xfs_fs_cmn_err(CE_WARN, ip->i_mount,
 			"corrupt inode %Lu (bad size %d for local fork, size = %d).  Unmount and run xfs_repair.",
 			(unsigned long long) ip->i_ino, size,
-			XFS_DFORK_SIZE_ARCH(dip, ip->i_mount, whichfork, ARCH_CONVERT));
+			XFS_DFORK_SIZE(dip, ip->i_mount, whichfork));
 		XFS_CORRUPTION_ERROR("xfs_iformat_local", XFS_ERRLEVEL_LOW,
 				     ip->i_mount, dip);
 		return XFS_ERROR(EFSCORRUPTED);
@@ -632,8 +586,7 @@ xfs_iformat_local(
 	ifp->if_bytes = size;
 	ifp->if_real_bytes = real_size;
 	if (size)
-		memcpy(ifp->if_u1.if_data,
-			XFS_DFORK_PTR_ARCH(dip, whichfork, ARCH_CONVERT), size);
+		memcpy(ifp->if_u1.if_data, XFS_DFORK_PTR(dip, whichfork), size);
 	ifp->if_flags &= ~XFS_IFEXTENTS;
 	ifp->if_flags |= XFS_IFINLINE;
 	return 0;
@@ -662,7 +615,7 @@ xfs_iformat_extents(
 	int		i;
 
 	ifp = XFS_IFORK_PTR(ip, whichfork);
-	nex = XFS_DFORK_NEXTENTS_ARCH(dip, whichfork, ARCH_CONVERT);
+	nex = XFS_DFORK_NEXTENTS(dip, whichfork);
 	size = nex * (uint)sizeof(xfs_bmbt_rec_t);
 
 	/*
@@ -670,7 +623,7 @@ xfs_iformat_extents(
 	 * is wrong and we just bail out rather than crash in
 	 * kmem_alloc() or memcpy() below.
 	 */
-	if (unlikely(size < 0 || size > XFS_DFORK_SIZE_ARCH(dip, ip->i_mount, whichfork, ARCH_CONVERT))) {
+	if (unlikely(size < 0 || size > XFS_DFORK_SIZE(dip, ip->i_mount, whichfork))) {
 		xfs_fs_cmn_err(CE_WARN, ip->i_mount,
 			"corrupt inode %Lu ((a)extents = %d).  Unmount and run xfs_repair.",
 			(unsigned long long) ip->i_ino, nex);
@@ -692,8 +645,7 @@ xfs_iformat_extents(
 	ifp->if_bytes = size;
 	ifp->if_real_bytes = real_size;
 	if (size) {
-		dp = (xfs_bmbt_rec_t *)
-			XFS_DFORK_PTR_ARCH(dip, whichfork, ARCH_CONVERT);
+		dp = (xfs_bmbt_rec_t *) XFS_DFORK_PTR(dip, whichfork);
 		xfs_validate_extents(dp, nex, 1, XFS_EXTFMT_INODE(ip));
 		ep = ifp->if_u1.if_extents;
 		for (i = 0; i < nex; i++, ep++, dp++) {
@@ -739,7 +691,7 @@ xfs_iformat_btree(
 	int			size;
 
 	ifp = XFS_IFORK_PTR(ip, whichfork);
-	dfp = (xfs_bmdr_block_t *)XFS_DFORK_PTR_ARCH(dip, whichfork, ARCH_CONVERT);
+	dfp = (xfs_bmdr_block_t *)XFS_DFORK_PTR(dip, whichfork);
 	size = XFS_BMAP_BROOT_SPACE(dfp);
 	nrecs = XFS_BMAP_BROOT_NUMRECS(dfp);
 
@@ -752,7 +704,7 @@ xfs_iformat_btree(
 	 */
 	if (unlikely(XFS_IFORK_NEXTENTS(ip, whichfork) <= ifp->if_ext_max
 	    || XFS_BMDR_SPACE_CALC(nrecs) >
-			XFS_DFORK_SIZE_ARCH(dip, ip->i_mount, whichfork, ARCH_CONVERT)
+			XFS_DFORK_SIZE(dip, ip->i_mount, whichfork)
 	    || XFS_IFORK_NEXTENTS(ip, whichfork) > ip->i_d.di_nblocks)) {
 		xfs_fs_cmn_err(CE_WARN, ip->i_mount,
 			"corrupt inode %Lu (btree).  Unmount and run xfs_repair.",
@@ -769,7 +721,7 @@ xfs_iformat_btree(
 	 * Copy and convert from the on-disk structure
 	 * to the in-memory structure.
 	 */
-	xfs_bmdr_to_bmbt(dfp, XFS_DFORK_SIZE_ARCH(dip, ip->i_mount, whichfork, ARCH_CONVERT),
+	xfs_bmdr_to_bmbt(dfp, XFS_DFORK_SIZE(dip, ip->i_mount, whichfork),
 		ifp->if_broot, size);
 	ifp->if_flags &= ~XFS_IFEXTENTS;
 	ifp->if_flags |= XFS_IFBROOT;
@@ -785,29 +737,18 @@ xfs_iformat_btree(
  * dip  = native representation
  * dir  = direction - +ve -> disk to native
  *                    -ve -> native to disk
- * arch = on-disk architecture
  */
 void
 xfs_xlate_dinode_core(
 	xfs_caddr_t		buf,
 	xfs_dinode_core_t	*dip,
-	int			dir,
-	xfs_arch_t		arch)
+	int			dir)
 {
 	xfs_dinode_core_t	*buf_core = (xfs_dinode_core_t *)buf;
 	xfs_dinode_core_t	*mem_core = (xfs_dinode_core_t *)dip;
+	xfs_arch_t		arch = ARCH_CONVERT;
 
 	ASSERT(dir);
-	if (arch == ARCH_NOCONVERT) {
-		if (dir > 0) {
-			memcpy((xfs_caddr_t)mem_core, (xfs_caddr_t)buf_core,
-				sizeof(xfs_dinode_core_t));
-		} else {
-			memcpy((xfs_caddr_t)buf_core, (xfs_caddr_t)mem_core,
-				sizeof(xfs_dinode_core_t));
-		}
-		return;
-	}
 
 	INT_XLATE(buf_core->di_magic, mem_core->di_magic, dir, arch);
 	INT_XLATE(buf_core->di_mode, mem_core->di_mode, dir, arch);
@@ -854,16 +795,13 @@ xfs_xlate_dinode_core(
 	INT_XLATE(buf_core->di_gen, mem_core->di_gen, dir, arch);
 }
 
-uint
-xfs_dic2xflags(
+STATIC uint
+_xfs_dic2xflags(
 	xfs_dinode_core_t	*dic,
-	xfs_arch_t		arch)
+	__uint16_t		di_flags)
 {
-	__uint16_t		di_flags;
-	uint			flags;
+	uint			flags = 0;
 
-	di_flags = INT_GET(dic->di_flags, arch);
-	flags = XFS_CFORK_Q_ARCH(dic, arch) ? XFS_XFLAG_HASATTR : 0;
 	if (di_flags & XFS_DIFLAG_ANY) {
 		if (di_flags & XFS_DIFLAG_REALTIME)
 			flags |= XFS_XFLAG_REALTIME;
@@ -886,7 +824,26 @@ xfs_dic2xflags(
 		if (di_flags & XFS_DIFLAG_NOSYMLINKS)
 			flags |= XFS_XFLAG_NOSYMLINKS;
 	}
+
 	return flags;
+}
+
+uint
+xfs_ip2xflags(
+	xfs_inode_t		*ip)
+{
+	xfs_dinode_core_t	*dic = &ip->i_d;
+
+	return _xfs_dic2xflags(dic, dic->di_flags) |
+		(XFS_CFORK_Q(dic) ? XFS_XFLAG_HASATTR : 0);
+}
+
+uint
+xfs_dic2xflags(
+	xfs_dinode_core_t	*dic)
+{
+	return _xfs_dic2xflags(dic, INT_GET(dic->di_flags, ARCH_CONVERT)) |
+		(XFS_CFORK_Q_DISK(dic) ? XFS_XFLAG_HASATTR : 0);
 }
 
 /*
@@ -974,9 +931,9 @@ xfs_iread(
 	 * specific information.
 	 * Otherwise, just get the truly permanent information.
 	 */
-	if (!INT_ISZERO(dip->di_core.di_mode, ARCH_CONVERT)) {
+	if (dip->di_core.di_mode) {
 		xfs_xlate_dinode_core((xfs_caddr_t)&dip->di_core,
-		     &(ip->i_d), 1, ARCH_CONVERT);
+		     &(ip->i_d), 1);
 		error = xfs_iformat(ip, dip);
 		if (error)  {
 			kmem_zone_free(xfs_inode_zone, ip);
@@ -1128,7 +1085,7 @@ xfs_ialloc(
 	xfs_trans_t	*tp,
 	xfs_inode_t	*pip,
 	mode_t		mode,
-	nlink_t		nlink,
+	xfs_nlink_t	nlink,
 	xfs_dev_t	rdev,
 	cred_t		*cr,
 	xfs_prid_t	prid,
@@ -1245,26 +1202,32 @@ xfs_ialloc(
 	case S_IFREG:
 	case S_IFDIR:
 		if (unlikely(pip->i_d.di_flags & XFS_DIFLAG_ANY)) {
-			if (pip->i_d.di_flags & XFS_DIFLAG_RTINHERIT) {
-				if ((mode & S_IFMT) == S_IFDIR) {
-					ip->i_d.di_flags |= XFS_DIFLAG_RTINHERIT;
-				} else {
-					ip->i_d.di_flags |= XFS_DIFLAG_REALTIME;
+			uint	di_flags = 0;
+
+			if ((mode & S_IFMT) == S_IFDIR) {
+				if (pip->i_d.di_flags & XFS_DIFLAG_RTINHERIT)
+					di_flags |= XFS_DIFLAG_RTINHERIT;
+			} else {
+				if (pip->i_d.di_flags & XFS_DIFLAG_RTINHERIT) {
+					di_flags |= XFS_DIFLAG_REALTIME;
 					ip->i_iocore.io_flags |= XFS_IOCORE_RT;
 				}
 			}
 			if ((pip->i_d.di_flags & XFS_DIFLAG_NOATIME) &&
 			    xfs_inherit_noatime)
-				ip->i_d.di_flags |= XFS_DIFLAG_NOATIME;
+				di_flags |= XFS_DIFLAG_NOATIME;
 			if ((pip->i_d.di_flags & XFS_DIFLAG_NODUMP) &&
 			    xfs_inherit_nodump)
-				ip->i_d.di_flags |= XFS_DIFLAG_NODUMP;
+				di_flags |= XFS_DIFLAG_NODUMP;
 			if ((pip->i_d.di_flags & XFS_DIFLAG_SYNC) &&
 			    xfs_inherit_sync)
-				ip->i_d.di_flags |= XFS_DIFLAG_SYNC;
+				di_flags |= XFS_DIFLAG_SYNC;
 			if ((pip->i_d.di_flags & XFS_DIFLAG_NOSYMLINKS) &&
 			    xfs_inherit_nosymlinks)
-				ip->i_d.di_flags |= XFS_DIFLAG_NOSYMLINKS;
+				di_flags |= XFS_DIFLAG_NOSYMLINKS;
+			if (pip->i_d.di_flags & XFS_DIFLAG_PROJINHERIT)
+				di_flags |= XFS_DIFLAG_PROJINHERIT;
+			ip->i_d.di_flags |= di_flags;
 		}
 		/* FALLTHROUGH */
 	case S_IFLNK:
@@ -1931,7 +1894,7 @@ xfs_iunlink(
 	agino = XFS_INO_TO_AGINO(mp, ip->i_ino);
 	ASSERT(agino != 0);
 	bucket_index = agino % XFS_AGI_UNLINKED_BUCKETS;
-	ASSERT(!INT_ISZERO(agi->agi_unlinked[bucket_index], ARCH_CONVERT));
+	ASSERT(agi->agi_unlinked[bucket_index]);
 	ASSERT(INT_GET(agi->agi_unlinked[bucket_index], ARCH_CONVERT) != agino);
 
 	if (INT_GET(agi->agi_unlinked[bucket_index], ARCH_CONVERT) != NULLAGINO) {
@@ -1946,7 +1909,7 @@ xfs_iunlink(
 			return error;
 		}
 		ASSERT(INT_GET(dip->di_next_unlinked, ARCH_CONVERT) == NULLAGINO);
-		ASSERT(!INT_ISZERO(dip->di_next_unlinked, ARCH_CONVERT));
+		ASSERT(dip->di_next_unlinked);
 		/* both on-disk, don't endian flip twice */
 		dip->di_next_unlinked = agi->agi_unlinked[bucket_index];
 		offset = ip->i_boffset +
@@ -2039,7 +2002,7 @@ xfs_iunlink_remove(
 	ASSERT(agino != 0);
 	bucket_index = agino % XFS_AGI_UNLINKED_BUCKETS;
 	ASSERT(INT_GET(agi->agi_unlinked[bucket_index], ARCH_CONVERT) != NULLAGINO);
-	ASSERT(!INT_ISZERO(agi->agi_unlinked[bucket_index], ARCH_CONVERT));
+	ASSERT(agi->agi_unlinked[bucket_index]);
 
 	if (INT_GET(agi->agi_unlinked[bucket_index], ARCH_CONVERT) == agino) {
 		/*
@@ -2154,7 +2117,7 @@ static __inline__ int xfs_inode_clean(xfs_inode_t *ip)
 		(ip->i_update_core == 0));
 }
 
-void
+STATIC void
 xfs_ifree_cluster(
 	xfs_inode_t	*free_ip,
 	xfs_trans_t	*tp,
@@ -2873,7 +2836,7 @@ xfs_iunpin(
  * be subsequently pinned once someone is waiting for it to be
  * unpinned.
  */
-void
+STATIC void
 xfs_iunpin_wait(
 	xfs_inode_t	*ip)
 {
@@ -3015,7 +2978,7 @@ xfs_iflush_fork(
 		ASSERT(whichfork == XFS_ATTR_FORK);
 		return 0;
 	}
-	cp = XFS_DFORK_PTR_ARCH(dip, whichfork, ARCH_CONVERT);
+	cp = XFS_DFORK_PTR(dip, whichfork);
 	mp = ip->i_mount;
 	switch (XFS_IFORK_FORMAT(ip, whichfork)) {
 	case XFS_DINODE_FMT_LOCAL:
@@ -3056,7 +3019,7 @@ xfs_iflush_fork(
 				XFS_BROOT_SIZE_ADJ));
 			xfs_bmbt_to_bmdr(ifp->if_broot, ifp->if_broot_bytes,
 				(xfs_bmdr_block_t *)cp,
-				XFS_DFORK_SIZE_ARCH(dip, mp, whichfork, ARCH_CONVERT));
+				XFS_DFORK_SIZE(dip, mp, whichfork));
 		}
 		break;
 
@@ -3474,8 +3437,7 @@ xfs_iflush_int(
 	 * because if the inode is dirty at all the core must
 	 * be.
 	 */
-	xfs_xlate_dinode_core((xfs_caddr_t)&(dip->di_core), &(ip->i_d),
-		-1, ARCH_CONVERT);
+	xfs_xlate_dinode_core((xfs_caddr_t)&(dip->di_core), &(ip->i_d), -1);
 
 	/* Wrap, we never let the log put out DI_MAX_FLUSH */
 	if (ip->i_d.di_flushiter == DI_MAX_FLUSH)
@@ -3505,7 +3467,7 @@ xfs_iflush_int(
 			ip->i_d.di_version = XFS_DINODE_VERSION_2;
 			INT_SET(dip->di_core.di_version, ARCH_CONVERT, XFS_DINODE_VERSION_2);
 			ip->i_d.di_onlink = 0;
-			INT_ZERO(dip->di_core.di_onlink, ARCH_CONVERT);
+			dip->di_core.di_onlink = 0;
 			memset(&(ip->i_d.di_pad[0]), 0, sizeof(ip->i_d.di_pad));
 			memset(&(dip->di_core.di_pad[0]), 0,
 			      sizeof(dip->di_core.di_pad));
@@ -3600,106 +3562,42 @@ corrupt_out:
 
 
 /*
- * Flush all inactive inodes in mp.  Return true if no user references
- * were found, false otherwise.
+ * Flush all inactive inodes in mp.
  */
-int
+void
 xfs_iflush_all(
-	xfs_mount_t	*mp,
-	int		flag)
+	xfs_mount_t	*mp)
 {
-	int		busy;
-	int		done;
-	int		purged;
 	xfs_inode_t	*ip;
-	vmap_t		vmap;
 	vnode_t		*vp;
 
-	busy = done = 0;
-	while (!done) {
-		purged = 0;
-		XFS_MOUNT_ILOCK(mp);
-		ip = mp->m_inodes;
-		if (ip == NULL) {
-			break;
+ again:
+	XFS_MOUNT_ILOCK(mp);
+	ip = mp->m_inodes;
+	if (ip == NULL)
+		goto out;
+
+	do {
+		/* Make sure we skip markers inserted by sync */
+		if (ip->i_mount == NULL) {
+			ip = ip->i_mnext;
+			continue;
 		}
-		do {
-			/* Make sure we skip markers inserted by sync */
-			if (ip->i_mount == NULL) {
-				ip = ip->i_mnext;
-				continue;
-			}
 
-			/*
-			 * It's up to our caller to purge the root
-			 * and quota vnodes later.
-			 */
-			vp = XFS_ITOV_NULL(ip);
-
-			if (!vp) {
-				XFS_MOUNT_IUNLOCK(mp);
-				xfs_finish_reclaim(ip, 0, XFS_IFLUSH_ASYNC);
-				purged = 1;
-				break;
-			}
-
-			if (vn_count(vp) != 0) {
-				if (vn_count(vp) == 1 &&
-				    (ip == mp->m_rootip ||
-				     (mp->m_quotainfo &&
-				      (ip->i_ino == mp->m_sb.sb_uquotino ||
-				       ip->i_ino == mp->m_sb.sb_gquotino)))) {
-
-					ip = ip->i_mnext;
-					continue;
-				}
-				if (!(flag & XFS_FLUSH_ALL)) {
-					busy = 1;
-					done = 1;
-					break;
-				}
-				/*
-				 * Ignore busy inodes but continue flushing
-				 * others.
-				 */
-				ip = ip->i_mnext;
-				continue;
-			}
-			/*
-			 * Sample vp mapping while holding mp locked on MP
-			 * systems, so we don't purge a reclaimed or
-			 * nonexistent vnode.  We break from the loop
-			 * since we know that we modify
-			 * it by pulling ourselves from it in xfs_reclaim()
-			 * called via vn_purge() below.  Set ip to the next
-			 * entry in the list anyway so we'll know below
-			 * whether we reached the end or not.
-			 */
-			VMAP(vp, vmap);
+		vp = XFS_ITOV_NULL(ip);
+		if (!vp) {
 			XFS_MOUNT_IUNLOCK(mp);
-
-			vn_purge(vp, &vmap);
-
-			purged = 1;
-			break;
-		} while (ip != mp->m_inodes);
-		/*
-		 * We need to distinguish between when we exit the loop
-		 * after a purge and when we simply hit the end of the
-		 * list.  We can't use the (ip == mp->m_inodes) test,
-		 * because when we purge an inode at the start of the list
-		 * the next inode on the list becomes mp->m_inodes.  That
-		 * would cause such a test to bail out early.  The purged
-		 * variable tells us how we got out of the loop.
-		 */
-		if (!purged) {
-			done = 1;
+			xfs_finish_reclaim(ip, 0, XFS_IFLUSH_ASYNC);
+			goto again;
 		}
-	}
-	XFS_MOUNT_IUNLOCK(mp);
-	return !busy;
-}
 
+		ASSERT(vn_count(vp) == 0);
+
+		ip = ip->i_mnext;
+	} while (ip != mp->m_inodes);
+ out:
+	XFS_MOUNT_IUNLOCK(mp);
+}
 
 /*
  * xfs_iaccess: check accessibility of inode for mode.

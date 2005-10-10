@@ -1,5 +1,5 @@
 /*
- * include/asm-arh/arch-ixp2000/platform.h
+ * include/asm-arm/arch-ixp2000/platform.h
  *
  * Various bits of code used by platform-level code.
  *
@@ -20,7 +20,7 @@
  * to on-chip I/O register to not complete fully. What this means is
  * that if you have a write to on-chip I/O followed by a back-to-back
  * read or write, the first write will happen twice. OR...if it's
- * not a back-to-back trasaction, the read or write will generate 
+ * not a back-to-back transaction, the read or write will generate
  * incorrect data.
  *
  * The official work around for this is to set the on-chip I/O regions
@@ -50,7 +50,7 @@ static inline void ixp2000_reg_write(volatile unsigned long *reg, unsigned long 
  * Boards may multiplex different devices on the 2nd channel of 
  * the slowport interface that each need different configuration 
  * settings.  For example, the IXDP2400 uses channel 2 on the interface 
- * to access the CPLD, the switch fabric card, and te media card.  Each 
+ * to access the CPLD, the switch fabric card, and the media card.  Each
  * one needs a different mode so drivers must save/restore the mode 
  * before and after each operation.  
  *
@@ -115,12 +115,14 @@ static inline unsigned int ixp2000_is_pcimaster(void)
 }
 
 void ixp2000_map_io(void);
+void ixp2000_uart_init(void);
 void ixp2000_init_irq(void);
 void ixp2000_init_time(unsigned long);
 unsigned long ixp2000_gettimeoffset(void);
 
 struct pci_sys_data;
 
+u32 *ixp2000_pci_config_addr(unsigned int bus, unsigned int devfn, int where);
 void ixp2000_pci_preinit(void);
 int ixp2000_pci_setup(int, struct pci_sys_data*);
 struct pci_bus* ixp2000_pci_scan_bus(int, struct pci_sys_data*);
@@ -137,30 +139,10 @@ struct ixp2000_flash_data {
 	unsigned long (*bank_setup)(unsigned long);
 };
 
-/*
- * GPIO helper functions
- */
-#define	GPIO_IN		0
-#define	GPIO_OUT	1
-
-extern void gpio_line_config(int line, int style);
-
-static inline int gpio_line_get(int line)
-{
-	return (((*IXP2000_GPIO_PLR) >> line) & 1);
-}
-
-static inline void gpio_line_set(int line, int value)
-{
-	if (value) 
-		ixp2000_reg_write(IXP2000_GPIO_POSR, (1 << line));
-	else 
-		ixp2000_reg_write(IXP2000_GPIO_POCR, (1 << line));
-}
-
 struct ixp2000_i2c_pins {
 	unsigned long sda_pin;
 	unsigned long scl_pin;
 };
+
 
 #endif /*  !__ASSEMBLY__ */

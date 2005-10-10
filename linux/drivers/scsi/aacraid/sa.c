@@ -62,7 +62,7 @@ static irqreturn_t aac_sa_intr(int irq, void *dev_id, struct pt_regs *regs)
 
 	if (intstat & mask) {
 		if (intstat & PrintfReady) {
-			aac_printf(dev, le32_to_cpu(sa_readl(dev, Mailbox5)));
+			aac_printf(dev, sa_readl(dev, Mailbox5));
 			sa_writew(dev, DoorbellClrReg_p, PrintfReady); /* clear PrintfReady */
 			sa_writew(dev, DoorbellReg_s, PrintfDone);
 		} else if (intstat & DOORBELL_1) {	// dev -> Host Normal Command Ready
@@ -89,7 +89,7 @@ static irqreturn_t aac_sa_intr(int irq, void *dev_id, struct pt_regs *regs)
  *	Notify the adapter of an event
  */
  
-void aac_sa_notify_adapter(struct aac_dev *dev, u32 event)
+static void aac_sa_notify_adapter(struct aac_dev *dev, u32 event)
 {
 	switch (event) {
 
@@ -106,7 +106,10 @@ void aac_sa_notify_adapter(struct aac_dev *dev, u32 event)
 		sa_writew(dev, DoorbellReg_s,DOORBELL_3);
 		break;
 	case HostShutdown:
-		//sa_sync_cmd(dev, HOST_CRASHING, 0, &ret);
+		/*
+		sa_sync_cmd(dev, HOST_CRASHING, 0, 0, 0, 0, 0, 0,
+		NULL, NULL, NULL, NULL, NULL);
+		*/
 		break;
 	case FastIo:
 		sa_writew(dev, DoorbellReg_s,DOORBELL_6);
@@ -128,25 +131,28 @@ void aac_sa_notify_adapter(struct aac_dev *dev, u32 event)
  *	@p1: first parameter
  *	@ret: adapter status
  *
- *	This routine will send a synchronous comamnd to the adapter and wait 
+ *	This routine will send a synchronous command to the adapter and wait 
  *	for its	completion.
  */
 
-static int sa_sync_cmd(struct aac_dev *dev, u32 command, u32 p1, u32 *ret)
+static int sa_sync_cmd(struct aac_dev *dev, u32 command, 
+		u32 p1, u32 p2, u32 p3, u32 p4, u32 p5, u32 p6,
+		u32 *ret, u32 *r1, u32 *r2, u32 *r3, u32 *r4)
 {
 	unsigned long start;
  	int ok;
 	/*
 	 *	Write the Command into Mailbox 0
 	 */
-	sa_writel(dev, Mailbox0, cpu_to_le32(command));
+	sa_writel(dev, Mailbox0, command);
 	/*
 	 *	Write the parameters into Mailboxes 1 - 4
 	 */
-	sa_writel(dev, Mailbox1, cpu_to_le32(p1));
-	sa_writel(dev, Mailbox2, 0);
-	sa_writel(dev, Mailbox3, 0);
-	sa_writel(dev, Mailbox4, 0);
+	sa_writel(dev, Mailbox1, p1);
+	sa_writel(dev, Mailbox2, p2);
+	sa_writel(dev, Mailbox3, p3);
+	sa_writel(dev, Mailbox4, p4);
+
 	/*
 	 *	Clear the synch command doorbell to start on a clean slate.
 	 */
@@ -186,7 +192,16 @@ static int sa_sync_cmd(struct aac_dev *dev, u32 command, u32 p1, u32 *ret)
 	/*
 	 *	Pull the synch status from Mailbox 0.
 	 */
-	*ret = le32_to_cpu(sa_readl(dev, Mailbox0));
+	if (ret)
+		*ret = sa_readl(dev, Mailbox0);
+	if (r1)
+		*r1 = sa_readl(dev, Mailbox1);
+	if (r2)
+		*r2 = sa_readl(dev, Mailbox2);
+	if (r3)
+		*r3 = sa_readl(dev, Mailbox3);
+	if (r4)
+		*r4 = sa_readl(dev, Mailbox4);
 	return 0;
 }
 
@@ -200,7 +215,8 @@ static int sa_sync_cmd(struct aac_dev *dev, u32 command, u32 p1, u32 *ret)
 static void aac_sa_interrupt_adapter (struct aac_dev *dev)
 {
 	u32 ret;
-	sa_sync_cmd(dev, BREAKPOINT_REQUEST, 0, &ret);
+	sa_sync_cmd(dev, BREAKPOINT_REQUEST, 0, 0, 0, 0, 0, 0,
+			&ret, NULL, NULL, NULL, NULL);
 }
 
 /**
@@ -218,9 +234,8 @@ static void aac_sa_start_adapter(struct aac_dev *dev)
 	 * Fill in the remaining pieces of the init.
 	 */
 	init = dev->init;
-	init->HostElapsedSeconds = cpu_to_le32(jiffies/HZ);
+	init->HostElapsedSeconds = cpu_to_le32(get_seconds());
 
-	dprintk(("INIT\n"));
 	/*
 	 * Tell the adapter we are back and up and running so it will scan its command
 	 * queues and enable our interrupts
@@ -230,12 +245,12 @@ static void aac_sa_start_adapter(struct aac_dev *dev)
 	 *	First clear out all interrupts.  Then enable the one's that 
 	 *	we can handle.
 	 */
-	dprintk(("MASK\n"));
-	sa_writew(dev, SaDbCSR.PRISETIRQMASK, cpu_to_le16(0xffff));
+	sa_writew(dev, SaDbCSR.PRISETIRQMASK, 0xffff);
 	sa_writew(dev, SaDbCSR.PRICLEARIRQMASK, (PrintfReady | DOORBELL_1 | DOORBELL_2 | DOORBELL_3 | DOORBELL_4));
-	dprintk(("SYNCCMD\n"));
 	/* We can only use a 32 bit address here */
-	sa_sync_cmd(dev, INIT_STRUCT_BASE_ADDRESS, (u32)(ulong)dev->init_pa, &ret);
+	sa_sync_cmd(dev, INIT_STRUCT_BASE_ADDRESS, 
+			(u32)(ulong)dev->init_pa, 0, 0, 0, 0, 0,
+			&ret, NULL, NULL, NULL, NULL);
 }
 
 /**
@@ -286,14 +301,12 @@ int aac_sa_init(struct aac_dev *dev)
 	int instance;
 	const char *name;
 
-	dprintk(("PREINST\n"));
 	instance = dev->id;
 	name     = dev->name;
 
 	/*
 	 *	Map in the registers from the adapter.
 	 */
-	dprintk(("PREMAP\n"));
 
 	if((dev->regs.sa = ioremap((unsigned long)dev->scsi_host_ptr->base, 8192))==NULL)
 	{	
@@ -320,15 +333,15 @@ int aac_sa_init(struct aac_dev *dev)
 	 */
 	while (!(sa_readl(dev, Mailbox7) & KERNEL_UP_AND_RUNNING)) {
 		if (time_after(jiffies, start+180*HZ)) {
-			status = sa_readl(dev, Mailbox7) >> 16;
-			printk(KERN_WARNING "%s%d: adapter kernel failed to start, init status = %d.\n", name, instance, le32_to_cpu(status));
+			status = sa_readl(dev, Mailbox7);
+			printk(KERN_WARNING "%s%d: adapter kernel failed to start, init status = %lx.\n", 
+					name, instance, status);
 			goto error_iounmap;
 		}
 		set_current_state(TASK_UNINTERRUPTIBLE);
 		schedule_timeout(1);
 	}
 
-	dprintk(("ATIRQ\n"));
 	if (request_irq(dev->scsi_host_ptr->irq, aac_sa_intr, SA_SHIRQ|SA_INTERRUPT, "aacraid", (void *)dev ) < 0) {
 		printk(KERN_WARNING "%s%d: Interrupt unavailable.\n", name, instance);
 		goto error_iounmap;
@@ -343,12 +356,10 @@ int aac_sa_init(struct aac_dev *dev)
 	dev->a_ops.adapter_sync_cmd = sa_sync_cmd;
 	dev->a_ops.adapter_check_health = aac_sa_check_health;
 
-	dprintk(("FUNCDONE\n"));
 
 	if(aac_init_adapter(dev) == NULL)
 		goto error_irq;
 
-	dprintk(("NEWADAPTDONE\n"));
 	/*
 	 *	Start any kernel threads needed
 	 */
@@ -362,9 +373,7 @@ int aac_sa_init(struct aac_dev *dev)
 	 *	Tell the adapter that all is configure, and it can start 
 	 *	accepting requests
 	 */
-	dprintk(("STARTING\n"));
 	aac_sa_start_adapter(dev);
-	dprintk(("STARTED\n"));
 	return 0;
 
 

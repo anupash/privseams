@@ -32,10 +32,6 @@ void *switch_to_tt(void *prev, void *next, void *last)
 	unsigned long flags;
 	int err, vtalrm, alrm, prof, cpu;
 	char c;
-	/* jailing and SMP are incompatible, so this doesn't need to be 
-	 * made per-cpu 
-	 */
-	static int reading;
 
 	from = prev;
 	to = next;
@@ -59,14 +55,11 @@ void *switch_to_tt(void *prev, void *next, void *last)
 	c = 0;
 	set_current(to);
 
-	reading = 0;
 	err = os_write_file(to->thread.mode.tt.switch_pipe[1], &c, sizeof(c));
 	if(err != sizeof(c))
 		panic("write of switch_pipe failed, err = %d", -err);
 
-	reading = 1;
-	if((from->exit_state == EXIT_ZOMBIE) ||
-	   (from->exit_state == EXIT_DEAD))
+	if(from->thread.mode.tt.switch_pipe[0] == -1)
 		os_kill_process(os_getpid(), 0);
 
 	err = os_read_file(from->thread.mode.tt.switch_pipe[0], &c, sizeof(c));
@@ -81,27 +74,8 @@ void *switch_to_tt(void *prev, void *next, void *last)
 	 * in case it has not already killed itself.
 	 */
 	prev_sched = current->thread.prev_sched;
-	if((prev_sched->exit_state == EXIT_ZOMBIE) ||
-	   (prev_sched->exit_state == EXIT_DEAD))
+        if(prev_sched->thread.mode.tt.switch_pipe[0] == -1)
 		os_kill_process(prev_sched->thread.mode.tt.extern_pid, 1);
-
-	/* This works around a nasty race with 'jail'.  If we are switching
-	 * between two threads of a threaded app and the incoming process 
-	 * runs before the outgoing process reaches the read, and it makes
-	 * it all the way out to userspace, then it will have write-protected 
-	 * the outgoing process stack.  Then, when the outgoing process 
-	 * returns from the write, it will segfault because it can no longer
-	 * write its own stack.  So, in order to avoid that, the incoming 
-	 * thread sits in a loop yielding until 'reading' is set.  This 
-	 * isn't entirely safe, since there may be a reschedule from a timer
-	 * happening between setting 'reading' and sleeping in read.  But,
-	 * it should get a whole quantum in which to reach the read and sleep,
-	 * which should be enough.
-	 */
-
-	if(jail){
-		while(!reading) sched_yield();
-	}
 
 	change_sig(SIGVTALRM, vtalrm);
 	change_sig(SIGALRM, alrm);
@@ -119,14 +93,18 @@ void release_thread_tt(struct task_struct *task)
 {
 	int pid = task->thread.mode.tt.extern_pid;
 
+	/*
+         * We first have to kill the other process, before
+         * closing its switch_pipe. Else it might wake up
+         * and receive "EOF" before we could kill it.
+         */
 	if(os_getpid() != pid)
 		os_kill_process(pid, 0);
-}
 
-void exit_thread_tt(void)
-{
-	os_close_file(current->thread.mode.tt.switch_pipe[0]);
-	os_close_file(current->thread.mode.tt.switch_pipe[1]);
+        os_close_file(task->thread.mode.tt.switch_pipe[0]);
+        os_close_file(task->thread.mode.tt.switch_pipe[1]);
+	/* use switch_pipe as flag: thread is released */
+        task->thread.mode.tt.switch_pipe[0] = -1;
 }
 
 void suspend_new_thread(int fd)
@@ -288,10 +266,10 @@ int copy_thread_tt(int nr, unsigned long clone_flags, unsigned long sp,
 	}
 
 	if(current->thread.forking){
-		sc_to_sc(UPT_SC(&p->thread.regs.regs), 
-			 UPT_SC(&current->thread.regs.regs));
+		sc_to_sc(UPT_SC(&p->thread.regs.regs), UPT_SC(&regs->regs));
 		SC_SET_SYSCALL_RETURN(UPT_SC(&p->thread.regs.regs), 0);
-		if(sp != 0) SC_SP(UPT_SC(&p->thread.regs.regs)) = sp;
+		if(sp != 0)
+			SC_SP(UPT_SC(&p->thread.regs.regs)) = sp;
 	}
 	p->thread.mode.tt.extern_pid = new_pid;
 
@@ -394,84 +372,6 @@ void init_idle_tt(void)
 	default_idle();
 }
 
-/* Changed by jail_setup, which is a setup */
-int jail = 0;
-
-int __init jail_setup(char *line, int *add)
-{
-	int ok = 1;
-
-	if(jail) return(0);
-#ifdef CONFIG_SMP
-	printf("'jail' may not used used in a kernel with CONFIG_SMP "
-	       "enabled\n");
-	ok = 0;
-#endif
-#ifdef CONFIG_HOSTFS
-	printf("'jail' may not used used in a kernel with CONFIG_HOSTFS "
-	       "enabled\n");
-	ok = 0;
-#endif
-#ifdef CONFIG_MODULES
-	printf("'jail' may not used used in a kernel with CONFIG_MODULES "
-	       "enabled\n");
-	ok = 0;
-#endif	
-	if(!ok) exit(1);
-
-	/* CAP_SYS_RAWIO controls the ability to open /dev/mem and /dev/kmem.
-	 * Removing it from the bounding set eliminates the ability of anything
-	 * to acquire it, and thus read or write kernel memory.
-	 */
-	cap_lower(cap_bset, CAP_SYS_RAWIO);
-	jail = 1;
-	return(0);
-}
-
-__uml_setup("jail", jail_setup,
-"jail\n"
-"    Enables the protection of kernel memory from processes.\n\n"
-);
-
-static void mprotect_kernel_mem(int w)
-{
-	unsigned long start, end;
-	int pages;
-
-	if(!jail || (current == &init_task)) return;
-
-	pages = (1 << CONFIG_KERNEL_STACK_ORDER);
-
-	start = (unsigned long) current_thread + PAGE_SIZE;
-	end = (unsigned long) current_thread + PAGE_SIZE * pages;
-	protect_memory(uml_reserved, start - uml_reserved, 1, w, 1, 1);
-	protect_memory(end, high_physmem - end, 1, w, 1, 1);
-
-	start = (unsigned long) UML_ROUND_DOWN(&_stext);
-	end = (unsigned long) UML_ROUND_UP(&_etext);
-	protect_memory(start, end - start, 1, w, 1, 1);
-
-	start = (unsigned long) UML_ROUND_DOWN(&_unprotected_end);
-	end = (unsigned long) UML_ROUND_UP(&_edata);
-	protect_memory(start, end - start, 1, w, 1, 1);
-
-	start = (unsigned long) UML_ROUND_DOWN(&__bss_start);
-	end = (unsigned long) UML_ROUND_UP(brk_start);
-	protect_memory(start, end - start, 1, w, 1, 1);
-
-	mprotect_kernel_vm(w);
-}
-
-void unprotect_kernel_mem(void)
-{
-	mprotect_kernel_mem(1);
-}
-
-void protect_kernel_mem(void)
-{
-	mprotect_kernel_mem(0);
-}
-
 extern void start_kernel(void);
 
 static int start_kernel_proc(void *unused)
@@ -559,14 +459,3 @@ int is_valid_pid(int pid)
 	read_unlock(&tasklist_lock);
 	return(0);
 }
-
-/*
- * Overrides for Emacs so that we follow Linus's tabbing style.
- * Emacs will notice this stuff at the end of the file and automatically
- * adjust the settings for this buffer only.  This must remain at the end
- * of the file.
- * ---------------------------------------------------------------------------
- * Local variables:
- * c-file-style: "linux"
- * End:
- */

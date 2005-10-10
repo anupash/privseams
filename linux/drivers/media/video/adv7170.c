@@ -130,7 +130,7 @@ adv7170_write_block (struct i2c_client *client,
 		u8 block_data[32];
 
 		msg.addr = client->addr;
-		msg.flags = client->flags;
+		msg.flags = 0;
 		while (len >= 2) {
 			msg.buf = (char *) block_data;
 			msg.len = 0;
@@ -384,25 +384,16 @@ static unsigned short normal_i2c[] =
 	I2C_ADV7171 >> 1, (I2C_ADV7171 >> 1) + 1,
 	I2C_CLIENT_END
 };
-static unsigned short normal_i2c_range[] = { I2C_CLIENT_END };
 
-static unsigned short probe[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short probe_range[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short ignore[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short ignore_range[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short force[2] = { I2C_CLIENT_END , I2C_CLIENT_END };
+static unsigned short ignore = I2C_CLIENT_END;
                                                                                 
 static struct i2c_client_address_data addr_data = {
 	.normal_i2c		= normal_i2c,
-	.normal_i2c_range	= normal_i2c_range,
-	.probe			= probe,
-	.probe_range		= probe_range,
-	.ignore			= ignore,
-	.ignore_range		= ignore_range,
-	.force			= force
+	.probe			= &ignore,
+	.ignore			= &ignore,
+	.force			= &ignore,
 };
 
-static int adv7170_i2c_id = 0;
 static struct i2c_driver i2c_driver_adv7170;
 
 static int
@@ -432,7 +423,6 @@ adv7170_detect_client (struct i2c_adapter *adapter,
 	client->adapter = adapter;
 	client->driver = &i2c_driver_adv7170;
 	client->flags = I2C_CLIENT_ALLOW_USE;
-	client->id = adv7170_i2c_id++;
 	if ((client->addr == I2C_ADV7170 >> 1) ||
 	    (client->addr == (I2C_ADV7170 >> 1) + 1)) {
 		dname = adv7170_name;
@@ -444,8 +434,7 @@ adv7170_detect_client (struct i2c_adapter *adapter,
 		kfree(client);
 		return 0;
 	}
-	snprintf(I2C_NAME(client), sizeof(I2C_NAME(client)) - 1,
-		"%s[%d]", dname, client->id);
+	strlcpy(I2C_NAME(client), dname, sizeof(I2C_NAME(client)));
 
 	encoder = kmalloc(sizeof(struct adv7170), GFP_KERNEL);
 	if (encoder == NULL) {

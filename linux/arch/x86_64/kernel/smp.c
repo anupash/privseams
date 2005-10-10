@@ -25,7 +25,9 @@
 #include <asm/pgalloc.h>
 #include <asm/tlbflush.h>
 #include <asm/mach_apic.h>
+#include <asm/mmu_context.h>
 #include <asm/proto.h>
+#include <asm/apicdef.h>
 
 /*
  *	Smarter SMP flushing macros. 
@@ -41,7 +43,7 @@ static cpumask_t flush_cpumask;
 static struct mm_struct * flush_mm;
 static unsigned long flush_va;
 static DEFINE_SPINLOCK(tlbstate_lock);
-#define FLUSH_ALL	0xffffffff
+#define FLUSH_ALL	-1ULL
 
 /*
  * We cannot call mmdrop() because we are in interrupt context, 
@@ -52,7 +54,7 @@ static inline void leave_mm (unsigned long cpu)
 	if (read_pda(mmu_state) == TLBSTATE_OK)
 		BUG();
 	clear_bit(cpu, &read_pda(active_mm)->cpu_vm_mask);
-	__flush_tlb();
+	load_cr3(swapper_pg_dir);
 }
 
 /*
@@ -127,10 +129,9 @@ asmlinkage void smp_invalidate_interrupt (void)
 		} else
 			leave_mm(cpu);
 	}
+out:
 	ack_APIC_irq();
 	cpu_clear(cpu, flush_cpumask);
-
-out:
 	put_cpu_no_resched();
 }
 
@@ -281,6 +282,79 @@ struct call_data_struct {
 
 static struct call_data_struct * call_data;
 
+void lock_ipi_call_lock(void)
+{
+	spin_lock_irq(&call_lock);
+}
+
+void unlock_ipi_call_lock(void)
+{
+	spin_unlock_irq(&call_lock);
+}
+
+/*
+ * this function sends a 'generic call function' IPI to one other CPU
+ * in the system.
+ */
+static void __smp_call_function_single (int cpu, void (*func) (void *info), void *info,
+				int nonatomic, int wait)
+{
+	struct call_data_struct data;
+	int cpus = 1;
+
+	data.func = func;
+	data.info = info;
+	atomic_set(&data.started, 0);
+	data.wait = wait;
+	if (wait)
+		atomic_set(&data.finished, 0);
+
+	call_data = &data;
+	wmb();
+	/* Send a message to all other CPUs and wait for them to respond */
+	send_IPI_mask(cpumask_of_cpu(cpu), CALL_FUNCTION_VECTOR);
+
+	/* Wait for response */
+	while (atomic_read(&data.started) != cpus)
+		cpu_relax();
+
+	if (!wait)
+		return;
+
+	while (atomic_read(&data.finished) != cpus)
+		cpu_relax();
+}
+
+/*
+ * smp_call_function_single - Run a function on another CPU
+ * @func: The function to run. This must be fast and non-blocking.
+ * @info: An arbitrary pointer to pass to the function.
+ * @nonatomic: Currently unused.
+ * @wait: If true, wait until function has completed on other CPUs.
+ *
+ * Retrurns 0 on success, else a negative status code.
+ *
+ * Does not return until the remote CPU is nearly ready to execute <func>
+ * or is or has executed.
+ */
+
+int smp_call_function_single (int cpu, void (*func) (void *info), void *info,
+	int nonatomic, int wait)
+{
+	/* prevent preemption and reschedule on another processor */
+	int me = get_cpu();
+	if (cpu == me) {
+		WARN_ON(1);
+		put_cpu();
+		return -EBUSY;
+	}
+	spin_lock_bh(&call_lock);
+	__smp_call_function_single(cpu, func, info, nonatomic, wait);
+	spin_unlock_bh(&call_lock);
+	put_cpu();
+	return 0;
+}
+
 /*
  * this function sends a 'generic call function' IPI to all other CPUs
  * in the system.
@@ -372,7 +446,10 @@ void smp_send_stop(void)
 	__smp_call_function(smp_really_stop_cpu, NULL, 0, 0);
 	if (!nolock)
 		spin_unlock(&call_lock);
-	smp_stop_cpu();
+
+	local_irq_disable();
+	disable_local_APIC();
+	local_irq_enable();
 }
 
 /*
@@ -408,4 +485,28 @@ asmlinkage void smp_call_function_interrupt(void)
 		mb();
 		atomic_inc(&call_data->finished);
 	}
+}
+
+int safe_smp_processor_id(void)
+{
+	int apicid, i;
+
+	if (disable_apic)
+		return 0;
+
+	apicid = hard_smp_processor_id();
+	if (x86_cpu_to_apicid[apicid] == apicid)
+		return apicid;
+
+	for (i = 0; i < NR_CPUS; ++i) {
+		if (x86_cpu_to_apicid[i] == apicid)
+			return i;
+	}
+
+	/* No entries in x86_cpu_to_apicid?  Either no MPS|ACPI,
+	 * or called too early.  Either way, we must be CPU 0. */
+      	if (x86_cpu_to_apicid[0] == BAD_APICID)
+		return 0;
+
+	return 0; /* Should not happen */
 }

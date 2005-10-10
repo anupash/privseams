@@ -26,11 +26,8 @@ static unsigned short normal_addr[] = { 0x50, I2C_CLIENT_END };
 
 static struct i2c_client_address_data addr_data = {
 	.normal_i2c		= normal_addr,
-	.normal_i2c_range	= ignore,
 	.probe			= ignore,
-	.probe_range		= ignore,
 	.ignore			= ignore,
-	.ignore_range		= ignore,
 	.force			= ignore,
 };
 
@@ -51,7 +48,6 @@ pcf8583_attach(struct i2c_adapter *adap, int addr, int kind)
 		return -ENOMEM;
 
 	memset(c, 0, sizeof(*c));
-	c->id		= pcf8583_driver.id;
 	c->addr		= addr;
 	c->adapter	= adap;
 	c->driver	= &pcf8583_driver;

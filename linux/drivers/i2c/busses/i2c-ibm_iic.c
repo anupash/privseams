@@ -549,7 +549,7 @@ static inline int iic_address_neq(const struct i2c_msg* p1,
  * Generic master transfer entrypoint. 
  * Returns the number of processed messages or error (<0)
  */
-static int iic_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
+static int iic_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 {
     	struct ibm_iic_private* dev = (struct ibm_iic_private*)(i2c_get_adapdata(adap));
 	volatile struct iic_regs __iomem *iic = dev->vaddr;
@@ -630,10 +630,6 @@ static struct i2c_algorithm iic_algo = {
 	.name 		= "IBM IIC algorithm",
 	.id   		= I2C_ALGO_OCP,
 	.master_xfer 	= iic_xfer,
-	.smbus_xfer	= NULL,
-	.slave_send	= NULL,
-	.slave_recv	= NULL,
-	.algo_control	= NULL,
 	.functionality	= iic_func
 };
 
@@ -699,7 +695,7 @@ static int __devinit iic_probe(struct ocp_device *ocp){
 
 	dev->irq = iic_force_poll ? -1 : ocp->def->irq;
 	if (dev->irq >= 0){
-		/* Disable interrupts until we finish intialization,
+		/* Disable interrupts until we finish initialization,
 		   assumes level-sensitive IRQ setup...
 		 */
 		iic_interrupt_mode(dev, 0);

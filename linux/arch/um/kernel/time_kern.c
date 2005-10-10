@@ -48,8 +48,6 @@ static unsigned long long prev_usecs;
 static long long delta;   		/* Deviation per interval */
 #endif
 
-#define MILLION 1000000
-
 void timer_irq(union uml_pt_regs *regs)
 {
 	unsigned long long ticks = 0;
@@ -136,26 +134,13 @@ long um_stime(int __user *tptr)
 	return 0;
 }
 
-void __udelay(unsigned long usecs)
-{
-	int i, n;
-
-	n = (loops_per_jiffy * HZ * usecs) / MILLION;
-	for(i=0;i<n;i++) ;
-}
-
-void __const_udelay(unsigned long usecs)
-{
-	int i, n;
-
-	n = (loops_per_jiffy * HZ * usecs) / MILLION;
-	for(i=0;i<n;i++) ;
-}
-
 void timer_handler(int sig, union uml_pt_regs *regs)
 {
 	local_irq_disable();
-	update_process_times(CHOOSE_MODE(user_context(UPT_SP(regs)), (regs)->skas.is_user));
+	irq_enter();
+	update_process_times(CHOOSE_MODE(user_context(UPT_SP(regs)),
+					 (regs)->skas.is_user));
+	irq_exit();
 	local_irq_enable();
 	if(current_thread->cpu == 0)
 		timer_irq(regs);
@@ -180,7 +165,7 @@ int __init timer_init(void)
 {
 	int err;
 
-	CHOOSE_MODE(user_time_init_tt(), user_time_init_skas());
+	user_time_init();
 	err = request_irq(TIMER_IRQ, um_timer, SA_INTERRUPT, "timer", NULL);
 	if(err != 0)
 		printk(KERN_ERR "timer_init : request_irq failed - "

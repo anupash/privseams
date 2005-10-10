@@ -40,7 +40,7 @@
 #include "ipoib.h"
 
 #ifdef CONFIG_INFINIBAND_IPOIB_DEBUG_DATA
-int data_debug_level;
+static int data_debug_level;
 
 module_param(data_debug_level, int, 0644);
 MODULE_PARM_DESC(data_debug_level,
@@ -81,7 +81,7 @@ void ipoib_free_ah(struct kref *kref)
 
 	unsigned long flags;
 
-	if (ah->last_send <= priv->tx_tail) {
+	if ((int) priv->tx_tail - (int) ah->last_send >= 0) {
 		ipoib_dbg(priv, "Freeing ah %p\n", ah->ah);
 		ib_destroy_ah(ah->ah);
 		kfree(ah);
@@ -105,7 +105,6 @@ static inline int ipoib_ib_receive(struct ipoib_dev_priv *priv,
 		.wr_id 	    = wr_id | IPOIB_OP_RECV,
 		.sg_list    = &list,
 		.num_sge    = 1,
-		.recv_flags = IB_RECV_SIGNALED
 	};
 	struct ib_recv_wr *bad_wr;
 
@@ -137,6 +136,9 @@ static int ipoib_ib_post_receive(struct net_device *dev, int id)
 	if (ret) {
 		ipoib_warn(priv, "ipoib_ib_receive failed for buf %d (%d)\n",
 			   id, ret);
+		dma_unmap_single(priv->ca->dma_device, addr,
+				 IPOIB_BUF_SIZE, DMA_FROM_DEVICE);
+		dev_kfree_skb_any(skb);
 		priv->rx_ring[id].skb = NULL;
 	}
 
@@ -199,7 +201,7 @@ static void ipoib_ib_handle_wc(struct net_device *dev,
 			if (wc->slid != priv->local_lid ||
 			    wc->src_qp != priv->qp->qp_num) {
 				skb->protocol = ((struct ipoib_header *) skb->data)->proto;
-
+				skb->mac.raw = skb->data;
 				skb_pull(skb, IPOIB_ENCAP_LEN);
 
 				dev->last_rx = jiffies;
@@ -353,7 +355,7 @@ static void __ipoib_reap_ah(struct net_device *dev)
 
 	spin_lock_irq(&priv->lock);
 	list_for_each_entry_safe(ah, tah, &priv->dead_ahs, list)
-		if (ah->last_send <= priv->tx_tail) {
+		if ((int) priv->tx_tail - (int) ah->last_send >= 0) {
 			list_del(&ah->list);
 			list_add_tail(&ah->list, &remove_list);
 		}
@@ -484,7 +486,7 @@ int ipoib_ib_dev_stop(struct net_device *dev)
 			 * assume the HW is wedged and just free up
 			 * all our pending work requests.
 			 */
-			while (priv->tx_tail < priv->tx_head) {
+			while ((int) priv->tx_tail - (int) priv->tx_head < 0) {
 				tx_req = &priv->tx_ring[priv->tx_tail &
 							(IPOIB_TX_RING_SIZE - 1)];
 				dma_unmap_single(priv->ca->dma_device,

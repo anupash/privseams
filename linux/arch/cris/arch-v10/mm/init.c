@@ -42,7 +42,7 @@ paging_init(void)
 	 *  switch_mm)
 	 */
 
-	current_pgd = init_mm.pgd;
+	per_cpu(current_pgd, smp_processor_id()) = init_mm.pgd;
 
 	/* initialise the TLB (tlb.c) */
 
@@ -184,7 +184,6 @@ paging_init(void)
 	 */
 
 	free_area_init_node(0, &contig_page_data, zones_size, PAGE_OFFSET >> PAGE_SHIFT, 0);
-	mem_map = contig_page_data.node_mem_map;
 }
 
 /* Initialize remaps of some I/O-ports. It is important that this

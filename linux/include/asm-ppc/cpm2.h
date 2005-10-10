@@ -69,6 +69,7 @@
 #define CPM_CR_INIT_TX		((ushort)0x0002)
 #define CPM_CR_HUNT_MODE	((ushort)0x0003)
 #define CPM_CR_STOP_TX		((ushort)0x0004)
+#define CPM_CR_GRA_STOP_TX      ((ushort)0x0005)
 #define CPM_CR_RESTART_TX	((ushort)0x0006)
 #define CPM_CR_SET_GADDR	((ushort)0x0008)
 #define CPM_CR_START_IDMA	((ushort)0x0009)
@@ -85,7 +86,7 @@
  */
 #define CPM_DATAONLY_BASE	((uint)128)
 #define CPM_DP_NOSPACE		((uint)0x7fffffff)
-#ifdef CONFIG_8272
+#if defined(CONFIG_8272) || defined(CONFIG_MPC8555)
 #define CPM_DATAONLY_SIZE	((uint)(8 * 1024) - CPM_DATAONLY_BASE)
 #define CPM_FCC_SPECIAL_BASE	((uint)0x00009000)
 #else
@@ -108,6 +109,7 @@ static inline long IS_DPERR(const uint offset)
  * and dual port ram.
  */
 extern		cpm_cpm2_t	*cpmp;	 /* Pointer to comm processor */
+
 extern uint cpm_dpalloc(uint size, uint align);
 extern int cpm_dpfree(uint offset);
 extern uint cpm_dpalloc_fixed(uint offset, uint size, uint align);
@@ -115,6 +117,8 @@ extern void cpm_dpdump(void);
 extern void *cpm_dpram_addr(uint offset);
 extern void cpm_setbrg(uint brg, uint rate);
 extern void cpm2_fastbrg(uint brg, uint rate, int div16);
+extern void cpm2_reset(void);
+
 
 /* Buffer descriptors used by many of the CPM protocols.
 */
@@ -531,7 +535,7 @@ typedef struct scc_uart {
 #define SCU_PSMR_RPM		((ushort)0x000c)
 #define SCU_PSMR_REVP		((ushort)0x0008)
 #define SCU_PSMR_TPM		((ushort)0x0003)
-#define SCU_PSMR_TEVP		((ushort)0x0003)
+#define SCU_PSMR_TEVP		((ushort)0x0002)
 
 /* CPM Transparent mode SCC.
  */
@@ -1038,7 +1042,51 @@ typedef struct im_idma {
 #define CMXSCR_TS4CS_CLK7  0x00000006   /* SCC4 Tx Clock Source is CLK7 */
 #define CMXSCR_TS4CS_CLK8  0x00000007   /* SCC4 Tx Clock Source is CLK8 */
 
+/*-----------------------------------------------------------------------
+ * SIUMCR - SIU Module Configuration Register				 4-31
+ */
+#define SIUMCR_BBD	0x80000000	/* Bus Busy Disable		*/
+#define SIUMCR_ESE	0x40000000	/* External Snoop Enable	*/
+#define SIUMCR_PBSE	0x20000000	/* Parity Byte Select Enable	*/
+#define SIUMCR_CDIS	0x10000000	/* Core Disable			*/
+#define SIUMCR_DPPC00	0x00000000	/* Data Parity Pins Configuration*/
+#define SIUMCR_DPPC01	0x04000000	/* - " -			*/
+#define SIUMCR_DPPC10	0x08000000	/* - " -			*/
+#define SIUMCR_DPPC11	0x0c000000	/* - " -			*/
+#define SIUMCR_L2CPC00	0x00000000	/* L2 Cache Pins Configuration	*/
+#define SIUMCR_L2CPC01	0x01000000	/* - " -			*/
+#define SIUMCR_L2CPC10	0x02000000	/* - " -			*/
+#define SIUMCR_L2CPC11	0x03000000	/* - " -			*/
+#define SIUMCR_LBPC00	0x00000000	/* Local Bus Pins Configuration	*/
+#define SIUMCR_LBPC01	0x00400000	/* - " -			*/
+#define SIUMCR_LBPC10	0x00800000	/* - " -			*/
+#define SIUMCR_LBPC11	0x00c00000	/* - " -			*/
+#define SIUMCR_APPC00	0x00000000	/* Address Parity Pins Configuration*/
+#define SIUMCR_APPC01	0x00100000	/* - " -			*/
+#define SIUMCR_APPC10	0x00200000	/* - " -			*/
+#define SIUMCR_APPC11	0x00300000	/* - " -			*/
+#define SIUMCR_CS10PC00	0x00000000	/* CS10 Pin Configuration	*/
+#define SIUMCR_CS10PC01	0x00040000	/* - " -			*/
+#define SIUMCR_CS10PC10	0x00080000	/* - " -			*/
+#define SIUMCR_CS10PC11	0x000c0000	/* - " -			*/
+#define SIUMCR_BCTLC00	0x00000000	/* Buffer Control Configuration	*/
+#define SIUMCR_BCTLC01	0x00010000	/* - " -			*/
+#define SIUMCR_BCTLC10	0x00020000	/* - " -			*/
+#define SIUMCR_BCTLC11	0x00030000	/* - " -			*/
+#define SIUMCR_MMR00	0x00000000	/* Mask Masters Requests	*/
+#define SIUMCR_MMR01	0x00004000	/* - " -			*/
+#define SIUMCR_MMR10	0x00008000	/* - " -			*/
+#define SIUMCR_MMR11	0x0000c000	/* - " -			*/
+#define SIUMCR_LPBSE	0x00002000	/* LocalBus Parity Byte Select Enable*/
+
+/*-----------------------------------------------------------------------
+ * SCCR - System Clock Control Register					 9-8
+*/
+#define SCCR_PCI_MODE	0x00000100	/* PCI Mode	*/
+#define SCCR_PCI_MODCK	0x00000080	/* Value of PCI_MODCK pin	*/
+#define SCCR_PCIDF_MSK	0x00000078	/* PCI division factor	*/
+#define SCCR_PCIDF_SHIFT 3
+
+
 #endif /* __CPM2__ */
 #endif /* __KERNEL__ */
-
-

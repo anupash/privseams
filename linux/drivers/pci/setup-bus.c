@@ -29,9 +29,9 @@
 
 #define DEBUG_CONFIG 1
 #if DEBUG_CONFIG
-# define DBGC(args)     printk args
+#define DBG(x...)     printk(x)
 #else
-# define DBGC(args)
+#define DBG(x...)
 #endif
 
 #define ROUND_UP(x, a)		(((x) + (a) - 1) & ~((a) - 1))
@@ -40,7 +40,7 @@
  * FIXME: IO should be max 256 bytes.  However, since we may
  * have a P2P bridge below a cardbus bridge, we need 4K.
  */
-#define CARDBUS_IO_SIZE		(4096)
+#define CARDBUS_IO_SIZE		(4*1024)
 #define CARDBUS_MEM_SIZE	(32*1024*1024)
 
 static void __devinit
@@ -51,8 +51,6 @@ pbus_assign_resources_sorted(struct pci_bus *bus)
 	struct resource_list head, *list, *tmp;
 	int idx;
 
-	bus->bridge_ctl &= ~PCI_BRIDGE_CTL_VGA;
-
 	head.next = NULL;
 	list_for_each_entry(dev, &bus->devices, bus_list) {
 		u16 class = dev->class >> 8;
@@ -62,17 +60,17 @@ pbus_assign_resources_sorted(struct pci_bus *bus)
 		    class == PCI_CLASS_BRIDGE_HOST)
 			continue;
 
-		if (class == PCI_CLASS_DISPLAY_VGA ||
-		    class == PCI_CLASS_NOT_DEFINED_VGA)
-			bus->bridge_ctl |= PCI_BRIDGE_CTL_VGA;
-
 		pdev_sort_resources(dev, &head);
 	}
 
 	for (list = head.next; list;) {
 		res = list->res;
 		idx = res - &list->dev->resource[0];
-		pci_assign_resource(list->dev, idx);
+		if (pci_assign_resource(list->dev, idx)) {
+			res->start = 0;
+			res->end = 0;
+			res->flags = 0;
+		}
 		tmp = list;
 		list = list->next;
 		kfree(tmp);
@@ -151,8 +149,7 @@ pci_setup_bridge(struct pci_bus *bus)
 	struct pci_bus_region region;
 	u32 l, io_upper16;
 
-	DBGC((KERN_INFO "PCI: Bus %d, bridge: %s\n",
-			bus->number, pci_name(bridge)));
+	DBG(KERN_INFO "PCI: Bridge: %s\n", pci_name(bridge));
 
 	/* Set up the top and bottom of the PCI I/O segment for this bus. */
 	pcibios_resource_to_bus(bridge, &region, bus->resource[0]);
@@ -163,14 +160,14 @@ pci_setup_bridge(struct pci_bus *bus)
 		l |= region.end & 0xf000;
 		/* Set up upper 16 bits of I/O base/limit. */
 		io_upper16 = (region.end & 0xffff0000) | (region.start >> 16);
-		DBGC((KERN_INFO "  IO window: %04lx-%04lx\n",
-				region.start, region.end));
+		DBG(KERN_INFO "  IO window: %04lx-%04lx\n",
+				region.start, region.end);
 	}
 	else {
 		/* Clear upper 16 bits of I/O base/limit. */
 		io_upper16 = 0;
 		l = 0x00f0;
-		DBGC((KERN_INFO "  IO window: disabled.\n"));
+		DBG(KERN_INFO "  IO window: disabled.\n");
 	}
 	/* Temporarily disable the I/O range before updating PCI_IO_BASE. */
 	pci_write_config_dword(bridge, PCI_IO_BASE_UPPER16, 0x0000ffff);
@@ -185,12 +182,12 @@ pci_setup_bridge(struct pci_bus *bus)
 	if (bus->resource[1]->flags & IORESOURCE_MEM) {
 		l = (region.start >> 16) & 0xfff0;
 		l |= region.end & 0xfff00000;
-		DBGC((KERN_INFO "  MEM window: %08lx-%08lx\n",
-				region.start, region.end));
+		DBG(KERN_INFO "  MEM window: %08lx-%08lx\n",
+				region.start, region.end);
 	}
 	else {
 		l = 0x0000fff0;
-		DBGC((KERN_INFO "  MEM window: disabled.\n"));
+		DBG(KERN_INFO "  MEM window: disabled.\n");
 	}
 	pci_write_config_dword(bridge, PCI_MEMORY_BASE, l);
 
@@ -204,12 +201,12 @@ pci_setup_bridge(struct pci_bus *bus)
 	if (bus->resource[2]->flags & IORESOURCE_PREFETCH) {
 		l = (region.start >> 16) & 0xfff0;
 		l |= region.end & 0xfff00000;
-		DBGC((KERN_INFO "  PREFETCH window: %08lx-%08lx\n",
-				region.start, region.end));
+		DBG(KERN_INFO "  PREFETCH window: %08lx-%08lx\n",
+				region.start, region.end);
 	}
 	else {
 		l = 0x0000fff0;
-		DBGC((KERN_INFO "  PREFETCH window: disabled.\n"));
+		DBG(KERN_INFO "  PREFETCH window: disabled.\n");
 	}
 	pci_write_config_dword(bridge, PCI_PREF_MEMORY_BASE, l);
 
@@ -271,6 +268,8 @@ find_free_bus_resource(struct pci_bus *bus, unsigned long type)
 
 	for (i = 0; i < PCI_BUS_NUM_RESOURCES; i++) {
 		r = bus->resource[i];
+		if (r == &ioport_resource || r == &iomem_resource)
+			continue;
 		if (r && (r->flags & type_mask) == type && !r->parent)
 			return r;
 	}
@@ -504,12 +503,6 @@ pci_bus_assign_resources(struct pci_bus *bus)
 
 	pbus_assign_resources_sorted(bus);
 
-	if (bus->bridge_ctl & PCI_BRIDGE_CTL_VGA) {
-		/* Propagate presence of the VGA to upstream bridges */
-		for (b = bus; b->parent; b = b->parent) {
-			b->bridge_ctl |= PCI_BRIDGE_CTL_VGA;
-		}
-	}
 	list_for_each_entry(dev, &bus->devices, bus_list) {
 		b = dev->subordinate;
 		if (!b)

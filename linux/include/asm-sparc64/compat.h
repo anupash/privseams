@@ -25,6 +25,7 @@ typedef s32		compat_daddr_t;
 typedef u32		compat_caddr_t;
 typedef __kernel_fsid_t	compat_fsid_t;
 typedef s32		compat_key_t;
+typedef s32		compat_timer_t;
 
 typedef s32		compat_int_t;
 typedef s32		compat_long_t;
@@ -51,14 +52,48 @@ struct compat_stat {
 	compat_dev_t	st_rdev;
 	compat_off_t	st_size;
 	compat_time_t	st_atime;
-	u32		__unused1;
+	compat_ulong_t	st_atime_nsec;
 	compat_time_t	st_mtime;
-	u32		__unused2;
+	compat_ulong_t	st_mtime_nsec;
 	compat_time_t	st_ctime;
-	u32		__unused3;
+	compat_ulong_t	st_ctime_nsec;
 	compat_off_t	st_blksize;
 	compat_off_t	st_blocks;
 	u32		__unused4[2];
+};
+
+struct compat_stat64 {
+	unsigned long long	st_dev;
+
+	unsigned long long	st_ino;
+
+	unsigned int	st_mode;
+	unsigned int	st_nlink;
+
+	unsigned int	st_uid;
+	unsigned int	st_gid;
+
+	unsigned long long	st_rdev;
+
+	unsigned char	__pad3[8];
+
+	long long	st_size;
+	unsigned int	st_blksize;
+
+	unsigned char	__pad4[8];
+	unsigned int	st_blocks;
+
+	unsigned int	st_atime;
+	unsigned int	st_atime_nsec;
+
+	unsigned int	st_mtime;
+	unsigned int	st_mtime_nsec;
+
+	unsigned int	st_ctime;
+	unsigned int	st_ctime_nsec;
+
+	unsigned int	__unused4;
+	unsigned int	__unused5;
 };
 
 struct compat_flock {

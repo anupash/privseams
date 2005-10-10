@@ -76,7 +76,6 @@ int hcd_buffer_create (struct usb_hcd *hcd)
 	}
 	return 0;
 }
-EXPORT_SYMBOL (hcd_buffer_create);
 
 
 /**
@@ -98,7 +97,6 @@ void hcd_buffer_destroy (struct usb_hcd *hcd)
 		}
 	}
 }
-EXPORT_SYMBOL (hcd_buffer_destroy);
 
 
 /* sometimes alloc/free could use kmalloc with SLAB_DMA, for
@@ -108,7 +106,7 @@ EXPORT_SYMBOL (hcd_buffer_destroy);
 void *hcd_buffer_alloc (
 	struct usb_bus 		*bus,
 	size_t			size,
-	int			mem_flags,
+	unsigned		mem_flags,
 	dma_addr_t		*dma
 )
 {

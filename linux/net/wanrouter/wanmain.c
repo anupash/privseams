@@ -48,8 +48,8 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>	/* support for loadable modules */
-#include <linux/slab.h>	/* kmalloc(), kfree() */
-#include <linux/mm.h>		/* verify_area(), etc. */
+#include <linux/slab.h>		/* kmalloc(), kfree() */
+#include <linux/mm.h>
 #include <linux/string.h>	/* inline mem*, str* functions */
 
 #include <asm/byteorder.h>	/* htons(), etc. */
@@ -358,10 +358,10 @@ int wanrouter_encapsulate(struct sk_buff *skb, struct net_device *dev,
  */
 
 
-unsigned short wanrouter_type_trans(struct sk_buff *skb, struct net_device *dev)
+__be16 wanrouter_type_trans(struct sk_buff *skb, struct net_device *dev)
 {
 	int cnt = skb->data[0] ? 0 : 1;	/* there may be a pad present */
-	unsigned short ethertype;
+	__be16 ethertype;
 
 	switch (skb->data[cnt]) {
 	case NLPID_IP:		/* IP datagramm */
@@ -379,7 +379,7 @@ unsigned short wanrouter_type_trans(struct sk_buff *skb, struct net_device *dev)
 				skb->data[cnt+3], dev->name);
 			return 0;
 		}
-		ethertype = *((unsigned short*)&skb->data[cnt+4]);
+		ethertype = *((__be16*)&skb->data[cnt+4]);
 		cnt += 6;
 		break;
 

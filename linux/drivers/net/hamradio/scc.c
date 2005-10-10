@@ -304,7 +304,7 @@ static inline void scc_discard_buffers(struct scc_channel *scc)
 		scc->tx_buff = NULL;
 	}
 	
-	while (skb_queue_len(&scc->tx_queue))
+	while (!skb_queue_empty(&scc->tx_queue))
 		dev_kfree_skb(skb_dequeue(&scc->tx_queue));
 
 	spin_unlock_irqrestore(&scc->lock, flags);
@@ -1126,8 +1126,7 @@ static void t_dwait(unsigned long channel)
 	
 	if (scc->stat.tx_state == TXS_WAIT)	/* maxkeyup or idle timeout */
 	{
-		if (skb_queue_len(&scc->tx_queue) == 0)	/* nothing to send */
-		{
+		if (skb_queue_empty(&scc->tx_queue)) {	/* nothing to send */
 			scc->stat.tx_state = TXS_IDLE;
 			netif_wake_queue(scc->dev);	/* t_maxkeyup locked it. */
 			return;
@@ -1630,10 +1629,7 @@ static void scc_net_rx(struct scc_channel *scc, struct sk_buff *skb)
 	scc->dev_stat.rx_packets++;
 	scc->dev_stat.rx_bytes += skb->len;
 
-	skb->dev      = scc->dev;
-	skb->protocol = htons(ETH_P_AX25);
-	skb->mac.raw  = skb->data;
-	skb->pkt_type = PACKET_HOST;
+	skb->protocol = ax25_type_trans(skb, scc->dev);
 	
 	netif_rx(skb);
 	scc->dev->last_rx = jiffies;

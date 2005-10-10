@@ -15,6 +15,8 @@
 #include <linux/sysdev.h>
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
+#include <linux/cpu.h>
+#include <linux/percpu.h>
 #include <asm/processor.h> 
 #include <asm/msr.h>
 #include <asm/mce.h>
@@ -33,6 +35,8 @@ static int banks;
 static unsigned long bank[NR_BANKS] = { [0 ... NR_BANKS-1] = ~0UL };
 static unsigned long console_logged;
 static int notify_user;
+static int rip_msr;
+static int mce_bootlog;
 
 /*
  * Lockless MCE logging infrastructure.
@@ -124,6 +128,23 @@ static int mce_available(struct cpuinfo_x86 *c)
 	       test_bit(X86_FEATURE_MCA, &c->x86_capability);
 }
 
+static inline void mce_get_rip(struct mce *m, struct pt_regs *regs)
+{
+	if (regs && (m->mcgstatus & MCG_STATUS_RIPV)) {
+		m->rip = regs->rip;
+		m->cs = regs->cs;
+	} else {
+		m->rip = 0;
+		m->cs = 0;
+	}
+	if (rip_msr) {
+		/* Assume the RIP in the MSR is exact. Is this true? */
+		m->mcgstatus |= MCG_STATUS_EIPV;
+		rdmsrl(rip_msr, m->rip);
+		m->cs = 0;
+	}
+}
+
 /* 
  * The actual machine check handler
  */
@@ -176,18 +197,12 @@ void do_machine_check(struct pt_regs * regs, long error_code)
 		if (m.status & MCI_STATUS_ADDRV)
 			rdmsrl(MSR_IA32_MC0_ADDR + i*4, m.addr);
 
-		if (regs && (m.mcgstatus & MCG_STATUS_RIPV)) {
-			m.rip = regs->rip;
-			m.cs = regs->cs;
-		} else {
-			m.rip = 0;
-			m.cs = 0;
-		}
-
-		if (error_code != -1)
+		mce_get_rip(&m, regs);
+		if (error_code >= 0)
 			rdtscll(m.tsc);
 		wrmsrl(MSR_IA32_MC0_STATUS + i*4, 0);
-		mce_log(&m);
+		if (error_code != -2)
+			mce_log(&m);
 
 		/* Did this bank cause the exception? */
 		/* Assume that the bank with uncorrectable errors did it,
@@ -296,10 +311,13 @@ static void mce_init(void *dummy)
 		printk(KERN_INFO "MCE: warning: using only %d banks\n", banks);
 		banks = NR_BANKS; 
 	}
+	/* Use accurate RIP reporting if available. */
+	if ((cap & (1<<9)) && ((cap >> 16) & 0xff) >= 9)
+		rip_msr = MSR_IA32_MCG_EIP;
 
 	/* Log the machine checks left over from the previous reset.
 	   This also clears all registers */
-	do_machine_check(NULL, -1);
+	do_machine_check(NULL, mce_bootlog ? -1 : -2);
 
 	set_in_cr4(X86_CR4_MCE);
 
@@ -313,7 +331,7 @@ static void mce_init(void *dummy)
 }
 
 /* Add per CPU specific workarounds here */
-static void __init mce_cpu_quirks(struct cpuinfo_x86 *c) 
+static void __cpuinit mce_cpu_quirks(struct cpuinfo_x86 *c)
 { 
 	/* This should be disabled by the BIOS, but isn't always */
 	if (c->x86_vendor == X86_VENDOR_AMD && c->x86 == 15) {
@@ -323,7 +341,7 @@ static void __init mce_cpu_quirks(struct cpuinfo_x86 *c)
 	}
 }			
 
-static void __init mce_cpu_features(struct cpuinfo_x86 *c)
+static void __cpuinit mce_cpu_features(struct cpuinfo_x86 *c)
 {
 	switch (c->x86_vendor) {
 	case X86_VENDOR_INTEL:
@@ -338,7 +356,7 @@ static void __init mce_cpu_features(struct cpuinfo_x86 *c)
  * Called for each booted CPU to set up machine checks.
  * Must be called with preempt off. 
  */
-void __init mcheck_init(struct cpuinfo_x86 *c)
+void __cpuinit mcheck_init(struct cpuinfo_x86 *c)
 {
 	static cpumask_t mce_cpus __initdata = CPU_MASK_NONE;
 
@@ -365,11 +383,15 @@ static void collect_tscs(void *data)
 
 static ssize_t mce_read(struct file *filp, char __user *ubuf, size_t usize, loff_t *off)
 {
-	unsigned long cpu_tsc[NR_CPUS];
+	unsigned long *cpu_tsc;
 	static DECLARE_MUTEX(mce_read_sem);
 	unsigned next;
 	char __user *buf = ubuf;
 	int i, err;
+
+	cpu_tsc = kmalloc(NR_CPUS * sizeof(long), GFP_KERNEL);
+	if (!cpu_tsc)
+		return -ENOMEM;
 
 	down(&mce_read_sem); 
 	next = rcu_dereference(mcelog.next);
@@ -377,6 +399,7 @@ static ssize_t mce_read(struct file *filp, char __user *ubuf, size_t usize, loff
 	/* Only supports full reads right now */
 	if (*off != 0 || usize < MCE_LOG_LEN*sizeof(struct mce)) { 
 		up(&mce_read_sem);
+		kfree(cpu_tsc);
 		return -EINVAL;
 	}
 
@@ -392,7 +415,7 @@ static ssize_t mce_read(struct file *filp, char __user *ubuf, size_t usize, loff
 	memset(mcelog.entry, 0, next * sizeof(struct mce));
 	mcelog.next = 0;
 
-	synchronize_kernel();	
+	synchronize_sched();
 
 	/* Collect entries that were still getting written before the synchronize. */
 
@@ -407,6 +430,7 @@ static ssize_t mce_read(struct file *filp, char __user *ubuf, size_t usize, loff
 		}
 	} 	
 	up(&mce_read_sem);
+	kfree(cpu_tsc);
 	return err ? -EFAULT : buf - ubuf; 
 }
 
@@ -454,11 +478,17 @@ static int __init mcheck_disable(char *str)
 }
 
 /* mce=off disables machine check. Note you can reenable it later
-   using sysfs */
+   using sysfs.
+   mce=bootlog Log MCEs from before booting. Disabled by default to work
+   around buggy BIOS that leave bogus MCEs.  */
 static int __init mcheck_enable(char *str)
 {
+	if (*str == '=')
+		str++;
 	if (!strcmp(str, "off"))
 		mce_dont_init = 1;
+	else if (!strcmp(str, "bootlog"))
+		mce_bootlog = 1;
 	else
 		printk("mce= argument %s ignored. Please use /sys", str); 
 	return 0;
@@ -494,10 +524,7 @@ static struct sysdev_class mce_sysclass = {
 	set_kset_name("machinecheck"),
 };
 
-static struct sys_device device_mce = {
-	.id	= 0,
-	.cls	= &mce_sysclass,
-};
+static DEFINE_PER_CPU(struct sys_device, device_mce);
 
 /* Why are there no generic functions for this? */
 #define ACCESSOR(name, var, start) \
@@ -522,27 +549,83 @@ ACCESSOR(bank4ctl,bank[4],mce_restart())
 ACCESSOR(tolerant,tolerant,)
 ACCESSOR(check_interval,check_interval,mce_restart())
 
+/* Per cpu sysdev init.  All of the cpus still share the same ctl bank */
+static __cpuinit int mce_create_device(unsigned int cpu)
+{
+	int err;
+	if (!mce_available(&cpu_data[cpu]))
+		return -EIO;
+
+	per_cpu(device_mce,cpu).id = cpu;
+	per_cpu(device_mce,cpu).cls = &mce_sysclass;
+
+	err = sysdev_register(&per_cpu(device_mce,cpu));
+
+	if (!err) {
+		sysdev_create_file(&per_cpu(device_mce,cpu), &attr_bank0ctl);
+		sysdev_create_file(&per_cpu(device_mce,cpu), &attr_bank1ctl);
+		sysdev_create_file(&per_cpu(device_mce,cpu), &attr_bank2ctl);
+		sysdev_create_file(&per_cpu(device_mce,cpu), &attr_bank3ctl);
+		sysdev_create_file(&per_cpu(device_mce,cpu), &attr_bank4ctl);
+		sysdev_create_file(&per_cpu(device_mce,cpu), &attr_tolerant);
+		sysdev_create_file(&per_cpu(device_mce,cpu), &attr_check_interval);
+	}
+	return err;
+}
+
+#ifdef CONFIG_HOTPLUG_CPU
+static __cpuinit void mce_remove_device(unsigned int cpu)
+{
+	sysdev_remove_file(&per_cpu(device_mce,cpu), &attr_bank0ctl);
+	sysdev_remove_file(&per_cpu(device_mce,cpu), &attr_bank1ctl);
+	sysdev_remove_file(&per_cpu(device_mce,cpu), &attr_bank2ctl);
+	sysdev_remove_file(&per_cpu(device_mce,cpu), &attr_bank3ctl);
+	sysdev_remove_file(&per_cpu(device_mce,cpu), &attr_bank4ctl);
+	sysdev_remove_file(&per_cpu(device_mce,cpu), &attr_tolerant);
+	sysdev_remove_file(&per_cpu(device_mce,cpu), &attr_check_interval);
+	sysdev_unregister(&per_cpu(device_mce,cpu));
+}
+#endif
+
+/* Get notified when a cpu comes on/off. Be hotplug friendly. */
+static __cpuinit int
+mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
+{
+	unsigned int cpu = (unsigned long)hcpu;
+
+	switch (action) {
+	case CPU_ONLINE:
+		mce_create_device(cpu);
+		break;
+#ifdef CONFIG_HOTPLUG_CPU
+	case CPU_DEAD:
+		mce_remove_device(cpu);
+		break;
+#endif
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block mce_cpu_notifier = {
+	.notifier_call = mce_cpu_callback,
+};
+
 static __init int mce_init_device(void)
 {
 	int err;
+	int i = 0;
+
 	if (!mce_available(&boot_cpu_data))
 		return -EIO;
 	err = sysdev_class_register(&mce_sysclass);
-	if (!err)
-		err = sysdev_register(&device_mce);
-	if (!err) { 
-		/* could create per CPU objects, but it is not worth it. */
-		sysdev_create_file(&device_mce, &attr_bank0ctl); 
-		sysdev_create_file(&device_mce, &attr_bank1ctl); 
-		sysdev_create_file(&device_mce, &attr_bank2ctl); 
-		sysdev_create_file(&device_mce, &attr_bank3ctl); 
-		sysdev_create_file(&device_mce, &attr_bank4ctl); 
-		sysdev_create_file(&device_mce, &attr_tolerant); 
-		sysdev_create_file(&device_mce, &attr_check_interval);
-	} 
-	
+
+	for_each_online_cpu(i) {
+		mce_create_device(i);
+	}
+
+	register_cpu_notifier(&mce_cpu_notifier);
 	misc_register(&mce_log_device);
 	return err;
-
 }
+
 device_initcall(mce_init_device);

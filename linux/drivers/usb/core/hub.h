@@ -205,6 +205,7 @@ struct usb_hub {
 	unsigned long		event_bits[1];	/* status change bitmask */
 	unsigned long		change_bits[1];	/* ports with logical connect
 							status change */
+	unsigned long		busy_bits[1];	/* ports being reset */
 #if USB_MAXCHILDREN > 31 /* 8*sizeof(unsigned long) - 1 */
 #error event_bits[] is too short!
 #endif
@@ -215,21 +216,12 @@ struct usb_hub {
 	u8			power_budget;	/* in 2mA units; or zero */
 
 	unsigned		quiescing:1;
+	unsigned		activating:1;
+	unsigned		resume_root_hub:1;
 
 	unsigned		has_indicators:1;
 	enum hub_led_mode	indicator[USB_MAXCHILDREN];
 	struct work_struct	leds;
 };
-
-/* use this for low-powered root hubs */
-static inline void
-hub_set_power_budget (struct usb_device *hubdev, unsigned mA)
-{
-	struct usb_hub	*hub;
-
-	hub = (struct usb_hub *)
-		usb_get_intfdata (hubdev->actconfig->interface[0]);
-	hub->power_budget = min(mA,(unsigned)500)/2;
-}
 
 #endif /* __LINUX_HUB_H */

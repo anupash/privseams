@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2004 Silicon Graphics, Inc.  All Rights Reserved.
+ * Copyright (c) 2000-2005 Silicon Graphics, Inc.  All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -66,7 +66,6 @@
 #include "xfs_buf_item.h"
 #include "xfs_utils.h"
 #include "xfs_version.h"
-#include "xfs_ioctl32.h"
 
 #include <linux/namei.h>
 #include <linux/init.h>
@@ -76,7 +75,6 @@
 STATIC struct quotactl_ops linvfs_qops;
 STATIC struct super_operations linvfs_sops;
 STATIC kmem_zone_t *linvfs_inode_zone;
-STATIC kmem_shaker_t xfs_inode_shaker;
 
 STATIC struct xfs_mount_args *
 xfs_args_allocate(
@@ -91,6 +89,10 @@ xfs_args_allocate(
 	/* Copy the already-parsed mount(2) flags we're interested in */
 	if (sb->s_flags & MS_NOATIME)
 		args->flags |= XFSMNT_NOATIME;
+	if (sb->s_flags & MS_DIRSYNC)
+		args->flags |= XFSMNT_DIRSYNC;
+	if (sb->s_flags & MS_SYNCHRONOUS)
+		args->flags |= XFSMNT_WSYNC;
 
 	/* Default to 32 bit inodes on Linux all the time */
 	args->flags |= XFSMNT_32BITINODES;
@@ -284,18 +286,6 @@ linvfs_destroy_inode(
 	struct inode		*inode)
 {
 	kmem_cache_free(linvfs_inode_zone, LINVFS_GET_VP(inode));
-}
-
-STATIC int
-xfs_inode_shake(
-	int		priority,
-	unsigned int	gfp_mask)
-{
-	int		pages;
-
-	pages = kmem_zone_shrink(linvfs_inode_zone);
-	pages += kmem_zone_shrink(xfs_inode_zone);
-	return pages;
 }
 
 STATIC void
@@ -493,7 +483,7 @@ xfssyncd(
 		set_current_state(TASK_INTERRUPTIBLE);
 		timeleft = schedule_timeout(timeleft);
 		/* swsusp */
-		try_to_freeze(PF_FREEZE);
+		try_to_freeze();
 		if (vfsp->vfs_flag & VFS_UMOUNT)
 			break;
 
@@ -600,8 +590,10 @@ linvfs_sync_super(
 	int		error;
 	int		flags = SYNC_FSDATA;
 
-	if (wait)
-		flags |= SYNC_WAIT;
+	if (unlikely(sb->s_frozen == SB_FREEZE_WRITE))
+		flags = SYNC_QUIESCE;
+	else
+		flags = SYNC_FSDATA | (wait ? SYNC_WAIT : 0);
 
 	VFS_SYNC(vfsp, flags, NULL, error);
 	sb->s_dirt = 0;
@@ -711,7 +703,8 @@ linvfs_getxquota(
 	struct vfs		*vfsp = LINVFS_GET_VFS(sb);
 	int			error, getmode;
 
-	getmode = (type == GRPQUOTA) ? Q_XGETGQUOTA : Q_XGETQUOTA;
+	getmode = (type == USRQUOTA) ? Q_XGETQUOTA :
+		 ((type == GRPQUOTA) ? Q_XGETGQUOTA : Q_XGETPQUOTA);
 	VFS_QUOTACTL(vfsp, getmode, id, (caddr_t)fdq, error);
 	return -error;
 }
@@ -726,7 +719,8 @@ linvfs_setxquota(
 	struct vfs		*vfsp = LINVFS_GET_VFS(sb);
 	int			error, setmode;
 
-	setmode = (type == GRPQUOTA) ? Q_XSETGQLIM : Q_XSETQLIM;
+	setmode = (type == USRQUOTA) ? Q_XSETQLIM :
+		 ((type == GRPQUOTA) ? Q_XSETGQLIM : Q_XSETPQLIM);
 	VFS_QUOTACTL(vfsp, setmode, id, (caddr_t)fdq, error);
 	return -error;
 }
@@ -885,12 +879,6 @@ init_xfs_fs( void )
 	uuid_init();
 	vfs_initquota();
 
-	xfs_inode_shaker = kmem_shake_register(xfs_inode_shake);
-	if (!xfs_inode_shaker) {
-		error = -ENOMEM;
-		goto undo_shaker;
-	}
-
 	error = register_filesystem(&xfs_fs_type);
 	if (error)
 		goto undo_register;
@@ -898,9 +886,6 @@ init_xfs_fs( void )
 	return 0;
 
 undo_register:
-	kmem_shake_deregister(xfs_inode_shaker);
-
-undo_shaker:
 	pagebuf_terminate();
 
 undo_pagebuf:
@@ -916,7 +901,6 @@ exit_xfs_fs( void )
 	vfs_exitquota();
 	XFS_DM_EXIT(&xfs_fs_type);
 	unregister_filesystem(&xfs_fs_type);
-	kmem_shake_deregister(xfs_inode_shaker);
 	xfs_cleanup();
 	pagebuf_terminate();
 	destroy_inodecache();

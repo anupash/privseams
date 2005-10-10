@@ -964,7 +964,7 @@ static void poll_vortex(struct net_device *dev)
 
 #ifdef CONFIG_PM
 
-static int vortex_suspend (struct pci_dev *pdev, u32 state)
+static int vortex_suspend (struct pci_dev *pdev, pm_message_t state)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 
@@ -1581,7 +1581,8 @@ vortex_up(struct net_device *dev)
 
 	if (VORTEX_PCI(vp)) {
 		pci_set_power_state(VORTEX_PCI(vp), PCI_D0);	/* Go active */
-		pci_restore_state(VORTEX_PCI(vp));
+		if (vp->pm_state_valid)
+			pci_restore_state(VORTEX_PCI(vp));
 		pci_enable_device(VORTEX_PCI(vp));
 	}
 
@@ -1801,7 +1802,7 @@ vortex_open(struct net_device *dev)
 				break;			/* Bad news!  */
 			skb->dev = dev;			/* Mark as being used by this device. */
 			skb_reserve(skb, 2);	/* Align IP on 16 byte boundaries */
-			vp->rx_ring[i].addr = cpu_to_le32(pci_map_single(VORTEX_PCI(vp), skb->tail, PKT_BUF_SZ, PCI_DMA_FROMDEVICE));
+			vp->rx_ring[i].addr = cpu_to_le32(pci_map_single(VORTEX_PCI(vp), skb->data, PKT_BUF_SZ, PCI_DMA_FROMDEVICE));
 		}
 		if (i != RX_RING_SIZE) {
 			int j;
@@ -2201,9 +2202,8 @@ boomerang_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	if (vortex_debug > 6) {
 		printk(KERN_DEBUG "boomerang_start_xmit()\n");
-		if (vortex_debug > 3)
-			printk(KERN_DEBUG "%s: Trying to send a packet, Tx index %d.\n",
-				   dev->name, vp->cur_tx);
+		printk(KERN_DEBUG "%s: Trying to send a packet, Tx index %d.\n",
+			   dev->name, vp->cur_tx);
 	}
 
 	if (vp->cur_tx - vp->dirty_tx >= TX_RING_SIZE) {
@@ -2632,7 +2632,7 @@ boomerang_rx(struct net_device *dev)
 				pci_dma_sync_single_for_cpu(VORTEX_PCI(vp), dma, PKT_BUF_SZ, PCI_DMA_FROMDEVICE);
 				/* 'skb_put()' points to the start of sk_buff data area. */
 				memcpy(skb_put(skb, pkt_len),
-					   vp->rx_skbuff[entry]->tail,
+					   vp->rx_skbuff[entry]->data,
 					   pkt_len);
 				pci_dma_sync_single_for_device(VORTEX_PCI(vp), dma, PKT_BUF_SZ, PCI_DMA_FROMDEVICE);
 				vp->rx_copy++;
@@ -2678,7 +2678,7 @@ boomerang_rx(struct net_device *dev)
 			}
 			skb->dev = dev;			/* Mark as being used by this device. */
 			skb_reserve(skb, 2);	/* Align IP on 16 byte boundaries */
-			vp->rx_ring[entry].addr = cpu_to_le32(pci_map_single(VORTEX_PCI(vp), skb->tail, PKT_BUF_SZ, PCI_DMA_FROMDEVICE));
+			vp->rx_ring[entry].addr = cpu_to_le32(pci_map_single(VORTEX_PCI(vp), skb->data, PKT_BUF_SZ, PCI_DMA_FROMDEVICE));
 			vp->rx_skbuff[entry] = skb;
 		}
 		vp->rx_ring[entry].status = 0;	/* Clear complete bit. */
@@ -2741,6 +2741,7 @@ vortex_down(struct net_device *dev, int final_down)
 		outl(0, ioaddr + DownListPtr);
 
 	if (final_down && VORTEX_PCI(vp)) {
+		vp->pm_state_valid = 1;
 		pci_save_state(VORTEX_PCI(vp));
 		acpi_set_WOL(dev);
 	}
@@ -3243,9 +3244,10 @@ static void acpi_set_WOL(struct net_device *dev)
 		outw(RxEnable, ioaddr + EL3_CMD);
 
 		pci_enable_wake(VORTEX_PCI(vp), 0, 1);
+
+		/* Change the power state to D3; RxEnable doesn't take effect. */
+		pci_set_power_state(VORTEX_PCI(vp), PCI_D3hot);
 	}
-	/* Change the power state to D3; RxEnable doesn't take effect. */
-	pci_set_power_state(VORTEX_PCI(vp), PCI_D3hot);
 }
 
 

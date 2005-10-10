@@ -29,14 +29,14 @@
     nForce2 Ultra 400 MCP	0084
     nForce3 Pro150 MCP		00D4
     nForce3 250Gb MCP		00E4
+    nForce4 MCP			0052
 
-    This driver supports the 2 SMBuses that are included in the MCP2 of the
-    nForce2 chipset.
+    This driver supports the 2 SMBuses that are included in the MCP of the
+    nForce2/3/4 chipsets.
 */
 
 /* Note: we assume there can only be one nForce2, with two SMBus interfaces */
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/kernel.h>
@@ -295,6 +295,7 @@ static struct pci_device_id nforce2_ids[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE2S_SMBUS) },
 	{ PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE3_SMBUS) },
 	{ PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE3S_SMBUS) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, PCI_DEVICE_ID_NVIDIA_NFORCE4_SMBUS) },
 	{ 0 }
 };
 

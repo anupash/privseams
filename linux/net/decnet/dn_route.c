@@ -253,7 +253,6 @@ static void dn_dst_update_pmtu(struct dst_entry *dst, u32 mtu)
  */
 static struct dst_entry *dn_dst_check(struct dst_entry *dst, __u32 cookie)
 {
-	dst_release(dst);
 	return NULL;
 }
 
@@ -818,7 +817,7 @@ static int dn_rt_set_next_hop(struct dn_route *rt, struct dn_fib_res *res)
 	if (rt->u.dst.metrics[RTAX_MTU-1] == 0 || 
             rt->u.dst.metrics[RTAX_MTU-1] > rt->u.dst.dev->mtu)
 		rt->u.dst.metrics[RTAX_MTU-1] = rt->u.dst.dev->mtu;
-	mss = dn_mss_from_pmtu(dev, dst_pmtu(&rt->u.dst));
+	mss = dn_mss_from_pmtu(dev, dst_mtu(&rt->u.dst));
 	if (rt->u.dst.metrics[RTAX_ADVMSS-1] == 0 ||
 	    rt->u.dst.metrics[RTAX_ADVMSS-1] > mss)
 		rt->u.dst.metrics[RTAX_ADVMSS-1] = mss;
@@ -1466,7 +1465,8 @@ int dn_route_input(struct sk_buff *skb)
 	return dn_route_input_slow(skb);
 }
 
-static int dn_rt_fill_info(struct sk_buff *skb, u32 pid, u32 seq, int event, int nowait)
+static int dn_rt_fill_info(struct sk_buff *skb, u32 pid, u32 seq,
+			   int event, int nowait, unsigned int flags)
 {
 	struct dn_route *rt = (struct dn_route *)skb->dst;
 	struct rtmsg *r;
@@ -1474,9 +1474,8 @@ static int dn_rt_fill_info(struct sk_buff *skb, u32 pid, u32 seq, int event, int
 	unsigned char *b = skb->tail;
 	struct rta_cacheinfo ci;
 
-	nlh = NLMSG_PUT(skb, pid, seq, event, sizeof(*r));
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*r), flags);
 	r = NLMSG_DATA(nlh);
-	nlh->nlmsg_flags = (nowait && pid) ? NLM_F_MULTI : 0;
 	r->rtm_family = AF_DECnet;
 	r->rtm_dst_len = 16;
 	r->rtm_src_len = 0;
@@ -1597,7 +1596,7 @@ int dn_cache_getroute(struct sk_buff *in_skb, struct nlmsghdr *nlh, void *arg)
 
 	NETLINK_CB(skb).dst_pid = NETLINK_CB(in_skb).pid;
 
-	err = dn_rt_fill_info(skb, NETLINK_CB(in_skb).pid, nlh->nlmsg_seq, RTM_NEWROUTE, 0);
+	err = dn_rt_fill_info(skb, NETLINK_CB(in_skb).pid, nlh->nlmsg_seq, RTM_NEWROUTE, 0, 0);
 
 	if (err == 0)
 		goto out_free;
@@ -1645,7 +1644,8 @@ int dn_cache_dump(struct sk_buff *skb, struct netlink_callback *cb)
 				continue;
 			skb->dst = dst_clone(&rt->u.dst);
 			if (dn_rt_fill_info(skb, NETLINK_CB(cb->skb).pid,
-					cb->nlh->nlmsg_seq, RTM_NEWROUTE, 1) <= 0) {
+					cb->nlh->nlmsg_seq, RTM_NEWROUTE, 
+					1, NLM_F_MULTI) <= 0) {
 				dst_release(xchg(&skb->dst, NULL));
 				rcu_read_unlock_bh();
 				goto done;

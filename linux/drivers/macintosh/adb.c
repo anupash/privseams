@@ -77,7 +77,7 @@ static struct adb_driver *adb_driver_list[] = {
 	NULL
 };
 
-static struct class_simple *adb_dev_class;
+static struct class *adb_dev_class;
 
 struct adb_driver *adb_controller;
 struct notifier_block *adb_client_list = NULL;
@@ -90,7 +90,7 @@ static int sleepy_trackpad;
 static int autopoll_devs;
 int __adb_probe_sync;
 
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 static int adb_notify_sleep(struct pmu_sleep_notifier *self, int when);
 static struct pmu_sleep_notifier adb_sleep_notifier = {
 	adb_notify_sleep,
@@ -320,9 +320,9 @@ int __init adb_init(void)
 		printk(KERN_WARNING "Warning: no ADB interface detected\n");
 		adb_controller = NULL;
 	} else {
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 		pmu_register_sleep_notifier(&adb_sleep_notifier);
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PM */
 #ifdef CONFIG_PPC
 		if (machine_is_compatible("AAPL,PowerBook1998") ||
 			machine_is_compatible("PowerBook1,1"))
@@ -337,7 +337,7 @@ int __init adb_init(void)
 
 __initcall(adb_init);
 
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 /*
  * notify clients before sleep and reset bus afterwards
  */
@@ -378,7 +378,7 @@ adb_notify_sleep(struct pmu_sleep_notifier *self, int when)
 	}
 	return PBOOK_SLEEP_OK;
 }
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PM */
 
 static int
 do_adb_reset_bus(void)
@@ -755,7 +755,7 @@ static int adb_release(struct inode *inode, struct file *file)
 static ssize_t adb_read(struct file *file, char __user *buf,
 			size_t count, loff_t *ppos)
 {
-	int ret;
+	int ret = 0;
 	struct adbdev_state *state = file->private_data;
 	struct adb_request *req;
 	wait_queue_t wait = __WAITQUEUE_INITIALIZER(wait,current);
@@ -765,9 +765,8 @@ static ssize_t adb_read(struct file *file, char __user *buf,
 		return -EINVAL;
 	if (count > sizeof(req->reply))
 		count = sizeof(req->reply);
-	ret = verify_area(VERIFY_WRITE, buf, count);
-	if (ret)
-		return ret;
+	if (!access_ok(VERIFY_WRITE, buf, count))
+		return -EFAULT;
 
 	req = NULL;
 	spin_lock_irqsave(&state->lock, flags);
@@ -824,9 +823,8 @@ static ssize_t adb_write(struct file *file, const char __user *buf,
 		return -EINVAL;
 	if (adb_controller == NULL)
 		return -ENXIO;
-	ret = verify_area(VERIFY_READ, buf, count);
-	if (ret)
-		return ret;
+	if (!access_ok(VERIFY_READ, buf, count))
+		return -EFAULT;
 
 	req = (struct adb_request *) kmalloc(sizeof(struct adb_request),
 					     GFP_KERNEL);
@@ -904,9 +902,8 @@ adbdev_init(void)
 
 	devfs_mk_cdev(MKDEV(ADB_MAJOR, 0), S_IFCHR | S_IRUSR | S_IWUSR, "adb");
 
-	adb_dev_class = class_simple_create(THIS_MODULE, "adb");
-	if (IS_ERR(adb_dev_class)) {
+	adb_dev_class = class_create(THIS_MODULE, "adb");
+	if (IS_ERR(adb_dev_class))
 		return;
-	}
-	class_simple_device_add(adb_dev_class, MKDEV(ADB_MAJOR, 0), NULL, "adb");
+	class_device_create(adb_dev_class, MKDEV(ADB_MAJOR, 0), NULL, "adb");
 }

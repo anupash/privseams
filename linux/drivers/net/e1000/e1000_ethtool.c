@@ -1,7 +1,7 @@
 /*******************************************************************************
 
   
-  Copyright(c) 1999 - 2004 Intel Corporation. All rights reserved.
+  Copyright(c) 1999 - 2005 Intel Corporation. All rights reserved.
   
   This program is free software; you can redistribute it and/or modify it 
   under the terms of the GNU General Public License as published by the Free 
@@ -69,6 +69,7 @@ static const struct e1000_stats e1000_gstrings_stats[] = {
 	{ "rx_crc_errors", E1000_STAT(net_stats.rx_crc_errors) },
 	{ "rx_frame_errors", E1000_STAT(net_stats.rx_frame_errors) },
 	{ "rx_fifo_errors", E1000_STAT(net_stats.rx_fifo_errors) },
+	{ "rx_no_buffer_count", E1000_STAT(stats.rnbc) },
 	{ "rx_missed_errors", E1000_STAT(net_stats.rx_missed_errors) },
 	{ "tx_aborted_errors", E1000_STAT(net_stats.tx_aborted_errors) },
 	{ "tx_carrier_errors", E1000_STAT(net_stats.tx_carrier_errors) },
@@ -104,7 +105,7 @@ static const char e1000_gstrings_test[][ETH_GSTRING_LEN] = {
 static int
 e1000_get_settings(struct net_device *netdev, struct ethtool_cmd *ecmd)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 
 	if(hw->media_type == e1000_media_type_copper) {
@@ -140,9 +141,9 @@ e1000_get_settings(struct net_device *netdev, struct ethtool_cmd *ecmd)
 				     SUPPORTED_FIBRE |
 				     SUPPORTED_Autoneg);
 
-		ecmd->advertising = (SUPPORTED_1000baseT_Full |
-				     SUPPORTED_FIBRE |
-				     SUPPORTED_Autoneg);
+		ecmd->advertising = (ADVERTISED_1000baseT_Full |
+				     ADVERTISED_FIBRE |
+				     ADVERTISED_Autoneg);
 
 		ecmd->port = PORT_FIBRE;
 
@@ -178,13 +179,24 @@ e1000_get_settings(struct net_device *netdev, struct ethtool_cmd *ecmd)
 static int
 e1000_set_settings(struct net_device *netdev, struct ethtool_cmd *ecmd)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 
 	if(ecmd->autoneg == AUTONEG_ENABLE) {
 		hw->autoneg = 1;
-		hw->autoneg_advertised = 0x002F;
-		ecmd->advertising = 0x002F;
+		if(hw->media_type == e1000_media_type_fiber)
+			hw->autoneg_advertised = ADVERTISED_1000baseT_Full |
+				     ADVERTISED_FIBRE |
+				     ADVERTISED_Autoneg;
+		else 
+			hw->autoneg_advertised = ADVERTISED_10baseT_Half |
+						  ADVERTISED_10baseT_Full |
+						  ADVERTISED_100baseT_Half |
+						  ADVERTISED_100baseT_Full |
+						  ADVERTISED_1000baseT_Full|
+						  ADVERTISED_Autoneg |
+						  ADVERTISED_TP;
+		ecmd->advertising = hw->autoneg_advertised;
 	} else
 		if(e1000_set_spd_dplx(adapter, ecmd->speed + ecmd->duplex))
 			return -EINVAL;
@@ -205,7 +217,7 @@ static void
 e1000_get_pauseparam(struct net_device *netdev,
                      struct ethtool_pauseparam *pause)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 
 	pause->autoneg = 
@@ -225,7 +237,7 @@ static int
 e1000_set_pauseparam(struct net_device *netdev,
                      struct ethtool_pauseparam *pause)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 	
 	adapter->fc_autoneg = pause->autoneg;
@@ -258,14 +270,14 @@ e1000_set_pauseparam(struct net_device *netdev,
 static uint32_t
 e1000_get_rx_csum(struct net_device *netdev)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	return adapter->rx_csum;
 }
 
 static int
 e1000_set_rx_csum(struct net_device *netdev, uint32_t data)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	adapter->rx_csum = data;
 
 	if(netif_running(netdev)) {
@@ -285,7 +297,7 @@ e1000_get_tx_csum(struct net_device *netdev)
 static int
 e1000_set_tx_csum(struct net_device *netdev, uint32_t data)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 
 	if(adapter->hw.mac_type < e1000_82543) {
 		if (!data)
@@ -305,8 +317,8 @@ e1000_set_tx_csum(struct net_device *netdev, uint32_t data)
 static int
 e1000_set_tso(struct net_device *netdev, uint32_t data)
 {
-	struct e1000_adapter *adapter = netdev->priv;
-	if ((adapter->hw.mac_type < e1000_82544) ||
+	struct e1000_adapter *adapter = netdev_priv(netdev);
+	if((adapter->hw.mac_type < e1000_82544) ||
 	    (adapter->hw.mac_type == e1000_82547)) 
 		return data ? -EINVAL : 0;
 
@@ -321,14 +333,14 @@ e1000_set_tso(struct net_device *netdev, uint32_t data)
 static uint32_t
 e1000_get_msglevel(struct net_device *netdev)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	return adapter->msg_enable;
 }
 
 static void
 e1000_set_msglevel(struct net_device *netdev, uint32_t data)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	adapter->msg_enable = data;
 }
 
@@ -343,7 +355,7 @@ static void
 e1000_get_regs(struct net_device *netdev,
 	       struct ethtool_regs *regs, void *p)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 	uint32_t *regs_buff = p;
 	uint16_t phy_data;
@@ -431,7 +443,7 @@ e1000_get_regs(struct net_device *netdev,
 static int
 e1000_get_eeprom_len(struct net_device *netdev)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	return adapter->hw.eeprom.word_size * 2;
 }
 
@@ -439,7 +451,7 @@ static int
 e1000_get_eeprom(struct net_device *netdev,
                       struct ethtool_eeprom *eeprom, uint8_t *bytes)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 	uint16_t *eeprom_buff;
 	int first_word, last_word;
@@ -485,7 +497,7 @@ static int
 e1000_set_eeprom(struct net_device *netdev,
                       struct ethtool_eeprom *eeprom, uint8_t *bytes)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 	uint16_t *eeprom_buff;
 	void *ptr;
@@ -546,7 +558,7 @@ static void
 e1000_get_drvinfo(struct net_device *netdev,
                        struct ethtool_drvinfo *drvinfo)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 
 	strncpy(drvinfo->driver,  e1000_driver_name, 32);
 	strncpy(drvinfo->version, e1000_driver_version, 32);
@@ -562,7 +574,7 @@ static void
 e1000_get_ringparam(struct net_device *netdev,
                     struct ethtool_ringparam *ring)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	e1000_mac_type mac_type = adapter->hw.mac_type;
 	struct e1000_desc_ring *txdr = &adapter->tx_ring;
 	struct e1000_desc_ring *rxdr = &adapter->rx_ring;
@@ -583,7 +595,7 @@ static int
 e1000_set_ringparam(struct net_device *netdev,
                     struct ethtool_ringparam *ring)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	e1000_mac_type mac_type = adapter->hw.mac_type;
 	struct e1000_desc_ring *txdr = &adapter->tx_ring;
 	struct e1000_desc_ring *rxdr = &adapter->rx_ring;
@@ -593,7 +605,7 @@ e1000_set_ringparam(struct net_device *netdev,
 	tx_old = adapter->tx_ring;
 	rx_old = adapter->rx_ring;
 
-	if ((ring->rx_mini_pending) || (ring->rx_jumbo_pending)) 
+	if((ring->rx_mini_pending) || (ring->rx_jumbo_pending))
 		return -EINVAL;
 
 	if(netif_running(adapter->netdev))
@@ -650,6 +662,9 @@ err_setup_rx:
 		E1000_WRITE_REG(&adapter->hw, R, (test[pat] & W));             \
 		value = E1000_READ_REG(&adapter->hw, R);                       \
 		if(value != (test[pat] & W & M)) {                             \
+			DPRINTK(DRV, ERR, "pattern test reg %04X failed: got " \
+			        "0x%08X expected 0x%08X\n",                    \
+			        E1000_##R, value, (test[pat] & W & M));        \
 			*data = (adapter->hw.mac_type < e1000_82543) ?         \
 				E1000_82542_##R : E1000_##R;                   \
 			return 1;                                              \
@@ -662,7 +677,9 @@ err_setup_rx:
 	uint32_t value;                                                        \
 	E1000_WRITE_REG(&adapter->hw, R, W & M);                               \
 	value = E1000_READ_REG(&adapter->hw, R);                               \
-	if ((W & M) != (value & M)) {                                          \
+	if((W & M) != (value & M)) {                                          \
+		DPRINTK(DRV, ERR, "set/check reg %04X test failed: got 0x%08X "\
+		        "expected 0x%08X\n", E1000_##R, (value & M), (W & M)); \
 		*data = (adapter->hw.mac_type < e1000_82543) ?                 \
 			E1000_82542_##R : E1000_##R;                           \
 		return 1;                                                      \
@@ -672,18 +689,33 @@ err_setup_rx:
 static int
 e1000_reg_test(struct e1000_adapter *adapter, uint64_t *data)
 {
-	uint32_t value;
-	uint32_t i;
+	uint32_t value, before, after;
+	uint32_t i, toggle;
 
 	/* The status register is Read Only, so a write should fail.
 	 * Some bits that get toggled are ignored.
 	 */
-	value = (E1000_READ_REG(&adapter->hw, STATUS) & (0xFFFFF833));
-	E1000_WRITE_REG(&adapter->hw, STATUS, (0xFFFFFFFF));
-	if(value != (E1000_READ_REG(&adapter->hw, STATUS) & (0xFFFFF833))) {
+        switch (adapter->hw.mac_type) {
+	case e1000_82573:
+		toggle = 0x7FFFF033;
+		break;
+	default:
+		toggle = 0xFFFFF833;
+		break;
+	}
+
+	before = E1000_READ_REG(&adapter->hw, STATUS);
+	value = (E1000_READ_REG(&adapter->hw, STATUS) & toggle);
+	E1000_WRITE_REG(&adapter->hw, STATUS, toggle);
+	after = E1000_READ_REG(&adapter->hw, STATUS) & toggle;
+	if(value != after) {
+		DPRINTK(DRV, ERR, "failed STATUS register test got: "
+		        "0x%08X expected: 0x%08X\n", after, value);
 		*data = 1;
 		return 1;
 	}
+	/* restore previous status */
+	E1000_WRITE_REG(&adapter->hw, STATUS, before);
 
 	REG_PATTERN_TEST(FCAL, 0xFFFFFFFF, 0xFFFFFFFF);
 	REG_PATTERN_TEST(FCAH, 0x0000FFFF, 0xFFFFFFFF);
@@ -765,7 +797,7 @@ e1000_test_intr(int irq,
 		struct pt_regs *regs)
 {
 	struct net_device *netdev = (struct net_device *) data;
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 
 	adapter->test_icr |= E1000_READ_REG(&adapter->hw, ICR);
 
@@ -784,8 +816,8 @@ e1000_intr_test(struct e1000_adapter *adapter, uint64_t *data)
 	/* Hook up test interrupt handler just for this test */
  	if(!request_irq(irq, &e1000_test_intr, 0, netdev->name, netdev)) {
  		shared_int = FALSE;
- 	} else if(request_irq(irq, &e1000_test_intr, SA_SHIRQ, 
-			netdev->name, netdev)){
+ 	} else if(request_irq(irq, &e1000_test_intr, SA_SHIRQ,
+			      netdev->name, netdev)){
 		*data = 1;
 		return -1;
 	}
@@ -842,10 +874,8 @@ e1000_intr_test(struct e1000_adapter *adapter, uint64_t *data)
 			 * test failed.
 			 */
 			adapter->test_icr = 0;
-			E1000_WRITE_REG(&adapter->hw, IMC, 
-					(~mask & 0x00007FFF));
-			E1000_WRITE_REG(&adapter->hw, ICS, 
-					(~mask & 0x00007FFF));
+			E1000_WRITE_REG(&adapter->hw, IMC, ~mask & 0x00007FFF);
+			E1000_WRITE_REG(&adapter->hw, ICS, ~mask & 0x00007FFF);
 			msec_delay(10);
 
 			if(adapter->test_icr) {
@@ -919,7 +949,8 @@ e1000_setup_desc_rings(struct e1000_adapter *adapter)
 
 	/* Setup Tx descriptor ring and Tx buffers */
 
-	txdr->count = 80;
+	if(!txdr->count)
+		txdr->count = E1000_DEFAULT_TXD;   
 
 	size = txdr->count * sizeof(struct e1000_buffer);
 	if(!(txdr->buffer_info = kmalloc(size, GFP_KERNEL))) {
@@ -974,7 +1005,8 @@ e1000_setup_desc_rings(struct e1000_adapter *adapter)
 
 	/* Setup Rx descriptor ring and Rx buffers */
 
-	rxdr->count = 80;
+	if(!rxdr->count)
+		rxdr->count = E1000_DEFAULT_RXD;   
 
 	size = rxdr->count * sizeof(struct e1000_buffer);
 	if(!(rxdr->buffer_info = kmalloc(size, GFP_KERNEL))) {
@@ -1008,7 +1040,7 @@ e1000_setup_desc_rings(struct e1000_adapter *adapter)
 		struct e1000_rx_desc *rx_desc = E1000_RX_DESC(*rxdr, i);
 		struct sk_buff *skb;
 
-		if(!(skb = alloc_skb(E1000_RXBUFFER_2048 + NET_IP_ALIGN, 
+		if(!(skb = alloc_skb(E1000_RXBUFFER_2048 + NET_IP_ALIGN,
 				GFP_KERNEL))) {
 			ret_val = 6;
 			goto err_nomem;
@@ -1213,6 +1245,7 @@ e1000_set_phy_loopback(struct e1000_adapter *adapter)
 	case e1000_82541_rev_2:
 	case e1000_82547:
 	case e1000_82547_rev_2:
+	case e1000_82573:
 		return e1000_integrated_phy_loopback(adapter);
 		break;
 
@@ -1310,31 +1343,63 @@ e1000_run_loopback_test(struct e1000_adapter *adapter)
 	struct e1000_desc_ring *txdr = &adapter->test_tx_ring;
 	struct e1000_desc_ring *rxdr = &adapter->test_rx_ring;
 	struct pci_dev *pdev = adapter->pdev;
-	int i;
+	int i, j, k, l, lc, good_cnt, ret_val=0;
+	unsigned long time;
 
 	E1000_WRITE_REG(&adapter->hw, RDT, rxdr->count - 1);
 
-	for(i = 0; i < 64; i++) {
-		e1000_create_lbtest_frame(txdr->buffer_info[i].skb, 1024);
-		pci_dma_sync_single_for_device(pdev, txdr->buffer_info[i].dma,
-					    txdr->buffer_info[i].length,
-					    PCI_DMA_TODEVICE);
-	}
-	E1000_WRITE_REG(&adapter->hw, TDT, i);
+	/* Calculate the loop count based on the largest descriptor ring 
+	 * The idea is to wrap the largest ring a number of times using 64
+	 * send/receive pairs during each loop
+	 */
 
-	msec_delay(200);
+	if(rxdr->count <= txdr->count)
+		lc = ((txdr->count / 64) * 2) + 1;
+	else
+		lc = ((rxdr->count / 64) * 2) + 1;
 
-	i = 0;
-	do {
-		pci_dma_sync_single_for_cpu(pdev, rxdr->buffer_info[i].dma,
-					    rxdr->buffer_info[i].length,
-					    PCI_DMA_FROMDEVICE);
-
-		if (!e1000_check_lbtest_frame(rxdr->buffer_info[i++].skb, 1024))
-			return 0;
-	} while (i < 64);
-
-	return 13;
+	k = l = 0;
+	for(j = 0; j <= lc; j++) { /* loop count loop */
+		for(i = 0; i < 64; i++) { /* send the packets */
+			e1000_create_lbtest_frame(txdr->buffer_info[i].skb, 
+					1024);
+			pci_dma_sync_single_for_device(pdev, 
+					txdr->buffer_info[k].dma,
+				    	txdr->buffer_info[k].length,
+				    	PCI_DMA_TODEVICE);
+			if(unlikely(++k == txdr->count)) k = 0;
+		}
+		E1000_WRITE_REG(&adapter->hw, TDT, k);
+		msec_delay(200);
+		time = jiffies; /* set the start time for the receive */
+		good_cnt = 0;
+		do { /* receive the sent packets */
+			pci_dma_sync_single_for_cpu(pdev, 
+					rxdr->buffer_info[l].dma,
+				    	rxdr->buffer_info[l].length,
+				    	PCI_DMA_FROMDEVICE);
+	
+			ret_val = e1000_check_lbtest_frame(
+					rxdr->buffer_info[l].skb,
+				   	1024);
+			if(!ret_val)
+				good_cnt++;
+			if(unlikely(++l == rxdr->count)) l = 0;
+			/* time + 20 msecs (200 msecs on 2.4) is more than 
+			 * enough time to complete the receives, if it's 
+			 * exceeded, break and error off
+			 */
+		} while (good_cnt < 64 && jiffies < (time + 20));
+		if(good_cnt != 64) {
+			ret_val = 13; /* ret_val is the same as mis-compare */
+			break; 
+		}
+		if(jiffies >= (time + 2)) {
+			ret_val = 14; /* error code for time out error */
+			break;
+		}
+	} /* end loop count loop */
+	return ret_val;
 }
 
 static int
@@ -1353,13 +1418,12 @@ static int
 e1000_link_test(struct e1000_adapter *adapter, uint64_t *data)
 {
 	*data = 0;
-
 	if (adapter->hw.media_type == e1000_media_type_internal_serdes) {
 		int i = 0;
 		adapter->hw.serdes_link_down = TRUE;
 
-		/* on some blade server designs link establishment */
-		/* could take as long as 2-3 minutes.              */
+		/* On some blade server designs, link establishment
+		 * could take as long as 2-3 minutes */
 		do {
 			e1000_check_for_link(&adapter->hw);
 			if (adapter->hw.serdes_link_down == FALSE)
@@ -1367,9 +1431,11 @@ e1000_link_test(struct e1000_adapter *adapter, uint64_t *data)
 			msec_delay(20);
 		} while (i++ < 3750);
 
-		*data = 1; 
+		*data = 1;
 	} else {
 		e1000_check_for_link(&adapter->hw);
+		if(adapter->hw.autoneg)  /* if auto_neg is set wait for it */
+			msec_delay(4000);
 
 		if(!(E1000_READ_REG(&adapter->hw, STATUS) & E1000_STATUS_LU)) {
 			*data = 1;
@@ -1388,7 +1454,7 @@ static void
 e1000_diag_test(struct net_device *netdev,
 		   struct ethtool_test *eth_test, uint64_t *data)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	boolean_t if_running = netif_running(netdev);
 
 	if(eth_test->flags == ETH_TEST_FL_OFFLINE) {
@@ -1448,7 +1514,7 @@ e1000_diag_test(struct net_device *netdev,
 static void
 e1000_get_wol(struct net_device *netdev, struct ethtool_wolinfo *wol)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 
 	switch(adapter->hw.device_id) {
@@ -1493,7 +1559,7 @@ e1000_get_wol(struct net_device *netdev, struct ethtool_wolinfo *wol)
 static int
 e1000_set_wol(struct net_device *netdev, struct ethtool_wolinfo *wol)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 
 	switch(adapter->hw.device_id) {
@@ -1554,22 +1620,31 @@ e1000_led_blink_callback(unsigned long data)
 static int
 e1000_phys_id(struct net_device *netdev, uint32_t data)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 
 	if(!data || data > (uint32_t)(MAX_SCHEDULE_TIMEOUT / HZ))
 		data = (uint32_t)(MAX_SCHEDULE_TIMEOUT / HZ);
 
-	if(!adapter->blink_timer.function) {
-		init_timer(&adapter->blink_timer);
-		adapter->blink_timer.function = e1000_led_blink_callback;
-		adapter->blink_timer.data = (unsigned long) adapter;
+	if(adapter->hw.mac_type < e1000_82573) {
+		if(!adapter->blink_timer.function) {
+			init_timer(&adapter->blink_timer);
+			adapter->blink_timer.function = e1000_led_blink_callback;
+			adapter->blink_timer.data = (unsigned long) adapter;
+		}
+		e1000_setup_led(&adapter->hw);
+		mod_timer(&adapter->blink_timer, jiffies);
+		msleep_interruptible(data * 1000);
+		del_timer_sync(&adapter->blink_timer);
+	}
+	else {
+		E1000_WRITE_REG(&adapter->hw, LEDCTL, (E1000_LEDCTL_LED2_BLINK_RATE |
+			E1000_LEDCTL_LED1_BLINK | E1000_LEDCTL_LED2_BLINK | 
+			(E1000_LEDCTL_MODE_LED_ON << E1000_LEDCTL_LED2_MODE_SHIFT) |
+			(E1000_LEDCTL_MODE_LINK_ACTIVITY << E1000_LEDCTL_LED1_MODE_SHIFT) |
+			(E1000_LEDCTL_MODE_LED_OFF << E1000_LEDCTL_LED0_MODE_SHIFT)));
+		msleep_interruptible(data * 1000);
 	}
 
-	e1000_setup_led(&adapter->hw);
-	mod_timer(&adapter->blink_timer, jiffies);
-
-	msleep_interruptible(data * 1000);
-	del_timer_sync(&adapter->blink_timer);
 	e1000_led_off(&adapter->hw);
 	clear_bit(E1000_LED_ON, &adapter->led_status);
 	e1000_cleanup_led(&adapter->hw);
@@ -1580,7 +1655,7 @@ e1000_phys_id(struct net_device *netdev, uint32_t data)
 static int
 e1000_nway_reset(struct net_device *netdev)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	if(netif_running(netdev)) {
 		e1000_down(adapter);
 		e1000_up(adapter);
@@ -1598,7 +1673,7 @@ static void
 e1000_get_ethtool_stats(struct net_device *netdev, 
 		struct ethtool_stats *stats, uint64_t *data)
 {
-	struct e1000_adapter *adapter = netdev->priv;
+	struct e1000_adapter *adapter = netdev_priv(netdev);
 	int i;
 
 	e1000_update_stats(adapter);

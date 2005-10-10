@@ -336,7 +336,6 @@ int cpqfcTS_detect(Scsi_Host_Template *ScsiHostTemplate)
       DEBUG_PCI(printk("  PciDev->baseaddress[3]= %lx\n", 
 				PciDev->resource[3].start));
 
-      scsi_set_device(HostAdapter, &PciDev->dev);
       HostAdapter->irq = PciDev->irq;  // copy for Scsi layers
       
       // HP Tachlite uses two (255-byte) ranges of Port I/O (lower & upper),
@@ -642,12 +641,12 @@ int cpqfcTS_ioctl( struct scsi_device *ScsiDev, int Cmnd, void *arg)
 				return( -EFAULT);
 			}
 		}
-		ScsiPassThruReq->sr_data_direction = SCSI_DATA_WRITE; 
+		ScsiPassThruReq->sr_data_direction = DMA_TO_DEVICE; 
 	} else if (vendor_cmd->rw_flag == VENDOR_READ_OPCODE) {
-		ScsiPassThruReq->sr_data_direction = SCSI_DATA_READ; 
+		ScsiPassThruReq->sr_data_direction = DMA_FROM_DEVICE;
 	} else
 		// maybe this means a bug in the user app
-		ScsiPassThruReq->sr_data_direction = SCSI_DATA_NONE;
+		ScsiPassThruReq->sr_data_direction = DMA_BIDIRECTIONAL;
 	    
 	ScsiPassThruReq->sr_cmd_len = 0; // set correctly by scsi_do_req()
 	ScsiPassThruReq->sr_sense_buffer[0] = 0;
@@ -752,7 +751,7 @@ int cpqfcTS_ioctl( struct scsi_device *ScsiDev, int Cmnd, void *arg)
 		result = -ENXIO;
 		break;
 	}
-	result = verify_area(VERIFY_WRITE, arg, sizeof(Scsi_FCTargAddress));
+	result = access_ok(VERIFY_WRITE, arg, sizeof(Scsi_FCTargAddress)) ? 0 : -EFAULT;
 	if (result) break;
  
       put_user(pLoggedInPort->port_id,

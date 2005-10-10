@@ -50,7 +50,7 @@ static const char fc_topologies[5][25] = {
  * Generates attributes for an adapter.
  */
 #define ZFCP_DEFINE_ADAPTER_ATTR(_name, _format, _value)                      \
-static ssize_t zfcp_sysfs_adapter_##_name##_show(struct device *dev,          \
+static ssize_t zfcp_sysfs_adapter_##_name##_show(struct device *dev, struct device_attribute *attr,          \
 						 char *buf)                   \
 {                                                                             \
 	struct zfcp_adapter *adapter;                                         \
@@ -65,6 +65,9 @@ ZFCP_DEFINE_ADAPTER_ATTR(status, "0x%08x\n", atomic_read(&adapter->status));
 ZFCP_DEFINE_ADAPTER_ATTR(wwnn, "0x%016llx\n", adapter->wwnn);
 ZFCP_DEFINE_ADAPTER_ATTR(wwpn, "0x%016llx\n", adapter->wwpn);
 ZFCP_DEFINE_ADAPTER_ATTR(s_id, "0x%06x\n", adapter->s_id);
+ZFCP_DEFINE_ADAPTER_ATTR(peer_wwnn, "0x%016llx\n", adapter->peer_wwnn);
+ZFCP_DEFINE_ADAPTER_ATTR(peer_wwpn, "0x%016llx\n", adapter->peer_wwpn);
+ZFCP_DEFINE_ADAPTER_ATTR(peer_d_id, "0x%06x\n", adapter->peer_d_id);
 ZFCP_DEFINE_ADAPTER_ATTR(card_version, "0x%04x\n", adapter->hydra_version);
 ZFCP_DEFINE_ADAPTER_ATTR(lic_version, "0x%08x\n", adapter->fsf_lic_version);
 ZFCP_DEFINE_ADAPTER_ATTR(fc_link_speed, "%d Gb/s\n", adapter->fc_link_speed);
@@ -87,7 +90,7 @@ ZFCP_DEFINE_ADAPTER_ATTR(in_recovery, "%d\n", atomic_test_mask
  * Store function of the "port_add" attribute of an adapter.
  */
 static ssize_t
-zfcp_sysfs_port_add_store(struct device *dev, const char *buf, size_t count)
+zfcp_sysfs_port_add_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	wwn_t wwpn;
 	char *endp;
@@ -132,7 +135,7 @@ static DEVICE_ATTR(port_add, S_IWUSR, NULL, zfcp_sysfs_port_add_store);
  * Store function of the "port_remove" attribute of an adapter.
  */
 static ssize_t
-zfcp_sysfs_port_remove_store(struct device *dev, const char *buf, size_t count)
+zfcp_sysfs_port_remove_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct zfcp_adapter *adapter;
 	struct zfcp_port *port;
@@ -193,7 +196,7 @@ static DEVICE_ATTR(port_remove, S_IWUSR, NULL, zfcp_sysfs_port_remove_store);
  * started for the belonging adapter.
  */
 static ssize_t
-zfcp_sysfs_adapter_failed_store(struct device *dev,
+zfcp_sysfs_adapter_failed_store(struct device *dev, struct device_attribute *attr,
 				const char *buf, size_t count)
 {
 	struct zfcp_adapter *adapter;
@@ -233,7 +236,7 @@ zfcp_sysfs_adapter_failed_store(struct device *dev,
  * "0" if adapter is working, otherwise "1".
  */
 static ssize_t
-zfcp_sysfs_adapter_failed_show(struct device *dev, char *buf)
+zfcp_sysfs_adapter_failed_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct zfcp_adapter *adapter;
 
@@ -255,6 +258,9 @@ static struct attribute *zfcp_adapter_attrs[] = {
 	&dev_attr_wwnn.attr,
 	&dev_attr_wwpn.attr,
 	&dev_attr_s_id.attr,
+	&dev_attr_peer_wwnn.attr,
+	&dev_attr_peer_wwpn.attr,
+	&dev_attr_peer_d_id.attr,
 	&dev_attr_card_version.attr,
 	&dev_attr_lic_version.attr,
 	&dev_attr_fc_link_speed.attr,

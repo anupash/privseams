@@ -25,7 +25,7 @@
  *  commsup.c
  *
  * Abstract: Contain all routines that are required for FSA host/adapter
- *    commuication.
+ *    communication.
  *
  */
 
@@ -38,6 +38,7 @@
 #include <linux/slab.h>
 #include <linux/completion.h>
 #include <linux/blkdev.h>
+#include <scsi/scsi_host.h>
 #include <asm/semaphore.h>
 
 #include "aacraid.h"
@@ -52,7 +53,13 @@
  
 static int fib_map_alloc(struct aac_dev *dev)
 {
-	if((dev->hw_fib_va = pci_alloc_consistent(dev->pdev, sizeof(struct hw_fib) * AAC_NUM_FIB, &dev->hw_fib_pa))==NULL)
+	dprintk((KERN_INFO
+	  "allocate hardware fibs pci_alloc_consistent(%p, %d * (%d + %d), %p)\n",
+	  dev->pdev, dev->max_fib_size, dev->scsi_host_ptr->can_queue,
+	  AAC_NUM_MGT_FIB, &dev->hw_fib_pa));
+	if((dev->hw_fib_va = pci_alloc_consistent(dev->pdev, dev->max_fib_size
+	  * (dev->scsi_host_ptr->can_queue + AAC_NUM_MGT_FIB),
+	  &dev->hw_fib_pa))==NULL)
 		return -ENOMEM;
 	return 0;
 }
@@ -67,7 +74,7 @@ static int fib_map_alloc(struct aac_dev *dev)
 
 void fib_map_free(struct aac_dev *dev)
 {
-	pci_free_consistent(dev->pdev, sizeof(struct hw_fib) * AAC_NUM_FIB, dev->hw_fib_va, dev->hw_fib_pa);
+	pci_free_consistent(dev->pdev, dev->max_fib_size * (dev->scsi_host_ptr->can_queue + AAC_NUM_MGT_FIB), dev->hw_fib_va, dev->hw_fib_pa);
 }
 
 /**
@@ -84,17 +91,22 @@ int fib_setup(struct aac_dev * dev)
 	struct hw_fib *hw_fib_va;
 	dma_addr_t hw_fib_pa;
 	int i;
-	
-	if(fib_map_alloc(dev)<0)
+
+	while (((i = fib_map_alloc(dev)) == -ENOMEM)
+	 && (dev->scsi_host_ptr->can_queue > (64 - AAC_NUM_MGT_FIB))) {
+		dev->init->MaxIoCommands = cpu_to_le32((dev->scsi_host_ptr->can_queue + AAC_NUM_MGT_FIB) >> 1);
+		dev->scsi_host_ptr->can_queue = le32_to_cpu(dev->init->MaxIoCommands) - AAC_NUM_MGT_FIB;
+	}
+	if (i<0)
 		return -ENOMEM;
 		
 	hw_fib_va = dev->hw_fib_va;
 	hw_fib_pa = dev->hw_fib_pa;
-	memset(hw_fib_va, 0, sizeof(struct hw_fib) * AAC_NUM_FIB);
+	memset(hw_fib_va, 0, dev->max_fib_size * (dev->scsi_host_ptr->can_queue + AAC_NUM_MGT_FIB));
 	/*
 	 *	Initialise the fibs
 	 */
-	for (i = 0, fibptr = &dev->fibs[i]; i < AAC_NUM_FIB; i++, fibptr++) 
+	for (i = 0, fibptr = &dev->fibs[i]; i < (dev->scsi_host_ptr->can_queue + AAC_NUM_MGT_FIB); i++, fibptr++) 
 	{
 		fibptr->dev = dev;
 		fibptr->hw_fib = hw_fib_va;
@@ -103,15 +115,15 @@ int fib_setup(struct aac_dev * dev)
 		init_MUTEX_LOCKED(&fibptr->event_wait);
 		spin_lock_init(&fibptr->event_lock);
 		hw_fib_va->header.XferState = cpu_to_le32(0xffffffff);
-		hw_fib_va->header.SenderSize = cpu_to_le16(sizeof(struct hw_fib));
+		hw_fib_va->header.SenderSize = cpu_to_le16(dev->max_fib_size);
 		fibptr->hw_fib_pa = hw_fib_pa;
-		hw_fib_va = (struct hw_fib *)((unsigned char *)hw_fib_va + sizeof(struct hw_fib));
-		hw_fib_pa = hw_fib_pa + sizeof(struct hw_fib); 
+		hw_fib_va = (struct hw_fib *)((unsigned char *)hw_fib_va + dev->max_fib_size);
+		hw_fib_pa = hw_fib_pa + dev->max_fib_size;
 	}
 	/*
 	 *	Add the fib chain to the free list
 	 */
-	dev->fibs[AAC_NUM_FIB-1].next = NULL;
+	dev->fibs[dev->scsi_host_ptr->can_queue + AAC_NUM_MGT_FIB - 1].next = NULL;
 	/*
 	 *	Enable this to debug out of queue space
 	 */
@@ -124,7 +136,7 @@ int fib_setup(struct aac_dev * dev)
  *	@dev: Adapter to allocate the fib for
  *
  *	Allocate a fib from the adapter fib pool. If the pool is empty we
- *	wait for fibs to become free.
+ *	return NULL.
  */
  
 struct fib * fib_alloc(struct aac_dev *dev)
@@ -133,10 +145,10 @@ struct fib * fib_alloc(struct aac_dev *dev)
 	unsigned long flags;
 	spin_lock_irqsave(&dev->fib_lock, flags);
 	fibptr = dev->free_fib;	
-	/* Cannot sleep here or you get hangs. Instead we did the
-	   maths at compile time. */
-	if(!fibptr)
-		BUG();
+	if(!fibptr){
+		spin_unlock_irqrestore(&dev->fib_lock, flags);
+		return fibptr;
+	}
 	dev->free_fib = fibptr->next;
 	spin_unlock_irqrestore(&dev->fib_lock, flags);
 	/*
@@ -148,7 +160,7 @@ struct fib * fib_alloc(struct aac_dev *dev)
 	 *	Null out fields that depend on being zero at the start of
 	 *	each I/O
 	 */
-	fibptr->hw_fib->header.XferState = cpu_to_le32(0);
+	fibptr->hw_fib->header.XferState = 0;
 	fibptr->callback = NULL;
 	fibptr->callback_data = NULL;
 
@@ -175,7 +187,8 @@ void fib_free(struct fib * fibptr)
 	} else {
 		if (fibptr->hw_fib->header.XferState != 0) {
 			printk(KERN_WARNING "fib_free, XferState != 0, fibptr = 0x%p, XferState = 0x%x\n", 
-				 (void*)fibptr, fibptr->hw_fib->header.XferState);
+				 (void*)fibptr, 
+				 le32_to_cpu(fibptr->hw_fib->header.XferState));
 		}
 		fibptr->next = fibptr->dev->free_fib;
 		fibptr->dev->free_fib = fibptr;
@@ -195,11 +208,11 @@ void fib_init(struct fib *fibptr)
 	struct hw_fib *hw_fib = fibptr->hw_fib;
 
 	hw_fib->header.StructType = FIB_MAGIC;
-	hw_fib->header.Size = cpu_to_le16(sizeof(struct hw_fib));
-        hw_fib->header.XferState = cpu_to_le32(HostOwned | FibInitialized | FibEmpty | FastResponseCapable);
+	hw_fib->header.Size = cpu_to_le16(fibptr->dev->max_fib_size);
+	hw_fib->header.XferState = cpu_to_le32(HostOwned | FibInitialized | FibEmpty | FastResponseCapable);
 	hw_fib->header.SenderFibAddress = cpu_to_le32(fibptr->hw_fib_pa);
 	hw_fib->header.ReceiverFibAddress = cpu_to_le32(fibptr->hw_fib_pa);
-	hw_fib->header.SenderSize = cpu_to_le16(sizeof(struct hw_fib));
+	hw_fib->header.SenderSize = cpu_to_le16(fibptr->dev->max_fib_size);
 }
 
 /**
@@ -210,12 +223,12 @@ void fib_init(struct fib *fibptr)
  *	caller.
  */
  
-void fib_dealloc(struct fib * fibptr)
+static void fib_dealloc(struct fib * fibptr)
 {
 	struct hw_fib *hw_fib = fibptr->hw_fib;
 	if(hw_fib->header.StructType != FIB_MAGIC) 
 		BUG();
-	hw_fib->header.XferState = cpu_to_le32(0);        
+	hw_fib->header.XferState = 0;        
 }
 
 /*
@@ -278,7 +291,7 @@ static int aac_get_entry (struct aac_dev * dev, u32 qid, struct aac_entry **entr
 	}
 
         if ((*index + 1) == le32_to_cpu(*(q->headers.consumer))) { /* Queue is full */
-		printk(KERN_WARNING "Queue %d full, %d outstanding.\n",
+		printk(KERN_WARNING "Queue %d full, %u outstanding.\n",
 				qid, q->numpending);
 		return 0;
 	} else {
@@ -344,7 +357,7 @@ static int aac_queue_get(struct aac_dev * dev, u32 * index, u32 qid, struct hw_f
 	 *	in the queue entry.
 	 */
 	if (map)
-		entry->addr = fibptr->hw_fib_pa;
+		entry->addr = cpu_to_le32(fibptr->hw_fib_pa);
 	return 0;
 }
 
@@ -418,13 +431,13 @@ int fib_send(u16 command, struct fib * fibptr, unsigned long size,  int priority
 	struct hw_fib * hw_fib = fibptr->hw_fib;
 	struct aac_queue * q;
 	unsigned long flags = 0;
-	if (!(le32_to_cpu(hw_fib->header.XferState) & HostOwned))
+	if (!(hw_fib->header.XferState & cpu_to_le32(HostOwned)))
 		return -EBUSY;
 	/*
 	 *	There are 5 cases with the wait and reponse requested flags. 
 	 *	The only invalid cases are if the caller requests to wait and
 	 *	does not request a response and if the caller does not want a
-	 *	response and the Fibis not allocated from pool. If a response
+	 *	response and the Fib is not allocated from pool. If a response
 	 *	is not requesed the Fib will just be deallocaed by the DPC
 	 *	routine when the response comes back from the adapter. No
 	 *	further processing will be done besides deleting the Fib. We 
@@ -566,12 +579,6 @@ int aac_consumer_get(struct aac_dev * dev, struct aac_queue * q, struct aac_entr
 	return(status);
 }
 
-int aac_consumer_avail(struct aac_dev *dev, struct aac_queue * q)
-{
-	return (le32_to_cpu(*q->headers.producer) != le32_to_cpu(*q->headers.consumer));
-}
-
-
 /**
  *	aac_consumer_free	-	free consumer entry
  *	@dev: Adapter
@@ -632,7 +639,7 @@ int fib_adapter_complete(struct fib * fibptr, unsigned short size)
 	struct hw_fib * hw_fib = fibptr->hw_fib;
 	struct aac_dev * dev = fibptr->dev;
 	unsigned long nointr = 0;
-	if (le32_to_cpu(hw_fib->header.XferState) == 0)
+	if (hw_fib->header.XferState == 0)
         	return 0;
 	/*
 	 *	If we plan to do anything check the structure type first.
@@ -663,9 +670,8 @@ int fib_adapter_complete(struct fib * fibptr, unsigned short size)
 			}
 			if (aac_insert_entry(dev, index, AdapHighRespQueue,  (nointr & (int)aac_config.irq_mod)) != 0) {
 			}
-		}
-		else if (hw_fib->header.XferState & NormalPriority) 
-		{
+		} else if (hw_fib->header.XferState & 
+				cpu_to_le32(NormalPriority)) {
 			u32 index;
 
 			if (size) {
@@ -704,7 +710,7 @@ int fib_complete(struct fib * fibptr)
 	 *	Check for a fib which has already been completed
 	 */
 
-	if (hw_fib->header.XferState == cpu_to_le32(0))
+	if (hw_fib->header.XferState == 0)
         	return 0;
 	/*
 	 *	If we plan to do anything check the structure type first.
@@ -749,22 +755,25 @@ int fib_complete(struct fib * fibptr)
 
 void aac_printf(struct aac_dev *dev, u32 val)
 {
-	int length = val & 0xffff;
-	int level = (val >> 16) & 0xffff;
 	char *cp = dev->printfbuf;
-	
-	/*
-	 *	The size of the printfbuf is set in port.c
-	 *	There is no variable or define for it
-	 */
-	if (length > 255)
-		length = 255;
-	if (cp[length] != 0)
-		cp[length] = 0;
-	if (level == LOG_AAC_HIGH_ERROR)
-		printk(KERN_WARNING "aacraid:%s", cp);
-	else
-		printk(KERN_INFO "aacraid:%s", cp);
+	if (dev->printf_enabled)
+	{
+		int length = val & 0xffff;
+		int level = (val >> 16) & 0xffff;
+		
+		/*
+		 *	The size of the printfbuf is set in port.c
+		 *	There is no variable or define for it
+		 */
+		if (length > 255)
+			length = 255;
+		if (cp[length] != 0)
+			cp[length] = 0;
+		if (level == LOG_AAC_HIGH_ERROR)
+			printk(KERN_WARNING "aacraid:%s", cp);
+		else
+			printk(KERN_INFO "aacraid:%s", cp);
+	}
 	memset(cp, 0,  256);
 }
 
@@ -837,8 +846,8 @@ int aac_command_thread(struct aac_dev * dev)
 			aifcmd = (struct aac_aifcmd *) hw_fib->data;
 			if (aifcmd->command == cpu_to_le32(AifCmdDriverNotify)) {
 				/* Handle Driver Notify Events */
-				*(u32 *)hw_fib->data = cpu_to_le32(ST_OK);
-				fib_adapter_complete(fib, sizeof(u32));
+				*(__le32 *)hw_fib->data = cpu_to_le32(ST_OK);
+				fib_adapter_complete(fib, (u16)sizeof(u32));
 			} else {
 				struct list_head *entry;
 				/* The u32 here is important and intended. We are using
@@ -921,7 +930,7 @@ int aac_command_thread(struct aac_dev * dev)
 				/*
 				 *	Set the status of this FIB
 				 */
-				*(u32 *)hw_fib->data = cpu_to_le32(ST_OK);
+				*(__le32 *)hw_fib->data = cpu_to_le32(ST_OK);
 				fib_adapter_complete(fib, sizeof(u32));
 				spin_unlock_irqrestore(&dev->fib_lock, flagv);
 			}

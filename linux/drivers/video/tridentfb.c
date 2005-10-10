@@ -31,7 +31,7 @@ struct tridentfb_par {
 	void __iomem * io_virt;	//iospace virtual memory address
 };
 
-unsigned char eng_oper;		//engine operation...
+static unsigned char eng_oper;		//engine operation...
 static struct fb_ops tridentfb_ops;
 
 static struct tridentfb_par default_par;
@@ -91,7 +91,7 @@ module_param(crt, int, 0);
 static int chip3D;
 static int chipcyber;
 
-int is3Dchip(int id)
+static int is3Dchip(int id)
 {
 	return 	((id == BLADE3D) || (id == CYBERBLADEE4) ||
 		 (id == CYBERBLADEi7) || (id == CYBERBLADEi7D) ||
@@ -104,7 +104,7 @@ int is3Dchip(int id)
 		 (id ==	CYBERBLADEXPAi1));
 }
 
-int iscyber(int id)
+static int iscyber(int id)
 {
 	switch (id) {
 		case CYBER9388:		
@@ -454,13 +454,16 @@ static struct accel_switch accel_image = {
 static void tridentfb_fillrect(struct fb_info * info, const struct fb_fillrect *fr)
 {
 	int bpp = info->var.bits_per_pixel;
-	int col;
+	int col = 0;
 	
 	switch (bpp) {
 		default:
-		case 8: col = fr->color;
+		case 8: col |= fr->color;
+			col |= col << 8;
+			col |= col << 16;
 			break;
 		case 16: col = ((u32 *)(info->pseudo_palette))[fr->color];
+			
 			 break;
 		case 32: col = ((u32 *)(info->pseudo_palette))[fr->color];
 			 break;
@@ -882,8 +885,9 @@ static int tridentfb_set_par(struct fb_info *info)
 
 	write3X4(GraphEngReg, 0x80);	//enable GE for text acceleration
 
-//	if (info->var.accel_flags & FB_ACCELF_TEXT)
-//FIXME		acc->init_accel(info->var.xres,bpp);
+#ifdef CONFIG_FB_TRIDENT_ACCEL	
+	acc->init_accel(info->var.xres,bpp);
+#endif
 	
 	switch (bpp) {
 		case 8:  tmp = 0x00; break;
@@ -900,7 +904,7 @@ static int tridentfb_set_par(struct fb_info *info)
 	write3X4(DRAMControl, tmp);	//both IO,linear enable
 
 	write3X4(InterfaceSel, read3X4(InterfaceSel) | 0x40);
-	write3X4(Performance,0x20);
+	write3X4(Performance,0x92);
 	write3X4(PCIReg,0x07);		//MMIO & PCI read and write burst enable
 
 	/* convert from picoseconds to MHz */
@@ -981,12 +985,14 @@ static int tridentfb_setcolreg(unsigned regno, unsigned red, unsigned green,
 		t_outb(green>>10,0x3C9);
 		t_outb(blue>>10,0x3C9);
 
-	} else
-	if (bpp == 16) 			/* RGB 565 */
-			((u32*)info->pseudo_palette)[regno] = (red & 0xF800) |
-			((green & 0xFC00) >> 5) | ((blue & 0xF800) >> 11);
-	else
-	if (bpp == 32)		/* ARGB 8888 */
+	} else if (bpp == 16) {	/* RGB 565 */
+		u32 col;
+
+		col = (red & 0xF800) | ((green & 0xFC00) >> 5) |
+			((blue & 0xF800) >> 11);
+		col |= col << 16;	
+		((u32 *)(info->pseudo_palette))[regno] = col;
+	} else if (bpp == 32)		/* ARGB 8888 */
 		((u32*)info->pseudo_palette)[regno] =
 			((transp & 0xFF00) <<16) 	|
 			((red & 0xFF00) << 8) 		|
@@ -1163,7 +1169,7 @@ static int __devinit trident_pci_probe(struct pci_dev * dev, const struct pci_de
 	fb_info.var = default_var;
 	fb_info.device = &dev->dev;
 	if (register_framebuffer(&fb_info) < 0) {
-		output("Could not register Trident framebuffer\n");
+		printk(KERN_ERR "tridentfb: could not register Trident framebuffer\n");
 		return -EINVAL;
 	}
 	output("fb%d: %s frame buffer device %dx%d-%dbpp\n",
@@ -1216,33 +1222,13 @@ static struct pci_driver tridentfb_pci_driver = {
 	.remove		= __devexit_p(trident_pci_remove)
 };
 
-int tridentfb_setup(char *options);
-
-int __init tridentfb_init(void)
-{
-#ifndef MODULE
-	char *option = NULL;
-
-	if (fb_get_options("tridentfb", &option))
-		return -ENODEV;
-	tridentfb_setup(option);
-#endif
-	output("Trident framebuffer %s initializing\n", VERSION);
-	return pci_module_init(&tridentfb_pci_driver);
-}
-
-void __exit tridentfb_exit(void)
-{
-	pci_unregister_driver(&tridentfb_pci_driver);
-}
-
-
 /*
  * Parse user specified options (`video=trident:')
  * example:
  * 	video=trident:800x600,bpp=16,noaccel
  */
-int tridentfb_setup(char *options)
+#ifndef MODULE
+static int tridentfb_setup(char *options)
 {
 	char * opt;
 	if (!options || !*options)
@@ -1271,6 +1257,25 @@ int tridentfb_setup(char *options)
 			mode = opt;
 	}
 	return 0;
+}
+#endif
+
+static int __init tridentfb_init(void)
+{
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("tridentfb", &option))
+		return -ENODEV;
+	tridentfb_setup(option);
+#endif
+	output("Trident framebuffer %s initializing\n", VERSION);
+	return pci_register_driver(&tridentfb_pci_driver);
+}
+
+static void __exit tridentfb_exit(void)
+{
+	pci_unregister_driver(&tridentfb_pci_driver);
 }
 
 static struct fb_ops tridentfb_ops = {

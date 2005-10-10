@@ -178,17 +178,17 @@ good_area:
 	 */
 
 	switch (handle_mm_fault(mm, vma, address, (acc_type & VM_WRITE) != 0)) {
-	      case 1:
+	      case VM_FAULT_MINOR:
 		++current->min_flt;
 		break;
-	      case 2:
+	      case VM_FAULT_MAJOR:
 		++current->maj_flt;
 		break;
-	      case 0:
+	      case VM_FAULT_SIGBUS:
 		/*
-		 * We ran out of memory, or some other thing happened
-		 * to us that made us unable to handle the page fault
-		 * gracefully.
+		 * We hit a hared mapping outside of the file, or some
+		 * other thing happened to us that made us unable to
+		 * handle the page fault gracefully.
 		 */
 		goto bad_area;
 	      default:
@@ -225,7 +225,7 @@ bad_area:
 		si.si_signo = SIGSEGV;
 		si.si_errno = 0;
 		si.si_code = SEGV_MAPERR;
-		si.si_addr = (void *) address;
+		si.si_addr = (void __user *) address;
 		force_sig_info(SIGSEGV, &si, current);
 		return;
 	}

@@ -151,7 +151,7 @@
 
 /* We actually can't write halfwords properly if not word aligned */
 static inline void
-SMC_outw(u16 val, unsigned long ioaddr, int reg)
+SMC_outw(u16 val, void __iomem *ioaddr, int reg)
 {
 	if (reg & 2) {
 		unsigned int v = val << 16;
@@ -161,6 +161,55 @@ SMC_outw(u16 val, unsigned long ioaddr, int reg)
 		writew(val, ioaddr + reg);
 	}
 }
+
+#elif	defined(CONFIG_ARCH_OMAP)
+
+/* We can only do 16-bit reads and writes in the static memory space. */
+#define SMC_CAN_USE_8BIT	0
+#define SMC_CAN_USE_16BIT	1
+#define SMC_CAN_USE_32BIT	0
+#define SMC_IO_SHIFT		0
+#define SMC_NOWAIT		1
+
+#define SMC_inb(a, r)		readb((a) + (r))
+#define SMC_outb(v, a, r)	writeb(v, (a) + (r))
+#define SMC_inw(a, r)		readw((a) + (r))
+#define SMC_outw(v, a, r)	writew(v, (a) + (r))
+#define SMC_insw(a, r, p, l)	readsw((a) + (r), p, l)
+#define SMC_outsw(a, r, p, l)	writesw((a) + (r), p, l)
+#define SMC_inl(a, r)		readl((a) + (r))
+#define SMC_outl(v, a, r)	writel(v, (a) + (r))
+#define SMC_insl(a, r, p, l)	readsl((a) + (r), p, l)
+#define SMC_outsl(a, r, p, l)	writesl((a) + (r), p, l)
+
+#include <asm/mach-types.h>
+#include <asm/arch/cpu.h>
+
+#define	SMC_IRQ_TRIGGER_TYPE (( \
+		   machine_is_omap_h2() \
+		|| machine_is_omap_h3() \
+		|| (machine_is_omap_innovator() && !cpu_is_omap1510()) \
+	) ? IRQT_FALLING : IRQT_RISING)
+
+
+#elif	defined(CONFIG_SH_SH4202_MICRODEV)
+
+#define SMC_CAN_USE_8BIT	0
+#define SMC_CAN_USE_16BIT	1
+#define SMC_CAN_USE_32BIT	0
+
+#define SMC_inb(a, r)		inb((a) + (r) - 0xa0000000)
+#define SMC_inw(a, r)		inw((a) + (r) - 0xa0000000)
+#define SMC_inl(a, r)		inl((a) + (r) - 0xa0000000)
+#define SMC_outb(v, a, r)	outb(v, (a) + (r) - 0xa0000000)
+#define SMC_outw(v, a, r)	outw(v, (a) + (r) - 0xa0000000)
+#define SMC_outl(v, a, r)	outl(v, (a) + (r) - 0xa0000000)
+#define SMC_insl(a, r, p, l)	insl((a) + (r) - 0xa0000000, p, l)
+#define SMC_outsl(a, r, p, l)	outsl((a) + (r) - 0xa0000000, p, l)
+#define SMC_insw(a, r, p, l)	insw((a) + (r) - 0xa0000000, p, l)
+#define SMC_outsw(a, r, p, l)	outsw((a) + (r) - 0xa0000000, p, l)
+
+#define set_irq_type(irq, type)	do {} while(0)
 
 #elif	defined(CONFIG_ISA)
 
@@ -261,6 +310,9 @@ static inline void SMC_outsw (unsigned long a, int r, unsigned char* p, int l)
 
 #endif
 
+#ifndef	SMC_IRQ_TRIGGER_TYPE
+#define	SMC_IRQ_TRIGGER_TYPE	IRQT_RISING
+#endif
 
 #ifdef SMC_USE_PXA_DMA
 /*
@@ -278,7 +330,7 @@ static inline void SMC_outsw (unsigned long a, int r, unsigned char* p, int l)
 #define SMC_insl(a, r, p, l) \
 	smc_pxa_dma_insl(a, lp->physaddr, r, dev->dma, p, l)
 static inline void
-smc_pxa_dma_insl(u_long ioaddr, u_long physaddr, int reg, int dma,
+smc_pxa_dma_insl(void __iomem *ioaddr, u_long physaddr, int reg, int dma,
 		 u_char *buf, int len)
 {
 	dma_addr_t dmabuf;
@@ -316,7 +368,7 @@ smc_pxa_dma_insl(u_long ioaddr, u_long physaddr, int reg, int dma,
 #define SMC_insw(a, r, p, l) \
 	smc_pxa_dma_insw(a, lp->physaddr, r, dev->dma, p, l)
 static inline void
-smc_pxa_dma_insw(u_long ioaddr, u_long physaddr, int reg, int dma,
+smc_pxa_dma_insw(void __iomem *ioaddr, u_long physaddr, int reg, int dma,
 		 u_char *buf, int len)
 {
 	dma_addr_t dmabuf;
@@ -362,7 +414,7 @@ smc_pxa_dma_irq(int dma, void *dummy, struct pt_regs *regs)
 #define SMC_IO_SHIFT	0
 #endif
 #define SMC_IO_EXTENT	(16 << SMC_IO_SHIFT)
-
+#define SMC_DATA_EXTENT (4)
 
 /*
  . Bank Select Register:
@@ -642,14 +694,6 @@ static const char * chip_ids[ 16 ] =  {
 
 
 /*
- . Transmit status bits
-*/
-#define TS_SUCCESS 0x0001
-#define TS_LOSTCAR 0x0400
-#define TS_LATCOL  0x0200
-#define TS_16COL   0x0010
-
-/*
  . Receive status bits
 */
 #define RS_ALGNERR	0x8000
@@ -806,6 +850,7 @@ static const char * chip_ids[ 16 ] =  {
 #define SMC_GET_FIFO()		SMC_inw( ioaddr, FIFO_REG )
 #define SMC_GET_PTR()		SMC_inw( ioaddr, PTR_REG )
 #define SMC_SET_PTR(x)		SMC_outw( x, ioaddr, PTR_REG )
+#define SMC_GET_EPH_STATUS()	SMC_inw( ioaddr, EPH_STATUS_REG )
 #define SMC_GET_RCR()		SMC_inw( ioaddr, RCR_REG )
 #define SMC_SET_RCR(x)		SMC_outw( x, ioaddr, RCR_REG )
 #define SMC_GET_REV()		SMC_inw( ioaddr, REV_REG )
@@ -883,7 +928,7 @@ static const char * chip_ids[ 16 ] =  {
 #endif
 
 #if SMC_CAN_USE_32BIT
-#define SMC_PUSH_DATA(p, l)						\
+#define _SMC_PUSH_DATA(p, l)						\
 	do {								\
 		char *__ptr = (p);					\
 		int __len = (l);					\
@@ -898,7 +943,7 @@ static const char * chip_ids[ 16 ] =  {
 			SMC_outw( *((u16 *)__ptr), ioaddr, DATA_REG );	\
 		}							\
 	} while (0)
-#define SMC_PULL_DATA(p, l)						\
+#define _SMC_PULL_DATA(p, l)						\
 	do {								\
 		char *__ptr = (p);					\
 		int __len = (l);					\
@@ -918,11 +963,11 @@ static const char * chip_ids[ 16 ] =  {
 		SMC_insl( ioaddr, DATA_REG, __ptr, __len >> 2);		\
 	} while (0)
 #elif SMC_CAN_USE_16BIT
-#define SMC_PUSH_DATA(p, l)	SMC_outsw( ioaddr, DATA_REG, p, (l) >> 1 )
-#define SMC_PULL_DATA(p, l)	SMC_insw ( ioaddr, DATA_REG, p, (l) >> 1 )
+#define _SMC_PUSH_DATA(p, l)	SMC_outsw( ioaddr, DATA_REG, p, (l) >> 1 )
+#define _SMC_PULL_DATA(p, l)	SMC_insw ( ioaddr, DATA_REG, p, (l) >> 1 )
 #elif SMC_CAN_USE_8BIT
-#define SMC_PUSH_DATA(p, l)	SMC_outsb( ioaddr, DATA_REG, p, l )
-#define SMC_PULL_DATA(p, l)	SMC_insb ( ioaddr, DATA_REG, p, l )
+#define _SMC_PUSH_DATA(p, l)	SMC_outsb( ioaddr, DATA_REG, p, l )
+#define _SMC_PULL_DATA(p, l)	SMC_insb ( ioaddr, DATA_REG, p, l )
 #endif
 
 #if ! SMC_CAN_USE_16BIT
@@ -939,6 +984,51 @@ static const char * chip_ids[ 16 ] =  {
 		__val16 |= SMC_inb( ioaddr, reg + (1 << SMC_IO_SHIFT)) << 8; \
 		__val16;						\
 	})
+#endif
+
+#if SMC_CAN_USE_DATACS
+#define SMC_PUSH_DATA(p, l)						\
+	if ( lp->datacs ) {						\
+		unsigned char *__ptr = (p);				\
+		int __len = (l);					\
+ 		if (__len >= 2 && (unsigned long)__ptr & 2) {		\
+ 			__len -= 2;					\
+ 			SMC_outw( *((u16 *)__ptr), ioaddr, DATA_REG );	\
+ 			__ptr += 2;					\
+ 		}							\
+		outsl(lp->datacs, __ptr, __len >> 2);			\
+ 		if (__len & 2) {					\
+ 			__ptr += (__len & ~3);				\
+ 			SMC_outw( *((u16 *)__ptr), ioaddr, DATA_REG );	\
+ 		}							\
+	} else {							\
+		_SMC_PUSH_DATA(p, l);					\
+	}
+
+#define SMC_PULL_DATA(p, l)						\
+	if ( lp->datacs ) { 						\
+		unsigned char *__ptr = (p);				\
+		int __len = (l);					\
+		if ((unsigned long)__ptr & 2) {			 	\
+			/*						\
+			 * We want 32bit alignment here.		\
+			 * Since some buses perform a full 32bit	\
+			 * fetch even for 16bit data we can't use	\
+			 * SMC_inw() here.  Back both source (on chip	\
+			 * and destination) pointers of 2 bytes.	\
+			 */						\
+			__ptr -= 2;					\
+			__len += 2;					\
+			SMC_SET_PTR( 2|PTR_READ|PTR_RCV|PTR_AUTOINC ); 	\
+		}							\
+		__len += 2;						\
+		insl( lp->datacs, __ptr, __len >> 2);			\
+	} else {							\
+		_SMC_PULL_DATA(p, l);					\
+	}
+#else
+#define SMC_PUSH_DATA(p, l) _SMC_PUSH_DATA(p, l)
+#define SMC_PULL_DATA(p, l) _SMC_PULL_DATA(p, l)
 #endif
 
 #if !defined (SMC_INTERRUPT_PREAMBLE)

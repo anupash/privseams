@@ -26,6 +26,10 @@
  *	05-Oct-2004	BJD	Added semaphore init to stop crashes on open
  *				Fixed tmr_count / wdt_count confusion
  *				Added configurable debug
+ *
+ *	11-Jan-2004	BJD	Fixed divide-by-2 in timeout code
+ *
+ *	10-Mar-2005	LCVR	Changed S3C2410_VA to S3C24XX_VA
 */
 
 #include <linux/module.h>
@@ -48,8 +52,8 @@
 #include <asm/arch/map.h>
 #include <asm/hardware/clock.h>
 
-#undef S3C2410_VA_WATCHDOG
-#define S3C2410_VA_WATCHDOG (0)
+#undef S3C24XX_VA_WATCHDOG
+#define S3C24XX_VA_WATCHDOG (0)
 
 #include <asm/arch/regs-watchdog.h>
 
@@ -58,12 +62,7 @@
 #define CONFIG_S3C2410_WATCHDOG_ATBOOT		(0)
 #define CONFIG_S3C2410_WATCHDOG_DEFAULT_TIME	(15)
 
-#ifdef CONFIG_WATCHDOG_NOWAYOUT
-static int nowayout = 1;
-#else
-static int nowayout = 0;
-#endif
-
+static int nowayout = WATCHDOG_NOWAYOUT;
 static int tmr_margin	= CONFIG_S3C2410_WATCHDOG_DEFAULT_TIME;
 static int tmr_atboot	= CONFIG_S3C2410_WATCHDOG_ATBOOT;
 static int soft_noboot	= 0;
@@ -163,11 +162,7 @@ static int s3c2410wdt_set_heartbeat(int timeout)
 	if (timeout < 1)
 		return -EINVAL;
 
-	/* I think someone must have missed a divide-by-2 in the 2410,
-	 * as a divisor of 128 gives half the calculated delay...
-	 */
-
-	freq /= 128/2;
+	freq /= 128;
 	count = timeout * freq;
 
 	DBG("%s: count=%d, timeout=%d, freq=%d\n",

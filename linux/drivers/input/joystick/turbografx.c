@@ -77,13 +77,14 @@ __obsolete_setup("tgfx_3=");
 static int tgfx_buttons[] = { BTN_TRIGGER, BTN_THUMB, BTN_THUMB2, BTN_TOP, BTN_TOP2 };
 static char *tgfx_name = "TurboGraFX Multisystem joystick";
 
-struct tgfx {
+static struct tgfx {
 	struct pardevice *pd;
 	struct timer_list timer;
 	struct input_dev dev[7];
 	char phys[7][32];
 	int sticks;
 	int used;
+	struct semaphore sem;
 } *tgfx_base[3];
 
 /*
@@ -99,7 +100,7 @@ static void tgfx_timer(unsigned long private)
 	for (i = 0; i < 7; i++)
 		if (tgfx->sticks & (1 << i)) {
 
- 			dev = tgfx->dev + i;
+			dev = tgfx->dev + i;
 
 			parport_write_data(tgfx->pd->port, ~(1 << i));
 			data1 = parport_read_status(tgfx->pd->port) ^ 0x7f;
@@ -122,23 +123,34 @@ static void tgfx_timer(unsigned long private)
 
 static int tgfx_open(struct input_dev *dev)
 {
-        struct tgfx *tgfx = dev->private;
-        if (!tgfx->used++) {
+	struct tgfx *tgfx = dev->private;
+	int err;
+
+	err = down_interruptible(&tgfx->sem);
+	if (err)
+		return err;
+
+	if (!tgfx->used++) {
 		parport_claim(tgfx->pd);
 		parport_write_control(tgfx->pd->port, 0x04);
-                mod_timer(&tgfx->timer, jiffies + TGFX_REFRESH_TIME);
+		mod_timer(&tgfx->timer, jiffies + TGFX_REFRESH_TIME);
 	}
-        return 0;
+
+	up(&tgfx->sem);
+	return 0;
 }
 
 static void tgfx_close(struct input_dev *dev)
 {
-        struct tgfx *tgfx = dev->private;
-        if (!--tgfx->used) {
-                del_timer(&tgfx->timer);
+	struct tgfx *tgfx = dev->private;
+
+	down(&tgfx->sem);
+	if (!--tgfx->used) {
+		del_timer_sync(&tgfx->timer);
 		parport_write_control(tgfx->pd->port, 0x00);
-        	parport_release(tgfx->pd);
+		parport_release(tgfx->pd);
 	}
+	up(&tgfx->sem);
 }
 
 /*
@@ -166,11 +178,12 @@ static struct tgfx __init *tgfx_probe(int *config, int nargs)
 		return NULL;
 	}
 
-	if (!(tgfx = kmalloc(sizeof(struct tgfx), GFP_KERNEL))) {
+	if (!(tgfx = kcalloc(1, sizeof(struct tgfx), GFP_KERNEL))) {
 		parport_put_port(pp);
 		return NULL;
 	}
-	memset(tgfx, 0, sizeof(struct tgfx));
+
+	init_MUTEX(&tgfx->sem);
 
 	tgfx->pd = parport_register_device(pp, "turbografx", NULL, NULL, NULL, PARPORT_DEV_EXCL, NULL);
 
@@ -229,7 +242,7 @@ static struct tgfx __init *tgfx_probe(int *config, int nargs)
 	return tgfx;
 }
 
-int __init tgfx_init(void)
+static int __init tgfx_init(void)
 {
 	tgfx_base[0] = tgfx_probe(tgfx, tgfx_nargs);
 	tgfx_base[1] = tgfx_probe(tgfx_2, tgfx_nargs_2);
@@ -241,7 +254,7 @@ int __init tgfx_init(void)
 	return -ENODEV;
 }
 
-void __exit tgfx_exit(void)
+static void __exit tgfx_exit(void)
 {
 	int i, j;
 

@@ -12,6 +12,7 @@
 #include <linux/list.h>
 #include <linux/sched.h>
 #include <linux/init.h>
+#include <linux/device.h>
 #include <linux/serial_8250.h>
 
 #include <asm/mach/arch.h>
@@ -24,6 +25,8 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 #include <asm/mach-types.h>
+
+unsigned int vram_size;
 
 static void cl7500_ack_irq_a(unsigned int irq)
 {
@@ -295,8 +298,8 @@ clps7500_timer_interrupt(int irq, void *dev_id, struct pt_regs *regs)
 
 static struct irqaction clps7500_timer_irq = {
 	.name		= "CLPS7500 Timer Tick",
-	.flags		= SA_INTERRUPT,
-	.handler	= clps7500_timer_interrupt
+	.flags		= SA_INTERRUPT | SA_TIMER,
+	.handler	= clps7500_timer_interrupt,
 };
 
 /*
@@ -305,11 +308,10 @@ static struct irqaction clps7500_timer_irq = {
 static void __init clps7500_timer_init(void)
 {
 	ioctime_init();
-
 	setup_irq(IRQ_TIMER, &clps7500_timer_irq);
 }
 
-static struct clps7500_timer = {
+static struct sys_timer clps7500_timer = {
 	.init		= clps7500_timer_init,
 	.offset		= ioc_timer_gettimeoffset,
 };
@@ -358,16 +360,19 @@ static struct platform_device serial_device = {
 	},
 };
 
-static int __init clps7500_init(void)
+static void __init clps7500_init(void)
 {
-	return platform_register_device(&serial_device);
+	platform_device_register(&serial_device);
 }
 
 MACHINE_START(CLPS7500, "CL-PS7500")
-	MAINTAINER("Philip Blundell")
-	BOOT_MEM(0x10000000, 0x03000000, 0xe0000000)
-	MAPIO(clps7500_map_io)
-	INITIRQ(clps7500_init_irq)
+	/* Maintainer: Philip Blundell */
+	.phys_ram	= 0x10000000,
+	.phys_io	= 0x03000000,
+	.io_pg_offst	= ((0xe0000000) >> 18) & 0xfffc,
+	.map_io		= clps7500_map_io,
+	.init_irq	= clps7500_init_irq,
+	.init_machine	= clps7500_init,
 	.timer		= &clps7500_timer,
 MACHINE_END
 

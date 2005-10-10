@@ -86,6 +86,7 @@ static int max_interrupt_work = 20;
 MODULE_AUTHOR("Donald Becker <becker@scyld.com>");
 MODULE_DESCRIPTION("3Com 3c515 Corkscrew driver");
 MODULE_LICENSE("GPL");
+MODULE_VERSION(DRV_VERSION);
 
 /* "Knobs" for adjusting internal parameters. */
 /* Put out somewhat more debugging messages. (0 - no msg, 1 minimal msgs). */
@@ -364,7 +365,7 @@ static int nopnp;
 #endif /* __ISAPNP__ */
 
 static struct net_device *corkscrew_scan(int unit);
-static void corkscrew_setup(struct net_device *dev, int ioaddr,
+static int corkscrew_setup(struct net_device *dev, int ioaddr,
 			    struct pnp_dev *idev, int card_number);
 static int corkscrew_open(struct net_device *dev);
 static void corkscrew_timer(unsigned long arg);
@@ -472,7 +473,7 @@ static int check_device(unsigned ioaddr)
 
 static void cleanup_card(struct net_device *dev)
 {
-	struct corkscrew_private *vp = (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	list_del_init(&vp->list);
 	if (dev->dma)
 		free_dma(dev->dma);
@@ -538,10 +539,9 @@ static struct net_device *corkscrew_scan(int unit)
 			printk(KERN_INFO "3c515 Resource configuration register %#4.4x, DCR %4.4x.\n",
 		     		inl(ioaddr + 0x2002), inw(ioaddr + 0x2000));
 			/* irq = inw(ioaddr + 0x2002) & 15; */ /* Use the irq from isapnp */
-			corkscrew_setup(dev, ioaddr, idev, cards_found++);
 			SET_NETDEV_DEV(dev, &idev->dev);
 			pnp_cards++;
-			err = register_netdev(dev);
+			err = corkscrew_setup(dev, ioaddr, idev, cards_found++);
 			if (!err)
 				return dev;
 			cleanup_card(dev);
@@ -557,8 +557,7 @@ no_pnp:
 
 		printk(KERN_INFO "3c515 Resource configuration register %#4.4x, DCR %4.4x.\n",
 		     inl(ioaddr + 0x2002), inw(ioaddr + 0x2000));
-		corkscrew_setup(dev, ioaddr, NULL, cards_found++);
-		err = register_netdev(dev);
+		err = corkscrew_setup(dev, ioaddr, NULL, cards_found++);
 		if (!err)
 			return dev;
 		cleanup_card(dev);
@@ -567,10 +566,10 @@ no_pnp:
 	return NULL;
 }
 
-static void corkscrew_setup(struct net_device *dev, int ioaddr,
+static int corkscrew_setup(struct net_device *dev, int ioaddr,
 			    struct pnp_dev *idev, int card_number)
 {
-	struct corkscrew_private *vp = (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	unsigned int eeprom[0x40], checksum = 0;	/* EEPROM contents */
 	int i;
 	int irq;
@@ -690,14 +689,15 @@ static void corkscrew_setup(struct net_device *dev, int ioaddr,
 	dev->get_stats = &corkscrew_get_stats;
 	dev->set_multicast_list = &set_rx_mode;
 	dev->ethtool_ops = &netdev_ethtool_ops;
+
+	return register_netdev(dev);
 }
 
 
 static int corkscrew_open(struct net_device *dev)
 {
 	int ioaddr = dev->base_addr;
-	struct corkscrew_private *vp =
-	    (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	union wn3_config config;
 	int i;
 
@@ -822,7 +822,7 @@ static int corkscrew_open(struct net_device *dev)
 				break;	/* Bad news!  */
 			skb->dev = dev;	/* Mark as being used by this device. */
 			skb_reserve(skb, 2);	/* Align IP on 16 byte boundaries */
-			vp->rx_ring[i].addr = isa_virt_to_bus(skb->tail);
+			vp->rx_ring[i].addr = isa_virt_to_bus(skb->data);
 		}
 		vp->rx_ring[i - 1].next = isa_virt_to_bus(&vp->rx_ring[0]);	/* Wrap the ring. */
 		outl(isa_virt_to_bus(&vp->rx_ring[0]), ioaddr + UpListPtr);
@@ -862,7 +862,7 @@ static void corkscrew_timer(unsigned long data)
 {
 #ifdef AUTOMEDIA
 	struct net_device *dev = (struct net_device *) data;
-	struct corkscrew_private *vp = (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	int ioaddr = dev->base_addr;
 	unsigned long flags;
 	int ok = 0;
@@ -954,8 +954,7 @@ static void corkscrew_timer(unsigned long data)
 static void corkscrew_timeout(struct net_device *dev)
 {
 	int i;
-	struct corkscrew_private *vp =
-	    (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	int ioaddr = dev->base_addr;
 
 	printk(KERN_WARNING
@@ -994,8 +993,7 @@ static void corkscrew_timeout(struct net_device *dev)
 static int corkscrew_start_xmit(struct sk_buff *skb,
 				struct net_device *dev)
 {
-	struct corkscrew_private *vp =
-	    (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	int ioaddr = dev->base_addr;
 
 	/* Block a timer-based transmit from overlapping. */
@@ -1123,14 +1121,13 @@ static irqreturn_t corkscrew_interrupt(int irq, void *dev_id,
 {
 	/* Use the now-standard shared IRQ implementation. */
 	struct net_device *dev = dev_id;
-	struct corkscrew_private *lp;
+	struct corkscrew_private *lp = netdev_priv(dev);
 	int ioaddr, status;
 	int latency;
 	int i = max_interrupt_work;
 
 	ioaddr = dev->base_addr;
 	latency = inb(ioaddr + Timer);
-	lp = (struct corkscrew_private *) dev->priv;
 
 	spin_lock(&lp->lock);
 	
@@ -1262,7 +1259,7 @@ static irqreturn_t corkscrew_interrupt(int irq, void *dev_id,
 
 static int corkscrew_rx(struct net_device *dev)
 {
-	struct corkscrew_private *vp = (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	int ioaddr = dev->base_addr;
 	int i;
 	short rx_status;
@@ -1329,8 +1326,7 @@ static int corkscrew_rx(struct net_device *dev)
 
 static int boomerang_rx(struct net_device *dev)
 {
-	struct corkscrew_private *vp =
-	    (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	int entry = vp->cur_rx % RX_RING_SIZE;
 	int ioaddr = dev->base_addr;
 	int rx_status;
@@ -1410,7 +1406,7 @@ static int boomerang_rx(struct net_device *dev)
 				break;	/* Bad news!  */
 			skb->dev = dev;	/* Mark as being used by this device. */
 			skb_reserve(skb, 2);	/* Align IP on 16 byte boundaries */
-			vp->rx_ring[entry].addr = isa_virt_to_bus(skb->tail);
+			vp->rx_ring[entry].addr = isa_virt_to_bus(skb->data);
 			vp->rx_skbuff[entry] = skb;
 		}
 		vp->rx_ring[entry].status = 0;	/* Clear complete bit. */
@@ -1420,8 +1416,7 @@ static int boomerang_rx(struct net_device *dev)
 
 static int corkscrew_close(struct net_device *dev)
 {
-	struct corkscrew_private *vp =
-	    (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	int ioaddr = dev->base_addr;
 	int i;
 
@@ -1476,7 +1471,7 @@ static int corkscrew_close(struct net_device *dev)
 
 static struct net_device_stats *corkscrew_get_stats(struct net_device *dev)
 {
-	struct corkscrew_private *vp = (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 	unsigned long flags;
 
 	if (netif_running(dev)) {
@@ -1496,8 +1491,7 @@ static struct net_device_stats *corkscrew_get_stats(struct net_device *dev)
 	*/
 static void update_stats(int ioaddr, struct net_device *dev)
 {
-	struct corkscrew_private *vp =
-	    (struct corkscrew_private *) dev->priv;
+	struct corkscrew_private *vp = netdev_priv(dev);
 
 	/* Unlike the 3c5x9 we need not turn off stats updates while reading. */
 	/* Switch to the stats window, and read everything. */

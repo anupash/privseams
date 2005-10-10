@@ -46,7 +46,7 @@ struct elf_phdr;
 
 #define IA32_EMULATOR 1
 
-#define ELF_ET_DYN_BASE		(TASK_UNMAPPED_32 + 0x1000000)
+#define ELF_ET_DYN_BASE		(TASK_UNMAPPED_BASE + 0x1000000)
 
 #undef ELF_ARCH
 #define ELF_ARCH EM_386
@@ -307,10 +307,11 @@ MODULE_AUTHOR("Eric Youngdale, Andi Kleen");
 
 #define elf_addr_t __u32
 
-#undef TASK_SIZE
-#define TASK_SIZE 0xffffffff
-
 static void elf32_init(struct pt_regs *);
+
+#define ARCH_HAS_SETUP_ADDITIONAL_PAGES 1
+#define arch_setup_additional_pages syscall32_setup_pages
+extern int syscall32_setup_pages(struct linux_binprm *, int exstack);
 
 #include "../../../fs/binfmt_elf.c" 
 

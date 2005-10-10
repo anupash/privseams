@@ -86,8 +86,10 @@ static kmem_cache_t *skbuff_head_cache;
  */
 void skb_over_panic(struct sk_buff *skb, int sz, void *here)
 {
-	printk(KERN_INFO "skput:over: %p:%d put:%d dev:%s",
-		here, skb->len, sz, skb->dev ? skb->dev->name : "<NULL>");
+	printk(KERN_EMERG "skb_over_panic: text:%p len:%d put:%d head:%p "
+	                  "data:%p tail:%p end:%p dev:%s\n",
+	       here, skb->len, sz, skb->head, skb->data, skb->tail, skb->end,
+	       skb->dev ? skb->dev->name : "<NULL>");
 	BUG();
 }
 
@@ -102,8 +104,10 @@ void skb_over_panic(struct sk_buff *skb, int sz, void *here)
 
 void skb_under_panic(struct sk_buff *skb, int sz, void *here)
 {
-	printk(KERN_INFO "skput:under: %p:%d put:%d dev:%s",
-               here, skb->len, sz, skb->dev ? skb->dev->name : "<NULL>");
+	printk(KERN_EMERG "skb_under_panic: text:%p len:%d put:%d head:%p "
+	                  "data:%p tail:%p end:%p dev:%s\n",
+	       here, skb->len, sz, skb->head, skb->data, skb->tail, skb->end,
+	       skb->dev ? skb->dev->name : "<NULL>");
 	BUG();
 }
 
@@ -125,7 +129,7 @@ void skb_under_panic(struct sk_buff *skb, int sz, void *here)
  *	Buffers may only be allocated from interrupts using a @gfp_mask of
  *	%GFP_ATOMIC.
  */
-struct sk_buff *alloc_skb(unsigned int size, int gfp_mask)
+struct sk_buff *alloc_skb(unsigned int size, unsigned int __nocast gfp_mask)
 {
 	struct sk_buff *skb;
 	u8 *data;
@@ -178,7 +182,8 @@ nodata:
  *	%GFP_ATOMIC.
  */
 struct sk_buff *alloc_skb_from_cache(kmem_cache_t *cp,
-				     unsigned int size, int gfp_mask)
+				     unsigned int size,
+				     unsigned int __nocast gfp_mask)
 {
 	struct sk_buff *skb;
 	u8 *data;
@@ -241,7 +246,8 @@ static void skb_clone_fraglist(struct sk_buff *skb)
 void skb_release_data(struct sk_buff *skb)
 {
 	if (!skb->cloned ||
-	    atomic_dec_and_test(&(skb_shinfo(skb)->dataref))) {
+	    !atomic_sub_return(skb->nohdr ? (1 << SKB_DATAREF_SHIFT) + 1 : 1,
+			       &skb_shinfo(skb)->dataref)) {
 		if (skb_shinfo(skb)->nr_frags) {
 			int i;
 			for (i = 0; i < skb_shinfo(skb)->nr_frags; i++)
@@ -275,20 +281,14 @@ void kfree_skbmem(struct sk_buff *skb)
 
 void __kfree_skb(struct sk_buff *skb)
 {
-	if (skb->list) {
-	 	printk(KERN_WARNING "Warning: kfree_skb passed an skb still "
-		       "on a list (from %p).\n", NET_CALLER(skb));
-		BUG();
-	}
+	BUG_ON(skb->list != NULL);
 
 	dst_release(skb->dst);
 #ifdef CONFIG_XFRM
 	secpath_put(skb->sp);
 #endif
-	if(skb->destructor) {
-		if (in_irq())
-			printk(KERN_WARNING "Warning: kfree_skb on "
-					    "hard IRQ %p\n", NET_CALLER(skb));
+	if (skb->destructor) {
+		WARN_ON(in_irq());
 		skb->destructor(skb);
 	}
 #ifdef CONFIG_NETFILTER
@@ -323,7 +323,7 @@ void __kfree_skb(struct sk_buff *skb)
  *	%GFP_ATOMIC.
  */
 
-struct sk_buff *skb_clone(struct sk_buff *skb, int gfp_mask)
+struct sk_buff *skb_clone(struct sk_buff *skb, unsigned int __nocast gfp_mask)
 {
 	struct sk_buff *n = kmem_cache_alloc(skbuff_head_cache, gfp_mask);
 
@@ -353,11 +353,11 @@ struct sk_buff *skb_clone(struct sk_buff *skb, int gfp_mask)
 	C(csum);
 	C(local_df);
 	n->cloned = 1;
+	n->nohdr = 0;
 	C(pkt_type);
 	C(ip_summed);
 	C(priority);
 	C(protocol);
-	C(security);
 	n->destructor = NULL;
 #ifdef CONFIG_NETFILTER
 	C(nfmark);
@@ -365,9 +365,6 @@ struct sk_buff *skb_clone(struct sk_buff *skb, int gfp_mask)
 	C(nfct);
 	nf_conntrack_get(skb->nfct);
 	C(nfctinfo);
-#ifdef CONFIG_NETFILTER_DEBUG
-	C(nf_debug);
-#endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	C(nf_bridge);
 	nf_bridge_get(skb->nf_bridge);
@@ -380,8 +377,8 @@ struct sk_buff *skb_clone(struct sk_buff *skb, int gfp_mask)
 	C(tc_index);
 #ifdef CONFIG_NET_CLS_ACT
 	n->tc_verd = SET_TC_VERD(skb->tc_verd,0);
-	n->tc_verd = CLR_TC_OK2MUNGE(skb->tc_verd);
-	n->tc_verd = CLR_TC_MUNGED(skb->tc_verd);
+	n->tc_verd = CLR_TC_OK2MUNGE(n->tc_verd);
+	n->tc_verd = CLR_TC_MUNGED(n->tc_verd);
 	C(input_dev);
 	C(tc_classid);
 #endif
@@ -425,16 +422,12 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	new->pkt_type	= old->pkt_type;
 	new->stamp	= old->stamp;
 	new->destructor = NULL;
-	new->security	= old->security;
 #ifdef CONFIG_NETFILTER
 	new->nfmark	= old->nfmark;
 	new->nfcache	= old->nfcache;
 	new->nfct	= old->nfct;
 	nf_conntrack_get(old->nfct);
 	new->nfctinfo	= old->nfctinfo;
-#ifdef CONFIG_NETFILTER_DEBUG
-	new->nf_debug	= old->nf_debug;
-#endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	new->nf_bridge	= old->nf_bridge;
 	nf_bridge_get(old->nf_bridge);
@@ -468,7 +461,7 @@ static void copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
  *	header is going to be modified. Use pskb_copy() instead.
  */
 
-struct sk_buff *skb_copy(const struct sk_buff *skb, int gfp_mask)
+struct sk_buff *skb_copy(const struct sk_buff *skb, unsigned int __nocast gfp_mask)
 {
 	int headerlen = skb->data - skb->head;
 	/*
@@ -507,7 +500,7 @@ struct sk_buff *skb_copy(const struct sk_buff *skb, int gfp_mask)
  *	The returned buffer has a reference count of 1.
  */
 
-struct sk_buff *pskb_copy(struct sk_buff *skb, int gfp_mask)
+struct sk_buff *pskb_copy(struct sk_buff *skb, unsigned int __nocast gfp_mask)
 {
 	/*
 	 *	Allocate the copy buffer
@@ -565,7 +558,8 @@ out:
  *	reloaded after call to this function.
  */
 
-int pskb_expand_head(struct sk_buff *skb, int nhead, int ntail, int gfp_mask)
+int pskb_expand_head(struct sk_buff *skb, int nhead, int ntail,
+		     unsigned int __nocast gfp_mask)
 {
 	int i;
 	u8 *data;
@@ -604,6 +598,7 @@ int pskb_expand_head(struct sk_buff *skb, int nhead, int ntail, int gfp_mask)
 	skb->h.raw   += off;
 	skb->nh.raw  += off;
 	skb->cloned   = 0;
+	skb->nohdr    = 0;
 	atomic_set(&skb_shinfo(skb)->dataref, 1);
 	return 0;
 
@@ -654,7 +649,8 @@ struct sk_buff *skb_realloc_headroom(struct sk_buff *skb, unsigned int headroom)
  *	only by netfilter in the cases when checksum is recalculated? --ANK
  */
 struct sk_buff *skb_copy_expand(const struct sk_buff *skb,
-				int newheadroom, int newtailroom, int gfp_mask)
+				int newheadroom, int newtailroom,
+				unsigned int __nocast gfp_mask)
 {
 	/*
 	 *	Allocate the copy buffer
@@ -982,69 +978,93 @@ fault:
 	return -EFAULT;
 }
 
-/* Keep iterating until skb_iter_next returns false. */
-void skb_iter_first(const struct sk_buff *skb, struct skb_iter *i)
-{
-	i->len = skb_headlen(skb);
-	i->data = (unsigned char *)skb->data;
-	i->nextfrag = 0;
-	i->fraglist = NULL;
-}
+/**
+ *	skb_store_bits - store bits from kernel buffer to skb
+ *	@skb: destination buffer
+ *	@offset: offset in destination
+ *	@from: source buffer
+ *	@len: number of bytes to copy
+ *
+ *	Copy the specified number of bytes from the source buffer to the
+ *	destination skb.  This function handles all the messy bits of
+ *	traversing fragment lists and such.
+ */
 
-int skb_iter_next(const struct sk_buff *skb, struct skb_iter *i)
+int skb_store_bits(const struct sk_buff *skb, int offset, void *from, int len)
 {
-	/* Unmap previous, if not head fragment. */
-	if (i->nextfrag)
-		kunmap_skb_frag(i->data);
+	int i, copy;
+	int start = skb_headlen(skb);
 
-	if (i->fraglist) {
-	fraglist:
-		/* We're iterating through fraglist. */
-		if (i->nextfrag < skb_shinfo(i->fraglist)->nr_frags) {
-			i->data = kmap_skb_frag(&skb_shinfo(i->fraglist)
-						->frags[i->nextfrag]);
-			i->len = skb_shinfo(i->fraglist)->frags[i->nextfrag]
-				.size;
-			i->nextfrag++;
-			return 1;
+	if (offset > (int)skb->len - len)
+		goto fault;
+
+	if ((copy = start - offset) > 0) {
+		if (copy > len)
+			copy = len;
+		memcpy(skb->data + offset, from, copy);
+		if ((len -= copy) == 0)
+			return 0;
+		offset += copy;
+		from += copy;
+	}
+
+	for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
+		skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
+		int end;
+
+		BUG_TRAP(start <= offset + len);
+
+		end = start + frag->size;
+		if ((copy = end - offset) > 0) {
+			u8 *vaddr;
+
+			if (copy > len)
+				copy = len;
+
+			vaddr = kmap_skb_frag(frag);
+			memcpy(vaddr + frag->page_offset + offset - start,
+			       from, copy);
+			kunmap_skb_frag(vaddr);
+
+			if ((len -= copy) == 0)
+				return 0;
+			offset += copy;
+			from += copy;
 		}
-		/* Fragments with fragments?  Too hard! */
-		BUG_ON(skb_shinfo(i->fraglist)->frag_list);
-		i->fraglist = i->fraglist->next;
-		if (!i->fraglist)
-			goto end;
-
-		i->len = skb_headlen(i->fraglist);
-		i->data = i->fraglist->data;
-		i->nextfrag = 0;
-		return 1;
+		start = end;
 	}
 
-	if (i->nextfrag < skb_shinfo(skb)->nr_frags) {
-		i->data = kmap_skb_frag(&skb_shinfo(skb)->frags[i->nextfrag]);
-		i->len = skb_shinfo(skb)->frags[i->nextfrag].size;
-		i->nextfrag++;
-		return 1;
+	if (skb_shinfo(skb)->frag_list) {
+		struct sk_buff *list = skb_shinfo(skb)->frag_list;
+
+		for (; list; list = list->next) {
+			int end;
+
+			BUG_TRAP(start <= offset + len);
+
+			end = start + list->len;
+			if ((copy = end - offset) > 0) {
+				if (copy > len)
+					copy = len;
+				if (skb_store_bits(list, offset - start,
+						   from, copy))
+					goto fault;
+				if ((len -= copy) == 0)
+					return 0;
+				offset += copy;
+				from += copy;
+			}
+			start = end;
+		}
 	}
+	if (!len)
+		return 0;
 
-	i->fraglist = skb_shinfo(skb)->frag_list;
-	if (i->fraglist)
-		goto fraglist;
-
-end:
-	/* Bug trap for callers */
-	i->data = NULL;
-	return 0;
+fault:
+	return -EFAULT;
 }
 
-void skb_iter_abort(const struct sk_buff *skb, struct skb_iter *i)
-{
-	/* Unmap previous, if not head fragment. */
-	if (i->data && i->nextfrag)
-		kunmap_skb_frag(i->data);
-	/* Bug trap for callers */
-	i->data = NULL;
-}
+EXPORT_SYMBOL(skb_store_bits);
 
 /* Checksum skb data. */
 
@@ -1444,7 +1464,7 @@ static inline void skb_split_no_header(struct sk_buff *skb,
 
 			if (pos < len) {
 				/* Split frag.
-				 * We have to variants in this case:
+				 * We have two variants in this case:
 				 * 1. Move all the frag to the second
 				 *    part, if it is possible. F.e.
 				 *    this approach is mandatory for TUX,
@@ -1467,6 +1487,9 @@ static inline void skb_split_no_header(struct sk_buff *skb,
 
 /**
  * skb_split - Split fragmented skb to two parts at length len.
+ * @skb: the buffer to split
+ * @skb1: the buffer to receive the second part
+ * @len: new length for skb
  */
 void skb_split(struct sk_buff *skb, struct sk_buff *skb1, const u32 len)
 {
@@ -1476,6 +1499,159 @@ void skb_split(struct sk_buff *skb, struct sk_buff *skb1, const u32 len)
 		skb_split_inside_header(skb, skb1, len, pos);
 	else		/* Second chunk has no header, nothing to copy. */
 		skb_split_no_header(skb, skb1, len, pos);
+}
+
+/**
+ * skb_prepare_seq_read - Prepare a sequential read of skb data
+ * @skb: the buffer to read
+ * @from: lower offset of data to be read
+ * @to: upper offset of data to be read
+ * @st: state variable
+ *
+ * Initializes the specified state variable. Must be called before
+ * invoking skb_seq_read() for the first time.
+ */
+void skb_prepare_seq_read(struct sk_buff *skb, unsigned int from,
+			  unsigned int to, struct skb_seq_state *st)
+{
+	st->lower_offset = from;
+	st->upper_offset = to;
+	st->root_skb = st->cur_skb = skb;
+	st->frag_idx = st->stepped_offset = 0;
+	st->frag_data = NULL;
+}
+
+/**
+ * skb_seq_read - Sequentially read skb data
+ * @consumed: number of bytes consumed by the caller so far
+ * @data: destination pointer for data to be returned
+ * @st: state variable
+ *
+ * Reads a block of skb data at &consumed relative to the
+ * lower offset specified to skb_prepare_seq_read(). Assigns
+ * the head of the data block to &data and returns the length
+ * of the block or 0 if the end of the skb data or the upper
+ * offset has been reached.
+ *
+ * The caller is not required to consume all of the data
+ * returned, i.e. &consumed is typically set to the number
+ * of bytes already consumed and the next call to
+ * skb_seq_read() will return the remaining part of the block.
+ *
+ * Note: The size of each block of data returned can be arbitary,
+ *       this limitation is the cost for zerocopy seqeuental
+ *       reads of potentially non linear data.
+ *
+ * Note: Fragment lists within fragments are not implemented
+ *       at the moment, state->root_skb could be replaced with
+ *       a stack for this purpose.
+ */
+unsigned int skb_seq_read(unsigned int consumed, const u8 **data,
+			  struct skb_seq_state *st)
+{
+	unsigned int block_limit, abs_offset = consumed + st->lower_offset;
+	skb_frag_t *frag;
+
+	if (unlikely(abs_offset >= st->upper_offset))
+		return 0;
+
+next_skb:
+	block_limit = skb_headlen(st->cur_skb);
+
+	if (abs_offset < block_limit) {
+		*data = st->cur_skb->data + abs_offset;
+		return block_limit - abs_offset;
+	}
+
+	if (st->frag_idx == 0 && !st->frag_data)
+		st->stepped_offset += skb_headlen(st->cur_skb);
+
+	while (st->frag_idx < skb_shinfo(st->cur_skb)->nr_frags) {
+		frag = &skb_shinfo(st->cur_skb)->frags[st->frag_idx];
+		block_limit = frag->size + st->stepped_offset;
+
+		if (abs_offset < block_limit) {
+			if (!st->frag_data)
+				st->frag_data = kmap_skb_frag(frag);
+
+			*data = (u8 *) st->frag_data + frag->page_offset +
+				(abs_offset - st->stepped_offset);
+
+			return block_limit - abs_offset;
+		}
+
+		if (st->frag_data) {
+			kunmap_skb_frag(st->frag_data);
+			st->frag_data = NULL;
+		}
+
+		st->frag_idx++;
+		st->stepped_offset += frag->size;
+	}
+
+	if (st->cur_skb->next) {
+		st->cur_skb = st->cur_skb->next;
+		st->frag_idx = 0;
+		goto next_skb;
+	} else if (st->root_skb == st->cur_skb &&
+		   skb_shinfo(st->root_skb)->frag_list) {
+		st->cur_skb = skb_shinfo(st->root_skb)->frag_list;
+		goto next_skb;
+	}
+
+	return 0;
+}
+
+/**
+ * skb_abort_seq_read - Abort a sequential read of skb data
+ * @st: state variable
+ *
+ * Must be called if skb_seq_read() was not called until it
+ * returned 0.
+ */
+void skb_abort_seq_read(struct skb_seq_state *st)
+{
+	if (st->frag_data)
+		kunmap_skb_frag(st->frag_data);
+}
+
+#define TS_SKB_CB(state)	((struct skb_seq_state *) &((state)->cb))
+
+static unsigned int skb_ts_get_next_block(unsigned int offset, const u8 **text,
+					  struct ts_config *conf,
+					  struct ts_state *state)
+{
+	return skb_seq_read(offset, text, TS_SKB_CB(state));
+}
+
+static void skb_ts_finish(struct ts_config *conf, struct ts_state *state)
+{
+	skb_abort_seq_read(TS_SKB_CB(state));
+}
+
+/**
+ * skb_find_text - Find a text pattern in skb data
+ * @skb: the buffer to look in
+ * @from: search offset
+ * @to: search limit
+ * @config: textsearch configuration
+ * @state: uninitialized textsearch state variable
+ *
+ * Finds a pattern in the skb data according to the specified
+ * textsearch configuration. Use textsearch_next() to retrieve
+ * subsequent occurrences of the pattern. Returns the offset
+ * to the first occurrence or UINT_MAX if no match was found.
+ */
+unsigned int skb_find_text(struct sk_buff *skb, unsigned int from,
+			   unsigned int to, struct ts_config *config,
+			   struct ts_state *state)
+{
+	config->get_next_block = skb_ts_get_next_block;
+	config->finish = skb_ts_finish;
+
+	skb_prepare_seq_read(skb, from, to, TS_SKB_CB(state));
+
+	return textsearch_find(config, state);
 }
 
 void __init skb_init(void)
@@ -1516,6 +1692,7 @@ EXPORT_SYMBOL(skb_queue_tail);
 EXPORT_SYMBOL(skb_unlink);
 EXPORT_SYMBOL(skb_append);
 EXPORT_SYMBOL(skb_split);
-EXPORT_SYMBOL(skb_iter_first);
-EXPORT_SYMBOL(skb_iter_next);
-EXPORT_SYMBOL(skb_iter_abort);
+EXPORT_SYMBOL(skb_prepare_seq_read);
+EXPORT_SYMBOL(skb_seq_read);
+EXPORT_SYMBOL(skb_abort_seq_read);
+EXPORT_SYMBOL(skb_find_text);

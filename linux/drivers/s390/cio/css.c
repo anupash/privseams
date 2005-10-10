@@ -1,7 +1,7 @@
 /*
  *  drivers/s390/cio/css.c
  *  driver for channel subsystem
- *   $Revision: 1.84 $
+ *   $Revision: 1.85 $
  *
  *    Copyright (C) 2002 IBM Deutschland Entwicklung GmbH,
  *			 IBM Corporation
@@ -128,33 +128,27 @@ css_probe_device(int irq)
 	return ret;
 }
 
+static int
+check_subchannel(struct device * dev, void * data)
+{
+	struct subchannel *sch;
+	int irq = (unsigned long)data;
+
+	sch = to_subchannel(dev);
+	return (sch->irq == irq);
+}
+
 struct subchannel *
 get_subchannel_by_schid(int irq)
 {
-	struct subchannel *sch;
-	struct list_head *entry;
 	struct device *dev;
 
-	if (!get_bus(&css_bus_type))
-		return NULL;
-	down_read(&css_bus_type.subsys.rwsem);
-	sch = NULL;
-	list_for_each(entry, &css_bus_type.devices.list) {
-		dev = get_device(container_of(entry,
-					      struct device, bus_list));
-		if (!dev)
-			continue;
-		sch = to_subchannel(dev);
-		if (sch->irq == irq)
-			break;
-		put_device(dev);
-		sch = NULL;
-	}
-	up_read(&css_bus_type.subsys.rwsem);
-	put_bus(&css_bus_type);
+	dev = bus_find_device(&css_bus_type, NULL,
+			      (void *)(unsigned long)irq, check_subchannel);
 
-	return sch;
+	return dev ? to_subchannel(dev) : NULL;
 }
+
 
 static inline int
 css_get_subchannel_status(struct subchannel *sch, int schid)
@@ -180,6 +174,7 @@ css_evaluate_subchannel(int irq, int slow)
 {
 	int event, ret, disc;
 	struct subchannel *sch;
+	unsigned long flags;
 
 	sch = get_subchannel_by_schid(irq);
 	disc = sch ? device_is_disconnected(sch) : 0;
@@ -221,7 +216,9 @@ css_evaluate_subchannel(int irq, int slow)
 			 * coming operational again. It won't do harm in real
 			 * no path situations.
 			 */
+			spin_lock_irqsave(&sch->lock, flags);
 			device_trigger_reprobe(sch);
+			spin_unlock_irqrestore(&sch->lock, flags);
 			ret = 0;
 			break;
 		}
@@ -262,14 +259,19 @@ css_evaluate_subchannel(int irq, int slow)
 			 * We can't immediately deregister the disconnected
 			 * device since it might block.
 			 */
+			spin_lock_irqsave(&sch->lock, flags);
 			device_trigger_reprobe(sch);
+			spin_unlock_irqrestore(&sch->lock, flags);
 			ret = 0;
 		}
 		break;
 	case CIO_OPER:
-		if (disc)
+		if (disc) {
+			spin_lock_irqsave(&sch->lock, flags);
 			/* Get device operational again. */
 			device_trigger_reprobe(sch);
+			spin_unlock_irqrestore(&sch->lock, flags);
+		}
 		ret = sch ? 0 : css_probe_device(irq);
 		break;
 	default:

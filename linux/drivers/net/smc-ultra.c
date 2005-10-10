@@ -176,6 +176,7 @@ static void cleanup_card(struct net_device *dev)
 		pnp_device_detach(idev);
 #endif
 	release_region(dev->base_addr - ULTRA_NIC_OFFSET, ULTRA_IO_EXTENT);
+	iounmap(ei_status.mem);
 }
 
 #ifndef MODULE
@@ -193,12 +194,7 @@ struct net_device * __init ultra_probe(int unit)
 	err = do_ultra_probe(dev);
 	if (err)
 		goto out;
-	err = register_netdev(dev);
-	if (err)
-		goto out1;
 	return dev;
-out1:
-	cleanup_card(dev);
 out:
 	free_netdev(dev);
 	return ERR_PTR(err);
@@ -294,9 +290,14 @@ static int __init ultra_probe1(struct net_device *dev, int ioaddr)
 	ei_status.rx_start_page = START_PG + TX_PAGES;
 	ei_status.stop_page = num_pages;
 
-	ei_status.rmem_start = dev->mem_start + TX_PAGES*256;
-	dev->mem_end = ei_status.rmem_end
-		= dev->mem_start + (ei_status.stop_page - START_PG)*256;
+	ei_status.mem = ioremap(dev->mem_start, (ei_status.stop_page - START_PG)*256);
+	if (!ei_status.mem) {
+		printk(", failed to ioremap.\n");
+		retval =  -ENOMEM;
+		goto out;
+	}
+
+	dev->mem_end = dev->mem_start + (ei_status.stop_page - START_PG)*256;
 
 	if (piomode) {
 		printk(",%s IRQ %d programmed-I/O mode.\n",
@@ -319,6 +320,9 @@ static int __init ultra_probe1(struct net_device *dev, int ioaddr)
 #endif
 	NS8390_init(dev, 0);
 
+	retval = register_netdev(dev);
+	if (retval)
+		goto out;
 	return 0;
 out:
 	release_region(ioaddr, ULTRA_IO_EXTENT);
@@ -430,16 +434,16 @@ ultra_reset_8390(struct net_device *dev)
 static void
 ultra_get_8390_hdr(struct net_device *dev, struct e8390_pkt_hdr *hdr, int ring_page)
 {
-	unsigned long hdr_start = dev->mem_start + ((ring_page - START_PG)<<8);
+	void __iomem *hdr_start = ei_status.mem + ((ring_page - START_PG)<<8);
 
 	outb(ULTRA_MEMENB, dev->base_addr - ULTRA_NIC_OFFSET);	/* shmem on */
 #ifdef __BIG_ENDIAN
 	/* Officially this is what we are doing, but the readl() is faster */
 	/* unfortunately it isn't endian aware of the struct               */
-	isa_memcpy_fromio(hdr, hdr_start, sizeof(struct e8390_pkt_hdr));
+	memcpy_fromio(hdr, hdr_start, sizeof(struct e8390_pkt_hdr));
 	hdr->count = le16_to_cpu(hdr->count);
 #else
-	((unsigned int*)hdr)[0] = isa_readl(hdr_start);
+	((unsigned int*)hdr)[0] = readl(hdr_start);
 #endif
 	outb(0x00, dev->base_addr - ULTRA_NIC_OFFSET); /* shmem off */
 }
@@ -450,20 +454,20 @@ ultra_get_8390_hdr(struct net_device *dev, struct e8390_pkt_hdr *hdr, int ring_p
 static void
 ultra_block_input(struct net_device *dev, int count, struct sk_buff *skb, int ring_offset)
 {
-	unsigned long xfer_start = dev->mem_start + ring_offset - (START_PG<<8);
+	void __iomem *xfer_start = ei_status.mem + ring_offset - (START_PG<<8);
 
 	/* Enable shared memory. */
 	outb(ULTRA_MEMENB, dev->base_addr - ULTRA_NIC_OFFSET);
 
-	if (xfer_start + count > ei_status.rmem_end) {
+	if (ring_offset + count > ei_status.stop_page*256) {
 		/* We must wrap the input move. */
-		int semi_count = ei_status.rmem_end - xfer_start;
-		isa_memcpy_fromio(skb->data, xfer_start, semi_count);
+		int semi_count = ei_status.stop_page*256 - ring_offset;
+		memcpy_fromio(skb->data, xfer_start, semi_count);
 		count -= semi_count;
-		isa_memcpy_fromio(skb->data + semi_count, ei_status.rmem_start, count);
+		memcpy_fromio(skb->data + semi_count, ei_status.mem + TX_PAGES * 256, count);
 	} else {
 		/* Packet is in one chunk -- we can copy + cksum. */
-		isa_eth_io_copy_and_sum(skb, xfer_start, count, 0);
+		eth_io_copy_and_sum(skb, xfer_start, count, 0);
 	}
 
 	outb(0x00, dev->base_addr - ULTRA_NIC_OFFSET);	/* Disable memory. */
@@ -473,12 +477,12 @@ static void
 ultra_block_output(struct net_device *dev, int count, const unsigned char *buf,
 				int start_page)
 {
-	unsigned long shmem = dev->mem_start + ((start_page - START_PG)<<8);
+	void __iomem *shmem = ei_status.mem + ((start_page - START_PG)<<8);
 
 	/* Enable shared memory. */
 	outb(ULTRA_MEMENB, dev->base_addr - ULTRA_NIC_OFFSET);
 
-	isa_memcpy_toio(shmem, buf, count);
+	memcpy_toio(shmem, buf, count);
 
 	outb(0x00, dev->base_addr - ULTRA_NIC_OFFSET); /* Disable memory. */
 }
@@ -577,11 +581,8 @@ init_module(void)
 		dev->irq = irq[this_dev];
 		dev->base_addr = io[this_dev];
 		if (do_ultra_probe(dev) == 0) {
-			if (register_netdev(dev) == 0) {
-				dev_ultra[found++] = dev;
-				continue;
-			}
-			cleanup_card(dev);
+			dev_ultra[found++] = dev;
+			continue;
 		}
 		free_netdev(dev);
 		printk(KERN_WARNING "smc-ultra.c: No SMC Ultra card found (i/o = 0x%x).\n", io[this_dev]);

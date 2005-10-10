@@ -99,10 +99,10 @@ where all fields are passed in as hexadecimal values (no leading 0x).
 Users need pass only as many fields as necessary; vendor, device,
 subvendor, and subdevice fields default to PCI_ANY_ID (FFFFFFFF),
 class and classmask fields default to 0, and driver_data defaults to
-0UL.  Device drivers must call
-   pci_dynids_set_use_driver_data(pci_driver *, 1)
-in order for the driver_data field to get passed to the driver.
-Otherwise, only a 0 is passed in that field.
+0UL.  Device drivers must initialize use_driver_data in the dynids struct
+in their pci_driver struct prior to calling pci_register_driver in order
+for the driver_data field to get passed to the driver. Otherwise, only a
+0 is passed in that field.
 
 When the driver exits, it just calls pci_unregister_driver() and the PCI layer
 automatically calls the remove hook for all devices handled by the driver.
@@ -266,19 +266,6 @@ port an old driver to the new PCI interface.  They are no longer present
 in the kernel as they aren't compatible with hotplug or PCI domains or
 having sane locking.
 
-pcibios_present() and		Since ages, you don't need to test presence
-pci_present()			of PCI subsystem when trying to talk to it.
-				If it's not there, the list of PCI devices
-				is empty and all functions for searching for
-				devices just return NULL.
-pcibios_(read|write)_*		Superseded by their pci_(read|write)_*
-				counterparts.
-pcibios_find_*			Superseded by their pci_get_* counterparts.
-pci_for_each_dev()		Superseded by pci_get_device()
-pci_for_each_dev_reverse()	Superseded by pci_find_device_reverse()
-pci_for_each_bus()		Superseded by pci_find_next_bus()
 pci_find_device()		Superseded by pci_get_device()
 pci_find_subsys()		Superseded by pci_get_subsys()
-pcibios_find_class()		Superseded by pci_get_class()
-pci_find_class()		Superseded by pci_get_class()
-pci_(read|write)_*_nodev()	Superseded by pci_bus_(read|write)_*()
+pci_find_slot()			Superseded by pci_get_slot()

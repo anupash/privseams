@@ -165,7 +165,7 @@ int __init
 via_calibrate_decr(void)
 {
 	struct device_node *vias;
-	volatile unsigned char *via;
+	volatile unsigned char __iomem *via;
 	int count = VIA_TIMER_FREQ_6 / 100;
 	unsigned int dstart, dend;
 
@@ -176,8 +176,7 @@ via_calibrate_decr(void)
 		vias = find_devices("via");
 	if (vias == 0 || vias->n_addrs == 0)
 		return 0;
-	via = (volatile unsigned char *)
-		ioremap(vias->addrs[0].address, vias->addrs[0].size);
+	via = ioremap(vias->addrs[0].address, vias->addrs[0].size);
 
 	/* set timer 1 for continuous interrupts */
 	out_8(&via[ACR], (via[ACR] & ~T1MODE) | T1MODE_CONT);
@@ -202,12 +201,12 @@ via_calibrate_decr(void)
 	printk(KERN_INFO "via_calibrate_decr: ticks per jiffy = %u (%u ticks)\n",
 	       tb_ticks_per_jiffy, dstart - dend);
 
-	iounmap((void*)via);
+	iounmap(via);
 	
 	return 1;
 }
 
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 /*
  * Reset the time after a sleep.
  */
@@ -239,7 +238,7 @@ time_sleep_notify(struct pmu_sleep_notifier *self, int when)
 static struct pmu_sleep_notifier time_sleep_notifier __pmacdata = {
 	time_sleep_notify, SLEEP_LEVEL_MISC,
 };
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PM */
 
 /*
  * Query the OF and get the decr frequency.
@@ -252,9 +251,9 @@ pmac_calibrate_decr(void)
 	struct device_node *cpu;
 	unsigned int freq, *fp;
 
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 	pmu_register_sleep_notifier(&time_sleep_notifier);
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PM */
 
 	/* We assume MacRISC2 machines have correct device-tree
 	 * calibration. That's better since the VIA itself seems

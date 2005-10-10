@@ -155,7 +155,7 @@ seclvl_attr_store(struct kobject *kobj,
 	struct seclvl_obj *obj = container_of(kobj, struct seclvl_obj, kobj);
 	struct seclvl_attribute *attribute =
 	    container_of(attr, struct seclvl_attribute, attr);
-	return (attribute->store ? attribute->store(obj, buf, len) : 0);
+	return attribute->store ? attribute->store(obj, buf, len) : -EIO;
 }
 
 static ssize_t
@@ -164,13 +164,13 @@ seclvl_attr_show(struct kobject *kobj, struct attribute *attr, char *buf)
 	struct seclvl_obj *obj = container_of(kobj, struct seclvl_obj, kobj);
 	struct seclvl_attribute *attribute =
 	    container_of(attr, struct seclvl_attribute, attr);
-	return (attribute->show ? attribute->show(obj, buf) : 0);
+	return attribute->show ? attribute->show(obj, buf) : -EIO;
 }
 
 /**
  * Callback function pointers for show and store
  */
-struct sysfs_ops seclvlfs_sysfs_ops = {
+static struct sysfs_ops seclvlfs_sysfs_ops = {
 	.show = seclvl_attr_show,
 	.store = seclvl_attr_store,
 };
@@ -275,7 +275,7 @@ seclvl_write_file(struct seclvl_obj *obj, const char *buff, size_t count)
 }
 
 /* Generate sysfs_attr_seclvl */
-struct seclvl_attribute sysfs_attr_seclvl =
+static struct seclvl_attribute sysfs_attr_seclvl =
 __ATTR(seclvl, (S_IFREG | S_IRUGO | S_IWUSR), seclvl_read_file,
        seclvl_write_file);
 
@@ -386,7 +386,7 @@ seclvl_write_passwd(struct seclvl_obj *obj, const char *buff, size_t count)
 }
 
 /* Generate sysfs_attr_passwd */
-struct seclvl_attribute sysfs_attr_passwd =
+static struct seclvl_attribute sysfs_attr_passwd =
 __ATTR(passwd, (S_IFREG | S_IRUGO | S_IWUSR), seclvl_read_passwd,
        seclvl_write_passwd);
 

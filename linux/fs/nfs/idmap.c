@@ -50,6 +50,7 @@
 #include <linux/nfs_fs.h>
 
 #include <linux/nfs_idmap.h>
+#include "nfs4_fs.h"
 
 #define IDMAP_HASH_SZ          128
 
@@ -79,7 +80,7 @@ static ssize_t   idmap_pipe_upcall(struct file *, struct rpc_pipe_msg *,
 		     char __user *, size_t);
 static ssize_t   idmap_pipe_downcall(struct file *, const char __user *,
 		     size_t);
-void             idmap_pipe_destroy_msg(struct rpc_pipe_msg *);
+static void      idmap_pipe_destroy_msg(struct rpc_pipe_msg *);
 
 static unsigned int fnvhash32(const void *, size_t);
 
@@ -434,7 +435,7 @@ out:
 	return ret;
 }
 
-void
+static void
 idmap_pipe_destroy_msg(struct rpc_pipe_msg *msg)
 {
 	struct idmap_msg *im = msg->data;

@@ -1,34 +1,29 @@
 obj-y = bitops.o bugs.o checksum.o delay.o fault.o ksyms.o ldt.o ptrace.o \
-	ptrace_user.o semaphore.o signal.o sigcontext.o syscalls.o sysrq.o
+	ptrace_user.o semaphore.o signal.o sigcontext.o stub.o stub_segv.o \
+	syscalls.o sysrq.o sys_call_table.o
 
 obj-$(CONFIG_HIGHMEM) += highmem.o
 obj-$(CONFIG_MODULES) += module.o
 
 USER_OBJS := bugs.o ptrace_user.o sigcontext.o fault.o
-USER_OBJS := $(foreach file,$(USER_OBJS),$(obj)/$(file))
 
 SYMLINKS = bitops.c semaphore.c highmem.c module.c
 
-# this needs to be before the foreach, because clean-files does not accept
-# complete paths like $(src)/$f.
-clean-files := $(SYMLINKS)
-
-SYMLINKS := $(foreach f,$(SYMLINKS),$(src)/$f)
+include arch/um/scripts/Makefile.rules
 
 bitops.c-dir = lib
 semaphore.c-dir = kernel
 highmem.c-dir = mm
 module.c-dir = kernel
 
-define make_link
-	-rm -f $1
-	ln -sf $(TOPDIR)/arch/i386/$($(notdir $1)-dir)/$(notdir $1) $1
-endef
+STUB_CFLAGS = -Wp,-MD,$(depfile) $(call unprofile,$(USER_CFLAGS))
 
-$(USER_OBJS) : %.o: %.c
-	$(CC) $(CFLAGS_$(notdir $@)) $(USER_CFLAGS) -c -o $@ $<
+# _cflags works with kernel files, not with userspace ones, but c_flags does,
+# why ask why?
+$(obj)/stub_segv.o : c_flags = $(STUB_CFLAGS)
 
-$(SYMLINKS): 
-	$(call make_link,$@)
+$(obj)/stub.o : a_flags = $(STUB_CFLAGS)
 
 subdir- := util
+
+include arch/um/scripts/Makefile.unmap

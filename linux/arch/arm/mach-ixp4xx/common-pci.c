@@ -453,8 +453,8 @@ int ixp4xx_setup(int nr, struct pci_sys_data *sys)
 	local_write_config(PCI_COMMAND, 2, PCI_COMMAND_MASTER | PCI_COMMAND_MEMORY);
 
 	res[0].name = "PCI I/O Space";
-	res[0].start = 0x00001000;
-	res[0].end = 0xffff0000;
+	res[0].start = 0x00000000;
+	res[0].end = 0x0000ffff;
 	res[0].flags = IORESOURCE_IO;
 
 	res[1].name = "PCI Memory Space";
@@ -502,15 +502,6 @@ pci_set_dma_mask(struct pci_dev *dev, u64 mask)
 }
     
 int
-pci_dac_set_dma_mask(struct pci_dev *dev, u64 mask)
-{
-	if (mask >= SZ_64M - 1 )
-		return 0;
-
-	return -EIO;
-}
-
-int
 pci_set_consistent_dma_mask(struct pci_dev *dev, u64 mask)
 {
 	if (mask >= SZ_64M - 1 )
@@ -520,7 +511,6 @@ pci_set_consistent_dma_mask(struct pci_dev *dev, u64 mask)
 }
 
 EXPORT_SYMBOL(pci_set_dma_mask);
-EXPORT_SYMBOL(pci_dac_set_dma_mask);
 EXPORT_SYMBOL(pci_set_consistent_dma_mask);
 EXPORT_SYMBOL(ixp4xx_pci_read);
 EXPORT_SYMBOL(ixp4xx_pci_write);

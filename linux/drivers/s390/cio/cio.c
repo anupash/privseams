@@ -1,7 +1,7 @@
 /*
  *  drivers/s390/cio/cio.c
  *   S/390 common I/O routines -- low level i/o calls
- *   $Revision: 1.130 $
+ *   $Revision: 1.134 $
  *
  *    Copyright (C) 1999-2002 IBM Deutschland Entwicklung GmbH,
  *			      IBM Corporation
@@ -63,17 +63,17 @@ __setup ("cio_msg=", cio_setup);
 static int __init
 cio_debug_init (void)
 {
-	cio_debug_msg_id = debug_register ("cio_msg", 4, 4, 16*sizeof (long));
+	cio_debug_msg_id = debug_register ("cio_msg", 16, 4, 16*sizeof (long));
 	if (!cio_debug_msg_id)
 		goto out_unregister;
 	debug_register_view (cio_debug_msg_id, &debug_sprintf_view);
 	debug_set_level (cio_debug_msg_id, 2);
-	cio_debug_trace_id = debug_register ("cio_trace", 4, 4, 8);
+	cio_debug_trace_id = debug_register ("cio_trace", 16, 4, 8);
 	if (!cio_debug_trace_id)
 		goto out_unregister;
 	debug_register_view (cio_debug_trace_id, &debug_hex_ascii_view);
 	debug_set_level (cio_debug_trace_id, 2);
-	cio_debug_crw_id = debug_register ("cio_crw", 2, 4, 16*sizeof (long));
+	cio_debug_crw_id = debug_register ("cio_crw", 4, 4, 16*sizeof (long));
 	if (!cio_debug_crw_id)
 		goto out_unregister;
 	debug_register_view (cio_debug_crw_id, &debug_sprintf_view);
@@ -228,7 +228,7 @@ cio_start_key (struct subchannel *sch,	/* subchannel structure */
 int
 cio_start (struct subchannel *sch, struct ccw1 *cpa, __u8 lpm)
 {
-	return cio_start_key(sch, cpa, lpm, default_storage_key);
+	return cio_start_key(sch, cpa, lpm, PAGE_DEFAULT_KEY);
 }
 
 /*
@@ -608,6 +608,10 @@ do_IRQ (struct pt_regs *regs)
 	irq_enter ();
 	asm volatile ("mc 0,0");
 	if (S390_lowcore.int_clock >= S390_lowcore.jiffy_timer)
+		/**
+		 * Make sure that the i/o interrupt did not "overtake"
+		 * the last HZ timer interrupt.
+		 */
 		account_ticks(regs);
 	/*
 	 * Get interrupt information from lowcore

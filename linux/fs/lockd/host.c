@@ -110,7 +110,6 @@ nlm_lookup_host(int server, struct sockaddr_in *sin,
 	host->h_addr.sin_port = 0;	/* ouch! */
 	host->h_version    = version;
 	host->h_proto      = proto;
-	host->h_authflavor = RPC_AUTH_UNIX;
 	host->h_rpcclnt    = NULL;
 	init_MUTEX(&host->h_sema);
 	host->h_nextrebind = jiffies + NLM_HOST_REBIND;
@@ -190,16 +189,15 @@ nlm_bind_host(struct nlm_host *host)
 			goto forgetit;
 
 		xprt_set_timeout(&xprt->timeout, 5, nlmsvc_timeout);
-
-		clnt = rpc_create_client(xprt, host->h_name, &nlm_program,
-					host->h_version, host->h_authflavor);
-		if (IS_ERR(clnt)) {
-			xprt_destroy(xprt);
-			goto forgetit;
-		}
-		clnt->cl_autobind = 1;	/* turn on pmap queries */
 		xprt->nocong = 1;	/* No congestion control for NLM */
 		xprt->resvport = 1;	/* NLM requires a reserved port */
+
+		/* Existing NLM servers accept AUTH_UNIX only */
+		clnt = rpc_create_client(xprt, host->h_name, &nlm_program,
+					host->h_version, RPC_AUTH_UNIX);
+		if (IS_ERR(clnt))
+			goto forgetit;
+		clnt->cl_autobind = 1;	/* turn on pmap queries */
 
 		host->h_rpcclnt = clnt;
 	}

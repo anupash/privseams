@@ -21,7 +21,6 @@
    All SMBus-related things are written by Frodo Looijaard <frodol@dds.nl>
    SMBus 2.0 support by Mark Studebaker <mdsxyz123@yahoo.com>                */
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
@@ -38,12 +37,43 @@ static LIST_HEAD(drivers);
 static DECLARE_MUTEX(core_lists);
 static DEFINE_IDR(i2c_adapter_idr);
 
-int i2c_device_probe(struct device *dev)
+/* match always succeeds, as we want the probe() to tell if we really accept this match */
+static int i2c_device_match(struct device *dev, struct device_driver *drv)
+{
+	return 1;
+}
+
+static int i2c_bus_suspend(struct device * dev, pm_message_t state)
+{
+	int rc = 0;
+
+	if (dev->driver && dev->driver->suspend)
+		rc = dev->driver->suspend(dev,state,0);
+	return rc;
+}
+
+static int i2c_bus_resume(struct device * dev)
+{
+	int rc = 0;
+	
+	if (dev->driver && dev->driver->resume)
+		rc = dev->driver->resume(dev,0);
+	return rc;
+}
+
+static struct bus_type i2c_bus_type = {
+	.name =		"i2c",
+	.match =	i2c_device_match,
+	.suspend =      i2c_bus_suspend,
+	.resume =       i2c_bus_resume,
+};
+
+static int i2c_device_probe(struct device *dev)
 {
 	return -ENODEV;
 }
 
-int i2c_device_remove(struct device *dev)
+static int i2c_device_remove(struct device *dev)
 {
 	return 0;
 }
@@ -72,7 +102,7 @@ static struct class i2c_adapter_class = {
 	.release =	&i2c_adapter_class_dev_release,
 };
 
-static ssize_t show_adapter_name(struct device *dev, char *buf)
+static ssize_t show_adapter_name(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct i2c_adapter *adap = dev_to_i2c_adapter(dev);
 	return sprintf(buf, "%s\n", adap->name);
@@ -86,7 +116,7 @@ static void i2c_client_release(struct device *dev)
 	complete(&client->released);
 }
 
-static ssize_t show_client_name(struct device *dev, char *buf)
+static ssize_t show_client_name(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	return sprintf(buf, "%s\n", client->name);
@@ -126,7 +156,7 @@ int i2c_add_adapter(struct i2c_adapter *adap)
 		goto out_unlock;
 	}
 
-	res = idr_get_new(&i2c_adapter_idr, NULL, &id);
+	res = idr_get_new(&i2c_adapter_idr, adap, &id);
 	if (res < 0) {
 		if (res == -EAGAIN)
 			res = -ENOMEM;
@@ -201,14 +231,14 @@ int i2c_del_adapter(struct i2c_adapter *adap)
 		if (driver->detach_adapter)
 			if ((res = driver->detach_adapter(adap))) {
 				dev_warn(&adap->dev, "can't detach adapter "
-					 "while detaching driver %s: driver not "
-					 "detached!", driver->name);
+					 "while detaching driver %s: driver "
+					 "not detached!\n", driver->name);
 				goto out_unlock;
 			}
 	}
 
 	/* detach any active clients. This must be done first, because
-	 * it can fail; in which case we give upp. */
+	 * it can fail; in which case we give up. */
 	list_for_each_safe(item, _n, &adap->clients) {
 		client = list_entry(item, struct i2c_client, list);
 
@@ -426,8 +456,8 @@ int i2c_detach_client(struct i2c_client *client)
 		res = adapter->client_unregister(client);
 		if (res) {
 			dev_err(&client->dev,
-			       "client_unregister [%s] failed, "
-			       "client not detached", client->name);
+				"client_unregister [%s] failed, "
+				"client not detached\n", client->name);
 			goto out;
 		}
 	}
@@ -523,38 +553,6 @@ void i2c_clients_command(struct i2c_adapter *adap, unsigned int cmd, void *arg)
        up(&adap->clist_lock);
 }
 
-
-/* match always succeeds, as we want the probe() to tell if we really accept this match */
-static int i2c_device_match(struct device *dev, struct device_driver *drv)
-{
-	return 1;
-}
-
-static int i2c_bus_suspend(struct device * dev, u32 state)
-{
-	int rc = 0;
-
-	if (dev->driver && dev->driver->suspend)
-		rc = dev->driver->suspend(dev,state,0);
-	return rc;
-}
-
-static int i2c_bus_resume(struct device * dev)
-{
-	int rc = 0;
-	
-	if (dev->driver && dev->driver->resume)
-		rc = dev->driver->resume(dev,0);
-	return rc;
-}
-
-struct bus_type i2c_bus_type = {
-	.name =		"i2c",
-	.match =	i2c_device_match,
-	.suspend =      i2c_bus_suspend,
-	.resume =       i2c_bus_resume,
-};
-
 static int __init i2c_init(void)
 {
 	int retval;
@@ -583,12 +581,18 @@ module_exit(i2c_exit);
  * ----------------------------------------------------
  */
 
-int i2c_transfer(struct i2c_adapter * adap, struct i2c_msg msgs[],int num)
+int i2c_transfer(struct i2c_adapter * adap, struct i2c_msg *msgs, int num)
 {
 	int ret;
 
 	if (adap->algo->master_xfer) {
- 	 	dev_dbg(&adap->dev, "master_xfer: with %d msgs.\n", num);
+#ifdef DEBUG
+		for (ret = 0; ret < num; ret++) {
+			dev_dbg(&adap->dev, "master_xfer[%d] %c, addr=0x%02x, "
+				"len=%d\n", ret, msgs[ret].flags & I2C_M_RD ?
+				'R' : 'W', msgs[ret].addr, msgs[ret].len);
+		}
+#endif
 
 		down(&adap->bus_lock);
 		ret = adap->algo->master_xfer(adap,msgs,num);
@@ -607,27 +611,16 @@ int i2c_master_send(struct i2c_client *client,const char *buf ,int count)
 	struct i2c_adapter *adap=client->adapter;
 	struct i2c_msg msg;
 
-	if (client->adapter->algo->master_xfer) {
-		msg.addr   = client->addr;
-		msg.flags = client->flags & I2C_M_TEN;
-		msg.len = count;
-		msg.buf = (char *)buf;
+	msg.addr = client->addr;
+	msg.flags = client->flags & I2C_M_TEN;
+	msg.len = count;
+	msg.buf = (char *)buf;
 	
-		dev_dbg(&client->adapter->dev, "master_send: writing %d bytes.\n",
-			count);
-	
-		down(&adap->bus_lock);
-		ret = adap->algo->master_xfer(adap,&msg,1);
-		up(&adap->bus_lock);
+	ret = i2c_transfer(adap, &msg, 1);
 
-		/* if everything went ok (i.e. 1 msg transmitted), return #bytes
-		 * transmitted, else error code.
-		 */
-		return (ret == 1 )? count : ret;
-	} else {
-		dev_err(&client->adapter->dev, "I2C level transfers not supported\n");
-		return -ENOSYS;
-	}
+	/* If everything went ok (i.e. 1 msg transmitted), return #bytes
+	   transmitted, else error code. */
+	return (ret == 1) ? count : ret;
 }
 
 int i2c_master_recv(struct i2c_client *client, char *buf ,int count)
@@ -635,31 +628,18 @@ int i2c_master_recv(struct i2c_client *client, char *buf ,int count)
 	struct i2c_adapter *adap=client->adapter;
 	struct i2c_msg msg;
 	int ret;
-	if (client->adapter->algo->master_xfer) {
-		msg.addr   = client->addr;
-		msg.flags = client->flags & I2C_M_TEN;
-		msg.flags |= I2C_M_RD;
-		msg.len = count;
-		msg.buf = buf;
 
-		dev_dbg(&client->adapter->dev, "master_recv: reading %d bytes.\n",
-			count);
-	
-		down(&adap->bus_lock);
-		ret = adap->algo->master_xfer(adap,&msg,1);
-		up(&adap->bus_lock);
-	
-		dev_dbg(&client->adapter->dev, "master_recv: return:%d (count:%d, addr:0x%02x)\n",
-			ret, count, client->addr);
-	
-		/* if everything went ok (i.e. 1 msg transmitted), return #bytes
-	 	* transmitted, else error code.
-	 	*/
-		return (ret == 1 )? count : ret;
-	} else {
-		dev_err(&client->adapter->dev, "I2C level transfers not supported\n");
-		return -ENOSYS;
-	}
+	msg.addr = client->addr;
+	msg.flags = client->flags & I2C_M_TEN;
+	msg.flags |= I2C_M_RD;
+	msg.len = count;
+	msg.buf = buf;
+
+	ret = i2c_transfer(adap, &msg, 1);
+
+	/* If everything went ok (i.e. 1 msg transmitted), return #bytes
+	   transmitted, else error code. */
+	return (ret == 1) ? count : ret;
 }
 
 
@@ -710,7 +690,7 @@ int i2c_probe(struct i2c_adapter *adapter,
 		   at all */
 		found = 0;
 
-		for (i = 0; !found && (address_data->force[i] != I2C_CLIENT_END); i += 3) {
+		for (i = 0; !found && (address_data->force[i] != I2C_CLIENT_END); i += 2) {
 			if (((adap_id == address_data->force[i]) || 
 			     (address_data->force[i] == ANY_I2C_BUS)) &&
 			     (addr == address_data->force[i+1])) {
@@ -737,18 +717,6 @@ int i2c_probe(struct i2c_adapter *adapter,
 				found = 1;
 			}
 		}
-		for (i = 0;
-		     !found && (address_data->ignore_range[i] != I2C_CLIENT_END);
-		     i += 3) {
-			if (((adap_id == address_data->ignore_range[i]) ||
-			    ((address_data->ignore_range[i]==ANY_I2C_BUS))) &&
-			    (addr >= address_data->ignore_range[i+1]) &&
-			    (addr <= address_data->ignore_range[i+2])) {
-				dev_dbg(&adapter->dev, "found ignore_range parameter for adapter %d, "
-					"addr %04x\n", adap_id,addr);
-				found = 1;
-			}
-		}
 		if (found) 
 			continue;
 
@@ -765,17 +733,6 @@ int i2c_probe(struct i2c_adapter *adapter,
 		}
 
 		for (i = 0;
-		     !found && (address_data->normal_i2c_range[i] != I2C_CLIENT_END);
-		     i += 2) {
-			if ((addr >= address_data->normal_i2c_range[i]) &&
-			    (addr <= address_data->normal_i2c_range[i+1])) {
-				found = 1;
-				dev_dbg(&adapter->dev, "found normal i2c_range entry for adapter %d, "
-					"addr %04x\n", adap_id,addr);
-			}
-		}
-
-		for (i = 0;
 		     !found && (address_data->probe[i] != I2C_CLIENT_END);
 		     i += 2) {
 			if (((adap_id == address_data->probe[i]) ||
@@ -783,18 +740,6 @@ int i2c_probe(struct i2c_adapter *adapter,
 			    (addr == address_data->probe[i+1])) {
 				found = 1;
 				dev_dbg(&adapter->dev, "found probe parameter for adapter %d, "
-					"addr %04x\n", adap_id,addr);
-			}
-		}
-		for (i = 0;
-		     !found && (address_data->probe_range[i] != I2C_CLIENT_END);
-		     i += 3) {
-			if (((adap_id == address_data->probe_range[i]) ||
-			   (address_data->probe_range[i] == ANY_I2C_BUS)) &&
-			   (addr >= address_data->probe_range[i+1]) &&
-			   (addr <= address_data->probe_range[i+2])) {
-				found = 1;
-				dev_dbg(&adapter->dev, "found probe_range parameter for adapter %d, "
 					"addr %04x\n", adap_id,addr);
 			}
 		}
@@ -820,20 +765,15 @@ int i2c_adapter_id(struct i2c_adapter *adap)
 
 struct i2c_adapter* i2c_get_adapter(int id)
 {
-	struct list_head   *item;
 	struct i2c_adapter *adapter;
 	
 	down(&core_lists);
-	list_for_each(item,&adapters) {
-		adapter = list_entry(item, struct i2c_adapter, list);
-		if (id == adapter->nr &&
-		    try_module_get(adapter->owner)) {
-			up(&core_lists);
-			return adapter;
-		}
-	}
+	adapter = (struct i2c_adapter *)idr_find(&i2c_adapter_idr, id);
+	if (adapter && !try_module_get(adapter->owner))
+		adapter = NULL;
+
 	up(&core_lists);
-	return NULL;
+	return adapter;
 }
 
 void i2c_put_adapter(struct i2c_adapter *adap)
@@ -860,7 +800,7 @@ crc8(u16 data)
 /* CRC over count bytes in the first array plus the bytes in the rest
    array if it is non-null. rest[0] is the (length of rest) - 1
    and is included. */
-u8 i2c_smbus_partial_pec(u8 crc, int count, u8 *first, u8 *rest)
+static u8 i2c_smbus_partial_pec(u8 crc, int count, u8 *first, u8 *rest)
 {
 	int i;
 
@@ -872,7 +812,7 @@ u8 i2c_smbus_partial_pec(u8 crc, int count, u8 *first, u8 *rest)
 	return crc;
 }
 
-u8 i2c_smbus_pec(int count, u8 *first, u8 *rest)
+static u8 i2c_smbus_pec(int count, u8 *first, u8 *rest)
 {
 	return i2c_smbus_partial_pec(0, count, first, rest);
 }
@@ -880,8 +820,8 @@ u8 i2c_smbus_pec(int count, u8 *first, u8 *rest)
 /* Returns new "size" (transaction type)
    Note that we convert byte to byte_data and byte_data to word_data
    rather than invent new xxx_PEC transactions. */
-int i2c_smbus_add_pec(u16 addr, u8 command, int size,
-                      union i2c_smbus_data *data)
+static int i2c_smbus_add_pec(u16 addr, u8 command, int size,
+			     union i2c_smbus_data *data)
 {
 	u8 buf[3];
 
@@ -910,8 +850,8 @@ int i2c_smbus_add_pec(u16 addr, u8 command, int size,
 	return size;	
 }
 
-int i2c_smbus_check_pec(u16 addr, u8 command, int size, u8 partial,
-                        union i2c_smbus_data *data)
+static int i2c_smbus_check_pec(u16 addr, u8 command, int size, u8 partial,
+			       union i2c_smbus_data *data)
 {
 	u8 buf[3], rpec, cpec;
 
@@ -1231,22 +1171,6 @@ s32 i2c_smbus_xfer(struct i2c_adapter * adapter, u16 addr, unsigned short flags,
 }
 
 
-/* You should always define `functionality'; the 'else' is just for
-   backward compatibility. */ 
-u32 i2c_get_functionality (struct i2c_adapter *adap)
-{
-	if (adap->algo->functionality)
-		return adap->algo->functionality(adap);
-	else
-		return 0xffffffff;
-}
-
-int i2c_check_functionality (struct i2c_adapter *adap, u32 func)
-{
-	u32 adap_func = i2c_get_functionality (adap);
-	return (func & adap_func) == func;
-}
-
 EXPORT_SYMBOL(i2c_add_adapter);
 EXPORT_SYMBOL(i2c_del_adapter);
 EXPORT_SYMBOL(i2c_add_driver);
@@ -1277,9 +1201,6 @@ EXPORT_SYMBOL(i2c_smbus_read_word_data);
 EXPORT_SYMBOL(i2c_smbus_write_word_data);
 EXPORT_SYMBOL(i2c_smbus_write_block_data);
 EXPORT_SYMBOL(i2c_smbus_read_i2c_block_data);
-
-EXPORT_SYMBOL(i2c_get_functionality);
-EXPORT_SYMBOL(i2c_check_functionality);
 
 MODULE_AUTHOR("Simon G. Vogl <simon@tk.uni-linz.ac.at>");
 MODULE_DESCRIPTION("I2C-Bus main module");

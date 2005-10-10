@@ -206,7 +206,10 @@ MODULE_PARM_DESC(dual_codec, "Secondary Codec ID (0 = disabled).");
 
 #define BA0_PMCS		0x0344	/* Power Management Control/Status */
 #define BA0_CWPR		0x03e0	/* Configuration Write Protect */
+
 #define BA0_EPPMC		0x03e4	/* Extended PCI Power Management Control */
+#define BA0_EPPMC_FPDN		(1<<14) /* Full Power DowN */
+
 #define BA0_GPIOR		0x03e8	/* GPIO Pin Interface Register */
 
 #define BA0_SPMC		0x03ec	/* Serial Port Power Management Control (& ASDIN2 enable) */
@@ -495,7 +498,7 @@ struct snd_cs4281 {
 	unsigned int midcr;
 	unsigned int uartm;
 
-	struct snd_cs4281_gameport *gameport;
+	struct gameport *gameport;
 
 #ifdef CONFIG_PM
 	u32 suspend_regs[SUSPEND_REGISTERS];
@@ -539,7 +542,7 @@ static void snd_cs4281_delay(unsigned int delay)
 	}
 }
 
-inline static void snd_cs4281_delay_long(void)
+static inline void snd_cs4281_delay_long(void)
 {
 	set_current_state(TASK_UNINTERRUPTIBLE);
 	schedule_timeout(1);
@@ -1238,38 +1241,29 @@ static void __devinit snd_cs4281_proc_init(cs4281_t * chip)
 
 #if defined(CONFIG_GAMEPORT) || (defined(MODULE) && defined(CONFIG_GAMEPORT_MODULE))
 
-typedef struct snd_cs4281_gameport {
-	struct gameport info;
-	cs4281_t *chip;
-} cs4281_gameport_t;
-
 static void snd_cs4281_gameport_trigger(struct gameport *gameport)
 {
-	cs4281_gameport_t *gp = (cs4281_gameport_t *)gameport;
-	cs4281_t *chip;
-	snd_assert(gp, return);
-	chip = gp->chip;
+	cs4281_t *chip = gameport_get_port_data(gameport);
+
+	snd_assert(chip, return);
 	snd_cs4281_pokeBA0(chip, BA0_JSPT, 0xff);
 }
 
 static unsigned char snd_cs4281_gameport_read(struct gameport *gameport)
 {
-	cs4281_gameport_t *gp = (cs4281_gameport_t *)gameport;
-	cs4281_t *chip;
-	snd_assert(gp, return 0);
-	chip = gp->chip;
+	cs4281_t *chip = gameport_get_port_data(gameport);
+
+	snd_assert(chip, return 0);
 	return snd_cs4281_peekBA0(chip, BA0_JSPT);
 }
 
 #ifdef COOKED_MODE
 static int snd_cs4281_gameport_cooked_read(struct gameport *gameport, int *axes, int *buttons)
 {
-	cs4281_gameport_t *gp = (cs4281_gameport_t *)gameport;
-	cs4281_t *chip;
+	cs4281_t *chip = gameport_get_port_data(gameport);
 	unsigned js1, js2, jst;
 	
-	snd_assert(gp, return 0);
-	chip = gp->chip;
+	snd_assert(chip, return 0);
 
 	js1 = snd_cs4281_peekBA0(chip, BA0_JSC1);
 	js2 = snd_cs4281_peekBA0(chip, BA0_JSC2);
@@ -1282,10 +1276,12 @@ static int snd_cs4281_gameport_cooked_read(struct gameport *gameport, int *axes,
 	axes[2] = ((js2 & JSC2_Y2V_MASK) >> JSC2_Y2V_SHIFT) & 0xFFFF;
 	axes[3] = ((js2 & JSC2_X2V_MASK) >> JSC2_X2V_SHIFT) & 0xFFFF;
 
-	for(jst=0;jst<4;++jst)
-		if(axes[jst]==0xFFFF) axes[jst] = -1;
+	for (jst = 0; jst < 4; ++jst)
+		if (axes[jst] == 0xFFFF) axes[jst] = -1;
 	return 0;
 }
+#else
+#define snd_cs4281_gameport_cooked_read	NULL
 #endif
 
 static int snd_cs4281_gameport_open(struct gameport *gameport, int mode)
@@ -1303,46 +1299,49 @@ static int snd_cs4281_gameport_open(struct gameport *gameport, int mode)
 	return 0;
 }
 
-static void __devinit snd_cs4281_gameport(cs4281_t *chip)
+static int __devinit snd_cs4281_create_gameport(cs4281_t *chip)
 {
-	cs4281_gameport_t *gp;
-	gp = kmalloc(sizeof(*gp), GFP_KERNEL);
-	if (! gp) {
-		snd_printk(KERN_ERR "cannot allocate gameport area\n");
-		return;
+	struct gameport *gp;
+
+	chip->gameport = gp = gameport_allocate_port();
+	if (!gp) {
+		printk(KERN_ERR "cs4281: cannot allocate memory for gameport\n");
+		return -ENOMEM;
 	}
-	memset(gp, 0, sizeof(*gp));
-	gp->info.open = snd_cs4281_gameport_open;
-	gp->info.read = snd_cs4281_gameport_read;
-	gp->info.trigger = snd_cs4281_gameport_trigger;
-#ifdef COOKED_MODE
-	gp->info.cooked_read = snd_cs4281_gameport_cooked_read;
-#endif
-	gp->chip = chip;
-	chip->gameport = gp;
+
+	gameport_set_name(gp, "CS4281 Gameport");
+	gameport_set_phys(gp, "pci%s/gameport0", pci_name(chip->pci));
+	gameport_set_dev_parent(gp, &chip->pci->dev);
+	gp->open = snd_cs4281_gameport_open;
+	gp->read = snd_cs4281_gameport_read;
+	gp->trigger = snd_cs4281_gameport_trigger;
+	gp->cooked_read = snd_cs4281_gameport_cooked_read;
+	gameport_set_port_data(gp, chip);
 
 	snd_cs4281_pokeBA0(chip, BA0_JSIO, 0xFF); // ?
 	snd_cs4281_pokeBA0(chip, BA0_JSCTL, JSCTL_SP_MEDIUM_SLOW);
-	gameport_register_port(&gp->info);
+
+	gameport_register_port(gp);
+
+	return 0;
 }
 
+static void snd_cs4281_free_gameport(cs4281_t *chip)
+{
+	if (chip->gameport) {
+		gameport_unregister_port(chip->gameport);
+		chip->gameport = NULL;
+	}
+}
 #else
-#define snd_cs4281_gameport(chip) /*NOP*/
+static inline int snd_cs4281_create_gameport(cs4281_t *chip) { return -ENOSYS; }
+static inline void snd_cs4281_free_gameport(cs4281_t *chip) { }
 #endif /* CONFIG_GAMEPORT || (MODULE && CONFIG_GAMEPORT_MODULE) */
-
-
-/*
-
- */
 
 static int snd_cs4281_free(cs4281_t *chip)
 {
-#if defined(CONFIG_GAMEPORT) || (defined(MODULE) && defined(CONFIG_GAMEPORT_MODULE))
-	if (chip->gameport) {
-		gameport_unregister_port(&chip->gameport->info);
-		kfree(chip->gameport);
-	}
-#endif
+	snd_cs4281_free_gameport(chip);
+
 	if (chip->irq >= 0)
 		synchronize_irq(chip->irq);
 
@@ -1376,8 +1375,8 @@ static int snd_cs4281_dev_free(snd_device_t *device)
 
 static int snd_cs4281_chip_init(cs4281_t *chip); /* defined below */
 #ifdef CONFIG_PM
-static int cs4281_suspend(snd_card_t *card, unsigned int state);
-static int cs4281_resume(snd_card_t *card, unsigned int state);
+static int cs4281_suspend(snd_card_t *card, pm_message_t state);
+static int cs4281_resume(snd_card_t *card);
 #endif
 
 static int __devinit snd_cs4281_create(snd_card_t * card,
@@ -1459,6 +1458,11 @@ static int snd_cs4281_chip_init(cs4281_t *chip)
 	unsigned int tmp;
 	int timeout;
 	int retry_count = 2;
+
+	/* Having EPPMC.FPDN=1 prevent proper chip initialisation */
+	tmp = snd_cs4281_peekBA0(chip, BA0_EPPMC);
+	if (tmp & BA0_EPPMC_FPDN)
+		snd_cs4281_pokeBA0(chip, BA0_EPPMC, tmp & ~BA0_EPPMC_FPDN);
 
       __retry:
 	tmp = snd_cs4281_peekBA0(chip, BA0_CFLR);
@@ -1893,9 +1897,7 @@ static irqreturn_t snd_cs4281_interrupt(int irq, void *dev_id, struct pt_regs *r
 			c = snd_cs4281_peekBA0(chip, BA0_MIDRP);
 			if ((chip->midcr & BA0_MIDCR_RIE) == 0)
 				continue;
-			spin_unlock(&chip->reg_lock);
 			snd_rawmidi_receive(chip->midi_input, &c, 1);
-			spin_lock(&chip->reg_lock);
 		}
 		while ((snd_cs4281_peekBA0(chip, BA0_MIDSR) & BA0_MIDSR_TBF) == 0) {
 			if ((chip->midcr & BA0_MIDCR_TIE) == 0)
@@ -1990,7 +1992,7 @@ static int __devinit snd_cs4281_probe(struct pci_dev *pci,
 		snd_card_free(card);
 		return err;
 	}
-	snd_cs4281_gameport(chip);
+	snd_cs4281_create_gameport(chip);
 	strcpy(card->driver, "CS4281");
 	strcpy(card->shortname, "Cirrus Logic CS4281");
 	sprintf(card->longname, "%s at 0x%lx, irq %d",
@@ -2037,7 +2039,7 @@ static int saved_regs[SUSPEND_REGISTERS] = {
 
 #define CLKCR1_CKRA                             0x00010000L
 
-static int cs4281_suspend(snd_card_t *card, unsigned int state)
+static int cs4281_suspend(snd_card_t *card, pm_message_t state)
 {
 	cs4281_t *chip = card->pm_private_data;
 	u32 ulCLK;
@@ -2082,7 +2084,7 @@ static int cs4281_suspend(snd_card_t *card, unsigned int state)
 	return 0;
 }
 
-static int cs4281_resume(snd_card_t *card, unsigned int state)
+static int cs4281_resume(snd_card_t *card)
 {
 	cs4281_t *chip = card->pm_private_data;
 	unsigned int i;
@@ -2125,7 +2127,7 @@ static struct pci_driver driver = {
 	
 static int __init alsa_card_cs4281_init(void)
 {
-	return pci_module_init(&driver);
+	return pci_register_driver(&driver);
 }
 
 static void __exit alsa_card_cs4281_exit(void)

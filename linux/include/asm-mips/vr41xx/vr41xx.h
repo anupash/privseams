@@ -45,6 +45,7 @@
 /*
  * Bus Control Uint
  */
+extern unsigned long vr41xx_calculate_clock_frequency(void);
 extern unsigned long vr41xx_get_vtclock_frequency(void);
 extern unsigned long vr41xx_get_tclock_frequency(void);
 
@@ -83,7 +84,7 @@ extern void vr41xx_mask_clock(vr41xx_clock_t clock);
 #define INT2_CASCADE_IRQ	MIPS_CPU_IRQ(4)
 #define INT3_CASCADE_IRQ	MIPS_CPU_IRQ(5)
 #define INT4_CASCADE_IRQ	MIPS_CPU_IRQ(6)
-#define MIPS_COUNTER_IRQ	MIPS_CPU_IRQ(7)
+#define TIMER_IRQ		MIPS_CPU_IRQ(7)
 
 /* SYINT1 Interrupt Numbers */
 #define SYSINT1_IRQ_BASE	8
@@ -125,7 +126,6 @@ extern void vr41xx_mask_clock(vr41xx_clock_t clock);
 #define GIU_IRQ_BASE		40
 #define GIU_IRQ(x)		(GIU_IRQ_BASE + (x))	/* IRQ 40-71 */
 #define GIU_IRQ_LAST		GIU_IRQ(31)
-#define GIU_IRQ_TO_PIN(x)	((x) - GIU_IRQ_BASE)	/* Pin 0-31 */
 
 extern int vr41xx_set_intassign(unsigned int irq, unsigned char intassign);
 extern int vr41xx_cascade_irq(unsigned int irq, int (*get_irq_number)(int irq));
@@ -195,153 +195,5 @@ extern void vr41xx_disable_csiint(uint16_t mask);
 
 extern void vr41xx_enable_bcuint(void);
 extern void vr41xx_disable_bcuint(void);
-
-/*
- * Power Management Unit
- */
-
-/*
- * RTC
- */
-extern void vr41xx_set_rtclong1_cycle(uint32_t cycles);
-extern uint32_t vr41xx_read_rtclong1_counter(void);
-
-extern void vr41xx_set_rtclong2_cycle(uint32_t cycles);
-extern uint32_t vr41xx_read_rtclong2_counter(void);
-
-extern void vr41xx_set_tclock_cycle(uint32_t cycles);
-extern uint32_t vr41xx_read_tclock_counter(void);
-
-/*
- * General-Purpose I/O Unit
- */
-enum {
-	TRIGGER_LEVEL,
-	TRIGGER_EDGE,
-	TRIGGER_EDGE_FALLING,
-	TRIGGER_EDGE_RISING
-};
-
-enum {
-	SIGNAL_THROUGH,
-	SIGNAL_HOLD
-};
-
-extern void vr41xx_set_irq_trigger(int pin, int trigger, int hold);
-
-enum {
-	LEVEL_LOW,
-	LEVEL_HIGH
-};
-
-extern void vr41xx_set_irq_level(int pin, int level);
-
-enum {
-	PIO_INPUT,
-	PIO_OUTPUT
-};
-
-enum {
-	DATA_LOW,
-	DATA_HIGH
-};
-
-/*
- * Serial Interface Unit
- */
-extern void vr41xx_siu_init(void);
-extern int vr41xx_serial_ports;
-
-/* SIU interfaces */
-typedef enum {
-	SIU_RS232C,
-	SIU_IRDA
-} siu_interface_t;
-
-/* IrDA interfaces */
-typedef enum {
-	IRDA_NONE,
-	IRDA_SHARP,
-	IRDA_TEMIC,
-	IRDA_HP
-} irda_module_t;
-
-extern void vr41xx_select_siu_interface(siu_interface_t interface,
-                                        irda_module_t module);
-
-/*
- * Debug Serial Interface Unit
- */
-extern void vr41xx_dsiu_init(void);
-
-/*
- * PCI Control Unit
- */
-#define PCI_MASTER_ADDRESS_MASK	0x7fffffffU
-
-struct pci_master_address_conversion {
-	uint32_t bus_base_address;
-	uint32_t address_mask;
-	uint32_t pci_base_address;
-};
-
-struct pci_target_address_conversion {
-	uint32_t address_mask;
-	uint32_t bus_base_address;
-};
-
-typedef enum {
-	CANNOT_LOCK_FROM_DEVICE,
-	CAN_LOCK_FROM_DEVICE,
-} pci_exclusive_access_t;
-
-struct pci_mailbox_address {
-	uint32_t base_address;
-};
-
-struct pci_target_address_window {
-	uint32_t base_address;
-};
-
-typedef enum {
-	PCI_ARBITRATION_MODE_FAIR,
-	PCI_ARBITRATION_MODE_ALTERNATE_0,
-	PCI_ARBITRATION_MODE_ALTERNATE_B,
-} pci_arbiter_priority_control_t;
-
-typedef enum {
-	PCI_TAKE_AWAY_GNT_DISABLE,
-	PCI_TAKE_AWAY_GNT_ENABLE,
-} pci_take_away_gnt_mode_t;
-
-struct pci_controller_unit_setup {
-	struct pci_master_address_conversion *master_memory1;
-	struct pci_master_address_conversion *master_memory2;
-
-	struct pci_target_address_conversion *target_memory1;
-	struct pci_target_address_conversion *target_memory2;
-
-	struct pci_master_address_conversion *master_io;
-
-	pci_exclusive_access_t exclusive_access;
-
-	uint32_t pci_clock_max;
-	uint8_t wait_time_limit_from_irdy_to_trdy;	/* Only VR4122 is supported */
-
-	struct pci_mailbox_address *mailbox;
-	struct pci_target_address_window *target_window1;
-	struct pci_target_address_window *target_window2;
-
-	uint8_t master_latency_timer;
-	uint8_t retry_limit;
-
-	pci_arbiter_priority_control_t arbiter_priority_control;
-	pci_take_away_gnt_mode_t take_away_gnt_mode;
-
-	struct resource *mem_resource;
-	struct resource *io_resource;
-};
-
-extern void vr41xx_pciu_setup(struct pci_controller_unit_setup *setup);
 
 #endif /* __NEC_VR41XX_H */

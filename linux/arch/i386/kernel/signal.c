@@ -93,7 +93,7 @@ sys_sigaction(int sig, const struct old_sigaction __user *act,
 
 	if (act) {
 		old_sigset_t mask;
-		if (verify_area(VERIFY_READ, act, sizeof(*act)) ||
+		if (!access_ok(VERIFY_READ, act, sizeof(*act)) ||
 		    __get_user(new_ka.sa.sa_handler, &act->sa_handler) ||
 		    __get_user(new_ka.sa.sa_restorer, &act->sa_restorer))
 			return -EFAULT;
@@ -105,7 +105,7 @@ sys_sigaction(int sig, const struct old_sigaction __user *act,
 	ret = do_sigaction(sig, act ? &new_ka : NULL, oact ? &old_ka : NULL);
 
 	if (!ret && oact) {
-		if (verify_area(VERIFY_WRITE, oact, sizeof(*oact)) ||
+		if (!access_ok(VERIFY_WRITE, oact, sizeof(*oact)) ||
 		    __put_user(old_ka.sa.sa_handler, &oact->sa_handler) ||
 		    __put_user(old_ka.sa.sa_restorer, &oact->sa_restorer))
 			return -EFAULT;
@@ -187,7 +187,7 @@ restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc, int *peax
 		struct _fpstate __user * buf;
 		err |= __get_user(buf, &sc->fpstate);
 		if (buf) {
-			if (verify_area(VERIFY_READ, buf, sizeof(*buf)))
+			if (!access_ok(VERIFY_READ, buf, sizeof(*buf)))
 				goto badframe;
 			err |= restore_i387(buf);
 		} else {
@@ -213,7 +213,7 @@ asmlinkage int sys_sigreturn(unsigned long __unused)
 	sigset_t set;
 	int eax;
 
-	if (verify_area(VERIFY_READ, frame, sizeof(*frame)))
+	if (!access_ok(VERIFY_READ, frame, sizeof(*frame)))
 		goto badframe;
 	if (__get_user(set.sig[0], &frame->sc.oldmask)
 	    || (_NSIG_WORDS > 1
@@ -243,7 +243,7 @@ asmlinkage int sys_rt_sigreturn(unsigned long __unused)
 	sigset_t set;
 	int eax;
 
-	if (verify_area(VERIFY_READ, frame, sizeof(*frame)))
+	if (!access_ok(VERIFY_READ, frame, sizeof(*frame)))
 		goto badframe;
 	if (__copy_from_user(&set, &frame->uc.uc_sigmask, sizeof(set)))
 		goto badframe;
@@ -346,8 +346,8 @@ get_sigframe(struct k_sigaction *ka, struct pt_regs * regs, size_t frame_size)
 extern void __user __kernel_sigreturn;
 extern void __user __kernel_rt_sigreturn;
 
-static void setup_frame(int sig, struct k_sigaction *ka,
-			sigset_t *set, struct pt_regs * regs)
+static int setup_frame(int sig, struct k_sigaction *ka,
+		       sigset_t *set, struct pt_regs * regs)
 {
 	void __user *restorer;
 	struct sigframe __user *frame;
@@ -429,13 +429,14 @@ static void setup_frame(int sig, struct k_sigaction *ka,
 		current->comm, current->pid, frame, regs->eip, frame->pretcode);
 #endif
 
-	return;
+	return 1;
 
 give_sigsegv:
 	force_sigsegv(sig, current);
+	return 0;
 }
 
-static void setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
+static int setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
 			   sigset_t *set, struct pt_regs * regs)
 {
 	void __user *restorer;
@@ -522,20 +523,23 @@ static void setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
 		current->comm, current->pid, frame, regs->eip, frame->pretcode);
 #endif
 
-	return;
+	return 1;
 
 give_sigsegv:
 	force_sigsegv(sig, current);
+	return 0;
 }
 
 /*
  * OK, we're invoking a handler
  */	
 
-static void
+static int
 handle_signal(unsigned long sig, siginfo_t *info, struct k_sigaction *ka,
 	      sigset_t *oldset,	struct pt_regs * regs)
 {
+	int ret;
+
 	/* Are we from a system call? */
 	if (regs->orig_eax >= 0) {
 		/* If so, check system call restarting.. */
@@ -557,19 +561,31 @@ handle_signal(unsigned long sig, siginfo_t *info, struct k_sigaction *ka,
 		}
 	}
 
+	/*
+	 * If TF is set due to a debugger (PT_DTRACE), clear the TF flag so
+	 * that register information in the sigcontext is correct.
+	 */
+	if (unlikely(regs->eflags & TF_MASK)
+	    && likely(current->ptrace & PT_DTRACE)) {
+		current->ptrace &= ~PT_DTRACE;
+		regs->eflags &= ~TF_MASK;
+	}
+
 	/* Set up the stack frame */
 	if (ka->sa.sa_flags & SA_SIGINFO)
-		setup_rt_frame(sig, ka, info, oldset, regs);
+		ret = setup_rt_frame(sig, ka, info, oldset, regs);
 	else
-		setup_frame(sig, ka, oldset, regs);
+		ret = setup_frame(sig, ka, oldset, regs);
 
-	if (!(ka->sa.sa_flags & SA_NODEFER)) {
+	if (ret && !(ka->sa.sa_flags & SA_NODEFER)) {
 		spin_lock_irq(&current->sighand->siglock);
 		sigorsets(&current->blocked,&current->blocked,&ka->sa.sa_mask);
 		sigaddset(&current->blocked,sig);
 		recalc_sigpending();
 		spin_unlock_irq(&current->sighand->siglock);
 	}
+
+	return ret;
 }
 
 /*
@@ -589,13 +605,11 @@ int fastcall do_signal(struct pt_regs *regs, sigset_t *oldset)
 	 * kernel mode. Just return without doing anything
 	 * if so.
 	 */
-	if ((regs->xcs & 3) != 3)
+	if (!user_mode(regs))
 		return 1;
 
-	if (current->flags & PF_FREEZE) {
-		refrigerator(0);
+	if (try_to_freeze())
 		goto no_signal;
-	}
 
 	if (!oldset)
 		oldset = &current->blocked;
@@ -608,12 +622,11 @@ int fastcall do_signal(struct pt_regs *regs, sigset_t *oldset)
 		 * inside the kernel.
 		 */
 		if (unlikely(current->thread.debugreg[7])) {
-			__asm__("movl %0,%%db7"	: : "r" (current->thread.debugreg[7]));
+			set_debugreg(current->thread.debugreg[7], 7);
 		}
 
 		/* Whee!  Actually deliver the signal.  */
-		handle_signal(signr, &info, &ka, oldset, regs);
-		return 1;
+		return handle_signal(signr, &info, &ka, oldset, regs);
 	}
 
  no_signal:

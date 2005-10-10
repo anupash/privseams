@@ -139,11 +139,9 @@ error_out:
 	return err;
 }
 
-static int ipcomp6_output(struct sk_buff *skb)
+static int ipcomp6_output(struct xfrm_state *x, struct sk_buff *skb)
 {
 	int err;
-	struct dst_entry *dst = skb->dst;
-	struct xfrm_state *x = dst->xfrm;
 	struct ipv6hdr *top_iph;
 	int hdr_len;
 	struct ipv6_comp_hdr *ipch;
@@ -162,8 +160,7 @@ static int ipcomp6_output(struct sk_buff *skb)
 
 	if ((skb_is_nonlinear(skb) || skb_cloned(skb)) &&
 		skb_linearize(skb, GFP_ATOMIC) != 0) {
-		err = -ENOMEM;
-		goto error;
+		goto out_ok;
 	}
 
 	/* compression */
@@ -176,11 +173,7 @@ static int ipcomp6_output(struct sk_buff *skb)
 	tfm = *per_cpu_ptr(ipcd->tfms, cpu);
 
 	err = crypto_comp_compress(tfm, start, plen, scratch, &dlen);
-	if (err) {
-		put_cpu();
-		goto error;
-	}
-	if ((dlen + sizeof(struct ipv6_comp_hdr)) >= plen) {
+	if (err || (dlen + sizeof(struct ipv6_comp_hdr)) >= plen) {
 		put_cpu();
 		goto out_ok;
 	}
@@ -200,10 +193,7 @@ static int ipcomp6_output(struct sk_buff *skb)
 	*skb->nh.raw = IPPROTO_COMP;
 
 out_ok:
-	err = 0;
-
-error:
-	return err;
+	return 0;
 }
 
 static void ipcomp6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
@@ -244,14 +234,9 @@ static struct xfrm_state *ipcomp6_tunnel_create(struct xfrm_state *x)
 	t->props.mode = 1;
 	memcpy(t->props.saddr.a6, x->props.saddr.a6, sizeof(struct in6_addr));
 
-	t->type = xfrm_get_type(IPPROTO_IPV6, t->props.family);
-	if (t->type == NULL)
+	if (xfrm_init_state(t))
 		goto error;
 
-	if (t->type->init_state(t, NULL))
-		goto error;
-
-	t->km.state = XFRM_STATE_VALID;
 	atomic_set(&t->tunnel_users, 1);
 
 out:
@@ -369,7 +354,7 @@ static struct crypto_tfm **ipcomp6_alloc_tfms(const char *alg_name)
 	int cpu;
 
 	/* This can be any valid CPU ID so we don't need locking. */
-	cpu = smp_processor_id();
+	cpu = raw_smp_processor_id();
 
 	list_for_each_entry(pos, &ipcomp6_tfms_list, list) {
 		struct crypto_tfm *tfm;
@@ -430,7 +415,7 @@ static void ipcomp6_destroy(struct xfrm_state *x)
 	xfrm6_tunnel_free_spi((xfrm_address_t *)&x->props.saddr);
 }
 
-static int ipcomp6_init_state(struct xfrm_state *x, void *args)
+static int ipcomp6_init_state(struct xfrm_state *x)
 {
 	int err;
 	struct ipcomp_data *ipcd;

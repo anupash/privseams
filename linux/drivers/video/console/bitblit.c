@@ -39,7 +39,7 @@ static inline int get_attribute(struct fb_info *info, u16 c)
 {
 	int attribute = 0;
 
-	if (fb_get_color_depth(info) == 1) {
+	if (fb_get_color_depth(&info->var) == 1) {
 		if (attr_underline(c))
 			attribute |= FBCON_ATTRIBUTE_UNDERLINE;
 		if (attr_reverse(c))
@@ -107,13 +107,6 @@ static void bit_putcs(struct vc_data *vc, struct fb_info *info,
 		      const unsigned short *s, int count, int yy, int xx,
 		      int fg, int bg)
 {
-	void (*move_unaligned)(struct fb_info *info, struct fb_pixmap *buf,
-			       u8 *dst, u32 d_pitch, u8 *src, u32 idx,
-			       u32 height, u32 shift_high, u32 shift_low,
-			       u32 mod);
-	void (*move_aligned)(struct fb_info *info, struct fb_pixmap *buf,
-			     u8 *dst, u32 d_pitch, u8 *src, u32 s_pitch,
-			     u32 height);
 	unsigned short charmask = vc->vc_hi_font_mask ? 0x1ff : 0xff;
 	unsigned int width = (vc->vc_font.width + 7) >> 3;
 	unsigned int cellsize = vc->vc_font.height * width;
@@ -141,13 +134,6 @@ static void bit_putcs(struct vc_data *vc, struct fb_info *info,
 	image.height = vc->vc_font.height;
 	image.depth = 1;
 
-	if (info->pixmap.outbuf && info->pixmap.inbuf) {
-		move_aligned = fb_iomove_buf_aligned;
-		move_unaligned = fb_iomove_buf_unaligned;
-	} else {
-		move_aligned = fb_sysmove_buf_aligned;
-		move_unaligned = fb_sysmove_buf_unaligned;
-	}
 	while (count) {
 		if (count > maxcnt)
 			cnt = k = maxcnt;
@@ -171,9 +157,9 @@ static void bit_putcs(struct vc_data *vc, struct fb_info *info,
 					src = buf;
 				}
 
-				move_unaligned(info, &info->pixmap, dst, pitch,
-					       src, idx, image.height,
-					       shift_high, shift_low, mod);
+				fb_pad_unaligned_buffer(dst, pitch, src, idx,
+						image.height, shift_high,
+						shift_low, mod);
 				shift_low += mod;
 				dst += (shift_low >= 8) ? width : width - 1;
 				shift_low &= 7;
@@ -189,8 +175,7 @@ static void bit_putcs(struct vc_data *vc, struct fb_info *info,
 					src = buf;
 				}
 
-				move_aligned(info, &info->pixmap, dst, pitch,
-					     src, idx, image.height);
+				fb_pad_aligned_buffer(dst, pitch, src, idx, image.height);
 				dst += width;
 			}
 		}
@@ -199,7 +184,10 @@ static void bit_putcs(struct vc_data *vc, struct fb_info *info,
 		count -= cnt;
 	}
 
-	if (buf)
+	/* buf is always NULL except when in monochrome mode, so in this case
+	   it's a gain to check buf against NULL even though kfree() handles
+	   NULL pointers just fine */
+	if (unlikely(buf))
 		kfree(buf);
 }
 
@@ -236,7 +224,7 @@ static void bit_clear_margins(struct vc_data *vc, struct fb_info *info,
 }
 
 static void bit_cursor(struct vc_data *vc, struct fb_info *info,
-		       struct display *p, int mode, int fg, int bg)
+		       struct display *p, int mode, int softback_lines, int fg, int bg)
 {
 	struct fb_cursor cursor;
 	struct fbcon_ops *ops = (struct fbcon_ops *) info->fbcon_par;
@@ -247,6 +235,15 @@ static void bit_cursor(struct vc_data *vc, struct fb_info *info,
 	char *src;
 
 	cursor.set = 0;
+
+	if (softback_lines) {
+		if (y + softback_lines >= vc->vc_rows) {
+			mode = CM_ERASE;
+			ops->cursor_flash = 0;
+			return;
+		} else
+			y += softback_lines;
+	}
 
  	c = scr_readw((u16 *) vc->vc_pos);
 	attribute = get_attribute(info, c);
@@ -264,8 +261,7 @@ static void bit_cursor(struct vc_data *vc, struct fb_info *info,
 		dst = kmalloc(w * vc->vc_font.height, GFP_ATOMIC);
 		if (!dst)
 			return;
-		if (ops->cursor_data)
-			kfree(ops->cursor_data);
+		kfree(ops->cursor_data);
 		ops->cursor_data = dst;
 		update_attr(dst, src, attribute, vc);
 		src = dst;
@@ -312,8 +308,7 @@ static void bit_cursor(struct vc_data *vc, struct fb_info *info,
 		if (!mask)
 			return;
 
-		if (ops->cursor_state.mask)
-			kfree(ops->cursor_state.mask);
+		kfree(ops->cursor_state.mask);
 		ops->cursor_state.mask = mask;
 
 		p->cursor_shape = vc->vc_cursor_type;

@@ -45,7 +45,7 @@ static struct ctrl_inquiry {
 	Scsi_Cmnd cmd;
 	char inquiry[256];
 	fc_channel *fc;
-} *fcs __initdata = { 0 };
+} *fcs __initdata;
 static int fcscount __initdata = 0;
 static atomic_t fcss __initdata = ATOMIC_INIT(0);
 DECLARE_MUTEX_LOCKED(fc_sem);
@@ -354,7 +354,6 @@ static Scsi_Host_Template driver_template = {
 	.use_clustering		= ENABLE_CLUSTERING,
 	.eh_abort_handler	= fcp_scsi_abort,
 	.eh_device_reset_handler = fcp_scsi_dev_reset,
-	.eh_bus_reset_handler	= fcp_scsi_bus_reset,
 	.eh_host_reset_handler	= fcp_scsi_host_reset,
 };
 

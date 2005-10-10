@@ -253,7 +253,7 @@ void pnp_init_resource_table(struct pnp_resource_table *table)
 
 /**
  * pnp_clean_resources - clears resources that were not manually set
- * @res - the resources to clean
+ * @res: the resources to clean
  *
  */
 static void pnp_clean_resource_table(struct pnp_resource_table * res)
@@ -296,7 +296,7 @@ static void pnp_clean_resource_table(struct pnp_resource_table * res)
  *
  * Only set depnum to 0 if the device does not have dependent options.
  */
-int pnp_assign_resources(struct pnp_dev *dev, int depnum)
+static int pnp_assign_resources(struct pnp_dev *dev, int depnum)
 {
 	struct pnp_port *port;
 	struct pnp_mem *mem;
@@ -390,6 +390,7 @@ fail:
  * pnp_manual_config_dev - Disables Auto Config and Manually sets the resource table
  * @dev: pointer to the desired device
  * @res: pointer to the new resource config
+ * @mode: 0 or PNP_CONFIG_FORCE
  *
  * This function can be used by drivers that want to manually set thier resources.
  */
@@ -558,7 +559,6 @@ void pnp_resource_change(struct resource *resource, unsigned long start, unsigne
 }
 
 
-EXPORT_SYMBOL(pnp_assign_resources);
 EXPORT_SYMBOL(pnp_manual_config_dev);
 EXPORT_SYMBOL(pnp_auto_config_dev);
 EXPORT_SYMBOL(pnp_activate_dev);

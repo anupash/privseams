@@ -7,7 +7,9 @@
 #ifdef __KERNEL__
 #include <asm/visasm.h>
 #include <asm/asi.h>
+#define GLOBAL_SPARE	g7
 #else
+#define GLOBAL_SPARE	g5
 #define ASI_BLK_P 0xf0
 #define FPRS_FEF  0x04
 #ifdef MEMCPY_DEBUG
@@ -85,14 +87,17 @@
 #define LOOP_CHUNK3(src, dest, len, branch_dest)		\
 	MAIN_LOOP_CHUNK(src, dest, f32, f48, len, branch_dest)
 
+#define DO_SYNC			membar	#Sync;
 #define STORE_SYNC(dest, fsrc)				\
 	EX_ST(STORE_BLK(%fsrc, %dest));			\
-	add			%dest, 0x40, %dest;
+	add			%dest, 0x40, %dest;	\
+	DO_SYNC
 
 #define STORE_JUMP(dest, fsrc, target)			\
 	EX_ST(STORE_BLK(%fsrc, %dest));			\
 	add			%dest, 0x40, %dest;	\
-	ba,pt			%xcc, target;
+	ba,pt			%xcc, target;		\
+	 nop;
 
 #define FINISH_VISCHUNK(dest, f0, f1, left)	\
 	subcc			%left, 8, %left;\
@@ -123,7 +128,7 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 	cmp		%g2, 0
 	tne		%xcc, 5
 	PREAMBLE
-	mov		%o0, %g5
+	mov		%o0, %o4
 	cmp		%o2, 0
 	be,pn		%XCC, 85f
 	 or		%o0, %o1, %o3
@@ -146,7 +151,7 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 	 * of bytes to copy to make 'dst' 64-byte aligned.  We pre-
 	 * subtract this from 'len'.
 	 */
-	 sub		%o0, %o1, %o4
+	 sub		%o0, %o1, %GLOBAL_SPARE
 	sub		%g2, 0x40, %g2
 	sub		%g0, %g2, %g2
 	sub		%o2, %g2, %o2
@@ -156,11 +161,11 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 
 1:	subcc		%g1, 0x1, %g1
 	EX_LD(LOAD(ldub, %o1 + 0x00, %o3))
-	EX_ST(STORE(stb, %o3, %o1 + %o4))
+	EX_ST(STORE(stb, %o3, %o1 + %GLOBAL_SPARE))
 	bgu,pt		%XCC, 1b
 	 add		%o1, 0x1, %o1
 
-	add		%o1, %o4, %o0
+	add		%o1, %GLOBAL_SPARE, %o0
 
 2:	cmp		%g2, 0x0
 	and		%o1, 0x7, %g1
@@ -188,19 +193,19 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 3:	
 	membar		  #LoadStore | #StoreStore | #StoreLoad
 
-	subcc		%o2, 0x40, %o4
+	subcc		%o2, 0x40, %GLOBAL_SPARE
 	add		%o1, %g1, %g1
-	andncc		%o4, (0x40 - 1), %o4
+	andncc		%GLOBAL_SPARE, (0x40 - 1), %GLOBAL_SPARE
 	srl		%g1, 3, %g2
-	sub		%o2, %o4, %g3
+	sub		%o2, %GLOBAL_SPARE, %g3
 	andn		%o1, (0x40 - 1), %o1
 	and		%g2, 7, %g2
 	andncc		%g3, 0x7, %g3
 	fmovd		%f0, %f2
 	sub		%g3, 0x8, %g3
-	sub		%o2, %o4, %o2
+	sub		%o2, %GLOBAL_SPARE, %o2
 
-	add		%g1, %o4, %g1
+	add		%g1, %GLOBAL_SPARE, %g1
 	subcc		%o2, %g3, %o2
 
 	EX_LD(LOAD_BLK(%o1, %f0))
@@ -208,7 +213,7 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 	add		%g1, %g3, %g1
 	EX_LD(LOAD_BLK(%o1, %f16))
 	add		%o1, 0x40, %o1
-	sub		%o4, 0x80, %o4
+	sub		%GLOBAL_SPARE, 0x80, %GLOBAL_SPARE
 	EX_LD(LOAD_BLK(%o1, %f32))
 	add		%o1, 0x40, %o1
 
@@ -229,172 +234,172 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 
 	.align		64
 1:	FREG_FROB(f0, f2, f4, f6, f8, f10,f12,f14,f16)
-	LOOP_CHUNK1(o1, o0, o4, 1f)
+	LOOP_CHUNK1(o1, o0, GLOBAL_SPARE, 1f)
 	FREG_FROB(f16,f18,f20,f22,f24,f26,f28,f30,f32)
-	LOOP_CHUNK2(o1, o0, o4, 2f)
+	LOOP_CHUNK2(o1, o0, GLOBAL_SPARE, 2f)
 	FREG_FROB(f32,f34,f36,f38,f40,f42,f44,f46,f0)
-	LOOP_CHUNK3(o1, o0, o4, 3f)
+	LOOP_CHUNK3(o1, o0, GLOBAL_SPARE, 3f)
 	ba,pt		%xcc, 1b+4
 	 faligndata	%f0, %f2, %f48
 1:	FREG_FROB(f16,f18,f20,f22,f24,f26,f28,f30,f32)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f32,f34,f36,f38,f40,f42,f44,f46,f0)
-	STORE_JUMP(o0, f48, 40f) membar #Sync
+	STORE_JUMP(o0, f48, 40f)
 2:	FREG_FROB(f32,f34,f36,f38,f40,f42,f44,f46,f0)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f0, f2, f4, f6, f8, f10,f12,f14,f16)
-	STORE_JUMP(o0, f48, 48f) membar #Sync
+	STORE_JUMP(o0, f48, 48f)
 3:	FREG_FROB(f0, f2, f4, f6, f8, f10,f12,f14,f16)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f16,f18,f20,f22,f24,f26,f28,f30,f32)
-	STORE_JUMP(o0, f48, 56f) membar #Sync
+	STORE_JUMP(o0, f48, 56f)
 
 1:	FREG_FROB(f2, f4, f6, f8, f10,f12,f14,f16,f18)
-	LOOP_CHUNK1(o1, o0, o4, 1f)
+	LOOP_CHUNK1(o1, o0, GLOBAL_SPARE, 1f)
 	FREG_FROB(f18,f20,f22,f24,f26,f28,f30,f32,f34)
-	LOOP_CHUNK2(o1, o0, o4, 2f)
+	LOOP_CHUNK2(o1, o0, GLOBAL_SPARE, 2f)
 	FREG_FROB(f34,f36,f38,f40,f42,f44,f46,f0, f2)
-	LOOP_CHUNK3(o1, o0, o4, 3f)
+	LOOP_CHUNK3(o1, o0, GLOBAL_SPARE, 3f)
 	ba,pt		%xcc, 1b+4
 	 faligndata	%f2, %f4, %f48
 1:	FREG_FROB(f18,f20,f22,f24,f26,f28,f30,f32,f34)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f34,f36,f38,f40,f42,f44,f46,f0, f2)
-	STORE_JUMP(o0, f48, 41f) membar #Sync
+	STORE_JUMP(o0, f48, 41f)
 2:	FREG_FROB(f34,f36,f38,f40,f42,f44,f46,f0, f2)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f2, f4, f6, f8, f10,f12,f14,f16,f18)
-	STORE_JUMP(o0, f48, 49f) membar #Sync
+	STORE_JUMP(o0, f48, 49f)
 3:	FREG_FROB(f2, f4, f6, f8, f10,f12,f14,f16,f18)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f18,f20,f22,f24,f26,f28,f30,f32,f34)
-	STORE_JUMP(o0, f48, 57f) membar #Sync
+	STORE_JUMP(o0, f48, 57f)
 
 1:	FREG_FROB(f4, f6, f8, f10,f12,f14,f16,f18,f20)
-	LOOP_CHUNK1(o1, o0, o4, 1f)
+	LOOP_CHUNK1(o1, o0, GLOBAL_SPARE, 1f)
 	FREG_FROB(f20,f22,f24,f26,f28,f30,f32,f34,f36)
-	LOOP_CHUNK2(o1, o0, o4, 2f)
+	LOOP_CHUNK2(o1, o0, GLOBAL_SPARE, 2f)
 	FREG_FROB(f36,f38,f40,f42,f44,f46,f0, f2, f4)
-	LOOP_CHUNK3(o1, o0, o4, 3f)
+	LOOP_CHUNK3(o1, o0, GLOBAL_SPARE, 3f)
 	ba,pt		%xcc, 1b+4
 	 faligndata	%f4, %f6, %f48
 1:	FREG_FROB(f20,f22,f24,f26,f28,f30,f32,f34,f36)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f36,f38,f40,f42,f44,f46,f0, f2, f4)
-	STORE_JUMP(o0, f48, 42f) membar #Sync
+	STORE_JUMP(o0, f48, 42f)
 2:	FREG_FROB(f36,f38,f40,f42,f44,f46,f0, f2, f4)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f4, f6, f8, f10,f12,f14,f16,f18,f20)
-	STORE_JUMP(o0, f48, 50f) membar #Sync
+	STORE_JUMP(o0, f48, 50f)
 3:	FREG_FROB(f4, f6, f8, f10,f12,f14,f16,f18,f20)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f20,f22,f24,f26,f28,f30,f32,f34,f36)
-	STORE_JUMP(o0, f48, 58f) membar #Sync
+	STORE_JUMP(o0, f48, 58f)
 
 1:	FREG_FROB(f6, f8, f10,f12,f14,f16,f18,f20,f22)
-	LOOP_CHUNK1(o1, o0, o4, 1f)
+	LOOP_CHUNK1(o1, o0, GLOBAL_SPARE, 1f)
 	FREG_FROB(f22,f24,f26,f28,f30,f32,f34,f36,f38)
-	LOOP_CHUNK2(o1, o0, o4, 2f)
+	LOOP_CHUNK2(o1, o0, GLOBAL_SPARE, 2f)
 	FREG_FROB(f38,f40,f42,f44,f46,f0, f2, f4, f6) 
-	LOOP_CHUNK3(o1, o0, o4, 3f)
+	LOOP_CHUNK3(o1, o0, GLOBAL_SPARE, 3f)
 	ba,pt		%xcc, 1b+4
 	 faligndata	%f6, %f8, %f48
 1:	FREG_FROB(f22,f24,f26,f28,f30,f32,f34,f36,f38)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f38,f40,f42,f44,f46,f0, f2, f4, f6)
-	STORE_JUMP(o0, f48, 43f) membar #Sync
+	STORE_JUMP(o0, f48, 43f)
 2:	FREG_FROB(f38,f40,f42,f44,f46,f0, f2, f4, f6)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f6, f8, f10,f12,f14,f16,f18,f20,f22)
-	STORE_JUMP(o0, f48, 51f) membar #Sync
+	STORE_JUMP(o0, f48, 51f)
 3:	FREG_FROB(f6, f8, f10,f12,f14,f16,f18,f20,f22)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f22,f24,f26,f28,f30,f32,f34,f36,f38)
-	STORE_JUMP(o0, f48, 59f) membar #Sync
+	STORE_JUMP(o0, f48, 59f)
 
 1:	FREG_FROB(f8, f10,f12,f14,f16,f18,f20,f22,f24)
-	LOOP_CHUNK1(o1, o0, o4, 1f)
+	LOOP_CHUNK1(o1, o0, GLOBAL_SPARE, 1f)
 	FREG_FROB(f24,f26,f28,f30,f32,f34,f36,f38,f40)
-	LOOP_CHUNK2(o1, o0, o4, 2f)
+	LOOP_CHUNK2(o1, o0, GLOBAL_SPARE, 2f)
 	FREG_FROB(f40,f42,f44,f46,f0, f2, f4, f6, f8)
-	LOOP_CHUNK3(o1, o0, o4, 3f)
+	LOOP_CHUNK3(o1, o0, GLOBAL_SPARE, 3f)
 	ba,pt		%xcc, 1b+4
 	 faligndata	%f8, %f10, %f48
 1:	FREG_FROB(f24,f26,f28,f30,f32,f34,f36,f38,f40)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f40,f42,f44,f46,f0, f2, f4, f6, f8)
-	STORE_JUMP(o0, f48, 44f) membar #Sync
+	STORE_JUMP(o0, f48, 44f)
 2:	FREG_FROB(f40,f42,f44,f46,f0, f2, f4, f6, f8)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f8, f10,f12,f14,f16,f18,f20,f22,f24)
-	STORE_JUMP(o0, f48, 52f) membar #Sync
+	STORE_JUMP(o0, f48, 52f)
 3:	FREG_FROB(f8, f10,f12,f14,f16,f18,f20,f22,f24)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f24,f26,f28,f30,f32,f34,f36,f38,f40)
-	STORE_JUMP(o0, f48, 60f) membar #Sync
+	STORE_JUMP(o0, f48, 60f)
 
 1:	FREG_FROB(f10,f12,f14,f16,f18,f20,f22,f24,f26)
-	LOOP_CHUNK1(o1, o0, o4, 1f)
+	LOOP_CHUNK1(o1, o0, GLOBAL_SPARE, 1f)
 	FREG_FROB(f26,f28,f30,f32,f34,f36,f38,f40,f42)
-	LOOP_CHUNK2(o1, o0, o4, 2f)
+	LOOP_CHUNK2(o1, o0, GLOBAL_SPARE, 2f)
 	FREG_FROB(f42,f44,f46,f0, f2, f4, f6, f8, f10)
-	LOOP_CHUNK3(o1, o0, o4, 3f)
+	LOOP_CHUNK3(o1, o0, GLOBAL_SPARE, 3f)
 	ba,pt		%xcc, 1b+4
 	 faligndata	%f10, %f12, %f48
 1:	FREG_FROB(f26,f28,f30,f32,f34,f36,f38,f40,f42)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f42,f44,f46,f0, f2, f4, f6, f8, f10)
-	STORE_JUMP(o0, f48, 45f) membar #Sync
+	STORE_JUMP(o0, f48, 45f)
 2:	FREG_FROB(f42,f44,f46,f0, f2, f4, f6, f8, f10)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f10,f12,f14,f16,f18,f20,f22,f24,f26)
-	STORE_JUMP(o0, f48, 53f) membar #Sync
+	STORE_JUMP(o0, f48, 53f)
 3:	FREG_FROB(f10,f12,f14,f16,f18,f20,f22,f24,f26)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f26,f28,f30,f32,f34,f36,f38,f40,f42)
-	STORE_JUMP(o0, f48, 61f) membar #Sync
+	STORE_JUMP(o0, f48, 61f)
 
 1:	FREG_FROB(f12,f14,f16,f18,f20,f22,f24,f26,f28)
-	LOOP_CHUNK1(o1, o0, o4, 1f)
+	LOOP_CHUNK1(o1, o0, GLOBAL_SPARE, 1f)
 	FREG_FROB(f28,f30,f32,f34,f36,f38,f40,f42,f44)
-	LOOP_CHUNK2(o1, o0, o4, 2f)
+	LOOP_CHUNK2(o1, o0, GLOBAL_SPARE, 2f)
 	FREG_FROB(f44,f46,f0, f2, f4, f6, f8, f10,f12)
-	LOOP_CHUNK3(o1, o0, o4, 3f)
+	LOOP_CHUNK3(o1, o0, GLOBAL_SPARE, 3f)
 	ba,pt		%xcc, 1b+4
 	 faligndata	%f12, %f14, %f48
 1:	FREG_FROB(f28,f30,f32,f34,f36,f38,f40,f42,f44)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f44,f46,f0, f2, f4, f6, f8, f10,f12)
-	STORE_JUMP(o0, f48, 46f) membar #Sync
+	STORE_JUMP(o0, f48, 46f)
 2:	FREG_FROB(f44,f46,f0, f2, f4, f6, f8, f10,f12)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f12,f14,f16,f18,f20,f22,f24,f26,f28)
-	STORE_JUMP(o0, f48, 54f) membar #Sync
+	STORE_JUMP(o0, f48, 54f)
 3:	FREG_FROB(f12,f14,f16,f18,f20,f22,f24,f26,f28)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f28,f30,f32,f34,f36,f38,f40,f42,f44)
-	STORE_JUMP(o0, f48, 62f) membar #Sync
+	STORE_JUMP(o0, f48, 62f)
 
 1:	FREG_FROB(f14,f16,f18,f20,f22,f24,f26,f28,f30)
-	LOOP_CHUNK1(o1, o0, o4, 1f)
+	LOOP_CHUNK1(o1, o0, GLOBAL_SPARE, 1f)
 	FREG_FROB(f30,f32,f34,f36,f38,f40,f42,f44,f46)
-	LOOP_CHUNK2(o1, o0, o4, 2f)
+	LOOP_CHUNK2(o1, o0, GLOBAL_SPARE, 2f)
 	FREG_FROB(f46,f0, f2, f4, f6, f8, f10,f12,f14)
-	LOOP_CHUNK3(o1, o0, o4, 3f)
+	LOOP_CHUNK3(o1, o0, GLOBAL_SPARE, 3f)
 	ba,pt		%xcc, 1b+4
 	 faligndata	%f14, %f16, %f48
 1:	FREG_FROB(f30,f32,f34,f36,f38,f40,f42,f44,f46)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f46,f0, f2, f4, f6, f8, f10,f12,f14)
-	STORE_JUMP(o0, f48, 47f) membar #Sync
+	STORE_JUMP(o0, f48, 47f)
 2:	FREG_FROB(f46,f0, f2, f4, f6, f8, f10,f12,f14)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f14,f16,f18,f20,f22,f24,f26,f28,f30)
-	STORE_JUMP(o0, f48, 55f) membar #Sync
+	STORE_JUMP(o0, f48, 55f)
 3:	FREG_FROB(f14,f16,f18,f20,f22,f24,f26,f28,f30)
-	STORE_SYNC(o0, f48) membar #Sync
+	STORE_SYNC(o0, f48)
 	FREG_FROB(f30,f32,f34,f36,f38,f40,f42,f44,f46)
-	STORE_JUMP(o0, f48, 63f) membar #Sync
+	STORE_JUMP(o0, f48, 63f)
 
 40:	FINISH_VISCHUNK(o0, f0,  f2,  g3)
 41:	FINISH_VISCHUNK(o0, f2,  f4,  g3)
@@ -449,18 +454,18 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 2:	membar		#StoreLoad | #StoreStore
 	VISExit
 	retl
-	 mov		EX_RETVAL(%g5), %o0
+	 mov		EX_RETVAL(%o4), %o0
 
 	.align		64
 70:	/* 16 < len <= (5 * 64) */
 	bne,pn		%XCC, 75f
 	 sub		%o0, %o1, %o3
 
-72:	andn		%o2, 0xf, %o4
+72:	andn		%o2, 0xf, %GLOBAL_SPARE
 	and		%o2, 0xf, %o2
 1:	EX_LD(LOAD(ldx, %o1 + 0x00, %o5))
 	EX_LD(LOAD(ldx, %o1 + 0x08, %g1))
-	subcc		%o4, 0x10, %o4
+	subcc		%GLOBAL_SPARE, 0x10, %GLOBAL_SPARE
 	EX_ST(STORE(stx, %o5, %o1 + %o3))
 	add		%o1, 0x8, %o1
 	EX_ST(STORE(stx, %g1, %o1 + %o3))
@@ -512,10 +517,10 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 	andn		%o1, 0x7, %o1
 	EX_LD(LOAD(ldx, %o1, %g2))
 	sub		%o3, %g1, %o3
-	andn		%o2, 0x7, %o4
+	andn		%o2, 0x7, %GLOBAL_SPARE
 	sllx		%g2, %g1, %g2
 1:	EX_LD(LOAD(ldx, %o1 + 0x8, %g3))
-	subcc		%o4, 0x8, %o4
+	subcc		%GLOBAL_SPARE, 0x8, %GLOBAL_SPARE
 	add		%o1, 0x8, %o1
 	srlx		%g3, %o3, %o5
 	or		%o5, %g2, %o5
@@ -544,7 +549,7 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 	 add		%o1, 4, %o1
 
 85:	retl
-	 mov		EX_RETVAL(%g5), %o0
+	 mov		EX_RETVAL(%o4), %o0
 
 	.align		32
 90:	EX_LD(LOAD(ldub, %o1, %g1))
@@ -553,6 +558,6 @@ FUNC_NAME:		/* %o0=dst, %o1=src, %o2=len */
 	bgu,pt		%XCC, 90b
 	 add		%o1, 1, %o1
 	retl
-	 mov		EX_RETVAL(%g5), %o0
+	 mov		EX_RETVAL(%o4), %o0
 
 	.size		FUNC_NAME, .-FUNC_NAME

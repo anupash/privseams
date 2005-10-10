@@ -30,6 +30,7 @@
  */
 irq_desc_t irq_desc[NR_IRQS] __cacheline_aligned = {
 	[0 ... NR_IRQS-1] = {
+		.status = IRQ_DISABLED,
 		.handler = &no_irq_type,
 		.lock = SPIN_LOCK_UNLOCKED
 	}
@@ -118,8 +119,6 @@ fastcall unsigned int __do_IRQ(unsigned int irq, struct pt_regs *regs)
 		 */
 		desc->handler->ack(irq);
 		action_ret = handle_IRQ_event(irq, regs, desc->action);
-		if (!noirqdebug)
-			note_interrupt(irq, desc, action_ret);
 		desc->handler->end(irq);
 		return 1;
 	}
@@ -173,7 +172,7 @@ fastcall unsigned int __do_IRQ(unsigned int irq, struct pt_regs *regs)
 
 		spin_lock(&desc->lock);
 		if (!noirqdebug)
-			note_interrupt(irq, desc, action_ret);
+			note_interrupt(irq, desc, action_ret, regs);
 		if (likely(!(desc->status & IRQ_PENDING)))
 			break;
 		desc->status &= ~IRQ_PENDING;

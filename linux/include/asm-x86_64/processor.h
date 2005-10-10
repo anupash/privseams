@@ -32,7 +32,7 @@
 #define ID_MASK		0x00200000
 
 #define desc_empty(desc) \
-               (!((desc)->a + (desc)->b))
+               (!((desc)->a | (desc)->b))
 
 #define desc_equal(desc1, desc2) \
                (((desc1)->a == (desc2)->a) && ((desc1)->b == (desc2)->b))
@@ -62,9 +62,8 @@ struct cpuinfo_x86 {
 	int	x86_tlbsize;	/* number of 4K pages in DTLB/ITLB combined(in pages)*/
         __u8    x86_virt_bits, x86_phys_bits;
 	__u8	x86_num_cores;
-	__u8	x86_apicid;
         __u32   x86_power; 	
-	__u32   x86_cpuid_level;	/* Max CPUID function supported */
+	__u32   extended_cpuid_level;	/* Max extended CPUID function supported */
 	unsigned long loops_per_jiffy;
 } ____cacheline_aligned;
 
@@ -92,7 +91,6 @@ extern char ignore_irq13;
 extern void identify_cpu(struct cpuinfo_x86 *);
 extern void print_cpu_info(struct cpuinfo_x86 *);
 extern unsigned int init_intel_cacheinfo(struct cpuinfo_x86 *c);
-extern void dodgy_tsc(void);
 
 /*
  * EFLAGS bits
@@ -160,18 +158,19 @@ static inline void clear_in_cr4 (unsigned long mask)
 
 
 /*
- * User space process size. 47bits.
+ * User space process size. 47bits minus one guard page.
  */
-#define TASK_SIZE	(0x800000000000UL)
+#define TASK_SIZE64	(0x800000000000UL - 4096)
 
 /* This decides where the kernel will search for a free chunk of vm
  * space during mmap's.
  */
 #define IA32_PAGE_OFFSET ((current->personality & ADDR_LIMIT_3GB) ? 0xc0000000 : 0xFFFFe000)
-#define TASK_UNMAPPED_32 PAGE_ALIGN(IA32_PAGE_OFFSET/3)
-#define TASK_UNMAPPED_64 PAGE_ALIGN(TASK_SIZE/3) 
-#define TASK_UNMAPPED_BASE	\
-	(test_thread_flag(TIF_IA32) ? TASK_UNMAPPED_32 : TASK_UNMAPPED_64)  
+
+#define TASK_SIZE 		(test_thread_flag(TIF_IA32) ? IA32_PAGE_OFFSET : TASK_SIZE64)
+#define TASK_SIZE_OF(child) 	((test_tsk_thread_flag(child, TIF_IA32)) ? IA32_PAGE_OFFSET : TASK_SIZE64)
+
+#define TASK_UNMAPPED_BASE	PAGE_ALIGN(TASK_SIZE/3)
 
 /*
  * Size of io_bitmap.
@@ -280,6 +279,14 @@ struct thread_struct {
 	(regs)->eflags = 0x200;							 \
 	set_fs(USER_DS);							 \
 } while(0) 
+
+#define get_debugreg(var, register)				\
+		__asm__("movq %%db" #register ", %0"		\
+			:"=r" (var))
+#define set_debugreg(value, register)			\
+		__asm__("movq %0,%%db" #register		\
+			: /* no output */			\
+			:"r" (value))
 
 struct task_struct;
 struct mm_struct;

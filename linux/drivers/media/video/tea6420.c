@@ -40,16 +40,12 @@ MODULE_PARM_DESC(debug, "Turn on/off device debugging (default:off).");
 
 /* addresses to scan, found only at 0x4c and/or 0x4d (7-Bit) */
 static unsigned short normal_i2c[] = { I2C_TEA6420_1, I2C_TEA6420_2, I2C_CLIENT_END };
-static unsigned short normal_i2c_range[] = { I2C_CLIENT_END };
 
 /* magic definition of all other variables and things */
 I2C_CLIENT_INSMOD;
 
 static struct i2c_driver driver;
 static struct i2c_client client_template;
-
-/* unique ID allocation */
-static int tea6420_id = 0;
 
 /* make a connection between the input 'i' and the output 'o'
    with gain 'g' for the tea6420-client 'client' (note: i = 6 means 'mute') */
@@ -111,7 +107,6 @@ static int tea6420_detect(struct i2c_adapter *adapter, int address, int kind)
 
 	/* fill client structure */
 	memcpy(client, &client_template, sizeof(struct i2c_client));
-	client->id = tea6420_id++;
 	client->addr = address;
 	client->adapter = adapter;
 

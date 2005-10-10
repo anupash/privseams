@@ -166,7 +166,7 @@ static const char *r128_family[] __devinitdata = {
 static int aty128_probe(struct pci_dev *pdev,
                                const struct pci_device_id *ent);
 static void aty128_remove(struct pci_dev *pdev);
-static int aty128_pci_suspend(struct pci_dev *pdev, u32 state);
+static int aty128_pci_suspend(struct pci_dev *pdev, pm_message_t state);
 static int aty128_pci_resume(struct pci_dev *pdev);
 static int aty128_do_resume(struct pci_dev *pdev);
 
@@ -350,10 +350,8 @@ static int default_vmode __initdata = VMODE_1024_768_60;
 static int default_cmode __initdata = CMODE_8;
 #endif
 
-#ifdef CONFIG_PMAC_PBOOK
 static int default_crt_on __initdata = 0;
 static int default_lcd_on __initdata = 1;
-#endif
 
 #ifdef CONFIG_MTRR
 static int mtrr = 1;
@@ -424,11 +422,6 @@ struct aty128fb_par {
 
 
 #define round_div(n, d) ((n+(d/2))/d)
-
-    /*
-     *  Interface used by the world
-     */
-int aty128fb_init(void);
 
 static int aty128fb_check_var(struct fb_var_screeninfo *var,
 			      struct fb_info *info);
@@ -1254,7 +1247,6 @@ static int aty128_crtc_to_var(const struct aty128_crtc *crtc,
 	return 0;
 }
 
-#ifdef CONFIG_PMAC_PBOOK
 static void aty128_set_crt_enable(struct aty128fb_par *par, int on)
 {
 	if (on) {
@@ -1289,7 +1281,6 @@ static void aty128_set_lcd_enable(struct aty128fb_par *par, int on)
 		aty_st_le32(LVDS_GEN_CNTL, reg);
 	}
 }
-#endif /* CONFIG_PMAC_PBOOK */
 
 static void aty128_set_pll(struct aty128_pll *pll, const struct aty128fb_par *par)
 {
@@ -1496,12 +1487,10 @@ static int aty128fb_set_par(struct fb_info *info)
 	info->fix.visual = par->crtc.bpp == 8 ? FB_VISUAL_PSEUDOCOLOR
 		: FB_VISUAL_DIRECTCOLOR;
 
-#ifdef CONFIG_PMAC_PBOOK
 	if (par->chip_gen == rage_M3) {
 		aty128_set_crt_enable(par, par->crt_on);
 		aty128_set_lcd_enable(par, par->lcd_on);
 	}
-#endif
 	if (par->accel_flags & FB_ACCELF_TEXT)
 		aty128_init_engine(par);
 
@@ -1648,7 +1637,8 @@ static int aty128fb_sync(struct fb_info *info)
 	return 0;
 }
 
-int __init aty128fb_setup(char *options)
+#ifndef MODULE
+static int __init aty128fb_setup(char *options)
 {
 	char *this_opt;
 
@@ -1656,7 +1646,6 @@ int __init aty128fb_setup(char *options)
 		return 0;
 
 	while ((this_opt = strsep(&options, ",")) != NULL) {
-#ifdef CONFIG_PMAC_PBOOK
 		if (!strncmp(this_opt, "lcd:", 4)) {
 			default_lcd_on = simple_strtoul(this_opt+4, NULL, 0);
 			continue;
@@ -1664,7 +1653,6 @@ int __init aty128fb_setup(char *options)
 			default_crt_on = simple_strtoul(this_opt+4, NULL, 0);
 			continue;
 		}
-#endif
 #ifdef CONFIG_MTRR
 		if(!strncmp(this_opt, "nomtrr", 6)) {
 			mtrr = 0;
@@ -1701,6 +1689,7 @@ int __init aty128fb_setup(char *options)
 	}
 	return 0;
 }
+#endif  /*  MODULE  */
 
 
 /*
@@ -1755,10 +1744,8 @@ static int __init aty128_init(struct pci_dev *pdev, const struct pci_device_id *
 	info->fbops = &aty128fb_ops;
 	info->flags = FBINFO_FLAG_DEFAULT;
 
-#ifdef CONFIG_PMAC_PBOOK
 	par->lcd_on = default_lcd_on;
 	par->crt_on = default_crt_on;
-#endif
 
 	var = default_var;
 #ifdef CONFIG_PPC_PMAC
@@ -2038,12 +2025,10 @@ static int aty128fb_blank(int blank, struct fb_info *fb)
 
 	aty_st_8(CRTC_EXT_CNTL+1, state);
 
-#ifdef CONFIG_PMAC_PBOOK
 	if (par->chip_gen == rage_M3) {
 		aty128_set_crt_enable(par, par->crt_on && !blank);
 		aty128_set_lcd_enable(par, par->lcd_on && !blank);
 	}
-#endif	
 #ifdef CONFIG_PMAC_BACKLIGHT
 	if ((_machine == _MACH_Pmac) && !blank)
 		set_backlight_enable(1);
@@ -2127,7 +2112,6 @@ static int aty128fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 static int aty128fb_ioctl(struct inode *inode, struct file *file, u_int cmd,
 			  u_long arg, struct fb_info *info)
 {
-#ifdef CONFIG_PMAC_PBOOK
 	struct aty128fb_par *par = info->par;
 	u32 value;
 	int rc;
@@ -2152,7 +2136,6 @@ static int aty128fb_ioctl(struct inode *inode, struct file *file, u_int cmd,
 		value = (par->crt_on << 1) | par->lcd_on;
 		return put_user(value, (__u32 __user *)arg);
 	}
-#endif
 	return -EINVAL;
 }
 
@@ -2330,7 +2313,7 @@ static void aty128_set_suspend(struct aty128fb_par *par, int suspend)
 	}
 }
 
-static int aty128_pci_suspend(struct pci_dev *pdev, u32 state)
+static int aty128_pci_suspend(struct pci_dev *pdev, pm_message_t state)
 {
 	struct fb_info *info = pci_get_drvdata(pdev);
 	struct aty128fb_par *par = info->par;
@@ -2370,6 +2353,14 @@ static int aty128_pci_suspend(struct pci_dev *pdev, u32 state)
 	/* Sleep */
 	par->asleep = 1;
 	par->lock_blank = 1;
+
+#ifdef CONFIG_PPC_PMAC
+	/* On powermac, we have hooks to properly suspend/resume AGP now,
+	 * use them here. We'll ultimately need some generic support here,
+	 * but the generic code isn't quite ready for that yet
+	 */
+	pmac_suspend_agp_for_card(pdev);
+#endif /* CONFIG_PPC_PMAC */
 
 	/* We need a way to make sure the fbdev layer will _not_ touch the
 	 * framebuffer before we put the chip to suspend state. On 2.4, I
@@ -2413,7 +2404,15 @@ static int aty128_do_resume(struct pci_dev *pdev)
 	par->lock_blank = 0;
 	aty128fb_blank(0, info);
 
-	pdev->dev.power.power_state = 0;
+#ifdef CONFIG_PPC_PMAC
+	/* On powermac, we have hooks to properly suspend/resume AGP now,
+	 * use them here. We'll ultimately need some generic support here,
+	 * but the generic code isn't quite ready for that yet
+	 */
+	pmac_resume_agp_for_card(pdev);
+#endif /* CONFIG_PPC_PMAC */
+
+	pdev->dev.power.power_state = PMSG_ON;
 
 	printk(KERN_DEBUG "aty128fb: resumed !\n");
 
@@ -2432,7 +2431,7 @@ static int aty128_pci_resume(struct pci_dev *pdev)
 }
 
 
-int __init aty128fb_init(void)
+static int __init aty128fb_init(void)
 {
 #ifndef MODULE
 	char *option = NULL;
@@ -2442,7 +2441,7 @@ int __init aty128fb_init(void)
 	aty128fb_setup(option);
 #endif
 
-	return pci_module_init(&aty128fb_driver);
+	return pci_register_driver(&aty128fb_driver);
 }
 
 static void __exit aty128fb_exit(void)
@@ -2452,7 +2451,6 @@ static void __exit aty128fb_exit(void)
 
 module_init(aty128fb_init);
 
-#ifdef MODULE
 module_exit(aty128fb_exit);
 
 MODULE_AUTHOR("(c)1999-2003 Brad Douglas <brad@neruo.com>");
@@ -2463,6 +2461,5 @@ MODULE_PARM_DESC(mode_option, "Specify resolution as \"<xres>x<yres>[-<bpp>][@<r
 #ifdef CONFIG_MTRR
 module_param_named(nomtrr, mtrr, invbool, 0);
 MODULE_PARM_DESC(nomtrr, "bool: Disable MTRR support (0 or 1=disabled) (default=0)");
-#endif
 #endif
 

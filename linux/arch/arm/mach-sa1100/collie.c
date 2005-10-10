@@ -38,6 +38,7 @@
 #include <asm/mach/serial_sa1100.h>
 
 #include <asm/hardware/scoop.h>
+#include <asm/mach/sharpsl_param.h>
 #include <asm/hardware/locomo.h>
 
 #include "generic.h"
@@ -55,7 +56,7 @@ static struct scoop_config collie_scoop_setup = {
 	.io_out		= COLLIE_SCOOP_IO_OUT,
 };
 
-static struct platform_device colliescoop_device = {
+struct platform_device colliescoop_device = {
 	.name		= "sharp-scoop",
 	.id		= -1,
 	.dev		= {
@@ -166,6 +167,8 @@ static void __init collie_init(void)
 
 	sa11x0_set_flash_data(&collie_flash_data, collie_flash_resources,
 			      ARRAY_SIZE(collie_flash_resources));
+
+	sharpsl_save_param();
 }
 
 static struct map_desc collie_io_desc[] __initdata = {
@@ -181,9 +184,11 @@ static void __init collie_map_io(void)
 }
 
 MACHINE_START(COLLIE, "Sharp-Collie")
-	BOOT_MEM(0xc0000000, 0x80000000, 0xf8000000)
-	MAPIO(collie_map_io)
-	INITIRQ(sa1100_init_irq)
+	.phys_ram	= 0xc0000000,
+	.phys_io	= 0x80000000,
+	.io_pg_offst	= ((0xf8000000) >> 18) & 0xfffc,
+	.map_io		= collie_map_io,
+	.init_irq	= sa1100_init_irq,
 	.timer		= &sa1100_timer,
 	.init_machine	= collie_init,
 MACHINE_END

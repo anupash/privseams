@@ -185,7 +185,7 @@ static inline void list_del(struct list_head *entry)
  * list_for_each_entry_rcu().
  *
  * Note that the caller is not permitted to immediately free
- * the newly deleted entry.  Instead, either synchronize_kernel()
+ * the newly deleted entry.  Instead, either synchronize_rcu()
  * or call_rcu() must be used to defer freeing until an RCU
  * grace period has elapsed.
  */
@@ -692,7 +692,7 @@ static inline void hlist_add_after(struct hlist_node *n,
  * @member:	the name of the hlist_node within the struct.
  *
  * This list-traversal primitive may safely run concurrently with
- * the _rcu list-mutation primitives such as hlist_add_rcu()
+ * the _rcu list-mutation primitives such as hlist_add_head_rcu()
  * as long as the traversal is guarded by rcu_read_lock().
  */
 #define hlist_for_each_entry_rcu(tpos, pos, head, member)		 \

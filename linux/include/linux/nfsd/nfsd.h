@@ -15,6 +15,7 @@
 #include <linux/unistd.h>
 #include <linux/dirent.h>
 #include <linux/fs.h>
+#include <linux/posix_acl.h>
 #include <linux/mount.h>
 
 #include <linux/nfsd/debug.h>
@@ -96,9 +97,9 @@ int		nfsd_commit(struct svc_rqst *, struct svc_fh *,
 int		nfsd_open(struct svc_rqst *, struct svc_fh *, int,
 				int, struct file **);
 void		nfsd_close(struct file *);
-int		nfsd_read(struct svc_rqst *, struct svc_fh *,
-				loff_t, struct kvec *,int, unsigned long *);
-int		nfsd_write(struct svc_rqst *, struct svc_fh *,
+int 		nfsd_read(struct svc_rqst *, struct svc_fh *, struct file *,
+				loff_t, struct kvec *, int, unsigned long *);
+int 		nfsd_write(struct svc_rqst *, struct svc_fh *,struct file *,
 				loff_t, struct kvec *,int, unsigned long, int *);
 int		nfsd_readlink(struct svc_rqst *, struct svc_fh *,
 				char *, int *);
@@ -123,6 +124,22 @@ int		nfsd_statfs(struct svc_rqst *, struct svc_fh *,
 
 int		nfsd_notify_change(struct inode *, struct iattr *);
 int		nfsd_permission(struct svc_export *, struct dentry *, int);
+void		nfsd_sync_dir(struct dentry *dp);
+
+#if defined(CONFIG_NFSD_V2_ACL) || defined(CONFIG_NFSD_V3_ACL)
+#ifdef CONFIG_NFSD_V2_ACL
+extern struct svc_version nfsd_acl_version2;
+#else
+#define nfsd_acl_version2 NULL
+#endif
+#ifdef CONFIG_NFSD_V3_ACL
+extern struct svc_version nfsd_acl_version3;
+#else
+#define nfsd_acl_version3 NULL
+#endif
+struct posix_acl *nfsd_get_posix_acl(struct svc_fh *, int);
+int nfsd_set_posix_acl(struct svc_fh *, int, struct posix_acl *);
+#endif
 
 
 /* 
@@ -130,14 +147,18 @@ int		nfsd_permission(struct svc_export *, struct dentry *, int);
  */
 #ifdef CONFIG_NFSD_V4
 void nfs4_state_init(void);
+int nfs4_state_start(void);
 void nfs4_state_shutdown(void);
 time_t nfs4_lease_time(void);
 void nfs4_reset_lease(time_t leasetime);
+int nfs4_reset_recoverydir(char *recdir);
 #else
-void static inline nfs4_state_init(void){}
-void static inline nfs4_state_shutdown(void){}
-time_t static inline nfs4_lease_time(void){return 0;}
-void static inline nfs4_reset_lease(time_t leasetime){}
+static inline void nfs4_state_init(void){};
+static inline int nfs4_state_start(void){return 0;}
+static inline void nfs4_state_shutdown(void){}
+static inline time_t nfs4_lease_time(void){return 0;}
+static inline void nfs4_reset_lease(time_t leasetime){}
+static inline int nfs4_reset_recoverydir(char *recdir) {return 0;}
 #endif
 
 /*
@@ -209,6 +230,8 @@ void		nfsd_lockd_shutdown(void);
 #define	nfserr_no_grace		__constant_htonl(NFSERR_NO_GRACE)
 #define	nfserr_reclaim_bad	__constant_htonl(NFSERR_RECLAIM_BAD)
 #define	nfserr_badname		__constant_htonl(NFSERR_BADNAME)
+#define	nfserr_cb_path_down	__constant_htonl(NFSERR_CB_PATH_DOWN)
+#define	nfserr_locked		__constant_htonl(NFSERR_LOCKED)
 
 /* error codes for internal use */
 /* if a request fails due to kmalloc failure, it gets dropped.

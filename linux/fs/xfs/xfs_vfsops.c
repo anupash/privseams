@@ -1,7 +1,7 @@
 /*
  * XFS filesystem operations.
  *
- * Copyright (c) 2000-2004 Silicon Graphics, Inc.  All Rights Reserved.
+ * Copyright (c) 2000-2005 Silicon Graphics, Inc.  All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -258,11 +258,6 @@ xfs_start_flags(
 	mp->m_fsname = kmem_alloc(mp->m_fsname_len, KM_SLEEP);
 	strcpy(mp->m_fsname, ap->fsname);
 
-	/*
-	 * Pull in the 'wsync' and 'ino64' mount options before we do the real
-	 * work of mounting and recovery.  The arg pointer will
-	 * be NULL when we are being called from the root mount code.
-	 */
 	if (ap->flags & XFSMNT_WSYNC)
 		mp->m_flags |= XFS_MOUNT_WSYNC;
 #if XFS_BIG_INUMS
@@ -302,8 +297,15 @@ xfs_start_flags(
 		mp->m_flags |= XFS_MOUNT_DFLT_IOSIZE;
 		mp->m_readio_log = mp->m_writeio_log = ap->iosizelog;
 	}
+
+	if (ap->flags & XFSMNT_IHASHSIZE)
+		mp->m_flags |= XFS_MOUNT_IHASHSIZE;
+
 	if (ap->flags & XFSMNT_IDELETE)
 		mp->m_flags |= XFS_MOUNT_IDELETE;
+
+	if (ap->flags & XFSMNT_DIRSYNC)
+		mp->m_flags |= XFS_MOUNT_DIRSYNC;
 
 	/*
 	 * no recovery flag requires a read-only mount
@@ -363,16 +365,6 @@ xfs_finish_flags(
 		cmn_err(CE_WARN,
 	"XFS: cannot mount a read-only filesystem as read-write");
 		return XFS_ERROR(EROFS);
-	}
-
-	/*
-	 * disallow mount attempts with (IRIX) project quota enabled
-	 */
-	if (XFS_SB_VERSION_HASQUOTA(&mp->m_sb) &&
-	    (mp->m_sb.sb_qflags & XFS_PQUOTA_ACCT)) {
-		cmn_err(CE_WARN,
-	"XFS: cannot mount a filesystem with IRIX project quota enabled");
-		return XFS_ERROR(ENOSYS);
 	}
 
 	/*
@@ -620,7 +612,34 @@ out:
 	return XFS_ERROR(error);
 }
 
-#define REMOUNT_READONLY_FLAGS	(SYNC_REMOUNT|SYNC_ATTR|SYNC_WAIT)
+STATIC int
+xfs_quiesce_fs(
+	xfs_mount_t		*mp)
+{
+	int			count = 0, pincount;
+		
+	xfs_refcache_purge_mp(mp);
+	xfs_flush_buftarg(mp->m_ddev_targp, 0);
+	xfs_finish_reclaim_all(mp, 0);
+
+	/* This loop must run at least twice.
+	 * The first instance of the loop will flush
+	 * most meta data but that will generate more
+	 * meta data (typically directory updates).
+	 * Which then must be flushed and logged before
+	 * we can write the unmount record.
+	 */ 
+	do {
+		xfs_syncsub(mp, SYNC_REMOUNT|SYNC_ATTR|SYNC_WAIT, 0, NULL);
+		pincount = xfs_flush_buftarg(mp->m_ddev_targp, 1);
+		if (!pincount) {
+			delay(50);
+			count++;
+		}
+	} while (count < 2);
+
+	return 0;
+}
 
 STATIC int
 xfs_mntupdate(
@@ -630,8 +649,7 @@ xfs_mntupdate(
 {
 	struct vfs	*vfsp = bhvtovfs(bdp);
 	xfs_mount_t	*mp = XFS_BHVTOM(bdp);
-	int		pincount, error;
-	int		count = 0;
+	int		error;
 
 	if (args->flags & XFSMNT_NOATIME)
 		mp->m_flags |= XFS_MOUNT_NOATIME;
@@ -643,25 +661,7 @@ xfs_mntupdate(
 	}
 
 	if (*flags & MS_RDONLY) {
-		xfs_refcache_purge_mp(mp);
-		xfs_flush_buftarg(mp->m_ddev_targp, 0);
-		xfs_finish_reclaim_all(mp, 0);
-
-		/* This loop must run at least twice.
-		 * The first instance of the loop will flush
-		 * most meta data but that will generate more
-		 * meta data (typically directory updates).
-		 * Which then must be flushed and logged before
-		 * we can write the unmount record.
-		 */ 
-		do {
-			VFS_SYNC(vfsp, REMOUNT_READONLY_FLAGS, NULL, error);
-			pincount = xfs_flush_buftarg(mp->m_ddev_targp, 1);
-			if (!pincount) {
-				delay(50);
-				count++;
-			}
-		} while (count < 2);
+		xfs_quiesce_fs(mp);
 
 		/* Ok now write out an unmount record */
 		xfs_log_unmount_write(mp);
@@ -877,10 +877,12 @@ xfs_sync(
 	int		flags,
 	cred_t		*credp)
 {
-	xfs_mount_t	*mp;
+	xfs_mount_t	*mp = XFS_BHVTOM(bdp);
 
-	mp = XFS_BHVTOM(bdp);
-	return (xfs_syncsub(mp, flags, 0, NULL));
+	if (unlikely(flags == SYNC_QUIESCE))
+		return xfs_quiesce_fs(mp);
+	else
+		return xfs_syncsub(mp, flags, 0, NULL);
 }
 
 /*
@@ -1647,6 +1649,7 @@ xfs_vget(
 #define MNTOPT_SWIDTH	"swidth"	/* data volume stripe width */
 #define MNTOPT_NOUUID	"nouuid"	/* ignore filesystem UUID */
 #define MNTOPT_MTPT	"mtpt"		/* filesystem mount point */
+#define MNTOPT_ALLOCSIZE    "allocsize"    /* preferred allocation size */
 #define MNTOPT_IHASHSIZE    "ihashsize"    /* size of inode hash table */
 #define MNTOPT_NORECOVERY   "norecovery"   /* don't run XFS recovery */
 #define MNTOPT_NOLOGFLUSH   "nologflush"   /* don't hard flush on log writes */
@@ -1655,8 +1658,30 @@ xfs_vget(
 #define MNTOPT_IKEEP	"ikeep"		/* do not free empty inode clusters */
 #define MNTOPT_NOIKEEP	"noikeep"	/* free empty inode clusters */
 
+STATIC unsigned long
+suffix_strtoul(const char *cp, char **endp, unsigned int base)
+{
+	int	last, shift_left_factor = 0;
+	char	*value = (char *)cp;
 
-int
+	last = strlen(value) - 1;
+	if (value[last] == 'K' || value[last] == 'k') {
+		shift_left_factor = 10;
+		value[last] = '\0';
+	}
+	if (value[last] == 'M' || value[last] == 'm') {
+		shift_left_factor = 20;
+		value[last] = '\0';
+	}
+	if (value[last] == 'G' || value[last] == 'g') {
+		shift_left_factor = 30;
+		value[last] = '\0';
+	}
+
+	return simple_strtoul(cp, endp, base) << shift_left_factor;
+}
+
+STATIC int
 xfs_parseargs(
 	struct bhv_desc		*bhv,
 	char			*options,
@@ -1686,62 +1711,63 @@ xfs_parseargs(
 		if (!strcmp(this_char, MNTOPT_LOGBUFS)) {
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					MNTOPT_LOGBUFS);
+					this_char);
 				return EINVAL;
 			}
 			args->logbufs = simple_strtoul(value, &eov, 10);
 		} else if (!strcmp(this_char, MNTOPT_LOGBSIZE)) {
-			int	last, in_kilobytes = 0;
-
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					MNTOPT_LOGBSIZE);
+					this_char);
 				return EINVAL;
 			}
-			last = strlen(value) - 1;
-			if (value[last] == 'K' || value[last] == 'k') {
-				in_kilobytes = 1;
-				value[last] = '\0';
-			}
-			args->logbufsize = simple_strtoul(value, &eov, 10);
-			if (in_kilobytes)
-				args->logbufsize <<= 10;
+			args->logbufsize = suffix_strtoul(value, &eov, 10);
 		} else if (!strcmp(this_char, MNTOPT_LOGDEV)) {
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					MNTOPT_LOGDEV);
+					this_char);
 				return EINVAL;
 			}
 			strncpy(args->logname, value, MAXNAMELEN);
 		} else if (!strcmp(this_char, MNTOPT_MTPT)) {
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					MNTOPT_MTPT);
+					this_char);
 				return EINVAL;
 			}
 			strncpy(args->mtpt, value, MAXNAMELEN);
 		} else if (!strcmp(this_char, MNTOPT_RTDEV)) {
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					MNTOPT_RTDEV);
+					this_char);
 				return EINVAL;
 			}
 			strncpy(args->rtname, value, MAXNAMELEN);
 		} else if (!strcmp(this_char, MNTOPT_BIOSIZE)) {
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					MNTOPT_BIOSIZE); 
+					this_char);
 				return EINVAL;
 			}
 			iosize = simple_strtoul(value, &eov, 10);
 			args->flags |= XFSMNT_IOSIZE;
 			args->iosizelog = (uint8_t) iosize;
+		} else if (!strcmp(this_char, MNTOPT_ALLOCSIZE)) {
+			if (!value || !*value) {
+				printk("XFS: %s option requires an argument\n",
+					this_char);
+				return EINVAL;
+			}
+			iosize = suffix_strtoul(value, &eov, 10);
+			args->flags |= XFSMNT_IOSIZE;
+			args->iosizelog = ffs(iosize) - 1;
 		} else if (!strcmp(this_char, MNTOPT_IHASHSIZE)) {
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					this_char); 
+					this_char);
 				return EINVAL;
 			}
+			args->flags |= XFSMNT_IHASHSIZE;
 			args->ihashsize = simple_strtoul(value, &eov, 10);
 		} else if (!strcmp(this_char, MNTOPT_WSYNC)) {
 			args->flags |= XFSMNT_WSYNC;
@@ -1753,7 +1779,7 @@ xfs_parseargs(
 			args->flags |= XFSMNT_INO64;
 #if !XFS_BIG_INUMS
 			printk("XFS: %s option not allowed on this system\n",
-				MNTOPT_INO64);
+				this_char);
 			return EINVAL;
 #endif
 		} else if (!strcmp(this_char, MNTOPT_NOALIGN)) {
@@ -1763,14 +1789,14 @@ xfs_parseargs(
 		} else if (!strcmp(this_char, MNTOPT_SUNIT)) {
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					MNTOPT_SUNIT);
+					this_char);
 				return EINVAL;
 			}
 			dsunit = simple_strtoul(value, &eov, 10);
 		} else if (!strcmp(this_char, MNTOPT_SWIDTH)) {
 			if (!value || !*value) {
 				printk("XFS: %s option requires an argument\n",
-					MNTOPT_SWIDTH);
+					this_char);
 				return EINVAL;
 			}
 			dswidth = simple_strtoul(value, &eov, 10);
@@ -1778,7 +1804,7 @@ xfs_parseargs(
 			args->flags &= ~XFSMNT_32BITINODES;
 #if !XFS_BIG_INUMS
 			printk("XFS: %s option not allowed on this system\n",
-				MNTOPT_64BITINODE);
+				this_char);
 			return EINVAL;
 #endif
 		} else if (!strcmp(this_char, MNTOPT_NOUUID)) {
@@ -1841,7 +1867,7 @@ printk("XFS: irixsgid is now a sysctl(2) variable, option is deprecated.\n");
 	return 0;
 }
 
-int
+STATIC int
 xfs_showargs(
 	struct bhv_desc		*bhv,
 	struct seq_file		*m)
@@ -1870,8 +1896,11 @@ xfs_showargs(
 			seq_puts(m, xfs_infop->str);
 	}
 
+	if (mp->m_flags & XFS_MOUNT_IHASHSIZE)
+		seq_printf(m, "," MNTOPT_IHASHSIZE "=%d", mp->m_ihsize);
+
 	if (mp->m_flags & XFS_MOUNT_DFLT_IOSIZE)
-		seq_printf(m, "," MNTOPT_BIOSIZE "=%d", mp->m_writeio_log);
+		seq_printf(m, "," MNTOPT_ALLOCSIZE "=%d", 1<<mp->m_writeio_log);
 
 	if (mp->m_logbufs > 0)
 		seq_printf(m, "," MNTOPT_LOGBUFS "=%d", mp->m_logbufs);

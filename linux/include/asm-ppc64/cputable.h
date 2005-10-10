@@ -66,6 +66,11 @@ struct cpu_spec {
 extern struct cpu_spec		cpu_specs[];
 extern struct cpu_spec		*cur_cpu_spec;
 
+static inline unsigned long cpu_has_feature(unsigned long feature)
+{
+	return cur_cpu_spec->cpu_features & feature;
+}
+
 
 /* firmware feature bitmask values */
 #define FIRMWARE_MAX_FEATURES 63
@@ -133,6 +138,7 @@ extern firmware_feature_t firmware_features_table[];
 #define CPU_FTR_COHERENT_ICACHE  	ASM_CONST(0x0000020000000000)
 #define CPU_FTR_LOCKLESS_TLBIE		ASM_CONST(0x0000040000000000)
 #define CPU_FTR_MMCRA_SIHV		ASM_CONST(0x0000080000000000)
+#define CPU_FTR_CTRL			ASM_CONST(0x0000100000000000)
 
 /* Platform firmware features */
 #define FW_FTR_				ASM_CONST(0x0000000000000001)
@@ -143,7 +149,7 @@ extern firmware_feature_t firmware_features_table[];
 
 #define CPU_FTR_PPCAS_ARCH_V2_BASE (CPU_FTR_SLB | \
                                  CPU_FTR_TLBIEL | CPU_FTR_NOEXECUTE | \
-                                 CPU_FTR_NODSISRALIGN)
+                                 CPU_FTR_NODSISRALIGN | CPU_FTR_CTRL)
 
 /* iSeries doesn't support large pages */
 #ifdef CONFIG_PPC_ISERIES

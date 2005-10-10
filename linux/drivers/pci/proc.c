@@ -15,6 +15,7 @@
 
 #include <asm/uaccess.h>
 #include <asm/byteorder.h>
+#include "pci.h"
 
 static int proc_initialized;	/* = 0 */
 
@@ -313,13 +314,10 @@ static void *pci_seq_start(struct seq_file *m, loff_t *pos)
 	struct pci_dev *dev = NULL;
 	loff_t n = *pos;
 
-	dev = pci_get_device(PCI_ANY_ID, PCI_ANY_ID, dev);
-	while (n--) {
-		dev = pci_get_device(PCI_ANY_ID, PCI_ANY_ID, dev);
-		if (dev == NULL)
-			goto exit;
+	for_each_pci_dev(dev) {
+		if (!n--)
+			break;
 	}
-exit:
 	return dev;
 }
 
@@ -357,14 +355,20 @@ static int show_device(struct seq_file *m, void *v)
 			dev->device,
 			dev->irq);
 	/* Here should be 7 and not PCI_NUM_RESOURCES as we need to preserve compatibility */
-	for(i=0; i<7; i++)
+	for (i=0; i<7; i++) {
+		u64 start, end;
+		pci_resource_to_user(dev, i, &dev->resource[i], &start, &end);
 		seq_printf(m, LONG_FORMAT,
-			dev->resource[i].start |
+			((unsigned long)start) |
 			(dev->resource[i].flags & PCI_REGION_FLAG_MASK));
-	for(i=0; i<7; i++)
+	}
+	for (i=0; i<7; i++) {
+		u64 start, end;
+		pci_resource_to_user(dev, i, &dev->resource[i], &start, &end);
 		seq_printf(m, LONG_FORMAT,
 			dev->resource[i].start < dev->resource[i].end ?
-			dev->resource[i].end - dev->resource[i].start + 1 : 0);
+			(unsigned long)(end - start) + 1 : 0);
+	}
 	seq_putc(m, '\t');
 	if (drv)
 		seq_printf(m, "%s", drv->name);
@@ -384,26 +388,32 @@ static struct proc_dir_entry *proc_bus_pci_dir;
 int pci_proc_attach_device(struct pci_dev *dev)
 {
 	struct pci_bus *bus = dev->bus;
-	struct proc_dir_entry *de, *e;
+	struct proc_dir_entry *e;
 	char name[16];
 
 	if (!proc_initialized)
 		return -EACCES;
 
-	if (!(de = bus->procdir)) {
-		if (pci_name_bus(name, bus))
-			return -EEXIST;
-		de = bus->procdir = proc_mkdir(name, proc_bus_pci_dir);
-		if (!de)
+	if (!bus->procdir) {
+		if (pci_proc_domain(bus)) {
+			sprintf(name, "%04x:%02x", pci_domain_nr(bus),
+					bus->number);
+		} else {
+			sprintf(name, "%02x", bus->number);
+		}
+		bus->procdir = proc_mkdir(name, proc_bus_pci_dir);
+		if (!bus->procdir)
 			return -ENOMEM;
 	}
+
 	sprintf(name, "%02x.%x", PCI_SLOT(dev->devfn), PCI_FUNC(dev->devfn));
-	e = dev->procent = create_proc_entry(name, S_IFREG | S_IRUGO | S_IWUSR, de);
+	e = create_proc_entry(name, S_IFREG | S_IRUGO | S_IWUSR, bus->procdir);
 	if (!e)
 		return -ENOMEM;
 	e->proc_fops = &proc_bus_pci_operations;
 	e->data = dev;
 	e->size = dev->cfg_size;
+	dev->procent = e;
 
 	return 0;
 }

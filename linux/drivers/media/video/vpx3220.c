@@ -569,25 +569,16 @@ static unsigned short normal_i2c[] =
     { I2C_VPX3220 >> 1, (I2C_VPX3220 >> 1) + 4,
 	I2C_CLIENT_END
 };
-static unsigned short normal_i2c_range[] = { I2C_CLIENT_END };
 
-static unsigned short probe[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short probe_range[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short ignore[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short ignore_range[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short force[2] = { I2C_CLIENT_END , I2C_CLIENT_END };
+static unsigned short ignore = I2C_CLIENT_END;
                                                                                 
 static struct i2c_client_address_data addr_data = {
 	.normal_i2c		= normal_i2c,
-	.normal_i2c_range	= normal_i2c_range,
-	.probe			= probe,
-	.probe_range		= probe_range,
-	.ignore			= ignore,
-	.ignore_range		= ignore_range,
-	.force			= force
+	.probe			= &ignore,
+	.ignore			= &ignore,
+	.force			= &ignore,
 };
 
-static int vpx3220_i2c_id = 0;
 static struct i2c_driver vpx3220_i2c_driver;
 
 static int
@@ -634,7 +625,6 @@ vpx3220_detect_client (struct i2c_adapter *adapter,
 	client->adapter = adapter;
 	client->driver = &vpx3220_i2c_driver;
 	client->flags = I2C_CLIENT_ALLOW_USE;
-	client->id = vpx3220_i2c_id++;
 
 	/* Check for manufacture ID and part number */
 	if (kind < 0) {
@@ -655,16 +645,16 @@ vpx3220_detect_client (struct i2c_adapter *adapter,
 		    vpx3220_read(client, 0x01);
 		switch (pn) {
 		case 0x4680:
-			snprintf(I2C_NAME(client), sizeof(I2C_NAME(client)) - 1,
-				 "vpx3220a[%d]", client->id);
+			strlcpy(I2C_NAME(client), "vpx3220a",
+				sizeof(I2C_NAME(client)));
 			break;
 		case 0x4260:
-			snprintf(I2C_NAME(client), sizeof(I2C_NAME(client)) - 1,
-				 "vpx3216b[%d]", client->id);
+			strlcpy(I2C_NAME(client), "vpx3216b",
+				sizeof(I2C_NAME(client)));
 			break;
 		case 0x4280:
-			snprintf(I2C_NAME(client), sizeof(I2C_NAME(client)) - 1,
-				 "vpx3214c[%d]", client->id);
+			strlcpy(I2C_NAME(client), "vpx3214c",
+				sizeof(I2C_NAME(client)));
 			break;
 		default:
 			dprintk(1,
@@ -675,9 +665,8 @@ vpx3220_detect_client (struct i2c_adapter *adapter,
 			return 0;
 		}
 	} else {
-		snprintf(I2C_NAME(client), sizeof(I2C_NAME(client)) - 1,
-			 "forced vpx32xx[%d]",
-		client->id);
+		strlcpy(I2C_NAME(client), "forced vpx32xx",
+			sizeof(I2C_NAME(client)));
 	}
 
 	decoder = kmalloc(sizeof(struct vpx3220), GFP_KERNEL);

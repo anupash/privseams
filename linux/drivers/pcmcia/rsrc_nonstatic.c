@@ -24,6 +24,8 @@
 #include <linux/ioport.h>
 #include <linux/timer.h>
 #include <linux/pci.h>
+#include <linux/device.h>
+
 #include <asm/irq.h>
 #include <asm/io.h>
 
@@ -370,6 +372,9 @@ static int do_mem_probe(u_long base, u_long num, struct pcmcia_socket *s)
 	   base, base+num-1);
     bad = fail = 0;
     step = (num < 0x20000) ? 0x2000 : ((num>>4) & ~0x1fff);
+    /* don't allow too large steps */
+    if (step > 0x800000)
+	step = 0x800000;
     /* cis_readable wants to map 2x map_size */
     if (step < 2 * s->map_size)
 	step = 2 * s->map_size;
@@ -463,8 +468,7 @@ static void validate_mem(struct pcmcia_socket *s, unsigned int probe_mask)
 
 	for (m = s_data->mem_db.next; m != &s_data->mem_db; m = mm.next) {
 		mm = *m;
-		if (do_mem_probe(mm.base, mm.num, s))
-			break;
+		do_mem_probe(mm.base, mm.num, s);
 	}
 }
 
@@ -472,8 +476,7 @@ static void validate_mem(struct pcmcia_socket *s, unsigned int probe_mask)
 
 
 /*
- * Locking note: this is the only place where we take
- * both rsrc_sem and skt_sem.
+ * Locking note: Must be called with skt_sem held!
  */
 static void pcmcia_nonstatic_validate_mem(struct pcmcia_socket *s)
 {
@@ -490,12 +493,8 @@ static void pcmcia_nonstatic_validate_mem(struct pcmcia_socket *s)
 		if (probe_mask & ~s_data->rsrc_mem_probe) {
 			s_data->rsrc_mem_probe |= probe_mask;
 
-			down(&s->skt_sem);
-
 			if (s->state & SOCKET_PRESENT)
 				validate_mem(s, probe_mask);
-
-			up(&s->skt_sem);
 		}
 
 		up(&rsrc_sem);
@@ -604,7 +603,7 @@ static int nonstatic_adjust_io_region(struct resource *res, unsigned long r_star
 
 ======================================================================*/
 
-struct resource *nonstatic_find_io_region(unsigned long base, int num,
+static struct resource *nonstatic_find_io_region(unsigned long base, int num,
 		   unsigned long align, struct pcmcia_socket *s)
 {
 	struct resource *res = make_resource(0, num, IORESOURCE_IO, s->dev.class_id);
@@ -638,8 +637,8 @@ struct resource *nonstatic_find_io_region(unsigned long base, int num,
 	return res;
 }
 
-struct resource * nonstatic_find_mem_region(u_long base, u_long num, u_long align,
-				 int low, struct pcmcia_socket *s)
+static struct resource * nonstatic_find_mem_region(u_long base, u_long num,
+		u_long align, int low, struct pcmcia_socket *s)
 {
 	struct resource *res = make_resource(0, num, IORESOURCE_MEM, s->dev.class_id);
 	struct socket_data *s_data = s->resource_data;
@@ -686,27 +685,23 @@ struct resource * nonstatic_find_mem_region(u_long base, u_long num, u_long alig
 }
 
 
-static int adjust_memory(struct pcmcia_socket *s, adjust_t *adj)
+static int adjust_memory(struct pcmcia_socket *s, unsigned int action, unsigned long start, unsigned long end)
 {
-	u_long base, num;
 	struct socket_data *data = s->resource_data;
-	int ret;
+	unsigned long size = end - start + 1;
+	int ret = 0;
 
-	base = adj->resource.memory.Base;
-	num = adj->resource.memory.Size;
-	if ((num == 0) || (base+num-1 < base))
-		return CS_BAD_SIZE;
-
-	ret = CS_SUCCESS;
+	if (end <= start)
+		return -EINVAL;
 
 	down(&rsrc_sem);
-	switch (adj->Action) {
+	switch (action) {
 	case ADD_MANAGED_RESOURCE:
-		ret = add_interval(&data->mem_db, base, num);
+		ret = add_interval(&data->mem_db, start, size);
 		break;
 	case REMOVE_MANAGED_RESOURCE:
-		ret = sub_interval(&data->mem_db, base, num);
-		if (ret == CS_SUCCESS) {
+		ret = sub_interval(&data->mem_db, start, size);
+		if (!ret) {
 			struct pcmcia_socket *socket;
 			down_read(&pcmcia_socket_list_rwsem);
 			list_for_each_entry(socket, &pcmcia_socket_list, socket_list)
@@ -715,7 +710,7 @@ static int adjust_memory(struct pcmcia_socket *s, adjust_t *adj)
 		}
 		break;
 	default:
-		ret = CS_UNSUPPORTED_FUNCTION;
+		ret = -EINVAL;
 	}
 	up(&rsrc_sem);
 
@@ -723,36 +718,35 @@ static int adjust_memory(struct pcmcia_socket *s, adjust_t *adj)
 }
 
 
-static int adjust_io(struct pcmcia_socket *s, adjust_t *adj)
+static int adjust_io(struct pcmcia_socket *s, unsigned int action, unsigned long start, unsigned long end)
 {
 	struct socket_data *data = s->resource_data;
-	kio_addr_t base, num;
-	int ret = CS_SUCCESS;
+	unsigned long size = end - start + 1;
+	int ret = 0;
 
-	base = adj->resource.io.BasePort;
-	num = adj->resource.io.NumPorts;
-	if ((base < 0) || (base > 0xffff))
-		return CS_BAD_BASE;
-	if ((num <= 0) || (base+num > 0x10000) || (base+num <= base))
-		return CS_BAD_SIZE;
+	if (end <= start)
+		return -EINVAL;
+
+	if (end > IO_SPACE_LIMIT)
+		return -EINVAL;
 
 	down(&rsrc_sem);
-	switch (adj->Action) {
+	switch (action) {
 	case ADD_MANAGED_RESOURCE:
-		if (add_interval(&data->io_db, base, num) != 0) {
-			ret = CS_IN_USE;
+		if (add_interval(&data->io_db, start, size) != 0) {
+			ret = -EBUSY;
 			break;
 		}
 #ifdef CONFIG_PCMCIA_PROBE
 		if (probe_io)
-			do_io_probe(s, base, num);
+			do_io_probe(s, start, size);
 #endif
 		break;
 	case REMOVE_MANAGED_RESOURCE:
-		sub_interval(&data->io_db, base, num);
+		sub_interval(&data->io_db, start, size);
 		break;
 	default:
-		ret = CS_UNSUPPORTED_FUNCTION;
+		ret = -EINVAL;
 		break;
 	}
 	up(&rsrc_sem);
@@ -763,14 +757,81 @@ static int adjust_io(struct pcmcia_socket *s, adjust_t *adj)
 
 static int nonstatic_adjust_resource_info(struct pcmcia_socket *s, adjust_t *adj)
 {
+	unsigned long end;
+
 	switch (adj->Resource) {
 	case RES_MEMORY_RANGE:
-		return adjust_memory(s, adj);
+		end = adj->resource.memory.Base + adj->resource.memory.Size - 1;
+		return adjust_memory(s, adj->Action, adj->resource.memory.Base, end);
 	case RES_IO_RANGE:
-		return adjust_io(s, adj);
+		end = adj->resource.io.BasePort + adj->resource.io.NumPorts - 1;
+		return adjust_io(s, adj->Action, adj->resource.io.BasePort, end);
 	}
 	return CS_UNSUPPORTED_FUNCTION;
 }
+
+#ifdef CONFIG_PCI
+static int nonstatic_autoadd_resources(struct pcmcia_socket *s)
+{
+	struct resource *res;
+	int i, done = 0;
+
+	if (!s->cb_dev || !s->cb_dev->bus)
+		return -ENODEV;
+
+#if defined(CONFIG_X86) || defined(CONFIG_X86_64)
+	/* If this is the root bus, the risk of hitting
+	 * some strange system devices which aren't protected
+	 * by either ACPI resource tables or properly requested
+	 * resources is too big. Therefore, don't do auto-adding
+	 * of resources at the moment.
+	 */
+	if (s->cb_dev->bus->number == 0)
+		return -EINVAL;
+#endif
+
+	for (i=0; i < PCI_BUS_NUM_RESOURCES; i++) {
+		res = s->cb_dev->bus->resource[i];
+		if (!res)
+			continue;
+
+		if (res->flags & IORESOURCE_IO) {
+			if (res == &ioport_resource)
+				continue;
+			printk(KERN_INFO "pcmcia: parent PCI bridge I/O window: 0x%lx - 0x%lx\n",
+			       res->start, res->end);
+			if (!adjust_io(s, ADD_MANAGED_RESOURCE, res->start, res->end))
+				done |= IORESOURCE_IO;
+
+		}
+
+		if (res->flags & IORESOURCE_MEM) {
+			if (res == &iomem_resource)
+				continue;
+			printk(KERN_INFO "pcmcia: parent PCI bridge Memory window: 0x%lx - 0x%lx\n",
+			       res->start, res->end);
+			if (!adjust_memory(s, ADD_MANAGED_RESOURCE, res->start, res->end))
+				done |= IORESOURCE_MEM;
+		}
+	}
+
+	/* if we got at least one of IO, and one of MEM, we can be glad and
+	 * activate the PCMCIA subsystem */
+	if (done & (IORESOURCE_MEM | IORESOURCE_IO))
+		s->resource_setup_done = 1;
+
+	return 0;
+}
+
+#else
+
+static inline int nonstatic_autoadd_resources(struct pcmcia_socket *s)
+{
+	return -ENODEV;
+}
+
+#endif
+
 
 static int nonstatic_init(struct pcmcia_socket *s)
 {
@@ -779,11 +840,14 @@ static int nonstatic_init(struct pcmcia_socket *s)
 	data = kmalloc(sizeof(struct socket_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
+	memset(data, 0, sizeof(struct socket_data));
 
 	data->mem_db.next = &data->mem_db;
 	data->io_db.next = &data->io_db;
 
 	s->resource_data = (void *) data;
+
+	nonstatic_autoadd_resources(s);
 
 	return 0;
 }
@@ -816,3 +880,164 @@ struct pccard_resource_ops pccard_nonstatic_ops = {
 	.exit = nonstatic_release_resource_db,
 };
 EXPORT_SYMBOL(pccard_nonstatic_ops);
+
+
+/* sysfs interface to the resource database */
+
+static ssize_t show_io_db(struct class_device *class_dev, char *buf)
+{
+	struct pcmcia_socket *s = class_get_devdata(class_dev);
+	struct socket_data *data;
+	struct resource_map *p;
+	ssize_t ret = 0;
+
+	down(&rsrc_sem);
+	data = s->resource_data;
+
+	for (p = data->io_db.next; p != &data->io_db; p = p->next) {
+		if (ret > (PAGE_SIZE - 10))
+			continue;
+		ret += snprintf (&buf[ret], (PAGE_SIZE - ret - 1),
+				 "0x%08lx - 0x%08lx\n",
+				 ((unsigned long) p->base),
+				 ((unsigned long) p->base + p->num - 1));
+	}
+
+	up(&rsrc_sem);
+	return (ret);
+}
+
+static ssize_t store_io_db(struct class_device *class_dev, const char *buf, size_t count)
+{
+	struct pcmcia_socket *s = class_get_devdata(class_dev);
+	unsigned long start_addr, end_addr;
+	unsigned int add = ADD_MANAGED_RESOURCE;
+	ssize_t ret = 0;
+
+	ret = sscanf (buf, "+ 0x%lx - 0x%lx", &start_addr, &end_addr);
+	if (ret != 2) {
+		ret = sscanf (buf, "- 0x%lx - 0x%lx", &start_addr, &end_addr);
+		add = REMOVE_MANAGED_RESOURCE;
+		if (ret != 2) {
+			ret = sscanf (buf, "0x%lx - 0x%lx", &start_addr, &end_addr);
+			add = ADD_MANAGED_RESOURCE;
+			if (ret != 2)
+				return -EINVAL;
+		}
+	}
+	if (end_addr <= start_addr)
+		return -EINVAL;
+
+	ret = adjust_io(s, add, start_addr, end_addr);
+	if (!ret)
+		s->resource_setup_new = 1;
+
+	return ret ? ret : count;
+}
+static CLASS_DEVICE_ATTR(available_resources_io, 0600, show_io_db, store_io_db);
+
+static ssize_t show_mem_db(struct class_device *class_dev, char *buf)
+{
+	struct pcmcia_socket *s = class_get_devdata(class_dev);
+	struct socket_data *data;
+	struct resource_map *p;
+	ssize_t ret = 0;
+
+	down(&rsrc_sem);
+	data = s->resource_data;
+
+	for (p = data->mem_db.next; p != &data->mem_db; p = p->next) {
+		if (ret > (PAGE_SIZE - 10))
+			continue;
+		ret += snprintf (&buf[ret], (PAGE_SIZE - ret - 1),
+				 "0x%08lx - 0x%08lx\n",
+				 ((unsigned long) p->base),
+				 ((unsigned long) p->base + p->num - 1));
+	}
+
+	up(&rsrc_sem);
+	return (ret);
+}
+
+static ssize_t store_mem_db(struct class_device *class_dev, const char *buf, size_t count)
+{
+	struct pcmcia_socket *s = class_get_devdata(class_dev);
+	unsigned long start_addr, end_addr;
+	unsigned int add = ADD_MANAGED_RESOURCE;
+	ssize_t ret = 0;
+
+	ret = sscanf (buf, "+ 0x%lx - 0x%lx", &start_addr, &end_addr);
+	if (ret != 2) {
+		ret = sscanf (buf, "- 0x%lx - 0x%lx", &start_addr, &end_addr);
+		add = REMOVE_MANAGED_RESOURCE;
+		if (ret != 2) {
+			ret = sscanf (buf, "0x%lx - 0x%lx", &start_addr, &end_addr);
+			add = ADD_MANAGED_RESOURCE;
+			if (ret != 2)
+				return -EINVAL;
+		}
+	}
+	if (end_addr <= start_addr)
+		return -EINVAL;
+
+	ret = adjust_memory(s, add, start_addr, end_addr);
+	if (!ret)
+		s->resource_setup_new = 1;
+
+	return ret ? ret : count;
+}
+static CLASS_DEVICE_ATTR(available_resources_mem, 0600, show_mem_db, store_mem_db);
+
+static struct class_device_attribute *pccard_rsrc_attributes[] = {
+	&class_device_attr_available_resources_io,
+	&class_device_attr_available_resources_mem,
+	NULL,
+};
+
+static int __devinit pccard_sysfs_add_rsrc(struct class_device *class_dev)
+{
+	struct pcmcia_socket *s = class_get_devdata(class_dev);
+	struct class_device_attribute **attr;
+	int ret = 0;
+	if (s->resource_ops != &pccard_nonstatic_ops)
+		return 0;
+
+	for (attr = pccard_rsrc_attributes; *attr; attr++) {
+		ret = class_device_create_file(class_dev, *attr);
+		if (ret)
+			break;
+	}
+
+	return ret;
+}
+
+static void __devexit pccard_sysfs_remove_rsrc(struct class_device *class_dev)
+{
+	struct pcmcia_socket *s = class_get_devdata(class_dev);
+	struct class_device_attribute **attr;
+
+	if (s->resource_ops != &pccard_nonstatic_ops)
+		return;
+
+	for (attr = pccard_rsrc_attributes; *attr; attr++)
+		class_device_remove_file(class_dev, *attr);
+}
+
+static struct class_interface pccard_rsrc_interface = {
+	.class = &pcmcia_socket_class,
+	.add = &pccard_sysfs_add_rsrc,
+	.remove = __devexit_p(&pccard_sysfs_remove_rsrc),
+};
+
+static int __init nonstatic_sysfs_init(void)
+{
+	return class_interface_register(&pccard_rsrc_interface);
+}
+
+static void __exit nonstatic_sysfs_exit(void)
+{
+	class_interface_unregister(&pccard_rsrc_interface);
+}
+
+module_init(nonstatic_sysfs_init);
+module_exit(nonstatic_sysfs_exit);

@@ -116,7 +116,8 @@ __asm__ __volatile__(
 	"orb $1,%%al\n"
 	"3:"
 	:"=a" (__res), "=&S" (d0), "=&D" (d1)
-		     :"1" (cs),"2" (ct));
+	:"1" (cs),"2" (ct)
+	:"memory");
 return __res;
 }
 
@@ -138,8 +139,9 @@ __asm__ __volatile__(
 	"3:\tsbbl %%eax,%%eax\n\t"
 	"orb $1,%%al\n"
 	"4:"
-		     :"=a" (__res), "=&S" (d0), "=&D" (d1), "=&c" (d2)
-		     :"1" (cs),"2" (ct),"3" (count));
+	:"=a" (__res), "=&S" (d0), "=&D" (d1), "=&c" (d2)
+	:"1" (cs),"2" (ct),"3" (count)
+	:"memory");
 return __res;
 }
 
@@ -158,7 +160,9 @@ __asm__ __volatile__(
 	"movl $1,%1\n"
 	"2:\tmovl %1,%0\n\t"
 	"decl %0"
-	:"=a" (__res), "=&S" (d0) : "1" (s),"0" (c));
+	:"=a" (__res), "=&S" (d0)
+	:"1" (s),"0" (c)
+	:"memory");
 return __res;
 }
 
@@ -175,7 +179,9 @@ __asm__ __volatile__(
 	"leal -1(%%esi),%0\n"
 	"2:\ttestb %%al,%%al\n\t"
 	"jne 1b"
-	:"=g" (__res), "=&S" (d0), "=&a" (d1) :"0" (0),"1" (s),"2" (c));
+	:"=g" (__res), "=&S" (d0), "=&a" (d1)
+	:"0" (0),"1" (s),"2" (c)
+	:"memory");
 return __res;
 }
 
@@ -189,7 +195,9 @@ __asm__ __volatile__(
 	"scasb\n\t"
 	"notl %0\n\t"
 	"decl %0"
-	:"=c" (__res), "=&D" (d0) :"1" (s),"a" (0), "0" (0xffffffffu));
+	:"=c" (__res), "=&D" (d0)
+	:"1" (s),"a" (0), "0" (0xffffffffu)
+	:"memory");
 return __res;
 }
 
@@ -198,46 +206,79 @@ static inline void * __memcpy(void * to, const void * from, size_t n)
 int d0, d1, d2;
 __asm__ __volatile__(
 	"rep ; movsl\n\t"
-	"testb $2,%b4\n\t"
-	"je 1f\n\t"
-	"movsw\n"
-	"1:\ttestb $1,%b4\n\t"
-	"je 2f\n\t"
-	"movsb\n"
-	"2:"
+	"movl %4,%%ecx\n\t"
+	"andl $3,%%ecx\n\t"
+#if 1	/* want to pay 2 byte penalty for a chance to skip microcoded rep? */
+	"jz 1f\n\t"
+#endif
+	"rep ; movsb\n\t"
+	"1:"
 	: "=&c" (d0), "=&D" (d1), "=&S" (d2)
-	:"0" (n/4), "q" (n),"1" ((long) to),"2" ((long) from)
+	: "0" (n/4), "g" (n), "1" ((long) to), "2" ((long) from)
 	: "memory");
 return (to);
 }
 
 /*
- * This looks horribly ugly, but the compiler can optimize it totally,
+ * This looks ugly, but the compiler can optimize it totally,
  * as the count is constant.
  */
 static inline void * __constant_memcpy(void * to, const void * from, size_t n)
 {
-	if (n <= 128)
-		return __builtin_memcpy(to, from, n);
-
-#define COMMON(x) \
-__asm__ __volatile__( \
-	"rep ; movsl" \
-	x \
-	: "=&c" (d0), "=&D" (d1), "=&S" (d2) \
-	: "0" (n/4),"1" ((long) to),"2" ((long) from) \
-	: "memory");
-{
-	int d0, d1, d2;
-	switch (n % 4) {
-		case 0: COMMON(""); return to;
-		case 1: COMMON("\n\tmovsb"); return to;
-		case 2: COMMON("\n\tmovsw"); return to;
-		default: COMMON("\n\tmovsw\n\tmovsb"); return to;
+	long esi, edi;
+	if (!n) return to;
+#if 1	/* want to do small copies with non-string ops? */
+	switch (n) {
+		case 1: *(char*)to = *(char*)from; return to;
+		case 2: *(short*)to = *(short*)from; return to;
+		case 4: *(int*)to = *(int*)from; return to;
+#if 1	/* including those doable with two moves? */
+		case 3: *(short*)to = *(short*)from;
+			*((char*)to+2) = *((char*)from+2); return to;
+		case 5: *(int*)to = *(int*)from;
+			*((char*)to+4) = *((char*)from+4); return to;
+		case 6: *(int*)to = *(int*)from;
+			*((short*)to+2) = *((short*)from+2); return to;
+		case 8: *(int*)to = *(int*)from;
+			*((int*)to+1) = *((int*)from+1); return to;
+#endif
 	}
-}
-  
-#undef COMMON
+#endif
+	esi = (long) from;
+	edi = (long) to;
+	if (n >= 5*4) {
+		/* large block: use rep prefix */
+		int ecx;
+		__asm__ __volatile__(
+			"rep ; movsl"
+			: "=&c" (ecx), "=&D" (edi), "=&S" (esi)
+			: "0" (n/4), "1" (edi),"2" (esi)
+			: "memory"
+		);
+	} else {
+		/* small block: don't clobber ecx + smaller code */
+		if (n >= 4*4) __asm__ __volatile__("movsl"
+			:"=&D"(edi),"=&S"(esi):"0"(edi),"1"(esi):"memory");
+		if (n >= 3*4) __asm__ __volatile__("movsl"
+			:"=&D"(edi),"=&S"(esi):"0"(edi),"1"(esi):"memory");
+		if (n >= 2*4) __asm__ __volatile__("movsl"
+			:"=&D"(edi),"=&S"(esi):"0"(edi),"1"(esi):"memory");
+		if (n >= 1*4) __asm__ __volatile__("movsl"
+			:"=&D"(edi),"=&S"(esi):"0"(edi),"1"(esi):"memory");
+	}
+	switch (n % 4) {
+		/* tail */
+		case 0: return to;
+		case 1: __asm__ __volatile__("movsb"
+			:"=&D"(edi),"=&S"(esi):"0"(edi),"1"(esi):"memory");
+			return to;
+		case 2: __asm__ __volatile__("movsw"
+			:"=&D"(edi),"=&S"(esi):"0"(edi),"1"(esi):"memory");
+			return to;
+		default: __asm__ __volatile__("movsw\n\tmovsb"
+			:"=&D"(edi),"=&S"(esi):"0"(edi),"1"(esi):"memory");
+			return to;
+	}
 }
 
 #define __HAVE_ARCH_MEMCPY
@@ -300,7 +341,9 @@ __asm__ __volatile__(
 	"je 1f\n\t"
 	"movl $1,%0\n"
 	"1:\tdecl %0"
-	:"=D" (__res), "=&c" (d0) : "a" (c),"0" (cs),"1" (count));
+	:"=D" (__res), "=&c" (d0)
+	:"a" (c),"0" (cs),"1" (count)
+	:"memory");
 return __res;
 }
 
@@ -336,7 +379,7 @@ __asm__ __volatile__(
 	"je 2f\n\t"
 	"stosb\n"
 	"2:"
-	: "=&c" (d0), "=&D" (d1)
+	:"=&c" (d0), "=&D" (d1)
 	:"a" (c), "q" (count), "0" (count/4), "1" ((long) s)
 	:"memory");
 return (s);	
@@ -359,7 +402,8 @@ __asm__ __volatile__(
 	"jne 1b\n"
 	"3:\tsubl %2,%0"
 	:"=a" (__res), "=&d" (d0)
-	:"c" (s),"1" (count));
+	:"c" (s),"1" (count)
+	:"memory");
 return __res;
 }
 /* end of additional stuff */
@@ -440,7 +484,8 @@ static inline void * memscan(void * addr, int c, size_t size)
 		"dec %%edi\n"
 		"1:"
 		: "=D" (addr), "=c" (size)
-		: "0" (addr), "1" (size), "a" (c));
+		: "0" (addr), "1" (size), "a" (c)
+		: "memory");
 	return addr;
 }
 

@@ -144,23 +144,13 @@ MODULE_PARM_DESC(full_duplex, "full duplex setting(s) (1)");
 MODULE_PARM_DESC(congenb, "Enable congestion control (1)");
 MODULE_PARM_DESC(txfifo, "Tx FIFO threshold in 4 byte units, (0-15)");
 MODULE_PARM_DESC(rxfifo, "Rx FIFO threshold in 4 byte units, (0-15)");
-MODULE_PARM_DESC(txdmaccount, "Tx DMA burst length; 128 - disable (0-128)");
-MODULE_PARM_DESC(rxdmaccount, "Rx DMA burst length; 128 - disable (0-128)");
+MODULE_PARM_DESC(txdmacount, "Tx DMA burst length; 128 - disable (0-128)");
+MODULE_PARM_DESC(rxdmacount, "Rx DMA burst length; 128 - disable (0-128)");
 MODULE_PARM_DESC(rx_copybreak, "copy breakpoint for copy-only-tiny-frames");
 MODULE_PARM_DESC(max_interrupt_work, "maximum events handled per interrupt");
 MODULE_PARM_DESC(multicast_filter_limit, "maximum number of filtered multicast addresses");
 
 #define RUN_AT(x) (jiffies + (x))
-
-/* ACPI power states don't universally work (yet) */
-#ifndef CONFIG_PM
-#undef pci_set_power_state
-#define pci_set_power_state null_set_power_state
-static inline int null_set_power_state(struct pci_dev *dev, int state)
-{
-	return 0;
-}
-#endif /* CONFIG_PM */
 
 #define netdevice_start(dev)
 #define netdevice_stop(dev)
@@ -1279,7 +1269,7 @@ speedo_init_rx_ring(struct net_device *dev)
 		if (skb == NULL)
 			break;			/* OK.  Just initially short of Rx bufs. */
 		skb->dev = dev;			/* Mark as being used by this device. */
-		rxf = (struct RxFD *)skb->tail;
+		rxf = (struct RxFD *)skb->data;
 		sp->rx_ringp[i] = rxf;
 		sp->rx_ring_dma[i] =
 			pci_map_single(sp->pdev, rxf,
@@ -1671,7 +1661,7 @@ static inline struct RxFD *speedo_rx_alloc(struct net_device *dev, int entry)
 		sp->rx_ringp[entry] = NULL;
 		return NULL;
 	}
-	rxf = sp->rx_ringp[entry] = (struct RxFD *)skb->tail;
+	rxf = sp->rx_ringp[entry] = (struct RxFD *)skb->data;
 	sp->rx_ring_dma[entry] =
 		pci_map_single(sp->pdev, rxf,
 					   PKT_BUF_SZ + sizeof(struct RxFD), PCI_DMA_FROMDEVICE);
@@ -1818,10 +1808,10 @@ speedo_rx(struct net_device *dev)
 
 #if 1 || USE_IP_CSUM
 				/* Packet is in one chunk -- we can copy + cksum. */
-				eth_copy_and_sum(skb, sp->rx_skbuff[entry]->tail, pkt_len, 0);
+				eth_copy_and_sum(skb, sp->rx_skbuff[entry]->data, pkt_len, 0);
 				skb_put(skb, pkt_len);
 #else
-				memcpy(skb_put(skb, pkt_len), sp->rx_skbuff[entry]->tail,
+				memcpy(skb_put(skb, pkt_len), sp->rx_skbuff[entry]->data,
 					   pkt_len);
 #endif
 				pci_dma_sync_single_for_device(sp->pdev, sp->rx_ring_dma[entry],
@@ -2281,7 +2271,7 @@ static void set_rx_mode(struct net_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int eepro100_suspend(struct pci_dev *pdev, u32 state)
+static int eepro100_suspend(struct pci_dev *pdev, pm_message_t state)
 {
 	struct net_device *dev = pci_get_drvdata (pdev);
 	struct speedo_private *sp = netdev_priv(dev);
@@ -2299,7 +2289,7 @@ static int eepro100_suspend(struct pci_dev *pdev, u32 state)
 	
 	/* XXX call pci_set_power_state ()? */
 	pci_disable_device(pdev);
-	pci_set_power_state (pdev, 3);
+	pci_set_power_state (pdev, PCI_D3hot);
 	return 0;
 }
 
@@ -2309,7 +2299,7 @@ static int eepro100_resume(struct pci_dev *pdev)
 	struct speedo_private *sp = netdev_priv(dev);
 	void __iomem *ioaddr = sp->regs;
 
-	pci_set_power_state(pdev, 0);
+	pci_set_power_state(pdev, PCI_D0);
 	pci_restore_state(pdev);
 	pci_enable_device(pdev);
 	pci_set_master(pdev);
@@ -2355,12 +2345,8 @@ static void __devexit eepro100_remove_one (struct pci_dev *pdev)
 }
 
 static struct pci_device_id eepro100_pci_tbl[] = {
-	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82557,
-		PCI_ANY_ID, PCI_ANY_ID, },
-	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82559ER,
-		PCI_ANY_ID, PCI_ANY_ID, },
-	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82801BA_7,
-		PCI_ANY_ID, PCI_ANY_ID, },
+	{ PCI_VENDOR_ID_INTEL, 0x1229, PCI_ANY_ID, PCI_ANY_ID, },
+	{ PCI_VENDOR_ID_INTEL, 0x1209, PCI_ANY_ID, PCI_ANY_ID, },
 	{ PCI_VENDOR_ID_INTEL, 0x1029, PCI_ANY_ID, PCI_ANY_ID, },
 	{ PCI_VENDOR_ID_INTEL, 0x1030, PCI_ANY_ID, PCI_ANY_ID, },
 	{ PCI_VENDOR_ID_INTEL, 0x1031, PCI_ANY_ID, PCI_ANY_ID, },
@@ -2380,7 +2366,6 @@ static struct pci_device_id eepro100_pci_tbl[] = {
 	{ PCI_VENDOR_ID_INTEL, 0x1050, PCI_ANY_ID, PCI_ANY_ID, },
 	{ PCI_VENDOR_ID_INTEL, 0x1059, PCI_ANY_ID, PCI_ANY_ID, },
 	{ PCI_VENDOR_ID_INTEL, 0x1227, PCI_ANY_ID, PCI_ANY_ID, },
-	{ PCI_VENDOR_ID_INTEL, 0x1228, PCI_ANY_ID, PCI_ANY_ID, },
 	{ PCI_VENDOR_ID_INTEL, 0x2449, PCI_ANY_ID, PCI_ANY_ID, },
 	{ PCI_VENDOR_ID_INTEL, 0x2459, PCI_ANY_ID, PCI_ANY_ID, },
 	{ PCI_VENDOR_ID_INTEL, 0x245D, PCI_ANY_ID, PCI_ANY_ID, },

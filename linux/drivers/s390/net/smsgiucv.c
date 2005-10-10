@@ -32,7 +32,7 @@ struct smsg_callback {
 	struct list_head list;
 	char *prefix;
 	int len;
-	void (*callback)(char *str);
+	void (*callback)(char *from, char *str);
 };
 
 MODULE_AUTHOR
@@ -55,8 +55,9 @@ smsg_message_pending(iucv_MessagePending *eib, void *pgm_data)
 {
 	struct smsg_callback *cb;
 	unsigned char *msg;
+	unsigned char sender[9];
 	unsigned short len;
-	int rc;
+	int rc, i;
 
 	len = eib->ln1msg2.ipbfln1f;
 	msg = kmalloc(len + 1, GFP_ATOMIC|GFP_DMA);
@@ -69,10 +70,18 @@ smsg_message_pending(iucv_MessagePending *eib, void *pgm_data)
 	if (rc == 0) {
 		msg[len] = 0;
 		EBCASC(msg, len);
+		memcpy(sender, msg, 8);
+		sender[8] = 0;
+		/* Remove trailing whitespace from the sender name. */
+		for (i = 7; i >= 0; i--) {
+			if (sender[i] != ' ' && sender[i] != '\t')
+				break;
+			sender[i] = 0;
+		}
 		spin_lock(&smsg_list_lock);
 		list_for_each_entry(cb, &smsg_list, list)
 			if (strncmp(msg + 8, cb->prefix, cb->len) == 0) {
-				cb->callback(msg + 8);
+				cb->callback(sender, msg + 8);
 				break;
 			}
 		spin_unlock(&smsg_list_lock);
@@ -91,7 +100,7 @@ static struct device_driver smsg_driver = {
 };
 
 int
-smsg_register_callback(char *prefix, void (*callback)(char *str))
+smsg_register_callback(char *prefix, void (*callback)(char *from, char *str))
 {
 	struct smsg_callback *cb;
 
@@ -108,7 +117,7 @@ smsg_register_callback(char *prefix, void (*callback)(char *str))
 }
 
 void
-smsg_unregister_callback(char *prefix, void (*callback)(char *str))
+smsg_unregister_callback(char *prefix, void (*callback)(char *from, char *str))
 {
 	struct smsg_callback *cb, *tmp;
 
@@ -129,7 +138,7 @@ static void __exit
 smsg_exit(void)
 {
 	if (smsg_handle > 0) {
-		cpcmd("SET SMSG OFF", 0, 0);
+		cpcmd("SET SMSG OFF", NULL, 0, NULL);
 		iucv_sever(smsg_pathid, 0);
 		iucv_unregister_program(smsg_handle);
 		driver_unregister(&smsg_driver);
@@ -168,7 +177,7 @@ smsg_init(void)
 		smsg_handle = 0;
 		return -EIO;
 	}
-	cpcmd("SET SMSG IUCV", 0, 0);
+	cpcmd("SET SMSG IUCV", NULL, 0, NULL);
 	return 0;
 }
 

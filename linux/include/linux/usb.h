@@ -70,6 +70,7 @@ struct usb_host_interface {
 	 */
 	struct usb_host_endpoint *endpoint;
 
+	char *string;		/* iInterface string, if present */
 	unsigned char *extra;   /* Extra descriptors */
 	int extralen;
 };
@@ -189,6 +190,8 @@ struct usb_interface_cache {
 /**
  * struct usb_host_config - representation of a device's configuration
  * @desc: the device's configuration descriptor.
+ * @string: pointer to the cached version of the iConfiguration string, if
+ *	present for this configuration.
  * @interface: array of pointers to usb_interface structures, one for each
  *	interface in the configuration.  The number of interfaces is stored
  *	in desc.bNumInterfaces.  These pointers are valid only while the
@@ -225,6 +228,7 @@ struct usb_interface_cache {
 struct usb_host_config {
 	struct usb_config_descriptor	desc;
 
+	char *string;
 	/* the interfaces associated with this configuration,
 	 * stored in no particular order */
 	struct usb_interface *interface[USB_MAXINTERFACES];
@@ -283,11 +287,14 @@ struct usb_bus {
 
 	struct dentry *usbfs_dentry;	/* usbfs dentry entry for the bus */
 
-	struct class_device class_dev;	/* class device for this bus */
+	struct class_device *class_dev;	/* class device for this bus */
+	struct kref kref;		/* handles reference counting this bus */
 	void (*release)(struct usb_bus *bus);	/* function to destroy this bus's memory */
+#if defined(CONFIG_USB_MON)
+	struct mon_bus *mon_bus;	/* non-null when associated */
+	int monitored;			/* non-zero when monitored */
+#endif
 };
-#define	to_usb_bus(d) container_of(d, struct usb_bus, class_dev)
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -338,6 +345,9 @@ struct usb_device {
 	int have_langid;		/* whether string_langid is valid yet */
 	int string_langid;		/* language ID for strings */
 
+	char *product;
+	char *manufacturer;
+	char *serial;			/* static strings from the device */
 	struct list_head filelist;
 	struct dentry *usbfs_dentry;	/* usbfs dentry entry for the device */
 
@@ -547,7 +557,7 @@ struct usb_driver {
 
 	int (*ioctl) (struct usb_interface *intf, unsigned int code, void *buf);
 
-	int (*suspend) (struct usb_interface *intf, u32 state);
+	int (*suspend) (struct usb_interface *intf, pm_message_t message);
 	int (*resume) (struct usb_interface *intf);
 
 	const struct usb_device_id *id_table;
@@ -785,6 +795,10 @@ typedef void (*usb_complete_t)(struct urb *, struct pt_regs *);
  * of the iso_frame_desc array, and the number of errors is reported in
  * error_count.  Completion callbacks for ISO transfers will normally
  * (re)submit URBs to ensure a constant transfer rate.
+ *
+ * Note that even fields marked "public" should not be touched by the driver
+ * when the urb is owned by the hcd, that is, since the call to
+ * usb_submit_urb() till the entry into the completion routine.
  */
 struct urb
 {
@@ -792,12 +806,12 @@ struct urb
 	struct kref kref;		/* reference count of the URB */
 	spinlock_t lock;		/* lock for the URB */
 	void *hcpriv;			/* private data for host controller */
-	struct list_head urb_list;	/* list pointer to all active urbs */
 	int bandwidth;			/* bandwidth for INT/ISO request */
 	atomic_t use_count;		/* concurrent submissions counter */
 	u8 reject;			/* submissions will fail */
 
 	/* public, documented fields in the urb that can be used by drivers */
+	struct list_head urb_list;	/* list head for use by the urb owner */
 	struct usb_device *dev; 	/* (in) pointer to associated device */
 	unsigned int pipe;		/* (in) pipe information */
 	int status;			/* (return) non-ISO status */
@@ -924,25 +938,25 @@ static inline void usb_fill_int_urb (struct urb *urb,
 }
 
 extern void usb_init_urb(struct urb *urb);
-extern struct urb *usb_alloc_urb(int iso_packets, int mem_flags);
+extern struct urb *usb_alloc_urb(int iso_packets, unsigned mem_flags);
 extern void usb_free_urb(struct urb *urb);
 #define usb_put_urb usb_free_urb
 extern struct urb *usb_get_urb(struct urb *urb);
-extern int usb_submit_urb(struct urb *urb, int mem_flags);
+extern int usb_submit_urb(struct urb *urb, unsigned mem_flags);
 extern int usb_unlink_urb(struct urb *urb);
 extern void usb_kill_urb(struct urb *urb);
 
 #define HAVE_USB_BUFFERS
 void *usb_buffer_alloc (struct usb_device *dev, size_t size,
-	int mem_flags, dma_addr_t *dma);
+	unsigned mem_flags, dma_addr_t *dma);
 void usb_buffer_free (struct usb_device *dev, size_t size,
 	void *addr, dma_addr_t dma);
 
-struct urb *usb_buffer_map (struct urb *urb);
 #if 0
+struct urb *usb_buffer_map (struct urb *urb);
 void usb_buffer_dmasync (struct urb *urb);
-#endif
 void usb_buffer_unmap (struct urb *urb);
+#endif
 
 struct scatterlist;
 int usb_buffer_map_sg (struct usb_device *dev, unsigned pipe,
@@ -966,7 +980,7 @@ extern int usb_bulk_msg(struct usb_device *usb_dev, unsigned int pipe,
 	int timeout);
 
 /* selective suspend/resume */
-extern int usb_suspend_device(struct usb_device *dev, u32 state);
+extern int usb_suspend_device(struct usb_device *dev, pm_message_t message);
 extern int usb_resume_device(struct usb_device *dev);
 
 
@@ -986,13 +1000,13 @@ extern int usb_reset_configuration(struct usb_device *dev);
 extern int usb_set_interface(struct usb_device *dev, int ifnum, int alternate);
 
 /*
- * timeouts, in seconds, used for sending/receiving control messages
+ * timeouts, in milliseconds, used for sending/receiving control messages
  * they typically complete within a few frames (msec) after they're issued
  * USB identifies 5 second timeouts, maybe more in a few cases, and a few
  * slow devices (like some MGE Ellipse UPSes) actually push that limit.
  */
-#define USB_CTRL_GET_TIMEOUT	5
-#define USB_CTRL_SET_TIMEOUT	5
+#define USB_CTRL_GET_TIMEOUT	5000
+#define USB_CTRL_SET_TIMEOUT	5000
 
 
 /**
@@ -1041,7 +1055,7 @@ int usb_sg_init (
 	struct scatterlist	*sg,
 	int			nents,
 	size_t			length,
-	int			mem_flags
+	unsigned		mem_flags
 );
 void usb_sg_cancel (struct usb_sg_request *io);
 void usb_sg_wait (struct usb_sg_request *io);

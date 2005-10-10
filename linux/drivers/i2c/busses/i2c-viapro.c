@@ -33,7 +33,6 @@
    Note: we assume there can only be one device, with one SMBus interface.
 */
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/pci.h>
@@ -121,12 +120,12 @@ static int vt596_transaction(void)
 		inb_p(SMBHSTDAT1));
 
 	/* Make sure the SMBus host is ready to start transmitting */
-	if ((temp = inb_p(SMBHSTSTS)) != 0x00) {
+	if ((temp = inb_p(SMBHSTSTS)) & 0x1F) {
 		dev_dbg(&vt596_adapter.dev, "SMBus busy (0x%02x). "
 				"Resetting...\n", temp);
 		
 		outb_p(temp, SMBHSTSTS);
-		if ((temp = inb_p(SMBHSTSTS)) != 0x00) {
+		if ((temp = inb_p(SMBHSTSTS)) & 0x1F) {
 			dev_dbg(&vt596_adapter.dev, "Failed! (0x%02x)\n", temp);
 			
 			return -1;
@@ -168,13 +167,14 @@ static int vt596_transaction(void)
 		dev_dbg(&vt596_adapter.dev, "Error: no response!\n");
 	}
 
-	if (inb_p(SMBHSTSTS) != 0x00)
-		outb_p(inb(SMBHSTSTS), SMBHSTSTS);
-
-	if ((temp = inb_p(SMBHSTSTS)) != 0x00) {
-		dev_dbg(&vt596_adapter.dev, "Failed reset at end of "
-			"transaction (%02x)\n", temp);
+	if ((temp = inb_p(SMBHSTSTS)) & 0x1F) {
+		outb_p(temp, SMBHSTSTS);
+		if ((temp = inb_p(SMBHSTSTS)) & 0x1F) {
+			dev_warn(&vt596_adapter.dev, "Failed reset at end "
+				 "of transaction (%02x)\n", temp);
+		}
 	}
+
 	dev_dbg(&vt596_adapter.dev, "Transaction (post): CNT=%02x, CMD=%02x, "
 		"ADD=%02x, DAT0=%02x, DAT1=%02x\n", inb_p(SMBHSTCNT),
 		inb_p(SMBHSTCMD), inb_p(SMBHSTADD), inb_p(SMBHSTDAT0), 

@@ -18,7 +18,6 @@
 #include <linux/personality.h>
 
 #include <asm/uaccess.h>
-#include <asm/ipc.h>
 #include <asm/ia32.h>
 
 /*
@@ -38,7 +37,7 @@ asmlinkage long sys_pipe(int __user *fildes)
 	return error;
 }
 
-long sys_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags,
+asmlinkage long sys_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags,
 	unsigned long fd, unsigned long off)
 {
 	long error;
@@ -69,13 +68,7 @@ out:
 static void find_start_end(unsigned long flags, unsigned long *begin,
 			   unsigned long *end)
 {
-#ifdef CONFIG_IA32_EMULATION
-	if (test_thread_flag(TIF_IA32)) { 
-		*begin = TASK_UNMAPPED_32;
-		*end = IA32_PAGE_OFFSET; 
-	} else 
-#endif
-	if (flags & MAP_32BIT) { 
+	if (!test_thread_flag(TIF_IA32) && (flags & MAP_32BIT)) {
 		/* This is usually used needed to map code in small
 		   model, so it needs to be in the first 31bit. Limit
 		   it to that.  This means we need to move the
@@ -85,10 +78,10 @@ static void find_start_end(unsigned long flags, unsigned long *begin,
 		   of playground for now. -AK */ 
 		*begin = 0x40000000; 
 		*end = 0x80000000;		
-	} else { 
-		*begin = TASK_UNMAPPED_64; 
+	} else {
+		*begin = TASK_UNMAPPED_BASE;
 		*end = TASK_SIZE; 
-		}
+	}
 } 
 
 unsigned long
@@ -112,6 +105,11 @@ arch_get_unmapped_area(struct file *filp, unsigned long addr,
 		    (!vma || addr + len <= vma->vm_start))
 			return addr;
 	}
+	if (((flags & MAP_32BIT) || test_thread_flag(TIF_IA32))
+	    && len <= mm->cached_hole_size) {
+	        mm->cached_hole_size = 0;
+		mm->free_area_cache = begin;
+	}
 	addr = mm->free_area_cache;
 	if (addr < begin) 
 		addr = begin; 
@@ -127,6 +125,7 @@ full_search:
 			 */
 			if (start_addr != begin) {
 				start_addr = addr = begin;
+				mm->cached_hole_size = 0;
 				goto full_search;
 			}
 			return -ENOMEM;
@@ -138,6 +137,9 @@ full_search:
 			mm->free_area_cache = addr + len;
 			return addr;
 		}
+		if (addr + mm->cached_hole_size < vma->vm_start)
+		        mm->cached_hole_size = vma->vm_start - addr;
+
 		addr = vma->vm_end;
 	}
 }
@@ -151,12 +153,6 @@ asmlinkage long sys_uname(struct new_utsname __user * name)
 	if (personality(current->personality) == PER_LINUX32) 
 		err |= copy_to_user(&name->machine, "i686", 5); 		
 	return err ? -EFAULT : 0;
-}
-
-asmlinkage long wrap_sys_shmat(int shmid, char __user *shmaddr, int shmflg)
-{
-	unsigned long raddr;
-	return do_shmat(shmid,shmaddr,shmflg,&raddr) ?: (long)raddr;
 }
 
 asmlinkage long sys_time64(long __user * tloc)

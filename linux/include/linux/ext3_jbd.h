@@ -42,15 +42,15 @@
  * superblock only gets updated once, of course, so don't bother
  * counting that again for the quota updates. */
 
-#define EXT3_DATA_TRANS_BLOCKS		(EXT3_SINGLEDATA_TRANS_BLOCKS + \
+#define EXT3_DATA_TRANS_BLOCKS(sb)	(EXT3_SINGLEDATA_TRANS_BLOCKS + \
 					 EXT3_XATTR_TRANS_BLOCKS - 2 + \
-					 2*EXT3_QUOTA_TRANS_BLOCKS)
+					 2*EXT3_QUOTA_TRANS_BLOCKS(sb))
 
 /* Delete operations potentially hit one directory's namespace plus an
  * entire inode, plus arbitrary amounts of bitmap/indirection data.  Be
  * generous.  We can grow the delete transaction later if necessary. */
 
-#define EXT3_DELETE_TRANS_BLOCKS	(2 * EXT3_DATA_TRANS_BLOCKS + 64)
+#define EXT3_DELETE_TRANS_BLOCKS(sb)	(2 * EXT3_DATA_TRANS_BLOCKS(sb) + 64)
 
 /* Define an arbitrary limit for the amount of data we will anticipate
  * writing to any given transaction.  For unbounded transactions such as
@@ -74,14 +74,17 @@
 #ifdef CONFIG_QUOTA
 /* Amount of blocks needed for quota update - we know that the structure was
  * allocated so we need to update only inode+data */
-#define EXT3_QUOTA_TRANS_BLOCKS 2
+#define EXT3_QUOTA_TRANS_BLOCKS(sb) (test_opt(sb, QUOTA) ? 2 : 0)
 /* Amount of blocks needed for quota insert/delete - we do some block writes
  * but inode, sb and group updates are done only once */
-#define EXT3_QUOTA_INIT_BLOCKS (DQUOT_MAX_WRITES*\
-				(EXT3_SINGLEDATA_TRANS_BLOCKS-3)+3)
+#define EXT3_QUOTA_INIT_BLOCKS(sb) (test_opt(sb, QUOTA) ? (DQUOT_INIT_ALLOC*\
+		(EXT3_SINGLEDATA_TRANS_BLOCKS-3)+3+DQUOT_INIT_REWRITE) : 0)
+#define EXT3_QUOTA_DEL_BLOCKS(sb) (test_opt(sb, QUOTA) ? (DQUOT_DEL_ALLOC*\
+		(EXT3_SINGLEDATA_TRANS_BLOCKS-3)+3+DQUOT_DEL_REWRITE) : 0)
 #else
-#define EXT3_QUOTA_TRANS_BLOCKS 0
-#define EXT3_QUOTA_INIT_BLOCKS 0
+#define EXT3_QUOTA_TRANS_BLOCKS(sb) 0
+#define EXT3_QUOTA_INIT_BLOCKS(sb) 0
+#define EXT3_QUOTA_DEL_BLOCKS(sb) 0
 #endif
 
 int
@@ -111,9 +114,9 @@ void ext3_journal_abort_handle(const char *caller, const char *err_fn,
 
 static inline int
 __ext3_journal_get_undo_access(const char *where, handle_t *handle,
-				struct buffer_head *bh, int *credits)
+				struct buffer_head *bh)
 {
-	int err = journal_get_undo_access(handle, bh, credits);
+	int err = journal_get_undo_access(handle, bh);
 	if (err)
 		ext3_journal_abort_handle(where, __FUNCTION__, bh, handle,err);
 	return err;
@@ -121,19 +124,18 @@ __ext3_journal_get_undo_access(const char *where, handle_t *handle,
 
 static inline int
 __ext3_journal_get_write_access(const char *where, handle_t *handle,
-				struct buffer_head *bh, int *credits)
+				struct buffer_head *bh)
 {
-	int err = journal_get_write_access(handle, bh, credits);
+	int err = journal_get_write_access(handle, bh);
 	if (err)
 		ext3_journal_abort_handle(where, __FUNCTION__, bh, handle,err);
 	return err;
 }
 
 static inline void
-ext3_journal_release_buffer(handle_t *handle, struct buffer_head *bh,
-				int credits)
+ext3_journal_release_buffer(handle_t *handle, struct buffer_head *bh)
 {
-	journal_release_buffer(handle, bh, credits);
+	journal_release_buffer(handle, bh);
 }
 
 static inline int
@@ -176,12 +178,10 @@ __ext3_journal_dirty_metadata(const char *where,
 }
 
 
-#define ext3_journal_get_undo_access(handle, bh, credits) \
-	__ext3_journal_get_undo_access(__FUNCTION__, (handle), (bh), (credits))
+#define ext3_journal_get_undo_access(handle, bh) \
+	__ext3_journal_get_undo_access(__FUNCTION__, (handle), (bh))
 #define ext3_journal_get_write_access(handle, bh) \
-	__ext3_journal_get_write_access(__FUNCTION__, (handle), (bh), NULL)
-#define ext3_journal_get_write_access_credits(handle, bh, credits) \
-	__ext3_journal_get_write_access(__FUNCTION__, (handle), (bh), (credits))
+	__ext3_journal_get_write_access(__FUNCTION__, (handle), (bh))
 #define ext3_journal_revoke(handle, blocknr, bh) \
 	__ext3_journal_revoke(__FUNCTION__, (handle), (blocknr), (bh))
 #define ext3_journal_get_create_access(handle, bh) \

@@ -288,8 +288,15 @@
 #define __NR_mq_timedreceive	(__NR_mq_open+3)
 #define __NR_mq_notify		(__NR_mq_open+4)
 #define __NR_mq_getsetattr	(__NR_mq_open+5)
- 
-#define NR_syscalls 283
+#define __NR_sys_kexec_load	283
+#define __NR_waitid		284
+/* #define __NR_sys_setaltroot	285 */
+#define __NR_add_key		286
+#define __NR_request_key	287
+#define __NR_keyctl		288
+
+#define NR_syscalls 289
+
 
 
 #ifdef __KERNEL__
@@ -387,6 +394,6 @@ extern inline _syscall3(pid_t,waitpid,pid_t,pid,int *,wait_stat,int,options)
  * What we want is __attribute__((weak,alias("sys_ni_syscall"))),
  * but it doesn't work on all toolchains, so we just do it by hand
  */
-#define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall");
+#define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall")
 
 #endif /* _ASM_CRIS_UNISTD_H_ */

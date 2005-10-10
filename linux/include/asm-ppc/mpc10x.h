@@ -115,8 +115,8 @@
 #define	MPC10X_CFG_MAPB_OPTIONS_CFAE	0x80	/* CPU_FD_ALIAS_EN */
 #define	MPC10X_CFG_MAPB_OPTIONS_PFAE	0x40	/* PCI_FD_ALIAS_EN */
 #define	MPC10X_CFG_MAPB_OPTIONS_DR	0x20	/* DLL_RESET */
-#define	MPC10X_CFG_MAPB_OPTIONS_PCICH	0x80	/* PCI_COMPATIBILITY_HOLE */
-#define	MPC10X_CFG_MAPB_OPTIONS_PROCCH	0x40	/* PROC_COMPATIBILITY_HOLE */
+#define	MPC10X_CFG_MAPB_OPTIONS_PCICH	0x08	/* PCI_COMPATIBILITY_HOLE */
+#define	MPC10X_CFG_MAPB_OPTIONS_PROCCH	0x04	/* PROC_COMPATIBILITY_HOLE */
 
 /* Define offsets for the memory controller registers in the config space */
 #define MPC10X_MCTLR_MEM_START_1	0x80	/* Banks 0-3 */
@@ -159,6 +159,13 @@ extern unsigned long			ioremap_base;
 #define	MPC10X_MAPA_EUMB_BASE		(ioremap_base - MPC10X_EUMB_SIZE)
 #define	MPC10X_MAPB_EUMB_BASE		MPC10X_MAPA_EUMB_BASE
 
+enum ppc_sys_devices {
+	MPC10X_IIC1,
+	MPC10X_DMA0,
+	MPC10X_DMA1,
+	MPC10X_UART0,
+	MPC10X_UART1,
+};
 
 int mpc10x_bridge_init(struct pci_controller *hose,
 		       uint current_map,

@@ -137,7 +137,7 @@ static void __init ap_init_irq(void)
 #ifdef CONFIG_PM
 static unsigned long ic_irq_enable;
 
-static int irq_suspend(struct sys_device *dev, u32 state)
+static int irq_suspend(struct sys_device *dev, pm_message_t state)
 {
 	ic_irq_enable = readl(VA_IC_BASE + IRQ_ENABLE);
 	return 0;
@@ -292,11 +292,13 @@ static struct sys_timer ap_timer = {
 };
 
 MACHINE_START(INTEGRATOR, "ARM-Integrator")
-	MAINTAINER("ARM Ltd/Deep Blue Solutions Ltd")
-	BOOT_MEM(0x00000000, 0x16000000, 0xf1600000)
-	BOOT_PARAMS(0x00000100)
-	MAPIO(ap_map_io)
-	INITIRQ(ap_init_irq)
+	/* Maintainer: ARM Ltd/Deep Blue Solutions Ltd */
+	.phys_ram	= 0x00000000,
+	.phys_io	= 0x16000000,
+	.io_pg_offst	= ((0xf1600000) >> 18) & 0xfffc,
+	.boot_params	= 0x00000100,
+	.map_io		= ap_map_io,
+	.init_irq	= ap_init_irq,
 	.timer		= &ap_timer,
-	INIT_MACHINE(ap_init)
+	.init_machine	= ap_init,
 MACHINE_END

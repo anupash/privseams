@@ -1,8 +1,8 @@
 /*
- * 	w1_family.c
+ *	w1_family.c
  *
  * Copyright (c) 2004 Evgeniy Polyakov <johnpol@2ka.mipt.ru>
- * 
+ *
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,10 +27,11 @@
 
 DEFINE_SPINLOCK(w1_flock);
 static LIST_HEAD(w1_families);
+extern void w1_reconnect_slaves(struct w1_family *f);
 
 static int w1_check_family(struct w1_family *f)
 {
-	if (!f->fops->rname || !f->fops->rbin || !f->fops->rval || !f->fops->rvalname)
+	if (!f->fops->rname || !f->fops->rbin)
 		return -EINVAL;
 
 	return 0;
@@ -60,8 +61,9 @@ int w1_register_family(struct w1_family *newf)
 		newf->need_exit = 0;
 		list_add_tail(&newf->family_entry, &w1_families);
 	}
-
 	spin_unlock(&w1_flock);
+
+	w1_reconnect_slaves(newf);
 
 	return ret;
 }
@@ -138,13 +140,13 @@ void w1_family_get(struct w1_family *f)
 
 void __w1_family_get(struct w1_family *f)
 {
+	smp_mb__before_atomic_inc();
 	atomic_inc(&f->refcnt);
+	smp_mb__after_atomic_inc();
 }
 
 EXPORT_SYMBOL(w1_family_get);
 EXPORT_SYMBOL(w1_family_put);
-EXPORT_SYMBOL(__w1_family_get);
-EXPORT_SYMBOL(__w1_family_put);
 EXPORT_SYMBOL(w1_family_registered);
 EXPORT_SYMBOL(w1_unregister_family);
 EXPORT_SYMBOL(w1_register_family);

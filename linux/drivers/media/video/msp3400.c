@@ -147,7 +147,6 @@ static unsigned short normal_i2c[] = {
 	I2C_MSP3400C_ALT  >> 1,
 	I2C_CLIENT_END
 };
-static unsigned short normal_i2c_range[] = {I2C_CLIENT_END,I2C_CLIENT_END};
 I2C_CLIENT_INSMOD;
 
 /* ----------------------------------------------------------------------- */
@@ -380,7 +379,9 @@ static void msp3400c_setvolume(struct i2c_client *client,
 	int val = 0, bal = 0;
 
 	if (!muted) {
-		val = (volume * 0x7F / 65535) << 8;
+		/* 0x7f instead if 0x73 here has sound quality issues,
+		 * probably due to overmodulation + clipping ... */
+		val = (volume * 0x73 / 65535) << 8;
 	}
 	if (val) {
 		bal = (balance / 256) - 128;
@@ -566,10 +567,6 @@ static void msp3400c_set_audmode(struct i2c_client *client, int audmode)
 	switch (audmode) {
 	case V4L2_TUNER_MODE_STEREO:
 		src = 0x0020 | nicam;
-#if 0
-		/* spatial effect */
-		msp3400c_write(client,I2C_MSP3400C_DFP, 0x0005,0x4000);
-#endif
 		break;
 	case V4L2_TUNER_MODE_MONO:
 		if (msp->mode == MSP_MODE_AM_NICAM) {
@@ -740,18 +737,13 @@ static int msp34xx_sleep(struct msp3400c *msp, int timeout)
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule();
 		} else {
-#if 0
-			/* hmm, that one doesn't return on wakeup ... */
-			msleep_interruptible(timeout);
-#else
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule_timeout(msecs_to_jiffies(timeout));
-#endif
 		}
 	}
-	if (current->flags & PF_FREEZE)
-		refrigerator(PF_FREEZE);
+
 	remove_wait_queue(&msp->wq, &wait);
+	try_to_freeze();
 	return msp->restart;
 }
 
@@ -993,7 +985,13 @@ static int msp34xx_modus(int norm)
 {
 	switch (norm) {
 	case VIDEO_MODE_PAL:
+#if 1
+		/* experimental: not sure this works with all chip versions */
+		return 0x7003;
+#else
+		/* previous value, try this if it breaks ... */
 		return 0x1003;
+#endif
 	case VIDEO_MODE_NTSC:  /* BTSC */
 		return 0x2003;
 	case VIDEO_MODE_SECAM:
@@ -1148,17 +1146,10 @@ static int msp3410d_thread(void *data)
 					    MSP_CARRIER(10.7));
 			/* scart routing */
 			msp3400c_set_scart(client,SCART_IN2,0);
-#if 0
-			/* radio from SCART_IN2 */
-			msp3400c_write(client,I2C_MSP3400C_DFP, 0x08, 0x0220);
-			msp3400c_write(client,I2C_MSP3400C_DFP, 0x09, 0x0220);
-			msp3400c_write(client,I2C_MSP3400C_DFP, 0x0b, 0x0220);
-#else
 			/* msp34xx does radio decoding */
 			msp3400c_write(client,I2C_MSP3400C_DFP, 0x08, 0x0020);
 			msp3400c_write(client,I2C_MSP3400C_DFP, 0x09, 0x0020);
 			msp3400c_write(client,I2C_MSP3400C_DFP, 0x0b, 0x0020);
-#endif
 			break;
 		case 0x0003:
 		case 0x0004:
@@ -1260,6 +1251,7 @@ static int msp34xxg_thread(void *data)
 	int val, std, i;
 
 	printk("msp34xxg: daemon started\n");
+	msp->source = 1; /* default */
 	for (;;) {
 		d2printk(KERN_DEBUG "msp34xxg: thread: sleep\n");
 		msp34xx_sleep(msp,-1);
@@ -1330,8 +1322,9 @@ static void msp34xxg_set_source(struct i2c_client *client, int source)
 
 	/* fix matrix mode to stereo and let the msp choose what
 	 * to output according to 'source', as recommended
+	 * for MONO (source==0) downmixing set bit[7:0] to 0x30
 	 */
-	int value = (source&0x07)<<8|(source==0 ? 0x00:0x20);
+	int value = (source&0x07)<<8|(source==0 ? 0x30:0x20);
 	dprintk("msp34xxg: set source to %d (0x%x)\n", source, value);
 	msp3400c_write(client,
 		       I2C_MSP3400C_DFP,
@@ -1355,7 +1348,7 @@ static void msp34xxg_set_source(struct i2c_client *client, int source)
 	msp3400c_write(client,
 		       I2C_MSP3400C_DEM,
 		       0x22, /* a2 threshold for stereo/bilingual */
-		       source==0 ? 0x7f0:stereo_threshold);
+		       stereo_threshold);
 	msp->source=source;
 }
 
@@ -1390,7 +1383,7 @@ static void msp34xxg_detect_stereo(struct i2c_client *client)
 static void msp34xxg_set_audmode(struct i2c_client *client, int audmode)
 {
 	struct msp3400c *msp = i2c_get_clientdata(client);
-	int source = 0;
+	int source;
 
 	switch (audmode) {
 	case V4L2_TUNER_MODE_MONO:
@@ -1406,9 +1399,10 @@ static void msp34xxg_set_audmode(struct i2c_client *client, int audmode)
 	case V4L2_TUNER_MODE_LANG2:
 		source=4; /* stereo or B */
 		break;
-	default: /* doing nothing: a safe, sane default */
+	default:
 		audmode = 0;
-		return;
+		source  = 1;
+		break;
 	}
 	msp->audmode = audmode;
 	msp34xxg_set_source(client, source);
@@ -1498,10 +1492,6 @@ static int msp_attach(struct i2c_adapter *adap, int addr, int kind)
 		return -1;
 	}
 
-#if 0
-	/* this will turn on a 1kHz beep - might be useful for debugging... */
-	msp3400c_write(c,I2C_MSP3400C_DFP, 0x0014, 0x1040);
-#endif
 	msp3400c_setvolume(c, msp->muted, msp->volume, msp->balance);
 
 	snprintf(c->name, sizeof(c->name), "MSP34%02d%c-%c%d",
@@ -1510,12 +1500,9 @@ static int msp_attach(struct i2c_adapter *adap, int addr, int kind)
 
 	msp->opmode = opmode;
 	if (OPMODE_AUTO == msp->opmode) {
-#if 0 /* seems to work for ivtv only, disable by default for now ... */
 		if (HAVE_SIMPLER(msp))
 			msp->opmode = OPMODE_SIMPLER;
-		else
-#endif
-		if (HAVE_SIMPLE(msp))
+		else if (HAVE_SIMPLE(msp))
 			msp->opmode = OPMODE_SIMPLE;
 		else
 			msp->opmode = OPMODE_MANUAL;

@@ -1,6 +1,6 @@
 /*
  *    Disk Array driver for HP SA 5xxx and 6xxx Controllers
- *    Copyright 2000, 2002 Hewlett-Packard Development Company, L.P.
+ *    Copyright 2000, 2005 Hewlett-Packard Development Company, L.P.
  *
  *    This program is free software; you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -41,19 +41,20 @@
 #include <asm/uaccess.h>
 #include <asm/io.h>
 
+#include <linux/dma-mapping.h>
 #include <linux/blkdev.h>
 #include <linux/genhd.h>
 #include <linux/completion.h>
 
 #define CCISS_DRIVER_VERSION(maj,min,submin) ((maj<<16)|(min<<8)|(submin))
-#define DRIVER_NAME "HP CISS Driver (v 2.6.4)"
-#define DRIVER_VERSION CCISS_DRIVER_VERSION(2,6,4)
+#define DRIVER_NAME "HP CISS Driver (v 2.6.6)"
+#define DRIVER_VERSION CCISS_DRIVER_VERSION(2,6,6)
 
 /* Embedded module documentation macros - see modules.h */
 MODULE_AUTHOR("Hewlett-Packard Company");
-MODULE_DESCRIPTION("Driver for HP Controller SA5xxx SA6xxx version 2.6.4");
+MODULE_DESCRIPTION("Driver for HP Controller SA5xxx SA6xxx version 2.6.6");
 MODULE_SUPPORTED_DEVICE("HP SA5i SA5i+ SA532 SA5300 SA5312 SA641 SA642 SA6400"
-			" SA6i P600");
+			" SA6i P600 P800 E400 E300");
 MODULE_LICENSE("GPL");
 
 #include "cciss_cmd.h"
@@ -61,7 +62,7 @@ MODULE_LICENSE("GPL");
 #include <linux/cciss_ioctl.h>
 
 /* define the PCI info for the cards we can control */
-const struct pci_device_id cciss_pci_device_id[] = {
+static const struct pci_device_id cciss_pci_device_id[] = {
 	{ PCI_VENDOR_ID_COMPAQ, PCI_DEVICE_ID_COMPAQ_CISS,
 			0x0E11, 0x4070, 0, 0, 0},
 	{ PCI_VENDOR_ID_COMPAQ, PCI_DEVICE_ID_COMPAQ_CISSB,
@@ -82,6 +83,12 @@ const struct pci_device_id cciss_pci_device_id[] = {
 		0x0E11, 0x4091, 0, 0, 0},
 	{ PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_CISSA,
 		0x103C, 0x3225, 0, 0, 0},
+	{ PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_CISSB,
+		0x103c, 0x3223, 0, 0, 0},
+	{ PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_CISSC,
+		0x103c, 0x3231, 0, 0, 0},
+	{ PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_CISSC,
+		0x103c, 0x3233, 0, 0, 0},
 	{0,}
 };
 MODULE_DEVICE_TABLE(pci, cciss_pci_device_id);
@@ -103,6 +110,9 @@ static struct board_type products[] = {
 	{ 0x409D0E11, "Smart Array 6400 EM", &SA5_access},
 	{ 0x40910E11, "Smart Array 6i", &SA5_access},
 	{ 0x3225103C, "Smart Array P600", &SA5_access},
+	{ 0x3223103C, "Smart Array P800", &SA5_access},
+	{ 0x3231103C, "Smart Array E400", &SA5_access},
+	{ 0x3233103C, "Smart Array E300", &SA5_access},
 };
 
 /* How long to wait (in millesconds) for board to go into simple mode */
@@ -114,9 +124,11 @@ static struct board_type products[] = {
 
 #define READ_AHEAD 	 1024
 #define NR_CMDS		 384 /* #commands that can be outstanding */
-#define MAX_CTLR 8
+#define MAX_CTLR	32
 
-#define CCISS_DMA_MASK	0xFFFFFFFF	/* 32 bit DMA */
+/* Originally cciss driver only supports 8 major numbers */
+#define MAX_CTLR_ORIG 	8
+
 
 static ctlr_info_t *hba[MAX_CTLR];
 
@@ -294,7 +306,7 @@ cciss_proc_write(struct file *file, const char __user *buffer,
 	if (copy_from_user(cmd, buffer, count)) return -EFAULT;
 	cmd[count] = '\0';
 	len = strlen(cmd);	// above 3 lines ensure safety
-	if (cmd[len-1] == '\n') 
+	if (len && cmd[len-1] == '\n')
 		cmd[--len] = '\0';
 #	ifdef CONFIG_CISS_SCSI_TAPE
 		if (strcmp("engage scsi", cmd)==0) {
@@ -626,6 +638,7 @@ static int cciss_ioctl(struct inode *inode, struct file *filep,
 		cciss_pci_info_struct pciinfo;
 
 		if (!arg) return -EINVAL;
+		pciinfo.domain = pci_domain_nr(host->pdev->bus);
 		pciinfo.bus = host->pdev->bus->number;
 		pciinfo.dev_fn = host->pdev->devfn;
 		pciinfo.board_id = host->board_id;
@@ -773,18 +786,10 @@ static int cciss_ioctl(struct inode *inode, struct file *filep,
 
  	case CCISS_GETLUNINFO: {
  		LogvolInfo_struct luninfo;
- 		int i;
  		
  		luninfo.LunID = drv->LunID;
  		luninfo.num_opens = drv->usage_count;
  		luninfo.num_parts = 0;
- 		/* count partitions 1 to 15 with sizes > 0 */
- 		for (i = 0; i < MAX_PART - 1; i++) {
-			if (!disk->part[i])
-				continue;
-			if (disk->part[i]->nr_sects != 0)
-				luninfo.num_parts++;
-		}
  		if (copy_to_user(argp, &luninfo,
  				sizeof(LogvolInfo_struct)))
  			return -EFAULT;
@@ -1130,7 +1135,7 @@ static int revalidate_allvol(ctlr_info_t *host)
 		/* this is for the online array utilities */
 		if (!drv->heads && i)
 			continue;
-		blk_queue_hardsect_size(host->queue, drv->block_size);
+		blk_queue_hardsect_size(drv->queue, drv->block_size);
 		set_capacity(disk, drv->nr_blocks);
 		add_disk(disk);
 	}
@@ -1686,7 +1691,7 @@ static int cciss_revalidate(struct gendisk *disk)
 	cciss_read_capacity(h->ctlr, logvol, size_buff, 1, &total_size, &block_size);
 	cciss_geometry_inquiry(h->ctlr, logvol, 1, total_size, block_size, inq_buff, drv);
 
-	blk_queue_hardsect_size(h->queue, drv->block_size);
+	blk_queue_hardsect_size(drv->queue, drv->block_size);
 	set_capacity(disk, drv->nr_blocks);
 
 	kfree(size_buff);
@@ -2080,6 +2085,9 @@ static void do_cciss_request(request_queue_t *q)
 	drive_info_struct *drv;
 	int i, dir;
 
+	/* We call start_io here in case there is a command waiting on the
+	 * queue that has not been sent.
+	*/
 	if (blk_queue_plugged(q))
 		goto startio;
 
@@ -2168,6 +2176,9 @@ queue:
 full:
 	blk_stop_queue(q);
 startio:
+	/* We will already have the driver lock here so not need
+	 * to lock it.
+	*/
 	start_io(h);
 }
 
@@ -2177,7 +2188,8 @@ static irqreturn_t do_cciss_intr(int irq, void *dev_id, struct pt_regs *regs)
 	CommandList_struct *c;
 	unsigned long flags;
 	__u32 a, a1;
-
+	int j;
+	int start_queue = h->next_to_run;
 
 	/* Is this interrupt for us? */
 	if (( h->access.intr_pending(h) == 0) || (h->interrupts_enabled == 0))
@@ -2224,10 +2236,46 @@ static irqreturn_t do_cciss_intr(int irq, void *dev_id, struct pt_regs *regs)
 		}
 	}
 
-	/*
-	 * See if we can queue up some more IO
+ 	/* check to see if we have maxed out the number of commands that can
+ 	 * be placed on the queue.  If so then exit.  We do this check here
+ 	 * in case the interrupt we serviced was from an ioctl and did not
+ 	 * free any new commands.
 	 */
-	blk_start_queue(h->queue);
+ 	if ((find_first_zero_bit(h->cmd_pool_bits, NR_CMDS)) == NR_CMDS)
+ 		goto cleanup;
+
+ 	/* We have room on the queue for more commands.  Now we need to queue
+ 	 * them up.  We will also keep track of the next queue to run so
+ 	 * that every queue gets a chance to be started first.
+ 	*/
+	for (j=0; j < h->highest_lun + 1; j++){
+		int curr_queue = (start_queue + j) % (h->highest_lun + 1);
+ 		/* make sure the disk has been added and the drive is real
+ 		 * because this can be called from the middle of init_one.
+ 		*/
+		if(!(h->drv[curr_queue].queue) ||
+		 		   !(h->drv[curr_queue].heads))
+ 			continue;
+ 		blk_start_queue(h->gendisk[curr_queue]->queue);
+
+ 		/* check to see if we have maxed out the number of commands
+ 		 * that can be placed on the queue.
+ 		*/
+ 		if ((find_first_zero_bit(h->cmd_pool_bits, NR_CMDS)) == NR_CMDS)
+ 		{
+ 			if (curr_queue == start_queue){
+				h->next_to_run = (start_queue + 1) % (h->highest_lun + 1);
+ 				goto cleanup;
+ 			} else {
+ 				h->next_to_run = curr_queue;
+ 				goto cleanup;
+ 	}
+ 		} else {
+			curr_queue = (curr_queue + 1) % (h->highest_lun + 1);
+ 		}
+ 	}
+
+cleanup:
 	spin_unlock_irqrestore(CCISS_LOCK(h->ctlr), flags);
 	return IRQ_HANDLED;
 }
@@ -2338,11 +2386,6 @@ static int cciss_pci_init(ctlr_info_t *c, struct pci_dev *pdev)
 	{
 		printk(KERN_ERR "cciss: Unable to Enable PCI device\n");
 		return( -1);
-	}
-	if (pci_set_dma_mask(pdev, CCISS_DMA_MASK ) != 0)
-	{
-		printk(KERN_ERR "cciss:  Unable to set DMA mask\n");
-		return(-1);
 	}
 
 	subsystem_vendor_id = pdev->subsystem_vendor;
@@ -2644,7 +2687,7 @@ static int alloc_cciss_hba(void)
 		}
 	}
 	printk(KERN_WARNING "cciss: This driver supports a maximum"
-		" of 8 controllers.\n");
+		" of %d controllers.\n", MAX_CTLR);
 	goto out;
 Enomem:
 	printk(KERN_ERR "cciss: out of memory.\n");
@@ -2676,13 +2719,14 @@ static int __devinit cciss_init_one(struct pci_dev *pdev,
 	request_queue_t *q;
 	int i;
 	int j;
+	int rc;
 
 	printk(KERN_DEBUG "cciss: Device 0x%x has been found at"
 			" bus %d dev %d func %d\n",
 		pdev->device, pdev->bus->number, PCI_SLOT(pdev->devfn),
 			PCI_FUNC(pdev->devfn));
 	i = alloc_cciss_hba();
-	if( i < 0 ) 
+	if(i < 0)
 		return (-1);
 	if (cciss_pci_init(hba[i], pdev) != 0)
 		goto clean1;
@@ -2692,19 +2736,32 @@ static int __devinit cciss_init_one(struct pci_dev *pdev,
 	hba[i]->pdev = pdev;
 
 	/* configure PCI DMA stuff */
-	if (!pci_set_dma_mask(pdev, 0xffffffffffffffffULL))
+	if (!pci_set_dma_mask(pdev, DMA_64BIT_MASK))
 		printk("cciss: using DAC cycles\n");
-	else if (!pci_set_dma_mask(pdev, 0xffffffff))
+	else if (!pci_set_dma_mask(pdev, DMA_32BIT_MASK))
 		printk("cciss: not using DAC cycles\n");
 	else {
 		printk("cciss: no suitable DMA available\n");
 		goto clean1;
 	}
 
-	if (register_blkdev(COMPAQ_CISS_MAJOR+i, hba[i]->devname)) {
-		printk(KERN_ERR "cciss: Unable to register device %s\n",
-				hba[i]->devname);
+	/*
+	 * register with the major number, or get a dynamic major number
+	 * by passing 0 as argument.  This is done for greater than
+	 * 8 controller support.
+	 */
+	if (i < MAX_CTLR_ORIG)
+		hba[i]->major = MAJOR_NR + i;
+	rc = register_blkdev(hba[i]->major, hba[i]->devname);
+	if(rc == -EBUSY || rc == -EINVAL) {
+		printk(KERN_ERR
+			"cciss:  Unable to get major number %d for %s "
+			"on hba %d\n", hba[i]->major, hba[i]->devname, i);
 		goto clean1;
+	}
+	else {
+		if (i >= MAX_CTLR_ORIG)
+			hba[i]->major = rc;
 	}
 
 	/* make sure the board interrupts are off */
@@ -2731,13 +2788,6 @@ static int __devinit cciss_init_one(struct pci_dev *pdev,
 	}
 
 	spin_lock_init(&hba[i]->lock);
-	q = blk_init_queue(do_cciss_request, &hba[i]->lock);
-	if (!q)
-		goto clean4;
-
-	q->backing_dev_info.ra_pages = READ_AHEAD;
-	hba[i]->queue = q;
-	q->queuedata = hba[i];
 
 	/* Initialize the pdev driver private data. 
 		have it point to hba[i].  */
@@ -2759,6 +2809,20 @@ static int __devinit cciss_init_one(struct pci_dev *pdev,
 
 	cciss_procinit(i);
 
+	for(j=0; j < NWD; j++) { /* mfm */
+		drive_info_struct *drv = &(hba[i]->drv[j]);
+		struct gendisk *disk = hba[i]->gendisk[j];
+
+		q = blk_init_queue(do_cciss_request, &hba[i]->lock);
+		if (!q) {
+			printk(KERN_ERR
+			   "cciss:  unable to allocate queue for disk %d\n",
+			   j);
+			break;
+		}
+		drv->queue = q;
+
+		q->backing_dev_info.ra_pages = READ_AHEAD;
 	blk_queue_bounce_limit(q, hba[i]->pdev->dma_mask);
 
 	/* This is a hardware imposed limit. */
@@ -2769,26 +2833,23 @@ static int __devinit cciss_init_one(struct pci_dev *pdev,
 
 	blk_queue_max_sectors(q, 512);
 
-
-	for(j=0; j<NWD; j++) {
-		drive_info_struct *drv = &(hba[i]->drv[j]);
-		struct gendisk *disk = hba[i]->gendisk[j];
-
+		q->queuedata = hba[i];
 		sprintf(disk->disk_name, "cciss/c%dd%d", i, j);
 		sprintf(disk->devfs_name, "cciss/host%d/target%d", i, j);
-		disk->major = COMPAQ_CISS_MAJOR + i;
+		disk->major = hba[i]->major;
 		disk->first_minor = j << NWD_SHIFT;
 		disk->fops = &cciss_fops;
-		disk->queue = hba[i]->queue;
+		disk->queue = q;
 		disk->private_data = drv;
 		/* we must register the controller even if no disks exist */
 		/* this is for the online array utilities */
 		if(!drv->heads && j)
 			continue;
-		blk_queue_hardsect_size(hba[i]->queue, drv->block_size);
+		blk_queue_hardsect_size(q, drv->block_size);
 		set_capacity(disk, drv->nr_blocks);
 		add_disk(disk);
 	}
+
 	return(1);
 
 clean4:
@@ -2805,7 +2866,7 @@ clean4:
 			hba[i]->errinfo_pool_dhandle);
 	free_irq(hba[i]->intr, hba[i]);
 clean2:
-	unregister_blkdev(COMPAQ_CISS_MAJOR+i, hba[i]->devname);
+	unregister_blkdev(hba[i]->major, hba[i]->devname);
 clean1:
 	release_io_mem(hba[i]);
 	free_hba(i);
@@ -2847,17 +2908,17 @@ static void __devexit cciss_remove_one (struct pci_dev *pdev)
 	pci_set_drvdata(pdev, NULL);
 	iounmap(hba[i]->vaddr);
 	cciss_unregister_scsi(i);  /* unhook from SCSI subsystem */
-	unregister_blkdev(COMPAQ_CISS_MAJOR+i, hba[i]->devname);
+	unregister_blkdev(hba[i]->major, hba[i]->devname);
 	remove_proc_entry(hba[i]->devname, proc_cciss);	
 	
 	/* remove it from the disk list */
 	for (j = 0; j < NWD; j++) {
 		struct gendisk *disk = hba[i]->gendisk[j];
 		if (disk->flags & GENHD_FL_UP)
+			blk_cleanup_queue(disk->queue);
 			del_gendisk(disk);
 	}
 
-	blk_cleanup_queue(hba[i]->queue);
 	pci_free_consistent(hba[i]->pdev, NR_CMDS * sizeof(CommandList_struct),
 			    hba[i]->cmd_pool, hba[i]->cmd_pool_dhandle);
 	pci_free_consistent(hba[i]->pdev, NR_CMDS * sizeof( ErrorInfo_struct),
@@ -2878,7 +2939,7 @@ static struct pci_driver cciss_pci_driver = {
  *  This is it.  Register the PCI driver information for the cards we control
  *  the OS will call our registered routines when it finds one of our cards. 
  */
-int __init cciss_init(void)
+static int __init cciss_init(void)
 {
 	printk(KERN_INFO DRIVER_NAME "\n");
 
@@ -2886,12 +2947,7 @@ int __init cciss_init(void)
 	return pci_module_init(&cciss_pci_driver);
 }
 
-static int __init init_cciss_module(void)
-{
-	return ( cciss_init());
-}
-
-static void __exit cleanup_cciss_module(void)
+static void __exit cciss_cleanup(void)
 {
 	int i;
 
@@ -2909,5 +2965,5 @@ static void __exit cleanup_cciss_module(void)
 	remove_proc_entry("cciss", proc_root_driver);
 }
 
-module_init(init_cciss_module);
-module_exit(cleanup_cciss_module);
+module_init(cciss_init);
+module_exit(cciss_cleanup);

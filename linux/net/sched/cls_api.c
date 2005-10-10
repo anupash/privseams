@@ -322,16 +322,17 @@ errout:
 
 static int
 tcf_fill_node(struct sk_buff *skb, struct tcf_proto *tp, unsigned long fh,
-	      u32 pid, u32 seq, unsigned flags, int event)
+	      u32 pid, u32 seq, u16 flags, int event)
 {
 	struct tcmsg *tcm;
 	struct nlmsghdr  *nlh;
 	unsigned char	 *b = skb->tail;
 
-	nlh = NLMSG_PUT(skb, pid, seq, event, sizeof(*tcm));
-	nlh->nlmsg_flags = flags;
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*tcm), flags);
 	tcm = NLMSG_DATA(nlh);
 	tcm->tcm_family = AF_UNSPEC;
+	tcm->tcm__pad1 = 0;
+	tcm->tcm__pad1 = 0;
 	tcm->tcm_ifindex = tp->q->dev->ifindex;
 	tcm->tcm_parent = tp->classid;
 	tcm->tcm_info = TC_H_MAKE(tp->prio, tp->protocol);
@@ -602,7 +603,7 @@ tcf_exts_dump_stats(struct sk_buff *skb, struct tcf_exts *exts,
 {
 #ifdef CONFIG_NET_CLS_ACT
 	if (exts->action)
-		if (tcf_action_copy_stats(skb, exts->action) < 0)
+		if (tcf_action_copy_stats(skb, exts->action, 1) < 0)
 			goto rtattr_failure;
 #elif defined CONFIG_NET_CLS_POLICE
 	if (exts->police)

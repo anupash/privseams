@@ -56,7 +56,7 @@ static struct class shost_class = {
  * @shost:	pointer to struct Scsi_Host
  * recovery:	recovery requested to run.
  **/
-void scsi_host_cancel(struct Scsi_Host *shost, int recovery)
+static void scsi_host_cancel(struct Scsi_Host *shost, int recovery)
 {
 	struct scsi_device *sdev;
 
@@ -129,6 +129,15 @@ int scsi_add_host(struct Scsi_Host *shost, struct device *dev)
 					 GFP_KERNEL)) == NULL)
 		goto out_del_classdev;
 
+	if (shost->transportt->create_work_queue) {
+		snprintf(shost->work_q_name, KOBJ_NAME_LEN, "scsi_wq_%d",
+			shost->host_no);
+		shost->work_q = create_singlethread_workqueue(
+					shost->work_q_name);
+		if (!shost->work_q)
+			goto out_free_shost_data;
+	}
+
 	error = scsi_sysfs_add_host(shost);
 	if (error)
 		goto out_destroy_host;
@@ -137,6 +146,10 @@ int scsi_add_host(struct Scsi_Host *shost, struct device *dev)
 	return error;
 
  out_destroy_host:
+	if (shost->work_q)
+		destroy_workqueue(shost->work_q);
+ out_free_shost_data:
+	kfree(shost->shost_data);
  out_del_classdev:
 	class_device_del(&shost->shost_classdev);
  out_del_gendev:
@@ -160,15 +173,13 @@ static void scsi_host_dev_release(struct device *dev)
 		shost->eh_notify = NULL;
 	}
 
+	if (shost->work_q)
+		destroy_workqueue(shost->work_q);
+
 	scsi_proc_hostdir_rm(shost->hostt);
 	scsi_destroy_command_freelist(shost);
 	kfree(shost->shost_data);
 
-	/*
-	 * Some drivers (eg aha1542) do scsi_register()/scsi_unregister()
-	 * during probing without performing a scsi_set_device() in between.
-	 * In this case dev->parent is NULL.
-	 */
 	if (parent)
 		put_device(parent);
 	kfree(shost);
@@ -216,6 +227,7 @@ struct Scsi_Host *scsi_host_alloc(struct scsi_host_template *sht, int privsize)
 	spin_lock_init(&shost->default_lock);
 	scsi_assign_lock(shost, &shost->default_lock);
 	INIT_LIST_HEAD(&shost->__devices);
+	INIT_LIST_HEAD(&shost->__targets);
 	INIT_LIST_HEAD(&shost->eh_cmd_q);
 	INIT_LIST_HEAD(&shost->starved_list);
 	init_waitqueue_head(&shost->host_wait);
@@ -247,6 +259,16 @@ struct Scsi_Host *scsi_host_alloc(struct scsi_host_template *sht, int privsize)
 	shost->cmd_per_lun = sht->cmd_per_lun;
 	shost->unchecked_isa_dma = sht->unchecked_isa_dma;
 	shost->use_clustering = sht->use_clustering;
+	shost->ordered_flush = sht->ordered_flush;
+	shost->ordered_tag = sht->ordered_tag;
+
+	/*
+	 * hosts/devices that do queueing must support ordered tags
+	 */
+	if (shost->can_queue > 1 && shost->ordered_flush) {
+		printk(KERN_ERR "scsi: ordered flushes don't support queueing\n");
+		shost->ordered_flush = 0;
+	}
 
 	if (sht->max_host_blocked)
 		shost->max_host_blocked = sht->max_host_blocked;
@@ -392,3 +414,44 @@ int scsi_is_host_device(const struct device *dev)
 	return dev->release == scsi_host_dev_release;
 }
 EXPORT_SYMBOL(scsi_is_host_device);
+
+/**
+ * scsi_queue_work - Queue work to the Scsi_Host workqueue.
+ * @shost:	Pointer to Scsi_Host.
+ * @work:	Work to queue for execution.
+ *
+ * Return value:
+ * 	0 on success / != 0 for error
+ **/
+int scsi_queue_work(struct Scsi_Host *shost, struct work_struct *work)
+{
+	if (unlikely(!shost->work_q)) {
+		printk(KERN_ERR
+			"ERROR: Scsi host '%s' attempted to queue scsi-work, "
+			"when no workqueue created.\n", shost->hostt->name);
+		dump_stack();
+
+		return -EINVAL;
+	}
+
+	return queue_work(shost->work_q, work);
+}
+EXPORT_SYMBOL_GPL(scsi_queue_work);
+
+/**
+ * scsi_flush_work - Flush a Scsi_Host's workqueue.
+ * @shost:	Pointer to Scsi_Host.
+ **/
+void scsi_flush_work(struct Scsi_Host *shost)
+{
+	if (!shost->work_q) {
+		printk(KERN_ERR
+			"ERROR: Scsi host '%s' attempted to flush scsi-work, "
+			"when no workqueue created.\n", shost->hostt->name);
+		dump_stack();
+		return;
+	}
+
+	flush_workqueue(shost->work_q);
+}
+EXPORT_SYMBOL_GPL(scsi_flush_work);

@@ -7,11 +7,10 @@
  *
  * For licensing information, see the file 'LICENCE' in this directory.
  *
- * $Id: fs.c,v 1.51 2004/11/28 12:19:37 dedekind Exp $
+ * $Id: fs.c,v 1.56 2005/07/06 12:13:09 dwmw2 Exp $
  *
  */
 
-#include <linux/version.h>
 #include <linux/config.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
@@ -25,6 +24,7 @@
 #include <linux/crc32.h>
 #include "nodelist.h"
 
+static int jffs2_flash_setup(struct jffs2_sb_info *c);
 
 static int jffs2_do_setattr (struct inode *inode, struct iattr *iattr)
 {
@@ -449,9 +449,13 @@ int jffs2_do_fill_super(struct super_block *sb, void *data, int silent)
 
 	c = JFFS2_SB_INFO(sb);
 
-#ifndef CONFIG_JFFS2_FS_NAND
+#ifndef CONFIG_JFFS2_FS_WRITEBUFFER
 	if (c->mtd->type == MTD_NANDFLASH) {
 		printk(KERN_ERR "jffs2: Cannot operate on NAND flash unless jffs2 NAND support is compiled in.\n");
+		return -EINVAL;
+	}
+	if (c->mtd->type == MTD_DATAFLASH) {
+		printk(KERN_ERR "jffs2: Cannot operate on DataFlash unless jffs2 DataFlash support is compiled in.\n");
 		return -EINVAL;
 	}
 #endif
@@ -521,9 +525,7 @@ int jffs2_do_fill_super(struct super_block *sb, void *data, int silent)
 	if (!sb->s_root)
 		goto out_root_i;
 
-#if LINUX_VERSION_CODE >= 0x20403
 	sb->s_maxbytes = 0xFFFFFFFF;
-#endif
 	sb->s_blocksize = PAGE_CACHE_SIZE;
 	sb->s_blocksize_bits = PAGE_CACHE_SHIFT;
 	sb->s_magic = JFFS2_SUPER_MAGIC;
@@ -644,7 +646,7 @@ void jffs2_gc_release_page(struct jffs2_sb_info *c,
 	page_cache_release(pg);
 }
 
-int jffs2_flash_setup(struct jffs2_sb_info *c) {
+static int jffs2_flash_setup(struct jffs2_sb_info *c) {
 	int ret = 0;
 	
 	if (jffs2_cleanmarker_oob(c)) {
@@ -660,6 +662,14 @@ int jffs2_flash_setup(struct jffs2_sb_info *c) {
 		if (ret)
 			return ret;
 	}
+	
+	/* and Dataflash */
+	if (jffs2_dataflash(c)) {
+		ret = jffs2_dataflash_setup(c);
+		if (ret)
+			return ret;
+	}
+	
 	return ret;
 }
 
@@ -672,5 +682,10 @@ void jffs2_flash_cleanup(struct jffs2_sb_info *c) {
 	/* add cleanups for other bizarre flashes here... */
 	if (jffs2_nor_ecc(c)) {
 		jffs2_nor_ecc_flash_cleanup(c);
+	}
+	
+	/* and DataFlash */
+	if (jffs2_dataflash(c)) {
+		jffs2_dataflash_cleanup(c);
 	}
 }

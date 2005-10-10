@@ -22,7 +22,6 @@
 #include <linux/device.h>
 #include <linux/string.h>
 #include <linux/proc_fs.h>
-#include <linux/vmalloc.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <video/w100fb.h>
@@ -90,8 +89,6 @@ struct w100fb_par {
 
 static struct w100fb_par *current_par;
 
-static u16 *gSaveImagePtr = NULL;
-
 /* Remapped addresses for base cfg, memmapped regs and the frame buffer itself */
 static void *remapped_base;
 static void *remapped_regs;
@@ -104,7 +101,7 @@ static void(*w100fb_ssp_send)(u8 adrs, u8 data);
  * Sysfs functions
  */
 
-static ssize_t rotation_show(struct device *dev, char *buf)
+static ssize_t rotation_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct fb_info *info = dev_get_drvdata(dev);
 	struct w100fb_par *par=info->par;
@@ -112,7 +109,7 @@ static ssize_t rotation_show(struct device *dev, char *buf)
 	return sprintf(buf, "%d\n",par->rotation_flag);
 }
 
-static ssize_t rotation_store(struct device *dev, const char *buf, size_t count)
+static ssize_t rotation_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	unsigned int rotate;
 	struct fb_info *info = dev_get_drvdata(dev);
@@ -137,7 +134,7 @@ static ssize_t rotation_store(struct device *dev, const char *buf, size_t count)
 
 static DEVICE_ATTR(rotation, 0644, rotation_show, rotation_store);
 
-static ssize_t w100fb_reg_read(struct device *dev, const char *buf, size_t count)
+static ssize_t w100fb_reg_read(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	unsigned long param;
 	unsigned long regs;
@@ -149,7 +146,7 @@ static ssize_t w100fb_reg_read(struct device *dev, const char *buf, size_t count
 
 static DEVICE_ATTR(reg_read, 0200, NULL, w100fb_reg_read);
 
-static ssize_t w100fb_reg_write(struct device *dev, const char *buf, size_t count)
+static ssize_t w100fb_reg_write(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	unsigned long regs;
 	unsigned long param;
@@ -166,7 +163,7 @@ static ssize_t w100fb_reg_write(struct device *dev, const char *buf, size_t coun
 static DEVICE_ATTR(reg_write, 0200, NULL, w100fb_reg_write);
 
 
-static ssize_t fastsysclk_show(struct device *dev, char *buf)
+static ssize_t fastsysclk_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct fb_info *info = dev_get_drvdata(dev);
 	struct w100fb_par *par=info->par;
@@ -174,7 +171,7 @@ static ssize_t fastsysclk_show(struct device *dev, char *buf)
 	return sprintf(buf, "%d\n",par->fastsysclk_mode);
 }
 
-static ssize_t fastsysclk_store(struct device *dev, const char *buf, size_t count)
+static ssize_t fastsysclk_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	int param;
 	struct fb_info *info = dev_get_drvdata(dev);
@@ -494,48 +491,60 @@ static void w100fb_clear_screen(u32 mode, long int offset)
 }
 
 
+/* Need to split up the buffers to stay within the limits of kmalloc */
+#define W100_BUF_NUM	6
+static uint32_t *gSaveImagePtr[W100_BUF_NUM] = { NULL };
+
 static void w100fb_save_buffer(void)
 {
-	int i;
+	int i, j, bufsize;
 
-	if (gSaveImagePtr != NULL) {
-		vfree(gSaveImagePtr);
-		gSaveImagePtr = NULL;
-	}
-	gSaveImagePtr = vmalloc(current_par->xres * current_par->yres * BITS_PER_PIXEL / 8);
-	if (gSaveImagePtr != NULL) {
-		for (i = 0; i < (current_par->xres * current_par->yres); i++)
-			*(gSaveImagePtr + i) = readw(remapped_fbuf + (2*i));
-	} else {
-		printk(KERN_WARNING "can't alloc pre-off image buffer\n");
+	bufsize=(current_par->xres * current_par->yres * BITS_PER_PIXEL / 8) / W100_BUF_NUM;
+	for (i = 0; i < W100_BUF_NUM; i++) {
+		if (gSaveImagePtr[i] == NULL)
+			gSaveImagePtr[i] = kmalloc(bufsize, GFP_KERNEL);
+		if (gSaveImagePtr[i] == NULL) {
+			w100fb_clear_buffer();
+			printk(KERN_WARNING "can't alloc pre-off image buffer %d\n", i);
+			break;
+		}
+		for (j = 0; j < bufsize/4; j++)
+			*(gSaveImagePtr[i] + j) = readl(remapped_fbuf + (bufsize*i) + j*4);
 	}
 }
 
 
 static void w100fb_restore_buffer(void)
 {
-	int i;
+	int i, j, bufsize;
 
-	if (gSaveImagePtr != NULL) {
-		for (i = 0; i < (current_par->xres * current_par->yres); i++) {
-				writew(*(gSaveImagePtr + i),remapped_fbuf + (2*i));
-			}
-		vfree(gSaveImagePtr);
-		gSaveImagePtr = NULL;
+	bufsize=(current_par->xres * current_par->yres * BITS_PER_PIXEL / 8) / W100_BUF_NUM;
+	for (i = 0; i < W100_BUF_NUM; i++) {
+		if (gSaveImagePtr[i] == NULL) {
+			printk(KERN_WARNING "can't find pre-off image buffer %d\n", i);
+			w100fb_clear_buffer();
+			break;
+		}
+		for (j = 0; j < (bufsize/4); j++)
+			writel(*(gSaveImagePtr[i] + j),remapped_fbuf + (bufsize*i) + (j*4));
+		kfree(gSaveImagePtr[i]);
+		gSaveImagePtr[i] = NULL;
 	}
 }
 
+
 static void w100fb_clear_buffer(void)
 {
-	if (gSaveImagePtr != NULL) {
-		vfree(gSaveImagePtr);
-		gSaveImagePtr = NULL;
+	int i;
+	for (i = 0; i < W100_BUF_NUM; i++) {
+		kfree(gSaveImagePtr[i]);
+		gSaveImagePtr[i] = NULL;
 	}
 }
 
 
 #ifdef CONFIG_PM
-static int w100fb_suspend(struct device *dev, u32 state, u32 level)
+static int w100fb_suspend(struct device *dev, pm_message_t state, u32 level)
 {
 	if (level == SUSPEND_POWER_DOWN) {
 		struct fb_info *info = dev_get_drvdata(dev);

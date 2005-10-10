@@ -885,7 +885,7 @@ static int c4_load_firmware(struct capi_ctr *ctrl, capiloaddata *data)
 }
 
 
-void c4_reset_ctr(struct capi_ctr *ctrl)
+static void c4_reset_ctr(struct capi_ctr *ctrl)
 {
 	avmcard *card = ((avmctrl_info *)(ctrl->driverdata))->card;
 	avmctrl_info *cinfo;
@@ -933,7 +933,7 @@ static void c4_remove(struct pci_dev *pdev)
 /* ------------------------------------------------------------- */
 
 
-void c4_register_appl(struct capi_ctr *ctrl,
+static void c4_register_appl(struct capi_ctr *ctrl,
 				u16 appl,
 				capi_register_params *rp)
 {
@@ -978,7 +978,7 @@ void c4_register_appl(struct capi_ctr *ctrl,
 
 /* ------------------------------------------------------------- */
 
-void c4_release_appl(struct capi_ctr *ctrl, u16 appl)
+static void c4_release_appl(struct capi_ctr *ctrl, u16 appl)
 {
 	avmctrl_info *cinfo = (avmctrl_info *)(ctrl->driverdata);
 	avmcard *card = cinfo->card;
@@ -1288,7 +1288,7 @@ static int __init c4_init(void)
 	} else
 		strcpy(rev, "1.0");
 
-	err = pci_module_init(&c4_pci_driver);
+	err = pci_register_driver(&c4_pci_driver);
 	if (!err) {
 		strlcpy(capi_driver_c2.revision, rev, 32);
 		register_capi_driver(&capi_driver_c2);

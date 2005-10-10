@@ -1,5 +1,5 @@
 /*
- * $Id: saa7134-empress.c,v 1.3 2004/11/07 13:17:15 kraxel Exp $
+ * $Id: saa7134-empress.c,v 1.11 2005/05/22 19:23:39 nsh Exp $
  *
  * (c) 2004 Gerd Knorr <kraxel@bytesex.org> [SuSE Labs]
  *
@@ -21,6 +21,7 @@
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
@@ -50,16 +51,21 @@ MODULE_PARM_DESC(debug,"enable debug messages");
 
 static void ts_reset_encoder(struct saa7134_dev* dev)
 {
+	if (!dev->empress_started)
+		return;
+
 	saa_writeb(SAA7134_SPECIAL_MODE, 0x00);
 	msleep(10);
    	saa_writeb(SAA7134_SPECIAL_MODE, 0x01);
 	msleep(100);
+	dev->empress_started = 0;
 }
 
-static int ts_init_encoder(struct saa7134_dev* dev, void* arg)
+static int ts_init_encoder(struct saa7134_dev* dev)
 {
 	ts_reset_encoder(dev);
-	saa7134_i2c_call_clients(dev, MPEG_SETPARAMS, arg);
+	saa7134_i2c_call_clients(dev, VIDIOC_S_MPEGCOMP, NULL);
+	dev->empress_started = 1;
  	return 0;
 }
 
@@ -81,18 +87,19 @@ static int ts_open(struct inode *inode, struct file *file)
 		return -ENODEV;
 
 	dprintk("open minor=%d\n",minor);
-	down(&dev->empress_tsq.lock);
 	err = -EBUSY;
-	if (dev->empress_users)
+	if (down_trylock(&dev->empress_tsq.lock))
 		goto done;
+	if (dev->empress_users)
+		goto done_up;
 
 	dev->empress_users++;
 	file->private_data = dev;
-	ts_init_encoder(dev, NULL);
 	err = 0;
 
- done:
+done_up:
 	up(&dev->empress_tsq.lock);
+done:
 	return err;
 }
 
@@ -105,6 +112,7 @@ static int ts_release(struct inode *inode, struct file *file)
 	down(&dev->empress_tsq.lock);
 	if (dev->empress_tsq.reading)
 		videobuf_read_stop(&dev->empress_tsq);
+	videobuf_mmap_free(&dev->empress_tsq);
 	dev->empress_users--;
 
 	/* stop the encoder */
@@ -118,6 +126,9 @@ static ssize_t
 ts_read(struct file *file, char __user *data, size_t count, loff_t *ppos)
 {
 	struct saa7134_dev *dev = file->private_data;
+
+	if (!dev->empress_started)
+		ts_init_encoder(dev);
 
 	return videobuf_read_stream(&dev->empress_tsq,
 				    data, count, ppos, 0,
@@ -222,10 +233,7 @@ static int ts_do_ioctl(struct inode *inode, struct file *file,
 		memset(f,0,sizeof(*f));
 		f->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-		/* FIXME: translate subsampling type EMPRESS into
-		 *        width/height: */
-		f->fmt.pix.width        = 720; /* D1 */
-		f->fmt.pix.height       = 576;
+		saa7134_i2c_call_clients(dev, cmd, arg);
 		f->fmt.pix.pixelformat  = V4L2_PIX_FMT_MPEG;
 		f->fmt.pix.sizeimage    = TS_PACKET_SIZE * dev->ts.nr_packets;
 		return 0;
@@ -238,20 +246,7 @@ static int ts_do_ioctl(struct inode *inode, struct file *file,
 		if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		    return -EINVAL;
 
-		/*
-		  FIXME: translate and round width/height into EMPRESS
-		  subsample type:
-
-		          type  |   PAL   |  NTSC
-			---------------------------
-			  SIF   | 352x288 | 352x240
-			 1/2 D1 | 352x576 | 352x480
-			 2/3 D1 | 480x576 | 480x480
-			  D1    | 720x576 | 720x480
-		*/
-
-		f->fmt.pix.width        = 720; /* D1 */
-		f->fmt.pix.height       = 576;
+		saa7134_i2c_call_clients(dev, cmd, arg);
 		f->fmt.pix.pixelformat  = V4L2_PIX_FMT_MPEG;
 		f->fmt.pix.sizeimage    = TS_PACKET_SIZE* dev->ts.nr_packets;
 		return 0;
@@ -281,8 +276,13 @@ static int ts_do_ioctl(struct inode *inode, struct file *file,
 	case VIDIOC_S_CTRL:
 		return saa7134_common_ioctl(dev, cmd, arg);
 
-	case MPEG_SETPARAMS:
-		return ts_init_encoder(dev, arg);
+	case VIDIOC_S_MPEGCOMP:
+		saa7134_i2c_call_clients(dev, VIDIOC_S_MPEGCOMP, arg);
+		ts_init_encoder(dev);
+		return 0;
+	case VIDIOC_G_MPEGCOMP:
+		saa7134_i2c_call_clients(dev, VIDIOC_G_MPEGCOMP, arg);
+		return 0;
 
 	default:
 		return -ENOIOCTLCMD;
@@ -320,6 +320,26 @@ static struct video_device saa7134_empress_template =
 	.minor	       = -1,
 };
 
+static void empress_signal_update(void* data)
+{
+	struct saa7134_dev* dev = (struct saa7134_dev*) data;
+
+	if (dev->nosignal) {
+		dprintk("no video signal\n");
+		ts_reset_encoder(dev);
+	} else {
+		dprintk("video signal acquired\n");
+		if (dev->empress_users)
+			ts_init_encoder(dev);
+	}
+}
+
+static void empress_signal_change(struct saa7134_dev *dev)
+{
+	schedule_work(&dev->empress_workqueue);
+}
+
+
 static int empress_init(struct saa7134_dev *dev)
 {
 	int err;
@@ -334,6 +354,8 @@ static int empress_init(struct saa7134_dev *dev)
 	snprintf(dev->empress_dev->name, sizeof(dev->empress_dev->name),
 		 "%s empress (%s)", dev->name,
 		 saa7134_boards[dev->board].name);
+
+	INIT_WORK(&dev->empress_workqueue, empress_signal_update, (void*) dev);
 
 	err = video_register_device(dev->empress_dev,VFL_TYPE_GRABBER,
 				    empress_nr[dev->nr]);
@@ -353,6 +375,8 @@ static int empress_init(struct saa7134_dev *dev)
 			    V4L2_FIELD_ALTERNATE,
 			    sizeof(struct saa7134_buf),
 			    dev);
+
+	empress_signal_update(dev);
 	return 0;
 }
 
@@ -362,6 +386,7 @@ static int empress_fini(struct saa7134_dev *dev)
 
 	if (NULL == dev->empress_dev)
 		return 0;
+	flush_scheduled_work();
 	video_unregister_device(dev->empress_dev);
 	dev->empress_dev = NULL;
 	return 0;
@@ -371,6 +396,7 @@ static struct saa7134_mpeg_ops empress_ops = {
 	.type          = SAA7134_MPEG_EMPRESS,
 	.init          = empress_init,
 	.fini          = empress_fini,
+	.signal_change = empress_signal_change,
 };
 
 static int __init empress_register(void)

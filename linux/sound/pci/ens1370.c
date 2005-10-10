@@ -430,7 +430,7 @@ struct _snd_ensoniq {
 #endif
 
 #ifdef SUPPORT_JOYSTICK
-	struct gameport gameport;
+	struct gameport *gameport;
 #endif
 };
 
@@ -683,6 +683,15 @@ static unsigned short snd_es1371_codec_read(ac97_t *ac97,
 	up(&ensoniq->src_mutex);
 	snd_printk("es1371: codec read timeout at 0x%lx [0x%x]\n", ES_REG(ensoniq, 1371_CODEC), inl(ES_REG(ensoniq, 1371_CODEC)));
 	return 0;
+}
+
+static void snd_es1371_codec_wait(ac97_t *ac97)
+{
+	msleep(750);
+	snd_es1371_codec_read(ac97, AC97_RESET);
+	snd_es1371_codec_read(ac97, AC97_VENDOR_ID1);
+	snd_es1371_codec_read(ac97, AC97_VENDOR_ID2);
+	msleep(50);
 }
 
 static void snd_es1371_adc_rate(ensoniq_t * ensoniq, unsigned int rate)
@@ -1585,6 +1594,7 @@ static int snd_ensoniq_1371_mixer(ensoniq_t * ensoniq)
 	static ac97_bus_ops_t ops = {
 		.write = snd_es1371_codec_write,
 		.read = snd_es1371_codec_read,
+		.wait = snd_es1371_codec_wait,
 	};
 
 	if ((err = snd_ac97_bus(card, 0, &ops, NULL, &pbus)) < 0)
@@ -1734,43 +1744,99 @@ static int __devinit snd_ensoniq_1370_mixer(ensoniq_t * ensoniq)
 #endif /* CHIP1370 */
 
 #ifdef SUPPORT_JOYSTICK
-static int snd_ensoniq_joystick(ensoniq_t *ensoniq, long port)
-{
+
 #ifdef CHIP1371
-	if (port == 1) { /* auto-detect */
-		for (port = 0x200; port <= 0x218; port += 8)
-			if (request_region(port, 8, "ens137x: gameport"))
-				break;
-		if (port > 0x218) {
-			snd_printk("no gameport available\n");
-			return -EBUSY;
-		}
-	} else
-#endif
-	{
-		if (!request_region(port, 8, "ens137x: gameport")) {
-			snd_printk("gameport io port 0x%03x in use", ensoniq->gameport.io);
-			return -EBUSY;
-		}
+static int __devinit snd_ensoniq_get_joystick_port(int dev)
+{
+	switch (joystick_port[dev]) {
+	case 0: /* disabled */
+	case 1: /* auto-detect */
+	case 0x200:
+	case 0x208:
+	case 0x210:
+	case 0x218:
+		return joystick_port[dev];
+
+	default:
+		printk(KERN_ERR "ens1371: invalid joystick port %#x", joystick_port[dev]);
+		return 0;
 	}
-	ensoniq->gameport.io = port;
+}
+#else
+static inline int snd_ensoniq_get_joystick_port(int dev)
+{
+	return joystick[dev] ? 0x200 : 0;
+}
+#endif
+
+static int __devinit snd_ensoniq_create_gameport(ensoniq_t *ensoniq, int dev)
+{
+	struct gameport *gp;
+	int io_port;
+
+	io_port = snd_ensoniq_get_joystick_port(dev);
+
+	switch (io_port) {
+	case 0:
+		return -ENOSYS;
+
+	case 1: /* auto_detect */
+		for (io_port = 0x200; io_port <= 0x218; io_port += 8)
+			if (request_region(io_port, 8, "ens137x: gameport"))
+				break;
+		if (io_port > 0x218) {
+			printk(KERN_WARNING "ens137x: no gameport ports available\n");
+			return -EBUSY;
+		}
+		break;
+
+	default:
+		if (!request_region(io_port, 8, "ens137x: gameport")) {
+			printk(KERN_WARNING "ens137x: gameport io port 0x%#x in use\n", io_port);
+			return -EBUSY;
+		}
+		break;
+	}
+
+	ensoniq->gameport = gp = gameport_allocate_port();
+	if (!gp) {
+		printk(KERN_ERR "ens137x: cannot allocate memory for gameport\n");
+		release_region(io_port, 8);
+		return -ENOMEM;
+	}
+
+	gameport_set_name(gp, "ES137x");
+	gameport_set_phys(gp, "pci%s/gameport0", pci_name(ensoniq->pci));
+	gameport_set_dev_parent(gp, &ensoniq->pci->dev);
+	gp->io = io_port;
+
 	ensoniq->ctrl |= ES_JYSTK_EN;
 #ifdef CHIP1371
 	ensoniq->ctrl &= ~ES_1371_JOY_ASELM;
-	ensoniq->ctrl |= ES_1371_JOY_ASEL((ensoniq->gameport.io - 0x200) / 8);
+	ensoniq->ctrl |= ES_1371_JOY_ASEL((io_port - 0x200) / 8);
 #endif
 	outl(ensoniq->ctrl, ES_REG(ensoniq, CONTROL));
-	gameport_register_port(&ensoniq->gameport);
+
+	gameport_register_port(ensoniq->gameport);
+
 	return 0;
 }
 
-static void snd_ensoniq_joystick_free(ensoniq_t *ensoniq)
+static void snd_ensoniq_free_gameport(ensoniq_t *ensoniq)
 {
-	gameport_unregister_port(&ensoniq->gameport);
-	ensoniq->ctrl &= ~ES_JYSTK_EN;
-	outl(ensoniq->ctrl, ES_REG(ensoniq, CONTROL));
-	release_region(ensoniq->gameport.io, 8);
+	if (ensoniq->gameport) {
+		int port = ensoniq->gameport->io;
+
+		gameport_unregister_port(ensoniq->gameport);
+		ensoniq->gameport = NULL;
+		ensoniq->ctrl &= ~ES_JYSTK_EN;
+		outl(ensoniq->ctrl, ES_REG(ensoniq, CONTROL));
+		release_region(port, 8);
+	}
 }
+#else
+static inline int snd_ensoniq_create_gameport(ensoniq_t *ensoniq, long port) { return -ENOSYS; }
+static inline void snd_ensoniq_free_gameport(ensoniq_t *ensoniq) { }
 #endif /* SUPPORT_JOYSTICK */
 
 /*
@@ -1810,10 +1876,7 @@ static void __devinit snd_ensoniq_proc_init(ensoniq_t * ensoniq)
 
 static int snd_ensoniq_free(ensoniq_t *ensoniq)
 {
-#ifdef SUPPORT_JOYSTICK
-	if (ensoniq->ctrl & ES_JYSTK_EN)
-		snd_ensoniq_joystick_free(ensoniq);
-#endif
+	snd_ensoniq_free_gameport(ensoniq);
 	if (ensoniq->irq < 0)
 		goto __hw_end;
 #ifdef CHIP1370
@@ -1955,21 +2018,11 @@ static int __devinit snd_ensoniq_create(snd_card_t * card,
 		if (pci->vendor == es1371_ac97_reset_hack[idx].vid &&
 		    pci->device == es1371_ac97_reset_hack[idx].did &&
 		    ensoniq->rev == es1371_ac97_reset_hack[idx].rev) {
-		        unsigned long tmo;
-			signed long tmo2;
-
 			ensoniq->cssr |= ES_1371_ST_AC97_RST;
 			outl(ensoniq->cssr, ES_REG(ensoniq, STATUS));
 			/* need to delay around 20ms(bleech) to give
 			some CODECs enough time to wakeup */
-			tmo = jiffies + (HZ / 50) + 1;
-			while (1) {
-				tmo2 = tmo - jiffies;
-				if (tmo2 <= 0)
-					break;
-				set_current_state(TASK_UNINTERRUPTIBLE);
-				schedule_timeout(tmo2);
-			}
+			msleep(20);
 			break;
 		}
 	/* AC'97 warm reset to start the bitclk */
@@ -2043,9 +2096,7 @@ static void snd_ensoniq_midi_interrupt(ensoniq_t * ensoniq)
 		if ((status & mask) == 0)
 			break;
 		byte = inb(ES_REG(ensoniq, UART_DATA));
-		spin_unlock(&ensoniq->reg_lock);
 		snd_rawmidi_receive(ensoniq->midi_input, &byte, 1);
-		spin_lock(&ensoniq->reg_lock);
 	}
 	spin_unlock(&ensoniq->reg_lock);
 
@@ -2313,22 +2364,9 @@ static int __devinit snd_audiopci_probe(struct pci_dev *pci,
 		snd_card_free(card);
 		return err;
 	}
-#ifdef SUPPORT_JOYSTICK
-#ifdef CHIP1371
-	switch (joystick_port[dev]) {
-	case 1: /* auto-detect */
-	case 0x200:
-	case 0x208:
-	case 0x210:
-	case 0x218:
-		snd_ensoniq_joystick(ensoniq, joystick_port[dev]);
-		break;
-	}
-#else
-	if (joystick[dev])
-		snd_ensoniq_joystick(ensoniq, 0x200);
-#endif
-#endif /* SUPPORT_JOYSTICK */
+
+	snd_ensoniq_create_gameport(ensoniq, dev);
+
 	strcpy(card->driver, DRIVER_NAME);
 
 	strcpy(card->shortname, "Ensoniq AudioPCI");
@@ -2363,7 +2401,7 @@ static struct pci_driver driver = {
 	
 static int __init alsa_card_ens137x_init(void)
 {
-	return pci_module_init(&driver);
+	return pci_register_driver(&driver);
 }
 
 static void __exit alsa_card_ens137x_exit(void)

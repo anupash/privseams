@@ -4034,7 +4034,7 @@ static void gdth_log_event(gdth_evt_data *dvr, char *buffer)
 }
 
 #ifdef GDTH_STATISTICS
-void gdth_timeout(ulong data)
+static void gdth_timeout(ulong data)
 {
     ulong32 i;
     Scsi_Cmnd *nscp;
@@ -4062,7 +4062,7 @@ void gdth_timeout(ulong data)
 }
 #endif
 
-void __init internal_setup(char *str,int *ints)
+static void __init internal_setup(char *str,int *ints)
 {
     int i, argc;
     char *cur_str, *argv;
@@ -4153,7 +4153,7 @@ int __init option_setup(char *str)
     return 1;
 }
 
-int __init gdth_detect(Scsi_Host_Template *shtp)
+static int __init gdth_detect(Scsi_Host_Template *shtp)
 {
     struct Scsi_Host *shp;
     gdth_pci_str pcistr[MAXHA];
@@ -4521,9 +4521,7 @@ int __init gdth_detect(Scsi_Host_Template *shtp)
             ha->virt_bus = hdr_channel;
 
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
-            scsi_set_device(shp, &pcistr[ctr].pdev->dev);
-#else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
             scsi_set_pci_device(shp, pcistr[ctr].pdev);
 #endif
             if (!(ha->cache_feat & ha->raw_feat & ha->screen_feat &GDT_64BIT)||
@@ -4604,7 +4602,7 @@ int __init gdth_detect(Scsi_Host_Template *shtp)
 }
 
 
-int gdth_release(struct Scsi_Host *shp)
+static int gdth_release(struct Scsi_Host *shp)
 {
     int hanum;
     gdth_ha_str *ha;
@@ -4691,7 +4689,7 @@ static const char *gdth_ctr_name(int hanum)
     return("");
 }
 
-const char *gdth_info(struct Scsi_Host *shp)
+static const char *gdth_info(struct Scsi_Host *shp)
 {
     int hanum;
     gdth_ha_str *ha;
@@ -4703,20 +4701,7 @@ const char *gdth_info(struct Scsi_Host *shp)
     return ((const char *)ha->binfo.type_string);
 }
 
-/* new error handling */
-int gdth_eh_abort(Scsi_Cmnd *scp)
-{
-    TRACE2(("gdth_eh_abort()\n"));
-    return FAILED;
-}
-
-int gdth_eh_device_reset(Scsi_Cmnd *scp)
-{
-    TRACE2(("gdth_eh_device_reset()\n"));
-    return FAILED;
-}
-
-int gdth_eh_bus_reset(Scsi_Cmnd *scp)
+static int gdth_eh_bus_reset(Scsi_Cmnd *scp)
 {
     int i, hanum;
     gdth_ha_str *ha;
@@ -4770,17 +4755,10 @@ int gdth_eh_bus_reset(Scsi_Cmnd *scp)
     return SUCCESS;
 }
 
-int gdth_eh_host_reset(Scsi_Cmnd *scp)
-{
-    TRACE2(("gdth_eh_host_reset()\n"));
-    return FAILED;
-}
-
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
-int gdth_bios_param(struct scsi_device *sdev,struct block_device *bdev,sector_t cap,int *ip)
+static int gdth_bios_param(struct scsi_device *sdev,struct block_device *bdev,sector_t cap,int *ip)
 #else
-int gdth_bios_param(Disk *disk,kdev_t dev,int *ip)
+static int gdth_bios_param(Disk *disk,kdev_t dev,int *ip)
 #endif
 {
     unchar b, t;
@@ -4818,7 +4796,7 @@ int gdth_bios_param(Disk *disk,kdev_t dev,int *ip)
 }
 
 
-int gdth_queuecommand(Scsi_Cmnd *scp,void (*done)(Scsi_Cmnd *))
+static int gdth_queuecommand(Scsi_Cmnd *scp,void (*done)(Scsi_Cmnd *))
 {
     int hanum;
     int priority;
@@ -5713,10 +5691,7 @@ static Scsi_Host_Template driver_template = {
         .release                = gdth_release,
         .info                   = gdth_info, 
         .queuecommand           = gdth_queuecommand,
-        .eh_abort_handler       = gdth_eh_abort, 
-        .eh_device_reset_handler = gdth_eh_device_reset,
         .eh_bus_reset_handler   = gdth_eh_bus_reset,
-        .eh_host_reset_handler  = gdth_eh_host_reset,
         .bios_param             = gdth_bios_param,
         .can_queue              = GDTH_MAXCMDS,
         .this_id                = -1,

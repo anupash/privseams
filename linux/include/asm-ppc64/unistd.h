@@ -268,7 +268,7 @@
 #define __NR_rtas		255
 /* Number 256 is reserved for sys_debug_setcontext */
 /* Number 257 is reserved for vserver */
-/* Number 258 is reserved for new sys_remap_file_pages */
+/* 258 currently unused */
 #define __NR_mbind		259
 #define __NR_get_mempolicy	260
 #define __NR_set_mempolicy	261
@@ -282,8 +282,14 @@
 #define __NR_add_key		269
 #define __NR_request_key	270
 #define __NR_keyctl		271
+#define __NR_waitid		272
+#define __NR_ioprio_set		273
+#define __NR_ioprio_get		274
+#define __NR_inotify_init	275
+#define __NR_inotify_add_watch	276
+#define __NR_inotify_rm_watch	277
 
-#define __NR_syscalls		272
+#define __NR_syscalls		278
 #ifdef __KERNEL__
 #define NR_syscalls	__NR_syscalls
 #endif
@@ -472,7 +478,7 @@ long sys_rt_sigaction(int sig, const struct sigaction __user *act,
  * What we want is __attribute__((weak,alias("sys_ni_syscall"))),
  * but it doesn't work on all toolchains, so we just do it by hand
  */
-#define cond_syscall(x) asm(".weak\t." #x "\n\t.set\t." #x ",.sys_ni_syscall");
+#define cond_syscall(x) asm(".weak\t." #x "\n\t.set\t." #x ",.sys_ni_syscall")
 
 #endif		/* __KERNEL__ */
 

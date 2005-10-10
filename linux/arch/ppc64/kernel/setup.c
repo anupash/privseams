@@ -41,7 +41,6 @@
 #include <asm/smp.h>
 #include <asm/elf.h>
 #include <asm/machdep.h>
-#include <asm/iSeries/LparData.h>
 #include <asm/paca.h>
 #include <asm/ppcdebug.h>
 #include <asm/time.h>
@@ -57,6 +56,8 @@
 #include <asm/cache.h>
 #include <asm/page.h>
 #include <asm/mmu.h>
+#include <asm/lmb.h>
+#include <asm/iSeries/ItLpNaca.h>
 
 #ifdef DEBUG
 #define DBG(fmt...) udbg_printf(fmt)
@@ -95,18 +96,12 @@ extern void udbg_init_maple_realmode(void);
 extern unsigned long klimit;
 
 extern void mm_init_ppc64(void);
-extern int  idle_setup(void);
 extern void stab_initialize(unsigned long stab);
 extern void htab_initialize(void);
 extern void early_init_devtree(void *flat_dt);
 extern void unflatten_device_tree(void);
 
 extern void smp_release_cpus(void);
-
-unsigned long decr_overclock = 1;
-unsigned long decr_overclock_proc0 = 1;
-unsigned long decr_overclock_set = 0;
-unsigned long decr_overclock_proc0_set = 0;
 
 int have_of = 1;
 int boot_cpuid = 0;
@@ -129,6 +124,7 @@ int ucache_bsize;
 /* The main machine-dep calls structure
  */
 struct machdep_calls ppc_md;
+EXPORT_SYMBOL(ppc_md);
 
 #ifdef CONFIG_MAGIC_SYSRQ
 unsigned long SYSRQ_KEY;
@@ -268,15 +264,9 @@ static void __init setup_cpu_maps(void)
 		nthreads = len / sizeof(u32);
 
 		for (j = 0; j < nthreads && cpu < NR_CPUS; j++) {
-			/*
-			 * Only spin up secondary threads if SMT is enabled.
-			 * We must leave space in the logical map for the
-			 * threads.
-			 */
-			if (j == 0 || smt_enabled_at_boot) {
-				cpu_set(cpu, cpu_present_map);
-				set_hard_smp_processor_id(cpu, intserv[j]);
-			}
+			cpu_set(cpu, cpu_present_map);
+			set_hard_smp_processor_id(cpu, intserv[j]);
+
 			if (intserv[j] == boot_cpuid_phys)
 				swap_cpuid = cpu;
 			cpu_set(cpu, cpu_possible_map);
@@ -315,7 +305,7 @@ static void __init setup_cpu_maps(void)
 		maxcpus = ireg[num_addr_cell + num_size_cell];
 
 		/* Double maxcpus for processors which have SMT capability */
-		if (cur_cpu_spec->cpu_features & CPU_FTR_SMT)
+		if (cpu_has_feature(CPU_FTR_SMT))
 			maxcpus *= 2;
 
 		if (maxcpus > NR_CPUS) {
@@ -339,7 +329,7 @@ static void __init setup_cpu_maps(void)
 	 */
 	for_each_cpu(cpu) {
 		cpu_set(cpu, cpu_sibling_map[cpu]);
-		if (cur_cpu_spec->cpu_features & CPU_FTR_SMT)
+		if (cpu_has_feature(CPU_FTR_SMT))
 			cpu_set(cpu ^ 0x1, cpu_sibling_map[cpu]);
 	}
 
@@ -353,6 +343,7 @@ static void __init setup_cpu_maps(void)
 extern struct machdep_calls pSeries_md;
 extern struct machdep_calls pmac_md;
 extern struct machdep_calls maple_md;
+extern struct machdep_calls bpa_md;
 
 /* Ultimately, stuff them in an elf section like initcalls... */
 static struct machdep_calls __initdata *machines[] = {
@@ -365,6 +356,9 @@ static struct machdep_calls __initdata *machines[] = {
 #ifdef CONFIG_PPC_MAPLE
 	&maple_md,
 #endif /* CONFIG_PPC_MAPLE */
+#ifdef CONFIG_PPC_BPA
+	&bpa_md,
+#endif
 	NULL
 };
 
@@ -604,12 +598,12 @@ void __init setup_system(void)
 	 */
 	initialize_cache_info();
 
-#ifdef CONFIG_PPC_PSERIES
+#ifdef CONFIG_PPC_RTAS
 	/*
 	 * Initialize RTAS if available
 	 */
 	rtas_initialize();
-#endif /* CONFIG_PPC_PSERIES */
+#endif /* CONFIG_PPC_RTAS */
 
 	/*
 	 * Check if we have an initrd provided via the device-tree
@@ -641,12 +635,11 @@ void __init setup_system(void)
 	early_console_initialized = 1;
 	register_console(&udbg_console);
 
-#endif /* !CONFIG_PPC_ISERIES */
-
 	/* Save unparsed command line copy for /proc/cmdline */
 	strlcpy(saved_command_line, cmd_line, COMMAND_LINE_SIZE);
 
 	parse_early_param();
+#endif /* !CONFIG_PPC_ISERIES */
 
 #if defined(CONFIG_SMP) && !defined(CONFIG_PPC_ISERIES)
 	/*
@@ -683,36 +676,50 @@ void __init setup_system(void)
 	DBG(" <- setup_system()\n");
 }
 
+/* also used by kexec */
+void machine_shutdown(void)
+{
+	if (ppc_md.nvram_sync)
+		ppc_md.nvram_sync();
+}
 
 void machine_restart(char *cmd)
 {
-	if (ppc_md.nvram_sync)
-		ppc_md.nvram_sync();
+	machine_shutdown();
 	ppc_md.restart(cmd);
+#ifdef CONFIG_SMP
+	smp_send_stop();
+#endif
+	printk(KERN_EMERG "System Halted, OK to turn off power\n");
+	local_irq_disable();
+	while (1) ;
 }
 
-EXPORT_SYMBOL(machine_restart);
-  
 void machine_power_off(void)
 {
-	if (ppc_md.nvram_sync)
-		ppc_md.nvram_sync();
+	machine_shutdown();
 	ppc_md.power_off();
+#ifdef CONFIG_SMP
+	smp_send_stop();
+#endif
+	printk(KERN_EMERG "System Halted, OK to turn off power\n");
+	local_irq_disable();
+	while (1) ;
 }
+/* Used by the G5 thermal driver */
+EXPORT_SYMBOL_GPL(machine_power_off);
 
-EXPORT_SYMBOL(machine_power_off);
-  
 void machine_halt(void)
 {
-	if (ppc_md.nvram_sync)
-		ppc_md.nvram_sync();
+	machine_shutdown();
 	ppc_md.halt();
+#ifdef CONFIG_SMP
+	smp_send_stop();
+#endif
+	printk(KERN_EMERG "System Halted, OK to turn off power\n");
+	local_irq_disable();
+	while (1) ;
 }
-
-EXPORT_SYMBOL(machine_halt);
-
-unsigned long ppc_proc_freq;
-unsigned long ppc_tb_freq;
 
 static int ppc64_panic_event(struct notifier_block *this,
                              unsigned long event, void *ptr)
@@ -767,7 +774,7 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		seq_printf(m, "unknown (%08x)", pvr);
 
 #ifdef CONFIG_ALTIVEC
-	if (cur_cpu_spec->cpu_features & CPU_FTR_ALTIVEC)
+	if (cpu_has_feature(CPU_FTR_ALTIVEC))
 		seq_printf(m, ", altivec supported");
 #endif /* CONFIG_ALTIVEC */
 
@@ -805,20 +812,31 @@ struct seq_operations cpuinfo_op = {
 	.show =	show_cpuinfo,
 };
 
-#if 0 /* XXX not currently used */
+/*
+ * These three variables are used to save values passed to us by prom_init()
+ * via the device tree. The TCE variables are needed because with a memory_limit
+ * in force we may need to explicitly map the TCE are at the top of RAM.
+ */
 unsigned long memory_limit;
+unsigned long tce_alloc_start;
+unsigned long tce_alloc_end;
 
+#ifdef CONFIG_PPC_ISERIES
+/*
+ * On iSeries we just parse the mem=X option from the command line.
+ * On pSeries it's a bit more complicated, see prom_init_mem()
+ */
 static int __init early_parsemem(char *p)
 {
 	if (!p)
 		return 0;
 
-	memory_limit = memparse(p, &p);
+	memory_limit = ALIGN(memparse(p, &p), PAGE_SIZE);
 
 	return 0;
 }
 early_param("mem", early_parsemem);
-#endif
+#endif /* CONFIG_PPC_ISERIES */
 
 #ifdef CONFIG_PPC_MULTIPLATFORM
 static int __init set_preferred_console(void)
@@ -990,6 +1008,34 @@ static void __init emergency_stack_init(void)
 }
 
 /*
+ * Called from setup_arch to initialize the bitmap of available
+ * syscalls in the systemcfg page
+ */
+void __init setup_syscall_map(void)
+{
+	unsigned int i, count64 = 0, count32 = 0;
+	extern unsigned long *sys_call_table;
+	extern unsigned long *sys_call_table32;
+	extern unsigned long sys_ni_syscall;
+
+
+	for (i = 0; i < __NR_syscalls; i++) {
+		if (sys_call_table[i] == sys_ni_syscall)
+			continue;
+		count64++;
+		systemcfg->syscall_map_64[i >> 5] |= 0x80000000UL >> (i & 0x1f);
+	}
+	for (i = 0; i < __NR_syscalls; i++) {
+		if (sys_call_table32[i] == sys_ni_syscall)
+			continue;
+		count32++;
+		systemcfg->syscall_map_32[i >> 5] |= 0x80000000UL >> (i & 0x1f);
+	}
+	printk(KERN_INFO "Syscall map setup, %d 32 bits and %d 64 bits syscalls\n",
+	       count32, count64);
+}
+
+/*
  * Called into from start_kernel, after lock_kernel has been called.
  * Initializes bootmem, which is unsed to manage page allocation until
  * mem_init is called.
@@ -1024,13 +1070,22 @@ void __init setup_arch(char **cmdline_p)
 	irqstack_early_init();
 	emergency_stack_init();
 
+	stabs_alloc();
+
 	/* set up the bootmem stuff with available memory */
 	do_init_bootmem();
+	sparse_init();
+
+	/* initialize the syscall map in systemcfg */
+	setup_syscall_map();
 
 	ppc_md.setup_arch();
 
-	/* Select the correct idle loop for the platform. */
-	idle_setup();
+	/* Use the default idle loop if the platform hasn't provided one. */
+	if (NULL == ppc_md.idle_loop) {
+		ppc_md.idle_loop = default_idle;
+		printk(KERN_INFO "Using default idle loop\n");
+	}
 
 	paging_init();
 	ppc64_boot_msg(0x15, "Setup Done");
@@ -1047,11 +1102,11 @@ void __init setup_arch(char **cmdline_p)
 static void ppc64_do_msg(unsigned int src, const char *msg)
 {
 	if (ppc_md.progress) {
-		char buf[32];
+		char buf[128];
 
-		sprintf(buf, "%08x        \n", src);
+		sprintf(buf, "%08X\n", src);
 		ppc_md.progress(buf, 0);
-		sprintf(buf, "%-16s", msg);
+		snprintf(buf, 128, "%s", msg);
 		ppc_md.progress(buf, 0);
 	}
 }
@@ -1084,63 +1139,14 @@ void ppc64_dump_msg(unsigned int src, const char *msg)
 	printk("[dump]%04x %s\n", src, msg);
 }
 
-int set_spread_lpevents( char * str )
-{
-	/* The parameter is the number of processors to share in processing lp events */
-	unsigned long i;
-	unsigned long val = simple_strtoul( str, NULL, 0 );
-	if ( ( val > 0 ) && ( val <= NR_CPUS ) ) {
-		for ( i=1; i<val; ++i )
-			paca[i].lpqueue_ptr = paca[0].lpqueue_ptr;
-		printk("lpevent processing spread over %ld processors\n", val);
-	}
-	else
-		printk("invalid spreaqd_lpevents %ld\n", val);
-	return 1;
-}	
-
 /* This should only be called on processor 0 during calibrate decr */
-void setup_default_decr(void)
+void __init setup_default_decr(void)
 {
 	struct paca_struct *lpaca = get_paca();
 
-	if ( decr_overclock_set && !decr_overclock_proc0_set )
-		decr_overclock_proc0 = decr_overclock;
-
-	lpaca->default_decr = tb_ticks_per_jiffy / decr_overclock_proc0;	
+	lpaca->default_decr = tb_ticks_per_jiffy;
 	lpaca->next_jiffy_update_tb = get_tb() + tb_ticks_per_jiffy;
 }
-
-int set_decr_overclock_proc0( char * str )
-{
-	unsigned long val = simple_strtoul( str, NULL, 0 );
-	if ( ( val >= 1 ) && ( val <= 48 ) ) {
-		decr_overclock_proc0_set = 1;
-		decr_overclock_proc0 = val;
-		printk("proc 0 decrementer overclock factor of %ld\n", val);
-	}
-	else
-		printk("invalid proc 0 decrementer overclock factor of %ld\n", val);
-	return 1;
-}
-
-int set_decr_overclock( char * str )
-{
-	unsigned long val = simple_strtoul( str, NULL, 0 );
-	if ( ( val >= 1 ) && ( val <= 48 ) ) {
-		decr_overclock_set = 1;
-		decr_overclock = val;
-		printk("decrementer overclock factor of %ld\n", val);
-	}
-	else
-		printk("invalid decrementer overclock factor of %ld\n", val);
-	return 1;
-
-}
-
-__setup("spread_lpevents=", set_spread_lpevents );
-__setup("decr_overclock_proc0=", set_decr_overclock_proc0 );
-__setup("decr_overclock=", set_decr_overclock );
 
 #ifndef CONFIG_PPC_ISERIES
 /*
@@ -1335,6 +1341,12 @@ EXPORT_SYMBOL(check_legacy_ioport);
 static int __init early_xmon(char *p)
 {
 	/* ensure xmon is enabled */
+	if (p) {
+		if (strncmp(p, "on", 2) == 0)
+			xmon_init();
+		if (strncmp(p, "early", 5) != 0)
+			return 0;
+	}
 	xmon_init();
 	debugger(NULL);
 
@@ -1345,9 +1357,6 @@ early_param("xmon", early_xmon);
 
 void cpu_die(void)
 {
-	idle_task_exit();
 	if (ppc_md.cpu_die)
 		ppc_md.cpu_die();
-	local_irq_disable();
-	for (;;);
 }

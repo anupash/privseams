@@ -63,6 +63,7 @@
 MODULE_AUTHOR("Takashi Iwai <tiwai@suse.de>");
 MODULE_DESCRIPTION("ALSA sequencer MIDI-through client");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("snd-seq-client-" __stringify(SNDRV_SEQ_CLIENT_DUMMY));
 
 static int ports = 1;
 static int duplex = 0;
@@ -139,10 +140,7 @@ dummy_input(snd_seq_event_t *ev, int direct, void *private_data, int atomic, int
 static void
 dummy_free(void *private_data)
 {
-	snd_seq_dummy_port_t *p;
-
-	p = private_data;
-	kfree(p);
+	kfree(private_data);
 }
 
 /*

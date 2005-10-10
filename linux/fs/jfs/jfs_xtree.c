@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) International Business Machines Corp., 2000-2004
+ *   Copyright (C) International Business Machines Corp., 2000-2005
  *
  *   This program is free software;  you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -111,8 +111,8 @@ static struct {
 /*
  * forward references
  */
-static int xtSearch(struct inode *ip,
-		    s64 xoff, int *cmpp, struct btstack * btstack, int flag);
+static int xtSearch(struct inode *ip, s64 xoff, s64 *next, int *cmpp,
+		    struct btstack * btstack, int flag);
 
 static int xtSplitUp(tid_t tid,
 		     struct inode *ip,
@@ -135,14 +135,6 @@ static int xtSearchNode(struct inode *ip,
 static int xtRelink(tid_t tid, struct inode *ip, xtpage_t * fp);
 #endif				/*  _STILL_TO_PORT */
 
-/* External references */
-
-/*
- *      debug control
- */
-/*      #define _JFS_DEBUG_XTREE        1 */
-
-
 /*
  *      xtLookup()
  *
@@ -159,11 +151,12 @@ int xtLookup(struct inode *ip, s64 lstart,
 	xtpage_t *p;
 	int index;
 	xad_t *xad;
-	s64 size, xoff, xend;
+	s64 next, size, xoff, xend;
 	int xlen;
 	s64 xaddr;
 
-	*plen = 0;
+	*paddr = 0;
+	*plen = llen;
 
 	if (!no_check) {
 		/* is lookup offset beyond eof ? */
@@ -180,7 +173,7 @@ int xtLookup(struct inode *ip, s64 lstart,
 	 * search for the xad entry covering the logical extent
 	 */
 //search:
-	if ((rc = xtSearch(ip, lstart, &cmp, &btstack, 0))) {
+	if ((rc = xtSearch(ip, lstart, &next, &cmp, &btstack, 0))) {
 		jfs_err("xtLookup: xtSearch returned %d", rc);
 		return rc;
 	}
@@ -198,8 +191,11 @@ int xtLookup(struct inode *ip, s64 lstart,
 	 * lstart is a page start address,
 	 * i.e., lstart cannot start in a hole;
 	 */
-	if (cmp)
+	if (cmp) {
+		if (next)
+			*plen = min(next - lstart, llen);
 		goto out;
+	}
 
 	/*
 	 * lxd covered by xad
@@ -284,7 +280,7 @@ int xtLookupList(struct inode *ip, struct lxdlist * lxdlist,
 	if (lstart >= size)
 		return 0;
 
-	if ((rc = xtSearch(ip, lstart, &cmp, &btstack, 0)))
+	if ((rc = xtSearch(ip, lstart, NULL, &cmp, &btstack, 0)))
 		return rc;
 
 	/*
@@ -488,6 +484,7 @@ int xtLookupList(struct inode *ip, struct lxdlist * lxdlist,
  * parameters:
  *      ip      - file object;
  *      xoff    - extent offset;
+ *      nextp	- address of next extent (if any) for search miss
  *      cmpp    - comparison result:
  *      btstack - traverse stack;
  *      flag    - search process flag (XT_INSERT);
@@ -497,7 +494,7 @@ int xtLookupList(struct inode *ip, struct lxdlist * lxdlist,
  *      *cmpp is set to result of comparison with the entry returned.
  *      the page containing the entry is pinned at exit.
  */
-static int xtSearch(struct inode *ip, s64 xoff,	/* offset of extent */
+static int xtSearch(struct inode *ip, s64 xoff,	s64 *nextp,
 		    int *cmpp, struct btstack * btstack, int flag)
 {
 	struct jfs_inode_info *jfs_ip = JFS_IP(ip);
@@ -511,6 +508,7 @@ static int xtSearch(struct inode *ip, s64 xoff,	/* offset of extent */
 	struct btframe *btsp;
 	int nsplit = 0;		/* number of pages to split */
 	s64 t64;
+	s64 next = 0;
 
 	INCREMENT(xtStat.search);
 
@@ -579,6 +577,7 @@ static int xtSearch(struct inode *ip, s64 xoff,	/* offset of extent */
 						 * previous and this entry
 						 */
 						*cmpp = 1;
+						next = t64;
 						goto out;
 					}
 
@@ -622,6 +621,9 @@ static int xtSearch(struct inode *ip, s64 xoff,	/* offset of extent */
 
 			/* update sequential access heuristics */
 			jfs_ip->btindex = index;
+
+			if (nextp)
+				*nextp = next;
 
 			INCREMENT(xtStat.fastSearch);
 			return 0;
@@ -675,10 +677,11 @@ static int xtSearch(struct inode *ip, s64 xoff,	/* offset of extent */
 
 					return 0;
 				}
-
 				/* search hit - internal page:
 				 * descend/search its child page
 				 */
+				if (index < le16_to_cpu(p->header.nextindex)-1)
+					next = offsetXAD(&p->xad[index + 1]);
 				goto next;
 			}
 
@@ -694,6 +697,8 @@ static int xtSearch(struct inode *ip, s64 xoff,	/* offset of extent */
 		 * base is the smallest index with key (Kj) greater than
 		 * search key (K) and may be zero or maxentry index.
 		 */
+		if (base < le16_to_cpu(p->header.nextindex))
+			next = offsetXAD(&p->xad[base]);
 		/*
 		 * search miss - leaf page:
 		 *
@@ -726,6 +731,9 @@ static int xtSearch(struct inode *ip, s64 xoff,	/* offset of extent */
 			else
 				jfs_ip->btorder = BT_RANDOM;
 			jfs_ip->btindex = base;
+
+			if (nextp)
+				*nextp = next;
 
 			return 0;
 		}
@@ -793,6 +801,7 @@ int xtInsert(tid_t tid,		/* transaction id */
 	struct xtsplit split;	/* split information */
 	xad_t *xad;
 	int cmp;
+	s64 next;
 	struct tlock *tlck;
 	struct xtlock *xtlck;
 
@@ -806,7 +815,7 @@ int xtInsert(tid_t tid,		/* transaction id */
 	 * n.b. xtSearch() may return index of maxentry of
 	 * the full page.
 	 */
-	if ((rc = xtSearch(ip, xoff, &cmp, &btstack, XT_INSERT)))
+	if ((rc = xtSearch(ip, xoff, &next, &cmp, &btstack, XT_INSERT)))
 		return rc;
 
 	/* retrieve search result */
@@ -814,7 +823,7 @@ int xtInsert(tid_t tid,		/* transaction id */
 
 	/* This test must follow XT_GETSEARCH since mp must be valid if
 	 * we branch to out: */
-	if (cmp == 0) {
+	if ((cmp == 0) || (next && (xlen > next - xoff))) {
 		rc = -EEXIST;
 		goto out;
 	}
@@ -1626,7 +1635,7 @@ int xtExtend(tid_t tid,		/* transaction id */
 	jfs_info("xtExtend: nxoff:0x%lx nxlen:0x%x", (ulong) xoff, xlen);
 
 	/* there must exist extent to be extended */
-	if ((rc = xtSearch(ip, xoff - 1, &cmp, &btstack, XT_INSERT)))
+	if ((rc = xtSearch(ip, xoff - 1, NULL, &cmp, &btstack, XT_INSERT)))
 		return rc;
 
 	/* retrieve search result */
@@ -1794,7 +1803,7 @@ printf("xtTailgate: nxoff:0x%lx nxlen:0x%x nxaddr:0x%lx\n",
 */
 
 	/* there must exist extent to be tailgated */
-	if ((rc = xtSearch(ip, xoff, &cmp, &btstack, XT_INSERT)))
+	if ((rc = xtSearch(ip, xoff, NULL, &cmp, &btstack, XT_INSERT)))
 		return rc;
 
 	/* retrieve search result */
@@ -1977,7 +1986,7 @@ int xtUpdate(tid_t tid, struct inode *ip, xad_t * nxad)
 	nxlen = lengthXAD(nxad);
 	nxaddr = addressXAD(nxad);
 
-	if ((rc = xtSearch(ip, nxoff, &cmp, &btstack, XT_INSERT)))
+	if ((rc = xtSearch(ip, nxoff, NULL, &cmp, &btstack, XT_INSERT)))
 		return rc;
 
 	/* retrieve search result */
@@ -2291,7 +2300,7 @@ int xtUpdate(tid_t tid, struct inode *ip, xad_t * nxad)
 	if (nextindex == le16_to_cpu(p->header.maxentry)) {
 		XT_PUTPAGE(mp);
 
-		if ((rc = xtSearch(ip, nxoff, &cmp, &btstack, XT_INSERT)))
+		if ((rc = xtSearch(ip, nxoff, NULL, &cmp, &btstack, XT_INSERT)))
 			return rc;
 
 		/* retrieve search result */
@@ -2438,6 +2447,7 @@ int xtAppend(tid_t tid,		/* transaction id */
 	int nsplit, nblocks, xlen;
 	struct pxdlist pxdlist;
 	pxd_t *pxd;
+	s64 next;
 
 	xaddr = *xaddrp;
 	xlen = *xlenp;
@@ -2452,7 +2462,7 @@ int xtAppend(tid_t tid,		/* transaction id */
 	 * n.b. xtSearch() may return index of maxentry of
 	 * the full page.
 	 */
-	if ((rc = xtSearch(ip, xoff, &cmp, &btstack, XT_INSERT)))
+	if ((rc = xtSearch(ip, xoff, &next, &cmp, &btstack, XT_INSERT)))
 		return rc;
 
 	/* retrieve search result */
@@ -2462,6 +2472,9 @@ int xtAppend(tid_t tid,		/* transaction id */
 		rc = -EEXIST;
 		goto out;
 	}
+
+	if (next)
+		xlen = min(xlen, (int)(next - xoff));
 //insert:
 	/*
 	 *      insert entry for new extent
@@ -2600,7 +2613,7 @@ int xtDelete(tid_t tid, struct inode *ip, s64 xoff, s32 xlen, int flag)
 	/*
 	 * find the matching entry; xtSearch() pins the page
 	 */
-	if ((rc = xtSearch(ip, xoff, &cmp, &btstack, 0)))
+	if ((rc = xtSearch(ip, xoff, NULL, &cmp, &btstack, 0)))
 		return rc;
 
 	XT_GETSEARCH(ip, btstack.top, bn, mp, p, index);
@@ -2852,7 +2865,7 @@ xtRelocate(tid_t tid, struct inode * ip, xad_t * oxad,	/* old XAD */
 	 */
 	if (xtype == DATAEXT) {
 		/* search in leaf entry */
-		rc = xtSearch(ip, xoff, &cmp, &btstack, 0);
+		rc = xtSearch(ip, xoff, NULL, &cmp, &btstack, 0);
 		if (rc)
 			return rc;
 
@@ -2958,7 +2971,7 @@ xtRelocate(tid_t tid, struct inode * ip, xad_t * oxad,	/* old XAD */
 		}
 
 		/* get back parent page */
-		if ((rc = xtSearch(ip, xoff, &cmp, &btstack, 0)))
+		if ((rc = xtSearch(ip, xoff, NULL, &cmp, &btstack, 0)))
 			return rc;
 
 		XT_GETSEARCH(ip, btstack.top, bn, pmp, pp, index);
@@ -3991,7 +4004,7 @@ s64 xtTruncate_pmap(tid_t tid, struct inode *ip, s64 committed_size)
 
 	if (committed_size) {
 		xoff = (committed_size >> JFS_SBI(ip->i_sb)->l2bsize) - 1;
-		rc = xtSearch(ip, xoff, &cmp, &btstack, 0);
+		rc = xtSearch(ip, xoff, NULL, &cmp, &btstack, 0);
 		if (rc)
 			return rc;
 
@@ -4118,338 +4131,6 @@ s64 xtTruncate_pmap(tid_t tid, struct inode *ip, s64 committed_size)
 
 	return 0;
 }
-
-
-#ifdef _JFS_DEBUG_XTREE
-/*
- *      xtDisplayTree()
- *
- * function: traverse forward
- */
-int xtDisplayTree(struct inode *ip)
-{
-	int rc = 0;
-	struct metapage *mp;
-	xtpage_t *p;
-	s64 bn, pbn;
-	int index, lastindex, v, h;
-	xad_t *xad;
-	struct btstack btstack;
-	struct btframe *btsp;
-	struct btframe *parent;
-
-	printk("display B+-tree.\n");
-
-	/* clear stack */
-	btsp = btstack.stack;
-
-	/*
-	 * start with root
-	 *
-	 * root resides in the inode
-	 */
-	bn = 0;
-	v = h = 0;
-
-	/*
-	 * first access of each page:
-	 */
-      getPage:
-	XT_GETPAGE(ip, bn, mp, PSIZE, p, rc);
-	if (rc)
-		return rc;
-
-	/* process entries forward from first index */
-	index = XTENTRYSTART;
-	lastindex = le16_to_cpu(p->header.nextindex) - 1;
-
-	if (p->header.flag & BT_INTERNAL) {
-		/*
-		 * first access of each internal page
-		 */
-		goto getChild;
-	} else {		/* (p->header.flag & BT_LEAF) */
-
-		/*
-		 * first access of each leaf page
-		 */
-		printf("leaf page ");
-		xtDisplayPage(ip, bn, p);
-
-		/* unpin the leaf page */
-		XT_PUTPAGE(mp);
-	}
-
-	/*
-	 * go back up to the parent page
-	 */
-      getParent:
-	/* pop/restore parent entry for the current child page */
-	if ((parent = (btsp == btstack.stack ? NULL : --btsp)) == NULL)
-		/* current page must have been root */
-		return;
-
-	/*
-	 * parent page scan completed
-	 */
-	if ((index = parent->index) == (lastindex = parent->lastindex)) {
-		/* go back up to the parent page */
-		goto getParent;
-	}
-
-	/*
-	 * parent page has entries remaining
-	 */
-	/* get back the parent page */
-	bn = parent->bn;
-	/* v = parent->level; */
-	XT_GETPAGE(ip, bn, mp, PSIZE, p, rc);
-	if (rc)
-		return rc;
-
-	/* get next parent entry */
-	index++;
-
-	/*
-	 * internal page: go down to child page of current entry
-	 */
-      getChild:
-	/* push/save current parent entry for the child page */
-	btsp->bn = pbn = bn;
-	btsp->index = index;
-	btsp->lastindex = lastindex;
-	/* btsp->level = v; */
-	/* btsp->node = h; */
-	++btsp;
-
-	/* get child page */
-	xad = &p->xad[index];
-	bn = addressXAD(xad);
-
-	/*
-	 * first access of each internal entry:
-	 */
-	/* release parent page */
-	XT_PUTPAGE(mp);
-
-	printk("traverse down 0x%lx[%d]->0x%lx\n", (ulong) pbn, index,
-	       (ulong) bn);
-	v++;
-	h = index;
-
-	/* process the child page */
-	goto getPage;
-}
-
-
-/*
- *      xtDisplayPage()
- *
- * function: display page
- */
-int xtDisplayPage(struct inode *ip, s64 bn, xtpage_t * p)
-{
-	int rc = 0;
-	xad_t *xad;
-	s64 xaddr, xoff;
-	int xlen, i, j;
-
-	/* display page control */
-	printf("bn:0x%lx flag:0x%x nextindex:%d\n",
-	       (ulong) bn, p->header.flag,
-	       le16_to_cpu(p->header.nextindex));
-
-	/* display entries */
-	xad = &p->xad[XTENTRYSTART];
-		for (i = XTENTRYSTART, j = 1; i < le16_to_cpu(p->header.nextindex);
-		     i++, xad++, j++) {
-			xoff = offsetXAD(xad);
-			xaddr = addressXAD(xad);
-			xlen = lengthXAD(xad);
-			printf("\t[%d] 0x%lx:0x%lx(0x%x)", i, (ulong) xoff,
-			       (ulong) xaddr, xlen);
-
-			if (j == 4) {
-				printf("\n");
-				j = 0;
-		}
-	}
-
-	printf("\n");
-}
-#endif				/* _JFS_DEBUG_XTREE */
-
-
-#ifdef _JFS_WIP
-/*
- *      xtGather()
- *
- * function:
- *      traverse for allocation acquiring tlock at commit time
- *      (vs at the time of update) logging backward top down
- *
- * note:
- *      problem - establishing that all new allocation have been
- *      processed both for append and random write in sparse file
- *      at the current entry at the current subtree root page
- *
- */
-int xtGather(btree_t *t)
-{
-	int rc = 0;
-	xtpage_t *p;
-	u64 bn;
-	int index;
-	btentry_t *e;
-	struct btstack btstack;
-	struct btsf *parent;
-
-	/* clear stack */
-	BT_CLR(&btstack);
-
-	/*
-	 * start with root
-	 *
-	 * root resides in the inode
-	 */
-	bn = 0;
-	XT_GETPAGE(ip, bn, mp, PSIZE, p, rc);
-	if (rc)
-		return rc;
-
-	/* new root is NOT pointed by a new entry
-	   if (p->header.flag & NEW)
-	   allocate new page lock;
-	   write a NEWPAGE log;
-	 */
-
-      dopage:
-	/*
-	 * first access of each page:
-	 */
-	/* process entries backward from last index */
-	index = le16_to_cpu(p->header.nextindex) - 1;
-
-	if (p->header.flag & BT_LEAF) {
-		/*
-		 * first access of each leaf page
-		 */
-		/* process leaf page entries backward */
-		for (; index >= XTENTRYSTART; index--) {
-			e = &p->xad[index];
-			/*
-			 * if newpage, log NEWPAGE.
-			 *
-			 if (e->flag & XAD_NEW) {
-			 nfound =+ entry->length;
-			 update current page lock for the entry;
-			 newpage(entry);
-			 *
-			 * if moved, log move.
-			 *
-			 } else if (e->flag & XAD_MOVED) {
-			 reset flag;
-			 update current page lock for the entry;
-			 }
-			 */
-		}
-
-		/* unpin the leaf page */
-		XT_PUTPAGE(mp);
-
-		/*
-		 * go back up to the parent page
-		 */
-	      getParent:
-		/* restore parent entry for the current child page */
-		if ((parent = BT_POP(&btstack)) == NULL)
-			/* current page must have been root */
-			return 0;
-
-		if ((index = parent->index) == XTENTRYSTART) {
-			/*
-			 * parent page scan completed
-			 */
-			/* go back up to the parent page */
-			goto getParent;
-		} else {
-			/*
-			 * parent page has entries remaining
-			 */
-			/* get back the parent page */
-			bn = parent->bn;
-			XT_GETPAGE(ip, bn, mp, PSIZE, p, rc);
-			if (rc)
-				return -EIO;
-
-			/* first subroot page which
-			 * covers all new allocated blocks
-			 * itself not new/modified.
-			 * (if modified from split of descendent,
-			 * go down path of split page)
-
-			 if (nfound == nnew &&
-			 !(p->header.flag & (NEW | MOD)))
-			 exit scan;
-			 */
-
-			/* process parent page entries backward */
-			index--;
-		}
-	} else {
-		/*
-		 * first access of each internal page
-		 */
-	}
-
-	/*
-	 * internal page: go down to child page of current entry
-	 */
-
-	/* save current parent entry for the child page */
-	BT_PUSH(&btstack, bn, index);
-
-	/* get current entry for the child page */
-	e = &p->xad[index];
-
-	/*
-	 * first access of each internal entry:
-	 */
-	/*
-	 * if new entry, log btree_tnewentry.
-	 *
-	 if (e->flag & XAD_NEW)
-	 update parent page lock for the entry;
-	 */
-
-	/* release parent page */
-	XT_PUTPAGE(mp);
-
-	/* get child page */
-	bn = e->bn;
-	XT_GETPAGE(ip, bn, mp, PSIZE, p, rc);
-	if (rc)
-		return rc;
-
-	/*
-	 * first access of each non-root page:
-	 */
-	/*
-	 * if new, log btree_newpage.
-	 *
-	 if (p->header.flag & NEW)
-	 allocate new page lock;
-	 write a NEWPAGE log (next, prev);
-	 */
-
-	/* process the child page */
-	goto dopage;
-
-      out:
-	return 0;
-}
-#endif				/* _JFS_WIP */
-
 
 #ifdef CONFIG_JFS_STATISTICS
 int jfs_xtstat_read(char *buffer, char **start, off_t offset, int length,

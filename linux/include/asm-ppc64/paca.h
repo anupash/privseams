@@ -22,12 +22,10 @@
 #include	<asm/iSeries/ItLpRegSave.h>
 #include	<asm/mmu.h>
 
-extern struct paca_struct paca[];
 register struct paca_struct *local_paca asm("r13");
 #define get_paca()	local_paca
 
 struct task_struct;
-struct ItLpQueue;
 
 /*
  * Defines the layout of the paca.
@@ -63,7 +61,6 @@ struct paca_struct {
 	u16 paca_index;			/* Logical processor number */
 
 	u32 default_decr;		/* Default decrementer value */
-	struct ItLpQueue *lpqueue_ptr;	/* LpQueue handled by this CPU */
 	u64 kernel_toc;			/* Kernel TOC address */
 	u64 stab_real;			/* Absolute address of segment table */
 	u64 stab_addr;			/* Virtual address of segment table */
@@ -92,7 +89,6 @@ struct paca_struct {
 	u64 next_jiffy_update_tb;	/* TB value for next jiffy update */
 	u64 saved_r1;			/* r1 save for RTAS calls */
 	u64 saved_msr;			/* MSR saved here by enter_rtas */
-	u32 lpevent_count;		/* lpevents processed  */
 	u8 proc_enabled;		/* irq soft-enable flag */
 
 	/* not yet used */
@@ -114,5 +110,7 @@ struct paca_struct {
 	struct ItLpRegSave reg_save;
 #endif
 };
+
+extern struct paca_struct paca[];
 
 #endif /* _PPC64_PACA_H */

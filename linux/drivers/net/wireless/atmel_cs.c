@@ -43,7 +43,6 @@
 #include <linux/moduleparam.h>
 #include <linux/device.h>
 
-#include <pcmcia/version.h>
 #include <pcmcia/cs_types.h>
 #include <pcmcia/cs.h>
 #include <pcmcia/cistpl.h>
@@ -55,6 +54,7 @@
 #include <asm/system.h>
 #include <linux/wireless.h>
 
+#include "atmel.h"
 
 /*
    All the PCMCIA modules use PCMCIA_DEBUG to control debugging.  If
@@ -89,11 +89,6 @@ MODULE_SUPPORTED_DEVICE("Atmel at76c50x PCMCIA cards");
    insertion and ejection events.  They are invoked from the atmel_cs
    event handler. 
 */
-
-struct net_device *init_atmel_card(int, int, char *, struct device *, 
-				    int (*present_func)(void *), void * );
-void stop_atmel_card( struct net_device *, int );
-int atmel_open( struct net_device * );
 
 static void atmel_config(dev_link_t *link);
 static void atmel_release(dev_link_t *link);
@@ -222,11 +217,6 @@ static dev_link_t *atmel_attach(void)
 	link->next = dev_list;
 	dev_list = link;
 	client_reg.dev_info = &dev_info;
-	client_reg.EventMask =
-		CS_EVENT_CARD_INSERTION | CS_EVENT_CARD_REMOVAL |
-		CS_EVENT_RESET_PHYSICAL | CS_EVENT_CARD_RESET |
-		CS_EVENT_PM_SUSPEND | CS_EVENT_PM_RESUME;
-	client_reg.event_handler = &atmel_event;
 	client_reg.Version = 0x0210;
 	client_reg.event_callback_args.client_data = link;
 	ret = pcmcia_register_client(&link->handle, &client_reg);
@@ -307,28 +297,30 @@ static int card_present(void *arg)
 static struct { 
 	int manf, card;
 	char *ver1;
-	char *firmware;
+	AtmelFWType firmware;
 	char *name;
 } card_table[] = {
-	{ 0, 0, "WLAN/802.11b PC CARD", "atmel_at76c502d%s.bin", "Actiontec 802CAT1" },  
-	{ 0, 0, "ATMEL/AT76C502AR", "atmel_at76c502%s.bin", "NoName-RFMD" }, 
-	{ 0, 0, "ATMEL/AT76C502AR_D", "atmel_at76c502d%s.bin", "NoName-revD" }, 
-	{ 0, 0, "ATMEL/AT76C502AR_E", "atmel_at76c502e%s.bin", "NoName-revE" },
-	{ 0, 0, "ATMEL/AT76C504", "atmel_at76c504%s.bin", "NoName-504" },
-	{ 0, 0, "ATMEL/AT76C504A", "atmel_at76c504a_2958%s.bin", "NoName-504a-2958" },
-	{ 0, 0, "ATMEL/AT76C504_R", "atmel_at76c504_2958%s.bin", "NoName-504-2958" },
-	{ MANFID_3COM, 0x0620, NULL, "atmel_at76c502_3com%s.bin", "3com 3CRWE62092B" }, 
-	{ MANFID_3COM, 0x0696, NULL, "atmel_at76c502_3com%s.bin", "3com 3CRSHPW196" }, 
-	{ 0, 0, "SMC/2632W-V2", "atmel_at76c502%s.bin", "SMC 2632W-V2" },
-        { 0, 0, "SMC/2632W", "atmel_at76c502d%s.bin", "SMC 2632W-V3" },
-	{ 0xd601, 0x0007, NULL, "atmel_at76c502%s.bin", "Sitecom WLAN-011" }, 
-	{ 0x01bf, 0x3302, NULL, "atmel_at76c502e%s.bin", "Belkin F5D6020-V2" }, 
-	{ 0, 0, "BT/Voyager 1020 Laptop Adapter", "atmel_at76c502%s.bin", "BT Voyager 1020" },
-        { 0, 0, "IEEE 802.11b/Wireless LAN PC Card", "atmel_at76c502%s.bin", "Siemens Gigaset PC Card II" },
-	{ 0, 0, "CNet/CNWLC 11Mbps Wireless PC Card V-5", "atmel_at76c502e%s.bin", "CNet CNWLC-811ARL" },
-	{ 0, 0, "Wireless/PC_CARD", "atmel_at76c502d%s.bin", "Planet WL-3552" },
-	{ 0, 0, "OEM/11Mbps Wireless LAN PC Card V-3", "atmel_at76c502%s.bin", "OEM 11Mbps WLAN PCMCIA Card" },
-	{ 0, 0, "11WAVE/11WP611AL-E", "atmel_at76c502e%s.bin", "11WAVE WaveBuddy" } 
+	{ 0, 0, "WLAN/802.11b PC CARD", ATMEL_FW_TYPE_502D, "Actiontec 802CAT1" },  
+	{ 0, 0, "ATMEL/AT76C502AR", ATMEL_FW_TYPE_502, "NoName-RFMD" }, 
+	{ 0, 0, "ATMEL/AT76C502AR_D", ATMEL_FW_TYPE_502D, "NoName-revD" }, 
+	{ 0, 0, "ATMEL/AT76C502AR_E", ATMEL_FW_TYPE_502E, "NoName-revE" },
+	{ 0, 0, "ATMEL/AT76C504", ATMEL_FW_TYPE_504, "NoName-504" },
+	{ 0, 0, "ATMEL/AT76C504A", ATMEL_FW_TYPE_504A_2958, "NoName-504a-2958" },
+	{ 0, 0, "ATMEL/AT76C504_R", ATMEL_FW_TYPE_504_2958, "NoName-504-2958" },
+	{ MANFID_3COM, 0x0620, NULL, ATMEL_FW_TYPE_502_3COM, "3com 3CRWE62092B" }, 
+	{ MANFID_3COM, 0x0696, NULL, ATMEL_FW_TYPE_502_3COM, "3com 3CRSHPW196" }, 
+	{ 0, 0, "SMC/2632W-V2", ATMEL_FW_TYPE_502, "SMC 2632W-V2" },
+	{ 0, 0, "SMC/2632W", ATMEL_FW_TYPE_502D, "SMC 2632W-V3" },
+	{ 0xd601, 0x0007, NULL, ATMEL_FW_TYPE_502, "Sitecom WLAN-011" }, 
+	{ 0x01bf, 0x3302, NULL, ATMEL_FW_TYPE_502E, "Belkin F5D6020-V2" }, 
+	{ 0, 0, "BT/Voyager 1020 Laptop Adapter", ATMEL_FW_TYPE_502, "BT Voyager 1020" },
+	{ 0, 0, "IEEE 802.11b/Wireless LAN PC Card", ATMEL_FW_TYPE_502, "Siemens Gigaset PC Card II" },
+	{ 0, 0, "IEEE 802.11b/Wireless LAN Card S", ATMEL_FW_TYPE_504_2958, "Siemens Gigaset PC Card II" },
+	{ 0, 0, "CNet/CNWLC 11Mbps Wireless PC Card V-5", ATMEL_FW_TYPE_502E, "CNet CNWLC-811ARL" },
+	{ 0, 0, "Wireless/PC_CARD", ATMEL_FW_TYPE_502D, "Planet WL-3552" },
+	{ 0, 0, "OEM/11Mbps Wireless LAN PC Card V-3", ATMEL_FW_TYPE_502, "OEM 11Mbps WLAN PCMCIA Card" },
+	{ 0, 0, "11WAVE/11WP611AL-E", ATMEL_FW_TYPE_502E, "11WAVE WaveBuddy" },
+	{ 0, 0, "LG/LW2100N", ATMEL_FW_TYPE_502E, "LG LW2100N 11Mbps WLAN PCMCIA Card" },
 };
 
 static void atmel_config(dev_link_t *link)
@@ -520,7 +512,7 @@ static void atmel_config(dev_link_t *link)
 	((local_info_t*)link->priv)->eth_dev = 
 		init_atmel_card(link->irq.AssignedIRQ,
 				link->io.BasePort1,
-				card_index == -1 ? NULL :  card_table[card_index].firmware,
+				card_index == -1 ? ATMEL_FW_TYPE_NONE :  card_table[card_index].firmware,
 				&handle_to_dev(handle),
 				card_present, 
 				link);
@@ -648,13 +640,36 @@ static int atmel_event(event_t event, int priority,
 } /* atmel_event */
 
 /*====================================================================*/
+static struct pcmcia_device_id atmel_ids[] = {
+	PCMCIA_DEVICE_MANF_CARD(0x0101, 0x0620),
+	PCMCIA_DEVICE_MANF_CARD(0x0101, 0x0696),
+	PCMCIA_DEVICE_MANF_CARD(0x01bf, 0x3302),
+	PCMCIA_DEVICE_MANF_CARD(0xd601, 0x0007),
+	PCMCIA_DEVICE_PROD_ID12("11WAVE", "11WP611AL-E", 0x9eb2da1f, 0xc9a0d3f9),
+	PCMCIA_DEVICE_PROD_ID12("ATMEL", "AT76C502AR", 0xabda4164, 0x41b37e1f),
+	PCMCIA_DEVICE_PROD_ID12("ATMEL", "AT76C504", 0xabda4164, 0x5040670a),
+	PCMCIA_DEVICE_PROD_ID12("ATMEL", "AT76C504A", 0xabda4164, 0xe15ed87f),
+	PCMCIA_DEVICE_PROD_ID12("BT", "Voyager 1020 Laptop Adapter", 0xae49b86a, 0x1e957cd5),
+	PCMCIA_DEVICE_PROD_ID12("CNet", "CNWLC 11Mbps Wireless PC Card V-5", 0xbc477dde, 0x502fae6b),
+	PCMCIA_DEVICE_PROD_ID12("IEEE 802.11b", "Wireless LAN PC Card", 0x5b878724, 0x122f1df6),
+	PCMCIA_DEVICE_PROD_ID12("OEM", "11Mbps Wireless LAN PC Card V-3", 0xfea54c90, 0x1c5b0f68),
+	PCMCIA_DEVICE_PROD_ID12("SMC", "2632W", 0xc4f8b18b, 0x30f38774),
+	PCMCIA_DEVICE_PROD_ID12("SMC", "2632W-V2", 0xc4f8b18b, 0x172d1377),
+	PCMCIA_DEVICE_PROD_ID12("Wireless", "PC", 0xa407ecdd, 0x556e4d7e),
+	PCMCIA_DEVICE_PROD_ID12("WLAN", "802.11b PC CARD", 0x575c516c, 0xb1f6dbc4),
+	PCMCIA_DEVICE_NULL
+};
+MODULE_DEVICE_TABLE(pcmcia, atmel_ids);
+
 static struct pcmcia_driver atmel_driver = {
-        .owner          = THIS_MODULE,
-        .drv            = {
-                .name   = "atmel_cs",
+	.owner		= THIS_MODULE,
+	.drv		= {
+		.name	= "atmel_cs",
         },
-        .attach         = atmel_attach,
-        .detach         = atmel_detach,
+	.attach         = atmel_attach,
+	.event		= atmel_event,
+	.detach		= atmel_detach,
+	.id_table	= atmel_ids,
 };
 
 static int atmel_cs_init(void)

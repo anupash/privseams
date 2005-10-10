@@ -5,8 +5,7 @@
 
 #include <errno.h>
 #include <string.h>
-#include <sys/ptrace.h>
-#include "sysdep/ptrace.h"
+#include "ptrace_user.h"
 #include "uml-config.h"
 #include "skas_ptregs.h"
 #include "registers.h"
@@ -68,6 +67,11 @@ void init_registers(int pid)
 	if(err)
 		panic("check_ptrace : PTRACE_GETFPREGS failed, errno = %d",
 		      err);
+}
+
+void get_safe_registers(unsigned long *regs)
+{
+	memcpy(regs, exec_regs, HOST_FRAME_SIZE * sizeof(unsigned long));
 }
 
 /*

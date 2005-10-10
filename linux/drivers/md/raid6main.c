@@ -1570,6 +1570,8 @@ static int make_request (request_queue_t *q, struct bio * bi)
 	sector_t logical_sector, last_sector;
 	struct stripe_head *sh;
 
+	md_write_start(mddev, bi);
+
 	if (bio_data_dir(bi)==WRITE) {
 		disk_stat_inc(mddev->gendisk, writes);
 		disk_stat_add(mddev->gendisk, write_sectors, bio_sectors(bi));
@@ -1583,8 +1585,7 @@ static int make_request (request_queue_t *q, struct bio * bi)
 
 	bi->bi_next = NULL;
 	bi->bi_phys_segments = 1;	/* over-loaded to count active stripes */
-	if ( bio_data_dir(bi) == WRITE )
-		md_write_start(mddev);
+
 	for (;logical_sector < last_sector; logical_sector += STRIPE_SECTORS) {
 		DEFINE_WAIT(w);
 
@@ -1634,7 +1635,7 @@ static int make_request (request_queue_t *q, struct bio * bi)
 }
 
 /* FIXME go_faster isn't used */
-static int sync_request (mddev_t *mddev, sector_t sector_nr, int go_faster)
+static sector_t sync_request(mddev_t *mddev, sector_t sector_nr, int *skipped, int go_faster)
 {
 	raid6_conf_t *conf = (raid6_conf_t *) mddev->private;
 	struct stripe_head *sh;
@@ -1651,6 +1652,15 @@ static int sync_request (mddev_t *mddev, sector_t sector_nr, int go_faster)
 		/* just being told to finish up .. nothing much to do */
 		unplug_slaves(mddev);
 		return 0;
+	}
+	/* if there are 2 or more failed drives and we are trying
+	 * to resync, then assert that we are finished, because there is
+	 * nothing we can do.
+	 */
+	if (mddev->degraded >= 2 && test_bit(MD_RECOVERY_SYNC, &mddev->recovery)) {
+		sector_t rv = (mddev->size << 1) - sector_nr;
+		*skipped = 1;
+		return rv;
 	}
 
 	x = sector_nr;
@@ -1696,7 +1706,6 @@ static void raid6d (mddev_t *mddev)
 	PRINTK("+++ raid6d active\n");
 
 	md_check_recovery(mddev);
-	md_handle_safemode(mddev);
 
 	handled = 0;
 	spin_lock_irq(&conf->device_lock);
@@ -1770,9 +1779,6 @@ static int run (mddev_t *mddev)
 	atomic_set(&conf->active_stripes, 0);
 	atomic_set(&conf->preread_active_stripes, 0);
 
-	mddev->queue->unplug_fn = raid6_unplug_device;
-	mddev->queue->issue_flush_fn = raid6_issue_flush;
-
 	PRINTK("raid6: run(%s) called.\n", mdname(mddev));
 
 	ITERATE_RDEV(mddev,rdev,tmp) {
@@ -1807,6 +1813,7 @@ static int run (mddev_t *mddev)
 
 	/* device size must be a multiple of chunk size */
 	mddev->size &= ~(mddev->chunk_size/1024 -1);
+	mddev->resync_max_sectors = mddev->size << 1;
 
 	if (conf->raid_disks < 4) {
 		printk(KERN_ERR "raid6: not enough configured devices for %s (%d, minimum 4)\n",
@@ -1886,6 +1893,9 @@ static int run (mddev_t *mddev)
 
 	/* Ok, everything is just fine now */
 	mddev->array_size =  mddev->size * (mddev->raid_disks - 2);
+
+	mddev->queue->unplug_fn = raid6_unplug_device;
+	mddev->queue->issue_flush_fn = raid6_issue_flush;
 	return 0;
 abort:
 	if (conf) {
@@ -2029,7 +2039,7 @@ static int raid6_remove_disk(mddev_t *mddev, int number)
 			goto abort;
 		}
 		p->rdev = NULL;
-		synchronize_kernel();
+		synchronize_rcu();
 		if (atomic_read(&rdev->nr_pending)) {
 			/* lost the race, try later */
 			err = -EBUSY;
@@ -2050,6 +2060,9 @@ static int raid6_add_disk(mddev_t *mddev, mdk_rdev_t *rdev)
 	int disk;
 	struct disk_info *p;
 
+	if (mddev->degraded > 2)
+		/* no point adding a device */
+		return 0;
 	/*
 	 * find the disk ...
 	 */
@@ -2083,6 +2096,7 @@ static int raid6_resize(mddev_t *mddev, sector_t sectors)
 		set_bit(MD_RECOVERY_NEEDED, &mddev->recovery);
 	}
 	mddev->size = sectors /2;
+	mddev->resync_max_sectors = sectors;
 	return 0;
 }
 

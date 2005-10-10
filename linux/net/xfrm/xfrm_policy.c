@@ -13,6 +13,7 @@
  * 	
  */
 
+#include <asm/bug.h>
 #include <linux/config.h>
 #include <linux/slab.h>
 #include <linux/kmod.h>
@@ -40,7 +41,7 @@ static kmem_cache_t *xfrm_dst_cache;
 
 static struct work_struct xfrm_policy_gc_work;
 static struct list_head xfrm_policy_gc_list =
-        LIST_HEAD_INIT(xfrm_policy_gc_list);
+	LIST_HEAD_INIT(xfrm_policy_gc_list);
 static DEFINE_SPINLOCK(xfrm_policy_gc_lock);
 
 static struct xfrm_policy_afinfo *xfrm_policy_get_afinfo(unsigned short family);
@@ -117,7 +118,6 @@ retry:
 	xfrm_policy_put_afinfo(afinfo);
 	return type;
 }
-EXPORT_SYMBOL(xfrm_get_type);
 
 int xfrm_dst_lookup(struct xfrm_dst **dst, struct flowi *fl, 
 		    unsigned short family)
@@ -215,8 +215,8 @@ out:
 
 expired:
 	read_unlock(&xp->lock);
-	km_policy_expired(xp, dir, 1);
-	xfrm_policy_delete(xp, dir);
+	if (!xfrm_policy_delete(xp, dir))
+		km_policy_expired(xp, dir, 1);
 	xfrm_pol_put(xp);
 }
 
@@ -300,19 +300,23 @@ static void xfrm_policy_gc_task(void *data)
 
 static void xfrm_policy_kill(struct xfrm_policy *policy)
 {
-	write_lock_bh(&policy->lock);
-	if (policy->dead)
-		goto out;
+	int dead;
 
+	write_lock_bh(&policy->lock);
+	dead = policy->dead;
 	policy->dead = 1;
+	write_unlock_bh(&policy->lock);
+
+	if (unlikely(dead)) {
+		WARN_ON(1);
+		return;
+	}
 
 	spin_lock(&xfrm_policy_gc_lock);
 	list_add(&policy->list, &xfrm_policy_gc_list);
 	spin_unlock(&xfrm_policy_gc_lock);
-	schedule_work(&xfrm_policy_gc_work);
 
-out:
-	write_unlock_bh(&policy->lock);
+	schedule_work(&xfrm_policy_gc_work);
 }
 
 /* Generate new index... KAME seems to generate them ordered by cost
@@ -550,7 +554,7 @@ static struct xfrm_policy *__xfrm_policy_unlink(struct xfrm_policy *pol,
 	return NULL;
 }
 
-void xfrm_policy_delete(struct xfrm_policy *pol, int dir)
+int xfrm_policy_delete(struct xfrm_policy *pol, int dir)
 {
 	write_lock_bh(&xfrm_policy_lock);
 	pol = __xfrm_policy_unlink(pol, dir);
@@ -559,7 +563,9 @@ void xfrm_policy_delete(struct xfrm_policy *pol, int dir)
 		if (dir < XFRM_POLICY_MAX)
 			atomic_inc(&flow_cache_genid);
 		xfrm_policy_kill(pol);
+		return 0;
 	}
+	return -ENOENT;
 }
 
 int xfrm_sk_policy_insert(struct sock *sk, int dir, struct xfrm_policy *pol)
@@ -735,7 +741,6 @@ int xfrm_lookup(struct dst_entry **dst_p, struct flowi *fl,
 	int err;
 	u32 genid;
 	u16 family = dst_orig->ops->family;
-
 restart:
 	genid = atomic_read(&flow_cache_genid);
 	policy = NULL;
@@ -813,7 +818,6 @@ restart:
 			if (err < 0)
 				goto error;
 		}
-
 		if (nx == 0) {
 			/* Flow passes not transformed. */
 			xfrm_pol_put(policy);
@@ -849,7 +853,6 @@ restart:
 		dst_hold(dst);
 		write_unlock_bh(&policy->lock);
 	}
-
 	*dst_p = dst;
 	dst_release(dst_orig);
 	xfrm_pol_put(policy);
@@ -881,7 +884,6 @@ xfrm_state_ok(struct xfrm_tmpl *tmpl, struct xfrm_state *x,
 		x->props.mode == tmpl->mode &&
 		(tmpl->aalgos & (1<<x->props.aalgo)) &&
 		!(x->props.mode && xfrm_state_addr_cmp(tmpl, x, family));
-/* XXX:Krisu - Something should be done about the last check */
 }
 
 static inline int
@@ -988,12 +990,7 @@ int __xfrm_policy_check(struct sock *sk, int dir, struct sk_buff *skb,
 				goto reject;
 		}
 
-		for (; k < sp->len; k++) {
-			if (sp->x[k].xvec->props.mode)
-				goto reject;
-		}
-
- 		if (secpath_has_tunnel(sp, k))
+		if (secpath_has_tunnel(sp, k))
 			goto reject;
 
 		xfrm_pol_put(pol);
@@ -1024,46 +1021,23 @@ static struct dst_entry *xfrm_dst_check(struct dst_entry *dst, u32 cookie)
 	if (!stale_bundle(dst))
 		return dst;
 
-	dst_release(dst);
 	return NULL;
 }
 
 static int stale_bundle(struct dst_entry *dst)
 {
-	struct dst_entry *child = dst;
-
-	while (child) {
-		if (child->obsolete > 0 ||
-		    (child->dev && !netif_running(child->dev)) ||
-		    (child->xfrm && child->xfrm->km.state != XFRM_STATE_VALID)) {
-			return 1;
-		}
-		child = child->child;
-	}
-
-	return 0;
+	return !xfrm_bundle_ok((struct xfrm_dst *)dst, NULL, AF_UNSPEC);
 }
 
-static void xfrm_dst_destroy(struct dst_entry *dst)
+void xfrm_dst_ifdown(struct dst_entry *dst, struct net_device *dev)
 {
-	if (!dst->xfrm)
-		return;
-	xfrm_state_put(dst->xfrm);
-	dst->xfrm = NULL;
-}
-
-static void xfrm_dst_ifdown(struct dst_entry *dst, struct net_device *dev,
-			    int unregister)
-{
-	if (!unregister)
-		return;
-
 	while ((dst = dst->child) && dst->xfrm && dst->dev == dev) {
 		dst->dev = &loopback_dev;
 		dev_hold(&loopback_dev);
 		dev_put(dev);
 	}
 }
+EXPORT_SYMBOL(xfrm_dst_ifdown);
 
 static void xfrm_link_failure(struct sk_buff *skb)
 {
@@ -1130,6 +1104,94 @@ int xfrm_flush_bundles(void)
 	return 0;
 }
 
+void xfrm_init_pmtu(struct dst_entry *dst)
+{
+	do {
+		struct xfrm_dst *xdst = (struct xfrm_dst *)dst;
+		u32 pmtu, route_mtu_cached;
+
+		pmtu = dst_mtu(dst->child);
+		xdst->child_mtu_cached = pmtu;
+
+		pmtu = xfrm_state_mtu(dst->xfrm, pmtu);
+
+		route_mtu_cached = dst_mtu(xdst->route);
+		xdst->route_mtu_cached = route_mtu_cached;
+
+		if (pmtu > route_mtu_cached)
+			pmtu = route_mtu_cached;
+
+		dst->metrics[RTAX_MTU-1] = pmtu;
+	} while ((dst = dst->next));
+}
+
+EXPORT_SYMBOL(xfrm_init_pmtu);
+
+/* Check that the bundle accepts the flow and its components are
+ * still valid.
+ */
+
+int xfrm_bundle_ok(struct xfrm_dst *first, struct flowi *fl, int family)
+{
+	struct dst_entry *dst = &first->u.dst;
+	struct xfrm_dst *last;
+	u32 mtu;
+
+	if (!dst_check(dst->path, ((struct xfrm_dst *)dst)->path_cookie) ||
+	    (dst->dev && !netif_running(dst->dev)))
+		return 0;
+
+	last = NULL;
+
+	do {
+		struct xfrm_dst *xdst = (struct xfrm_dst *)dst;
+
+		if (fl && !xfrm_selector_match(&dst->xfrm->sel, fl, family))
+			return 0;
+		if (dst->xfrm->km.state != XFRM_STATE_VALID)
+			return 0;
+
+		mtu = dst_mtu(dst->child);
+		if (xdst->child_mtu_cached != mtu) {
+			last = xdst;
+			xdst->child_mtu_cached = mtu;
+		}
+
+		if (!dst_check(xdst->route, xdst->route_cookie))
+			return 0;
+		mtu = dst_mtu(xdst->route);
+		if (xdst->route_mtu_cached != mtu) {
+			last = xdst;
+			xdst->route_mtu_cached = mtu;
+		}
+
+		dst = dst->child;
+	} while (dst->xfrm);
+
+	if (likely(!last))
+		return 1;
+
+	mtu = last->child_mtu_cached;
+	for (;;) {
+		dst = &last->u.dst;
+
+		mtu = xfrm_state_mtu(dst->xfrm, mtu);
+		if (mtu > last->route_mtu_cached)
+			mtu = last->route_mtu_cached;
+		dst->metrics[RTAX_MTU-1] = mtu;
+
+		if (last == first)
+			break;
+
+		last = last->u.next;
+		last->child_mtu_cached = mtu;
+	}
+
+	return 1;
+}
+
+EXPORT_SYMBOL(xfrm_bundle_ok);
+
 /* Well... that's _TASK_. We need to scan through transformation
  * list and figure out what mss tcp should generate in order to
  * final datagram fit to mtu. Mama mia... :-)
@@ -1186,10 +1248,6 @@ int xfrm_policy_register_afinfo(struct xfrm_policy_afinfo *afinfo)
 			dst_ops->kmem_cachep = xfrm_dst_cache;
 		if (likely(dst_ops->check == NULL))
 			dst_ops->check = xfrm_dst_check;
-		if (likely(dst_ops->destroy == NULL))
-			dst_ops->destroy = xfrm_dst_destroy;
-		if (likely(dst_ops->ifdown == NULL))
-			dst_ops->ifdown = xfrm_dst_ifdown;
 		if (likely(dst_ops->negative_advice == NULL))
 			dst_ops->negative_advice = xfrm_negative_advice;
 		if (likely(dst_ops->link_failure == NULL))
@@ -1221,8 +1279,6 @@ int xfrm_policy_unregister_afinfo(struct xfrm_policy_afinfo *afinfo)
 			xfrm_policy_afinfo[afinfo->family] = NULL;
 			dst_ops->kmem_cachep = NULL;
 			dst_ops->check = NULL;
-			dst_ops->destroy = NULL;
-			dst_ops->ifdown = NULL;
 			dst_ops->negative_advice = NULL;
 			dst_ops->link_failure = NULL;
 			dst_ops->get_mss = NULL;

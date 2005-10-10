@@ -29,7 +29,7 @@ struct desc_struct {
 };
 
 #define desc_empty(desc) \
-		(!((desc)->a + (desc)->b))
+		(!((desc)->a | (desc)->b))
 
 #define desc_equal(desc1, desc2) \
 		(((desc1)->a == (desc2)->a) && ((desc1)->b == (desc2)->b))
@@ -98,12 +98,12 @@ extern struct cpuinfo_x86 cpu_data[];
 #endif
 
 extern	int phys_proc_id[NR_CPUS];
+extern	int cpu_core_id[NR_CPUS];
 extern char ignore_fpu_irq;
 
 extern void identify_cpu(struct cpuinfo_x86 *);
 extern void print_cpu_info(struct cpuinfo_x86 *);
 extern unsigned int init_intel_cacheinfo(struct cpuinfo_x86 *c);
-extern void dodgy_tsc(void);
 
 #ifdef CONFIG_X86_HT
 extern void detect_ht(struct cpuinfo_x86 *c);
@@ -137,7 +137,7 @@ static inline void detect_ht(struct cpuinfo_x86 *c) {}
  * clear %ecx since some cpus (Cyrix MII) do not set or clear %ecx
  * resulting in stale register contents being returned.
  */
-static inline void cpuid(int op, int *eax, int *ebx, int *ecx, int *edx)
+static inline void cpuid(unsigned int op, unsigned int *eax, unsigned int *ebx, unsigned int *ecx, unsigned int *edx)
 {
 	__asm__("cpuid"
 		: "=a" (*eax),
@@ -145,6 +145,18 @@ static inline void cpuid(int op, int *eax, int *ebx, int *ecx, int *edx)
 		  "=c" (*ecx),
 		  "=d" (*edx)
 		: "0" (op), "c"(0));
+}
+
+/* Some CPUID calls want 'count' to be placed in ecx */
+static inline void cpuid_count(int op, int count, int *eax, int *ebx, int *ecx,
+	       	int *edx)
+{
+	__asm__("cpuid"
+		: "=a" (*eax),
+		  "=b" (*ebx),
+		  "=c" (*ecx),
+		  "=d" (*edx)
+		: "0" (op), "c" (count));
 }
 
 /*
@@ -488,6 +500,18 @@ static inline void load_esp0(struct tss_struct *tss, struct thread_struct *threa
 	regs->esp = new_esp;					\
 } while (0)
 
+/*
+ * These special macros can be used to get or set a debugging register
+ */
+#define get_debugreg(var, register)				\
+		__asm__("movl %%db" #register ", %0"		\
+			:"=r" (var))
+#define set_debugreg(value, register)			\
+		__asm__("movl %0,%%db" #register		\
+			: /* no output */			\
+			:"r" (value))
+
+
 /* Forward declaration, a strange C thing */
 struct task_struct;
 struct mm_struct;
@@ -667,5 +691,15 @@ extern void select_idle_routine(const struct cpuinfo_x86 *c);
 #define cache_line_size() (boot_cpu_data.x86_cache_alignment)
 
 extern unsigned long boot_option_idle_override;
+extern void enable_sep_cpu(void);
+extern int sysenter_setup(void);
+
+#ifdef CONFIG_MTRR
+extern void mtrr_ap_init(void);
+extern void mtrr_bp_init(void);
+#else
+#define mtrr_ap_init() do {} while (0)
+#define mtrr_bp_init() do {} while (0)
+#endif
 
 #endif /* __ASM_I386_PROCESSOR_H */

@@ -13,6 +13,7 @@ obj-$(CONFIG_HISAX_AVM_A1_CS)		+= avma1_cs.o
 obj-$(CONFIG_HISAX_TELES_CS)		+= teles_cs.o
 obj-$(CONFIG_HISAX_ST5481)		+= hisax_st5481.o
 obj-$(CONFIG_HISAX_HFCUSB)		+= hfc_usb.o
+obj-$(CONFIG_HISAX_HFC4S8S)		+= hfc4s8s_l1.o
 obj-$(CONFIG_HISAX_FRITZ_PCIPNP)        += hisax_isac.o hisax_fcpcipnp.o
 
 ifdef CONFIG_HISAX_HDLC
@@ -22,7 +23,7 @@ endif
 # Multipart objects.
 
 hisax_st5481-y 				:= st5481_init.o st5481_usb.o st5481_d.o \
-					   st5481_b.o st5481_hdlc.o
+					   st5481_b.o
 
 hisax-y	  				:= config.o isdnl1.o tei.o isdnl2.o isdnl3.o \
 		     			   lmgr.o q931.o callc.o fsm.o

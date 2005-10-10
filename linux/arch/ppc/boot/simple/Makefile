@@ -49,7 +49,7 @@ clear_L2_L3	:= $(srctree)/$(boot)/simple/clear.S
 #----------------------------------------------------------------------------
       zimage-$(CONFIG_CPCI690)		:= zImage-STRIPELF
 zimageinitrd-$(CONFIG_CPCI690)		:= zImage.initrd-STRIPELF
-     extra.o-$(CONFIG_CPCI690)		:= misc-cpci690.o mv64x60_stub.o
+     extra.o-$(CONFIG_CPCI690)		:= misc-cpci690.o
          end-$(CONFIG_CPCI690)		:= cpci690
    cacheflag-$(CONFIG_CPCI690)		:= -include $(clear_L2_L3)
 
@@ -61,10 +61,17 @@ zimageinitrd-$(CONFIG_IBM_OPENBIOS)	:= zImage.initrd-TREE
          end-$(CONFIG_EMBEDDEDBOOT)	:= embedded
         misc-$(CONFIG_EMBEDDEDBOOT)	:= misc-embedded.o
 
+      zimage-$(CONFIG_BAMBOO)		:= zImage-TREE
+zimageinitrd-$(CONFIG_BAMBOO)		:= zImage.initrd-TREE
+         end-$(CONFIG_BAMBOO)		:= bamboo
+  entrypoint-$(CONFIG_BAMBOO)		:= 0x01000000
+     extra.o-$(CONFIG_BAMBOO)		:= pibs.o
+
       zimage-$(CONFIG_EBONY)		:= zImage-TREE
 zimageinitrd-$(CONFIG_EBONY)		:= zImage.initrd-TREE
          end-$(CONFIG_EBONY)		:= ebony
   entrypoint-$(CONFIG_EBONY)		:= 0x01000000
+     extra.o-$(CONFIG_EBONY)		:= openbios.o
 
       zimage-$(CONFIG_LUAN)		:= zImage-TREE
 zimageinitrd-$(CONFIG_LUAN)		:= zImage.initrd-TREE
@@ -93,9 +100,13 @@ zimageinitrd-$(CONFIG_GEMINI)		:= zImage.initrd-STRIPELF
          end-$(CONFIG_K2)		:= k2
    cacheflag-$(CONFIG_K2)		:= -include $(clear_L2_L3)
 
-     extra.o-$(CONFIG_KATANA)		:= misc-katana.o mv64x60_stub.o
+     extra.o-$(CONFIG_KATANA)		:= misc-katana.o
          end-$(CONFIG_KATANA)		:= katana
    cacheflag-$(CONFIG_KATANA)		:= -include $(clear_L2_L3)
+
+     extra.o-$(CONFIG_RADSTONE_PPC7D)	:= misc-radstone_ppc7d.o
+         end-$(CONFIG_RADSTONE_PPC7D)	:= radstone_ppc7d
+   cacheflag-$(CONFIG_RADSTONE_PPC7D)	:= -include $(clear_L2_L3)
 
 # kconfig 'feature', only one of these will ever be 'y' at a time.
 # The rest will be unset.
@@ -118,10 +129,13 @@ zimageinitrd-$(pcore)			:= zImage.initrd-STRIPELF
          end-$(pcore)			:= pcore
    cacheflag-$(pcore)			:= -include $(clear_L2_L3)
 
+# Really only valid if CONFIG_6xx=y
       zimage-$(CONFIG_PPC_PREP)		:= zImage-PPLUS
 zimageinitrd-$(CONFIG_PPC_PREP)		:= zImage.initrd-PPLUS
+ifeq ($(CONFIG_6xx),y)
      extra.o-$(CONFIG_PPC_PREP)		:= prepmap.o
         misc-$(CONFIG_PPC_PREP)		+= misc-prep.o mpc10x_memory.o
+endif
          end-$(CONFIG_PPC_PREP)		:= prep
 
          end-$(CONFIG_SANDPOINT)	:= sandpoint
@@ -195,7 +209,7 @@ $(obj)/zvmlinux: $(OBJS) $(LIBS) $(srctree)/$(boot)/ld.script \
 		$(obj)/dummy.o $(obj)/image.o
 	$(LD) $(LD_ARGS) -o $@ $(OBJS) $(obj)/image.o $(LIBS)
 	$(OBJCOPY) $(OBJCOPY_ARGS) $@ $@ -R .comment -R .stab \
-		-R .stabstr -R .ramdisk -R .sysmap
+		-R .stabstr -R .ramdisk
 
 $(obj)/zvmlinux.initrd: $(OBJS) $(LIBS) $(srctree)/$(boot)/ld.script \
 		$(images)/vmlinux.gz $(obj)/dummy.o
@@ -207,7 +221,7 @@ $(obj)/zvmlinux.initrd: $(OBJS) $(LIBS) $(srctree)/$(boot)/ld.script \
 		$(obj)/dummy.o $(obj)/image.o
 	$(LD) $(LD_ARGS) -o $@ $(OBJS) $(obj)/image.o $(LIBS)
 	$(OBJCOPY) $(OBJCOPY_ARGS) $@ $@ -R .comment -R .stab \
-		-R .stabstr -R .sysmap
+		-R .stabstr
 
 # Sort-of dummy rules, that let us format the image we want.
 zImage: $(images)/$(zimage-y) $(obj)/zvmlinux

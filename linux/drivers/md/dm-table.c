@@ -242,7 +242,7 @@ static void free_devices(struct list_head *devices)
 	}
 }
 
-void table_destroy(struct dm_table *t)
+static void table_destroy(struct dm_table *t)
 {
 	unsigned int i;
 
@@ -454,6 +454,8 @@ static int __table_get_device(struct dm_table *t, struct dm_target *ti,
 			kfree(dd);
 			return r;
 		}
+
+		format_dev_t(dd->name, dev);
 
 		atomic_set(&dd->count, 0);
 		list_add(&dd->list, &t->devices);
@@ -867,11 +869,17 @@ static void suspend_targets(struct dm_table *t, unsigned postsuspend)
 
 void dm_table_presuspend_targets(struct dm_table *t)
 {
+	if (!t)
+		return;
+
 	return suspend_targets(t, 0);
 }
 
 void dm_table_postsuspend_targets(struct dm_table *t)
 {
+	if (!t)
+		return;
+
 	return suspend_targets(t, 1);
 }
 
@@ -941,6 +949,7 @@ EXPORT_SYMBOL(dm_vcalloc);
 EXPORT_SYMBOL(dm_get_device);
 EXPORT_SYMBOL(dm_put_device);
 EXPORT_SYMBOL(dm_table_event);
+EXPORT_SYMBOL(dm_table_get_size);
 EXPORT_SYMBOL(dm_table_get_mode);
 EXPORT_SYMBOL(dm_table_put);
 EXPORT_SYMBOL(dm_table_get);

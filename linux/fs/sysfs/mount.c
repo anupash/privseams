@@ -28,6 +28,7 @@ static struct sysfs_dirent sysfs_root = {
 	.s_children	= LIST_HEAD_INIT(sysfs_root.s_children),
 	.s_element	= NULL,
 	.s_type		= SYSFS_ROOT,
+	.s_iattr	= NULL,
 };
 
 static int sysfs_fill_super(struct super_block *sb, void *data, int silent)
@@ -42,7 +43,8 @@ static int sysfs_fill_super(struct super_block *sb, void *data, int silent)
 	sb->s_time_gran = 1;
 	sysfs_sb = sb;
 
-	inode = sysfs_new_inode(S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO);
+	inode = sysfs_new_inode(S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO,
+				 &sysfs_root);
 	if (inode) {
 		inode->i_op = &sysfs_dir_inode_operations;
 		inode->i_fop = &sysfs_dir_operations;
@@ -93,6 +95,7 @@ int __init sysfs_init(void)
 			printk(KERN_ERR "sysfs: could not mount!\n");
 			err = PTR_ERR(sysfs_mount);
 			sysfs_mount = NULL;
+			unregister_filesystem(&sysfs_fs_type);
 			goto out_err;
 		}
 	} else
@@ -101,5 +104,6 @@ out:
 	return err;
 out_err:
 	kmem_cache_destroy(sysfs_dir_cachep);
+	sysfs_dir_cachep = NULL;
 	goto out;
 }

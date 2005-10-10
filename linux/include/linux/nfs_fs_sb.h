@@ -10,6 +10,7 @@
 struct nfs_server {
 	struct rpc_clnt *	client;		/* RPC client handle */
 	struct rpc_clnt *	client_sys;	/* 2nd handle for FSINFO */
+	struct rpc_clnt *	client_acl;	/* ACL RPC client handle */
 	struct nfs_rpc_ops *	rpc_ops;	/* NFS protocol vector */
 	struct backing_dev_info	backing_dev_info;
 	int			flags;		/* various flags */
@@ -53,5 +54,6 @@ struct nfs_server {
 #define NFS_CAP_HARDLINKS	(1U << 1)
 #define NFS_CAP_SYMLINKS	(1U << 2)
 #define NFS_CAP_ACLS		(1U << 3)
+#define NFS_CAP_ATOMIC_OPEN	(1U << 4)
 
 #endif

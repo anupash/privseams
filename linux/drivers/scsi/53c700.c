@@ -170,7 +170,6 @@ MODULE_LICENSE("GPL");
 STATIC int NCR_700_queuecommand(struct scsi_cmnd *, void (*done)(struct scsi_cmnd *));
 STATIC int NCR_700_abort(struct scsi_cmnd * SCpnt);
 STATIC int NCR_700_bus_reset(struct scsi_cmnd * SCpnt);
-STATIC int NCR_700_dev_reset(struct scsi_cmnd * SCpnt);
 STATIC int NCR_700_host_reset(struct scsi_cmnd * SCpnt);
 STATIC void NCR_700_chip_setup(struct Scsi_Host *host);
 STATIC void NCR_700_chip_reset(struct Scsi_Host *host);
@@ -296,8 +295,7 @@ NCR_700_get_SXFER(struct scsi_device *SDp)
 
 struct Scsi_Host *
 NCR_700_detect(struct scsi_host_template *tpnt,
-	       struct NCR_700_Host_Parameters *hostdata, struct device *dev,
-	       unsigned long irq, u8 scsi_id)
+	       struct NCR_700_Host_Parameters *hostdata, struct device *dev)
 {
 	dma_addr_t pScript, pSlots;
 	__u8 *memory;
@@ -331,7 +329,6 @@ NCR_700_detect(struct scsi_host_template *tpnt,
 	/* Fill in the missing routines from the host template */
 	tpnt->queuecommand = NCR_700_queuecommand;
 	tpnt->eh_abort_handler = NCR_700_abort;
-	tpnt->eh_device_reset_handler = NCR_700_dev_reset;
 	tpnt->eh_bus_reset_handler = NCR_700_bus_reset;
 	tpnt->eh_host_reset_handler = NCR_700_host_reset;
 	tpnt->can_queue = NCR_700_COMMAND_SLOTS_PER_HOST;
@@ -390,11 +387,8 @@ NCR_700_detect(struct scsi_host_template *tpnt,
 	host->max_lun = NCR_700_MAX_LUNS;
 	BUG_ON(NCR_700_transport_template == NULL);
 	host->transportt = NCR_700_transport_template;
-	host->unique_id = hostdata->base;
-	host->base = hostdata->base;
+	host->unique_id = (unsigned long)hostdata->base;
 	hostdata->eh_complete = NULL;
-	host->irq = irq;
-	host->this_id = scsi_id;
 	host->hostdata[0] = (unsigned long)hostdata;
 	/* kick the chip */
 	NCR_700_writeb(0xff, host, CTEST9_REG);
@@ -415,28 +409,16 @@ NCR_700_detect(struct scsi_host_template *tpnt,
 	/* reset the chip */
 	NCR_700_chip_reset(host);
 
-	if (request_irq(irq, NCR_700_intr, SA_SHIRQ, dev->bus_id, host)) {
-		dev_printk(KERN_ERR, dev, "53c700: irq %lu request failed\n ",
-			   irq);
-		goto out_put_host;
-	}
-
 	if (scsi_add_host(host, dev)) {
 		dev_printk(KERN_ERR, dev, "53c700: scsi_add_host failed\n");
-		goto out_release_irq;
+		scsi_host_put(host);
+		return NULL;
 	}
 
 	spi_signalling(host) = hostdata->differential ? SPI_SIGNAL_HVD :
 		SPI_SIGNAL_SE;
 
 	return host;
-
- out_release_irq:
-	free_irq(irq, host);
- out_put_host:
-	scsi_host_put(host);
-
-	return NULL;
 }
 
 int
@@ -824,6 +806,7 @@ process_extended_message(struct Scsi_Host *host,
 	switch(hostdata->msgin[2]) {
 	case A_SDTR_MSG:
 		if(SCp != NULL && NCR_700_is_flag_set(SCp->device, NCR_700_DEV_BEGIN_SYNC_NEGOTIATION)) {
+			struct scsi_target *starget = SCp->device->sdev_target;
 			__u8 period = hostdata->msgin[3];
 			__u8 offset = hostdata->msgin[4];
 
@@ -831,22 +814,15 @@ process_extended_message(struct Scsi_Host *host,
 				offset = 0;
 				period = 0;
 			}
+
+			spi_offset(starget) = offset;
+			spi_period(starget) = period;
 			
 			if(NCR_700_is_flag_set(SCp->device, NCR_700_DEV_PRINT_SYNC_NEGOTIATION)) {
-				if(spi_offset(SCp->device->sdev_target) != 0)
-					printk(KERN_INFO "scsi%d: (%d:%d) Synchronous at offset %d, period %dns\n",
-					       host->host_no, pun, lun,
-					       offset, period*4);
-				else
-					printk(KERN_INFO "scsi%d: (%d:%d) Asynchronous\n",
-					       host->host_no, pun, lun);
+				spi_display_xfer_agreement(starget);
 				NCR_700_clear_flag(SCp->device, NCR_700_DEV_PRINT_SYNC_NEGOTIATION);
 			}
-				
-			spi_offset(SCp->device->sdev_target) = offset;
-			spi_period(SCp->device->sdev_target) = period;
 			
-
 			NCR_700_set_flag(SCp->device, NCR_700_DEV_NEGOTIATED_SYNC);
 			NCR_700_clear_flag(SCp->device, NCR_700_DEV_BEGIN_SYNC_NEGOTIATION);
 			
@@ -1981,34 +1957,31 @@ NCR_700_bus_reset(struct scsi_cmnd * SCp)
 	printk(KERN_INFO "scsi%d (%d:%d) New error handler wants BUS reset, cmd %p\n\t",
 	       SCp->device->host->host_no, SCp->device->id, SCp->device->lun, SCp);
 	scsi_print_command(SCp);
+
 	/* In theory, eh_complete should always be null because the
 	 * eh is single threaded, but just in case we're handling a
 	 * reset via sg or something */
-	while(hostdata->eh_complete != NULL) {
+	spin_lock_irq(SCp->device->host->host_lock);
+	while (hostdata->eh_complete != NULL) {
 		spin_unlock_irq(SCp->device->host->host_lock);
 		msleep_interruptible(100);
 		spin_lock_irq(SCp->device->host->host_lock);
 	}
+
 	hostdata->eh_complete = &complete;
 	NCR_700_internal_bus_reset(SCp->device->host);
+
 	spin_unlock_irq(SCp->device->host->host_lock);
 	wait_for_completion(&complete);
 	spin_lock_irq(SCp->device->host->host_lock);
+
 	hostdata->eh_complete = NULL;
 	/* Revalidate the transport parameters of the failing device */
 	if(hostdata->fast)
 		spi_schedule_dv_device(SCp->device);
-	return SUCCESS;
-}
 
-STATIC int
-NCR_700_dev_reset(struct scsi_cmnd * SCp)
-{
-	printk(KERN_INFO "scsi%d (%d:%d) New error handler wants device reset\n\t",
-	       SCp->device->host->host_no, SCp->device->id, SCp->device->lun);
-	scsi_print_command(SCp);
-	
-	return FAILED;
+	spin_unlock_irq(SCp->device->host->host_lock);
+	return SUCCESS;
 }
 
 STATIC int
@@ -2018,8 +1991,13 @@ NCR_700_host_reset(struct scsi_cmnd * SCp)
 	       SCp->device->host->host_no, SCp->device->id, SCp->device->lun);
 	scsi_print_command(SCp);
 
+	spin_lock_irq(SCp->device->host->host_lock);
+
 	NCR_700_internal_bus_reset(SCp->device->host);
 	NCR_700_chip_reset(SCp->device->host);
+
+	spin_unlock_irq(SCp->device->host->host_lock);
+
 	return SUCCESS;
 }
 
@@ -2147,7 +2125,7 @@ static int NCR_700_change_queue_type(struct scsi_device *SDp, int tag_type)
 }
 
 static ssize_t
-NCR_700_show_active_tags(struct device *dev, char *buf)
+NCR_700_show_active_tags(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct scsi_device *SDp = to_scsi_device(dev);
 

@@ -8,7 +8,7 @@
  * Version:	@(#)if.h	1.0.2	04/18/93
  *
  * Authors:	Original taken from Berkeley UNIX 4.3, (c) UCB 1982-1988
- *		Ross Biro, <bir7@leland.Stanford.Edu>
+ *		Ross Biro
  *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
  *
  *		This program is free software; you can redistribute it and/or
@@ -33,7 +33,7 @@
 #define	IFF_LOOPBACK	0x8		/* is a loopback net		*/
 #define	IFF_POINTOPOINT	0x10		/* interface is has p-p link	*/
 #define	IFF_NOTRAILERS	0x20		/* avoid use of trailers	*/
-#define	IFF_RUNNING	0x40		/* resources allocated		*/
+#define	IFF_RUNNING	0x40		/* interface running and carrier ok */
 #define	IFF_NOARP	0x80		/* no ARP protocol		*/
 #define	IFF_PROMISC	0x100		/* receive all packets		*/
 #define	IFF_ALLMULTI	0x200		/* receive all multicast packets*/

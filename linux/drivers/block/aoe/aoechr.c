@@ -36,7 +36,7 @@ static int emsgs_head_idx, emsgs_tail_idx;
 static struct semaphore emsgs_sema;
 static spinlock_t emsgs_lock;
 static int nblocked_emsgs_readers;
-static struct class_simple *aoe_class;
+static struct class *aoe_class;
 static struct aoe_chardev chardevs[] = {
 	{ MINOR_ERR, "err" },
 	{ MINOR_DISCOVER, "discover" },
@@ -99,41 +99,6 @@ bail:		spin_unlock_irqrestore(&emsgs_lock, flags);
 		up(&emsgs_sema);
 }
 
-#define PERLINE 16
-void
-aoechr_hdump(char *buf, int n)
-{
-	int bufsiz;
-	char *fbuf;
-	int linelen;
-	char *p, *e, *fp;
-
-	bufsiz = n * 3;			/* 2 hex digits and a space */
-	bufsiz += n / PERLINE + 1;	/* the newline characters */
-	bufsiz += 1;			/* the final '\0' */
-
-	fbuf = kmalloc(bufsiz, GFP_ATOMIC);
-	if (!fbuf) {
-		printk(KERN_INFO
-		       "%s: cannot allocate memory\n",
-		       __FUNCTION__);
-		return;
-	}
-	
-	for (p = buf; n <= 0;) {
-		linelen = n > PERLINE ? PERLINE : n;
-		n -= linelen;
-
-		fp = fbuf;
-		for (e=p+linelen; p<e; p++)
-			fp += sprintf(fp, "%2.2X ", *p & 255);
-		sprintf(fp, "\n");
-		aoechr_error(fbuf);
-	}
-
-	kfree(fbuf);
-}
-
 static ssize_t
 aoechr_write(struct file *filp, const char __user *buf, size_t cnt, loff_t *offp)
 {
@@ -178,13 +143,13 @@ aoechr_rel(struct inode *inode, struct file *filp)
 static ssize_t
 aoechr_read(struct file *filp, char __user *buf, size_t cnt, loff_t *off)
 {
-	int n;
+	unsigned long n;
 	char *mp;
 	struct ErrMsg *em;
 	ssize_t len;
 	ulong flags;
 
-	n = (int) filp->private_data;
+	n = (unsigned long) filp->private_data;
 	switch (n) {
 	case MINOR_ERR:
 		spin_lock_irqsave(&emsgs_lock, flags);
@@ -233,7 +198,7 @@ loop:
 	}
 }
 
-struct file_operations aoe_fops = {
+static struct file_operations aoe_fops = {
 	.write = aoechr_write,
 	.read = aoechr_read,
 	.open = aoechr_open,
@@ -253,13 +218,13 @@ aoechr_init(void)
 	}
 	sema_init(&emsgs_sema, 0);
 	spin_lock_init(&emsgs_lock);
-	aoe_class = class_simple_create(THIS_MODULE, "aoe");
+	aoe_class = class_create(THIS_MODULE, "aoe");
 	if (IS_ERR(aoe_class)) {
 		unregister_chrdev(AOE_MAJOR, "aoechr");
 		return PTR_ERR(aoe_class);
 	}
 	for (i = 0; i < ARRAY_SIZE(chardevs); ++i)
-		class_simple_device_add(aoe_class,
+		class_device_create(aoe_class,
 					MKDEV(AOE_MAJOR, chardevs[i].minor),
 					NULL, chardevs[i].name);
 
@@ -272,8 +237,8 @@ aoechr_exit(void)
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(chardevs); ++i)
-		class_simple_device_remove(MKDEV(AOE_MAJOR, chardevs[i].minor));
-	class_simple_destroy(aoe_class);
+		class_device_destroy(aoe_class, MKDEV(AOE_MAJOR, chardevs[i].minor));
+	class_destroy(aoe_class);
 	unregister_chrdev(AOE_MAJOR, "aoechr");
 }
 

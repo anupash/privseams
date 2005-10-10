@@ -33,7 +33,7 @@
  * Transcribed from Intel (as86) -> AT&T (gas) by Chris Noe, May 1999.
  * <stiker@northlink.com>
  *
- * Fix to work around buggy BIOSes which dont use carry bit correctly
+ * Fix to work around buggy BIOSes which don't use carry bit correctly
  * and/or report extended memory in CX/DX for e801h memory size detection 
  * call.  As a result the kernel got wrong figures.  The int15/e801h docs
  * from Ralf Brown interrupt list seem to indicate AX/BX should be used
@@ -164,7 +164,7 @@ ramdisk_max:	.long (-__PAGE_OFFSET-(512 << 20)-1) & 0x7fffffff
 trampoline:	call	start_of_setup
 		.align 16
 					# The offset at this point is 0x240
-		.space	(0x7ff-0x240+1) # E820 & EDD space (ending at 0x7ff)
+		.space	(0xeff-0x240+1) # E820 & EDD space (ending at 0xeff)
 # End of setup header #####################################################
 
 start_of_setup:
@@ -333,9 +333,9 @@ jmpe820:
 	# sizeof(e820rec).
 	#
 good820:
-	movb	(E820NR), %al			# up to 32 entries
+	movb	(E820NR), %al			# up to 128 entries
 	cmpb	$E820MAX, %al
-	jnl	bail820
+	jae	bail820
 
 	incb	(E820NR)
 	movw	%di, %ax
@@ -357,7 +357,7 @@ bail820:
 
 meme801:
 	stc					# fix to work around buggy
-	xorw	%cx,%cx				# BIOSes which dont clear/set
+	xorw	%cx,%cx				# BIOSes which don't clear/set
 	xorw	%dx,%dx				# carry on pass/error of
 						# e801h memory size call
 						# or merely pass cx,dx though
@@ -847,7 +847,7 @@ flush_instr:
 #
 #	but we yet haven't reloaded the CS register, so the default size 
 #	of the target offset still is 16 bit.
-#       However, using an operand prefix (0x66), the CPU will properly
+#	However, using an operand prefix (0x66), the CPU will properly
 #	take our 48 bit far pointer. (INTeL 80386 Programmer's Reference
 #	Manual, Mixing 16-bit and 32-bit code, page 16-6)
 

@@ -58,14 +58,14 @@ MODULE_LICENSE("GPL");
 
 /* -------- driver information -------------------------------------- */
 
-static struct class_simple *capi_class;
+static struct class *capi_class;
 
-int capi_major = 68;		/* allocated */
+static int capi_major = 68;		/* allocated */
 #ifdef CONFIG_ISDN_CAPI_MIDDLEWARE
 #define CAPINC_NR_PORTS	32
 #define CAPINC_MAX_PORTS	256
-int capi_ttymajor = 191;
-int capi_ttyminors = CAPINC_NR_PORTS;
+static int capi_ttymajor = 191;
+static int capi_ttyminors = CAPINC_NR_PORTS;
 #endif /* CONFIG_ISDN_CAPI_MIDDLEWARE */
 
 module_param_named(major, capi_major, uint, 0);
@@ -268,7 +268,7 @@ static void capiminor_free(struct capiminor *mp)
 	kfree(mp);
 }
 
-struct capiminor *capiminor_find(unsigned int minor)
+static struct capiminor *capiminor_find(unsigned int minor)
 {
 	struct list_head *l;
 	struct capiminor *p = NULL;
@@ -1166,7 +1166,7 @@ static int capinc_tty_write_room(struct tty_struct *tty)
 	return room;
 }
 
-int capinc_tty_chars_in_buffer(struct tty_struct *tty)
+static int capinc_tty_chars_in_buffer(struct tty_struct *tty)
 {
 	struct capiminor *mp = (struct capiminor *)tty->driver_data;
 	if (!mp || !mp->nccip) {
@@ -1499,20 +1499,20 @@ static int __init capi_init(void)
 		return -EIO;
 	}
 
-	capi_class = class_simple_create(THIS_MODULE, "capi");
+	capi_class = class_create(THIS_MODULE, "capi");
 	if (IS_ERR(capi_class)) {
 		unregister_chrdev(capi_major, "capi20");
 		return PTR_ERR(capi_class);
 	}
 
-	class_simple_device_add(capi_class, MKDEV(capi_major, 0), NULL, "capi");
+	class_device_create(capi_class, MKDEV(capi_major, 0), NULL, "capi");
 	devfs_mk_cdev(MKDEV(capi_major, 0), S_IFCHR | S_IRUSR | S_IWUSR,
 			"isdn/capi20");
 
 #ifdef CONFIG_ISDN_CAPI_MIDDLEWARE
 	if (capinc_tty_init() < 0) {
-		class_simple_device_remove(MKDEV(capi_major, 0));
-		class_simple_destroy(capi_class);
+		class_device_destroy(capi_class, MKDEV(capi_major, 0));
+		class_destroy(capi_class);
 		unregister_chrdev(capi_major, "capi20");
 		return -ENOMEM;
 	}
@@ -1539,8 +1539,8 @@ static void __exit capi_exit(void)
 {
 	proc_exit();
 
-	class_simple_device_remove(MKDEV(capi_major, 0));
-	class_simple_destroy(capi_class);
+	class_device_destroy(capi_class, MKDEV(capi_major, 0));
+	class_destroy(capi_class);
 	unregister_chrdev(capi_major, "capi20");
 	devfs_remove("isdn/capi20");
 

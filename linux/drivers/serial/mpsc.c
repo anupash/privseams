@@ -67,7 +67,11 @@
 
 static struct mpsc_port_info mpsc_ports[MPSC_NUM_CTLRS];
 static struct mpsc_shared_regs mpsc_shared_regs;
+static struct uart_driver mpsc_reg;
 
+static void mpsc_start_rx(struct mpsc_port_info *pi);
+static void mpsc_free_ring_mem(struct mpsc_port_info *pi);
+static void mpsc_release_port(struct uart_port *port);
 /*
  ******************************************************************************
  *
@@ -329,8 +333,8 @@ mpsc_sdma_stop(struct mpsc_port_info *pi)
 	mpsc_sdma_cmd(pi, SDMA_SDCM_AR | SDMA_SDCM_AT);
 
 	/* Clear the SDMA current and first TX and RX pointers */
-	mpsc_sdma_set_tx_ring(pi, 0);
-	mpsc_sdma_set_rx_ring(pi, 0);
+	mpsc_sdma_set_tx_ring(pi, NULL);
+	mpsc_sdma_set_rx_ring(pi, NULL);
 
 	/* Disable interrupts */
 	mpsc_sdma_intr_mask(pi, 0xf);
@@ -546,7 +550,6 @@ static int
 mpsc_alloc_ring_mem(struct mpsc_port_info *pi)
 {
 	int rc = 0;
-	static void mpsc_free_ring_mem(struct mpsc_port_info *pi);
 
 	pr_debug("mpsc_alloc_ring_mem[%d]: Allocating ring mem\n",
 		pi->port.line);
@@ -745,7 +748,6 @@ mpsc_rx_intr(struct mpsc_port_info *pi, struct pt_regs *regs)
 	int	rc = 0;
 	u8	*bp;
 	char	flag = TTY_NORMAL;
-	static void mpsc_start_rx(struct mpsc_port_info *pi);
 
 	pr_debug("mpsc_rx_intr[%d]: Handling Rx intr\n", pi->port.line);
 
@@ -1056,12 +1058,9 @@ mpsc_get_mctrl(struct uart_port *port)
 {
 	struct mpsc_port_info *pi = (struct mpsc_port_info *)port;
 	u32 mflags, status;
-	ulong iflags;
 
-	spin_lock_irqsave(&pi->port.lock, iflags);
 	status = (pi->mirror_regs) ? pi->MPSC_CHR_10_m :
 		readl(pi->mpsc_base + MPSC_CHR_10);
-	spin_unlock_irqrestore(&pi->port.lock, iflags);
 
 	mflags = 0;
 	if (status & 0x1)
@@ -1178,7 +1177,6 @@ static void
 mpsc_shutdown(struct uart_port *port)
 {
 	struct mpsc_port_info *pi = (struct mpsc_port_info *)port;
-	static void mpsc_release_port(struct uart_port *port);
 
 	pr_debug("mpsc_shutdown[%d]: Shutting down MPSC\n", port->line);
 
@@ -1448,7 +1446,6 @@ mpsc_console_setup(struct console *co, char *options)
 	return uart_set_options(&pi->port, co, baud, parity, bits, flow);
 }
 
-extern struct uart_driver mpsc_reg;
 static struct console mpsc_console = {
 	.name   = MPSC_DEV_NAME,
 	.write  = mpsc_console_write,
@@ -1540,8 +1537,8 @@ mpsc_shared_unmap_regs(void)
 			MPSC_SDMA_INTR_REG_BLOCK_SIZE);
 	}
 
-	mpsc_shared_regs.mpsc_routing_base = 0;
-	mpsc_shared_regs.sdma_intr_base = 0;
+	mpsc_shared_regs.mpsc_routing_base = NULL;
+	mpsc_shared_regs.sdma_intr_base = NULL;
 
 	mpsc_shared_regs.mpsc_routing_base_p = 0;
 	mpsc_shared_regs.sdma_intr_base_p = 0;
@@ -1678,9 +1675,9 @@ mpsc_drv_unmap_regs(struct mpsc_port_info *pi)
 		release_mem_region(pi->brg_base_p, MPSC_BRG_REG_BLOCK_SIZE);
 	}
 
-	pi->mpsc_base = 0;
-	pi->sdma_base = 0;
-	pi->brg_base = 0;
+	pi->mpsc_base = NULL;
+	pi->sdma_base = NULL;
+	pi->brg_base = NULL;
 
 	pi->mpsc_base_p = 0;
 	pi->sdma_base_p = 0;

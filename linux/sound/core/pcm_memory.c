@@ -204,6 +204,7 @@ static int snd_pcm_lib_preallocate_pages1(snd_pcm_substream_t *substream,
 		entry->c.text.read = snd_pcm_lib_preallocate_proc_read;
 		entry->c.text.write_size = 64;
 		entry->c.text.write = snd_pcm_lib_preallocate_proc_write;
+		entry->mode |= S_IWUSR;
 		entry->private_data = substream;
 		if (snd_info_register(entry) < 0) {
 			snd_info_free_entry(entry);
@@ -291,7 +292,7 @@ struct page *snd_pcm_sgbuf_ops_page(snd_pcm_substream_t *substream, unsigned lon
  * @substream: the substream to allocate the DMA buffer to
  * @size: the requested buffer size in bytes
  *
- * Allocates the DMA buffer on the BUS type given by
+ * Allocates the DMA buffer on the BUS type given earlier to
  * snd_pcm_lib_preallocate_xxx_pages().
  *
  * Returns 1 if the buffer is changed, 0 if not changed, or a negative

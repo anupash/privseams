@@ -19,6 +19,9 @@ enum bh_state_bits {
 	BH_Dirty,	/* Is dirty */
 	BH_Lock,	/* Is locked */
 	BH_Req,		/* Has been submitted for I/O */
+	BH_Uptodate_Lock,/* Used by the first bh in a page, to serialise
+			  * IO completion of other buffers in the page
+			  */
 
 	BH_Mapped,	/* Has a disk mapping */
 	BH_New,		/* Disk mapping was newly created by get_block */
@@ -169,7 +172,7 @@ void __brelse(struct buffer_head *);
 void __bforget(struct buffer_head *);
 void __breadahead(struct block_device *, sector_t block, int size);
 struct buffer_head *__bread(struct block_device *, sector_t block, int size);
-struct buffer_head *alloc_buffer_head(int gfp_flags);
+struct buffer_head *alloc_buffer_head(unsigned int __nocast gfp_flags);
 void free_buffer_head(struct buffer_head * bh);
 void FASTCALL(unlock_buffer(struct buffer_head *bh));
 void FASTCALL(__lock_buffer(struct buffer_head *bh));
@@ -203,6 +206,9 @@ int file_fsync(struct file *, struct dentry *, int);
 int nobh_prepare_write(struct page*, unsigned, unsigned, get_block_t*);
 int nobh_commit_write(struct file *, struct page *, unsigned, unsigned);
 int nobh_truncate_page(struct address_space *, loff_t);
+int nobh_writepage(struct page *page, get_block_t *get_block,
+                        struct writeback_control *wbc);
+
 
 /*
  * inline definitions

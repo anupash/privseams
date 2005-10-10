@@ -43,6 +43,10 @@ config GENERIC_NVRAM
 	bool
 	default y
 
+config SCHED_NO_NO_OMIT_FRAME_POINTER
+	bool
+	default y
+
 source "init/Kconfig"
 
 menu "Processor"
@@ -52,17 +56,18 @@ choice
 	default 6xx
 
 config 6xx
-	bool "6xx/7xx/74xx/52xx/8260"
+	bool "6xx/7xx/74xx/52xx/82xx/83xx"
+	select PPC_FPU
 	help
 	  There are four types of PowerPC chips supported.  The more common
 	  types (601, 603, 604, 740, 750, 7400), the Motorola embedded
-	  versions (821, 823, 850, 855, 860, 52xx, 8260), the IBM embedded
+	  versions (821, 823, 850, 855, 860, 52xx, 82xx, 83xx), the IBM embedded
 	  versions (403 and 405) and the high end 64 bit Power processors
 	  (POWER 3, POWER4, and IBM 970 also known as G5)
 	  Unless you are building a kernel for one of the embedded processor
 	  systems, 64 bit IBM RS/6000 or an Apple G5, choose 6xx.
 	  Note that the kernel runs in 32-bit mode even on 64-bit chips.
-	  Also note that because the 52xx & 82xx family has a 603e core,
+	  Also note that because the 52xx, 82xx, & 83xx family has a 603e core,
 	  specific support for that chipset is asked later on.
 
 config 40x
@@ -72,44 +77,57 @@ config 44x
 	bool "44x"
 
 config POWER3
+	select PPC_FPU
 	bool "POWER3"
 
 config POWER4
+	select PPC_FPU
 	bool "POWER4 and 970 (G5)"
 
 config 8xx
-	depends on BROKEN
 	bool "8xx"
+
+config E200
+	bool "e200"
 
 config E500
 	bool "e500"
 
 endchoice
 
+config PPC_FPU
+	bool
+
 config BOOKE
 	bool
-	depends on E500
+	depends on E200 || E500
 	default y
 
 config FSL_BOOKE
 	bool
-	depends on E500
+	depends on E200 || E500
 	default y
 
 config PTE_64BIT
 	bool
-	depends on 44x
-	default y
+	depends on 44x || E500
+	default y if 44x
+	default y if E500 && PHYS_64BIT
 
 config PHYS_64BIT
-	bool
-	depends on 44x
-	default y
+	bool 'Large physical address support' if E500
+	depends on 44x || E500
+	default y if 44x
+	---help---
+	  This option enables kernel support for larger than 32-bit physical
+	  addresses.  This features is not be available on all e500 cores.
+
+	  If in doubt, say N here.
 
 config ALTIVEC
 	bool "AltiVec Support"
 	depends on 6xx || POWER4
-	depends on !8260
+	depends on !8260 && !83xx
 	---help---
 	  This option enables kernel support for the Altivec extensions to the
 	  PowerPC processor. The kernel currently supports saving and restoring
@@ -125,22 +143,22 @@ config ALTIVEC
 
 config SPE
 	bool "SPE Support"
-	depends on E500
+	depends on E200 || E500
 	---help---
 	  This option enables kernel support for the Signal Processing
 	  Extensions (SPE) to the PowerPC processor. The kernel currently
 	  supports saving and restoring SPE registers, and turning on the
 	  'spe enable' bit so user processes can execute SPE instructions.
 
-	  This option is only usefully if you have a processor that supports
+	  This option is only useful if you have a processor that supports
 	  SPE (e500, otherwise known as 85xx series), but does not have any
-	  affect on a non-spe cpu (it does, however add code to the kernel).
+	  effect on a non-spe cpu (it does, however add code to the kernel).
 
 	  If in doubt, say Y here.
 
 config TAU
 	bool "Thermal Management Support"
-	depends on 6xx && !8260
+	depends on 6xx && !8260 && !83xx
 	help
 	  G3 and G4 processors have an on-chip temperature sensor called the
 	  'Thermal Assist Unit (TAU)', which, in theory, can measure the on-die
@@ -184,7 +202,7 @@ config TAU_AVERAGE
 
 config MATH_EMULATION
 	bool "Math emulation"
-	depends on 4xx || 8xx || E500
+	depends on 4xx || 8xx || E200 || E500
 	---help---
 	  Some PowerPC chips designed for embedded applications do not have
 	  a floating-point unit and therefore do not implement the
@@ -198,20 +216,36 @@ config MATH_EMULATION
 	  here.  Saying Y here will not hurt performance (on any machine) but
 	  will increase the size of the kernel.
 
+config KEXEC
+	bool "kexec system call (EXPERIMENTAL)"
+	depends on EXPERIMENTAL
+	help
+	  kexec is a system call that implements the ability to shutdown your
+	  current kernel, and to start another kernel.  It is like a reboot
+	  but it is indepedent of the system firmware.   And like a reboot
+	  you can start any kernel with it, not just Linux.
+
+	  The name comes from the similiarity to the exec system call.
+
+	  It is an ongoing process to be certain the hardware in a machine
+	  is properly shutdown, so do not be surprised if this code does not
+	  initially work for you.  It may help to enable device hotplugging
+	  support.  As of this writing the exact hardware interface is
+	  strongly in flux, so no good recommendation can be made.
+
+	  In the GameCube implementation, kexec allows you to load and
+	  run DOL files, including kernel and homebrew DOLs.
+
 source "drivers/cpufreq/Kconfig"
 
 config CPU_FREQ_PMAC
 	bool "Support for Apple PowerBooks"
 	depends on CPU_FREQ && ADB_PMU
+	select CPU_FREQ_TABLE
 	help
 	  This adds support for frequency switching on Apple PowerBooks,
 	  this currently includes some models of iBook & Titanium
 	  PowerBook.
-
-config CPU_FREQ_TABLE
-	bool
-	depends on CPU_FREQ_PMAC
-	default y
 
 config PPC601_SYNC_FIX
 	bool "Workarounds for PPC601 bugs"
@@ -242,12 +276,15 @@ config PPC_STD_MMU
 
 config NOT_COHERENT_CACHE
 	bool
-	depends on 4xx || 8xx
+	depends on 4xx || 8xx || E200
 	default y
 
 endmenu
 
 menu "Platform options"
+
+config FADS
+	bool
 
 choice
 	prompt "8xx Machine Type"
@@ -364,8 +401,25 @@ config BSEIP
 	  26MB DRAM, 4MB flash, Ethernet, a 16K-gate FPGA, USB, an LCD/video
 	  controller, and two RS232 ports.
 
-config FADS
+config MPC8XXFADS
 	bool "FADS"
+	select FADS
+
+config MPC86XADS
+	bool "MPC86XADS"
+	help
+	  MPC86x Application Development System by Freescale Semiconductor.
+	  The MPC86xADS is meant to serve as a platform for s/w and h/w
+	  development around the MPC86X processor families.
+	select FADS
+
+config MPC885ADS
+	bool "MPC885ADS"
+	help
+	  Freescale Semiconductor MPC885 Application Development System (ADS).
+	  Also known as DUET.
+	  The MPC885ADS is meant to serve as a platform for s/w and h/w
+	  development around the MPC885 processor family.
 
 config TQM823L
 	bool "TQM823L"
@@ -504,6 +558,7 @@ config PPC_MULTIPLATFORM
 
 config APUS
 	bool "Amiga-APUS"
+	depends on BROKEN
 	help
 	  Select APUS if configuring for a PowerUP Amiga.
 	  More information is available at:
@@ -538,6 +593,17 @@ config CHESTNUT
 config SPRUCE
 	bool "IBM-Spruce"
 
+config HDPU
+	bool "Sky-HDPU"
+	help
+	  Select HDPU if configuring a Sky Computers Compute Blade.
+
+config HDPU_FEATURES
+	depends HDPU
+	tristate "HDPU-Features"
+	help
+	  Select to enable HDPU enhanced features.
+
 config EV64260
 	bool "Marvell-EV64260BP"
 	help
@@ -568,6 +634,9 @@ config SANDPOINT
 	  Select SANDPOINT if configuring for a Motorola Sandpoint X3
 	  (any flavor).
 
+config RADSTONE_PPC7D
+	bool "Radstone Technology PPC7D board"
+
 config ADIR
 	bool "SBS-Adirondack"
 
@@ -579,6 +648,7 @@ config PAL4
 
 config GEMINI
 	bool "Synergy-Gemini"
+	depends on BROKEN
 	help
 	  Select Gemini if configuring for a Synergy Microsystems' Gemini
 	  series Single Board Computer.  More information is available at:
@@ -638,6 +708,11 @@ config LITE5200
 	  much but it's only been tested on this board version. I think this
 	  board is also known as IceCube.
 
+config MPC834x_SYS
+	bool "Freescale MPC834x SYS"
+	help
+	  This option enables support for the MPC 834x SYS evaluation board.
+
 endchoice
 
 config PQ2ADS
@@ -675,6 +750,14 @@ config 8272
 	help
 	  The MPC8272 CPM has a different internal dpram setup than other CPM2
 	  devices
+
+config 83xx
+	bool
+	default y if MPC834x_SYS
+
+config MPC834x
+	bool
+	default y if MPC834x_SYS
 
 config CPM2
 	bool
@@ -715,7 +798,8 @@ config PPC_GEN550
 	bool
 	depends on SANDPOINT || MCPN765 || SPRUCE || PPLUS || PCORE || \
 		PRPMC750 || K2 || PRPMC800 || LOPEC || \
-		(EV64260 && !SERIAL_MPSC) || CHESTNUT
+		(EV64260 && !SERIAL_MPSC) || CHESTNUT || RADSTONE_PPC7D || \
+		83xx
 	default y
 
 config FORCE
@@ -728,15 +812,10 @@ config GT64260
 	depends on EV64260 || CPCI690
 	default y
 
-config MV64360
+config MV64360		# Really MV64360 & MV64460
 	bool
-	depends on KATANA
+	depends on CHESTNUT || KATANA || RADSTONE_PPC7D || HDPU
 	default y
-
-config MV64360
-	bool
-	depends on CHESTNUT
-  	default y
 
 config MV64X60
 	bool
@@ -791,11 +870,6 @@ config MPC10X_BRIDGE
 	depends on PCORE || POWERPMC250 || LOPEC || SANDPOINT
 	default y
 
-config FSL_OCP
-	bool
-	depends on MPC10X_BRIDGE || PPC_MPC52xx
-	default y
-
 config MPC10X_OPENPIC
 	bool
 	depends on POWERPMC250 || LOPEC || SANDPOINT
@@ -804,6 +878,13 @@ config MPC10X_OPENPIC
 config MPC10X_STORE_GATHERING
 	bool "Enable MPC10x store gathering"
 	depends on MPC10X_BRIDGE
+
+config SANDPOINT_ENABLE_UART1
+	bool "Enable DUART mode on Sandpoint"
+	depends on SANDPOINT
+	help
+	  If this option is enabled then the MPC824x processor will run
+	  in DUART mode instead of UART mode.
 
 config CPC710_DATA_GATHERING
 	bool "Enable CPC710 data gathering"
@@ -830,6 +911,7 @@ config PPCBUG_NVRAM
 	default y if PPC_PREP
 
 config SMP
+	depends on PPC_STD_MMU
 	bool "Symmetric multi-processing support"
 	---help---
 	  This enables support for systems with more than one CPU. If you have
@@ -849,7 +931,7 @@ config SMP
 
 config IRQ_ALL_CPUS
 	bool "Distribute interrupts on all CPUs by default"
-	depends on SMP
+	depends on SMP && !MV64360
 	help
 	  This option gives the kernel permission to distribute IRQs across
 	  multiple CPUs.  Saying N here will route all IRQs to the first
@@ -862,18 +944,12 @@ config NR_CPUS
 	depends on SMP
 	default "4"
 
-config PREEMPT
-	bool "Preemptible Kernel"
-	help
-	  This option reduces the latency of the kernel when reacting to
-	  real-time or interactive events by allowing a low priority process to
-	  be preempted even if it is in kernel mode executing a system call.
-
-	  Say Y here if you are building a kernel for a desktop, embedded
-	  or real-time system.  Say N if you are unsure.
-
 config HIGHMEM
 	bool "High memory support"
+
+source kernel/Kconfig.hz
+source kernel/Kconfig.preempt
+source "mm/Kconfig"
 
 source "fs/Kconfig.binfmt"
 
@@ -1046,7 +1122,32 @@ config PROC_HARDWARE
 
 source "drivers/zorro/Kconfig"
 
+if !44x || BROKEN
+source kernel/power/Kconfig
+endif
+
+config SECCOMP
+	bool "Enable seccomp to safely compute untrusted bytecode"
+	depends on PROC_FS
+	default y
+	help
+	  This kernel feature is useful for number crunching applications
+	  that may need to compute untrusted bytecode during their
+	  execution. By using pipes or other transports made available to
+	  the process as file descriptors supporting the read/write
+	  syscalls, it's possible to isolate those applications in
+	  their own address space using seccomp. Once seccomp is
+	  enabled via /proc/<pid>/seccomp, it cannot be disabled
+	  and the task is only allowed to execute a few safe syscalls
+	  defined by each seccomp mode.
+
+	  If unsure, say Y. Only embedded should say N here.
+
 endmenu
+
+config ISA_DMA_API
+	bool
+	default y
 
 menu "Bus options"
 
@@ -1079,8 +1180,8 @@ config MCA
 	bool
 
 config PCI
-	bool "PCI support" if 40x || CPM2 || 85xx
-	default y if !40x && !CPM2 && !8xx && !APUS && !85xx
+	bool "PCI support" if 40x || CPM2 || 83xx || 85xx || PPC_MPC52xx
+	default y if !40x && !CPM2 && !8xx && !APUS && !83xx && !85xx
 	default PCI_PERMEDIA if !4xx && !CPM2 && !8xx && APUS
 	default PCI_QSPAN if !4xx && !CPM2 && 8xx
 	help
@@ -1102,12 +1203,12 @@ config PCI_QSPAN
 
 config PCI_8260
 	bool
-	depends on PCI && 8260 && !8272
+	depends on PCI && 8260
 	default y
 
 config 8260_PCI9
 	bool "  Enable workaround for MPC826x erratum PCI 9"
-	depends on PCI_8260
+	depends on PCI_8260 && !ADS8272
 	default y
 
 choice
@@ -1256,6 +1357,8 @@ config PIN_TLB
 	bool "Pinned Kernel TLBs (860 ONLY)"
 	depends on ADVANCED_OPTIONS && 8xx
 endmenu
+
+source "net/Kconfig"
 
 source "drivers/Kconfig"
 

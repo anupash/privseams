@@ -12,7 +12,7 @@ struct thread_info {
 	unsigned long flags;		/* thread_info flags (see TIF_*) */
 	mm_segment_t addr_limit;	/* user-level address space limit */
 	__u32 cpu;			/* current CPU */
-	__s32 preempt_count;		/* 0=premptable, <0=BUG; will also serve as bh-counter */
+	int preempt_count;		/* 0=premptable, <0=BUG; will also serve as bh-counter */
 	struct restart_block restart_block;
 };
 
@@ -23,7 +23,7 @@ struct thread_info {
 	.flags		= 0,			\
 	.cpu		= 0,			\
 	.addr_limit	= KERNEL_DS,		\
-	.preempt_count	= 0,			\
+	.preempt_count	= 1,			\
   	.restart_block	= {			\
 		.fn = do_no_restart_syscall	\
 	}					\
@@ -52,7 +52,7 @@ struct thread_info {
 
 #endif /* !__ASSEMBLY */
 
-#define PREEMPT_ACTIVE          0x4000000
+#define PREEMPT_ACTIVE          0x10000000
 
 /*
  * thread information flags

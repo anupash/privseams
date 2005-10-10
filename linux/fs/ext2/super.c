@@ -31,6 +31,7 @@
 #include "ext2.h"
 #include "xattr.h"
 #include "acl.h"
+#include "xip.h"
 
 static void ext2_sync_super(struct super_block *sb,
 			    struct ext2_super_block *es);
@@ -198,10 +199,7 @@ static void ext2_clear_inode(struct inode *inode)
 		ei->i_default_acl = EXT2_ACL_NOT_CACHED;
 	}
 #endif
-	if (!is_bad_inode(inode))
-		ext2_discard_prealloc(inode);
 }
-
 
 #ifdef CONFIG_QUOTA
 static ssize_t ext2_quota_read(struct super_block *sb, int type, char *data, size_t len, loff_t off);
@@ -213,6 +211,7 @@ static struct super_operations ext2_sops = {
 	.destroy_inode	= ext2_destroy_inode,
 	.read_inode	= ext2_read_inode,
 	.write_inode	= ext2_write_inode,
+	.put_inode	= ext2_put_inode,
 	.delete_inode	= ext2_delete_inode,
 	.put_super	= ext2_put_super,
 	.write_super	= ext2_write_super,
@@ -259,7 +258,7 @@ enum {
 	Opt_bsd_df, Opt_minix_df, Opt_grpid, Opt_nogrpid,
 	Opt_resgid, Opt_resuid, Opt_sb, Opt_err_cont, Opt_err_panic, Opt_err_ro,
 	Opt_nouid32, Opt_check, Opt_nocheck, Opt_debug, Opt_oldalloc, Opt_orlov, Opt_nobh,
-	Opt_user_xattr, Opt_nouser_xattr, Opt_acl, Opt_noacl,
+	Opt_user_xattr, Opt_nouser_xattr, Opt_acl, Opt_noacl, Opt_xip,
 	Opt_ignore, Opt_err,
 };
 
@@ -288,6 +287,7 @@ static match_table_t tokens = {
 	{Opt_nouser_xattr, "nouser_xattr"},
 	{Opt_acl, "acl"},
 	{Opt_noacl, "noacl"},
+	{Opt_xip, "xip"},
 	{Opt_ignore, "grpquota"},
 	{Opt_ignore, "noquota"},
 	{Opt_ignore, "quota"},
@@ -399,6 +399,13 @@ static int parse_options (char * options,
 			printk("EXT2 (no)acl options not supported\n");
 			break;
 #endif
+		case Opt_xip:
+#ifdef CONFIG_EXT2_FS_XIP
+			set_opt (sbi->s_mount_opt, XIP);
+#else
+			printk("EXT2 xip option not supported\n");
+#endif
+			break;
 		case Opt_ignore:
 			break;
 		default:
@@ -518,12 +525,18 @@ static int ext2_check_descriptors (struct super_block * sb)
 static loff_t ext2_max_size(int bits)
 {
 	loff_t res = EXT2_NDIR_BLOCKS;
+	/* This constant is calculated to be the largest file size for a
+	 * dense, 4k-blocksize file such that the total number of
+	 * sectors in the file, including data and all indirect blocks,
+	 * does not exceed 2^32. */
+	const loff_t upper_limit = 0x1ff7fffd000LL;
+
 	res += 1LL << (bits-2);
 	res += 1LL << (2*(bits-2));
 	res += 1LL << (3*(bits-2));
 	res <<= bits;
-	if (res > (512LL << 32) - (1 << bits))
-		res = (512LL << 32) - (1 << bits);
+	if (res > upper_limit)
+		res = upper_limit;
 	return res;
 }
 
@@ -636,6 +649,9 @@ static int ext2_fill_super(struct super_block *sb, void *data, int silent)
 		((EXT2_SB(sb)->s_mount_opt & EXT2_MOUNT_POSIX_ACL) ?
 		 MS_POSIXACL : 0);
 
+	ext2_xip_verify_sb(sb); /* see if bdev supports xip, unset
+				    EXT2_MOUNT_XIP if not */
+
 	if (le32_to_cpu(es->s_rev_level) == EXT2_GOOD_OLD_REV &&
 	    (EXT2_HAS_COMPAT_FEATURE(sb, ~0U) ||
 	     EXT2_HAS_RO_COMPAT_FEATURE(sb, ~0U) ||
@@ -663,6 +679,13 @@ static int ext2_fill_super(struct super_block *sb, void *data, int silent)
 	}
 
 	blocksize = BLOCK_SIZE << le32_to_cpu(sbi->s_es->s_log_block_size);
+
+	if ((ext2_use_xip(sb)) && ((blocksize != PAGE_SIZE) ||
+				  (sb->s_blocksize != blocksize))) {
+		if (!silent)
+			printk("XIP: Unsupported blocksize\n");
+		goto failed_mount;
+	}
 
 	/* If the blocksize doesn't match, re-read the thing.. */
 	if (sb->s_blocksize != blocksize) {
@@ -912,17 +935,34 @@ static int ext2_remount (struct super_block * sb, int * flags, char * data)
 {
 	struct ext2_sb_info * sbi = EXT2_SB(sb);
 	struct ext2_super_block * es;
+	unsigned long old_mount_opt = sbi->s_mount_opt;
+	struct ext2_mount_options old_opts;
+	unsigned long old_sb_flags;
+	int err;
+
+	/* Store the old options */
+	old_sb_flags = sb->s_flags;
+	old_opts.s_mount_opt = sbi->s_mount_opt;
+	old_opts.s_resuid = sbi->s_resuid;
+	old_opts.s_resgid = sbi->s_resgid;
 
 	/*
 	 * Allow the "check" option to be passed as a remount option.
 	 */
-	if (!parse_options (data, sbi))
-		return -EINVAL;
+	if (!parse_options (data, sbi)) {
+		err = -EINVAL;
+		goto restore_opts;
+	}
 
 	sb->s_flags = (sb->s_flags & ~MS_POSIXACL) |
 		((sbi->s_mount_opt & EXT2_MOUNT_POSIX_ACL) ? MS_POSIXACL : 0);
 
 	es = sbi->s_es;
+	if (((sbi->s_mount_opt & EXT2_MOUNT_XIP) !=
+	    (old_mount_opt & EXT2_MOUNT_XIP)) &&
+	    invalidate_inodes(sb))
+		ext2_warning(sb, __FUNCTION__, "busy inodes while remounting "\
+			     "xip remain in cache (no functional problem)");
 	if ((*flags & MS_RDONLY) == (sb->s_flags & MS_RDONLY))
 		return 0;
 	if (*flags & MS_RDONLY) {
@@ -942,7 +982,8 @@ static int ext2_remount (struct super_block * sb, int * flags, char * data)
 			printk("EXT2-fs: %s: couldn't remount RDWR because of "
 			       "unsupported optional features (%x).\n",
 			       sb->s_id, le32_to_cpu(ret));
-			return -EROFS;
+			err = -EROFS;
+			goto restore_opts;
 		}
 		/*
 		 * Mounting a RDONLY partition read-write, so reread and
@@ -955,6 +996,12 @@ static int ext2_remount (struct super_block * sb, int * flags, char * data)
 	}
 	ext2_sync_super(sb, es);
 	return 0;
+restore_opts:
+	sbi->s_mount_opt = old_opts.s_mount_opt;
+	sbi->s_resuid = old_opts.s_resuid;
+	sbi->s_resgid = old_opts.s_resgid;
+	sb->s_flags = old_sb_flags;
+	return err;
 }
 
 static int ext2_statfs (struct super_block * sb, struct kstatfs * buf)

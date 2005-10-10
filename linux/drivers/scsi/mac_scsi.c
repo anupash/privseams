@@ -302,7 +302,7 @@ int macscsi_detect(Scsi_Host_Template * tpnt)
 
     if (instance->irq != SCSI_IRQ_NONE)
 	if (request_irq(instance->irq, NCR5380_intr, IRQ_FLG_SLOW, 
-		"ncr5380", NCR5380_intr)) {
+		"ncr5380", instance)) {
 	    printk(KERN_WARNING "scsi%d: IRQ%d not free, interrupts disabled\n",
 		   instance->host_no, instance->irq);
 	    instance->irq = SCSI_IRQ_NONE;
@@ -591,8 +591,6 @@ static Scsi_Host_Template driver_template = {
 	.queuecommand			= macscsi_queue_command,
 	.eh_abort_handler		= macscsi_abort,
 	.eh_bus_reset_handler		= macscsi_bus_reset,
-	.eh_device_reset_handler	= macscsi_device_reset,
-	.eh_host_reset_handler		= macscsi_host_reset,
 	.can_queue			= CAN_QUEUE,
 	.this_id			= 7,
 	.sg_tablesize			= SG_ALL,

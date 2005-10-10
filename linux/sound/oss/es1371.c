@@ -128,10 +128,15 @@
 #include <linux/ac97_codec.h>
 #include <linux/gameport.h>
 #include <linux/wait.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/io.h>
 #include <asm/page.h>
 #include <asm/uaccess.h>
+
+#if defined(CONFIG_GAMEPORT) || (defined(MODULE) && defined(CONFIG_GAMEPORT_MODULE))
+#define SUPPORT_JOYSTICK
+#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -453,7 +458,10 @@ struct es1371_state {
 		unsigned char obuf[MIDIOUTBUF];
 	} midi;
 
-	struct gameport gameport;
+#ifdef SUPPORT_JOYSTICK
+	struct gameport *gameport;
+#endif
+
 	struct semaphore sem;
 };
 
@@ -2786,6 +2794,57 @@ static struct
 	{ PCI_ANY_ID, PCI_ANY_ID }
 };
 
+#ifdef SUPPORT_JOYSTICK
+
+static int __devinit es1371_register_gameport(struct es1371_state *s)
+{
+	struct gameport *gp;
+	int gpio;
+
+	for (gpio = 0x218; gpio >= 0x200; gpio -= 0x08)
+		if (request_region(gpio, JOY_EXTENT, "es1371"))
+			break;
+
+	if (gpio < 0x200) {
+		printk(KERN_ERR PFX "no free joystick address found\n");
+		return -EBUSY;
+	}
+
+	s->gameport = gp = gameport_allocate_port();
+	if (!gp) {
+		printk(KERN_ERR PFX "can not allocate memory for gameport\n");
+		release_region(gpio, JOY_EXTENT);
+		return -ENOMEM;
+	}
+
+	gameport_set_name(gp, "ESS1371 Gameport");
+	gameport_set_phys(gp, "isa%04x/gameport0", gpio);
+	gp->dev.parent = &s->dev->dev;
+	gp->io = gpio;
+
+	s->ctrl |= CTRL_JYSTK_EN | (((gpio >> 3) & CTRL_JOY_MASK) << CTRL_JOY_SHIFT);
+	outl(s->ctrl, s->io + ES1371_REG_CONTROL);
+
+	gameport_register_port(gp);
+
+	return 0;
+}
+
+static inline void es1371_unregister_gameport(struct es1371_state *s)
+{
+	if (s->gameport) {
+		int gpio = s->gameport->io;
+		gameport_unregister_port(s->gameport);
+		release_region(gpio, JOY_EXTENT);
+
+	}
+}
+
+#else
+static inline int es1371_register_gameport(struct es1371_state *s) { return -ENOSYS; }
+static inline void es1371_unregister_gameport(struct es1371_state *s) { }
+#endif /* SUPPORT_JOYSTICK */
+
 
 static int __devinit es1371_probe(struct pci_dev *pcidev, const struct pci_device_id *pciid)
 {
@@ -2804,7 +2863,7 @@ static int __devinit es1371_probe(struct pci_dev *pcidev, const struct pci_devic
 		return -ENODEV;
 	if (pcidev->irq == 0) 
 		return -ENODEV;
-	i = pci_set_dma_mask(pcidev, 0xffffffff);
+	i = pci_set_dma_mask(pcidev, DMA_32BIT_MASK);
 	if (i) {
 		printk(KERN_WARNING "es1371: architecture does not support 32bit PCI busmaster DMA\n");
 		return i;
@@ -2849,8 +2908,8 @@ static int __devinit es1371_probe(struct pci_dev *pcidev, const struct pci_devic
 		printk(KERN_ERR PFX "irq %u in use\n", s->irq);
 		goto err_irq;
 	}
-	printk(KERN_INFO PFX "found es1371 rev %d at io %#lx irq %u joystick %#x\n",
-	       s->rev, s->io, s->irq, s->gameport.io);
+	printk(KERN_INFO PFX "found es1371 rev %d at io %#lx irq %u\n",
+	       s->rev, s->io, s->irq);
 	/* register devices */
 	if ((res=(s->dev_audio = register_sound_dsp(&es1371_audio_fops,-1)))<0)
 		goto err_dev1;
@@ -2881,16 +2940,6 @@ static int __devinit es1371_probe(struct pci_dev *pcidev, const struct pci_devic
                     	printk(KERN_INFO PFX "Enabling internal amplifier.\n");
 		}
 	}
-	s->gameport.io = 0;
-	for (i = 0x218; i >= 0x200; i -= 0x08) {
-		if (request_region(i, JOY_EXTENT, "es1371")) {
-			s->ctrl |= CTRL_JYSTK_EN | (((i >> 3) & CTRL_JOY_MASK) << CTRL_JOY_SHIFT);
-			s->gameport.io = i;
-			break;
-		}
-	}
-	if (!s->gameport.io)
-		printk(KERN_ERR PFX "no free joystick address found\n");
 
 	s->sctrl = 0;
 	cssr = 0;
@@ -2960,9 +3009,9 @@ static int __devinit es1371_probe(struct pci_dev *pcidev, const struct pci_devic
 	set_fs(fs);
 	/* turn on S/PDIF output driver if requested */
 	outl(cssr, s->io+ES1371_REG_STATUS);
-	/* register gameport */
-	if (s->gameport.io)
-		gameport_register_port(&s->gameport);
+
+	es1371_register_gameport(s);
+
 	/* store it in the driver field */
 	pci_set_drvdata(pcidev, s);
 	/* put it into driver list */
@@ -2970,11 +3019,9 @@ static int __devinit es1371_probe(struct pci_dev *pcidev, const struct pci_devic
 	/* increment devindex */
 	if (devindex < NR_DEVICE-1)
 		devindex++;
-       	return 0;
+	return 0;
 
  err_gp:
-	if (s->gameport.io)
-		release_region(s->gameport.io, JOY_EXTENT);
 #ifdef ES1371_DEBUG
 	if (s->ps)
 		remove_proc_entry("es1371", NULL);
@@ -3013,10 +3060,7 @@ static void __devexit es1371_remove(struct pci_dev *dev)
 	outl(0, s->io+ES1371_REG_SERIAL_CONTROL); /* clear serial interrupts */
 	synchronize_irq(s->irq);
 	free_irq(s->irq, s);
-	if (s->gameport.io) {
-		gameport_unregister_port(&s->gameport);
-		release_region(s->gameport.io, JOY_EXTENT);
-	}
+	es1371_unregister_gameport(s);
 	release_region(s->io, ES1371_EXTENT);
 	unregister_sound_dsp(s->dev_audio);
 	unregister_sound_mixer(s->codec->dev_mixer);

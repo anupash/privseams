@@ -33,7 +33,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * $Id: agent_priv.h 1389 2004-12-27 22:56:47Z roland $
+ * $Id: agent_priv.h 1640 2005-01-24 22:39:02Z halr $
  */
 
 #ifndef __IB_AGENT_PRIV_H__
@@ -55,10 +55,8 @@ struct ib_agent_port_private {
 	struct list_head send_posted_list;
 	spinlock_t send_list_lock;
 	int port_num;
-	struct ib_mad_agent *dr_smp_agent;    /* DR SM class */
-	struct ib_mad_agent *lr_smp_agent;    /* LR SM class */
+	struct ib_mad_agent *smp_agent;	      /* SM class */
 	struct ib_mad_agent *perf_mgmt_agent; /* PerfMgmt class */
-	struct ib_mr *mr;
 };
 
 #endif	/* __IB_AGENT_PRIV_H__ */

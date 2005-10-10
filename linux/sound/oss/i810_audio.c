@@ -3430,9 +3430,9 @@ out_iospace:
 		release_mem_region(card->iobase_mmio_phys, 256);
 	}
 out_pio:	
-	release_region(card->iobase, 64);
-out_region2:
 	release_region(card->ac97base, 256);
+out_region2:
+	release_region(card->iobase, 64);
 out_region1:
 	pci_free_consistent(pci_dev, sizeof(struct i810_channel)*NR_HW_CH,
 	    card->channel, card->chandma);
@@ -3470,7 +3470,7 @@ static void __devexit i810_remove(struct pci_dev *pci_dev)
 }
 
 #ifdef CONFIG_PM
-static int i810_pm_suspend(struct pci_dev *dev, u32 pm_state)
+static int i810_pm_suspend(struct pci_dev *dev, pm_message_t pm_state)
 {
         struct i810_card *card = pci_get_drvdata(dev);
         struct i810_state *state;

@@ -37,12 +37,10 @@
 #include <net/ipv6.h>
 #include <linux/icmpv6.h>
 
-static int esp6_output(struct sk_buff *skb)
+static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
 {
 	int err;
 	int hdr_len;
-	struct dst_entry *dst = skb->dst;
-	struct xfrm_state *x  = dst->xfrm;
 	struct ipv6hdr *top_iph;
 	struct ipv6_esp_hdr *esph;
 	struct crypto_tfm *tfm;
@@ -55,7 +53,7 @@ static int esp6_output(struct sk_buff *skb)
 
 	esp = x->data;
 	hdr_len = skb->h.raw - skb->data +
-		sizeof(*esph) + esp->conf.ivlen;
+		  sizeof(*esph) + esp->conf.ivlen;
 
 	/* Strip IP+ESP header. */
 	__skb_pull(skb, hdr_len);
@@ -91,16 +89,6 @@ static int esp6_output(struct sk_buff *skb)
 	top_iph->payload_len = htons(skb->len + alen - sizeof(*top_iph));
 	*(u8*)(trailer->tail - 1) = *skb->nh.raw;
 	*skb->nh.raw = IPPROTO_ESP;
-
-#ifdef CONFIG_ESPBEET
-	if (x->props.mode == XFRM_MODE_BEET) {
-		ipv6_addr_copy(&top_iph->daddr,
-			       (struct in6_addr *)&x->outeraddr);
-		/* hopefully the source address is overwritten later...
-		   if not, we might have to call get_saddr() here?
-		*/
-	}
-#endif
 
 	esph->spi = x->id.spi;
 	esph->seq_no = htonl(++x->replay.oseq);
@@ -308,7 +296,7 @@ static void esp6_destroy(struct xfrm_state *x)
 	kfree(esp);
 }
 
-static int esp6_init_state(struct xfrm_state *x, void *args)
+static int esp6_init_state(struct xfrm_state *x)
 {
 	struct esp_data *esp = NULL;
 

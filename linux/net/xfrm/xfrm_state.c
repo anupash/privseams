@@ -35,11 +35,8 @@ static DEFINE_SPINLOCK(xfrm_state_lock);
  * Main use is finding SA after policy selected tunnel or transport mode.
  * Also, it can be used by ah/esp icmp error handler to find offending SA.
  */
-struct list_head xfrm_state_bydst[XFRM_DST_HSIZE];
-struct list_head xfrm_state_byspi[XFRM_DST_HSIZE];
-
-EXPORT_SYMBOL(xfrm_state_bydst);
-EXPORT_SYMBOL(xfrm_state_byspi);
+static struct list_head xfrm_state_bydst[XFRM_DST_HSIZE];
+static struct list_head xfrm_state_byspi[XFRM_DST_HSIZE];
 
 DECLARE_WAIT_QUEUE_HEAD(km_waitq);
 EXPORT_SYMBOL(km_waitq);
@@ -51,7 +48,9 @@ static struct work_struct xfrm_state_gc_work;
 static struct list_head xfrm_state_gc_list = LIST_HEAD_INIT(xfrm_state_gc_list);
 static DEFINE_SPINLOCK(xfrm_state_gc_lock);
 
-static void __xfrm_state_delete(struct xfrm_state *x);
+static int xfrm_state_gc_flush_bundles;
+
+static int __xfrm_state_delete(struct xfrm_state *x);
 
 static struct xfrm_state_afinfo *xfrm_state_get_afinfo(unsigned short family);
 static void xfrm_state_put_afinfo(struct xfrm_state_afinfo *afinfo);
@@ -83,6 +82,11 @@ static void xfrm_state_gc_task(void *data)
 	struct xfrm_state *x;
 	struct list_head *entry, *tmp;
 	struct list_head gc_list = LIST_HEAD_INIT(gc_list);
+
+	if (xfrm_state_gc_flush_bundles) {
+		xfrm_state_gc_flush_bundles = 0;
+		xfrm_flush_bundles();
+	}
 
 	spin_lock_bh(&xfrm_state_gc_lock);
 	list_splice_init(&xfrm_state_gc_list, &gc_list);
@@ -150,6 +154,7 @@ static void xfrm_timer_handler(unsigned long data)
 			next = tmo;
 	}
 
+	x->km.dying = warn;
 	if (warn)
 		km_state_expired(x, 0);
 resched:
@@ -165,9 +170,9 @@ expired:
 		next = 2;
 		goto resched;
 	}
-	if (x->id.spi != 0)
+	if (!__xfrm_state_delete(x) && x->id.spi)
 		km_state_expired(x, 1);
-	__xfrm_state_delete(x);
+
 out:
 	spin_unlock(&x->lock);
 	xfrm_state_put(x);
@@ -210,8 +215,10 @@ void __xfrm_state_destroy(struct xfrm_state *x)
 }
 EXPORT_SYMBOL(__xfrm_state_destroy);
 
-static void __xfrm_state_delete(struct xfrm_state *x)
+static int __xfrm_state_delete(struct xfrm_state *x)
 {
+	int err = -ESRCH;
+
 	if (x->km.state != XFRM_STATE_DEAD) {
 		x->km.state = XFRM_STATE_DEAD;
 		spin_lock(&xfrm_state_lock);
@@ -230,22 +237,31 @@ static void __xfrm_state_delete(struct xfrm_state *x)
 		 * our caller holds.  A larger value means that
 		 * there are DSTs attached to this xfrm_state.
 		 */
-		if (atomic_read(&x->refcnt) > 2)
-			xfrm_flush_bundles();
+		if (atomic_read(&x->refcnt) > 2) {
+			xfrm_state_gc_flush_bundles = 1;
+			schedule_work(&xfrm_state_gc_work);
+		}
 
 		/* All xfrm_state objects are created by xfrm_state_alloc.
 		 * The xfrm_state_alloc call gives a reference, and that
 		 * is what we are dropping here.
 		 */
 		atomic_dec(&x->refcnt);
+		err = 0;
 	}
+
+	return err;
 }
 
-void xfrm_state_delete(struct xfrm_state *x)
+int xfrm_state_delete(struct xfrm_state *x)
 {
+	int err;
+
 	spin_lock_bh(&x->lock);
-	__xfrm_state_delete(x);
+	err = __xfrm_state_delete(x);
 	spin_unlock_bh(&x->lock);
+
+	return err;
 }
 EXPORT_SYMBOL(xfrm_state_delete);
 
@@ -297,10 +313,17 @@ xfrm_state_find(xfrm_address_t *daddr, xfrm_address_t *saddr,
 		unsigned short family)
 {
 	unsigned h = xfrm_dst_hash(daddr, family);
-	struct xfrm_state *x;
+	struct xfrm_state *x, *x0;
 	int acquire_in_progress = 0;
 	int error = 0;
 	struct xfrm_state *best = NULL;
+	struct xfrm_state_afinfo *afinfo;
+	
+	afinfo = xfrm_state_get_afinfo(family);
+	if (afinfo == NULL) {
+		*err = -EAFNOSUPPORT;
+		return NULL;
+	}
 
 	spin_lock_bh(&xfrm_state_lock);
 	list_for_each_entry(x, xfrm_state_bydst+h, bydst) {
@@ -308,7 +331,8 @@ xfrm_state_find(xfrm_address_t *daddr, xfrm_address_t *saddr,
 		    x->props.reqid == tmpl->reqid &&
 		    xfrm_state_addr_check(x, daddr, saddr, family) &&
 		    tmpl->mode == x->props.mode &&
-		    tmpl->id.proto == x->id.proto) {
+		    tmpl->id.proto == x->id.proto &&
+		    (tmpl->id.spi == x->id.spi || !tmpl->id.spi)) {
 			/* Resolution logic:
 			   1. There is a valid state with matching selector.
 			      Done.
@@ -335,14 +359,25 @@ xfrm_state_find(xfrm_address_t *daddr, xfrm_address_t *saddr,
 			} else if (x->km.state == XFRM_STATE_ERROR ||
 				   x->km.state == XFRM_STATE_EXPIRED) {
 				if (xfrm_selector_match(&x->sel, fl, family))
-					error = 1;
+					error = -ESRCH;
 			}
 		}
 	}
 
 	x = best;
-	if (!x && !error && !acquire_in_progress &&
-	    ((x = xfrm_state_alloc()) != NULL)) {
+	if (!x && !error && !acquire_in_progress) {
+		if (tmpl->id.spi &&
+		    (x0 = afinfo->state_lookup(daddr, tmpl->id.spi,
+		                               tmpl->id.proto)) != NULL) {
+			xfrm_state_put(x0);
+			error = -EEXIST;
+			goto out;
+		}
+		x = xfrm_state_alloc();
+		if (x == NULL) {
+			error = -ENOMEM;
+			goto out;
+		}
 		/* Initialize temporary selector matching only
 		 * to current session. */
 		xfrm_init_tempsel(x, fl, tmpl, daddr, saddr, family);
@@ -364,15 +399,16 @@ xfrm_state_find(xfrm_address_t *daddr, xfrm_address_t *saddr,
 			x->km.state = XFRM_STATE_DEAD;
 			xfrm_state_put(x);
 			x = NULL;
-			error = 1;
+			error = -ESRCH;
 		}
 	}
+out:
 	if (x)
 		xfrm_state_hold(x);
 	else
-		*err = acquire_in_progress ? -EAGAIN :
-			(error ? -ESRCH : -ENOMEM);
+		*err = acquire_in_progress ? -EAGAIN : error;
 	spin_unlock_bh(&xfrm_state_lock);
+	xfrm_state_put_afinfo(afinfo);
 	return x;
 }
 
@@ -433,7 +469,7 @@ int xfrm_state_add(struct xfrm_state *x)
 			x1 = NULL;
 		}
 	}
-	
+
 	if (!x1)
 		x1 = afinfo->find_acq(
 			x->props.mode, x->props.reqid, x->id.proto,
@@ -530,16 +566,18 @@ int xfrm_state_check_expire(struct xfrm_state *x)
 
 	if (x->curlft.bytes >= x->lft.hard_byte_limit ||
 	    x->curlft.packets >= x->lft.hard_packet_limit) {
-		km_state_expired(x, 1);
-		if (!mod_timer(&x->timer, jiffies + XFRM_ACQ_EXPIRES*HZ))
+		x->km.state = XFRM_STATE_EXPIRED;
+		if (!mod_timer(&x->timer, jiffies))
 			xfrm_state_hold(x);
 		return -EINVAL;
 	}
 
 	if (!x->km.dying &&
 	    (x->curlft.bytes >= x->lft.soft_byte_limit ||
-	     x->curlft.packets >= x->lft.soft_packet_limit))
+	     x->curlft.packets >= x->lft.soft_packet_limit)) {
+		x->km.dying = 1;
 		km_state_expired(x, 0);
+	}
 	return 0;
 }
 EXPORT_SYMBOL(xfrm_state_check_expire);
@@ -611,7 +649,7 @@ static struct xfrm_state *__xfrm_find_acq_byseq(u32 seq)
 
 	for (i = 0; i < XFRM_DST_HSIZE; i++) {
 		list_for_each_entry(x, xfrm_state_bydst+i, bydst) {
-			if (x->km.seq == seq) {
+			if (x->km.seq == seq && x->km.state == XFRM_STATE_ACQ) {
 				xfrm_state_hold(x);
 				return x;
 			}
@@ -769,34 +807,56 @@ EXPORT_SYMBOL(xfrm_replay_advance);
 static struct list_head xfrm_km_list = LIST_HEAD_INIT(xfrm_km_list);
 static DEFINE_RWLOCK(xfrm_km_lock);
 
-static void km_state_expired(struct xfrm_state *x, int hard)
+void km_policy_notify(struct xfrm_policy *xp, int dir, struct km_event *c)
 {
 	struct xfrm_mgr *km;
 
-	if (hard)
-		x->km.state = XFRM_STATE_EXPIRED;
-	else
-		x->km.dying = 1;
-
 	read_lock(&xfrm_km_lock);
 	list_for_each_entry(km, &xfrm_km_list, list)
-		km->notify(x, hard);
+		if (km->notify_policy)
+			km->notify_policy(xp, dir, c);
 	read_unlock(&xfrm_km_lock);
+}
+
+void km_state_notify(struct xfrm_state *x, struct km_event *c)
+{
+	struct xfrm_mgr *km;
+	read_lock(&xfrm_km_lock);
+	list_for_each_entry(km, &xfrm_km_list, list)
+		if (km->notify)
+			km->notify(x, c);
+	read_unlock(&xfrm_km_lock);
+}
+
+EXPORT_SYMBOL(km_policy_notify);
+EXPORT_SYMBOL(km_state_notify);
+
+static void km_state_expired(struct xfrm_state *x, int hard)
+{
+	struct km_event c;
+
+	c.data.hard = hard;
+	c.event = XFRM_MSG_EXPIRE;
+	km_state_notify(x, &c);
 
 	if (hard)
 		wake_up(&km_waitq);
 }
 
+/*
+ * We send to all registered managers regardless of failure
+ * We are happy with one success
+*/
 static int km_query(struct xfrm_state *x, struct xfrm_tmpl *t, struct xfrm_policy *pol)
 {
-	int err = -EINVAL;
+	int err = -EINVAL, acqret;
 	struct xfrm_mgr *km;
 
 	read_lock(&xfrm_km_lock);
 	list_for_each_entry(km, &xfrm_km_list, list) {
-		err = km->acquire(x, t, pol, XFRM_POLICY_OUT);
-		if (!err)
-			break;
+		acqret = km->acquire(x, t, pol, XFRM_POLICY_OUT);
+		if (!acqret)
+			err = acqret;
 	}
 	read_unlock(&xfrm_km_lock);
 	return err;
@@ -809,9 +869,8 @@ int km_new_mapping(struct xfrm_state *x, xfrm_address_t *ipaddr, u16 sport)
 
 	read_lock(&xfrm_km_lock);
 	list_for_each_entry(km, &xfrm_km_list, list) {
-		if (km->new_mapping) {
+		if (km->new_mapping)
 			err = km->new_mapping(x, ipaddr, sport);
-		}
 		if (!err)
 			break;
 	}
@@ -822,13 +881,11 @@ EXPORT_SYMBOL(km_new_mapping);
 
 void km_policy_expired(struct xfrm_policy *pol, int dir, int hard)
 {
-	struct xfrm_mgr *km;
+	struct km_event c;
 
-	read_lock(&xfrm_km_lock);
-	list_for_each_entry(km, &xfrm_km_list, list)
-		if (km->notify_policy)
-			km->notify_policy(pol, dir, hard);
-	read_unlock(&xfrm_km_lock);
+	c.data.hard = hard;
+	c.event = XFRM_MSG_POLEXPIRE;
+	km_policy_notify(pol, dir, &c);
 
 	if (hard)
 		wake_up(&km_waitq);
@@ -969,6 +1026,73 @@ void xfrm_state_delete_tunnel(struct xfrm_state *x)
 }
 EXPORT_SYMBOL(xfrm_state_delete_tunnel);
 
+int xfrm_state_mtu(struct xfrm_state *x, int mtu)
+{
+	int res = mtu;
+
+	res -= x->props.header_len;
+
+	for (;;) {
+		int m = res;
+
+		if (m < 68)
+			return 68;
+
+		spin_lock_bh(&x->lock);
+		if (x->km.state == XFRM_STATE_VALID &&
+		    x->type && x->type->get_max_size)
+			m = x->type->get_max_size(x, m);
+		else
+			m += x->props.header_len;
+		spin_unlock_bh(&x->lock);
+
+		if (m <= mtu)
+			break;
+		res -= (m - mtu);
+	}
+
+	return res;
+}
+
+EXPORT_SYMBOL(xfrm_state_mtu);
+
+int xfrm_init_state(struct xfrm_state *x)
+{
+	struct xfrm_state_afinfo *afinfo;
+	int family = x->props.family;
+	int err;
+
+	err = -EAFNOSUPPORT;
+	afinfo = xfrm_state_get_afinfo(family);
+	if (!afinfo)
+		goto error;
+
+	err = 0;
+	if (afinfo->init_flags)
+		err = afinfo->init_flags(x);
+
+	xfrm_state_put_afinfo(afinfo);
+
+	if (err)
+		goto error;
+
+	err = -EPROTONOSUPPORT;
+	x->type = xfrm_get_type(x->id.proto, family);
+	if (x->type == NULL)
+		goto error;
+
+	err = x->type->init_state(x);
+	if (err)
+		goto error;
+
+	x->km.state = XFRM_STATE_VALID;
+
+error:
+	return err;
+}
+
+EXPORT_SYMBOL(xfrm_init_state);
+ 
 void __init xfrm_state_init(void)
 {
 	int i;

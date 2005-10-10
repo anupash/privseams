@@ -34,8 +34,10 @@
 #include <linux/root_dev.h>
 #include <linux/seq_file.h>
 #include <linux/serial.h>
+#include <linux/initrd.h>
 #include <linux/module.h>
 #include <linux/fsl_devices.h>
+#include <linux/interrupt.h>
 
 #include <asm/system.h>
 #include <asm/pgtable.h>
@@ -44,21 +46,19 @@
 #include <asm/time.h>
 #include <asm/io.h>
 #include <asm/machdep.h>
-#include <asm/prom.h>
 #include <asm/open_pic.h>
 #include <asm/bootinfo.h>
 #include <asm/pci-bridge.h>
 #include <asm/mpc85xx.h>
 #include <asm/irq.h>
 #include <asm/immap_85xx.h>
-#include <asm/immap_cpm2.h>
+#include <asm/cpm2.h>
 #include <asm/mpc85xx.h>
 #include <asm/ppc_sys.h>
 
 #include <syslib/cpm2_pic.h>
 #include <syslib/ppc85xx_common.h>
 
-extern void cpm2_reset(void);
 
 unsigned char __res[sizeof(bd_t)];
 
@@ -70,38 +70,7 @@ unsigned long pci_dram_offset = 0;
 
 /* Internal interrupts are all Level Sensitive, and Positive Polarity */
 static u8 gp3_openpic_initsenses[] __initdata = {
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  0: L2 Cache */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  1: ECM */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  2: DDR DRAM */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  3: LBIU */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  4: DMA 0 */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  5: DMA 1 */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  6: DMA 2 */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  7: DMA 3 */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  8: PCI/PCI-X */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal  9: RIO Inbound Port Write Error */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 10: RIO Doorbell Inbound */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 11: RIO Outbound Message */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 12: RIO Inbound Message */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 13: TSEC 0 Transmit */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 14: TSEC 0 Receive */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 15: Unused */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 16: Unused */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 17: Unused */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 18: TSEC 0 Receive/Transmit Error */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 19: TSEC 1 Transmit */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 20: TSEC 1 Receive */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 21: Unused */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 22: Unused */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 23: Unused */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 24: TSEC 1 Receive/Transmit Error */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 25: Fast Ethernet */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 26: DUART */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 27: I2C */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 28: Performance Monitor */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 29: Unused */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 30: CPM */
-	(IRQ_SENSE_LEVEL | IRQ_POLARITY_POSITIVE),	/* Internal 31: Unused */
+	MPC85XX_INTERNAL_IRQ_SENSES,
 	0x0,						/* External  0: */
 #if defined(CONFIG_PCI)
 	(IRQ_SENSE_LEVEL | IRQ_POLARITY_NEGATIVE),	/* External 1: PCI slot 0 */
@@ -152,19 +121,23 @@ gp3_setup_arch(void)
 
 	/* setup the board related information for the enet controllers */
 	pdata = (struct gianfar_platform_data *) ppc_sys_get_pdata(MPC85xx_TSEC1);
-/*	pdata->board_flags = FSL_GIANFAR_BRD_HAS_PHY_INTR; */
-	pdata->interruptPHY = MPC85xx_IRQ_EXT5;
-	pdata->phyid = 2;
-	pdata->phy_reg_addr += binfo->bi_immr_base;
-	memcpy(pdata->mac_addr, binfo->bi_enetaddr, 6);
+	if (pdata) {
+	/*	pdata->board_flags = FSL_GIANFAR_BRD_HAS_PHY_INTR; */
+		pdata->interruptPHY = MPC85xx_IRQ_EXT5;
+		pdata->phyid = 2;
+		pdata->phy_reg_addr += binfo->bi_immr_base;
+		memcpy(pdata->mac_addr, binfo->bi_enetaddr, 6);
+	}
 
 	pdata = (struct gianfar_platform_data *) ppc_sys_get_pdata(MPC85xx_TSEC2);
-/*	pdata->board_flags = FSL_GIANFAR_BRD_HAS_PHY_INTR; */
-	pdata->interruptPHY = MPC85xx_IRQ_EXT5;
-	pdata->phyid = 4;
-	/* fixup phy address */
-	pdata->phy_reg_addr += binfo->bi_immr_base;
-	memcpy(pdata->mac_addr, binfo->bi_enet1addr, 6);
+	if (pdata) {
+	/*	pdata->board_flags = FSL_GIANFAR_BRD_HAS_PHY_INTR; */
+		pdata->interruptPHY = MPC85xx_IRQ_EXT5;
+		pdata->phyid = 4;
+		/* fixup phy address */
+		pdata->phy_reg_addr += binfo->bi_immr_base;
+		memcpy(pdata->mac_addr, binfo->bi_enet1addr, 6);
+	}
 
 #ifdef CONFIG_BLK_DEV_INITRD
 	if (initrd_start)
@@ -198,8 +171,6 @@ static struct irqaction cpm2_irqaction = {
 static void __init
 gp3_init_IRQ(void)
 {
-	int i;
-	volatile cpm2_map_t *immap = cpm2_immr;
 	bd_t *binfo = (bd_t *) __res;
 
 	/*
@@ -217,7 +188,7 @@ gp3_init_IRQ(void)
 	openpic_set_sources(0, 32, OpenPIC_Addr + 0x10200);
 
 	/* Map PIC IRQs 0-11 */
-	openpic_set_sources(32, 12, OpenPIC_Addr + 0x10000);
+	openpic_set_sources(48, 12, OpenPIC_Addr + 0x10000);
 
 	/*
 	 * Let openpic interrupts starting from an offset, to
@@ -225,24 +196,8 @@ gp3_init_IRQ(void)
 	 */
 	openpic_init(MPC85xx_OPENPIC_IRQ_OFFSET);
 
-	/*
-	 * Setup CPM2 PIC
-	 */
-
-	/* disable all CPM interupts */
-	immap->im_intctl.ic_simrh = 0x0;
-	immap->im_intctl.ic_simrl = 0x0;
-
-	for (i = CPM_IRQ_OFFSET; i < (NR_CPM_INTS + CPM_IRQ_OFFSET); i++)
-		irq_desc[i].handler = &cpm2_pic;
-
-	/*
-	 * Initialize the default interrupt mapping priorities,
-	 * in case the boot rom changed something on us.
-	 */
-	immap->im_intctl.ic_sicr = 0;
-	immap->im_intctl.ic_scprrh = 0x05309770;
-	immap->im_intctl.ic_scprrl = 0x05309770;
+	/* Setup CPM2 PIC */
+        cpm2_init_IRQ();
 
 	setup_irq(MPC85xx_IRQ_CPM, &cpm2_irqaction);
 
@@ -261,31 +216,20 @@ gp3_show_cpuinfo(struct seq_file *m)
 	/* get the core frequency */
 	freq = binfo->bi_intfreq;
 
-	pvid = mfspr(PVR);
-	svid = mfspr(SVR);
+	pvid = mfspr(SPRN_PVR);
+	svid = mfspr(SPRN_SVR);
 
 	memsize = total_memory;
 
 	seq_printf(m, "Vendor\t\t: RPC Electronics STx \n");
-
-	switch (svid & 0xffff0000) {
-	case SVR_8540:
-		seq_printf(m, "Machine\t\t: GP3 - MPC8540\n");
-		break;
-	case SVR_8560:
-		seq_printf(m, "Machine\t\t: GP3 - MPC8560\n");
-		break;
-	default:
-		seq_printf(m, "Machine\t\t: unknown\n");
-		break;
-	}
+	seq_printf(m, "Machine\t\t: GP3 - MPC%s\n", cur_ppc_sys_spec->ppc_sys_name);
 	seq_printf(m, "bus freq\t: %u.%.6u MHz\n", freq / 1000000,
 		   freq % 1000000);
 	seq_printf(m, "PVR\t\t: 0x%x\n", pvid);
 	seq_printf(m, "SVR\t\t: 0x%x\n", svid);
 
 	/* Display cpu Pll setting */
-	phid1 = mfspr(HID1);
+	phid1 = mfspr(SPRN_HID1);
 	seq_printf(m, "PLL setting\t: 0x%x\n", ((phid1 >> 24) & 0x3f));
 
 	/* Display the amount of memory */
@@ -357,7 +301,7 @@ platform_init(unsigned long r3, unsigned long r4, unsigned long r5,
 		strcpy(cmd_line, (char *) (r6 + KERNELBASE));
 	}
 
-	identify_ppc_sys_by_id(mfspr(SVR));
+	identify_ppc_sys_by_id(mfspr(SPRN_SVR));
 
 	/* setup the PowerPC module struct */
 	ppc_md.setup_arch = gp3_setup_arch;

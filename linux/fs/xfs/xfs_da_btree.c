@@ -113,7 +113,10 @@ STATIC void xfs_da_node_unbalance(xfs_da_state_t *state,
 STATIC uint	xfs_da_node_lasthash(xfs_dabuf_t *bp, int *count);
 STATIC int	xfs_da_node_order(xfs_dabuf_t *node1_bp, xfs_dabuf_t *node2_bp);
 STATIC xfs_dabuf_t *xfs_da_buf_make(int nbuf, xfs_buf_t **bps, inst_t *ra);
-
+STATIC int	xfs_da_blk_unlink(xfs_da_state_t *state,
+				  xfs_da_state_blk_t *drop_blk,
+				  xfs_da_state_blk_t *save_blk);
+STATIC void	xfs_da_state_kill_altpath(xfs_da_state_t *state);
 
 /*========================================================================
  * Routines used for growing the Btree.
@@ -137,11 +140,11 @@ xfs_da_node_create(xfs_da_args_t *args, xfs_dablk_t blkno, int level,
 		return(error);
 	ASSERT(bp != NULL);
 	node = bp->data;
-	INT_ZERO(node->hdr.info.forw, ARCH_CONVERT);
-	INT_ZERO(node->hdr.info.back, ARCH_CONVERT);
+	node->hdr.info.forw = 0;
+	node->hdr.info.back = 0;
 	INT_SET(node->hdr.info.magic, ARCH_CONVERT, XFS_DA_NODE_MAGIC);
-	INT_ZERO(node->hdr.info.pad, ARCH_CONVERT);
-	INT_ZERO(node->hdr.count, ARCH_CONVERT);
+	node->hdr.info.pad = 0;
+	node->hdr.count = 0;
 	INT_SET(node->hdr.level, ARCH_CONVERT, level);
 
 	xfs_da_log_buf(tp, bp,
@@ -306,7 +309,7 @@ xfs_da_split(xfs_da_state_t *state)
 	 */
 
 	node = oldblk->bp->data;
-	if (!INT_ISZERO(node->hdr.info.forw, ARCH_CONVERT)) {
+	if (node->hdr.info.forw) {
 		if (INT_GET(node->hdr.info.forw, ARCH_CONVERT) == addblk->blkno) {
 			bp = addblk->bp;
 		} else {
@@ -791,8 +794,8 @@ xfs_da_root_join(xfs_da_state_t *state, xfs_da_state_blk_t *root_blk)
 	ASSERT(root_blk->magic == XFS_DA_NODE_MAGIC);
 	oldroot = root_blk->bp->data;
 	ASSERT(INT_GET(oldroot->hdr.info.magic, ARCH_CONVERT) == XFS_DA_NODE_MAGIC);
-	ASSERT(INT_ISZERO(oldroot->hdr.info.forw, ARCH_CONVERT));
-	ASSERT(INT_ISZERO(oldroot->hdr.info.back, ARCH_CONVERT));
+	ASSERT(!oldroot->hdr.info.forw);
+	ASSERT(!oldroot->hdr.info.back);
 
 	/*
 	 * If the root has more than one child, then don't do anything.
@@ -818,8 +821,8 @@ xfs_da_root_join(xfs_da_state_t *state, xfs_da_state_blk_t *root_blk)
 	} else {
 		ASSERT(INT_GET(blkinfo->magic, ARCH_CONVERT) == XFS_DA_NODE_MAGIC);
 	}
-	ASSERT(INT_ISZERO(blkinfo->forw, ARCH_CONVERT));
-	ASSERT(INT_ISZERO(blkinfo->back, ARCH_CONVERT));
+	ASSERT(!blkinfo->forw);
+	ASSERT(!blkinfo->back);
 	memcpy(root_blk->bp->data, bp->data, state->blocksize);
 	xfs_da_log_buf(args->trans, root_blk->bp, 0, state->blocksize - 1);
 	error = xfs_da_shrink_inode(args, child, bp);
@@ -871,7 +874,7 @@ xfs_da_node_toosmall(xfs_da_state_t *state, int *action)
 		 * Make altpath point to the block we want to keep and
 		 * path point to the block we want to drop (this one).
 		 */
-		forward = (!INT_ISZERO(info->forw, ARCH_CONVERT));
+		forward = info->forw;
 		memcpy(&state->altpath, &state->path, sizeof(state->path));
 		error = xfs_da_path_shift(state, &state->altpath, forward,
 						 0, &retval);
@@ -1416,7 +1419,7 @@ xfs_da_node_lasthash(xfs_dabuf_t *bp, int *count)
 	ASSERT(INT_GET(node->hdr.info.magic, ARCH_CONVERT) == XFS_DA_NODE_MAGIC);
 	if (count)
 		*count = INT_GET(node->hdr.count, ARCH_CONVERT);
-	if (INT_ISZERO(node->hdr.count, ARCH_CONVERT))
+	if (!node->hdr.count)
 		return(0);
 	return(INT_GET(node->btree[ INT_GET(node->hdr.count, ARCH_CONVERT)-1 ].hashval, ARCH_CONVERT));
 }
@@ -1424,7 +1427,7 @@ xfs_da_node_lasthash(xfs_dabuf_t *bp, int *count)
 /*
  * Unlink a block from a doubly linked list of blocks.
  */
-int							/* error */
+STATIC int						/* error */
 xfs_da_blk_unlink(xfs_da_state_t *state, xfs_da_state_blk_t *drop_blk,
 				 xfs_da_state_blk_t *save_blk)
 {
@@ -1627,40 +1630,38 @@ xfs_da_hashname(uchar_t *name, int namelen)
 {
 	xfs_dahash_t hash;
 
-#define	ROTL(x,y)	(((x) << (y)) | ((x) >> (32 - (y))))
 #ifdef SLOWVERSION
 	/*
 	 * This is the old one-byte-at-a-time version.
 	 */
-	for (hash = 0; namelen > 0; namelen--) {
-		hash = *name++ ^ ROTL(hash, 7);
-	}
+	for (hash = 0; namelen > 0; namelen--)
+		hash = *name++ ^ rol32(hash, 7);
+
 	return(hash);
 #else
 	/*
 	 * Do four characters at a time as long as we can.
 	 */
-	for (hash = 0; namelen >= 4; namelen -= 4, name += 4) {
+	for (hash = 0; namelen >= 4; namelen -= 4, name += 4)
 		hash = (name[0] << 21) ^ (name[1] << 14) ^ (name[2] << 7) ^
-		       (name[3] << 0) ^ ROTL(hash, 7 * 4);
-	}
+		       (name[3] << 0) ^ rol32(hash, 7 * 4);
+
 	/*
 	 * Now do the rest of the characters.
 	 */
 	switch (namelen) {
 	case 3:
 		return (name[0] << 14) ^ (name[1] << 7) ^ (name[2] << 0) ^
-		       ROTL(hash, 7 * 3);
+		       rol32(hash, 7 * 3);
 	case 2:
-		return (name[0] << 7) ^ (name[1] << 0) ^ ROTL(hash, 7 * 2);
+		return (name[0] << 7) ^ (name[1] << 0) ^ rol32(hash, 7 * 2);
 	case 1:
-		return (name[0] << 0) ^ ROTL(hash, 7 * 1);
+		return (name[0] << 0) ^ rol32(hash, 7 * 1);
 	case 0:
 		return hash;
 	}
 	/* NOTREACHED */
 #endif
-#undef ROTL
 	return 0; /* keep gcc happy */
 }
 
@@ -2383,7 +2384,7 @@ xfs_da_state_alloc(void)
 /*
  * Kill the altpath contents of a da-state structure.
  */
-void
+STATIC void
 xfs_da_state_kill_altpath(xfs_da_state_t *state)
 {
 	int	i;

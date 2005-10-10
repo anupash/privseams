@@ -343,7 +343,7 @@ void xfrm6_tunnel_free_spi(xfrm_address_t *saddr)
 
 EXPORT_SYMBOL(xfrm6_tunnel_free_spi);
 
-static int xfrm6_tunnel_output(struct sk_buff *skb)
+static int xfrm6_tunnel_output(struct xfrm_state *x, struct sk_buff *skb)
 {
 	struct ipv6hdr *top_iph;
 
@@ -466,7 +466,7 @@ static void xfrm6_tunnel_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 	return;
 }
 
-static int xfrm6_tunnel_init_state(struct xfrm_state *x, void *args)
+static int xfrm6_tunnel_init_state(struct xfrm_state *x)
 {
 	if (!x->props.mode)
 		return -EINVAL;

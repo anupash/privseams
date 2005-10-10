@@ -294,7 +294,6 @@ static struct scsi_host_template nsp32_template = {
 	.this_id			= NSP32_HOST_SCSIID,
 	.use_clustering			= DISABLE_CLUSTERING,
 	.eh_abort_handler       	= nsp32_eh_abort,
-/*	.eh_device_reset_handler	= NULL, */
 	.eh_bus_reset_handler		= nsp32_eh_bus_reset,
 	.eh_host_reset_handler		= nsp32_eh_host_reset,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,74))
@@ -2720,9 +2719,7 @@ static int nsp32_detect(Scsi_Host_Template *sht)
 	host->unique_id = data->BaseAddress;
 	host->n_io_port	= data->NumAddress;
 	host->base      = (unsigned long)data->MmioAddress;
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,5,63))
-	scsi_set_device(host, &PCIDEV->dev);
-#else
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,5,63))
 	scsi_set_pci_device(host, PCIDEV);
 #endif
 
@@ -2988,6 +2985,8 @@ static int nsp32_eh_bus_reset(struct scsi_cmnd *SCpnt)
 	nsp32_hw_data *data = (nsp32_hw_data *)SCpnt->device->host->hostdata;
 	unsigned int   base = SCpnt->device->host->io_port;
 
+	spin_lock_irq(SCpnt->device->host->host_lock);
+
 	nsp32_msg(KERN_INFO, "Bus Reset");	
 	nsp32_dbg(NSP32_DEBUG_BUSRESET, "SCpnt=0x%x", SCpnt);
 
@@ -2995,6 +2994,7 @@ static int nsp32_eh_bus_reset(struct scsi_cmnd *SCpnt)
 	nsp32_do_bus_reset(data);
 	nsp32_write2(base, IRQ_CONTROL, 0);
 
+	spin_unlock_irq(SCpnt->device->host->host_lock);
 	return SUCCESS;	/* SCSI bus reset is succeeded at any time. */
 }
 
@@ -3049,11 +3049,14 @@ static int nsp32_eh_host_reset(struct scsi_cmnd *SCpnt)
 	nsp32_msg(KERN_INFO, "Host Reset");	
 	nsp32_dbg(NSP32_DEBUG_BUSRESET, "SCpnt=0x%x", SCpnt);
 
+	spin_lock_irq(SCpnt->device->host->host_lock);
+
 	nsp32hw_init(data);
 	nsp32_write2(base, IRQ_CONTROL, IRQ_CONTROL_ALL_IRQ_MASK);
 	nsp32_do_bus_reset(data);
 	nsp32_write2(base, IRQ_CONTROL, 0);
 
+	spin_unlock_irq(SCpnt->device->host->host_lock);
 	return SUCCESS;	/* Host reset is succeeded at any time. */
 }
 
@@ -3435,7 +3438,7 @@ static int nsp32_prom_read_bit(nsp32_hw_data *data)
 #ifdef CONFIG_PM
 
 /* Device suspended */
-static int nsp32_suspend(struct pci_dev *pdev, u32 state)
+static int nsp32_suspend(struct pci_dev *pdev, pm_message_t state)
 {
 	struct Scsi_Host *host = pci_get_drvdata(pdev);
 
@@ -3443,7 +3446,7 @@ static int nsp32_suspend(struct pci_dev *pdev, u32 state)
 
 	pci_save_state     (pdev);
 	pci_disable_device (pdev);
-	pci_set_power_state(pdev, state);
+	pci_set_power_state(pdev, pci_choose_state(pdev, state));
 
 	return 0;
 }
@@ -3457,8 +3460,8 @@ static int nsp32_resume(struct pci_dev *pdev)
 
 	nsp32_msg(KERN_INFO, "pci-resume: pdev=0x%p, slot=%s, host=0x%p", pdev, pci_name(pdev), host);
 
-	pci_set_power_state(pdev, 0);
-	pci_enable_wake    (pdev, 0, 0);
+	pci_set_power_state(pdev, PCI_D0);
+	pci_enable_wake    (pdev, PCI_D0, 0);
 	pci_restore_state  (pdev);
 
 	reg = nsp32_read2(data->BaseAddress, INDEX_REG);
@@ -3479,7 +3482,7 @@ static int nsp32_resume(struct pci_dev *pdev)
 }
 
 /* Enable wake event */
-static int nsp32_enable_wake(struct pci_dev *pdev, u32 state, int enable)
+static int nsp32_enable_wake(struct pci_dev *pdev, pci_power_t state, int enable)
 {
 	struct Scsi_Host *host = pci_get_drvdata(pdev);
 

@@ -156,7 +156,6 @@ vn_initialize(
 
 #ifdef	XFS_VNODE_TRACE
 	vp->v_trace = ktrace_alloc(VNODE_TRACE_SIZE, KM_SLEEP);
-	printk("Allocated VNODE_TRACE at 0x%p\n", vp->v_trace);
 #endif	/* XFS_VNODE_TRACE */
 
 	vn_trace_exit(vp, "vn_initialize", (inst_t *)__return_address);
@@ -412,25 +411,25 @@ vn_remove(
 /*  0 */		(void *)(__psint_t)(vk),		\
 /*  1 */		(void *)(s),				\
 /*  2 */		(void *)(__psint_t) line,		\
-/*  3 */		(void *)(vn_count(vp)), \
+/*  3 */		(void *)(__psint_t)(vn_count(vp)),	\
 /*  4 */		(void *)(ra),				\
 /*  5 */		(void *)(__psunsigned_t)(vp)->v_flag,	\
 /*  6 */		(void *)(__psint_t)current_cpu(),	\
 /*  7 */		(void *)(__psint_t)current_pid(),	\
 /*  8 */		(void *)__return_address,		\
-/*  9 */		0, 0, 0, 0, 0, 0, 0)
+/*  9 */		NULL, NULL, NULL, NULL, NULL, NULL, NULL)
 
 /*
  * Vnode tracing code.
  */
 void
-vn_trace_entry(vnode_t *vp, char *func, inst_t *ra)
+vn_trace_entry(vnode_t *vp, const char *func, inst_t *ra)
 {
 	KTRACE_ENTER(vp, VNODE_KTRACE_ENTRY, func, 0, ra);
 }
 
 void
-vn_trace_exit(vnode_t *vp, char *func, inst_t *ra)
+vn_trace_exit(vnode_t *vp, const char *func, inst_t *ra)
 {
 	KTRACE_ENTER(vp, VNODE_KTRACE_EXIT, func, 0, ra);
 }

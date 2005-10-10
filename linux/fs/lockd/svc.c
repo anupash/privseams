@@ -191,7 +191,9 @@ lockd(struct svc_rqst *rqstp)
 		printk(KERN_DEBUG
 			"lockd: new process, skipping host shutdown\n");
 	wake_up(&lockd_exit);
-		
+
+	flush_signals(current);
+
 	/* Exit the RPC thread */
 	svc_exit_thread(rqstp);
 
@@ -329,7 +331,7 @@ static ctl_table nlm_sysctls[] = {
 		.ctl_name	= CTL_UNNUMBERED,
 		.procname	= "nlm_grace_period",
 		.data		= &nlm_grace_period,
-		.maxlen		= sizeof(int),
+		.maxlen		= sizeof(unsigned long),
 		.mode		= 0644,
 		.proc_handler	= &proc_doulongvec_minmax,
 		.extra1		= (unsigned long *) &nlm_grace_period_min,
@@ -339,7 +341,7 @@ static ctl_table nlm_sysctls[] = {
 		.ctl_name	= CTL_UNNUMBERED,
 		.procname	= "nlm_timeout",
 		.data		= &nlm_timeout,
-		.maxlen		= sizeof(int),
+		.maxlen		= sizeof(unsigned long),
 		.mode		= 0644,
 		.proc_handler	= &proc_doulongvec_minmax,
 		.extra1		= (unsigned long *) &nlm_timeout_min,
@@ -402,6 +404,38 @@ static int param_set_##name(const char *val, struct kernel_param *kp)	\
 	*((int *) kp->arg) = num;					\
 	return 0;							\
 }
+
+static inline int is_callback(u32 proc)
+{
+	return proc == NLMPROC_GRANTED
+		|| proc == NLMPROC_GRANTED_MSG
+		|| proc == NLMPROC_TEST_RES
+		|| proc == NLMPROC_LOCK_RES
+		|| proc == NLMPROC_CANCEL_RES
+		|| proc == NLMPROC_UNLOCK_RES
+		|| proc == NLMPROC_NSM_NOTIFY;
+}
+
+
+static int lockd_authenticate(struct svc_rqst *rqstp)
+{
+	rqstp->rq_client = NULL;
+	switch (rqstp->rq_authop->flavour) {
+		case RPC_AUTH_NULL:
+		case RPC_AUTH_UNIX:
+			if (rqstp->rq_proc == 0)
+				return SVC_OK;
+			if (is_callback(rqstp->rq_proc)) {
+				/* Leave it to individual procedures to
+				 * call nlmsvc_lookup_host(rqstp)
+				 */
+				return SVC_OK;
+			}
+			return svc_set_client(rqstp);
+	}
+	return SVC_DENIED;
+}
+
 
 param_set_min_max(port, int, simple_strtol, 0, 65535)
 param_set_min_max(grace_period, unsigned long, simple_strtoul,
@@ -483,4 +517,5 @@ static struct svc_program	nlmsvc_program = {
 	.pg_name		= "lockd",		/* service name */
 	.pg_class		= "nfsd",		/* share authentication with nfsd */
 	.pg_stats		= &nlmsvc_stats,	/* stats table */
+	.pg_authenticate = &lockd_authenticate	/* export authentication */
 };

@@ -28,6 +28,8 @@
 
 #ifdef __KERNEL__
 
+#include <acpi/pdc_intel.h>
+
 #include <asm/system.h>		/* defines cmpxchg */
 
 #define COMPILER_DEPENDENT_INT64   long long
@@ -101,12 +103,6 @@ __acpi_release_global_lock (unsigned int *lock)
         :"=r"(n_hi), "=r"(n_lo)     \
         :"0"(n_hi), "1"(n_lo))
 
-/*
- * Refer Intel ACPI _PDC support document for bit definitions
- */
-#define ACPI_PDC_EST_CAPABILITY_SMP 	0xa
-#define ACPI_PDC_EST_CAPABILITY_MSR	0x1
-
 #ifdef CONFIG_ACPI_BOOT 
 extern int acpi_lapic;
 extern int acpi_ioapic;
@@ -174,7 +170,6 @@ static inline int acpi_irq_balance_set(char *str) { return 0; }
 
 /* routines for saving/restoring kernel state */
 extern int acpi_save_state_mem(void);
-extern int acpi_save_state_disk(void);
 extern void acpi_restore_state_mem(void);
 
 extern unsigned long acpi_wakeup_address;
@@ -185,6 +180,8 @@ extern void acpi_reserve_bootmem(void);
 #endif /*CONFIG_ACPI_SLEEP*/
 
 extern u8 x86_acpiid_to_apicid[];
+
+#define ARCH_HAS_POWER_PDC_INIT	1
 
 #endif /*__KERNEL__*/
 

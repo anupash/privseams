@@ -1,7 +1,7 @@
 /*
  *  drivers/s390/cio/device.c
  *  bus driver for ccw devices
- *   $Revision: 1.129 $
+ *   $Revision: 1.131 $
  *
  *    Copyright (C) 2002 IBM Deutschland Entwicklung GmbH,
  *			 IBM Corporation
@@ -204,7 +204,7 @@ module_exit(cleanup_ccw_bus_type);
  * TODO: Split chpids and pimpampom up? Where is "in use" in the tree?
  */
 static ssize_t
-chpids_show (struct device * dev, char * buf)
+chpids_show (struct device * dev, struct device_attribute *attr, char * buf)
 {
 	struct subchannel *sch = to_subchannel(dev);
 	struct ssd_info *ssd = &sch->ssd_info;
@@ -219,7 +219,7 @@ chpids_show (struct device * dev, char * buf)
 }
 
 static ssize_t
-pimpampom_show (struct device * dev, char * buf)
+pimpampom_show (struct device * dev, struct device_attribute *attr, char * buf)
 {
 	struct subchannel *sch = to_subchannel(dev);
 	struct pmcw *pmcw = &sch->schib.pmcw;
@@ -229,7 +229,7 @@ pimpampom_show (struct device * dev, char * buf)
 }
 
 static ssize_t
-devtype_show (struct device *dev, char *buf)
+devtype_show (struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ccw_device *cdev = to_ccwdev(dev);
 	struct ccw_device_id *id = &(cdev->id);
@@ -242,7 +242,7 @@ devtype_show (struct device *dev, char *buf)
 }
 
 static ssize_t
-cutype_show (struct device *dev, char *buf)
+cutype_show (struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ccw_device *cdev = to_ccwdev(dev);
 	struct ccw_device_id *id = &(cdev->id);
@@ -252,7 +252,7 @@ cutype_show (struct device *dev, char *buf)
 }
 
 static ssize_t
-online_show (struct device *dev, char *buf)
+online_show (struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ccw_device *cdev = to_ccwdev(dev);
 
@@ -293,6 +293,14 @@ ccw_device_set_offline(struct ccw_device *cdev)
 	cdev->online = 0;
 	spin_lock_irq(cdev->ccwlock);
 	ret = ccw_device_offline(cdev);
+	if (ret == -ENODEV) {
+		if (cdev->private->state != DEV_STATE_NOT_OPER) {
+			cdev->private->state = DEV_STATE_OFFLINE;
+			dev_fsm_event(cdev, DEV_EVENT_NOTOPER);
+		}
+		spin_unlock_irq(cdev->ccwlock);
+		return ret;
+	}
 	spin_unlock_irq(cdev->ccwlock);
 	if (ret == 0)
 		wait_event(cdev->private->wait_q, dev_fsm_final_state(cdev));
@@ -342,7 +350,7 @@ ccw_device_set_online(struct ccw_device *cdev)
 }
 
 static ssize_t
-online_store (struct device *dev, const char *buf, size_t count)
+online_store (struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct ccw_device *cdev = to_ccwdev(dev);
 	int i, force, ret;
@@ -414,7 +422,7 @@ online_store (struct device *dev, const char *buf, size_t count)
 }
 
 static ssize_t
-available_show (struct device *dev, char *buf)
+available_show (struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ccw_device *cdev = to_ccwdev(dev);
 	struct subchannel *sch;
@@ -506,36 +514,39 @@ ccw_device_register(struct ccw_device *cdev)
 	return ret;
 }
 
+struct match_data {
+	unsigned int  devno;
+	struct ccw_device * sibling;
+};
+
+static int
+match_devno(struct device * dev, void * data)
+{
+	struct match_data * d = (struct match_data *)data;
+	struct ccw_device * cdev;
+
+	cdev = to_ccwdev(dev);
+	if ((cdev->private->state == DEV_STATE_DISCONNECTED) &&
+	    (cdev->private->devno == d->devno) &&
+	    (cdev != d->sibling)) {
+		cdev->private->state = DEV_STATE_NOT_OPER;
+		return 1;
+	}
+	return 0;
+}
+
 static struct ccw_device *
 get_disc_ccwdev_by_devno(unsigned int devno, struct ccw_device *sibling)
 {
-	struct ccw_device *cdev;
-	struct list_head *entry;
 	struct device *dev;
+	struct match_data data = {
+		.devno  = devno,
+		.sibling = sibling,
+	};
 
-	if (!get_bus(&ccw_bus_type))
-		return NULL;
-	down_read(&ccw_bus_type.subsys.rwsem);
-	cdev = NULL;
-	list_for_each(entry, &ccw_bus_type.devices.list) {
-		dev = get_device(container_of(entry,
-					      struct device, bus_list));
-		if (!dev)
-			continue;
-		cdev = to_ccwdev(dev);
-		if ((cdev->private->state == DEV_STATE_DISCONNECTED) &&
-		    (cdev->private->devno == devno) &&
-		    (cdev != sibling)) {
-			cdev->private->state = DEV_STATE_NOT_OPER;
-			break;
-		}
-		put_device(dev);
-		cdev = NULL;
-	}
-	up_read(&ccw_bus_type.subsys.rwsem);
-	put_bus(&ccw_bus_type);
+	dev = bus_find_device(&css_bus_type, NULL, &data, match_devno);
 
-	return cdev;
+	return dev ? to_ccwdev(dev) : NULL;
 }
 
 static void
@@ -639,7 +650,7 @@ io_subchannel_register(void *data)
 	cdev = (struct ccw_device *) data;
 	sch = to_subchannel(cdev->dev.parent);
 
-	if (!list_empty(&sch->dev.children)) {
+	if (klist_node_attached(&cdev->dev.knode_parent)) {
 		bus_rescan_devices(&ccw_bus_type);
 		goto out;
 	}
@@ -1011,30 +1022,29 @@ ccw_device_probe_console(void)
 /*
  * get ccw_device matching the busid, but only if owned by cdrv
  */
+static int
+__ccwdev_check_busid(struct device *dev, void *id)
+{
+	char *bus_id;
+
+	bus_id = (char *)id;
+
+	return (strncmp(bus_id, dev->bus_id, BUS_ID_SIZE) == 0);
+}
+
+
 struct ccw_device *
 get_ccwdev_by_busid(struct ccw_driver *cdrv, const char *bus_id)
 {
-	struct device *d, *dev;
+	struct device *dev;
 	struct device_driver *drv;
 
 	drv = get_driver(&cdrv->driver);
 	if (!drv)
-		return 0;
+		return NULL;
 
-	down_read(&drv->bus->subsys.rwsem);
-
-	dev = NULL;
-	list_for_each_entry(d, &drv->devices, driver_list) {
-		dev = get_device(d);
-
-		if (dev && !strncmp(bus_id, dev->bus_id, BUS_ID_SIZE))
-			break;
-		else if (dev) {
-			put_device(dev);
-			dev = NULL;
-		}
-	}
-	up_read(&drv->bus->subsys.rwsem);
+	dev = driver_find_device(drv, NULL, (void *)bus_id,
+				 __ccwdev_check_busid);
 	put_driver(drv);
 
 	return dev ? to_ccwdev(dev) : 0;

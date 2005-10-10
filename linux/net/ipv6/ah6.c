@@ -154,12 +154,10 @@ static int ipv6_clear_mutable_options(struct ipv6hdr *iph, int len)
 	return 0;
 }
 
-static int ah6_output(struct sk_buff *skb)
+static int ah6_output(struct xfrm_state *x, struct sk_buff *skb)
 {
 	int err;
 	int extlen;
-	struct dst_entry *dst = skb->dst;
-	struct xfrm_state *x  = dst->xfrm;
 	struct ipv6hdr *top_iph;
 	struct ip_auth_hdr *ah;
 	struct ah_data *ahp;
@@ -341,7 +339,7 @@ static void ah6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 	xfrm_state_put(x);
 }
 
-static int ah6_init_state(struct xfrm_state *x, void *args)
+static int ah6_init_state(struct xfrm_state *x)
 {
 	struct ah_data *ahp = NULL;
 	struct xfrm_algo_desc *aalg_desc;

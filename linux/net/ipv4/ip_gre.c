@@ -290,7 +290,6 @@ static struct ip_tunnel * ipgre_tunnel_locate(struct ip_tunnel_parm *parms, int 
 
 	dev_hold(dev);
 	ipgre_tunnel_link(nt);
-	/* Do not decrement MOD_USE_COUNT here. */
 	return nt;
 
 failed:
@@ -511,7 +510,7 @@ out:
 
 	/* change mtu on this route */
 	if (type == ICMP_DEST_UNREACH && code == ICMP_FRAG_NEEDED) {
-		if (rel_info > dst_pmtu(skb2->dst)) {
+		if (rel_info > dst_mtu(skb2->dst)) {
 			kfree_skb(skb2);
 			return;
 		}
@@ -618,10 +617,8 @@ static int ipgre_rcv(struct sk_buff *skb)
 
 		skb->mac.raw = skb->nh.raw;
 		skb->nh.raw = __pskb_pull(skb, offset);
+		skb_postpull_rcsum(skb, skb->mac.raw, offset);
 		memset(&(IPCB(skb)->opt), 0, sizeof(struct ip_options));
-		if (skb->ip_summed == CHECKSUM_HW)
-			skb->csum = csum_sub(skb->csum,
-					     csum_partial(skb->mac.raw, skb->nh.raw-skb->mac.raw, 0));
 		skb->pkt_type = PACKET_HOST;
 #ifdef CONFIG_NET_IPGRE_BROADCAST
 		if (MULTICAST(iph->daddr)) {
@@ -766,9 +763,9 @@ static int ipgre_tunnel_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	df = tiph->frag_off;
 	if (df)
-		mtu = dst_pmtu(&rt->u.dst) - tunnel->hlen;
+		mtu = dst_mtu(&rt->u.dst) - tunnel->hlen;
 	else
-		mtu = skb->dst ? dst_pmtu(skb->dst) : dev->mtu;
+		mtu = skb->dst ? dst_mtu(skb->dst) : dev->mtu;
 
 	if (skb->dst)
 		skb->dst->ops->update_pmtu(skb->dst, mtu);
@@ -787,7 +784,7 @@ static int ipgre_tunnel_xmit(struct sk_buff *skb, struct net_device *dev)
 	else if (skb->protocol == htons(ETH_P_IPV6)) {
 		struct rt6_info *rt6 = (struct rt6_info*)skb->dst;
 
-		if (rt6 && mtu < dst_pmtu(skb->dst) && mtu >= IPV6_MIN_MTU) {
+		if (rt6 && mtu < dst_mtu(skb->dst) && mtu >= IPV6_MIN_MTU) {
 			if ((tunnel->parms.iph.daddr && !MULTICAST(tunnel->parms.iph.daddr)) ||
 			    rt6->rt6i_dst.plen == 128) {
 				rt6->rt6i_flags |= RTF_MODIFIED;
@@ -1279,12 +1276,28 @@ err1:
 	goto out;
 }
 
-static void ipgre_fini(void)
+static void __exit ipgre_destroy_tunnels(void)
+{
+	int prio;
+
+	for (prio = 0; prio < 4; prio++) {
+		int h;
+		for (h = 0; h < HASH_SIZE; h++) {
+			struct ip_tunnel *t;
+			while ((t = tunnels[prio][h]) != NULL)
+				unregister_netdevice(t->dev);
+		}
+	}
+}
+
+static void __exit ipgre_fini(void)
 {
 	if (inet_del_protocol(&ipgre_protocol, IPPROTO_GRE) < 0)
 		printk(KERN_INFO "ipgre close: can't remove protocol\n");
 
-	unregister_netdev(ipgre_fb_tunnel_dev);
+	rtnl_lock();
+	ipgre_destroy_tunnels();
+	rtnl_unlock();
 }
 
 module_init(ipgre_init);

@@ -4,7 +4,7 @@
  * Version:	@(#)socket.c	1.1.93	18/02/95
  *
  * Authors:	Orest Zborowski, <obz@Kodak.COM>
- *		Ross Biro, <bir7@leland.Stanford.Edu>
+ *		Ross Biro
  *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
  *
  * Fixes:
@@ -81,6 +81,7 @@
 #include <linux/syscalls.h>
 #include <linux/compat.h>
 #include <linux/kmod.h>
+#include <linux/audit.h>
 
 #ifdef CONFIG_NET_RADIO
 #include <linux/wireless.h>		/* Note : will define WIRELESS_EXT */
@@ -226,7 +227,7 @@ int move_addr_to_kernel(void __user *uaddr, int ulen, void *kaddr)
 		return 0;
 	if(copy_from_user(kaddr,uaddr,ulen))
 		return -EFAULT;
-	return 0;
+	return audit_sockaddr(ulen, kaddr);
 }
 
 /**
@@ -287,7 +288,7 @@ static struct inode *sock_alloc_inode(struct super_block *sb)
 	ei->socket.ops = NULL;
 	ei->socket.sk = NULL;
 	ei->socket.file = NULL;
-	ei->socket.passcred = 0;
+	ei->socket.flags = 0;
 
 	return &ei->vfs_inode;
 }
@@ -382,9 +383,8 @@ int sock_map_fd(struct socket *sock)
 			goto out;
 		}
 
-		sprintf(name, "[%lu]", SOCK_INODE(sock)->i_ino);
+		this.len = sprintf(name, "[%lu]", SOCK_INODE(sock)->i_ino);
 		this.name = name;
-		this.len = strlen(name);
 		this.hash = SOCK_INODE(sock)->i_ino;
 
 		file->f_dentry = d_alloc(sock_mnt->mnt_sb->s_root, &this);
@@ -437,13 +437,13 @@ struct socket *sockfd_lookup(int fd, int *err)
 	}
 
 	inode = file->f_dentry->d_inode;
-	if (!inode->i_sock || !(sock = SOCKET_I(inode)))
-	{
+	if (!S_ISSOCK(inode->i_mode)) {
 		*err = -ENOTSOCK;
 		fput(file);
 		return NULL;
 	}
 
+	sock = SOCKET_I(inode);
 	if (sock->file != file) {
 		printk(KERN_ERR "socki_lookup: socket file changed!\n");
 		sock->file = file;
@@ -471,7 +471,6 @@ static struct socket *sock_alloc(void)
 	sock = SOCKET_I(inode);
 
 	inode->i_mode = S_IFSOCK|S_IRWXUGO;
-	inode->i_sock = 1;
 	inode->i_uid = current->fsuid;
 	inode->i_gid = current->fsgid;
 
@@ -993,8 +992,7 @@ static int sock_fasync(int fd, struct file *filp, int on)
 	sock = SOCKET_I(filp->f_dentry->d_inode);
 
 	if ((sk=sock->sk) == NULL) {
-		if (fna)
-			kfree(fna);
+		kfree(fna);
 		return -EINVAL;
 	}
 
@@ -1741,10 +1739,11 @@ asmlinkage long sys_sendmsg(int fd, struct msghdr __user *msg, unsigned flags)
 		goto out_freeiov;
 	ctl_len = msg_sys.msg_controllen; 
 	if ((MSG_CMSG_COMPAT & flags) && ctl_len) {
-		err = cmsghdr_from_user_compat_to_kern(&msg_sys, ctl, sizeof(ctl));
+		err = cmsghdr_from_user_compat_to_kern(&msg_sys, sock->sk, ctl, sizeof(ctl));
 		if (err)
 			goto out_freeiov;
 		ctl_buf = msg_sys.msg_control;
+		ctl_len = msg_sys.msg_controllen;
 	} else if (ctl_len) {
 		if (ctl_len > sizeof(ctl))
 		{
@@ -1908,7 +1907,11 @@ asmlinkage long sys_socketcall(int call, unsigned long __user *args)
 	/* copy_from_user should be SMP safe. */
 	if (copy_from_user(a, args, nargs[call]))
 		return -EFAULT;
-		
+
+	err = audit_socketcall(nargs[call]/sizeof(unsigned long), a);
+	if (err)
+		return err;
+
 	a0=a[0];
 	a1=a[1];
 	

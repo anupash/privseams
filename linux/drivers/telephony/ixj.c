@@ -41,9 +41,6 @@
  *
  ***************************************************************************/
 
-static char ixj_c_rcsid[] = "$Id: ixj.c,v 4.7 2001/08/13 06:19:33 craigs Exp $";
-static char ixj_c_revision[] = "$Revision: 4.7 $";
-
 /*
  * $Log: ixj.c,v $
  *
@@ -332,10 +329,8 @@ static IXJ *ixj_alloc()
 
 static void ixj_fsk_free(IXJ *j)
 {
-	if(j->fskdata != NULL) {
-		kfree(j->fskdata);
-		j->fskdata = NULL;
-	}
+	kfree(j->fskdata);
+	j->fskdata = NULL;
 }
 
 static void ixj_fsk_alloc(IXJ *j)
@@ -3870,13 +3865,11 @@ static int set_rec_codec(IXJ *j, int rate)
 		j->rec_mode = 7;
 		break;
 	default:
+		kfree(j->read_buffer);
 		j->rec_frame_size = 0;
 		j->rec_mode = -1;
-		if (j->read_buffer) {
-			kfree(j->read_buffer);
-			j->read_buffer = NULL;
-			j->read_buffer_size = 0;
-		}
+		j->read_buffer = NULL;
+		j->read_buffer_size = 0;
 		retval = 1;
 		break;
 	}
@@ -3994,14 +3987,12 @@ static int ixj_record_start(IXJ *j)
 
 static void ixj_record_stop(IXJ *j)
 {
-	if(ixjdebug & 0x0002)
+	if (ixjdebug & 0x0002)
 		printk("IXJ %d Stopping Record Codec %d at %ld\n", j->board, j->rec_codec, jiffies);
 
-	if (j->read_buffer) {
-		kfree(j->read_buffer);
-		j->read_buffer = NULL;
-		j->read_buffer_size = 0;
-	}
+	kfree(j->read_buffer);
+	j->read_buffer = NULL;
+	j->read_buffer_size = 0;
 	if (j->rec_mode > -1) {
 		ixj_WriteDSPCommand(0x5120, j);
 		j->rec_mode = -1;
@@ -4452,13 +4443,11 @@ static int set_play_codec(IXJ *j, int rate)
 		j->play_mode = 5;
 		break;
 	default:
+		kfree(j->write_buffer);
 		j->play_frame_size = 0;
 		j->play_mode = -1;
-		if (j->write_buffer) {
-			kfree(j->write_buffer);
-			j->write_buffer = NULL;
-			j->write_buffer_size = 0;
-		}
+		j->write_buffer = NULL;
+		j->write_buffer_size = 0;
 		retval = 1;
 		break;
 	}
@@ -4581,14 +4570,12 @@ static int ixj_play_start(IXJ *j)
 
 static void ixj_play_stop(IXJ *j)
 {
-	if(ixjdebug & 0x0002)
+	if (ixjdebug & 0x0002)
 		printk("IXJ %d Stopping Play Codec %d at %ld\n", j->board, j->play_codec, jiffies);
 
-	if (j->write_buffer) {
-		kfree(j->write_buffer);
-		j->write_buffer = NULL;
-		j->write_buffer_size = 0;
-	}
+	kfree(j->write_buffer);
+	j->write_buffer = NULL;
+	j->write_buffer_size = 0;
 	if (j->play_mode > -1) {
 		ixj_WriteDSPCommand(0x5221, j);	/* Stop playback and flush buffers.  8022 reference page 9-40 */
 
@@ -5813,9 +5800,7 @@ static void ixj_cpt_stop(IXJ *j)
 		ixj_play_tone(j, 0);
 		j->tone_state = j->tone_cadence_state = 0;
 		if (j->cadence_t) {
-			if (j->cadence_t->ce) {
-				kfree(j->cadence_t->ce);
-			}
+			kfree(j->cadence_t->ce);
 			kfree(j->cadence_t);
 			j->cadence_t = NULL;
 		}
@@ -5949,10 +5934,10 @@ static int ixj_build_filter_cadence(IXJ *j, IXJ_FILTER_CADENCE __user * cp)
 	j->cadence_f[lcp->filter].off3 = lcp->off3;
 	j->cadence_f[lcp->filter].off3min = 0;
 	j->cadence_f[lcp->filter].off3max = 0;
-	kfree(lcp);
 	if(ixjdebug & 0x0002) {
 		printk(KERN_INFO "Cadence %d loaded\n", lcp->filter);
 	}
+	kfree(lcp);
 	return 0;
 }
 
@@ -6172,8 +6157,14 @@ static int ixj_ioctl(struct inode *inode, struct file *file_p, unsigned int cmd,
 		retval = j->serial;
 		break;
 	case IXJCTL_VERSION:
-		if (copy_to_user(argp, ixj_c_revision, strlen(ixj_c_revision))) 
-			retval = -EFAULT;
+		{
+			char arg_str[100];
+			snprintf(arg_str, sizeof(arg_str),
+				"\nDriver version %i.%i.%i", IXJ_VER_MAJOR,
+				IXJ_VER_MINOR, IXJ_BLD_VER);
+			if (copy_to_user(argp, arg_str, strlen(arg_str)))
+				retval = -EFAULT;
+		}
 		break;
 	case PHONE_RING_CADENCE:
 		j->ring_cadence = arg;
@@ -7168,9 +7159,6 @@ static int ixj_get_status_proc(char *buf)
 	int cnt;
 	IXJ *j;
 	len = 0;
-	len += sprintf(buf + len, "%s", ixj_c_rcsid);
-	len += sprintf(buf + len, "\n%s", ixj_h_rcsid);
-	len += sprintf(buf + len, "\n%s", ixjuser_h_rcsid);
 	len += sprintf(buf + len, "\nDriver version %i.%i.%i", IXJ_VER_MAJOR, IXJ_VER_MINOR, IXJ_BLD_VER);
 	len += sprintf(buf + len, "\nsizeof IXJ struct %Zd bytes", sizeof(IXJ));
 	len += sprintf(buf + len, "\nsizeof DAA struct %Zd bytes", sizeof(DAA_REGS));
@@ -7497,10 +7485,8 @@ static void cleanup(void)
 					printk(KERN_INFO "IXJ: Releasing XILINX address for /dev/phone%d\n", cnt);
 				release_region(j->XILINXbase, 4);
 			}
-			if (j->read_buffer)
-				kfree(j->read_buffer);
-			if (j->write_buffer)
-				kfree(j->write_buffer);
+			kfree(j->read_buffer);
+			kfree(j->write_buffer);
 			if (j->dev)
 				pnp_device_detach(j->dev);
 			if (ixjdebug & 0x0002)
@@ -7790,7 +7776,7 @@ static int __init ixj_init(void)
 	if ((probe = ixj_probe_pci(&cnt)) < 0) {
 		return probe;
 	}
-	printk("%s\n", ixj_c_rcsid);
+	printk(KERN_INFO "ixj driver initialized.\n");
 	create_proc_read_entry ("ixj", 0, NULL, ixj_read_proc, NULL);
 	return probe;
 }

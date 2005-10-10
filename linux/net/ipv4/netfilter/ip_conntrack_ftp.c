@@ -16,7 +16,6 @@
 #include <net/checksum.h>
 #include <net/tcp.h>
 
-#include <linux/netfilter_ipv4/lockhelp.h>
 #include <linux/netfilter_ipv4/ip_conntrack_helper.h>
 #include <linux/netfilter_ipv4/ip_conntrack_ftp.h>
 #include <linux/moduleparam.h>
@@ -28,7 +27,7 @@ MODULE_DESCRIPTION("ftp connection tracking helper");
 /* This is slow, but it's simple. --RR */
 static char ftp_buffer[65536];
 
-static DECLARE_LOCK(ip_ftp_lock);
+static DEFINE_SPINLOCK(ip_ftp_lock);
 
 #define MAX_PORTS 8
 static int ports[MAX_PORTS];
@@ -252,7 +251,7 @@ static int find_pattern(const char *data, size_t dlen,
 }
 
 /* Look up to see if we're just after a \n. */
-static int find_nl_seq(u16 seq, const struct ip_ct_ftp_master *info, int dir)
+static int find_nl_seq(u32 seq, const struct ip_ct_ftp_master *info, int dir)
 {
 	unsigned int i;
 
@@ -263,7 +262,7 @@ static int find_nl_seq(u16 seq, const struct ip_ct_ftp_master *info, int dir)
 }
 
 /* We don't update if it's older than what we have. */
-static void update_nl_seq(u16 nl_seq, struct ip_ct_ftp_master *info, int dir)
+static void update_nl_seq(u32 nl_seq, struct ip_ct_ftp_master *info, int dir)
 {
 	unsigned int i, oldest = NUM_SEQ_TO_REMEMBER;
 
@@ -319,7 +318,7 @@ static int help(struct sk_buff **pskb,
 	}
 	datalen = (*pskb)->len - dataoff;
 
-	LOCK_BH(&ip_ftp_lock);
+	spin_lock_bh(&ip_ftp_lock);
 	fb_ptr = skb_header_pointer(*pskb, dataoff,
 				    (*pskb)->len - dataoff, ftp_buffer);
 	BUG_ON(fb_ptr == NULL);
@@ -377,7 +376,7 @@ static int help(struct sk_buff **pskb,
 	       fb_ptr + matchoff, matchlen, ntohl(th->seq) + matchoff);
 			 
 	/* Allocate expectation which will be inserted */
-	exp = ip_conntrack_expect_alloc();
+	exp = ip_conntrack_expect_alloc(ct);
 	if (exp == NULL) {
 		ret = NF_DROP;
 		goto out;
@@ -404,8 +403,7 @@ static int help(struct sk_buff **pskb,
 		   networks, or the packet filter itself). */
 		if (!loose) {
 			ret = NF_ACCEPT;
-			ip_conntrack_expect_free(exp);
-			goto out_update_nl;
+			goto out_put_expect;
 		}
 		exp->tuple.dst.ip = htonl((array[0] << 24) | (array[1] << 16)
 					 | (array[2] << 8) | array[3]);
@@ -420,7 +418,6 @@ static int help(struct sk_buff **pskb,
 		  { 0xFFFFFFFF, { .tcp = { 0xFFFF } }, 0xFF }});
 
 	exp->expectfn = NULL;
-	exp->master = ct;
 
 	/* Now, NAT might want to mangle the packet, and register the
 	 * (possibly changed) expectation itself. */
@@ -429,12 +426,14 @@ static int help(struct sk_buff **pskb,
 				      matchoff, matchlen, exp, &seq);
 	else {
 		/* Can't expect this?  Best to drop packet now. */
-		if (ip_conntrack_expect_related(exp) != 0) {
-			ip_conntrack_expect_free(exp);
+		if (ip_conntrack_expect_related(exp) != 0)
 			ret = NF_DROP;
-		} else
+		else
 			ret = NF_ACCEPT;
 	}
+
+out_put_expect:
+	ip_conntrack_expect_put(exp);
 
 out_update_nl:
 	/* Now if this ends in \n, update ftp info.  Seq may have been
@@ -442,7 +441,7 @@ out_update_nl:
 	if (ends_in_nl)
 		update_nl_seq(seq, ct_ftp_info,dir);
  out:
-	UNLOCK_BH(&ip_ftp_lock);
+	spin_unlock_bh(&ip_ftp_lock);
 	return ret;
 }
 

@@ -12,6 +12,7 @@
 #include <linux/config.h>
 #include <linux/linux_logo.h>
 #include <linux/stddef.h>
+#include <linux/module.h>
 
 #ifdef CONFIG_M68K
 #include <asm/setup.h>
@@ -32,6 +33,7 @@ extern const struct linux_logo logo_sun_clut224;
 extern const struct linux_logo logo_superh_mono;
 extern const struct linux_logo logo_superh_vga16;
 extern const struct linux_logo logo_superh_clut224;
+extern const struct linux_logo logo_m32r_clut224;
 
 
 const struct linux_logo *fb_find_logo(int depth)
@@ -66,8 +68,10 @@ const struct linux_logo *fb_find_logo(int depth)
 		logo = &logo_linux_clut224;
 #endif
 #ifdef CONFIG_LOGO_DEC_CLUT224
-		/* DEC Linux logo on MIPS/MIPS64 */
+		/* DEC Linux logo on MIPS/MIPS64 or ALPHA */
+#ifndef CONFIG_ALPHA
 		if (mips_machgroup == MACH_GROUP_DEC)
+#endif
 			logo = &logo_dec_clut224;
 #endif
 #ifdef CONFIG_LOGO_MAC_CLUT224
@@ -94,7 +98,11 @@ const struct linux_logo *fb_find_logo(int depth)
 		/* SuperH Linux logo */
 		logo = &logo_superh_clut224;
 #endif
+#ifdef CONFIG_LOGO_M32R_CLUT224
+		/* M32R Linux logo */
+		logo = &logo_m32r_clut224;
+#endif
 	}
 	return logo;
 }
-
+EXPORT_SYMBOL_GPL(fb_find_logo);

@@ -77,7 +77,7 @@ static inline void ack_APIC_irq(void)
 extern int get_maxlvt (void);
 extern void clear_local_APIC (void);
 extern void connect_bsp_APIC (void);
-extern void disconnect_bsp_APIC (void);
+extern void disconnect_bsp_APIC (int virt_wire_setup);
 extern void disable_local_APIC (void);
 extern int verify_local_APIC (void);
 extern void cache_APIC_registers (void);
@@ -99,7 +99,6 @@ extern void disable_APIC_timer(void);
 extern void enable_APIC_timer(void);
 extern void clustered_apic_check(void);
 
-extern int check_nmi_watchdog(void);
 extern void nmi_watchdog_default(void);
 extern int setup_nmi_watchdog(char *);
 

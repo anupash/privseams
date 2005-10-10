@@ -31,12 +31,13 @@
 #include <linux/mc146818rtc.h>
 #include <linux/compiler.h>
 #include <linux/acpi.h>
-
+#include <linux/module.h>
 #include <linux/sysdev.h>
 #include <asm/io.h>
 #include <asm/smp.h>
 #include <asm/desc.h>
 #include <asm/timer.h>
+#include <asm/i8259.h>
 
 #include <mach_apic.h>
 
@@ -188,7 +189,7 @@ static void unmask_IO_APIC_irq (unsigned int irq)
 	spin_unlock_irqrestore(&ioapic_lock, flags);
 }
 
-void clear_IO_APIC_pin(unsigned int apic, unsigned int pin)
+static void clear_IO_APIC_pin(unsigned int apic, unsigned int pin)
 {
 	struct IO_APIC_route_entry entry;
 	unsigned long flags;
@@ -264,7 +265,7 @@ cpumask_t __cacheline_aligned pending_irq_balance_cpumask[NR_IRQS];
 static int irqbalance_disabled = IRQBALANCE_CHECK_ARCH;
 static int physical_balance = 0;
 
-struct irq_cpu_info {
+static struct irq_cpu_info {
 	unsigned long * last_irq;
 	unsigned long * irq_delta;
 	unsigned long irq;
@@ -275,7 +276,7 @@ struct irq_cpu_info {
 #define IRQ_DELTA(cpu,irq) 	(irq_cpu_data[cpu].irq_delta[irq])
 
 #define IDLE_ENOUGH(cpu,now) \
-		(idle_cpu(cpu) && ((now) - irq_stat[(cpu)].idle_timestamp > 1))
+	(idle_cpu(cpu) && ((now) - per_cpu(irq_stat, (cpu)).idle_timestamp > 1))
 
 #define IRQ_ALLOWED(cpu, allowed_mask)	cpu_isset(cpu, allowed_mask)
 
@@ -286,7 +287,7 @@ struct irq_cpu_info {
 #define BALANCED_IRQ_MORE_DELTA		(HZ/10)
 #define BALANCED_IRQ_LESS_DELTA		(HZ)
 
-long balanced_irq_interval = MAX_BALANCED_IRQ_INTERVAL;
+static long balanced_irq_interval = MAX_BALANCED_IRQ_INTERVAL;
 
 static unsigned long move(int curr_cpu, cpumask_t allowed_mask,
 			unsigned long now, int direction)
@@ -573,12 +574,14 @@ static int balanced_irq(void *unused)
 	for ( ; ; ) {
 		set_current_state(TASK_INTERRUPTIBLE);
 		time_remaining = schedule_timeout(time_remaining);
-		try_to_freeze(PF_FREEZE);
+		try_to_freeze();
 		if (time_after(jiffies,
 				prev_balance_time+balanced_irq_interval)) {
+			preempt_disable();
 			do_irq_balance();
 			prev_balance_time = jiffies;
 			time_remaining = balanced_irq_interval;
+			preempt_enable();
 		}
 	}
 	return 0;
@@ -630,10 +633,8 @@ static int __init balanced_irq_init(void)
 		printk(KERN_ERR "balanced_irq_init: failed to spawn balanced_irq");
 failed:
 	for (i = 0; i < NR_CPUS; i++) {
-		if(irq_cpu_data[i].irq_delta)
-			kfree(irq_cpu_data[i].irq_delta);
-		if(irq_cpu_data[i].last_irq)
-			kfree(irq_cpu_data[i].last_irq);
+		kfree(irq_cpu_data[i].irq_delta);
+		kfree(irq_cpu_data[i].last_irq);
 	}
 	return 0;
 }
@@ -685,8 +686,8 @@ void fastcall send_IPI_self(int vector)
  */
 
 #define MAX_PIRQS 8
-int pirq_entries [MAX_PIRQS];
-int pirqs_enabled;
+static int pirq_entries [MAX_PIRQS];
+static int pirqs_enabled;
 int skip_ioapic_setup;
 
 static int __init ioapic_setup(char *str)
@@ -812,6 +813,7 @@ int IO_APIC_get_PCI_irq_vector(int bus, int slot, int pin)
 	}
 	return best_guess;
 }
+EXPORT_SYMBOL(IO_APIC_get_PCI_irq_vector);
 
 /*
  * This function currently is only a helper for the i386 smp boot process where 
@@ -1179,7 +1181,7 @@ static inline void ioapic_register_intr(int irq, int vector, unsigned long trigg
 	}
 }
 
-void __init setup_IO_APIC_irqs(void)
+static void __init setup_IO_APIC_irqs(void)
 {
 	struct IO_APIC_route_entry entry;
 	int apic, pin, idx, irq, first_notcon = 1, vector;
@@ -1258,7 +1260,7 @@ void __init setup_IO_APIC_irqs(void)
 /*
  * Set up the 8259A-master output pin:
  */
-void __init setup_ExtINT_IRQ0_pin(unsigned int pin, int vector)
+static void __init setup_ExtINT_IRQ0_pin(unsigned int pin, int vector)
 {
 	struct IO_APIC_route_entry entry;
 	unsigned long flags;
@@ -1452,6 +1454,8 @@ void __init print_IO_APIC(void)
 	return;
 }
 
+#if 0
+
 static void print_APIC_bitfield (int base)
 {
 	unsigned int v;
@@ -1563,7 +1567,6 @@ void print_all_local_APICs (void)
 
 void /*__init*/ print_PIC(void)
 {
-	extern spinlock_t i8259A_lock;
 	unsigned int v;
 	unsigned long flags;
 
@@ -1593,6 +1596,8 @@ void /*__init*/ print_PIC(void)
 	v = inb(0x4d1) << 8 | inb(0x4d0);
 	printk(KERN_DEBUG "... PIC ELCR: %04x\n", v);
 }
+
+#endif  /*  0  */
 
 static void __init enable_IO_APIC(void)
 {
@@ -1629,12 +1634,43 @@ static void __init enable_IO_APIC(void)
  */
 void disable_IO_APIC(void)
 {
+	int pin;
 	/*
 	 * Clear the IO-APIC before rebooting:
 	 */
 	clear_IO_APIC();
 
-	disconnect_bsp_APIC();
+	/*
+	 * If the i82559 is routed through an IOAPIC
+	 * Put that IOAPIC in virtual wire mode
+	 * so legacy interrups can be delivered.
+	 */
+	pin = find_isa_irq_pin(0, mp_ExtINT);
+	if (pin != -1) {
+		struct IO_APIC_route_entry entry;
+		unsigned long flags;
+
+		memset(&entry, 0, sizeof(entry));
+		entry.mask            = 0; /* Enabled */
+		entry.trigger         = 0; /* Edge */
+		entry.irr             = 0;
+		entry.polarity        = 0; /* High */
+		entry.delivery_status = 0;
+		entry.dest_mode       = 0; /* Physical */
+		entry.delivery_mode   = 7; /* ExtInt */
+		entry.vector          = 0;
+		entry.dest.physical.physical_dest = 0;
+
+
+		/*
+		 * Add it to the IO-APIC irq-routing table:
+		 */
+		spin_lock_irqsave(&ioapic_lock, flags);
+		io_apic_write(0, 0x11+2*pin, *(((int *)&entry)+1));
+		io_apic_write(0, 0x10+2*pin, *(((int *)&entry)+0));
+		spin_unlock_irqrestore(&ioapic_lock, flags);
+	}
+	disconnect_bsp_APIC(pin != -1);
 }
 
 /*
@@ -1654,6 +1690,12 @@ static void __init setup_ioapic_ids_from_mpc(void)
 	unsigned char old_id;
 	unsigned long flags;
 
+	/*
+	 * Don't check I/O APIC IDs for xAPIC systems.  They have
+	 * no meaning without the serial APIC bus.
+	 */
+	if (!(boot_cpu_data.x86_vendor == X86_VENDOR_INTEL && boot_cpu_data.x86 < 15))
+		return;
 	/*
 	 * This is broken; anything with a real cpu count has to
 	 * circumvent this idiocy regardless.
@@ -1680,10 +1722,6 @@ static void __init setup_ioapic_ids_from_mpc(void)
 			mp_ioapics[apic].mpc_apicid = reg_00.bits.ID;
 		}
 
-		/* Don't check I/O APIC IDs for some xAPIC systems.  They have
-		 * no meaning without the serial APIC bus. */
-		if (NO_IOAPIC_CHECK)
-			continue;
 		/*
 		 * Sanity check, is the ID really free? Every APIC in a
 		 * system must have a unique ID or we get lots of nice
@@ -2171,7 +2209,6 @@ static inline void check_timer(void)
 				disable_8259A_irq(0);
 				setup_nmi();
 				enable_8259A_irq(0);
-				check_nmi_watchdog();
 			}
 			return;
 		}
@@ -2194,7 +2231,6 @@ static inline void check_timer(void)
 				add_pin_to_irq(0, 0, pin2);
 			if (nmi_watchdog == NMI_IO_APIC) {
 				setup_nmi();
-				check_nmi_watchdog();
 			}
 			return;
 		}
@@ -2295,7 +2331,7 @@ struct sysfs_ioapic_data {
 };
 static struct sysfs_ioapic_data * mp_ioapic_data[MAX_IO_APICS];
 
-static int ioapic_suspend(struct sys_device *dev, u32 state)
+static int ioapic_suspend(struct sys_device *dev, pm_message_t state)
 {
 	struct IO_APIC_route_entry *entry;
 	struct sysfs_ioapic_data *data;

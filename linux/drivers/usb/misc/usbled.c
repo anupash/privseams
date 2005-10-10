@@ -74,21 +74,21 @@ static void change_color(struct usb_led *led)
 				(0x00 * 0x100) + color,
 				buffer,	
 				8,
-				2 * HZ);
+				2000);
 	if (retval)
 		dev_dbg(&led->udev->dev, "retval = %d\n", retval);
 	kfree(buffer);
 }
 
 #define show_set(value)	\
-static ssize_t show_##value(struct device *dev, char *buf)		\
+static ssize_t show_##value(struct device *dev, struct device_attribute *attr, char *buf)		\
 {									\
 	struct usb_interface *intf = to_usb_interface(dev);		\
 	struct usb_led *led = usb_get_intfdata(intf);			\
 									\
 	return sprintf(buf, "%d\n", led->value);			\
 }									\
-static ssize_t set_##value(struct device *dev, const char *buf, size_t count)	\
+static ssize_t set_##value(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)	\
 {									\
 	struct usb_interface *intf = to_usb_interface(dev);		\
 	struct usb_led *led = usb_get_intfdata(intf);			\

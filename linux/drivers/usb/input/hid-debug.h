@@ -67,7 +67,7 @@ static const struct hid_usage_entry hid_usage_table[] = {
       {0, 0x44, "Vbry"},
       {0, 0x45, "Vbrz"},
       {0, 0x46, "Vno"},
-    {0, 0x80, "SystemControl"}, 
+    {0, 0x80, "SystemControl"},
       {0, 0x81, "SystemPowerDown"},
       {0, 0x82, "SystemSleep"},
       {0, 0x83, "SystemWakeUp"},
@@ -347,7 +347,7 @@ __inline__ static void tab(int n) {
 
 static void hid_dump_field(struct hid_field *field, int n) {
 	int j;
-	
+
 	if (field->physical) {
 		tab(n);
 		printk("Physical(");
@@ -408,7 +408,7 @@ static void hid_dump_field(struct hid_field *field, int n) {
 					printk("%s", units[sys][i]);
 					if(nibble != 1) {
 						/* This is a _signed_ nibble(!) */
-	
+
 						int val = nibble & 0x7;
 						if(nibble & 0x08)
 							val = -((0x7 & ~val) +1);
@@ -443,7 +443,7 @@ static void __attribute__((unused)) hid_dump_device(struct hid_device *device) {
 	struct list_head *list;
 	unsigned i,k;
 	static char *table[] = {"INPUT", "OUTPUT", "FEATURE"};
-	
+
 	for (i = 0; i < HID_REPORT_TYPES; i++) {
 		report_enum = device->report_enum + i;
 		list = report_enum->report_list.next;
@@ -473,7 +473,6 @@ static void __attribute__((unused)) hid_dump_input(struct hid_usage *usage, __s3
 
 
 static char *events[EV_MAX + 1] = {
-	[0 ... EV_MAX] = NULL,
 	[EV_SYN] = "Sync",			[EV_KEY] = "Key",
 	[EV_REL] = "Relative",			[EV_ABS] = "Absolute",
 	[EV_MSC] = "Misc",			[EV_LED] = "LED",
@@ -483,11 +482,9 @@ static char *events[EV_MAX + 1] = {
 };
 
 static char *syncs[2] = {
-	[0 ... 1] = NULL,
 	[SYN_REPORT] = "Report",		[SYN_CONFIG] = "Config",
 };
 static char *keys[KEY_MAX + 1] = {
-	[0 ... KEY_MAX] = NULL,
 	[KEY_RESERVED] = "Reserved",		[KEY_ESC] = "Esc",
 	[KEY_1] = "1",				[KEY_2] = "2",
 	[KEY_3] = "3",				[KEY_4] = "4",
@@ -665,15 +662,13 @@ static char *keys[KEY_MAX + 1] = {
 };
 
 static char *relatives[REL_MAX + 1] = {
-	[0 ... REL_MAX] = NULL,
 	[REL_X] = "X",			[REL_Y] = "Y",
 	[REL_Z] = "Z",			[REL_HWHEEL] = "HWheel",
-	[REL_DIAL] = "Dial",		[REL_WHEEL] = "Wheel", 
-	[REL_MISC] = "Misc",	
+	[REL_DIAL] = "Dial",		[REL_WHEEL] = "Wheel",
+	[REL_MISC] = "Misc",
 };
 
 static char *absolutes[ABS_MAX + 1] = {
-	[0 ... ABS_MAX] = NULL,
 	[ABS_X] = "X",			[ABS_Y] = "Y",
 	[ABS_Z] = "Z",			[ABS_RX] = "Rx",
 	[ABS_RY] = "Ry",		[ABS_RZ] = "Rz",
@@ -690,40 +685,35 @@ static char *absolutes[ABS_MAX + 1] = {
 };
 
 static char *misc[MSC_MAX + 1] = {
-	[ 0 ... MSC_MAX] = NULL,
 	[MSC_SERIAL] = "Serial",	[MSC_PULSELED] = "Pulseled",
 	[MSC_GESTURE] = "Gesture",	[MSC_RAW] = "RawData"
 };
 
 static char *leds[LED_MAX + 1] = {
-	[0 ... LED_MAX] = NULL,
-	[LED_NUML] = "NumLock",		[LED_CAPSL] = "CapsLock", 
+	[LED_NUML] = "NumLock",		[LED_CAPSL] = "CapsLock",
 	[LED_SCROLLL] = "ScrollLock",	[LED_COMPOSE] = "Compose",
-	[LED_KANA] = "Kana",		[LED_SLEEP] = "Sleep", 
+	[LED_KANA] = "Kana",		[LED_SLEEP] = "Sleep",
 	[LED_SUSPEND] = "Suspend",	[LED_MUTE] = "Mute",
 	[LED_MISC] = "Misc",
 };
 
 static char *repeats[REP_MAX + 1] = {
-	[0 ... REP_MAX] = NULL,
 	[REP_DELAY] = "Delay",		[REP_PERIOD] = "Period"
 };
 
 static char *sounds[SND_MAX + 1] = {
-	[0 ... SND_MAX] = NULL,
 	[SND_CLICK] = "Click",		[SND_BELL] = "Bell",
 	[SND_TONE] = "Tone"
 };
 
 static char **names[EV_MAX + 1] = {
-	[0 ... EV_MAX] = NULL,
 	[EV_SYN] = syncs,			[EV_KEY] = keys,
 	[EV_REL] = relatives,			[EV_ABS] = absolutes,
 	[EV_MSC] = misc,			[EV_LED] = leds,
 	[EV_SND] = sounds,			[EV_REP] = repeats,
 };
 
-static void resolv_event(__u8 type, __u16 code) {
+static void __attribute__((unused)) resolv_event(__u8 type, __u16 code) {
 
 	printk("%s.%s", events[type] ? events[type] : "?",
 		names[type] ? (names[type][code] ? names[type][code] : "?") : "?");

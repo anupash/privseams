@@ -61,7 +61,7 @@ struct loop_device {
 	struct semaphore	lo_sem;
 	struct semaphore	lo_ctl_mutex;
 	struct semaphore	lo_bh_mutex;
-	atomic_t		lo_pending;
+	int			lo_pending;
 
 	request_queue_t		*lo_queue;
 };
@@ -71,7 +71,10 @@ struct loop_device {
 /*
  * Loop flags
  */
-#define LO_FLAGS_READ_ONLY	1
+enum {
+	LO_FLAGS_READ_ONLY	= 1,
+	LO_FLAGS_USE_AOPS	= 2,
+};
 
 #include <asm/posix_types.h>	/* for __kernel_old_dev_t */
 #include <asm/types.h>		/* for __u64 */

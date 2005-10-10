@@ -71,6 +71,7 @@ struct mousedev {
 	struct mousedev_hw_data packet;
 	unsigned int pkt_count;
 	int old_x[4], old_y[4];
+	int frac_dx, frac_dy;
 	unsigned long touch;
 };
 
@@ -100,6 +101,7 @@ struct mousedev_list {
 	unsigned char ready, buffer, bufsiz;
 	unsigned char imexseq, impsseq;
 	enum mousedev_emul mode;
+	unsigned long last_buttons;
 };
 
 #define MOUSEDEV_SEQ_LEN	6
@@ -117,24 +119,31 @@ static struct mousedev mousedev_mix;
 
 static void mousedev_touchpad_event(struct input_dev *dev, struct mousedev *mousedev, unsigned int code, int value)
 {
-	int size;
+	int size, tmp;
+	enum { FRACTION_DENOM = 128 };
 
 	if (mousedev->touch) {
+		size = dev->absmax[ABS_X] - dev->absmin[ABS_X];
+		if (size == 0) size = 256 * 2;
 		switch (code) {
 			case ABS_X:
-				size = dev->absmax[ABS_X] - dev->absmin[ABS_X];
-				if (size == 0) size = xres;
 				fx(0) = value;
-				if (mousedev->pkt_count >= 2)
-					mousedev->packet.dx = ((fx(0) - fx(1)) / 2 + (fx(1) - fx(2)) / 2) * xres / (size * 2);
+				if (mousedev->pkt_count >= 2) {
+					tmp = ((value - fx(2)) * (256 * FRACTION_DENOM)) / size;
+					tmp += mousedev->frac_dx;
+					mousedev->packet.dx = tmp / FRACTION_DENOM;
+					mousedev->frac_dx = tmp - mousedev->packet.dx * FRACTION_DENOM;
+				}
 				break;
 
 			case ABS_Y:
-				size = dev->absmax[ABS_Y] - dev->absmin[ABS_Y];
-				if (size == 0) size = yres;
 				fy(0) = value;
-				if (mousedev->pkt_count >= 2)
-					mousedev->packet.dy = -((fy(0) - fy(1)) / 2 + (fy(1) - fy(2)) / 2) * yres / (size * 2);
+				if (mousedev->pkt_count >= 2) {
+					tmp = -((value - fy(2)) * (256 * FRACTION_DENOM)) / size;
+					tmp += mousedev->frac_dy;
+					mousedev->packet.dy = tmp / FRACTION_DENOM;
+					mousedev->frac_dy = tmp - mousedev->packet.dy * FRACTION_DENOM;
+				}
 				break;
 		}
 	}
@@ -211,12 +220,13 @@ static void mousedev_notify_readers(struct mousedev *mousedev, struct mousedev_h
 	struct mousedev_list *list;
 	struct mousedev_motion *p;
 	unsigned long flags;
+	int wake_readers = 0;
 
 	list_for_each_entry(list, &mousedev->list, node) {
 		spin_lock_irqsave(&list->packet_lock, flags);
 
 		p = &list->packets[list->head];
-		if (list->ready && p->buttons != packet->buttons) {
+		if (list->ready && p->buttons != mousedev->packet.buttons) {
 			unsigned int new_head = (list->head + 1) % PACKET_QUEUE_LEN;
 			if (new_head != list->tail) {
 				p = &list->packets[list->head = new_head];
@@ -241,13 +251,19 @@ static void mousedev_notify_readers(struct mousedev *mousedev, struct mousedev_h
 		p->dz += packet->dz;
 		p->buttons = mousedev->packet.buttons;
 
-		list->ready = 1;
+		if (p->dx || p->dy || p->dz || p->buttons != list->last_buttons)
+			list->ready = 1;
 
 		spin_unlock_irqrestore(&list->packet_lock, flags);
-		kill_fasync(&list->fasync, SIGIO, POLL_IN);
+
+		if (list->ready) {
+			kill_fasync(&list->fasync, SIGIO, POLL_IN);
+			wake_readers = 1;
+		}
 	}
 
-	wake_up_interruptible(&mousedev->wait);
+	if (wake_readers)
+		wake_up_interruptible(&mousedev->wait);
 }
 
 static void mousedev_touchpad_touch(struct mousedev *mousedev, int value)
@@ -268,6 +284,8 @@ static void mousedev_touchpad_touch(struct mousedev *mousedev, int value)
 			clear_bit(0, &mousedev_mix.packet.buttons);
 		}
 		mousedev->touch = mousedev->pkt_count = 0;
+		mousedev->frac_dx = 0;
+		mousedev->frac_dy = 0;
 	}
 	else
 		if (!mousedev->touch)
@@ -445,7 +463,7 @@ static void mousedev_packet(struct mousedev_list *list, signed char *ps2_data)
 
 	switch (list->mode) {
 		case MOUSEDEV_EMUL_EXPS:
-			ps2_data[3] = mousedev_limit_delta(p->dz, 127);
+			ps2_data[3] = mousedev_limit_delta(p->dz, 7);
 			p->dz -= ps2_data[3];
 			ps2_data[3] = (ps2_data[3] & 0x0f) | ((p->buttons & 0x18) << 1);
 			list->bufsiz = 4;
@@ -467,9 +485,10 @@ static void mousedev_packet(struct mousedev_list *list, signed char *ps2_data)
 	}
 
 	if (!p->dx && !p->dy && !p->dz) {
-		if (list->tail == list->head)
+		if (list->tail == list->head) {
 			list->ready = 0;
-		else
+			list->last_buttons = p->buttons;
+		} else
 			list->tail = (list->tail + 1) % PACKET_QUEUE_LEN;
 	}
 
@@ -585,12 +604,11 @@ static unsigned int mousedev_poll(struct file *file, poll_table *wait)
 {
 	struct mousedev_list *list = file->private_data;
 	poll_wait(file, &list->mousedev->wait, wait);
-	if (list->ready || list->buffer)
-		return POLLIN | POLLRDNORM;
-	return 0;
+	return ((list->ready || list->buffer) ? (POLLIN | POLLRDNORM) : 0) |
+		(list->mousedev->exist ? 0 : (POLLHUP | POLLERR));
 }
 
-struct file_operations mousedev_fops = {
+static struct file_operations mousedev_fops = {
 	.owner =	THIS_MODULE,
 	.read =		mousedev_read,
 	.write =	mousedev_write,
@@ -633,9 +651,9 @@ static struct input_handle *mousedev_connect(struct input_handler *handler, stru
 
 	devfs_mk_cdev(MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + minor),
 			S_IFCHR|S_IRUGO|S_IWUSR, "input/mouse%d", minor);
-	class_simple_device_add(input_class,
-				MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + minor),
-				dev->dev, "mouse%d", minor);
+	class_device_create(input_class,
+			MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + minor),
+			dev->dev, "mouse%d", minor);
 
 	return &mousedev->handle;
 }
@@ -643,13 +661,18 @@ static struct input_handle *mousedev_connect(struct input_handler *handler, stru
 static void mousedev_disconnect(struct input_handle *handle)
 {
 	struct mousedev *mousedev = handle->private;
+	struct mousedev_list *list;
 
-	class_simple_device_remove(MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + mousedev->minor));
+	class_device_destroy(input_class,
+			MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + mousedev->minor));
 	devfs_remove("input/mouse%d", mousedev->minor);
 	mousedev->exist = 0;
 
 	if (mousedev->open) {
 		input_close_device(handle);
+		wake_up_interruptible(&mousedev->wait);
+		list_for_each_entry(list, &mousedev->list, node)
+			kill_fasync(&list->fasync, SIGIO, POLL_HUP);
 	} else {
 		if (mousedev_mix.open)
 			input_close_device(handle);
@@ -717,8 +740,8 @@ static int __init mousedev_init(void)
 
 	devfs_mk_cdev(MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + MOUSEDEV_MIX),
 			S_IFCHR|S_IRUGO|S_IWUSR, "input/mice");
-	class_simple_device_add(input_class, MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + MOUSEDEV_MIX),
-				NULL, "mice");
+	class_device_create(input_class,
+			MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + MOUSEDEV_MIX), NULL, "mice");
 
 #ifdef CONFIG_INPUT_MOUSEDEV_PSAUX
 	if (!(psaux_registered = !misc_register(&psaux_mouse)))
@@ -737,7 +760,8 @@ static void __exit mousedev_exit(void)
 		misc_deregister(&psaux_mouse);
 #endif
 	devfs_remove("input/mice");
-	class_simple_device_remove(MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + MOUSEDEV_MIX));
+	class_device_destroy(input_class,
+			MKDEV(INPUT_MAJOR, MOUSEDEV_MINOR_BASE + MOUSEDEV_MIX));
 	input_unregister_handler(&mousedev_handler);
 }
 

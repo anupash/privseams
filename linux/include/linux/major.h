@@ -25,7 +25,6 @@
 #define MISC_MAJOR		10
 #define SCSI_CDROM_MAJOR	11
 #define MUX_MAJOR		11	/* PA-RISC only */
-#define QIC02_TAPE_MAJOR	12
 #define XT_DISK_MAJOR		13
 #define INPUT_MAJOR		13
 #define SOUND_MAJOR		14
@@ -101,6 +100,7 @@
 #define I2O_MAJOR		80	/* 80->87 */
 
 #define SHMIQ_MAJOR		85   /* Linux/mips, SGI /dev/shmiq */
+#define SCSI_CHANGER_MAJOR      86
 
 #define IDE6_MAJOR		88
 #define IDE7_MAJOR		89

@@ -29,7 +29,7 @@ static int sysfs_initialized;	/* = 0 */
 /* show configuration fields */
 #define pci_config_attr(field, format_string)				\
 static ssize_t								\
-field##_show(struct device *dev, char *buf)				\
+field##_show(struct device *dev, struct device_attribute *attr, char *buf)				\
 {									\
 	struct pci_dev *pdev;						\
 									\
@@ -44,9 +44,9 @@ pci_config_attr(subsystem_device, "0x%04x\n");
 pci_config_attr(class, "0x%06x\n");
 pci_config_attr(irq, "%u\n");
 
-static ssize_t local_cpus_show(struct device *dev, char *buf)
+static ssize_t local_cpus_show(struct device *dev, struct device_attribute *attr, char *buf)
 {		
-	cpumask_t mask = pcibus_to_cpumask(to_pci_dev(dev)->bus->number);
+	cpumask_t mask = pcibus_to_cpumask(to_pci_dev(dev)->bus);
 	int len = cpumask_scnprintf(buf, PAGE_SIZE-2, mask);
 	strcat(buf,"\n"); 
 	return 1+len;
@@ -54,23 +54,37 @@ static ssize_t local_cpus_show(struct device *dev, char *buf)
 
 /* show resources */
 static ssize_t
-resource_show(struct device * dev, char * buf)
+resource_show(struct device * dev, struct device_attribute *attr, char * buf)
 {
 	struct pci_dev * pci_dev = to_pci_dev(dev);
 	char * str = buf;
 	int i;
 	int max = 7;
+	u64 start, end;
 
 	if (pci_dev->subordinate)
 		max = DEVICE_COUNT_RESOURCE;
 
 	for (i = 0; i < max; i++) {
-		str += sprintf(str,"0x%016lx 0x%016lx 0x%016lx\n",
-			       pci_resource_start(pci_dev,i),
-			       pci_resource_end(pci_dev,i),
-			       pci_resource_flags(pci_dev,i));
+		struct resource *res =  &pci_dev->resource[i];
+		pci_resource_to_user(pci_dev, i, res, &start, &end);
+		str += sprintf(str,"0x%016llx 0x%016llx 0x%016llx\n",
+			       (unsigned long long)start,
+			       (unsigned long long)end,
+			       (unsigned long long)res->flags);
 	}
 	return (str - buf);
+}
+
+static ssize_t modalias_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct pci_dev *pci_dev = to_pci_dev(dev);
+
+	return sprintf(buf, "pci:v%08Xd%08Xsv%08Xsd%08Xbc%02Xsc%02Xi%02x\n",
+		       pci_dev->vendor, pci_dev->device,
+		       pci_dev->subsystem_vendor, pci_dev->subsystem_device,
+		       (u8)(pci_dev->class >> 16), (u8)(pci_dev->class >> 8),
+		       (u8)(pci_dev->class));
 }
 
 struct device_attribute pci_dev_attrs[] = {
@@ -82,6 +96,7 @@ struct device_attribute pci_dev_attrs[] = {
 	__ATTR_RO(class),
 	__ATTR_RO(irq),
 	__ATTR_RO(local_cpus),
+	__ATTR_RO(modalias),
 	__ATTR_NULL,
 };
 
@@ -91,6 +106,7 @@ pci_read_config(struct kobject *kobj, char *buf, loff_t off, size_t count)
 	struct pci_dev *dev = to_pci_dev(container_of(kobj,struct device,kobj));
 	unsigned int size = 64;
 	loff_t init_off = off;
+	u8 *data = (u8*) buf;
 
 	/* Several chips lock up trying to read undefined config space */
 	if (capable(CAP_SYS_ADMIN)) {
@@ -108,30 +124,47 @@ pci_read_config(struct kobject *kobj, char *buf, loff_t off, size_t count)
 		size = count;
 	}
 
-	while (off & 3) {
-		unsigned char val;
+	if ((off & 1) && size) {
+		u8 val;
 		pci_read_config_byte(dev, off, &val);
-		buf[off - init_off] = val;
+		data[off - init_off] = val;
 		off++;
-		if (--size == 0)
-			break;
+		size--;
+	}
+
+	if ((off & 3) && size > 2) {
+		u16 val;
+		pci_read_config_word(dev, off, &val);
+		data[off - init_off] = val & 0xff;
+		data[off - init_off + 1] = (val >> 8) & 0xff;
+		off += 2;
+		size -= 2;
 	}
 
 	while (size > 3) {
-		unsigned int val;
+		u32 val;
 		pci_read_config_dword(dev, off, &val);
-		buf[off - init_off] = val & 0xff;
-		buf[off - init_off + 1] = (val >> 8) & 0xff;
-		buf[off - init_off + 2] = (val >> 16) & 0xff;
-		buf[off - init_off + 3] = (val >> 24) & 0xff;
+		data[off - init_off] = val & 0xff;
+		data[off - init_off + 1] = (val >> 8) & 0xff;
+		data[off - init_off + 2] = (val >> 16) & 0xff;
+		data[off - init_off + 3] = (val >> 24) & 0xff;
 		off += 4;
 		size -= 4;
 	}
 
-	while (size > 0) {
-		unsigned char val;
+	if (size >= 2) {
+		u16 val;
+		pci_read_config_word(dev, off, &val);
+		data[off - init_off] = val & 0xff;
+		data[off - init_off + 1] = (val >> 8) & 0xff;
+		off += 2;
+		size -= 2;
+	}
+
+	if (size > 0) {
+		u8 val;
 		pci_read_config_byte(dev, off, &val);
-		buf[off - init_off] = val;
+		data[off - init_off] = val;
 		off++;
 		--size;
 	}
@@ -145,6 +178,7 @@ pci_write_config(struct kobject *kobj, char *buf, loff_t off, size_t count)
 	struct pci_dev *dev = to_pci_dev(container_of(kobj,struct device,kobj));
 	unsigned int size = count;
 	loff_t init_off = off;
+	u8 *data = (u8*) buf;
 
 	if (off > dev->cfg_size)
 		return 0;
@@ -152,26 +186,41 @@ pci_write_config(struct kobject *kobj, char *buf, loff_t off, size_t count)
 		size = dev->cfg_size - off;
 		count = size;
 	}
-
-	while (off & 3) {
-		pci_write_config_byte(dev, off, buf[off - init_off]);
+	
+	if ((off & 1) && size) {
+		pci_write_config_byte(dev, off, data[off - init_off]);
 		off++;
-		if (--size == 0)
-			break;
+		size--;
 	}
+	
+	if ((off & 3) && size > 2) {
+		u16 val = data[off - init_off];
+		val |= (u16) data[off - init_off + 1] << 8;
+                pci_write_config_word(dev, off, val);
+                off += 2;
+                size -= 2;
+        }
 
 	while (size > 3) {
-		unsigned int val = buf[off - init_off];
-		val |= (unsigned int) buf[off - init_off + 1] << 8;
-		val |= (unsigned int) buf[off - init_off + 2] << 16;
-		val |= (unsigned int) buf[off - init_off + 3] << 24;
+		u32 val = data[off - init_off];
+		val |= (u32) data[off - init_off + 1] << 8;
+		val |= (u32) data[off - init_off + 2] << 16;
+		val |= (u32) data[off - init_off + 3] << 24;
 		pci_write_config_dword(dev, off, val);
 		off += 4;
 		size -= 4;
 	}
+	
+	if (size >= 2) {
+		u16 val = data[off - init_off];
+		val |= (u16) data[off - init_off + 1] << 8;
+		pci_write_config_word(dev, off, val);
+		off += 2;
+		size -= 2;
+	}
 
-	while (size > 0) {
-		pci_write_config_byte(dev, off, buf[off - init_off]);
+	if (size) {
+		pci_write_config_byte(dev, off, data[off - init_off]);
 		off++;
 		--size;
 	}
@@ -267,8 +316,21 @@ pci_mmap_resource(struct kobject *kobj, struct bin_attribute *attr,
 						       struct device, kobj));
 	struct resource *res = (struct resource *)attr->private;
 	enum pci_mmap_state mmap_type;
+	u64 start, end;
+	int i;
 
-	vma->vm_pgoff += res->start >> PAGE_SHIFT;
+	for (i = 0; i < PCI_ROM_RESOURCE; i++)
+		if (res == &pdev->resource[i])
+			break;
+	if (i >= PCI_ROM_RESOURCE)
+		return -ENODEV;
+
+	/* pci_mmap_page_range() expects the same kind of entry as coming
+	 * from /proc/bus/pci/ which is a "user visible" value. If this is
+	 * different from the resource itself, arch will do necessary fixup.
+	 */
+	pci_resource_to_user(pdev, i, res, &start, &end);
+	vma->vm_pgoff += start >> PAGE_SHIFT;
 	mmap_type = res->flags & IORESOURCE_MEM ? pci_mmap_mem : pci_mmap_io;
 
 	return pci_mmap_page_range(pdev, vma, mmap_type, 0);
@@ -293,16 +355,17 @@ pci_create_resource_files(struct pci_dev *pdev)
 		if (!pci_resource_len(pdev, i))
 			continue;
 
-		res_attr = kmalloc(sizeof(*res_attr) + 10, GFP_ATOMIC);
+		/* allocate attribute structure, piggyback attribute name */
+		res_attr = kcalloc(1, sizeof(*res_attr) + 10, GFP_ATOMIC);
 		if (res_attr) {
-			memset(res_attr, 0, sizeof(*res_attr) + 10);
+			char *res_attr_name = (char *)(res_attr + 1);
+
 			pdev->res_attr[i] = res_attr;
-			/* Allocated above after the res_attr struct */
-			res_attr->attr.name = (char *)(res_attr + 1);
-			sprintf(res_attr->attr.name, "resource%d", i);
-			res_attr->size = pci_resource_len(pdev, i);
+			sprintf(res_attr_name, "resource%d", i);
+			res_attr->attr.name = res_attr_name;
 			res_attr->attr.mode = S_IRUSR | S_IWUSR;
 			res_attr->attr.owner = THIS_MODULE;
+			res_attr->size = pci_resource_len(pdev, i);
 			res_attr->mmap = pci_mmap_resource;
 			res_attr->private = &pdev->resource[i];
 			sysfs_create_bin_file(&pdev->dev.kobj, res_attr);
@@ -481,7 +544,7 @@ static int __init pci_sysfs_init(void)
 	struct pci_dev *pdev = NULL;
 	
 	sysfs_initialized = 1;
-	while ((pdev = pci_find_device(PCI_ANY_ID, PCI_ANY_ID, pdev)) != NULL)
+	for_each_pci_dev(pdev)
 		pci_create_sysfs_dev_files(pdev);
 
 	return 0;

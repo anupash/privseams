@@ -23,7 +23,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * Send feedback to <greg@kroah.com>, <dely.l.sy@intel.com>
+ * Send feedback to <greg@kroah.com>, <kristen.c.accardi@intel.com>
  *
  */
 
@@ -1354,10 +1354,11 @@ static u32 remove_board(struct pci_func *func, struct controller *ctrl)
 				dbg("PCI Bridge Hot-Remove s:b:d:f(%02x:%02x:%02x:%02x)\n", 
 					ctrl->seg, func->bus, func->device, func->function);
 				bridge_slot_remove(func);
-			} else
+			} else {
 				dbg("PCI Function Hot-Remove s:b:d:f(%02x:%02x:%02x:%02x)\n", 
 					ctrl->seg, func->bus, func->device, func->function);
 				slot_remove(func);
+			}
 
 			func = pciehp_slot_find(ctrl->slot_bus, device, 0);
 		}

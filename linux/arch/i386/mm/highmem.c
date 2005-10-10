@@ -1,4 +1,5 @@
 #include <linux/highmem.h>
+#include <linux/module.h>
 
 void *kmap(struct page *page)
 {
@@ -66,12 +67,30 @@ void kunmap_atomic(void *kvaddr, enum km_type type)
 	 * force other mappings to Oops if they'll try to access
 	 * this pte without first remap it
 	 */
-	pte_clear(kmap_pte-idx);
+	pte_clear(&init_mm, vaddr, kmap_pte-idx);
 	__flush_tlb_one(vaddr);
 #endif
 
 	dec_preempt_count();
 	preempt_check_resched();
+}
+
+/* This is the same as kmap_atomic() but can map memory that doesn't
+ * have a struct page associated with it.
+ */
+void *kmap_atomic_pfn(unsigned long pfn, enum km_type type)
+{
+	enum fixed_addresses idx;
+	unsigned long vaddr;
+
+	inc_preempt_count();
+
+	idx = type + KM_TYPE_NR*smp_processor_id();
+	vaddr = __fix_to_virt(FIX_KMAP_BEGIN + idx);
+	set_pte(kmap_pte-idx, pfn_pte(pfn, kmap_prot));
+	__flush_tlb_one(vaddr);
+
+	return (void*) vaddr;
 }
 
 struct page *kmap_atomic_to_page(void *ptr)
@@ -87,3 +106,8 @@ struct page *kmap_atomic_to_page(void *ptr)
 	return pte_page(*pte);
 }
 
+EXPORT_SYMBOL(kmap);
+EXPORT_SYMBOL(kunmap);
+EXPORT_SYMBOL(kmap_atomic);
+EXPORT_SYMBOL(kunmap_atomic);
+EXPORT_SYMBOL(kmap_atomic_to_page);

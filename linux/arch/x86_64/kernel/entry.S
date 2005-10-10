@@ -44,10 +44,7 @@
 
 	.code64
 
-#ifdef CONFIG_PREEMPT
-#define preempt_stop cli
-#else
-#define preempt_stop
+#ifndef CONFIG_PREEMPT
 #define retint_kernel retint_restore_args
 #endif	
 	
@@ -79,7 +76,7 @@
 
 	.macro FAKE_STACK_FRAME child_rip
 	/* push in order ss, rsp, eflags, cs, rip */
-	xorq %rax, %rax
+	xorl %eax, %eax
 	pushq %rax /* ss */
 	CFI_ADJUST_CFA_OFFSET	8
 	pushq %rax /* rsp */
@@ -184,7 +181,7 @@ ENTRY(system_call)
 	movq  %rax,ORIG_RAX-ARGOFFSET(%rsp) 
 	movq  %rcx,RIP-ARGOFFSET(%rsp)  
 	GET_THREAD_INFO(%rcx)
-	testl $(_TIF_SYSCALL_TRACE|_TIF_SYSCALL_AUDIT),threadinfo_flags(%rcx)
+	testl $(_TIF_SYSCALL_TRACE|_TIF_SYSCALL_AUDIT|_TIF_SECCOMP),threadinfo_flags(%rcx)
 	jnz tracesys
 	cmpq $__NR_syscall_max,%rax
 	ja badsys
@@ -197,7 +194,7 @@ ENTRY(system_call)
  */		
 	.globl ret_from_sys_call
 ret_from_sys_call:
-	movl $_TIF_WORK_MASK,%edi
+	movl $_TIF_ALLWORK_MASK,%edi
 	/* edi:	flagmask */
 sysret_check:		
 	GET_THREAD_INFO(%rcx)
@@ -289,6 +286,7 @@ int_careful:
 	pushq %rdi
 	call schedule
 	popq %rdi
+	cli
 	jmp int_with_check
 
 	/* handle signals and tracing -- both require a full stack frame */
@@ -302,9 +300,8 @@ int_very_careful:
 	leaq 8(%rsp),%rdi	# &ptregs -> arg1	
 	call syscall_trace_leave
 	popq %rdi
-	btr  $TIF_SYSCALL_TRACE,%edi
-	btr  $TIF_SYSCALL_AUDIT,%edi
-	btr  $TIF_SINGLESTEP,%edi
+	andl $~(_TIF_SYSCALL_TRACE|_TIF_SYSCALL_AUDIT|_TIF_SINGLESTEP),%edi
+	cli
 	jmp int_restore_rest
 	
 int_signal:
@@ -316,6 +313,7 @@ int_signal:
 1:	movl $_TIF_NEED_RESCHED,%edi	
 int_restore_rest:
 	RESTORE_REST
+	cli
 	jmp int_with_check
 	CFI_ENDPROC
 		
@@ -425,7 +423,7 @@ ENTRY(stub_rt_sigreturn)
 	testl $3,CS(%rdi)
 	je 1f
 	swapgs	
-1:	addl $1,%gs:pda_irqcount	# RED-PEN should check preempt count
+1:	incl	%gs:pda_irqcount	# RED-PEN should check preempt count
 	movq %gs:pda_irqstackptr,%rax
 	cmoveq %rax,%rsp							
 	pushq %rdi			# save old stack	
@@ -438,7 +436,7 @@ ENTRY(common_interrupt)
 ret_from_intr:		
 	popq  %rdi
 	cli	
-	subl $1,%gs:pda_irqcount
+	decl %gs:pda_irqcount
 #ifdef CONFIG_DEBUG_INFO
 	movq RBP(%rdi),%rbp
 #endif
@@ -460,7 +458,6 @@ retint_check:
 	andl %edi,%edx
 	jnz  retint_careful
 retint_swapgs:	 	
-	cli
 	swapgs 
 retint_restore_args:				
 	cli
@@ -497,13 +494,13 @@ retint_signal:
 	sti
 	SAVE_REST
 	movq $-1,ORIG_RAX(%rsp) 			
-	xorq %rsi,%rsi		# oldset
+	xorl %esi,%esi		# oldset
 	movq %rsp,%rdi		# &pt_regs
 	call do_notify_resume
 	RESTORE_REST
 	cli
 	movl $_TIF_NEED_RESCHED,%edi
-	GET_THREAD_INFO(%rcx)	
+	GET_THREAD_INFO(%rcx)
 	jmp retint_check
 
 #ifdef CONFIG_PREEMPT
@@ -516,13 +513,8 @@ retint_kernel:
 	bt  $TIF_NEED_RESCHED,threadinfo_flags(%rcx)
 	jnc  retint_restore_args
 	bt   $9,EFLAGS-ARGOFFSET(%rsp)	/* interrupts off? */
-	jc   retint_restore_args
-	movl $PREEMPT_ACTIVE,threadinfo_preempt_count(%rcx)
-	sti
-	call schedule
-	cli
-	GET_THREAD_INFO(%rcx)
-	movl $0,threadinfo_preempt_count(%rcx) 
+	jnc  retint_restore_args
+	call preempt_schedule_irq
 	jmp exit_intr
 #endif	
 	CFI_ENDPROC
@@ -594,6 +586,7 @@ ENTRY(spurious_interrupt)
 	movq ORIG_RAX(%rsp),%rsi
 	movq $-1,ORIG_RAX(%rsp)
 	call \sym
+	cli
 	.endm
 	
 /*
@@ -759,7 +752,7 @@ child_rip:
 	movq %rsi, %rdi
 	call *%rax
 	# exit
-	xorq %rdi, %rdi
+	xorl %edi, %edi
 	call do_exit
 
 /*
@@ -809,10 +802,6 @@ ENTRY(debug)
 	pushq $0
 	CFI_ADJUST_CFA_OFFSET 8		
 	paranoidentry do_debug
-	/* switch back to process stack to restore the state ptrace touched */
-	movq %rax,%rsp	
-	testl $3,CS(%rsp)
-	jnz   paranoid_userspace	
 	jmp paranoid_exit
 	CFI_ENDPROC
 
@@ -822,37 +811,49 @@ ENTRY(nmi)
 	pushq $-1
 	CFI_ADJUST_CFA_OFFSET 8		
 	paranoidentry do_nmi
+	/*
+ 	 * "Paranoid" exit path from exception stack.
+  	 * Paranoid because this is used by NMIs and cannot take
+	 * any kernel state for granted.
+	 * We don't do kernel preemption checks here, because only
+	 * NMI should be common and it does not enable IRQs and
+	 * cannot get reschedule ticks.
+	 */
 	/* ebx:	no swapgs flag */
 paranoid_exit:
 	testl %ebx,%ebx				/* swapgs needed? */
 	jnz paranoid_restore
+	testl $3,CS(%rsp)
+	jnz   paranoid_userspace
 paranoid_swapgs:	
-	cli
 	swapgs
 paranoid_restore:	
 	RESTORE_ALL 8
 	iretq
 paranoid_userspace:	
-	cli
 	GET_THREAD_INFO(%rcx)
-	movl threadinfo_flags(%rcx),%edx
-	testl $_TIF_NEED_RESCHED,%edx
-	jnz paranoid_resched
-	testl $(_TIF_SIGPENDING|_TIF_NOTIFY_RESUME|_TIF_SINGLESTEP),%edx
-	jnz paranoid_signal
-	jmp paranoid_swapgs
-paranoid_resched:		
+	movl threadinfo_flags(%rcx),%ebx
+	andl $_TIF_WORK_MASK,%ebx
+	jz paranoid_swapgs
+	movq %rsp,%rdi			/* &pt_regs */
+	call sync_regs
+	movq %rax,%rsp			/* switch stack for scheduling */
+	testl $_TIF_NEED_RESCHED,%ebx
+	jnz paranoid_schedule
+	movl %ebx,%edx			/* arg3: thread flags */
+	sti
+	xorl %esi,%esi 			/* arg2: oldset */
+	movq %rsp,%rdi 			/* arg1: &pt_regs */
+	call do_notify_resume
+	cli
+	jmp paranoid_userspace
+paranoid_schedule:
 	sti
 	call schedule
-	jmp paranoid_exit
-paranoid_signal:		
-	sti
-	xorl %esi,%esi /* oldset */
-	movq %rsp,%rdi /* &pt_regs */
-	call do_notify_resume
-	jmp paranoid_exit
+	cli
+	jmp paranoid_userspace
 	CFI_ENDPROC
-	
+
 ENTRY(int3)
 	zeroentry do_int3	
 
@@ -875,9 +876,6 @@ ENTRY(reserved)
 ENTRY(double_fault)
 	CFI_STARTPROC
 	paranoidentry do_double_fault
-	movq %rax,%rsp
-	testl $3,CS(%rsp)
-	jnz paranoid_userspace		
 	jmp paranoid_exit
 	CFI_ENDPROC
 
@@ -891,9 +889,6 @@ ENTRY(segment_not_present)
 ENTRY(stack_segment)
 	CFI_STARTPROC
 	paranoidentry do_stack_segment
-	movq %rax,%rsp
-	testl $3,CS(%rsp)
-	jnz paranoid_userspace
 	jmp paranoid_exit
 	CFI_ENDPROC
 
@@ -922,4 +917,16 @@ ENTRY(machine_check)
 
 ENTRY(call_debug)
        zeroentry do_call_debug
+
+ENTRY(call_softirq)
+	movq %gs:pda_irqstackptr,%rax
+	pushq %r15
+	movq %rsp,%r15
+	incl %gs:pda_irqcount
+	cmove %rax,%rsp
+	call __do_softirq
+	movq %r15,%rsp
+	decl %gs:pda_irqcount
+	popq %r15
+	ret
 

@@ -451,7 +451,7 @@ static int __init moxa_init(void)
 		int n = (sizeof(moxa_pcibrds) / sizeof(moxa_pcibrds[0])) - 1;
 		i = 0;
 		while (i < n) {
-			while ((p = pci_find_device(moxa_pcibrds[i].vendor, moxa_pcibrds[i].device, p))!=NULL)
+			while ((p = pci_get_device(moxa_pcibrds[i].vendor, moxa_pcibrds[i].device, p))!=NULL)
 			{
 				if (pci_enable_device(p))
 					continue;
@@ -3090,6 +3090,7 @@ static int moxaloadc320(int cardno, void __iomem *baseAddr, int len, int *numPor
 	return (0);
 }
 
+#if 0
 long MoxaPortGetCurBaud(int port)
 {
 
@@ -3097,6 +3098,7 @@ long MoxaPortGetCurBaud(int port)
 		return (0);
 	return (moxaCurBaud[port]);
 }
+#endif  /*  0  */
 
 static void MoxaSetFifo(int port, int enable)
 {

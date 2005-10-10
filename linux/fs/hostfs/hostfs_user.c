@@ -28,10 +28,7 @@ int stat_file(const char *path, unsigned long long *inode_out, int *mode_out,
 	if(lstat64(path, &buf) < 0)
 		return(-errno);
 
-	/* See the Makefile for why STAT64_INO_FIELD is passed in
-	 * by the build
-	 */
-	if(inode_out != NULL) *inode_out = buf.STAT64_INO_FIELD;
+	if(inode_out != NULL) *inode_out = buf.st_ino;
 	if(mode_out != NULL) *mode_out = buf.st_mode;
 	if(nlink_out != NULL) *nlink_out = buf.st_nlink;
 	if(uid_out != NULL) *uid_out = buf.st_uid;
@@ -156,8 +153,22 @@ int lseek_file(int fd, long long offset, int whence)
 	int ret;
 
 	ret = lseek64(fd, offset, whence);
-	if(ret < 0) return(-errno);
+	if(ret < 0)
+		return(-errno);
 	return(0);
+}
+
+int fsync_file(int fd, int datasync)
+{
+	int ret;
+	if (datasync)
+		ret = fdatasync(fd);
+	else
+		ret = fsync(fd);
+
+	if (ret < 0)
+		return -errno;
+	return 0;
 }
 
 void close_file(void *stream)

@@ -7,8 +7,9 @@
 
 #include <linux/acpi.h>
 #include <linux/bootmem.h>
+#include <linux/dmi.h>
 #include <asm/smp.h>
-
+#include <asm/tlbflush.h>
 
 /* address in low memory of the wakeup routine. */
 unsigned long acpi_wakeup_address = 0;
@@ -27,6 +28,7 @@ static void init_low_mapping(pgd_t *pgd, int pgd_limit)
 		set_pgd(pgd, *(pgd+USER_PTRS_PER_PGD));
 		pgd_ofs++, pgd++;
 	}
+	flush_tlb_all();
 }
 
 /**
@@ -44,15 +46,6 @@ int acpi_save_state_mem (void)
 	acpi_copy_wakeup_routine(acpi_wakeup_address);
 
 	return 0;
-}
-
-/**
- * acpi_save_state_disk - save kernel state to disk
- *
- */
-int acpi_save_state_disk (void)
-{
-	return 1;
 }
 
 /*
@@ -99,3 +92,29 @@ static int __init acpi_sleep_setup(char *str)
 
 
 __setup("acpi_sleep=", acpi_sleep_setup);
+
+
+static __init int reset_videomode_after_s3(struct dmi_system_id *d)
+{
+	acpi_video_flags |= 2;
+	return 0;
+}
+
+static __initdata struct dmi_system_id acpisleep_dmi_table[] = {
+	{	/* Reset video mode after returning from ACPI S3 sleep */
+		.callback = reset_videomode_after_s3,
+		.ident = "Toshiba Satellite 4030cdt",
+		.matches = {
+			DMI_MATCH(DMI_PRODUCT_NAME, "S4030CDT/4.3"),
+		},
+	},
+	{ }
+};
+
+static int __init acpisleep_dmi_init(void)
+{
+	dmi_check_system(acpisleep_dmi_table);
+	return 0;
+}
+
+core_initcall(acpisleep_dmi_init);

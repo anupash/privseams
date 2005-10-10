@@ -246,6 +246,11 @@ static const struct fb_videomode modedb[] = {
 	/* 480x300 @ 72 Hz, 48.0 kHz hsync */
 	NULL, 72, 480, 300, 33386, 40, 24, 11, 19, 80, 3,
 	0, FB_VMODE_DOUBLE
+    }, {
+	/* 1920x1200 @ 60 Hz, 74.5 Khz hsync */
+	NULL, 60, 1920, 1200, 5177, 128, 336, 1, 38, 208, 3,
+	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	FB_VMODE_NONINTERLACED
     },
 };
 
@@ -404,8 +409,8 @@ static int my_atoi(const char *name)
  *
  */
 
-int fb_try_mode(struct fb_var_screeninfo *var, struct fb_info *info,
-		const struct fb_videomode *mode, unsigned int bpp)
+static int fb_try_mode(struct fb_var_screeninfo *var, struct fb_info *info,
+		       const struct fb_videomode *mode, unsigned int bpp)
 {
     int err = 0;
 
@@ -722,6 +727,47 @@ struct fb_videomode *fb_find_best_mode(struct fb_var_screeninfo *var,
 }
 
 /**
+ * fb_find_nearest_mode - find mode closest video mode
+ *
+ * @var: pointer to struct fb_var_screeninfo
+ * @head: pointer to modelist
+ *
+ * Finds best matching videomode, smaller or greater in dimension.
+ * If more than 1 videomode is found, will return the videomode with
+ * the closest refresh rate
+ */
+struct fb_videomode *fb_find_nearest_mode(struct fb_var_screeninfo *var,
+					  struct list_head *head)
+{
+	struct list_head *pos;
+	struct fb_modelist *modelist;
+	struct fb_videomode *mode, *best = NULL;
+	u32 diff = -1, diff_refresh = -1;
+
+	list_for_each(pos, head) {
+		u32 d;
+
+		modelist = list_entry(pos, struct fb_modelist, list);
+		mode = &modelist->mode;
+
+		d = abs(mode->xres - var->xres) +
+			abs(mode->yres - var->yres);
+		if (diff > d) {
+			diff = d;
+			best = mode;
+		} else if (diff == d) {
+			d = abs(mode->refresh - best->refresh);
+			if (diff_refresh > d) {
+				diff_refresh = d;
+				best = mode;
+			}
+		}
+	}
+
+	return best;
+}
+
+/**
  * fb_match_mode - find a videomode which exactly matches the timings in var
  * @var: pointer to struct fb_var_screeninfo
  * @head: pointer to struct list_head of modelist
@@ -846,5 +892,6 @@ EXPORT_SYMBOL(fb_delete_videomode);
 EXPORT_SYMBOL(fb_destroy_modelist);
 EXPORT_SYMBOL(fb_match_mode);
 EXPORT_SYMBOL(fb_find_best_mode);
+EXPORT_SYMBOL(fb_find_nearest_mode);
 EXPORT_SYMBOL(fb_videomode_to_modelist);
 EXPORT_SYMBOL(fb_find_mode);

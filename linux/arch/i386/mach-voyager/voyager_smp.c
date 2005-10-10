@@ -10,6 +10,7 @@
  * the voyager hal to provide the functionality
  */
 #include <linux/config.h>
+#include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/kernel_stat.h>
 #include <linux/delay.h>
@@ -37,13 +38,10 @@ DEFINE_PER_CPU(struct tlb_state, cpu_tlbstate) ____cacheline_aligned = { &init_m
 /* CPU IRQ affinity -- set to all ones initially */
 static unsigned long cpu_irq_affinity[NR_CPUS] __cacheline_aligned = { [0 ... NR_CPUS-1]  = ~0UL };
 
-/* Set when the idlers are all forked - Set in main.c but not actually
- * used by any other parts of the kernel */
-int smp_threads_ready = 0;
-
 /* per CPU data structure (for /proc/cpuinfo et al), visible externally
  * indexed physically */
 struct cpuinfo_x86 cpu_data[NR_CPUS] __cacheline_aligned;
+EXPORT_SYMBOL(cpu_data);
 
 /* physical ID of the CPU used to boot the system */
 unsigned char boot_cpu_id;
@@ -76,18 +74,11 @@ static volatile unsigned long smp_invalidate_needed;
 /* Bitmask of currently online CPUs - used by setup.c for
    /proc/cpuinfo, visible externally but still physical */
 cpumask_t cpu_online_map = CPU_MASK_NONE;
+EXPORT_SYMBOL(cpu_online_map);
 
 /* Bitmask of CPUs present in the system - exported by i386_syms.c, used
  * by scheduler but indexed physically */
 cpumask_t phys_cpu_present_map = CPU_MASK_NONE;
-
-/* estimate of time used to flush the SMP-local cache - used in
- * processor affinity calculations */
-cycles_t cacheflush_time = 0;
-
-/* cache decay ticks for scheduler---a fairly useless quantity for the
-   voyager system with its odd affinity and huge L3 cache */
-unsigned long cache_decay_ticks = 20;
 
 
 /* The internal functions */
@@ -109,7 +100,6 @@ static void ack_vic_irq(unsigned int irq);
 static void vic_enable_cpi(void);
 static void do_boot_cpu(__u8 cpuid);
 static void do_quad_bootstrap(void);
-static inline void wrapper_smp_local_timer_interrupt(struct pt_regs *);
 
 int hard_smp_processor_id(void);
 
@@ -135,6 +125,14 @@ send_QIC_CPI(__u32 cpuset, __u8 cpi)
 			send_one_QIC_CPI(cpu, cpi - QIC_CPI_OFFSET);
 		}
 	}
+}
+
+static inline void
+wrapper_smp_local_timer_interrupt(struct pt_regs *regs)
+{
+	irq_enter();
+	smp_local_timer_interrupt(regs);
+	irq_exit();
 }
 
 static inline void
@@ -210,14 +208,14 @@ ack_CPI(__u8 cpi)
  * 8259 IRQs except that masks and things must be kept per processor
  */
 static struct hw_interrupt_type vic_irq_type = {
-	"VIC-level",
-	startup_vic_irq,	/* startup */
-	disable_vic_irq,	/* shutdown */
-	enable_vic_irq,		/* enable */
-	disable_vic_irq,	/* disable */
-	before_handle_vic_irq,	/* ack */
-	after_handle_vic_irq,	/* end */
-	set_vic_irq_affinity,	/* affinity */
+	.typename = "VIC-level",
+	.startup = startup_vic_irq,
+	.shutdown = disable_vic_irq,
+	.enable = enable_vic_irq,
+	.disable = disable_vic_irq,
+	.ack = before_handle_vic_irq,
+	.end = after_handle_vic_irq,
+	.set_affinity = set_vic_irq_affinity,
 };
 
 /* used to count up as CPUs are brought on line (starts at 0) */
@@ -243,6 +241,7 @@ static cpumask_t smp_commenced_mask = CPU_MASK_NONE;
 /* This is for the new dynamic CPU boot code */
 cpumask_t cpu_callin_map = CPU_MASK_NONE;
 cpumask_t cpu_callout_map = CPU_MASK_NONE;
+EXPORT_SYMBOL(cpu_callout_map);
 
 /* The per processor IRQ masks (these are usually kept in sync) */
 static __u16 vic_irq_mask[NR_CPUS] __cacheline_aligned;
@@ -983,6 +982,7 @@ void flush_tlb_page(struct vm_area_struct * vma, unsigned long va)
 
 	preempt_enable();
 }
+EXPORT_SYMBOL(flush_tlb_page);
 
 /* enable the requested IRQs */
 static void
@@ -1114,6 +1114,7 @@ smp_call_function (void (*func) (void *info), void *info, int retry,
 
 	return 0;
 }
+EXPORT_SYMBOL(smp_call_function);
 
 /* Sorry about the name.  In an APIC based system, the APICs
  * themselves are programmed to send a timer interrupt.  This is used
@@ -1261,14 +1262,6 @@ smp_vic_timer_interrupt(struct pt_regs *regs)
 	smp_local_timer_interrupt(regs);
 }
 
-static inline void
-wrapper_smp_local_timer_interrupt(struct pt_regs *regs)
-{
-	irq_enter();
-	smp_local_timer_interrupt(regs);
-	irq_exit();
-}
-
 /* local (per CPU) timer interrupt.  It does both profiling and
  * process statistics/rescheduling.
  *
@@ -1301,7 +1294,7 @@ smp_local_timer_interrupt(struct pt_regs * regs)
 						per_cpu(prof_counter, cpu);
 		}
 
-		update_process_times(user_mode(regs));
+		update_process_times(user_mode_vm(regs));
 	}
 
 	if( ((1<<cpu) & voyager_extended_vic_processors) == 0)

@@ -11,6 +11,10 @@ extern int pci_bus_alloc_resource(struct pci_bus *bus, struct resource *res,
 				  void (*alignf)(void *, struct resource *,
 					  	 unsigned long, unsigned long),
 				  void *alignf_data);
+/* Firmware callbacks */
+extern int (*platform_pci_choose_state)(struct pci_dev *dev, pm_message_t state);
+extern int (*platform_pci_set_power_state)(struct pci_dev *dev, pci_power_t state);
+
 /* PCI /proc functions */
 #ifdef CONFIG_PROC_FS
 extern int pci_proc_attach_device(struct pci_dev *dev);
@@ -32,37 +36,22 @@ extern unsigned char pci_max_busnr(void);
 extern unsigned char pci_bus_max_busnr(struct pci_bus *bus);
 extern int pci_bus_find_capability (struct pci_bus *bus, unsigned int devfn, int cap);
 
-struct pci_dev_wrapped {
-	struct pci_dev	*dev;
-	void		*data;
-};
-
-struct pci_bus_wrapped {
-	struct pci_bus	*bus;
-	void		*data;
-};
-
-struct pci_visit {
-	int (* pre_visit_pci_bus)	(struct pci_bus_wrapped *,
-					 struct pci_dev_wrapped *);
-	int (* post_visit_pci_bus)	(struct pci_bus_wrapped *,
-					 struct pci_dev_wrapped *);
-
-	int (* pre_visit_pci_dev)	(struct pci_dev_wrapped *,
-					 struct pci_bus_wrapped *);
-	int (* visit_pci_dev)		(struct pci_dev_wrapped *,
-					 struct pci_bus_wrapped *);
-	int (* post_visit_pci_dev)	(struct pci_dev_wrapped *,
-					 struct pci_bus_wrapped *);
-};
-
-extern int pci_visit_dev(struct pci_visit *fn,
-			 struct pci_dev_wrapped *wrapped_dev,
-			 struct pci_bus_wrapped *wrapped_parent);
 extern void pci_remove_legacy_files(struct pci_bus *bus);
 
 /* Lock for read/write access to pci device and bus lists */
 extern spinlock_t pci_bus_lock;
+
+#ifdef CONFIG_X86_IO_APIC
+extern int pci_msi_quirk;
+#else
+#define pci_msi_quirk 0
+#endif
+
+#ifdef CONFIG_PCI_MSI
+void disable_msi_mode(struct pci_dev *dev, int pos, int type);
+#else
+static inline void disable_msi_mode(struct pci_dev *dev, int pos, int type) { }
+#endif
 
 extern int pcie_mch_quirk;
 extern struct device_attribute pci_dev_attrs[];

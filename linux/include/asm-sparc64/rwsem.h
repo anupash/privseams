@@ -15,17 +15,12 @@
 
 #include <linux/list.h>
 #include <linux/spinlock.h>
+#include <asm/rwsem-const.h>
 
 struct rwsem_waiter;
 
 struct rw_semaphore {
 	signed int count;
-#define RWSEM_UNLOCKED_VALUE		0x00000000
-#define RWSEM_ACTIVE_BIAS		0x00000001
-#define RWSEM_ACTIVE_MASK		0x0000ffff
-#define RWSEM_WAITING_BIAS		0xffff0000
-#define RWSEM_ACTIVE_READ_BIAS		RWSEM_ACTIVE_BIAS
-#define RWSEM_ACTIVE_WRITE_BIAS		(RWSEM_WAITING_BIAS + RWSEM_ACTIVE_BIAS)
 	spinlock_t		wait_lock;
 	struct list_head	wait_list;
 };
@@ -51,53 +46,14 @@ extern void __up_read(struct rw_semaphore *sem);
 extern void __up_write(struct rw_semaphore *sem);
 extern void __downgrade_write(struct rw_semaphore *sem);
 
-static __inline__ int rwsem_atomic_update(int delta, struct rw_semaphore *sem)
+static inline int rwsem_atomic_update(int delta, struct rw_semaphore *sem)
 {
-	int tmp = delta;
-
-	__asm__ __volatile__(
-		"1:\tlduw	[%2], %%g5\n\t"
-		"add		%%g5, %1, %%g7\n\t"
-		"cas		[%2], %%g5, %%g7\n\t"
-		"cmp		%%g5, %%g7\n\t"
-		"bne,pn		%%icc, 1b\n\t"
-		" membar	#StoreLoad | #StoreStore\n\t"
-		"mov		%%g7, %0\n\t"
-		: "=&r" (tmp)
-		: "0" (tmp), "r" (sem)
-		: "g5", "g7", "memory", "cc");
-
-	return tmp + delta;
+	return atomic_add_return(delta, (atomic_t *)(&sem->count));
 }
 
-#define rwsem_atomic_add rwsem_atomic_update
-
-static __inline__ __u16 rwsem_cmpxchgw(struct rw_semaphore *sem, __u16 __old, __u16 __new)
+static inline void rwsem_atomic_add(int delta, struct rw_semaphore *sem)
 {
-	u32 old = (sem->count & 0xffff0000) | (u32) __old;
-	u32 new = (old & 0xffff0000) | (u32) __new;
-	u32 prev;
-
-again:
-	__asm__ __volatile__("cas	[%2], %3, %0\n\t"
-			     "membar	#StoreLoad | #StoreStore"
-			     : "=&r" (prev)
-			     : "0" (new), "r" (sem), "r" (old)
-			     : "memory");
-
-	/* To give the same semantics as x86 cmpxchgw, keep trying
-	 * if only the upper 16-bits changed.
-	 */
-	if (prev != old &&
-	    ((prev & 0xffff) == (old & 0xffff)))
-		goto again;
-
-	return prev & 0xffff;
-}
-
-static __inline__ signed long rwsem_cmpxchg(struct rw_semaphore *sem, signed long old, signed long new)
-{
-	return cmpxchg(&sem->count,old,new);
+	atomic_add(delta, (atomic_t *)(&sem->count));
 }
 
 #endif /* __KERNEL__ */

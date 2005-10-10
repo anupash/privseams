@@ -17,7 +17,6 @@
 #include "linux/utime.h"
 #include "asm/mman.h"
 #include "asm/uaccess.h"
-#include "asm/ipc.h"
 #include "kern_util.h"
 #include "user_util.h"
 #include "sysdep/syscalls.h"
@@ -27,18 +26,13 @@
 /*  Unlocked, I don't care if this is a bit off */
 int nsyscalls = 0;
 
-long um_mount(char __user * dev_name, char __user * dir_name,
-	      char __user * type, unsigned long new_flags, void __user * data)
-{
-	return(sys_mount(dev_name, dir_name, type, new_flags, data));
-}
-
 long sys_fork(void)
 {
 	long ret;
 
 	current->thread.forking = 1;
-        ret = do_fork(SIGCHLD, 0, NULL, 0, NULL, NULL);
+	ret = do_fork(SIGCHLD, UPT_SP(&current->thread.regs.regs),
+		      &current->thread.regs, 0, NULL, NULL);
 	current->thread.forking = 0;
 	return(ret);
 }
@@ -48,8 +42,9 @@ long sys_vfork(void)
 	long ret;
 
 	current->thread.forking = 1;
-	ret = do_fork(CLONE_VFORK | CLONE_VM | SIGCHLD, 0, NULL, 0, NULL,
-		      NULL);
+	ret = do_fork(CLONE_VFORK | CLONE_VM | SIGCHLD,
+		      UPT_SP(&current->thread.regs.regs),
+		      &current->thread.regs, 0, NULL, NULL);
 	current->thread.forking = 0;
 	return(ret);
 }
@@ -154,11 +149,6 @@ long sys_olduname(struct oldold_utsname * name)
 	return error;
 }
 
-long execute_syscall(void *r)
-{
-	return(CHOOSE_MODE_PROC(execute_syscall_tt, execute_syscall_skas, r));
-}
-
 DEFINE_SPINLOCK(syscall_lock);
 
 static int syscall_index = 0;
@@ -174,14 +164,3 @@ int next_syscall_index(int limit)
 	spin_unlock(&syscall_lock);
 	return(ret);
 }
-
-/*
- * Overrides for Emacs so that we follow Linus's tabbing style.
- * Emacs will notice this stuff at the end of the file and automatically
- * adjust the settings for this buffer only.  This must remain at the end
- * of the file.
- * ---------------------------------------------------------------------------
- * Local variables:
- * c-file-style: "linux"
- * End:
- */

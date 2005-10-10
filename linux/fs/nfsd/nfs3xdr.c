@@ -71,6 +71,12 @@ decode_fh(u32 *p, struct svc_fh *fhp)
 	return p + XDR_QUADLEN(size);
 }
 
+/* Helper function for NFSv3 ACL code */
+u32 *nfs3svc_decode_fh(u32 *p, struct svc_fh *fhp)
+{
+	return decode_fh(p, fhp);
+}
+
 static inline u32 *
 encode_fh(u32 *p, struct svc_fh *fhp)
 {
@@ -231,6 +237,13 @@ encode_post_op_attr(struct svc_rqst *rqstp, u32 *p, struct svc_fh *fhp)
 	}
 	*p++ = xdr_zero;
 	return p;
+}
+
+/* Helper for NFSv3 ACLs */
+u32 *
+nfs3svc_encode_post_op_attr(struct svc_rqst *rqstp, u32 *p, struct svc_fh *fhp)
+{
+	return encode_post_op_attr(rqstp, p, fhp);
 }
 
 /*
@@ -801,6 +814,11 @@ compose_entry_fh(struct nfsd3_readdirres *cd, struct svc_fh *fhp,
 	if (isdotent(name, namlen)) {
 		if (namlen == 2) {
 			dchild = dget_parent(dparent);
+			if (dchild == dparent) {
+				/* filesystem root - cannot return filehandle for ".." */
+				dput(dchild);
+				return 1;
+			}
 		} else
 			dchild = dget(dparent);
 	} else

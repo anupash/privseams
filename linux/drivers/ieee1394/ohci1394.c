@@ -162,7 +162,7 @@ printk(level "%s: " fmt "\n" , OHCI1394_DRIVER_NAME , ## args)
 printk(level "%s: fw-host%d: " fmt "\n" , OHCI1394_DRIVER_NAME, ohci->host->id , ## args)
 
 static char version[] __devinitdata =
-	"$Rev: 1223 $ Ben Collins <bcollins@debian.org>";
+	"$Rev: 1299 $ Ben Collins <bcollins@debian.org>";
 
 /* Module Parameters */
 static int phys_dma = 1;
@@ -478,11 +478,14 @@ static void ohci_initialize(struct ti_ohci *ohci)
 	int num_ports, i;
 
 	spin_lock_init(&ohci->phy_reg_lock);
-	spin_lock_init(&ohci->event_lock);
 
 	/* Put some defaults to these undefined bus options */
 	buf = reg_read(ohci, OHCI1394_BusOptions);
-	buf |=  0xE0000000; /* Enable IRMC, CMC and ISC */
+	buf |=  0x60000000; /* Enable CMC and ISC */
+	if (hpsb_disable_irm)
+		buf &= ~0x80000000;
+	else
+		buf |=  0x80000000; /* Enable IRMC */
 	buf &= ~0x00ff0000; /* XXX: Set cyc_clk_acc to zero for now */
 	buf &= ~0x18000000; /* Disable PMC and BMC */
 	reg_write(ohci, OHCI1394_BusOptions, buf);
@@ -497,10 +500,16 @@ static void ohci_initialize(struct ti_ohci *ohci)
 	reg_write(ohci, OHCI1394_LinkControlClear, 0xffffffff);
 
 	/* Enable cycle timer and cycle master and set the IRM
-	 * contender bit in our self ID packets. */
-	reg_write(ohci, OHCI1394_LinkControlSet, OHCI1394_LinkControl_CycleTimerEnable |
+	 * contender bit in our self ID packets if appropriate. */
+	reg_write(ohci, OHCI1394_LinkControlSet,
+		  OHCI1394_LinkControl_CycleTimerEnable |
 		  OHCI1394_LinkControl_CycleMaster);
-	set_phy_reg_mask(ohci, 4, 0xc0);
+	i = get_phy_reg(ohci, 4) | PHY_04_LCTRL;
+	if (hpsb_disable_irm)
+		i &= ~PHY_04_CONTENDER;
+	else
+		i |= PHY_04_CONTENDER;
+	set_phy_reg(ohci, 4, i);
 
 	/* Set up self-id dma buffer */
 	reg_write(ohci, OHCI1394_SelfIDBuffer, ohci->selfid_buf_bus);
@@ -515,12 +524,6 @@ static void ohci_initialize(struct ti_ohci *ohci)
 	/* Now get our max packet size */
 	ohci->max_packet_size =
 		1<<(((reg_read(ohci, OHCI1394_BusOptions)>>12)&0xf)+1);
-
-	if (ohci->max_packet_size < 512) {
-		HPSB_ERR("warning: Invalid max packet size of %d, setting to 512",
-			     ohci->max_packet_size);
-		ohci->max_packet_size = 512;
-	}
 		
 	/* Don't accept phy packets into AR request context */
 	reg_write(ohci, OHCI1394_LinkControlClear, 0x00000400);
@@ -540,6 +543,9 @@ static void ohci_initialize(struct ti_ohci *ohci)
 	/* Initialize AT dma */
 	initialize_dma_trm_ctx(&ohci->at_req_context);
 	initialize_dma_trm_ctx(&ohci->at_resp_context);
+	
+	/* Initialize IR Legacy DMA channel mask */
+	ohci->ir_legacy_channels = 0;
 
 	/*
 	 * Accept AT requests from all nodes. This probably
@@ -1029,28 +1035,14 @@ static int ohci_devctl(struct hpsb_host *host, enum devctl_cmd cmd, int arg)
 	case ISO_LISTEN_CHANNEL:
         {
 		u64 mask;
+		struct dma_rcv_ctx *d = &ohci->ir_legacy_context;
+		int ir_legacy_active;
 
 		if (arg<0 || arg>63) {
 			PRINT(KERN_ERR,
 			      "%s: IS0 listen channel %d is out of range",
 			      __FUNCTION__, arg);
 			return -EFAULT;
-		}
-
-		/* activate the legacy IR context */
-		if (ohci->ir_legacy_context.ohci == NULL) {
-			if (alloc_dma_rcv_ctx(ohci, &ohci->ir_legacy_context,
-					      DMA_CTX_ISO, 0, IR_NUM_DESC,
-					      IR_BUF_SIZE, IR_SPLIT_BUF_SIZE,
-					      OHCI1394_IsoRcvContextBase) < 0) {
-				PRINT(KERN_ERR, "%s: failed to allocate an IR context",
-				      __FUNCTION__);
-				return -ENOMEM;
-			}
-			ohci->ir_legacy_channels = 0;
-			initialize_dma_rcv_ctx(&ohci->ir_legacy_context, 1);
-
-			DBGMSG("ISO receive legacy context activated");
 		}
 
 		mask = (u64)0x1<<arg;
@@ -1065,8 +1057,37 @@ static int ohci_devctl(struct hpsb_host *host, enum devctl_cmd cmd, int arg)
 			return -EFAULT;
 		}
 
+		ir_legacy_active = ohci->ir_legacy_channels;
+
 		ohci->ISO_channel_usage |= mask;
 		ohci->ir_legacy_channels |= mask;
+
+                spin_unlock_irqrestore(&ohci->IR_channel_lock, flags);
+
+		if (!ir_legacy_active) {
+			if (ohci1394_register_iso_tasklet(ohci,
+					  &ohci->ir_legacy_tasklet) < 0) {
+				PRINT(KERN_ERR, "No IR DMA context available");
+				return -EBUSY;
+			}
+
+			/* the IR context can be assigned to any DMA context
+			 * by ohci1394_register_iso_tasklet */
+			d->ctx = ohci->ir_legacy_tasklet.context;
+			d->ctrlSet = OHCI1394_IsoRcvContextControlSet +
+				32*d->ctx;
+			d->ctrlClear = OHCI1394_IsoRcvContextControlClear +
+				32*d->ctx;
+			d->cmdPtr = OHCI1394_IsoRcvCommandPtr + 32*d->ctx;
+			d->ctxtMatch = OHCI1394_IsoRcvContextMatch + 32*d->ctx;
+
+			initialize_dma_rcv_ctx(&ohci->ir_legacy_context, 1);
+
+			if (printk_ratelimit())
+				PRINT(KERN_ERR, "IR legacy activated");
+		}
+
+                spin_lock_irqsave(&ohci->IR_channel_lock, flags);
 
 		if (arg>31)
 			reg_write(ohci, OHCI1394_IRMultiChanMaskHiSet,
@@ -1117,9 +1138,9 @@ static int ohci_devctl(struct hpsb_host *host, enum devctl_cmd cmd, int arg)
 
 		if (ohci->ir_legacy_channels == 0) {
 			stop_dma_rcv_ctx(&ohci->ir_legacy_context);
-			free_dma_rcv_ctx(&ohci->ir_legacy_context);
-			DBGMSG("ISO receive legacy context deactivated");
+			DBGMSG("ISO legacy receive context stopped");
 		}
+
                 break;
         }
 	default:
@@ -1289,8 +1310,10 @@ static int ohci_iso_recv_init(struct hpsb_iso *iso)
 				                       OHCI_ISO_RECEIVE,
 				  ohci_iso_recv_task, (unsigned long) iso);
 
-	if (ohci1394_register_iso_tasklet(recv->ohci, &recv->task) < 0)
+	if (ohci1394_register_iso_tasklet(recv->ohci, &recv->task) < 0) {
+		ret = -EBUSY;
 		goto err;
+	}
 
 	recv->task_active = 1;
 
@@ -1549,6 +1572,10 @@ static void ohci_iso_recv_release_block(struct ohci_iso_recv *recv, int block)
 
 	struct dma_cmd *next = &recv->block[next_i];
 	struct dma_cmd *prev = &recv->block[prev_i];
+	
+	/* ignore out-of-range requests */
+	if ((block < 0) || (block > recv->nblocks))
+		return;
 
 	/* 'next' becomes the new end of the DMA chain,
 	   so disable branch and enable interrupt */
@@ -1576,19 +1603,8 @@ static void ohci_iso_recv_release_block(struct ohci_iso_recv *recv, int block)
 static void ohci_iso_recv_bufferfill_release(struct ohci_iso_recv *recv,
 					     struct hpsb_iso_packet_info *info)
 {
-	int len;
-
 	/* release the memory where the packet was */
-	len = info->len;
-
-	/* add the wasted space for padding to 4 bytes */
-	if (len % 4)
-		len += 4 - (len % 4);
-
-	/* add 8 bytes for the OHCI DMA data format overhead */
-	len += 8;
-
-	recv->released_bytes += len;
+	recv->released_bytes += info->total_len;
 
 	/* have we released enough memory for one block? */
 	while (recv->released_bytes > recv->buf_stride) {
@@ -1620,7 +1636,7 @@ static void ohci_iso_recv_bufferfill_parse(struct hpsb_iso *iso, struct ohci_iso
 		/* note: packet layout is as shown in section 10.6.1.1 of the OHCI spec */
 
 		unsigned int offset;
-		unsigned short len, cycle;
+		unsigned short len, cycle, total_len;
 		unsigned char channel, tag, sy;
 
 		unsigned char *p = iso->data_buf.kvirt;
@@ -1671,9 +1687,11 @@ static void ohci_iso_recv_bufferfill_parse(struct hpsb_iso *iso, struct ohci_iso
 		/* advance to xferStatus/timeStamp */
 		recv->dma_offset += len;
 
+		total_len = len + 8; /* 8 bytes header+trailer in OHCI packet */
 		/* payload is padded to 4 bytes */
 		if (len % 4) {
 			recv->dma_offset += 4 - (len%4);
+			total_len += 4 - (len%4);
 		}
 
 		/* check for wrap-around */
@@ -1707,7 +1725,7 @@ static void ohci_iso_recv_bufferfill_parse(struct hpsb_iso *iso, struct ohci_iso
 			recv->dma_offset -= recv->buf_stride*recv->nblocks;
 		}
 
-		hpsb_iso_packet_received(iso, offset, len, cycle, channel, tag, sy);
+		hpsb_iso_packet_received(iso, offset, len, total_len, cycle, channel, tag, sy);
 	}
 
 	if (wake)
@@ -1833,7 +1851,8 @@ static void ohci_iso_recv_packetperbuf_task(struct hpsb_iso *iso, struct ohci_is
 			tag = hdr[5] >> 6;
 			sy = hdr[4] & 0xF;
 
-			hpsb_iso_packet_received(iso, offset, packet_len, cycle, channel, tag, sy);
+			hpsb_iso_packet_received(iso, offset, packet_len,
+					recv->buf_stride, cycle, channel, tag, sy);
 		}
 
 		/* reset the DMA descriptor */
@@ -1915,8 +1934,10 @@ static int ohci_iso_xmit_init(struct hpsb_iso *iso)
 	ohci1394_init_iso_tasklet(&xmit->task, OHCI_ISO_TRANSMIT,
 				  ohci_iso_xmit_task, (unsigned long) iso);
 
-	if (ohci1394_register_iso_tasklet(xmit->ohci, &xmit->task) < 0)
+	if (ohci1394_register_iso_tasklet(xmit->ohci, &xmit->task) < 0) {
+		ret = -EBUSY;
 		goto err;
+	}
 
 	xmit->task_active = 1;
 
@@ -2545,6 +2566,10 @@ static void insert_dma_buffer(struct dma_rcv_ctx *d, int idx)
 	idx = (idx + d->num_desc - 1 ) % d->num_desc;
 	d->prg_cpu[idx]->branchAddress |= le32_to_cpu(0x00000001);
 
+	/* To avoid a race, ensure 1394 interface hardware sees the inserted
+	 * context program descriptors before it sees the wakeup bit set. */
+	wmb();
+	
 	/* wake up the dma context if necessary */
 	if (!(reg_read(ohci, d->ctrlSet) & 0x400)) {
 		PRINT(KERN_INFO,
@@ -2706,7 +2731,7 @@ static void dma_rcv_tasklet (unsigned long data)
 				(cond_le32_to_cpu(d->spb[length/4-1], ohci->no_swap_incoming)>>16)&0x1f,
 				(cond_le32_to_cpu(d->spb[length/4-1], ohci->no_swap_incoming)>>21)&0x3,
 				tcode, length, d->ctx,
-				(cond_le32_to_cpu(d->spb[length/4-1], ohci->no_swap_incoming)>>10)&0x3f);
+				(cond_le32_to_cpu(d->spb[0], ohci->no_swap_incoming)>>10)&0x3f);
 
 			ack = (((cond_le32_to_cpu(d->spb[length/4-1], ohci->no_swap_incoming)>>16)&0x1f)
 				== 0x11) ? 1 : 0;
@@ -2769,7 +2794,7 @@ static void dma_trm_tasklet (unsigned long data)
 				       d->ctx);
 			else
 				DBGMSG("Packet sent to node %d tcode=0x%X tLabel="
-				       "0x%02X ack=0x%X spd=%d dataLength=%d ctx=%d",
+				       "%d ack=0x%X spd=%d dataLength=%d ctx=%d",
 				       (le32_to_cpu(d->prg_cpu[d->sent_ind]->data[1])>>16)&0x3f,
 				       (le32_to_cpu(d->prg_cpu[d->sent_ind]->data[0])>>4)&0xf,
 				       (le32_to_cpu(d->prg_cpu[d->sent_ind]->data[0])>>10)&0x3f,
@@ -2778,7 +2803,7 @@ static void dma_trm_tasklet (unsigned long data)
 				       d->ctx);
 		else
 			DBGMSG("Packet sent to node %d tcode=0x%X tLabel="
-			       "0x%02X ack=0x%X spd=%d data=0x%08X ctx=%d",
+			       "%d ack=0x%X spd=%d data=0x%08X ctx=%d",
                                 (le32_to_cpu(d->prg_cpu[d->sent_ind]->data[1])
                                         >>16)&0x3f,
                                 (le32_to_cpu(d->prg_cpu[d->sent_ind]->data[0])
@@ -2908,7 +2933,7 @@ static void free_dma_rcv_ctx(struct dma_rcv_ctx *d)
 		kfree(d->prg_cpu);
 		kfree(d->prg_bus);
 	}
-	if (d->spb) kfree(d->spb);
+	kfree(d->spb);
 
 	/* Mark this context as freed. */
 	d->ohci = NULL;
@@ -2919,7 +2944,9 @@ alloc_dma_rcv_ctx(struct ti_ohci *ohci, struct dma_rcv_ctx *d,
 		  enum context_type type, int ctx, int num_desc,
 		  int buf_size, int split_buf_size, int context_base)
 {
-	int i;
+	int i, len;
+	static int num_allocs;
+	static char pool_name[20];
 
 	d->ohci = ohci;
 	d->type = type;
@@ -2963,9 +2990,19 @@ alloc_dma_rcv_ctx(struct ti_ohci *ohci, struct dma_rcv_ctx *d,
 		free_dma_rcv_ctx(d);
 		return -ENOMEM;
 	}
-
-	d->prg_pool = pci_pool_create("ohci1394 rcv prg", ohci->dev,
+	
+	len = sprintf(pool_name, "ohci1394_rcv_prg");
+	sprintf(pool_name+len, "%d", num_allocs);
+	d->prg_pool = pci_pool_create(pool_name, ohci->dev,
 				sizeof(struct dma_cmd), 4, 0);
+	if(d->prg_pool == NULL)
+	{
+		PRINT(KERN_ERR, "pci_pool_create failed for %s", pool_name);
+		free_dma_rcv_ctx(d);
+		return -ENOMEM;
+	}
+	num_allocs++;
+
 	OHCI_DMA_ALLOC("dma_rcv prg pool");
 
 	for (i=0; i<d->num_desc; i++) {
@@ -3002,20 +3039,6 @@ alloc_dma_rcv_ctx(struct ti_ohci *ohci, struct dma_rcv_ctx *d,
 		ohci1394_init_iso_tasklet(&ohci->ir_legacy_tasklet,
 					  OHCI_ISO_MULTICHANNEL_RECEIVE,
 					  dma_rcv_tasklet, (unsigned long) d);
-		if (ohci1394_register_iso_tasklet(ohci,
-						  &ohci->ir_legacy_tasklet) < 0) {
-			PRINT(KERN_ERR, "No IR DMA context available");
-			free_dma_rcv_ctx(d);
-			return -EBUSY;
-		}
-
-		/* the IR context can be assigned to any DMA context
-		 * by ohci1394_register_iso_tasklet */
-		d->ctx = ohci->ir_legacy_tasklet.context;
-		d->ctrlSet = OHCI1394_IsoRcvContextControlSet + 32*d->ctx;
-		d->ctrlClear = OHCI1394_IsoRcvContextControlClear + 32*d->ctx;
-		d->cmdPtr = OHCI1394_IsoRcvCommandPtr + 32*d->ctx;
-		d->ctxtMatch = OHCI1394_IsoRcvContextMatch + 32*d->ctx;
 	} else {
 		d->ctrlSet = context_base + OHCI1394_ContextControlSet;
 		d->ctrlClear = context_base + OHCI1394_ContextControlClear;
@@ -3058,7 +3081,9 @@ alloc_dma_trm_ctx(struct ti_ohci *ohci, struct dma_trm_ctx *d,
 		  enum context_type type, int ctx, int num_desc,
 		  int context_base)
 {
-	int i;
+	int i, len;
+	static char pool_name[20];
+	static int num_allocs=0;
 
 	d->ohci = ohci;
 	d->type = type;
@@ -3080,8 +3105,17 @@ alloc_dma_trm_ctx(struct ti_ohci *ohci, struct dma_trm_ctx *d,
 	memset(d->prg_cpu, 0, d->num_desc * sizeof(struct at_dma_prg*));
 	memset(d->prg_bus, 0, d->num_desc * sizeof(dma_addr_t));
 
-	d->prg_pool = pci_pool_create("ohci1394 trm prg", ohci->dev,
+	len = sprintf(pool_name, "ohci1394_trm_prg");
+	sprintf(pool_name+len, "%d", num_allocs);
+	d->prg_pool = pci_pool_create(pool_name, ohci->dev,
 				sizeof(struct at_dma_prg), 4, 0);
+	if (d->prg_pool == NULL) {
+		PRINT(KERN_ERR, "pci_pool_create failed for %s", pool_name);
+		free_dma_trm_ctx(d);
+		return -ENOMEM;
+	}
+	num_allocs++;
+
 	OHCI_DMA_ALLOC("dma_rcv prg pool");
 
 	for (i = 0; i < d->num_desc; i++) {
@@ -3353,12 +3387,28 @@ static int __devinit ohci1394_pci_probe(struct pci_dev *dev,
 	ohci->ISO_channel_usage = 0;
         spin_lock_init(&ohci->IR_channel_lock);
 
-	/* the IR DMA context is allocated on-demand; mark it inactive */
-	ohci->ir_legacy_context.ohci = NULL;
+	/* Allocate the IR DMA context right here so we don't have
+	 * to do it in interrupt path - note that this doesn't
+	 * waste much memory and avoids the jugglery required to
+	 * allocate it in IRQ path. */
+	if (alloc_dma_rcv_ctx(ohci, &ohci->ir_legacy_context,
+			      DMA_CTX_ISO, 0, IR_NUM_DESC,
+			      IR_BUF_SIZE, IR_SPLIT_BUF_SIZE,
+			      OHCI1394_IsoRcvContextBase) < 0) {
+		FAIL(-ENOMEM, "Cannot allocate IR Legacy DMA context");
+	}
 
-	/* same for the IT DMA context */
+	/* We hopefully don't have to pre-allocate IT DMA like we did
+	 * for IR DMA above. Allocate it on-demand and mark inactive. */
 	ohci->it_legacy_context.ohci = NULL;
+	spin_lock_init(&ohci->event_lock);
 
+	/*
+	 * interrupts are disabled, all right, but... due to SA_SHIRQ we
+	 * might get called anyway.  We'll see no event, of course, but
+	 * we need to get to that "no event", so enough should be initialized
+	 * by that point.
+	 */
 	if (request_irq(dev->irq, ohci_irq_handler, SA_SHIRQ,
 			 OHCI1394_DRIVER_NAME, ohci))
 		FAIL(-ENOMEM, "Failed to allocate shared interrupt %d", dev->irq);
@@ -3445,6 +3495,10 @@ static void ohci1394_pci_remove(struct pci_dev *pdev)
 		/* Free IT dma */
 		free_dma_trm_ctx(&ohci->it_legacy_context);
 
+		/* Free IR legacy dma */
+		free_dma_rcv_ctx(&ohci->ir_legacy_context);
+
+
 	case OHCI_INIT_HAVE_SELFID_BUFFER:
 		pci_free_consistent(ohci->dev, OHCI1394_SI_DMA_BUF_SIZE,
 				    ohci->selfid_buf_cpu,
@@ -3493,8 +3547,8 @@ static void ohci1394_pci_remove(struct pci_dev *pdev)
 
 static int ohci1394_pci_resume (struct pci_dev *pdev)
 {
-#ifdef CONFIG_PMAC_PBOOK
-	{
+#ifdef CONFIG_PPC_PMAC
+	if (_machine == _MACH_Pmac) {
 		struct device_node *of_node;
 
 		/* Re-enable 1394 */
@@ -3502,7 +3556,7 @@ static int ohci1394_pci_resume (struct pci_dev *pdev)
 		if (of_node)
 			pmac_call_feature (PMAC_FTR_1394_ENABLE, of_node, 0, 1);
 	}
-#endif
+#endif /* CONFIG_PPC_PMAC */
 
 	pci_enable_device(pdev);
 
@@ -3510,10 +3564,10 @@ static int ohci1394_pci_resume (struct pci_dev *pdev)
 }
 
 
-static int ohci1394_pci_suspend (struct pci_dev *pdev, u32 state)
+static int ohci1394_pci_suspend (struct pci_dev *pdev, pm_message_t state)
 {
-#ifdef CONFIG_PMAC_PBOOK
-	{
+#ifdef CONFIG_PPC_PMAC
+	if (_machine == _MACH_Pmac) {
 		struct device_node *of_node;
 
 		/* Disable 1394 */
@@ -3676,7 +3730,7 @@ static void __exit ohci1394_cleanup (void)
 
 static int __init ohci1394_init(void)
 {
-	return pci_module_init(&ohci1394_pci_driver);
+	return pci_register_driver(&ohci1394_pci_driver);
 }
 
 module_init(ohci1394_init);

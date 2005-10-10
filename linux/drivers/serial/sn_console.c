@@ -6,7 +6,7 @@
  * driver for that.
  *
  *
- * Copyright (c) 2004 Silicon Graphics, Inc.  All Rights Reserved.
+ * Copyright (c) 2004-2005 Silicon Graphics, Inc.  All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License
@@ -104,6 +104,7 @@ struct sn_cons_port {
 };
 
 static struct sn_cons_port sal_console_port;
+static int sn_process_input;
 
 /* Only used if USE_DYNAMIC_MINOR is set to 1 */
 static struct miscdevice misc;	/* used with misc_register for dynamic */
@@ -571,6 +572,7 @@ static void sn_transmit_chars(struct sn_cons_port *port, int raw)
 
 	if (uart_circ_empty(xmit) || uart_tx_stopped(&port->sc_port)) {
 		/* Nothing to do. */
+		ia64_sn_console_intr_disable(SAL_CONSOLE_INTR_XMIT);
 		return;
 	}
 
@@ -681,7 +683,8 @@ static void sn_sal_timer_poll(unsigned long data)
 
 	if (!port->sc_port.irq) {
 		spin_lock_irqsave(&port->sc_port.lock, flags);
-		sn_receive_chars(port, NULL, flags);
+		if (sn_process_input)
+			sn_receive_chars(port, NULL, flags);
 		sn_transmit_chars(port, TRANSMIT_RAW);
 		spin_unlock_irqrestore(&port->sc_port.lock, flags);
 		mod_timer(&port->sc_timer,
@@ -785,7 +788,7 @@ static void __init sn_sal_switch_to_interrupts(struct sn_cons_port *port)
 
 static void sn_sal_console_write(struct console *, const char *, unsigned);
 static int __init sn_sal_console_setup(struct console *, char *);
-extern struct uart_driver sal_console_uart;
+static struct uart_driver sal_console_uart;
 extern struct tty_driver *uart_console_device(struct console *, int *);
 
 static struct console sal_console = {
@@ -878,6 +881,7 @@ static int __init sn_sal_module_init(void)
 	if (!IS_RUNNING_ON_SIMULATOR()) {
 		sn_sal_switch_to_interrupts(&sal_console_port);
 	}
+	sn_process_input = 1;
 	return 0;
 }
 
@@ -1089,6 +1093,7 @@ int __init sn_serial_console_early_setup(void)
 		return -1;
 
 	sal_console_port.sc_ops = &poll_ops;
+	spin_lock_init(&sal_console_port.sc_port.lock);
 	early_sn_setup();	/* Find SAL entry points */
 	register_console(&sal_console_early);
 

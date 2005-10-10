@@ -70,6 +70,14 @@ enum
 	CTL_BUS_ISA=1		/* ISA */
 };
 
+/* /proc/sys/fs/inotify/ */
+enum
+{
+	INOTIFY_MAX_USER_INSTANCES=1,	/* max instances per user */
+	INOTIFY_MAX_USER_WATCHES=2,	/* max watches per user */
+	INOTIFY_MAX_QUEUED_EVENTS=3	/* max queued events per instance */
+};
+
 /* CTL_KERN names: */
 enum
 {
@@ -135,6 +143,9 @@ enum
 	KERN_HZ_TIMER=65,	/* int: hz timer on or off */
 	KERN_UNKNOWN_NMI_PANIC=66, /* int: unknown nmi panic flag */
 	KERN_BOOTLOADER_TYPE=67, /* int: boot loader type */
+	KERN_RANDOMIZE=68, /* int: randomize virtual address space */
+	KERN_SETUID_DUMPABLE=69, /* int: behaviour of dumps for setuid core */
+	KERN_SPIN_RETRY=70,	/* int: number of spinlock retries */
 };
 
 
@@ -191,10 +202,7 @@ enum
 	NET_TR=14,
 	NET_DECNET=15,
 	NET_ECONET=16,
-	NET_SCTP=17,
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	NET_HIP=18,
-#endif
+	NET_SCTP=17, 
 };
 
 /* /proc/sys/kernel/random */
@@ -244,6 +252,7 @@ enum
 	NET_CORE_MOD_CONG=16,
 	NET_CORE_DEV_WEIGHT=17,
 	NET_CORE_SOMAXCONN=18,
+	NET_CORE_BUDGET=19,
 };
 
 /* /proc/sys/net/ethernet */
@@ -334,20 +343,14 @@ enum
 	NET_TCP_FRTO=92,
 	NET_TCP_LOW_LATENCY=93,
 	NET_IPV4_IPFRAG_SECRET_INTERVAL=94,
-	NET_TCP_WESTWOOD=95,
 	NET_IPV4_IGMP_MAX_MSF=96,
 	NET_TCP_NO_METRICS_SAVE=97,
-	NET_TCP_VEGAS=98,
-	NET_TCP_VEGAS_ALPHA=99,
-	NET_TCP_VEGAS_BETA=100,
-	NET_TCP_VEGAS_GAMMA=101,
- 	NET_TCP_BIC=102,
- 	NET_TCP_BIC_FAST_CONVERGENCE=103,
-	NET_TCP_BIC_LOW_WINDOW=104,
 	NET_TCP_DEFAULT_WIN_SCALE=105,
 	NET_TCP_MODERATE_RCVBUF=106,
 	NET_TCP_TSO_WIN_DIVISOR=107,
 	NET_TCP_BIC_BETA=108,
+	NET_IPV4_ICMP_ERRORS_USE_INBOUND_IFADDR=109,
+	NET_TCP_CONG_CONTROL=110,
 };
 
 enum {
@@ -401,6 +404,8 @@ enum
 	NET_IPV4_CONF_FORCE_IGMP_VERSION=17,
 	NET_IPV4_CONF_ARP_ANNOUNCE=18,
 	NET_IPV4_CONF_ARP_IGNORE=19,
+	NET_IPV4_CONF_PROMOTE_SECONDARIES=20,
+	__NET_IPV4_CONF_MAX
 };
 
 /* /proc/sys/net/ipv4/netfilter */
@@ -458,7 +463,8 @@ enum {
 	NET_IPV6_ROUTE_GC_INTERVAL=6,
 	NET_IPV6_ROUTE_GC_ELASTICITY=7,
 	NET_IPV6_ROUTE_MTU_EXPIRES=8,
-	NET_IPV6_ROUTE_MIN_ADVMSS=9
+	NET_IPV6_ROUTE_MIN_ADVMSS=9,
+	NET_IPV6_ROUTE_GC_MIN_INTERVAL_MS=10
 };
 
 enum {
@@ -478,7 +484,8 @@ enum {
 	NET_IPV6_REGEN_MAX_RETRY=14,
 	NET_IPV6_MAX_DESYNC_FACTOR=15,
 	NET_IPV6_MAX_ADDRESSES=16,
-	NET_IPV6_FORCE_MLD_VERSION=17
+	NET_IPV6_FORCE_MLD_VERSION=17,
+	__NET_IPV6_MAX
 };
 
 /* /proc/sys/net/ipv6/icmp */
@@ -503,7 +510,10 @@ enum {
 	NET_NEIGH_GC_INTERVAL=13,
 	NET_NEIGH_GC_THRESH1=14,
 	NET_NEIGH_GC_THRESH2=15,
-	NET_NEIGH_GC_THRESH3=16
+	NET_NEIGH_GC_THRESH3=16,
+	NET_NEIGH_RETRANS_TIME_MS=17,
+	NET_NEIGH_REACHABLE_TIME_MS=18,
+	__NET_NEIGH_MAX
 };
 
 /* /proc/sys/net/ipx */
@@ -639,6 +649,8 @@ enum {
 	NET_SCTP_MAX_BURST               = 12,
 	NET_SCTP_ADDIP_ENABLE		 = 13,
 	NET_SCTP_PRSCTP_ENABLE		 = 14,
+	NET_SCTP_SNDBUF_POLICY		 = 15,
+	NET_SCTP_SACK_TIMEOUT		 = 16,
 };
 
 /* /proc/sys/net/bridge */
@@ -648,13 +660,6 @@ enum {
 	NET_BRIDGE_NF_CALL_IP6TABLES = 3,
 	NET_BRIDGE_NF_FILTER_VLAN_TAGGED = 4,
 };
-
-/* /proc/sys/net/hip */
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-enum {
-	NET_HIP_COOKIE_MAX_K_R1 = 1, /* max value of K to calculate received cookie */
-};
-#endif
 
 /* CTL_PROC names: */
 
@@ -680,6 +685,7 @@ enum
 	FS_XFS=17,	/* struct: control xfs parameters */
 	FS_AIO_NR=18,	/* current system-wide number of aio requests */
 	FS_AIO_MAX_NR=19,	/* system-wide maximum number of aio requests */
+	FS_INOTIFY=20,	/* inotify submenu */
 };
 
 /* /proc/sys/fs/quota/ */

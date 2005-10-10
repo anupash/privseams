@@ -17,6 +17,8 @@
 
 #include "uhci-hcd.h"
 
+static struct dentry *uhci_debugfs_root = NULL;
+
 /* Handle REALLY large printk's so we don't overflow buffers */
 static inline void lprintk(char *buf)
 {
@@ -235,6 +237,37 @@ static int uhci_show_sc(int port, unsigned short status, char *buf, int len)
 	return out - buf;
 }
 
+static int uhci_show_root_hub_state(struct uhci_hcd *uhci, char *buf, int len)
+{
+	char *out = buf;
+	char *rh_state;
+
+	/* Try to make sure there's enough memory */
+	if (len < 60)
+		return 0;
+
+	switch (uhci->rh_state) {
+	    case UHCI_RH_RESET:
+		rh_state = "reset";		break;
+	    case UHCI_RH_SUSPENDED:
+		rh_state = "suspended";		break;
+	    case UHCI_RH_AUTO_STOPPED:
+		rh_state = "auto-stopped";	break;
+	    case UHCI_RH_RESUMING:
+		rh_state = "resuming";		break;
+	    case UHCI_RH_SUSPENDING:
+		rh_state = "suspending";	break;
+	    case UHCI_RH_RUNNING:
+		rh_state = "running";		break;
+	    case UHCI_RH_RUNNING_NODEVS:
+		rh_state = "running, no devs";	break;
+	    default:
+		rh_state = "?";			break;
+	}
+	out += sprintf(out, "Root-hub state: %s\n", rh_state);
+	return out - buf;
+}
+
 static int uhci_show_status(struct uhci_hcd *uhci, char *buf, int len)
 {
 	char *out = buf;
@@ -404,8 +437,9 @@ static int uhci_sprint_schedule(struct uhci_hcd *uhci, char *buf, int len)
 	struct uhci_td *td;
 	struct list_head *tmp, *head;
 
-	spin_lock_irqsave(&uhci->schedule_lock, flags);
+	spin_lock_irqsave(&uhci->lock, flags);
 
+	out += uhci_show_root_hub_state(uhci, out, len - (out - buf));
 	out += sprintf(out, "HC status\n");
 	out += uhci_show_status(uhci, out, len - (out - buf));
 
@@ -490,14 +524,12 @@ static int uhci_sprint_schedule(struct uhci_hcd *uhci, char *buf, int len)
 	if (debug > 2)
 		out += uhci_show_lists(uhci, out, len - (out - buf));
 
-	spin_unlock_irqrestore(&uhci->schedule_lock, flags);
+	spin_unlock_irqrestore(&uhci->lock, flags);
 
 	return out - buf;
 }
 
 #define MAX_OUTPUT	(64 * 1024)
-
-static struct dentry *uhci_debugfs_root = NULL;
 
 struct uhci_debug {
 	int size;
@@ -579,4 +611,9 @@ static struct file_operations uhci_debug_operations = {
 	.read =		uhci_debug_read,
 	.release =	uhci_debug_release,
 };
+
+#else	/* CONFIG_DEBUG_FS */
+
+#define uhci_debug_operations (* (struct file_operations *) NULL)
+
 #endif

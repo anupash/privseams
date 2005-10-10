@@ -1,7 +1,7 @@
 /*
  * intelfb
  *
- * Linux framebuffer driver for Intel(R) 830M/845G/852GM/855GM/865G
+ * Linux framebuffer driver for Intel(R) 830M/845G/852GM/855GM/865G/915G
  * integrated graphics chips.
  *
  * Copyright © 2002, 2003 David Dawes <dawes@xfree86.org>
@@ -135,8 +135,44 @@
 #endif
 
 #include "intelfb.h"
-#include "intelfbdrv.h"
 #include "intelfbhw.h"
+
+static void __devinit get_initial_mode(struct intelfb_info *dinfo);
+static void update_dinfo(struct intelfb_info *dinfo,
+			 struct fb_var_screeninfo *var);
+static int intelfb_get_fix(struct fb_fix_screeninfo *fix,
+			   struct fb_info *info);
+
+static int intelfb_check_var(struct fb_var_screeninfo *var,
+			     struct fb_info *info);
+static int intelfb_set_par(struct fb_info *info);
+static int intelfb_setcolreg(unsigned regno, unsigned red, unsigned green,
+			     unsigned blue, unsigned transp,
+			     struct fb_info *info);
+
+static int intelfb_blank(int blank, struct fb_info *info);
+static int intelfb_pan_display(struct fb_var_screeninfo *var,
+			       struct fb_info *info);
+
+static void intelfb_fillrect(struct fb_info *info,
+			     const struct fb_fillrect *rect);
+static void intelfb_copyarea(struct fb_info *info,
+			     const struct fb_copyarea *region);
+static void intelfb_imageblit(struct fb_info *info,
+			      const struct fb_image *image);
+static int intelfb_cursor(struct fb_info *info,
+			   struct fb_cursor *cursor);
+
+static int intelfb_sync(struct fb_info *info);
+
+static int intelfb_ioctl(struct inode *inode, struct file *file,
+			 unsigned int cmd, unsigned long arg,
+			 struct fb_info *info);
+
+static int __devinit intelfb_pci_register(struct pci_dev *pdev,
+					  const struct pci_device_id *ent);
+static void __devexit intelfb_pci_unregister(struct pci_dev *pdev);
+static int __devinit intelfb_set_fbinfo(struct intelfb_info *dinfo);
 
 /*
  * Limiting the class to PCI_CLASS_DISPLAY_VGA prevents function 1 of the
@@ -153,6 +189,7 @@ static struct pci_device_id intelfb_pci_table[] __devinitdata = {
 	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_845G, PCI_ANY_ID, PCI_ANY_ID, PCI_CLASS_DISPLAY_VGA << 8, INTELFB_CLASS_MASK, INTEL_845G },
 	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_85XGM, PCI_ANY_ID, PCI_ANY_ID, PCI_CLASS_DISPLAY_VGA << 8, INTELFB_CLASS_MASK, INTEL_85XGM },
 	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_865G, PCI_ANY_ID, PCI_ANY_ID, PCI_CLASS_DISPLAY_VGA << 8, INTELFB_CLASS_MASK, INTEL_865G },
+	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_915G, PCI_ANY_ID, PCI_ANY_ID, PCI_CLASS_DISPLAY_VGA << 8, INTELFB_CLASS_MASK, INTEL_915G },
 	{ 0, }
 };
 
@@ -177,7 +214,7 @@ static struct fb_ops intel_fb_ops = {
 
 /* PCI driver module table */
 static struct pci_driver intelfb_driver = {
-	.name =		"Intel(R) " SUPPORTED_CHIPSETS " Framebuffer Driver",
+	.name =		"intelfb",
 	.id_table =	intelfb_pci_table,
 	.probe =	intelfb_pci_register,
 	.remove =	__devexit_p(intelfb_pci_unregister)
@@ -191,22 +228,25 @@ MODULE_DESCRIPTION(
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_DEVICE_TABLE(pci, intelfb_pci_table);
 
-static int accel        __initdata = 1;
-static int vram         __initdata = 4;
-static int hwcursor     __initdata = 1;
-static int mtrr         __initdata = 1;
-static int fixed        __initdata = 0;
-static int noinit       __initdata = 0;
-static int noregister   __initdata = 0;
-static int probeonly    __initdata = 0;
-static int idonly       __initdata = 0;
-static int bailearly    __initdata = 0;
-static char *mode       __initdata = NULL;
+static int accel        = 1;
+static int vram         = 4;
+static int hwcursor     = 1;
+static int mtrr         = 1;
+static int fixed        = 0;
+static int noinit       = 0;
+static int noregister   = 0;
+static int probeonly    = 0;
+static int idonly       = 0;
+static int bailearly    = 0;
+static int voffset	= 48;
+static char *mode       = NULL;
 
 module_param(accel, bool, S_IRUGO);
 MODULE_PARM_DESC(accel, "Enable console acceleration");
 module_param(vram, int, S_IRUGO);
 MODULE_PARM_DESC(vram, "System RAM to allocate to framebuffer in MiB");
+module_param(voffset, int, S_IRUGO);
+MODULE_PARM_DESC(voffset, "Offset of framebuffer in MiB");
 module_param(hwcursor, bool, S_IRUGO);
 MODULE_PARM_DESC(hwcursor, "Enable HW cursor");
 module_param(mtrr, bool, S_IRUGO);
@@ -226,42 +266,6 @@ MODULE_PARM_DESC(bailearly, "Bail out early, depending on value (debug)");
 module_param(mode, charp, S_IRUGO);
 MODULE_PARM_DESC(mode,
 		 "Initial video mode \"<xres>x<yres>[-<depth>][@<refresh>]\"");
-/***************************************************************
- *                     modules entry points                    *
- ***************************************************************/
-
-/* module load/unload entry points */
-int __init
-intelfb_init(void)
-{
-#ifndef MODULE
-	char *option = NULL;
-#endif
-
-	DBG_MSG("intelfb_init\n");
-
-	INF_MSG("Framebuffer driver for "
-		"Intel(R) " SUPPORTED_CHIPSETS " chipsets\n");
-	INF_MSG("Version " INTELFB_VERSION "\n");
-
-	if (idonly)
-		return -ENODEV;
-
-#ifndef MODULE
-	if (fb_get_options("intelfb", &option))
-		return -ENODEV;
-	intelfb_setup(option);
-#endif
-
-	return pci_module_init(&intelfb_driver);
-}
-
-static void __exit
-intelfb_exit(void)
-{
-	DBG_MSG("intelfb_exit\n");
-	pci_unregister_driver(&intelfb_driver);
-}
 
 #ifndef MODULE
 #define OPT_EQUAL(opt, name) (!strncmp(opt, name, strlen(name)))
@@ -321,7 +325,7 @@ get_opt_bool(const char *this_opt, const char *name, int *ret)
 	return 1;
 }
 
-int __init
+static int __init
 intelfb_setup(char *options)
 {
 	char *this_opt;
@@ -373,11 +377,40 @@ intelfb_setup(char *options)
 
 #endif
 
-module_init(intelfb_init);
-
-#ifdef MODULE
-module_exit(intelfb_exit);
+static int __init
+intelfb_init(void)
+{
+#ifndef MODULE
+	char *option = NULL;
 #endif
+
+	DBG_MSG("intelfb_init\n");
+
+	INF_MSG("Framebuffer driver for "
+		"Intel(R) " SUPPORTED_CHIPSETS " chipsets\n");
+	INF_MSG("Version " INTELFB_VERSION "\n");
+
+	if (idonly)
+		return -ENODEV;
+
+#ifndef MODULE
+	if (fb_get_options("intelfb", &option))
+		return -ENODEV;
+	intelfb_setup(option);
+#endif
+
+	return pci_register_driver(&intelfb_driver);
+}
+
+static void __exit
+intelfb_exit(void)
+{
+	DBG_MSG("intelfb_exit\n");
+	pci_unregister_driver(&intelfb_driver);
+}
+
+module_init(intelfb_init);
+module_exit(intelfb_exit);
 
 /***************************************************************
  *                     mtrr support functions                  *
@@ -470,6 +503,10 @@ intelfb_pci_register(struct pci_dev *pdev, const struct pci_device_id *ent)
 	struct agp_kern_info gtt_info;
 	int agp_memtype;
 	const char *s;
+	struct agp_bridge_data *bridge;
+ 	int aperture_bar = 0;
+ 	int mmio_bar = 1;
+	int offset;
 
 	DBG_MSG("intelfb_pci_register\n");
 
@@ -516,13 +553,20 @@ intelfb_pci_register(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 
 	/* Set base addresses. */
-	dinfo->aperture.physical = pci_resource_start(pdev, 0);
-	dinfo->aperture.size     = pci_resource_len(pdev, 0);
-	dinfo->mmio_base_phys    = pci_resource_start(pdev, 1);
-
-	DBG_MSG("fb aperture: 0x%lx/0x%lx, MMIO region: 0x%lx/0x%lx\n",
-		pci_resource_start(pdev, 0), pci_resource_len(pdev, 0),
-		pci_resource_start(pdev, 1), pci_resource_len(pdev, 1));
+	if (ent->device == PCI_DEVICE_ID_INTEL_915G) {
+		aperture_bar = 2;
+		mmio_bar = 0;
+		/* Disable HW cursor on 915G (not implemented yet) */
+		hwcursor = 0;
+	}
+	dinfo->aperture.physical = pci_resource_start(pdev, aperture_bar);
+	dinfo->aperture.size     = pci_resource_len(pdev, aperture_bar);
+	dinfo->mmio_base_phys    = pci_resource_start(pdev, mmio_bar);
+	DBG_MSG("fb aperture: 0x%llx/0x%llx, MMIO region: 0x%llx/0x%llx\n",
+		(unsigned long long)pci_resource_start(pdev, aperture_bar),
+		(unsigned long long)pci_resource_len(pdev, aperture_bar),
+		(unsigned long long)pci_resource_start(pdev, mmio_bar),
+		(unsigned long long)pci_resource_len(pdev, mmio_bar));
 
 	/* Reserve the fb and MMIO regions */
 	if (!request_mem_region(dinfo->aperture.physical, dinfo->aperture.size,
@@ -535,23 +579,6 @@ intelfb_pci_register(struct pci_dev *pdev, const struct pci_device_id *ent)
 				INTEL_REG_SIZE,
 				INTELFB_MODULE_NAME)) {
 		ERR_MSG("Cannot reserve MMIO region.\n");
-		cleanup(dinfo);
-		return -ENODEV;
-	}
-
-	/* Map the fb and MMIO regions */
-	dinfo->aperture.virtual = (u8 __iomem *)ioremap_nocache
-		(dinfo->aperture.physical, dinfo->aperture.size);
-	if (!dinfo->aperture.virtual) {
-		ERR_MSG("Cannot remap FB region.\n");
-		cleanup(dinfo);
-		return -ENODEV;
-	}
-	dinfo->mmio_base =
-		(u8 __iomem *)ioremap_nocache(dinfo->mmio_base_phys,
-					       INTEL_REG_SIZE);
-	if (!dinfo->mmio_base) {
-		ERR_MSG("Cannot remap MMIO region.\n");
 		cleanup(dinfo);
 		return -ENODEV;
 	}
@@ -586,9 +613,15 @@ intelfb_pci_register(struct pci_dev *pdev, const struct pci_device_id *ent)
 		dinfo->accel = 0;
 	}
 
+	if (MB(voffset) < stolen_size)
+		offset = (stolen_size >> 12);
+	else
+		offset = ROUND_UP_TO_PAGE(MB(voffset))/GTT_PAGE_SIZE;
+
 	/* Framebuffer parameters - Use all the stolen memory if >= vram */
-	if (ROUND_UP_TO_PAGE(stolen_size) >= MB(vram)) {
+	if (ROUND_UP_TO_PAGE(stolen_size) >= ((offset << 12) +  MB(vram))) {
 		dinfo->fb.size = ROUND_UP_TO_PAGE(stolen_size);
+		dinfo->fb.offset = 0;
 		dinfo->fbmem_gart = 0;
 	} else {
 		dinfo->fb.size =  MB(vram);
@@ -605,49 +638,68 @@ intelfb_pci_register(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 
 	/* Use agpgart to manage the GATT */
-	if (agp_backend_acquire()) {
+	if (!(bridge = agp_backend_acquire(pdev))) {
 		ERR_MSG("cannot acquire agp\n");
 		cleanup(dinfo);
 		return -ENODEV;
 	}
 
 	/* get the current gatt info */
-	if (agp_copy_info(&gtt_info)) {
+	if (agp_copy_info(bridge, &gtt_info)) {
 		ERR_MSG("cannot get agp info\n");
-		agp_backend_release();
+		agp_backend_release(bridge);
 		cleanup(dinfo);
 		return -ENODEV;
 	}
 
 	/* set the mem offsets - set them after the already used pages */
 	if (dinfo->accel) {
-		dinfo->ring.offset = (stolen_size >> 12)
-			+ gtt_info.current_memory;
+		dinfo->ring.offset = offset + gtt_info.current_memory;
 	}
 	if (dinfo->hwcursor) {
-		dinfo->cursor.offset = (stolen_size >> 12) +
+		dinfo->cursor.offset = offset +
 			+ gtt_info.current_memory + (dinfo->ring.size >> 12);
 	}
 	if (dinfo->fbmem_gart) {
-		dinfo->fb.offset = (stolen_size >> 12) +
+		dinfo->fb.offset = offset +
 			+ gtt_info.current_memory + (dinfo->ring.size >> 12)
 			+ (dinfo->cursor.size >> 12);
+	}
+
+	/* Map the fb and MMIO regions */
+	/* ioremap only up to the end of used aperture */
+	dinfo->aperture.virtual = (u8 __iomem *)ioremap_nocache
+		(dinfo->aperture.physical, (dinfo->fb.offset << 12)
+		 + dinfo->fb.size);
+	if (!dinfo->aperture.virtual) {
+		ERR_MSG("Cannot remap FB region.\n");
+		cleanup(dinfo);
+		return -ENODEV;
+	}
+
+	dinfo->mmio_base =
+		(u8 __iomem *)ioremap_nocache(dinfo->mmio_base_phys,
+					       INTEL_REG_SIZE);
+	if (!dinfo->mmio_base) {
+		ERR_MSG("Cannot remap MMIO region.\n");
+		cleanup(dinfo);
+		return -ENODEV;
 	}
 
 	/* Allocate memories (which aren't stolen) */
 	if (dinfo->accel) {
 		if (!(dinfo->gtt_ring_mem =
-		      agp_allocate_memory(dinfo->ring.size >> 12,
+		      agp_allocate_memory(bridge, dinfo->ring.size >> 12,
 					  AGP_NORMAL_MEMORY))) {
 			ERR_MSG("cannot allocate ring buffer memory\n");
-			agp_backend_release();
+			agp_backend_release(bridge);
 			cleanup(dinfo);
 			return -ENOMEM;
 		}
 		if (agp_bind_memory(dinfo->gtt_ring_mem,
 				    dinfo->ring.offset)) {
 			ERR_MSG("cannot bind ring buffer memory\n");
-			agp_backend_release();
+			agp_backend_release(bridge);
 			cleanup(dinfo);
 			return -EBUSY;
 		}
@@ -661,17 +713,17 @@ intelfb_pci_register(struct pci_dev *pdev, const struct pci_device_id *ent)
 		agp_memtype = dinfo->mobile ? AGP_PHYSICAL_MEMORY
 			: AGP_NORMAL_MEMORY;
 		if (!(dinfo->gtt_cursor_mem =
-		      agp_allocate_memory(dinfo->cursor.size >> 12,
+		      agp_allocate_memory(bridge, dinfo->cursor.size >> 12,
 					  agp_memtype))) {
 			ERR_MSG("cannot allocate cursor memory\n");
-			agp_backend_release();
+			agp_backend_release(bridge);
 			cleanup(dinfo);
 			return -ENOMEM;
 		}
 		if (agp_bind_memory(dinfo->gtt_cursor_mem,
 				    dinfo->cursor.offset)) {
 			ERR_MSG("cannot bind cursor memory\n");
-			agp_backend_release();
+			agp_backend_release(bridge);
 			cleanup(dinfo);
 			return -EBUSY;
 		}
@@ -686,7 +738,7 @@ intelfb_pci_register(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 	if (dinfo->fbmem_gart) {
 		if (!(dinfo->gtt_fb_mem =
-		      agp_allocate_memory(dinfo->fb.size >> 12,
+		      agp_allocate_memory(bridge, dinfo->fb.size >> 12,
 					  AGP_NORMAL_MEMORY))) {
 			WRN_MSG("cannot allocate framebuffer memory - use "
 				"the stolen one\n");
@@ -709,7 +761,7 @@ intelfb_pci_register(struct pci_dev *pdev, const struct pci_device_id *ent)
 	dinfo->fb_start = dinfo->fb.offset << 12;
 
 	/* release agpgart */
-	agp_backend_release();
+	agp_backend_release(bridge);
 
 	if (mtrr)
 		set_mtrr(dinfo);
@@ -989,13 +1041,15 @@ intelfb_init_var(struct intelfb_info *dinfo)
 	} else {
 		if (mode) {
 			msrc = fb_find_mode(var, dinfo->info, mode,
-					    NULL, 0, NULL, 0);
+					    vesa_modes, VESA_MODEDB_SIZE,
+					    NULL, 0);
 			if (msrc)
 				msrc |= 8;
 		}
 		if (!msrc) {
 			msrc = fb_find_mode(var, dinfo->info, PREFERRED_MODE,
-					    NULL, 0, NULL, 0);
+					    vesa_modes, VESA_MODEDB_SIZE,
+					    NULL, 0);
 		}
 	}
 
@@ -1041,6 +1095,7 @@ intelfb_set_fbinfo(struct intelfb_info *dinfo)
 
 	info->pixmap.size = 64*1024;
 	info->pixmap.buf_align = 8;
+	info->pixmap.access_align = 32;
 	info->pixmap.flags = FB_PIXMAP_SYSTEM;
 
 	if (intelfb_init_var(dinfo))
@@ -1251,7 +1306,7 @@ intelfb_set_par(struct fb_info *info)
 
 	intelfb_blank(FB_BLANK_POWERDOWN, info);
 
-	if (dinfo->accel)
+	if (ACCEL(dinfo, info))
 		intelfbhw_2d_stop(dinfo);
 
  	memcpy(hw, &dinfo->save_state, sizeof(*hw));
@@ -1267,7 +1322,7 @@ intelfb_set_par(struct fb_info *info)
 
 	update_dinfo(dinfo, &info->var);
 
-	if (dinfo->accel)
+	if (ACCEL(dinfo, info))
 		intelfbhw_2d_start(dinfo);
 
 	intelfb_pan_display(&info->var, info);

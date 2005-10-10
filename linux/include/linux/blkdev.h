@@ -54,16 +54,23 @@ struct as_io_context {
 
 struct cfq_queue;
 struct cfq_io_context {
-	void (*dtor)(struct cfq_io_context *);
-	void (*exit)(struct cfq_io_context *);
-
-	struct io_context *ioc;
-
 	/*
 	 * circular list of cfq_io_contexts belonging to a process io context
 	 */
 	struct list_head list;
 	struct cfq_queue *cfqq;
+	void *key;
+
+	struct io_context *ioc;
+
+	unsigned long last_end_request;
+	unsigned long last_queue;
+	unsigned long ttime_total;
+	unsigned long ttime_samples;
+	unsigned long ttime_mean;
+
+	void (*dtor)(struct cfq_io_context *);
+	void (*exit)(struct cfq_io_context *);
 };
 
 /*
@@ -73,7 +80,9 @@ struct cfq_io_context {
  */
 struct io_context {
 	atomic_t refcount;
-	pid_t pid;
+	struct task_struct *task;
+
+	int (*set_ioprio)(struct io_context *, unsigned int);
 
 	/*
 	 * For request batching
@@ -81,17 +90,19 @@ struct io_context {
 	unsigned long last_waited; /* Time last woken after wait for request */
 	int nr_batch_requests;     /* Number of requests left in the batch */
 
-	spinlock_t lock;
-
 	struct as_io_context *aic;
 	struct cfq_io_context *cic;
 };
 
 void put_io_context(struct io_context *ioc);
 void exit_io_context(void);
+struct io_context *current_io_context(int gfp_flags);
 struct io_context *get_io_context(int gfp_flags);
 void copy_io_context(struct io_context **pdst, struct io_context **psrc);
 void swap_io_context(struct io_context **ioc1, struct io_context **ioc2);
+
+struct request;
+typedef void (rq_end_io_fn)(struct request *);
 
 struct request_list {
 	int count[2];
@@ -130,6 +141,8 @@ struct request {
 	struct bio *biotail;
 
 	void *elevator_private;
+
+	unsigned short ioprio;
 
 	int rq_status;	/* should split this into a few status bits */
 	struct gendisk *rq_disk;
@@ -176,6 +189,12 @@ struct request {
 	 * For Power Management requests
 	 */
 	struct request_pm_state *pm;
+
+	/*
+	 * completion callback. end_io_data should be folded in with waiting
+	 */
+	rq_end_io_fn *end_io;
+	void *end_io_data;
 };
 
 /*
@@ -210,6 +229,7 @@ enum rq_flag_bits {
 	__REQ_PM_SHUTDOWN,	/* shutdown request */
 	__REQ_BAR_PREFLUSH,	/* barrier pre-flush done */
 	__REQ_BAR_POSTFLUSH,	/* barrier post-flush */
+	__REQ_BAR_FLUSH,	/* rq is the flush request */
 	__REQ_NR_BITS,		/* stops here */
 };
 
@@ -237,6 +257,7 @@ enum rq_flag_bits {
 #define REQ_PM_SHUTDOWN	(1 << __REQ_PM_SHUTDOWN)
 #define REQ_BAR_PREFLUSH	(1 << __REQ_BAR_PREFLUSH)
 #define REQ_BAR_POSTFLUSH	(1 << __REQ_BAR_POSTFLUSH)
+#define REQ_BAR_FLUSH	(1 << __REQ_BAR_FLUSH)
 
 /*
  * State information carried for REQ_PM_SUSPEND and REQ_PM_RESUME
@@ -266,14 +287,13 @@ struct bio_vec;
 typedef int (merge_bvec_fn) (request_queue_t *, struct bio *, struct bio_vec *);
 typedef void (activity_fn) (void *data, int rw);
 typedef int (issue_flush_fn) (request_queue_t *, struct gendisk *, sector_t *);
+typedef int (prepare_flush_fn) (request_queue_t *, struct request *);
+typedef void (end_flush_fn) (request_queue_t *, struct request *);
 
 enum blk_queue_state {
 	Queue_down,
 	Queue_up,
 };
-
-#define BLK_TAGS_PER_LONG	(sizeof(unsigned long) * 8)
-#define BLK_TAGS_MASK		(BLK_TAGS_PER_LONG - 1)
 
 struct blk_queue_tag {
 	struct request **tag_index;	/* map of busy tags */
@@ -309,6 +329,8 @@ struct request_queue
 	merge_bvec_fn		*merge_bvec_fn;
 	activity_fn		*activity_fn;
 	issue_flush_fn		*issue_flush_fn;
+	prepare_flush_fn	*prepare_flush_fn;
+	end_flush_fn		*end_flush_fn;
 
 	/*
 	 * Auto-unplugging state
@@ -332,7 +354,7 @@ struct request_queue
 	 * queue needs bounce pages for pages above this limit
 	 */
 	unsigned long		bounce_pfn;
-	int			bounce_gfp;
+	unsigned int		bounce_gfp;
 
 	/*
 	 * various queue flags, see QUEUE_* below
@@ -340,8 +362,11 @@ struct request_queue
 	unsigned long		queue_flags;
 
 	/*
-	 * protects queue structures from reentrancy
+	 * protects queue structures from reentrancy. ->__queue_lock should
+	 * _never_ be used directly, it is queue private. always use
+	 * ->queue_lock.
 	 */
+	spinlock_t		__queue_lock;
 	spinlock_t		*queue_lock;
 
 	/*
@@ -378,8 +403,21 @@ struct request_queue
 	 */
 	unsigned int		sg_timeout;
 	unsigned int		sg_reserved_size;
+	int			node;
 
 	struct list_head	drain_list;
+
+	/*
+	 * reserved for flush operations
+	 */
+	struct request		*flush_rq;
+	unsigned char		ordered;
+};
+
+enum {
+	QUEUE_ORDERED_NONE,
+	QUEUE_ORDERED_TAG,
+	QUEUE_ORDERED_FLUSH,
 };
 
 #define RQ_INACTIVE		(-1)
@@ -396,12 +434,13 @@ struct request_queue
 #define QUEUE_FLAG_DEAD		5	/* queue being torn down */
 #define QUEUE_FLAG_REENTER	6	/* Re-entrancy avoidance */
 #define QUEUE_FLAG_PLUGGED	7	/* queue is plugged */
-#define QUEUE_FLAG_ORDERED	8	/* supports ordered writes */
-#define QUEUE_FLAG_DRAIN	9	/* draining queue for sched switch */
+#define QUEUE_FLAG_DRAIN	8	/* draining queue for sched switch */
+#define QUEUE_FLAG_FLUSH	9	/* doing barrier flush sequence */
 
 #define blk_queue_plugged(q)	test_bit(QUEUE_FLAG_PLUGGED, &(q)->queue_flags)
 #define blk_queue_tagged(q)	test_bit(QUEUE_FLAG_QUEUED, &(q)->queue_flags)
 #define blk_queue_stopped(q)	test_bit(QUEUE_FLAG_STOPPED, &(q)->queue_flags)
+#define blk_queue_flushing(q)	test_bit(QUEUE_FLAG_FLUSH, &(q)->queue_flags)
 
 #define blk_fs_request(rq)	((rq)->flags & REQ_CMD)
 #define blk_pc_request(rq)	((rq)->flags & REQ_BLOCK_PC)
@@ -509,17 +548,14 @@ extern void blk_unregister_queue(struct gendisk *disk);
 extern void register_disk(struct gendisk *dev);
 extern void generic_make_request(struct bio *bio);
 extern void blk_put_request(struct request *);
+extern void blk_end_sync_rq(struct request *rq);
 extern void blk_attempt_remerge(request_queue_t *, struct request *);
-extern void __blk_attempt_remerge(request_queue_t *, struct request *);
 extern struct request *blk_get_request(request_queue_t *, int, int);
-extern void blk_put_request(struct request *);
-extern void blk_insert_request(request_queue_t *, struct request *, int, void *, int);
+extern void blk_insert_request(request_queue_t *, struct request *, int, void *);
 extern void blk_requeue_request(request_queue_t *, struct request *);
 extern void blk_plug_device(request_queue_t *);
 extern int blk_remove_plug(request_queue_t *);
 extern void blk_recount_segments(request_queue_t *, struct bio *);
-extern int blk_phys_contig_segment(request_queue_t *q, struct bio *, struct bio *);
-extern int blk_hw_contig_segment(request_queue_t *q, struct bio *, struct bio *);
 extern int scsi_cmd_ioctl(struct file *, struct gendisk *, unsigned int, void __user *);
 extern void blk_start_queue(request_queue_t *q);
 extern void blk_stop_queue(request_queue_t *q);
@@ -584,6 +620,8 @@ static inline void blkdev_dequeue_request(struct request *req)
 /*
  * Access functions for manipulating queue properties
  */
+extern request_queue_t *blk_init_queue_node(request_fn_proc *rfn,
+					spinlock_t *lock, int node_id);
 extern request_queue_t *blk_init_queue(request_fn_proc *, spinlock_t *);
 extern void blk_cleanup_queue(request_queue_t *);
 extern void blk_queue_make_request(request_queue_t *, make_request_fn *);
@@ -601,7 +639,9 @@ extern void blk_queue_dma_alignment(request_queue_t *, int);
 extern struct backing_dev_info *blk_get_backing_dev_info(struct block_device *bdev);
 extern void blk_queue_ordered(request_queue_t *, int);
 extern void blk_queue_issue_flush_fn(request_queue_t *, issue_flush_fn *);
-extern int blkdev_scsi_issue_flush_fn(request_queue_t *, struct gendisk *, sector_t *);
+extern struct request *blk_start_pre_flush(request_queue_t *,struct request *);
+extern int blk_complete_barrier_rq(request_queue_t *, struct request *, int);
+extern int blk_complete_barrier_rq_locked(request_queue_t *, struct request *, int);
 
 extern int blk_rq_map_sg(request_queue_t *, struct request *, struct scatterlist *);
 extern void blk_dump_rq_flags(struct request *, char *);
@@ -612,7 +652,8 @@ extern void blk_wait_queue_drained(request_queue_t *, int);
 extern void blk_finish_queue_drain(request_queue_t *);
 
 int blk_get_queue(request_queue_t *);
-request_queue_t *blk_alloc_queue(int);
+request_queue_t *blk_alloc_queue(int gfp_mask);
+request_queue_t *blk_alloc_queue_node(int,int);
 #define blk_put_queue(q) blk_cleanup_queue((q))
 
 /*
@@ -640,8 +681,6 @@ extern int blkdev_issue_flush(struct block_device *, sector_t *);
 #define MAX_SEGMENT_SIZE	65536
 
 #define blkdev_entry_to_request(entry) list_entry((entry), struct request, queuelist)
-
-extern void drive_stat_acct(struct request *, int, int);
 
 static inline int queue_hardsect_size(request_queue_t *q)
 {

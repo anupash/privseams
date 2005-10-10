@@ -1,12 +1,12 @@
 /*
  * NES, SNES, N64, MultiSystem, PSX gamepad driver for Linux
  *
- *  Copyright (c) 1999-2004 	Vojtech Pavlik <vojtech@suse.cz>
- *  Copyright (c) 2004 		Peter Nelson <rufus-kernel@hackish.org>
+ *  Copyright (c) 1999-2004	Vojtech Pavlik <vojtech@suse.cz>
+ *  Copyright (c) 2004		Peter Nelson <rufus-kernel@hackish.org>
  *
  *  Based on the work of:
- *  	Andree Borrmann		John Dahlstrom
- *  	David Kuder		Nathan Hand
+ *	Andree Borrmann		John Dahlstrom
+ *	David Kuder		Nathan Hand
  */
 
 /*
@@ -81,6 +81,7 @@ struct gc {
 	struct timer_list timer;
 	unsigned char pads[GC_MAX + 1];
 	int used;
+	struct semaphore sem;
 	char phys[5][32];
 };
 
@@ -227,7 +228,8 @@ static void gc_multi_read_packet(struct gc *gc, int length, unsigned char *data)
  */
 
 #define GC_PSX_DELAY	25		/* 25 usec */
-#define GC_PSX_LENGTH	8		/* talk to the controller in bytes */
+#define GC_PSX_LENGTH	8		/* talk to the controller in bits */
+#define GC_PSX_BYTES	6		/* the maximum number of bytes to read off the controller */
 
 #define GC_PSX_MOUSE	1		/* Mouse */
 #define GC_PSX_NEGCON	2		/* NegCon */
@@ -241,7 +243,7 @@ static void gc_multi_read_packet(struct gc *gc, int length, unsigned char *data)
 #define GC_PSX_SELECT	0x02		/* Pin 3 */
 
 #define GC_PSX_ID(x)	((x) >> 4)	/* High nibble is device type */
-#define GC_PSX_LEN(x)	((x) & 0xf)	/* Low nibble is length in words */
+#define GC_PSX_LEN(x)	(((x) & 0xf) << 1)	/* Low nibble is length in bytes/2 */
 
 static int gc_psx_delay = GC_PSX_DELAY;
 module_param_named(psx_delay, gc_psx_delay, uint, 0);
@@ -259,13 +261,13 @@ static short gc_psx_ddr_btn[] = { BTN_0, BTN_1, BTN_2, BTN_3 };
  * the psx pad.
  */
 
-static void gc_psx_command(struct gc *gc, int b, unsigned char data[GC_PSX_LENGTH])
+static void gc_psx_command(struct gc *gc, int b, unsigned char data[5])
 {
 	int i, j, cmd, read;
 	for (i = 0; i < 5; i++)
 		data[i] = 0;
 
-	for (i = 0; i < 8; i++, b >>= 1) {
+	for (i = 0; i < GC_PSX_LENGTH; i++, b >>= 1) {
 		cmd = (b & 1) ? GC_PSX_COMMAND : 0;
 		parport_write_data(gc->pd->port, cmd | GC_PSX_POWER);
 		udelay(gc_psx_delay);
@@ -282,7 +284,7 @@ static void gc_psx_command(struct gc *gc, int b, unsigned char data[GC_PSX_LENGT
  * device identifier code.
  */
 
-static void gc_psx_read_packet(struct gc *gc, unsigned char data[5][GC_PSX_LENGTH], unsigned char id[5])
+static void gc_psx_read_packet(struct gc *gc, unsigned char data[5][GC_PSX_BYTES], unsigned char id[5])
 {
 	int i, j, max_len = 0;
 	unsigned long flags;
@@ -300,10 +302,12 @@ static void gc_psx_read_packet(struct gc *gc, unsigned char data[5][GC_PSX_LENGT
 	gc_psx_command(gc, 0, data2);							/* Dump status */
 
 	for (i =0; i < 5; i++)								/* Find the longest pad */
-		if((gc_status_bit[i] & (gc->pads[GC_PSX] | gc->pads[GC_DDR])) && (GC_PSX_LEN(id[i]) > max_len))
+		if((gc_status_bit[i] & (gc->pads[GC_PSX] | gc->pads[GC_DDR]))
+			&& (GC_PSX_LEN(id[i]) > max_len)
+			&& (GC_PSX_LEN(id[i]) <= GC_PSX_BYTES))
 			max_len = GC_PSX_LEN(id[i]);
 
-	for (i = 0; i < max_len * 2; i++) {						/* Read in all the data */
+	for (i = 0; i < max_len; i++) {						/* Read in all the data */
 		gc_psx_command(gc, 0, data2);
 		for (j = 0; j < 5; j++)
 			data[j][i] = data2[j];
@@ -328,7 +332,7 @@ static void gc_timer(unsigned long private)
 	struct gc *gc = (void *) private;
 	struct input_dev *dev = gc->dev;
 	unsigned char data[GC_MAX_LENGTH];
-	unsigned char data_psx[5][GC_PSX_LENGTH];
+	unsigned char data_psx[5][GC_PSX_BYTES];
 	int i, j, s;
 
 /*
@@ -430,7 +434,7 @@ static void gc_timer(unsigned long private)
 		gc_psx_read_packet(gc, data_psx, data);
 
 		for (i = 0; i < 5; i++) {
-	 		switch (data[i]) {
+			switch (data[i]) {
 
 				case GC_PSX_RUMBLE:
 
@@ -500,22 +504,33 @@ static void gc_timer(unsigned long private)
 static int gc_open(struct input_dev *dev)
 {
 	struct gc *gc = dev->private;
+	int err;
+
+	err = down_interruptible(&gc->sem);
+	if (err)
+		return err;
+
 	if (!gc->used++) {
 		parport_claim(gc->pd);
 		parport_write_control(gc->pd->port, 0x04);
 		mod_timer(&gc->timer, jiffies + GC_REFRESH_TIME);
 	}
+
+	up(&gc->sem);
 	return 0;
 }
 
 static void gc_close(struct input_dev *dev)
 {
 	struct gc *gc = dev->private;
+
+	down(&gc->sem);
 	if (!--gc->used) {
-		del_timer(&gc->timer);
+		del_timer_sync(&gc->timer);
 		parport_write_control(gc->pd->port, 0x00);
 		parport_release(gc->pd);
 	}
+	up(&gc->sem);
 }
 
 static struct gc __init *gc_probe(int *config, int nargs)
@@ -539,11 +554,12 @@ static struct gc __init *gc_probe(int *config, int nargs)
 		return NULL;
 	}
 
-	if (!(gc = kmalloc(sizeof(struct gc), GFP_KERNEL))) {
+	if (!(gc = kcalloc(1, sizeof(struct gc), GFP_KERNEL))) {
 		parport_put_port(pp);
 		return NULL;
 	}
-	memset(gc, 0, sizeof(struct gc));
+
+	init_MUTEX(&gc->sem);
 
 	gc->pd = parport_register_device(pp, "gamecon", NULL, NULL, NULL, PARPORT_DEV_EXCL, NULL);
 
@@ -665,7 +681,7 @@ static struct gc __init *gc_probe(int *config, int nargs)
 	return gc;
 }
 
-int __init gc_init(void)
+static int __init gc_init(void)
 {
 	gc_base[0] = gc_probe(gc, gc_nargs);
 	gc_base[1] = gc_probe(gc_2, gc_nargs_2);
@@ -677,7 +693,7 @@ int __init gc_init(void)
 	return -ENODEV;
 }
 
-void __exit gc_exit(void)
+static void __exit gc_exit(void)
 {
 	int i, j;
 

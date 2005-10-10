@@ -126,7 +126,6 @@ CONFIG_HAVE_DEC_LOCK=y
 #
 CONFIG_PM=y
 CONFIG_SOFTWARE_SUSPEND=y
-# CONFIG_PM_DISK is not set
 
 #
 # ACPI (Advanced Configuration and Power Interface) Support
@@ -802,7 +801,6 @@ CONFIG_AGP=y
 # CONFIG_AGP_AMD is not set
 # CONFIG_AGP_AMD64 is not set
 CONFIG_AGP_INTEL=y
-CONFIG_AGP_INTEL_MCH=m
 # CONFIG_AGP_NVIDIA is not set
 # CONFIG_AGP_SIS is not set
 # CONFIG_AGP_SWORKS is not set

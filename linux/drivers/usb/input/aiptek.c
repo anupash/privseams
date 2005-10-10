@@ -1,7 +1,7 @@
 /*
  *  Native support for the Aiptek HyperPen USB Tablets
  *  (4000U/5000U/6000U/8000U/12000U)
- *  
+ *
  *  Copyright (c) 2001      Chris Atenasio   <chris@crud.net>
  *  Copyright (c) 2002-2004 Bryan W. Headley <bwheadley@earthlink.net>
  *
@@ -31,7 +31,7 @@
  *           - Added support for the sysfs interface, deprecating the
  *             procfs interface for 2.5.x kernel. Also added support for
  *             Wheel command. Bryan W. Headley July-15-2003.
- *      v1.2 - Reworked jitter timer as a kernel thread. 
+ *      v1.2 - Reworked jitter timer as a kernel thread.
  *             Bryan W. Headley November-28-2003/Jan-10-2004.
  *      v1.3 - Repaired issue of kernel thread going nuts on single-processor
  *             machines, introduced programmableDelay as a command line
@@ -49,10 +49,10 @@
  * NOTE:
  *      This kernel driver is augmented by the "Aiptek" XFree86 input
  *      driver for your X server, as well as the Gaiptek GUI Front-end
- *      "Tablet Manager". 
- *      These three products are highly interactive with one another, 
+ *      "Tablet Manager".
+ *      These three products are highly interactive with one another,
  *      so therefore it's easier to document them all as one subsystem.
- *      Please visit the project's "home page", located at, 
+ *      Please visit the project's "home page", located at,
  *      http://aiptektablet.sourceforge.net.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -77,6 +77,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/usb.h>
+#include <linux/usb_input.h>
 #include <linux/sched.h>
 #include <asm/uaccess.h>
 #include <asm/unaligned.h>
@@ -156,7 +157,7 @@
  * Command/Data    Description     Return Bytes    Return Value
  * 0x10/0x00       SwitchToMouse       0
  * 0x10/0x01       SwitchToTablet      0
- * 0x18/0x04       SetResolution       0 
+ * 0x18/0x04       SetResolution       0
  * 0x12/0xFF       AutoGainOn          0
  * 0x17/0x00       FilterOn            0
  * 0x01/0x00       GetXExtension       2           MaxX
@@ -247,7 +248,7 @@
 #define AIPTEK_DIAGNOSTIC_SENDING_ABSOLUTE_IN_RELATIVE	2
 #define AIPTEK_DIAGNOSTIC_TOOL_DISALLOWED		3
 
-	/* Time to wait (in ms) to help mask hand jittering 
+	/* Time to wait (in ms) to help mask hand jittering
 	 * when pressing the stylus buttons.
 	 */
 #define AIPTEK_JITTER_DELAY_DEFAULT			50
@@ -297,8 +298,6 @@ struct aiptek_features {
 	int firmwareCode;	/* prom/eeprom version            */
 	char usbPath[64 + 1];	/* device's physical usb path     */
 	char inputPath[64 + 1];	/* input device path              */
-	char manuName[64 + 1];	/* manufacturer name              */
-	char prodName[64 + 1];	/* product name                   */
 };
 
 struct aiptek_settings {
@@ -326,7 +325,6 @@ struct aiptek {
 	struct aiptek_settings curSetting;	/* tablet's current programmable */
 	struct aiptek_settings newSetting;	/* ... and new param settings    */
 	unsigned int ifnum;			/* interface number for IO       */
-	int openCount;				/* module use counter            */
 	int diagnostic;				/* tablet diagnostic codes       */
 	unsigned long eventCount;		/* event count                   */
 	int inDelay;				/* jitter: in jitter delay?      */
@@ -388,7 +386,7 @@ static int aiptek_convert_from_2s_complement(unsigned char c)
  * convention above.) I therefore have taken over REL_MISC and ABS_MISC
  * (for relative and absolute reports, respectively) for communicating
  * Proximity. Why two events? I thought it interesting to know if the
- * Proximity event occured while the tablet was in absolute or relative
+ * Proximity event occurred while the tablet was in absolute or relative
  * mode.
  *
  * Other tablets use the notion of a certain minimum stylus pressure
@@ -793,10 +791,10 @@ exit:
  * specific Aiptek model numbers, because there has been overlaps,
  * use, and reuse of id's in existing models. Certain models have
  * been known to use more than one ID, indicative perhaps of
- * manufacturing revisions. In any event, we consider these 
+ * manufacturing revisions. In any event, we consider these
  * IDs to not be model-specific nor unique.
  */
-struct usb_device_id aiptek_ids[] = {
+static const struct usb_device_id aiptek_ids[] = {
 	{USB_DEVICE(USB_VENDOR_ID_AIPTEK, 0x01)},
 	{USB_DEVICE(USB_VENDOR_ID_AIPTEK, 0x10)},
 	{USB_DEVICE(USB_VENDOR_ID_AIPTEK, 0x20)},
@@ -816,15 +814,9 @@ static int aiptek_open(struct input_dev *inputdev)
 {
 	struct aiptek *aiptek = inputdev->private;
 
-	if (aiptek->openCount++ > 0) {
-		return 0;
-	}
-
 	aiptek->urb->dev = aiptek->usbdev;
-	if (usb_submit_urb(aiptek->urb, GFP_KERNEL) != 0) {
-		aiptek->openCount--;
+	if (usb_submit_urb(aiptek->urb, GFP_KERNEL) != 0)
 		return -EIO;
-	}
 
 	return 0;
 }
@@ -836,13 +828,11 @@ static void aiptek_close(struct input_dev *inputdev)
 {
 	struct aiptek *aiptek = inputdev->private;
 
-	if (--aiptek->openCount == 0) {
-		usb_kill_urb(aiptek->urb);
-	}
+	usb_kill_urb(aiptek->urb);
 }
 
 /***********************************************************************
- * aiptek_set_report and aiptek_get_report() are borrowed from Linux 2.4.x, 
+ * aiptek_set_report and aiptek_get_report() are borrowed from Linux 2.4.x,
  * where they were known as usb_set_report and usb_get_report.
  */
 static int
@@ -855,7 +845,7 @@ aiptek_set_report(struct aiptek *aiptek,
 			       USB_REQ_SET_REPORT,
 			       USB_TYPE_CLASS | USB_RECIP_INTERFACE |
 			       USB_DIR_OUT, (report_type << 8) + report_id,
-			       aiptek->ifnum, buffer, size, 5 * HZ);
+			       aiptek->ifnum, buffer, size, 5000);
 }
 
 static int
@@ -868,7 +858,7 @@ aiptek_get_report(struct aiptek *aiptek,
 			       USB_REQ_GET_REPORT,
 			       USB_TYPE_CLASS | USB_RECIP_INTERFACE |
 			       USB_DIR_IN, (report_type << 8) + report_id,
-			       aiptek->ifnum, buffer, size, 5 * HZ);
+			       aiptek->ifnum, buffer, size, 5000);
 }
 
 /***********************************************************************
@@ -1027,7 +1017,7 @@ static int aiptek_program_tablet(struct aiptek *aiptek)
 /***********************************************************************
  * support the 'size' file -- display support
  */
-static ssize_t show_tabletSize(struct device *dev, char *buf)
+static ssize_t show_tabletSize(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1050,7 +1040,7 @@ static DEVICE_ATTR(size, S_IRUGO, show_tabletSize, NULL);
 /***********************************************************************
  * support routines for the 'product_id' file
  */
-static ssize_t show_tabletProductId(struct device *dev, char *buf)
+static ssize_t show_tabletProductId(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1066,7 +1056,7 @@ static DEVICE_ATTR(product_id, S_IRUGO, show_tabletProductId, NULL);
 /***********************************************************************
  * support routines for the 'vendor_id' file
  */
-static ssize_t show_tabletVendorId(struct device *dev, char *buf)
+static ssize_t show_tabletVendorId(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1081,7 +1071,7 @@ static DEVICE_ATTR(vendor_id, S_IRUGO, show_tabletVendorId, NULL);
 /***********************************************************************
  * support routines for the 'vendor' file
  */
-static ssize_t show_tabletManufacturer(struct device *dev, char *buf)
+static ssize_t show_tabletManufacturer(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	int retval;
@@ -1089,7 +1079,7 @@ static ssize_t show_tabletManufacturer(struct device *dev, char *buf)
 	if (aiptek == NULL)
 		return 0;
 
-	retval = snprintf(buf, PAGE_SIZE, "%s\n", aiptek->features.manuName);
+	retval = snprintf(buf, PAGE_SIZE, "%s\n", aiptek->usbdev->manufacturer);
 	return retval;
 }
 
@@ -1098,7 +1088,7 @@ static DEVICE_ATTR(vendor, S_IRUGO, show_tabletManufacturer, NULL);
 /***********************************************************************
  * support routines for the 'product' file
  */
-static ssize_t show_tabletProduct(struct device *dev, char *buf)
+static ssize_t show_tabletProduct(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	int retval;
@@ -1106,7 +1096,7 @@ static ssize_t show_tabletProduct(struct device *dev, char *buf)
 	if (aiptek == NULL)
 		return 0;
 
-	retval = snprintf(buf, PAGE_SIZE, "%s\n", aiptek->features.prodName);
+	retval = snprintf(buf, PAGE_SIZE, "%s\n", aiptek->usbdev->product);
 	return retval;
 }
 
@@ -1116,7 +1106,7 @@ static DEVICE_ATTR(product, S_IRUGO, show_tabletProduct, NULL);
  * support routines for the 'pointer_mode' file. Note that this file
  * both displays current setting and allows reprogramming.
  */
-static ssize_t show_tabletPointerMode(struct device *dev, char *buf)
+static ssize_t show_tabletPointerMode(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *s;
@@ -1145,7 +1135,7 @@ static ssize_t show_tabletPointerMode(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletPointerMode(struct device *dev, const char *buf, size_t count)
+store_tabletPointerMode(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	if (aiptek == NULL)
@@ -1170,7 +1160,7 @@ static DEVICE_ATTR(pointer_mode,
  * support routines for the 'coordinate_mode' file. Note that this file
  * both displays current setting and allows reprogramming.
  */
-static ssize_t show_tabletCoordinateMode(struct device *dev, char *buf)
+static ssize_t show_tabletCoordinateMode(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *s;
@@ -1195,7 +1185,7 @@ static ssize_t show_tabletCoordinateMode(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletCoordinateMode(struct device *dev, const char *buf, size_t count)
+store_tabletCoordinateMode(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	if (aiptek == NULL)
@@ -1219,7 +1209,7 @@ static DEVICE_ATTR(coordinate_mode,
  * support routines for the 'tool_mode' file. Note that this file
  * both displays current setting and allows reprogramming.
  */
-static ssize_t show_tabletToolMode(struct device *dev, char *buf)
+static ssize_t show_tabletToolMode(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *s;
@@ -1264,7 +1254,7 @@ static ssize_t show_tabletToolMode(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletToolMode(struct device *dev, const char *buf, size_t count)
+store_tabletToolMode(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	if (aiptek == NULL)
@@ -1297,7 +1287,7 @@ static DEVICE_ATTR(tool_mode,
  * support routines for the 'xtilt' file. Note that this file
  * both displays current setting and allows reprogramming.
  */
-static ssize_t show_tabletXtilt(struct device *dev, char *buf)
+static ssize_t show_tabletXtilt(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1313,7 +1303,7 @@ static ssize_t show_tabletXtilt(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletXtilt(struct device *dev, const char *buf, size_t count)
+store_tabletXtilt(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	int x;
@@ -1339,7 +1329,7 @@ static DEVICE_ATTR(xtilt,
  * support routines for the 'ytilt' file. Note that this file
  * both displays current setting and allows reprogramming.
  */
-static ssize_t show_tabletYtilt(struct device *dev, char *buf)
+static ssize_t show_tabletYtilt(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1355,7 +1345,7 @@ static ssize_t show_tabletYtilt(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletYtilt(struct device *dev, const char *buf, size_t count)
+store_tabletYtilt(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	int y;
@@ -1381,7 +1371,7 @@ static DEVICE_ATTR(ytilt,
  * support routines for the 'jitter' file. Note that this file
  * both displays current setting and allows reprogramming.
  */
-static ssize_t show_tabletJitterDelay(struct device *dev, char *buf)
+static ssize_t show_tabletJitterDelay(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1392,7 +1382,7 @@ static ssize_t show_tabletJitterDelay(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletJitterDelay(struct device *dev, const char *buf, size_t count)
+store_tabletJitterDelay(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1411,7 +1401,7 @@ static DEVICE_ATTR(jitter,
  * support routines for the 'delay' file. Note that this file
  * both displays current setting and allows reprogramming.
  */
-static ssize_t show_tabletProgrammableDelay(struct device *dev, char *buf)
+static ssize_t show_tabletProgrammableDelay(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1423,7 +1413,7 @@ static ssize_t show_tabletProgrammableDelay(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletProgrammableDelay(struct device *dev, const char *buf, size_t count)
+store_tabletProgrammableDelay(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1442,7 +1432,7 @@ static DEVICE_ATTR(delay,
  * support routines for the 'input_path' file. Note that this file
  * only displays current setting.
  */
-static ssize_t show_tabletInputDevice(struct device *dev, char *buf)
+static ssize_t show_tabletInputDevice(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1459,7 +1449,7 @@ static DEVICE_ATTR(input_path, S_IRUGO, show_tabletInputDevice, NULL);
  * support routines for the 'event_count' file. Note that this file
  * only displays current setting.
  */
-static ssize_t show_tabletEventsReceived(struct device *dev, char *buf)
+static ssize_t show_tabletEventsReceived(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1475,7 +1465,7 @@ static DEVICE_ATTR(event_count, S_IRUGO, show_tabletEventsReceived, NULL);
  * support routines for the 'diagnostic' file. Note that this file
  * only displays current setting.
  */
-static ssize_t show_tabletDiagnosticMessage(struct device *dev, char *buf)
+static ssize_t show_tabletDiagnosticMessage(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *retMsg;
@@ -1517,7 +1507,7 @@ static DEVICE_ATTR(diagnostic, S_IRUGO, show_tabletDiagnosticMessage, NULL);
  * support routines for the 'stylus_upper' file. Note that this file
  * both displays current setting and allows for setting changing.
  */
-static ssize_t show_tabletStylusUpper(struct device *dev, char *buf)
+static ssize_t show_tabletStylusUpper(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *s;
@@ -1542,7 +1532,7 @@ static ssize_t show_tabletStylusUpper(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletStylusUpper(struct device *dev, const char *buf, size_t count)
+store_tabletStylusUpper(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1567,7 +1557,7 @@ static DEVICE_ATTR(stylus_upper,
  * support routines for the 'stylus_lower' file. Note that this file
  * both displays current setting and allows for setting changing.
  */
-static ssize_t show_tabletStylusLower(struct device *dev, char *buf)
+static ssize_t show_tabletStylusLower(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *s;
@@ -1592,7 +1582,7 @@ static ssize_t show_tabletStylusLower(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletStylusLower(struct device *dev, const char *buf, size_t count)
+store_tabletStylusLower(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1617,7 +1607,7 @@ static DEVICE_ATTR(stylus_lower,
  * support routines for the 'mouse_left' file. Note that this file
  * both displays current setting and allows for setting changing.
  */
-static ssize_t show_tabletMouseLeft(struct device *dev, char *buf)
+static ssize_t show_tabletMouseLeft(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *s;
@@ -1646,7 +1636,7 @@ static ssize_t show_tabletMouseLeft(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletMouseLeft(struct device *dev, const char *buf, size_t count)
+store_tabletMouseLeft(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1671,7 +1661,7 @@ static DEVICE_ATTR(mouse_left,
  * support routines for the 'mouse_middle' file. Note that this file
  * both displays current setting and allows for setting changing.
  */
-static ssize_t show_tabletMouseMiddle(struct device *dev, char *buf)
+static ssize_t show_tabletMouseMiddle(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *s;
@@ -1700,7 +1690,7 @@ static ssize_t show_tabletMouseMiddle(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletMouseMiddle(struct device *dev, const char *buf, size_t count)
+store_tabletMouseMiddle(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1727,7 +1717,7 @@ static DEVICE_ATTR(mouse_middle,
  * support routines for the 'mouse_right' file. Note that this file
  * both displays current setting and allows for setting changing.
  */
-static ssize_t show_tabletMouseRight(struct device *dev, char *buf)
+static ssize_t show_tabletMouseRight(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 	char *s;
@@ -1756,7 +1746,7 @@ static ssize_t show_tabletMouseRight(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletMouseRight(struct device *dev, const char *buf, size_t count)
+store_tabletMouseRight(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1782,7 +1772,7 @@ static DEVICE_ATTR(mouse_right,
  * support routines for the 'wheel' file. Note that this file
  * both displays current setting and allows for setting changing.
  */
-static ssize_t show_tabletWheel(struct device *dev, char *buf)
+static ssize_t show_tabletWheel(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1798,7 +1788,7 @@ static ssize_t show_tabletWheel(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletWheel(struct device *dev, const char *buf, size_t count)
+store_tabletWheel(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1816,7 +1806,7 @@ static DEVICE_ATTR(wheel,
  * support routines for the 'execute' file. Note that this file
  * both displays current setting and allows for setting changing.
  */
-static ssize_t show_tabletExecute(struct device *dev, char *buf)
+static ssize_t show_tabletExecute(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1831,7 +1821,7 @@ static ssize_t show_tabletExecute(struct device *dev, char *buf)
 }
 
 static ssize_t
-store_tabletExecute(struct device *dev, const char *buf, size_t count)
+store_tabletExecute(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1857,7 +1847,7 @@ static DEVICE_ATTR(execute,
  * support routines for the 'odm_code' file. Note that this file
  * only displays current setting.
  */
-static ssize_t show_tabletODMCode(struct device *dev, char *buf)
+static ssize_t show_tabletODMCode(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1873,7 +1863,7 @@ static DEVICE_ATTR(odm_code, S_IRUGO, show_tabletODMCode, NULL);
  * support routines for the 'model_code' file. Note that this file
  * only displays current setting.
  */
-static ssize_t show_tabletModelCode(struct device *dev, char *buf)
+static ssize_t show_tabletModelCode(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -1889,7 +1879,7 @@ static DEVICE_ATTR(model_code, S_IRUGO, show_tabletModelCode, NULL);
  * support routines for the 'firmware_code' file. Note that this file
  * only displays current setting.
  */
-static ssize_t show_firmwareCode(struct device *dev, char *buf)
+static ssize_t show_firmwareCode(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct aiptek *aiptek = dev_get_drvdata(dev);
 
@@ -2136,10 +2126,8 @@ aiptek_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	aiptek->inputdev.absflat[ABS_WHEEL] = 0;
 	aiptek->inputdev.name = "Aiptek";
 	aiptek->inputdev.phys = aiptek->features.usbPath;
-	aiptek->inputdev.id.bustype = BUS_USB;
-	aiptek->inputdev.id.vendor = le16_to_cpu(usbdev->descriptor.idVendor);
-	aiptek->inputdev.id.product = le16_to_cpu(usbdev->descriptor.idProduct);
-	aiptek->inputdev.id.version = le16_to_cpu(usbdev->descriptor.bcdDevice);
+	usb_to_input_id(usbdev, &aiptek->inputdev.id);
+	aiptek->inputdev.dev = &intf->dev;
 
 	aiptek->usbdev = usbdev;
 	aiptek->ifnum = intf->altsetting[0].desc.bInterfaceNumber;
@@ -2165,19 +2153,6 @@ aiptek_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	/* Register the tablet as an Input Device
 	 */
 	input_register_device(&aiptek->inputdev);
-
-	/* Go and decode the USB representation of the tablet's manufacturer
-	 * name and product name. They only change once every hotplug event,
-	 * which is why we put it here instead of in the sysfs interface.
-	 */
-	usb_string(usbdev,
-		   usbdev->descriptor.iManufacturer,
-		   aiptek->features.manuName,
-		   sizeof(aiptek->features.manuName));
-	usb_string(usbdev,
-		   usbdev->descriptor.iProduct,
-		   aiptek->features.prodName,
-		   sizeof(aiptek->features.prodName));
 
 	/* We now will look for the evdev device which is mapped to
 	 * the tablet. The partial name is kept in the link list of
@@ -2266,7 +2241,6 @@ static void aiptek_disconnect(struct usb_interface *intf)
 				AIPTEK_PACKET_LENGTH,
 				aiptek->data, aiptek->data_dma);
 		kfree(aiptek);
-		aiptek = NULL;
 	}
 }
 

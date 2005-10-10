@@ -140,11 +140,6 @@ typedef union {
 #define	XFS_PUT_COOKIE(c,mp,bno,entry,hash)	\
 	((c).s.be = XFS_DA_MAKE_BNOENTRY(mp, bno, entry), (c).s.h = (hash))
 
-#define	XFS_GET_DIR_INO_ARCH(mp,di,arch) \
-    DIRINO_GET_ARCH(&(di),arch)
-#define	XFS_GET_DIR_INO(mp,di) \
-    XFS_GET_DIR_INO_ARCH(mp,di,ARCH_NOCONVERT)
-
 typedef struct xfs_dir_put_args
 {
 	xfs_dircook_t	cook;		/* cookie of (next) entry */
@@ -207,8 +202,6 @@ int xfs_dir_leaf_to_shortform(struct xfs_da_args *args);
 /*
  * Routines used for growing the Btree.
  */
-int	xfs_dir_leaf_create(struct xfs_da_args *args, xfs_dablk_t which_block,
-				   struct xfs_dabuf **bpp);
 int	xfs_dir_leaf_split(struct xfs_da_state *state,
 				  struct xfs_da_state_blk *oldblk,
 				  struct xfs_da_state_blk *newblk);

@@ -52,7 +52,7 @@
 #include <asm/cache.h>
 #include <asm/prom.h>
 #include <asm/ptrace.h>
-#include <asm/iSeries/LparData.h>
+#include <asm/iSeries/ItLpQueue.h>
 #include <asm/machdep.h>
 #include <asm/paca.h>
 
@@ -61,11 +61,11 @@ extern void iSeries_smp_message_recv( struct pt_regs * );
 #endif
 
 extern irq_desc_t irq_desc[NR_IRQS];
+EXPORT_SYMBOL(irq_desc);
 
 int distribute_irqs = 1;
 int __irq_offset_value;
 int ppc_spurious_interrupts;
-unsigned long lpevent_count;
 u64 ppc64_interrupt_controller;
 
 int show_interrupts(struct seq_file *p, void *v)
@@ -114,6 +114,35 @@ skip:
 		seq_printf(p, "BAD: %10u\n", ppc_spurious_interrupts);
 	return 0;
 }
+
+#ifdef CONFIG_HOTPLUG_CPU
+void fixup_irqs(cpumask_t map)
+{
+	unsigned int irq;
+	static int warned;
+
+	for_each_irq(irq) {
+		cpumask_t mask;
+
+		if (irq_desc[irq].status & IRQ_PER_CPU)
+			continue;
+
+		cpus_and(mask, irq_affinity[irq], map);
+		if (any_online_cpu(mask) == NR_CPUS) {
+			printk("Breaking affinity for irq %i\n", irq);
+			mask = map;
+		}
+		if (irq_desc[irq].handler->set_affinity)
+			irq_desc[irq].handler->set_affinity(irq, mask);
+		else if (irq_desc[irq].action && !(warned++))
+			printk("Cannot set affinity for irq %i\n", irq);
+	}
+
+	local_irq_enable();
+	mdelay(1);
+	local_irq_disable();
+}
+#endif
 
 extern int noirqdebug;
 
@@ -215,7 +244,7 @@ void ppc_irq_dispatch_handler(struct pt_regs *regs, int irq)
 
 		spin_lock(&desc->lock);
 		if (!noirqdebug)
-			note_interrupt(irq, desc, action_ret);
+			note_interrupt(irq, desc, action_ret, regs);
 		if (likely(!(desc->status & IRQ_PENDING)))
 			break;
 		desc->status &= ~IRQ_PENDING;
@@ -239,7 +268,6 @@ out:
 void do_IRQ(struct pt_regs *regs)
 {
 	struct paca_struct *lpaca;
-	struct ItLpQueue *lpq;
 
 	irq_enter();
 
@@ -265,9 +293,8 @@ void do_IRQ(struct pt_regs *regs)
 		iSeries_smp_message_recv(regs);
 	}
 #endif /* CONFIG_SMP */
-	lpq = lpaca->lpqueue_ptr;
-	if (lpq && ItLpQueue_isLpIntPending(lpq))
-		lpevent_count += ItLpQueue_process(lpq, regs);
+	if (hvlpevent_is_pending())
+		process_hvlpevents(regs);
 
 	irq_exit();
 
@@ -364,6 +391,9 @@ int virt_irq_create_mapping(unsigned int real_irq)
 
 	if (ppc64_interrupt_controller == IC_OPEN_PIC)
 		return real_irq;	/* no mapping for openpic (for now) */
+
+	if (ppc64_interrupt_controller == IC_BPA_IIC)
+		return real_irq;	/* no mapping for iic either */
 
 	/* don't map interrupts < MIN_VIRT_IRQ */
 	if (real_irq < MIN_VIRT_IRQ) {

@@ -51,6 +51,9 @@ struct module_attribute {
         ssize_t (*show)(struct module_attribute *, struct module *, char *);
         ssize_t (*store)(struct module_attribute *, struct module *,
 			 const char *, size_t count);
+	void (*setup)(struct module *, const char *);
+	int (*test)(struct module *);
+	void (*free)(struct module *);
 };
 
 struct module_kobject
@@ -77,24 +80,14 @@ void sort_main_extable(void);
 extern struct subsystem module_subsys;
 
 #ifdef MODULE
-#define ___module_cat(a,b) __mod_ ## a ## b
-#define __module_cat(a,b) ___module_cat(a,b)
-#define __MODULE_INFO(tag, name, info)					  \
-static const char __module_cat(name,__LINE__)[]				  \
-  __attribute_used__							  \
-  __attribute__((section(".modinfo"),unused)) = __stringify(tag) "=" info
-
 #define MODULE_GENERIC_TABLE(gtype,name)			\
 extern const struct gtype##_id __mod_##gtype##_table		\
   __attribute__ ((unused, alias(__stringify(name))))
 
 extern struct module __this_module;
 #define THIS_MODULE (&__this_module)
-
 #else  /* !MODULE */
-
 #define MODULE_GENERIC_TABLE(gtype,name)
-#define __MODULE_INFO(tag, name, info)
 #define THIS_MODULE ((struct module *)0)
 #endif
 
@@ -249,6 +242,8 @@ struct module
 	/* Sysfs stuff. */
 	struct module_kobject mkobj;
 	struct module_param_attrs *param_attrs;
+	const char *version;
+	const char *srcversion;
 
 	/* Exported symbols */
 	const struct kernel_symbol *syms;
@@ -560,7 +555,8 @@ static inline void MODULE_PARM_(void) { }
 /* DEPRECATED: Do not use. */
 #define MODULE_PARM(var,type)						    \
 struct obsolete_modparm __parm_##var __attribute__((section("__obsparm"))) = \
-{ __stringify(var), type, &MODULE_PARM_ };
+{ __stringify(var), type, &MODULE_PARM_ }; \
+__MODULE_PARM_TYPE(var, type);
 #else
 #define MODULE_PARM(var,type) static void __attribute__((__unused__)) *__parm_##var = &MODULE_PARM_;
 #endif
@@ -572,7 +568,6 @@ struct obsolete_modparm __parm_##var __attribute__((section("__obsparm"))) = \
 extern void __deprecated inter_module_register(const char *,
 		struct module *, const void *);
 extern void __deprecated inter_module_unregister(const char *);
-extern const void * __deprecated inter_module_get(const char *);
 extern const void * __deprecated inter_module_get_request(const char *,
 		const char *);
 extern void __deprecated inter_module_put(const char *);

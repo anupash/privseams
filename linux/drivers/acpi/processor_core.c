@@ -105,7 +105,7 @@ static struct acpi_driver acpi_processor_driver = {
 #define UNINSTALL_NOTIFY_HANDLER	2
 
 
-struct file_operations acpi_processor_info_fops = {
+static struct file_operations acpi_processor_info_fops = {
 	.open 		= acpi_processor_info_open_fs,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
@@ -121,7 +121,7 @@ struct acpi_processor_errata errata;
                                 Errata Handling
    -------------------------------------------------------------------------- */
 
-int
+static int
 acpi_processor_errata_piix4 (
 	struct pci_dev		*dev)
 {
@@ -256,10 +256,47 @@ acpi_processor_errata (
 
 
 /* --------------------------------------------------------------------------
+                              Common ACPI processor fucntions
+   -------------------------------------------------------------------------- */
+
+/*
+ * _PDC is required for a BIOS-OS handshake for most of the newer
+ * ACPI processor features.
+ */
+
+int acpi_processor_set_pdc(struct acpi_processor *pr,
+				struct acpi_object_list *pdc_in)
+{
+	acpi_status		status = AE_OK;
+	u32			arg0_buf[3];
+	union acpi_object	arg0 = {ACPI_TYPE_BUFFER};
+	struct acpi_object_list	no_object = {1, &arg0};
+	struct acpi_object_list	*pdc;
+
+	ACPI_FUNCTION_TRACE("acpi_processor_set_pdc");
+
+	arg0.buffer.length = 12;
+	arg0.buffer.pointer = (u8 *) arg0_buf;
+	arg0_buf[0] = ACPI_PDC_REVISION_ID;
+	arg0_buf[1] = 0;
+	arg0_buf[2] = 0;
+
+	pdc = (pdc_in) ? pdc_in : &no_object;
+
+	status = acpi_evaluate_object(pr->handle, "_PDC", pdc, NULL);
+
+	if ((ACPI_FAILURE(status)) && (pdc_in))
+		ACPI_DEBUG_PRINT((ACPI_DB_INFO, "Error evaluating _PDC, using legacy perf. control...\n"));
+
+	return_VALUE(status);
+}
+
+
+/* --------------------------------------------------------------------------
                               FS Interface (/proc)
    -------------------------------------------------------------------------- */
 
-struct proc_dir_entry		*acpi_processor_dir = NULL;
+static struct proc_dir_entry	*acpi_processor_dir = NULL;
 
 static int acpi_processor_info_seq_show(struct seq_file *seq, void *offset)
 {
@@ -723,7 +760,7 @@ int acpi_processor_device_add(
 		return_VALUE(-ENODEV);
 	}
 
-	acpi_bus_scan(*device);
+	acpi_bus_start(*device);
 
 	pr = acpi_driver_data(*device);
 	if (!pr)

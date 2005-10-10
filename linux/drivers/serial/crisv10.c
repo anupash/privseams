@@ -426,8 +426,6 @@
 static char *serial_version = "$Revision: 1.25 $";
 
 #include <linux/config.h>
-#include <linux/version.h>
-
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/signal.h>
@@ -3757,10 +3755,8 @@ rs_write(struct tty_struct * tty, int from_user,
 		e100_enable_rx_irq(info);
 #endif
 
-		if (info->rs485.delay_rts_before_send > 0) {
-			set_current_state(TASK_INTERRUPTIBLE);
-			schedule_timeout((info->rs485.delay_rts_before_send * HZ)/1000);
-		}
+		if (info->rs485.delay_rts_before_send > 0)
+			msleep(info->rs485.delay_rts_before_send);
 	}
 #endif /* CONFIG_ETRAX_RS485 */
 

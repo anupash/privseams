@@ -10,20 +10,9 @@
  * 
  *  isofs directory handling functions
  */
-#include <linux/errno.h>
-#include <linux/fs.h>
-#include <linux/iso_fs.h>
-#include <linux/kernel.h>
-#include <linux/stat.h>
-#include <linux/string.h>
-#include <linux/mm.h>
-#include <linux/slab.h>
-#include <linux/time.h>
 #include <linux/config.h>
 #include <linux/smp_lock.h>
-#include <linux/buffer_head.h>
-
-#include <asm/uaccess.h>
+#include "isofs.h"
 
 static int isofs_readdir(struct file *, void *, filldir_t);
 
@@ -204,12 +193,17 @@ static int do_isofs_readdir(struct inode *inode, struct file *filp,
 
 		/* Handle everything else.  Do name translation if there
 		   is no Rock Ridge NM field. */
-		if (sbi->s_unhide == 'n') {
-			/* Do not report hidden or associated files */
-			if (de->flags[-sbi->s_high_sierra] & 5) {
-				filp->f_pos += de_len;
-				continue;
-			}
+
+		/*
+		 * Do not report hidden files if so instructed, or associated
+		 * files unless instructed to do so
+		 */
+		if ((sbi->s_hide == 'y' &&
+				(de->flags[-sbi->s_high_sierra] & 1)) ||
+		      (sbi->s_showassoc =='n' &&
+				(de->flags[-sbi->s_high_sierra] & 4))) {
+			filp->f_pos += de_len;
+			continue;
 		}
 
 		map = 1;

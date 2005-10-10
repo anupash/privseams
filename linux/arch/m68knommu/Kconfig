@@ -532,7 +532,14 @@ config ROMKERNEL
 
 endchoice
 
+source "mm/Kconfig"
+
 endmenu
+
+config ISA_DMA_API
+	bool
+	depends on !M5272
+	default y
 
 menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
 
@@ -567,6 +574,8 @@ config PM
 	  Support processor power management modes
 
 endmenu
+
+source "net/Kconfig"
 
 source "drivers/Kconfig"
 

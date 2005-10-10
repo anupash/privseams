@@ -50,12 +50,9 @@ extern volatile int __cpu_logical_map[];
  */
 
 struct _lowcore *lowcore_ptr[NR_CPUS];
-cycles_t         cacheflush_time=0;
-int              smp_threads_ready=0;      /* Set when the idlers are all forked. */
 
 cpumask_t cpu_online_map;
 cpumask_t cpu_possible_map;
-unsigned long    cache_decay_ticks = 0;
 
 static struct task_struct *current_set[NR_CPUS];
 
@@ -212,29 +209,29 @@ EXPORT_SYMBOL(smp_call_function_on);
 
 static inline void do_send_stop(void)
 {
-        int i, rc;
+        int cpu, rc;
 
         /* stop all processors */
-        for (i =  0; i < NR_CPUS; i++) {
-                if (!cpu_online(i) || smp_processor_id() == i)
+	for_each_online_cpu(cpu) {
+		if (cpu == smp_processor_id())
 			continue;
 		do {
-			rc = signal_processor(i, sigp_stop);
+			rc = signal_processor(cpu, sigp_stop);
 		} while (rc == sigp_busy);
 	}
 }
 
 static inline void do_store_status(void)
 {
-        int i, rc;
+        int cpu, rc;
 
         /* store status of all processors in their lowcores (real 0) */
-        for (i =  0; i < NR_CPUS; i++) {
-                if (!cpu_online(i) || smp_processor_id() == i) 
+	for_each_online_cpu(cpu) {
+		if (cpu == smp_processor_id())
 			continue;
 		do {
 			rc = signal_processor_p(
-				(__u32)(unsigned long) lowcore_ptr[i], i,
+				(__u32)(unsigned long) lowcore_ptr[cpu], cpu,
 				sigp_store_status_at_address);
 		} while(rc == sigp_busy);
         }
@@ -259,37 +256,41 @@ void smp_send_stop(void)
 /*
  * Reboot, halt and power_off routines for SMP.
  */
-static cpumask_t cpu_restart_map;
 
 static void do_machine_restart(void * __unused)
 {
+	int cpu;
 	static atomic_t cpuid = ATOMIC_INIT(-1);
 
-	cpu_clear(smp_processor_id(), cpu_restart_map);
-	if (atomic_compare_and_swap(-1, smp_processor_id(), &cpuid) == 0) {
-		/* Wait for all other cpus to enter do_machine_restart. */
-		while (!cpus_empty(cpu_restart_map))
+	if (atomic_compare_and_swap(-1, smp_processor_id(), &cpuid))
+		signal_processor(smp_processor_id(), sigp_stop);
+
+	/* Wait for all other cpus to enter stopped state */
+	for_each_online_cpu(cpu) {
+		if (cpu == smp_processor_id())
+			continue;
+		while(!smp_cpu_not_running(cpu))
 			cpu_relax();
-		/* Store status of other cpus. */
-		do_store_status();
-		/*
-		 * Finally call reipl. Because we waited for all other
-		 * cpus to enter this function we know that they do
-		 * not hold any s390irq-locks (the cpus have been
-		 * interrupted by an external interrupt and s390irq
-		 * locks are always held disabled).
-		 */
-		if (MACHINE_IS_VM)
-			cpcmd ("IPL", NULL, 0);
-		else
-			reipl (0x10000 | S390_lowcore.ipl_device);
 	}
-	signal_processor(smp_processor_id(), sigp_stop);
+
+	/* Store status of other cpus. */
+	do_store_status();
+
+	/*
+	 * Finally call reipl. Because we waited for all other
+	 * cpus to enter this function we know that they do
+	 * not hold any s390irq-locks (the cpus have been
+	 * interrupted by an external interrupt and s390irq
+	 * locks are always held disabled).
+	 */
+	if (MACHINE_IS_VM)
+		cpcmd ("IPL", NULL, 0, NULL);
+	else
+		reipl (0x10000 | S390_lowcore.ipl_device);
 }
 
 void machine_restart_smp(char * __unused) 
 {
-	cpu_restart_map = cpu_online_map;
         on_each_cpu(do_machine_restart, NULL, 0, 0);
 }
 
@@ -312,7 +313,7 @@ static void do_machine_halt(void * __unused)
 	if (atomic_compare_and_swap(-1, smp_processor_id(), &cpuid) == 0) {
 		smp_send_stop();
 		if (MACHINE_IS_VM && strlen(vmhalt_cmd) > 0)
-			cpcmd(vmhalt_cmd, NULL, 0);
+			cpcmd(vmhalt_cmd, NULL, 0, NULL);
 		signal_processor(smp_processor_id(),
 				 sigp_stop_and_store_status);
 	}
@@ -331,7 +332,7 @@ static void do_machine_power_off(void * __unused)
 	if (atomic_compare_and_swap(-1, smp_processor_id(), &cpuid) == 0) {
 		smp_send_stop();
 		if (MACHINE_IS_VM && strlen(vmpoff_cmd) > 0)
-			cpcmd(vmpoff_cmd, NULL, 0);
+			cpcmd(vmpoff_cmd, NULL, 0, NULL);
 		signal_processor(smp_processor_id(),
 				 sigp_stop_and_store_status);
 	}
@@ -374,7 +375,7 @@ static void smp_ext_bitcall(int cpu, ec_bit_sig sig)
          * Set signaling bit in lowcore of target cpu and kick it
          */
 	set_bit(sig, (unsigned long *) &lowcore_ptr[cpu]->ext_call_fast);
-	while(signal_processor(cpu, sigp_external_call) == sigp_busy)
+	while(signal_processor(cpu, sigp_emergency_signal) == sigp_busy)
 		udelay(10);
 }
 
@@ -384,16 +385,16 @@ static void smp_ext_bitcall(int cpu, ec_bit_sig sig)
  */
 static void smp_ext_bitcall_others(ec_bit_sig sig)
 {
-        int i;
+        int cpu;
 
-        for (i = 0; i < NR_CPUS; i++) {
-                if (!cpu_online(i) || smp_processor_id() == i)
+	for_each_online_cpu(cpu) {
+		if (cpu == smp_processor_id())
                         continue;
                 /*
                  * Set signaling bit in lowcore of target cpu and kick it
                  */
-		set_bit(sig, (unsigned long *) &lowcore_ptr[i]->ext_call_fast);
-                while (signal_processor(i, sigp_external_call) == sigp_busy)
+		set_bit(sig, (unsigned long *) &lowcore_ptr[cpu]->ext_call_fast);
+		while (signal_processor(cpu, sigp_emergency_signal) == sigp_busy)
 			udelay(10);
         }
 }
@@ -497,7 +498,6 @@ __init smp_check_cpus(unsigned int max_cpus)
 	 */
 
 	boot_cpu_addr = S390_lowcore.cpu_data.cpu_addr;
-	__cpu_logical_map[0] = boot_cpu_addr;
 	current_thread_info()->cpu = 0;
 	num_cpus = 1;
 	for (cpu = 0; cpu <= 65535 && num_cpus < max_cpus; cpu++) {
@@ -537,7 +537,8 @@ int __devinit start_secondary(void *cpuvoid)
 #endif
 #ifdef CONFIG_PFAULT
 	/* Enable pfault pseudo page faults on this cpu. */
-	pfault_init();
+	if (MACHINE_IS_VM)
+		pfault_init();
 #endif
 	/* Mark this cpu as online */
 	cpu_set(smp_processor_id(), cpu_online_map);
@@ -679,16 +680,19 @@ __cpu_disable(void)
 {
 	unsigned long flags;
 	ec_creg_mask_parms cr_parms;
+	int cpu = smp_processor_id();
 
 	spin_lock_irqsave(&smp_reserve_lock, flags);
-	if (smp_cpu_reserved[smp_processor_id()] != 0) {
+	if (smp_cpu_reserved[cpu] != 0) {
 		spin_unlock_irqrestore(&smp_reserve_lock, flags);
 		return -EBUSY;
 	}
+	cpu_clear(cpu, cpu_online_map);
 
 #ifdef CONFIG_PFAULT
 	/* Disable pfault pseudo page faults on this cpu. */
-	pfault_fini();
+	if (MACHINE_IS_VM)
+		pfault_fini();
 #endif
 
 	/* disable all external interrupts */
@@ -725,7 +729,7 @@ void
 __cpu_die(unsigned int cpu)
 {
 	/* Wait until target cpu is down */
-	while (!cpu_stopped(cpu))
+	while (!smp_cpu_not_running(cpu))
 		cpu_relax();
 	printk("Processor %d spun down\n", cpu);
 }
@@ -749,9 +753,9 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 	unsigned int cpu;
         int i;
 
-        /* request the 0x1202 external interrupt */
-        if (register_external_interrupt(0x1202, do_ext_call_interrupt) != 0)
-                panic("Couldn't request external interrupt 0x1202");
+        /* request the 0x1201 emergency signal external interrupt */
+        if (register_external_interrupt(0x1201, do_ext_call_interrupt) != 0)
+                panic("Couldn't request external interrupt 0x1201");
         smp_check_cpus(max_cpus);
         memset(lowcore_ptr,0,sizeof(lowcore_ptr));  
         /*
@@ -771,13 +775,24 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 
 		*(lowcore_ptr[i]) = S390_lowcore;
 		lowcore_ptr[i]->async_stack = stack + (ASYNC_SIZE);
-#ifdef CONFIG_CHECK_STACK
 		stack = __get_free_pages(GFP_KERNEL,0);
 		if (stack == 0ULL)
 			panic("smp_boot_cpus failed to allocate memory\n");
 		lowcore_ptr[i]->panic_stack = stack + (PAGE_SIZE);
+#ifndef __s390x__
+		if (MACHINE_HAS_IEEE) {
+			lowcore_ptr[i]->extended_save_area_addr =
+				(__u32) __get_free_pages(GFP_KERNEL,0);
+			if (lowcore_ptr[i]->extended_save_area_addr == 0)
+				panic("smp_boot_cpus failed to "
+				      "allocate memory\n");
+		}
 #endif
 	}
+#ifndef __s390x__
+	if (MACHINE_HAS_IEEE)
+		ctl_set_bit(14, 29); /* enable extended save area */
+#endif
 	set_prefix((u32)(unsigned long) lowcore_ptr[smp_processor_id()]);
 
 	for_each_cpu(cpu)
@@ -790,6 +805,7 @@ void __devinit smp_prepare_boot_cpu(void)
 	BUG_ON(smp_processor_id() != 0);
 
 	cpu_set(0, cpu_online_map);
+	cpu_set(0, cpu_present_map);
 	cpu_set(0, cpu_possible_map);
 	S390_lowcore.percpu_offset = __per_cpu_offset[0];
 	current_set[0] = current;

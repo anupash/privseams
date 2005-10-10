@@ -37,8 +37,8 @@ int hfsplus_ext_cmp_key(hfsplus_btree_key *k1, hfsplus_btree_key *k2)
 	return be32_to_cpu(k1s) < be32_to_cpu(k2s) ? -1 : 1;
 }
 
-void hfsplus_ext_build_key(hfsplus_btree_key *key, u32 cnid,
-			  u32 block, u8 type)
+static void hfsplus_ext_build_key(hfsplus_btree_key *key, u32 cnid,
+				  u32 block, u8 type)
 {
 	key->key_len = cpu_to_be16(HFSPLUS_EXT_KEYLEN - 2);
 	key->ext.cnid = cpu_to_be32(cnid);
@@ -263,8 +263,9 @@ static int hfsplus_add_extent(struct hfsplus_extent *extent, u32 offset,
 	return -EIO;
 }
 
-int hfsplus_free_extents(struct super_block *sb, struct hfsplus_extent *extent,
-			 u32 offset, u32 block_nr)
+static int hfsplus_free_extents(struct super_block *sb,
+				struct hfsplus_extent *extent,
+				u32 offset, u32 block_nr)
 {
 	u32 count, start;
 	int i;
@@ -460,7 +461,9 @@ void hfsplus_file_truncate(struct inode *inode)
 		page_cache_release(page);
 		mark_inode_dirty(inode);
 		return;
-	}
+	} else if (inode->i_size == HFSPLUS_I(inode).phys_size)
+		return;
+
 	blk_cnt = (inode->i_size + HFSPLUS_SB(sb).alloc_blksz - 1) >> HFSPLUS_SB(sb).alloc_blksz_shift;
 	alloc_cnt = HFSPLUS_I(inode).alloc_blocks;
 	if (blk_cnt == alloc_cnt)

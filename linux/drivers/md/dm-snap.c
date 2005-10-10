@@ -777,7 +777,7 @@ static int snapshot_map(struct dm_target *ti, struct bio *bio,
 
 	/* Full snapshots are not usable */
 	if (!s->valid)
-		return -1;
+		return -EIO;
 
 	/*
 	 * Write to snapshot - higher level takes care of RW/RO
@@ -864,8 +864,6 @@ static int snapshot_status(struct dm_target *ti, status_type_t type,
 			   char *result, unsigned int maxlen)
 {
 	struct dm_snapshot *snap = (struct dm_snapshot *) ti->private;
-	char cow[32];
-	char org[32];
 
 	switch (type) {
 	case STATUSTYPE_INFO:
@@ -892,9 +890,8 @@ static int snapshot_status(struct dm_target *ti, status_type_t type,
 		 * to make private copies if the output is to
 		 * make sense.
 		 */
-		format_dev_t(cow, snap->cow->bdev->bd_dev);
-		format_dev_t(org, snap->origin->bdev->bd_dev);
-		snprintf(result, maxlen, "%s %s %c " SECTOR_FORMAT, org, cow,
+		snprintf(result, maxlen, "%s %s %c " SECTOR_FORMAT,
+			 snap->origin->name, snap->cow->name,
 			 snap->type, snap->chunk_size);
 		break;
 	}
@@ -932,6 +929,10 @@ static int __origin_write(struct list_head *snapshots, struct bio *bio)
 
 		/* Only deal with valid snapshots */
 		if (!snap->valid)
+			continue;
+
+		/* Nothing to do if writing beyond end of snapshot */
+		if (bio->bi_sector >= dm_table_get_size(snap->table))
 			continue;
 
 		down_write(&snap->lock);
@@ -1082,7 +1083,6 @@ static int origin_status(struct dm_target *ti, status_type_t type, char *result,
 			 unsigned int maxlen)
 {
 	struct dm_dev *dev = (struct dm_dev *) ti->private;
-	char buffer[32];
 
 	switch (type) {
 	case STATUSTYPE_INFO:
@@ -1090,8 +1090,7 @@ static int origin_status(struct dm_target *ti, status_type_t type, char *result,
 		break;
 
 	case STATUSTYPE_TABLE:
-		format_dev_t(buffer, dev->bdev->bd_dev);
-		snprintf(result, maxlen, "%s", buffer);
+		snprintf(result, maxlen, "%s", dev->name);
 		break;
 	}
 

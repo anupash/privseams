@@ -122,6 +122,9 @@
 
 #include "dm.h"
 
+#if defined(CONFIG_GAMEPORT) || (defined(MODULE) && defined(CONFIG_GAMEPORT_MODULE))
+#define SUPPORT_JOYSTICK 1
+#endif
 
 /* --------------------------------------------------------------------- */
 
@@ -365,7 +368,9 @@ struct sv_state {
 		unsigned char obuf[MIDIOUTBUF];
 	} midi;
 
-	struct gameport gameport;
+#if SUPPORT_JOYSTICK
+	struct gameport *gameport;
+#endif
 };
 
 /* --------------------------------------------------------------------- */
@@ -1149,7 +1154,7 @@ static int mixer_ioctl(struct sv_state *s, unsigned int cmd, unsigned long arg)
 			if (mixtable[i].rec)
 				break;
 		}
-		if (!mixtable[i].rec)
+		if (i == SOUND_MIXER_NRDEVICES)
 			return 0;
 		spin_lock_irqsave(&s->lock, flags);
 		frobindir(s, SV_CIMIX_ADCINL, 0x1f, mixtable[i].rec << 5);
@@ -2485,12 +2490,53 @@ static struct initvol {
 #define RSRCISIOREGION(dev,num) (pci_resource_start((dev), (num)) != 0 && \
 				 (pci_resource_flags((dev), (num)) & IORESOURCE_IO))
 
+#ifdef SUPPORT_JOYSTICK
+static int __devinit sv_register_gameport(struct sv_state *s, int io_port)
+{
+	struct gameport *gp;
+
+	if (!request_region(io_port, SV_EXTENT_GAME, "S3 SonicVibes Gameport")) {
+		printk(KERN_ERR "sv: gameport io ports are in use\n");
+		return -EBUSY;
+	}
+
+	s->gameport = gp = gameport_allocate_port();
+	if (!gp) {
+		printk(KERN_ERR "sv: can not allocate memory for gameport\n");
+		release_region(io_port, SV_EXTENT_GAME);
+		return -ENOMEM;
+	}
+
+	gameport_set_name(gp, "S3 SonicVibes Gameport");
+	gameport_set_phys(gp, "isa%04x/gameport0", io_port);
+	gp->dev.parent = &s->dev->dev;
+	gp->io = io_port;
+
+	gameport_register_port(gp);
+
+	return 0;
+}
+
+static inline void sv_unregister_gameport(struct sv_state *s)
+{
+	if (s->gameport) {
+		int gpio = s->gameport->io;
+		gameport_unregister_port(s->gameport);
+		release_region(gpio, SV_EXTENT_GAME);
+	}
+}
+#else
+static inline int sv_register_gameport(struct sv_state *s, int io_port) { return -ENOSYS; }
+static inline void sv_unregister_gameport(struct sv_state *s) { }
+#endif /* SUPPORT_JOYSTICK */
+
 static int __devinit sv_probe(struct pci_dev *pcidev, const struct pci_device_id *pciid)
 {
 	static char __devinitdata sv_ddma_name[] = "S3 Inc. SonicVibes DDMA Controller";
        	struct sv_state *s;
 	mm_segment_t fs;
 	int i, val, ret;
+	int gpio;
 	char *ddmaname;
 	unsigned ddmanamelen;
 
@@ -2546,11 +2592,11 @@ static int __devinit sv_probe(struct pci_dev *pcidev, const struct pci_device_id
 	s->iomidi = pci_resource_start(pcidev, RESOURCE_MIDI);
 	s->iodmaa = pci_resource_start(pcidev, RESOURCE_DDMA);
 	s->iodmac = pci_resource_start(pcidev, RESOURCE_DDMA) + SV_EXTENT_DMA;
-	s->gameport.io = pci_resource_start(pcidev, RESOURCE_GAME);
+	gpio = pci_resource_start(pcidev, RESOURCE_GAME);
 	pci_write_config_dword(pcidev, 0x40, s->iodmaa | 9);  /* enable and use extended mode */
 	pci_write_config_dword(pcidev, 0x48, s->iodmac | 9);  /* enable */
 	printk(KERN_DEBUG "sv: io ports: %#lx %#lx %#lx %#lx %#x %#x %#x\n",
-	       s->iosb, s->ioenh, s->iosynth, s->iomidi, s->gameport.io, s->iodmaa, s->iodmac);
+	       s->iosb, s->ioenh, s->iosynth, s->iomidi, gpio, s->iodmaa, s->iodmac);
 	s->irq = pcidev->irq;
 	
 	/* hack */
@@ -2577,10 +2623,7 @@ static int __devinit sv_probe(struct pci_dev *pcidev, const struct pci_device_id
 		printk(KERN_ERR "sv: io ports %#lx-%#lx in use\n", s->iosynth, s->iosynth+SV_EXTENT_SYNTH-1);
 		goto err_region1;
 	}
-	if (s->gameport.io && !request_region(s->gameport.io, SV_EXTENT_GAME, "ESS Solo1")) {
-		printk(KERN_ERR "sv: gameport io ports in use\n");
-		s->gameport.io = 0;
-	}
+
 	/* initialize codec registers */
 	outb(0x80, s->ioenh + SV_CODEC_CONTROL); /* assert reset */
 	udelay(50);
@@ -2639,7 +2682,7 @@ static int __devinit sv_probe(struct pci_dev *pcidev, const struct pci_device_id
 	}
 	set_fs(fs);
 	/* register gameport */
-	gameport_register_port(&s->gameport);
+	sv_register_gameport(s, gpio);
 	/* store it in the driver field */
 	pci_set_drvdata(pcidev, s);
 	/* put it into driver list */
@@ -2659,8 +2702,6 @@ static int __devinit sv_probe(struct pci_dev *pcidev, const struct pci_device_id
 	printk(KERN_ERR "sv: cannot register misc device\n");
 	free_irq(s->irq, s);
  err_irq:
-	if (s->gameport.io)
-		release_region(s->gameport.io, SV_EXTENT_GAME);
 	release_region(s->iosynth, SV_EXTENT_SYNTH);
  err_region1:
 	release_region(s->iomidi, SV_EXTENT_MIDI);
@@ -2689,10 +2730,7 @@ static void __devexit sv_remove(struct pci_dev *dev)
 	/*outb(0, s->iodmaa + SV_DMA_RESET);*/
 	/*outb(0, s->iodmac + SV_DMA_RESET);*/
 	free_irq(s->irq, s);
-	if (s->gameport.io) {
-		gameport_unregister_port(&s->gameport);
-		release_region(s->gameport.io, SV_EXTENT_GAME);
-	}
+	sv_unregister_gameport(s);
 	release_region(s->iodmac, SV_EXTENT_DMA);
 	release_region(s->iodmaa, SV_EXTENT_DMA);
 	release_region(s->ioenh, SV_EXTENT_ENH);

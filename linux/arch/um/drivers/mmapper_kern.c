@@ -9,18 +9,11 @@
  *
  */
 
-#include <linux/types.h>
-#include <linux/kdev_t.h>
-#include <linux/time.h>
-#include <linux/devfs_fs_kernel.h>
+#include <linux/init.h> 
 #include <linux/module.h>
 #include <linux/mm.h> 
-#include <linux/slab.h>
-#include <linux/init.h> 
-#include <linux/smp_lock.h>
+#include <linux/miscdevice.h>
 #include <asm/uaccess.h>
-#include <asm/irq.h>
-#include <asm/pgtable.h>
 #include "mem_user.h"
 #include "user_util.h"
  
@@ -30,35 +23,22 @@ static unsigned long p_buf = 0;
 static char *v_buf = NULL;
 
 static ssize_t
-mmapper_read(struct file *file, char *buf, size_t count, loff_t *ppos)
+mmapper_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 {
-	if(*ppos > mmapper_size)
-		return -EINVAL;
-
-	if(count + *ppos > mmapper_size)
-		count = count + *ppos - mmapper_size;
-
-	if(count < 0)
-		return -EINVAL;
- 
-	copy_to_user(buf,&v_buf[*ppos],count);
-	
-	return count;
+	return simple_read_from_buffer(buf, count, ppos, v_buf, mmapper_size);
 }
 
 static ssize_t
-mmapper_write(struct file *file, const char *buf, size_t count, loff_t *ppos)
+mmapper_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos)
 {
-	if(*ppos > mmapper_size)
+	if (*ppos > mmapper_size)
 		return -EINVAL;
 
-	if(count + *ppos > mmapper_size)
-		count = count + *ppos - mmapper_size;
+	if (count > mmapper_size - *ppos)
+		count = mmapper_size - *ppos;
 
-	if(count < 0)
-		return -EINVAL;
-
-	copy_from_user(&v_buf[*ppos],buf,count);
+	if (copy_from_user(&v_buf[*ppos], buf, count))
+		return -EFAULT;
 	
 	return count;
 }
@@ -76,7 +56,6 @@ mmapper_mmap(struct file *file, struct vm_area_struct * vma)
 	int ret = -EINVAL;
 	int size;
 
-	lock_kernel();
 	if (vma->vm_pgoff != 0)
 		goto out;
 	
@@ -91,7 +70,6 @@ mmapper_mmap(struct file *file, struct vm_area_struct * vma)
 		goto out;
 	ret = 0;
 out:
-	unlock_kernel();
 	return ret;
 }
 
@@ -117,24 +95,39 @@ static struct file_operations mmapper_fops = {
 	.release	= mmapper_release,
 };
 
+static struct miscdevice mmapper_dev = {
+	.minor		= MISC_DYNAMIC_MINOR,
+	.name		= "mmapper",
+	.fops		= &mmapper_fops
+};
+
 static int __init mmapper_init(void)
 {
+	int err;
+
 	printk(KERN_INFO "Mapper v0.1\n");
 
 	v_buf = (char *) find_iomem("mmapper", &mmapper_size);
 	if(mmapper_size == 0){
 		printk(KERN_ERR "mmapper_init - find_iomem failed\n");
-		return(0);
+		goto out;
+	}
+
+	err = misc_register(&mmapper_dev);
+	if(err){
+		printk(KERN_ERR "mmapper - misc_register failed, err = %d\n",
+		       err);
+		goto out;
 	}
 
 	p_buf = __pa(v_buf);
-
-	devfs_mk_cdev(MKDEV(30, 0), S_IFCHR|S_IRUGO|S_IWUGO, "mmapper");
-	return(0);
+out:
+	return 0;
 }
 
 static void mmapper_exit(void)
 {
+	misc_deregister(&mmapper_dev);
 }
 
 module_init(mmapper_init);

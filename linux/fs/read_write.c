@@ -10,7 +10,7 @@
 #include <linux/file.h>
 #include <linux/uio.h>
 #include <linux/smp_lock.h>
-#include <linux/dnotify.h>
+#include <linux/fsnotify.h>
 #include <linux/security.h>
 #include <linux/module.h>
 #include <linux/syscalls.h>
@@ -203,6 +203,16 @@ Einval:
 	return -EINVAL;
 }
 
+static void wait_on_retry_sync_kiocb(struct kiocb *iocb)
+{
+	set_current_state(TASK_UNINTERRUPTIBLE);
+	if (!kiocbIsKicked(iocb))
+		schedule();
+	else
+		kiocbClearKicked(iocb);
+	__set_current_state(TASK_RUNNING);
+}
+
 ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *ppos)
 {
 	struct kiocb kiocb;
@@ -210,7 +220,10 @@ ssize_t do_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *pp
 
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
-	ret = filp->f_op->aio_read(&kiocb, buf, len, kiocb.ki_pos);
+	while (-EIOCBRETRY ==
+		(ret = filp->f_op->aio_read(&kiocb, buf, len, kiocb.ki_pos)))
+		wait_on_retry_sync_kiocb(&kiocb);
+
 	if (-EIOCBQUEUED == ret)
 		ret = wait_on_sync_kiocb(&kiocb);
 	*ppos = kiocb.ki_pos;
@@ -239,7 +252,7 @@ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
 			else
 				ret = do_sync_read(file, buf, count, pos);
 			if (ret > 0) {
-				dnotify_parent(file->f_dentry, DN_ACCESS);
+				fsnotify_access(file->f_dentry);
 				current->rchar += ret;
 			}
 			current->syscr++;
@@ -258,7 +271,10 @@ ssize_t do_sync_write(struct file *filp, const char __user *buf, size_t len, lof
 
 	init_sync_kiocb(&kiocb, filp);
 	kiocb.ki_pos = *ppos;
-	ret = filp->f_op->aio_write(&kiocb, buf, len, kiocb.ki_pos);
+	while (-EIOCBRETRY ==
+	       (ret = filp->f_op->aio_write(&kiocb, buf, len, kiocb.ki_pos)))
+		wait_on_retry_sync_kiocb(&kiocb);
+
 	if (-EIOCBQUEUED == ret)
 		ret = wait_on_sync_kiocb(&kiocb);
 	*ppos = kiocb.ki_pos;
@@ -287,7 +303,7 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 			else
 				ret = do_sync_write(file, buf, count, pos);
 			if (ret > 0) {
-				dnotify_parent(file->f_dentry, DN_MODIFY);
+				fsnotify_modify(file->f_dentry);
 				current->wchar += ret;
 			}
 			current->syscw++;
@@ -467,10 +483,10 @@ static ssize_t do_readv_writev(int type, struct file *file,
 		void __user *buf = iov[seg].iov_base;
 		ssize_t len = (ssize_t)iov[seg].iov_len;
 
-		if (unlikely(!access_ok(vrfy_dir(type), buf, len)))
-			goto Efault;
 		if (len < 0)	/* size_t not fitting an ssize_t .. */
 			goto out;
+		if (unlikely(!access_ok(vrfy_dir(type), buf, len)))
+			goto Efault;
 		tot_len += len;
 		if ((ssize_t)tot_len < 0) /* maths overflow on the ssize_t */
 			goto out;
@@ -523,9 +539,12 @@ static ssize_t do_readv_writev(int type, struct file *file,
 out:
 	if (iov != iovstack)
 		kfree(iov);
-	if ((ret + (type == READ)) > 0)
-		dnotify_parent(file->f_dentry,
-				(type == READ) ? DN_ACCESS : DN_MODIFY);
+	if ((ret + (type == READ)) > 0) {
+		if (type == READ)
+			fsnotify_access(file->f_dentry);
+		else
+			fsnotify_modify(file->f_dentry);
+	}
 	return ret;
 Efault:
 	ret = -EFAULT;

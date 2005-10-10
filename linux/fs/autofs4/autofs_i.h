@@ -84,6 +84,7 @@ struct autofs_wait_queue {
 	char *name;
 	/* This is for status reporting upon return */
 	int status;
+	atomic_t notified;
 	atomic_t wait_ctr;
 };
 
@@ -91,6 +92,7 @@ struct autofs_wait_queue {
 
 struct autofs_sb_info {
 	u32 magic;
+	struct dentry *root;
 	struct file *pipe;
 	pid_t oz_pgrp;
 	int catatonic;
@@ -101,6 +103,7 @@ struct autofs_sb_info {
 	int needs_reghost;
 	struct super_block *sb;
 	struct semaphore wq_sem;
+	spinlock_t fs_lock;
 	struct autofs_wait_queue *queues; /* Wait queue pointer */
 };
 
@@ -126,9 +129,18 @@ static inline int autofs4_oz_mode(struct autofs_sb_info *sbi) {
 static inline int autofs4_ispending(struct dentry *dentry)
 {
 	struct autofs_info *inf = autofs4_dentry_ino(dentry);
+	int pending = 0;
 
-	return (dentry->d_flags & DCACHE_AUTOFS_PENDING) ||
-		(inf != NULL && inf->flags & AUTOFS_INF_EXPIRING);
+	if (dentry->d_flags & DCACHE_AUTOFS_PENDING)
+		return 1;
+
+	if (inf) {
+		spin_lock(&inf->sbi->fs_lock);
+		pending = inf->flags & AUTOFS_INF_EXPIRING;
+		spin_unlock(&inf->sbi->fs_lock);
+	}
+
+	return pending;
 }
 
 static inline void autofs4_copy_atime(struct file *src, struct file *dst)
@@ -173,6 +185,19 @@ enum autofs_notify
 int autofs4_wait(struct autofs_sb_info *,struct dentry *, enum autofs_notify);
 int autofs4_wait_release(struct autofs_sb_info *,autofs_wqt_t,int);
 void autofs4_catatonic_mode(struct autofs_sb_info *);
+
+static inline int autofs4_follow_mount(struct vfsmount **mnt, struct dentry **dentry)
+{
+	int res = 0;
+
+	while (d_mountpoint(*dentry)) {
+		int followed = follow_down(mnt, dentry);
+		if (!followed)
+			break;
+		res = 1;
+	}
+	return res;
+}
 
 static inline int simple_positive(struct dentry *dentry)
 {

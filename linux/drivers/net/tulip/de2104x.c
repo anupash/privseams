@@ -446,13 +446,13 @@ static void de_rx (struct de_private *de)
 
 			mapping =
 			de->rx_skb[rx_tail].mapping =
-				pci_map_single(de->pdev, copy_skb->tail,
+				pci_map_single(de->pdev, copy_skb->data,
 					       buflen, PCI_DMA_FROMDEVICE);
 			de->rx_skb[rx_tail].skb = copy_skb;
 		} else {
 			pci_dma_sync_single_for_cpu(de->pdev, mapping, len, PCI_DMA_FROMDEVICE);
 			skb_reserve(copy_skb, RX_OFFSET);
-			memcpy(skb_put(copy_skb, len), skb->tail, len);
+			memcpy(skb_put(copy_skb, len), skb->data, len);
 
 			pci_dma_sync_single_for_device(de->pdev, mapping, len, PCI_DMA_FROMDEVICE);
 
@@ -1269,7 +1269,7 @@ static int de_refill_rx (struct de_private *de)
 		skb->dev = de->dev;
 
 		de->rx_skb[i].mapping = pci_map_single(de->pdev,
-			skb->tail, de->rx_buf_sz, PCI_DMA_FROMDEVICE);
+			skb->data, de->rx_buf_sz, PCI_DMA_FROMDEVICE);
 		de->rx_skb[i].skb = skb;
 
 		de->rx_ring[i].opts1 = cpu_to_le32(DescOwn);
@@ -1927,7 +1927,7 @@ bad_srom:
 	goto fill_defaults;
 }
 
-static int __devinit de_init_one (struct pci_dev *pdev,
+static int __init de_init_one (struct pci_dev *pdev,
 				  const struct pci_device_id *ent)
 {
 	struct net_device *dev;
@@ -2102,7 +2102,7 @@ static void __exit de_remove_one (struct pci_dev *pdev)
 
 #ifdef CONFIG_PM
 
-static int de_suspend (struct pci_dev *pdev, u32 state)
+static int de_suspend (struct pci_dev *pdev, pm_message_t state)
 {
 	struct net_device *dev = pci_get_drvdata (pdev);
 	struct de_private *de = dev->priv;

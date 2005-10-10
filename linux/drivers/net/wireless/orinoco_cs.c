@@ -31,7 +31,6 @@
 #include <linux/etherdevice.h>
 #include <linux/wireless.h>
 
-#include <pcmcia/version.h>
 #include <pcmcia/cs_types.h>
 #include <pcmcia/cs.h>
 #include <pcmcia/cistpl.h>
@@ -57,8 +56,8 @@ MODULE_LICENSE("Dual MPL/GPL");
 /* Some D-Link cards have buggy CIS. They do work at 5v properly, but
  * don't have any CIS entry for it. This workaround it... */
 static int ignore_cis_vcc; /* = 0 */
-
 module_param(ignore_cis_vcc, int, 0);
+MODULE_PARM_DESC(ignore_cis_vcc, "Allow voltage mismatch between card and socket");
 
 /********************************************************************/
 /* Magic constants						    */
@@ -128,6 +127,7 @@ orinoco_cs_hard_reset(struct orinoco_private *priv)
 	if (err)
 		return err;
 
+	msleep(100);
 	clear_bit(0, &card->hard_reset_in_progress);
 
 	return 0;
@@ -166,9 +166,10 @@ orinoco_cs_attach(void)
 	link->priv = dev;
 
 	/* Interrupt setup */
-	link->irq.Attributes = IRQ_TYPE_EXCLUSIVE;
+	link->irq.Attributes = IRQ_TYPE_EXCLUSIVE | IRQ_HANDLE_PRESENT;
 	link->irq.IRQInfo1 = IRQ_LEVEL_ID;
-	link->irq.Handler = NULL;
+	link->irq.Handler = orinoco_interrupt;
+	link->irq.Instance = dev; 
 
 	/* General socket configuration defaults can go here.  In this
 	 * client, we assume very little, and rely on the CIS for
@@ -184,11 +185,6 @@ orinoco_cs_attach(void)
 	dev_list = link;
 
 	client_reg.dev_info = &dev_info;
-	client_reg.EventMask =
-		CS_EVENT_CARD_INSERTION | CS_EVENT_CARD_REMOVAL |
-		CS_EVENT_RESET_PHYSICAL | CS_EVENT_CARD_RESET |
-		CS_EVENT_PM_SUSPEND | CS_EVENT_PM_RESUME;
-	client_reg.event_handler = &orinoco_cs_event;
 	client_reg.Version = 0x0210; /* FIXME: what does this mean? */
 	client_reg.event_callback_args.client_data = link;
 
@@ -235,7 +231,7 @@ static void orinoco_cs_detach(dev_link_t *link)
 		      dev);
 		unregister_netdev(dev);
 	}
-	free_netdev(dev);
+	free_orinocodev(dev);
 }				/* orinoco_cs_detach */
 
 /*
@@ -262,6 +258,7 @@ orinoco_cs_config(dev_link_t *link)
 	cisinfo_t info;
 	tuple_t tuple;
 	cisparse_t parse;
+	void __iomem *mem;
 
 	CS_CHECK(ValidateCIS, pcmcia_validate_cis(handle, &info));
 
@@ -308,8 +305,8 @@ orinoco_cs_config(dev_link_t *link)
 		cistpl_cftable_entry_t *cfg = &(parse.cftable_entry);
 		cistpl_cftable_entry_t dflt = { .index = 0 };
 
-		if (pcmcia_get_tuple_data(handle, &tuple) != 0 ||
-				pcmcia_parse_tuple(handle, &tuple, &parse) != 0)
+		if ( (pcmcia_get_tuple_data(handle, &tuple) != 0)
+		    || (pcmcia_parse_tuple(handle, &tuple, &parse) != 0))
 			goto next_entry;
 
 		if (cfg->flags & CISTPL_CFTABLE_DEFAULT)
@@ -348,8 +345,7 @@ orinoco_cs_config(dev_link_t *link)
 			    dflt.vpp1.param[CISTPL_POWER_VNOM] / 10000;
 		
 		/* Do we need to allocate an interrupt? */
-		if (cfg->irq.IRQInfo1 || dflt.irq.IRQInfo1)
-			link->conf.Attributes |= CONF_ENABLE_IRQ;
+		link->conf.Attributes |= CONF_ENABLE_IRQ;
 
 		/* IO window settings */
 		link->io.NumPorts1 = link->io.NumPorts2 = 0;
@@ -390,7 +386,7 @@ orinoco_cs_config(dev_link_t *link)
 		last_ret = pcmcia_get_next_tuple(handle, &tuple);
 		if (last_ret  == CS_NO_MORE_ITEMS) {
 			printk(KERN_ERR PFX "GetNextTuple(): No matching "
-			       "CIS configuration, maybe you need the "
+			       "CIS configuration.  Maybe you need the "
 			       "ignore_cis_vcc=1 parameter.\n");
 			goto cs_failed;
 		}
@@ -401,20 +397,16 @@ orinoco_cs_config(dev_link_t *link)
 	 * a handler to the interrupt, unless the 'Handler' member of
 	 * the irq structure is initialized.
 	 */
-	if (link->conf.Attributes & CONF_ENABLE_IRQ) {
-		link->irq.Attributes = IRQ_TYPE_EXCLUSIVE | IRQ_HANDLE_PRESENT;
-		link->irq.IRQInfo1 = IRQ_LEVEL_ID;
-  		link->irq.Handler = orinoco_interrupt; 
-  		link->irq.Instance = dev; 
-		
-		CS_CHECK(RequestIRQ, pcmcia_request_irq(link->handle, &link->irq));
-	}
+	CS_CHECK(RequestIRQ, pcmcia_request_irq(link->handle, &link->irq));
 
 	/* We initialize the hermes structure before completing PCMCIA
 	 * configuration just in case the interrupt handler gets
 	 * called. */
-	hermes_struct_init(hw, link->io.BasePort1,
-				HERMES_IO, HERMES_16BIT_REGSPACING);
+	mem = ioport_map(link->io.BasePort1, link->io.NumPorts1);
+	if (!mem)
+		goto cs_failed;
+
+	hermes_struct_init(hw, mem, HERMES_16BIT_REGSPACING);
 
 	/*
 	 * This actually configures the PCMCIA socket -- setting up
@@ -430,8 +422,6 @@ orinoco_cs_config(dev_link_t *link)
 	SET_MODULE_OWNER(dev);
 	card->node.major = card->node.minor = 0;
 
-	/* register_netdev will give us an ethX name */
-	dev->name[0] = '\0';
 	SET_NETDEV_DEV(dev, &handle_to_dev(handle));
 	/* Tell the stack we exist */
 	if (register_netdev(dev) != 0) {
@@ -454,8 +444,7 @@ orinoco_cs_config(dev_link_t *link)
 	if (link->conf.Vpp1)
 		printk(", Vpp %d.%d", link->conf.Vpp1 / 10,
 		       link->conf.Vpp1 % 10);
-	if (link->conf.Attributes & CONF_ENABLE_IRQ)
-		printk(", irq %d", link->irq.AssignedIRQ);
+	printk(", irq %d", link->irq.AssignedIRQ);
 	if (link->io.NumPorts1)
 		printk(", io 0x%04x-0x%04x", link->io.BasePort1,
 		       link->io.BasePort1 + link->io.NumPorts1 - 1);
@@ -498,6 +487,8 @@ orinoco_cs_release(dev_link_t *link)
 	if (link->irq.AssignedIRQ)
 		pcmcia_release_irq(link->handle, &link->irq);
 	link->state &= ~DEV_CONFIG;
+	if (priv->hw.iobase)
+		ioport_unmap(priv->hw.iobase);
 }				/* orinoco_cs_release */
 
 /*
@@ -519,12 +510,12 @@ orinoco_cs_event(event_t event, int priority,
 	case CS_EVENT_CARD_REMOVAL:
 		link->state &= ~DEV_PRESENT;
 		if (link->state & DEV_CONFIG) {
-			orinoco_lock(priv, &flags);
+			unsigned long flags;
 
+			spin_lock_irqsave(&priv->lock, flags);
 			netif_device_detach(dev);
 			priv->hw_unavailable++;
-
-			orinoco_unlock(priv, &flags);
+			spin_unlock_irqrestore(&priv->lock, flags);
 		}
 		break;
 
@@ -611,13 +602,63 @@ static char version[] __initdata = DRIVER_NAME " " DRIVER_VERSION
 	" (David Gibson <hermes@gibson.dropbear.id.au>, "
 	"Pavel Roskin <proski@gnu.org>, et al)";
 
+static struct pcmcia_device_id orinoco_cs_ids[] = {
+	PCMCIA_DEVICE_MANF_CARD(0x000b, 0x7300),
+	PCMCIA_DEVICE_MANF_CARD(0x0089, 0x0001),
+	PCMCIA_DEVICE_MANF_CARD(0x0138, 0x0002),
+	PCMCIA_DEVICE_MANF_CARD(0x0156, 0x0002),
+	PCMCIA_DEVICE_MANF_CARD(0x01eb, 0x080a),
+	PCMCIA_DEVICE_MANF_CARD(0x0261, 0x0002),
+	PCMCIA_DEVICE_MANF_CARD(0x0268, 0x0001),
+	PCMCIA_DEVICE_MANF_CARD(0x026f, 0x0305),
+	PCMCIA_DEVICE_MANF_CARD(0x0274, 0x1613),
+	PCMCIA_DEVICE_MANF_CARD(0x028a, 0x0002),
+	PCMCIA_DEVICE_MANF_CARD(0x028a, 0x0673),
+	PCMCIA_DEVICE_MANF_CARD(0x02aa, 0x0002),
+	PCMCIA_DEVICE_MANF_CARD(0x02ac, 0x0002),
+	PCMCIA_DEVICE_MANF_CARD(0x14ea, 0xb001),
+	PCMCIA_DEVICE_MANF_CARD(0x50c2, 0x7300),
+	PCMCIA_DEVICE_MANF_CARD(0x9005, 0x0021),
+	PCMCIA_DEVICE_MANF_CARD(0xc250, 0x0002),
+	PCMCIA_DEVICE_MANF_CARD(0xd601, 0x0002),
+	PCMCIA_DEVICE_MANF_CARD(0xd601, 0x0005),
+	PCMCIA_DEVICE_PROD_ID12("3Com", "3CRWE737A AirConnect Wireless LAN PC Card", 0x41240e5b, 0x56010af3),
+	PCMCIA_DEVICE_PROD_ID123("Instant Wireless ", " Network PC CARD", "Version 01.02", 0x11d901af, 0x6e9bd926, 0x4b74baa0),
+	PCMCIA_DEVICE_PROD_ID12("ACTIONTEC", "PRISM Wireless LAN PC Card", 0x393089da, 0xa71e69d5),
+	PCMCIA_DEVICE_PROD_ID12("Avaya Communication", "Avaya Wireless PC Card", 0xd8a43b78, 0x0d341169),
+	PCMCIA_DEVICE_PROD_ID12("BUFFALO", "WLI-PCM-L11G", 0x2decece3, 0xf57ca4b3),
+	PCMCIA_DEVICE_PROD_ID12("Cabletron", "RoamAbout 802.11 DS", 0x32d445f5, 0xedeffd90),
+	PCMCIA_DEVICE_PROD_ID12("corega K.K.", "Wireless LAN PCC-11", 0x5261440f, 0xa6405584),
+	PCMCIA_DEVICE_PROD_ID12("corega K.K.", "Wireless LAN PCCA-11", 0x5261440f, 0xdf6115f9),
+	PCMCIA_DEVICE_PROD_ID12("D", "Link DRC-650 11Mbps WLAN Card", 0x71b18589, 0xf144e3ac),
+	PCMCIA_DEVICE_PROD_ID12("D", "Link DWL-650 11Mbps WLAN Card", 0x71b18589, 0xb6f1b0ab),
+	PCMCIA_DEVICE_PROD_ID12("ELSA", "AirLancer MC-11", 0x4507a33a, 0xef54f0e3),
+	PCMCIA_DEVICE_PROD_ID12("HyperLink", "Wireless PC Card 11Mbps", 0x56cc3f1a, 0x0bcf220c),
+	PCMCIA_DEVICE_PROD_ID12("INTERSIL", "HFA384x/IEEE", 0x74c5e40d, 0xdb472a18),
+	PCMCIA_DEVICE_PROD_ID12("Lucent Technologies", "WaveLAN/IEEE", 0x23eb9949, 0xc562e72a),
+	PCMCIA_DEVICE_PROD_ID12("MELCO", "WLI-PCM-L11", 0x481e0094, 0x7360e410),
+	PCMCIA_DEVICE_PROD_ID12("MELCO", "WLI-PCM-L11G", 0x481e0094, 0xf57ca4b3),
+	PCMCIA_DEVICE_PROD_ID12("Microsoft", "Wireless Notebook Adapter MN-520", 0x5961bf85, 0x6eec8c01),
+	PCMCIA_DEVICE_PROD_ID12("NCR", "WaveLAN/IEEE", 0x24358cd4, 0xc562e72a),
+	PCMCIA_DEVICE_PROD_ID12("NETGEAR MA401RA Wireless PC", "Card", 0x0306467f, 0x9762e8f1),
+	PCMCIA_DEVICE_PROD_ID12("PLANEX", "GeoWave/GW-CF110", 0x209f40ab, 0xd9715264),
+	PCMCIA_DEVICE_PROD_ID12("PROXIM", "LAN PC CARD HARMONY 80211B", 0xc6536a5e, 0x090c3cd9),
+	PCMCIA_DEVICE_PROD_ID12("PROXIM", "LAN PCI CARD HARMONY 80211B", 0xc6536a5e, 0x9f494e26),
+	PCMCIA_DEVICE_PROD_ID12("SAMSUNG", "11Mbps WLAN Card", 0x43d74cb4, 0x579bd91b),
+	PCMCIA_DEVICE_PROD_ID1("Symbol Technologies", 0x3f02b4d6),
+	PCMCIA_DEVICE_NULL,
+};
+MODULE_DEVICE_TABLE(pcmcia, orinoco_cs_ids);
+
 static struct pcmcia_driver orinoco_driver = {
 	.owner		= THIS_MODULE,
 	.drv		= {
 		.name	= DRIVER_NAME,
 	},
 	.attach		= orinoco_cs_attach,
+	.event		= orinoco_cs_event,
 	.detach		= orinoco_cs_detach,
+	.id_table       = orinoco_cs_ids,
 };
 
 static int __init

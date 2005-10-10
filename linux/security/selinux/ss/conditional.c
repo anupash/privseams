@@ -166,16 +166,14 @@ static void cond_list_destroy(struct cond_node *list)
 
 void cond_policydb_destroy(struct policydb *p)
 {
-	if (p->bool_val_to_struct != NULL)
-		kfree(p->bool_val_to_struct);
+	kfree(p->bool_val_to_struct);
 	avtab_destroy(&p->te_cond_avtab);
 	cond_list_destroy(p->cond_list);
 }
 
 int cond_init_bool_indexes(struct policydb *p)
 {
-	if (p->bool_val_to_struct)
-		kfree(p->bool_val_to_struct);
+	kfree(p->bool_val_to_struct);
 	p->bool_val_to_struct = (struct cond_bool_datum**)
 		kmalloc(p->p_bools.nprim * sizeof(struct cond_bool_datum*), GFP_KERNEL);
 	if (!p->bool_val_to_struct)
@@ -185,8 +183,7 @@ int cond_init_bool_indexes(struct policydb *p)
 
 int cond_destroy_bool(void *key, void *datum, void *p)
 {
-	if (key)
-		kfree(key);
+	kfree(key);
 	kfree(datum);
 	return 0;
 }
@@ -208,7 +205,7 @@ int cond_index_bool(void *key, void *datum, void *datap)
 	return 0;
 }
 
-int bool_isvalid(struct cond_bool_datum *b)
+static int bool_isvalid(struct cond_bool_datum *b)
 {
 	if (!(b->state == 0 || b->state == 1))
 		return 0;

@@ -4,6 +4,7 @@
 
 #include <linux/pci.h>
 #include <linux/init.h>
+#include <linux/module.h>
 #include "pci.h"
 #include "pci-functions.h"
 
@@ -172,7 +173,8 @@ static int __devinit pci_bios_find_device (unsigned short vendor, unsigned short
 	return (int) (ret & 0xff00) >> 8;
 }
 
-static int pci_bios_read (int seg, int bus, int devfn, int reg, int len, u32 *value)
+static int pci_bios_read(unsigned int seg, unsigned int bus,
+			 unsigned int devfn, int reg, int len, u32 *value)
 {
 	unsigned long result = 0;
 	unsigned long flags;
@@ -227,7 +229,8 @@ static int pci_bios_read (int seg, int bus, int devfn, int reg, int len, u32 *va
 	return (int)((result & 0xff00) >> 8);
 }
 
-static int pci_bios_write (int seg, int bus, int devfn, int reg, int len, u32 value)
+static int pci_bios_write(unsigned int seg, unsigned int bus,
+			  unsigned int devfn, int reg, int len, u32 value)
 {
 	unsigned long result = 0;
 	unsigned long flags;
@@ -454,7 +457,7 @@ struct irq_routing_table * __devinit pcibios_get_irq_routing_table(void)
 	free_page(page);
 	return rt;
 }
-
+EXPORT_SYMBOL(pcibios_get_irq_routing_table);
 
 int pcibios_set_irq_routing(struct pci_dev *dev, int pin, int irq)
 {
@@ -471,6 +474,7 @@ int pcibios_set_irq_routing(struct pci_dev *dev, int pin, int irq)
 		  "S" (&pci_indirect));
 	return !(ret & 0xff00);
 }
+EXPORT_SYMBOL(pcibios_set_irq_routing);
 
 static int __init pci_pcbios_init(void)
 {

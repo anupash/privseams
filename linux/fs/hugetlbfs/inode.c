@@ -40,7 +40,7 @@ static struct inode_operations hugetlbfs_inode_operations;
 
 static struct backing_dev_info hugetlbfs_backing_dev_info = {
 	.ra_pages	= 0,	/* No readahead */
-	.memory_backed	= 1,	/* Does not contribute to dirty memory */
+	.capabilities	= BDI_CAP_NO_ACCT_DIRTY | BDI_CAP_NO_WRITEBACK,
 };
 
 int sysctl_hugetlb_shm_group;
@@ -121,6 +121,9 @@ hugetlb_get_unmapped_area(struct file *file, unsigned long addr,
 	}
 
 	start_addr = mm->free_area_cache;
+
+	if (len <= mm->cached_hole_size)
+		start_addr = TASK_UNMAPPED_BASE;
 
 full_search:
 	addr = ALIGN(start_addr, HPAGE_SIZE);

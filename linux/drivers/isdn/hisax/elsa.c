@@ -33,13 +33,13 @@
 
 extern const char *CardType[];
 
-const char *Elsa_revision = "$Revision: 2.32.2.4 $";
-const char *Elsa_Types[] =
+static const char *Elsa_revision = "$Revision: 2.32.2.4 $";
+static const char *Elsa_Types[] =
 {"None", "PC", "PCC-8", "PCC-16", "PCF", "PCF-Pro",
  "PCMCIA", "QS 1000", "QS 3000", "Microlink PCI", "QS 3000 PCI", 
  "PCMCIA-IPAC" };
 
-const char *ITACVer[] =
+static const char *ITACVer[] =
 {"?0?", "?1?", "?2?", "?3?", "?4?", "V2.2",
  "B1", "A1"};
 
@@ -425,7 +425,7 @@ Start_IPAC:
 	return IRQ_HANDLED;
 }
 
-void
+static void
 release_io_elsa(struct IsdnCardState *cs)
 {
 	int bytecnt = 8;
@@ -838,7 +838,7 @@ static 	struct pci_dev *dev_qs1000 __devinitdata = NULL;
 static 	struct pci_dev *dev_qs3000 __devinitdata = NULL;
 
 #ifdef __ISAPNP__
-static struct isapnp_device_id elsa_ids[] __initdata = {
+static struct isapnp_device_id elsa_ids[] __devinitdata = {
 	{ ISAPNP_VENDOR('E', 'L', 'S'), ISAPNP_FUNCTION(0x0133),
 	  ISAPNP_VENDOR('E', 'L', 'S'), ISAPNP_FUNCTION(0x0133), 
 	  (unsigned long) "Elsa QS1000" },
@@ -848,7 +848,7 @@ static struct isapnp_device_id elsa_ids[] __initdata = {
 	{ 0, }
 };
 
-static struct isapnp_device_id *ipid __initdata = &elsa_ids[0];
+static struct isapnp_device_id *ipid __devinitdata = &elsa_ids[0];
 static struct pnp_card *pnp_c __devinitdata = NULL;
 #endif
 

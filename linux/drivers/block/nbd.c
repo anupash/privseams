@@ -38,7 +38,7 @@
  * 03-06-24 Cleanup PARANOIA usage & code. <ldl@aros.net>
  * 04-02-19 Remove PARANOIA, plus various cleanups (Paul Clements)
  * possible FIXME: make set_sock / set_blksize / set_size / do_it one syscall
- * why not: would need verify_area and friends, would share yet another 
+ * why not: would need access_ok and friends, would share yet another
  *          structure with userland
  */
 
@@ -78,6 +78,7 @@
 #define DBG_RX          0x0200
 #define DBG_TX          0x0400
 static unsigned int debugflags;
+static unsigned int nbds_max = 16;
 #endif /* NDEBUG */
 
 static struct nbd_device nbd_dev[MAX_NBD];
@@ -315,7 +316,7 @@ static inline int sock_recv_bvec(struct socket *sock, struct bio_vec *bvec)
 }
 
 /* NULL returned = something went wrong, inform userspace */
-struct request *nbd_read_stat(struct nbd_device *lo)
+static struct request *nbd_read_stat(struct nbd_device *lo)
 {
 	int result;
 	struct nbd_reply reply;
@@ -377,7 +378,7 @@ harderror:
 	return NULL;
 }
 
-void nbd_do_it(struct nbd_device *lo)
+static void nbd_do_it(struct nbd_device *lo)
 {
 	struct request *req;
 
@@ -388,7 +389,7 @@ void nbd_do_it(struct nbd_device *lo)
 	return;
 }
 
-void nbd_clear_que(struct nbd_device *lo)
+static void nbd_clear_que(struct nbd_device *lo)
 {
 	struct request *req;
 
@@ -549,7 +550,7 @@ static int nbd_ioctl(struct inode *inode, struct file *file,
 		file = fget(arg);
 		if (file) {
 			inode = file->f_dentry->d_inode;
-			if (inode->i_sock) {
+			if (S_ISSOCK(inode->i_mode)) {
 				lo->file = file;
 				lo->sock = SOCKET_I(inode);
 				error = 0;
@@ -647,7 +648,13 @@ static int __init nbd_init(void)
 		return -EIO;
 	}
 
-	for (i = 0; i < MAX_NBD; i++) {
+	if (nbds_max > MAX_NBD) {
+		printk(KERN_CRIT "nbd: cannot allocate more than %u nbds; %u requested.\n", MAX_NBD,
+				nbds_max);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < nbds_max; i++) {
 		struct gendisk *disk = alloc_disk(1);
 		if (!disk)
 			goto out;
@@ -673,7 +680,7 @@ static int __init nbd_init(void)
 	dprintk(DBG_INIT, "nbd: debugflags=0x%x\n", debugflags);
 
 	devfs_mk_dir("nbd");
-	for (i = 0; i < MAX_NBD; i++) {
+	for (i = 0; i < nbds_max; i++) {
 		struct gendisk *disk = nbd_dev[i].disk;
 		nbd_dev[i].file = NULL;
 		nbd_dev[i].magic = LO_MAGIC;
@@ -706,8 +713,9 @@ out:
 static void __exit nbd_cleanup(void)
 {
 	int i;
-	for (i = 0; i < MAX_NBD; i++) {
+	for (i = 0; i < nbds_max; i++) {
 		struct gendisk *disk = nbd_dev[i].disk;
+		nbd_dev[i].magic = 0;
 		if (disk) {
 			del_gendisk(disk);
 			blk_cleanup_queue(disk->queue);
@@ -725,6 +733,8 @@ module_exit(nbd_cleanup);
 MODULE_DESCRIPTION("Network Block Device");
 MODULE_LICENSE("GPL");
 
+module_param(nbds_max, int, 0444);
+MODULE_PARM_DESC(nbds_max, "How many network block devices to initialize.");
 #ifndef NDEBUG
 module_param(debugflags, int, 0644);
 MODULE_PARM_DESC(debugflags, "flags for controlling debug output");

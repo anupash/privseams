@@ -54,10 +54,10 @@
 #include <scsi/scsi_cmnd.h>
 #include <scsi/scsi_device.h>
 
+#include "usb.h"
 #include "transport.h"
 #include "protocol.h"
 #include "scsiglue.h"
-#include "usb.h"
 #include "debug.h"
 
 
@@ -266,8 +266,9 @@ int usb_stor_clear_halt(struct us_data *us, unsigned int pipe)
 		NULL, 0, 3*HZ);
 
 	/* reset the endpoint toggle */
-	usb_settoggle(us->pusb_dev, usb_pipeendpoint(pipe),
-		usb_pipeout(pipe), 0);
+	if (result >= 0)
+		usb_settoggle(us->pusb_dev, usb_pipeendpoint(pipe),
+				usb_pipeout(pipe), 0);
 
 	US_DEBUGP("%s: result = %d\n", __FUNCTION__, result);
 	return result;
@@ -383,7 +384,8 @@ int usb_stor_ctrl_transfer(struct us_data *us, unsigned int pipe,
  * This routine always uses us->recv_intr_pipe as the pipe and
  * us->ep_bInterval as the interrupt interval.
  */
-int usb_stor_intr_transfer(struct us_data *us, void *buf, unsigned int length)
+static int usb_stor_intr_transfer(struct us_data *us, void *buf,
+				  unsigned int length)
 {
 	int result;
 	unsigned int pipe = us->recv_intr_pipe;
@@ -436,7 +438,7 @@ int usb_stor_bulk_transfer_buf(struct us_data *us, unsigned int pipe,
  * This function does basically the same thing as usb_stor_bulk_transfer_buf()
  * above, but it uses the usbcore scatter-gather library.
  */
-int usb_stor_bulk_transfer_sglist(struct us_data *us, unsigned int pipe,
+static int usb_stor_bulk_transfer_sglist(struct us_data *us, unsigned int pipe,
 		struct scatterlist *sg, int num_sg, unsigned int length,
 		unsigned int *act_len)
 {
@@ -539,15 +541,15 @@ void usb_stor_invoke_transport(struct scsi_cmnd *srb, struct us_data *us)
 	 */
 	if (test_bit(US_FLIDX_TIMED_OUT, &us->flags)) {
 		US_DEBUGP("-- command was aborted\n");
-		goto Handle_Abort;
+		srb->result = DID_ABORT << 16;
+		goto Handle_Errors;
 	}
 
 	/* if there is a transport error, reset and don't auto-sense */
 	if (result == USB_STOR_TRANSPORT_ERROR) {
 		US_DEBUGP("-- transport indicates error, resetting\n");
-		us->transport_reset(us);
 		srb->result = DID_ERROR << 16;
-		return;
+		goto Handle_Errors;
 	}
 
 	/* if the transport provided its own sense data, don't auto-sense */
@@ -667,7 +669,8 @@ void usb_stor_invoke_transport(struct scsi_cmnd *srb, struct us_data *us)
 
 		if (test_bit(US_FLIDX_TIMED_OUT, &us->flags)) {
 			US_DEBUGP("-- auto-sense aborted\n");
-			goto Handle_Abort;
+			srb->result = DID_ABORT << 16;
+			goto Handle_Errors;
 		}
 		if (temp_result != USB_STOR_TRANSPORT_GOOD) {
 			US_DEBUGP("-- auto-sense failure\n");
@@ -676,9 +679,9 @@ void usb_stor_invoke_transport(struct scsi_cmnd *srb, struct us_data *us)
 			 * multi-target device, since failure of an
 			 * auto-sense is perfectly valid
 			 */
-			if (!(us->flags & US_FL_SCM_MULT_TARG))
-				us->transport_reset(us);
 			srb->result = DID_ERROR << 16;
+			if (!(us->flags & US_FL_SCM_MULT_TARG))
+				goto Handle_Errors;
 			return;
 		}
 
@@ -719,12 +722,28 @@ void usb_stor_invoke_transport(struct scsi_cmnd *srb, struct us_data *us)
 
 	return;
 
-	/* abort processing: the bulk-only transport requires a reset
-	 * following an abort */
-  Handle_Abort:
-	srb->result = DID_ABORT << 16;
-	if (us->protocol == US_PR_BULK)
+	/* Error and abort processing: try to resynchronize with the device
+	 * by issuing a port reset.  If that fails, try a class-specific
+	 * device reset. */
+  Handle_Errors:
+
+	/* Let the SCSI layer know we are doing a reset, set the
+	 * RESETTING bit, and clear the ABORTING bit so that the reset
+	 * may proceed. */
+	scsi_lock(us_to_host(us));
+	usb_stor_report_bus_reset(us);
+	set_bit(US_FLIDX_RESETTING, &us->flags);
+	clear_bit(US_FLIDX_ABORTING, &us->flags);
+	scsi_unlock(us_to_host(us));
+
+	result = usb_stor_port_reset(us);
+	if (result < 0) {
+		scsi_lock(us_to_host(us));
+		usb_stor_report_device_reset(us);
+		scsi_unlock(us_to_host(us));
 		us->transport_reset(us);
+	}
+	clear_bit(US_FLIDX_RESETTING, &us->flags);
 }
 
 /* Stop the current URB transfer */
@@ -991,11 +1010,11 @@ int usb_stor_Bulk_transport(struct scsi_cmnd *srb, struct us_data *us)
 	/* DATA STAGE */
 	/* send/receive data payload, if there is any */
 
-	/* Genesys Logic interface chips need a 100us delay between the
+	/* Some USB-IDE converter chips need a 100us delay between the
 	 * command phase and the data phase.  Some devices need a little
 	 * more than that, probably because of clock rate inaccuracies. */
-	if (le16_to_cpu(us->pusb_dev->descriptor.idVendor) == USB_VENDOR_ID_GENESYS)
-		udelay(110);
+	if (unlikely(us->flags & US_FL_GO_SLOW))
+		udelay(125);
 
 	if (transfer_length) {
 		unsigned int pipe = srb->sc_data_direction == DMA_FROM_DEVICE ? 
@@ -1055,19 +1074,31 @@ int usb_stor_Bulk_transport(struct scsi_cmnd *srb, struct us_data *us)
 	US_DEBUGP("Bulk Status S 0x%x T 0x%x R %u Stat 0x%x\n",
 			le32_to_cpu(bcs->Signature), bcs->Tag, 
 			residue, bcs->Status);
-	if ((bcs->Signature != cpu_to_le32(US_BULK_CS_SIGN) &&
-		    bcs->Signature != cpu_to_le32(US_BULK_CS_OLYMPUS_SIGN)) ||
-			bcs->Tag != srb->serial_number || 
-			bcs->Status > US_BULK_STAT_PHASE) {
+	if (bcs->Tag != srb->serial_number || bcs->Status > US_BULK_STAT_PHASE) {
 		US_DEBUGP("Bulk logical error\n");
+		return USB_STOR_TRANSPORT_ERROR;
+	}
+
+	/* Some broken devices report odd signatures, so we do not check them
+	 * for validity against the spec. We store the first one we see,
+	 * and check subsequent transfers for validity against this signature.
+	 */
+	if (!us->bcs_signature) {
+		us->bcs_signature = bcs->Signature;
+		if (us->bcs_signature != cpu_to_le32(US_BULK_CS_SIGN))
+			US_DEBUGP("Learnt BCS signature 0x%08X\n",
+					le32_to_cpu(us->bcs_signature));
+	} else if (bcs->Signature != us->bcs_signature) {
+		US_DEBUGP("Signature mismatch: got %08X, expecting %08X\n",
+			  le32_to_cpu(bcs->Signature),
+			  le32_to_cpu(us->bcs_signature));
 		return USB_STOR_TRANSPORT_ERROR;
 	}
 
 	/* try to compute the actual residue, based on how much data
 	 * was really transferred and what the device tells us */
 	if (residue) {
-		if (!(us->flags & US_FL_IGNORE_RESIDUE) ||
-				srb->sc_data_direction == DMA_TO_DEVICE) {
+		if (!(us->flags & US_FL_IGNORE_RESIDUE)) {
 			residue = min(residue, transfer_length);
 			srb->resid = max(srb->resid, (int) residue);
 		}
@@ -1111,7 +1142,7 @@ int usb_stor_Bulk_transport(struct scsi_cmnd *srb, struct us_data *us)
  * It's handy that every transport mechanism uses the control endpoint for
  * resets.
  *
- * Basically, we send a reset with a 20-second timeout, so we don't get
+ * Basically, we send a reset with a 5-second timeout, so we don't get
  * jammed attempting to do the reset.
  */
 static int usb_stor_reset_common(struct us_data *us,
@@ -1120,38 +1151,28 @@ static int usb_stor_reset_common(struct us_data *us,
 {
 	int result;
 	int result2;
-	int rc = FAILED;
 
-	/* Let the SCSI layer know we are doing a reset, set the
-	 * RESETTING bit, and clear the ABORTING bit so that the reset
-	 * may proceed.
-	 */
-	scsi_lock(us->host);
-	usb_stor_report_device_reset(us);
-	set_bit(US_FLIDX_RESETTING, &us->flags);
-	clear_bit(US_FLIDX_ABORTING, &us->flags);
-	scsi_unlock(us->host);
+	if (test_bit(US_FLIDX_DISCONNECTING, &us->flags)) {
+		US_DEBUGP("No reset during disconnect\n");
+		return -EIO;
+	}
 
-	/* A 20-second timeout may seem rather long, but a LaCie
-	 * StudioDrive USB2 device takes 16+ seconds to get going
-	 * following a powerup or USB attach event.
-	 */
 	result = usb_stor_control_msg(us, us->send_ctrl_pipe,
 			request, requesttype, value, index, data, size,
-			20*HZ);
+			5*HZ);
 	if (result < 0) {
 		US_DEBUGP("Soft reset failed: %d\n", result);
-		goto Done;
+		return result;
 	}
 
  	/* Give the device some time to recover from the reset,
  	 * but don't delay disconnect processing. */
- 	wait_event_interruptible_timeout(us->dev_reset_wait,
+ 	wait_event_interruptible_timeout(us->delay_wait,
  			test_bit(US_FLIDX_DISCONNECTING, &us->flags),
  			HZ*6);
 	if (test_bit(US_FLIDX_DISCONNECTING, &us->flags)) {
 		US_DEBUGP("Reset interrupted by disconnect\n");
-		goto Done;
+		return -EIO;
 	}
 
 	US_DEBUGP("Soft reset: clearing bulk-in endpoint halt\n");
@@ -1160,17 +1181,14 @@ static int usb_stor_reset_common(struct us_data *us,
 	US_DEBUGP("Soft reset: clearing bulk-out endpoint halt\n");
 	result2 = usb_stor_clear_halt(us, us->send_bulk_pipe);
 
-	/* return a result code based on the result of the control message */
-	if (result < 0 || result2 < 0) {
+	/* return a result code based on the result of the clear-halts */
+	if (result >= 0)
+		result = result2;
+	if (result < 0)
 		US_DEBUGP("Soft reset failed\n");
-		goto Done;
-	}
-	US_DEBUGP("Soft reset done\n");
-	rc = SUCCESS;
-
-  Done:
-	clear_bit(US_FLIDX_RESETTING, &us->flags);
-	return rc;
+	else
+		US_DEBUGP("Soft reset done\n");
+	return result;
 }
 
 /* This issues a CB[I] Reset to the device in question
@@ -1199,4 +1217,33 @@ int usb_stor_Bulk_reset(struct us_data *us)
 	return usb_stor_reset_common(us, US_BULK_RESET_REQUEST, 
 				 USB_TYPE_CLASS | USB_RECIP_INTERFACE,
 				 0, us->ifnum, NULL, 0);
+}
+
+/* Issue a USB port reset to the device.  But don't do anything if
+ * there's more than one interface in the device, so that other users
+ * are not affected. */
+int usb_stor_port_reset(struct us_data *us)
+{
+	int result, rc;
+
+	if (test_bit(US_FLIDX_DISCONNECTING, &us->flags)) {
+		result = -EIO;
+		US_DEBUGP("No reset during disconnect\n");
+	} else if (us->pusb_dev->actconfig->desc.bNumInterfaces != 1) {
+		result = -EBUSY;
+		US_DEBUGP("Refusing to reset a multi-interface device\n");
+	} else {
+		result = rc =
+			usb_lock_device_for_reset(us->pusb_dev, us->pusb_intf);
+		if (result < 0) {
+			US_DEBUGP("unable to lock device for reset: %d\n",
+					result);
+		} else {
+			result = usb_reset_device(us->pusb_dev);
+			if (rc)
+				usb_unlock_device(us->pusb_dev);
+			US_DEBUGP("usb_reset_device returns %d\n", result);
+		}
+	}
+	return result;
 }

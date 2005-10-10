@@ -332,11 +332,8 @@ static int via_set_drive(ide_drive_t *drive, u8 speed)
 	struct ide_timing t, p;
 	unsigned int T, UT;
 
-	if (speed != XFER_PIO_SLOW && speed != drive->current_speed)
-		if (ide_config_drive_speed(drive, speed))
-			printk(KERN_WARNING "ide%d: Drive %d didn't "
-				"accept speed setting. Oh, well.\n",
-				drive->dn >> 1, drive->dn & 1);
+	if (speed != XFER_PIO_SLOW)
+		ide_config_drive_speed(drive, speed);
 
 	T = 1000000000 / via_clock;
 
@@ -418,7 +415,7 @@ static int via82cxxx_ide_dma_check (ide_drive_t *drive)
  *	and initialize its drive independent registers.
  */
 
-static unsigned int __init init_chipset_via82cxxx(struct pci_dev *dev, const char *name)
+static unsigned int __devinit init_chipset_via82cxxx(struct pci_dev *dev, const char *name)
 {
 	struct pci_dev *isa = NULL;
 	u8 t, v;
@@ -579,7 +576,7 @@ static unsigned int __init init_chipset_via82cxxx(struct pci_dev *dev, const cha
 	return 0;
 }
 
-static void __init init_hwif_via82cxxx(ide_hwif_t *hwif)
+static void __devinit init_hwif_via82cxxx(ide_hwif_t *hwif)
 {
 	int i;
 

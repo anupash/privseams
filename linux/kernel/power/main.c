@@ -19,6 +19,9 @@
 
 #include "power.h"
 
+/*This is just an arbitrary number */
+#define FREE_PAGE_NUMBER (100)
+
 DECLARE_MUTEX(pm_sem);
 
 struct pm_ops * pm_ops = NULL;
@@ -49,15 +52,33 @@ void pm_set_ops(struct pm_ops * ops)
 static int suspend_prepare(suspend_state_t state)
 {
 	int error = 0;
+	unsigned int free_pages;
 
 	if (!pm_ops || !pm_ops->enter)
 		return -EPERM;
 
 	pm_prepare_console();
 
+	disable_nonboot_cpus();
+
+	if (num_online_cpus() != 1) {
+		error = -EPERM;
+		goto Enable_cpu;
+	}
+
 	if (freeze_processes()) {
 		error = -EAGAIN;
 		goto Thaw;
+	}
+
+	if ((free_pages = nr_free_pages()) < FREE_PAGE_NUMBER) {
+		pr_debug("PM: free some memory\n");
+		shrink_all_memory(FREE_PAGE_NUMBER - free_pages);
+		if (nr_free_pages() < FREE_PAGE_NUMBER) {
+			error = -ENOMEM;
+			printk(KERN_ERR "PM: No enough memory\n");
+			goto Thaw;
+		}
 	}
 
 	if (pm_ops->prepare) {
@@ -65,14 +86,18 @@ static int suspend_prepare(suspend_state_t state)
 			goto Thaw;
 	}
 
-	if ((error = device_suspend(PMSG_SUSPEND)))
+	if ((error = device_suspend(PMSG_SUSPEND))) {
+		printk(KERN_ERR "Some devices failed to suspend\n");
 		goto Finish;
+	}
 	return 0;
  Finish:
 	if (pm_ops->finish)
 		pm_ops->finish(state);
  Thaw:
 	thaw_processes();
+ Enable_cpu:
+	enable_nonboot_cpus();
 	pm_restore_console();
 	return error;
 }
@@ -85,8 +110,10 @@ static int suspend_enter(suspend_state_t state)
 
 	local_irq_save(flags);
 
-	if ((error = device_power_down(PMSG_SUSPEND)))
+	if ((error = device_power_down(PMSG_SUSPEND))) {
+		printk(KERN_ERR "Some devices failed to power down\n");
 		goto Done;
+	}
 	error = pm_ops->enter(state);
 	device_power_up();
  Done:
@@ -109,13 +136,14 @@ static void suspend_finish(suspend_state_t state)
 	if (pm_ops && pm_ops->finish)
 		pm_ops->finish(state);
 	thaw_processes();
+	enable_nonboot_cpus();
 	pm_restore_console();
 }
 
 
 
 
-char * pm_states[] = {
+static char * pm_states[] = {
 	[PM_SUSPEND_STANDBY]	= "standby",
 	[PM_SUSPEND_MEM]	= "mem",
 	[PM_SUSPEND_DISK]	= "disk",
@@ -146,20 +174,14 @@ static int enter_state(suspend_state_t state)
 		goto Unlock;
 	}
 
-	/* Suspend is hard to get right on SMP. */
-	if (num_online_cpus() != 1) {
-		error = -EPERM;
-		goto Unlock;
-	}
-
-	pr_debug("PM: Preparing system for suspend\n");
+	pr_debug("PM: Preparing system for %s sleep\n", pm_states[state]);
 	if ((error = suspend_prepare(state)))
 		goto Unlock;
 
-	pr_debug("PM: Entering state.\n");
+	pr_debug("PM: Entering %s sleep\n", pm_states[state]);
 	error = suspend_enter(state);
 
-	pr_debug("PM: Finishing up.\n");
+	pr_debug("PM: Finishing wakeup.\n");
 	suspend_finish(state);
  Unlock:
 	up(&pm_sem);
@@ -186,7 +208,7 @@ int software_suspend(void)
 
 int pm_suspend(suspend_state_t state)
 {
-	if (state > PM_SUSPEND_ON && state < PM_SUSPEND_MAX)
+	if (state > PM_SUSPEND_ON && state <= PM_SUSPEND_MAX)
 		return enter_state(state);
 	return -EINVAL;
 }

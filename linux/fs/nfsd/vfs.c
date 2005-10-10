@@ -36,6 +36,7 @@
 #include <linux/module.h>
 #include <linux/namei.h>
 #include <linux/vfs.h>
+#include <linux/delay.h>
 #include <linux/sunrpc/svc.h>
 #include <linux/nfsd/nfsd.h>
 #ifdef CONFIG_NFSD_V3
@@ -44,11 +45,10 @@
 #endif /* CONFIG_NFSD_V3 */
 #include <linux/nfsd/nfsfh.h>
 #include <linux/quotaops.h>
-#include <linux/dnotify.h>
-#ifdef CONFIG_NFSD_V4
+#include <linux/fsnotify.h>
 #include <linux/posix_acl.h>
 #include <linux/posix_acl_xattr.h>
-#include <linux/xattr_acl.h>
+#ifdef CONFIG_NFSD_V4
 #include <linux/xattr.h>
 #include <linux/nfs4.h>
 #include <linux/nfs4_acl.h>
@@ -392,7 +392,7 @@ set_nfsv4_acl_one(struct dentry *dentry, struct posix_acl *pacl, char *key)
 	}
 out:
 	kfree(buf);
-	return (error);
+	return error;
 }
 
 int
@@ -416,17 +416,20 @@ nfsd4_set_nfs4_acl(struct svc_rqst *rqstp, struct svc_fh *fhp,
 		flags = NFS4_ACL_DIR;
 
 	error = nfs4_acl_nfsv4_to_posix(acl, &pacl, &dpacl, flags);
-	if (error < 0)
+	if (error == -EINVAL) {
+		error = nfserr_attrnotsupp;
+		goto out;
+	} else if (error < 0)
 		goto out_nfserr;
 
 	if (pacl) {
-		error = set_nfsv4_acl_one(dentry, pacl, XATTR_NAME_ACL_ACCESS);
+		error = set_nfsv4_acl_one(dentry, pacl, POSIX_ACL_XATTR_ACCESS);
 		if (error < 0)
 			goto out_nfserr;
 	}
 
 	if (dpacl) {
-		error = set_nfsv4_acl_one(dentry, dpacl, XATTR_NAME_ACL_DEFAULT);
+		error = set_nfsv4_acl_one(dentry, dpacl, POSIX_ACL_XATTR_DEFAULT);
 		if (error < 0)
 			goto out_nfserr;
 	}
@@ -493,7 +496,7 @@ nfsd4_get_nfs4_acl(struct svc_rqst *rqstp, struct dentry *dentry, struct nfs4_ac
 	struct posix_acl *pacl = NULL, *dpacl = NULL;
 	unsigned int flags = 0;
 
-	pacl = _get_posix_acl(dentry, XATTR_NAME_ACL_ACCESS);
+	pacl = _get_posix_acl(dentry, POSIX_ACL_XATTR_ACCESS);
 	if (IS_ERR(pacl) && PTR_ERR(pacl) == -ENODATA)
 		pacl = posix_acl_from_mode(inode->i_mode, GFP_KERNEL);
 	if (IS_ERR(pacl)) {
@@ -503,7 +506,7 @@ nfsd4_get_nfs4_acl(struct svc_rqst *rqstp, struct dentry *dentry, struct nfs4_ac
 	}
 
 	if (S_ISDIR(inode->i_mode)) {
-		dpacl = _get_posix_acl(dentry, XATTR_NAME_ACL_DEFAULT);
+		dpacl = _get_posix_acl(dentry, POSIX_ACL_XATTR_DEFAULT);
 		if (IS_ERR(dpacl) && PTR_ERR(dpacl) == -ENODATA)
 			dpacl = NULL;
 		else if (IS_ERR(dpacl)) {
@@ -707,8 +710,8 @@ nfsd_close(struct file *filp)
  * As this calls fsync (not fdatasync) there is no need for a write_inode
  * after it.
  */
-inline void nfsd_dosync(struct file *filp, struct dentry *dp, 
-			struct file_operations *fop)
+static inline void nfsd_dosync(struct file *filp, struct dentry *dp,
+			       struct file_operations *fop)
 {
 	struct inode *inode = dp->d_inode;
 	int (*fsync) (struct file *, struct dentry *, int);
@@ -720,7 +723,7 @@ inline void nfsd_dosync(struct file *filp, struct dentry *dp,
 }
 	
 
-void
+static void
 nfsd_sync(struct file *filp)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
@@ -810,30 +813,21 @@ nfsd_read_actor(read_descriptor_t *desc, struct page *page, unsigned long offset
 	return size;
 }
 
-/*
- * Read data from a file. count must contain the requested read count
- * on entry. On return, *count contains the number of bytes actually read.
- * N.B. After this call fhp needs an fh_put
- */
-int
-nfsd_read(struct svc_rqst *rqstp, struct svc_fh *fhp, loff_t offset,
-          struct kvec *vec, int vlen, unsigned long *count)
+static inline int
+nfsd_vfs_read(struct svc_rqst *rqstp, struct svc_fh *fhp, struct file *file,
+              loff_t offset, struct kvec *vec, int vlen, unsigned long *count)
 {
+	struct inode *inode;
 	struct raparms	*ra;
 	mm_segment_t	oldfs;
 	int		err;
-	struct file	*file;
-	struct inode	*inode;
 
-	err = nfsd_open(rqstp, fhp, S_IFREG, MAY_READ, &file);
-	if (err)
-		goto out;
 	err = nfserr_perm;
 	inode = file->f_dentry->d_inode;
 #ifdef MSNFS
 	if ((fhp->fh_export->ex_flags & NFSEXP_MSNFS) &&
 		(!lock_may_read(inode, offset, *count)))
-		goto out_close;
+		goto out;
 #endif
 
 	/* Get readahead parameters */
@@ -866,44 +860,31 @@ nfsd_read(struct svc_rqst *rqstp, struct svc_fh *fhp, loff_t offset,
 		nfsdstats.io_read += err;
 		*count = err;
 		err = 0;
-		dnotify_parent(file->f_dentry, DN_ACCESS);
+		fsnotify_access(file->f_dentry);
 	} else 
 		err = nfserrno(err);
-out_close:
-	nfsd_close(file);
 out:
 	return err;
 }
 
-/*
- * Write data to a file.
- * The stable flag requests synchronous writes.
- * N.B. After this call fhp needs an fh_put
- */
-int
-nfsd_write(struct svc_rqst *rqstp, struct svc_fh *fhp, loff_t offset,
-				struct kvec *vec, int vlen,
+static inline int
+nfsd_vfs_write(struct svc_rqst *rqstp, struct svc_fh *fhp, struct file *file,
+				loff_t offset, struct kvec *vec, int vlen,
 	   			unsigned long cnt, int *stablep)
 {
 	struct svc_export	*exp;
-	struct file		*file;
 	struct dentry		*dentry;
 	struct inode		*inode;
 	mm_segment_t		oldfs;
 	int			err = 0;
 	int			stable = *stablep;
 
-	err = nfsd_open(rqstp, fhp, S_IFREG, MAY_WRITE, &file);
-	if (err)
-		goto out;
-	if (!cnt)
-		goto out_close;
 	err = nfserr_perm;
 
 #ifdef MSNFS
 	if ((fhp->fh_export->ex_flags & NFSEXP_MSNFS) &&
 		(!lock_may_write(file->f_dentry->d_inode, offset, cnt)))
-		goto out_close;
+		goto out;
 #endif
 
 	dentry = file->f_dentry;
@@ -935,7 +916,7 @@ nfsd_write(struct svc_rqst *rqstp, struct svc_fh *fhp, loff_t offset,
 	set_fs(oldfs);
 	if (err >= 0) {
 		nfsdstats.io_write += cnt;
-		dnotify_parent(file->f_dentry, DN_MODIFY);
+		fsnotify_modify(file->f_dentry);
 	}
 
 	/* clear setuid/setgid flag after write */
@@ -968,8 +949,7 @@ nfsd_write(struct svc_rqst *rqstp, struct svc_fh *fhp, loff_t offset,
 			if (atomic_read(&inode->i_writecount) > 1
 			    || (last_ino == inode->i_ino && last_dev == inode->i_sb->s_dev)) {
 				dprintk("nfsd: write defer %d\n", current->pid);
-				set_current_state(TASK_UNINTERRUPTIBLE);
-				schedule_timeout((HZ+99)/100);
+				msleep(10);
 				dprintk("nfsd: write resume %d\n", current->pid);
 			}
 
@@ -990,12 +970,71 @@ nfsd_write(struct svc_rqst *rqstp, struct svc_fh *fhp, loff_t offset,
 		err = 0;
 	else 
 		err = nfserrno(err);
-out_close:
-	nfsd_close(file);
 out:
 	return err;
 }
 
+/*
+ * Read data from a file. count must contain the requested read count
+ * on entry. On return, *count contains the number of bytes actually read.
+ * N.B. After this call fhp needs an fh_put
+ */
+int
+nfsd_read(struct svc_rqst *rqstp, struct svc_fh *fhp, struct file *file,
+		loff_t offset, struct kvec *vec, int vlen,
+		unsigned long *count)
+{
+	int		err;
+
+	if (file) {
+		err = nfsd_permission(fhp->fh_export, fhp->fh_dentry,
+				MAY_READ|MAY_OWNER_OVERRIDE);
+		if (err)
+			goto out;
+		err = nfsd_vfs_read(rqstp, fhp, file, offset, vec, vlen, count);
+	} else {
+		err = nfsd_open(rqstp, fhp, S_IFREG, MAY_READ, &file);
+		if (err)
+			goto out;
+		err = nfsd_vfs_read(rqstp, fhp, file, offset, vec, vlen, count);
+		nfsd_close(file);
+	}
+out:
+	return err;
+}
+
+/*
+ * Write data to a file.
+ * The stable flag requests synchronous writes.
+ * N.B. After this call fhp needs an fh_put
+ */
+int
+nfsd_write(struct svc_rqst *rqstp, struct svc_fh *fhp, struct file *file,
+		loff_t offset, struct kvec *vec, int vlen, unsigned long cnt,
+		int *stablep)
+{
+	int			err = 0;
+
+	if (file) {
+		err = nfsd_permission(fhp->fh_export, fhp->fh_dentry,
+				MAY_WRITE|MAY_OWNER_OVERRIDE);
+		if (err)
+			goto out;
+		err = nfsd_vfs_write(rqstp, fhp, file, offset, vec, vlen, cnt,
+				stablep);
+	} else {
+		err = nfsd_open(rqstp, fhp, S_IFREG, MAY_WRITE, &file);
+		if (err)
+			goto out;
+
+		if (cnt)
+			err = nfsd_vfs_write(rqstp, fhp, file, offset, vec, vlen,
+					     cnt, stablep);
+		nfsd_close(file);
+	}
+out:
+	return err;
+}
 
 #ifdef CONFIG_NFSD_V3
 /*
@@ -1817,3 +1856,107 @@ nfsd_racache_init(int cache_size)
 	nfsdstats.ra_size = cache_size;
 	return 0;
 }
+
+#if defined(CONFIG_NFSD_V2_ACL) || defined(CONFIG_NFSD_V3_ACL)
+struct posix_acl *
+nfsd_get_posix_acl(struct svc_fh *fhp, int type)
+{
+	struct inode *inode = fhp->fh_dentry->d_inode;
+	char *name;
+	void *value = NULL;
+	ssize_t size;
+	struct posix_acl *acl;
+
+	if (!IS_POSIXACL(inode) || !inode->i_op || !inode->i_op->getxattr)
+		return ERR_PTR(-EOPNOTSUPP);
+	switch(type) {
+		case ACL_TYPE_ACCESS:
+			name = POSIX_ACL_XATTR_ACCESS;
+			break;
+		case ACL_TYPE_DEFAULT:
+			name = POSIX_ACL_XATTR_DEFAULT;
+			break;
+		default:
+			return ERR_PTR(-EOPNOTSUPP);
+	}
+
+	size = inode->i_op->getxattr(fhp->fh_dentry, name, NULL, 0);
+
+	if (size < 0) {
+		acl = ERR_PTR(size);
+		goto getout;
+	} else if (size > 0) {
+		value = kmalloc(size, GFP_KERNEL);
+		if (!value) {
+			acl = ERR_PTR(-ENOMEM);
+			goto getout;
+		}
+		size = inode->i_op->getxattr(fhp->fh_dentry, name, value, size);
+		if (size < 0) {
+			acl = ERR_PTR(size);
+			goto getout;
+		}
+	}
+	acl = posix_acl_from_xattr(value, size);
+
+getout:
+	kfree(value);
+	return acl;
+}
+
+int
+nfsd_set_posix_acl(struct svc_fh *fhp, int type, struct posix_acl *acl)
+{
+	struct inode *inode = fhp->fh_dentry->d_inode;
+	char *name;
+	void *value = NULL;
+	size_t size;
+	int error;
+
+	if (!IS_POSIXACL(inode) || !inode->i_op ||
+	    !inode->i_op->setxattr || !inode->i_op->removexattr)
+		return -EOPNOTSUPP;
+	switch(type) {
+		case ACL_TYPE_ACCESS:
+			name = POSIX_ACL_XATTR_ACCESS;
+			break;
+		case ACL_TYPE_DEFAULT:
+			name = POSIX_ACL_XATTR_DEFAULT;
+			break;
+		default:
+			return -EOPNOTSUPP;
+	}
+
+	if (acl && acl->a_count) {
+		size = posix_acl_xattr_size(acl->a_count);
+		value = kmalloc(size, GFP_KERNEL);
+		if (!value)
+			return -ENOMEM;
+		size = posix_acl_to_xattr(acl, value, size);
+		if (size < 0) {
+			error = size;
+			goto getout;
+		}
+	} else
+		size = 0;
+
+	if (!fhp->fh_locked)
+		fh_lock(fhp);  /* unlocking is done automatically */
+	if (size)
+		error = inode->i_op->setxattr(fhp->fh_dentry, name,
+					      value, size, 0);
+	else {
+		if (!S_ISDIR(inode->i_mode) && type == ACL_TYPE_DEFAULT)
+			error = 0;
+		else {
+			error = inode->i_op->removexattr(fhp->fh_dentry, name);
+			if (error == -ENODATA)
+				error = 0;
+		}
+	}
+
+getout:
+	kfree(value);
+	return error;
+}
+#endif  /* defined(CONFIG_NFSD_V2_ACL) || defined(CONFIG_NFSD_V3_ACL) */

@@ -21,10 +21,12 @@
 #define POLICYDB_VERSION_BOOL		16
 #define POLICYDB_VERSION_IPV6		17
 #define POLICYDB_VERSION_NLCLASS	18
+#define POLICYDB_VERSION_VALIDATETRANS	19
+#define POLICYDB_VERSION_MLS		19
 
 /* Range of policy versions we understand*/
 #define POLICYDB_VERSION_MIN   POLICYDB_VERSION_BASE
-#define POLICYDB_VERSION_MAX   POLICYDB_VERSION_NLCLASS
+#define POLICYDB_VERSION_MAX   POLICYDB_VERSION_MLS
 
 #ifdef CONFIG_SECURITY_SELINUX_BOOTPARAM
 extern int selinux_enabled;
@@ -32,11 +34,7 @@ extern int selinux_enabled;
 #define selinux_enabled 1
 #endif
 
-#ifdef CONFIG_SECURITY_SELINUX_MLS
-#define selinux_mls_enabled 1
-#else
-#define selinux_mls_enabled 0
-#endif
+extern int selinux_mls_enabled;
 
 int security_load_policy(void * data, size_t len);
 
@@ -67,6 +65,8 @@ int security_sid_to_context(u32 sid, char **scontext,
 int security_context_to_sid(char *scontext, u32 scontext_len,
 	u32 *out_sid);
 
+int security_context_to_sid_default(char *scontext, u32 scontext_len, u32 *out_sid, u32 def_sid);
+
 int security_get_user_sids(u32 callsid, char *username,
 			   u32 **sids, u32 *nel);
 
@@ -78,6 +78,9 @@ int security_netif_sid(char *name, u32 *if_sid,
 
 int security_node_sid(u16 domain, void *addr, u32 addrlen,
 	u32 *out_sid);
+
+int security_validate_transition(u32 oldsid, u32 newsid, u32 tasksid,
+                                 u16 tclass);
 
 #define SECURITY_FS_USE_XATTR		1 /* use xattr */
 #define SECURITY_FS_USE_TRANS		2 /* use transition SIDs, e.g. devpts/tmpfs */

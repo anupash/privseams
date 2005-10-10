@@ -4,6 +4,10 @@
  *  Copyright (C) 1992 Linus Torvalds
  *  Modifications for ARM processor Copyright (C) 1995-2000 Russell King.
  *
+ *  Support for Dynamic Tick Timer Copyright (C) 2004-2005 Nokia Corporation.
+ *  Dynamic Tick Timer written by Tony Lindgren <tony@atomide.com> and
+ *  Tuukka Tikkanen <tuukka.tikkanen@elektrobit.com>.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -37,6 +41,7 @@
 #include <asm/irq.h>
 #include <asm/system.h>
 #include <asm/mach/irq.h>
+#include <asm/mach/time.h>
 
 /*
  * Maximum IRQ count.  Currently, this is arbitary.  However, it should
@@ -54,6 +59,13 @@ static LIST_HEAD(irq_pending);
 
 struct irqdesc irq_desc[NR_IRQS];
 void (*init_arch_irq)(void) __initdata = NULL;
+
+/*
+ * No architecture-specific irq_finish function defined in arm/arch/irqs.h.
+ */
+#ifndef irq_finish
+#define irq_finish(irq) do { } while (0)
+#endif
 
 /*
  * Dummy mask/unmask handler
@@ -322,6 +334,15 @@ __do_irq(unsigned int irq, struct irqaction *action, struct pt_regs *regs)
 
 	spin_unlock(&irq_controller_lock);
 
+#ifdef CONFIG_NO_IDLE_HZ
+	if (!(action->flags & SA_TIMER) && system_timer->dyn_tick != NULL) {
+		write_seqlock(&xtime_lock);
+		if (system_timer->dyn_tick->state & DYN_TICK_ENABLED)
+			system_timer->dyn_tick->handler(irq, 0, regs);
+		write_sequnlock(&xtime_lock);
+	}
+#endif
+
 	if (!(action->flags & SA_INTERRUPT))
 		local_irq_enable();
 
@@ -531,6 +552,8 @@ asmlinkage void asm_do_IRQ(unsigned int irq, struct pt_regs *regs)
 	 */
 	if (!list_empty(&irq_pending))
 		do_pending_irqs(regs);
+
+	irq_finish(irq);
 
 	spin_unlock(&irq_controller_lock);
 	irq_exit();

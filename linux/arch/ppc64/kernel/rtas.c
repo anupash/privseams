@@ -91,6 +91,123 @@ call_rtas_display_status_delay(unsigned char c)
 	}
 }
 
+void
+rtas_progress(char *s, unsigned short hex)
+{
+	struct device_node *root;
+	int width, *p;
+	char *os;
+	static int display_character, set_indicator;
+	static int display_width, display_lines, *row_width, form_feed;
+	static DEFINE_SPINLOCK(progress_lock);
+	static int current_line;
+	static int pending_newline = 0;  /* did last write end with unprinted newline? */
+
+	if (!rtas.base)
+		return;
+
+	if (display_width == 0) {
+		display_width = 0x10;
+		if ((root = find_path_device("/rtas"))) {
+			if ((p = (unsigned int *)get_property(root,
+					"ibm,display-line-length", NULL)))
+				display_width = *p;
+			if ((p = (unsigned int *)get_property(root,
+					"ibm,form-feed", NULL)))
+				form_feed = *p;
+			if ((p = (unsigned int *)get_property(root,
+					"ibm,display-number-of-lines", NULL)))
+				display_lines = *p;
+			row_width = (unsigned int *)get_property(root,
+					"ibm,display-truncation-length", NULL);
+		}
+		display_character = rtas_token("display-character");
+		set_indicator = rtas_token("set-indicator");
+	}
+
+	if (display_character == RTAS_UNKNOWN_SERVICE) {
+		/* use hex display if available */
+		if (set_indicator != RTAS_UNKNOWN_SERVICE)
+			rtas_call(set_indicator, 3, 1, NULL, 6, 0, hex);
+		return;
+	}
+
+	spin_lock(&progress_lock);
+
+	/*
+	 * Last write ended with newline, but we didn't print it since
+	 * it would just clear the bottom line of output. Print it now
+	 * instead.
+	 *
+	 * If no newline is pending and form feed is supported, clear the
+	 * display with a form feed; otherwise, print a CR to start output
+	 * at the beginning of the line.
+	 */
+	if (pending_newline) {
+		rtas_call(display_character, 1, 1, NULL, '\r');
+		rtas_call(display_character, 1, 1, NULL, '\n');
+		pending_newline = 0;
+	} else {
+		current_line = 0;
+		if (form_feed)
+			rtas_call(display_character, 1, 1, NULL,
+				  (char)form_feed);
+		else
+			rtas_call(display_character, 1, 1, NULL, '\r');
+	}
+ 
+	if (row_width)
+		width = row_width[current_line];
+	else
+		width = display_width;
+	os = s;
+	while (*os) {
+		if (*os == '\n' || *os == '\r') {
+			/* If newline is the last character, save it
+			 * until next call to avoid bumping up the
+			 * display output.
+			 */
+			if (*os == '\n' && !os[1]) {
+				pending_newline = 1;
+				current_line++;
+				if (current_line > display_lines-1)
+					current_line = display_lines-1;
+				spin_unlock(&progress_lock);
+				return;
+			}
+ 
+			/* RTAS wants CR-LF, not just LF */
+ 
+			if (*os == '\n') {
+				rtas_call(display_character, 1, 1, NULL, '\r');
+				rtas_call(display_character, 1, 1, NULL, '\n');
+			} else {
+				/* CR might be used to re-draw a line, so we'll
+				 * leave it alone and not add LF.
+				 */
+				rtas_call(display_character, 1, 1, NULL, *os);
+			}
+ 
+			if (row_width)
+				width = row_width[current_line];
+			else
+				width = display_width;
+		} else {
+			width--;
+			rtas_call(display_character, 1, 1, NULL, *os);
+		}
+ 
+		os++;
+ 
+		/* if we overwrite the screen length */
+		if (width <= 0)
+			while ((*os != 0) && (*os != '\n') && (*os != '\r'))
+				os++;
+	}
+ 
+	spin_unlock(&progress_lock);
+}
+
 int
 rtas_token(const char *service)
 {
@@ -255,29 +372,59 @@ rtas_extended_busy_delay_time(int status)
 	return ms; 
 }
 
-int
-rtas_get_power_level(int powerdomain, int *level)
+int rtas_error_rc(int rtas_rc)
+{
+	int rc;
+
+	switch (rtas_rc) {
+		case -1: 		/* Hardware Error */
+			rc = -EIO;
+			break;
+		case -3:		/* Bad indicator/domain/etc */
+			rc = -EINVAL;
+			break;
+		case -9000:		/* Isolation error */
+			rc = -EFAULT;
+			break;
+		case -9001:		/* Outstanding TCE/PTE */
+			rc = -EEXIST;
+			break;
+		case -9002:		/* No usable slot */
+			rc = -ENODEV;
+			break;
+		default:
+			printk(KERN_ERR "%s: unexpected RTAS error %d\n",
+					__FUNCTION__, rtas_rc);
+			rc = -ERANGE;
+			break;
+	}
+	return rc;
+}
+
+int rtas_get_power_level(int powerdomain, int *level)
 {
 	int token = rtas_token("get-power-level");
 	int rc;
 
 	if (token == RTAS_UNKNOWN_SERVICE)
-		return RTAS_UNKNOWN_OP;
+		return -ENOENT;
 
 	while ((rc = rtas_call(token, 1, 2, level, powerdomain)) == RTAS_BUSY)
 		udelay(1);
+
+	if (rc < 0)
+		return rtas_error_rc(rc);
 	return rc;
 }
 
-int
-rtas_set_power_level(int powerdomain, int level, int *setlevel)
+int rtas_set_power_level(int powerdomain, int level, int *setlevel)
 {
 	int token = rtas_token("set-power-level");
 	unsigned int wait_time;
 	int rc;
 
 	if (token == RTAS_UNKNOWN_SERVICE)
-		return RTAS_UNKNOWN_OP;
+		return -ENOENT;
 
 	while (1) {
 		rc = rtas_call(token, 2, 2, setlevel, powerdomain, level);
@@ -289,18 +436,20 @@ rtas_set_power_level(int powerdomain, int level, int *setlevel)
 		} else
 			break;
 	}
+
+	if (rc < 0)
+		return rtas_error_rc(rc);
 	return rc;
 }
 
-int
-rtas_get_sensor(int sensor, int index, int *state)
+int rtas_get_sensor(int sensor, int index, int *state)
 {
 	int token = rtas_token("get-sensor-state");
 	unsigned int wait_time;
 	int rc;
 
 	if (token == RTAS_UNKNOWN_SERVICE)
-		return RTAS_UNKNOWN_OP;
+		return -ENOENT;
 
 	while (1) {
 		rc = rtas_call(token, 2, 2, state, sensor, index);
@@ -312,18 +461,20 @@ rtas_get_sensor(int sensor, int index, int *state)
 		} else
 			break;
 	}
+
+	if (rc < 0)
+		return rtas_error_rc(rc);
 	return rc;
 }
 
-int
-rtas_set_indicator(int indicator, int index, int new_value)
+int rtas_set_indicator(int indicator, int index, int new_value)
 {
 	int token = rtas_token("set-indicator");
 	unsigned int wait_time;
 	int rc;
 
 	if (token == RTAS_UNKNOWN_SERVICE)
-		return RTAS_UNKNOWN_OP;
+		return -ENOENT;
 
 	while (1) {
 		rc = rtas_call(token, 3, 1, NULL, indicator, index, new_value);
@@ -337,6 +488,8 @@ rtas_set_indicator(int indicator, int index, int new_value)
 			break;
 	}
 
+	if (rc < 0)
+		return rtas_error_rc(rc);
 	return rc;
 }
 
@@ -389,8 +542,8 @@ rtas_flash_firmware(void)
 
 	printk(KERN_ALERT "FLASH: flash image is %ld bytes\n", image_size);
 	printk(KERN_ALERT "FLASH: performing flash and reboot\n");
-	ppc_md.progress("Flashing        \n", 0x0);
-	ppc_md.progress("Please Wait...  ", 0x0);
+	rtas_progress("Flashing        \n", 0x0);
+	rtas_progress("Please Wait...  ", 0x0);
 	printk(KERN_ALERT "FLASH: this will take several minutes.  Do not power off!\n");
 	status = rtas_call(update_token, 1, 1, NULL, rtas_block_list);
 	switch (status) {	/* should only get "bad" status */

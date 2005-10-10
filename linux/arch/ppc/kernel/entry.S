@@ -45,40 +45,39 @@
 #endif
 
 #ifdef CONFIG_BOOKE
-#define	COR	r8	/* Critical Offset Register (COR) */
-#define BOOKE_LOAD_COR	lis COR,crit_save@ha
-#define BOOKE_REST_COR	mfspr COR,SPRG2
-#define BOOKE_SAVE_COR	mtspr SPRG2,COR
-#else
-#define COR	0
-#define BOOKE_LOAD_COR
-#define BOOKE_REST_COR
-#define BOOKE_SAVE_COR
-#endif
+#include "head_booke.h"
+#define TRANSFER_TO_HANDLER_EXC_LEVEL(exc_level)	\
+	mtspr	exc_level##_SPRG,r8;			\
+	BOOKE_LOAD_EXC_LEVEL_STACK(exc_level);		\
+	lwz	r0,GPR10-INT_FRAME_SIZE(r8);		\
+	stw	r0,GPR10(r11);				\
+	lwz	r0,GPR11-INT_FRAME_SIZE(r8);		\
+	stw	r0,GPR11(r11);				\
+	mfspr	r8,exc_level##_SPRG
 
-#ifdef CONFIG_BOOKE
 	.globl	mcheck_transfer_to_handler
 mcheck_transfer_to_handler:
-	mtspr	SPRG6W,r8
-	lis	r8,mcheck_save@ha
-	lwz	r0,mcheck_r10@l(r8)
-	stw	r0,GPR10(r11)
-	lwz	r0,mcheck_r11@l(r8)
-	stw	r0,GPR11(r11)
-	mfspr	r8,SPRG6R
+	TRANSFER_TO_HANDLER_EXC_LEVEL(MCHECK)
 	b	transfer_to_handler_full
-#endif
 
-#if defined(CONFIG_40x) || defined(CONFIG_BOOKE)
+	.globl	debug_transfer_to_handler
+debug_transfer_to_handler:
+	TRANSFER_TO_HANDLER_EXC_LEVEL(DEBUG)
+	b	transfer_to_handler_full
+
 	.globl	crit_transfer_to_handler
 crit_transfer_to_handler:
-	BOOKE_SAVE_COR
-	BOOKE_LOAD_COR
-	lwz	r0,crit_r10@l(COR)
+	TRANSFER_TO_HANDLER_EXC_LEVEL(CRIT)
+	/* fall through */
+#endif
+
+#ifdef CONFIG_40x
+	.globl	crit_transfer_to_handler
+crit_transfer_to_handler:
+	lwz	r0,crit_r10@l(0)
 	stw	r0,GPR10(r11)
-	lwz	r0,crit_r11@l(COR)
+	lwz	r0,crit_r11@l(0)
 	stw	r0,GPR11(r11)
-	BOOKE_REST_COR
 	/* fall through */
 #endif
 
@@ -101,10 +100,10 @@ transfer_to_handler:
 	stw	r9,_MSR(r11)
 	andi.	r2,r9,MSR_PR
 	mfctr	r12
-	mfspr	r2,XER
+	mfspr	r2,SPRN_XER
 	stw	r12,_CTR(r11)
 	stw	r2,_XER(r11)
-	mfspr	r12,SPRG3
+	mfspr	r12,SPRN_SPRG3
 	addi	r2,r12,-THREAD
 	tovirt(r2,r2)			/* set r2 to current */
 	beq	2f			/* if from user, fix up THREAD.regs */
@@ -152,8 +151,8 @@ transfer_to_handler_cont:
 	lwz	r11,0(r9)		/* virtual address of handler */
 	lwz	r9,4(r9)		/* where to go when done */
 	FIX_SRR1(r10,r12)
-	mtspr	SRR0,r11
-	mtspr	SRR1,r10
+	mtspr	SPRN_SRR0,r11
+	mtspr	SPRN_SRR1,r10
 	mtlr	r9
 	SYNC
 	RFI				/* jump to handler, enable MMU */
@@ -177,8 +176,8 @@ stack_ovf:
 	addi	r9,r9,StackOverflow@l
 	LOAD_MSR_KERNEL(r10,MSR_KERNEL)
 	FIX_SRR1(r10,r12)
-	mtspr	SRR0,r9
-	mtspr	SRR1,r10
+	mtspr	SPRN_SRR0,r9
+	mtspr	SPRN_SRR1,r10
 	SYNC
 	RFI
 
@@ -205,7 +204,7 @@ _GLOBAL(DoSyscall)
 	rlwinm	r11,r11,0,~_TIFL_FORCE_NOERROR
 	stw	r11,TI_LOCAL_FLAGS(r10)
 	lwz	r11,TI_FLAGS(r10)
-	andi.	r11,r11,_TIF_SYSCALL_TRACE
+	andi.	r11,r11,_TIF_SYSCALL_T_OR_A
 	bne-	syscall_dotrace
 syscall_dotrace_cont:
 	cmplwi	0,r0,NR_syscalls
@@ -216,6 +215,7 @@ syscall_dotrace_cont:
 	lwzx	r10,r10,r0	/* Fetch system call handler [ptr] */
 	mtlr	r10
 	addi	r9,r1,STACK_FRAME_OVERHEAD
+	PPC440EP_ERR42
 	blrl			/* Call handler */
 	.globl	ret_from_syscall
 ret_from_syscall:
@@ -240,7 +240,7 @@ ret_from_syscall:
 	SYNC
 	MTMSRD(r10)
 	lwz	r9,TI_FLAGS(r12)
-	andi.	r0,r9,(_TIF_SYSCALL_TRACE|_TIF_SIGPENDING|_TIF_NEED_RESCHED)
+	andi.	r0,r9,(_TIF_SYSCALL_T_OR_A|_TIF_SIGPENDING|_TIF_NEED_RESCHED)
 	bne-	syscall_exit_work
 syscall_exit_cont:
 #if defined(CONFIG_4xx) || defined(CONFIG_BOOKE)
@@ -260,8 +260,8 @@ syscall_exit_cont:
 	FIX_SRR1(r8, r0)
 	lwz	r2,GPR2(r1)
 	lwz	r1,GPR1(r1)
-	mtspr	SRR0,r7
-	mtspr	SRR1,r8
+	mtspr	SPRN_SRR0,r7
+	mtspr	SPRN_SRR1,r8
 	SYNC
 	RFI
 
@@ -280,7 +280,8 @@ syscall_dotrace:
 	SAVE_NVGPRS(r1)
 	li	r0,0xc00
 	stw	r0,TRAP(r1)
-	bl	do_syscall_trace
+	addi	r3,r1,STACK_FRAME_OVERHEAD
+	bl	do_syscall_trace_enter
 	lwz	r0,GPR0(r1)	/* Restore original registers */
 	lwz	r3,GPR3(r1)
 	lwz	r4,GPR4(r1)
@@ -294,7 +295,7 @@ syscall_dotrace:
 syscall_exit_work:
 	stw	r6,RESULT(r1)	/* Save result */
 	stw	r3,GPR3(r1)	/* Update return value */
-	andi.	r0,r9,_TIF_SYSCALL_TRACE
+	andi.	r0,r9,_TIF_SYSCALL_T_OR_A
 	beq	5f
 	ori	r10,r10,MSR_EE
 	SYNC
@@ -306,7 +307,8 @@ syscall_exit_work:
 	li	r4,0xc00
 	stw	r4,TRAP(r1)
 4:
-	bl	do_syscall_trace
+	addi	r3,r1,STACK_FRAME_OVERHEAD
+	bl	do_syscall_trace_leave
 	REST_NVGPRS(r1)
 2:
 	lwz	r3,GPR3(r1)
@@ -538,7 +540,7 @@ END_FTR_SECTION_IFSET(CPU_FTR_ALTIVEC)
 
 	tophys(r0,r4)
 	CLR_TOP32(r0)
-	mtspr	SPRG3,r0	/* Update current THREAD phys addr */
+	mtspr	SPRN_SPRG3,r0	/* Update current THREAD phys addr */
 	lwz	r1,KSP(r4)	/* Load new stack pointer */
 
 	/* save the old current 'last' for return value */
@@ -566,13 +568,72 @@ END_FTR_SECTION_IFSET(CPU_FTR_ALTIVEC)
 	addi	r1,r1,INT_FRAME_SIZE
 	blr
 
+	.globl	fast_exception_return
+fast_exception_return:
+#if !(defined(CONFIG_4xx) || defined(CONFIG_BOOKE))
+	andi.	r10,r9,MSR_RI		/* check for recoverable interrupt */
+	beq	1f			/* if not, we've got problems */
+#endif
+
+2:	REST_4GPRS(3, r11)
+	lwz	r10,_CCR(r11)
+	REST_GPR(1, r11)
+	mtcr	r10
+	lwz	r10,_LINK(r11)
+	mtlr	r10
+	REST_GPR(10, r11)
+	mtspr	SPRN_SRR1,r9
+	mtspr	SPRN_SRR0,r12
+	REST_GPR(9, r11)
+	REST_GPR(12, r11)
+	lwz	r11,GPR11(r11)
+	SYNC
+	RFI
+
+#if !(defined(CONFIG_4xx) || defined(CONFIG_BOOKE))
+/* check if the exception happened in a restartable section */
+1:	lis	r3,exc_exit_restart_end@ha
+	addi	r3,r3,exc_exit_restart_end@l
+	cmplw	r12,r3
+	bge	3f
+	lis	r4,exc_exit_restart@ha
+	addi	r4,r4,exc_exit_restart@l
+	cmplw	r12,r4
+	blt	3f
+	lis	r3,fee_restarts@ha
+	tophys(r3,r3)
+	lwz	r5,fee_restarts@l(r3)
+	addi	r5,r5,1
+	stw	r5,fee_restarts@l(r3)
+	mr	r12,r4		/* restart at exc_exit_restart */
+	b	2b
+
+	.comm	fee_restarts,4
+
+/* aargh, a nonrecoverable interrupt, panic */
+/* aargh, we don't know which trap this is */
+/* but the 601 doesn't implement the RI bit, so assume it's OK */
+3:
+BEGIN_FTR_SECTION
+	b	2b
+END_FTR_SECTION_IFSET(CPU_FTR_601)
+	li	r10,-1
+	stw	r10,TRAP(r11)
+	addi	r3,r1,STACK_FRAME_OVERHEAD
+	lis	r10,MSR_KERNEL@h
+	ori	r10,r10,MSR_KERNEL@l
+	bl	transfer_to_handler_full
+	.long	nonrecoverable_exception
+	.long	ret_from_except
+#endif
+
 	.globl	sigreturn_exit
 sigreturn_exit:
 	subi	r1,r3,STACK_FRAME_OVERHEAD
 	rlwinm	r12,r1,0,0,18	/* current_thread_info() */
 	lwz	r9,TI_FLAGS(r12)
-	andi.	r0,r9,_TIF_SYSCALL_TRACE
-	bnel-	do_syscall_trace
+	andi.	r0,r9,_TIF_SYSCALL_T_OR_A
+	bnel-	do_syscall_trace_leave
 	/* fall through */
 
 	.globl	ret_from_except_full
@@ -642,7 +703,7 @@ restore:
 
 	lwz	r10,_XER(r1)
 	lwz	r11,_CTR(r1)
-	mtspr	XER,r10
+	mtspr	SPRN_XER,r10
 	mtctr	r11
 
 	PPC405_ERR77(0,r1)
@@ -675,8 +736,8 @@ exc_exit_restart:
 	lwz	r9,_MSR(r1)
 	lwz	r12,_NIP(r1)
 	FIX_SRR1(r9,r10)
-	mtspr	SRR0,r12
-	mtspr	SRR1,r9
+	mtspr	SPRN_SRR0,r12
+	mtspr	SPRN_SRR1,r9
 	REST_4GPRS(9, r1)
 	lwz	r1,GPR1(r1)
 	.globl exc_exit_restart_end
@@ -702,8 +763,8 @@ exc_exit_restart:
 	lwz	r11,_NIP(r1)
 	lwz	r12,_MSR(r1)
 exc_exit_start:
-	mtspr	SRR0,r11
-	mtspr	SRR1,r12
+	mtspr	SPRN_SRR0,r11
+	mtspr	SPRN_SRR1,r12
 	REST_2GPRS(11, r1)
 	lwz	r1,GPR1(r1)
 	.globl exc_exit_restart_end
@@ -724,148 +785,69 @@ exc_exit_restart_end:
  * We have to restore various SPRs that may have been in use at the
  * time of the critical interrupt.
  *
- * Note that SPRG6 is used for machine check on CONFIG_BOOKE parts and
- * thus not saved in the critical handler
  */
+#ifdef CONFIG_40x
+#define PPC_40x_TURN_OFF_MSR_DR						    \
+	/* avoid any possible TLB misses here by turning off MSR.DR, we	    \
+	 * assume the instructions here are mapped by a pinned TLB entry */ \
+	li	r10,MSR_IR;						    \
+	mtmsr	r10;							    \
+	isync;								    \
+	tophys(r1, r1);
+#else
+#define PPC_40x_TURN_OFF_MSR_DR
+#endif
+
+#define RET_FROM_EXC_LEVEL(exc_lvl_srr0, exc_lvl_srr1, exc_lvl_rfi)	\
+	REST_NVGPRS(r1);						\
+	lwz	r3,_MSR(r1);						\
+	andi.	r3,r3,MSR_PR;						\
+	LOAD_MSR_KERNEL(r10,MSR_KERNEL);				\
+	bne	user_exc_return;					\
+	lwz	r0,GPR0(r1);						\
+	lwz	r2,GPR2(r1);						\
+	REST_4GPRS(3, r1);						\
+	REST_2GPRS(7, r1);						\
+	lwz	r10,_XER(r1);						\
+	lwz	r11,_CTR(r1);						\
+	mtspr	SPRN_XER,r10;						\
+	mtctr	r11;							\
+	PPC405_ERR77(0,r1);						\
+	stwcx.	r0,0,r1;		/* to clear the reservation */	\
+	lwz	r11,_LINK(r1);						\
+	mtlr	r11;							\
+	lwz	r10,_CCR(r1);						\
+	mtcrf	0xff,r10;						\
+	PPC_40x_TURN_OFF_MSR_DR;					\
+	lwz	r9,_DEAR(r1);						\
+	lwz	r10,_ESR(r1);						\
+	mtspr	SPRN_DEAR,r9;						\
+	mtspr	SPRN_ESR,r10;						\
+	lwz	r11,_NIP(r1);						\
+	lwz	r12,_MSR(r1);						\
+	mtspr	exc_lvl_srr0,r11;					\
+	mtspr	exc_lvl_srr1,r12;					\
+	lwz	r9,GPR9(r1);						\
+	lwz	r12,GPR12(r1);						\
+	lwz	r10,GPR10(r1);						\
+	lwz	r11,GPR11(r1);						\
+	lwz	r1,GPR1(r1);						\
+	PPC405_ERR77_SYNC;						\
+	exc_lvl_rfi;							\
+	b	.;		/* prevent prefetch past exc_lvl_rfi */
+
 	.globl	ret_from_crit_exc
 ret_from_crit_exc:
-	REST_NVGPRS(r1)
-	lwz	r3,_MSR(r1)
-	andi.	r3,r3,MSR_PR
-	LOAD_MSR_KERNEL(r10,MSR_KERNEL)
-	bne	user_exc_return
-
-	lwz	r0,GPR0(r1)
-	lwz	r2,GPR2(r1)
-	REST_4GPRS(3, r1)
-	REST_2GPRS(7, r1)
-
-	lwz	r10,_XER(r1)
-	lwz	r11,_CTR(r1)
-	mtspr	XER,r10
-	mtctr	r11
-
-	PPC405_ERR77(0,r1)
-	stwcx.	r0,0,r1			/* to clear the reservation */
-
-	lwz	r11,_LINK(r1)
-	mtlr	r11
-	lwz	r10,_CCR(r1)
-	mtcrf	0xff,r10
-#ifdef CONFIG_40x
-	/* avoid any possible TLB misses here by turning off MSR.DR, we
-	 * assume the instructions here are mapped by a pinned TLB entry */
-	li	r10,MSR_IR
-	mtmsr	r10
-	isync
-	tophys(r1, r1)
-#endif
-	lwz	r9,_DEAR(r1)
-	lwz	r10,_ESR(r1)
-	mtspr	SPRN_DEAR,r9
-	mtspr	SPRN_ESR,r10
-	lwz	r11,_NIP(r1)
-	lwz	r12,_MSR(r1)
-	mtspr	CSRR0,r11
-	mtspr	CSRR1,r12
-	lwz	r9,GPR9(r1)
-	lwz	r12,GPR12(r1)
-	BOOKE_SAVE_COR
-	BOOKE_LOAD_COR
-	lwz	r10,crit_sprg0@l(COR)
-	mtspr	SPRN_SPRG0,r10
-	lwz	r10,crit_sprg1@l(COR)
-	mtspr	SPRN_SPRG1,r10
-	lwz	r10,crit_sprg4@l(COR)
-	mtspr	SPRN_SPRG4,r10
-	lwz	r10,crit_sprg5@l(COR)
-	mtspr	SPRN_SPRG5,r10
-#ifdef CONFIG_40x
-	lwz	r10,crit_sprg6@l(COR)
-	mtspr	SPRN_SPRG6,r10
-#endif
-	lwz	r10,crit_sprg7@l(COR)
-	mtspr	SPRN_SPRG7,r10
-	lwz	r10,crit_srr0@l(COR)
-	mtspr	SRR0,r10
-	lwz	r10,crit_srr1@l(COR)
-	mtspr	SRR1,r10
-	lwz	r10,crit_pid@l(COR)
-	mtspr	SPRN_PID,r10
-	lwz	r10,GPR10(r1)
-	lwz	r11,GPR11(r1)
-	lwz	r1,GPR1(r1)
-	BOOKE_REST_COR
-	PPC405_ERR77_SYNC
-	rfci
-	b	.		/* prevent prefetch past rfci */
+	RET_FROM_EXC_LEVEL(SPRN_CSRR0, SPRN_CSRR1, RFCI)
 
 #ifdef CONFIG_BOOKE
-/*
- * Return from a machine check interrupt, similar to a critical
- * interrupt.
- */
+	.globl	ret_from_debug_exc
+ret_from_debug_exc:
+	RET_FROM_EXC_LEVEL(SPRN_DSRR0, SPRN_DSRR1, RFDI)
+
 	.globl	ret_from_mcheck_exc
 ret_from_mcheck_exc:
-	REST_NVGPRS(r1)
-	lwz	r3,_MSR(r1)
-	andi.	r3,r3,MSR_PR
-	LOAD_MSR_KERNEL(r10,MSR_KERNEL)
-	bne	user_exc_return
-
-	lwz	r0,GPR0(r1)
-	lwz	r2,GPR2(r1)
-	REST_4GPRS(3, r1)
-	REST_2GPRS(7, r1)
-
-	lwz	r10,_XER(r1)
-	lwz	r11,_CTR(r1)
-	mtspr	XER,r10
-	mtctr	r11
-
-	stwcx.	r0,0,r1			/* to clear the reservation */
-
-	lwz	r11,_LINK(r1)
-	mtlr	r11
-	lwz	r10,_CCR(r1)
-	mtcrf	0xff,r10
-	lwz	r9,_DEAR(r1)
-	lwz	r10,_ESR(r1)
-	mtspr	SPRN_DEAR,r9
-	mtspr	SPRN_ESR,r10
-	lwz	r11,_NIP(r1)
-	lwz	r12,_MSR(r1)
-	mtspr	MCSRR0,r11
-	mtspr	MCSRR1,r12
-	lwz	r9,GPR9(r1)
-	lwz	r12,GPR12(r1)
-	mtspr	SPRG6W,r8
-	lis	r8,mcheck_save@ha
-	lwz	r10,mcheck_sprg0@l(r8)
-	mtspr	SPRN_SPRG0,r10
-	lwz	r10,mcheck_sprg1@l(r8)
-	mtspr	SPRN_SPRG1,r10
-	lwz	r10,mcheck_sprg4@l(r8)
-	mtspr	SPRN_SPRG4,r10
-	lwz	r10,mcheck_sprg5@l(r8)
-	mtspr	SPRN_SPRG5,r10
-	lwz	r10,mcheck_sprg7@l(r8)
-	mtspr	SPRN_SPRG7,r10
-	lwz	r10,mcheck_srr0@l(r8)
-	mtspr	SRR0,r10
-	lwz	r10,mcheck_srr1@l(r8)
-	mtspr	SRR1,r10
-	lwz	r10,mcheck_csrr0@l(r8)
-	mtspr	CSRR0,r10
-	lwz	r10,mcheck_csrr1@l(r8)
-	mtspr	CSRR1,r10
-	lwz	r10,mcheck_pid@l(r8)
-	mtspr	SPRN_PID,r10
-	lwz	r10,GPR10(r1)
-	lwz	r11,GPR11(r1)
-	lwz	r1,GPR1(r1)
-	mfspr	r8,SPRG6R
-	RFMCI
+	RET_FROM_EXC_LEVEL(SPRN_MCSRR0, SPRN_MCSRR1, RFMCI)
 #endif /* CONFIG_BOOKE */
 
 /*
@@ -997,9 +979,9 @@ _GLOBAL(enter_rtas)
 	li	r9,MSR_KERNEL & ~(MSR_IR|MSR_DR)
 	mtlr	r6
 	CLR_TOP32(r7)
-	mtspr	SPRG2,r7
-	mtspr	SRR0,r8
-	mtspr	SRR1,r9
+	mtspr	SPRN_SPRG2,r7
+	mtspr	SPRN_SRR0,r8
+	mtspr	SPRN_SRR1,r9
 	RFI
 1:	tophys(r9,r1)
 	lwz	r8,INT_FRAME_SIZE+4(r9)	/* get return address */
@@ -1007,9 +989,9 @@ _GLOBAL(enter_rtas)
 	FIX_SRR1(r9,r0)
 	addi	r1,r1,INT_FRAME_SIZE
 	li	r0,0
-	mtspr	SPRG2,r0
-	mtspr	SRR0,r8
-	mtspr	SRR1,r9
+	mtspr	SPRN_SPRG2,r0
+	mtspr	SPRN_SRR0,r8
+	mtspr	SPRN_SRR1,r9
 	RFI			/* return to caller */
 
 	.globl	machine_check_in_rtas

@@ -1277,7 +1277,7 @@ static void do_dv1394_shutdown(struct video_card *video, int free_dv_buf)
 	error-prone code in dv1394.
 */
 
-int dv1394_mmap(struct file *file, struct vm_area_struct *vma)
+static int dv1394_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	struct video_card *video = file_to_video_card(file);
 	int retval = -EINVAL;
@@ -2343,6 +2343,8 @@ static void dv1394_remove_host (struct hpsb_host *host)
 			dv1394_un_init(video);
 	} while (video != NULL);
 
+	class_device_destroy(hpsb_protocol_class,
+		MKDEV(IEEE1394_MAJOR, IEEE1394_MINOR_BLOCK_DV1394 * 16 + (id<<2)));
 	devfs_remove("ieee1394/dv/host%d/NTSC", id);
 	devfs_remove("ieee1394/dv/host%d/PAL", id);
 	devfs_remove("ieee1394/dv/host%d", id);
@@ -2359,6 +2361,9 @@ static void dv1394_add_host (struct hpsb_host *host)
 
 	ohci = (struct ti_ohci *)host->hostdata;
 
+	class_device_create(hpsb_protocol_class, MKDEV(
+		IEEE1394_MAJOR,	IEEE1394_MINOR_BLOCK_DV1394 * 16 + (id<<2)), 
+		NULL, "dv1394-%d", id);
 	devfs_mk_dir("ieee1394/dv/host%d", id);
 	devfs_mk_dir("ieee1394/dv/host%d/NTSC", id);
 	devfs_mk_dir("ieee1394/dv/host%d/PAL", id);
@@ -2526,7 +2531,7 @@ static int handle_dv1394_init(struct file *file, unsigned int cmd, unsigned long
 	mm_segment_t old_fs;
 	int ret;
 
-	if (file->f_op->ioctl != dv1394_ioctl)
+	if (file->f_op->unlocked_ioctl != dv1394_ioctl)
 		return -EFAULT;
 
 	if (copy_from_user(&dv32, (void __user *)arg, sizeof(dv32)))
@@ -2542,8 +2547,7 @@ static int handle_dv1394_init(struct file *file, unsigned int cmd, unsigned long
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
-	ret = dv1394_ioctl(file,
-			   DV1394_IOC_INIT, (unsigned long)&dv);
+	ret = dv1394_ioctl(file, DV1394_IOC_INIT, (unsigned long)&dv);
 	set_fs(old_fs);
 
 	return ret;
@@ -2556,13 +2560,12 @@ static int handle_dv1394_get_status(struct file *file, unsigned int cmd, unsigne
 	mm_segment_t old_fs;
 	int ret;
 
-	if (file->f_op->ioctl != dv1394_ioctl)
+	if (file->f_op->unlocked_ioctl != dv1394_ioctl)
 		return -EFAULT;
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
-	ret = dv1394_ioctl(file,
-			   DV1394_IOC_GET_STATUS, (unsigned long)&dv);
+	ret = dv1394_ioctl(file, DV1394_IOC_GET_STATUS, (unsigned long)&dv);
 	set_fs(old_fs);
 
 	if (!ret) {
@@ -2590,7 +2593,6 @@ static int handle_dv1394_get_status(struct file *file, unsigned int cmd, unsigne
 static long dv1394_compat_ioctl(struct file *file, unsigned int cmd,
 			       unsigned long arg)
 {
-	int err;
 	switch (cmd) {
 	case DV1394_IOC_SHUTDOWN:
 	case DV1394_IOC_SUBMIT_FRAMES:

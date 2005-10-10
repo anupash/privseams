@@ -662,7 +662,7 @@ static int ipaq_open(struct usb_serial_port *port, struct file *filp)
 	while (retries--) {
 		result = usb_control_msg(serial->dev,
 				usb_sndctrlpipe(serial->dev, 0), 0x22, 0x21,
-				0x1, 0, NULL, 0, HZ / 10 + 1);
+				0x1, 0, NULL, 0, 100);
 		if (result == 0) {
 			return 0;
 		}
@@ -818,11 +818,6 @@ static void ipaq_write_gather(struct usb_serial_port *port)
 	struct ipaq_packet	*pkt, *tmp;
 	struct urb		*urb = port->write_urb;
 
-	if (urb->status == -EINPROGRESS) {
-		/* Should never happen */
-		err("%s - flushing while urb is active !", __FUNCTION__);
-		return;
-	}
 	room = URBDATA_SIZE;
 	list_for_each_entry_safe(pkt, tmp, &priv->queue, list) {
 		count = min(room, (int)(pkt->len - pkt->written));

@@ -399,18 +399,34 @@ qdisc_create(struct net_device *dev, u32 handle, struct rtattr **tca, int *errp)
 {
 	int err;
 	struct rtattr *kind = tca[TCA_KIND-1];
-	void *p = NULL;
 	struct Qdisc *sch;
 	struct Qdisc_ops *ops;
-	int size;
 
 	ops = qdisc_lookup_ops(kind);
 #ifdef CONFIG_KMOD
-	if (ops==NULL && tca[TCA_KIND-1] != NULL) {
+	if (ops == NULL && kind != NULL) {
 		char name[IFNAMSIZ];
 		if (rtattr_strlcpy(name, kind, IFNAMSIZ) < IFNAMSIZ) {
+			/* We dropped the RTNL semaphore in order to
+			 * perform the module load.  So, even if we
+			 * succeeded in loading the module we have to
+			 * tell the caller to replay the request.  We
+			 * indicate this using -EAGAIN.
+			 * We replay the request because the device may
+			 * go away in the mean time.
+			 */
+			rtnl_unlock();
 			request_module("sch_%s", name);
+			rtnl_lock();
 			ops = qdisc_lookup_ops(kind);
+			if (ops != NULL) {
+				/* We will try again qdisc_lookup_ops,
+				 * so don't keep a reference.
+				 */
+				module_put(ops->owner);
+				err = -EAGAIN;
+				goto err_out;
+			}
 		}
 	}
 #endif
@@ -419,64 +435,55 @@ qdisc_create(struct net_device *dev, u32 handle, struct rtattr **tca, int *errp)
 	if (ops == NULL)
 		goto err_out;
 
-	/* ensure that the Qdisc and the private data are 32-byte aligned */
-	size = ((sizeof(*sch) + QDISC_ALIGN_CONST) & ~QDISC_ALIGN_CONST);
-	size += ops->priv_size + QDISC_ALIGN_CONST;
-
-	p = kmalloc(size, GFP_KERNEL);
-	err = -ENOBUFS;
-	if (!p)
+	sch = qdisc_alloc(dev, ops);
+	if (IS_ERR(sch)) {
+		err = PTR_ERR(sch);
 		goto err_out2;
-	memset(p, 0, size);
-	sch = (struct Qdisc *)(((unsigned long)p + QDISC_ALIGN_CONST)
-	                       & ~QDISC_ALIGN_CONST);
-	sch->padded = (char *)sch - (char *)p;
+	}
 
-	INIT_LIST_HEAD(&sch->list);
-	skb_queue_head_init(&sch->q);
-
-	if (handle == TC_H_INGRESS)
+	if (handle == TC_H_INGRESS) {
 		sch->flags |= TCQ_F_INGRESS;
-
-	sch->ops = ops;
-	sch->enqueue = ops->enqueue;
-	sch->dequeue = ops->dequeue;
-	sch->dev = dev;
-	dev_hold(dev);
-	atomic_set(&sch->refcnt, 1);
-	sch->stats_lock = &dev->queue_lock;
-	if (handle == 0) {
+		handle = TC_H_MAKE(TC_H_INGRESS, 0);
+	} else if (handle == 0) {
 		handle = qdisc_alloc_handle(dev);
 		err = -ENOMEM;
 		if (handle == 0)
 			goto err_out3;
 	}
 
-	if (handle == TC_H_INGRESS)
-                sch->handle =TC_H_MAKE(TC_H_INGRESS, 0);
-        else
-                sch->handle = handle;
+	sch->handle = handle;
 
 	if (!ops->init || (err = ops->init(sch, tca[TCA_OPTIONS-1])) == 0) {
+#ifdef CONFIG_NET_ESTIMATOR
+		if (tca[TCA_RATE-1]) {
+			err = gen_new_estimator(&sch->bstats, &sch->rate_est,
+						sch->stats_lock,
+						tca[TCA_RATE-1]);
+			if (err) {
+				/*
+				 * Any broken qdiscs that would require
+				 * a ops->reset() here? The qdisc was never
+				 * in action so it shouldn't be necessary.
+				 */
+				if (ops->destroy)
+					ops->destroy(sch);
+				goto err_out3;
+			}
+		}
+#endif
 		qdisc_lock_tree(dev);
 		list_add_tail(&sch->list, &dev->qdisc_list);
 		qdisc_unlock_tree(dev);
 
-#ifdef CONFIG_NET_ESTIMATOR
-		if (tca[TCA_RATE-1])
-			gen_new_estimator(&sch->bstats, &sch->rate_est,
-				sch->stats_lock, tca[TCA_RATE-1]);
-#endif
 		return sch;
 	}
 err_out3:
 	dev_put(dev);
+	kfree((char *) sch - sch->padded);
 err_out2:
 	module_put(ops->owner);
 err_out:
 	*errp = err;
-	if (p)
-		kfree(p);
 	return NULL;
 }
 
@@ -606,13 +613,19 @@ static int tc_get_qdisc(struct sk_buff *skb, struct nlmsghdr *n, void *arg)
 
 static int tc_modify_qdisc(struct sk_buff *skb, struct nlmsghdr *n, void *arg)
 {
-	struct tcmsg *tcm = NLMSG_DATA(n);
-	struct rtattr **tca = arg;
+	struct tcmsg *tcm;
+	struct rtattr **tca;
 	struct net_device *dev;
-	u32 clid = tcm->tcm_parent;
-	struct Qdisc *q = NULL;
-	struct Qdisc *p = NULL;
+	u32 clid;
+	struct Qdisc *q, *p;
 	int err;
+
+replay:
+	/* Reinit, just in case something touches this. */
+	tcm = NLMSG_DATA(n);
+	tca = arg;
+	clid = tcm->tcm_parent;
+	q = p = NULL;
 
 	if ((dev = __dev_get_by_index(tcm->tcm_ifindex)) == NULL)
 		return -ENODEV;
@@ -707,8 +720,11 @@ create_n_graft:
 		q = qdisc_create(dev, tcm->tcm_parent, tca, &err);
         else
 		q = qdisc_create(dev, tcm->tcm_handle, tca, &err);
-	if (q == NULL)
+	if (q == NULL) {
+		if (err == -EAGAIN)
+			goto replay;
 		return err;
+	}
 
 graft:
 	if (1) {
@@ -733,17 +749,18 @@ graft:
 }
 
 static int tc_fill_qdisc(struct sk_buff *skb, struct Qdisc *q, u32 clid,
-			 u32 pid, u32 seq, unsigned flags, int event)
+			 u32 pid, u32 seq, u16 flags, int event)
 {
 	struct tcmsg *tcm;
 	struct nlmsghdr  *nlh;
 	unsigned char	 *b = skb->tail;
 	struct gnet_dump d;
 
-	nlh = NLMSG_PUT(skb, pid, seq, event, sizeof(*tcm));
-	nlh->nlmsg_flags = flags;
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*tcm), flags);
 	tcm = NLMSG_DATA(nlh);
 	tcm->tcm_family = AF_UNSPEC;
+	tcm->tcm__pad1 = 0;
+	tcm->tcm__pad2 = 0;
 	tcm->tcm_ifindex = q->dev->ifindex;
 	tcm->tcm_parent = clid;
 	tcm->tcm_handle = q->handle;
@@ -970,7 +987,7 @@ out:
 
 static int tc_fill_tclass(struct sk_buff *skb, struct Qdisc *q,
 			  unsigned long cl,
-			  u32 pid, u32 seq, unsigned flags, int event)
+			  u32 pid, u32 seq, u16 flags, int event)
 {
 	struct tcmsg *tcm;
 	struct nlmsghdr  *nlh;
@@ -978,8 +995,7 @@ static int tc_fill_tclass(struct sk_buff *skb, struct Qdisc *q,
 	struct gnet_dump d;
 	struct Qdisc_class_ops *cl_ops = q->ops->cl_ops;
 
-	nlh = NLMSG_PUT(skb, pid, seq, event, sizeof(*tcm));
-	nlh->nlmsg_flags = flags;
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*tcm), flags);
 	tcm = NLMSG_DATA(nlh);
 	tcm->tcm_family = AF_UNSPEC;
 	tcm->tcm_ifindex = q->dev->ifindex;
@@ -1262,6 +1278,7 @@ static int __init pktsched_init(void)
 
 subsys_initcall(pktsched_init);
 
+EXPORT_SYMBOL(qdisc_lookup);
 EXPORT_SYMBOL(qdisc_get_rtab);
 EXPORT_SYMBOL(qdisc_put_rtab);
 EXPORT_SYMBOL(register_qdisc);

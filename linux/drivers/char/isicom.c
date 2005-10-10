@@ -151,9 +151,6 @@ MODULE_DEVICE_TABLE(pci, isicom_pci_tbl);
 static int prev_card = 3;	/*	start servicing isi_card[0]	*/
 static struct tty_driver *isicom_normal;
 
-static struct isi_board isi_card[BOARD_COUNT];
-static struct isi_port  isi_ports[PORT_COUNT];
-
 static struct timer_list tx;
 static char re_schedule = 1;
 #ifdef ISICOM_DEBUG
@@ -209,6 +206,9 @@ struct	isi_port {
 	int			xmit_tail;
 	int			xmit_cnt;
 };
+
+static struct isi_board isi_card[BOARD_COUNT];
+static struct isi_port  isi_ports[PORT_COUNT];
 
 /*
  *	Locking functions for card level locking. We need to own both
@@ -381,7 +381,7 @@ static struct file_operations ISILoad_fops = {
 	.ioctl		= ISILoad_ioctl,
 };
 
-struct miscdevice isiloader_device = {
+static struct miscdevice isiloader_device = {
 	ISILOAD_MISC_MINOR, "isictl", &ISILoad_fops
 };
 
@@ -1271,7 +1271,7 @@ static void isicom_shutdown_port(struct isi_port * port)
 	}	
 	port->flags &= ~ASYNC_INITIALIZED;
 	/* 3rd October 2000 : Vinayak P Risbud */
-	port->tty = 0;
+	port->tty = NULL;
 	spin_unlock_irqrestore(&card->card_lock, flags);
 	
 	/*Fix done by Anil .S on 30-04-2001
@@ -1756,7 +1756,7 @@ static void isicom_flush_buffer(struct tty_struct * tty)
 }
 
 
-static int __init register_ioregion(void)
+static int __devinit register_ioregion(void)
 {
 	int count, done=0;
 	for (count=0; count < BOARD_COUNT; count++ ) {
@@ -1771,7 +1771,7 @@ static int __init register_ioregion(void)
 	return done;
 }
 
-static void __exit unregister_ioregion(void)
+static void unregister_ioregion(void)
 {
 	int count;
 	for (count=0; count < BOARD_COUNT; count++ ) 
@@ -1803,7 +1803,7 @@ static struct tty_operations isicom_ops = {
 	.tiocmset	= isicom_tiocmset,
 };
 
-static int __init register_drivers(void)
+static int __devinit register_drivers(void)
 {
 	int error;
 
@@ -1834,7 +1834,7 @@ static int __init register_drivers(void)
 	return 0;
 }
 
-static void __exit unregister_drivers(void)
+static void unregister_drivers(void)
 {
 	int error = tty_unregister_driver(isicom_normal);
 	if (error)
@@ -1842,7 +1842,7 @@ static void __exit unregister_drivers(void)
 	put_tty_driver(isicom_normal);
 }
 
-static int __init register_isr(void)
+static int __devinit register_isr(void)
 {
 	int count, done=0;
 	unsigned long irqflags;
@@ -1883,7 +1883,7 @@ static void __exit unregister_isr(void)
 	}
 }
 
-static int __init isicom_init(void)
+static int __devinit isicom_init(void)
 {
 	int card, channel, base;
 	struct isi_port * port;

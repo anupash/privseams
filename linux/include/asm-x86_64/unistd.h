@@ -76,7 +76,7 @@ __SYSCALL(__NR_madvise, sys_madvise)
 #define __NR_shmget                             29
 __SYSCALL(__NR_shmget, sys_shmget)
 #define __NR_shmat                              30
-__SYSCALL(__NR_shmat, wrap_sys_shmat)
+__SYSCALL(__NR_shmat, sys_shmat)
 #define __NR_shmctl                             31
 __SYSCALL(__NR_shmctl, sys_shmctl)
 
@@ -533,8 +533,6 @@ __SYSCALL(__NR_tgkill, sys_tgkill)
 __SYSCALL(__NR_utimes, sys_utimes)
 #define __NR_vserver		236
 __SYSCALL(__NR_vserver, sys_ni_syscall)
-#define __NR_vserver		236
-__SYSCALL(__NR_vserver, sys_ni_syscall)
 #define __NR_mbind 		237
 __SYSCALL(__NR_mbind, sys_mbind)
 #define __NR_set_mempolicy 	238
@@ -554,7 +552,7 @@ __SYSCALL(__NR_mq_notify, sys_mq_notify)
 #define __NR_mq_getsetattr 	245
 __SYSCALL(__NR_mq_getsetattr, sys_mq_getsetattr)
 #define __NR_kexec_load 	246
-__SYSCALL(__NR_kexec_load, sys_ni_syscall)
+__SYSCALL(__NR_kexec_load, sys_kexec_load)
 #define __NR_waitid		247
 __SYSCALL(__NR_waitid, sys_waitid)
 #define __NR_add_key		248
@@ -563,8 +561,18 @@ __SYSCALL(__NR_add_key, sys_add_key)
 __SYSCALL(__NR_request_key, sys_request_key)
 #define __NR_keyctl		250
 __SYSCALL(__NR_keyctl, sys_keyctl)
+#define __NR_ioprio_set		251
+__SYSCALL(__NR_ioprio_set, sys_ioprio_set)
+#define __NR_ioprio_get		252
+__SYSCALL(__NR_ioprio_get, sys_ioprio_get)
+#define __NR_inotify_init	253
+__SYSCALL(__NR_inotify_init, sys_inotify_init)
+#define __NR_inotify_add_watch	254
+__SYSCALL(__NR_inotify_add_watch, sys_inotify_add_watch)
+#define __NR_inotify_rm_watch	255
+__SYSCALL(__NR_inotify_rm_watch, sys_inotify_rm_watch)
 
-#define __NR_syscall_max __NR_keyctl
+#define __NR_syscall_max __NR_inotify_rm_watch
 #ifndef __NO_STUBS
 
 /* user-visible error numbers are in the range -1 - -4095 */
@@ -774,7 +782,7 @@ asmlinkage long sys_pipe(int *fildes);
 
 asmlinkage long sys_ptrace(long request, long pid,
 				unsigned long addr, long data);
-asmlinkage long sys_iopl(unsigned int level, struct pt_regs regs);
+asmlinkage long sys_iopl(unsigned int level, struct pt_regs *regs);
 asmlinkage long sys_ioperm(unsigned long from, unsigned long num, int turn_on);
 struct sigaction;
 asmlinkage long sys_rt_sigaction(int sig,
@@ -792,6 +800,6 @@ asmlinkage long sys_rt_sigaction(int sig,
  * What we want is __attribute__((weak,alias("sys_ni_syscall"))),
  * but it doesn't work on all toolchains, so we just do it by hand
  */
-#define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall");
+#define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall")
 
 #endif

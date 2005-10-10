@@ -110,7 +110,7 @@ static int __init hp_zx1_ioc_shared(void)
 	hp->gart_size = HP_ZX1_GART_SIZE;
 	hp->gatt_entries = hp->gart_size / hp->io_page_size;
 
-	hp->io_pdir = phys_to_virt(readq(hp->ioc_regs+HP_ZX1_PDIR_BASE));
+	hp->io_pdir = gart_to_virt(readq(hp->ioc_regs+HP_ZX1_PDIR_BASE));
 	hp->gatt = &hp->io_pdir[HP_ZX1_IOVA_TO_PDIR(hp->gart_base)];
 
 	if (hp->gatt[0] != HP_ZX1_SBA_IOMMU_COOKIE) {
@@ -248,7 +248,7 @@ hp_zx1_configure (void)
 	agp_bridge->mode = readl(hp->lba_regs+hp->lba_cap_offset+PCI_AGP_STATUS);
 
 	if (hp->io_pdir_owner) {
-		writel(virt_to_phys(hp->io_pdir), hp->ioc_regs+HP_ZX1_PDIR_BASE);
+		writel(virt_to_gart(hp->io_pdir), hp->ioc_regs+HP_ZX1_PDIR_BASE);
 		readl(hp->ioc_regs+HP_ZX1_PDIR_BASE);
 		writel(hp->io_tlb_ps, hp->ioc_regs+HP_ZX1_TCNFG);
 		readl(hp->ioc_regs+HP_ZX1_TCNFG);
@@ -289,7 +289,7 @@ hp_zx1_tlbflush (struct agp_memory *mem)
 }
 
 static int
-hp_zx1_create_gatt_table (void)
+hp_zx1_create_gatt_table (struct agp_bridge_data *bridge)
 {
 	struct _hp_private *hp = &hp_private;
 	int i;
@@ -317,7 +317,7 @@ hp_zx1_create_gatt_table (void)
 }
 
 static int
-hp_zx1_free_gatt_table (void)
+hp_zx1_free_gatt_table (struct agp_bridge_data *bridge)
 {
 	struct _hp_private *hp = &hp_private;
 
@@ -367,7 +367,9 @@ hp_zx1_insert_memory (struct agp_memory *mem, off_t pg_start, int type)
 		for (k = 0;
 		     k < hp->io_pages_per_kpage;
 		     k++, j++, paddr += hp->io_page_size) {
-			hp->gatt[j] = agp_bridge->driver->mask_memory(paddr, type);
+			hp->gatt[j] =
+				agp_bridge->driver->mask_memory(agp_bridge,
+					paddr, type);
 		}
 	}
 
@@ -396,19 +398,20 @@ hp_zx1_remove_memory (struct agp_memory *mem, off_t pg_start, int type)
 }
 
 static unsigned long
-hp_zx1_mask_memory (unsigned long addr, int type)
+hp_zx1_mask_memory (struct agp_bridge_data *bridge,
+	unsigned long addr, int type)
 {
 	return HP_ZX1_PDIR_VALID_BIT | addr;
 }
 
 static void
-hp_zx1_enable (u32 mode)
+hp_zx1_enable (struct agp_bridge_data *bridge, u32 mode)
 {
 	struct _hp_private *hp = &hp_private;
 	u32 command;
 
 	command = readl(hp->lba_regs+hp->lba_cap_offset+PCI_AGP_STATUS);
-	command = agp_collect_device_status(mode, command);
+	command = agp_collect_device_status(bridge, mode, command);
 	command |= 0x00000100;
 
 	writel(command, hp->lba_regs+hp->lba_cap_offset+PCI_AGP_COMMAND);

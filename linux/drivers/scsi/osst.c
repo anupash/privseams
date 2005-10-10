@@ -24,7 +24,7 @@
 */
 
 static const char * cvsid = "$Id: osst.c,v 1.73 2005/01/01 21:13:34 wriede Exp $";
-const char * osst_version = "0.99.3";
+static const char * osst_version = "0.99.3";
 
 /* The "failure to reconnect" firmware bug */
 #define OSST_FW_NEED_POLL_MIN 10601 /*(107A)*/
@@ -170,7 +170,7 @@ static int osst_copy_from_buffer(struct osst_buffer *, unsigned char *);
 static int osst_probe(struct device *);
 static int osst_remove(struct device *);
 
-struct scsi_driver osst_template = {
+static struct scsi_driver osst_template = {
 	.owner			= THIS_MODULE,
 	.gendrv = {
 		.name		=  "osst",
@@ -4318,7 +4318,13 @@ static int os_scsi_tape_open(struct inode * inode, struct file * filp)
 	int		      dev  = TAPE_NR(inode);
 	int		      mode = TAPE_MODE(inode);
 
-	nonseekable_open(inode, filp);
+	/*
+	 * We really want to do nonseekable_open(inode, filp); here, but some
+	 * versions of tar incorrectly call lseek on tapes and bail out if that
+	 * fails.  So we disallow pread() and pwrite(), but permit lseeks.
+	 */
+	filp->f_mode &= ~(FMODE_PREAD | FMODE_PWRITE);
+
 	write_lock(&os_scsi_tapes_lock);
 	if (dev >= osst_max_dev || os_scsi_tapes == NULL ||
 	    (STp = os_scsi_tapes[dev]) == NULL || !STp->device) {
@@ -4764,9 +4770,6 @@ static int os_scsi_tape_close(struct inode * inode, struct file * filp)
 {
 	int		      result = 0;
 	struct osst_tape    * STp    = filp->private_data;
-	struct scsi_request * SRpnt  = NULL;
-
-	if (SRpnt) scsi_release_request(SRpnt);
 
 	if (STp->door_locked == ST_LOCKED_AUTO)
 		do_door_lock(STp, 0);
@@ -5121,6 +5124,22 @@ out:
 	return retval;
 }
 
+#ifdef CONFIG_COMPAT
+static long osst_compat_ioctl(struct file * file, unsigned int cmd_in, unsigned long arg)
+{
+	struct osst_tape *STp = file->private_data;
+	struct scsi_device *sdev = STp->device;
+	int ret = -ENOIOCTLCMD;
+	if (sdev->host->hostt->compat_ioctl) {
+
+		ret = sdev->host->hostt->compat_ioctl(sdev, cmd_in, (void __user *)arg);
+
+	}
+	return ret;
+}
+#endif
+
+
 
 /* Memory handling routines */
 
@@ -5456,6 +5475,9 @@ static struct file_operations osst_fops = {
 	.read =         osst_read,
 	.write =        osst_write,
 	.ioctl =        osst_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = osst_compat_ioctl,
+#endif
 	.open =         os_scsi_tape_open,
 	.flush =        os_scsi_tape_flush,
 	.release =      os_scsi_tape_close,
@@ -5586,13 +5608,13 @@ static ssize_t osst_filemark_cnt_show(struct class_device *class_dev, char *buf)
 
 CLASS_DEVICE_ATTR(file_count, S_IRUGO, osst_filemark_cnt_show, NULL);
 
-static struct class_simple * osst_sysfs_class;
+static struct class *osst_sysfs_class;
 
 static int osst_sysfs_valid = 0;
 
 static void osst_sysfs_init(void)
 {
-	osst_sysfs_class = class_simple_create(THIS_MODULE, "onstream_tape");
+	osst_sysfs_class = class_create(THIS_MODULE, "onstream_tape");
 	if ( IS_ERR(osst_sysfs_class) )
 		printk(KERN_WARNING "osst :W: Unable to register sysfs class\n");
 	else
@@ -5605,7 +5627,7 @@ static void osst_sysfs_add(dev_t dev, struct device *device, struct osst_tape * 
 
 	if (!osst_sysfs_valid) return;
 
-	osst_class_member = class_simple_device_add(osst_sysfs_class, dev, device, "%s", name);
+	osst_class_member = class_device_create(osst_sysfs_class, dev, device, "%s", name);
 	if (IS_ERR(osst_class_member)) {
 		printk(KERN_WARNING "osst :W: Unable to add sysfs class member %s\n", name);
 		return;
@@ -5623,13 +5645,13 @@ static void osst_sysfs_destroy(dev_t dev)
 {
 	if (!osst_sysfs_valid) return; 
 
-	class_simple_device_remove(dev);
+	class_device_destroy(osst_sysfs_class, dev);
 }
 
 static void osst_sysfs_cleanup(void)
 {
 	if (osst_sysfs_valid) {
-		class_simple_destroy(osst_sysfs_class);
+		class_destroy(osst_sysfs_class);
 		osst_sysfs_valid = 0;
 	}
 }

@@ -14,14 +14,11 @@
  * This file is licenced under the GPL.
  */
  
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PPC_PMAC
 #include <asm/machdep.h>
 #include <asm/pmac_feature.h>
 #include <asm/pci-bridge.h>
 #include <asm/prom.h>
-#ifndef CONFIG_PM
-#	define CONFIG_PM
-#endif
 #endif
 
 #ifndef CONFIG_PCI
@@ -54,7 +51,7 @@ ohci_pci_start (struct usb_hcd *hcd)
 		if (pdev->vendor == PCI_VENDOR_ID_AMD
 				&& pdev->device == 0x740c) {
 			ohci->flags = OHCI_QUIRK_AMD756;
-			ohci_info (ohci, "AMD756 erratum 4 workaround\n");
+			ohci_dbg (ohci, "AMD756 erratum 4 workaround\n");
 			// also somewhat erratum 10 (suspend/resume issues)
 		}
 
@@ -68,7 +65,7 @@ ohci_pci_start (struct usb_hcd *hcd)
 		 */
 		else if (pdev->vendor == PCI_VENDOR_ID_OPTI
 				&& pdev->device == 0xc861) {
-			ohci_info (ohci,
+			ohci_dbg (ohci,
 				"WARNING: OPTi workarounds unavailable\n");
 		}
 
@@ -84,8 +81,19 @@ ohci_pci_start (struct usb_hcd *hcd)
 			if (b && b->device == PCI_DEVICE_ID_NS_87560_LIO
 					&& b->vendor == PCI_VENDOR_ID_NS) {
 				ohci->flags |= OHCI_QUIRK_SUPERIO;
-				ohci_info (ohci, "Using NSC SuperIO setup\n");
+				ohci_dbg (ohci, "Using NSC SuperIO setup\n");
 			}
+		}
+
+		/* Check for Compaq's ZFMicro chipset, which needs short 
+		 * delays before control or bulk queues get re-activated
+		 * in finish_unlinks()
+		 */
+		else if (pdev->vendor == PCI_VENDOR_ID_COMPAQ
+				&& pdev->device  == 0xa0f8) {
+			ohci->flags |= OHCI_QUIRK_ZFMICRO;
+			ohci_dbg (ohci,
+				"enabled Compaq ZFMicro chipset quirk\n");
 		}
 	}
 
@@ -102,7 +110,7 @@ ohci_pci_start (struct usb_hcd *hcd)
 
 #ifdef	CONFIG_PM
 
-static int ohci_pci_suspend (struct usb_hcd *hcd, u32 state)
+static int ohci_pci_suspend (struct usb_hcd *hcd, pm_message_t message)
 {
 	struct ohci_hcd		*ohci = hcd_to_ohci (hcd);
 
@@ -111,7 +119,7 @@ static int ohci_pci_suspend (struct usb_hcd *hcd, u32 state)
 		msleep (100);
 
 #ifdef	CONFIG_USB_SUSPEND
-	(void) usb_suspend_device (hcd->self.root_hub, state);
+	(void) usb_suspend_device (hcd->self.root_hub, message);
 #else
 	usb_lock_device (hcd->self.root_hub);
 	(void) ohci_hub_suspend (hcd);
@@ -121,7 +129,7 @@ static int ohci_pci_suspend (struct usb_hcd *hcd, u32 state)
 	/* let things settle down a bit */
 	msleep (100);
 	
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PPC_PMAC
 	if (_machine == _MACH_Pmac) {
 	   	struct device_node	*of_node;
  
@@ -130,7 +138,7 @@ static int ohci_pci_suspend (struct usb_hcd *hcd, u32 state)
 		if (of_node)
 			pmac_call_feature(PMAC_FTR_USB_ENABLE, of_node, 0, 0);
 	}
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PPC_PMAC */
 	return 0;
 }
 
@@ -140,7 +148,7 @@ static int ohci_pci_resume (struct usb_hcd *hcd)
 	struct ohci_hcd		*ohci = hcd_to_ohci (hcd);
 	int			retval = 0;
 
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PPC_PMAC
 	if (_machine == _MACH_Pmac) {
 		struct device_node *of_node;
 
@@ -149,7 +157,7 @@ static int ohci_pci_resume (struct usb_hcd *hcd)
 		if (of_node)
 			pmac_call_feature (PMAC_FTR_USB_ENABLE, of_node, 0, 1);
 	}
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PPC_PMAC */
 
 	/* resume root hub */
 	if (time_before (jiffies, ohci->next_statechange))

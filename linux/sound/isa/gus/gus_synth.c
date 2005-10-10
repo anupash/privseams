@@ -99,7 +99,8 @@ static void snd_gus_synth_free_private_instruments(snd_gus_port_t *p, int client
 	snd_seq_instr_list_free_cond(p->gus->gf1.ilist, &ifree, client, 0);
 }
  
-int snd_gus_synth_event_input(snd_seq_event_t *ev, int direct, void *private_data, int atomic, int hop)
+static int snd_gus_synth_event_input(snd_seq_event_t *ev, int direct,
+				     void *private_data, int atomic, int hop)
 {
 	snd_gus_port_t * p = (snd_gus_port_t *) private_data;
 	
@@ -214,7 +215,7 @@ static int snd_gus_synth_new_device(snd_seq_device_t *dev)
 	snd_gus_card_t *gus;
 	int client, i;
 	snd_seq_client_callback_t callbacks;
-	snd_seq_client_info_t cinfo;
+	snd_seq_client_info_t *cinfo;
 	snd_seq_port_subscribe_t sub;
 	snd_iwffff_ops_t *iwops;
 	snd_gf1_ops_t *gf1ops;
@@ -227,21 +228,28 @@ static int snd_gus_synth_new_device(snd_seq_device_t *dev)
 	init_MUTEX(&gus->register_mutex);
 	gus->gf1.seq_client = -1;
 	
+	cinfo = kmalloc(sizeof(*cinfo), GFP_KERNEL);
+	if (! cinfo)
+		return -ENOMEM;
+
 	/* allocate new client */
 	memset(&callbacks, 0, sizeof(callbacks));
 	callbacks.private_data = gus;
 	callbacks.allow_output = callbacks.allow_input = 1;
 	client = gus->gf1.seq_client =
 			snd_seq_create_kernel_client(gus->card, 1, &callbacks);
-	if (client < 0)
+	if (client < 0) {
+		kfree(cinfo);
 		return client;
+	}
 
 	/* change name of client */
-	memset(&cinfo, 0, sizeof(cinfo));
-	cinfo.client = client;
-	cinfo.type = KERNEL_CLIENT;
-	sprintf(cinfo.name, gus->interwave ? "AMD InterWave" : "GF1");
-	snd_seq_kernel_client_ctl(client, SNDRV_SEQ_IOCTL_SET_CLIENT_INFO, &cinfo);
+	memset(cinfo, 0, sizeof(*cinfo));
+	cinfo->client = client;
+	cinfo->type = KERNEL_CLIENT;
+	sprintf(cinfo->name, gus->interwave ? "AMD InterWave" : "GF1");
+	snd_seq_kernel_client_ctl(client, SNDRV_SEQ_IOCTL_SET_CLIENT_INFO, cinfo);
+	kfree(cinfo);
 
 	for (i = 0; i < 4; i++)
 		snd_gus_synth_create_port(gus, i);

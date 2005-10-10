@@ -23,6 +23,7 @@
 
 #include <asm/system.h>
 
+#include <linux/module.h>
 #include <linux/types.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
@@ -96,12 +97,13 @@ rpc_setup_pipedir(struct rpc_clnt *clnt, char *dir_name)
  * made to sleep too long.
  */
 struct rpc_clnt *
-rpc_create_client(struct rpc_xprt *xprt, char *servname,
+rpc_new_client(struct rpc_xprt *xprt, char *servname,
 		  struct rpc_program *program, u32 vers,
 		  rpc_authflavor_t flavor)
 {
 	struct rpc_version	*version;
 	struct rpc_clnt		*clnt = NULL;
+	struct rpc_auth		*auth;
 	int err;
 	int len;
 
@@ -156,10 +158,11 @@ rpc_create_client(struct rpc_xprt *xprt, char *servname,
 	if (err < 0)
 		goto out_no_path;
 
-	err = -ENOMEM;
-	if (!rpcauth_create(flavor, clnt)) {
+	auth = rpcauth_create(flavor, clnt);
+	if (IS_ERR(auth)) {
 		printk(KERN_INFO "RPC: Couldn't create auth handle (flavor %u)\n",
 				flavor);
+		err = PTR_ERR(auth);
 		goto out_no_auth;
 	}
 
@@ -177,6 +180,37 @@ out_no_path:
 		kfree(clnt->cl_server);
 	kfree(clnt);
 out_err:
+	xprt_destroy(xprt);
+	return ERR_PTR(err);
+}
+
+/**
+ * Create an RPC client
+ * @xprt - pointer to xprt struct
+ * @servname - name of server
+ * @info - rpc_program
+ * @version - rpc_program version
+ * @authflavor - rpc_auth flavour to use
+ *
+ * Creates an RPC client structure, then pings the server in order to
+ * determine if it is up, and if it supports this program and version.
+ *
+ * This function should never be called by asynchronous tasks such as
+ * the portmapper.
+ */
+struct rpc_clnt *rpc_create_client(struct rpc_xprt *xprt, char *servname,
+		struct rpc_program *info, u32 version, rpc_authflavor_t authflavor)
+{
+	struct rpc_clnt *clnt;
+	int err;
+	
+	clnt = rpc_new_client(xprt, servname, info, version, authflavor);
+	if (IS_ERR(clnt))
+		return clnt;
+	err = rpc_ping(clnt, RPC_TASK_SOFT|RPC_TASK_NOINTR);
+	if (err == 0)
+		return clnt;
+	rpc_shutdown_client(clnt);
 	return ERR_PTR(err);
 }
 
@@ -207,6 +241,8 @@ rpc_clone_client(struct rpc_clnt *clnt)
 	rpc_init_rtt(&new->cl_rtt_default, clnt->cl_xprt->timeout.to_initval);
 	if (new->cl_auth)
 		atomic_inc(&new->cl_auth->au_count);
+	new->cl_pmap		= &new->cl_pmap_default;
+	rpc_init_wait_queue(&new->cl_pmap_default.pm_bindwait, "bindwait");
 	return new;
 out_no_clnt:
 	printk(KERN_INFO "RPC: out of memory in %s\n", __FUNCTION__);
@@ -295,6 +331,44 @@ rpc_release_client(struct rpc_clnt *clnt)
 		rpc_destroy_client(clnt);
 }
 
+/**
+ * rpc_bind_new_program - bind a new RPC program to an existing client
+ * @old - old rpc_client
+ * @program - rpc program to set
+ * @vers - rpc program version
+ *
+ * Clones the rpc client and sets up a new RPC program. This is mainly
+ * of use for enabling different RPC programs to share the same transport.
+ * The Sun NFSv2/v3 ACL protocol can do this.
+ */
+struct rpc_clnt *rpc_bind_new_program(struct rpc_clnt *old,
+				      struct rpc_program *program,
+				      int vers)
+{
+	struct rpc_clnt *clnt;
+	struct rpc_version *version;
+	int err;
+
+	BUG_ON(vers >= program->nrvers || !program->version[vers]);
+	version = program->version[vers];
+	clnt = rpc_clone_client(old);
+	if (IS_ERR(clnt))
+		goto out;
+	clnt->cl_procinfo = version->procs;
+	clnt->cl_maxproc  = version->nrprocs;
+	clnt->cl_protname = program->name;
+	clnt->cl_prog     = program->number;
+	clnt->cl_vers     = version->number;
+	clnt->cl_stats    = program->stats;
+	err = rpc_ping(clnt, RPC_TASK_SOFT|RPC_TASK_NOINTR);
+	if (err != 0) {
+		rpc_shutdown_client(clnt);
+		clnt = ERR_PTR(err);
+	}
+out:	
+	return clnt;
+}
+
 /*
  * Default callback for async RPC calls
  */
@@ -304,38 +378,41 @@ rpc_default_callback(struct rpc_task *task)
 }
 
 /*
- *	Export the signal mask handling for aysnchronous code that
+ *	Export the signal mask handling for synchronous code that
  *	sleeps on RPC calls
  */
+#define RPC_INTR_SIGNALS (sigmask(SIGINT) | sigmask(SIGQUIT) | sigmask(SIGKILL))
  
+static void rpc_save_sigmask(sigset_t *oldset, int intr)
+{
+	unsigned long	sigallow = 0;
+	sigset_t sigmask;
+
+	/* Block all signals except those listed in sigallow */
+	if (intr)
+		sigallow |= RPC_INTR_SIGNALS;
+	siginitsetinv(&sigmask, sigallow);
+	sigprocmask(SIG_BLOCK, &sigmask, oldset);
+}
+
+static inline void rpc_task_sigmask(struct rpc_task *task, sigset_t *oldset)
+{
+	rpc_save_sigmask(oldset, !RPC_TASK_UNINTERRUPTIBLE(task));
+}
+
+static inline void rpc_restore_sigmask(sigset_t *oldset)
+{
+	sigprocmask(SIG_SETMASK, oldset, NULL);
+}
+
 void rpc_clnt_sigmask(struct rpc_clnt *clnt, sigset_t *oldset)
 {
-	unsigned long	sigallow = sigmask(SIGKILL);
-	unsigned long	irqflags;
-	
-	/* Turn off various signals */
-	if (clnt->cl_intr) {
-		struct k_sigaction *action = current->sighand->action;
-		if (action[SIGINT-1].sa.sa_handler == SIG_DFL)
-			sigallow |= sigmask(SIGINT);
-		if (action[SIGQUIT-1].sa.sa_handler == SIG_DFL)
-			sigallow |= sigmask(SIGQUIT);
-	}
-	spin_lock_irqsave(&current->sighand->siglock, irqflags);
-	*oldset = current->blocked;
-	siginitsetinv(&current->blocked, sigallow & ~oldset->sig[0]);
-	recalc_sigpending();
-	spin_unlock_irqrestore(&current->sighand->siglock, irqflags);
+	rpc_save_sigmask(oldset, clnt->cl_intr);
 }
 
 void rpc_clnt_sigunmask(struct rpc_clnt *clnt, sigset_t *oldset)
 {
-	unsigned long	irqflags;
-	
-	spin_lock_irqsave(&current->sighand->siglock, irqflags);
-	current->blocked = *oldset;
-	recalc_sigpending();
-	spin_unlock_irqrestore(&current->sighand->siglock, irqflags);
+	rpc_restore_sigmask(oldset);
 }
 
 /*
@@ -353,26 +430,26 @@ int rpc_call_sync(struct rpc_clnt *clnt, struct rpc_message *msg, int flags)
 
 	BUG_ON(flags & RPC_TASK_ASYNC);
 
-	rpc_clnt_sigmask(clnt, &oldset);		
-
 	status = -ENOMEM;
 	task = rpc_new_task(clnt, NULL, flags);
 	if (task == NULL)
 		goto out;
 
+	/* Mask signals on RPC calls _and_ GSS_AUTH upcalls */
+	rpc_task_sigmask(task, &oldset);
+
 	rpc_call_setup(task, msg, 0);
 
 	/* Set up the call info struct and execute the task */
-	if (task->tk_status == 0)
+	if (task->tk_status == 0) {
 		status = rpc_execute(task);
-	else {
+	} else {
 		status = task->tk_status;
 		rpc_release_task(task);
 	}
 
+	rpc_restore_sigmask(&oldset);
 out:
-	rpc_clnt_sigunmask(clnt, &oldset);		
-
 	return status;
 }
 
@@ -393,8 +470,6 @@ rpc_call_async(struct rpc_clnt *clnt, struct rpc_message *msg, int flags,
 
 	flags |= RPC_TASK_ASYNC;
 
-	rpc_clnt_sigmask(clnt, &oldset);		
-
 	/* Create/initialize a new RPC task */
 	if (!callback)
 		callback = rpc_default_callback;
@@ -403,19 +478,20 @@ rpc_call_async(struct rpc_clnt *clnt, struct rpc_message *msg, int flags,
 		goto out;
 	task->tk_calldata = data;
 
+	/* Mask signals on GSS_AUTH upcalls */
+	rpc_task_sigmask(task, &oldset);		
+
 	rpc_call_setup(task, msg, 0);
 
 	/* Set up the call info struct and execute the task */
-	if (task->tk_status == 0)
-		status = rpc_execute(task);
-	else {
-		status = task->tk_status;
+	status = task->tk_status;
+	if (status == 0)
+		rpc_execute(task);
+	else
 		rpc_release_task(task);
-	}
 
+	rpc_restore_sigmask(&oldset);		
 out:
-	rpc_clnt_sigunmask(clnt, &oldset);		
-
 	return status;
 }
 
@@ -426,9 +502,9 @@ rpc_call_setup(struct rpc_task *task, struct rpc_message *msg, int flags)
 	task->tk_msg   = *msg;
 	task->tk_flags |= flags;
 	/* Bind the user cred */
-	if (task->tk_msg.rpc_cred != NULL) {
+	if (task->tk_msg.rpc_cred != NULL)
 		rpcauth_holdcred(task);
-	} else
+	else
 		rpcauth_bindcred(task);
 
 	if (task->tk_status == 0)
@@ -451,6 +527,20 @@ rpc_setbufsize(struct rpc_clnt *clnt, unsigned int sndsize, unsigned int rcvsize
 	if (xprt_connected(xprt))
 		xprt_sock_setbufsize(xprt);
 }
+
+/*
+ * Return size of largest payload RPC client can support, in bytes
+ *
+ * For stream transports, this is one RPC record fragment (see RFC
+ * 1831), as we don't support multi-record requests yet.  For datagram
+ * transports, this is the size of an IP packet minus the IP, UDP, and
+ * RPC header sizes.
+ */
+size_t rpc_max_payload(struct rpc_clnt *clnt)
+{
+	return clnt->cl_xprt->max_payload;
+}
+EXPORT_SYMBOL(rpc_max_payload);
 
 /*
  * Restart an (async) RPC call. Usually called from within the
@@ -579,7 +669,7 @@ call_allocate(struct rpc_task *task)
 		return;
 	printk(KERN_INFO "RPC: buffer allocation failed for task %p\n", task); 
 
-	if (RPC_IS_ASYNC(task) || !(task->tk_client->cl_intr && signalled())) {
+	if (RPC_IS_ASYNC(task) || !signalled()) {
 		xprt_release(task);
 		task->tk_action = call_reserve;
 		rpc_delay(task, HZ>>4);
@@ -871,21 +961,6 @@ call_decode(struct rpc_task *task)
 		goto out_retry;
 	}
 
-	/*
-	 * The following is an NFS-specific hack to cater for setuid
-	 * processes whose uid is mapped to nobody on the server.
-	 */
-	if (task->tk_client->cl_droppriv && 
-            (ntohl(*p) == NFSERR_ACCES || ntohl(*p) == NFSERR_PERM)) {
-		if (RPC_IS_SETUID(task) && task->tk_suid_retry) {
-			dprintk("RPC: %4d retry squashed uid\n", task->tk_pid);
-			task->tk_flags ^= RPC_CALL_REALUID;
-			task->tk_action = call_bind;
-			task->tk_suid_retry--;
-			goto out_retry;
-		}
-	}
-
 	task->tk_action = NULL;
 
 	if (decode)
@@ -958,7 +1033,9 @@ call_header(struct rpc_task *task)
 	*p++ = htonl(clnt->cl_prog);	/* program number */
 	*p++ = htonl(clnt->cl_vers);	/* program version */
 	*p++ = htonl(task->tk_msg.rpc_proc->p_proc);	/* procedure */
-	return rpcauth_marshcred(task, p);
+	p = rpcauth_marshcred(task, p);
+	req->rq_slen = xdr_adjust_iovec(&req->rq_svec[0], p);
+	return p;
 }
 
 /*
@@ -987,10 +1064,11 @@ call_verify(struct rpc_task *task)
 			case RPC_AUTH_ERROR:
 				break;
 			case RPC_MISMATCH:
-				printk(KERN_WARNING "%s: RPC call version mismatch!\n", __FUNCTION__);
-				goto out_eio;
+				dprintk("%s: RPC call version mismatch!\n", __FUNCTION__);
+				error = -EPROTONOSUPPORT;
+				goto out_err;
 			default:
-				printk(KERN_WARNING "%s: RPC call rejected, unknown error: %x\n", __FUNCTION__, n);
+				dprintk("%s: RPC call rejected, unknown error: %x\n", __FUNCTION__, n);
 				goto out_eio;
 		}
 		if (--len < 0)
@@ -1041,23 +1119,26 @@ call_verify(struct rpc_task *task)
 	case RPC_SUCCESS:
 		return p;
 	case RPC_PROG_UNAVAIL:
-		printk(KERN_WARNING "RPC: call_verify: program %u is unsupported by server %s\n",
+		dprintk("RPC: call_verify: program %u is unsupported by server %s\n",
 				(unsigned int)task->tk_client->cl_prog,
 				task->tk_client->cl_server);
-		goto out_eio;
+		error = -EPFNOSUPPORT;
+		goto out_err;
 	case RPC_PROG_MISMATCH:
-		printk(KERN_WARNING "RPC: call_verify: program %u, version %u unsupported by server %s\n",
+		dprintk("RPC: call_verify: program %u, version %u unsupported by server %s\n",
 				(unsigned int)task->tk_client->cl_prog,
 				(unsigned int)task->tk_client->cl_vers,
 				task->tk_client->cl_server);
-		goto out_eio;
+		error = -EPROTONOSUPPORT;
+		goto out_err;
 	case RPC_PROC_UNAVAIL:
-		printk(KERN_WARNING "RPC: call_verify: proc %p unsupported by program %u, version %u on server %s\n",
+		dprintk("RPC: call_verify: proc %p unsupported by program %u, version %u on server %s\n",
 				task->tk_msg.rpc_proc,
 				task->tk_client->cl_prog,
 				task->tk_client->cl_vers,
 				task->tk_client->cl_server);
-		goto out_eio;
+		error = -EOPNOTSUPP;
+		goto out_err;
 	case RPC_GARBAGE_ARGS:
 		dprintk("RPC: %4d %s: server saw garbage\n", task->tk_pid, __FUNCTION__);
 		break;			/* retry */
@@ -1070,7 +1151,7 @@ out_retry:
 	task->tk_client->cl_stats->rpcgarbage++;
 	if (task->tk_garb_retry) {
 		task->tk_garb_retry--;
-		dprintk(KERN_WARNING "RPC %s: retrying %4d\n", __FUNCTION__, task->tk_pid);
+		dprintk("RPC %s: retrying %4d\n", __FUNCTION__, task->tk_pid);
 		task->tk_action = call_bind;
 		return NULL;
 	}
@@ -1083,4 +1164,31 @@ out_err:
 out_overflow:
 	printk(KERN_WARNING "RPC %s: server reply was truncated.\n", __FUNCTION__);
 	goto out_retry;
+}
+
+static int rpcproc_encode_null(void *rqstp, u32 *data, void *obj)
+{
+	return 0;
+}
+
+static int rpcproc_decode_null(void *rqstp, u32 *data, void *obj)
+{
+	return 0;
+}
+
+static struct rpc_procinfo rpcproc_null = {
+	.p_encode = rpcproc_encode_null,
+	.p_decode = rpcproc_decode_null,
+};
+
+int rpc_ping(struct rpc_clnt *clnt, int flags)
+{
+	struct rpc_message msg = {
+		.rpc_proc = &rpcproc_null,
+	};
+	int err;
+	msg.rpc_cred = authnull_ops.lookup_cred(NULL, NULL, 0);
+	err = rpc_call_sync(clnt, &msg, flags);
+	put_rpccred(msg.rpc_cred);
+	return err;
 }

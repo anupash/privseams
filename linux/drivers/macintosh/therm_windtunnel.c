@@ -43,18 +43,19 @@
 #include <asm/system.h>
 #include <asm/sections.h>
 #include <asm/of_device.h>
+#include <asm/macio.h>
 
 #define LOG_TEMP		0			/* continously log temperature */
 
 #define I2C_DRIVERID_G4FAN	0x9001			/* fixme */
-#define THERMOSTAT_CLIENT_ID	1
-#define FAN_CLIENT_ID		2
 
 static int 			do_probe( struct i2c_adapter *adapter, int addr, int kind);
 
 /* scan 0x48-0x4f (DS1775) and 0x2c-2x2f (ADM1030) */
-static unsigned short		normal_i2c[] = { 0x49, 0x2c, I2C_CLIENT_END };
-static unsigned short		normal_i2c_range[] = { 0x48, 0x4f, 0x2c, 0x2f, I2C_CLIENT_END };
+static unsigned short		normal_i2c[] = { 0x48, 0x49, 0x4a, 0x4b,
+						 0x4c, 0x4d, 0x4e, 0x4f,
+						 0x2c, 0x2d, 0x2e, 0x2f,
+						 I2C_CLIENT_END };
 
 I2C_CLIENT_INSMOD;
 
@@ -109,13 +110,13 @@ print_temp( const char *s, int temp )
 }
 
 static ssize_t
-show_cpu_temperature( struct device *dev, char *buf )
+show_cpu_temperature( struct device *dev, struct device_attribute *attr, char *buf )
 {
 	return sprintf(buf, "%d.%d\n", x.temp>>8, (x.temp & 255)*10/256 );
 }
 
 static ssize_t
-show_case_temperature( struct device *dev, char *buf )
+show_case_temperature( struct device *dev, struct device_attribute *attr, char *buf )
 {
 	return sprintf(buf, "%d.%d\n", x.casetemp>>8, (x.casetemp & 255)*10/256 );
 }
@@ -372,7 +373,6 @@ attach_fan( struct i2c_client *cl )
 		goto out;
 	printk("ADM1030 fan controller [@%02x]\n", cl->addr );
 
-	cl->id = FAN_CLIENT_ID;
 	strlcpy( cl->name, "ADM1030 fan controller", sizeof(cl->name) );
 
 	if( !i2c_attach_client(cl) )
@@ -412,7 +412,6 @@ attach_thermostat( struct i2c_client *cl )
 	x.overheat_temp = os_temp;
 	x.overheat_hyst = hyst_temp;
 	
-	cl->id = THERMOSTAT_CLIENT_ID;
 	strlcpy( cl->name, "DS1775 thermostat", sizeof(cl->name) );
 
 	if( !i2c_attach_client(cl) )
@@ -452,7 +451,7 @@ do_probe( struct i2c_adapter *adapter, int addr, int kind )
 /************************************************************************/
 
 static int
-therm_of_probe( struct of_device *dev, const struct of_match *match )
+therm_of_probe( struct of_device *dev, const struct of_device_id *match )
 {
 	return i2c_add_driver( &g4fan_driver );
 }
@@ -463,9 +462,8 @@ therm_of_remove( struct of_device *dev )
 	return i2c_del_driver( &g4fan_driver );
 }
 
-static struct of_match therm_of_match[] = {{
+static struct of_device_id therm_of_match[] = {{
 	.name		= "fan",
-	.type		= OF_ANY_MATCH,
 	.compatible	= "adm1030"
     }, {}
 };

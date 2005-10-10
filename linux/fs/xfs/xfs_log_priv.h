@@ -74,17 +74,17 @@ struct xfs_mount;
  *  set lsns
  */
 
-#define ASSIGN_LSN_CYCLE(lsn,cycle,arch) \
-    INT_SET(((uint *)&(lsn))[LSN_FIELD_CYCLE(arch)], arch, (cycle));
-#define ASSIGN_LSN_BLOCK(lsn,block,arch) \
-    INT_SET(((uint *)&(lsn))[LSN_FIELD_BLOCK(arch)], arch, (block));
-#define ASSIGN_ANY_LSN(lsn,cycle,block,arch)  \
+#define ASSIGN_ANY_LSN_HOST(lsn,cycle,block)  \
     { \
-	ASSIGN_LSN_CYCLE(lsn,cycle,arch); \
-	ASSIGN_LSN_BLOCK(lsn,block,arch); \
+	(lsn) = ((xfs_lsn_t)(cycle)<<32)|(block); \
     }
-#define ASSIGN_LSN(lsn,log,arch) \
-    ASSIGN_ANY_LSN(lsn,(log)->l_curr_cycle,(log)->l_curr_block,arch);
+#define ASSIGN_ANY_LSN_DISK(lsn,cycle,block)  \
+    { \
+	INT_SET(((uint *)&(lsn))[0], ARCH_CONVERT, (cycle)); \
+	INT_SET(((uint *)&(lsn))[1], ARCH_CONVERT, (block)); \
+    }
+#define ASSIGN_LSN(lsn,log) \
+    ASSIGN_ANY_LSN_DISK(lsn,(log)->l_curr_cycle,(log)->l_curr_block);
 
 #define XLOG_SET(f,b)		(((f) & (b)) == (b))
 
@@ -535,7 +535,6 @@ typedef struct log {
 
 /* common routines */
 extern xfs_lsn_t xlog_assign_tail_lsn(struct xfs_mount *mp);
-extern int	 xlog_find_head(xlog_t *log, xfs_daddr_t *head_blk);
 extern int	 xlog_find_tail(xlog_t	*log,
 				xfs_daddr_t *head_blk,
 				xfs_daddr_t *tail_blk,
@@ -548,7 +547,6 @@ extern void	 xlog_recover_process_iunlinks(xlog_t *log);
 extern struct xfs_buf *xlog_get_bp(xlog_t *, int);
 extern void	 xlog_put_bp(struct xfs_buf *);
 extern int	 xlog_bread(xlog_t *, xfs_daddr_t, int, struct xfs_buf *);
-extern xfs_caddr_t xlog_align(xlog_t *, xfs_daddr_t, int, struct xfs_buf *);
 
 /* iclog tracing */
 #define XLOG_TRACE_GRAB_FLUSH  1

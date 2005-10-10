@@ -208,7 +208,7 @@ static int test_bus(struct i2c_algo_iic_data *adap, char *name) {
 		goto bailout;
 	}
 	sdalo(adap);
-	printk("test_bus:1 scl: %d  sda: %d \n",getscl(adap),
+	printk("test_bus:1 scl: %d  sda: %d\n", getscl(adap),
 	       getsda(adap));
 	if ( 0 != getsda(adap) ) {
 		printk("test_bus: %s SDA stuck high!\n",name);
@@ -221,7 +221,7 @@ static int test_bus(struct i2c_algo_iic_data *adap, char *name) {
 		goto bailout;
 	}		
 	sdahi(adap);
-	printk("test_bus:2 scl: %d  sda: %d \n",getscl(adap),
+	printk("test_bus:2 scl: %d  sda: %d\n", getscl(adap),
 	       getsda(adap));
 	if ( 0 == getsda(adap) ) {
 		printk("test_bus: %s SDA stuck low!\n",name);
@@ -234,7 +234,7 @@ static int test_bus(struct i2c_algo_iic_data *adap, char *name) {
 	goto bailout;
 	}
 	scllo(adap);
-	printk("test_bus:3 scl: %d  sda: %d \n",getscl(adap),
+	printk("test_bus:3 scl: %d  sda: %d\n", getscl(adap),
 	       getsda(adap));
 	if ( 0 != getscl(adap) ) {
 
@@ -247,7 +247,7 @@ static int test_bus(struct i2c_algo_iic_data *adap, char *name) {
 		goto bailout;
 	}
 	sclhi(adap);
-	printk("test_bus:4 scl: %d  sda: %d \n",getscl(adap),
+	printk("test_bus:4 scl: %d  sda: %d\n", getscl(adap),
 	       getsda(adap));
 	if ( 0 == getscl(adap) ) {
 		printk("test_bus: %s SCL stuck low!\n",name);
@@ -490,7 +490,7 @@ static int iic_readbytes(struct i2c_adapter *i2c_adap, char *buf, int count,
  * condition.
  */
 #if 0
-static int iic_combined_transaction(struct i2c_adapter *i2c_adap, struct i2c_msg msgs[], int num) 
+static int iic_combined_transaction(struct i2c_adapter *i2c_adap, struct i2c_msg *msgs, int num) 
 {
    int i;
    struct i2c_msg *pmsg;
@@ -600,7 +600,7 @@ static inline int iic_doAddress(struct i2c_algo_iic_data *adap,
  * verify that the bus is not busy or in some unknown state.
  */
 static int iic_xfer(struct i2c_adapter *i2c_adap,
-		    struct i2c_msg msgs[], 
+		    struct i2c_msg *msgs, 
 		    int num)
 {
 	struct i2c_algo_iic_data *adap = i2c_adap->algo_data;
@@ -713,14 +713,11 @@ static u32 iic_func(struct i2c_adapter *adap)
 /* -----exported algorithm data: -------------------------------------	*/
 
 static struct i2c_algorithm iic_algo = {
-	"ITE IIC algorithm",
-	I2C_ALGO_IIC,
-	iic_xfer,		/* master_xfer	*/
-	NULL,				/* smbus_xfer	*/
-	NULL,				/* slave_xmit		*/
-	NULL,				/* slave_recv		*/
-	algo_control,			/* ioctl		*/
-	iic_func,			/* functionality	*/
+	.name		= "ITE IIC algorithm",
+	.id		= I2C_ALGO_IIC,
+	.master_xfer	= iic_xfer,
+	.algo_control	= algo_control, /* ioctl */
+	.functionality	= iic_func,
 };
 
 

@@ -339,7 +339,7 @@ xfs_inode_item_format(
 			nrecs = ip->i_df.if_bytes /
 				(uint)sizeof(xfs_bmbt_rec_t);
 			ASSERT(nrecs > 0);
-#if ARCH_CONVERT == ARCH_NOCONVERT
+#if __BYTE_ORDER == __BIG_ENDIAN
 			if (nrecs == ip->i_d.di_nextents) {
 				/*
 				 * There are no delayed allocation
@@ -467,7 +467,7 @@ xfs_inode_item_format(
 #endif
 			ASSERT(nrecs > 0);
 			ASSERT(nrecs == ip->i_d.di_anextents);
-#if ARCH_CONVERT == ARCH_NOCONVERT
+#if __BYTE_ORDER == __BIG_ENDIAN
 			/*
 			 * There are not delayed allocation extents
 			 * for attributes, so just point at the array.
@@ -910,7 +910,7 @@ xfs_inode_item_committing(
 /*
  * This is the ops vector shared by all buf log items.
  */
-struct xfs_item_ops xfs_inode_item_ops = {
+STATIC struct xfs_item_ops xfs_inode_item_ops = {
 	.iop_size	= (uint(*)(xfs_log_item_t*))xfs_inode_item_size,
 	.iop_format	= (void(*)(xfs_log_item_t*, xfs_log_iovec_t*))
 					xfs_inode_item_format,

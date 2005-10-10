@@ -56,7 +56,6 @@
  * Walk state - current state of a parse tree walk.  Used for both a leisurely stroll through
  * the tree (for whatever reason), and for control method execution.
  */
-
 #define ACPI_NEXT_OP_DOWNWARD       1
 #define ACPI_NEXT_OP_UPWARD         2
 
@@ -94,6 +93,7 @@ struct acpi_walk_state
 	union acpi_generic_state            *control_state;                     /* List of control states (nested IFs) */
 	struct acpi_namespace_node          *deferred_node;                     /* Used when executing deferred opcodes */
 	struct acpi_gpe_event_info          *gpe_event_info;                    /* Info for GPE (_Lxx/_Exx methods only */
+	union acpi_operand_object           *implicit_return_obj;
 	struct acpi_namespace_node          local_variables[ACPI_METHOD_NUM_LOCALS];    /* Control method locals */
 	struct acpi_namespace_node          *method_call_node;                  /* Called method Node*/
 	union acpi_parse_object             *method_call_op;                    /* method_call Op if running a method */

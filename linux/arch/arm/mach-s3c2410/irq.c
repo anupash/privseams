@@ -39,6 +39,15 @@
  *
  *   04-Nov-2004  Ben Dooks
  *		  Fix standard IRQ wake for EINT0..4 and RTC
+ *
+ *   22-Feb-2005  Ben Dooks
+ *		  Fixed edge-triggering on ADC IRQ
+ *
+ *   28-Jun-2005  Ben Dooks
+ *		  Mark IRQ_LCD valid
+ *
+ *   25-Jul-2005  Ben Dooks
+ *		  Split the S3C2440 IRQ code to seperate file
 */
 
 #include <linux/init.h>
@@ -57,12 +66,9 @@
 #include <asm/arch/regs-irq.h>
 #include <asm/arch/regs-gpio.h>
 
+#include "cpu.h"
 #include "pm.h"
-
-#define irqdbf(x...)
-#define irqdbf2(x...)
-
-#define EXTINT_OFF (IRQ_EINT4 - 4)
+#include "irq.h"
 
 /* wakeup irq control */
 
@@ -174,7 +180,7 @@ s3c_irq_unmask(unsigned int irqno)
 	__raw_writel(mask, S3C2410_INTMSK);
 }
 
-static struct irqchip s3c_irq_level_chip = {
+struct irqchip s3c_irq_level_chip = {
 	.ack	   = s3c_irq_maskack,
 	.mask	   = s3c_irq_mask,
 	.unmask	   = s3c_irq_unmask,
@@ -261,8 +267,8 @@ s3c_irqext_unmask(unsigned int irqno)
 static int
 s3c_irqext_type(unsigned int irq, unsigned int type)
 {
-	unsigned long extint_reg;
-	unsigned long gpcon_reg;
+	void __iomem *extint_reg;
+	void __iomem *gpcon_reg;
 	unsigned long gpcon_offset, extint_offset;
 	unsigned long newvalue = 0, value;
 
@@ -362,68 +368,6 @@ static struct irqchip s3c_irq_eint0t4 = {
 #define INTMSK_UART1	 (1UL << (IRQ_UART1 - IRQ_EINT0))
 #define INTMSK_UART2	 (1UL << (IRQ_UART2 - IRQ_EINT0))
 #define INTMSK_ADCPARENT (1UL << (IRQ_ADCPARENT - IRQ_EINT0))
-#define INTMSK_LCD	 (1UL << (IRQ_LCD - IRQ_EINT0))
-
-static inline void
-s3c_irqsub_mask(unsigned int irqno, unsigned int parentbit,
-		int subcheck)
-{
-	unsigned long mask;
-	unsigned long submask;
-
-	submask = __raw_readl(S3C2410_INTSUBMSK);
-	mask = __raw_readl(S3C2410_INTMSK);
-
-	submask |= (1UL << (irqno - IRQ_S3CUART_RX0));
-
-	/* check to see if we need to mask the parent IRQ */
-
-	if ((submask  & subcheck) == subcheck) {
-		__raw_writel(mask | parentbit, S3C2410_INTMSK);
-	}
-
-	/* write back masks */
-	__raw_writel(submask, S3C2410_INTSUBMSK);
-
-}
-
-static inline void
-s3c_irqsub_unmask(unsigned int irqno, unsigned int parentbit)
-{
-	unsigned long mask;
-	unsigned long submask;
-
-	submask = __raw_readl(S3C2410_INTSUBMSK);
-	mask = __raw_readl(S3C2410_INTMSK);
-
-	submask &= ~(1UL << (irqno - IRQ_S3CUART_RX0));
-	mask &= ~parentbit;
-
-	/* write back masks */
-	__raw_writel(submask, S3C2410_INTSUBMSK);
-	__raw_writel(mask, S3C2410_INTMSK);
-}
-
-
-static inline void
-s3c_irqsub_maskack(unsigned int irqno, unsigned int parentmask, unsigned int group)
-{
-	unsigned int bit = 1UL << (irqno - IRQ_S3CUART_RX0);
-
-	s3c_irqsub_mask(irqno, parentmask, group);
-
-	__raw_writel(bit, S3C2410_SUBSRCPND);
-
-	/* only ack parent if we've got all the irqs (seems we must
-	 * ack, all and hope that the irq system retriggers ok when
-	 * the interrupt goes off again)
-	 */
-
-	if (1) {
-		__raw_writel(parentmask, S3C2410_SRCPND);
-		__raw_writel(parentmask, S3C2410_INTPND);
-	}
-}
 
 
 /* UART0 */
@@ -521,7 +465,7 @@ s3c_irq_adc_unmask(unsigned int irqno)
 static void
 s3c_irq_adc_ack(unsigned int irqno)
 {
-	s3c_irqsub_maskack(irqno, INTMSK_ADCPARENT, 3 << 9);
+	s3c_irqsub_ack(irqno, INTMSK_ADCPARENT, 3 << 9);
 }
 
 static struct irqchip s3c_irq_adc = {
@@ -628,6 +572,7 @@ s3c_irq_demux_uart2(unsigned int irq,
 	s3c_irq_demux_uart(IRQ_S3CUART_RX2, regs);
 }
 
+
 /* s3c24xx_init_irq
  *
  * Initialise S3C2410 IRQ system
@@ -694,7 +639,6 @@ void __init s3c24xx_init_irq(void)
 		case IRQ_UART0:
 		case IRQ_UART1:
 		case IRQ_UART2:
-		case IRQ_LCD:
 		case IRQ_ADCPARENT:
 			set_irq_chip(irqno, &s3c_irq_level_chip);
 			set_irq_handler(irqno, do_level_IRQ);

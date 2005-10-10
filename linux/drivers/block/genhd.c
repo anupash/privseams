@@ -14,6 +14,7 @@
 #include <linux/slab.h>
 #include <linux/kmod.h>
 #include <linux/kobj_map.h>
+#include <linux/buffer_head.h>
 
 #define MAX_PROBE_HASH 255	/* random */
 
@@ -39,7 +40,7 @@ static inline int major_to_index(int major)
 
 #ifdef CONFIG_PROC_FS
 /* get block device names in somewhat random order */
-int get_blkdev_list(char *p)
+int get_blkdev_list(char *p, int used)
 {
 	struct blk_major_name *n;
 	int i, len;
@@ -48,10 +49,18 @@ int get_blkdev_list(char *p)
 
 	down(&block_subsys_sem);
 	for (i = 0; i < ARRAY_SIZE(major_names); i++) {
-		for (n = major_names[i]; n; n = n->next)
+		for (n = major_names[i]; n; n = n->next) {
+			/*
+			 * If the curent string plus the 5 extra characters
+			 * in the line would run us off the page, then we're done
+			 */
+			if ((len + used + strlen(n->name) + 5) >= PAGE_SIZE)
+				goto page_full;
 			len += sprintf(p+len, "%3d %s\n",
 				       n->major, n->name);
+		}
 	}
+page_full:
 	up(&block_subsys_sem);
 
 	return len;
@@ -302,7 +311,7 @@ static struct kobject *base_probe(dev_t dev, int *part, void *data)
 
 static int __init genhd_device_init(void)
 {
-	bdev_map = kobj_map_init(base_probe, &block_subsys);
+	bdev_map = kobj_map_init(base_probe, &block_subsys_sem);
 	blk_dev_init();
 	subsystem_register(&block_subsys);
 	return 0;
@@ -321,7 +330,7 @@ static ssize_t disk_attr_show(struct kobject *kobj, struct attribute *attr,
 	struct gendisk *disk = to_disk(kobj);
 	struct disk_attribute *disk_attr =
 		container_of(attr,struct disk_attribute,attr);
-	ssize_t ret = 0;
+	ssize_t ret = -EIO;
 
 	if (disk_attr->show)
 		ret = disk_attr->show(disk,page);
@@ -430,42 +439,57 @@ static int block_hotplug_filter(struct kset *kset, struct kobject *kobj)
 static int block_hotplug(struct kset *kset, struct kobject *kobj, char **envp,
 			 int num_envp, char *buffer, int buffer_size)
 {
-	struct device *dev = NULL;
 	struct kobj_type *ktype = get_ktype(kobj);
+	struct device *physdev;
+	struct gendisk *disk;
+	struct hd_struct *part;
 	int length = 0;
 	int i = 0;
 
-	/* get physical device backing disk or partition */
 	if (ktype == &ktype_block) {
-		struct gendisk *disk = container_of(kobj, struct gendisk, kobj);
-		dev = disk->driverfs_dev;
+		disk = container_of(kobj, struct gendisk, kobj);
+		add_hotplug_env_var(envp, num_envp, &i, buffer, buffer_size,
+				    &length, "MINOR=%u", disk->first_minor);
 	} else if (ktype == &ktype_part) {
-		struct gendisk *disk = container_of(kobj->parent, struct gendisk, kobj);
-		dev = disk->driverfs_dev;
-	}
+		disk = container_of(kobj->parent, struct gendisk, kobj);
+		part = container_of(kobj, struct hd_struct, kobj);
+		add_hotplug_env_var(envp, num_envp, &i, buffer, buffer_size,
+				    &length, "MINOR=%u",
+				    disk->first_minor + part->partno);
+	} else
+		return 0;
 
-	if (dev) {
-		/* add physical device, backing this device  */
-		char *path = kobject_get_path(&dev->kobj, GFP_KERNEL);
+	add_hotplug_env_var(envp, num_envp, &i, buffer, buffer_size, &length,
+			    "MAJOR=%u", disk->major);
+
+	/* add physical device, backing this device  */
+	physdev = disk->driverfs_dev;
+	if (physdev) {
+		char *path = kobject_get_path(&physdev->kobj, GFP_KERNEL);
 
 		add_hotplug_env_var(envp, num_envp, &i, buffer, buffer_size,
 				    &length, "PHYSDEVPATH=%s", path);
 		kfree(path);
 
-		/* add bus name of physical device */
-		if (dev->bus)
+		if (physdev->bus)
 			add_hotplug_env_var(envp, num_envp, &i,
 					    buffer, buffer_size, &length,
-					    "PHYSDEVBUS=%s", dev->bus->name);
+					    "PHYSDEVBUS=%s",
+					    physdev->bus->name);
 
-		/* add driver name of physical device */
-		if (dev->driver)
+		if (physdev->driver)
 			add_hotplug_env_var(envp, num_envp, &i,
 					    buffer, buffer_size, &length,
-					    "PHYSDEVDRIVER=%s", dev->driver->name);
-
-		envp[i] = NULL;
+					    "PHYSDEVDRIVER=%s",
+					    physdev->driver->name);
 	}
+
+	/* terminate, set to next free slot, shrink available space */
+	envp[i] = NULL;
+	envp = &envp[i];
+	num_envp -= i;
+	buffer = &buffer[length];
+	buffer_size -= length;
 
 	return 0;
 }
@@ -566,10 +590,16 @@ struct seq_operations diskstats_op = {
 	.show	= diskstats_show
 };
 
-
 struct gendisk *alloc_disk(int minors)
 {
-	struct gendisk *disk = kmalloc(sizeof(struct gendisk), GFP_KERNEL);
+	return alloc_disk_node(minors, -1);
+}
+
+struct gendisk *alloc_disk_node(int minors, int node_id)
+{
+	struct gendisk *disk;
+
+	disk = kmalloc_node(sizeof(struct gendisk), GFP_KERNEL, node_id);
 	if (disk) {
 		memset(disk, 0, sizeof(struct gendisk));
 		if (!init_disk_stats(disk)) {
@@ -578,7 +608,7 @@ struct gendisk *alloc_disk(int minors)
 		}
 		if (minors > 1) {
 			int size = (minors - 1) * sizeof(struct hd_struct *);
-			disk->part = kmalloc(size, GFP_KERNEL);
+			disk->part = kmalloc_node(size, GFP_KERNEL, node_id);
 			if (!disk->part) {
 				kfree(disk);
 				return NULL;
@@ -594,6 +624,7 @@ struct gendisk *alloc_disk(int minors)
 }
 
 EXPORT_SYMBOL(alloc_disk);
+EXPORT_SYMBOL(alloc_disk_node);
 
 struct kobject *get_disk(struct gendisk *disk)
 {
@@ -661,7 +692,8 @@ int invalidate_partition(struct gendisk *disk, int index)
 	int res = 0;
 	struct block_device *bdev = bdget_disk(disk, index);
 	if (bdev) {
-		res = __invalidate_device(bdev, 1);
+		fsync_bdev(bdev);
+		res = __invalidate_device(bdev);
 		bdput(bdev);
 	}
 	return res;

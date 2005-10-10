@@ -48,8 +48,8 @@
 #include <asm/io.h>
 
 /* Module and version information */
-#define WATCHDOG_VERSION "1.00"
-#define WATCHDOG_DATE "12 Jun 2004"
+#define WATCHDOG_VERSION "1.01"
+#define WATCHDOG_DATE "15 Mar 2005"
 #define WATCHDOG_DRIVER_NAME "PCI-PC Watchdog"
 #define WATCHDOG_NAME "pcwd_pci"
 #define PFX WATCHDOG_NAME ": "
@@ -103,12 +103,7 @@ static int heartbeat = WATCHDOG_HEARTBEAT;
 module_param(heartbeat, int, 0);
 MODULE_PARM_DESC(heartbeat, "Watchdog heartbeat in seconds. (0<heartbeat<65536, default=" __MODULE_STRING(WATCHDOG_HEARTBEAT) ")");
 
-#ifdef CONFIG_WATCHDOG_NOWAYOUT
-static int nowayout = 1;
-#else
-static int nowayout = 0;
-#endif
-
+static int nowayout = WATCHDOG_NOWAYOUT;
 module_param(nowayout, int, 0);
 MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started (default=CONFIG_WATCHDOG_NOWAYOUT)");
 
@@ -659,7 +654,7 @@ static int __init pcipcwd_init_module(void)
 {
 	spin_lock_init (&pcipcwd_private.io_lock);
 
-	return pci_module_init(&pcipcwd_driver);
+	return pci_register_driver(&pcipcwd_driver);
 }
 
 static void __exit pcipcwd_cleanup_module(void)

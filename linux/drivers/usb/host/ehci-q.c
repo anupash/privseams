@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2002 by David Brownell
+ * Copyright (C) 2001-2004 by David Brownell
  * 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -198,7 +198,7 @@ static void qtd_copy_status (
 				&& urb->dev->tt && !usb_pipeint (urb->pipe)
 				&& ((token & QTD_STS_MMF) != 0
 					|| QTD_CERR(token) == 0)
-				&& (!ehci_is_ARC(ehci)
+				&& (!ehci_is_TDI(ehci)
                 	                || urb->dev->tt->hub !=
 					   ehci_to_hcd(ehci)->self.root_hub)) {
 #ifdef DEBUG
@@ -222,7 +222,7 @@ __acquires(ehci->lock)
 		struct ehci_qh	*qh = (struct ehci_qh *) urb->hcpriv;
 
 		/* S-mask in a QH means it's an interrupt urb */
-		if ((qh->hw_info2 & __constant_cpu_to_le32 (0x00ff)) != 0) {
+		if ((qh->hw_info2 & __constant_cpu_to_le32 (QH_SMASK)) != 0) {
 
 			/* ... update hc-wide periodic stats (for usbfs) */
 			ehci_to_hcd(ehci)->self.bandwidth_int_reqs--;
@@ -338,23 +338,24 @@ qh_completions (struct ehci_hcd *ehci, struct ehci_qh *qh, struct pt_regs *regs)
 			if ((token & QTD_STS_HALT) != 0) {
 				stopped = 1;
 
-			/* magic dummy for some short reads; qh won't advance */
+			/* magic dummy for some short reads; qh won't advance.
+			 * that silicon quirk can kick in with this dummy too.
+			 */
 			} else if (IS_SHORT_READ (token)
-					&& (qh->hw_alt_next & QTD_MASK)
-						== ehci->async->hw_alt_next) {
+					&& !(qtd->hw_alt_next & EHCI_LIST_END)) {
 				stopped = 1;
 				goto halt;
 			}
 
 		/* stop scanning when we reach qtds the hc is using */
 		} else if (likely (!stopped
-				&& HCD_IS_RUNNING (ehci_to_hcd(ehci)->state))) {
+				&& HC_IS_RUNNING (ehci_to_hcd(ehci)->state))) {
 			break;
 
 		} else {
 			stopped = 1;
 
-			if (unlikely (!HCD_IS_RUNNING (ehci_to_hcd(ehci)->state)))
+			if (unlikely (!HC_IS_RUNNING (ehci_to_hcd(ehci)->state)))
 				urb->status = -ESHUTDOWN;
 
 			/* ignore active urbs unless some previous qtd
@@ -427,7 +428,8 @@ halt:
 			/* should be rare for periodic transfers,
 			 * except maybe high bandwidth ...
 			 */
-			if (qh->period) {
+			if ((__constant_cpu_to_le32 (QH_SMASK)
+					& qh->hw_info2) != 0) {
 				intr_deschedule (ehci, qh);
 				(void) qh_schedule (ehci, qh);
 			} else
@@ -522,7 +524,7 @@ qh_urb_transaction (
 	else
 		buf = 0;
 
-	// FIXME this 'buf' check break some zlps...
+	/* for zero length DATA stages, STATUS is always IN */
 	if (!buf || is_input)
 		token |= (1 /* "in" */ << 8);
 	/* else it's already initted to "out" pid (0 << 8) */
@@ -656,8 +658,8 @@ qh_make (
 	 * For control/bulk requests, the HC or TT handles these.
 	 */
 	if (type == PIPE_INTERRUPT) {
-		qh->usecs = usb_calc_bus_time (USB_SPEED_HIGH, is_input, 0,
-				hb_mult (maxp) * max_packet (maxp));
+		qh->usecs = NS_TO_US (usb_calc_bus_time (USB_SPEED_HIGH, is_input, 0,
+				hb_mult (maxp) * max_packet (maxp)));
 		qh->start = NO_FRAME;
 
 		if (urb->dev->speed == USB_SPEED_HIGH) {
@@ -714,10 +716,10 @@ qh_make (
 		info2 |= (EHCI_TUNE_MULT_TT << 30);
 		info2 |= urb->dev->ttport << 23;
 
-		/* set the address of the TT; for ARC's integrated
+		/* set the address of the TT; for TDI's integrated
 		 * root hub tt, leave it zeroed.
 		 */
-		if (!ehci_is_ARC(ehci)
+		if (!ehci_is_TDI(ehci)
 				|| urb->dev->tt->hub !=
 					ehci_to_hcd(ehci)->self.root_hub)
 			info2 |= urb->dev->tt->hub->devnum << 16;
@@ -780,7 +782,7 @@ static void qh_link_async (struct ehci_hcd *ehci, struct ehci_qh *qh)
 			(void) handshake (&ehci->regs->status, STS_ASS, 0, 150);
 			cmd |= CMD_ASE | CMD_RUN;
 			writel (cmd, &ehci->regs->command);
-			ehci_to_hcd(ehci)->state = USB_STATE_RUNNING;
+			ehci_to_hcd(ehci)->state = HC_STATE_RUNNING;
 			/* posted write need not be known to HC yet ... */
 		}
 	}
@@ -897,7 +899,7 @@ submit_async (
 	struct usb_host_endpoint *ep,
 	struct urb		*urb,
 	struct list_head	*qtd_list,
-	int			mem_flags
+	unsigned		mem_flags
 ) {
 	struct ehci_qtd		*qtd;
 	int			epnum;
@@ -959,7 +961,7 @@ static void end_unlink_async (struct ehci_hcd *ehci, struct pt_regs *regs)
 	qh_completions (ehci, qh, regs);
 
 	if (!list_empty (&qh->qtd_list)
-			&& HCD_IS_RUNNING (ehci_to_hcd(ehci)->state))
+			&& HC_IS_RUNNING (ehci_to_hcd(ehci)->state))
 		qh_link_async (ehci, qh);
 	else {
 		qh_put (qh);		// refcount from async list
@@ -967,7 +969,7 @@ static void end_unlink_async (struct ehci_hcd *ehci, struct pt_regs *regs)
 		/* it's not free to turn the async schedule on/off; leave it
 		 * active but idle for a while once it empties.
 		 */
-		if (HCD_IS_RUNNING (ehci_to_hcd(ehci)->state)
+		if (HC_IS_RUNNING (ehci_to_hcd(ehci)->state)
 				&& ehci->async->qh_next.qh == NULL)
 			timer_action (ehci, TIMER_ASYNC_OFF);
 	}
@@ -998,7 +1000,7 @@ static void start_unlink_async (struct ehci_hcd *ehci, struct ehci_qh *qh)
 	/* stop async schedule right now? */
 	if (unlikely (qh == ehci->async)) {
 		/* can't get here without STS_ASS set */
-		if (ehci_to_hcd(ehci)->state != USB_STATE_HALT) {
+		if (ehci_to_hcd(ehci)->state != HC_STATE_HALT) {
 			writel (cmd & ~CMD_ASE, &ehci->regs->command);
 			wmb ();
 			// handshake later, if we need to
@@ -1018,7 +1020,7 @@ static void start_unlink_async (struct ehci_hcd *ehci, struct ehci_qh *qh)
 	prev->qh_next = qh->qh_next;
 	wmb ();
 
-	if (unlikely (ehci_to_hcd(ehci)->state == USB_STATE_HALT)) {
+	if (unlikely (ehci_to_hcd(ehci)->state == HC_STATE_HALT)) {
 		/* if (unlikely (qh->reclaim != 0))
 		 * 	this will recurse, probably not much
 		 */

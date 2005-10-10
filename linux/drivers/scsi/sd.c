@@ -122,6 +122,8 @@ static void sd_shutdown(struct device *dev);
 static void sd_rescan(struct device *);
 static int sd_init_command(struct scsi_cmnd *);
 static int sd_issue_flush(struct device *, sector_t *);
+static void sd_end_flush(request_queue_t *, struct request *);
+static int sd_prepare_flush(request_queue_t *, struct request *);
 static void sd_read_capacity(struct scsi_disk *sdkp, char *diskname,
 		 struct scsi_request *SRpnt, unsigned char *buffer);
 
@@ -136,6 +138,8 @@ static struct scsi_driver sd_template = {
 	.rescan			= sd_rescan,
 	.init_command		= sd_init_command,
 	.issue_flush		= sd_issue_flush,
+	.prepare_flush		= sd_prepare_flush,
+	.end_flush		= sd_end_flush,
 };
 
 /*
@@ -369,9 +373,6 @@ static int sd_init_command(struct scsi_cmnd * SCpnt)
 		SCpnt->cmnd[7] = (unsigned char) (this_count >> 8) & 0xff;
 		SCpnt->cmnd[8] = (unsigned char) this_count & 0xff;
 	} else {
-		if (this_count > 0xff)
-			this_count = 0xff;
-
 		SCpnt->cmnd[1] |= (unsigned char) ((block >> 16) & 0x1f);
 		SCpnt->cmnd[2] = (unsigned char) ((block >> 8) & 0xff);
 		SCpnt->cmnd[3] = (unsigned char) block & 0xff;
@@ -735,17 +736,95 @@ static int sd_issue_flush(struct device *dev, sector_t *error_sector)
 	return sd_sync_cache(sdp);
 }
 
+static void sd_end_flush(request_queue_t *q, struct request *flush_rq)
+{
+	struct request *rq = flush_rq->end_io_data;
+	struct scsi_cmnd *cmd = rq->special;
+	unsigned int bytes = rq->hard_nr_sectors << 9;
+
+	if (!flush_rq->errors) {
+		spin_unlock(q->queue_lock);
+		scsi_io_completion(cmd, bytes, 0);
+		spin_lock(q->queue_lock);
+	} else if (blk_barrier_postflush(rq)) {
+		spin_unlock(q->queue_lock);
+		scsi_io_completion(cmd, 0, bytes);
+		spin_lock(q->queue_lock);
+	} else {
+		/*
+		 * force journal abort of barriers
+		 */
+		end_that_request_first(rq, -EOPNOTSUPP, rq->hard_nr_sectors);
+		end_that_request_last(rq);
+	}
+}
+
+static int sd_prepare_flush(request_queue_t *q, struct request *rq)
+{
+	struct scsi_device *sdev = q->queuedata;
+	struct scsi_disk *sdkp = dev_get_drvdata(&sdev->sdev_gendev);
+
+	if (sdkp->WCE) {
+		memset(rq->cmd, 0, sizeof(rq->cmd));
+		rq->flags |= REQ_BLOCK_PC | REQ_SOFTBARRIER;
+		rq->timeout = SD_TIMEOUT;
+		rq->cmd[0] = SYNCHRONIZE_CACHE;
+		return 1;
+	}
+
+	return 0;
+}
+
 static void sd_rescan(struct device *dev)
 {
 	struct scsi_disk *sdkp = dev_get_drvdata(dev);
 	sd_revalidate_disk(sdkp->disk);
 }
 
+
+#ifdef CONFIG_COMPAT
+/* 
+ * This gets directly called from VFS. When the ioctl 
+ * is not recognized we go back to the other translation paths. 
+ */
+static long sd_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	struct block_device *bdev = file->f_dentry->d_inode->i_bdev;
+	struct gendisk *disk = bdev->bd_disk;
+	struct scsi_device *sdev = scsi_disk(disk)->device;
+
+	/*
+	 * If we are in the middle of error recovery, don't let anyone
+	 * else try and use this device.  Also, if error recovery fails, it
+	 * may try and take the device offline, in which case all further
+	 * access to the device is prohibited.
+	 */
+	if (!scsi_block_when_processing_errors(sdev))
+		return -ENODEV;
+	       
+	if (sdev->host->hostt->compat_ioctl) {
+		int ret;
+
+		ret = sdev->host->hostt->compat_ioctl(sdev, cmd, (void __user *)arg);
+
+		return ret;
+	}
+
+	/* 
+	 * Let the static ioctl translation table take care of it.
+	 */
+	return -ENOIOCTLCMD; 
+}
+#endif
+
 static struct block_device_operations sd_fops = {
 	.owner			= THIS_MODULE,
 	.open			= sd_open,
 	.release		= sd_release,
 	.ioctl			= sd_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl		= sd_compat_ioctl,
+#endif
 	.media_changed		= sd_media_changed,
 	.revalidate_disk	= sd_revalidate_disk,
 };
@@ -1286,16 +1365,25 @@ sd_read_write_protect_flag(struct scsi_disk *sdkp, char *diskname,
  */
 static void
 sd_read_cache_type(struct scsi_disk *sdkp, char *diskname,
-		   struct scsi_request *SRpnt, unsigned char *buffer) {
+		   struct scsi_request *SRpnt, unsigned char *buffer)
+{
 	int len = 0, res;
 
-	const int dbd = 0;	   /* DBD */
-	const int modepage = 0x08; /* current values, cache page */
+	int dbd;
+	int modepage;
 	struct scsi_mode_data data;
 	struct scsi_sense_hdr sshdr;
 
 	if (sdkp->device->skip_ms_page_8)
 		goto defaults;
+
+	if (sdkp->device->type == TYPE_RBC) {
+		modepage = 6;
+		dbd = 8;
+	} else {
+		modepage = 8;
+		dbd = 0;
+	}
 
 	/* cautiously ask */
 	res = sd_do_mode_sense(SRpnt, dbd, modepage, buffer, 4, &data);
@@ -1327,11 +1415,20 @@ sd_read_cache_type(struct scsi_disk *sdkp, char *diskname,
 			"write back, no read (daft)"
 		};
 		int ct = 0;
-		int offset = data.header_length +
-			data.block_descriptor_length + 2;
+		int offset = data.header_length + data.block_descriptor_length;
 
-		sdkp->WCE = ((buffer[offset] & 0x04) != 0);
-		sdkp->RCD = ((buffer[offset] & 0x01) != 0);
+		if ((buffer[offset] & 0x3f) != modepage) {
+			printk(KERN_ERR "%s: got wrong page\n", diskname);
+			goto defaults;
+		}
+
+		if (modepage == 8) {
+			sdkp->WCE = ((buffer[offset + 2] & 0x04) != 0);
+			sdkp->RCD = ((buffer[offset + 2] & 0x01) != 0);
+		} else {
+			sdkp->WCE = ((buffer[offset + 2] & 0x01) == 0);
+			sdkp->RCD = 0;
+		}
 
 		ct =  sdkp->RCD + 2*sdkp->WCE;
 
@@ -1451,7 +1548,7 @@ static int sd_probe(struct device *dev)
 	int error;
 
 	error = -ENODEV;
-	if ((sdp->type != TYPE_DISK) && (sdp->type != TYPE_MOD))
+	if (sdp->type != TYPE_DISK && sdp->type != TYPE_MOD && sdp->type != TYPE_RBC)
 		goto out;
 
 	SCSI_LOG_HLQUEUE(3, printk("sd_attach: scsi device: <%d,%d,%d,%d>\n", 
@@ -1488,7 +1585,7 @@ static int sd_probe(struct device *dev)
 	sdkp->openers = 0;
 
 	if (!sdp->timeout) {
-		if (sdp->type == TYPE_DISK)
+		if (sdp->type != TYPE_MOD)
 			sdp->timeout = SD_TIMEOUT;
 		else
 			sdp->timeout = SD_MOD_TIMEOUT;

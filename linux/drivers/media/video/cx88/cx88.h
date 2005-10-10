@@ -1,5 +1,5 @@
 /*
- * $Id: cx88.h,v 1.40 2004/11/03 09:04:51 kraxel Exp $
+ * $Id: cx88.h,v 1.70 2005/07/24 17:44:09 mkrufky Exp $
  *
  * v4l2 device driver for cx2388x based TV cards
  *
@@ -27,6 +27,7 @@
 #include <linux/kdev_t.h>
 
 #include <media/tuner.h>
+#include <media/tveeprom.h>
 #include <media/audiochip.h>
 #include <media/video-buf.h>
 #include <media/video-buf-dvb.h>
@@ -34,8 +35,8 @@
 #include "btcx-risc.h"
 #include "cx88-reg.h"
 
-#include <linux/version.h>
-#define CX88_VERSION_CODE KERNEL_VERSION(0,0,4)
+#include <linux/utsname.h>
+#define CX88_VERSION_CODE KERNEL_VERSION(0,0,5)
 
 #ifndef TRUE
 # define TRUE (1==1)
@@ -50,8 +51,6 @@
 /* ----------------------------------------------------------- */
 /* defines and enums                                           */
 
-#define V4L2_I2C_CLIENTS 1
-
 #define FORMAT_FLAGS_PACKED       0x01
 #define FORMAT_FLAGS_PLANAR       0x02
 
@@ -62,6 +61,13 @@
 #define SHADOW_AUD_VOL_CTL           1
 #define SHADOW_AUD_BAL_CTL           2
 #define SHADOW_MAX                   2
+
+/* FM Radio deemphasis type */
+enum cx88_deemph_type {
+	FM_NO_DEEMPH = 0,
+	FM_DEEMPH_50,
+	FM_DEEMPH_75
+};
 
 /* ----------------------------------------------------------- */
 /* tv norms                                                    */
@@ -76,8 +82,8 @@ struct cx88_tvnorm {
 static unsigned int inline norm_maxw(struct cx88_tvnorm *norm)
 {
 	return (norm->id & V4L2_STD_625_50) ? 768 : 640;
-//	return (norm->id & V4L2_STD_625_50) ? 720 : 640;
 }
+
 
 static unsigned int inline norm_maxh(struct cx88_tvnorm *norm)
 {
@@ -139,7 +145,7 @@ extern struct sram_channel cx88_sram_channels[];
 #define CX88_BOARD_GDI                      2
 #define CX88_BOARD_PIXELVIEW                3
 #define CX88_BOARD_ATI_WONDER_PRO           4
-#define CX88_BOARD_WINFAST2000XP            5
+#define CX88_BOARD_WINFAST2000XP_EXPERT     5
 #define CX88_BOARD_AVERTV_303               6
 #define CX88_BOARD_MSI_TVANYWHERE_MASTER    7
 #define CX88_BOARD_WINFAST_DV2000           8
@@ -151,11 +157,21 @@ extern struct sram_channel cx88_sram_channels[];
 #define CX88_BOARD_KWORLD_DVB_T            14
 #define CX88_BOARD_DVICO_FUSIONHDTV_DVB_T1 15
 #define CX88_BOARD_KWORLD_LTV883           16
-#define CX88_BOARD_DVICO_FUSIONHDTV_3_GOLD 17
+#define CX88_BOARD_DVICO_FUSIONHDTV_3_GOLD_Q  17
 #define CX88_BOARD_HAUPPAUGE_DVB_T1        18
 #define CX88_BOARD_CONEXANT_DVB_T1         19
 #define CX88_BOARD_PROVIDEO_PV259          20
 #define CX88_BOARD_DVICO_FUSIONHDTV_DVB_T_PLUS 21
+#define CX88_BOARD_PCHDTV_HD3000           22
+#define CX88_BOARD_DNTV_LIVE_DVB_T         23
+#define CX88_BOARD_HAUPPAUGE_ROSLYN        24
+#define CX88_BOARD_DIGITALLOGIC_MEC        25
+#define CX88_BOARD_IODATA_GVBCTV7E         26
+#define CX88_BOARD_PIXELVIEW_PLAYTV_ULTRA_PRO 27
+#define CX88_BOARD_DVICO_FUSIONHDTV_3_GOLD_T  28
+#define CX88_BOARD_ADSTECH_DVB_T_PCI          29
+#define CX88_BOARD_TERRATEC_CINERGY_1400_DVB_T1  30
+#define CX88_BOARD_DVICO_FUSIONHDTV_5_GOLD 31
 
 enum cx88_itype {
 	CX88_VMUX_COMPOSITE1 = 1,
@@ -179,6 +195,9 @@ struct cx88_input {
 struct cx88_board {
 	char                    *name;
 	unsigned int            tuner_type;
+	unsigned int		radio_type;
+	unsigned char		tuner_addr;
+	unsigned char		radio_addr;
 	int                     tda9887_conf;
 	struct cx88_input       input[8];
 	struct cx88_input       radio;
@@ -202,7 +221,6 @@ struct cx88_subid {
 #define RESOURCE_VBI           4
 
 #define BUFFER_TIMEOUT     (HZ/2)  /* 0.5 seconds */
-//#define BUFFER_TIMEOUT     (HZ*2)
 
 /* buffer for one video frame */
 struct cx88_buffer {
@@ -238,6 +256,7 @@ struct cx88_core {
         u32                        __iomem *lmmio;
         u8                         __iomem *bmmio;
 	u32                        shadow[SHADOW_MAX];
+	int                        pci_irqmask;
 
 	/* i2c i/o */
 	struct i2c_adapter         i2c_adap;
@@ -248,20 +267,27 @@ struct cx88_core {
 	/* config info -- analog */
 	unsigned int               board;
 	unsigned int               tuner_type;
+	unsigned int               radio_type;
+	unsigned char              tuner_addr;
+	unsigned char              radio_addr;
 	unsigned int               tda9887_conf;
 	unsigned int               has_radio;
 
 	/* config info -- dvb */
-	unsigned int               pll_type;
+	struct dvb_pll_desc        *pll_desc;
 	unsigned int               pll_addr;
-	unsigned int               demod_addr;
 
 	/* state info */
 	struct task_struct         *kthread;
 	struct cx88_tvnorm         *tvnorm;
 	u32                        tvaudio;
+	u32                        audiomode_manual;
+	u32                        audiomode_current;
 	u32                        input;
 	u32                        astat;
+
+	/* IR remote control state */
+	struct cx88_IR             *ir;
 };
 
 struct cx8800_dev;
@@ -310,11 +336,6 @@ struct cx8800_dev {
 	struct pci_dev             *pci;
 	unsigned char              pci_rev,pci_lat;
 
-#if 0
-	/* video overlay */
-	struct v4l2_framebuffer    fbuf;
-	struct cx88_buffer         *screen;
-#endif
 
 	/* capture queues */
 	struct cx88_dmaqueue       vidq;
@@ -371,11 +392,16 @@ struct cx8802_dev {
 	struct list_head           devlist;
 	struct video_device        *mpeg_dev;
 	u32                        mailbox;
+	int                        width;
+	int                        height;
 
 	/* for dvb only */
 	struct videobuf_dvb        dvb;
 	void*                      fe_handle;
 	int                        (*fe_release)(void *handle);
+
+	/* for switching modulation types */
+	unsigned char              ts_gen_cntrl;
 };
 
 /* ----------------------------------------------------------- */
@@ -404,14 +430,11 @@ struct cx8802_dev {
 /* ----------------------------------------------------------- */
 /* cx88-core.c                                                 */
 
-extern char *cx88_pci_irqs[32];
-extern char *cx88_vid_irqs[32];
-extern char *cx88_mpeg_irqs[32];
 extern void cx88_print_irqbits(char *name, char *tag, char **strings,
 			       u32 bits, u32 mask);
 extern void cx88_print_ioctl(char *name, unsigned int cmd);
 
-extern void cx88_irq(struct cx88_core *core, u32 status, u32 mask);
+extern int cx88_core_irq(struct cx88_core *core, u32 status);
 extern void cx88_wakeup(struct cx88_core *core,
 			struct cx88_dmaqueue *q, u32 count);
 extern void cx88_shutdown(struct cx88_core *core);
@@ -456,9 +479,11 @@ extern void cx88_core_put(struct cx88_core *core,
 /* cx88-vbi.c                                                  */
 
 void cx8800_vbi_fmt(struct cx8800_dev *dev, struct v4l2_format *f);
+/*
 int cx8800_start_vbi_dma(struct cx8800_dev    *dev,
 			 struct cx88_dmaqueue *q,
 			 struct cx88_buffer   *buf);
+*/
 int cx8800_stop_vbi_dma(struct cx8800_dev *dev);
 int cx8800_restart_vbi_queue(struct cx8800_dev    *dev,
 			     struct cx88_dmaqueue *q);
@@ -503,9 +528,17 @@ extern void cx88_card_setup(struct cx88_core *core);
 #define WW_FM		12
 
 void cx88_set_tvaudio(struct cx88_core *core);
+void cx88_newstation(struct cx88_core *core);
 void cx88_get_stereo(struct cx88_core *core, struct v4l2_tuner *t);
-void cx88_set_stereo(struct cx88_core *core, u32 mode);
+void cx88_set_stereo(struct cx88_core *core, u32 mode, int manual);
 int cx88_audio_thread(void *data);
+
+/* ----------------------------------------------------------- */
+/* cx88-input.c                                                */
+
+int cx88_ir_init(struct cx88_core *core, struct pci_dev *pci);
+int cx88_ir_fini(struct cx88_core *core);
+void cx88_ir_irq(struct cx88_core *core);
 
 /* ----------------------------------------------------------- */
 /* cx88-mpeg.c                                                 */
@@ -517,7 +550,7 @@ void cx8802_cancel_buffers(struct cx8802_dev *dev);
 int cx8802_init_common(struct cx8802_dev *dev);
 void cx8802_fini_common(struct cx8802_dev *dev);
 
-int cx8802_suspend_common(struct pci_dev *pci_dev, u32 state);
+int cx8802_suspend_common(struct pci_dev *pci_dev, pm_message_t state);
 int cx8802_resume_common(struct pci_dev *pci_dev);
 
 /*

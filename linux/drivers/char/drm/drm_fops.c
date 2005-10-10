@@ -37,6 +37,8 @@
 #include "drmP.h"
 #include <linux/poll.h>
 
+static int drm_open_helper(struct inode *inode, struct file *filp, drm_device_t *dev);
+
 static int drm_setup( drm_device_t *dev )
 {
 	int i;
@@ -143,8 +145,10 @@ int drm_open( struct inode *inode, struct file *filp )
 	if (!((minor >= 0) && (minor < drm_cards_limit)))
 		return -ENODEV;
 		
-	dev = drm_minors[minor].dev;
-	if (!dev)
+	if (!drm_heads[minor])
+		return -ENODEV;
+
+	if (!(dev = drm_heads[minor]->dev))
 		return -ENODEV;
 	
 	retcode = drm_open_helper( inode, filp, dev );
@@ -181,7 +185,7 @@ int drm_release( struct inode *inode, struct file *filp )
 	int retcode = 0;
 
 	lock_kernel();
-	dev = priv->dev;
+	dev = priv->head->dev;
 
 	DRM_DEBUG( "open_count = %d\n", dev->open_count );
 
@@ -193,7 +197,7 @@ int drm_release( struct inode *inode, struct file *filp )
 	 */
 
 	DRM_DEBUG( "pid = %d, device = 0x%lx, open_count = %d\n",
-		   current->pid, (long)old_encode_dev(dev->device), dev->open_count );
+		   current->pid, (long)old_encode_dev(priv->head->device), dev->open_count );
 
 	if ( priv->lock_count && dev->lock.hw_lock &&
 	     _DRM_LOCK_IS_HELD(dev->lock.hw_lock->lock) &&
@@ -249,7 +253,7 @@ int drm_release( struct inode *inode, struct file *filp )
 		}
 	}
 	
-	if (drm_core_check_feature(dev, DRIVER_HAVE_DMA))
+	if (drm_core_check_feature(dev, DRIVER_HAVE_DMA) && !dev->driver->release)
 	{
 		dev->driver->reclaim_buffers(dev, filp);
 	}
@@ -257,7 +261,7 @@ int drm_release( struct inode *inode, struct file *filp )
 	drm_fasync( -1, filp, 0 );
 
 	down( &dev->ctxlist_sem );
-	if ( !list_empty( &dev->ctxlist->head ) ) {
+	if ( dev->ctxlist && (!list_empty(&dev->ctxlist->head))) {
 		drm_ctx_list_t *pos, *n;
 
 		list_for_each_entry_safe( pos, n, &dev->ctxlist->head, head ) {
@@ -339,7 +343,7 @@ EXPORT_SYMBOL(drm_release);
  * Creates and initializes a drm_file structure for the file private data in \p
  * filp and add it into the double linked list in \p dev.
  */
-int drm_open_helper(struct inode *inode, struct file *filp, drm_device_t *dev)
+static int drm_open_helper(struct inode *inode, struct file *filp, drm_device_t *dev)
 {
 	int	     minor = iminor(inode);
 	drm_file_t   *priv;
@@ -358,7 +362,7 @@ int drm_open_helper(struct inode *inode, struct file *filp, drm_device_t *dev)
 	priv->uid	    = current->euid;
 	priv->pid	    = current->pid;
 	priv->minor	    = minor;
-	priv->dev	    = dev;
+	priv->head          = drm_heads[minor];
 	priv->ioctl_count   = 0;
 	priv->authenticated = capable(CAP_SYS_ADMIN);
 	priv->lock_count    = 0;
@@ -412,10 +416,10 @@ out_free:
 int drm_flush(struct file *filp)
 {
 	drm_file_t    *priv   = filp->private_data;
-	drm_device_t  *dev    = priv->dev;
+	drm_device_t  *dev    = priv->head->dev;
 
 	DRM_DEBUG("pid = %d, device = 0x%lx, open_count = %d\n",
-		  current->pid, (long)old_encode_dev(dev->device), dev->open_count);
+		  current->pid, (long)old_encode_dev(priv->head->device), dev->open_count);
 	return 0;
 }
 EXPORT_SYMBOL(drm_flush);
@@ -424,10 +428,10 @@ EXPORT_SYMBOL(drm_flush);
 int drm_fasync(int fd, struct file *filp, int on)
 {
 	drm_file_t    *priv   = filp->private_data;
-	drm_device_t  *dev    = priv->dev;
+	drm_device_t  *dev    = priv->head->dev;
 	int	      retcode;
 
-	DRM_DEBUG("fd = %d, device = 0x%lx\n", fd, (long)old_encode_dev(dev->device));
+	DRM_DEBUG("fd = %d, device = 0x%lx\n", fd, (long)old_encode_dev(priv->head->device));
 	retcode = fasync_helper(fd, filp, on, &dev->buf_async);
 	if (retcode < 0) return retcode;
 	return 0;
@@ -441,9 +445,3 @@ unsigned int drm_poll(struct file *filp, struct poll_table_struct *wait)
 }
 EXPORT_SYMBOL(drm_poll);
 
-
-/** No-op. */
-ssize_t drm_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
-{
-	return 0;
-}

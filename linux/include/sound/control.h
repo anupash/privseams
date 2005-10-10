@@ -106,7 +106,7 @@ typedef int (*snd_kctl_ioctl_func_t) (snd_card_t * card,
 void snd_ctl_notify(snd_card_t * card, unsigned int mask, snd_ctl_elem_id_t * id);
 
 snd_kcontrol_t *snd_ctl_new(snd_kcontrol_t * kcontrol, unsigned int access);
-snd_kcontrol_t *snd_ctl_new1(snd_kcontrol_new_t * kcontrolnew, void * private_data);
+snd_kcontrol_t *snd_ctl_new1(const snd_kcontrol_new_t * kcontrolnew, void * private_data);
 void snd_ctl_free_one(snd_kcontrol_t * kcontrol);
 int snd_ctl_add(snd_card_t * card, snd_kcontrol_t * kcontrol);
 int snd_ctl_remove(snd_card_t * card, snd_kcontrol_t * kcontrol);
@@ -119,6 +119,13 @@ int snd_ctl_create(snd_card_t *card);
 
 int snd_ctl_register_ioctl(snd_kctl_ioctl_func_t fcn);
 int snd_ctl_unregister_ioctl(snd_kctl_ioctl_func_t fcn);
+#ifdef CONFIG_COMPAT
+int snd_ctl_register_ioctl_compat(snd_kctl_ioctl_func_t fcn);
+int snd_ctl_unregister_ioctl_compat(snd_kctl_ioctl_func_t fcn);
+#else
+#define snd_ctl_register_ioctl_compat(fcn)
+#define snd_ctl_unregister_ioctl_compat(fcn)
+#endif
 
 int snd_ctl_elem_read(snd_card_t *card, snd_ctl_elem_value_t *control);
 int snd_ctl_elem_write(snd_card_t *card, snd_ctl_file_t *file, snd_ctl_elem_value_t *control);

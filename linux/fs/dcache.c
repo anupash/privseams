@@ -19,6 +19,7 @@
 #include <linux/string.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
+#include <linux/fsnotify.h>
 #include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/smp_lock.h>
@@ -36,9 +37,10 @@
 /* #define DCACHE_DEBUG 1 */
 
 int sysctl_vfs_cache_pressure = 100;
+EXPORT_SYMBOL_GPL(sysctl_vfs_cache_pressure);
 
  __cacheline_aligned_in_smp DEFINE_SPINLOCK(dcache_lock);
-seqlock_t rename_lock __cacheline_aligned_in_smp = SEQLOCK_UNLOCKED;
+static seqlock_t rename_lock __cacheline_aligned_in_smp = SEQLOCK_UNLOCKED;
 
 EXPORT_SYMBOL(dcache_lock);
 
@@ -100,6 +102,7 @@ static inline void dentry_iput(struct dentry * dentry)
 		list_del_init(&dentry->d_alias);
 		spin_unlock(&dentry->d_lock);
 		spin_unlock(&dcache_lock);
+		fsnotify_inoderemove(inode);
 		if (dentry->d_op && dentry->d_op->d_iput)
 			dentry->d_op->d_iput(dentry, inode);
 		else
@@ -340,13 +343,16 @@ restart:
 	tmp = head;
 	while ((tmp = tmp->next) != head) {
 		struct dentry *dentry = list_entry(tmp, struct dentry, d_alias);
+		spin_lock(&dentry->d_lock);
 		if (!atomic_read(&dentry->d_count)) {
 			__dget_locked(dentry);
 			__d_drop(dentry);
+			spin_unlock(&dentry->d_lock);
 			spin_unlock(&dcache_lock);
 			dput(dentry);
 			goto restart;
 		}
+		spin_unlock(&dentry->d_lock);
 	}
 	spin_unlock(&dcache_lock);
 }
@@ -1161,13 +1167,16 @@ out:
  
 void d_delete(struct dentry * dentry)
 {
+	int isdir = 0;
 	/*
 	 * Are we the only user?
 	 */
 	spin_lock(&dcache_lock);
 	spin_lock(&dentry->d_lock);
+	isdir = S_ISDIR(dentry->d_inode->i_mode);
 	if (atomic_read(&dentry->d_count) == 1) {
 		dentry_iput(dentry);
+		fsnotify_nameremove(dentry, isdir);
 		return;
 	}
 
@@ -1176,6 +1185,8 @@ void d_delete(struct dentry * dentry)
 
 	spin_unlock(&dentry->d_lock);
 	spin_unlock(&dcache_lock);
+
+	fsnotify_nameremove(dentry, isdir);
 }
 
 static void __d_rehash(struct dentry * entry, struct hlist_head *list)
@@ -1529,7 +1540,6 @@ int is_subdir(struct dentry * new_dentry, struct dentry * old_dentry)
 	struct dentry * saved = new_dentry;
 	unsigned long seq;
 
-	result = 0;
 	/* need rcu_readlock to protect against the d_parent trashing due to
 	 * d_move
 	 */
@@ -1537,6 +1547,7 @@ int is_subdir(struct dentry * new_dentry, struct dentry * old_dentry)
         do {
 		/* for restarting inner loop in case of seq retry */
 		new_dentry = saved;
+		result = 0;
 		seq = read_seqbegin(&rename_lock);
 		for (;;) {
 			if (new_dentry != old_dentry) {

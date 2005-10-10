@@ -35,28 +35,30 @@ svc_create(struct svc_program *prog, unsigned int bufsize)
 	if (!(serv = (struct svc_serv *) kmalloc(sizeof(*serv), GFP_KERNEL)))
 		return NULL;
 	memset(serv, 0, sizeof(*serv));
+	serv->sv_name      = prog->pg_name;
 	serv->sv_program   = prog;
 	serv->sv_nrthreads = 1;
 	serv->sv_stats     = prog->pg_stats;
 	serv->sv_bufsz	   = bufsize? bufsize : 4096;
-	prog->pg_lovers = prog->pg_nvers-1;
 	xdrsize = 0;
-	for (vers=0; vers<prog->pg_nvers ; vers++)
-		if (prog->pg_vers[vers]) {
-			prog->pg_hivers = vers;
-			if (prog->pg_lovers > vers)
-				prog->pg_lovers = vers;
-			if (prog->pg_vers[vers]->vs_xdrsize > xdrsize)
-				xdrsize = prog->pg_vers[vers]->vs_xdrsize;
-		}
+	while (prog) {
+		prog->pg_lovers = prog->pg_nvers-1;
+		for (vers=0; vers<prog->pg_nvers ; vers++)
+			if (prog->pg_vers[vers]) {
+				prog->pg_hivers = vers;
+				if (prog->pg_lovers > vers)
+					prog->pg_lovers = vers;
+				if (prog->pg_vers[vers]->vs_xdrsize > xdrsize)
+					xdrsize = prog->pg_vers[vers]->vs_xdrsize;
+			}
+		prog = prog->pg_next;
+	}
 	serv->sv_xdrsize   = xdrsize;
 	INIT_LIST_HEAD(&serv->sv_threads);
 	INIT_LIST_HEAD(&serv->sv_sockets);
 	INIT_LIST_HEAD(&serv->sv_tempsocks);
 	INIT_LIST_HEAD(&serv->sv_permsocks);
 	spin_lock_init(&serv->sv_lock);
-
-	serv->sv_name      = prog->pg_name;
 
 	/* Remove any stale portmap registrations */
 	svc_register(serv, 0, 0);
@@ -264,6 +266,7 @@ svc_process(struct svc_serv *serv, struct svc_rqst *rqstp)
 	u32			dir, prog, vers, proc,
 				auth_stat, rpc_stat;
 	int			auth_res;
+	u32			*accept_statp;
 
 	rpc_stat = rpc_success;
 
@@ -280,6 +283,7 @@ svc_process(struct svc_serv *serv, struct svc_rqst *rqstp)
 	rqstp->rq_res.len = 0;
 	rqstp->rq_res.page_base = 0;
 	rqstp->rq_res.page_len = 0;
+	rqstp->rq_res.buflen = PAGE_SIZE;
 	rqstp->rq_res.tail[0].iov_len = 0;
 	/* tcp needs a space for the record length... */
 	if (rqstp->rq_prot == IPPROTO_TCP)
@@ -299,6 +303,9 @@ svc_process(struct svc_serv *serv, struct svc_rqst *rqstp)
 	if (vers != 2)		/* RPC version number */
 		goto err_bad_rpc;
 
+	/* Save position in case we later decide to reject: */
+	accept_statp = resv->iov_base + resv->iov_len;
+
 	svc_putu32(resv, xdr_zero);		/* ACCEPT */
 
 	rqstp->rq_prog = prog = ntohl(svc_getu32(argv));	/* program number */
@@ -311,10 +318,12 @@ svc_process(struct svc_serv *serv, struct svc_rqst *rqstp)
 	 * We do this before anything else in order to get a decent
 	 * auth verifier.
 	 */
-	if (progp->pg_authenticate != NULL)
-		auth_res = progp->pg_authenticate(rqstp, &auth_stat);
-	else
-		auth_res = svc_authenticate(rqstp, &auth_stat);
+	auth_res = svc_authenticate(rqstp, &auth_stat);
+	/* Also give the program a chance to reject this call: */
+	if (auth_res == SVC_OK) {
+		auth_stat = rpc_autherr_badcred;
+		auth_res = progp->pg_authenticate(rqstp);
+	}
 	switch (auth_res) {
 	case SVC_OK:
 		break;
@@ -332,7 +341,10 @@ svc_process(struct svc_serv *serv, struct svc_rqst *rqstp)
 		goto sendit;
 	}
 		
-	if (prog != progp->pg_prog)
+	for (progp = serv->sv_program; progp; progp = progp->pg_next)
+		if (prog == progp->pg_prog)
+			break;
+	if (progp == NULL)
 		goto err_bad_prog;
 
 	if (vers >= progp->pg_nvers ||
@@ -437,18 +449,15 @@ err_bad_rpc:
 err_bad_auth:
 	dprintk("svc: authentication failed (%d)\n", ntohl(auth_stat));
 	serv->sv_stats->rpcbadauth++;
-	resv->iov_len -= 4;
+	/* Restore write pointer to location of accept status: */
+	xdr_ressize_check(rqstp, accept_statp);
 	svc_putu32(resv, xdr_one);	/* REJECT */
 	svc_putu32(resv, xdr_one);	/* AUTH_ERROR */
 	svc_putu32(resv, auth_stat);	/* status */
 	goto sendit;
 
 err_bad_prog:
-#ifdef RPC_PARANOIA
-	if (prog != 100227 || progp->pg_prog != 100003)
-		printk("svc: unknown program %d (me %d)\n", prog, progp->pg_prog);
-	/* else it is just a Solaris client seeing if ACLs are supported */
-#endif
+	dprintk("svc: unknown program %d\n", prog);
 	serv->sv_stats->rpcbadfmt++;
 	svc_putu32(resv, rpc_prog_unavail);
 	goto sendit;

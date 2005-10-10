@@ -654,13 +654,14 @@ static void __devexit ne2k_pci_remove_one (struct pci_dev *pdev)
 }
 
 #ifdef CONFIG_PM
-static int ne2k_pci_suspend (struct pci_dev *pdev, u32 state)
+static int ne2k_pci_suspend (struct pci_dev *pdev, pm_message_t state)
 {
 	struct net_device *dev = pci_get_drvdata (pdev);
 
 	netif_device_detach(dev);
 	pci_save_state(pdev);
-	pci_set_power_state(pdev, state);
+	pci_disable_device(pdev);
+	pci_set_power_state(pdev, pci_choose_state(pdev, state));
 
 	return 0;
 }
@@ -671,6 +672,8 @@ static int ne2k_pci_resume (struct pci_dev *pdev)
 
 	pci_set_power_state(pdev, 0);
 	pci_restore_state(pdev);
+	pci_enable_device(pdev);
+	pci_set_master(pdev);
 	NS8390_init(dev, 1);
 	netif_device_attach(dev);
 

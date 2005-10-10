@@ -17,13 +17,23 @@
 #include <asm/sigcontext.h>
 #include <asm/user.h>
 
-extern unsigned long mxcsr_feature_mask;
 extern void mxcsr_feature_mask_init(void);
 extern void init_fpu(struct task_struct *);
+
 /*
  * FPU lazy state save handling...
  */
-extern void restore_fpu( struct task_struct *tsk );
+
+/*
+ * The "nop" is needed to make the instructions the same
+ * length.
+ */
+#define restore_fpu(tsk)			\
+	alternative_input(			\
+		"nop ; frstor %1",		\
+		"fxrstor %1",			\
+		X86_FEATURE_FXSR,		\
+		"m" ((tsk)->thread.i387.fxsave))
 
 extern void kernel_fpu_begin(void);
 #define kernel_fpu_end() do { stts(); preempt_enable(); } while(0)
@@ -33,13 +43,12 @@ extern void kernel_fpu_begin(void);
  */
 static inline void __save_init_fpu( struct task_struct *tsk )
 {
-	if ( cpu_has_fxsr ) {
-		asm volatile( "fxsave %0 ; fnclex"
-			      : "=m" (tsk->thread.i387.fxsave) );
-	} else {
-		asm volatile( "fnsave %0 ; fwait"
-			      : "=m" (tsk->thread.i387.fsave) );
-	}
+	alternative_input(
+		"fnsave %1 ; fwait ;" GENERIC_NOP2,
+		"fxsave %1 ; fnclex",
+		X86_FEATURE_FXSR,
+		"m" (tsk->thread.i387.fxsave)
+		:"memory");
 	tsk->thread_info->status &= ~TS_USEDFPU;
 }
 
@@ -86,12 +95,7 @@ static inline void save_init_fpu( struct task_struct *tsk )
  */
 extern unsigned short get_fpu_cwd( struct task_struct *tsk );
 extern unsigned short get_fpu_swd( struct task_struct *tsk );
-extern unsigned short get_fpu_twd( struct task_struct *tsk );
 extern unsigned short get_fpu_mxcsr( struct task_struct *tsk );
-
-extern void set_fpu_cwd( struct task_struct *tsk, unsigned short cwd );
-extern void set_fpu_swd( struct task_struct *tsk, unsigned short swd );
-extern void set_fpu_twd( struct task_struct *tsk, unsigned short twd );
 
 /*
  * Signal frame handlers...

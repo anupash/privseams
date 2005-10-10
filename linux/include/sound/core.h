@@ -26,6 +26,7 @@
 #include <asm/semaphore.h>		/* struct semaphore */
 #include <linux/rwsem.h>		/* struct rw_semaphore */
 #include <linux/workqueue.h>		/* struct workqueue_struct */
+#include <linux/pm.h>			/* pm_message_t */
 
 /* Typedef's */
 typedef struct timespec snd_timestamp_t;
@@ -125,25 +126,26 @@ struct snd_monitor_file {
 	struct snd_monitor_file *next;
 };
 
-struct snd_shutdown_f_ops;	/* define it later */
+struct snd_shutdown_f_ops;	/* define it later in init.c */
 
 /* main structure for soundcard */
 
 struct _snd_card {
-	int number;			/* number of soundcard (index to snd_cards) */
+	int number;			/* number of soundcard (index to
+								snd_cards) */
 
 	char id[16];			/* id string of this card */
 	char driver[16];		/* driver name */
 	char shortname[32];		/* short name of this soundcard */
 	char longname[80];		/* name of this soundcard */
 	char mixername[80];		/* mixer name */
-	char components[80];		/* card components delimited with space */
-
+	char components[80];		/* card components delimited with
+								space */
 	struct module *module;		/* top-level module */
 
 	void *private_data;		/* private data for soundcard */
-	void (*private_free) (snd_card_t *card); /* callback for freeing of private data */
-
+	void (*private_free) (snd_card_t *card); /* callback for freeing of
+								private data */
 	struct list_head devices;	/* devices */
 
 	unsigned int last_numid;	/* last used numeric ID */
@@ -159,7 +161,8 @@ struct _snd_card {
 	struct proc_dir_entry *proc_root_link;	/* number link to real id */
 
 	struct snd_monitor_file *files; /* all files associated to this card */
-	struct snd_shutdown_f_ops *s_f_ops; /* file operations in the shutdown state */
+	struct snd_shutdown_f_ops *s_f_ops; /* file operations in the shutdown
+								state */
 	spinlock_t files_lock;		/* lock the files for this card */
 	int shutdown;			/* this card is going down */
 	wait_queue_head_t shutdown_sleep;
@@ -167,13 +170,15 @@ struct _snd_card {
 	struct device *dev;
 
 #ifdef CONFIG_PM
-	int (*pm_suspend)(snd_card_t *card, unsigned int state);
-	int (*pm_resume)(snd_card_t *card, unsigned int state);
-	struct pm_dev *pm_dev;		/* for ISA */
+	int (*pm_suspend)(snd_card_t *card, pm_message_t state);
+	int (*pm_resume)(snd_card_t *card);
 	void *pm_private_data;
 	unsigned int power_state;	/* power state */
 	struct semaphore power_lock;	/* power lock */
 	wait_queue_head_t power_sleep;
+#ifdef CONFIG_SND_GENERIC_PM
+	struct snd_generic_device *pm_dev;	/* for ISA */
+#endif
 #endif
 
 #if defined(CONFIG_SND_MIXER_OSS) || defined(CONFIG_SND_MIXER_OSS_MODULE)
@@ -193,8 +198,6 @@ static inline void snd_power_unlock(snd_card_t *card)
 	up(&card->power_lock);
 }
 
-int snd_power_wait(snd_card_t *card, unsigned int power_state, struct file *file);
-
 static inline unsigned int snd_power_get_state(snd_card_t *card)
 {
 	return card->power_state;
@@ -205,39 +208,39 @@ static inline void snd_power_change_state(snd_card_t *card, unsigned int state)
 	card->power_state = state;
 	wake_up(&card->power_sleep);
 }
+
+/* init.c */
+int snd_power_wait(snd_card_t *card, unsigned int power_state, struct file *file);
+
 int snd_card_set_pm_callback(snd_card_t *card,
-			     int (*suspend)(snd_card_t *, unsigned int),
-			     int (*resume)(snd_card_t *, unsigned int),
+			     int (*suspend)(snd_card_t *, pm_message_t),
+			     int (*resume)(snd_card_t *),
 			     void *private_data);
-int snd_card_set_dev_pm_callback(snd_card_t *card, int type,
-				 int (*suspend)(snd_card_t *, unsigned int),
-				 int (*resume)(snd_card_t *, unsigned int),
-				 void *private_data);
+int snd_card_set_generic_pm_callback(snd_card_t *card,
+				     int (*suspend)(snd_card_t *, pm_message_t),
+				     int (*resume)(snd_card_t *),
+				     void *private_data);
 #define snd_card_set_isa_pm_callback(card,suspend,resume,data) \
-	snd_card_set_dev_pm_callback(card, PM_ISA_DEV, suspend, resume, data)
-#ifdef CONFIG_PCI
-#ifndef SND_PCI_PM_CALLBACKS
-int snd_card_pci_suspend(struct pci_dev *dev, u32 state);
+	snd_card_set_generic_pm_callback(card, suspend, resume, data)
+struct pci_dev;
+int snd_card_pci_suspend(struct pci_dev *dev, pm_message_t state);
 int snd_card_pci_resume(struct pci_dev *dev);
 #define SND_PCI_PM_CALLBACKS \
 	.suspend = snd_card_pci_suspend,  .resume = snd_card_pci_resume
-#endif
-#endif
-#else
+
+#else /* ! CONFIG_PM */
+
 #define snd_power_lock(card)		do { (void)(card); } while (0)
 #define snd_power_unlock(card)		do { (void)(card); } while (0)
 static inline int snd_power_wait(snd_card_t *card, unsigned int state, struct file *file) { return 0; }
 #define snd_power_get_state(card)	SNDRV_CTL_POWER_D0
 #define snd_power_change_state(card, state)	do { (void)(card); } while (0)
 #define snd_card_set_pm_callback(card,suspend,resume,data)
-#define snd_card_set_dev_pm_callback(card,suspend,resume,data)
+#define snd_card_set_generic_pm_callback(card,suspend,resume,data)
 #define snd_card_set_isa_pm_callback(card,suspend,resume,data)
-#ifdef CONFIG_PCI
 #define SND_PCI_PM_CALLBACKS
-#endif
-#endif
 
-/* device.c */
+#endif /* CONFIG_PM */
 
 struct _snd_minor {
 	struct list_head list;		/* list of all minors per card */
@@ -245,7 +248,8 @@ struct _snd_minor {
 	int device;			/* device number */
 	const char *comment;		/* for /proc/asound/devices */
 	struct file_operations *f_ops;	/* file operations */
-	char name[0];			/* device name (keep at the end of structure) */
+	char name[0];			/* device name (keep at the end of
+								structure) */
 };
 
 typedef struct _snd_minor snd_minor_t;
@@ -286,11 +290,12 @@ void snd_memory_init(void);
 void snd_memory_done(void);
 int snd_memory_info_init(void);
 int snd_memory_info_done(void);
-void *snd_hidden_kmalloc(size_t size, int flags);
-void *snd_hidden_kcalloc(size_t n, size_t size, int flags);
+void *snd_hidden_kmalloc(size_t size, unsigned int __nocast flags);
+void *snd_hidden_kcalloc(size_t n, size_t size, unsigned int __nocast flags);
 void snd_hidden_kfree(const void *obj);
 void *snd_hidden_vmalloc(unsigned long size);
 void snd_hidden_vfree(void *obj);
+char *snd_hidden_kstrdup(const char *s, unsigned int __nocast flags);
 #define kmalloc(size, flags) snd_hidden_kmalloc(size, flags)
 #define kcalloc(n, size, flags) snd_hidden_kcalloc(n, size, flags)
 #define kfree(obj) snd_hidden_kfree(obj)
@@ -300,6 +305,7 @@ void snd_hidden_vfree(void *obj);
 #define vmalloc_nocheck(size) snd_wrapper_vmalloc(size)
 #define kfree_nocheck(obj) snd_wrapper_kfree(obj)
 #define vfree_nocheck(obj) snd_wrapper_vfree(obj)
+#define kstrdup(s, flags)  snd_hidden_kstrdup(s, flags)
 #else
 #define snd_memory_init() /*NOP*/
 #define snd_memory_done() /*NOP*/
@@ -310,7 +316,6 @@ void snd_hidden_vfree(void *obj);
 #define kfree_nocheck(obj) kfree(obj)
 #define vfree_nocheck(obj) vfree(obj)
 #endif
-char *snd_kmalloc_strdup(const char *string, int flags);
 int copy_to_user_fromio(void __user *dst, const volatile void __iomem *src, size_t count);
 int copy_from_user_toio(volatile void __iomem *dst, const void __user *src, size_t count);
 
@@ -355,11 +360,13 @@ int snd_device_free_all(snd_card_t *card, snd_device_cmd_t cmd);
 
 /* isadma.c */
 
+#ifdef CONFIG_ISA_DMA_API
 #define DMA_MODE_NO_ENABLE	0x0100
 
 void snd_dma_program(unsigned long dma, unsigned long addr, unsigned int size, unsigned short mode);
 void snd_dma_disable(unsigned long dma);
 unsigned int snd_dma_pointer(unsigned long dma, unsigned int size);
+#endif
 
 /* misc.c */
 
@@ -409,7 +416,7 @@ void snd_verbose_printd(const char *file, int line, const char *format, ...)
 	printk(fmt ,##args)
 #endif
 /**
- * snd_assert - run-time assersion macro
+ * snd_assert - run-time assertion macro
  * @expr: expression
  * @args...: the action
  *
@@ -425,7 +432,7 @@ void snd_verbose_printd(const char *file, int line, const char *format, ...)
 	}\
 } while (0)
 /**
- * snd_runtime_check - run-time assersion macro
+ * snd_runtime_check - run-time assertion macro
  * @expr: expression
  * @args...: the action
  *
@@ -488,5 +495,14 @@ static inline int snd_timestamp_null(struct timespec *tstamp)
 }
 
 #define SNDRV_OSS_VERSION         ((3<<16)|(8<<8)|(1<<4)|(0))	/* 3.8.1a */
+
+/* for easier backward-porting */
+#if defined(CONFIG_GAMEPORT) || defined(CONFIG_GAMEPORT_MODULE)
+#ifndef gameport_set_dev_parent
+#define gameport_set_dev_parent(gp,xdev) ((gp)->dev.parent = (xdev))
+#define gameport_set_port_data(gp,r) ((gp)->port_data = (r))
+#define gameport_get_port_data(gp) (gp)->port_data
+#endif
+#endif
 
 #endif /* __SOUND_CORE_H */

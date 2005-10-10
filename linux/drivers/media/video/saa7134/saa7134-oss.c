@@ -1,5 +1,5 @@
 /*
- * $Id: saa7134-oss.c,v 1.11 2004/11/07 13:17:15 kraxel Exp $
+ * $Id: saa7134-oss.c,v 1.17 2005/06/28 23:41:47 mkrufky Exp $
  *
  * device driver for philips saa7134 based TV cards
  * oss dsp interface
@@ -24,6 +24,7 @@
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/soundcard.h>
@@ -48,7 +49,6 @@ MODULE_PARM_DESC(oss_rate,"sample rate (valid are: 32000,48000)");
 
 static int dsp_buffer_conf(struct saa7134_dev *dev, int blksize, int blocks)
 {
-	blksize &= ~0xff;
 	if (blksize < 0x100)
 		blksize = 0x100;
 	if (blksize > 0x10000)
@@ -56,8 +56,6 @@ static int dsp_buffer_conf(struct saa7134_dev *dev, int blksize, int blocks)
 
 	if (blocks < 2)
 		blocks = 2;
-        while ((blksize * blocks) & ~PAGE_MASK)
-		blocks++;
 	if ((blksize * blocks) > 1024*1024)
 		blocks = 1024*1024 / blksize;
 
@@ -78,7 +76,7 @@ static int dsp_buffer_init(struct saa7134_dev *dev)
 		BUG();
 	videobuf_dma_init(&dev->oss.dma);
 	err = videobuf_dma_init_kernel(&dev->oss.dma, PCI_DMA_FROMDEVICE,
-				       dev->oss.bufsize >> PAGE_SHIFT);
+				       (dev->oss.bufsize + PAGE_SIZE) >> PAGE_SHIFT);
 	if (0 != err)
 		return err;
 	return 0;
@@ -162,10 +160,11 @@ static int dsp_rec_start(struct saa7134_dev *dev)
 			fmt |= 0x04;
 		fmt |= (TV == dev->oss.input) ? 0xc0 : 0x80;
 
-		saa_writeb(SAA7134_NUM_SAMPLES0, (dev->oss.blksize & 0x0000ff));
-		saa_writeb(SAA7134_NUM_SAMPLES1, (dev->oss.blksize & 0x00ff00) >>  8);
-		saa_writeb(SAA7134_NUM_SAMPLES2, (dev->oss.blksize & 0xff0000) >> 16);
+		saa_writeb(SAA7134_NUM_SAMPLES0, ((dev->oss.blksize - 1) & 0x0000ff));
+		saa_writeb(SAA7134_NUM_SAMPLES1, ((dev->oss.blksize - 1) & 0x00ff00) >>  8);
+		saa_writeb(SAA7134_NUM_SAMPLES2, ((dev->oss.blksize - 1) & 0xff0000) >> 16);
 		saa_writeb(SAA7134_AUDIO_FORMAT_CTRL, fmt);
+
 		break;
 	case PCI_DEVICE_ID_PHILIPS_SAA7133:
 	case PCI_DEVICE_ID_PHILIPS_SAA7135:
@@ -543,6 +542,7 @@ mixer_recsrc_7134(struct saa7134_dev *dev)
 		break;
 	case LINE1:
 	case LINE2:
+	case LINE2_LEFT:
 		analog_io = (LINE1 == dev->oss.input) ? 0x00 : 0x08;
 		rate = (32000 == dev->oss.rate) ? 0x01 : 0x03;
 		saa_andorb(SAA7134_ANALOG_IO_SELECT,  0x08, analog_io);
@@ -556,20 +556,28 @@ mixer_recsrc_7134(struct saa7134_dev *dev)
 static int
 mixer_recsrc_7133(struct saa7134_dev *dev)
 {
-	u32 value = 0xbbbbbb;
+	u32 anabar, xbarin;
 
+	xbarin = 0x03; // adc
+    anabar = 0;
 	switch (dev->oss.input) {
 	case TV:
-		value = 0xbbbb10;  /* MAIN */
+		xbarin = 0; // Demodulator
+        anabar = 2; // DACs
 		break;
 	case LINE1:
-		value = 0xbbbb32;  /* AUX1 */
+		anabar = 0;  // aux1, aux1
 		break;
 	case LINE2:
-		value = 0xbbbb54;  /* AUX2 */
+	case LINE2_LEFT:
+		anabar = 9;  // aux2, aux2
 		break;
 	}
-	saa_dsp_writel(dev, 0x46c >> 2, value);
+    /* output xbar always main channel */
+	saa_dsp_writel(dev, 0x46c >> 2, 0xbbbb10);
+	saa_dsp_writel(dev, 0x464 >> 2, xbarin);
+	saa_writel(0x594 >> 2, anabar);
+
 	return 0;
 }
 
@@ -608,6 +616,7 @@ mixer_level(struct saa7134_dev *dev, enum saa7134_audio_in src, int level)
 				   (100 == level) ? 0x00 : 0x10);
 			break;
 		case LINE2:
+		case LINE2_LEFT:
 			saa_andorb(SAA7134_ANALOG_IO_SELECT,  0x20,
 				   (100 == level) ? 0x00 : 0x20);
 			break;
@@ -813,7 +822,7 @@ void saa7134_irq_oss_done(struct saa7134_dev *dev, unsigned long status)
 			reg = SAA7134_RS_BA1(6);
 	} else {
 		/* even */
-		if (0 == (dev->oss.dma_blk & 0x00))
+		if (1 == (dev->oss.dma_blk & 0x01))
 			reg = SAA7134_RS_BA2(6);
 	}
 	if (0 == reg) {

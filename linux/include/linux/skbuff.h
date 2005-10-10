@@ -27,6 +27,7 @@
 #include <linux/highmem.h>
 #include <linux/poll.h>
 #include <linux/net.h>
+#include <linux/textsearch.h>
 #include <net/checksum.h>
 
 #define HAVE_ALLOC_SKB		/* For the drivers to know */
@@ -82,12 +83,6 @@
  *
  *	Any questions? No questions, good. 		--ANK
  */
-
-#ifdef __i386__
-#define NET_CALLER(arg) (*(((void **)&arg) - 1))
-#else
-#define NET_CALLER(arg) __builtin_return_address(0)
-#endif
 
 struct net_device;
 
@@ -146,6 +141,20 @@ struct skb_shared_info {
 	skb_frag_t	frags[MAX_SKB_FRAGS];
 };
 
+/* We divide dataref into two halves.  The higher 16 bits hold references
+ * to the payload part of skb->data.  The lower 16 bits hold references to
+ * the entire skb->data.  It is up to the users of the skb to agree on
+ * where the payload starts.
+ *
+ * All users must obey the rule that the skb->data reference count must be
+ * greater than or equal to the payload reference count.
+ *
+ * Holding a reference to the payload part means that the user does not
+ * care about modifications to the header part of skb->data.
+ */
+#define SKB_DATAREF_SHIFT 16
+#define SKB_DATAREF_MASK ((1 << SKB_DATAREF_SHIFT) - 1)
+
 /** 
  *	struct sk_buff - socket buffer
  *	@next: Next buffer in list
@@ -159,20 +168,21 @@ struct skb_shared_info {
  *	@h: Transport layer header
  *	@nh: Network layer header
  *	@mac: Link layer header
- *	@dst: FIXME: Describe this field
+ *	@dst: destination entry
+ *	@sp: the security path, used for xfrm
  *	@cb: Control buffer. Free for use by every layer. Put private vars here
  *	@len: Length of actual data
  *	@data_len: Data length
  *	@mac_len: Length of link layer header
  *	@csum: Checksum
- *	@__unused: Dead field, may be reused
+ *	@local_df: allow local fragmentation
  *	@cloned: Head may be cloned (check refcnt to be sure)
+ *	@nohdr: Payload reference only, must not modify header
  *	@pkt_type: Packet class
  *	@ip_summed: Driver fed us an IP checksum
  *	@priority: Packet queueing priority
  *	@users: User count - see {datagram,tcp}.c
  *	@protocol: Packet protocol from driver
- *	@security: Security level of packet
  *	@truesize: Buffer size 
  *	@head: Head of buffer
  *	@data: Data head pointer
@@ -183,10 +193,11 @@ struct skb_shared_info {
  *	@nfcache: Cache info
  *	@nfct: Associated connection, if any
  *	@nfctinfo: Relationship of this skb to the connection
- *	@nf_debug: Netfilter debugging
  *	@nf_bridge: Saved data about a bridged frame - see br_netfilter.c
  *      @private: Data which is private to the HIPPI implementation
  *	@tc_index: Traffic control index
+ *	@tc_verd: traffic control verdict
+ *	@tc_classid: traffic control classid
  */
 
 struct sk_buff {
@@ -237,23 +248,21 @@ struct sk_buff {
 				data_len,
 				mac_len,
 				csum;
-	unsigned char		local_df,
-				cloned,
-				pkt_type,
-				ip_summed;
 	__u32			priority;
-	unsigned short		protocol,
-				security;
+	__u8			local_df:1,
+				cloned:1,
+				ip_summed:2,
+				nohdr:1;
+				/* 3 bits spare */
+	__u8			pkt_type;
+	__be16			protocol;
 
 	void			(*destructor)(struct sk_buff *skb);
 #ifdef CONFIG_NETFILTER
-        unsigned long		nfmark;
+	unsigned long		nfmark;
 	__u32			nfcache;
 	__u32			nfctinfo;
 	struct nf_conntrack	*nfct;
-#ifdef CONFIG_NETFILTER_DEBUG
-        unsigned int		nf_debug;
-#endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	struct nf_bridge_info	*nf_bridge;
 #endif
@@ -291,26 +300,54 @@ struct sk_buff {
 #include <asm/system.h>
 
 extern void	       __kfree_skb(struct sk_buff *skb);
-extern struct sk_buff *alloc_skb(unsigned int size, int priority);
+extern struct sk_buff *alloc_skb(unsigned int size,
+				 unsigned int __nocast priority);
 extern struct sk_buff *alloc_skb_from_cache(kmem_cache_t *cp,
-					    unsigned int size, int priority);
+					    unsigned int size,
+					    unsigned int __nocast priority);
 extern void	       kfree_skbmem(struct sk_buff *skb);
-extern struct sk_buff *skb_clone(struct sk_buff *skb, int priority);
-extern struct sk_buff *skb_copy(const struct sk_buff *skb, int priority);
-extern struct sk_buff *pskb_copy(struct sk_buff *skb, int gfp_mask);
+extern struct sk_buff *skb_clone(struct sk_buff *skb,
+				 unsigned int __nocast priority);
+extern struct sk_buff *skb_copy(const struct sk_buff *skb,
+				unsigned int __nocast priority);
+extern struct sk_buff *pskb_copy(struct sk_buff *skb,
+				 unsigned int __nocast gfp_mask);
 extern int	       pskb_expand_head(struct sk_buff *skb,
-					int nhead, int ntail, int gfp_mask);
+					int nhead, int ntail,
+					unsigned int __nocast gfp_mask);
 extern struct sk_buff *skb_realloc_headroom(struct sk_buff *skb,
 					    unsigned int headroom);
 extern struct sk_buff *skb_copy_expand(const struct sk_buff *skb,
 				       int newheadroom, int newtailroom,
-				       int priority);
+				       unsigned int __nocast priority);
 extern struct sk_buff *		skb_pad(struct sk_buff *skb, int pad);
 #define dev_kfree_skb(a)	kfree_skb(a)
 extern void	      skb_over_panic(struct sk_buff *skb, int len,
 				     void *here);
 extern void	      skb_under_panic(struct sk_buff *skb, int len,
 				      void *here);
+
+struct skb_seq_state
+{
+	__u32		lower_offset;
+	__u32		upper_offset;
+	__u32		frag_idx;
+	__u32		stepped_offset;
+	struct sk_buff	*root_skb;
+	struct sk_buff	*cur_skb;
+	__u8		*frag_data;
+};
+
+extern void	      skb_prepare_seq_read(struct sk_buff *skb,
+					   unsigned int from, unsigned int to,
+					   struct skb_seq_state *st);
+extern unsigned int   skb_seq_read(unsigned int consumed, const u8 **data,
+				   struct skb_seq_state *st);
+extern void	      skb_abort_seq_read(struct skb_seq_state *st);
+
+extern unsigned int   skb_find_text(struct sk_buff *skb, unsigned int from,
+				    unsigned int to, struct ts_config *config,
+				    struct ts_state *state);
 
 /* Internal */
 #define skb_shinfo(SKB)		((struct skb_shared_info *)((SKB)->end))
@@ -370,7 +407,42 @@ static inline void kfree_skb(struct sk_buff *skb)
  */
 static inline int skb_cloned(const struct sk_buff *skb)
 {
-	return skb->cloned && atomic_read(&skb_shinfo(skb)->dataref) != 1;
+	return skb->cloned &&
+	       (atomic_read(&skb_shinfo(skb)->dataref) & SKB_DATAREF_MASK) != 1;
+}
+
+/**
+ *	skb_header_cloned - is the header a clone
+ *	@skb: buffer to check
+ *
+ *	Returns true if modifying the header part of the buffer requires
+ *	the data to be copied.
+ */
+static inline int skb_header_cloned(const struct sk_buff *skb)
+{
+	int dataref;
+
+	if (!skb->cloned)
+		return 0;
+
+	dataref = atomic_read(&skb_shinfo(skb)->dataref);
+	dataref = (dataref & SKB_DATAREF_MASK) - (dataref >> SKB_DATAREF_SHIFT);
+	return dataref != 1;
+}
+
+/**
+ *	skb_header_release - release reference to header
+ *	@skb: buffer to operate on
+ *
+ *	Drop a reference to the header part of the buffer.  This is done
+ *	by acquiring a payload reference.  You must not read from the header
+ *	part of skb->data after this.
+ */
+static inline void skb_header_release(struct sk_buff *skb)
+{
+	BUG_ON(skb->nohdr);
+	skb->nohdr = 1;
+	atomic_add(1 << SKB_DATAREF_SHIFT, &skb_shinfo(skb)->dataref);
 }
 
 /**
@@ -398,7 +470,8 @@ static inline int skb_shared(const struct sk_buff *skb)
  *
  *	NULL is returned on a memory allocation failure.
  */
-static inline struct sk_buff *skb_share_check(struct sk_buff *skb, int pri)
+static inline struct sk_buff *skb_share_check(struct sk_buff *skb,
+					      unsigned int __nocast pri)
 {
 	might_sleep_if(pri & __GFP_WAIT);
 	if (skb_shared(skb)) {
@@ -429,7 +502,8 @@ static inline struct sk_buff *skb_share_check(struct sk_buff *skb, int pri)
  *
  *	%NULL is returned on a memory allocation failure.
  */
-static inline struct sk_buff *skb_unshare(struct sk_buff *skb, int pri)
+static inline struct sk_buff *skb_unshare(struct sk_buff *skb,
+					  unsigned int __nocast pri)
 {
 	might_sleep_if(pri & __GFP_WAIT);
 	if (skb_cloned(skb)) {
@@ -921,6 +995,7 @@ static inline void __skb_queue_purge(struct sk_buff_head *list)
 		kfree_skb(skb);
 }
 
+#ifndef CONFIG_HAVE_ARCH_DEV_ALLOC_SKB
 /**
  *	__dev_alloc_skb - allocate an skbuff for sending
  *	@length: length to allocate
@@ -933,9 +1008,8 @@ static inline void __skb_queue_purge(struct sk_buff_head *list)
  *
  *	%NULL is returned in there is no free memory.
  */
-#ifndef CONFIG_HAVE_ARCH_DEV_ALLOC_SKB
 static inline struct sk_buff *__dev_alloc_skb(unsigned int length,
-					      int gfp_mask)
+					      unsigned int __nocast gfp_mask)
 {
 	struct sk_buff *skb = alloc_skb(length + 16, gfp_mask);
 	if (likely(skb))
@@ -1048,10 +1122,46 @@ static inline int skb_can_coalesce(struct sk_buff *skb, int i,
  *	If there is no free memory -ENOMEM is returned, otherwise zero
  *	is returned and the old skb data released.
  */
-extern int __skb_linearize(struct sk_buff *skb, int gfp);
-static inline int skb_linearize(struct sk_buff *skb, int gfp)
+extern int __skb_linearize(struct sk_buff *skb, unsigned int __nocast gfp);
+static inline int skb_linearize(struct sk_buff *skb, unsigned int __nocast gfp)
 {
 	return __skb_linearize(skb, gfp);
+}
+
+/**
+ *	skb_postpull_rcsum - update checksum for received skb after pull
+ *	@skb: buffer to update
+ *	@start: start of data before pull
+ *	@len: length of data pulled
+ *
+ *	After doing a pull on a received packet, you need to call this to
+ *	update the CHECKSUM_HW checksum, or set ip_summed to CHECKSUM_NONE
+ *	so that it can be recomputed from scratch.
+ */
+
+static inline void skb_postpull_rcsum(struct sk_buff *skb,
+					 const void *start, int len)
+{
+	if (skb->ip_summed == CHECKSUM_HW)
+		skb->csum = csum_sub(skb->csum, csum_partial(start, len, 0));
+}
+
+/**
+ *	pskb_trim_rcsum - trim received skb and update checksum
+ *	@skb: buffer to trim
+ *	@len: new length
+ *
+ *	This is exactly the same as pskb_trim except that it ensures the
+ *	checksum of received packets are still valid after the operation.
+ */
+
+static inline int pskb_trim_rcsum(struct sk_buff *skb, unsigned int len)
+{
+	if (len >= skb->len)
+		return 0;
+	if (skb->ip_summed == CHECKSUM_HW)
+		skb->ip_summed = CHECKSUM_NONE;
+	return __pskb_trim(skb, len);
 }
 
 static inline void *kmap_skb_frag(const skb_frag_t *frag)
@@ -1094,6 +1204,8 @@ extern unsigned int    skb_checksum(const struct sk_buff *skb, int offset,
 				    int len, unsigned int csum);
 extern int	       skb_copy_bits(const struct sk_buff *skb, int offset,
 				     void *to, int len);
+extern int	       skb_store_bits(const struct sk_buff *skb, int offset,
+				      void *from, int len);
 extern unsigned int    skb_copy_and_csum_bits(const struct sk_buff *skb,
 					      int offset, u8 *to, int len,
 					      unsigned int csum);
@@ -1106,7 +1218,7 @@ static inline void *skb_header_pointer(const struct sk_buff *skb, int offset,
 {
 	int hlen = skb_headlen(skb);
 
-	if (offset + len <= hlen)
+	if (hlen - offset >= len)
 		return skb->data + offset;
 
 	if (skb_copy_bits(skb, offset, buffer, len) < 0)
@@ -1117,22 +1229,6 @@ static inline void *skb_header_pointer(const struct sk_buff *skb, int offset,
 
 extern void skb_init(void);
 extern void skb_add_mtu(int mtu);
-
-struct skb_iter {
-	/* Iteration functions set these */
-	unsigned char *data;
-	unsigned int len;
-
-	/* Private to iteration */
-	unsigned int nextfrag;
-	struct sk_buff *fraglist;
-};
-
-/* Keep iterating until skb_iter_next returns false. */
-extern void skb_iter_first(const struct sk_buff *skb, struct skb_iter *i);
-extern int skb_iter_next(const struct sk_buff *skb, struct skb_iter *i);
-/* Call this if aborting loop before !skb_iter_next */
-extern void skb_iter_abort(const struct sk_buff *skb, struct skb_iter *i);
 
 #ifdef CONFIG_NETFILTER
 static inline void nf_conntrack_put(struct nf_conntrack *nfct)
@@ -1149,15 +1245,6 @@ static inline void nf_reset(struct sk_buff *skb)
 {
 	nf_conntrack_put(skb->nfct);
 	skb->nfct = NULL;
-#ifdef CONFIG_NETFILTER_DEBUG
-	skb->nf_debug = 0;
-#endif
-}
-static inline void nf_reset_debug(struct sk_buff *skb)
-{
-#ifdef CONFIG_NETFILTER_DEBUG
-	skb->nf_debug = 0;
-#endif
 }
 
 #ifdef CONFIG_BRIDGE_NETFILTER

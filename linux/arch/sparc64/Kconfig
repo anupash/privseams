@@ -16,6 +16,52 @@ config TIME_INTERPOLATION
 	bool
 	default y
 
+choice
+	prompt "Kernel page size"
+	default SPARC64_PAGE_SIZE_8KB
+
+config SPARC64_PAGE_SIZE_8KB
+	bool "8KB"
+	help
+	  This lets you select the page size of the kernel.
+
+	  8KB and 64KB work quite well, since Sparc ELF sections
+	  provide for up to 64KB alignment.
+
+	  Therefore, 512KB and 4MB are for expert hackers only.
+
+	  If you don't know what to do, choose 8KB.
+
+config SPARC64_PAGE_SIZE_64KB
+	bool "64KB"
+
+config SPARC64_PAGE_SIZE_512KB
+	bool "512KB"
+
+config SPARC64_PAGE_SIZE_4MB
+	bool "4MB"
+
+endchoice
+
+config SECCOMP
+	bool "Enable seccomp to safely compute untrusted bytecode"
+	depends on PROC_FS
+	default y
+	help
+	  This kernel feature is useful for number crunching applications
+	  that may need to compute untrusted bytecode during their
+	  execution. By using pipes or other transports made available to
+	  the process as file descriptors supporting the read/write
+	  syscalls, it's possible to isolate those applications in
+	  their own address space using seccomp. Once seccomp is
+	  enabled via /proc/<pid>/seccomp, it cannot be disabled
+	  and the task is only allowed to execute a few safe syscalls
+	  defined by each seccomp mode.
+
+	  If unsure, say Y. Only embedded should say N here.
+
+source kernel/Kconfig.hz
+
 source "init/Kconfig"
 
 config SYSVIPC_COMPAT
@@ -91,6 +137,7 @@ config VT_CONSOLE
 
 config HW_CONSOLE
 	bool
+	depends on VT
 	default y
 
 config SMP
@@ -136,19 +183,10 @@ config NR_CPUS
 
 source "drivers/cpufreq/Kconfig"
 
-config CPU_FREQ_TABLE
-       tristate "CPU frequency table helpers"
-       depends on CPU_FREQ
-       default y
-       help
-         Many CPUFreq drivers use these helpers, so only say N here if
-	 the CPUFreq driver of your choice doesn't need these helpers.
-
-	 If in doubt, say Y.
-
 config US3_FREQ
 	tristate "UltraSPARC-III CPU Frequency driver"
-	depends on CPU_FREQ_TABLE
+	depends on CPU_FREQ
+	select CPU_FREQ_TABLE
 	help
 	  This adds the CPUFreq driver for UltraSPARC-III processors.
 
@@ -158,7 +196,8 @@ config US3_FREQ
 
 config US2E_FREQ
 	tristate "UltraSPARC-IIe CPU Frequency driver"
-	depends on CPU_FREQ_TABLE
+	depends on CPU_FREQ
+	select CPU_FREQ_TABLE
 	help
 	  This adds the CPUFreq driver for UltraSPARC-IIe processors.
 
@@ -198,9 +237,11 @@ config HUGETLB_PAGE_SIZE_4MB
 	bool "4MB"
 
 config HUGETLB_PAGE_SIZE_512K
+	depends on !SPARC64_PAGE_SIZE_4MB
 	bool "512K"
 
 config HUGETLB_PAGE_SIZE_64K
+	depends on !SPARC64_PAGE_SIZE_4MB && !SPARC64_PAGE_SIZE_512K
 	bool "64K"
 
 endchoice
@@ -422,6 +463,24 @@ config PRINTER
 	  If you have more than 8 printers, you need to increase the LP_NO
 	  macro in lp.c and the PARPORT_MAX macro in parport.h.
 
+config PPDEV
+	tristate "Support for user-space parallel port device drivers"
+	depends on PARPORT
+	---help---
+	  Saying Y to this adds support for /dev/parport device nodes.  This
+	  is needed for programs that want portable access to the parallel
+	  port, for instance deviceid (which displays Plug-and-Play device
+	  IDs).
+
+	  This is the parallel port equivalent of SCSI generic support (sg).
+	  It is safe to say N to this -- it is not needed for normal printing
+	  or parallel port CD-ROM/disk support.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called ppdev.
+
+	  If unsure, say N.
+
 config ENVCTRL
 	tristate "SUNW, envctrl support"
 	depends on PCI
@@ -462,7 +521,11 @@ config CMDLINE
 
 	  NOTE: This option WILL override the PROM bootargs setting!
 
+source "mm/Kconfig"
+
 endmenu
+
+source "net/Kconfig"
 
 source "drivers/base/Kconfig"
 
@@ -490,7 +553,7 @@ endif
 
 source "drivers/ieee1394/Kconfig"
 
-source "net/Kconfig"
+source "drivers/net/Kconfig"
 
 source "drivers/isdn/Kconfig"
 
@@ -585,6 +648,8 @@ endmenu
 source "drivers/input/Kconfig"
 
 source "drivers/i2c/Kconfig"
+
+source "drivers/hwmon/Kconfig"
 
 source "fs/Kconfig"
 

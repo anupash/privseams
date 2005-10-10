@@ -97,12 +97,14 @@
 #include <linux/delay.h>
 #include <linux/blkdev.h>
 #include <linux/stat.h>
+#include <linux/delay.h>
 
 #include <asm/io.h>
 #include <asm/system.h>
 #include <asm/uaccess.h>
 
 #include "scsi.h"
+#include <scsi/scsi_dbg.h>
 #include <scsi/scsi_host.h>
 #include "seagate.h"
 
@@ -746,7 +748,7 @@ static int internal_command (unsigned char target, unsigned char lun,
 
 #if (DEBUG & PRINT_COMMAND)
 	printk("scsi%d : target = %d, command = ", hostno, target);
-	print_command((unsigned char *) cmnd);
+	__scsi_print_command((unsigned char *) cmnd);
 #endif
 
 #if (DEBUG & PHASE_RESELECT)
@@ -1553,7 +1555,7 @@ connect_loop:
 	printk("\n");
 #endif
 	printk("scsi%d : status = ", hostno);
-	print_status(status);
+	scsi_print_status(status);
 	printk(" message = %02x\n", message);
 #endif
 
@@ -1630,23 +1632,13 @@ static int seagate_st0x_bus_reset(Scsi_Cmnd * SCpnt)
 	/* assert  RESET signal on SCSI bus.  */
 	WRITE_CONTROL (BASE_CMD | CMD_RST);
 
-	udelay (20 * 1000);
+	mdelay (20);
 
 	WRITE_CONTROL (BASE_CMD);
 	st0x_aborted = DID_RESET;
 
 	DANY ("done.\n");
 	return SUCCESS;
-}
-
-static int seagate_st0x_host_reset(Scsi_Cmnd *SCpnt)
-{
-	return FAILED;
-}
-
-static int seagate_st0x_device_reset(Scsi_Cmnd *SCpnt)
-{
-	return FAILED;
 }
 
 static int seagate_st0x_release(struct Scsi_Host *shost)
@@ -1664,8 +1656,6 @@ static Scsi_Host_Template driver_template = {
 	.queuecommand   	= seagate_st0x_queue_command,
 	.eh_abort_handler	= seagate_st0x_abort,
 	.eh_bus_reset_handler	= seagate_st0x_bus_reset,
-	.eh_host_reset_handler	= seagate_st0x_host_reset,
-	.eh_device_reset_handler = seagate_st0x_device_reset,
 	.can_queue      	= 1,
 	.this_id        	= 7,
 	.sg_tablesize   	= SG_ALL,

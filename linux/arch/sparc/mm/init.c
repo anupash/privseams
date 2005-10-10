@@ -59,9 +59,6 @@ unsigned long highstart_pfn, highend_pfn;
 pte_t *kmap_pte;
 pgprot_t kmap_prot;
 
-EXPORT_SYMBOL(kmap_prot);
-EXPORT_SYMBOL(kmap_pte);
-
 #define kmap_get_fixmap_pte(vaddr) \
 	pte_offset_kernel(pmd_offset(pgd_offset_k(vaddr), (vaddr)), (vaddr))
 
@@ -387,7 +384,6 @@ void map_high_region(unsigned long start_pfn, unsigned long end_pfn)
 		struct page *page = pfn_to_page(tmp);
 
 		ClearPageReserved(page);
-		set_bit(PG_highmem, &page->flags);
 		set_page_count(page, 1);
 		__free_page(page);
 		totalhigh_pages++;

@@ -154,8 +154,6 @@
 #define ENE_TEST_C9			0xc9	/* 8bit */
 #define ENE_TEST_C9_TLTENABLE		0x02
 
-#ifdef CONFIG_CARDBUS
-
 /*
  * Texas Instruments CardBus controller overrides.
  */
@@ -262,6 +260,7 @@ static void ti_set_zv(struct yenta_socket *socket)
 			case PCI_DEVICE_ID_TI_1220:
 			case PCI_DEVICE_ID_TI_1221:
 			case PCI_DEVICE_ID_TI_1225:
+			case PCI_DEVICE_ID_TI_4510:
 				socket->socket.zoom_video = ti_zoom_video;
 				break;	
 			case PCI_DEVICE_ID_TI_1250:
@@ -441,6 +440,25 @@ out:
 }
 
 
+/* changes the irq of func1 to match that of func0 */
+static int ti12xx_align_irqs(struct yenta_socket *socket, int *old_irq)
+{
+	struct pci_dev *func0;
+
+	/* find func0 device */
+	func0 = pci_get_slot(socket->dev->bus, socket->dev->devfn & ~0x07);
+	if (!func0)
+		return 0;
+
+	if (old_irq)
+		*old_irq = socket->cb_irq;
+	socket->cb_irq = socket->dev->irq = func0->irq;
+
+	pci_dev_put(func0);
+
+	return 1;
+}
+
 /*
  * ties INTA and INTB together. also changes the devices irq to that of
  * the function 0 device. call from func1 only.
@@ -448,25 +466,21 @@ out:
  */
 static int ti12xx_tie_interrupts(struct yenta_socket *socket, int *old_irq)
 {
-	struct pci_dev *func0;
 	u32 sysctl;
+	int ret;
 
 	sysctl = config_readl(socket, TI113X_SYSTEM_CONTROL);
 	if (sysctl & TI122X_SCR_INTRTIE)
 		return 0;
 
-	/* find func0 device */
-	func0 = pci_get_slot(socket->dev->bus, socket->dev->devfn & ~0x07);
-	if (!func0)
+	/* align */
+	ret = ti12xx_align_irqs(socket, old_irq);
+	if (!ret)
 		return 0;
 
-	/* change the interrupt to match func0, tie 'em up */
-	*old_irq = socket->cb_irq;
-	socket->cb_irq = socket->dev->irq = func0->irq;
+	/* tie */
 	sysctl |= TI122X_SCR_INTRTIE;
 	config_writel(socket, TI113X_SYSTEM_CONTROL, sysctl);
-
-	pci_dev_put(func0);
 
 	return 1;
 }
@@ -488,13 +502,18 @@ static void ti12xx_untie_interrupts(struct yenta_socket *socket, int old_irq)
  */
 static void ti12xx_irqroute_func1(struct yenta_socket *socket)
 {
-	u32 mfunc, mfunc_old, devctl;
+	u32 mfunc, mfunc_old, devctl, sysctl;
 	int pci_irq_status;
 
 	mfunc = mfunc_old = config_readl(socket, TI122X_MFUNC);
 	devctl = config_readb(socket, TI113X_DEVICE_CONTROL);
 	printk(KERN_INFO "Yenta TI: socket %s, mfunc 0x%08x, devctl 0x%02x\n",
 	       pci_name(socket->dev), mfunc, devctl);
+
+	/* if IRQs are configured as tied, align irq of func1 with func0 */
+	sysctl = config_readl(socket, TI113X_SYSTEM_CONTROL);
+	if (sysctl & TI122X_SCR_INTRTIE)
+		ti12xx_align_irqs(socket, NULL);
 
 	/* make sure PCI interrupts are enabled before probing */
 	ti_init(socket);
@@ -590,6 +609,170 @@ out:
 	}
 }
 
+
+/* Returns true value if the second slot of a two-slot controller is empty */
+static int ti12xx_2nd_slot_empty(struct yenta_socket *socket)
+{
+	struct pci_dev *func;
+	struct yenta_socket *slot2;
+	int devfn;
+	unsigned int state;
+	int ret = 1;
+
+	/* catch the two-slot controllers */
+	switch (socket->dev->device) {
+	case PCI_DEVICE_ID_TI_1220:
+	case PCI_DEVICE_ID_TI_1221:
+	case PCI_DEVICE_ID_TI_1225:
+	case PCI_DEVICE_ID_TI_1251A:
+	case PCI_DEVICE_ID_TI_1251B:
+	case PCI_DEVICE_ID_TI_1420:
+	case PCI_DEVICE_ID_TI_1450:
+	case PCI_DEVICE_ID_TI_1451A:
+	case PCI_DEVICE_ID_TI_1520:
+	case PCI_DEVICE_ID_TI_1620:
+	case PCI_DEVICE_ID_TI_4520:
+	case PCI_DEVICE_ID_TI_4450:
+	case PCI_DEVICE_ID_TI_4451:
+		/*
+		 * there are way more, but they need to be added in yenta_socket.c
+		 * and pci_ids.h first anyway.
+		 */
+		break;
+
+	/* single-slot controllers have the 2nd slot empty always :) */
+	default:
+		return 1;
+	}
+
+	/* get other slot */
+	devfn = socket->dev->devfn & ~0x07;
+	func = pci_get_slot(socket->dev->bus,
+	                    (socket->dev->devfn & 0x07) ? devfn : devfn | 0x01);
+	if (!func)
+		return 1;
+
+	slot2 = pci_get_drvdata(func);
+	if (!slot2)
+		goto out;
+
+	/* check state */
+	yenta_get_status(&socket->socket, &state);
+	if (state & SS_DETECT) {
+		ret = 0;
+		goto out;
+	}
+
+out:
+	pci_dev_put(func);
+	return ret;
+}
+
+/*
+ * TI specifiy parts for the power hook.
+ *
+ * some TI's with some CB's produces interrupt storm on power on. it has been
+ * seen with atheros wlan cards on TI1225 and TI1410. solution is simply to
+ * disable any CB interrupts during this time.
+ */
+static int ti12xx_power_hook(struct pcmcia_socket *sock, int operation)
+{
+	struct yenta_socket *socket = container_of(sock, struct yenta_socket, socket);
+	u32 mfunc, devctl, sysctl;
+	u8 gpio3;
+
+	/* only POWER_PRE and POWER_POST are interesting */
+	if ((operation != HOOK_POWER_PRE) && (operation != HOOK_POWER_POST))
+		return 0;
+
+	devctl = config_readb(socket, TI113X_DEVICE_CONTROL);
+	sysctl = config_readl(socket, TI113X_SYSTEM_CONTROL);
+	mfunc = config_readl(socket, TI122X_MFUNC);
+
+	/*
+	 * all serial/tied: only disable when modparm set. always doing it
+	 * would mean a regression for working setups 'cos it disables the
+	 * interrupts for both both slots on 2-slot controllers
+	 * (and users of single slot controllers where it's save have to
+	 * live with setting the modparm, most don't have to anyway)
+	 */
+	if (((devctl & TI113X_DCR_IMODE_MASK) == TI12XX_DCR_IMODE_ALL_SERIAL) &&
+	    (pwr_irqs_off || ti12xx_2nd_slot_empty(socket))) {
+		switch (socket->dev->device) {
+		case PCI_DEVICE_ID_TI_1250:
+		case PCI_DEVICE_ID_TI_1251A:
+		case PCI_DEVICE_ID_TI_1251B:
+		case PCI_DEVICE_ID_TI_1450:
+		case PCI_DEVICE_ID_TI_1451A:
+		case PCI_DEVICE_ID_TI_4450:
+		case PCI_DEVICE_ID_TI_4451:
+			/* these chips have no IRQSER setting in MFUNC3  */
+			break;
+
+		default:
+			if (operation == HOOK_POWER_PRE)
+				mfunc = (mfunc & ~TI122X_MFUNC3_MASK);
+			else
+				mfunc = (mfunc & ~TI122X_MFUNC3_MASK) | TI122X_MFUNC3_IRQSER;
+		}
+
+		return 0;
+	}
+
+	/* do the job differently for func0/1 */
+	if ((PCI_FUNC(socket->dev->devfn) == 0) ||
+	    ((sysctl & TI122X_SCR_INTRTIE) &&
+	     (pwr_irqs_off || ti12xx_2nd_slot_empty(socket)))) {
+		/* some bridges are different */
+		switch (socket->dev->device) {
+		case PCI_DEVICE_ID_TI_1250:
+		case PCI_DEVICE_ID_TI_1251A:
+		case PCI_DEVICE_ID_TI_1251B:
+		case PCI_DEVICE_ID_TI_1450:
+			/* those oldies use gpio3 for INTA */
+			gpio3 = config_readb(socket, TI1250_GPIO3_CONTROL);
+			if (operation == HOOK_POWER_PRE)
+				gpio3 = (gpio3 & ~TI1250_GPIO_MODE_MASK) | 0x40;
+			else
+				gpio3 &= ~TI1250_GPIO_MODE_MASK;
+			config_writeb(socket, TI1250_GPIO3_CONTROL, gpio3);
+			break;
+
+		default:
+			/* all new bridges are the same */
+			if (operation == HOOK_POWER_PRE)
+				mfunc &= ~TI122X_MFUNC0_MASK;
+			else
+				mfunc |= TI122X_MFUNC0_INTA;
+			config_writel(socket, TI122X_MFUNC, mfunc);
+		}
+	} else {
+		switch (socket->dev->device) {
+		case PCI_DEVICE_ID_TI_1251A:
+		case PCI_DEVICE_ID_TI_1251B:
+		case PCI_DEVICE_ID_TI_1450:
+			/* those have INTA elsewhere and INTB in MFUNC0 */
+			if (operation == HOOK_POWER_PRE)
+				mfunc &= ~TI122X_MFUNC0_MASK;
+			else
+				mfunc |= TI125X_MFUNC0_INTB;
+			config_writel(socket, TI122X_MFUNC, mfunc);
+
+			break;
+
+		default:
+			/* all new bridges are the same */
+			if (operation == HOOK_POWER_PRE)
+				mfunc &= ~TI122X_MFUNC1_MASK;
+			else
+				mfunc |= TI122X_MFUNC1_INTB;
+			config_writel(socket, TI122X_MFUNC, mfunc);
+		}
+	}
+
+	return 0;
+}
+
 static int ti12xx_override(struct yenta_socket *socket)
 {
 	u32 val, val_orig;
@@ -633,6 +816,9 @@ static int ti12xx_override(struct yenta_socket *socket)
 	else
 		ti12xx_irqroute_func1(socket);
 
+	/* install power hook */
+	socket->socket.power_hook = ti12xx_power_hook;
+
 	return ti_override(socket);
 }
 
@@ -654,8 +840,6 @@ static int ti1250_override(struct yenta_socket *socket)
 
 	return ti12xx_override(socket);
 }
-
-#endif /* CONFIG_CARDBUS */
 
 #endif /* _LINUX_TI113X_H */
 

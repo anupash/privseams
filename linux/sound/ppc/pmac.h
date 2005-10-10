@@ -60,7 +60,8 @@ typedef struct snd_pmac_dbdma pmac_dbdma_t;
  * DBDMA space
  */
 struct snd_pmac_dbdma {
-	unsigned long addr;
+	dma_addr_t dma_base;
+	dma_addr_t addr;
 	struct dbdma_cmd __iomem *cmds;
 	void *space;
 	int size;
@@ -93,7 +94,8 @@ struct snd_pmac_stream {
  */
 
 enum snd_pmac_model {
-	PMAC_AWACS, PMAC_SCREAMER, PMAC_BURGUNDY, PMAC_DACA, PMAC_TUMBLER, PMAC_SNAPPER
+	PMAC_AWACS, PMAC_SCREAMER, PMAC_BURGUNDY, PMAC_DACA, PMAC_TUMBLER,
+	PMAC_SNAPPER, PMAC_TOONIE
 };
 
 struct snd_pmac {
@@ -101,6 +103,7 @@ struct snd_pmac {
 
 	/* h/w info */
 	struct device_node *node;
+	struct pci_dev *pdev;
 	unsigned int revision;
 	unsigned int manufacturer;
 	unsigned int subframe;
@@ -110,6 +113,7 @@ struct snd_pmac {
 	unsigned int has_iic : 1;
 	unsigned int is_pbook_3400 : 1;
 	unsigned int is_pbook_G3 : 1;
+	unsigned int is_k2 : 1;
 
 	unsigned int can_byte_swap : 1;
 	unsigned int can_duplex : 1;
@@ -157,12 +161,13 @@ struct snd_pmac {
 	snd_kcontrol_t *speaker_sw_ctl;
 	snd_kcontrol_t *drc_sw_ctl;	/* only used for tumbler -ReneR */
 	snd_kcontrol_t *hp_detect_ctl;
+	snd_kcontrol_t *lineout_sw_ctl;
 
 	/* lowlevel callbacks */
 	void (*set_format)(pmac_t *chip);
 	void (*update_automute)(pmac_t *chip, int do_notify);
 	int (*detect_headphone)(pmac_t *chip);
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 	void (*suspend)(pmac_t *chip);
 	void (*resume)(pmac_t *chip);
 #endif
@@ -187,6 +192,7 @@ int snd_pmac_burgundy_init(pmac_t *chip);
 int snd_pmac_daca_init(pmac_t *chip);
 int snd_pmac_tumbler_init(pmac_t *chip);
 int snd_pmac_tumbler_post_init(void);
+int snd_pmac_toonie_init(pmac_t *chip);
 
 /* i2c functions */
 typedef struct snd_pmac_keywest {
@@ -205,10 +211,5 @@ int snd_pmac_boolean_stereo_info(snd_kcontrol_t *kcontrol, snd_ctl_elem_info_t *
 int snd_pmac_boolean_mono_info(snd_kcontrol_t *kcontrol, snd_ctl_elem_info_t *uinfo);
 
 int snd_pmac_add_automute(pmac_t *chip);
-
-#define big_mdelay(msec) do {\
-	set_current_state(TASK_UNINTERRUPTIBLE);\
-	schedule_timeout(((msec) * HZ + 999) / 1000);\
-} while (0)
 
 #endif /* __PMAC_H */

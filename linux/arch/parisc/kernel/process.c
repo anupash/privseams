@@ -54,7 +54,7 @@
 #include <asm/uaccess.h>
 #include <asm/unwind.h>
 
-int hlt_counter;
+static int hlt_counter;
 
 /*
  * Power off function, if any
@@ -150,8 +150,6 @@ void machine_restart(char *cmd)
 
 }
 
-EXPORT_SYMBOL(machine_restart);
-
 void machine_halt(void)
 {
 	/*
@@ -159,8 +157,6 @@ void machine_halt(void)
 	** function, called by the reboot notifier chain.
 	*/
 }
-
-EXPORT_SYMBOL(machine_halt);
 
 
 /*
@@ -186,8 +182,6 @@ void machine_power_off(void)
 	printk(KERN_EMERG "System shut down completed.\n"
 	       KERN_EMERG "Please power this system off now.");
 }
-
-EXPORT_SYMBOL(machine_power_off);
 
 
 /*
@@ -251,7 +245,7 @@ int
 sys_clone(unsigned long clone_flags, unsigned long usp,
 	  struct pt_regs *regs)
 {
-	int *user_tid = (int *)regs->gr[26];
+	int __user *user_tid = (int __user *)regs->gr[26];
 
 	/* usp must be word aligned.  This also prevents users from
 	 * passing in the value 1 (which is the signal for a special
@@ -357,12 +351,12 @@ asmlinkage int sys_execve(struct pt_regs *regs)
 	int error;
 	char *filename;
 
-	filename = getname((char *) regs->gr[26]);
+	filename = getname((const char __user *) regs->gr[26]);
 	error = PTR_ERR(filename);
 	if (IS_ERR(filename))
 		goto out;
-	error = do_execve(filename, (char **) regs->gr[25],
-		(char **) regs->gr[24], regs);
+	error = do_execve(filename, (char __user **) regs->gr[25],
+		(char __user **) regs->gr[24], regs);
 	if (error == 0) {
 		task_lock(current);
 		current->ptrace &= ~PT_DTRACE;

@@ -259,9 +259,11 @@ static void __init map_sa1100_gpio_regs( void )
 	unsigned long phys = __PREG(GPLR) & PMD_MASK;
 	unsigned long virt = io_p2v(phys);
 	int prot = PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_DOMAIN(DOMAIN_IO);
-	pmd_t pmd;
-	pmd_val(pmd) = phys | prot;
-	set_pmd(pmd_offset(pgd_offset_k(virt), virt), pmd);
+	pmd_t *pmd;
+
+	pmd = pmd_offset(pgd_offset_k(virt), virt);
+	*pmd = __pmd(phys | prot);
+	flush_pmd_entry(pmd);
 }
 
 /*
@@ -429,11 +431,13 @@ static void __init assabet_map_io(void)
 
 
 MACHINE_START(ASSABET, "Intel-Assabet")
-	BOOT_MEM(0xc0000000, 0x80000000, 0xf8000000)
-	BOOT_PARAMS(0xc0000100)
-	FIXUP(fixup_assabet)
-	MAPIO(assabet_map_io)
-	INITIRQ(sa1100_init_irq)
+	.phys_ram	= 0xc0000000,
+	.phys_io	= 0x80000000,
+	.io_pg_offst	= ((0xf8000000) >> 18) & 0xfffc,
+	.boot_params	= 0xc0000100,
+	.fixup		= fixup_assabet,
+	.map_io		= assabet_map_io,
+	.init_irq	= sa1100_init_irq,
 	.timer		= &sa1100_timer,
 	.init_machine	= assabet_init,
 MACHINE_END

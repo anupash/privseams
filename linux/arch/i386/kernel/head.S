@@ -299,7 +299,6 @@ is386:	movl $2,%ecx		# set MP
 	movl %eax,%cr0
 
 	call check_x87
-	incb ready
 	lgdt cpu_gdt_descr
 	lidt idt_descr
 	ljmp $(__KERNEL_CS),$1f
@@ -316,8 +315,9 @@ is386:	movl $2,%ecx		# set MP
 	lldt %ax
 	cld			# gcc2 wants the direction flag cleared at all times
 #ifdef CONFIG_SMP
-	movb ready, %cl	
-	cmpb $1,%cl
+	movb ready, %cl
+	movb $1, ready
+	cmpb $0,%cl
 	je 1f			# the first CPU calls start_kernel
 				# all other CPUs call initialize_secondary
 	call initialize_secondary
@@ -380,6 +380,7 @@ rp_sidt:
 	ALIGN
 ignore_int:
 	cld
+#ifdef CONFIG_PRINTK
 	pushl %eax
 	pushl %ecx
 	pushl %edx
@@ -400,6 +401,7 @@ ignore_int:
 	popl %edx
 	popl %ecx
 	popl %eax
+#endif
 	iret
 
 /*
@@ -512,7 +514,7 @@ ENTRY(cpu_gdt_table)
 	.quad 0x00009a0000000000	/* 0xc0 APM CS 16 code (16 bit) */
 	.quad 0x0040920000000000	/* 0xc8 APM DS    data */
 
-	.quad 0x0000000000000000	/* 0xd0 - unused */
+	.quad 0x0000920000000000	/* 0xd0 - ESPFIX 16-bit SS */
 	.quad 0x0000000000000000	/* 0xd8 - unused */
 	.quad 0x0000000000000000	/* 0xe0 - unused */
 	.quad 0x0000000000000000	/* 0xe8 - unused */

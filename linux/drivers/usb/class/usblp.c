@@ -114,7 +114,7 @@ MFG:HEWLETT-PACKARD;MDL:DESKJET 970C;CMD:MLC,PCL,PML;CLASS:PRINTER;DESCRIPTION:H
 #define USBLP_MINORS		16
 #define USBLP_MINOR_BASE	0
 
-#define USBLP_WRITE_TIMEOUT	(5*HZ)			/* 5 seconds */
+#define USBLP_WRITE_TIMEOUT	(5000)			/* 5 seconds */
 
 #define USBLP_FIRST_PROTOCOL	1
 #define USBLP_LAST_PROTOCOL	3
@@ -379,6 +379,8 @@ static int usblp_open(struct inode *inode, struct file *file)
 	usblp->writeurb->transfer_buffer_length = 0;
 	usblp->wcomplete = 1; /* we begin writeable */
 	usblp->rcomplete = 0;
+	usblp->writeurb->status = 0;
+	usblp->readurb->status = 0;
 
 	if (usblp->bidir) {
 		usblp->readcount = 0;
@@ -751,6 +753,7 @@ static ssize_t usblp_read(struct file *file, char __user *buffer, size_t count, 
 				schedule();
 			} else {
 				set_current_state(TASK_RUNNING);
+				down(&usblp->sem);
 				break;
 			}
 			down (&usblp->sem);

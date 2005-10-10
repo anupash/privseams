@@ -156,11 +156,13 @@ else \
 
 
 #if (HD_DELAY > 0)
+
+#include <asm/i8253.h>
+
 unsigned long last_req;
 
 unsigned long read_timer(void)
 {
-        extern spinlock_t i8253_lock;
 	unsigned long t, flags;
 	int i;
 
@@ -851,7 +853,7 @@ Enomem:
 	goto out;
 }
 
-static int parse_hd_setup (char *line) {
+static int __init parse_hd_setup (char *line) {
 	int ints[6];
 
 	(void) get_options(line, ARRAY_SIZE(ints), ints);

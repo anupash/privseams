@@ -146,7 +146,7 @@ bt819_write_block (struct i2c_client *client,
 		u8 block_data[32];
 
 		msg.addr = client->addr;
-		msg.flags = client->flags;
+		msg.flags = 0;
 		while (len >= 2) {
 			msg.buf = (char *) block_data;
 			msg.len = 0;
@@ -236,7 +236,8 @@ bt819_init (struct i2c_client *client)
 	init[0x07 * 2 - 1] = timing->hactive & 0xff;
 	init[0x08 * 2 - 1] = timing->hscale >> 8;
 	init[0x09 * 2 - 1] = timing->hscale & 0xff;
-	init[0x19*2-1] = decoder->norm == 0 ? 115 : 93;	/* Chroma burst delay */
+	/* 0x15 in array is address 0x19 */
+	init[0x15 * 2 - 1] = (decoder->norm == 0) ? 115 : 93;	/* Chroma burst delay */
 	/* reset */
 	bt819_write(client, 0x1f, 0x00);
 	mdelay(1);
@@ -499,25 +500,16 @@ static unsigned short normal_i2c[] = {
 	I2C_BT819 >> 1,
 	I2C_CLIENT_END,
 };
-static unsigned short normal_i2c_range[] = { I2C_CLIENT_END };
 
-static unsigned short probe[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short probe_range[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short ignore[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short ignore_range[2] = { I2C_CLIENT_END, I2C_CLIENT_END };
-static unsigned short force[2] = { I2C_CLIENT_END , I2C_CLIENT_END };
+static unsigned short ignore = I2C_CLIENT_END;
                                                                                 
 static struct i2c_client_address_data addr_data = {
 	.normal_i2c		= normal_i2c,
-	.normal_i2c_range	= normal_i2c_range,
-	.probe			= probe,
-	.probe_range		= probe_range,
-	.ignore			= ignore,
-	.ignore_range		= ignore_range,
-	.force			= force
+	.probe			= &ignore,
+	.ignore			= &ignore,
+	.force			= &ignore,
 };
 
-static int bt819_i2c_id = 0;
 static struct i2c_driver i2c_driver_bt819;
 
 static int
@@ -546,7 +538,6 @@ bt819_detect_client (struct i2c_adapter *adapter,
 	client->adapter = adapter;
 	client->driver = &i2c_driver_bt819;
 	client->flags = I2C_CLIENT_ALLOW_USE;
-	client->id = bt819_i2c_id++;
 
 	decoder = kmalloc(sizeof(struct bt819), GFP_KERNEL);
 	if (decoder == NULL) {
@@ -568,16 +559,13 @@ bt819_detect_client (struct i2c_adapter *adapter,
 	id = bt819_read(client, 0x17);
 	switch (id & 0xf0) {
 	case 0x70:
-	        snprintf(I2C_NAME(client), sizeof(I2C_NAME(client)) - 1,
-			 "bt819a[%d]", client->id);
+		strlcpy(I2C_NAME(client), "bt819a", sizeof(I2C_NAME(client)));
 		break;
 	case 0x60:
-		snprintf(I2C_NAME(client), sizeof(I2C_NAME(client)) - 1,
-			 "bt817a[%d]", client->id);
+		strlcpy(I2C_NAME(client), "bt817a", sizeof(I2C_NAME(client)));
 		break;
 	case 0x20:
-		snprintf(I2C_NAME(client), sizeof(I2C_NAME(client)) - 1,
-			 "bt815a[%d]", client->id);
+		strlcpy(I2C_NAME(client), "bt815a", sizeof(I2C_NAME(client)));
 		break;
 	default:
 		dprintk(1,

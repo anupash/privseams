@@ -1133,7 +1133,7 @@ static void __init psycho_base_address_update(struct pci_dev *pdev, int resource
 	       (((u32)(res->start - root->start)) & ~size));
 	if (resource == PCI_ROM_RESOURCE) {
 		reg |= PCI_ROM_ADDRESS_ENABLE;
-		res->flags |= PCI_ROM_ADDRESS_ENABLE;
+		res->flags |= IORESOURCE_ROM_ENABLE;
 	}
 	pci_write_config_dword(pdev, where, reg);
 
@@ -1212,7 +1212,7 @@ static void __init psycho_iommu_init(struct pci_controller_info *p)
 
 	/* Setup initial software IOMMU state. */
 	spin_lock_init(&iommu->lock);
-	iommu->iommu_cur_ctx = 0;
+	iommu->ctx_lowest_free = 1;
 
 	/* Register addresses. */
 	iommu->iommu_control  = p->pbm_A.controller_regs + PSYCHO_IOMMU_CONTROL;
@@ -1303,8 +1303,7 @@ static void psycho_controller_hwinit(struct pci_controller_info *p)
 {
 	u64 tmp;
 
-	/* PROM sets the IRQ retry value too low, increase it. */
-	psycho_write(p->pbm_A.controller_regs + PSYCHO_IRQ_RETRY, 0xff);
+	psycho_write(p->pbm_A.controller_regs + PSYCHO_IRQ_RETRY, 5);
 
 	/* Enable arbiter for all PCI slots. */
 	tmp = psycho_read(p->pbm_A.controller_regs + PSYCHO_PCIA_CTRL);

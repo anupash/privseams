@@ -24,7 +24,7 @@ typedef u16	compat_nlink_t;
 typedef u16	compat_ipc_pid_t;
 typedef s32	compat_daddr_t;
 typedef u32	compat_caddr_t;
-typedef u32	compat_timer_t;
+typedef s32	compat_timer_t;
 
 typedef s32	compat_int_t;
 typedef s32	compat_long_t;
@@ -131,15 +131,15 @@ typedef u32		compat_sigset_word;
  */
 typedef	u32		compat_uptr_t;
 
-static inline void *compat_ptr(compat_uptr_t uptr)
+static inline void __user *compat_ptr(compat_uptr_t uptr)
 {
-	return (void *)(unsigned long)uptr;
+	return (void __user *)(unsigned long)uptr;
 }
 
-static __inline__ void *compat_alloc_user_space(long len)
+static __inline__ void __user *compat_alloc_user_space(long len)
 {
 	struct pt_regs *regs = &current->thread.regs;
-	return (void *)regs->gr[30];
+	return (void __user *)regs->gr[30];
 }
 
 #endif /* _ASM_PARISC_COMPAT_H */

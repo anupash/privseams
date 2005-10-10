@@ -96,9 +96,6 @@ extern struct task_struct *current_set[NR_CPUS];
 char *klimit = _end;
 struct mem_pieces phys_avail;
 
-extern char *sysmap;
-extern unsigned long sysmap_size;
-
 /*
  * this tells the system to map all of ram with the segregs
  * (i.e. page tables) instead of the bats.
@@ -179,6 +176,7 @@ void free_initmem(void)
 	if (!have_of)
 		FREESEC(openfirmware);
  	printk("\n");
+	ppc_md.progress = NULL;
 #undef FREESEC
 }
 
@@ -441,12 +439,6 @@ void __init mem_init(void)
 	if (agp_special_page)
 		SetPageReserved(virt_to_page(agp_special_page));
 #endif
-	if ( sysmap )
-		for (addr = (unsigned long)sysmap;
-		     addr < PAGE_ALIGN((unsigned long)sysmap+sysmap_size) ;
-		     addr += PAGE_SIZE)
-			SetPageReserved(virt_to_page(addr));
-
 	for (addr = PAGE_OFFSET; addr < (unsigned long)high_memory;
 	     addr += PAGE_SIZE) {
 		if (!PageReserved(virt_to_page(addr)))
@@ -468,7 +460,6 @@ void __init mem_init(void)
 			struct page *page = mem_map + pfn;
 
 			ClearPageReserved(page);
-			set_bit(PG_highmem, &page->flags);
 			set_page_count(page, 1);
 			__free_page(page);
 			totalhigh_pages++;
@@ -482,25 +473,11 @@ void __init mem_init(void)
 	       codepages<< (PAGE_SHIFT-10), datapages<< (PAGE_SHIFT-10),
 	       initpages<< (PAGE_SHIFT-10),
 	       (unsigned long) (totalhigh_pages << (PAGE_SHIFT-10)));
-	if (sysmap)
-		printk("System.map loaded at 0x%08x for debugger, size: %ld bytes\n",
-			(unsigned int)sysmap, sysmap_size);
+
 #ifdef CONFIG_PPC_PMAC
 	if (agp_special_page)
 		printk(KERN_INFO "AGP special page: 0x%08lx\n", agp_special_page);
 #endif
-
-	/* Make sure all our pagetable pages have page->mapping
-	   and page->index set correctly. */
-	for (addr = KERNELBASE; addr != 0; addr += PGDIR_SIZE) {
-		struct page *pg;
-		pmd_t *pmd = pmd_offset(pgd_offset_k(addr), addr);
-		if (pmd_present(*pmd)) {
-			pg = pmd_page(*pmd);
-			pg->mapping = (void *) &init_mm;
-			pg->index = addr;
-		}
-	}
 
 	mem_init_done = 1;
 }
@@ -546,9 +523,6 @@ set_phys_avail(unsigned long total_memory)
 	if (rtas_data)
 		mem_pieces_remove(&phys_avail, rtas_data, rtas_size, 1);
 #endif
-	/* remove the sysmap pages from the available memory */
-	if (sysmap)
-		mem_pieces_remove(&phys_avail, __pa(sysmap), sysmap_size, 1);
 #ifdef CONFIG_PPC_PMAC
 	/* Because of some uninorth weirdness, we need a page of
 	 * memory as high as possible (it must be outside of the
@@ -588,6 +562,9 @@ void flush_dcache_icache_page(struct page *page)
 #ifdef CONFIG_BOOKE
 	__flush_dcache_icache(kmap(page));
 	kunmap(page);
+#elif CONFIG_8xx
+	/* On 8xx there is no need to kmap since highmem is not supported */
+	__flush_dcache_icache(page_address(page)); 
 #else
 	__flush_dcache_icache_phys(page_to_pfn(page) << PAGE_SHIFT);
 #endif
@@ -632,9 +609,19 @@ void update_mmu_cache(struct vm_area_struct *vma, unsigned long address,
 		struct page *page = pfn_to_page(pfn);
 		if (!PageReserved(page)
 		    && !test_bit(PG_arch_1, &page->flags)) {
-			if (vma->vm_mm == current->active_mm)
+			if (vma->vm_mm == current->active_mm) {
+#ifdef CONFIG_8xx
+			/* On 8xx, cache control instructions (particularly 
+		 	 * "dcbst" from flush_dcache_icache) fault as write 
+			 * operation if there is an unpopulated TLB entry 
+			 * for the address in question. To workaround that, 
+			 * we invalidate the TLB here, thus avoiding dcbst 
+			 * misbehaviour.
+			 */
+				_tlbie(address);
+#endif
 				__flush_dcache_icache((void *) address);
-			else
+			} else
 				flush_dcache_icache_page(page);
 			set_bit(PG_arch_1, &page->flags);
 		}
@@ -653,3 +640,27 @@ void update_mmu_cache(struct vm_area_struct *vma, unsigned long address,
 	}
 #endif
 }
+
+/*
+ * This is called by /dev/mem to know if a given address has to
+ * be mapped non-cacheable or not
+ */
+int page_is_ram(unsigned long pfn)
+{
+	unsigned long paddr = (pfn << PAGE_SHIFT);
+
+	return paddr < __pa(high_memory);
+}
+
+pgprot_t phys_mem_access_prot(struct file *file, unsigned long addr,
+			      unsigned long size, pgprot_t vma_prot)
+{
+	if (ppc_md.phys_mem_access_prot)
+		return ppc_md.phys_mem_access_prot(file, addr, size, vma_prot);
+
+	if (!page_is_ram(addr >> PAGE_SHIFT))
+		vma_prot = __pgprot(pgprot_val(vma_prot)
+				    | _PAGE_GUARDED | _PAGE_NO_CACHE);
+	return vma_prot;
+}
+EXPORT_SYMBOL(phys_mem_access_prot);

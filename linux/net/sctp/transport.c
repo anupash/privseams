@@ -57,7 +57,7 @@
 /* Initialize a new transport from provided memory.  */
 static struct sctp_transport *sctp_transport_init(struct sctp_transport *peer,
 						  const union sctp_addr *addr,
-						  int gfp)
+						  unsigned int __nocast gfp)
 {
 	/* Copy in the address.  */
 	peer->ipaddr = *addr;
@@ -83,7 +83,9 @@ static struct sctp_transport *sctp_transport_init(struct sctp_transport *peer,
 	peer->last_time_used = jiffies;
 	peer->last_time_ecne_reduced = jiffies;
 
-	peer->active = SCTP_ACTIVE;
+	peer->init_sent_count = 0;
+
+	peer->state = SCTP_ACTIVE;
 	peer->hb_allowed = 0;
 
 	/* Initialize the default path max_retrans.  */
@@ -101,7 +103,6 @@ static struct sctp_transport *sctp_transport_init(struct sctp_transport *peer,
 
 	/* Set up the heartbeat timer. */
 	init_timer(&peer->hb_timer);
-	peer->hb_interval = SCTP_DEFAULT_TIMEOUT_HEARTBEAT;
 	peer->hb_timer.function = sctp_generate_heartbeat_event;
 	peer->hb_timer.data = (unsigned long)peer;
 
@@ -120,7 +121,8 @@ static struct sctp_transport *sctp_transport_init(struct sctp_transport *peer,
 }
 
 /* Allocate and initialize a new transport.  */
-struct sctp_transport *sctp_transport_new(const union sctp_addr *addr, int gfp)
+struct sctp_transport *sctp_transport_new(const union sctp_addr *addr,
+					  unsigned int __nocast gfp)
 {
         struct sctp_transport *transport;
 
@@ -227,7 +229,7 @@ void sctp_transport_pmtu(struct sctp_transport *transport)
 	dst = transport->af_specific->get_dst(NULL, &transport->ipaddr, NULL);
 
 	if (dst) {
-		transport->pmtu = dst_pmtu(dst);
+		transport->pmtu = dst_mtu(dst);
 		dst_release(dst);
 	} else
 		transport->pmtu = SCTP_DEFAULT_MAXSEGMENT;
@@ -253,7 +255,7 @@ void sctp_transport_route(struct sctp_transport *transport,
 
 	transport->dst = dst;
 	if (dst) {
-		transport->pmtu = dst_pmtu(dst);
+		transport->pmtu = dst_mtu(dst);
 
 		/* Initialize sk->sk_rcv_saddr, if the transport is the
 		 * association's active path for getsockname().

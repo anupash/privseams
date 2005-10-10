@@ -23,7 +23,6 @@
 #include <linux/vt_kern.h>		/* For unblank_screen() */
 #include <linux/compiler.h>
 #include <linux/module.h>
-#include <linux/kprobes.h>
 
 #include <asm/system.h>
 #include <asm/uaccess.h>
@@ -62,21 +61,19 @@ void bust_spinlocks(int yes)
 static noinline int is_prefetch(struct pt_regs *regs, unsigned long addr,
 				unsigned long error_code)
 { 
-	unsigned char *instr = (unsigned char *)(regs->rip);
+	unsigned char *instr;
 	int scan_more = 1;
 	int prefetch = 0; 
-	unsigned char *max_instr = instr + 15;
+	unsigned char *max_instr;
 
 	/* If it was a exec fault ignore */
 	if (error_code & (1<<4))
 		return 0;
 	
-	/* Code segments in LDT could have a non zero base. Don't check
-	   when that's possible */
-	if (regs->cs & (1<<2))
-		return 0;
+	instr = (unsigned char *)convert_rip_to_linear(current, regs);
+	max_instr = instr + 15;
 
-	if ((regs->cs & 3) != 0 && regs->rip >= TASK_SIZE)
+	if (user_mode(regs) && instr >= (unsigned char *)TASK_SIZE)
 		return 0;
 
 	while (scan_more && instr < max_instr) { 
@@ -108,7 +105,7 @@ static noinline int is_prefetch(struct pt_regs *regs, unsigned long addr,
 			/* Could check the LDT for lm, but for now it's good
 			   enough to assume that long mode only uses well known
 			   segments or kernel. */
-			scan_more = ((regs->cs & 3) == 0) || (regs->cs == __USER_CS);
+			scan_more = (!user_mode(regs)) || (regs->cs == __USER_CS);
 			break;
 			
 		case 0x60:
@@ -214,9 +211,7 @@ int unhandled_signal(struct task_struct *tsk, int sig)
 {
 	if (tsk->pid == 1)
 		return 1;
-	/* Warn for strace, but not for gdb */
-	if (!test_ti_thread_flag(tsk->thread_info, TIF_SYSCALL_TRACE) &&
-	    (tsk->ptrace & PT_PTRACED))
+	if (tsk->ptrace & PT_PTRACED)
 		return 0;
 	return (tsk->sighand->action[sig-1].sa.sa_handler == SIG_IGN) ||
 		(tsk->sighand->action[sig-1].sa.sa_handler == SIG_DFL);
@@ -236,6 +231,8 @@ static noinline void pgtable_bad(unsigned long address, struct pt_regs *regs,
 
 /*
  * Handle a fault on the vmalloc or module mapping area
+ *
+ * This assumes no large pages in there.
  */
 static int vmalloc_fault(unsigned long address)
 {
@@ -274,7 +271,10 @@ static int vmalloc_fault(unsigned long address)
 	if (!pte_present(*pte_ref))
 		return -1;
 	pte = pte_offset_kernel(pmd, address);
-	if (!pte_present(*pte) || pte_page(*pte) != pte_page(*pte_ref))
+	/* Don't use pte_page here, because the mappings can point
+	   outside mem_map, and the NUMA hash lookup cannot handle
+	   that. */
+	if (!pte_present(*pte) || pte_pfn(*pte) != pte_pfn(*pte_ref))
 		BUG();
 	__flush_tlb_all();
 	return 0;
@@ -347,8 +347,10 @@ asmlinkage void do_page_fault(struct pt_regs *regs, unsigned long error_code)
 	 * (error_code & 4) == 0, and that the fault was not a
 	 * protection error (error_code & 1) == 0.
 	 */
-	if (unlikely(address >= TASK_SIZE)) {
-		if (!(error_code & 5)) {
+	if (unlikely(address >= TASK_SIZE64)) {
+		if (!(error_code & 5) &&
+		      ((address >= VMALLOC_START && address < VMALLOC_END) ||
+		       (address >= MODULES_VADDR && address < MODULES_END))) {
 			if (vmalloc_fault(address) < 0)
 				goto bad_area_nosemaphore;
 			return;
@@ -435,13 +437,13 @@ good_area:
 	 * the fault.
 	 */
 	switch (handle_mm_fault(mm, vma, address, write)) {
-	case 1:
+	case VM_FAULT_MINOR:
 		tsk->min_flt++;
 		break;
-	case 2:
+	case VM_FAULT_MAJOR:
 		tsk->maj_flt++;
 		break;
-	case 0:
+	case VM_FAULT_SIGBUS:
 		goto do_sigbus;
 	default:
 		goto out_of_memory;
@@ -458,17 +460,6 @@ bad_area:
 	up_read(&mm->mmap_sem);
 
 bad_area_nosemaphore:
-
-#ifdef CONFIG_IA32_EMULATION
-	/* 32bit vsyscall. map on demand. */
-	if (test_thread_flag(TIF_IA32) &&
-	    address >= VSYSCALL32_BASE && address < VSYSCALL32_END) {
-		if (map_syscall32(mm, address) < 0)
-			goto out_of_memory2;
-		return;
-	}
-#endif
-
 	/* User mode accesses just cause a SIGSEGV */
 	if (error_code & 4) {
 		if (is_prefetch(regs, address, error_code))
@@ -550,7 +541,6 @@ no_context:
  */
 out_of_memory:
 	up_read(&mm->mmap_sem);
-out_of_memory2:
 	if (current->pid == 1) { 
 		yield();
 		goto again;

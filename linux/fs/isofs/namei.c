@@ -6,20 +6,9 @@
  *  (C) 1991  Linus Torvalds - minix filesystem
  */
 
-#include <linux/time.h>
-#include <linux/iso_fs.h>
-#include <linux/kernel.h>
-#include <linux/string.h>
-#include <linux/stat.h>
-#include <linux/fcntl.h>
-#include <linux/mm.h>
-#include <linux/errno.h>
 #include <linux/config.h>	/* Joliet? */
 #include <linux/smp_lock.h>
-#include <linux/buffer_head.h>
-#include <linux/dcache.h>
-
-#include <asm/uaccess.h>
+#include "isofs.h"
 
 /*
  * ok, we cannot use strncmp, as the name is not in our data space.
@@ -142,14 +131,16 @@ isofs_find_entry(struct inode *dir, struct dentry *dentry,
 		}
 
 		/*
-		 * Skip hidden or associated files unless unhide is set 
+		 * Skip hidden or associated files unless hide or showassoc,
+		 * respectively, is set
 		 */
 		match = 0;
 		if (dlen > 0 &&
-		    (!(de->flags[-sbi->s_high_sierra] & 5)
-		     || sbi->s_unhide == 'y'))
-		{
-			match = (isofs_cmp(dentry,dpnt,dlen) == 0);
+			(sbi->s_hide =='n' ||
+				(!(de->flags[-sbi->s_high_sierra] & 1))) &&
+			(sbi->s_showassoc =='y' ||
+				(!(de->flags[-sbi->s_high_sierra] & 4)))) {
+			match = (isofs_cmp(dentry, dpnt, dlen) == 0);
 		}
 		if (match) {
 			isofs_normalize_block_and_offset(de,
@@ -157,11 +148,11 @@ isofs_find_entry(struct inode *dir, struct dentry *dentry,
 							 &offset_saved);
                         *block_rv = block_saved;
                         *offset_rv = offset_saved;
-			if (bh) brelse(bh);
+			brelse(bh);
 			return 1;
 		}
 	}
-	if (bh) brelse(bh);
+	brelse(bh);
 	return 0;
 }
 

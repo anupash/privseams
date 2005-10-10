@@ -30,10 +30,12 @@
 
 
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/types.h>
+#include <linux/videodev.h>
 #include <linux/i2c.h>
 
 #include <media/tuner.h>
@@ -73,7 +75,7 @@ hauppauge_tuner_fmt[] =
 	{ 0x00000007, "PAL(B/G)" },
 	{ 0x00001000, "NTSC(M)" },
 	{ 0x00000010, "PAL(I)" },
-	{ 0x00400000, "SECAM(L/Lï¿½)" },
+	{ 0x00400000, "SECAM(L/L´)" },
 	{ 0x00000e00, "PAL(D/K)" },
 	{ 0x03000000, "ATSC Digital" },
 };
@@ -187,14 +189,16 @@ hauppauge_tuner[] =
 	{ TUNER_ABSENT,        "Philips FQ1236 MK3"},
 	{ TUNER_ABSENT,        "Samsung TCPN 2121P30A"},
 	{ TUNER_ABSENT,        "Samsung TCPE 4121P30A"},
-	{ TUNER_ABSENT,        "TCL MFPE05 2"},
+	{ TUNER_PHILIPS_FM1216ME_MK3, "TCL MFPE05 2"},
 	/* 90-99 */
 	{ TUNER_ABSENT,        "LG TALN H202T"},
-	{ TUNER_ABSENT,        "Philips FQ1216AME MK4"},
-	{ TUNER_ABSENT,        "Philips FQ1236A MK4"},
+	{ TUNER_PHILIPS_FQ1216AME_MK4, "Philips FQ1216AME MK4"},
+	{ TUNER_PHILIPS_FQ1236A_MK4, "Philips FQ1236A MK4"},
 	{ TUNER_ABSENT,        "Philips FQ1286A MK4"},
 	{ TUNER_ABSENT,        "Philips FQ1216ME MK5"},
 	{ TUNER_ABSENT,        "Philips FQ1236 MK5"},
+	{ TUNER_ABSENT,        "Unspecified"},
+	{ TUNER_LG_PAL_TAPE,   "LG PAL (TAPE Series)"},
 };
 
 static char *sndtype[] = {
@@ -240,6 +244,7 @@ static int hasRadioTuner(int tunerType)
                 case 61: //PNPEnv_TUNER_TAPE_M001D_MK3:
                 case 78: //PNPEnv_TUNER_TDA8275C1_8290_FM:
                 case 89: //PNPEnv_TUNER_TCL_MFPE05_2:
+                case 92: //PNPEnv_TUNER_PHILIPS_FQ1236A_MK4:
                     return 1;
         }
         return 0;
@@ -255,8 +260,8 @@ void tveeprom_hauppauge_analog(struct tveeprom *tvee, unsigned char *eeprom_data
 	** if packet[0] & f8 == f8, then EOD and packet[1] == checksum
 	**
 	** In our (ivtv) case we're interested in the following:
-	** tuner type: tag [00].05 or [0a].01 (index into hauppauge_tuners)
-	** tuner fmts: tag [00].04 or [0a].00 (bitmask index into hauppauge_fmts)
+	** tuner type: tag [00].05 or [0a].01 (index into hauppauge_tuner)
+	** tuner fmts: tag [00].04 or [0a].00 (bitmask index into hauppauge_tuner_fmt)
 	** radio:      tag [00].{last} or [0e].00  (bitmask.  bit2=FM)
 	** audio proc: tag [02].01 or [05].00 (lower nibble indexes lut?)
 
@@ -268,11 +273,11 @@ void tveeprom_hauppauge_analog(struct tveeprom *tvee, unsigned char *eeprom_data
 	** # of inputs/outputs ???
 	*/
 
-	int i, j, len, done, tag, tuner = 0, t_format = 0;
+	int i, j, len, done, beenhere, tag, tuner = 0, t_format = 0;
 	char *t_name = NULL, *t_fmt_name = NULL;
 
 	dprintk(1, "%s\n",__FUNCTION__);
-	tvee->revision = done = len = 0;
+	tvee->revision = done = len = beenhere = 0;
 	for (i = 0; !done && i < 256; i += len) {
 		dprintk(2, "processing pos = %02x (%02x, %02x)\n",
 			i, eeprom_data[i], eeprom_data[i + 1]);
@@ -341,9 +346,14 @@ void tveeprom_hauppauge_analog(struct tveeprom *tvee, unsigned char *eeprom_data
 				(eeprom_data[i+7] << 16);
 			break;
 		case 0x0a:
-			tuner = eeprom_data[i+2];
-			t_format = eeprom_data[i+1];
-			break;
+			if(beenhere == 0) {
+				tuner = eeprom_data[i+2];
+				t_format = eeprom_data[i+1];
+				beenhere = 1;
+				break;
+			} else {
+				break;
+			}
 		case 0x0e:
 			tvee->has_radio = eeprom_data[i+1];
 			break;
@@ -390,14 +400,6 @@ void tveeprom_hauppauge_analog(struct tveeprom *tvee, unsigned char *eeprom_data
 		}
 	}
 
-#if 0
-	if (t_format < sizeof(hauppauge_tuner_fmt)/sizeof(struct HAUPPAUGE_TUNER_FMT)) {
-		tvee->tuner_formats = hauppauge_tuner_fmt[t_format].id;
-		t_fmt_name = hauppauge_tuner_fmt[t_format].name;
-	} else {
-		t_fmt_name = "<unknown>";
-	}
-#endif
 
 	TVEEPROM_KERN_INFO("Hauppauge: model = %d, rev = %s, serial# = %d\n",
 		   tvee->model,
@@ -443,6 +445,7 @@ int tveeprom_read(struct i2c_client *c, unsigned char *eedata, int len)
 }
 EXPORT_SYMBOL(tveeprom_read);
 
+#if 0
 int tveeprom_dump(unsigned char *eedata, int len)
 {
 	int i;
@@ -458,6 +461,7 @@ int tveeprom_dump(unsigned char *eedata, int len)
 	return 0;
 }
 EXPORT_SYMBOL(tveeprom_dump);
+#endif  /*  0  */
 
 /* ----------------------------------------------------------------------- */
 /* needed for ivtv.sf.net at the moment.  Should go away in the long       */
@@ -472,10 +476,10 @@ static unsigned short normal_i2c[] = {
 	0xa0 >> 1,
 	I2C_CLIENT_END,
 };
-static unsigned short normal_i2c_range[] = { I2C_CLIENT_END };
+
 I2C_CLIENT_INSMOD;
 
-struct i2c_driver i2c_driver_tveeprom;
+static struct i2c_driver i2c_driver_tveeprom;
 
 static int
 tveeprom_command(struct i2c_client *client,
@@ -547,7 +551,7 @@ tveeprom_detach_client (struct i2c_client *client)
 	return 0;
 }
 
-struct i2c_driver i2c_driver_tveeprom = {
+static struct i2c_driver i2c_driver_tveeprom = {
 	.owner          = THIS_MODULE,
 	.name           = "tveeprom",
 	.id             = I2C_DRIVERID_TVEEPROM,

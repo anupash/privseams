@@ -59,6 +59,7 @@
 #include <linux/usbdevice_fs.h>
 #include <asm/uaccess.h>
 
+#include "usb.h"
 #include "hcd.h"
 
 #define MAX_TOPO_LEVEL		6
@@ -238,7 +239,7 @@ static char *usb_dump_interface_descriptor(char *start, char *end,
 	int setno)
 {
 	const struct usb_interface_descriptor *desc = &intfc->altsetting[setno].desc;
-	char *driver_name = "";
+	const char *driver_name = "";
 
 	if (start > end)
 		return start;
@@ -362,33 +363,21 @@ static char *usb_dump_device_descriptor(char *start, char *end, const struct usb
  */
 static char *usb_dump_device_strings (char *start, char *end, struct usb_device *dev)
 {
-	char *buf;
-
 	if (start > end)
 		return start;
-	buf = kmalloc(128, GFP_KERNEL);
-	if (!buf)
-		return start;
-	if (dev->descriptor.iManufacturer) {
-		if (usb_string(dev, dev->descriptor.iManufacturer, buf, 128) > 0)
-			start += sprintf(start, format_string_manufacturer, buf);
-	}				
+	if (dev->manufacturer)
+		start += sprintf(start, format_string_manufacturer, dev->manufacturer);
 	if (start > end)
 		goto out;
-	if (dev->descriptor.iProduct) {
-		if (usb_string(dev, dev->descriptor.iProduct, buf, 128) > 0)
-			start += sprintf(start, format_string_product, buf);
-	}
+	if (dev->product)
+		start += sprintf(start, format_string_product, dev->product);
 	if (start > end)
 		goto out;
 #ifdef ALLOW_SERIAL_NUMBER
-	if (dev->descriptor.iSerialNumber) {
-		if (usb_string(dev, dev->descriptor.iSerialNumber, buf, 128) > 0)
-			start += sprintf(start, format_string_serialnumber, buf);
-	}
+	if (dev->serial)
+		start += sprintf(start, format_string_serialnumber, dev->serial);
 #endif
  out:
-	kfree(buf);
 	return start;
 }
 
@@ -472,7 +461,7 @@ static ssize_t usb_device_dump(char __user **buffer, size_t *nbytes, loff_t *ski
 		return 0;
 	
 	if (level > MAX_TOPO_LEVEL)
-		return total_written;
+		return 0;
 	/* allocate 2^1 pages = 8K (on i386); should be more than enough for one device */
         if (!(pages_start = (char*) __get_free_pages(GFP_KERNEL,1)))
                 return -ENOMEM;
@@ -539,10 +528,7 @@ static ssize_t usb_device_dump(char __user **buffer, size_t *nbytes, loff_t *ski
 			length = *nbytes;
 		if (copy_to_user(*buffer, pages_start + *skip_bytes, length)) {
 			free_pages((unsigned long)pages_start, 1);
-			
-			if (total_written == 0)
-				return -EFAULT;
-			return total_written;
+			return -EFAULT;
 		}
 		*nbytes -= length;
 		*file_offset += length;
@@ -620,6 +606,7 @@ static unsigned int usb_device_poll(struct file *file, struct poll_table_struct 
 		/* we may have dropped BKL - need to check for having lost the race */
 		if (file->private_data) {
 			kfree(st);
+			st = file->private_data;
 			goto lost_race;
 		}
 
@@ -650,11 +637,8 @@ static int usb_device_open(struct inode *inode, struct file *file)
 
 static int usb_device_release(struct inode *inode, struct file *file)
 {
-	if (file->private_data) {
-		kfree(file->private_data);
-		file->private_data = NULL;
-	}
-
+	kfree(file->private_data);
+	file->private_data = NULL;
         return 0;
 }
 

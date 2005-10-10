@@ -226,14 +226,13 @@ static int snd_usX2Y_hwdep_dsp_load(snd_hwdep_t *hw, snd_hwdep_dsp_image_t *dsp)
 		if (err)
 			snd_printk("usb_set_interface error \n");
 		else
-			err = usb_bulk_msg(dev, usb_sndbulkpipe(dev, 2), buf, dsp->length, &lret, 6*HZ);
+			err = usb_bulk_msg(dev, usb_sndbulkpipe(dev, 2), buf, dsp->length, &lret, 6000);
 		kfree(buf);
 	}
 	if (err)
 		return err;
 	if (dsp->index == 1) {
-		set_current_state(TASK_UNINTERRUPTIBLE);
-		schedule_timeout(HZ/4);			// give the device some time 
+		msleep(250);				// give the device some time
 		err = usX2Y_AsyncSeq04_init(priv);
 		if (err) {
 			snd_printk("usX2Y_AsyncSeq04_init error \n");

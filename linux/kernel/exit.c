@@ -25,7 +25,9 @@
 #include <linux/mount.h>
 #include <linux/proc_fs.h>
 #include <linux/mempolicy.h>
+#include <linux/cpuset.h>
 #include <linux/syscalls.h>
+#include <linux/signal.h>
 
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
@@ -36,6 +38,8 @@ extern void sem_exit (void);
 extern struct task_struct *child_reaper;
 
 int getrusage(struct task_struct *, int, struct rusage __user *);
+
+static void exit_mm(struct task_struct * tsk);
 
 static void __unhash_process(struct task_struct *p)
 {
@@ -68,6 +72,11 @@ repeat:
 	BUG_ON(!list_empty(&p->ptrace_list) || !list_empty(&p->ptrace_children));
 	__exit_signal(p);
 	__exit_sighand(p);
+	/*
+	 * Note that the fastpath in sys_times depends on __exit_signal having
+	 * updated the counters before a task is removed from the tasklist of
+	 * the process by __unhash_process.
+	 */
 	__unhash_process(p);
 
 	/*
@@ -208,7 +217,7 @@ static inline int has_stopped_jobs(int pgrp)
 }
 
 /**
- * reparent_to_init() - Reparent the calling kernel thread to the init task.
+ * reparent_to_init - Reparent the calling kernel thread to the init task.
  *
  * If a kernel thread is launched as a result of a system call, or if
  * it ever exits, it should generally reparent itself to init so that
@@ -219,7 +228,7 @@ static inline int has_stopped_jobs(int pgrp)
  *
  * NOTE that reparent_to_init() gives the caller full capabilities.
  */
-void reparent_to_init(void)
+static inline void reparent_to_init(void)
 {
 	write_lock_irq(&tasklist_lock);
 
@@ -276,7 +285,7 @@ void set_special_pids(pid_t session, pid_t pgrp)
  */
 int allow_signal(int sig)
 {
-	if (sig < 1 || sig > _NSIG)
+	if (!valid_signal(sig) || sig < 1)
 		return -EINVAL;
 
 	spin_lock_irq(&current->sighand->siglock);
@@ -297,7 +306,7 @@ EXPORT_SYMBOL(allow_signal);
 
 int disallow_signal(int sig)
 {
-	if (sig < 1 || sig > _NSIG)
+	if (!valid_signal(sig) || sig < 1)
 		return -EINVAL;
 
 	spin_lock_irq(&current->sighand->siglock);
@@ -472,7 +481,7 @@ EXPORT_SYMBOL_GPL(exit_fs);
  * Turn us into a lazy TLB process if we
  * aren't already..
  */
-void exit_mm(struct task_struct * tsk)
+static void exit_mm(struct task_struct * tsk)
 {
 	struct mm_struct *mm = tsk->mm;
 
@@ -516,8 +525,6 @@ static inline void choose_new_parent(task_t *p, task_t *reaper, task_t *child_re
 	 */
 	BUG_ON(p == reaper || reaper->exit_state >= EXIT_ZOMBIE);
 	p->real_parent = reaper;
-	if (p->parent == p->real_parent)
-		BUG();
 }
 
 static inline void reparent_thread(task_t *p, task_t *father, int traced)
@@ -753,13 +760,6 @@ static void exit_notify(struct task_struct *tsk)
 		state = EXIT_DEAD;
 	tsk->exit_state = state;
 
-	/*
-	 * Clear these here so that update_process_times() won't try to deliver
-	 * itimer, profile or rlimit signals to this task while it is in late exit.
-	 */
-	tsk->it_virt_value = cputime_zero;
-	tsk->it_prof_value = cputime_zero;
-
 	write_unlock_irq(&tasklist_lock);
 
 	list_for_each_safe(_p, _n, &ptrace_dead) {
@@ -784,6 +784,8 @@ fastcall NORET_TYPE void do_exit(long code)
 
 	profile_task_exit(tsk);
 
+	WARN_ON(atomic_read(&tsk->fs_excl));
+
 	if (unlikely(in_interrupt()))
 		panic("Aiee, killing interrupt handler!");
 	if (unlikely(!tsk->pid))
@@ -798,19 +800,39 @@ fastcall NORET_TYPE void do_exit(long code)
 		ptrace_notify((PTRACE_EVENT_EXIT << 8) | SIGTRAP);
 	}
 
+	/*
+	 * We're taking recursive faults here in do_exit. Safest is to just
+	 * leave this task alone and wait for reboot.
+	 */
+	if (unlikely(tsk->flags & PF_EXITING)) {
+		printk(KERN_ALERT
+			"Fixing recursive fault but reboot is needed!\n");
+		set_current_state(TASK_UNINTERRUPTIBLE);
+		schedule();
+	}
+
 	tsk->flags |= PF_EXITING;
-	del_timer_sync(&tsk->real_timer);
+
+	/*
+	 * Make sure we don't try to process any timer firings
+	 * while we are already exiting.
+	 */
+ 	tsk->it_virt_expires = cputime_zero;
+ 	tsk->it_prof_expires = cputime_zero;
+	tsk->it_sched_expires = 0;
 
 	if (unlikely(in_atomic()))
 		printk(KERN_INFO "note: %s[%d] exited with preempt_count %d\n",
 				current->comm, current->pid,
 				preempt_count());
 
-	acct_update_integrals();
-	update_mem_hiwater();
+	acct_update_integrals(tsk);
+	update_mem_hiwater(tsk);
 	group_dead = atomic_dec_and_test(&tsk->signal->live);
-	if (group_dead)
+	if (group_dead) {
+ 		del_timer_sync(&tsk->signal->real_timer);
 		acct_process(code);
+	}
 	exit_mm(tsk);
 
 	exit_sem(tsk);
@@ -818,6 +840,7 @@ fastcall NORET_TYPE void do_exit(long code)
 	__exit_fs(tsk);
 	exit_namespace(tsk);
 	exit_thread();
+	cpuset_exit(tsk);
 	exit_keys(tsk);
 
 	if (group_dead && tsk->signal->leader)
@@ -840,6 +863,8 @@ fastcall NORET_TYPE void do_exit(long code)
 	/* Avoid "noreturn function does return".  */
 	for (;;) ;
 }
+
+EXPORT_SYMBOL_GPL(do_exit);
 
 NORET_TYPE void complete_and_exit(struct completion *comp, long code)
 {

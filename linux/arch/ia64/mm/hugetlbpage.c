@@ -24,7 +24,7 @@
 
 unsigned int hpage_shift=HPAGE_SHIFT_DEFAULT;
 
-static pte_t *
+pte_t *
 huge_pte_alloc (struct mm_struct *mm, unsigned long addr)
 {
 	unsigned long taddr = htlbpage_to_page(addr);
@@ -43,7 +43,7 @@ huge_pte_alloc (struct mm_struct *mm, unsigned long addr)
 	return pte;
 }
 
-static pte_t *
+pte_t *
 huge_pte_offset (struct mm_struct *mm, unsigned long addr)
 {
 	unsigned long taddr = htlbpage_to_page(addr);
@@ -67,23 +67,6 @@ huge_pte_offset (struct mm_struct *mm, unsigned long addr)
 
 #define mk_pte_huge(entry) { pte_val(entry) |= _PAGE_P; }
 
-static void
-set_huge_pte (struct mm_struct *mm, struct vm_area_struct *vma,
-	      struct page *page, pte_t * page_table, int write_access)
-{
-	pte_t entry;
-
-	mm->rss += (HPAGE_SIZE / PAGE_SIZE);
-	if (write_access) {
-		entry =
-		    pte_mkwrite(pte_mkdirty(mk_pte(page, vma->vm_page_prot)));
-	} else
-		entry = pte_wrprotect(mk_pte(page, vma->vm_page_prot));
-	entry = pte_mkyoung(entry);
-	mk_pte_huge(entry);
-	set_pte(page_table, entry);
-	return;
-}
 /*
  * This function checks for proper alignment of input addr and len parameters.
  */
@@ -97,68 +80,6 @@ int is_aligned_hugepage_range(unsigned long addr, unsigned long len)
 		return -EINVAL;
 
 	return 0;
-}
-
-int copy_hugetlb_page_range(struct mm_struct *dst, struct mm_struct *src,
-			struct vm_area_struct *vma)
-{
-	pte_t *src_pte, *dst_pte, entry;
-	struct page *ptepage;
-	unsigned long addr = vma->vm_start;
-	unsigned long end = vma->vm_end;
-
-	while (addr < end) {
-		dst_pte = huge_pte_alloc(dst, addr);
-		if (!dst_pte)
-			goto nomem;
-		src_pte = huge_pte_offset(src, addr);
-		entry = *src_pte;
-		ptepage = pte_page(entry);
-		get_page(ptepage);
-		set_pte(dst_pte, entry);
-		dst->rss += (HPAGE_SIZE / PAGE_SIZE);
-		addr += HPAGE_SIZE;
-	}
-	return 0;
-nomem:
-	return -ENOMEM;
-}
-
-int
-follow_hugetlb_page(struct mm_struct *mm, struct vm_area_struct *vma,
-		    struct page **pages, struct vm_area_struct **vmas,
-		    unsigned long *st, int *length, int i)
-{
-	pte_t *ptep, pte;
-	unsigned long start = *st;
-	unsigned long pstart;
-	int len = *length;
-	struct page *page;
-
-	do {
-		pstart = start & HPAGE_MASK;
-		ptep = huge_pte_offset(mm, start);
-		pte = *ptep;
-
-back1:
-		page = pte_page(pte);
-		if (pages) {
-			page += ((start & ~HPAGE_MASK) >> PAGE_SHIFT);
-			get_page(page);
-			pages[i] = page;
-		}
-		if (vmas)
-			vmas[i] = vma;
-		i++;
-		len--;
-		start += PAGE_SIZE;
-		if (((start & HPAGE_MASK) == pstart) && len &&
-				(start < vma->vm_end))
-			goto back1;
-	} while (len && start < vma->vm_end);
-	*length = len;
-	*st = start;
-	return i;
 }
 
 struct page *follow_huge_addr(struct mm_struct *mm, unsigned long addr, int write)
@@ -186,121 +107,30 @@ follow_huge_pmd(struct mm_struct *mm, unsigned long address, pmd_t *pmd, int wri
 	return NULL;
 }
 
-/*
- * Same as generic free_pgtables(), except constant PGDIR_* and pgd_offset
- * are hugetlb region specific.
- */
-void hugetlb_free_pgtables(struct mmu_gather *tlb, struct vm_area_struct *prev,
-	unsigned long start, unsigned long end)
+void hugetlb_free_pgd_range(struct mmu_gather **tlb,
+			unsigned long addr, unsigned long end,
+			unsigned long floor, unsigned long ceiling)
 {
-	unsigned long first = start & HUGETLB_PGDIR_MASK;
-	unsigned long last = end + HUGETLB_PGDIR_SIZE - 1;
-	struct mm_struct *mm = tlb->mm;
+	/*
+	 * This is called only when is_hugepage_only_range(addr,),
+	 * and it follows that is_hugepage_only_range(end,) also.
+	 *
+	 * The offset of these addresses from the base of the hugetlb
+	 * region must be scaled down by HPAGE_SIZE/PAGE_SIZE so that
+	 * the standard free_pgd_range will free the right page tables.
+	 *
+	 * If floor and ceiling are also in the hugetlb region, they
+	 * must likewise be scaled down; but if outside, left unchanged.
+	 */
 
-	if (!prev) {
-		prev = mm->mmap;
-		if (!prev)
-			goto no_mmaps;
-		if (prev->vm_end > start) {
-			if (last > prev->vm_start)
-				last = prev->vm_start;
-			goto no_mmaps;
-		}
-	}
-	for (;;) {
-		struct vm_area_struct *next = prev->vm_next;
+	addr = htlbpage_to_page(addr);
+	end  = htlbpage_to_page(end);
+	if (is_hugepage_only_range(tlb->mm, floor, HPAGE_SIZE))
+		floor = htlbpage_to_page(floor);
+	if (is_hugepage_only_range(tlb->mm, ceiling, HPAGE_SIZE))
+		ceiling = htlbpage_to_page(ceiling);
 
-		if (next) {
-			if (next->vm_start < start) {
-				prev = next;
-				continue;
-			}
-			if (last > next->vm_start)
-				last = next->vm_start;
-		}
-		if (prev->vm_end > first)
-			first = prev->vm_end;
-		break;
-	}
-no_mmaps:
-	if (last < first)	/* for arches with discontiguous pgd indices */
-		return;
-	clear_page_range(tlb, first, last);
-}
-
-void unmap_hugepage_range(struct vm_area_struct *vma, unsigned long start, unsigned long end)
-{
-	struct mm_struct *mm = vma->vm_mm;
-	unsigned long address;
-	pte_t *pte;
-	struct page *page;
-
-	BUG_ON(start & (HPAGE_SIZE - 1));
-	BUG_ON(end & (HPAGE_SIZE - 1));
-
-	for (address = start; address < end; address += HPAGE_SIZE) {
-		pte = huge_pte_offset(mm, address);
-		if (pte_none(*pte))
-			continue;
-		page = pte_page(*pte);
-		put_page(page);
-		pte_clear(pte);
-	}
-	mm->rss -= (end - start) >> PAGE_SHIFT;
-	flush_tlb_range(vma, start, end);
-}
-
-int hugetlb_prefault(struct address_space *mapping, struct vm_area_struct *vma)
-{
-	struct mm_struct *mm = current->mm;
-	unsigned long addr;
-	int ret = 0;
-
-	BUG_ON(vma->vm_start & ~HPAGE_MASK);
-	BUG_ON(vma->vm_end & ~HPAGE_MASK);
-
-	spin_lock(&mm->page_table_lock);
-	for (addr = vma->vm_start; addr < vma->vm_end; addr += HPAGE_SIZE) {
-		unsigned long idx;
-		pte_t *pte = huge_pte_alloc(mm, addr);
-		struct page *page;
-
-		if (!pte) {
-			ret = -ENOMEM;
-			goto out;
-		}
-		if (!pte_none(*pte))
-			continue;
-
-		idx = ((addr - vma->vm_start) >> HPAGE_SHIFT)
-			+ (vma->vm_pgoff >> (HPAGE_SHIFT - PAGE_SHIFT));
-		page = find_get_page(mapping, idx);
-		if (!page) {
-			/* charge the fs quota first */
-			if (hugetlb_get_quota(mapping)) {
-				ret = -ENOMEM;
-				goto out;
-			}
-			page = alloc_huge_page();
-			if (!page) {
-				hugetlb_put_quota(mapping);
-				ret = -ENOMEM;
-				goto out;
-			}
-			ret = add_to_page_cache(page, mapping, idx, GFP_ATOMIC);
-			if (! ret) {
-				unlock_page(page);
-			} else {
-				hugetlb_put_quota(mapping);
-				page_cache_release(page);
-				goto out;
-			}
-		}
-		set_huge_pte(mm, vma, page, pte, vma->vm_flags & VM_WRITE);
-	}
-out:
-	spin_unlock(&mm->page_table_lock);
-	return ret;
+	free_pgd_range(tlb, addr, end, floor, ceiling);
 }
 
 unsigned long hugetlb_get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,

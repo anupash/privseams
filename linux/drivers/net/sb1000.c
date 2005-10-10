@@ -57,9 +57,9 @@ static char version[] = "sb1000.c:v1.1.2 6/01/98 (fventuri@mediaone.net)\n";
 #include <asm/uaccess.h>
 
 #ifdef SB1000_DEBUG
-int sb1000_debug = SB1000_DEBUG;
+static int sb1000_debug = SB1000_DEBUG;
 #else
-int sb1000_debug = 1;
+static int sb1000_debug = 1;
 #endif
 
 static const int SB1000_IO_EXTENT = 8;
@@ -90,7 +90,6 @@ static int sb1000_close(struct net_device *dev);
 
 
 /* SB1000 hardware routines to be used during open/configuration phases */
-static inline void nicedelay(unsigned long usecs);
 static inline int card_wait_for_busy_clear(const int ioaddr[],
 	const char* name);
 static inline int card_wait_for_ready(const int ioaddr[], const char* name,
@@ -116,15 +115,15 @@ static inline int sb1000_start_get_set_command(const int ioaddr[],
 static inline int sb1000_end_get_set_command(const int ioaddr[],
 	const char* name);
 static inline int sb1000_activate(const int ioaddr[], const char* name);
-static inline int sb1000_get_firmware_version(const int ioaddr[],
+static int sb1000_get_firmware_version(const int ioaddr[],
 	const char* name, unsigned char version[], int do_end);
-static inline int sb1000_get_frequency(const int ioaddr[], const char* name,
+static int sb1000_get_frequency(const int ioaddr[], const char* name,
 	int* frequency);
-static inline int sb1000_set_frequency(const int ioaddr[], const char* name,
+static int sb1000_set_frequency(const int ioaddr[], const char* name,
 	int frequency);
-static inline int sb1000_get_PIDs(const int ioaddr[], const char* name,
+static int sb1000_get_PIDs(const int ioaddr[], const char* name,
 	short PID[]);
-static inline int sb1000_set_PIDs(const int ioaddr[], const char* name,
+static int sb1000_set_PIDs(const int ioaddr[], const char* name,
 	const short PID[]);
 
 /* SB1000 commands for frame rx interrupt */
@@ -252,14 +251,7 @@ static struct pnp_driver sb1000_driver = {
  * SB1000 hardware routines to be used during open/configuration phases
  */
 
-const int TimeOutJiffies = (875 * HZ) / 100;
-
-static inline void nicedelay(unsigned long usecs)
-{
-	current->state = TASK_INTERRUPTIBLE;
-	schedule_timeout(HZ);
-	return;
-}
+static const int TimeOutJiffies = (875 * HZ) / 100;
 
 /* Card Wait For Busy Clear (cannot be used during an interrupt) */
 static inline int
@@ -363,7 +355,7 @@ card_send_command(const int ioaddr[], const char* name,
 /*
  * SB1000 hardware routines to be used during frame rx interrupt
  */
-const int Sb1000TimeOutJiffies = 7 * HZ;
+static const int Sb1000TimeOutJiffies = 7 * HZ;
 
 /* Card Wait For Ready (to be used during frame rx) */
 static inline int
@@ -475,7 +467,7 @@ sb1000_reset(const int ioaddr[], const char* name)
 	udelay(1000);
 	outb(0x0, port);
 	inb(port);
-	nicedelay(60000);
+	ssleep(1);
 	outb(0x4, port);
 	inb(port);
 	udelay(1000);
@@ -537,7 +529,7 @@ sb1000_activate(const int ioaddr[], const char* name)
 	const unsigned char Command0[6] = {0x80, 0x11, 0x00, 0x00, 0x00, 0x00};
 	const unsigned char Command1[6] = {0x80, 0x16, 0x00, 0x00, 0x00, 0x00};
 
-	nicedelay(50000);
+	ssleep(1);
 	if ((status = card_send_command(ioaddr, name, Command0, st)))
 		return status;
 	if ((status = card_send_command(ioaddr, name, Command1, st)))
@@ -552,7 +544,7 @@ sb1000_activate(const int ioaddr[], const char* name)
 }
 
 /* get SB1000 firmware version */
-static inline int
+static int
 sb1000_get_firmware_version(const int ioaddr[], const char* name,
 	unsigned char version[], int do_end)
 {
@@ -575,7 +567,7 @@ sb1000_get_firmware_version(const int ioaddr[], const char* name,
 }
 
 /* get SB1000 frequency */
-static inline int
+static int
 sb1000_get_frequency(const int ioaddr[], const char* name, int* frequency)
 {
 	unsigned char st[7];
@@ -592,7 +584,7 @@ sb1000_get_frequency(const int ioaddr[], const char* name, int* frequency)
 }
 
 /* set SB1000 frequency */
-static inline int
+static int
 sb1000_set_frequency(const int ioaddr[], const char* name, int frequency)
 {
 	unsigned char st[7];
@@ -622,7 +614,7 @@ sb1000_set_frequency(const int ioaddr[], const char* name, int frequency)
 }
 
 /* get SB1000 PIDs */
-static inline int
+static int
 sb1000_get_PIDs(const int ioaddr[], const char* name, short PID[])
 {
 	unsigned char st[7];
@@ -656,7 +648,7 @@ sb1000_get_PIDs(const int ioaddr[], const char* name, short PID[])
 }
 
 /* set SB1000 PIDs */
-static inline int
+static int
 sb1000_set_PIDs(const int ioaddr[], const char* name, const short PID[])
 {
 	unsigned char st[7];
@@ -944,7 +936,7 @@ sb1000_open(struct net_device *dev)
 	/* initialize sb1000 */
 	if ((status = sb1000_reset(ioaddr, name)))
 		return status;
-	nicedelay(200000);
+	ssleep(1);
 	if ((status = sb1000_check_CRC(ioaddr, name)))
 		return status;
 

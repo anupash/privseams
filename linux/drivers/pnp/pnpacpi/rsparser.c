@@ -94,8 +94,8 @@ static void
 pnpacpi_parse_allocated_dmaresource(struct pnp_resource_table * res, int dma)
 {
 	int i = 0;
-	while (!(res->dma_resource[i].flags & IORESOURCE_UNSET) &&
-			i < PNP_MAX_DMA)
+	while (i < PNP_MAX_DMA &&
+			!(res->dma_resource[i].flags & IORESOURCE_UNSET))
 		i++;
 	if (i < PNP_MAX_DMA) {
 		res->dma_resource[i].flags = IORESOURCE_DMA;  // Also clears _UNSET flag
@@ -160,7 +160,7 @@ static acpi_status pnpacpi_allocated_resource(struct acpi_resource *res,
 				acpi_register_gsi(res->data.irq.interrupts[0],
 					res->data.irq.edge_level,
 					res->data.irq.active_high_low));
-			pcibios_penalize_isa_irq(res->data.irq.interrupts[0]);
+			pcibios_penalize_isa_irq(res->data.irq.interrupts[0], 1);
 		}
 		break;
 
@@ -171,7 +171,7 @@ static acpi_status pnpacpi_allocated_resource(struct acpi_resource *res,
 				acpi_register_gsi(res->data.extended_irq.interrupts[0],
 					res->data.extended_irq.edge_level,
 					res->data.extended_irq.active_high_low));
-			pcibios_penalize_isa_irq(res->data.extended_irq.interrupts[0]);
+			pcibios_penalize_isa_irq(res->data.extended_irq.interrupts[0], 1);
 		}
 		break;
 	case ACPI_RSTYPE_DMA:
@@ -219,9 +219,10 @@ static acpi_status pnpacpi_allocated_resource(struct acpi_resource *res,
 		res->data.address64.min_address_range, 
 		res->data.address64.address_length);
 		break;
+	case ACPI_RSTYPE_VENDOR:
+		break;
 	default:
-		pnp_warn("PnPACPI: Alloc type : %d not handle", 
-				res->id);
+		pnp_warn("PnPACPI: unknown resource type %d", res->id);
 		return AE_ERROR;
 	}
 			
@@ -443,6 +444,7 @@ pnpacpi_parse_fixed_mem32_option(struct pnp_option *option,
 
 struct acpipnp_parse_option_s {
 	struct pnp_option *option;
+	struct pnp_option *option_independent;
 	struct pnp_dev *dev;
 };
 
@@ -506,9 +508,16 @@ static acpi_status pnpacpi_option_resource(struct acpi_resource *res,
 			parse_data->option = option;	
 			break;
 		case ACPI_RSTYPE_END_DPF:
-			return AE_CTRL_TERMINATE;
+			/*only one EndDependentFn is allowed*/
+			if (!parse_data->option_independent) {
+				pnp_warn("PnPACPI: more than one EndDependentFn");
+				return AE_ERROR;
+			}
+			parse_data->option = parse_data->option_independent;
+			parse_data->option_independent = NULL;
+			break;
 		default:
-			pnp_warn("PnPACPI:Option type: %d not handle", res->id);
+			pnp_warn("PnPACPI: unknown resource type %d", res->id);
 			return AE_ERROR;
 	}
 			
@@ -524,6 +533,7 @@ acpi_status pnpacpi_parse_resource_option_data(acpi_handle handle,
 	parse_data.option = pnp_register_independent_option(dev);
 	if (!parse_data.option)
 		return AE_ERROR;
+	parse_data.option_independent = parse_data.option;
 	parse_data.dev = dev;
 	status = acpi_walk_resources(handle, METHOD_NAME__PRS, 
 		pnpacpi_option_resource, &parse_data);
@@ -810,7 +820,7 @@ int pnpacpi_encode_resources(struct pnp_resource_table *res_table,
 			mem ++;
 			break;
 		default: /* other type */
-			pnp_warn("Invalid type");
+			pnp_warn("unknown resource type %d", resource->id);
 			return -EINVAL;
 		}
 		resource ++;

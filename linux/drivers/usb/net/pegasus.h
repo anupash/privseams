@@ -29,7 +29,6 @@
 #define	DEFAULT_GPIO_SET	0x26
 
 #define	PEGASUS_PRESENT		0x00000001
-#define	PEGASUS_RUNNING		0x00000002
 #define	PEGASUS_TX_BUSY		0x00000004
 #define	PEGASUS_RX_BUSY		0x00000008
 #define	CTRL_URB_RUNNING	0x00000010
@@ -86,16 +85,18 @@ enum pegasus_registers {
 
 typedef struct pegasus {
 	struct usb_device	*usb;
+	struct usb_interface	*intf;
 	struct net_device	*net;
 	struct net_device_stats	stats;
 	struct mii_if_info	mii;
 	unsigned		flags;
 	unsigned		features;
-	u32			msg_level;
+	u32			msg_enable;
 	u32			wolopts;
 	int			dev_index;
 	int			intr_interval;
 	struct tasklet_struct	rx_tl;
+	struct work_struct	carrier_check;
 	struct urb		*ctrl_urb, *rx_urb, *tx_urb, *intr_urb;
 	struct sk_buff		*rx_pool[RX_SKBS];
 	struct sk_buff		*rx_skb;
@@ -248,6 +249,8 @@ PEGASUS_DEV( "Kingston KNU101TX Ethernet", VENDOR_KINGSTON, 0x000a,
 		DEFAULT_GPIO_RESET)
 PEGASUS_DEV( "LANEED USB Ethernet LD-USB/TX", VENDOR_LANEED, 0x4002,
 		DEFAULT_GPIO_RESET )
+PEGASUS_DEV( "LANEED USB Ethernet LD-USBL/TX", VENDOR_LANEED, 0x4005,
+		DEFAULT_GPIO_RESET | PEGASUS_II)
 PEGASUS_DEV( "LANEED USB Ethernet LD-USB/TX", VENDOR_LANEED, 0x400b,
 		DEFAULT_GPIO_RESET | PEGASUS_II )
 PEGASUS_DEV( "LANEED USB Ethernet LD-USB/T", VENDOR_LANEED, 0xabc1,

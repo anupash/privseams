@@ -138,7 +138,7 @@ ohci_dump_status (struct ohci_hcd *controller, char **next, unsigned *size)
 	ohci_dbg_sw (controller, next, size,
 		"OHCI %d.%d, %s legacy support registers\n",
 		0x03 & (temp >> 4), (temp & 0x0f),
-		(temp & 0x10) ? "with" : "NO");
+		(temp & 0x0100) ? "with" : "NO");
 
 	temp = ohci_readl (controller, &regs->control);
 	ohci_dbg_sw (controller, next, size,
@@ -193,6 +193,10 @@ ohci_dump_status (struct ohci_hcd *controller, char **next, unsigned *size)
 
 	maybe_print_eds (controller, "donehead",
 			ohci_readl (controller, &regs->donehead), next, size);
+
+	/* broken fminterval means traffic won't flow! */ 
+	ohci_dbg (controller, "fminterval %08x\n", 
+			ohci_readl (controller, &regs->fminterval));
 }
 
 #define dbg_port_sw(hc,num,value,next,size) \
@@ -328,7 +332,7 @@ static void ohci_dump_td (const struct ohci_hcd *ohci, const char *label,
 			hc32_to_cpup (ohci, &td->hwCBP) & ~0x0fff,
 			hc32_to_cpup (ohci, &td->hwBE));
 		for (i = 0; i < MAXPSW; i++) {
-			u16	psw = hc16_to_cpup (ohci, &td->hwPSW [i]);
+			u16	psw = ohci_hwPSW (ohci, td, i);
 			int	cc = (psw >> 12) & 0x0f;
 			ohci_dbg (ohci, "    psw [%d] = %2x, CC=%x %s=%d\n", i,
 				psw, cc,
@@ -477,7 +481,7 @@ show_async (struct class_device *class_dev, char *buf)
 	size_t			temp;
 	unsigned long		flags;
 
-	bus = to_usb_bus(class_dev);
+	bus = class_get_devdata(class_dev);
 	hcd = bus->hcpriv;
 	ohci = hcd_to_ohci(hcd);
 
@@ -510,7 +514,7 @@ show_periodic (struct class_device *class_dev, char *buf)
 		return 0;
 	seen_count = 0;
 
-	bus = to_usb_bus(class_dev);
+	bus = class_get_devdata(class_dev);
 	hcd = bus->hcpriv;
 	ohci = hcd_to_ohci(hcd);
 	next = buf;
@@ -607,7 +611,7 @@ show_registers (struct class_device *class_dev, char *buf)
 	char			*next;
 	u32			rdata;
 
-	bus = to_usb_bus(class_dev);
+	bus = class_get_devdata(class_dev);
 	hcd = bus->hcpriv;
 	ohci = hcd_to_ohci(hcd);
 	regs = ohci->regs;
@@ -620,9 +624,11 @@ show_registers (struct class_device *class_dev, char *buf)
 
 	ohci_dbg_sw (ohci, &next, &size,
 		"bus %s, device %s\n"
+		"%s\n"
 		"%s version " DRIVER_VERSION "\n",
 		hcd->self.controller->bus->name,
 		hcd->self.controller->bus_id,
+		hcd->product_desc,
 		hcd_name);
 
 	if (bus->controller->power.power_state) {
@@ -678,7 +684,7 @@ static CLASS_DEVICE_ATTR (registers, S_IRUGO, show_registers, NULL);
 
 static inline void create_debug_files (struct ohci_hcd *ohci)
 {
-	struct class_device *cldev = &ohci_to_hcd(ohci)->self.class_dev;
+	struct class_device *cldev = ohci_to_hcd(ohci)->self.class_dev;
 
 	class_device_create_file(cldev, &class_device_attr_async);
 	class_device_create_file(cldev, &class_device_attr_periodic);
@@ -688,7 +694,7 @@ static inline void create_debug_files (struct ohci_hcd *ohci)
 
 static inline void remove_debug_files (struct ohci_hcd *ohci)
 {
-	struct class_device *cldev = &ohci_to_hcd(ohci)->self.class_dev;
+	struct class_device *cldev = ohci_to_hcd(ohci)->self.class_dev;
 
 	class_device_remove_file(cldev, &class_device_attr_async);
 	class_device_remove_file(cldev, &class_device_attr_periodic);

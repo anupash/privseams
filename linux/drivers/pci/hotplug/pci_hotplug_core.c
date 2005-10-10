@@ -73,7 +73,7 @@ static ssize_t hotplug_slot_attr_show(struct kobject *kobj,
 {
 	struct hotplug_slot *slot = to_hotplug_slot(kobj);
 	struct hotplug_slot_attribute *attribute = to_hotplug_attr(attr);
-	return attribute->show ? attribute->show(slot, buf) : 0;
+	return attribute->show ? attribute->show(slot, buf) : -EIO;
 }
 
 static ssize_t hotplug_slot_attr_store(struct kobject *kobj,
@@ -81,7 +81,7 @@ static ssize_t hotplug_slot_attr_store(struct kobject *kobj,
 {
 	struct hotplug_slot *slot = to_hotplug_slot(kobj);
 	struct hotplug_slot_attribute *attribute = to_hotplug_attr(attr);
-	return attribute->store ? attribute->store(slot, buf, len) : 0;
+	return attribute->store ? attribute->store(slot, buf, len) : -EIO;
 }
 
 static struct sysfs_ops hotplug_slot_sysfs_ops = {
@@ -567,6 +567,11 @@ int pci_hp_register (struct hotplug_slot *slot)
 		return -ENODEV;
 	if ((slot->info == NULL) || (slot->ops == NULL))
 		return -EINVAL;
+	if (slot->release == NULL) {
+		dbg("Why are you trying to register a hotplug slot"
+		    "without a proper release function?\n");
+		return -EINVAL;
+	}
 
 	kobject_set_name(&slot->kobj, "%s", slot->name);
 	kobj_set_kset_s(slot, pci_hotplug_slots_subsys);

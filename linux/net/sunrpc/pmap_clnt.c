@@ -3,9 +3,6 @@
  *
  * Portmapper client.
  *
- * FIXME: In a secure environment, we may want to use an authentication
- * flavor other than AUTH_NULL.
- *
  * Copyright (C) 1996, Olaf Kirch <okir@monad.swb.de>
  */
 
@@ -55,6 +52,9 @@ rpc_getport(struct rpc_task *task, struct rpc_clnt *clnt)
 	dprintk("RPC: %4d rpc_getport(%s, %d, %d, %d)\n",
 			task->tk_pid, clnt->cl_server,
 			map->pm_prog, map->pm_vers, map->pm_prot);
+
+	/* Autobind on cloned rpc clients is discouraged */
+	BUG_ON(clnt->cl_parent != clnt);
 
 	spin_lock(&pmap_lock);
 	if (map->pm_binding) {
@@ -210,12 +210,10 @@ pmap_create(char *hostname, struct sockaddr_in *srvaddr, int proto)
 	xprt->addr.sin_port = htons(RPC_PMAP_PORT);
 
 	/* printk("pmap: create clnt\n"); */
-	clnt = rpc_create_client(xprt, hostname,
+	clnt = rpc_new_client(xprt, hostname,
 				&pmap_program, RPC_PMAP_VERSION,
-				RPC_AUTH_NULL);
-	if (IS_ERR(clnt)) {
-		xprt_destroy(xprt);
-	} else {
+				RPC_AUTH_UNIX);
+	if (!IS_ERR(clnt)) {
 		clnt->cl_softrtry = 1;
 		clnt->cl_chatty   = 1;
 		clnt->cl_oneshot  = 1;

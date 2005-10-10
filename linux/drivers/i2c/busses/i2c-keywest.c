@@ -46,7 +46,6 @@
     sound driver to be happy
 */
 
-#include <linux/config.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/ioport.h>
@@ -399,7 +398,7 @@ keywest_smbus_xfer(	struct i2c_adapter*	adap,
  */
 static int
 keywest_xfer(	struct i2c_adapter *adap,
-		struct i2c_msg msgs[], 
+		struct i2c_msg *msgs, 
 		int num)
 {
 	struct keywest_chan* chan = i2c_get_adapdata(adap);
@@ -516,6 +515,11 @@ create_iface(struct device_node *np, struct device *dev)
 	u32 *psteps, *prate;
 	int rc;
 
+	if (np->n_intrs < 1 || np->n_addrs < 1) {
+		printk(KERN_ERR "%s: Missing interrupt or address !\n",
+		       np->full_name);
+		return -ENODEV;
+	}
 	if (pmac_low_i2c_lock(np))
 		return -ENODEV;
 
@@ -694,7 +698,7 @@ dispose_iface(struct device *dev)
 }
 
 static int
-create_iface_macio(struct macio_dev* dev, const struct of_match *match)
+create_iface_macio(struct macio_dev* dev, const struct of_device_id *match)
 {
 	return create_iface(dev->ofdev.node, &dev->ofdev.dev);
 }
@@ -706,7 +710,7 @@ dispose_iface_macio(struct macio_dev* dev)
 }
 
 static int
-create_iface_of_platform(struct of_device* dev, const struct of_match *match)
+create_iface_of_platform(struct of_device* dev, const struct of_device_id *match)
 {
 	return create_iface(dev->node, &dev->dev);
 }
@@ -717,10 +721,9 @@ dispose_iface_of_platform(struct of_device* dev)
 	return dispose_iface(&dev->dev);
 }
 
-static struct of_match i2c_keywest_match[] = 
+static struct of_device_id i2c_keywest_match[] = 
 {
 	{
-	.name 		= OF_ANY_MATCH,
 	.type		= "i2c",
 	.compatible	= "keywest"
 	},

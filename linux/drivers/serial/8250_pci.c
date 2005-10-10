@@ -31,6 +31,8 @@
 
 #include "8250.h"
 
+#undef SERIAL_DEBUG_PCI
+
 /*
  * Definitions for PCI support.
  */
@@ -387,6 +389,9 @@ static void __devexit sbs_exit(struct pci_dev *dev)
  *     - 10x cards have control registers in IO and/or memory space;
  *     - 20x cards have control registers in standard PCI configuration space.
  *
+ * There are also Quartet Serial cards which use Oxford Semiconductor
+ * 16954 quad UART PCI chip clocked by 18.432 MHz quartz.
+ *
  * Note: some SIIG cards are probed by the parport_serial object.
  */
 
@@ -575,6 +580,16 @@ static int __devinit pci_xircom_init(struct pci_dev *dev)
 {
 	msleep(100);
 	return 0;
+}
+
+static int __devinit pci_netmos_init(struct pci_dev *dev)
+{
+	/* subdevice 0x00PS means <P> parallel, <S> serial */
+	unsigned int num_serial = dev->subsystem_device & 0xf;
+
+	if (num_serial == 0)
+		return -ENODEV;
+	return num_serial;
 }
 
 static int
@@ -934,6 +949,17 @@ static struct pci_serial_quirk pci_serial_quirks[] = {
 		.setup		= pci_default_setup,
 	},
 	/*
+	 * Netmos cards
+	 */
+	{
+		.vendor		= PCI_VENDOR_ID_NETMOS,
+		.device		= PCI_ANY_ID,
+		.subvendor	= PCI_ANY_ID,
+		.subdevice	= PCI_ANY_ID,
+		.init		= pci_netmos_init,
+		.setup		= pci_default_setup,
+	},
+	/*
 	 * Default "match everything" terminator entry
 	 */
 	{
@@ -986,6 +1012,8 @@ get_pci_irq(struct pci_dev *dev, struct pci_board *board, int idx)
  *  n    = number of serial ports
  *  baud = baud rate
  *
+ * This table is sorted by (in order): baud, bt, bn, n.
+ *
  * Please note: in theory if n = 1, _bt infix should make no difference.
  * ie, pbn_b0_1_115200 is the same as pbn_b0_bt_1_115200
  */
@@ -1000,6 +1028,10 @@ enum pci_board_num_t {
 	pbn_b0_1_921600,
 	pbn_b0_2_921600,
 	pbn_b0_4_921600,
+
+	pbn_b0_2_1130000,
+
+	pbn_b0_4_1152000,
 
 	pbn_b0_bt_1_115200,
 	pbn_b0_bt_2_115200,
@@ -1131,6 +1163,20 @@ static struct pci_board pci_boards[] __devinitdata = {
 		.flags		= FL_BASE0,
 		.num_ports	= 4,
 		.base_baud	= 921600,
+		.uart_offset	= 8,
+	},
+
+	[pbn_b0_2_1130000] = {
+		.flags          = FL_BASE0,
+		.num_ports      = 2,
+		.base_baud      = 1130000,
+		.uart_offset    = 8,
+	},
+
+	[pbn_b0_4_1152000] = {
+		.flags		= FL_BASE0,
+		.num_ports	= 4,
+		.base_baud	= 1152000,
 		.uart_offset	= 8,
 	},
 
@@ -1730,36 +1776,33 @@ pciserial_init_one(struct pci_dev *dev, const struct pci_device_id *ent)
 static void __devexit pciserial_remove_one(struct pci_dev *dev)
 {
 	struct serial_private *priv = pci_get_drvdata(dev);
+	struct pci_serial_quirk *quirk;
+	int i;
 
 	pci_set_drvdata(dev, NULL);
 
-	if (priv) {
-		struct pci_serial_quirk *quirk;
-		int i;
+	for (i = 0; i < priv->nr; i++)
+		serial8250_unregister_port(priv->line[i]);
 
-		for (i = 0; i < priv->nr; i++)
-			serial8250_unregister_port(priv->line[i]);
-
-		for (i = 0; i < PCI_NUM_BAR_RESOURCES; i++) {
-			if (priv->remapped_bar[i])
-				iounmap(priv->remapped_bar[i]);
-			priv->remapped_bar[i] = NULL;
-		}
-
-		/*
-		 * Find the exit quirks.
-		 */
-		quirk = find_quirk(dev);
-		if (quirk->exit)
-			quirk->exit(dev);
-
-		pci_disable_device(dev);
-
-		kfree(priv);
+	for (i = 0; i < PCI_NUM_BAR_RESOURCES; i++) {
+		if (priv->remapped_bar[i])
+			iounmap(priv->remapped_bar[i]);
+		priv->remapped_bar[i] = NULL;
 	}
+
+	/*
+	 * Find the exit quirks.
+	 */
+	quirk = find_quirk(dev);
+	if (quirk->exit)
+		quirk->exit(dev);
+
+	pci_disable_device(dev);
+
+	kfree(priv);
 }
 
-static int pciserial_suspend_one(struct pci_dev *dev, u32 state)
+static int pciserial_suspend_one(struct pci_dev *dev, pm_message_t state)
 {
 	struct serial_private *priv = pci_get_drvdata(dev);
 
@@ -1769,6 +1812,8 @@ static int pciserial_suspend_one(struct pci_dev *dev, u32 state)
 		for (i = 0; i < priv->nr; i++)
 			serial8250_suspend_port(priv->line[i]);
 	}
+	pci_save_state(dev);
+	pci_set_power_state(dev, pci_choose_state(dev, state));
 	return 0;
 }
 
@@ -1776,8 +1821,16 @@ static int pciserial_resume_one(struct pci_dev *dev)
 {
 	struct serial_private *priv = pci_get_drvdata(dev);
 
+	pci_set_power_state(dev, PCI_D0);
+	pci_restore_state(dev);
+
 	if (priv) {
 		int i;
+
+		/*
+		 * The device may have been disabled.  Re-enable it.
+		 */
+		pci_enable_device(dev);
 
 		/*
 		 * Ensure that the board is correctly configured.
@@ -1867,6 +1920,9 @@ static struct pci_device_id serial_pci_tbl[] = {
 	{	PCI_VENDOR_ID_SEALEVEL, PCI_DEVICE_ID_SEALEVEL_COMM8,
 		PCI_ANY_ID, PCI_ANY_ID, 0, 0, 
 		pbn_b2_8_115200 },
+	{	PCI_VENDOR_ID_SEALEVEL, PCI_DEVICE_ID_SEALEVEL_UCOMM8,
+		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+		pbn_b2_8_115200 },
 
 	{	PCI_VENDOR_ID_PLX, PCI_DEVICE_ID_PLX_GTEK_SERIAL2,
 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
@@ -1939,6 +1995,19 @@ static struct pci_device_id serial_pci_tbl[] = {
 	{	PCI_VENDOR_ID_SPECIALIX, PCI_DEVICE_ID_OXSEMI_16PCI954,
 		PCI_VENDOR_ID_SPECIALIX, PCI_SUBDEVICE_ID_SPECIALIX_SPEED4, 0, 0,
 		pbn_b0_4_921600 },
+	{	PCI_VENDOR_ID_OXSEMI, PCI_DEVICE_ID_OXSEMI_16PCI954,
+		PCI_SUBVENDOR_ID_SIIG, PCI_SUBDEVICE_ID_SIIG_QUARTET_SERIAL, 0, 0,
+		pbn_b0_4_1152000 },
+
+		/*
+		 * The below card is a little controversial since it is the
+		 * subject of a PCI vendor/device ID clash.  (See
+		 * www.ussg.iu.edu/hypermail/linux/kernel/0303.1/0516.html).
+		 * For now just used the hex ID 0x950a.
+		 */
+	{	PCI_VENDOR_ID_OXSEMI, 0x950a,
+		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
+		pbn_b0_2_1130000 },
 	{	PCI_VENDOR_ID_OXSEMI, PCI_DEVICE_ID_OXSEMI_16PCI954,
 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
 		pbn_b0_4_115200 },
@@ -2174,6 +2243,9 @@ static struct pci_device_id serial_pci_tbl[] = {
 	/*
 	 * HP Diva card
 	 */
+	{	PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_DIVA,
+		PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_DIVA_RMP3, 0, 0,
+		pbn_b1_1_115200 },
 	{	PCI_VENDOR_ID_HP, PCI_DEVICE_ID_HP_DIVA,
 		PCI_ANY_ID, PCI_ANY_ID, 0, 0,
 		pbn_b0_5_115200 },

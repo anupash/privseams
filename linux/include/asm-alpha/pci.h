@@ -58,7 +58,7 @@ struct pci_controller {
 
 extern void pcibios_set_master(struct pci_dev *dev);
 
-extern inline void pcibios_penalize_isa_irq(int irq)
+extern inline void pcibios_penalize_isa_irq(int irq, int active)
 {
 	/* We don't do dynamic PCI IRQ allocation */
 }
@@ -223,22 +223,43 @@ pci_dac_dma_sync_single_for_device(struct pci_dev *pdev, dma64_addr_t dma_addr,
 	/* Nothing to do. */
 }
 
+#ifdef CONFIG_PCI
+static inline void pci_dma_burst_advice(struct pci_dev *pdev,
+					enum pci_dma_burst_strategy *strat,
+					unsigned long *strategy_parameter)
+{
+	unsigned long cacheline_size;
+	u8 byte;
+
+	pci_read_config_byte(pdev, PCI_CACHE_LINE_SIZE, &byte);
+	if (byte == 0)
+		cacheline_size = 1024;
+	else
+		cacheline_size = (int) byte * 4;
+
+	*strat = PCI_DMA_BURST_BOUNDARY;
+	*strategy_parameter = cacheline_size;
+}
+#endif
+
+/* TODO: integrate with include/asm-generic/pci.h ? */
+static inline int pci_get_legacy_ide_irq(struct pci_dev *dev, int channel)
+{
+	return channel ? 15 : 14;
+}
+
 extern void pcibios_resource_to_bus(struct pci_dev *, struct pci_bus_region *,
 				    struct resource *);
 
+extern void pcibios_bus_to_resource(struct pci_dev *dev, struct resource *res,
+				    struct pci_bus_region *region);
+
 #define pci_domain_nr(bus) ((struct pci_controller *)(bus)->sysdata)->index
 
-static inline int
-pci_name_bus(char *name, struct pci_bus *bus)
+static inline int pci_proc_domain(struct pci_bus *bus)
 {
 	struct pci_controller *hose = bus->sysdata;
-
-	if (likely(hose->need_domain_info == 0)) {
-		sprintf(name, "%02x", bus->number);
-	} else {
-		sprintf(name, "%04x:%02x", hose->index, bus->number);
-	}
-	return 0;
+	return hose->need_domain_info;
 }
 
 static inline void

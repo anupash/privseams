@@ -46,7 +46,6 @@
 #include <linux/skbuff.h>
 #include <linux/ethtool.h>
 
-#include <pcmcia/version.h>
 #include <pcmcia/cs_types.h>
 #include <pcmcia/cs.h>
 #include <pcmcia/cistpl.h>
@@ -393,11 +392,6 @@ static dev_link_t *ray_attach(void)
     link->next = dev_list;
     dev_list = link;
     client_reg.dev_info = &dev_info;
-    client_reg.EventMask =
-        CS_EVENT_CARD_INSERTION | CS_EVENT_CARD_REMOVAL |
-        CS_EVENT_RESET_PHYSICAL | CS_EVENT_CARD_RESET |
-        CS_EVENT_PM_SUSPEND | CS_EVENT_PM_RESUME;
-    client_reg.event_handler = &ray_event;
     client_reg.Version = 0x0210;
     client_reg.event_callback_args.client_data = link;
 
@@ -1215,6 +1209,9 @@ static int ray_dev_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 #if WIRELESS_EXT > 7
     struct iwreq *wrq = (struct iwreq *) ifr;
 #endif	/* WIRELESS_EXT > 7 */
+#ifdef WIRELESS_SPY
+    struct sockaddr	address[IW_MAX_SPY];
+#endif	/* WIRELESS_SPY */
 
     if (!(link->state & DEV_PRESENT)) {
         DEBUG(2,"ray_dev_ioctl - device not present\n");
@@ -1511,7 +1508,6 @@ static int ray_dev_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
       /* If there is some addresses to copy */
       if(local->spy_number > 0)
 	{
-	  struct sockaddr	address[IW_MAX_SPY];
 	  int			i;
 
 	  /* Copy addresses to the driver */
@@ -1551,7 +1547,6 @@ static int ray_dev_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
       /* If the user want to have the addresses back... */
       if((local->spy_number > 0) && (wrq->u.data.pointer != (caddr_t) 0))
 	{
-	  struct sockaddr	address[IW_MAX_SPY];
 	  int			i;
 
 	  /* Copy addresses from the lp structure */
@@ -2903,13 +2898,21 @@ static int write_int(struct file *file, const char __user *buffer, unsigned long
 }
 #endif
 
+static struct pcmcia_device_id ray_ids[] = {
+	PCMCIA_DEVICE_MANF_CARD(0x01a6, 0x0000),
+	PCMCIA_DEVICE_NULL,
+};
+MODULE_DEVICE_TABLE(pcmcia, ray_ids);
+
 static struct pcmcia_driver ray_driver = {
 	.owner		= THIS_MODULE,
 	.drv		= {
 		.name	= "ray_cs",
 	},
 	.attach		= ray_attach,
+	.event		= ray_event,
 	.detach		= ray_detach,
+	.id_table       = ray_ids,
 };
 
 static int __init init_ray_cs(void)

@@ -412,11 +412,6 @@ void xfs_ifork_next_set(xfs_inode_t *ip, int w, int n);
 #define	XFS_IFLUSH_DELWRI		5
 
 /*
- * Flags for xfs_iflush_all.
- */
-#define	XFS_FLUSH_ALL		0x1
-
-/*
  * Flags for xfs_itruncate_start().
  */
 #define	XFS_ITRUNC_DEFINITE	0x1
@@ -487,20 +482,19 @@ int		xfs_finish_reclaim_all(struct xfs_mount *, int);
 /*
  * xfs_inode.c prototypes.
  */
-int		xfs_inotobp(struct xfs_mount *, struct xfs_trans *, xfs_ino_t,
-			    xfs_dinode_t **, struct xfs_buf **, int *);
 int		xfs_itobp(struct xfs_mount *, struct xfs_trans *,
 			  xfs_inode_t *, xfs_dinode_t **, struct xfs_buf **,
 			  xfs_daddr_t);
 int		xfs_iread(struct xfs_mount *, struct xfs_trans *, xfs_ino_t,
 			  xfs_inode_t **, xfs_daddr_t);
 int		xfs_iread_extents(struct xfs_trans *, xfs_inode_t *, int);
-int		xfs_ialloc(struct xfs_trans *, xfs_inode_t *, mode_t, nlink_t,
-			   xfs_dev_t, struct cred *, xfs_prid_t, int,
-			   struct xfs_buf **, boolean_t *, xfs_inode_t **);
+int		xfs_ialloc(struct xfs_trans *, xfs_inode_t *, mode_t,
+			   xfs_nlink_t, xfs_dev_t, struct cred *, xfs_prid_t,
+			   int, struct xfs_buf **, boolean_t *, xfs_inode_t **);
 void		xfs_xlate_dinode_core(xfs_caddr_t, struct xfs_dinode_core *,
-					int, xfs_arch_t);
-uint		xfs_dic2xflags(struct xfs_dinode_core *, xfs_arch_t);
+					int);
+uint		xfs_ip2xflags(struct xfs_inode *);
+uint		xfs_dic2xflags(struct xfs_dinode_core *);
 int		xfs_ifree(struct xfs_trans *, xfs_inode_t *,
 			   struct xfs_bmap_free *);
 void		xfs_itruncate_start(xfs_inode_t *, uint, xfs_fsize_t);
@@ -521,7 +515,7 @@ void		xfs_ipin(xfs_inode_t *);
 void		xfs_iunpin(xfs_inode_t *);
 int		xfs_iextents_copy(xfs_inode_t *, xfs_bmbt_rec_t *, int);
 int		xfs_iflush(xfs_inode_t *, uint);
-int		xfs_iflush_all(struct xfs_mount *, int);
+void		xfs_iflush_all(struct xfs_mount *);
 int		xfs_iaccess(xfs_inode_t *, mode_t, cred_t *);
 uint		xfs_iroundup(uint);
 void		xfs_ichgtime(xfs_inode_t *, int);

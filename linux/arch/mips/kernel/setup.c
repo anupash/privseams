@@ -33,6 +33,7 @@
 #include <linux/root_dev.h>
 #include <linux/highmem.h>
 #include <linux/console.h>
+#include <linux/mmzone.h>
 
 #include <asm/addrspace.h>
 #include <asm/bootinfo.h>
@@ -86,8 +87,8 @@ EXPORT_SYMBOL(mips_io_port_base);
 unsigned long isa_slot_offset;
 EXPORT_SYMBOL(isa_slot_offset);
 
-static struct resource code_resource = { "Kernel code" };
-static struct resource data_resource = { "Kernel data" };
+static struct resource code_resource = { .name = "Kernel code", };
+static struct resource data_resource = { .name = "Kernel data", };
 
 void __init add_memory_region(phys_t start, phys_t size, long type)
 {
@@ -356,6 +357,8 @@ static inline void bootmem_init(void)
 	}
 #endif
 
+	memory_present(0, first_usable_pfn, max_low_pfn);
+
 	/* Initialize the boot-time allocator with low memory only.  */
 	bootmap_size = init_bootmem(first_usable_pfn, max_low_pfn);
 
@@ -557,6 +560,7 @@ void __init setup_arch(char **cmdline_p)
 
 	parse_cmdline_early();
 	bootmem_init();
+	sparse_init();
 	paging_init();
 	resource_init();
 }

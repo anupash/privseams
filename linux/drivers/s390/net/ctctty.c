@@ -1,5 +1,5 @@
 /*
- * $Id: ctctty.c,v 1.26 2004/08/04 11:06:55 mschwide Exp $
+ * $Id: ctctty.c,v 1.29 2005/04/05 08:50:44 mschwide Exp $
  *
  * CTC / ESCON network driver, tty interface.
  *
@@ -156,7 +156,7 @@ ctc_tty_readmodem(ctc_tty_info *info)
 					skb_queue_head(&info->rx_queue, skb);
 				else {
 					kfree_skb(skb);
-					ret = skb_queue_len(&info->rx_queue);
+					ret = !skb_queue_empty(&info->rx_queue);
 				}
 			}
 		}
@@ -530,7 +530,7 @@ ctc_tty_write(struct tty_struct *tty, const u_char * buf, int count)
 		total += c;
 		count -= c;
 	}
-	if (skb_queue_len(&info->tx_queue)) {
+	if (!skb_queue_empty(&info->tx_queue)) {
 		info->lsr &= ~UART_LSR_TEMT;
 		tasklet_schedule(&info->tasklet);
 	}
@@ -594,7 +594,7 @@ ctc_tty_flush_chars(struct tty_struct *tty)
 		return;
 	if (ctc_tty_paranoia_check(info, tty->name, "ctc_tty_flush_chars"))
 		return;
-	if (tty->stopped || tty->hw_stopped || (!skb_queue_len(&info->tx_queue)))
+	if (tty->stopped || tty->hw_stopped || skb_queue_empty(&info->tx_queue))
 		return;
 	tasklet_schedule(&info->tasklet);
 }
@@ -778,11 +778,10 @@ ctc_tty_ioctl(struct tty_struct *tty, struct file *file,
 			printk(KERN_DEBUG "%s%d ioctl TIOCSERGETLSR\n", CTC_TTY_NAME,
 			       info->line);
 #endif
-			error = verify_area(VERIFY_WRITE, (void __user *) arg, sizeof(uint));
-			if (error)
-				return error;
-			else
+			if (access_ok(VERIFY_WRITE, (void __user *) arg, sizeof(uint)))
 				return ctc_tty_get_lsr_info(info, (uint __user *) arg);
+			else
+				return -EFAULT;
 		default:
 #ifdef CTC_DEBUG_MODEM_IOCTL
 			printk(KERN_DEBUG "UNKNOWN ioctl 0x%08x on %s%d\n", cmd,
@@ -1057,8 +1056,7 @@ ctc_tty_close(struct tty_struct *tty, struct file *filp)
 	info->tty = 0;
 	tty->closing = 0;
 	if (info->blocked_open) {
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout(HZ/2);
+		msleep_interruptible(500);
 		wake_up_interruptible(&info->open_wait);
 	}
 	info->flags &= ~(CTC_ASYNC_NORMAL_ACTIVE | CTC_ASYNC_CLOSING);

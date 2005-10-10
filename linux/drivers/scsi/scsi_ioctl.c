@@ -27,11 +27,6 @@
 
 #define NORMAL_RETRIES			5
 #define IOCTL_NORMAL_TIMEOUT			(10 * HZ)
-#define FORMAT_UNIT_TIMEOUT		(2 * 60 * 60 * HZ)
-#define START_STOP_TIMEOUT		(60 * HZ)
-#define MOVE_MEDIUM_TIMEOUT		(5 * 60 * HZ)
-#define READ_ELEMENT_STATUS_TIMEOUT	(5 * 60 * HZ)
-#define READ_DEFECT_DATA_TIMEOUT	(60 * HZ )  /* ZIP-250 on parallel port takes as long! */
 
 #define MAX_BUF PAGE_SIZE
 
@@ -230,7 +225,7 @@ int scsi_ioctl_send_command(struct scsi_device *sdev,
 	/*
 	 * Verify that we can read at least this much.
 	 */
-	if (verify_area(VERIFY_READ, sic, sizeof(Scsi_Ioctl_Command)))
+	if (!access_ok(VERIFY_READ, sic, sizeof(Scsi_Ioctl_Command)))
 		return -EFAULT;
 
 	if(__get_user(inlen, &sic->inlen))
@@ -285,7 +280,7 @@ int scsi_ioctl_send_command(struct scsi_device *sdev,
 	
 	result = -EFAULT;
 
-	if (verify_area(VERIFY_READ, cmd_in, cmdlen + inlen))
+	if (!access_ok(VERIFY_READ, cmd_in, cmdlen + inlen))
 		goto error;
 
 	if(__copy_from_user(cmd, cmd_in, cmdlen))
@@ -417,7 +412,7 @@ int scsi_ioctl(struct scsi_device *sdev, int cmd, void __user *arg)
 
 	switch (cmd) {
 	case SCSI_IOCTL_GET_IDLUN:
-		if (verify_area(VERIFY_WRITE, arg, sizeof(struct scsi_idlun)))
+		if (!access_ok(VERIFY_WRITE, arg, sizeof(struct scsi_idlun)))
 			return -EFAULT;
 
 		__put_user((sdev->id & 0xff)

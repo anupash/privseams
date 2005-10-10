@@ -32,6 +32,8 @@ SECTIONS
   .data1   : { *(.data1) }
   . = ALIGN(64);
   .data.cacheline_aligned : { *(.data.cacheline_aligned) }
+  . = ALIGN(64);
+  .data.read_mostly : { *(.data.read_mostly) }
   _edata  =  .;
   PROVIDE (edata = .);
   .fixup   : { *(.fixup) }
@@ -72,7 +74,7 @@ SECTIONS
   __initramfs_start = .;
   .init.ramfs : { *(.init.ramfs) }
   __initramfs_end = .;
-  . = ALIGN(32);
+  . = ALIGN(8192);
   __per_cpu_start = .;
   .data.percpu  : { *(.data.percpu) }
   __per_cpu_end = .;

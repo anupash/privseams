@@ -29,7 +29,7 @@
 extern int boot_cpuid;
 extern int boot_cpuid_phys;
 
-extern void cpu_die(void) __attribute__((noreturn));
+extern void cpu_die(void);
 
 #ifdef CONFIG_SMP
 
@@ -37,8 +37,15 @@ extern void smp_send_debugger_break(int cpu);
 struct pt_regs;
 extern void smp_message_recv(int, struct pt_regs *);
 
+#ifdef CONFIG_HOTPLUG_CPU
+extern void fixup_irqs(cpumask_t map);
+int generic_cpu_disable(void);
+int generic_cpu_enable(unsigned int cpu);
+void generic_cpu_die(unsigned int cpu);
+void generic_mach_cpu_die(void);
+#endif
 
-#define __smp_processor_id() (get_paca()->paca_index)
+#define raw_smp_processor_id()	(get_paca()->paca_index)
 #define hard_smp_processor_id() (get_paca()->hw_cpu_id)
 
 extern cpumask_t cpu_sibling_map[NR_CPUS];
@@ -77,6 +84,14 @@ extern void smp_generic_give_timebase(void);
 extern void smp_generic_take_timebase(void);
 
 extern struct smp_ops_t *smp_ops;
+
+#ifdef CONFIG_PPC_PSERIES
+void vpa_init(int cpu);
+#else
+static inline void vpa_init(int cpu)
+{
+}
+#endif /* CONFIG_PPC_PSERIES */
 
 #endif /* __ASSEMBLY__ */
 

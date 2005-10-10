@@ -154,11 +154,9 @@ out:
 	return err;
 }
 
-static int ipcomp_output(struct sk_buff *skb)
+static int ipcomp_output(struct xfrm_state *x, struct sk_buff *skb)
 {
 	int err;
-	struct dst_entry *dst = skb->dst;
-	struct xfrm_state *x = dst->xfrm;
 	struct iphdr *iph;
 	struct ip_comp_hdr *ipch;
 	struct ipcomp_data *ipcd = x->data;
@@ -169,32 +167,22 @@ static int ipcomp_output(struct sk_buff *skb)
 	hdr_len = iph->ihl * 4;
 	if ((skb->len - hdr_len) < ipcd->threshold) {
 		/* Don't bother compressing */
-		if (x->props.mode) {
-			ip_send_check(iph);
-		}
 		goto out_ok;
 	}
 
 	if ((skb_is_nonlinear(skb) || skb_cloned(skb)) &&
 	    skb_linearize(skb, GFP_ATOMIC) != 0) {
-	    	err = -ENOMEM;
-	    	goto error;
+		goto out_ok;
 	}
 	
 	err = ipcomp_compress(x, skb);
+	iph = skb->nh.iph;
+
 	if (err) {
-		if (err == -EMSGSIZE) {
-			if (x->props.mode) {
-				iph = skb->nh.iph;
-				ip_send_check(iph);
-			}
-			goto out_ok;
-		}
-		goto error;
+		goto out_ok;
 	}
 
 	/* Install ipcomp header, convert into ipcomp datagram. */
-	iph = skb->nh.iph;
 	iph->tot_len = htons(skb->len);
 	ipch = (struct ip_comp_hdr *)((char *)iph + iph->ihl * 4);
 	ipch->nexthdr = iph->protocol;
@@ -202,12 +190,12 @@ static int ipcomp_output(struct sk_buff *skb)
 	ipch->cpi = htons((u16 )ntohl(x->id.spi));
 	iph->protocol = IPPROTO_COMP;
 	ip_send_check(iph);
+	return 0;
 
 out_ok:
-	err = 0;
-
-error:
-	return err;
+	if (x->props.mode)
+		ip_send_check(iph);
+	return 0;
 }
 
 static void ipcomp4_err(struct sk_buff *skb, u32 info)
@@ -248,15 +236,10 @@ static struct xfrm_state *ipcomp_tunnel_create(struct xfrm_state *x)
 	t->props.mode = 1;
 	t->props.saddr.a4 = x->props.saddr.a4;
 	t->props.flags = x->props.flags;
-	
-	t->type = xfrm_get_type(IPPROTO_IPIP, t->props.family);
-	if (t->type == NULL)
-		goto error;
-		
-	if (t->type->init_state(t, NULL))
+
+	if (xfrm_init_state(t))
 		goto error;
 
-	t->km.state = XFRM_STATE_VALID;
 	atomic_set(&t->tunnel_users, 1);
 out:
 	return t;
@@ -375,7 +358,7 @@ static struct crypto_tfm **ipcomp_alloc_tfms(const char *alg_name)
 	int cpu;
 
 	/* This can be any valid CPU ID so we don't need locking. */
-	cpu = smp_processor_id();
+	cpu = raw_smp_processor_id();
 
 	list_for_each_entry(pos, &ipcomp_tfms_list, list) {
 		struct crypto_tfm *tfm;
@@ -434,7 +417,7 @@ static void ipcomp_destroy(struct xfrm_state *x)
 	kfree(ipcd);
 }
 
-static int ipcomp_init_state(struct xfrm_state *x, void *args)
+static int ipcomp_init_state(struct xfrm_state *x)
 {
 	int err;
 	struct ipcomp_data *ipcd;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004 Topspin Communications.  All rights reserved.
+ * Copyright (c) 2005 Cisco Systems.  All rights reserved.
  *
  * This software is available to you under a choice of one of two
  * licenses.  You may choose to be licensed under the terms of the GNU
@@ -49,10 +50,41 @@ struct mthca_buf_list {
 	DECLARE_PCI_UNMAP_ADDR(mapping)
 };
 
+struct mthca_uar {
+	unsigned long pfn;
+	int           index;
+};
+
+struct mthca_user_db_table;
+
+struct mthca_ucontext {
+	struct ib_ucontext          ibucontext;
+	struct mthca_uar            uar;
+	struct mthca_user_db_table *db_tab;
+};
+
+struct mthca_mtt;
+
 struct mthca_mr {
-	struct ib_mr ibmr;
-	int order;
-	u32 first_seg;
+	struct ib_mr      ibmr;
+	struct mthca_mtt *mtt;
+};
+
+struct mthca_fmr {
+	struct ib_fmr      ibmr;
+	struct ib_fmr_attr attr;
+	struct mthca_mtt  *mtt;
+	int                maps;
+	union {
+		struct {
+			struct mthca_mpt_entry __iomem *mpt;
+			u64 __iomem *mtts;
+		} tavor;
+		struct {
+			struct mthca_mpt_entry *mpt;
+			__be64 *mtts;
+		} arbel;
+	} mem;
 };
 
 struct mthca_pd {
@@ -60,12 +92,13 @@ struct mthca_pd {
 	u32             pd_num;
 	atomic_t        sqp_count;
 	struct mthca_mr ntmr;
+	int             privileged;
 };
 
 struct mthca_eq {
 	struct mthca_dev      *dev;
 	int                    eqn;
-	u32                    ecr_mask;
+	u32                    eqn_mask;
 	u32                    cons_index;
 	u16                    msi_x_vector;
 	u16                    msi_x_entry;
@@ -77,12 +110,18 @@ struct mthca_eq {
 
 struct mthca_av;
 
+enum mthca_ah_type {
+	MTHCA_AH_ON_HCA,
+	MTHCA_AH_PCI_POOL,
+	MTHCA_AH_KMALLOC
+};
+
 struct mthca_ah {
-	struct ib_ah     ibah;
-	int              on_hca;
-	u32              key;
-	struct mthca_av *av;
-	dma_addr_t       avdma;
+	struct ib_ah       ibah;
+	enum mthca_ah_type type;
+	u32                key;
+	struct mthca_av   *av;
+	dma_addr_t         avdma;
 };
 
 /*
@@ -136,8 +175,17 @@ struct mthca_cq {
 	spinlock_t             lock;
 	atomic_t               refcount;
 	int                    cqn;
-	int                    cons_index;
+	u32                    cons_index;
 	int                    is_direct;
+	int                    is_kernel;
+
+	/* Next fields are Arbel only */
+	int                    set_ci_db_index;
+	u32                   *set_ci_db;
+	int                    arm_db_index;
+	u32                   *arm_db;
+	int                    arm_sn;
+
 	union {
 		struct mthca_buf_list direct;
 		struct mthca_buf_list *page_list;
@@ -147,19 +195,22 @@ struct mthca_cq {
 };
 
 struct mthca_wq {
-	int   max;
-	int   cur;
-	int   next;
-	int   last_comp;
-	void *last;
-	int   max_gs;
-	int   wqe_shift;
-	enum ib_sig_type policy;
+	spinlock_t lock;
+	int        max;
+	unsigned   next_ind;
+	unsigned   last_comp;
+	unsigned   head;
+	unsigned   tail;
+	void      *last;
+	int        max_gs;
+	int        wqe_shift;
+
+	int        db_index;	/* Arbel only */
+	u32       *db;
 };
 
 struct mthca_qp {
 	struct ib_qp           ibqp;
-	spinlock_t             lock;
 	atomic_t               refcount;
 	u32                    qpn;
 	int                    is_direct;
@@ -172,6 +223,7 @@ struct mthca_qp {
 
 	struct mthca_wq        rq;
 	struct mthca_wq        sq;
+	enum ib_sig_type       sq_policy;
 	int                    send_wqe_offset;
 
 	u64                   *wrid;
@@ -194,6 +246,16 @@ struct mthca_sqp {
 	void           *header_buf;
 	dma_addr_t      header_dma;
 };
+
+static inline struct mthca_ucontext *to_mucontext(struct ib_ucontext *ibucontext)
+{
+	return container_of(ibucontext, struct mthca_ucontext, ibucontext);
+}
+
+static inline struct mthca_fmr *to_mfmr(struct ib_fmr *ibmr)
+{
+	return container_of(ibmr, struct mthca_fmr, ibmr);
+}
 
 static inline struct mthca_mr *to_mmr(struct ib_mr *ibmr)
 {

@@ -34,7 +34,7 @@ struct gs_port {
   int                     xmit_head;
   int                     xmit_tail;
   int                     xmit_cnt;
-  /*  struct semaphore        port_write_sem; */
+  struct semaphore        port_write_sem;
   int                     flags;
   wait_queue_head_t       open_wait;
   wait_queue_head_t       close_wait;
@@ -49,6 +49,7 @@ struct gs_port {
   int                     baud_base;
   int                     baud;
   int                     custom_divisor;
+  spinlock_t              driver_lock;
 };
 
 
@@ -70,6 +71,7 @@ struct gs_port {
 #define GS_DEBUG_STUFF   0x00000008
 #define GS_DEBUG_CLOSE   0x00000010
 #define GS_DEBUG_FLOW    0x00000020
+#define GS_DEBUG_WRITE   0x00000040
 
 
 void gs_put_char(struct tty_struct *tty, unsigned char ch);
@@ -90,7 +92,5 @@ int  gs_init_port(struct gs_port *port);
 int  gs_setserial(struct gs_port *port, struct serial_struct __user *sp);
 int  gs_getserial(struct gs_port *port, struct serial_struct __user *sp);
 void gs_got_break(struct gs_port *port);
-
-extern int gs_debug;
 
 #endif

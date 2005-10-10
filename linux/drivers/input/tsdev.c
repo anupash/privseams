@@ -232,11 +232,9 @@ static ssize_t tsdev_read(struct file *file, char __user *buffer, size_t count,
 static unsigned int tsdev_poll(struct file *file, poll_table * wait)
 {
 	struct tsdev_list *list = file->private_data;
-
 	poll_wait(file, &list->tsdev->wait, wait);
-	if (list->head != list->tail)
-		return POLLIN | POLLRDNORM;
-	return 0;
+	return ((list->head == list->tail) ? 0 : (POLLIN | POLLRDNORM)) |
+		(list->tsdev->exist ? 0 : (POLLHUP | POLLERR));
 }
 
 static int tsdev_ioctl(struct inode *inode, struct file *file,
@@ -265,7 +263,7 @@ static int tsdev_ioctl(struct inode *inode, struct file *file,
 	return retval;
 }
 
-struct file_operations tsdev_fops = {
+static struct file_operations tsdev_fops = {
 	.owner =	THIS_MODULE,
 	.open =		tsdev_open,
 	.release =	tsdev_release,
@@ -416,9 +414,9 @@ static struct input_handle *tsdev_connect(struct input_handler *handler,
 			S_IFCHR|S_IRUGO|S_IWUSR, "input/ts%d", minor);
 	devfs_mk_cdev(MKDEV(INPUT_MAJOR, TSDEV_MINOR_BASE + minor + TSDEV_MINORS/2),
 			S_IFCHR|S_IRUGO|S_IWUSR, "input/tsraw%d", minor);
-	class_simple_device_add(input_class,
-				MKDEV(INPUT_MAJOR, TSDEV_MINOR_BASE + minor),
-				dev->dev, "ts%d", minor);
+	class_device_create(input_class,
+			MKDEV(INPUT_MAJOR, TSDEV_MINOR_BASE + minor),
+			dev->dev, "ts%d", minor);
 
 	return &tsdev->handle;
 }
@@ -426,8 +424,10 @@ static struct input_handle *tsdev_connect(struct input_handler *handler,
 static void tsdev_disconnect(struct input_handle *handle)
 {
 	struct tsdev *tsdev = handle->private;
+	struct tsdev_list *list;
 
-	class_simple_device_remove(MKDEV(INPUT_MAJOR, TSDEV_MINOR_BASE + tsdev->minor));
+	class_device_destroy(input_class,
+			MKDEV(INPUT_MAJOR, TSDEV_MINOR_BASE + tsdev->minor));
 	devfs_remove("input/ts%d", tsdev->minor);
 	devfs_remove("input/tsraw%d", tsdev->minor);
 	tsdev->exist = 0;
@@ -435,6 +435,8 @@ static void tsdev_disconnect(struct input_handle *handle)
 	if (tsdev->open) {
 		input_close_device(handle);
 		wake_up_interruptible(&tsdev->wait);
+		list_for_each_entry(list, &tsdev->list, node)
+			kill_fasync(&list->fasync, SIGIO, POLL_HUP);
 	} else
 		tsdev_free(tsdev);
 }

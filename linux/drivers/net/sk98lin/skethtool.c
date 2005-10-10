@@ -257,7 +257,7 @@ static void getDriverInfo(struct net_device *dev, struct ethtool_drvinfo *info)
 	strlcpy(info->driver, DRIVER_FILE_NAME, sizeof(info->driver));
 	strcpy(info->version, vers);
 	strcpy(info->fw_version, "N/A");
-	strlcpy(info->bus_info, pAC->PciDev->slot_name, ETHTOOL_BUSINFO_LEN);
+	strlcpy(info->bus_info, pci_name(pAC->PciDev), ETHTOOL_BUSINFO_LEN);
 }
 
 /*
@@ -437,9 +437,6 @@ static int locateDevice(struct net_device *dev, u32 data)
 	pAC->LedsOn = 0;
 	mod_timer(&pAC->BlinkTimer, jiffies);
 	msleep_interruptible(data * 1000);
-
-	set_current_state(TASK_INTERRUPTIBLE);
-	schedule_timeout(data * HZ);
 	del_timer_sync(&pAC->BlinkTimer);
 	toggleLeds(pNet, 0);
 

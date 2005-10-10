@@ -19,6 +19,7 @@ obj-$(CONFIG_HOTPLUG_PCI) += hotplug/
 #
 # Some architectures use the generic PCI setup functions
 #
+obj-$(CONFIG_X86) += setup-bus.o
 obj-$(CONFIG_ALPHA) += setup-bus.o setup-irq.o
 obj-$(CONFIG_ARM) += setup-bus.o setup-irq.o
 obj-$(CONFIG_PARISC) += setup-bus.o
@@ -39,6 +40,10 @@ obj-$(CONFIG_HOTPLUG) += setup-bus.o
 
 ifndef CONFIG_X86
 obj-y += syscall.o
+endif
+
+ifeq ($(CONFIG_PCI_DEBUG),y)
+EXTRA_CFLAGS += -DDEBUG
 endif
 
 hostprogs-y := gen-devlist

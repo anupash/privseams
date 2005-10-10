@@ -127,16 +127,12 @@ void dma_region_free(struct dma_region *dma)
 		dma->dev = NULL;
 	}
 
-	if (dma->sglist) {
-		vfree(dma->sglist);
-		dma->sglist = NULL;
-	}
+	vfree(dma->sglist);
+	dma->sglist = NULL;
 
-	if (dma->kvirt) {
-		vfree(dma->kvirt);
-		dma->kvirt = NULL;
-		dma->n_pages = 0;
-	}
+	vfree(dma->kvirt);
+	dma->kvirt = NULL;
+	dma->n_pages = 0;
 }
 
 /* find the scatterlist index and remaining offset corresponding to a
@@ -162,7 +158,7 @@ static inline int dma_region_find(struct dma_region *dma, unsigned long offset, 
 
 dma_addr_t dma_region_offset_to_bus(struct dma_region *dma, unsigned long offset)
 {
-	unsigned long rem;
+	unsigned long rem = 0;
 
 	struct scatterlist *sg = &dma->sglist[dma_region_find(dma, offset, &rem)];
 	return sg_dma_address(sg) + rem;

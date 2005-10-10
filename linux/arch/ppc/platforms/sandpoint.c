@@ -81,6 +81,7 @@
 #include <linux/serial.h>
 #include <linux/tty.h>	/* for linux/serial_core.h */
 #include <linux/serial_core.h>
+#include <linux/serial_8250.h>
 
 #include <asm/system.h>
 #include <asm/pgtable.h>
@@ -99,6 +100,7 @@
 #include <asm/mpc10x.h>
 #include <asm/pci-bridge.h>
 #include <asm/kgdb.h>
+#include <asm/ppc_sys.h>
 
 #include "sandpoint.h"
 
@@ -201,13 +203,6 @@ sandpoint_setup_winbond_83553(struct pci_controller *hose)
 				devfn,
 				0x48, /* ISA-to-PCI Addr Decoder Control */
 				0xf0);
-
-	/* Enable RTC and Keyboard address locations.  */
-	early_write_config_byte(hose,
-				0,
-				devfn,
-				0x4d,	/* Chip Select Control Register */
-				0x00);
 
 	/* Enable Port 92.  */
 	early_write_config_byte(hose,
@@ -312,6 +307,28 @@ sandpoint_setup_arch(void)
 	/* Lookup PCI host bridges */
 	sandpoint_find_bridges();
 
+	if (strncmp (cur_ppc_sys_spec->ppc_sys_name, "8245", 4) == 0)
+	{
+		bd_t *bp = (bd_t *)__res;
+		struct plat_serial8250_port *pdata;
+
+		pdata = (struct plat_serial8250_port *) ppc_sys_get_pdata(MPC10X_UART0);
+		if (pdata)
+		{
+			pdata[0].uartclk = bp->bi_busfreq;
+		}
+
+#ifdef CONFIG_SANDPOINT_ENABLE_UART1
+		pdata = (struct plat_serial8250_port *) ppc_sys_get_pdata(MPC10X_UART1);
+		if (pdata)
+		{
+			pdata[0].uartclk = bp->bi_busfreq;
+		}
+#else
+		ppc_sys_device_remove(MPC10X_UART1);
+#endif
+	}
+
 	printk(KERN_INFO "Motorola SPS Sandpoint Test Platform\n");
 	printk(KERN_INFO "Port by MontaVista Software, Inc. (source@mvista.com)\n");
 
@@ -319,10 +336,10 @@ sandpoint_setup_arch(void)
 	 * We will do this now with good known values.  Future versions
 	 * of DINK32 are supposed to get this correct.
 	 */
-	if (cur_cpu_spec[0]->cpu_features & CPU_FTR_SPEC7450)
+	if (cpu_has_feature(CPU_FTR_SPEC7450))
 		/* 745x is different.  We only want to pass along enable. */
 		_set_L2CR(L2CR_L2E);
-	else if (cur_cpu_spec[0]->cpu_features & CPU_FTR_L2CR)
+	else if (cpu_has_feature(CPU_FTR_L2CR))
 		/* All modules have 1MB of L2.  We also assume that an
 		 * L2 divisor of 3 will work.
 		 */
@@ -330,7 +347,7 @@ sandpoint_setup_arch(void)
 				| L2CR_L2RAM_PIPE | L2CR_L2OH_1_0 | L2CR_L2DF);
 #if 0
 	/* Untested right now. */
-	if (cur_cpu_spec[0]->cpu_features & CPU_FTR_L3CR) {
+	if (cpu_has_feature(CPU_FTR_L3CR)) {
 		/* Magic value. */
 		_set_L3CR(0x8f032000);
 	}

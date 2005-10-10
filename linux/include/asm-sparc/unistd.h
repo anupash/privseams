@@ -79,7 +79,7 @@
 #define __NR_umask               60 /* Common                                      */
 #define __NR_chroot              61 /* Common                                      */
 #define __NR_fstat               62 /* Common                                      */
-#define __NR_fstat64		 63 /* Linux sparc32 Specific			   */
+#define __NR_fstat64		 63 /* Linux Specific			           */
 #define __NR_getpagesize         64 /* Common                                      */
 #define __NR_msync               65 /* Common in newer 1.3.x revs...               */
 #define __NR_vfork               66 /* Common                                      */
@@ -148,14 +148,14 @@
 #define __NR_truncate           129 /* Common                                      */
 #define __NR_ftruncate          130 /* Common                                      */
 #define __NR_flock              131 /* Common                                      */
-#define __NR_lstat64		132 /* Linux sparc32 Specific			   */
+#define __NR_lstat64		132 /* Linux Specific			           */
 #define __NR_sendto             133 /* Common                                      */
 #define __NR_shutdown           134 /* Common                                      */
 #define __NR_socketpair         135 /* Common                                      */
 #define __NR_mkdir              136 /* Common                                      */
 #define __NR_rmdir              137 /* Common                                      */
 #define __NR_utimes             138 /* SunOS Specific                              */
-#define __NR_stat64		139 /* Linux sparc32 Specific			   */
+#define __NR_stat64		139 /* Linux Specific			           */
 #define __NR_sendfile64         140 /* adjtime under SunOS                         */
 #define __NR_getpeername        141 /* Common                                      */
 #define __NR_futex              142 /* gethostid under SunOS                       */
@@ -167,12 +167,12 @@
 #define __NR_pciconfig_read	148 /* ENOSYS under SunOS                          */
 #define __NR_pciconfig_write	149 /* ENOSYS under SunOS                          */
 #define __NR_getsockname        150 /* Common                                      */
-/* #define __NR_getmsg          151    SunOS Specific                              */
-/* #define __NR_putmsg          152    SunOS Specific                              */
+#define __NR_inotify_init       151 /* Linux specific                              */
+#define __NR_inotify_add_watch  152 /* Linux specific                              */
 #define __NR_poll               153 /* Common                                      */
 #define __NR_getdents64		154 /* Linux specific				   */
 #define __NR_fcntl64		155 /* Linux sparc32 Specific                      */
-/* #define __NR_getdirentires 	156    SunOS Specific                              */
+#define __NR_inotify_rm_watch   156 /* Linux specific				   */
 #define __NR_statfs             157 /* Common                                      */
 #define __NR_fstatfs            158 /* Common                                      */
 #define __NR_umount             159 /* Common                                      */
@@ -212,7 +212,7 @@
 #define __NR_epoll_create       193 /* Linux Specific                              */
 #define __NR_epoll_ctl          194 /* Linux Specific                              */
 #define __NR_epoll_wait         195 /* Linux Specific                              */
-/* #define __NR_ulimit          196    Linux Specific                              */
+#define __NR_ioprio_set         196 /* Linux Specific                              */
 #define __NR_getppid            197 /* Linux Specific                              */
 #define __NR_sigaction          198 /* Linux Specific                              */
 #define __NR_sgetmask           199 /* Linux Specific                              */
@@ -234,7 +234,7 @@
 #define __NR_ipc                215 /* Linux Specific                              */
 #define __NR_sigreturn          216 /* Linux Specific                              */
 #define __NR_clone              217 /* Linux Specific                              */
-/* #define __NR_modify_ldt      218    Linux Specific - i386 specific, unused      */
+#define __NR_ioprio_get         218 /* Linux Specific                              */
 #define __NR_adjtimex           219 /* Linux Specific                              */
 #define __NR_sigprocmask        220 /* Linux Specific                              */
 #define __NR_create_module      221 /* Linux Specific                              */
@@ -513,6 +513,6 @@ asmlinkage long sys_rt_sigaction(int sig,
  * What we want is __attribute__((weak,alias("sys_ni_syscall"))),
  * but it doesn't work on all toolchains, so we just do it by hand
  */
-#define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall");
+#define cond_syscall(x) asm(".weak\t" #x "\n\t.set\t" #x ",sys_ni_syscall")
 
 #endif /* _SPARC_UNISTD_H */

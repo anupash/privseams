@@ -7,7 +7,7 @@
  *
  * Version:	$Id: tcp_timer.c,v 1.88 2002/02/01 22:01:04 davem Exp $
  *
- * Authors:	Ross Biro, <bir7@leland.Stanford.Edu>
+ * Authors:	Ross Biro
  *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
  *		Mark Evans, <evansmp@uhura.aston.ac.uk>
  *		Corey Minyard <wf-rch!minyard@relay.EU.net>
@@ -38,6 +38,7 @@ static void tcp_keepalive_timer (unsigned long data);
 
 #ifdef TCP_DEBUG
 const char tcp_timer_bug_msg[] = KERN_DEBUG "tcpbug: unknown timer value\n";
+EXPORT_SYMBOL(tcp_timer_bug_msg);
 #endif
 
 /*
@@ -230,11 +231,10 @@ static void tcp_delack_timer(unsigned long data)
 	}
 	tp->ack.pending &= ~TCP_ACK_TIMER;
 
-	if (skb_queue_len(&tp->ucopy.prequeue)) {
+	if (!skb_queue_empty(&tp->ucopy.prequeue)) {
 		struct sk_buff *skb;
 
-		NET_ADD_STATS_BH(LINUX_MIB_TCPSCHEDULERFAILED, 
-				 skb_queue_len(&tp->ucopy.prequeue));
+		NET_INC_STATS_BH(LINUX_MIB_TCPSCHEDULERFAILED);
 
 		while ((skb = __skb_dequeue(&tp->ucopy.prequeue)) != NULL)
 			sk->sk_backlog_rcv(sk, skb);
@@ -463,11 +463,11 @@ out_unlock:
 static void tcp_synack_timer(struct sock *sk)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
-	struct tcp_listen_opt *lopt = tp->listen_opt;
+	struct listen_sock *lopt = tp->accept_queue.listen_opt;
 	int max_retries = tp->syn_retries ? : sysctl_tcp_synack_retries;
 	int thresh = max_retries;
 	unsigned long now = jiffies;
-	struct open_request **reqp, *req;
+	struct request_sock **reqp, *req;
 	int i, budget;
 
 	if (lopt == NULL || lopt->qlen == 0)
@@ -512,8 +512,8 @@ static void tcp_synack_timer(struct sock *sk)
 		while ((req = *reqp) != NULL) {
 			if (time_after_eq(now, req->expires)) {
 				if ((req->retrans < thresh ||
-				     (req->acked && req->retrans < max_retries))
-				    && !req->class->rtx_syn_ack(sk, req, NULL)) {
+				     (inet_rsk(req)->acked && req->retrans < max_retries))
+				    && !req->rsk_ops->rtx_syn_ack(sk, req, NULL)) {
 					unsigned long timeo;
 
 					if (req->retrans++ == 0)
@@ -526,13 +526,9 @@ static void tcp_synack_timer(struct sock *sk)
 				}
 
 				/* Drop this request */
-				write_lock(&tp->syn_wait_lock);
-				*reqp = req->dl_next;
-				write_unlock(&tp->syn_wait_lock);
-				lopt->qlen--;
-				if (req->retrans == 0)
-					lopt->qlen_young--;
-				tcp_openreq_free(req);
+				tcp_synq_unlink(tp, req, reqp);
+				reqsk_queue_removed(&tp->accept_queue, req);
+				reqsk_free(req);
 				continue;
 			}
 			reqp = &req->dl_next;

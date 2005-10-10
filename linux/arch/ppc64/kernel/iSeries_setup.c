@@ -15,7 +15,7 @@
  *      as published by the Free Software Foundation; either version
  *      2 of the License, or (at your option) any later version.
  */
- 
+
 #undef DEBUG
 
 #include <linux/config.h>
@@ -24,7 +24,6 @@
 #include <linux/smp.h>
 #include <linux/param.h>
 #include <linux/string.h>
-#include <linux/bootmem.h>
 #include <linux/initrd.h>
 #include <linux/seq_file.h>
 #include <linux/kdev_t.h>
@@ -39,6 +38,7 @@
 #include <asm/mmu_context.h>
 #include <asm/cputable.h>
 #include <asm/sections.h>
+#include <asm/iommu.h>
 
 #include <asm/time.h>
 #include "iSeries_setup.h"
@@ -46,7 +46,7 @@
 #include <asm/paca.h>
 #include <asm/cache.h>
 #include <asm/sections.h>
-#include <asm/iSeries/LparData.h>
+#include <asm/abs_addr.h>
 #include <asm/iSeries/HvCallHpt.h>
 #include <asm/iSeries/HvLpConfig.h>
 #include <asm/iSeries/HvCallEvent.h>
@@ -54,9 +54,12 @@
 #include <asm/iSeries/HvCallXm.h>
 #include <asm/iSeries/ItLpQueue.h>
 #include <asm/iSeries/IoHriMainStore.h>
-#include <asm/iSeries/iSeries_proc.h>
 #include <asm/iSeries/mf.h>
 #include <asm/iSeries/HvLpEvent.h>
+#include <asm/iSeries/iSeries_irq.h>
+#include <asm/iSeries/IoHriProcessorVpd.h>
+#include <asm/iSeries/ItVpdAreas.h>
+#include <asm/iSeries/LparMap.h>
 
 extern void hvlog(char *fmt, ...);
 
@@ -72,8 +75,11 @@ extern void ppcdbg_initialize(void);
 static void build_iSeries_Memory_Map(void);
 static void setup_iSeries_cache_sizes(void);
 static void iSeries_bolt_kernel(unsigned long saddr, unsigned long eaddr);
-extern void iSeries_setup_arch(void);
+#ifdef CONFIG_PCI
 extern void iSeries_pci_final_fixup(void);
+#else
+static void iSeries_pci_final_fixup(void) { }
+#endif
 
 /* Global Variables */
 static unsigned long procFreqHz;
@@ -108,8 +114,8 @@ struct MemoryBlock {
  * and return the number of physical blocks and fill in the array of
  * block data.
  */
-unsigned long iSeries_process_Condor_mainstore_vpd(struct MemoryBlock *mb_array,
-		unsigned long max_entries)
+static unsigned long iSeries_process_Condor_mainstore_vpd(
+		struct MemoryBlock *mb_array, unsigned long max_entries)
 {
 	unsigned long holeFirstChunk, holeSizeChunks;
 	unsigned long numMemoryBlocks = 1;
@@ -154,7 +160,7 @@ unsigned long iSeries_process_Condor_mainstore_vpd(struct MemoryBlock *mb_array,
 #define MaxSegmentAdrRangeBlocks	128
 #define MaxAreaRangeBlocks		4
 
-unsigned long iSeries_process_Regatta_mainstore_vpd(
+static unsigned long iSeries_process_Regatta_mainstore_vpd(
 		struct MemoryBlock *mb_array, unsigned long max_entries)
 {
 	struct IoHriMainStoreSegment5 *msVpdP =
@@ -246,7 +252,7 @@ unsigned long iSeries_process_Regatta_mainstore_vpd(
 		printk("          Bitmap range: %016lx - %016lx\n"
 				"        Absolute range: %016lx - %016lx\n",
 				mb_array[i].logicalStart,
-				mb_array[i].logicalEnd, 
+				mb_array[i].logicalEnd,
 				mb_array[i].absStart, mb_array[i].absEnd);
 		mb_array[i].absStart = addr_to_chunk(mb_array[i].absStart &
 				0x000fffffffffffff);
@@ -261,13 +267,13 @@ unsigned long iSeries_process_Regatta_mainstore_vpd(
 	return numSegmentBlocks;
 }
 
-unsigned long iSeries_process_mainstore_vpd(struct MemoryBlock *mb_array,
+static unsigned long iSeries_process_mainstore_vpd(struct MemoryBlock *mb_array,
 		unsigned long max_entries)
 {
 	unsigned long i;
 	unsigned long mem_blocks = 0;
 
-	if (cur_cpu_spec->cpu_features & CPU_FTR_SLB)
+	if (cpu_has_feature(CPU_FTR_SLB))
 		mem_blocks = iSeries_process_Regatta_mainstore_vpd(mb_array,
 				max_entries);
 	else
@@ -284,7 +290,7 @@ unsigned long iSeries_process_mainstore_vpd(struct MemoryBlock *mb_array,
 	return mem_blocks;
 }
 
-static void __init iSeries_parse_cmdline(void)
+static void __init iSeries_get_cmdline(void)
 {
 	char *p, *q;
 
@@ -302,8 +308,10 @@ static void __init iSeries_parse_cmdline(void)
 	*p = 0;
 }
 
-/*static*/ void __init iSeries_init_early(void)
+static void __init iSeries_init_early(void)
 {
+	extern unsigned long memory_limit;
+
 	DBG(" -> iSeries_init_early()\n");
 
 	ppcdbg_initialize();
@@ -351,11 +359,36 @@ static void __init iSeries_parse_cmdline(void)
 	 */
 	build_iSeries_Memory_Map();
 
+	iSeries_get_cmdline();
+
+	/* Save unparsed command line copy for /proc/cmdline */
+	strlcpy(saved_command_line, cmd_line, COMMAND_LINE_SIZE);
+
+	/* Parse early parameters, in particular mem=x */
+	parse_early_param();
+
+	if (memory_limit) {
+		if (memory_limit < systemcfg->physicalMemorySize)
+			systemcfg->physicalMemorySize = memory_limit;
+		else {
+			printk("Ignoring mem=%lu >= ram_top.\n", memory_limit);
+			memory_limit = 0;
+		}
+	}
+
+	/* Bolt kernel mappings for all of memory (or just a bit if we've got a limit) */
+	iSeries_bolt_kernel(0, systemcfg->physicalMemorySize);
+
+	lmb_init();
+	lmb_add(0, systemcfg->physicalMemorySize);
+	lmb_analyze();
+	lmb_reserve(0, __pa(klimit));
+
 	/* Initialize machine-dependency vectors */
 #ifdef CONFIG_SMP
 	smp_init_iSeries();
 #endif
-	if (itLpNaca.xPirEnvironMode == 0) 
+	if (itLpNaca.xPirEnvironMode == 0)
 		piranha_simulator = 1;
 
 	/* Associate Lp Event Queue 0 with processor 0 */
@@ -376,30 +409,27 @@ static void __init iSeries_parse_cmdline(void)
 		initrd_start = initrd_end = 0;
 #endif /* CONFIG_BLK_DEV_INITRD */
 
-
-	iSeries_parse_cmdline();
-
 	DBG(" <- iSeries_init_early()\n");
 }
 
 /*
  * The iSeries may have very large memories ( > 128 GB ) and a partition
  * may get memory in "chunks" that may be anywhere in the 2**52 real
- * address space.  The chunks are 256K in size.  To map this to the 
- * memory model Linux expects, the AS/400 specific code builds a 
+ * address space.  The chunks are 256K in size.  To map this to the
+ * memory model Linux expects, the AS/400 specific code builds a
  * translation table to translate what Linux thinks are "physical"
- * addresses to the actual real addresses.  This allows us to make 
+ * addresses to the actual real addresses.  This allows us to make
  * it appear to Linux that we have contiguous memory starting at
  * physical address zero while in fact this could be far from the truth.
- * To avoid confusion, I'll let the words physical and/or real address 
- * apply to the Linux addresses while I'll use "absolute address" to 
+ * To avoid confusion, I'll let the words physical and/or real address
+ * apply to the Linux addresses while I'll use "absolute address" to
  * refer to the actual hardware real address.
  *
- * build_iSeries_Memory_Map gets information from the Hypervisor and 
+ * build_iSeries_Memory_Map gets information from the Hypervisor and
  * looks at the Main Store VPD to determine the absolute addresses
  * of the memory that has been assigned to our partition and builds
  * a table used to translate Linux's physical addresses to these
- * absolute addresses.  Absolute addresses are needed when 
+ * absolute addresses.  Absolute addresses are needed when
  * communicating with the hypervisor (e.g. to build HPT entries)
  */
 
@@ -428,13 +458,13 @@ static void __init build_iSeries_Memory_Map(void)
 	 * otherwise, it might not be returned by PLIC as the first
 	 * chunks
 	 */
-	
+
 	loadAreaFirstChunk = (u32)addr_to_chunk(itLpNaca.xLoadAreaAddr);
 	loadAreaSize =  itLpNaca.xLoadAreaChunks;
 
 	/*
-	 * Only add the pages already mapped here.  
-	 * Otherwise we might add the hpt pages 
+	 * Only add the pages already mapped here.
+	 * Otherwise we might add the hpt pages
 	 * The rest of the pages of the load area
 	 * aren't in the HPT yet and can still
 	 * be assigned an arbitrary physical address
@@ -446,7 +476,7 @@ static void __init build_iSeries_Memory_Map(void)
 
 	/*
 	 * TODO Do we need to do something if the HPT is in the 64MB load area?
-	 * This would be required if the itLpNaca.xLoadAreaChunks includes 
+	 * This would be required if the itLpNaca.xLoadAreaChunks includes
 	 * the HPT size
 	 */
 
@@ -454,11 +484,11 @@ static void __init build_iSeries_Memory_Map(void)
 		"                    absolute addr = %016lx\n",
 		chunk_to_addr(loadAreaFirstChunk));
 	printk("Load area size %dK\n", loadAreaSize * 256);
-	
+
 	for (nextPhysChunk = 0; nextPhysChunk < loadAreaSize; ++nextPhysChunk)
 		msChunks.abs[nextPhysChunk] =
 			loadAreaFirstChunk + nextPhysChunk;
-	
+
 	/*
 	 * Get absolute address of our HPT and remember it so
 	 * we won't map it to any physical address
@@ -473,9 +503,9 @@ static void __init build_iSeries_Memory_Map(void)
 
 	/* Fill in the hashed page table hash mask */
 	num_ptegs = hptSizePages *
-		(PAGE_SIZE / (sizeof(HPTE) * HPTES_PER_GROUP));
+		(PAGE_SIZE / (sizeof(hpte_t) * HPTES_PER_GROUP));
 	htab_hash_mask = num_ptegs - 1;
-	
+
 	/*
 	 * The actual hashed page table is in the hypervisor,
 	 * we have no direct access
@@ -533,20 +563,12 @@ static void __init build_iSeries_Memory_Map(void)
 	}
 
 	/*
-	 * main store size (in chunks) is 
+	 * main store size (in chunks) is
 	 *   totalChunks - hptSizeChunks
-	 * which should be equal to 
+	 * which should be equal to
 	 *   nextPhysChunk
 	 */
 	systemcfg->physicalMemorySize = chunk_to_addr(nextPhysChunk);
-
-	/* Bolt kernel mappings for all of memory */
-	iSeries_bolt_kernel(0, systemcfg->physicalMemorySize);
-
-	lmb_init();
-	lmb_add(0, systemcfg->physicalMemorySize);
-	lmb_analyze();	/* ?? */
-	lmb_reserve(0, __pa(klimit));
 }
 
 /*
@@ -596,25 +618,23 @@ static void __init setup_iSeries_cache_sizes(void)
 static void iSeries_make_pte(unsigned long va, unsigned long pa,
 			     int mode)
 {
-	HPTE local_hpte, rhpte;
+	hpte_t local_hpte, rhpte;
 	unsigned long hash, vpn;
 	long slot;
 
 	vpn = va >> PAGE_SHIFT;
 	hash = hpt_hash(vpn, 0);
 
-	local_hpte.dw1.dword1 = pa | mode;
-	local_hpte.dw0.dword0 = 0;
-	local_hpte.dw0.dw0.avpn = va >> 23;
-	local_hpte.dw0.dw0.bolted = 1;		/* bolted */
-	local_hpte.dw0.dw0.v = 1;
+	local_hpte.r = pa | mode;
+	local_hpte.v = ((va >> 23) << HPTE_V_AVPN_SHIFT)
+		| HPTE_V_BOLTED | HPTE_V_VALID;
 
 	slot = HvCallHpt_findValid(&rhpte, vpn);
 	if (slot < 0) {
 		/* Must find space in primary group */
 		panic("hash_page: hpte already exists\n");
 	}
-	HvCallHpt_addValidate(slot, 0, (HPTE *)&local_hpte );
+	HvCallHpt_addValidate(slot, 0, &local_hpte);
 }
 
 /*
@@ -624,7 +644,7 @@ static void __init iSeries_bolt_kernel(unsigned long saddr, unsigned long eaddr)
 {
 	unsigned long pa;
 	unsigned long mode_rw = _PAGE_ACCESSED | _PAGE_COHERENT | PP_RWXX;
-	HPTE hpte;
+	hpte_t hpte;
 
 	for (pa = saddr; pa < eaddr ;pa += PAGE_SIZE) {
 		unsigned long ea = (unsigned long)__va(pa);
@@ -633,7 +653,11 @@ static void __init iSeries_bolt_kernel(unsigned long saddr, unsigned long eaddr)
 		unsigned long vpn = va >> PAGE_SHIFT;
 		unsigned long slot = HvCallHpt_findValid(&hpte, vpn);
 
-		if (hpte.dw0.dw0.v) {
+		/* Make non-kernel text non-executable */
+		if (!in_kernel_text(ea))
+			mode_rw |= HW_NO_EXEC;
+
+		if (hpte.v & HPTE_V_VALID) {
 			/* HPTE exists, so just bolt it */
 			HvCallHpt_setSwBits(slot, 0x10, 0);
 			/* And make sure the pp bits are correct */
@@ -644,15 +668,11 @@ static void __init iSeries_bolt_kernel(unsigned long saddr, unsigned long eaddr)
 	}
 }
 
-extern unsigned long ppc_proc_freq;
-extern unsigned long ppc_tb_freq;
-
 /*
  * Document me.
  */
-void __init iSeries_setup_arch(void)
+static void __init iSeries_setup_arch(void)
 {
-	void *eventStack;
 	unsigned procIx = get_paca()->lppaca.dyn_hv_phys_proc_index;
 
 	/* Add an eye catcher and the systemcfg layout version number */
@@ -661,24 +681,7 @@ void __init iSeries_setup_arch(void)
 	systemcfg->version.minor = SYSTEMCFG_MINOR;
 
 	/* Setup the Lp Event Queue */
-
-	/* Allocate a page for the Event Stack
-	 * The hypervisor wants the absolute real address, so
-	 * we subtract out the KERNELBASE and add in the
-	 * absolute real address of the kernel load area
-	 */
-	eventStack = alloc_bootmem_pages(LpEventStackSize);
-	memset(eventStack, 0, LpEventStackSize);
-	
-	/* Invoke the hypervisor to initialize the event stack */
-	HvCallEvent_setLpEventStack(0, eventStack, LpEventStackSize);
-
-	/* Initialize fields in our Lp Event Queue */
-	xItLpQueue.xSlicEventStackPtr = (char *)eventStack;
-	xItLpQueue.xSlicCurEventPtr = (char *)eventStack;
-	xItLpQueue.xSlicLastValidEventPtr = (char *)eventStack + 
-					(LpEventStackSize - LpEventMaxSize);
-	xItLpQueue.xIndex = 0;
+	setup_hvlpevent_queue();
 
 	/* Compute processor frequency */
 	procFreqHz = ((1UL << 34) * 1000000) /
@@ -694,7 +697,7 @@ void __init iSeries_setup_arch(void)
 	tbFreqMhzHundreths = (tbFreqHz / 10000) - (tbFreqMhz * 100);
 	ppc_tb_freq = tbFreqHz;
 
-	printk("Max  logical processors = %d\n", 
+	printk("Max  logical processors = %d\n",
 			itVpdAreas.xSlicMaxLogicalProcs);
 	printk("Max physical processors = %d\n",
 			itVpdAreas.xSlicMaxPhysicalProcs);
@@ -706,7 +709,7 @@ void __init iSeries_setup_arch(void)
 	printk("Processor version = %x\n", systemcfg->processor);
 }
 
-void iSeries_get_cpuinfo(struct seq_file *m)
+static void iSeries_get_cpuinfo(struct seq_file *m)
 {
 	seq_printf(m, "machine\t\t: 64-bit iSeries Logical Partition\n");
 }
@@ -715,7 +718,7 @@ void iSeries_get_cpuinfo(struct seq_file *m)
  * Document me.
  * and Implement me.
  */
-int iSeries_get_irq(struct pt_regs *regs)
+static int iSeries_get_irq(struct pt_regs *regs)
 {
 	/* -2 means ignore this interrupt */
 	return -2;
@@ -724,7 +727,7 @@ int iSeries_get_irq(struct pt_regs *regs)
 /*
  * Document me.
  */
-void iSeries_restart(char *cmd)
+static void iSeries_restart(char *cmd)
 {
 	mf_reboot();
 }
@@ -732,7 +735,7 @@ void iSeries_restart(char *cmd)
 /*
  * Document me.
  */
-void iSeries_power_off(void)
+static void iSeries_power_off(void)
 {
 	mf_power_off();
 }
@@ -740,15 +743,10 @@ void iSeries_power_off(void)
 /*
  * Document me.
  */
-void iSeries_halt(void)
+static void iSeries_halt(void)
 {
 	mf_power_off();
 }
-
-/* JDH Hack */
-unsigned long jdh_time = 0;
-
-extern void setup_default_decr(void);
 
 /*
  * void __init iSeries_calibrate_decr()
@@ -758,17 +756,17 @@ extern void setup_default_decr(void);
  *   and sets up the kernel timer decrementer based on that value.
  *
  */
-void __init iSeries_calibrate_decr(void)
+static void __init iSeries_calibrate_decr(void)
 {
 	unsigned long	cyclesPerUsec;
 	struct div_result divres;
-	
+
 	/* Compute decrementer (and TB) frequency in cycles/sec */
 	cyclesPerUsec = ppc_tb_freq / 1000000;
 
 	/*
 	 * Set the amount to refresh the decrementer by.  This
-	 * is the number of decrementer ticks it takes for 
+	 * is the number of decrementer ticks it takes for
 	 * 1/HZ seconds.
 	 */
 	tb_ticks_per_jiffy = ppc_tb_freq / HZ;
@@ -793,7 +791,7 @@ void __init iSeries_calibrate_decr(void)
 	setup_default_decr();
 }
 
-void __init iSeries_progress(char * st, unsigned short code)
+static void __init iSeries_progress(char * st, unsigned short code)
 {
 	printk("Progress: [%04x] - %s\n", (unsigned)code, st);
 	if (!piranha_simulator && mf_initialized) {
@@ -825,7 +823,7 @@ static void __init iSeries_fixup_klimit(void)
 	}
 }
 
-int __init iSeries_src_init(void)
+static int __init iSeries_src_init(void)
 {
         /* clear the progress line */
         ppc_md.progress(" ", 0xffff);
@@ -833,6 +831,96 @@ int __init iSeries_src_init(void)
 }
 
 late_initcall(iSeries_src_init);
+
+static inline void process_iSeries_events(void)
+{
+	asm volatile ("li 0,0x5555; sc" : : : "r0", "r3");
+}
+
+static void yield_shared_processor(void)
+{
+	unsigned long tb;
+
+	HvCall_setEnabledInterrupts(HvCall_MaskIPI |
+				    HvCall_MaskLpEvent |
+				    HvCall_MaskLpProd |
+				    HvCall_MaskTimeout);
+
+	tb = get_tb();
+	/* Compute future tb value when yield should expire */
+	HvCall_yieldProcessor(HvCall_YieldTimed, tb+tb_ticks_per_jiffy);
+
+	/*
+	 * The decrementer stops during the yield.  Force a fake decrementer
+	 * here and let the timer_interrupt code sort out the actual time.
+	 */
+	get_paca()->lppaca.int_dword.fields.decr_int = 1;
+	process_iSeries_events();
+}
+
+static int iseries_shared_idle(void)
+{
+	while (1) {
+		while (!need_resched() && !hvlpevent_is_pending()) {
+			local_irq_disable();
+			ppc64_runlatch_off();
+
+			/* Recheck with irqs off */
+			if (!need_resched() && !hvlpevent_is_pending())
+				yield_shared_processor();
+
+			HMT_medium();
+			local_irq_enable();
+		}
+
+		ppc64_runlatch_on();
+
+		if (hvlpevent_is_pending())
+			process_iSeries_events();
+
+		schedule();
+	}
+
+	return 0;
+}
+
+static int iseries_dedicated_idle(void)
+{
+	long oldval;
+
+	while (1) {
+		oldval = test_and_clear_thread_flag(TIF_NEED_RESCHED);
+
+		if (!oldval) {
+			set_thread_flag(TIF_POLLING_NRFLAG);
+
+			while (!need_resched()) {
+				ppc64_runlatch_off();
+				HMT_low();
+
+				if (hvlpevent_is_pending()) {
+					HMT_medium();
+					ppc64_runlatch_on();
+					process_iSeries_events();
+				}
+			}
+
+			HMT_medium();
+			clear_thread_flag(TIF_POLLING_NRFLAG);
+		} else {
+			set_need_resched();
+		}
+
+		ppc64_runlatch_on();
+		schedule();
+	}
+
+	return 0;
+}
+
+#ifndef CONFIG_PCI
+void __init iSeries_init_IRQ(void) { }
+#endif
 
 void __init iSeries_early_setup(void)
 {
@@ -855,5 +943,13 @@ void __init iSeries_early_setup(void)
 	ppc_md.get_rtc_time = iSeries_get_rtc_time;
 	ppc_md.calibrate_decr = iSeries_calibrate_decr;
 	ppc_md.progress = iSeries_progress;
+
+	if (get_paca()->lppaca.shared_proc) {
+		ppc_md.idle_loop = iseries_shared_idle;
+		printk(KERN_INFO "Using shared processor idle loop\n");
+	} else {
+		ppc_md.idle_loop = iseries_dedicated_idle;
+		printk(KERN_INFO "Using dedicated idle loop\n");
+	}
 }
 

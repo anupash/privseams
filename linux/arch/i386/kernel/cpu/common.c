@@ -21,9 +21,12 @@
 DEFINE_PER_CPU(struct desc_struct, cpu_gdt_table[GDT_ENTRIES]);
 EXPORT_PER_CPU_SYMBOL(cpu_gdt_table);
 
-static int cachesize_override __initdata = -1;
-static int disable_x86_fxsr __initdata = 0;
-static int disable_x86_serial_nr __initdata = 1;
+DEFINE_PER_CPU(unsigned char, cpu_16bit_stack[CPU_16BIT_STACK_SIZE]);
+EXPORT_PER_CPU_SYMBOL(cpu_16bit_stack);
+
+static int cachesize_override __devinitdata = -1;
+static int disable_x86_fxsr __devinitdata = 0;
+static int disable_x86_serial_nr __devinitdata = 1;
 
 struct cpu_dev * cpu_devs[X86_VENDOR_NUM] = {};
 
@@ -56,7 +59,7 @@ static int __init cachesize_setup(char *str)
 }
 __setup("cachesize=", cachesize_setup);
 
-int __init get_model_name(struct cpuinfo_x86 *c)
+int __devinit get_model_name(struct cpuinfo_x86 *c)
 {
 	unsigned int *v;
 	char *p, *q;
@@ -86,7 +89,7 @@ int __init get_model_name(struct cpuinfo_x86 *c)
 }
 
 
-void __init display_cacheinfo(struct cpuinfo_x86 *c)
+void __devinit display_cacheinfo(struct cpuinfo_x86 *c)
 {
 	unsigned int n, dummy, ecx, edx, l2size;
 
@@ -127,7 +130,7 @@ void __init display_cacheinfo(struct cpuinfo_x86 *c)
 /* in particular, if CPUID levels 0x80000002..4 are supported, this isn't used */
 
 /* Look up CPU names by table lookup. */
-static char __init *table_lookup_model(struct cpuinfo_x86 *c)
+static char __devinit *table_lookup_model(struct cpuinfo_x86 *c)
 {
 	struct cpu_model_info *info;
 
@@ -148,7 +151,7 @@ static char __init *table_lookup_model(struct cpuinfo_x86 *c)
 }
 
 
-void __init get_cpu_vendor(struct cpuinfo_x86 *c, int early)
+void __devinit get_cpu_vendor(struct cpuinfo_x86 *c, int early)
 {
 	char *v = c->x86_vendor_id;
 	int i;
@@ -199,7 +202,7 @@ static inline int flag_is_changeable_p(u32 flag)
 
 
 /* Probe for the CPUID instruction */
-int __init have_cpuid_p(void)
+static int __devinit have_cpuid_p(void)
 {
 	return flag_is_changeable_p(X86_EFLAGS_ID);
 }
@@ -207,7 +210,7 @@ int __init have_cpuid_p(void)
 /* Do minimum CPU detection early.
    Fields really needed: vendor, cpuid_level, family, model, mask, cache alignment.
    The others are not touched to avoid unwanted side effects. */
-void __init early_cpu_detect(void)
+static void __init early_cpu_detect(void)
 {
 	struct cpuinfo_x86 *c = &boot_cpu_data;
 
@@ -240,9 +243,13 @@ void __init early_cpu_detect(void)
 	}
 
 	early_intel_workaround(c);
+
+#ifdef CONFIG_X86_HT
+	phys_proc_id[smp_processor_id()] = (cpuid_ebx(1) >> 24) & 0xff;
+#endif
 }
 
-void __init generic_identify(struct cpuinfo_x86 * c)
+void __devinit generic_identify(struct cpuinfo_x86 * c)
 {
 	u32 tfms, xlvl;
 	int junk;
@@ -289,7 +296,7 @@ void __init generic_identify(struct cpuinfo_x86 * c)
 	}
 }
 
-static void __init squash_the_stupid_serial_number(struct cpuinfo_x86 *c)
+static void __devinit squash_the_stupid_serial_number(struct cpuinfo_x86 *c)
 {
 	if (cpu_has(c, X86_FEATURE_PN) && disable_x86_serial_nr ) {
 		/* Disable processor serial number */
@@ -317,7 +324,7 @@ __setup("serialnumber", x86_serial_nr_setup);
 /*
  * This does the hard work of actually picking apart the CPU stuff...
  */
-void __init identify_cpu(struct cpuinfo_x86 *c)
+void __devinit identify_cpu(struct cpuinfo_x86 *c)
 {
 	int i;
 
@@ -425,26 +432,24 @@ void __init identify_cpu(struct cpuinfo_x86 *c)
 #ifdef CONFIG_X86_MCE
 	mcheck_init(c);
 #endif
-}
-/*
- *	Perform early boot up checks for a valid TSC. See arch/i386/kernel/time.c
- */
- 
-void __init dodgy_tsc(void)
-{
-	if (( boot_cpu_data.x86_vendor == X86_VENDOR_CYRIX ) ||
-	    ( boot_cpu_data.x86_vendor == X86_VENDOR_NSC   ))
-		cpu_devs[X86_VENDOR_CYRIX]->c_init(&boot_cpu_data);
+	if (c == &boot_cpu_data)
+		sysenter_setup();
+	enable_sep_cpu();
+
+	if (c == &boot_cpu_data)
+		mtrr_bp_init();
+	else
+		mtrr_ap_init();
 }
 
 #ifdef CONFIG_X86_HT
-void __init detect_ht(struct cpuinfo_x86 *c)
+void __devinit detect_ht(struct cpuinfo_x86 *c)
 {
 	u32 	eax, ebx, ecx, edx;
-	int 	index_lsb, index_msb, tmp;
+	int 	index_msb, tmp;
 	int 	cpu = smp_processor_id();
 
-	if (!cpu_has(c, X86_FEATURE_HT))
+	if (!cpu_has(c, X86_FEATURE_HT) || cpu_has(c, X86_FEATURE_CMP_LEGACY))
 		return;
 
 	cpuid(1, &eax, &ebx, &ecx, &edx);
@@ -453,7 +458,6 @@ void __init detect_ht(struct cpuinfo_x86 *c)
 	if (smp_num_siblings == 1) {
 		printk(KERN_INFO  "CPU: Hyper-Threading is disabled\n");
 	} else if (smp_num_siblings > 1 ) {
-		index_lsb = 0;
 		index_msb = 31;
 
 		if (smp_num_siblings > NR_CPUS) {
@@ -462,26 +466,39 @@ void __init detect_ht(struct cpuinfo_x86 *c)
 			return;
 		}
 		tmp = smp_num_siblings;
-		while ((tmp & 1) == 0) {
-			tmp >>=1 ;
-			index_lsb++;
-		}
-		tmp = smp_num_siblings;
 		while ((tmp & 0x80000000 ) == 0) {
 			tmp <<=1 ;
 			index_msb--;
 		}
-		if (index_lsb != index_msb )
+		if (smp_num_siblings & (smp_num_siblings - 1))
 			index_msb++;
 		phys_proc_id[cpu] = phys_pkg_id((ebx >> 24) & 0xFF, index_msb);
 
 		printk(KERN_INFO  "CPU: Physical Processor ID: %d\n",
 		       phys_proc_id[cpu]);
+
+		smp_num_siblings = smp_num_siblings / c->x86_num_cores;
+
+		tmp = smp_num_siblings;
+		index_msb = 31;
+		while ((tmp & 0x80000000) == 0) {
+			tmp <<=1 ;
+			index_msb--;
+		}
+
+		if (smp_num_siblings & (smp_num_siblings - 1))
+			index_msb++;
+
+		cpu_core_id[cpu] = phys_pkg_id((ebx >> 24) & 0xFF, index_msb);
+
+		if (c->x86_num_cores > 1)
+			printk(KERN_INFO  "CPU: Processor Core ID: %d\n",
+			       cpu_core_id[cpu]);
 	}
 }
 #endif
 
-void __init print_cpu_info(struct cpuinfo_x86 *c)
+void __devinit print_cpu_info(struct cpuinfo_x86 *c)
 {
 	char *vendor = NULL;
 
@@ -504,7 +521,7 @@ void __init print_cpu_info(struct cpuinfo_x86 *c)
 		printk("\n");
 }
 
-cpumask_t cpu_initialized __initdata = CPU_MASK_NONE;
+cpumask_t cpu_initialized __devinitdata = CPU_MASK_NONE;
 
 /* This is hacky. :)
  * We're emulating future behavior.
@@ -523,7 +540,6 @@ extern int transmeta_init_cpu(void);
 extern int rise_init_cpu(void);
 extern int nexgen_init_cpu(void);
 extern int umc_init_cpu(void);
-void early_cpu_detect(void);
 
 void __init early_cpu_init(void)
 {
@@ -552,11 +568,12 @@ void __init early_cpu_init(void)
  * and IDT. We reload them nevertheless, this function acts as a
  * 'CPU state barrier', nothing should get across.
  */
-void __init cpu_init (void)
+void __devinit cpu_init(void)
 {
 	int cpu = smp_processor_id();
 	struct tss_struct * t = &per_cpu(init_tss, cpu);
 	struct thread_struct *thread = &current->thread;
+	__u32 stk16_off = (__u32)&per_cpu(cpu_16bit_stack, cpu);
 
 	if (cpu_test_and_set(cpu, cpu_initialized)) {
 		printk(KERN_WARNING "CPU#%d already initialized!\n", cpu);
@@ -579,6 +596,13 @@ void __init cpu_init (void)
 	 */
 	memcpy(&per_cpu(cpu_gdt_table, cpu), cpu_gdt_table,
 	       GDT_SIZE);
+
+	/* Set up GDT entry for 16bit stack */
+	*(__u64 *)&(per_cpu(cpu_gdt_table, cpu)[GDT_ENTRY_ESPFIX_SS]) |=
+		((((__u64)stk16_off) << 16) & 0x000000ffffff0000ULL) |
+		((((__u64)stk16_off) << 32) & 0xff00000000000000ULL) |
+		(CPU_16BIT_STACK_SIZE - 1);
+
 	cpu_gdt_descr[cpu].size = GDT_SIZE - 1;
 	cpu_gdt_descr[cpu].address =
 	    (unsigned long)&per_cpu(cpu_gdt_table, cpu);
@@ -619,7 +643,7 @@ void __init cpu_init (void)
 
 	/* Clear all 6 debug registers: */
 
-#define CD(register) __asm__("movl %0,%%db" #register ::"r"(0) );
+#define CD(register) set_debugreg(0, register)
 
 	CD(0); CD(1); CD(2); CD(3); /* no db4 and db5 */; CD(6); CD(7);
 
@@ -632,3 +656,15 @@ void __init cpu_init (void)
 	clear_used_math();
 	mxcsr_feature_mask_init();
 }
+
+#ifdef CONFIG_HOTPLUG_CPU
+void __devinit cpu_uninit(void)
+{
+	int cpu = raw_smp_processor_id();
+	cpu_clear(cpu, cpu_initialized);
+
+	/* lazy TLB state */
+	per_cpu(cpu_tlbstate, cpu).state = 0;
+	per_cpu(cpu_tlbstate, cpu).active_mm = &init_mm;
+}
+#endif

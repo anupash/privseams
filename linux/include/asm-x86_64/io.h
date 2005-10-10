@@ -36,11 +36,7 @@
   *  - Arnaldo Carvalho de Melo <acme@conectiva.com.br>
   */
 
-#ifdef SLOW_IO_BY_JUMPING
-#define __SLOW_DOWN_IO "\njmp 1f\n1:\tjmp 1f\n1:"
-#else
 #define __SLOW_DOWN_IO "\noutb %%al,$0x80"
-#endif
 
 #ifdef REALLY_SLOW_IO
 #define __FULL_SLOW_DOWN_IO __SLOW_DOWN_IO __SLOW_DOWN_IO __SLOW_DOWN_IO __SLOW_DOWN_IO
@@ -128,12 +124,7 @@ extern inline void * phys_to_virt(unsigned long address)
 /*
  * Change "struct page" to physical address.
  */
-#ifdef CONFIG_DISCONTIGMEM
-#include <asm/mmzone.h>
 #define page_to_phys(page)    ((dma_addr_t)page_to_pfn(page) << PAGE_SHIFT)
-#else
-#define page_to_phys(page)	((page - mem_map) << PAGE_SHIFT)
-#endif
 
 #include <asm-generic/iomap.h>
 
@@ -328,6 +319,17 @@ out:
 
 extern int iommu_bio_merge;
 #define BIO_VMERGE_BOUNDARY iommu_bio_merge
+
+/*
+ * Convert a physical pointer to a virtual kernel pointer for /dev/mem
+ * access
+ */
+#define xlate_dev_mem_ptr(p)	__va(p)
+
+/*
+ * Convert a virtual cached pointer to an uncached pointer
+ */
+#define xlate_dev_kmem_ptr(p)	p
 
 #endif /* __KERNEL__ */
 

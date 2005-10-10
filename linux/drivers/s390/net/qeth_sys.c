@@ -1,6 +1,6 @@
 /*
  *
- * linux/drivers/s390/net/qeth_sys.c ($Revision: 1.49 $)
+ * linux/drivers/s390/net/qeth_sys.c ($Revision: 1.51 $)
  *
  * Linux on zSeries OSA Express and HiperSockets support
  * This file contains code related to sysfs.
@@ -20,7 +20,7 @@
 #include "qeth_mpc.h"
 #include "qeth_fs.h"
 
-const char *VERSION_QETH_SYS_C = "$Revision: 1.49 $";
+const char *VERSION_QETH_SYS_C = "$Revision: 1.51 $";
 
 /*****************************************************************************/
 /*                                                                           */
@@ -30,7 +30,7 @@ const char *VERSION_QETH_SYS_C = "$Revision: 1.49 $";
 //low/high watermark
 
 static ssize_t
-qeth_dev_state_show(struct device *dev, char *buf)
+qeth_dev_state_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 	if (!card)
@@ -58,7 +58,7 @@ qeth_dev_state_show(struct device *dev, char *buf)
 static DEVICE_ATTR(state, 0444, qeth_dev_state_show, NULL);
 
 static ssize_t
-qeth_dev_chpid_show(struct device *dev, char *buf)
+qeth_dev_chpid_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 	if (!card)
@@ -70,7 +70,7 @@ qeth_dev_chpid_show(struct device *dev, char *buf)
 static DEVICE_ATTR(chpid, 0444, qeth_dev_chpid_show, NULL);
 
 static ssize_t
-qeth_dev_if_name_show(struct device *dev, char *buf)
+qeth_dev_if_name_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 	if (!card)
@@ -81,7 +81,7 @@ qeth_dev_if_name_show(struct device *dev, char *buf)
 static DEVICE_ATTR(if_name, 0444, qeth_dev_if_name_show, NULL);
 
 static ssize_t
-qeth_dev_card_type_show(struct device *dev, char *buf)
+qeth_dev_card_type_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 	if (!card)
@@ -93,7 +93,7 @@ qeth_dev_card_type_show(struct device *dev, char *buf)
 static DEVICE_ATTR(card_type, 0444, qeth_dev_card_type_show, NULL);
 
 static ssize_t
-qeth_dev_portno_show(struct device *dev, char *buf)
+qeth_dev_portno_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 	if (!card)
@@ -103,7 +103,7 @@ qeth_dev_portno_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_portno_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_portno_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -129,7 +129,7 @@ qeth_dev_portno_store(struct device *dev, const char *buf, size_t count)
 static DEVICE_ATTR(portno, 0644, qeth_dev_portno_show, qeth_dev_portno_store);
 
 static ssize_t
-qeth_dev_portname_show(struct device *dev, char *buf)
+qeth_dev_portname_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 	char portname[9] = {0, };
@@ -146,7 +146,7 @@ qeth_dev_portname_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_portname_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_portname_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -177,7 +177,7 @@ static DEVICE_ATTR(portname, 0644, qeth_dev_portname_show,
 		qeth_dev_portname_store);
 
 static ssize_t
-qeth_dev_checksum_show(struct device *dev, char *buf)
+qeth_dev_checksum_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -188,7 +188,7 @@ qeth_dev_checksum_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_checksum_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_checksum_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -218,7 +218,7 @@ static DEVICE_ATTR(checksumming, 0644, qeth_dev_checksum_show,
 		qeth_dev_checksum_store);
 
 static ssize_t
-qeth_dev_prioqing_show(struct device *dev, char *buf)
+qeth_dev_prioqing_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -237,7 +237,7 @@ qeth_dev_prioqing_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_prioqing_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_prioqing_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -248,6 +248,16 @@ qeth_dev_prioqing_store(struct device *dev, const char *buf, size_t count)
 	if ((card->state != CARD_STATE_DOWN) &&
 	    (card->state != CARD_STATE_RECOVER))
 		return -EPERM;
+
+	/* check if 1920 devices are supported ,
+	 * if though we have to permit priority queueing
+	 */
+	if (card->qdio.no_out_queues == 1) {
+		PRINT_WARN("Priority queueing disabled due "
+			   "to hardware limitations!\n");
+		card->qdio.do_prio_queueing = QETH_PRIOQ_DEFAULT;
+		return -EPERM;
+	}
 
 	tmp = strsep((char **) &buf, "\n");
 	if (!strcmp(tmp, "prio_queueing_prec"))
@@ -280,7 +290,7 @@ static DEVICE_ATTR(priority_queueing, 0644, qeth_dev_prioqing_show,
 		qeth_dev_prioqing_store);
 
 static ssize_t
-qeth_dev_bufcnt_show(struct device *dev, char *buf)
+qeth_dev_bufcnt_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -291,7 +301,7 @@ qeth_dev_bufcnt_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_bufcnt_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_bufcnt_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -350,7 +360,7 @@ qeth_dev_route_show(struct qeth_card *card, struct qeth_routing_info *route,
 }
 
 static ssize_t
-qeth_dev_route4_show(struct device *dev, char *buf)
+qeth_dev_route4_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -400,7 +410,7 @@ qeth_dev_route_store(struct qeth_card *card, struct qeth_routing_info *route,
 }
 
 static ssize_t
-qeth_dev_route4_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_route4_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -415,7 +425,7 @@ static DEVICE_ATTR(route4, 0644, qeth_dev_route4_show, qeth_dev_route4_store);
 
 #ifdef CONFIG_QETH_IPV6
 static ssize_t
-qeth_dev_route6_show(struct device *dev, char *buf)
+qeth_dev_route6_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -429,7 +439,7 @@ qeth_dev_route6_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_route6_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_route6_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -451,7 +461,7 @@ static DEVICE_ATTR(route6, 0644, qeth_dev_route6_show, qeth_dev_route6_store);
 #endif
 
 static ssize_t
-qeth_dev_add_hhlen_show(struct device *dev, char *buf)
+qeth_dev_add_hhlen_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -462,7 +472,7 @@ qeth_dev_add_hhlen_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_add_hhlen_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_add_hhlen_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -489,7 +499,7 @@ static DEVICE_ATTR(add_hhlen, 0644, qeth_dev_add_hhlen_show,
 		   qeth_dev_add_hhlen_store);
 
 static ssize_t
-qeth_dev_fake_ll_show(struct device *dev, char *buf)
+qeth_dev_fake_ll_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -500,7 +510,7 @@ qeth_dev_fake_ll_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_fake_ll_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_fake_ll_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -526,7 +536,7 @@ static DEVICE_ATTR(fake_ll, 0644, qeth_dev_fake_ll_show,
 		   qeth_dev_fake_ll_store);
 
 static ssize_t
-qeth_dev_fake_broadcast_show(struct device *dev, char *buf)
+qeth_dev_fake_broadcast_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -537,7 +547,7 @@ qeth_dev_fake_broadcast_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_fake_broadcast_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_fake_broadcast_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -564,7 +574,7 @@ static DEVICE_ATTR(fake_broadcast, 0644, qeth_dev_fake_broadcast_show,
 		   qeth_dev_fake_broadcast_store);
 
 static ssize_t
-qeth_dev_recover_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_recover_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -586,7 +596,7 @@ qeth_dev_recover_store(struct device *dev, const char *buf, size_t count)
 static DEVICE_ATTR(recover, 0200, NULL, qeth_dev_recover_store);
 
 static ssize_t
-qeth_dev_broadcast_mode_show(struct device *dev, char *buf)
+qeth_dev_broadcast_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -603,7 +613,7 @@ qeth_dev_broadcast_mode_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_broadcast_mode_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_broadcast_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -641,7 +651,7 @@ static DEVICE_ATTR(broadcast_mode, 0644, qeth_dev_broadcast_mode_show,
 		   qeth_dev_broadcast_mode_store);
 
 static ssize_t
-qeth_dev_canonical_macaddr_show(struct device *dev, char *buf)
+qeth_dev_canonical_macaddr_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -657,7 +667,7 @@ qeth_dev_canonical_macaddr_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_canonical_macaddr_store(struct device *dev, const char *buf,
+qeth_dev_canonical_macaddr_store(struct device *dev, struct device_attribute *attr, const char *buf,
 				  size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
@@ -693,7 +703,7 @@ static DEVICE_ATTR(canonical_macaddr, 0644, qeth_dev_canonical_macaddr_show,
 		   qeth_dev_canonical_macaddr_store);
 
 static ssize_t
-qeth_dev_layer2_show(struct device *dev, char *buf)
+qeth_dev_layer2_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -704,7 +714,7 @@ qeth_dev_layer2_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_layer2_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_layer2_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -731,6 +741,174 @@ qeth_dev_layer2_store(struct device *dev, const char *buf, size_t count)
 static DEVICE_ATTR(layer2, 0644, qeth_dev_layer2_show,
 		   qeth_dev_layer2_store);
 
+static ssize_t
+qeth_dev_large_send_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct qeth_card *card = dev->driver_data;
+
+	if (!card)
+		return -EINVAL;
+
+	switch (card->options.large_send) {
+	case QETH_LARGE_SEND_NO:
+		return sprintf(buf, "%s\n", "no");
+	case QETH_LARGE_SEND_EDDP:
+		return sprintf(buf, "%s\n", "EDDP");
+	case QETH_LARGE_SEND_TSO:
+		return sprintf(buf, "%s\n", "TSO");
+	default:
+		return sprintf(buf, "%s\n", "N/A");
+	}
+}
+
+static ssize_t
+qeth_dev_large_send_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct qeth_card *card = dev->driver_data;
+	enum qeth_large_send_types type;
+	int rc = 0;
+	char *tmp;
+
+	if (!card)
+		return -EINVAL;
+
+	tmp = strsep((char **) &buf, "\n");
+
+	if (!strcmp(tmp, "no")){
+		type = QETH_LARGE_SEND_NO;
+	} else if (!strcmp(tmp, "EDDP")) {
+		type = QETH_LARGE_SEND_EDDP;
+	} else if (!strcmp(tmp, "TSO")) {
+		type = QETH_LARGE_SEND_TSO;
+	} else {
+		PRINT_WARN("large_send: invalid mode %s!\n", tmp);
+		return -EINVAL;
+	}
+	if (card->options.large_send == type)
+		return count;
+	card->options.large_send = type;
+	if ((rc = qeth_set_large_send(card)))
+		return rc;
+
+	return count;
+}
+
+static DEVICE_ATTR(large_send, 0644, qeth_dev_large_send_show,
+		   qeth_dev_large_send_store);
+
+static ssize_t
+qeth_dev_blkt_show(char *buf, struct qeth_card *card, int value )
+{
+
+	if (!card)
+		return -EINVAL;
+
+	return sprintf(buf, "%i\n", value);
+}
+
+static ssize_t
+qeth_dev_blkt_store(struct qeth_card *card, const char *buf, size_t count,
+			  int *value, int max_value)
+{
+	char *tmp;
+	int i;
+
+	if (!card)
+		return -EINVAL;
+
+	if ((card->state != CARD_STATE_DOWN) &&
+	    (card->state != CARD_STATE_RECOVER))
+		return -EPERM;
+
+	i = simple_strtoul(buf, &tmp, 10);
+	if (i <= max_value) {
+		*value = i;
+	} else {
+		PRINT_WARN("blkt total time: write values between"
+			   " 0 and %d to this file!\n", max_value);
+		return -EINVAL;
+	}
+	return count;
+}
+
+static ssize_t
+qeth_dev_blkt_total_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct qeth_card *card = dev->driver_data;
+
+	return qeth_dev_blkt_show(buf, card, card->info.blkt.time_total);
+}
+
+
+static ssize_t
+qeth_dev_blkt_total_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct qeth_card *card = dev->driver_data;
+
+	return qeth_dev_blkt_store(card, buf, count,
+				   &card->info.blkt.time_total,1000);
+}
+
+
+
+static DEVICE_ATTR(total, 0644, qeth_dev_blkt_total_show,
+		   qeth_dev_blkt_total_store);
+
+static ssize_t
+qeth_dev_blkt_inter_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct qeth_card *card = dev->driver_data;
+
+	return qeth_dev_blkt_show(buf, card, card->info.blkt.inter_packet);
+}
+
+
+static ssize_t
+qeth_dev_blkt_inter_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct qeth_card *card = dev->driver_data;
+
+	return qeth_dev_blkt_store(card, buf, count,
+				   &card->info.blkt.inter_packet,100);
+}
+
+static DEVICE_ATTR(inter, 0644, qeth_dev_blkt_inter_show,
+		   qeth_dev_blkt_inter_store);
+
+static ssize_t
+qeth_dev_blkt_inter_jumbo_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct qeth_card *card = dev->driver_data;
+
+	return qeth_dev_blkt_show(buf, card,
+				  card->info.blkt.inter_packet_jumbo);
+}
+
+
+static ssize_t
+qeth_dev_blkt_inter_jumbo_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct qeth_card *card = dev->driver_data;
+
+	return qeth_dev_blkt_store(card, buf, count,
+				   &card->info.blkt.inter_packet_jumbo,100);
+}
+
+static DEVICE_ATTR(inter_jumbo, 0644, qeth_dev_blkt_inter_jumbo_show,
+		   qeth_dev_blkt_inter_jumbo_store);
+
+static struct device_attribute * qeth_blkt_device_attrs[] = {
+	&dev_attr_total,
+	&dev_attr_inter,
+	&dev_attr_inter_jumbo,
+	NULL,
+};
+
+static struct attribute_group qeth_device_blkt_group = {
+	.name = "blkt",
+	.attrs = (struct attribute **)qeth_blkt_device_attrs,
+};
+
 static struct device_attribute * qeth_device_attrs[] = {
 	&dev_attr_state,
 	&dev_attr_chpid,
@@ -752,6 +930,7 @@ static struct device_attribute * qeth_device_attrs[] = {
 	&dev_attr_broadcast_mode,
 	&dev_attr_canonical_macaddr,
 	&dev_attr_layer2,
+	&dev_attr_large_send,
 	NULL,
 };
 
@@ -777,7 +956,7 @@ qeth_check_layer2(struct qeth_card *card)
 
 
 static ssize_t
-qeth_dev_ipato_enable_show(struct device *dev, char *buf)
+qeth_dev_ipato_enable_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -790,7 +969,7 @@ qeth_dev_ipato_enable_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_ipato_enable_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_ipato_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -825,7 +1004,7 @@ static QETH_DEVICE_ATTR(ipato_enable, enable, 0644,
 			qeth_dev_ipato_enable_store);
 
 static ssize_t
-qeth_dev_ipato_invert4_show(struct device *dev, char *buf)
+qeth_dev_ipato_invert4_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -839,7 +1018,7 @@ qeth_dev_ipato_invert4_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_ipato_invert4_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_ipato_invert4_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -905,7 +1084,7 @@ qeth_dev_ipato_add_show(char *buf, struct qeth_card *card,
 }
 
 static ssize_t
-qeth_dev_ipato_add4_show(struct device *dev, char *buf)
+qeth_dev_ipato_add4_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -974,7 +1153,7 @@ qeth_dev_ipato_add_store(const char *buf, size_t count,
 }
 
 static ssize_t
-qeth_dev_ipato_add4_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_ipato_add4_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1007,7 +1186,7 @@ qeth_dev_ipato_del_store(const char *buf, size_t count,
 }
 
 static ssize_t
-qeth_dev_ipato_del4_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_ipato_del4_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1022,7 +1201,7 @@ static QETH_DEVICE_ATTR(ipato_del4, del4, 0200, NULL,
 
 #ifdef CONFIG_QETH_IPV6
 static ssize_t
-qeth_dev_ipato_invert6_show(struct device *dev, char *buf)
+qeth_dev_ipato_invert6_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1036,7 +1215,7 @@ qeth_dev_ipato_invert6_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_ipato_invert6_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_ipato_invert6_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 	char *tmp;
@@ -1068,7 +1247,7 @@ static QETH_DEVICE_ATTR(ipato_invert6, invert6, 0644,
 
 
 static ssize_t
-qeth_dev_ipato_add6_show(struct device *dev, char *buf)
+qeth_dev_ipato_add6_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1079,7 +1258,7 @@ qeth_dev_ipato_add6_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_ipato_add6_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_ipato_add6_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1094,7 +1273,7 @@ static QETH_DEVICE_ATTR(ipato_add6, add6, 0644,
 			qeth_dev_ipato_add6_store);
 
 static ssize_t
-qeth_dev_ipato_del6_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_ipato_del6_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1162,7 +1341,7 @@ qeth_dev_vipa_add_show(char *buf, struct qeth_card *card,
 }
 
 static ssize_t
-qeth_dev_vipa_add4_show(struct device *dev, char *buf)
+qeth_dev_vipa_add4_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1202,7 +1381,7 @@ qeth_dev_vipa_add_store(const char *buf, size_t count,
 }
 
 static ssize_t
-qeth_dev_vipa_add4_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_vipa_add4_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1234,7 +1413,7 @@ qeth_dev_vipa_del_store(const char *buf, size_t count,
 }
 
 static ssize_t
-qeth_dev_vipa_del4_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_vipa_del4_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1249,7 +1428,7 @@ static QETH_DEVICE_ATTR(vipa_del4, del4, 0200, NULL,
 
 #ifdef CONFIG_QETH_IPV6
 static ssize_t
-qeth_dev_vipa_add6_show(struct device *dev, char *buf)
+qeth_dev_vipa_add6_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1260,7 +1439,7 @@ qeth_dev_vipa_add6_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_vipa_add6_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_vipa_add6_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1275,7 +1454,7 @@ static QETH_DEVICE_ATTR(vipa_add6, add6, 0644,
 			qeth_dev_vipa_add6_store);
 
 static ssize_t
-qeth_dev_vipa_del6_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_vipa_del6_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1343,7 +1522,7 @@ qeth_dev_rxip_add_show(char *buf, struct qeth_card *card,
 }
 
 static ssize_t
-qeth_dev_rxip_add4_show(struct device *dev, char *buf)
+qeth_dev_rxip_add4_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1383,7 +1562,7 @@ qeth_dev_rxip_add_store(const char *buf, size_t count,
 }
 
 static ssize_t
-qeth_dev_rxip_add4_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_rxip_add4_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1415,7 +1594,7 @@ qeth_dev_rxip_del_store(const char *buf, size_t count,
 }
 
 static ssize_t
-qeth_dev_rxip_del4_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_rxip_del4_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1430,7 +1609,7 @@ static QETH_DEVICE_ATTR(rxip_del4, del4, 0200, NULL,
 
 #ifdef CONFIG_QETH_IPV6
 static ssize_t
-qeth_dev_rxip_add6_show(struct device *dev, char *buf)
+qeth_dev_rxip_add6_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1441,7 +1620,7 @@ qeth_dev_rxip_add6_show(struct device *dev, char *buf)
 }
 
 static ssize_t
-qeth_dev_rxip_add6_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_rxip_add6_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1456,7 +1635,7 @@ static QETH_DEVICE_ATTR(rxip_add6, add6, 0644,
 			qeth_dev_rxip_add6_store);
 
 static ssize_t
-qeth_dev_rxip_del6_store(struct device *dev, const char *buf, size_t count)
+qeth_dev_rxip_del6_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qeth_card *card = dev->driver_data;
 
@@ -1506,6 +1685,8 @@ qeth_create_device_attributes(struct device *dev)
 		sysfs_remove_group(&dev->kobj, &qeth_device_ipato_group);
 		sysfs_remove_group(&dev->kobj, &qeth_device_vipa_group);
 	}
+	if ((ret = sysfs_create_group(&dev->kobj, &qeth_device_blkt_group)))
+		return ret;
 
 	return ret;
 }
@@ -1517,6 +1698,7 @@ qeth_remove_device_attributes(struct device *dev)
 	sysfs_remove_group(&dev->kobj, &qeth_device_ipato_group);
 	sysfs_remove_group(&dev->kobj, &qeth_device_vipa_group);
 	sysfs_remove_group(&dev->kobj, &qeth_device_rxip_group);
+	sysfs_remove_group(&dev->kobj, &qeth_device_blkt_group);
 }
 
 /**********************/

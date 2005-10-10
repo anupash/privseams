@@ -54,8 +54,7 @@ irqreturn_t i830_driver_irq_handler( DRM_IRQ_ARGS )
 	return IRQ_HANDLED;
 }
 
-
-int i830_emit_irq(drm_device_t *dev)
+static int i830_emit_irq(drm_device_t *dev)
 {
 	drm_i830_private_t *dev_priv = dev->dev_private;
 	RING_LOCALS;
@@ -73,7 +72,7 @@ int i830_emit_irq(drm_device_t *dev)
 }
 
 
-int i830_wait_irq(drm_device_t *dev, int irq_nr)
+static int i830_wait_irq(drm_device_t *dev, int irq_nr)
 {
   	drm_i830_private_t *dev_priv = 
 	   (drm_i830_private_t *)dev->dev_private;
@@ -123,7 +122,7 @@ int i830_irq_emit( struct inode *inode, struct file *filp, unsigned int cmd,
 		   unsigned long arg )
 {
 	drm_file_t	  *priv	    = filp->private_data;
-	drm_device_t	  *dev	    = priv->dev;
+	drm_device_t	  *dev	    = priv->head->dev;
 	drm_i830_private_t *dev_priv = dev->dev_private;
 	drm_i830_irq_emit_t emit;
 	int result;
@@ -155,7 +154,7 @@ int i830_irq_wait( struct inode *inode, struct file *filp, unsigned int cmd,
 		   unsigned long arg )
 {
 	drm_file_t	  *priv	    = filp->private_data;
-	drm_device_t	  *dev	    = priv->dev;
+	drm_device_t	  *dev	    = priv->head->dev;
 	drm_i830_private_t *dev_priv = dev->dev_private;
 	drm_i830_irq_wait_t irqwait;
 

@@ -6,18 +6,51 @@
  * Copyright (C) 2001-2004 Silicon Graphics, Inc. All rights reserved.
  */
 
-#include <linux/types.h>
 #include <linux/interrupt.h>
+#include <linux/types.h>
 #include <linux/pci.h>
+#include <asm/sn/addrs.h>
+#include <asm/sn/geo.h>
+#include <asm/sn/pcibr_provider.h>
+#include <asm/sn/pcibus_provider_defs.h>
+#include <asm/sn/pcidev.h>
 #include <asm/sn/sn_sal.h>
 #include "xtalk/xwidgetdev.h"
-#include <asm/sn/geo.h>
 #include "xtalk/hubdev.h"
-#include "pci/pcibus_provider_defs.h"
-#include "pci/pcidev.h"
-#include "pci/pcibr_provider.h"
-#include <asm/sn/addrs.h>
 
+int
+sal_pcibr_slot_enable(struct pcibus_info *soft, int device, void *resp)
+{
+	struct ia64_sal_retval ret_stuff;
+	uint64_t busnum;
+
+	ret_stuff.status = 0;
+	ret_stuff.v0 = 0;
+
+	busnum = soft->pbi_buscommon.bs_persist_busnum;
+	SAL_CALL_NOLOCK(ret_stuff, (u64) SN_SAL_IOIF_SLOT_ENABLE, (u64) busnum,
+			(u64) device, (u64) resp, 0, 0, 0, 0);
+
+	return (int)ret_stuff.v0;
+}
+
+int
+sal_pcibr_slot_disable(struct pcibus_info *soft, int device, int action,
+		       void *resp)
+{
+	struct ia64_sal_retval ret_stuff;
+	uint64_t busnum;
+
+	ret_stuff.status = 0;
+	ret_stuff.v0 = 0;
+
+	busnum = soft->pbi_buscommon.bs_persist_busnum;
+	SAL_CALL_NOLOCK(ret_stuff, (u64) SN_SAL_IOIF_SLOT_DISABLE,
+			(u64) busnum, (u64) device, (u64) action,
+			(u64) resp, 0, 0, 0);
+
+	return (int)ret_stuff.v0;
+}
 
 static int sal_pcibr_error_interrupt(struct pcibus_info *soft)
 {
@@ -52,7 +85,7 @@ pcibr_error_intr_handler(int irq, void *arg, struct pt_regs *regs)
 }
 
 void *
-pcibr_bus_fixup(struct pcibus_bussoft *prom_bussoft)
+pcibr_bus_fixup(struct pcibus_bussoft *prom_bussoft, struct pci_controller *controller)
 {
 	int nasid, cnode, j;
 	struct hubdev_info *hubdev_info;
@@ -125,6 +158,14 @@ pcibr_bus_fixup(struct pcibus_bussoft *prom_bussoft)
 	memset(soft->pbi_int_ate_resource.ate, 0,
  	       (soft->pbi_int_ate_size * sizeof(uint64_t)));
 
+	if (prom_bussoft->bs_asic_type == PCIIO_ASIC_TYPE_TIOCP)
+		/*
+		 * TIO PCI Bridge with no closest node information.
+		 * FIXME: Find another way to determine the closest node
+		 */
+		controller->node = -1;
+	else
+		controller->node = cnode;
 	return soft;
 }
 
@@ -168,3 +209,26 @@ void pcibr_change_devices_irq(struct sn_irq_info *sn_irq_info)
 		pcibr_force_interrupt(sn_irq_info);
 	}
 }
+
+/*
+ * Provider entries for PIC/CP
+ */
+
+struct sn_pcibus_provider pcibr_provider = {
+	.dma_map = pcibr_dma_map,
+	.dma_map_consistent = pcibr_dma_map_consistent,
+	.dma_unmap = pcibr_dma_unmap,
+	.bus_fixup = pcibr_bus_fixup,
+};
+
+int
+pcibr_init_provider(void)
+{
+	sn_pci_provider[PCIIO_ASIC_TYPE_PIC] = &pcibr_provider;
+	sn_pci_provider[PCIIO_ASIC_TYPE_TIOCP] = &pcibr_provider;
+
+	return 0;
+}
+
+EXPORT_SYMBOL_GPL(sal_pcibr_slot_enable);
+EXPORT_SYMBOL_GPL(sal_pcibr_slot_disable);

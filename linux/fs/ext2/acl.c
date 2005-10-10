@@ -283,6 +283,8 @@ ext2_check_acl(struct inode *inode, int mask)
 {
 	struct posix_acl *acl = ext2_get_acl(inode, ACL_TYPE_ACCESS);
 
+	if (IS_ERR(acl))
+		return PTR_ERR(acl);
 	if (acl) {
 		int error = posix_acl_permission(inode, acl, mask);
 		posix_acl_release(acl);
@@ -394,12 +396,12 @@ static size_t
 ext2_xattr_list_acl_access(struct inode *inode, char *list, size_t list_size,
 			   const char *name, size_t name_len)
 {
-	const size_t size = sizeof(XATTR_NAME_ACL_ACCESS);
+	const size_t size = sizeof(POSIX_ACL_XATTR_ACCESS);
 
 	if (!test_opt(inode->i_sb, POSIX_ACL))
 		return 0;
 	if (list && size <= list_size)
-		memcpy(list, XATTR_NAME_ACL_ACCESS, size);
+		memcpy(list, POSIX_ACL_XATTR_ACCESS, size);
 	return size;
 }
 
@@ -407,12 +409,12 @@ static size_t
 ext2_xattr_list_acl_default(struct inode *inode, char *list, size_t list_size,
 			    const char *name, size_t name_len)
 {
-	const size_t size = sizeof(XATTR_NAME_ACL_DEFAULT);
+	const size_t size = sizeof(POSIX_ACL_XATTR_DEFAULT);
 
 	if (!test_opt(inode->i_sb, POSIX_ACL))
 		return 0;
 	if (list && size <= list_size)
-		memcpy(list, XATTR_NAME_ACL_DEFAULT, size);
+		memcpy(list, POSIX_ACL_XATTR_DEFAULT, size);
 	return size;
 }
 
@@ -504,14 +506,14 @@ ext2_xattr_set_acl_default(struct inode *inode, const char *name,
 }
 
 struct xattr_handler ext2_xattr_acl_access_handler = {
-	.prefix	= XATTR_NAME_ACL_ACCESS,
+	.prefix	= POSIX_ACL_XATTR_ACCESS,
 	.list	= ext2_xattr_list_acl_access,
 	.get	= ext2_xattr_get_acl_access,
 	.set	= ext2_xattr_set_acl_access,
 };
 
 struct xattr_handler ext2_xattr_acl_default_handler = {
-	.prefix	= XATTR_NAME_ACL_DEFAULT,
+	.prefix	= POSIX_ACL_XATTR_DEFAULT,
 	.list	= ext2_xattr_list_acl_default,
 	.get	= ext2_xattr_get_acl_default,
 	.set	= ext2_xattr_set_acl_default,

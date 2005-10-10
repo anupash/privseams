@@ -37,6 +37,8 @@
 #include <asm/bug.h>
 #include <asm/cputable.h>
 #include <asm/setup.h>
+#include <asm/hvcall.h>
+#include <asm/iSeries/LparMap.h>
 
 #ifdef CONFIG_PPC_ISERIES
 #define DO_SOFT_DISABLE
@@ -45,7 +47,6 @@
 /*
  * hcall interface to pSeries LPAR
  */
-#define HVSC		.long 0x44000022
 #define H_SET_ASR	0x30
 
 /*
@@ -54,7 +55,6 @@
  * 0x0100 - 0x2fff : pSeries Interrupt prologs
  * 0x3000 - 0x3fff : Interrupt support
  * 0x4000 - 0x4fff : NACA
- * 0x5000 - 0x5fff : SystemCfg
  * 0x6000	   : iSeries and common interrupt prologs
  * 0x9000 - 0x9fff : Initial segment table
  */
@@ -309,6 +309,7 @@ exception_marker:
 label##_pSeries:					\
 	HMT_MEDIUM;					\
 	mtspr	SPRG1,r13;		/* save r13 */	\
+	RUNLATCH_ON(r13);				\
 	EXCEPTION_PROLOG_PSERIES(PACA_EXGEN, label##_common)
 
 #define STD_EXCEPTION_ISERIES(n, label, area)		\
@@ -316,6 +317,7 @@ label##_pSeries:					\
 label##_iSeries:					\
 	HMT_MEDIUM;					\
 	mtspr	SPRG1,r13;		/* save r13 */	\
+	RUNLATCH_ON(r13);				\
 	EXCEPTION_PROLOG_ISERIES_1(area);		\
 	EXCEPTION_PROLOG_ISERIES_2;			\
 	b	label##_common
@@ -325,6 +327,7 @@ label##_iSeries:					\
 label##_iSeries:							\
 	HMT_MEDIUM;							\
 	mtspr	SPRG1,r13;		/* save r13 */			\
+	RUNLATCH_ON(r13);						\
 	EXCEPTION_PROLOG_ISERIES_1(PACA_EXGEN);				\
 	lbz	r10,PACAPROCENABLED(r13);				\
 	cmpwi	0,r10,0;						\
@@ -394,6 +397,7 @@ __start_interrupts:
 _machine_check_pSeries:
 	HMT_MEDIUM
 	mtspr	SPRG1,r13		/* save r13 */
+	RUNLATCH_ON(r13)
 	EXCEPTION_PROLOG_PSERIES(PACA_EXMC, machine_check_common)
 
 	. = 0x300
@@ -420,6 +424,7 @@ END_FTR_SECTION_IFCLR(CPU_FTR_SLB)
 data_access_slb_pSeries:
 	HMT_MEDIUM
 	mtspr	SPRG1,r13
+	RUNLATCH_ON(r13)
 	mfspr	r13,SPRG3		/* get paca address into r13 */
 	std	r9,PACA_EXSLB+EX_R9(r13)	/* save r9 - r12 */
 	std	r10,PACA_EXSLB+EX_R10(r13)
@@ -440,6 +445,7 @@ data_access_slb_pSeries:
 instruction_access_slb_pSeries:
 	HMT_MEDIUM
 	mtspr	SPRG1,r13
+	RUNLATCH_ON(r13)
 	mfspr	r13,SPRG3		/* get paca address into r13 */
 	std	r9,PACA_EXSLB+EX_R9(r13)	/* save r9 - r12 */
 	std	r10,PACA_EXSLB+EX_R10(r13)
@@ -465,6 +471,7 @@ instruction_access_slb_pSeries:
 	.globl	system_call_pSeries
 system_call_pSeries:
 	HMT_MEDIUM
+	RUNLATCH_ON(r9)
 	mr	r9,r13
 	mfmsr	r10
 	mfspr	r13,SPRG3
@@ -516,43 +523,9 @@ __end_interrupts:
 #ifdef CONFIG_PPC_ISERIES
 	.globl naca
 naca:
-	.llong itVpdAreas
-#endif
-
-	. = SYSTEMCFG_PHYS_ADDR
-	.globl __start_systemcfg
-__start_systemcfg:
-	. = (SYSTEMCFG_PHYS_ADDR + PAGE_SIZE)
-	.globl __end_systemcfg
-__end_systemcfg:
-
-#ifdef CONFIG_PPC_ISERIES
-	/*
-	 * The iSeries LPAR map is at this fixed address
-	 * so that the HvReleaseData structure can address
-	 * it with a 32-bit offset.
-	 *
-	 * The VSID values below are dependent on the
-	 * VSID generation algorithm.  See include/asm/mmu_context.h.
-	 */
-
-	.llong	2		/* # ESIDs to be mapped by hypervisor	 */
-	.llong	1		/* # memory ranges to be mapped by hypervisor */
-	.llong	STAB0_PAGE	/* Page # of segment table within load area	*/
-	.llong	0		/* Reserved */
-	.llong	0		/* Reserved */
-	.llong	0		/* Reserved */
-	.llong	0		/* Reserved */
-	.llong	0		/* Reserved */
-	.llong	(KERNELBASE>>SID_SHIFT)
-	.llong	0x408f92c94	/* KERNELBASE VSID */
-	/* We have to list the bolted VMALLOC segment here, too, so that it
-	 * will be restored on shared processor switch */
-	.llong	(VMALLOCBASE>>SID_SHIFT)
-	.llong	0xf09b89af5	/* VMALLOCBASE VSID */
-	.llong	8192		/* # pages to map (32 MB) */
-	.llong	0		/* Offset from start of loadarea to start of map */
-	.llong	0x408f92c940000	/* VPN of first page to map */
+	.llong	itVpdAreas
+	.llong	0		/* xRamDisk */
+	.llong	0		/* xRamDiskSize */
 
 	. = 0x6100
 
@@ -634,10 +607,10 @@ system_reset_iSeries:
 	lhz	r24,PACAPACAINDEX(r13)	/* Get processor # */
 	cmpwi	0,r24,0			/* Are we processor 0? */
 	beq	.__start_initialization_iSeries	/* Start up the first processor */
-	mfspr	r4,CTRLF
-	li	r5,RUNLATCH		/* Turn off the run light */
+	mfspr	r4,SPRN_CTRLF
+	li	r5,CTRL_RUNLATCH	/* Turn off the run light */
 	andc	r4,r4,r5
-	mtspr	CTRLT,r4
+	mtspr	SPRN_CTRLT,r4
 
 1:
 	HMT_LOW
@@ -707,6 +680,11 @@ hardware_interrupt_iSeries_masked:
 	.globl fwnmi_data_area
 fwnmi_data_area:
 
+#ifdef CONFIG_PPC_ISERIES
+	. = LPARMAP_PHYS
+#include "lparmap.s"
+#endif /* CONFIG_PPC_ISERIES */
+
 /*
  * Vectors for the FWNMI option.  Share common code.
  */
@@ -715,11 +693,13 @@ fwnmi_data_area:
 system_reset_fwnmi:
 	HMT_MEDIUM
 	mtspr	SPRG1,r13		/* save r13 */
+	RUNLATCH_ON(r13)
 	EXCEPTION_PROLOG_PSERIES(PACA_EXGEN, system_reset_common)
 	.globl machine_check_fwnmi
 machine_check_fwnmi:
 	HMT_MEDIUM
 	mtspr	SPRG1,r13		/* save r13 */
+	RUNLATCH_ON(r13)
 	EXCEPTION_PROLOG_PSERIES(PACA_EXMC, machine_check_common)
 
 	/*
@@ -856,6 +836,7 @@ unrecov_fer:
 	.align	7
 	.globl data_access_common
 data_access_common:
+	RUNLATCH_ON(r10)		/* It wont fit in the 0x300 handler */
 	mfspr	r10,DAR
 	std	r10,PACA_EXGEN+EX_DAR(r13)
 	mfspr	r10,DSISR
@@ -930,7 +911,9 @@ fp_unavailable_common:
 altivec_unavailable_common:
 	EXCEPTION_PROLOG_COMMON(0xf20, PACA_EXGEN)
 #ifdef CONFIG_ALTIVEC
+BEGIN_FTR_SECTION
 	bne	.load_up_altivec	/* if from user, just load it up */
+END_FTR_SECTION_IFSET(CPU_FTR_ALTIVEC)
 #endif
 	bl	.save_nvgprs
 	addi	r3,r1,STACK_FRAME_OVERHEAD
@@ -958,11 +941,12 @@ END_FTR_SECTION_IFCLR(CPU_FTR_SLB)
 	 * accessing a userspace segment (even from the kernel). We assume
 	 * kernel addresses always have the high bit set.
 	 */
-	rlwinm	r4,r4,32-23,29,29	/* DSISR_STORE -> _PAGE_RW */
+	rlwinm	r4,r4,32-25+9,31-9,31-9	/* DSISR_STORE -> _PAGE_RW */
 	rotldi	r0,r3,15		/* Move high bit into MSR_PR posn */
 	orc	r0,r12,r0		/* MSR_PR | ~high_bit */
 	rlwimi	r4,r0,32-13,30,30	/* becomes _PAGE_USER access bit */
 	ori	r4,r4,1			/* add _PAGE_PRESENT */
+	rlwimi	r4,r5,22+2,31-2,31-2	/* Set _PAGE_EXEC if trap is 0x400 */
 
 	/*
 	 * On iSeries, we soft-disable interrupts here, then
@@ -1199,7 +1183,7 @@ _GLOBAL(pSeries_secondary_smp_init)
 	bl	.__restore_cpu_setup
 
 	/* Set up a paca value for this processor. Since we have the
-	 * physical cpu id in r3, we need to search the pacas to find
+	 * physical cpu id in r24, we need to search the pacas to find
 	 * which logical id maps to our physical one.
 	 */
 	LOADADDR(r13, paca) 		/* Get base vaddr of paca array	 */
@@ -1212,8 +1196,8 @@ _GLOBAL(pSeries_secondary_smp_init)
 	cmpwi	r5,NR_CPUS
 	blt	1b
 
-99:	HMT_LOW				/* Couldn't find our CPU id      */
-	b	99b
+	mr	r3,r24			/* not found, copy phys to r3	 */
+	b	.kexec_wait		/* next kernel might do better	 */
 
 2:	mtspr	SPRG3,r13		/* Save vaddr of paca in SPRG3	 */
 	/* From now on, r24 is expected to be logica cpuid */
@@ -1263,10 +1247,6 @@ _STATIC(__start_initialization_iSeries)
 	LOADADDR(r2,__toc_start)
 	addi	r2,r2,0x4000
 	addi	r2,r2,0x4000
-
-	LOADADDR(r9,systemcfg)
-	SET_REG_TO_CONST(r4, SYSTEMCFG_VIRT_ADDR)
-	std	r4,0(r9)		/* set the systemcfg pointer */
 
 	bl	.iSeries_early_setup
 
@@ -1772,7 +1752,7 @@ _GLOBAL(__secondary_start)
 	sc				/* HvCall_setASR */
 #else
 	/* set the ASR */
-	li	r3,SYSTEMCFG_PHYS_ADDR	/* r3 = ptr to systemcfg	 */
+	ld	r3,systemcfg@got(r2)	/* r3 = ptr to systemcfg	 */
 	lwz	r3,PLATFORM(r3)		/* r3 = platform flags		 */
 	cmpldi 	r3,PLATFORM_PSERIES_LPAR
 	bne	98f
@@ -1861,12 +1841,6 @@ _STATIC(start_here_multiplatform)
 	ori	r6,r6,MSR_RI
 	mtmsrd	r6			/* RI on */
 
-	/* setup the systemcfg pointer which is needed by *tab_initialize	*/
-	LOADADDR(r6,systemcfg)
-	sub	r6,r6,r26		/* addr of the variable systemcfg */
-	li	r27,SYSTEMCFG_PHYS_ADDR
-	std	r27,0(r6)	 	/* set the value of systemcfg	*/
-
 #ifdef CONFIG_HMT
 	/* Start up the second thread on cpu 0 */
 	mfspr	r3,PVR
@@ -1941,7 +1915,7 @@ _STATIC(start_here_multiplatform)
 	/* set the ASR */
 	ld	r3,PACASTABREAL(r13)
 	ori	r4,r3,1			/* turn on valid bit		 */
-	li	r3,SYSTEMCFG_PHYS_ADDR	/* r3 = ptr to systemcfg */
+	ld	r3,systemcfg@got(r2)	/* r3 = ptr to systemcfg */
 	lwz	r3,PLATFORM(r3)		/* r3 = platform flags */
 	cmpldi 	r3,PLATFORM_PSERIES_LPAR
 	bne	98f
@@ -1960,7 +1934,7 @@ _STATIC(start_here_multiplatform)
 	mtasr	r4			/* set the stab location	*/
 99:
 	/* Set SDR1 (hash table pointer) */
-	li	r3,SYSTEMCFG_PHYS_ADDR	/* r3 = ptr to systemcfg */
+	ld	r3,systemcfg@got(r2)	/* r3 = ptr to systemcfg */
 	lwz	r3,PLATFORM(r3)		/* r3 = platform flags */
 	/* Test if bit 0 is set (LPAR bit) */
 	andi.	r3,r3,0x1
@@ -1997,11 +1971,6 @@ _STATIC(start_here_common)
 	 */
 	li	r3,0
 	bl	.do_cpu_ftr_fixups
-
-	/* setup the systemcfg pointer */
-	LOADADDR(r9,systemcfg)
-	SET_REG_TO_CONST(r8, SYSTEMCFG_VIRT_ADDR)
-	std	r8,0(r9)
 
 	LOADADDR(r26, boot_cpuid)
 	lwz	r26,0(r26)
@@ -2102,13 +2071,13 @@ _GLOBAL(hmt_start_secondary)
 	mfspr	r4, HID0
 	ori	r4, r4, 0x1
 	mtspr	HID0, r4
-	mfspr	r4, CTRLF
+	mfspr	r4, SPRN_CTRLF
 	oris	r4, r4, 0x40
-	mtspr	CTRLT, r4
+	mtspr	SPRN_CTRLT, r4
 	blr
 #endif
 
-#if defined(CONFIG_SMP) && !defined(CONFIG_PPC_ISERIES)
+#if defined(CONFIG_KEXEC) || (defined(CONFIG_SMP) && !defined(CONFIG_PPC_ISERIES))
 _GLOBAL(smp_release_cpus)
 	/* All secondary cpus are spinning on a common
 	 * spinloop, release them all now so they can start
@@ -2141,17 +2110,6 @@ empty_zero_page:
 swapper_pg_dir:
 	.space	4096
 
-	.globl	ioremap_dir
-ioremap_dir:
-	.space	4096
-
-#ifdef CONFIG_SMP
-/* 1 page segment table per cpu (max 48, cpu0 allocated at STAB0_PHYS_ADDR) */
-	.globl	stab_array
-stab_array:
-	.space	4096 * 48
-#endif
-	
 /*
  * This space gets a copy of optional info passed to us by the bootstrap
  * Used to pass parameters into the kernel like root=/dev/sda1, etc.

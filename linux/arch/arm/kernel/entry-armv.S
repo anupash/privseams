@@ -14,58 +14,101 @@
  *  it to save wrong values...  Be aware!
  */
 #include <linux/config.h>
-#include <linux/init.h>
 
-#include <asm/thread_info.h>
 #include <asm/glue.h>
-#include <asm/ptrace.h>
 #include <asm/vfpmacros.h>
+#include <asm/hardware.h>		/* should be moved into entry-macro.S */
+#include <asm/arch/irqs.h>		/* should be moved into entry-macro.S */
+#include <asm/arch/entry-macro.S>
 
 #include "entry-header.S"
 
 /*
+ * Interrupt handling.  Preserves r7, r8, r9
+ */
+	.macro	irq_handler
+1:	get_irqnr_and_base r0, r6, r5, lr
+	movne	r1, sp
+	@
+	@ routine called with r0 = irq number, r1 = struct pt_regs *
+	@
+	adrne	lr, 1b
+	bne	asm_do_IRQ
+
+#ifdef CONFIG_SMP
+	/*
+	 * XXX
+	 *
+	 * this macro assumes that irqstat (r6) and base (r5) are
+	 * preserved from get_irqnr_and_base above
+	 */
+	test_for_ipi r0, r6, r5, lr
+	movne	r0, sp
+	adrne	lr, 1b
+	bne	do_IPI
+#endif
+
+	.endm
+
+/*
  * Invalid mode handlers
  */
-	.macro	inv_entry, sym, reason
-	sub	sp, sp, #S_FRAME_SIZE		@ Allocate frame size in one go
-	stmia	sp, {r0 - lr}			@ Save XXX r0 - lr
-	ldr	r4, .LC\sym
+	.macro	inv_entry, reason
+	sub	sp, sp, #S_FRAME_SIZE
+	stmib	sp, {r1 - lr}
 	mov	r1, #\reason
 	.endm
 
 __pabt_invalid:
-	inv_entry abt, BAD_PREFETCH
-	b	1f
+	inv_entry BAD_PREFETCH
+	b	common_invalid
 
 __dabt_invalid:
-	inv_entry abt, BAD_DATA
-	b	1f
+	inv_entry BAD_DATA
+	b	common_invalid
 
 __irq_invalid:
-	inv_entry irq, BAD_IRQ
-	b	1f
+	inv_entry BAD_IRQ
+	b	common_invalid
 
 __und_invalid:
-	inv_entry und, BAD_UNDEFINSTR
+	inv_entry BAD_UNDEFINSTR
 
-1:	zero_fp
-	ldmia	r4, {r5 - r7}			@ Get XXX pc, cpsr, old_r0
-	add	r4, sp, #S_PC
-	stmia	r4, {r5 - r7}			@ Save XXX pc, cpsr, old_r0
+	@
+	@ XXX fall through to common_invalid
+	@
+
+@
+@ common_invalid - generic code for failed exception (re-entrant version of handlers)
+@
+common_invalid:
+	zero_fp
+
+	ldmia	r0, {r4 - r6}
+	add	r0, sp, #S_PC		@ here for interlock avoidance
+	mov	r7, #-1			@  ""   ""    ""        ""
+	str	r4, [sp]		@ save preserved r0
+	stmia	r0, {r5 - r7}		@ lr_<exception>,
+					@ cpsr_<exception>, "old_r0"
+
 	mov	r0, sp
-	and	r2, r6, #31			@ int mode
+	and	r2, r6, #0x1f
 	b	bad_mode
 
 /*
  * SVC mode handlers
  */
-	.macro	svc_entry, sym
+	.macro	svc_entry
 	sub	sp, sp, #S_FRAME_SIZE
-	stmia	sp, {r0 - r12}			@ save r0 - r12
-	ldr	r2, .LC\sym
-	add	r0, sp, #S_FRAME_SIZE
-	ldmia	r2, {r2 - r4}			@ get pc, cpsr
-	add	r5, sp, #S_SP
+	stmib	sp, {r1 - r12}
+
+	ldmia	r0, {r1 - r3}
+	add	r5, sp, #S_SP		@ here for interlock avoidance
+	mov	r4, #-1			@  ""  ""      ""       ""
+	add	r0, sp, #S_FRAME_SIZE   @  ""  ""      ""       ""
+	str	r1, [sp]		@ save the "real" r0 copied
+					@ from the exception stack
+
 	mov	r1, lr
 
 	@
@@ -82,7 +125,7 @@ __und_invalid:
 
 	.align	5
 __dabt_svc:
-	svc_entry abt
+	svc_entry
 
 	@
 	@ get ready to re-enable interrupts if appropriate
@@ -118,7 +161,7 @@ __dabt_svc:
 	@
 	@ IRQs off again before pulling preserved data off the stack
 	@
-	disable_irq r0
+	disable_irq
 
 	@
 	@ restore SPSR and restart the instruction
@@ -129,28 +172,24 @@ __dabt_svc:
 
 	.align	5
 __irq_svc:
-	svc_entry irq
+	svc_entry
+
 #ifdef CONFIG_PREEMPT
-	get_thread_info r8
-	ldr	r9, [r8, #TI_PREEMPT]		@ get preempt count
-	add	r7, r9, #1			@ increment it
-	str	r7, [r8, #TI_PREEMPT]
+	get_thread_info tsk
+	ldr	r8, [tsk, #TI_PREEMPT]		@ get preempt count
+	add	r7, r8, #1			@ increment it
+	str	r7, [tsk, #TI_PREEMPT]
 #endif
-1:	get_irqnr_and_base r0, r6, r5, lr
-	movne	r1, sp
-	@
-	@ routine called with r0 = irq number, r1 = struct pt_regs *
-	@
-	adrne	lr, 1b
-	bne	asm_do_IRQ
+
+	irq_handler
 #ifdef CONFIG_PREEMPT
-	ldr	r0, [r8, #TI_FLAGS]		@ get flags
+	ldr	r0, [tsk, #TI_FLAGS]		@ get flags
 	tst	r0, #_TIF_NEED_RESCHED
 	blne	svc_preempt
 preempt_return:
-	ldr	r0, [r8, #TI_PREEMPT]		@ read preempt value
+	ldr	r0, [tsk, #TI_PREEMPT]		@ read preempt value
+	str	r8, [tsk, #TI_PREEMPT]		@ restore preempt count
 	teq	r0, r7
-	str	r9, [r8, #TI_PREEMPT]		@ restore preempt count
 	strne	r0, [r0, -r0]			@ bug()
 #endif
 	ldr	r0, [sp, #S_PSR]		@ irqs are already disabled
@@ -161,7 +200,7 @@ preempt_return:
 
 #ifdef CONFIG_PREEMPT
 svc_preempt:
-	teq	r9, #0				@ was preempt count = 0
+	teq	r8, #0				@ was preempt count = 0
 	ldreq	r6, .LCirq_stat
 	movne	pc, lr				@ no
 	ldr	r0, [r6, #4]			@ local_irq_count
@@ -169,9 +208,9 @@ svc_preempt:
 	adds	r0, r0, r1
 	movne	pc, lr
 	mov	r7, #0				@ preempt_schedule_irq
-	str	r7, [r8, #TI_PREEMPT]		@ expects preempt_count == 0
+	str	r7, [tsk, #TI_PREEMPT]		@ expects preempt_count == 0
 1:	bl	preempt_schedule_irq		@ irq en/disable is done inside
-	ldr	r0, [r8, #TI_FLAGS]		@ get new tasks TI_FLAGS
+	ldr	r0, [tsk, #TI_FLAGS]		@ get new tasks TI_FLAGS
 	tst	r0, #_TIF_NEED_RESCHED
 	beq	preempt_return			@ go again
 	b	1b
@@ -179,7 +218,7 @@ svc_preempt:
 
 	.align	5
 __und_svc:
-	svc_entry und
+	svc_entry
 
 	@
 	@ call emulation code, which returns using r9 if it has emulated
@@ -198,7 +237,7 @@ __und_svc:
 	@
 	@ IRQs off again before pulling preserved data off the stack
 	@
-1:	disable_irq r0
+1:	disable_irq
 
 	@
 	@ restore SPSR and restart the instruction
@@ -209,7 +248,7 @@ __und_svc:
 
 	.align	5
 __pabt_svc:
-	svc_entry abt
+	svc_entry
 
 	@
 	@ re-enable interrupts if appropriate
@@ -232,7 +271,7 @@ __pabt_svc:
 	@
 	@ IRQs off again before pulling preserved data off the stack
 	@
-	disable_irq r0
+	disable_irq
 
 	@
 	@ restore SPSR and restart the instruction
@@ -242,12 +281,8 @@ __pabt_svc:
 	ldmia	sp, {r0 - pc}^			@ load r0 - pc, cpsr
 
 	.align	5
-.LCirq:
-	.word	__temp_irq
-.LCund:
-	.word	__temp_und
-.LCabt:
-	.word	__temp_abt
+.LCcralign:
+	.word	cr_alignment
 #ifdef MULTI_ABORT
 .LCprocfns:
 	.word	processor
@@ -262,12 +297,22 @@ __pabt_svc:
 /*
  * User mode handlers
  */
-	.macro	usr_entry, sym
-	sub	sp, sp, #S_FRAME_SIZE		@ Allocate frame size in one go
-	stmia	sp, {r0 - r12}			@ save r0 - r12
-	ldr	r7, .LC\sym
-	add	r5, sp, #S_PC
-	ldmia	r7, {r2 - r4}			@ Get USR pc, cpsr
+	.macro	usr_entry
+	sub	sp, sp, #S_FRAME_SIZE
+	stmib	sp, {r1 - r12}
+
+	ldmia	r0, {r1 - r3}
+	add	r0, sp, #S_PC		@ here for interlock avoidance
+	mov	r4, #-1			@  ""  ""     ""        ""
+
+	str	r1, [sp]		@ save the "real" r0 copied
+					@ from the exception stack
+
+#if __LINUX_ARM_ARCH__ < 6 && !defined(CONFIG_NEEDS_SYSCALL_FOR_CMPXCHG)
+	@ make sure our user space atomic helper is aborted
+	cmp	r2, #VIRT_OFFSET
+	bichs	r3, r3, #PSR_Z_BIT
+#endif
 
 	@
 	@ We are now ready to fill in the remaining blanks on the stack:
@@ -278,15 +323,23 @@ __pabt_svc:
 	@
 	@ Also, separately save sp_usr and lr_usr
 	@
-	stmia	r5, {r2 - r4}
-	stmdb	r5, {sp, lr}^
+	stmia	r0, {r2 - r4}
+	stmdb	r0, {sp, lr}^
+
+	@
+	@ Enable the alignment trap while in kernel mode
+	@
+	alignment_trap r0
+
+	@
+	@ Clear FP to mark the first stack frame
+	@
+	zero_fp
 	.endm
 
 	.align	5
 __dabt_usr:
-	usr_entry abt
-	alignment_trap r7, r0, __temp_abt
-	zero_fp
+	usr_entry
 
 	@
 	@ Call the processor-specific abort handler:
@@ -308,38 +361,30 @@ __dabt_usr:
 	@
 	@ IRQs on, then call the main handler
 	@
-	enable_irq r2
+	enable_irq
 	mov	r2, sp
 	adr	lr, ret_from_exception
 	b	do_DataAbort
 
 	.align	5
 __irq_usr:
-	usr_entry irq
-	alignment_trap r7, r0, __temp_irq
-	zero_fp
-#ifdef CONFIG_PREEMPT
-	get_thread_info r8
-	ldr	r9, [r8, #TI_PREEMPT]		@ get preempt count
-	add	r7, r9, #1			@ increment it
-	str	r7, [r8, #TI_PREEMPT]
-#endif
-1:	get_irqnr_and_base r0, r6, r5, lr
-	movne	r1, sp
-	adrne	lr, 1b
-	@
-	@ routine called with r0 = irq number, r1 = struct pt_regs *
-	@
-	bne	asm_do_IRQ
-#ifdef CONFIG_PREEMPT
-	ldr	r0, [r8, #TI_PREEMPT]
-	teq	r0, r7
-	str	r9, [r8, #TI_PREEMPT]
-	strne	r0, [r0, -r0]
-	mov	tsk, r8
-#else
+	usr_entry
+
 	get_thread_info tsk
+#ifdef CONFIG_PREEMPT
+	ldr	r8, [tsk, #TI_PREEMPT]		@ get preempt count
+	add	r7, r8, #1			@ increment it
+	str	r7, [tsk, #TI_PREEMPT]
 #endif
+
+	irq_handler
+#ifdef CONFIG_PREEMPT
+	ldr	r0, [tsk, #TI_PREEMPT]
+	str	r8, [tsk, #TI_PREEMPT]
+	teq	r0, r7
+	strne	r0, [r0, -r0]
+#endif
+
 	mov	why, #0
 	b	ret_to_user
 
@@ -347,9 +392,8 @@ __irq_usr:
 
 	.align	5
 __und_usr:
-	usr_entry und
-	alignment_trap r7, r0, __temp_und
-	zero_fp
+	usr_entry
+
 	tst	r3, #PSR_T_BIT			@ Thumb mode?
 	bne	fpundefinstr			@ ignore FP
 	sub	r4, r2, #4
@@ -412,7 +456,7 @@ call_fpe:
 	movcss	r7, r5, lsr #(TIF_USING_IWMMXT + 1)
 	bcs	iwmmxt_task_enable
 #endif
-	enable_irq r7
+	enable_irq
 	add	pc, pc, r8, lsr #6
 	mov	r0, r0
 
@@ -464,10 +508,9 @@ fpundefinstr:
 
 	.align	5
 __pabt_usr:
-	usr_entry abt
-	alignment_trap r7, r0, __temp_abt
-	zero_fp
-	enable_irq r0				@ Enable interrupts
+	usr_entry
+
+	enable_irq				@ Enable interrupts
 	mov	r0, r2				@ address (pc)
 	mov	r1, sp				@ regs
 	bl	do_PrefetchAbort		@ call abort handler
@@ -490,12 +533,23 @@ ENTRY(__switch_to)
 	ldr	r3, [r2, #TI_TP_VALUE]
 	stmia	ip!, {r4 - sl, fp, sp, lr}	@ Store most regs on stack
 	ldr	r6, [r2, #TI_CPU_DOMAIN]!
+#if __LINUX_ARM_ARCH__ >= 6
+#ifdef CONFIG_CPU_MPCORE
+	clrex
+#else
+	strex	r3, r4, [ip]			@ Clear exclusive monitor
+#endif
+#endif
 #if defined(CONFIG_CPU_XSCALE) && !defined(CONFIG_IWMMXT)
 	mra	r4, r5, acc0
 	stmia   ip, {r4, r5}
 #endif
+#if defined(CONFIG_HAS_TLS_REG)
+	mcr	p15, 0, r3, c13, c0, 3		@ set TLS register
+#elif !defined(CONFIG_TLS_REG_EMUL)
 	mov	r4, #0xffff0fff
-	str	r3, [r4, #-3]			@ Set TLS ptr
+	str	r3, [r4, #-15]			@ TLS val at 0xffff0ff0
+#endif
 	mcr	p15, 0, r6, c3, c0, 0		@ Set domain register
 #ifdef CONFIG_VFP
 	@ Always disable VFP so we can lazily save/restore the old
@@ -514,44 +568,261 @@ ENTRY(__switch_to)
 	ldmib	r2, {r4 - sl, fp, sp, pc}	@ Load all regs saved previously
 
 	__INIT
+
+/*
+ * User helpers.
+ *
+ * These are segment of kernel provided user code reachable from user space
+ * at a fixed address in kernel memory.  This is used to provide user space
+ * with some operations which require kernel help because of unimplemented
+ * native feature and/or instructions in many ARM CPUs. The idea is for
+ * this code to be executed directly in user mode for best efficiency but
+ * which is too intimate with the kernel counter part to be left to user
+ * libraries.  In fact this code might even differ from one CPU to another
+ * depending on the available  instruction set and restrictions like on
+ * SMP systems.  In other words, the kernel reserves the right to change
+ * this code as needed without warning. Only the entry points and their
+ * results are guaranteed to be stable.
+ *
+ * Each segment is 32-byte aligned and will be moved to the top of the high
+ * vector page.  New segments (if ever needed) must be added in front of
+ * existing ones.  This mechanism should be used only for things that are
+ * really small and justified, and not be abused freely.
+ *
+ * User space is expected to implement those things inline when optimizing
+ * for a processor that has the necessary native support, but only if such
+ * resulting binaries are already to be incompatible with earlier ARM
+ * processors due to the use of unsupported instructions other than what
+ * is provided here.  In other words don't make binaries unable to run on
+ * earlier processors just for the sake of not using these kernel helpers
+ * if your compiled code is not going to use the new instructions for other
+ * purpose.
+ */
+
+	.align	5
+	.globl	__kuser_helper_start
+__kuser_helper_start:
+
+/*
+ * Reference prototype:
+ *
+ *	int __kernel_cmpxchg(int oldval, int newval, int *ptr)
+ *
+ * Input:
+ *
+ *	r0 = oldval
+ *	r1 = newval
+ *	r2 = ptr
+ *	lr = return address
+ *
+ * Output:
+ *
+ *	r0 = returned value (zero or non-zero)
+ *	C flag = set if r0 == 0, clear if r0 != 0
+ *
+ * Clobbered:
+ *
+ *	r3, ip, flags
+ *
+ * Definition and user space usage example:
+ *
+ *	typedef int (__kernel_cmpxchg_t)(int oldval, int newval, int *ptr);
+ *	#define __kernel_cmpxchg (*(__kernel_cmpxchg_t *)0xffff0fc0)
+ *
+ * Atomically store newval in *ptr if *ptr is equal to oldval for user space.
+ * Return zero if *ptr was changed or non-zero if no exchange happened.
+ * The C flag is also set if *ptr was changed to allow for assembly
+ * optimization in the calling code.
+ *
+ * For example, a user space atomic_add implementation could look like this:
+ *
+ * #define atomic_add(ptr, val) \
+ *	({ register unsigned int *__ptr asm("r2") = (ptr); \
+ *	   register unsigned int __result asm("r1"); \
+ *	   asm volatile ( \
+ *	       "1: @ atomic_add\n\t" \
+ *	       "ldr	r0, [r2]\n\t" \
+ *	       "mov	r3, #0xffff0fff\n\t" \
+ *	       "add	lr, pc, #4\n\t" \
+ *	       "add	r1, r0, %2\n\t" \
+ *	       "add	pc, r3, #(0xffff0fc0 - 0xffff0fff)\n\t" \
+ *	       "bcc	1b" \
+ *	       : "=&r" (__result) \
+ *	       : "r" (__ptr), "rIL" (val) \
+ *	       : "r0","r3","ip","lr","cc","memory" ); \
+ *	   __result; })
+ */
+
+__kuser_cmpxchg:				@ 0xffff0fc0
+
+#if defined(CONFIG_NEEDS_SYSCALL_FOR_CMPXCHG)
+
+	/*
+	 * Poor you.  No fast solution possible...
+	 * The kernel itself must perform the operation.
+	 * A special ghost syscall is used for that (see traps.c).
+	 */
+	swi	#0x9ffff0
+	mov	pc, lr
+
+#elif __LINUX_ARM_ARCH__ < 6
+
+	/*
+	 * Theory of operation:
+	 *
+	 * We set the Z flag before loading oldval. If ever an exception
+	 * occurs we can not be sure the loaded value will still be the same
+	 * when the exception returns, therefore the user exception handler
+	 * will clear the Z flag whenever the interrupted user code was
+	 * actually from the kernel address space (see the usr_entry macro).
+	 *
+	 * The post-increment on the str is used to prevent a race with an
+	 * exception happening just after the str instruction which would
+	 * clear the Z flag although the exchange was done.
+	 */
+	teq	ip, ip			@ set Z flag
+	ldr	ip, [r2]		@ load current val
+	add	r3, r2, #1		@ prepare store ptr
+	teqeq	ip, r0			@ compare with oldval if still allowed
+	streq	r1, [r3, #-1]!		@ store newval if still allowed
+	subs	r0, r2, r3		@ if r2 == r3 the str occured
+	mov	pc, lr
+
+#else
+
+	ldrex	r3, [r2]
+	subs	r3, r3, r0
+	strexeq	r3, r1, [r2]
+	rsbs	r0, r3, #0
+	mov	pc, lr
+
+#endif
+
+	.align	5
+
+/*
+ * Reference prototype:
+ *
+ *	int __kernel_get_tls(void)
+ *
+ * Input:
+ *
+ *	lr = return address
+ *
+ * Output:
+ *
+ *	r0 = TLS value
+ *
+ * Clobbered:
+ *
+ *	the Z flag might be lost
+ *
+ * Definition and user space usage example:
+ *
+ *	typedef int (__kernel_get_tls_t)(void);
+ *	#define __kernel_get_tls (*(__kernel_get_tls_t *)0xffff0fe0)
+ *
+ * Get the TLS value as previously set via the __ARM_NR_set_tls syscall.
+ *
+ * This could be used as follows:
+ *
+ * #define __kernel_get_tls() \
+ *	({ register unsigned int __val asm("r0"); \
+ *         asm( "mov r0, #0xffff0fff; mov lr, pc; sub pc, r0, #31" \
+ *	        : "=r" (__val) : : "lr","cc" ); \
+ *	   __val; })
+ */
+
+__kuser_get_tls:				@ 0xffff0fe0
+
+#if !defined(CONFIG_HAS_TLS_REG) && !defined(CONFIG_TLS_REG_EMUL)
+
+	ldr	r0, [pc, #(16 - 8)]		@ TLS stored at 0xffff0ff0
+	mov	pc, lr
+
+#else
+
+	mrc	p15, 0, r0, c13, c0, 3		@ read TLS register
+	mov	pc, lr
+
+#endif
+
+	.rep	5
+	.word	0			@ pad up to __kuser_helper_version
+	.endr
+
+/*
+ * Reference declaration:
+ *
+ *	extern unsigned int __kernel_helper_version;
+ *
+ * Definition and user space usage example:
+ *
+ *	#define __kernel_helper_version (*(unsigned int *)0xffff0ffc)
+ *
+ * User space may read this to determine the curent number of helpers
+ * available.
+ */
+
+__kuser_helper_version:				@ 0xffff0ffc
+	.word	((__kuser_helper_end - __kuser_helper_start) >> 5)
+
+	.globl	__kuser_helper_end
+__kuser_helper_end:
+
+
 /*
  * Vector stubs.
  *
- * This code is copied to 0x200 or 0xffff0200 so we can use branches in the
- * vectors, rather than ldr's.
+ * This code is copied to 0xffff0200 so we can use branches in the
+ * vectors, rather than ldr's.  Note that this code must not
+ * exceed 0x300 bytes.
  *
  * Common stub entry macro:
  *   Enter in IRQ mode, spsr = SVC/USR CPSR, lr = SVC/USR PC
+ *
+ * SP points to a minimal amount of processor-private memory, the address
+ * of which is copied into r0 for the mode specific abort handler.
  */
-	.macro	vector_stub, name, sym, correction=0
+	.macro	vector_stub, name, correction=0
 	.align	5
 
 vector_\name:
-	ldr	r13, .LCs\sym
 	.if \correction
 	sub	lr, lr, #\correction
 	.endif
-	str	lr, [r13]			@ save lr_IRQ
-	mrs	lr, spsr
-	str	lr, [r13, #4]			@ save spsr_IRQ
-	@
-	@ now branch to the relevant MODE handling routine
-	@
-	mrs	r13, cpsr
-	bic	r13, r13, #MODE_MASK
-	orr	r13, r13, #MODE_SVC
-	msr	spsr_cxsf, r13			@ switch to SVC_32 mode
 
-	and	lr, lr, #15
+	@
+	@ Save r0, lr_<exception> (parent PC) and spsr_<exception>
+	@ (parent CPSR)
+	@
+	stmia	sp, {r0, lr}		@ save r0, lr
+	mrs	lr, spsr
+	str	lr, [sp, #8]		@ save spsr
+
+	@
+	@ Prepare for SVC32 mode.  IRQs remain disabled.
+	@
+	mrs	r0, cpsr
+	bic	r0, r0, #MODE_MASK
+	orr	r0, r0, #SVC_MODE
+	msr	spsr_cxsf, r0
+
+	@
+	@ the branch table must immediately follow this code
+	@
+	mov	r0, sp
+	and	lr, lr, #0x0f
 	ldr	lr, [pc, lr, lsl #2]
-	movs	pc, lr				@ Changes mode and branches
+	movs	pc, lr			@ branch to handler in SVC mode
 	.endm
 
+	.globl	__stubs_start
 __stubs_start:
 /*
  * Interrupt dispatcher
  */
-	vector_stub	irq, irq, 4
+	vector_stub	irq, 4
 
 	.long	__irq_usr			@  0  (USR_26 / USR_32)
 	.long	__irq_invalid			@  1  (FIQ_26 / FIQ_32)
@@ -574,7 +845,7 @@ __stubs_start:
  * Data abort dispatcher
  * Enter in ABT mode, spsr = USR CPSR, lr = USR PC
  */
-	vector_stub	dabt, abt, 8
+	vector_stub	dabt, 8
 
 	.long	__dabt_usr			@  0  (USR_26 / USR_32)
 	.long	__dabt_invalid			@  1  (FIQ_26 / FIQ_32)
@@ -597,7 +868,7 @@ __stubs_start:
  * Prefetch abort dispatcher
  * Enter in ABT mode, spsr = USR CPSR, lr = USR PC
  */
-	vector_stub	pabt, abt, 4
+	vector_stub	pabt, 4
 
 	.long	__pabt_usr			@  0 (USR_26 / USR_32)
 	.long	__pabt_invalid			@  1 (FIQ_26 / FIQ_32)
@@ -620,7 +891,7 @@ __stubs_start:
  * Undef instr entry dispatcher
  * Enter in UND mode, spsr = SVC/USR CPSR, lr = SVC/USR PC
  */
-	vector_stub	und, und
+	vector_stub	und
 
 	.long	__und_usr			@  0 (USR_26 / USR_32)
 	.long	__und_invalid			@  1 (FIQ_26 / FIQ_32)
@@ -674,63 +945,26 @@ vector_addrexcptn:
 .LCvswi:
 	.word	vector_swi
 
-.LCsirq:
-	.word	__temp_irq
-.LCsund:
-	.word	__temp_und
-.LCsabt:
-	.word	__temp_abt
-
+	.globl	__stubs_end
 __stubs_end:
 
-	.equ	__real_stubs_start, .LCvectors + 0x200
+	.equ	stubs_offset, __vectors_start + 0x200 - __stubs_start
 
-.LCvectors:
+	.globl	__vectors_start
+__vectors_start:
 	swi	SYS_ERROR0
-	b	__real_stubs_start + (vector_und - __stubs_start)
-	ldr	pc, __real_stubs_start + (.LCvswi - __stubs_start)
-	b	__real_stubs_start + (vector_pabt - __stubs_start)
-	b	__real_stubs_start + (vector_dabt - __stubs_start)
-	b	__real_stubs_start + (vector_addrexcptn - __stubs_start)
-	b	__real_stubs_start + (vector_irq - __stubs_start)
-	b	__real_stubs_start + (vector_fiq - __stubs_start)
+	b	vector_und + stubs_offset
+	ldr	pc, .LCvswi + stubs_offset
+	b	vector_pabt + stubs_offset
+	b	vector_dabt + stubs_offset
+	b	vector_addrexcptn + stubs_offset
+	b	vector_irq + stubs_offset
+	b	vector_fiq + stubs_offset
 
-ENTRY(__trap_init)
-	stmfd	sp!, {r4 - r6, lr}
-
-	mov	r0, #0xff000000
-	orr	r0, r0, #0x00ff0000		@ high vectors position
-	adr	r1, .LCvectors			@ set up the vectors
-	ldmia	r1, {r1, r2, r3, r4, r5, r6, ip, lr}
-	stmia	r0, {r1, r2, r3, r4, r5, r6, ip, lr}
-
-	add	r2, r0, #0x200
-	adr	r0, __stubs_start		@ copy stubs to 0x200
-	adr	r1, __stubs_end
-1:	ldr	r3, [r0], #4
-	str	r3, [r2], #4
-	cmp	r0, r1
-	blt	1b
-	LOADREGS(fd, sp!, {r4 - r6, pc})
+	.globl	__vectors_end
+__vectors_end:
 
 	.data
-
-/*
- * Do not reorder these, and do not insert extra data between...
- */
-
-__temp_irq:
-	.word	0				@ saved lr_irq
-	.word	0				@ saved spsr_irq
-	.word	-1				@ old_r0
-__temp_und:
-	.word	0				@ Saved lr_und
-	.word	0				@ Saved spsr_und
-	.word	-1				@ old_r0
-__temp_abt:
-	.word	0				@ Saved lr_abt
-	.word	0				@ Saved spsr_abt
-	.word	-1				@ old_r0
 
 	.globl	cr_alignment
 	.globl	cr_no_alignment

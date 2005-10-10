@@ -104,6 +104,7 @@
 #include <linux/smp_lock.h>
 #include <linux/gameport.h>
 #include <linux/wait.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/io.h>
 #include <asm/page.h>
@@ -148,6 +149,10 @@
 #define FMODE_MIDI_WRITE (FMODE_WRITE << FMODE_MIDI_SHIFT)
 
 #define FMODE_DMFM 0x10
+
+#if defined(CONFIG_GAMEPORT) || (defined(MODULE) && defined(CONFIG_GAMEPORT_MODULE))
+#define SUPPORT_JOYSTICK 1
+#endif
 
 static struct pci_driver solo1_driver;
 
@@ -226,7 +231,9 @@ struct solo1_state {
 		unsigned char obuf[MIDIOUTBUF];
 	} midi;
 
-	struct gameport gameport;
+#if SUPPORT_JOYSTICK
+	struct gameport *gameport;
+#endif
 };
 
 /* --------------------------------------------------------------------- */
@@ -2193,7 +2200,7 @@ static /*const*/ struct file_operations solo1_dmfm_fops = {
 static struct initvol {
 	int mixch;
 	int vol;
-} initvol[] __initdata = {
+} initvol[] __devinitdata = {
 	{ SOUND_MIXER_WRITE_VOLUME, 0x4040 },
 	{ SOUND_MIXER_WRITE_PCM, 0x4040 },
 	{ SOUND_MIXER_WRITE_SYNTH, 0x4040 },
@@ -2257,7 +2264,7 @@ static int setup_solo1(struct solo1_state *s)
 }
 
 static int
-solo1_suspend(struct pci_dev *pci_dev, u32 state) {
+solo1_suspend(struct pci_dev *pci_dev, pm_message_t state) {
 	struct solo1_state *s = (struct solo1_state*)pci_get_drvdata(pci_dev);
 	if (!s)
 		return 1;
@@ -2280,9 +2287,50 @@ solo1_resume(struct pci_dev *pci_dev) {
 	return 0;
 }
 
+#ifdef SUPPORT_JOYSTICK
+static int __devinit solo1_register_gameport(struct solo1_state *s, int io_port)
+{
+	struct gameport *gp;
+
+	if (!request_region(io_port, GAMEPORT_EXTENT, "ESS Solo1")) {
+		printk(KERN_ERR "solo1: gameport io ports are in use\n");
+		return -EBUSY;
+	}
+
+	s->gameport = gp = gameport_allocate_port();
+	if (!gp) {
+		printk(KERN_ERR "solo1: can not allocate memory for gameport\n");
+		release_region(io_port, GAMEPORT_EXTENT);
+		return -ENOMEM;
+	}
+
+	gameport_set_name(gp, "ESS Solo1 Gameport");
+	gameport_set_phys(gp, "isa%04x/gameport0", io_port);
+	gp->dev.parent = &s->dev->dev;
+	gp->io = io_port;
+
+	gameport_register_port(gp);
+
+	return 0;
+}
+
+static inline void solo1_unregister_gameport(struct solo1_state *s)
+{
+	if (s->gameport) {
+		int gpio = s->gameport->io;
+		gameport_unregister_port(s->gameport);
+		release_region(gpio, GAMEPORT_EXTENT);
+	}
+}
+#else
+static inline int solo1_register_gameport(struct solo1_state *s, int io_port) { return -ENOSYS; }
+static inline void solo1_unregister_gameport(struct solo1_state *s) { }
+#endif /* SUPPORT_JOYSTICK */
+
 static int __devinit solo1_probe(struct pci_dev *pcidev, const struct pci_device_id *pciid)
 {
 	struct solo1_state *s;
+	int gpio;
 	int ret;
 
  	if ((ret=pci_enable_device(pcidev)))
@@ -2299,7 +2347,7 @@ static int __devinit solo1_probe(struct pci_dev *pcidev, const struct pci_device
 	 * to 24 bits first, then 32 bits (playback only) if that fails.
 	 */
 	if (pci_set_dma_mask(pcidev, 0x00ffffff) &&
-	    pci_set_dma_mask(pcidev, 0xffffffff)) {
+	    pci_set_dma_mask(pcidev, DMA_32BIT_MASK)) {
 		printk(KERN_WARNING "solo1: architecture does not support 24bit or 32bit PCI busmaster DMA\n");
 		return -ENODEV;
 	}
@@ -2323,7 +2371,7 @@ static int __devinit solo1_probe(struct pci_dev *pcidev, const struct pci_device
 	s->vcbase = pci_resource_start(pcidev, 2);
 	s->ddmabase = s->vcbase + DDMABASE_OFFSET;
 	s->mpubase = pci_resource_start(pcidev, 3);
-	s->gameport.io = pci_resource_start(pcidev, 4);
+	gpio = pci_resource_start(pcidev, 4);
 	s->irq = pcidev->irq;
 	ret = -EBUSY;
 	if (!request_region(s->iobase, IOBASE_EXTENT, "ESS Solo1")) {
@@ -2342,15 +2390,10 @@ static int __devinit solo1_probe(struct pci_dev *pcidev, const struct pci_device
 		printk(KERN_ERR "solo1: io ports in use\n");
 		goto err_region4;
 	}
-	if (s->gameport.io && !request_region(s->gameport.io, GAMEPORT_EXTENT, "ESS Solo1")) {
-		printk(KERN_ERR "solo1: gameport io ports in use\n");
-		s->gameport.io = 0;
-	}
 	if ((ret=request_irq(s->irq,solo1_interrupt,SA_SHIRQ,"ESS Solo1",s))) {
 		printk(KERN_ERR "solo1: irq %u in use\n", s->irq);
 		goto err_irq;
 	}
-	printk(KERN_INFO "solo1: joystick port at %#x\n", s->gameport.io+1);
 	/* register devices */
 	if ((s->dev_audio = register_sound_dsp(&solo1_audio_fops, -1)) < 0) {
 		ret = s->dev_audio;
@@ -2373,7 +2416,7 @@ static int __devinit solo1_probe(struct pci_dev *pcidev, const struct pci_device
 		goto err;
 	}
 	/* register gameport */
-	gameport_register_port(&s->gameport);
+	solo1_register_gameport(s, gpio);
 	/* store it in the driver field */
 	pci_set_drvdata(pcidev, s);
 	return 0;
@@ -2390,8 +2433,6 @@ static int __devinit solo1_probe(struct pci_dev *pcidev, const struct pci_device
 	printk(KERN_ERR "solo1: initialisation error\n");
 	free_irq(s->irq, s);
  err_irq:
-	if (s->gameport.io)
-		release_region(s->gameport.io, GAMEPORT_EXTENT);
 	release_region(s->mpubase, MPUBASE_EXTENT);
  err_region4:
 	release_region(s->ddmabase, DDMABASE_EXTENT);
@@ -2417,10 +2458,7 @@ static void __devexit solo1_remove(struct pci_dev *dev)
 	synchronize_irq(s->irq);
 	pci_write_config_word(s->dev, 0x60, 0); /* turn off DDMA controller address space */
 	free_irq(s->irq, s);
-	if (s->gameport.io) {
-		gameport_unregister_port(&s->gameport);
-		release_region(s->gameport.io, GAMEPORT_EXTENT);
-	}
+	solo1_unregister_gameport(s);
 	release_region(s->iobase, IOBASE_EXTENT);
 	release_region(s->sbbase+FMSYNTH_EXTENT, SBBASE_EXTENT-FMSYNTH_EXTENT);
 	release_region(s->ddmabase, DDMABASE_EXTENT);

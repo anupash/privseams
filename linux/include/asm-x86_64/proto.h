@@ -15,6 +15,13 @@ extern void pda_init(int);
 extern void early_idt_handler(void);
 
 extern void mcheck_init(struct cpuinfo_x86 *c);
+#ifdef CONFIG_MTRR
+extern void mtrr_ap_init(void);
+extern void mtrr_bp_init(void);
+#else
+#define mtrr_ap_init() do {} while (0)
+#define mtrr_bp_init() do {} while (0)
+#endif
 extern void init_memory_mapping(unsigned long start, unsigned long end);
 
 extern void system_call(void); 
@@ -29,7 +36,12 @@ extern void config_acpi_tables(void);
 extern void ia32_syscall(void);
 extern void iommu_hole_init(void);
 
-extern void time_init_smp(void);
+extern void time_init_gtod(void);
+extern int pmtimer_mark_offset(void);
+extern unsigned int do_gettimeoffset_pm(void);
+extern u32 pmtmr_ioport;
+extern unsigned long long monotonic_base;
+extern int sysctl_vsyscall;
 
 extern void do_softirq_thunk(void);
 
@@ -69,8 +81,6 @@ extern void __die(const char * str, struct pt_regs * regs, long err);
 extern void __show_regs(struct pt_regs * regs);
 extern void show_regs(struct pt_regs * regs);
 
-extern int map_syscall32(struct mm_struct *mm, unsigned long address);
-extern int __map_syscall32(struct mm_struct *mm, unsigned long address);
 extern char *syscall32_page;
 extern void syscall32_cpu_init(void);
 

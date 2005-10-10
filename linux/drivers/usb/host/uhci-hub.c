@@ -33,9 +33,24 @@ static __u8 root_hub_hub_des[] =
 /* status change bits:  nonzero writes will clear */
 #define RWC_BITS	(USBPORTSC_OCC | USBPORTSC_PEC | USBPORTSC_CSC)
 
-static int uhci_hub_status_data(struct usb_hcd *hcd, char *buf)
+/* A port that either is connected or has a changed-bit set will prevent
+ * us from AUTO_STOPPING.
+ */
+static int any_ports_active(struct uhci_hcd *uhci)
 {
-	struct uhci_hcd *uhci = hcd_to_uhci(hcd);
+	int port;
+
+	for (port = 0; port < uhci->rh_numports; ++port) {
+		if ((inw(uhci->io_addr + USBPORTSC1 + port * 2) &
+				(USBPORTSC_CCS | RWC_BITS)) ||
+				test_bit(port, &uhci->port_c_suspend))
+			return 1;
+	}
+	return 0;
+}
+
+static inline int get_hub_status_data(struct uhci_hcd *uhci, char *buf)
+{
 	int port;
 
 	*buf = 0;
@@ -44,8 +59,6 @@ static int uhci_hub_status_data(struct usb_hcd *hcd, char *buf)
 				test_bit(port, &uhci->port_c_suspend))
 			*buf |= (1 << (port + 1));
 	}
-	if (*buf && uhci->state == UHCI_SUSPENDED)
-		uhci->resume_detect = 1;
 	return !!*buf;
 }
 
@@ -66,7 +79,6 @@ static int uhci_hub_status_data(struct usb_hcd *hcd, char *buf)
 
 /* UHCI controllers don't automatically stop resume signalling after 20 msec,
  * so we have to poll and check timeouts in order to take care of it.
- * FIXME:  Synchronize access to these fields by a spinlock.
  */
 static void uhci_finish_suspend(struct uhci_hcd *uhci, int port,
 		unsigned long port_addr)
@@ -87,26 +99,100 @@ static void uhci_finish_suspend(struct uhci_hcd *uhci, int port,
 	}
 }
 
-static void uhci_check_resume(struct uhci_hcd *uhci)
+static void uhci_check_ports(struct uhci_hcd *uhci)
 {
 	unsigned int port;
 	unsigned long port_addr;
+	int status;
 
 	for (port = 0; port < uhci->rh_numports; ++port) {
 		port_addr = uhci->io_addr + USBPORTSC1 + 2 * port;
-		if (unlikely(inw(port_addr) & USBPORTSC_RD)) {
+		status = inw(port_addr);
+		if (unlikely(status & USBPORTSC_PR)) {
+			if (time_after_eq(jiffies, uhci->ports_timeout)) {
+				CLR_RH_PORTSTAT(USBPORTSC_PR);
+				udelay(10);
+
+				/* If the port was enabled before, turning
+				 * reset on caused a port enable change.
+				 * Turning reset off causes a port connect
+				 * status change.  Clear these changes. */
+				CLR_RH_PORTSTAT(USBPORTSC_CSC | USBPORTSC_PEC);
+				SET_RH_PORTSTAT(USBPORTSC_PE);
+			}
+		}
+		if (unlikely(status & USBPORTSC_RD)) {
 			if (!test_bit(port, &uhci->resuming_ports)) {
 
 				/* Port received a wakeup request */
 				set_bit(port, &uhci->resuming_ports);
-				uhci->resume_timeout = jiffies +
+				uhci->ports_timeout = jiffies +
 						msecs_to_jiffies(20);
+
+				/* Make sure we see the port again
+				 * after the resuming period is over. */
+				mod_timer(&uhci_to_hcd(uhci)->rh_timer,
+						uhci->ports_timeout);
 			} else if (time_after_eq(jiffies,
-						uhci->resume_timeout)) {
+						uhci->ports_timeout)) {
 				uhci_finish_suspend(uhci, port, port_addr);
 			}
 		}
 	}
+}
+
+static int uhci_hub_status_data(struct usb_hcd *hcd, char *buf)
+{
+	struct uhci_hcd *uhci = hcd_to_uhci(hcd);
+	unsigned long flags;
+	int status;
+
+	spin_lock_irqsave(&uhci->lock, flags);
+	if (uhci->hc_inaccessible) {
+		status = 0;
+		goto done;
+	}
+
+	uhci_check_ports(uhci);
+	status = get_hub_status_data(uhci, buf);
+
+	switch (uhci->rh_state) {
+	    case UHCI_RH_SUSPENDING:
+	    case UHCI_RH_SUSPENDED:
+		/* if port change, ask to be resumed */
+		if (status)
+			usb_hcd_resume_root_hub(hcd);
+		break;
+
+	    case UHCI_RH_AUTO_STOPPED:
+		/* if port change, auto start */
+		if (status)
+			wakeup_rh(uhci);
+		break;
+
+	    case UHCI_RH_RUNNING:
+		/* are any devices attached? */
+		if (!any_ports_active(uhci)) {
+			uhci->rh_state = UHCI_RH_RUNNING_NODEVS;
+			uhci->auto_stop_time = jiffies + HZ;
+		}
+		break;
+
+	    case UHCI_RH_RUNNING_NODEVS:
+		/* auto-stop if nothing connected for 1 second */
+		if (any_ports_active(uhci))
+			uhci->rh_state = UHCI_RH_RUNNING;
+		else if (time_after_eq(jiffies, uhci->auto_stop_time))
+			suspend_rh(uhci, UHCI_RH_AUTO_STOPPED);
+		break;
+
+	    default:
+		break;
+	}
+
+done:
+	spin_unlock_irqrestore(&uhci->lock, flags);
+	return status;
 }
 
 /* size of returned buffer is part of USB spec */
@@ -118,7 +204,12 @@ static int uhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 	unsigned int port = wIndex - 1;
 	unsigned long port_addr = uhci->io_addr + USBPORTSC1 + 2 * port;
 	u16 wPortChange, wPortStatus;
+	unsigned long flags;
 
+	if (uhci->hc_inaccessible)
+		return -ETIMEDOUT;
+
+	spin_lock_irqsave(&uhci->lock, flags);
 	switch (typeReq) {
 
 	case GetHubStatus:
@@ -128,9 +219,7 @@ static int uhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 		if (port >= uhci->rh_numports)
 			goto err;
 
-		if (uhci->resuming_ports)
-			uhci_check_resume(uhci);
-
+		uhci_check_ports(uhci);
 		status = inw(port_addr);
 
 		/* Intel controllers report the OverCurrent bit active on.
@@ -203,15 +292,12 @@ static int uhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			OK(0);
 		case USB_PORT_FEAT_RESET:
 			SET_RH_PORTSTAT(USBPORTSC_PR);
-			mdelay(50);	/* USB v1.1 7.1.7.3 */
-			CLR_RH_PORTSTAT(USBPORTSC_PR);
-			udelay(10);
 
 			/* Reset terminates Resume signalling */
 			uhci_finish_suspend(uhci, port, port_addr);
-			SET_RH_PORTSTAT(USBPORTSC_PE);
-			mdelay(10);
-			CLR_RH_PORTSTAT(USBPORTSC_PEC|USBPORTSC_CSC);
+
+			/* USB v2.0 7.1.7.5 */
+			uhci->ports_timeout = jiffies + msecs_to_jiffies(50);
 			OK(0);
 		case USB_PORT_FEAT_POWER:
 			/* UHCI has no power switching */
@@ -238,8 +324,6 @@ static int uhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			if (test_bit(port, &uhci->suspended_ports) &&
 					!test_and_set_bit(port,
 						&uhci->resuming_ports)) {
-				uhci->resume_timeout = jiffies +
-						msecs_to_jiffies(20);
 				SET_RH_PORTSTAT(USBPORTSC_RD);
 
 				/* The controller won't allow RD to be set
@@ -249,6 +333,10 @@ static int uhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 				if (!(inw(port_addr) & USBPORTSC_RD))
 					uhci_finish_suspend(uhci, port,
 							port_addr);
+				else
+					/* USB v2.0 7.1.7.7 */
+					uhci->ports_timeout = jiffies +
+						msecs_to_jiffies(20);
 			}
 			OK(0);
 		case USB_PORT_FEAT_C_SUSPEND:
@@ -280,6 +368,7 @@ static int uhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 err:
 		retval = -EPIPE;
 	}
+	spin_unlock_irqrestore(&uhci->lock, flags);
 
 	return retval;
 }

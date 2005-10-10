@@ -195,7 +195,6 @@ static struct ip_tunnel * ipip6_tunnel_locate(struct ip_tunnel_parm *parms, int 
 	dev_hold(dev);
 
 	ipip6_tunnel_link(nt);
-	/* Do not decrement MOD_USE_COUNT here. */
 	return nt;
 
 failed:
@@ -500,9 +499,9 @@ static int ipip6_tunnel_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 
 	if (tiph->frag_off)
-		mtu = dst_pmtu(&rt->u.dst) - sizeof(struct iphdr);
+		mtu = dst_mtu(&rt->u.dst) - sizeof(struct iphdr);
 	else
-		mtu = skb->dst ? dst_pmtu(skb->dst) : dev->mtu;
+		mtu = skb->dst ? dst_mtu(skb->dst) : dev->mtu;
 
 	if (mtu < 68) {
 		tunnel->stat.collisions++;
@@ -794,10 +793,28 @@ static struct net_protocol sit_protocol = {
 	.err_handler	=	ipip6_err,
 };
 
+static void __exit sit_destroy_tunnels(void)
+{
+	int prio;
+
+	for (prio = 1; prio < 4; prio++) {
+		int h;
+		for (h = 0; h < HASH_SIZE; h++) {
+			struct ip_tunnel *t;
+			while ((t = tunnels[prio][h]) != NULL)
+				unregister_netdevice(t->dev);
+		}
+	}
+}
+
 void __exit sit_cleanup(void)
 {
 	inet_del_protocol(&sit_protocol, IPPROTO_IPV6);
-	unregister_netdev(ipip6_fb_tunnel_dev);
+
+	rtnl_lock();
+	sit_destroy_tunnels();
+	unregister_netdevice(ipip6_fb_tunnel_dev);
+	rtnl_unlock();
 }
 
 int __init sit_init(void)

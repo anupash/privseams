@@ -505,7 +505,7 @@ static inline unsigned long eeh_token_to_phys(unsigned long token)
 	pte_t *ptep;
 	unsigned long pa;
 
-	ptep = find_linux_pte(ioremap_mm.pgd, token);
+	ptep = find_linux_pte(init_mm.pgd, token);
 	if (!ptep)
 		return token;
 	pa = pte_pfn(*ptep) << PAGE_SHIFT;
@@ -824,7 +824,7 @@ void eeh_add_device_early(struct device_node *dn)
 	struct pci_controller *phb;
 	struct eeh_early_enable_info info;
 
-	if (!dn || !eeh_subsystem_enabled)
+	if (!dn)
 		return;
 	phb = dn->phb;
 	if (NULL == phb || 0 == phb->buid) {

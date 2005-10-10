@@ -32,6 +32,7 @@
 #include <asm/leds.h>
 #include <asm/processor.h>
 #include <asm/uaccess.h>
+#include <asm/mach/time.h>
 
 extern const char *processor_modes[];
 extern void setup_mm_for_reboot(char mode);
@@ -85,8 +86,10 @@ EXPORT_SYMBOL(pm_power_off);
 void default_idle(void)
 {
 	local_irq_disable();
-	if (!need_resched() && !hlt_counter)
+	if (!need_resched() && !hlt_counter) {
+		timer_dyn_reprogram();
 		arch_idle();
+	}
 	local_irq_enable();
 }
 
@@ -128,7 +131,6 @@ void machine_halt(void)
 {
 }
 
-EXPORT_SYMBOL(machine_halt);
 
 void machine_power_off(void)
 {
@@ -136,7 +138,6 @@ void machine_power_off(void)
 		pm_power_off();
 }
 
-EXPORT_SYMBOL(machine_power_off);
 
 void machine_restart(char * __unused)
 {
@@ -166,14 +167,11 @@ void machine_restart(char * __unused)
 	while (1);
 }
 
-EXPORT_SYMBOL(machine_restart);
-
-void show_regs(struct pt_regs * regs)
+void __show_regs(struct pt_regs *regs)
 {
-	unsigned long flags;
+	unsigned long flags = condition_codes(regs);
 
-	flags = condition_codes(regs);
-
+	printk("CPU: %d\n", smp_processor_id());
 	print_symbol("PC is at %s\n", instruction_pointer(regs));
 	print_symbol("LR is at %s\n", regs->ARM_lr);
 	printk("pc : [<%08lx>]    lr : [<%08lx>]    %s\n"
@@ -213,6 +211,14 @@ void show_regs(struct pt_regs * regs)
 	}
 }
 
+void show_regs(struct pt_regs * regs)
+{
+	printk("\n");
+	printk("Pid: %d, comm: %20s\n", current->pid, current->comm);
+	__show_regs(regs);
+	__backtrace();
+}
+
 void show_fpregs(struct user_fp *regs)
 {
 	int i;
@@ -249,8 +255,6 @@ static unsigned long *thread_info_head;
 static unsigned int nr_thread_info;
 
 #define EXTRA_TASK_STRUCT	4
-#define ll_alloc_task_struct() ((struct thread_info *) __get_free_pages(GFP_KERNEL,1))
-#define ll_free_task_struct(p) free_pages((unsigned long)(p),1)
 
 struct thread_info *alloc_thread_info(struct task_struct *task)
 {
@@ -267,17 +271,16 @@ struct thread_info *alloc_thread_info(struct task_struct *task)
 	}
 
 	if (!thread)
-		thread = ll_alloc_task_struct();
+		thread = (struct thread_info *)
+			   __get_free_pages(GFP_KERNEL, THREAD_SIZE_ORDER);
 
-#ifdef CONFIG_MAGIC_SYSRQ
+#ifdef CONFIG_DEBUG_STACK_USAGE
 	/*
 	 * The stack must be cleared if you want SYSRQ-T to
 	 * give sensible stack usage information
 	 */
-	if (thread) {
-		char *p = (char *)thread;
-		memzero(p+KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);
-	}
+	if (thread)
+		memzero(thread, THREAD_SIZE);
 #endif
 	return thread;
 }
@@ -290,7 +293,7 @@ void free_thread_info(struct thread_info *thread)
 		thread_info_head = p;
 		nr_thread_info += 1;
 	} else
-		ll_free_task_struct(thread);
+		free_pages((unsigned long)thread, THREAD_SIZE_ORDER);
 }
 
 /*
@@ -343,7 +346,7 @@ copy_thread(int nr, unsigned long clone_flags, unsigned long stack_start,
 	struct thread_info *thread = p->thread_info;
 	struct pt_regs *childregs;
 
-	childregs = ((struct pt_regs *)((unsigned long)thread + THREAD_SIZE - 8)) - 1;
+	childregs = ((struct pt_regs *)((unsigned long)thread + THREAD_START_SP)) - 1;
 	*childregs = *regs;
 	childregs->ARM_r0 = 0;
 	childregs->ARM_sp = stack_start;
@@ -440,15 +443,17 @@ EXPORT_SYMBOL(kernel_thread);
 unsigned long get_wchan(struct task_struct *p)
 {
 	unsigned long fp, lr;
-	unsigned long stack_page;
+	unsigned long stack_start, stack_end;
 	int count = 0;
 	if (!p || p == current || p->state == TASK_RUNNING)
 		return 0;
 
-	stack_page = 4096 + (unsigned long)p->thread_info;
+	stack_start = (unsigned long)(p->thread_info + 1);
+	stack_end = ((unsigned long)p->thread_info) + THREAD_SIZE;
+
 	fp = thread_saved_fp(p);
 	do {
-		if (fp < stack_page || fp > 4092+stack_page)
+		if (fp < stack_start || fp > stack_end)
 			return 0;
 		lr = pc_pointer (((unsigned long *)fp)[-1]);
 		if (!in_sched_functions(lr))

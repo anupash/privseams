@@ -65,7 +65,8 @@
 
 #define access_ok(type,addr,size) __access_ok(addr,size)
 
-extern inline int verify_area(int type, const void __user *addr,
+/* this function will go away soon - use access_ok() instead */
+extern inline int __deprecated verify_area(int type, const void __user *addr,
 						unsigned long size)
 {
 	return access_ok(type, addr, size) ? 0 : -EFAULT;
@@ -148,11 +149,11 @@ struct exception_table_entry
 })
 #endif
 
-#ifndef __CHECKER__
 #define __put_user(x, ptr) \
 ({								\
 	__typeof__(*(ptr)) __x = (x);				\
 	int __pu_err;						\
+        __chk_user_ptr(ptr);                                    \
 	switch (sizeof (*(ptr))) {				\
 	case 1:							\
 	case 2:							\
@@ -161,19 +162,11 @@ struct exception_table_entry
 		__put_user_asm(__x, ptr, __pu_err);		\
 		break;						\
 	default:						\
-		__pu_err = __put_user_bad();			\
+		__put_user_bad();				\
 		break;						\
 	 }							\
 	__pu_err;						\
 })
-#else
-#define __put_user(x, ptr)			\
-({						\
-	void __user *p;				\
-	p = (ptr);				\
-	0;					\
-})
-#endif
 
 #define put_user(x, ptr)					\
 ({								\
@@ -182,7 +175,7 @@ struct exception_table_entry
 })
 
 
-extern int __put_user_bad(void);
+extern int __put_user_bad(void) __attribute__((noreturn));
 
 #if __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ > 2)
 #define __get_user_asm(x, ptr, err) \
@@ -212,11 +205,11 @@ extern int __put_user_bad(void);
 })
 #endif
 
-#ifndef __CHECKER__
 #define __get_user(x, ptr)					\
 ({								\
 	__typeof__(*(ptr)) __x;					\
 	int __gu_err;						\
+        __chk_user_ptr(ptr);                                    \
 	switch (sizeof(*(ptr))) {				\
 	case 1:							\
 	case 2:							\
@@ -225,22 +218,12 @@ extern int __put_user_bad(void);
 		__get_user_asm(__x, ptr, __gu_err);		\
 		break;						\
 	default:						\
-		__x = 0;					\
-		__gu_err = __get_user_bad();			\
+		__get_user_bad();				\
 		break;						\
 	}							\
 	(x) = __x;						\
 	__gu_err;						\
 })
-#else
-#define __get_user(x, ptr)			\
-({						\
-	void __user *p;				\
-	p = (ptr);				\
-	0;					\
-})
-#endif
-
 
 #define get_user(x, ptr)					\
 ({								\
@@ -248,7 +231,7 @@ extern int __put_user_bad(void);
 	__get_user(x, ptr);					\
 })
 
-extern int __get_user_bad(void);
+extern int __get_user_bad(void) __attribute__((noreturn));
 
 #define __put_user_unaligned __put_user
 #define __get_user_unaligned __get_user

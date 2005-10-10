@@ -4,18 +4,20 @@
 # Licensed under the GPL
 #
 
+#XXX: why into lib-y?
 lib-y = bitops.o bugs.o csum-partial.o delay.o fault.o mem.o memcpy.o \
-	ptrace.o ptrace_user.o semaphore.o sigcontext.o signal.o \
-	syscalls.o sysrq.o thunk.o
+	ptrace.o ptrace_user.o semaphore.o sigcontext.o signal.o stub.o \
+	stub_segv.o syscalls.o syscall_table.o sysrq.o thunk.o
+
+obj-y := ksyms.o
+obj-$(CONFIG_MODULES) += module.o um_module.o
 
 USER_OBJS := ptrace_user.o sigcontext.o
-USER_OBJS := $(foreach file,$(USER_OBJS),$(obj)/$(file))
 
 SYMLINKS = bitops.c csum-copy.S csum-partial.c csum-wrappers.c memcpy.S \
-	semaphore.c thunk.S
-SYMLINKS := $(foreach f,$(SYMLINKS),$(src)/$f)
+	semaphore.c thunk.S module.c
 
-clean-files := $(SYMLINKS)
+include arch/um/scripts/Makefile.rules
 
 bitops.c-dir = lib
 csum-copy.S-dir = lib
@@ -24,16 +26,16 @@ csum-wrappers.c-dir = lib
 memcpy.S-dir = lib
 semaphore.c-dir = kernel
 thunk.S-dir = lib
+module.c-dir = kernel
 
-define make_link
-       -rm -f $1
-       ln -sf $(TOPDIR)/arch/x86_64/$($(notdir $1)-dir)/$(notdir $1) $1
-endef
+STUB_CFLAGS = -Wp,-MD,$(depfile) $(call unprofile,$(USER_CFLAGS))
 
-$(SYMLINKS):
-	$(call make_link,$@)
+# _cflags works with kernel files, not with userspace ones, but c_flags does,
+# why ask why?
+$(obj)/stub_segv.o : c_flags = $(STUB_CFLAGS)
 
-$(USER_OBJS) : %.o: %.c
-	$(CC) $(CFLAGS_$(notdir $@)) $(USER_CFLAGS) -c -o $@ $<
+$(obj)/stub.o : a_flags = $(STUB_CFLAGS)
 
-CFLAGS_csum-partial.o := -Dcsum_partial=arch_csum_partial
+subdir- := util
+
+include arch/um/scripts/Makefile.unmap

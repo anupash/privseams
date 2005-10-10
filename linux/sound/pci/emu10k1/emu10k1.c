@@ -52,6 +52,7 @@ static int seq_ports[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS - 1)] = 4};
 static int max_synth_voices[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS - 1)] = 64};
 static int max_buffer_size[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS - 1)] = 128};
 static int enable_ir[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS - 1)] = 0};
+static uint subsystem[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS - 1)] = 0}; /* Force card subsystem model */
 
 module_param_array(index, int, NULL, 0444);
 MODULE_PARM_DESC(index, "Index value for the EMU10K1 soundcard.");
@@ -71,7 +72,8 @@ module_param_array(max_buffer_size, int, NULL, 0444);
 MODULE_PARM_DESC(max_buffer_size, "Maximum sample buffer size in MB.");
 module_param_array(enable_ir, bool, NULL, 0444);
 MODULE_PARM_DESC(enable_ir, "Enable IR.");
-
+module_param_array(subsystem, uint, NULL, 0444);
+MODULE_PARM_DESC(subsystem, "Force card subsystem model.");
 /*
  * Class 0401: 1102:0008 (rev 00) Subsystem: 1102:1001 -> Audigy2 Value  Model:SB0400
  */
@@ -122,7 +124,7 @@ static int __devinit snd_card_emu10k1_probe(struct pci_dev *pci,
 		max_buffer_size[dev] = 1024;
 	if ((err = snd_emu10k1_create(card, pci, extin[dev], extout[dev],
 				      (long)max_buffer_size[dev] * 1024 * 1024,
-				      enable_ir[dev],
+				      enable_ir[dev], subsystem[dev],
 				      &emu)) < 0) {
 		snd_card_free(card);
 		return err;
@@ -138,7 +140,15 @@ static int __devinit snd_card_emu10k1_probe(struct pci_dev *pci,
 	if ((err = snd_emu10k1_pcm_efx(emu, 2, NULL)) < 0) {
 		snd_card_free(card);
 		return err;
-	}		
+	}
+	/* This stores the periods table. */
+	if (emu->card_capabilities->ca0151_chip) { /* P16V */	
+		if(snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV, snd_dma_pci_data(pci), 1024, &emu->p16v_buffer) < 0) {
+			snd_p16v_free(emu);
+			return -ENOMEM;
+		}
+	}
+
 	if ((err = snd_emu10k1_mixer(emu)) < 0) {
 		snd_card_free(card);
 		return err;
@@ -149,6 +159,16 @@ static int __devinit snd_card_emu10k1_probe(struct pci_dev *pci,
 		return err;
 	}
 
+	if ((err = snd_emu10k1_pcm_multi(emu, 3, NULL)) < 0) {
+		snd_card_free(card);
+		return err;
+	}
+	if (emu->card_capabilities->ca0151_chip) { /* P16V */	
+		if ((err = snd_p16v_pcm(emu, 4, NULL)) < 0) {
+			snd_card_free(card);
+			return err;
+		}
+	}
 	if (emu->audigy) {
 		if ((err = snd_emu10k1_audigy_midi(emu)) < 0) {
 			snd_card_free(card);
@@ -180,23 +200,11 @@ static int __devinit snd_card_emu10k1_probe(struct pci_dev *pci,
 	}
 #endif
  
-	if (emu->audigy && (emu->serial == 0x10011102) ) {
-		strcpy(card->driver, "Audigy2");
-		strcpy(card->shortname, "Sound Blaster Audigy2_Value");
-	} else if (emu->audigy && (emu->revision == 4) ) {
-		strcpy(card->driver, "Audigy2");
-		strcpy(card->shortname, "Sound Blaster Audigy2");
-	} else if (emu->audigy) {
-		strcpy(card->driver, "Audigy");
-		strcpy(card->shortname, "Sound Blaster Audigy");
-	} else if (emu->APS) {
-		strcpy(card->driver, "E-mu APS");
-		strcpy(card->shortname, "E-mu APS");
-	} else {
-		strcpy(card->driver, "EMU10K1");
-		strcpy(card->shortname, "Sound Blaster Live!");
-	}
-	sprintf(card->longname, "%s (rev.%d, serial:0x%x) at 0x%lx, irq %i", card->shortname, emu->revision, emu->serial, emu->port, emu->irq);
+	strcpy(card->driver, emu->card_capabilities->driver);
+	strcpy(card->shortname, emu->card_capabilities->name);
+	snprintf(card->longname, sizeof(card->longname),
+		 "%s (rev.%d, serial:0x%x) at 0x%lx, irq %i",
+		 card->shortname, emu->revision, emu->serial, emu->port, emu->irq);
 
 	if ((err = snd_card_register(card)) < 0) {
 		snd_card_free(card);
@@ -222,7 +230,7 @@ static struct pci_driver driver = {
 
 static int __init alsa_card_emu10k1_init(void)
 {
-	return pci_module_init(&driver);
+	return pci_register_driver(&driver);
 }
 
 static void __exit alsa_card_emu10k1_exit(void)

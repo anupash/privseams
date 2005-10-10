@@ -23,20 +23,13 @@
 #include <linux/pagemap.h>
 #include <linux/quotaops.h>
 #include "jfs_incore.h"
+#include "jfs_inode.h"
 #include "jfs_filsys.h"
 #include "jfs_imap.h"
 #include "jfs_extent.h"
 #include "jfs_unicode.h"
 #include "jfs_debug.h"
 
-
-extern struct inode_operations jfs_dir_inode_operations;
-extern struct inode_operations jfs_file_inode_operations;
-extern struct inode_operations jfs_symlink_inode_operations;
-extern struct file_operations jfs_dir_operations;
-extern struct file_operations jfs_file_operations;
-struct address_space_operations jfs_aops;
-extern int freeZeroLink(struct inode *);
 
 void jfs_read_inode(struct inode *inode)
 {
@@ -52,8 +45,6 @@ void jfs_read_inode(struct inode *inode)
 	} else if (S_ISDIR(inode->i_mode)) {
 		inode->i_op = &jfs_dir_inode_operations;
 		inode->i_fop = &jfs_dir_operations;
-		inode->i_mapping->a_ops = &jfs_aops;
-		mapping_set_gfp_mask(inode->i_mapping, GFP_NOFS);
 	} else if (S_ISLNK(inode->i_mode)) {
 		if (inode->i_size >= IDATASIZE) {
 			inode->i_op = &page_symlink_inode_operations;
@@ -137,8 +128,12 @@ void jfs_delete_inode(struct inode *inode)
 {
 	jfs_info("In jfs_delete_inode, inode = 0x%p", inode);
 
+	if (is_bad_inode(inode) ||
+	    (JFS_IP(inode)->fileset != cpu_to_le32(FILESYSTEM_I)))
+			return;
+
 	if (test_cflag(COMMIT_Freewmap, inode))
-		freeZeroLink(inode);
+		jfs_free_zero_link(inode);
 
 	diFree(inode);
 
@@ -176,41 +171,23 @@ jfs_get_blocks(struct inode *ip, sector_t lblock, unsigned long max_blocks,
 			struct buffer_head *bh_result, int create)
 {
 	s64 lblock64 = lblock;
-	int no_size_check = 0;
 	int rc = 0;
-	int take_locks;
 	xad_t xad;
 	s64 xaddr;
 	int xflag;
-	s32 xlen;
+	s32 xlen = max_blocks;
 
-	/*
-	 * If this is a special inode (imap, dmap) or directory,
-	 * the lock should already be taken
-	 */
-	take_locks = ((JFS_IP(ip)->fileset != AGGREGATE_I) &&
-		      !S_ISDIR(ip->i_mode));
 	/*
 	 * Take appropriate lock on inode
 	 */
-	if (take_locks) {
-		if (create)
-			IWRITE_LOCK(ip);
-		else
-			IREAD_LOCK(ip);
-	}
+	if (create)
+		IWRITE_LOCK(ip);
+	else
+		IREAD_LOCK(ip);
 
-	/*
-	 * A directory's "data" is the inode index table, but i_size is the
-	 * size of the d-tree, so don't check the offset against i_size
-	 */
-	if (S_ISDIR(ip->i_mode))
-		no_size_check = 1;
-
-	if ((no_size_check ||
-	     ((lblock64 << ip->i_sb->s_blocksize_bits) < ip->i_size)) &&
-	    (xtLookup(ip, lblock64, max_blocks, &xflag, &xaddr, &xlen, no_size_check)
-	     == 0) && xlen) {
+	if (((lblock64 << ip->i_sb->s_blocksize_bits) < ip->i_size) &&
+	    (!xtLookup(ip, lblock64, max_blocks, &xflag, &xaddr, &xlen, 0)) &&
+	    xaddr) {
 		if (xflag & XAD_NOTRECORDED) {
 			if (!create)
 				/*
@@ -249,7 +226,7 @@ jfs_get_blocks(struct inode *ip, sector_t lblock, unsigned long max_blocks,
 #ifdef _JFS_4K
 	if ((rc = extHint(ip, lblock64 << ip->i_sb->s_blocksize_bits, &xad)))
 		goto unlock;
-	rc = extAlloc(ip, max_blocks, lblock64, &xad, FALSE);
+	rc = extAlloc(ip, xlen, lblock64, &xad, FALSE);
 	if (rc)
 		goto unlock;
 
@@ -269,12 +246,10 @@ jfs_get_blocks(struct inode *ip, sector_t lblock, unsigned long max_blocks,
 	/*
 	 * Release lock on inode
 	 */
-	if (take_locks) {
-		if (create)
-			IWRITE_UNLOCK(ip);
-		else
-			IREAD_UNLOCK(ip);
-	}
+	if (create)
+		IWRITE_UNLOCK(ip);
+	else
+		IREAD_UNLOCK(ip);
 	return rc;
 }
 
@@ -286,7 +261,7 @@ static int jfs_get_block(struct inode *ip, sector_t lblock,
 
 static int jfs_writepage(struct page *page, struct writeback_control *wbc)
 {
-	return block_write_full_page(page, jfs_get_block, wbc);
+	return nobh_writepage(page, jfs_get_block, wbc);
 }
 
 static int jfs_writepages(struct address_space *mapping,

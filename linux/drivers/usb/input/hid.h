@@ -118,7 +118,7 @@ struct hid_item {
 #define HID_MAIN_ITEM_CONSTANT		0x001
 #define HID_MAIN_ITEM_VARIABLE		0x002
 #define HID_MAIN_ITEM_RELATIVE		0x004
-#define HID_MAIN_ITEM_WRAP		0x008	
+#define HID_MAIN_ITEM_WRAP		0x008
 #define HID_MAIN_ITEM_NONLINEAR		0x010
 #define HID_MAIN_ITEM_NO_PREFERRED	0x020
 #define HID_MAIN_ITEM_NULL_STATE	0x040
@@ -172,14 +172,14 @@ struct hid_item {
 #define HID_USAGE_PAGE		0xffff0000
 
 #define HID_UP_UNDEFINED	0x00000000
-#define HID_UP_GENDESK 		0x00010000
-#define HID_UP_KEYBOARD 	0x00070000
-#define HID_UP_LED 		0x00080000
-#define HID_UP_BUTTON 		0x00090000
-#define HID_UP_ORDINAL 		0x000a0000
+#define HID_UP_GENDESK		0x00010000
+#define HID_UP_KEYBOARD		0x00070000
+#define HID_UP_LED		0x00080000
+#define HID_UP_BUTTON		0x00090000
+#define HID_UP_ORDINAL		0x000a0000
 #define HID_UP_CONSUMER		0x000c0000
-#define HID_UP_DIGITIZER 	0x000d0000
-#define HID_UP_PID 		0x000f0000
+#define HID_UP_DIGITIZER	0x000d0000
+#define HID_UP_PID		0x000f0000
 #define HID_UP_HPVENDOR         0xff7f0000
 #define HID_UP_MSVENDOR		0xff000000
 
@@ -406,7 +406,7 @@ struct hid_device {							/* device report descriptor */
 	dma_addr_t outbuf_dma;						/* Output buffer dma */
 	spinlock_t outlock;						/* Output fifo spinlock */
 
-	unsigned claimed;						/* Claimed by hidinput, hiddev? */	
+	unsigned claimed;						/* Claimed by hidinput, hiddev? */
 	unsigned quirks;						/* Various quirks the device can pull on us */
 
 	struct list_head inputs;					/* The list of inputs */
@@ -484,11 +484,10 @@ static inline void hidinput_disconnect(struct hid_device *hid) { }
 
 int hid_open(struct hid_device *);
 void hid_close(struct hid_device *);
-int hid_find_field(struct hid_device *, unsigned int, unsigned int, struct hid_field **);
 int hid_set_field(struct hid_field *, unsigned, __s32);
 void hid_submit_report(struct hid_device *, struct hid_report *, unsigned char dir);
 void hid_init_reports(struct hid_device *hid);
-int hid_find_report_by_usage(struct hid_device *hid, __u32 wanted_usage, struct hid_report **report, int type);
+struct hid_field *hid_find_field_by_usage(struct hid_device *hid, __u32 wanted_usage, int type);
 int hid_wait_io(struct hid_device* hid);
 
 

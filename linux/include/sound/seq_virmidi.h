@@ -38,7 +38,7 @@ typedef struct _snd_virmidi {
 	int seq_mode;
 	int client;
 	int port;
-	int trigger: 1;
+	unsigned int trigger: 1;
 	snd_midi_event_t *parser;
 	snd_seq_event_t event;
 	snd_virmidi_dev_t *rdev;
@@ -79,6 +79,5 @@ struct _snd_virmidi_dev {
 #define SNDRV_VIRMIDI_SEQ_DISPATCH	2
 
 int snd_virmidi_new(snd_card_t *card, int device, snd_rawmidi_t **rrmidi);
-int snd_virmidi_receive(snd_rawmidi_t *rmidi, snd_seq_event_t *ev);
 
 #endif /* __SOUND_SEQ_VIRMIDI */

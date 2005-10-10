@@ -37,10 +37,13 @@
 #include <asm/desc.h>
 #include <asm/proto.h>
 #include <asm/mach_apic.h>
+#include <asm/acpi.h>
 
 #define __apicdebuginit  __init
 
 int sis_apic_bug; /* not actually supported, dummy for compile */
+
+static int no_timer_check;
 
 static DEFINE_SPINLOCK(ioapic_lock);
 
@@ -147,7 +150,7 @@ static void unmask_IO_APIC_irq (unsigned int irq)
 	spin_unlock_irqrestore(&ioapic_lock, flags);
 }
 
-void clear_IO_APIC_pin(unsigned int apic, unsigned int pin)
+static void clear_IO_APIC_pin(unsigned int apic, unsigned int pin)
 {
 	struct IO_APIC_route_entry entry;
 	unsigned long flags;
@@ -185,8 +188,8 @@ static void clear_IO_APIC (void)
  */
 
 #define MAX_PIRQS 8
-int pirq_entries [MAX_PIRQS];
-int pirqs_enabled;
+static int pirq_entries [MAX_PIRQS];
+static int pirqs_enabled;
 int skip_ioapic_setup;
 int ioapic_force;
 
@@ -327,7 +330,7 @@ static int find_irq_entry(int apic, int pin, int type)
 /*
  * Find the pin to which IRQ[irq] (ISA) is connected
  */
-static int __init find_isa_irq_pin(int irq, int type)
+static int find_isa_irq_pin(int irq, int type)
 {
 	int i;
 
@@ -707,7 +710,7 @@ static inline void ioapic_register_intr(int irq, int vector, unsigned long trigg
 	}
 }
 
-void __init setup_IO_APIC_irqs(void)
+static void __init setup_IO_APIC_irqs(void)
 {
 	struct IO_APIC_route_entry entry;
 	int apic, pin, idx, irq, first_notcon = 1, vector;
@@ -776,7 +779,7 @@ void __init setup_IO_APIC_irqs(void)
  * Set up the 8259A-master output pin as broadcast to all
  * CPUs.
  */
-void __init setup_ExtINT_IRQ0_pin(unsigned int pin, int vector)
+static void __init setup_ExtINT_IRQ0_pin(unsigned int pin, int vector)
 {
 	struct IO_APIC_route_entry entry;
 	unsigned long flags;
@@ -948,6 +951,8 @@ void __apicdebuginit print_IO_APIC(void)
 	return;
 }
 
+#if 0
+
 static __apicdebuginit void print_APIC_bitfield (int base)
 {
 	unsigned int v;
@@ -1059,7 +1064,6 @@ void print_all_local_APICs (void)
 
 void __apicdebuginit print_PIC(void)
 {
-	extern spinlock_t i8259A_lock;
 	unsigned int v;
 	unsigned long flags;
 
@@ -1089,6 +1093,8 @@ void __apicdebuginit print_PIC(void)
 	v = inb(0x4d1) << 8 | inb(0x4d0);
 	printk(KERN_DEBUG "... PIC ELCR: %04x\n", v);
 }
+
+#endif  /*  0  */
 
 static void __init enable_IO_APIC(void)
 {
@@ -1125,12 +1131,44 @@ static void __init enable_IO_APIC(void)
  */
 void disable_IO_APIC(void)
 {
+	int pin;
 	/*
 	 * Clear the IO-APIC before rebooting:
 	 */
 	clear_IO_APIC();
 
-	disconnect_bsp_APIC();
+	/*
+	 * If the i82559 is routed through an IOAPIC
+	 * Put that IOAPIC in virtual wire mode
+	 * so legacy interrups can be delivered.
+	 */
+	pin = find_isa_irq_pin(0, mp_ExtINT);
+	if (pin != -1) {
+		struct IO_APIC_route_entry entry;
+		unsigned long flags;
+
+		memset(&entry, 0, sizeof(entry));
+		entry.mask            = 0; /* Enabled */
+		entry.trigger         = 0; /* Edge */
+		entry.irr             = 0;
+		entry.polarity        = 0; /* High */
+		entry.delivery_status = 0;
+		entry.dest_mode       = 0; /* Physical */
+		entry.delivery_mode   = 7; /* ExtInt */
+		entry.vector          = 0;
+		entry.dest.physical.physical_dest = 0;
+
+
+		/*
+		 * Add it to the IO-APIC irq-routing table:
+		 */
+		spin_lock_irqsave(&ioapic_lock, flags);
+		io_apic_write(0, 0x11+2*pin, *(((int *)&entry)+1));
+		io_apic_write(0, 0x10+2*pin, *(((int *)&entry)+0));
+		spin_unlock_irqrestore(&ioapic_lock, flags);
+	}
+
+	disconnect_bsp_APIC(pin != -1);
 }
 
 /*
@@ -1597,13 +1635,12 @@ static inline void check_timer(void)
 		 * Ok, does IRQ0 through the IOAPIC work?
 		 */
 		unmask_IO_APIC_irq(0);
-		if (timer_irq_works()) {
+		if (!no_timer_check && timer_irq_works()) {
 			nmi_watchdog_default();
 			if (nmi_watchdog == NMI_IO_APIC) {
 				disable_8259A_irq(0);
 				setup_nmi();
 				enable_8259A_irq(0);
-				check_nmi_watchdog();
 			}
 			return;
 		}
@@ -1623,7 +1660,6 @@ static inline void check_timer(void)
 			nmi_watchdog_default();
 			if (nmi_watchdog == NMI_IO_APIC) {
 				setup_nmi();
-				check_nmi_watchdog();
 			}
 			return;
 		}
@@ -1669,6 +1705,13 @@ static inline void check_timer(void)
 	panic("IO-APIC + timer doesn't work! Try using the 'noapic' kernel parameter\n");
 }
 
+static int __init notimercheck(char *s)
+{
+	no_timer_check = 1;
+	return 1;
+}
+__setup("no_timer_check", notimercheck);
+
 /*
  *
  * IRQ's that are handled by the PIC in the MPS IOAPIC case.
@@ -1708,7 +1751,7 @@ struct sysfs_ioapic_data {
 };
 static struct sysfs_ioapic_data * mp_ioapic_data[MAX_IO_APICS];
 
-static int ioapic_suspend(struct sys_device *dev, u32 state)
+static int ioapic_suspend(struct sys_device *dev, pm_message_t state)
 {
 	struct IO_APIC_route_entry *entry;
 	struct sysfs_ioapic_data *data;
@@ -1801,76 +1844,6 @@ device_initcall(ioapic_init_sysfs);
 #ifdef CONFIG_ACPI_BOOT
 
 #define IO_APIC_MAX_ID		0xFE
-
-int __init io_apic_get_unique_id (int ioapic, int apic_id)
-{
-	union IO_APIC_reg_00 reg_00;
-	static physid_mask_t apic_id_map;
-	unsigned long flags;
-	int i = 0;
-
-	/*
-	 * The P4 platform supports up to 256 APIC IDs on two separate APIC 
-	 * buses (one for LAPICs, one for IOAPICs), where predecessors only 
-	 * supports up to 16 on one shared APIC bus.
-	 * 
-	 * TBD: Expand LAPIC/IOAPIC support on P4-class systems to take full
-	 *      advantage of new APIC bus architecture.
-	 */
-
-	if (physids_empty(apic_id_map))
-		apic_id_map = phys_cpu_present_map;
-
-	spin_lock_irqsave(&ioapic_lock, flags);
-	reg_00.raw = io_apic_read(ioapic, 0);
-	spin_unlock_irqrestore(&ioapic_lock, flags);
-
-	if (apic_id >= IO_APIC_MAX_ID) {
-		apic_printk(APIC_QUIET, KERN_WARNING "IOAPIC[%d]: Invalid apic_id %d, trying "
-			"%d\n", ioapic, apic_id, reg_00.bits.ID);
-		apic_id = reg_00.bits.ID;
-	}
-
-	/*
-	 * Every APIC in a system must have a unique ID or we get lots of nice 
-	 * 'stuck on smp_invalidate_needed IPI wait' messages.
-	 */
-	if (physid_isset(apic_id, apic_id_map)) {
-
-		for (i = 0; i < IO_APIC_MAX_ID; i++) {
-			if (!physid_isset(i, apic_id_map))
-				break;
-		}
-
-		if (i == IO_APIC_MAX_ID)
-			panic("Max apic_id exceeded!\n");
-
-		apic_printk(APIC_VERBOSE, KERN_WARNING "IOAPIC[%d]: apic_id %d already used, "
-			"trying %d\n", ioapic, apic_id, i);
-
-		apic_id = i;
-	} 
-
-	physid_set(apic_id, apic_id_map);
-
-	if (reg_00.bits.ID != apic_id) {
-		reg_00.bits.ID = apic_id;
-
-		spin_lock_irqsave(&ioapic_lock, flags);
-		io_apic_write(ioapic, 0, reg_00.raw);
-		reg_00.raw = io_apic_read(ioapic, 0);
-		spin_unlock_irqrestore(&ioapic_lock, flags);
-
-		/* Sanity check */
-		if (reg_00.bits.ID != apic_id)
-			panic("IOAPIC[%d]: Unable change apic_id!\n", ioapic);
-	}
-
-	apic_printk(APIC_VERBOSE,KERN_INFO "IOAPIC[%d]: Assigned apic_id %d\n", ioapic, apic_id);
-
-	return apic_id;
-}
-
 
 int __init io_apic_get_version (int ioapic)
 {

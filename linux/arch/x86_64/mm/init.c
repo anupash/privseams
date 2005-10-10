@@ -318,22 +318,30 @@ void zap_low_mappings(void)
 	flush_tlb_all();
 }
 
-#ifndef CONFIG_DISCONTIGMEM
+#ifndef CONFIG_NUMA
 void __init paging_init(void)
 {
 	{
-		unsigned long zones_size[MAX_NR_ZONES] = {0, 0, 0};
+		unsigned long zones_size[MAX_NR_ZONES];
+		unsigned long holes[MAX_NR_ZONES];
 		unsigned int max_dma;
+
+		memset(zones_size, 0, sizeof(zones_size));
+		memset(holes, 0, sizeof(holes));
 
 		max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
 
-		if (end_pfn < max_dma)
+		if (end_pfn < max_dma) {
 			zones_size[ZONE_DMA] = end_pfn;
-		else {
+			holes[ZONE_DMA] = e820_hole_size(0, end_pfn);
+		} else {
 			zones_size[ZONE_DMA] = max_dma;
+			holes[ZONE_DMA] = e820_hole_size(0, max_dma);
 			zones_size[ZONE_NORMAL] = end_pfn - max_dma;
+			holes[ZONE_NORMAL] = e820_hole_size(max_dma, end_pfn);
 		}
-		free_area_init(zones_size);
+		free_area_init_node(0, NODE_DATA(0), zones_size,
+                        __pa(PAGE_OFFSET) >> PAGE_SHIFT, holes);
 	}
 	return;
 }
@@ -427,13 +435,16 @@ void __init mem_init(void)
 	reservedpages = 0;
 
 	/* this will put all low memory onto the freelists */
-#ifdef CONFIG_DISCONTIGMEM
+#ifdef CONFIG_NUMA
 	totalram_pages += numa_free_all_bootmem();
 	tmp = 0;
 	/* should count reserved pages here for all nodes */ 
 #else
+
+#ifdef CONFIG_FLATMEM
 	max_mapnr = end_pfn;
 	if (!mem_map) BUG();
+#endif
 
 	totalram_pages += free_all_bootmem();
 
@@ -515,7 +526,7 @@ void free_initrd_mem(unsigned long start, unsigned long end)
 void __init reserve_bootmem_generic(unsigned long phys, unsigned len) 
 { 
 	/* Should check here against the e820 map to avoid double free */ 
-#ifdef CONFIG_DISCONTIGMEM
+#ifdef CONFIG_NUMA
 	int nid = phys_to_nid(phys);
   	reserve_bootmem_node(NODE_DATA(nid), phys, len);
 #else       		
@@ -583,9 +594,9 @@ static __init int x8664_sysctl_init(void)
 __initcall(x8664_sysctl_init);
 #endif
 
-/* Pseudo VMAs to allow ptrace access for the vsyscall pages.  x86-64 has two
-   different ones: one for 32bit and one for 64bit. Use the appropiate
-   for the target task. */
+/* A pseudo VMAs to allow ptrace access for the vsyscall page.   This only
+   covers the 64bit vsyscall page now. 32bit has a real VMA now and does
+   not need special handling anymore. */
 
 static struct vm_area_struct gate_vma = {
 	.vm_start = VSYSCALL_START,
@@ -593,22 +604,11 @@ static struct vm_area_struct gate_vma = {
 	.vm_page_prot = PAGE_READONLY
 };
 
-static struct vm_area_struct gate32_vma = {
-	.vm_start = VSYSCALL32_BASE,
-	.vm_end = VSYSCALL32_END,
-	.vm_page_prot = PAGE_READONLY
-};
-
 struct vm_area_struct *get_gate_vma(struct task_struct *tsk)
 {
 #ifdef CONFIG_IA32_EMULATION
-	if (test_tsk_thread_flag(tsk, TIF_IA32)) {
-		/* lookup code assumes the pages are present. set them up
-		   now */
-		if (__map_syscall32(tsk->mm, VSYSCALL32_BASE) < 0)
-			return NULL;
-		return &gate32_vma;
-	}
+	if (test_tsk_thread_flag(tsk, TIF_IA32))
+		return NULL;
 #endif
 	return &gate_vma;
 }
@@ -616,6 +616,8 @@ struct vm_area_struct *get_gate_vma(struct task_struct *tsk)
 int in_gate_area(struct task_struct *task, unsigned long addr)
 {
 	struct vm_area_struct *vma = get_gate_vma(task);
+	if (!vma)
+		return 0;
 	return (addr >= vma->vm_start) && (addr < vma->vm_end);
 }
 
@@ -625,6 +627,5 @@ int in_gate_area(struct task_struct *task, unsigned long addr)
  */
 int in_gate_area_no_task(unsigned long addr)
 {
-	return (((addr >= VSYSCALL_START) && (addr < VSYSCALL_END)) ||
-		((addr >= VSYSCALL32_BASE) && (addr < VSYSCALL32_END)));
+	return (addr >= VSYSCALL_START) && (addr < VSYSCALL_END);
 }

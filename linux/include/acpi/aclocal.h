@@ -72,7 +72,6 @@ typedef u32                                     acpi_mutex_handle;
  *
  * NOTE: any changes here must be reflected in the acpi_gbl_mutex_names table also!
  */
-
 #define ACPI_MTX_EXECUTE                0
 #define ACPI_MTX_INTERPRETER            1
 #define ACPI_MTX_PARSER                 2
@@ -151,12 +150,12 @@ typedef u16                                     acpi_owner_id;
 #define ACPI_FIELD_DWORD_GRANULARITY    4
 #define ACPI_FIELD_QWORD_GRANULARITY    8
 
+
 /*****************************************************************************
  *
  * Namespace typedefs and structs
  *
  ****************************************************************************/
-
 
 /* Operational modes of the AML interpreter/scanner */
 
@@ -176,7 +175,6 @@ typedef enum
  * data_type is used to differentiate between internal descriptors, and MUST
  * be the first byte in this structure.
  */
-
 union acpi_name_union
 {
 	u32                                 integer;
@@ -415,7 +413,6 @@ struct acpi_field_info
  *
  ****************************************************************************/
 
-
 #define ACPI_CONTROL_NORMAL                  0xC0
 #define ACPI_CONTROL_CONDITIONAL_EXECUTING   0xC1
 #define ACPI_CONTROL_PREDICATE_EXECUTING     0xC2
@@ -424,6 +421,7 @@ struct acpi_field_info
 
 
 /* Forward declarations */
+
 struct acpi_walk_state        ;
 struct acpi_obj_mutex;
 union acpi_parse_object        ;
@@ -601,7 +599,6 @@ struct acpi_opcode_info
 	u8                                  type;           /* Opcode type */
 };
 
-
 union acpi_parse_value
 {
 	acpi_integer                        integer;        /* Integer constant (Up to 64 bits) */
@@ -612,7 +609,6 @@ union acpi_parse_value
 	char                                *name;          /* NULL terminated string */
 	union acpi_parse_object             *arg;           /* arguments and contained ops */
 };
-
 
 #define ACPI_PARSE_COMMON \
 	u8                                  data_type;      /* To differentiate various internal objs */\
@@ -690,7 +686,6 @@ struct acpi_parse_obj_asl
 	u8                                  extra;
 	char                                parse_op_name[12];
 };
-
 
 union acpi_parse_object
 {
@@ -774,6 +769,7 @@ struct acpi_bit_register_info
 #define ACPI_BITMASK_POWER_BUTTON_STATUS        0x0100
 #define ACPI_BITMASK_SLEEP_BUTTON_STATUS        0x0200
 #define ACPI_BITMASK_RT_CLOCK_STATUS            0x0400
+#define ACPI_BITMASK_PCIEXP_WAKE_STATUS         0x4000    /* ACPI 3.0 */
 #define ACPI_BITMASK_WAKE_STATUS                0x8000
 
 #define ACPI_BITMASK_ALL_FIXED_STATUS           (ACPI_BITMASK_TIMER_STATUS          | \
@@ -789,6 +785,7 @@ struct acpi_bit_register_info
 #define ACPI_BITMASK_POWER_BUTTON_ENABLE        0x0100
 #define ACPI_BITMASK_SLEEP_BUTTON_ENABLE        0x0200
 #define ACPI_BITMASK_RT_CLOCK_ENABLE            0x0400
+#define ACPI_BITMASK_PCIEXP_WAKE_DISABLE        0x4000    /* ACPI 3.0 */
 
 #define ACPI_BITMASK_SCI_ENABLE                 0x0001
 #define ACPI_BITMASK_BUS_MASTER_RLD             0x0002
@@ -807,6 +804,7 @@ struct acpi_bit_register_info
 #define ACPI_BITPOSITION_POWER_BUTTON_STATUS    0x08
 #define ACPI_BITPOSITION_SLEEP_BUTTON_STATUS    0x09
 #define ACPI_BITPOSITION_RT_CLOCK_STATUS        0x0A
+#define ACPI_BITPOSITION_PCIEXP_WAKE_STATUS     0x0E    /* ACPI 3.0 */
 #define ACPI_BITPOSITION_WAKE_STATUS            0x0F
 
 #define ACPI_BITPOSITION_TIMER_ENABLE           0x00
@@ -814,6 +812,7 @@ struct acpi_bit_register_info
 #define ACPI_BITPOSITION_POWER_BUTTON_ENABLE    0x08
 #define ACPI_BITPOSITION_SLEEP_BUTTON_ENABLE    0x09
 #define ACPI_BITPOSITION_RT_CLOCK_ENABLE        0x0A
+#define ACPI_BITPOSITION_PCIEXP_WAKE_DISABLE    0x0E    /* ACPI 3.0 */
 
 #define ACPI_BITPOSITION_SCI_ENABLE             0x00
 #define ACPI_BITPOSITION_BUS_MASTER_RLD         0x01
@@ -829,7 +828,6 @@ struct acpi_bit_register_info
  * Resource descriptors
  *
  ****************************************************************************/
-
 
 /* resource_type values */
 

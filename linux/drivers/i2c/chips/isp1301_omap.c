@@ -145,7 +145,6 @@ static inline void notresponding(struct isp1301 *isp)
 static unsigned short normal_i2c[] = {
 	ISP_BASE, ISP_BASE + 1,
 	I2C_CLIENT_END };
-static unsigned short normal_i2c_range[] = { I2C_CLIENT_END };
 
 I2C_CLIENT_INSMOD;
 
@@ -1503,7 +1502,6 @@ static int isp1301_probe(struct i2c_adapter *bus, int address, int kind)
 	isp->client.addr = address;
 	i2c_set_clientdata(&isp->client, isp);
 	isp->client.adapter = bus;
-	isp->client.id = 1301;
 	isp->client.driver = &isp1301_driver;
 	strlcpy(isp->client.name, DRIVER_NAME, I2C_NAME_SIZE);
 	i2c = &isp->client;

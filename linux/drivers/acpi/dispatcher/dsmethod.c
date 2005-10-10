@@ -153,12 +153,11 @@ acpi_ds_parse_method (
 	/*
 	 * Parse the method, first pass
 	 *
-	 * The first pass load is where newly declared named objects are
-	 * added into the namespace.  Actual evaluation of
-	 * the named objects (what would be called a "second
-	 * pass") happens during the actual execution of the
-	 * method so that operands to the named objects can
-	 * take on dynamic run-time values.
+	 * The first pass load is where newly declared named objects are added into
+	 * the namespace.  Actual evaluation of the named objects (what would be
+	 * called a "second pass") happens during the actual execution of the
+	 * method so that operands to the named objects can take on dynamic
+	 * run-time values.
 	 */
 	status = acpi_ps_parse_aml (walk_state);
 	if (ACPI_FAILURE (status)) {
@@ -448,7 +447,16 @@ acpi_ds_restart_control_method (
 			 */
 			walk_state->return_desc = return_desc;
 		}
-		else {
+
+		/*
+		 * The following code is the
+		 * optional support for a so-called "implicit return". Some AML code
+		 * assumes that the last value of the method is "implicitly" returned
+		 * to the caller. Just save the last result as the return value.
+		 * NOTE: this is optional because the ASL language does not actually
+		 * support this behavior.
+		 */
+		else if (!acpi_ds_do_implicit_return (return_desc, walk_state, FALSE)) {
 			/*
 			 * Delete the return value if it will not be used by the
 			 * calling method

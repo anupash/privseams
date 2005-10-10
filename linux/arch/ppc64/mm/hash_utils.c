@@ -51,6 +51,7 @@
 #include <asm/cacheflush.h>
 #include <asm/cputable.h>
 #include <asm/abs_addr.h>
+#include <asm/sections.h>
 
 #ifdef DEBUG
 #define DBG(fmt...) udbg_printf(fmt)
@@ -74,8 +75,8 @@
 extern unsigned long dart_tablebase;
 #endif /* CONFIG_U3_DART */
 
-HPTE		*htab_address;
-unsigned long	htab_hash_mask;
+hpte_t *htab_address;
+unsigned long htab_hash_mask;
 
 extern unsigned long _SDR1;
 
@@ -95,11 +96,16 @@ static inline void create_pte_mapping(unsigned long start, unsigned long end,
 {
 	unsigned long addr;
 	unsigned int step;
+	unsigned long tmp_mode;
+	unsigned long vflags;
 
-	if (large)
+	if (large) {
 		step = 16*MB;
-	else
+		vflags = HPTE_V_BOLTED | HPTE_V_LARGE;
+	} else {
 		step = 4*KB;
+		vflags = HPTE_V_BOLTED;
+	}
 
 	for (addr = start; addr < end; addr += step) {
 		unsigned long vpn, hash, hpteg;
@@ -112,6 +118,13 @@ static inline void create_pte_mapping(unsigned long start, unsigned long end,
 		else
 			vpn = va >> PAGE_SHIFT;
 
+
+		tmp_mode = mode;
+		
+		/* Make non-kernel text non-executable */
+		if (!in_kernel_text(addr))
+			tmp_mode = mode | HW_NO_EXEC;
+
 		hash = hpt_hash(vpn, large);
 
 		hpteg = ((hash & htab_hash_mask) * HPTES_PER_GROUP);
@@ -120,12 +133,12 @@ static inline void create_pte_mapping(unsigned long start, unsigned long end,
 		if (systemcfg->platform & PLATFORM_LPAR)
 			ret = pSeries_lpar_hpte_insert(hpteg, va,
 				virt_to_abs(addr) >> PAGE_SHIFT,
-				0, mode, 1, large);
+				vflags, tmp_mode);
 		else
 #endif /* CONFIG_PPC_PSERIES */
 			ret = native_hpte_insert(hpteg, va,
 				virt_to_abs(addr) >> PAGE_SHIFT,
-				0, mode, 1, large);
+				vflags, tmp_mode);
 
 		if (ret == -1) {
 			ppc64_terminate_msg(0x20, "create_pte_mapping");
@@ -140,6 +153,8 @@ void __init htab_initialize(void)
 	unsigned long pteg_count;
 	unsigned long mode_rw;
 	int i, use_largepages = 0;
+	unsigned long base = 0, size = 0;
+	extern unsigned long tce_alloc_start, tce_alloc_end;
 
 	DBG(" -> htab_initialize()\n");
 
@@ -184,19 +199,17 @@ void __init htab_initialize(void)
 		memset((void *)table, 0, htab_size_bytes);
 	}
 
-	mode_rw = _PAGE_ACCESSED | _PAGE_COHERENT | PP_RWXX;
+	mode_rw = _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_COHERENT | PP_RWXX;
 
 	/* On U3 based machines, we need to reserve the DART area and
 	 * _NOT_ map it to avoid cache paradoxes as it's remapped non
 	 * cacheable later on
 	 */
-	if (cur_cpu_spec->cpu_features & CPU_FTR_16M_PAGE)
+	if (cpu_has_feature(CPU_FTR_16M_PAGE))
 		use_largepages = 1;
 
 	/* create bolted the linear mapping in the hash table */
 	for (i=0; i < lmb.memory.cnt; i++) {
-		unsigned long base, size;
-
 		base = lmb.memory.region[i].physbase + KERNELBASE;
 		size = lmb.memory.region[i].size;
 
@@ -225,6 +238,25 @@ void __init htab_initialize(void)
 #endif /* CONFIG_U3_DART */
 		create_pte_mapping(base, base + size, mode_rw, use_largepages);
 	}
+
+	/*
+	 * If we have a memory_limit and we've allocated TCEs then we need to
+	 * explicitly map the TCE area at the top of RAM. We also cope with the
+	 * case that the TCEs start below memory_limit.
+	 * tce_alloc_start/end are 16MB aligned so the mapping should work
+	 * for either 4K or 16MB pages.
+	 */
+	if (tce_alloc_start) {
+		tce_alloc_start += KERNELBASE;
+		tce_alloc_end += KERNELBASE;
+
+		if (base + size >= tce_alloc_start)
+			tce_alloc_start = base + size + 1;
+
+		create_pte_mapping(tce_alloc_start, tce_alloc_end,
+			mode_rw, use_largepages);
+	}
+
 	DBG(" <- htab_initialize()\n");
 }
 #undef KB
@@ -238,8 +270,6 @@ unsigned int hash_page_do_lazy_icache(unsigned int pp, pte_t pte, int trap)
 {
 	struct page *page;
 
-#define PPC64_HWNOEXEC (1 << 2)
-
 	if (!pfn_valid(pte_pfn(pte)))
 		return pp;
 
@@ -251,7 +281,7 @@ unsigned int hash_page_do_lazy_icache(unsigned int pp, pte_t pte, int trap)
 			__flush_dcache_icache(page_address(page));
 			set_bit(PG_arch_1, &page->flags);
 		} else
-			pp |= PPC64_HWNOEXEC;
+			pp |= HW_NO_EXEC;
 	}
 	return pp;
 }
@@ -272,24 +302,19 @@ int hash_page(unsigned long ea, unsigned long access, unsigned long trap)
 	int local = 0;
 	cpumask_t tmp;
 
+	if ((ea & ~REGION_MASK) > EADDR_MASK)
+		return 1;
+
  	switch (REGION_ID(ea)) {
 	case USER_REGION_ID:
 		user_region = 1;
 		mm = current->mm;
-		if ((ea > USER_END) || (! mm))
+		if (! mm)
 			return 1;
 
 		vsid = get_vsid(mm->context.id, ea);
 		break;
-	case IO_REGION_ID:
-		if (ea > IMALLOC_END)
-			return 1;
-		mm = &ioremap_mm;
-		vsid = get_kernel_vsid(ea);
-		break;
 	case VMALLOC_REGION_ID:
-		if (ea > VMALLOC_END)
-			return 1;
 		mm = &init_mm;
 		vsid = get_kernel_vsid(ea);
 		break;
@@ -336,7 +361,7 @@ void flush_hash_page(unsigned long context, unsigned long ea, pte_t pte,
 	unsigned long vsid, vpn, va, hash, secondary, slot;
 	unsigned long huge = pte_huge(pte);
 
-	if ((ea >= USER_START) && (ea <= USER_END))
+	if (ea < KERNELBASE)
 		vsid = get_vsid(context, ea);
 	else
 		vsid = get_kernel_vsid(ea);

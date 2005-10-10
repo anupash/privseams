@@ -47,11 +47,10 @@ warn(const char *fmt, ...)
 	va_end(arglist);
 }
 
-void *do_nofail(void *ptr, const char *file, int line, const char *expr)
+void *do_nofail(void *ptr, const char *expr)
 {
 	if (!ptr) {
-		fatal("Memory allocation failure %s line %d: %s.\n",
-		      file, line, expr);
+		fatal("modpost: Memory allocation failure: %s.\n", expr);
 	}
 	return ptr;
 }
@@ -360,11 +359,16 @@ handle_modversions(struct module *mod, struct elf_info *info,
 		/* ignore __this_module, it will be resolved shortly */
 		if (strcmp(symname, MODULE_SYMBOL_PREFIX "__this_module") == 0)
 			break;
-#ifdef STT_REGISTER
+/* cope with newer glibc (2.3.4 or higher) STT_ definition in elf.h */
+#if defined(STT_REGISTER) || defined(STT_SPARC_REGISTER)
+/* add compatibility with older glibc */
+#ifndef STT_SPARC_REGISTER
+#define STT_SPARC_REGISTER STT_REGISTER
+#endif
 		if (info->hdr->e_machine == EM_SPARC ||
 		    info->hdr->e_machine == EM_SPARCV9) {
 			/* Ignore register directives. */
-			if (ELF_ST_TYPE(sym->st_info) == STT_REGISTER)
+			if (ELF_ST_TYPE(sym->st_info) == STT_SPARC_REGISTER)
 				break;
 		}
 #endif

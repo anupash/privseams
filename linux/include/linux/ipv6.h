@@ -193,6 +193,19 @@ struct inet6_skb_parm {
 
 #define IP6CB(skb)	((struct inet6_skb_parm*)((skb)->cb))
 
+struct tcp6_request_sock {
+	struct tcp_request_sock	req;
+	struct in6_addr		loc_addr;
+	struct in6_addr		rmt_addr;
+	struct sk_buff		*pktopts;
+	int			iif;
+};
+
+static inline struct tcp6_request_sock *tcp6_rsk(const struct request_sock *sk)
+{
+	return (struct tcp6_request_sock *)sk;
+}
+
 /**
  * struct ipv6_pinfo - ipv6 private area
  *
@@ -209,8 +222,8 @@ struct ipv6_pinfo {
 
 	__u32			flow_label;
 	__u32			frag_size;
-	int			hop_limit;
-	int			mcast_hops;
+	__s16			hop_limit;
+	__s16			mcast_hops;
 	int			mcast_oif;
 
 	/* pktoption flags */
@@ -233,10 +246,11 @@ struct ipv6_pinfo {
 				pmtudisc:2,
 				ipv6only:1;
 
+	__u32			dst_cookie;
+
 	struct ipv6_mc_socklist	*ipv6_mc_list;
 	struct ipv6_ac_socklist	*ipv6_ac_list;
 	struct ipv6_fl_socklist *ipv6_fl_list;
-	__u32			dst_cookie;
 
 	struct ipv6_txoptions	*opt;
 	struct sk_buff		*pktoptions;

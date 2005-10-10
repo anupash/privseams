@@ -1,6 +1,7 @@
 #ifndef _NET_XFRM_H
 #define _NET_XFRM_H
 
+#include <linux/compiler.h>
 #include <linux/xfrm.h>
 #include <linux/spinlock.h>
 #include <linux/list.h>
@@ -19,10 +20,6 @@
 #define XFRM_ALIGN8(len)	(((len) + 7) & ~7)
 
 extern struct semaphore xfrm_cfg_sem;
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip.h>
-#endif
 
 /* Organization of SPD aka "XFRM rules"
    ------------------------------------
@@ -118,10 +115,6 @@ struct xfrm_state
 		int		trailer_len;
 	} props;
 
-#if defined(CONFIG_ESPBEET)
-        xfrm_address_t   outeraddr;
-#endif
-
 	struct xfrm_lifetime_cfg lft;
 
 	/* Data for transformer */
@@ -154,11 +147,6 @@ struct xfrm_state
 	/* Private data of this transformer, format is opaque,
 	 * interpreted by xfrm_type methods. */
 	void			*data;
-	
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-        hip_hit_t src_hit;
-        hip_hit_t dst_hit;
-#endif
 };
 
 enum {
@@ -170,10 +158,18 @@ enum {
 	XFRM_STATE_DEAD
 };
 
-enum {
-	XFRM_MODE_TRANSPORT=0,
-	XFRM_MODE_TUNNEL,
-        XFRM_MODE_BEET
+/* callback structure passed from either netlink or pfkey */
+struct km_event
+{
+	union {
+		u32 hard;
+		u32 proto;
+		u32 byid;
+	} data;
+
+	u32	seq;
+	u32	pid;
+	u32	event;
 };
 
 struct xfrm_type;
@@ -197,6 +193,8 @@ struct xfrm_policy_afinfo {
 
 extern int xfrm_policy_register_afinfo(struct xfrm_policy_afinfo *afinfo);
 extern int xfrm_policy_unregister_afinfo(struct xfrm_policy_afinfo *afinfo);
+extern void km_policy_notify(struct xfrm_policy *xp, int dir, struct km_event *c);
+extern void km_state_notify(struct xfrm_state *x, struct km_event *c);
 
 #define XFRM_ACQ_EXPIRES	30
 
@@ -206,6 +204,7 @@ struct xfrm_state_afinfo {
 	rwlock_t		lock;
 	struct list_head	*state_bydst;
 	struct list_head	*state_byspi;
+	int			(*init_flags)(struct xfrm_state *x);
 	void			(*init_tempsel)(struct xfrm_state *x, struct flowi *fl,
 						struct xfrm_tmpl *tmpl,
 						xfrm_address_t *daddr, xfrm_address_t *saddr);
@@ -227,11 +226,11 @@ struct xfrm_type
 	struct module		*owner;
 	__u8			proto;
 
-	int			(*init_state)(struct xfrm_state *x, void *args);
+	int			(*init_state)(struct xfrm_state *x);
 	void			(*destructor)(struct xfrm_state *);
 	int			(*input)(struct xfrm_state *, struct xfrm_decap_state *, struct sk_buff *skb);
 	int			(*post_input)(struct xfrm_state *, struct xfrm_decap_state *, struct sk_buff *skb);
-	int			(*output)(struct sk_buff *pskb);
+	int			(*output)(struct xfrm_state *, struct sk_buff *pskb);
 	/* Estimate maximal size of result of transformation of a dgram */
 	u32			(*get_max_size)(struct xfrm_state *, int size);
 };
@@ -308,11 +307,11 @@ struct xfrm_mgr
 {
 	struct list_head	list;
 	char			*id;
-	int			(*notify)(struct xfrm_state *x, int event);
+	int			(*notify)(struct xfrm_state *x, struct km_event *c);
 	int			(*acquire)(struct xfrm_state *x, struct xfrm_tmpl *, struct xfrm_policy *xp, int dir);
 	struct xfrm_policy	*(*compile_policy)(u16 family, int opt, u8 *data, int len, int *dir);
 	int			(*new_mapping)(struct xfrm_state *x, xfrm_address_t *ipaddr, u16 sport);
-	int			(*notify_policy)(struct xfrm_policy *x, int dir, int event);
+	int			(*notify_policy)(struct xfrm_policy *x, int dir, struct km_event *c);
 };
 
 extern int xfrm_register_km(struct xfrm_mgr *km);
@@ -530,7 +529,21 @@ struct xfrm_dst
 		struct rtable		rt;
 		struct rt6_info		rt6;
 	} u;
+	struct dst_entry *route;
+	u32 route_mtu_cached;
+	u32 child_mtu_cached;
+	u32 route_cookie;
+	u32 path_cookie;
 };
+
+static inline void xfrm_dst_destroy(struct xfrm_dst *xdst)
+{
+	dst_release(xdst->route);
+	if (likely(xdst->u.dst.xfrm))
+		xfrm_state_put(xdst->u.dst.xfrm);
+}
+
+extern void xfrm_dst_ifdown(struct dst_entry *dst, struct net_device *dev);
 
 /* Decapsulation state, used by the input to store data during
  * decapsulation procedure, to be used later (during the policy
@@ -660,7 +673,7 @@ static inline int xfrm_sk_clone_policy(struct sock *sk)
 	return 0;
 }
 
-extern void xfrm_policy_delete(struct xfrm_policy *pol, int dir);
+extern int xfrm_policy_delete(struct xfrm_policy *pol, int dir);
 
 static inline void xfrm_sk_free_policy(struct sock *sk)
 {
@@ -790,7 +803,7 @@ struct xfrm_algo_desc {
 /* XFRM tunnel handlers.  */
 struct xfrm_tunnel {
 	int (*handler)(struct sk_buff *skb);
-	void (*err_handler)(struct sk_buff *skb, void *info);
+	void (*err_handler)(struct sk_buff *skb, __u32 info);
 };
 
 struct xfrm6_tunnel {
@@ -821,11 +834,13 @@ extern int xfrm_state_add(struct xfrm_state *x);
 extern int xfrm_state_update(struct xfrm_state *x);
 extern struct xfrm_state *xfrm_state_lookup(xfrm_address_t *daddr, u32 spi, u8 proto, unsigned short family);
 extern struct xfrm_state *xfrm_find_acq_byseq(u32 seq);
-extern void xfrm_state_delete(struct xfrm_state *x);
+extern int xfrm_state_delete(struct xfrm_state *x);
 extern void xfrm_state_flush(u8 proto);
 extern int xfrm_replay_check(struct xfrm_state *x, u32 seq);
 extern void xfrm_replay_advance(struct xfrm_state *x, u32 seq);
 extern int xfrm_state_check(struct xfrm_state *x, struct sk_buff *skb);
+extern int xfrm_state_mtu(struct xfrm_state *x, int mtu);
+extern int xfrm_init_state(struct xfrm_state *x);
 extern int xfrm4_rcv(struct sk_buff *skb);
 extern int xfrm4_output(struct sk_buff *skb);
 extern int xfrm4_tunnel_register(struct xfrm_tunnel *handler);
@@ -876,6 +891,8 @@ struct xfrm_state * xfrm_find_acq(u8 mode, u32 reqid, u8 proto,
 extern void xfrm_policy_flush(void);
 extern int xfrm_sk_policy_insert(struct sock *sk, int dir, struct xfrm_policy *pol);
 extern int xfrm_flush_bundles(void);
+extern int xfrm_bundle_ok(struct xfrm_dst *xdst, struct flowi *fl, int family);
+extern void xfrm_init_pmtu(struct dst_entry *dst);
 
 extern wait_queue_head_t km_waitq;
 extern int km_new_mapping(struct xfrm_state *x, xfrm_address_t *ipaddr, u16 sport);

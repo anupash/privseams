@@ -16,9 +16,9 @@
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
 #include <linux/delay.h>
-#include <linux/ioport.h> /* for request_region */
 #include <linux/uio.h>
 #include <linux/init.h>
+#include <linux/dma-mapping.h>
 #include <linux/atm_zatm.h>
 #include <linux/capability.h>
 #include <linux/bitops.h>
@@ -411,7 +411,7 @@ printk("[-3..0] 0x%08lx 0x%08lx 0x%08lx 0x%08lx\n",((unsigned *) skb->data)[-3],
 #if 0
 printk("dummy: 0x%08lx, 0x%08lx\n",dummy[0],dummy[1]);
 #endif
-		size = error ? 0 : ntohs(((u16 *) skb->data)[cells*
+		size = error ? 0 : ntohs(((__be16 *) skb->data)[cells*
 		    ATM_CELL_PAYLOAD/sizeof(u16)-3]);
 		EVENT("got skb 0x%lx, size %d\n",(unsigned long) skb,size);
 		chan = (here[3] & uPD98401_AAL5_CHAN) >>
@@ -902,7 +902,7 @@ static void close_tx(struct atm_vcc *vcc)
 		zatm_dev->tx_bw += vcc->qos.txtp.min_pcr;
 		dealloc_shaper(vcc->dev,zatm_vcc->shaper);
 	}
-	if (zatm_vcc->ring) kfree(zatm_vcc->ring);
+	kfree(zatm_vcc->ring);
 }
 
 
@@ -1090,7 +1090,7 @@ static irqreturn_t zatm_int(int irq,void *dev_id,struct pt_regs *regs)
 /*----------------------------- (E)EPROM access -----------------------------*/
 
 
-static void __init eprom_set(struct zatm_dev *zatm_dev,unsigned long value,
+static void __devinit eprom_set(struct zatm_dev *zatm_dev,unsigned long value,
     unsigned short cmd)
 {
 	int error;
@@ -1101,7 +1101,7 @@ static void __init eprom_set(struct zatm_dev *zatm_dev,unsigned long value,
 }
 
 
-static unsigned long __init eprom_get(struct zatm_dev *zatm_dev,
+static unsigned long __devinit eprom_get(struct zatm_dev *zatm_dev,
     unsigned short cmd)
 {
 	unsigned int value;
@@ -1114,7 +1114,7 @@ static unsigned long __init eprom_get(struct zatm_dev *zatm_dev,
 }
 
 
-static void __init eprom_put_bits(struct zatm_dev *zatm_dev,
+static void __devinit eprom_put_bits(struct zatm_dev *zatm_dev,
     unsigned long data,int bits,unsigned short cmd)
 {
 	unsigned long value;
@@ -1129,7 +1129,7 @@ static void __init eprom_put_bits(struct zatm_dev *zatm_dev,
 }
 
 
-static void __init eprom_get_byte(struct zatm_dev *zatm_dev,
+static void __devinit eprom_get_byte(struct zatm_dev *zatm_dev,
     unsigned char *byte,unsigned short cmd)
 {
 	int i;
@@ -1145,7 +1145,7 @@ static void __init eprom_get_byte(struct zatm_dev *zatm_dev,
 }
 
 
-static unsigned char __init eprom_try_esi(struct atm_dev *dev,
+static unsigned char __devinit eprom_try_esi(struct atm_dev *dev,
     unsigned short cmd,int offset,int swap)
 {
 	unsigned char buf[ZEPROM_SIZE];
@@ -1166,7 +1166,7 @@ static unsigned char __init eprom_try_esi(struct atm_dev *dev,
 }
 
 
-static void __init eprom_get_esi(struct atm_dev *dev)
+static void __devinit eprom_get_esi(struct atm_dev *dev)
 {
 	if (eprom_try_esi(dev,ZEPROM_V1_REG,ZEPROM_V1_ESI_OFF,1)) return;
 	(void) eprom_try_esi(dev,ZEPROM_V2_REG,ZEPROM_V2_ESI_OFF,0);
@@ -1257,22 +1257,22 @@ static int __init zatm_init(struct atm_dev *dev)
 
 static int __init zatm_start(struct atm_dev *dev)
 {
-	struct zatm_dev *zatm_dev;
+	struct zatm_dev *zatm_dev = ZATM_DEV(dev);
+	struct pci_dev *pdev = zatm_dev->pci_dev;
 	unsigned long curr;
 	int pools,vccs,rx;
-	int error,i,ld;
+	int error, i, ld;
 
 	DPRINTK("zatm_start\n");
-	zatm_dev = ZATM_DEV(dev);
 	zatm_dev->rx_map = zatm_dev->tx_map = NULL;
-	for (i = 0; i < NR_MBX; i++)
-		zatm_dev->mbx_start[i] = 0;
-	if (request_irq(zatm_dev->irq,&zatm_int,SA_SHIRQ,DEV_LABEL,dev)) {
-		printk(KERN_ERR DEV_LABEL "(itf %d): IRQ%d is already in use\n",
-		    dev->number,zatm_dev->irq);
-		return -EAGAIN;
+ 	for (i = 0; i < NR_MBX; i++)
+ 		zatm_dev->mbx_start[i] = 0;
+ 	error = request_irq(zatm_dev->irq, zatm_int, SA_SHIRQ, DEV_LABEL, dev);
+	if (error < 0) {
+ 		printk(KERN_ERR DEV_LABEL "(itf %d): IRQ%d is already in use\n",
+ 		    dev->number,zatm_dev->irq);
+		goto done;
 	}
-	request_region(zatm_dev->base,uPD98401_PORTS,DEV_LABEL);
 	/* define memory regions */
 	pools = NR_POOLS;
 	if (NR_SHAPERS*SHAPER_SIZE > pools*POOL_SIZE)
@@ -1299,54 +1299,66 @@ static int __init zatm_start(struct atm_dev *dev)
 	    "%ld VCs\n",dev->number,NR_SHAPERS,pools,rx,
 	    (zatm_dev->mem-curr*4)/VC_SIZE);
 	/* create mailboxes */
-	for (i = 0; i < NR_MBX; i++)
-		if (mbx_entries[i]) {
-			unsigned long here;
+	for (i = 0; i < NR_MBX; i++) {
+		void *mbx;
+		dma_addr_t mbx_dma;
 
-			here = (unsigned long) kmalloc(2*MBX_SIZE(i),
-			    GFP_KERNEL);
-			if (!here) {
-				error = -ENOMEM;
-				goto out;
-			}
-			if ((here^(here+MBX_SIZE(i))) & ~0xffffUL)/* paranoia */
-				here = (here & ~0xffffUL)+0x10000;
-			zatm_dev->mbx_start[i] = here;
-			if ((here^virt_to_bus((void *) here)) & 0xffff) {
-				printk(KERN_ERR DEV_LABEL "(itf %d): system "
-				    "bus incompatible with driver\n",
-				    dev->number);
-				error = -ENODEV;
-				goto out;
-			}
-			DPRINTK("mbx@0x%08lx-0x%08lx\n",here,here+MBX_SIZE(i));
-			zatm_dev->mbx_end[i] = (here+MBX_SIZE(i)) & 0xffff;
-			zout(virt_to_bus((void *) here) >> 16,MSH(i));
-			zout(virt_to_bus((void *) here),MSL(i));
-			zout((here+MBX_SIZE(i)) & 0xffff,MBA(i));
-			zout(here & 0xffff,MTA(i));
-			zout(here & 0xffff,MWA(i));
+		if (!mbx_entries[i])
+			continue;
+		mbx = pci_alloc_consistent(pdev, 2*MBX_SIZE(i), &mbx_dma);
+		if (!mbx) {
+			error = -ENOMEM;
+			goto out;
 		}
+		/*
+		 * Alignment provided by pci_alloc_consistent() isn't enough
+		 * for this device.
+		 */
+		if (((unsigned long)mbx ^ mbx_dma) & 0xffff) {
+			printk(KERN_ERR DEV_LABEL "(itf %d): system "
+			       "bus incompatible with driver\n", dev->number);
+			pci_free_consistent(pdev, 2*MBX_SIZE(i), mbx, mbx_dma);
+			error = -ENODEV;
+			goto out;
+		}
+		DPRINTK("mbx@0x%08lx-0x%08lx\n", mbx, mbx + MBX_SIZE(i));
+		zatm_dev->mbx_start[i] = (unsigned long)mbx;
+		zatm_dev->mbx_dma[i] = mbx_dma;
+		zatm_dev->mbx_end[i] = (zatm_dev->mbx_start[i] + MBX_SIZE(i)) &
+					0xffff;
+		zout(mbx_dma >> 16, MSH(i));
+		zout(mbx_dma, MSL(i));
+		zout(zatm_dev->mbx_end[i], MBA(i));
+		zout((unsigned long)mbx & 0xffff, MTA(i));
+		zout((unsigned long)mbx & 0xffff, MWA(i));
+	}
 	error = start_tx(dev);
-	if (error) goto out;
+	if (error)
+		goto out;
 	error = start_rx(dev);
-	if (error) goto out;
+	if (error)
+		goto out_tx;
 	error = dev->phy->start(dev);
-	if (error) goto out;
+	if (error)
+		goto out_rx;
 	zout(0xffffffff,IMR); /* enable interrupts */
 	/* enable TX & RX */
 	zout(zin(GMR) | uPD98401_GMR_SE | uPD98401_GMR_RE,GMR);
-	return 0;
-    out:
-	for (i = 0; i < NR_MBX; i++)
-		if (zatm_dev->mbx_start[i] != 0)
-			kfree((void *) zatm_dev->mbx_start[i]);
-	if (zatm_dev->rx_map != NULL)
-		kfree(zatm_dev->rx_map);
-	if (zatm_dev->tx_map != NULL)
-		kfree(zatm_dev->tx_map);
-	free_irq(zatm_dev->irq, dev);
+done:
 	return error;
+
+out_rx:
+	kfree(zatm_dev->rx_map);
+out_tx:
+	kfree(zatm_dev->tx_map);
+out:
+	while (i-- > 0) {
+		pci_free_consistent(pdev, 2*MBX_SIZE(i), 
+				    (void *)zatm_dev->mbx_start[i],
+				    zatm_dev->mbx_dma[i]);
+	}
+	free_irq(zatm_dev->irq, dev);
+	goto done;
 }
 
 
@@ -1639,7 +1651,7 @@ static struct pci_driver zatm_driver = {
 
 static int __init zatm_init_module(void)
 {
-	return pci_module_init(&zatm_driver);
+	return pci_register_driver(&zatm_driver);
 }
 
 module_init(zatm_init_module);

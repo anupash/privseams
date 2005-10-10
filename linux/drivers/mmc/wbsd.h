@@ -8,13 +8,6 @@
  * published by the Free Software Foundation.
  */
 
-const int config_ports[] = { 0x2E, 0x4E };
-const int unlock_codes[] = { 0x83, 0x87 };
-
-const int valid_ids[] = {
-	0x7112,
-	};
-
 #define LOCK_CODE		0xAA
 
 #define WBSD_CONF_SWRST		0x02
@@ -34,6 +27,12 @@ const int valid_ids[] = {
 #define WBSD_CONF_PINS		0xF0
 
 #define DEVICE_SD		0x03
+
+#define WBSD_PINS_DAT3_HI	0x20
+#define WBSD_PINS_DAT3_OUT	0x10
+#define WBSD_PINS_GP11_HI	0x04
+#define WBSD_PINS_DETECT_GP11	0x02
+#define WBSD_PINS_DETECT_DAT3	0x01
 
 #define WBSD_CMDR		0x00
 #define WBSD_DFR		0x01
@@ -133,6 +132,7 @@ const int valid_ids[] = {
 #define WBSD_CRC_OK		0x05 /* S010E (00101) */
 #define WBSD_CRC_FAIL		0x0B /* S101E (01011) */
 
+#define WBSD_DMA_SIZE		65536
 
 struct wbsd_host
 {
@@ -140,6 +140,11 @@ struct wbsd_host
 	
 	spinlock_t		lock;		/* Mutex */
 
+	int			flags;		/* Driver states */
+
+#define WBSD_FCARD_PRESENT	(1<<0)		/* Card is present */
+#define WBSD_FIGNORE_DETECT	(1<<1)		/* Ignore card detection */
+	
 	struct mmc_request*	mrq;		/* Current request */
 	
 	u8			isr;		/* Accumulated ISR */
@@ -175,4 +180,6 @@ struct wbsd_host
 	struct tasklet_struct	timeout_tasklet;
 	struct tasklet_struct	finish_tasklet;
 	struct tasklet_struct	block_tasklet;
+	
+	struct timer_list	timer;		/* Card detection timer */
 };

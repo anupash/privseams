@@ -242,6 +242,7 @@ static struct pci_device_id tulip_pci_tbl[] = {
  	{ 0x10b9, 0x5261, PCI_ANY_ID, PCI_ANY_ID, 0, 0, ULI526X },	/* ALi 1563 integrated ethernet */
  	{ 0x10b9, 0x5263, PCI_ANY_ID, PCI_ANY_ID, 0, 0, ULI526X },	/* ALi 1563 integrated ethernet */
 	{ 0x10b7, 0x9300, PCI_ANY_ID, PCI_ANY_ID, 0, 0, COMET }, /* 3Com 3CSOHO100B-TX */
+	{ 0x14ea, 0xab08, PCI_ANY_ID, PCI_ANY_ID, 0, 0, COMET }, /* Planex FNW-3602-TX */
 	{ } /* terminate list */
 };
 MODULE_DEVICE_TABLE(pci, tulip_pci_tbl);
@@ -624,7 +625,7 @@ static void tulip_init_ring(struct net_device *dev)
 		tp->rx_buffers[i].skb = skb;
 		if (skb == NULL)
 			break;
-		mapping = pci_map_single(tp->pdev, skb->tail,
+		mapping = pci_map_single(tp->pdev, skb->data,
 					 PKT_BUF_SZ, PCI_DMA_FROMDEVICE);
 		tp->rx_buffers[i].mapping = mapping;
 		skb->dev = dev;			/* Mark as being used by this device. */
@@ -1102,15 +1103,18 @@ static void set_rx_mode(struct net_device *dev)
 			entry = tp->cur_tx++ % TX_RING_SIZE;
 
 			if (entry != 0) {
-				/* Avoid a chip errata by prefixing a dummy entry. */
-				tp->tx_buffers[entry].skb = NULL;
-				tp->tx_buffers[entry].mapping = 0;
-				tp->tx_ring[entry].length =
-					(entry == TX_RING_SIZE-1) ? cpu_to_le32(DESC_RING_WRAP) : 0;
-				tp->tx_ring[entry].buffer1 = 0;
-				/* Must set DescOwned later to avoid race with chip */
-				dummy = entry;
-				entry = tp->cur_tx++ % TX_RING_SIZE;
+				/* Avoid a chip errata by prefixing a dummy entry. Don't do
+				   this on the ULI526X as it triggers a different problem */
+				if (!(tp->chip_id == ULI526X && (tp->revision == 0x40 || tp->revision == 0x50))) {
+					tp->tx_buffers[entry].skb = NULL;
+					tp->tx_buffers[entry].mapping = 0;
+					tp->tx_ring[entry].length =
+						(entry == TX_RING_SIZE-1) ? cpu_to_le32(DESC_RING_WRAP) : 0;
+					tp->tx_ring[entry].buffer1 = 0;
+					/* Must set DescOwned later to avoid race with chip */
+					dummy = entry;
+					entry = tp->cur_tx++ % TX_RING_SIZE;
+				}
 			}
 
 			tp->tx_buffers[entry].skb = NULL;
@@ -1511,8 +1515,8 @@ static int __devinit tulip_init_one (struct pci_dev *pdev,
                     (PCI_SLOT(pdev->devfn) == 12))) {
                        /* Cobalt MAC address in first EEPROM locations. */
                        sa_offset = 0;
-                       /* No media table either */
-                       tp->flags &= ~HAS_MEDIA_TABLE;
+		       /* Ensure our media table fixup get's applied */
+		       memcpy(ee_data + 16, ee_data, 8);
                }
 #endif
 #ifdef CONFIG_GSC
@@ -1749,15 +1753,23 @@ err_out_free_netdev:
 
 #ifdef CONFIG_PM
 
-static int tulip_suspend (struct pci_dev *pdev, u32 state)
+static int tulip_suspend (struct pci_dev *pdev, pm_message_t state)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 
-	if (dev && netif_running (dev) && netif_device_present (dev)) {
-		netif_device_detach (dev);
-		tulip_down (dev);
-		/* pci_power_off(pdev, -1); */
-	}
+	if (!dev)
+		return -EINVAL;
+
+	if (netif_running(dev))
+		tulip_down(dev);
+
+	netif_device_detach(dev);
+	free_irq(dev->irq, dev);
+
+	pci_save_state(pdev);
+	pci_disable_device(pdev);
+	pci_set_power_state(pdev, pci_choose_state(pdev, state));
+
 	return 0;
 }
 
@@ -1765,15 +1777,26 @@ static int tulip_suspend (struct pci_dev *pdev, u32 state)
 static int tulip_resume(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
+	int retval;
 
-	if (dev && netif_running (dev) && !netif_device_present (dev)) {
-#if 1
-		pci_enable_device (pdev);
-#endif
-		/* pci_power_on(pdev); */
-		tulip_up (dev);
-		netif_device_attach (dev);
+	if (!dev)
+		return -EINVAL;
+
+	pci_set_power_state(pdev, PCI_D0);
+	pci_restore_state(pdev);
+
+	pci_enable_device(pdev);
+
+	if ((retval = request_irq(dev->irq, &tulip_interrupt, SA_SHIRQ, dev->name, dev))) {
+		printk (KERN_ERR "tulip: request_irq failed in resume\n");
+		return retval;
 	}
+
+	netif_device_attach(dev);
+
+	if (netif_running(dev))
+		tulip_up(dev);
+
 	return 0;
 }
 

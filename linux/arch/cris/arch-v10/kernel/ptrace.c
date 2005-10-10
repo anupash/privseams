@@ -10,6 +10,8 @@
 #include <linux/errno.h>
 #include <linux/ptrace.h>
 #include <linux/user.h>
+#include <linux/signal.h>
+#include <linux/security.h>
 
 #include <asm/uaccess.h>
 #include <asm/page.h>
@@ -85,9 +87,13 @@ sys_ptrace(long request, long pid, long addr, long data)
 	ret = -EPERM;
 	
 	if (request == PTRACE_TRACEME) {
+		/* are we already being traced? */
 		if (current->ptrace & PT_PTRACED)
 			goto out;
-
+		ret = security_ptrace(current->parent, current);
+		if (ret)
+			goto out;
+		/* set the ptrace bit in the process flags. */
 		current->ptrace |= PT_PTRACED;
 		ret = 0;
 		goto out;
@@ -184,7 +190,7 @@ sys_ptrace(long request, long pid, long addr, long data)
 		case PTRACE_CONT:
 			ret = -EIO;
 			
-			if ((unsigned long) data > _NSIG)
+			if (!valid_signal(data))
 				break;
                         
 			if (request == PTRACE_SYSCALL) {
@@ -206,7 +212,7 @@ sys_ptrace(long request, long pid, long addr, long data)
 		case PTRACE_KILL:
 			ret = 0;
 			
-			if (child->state == TASK_ZOMBIE)
+			if (child->exit_state == EXIT_ZOMBIE)
 				break;
 			
 			child->exit_code = SIGKILL;
@@ -219,7 +225,7 @@ sys_ptrace(long request, long pid, long addr, long data)
 		case PTRACE_SINGLESTEP:
 			ret = -EIO;
 			
-			if ((unsigned long) data > _NSIG)
+			if (!valid_signal(data))
 				break;
 			
 			clear_tsk_thread_flag(child, TIF_SYSCALL_TRACE);

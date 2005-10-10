@@ -2017,7 +2017,7 @@ xfs_bmbt_get_state(
 				ext_flag);
 }
 
-#if ARCH_CONVERT != ARCH_NOCONVERT
+#if __BYTE_ORDER != __BIG_ENDIAN
 /* Endian flipping versions of the bmbt extraction functions */
 void
 xfs_bmbt_disk_get_all(
@@ -2331,20 +2331,6 @@ xfs_bmbt_lookup_ge(
 	return xfs_bmbt_lookup(cur, XFS_LOOKUP_GE, stat);
 }
 
-int					/* error */
-xfs_bmbt_lookup_le(
-	xfs_btree_cur_t	*cur,
-	xfs_fileoff_t	off,
-	xfs_fsblock_t	bno,
-	xfs_filblks_t	len,
-	int		*stat)		/* success/failure */
-{
-	cur->bc_rec.b.br_startoff = off;
-	cur->bc_rec.b.br_startblock = bno;
-	cur->bc_rec.b.br_blockcount = len;
-	return xfs_bmbt_lookup(cur, XFS_LOOKUP_LE, stat);
-}
-
 /*
  * Give the bmap btree a new root block.  Copy the old broot contents
  * down into a real block and make the broot point to it.
@@ -2545,7 +2531,7 @@ xfs_bmbt_set_allf(
 #endif	/* XFS_BIG_BLKNOS */
 }
 
-#if ARCH_CONVERT != ARCH_NOCONVERT
+#if __BYTE_ORDER != __BIG_ENDIAN
 /*
  * Set all the fields in a bmap extent record from the uncompressed form.
  */

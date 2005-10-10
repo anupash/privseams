@@ -47,6 +47,7 @@ static const char version[] = "lance.c:v1.15ac 1999/11/13 dplatt@3do.com, becker
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
+#include <linux/delay.h>
 #include <linux/errno.h>
 #include <linux/ioport.h>
 #include <linux/slab.h>
@@ -355,11 +356,8 @@ int init_module(void)
 		dev->base_addr = io[this_dev];
 		dev->dma = dma[this_dev];
 		if (do_lance_probe(dev) == 0) {
-			if (register_netdev(dev) == 0) {
-				dev_lance[found++] = dev;
-				continue;
-			}
-			cleanup_card(dev);
+			dev_lance[found++] = dev;
+			continue;
 		}
 		free_netdev(dev);
 		break;
@@ -447,12 +445,7 @@ struct net_device * __init lance_probe(int unit)
 	err = do_lance_probe(dev);
 	if (err)
 		goto out;
-	err = register_netdev(dev);
-	if (err)
-		goto out1;
 	return dev;
-out1:
-	cleanup_card(dev);
 out:
 	free_netdev(dev);
 	return ERR_PTR(err);
@@ -723,6 +716,9 @@ static int __init lance_probe1(struct net_device *dev, int ioaddr, int irq, int 
 	dev->tx_timeout = lance_tx_timeout;
 	dev->watchdog_timeo = TX_TIMEOUT;
 
+	err = register_netdev(dev);
+	if (err)
+		goto out_dma;
 	return 0;
 out_dma:
 	if (dev->dma != 4)
@@ -866,7 +862,7 @@ lance_init_ring(struct net_device *dev, int gfp)
 		lp->rx_skbuff[i] = skb;
 		if (skb) {
 			skb->dev = dev;
-			rx_buff = skb->tail;
+			rx_buff = skb->data;
 		} else
 			rx_buff = kmalloc(PKT_BUF_SZ, GFP_DMA | gfp);
 		if (rx_buff == NULL)

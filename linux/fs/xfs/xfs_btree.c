@@ -90,6 +90,16 @@ xfs_btree_maxrecs(
  */
 
 /*
+ * Retrieve the block pointer from the cursor at the given level.
+ * This may be a bmap btree root or from a buffer.
+ */
+STATIC xfs_btree_block_t *			/* generic btree block pointer */
+xfs_btree_get_block(
+	xfs_btree_cur_t		*cur,	/* btree cursor */
+	int			level,	/* level in btree */
+	struct xfs_buf		**bpp);	/* buffer containing the block */
+
+/*
  * Checking routine: return maxrecs for the block.
  */
 STATIC int				/* number of records fitting in block */
@@ -208,10 +218,10 @@ xfs_btree_check_lblock(
 		INT_GET(block->bb_level, ARCH_CONVERT) == level &&
 		INT_GET(block->bb_numrecs, ARCH_CONVERT) <=
 			xfs_btree_maxrecs(cur, (xfs_btree_block_t *)block) &&
-		!INT_ISZERO(block->bb_leftsib, ARCH_CONVERT) &&
+		block->bb_leftsib &&
 		(INT_GET(block->bb_leftsib, ARCH_CONVERT) == NULLDFSBNO ||
 		 XFS_FSB_SANITY_CHECK(mp, INT_GET(block->bb_leftsib, ARCH_CONVERT))) &&
-		!INT_ISZERO(block->bb_rightsib, ARCH_CONVERT) &&
+		block->bb_rightsib &&
 		(INT_GET(block->bb_rightsib, ARCH_CONVERT) == NULLDFSBNO ||
 		 XFS_FSB_SANITY_CHECK(mp, INT_GET(block->bb_rightsib, ARCH_CONVERT)));
 	if (unlikely(XFS_TEST_ERROR(!lblock_ok, mp, XFS_ERRTAG_BTREE_CHECK_LBLOCK,
@@ -329,10 +339,10 @@ xfs_btree_check_sblock(
 			xfs_btree_maxrecs(cur, (xfs_btree_block_t *)block) &&
 		(INT_GET(block->bb_leftsib, ARCH_CONVERT) == NULLAGBLOCK ||
 		 INT_GET(block->bb_leftsib, ARCH_CONVERT) < agflen) &&
-		!INT_ISZERO(block->bb_leftsib, ARCH_CONVERT) &&
+		block->bb_leftsib &&
 		(INT_GET(block->bb_rightsib, ARCH_CONVERT) == NULLAGBLOCK ||
 		 INT_GET(block->bb_rightsib, ARCH_CONVERT) < agflen) &&
-		!INT_ISZERO(block->bb_rightsib, ARCH_CONVERT);
+		block->bb_rightsib;
 	if (unlikely(XFS_TEST_ERROR(!sblock_ok, cur->bc_mp,
 			XFS_ERRTAG_BTREE_CHECK_SBLOCK,
 			XFS_RANDOM_BTREE_CHECK_SBLOCK))) {
@@ -484,7 +494,7 @@ xfs_btree_firstrec(
 	/*
 	 * It's empty, there is no such record.
 	 */
-	if (INT_ISZERO(block->bb_h.bb_numrecs, ARCH_CONVERT))
+	if (!block->bb_h.bb_numrecs)
 		return 0;
 	/*
 	 * Set the ptr value to 1, that's the first record/key.
@@ -497,7 +507,7 @@ xfs_btree_firstrec(
  * Retrieve the block pointer from the cursor at the given level.
  * This may be a bmap btree root or from a buffer.
  */
-xfs_btree_block_t *			/* generic btree block pointer */
+STATIC xfs_btree_block_t *		/* generic btree block pointer */
 xfs_btree_get_block(
 	xfs_btree_cur_t		*cur,	/* btree cursor */
 	int			level,	/* level in btree */
@@ -698,7 +708,7 @@ xfs_btree_lastrec(
 	/*
 	 * It's empty, there is no such record.
 	 */
-	if (INT_ISZERO(block->bb_h.bb_numrecs, ARCH_CONVERT))
+	if (!block->bb_h.bb_numrecs)
 		return 0;
 	/*
 	 * Set the ptr value to numrecs, that's the last record/key.

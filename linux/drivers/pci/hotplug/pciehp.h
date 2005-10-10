@@ -23,7 +23,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * Send feedback to <greg@kroah.com>, <dely.l.sy@intel.com>
+ * Send feedback to <greg@kroah.com>, <kristen.c.accardi@intel.com>
  *
  */
 #ifndef _PCIEHP_H
@@ -130,6 +130,7 @@ struct controller {
 	u8 slot_bus;		/* Bus where the slots handled by this controller sit */
 	u8 ctrlcap;
 	u16 vendor_id;
+	u8 cap_base;
 };
 
 struct irq_mapping {

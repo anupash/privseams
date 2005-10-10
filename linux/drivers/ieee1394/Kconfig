@@ -5,6 +5,7 @@ menu "IEEE 1394 (FireWire) support"
 config IEEE1394
 	tristate "IEEE 1394 (FireWire) support"
 	depends on PCI || BROKEN
+	select NET
 	help
 	  IEEE 1394 describes a high performance serial bus, which is also
 	  known as FireWire(tm) or i.Link(tm) and is used for connecting all
@@ -65,6 +66,18 @@ config IEEE1394_CONFIG_ROM_IP1394
 	  with MacOSX and WinXP IP-over-1394), enable this option and the
 	  eth1394 option below.
 
+config IEEE1394_EXPORT_FULL_API
+	bool "Export all symbols of ieee1394's API"
+	depends on IEEE1394
+	default n
+	help
+	  Export all symbols of ieee1394's driver programming interface, even
+	  those that are not currently used by the standard IEEE 1394 drivers.
+
+	  This option does not affect the interface to userspace applications.
+	  Say Y here if you want to compile externally developed drivers that
+	  make extended use of ieee1394's API. It is otherwise safe to say N.
+
 comment "Device Drivers"
 	depends on IEEE1394
 
@@ -83,11 +96,6 @@ config IEEE1394_PCILYNX
 	  To compile this driver as a module, say M here: the
 	  module will be called pcilynx.
 
-# Non-maintained pcilynx options
-# if [ "$CONFIG_IEEE1394_PCILYNX" != "n" ]; then
-#     bool '    Use PCILynx local RAM' CONFIG_IEEE1394_PCILYNX_LOCALRAM
-#     bool '    Support for non-IEEE1394 local ports' CONFIG_IEEE1394_PCILYNX_PORTS
-# fi
 config IEEE1394_OHCI1394
 	tristate "OHCI-1394 support"
 	depends on PCI && IEEE1394

@@ -71,6 +71,9 @@ EXPORT_SYMBOL(acpi_in_debugger);
 extern char line_buf[80];
 #endif /*ENABLE_DEBUGGER*/
 
+int acpi_specific_hotkey_enabled = TRUE;
+EXPORT_SYMBOL(acpi_specific_hotkey_enabled);
+
 static unsigned int acpi_irq_irq;
 static acpi_osd_handler acpi_irq_handler;
 static void *acpi_irq_context;
@@ -142,10 +145,14 @@ acpi_os_vprintf(const char *fmt, va_list args)
 #endif
 }
 
+extern int acpi_in_resume;
 void *
 acpi_os_allocate(acpi_size size)
 {
-	return kmalloc(size, GFP_KERNEL);
+	if (acpi_in_resume)
+		return kmalloc(size, GFP_ATOMIC);
+	else
+		return kmalloc(size, GFP_KERNEL);
 }
 
 void
@@ -563,7 +570,7 @@ acpi_os_write_pci_configuration (struct acpi_pci_id *pci_id, u32 reg, acpi_integ
 }
 
 /* TODO: Change code to take advantage of driver model more */
-void
+static void
 acpi_os_derive_pci_id_2 (
 	acpi_handle		rhandle,        /* upper bound  */
 	acpi_handle		chandle,        /* current node */
@@ -1071,7 +1078,7 @@ acpi_os_signal (
 }
 EXPORT_SYMBOL(acpi_os_signal);
 
-int __init
+static int __init
 acpi_os_name_setup(char *str)
 {
 	char *p = acpi_os_name;
@@ -1101,7 +1108,7 @@ __setup("acpi_os_name=", acpi_os_name_setup);
  * empty string disables _OSI
  * TBD additional string adds to _OSI
  */
-int __init
+static int __init
 acpi_osi_setup(char *str)
 {
 	if (str == NULL || *str == '\0') {
@@ -1119,7 +1126,7 @@ acpi_osi_setup(char *str)
 __setup("acpi_osi=", acpi_osi_setup);
 
 /* enable serialization to combat AE_ALREADY_EXISTS errors */
-int __init
+static int __init
 acpi_serialize_setup(char *str)
 {
 	printk(KERN_INFO PREFIX "serialize enabled\n");
@@ -1140,7 +1147,7 @@ __setup("acpi_serialize", acpi_serialize_setup);
  * Run-time events on the same GPE this flag is available
  * to tell Linux to keep the wake-time GPEs enabled at run-time.
  */
-int __init
+static int __init
 acpi_wake_gpes_always_on_setup(char *str)
 {
 	printk(KERN_INFO PREFIX "wake GPEs not disabled\n");
@@ -1151,6 +1158,15 @@ acpi_wake_gpes_always_on_setup(char *str)
 }
 
 __setup("acpi_wake_gpes_always_on", acpi_wake_gpes_always_on_setup);
+
+int __init
+acpi_hotkey_setup(char *str)
+{
+	acpi_specific_hotkey_enabled = FALSE;
+	return 1;
+}
+
+__setup("acpi_generic_hotkey", acpi_hotkey_setup);
 
 /*
  * max_cstate is defined in the base kernel so modules can

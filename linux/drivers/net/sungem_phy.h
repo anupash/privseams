@@ -7,7 +7,7 @@ struct mii_phy;
 struct mii_phy_ops
 {
 	int		(*init)(struct mii_phy *phy);
-	int		(*suspend)(struct mii_phy *phy, int wol_options);
+	int		(*suspend)(struct mii_phy *phy);
 	int		(*setup_aneg)(struct mii_phy *phy, u32 advertise);
 	int		(*setup_forced)(struct mii_phy *phy, int speed, int fd);
 	int		(*poll_link)(struct mii_phy *phy);
@@ -43,9 +43,10 @@ struct mii_phy
 	int			pause;
 
 	/* Provided by host chip */
-	struct net_device*	dev;
+	struct net_device	*dev;
 	int (*mdio_read) (struct net_device *dev, int mii_id, int reg);
 	void (*mdio_write) (struct net_device *dev, int mii_id, int reg, int val);
+	void			*platform_data;
 };
 
 /* Pass in a struct mii_phy with dev, mdio_read and mdio_write
@@ -80,6 +81,7 @@ extern int mii_phy_probe(struct mii_phy *phy, int mii_id);
 #define MII_BCM5221_SHDOW_AUX_STAT2		0x1b
 #define MII_BCM5221_SHDOW_AUX_STAT2_APD		0x0020
 #define MII_BCM5221_SHDOW_AUX_MODE4		0x1a
+#define MII_BCM5221_SHDOW_AUX_MODE4_IDDQMODE	0x0001
 #define MII_BCM5221_SHDOW_AUX_MODE4_CLKLOPWR	0x0004
 
 /* MII BCM5400 1000-BASET Control register */

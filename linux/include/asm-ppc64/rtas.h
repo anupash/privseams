@@ -24,11 +24,8 @@
 
 /* RTAS return status codes */
 #define RTAS_BUSY		-2    /* RTAS Busy */
-#define RTAS_NO_SUCH_INDICATOR	-3    /* No such indicator implemented */
 #define RTAS_EXTENDED_DELAY_MIN	9900
 #define RTAS_EXTENDED_DELAY_MAX	9905
-
-#define RTAS_UNKNOWN_OP		-1099 /* Unknown RTAS Token */
 
 /*
  * In general to call RTAS use rtas_token("string") to lookup
@@ -189,7 +186,13 @@ extern int rtas_get_sensor(int sensor, int index, int *state);
 extern int rtas_get_power_level(int powerdomain, int *level);
 extern int rtas_set_power_level(int powerdomain, int level, int *setlevel);
 extern int rtas_set_indicator(int indicator, int index, int new_value);
+extern void rtas_progress(char *s, unsigned short hex);
 extern void rtas_initialize(void);
+
+struct rtc_time;
+extern void rtas_get_boot_time(struct rtc_time *rtc_time);
+extern void rtas_get_rtc_time(struct rtc_time *rtc_time);
+extern int rtas_set_rtc_time(struct rtc_time *rtc_time);
 
 /* Given an RTAS status code of 9900..9905 compute the hinted delay */
 unsigned int rtas_extended_busy_delay_time(int status);

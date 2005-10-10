@@ -32,8 +32,6 @@
  */
 typedef unsigned long long cycles_t;
 
-extern cycles_t cacheflush_time;
-
 static inline cycles_t get_cycles (void)
 {
 	unsigned long long ret=0;
@@ -49,6 +47,9 @@ static inline cycles_t get_cycles (void)
 	return ret;
 }
 
-extern unsigned long cpu_khz;
+extern unsigned int cpu_khz;
+
+extern int read_current_timer(unsigned long *timer_value);
+#define ARCH_HAS_READ_CURRENT_TIMER	1
 
 #endif

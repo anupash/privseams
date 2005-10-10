@@ -13,6 +13,8 @@
 #define IO_OK		0
 #define IO_ERROR	1
 
+#define MAJOR_NR COMPAQ_CISS_MAJOR
+
 struct ctlr_info;
 typedef struct ctlr_info ctlr_info_t;
 
@@ -27,6 +29,7 @@ typedef struct _drive_info_struct
 {
  	__u32   LunID;	
 	int 	usage_count;
+	struct request_queue *queue;
 	sector_t nr_blocks;
 	int	block_size;
 	int 	heads;
@@ -50,6 +53,7 @@ struct ctlr_info
 	CfgTable_struct __iomem *cfgtable;
 	unsigned int intr;
 	int	interrupts_enabled;
+	int	major;
 	int 	max_commands;
 	int	commands_outstanding;
 	int 	max_outstanding; /* Debug */ 
@@ -69,7 +73,6 @@ struct ctlr_info
 	unsigned int maxQsinceinit;
 	unsigned int maxSG;
 	spinlock_t lock;
-	struct request_queue *queue;
 
 	//* pointers to command and error info pool */ 
 	CommandList_struct 	*cmd_pool;
@@ -80,6 +83,11 @@ struct ctlr_info
 	int			nr_allocs;
 	int			nr_frees; 
 	int			busy_configuring;
+
+	/* This element holds the zero based queue number of the last
+	 * queue to be started.  It is used for fairness.
+	*/
+	int			next_to_run;
 
 	// Disk structures we need to pass back
 	struct gendisk   *gendisk[NWD];
@@ -252,7 +260,7 @@ struct board_type {
 	struct access_method *access;
 };
 
-#define CCISS_LOCK(i)	(hba[i]->queue->queue_lock)
+#define CCISS_LOCK(i)	(&hba[i]->lock)
 
 #endif /* CCISS_H */
 

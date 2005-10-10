@@ -22,7 +22,7 @@ copy of the structure. You must not re-register over the top of the line
 discipline even with the same data or your computer again will be eaten by
 demons.
 
-In order to remove a line discipline call tty_register_ldisc passing NULL.
+In order to remove a line discipline call tty_unregister_ldisc().
 In ancient times this always worked. In modern times the function will
 return -EBUSY if the ldisc is currently in use. Since the ldisc referencing
 code manages the module counts this should not usually be a concern.
@@ -92,6 +92,11 @@ write_wakeup()	-	May be called at any point between open and close.
 			is needed but always races versus calls. Thus the
 			ldisc must be careful about setting order and to
 			handle unexpected calls. Must not sleep.
+
+			The driver is forbidden from calling this directly
+			from the ->write call from the ldisc as the ldisc
+			is permitted to call the driver write method from
+			this function. In such a situation defer it.
 
 
 Locking

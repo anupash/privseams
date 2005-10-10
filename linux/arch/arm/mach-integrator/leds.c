@@ -22,6 +22,8 @@
  */
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/smp.h>
+#include <linux/spinlock.h>
 
 #include <asm/hardware.h>
 #include <asm/io.h>
@@ -37,7 +39,7 @@ static void integrator_leds_event(led_event_t ledevt)
 	unsigned long flags;
 	const unsigned int dbg_base = IO_ADDRESS(INTEGRATOR_DBG_BASE);
 	unsigned int update_alpha_leds;
-	
+
 	// yup, change the LEDs
 	local_irq_save(flags);
 	update_alpha_leds = 0;
@@ -85,4 +87,4 @@ static int __init leds_init(void)
 	return 0;
 }
 
-__initcall(leds_init);
+core_initcall(leds_init);

@@ -41,6 +41,7 @@
 #include <linux/init.h>
 #include <linux/devfs_fs_kernel.h>
 #include <linux/device.h>
+#include <linux/wait.h>
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -406,7 +407,6 @@ static unsigned long	stli_eisamemprobeaddrs[] = {
 };
 
 static int	stli_eisamempsize = sizeof(stli_eisamemprobeaddrs) / sizeof(unsigned long);
-int		stli_eisaprobe = STLI_EISAPROBE;
 
 /*
  *	Define the Stallion PCI vendor and device IDs.
@@ -791,7 +791,7 @@ static int	stli_timeron;
 
 /*****************************************************************************/
 
-static struct class_simple *istallion_class;
+static struct class *istallion_class;
 
 #ifdef MODULE
 
@@ -853,10 +853,10 @@ static void __exit istallion_module_exit(void)
 	put_tty_driver(stli_serial);
 	for (i = 0; i < 4; i++) {
 		devfs_remove("staliomem/%d", i);
-		class_simple_device_remove(MKDEV(STL_SIOMEMMAJOR, i));
+		class_device_destroy(istallion_class, MKDEV(STL_SIOMEMMAJOR, i));
 	}
 	devfs_remove("staliomem");
-	class_simple_destroy(istallion_class);
+	class_destroy(istallion_class);
 	if ((i = unregister_chrdev(STL_SIOMEMMAJOR, "staliomem")))
 		printk("STALLION: failed to un-register serial memory device, "
 			"errno=%d\n", -i);
@@ -1068,11 +1068,10 @@ static int stli_open(struct tty_struct *tty, struct file *filp)
 	tty->driver_data = portp;
 	portp->refcount++;
 
-	while (test_bit(ST_INITIALIZING, &portp->state)) {
-		if (signal_pending(current))
-			return(-ERESTARTSYS);
-		interruptible_sleep_on(&portp->raw_wait);
-	}
+	wait_event_interruptible(portp->raw_wait,
+			!test_bit(ST_INITIALIZING, &portp->state));
+	if (signal_pending(current))
+		return(-ERESTARTSYS);
 
 	if ((portp->flags & ASYNC_INITIALIZED) == 0) {
 		set_bit(ST_INITIALIZING, &portp->state);
@@ -1275,12 +1274,11 @@ static int stli_rawopen(stlibrd_t *brdp, stliport_t *portp, unsigned long arg, i
  *	order of opens and closes may not be preserved across shared
  *	memory, so we must wait until it is complete.
  */
-	while (test_bit(ST_CLOSING, &portp->state)) {
-		if (signal_pending(current)) {
-			restore_flags(flags);
-			return(-ERESTARTSYS);
-		}
-		interruptible_sleep_on(&portp->raw_wait);
+	wait_event_interruptible(portp->raw_wait,
+			!test_bit(ST_CLOSING, &portp->state));
+	if (signal_pending(current)) {
+		restore_flags(flags);
+		return -ERESTARTSYS;
 	}
 
 /*
@@ -1309,13 +1307,10 @@ static int stli_rawopen(stlibrd_t *brdp, stliport_t *portp, unsigned long arg, i
  */
 	rc = 0;
 	set_bit(ST_OPENING, &portp->state);
-	while (test_bit(ST_OPENING, &portp->state)) {
-		if (signal_pending(current)) {
-			rc = -ERESTARTSYS;
-			break;
-		}
-		interruptible_sleep_on(&portp->raw_wait);
-	}
+	wait_event_interruptible(portp->raw_wait,
+			!test_bit(ST_OPENING, &portp->state));
+	if (signal_pending(current))
+		rc = -ERESTARTSYS;
 	restore_flags(flags);
 
 	if ((rc == 0) && (portp->rc != 0))
@@ -1352,12 +1347,11 @@ static int stli_rawclose(stlibrd_t *brdp, stliport_t *portp, unsigned long arg, 
  *	occurs on this port.
  */
 	if (wait) {
-		while (test_bit(ST_CLOSING, &portp->state)) {
-			if (signal_pending(current)) {
-				restore_flags(flags);
-				return(-ERESTARTSYS);
-			}
-			interruptible_sleep_on(&portp->raw_wait);
+		wait_event_interruptible(portp->raw_wait,
+				!test_bit(ST_CLOSING, &portp->state));
+		if (signal_pending(current)) {
+			restore_flags(flags);
+			return -ERESTARTSYS;
 		}
 	}
 
@@ -1385,13 +1379,10 @@ static int stli_rawclose(stlibrd_t *brdp, stliport_t *portp, unsigned long arg, 
  *	to come back.
  */
 	rc = 0;
-	while (test_bit(ST_CLOSING, &portp->state)) {
-		if (signal_pending(current)) {
-			rc = -ERESTARTSYS;
-			break;
-		}
-		interruptible_sleep_on(&portp->raw_wait);
-	}
+	wait_event_interruptible(portp->raw_wait,
+			!test_bit(ST_CLOSING, &portp->state));
+	if (signal_pending(current))
+		rc = -ERESTARTSYS;
 	restore_flags(flags);
 
 	if ((rc == 0) && (portp->rc != 0))
@@ -1420,22 +1411,20 @@ static int stli_cmdwait(stlibrd_t *brdp, stliport_t *portp, unsigned long cmd, v
 
 	save_flags(flags);
 	cli();
-	while (test_bit(ST_CMDING, &portp->state)) {
-		if (signal_pending(current)) {
-			restore_flags(flags);
-			return(-ERESTARTSYS);
-		}
-		interruptible_sleep_on(&portp->raw_wait);
+	wait_event_interruptible(portp->raw_wait,
+			!test_bit(ST_CMDING, &portp->state));
+	if (signal_pending(current)) {
+		restore_flags(flags);
+		return -ERESTARTSYS;
 	}
 
 	stli_sendcmd(brdp, portp, cmd, arg, size, copyback);
 
-	while (test_bit(ST_CMDING, &portp->state)) {
-		if (signal_pending(current)) {
-			restore_flags(flags);
-			return(-ERESTARTSYS);
-		}
-		interruptible_sleep_on(&portp->raw_wait);
+	wait_event_interruptible(portp->raw_wait,
+			!test_bit(ST_CMDING, &portp->state));
+	if (signal_pending(current)) {
+		restore_flags(flags);
+		return -ERESTARTSYS;
 	}
 	restore_flags(flags);
 
@@ -4695,7 +4684,7 @@ static int stli_initbrds(void)
 #ifdef MODULE
 	stli_argbrds();
 #endif
-	if (stli_eisaprobe)
+	if (STLI_EISAPROBE)
 		stli_findeisabrds();
 #ifdef CONFIG_PCI
 	stli_findpcibrds();
@@ -5252,12 +5241,12 @@ int __init stli_init(void)
 				"device\n");
 
 	devfs_mk_dir("staliomem");
-	istallion_class = class_simple_create(THIS_MODULE, "staliomem");
+	istallion_class = class_create(THIS_MODULE, "staliomem");
 	for (i = 0; i < 4; i++) {
 		devfs_mk_cdev(MKDEV(STL_SIOMEMMAJOR, i),
 			       S_IFCHR | S_IRUSR | S_IWUSR,
 			       "staliomem/%d", i);
-		class_simple_device_add(istallion_class, MKDEV(STL_SIOMEMMAJOR, i), 
+		class_device_create(istallion_class, MKDEV(STL_SIOMEMMAJOR, i),
 				NULL, "staliomem%d", i);
 	}
 

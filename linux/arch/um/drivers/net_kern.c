@@ -146,7 +146,6 @@ static int uml_net_close(struct net_device *dev)
 	netif_stop_queue(dev);
 	spin_lock(&lp->lock);
 
-	free_irq_by_irq_and_dev(dev->irq, dev);
 	free_irq(dev->irq, dev);
 	if(lp->close != NULL)
 		(*lp->close)(lp->fd, &lp->user);
@@ -383,7 +382,6 @@ static int eth_configure(int n, void *init, char *mac,
 	save = lp->user[0];
 	*lp = ((struct uml_net_private)
 		{ .list  		= LIST_HEAD_INIT(lp->list),
-		  .lock 		= SPIN_LOCK_UNLOCKED,
 		  .dev 			= dev,
 		  .fd 			= -1,
 		  .mac 			= { 0xfe, 0xfd, 0x0, 0x0, 0x0, 0x0},
@@ -400,6 +398,7 @@ static int eth_configure(int n, void *init, char *mac,
 		  .user  		= { save } });
 
 	init_timer(&lp->tl);
+	spin_lock_init(&lp->lock);
 	lp->tl.function = uml_net_user_timer_expire;
 	if (lp->have_mac)
 		memcpy(lp->mac, device->mac, sizeof(lp->mac));
@@ -613,25 +612,35 @@ static int net_config(char *str)
 	return(err);
 }
 
-static int net_remove(char *str)
+static int net_id(char **str, int *start_out, int *end_out)
+{
+        char *end;
+        int n;
+
+	n = simple_strtoul(*str, &end, 0);
+	if((*end != '\0') || (end == *str))
+		return -1;
+
+        *start_out = n;
+        *end_out = n;
+        *str = end;
+        return n;
+}
+
+static int net_remove(int n)
 {
 	struct uml_net *device;
 	struct net_device *dev;
 	struct uml_net_private *lp;
-	char *end;
-	int n;
-
-	n = simple_strtoul(str, &end, 0);
-	if((*end != '\0') || (end == str))
-		return(-1);
 
 	device = find_device(n);
 	if(device == NULL)
-		return(0);
+		return -ENODEV;
 
 	dev = device->dev;
 	lp = dev->priv;
-	if(lp->fd > 0) return(-1);
+	if(lp->fd > 0)
+                return -EBUSY;
 	if(lp->remove != NULL) (*lp->remove)(&lp->user);
 	unregister_netdev(dev);
 	platform_device_unregister(&device->pdev);
@@ -639,13 +648,14 @@ static int net_remove(char *str)
 	list_del(&device->list);
 	kfree(device);
 	free_netdev(dev);
-	return(0);
+	return 0;
 }
 
 static struct mc_device net_mc = {
 	.name		= "eth",
 	.config		= net_config,
 	.get_config	= NULL,
+        .id		= net_id,
 	.remove		= net_remove,
 };
 
@@ -728,7 +738,8 @@ static void close_devices(void)
 
 	list_for_each(ele, &opened){
 		lp = list_entry(ele, struct uml_net_private, list);
-		if(lp->close != NULL) (*lp->close)(lp->fd, &lp->user);
+		if((lp->close != NULL) && (lp->fd >= 0))
+			(*lp->close)(lp->fd, &lp->user);
 		if(lp->remove != NULL) (*lp->remove)(&lp->user);
 	}
 }

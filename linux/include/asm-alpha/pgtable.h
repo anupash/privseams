@@ -22,6 +22,7 @@
  * hook is made available.
  */
 #define set_pte(pteptr, pteval) ((*(pteptr)) = (pteval))
+#define set_pte_at(mm,addr,ptep,pteval) set_pte(ptep,pteval)
 
 /* PMD_SHIFT determines the size of the area a second-level page table can map */
 #define PMD_SHIFT	(PAGE_SHIFT + (PAGE_SHIFT-3))
@@ -41,7 +42,7 @@
 #define PTRS_PER_PMD	(1UL << (PAGE_SHIFT-3))
 #define PTRS_PER_PGD	(1UL << (PAGE_SHIFT-3))
 #define USER_PTRS_PER_PGD	(TASK_SIZE / PGDIR_SIZE)
-#define FIRST_USER_PGD_NR	0
+#define FIRST_USER_ADDRESS	0
 
 /* Number of pointers that fit on a page:  this will go away. */
 #define PTRS_PER_PAGE	(1UL << (PAGE_SHIFT-3))
@@ -130,6 +131,12 @@
 #define __S101	_PAGE_S(_PAGE_FOW)
 #define __S110	_PAGE_S(0)
 #define __S111	_PAGE_S(0)
+
+/*
+ * pgprot_noncached() is only for infiniband pci support, and a real
+ * implementation for RAM would be more complicated.
+ */
+#define pgprot_noncached(prot)	(prot)
 
 /*
  * BAD_PAGETABLE is used when we need a bogus page-table, while
@@ -235,7 +242,10 @@ extern inline unsigned long pgd_page(pgd_t pgd)
 
 extern inline int pte_none(pte_t pte)		{ return !pte_val(pte); }
 extern inline int pte_present(pte_t pte)	{ return pte_val(pte) & _PAGE_VALID; }
-extern inline void pte_clear(pte_t *ptep)	{ pte_val(*ptep) = 0; }
+extern inline void pte_clear(struct mm_struct *mm, unsigned long addr, pte_t *ptep)
+{
+	pte_val(*ptep) = 0;
+}
 
 extern inline int pmd_none(pmd_t pmd)		{ return !pmd_val(pmd); }
 extern inline int pmd_bad(pmd_t pmd)		{ return (pmd_val(pmd) & ~_PFN_MASK) != _PAGE_TABLE; }
@@ -335,6 +345,13 @@ extern inline pte_t mk_swap_pte(unsigned long type, unsigned long offset)
 	unsigned long pfn = virt_to_phys(va) >> PAGE_SHIFT;	\
 	remap_pfn_range(vma, start, pfn, size, prot);		\
 })
+
+#define io_remap_pfn_range(vma, start, pfn, size, prot)	\
+		remap_pfn_range(vma, start, pfn, size, prot)
+
+#define MK_IOSPACE_PFN(space, pfn)	(pfn)
+#define GET_IOSPACE(pfn)		0
+#define GET_PFN(pfn)			(pfn)
 
 #define pte_ERROR(e) \
 	printk("%s:%d: bad pte %016lx.\n", __FILE__, __LINE__, pte_val(e))

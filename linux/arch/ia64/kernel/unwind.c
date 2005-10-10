@@ -362,7 +362,7 @@ unw_access_gr (struct unw_frame_info *info, int regnum, unsigned long *val, char
 			if (info->pri_unat_loc)
 				nat_addr = info->pri_unat_loc;
 			else
-				nat_addr = &info->sw->ar_unat;
+				nat_addr = &info->sw->caller_unat;
 			nat_mask = (1UL << ((long) addr & 0x1f8)/8);
 		}
 	} else {
@@ -524,7 +524,7 @@ unw_access_ar (struct unw_frame_info *info, int regnum, unsigned long *val, int 
 	      case UNW_AR_UNAT:
 		addr = info->unat_loc;
 		if (!addr)
-			addr = &info->sw->ar_unat;
+			addr = &info->sw->caller_unat;
 		break;
 
 	      case UNW_AR_LC:
@@ -1775,7 +1775,7 @@ run_script (struct unw_script *script, struct unw_frame_info *state)
 
 		      case UNW_INSN_SETNAT_MEMSTK:
 			if (!state->pri_unat_loc)
-				state->pri_unat_loc = &state->sw->ar_unat;
+				state->pri_unat_loc = &state->sw->caller_unat;
 			/* register off. is a multiple of 8, so the least 3 bits (type) are 0 */
 			s[dst+1] = ((unsigned long) state->pri_unat_loc - s[dst]) | UNW_NAT_MEMSTK;
 			break;
@@ -1943,23 +1943,30 @@ EXPORT_SYMBOL(unw_unwind);
 int
 unw_unwind_to_user (struct unw_frame_info *info)
 {
-	unsigned long ip, sp;
+	unsigned long ip, sp, pr = 0;
 
 	while (unw_unwind(info) >= 0) {
-		if (unw_get_rp(info, &ip) < 0) {
-			unw_get_ip(info, &ip);
-			UNW_DPRINT(0, "unwind.%s: failed to read return pointer (ip=0x%lx)\n",
-				   __FUNCTION__, ip);
+		unw_get_sp(info, &sp);
+		if ((long)((unsigned long)info->task + IA64_STK_OFFSET - sp)
+		    < IA64_PT_REGS_SIZE) {
+			UNW_DPRINT(0, "unwind.%s: ran off the top of the kernel stack\n",
+				   __FUNCTION__);
+			break;
+		}
+		if (unw_is_intr_frame(info) &&
+		    (pr & (1UL << PRED_USER_STACK)))
+			return 0;
+		if (unw_get_pr (info, &pr) < 0) {
+			unw_get_rp(info, &ip);
+			UNW_DPRINT(0, "unwind.%s: failed to read "
+				   "predicate register (ip=0x%lx)\n",
+				__FUNCTION__, ip);
 			return -1;
 		}
-		unw_get_sp(info, &sp);
-		if (sp >= (unsigned long)info->task + IA64_STK_OFFSET)
-			break;
-		if (ip < FIXADDR_USER_END)
-			return 0;
 	}
 	unw_get_ip(info, &ip);
-	UNW_DPRINT(0, "unwind.%s: failed to unwind to user-level (ip=0x%lx)\n", __FUNCTION__, ip);
+	UNW_DPRINT(0, "unwind.%s: failed to unwind to user-level (ip=0x%lx)\n",
+		   __FUNCTION__, ip);
 	return -1;
 }
 EXPORT_SYMBOL(unw_unwind_to_user);
@@ -2236,11 +2243,11 @@ unw_init (void)
 	if (8*sizeof(unw_hash_index_t) < UNW_LOG_HASH_SIZE)
 		unw_hash_index_t_is_too_narrow();
 
-	unw.sw_off[unw.preg_index[UNW_REG_PRI_UNAT_GR]] = SW(AR_UNAT);
+	unw.sw_off[unw.preg_index[UNW_REG_PRI_UNAT_GR]] = SW(CALLER_UNAT);
 	unw.sw_off[unw.preg_index[UNW_REG_BSPSTORE]] = SW(AR_BSPSTORE);
-	unw.sw_off[unw.preg_index[UNW_REG_PFS]] = SW(AR_UNAT);
+	unw.sw_off[unw.preg_index[UNW_REG_PFS]] = SW(AR_PFS);
 	unw.sw_off[unw.preg_index[UNW_REG_RP]] = SW(B0);
-	unw.sw_off[unw.preg_index[UNW_REG_UNAT]] = SW(AR_UNAT);
+	unw.sw_off[unw.preg_index[UNW_REG_UNAT]] = SW(CALLER_UNAT);
 	unw.sw_off[unw.preg_index[UNW_REG_PR]] = SW(PR);
 	unw.sw_off[unw.preg_index[UNW_REG_LC]] = SW(AR_LC);
 	unw.sw_off[unw.preg_index[UNW_REG_FPSR]] = SW(AR_FPSR);

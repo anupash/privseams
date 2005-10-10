@@ -14,6 +14,10 @@
 
 #include <asm/fpstate.h>
 
+#define THREAD_SIZE_ORDER	1
+#define THREAD_SIZE		8192
+#define THREAD_START_SP		(THREAD_SIZE - 8)
+
 #ifndef __ASSEMBLY__
 
 struct task_struct;
@@ -45,7 +49,7 @@ struct cpu_context_save {
  */
 struct thread_info {
 	unsigned long		flags;		/* low level flags */
-	__s32			preempt_count;	/* 0 => preemptable, <0 => bug */
+	int			preempt_count;	/* 0 => preemptable, <0 => bug */
 	mm_segment_t		addr_limit;	/* address limit */
 	struct task_struct	*task;		/* main task structure */
 	struct exec_domain	*exec_domain;	/* execution domain */
@@ -76,8 +80,6 @@ struct thread_info {
 
 #define init_thread_info	(init_thread_union.thread_info)
 #define init_stack		(init_thread_union.stack)
-
-#define THREAD_SIZE		8192
 
 /*
  * how to get the thread information struct from C

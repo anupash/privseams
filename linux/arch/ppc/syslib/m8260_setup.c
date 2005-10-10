@@ -24,7 +24,7 @@
 #include <asm/io.h>
 #include <asm/pgtable.h>
 #include <asm/mpc8260.h>
-#include <asm/immap_cpm2.h>
+#include <asm/cpm2.h>
 #include <asm/machdep.h>
 #include <asm/bootinfo.h>
 #include <asm/time.h>
@@ -33,8 +33,8 @@
 
 unsigned char __res[sizeof(bd_t)];
 
-extern void cpm2_reset(void);
-extern void m8260_find_bridges(void);
+extern void pq2_find_bridges(void);
+extern void pq2pci_init_irq(void);
 extern void idma_pci9_init(void);
 
 /* Place-holder for board-specific init */
@@ -56,7 +56,7 @@ m8260_setup_arch(void)
 	idma_pci9_init();
 #endif
 #ifdef CONFIG_PCI_8260
-	m8260_find_bridges();
+	pq2_find_bridges();
 #endif
 #ifdef CONFIG_BLK_DEV_INITRD
 	if (initrd_start)
@@ -167,18 +167,18 @@ m8260_show_cpuinfo(struct seq_file *m)
 static void __init
 m8260_init_IRQ(void)
 {
-	int i;
-
-        for ( i = 0 ; i < NR_SIU_INTS ; i++ )
-                irq_desc[i].handler = &cpm2_pic;
+	cpm2_init_IRQ();
 
 	/* Initialize the default interrupt mapping priorities,
 	 * in case the boot rom changed something on us.
 	 */
-	cpm2_immr->im_intctl.ic_sicr = 0;
 	cpm2_immr->im_intctl.ic_siprr = 0x05309770;
-	cpm2_immr->im_intctl.ic_scprrh = 0x05309770;
-	cpm2_immr->im_intctl.ic_scprrl = 0x05309770;
+
+#if defined(CONFIG_PCI) && (defined(CONFIG_ADS8272) || defined(CONFIG_PQ2FADS))
+ 	/* Initialize stuff for the 82xx CPLD IC and install demux  */
+ 	pq2pci_init_irq();
+#endif
+
 }
 
 /*

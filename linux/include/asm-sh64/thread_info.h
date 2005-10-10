@@ -22,7 +22,7 @@ struct thread_info {
 	struct exec_domain	*exec_domain;	/* execution domain */
 	unsigned long		flags;		/* low level flags */
 	/* Put the 4 32-bit fields together to make asm offsetting easier. */
-	__s32			preempt_count; /* 0 => preemptable, <0 => BUG */
+	int			preempt_count;	/* 0 => preemptable, <0 => BUG */
 	__u16			cpu;
 
 	mm_segment_t		addr_limit;
@@ -61,14 +61,19 @@ static inline struct thread_info *current_thread_info(void)
 }
 
 /* thread information allocation */
-#define alloc_thread_info(ti) ((struct thread_info *) __get_free_pages(GFP_KERNEL,2))
+
+
+
+#define alloc_thread_info(ti) ((struct thread_info *) __get_free_pages(GFP_KERNEL,1))
 #define free_thread_info(ti) free_pages((unsigned long) (ti), 1)
 #define get_thread_info(ti) get_task_struct((ti)->task)
 #define put_thread_info(ti) put_task_struct((ti)->task)
 
 #endif /* __ASSEMBLY__ */
 
-#define PREEMPT_ACTIVE		0x4000000
+#define THREAD_SIZE  8192
+
+#define PREEMPT_ACTIVE		0x10000000
 
 /* thread information flags */
 #define TIF_SYSCALL_TRACE	0	/* syscall trace active */
@@ -76,7 +81,6 @@ static inline struct thread_info *current_thread_info(void)
 #define TIF_NEED_RESCHED	3	/* rescheduling necessary */
 #define TIF_MEMDIE		4
 
-#define THREAD_SIZE	16384
 
 #endif /* __KERNEL__ */
 

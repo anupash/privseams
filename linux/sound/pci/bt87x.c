@@ -41,7 +41,7 @@ MODULE_LICENSE("GPL");
 MODULE_SUPPORTED_DEVICE("{{Brooktree,Bt878},"
 		"{Brooktree,Bt879}}");
 
-static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;	/* Index 0-MAX */
+static int index[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS - 1)] = -2}; /* Exclude the first card */
 static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;	/* ID for this card */
 static int enable[SNDRV_CARDS] = SNDRV_DEFAULT_ENABLE_PNP;	/* Enable this card */
 static int digital_rate[SNDRV_CARDS] = { [0 ... (SNDRV_CARDS-1)] = 0 }; /* digital input rate */
@@ -798,13 +798,15 @@ static struct {
 	{0x270f, 0xfc00}, /* Chaintech Digitop DST-1000 DVB-S */
 };
 
+static struct pci_driver driver;
+
 /* return the rate of the card, or a negative value if it's blacklisted */
 static int __devinit snd_bt87x_detect_card(struct pci_dev *pci)
 {
 	int i;
 	const struct pci_device_id *supported;
 
-	supported = pci_match_device(snd_bt87x_ids, pci);
+	supported = pci_match_device(&driver, pci);
 	if (supported)
 		return supported->driver_data;
 
@@ -918,7 +920,7 @@ static int __init alsa_card_bt87x_init(void)
 {
 	if (load_all)
 		driver.id_table = snd_bt87x_default_ids;
-	return pci_module_init(&driver);
+	return pci_register_driver(&driver);
 }
 
 static void __exit alsa_card_bt87x_exit(void)

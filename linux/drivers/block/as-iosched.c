@@ -25,7 +25,7 @@
 #define REQ_ASYNC	0
 
 /*
- * See Documentation/as-iosched.txt
+ * See Documentation/block/as-iosched.txt
  */
 
 /*
@@ -1463,32 +1463,33 @@ static void as_add_request(struct as_data *ad, struct as_rq *arq)
 	arq->state = AS_RQ_QUEUED;
 }
 
+static void as_deactivate_request(request_queue_t *q, struct request *rq)
+{
+	struct as_data *ad = q->elevator->elevator_data;
+	struct as_rq *arq = RQ_DATA(rq);
+
+	if (arq) {
+		if (arq->state == AS_RQ_REMOVED) {
+			arq->state = AS_RQ_DISPATCHED;
+			if (arq->io_context && arq->io_context->aic)
+				atomic_inc(&arq->io_context->aic->nr_dispatched);
+		}
+	} else
+		WARN_ON(blk_fs_request(rq)
+			&& (!(rq->flags & (REQ_HARDBARRIER|REQ_SOFTBARRIER))) );
+
+	/* Stop anticipating - let this request get through */
+	as_antic_stop(ad);
+}
+
 /*
  * requeue the request. The request has not been completed, nor is it a
  * new request, so don't touch accounting.
  */
 static void as_requeue_request(request_queue_t *q, struct request *rq)
 {
-	struct as_data *ad = q->elevator->elevator_data;
-	struct as_rq *arq = RQ_DATA(rq);
-
-	if (arq) {
-		if (arq->state != AS_RQ_REMOVED) {
-			printk("arq->state %d\n", arq->state);
-			WARN_ON(1);
-		}
-
-		arq->state = AS_RQ_DISPATCHED;
-		if (arq->io_context && arq->io_context->aic)
-			atomic_inc(&arq->io_context->aic->nr_dispatched);
-	} else
-		WARN_ON(blk_fs_request(rq)
-			&& (!(rq->flags & (REQ_HARDBARRIER|REQ_SOFTBARRIER))) );
-
-	list_add(&rq->queuelist, ad->dispatch);
-
-	/* Stop anticipating - let this request get through */
-	as_antic_stop(ad);
+	as_deactivate_request(q, rq);
+	list_add(&rq->queuelist, &q->queue_head);
 }
 
 /*
@@ -1805,7 +1806,8 @@ static void as_put_request(request_queue_t *q, struct request *rq)
 	rq->elevator_private = NULL;
 }
 
-static int as_set_request(request_queue_t *q, struct request *rq, int gfp_mask)
+static int as_set_request(request_queue_t *q, struct request *rq,
+			  struct bio *bio, int gfp_mask)
 {
 	struct as_data *ad = q->elevator->elevator_data;
 	struct as_rq *arq = mempool_alloc(ad->arq_pool, gfp_mask);
@@ -1826,7 +1828,7 @@ static int as_set_request(request_queue_t *q, struct request *rq, int gfp_mask)
 	return 1;
 }
 
-static int as_may_queue(request_queue_t *q, int rw)
+static int as_may_queue(request_queue_t *q, int rw, struct bio *bio)
 {
 	int ret = ELV_MQUEUE_MAY;
 	struct as_data *ad = q->elevator->elevator_data;
@@ -1870,20 +1872,22 @@ static int as_init_queue(request_queue_t *q, elevator_t *e)
 	if (!arq_pool)
 		return -ENOMEM;
 
-	ad = kmalloc(sizeof(*ad), GFP_KERNEL);
+	ad = kmalloc_node(sizeof(*ad), GFP_KERNEL, q->node);
 	if (!ad)
 		return -ENOMEM;
 	memset(ad, 0, sizeof(*ad));
 
 	ad->q = q; /* Identify what queue the data belongs to */
 
-	ad->hash = kmalloc(sizeof(struct list_head)*AS_HASH_ENTRIES,GFP_KERNEL);
+	ad->hash = kmalloc_node(sizeof(struct list_head)*AS_HASH_ENTRIES,
+				GFP_KERNEL, q->node);
 	if (!ad->hash) {
 		kfree(ad);
 		return -ENOMEM;
 	}
 
-	ad->arq_pool = mempool_create(BLKDEV_MIN_RQ, mempool_alloc_slab, mempool_free_slab, arq_pool);
+	ad->arq_pool = mempool_create_node(BLKDEV_MIN_RQ, mempool_alloc_slab,
+				mempool_free_slab, arq_pool, q->node);
 	if (!ad->arq_pool) {
 		kfree(ad->hash);
 		kfree(ad);
@@ -1931,23 +1935,15 @@ struct as_fs_entry {
 static ssize_t
 as_var_show(unsigned int var, char *page)
 {
-	var = (var * 1000) / HZ;
 	return sprintf(page, "%d\n", var);
 }
 
 static ssize_t
 as_var_store(unsigned long *var, const char *page, size_t count)
 {
-	unsigned long tmp;
 	char *p = (char *) page;
 
-	tmp = simple_strtoul(p, &p, 10);
-	if (tmp != 0) {
-		tmp = (tmp * HZ) / 1000;
-		if (tmp == 0)
-			tmp = 1;
-	}
-	*var = tmp;
+	*var = simple_strtoul(p, &p, 10);
 	return count;
 }
 
@@ -2043,7 +2039,7 @@ as_attr_show(struct kobject *kobj, struct attribute *attr, char *page)
 	struct as_fs_entry *entry = to_as(attr);
 
 	if (!entry->show)
-		return 0;
+		return -EIO;
 
 	return entry->show(e->elevator_data, page);
 }
@@ -2056,7 +2052,7 @@ as_attr_store(struct kobject *kobj, struct attribute *attr,
 	struct as_fs_entry *entry = to_as(attr);
 
 	if (!entry->store)
-		return -EINVAL;
+		return -EIO;
 
 	return entry->store(e->elevator_data, page, length);
 }
@@ -2080,6 +2076,7 @@ static struct elevator_type iosched_as = {
 		.elevator_add_req_fn =		as_insert_request,
 		.elevator_remove_req_fn =	as_remove_request,
 		.elevator_requeue_req_fn = 	as_requeue_request,
+		.elevator_deactivate_req_fn = 	as_deactivate_request,
 		.elevator_queue_empty_fn =	as_queue_empty,
 		.elevator_completed_req_fn =	as_completed_request,
 		.elevator_former_req_fn =	as_former_request,

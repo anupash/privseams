@@ -94,6 +94,7 @@ Your cooperation is appreciated.
 		  9 = /dev/urandom	Faster, less secure random number gen.
 		 10 = /dev/aio		Asyncronous I/O notification interface
 		 11 = /dev/kmsg		Writes to this come out as printk's
+		 12 = /dev/oldmem	Access to crash dump from kexec kernel
   1 block	RAM disk
 		  0 = /dev/ram0		First RAM disk
 		  1 = /dev/ram1		Second RAM disk
@@ -2754,6 +2755,8 @@ Your cooperation is appreciated.
 		 50 = /dev/ttyIOC40		Altix serial card
 		    ...
 		 81 = /dev/ttyIOC431		Altix serial card
+		 82 = /dev/ttyVR0               NEC VR4100 series SIU
+		 83 = /dev/ttyVR1               NEC VR4100 series DSIU
 
 205 char	Low-density serial ports (alternate device)
 		  0 = /dev/culu0		Callout device for ttyLU0
@@ -2788,6 +2791,8 @@ Your cooperation is appreciated.
 		 50 = /dev/cuioc40		Callout device for ttyIOC40
 		    ...
 		 81 = /dev/cuioc431		Callout device for ttyIOC431
+		 82 = /dev/cuvr0                Callout device for ttyVR0
+		 83 = /dev/cuvr1                Callout device for ttyVR1
 
 
 206 char	OnStream SC-x0 tape devices

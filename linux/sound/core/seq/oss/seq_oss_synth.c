@@ -75,7 +75,7 @@ static seq_oss_synth_t midi_synth_dev = {
 	"MIDI", /* name */
 };
 
-static spinlock_t register_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(register_lock);
 
 /*
  * prototypes
@@ -325,14 +325,10 @@ snd_seq_oss_synth_cleanup(seq_oss_devinfo_t *dp)
 			}
 			snd_use_lock_free(&rec->use_lock);
 		}
-		if (info->sysex) {
-			kfree(info->sysex);
-			info->sysex = NULL;
-		}
-		if (info->ch) {
-			kfree(info->ch);
-			info->ch = NULL;
-		}
+		kfree(info->sysex);
+		info->sysex = NULL;
+		kfree(info->ch);
+		info->ch = NULL;
 	}
 	dp->synth_opened = 0;
 	dp->max_synthdev = 0;
@@ -418,14 +414,10 @@ snd_seq_oss_synth_reset(seq_oss_devinfo_t *dp, int dev)
 					  dp->file_mode) < 0) {
 			midi_synth_dev.opened--;
 			info->opened = 0;
-			if (info->sysex) {
-				kfree(info->sysex);
-				info->sysex = NULL;
-			}
-			if (info->ch) {
-				kfree(info->ch);
-				info->ch = NULL;
-			}
+			kfree(info->sysex);
+			info->sysex = NULL;
+			kfree(info->ch);
+			info->ch = NULL;
 		}
 		return;
 	}

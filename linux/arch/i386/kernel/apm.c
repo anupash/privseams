@@ -166,14 +166,14 @@
  *         If an APM idle fails log it and idle sensibly
  *   1.15: Don't queue events to clients who open the device O_WRONLY.
  *         Don't expect replies from clients who open the device O_RDONLY.
- *         (Idea from Thomas Hood <jdthood@mail.com>)
+ *         (Idea from Thomas Hood)
  *         Minor waitqueue cleanups. (John Fremlin <chief@bandits.org>)
  *   1.16: Fix idle calling. (Andreas Steinmetz <ast@domdv.de> et al.)
  *         Notify listeners of standby or suspend events before notifying
  *         drivers. Return EBUSY to ioctl() if suspend is rejected.
  *         (Russell King <rmk@arm.linux.org.uk> and Thomas Hood)
  *         Ignore first resume after we generate our own resume event
- *         after a suspend (Thomas Hood <jdthood@mail.com>)
+ *         after a suspend (Thomas Hood)
  *         Daemonize now gets rid of our controlling terminal (sfr).
  *         CONFIG_APM_CPU_IDLE now just affects the default value of
  *         idle_threshold (sfr).
@@ -228,10 +228,10 @@
 #include <asm/system.h>
 #include <asm/uaccess.h>
 #include <asm/desc.h>
+#include <asm/i8253.h>
 
 #include "io_ports.h"
 
-extern spinlock_t i8253_lock;
 extern unsigned long get_cmos_time(void);
 extern void machine_real_restart(unsigned char *, int);
 
@@ -346,10 +346,10 @@ extern int (*console_blank_hook)(int);
 struct apm_user {
 	int		magic;
 	struct apm_user *	next;
-	int		suser: 1;
-	int		writer: 1;
-	int		reader: 1;
-	int		suspend_wait: 1;
+	unsigned int	suser: 1;
+	unsigned int	writer: 1;
+	unsigned int	reader: 1;
+	unsigned int	suspend_wait: 1;
 	int		suspend_result;
 	int		suspends_pending;
 	int		standbys_pending;
@@ -911,14 +911,7 @@ static void apm_power_off(void)
 		0xcd, 0x15		/* int   $0x15       */
 	};
 
-	/*
-	 * This may be called on an SMP machine.
-	 */
-#ifdef CONFIG_SMP
 	/* Some bioses don't like being called from CPU != 0 */
-	set_cpus_allowed(current, cpumask_of_cpu(0));
-	BUG_ON(smp_processor_id() != 0);
-#endif
 	if (apm_info.realmode_power_off)
 	{
 		(void)apm_save_cpus();
@@ -1168,8 +1161,7 @@ static void get_time_diff(void)
 static void reinit_timer(void)
 {
 #ifdef INIT_TIMER_AFTER_SUSPEND
-	unsigned long	flags;
-	extern spinlock_t i8253_lock;
+	unsigned long flags;
 
 	spin_lock_irqsave(&i8253_lock, flags);
 	/* set the clock to 100 Hz */
@@ -1202,10 +1194,11 @@ static int suspend(int vetoable)
 	}
 
 	device_suspend(PMSG_SUSPEND);
+	local_irq_disable();
 	device_power_down(PMSG_SUSPEND);
 
 	/* serialize with the timer interrupt */
-	write_seqlock_irq(&xtime_lock);
+	write_seqlock(&xtime_lock);
 
 	/* protect against access to timer chip registers */
 	spin_lock(&i8253_lock);
@@ -1216,20 +1209,22 @@ static int suspend(int vetoable)
 	 * We'll undo any timer changes due to interrupts below.
 	 */
 	spin_unlock(&i8253_lock);
-	write_sequnlock_irq(&xtime_lock);
+	write_sequnlock(&xtime_lock);
+	local_irq_enable();
 
 	save_processor_state();
 	err = set_system_power_state(APM_STATE_SUSPEND);
+	ignore_normal_resume = 1;
 	restore_processor_state();
 
-	write_seqlock_irq(&xtime_lock);
+	local_irq_disable();
+	write_seqlock(&xtime_lock);
 	spin_lock(&i8253_lock);
 	reinit_timer();
 	set_time();
-	ignore_normal_resume = 1;
 
 	spin_unlock(&i8253_lock);
-	write_sequnlock_irq(&xtime_lock);
+	write_sequnlock(&xtime_lock);
 
 	if (err == APM_NO_ERROR)
 		err = APM_SUCCESS;
@@ -1237,6 +1232,7 @@ static int suspend(int vetoable)
 		apm_error("suspend", err);
 	err = (err == APM_SUCCESS) ? 0 : -EIO;
 	device_power_up();
+	local_irq_enable();
 	device_resume();
 	pm_send_all(PM_RESUME, (void *)0);
 	queue_event(APM_NORMAL_RESUME, NULL);
@@ -1255,17 +1251,22 @@ static void standby(void)
 {
 	int	err;
 
+	local_irq_disable();
 	device_power_down(PMSG_SUSPEND);
 	/* serialize with the timer interrupt */
-	write_seqlock_irq(&xtime_lock);
+	write_seqlock(&xtime_lock);
 	/* If needed, notify drivers here */
 	get_time_diff();
-	write_sequnlock_irq(&xtime_lock);
+	write_sequnlock(&xtime_lock);
+	local_irq_enable();
 
 	err = set_system_power_state(APM_STATE_STANDBY);
 	if ((err != APM_SUCCESS) && (err != APM_NO_ERROR))
 		apm_error("standby", err);
+
+	local_irq_disable();
 	device_power_up();
+	local_irq_enable();
 }
 
 static apm_event_t get_event(void)

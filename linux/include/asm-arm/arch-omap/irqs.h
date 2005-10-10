@@ -149,9 +149,17 @@
 #define INT_1610_McBSP2RX_OF	(31 + IH2_BASE)
 #define INT_1610_STI		(32 + IH2_BASE)
 #define INT_1610_STI_WAKEUP	(33 + IH2_BASE)
+#define INT_1610_GPTIMER3	(34 + IH2_BASE)
+#define INT_1610_GPTIMER4	(35 + IH2_BASE)
+#define INT_1610_GPTIMER5	(36 + IH2_BASE)
+#define INT_1610_GPTIMER6	(37 + IH2_BASE)
+#define INT_1610_GPTIMER7	(38 + IH2_BASE)
+#define INT_1610_GPTIMER8	(39 + IH2_BASE)
 #define INT_1610_GPIO_BANK2	(40 + IH2_BASE)
 #define INT_1610_GPIO_BANK3	(41 + IH2_BASE)
 #define INT_1610_MMC2		(42 + IH2_BASE)
+#define INT_1610_CF		(43 + IH2_BASE)
+#define INT_1610_WAKE_UP_REQ	(46 + IH2_BASE)
 #define INT_1610_GPIO_BANK4	(48 + IH2_BASE)
 #define INT_1610_SPI		(49 + IH2_BASE)
 #define INT_1610_DMA_CH6	(53 + IH2_BASE)
@@ -230,6 +238,8 @@
 #define IH_GPIO_BASE		(128 + IH2_BASE)
 #define IH_MPUIO_BASE		(OMAP_MAX_GPIO_LINES + IH_GPIO_BASE)
 #define IH_BOARD_BASE		(16 + IH_MPUIO_BASE)
+
+#define OMAP_IRQ_BIT(irq)	(1 << ((irq) % 32))
 
 #ifndef __ASSEMBLY__
 extern void omap_init_irq(void);

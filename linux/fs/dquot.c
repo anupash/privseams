@@ -409,13 +409,10 @@ out_dqlock:
  * for this sb+type at all. */
 static void invalidate_dquots(struct super_block *sb, int type)
 {
-	struct dquot *dquot;
-	struct list_head *head;
+	struct dquot *dquot, *tmp;
 
 	spin_lock(&dq_list_lock);
-	for (head = inuse_list.next; head != &inuse_list;) {
-		dquot = list_entry(head, struct dquot, dq_inuse);
-		head = head->next;
+	list_for_each_entry_safe(dquot, tmp, &inuse_list, dq_inuse) {
 		if (dquot->dq_sb != sb)
 			continue;
 		if (dquot->dq_type != type)
@@ -505,14 +502,12 @@ static void prune_dqcache(int count)
 
 static int shrink_dqcache_memory(int nr, unsigned int gfp_mask)
 {
-	int ret;
-
-	spin_lock(&dq_list_lock);
-	if (nr)
+	if (nr) {
+		spin_lock(&dq_list_lock);
 		prune_dqcache(nr);
-	ret = dqstats.allocated_dquots;
-	spin_unlock(&dq_list_lock);
-	return ret;
+		spin_unlock(&dq_list_lock);
+	}
+	return (dqstats.free_dquots / 100) * sysctl_vfs_cache_pressure;
 }
 
 /*
@@ -1092,7 +1087,7 @@ warn_put_all:
 }
 
 /*
- * This is a non-blocking operation.
+ * This operation can block, but only after everything is updated
  */
 int dquot_free_space(struct inode *inode, qsize_t number)
 {
@@ -1128,7 +1123,7 @@ out_sub:
 }
 
 /*
- * This is a non-blocking operation.
+ * This operation can block, but only after everything is updated
  */
 int dquot_free_inode(const struct inode *inode, unsigned long number)
 {
@@ -1163,6 +1158,7 @@ int dquot_free_inode(const struct inode *inode, unsigned long number)
  * Transfer the number of inode and blocks from one diskquota to an other.
  *
  * This operation can block, but only after everything is updated
+ * A transaction must be started when entering this function.
  */
 int dquot_transfer(struct inode *inode, struct iattr *iattr)
 {
@@ -1444,6 +1440,7 @@ static int vfs_quota_on_inode(struct inode *inode, int type, int format_id)
 	oldflags = inode->i_flags & (S_NOATIME | S_IMMUTABLE | S_NOQUOTA);
 	inode->i_flags |= S_NOQUOTA | S_NOATIME | S_IMMUTABLE;
 	up_write(&dqopt->dqptr_sem);
+	sb->dq_op->drop(inode);
 
 	error = -EIO;
 	dqopt->files[type] = igrab(inode);
@@ -1519,14 +1516,22 @@ out_path:
  * This function is used when filesystem needs to initialize quotas
  * during mount time.
  */
-int vfs_quota_on_mount(int type, int format_id, struct dentry *dentry)
+int vfs_quota_on_mount(struct super_block *sb, char *qf_name,
+		int format_id, int type)
 {
+	struct dentry *dentry;
 	int error;
 
+	dentry = lookup_one_len(qf_name, sb->s_root, strlen(qf_name));
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	error = security_quota_on(dentry);
-	if (error)
-		return error;
-	return vfs_quota_on_inode(dentry->d_inode, type, format_id);
+	if (!error)
+		error = vfs_quota_on_inode(dentry->d_inode, type, format_id);
+
+	dput(dentry);
+	return error;
 }
 
 /* Generic routine for getting common part of quota structure */

@@ -43,6 +43,7 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/device.h>
+#include <linux/sysdev.h>
 #include <linux/suspend.h>
 #include <linux/syscalls.h>
 #include <linux/cpu.h>
@@ -60,6 +61,10 @@
 #include <asm/time.h>
 #ifdef CONFIG_PMAC_BACKLIGHT
 #include <asm/backlight.h>
+#endif
+
+#ifdef CONFIG_PPC32
+#include <asm/open_pic.h>
 #endif
 
 /* Some compile options */
@@ -150,10 +155,10 @@ static spinlock_t pmu_lock;
 static u8 pmu_intr_mask;
 static int pmu_version;
 static int drop_interrupts;
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 static int option_lid_wakeup = 1;
 static int sleep_in_progress;
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PM */
 static unsigned long async_req_locks;
 static unsigned int pmu_irq_stats[11];
 
@@ -163,7 +168,6 @@ static struct proc_dir_entry *proc_pmu_irqstats;
 static struct proc_dir_entry *proc_pmu_options;
 static int option_server_mode;
 
-#ifdef CONFIG_PMAC_PBOOK
 int pmu_battery_count;
 int pmu_cur_battery;
 unsigned int pmu_power_flags;
@@ -171,7 +175,6 @@ struct pmu_battery_info pmu_batteries[PMU_MAX_BATTERIES];
 static int query_batt_timer = BATTERY_POLLING_COUNT;
 static struct adb_request batt_req;
 static struct proc_dir_entry *proc_pmu_batt[PMU_MAX_BATTERIES];
-#endif /* CONFIG_PMAC_PBOOK */
 
 #if defined(CONFIG_INPUT_ADBHID) && defined(CONFIG_PMAC_BACKLIGHT)
 extern int disable_kernel_backlight;
@@ -205,11 +208,9 @@ static int proc_get_irqstats(char *page, char **start, off_t off,
 static int pmu_set_backlight_level(int level, void* data);
 static int pmu_set_backlight_enable(int on, int level, void* data);
 #endif /* CONFIG_PMAC_BACKLIGHT */
-#ifdef CONFIG_PMAC_PBOOK
 static void pmu_pass_intr(unsigned char *data, int len);
 static int proc_get_batt(char *page, char **start, off_t off,
 			int count, int *eof, void *data);
-#endif /* CONFIG_PMAC_PBOOK */
 static int proc_read_options(char *page, char **start, off_t off,
 			int count, int *eof, void *data);
 static int proc_write_options(struct file *file, const char __user *buffer,
@@ -367,9 +368,7 @@ find_via_pmu(void)
 	printk(KERN_INFO "PMU driver %d initialized for %s, firmware: %02x\n",
 	       PMU_DRIVER_VERSION, pbook_type[pmu_kind], pmu_version);
 	       
-#ifndef CONFIG_PPC64
 	sys_ctrler = SYS_CTRLER_PMU;
-#endif
 	
 	return 1;
 }
@@ -404,8 +403,12 @@ static int __init via_pmu_start(void)
 
 	bright_req_1.complete = 1;
 	bright_req_2.complete = 1;
-#ifdef CONFIG_PMAC_PBOOK
 	batt_req.complete = 1;
+
+#ifdef CONFIG_PPC32
+	if (pmu_kind == PMU_KEYLARGO_BASED)
+		openpic_set_irq_priority(vias->intrs[0].line,
+					 OPENPIC_PRIORITY_DEFAULT + 1);
 #endif
 
 	if (request_irq(vias->intrs[0].line, via_pmu_interrupt, 0, "VIA-PMU",
@@ -459,7 +462,7 @@ static int __init via_pmu_dev_init(void)
 	register_backlight_controller(&pmu_backlight_controller, NULL, "pmu");
 #endif /* CONFIG_PMAC_BACKLIGHT */
 
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PPC32
   	if (machine_is_compatible("AAPL,3400/2400") ||
   		machine_is_compatible("AAPL,3500")) {
 		int mb = pmac_call_feature(PMAC_FTR_GET_MB_INFO,
@@ -487,20 +490,19 @@ static int __init via_pmu_dev_init(void)
 				pmu_batteries[1].flags |= PMU_BATT_TYPE_SMART;
 		}
 	}
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PPC32 */
+
 	/* Create /proc/pmu */
 	proc_pmu_root = proc_mkdir("pmu", NULL);
 	if (proc_pmu_root) {
-#ifdef CONFIG_PMAC_PBOOK
-		int i;
+		long i;
 
 		for (i=0; i<pmu_battery_count; i++) {
 			char title[16];
-			sprintf(title, "battery_%d", i);
+			sprintf(title, "battery_%ld", i);
 			proc_pmu_batt[i] = create_proc_read_entry(title, 0, proc_pmu_root,
 						proc_get_batt, (void *)i);
 		}
-#endif /* CONFIG_PMAC_PBOOK */
 
 		proc_pmu_info = create_proc_read_entry("info", 0, proc_pmu_root,
 					proc_get_info, NULL);
@@ -619,8 +621,6 @@ static void pmu_set_server_mode(int server_mode)
 			    req.reply[0], PMU_PWR_WAKEUP_AC_INSERT); 
 	pmu_wait_complete(&req);
 }
-
-#ifdef CONFIG_PMAC_PBOOK
 
 /* This new version of the code for 2400/3400/3500 powerbooks
  * is inspired from the implementation in gkrellm-pmu
@@ -804,8 +804,6 @@ query_battery_state(void)
 			2, PMU_SMART_BATTERY_STATE, pmu_cur_battery+1);
 }
 
-#endif /* CONFIG_PMAC_PBOOK */
-
 static int __pmac
 proc_get_info(char *page, char **start, off_t off,
 		int count, int *eof, void *data)
@@ -814,11 +812,9 @@ proc_get_info(char *page, char **start, off_t off,
 
 	p += sprintf(p, "PMU driver version     : %d\n", PMU_DRIVER_VERSION);
 	p += sprintf(p, "PMU firmware version   : %02x\n", pmu_version);
-#ifdef CONFIG_PMAC_PBOOK
 	p += sprintf(p, "AC Power               : %d\n",
 		((pmu_power_flags & PMU_PWR_AC_PRESENT) != 0));
 	p += sprintf(p, "Battery count          : %d\n", pmu_battery_count);
-#endif /* CONFIG_PMAC_PBOOK */
 
 	return p - page;
 }
@@ -850,12 +846,11 @@ proc_get_irqstats(char *page, char **start, off_t off,
 	return p - page;
 }
 
-#ifdef CONFIG_PMAC_PBOOK
 static int __pmac
 proc_get_batt(char *page, char **start, off_t off,
 		int count, int *eof, void *data)
 {
-	int batnum = (int)data;
+	long batnum = (long)data;
 	char *p = page;
 	
 	p += sprintf(p, "\n");
@@ -874,7 +869,6 @@ proc_get_batt(char *page, char **start, off_t off,
 
 	return p - page;
 }
-#endif /* CONFIG_PMAC_PBOOK */
 
 static int __pmac
 proc_read_options(char *page, char **start, off_t off,
@@ -882,11 +876,11 @@ proc_read_options(char *page, char **start, off_t off,
 {
 	char *p = page;
 
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 	if (pmu_kind == PMU_KEYLARGO_BASED &&
 	    pmac_call_feature(PMAC_FTR_SLEEP_STATE,NULL,0,-1) >= 0)
 		p += sprintf(p, "lid_wakeup=%d\n", option_lid_wakeup);
-#endif /* CONFIG_PMAC_PBOOK */
+#endif
 	if (pmu_kind == PMU_KEYLARGO_BASED)
 		p += sprintf(p, "server_mode=%d\n", option_server_mode);
 
@@ -923,12 +917,12 @@ proc_write_options(struct file *file, const char __user *buffer,
 	*(val++) = 0;
 	while(*val == ' ')
 		val++;
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 	if (pmu_kind == PMU_KEYLARGO_BASED &&
 	    pmac_call_feature(PMAC_FTR_SLEEP_STATE,NULL,0,-1) >= 0)
 		if (!strcmp(label, "lid_wakeup"))
 			option_lid_wakeup = ((*val) == '1');
-#endif /* CONFIG_PMAC_PBOOK */
+#endif
 	if (pmu_kind == PMU_KEYLARGO_BASED && !strcmp(label, "server_mode")) {
 		int new_value;
 		new_value = ((*val) == '1');
@@ -1423,7 +1417,6 @@ next:
 	}
 	/* Tick interrupt */
 	else if ((1 << pirq) & PMU_INT_TICK) {
-#ifdef CONFIG_PMAC_PBOOK
 		/* Environement or tick interrupt, query batteries */
 		if (pmu_battery_count) {
 			if ((--query_batt_timer) == 0) {
@@ -1438,7 +1431,6 @@ next:
 		pmu_pass_intr(data, len);
 	} else {
 	       pmu_pass_intr(data, len);
-#endif /* CONFIG_PMAC_PBOOK */
 	}
 	goto next;
 }
@@ -1745,6 +1737,9 @@ pmu_restart(void)
 {
 	struct adb_request req;
 
+	if (via == NULL)
+		return;
+
 	local_irq_disable();
 
 	drop_interrupts = 1;
@@ -1766,6 +1761,9 @@ void __pmac
 pmu_shutdown(void)
 {
 	struct adb_request req;
+
+	if (via == NULL)
+		return;
 
 	local_irq_disable();
 
@@ -2047,7 +2045,7 @@ pmu_i2c_simple_write(int bus, int addr,  u8* data, int len)
 	return -1;
 }
 
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 
 static LIST_HEAD(sleep_notifiers);
 
@@ -2326,7 +2324,7 @@ pmac_suspend_devices(void)
 	/* Sync the disks. */
 	/* XXX It would be nice to have some way to ensure that
 	 * nobody is dirtying any new buffers while we wait. That
-	 * could be acheived using the refrigerator for processes
+	 * could be achieved using the refrigerator for processes
 	 * that swsusp uses
 	 */
 	sys_sync();
@@ -2339,13 +2337,17 @@ pmac_suspend_devices(void)
 	}
 
 	/* Send suspend call to devices, hold the device core's dpm_sem */
-	ret = device_suspend(PM_SUSPEND_MEM);
+	ret = device_suspend(PMSG_SUSPEND);
 	if (ret) {
 		broadcast_wake();
 		printk(KERN_ERR "Driver sleep failed\n");
 		return -EBUSY;
 	}
 
+	/* Disable clock spreading on some machines */
+	pmac_tweak_clock_spreading(0);
+
+	/* Stop preemption */
 	preempt_disable();
 
 	/* Make sure the decrementer won't interrupt us */
@@ -2366,7 +2368,7 @@ pmac_suspend_devices(void)
 	 * use this but still... This will take care of sysdev's as well, so
 	 * we exit from here with local irqs disabled and PIC off.
 	 */
-	ret = device_power_down(PM_SUSPEND_MEM);
+	ret = device_power_down(PMSG_SUSPEND);
 	if (ret) {
 		wakeup_decrementer();
 		local_irq_enable();
@@ -2379,7 +2381,6 @@ pmac_suspend_devices(void)
 
 	/* Wait for completion of async backlight requests */
 	while (!bright_req_1.complete || !bright_req_2.complete ||
-
 			!batt_req.complete)
 		pmu_poll();
 
@@ -2389,7 +2390,7 @@ pmac_suspend_devices(void)
 	enable_kernel_fp();
 
 #ifdef CONFIG_ALTIVEC
-	if (cur_cpu_spec[0]->cpu_features & CPU_FTR_ALTIVEC)
+	if (cpu_has_feature(CPU_FTR_ALTIVEC))
 		enable_kernel_altivec();
 #endif /* CONFIG_ALTIVEC */
 
@@ -2413,10 +2414,11 @@ pmac_wakeup_devices(void)
 
 	/* Re-enable local CPU interrupts */
 	local_irq_enable();
-
-	mdelay(100);
-
+	mdelay(10);
 	preempt_enable();
+
+	/* Re-enable clock spreading on some machines */
+	pmac_tweak_clock_spreading(1);
 
 	/* Resume devices */
 	device_resume();
@@ -2540,7 +2542,9 @@ powerbook_sleep_Core99(void)
 		return ret;
 	}
 
-	printk(KERN_DEBUG "HID1, before: %x\n", mfspr(SPRN_HID1));
+	/* Stop environment and ADB interrupts */
+	pmu_request(&req, NULL, 2, PMU_SET_INTR_MASK, 0);
+	pmu_wait_complete(&req);
 
 	/* Tell PMU what events will wake us up */
 	pmu_request(&req, NULL, 4, PMU_POWER_EVENTS, PMU_PWR_CLR_WAKEUP_EVENTS,
@@ -2582,6 +2586,9 @@ powerbook_sleep_Core99(void)
 	/* Restore VIA */
 	restore_via_state();
 
+	/* tweak LPJ before cpufreq is there */
+	loops_per_jiffy *= 2;
+
 	/* Restore video */
 	pmac_call_early_video_resume();
 
@@ -2602,7 +2609,8 @@ powerbook_sleep_Core99(void)
 	pmu_request(&req, NULL, 2, PMU_SET_INTR_MASK, pmu_intr_mask);
 	pmu_wait_complete(&req);
 
-	printk(KERN_DEBUG "HID1, after: %x\n", mfspr(SPRN_HID1));
+	/* Restore LPJ, cpufreq will adjust the cpu frequency */
+	loops_per_jiffy /= 2;
 
 	pmac_wakeup_devices();
 
@@ -2690,6 +2698,8 @@ powerbook_sleep_3400(void)
 	return 0;
 }
 
+#endif /* CONFIG_PM */
+
 /*
  * Support for /dev/pmu device
  */
@@ -2770,13 +2780,12 @@ pmu_read(struct file *file, char __user *buf,
 	struct pmu_private *pp = file->private_data;
 	DECLARE_WAITQUEUE(wait, current);
 	unsigned long flags;
-	int ret;
+	int ret = 0;
 
 	if (count < 1 || pp == 0)
 		return -EINVAL;
-	ret = verify_area(VERIFY_WRITE, buf, count);
-	if (ret)
-		return ret;
+	if (!access_ok(VERIFY_WRITE, buf, count))
+		return -EFAULT;
 
 	spin_lock_irqsave(&pp->lock, flags);
 	add_wait_queue(&pp->wait, &wait);
@@ -2870,11 +2879,11 @@ static int __pmac
 pmu_ioctl(struct inode * inode, struct file *filp,
 		     u_int cmd, u_long arg)
 {
-	struct pmu_private *pp = filp->private_data;
 	__u32 __user *argp = (__u32 __user *)arg;
-	int error;
+	int error = -EINVAL;
 
 	switch (cmd) {
+#ifdef CONFIG_PM
 	case PMU_IOC_SLEEP:
 		if (!capable(CAP_SYS_ADMIN))
 			return -EACCES;
@@ -2896,12 +2905,13 @@ pmu_ioctl(struct inode * inode, struct file *filp,
 			error = -ENOSYS;
 		}
 		sleep_in_progress = 0;
-		return error;
+		break;
 	case PMU_IOC_CAN_SLEEP:
 		if (pmac_call_feature(PMAC_FTR_SLEEP_STATE,NULL,0,-1) < 0)
 			return put_user(0, argp);
 		else
 			return put_user(1, argp);
+#endif /* CONFIG_PM */
 
 #ifdef CONFIG_PMAC_BACKLIGHT
 	/* Backlight should have its own device or go via
@@ -2922,11 +2932,13 @@ pmu_ioctl(struct inode * inode, struct file *filp,
 		error = get_user(value, argp);
 		if (!error)
 			error = set_backlight_level(value);
-		return error;
+		break;
 	}
 #ifdef CONFIG_INPUT_ADBHID
 	case PMU_IOC_GRAB_BACKLIGHT: {
+		struct pmu_private *pp = filp->private_data;
 		unsigned long flags;
+
 		if (pp->backlight_locker)
 			return 0;
 		pp->backlight_locker = 1;
@@ -2942,7 +2954,7 @@ pmu_ioctl(struct inode * inode, struct file *filp,
 	case PMU_IOC_HAS_ADB:
 		return put_user(pmu_has_adb, argp);
 	}
-	return -EINVAL;
+	return error;
 }
 
 static struct file_operations pmu_device_fops __pmacdata = {
@@ -2958,14 +2970,16 @@ static struct miscdevice pmu_device __pmacdata = {
 	PMU_MINOR, "pmu", &pmu_device_fops
 };
 
-void pmu_device_init(void)
+static int pmu_device_init(void)
 {
 	if (!via)
-		return;
+		return 0;
 	if (misc_register(&pmu_device) < 0)
 		printk(KERN_ERR "via-pmu: cannot register misc device.\n");
+	return 0;
 }
-#endif /* CONFIG_PMAC_PBOOK */
+device_initcall(pmu_device_init);
+
 
 #ifdef DEBUG_SLEEP
 static inline void  __pmac
@@ -3040,6 +3054,88 @@ pmu_polled_request(struct adb_request *req)
 }
 #endif /* DEBUG_SLEEP */
 
+
+/* FIXME: This is a temporary set of callbacks to enable us
+ * to do suspend-to-disk.
+ */
+
+#ifdef CONFIG_PM
+
+static int pmu_sys_suspended = 0;
+
+static int pmu_sys_suspend(struct sys_device *sysdev, pm_message_t state)
+{
+	if (state != PM_SUSPEND_DISK || pmu_sys_suspended)
+		return 0;
+
+	/* Suspend PMU event interrupts */
+	pmu_suspend();
+
+	pmu_sys_suspended = 1;
+	return 0;
+}
+
+static int pmu_sys_resume(struct sys_device *sysdev)
+{
+	struct adb_request req;
+
+	if (!pmu_sys_suspended)
+		return 0;
+
+	/* Tell PMU we are ready */
+	pmu_request(&req, NULL, 2, PMU_SYSTEM_READY, 2);
+	pmu_wait_complete(&req);
+
+	/* Resume PMU event interrupts */
+	pmu_resume();
+
+	pmu_sys_suspended = 0;
+
+	return 0;
+}
+
+#endif /* CONFIG_PM */
+
+static struct sysdev_class pmu_sysclass = {
+	set_kset_name("pmu"),
+};
+
+static struct sys_device device_pmu = {
+	.id		= 0,
+	.cls		= &pmu_sysclass,
+};
+
+static struct sysdev_driver driver_pmu = {
+#ifdef CONFIG_PM
+	.suspend	= &pmu_sys_suspend,
+	.resume		= &pmu_sys_resume,
+#endif /* CONFIG_PM */
+};
+
+static int __init init_pmu_sysfs(void)
+{
+	int rc;
+
+	rc = sysdev_class_register(&pmu_sysclass);
+	if (rc) {
+		printk(KERN_ERR "Failed registering PMU sys class\n");
+		return -ENODEV;
+	}
+	rc = sysdev_register(&device_pmu);
+	if (rc) {
+		printk(KERN_ERR "Failed registering PMU sys device\n");
+		return -ENODEV;
+	}
+	rc = sysdev_driver_register(&pmu_sysclass, &driver_pmu);
+	if (rc) {
+		printk(KERN_ERR "Failed registering PMU sys driver\n");
+		return -ENODEV;
+	}
+	return 0;
+}
+
+subsys_initcall(init_pmu_sysfs);
+
 EXPORT_SYMBOL(pmu_request);
 EXPORT_SYMBOL(pmu_poll);
 EXPORT_SYMBOL(pmu_poll_adb);
@@ -3051,12 +3147,12 @@ EXPORT_SYMBOL(pmu_i2c_combined_read);
 EXPORT_SYMBOL(pmu_i2c_stdsub_write);
 EXPORT_SYMBOL(pmu_i2c_simple_read);
 EXPORT_SYMBOL(pmu_i2c_simple_write);
-#ifdef CONFIG_PMAC_PBOOK
+#ifdef CONFIG_PM
 EXPORT_SYMBOL(pmu_register_sleep_notifier);
 EXPORT_SYMBOL(pmu_unregister_sleep_notifier);
 EXPORT_SYMBOL(pmu_enable_irled);
 EXPORT_SYMBOL(pmu_battery_count);
 EXPORT_SYMBOL(pmu_batteries);
 EXPORT_SYMBOL(pmu_power_flags);
-#endif /* CONFIG_PMAC_PBOOK */
+#endif /* CONFIG_PM */
 

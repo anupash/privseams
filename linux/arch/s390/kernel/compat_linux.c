@@ -58,6 +58,7 @@
 #include <linux/compat.h>
 #include <linux/vfs.h>
 #include <linux/ptrace.h>
+#include <linux/fadvise.h>
 
 #include <asm/types.h>
 #include <asm/ipc.h>
@@ -1019,7 +1020,7 @@ extern asmlinkage long
 sys_timer_create(clockid_t, struct sigevent *, timer_t *);
 
 asmlinkage long
-sys32_timer_create(clockid_t which_clock, struct sigevent32 *se32,
+sys32_timer_create(clockid_t which_clock, struct compat_sigevent *se32,
 		timer_t *timer_id)
 {
 	struct sigevent se;
@@ -1030,16 +1031,7 @@ sys32_timer_create(clockid_t which_clock, struct sigevent32 *se32,
 	if (se32 == NULL)
 		return sys_timer_create(which_clock, NULL, timer_id);
 
-	/* XXX: converting se32 to se is filthy because of the
-	 * two union members. For now it is ok, because the pointers
-	 * are not touched in kernel.
-	 */
-	memset(&se, 0, sizeof(se));
-	if (get_user(se.sigev_value.sival_int,  &se32->sigev_value.sival_int) ||
-	    get_user(se.sigev_signo, &se32->sigev_signo) ||
-	    get_user(se.sigev_notify, &se32->sigev_notify) ||
-	    copy_from_user(&se._sigev_un._pad, &se32->_sigev_un._pad,
-	    sizeof(se._sigev_un._pad)))
+	if (get_compat_sigevent(&se, se32))
 		return -EFAULT;
 
 	old_fs = get_fs();
@@ -1051,4 +1043,41 @@ sys32_timer_create(clockid_t which_clock, struct sigevent32 *se32,
 		ret = put_user (ktimer_id, timer_id);
 
 	return ret;
+}
+
+/*
+ * 31 bit emulation wrapper functions for sys_fadvise64/fadvise64_64.
+ * These need to rewrite the advise values for POSIX_FADV_{DONTNEED,NOREUSE}
+ * because the 31 bit values differ from the 64 bit values.
+ */
+
+asmlinkage long
+sys32_fadvise64(int fd, loff_t offset, size_t len, int advise)
+{
+	if (advise == 4)
+		advise = POSIX_FADV_DONTNEED;
+	else if (advise == 5)
+		advise = POSIX_FADV_NOREUSE;
+	return sys_fadvise64(fd, offset, len, advise);
+}
+
+struct fadvise64_64_args {
+	int fd;
+	long long offset;
+	long long len;
+	int advice;
+};
+
+asmlinkage long
+sys32_fadvise64_64(struct fadvise64_64_args __user *args)
+{
+	struct fadvise64_64_args a;
+
+	if ( copy_from_user(&a, args, sizeof(a)) )
+		return -EFAULT;
+	if (a.advice == 4)
+		a.advice = POSIX_FADV_DONTNEED;
+	else if (a.advice == 5)
+		a.advice = POSIX_FADV_NOREUSE;
+	return sys_fadvise64_64(a.fd, a.offset, a.len, a.advice);
 }

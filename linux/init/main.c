@@ -41,6 +41,7 @@
 #include <linux/kallsyms.h>
 #include <linux/writeback.h>
 #include <linux/cpu.h>
+#include <linux/cpuset.h>
 #include <linux/efi.h>
 #include <linux/unistd.h>
 #include <linux/rmap.h>
@@ -50,6 +51,7 @@
 #include <asm/io.h>
 #include <asm/bugs.h>
 #include <asm/setup.h>
+#include <asm/sections.h>
 
 /*
  * This is one of the first .c files built. Error out early
@@ -109,8 +111,8 @@ EXPORT_SYMBOL(system_state);
 /*
  * Boot command-line arguments
  */
-#define MAX_INIT_ARGS 32
-#define MAX_INIT_ENVS 32
+#define MAX_INIT_ARGS CONFIG_INIT_ENV_ARG_LIMIT
+#define MAX_INIT_ENVS CONFIG_INIT_ENV_ARG_LIMIT
 
 extern void time_init(void);
 /* Default late time init is NULL. archs can override this later. */
@@ -208,6 +210,14 @@ static int __init quiet_kernel(char *str)
 
 __setup("debug", debug_kernel);
 __setup("quiet", quiet_kernel);
+
+static int __init loglevel(char *str)
+{
+	get_option(&str, &console_loglevel);
+	return 1;
+}
+
+__setup("loglevel=", loglevel);
 
 /*
  * Unknown boot options get handed to init, unless they look like
@@ -314,8 +324,6 @@ static void __init setup_per_cpu_areas(void)
 {
 	unsigned long size, i;
 	char *ptr;
-	/* Created by linker magic */
-	extern char __per_cpu_start[], __per_cpu_end[];
 
 	/* Copy section for each CPU (we discard the original) */
 	size = ALIGN(__per_cpu_end - __per_cpu_start, SMP_CACHE_BYTES);
@@ -347,12 +355,11 @@ static void __init smp_init(void)
 	}
 
 	/* Any cleanup work */
-	printk("Brought up %ld CPUs\n", (long)num_online_cpus());
+	printk(KERN_INFO "Brought up %ld CPUs\n", (long)num_online_cpus());
 	smp_cpus_done(max_cpus);
 #if 0
 	/* Get other processors into their bootup holding patterns. */
 
-	smp_threads_ready=1;
 	smp_commence();
 #endif
 }
@@ -375,6 +382,13 @@ static void noinline rest_init(void)
 	numa_default_policy();
 	unlock_kernel();
 	preempt_enable_no_resched();
+
+	/*
+	 * The boot idle thread must execute schedule()
+	 * at least one to get things moving:
+	 */
+	schedule();
+
 	cpu_idle();
 } 
 
@@ -423,6 +437,7 @@ asmlinkage void __init start_kernel(void)
  */
 	lock_kernel();
 	page_address_init();
+	printk(KERN_NOTICE);
 	printk(linux_banner);
 	setup_arch(&command_line);
 	setup_per_cpu_areas();
@@ -446,7 +461,7 @@ asmlinkage void __init start_kernel(void)
 	preempt_disable();
 	build_all_zonelists();
 	page_alloc_init();
-	printk("Kernel command line: %s\n", saved_command_line);
+	printk(KERN_NOTICE "Kernel command line: %s\n", saved_command_line);
 	parse_early_param();
 	parse_args("Booting kernel", command_line, __start___param,
 		   __stop___param - __start___param,
@@ -481,6 +496,7 @@ asmlinkage void __init start_kernel(void)
 	vfs_caches_init_early();
 	mem_init();
 	kmem_cache_init();
+	setup_per_cpu_pageset();
 	numa_policy_init();
 	if (late_time_init)
 		late_time_init();
@@ -497,6 +513,7 @@ asmlinkage void __init start_kernel(void)
 	proc_caches_init();
 	buffer_init();
 	unnamed_dev_init();
+	key_init();
 	security_init();
 	vfs_caches_init(num_physpages);
 	radix_tree_init();
@@ -506,6 +523,8 @@ asmlinkage void __init start_kernel(void)
 #ifdef CONFIG_PROC_FS
 	proc_root_init();
 #endif
+	cpuset_init();
+
 	check_bugs();
 
 	acpi_early_init(); /* before LAPIC and SMP init */
@@ -553,7 +572,7 @@ static void __init do_initcalls(void)
 			local_irq_enable();
 		}
 		if (msg) {
-			printk("error in initcall at 0x%p: "
+			printk(KERN_WARNING "error in initcall at 0x%p: "
 				"returned with %s\n", *call, msg);
 		}
 	}
@@ -574,7 +593,6 @@ static void __init do_basic_setup(void)
 	/* drivers will send hotplug events */
 	init_workqueues();
 	usermodehelper_init();
-	key_init();
 	driver_init();
 
 #ifdef CONFIG_SYSCTL
@@ -626,6 +644,10 @@ static int init(void * unused)
 {
 	lock_kernel();
 	/*
+	 * init can run on any cpu.
+	 */
+	set_cpus_allowed(current, CPU_MASK_ALL);
+	/*
 	 * Tell the world that we're going to be the grim
 	 * reaper of innocent orphaned children.
 	 *
@@ -643,6 +665,8 @@ static int init(void * unused)
 	fixup_cpu_present_map();
 	smp_init();
 	sched_init_smp();
+
+	cpuset_init_smp();
 
 	/*
 	 * Do this before initcalls, because some drivers want to access
@@ -672,7 +696,7 @@ static int init(void * unused)
 	numa_default_policy();
 
 	if (sys_open((const char __user *) "/dev/console", O_RDWR, 0) < 0)
-		printk("Warning: unable to open an initial console.\n");
+		printk(KERN_WARNING "Warning: unable to open an initial console.\n");
 
 	(void) sys_dup(0);
 	(void) sys_dup(0);

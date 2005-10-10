@@ -1047,6 +1047,7 @@ int usb_serial_probe(struct usb_interface *interface,
 		memset(port, 0x00, sizeof(struct usb_serial_port));
 		port->number = i + serial->minor;
 		port->serial = serial;
+		spin_lock_init(&port->lock);
 		INIT_WORK(&port->work, usb_serial_port_softint, port);
 		serial->port[i] = port;
 	}
@@ -1297,13 +1298,6 @@ static int __init usb_serial_init(void)
 		goto exit_bus;
 	}
 
-	/* register the generic driver, if we should */
-	result = usb_serial_generic_register(debug);
-	if (result < 0) {
-		err("%s - registering generic driver failed", __FUNCTION__);
-		goto exit_generic;
-	}
-
 	usb_serial_tty_driver->owner = THIS_MODULE;
 	usb_serial_tty_driver->driver_name = "usbserial";
 	usb_serial_tty_driver->devfs_name = "usb/tts/";
@@ -1329,17 +1323,24 @@ static int __init usb_serial_init(void)
 		goto exit_tty;
 	}
 
+	/* register the generic driver, if we should */
+	result = usb_serial_generic_register(debug);
+	if (result < 0) {
+		err("%s - registering generic driver failed", __FUNCTION__);
+		goto exit_generic;
+	}
+
 	info(DRIVER_DESC " " DRIVER_VERSION);
 
 	return result;
+
+exit_generic:
+	usb_deregister(&usb_serial_driver);
 
 exit_tty:
 	tty_unregister_driver(usb_serial_tty_driver);
 
 exit_reg_driver:
-	usb_serial_generic_deregister();
-
-exit_generic:
 	bus_unregister(&usb_serial_bus_type);
 
 exit_bus:
@@ -1418,11 +1419,11 @@ void usb_serial_deregister(struct usb_serial_device_type *device)
 
 /* If the usb-serial core is built into the core, the usb-serial drivers
    need these symbols to load properly as modules. */
-EXPORT_SYMBOL(usb_serial_register);
-EXPORT_SYMBOL(usb_serial_deregister);
-EXPORT_SYMBOL(usb_serial_probe);
-EXPORT_SYMBOL(usb_serial_disconnect);
-EXPORT_SYMBOL(usb_serial_port_softint);
+EXPORT_SYMBOL_GPL(usb_serial_register);
+EXPORT_SYMBOL_GPL(usb_serial_deregister);
+EXPORT_SYMBOL_GPL(usb_serial_probe);
+EXPORT_SYMBOL_GPL(usb_serial_disconnect);
+EXPORT_SYMBOL_GPL(usb_serial_port_softint);
 
 
 /* Module information */

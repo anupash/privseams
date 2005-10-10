@@ -3,7 +3,7 @@
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
  *
- * Copyright (C) 1999,2001-2004 Silicon Graphics, Inc. All rights reserved.
+ * Copyright (C) 1999,2001-2005 Silicon Graphics, Inc. All rights reserved.
  */
 
 #include <linux/config.h>
@@ -29,12 +29,14 @@
 #include <linux/sched.h>
 #include <linux/root_dev.h>
 #include <linux/nodemask.h>
+#include <linux/pm.h>
 
 #include <asm/io.h>
 #include <asm/sal.h>
 #include <asm/machvec.h>
 #include <asm/system.h>
 #include <asm/processor.h>
+#include <asm/vga.h>
 #include <asm/sn/arch.h>
 #include <asm/sn/addrs.h>
 #include <asm/sn/pda.h>
@@ -67,8 +69,16 @@ extern void snidle(int);
 extern unsigned char acpi_kbd_controller_present;
 
 unsigned long sn_rtc_cycles_per_second;
-
 EXPORT_SYMBOL(sn_rtc_cycles_per_second);
+
+DEFINE_PER_CPU(struct sn_hub_info_s, __sn_hub_info);
+EXPORT_PER_CPU_SYMBOL(__sn_hub_info);
+
+DEFINE_PER_CPU(short, __sn_cnodeid_to_nasid[MAX_NUMNODES]);
+EXPORT_PER_CPU_SYMBOL(__sn_cnodeid_to_nasid);
+
+DEFINE_PER_CPU(struct nodepda_s *, __sn_nodepda);
+EXPORT_PER_CPU_SYMBOL(__sn_nodepda);
 
 partid_t sn_partid = -1;
 EXPORT_SYMBOL(sn_partid);
@@ -76,6 +86,17 @@ char sn_system_serial_number_string[128];
 EXPORT_SYMBOL(sn_system_serial_number_string);
 u64 sn_partition_serial_number;
 EXPORT_SYMBOL(sn_partition_serial_number);
+u8 sn_partition_id;
+EXPORT_SYMBOL(sn_partition_id);
+u8 sn_system_size;
+EXPORT_SYMBOL(sn_system_size);
+u8 sn_sharing_domain_size;
+EXPORT_SYMBOL(sn_sharing_domain_size);
+u8 sn_coherency_id;
+EXPORT_SYMBOL(sn_coherency_id);
+u8 sn_region_size;
+EXPORT_SYMBOL(sn_region_size);
+int sn_prom_type;	/* 0=hardware, 1=medusa/realprom, 2=medusa/fakeprom */
 
 short physical_node_map[MAX_PHYSNODE_ID];
 
@@ -203,7 +224,7 @@ void __init early_sn_setup(void)
 
 extern int platform_intr_list[];
 extern nasid_t master_nasid;
-static int shub_1_1_found __initdata;
+static int __initdata shub_1_1_found = 0;
 
 /*
  * sn_check_for_wars
@@ -249,17 +270,22 @@ void __init sn_setup(char **cmdline_p)
 {
 	long status, ticks_per_sec, drift;
 	int pxm;
-	int major = sn_sal_rev_major(), minor = sn_sal_rev_minor();
+	u32 version = sn_sal_rev();
 	extern void sn_cpu_init(void);
 
-	/*
-	 * If the generic code has enabled vga console support - lets
-	 * get rid of it again. This is a kludge for the fact that ACPI
-	 * currtently has no way of informing us if legacy VGA is available
-	 * or not.
-	 */
+	ia64_sn_plat_set_error_handling_features();
+
 #if defined(CONFIG_VT) && defined(CONFIG_VGA_CONSOLE)
-	if (conswitchp == &vga_con) {
+	/*
+	 * If there was a primary vga adapter identified through the
+	 * EFI PCDP table, make it the preferred console.  Otherwise
+	 * zero out conswitchp.
+	 */
+
+	if (vga_console_membase) {
+		/* usable vga ... make tty0 the preferred default console */
+		add_preferred_console("tty", 0, NULL);
+	} else {
 		printk(KERN_DEBUG "SGI: Disabling VGA console\n");
 #ifdef CONFIG_DUMMY_CONSOLE
 		conswitchp = &dummy_con;
@@ -282,22 +308,21 @@ void __init sn_setup(char **cmdline_p)
 	 * support here so we don't have to listen to failed keyboard probe
 	 * messages.
 	 */
-	if ((major < 2 || (major == 2 && minor <= 9)) &&
-	    acpi_kbd_controller_present) {
+	if (version <= 0x0209 && acpi_kbd_controller_present) {
 		printk(KERN_INFO "Disabling legacy keyboard support as prom "
 		       "is too old and doesn't provide FADT\n");
 		acpi_kbd_controller_present = 0;
 	}
 
-	printk("SGI SAL version %x.%02x\n", major, minor);
+	printk("SGI SAL version %x.%02x\n", version >> 8, version & 0x00FF);
 
 	/*
 	 * Confirm the SAL we're running on is recent enough...
 	 */
-	if ((major < SN_SAL_MIN_MAJOR) || (major == SN_SAL_MIN_MAJOR &&
-					   minor < SN_SAL_MIN_MINOR)) {
+	if (version < SN_SAL_MIN_VERSION) {
 		printk(KERN_ERR "This kernel needs SGI SAL version >= "
-		       "%x.%02x\n", SN_SAL_MIN_MAJOR, SN_SAL_MIN_MINOR);
+		       "%x.%02x\n", SN_SAL_MIN_VERSION >> 8,
+		        SN_SAL_MIN_VERSION & 0x00FF);
 		panic("PROM version too old\n");
 	}
 
@@ -329,7 +354,7 @@ void __init sn_setup(char **cmdline_p)
 
 	ia64_mark_idle = &snidle;
 
-	/* 
+	/*
 	 * For the bootcpu, we do this here. All other cpus will make the
 	 * call as part of cpu_init in slave cpu initialization.
 	 */
@@ -341,6 +366,14 @@ void __init sn_setup(char **cmdline_p)
 	screen_info = sn_screen_info;
 
 	sn_timer_init();
+
+	/*
+	 * set pm_power_off to a SAL call to allow
+	 * sn machines to power off. The SAL call can be replaced
+	 * by an ACPI interface call when ACPI is fully implemented
+	 * for sn.
+	 */
+	pm_power_off = ia64_sn_power_down;
 }
 
 /**
@@ -352,11 +385,11 @@ static void __init sn_init_pdas(char **cmdline_p)
 {
 	cnodeid_t cnode;
 
-	memset(pda->cnodeid_to_nasid_table, -1,
-	       sizeof(pda->cnodeid_to_nasid_table));
+	memset(sn_cnodeid_to_nasid, -1,
+			sizeof(__ia64_per_cpu_var(__sn_cnodeid_to_nasid)));
 	for_each_online_node(cnode)
-		pda->cnodeid_to_nasid_table[cnode] =
-		    pxm_to_nasid(nid_to_pxm_map[cnode]);
+		sn_cnodeid_to_nasid[cnode] =
+				pxm_to_nasid(nid_to_pxm_map[cnode]);
 
 	numionodes = num_online_nodes();
 	scan_for_ionodes();
@@ -368,7 +401,7 @@ static void __init sn_init_pdas(char **cmdline_p)
 		nodepdaindr[cnode] =
 		    alloc_bootmem_node(NODE_DATA(cnode), sizeof(nodepda_t));
 		memset(nodepdaindr[cnode], 0, sizeof(nodepda_t));
-		memset(nodepdaindr[cnode]->phys_cpuid, -1, 
+		memset(nodepdaindr[cnode]->phys_cpuid, -1,
 		    sizeof(nodepdaindr[cnode]->phys_cpuid));
 	}
 
@@ -398,7 +431,7 @@ static void __init sn_init_pdas(char **cmdline_p)
 	}
 
 	/*
-	 * Initialize the per node hubdev.  This includes IO Nodes and 
+	 * Initialize the per node hubdev.  This includes IO Nodes and
 	 * headless/memless nodes.
 	 */
 	for (cnode = 0; cnode < numionodes; cnode++) {
@@ -424,16 +457,22 @@ void __init sn_cpu_init(void)
 	int slice;
 	int cnode;
 	int i;
-	u64 shubtype, nasid_bitmask, nasid_shift;
 	static int wars_have_been_checked;
 
+	if (smp_processor_id() == 0 && IS_MEDUSA()) {
+		if (ia64_sn_is_fake_prom())
+			sn_prom_type = 2;
+		else
+			sn_prom_type = 1;
+		printk("Running on medusa with %s PROM\n", (sn_prom_type == 1) ? "real" : "fake");
+	}
+
 	memset(pda, 0, sizeof(pda));
-	if (ia64_sn_get_hub_info(0, &shubtype, &nasid_bitmask, &nasid_shift))
+	if (ia64_sn_get_sn_info(0, &sn_hub_info->shub2, &sn_hub_info->nasid_bitmask, &sn_hub_info->nasid_shift,
+				&sn_system_size, &sn_sharing_domain_size, &sn_partition_id,
+				&sn_coherency_id, &sn_region_size))
 		BUG();
-	pda->shub2 = (u8)shubtype;
-	pda->nasid_bitmask = (u16)nasid_bitmask;
-	pda->nasid_shift = (u8)nasid_shift;
-	pda->as_shift = pda->nasid_shift - 2;
+	sn_hub_info->as_shift = sn_hub_info->nasid_shift - 2;
 
 	/*
 	 * The boot cpu makes this call again after platform initialization is
@@ -458,7 +497,8 @@ void __init sn_cpu_init(void)
 
 	cnode = nasid_to_cnodeid(nasid);
 
-	pda->p_nodepda = nodepdaindr[cnode];
+	sn_nodepda = nodepdaindr[cnode];
+
 	pda->led_address =
 	    (typeof(pda->led_address)) (LED0 + (slice << LED_CPU_SHIFT));
 	pda->led_state = LED_ALWAYS_SET;
@@ -467,29 +507,32 @@ void __init sn_cpu_init(void)
 	pda->idle_flag = 0;
 
 	if (cpuid != 0) {
-		memcpy(pda->cnodeid_to_nasid_table,
-		       pdacpu(0)->cnodeid_to_nasid_table,
-		       sizeof(pda->cnodeid_to_nasid_table));
+		/* copy cpu 0's sn_cnodeid_to_nasid table to this cpu's */
+		memcpy(sn_cnodeid_to_nasid,
+		       (&per_cpu(__sn_cnodeid_to_nasid, 0)),
+		       sizeof(__ia64_per_cpu_var(__sn_cnodeid_to_nasid)));
 	}
 
 	/*
 	 * Check for WARs.
 	 * Only needs to be done once, on BSP.
-	 * Has to be done after loop above, because it uses pda.cnodeid_to_nasid_table[i].
+	 * Has to be done after loop above, because it uses this cpu's
+	 * sn_cnodeid_to_nasid table which was just initialized if this
+	 * isn't cpu 0.
 	 * Has to be done before assignment below.
 	 */
 	if (!wars_have_been_checked) {
 		sn_check_for_wars();
 		wars_have_been_checked = 1;
 	}
-	pda->shub_1_1_found = shub_1_1_found;
+	sn_hub_info->shub_1_1_found = shub_1_1_found;
 
 	/*
 	 * Set up addresses of PIO/MEM write status registers.
 	 */
 	{
 		u64 pio1[] = {SH1_PIO_WRITE_STATUS_0, 0, SH1_PIO_WRITE_STATUS_1, 0};
-		u64 pio2[] = {SH2_PIO_WRITE_STATUS_0, SH2_PIO_WRITE_STATUS_1, 
+		u64 pio2[] = {SH2_PIO_WRITE_STATUS_0, SH2_PIO_WRITE_STATUS_1,
 			SH2_PIO_WRITE_STATUS_2, SH2_PIO_WRITE_STATUS_3};
 		u64 *pio;
 		pio = is_shub1() ? pio1 : pio2;
@@ -521,6 +564,10 @@ static void __init scan_for_ionodes(void)
 	int nasid = 0;
 	lboard_t *brd;
 
+	/* fakeprom does not support klgraph */
+	if (IS_RUNNING_ON_FAKE_PROM())
+		return;
+
 	/* Setup ionodes with memory */
 	for (nasid = 0; nasid < MAX_PHYSNODE_ID; nasid += 2) {
 		char *klgraph_header;
@@ -532,8 +579,6 @@ static void __init scan_for_ionodes(void)
 		cnodeid = -1;
 		klgraph_header = __va(ia64_sn_get_klconfig_addr(nasid));
 		if (!klgraph_header) {
-			if (IS_RUNNING_ON_SIMULATOR())
-				continue;
 			BUG();	/* All nodes must have klconfig tables! */
 		}
 		cnodeid = nasid_to_cnodeid(nasid);
@@ -561,8 +606,7 @@ static void __init scan_for_ionodes(void)
 		brd = find_lboard_any(brd, KLTYPE_SNIA);
 
 		while (brd) {
-			pda->cnodeid_to_nasid_table[numionodes] =
-			    brd->brd_nasid;
+			sn_cnodeid_to_nasid[numionodes] = brd->brd_nasid;
 			physical_node_map[brd->brd_nasid] = numionodes;
 			root_lboard[numionodes] = brd;
 			numionodes++;
@@ -583,8 +627,7 @@ static void __init scan_for_ionodes(void)
 				      root_lboard[nasid_to_cnodeid(nasid)],
 				      KLTYPE_TIO);
 		while (brd) {
-			pda->cnodeid_to_nasid_table[numionodes] =
-			    brd->brd_nasid;
+			sn_cnodeid_to_nasid[numionodes] = brd->brd_nasid;
 			physical_node_map[brd->brd_nasid] = numionodes;
 			root_lboard[numionodes] = brd;
 			numionodes++;
@@ -595,16 +638,16 @@ static void __init scan_for_ionodes(void)
 			brd = find_lboard_any(brd, KLTYPE_TIO);
 		}
 	}
-
 }
 
 int
 nasid_slice_to_cpuid(int nasid, int slice)
 {
 	long cpu;
-	
-	for (cpu=0; cpu < NR_CPUS; cpu++) 
-		if (nodepda->phys_cpuid[cpu].nasid == nasid && nodepda->phys_cpuid[cpu].slice == slice)
+
+	for (cpu=0; cpu < NR_CPUS; cpu++)
+		if (cpuid_to_nasid(cpu) == nasid &&
+					cpuid_to_slice(cpu) == slice)
 			return cpu;
 
 	return -1;

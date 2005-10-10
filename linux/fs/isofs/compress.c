@@ -18,29 +18,12 @@
 
 #include <linux/config.h>
 #include <linux/module.h>
-
-#include <linux/stat.h>
-#include <linux/time.h>
-#include <linux/iso_fs.h>
-#include <linux/kernel.h>
-#include <linux/major.h>
-#include <linux/mm.h>
-#include <linux/string.h>
-#include <linux/slab.h>
-#include <linux/errno.h>
 #include <linux/init.h>
-#include <linux/nls.h>
-#include <linux/ctype.h>
-#include <linux/smp_lock.h>
-#include <linux/blkdev.h>
+
 #include <linux/vmalloc.h>
 #include <linux/zlib.h>
-#include <linux/buffer_head.h>
 
-#include <asm/system.h>
-#include <asm/uaccess.h>
-#include <asm/semaphore.h>
-
+#include "isofs.h"
 #include "zisofs.h"
 
 /* This should probably be global. */
@@ -146,7 +129,13 @@ static int zisofs_readpage(struct file *file, struct page *page)
 	cend = le32_to_cpu(*(__le32 *)(bh->b_data + (blockendptr & bufmask)));
 	brelse(bh);
 
+	if (cstart > cend)
+		goto eio;
+		
 	csize = cend-cstart;
+
+	if (csize > deflateBound(1UL << zisofs_block_shift))
+		goto eio;
 
 	/* Now page[] contains an array of pages, any of which can be NULL,
 	   and the locks on which we hold.  We should now read the data and

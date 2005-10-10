@@ -30,9 +30,8 @@
 #include <linux/module.h>
 #include <linux/nodemask.h>
 #include <asm/numaq.h>
-
-/* These are needed before the pgdat's are created */
-extern long node_start_pfn[], node_end_pfn[];
+#include <asm/topology.h>
+#include <asm/processor.h>
 
 #define	MB_TO_PAGES(addr) ((addr) << (20 - PAGE_SHIFT))
 
@@ -59,6 +58,12 @@ static void __init smp_dump_qct(void)
 				eq->hi_shrd_mem_start - eq->priv_mem_size);
 			node_end_pfn[node] = MB_TO_PAGES(
 				eq->hi_shrd_mem_start + eq->hi_shrd_mem_size);
+
+			memory_present(node,
+				node_start_pfn[node], node_end_pfn[node]);
+			node_remap_size[node] = node_memmap_size_bytes(node,
+							node_start_pfn[node],
+							node_end_pfn[node]);
 		}
 	}
 }
@@ -73,3 +78,11 @@ int __init get_memcfg_numaq(void)
 	smp_dump_qct();
 	return 1;
 }
+
+static int __init numaq_dsc_disable(void)
+{
+	printk(KERN_DEBUG "NUMAQ: disabling TSC\n");
+	tsc_disable = 1;
+	return 0;
+}
+core_initcall(numaq_dsc_disable);

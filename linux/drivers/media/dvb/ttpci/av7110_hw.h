@@ -364,7 +364,6 @@ enum av7110_command_type {
 
 
 
-extern void av7110_reset_arm(struct av7110 *av7110);
 extern int av7110_bootarm(struct av7110 *av7110);
 extern int av7110_firmversion(struct av7110 *av7110);
 #define FW_CI_LL_SUPPORT(arm_app) ((arm_app) & 0x80000000)
@@ -373,12 +372,8 @@ extern int av7110_firmversion(struct av7110 *av7110);
 
 extern int av7110_wait_msgstate(struct av7110 *av7110, u16 flags);
 extern int av7110_fw_cmd(struct av7110 *av7110, int type, int com, int num, ...);
-extern int __av7110_send_fw_cmd(struct av7110 *av7110, u16* buf, int length);
-extern int av7110_send_fw_cmd(struct av7110 *av7110, u16* buf, int length);
-extern int av7110_send_ci_cmd(struct av7110 *av7110, u8 subcom, u8 *buf, u8 len);
 extern int av7110_fw_request(struct av7110 *av7110, u16 *request_buf,
 			     int request_buf_len, u16 *reply_buf, int reply_buf_len);
-extern int av7110_fw_query(struct av7110 *av7110, u16 tag, u16* Buff, s16 length);
 
 
 /* DEBI (saa7146 data extension bus interface) access */
@@ -463,27 +458,27 @@ static inline int SendDAC(struct av7110 *av7110, u8 addr, u8 data)
 	return av7110_fw_cmd(av7110, COMTYPE_AUDIODAC, AudioDAC, 2, addr, data);
 }
 
-static inline void av7710_set_video_mode(struct av7110 *av7110, int mode)
+static inline int av7710_set_video_mode(struct av7110 *av7110, int mode)
 {
-	av7110_fw_cmd(av7110, COMTYPE_ENCODER, SetVidMode, 1, mode);
+	return av7110_fw_cmd(av7110, COMTYPE_ENCODER, SetVidMode, 1, mode);
 }
 
-static int inline vidcom(struct av7110 *av7110, u32 com, u32 arg)
+static inline int vidcom(struct av7110 *av7110, u32 com, u32 arg)
 {
 	return av7110_fw_cmd(av7110, COMTYPE_MISC, AV7110_FW_VIDEO_COMMAND, 4,
 			     (com>>16), (com&0xffff),
 			     (arg>>16), (arg&0xffff));
 }
 
-static int inline audcom(struct av7110 *av7110, u32 com)
+static inline int audcom(struct av7110 *av7110, u32 com)
 {
 	return av7110_fw_cmd(av7110, COMTYPE_MISC, AV7110_FW_AUDIO_COMMAND, 2,
 			     (com>>16), (com&0xffff));
 }
 
-static inline void Set22K(struct av7110 *av7110, int state)
+static inline int Set22K(struct av7110 *av7110, int state)
 {
-	av7110_fw_cmd(av7110, COMTYPE_AUDIODAC, (state ? ON22K : OFF22K), 0);
+	return av7110_fw_cmd(av7110, COMTYPE_AUDIODAC, (state ? ON22K : OFF22K), 0);
 }
 
 

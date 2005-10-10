@@ -67,7 +67,7 @@ static isdn_divert_if *divert_if; /* = NULL */
 static int isdn_writebuf_stub(int, int, const u_char __user *, int);
 static void set_global_features(void);
 static int isdn_wildmat(char *s, char *p);
-
+static int isdn_add_channels(isdn_driver_t *d, int drvidx, int n, int adding);
 
 static inline void
 isdn_lock_driver(isdn_driver_t *drv)
@@ -388,7 +388,7 @@ isdn_all_eaz(int di, int ch)
  */
 #include <linux/isdn/capicmd.h>
 
-int
+static int
 isdn_capi_rec_hl_msg(capi_msg *cm) {
 	
 	int di;
@@ -1180,9 +1180,9 @@ isdn_ioctl(struct inode *inode, struct file *file, uint cmd, ulong arg)
 				if (arg) {
 					ulong __user *p = argp;
 					int i;
-					if ((ret = verify_area(VERIFY_WRITE, p,
-							       sizeof(ulong) * ISDN_MAX_CHANNELS * 2)))
-						return ret;
+					if (!access_ok(VERIFY_WRITE, p,
+							sizeof(ulong) * ISDN_MAX_CHANNELS * 2))
+						return -EFAULT;
 					for (i = 0; i < ISDN_MAX_CHANNELS; i++) {
 						put_user(dev->ibytes[i], p++);
 						put_user(dev->obytes[i], p++);
@@ -1420,10 +1420,10 @@ isdn_ioctl(struct inode *inode, struct file *file, uint cmd, ulong arg)
 					char __user *p = argp;
 					int i;
 
-					if ((ret = verify_area(VERIFY_WRITE, argp,
+					if (!access_ok(VERIFY_WRITE, argp,
 					(ISDN_MODEM_NUMREG + ISDN_MSNLEN + ISDN_LMSNLEN)
-						   * ISDN_MAX_CHANNELS)))
-						return ret;
+						   * ISDN_MAX_CHANNELS))
+						return -EFAULT;
 
 					for (i = 0; i < ISDN_MAX_CHANNELS; i++) {
 						if (copy_to_user(p, dev->mdm.info[i].emu.profile,
@@ -1447,10 +1447,10 @@ isdn_ioctl(struct inode *inode, struct file *file, uint cmd, ulong arg)
 					char __user *p = argp;
 					int i;
 
-					if ((ret = verify_area(VERIFY_READ, argp,
+					if (!access_ok(VERIFY_READ, argp,
 					(ISDN_MODEM_NUMREG + ISDN_MSNLEN + ISDN_LMSNLEN)
-						   * ISDN_MAX_CHANNELS)))
-						return ret;
+						   * ISDN_MAX_CHANNELS))
+						return -EFAULT;
 
 					for (i = 0; i < ISDN_MAX_CHANNELS; i++) {
 						if (copy_from_user(dev->mdm.info[i].emu.profile, p,
@@ -1496,8 +1496,8 @@ isdn_ioctl(struct inode *inode, struct file *file, uint cmd, ulong arg)
 							int j = 0;
 
 							while (1) {
-								if ((ret = verify_area(VERIFY_READ, p, 1)))
-									return ret;
+								if (!access_ok(VERIFY_READ, p, 1))
+									return -EFAULT;
 								get_user(bname[j], p++);
 								switch (bname[j]) {
 									case '\0':
@@ -1563,9 +1563,9 @@ isdn_ioctl(struct inode *inode, struct file *file, uint cmd, ulong arg)
 						drvidx = 0;
 					if (drvidx == -1)
 						return -ENODEV;
-					if ((ret = verify_area(VERIFY_WRITE, argp,
-					     sizeof(isdn_ioctl_struct))))
-						return ret;
+					if (!access_ok(VERIFY_WRITE, argp,
+					     sizeof(isdn_ioctl_struct)))
+						return -EFAULT;
 					c.driver = drvidx;
 					c.command = ISDN_CMD_IOCTL;
 					c.arg = cmd;
@@ -1923,7 +1923,7 @@ isdn_writebuf_skb_stub(int drvidx, int chan, int ack, struct sk_buff *skb)
 	return ret;
 }
 
-int
+static int
 isdn_add_channels(isdn_driver_t *d, int drvidx, int n, int adding)
 {
 	int j, k, m;

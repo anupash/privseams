@@ -361,10 +361,7 @@ static void snd_emu10k1x_gpio_write(emu10k1x_t *emu, unsigned int value)
 
 static void snd_emu10k1x_pcm_free_substream(snd_pcm_runtime_t *runtime)
 {
-	emu10k1x_pcm_t *epcm = runtime->private_data;
-  
-	if (epcm)
-		kfree(epcm);
+	kfree(runtime->private_data);
 }
 
 static void snd_emu10k1x_pcm_interrupt(emu10k1x_t *emu, emu10k1x_voice_t *voice)
@@ -749,6 +746,7 @@ static int snd_emu10k1x_ac97(emu10k1x_t *chip)
 
 	memset(&ac97, 0, sizeof(ac97));
 	ac97.private_data = chip;
+	ac97.scaps = AC97_SCAP_NO_SPDIF;
 	return snd_ac97_mixer(pbus, &ac97, &chip->ac97);
 }
 
@@ -1074,6 +1072,7 @@ static int __devinit snd_emu10k1x_proc_init(emu10k1x_t * emu)
 		snd_info_set_text_ops(entry, emu, 1024, snd_emu10k1x_proc_reg_read);
 		entry->c.text.write_size = 64;
 		entry->c.text.write = snd_emu10k1x_proc_reg_write;
+		entry->mode |= S_IWUSR;
 		entry->private_data = emu;
 	}
 	
@@ -1278,10 +1277,8 @@ static void do_emu10k1x_midi_interrupt(emu10k1x_t *emu, emu10k1x_midi_t *midi, u
 			mpu401_clear_rx(emu, midi);
 		} else {
 			byte = mpu401_read_data(emu, midi);
-			spin_unlock(&midi->input_lock);
 			if (midi->substream_input)
 				snd_rawmidi_receive(midi->substream_input, &byte, 1);
-			spin_lock(&midi->input_lock);
 		}
 	}
 	spin_unlock(&midi->input_lock);
@@ -1628,7 +1625,7 @@ static int __init alsa_card_emu10k1x_init(void)
 {
 	int err;
 
-	if ((err = pci_module_init(&driver)) > 0)
+	if ((err = pci_register_driver(&driver)) > 0)
 		return err;
 
 	return 0;

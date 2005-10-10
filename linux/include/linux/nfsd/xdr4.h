@@ -210,6 +210,7 @@ struct nfsd4_open {
 	u32		op_share_access;    /* request */
 	u32		op_share_deny;      /* request */
 	stateid_t	op_stateid;         /* response */
+	u32		op_recall;          /* recall */
 	struct nfsd4_change_info  op_cinfo; /* response */
 	u32		op_rflags;          /* response */
 	int		op_truncate;        /* used during processing */
@@ -241,6 +242,7 @@ struct nfsd4_read {
 	u32		rd_length;          /* request */
 	struct kvec	rd_iov[RPCSVC_MAXPAGES];
 	int		rd_vlen;
+	struct file     *rd_filp;
 	
 	struct svc_rqst *rd_rqstp;          /* response */
 	struct svc_fh * rd_fhp;             /* response */

@@ -2,6 +2,15 @@
 #include <linux/ext2_fs.h>
 
 /*
+ * ext2 mount options
+ */
+struct ext2_mount_options {
+	unsigned long s_mount_opt;
+	uid_t s_resuid;
+	gid_t s_resgid;
+};
+
+/*
  * second extended file system inode data in memory
  */
 struct ext2_inode_info {
@@ -116,6 +125,7 @@ extern unsigned long ext2_count_free (struct buffer_head *, unsigned);
 /* inode.c */
 extern void ext2_read_inode (struct inode *);
 extern int ext2_write_inode (struct inode *, int);
+extern void ext2_put_inode (struct inode *);
 extern void ext2_delete_inode (struct inode *);
 extern int ext2_sync_inode (struct inode *);
 extern void ext2_discard_prealloc (struct inode *);
@@ -146,9 +156,11 @@ extern struct file_operations ext2_dir_operations;
 /* file.c */
 extern struct inode_operations ext2_file_inode_operations;
 extern struct file_operations ext2_file_operations;
+extern struct file_operations ext2_xip_file_operations;
 
 /* inode.c */
 extern struct address_space_operations ext2_aops;
+extern struct address_space_operations ext2_aops_xip;
 extern struct address_space_operations ext2_nobh_aops;
 
 /* namei.c */

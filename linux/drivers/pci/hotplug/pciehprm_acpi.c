@@ -20,7 +20,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * Send feedback to <dely.l.sy@intel.com>
+ * Send feedback to <kristen.c.accardi@intel.com>
  *
  */
 
@@ -254,10 +254,9 @@ static int acpi_run_oshp ( struct acpi_bridge	*ab)
 {
 	acpi_status		status;
 	u8			*path_name = acpi_path_name(ab->handle);
-	struct acpi_buffer	ret_buf = { 0, NULL};
 
 	/* run OSHP */
-	status = acpi_evaluate_object(ab->handle, METHOD_NAME_OSHP, NULL, &ret_buf);
+	status = acpi_evaluate_object(ab->handle, METHOD_NAME_OSHP, NULL, NULL);
 	if (ACPI_FAILURE(status)) {
 		err("acpi_pciehprm:%s OSHP fails=0x%x\n", path_name, status);
 		oshp_run_status = (status == AE_NOT_FOUND) ? OSHP_NOT_EXIST : OSHP_RUN_FAILED;

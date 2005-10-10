@@ -41,20 +41,25 @@ static const struct vio_device_id *vio_match_device(
 static struct iommu_table *vio_build_iommu_table(struct vio_dev *);
 static int vio_num_address_cells;
 #endif
-static struct vio_dev *vio_bus_device; /* fake "parent" device */
+#ifdef CONFIG_PPC_ISERIES
+static struct iommu_table veth_iommu_table;
+static struct iommu_table vio_iommu_table;
+#endif
+static struct vio_dev vio_bus_device  = { /* fake "parent" device */
+	.name = vio_bus_device.dev.bus_id,
+	.type = "",
+#ifdef CONFIG_PPC_ISERIES
+	.iommu_table = &vio_iommu_table,
+#endif
+	.dev.bus_id = "vio",
+	.dev.bus = &vio_bus_type,
+};
 
 #ifdef CONFIG_PPC_ISERIES
 static struct vio_dev *__init vio_register_device_iseries(char *type,
 		uint32_t unit_num);
 
-static struct iommu_table veth_iommu_table;
-static struct iommu_table vio_iommu_table;
-
-static struct vio_dev _vio_dev  = {
-	.iommu_table = &vio_iommu_table,
-	.dev.bus = &vio_bus_type
-};
-struct device *iSeries_vio_dev = &_vio_dev.dev;
+struct device *iSeries_vio_dev = &vio_bus_device.dev;
 EXPORT_SYMBOL(iSeries_vio_dev);
 
 #define device_is_compatible(a, b)	1
@@ -260,18 +265,10 @@ static int __init vio_bus_init(void)
 	}
 
 	/* the fake parent of all vio devices, just to give us a nice directory */
-	vio_bus_device = kmalloc(sizeof(struct vio_dev), GFP_KERNEL);
-	if (!vio_bus_device) {
-		return 1;
-	}
-	memset(vio_bus_device, 0, sizeof(struct vio_dev));
-	strcpy(vio_bus_device->dev.bus_id, "vio");
-
-	err = device_register(&vio_bus_device->dev);
+	err = device_register(&vio_bus_device.dev);
 	if (err) {
 		printk(KERN_WARNING "%s: device_register returned %i\n", __FUNCTION__,
 			err);
-		kfree(vio_bus_device);
 		return err;
 	}
 
@@ -300,7 +297,7 @@ static void __devinit vio_dev_release(struct device *dev)
 }
 
 #ifdef CONFIG_PPC_PSERIES
-static ssize_t viodev_show_devspec(struct device *dev, char *buf)
+static ssize_t viodev_show_devspec(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct device_node *of_node = dev->platform_data;
 
@@ -309,7 +306,7 @@ static ssize_t viodev_show_devspec(struct device *dev, char *buf)
 DEVICE_ATTR(devspec, S_IRUSR | S_IRGRP | S_IROTH, viodev_show_devspec, NULL);
 #endif
 
-static ssize_t viodev_show_name(struct device *dev, char *buf)
+static ssize_t viodev_show_name(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%s\n", to_vio_dev(dev)->name);
 }
@@ -326,7 +323,7 @@ static struct vio_dev * __devinit vio_register_device_common(
 	viodev->unit_address = unit_address;
 	viodev->iommu_table = iommu_table;
 	/* init generic 'struct device' fields: */
-	viodev->dev.parent = &vio_bus_device->dev;
+	viodev->dev.parent = &vio_bus_device.dev;
 	viodev->dev.bus = &vio_bus_type;
 	viodev->dev.release = vio_dev_release;
 
@@ -557,48 +554,61 @@ int vio_disable_interrupts(struct vio_dev *dev)
 EXPORT_SYMBOL(vio_disable_interrupts);
 #endif
 
-dma_addr_t vio_map_single(struct vio_dev *dev, void *vaddr,
+static dma_addr_t vio_map_single(struct device *dev, void *vaddr,
 			  size_t size, enum dma_data_direction direction)
 {
-	return iommu_map_single(dev->iommu_table, vaddr, size, direction);
+	return iommu_map_single(to_vio_dev(dev)->iommu_table, vaddr, size,
+			direction);
 }
-EXPORT_SYMBOL(vio_map_single);
 
-void vio_unmap_single(struct vio_dev *dev, dma_addr_t dma_handle,
+static void vio_unmap_single(struct device *dev, dma_addr_t dma_handle,
 		      size_t size, enum dma_data_direction direction)
 {
-	iommu_unmap_single(dev->iommu_table, dma_handle, size, direction);
+	iommu_unmap_single(to_vio_dev(dev)->iommu_table, dma_handle, size,
+			direction);
 }
-EXPORT_SYMBOL(vio_unmap_single);
 
-int vio_map_sg(struct vio_dev *vdev, struct scatterlist *sglist, int nelems,
-	       enum dma_data_direction direction)
+static int vio_map_sg(struct device *dev, struct scatterlist *sglist,
+		int nelems, enum dma_data_direction direction)
 {
-	return iommu_map_sg(&vdev->dev, vdev->iommu_table, sglist,
+	return iommu_map_sg(dev, to_vio_dev(dev)->iommu_table, sglist,
 			nelems, direction);
 }
-EXPORT_SYMBOL(vio_map_sg);
 
-void vio_unmap_sg(struct vio_dev *vdev, struct scatterlist *sglist, int nelems,
-		  enum dma_data_direction direction)
+static void vio_unmap_sg(struct device *dev, struct scatterlist *sglist,
+		int nelems, enum dma_data_direction direction)
 {
-	iommu_unmap_sg(vdev->iommu_table, sglist, nelems, direction);
+	iommu_unmap_sg(to_vio_dev(dev)->iommu_table, sglist, nelems, direction);
 }
-EXPORT_SYMBOL(vio_unmap_sg);
 
-void *vio_alloc_consistent(struct vio_dev *dev, size_t size,
-			   dma_addr_t *dma_handle)
+static void *vio_alloc_coherent(struct device *dev, size_t size,
+			   dma_addr_t *dma_handle, unsigned int __nocast flag)
 {
-	return iommu_alloc_consistent(dev->iommu_table, size, dma_handle);
+	return iommu_alloc_coherent(to_vio_dev(dev)->iommu_table, size,
+			dma_handle, flag);
 }
-EXPORT_SYMBOL(vio_alloc_consistent);
 
-void vio_free_consistent(struct vio_dev *dev, size_t size,
+static void vio_free_coherent(struct device *dev, size_t size,
 			 void *vaddr, dma_addr_t dma_handle)
 {
-	iommu_free_consistent(dev->iommu_table, size, vaddr, dma_handle);
+	iommu_free_coherent(to_vio_dev(dev)->iommu_table, size, vaddr,
+			dma_handle);
 }
-EXPORT_SYMBOL(vio_free_consistent);
+
+static int vio_dma_supported(struct device *dev, u64 mask)
+{
+	return 1;
+}
+
+struct dma_mapping_ops vio_dma_ops = {
+	.alloc_coherent = vio_alloc_coherent,
+	.free_coherent = vio_free_coherent,
+	.map_single = vio_map_single,
+	.unmap_single = vio_unmap_single,
+	.map_sg = vio_map_sg,
+	.unmap_sg = vio_unmap_sg,
+	.dma_supported = vio_dma_supported,
+};
 
 static int vio_bus_match(struct device *dev, struct device_driver *drv)
 {
@@ -623,5 +633,3 @@ struct bus_type vio_bus_type = {
 	.name = "vio",
 	.match = vio_bus_match,
 };
-
-EXPORT_SYMBOL(vio_bus_type);

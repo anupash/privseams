@@ -26,6 +26,10 @@
 #include <linux/ptrace.h>
 #include <linux/user.h>
 #include <linux/security.h>
+#include <linux/signal.h>
+#include <linux/seccomp.h>
+#include <linux/audit.h>
+#include <linux/module.h>
 
 #include <asm/uaccess.h>
 #include <asm/page.h>
@@ -356,7 +360,7 @@ int sys_ptrace(long request, long pid, long addr, long data)
 	case PTRACE_SYSCALL: /* continue and stop at next (return from) syscall */
 	case PTRACE_CONT: { /* restart after signal. */
 		ret = -EIO;
-		if ((unsigned long) data > _NSIG)
+		if (!valid_signal(data))
 			break;
 		if (request == PTRACE_SYSCALL) {
 			set_tsk_thread_flag(child, TIF_SYSCALL_TRACE);
@@ -389,7 +393,7 @@ int sys_ptrace(long request, long pid, long addr, long data)
 
 	case PTRACE_SINGLESTEP: {  /* set the trap flag. */
 		ret = -EIO;
-		if ((unsigned long) data > _NSIG)
+		if (!valid_signal(data))
 			break;
 		clear_tsk_thread_flag(child, TIF_SYSCALL_TRACE);
 		set_single_step(child);
@@ -454,11 +458,10 @@ out:
 	return ret;
 }
 
-void do_syscall_trace(void)
+static void do_syscall_trace(void)
 {
-        if (!test_thread_flag(TIF_SYSCALL_TRACE)
-	    || !(current->ptrace & PT_PTRACED))
-		return;
+	/* the 0x80 provides a way for the tracing parent to distinguish
+	   between a syscall stop and SIGTRAP delivery */
 	ptrace_notify(SIGTRAP | ((current->ptrace & PT_TRACESYSGOOD)
 				 ? 0x80 : 0));
 
@@ -472,3 +475,33 @@ void do_syscall_trace(void)
 		current->exit_code = 0;
 	}
 }
+
+void do_syscall_trace_enter(struct pt_regs *regs)
+{
+	if (test_thread_flag(TIF_SYSCALL_TRACE)
+	    && (current->ptrace & PT_PTRACED))
+		do_syscall_trace();
+
+	if (unlikely(current->audit_context))
+		audit_syscall_entry(current, AUDIT_ARCH_PPC,
+				    regs->gpr[0],
+				    regs->gpr[3], regs->gpr[4],
+				    regs->gpr[5], regs->gpr[6]);
+}
+
+void do_syscall_trace_leave(struct pt_regs *regs)
+{
+	secure_computing(regs->gpr[0]);
+
+	if (unlikely(current->audit_context))
+		audit_syscall_exit(current,
+				   (regs->ccr&0x1000)?AUDITSC_FAILURE:AUDITSC_SUCCESS,
+				   regs->result);
+
+	if ((test_thread_flag(TIF_SYSCALL_TRACE))
+	    && (current->ptrace & PT_PTRACED))
+		do_syscall_trace();
+}
+
+EXPORT_SYMBOL(do_syscall_trace_enter);
+EXPORT_SYMBOL(do_syscall_trace_leave);

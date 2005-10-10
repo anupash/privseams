@@ -62,6 +62,9 @@ enum nf_ip_hook_priorities {
 	NF_IP_PRI_FILTER = 0,
 	NF_IP_PRI_NAT_SRC = 100,
 	NF_IP_PRI_SELINUX_LAST = 225,
+	NF_IP_PRI_CONNTRACK_HELPER = INT_MAX - 2,
+	NF_IP_PRI_NAT_SEQ_ADJUST = INT_MAX - 1,
+	NF_IP_PRI_CONNTRACK_CONFIRM = INT_MAX,
 	NF_IP_PRI_LAST = INT_MAX,
 };
 
@@ -72,12 +75,6 @@ enum nf_ip_hook_priorities {
 #define SO_ORIGINAL_DST 80
 
 #ifdef __KERNEL__
-#ifdef CONFIG_NETFILTER_DEBUG
-void nf_debug_ip_local_deliver(struct sk_buff *skb);
-void nf_debug_ip_loopback_xmit(struct sk_buff *newskb);
-void nf_debug_ip_finish_output2(struct sk_buff *skb);
-#endif /*CONFIG_NETFILTER_DEBUG*/
-
 extern int ip_route_me_harder(struct sk_buff **pskb);
 
 /* Call this before modifying an existing IP packet: ensures it is

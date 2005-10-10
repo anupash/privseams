@@ -131,11 +131,7 @@
 #define	WDIOC_GET_PRETIMEOUT     _IOW(WATCHDOG_IOCTL_BASE, 22, int)
 #endif
 
-#ifdef CONFIG_WATCHDOG_NOWAYOUT
-static int nowayout = 1;
-#else
-static int nowayout;
-#endif
+static int nowayout = WATCHDOG_NOWAYOUT;
 
 static ipmi_user_t watchdog_user = NULL;
 
@@ -709,11 +705,11 @@ static int ipmi_close(struct inode *ino, struct file *filep)
 		if (expect_close == 42) {
 			ipmi_watchdog_state = WDOG_TIMEOUT_NONE;
 			ipmi_set_timeout(IPMI_SET_TIMEOUT_NO_HB);
-			clear_bit(0, &ipmi_wdog_open);
 		} else {
 			printk(KERN_CRIT PFX "Unexpected close, not stopping watchdog!\n");
 			ipmi_heartbeat();
 		}
+		clear_bit(0, &ipmi_wdog_open);
 	}
 
 	ipmi_fasync (-1, filep, 0);

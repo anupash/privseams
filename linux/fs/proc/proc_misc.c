@@ -44,6 +44,7 @@
 #include <linux/jiffies.h>
 #include <linux/sysrq.h>
 #include <linux/vmalloc.h>
+#include <linux/crash_dump.h>
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
 #include <asm/io.h>
@@ -126,6 +127,7 @@ static int meminfo_read_proc(char *page, char **start, off_t off,
 	unsigned long committed;
 	unsigned long allowed;
 	struct vmalloc_info vmi;
+	long cached;
 
 	get_page_state(&ps);
 	get_zone_counts(&active, &inactive, &free);
@@ -139,6 +141,10 @@ static int meminfo_read_proc(char *page, char **start, off_t off,
 	committed = atomic_read(&vm_committed_space);
 	allowed = ((totalram_pages - hugetlb_total_pages())
 		* sysctl_overcommit_ratio / 100) + total_swap_pages;
+
+	cached = get_page_cache_size() - total_swapcache_pages - i.bufferram;
+	if (cached < 0)
+		cached = 0;
 
 	get_vmalloc_info(&vmi);
 
@@ -172,7 +178,7 @@ static int meminfo_read_proc(char *page, char **start, off_t off,
 		K(i.totalram),
 		K(i.freeram),
 		K(i.bufferram),
-		K(get_page_cache_size()-total_swapcache_pages-i.bufferram),
+		K(cached),
 		K(total_swapcache_pages),
 		K(active),
 		K(inactive),
@@ -189,7 +195,7 @@ static int meminfo_read_proc(char *page, char **start, off_t off,
 		K(allowed),
 		K(committed),
 		K(ps.nr_page_table_pages),
-		VMALLOC_TOTAL >> 10,
+		(unsigned long)VMALLOC_TOTAL >> 10,
 		vmi.used >> 10,
 		vmi.largest_chunk >> 10
 		);
@@ -209,6 +215,19 @@ static int fragmentation_open(struct inode *inode, struct file *file)
 
 static struct file_operations fragmentation_file_operations = {
 	.open		= fragmentation_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+extern struct seq_operations zoneinfo_op;
+static int zoneinfo_open(struct inode *inode, struct file *file)
+{
+	return seq_open(file, &zoneinfo_op);
+}
+
+static struct file_operations proc_zoneinfo_file_operations = {
+	.open		= zoneinfo_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= seq_release,
@@ -433,7 +452,7 @@ static int devices_read_proc(char *page, char **start, off_t off,
 				 int count, int *eof, void *data)
 {
 	int len = get_chrdev_list(page);
-	len += get_blkdev_list(page+len);
+	len += get_blkdev_list(page+len, len);
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
@@ -524,7 +543,7 @@ static ssize_t write_sysrq_trigger(struct file *file, const char __user *buf,
 
 		if (get_user(c, buf))
 			return -EFAULT;
-		__handle_sysrq(c, NULL, NULL);
+		__handle_sysrq(c, NULL, NULL, 0);
 	}
 	return count;
 }
@@ -584,6 +603,7 @@ void __init proc_misc_init(void)
 	create_seq_entry("slabinfo",S_IWUSR|S_IRUGO,&proc_slabinfo_operations);
 	create_seq_entry("buddyinfo",S_IRUGO, &fragmentation_file_operations);
 	create_seq_entry("vmstat",S_IRUGO, &proc_vmstat_file_operations);
+	create_seq_entry("zoneinfo",S_IRUGO, &proc_zoneinfo_file_operations);
 	create_seq_entry("diskstats", 0, &proc_diskstats_operations);
 #ifdef CONFIG_MODULES
 	create_seq_entry("modules", 0, &proc_modules_operations);
@@ -598,6 +618,11 @@ void __init proc_misc_init(void)
 		proc_root_kcore->size =
 				(size_t)high_memory - PAGE_OFFSET + PAGE_SIZE;
 	}
+#endif
+#ifdef CONFIG_PROC_VMCORE
+	proc_vmcore = create_proc_entry("vmcore", S_IRUSR, NULL);
+	if (proc_vmcore)
+		proc_vmcore->proc_fops = &proc_vmcore_operations;
 #endif
 #ifdef CONFIG_MAGIC_SYSRQ
 	entry = create_proc_entry("sysrq-trigger", S_IWUSR, NULL);

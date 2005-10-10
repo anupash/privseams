@@ -54,7 +54,12 @@ int console_printk[4] = {
 
 EXPORT_SYMBOL(console_printk);
 
+/*
+ * Low lever drivers may need that to know if they can schedule in
+ * their unblank() callback or not. So let's export it.
+ */
 int oops_in_progress;
+EXPORT_SYMBOL(oops_in_progress);
 
 /*
  * console_sem protects the console_drivers list, and also
@@ -80,10 +85,6 @@ static int console_locked;
  */
 static DEFINE_SPINLOCK(logbuf_lock);
 
-static char __log_buf[__LOG_BUF_LEN];
-static char *log_buf = __log_buf;
-static int log_buf_len = __LOG_BUF_LEN;
-
 #define LOG_BUF_MASK	(log_buf_len-1)
 #define LOG_BUF(idx) (log_buf[(idx) & LOG_BUF_MASK])
 
@@ -94,7 +95,6 @@ static int log_buf_len = __LOG_BUF_LEN;
 static unsigned long log_start;	/* Index into log_buf: next char to be read by syslog() */
 static unsigned long con_start;	/* Index into log_buf: next char to be sent to consoles */
 static unsigned long log_end;	/* Index into log_buf: most-recently-written-char + 1 */
-static unsigned long logged_chars; /* Number of chars produced since last read+clear operation */
 
 /*
  *	Array of consoles built from command line options (console=)
@@ -114,6 +114,13 @@ static int preferred_console = -1;
 
 /* Flag: console code may call schedule() */
 static int console_may_schedule;
+
+#ifdef CONFIG_PRINTK
+
+static char __log_buf[__LOG_BUF_LEN];
+static char *log_buf = __log_buf;
+static int log_buf_len = __LOG_BUF_LEN;
+static unsigned long logged_chars; /* Number of chars produced since last read+clear operation */
 
 /*
  *	Setup a list of consoles. Called from init/main.c
@@ -152,42 +159,6 @@ static int __init console_setup(char *str)
 }
 
 __setup("console=", console_setup);
-
-/**
- * add_preferred_console - add a device to the list of preferred consoles.
- *
- * The last preferred console added will be used for kernel messages
- * and stdin/out/err for init.  Normally this is used by console_setup
- * above to handle user-supplied console arguments; however it can also
- * be used by arch-specific code either to override the user or more
- * commonly to provide a default console (ie from PROM variables) when
- * the user has not supplied one.
- */
-int __init add_preferred_console(char *name, int idx, char *options)
-{
-	struct console_cmdline *c;
-	int i;
-
-	/*
-	 *	See if this tty is not yet registered, and
-	 *	if we have a slot free.
-	 */
-	for(i = 0; i < MAX_CMDLINECONSOLES && console_cmdline[i].name[0]; i++)
-		if (strcmp(console_cmdline[i].name, name) == 0 &&
-			  console_cmdline[i].index == idx) {
-				selected_console = i;
-				return 0;
-		}
-	if (i == MAX_CMDLINECONSOLES)
-		return -E2BIG;
-	selected_console = i;
-	c = &console_cmdline[i];
-	memcpy(c->name, name, sizeof(c->name));
-	c->name[sizeof(c->name) - 1] = 0;
-	c->options = options;
-	c->index = idx;
-	return 0;
-}
 
 static int __init log_buf_len_setup(char *str)
 {
@@ -269,9 +240,10 @@ int do_syslog(int type, char __user * buf, int len)
 		error = 0;
 		if (!len)
 			goto out;
-		error = verify_area(VERIFY_WRITE,buf,len);
-		if (error)
+		if (!access_ok(VERIFY_WRITE, buf, len)) {
+			error = -EFAULT;
 			goto out;
+		}
 		error = wait_event_interruptible(log_wait, (log_start - log_end));
 		if (error)
 			goto out;
@@ -301,9 +273,10 @@ int do_syslog(int type, char __user * buf, int len)
 		error = 0;
 		if (!len)
 			goto out;
-		error = verify_area(VERIFY_WRITE,buf,len);
-		if (error)
+		if (!access_ok(VERIFY_WRITE, buf, len)) {
+			error = -EFAULT;
 			goto out;
+		}
 		count = len;
 		if (count > log_buf_len)
 			count = log_buf_len;
@@ -499,6 +472,22 @@ static void zap_locks(void)
 	init_MUTEX(&console_sem);
 }
 
+#if defined(CONFIG_PRINTK_TIME)
+static int printk_time = 1;
+#else
+static int printk_time = 0;
+#endif
+
+static int __init printk_time_setup(char *str)
+{
+	if (*str)
+		return 0;
+	printk_time = 1;
+	return 1;
+}
+
+__setup("time", printk_time_setup);
+
 /*
  * This is printk.  It can be called from any context.  We want it to work.
  * 
@@ -512,6 +501,7 @@ static void zap_locks(void)
  * then changes console_loglevel may break. This is because console_loglevel
  * is inspected when the actual printing occurs.
  */
+
 asmlinkage int printk(const char *fmt, ...)
 {
 	va_list args;
@@ -547,20 +537,58 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 	 */
 	for (p = printk_buf; *p; p++) {
 		if (log_level_unknown) {
-			if (p[0] != '<' || p[1] < '0' || p[1] > '7' || p[2] != '>') {
-				emit_log_char('<');
-				emit_log_char(default_message_loglevel + '0');
-				emit_log_char('>');
+                        /* log_level_unknown signals the start of a new line */
+			if (printk_time) {
+				int loglev_char;
+				char tbuf[50], *tp;
+				unsigned tlen;
+				unsigned long long t;
+				unsigned long nanosec_rem;
+
+				/*
+				 * force the log level token to be
+				 * before the time output.
+				 */
+				if (p[0] == '<' && p[1] >='0' &&
+				   p[1] <= '7' && p[2] == '>') {
+					loglev_char = p[1];
+					p += 3;
+					printed_len += 3;
+				} else {
+					loglev_char = default_message_loglevel
+						+ '0';
+				}
+				t = sched_clock();
+				nanosec_rem = do_div(t, 1000000000);
+				tlen = sprintf(tbuf,
+						"<%c>[%5lu.%06lu] ",
+						loglev_char,
+						(unsigned long)t,
+						nanosec_rem/1000);
+
+				for (tp = tbuf; tp < tbuf + tlen; tp++)
+					emit_log_char(*tp);
+				printed_len += tlen - 3;
+			} else {
+				if (p[0] != '<' || p[1] < '0' ||
+				   p[1] > '7' || p[2] != '>') {
+					emit_log_char('<');
+					emit_log_char(default_message_loglevel
+						+ '0');
+					emit_log_char('>');
+				}
+				printed_len += 3;
 			}
 			log_level_unknown = 0;
+			if (!*p)
+				break;
 		}
 		emit_log_char(*p);
 		if (*p == '\n')
 			log_level_unknown = 1;
 	}
 
-	if (!cpu_online(smp_processor_id()) &&
-	    system_state != SYSTEM_RUNNING) {
+	if (!cpu_online(smp_processor_id())) {
 		/*
 		 * Some console drivers may assume that per-cpu resources have
 		 * been allocated.  So don't allow them to be called by this
@@ -592,6 +620,54 @@ out:
 }
 EXPORT_SYMBOL(printk);
 EXPORT_SYMBOL(vprintk);
+
+#else
+
+asmlinkage long sys_syslog(int type, char __user * buf, int len)
+{
+	return 0;
+}
+
+int do_syslog(int type, char __user * buf, int len) { return 0; }
+static void call_console_drivers(unsigned long start, unsigned long end) {}
+
+#endif
+
+/**
+ * add_preferred_console - add a device to the list of preferred consoles.
+ *
+ * The last preferred console added will be used for kernel messages
+ * and stdin/out/err for init.  Normally this is used by console_setup
+ * above to handle user-supplied console arguments; however it can also
+ * be used by arch-specific code either to override the user or more
+ * commonly to provide a default console (ie from PROM variables) when
+ * the user has not supplied one.
+ */
+int __init add_preferred_console(char *name, int idx, char *options)
+{
+	struct console_cmdline *c;
+	int i;
+
+	/*
+	 *	See if this tty is not yet registered, and
+	 *	if we have a slot free.
+	 */
+	for(i = 0; i < MAX_CMDLINECONSOLES && console_cmdline[i].name[0]; i++)
+		if (strcmp(console_cmdline[i].name, name) == 0 &&
+			  console_cmdline[i].index == idx) {
+				selected_console = i;
+				return 0;
+		}
+	if (i == MAX_CMDLINECONSOLES)
+		return -E2BIG;
+	selected_console = i;
+	c = &console_cmdline[i];
+	memcpy(c->name, name, sizeof(c->name));
+	c->name[sizeof(c->name) - 1] = 0;
+	c->options = options;
+	c->index = idx;
+	return 0;
+}
 
 /**
  * acquire_console_sem - lock the console system for exclusive use.
@@ -694,12 +770,15 @@ void console_unblank(void)
 	struct console *c;
 
 	/*
-	 * Try to get the console semaphore. If someone else owns it
-	 * we have to return without unblanking because console_unblank
-	 * may be called in interrupt context.
+	 * console_unblank can no longer be called in interrupt context unless
+	 * oops_in_progress is set to 1..
 	 */
-	if (down_trylock(&console_sem) != 0)
-		return;
+	if (oops_in_progress) {
+		if (down_trylock(&console_sem) != 0)
+			return;
+	} else
+		acquire_console_sem();
+
 	console_locked = 1;
 	console_may_schedule = 0;
 	for (c = console_drivers; c != NULL; c = c->next)
@@ -796,13 +875,20 @@ void register_console(struct console * console)
 			break;
 		console->flags |= CON_ENABLED;
 		console->index = console_cmdline[i].index;
-		if (i == preferred_console)
+		if (i == selected_console) {
 			console->flags |= CON_CONSDEV;
+			preferred_console = selected_console;
+		}
 		break;
 	}
 
 	if (!(console->flags & CON_ENABLED))
 		return;
+
+	if (console_drivers && (console_drivers->flags & CON_BOOT)) {
+		unregister_console(console_drivers);
+		console->flags &= ~CON_PRINTBUFFER;
+	}
 
 	/*
 	 *	Put this console in the list - keep the
@@ -812,6 +898,8 @@ void register_console(struct console * console)
 	if ((console->flags & CON_CONSDEV) || console_drivers == NULL) {
 		console->next = console_drivers;
 		console_drivers = console;
+		if (console->next)
+			console->next->flags &= ~CON_CONSDEV;
 	} else {
 		console->next = console_drivers->next;
 		console_drivers->next = console;
@@ -852,16 +940,20 @@ int unregister_console(struct console * console)
 	/* If last console is removed, we re-enable picking the first
 	 * one that gets registered. Without that, pmac early boot console
 	 * would prevent fbcon from taking over.
+	 *
+	 * If this isn't the last console and it has CON_CONSDEV set, we
+	 * need to set it on the next preferred console.
 	 */
 	if (console_drivers == NULL)
 		preferred_console = selected_console;
-		
+	else if (console->flags & CON_CONSDEV)
+		console_drivers->flags |= CON_CONSDEV;
 
 	release_console_sem();
 	return res;
 }
 EXPORT_SYMBOL(unregister_console);
-	
+
 /**
  * tty_write_message - write a message to a certain tty, not just the console.
  *

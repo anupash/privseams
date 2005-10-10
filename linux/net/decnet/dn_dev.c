@@ -716,13 +716,13 @@ static int dn_dev_rtm_newaddr(struct sk_buff *skb, struct nlmsghdr *nlh, void *a
 }
 
 static int dn_dev_fill_ifaddr(struct sk_buff *skb, struct dn_ifaddr *ifa,
-				u32 pid, u32 seq, int event)
+				u32 pid, u32 seq, int event, unsigned int flags)
 {
 	struct ifaddrmsg *ifm;
 	struct nlmsghdr *nlh;
 	unsigned char *b = skb->tail;
 
-	nlh = NLMSG_PUT(skb, pid, seq, event, sizeof(*ifm));
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*ifm), flags);
 	ifm = NLMSG_DATA(nlh);
 
 	ifm->ifa_family = AF_DECnet;
@@ -755,7 +755,7 @@ static void rtmsg_ifa(int event, struct dn_ifaddr *ifa)
 		netlink_set_err(rtnl, 0, RTMGRP_DECnet_IFADDR, ENOBUFS);
 		return;
 	}
-	if (dn_dev_fill_ifaddr(skb, ifa, 0, 0, event) < 0) {
+	if (dn_dev_fill_ifaddr(skb, ifa, 0, 0, event, 0) < 0) {
 		kfree_skb(skb);
 		netlink_set_err(rtnl, 0, RTMGRP_DECnet_IFADDR, EINVAL);
 		return;
@@ -790,7 +790,8 @@ static int dn_dev_dump_ifaddr(struct sk_buff *skb, struct netlink_callback *cb)
 			if (dn_dev_fill_ifaddr(skb, ifa,
 					       NETLINK_CB(cb->skb).pid,
 					       cb->nlh->nlmsg_seq,
-					       RTM_NEWADDR) <= 0)
+					       RTM_NEWADDR,
+					       NLM_F_MULTI) <= 0)
 				goto done;
 		}
 	}
@@ -1411,21 +1412,22 @@ static struct file_operations dn_dev_seq_fops = {
 
 #endif /* CONFIG_PROC_FS */
 
-static struct rtnetlink_link dnet_rtnetlink_table[RTM_MAX-RTM_BASE+1] = 
+static struct rtnetlink_link dnet_rtnetlink_table[RTM_NR_MSGTYPES] =
 {
-	 [4] = { .doit   = dn_dev_rtm_newaddr,	},
-	 [5] = { .doit   = dn_dev_rtm_deladdr,	},
-	 [6] = { .dumpit = dn_dev_dump_ifaddr,	},
-
+	[RTM_NEWADDR  - RTM_BASE] = { .doit	= dn_dev_rtm_newaddr,	},
+	[RTM_DELADDR  - RTM_BASE] = { .doit	= dn_dev_rtm_deladdr,	},
+	[RTM_GETADDR  - RTM_BASE] = { .dumpit	= dn_dev_dump_ifaddr,	},
 #ifdef CONFIG_DECNET_ROUTER
-	 [8] = { .doit   = dn_fib_rtm_newroute,	},
-	 [9] = { .doit   = dn_fib_rtm_delroute,	},
-	[10] = { .doit   = dn_cache_getroute, .dumpit = dn_fib_dump, },
-	[16] = { .doit   = dn_fib_rtm_newrule, },
-	[17] = { .doit   = dn_fib_rtm_delrule, },
-	[18] = { .dumpit = dn_fib_dump_rules,  },
+	[RTM_NEWROUTE - RTM_BASE] = { .doit	= dn_fib_rtm_newroute,	},
+	[RTM_DELROUTE - RTM_BASE] = { .doit	= dn_fib_rtm_delroute,	},
+	[RTM_GETROUTE - RTM_BASE] = { .doit	= dn_cache_getroute,
+				      .dumpit	= dn_fib_dump,		},
+	[RTM_NEWRULE  - RTM_BASE] = { .doit	= dn_fib_rtm_newrule,	},
+	[RTM_DELRULE  - RTM_BASE] = { .doit	= dn_fib_rtm_delrule,	},
+	[RTM_GETRULE  - RTM_BASE] = { .dumpit	= dn_fib_dump_rules,	},
 #else
-	[10] = { .doit   = dn_cache_getroute, .dumpit = dn_cache_dump, },
+	[RTM_GETROUTE - RTM_BASE] = { .doit	= dn_cache_getroute,
+				      .dumpit	= dn_cache_dump,	},
 #endif
 
 };

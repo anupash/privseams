@@ -42,7 +42,6 @@ struct nlm_host {
 	struct rpc_clnt	*	h_rpcclnt;	/* RPC client to talk to peer */
 	char			h_name[20];	/* remote hostname */
 	u32			h_version;	/* interface version */
-	rpc_authflavor_t	h_authflavor;	/* RPC authentication type */
 	unsigned short		h_proto;	/* transport proto */
 	unsigned short		h_reclaiming : 1,
 				h_server     : 1, /* server side, not client side */
@@ -73,6 +72,8 @@ struct nlm_lockowner {
 	uint32_t pid;
 };
 
+struct nlm_wait;
+
 /*
  * Memory chunk for NLM client RPC request.
  */
@@ -82,6 +83,7 @@ struct nlm_rqst {
 	struct nlm_host *	a_host;		/* host handle */
 	struct nlm_args		a_args;		/* arguments */
 	struct nlm_res		a_res;		/* result */
+	struct nlm_wait *	a_block;
 	char			a_owner[NLMCLNT_OHSIZE];
 };
 
@@ -143,9 +145,9 @@ extern unsigned long		nlmsvc_timeout;
  * Lockd client functions
  */
 struct nlm_rqst * nlmclnt_alloc_call(void);
-int		  nlmclnt_call(struct nlm_rqst *, u32);
-int		  nlmclnt_async_call(struct nlm_rqst *, u32, rpc_action);
-int		  nlmclnt_block(struct nlm_host *, struct file_lock *, u32 *);
+int		  nlmclnt_prepare_block(struct nlm_rqst *req, struct nlm_host *host, struct file_lock *fl);
+void		  nlmclnt_finish_block(struct nlm_rqst *req);
+long		  nlmclnt_block(struct nlm_rqst *req, long timeout);
 int		  nlmclnt_cancel(struct nlm_host *, struct file_lock *);
 u32		  nlmclnt_grant(struct nlm_lock *);
 void		  nlmclnt_recovery(struct nlm_host *, u32);

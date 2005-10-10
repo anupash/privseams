@@ -49,7 +49,7 @@ int mp_bus_id_to_node [MAX_MP_BUSSES];
 int mp_bus_id_to_local [MAX_MP_BUSSES];
 int quad_local_to_mp_bus_id [NR_CPUS/4][4];
 int mp_bus_id_to_pci_bus [MAX_MP_BUSSES] = { [0 ... MAX_MP_BUSSES-1] = -1 };
-int mp_current_pci_id;
+static int mp_current_pci_id;
 
 /* I/O APIC entries */
 struct mpc_config_ioapic mp_ioapics[MAX_IO_APICS];
@@ -67,7 +67,6 @@ unsigned long mp_lapic_addr;
 
 /* Processor that is doing the boot up */
 unsigned int boot_cpu_physical_apicid = -1U;
-unsigned int boot_cpu_logical_apicid = -1U;
 /* Internal processor count */
 static unsigned int __initdata num_processors;
 
@@ -119,7 +118,7 @@ static int MP_valid_apicid(int apicid, int version)
 }
 #endif
 
-void __init MP_processor_info (struct mpc_config_processor *m)
+static void __init MP_processor_info (struct mpc_config_processor *m)
 {
  	int ver, apicid;
 	physid_mask_t tmp;
@@ -180,7 +179,6 @@ void __init MP_processor_info (struct mpc_config_processor *m)
 	if (m->mpc_cpuflag & CPU_BOOTPROCESSOR) {
 		Dprintk("    Bootup CPU\n");
 		boot_cpu_physical_apicid = m->mpc_apicid;
-		boot_cpu_logical_apicid = apicid;
 	}
 
 	if (num_processors >= NR_CPUS) {
@@ -863,7 +861,7 @@ void __init mp_register_lapic (
 #define MP_ISA_BUS		0
 #define MP_MAX_IOAPIC_PIN	127
 
-struct mp_ioapic_routing {
+static struct mp_ioapic_routing {
 	int			apic_id;
 	int			gsi_base;
 	int			gsi_end;
@@ -914,7 +912,10 @@ void __init mp_register_ioapic (
 	mp_ioapics[idx].mpc_apicaddr = address;
 
 	set_fixmap_nocache(FIX_IO_APIC_BASE_0 + idx, address);
-	mp_ioapics[idx].mpc_apicid = io_apic_get_unique_id(idx, id);
+	if ((boot_cpu_data.x86_vendor == X86_VENDOR_INTEL) && (boot_cpu_data.x86 < 15))
+		mp_ioapics[idx].mpc_apicid = io_apic_get_unique_id(idx, id);
+	else
+		mp_ioapics[idx].mpc_apicid = id;
 	mp_ioapics[idx].mpc_apicver = io_apic_get_version(idx);
 	
 	/* 
@@ -982,6 +983,7 @@ void __init mp_override_legacy_irq (
 	return;
 }
 
+int es7000_plat;
 
 void __init mp_config_acpi_legacy_irqs (void)
 {
@@ -996,9 +998,9 @@ void __init mp_config_acpi_legacy_irqs (void)
 	Dprintk("Bus #%d is ISA\n", MP_ISA_BUS);
 
 	/*
-	 * ES7000 has no legacy identity mappings
+	 * Older generations of ES7000 have no legacy identity mappings
 	 */
-	if (es7000_plat)
+	if (es7000_plat == 1)
 		return;
 
 	/* 
@@ -1054,11 +1056,20 @@ void __init mp_config_acpi_legacy_irqs (void)
 	}
 }
 
+#define MAX_GSI_NUM	4096
+
 int mp_register_gsi (u32 gsi, int edge_level, int active_high_low)
 {
 	int			ioapic = -1;
 	int			ioapic_pin = 0;
 	int			idx, bit = 0;
+	static int		pci_irq = 16;
+	/*
+	 * Mapping between Global System Interrups, which
+	 * represent all possible interrupts, and IRQs
+	 * assigned to actual devices.
+	 */
+	static int		gsi_to_irq[MAX_GSI_NUM];
 
 #ifdef CONFIG_ACPI_BUS
 	/* Don't set up the ACPI SCI because it's already set up */
@@ -1093,10 +1104,33 @@ int mp_register_gsi (u32 gsi, int edge_level, int active_high_low)
 	if ((1<<bit) & mp_ioapic_routing[ioapic].pin_programmed[idx]) {
 		Dprintk(KERN_DEBUG "Pin %d-%d already programmed\n",
 			mp_ioapic_routing[ioapic].apic_id, ioapic_pin);
-		return gsi;
+		return gsi_to_irq[gsi];
 	}
 
 	mp_ioapic_routing[ioapic].pin_programmed[idx] |= (1<<bit);
+
+	if (edge_level) {
+		/*
+		 * For PCI devices assign IRQs in order, avoiding gaps
+		 * due to unused I/O APIC pins.
+		 */
+		int irq = gsi;
+		if (gsi < MAX_GSI_NUM) {
+			if (gsi > 15)
+				gsi = pci_irq++;
+#ifdef CONFIG_ACPI_BUS
+			/*
+			 * Don't assign IRQ used by ACPI SCI
+			 */
+			if (gsi == acpi_fadt.sci_int)
+				gsi = pci_irq++;
+#endif
+			gsi_to_irq[irq] = gsi;
+		} else {
+			printk(KERN_ERR "GSI %u is too high\n", gsi);
+			return gsi;
+		}
+	}
 
 	io_apic_set_pci_routing(ioapic, ioapic_pin, gsi,
 		    edge_level == ACPI_EDGE_SENSITIVE ? 0 : 1,

@@ -66,7 +66,6 @@
 
 acpi_status
 acpi_ex_store_buffer_to_buffer (
-	acpi_object_type                original_src_type,
 	union acpi_operand_object       *source_desc,
 	union acpi_operand_object       *target_desc)
 {
@@ -77,9 +76,8 @@ acpi_ex_store_buffer_to_buffer (
 	ACPI_FUNCTION_TRACE_PTR ("ex_store_buffer_to_buffer", source_desc);
 
 
-	/*
-	 * We know that source_desc is a buffer by now
-	 */
+	/* We know that source_desc is a buffer by now */
+
 	buffer = (u8 *) source_desc->buffer.pointer;
 	length = source_desc->buffer.length;
 
@@ -105,7 +103,17 @@ acpi_ex_store_buffer_to_buffer (
 		ACPI_MEMSET (target_desc->buffer.pointer, 0, target_desc->buffer.length);
 		ACPI_MEMCPY (target_desc->buffer.pointer, buffer, length);
 
+#ifdef ACPI_OBSOLETE_BEHAVIOR
 		/*
+		 * NOTE: ACPI versions up to 3.0 specified that the buffer must be
+		 * truncated if the string is smaller than the buffer.  However, "other"
+		 * implementations of ACPI never did this and thus became the defacto
+		 * standard. ACPi 3.0_a changes this behavior such that the buffer
+		 * is no longer truncated.
+		 */
+
+		/*
+		 * OBSOLETE BEHAVIOR:
 		 * If the original source was a string, we must truncate the buffer,
 		 * according to the ACPI spec.  Integer-to-Buffer and Buffer-to-Buffer
 		 * copy must not truncate the original buffer.
@@ -115,11 +123,13 @@ acpi_ex_store_buffer_to_buffer (
 
 			target_desc->buffer.length = length;
 		}
+#endif
 	}
 	else {
 		/* Truncate the source, copy only what will fit */
 
-		ACPI_MEMCPY (target_desc->buffer.pointer, buffer, target_desc->buffer.length);
+		ACPI_MEMCPY (target_desc->buffer.pointer, buffer,
+			target_desc->buffer.length);
 
 		ACPI_DEBUG_PRINT ((ACPI_DB_INFO,
 			"Truncating source buffer from %X to %X\n",
@@ -159,9 +169,8 @@ acpi_ex_store_string_to_string (
 	ACPI_FUNCTION_TRACE_PTR ("ex_store_string_to_string", source_desc);
 
 
-	/*
-	 * We know that source_desc is a string by now.
-	 */
+	/* We know that source_desc is a string by now */
+
 	buffer = (u8 *) source_desc->string.pointer;
 	length = source_desc->string.length;
 
@@ -175,7 +184,8 @@ acpi_ex_store_string_to_string (
 		 * String will fit in existing non-static buffer.
 		 * Clear old string and copy in the new one
 		 */
-		ACPI_MEMSET (target_desc->string.pointer, 0, (acpi_size) target_desc->string.length + 1);
+		ACPI_MEMSET (target_desc->string.pointer, 0,
+			(acpi_size) target_desc->string.length + 1);
 		ACPI_MEMCPY (target_desc->string.pointer, buffer, length);
 	}
 	else {
@@ -185,13 +195,13 @@ acpi_ex_store_string_to_string (
 		 */
 		if (target_desc->string.pointer &&
 		   (!(target_desc->common.flags & AOPOBJ_STATIC_POINTER))) {
-			/*
-			 * Only free if not a pointer into the DSDT
-			 */
+			/* Only free if not a pointer into the DSDT */
+
 			ACPI_MEM_FREE (target_desc->string.pointer);
 		}
 
-		target_desc->string.pointer = ACPI_MEM_CALLOCATE ((acpi_size) length + 1);
+		target_desc->string.pointer = ACPI_MEM_CALLOCATE (
+				   (acpi_size) length + 1);
 		if (!target_desc->string.pointer) {
 			return_ACPI_STATUS (AE_NO_MEMORY);
 		}

@@ -7,6 +7,7 @@
 #include <linux/root_dev.h>
 #include <linux/security.h>
 #include <linux/delay.h>
+#include <linux/mount.h>
 
 #include <linux/nfs_fs.h>
 #include <linux/nfs_fs_sb.h>
@@ -24,8 +25,6 @@ static char __initdata saved_root_name[64];
 
 /* this is initialized in init/main.c */
 dev_t ROOT_DEV;
-
-EXPORT_SYMBOL(ROOT_DEV);
 
 static int __init load_ramdisk(char *str)
 {
@@ -53,7 +52,7 @@ static int __init readwrite(char *str)
 __setup("ro", readonly);
 __setup("rw", readwrite);
 
-static dev_t __init try_name(char *name, int part)
+static dev_t try_name(char *name, int part)
 {
 	char path[64];
 	char buf[32];
@@ -135,7 +134,7 @@ fail:
  *	is mounted on rootfs /sys.
  */
 
-dev_t __init name_to_dev_t(char *name)
+dev_t name_to_dev_t(char *name)
 {
 	char s[32];
 	char *p;

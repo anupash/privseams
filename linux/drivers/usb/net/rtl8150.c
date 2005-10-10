@@ -167,8 +167,6 @@ struct rtl8150 {
 
 typedef struct rtl8150 rtl8150_t;
 
-static unsigned long multicast_filter_limit = 32;
-
 static void fill_skb_pool(rtl8150_t *);
 static void free_skb_pool(rtl8150_t *);
 static inline struct sk_buff *pull_skb(rtl8150_t *);
@@ -195,14 +193,14 @@ static int get_registers(rtl8150_t * dev, u16 indx, u16 size, void *data)
 {
 	return usb_control_msg(dev->udev, usb_rcvctrlpipe(dev->udev, 0),
 			       RTL8150_REQ_GET_REGS, RTL8150_REQT_READ,
-			       indx, 0, data, size, HZ / 2);
+			       indx, 0, data, size, 500);
 }
 
 static int set_registers(rtl8150_t * dev, u16 indx, u16 size, void *data)
 {
 	return usb_control_msg(dev->udev, usb_sndctrlpipe(dev->udev, 0),
 			       RTL8150_REQ_SET_REGS, RTL8150_REQT_WRITE,
-			       indx, 0, data, size, HZ / 2);
+			       indx, 0, data, size, 500);
 }
 
 static void ctrl_callback(struct urb *urb, struct pt_regs *regs)
@@ -667,7 +665,7 @@ static void rtl8150_set_multicast(struct net_device *netdev)
 	if (netdev->flags & IFF_PROMISC) {
 		dev->rx_creg |= cpu_to_le16(0x0001);
 		info("%s: promiscuous mode", netdev->name);
-	} else if ((netdev->mc_count > multicast_filter_limit) ||
+	} else if (netdev->mc_count ||
 		   (netdev->flags & IFF_ALLMULTI)) {
 		dev->rx_creg &= cpu_to_le16(0xfffe);
 		dev->rx_creg |= cpu_to_le16(0x0002);

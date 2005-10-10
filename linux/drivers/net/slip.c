@@ -74,6 +74,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/if_arp.h>
 #include <linux/if_slip.h>
+#include <linux/delay.h>
 #include <linux/init.h>
 #include "slip.h"
 #ifdef CONFIG_INET
@@ -185,15 +186,12 @@ sl_alloc_bufs(struct slip *sl, int mtu)
 	/* Cleanup */
 err_exit:
 #ifdef SL_INCLUDE_CSLIP
-	if (cbuff)
-		kfree(cbuff);
+	kfree(cbuff);
 	if (slcomp)
 		slhc_free(slcomp);
 #endif
-	if (xbuff)
-		kfree(xbuff);
-	if (rbuff)
-		kfree(rbuff);
+	kfree(xbuff);
+	kfree(rbuff);
 	return err;
 }
 
@@ -201,18 +199,12 @@ err_exit:
 static void
 sl_free_bufs(struct slip *sl)
 {
-	void * tmp;
-
 	/* Free all SLIP frame buffers. */
-	if ((tmp = xchg(&sl->rbuff, NULL)) != NULL)
-		kfree(tmp);
-	if ((tmp = xchg(&sl->xbuff, NULL)) != NULL)
-		kfree(tmp);
+	kfree(xchg(&sl->rbuff, NULL));
+	kfree(xchg(&sl->xbuff, NULL));
 #ifdef SL_INCLUDE_CSLIP
-	if ((tmp = xchg(&sl->cbuff, NULL)) != NULL)
-		kfree(tmp);
-	if ((tmp = xchg(&sl->slcomp, NULL)) != NULL)
-		slhc_free(tmp);
+	kfree(xchg(&sl->cbuff, NULL));
+	slhc_free(xchg(&sl->slcomp, NULL));
 #endif
 }
 
@@ -297,13 +289,10 @@ done_on_bh:
 	spin_unlock_bh(&sl->lock);
 
 done:
-	if (xbuff)
-		kfree(xbuff);
-	if (rbuff)
-		kfree(rbuff);
+	kfree(xbuff);
+	kfree(rbuff);
 #ifdef SL_INCLUDE_CSLIP
-	if (cbuff)
-		kfree(cbuff);
+	kfree(cbuff);
 #endif
 	return err;
 }
@@ -1395,10 +1384,8 @@ static void __exit slip_exit(void)
 	/* First of all: check for active disciplines and hangup them.
 	 */
 	do {
-		if (busy) {
-			set_current_state(TASK_INTERRUPTIBLE);
-			schedule_timeout(HZ / 10);
-		}
+		if (busy)
+			msleep_interruptible(100);
 
 		busy = 0;
 		for (i = 0; i < slip_maxdev; i++) {
@@ -1436,7 +1423,7 @@ static void __exit slip_exit(void)
 	kfree(slip_devs);
 	slip_devs = NULL;
 
-	if ((i = tty_register_ldisc(N_SLIP, NULL)))
+	if ((i = tty_unregister_ldisc(N_SLIP)))
 	{
 		printk(KERN_ERR "SLIP: can't unregister line discipline (err = %d)\n", i);
 	}

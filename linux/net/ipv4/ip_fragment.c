@@ -377,7 +377,7 @@ static struct ipq *ip_frag_create(unsigned hash, struct iphdr *iph, u32 user)
 	return ip_frag_intern(hash, qp);
 
 out_nomem:
-	NETDEBUG(if (net_ratelimit()) printk(KERN_ERR "ip_frag_create: no memory left !\n"));
+	LIMIT_NETDEBUG(printk(KERN_ERR "ip_frag_create: no memory left !\n"));
 	return NULL;
 }
 
@@ -457,7 +457,7 @@ static void ip_frag_queue(struct ipq *qp, struct sk_buff *skb)
 
 	if (pskb_pull(skb, ihl) == NULL)
 		goto err;
-	if (pskb_trim(skb, end-offset))
+	if (pskb_trim_rcsum(skb, end-offset))
 		goto err;
 
 	/* Find out which fragments are in front and at the back of us
@@ -625,10 +625,8 @@ static struct sk_buff *ip_frag_reasm(struct ipq *qp, struct net_device *dev)
 	return head;
 
 out_nomem:
- 	NETDEBUG(if (net_ratelimit())
-	         printk(KERN_ERR 
-			"IP: queue_glue: no memory for gluing queue %p\n",
-			qp));
+ 	LIMIT_NETDEBUG(printk(KERN_ERR "IP: queue_glue: no memory for gluing "
+			      "queue %p\n", qp));
 	goto out_fail;
 out_oversize:
 	if (net_ratelimit())

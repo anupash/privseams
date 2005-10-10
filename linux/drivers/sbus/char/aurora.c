@@ -81,10 +81,6 @@ unsigned char irqs[4] = {
 int irqhit=0;
 #endif
 
-#ifndef MIN
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
-
 static struct tty_driver *aurora_driver;
 static struct Aurora_board aurora_board[AURORA_NBOARD] = {
 	{0,},
@@ -594,7 +590,7 @@ static void aurora_transmit(struct Aurora_board const * bp, int chip)
 					    &bp->r[chip]->r[CD180_TDR]);
 				port->COR2 &= ~COR2_ETC;
 			}
-			count = MIN(port->break_length, 0xff);
+			count = min(port->break_length, 0xff);
 			sbus_writeb(CD180_C_ESC,
 				    &bp->r[chip]->r[CD180_TDR]);
 			sbus_writeb(CD180_C_DELAY,
@@ -1519,8 +1515,7 @@ static void aurora_close(struct tty_struct * tty, struct file * filp)
 		 */
 		timeout = jiffies+HZ;
 		while(port->SRER & SRER_TXEMPTY)  {
-			current->state = TASK_INTERRUPTIBLE;
-			schedule_timeout(port->timeout);
+			msleep_interruptible(jiffies_to_msecs(port->timeout));
 			if (time_after(jiffies, timeout))
 				break;
 		}
@@ -1537,8 +1532,7 @@ static void aurora_close(struct tty_struct * tty, struct file * filp)
 	port->tty = 0;
 	if (port->blocked_open) {
 		if (port->close_delay) {
-			current->state = TASK_INTERRUPTIBLE;
-			schedule_timeout(port->close_delay);
+			msleep_interruptible(jiffies_to_msecs(port->close_delay));
 		}
 		wake_up_interruptible(&port->open_wait);
 	}
@@ -1575,7 +1569,7 @@ static int aurora_write(struct tty_struct * tty,
 	save_flags(flags);
 	while (1) {
 		cli();
-		c = MIN(count, MIN(SERIAL_XMIT_SIZE - port->xmit_cnt - 1,
+		c = min(count, min(SERIAL_XMIT_SIZE - port->xmit_cnt - 1,
 				   SERIAL_XMIT_SIZE - port->xmit_head));
 		if (c <= 0) {
 			restore_flags(flags);
@@ -1887,14 +1881,12 @@ extern int aurora_get_serial_info(struct Aurora_port * port,
 {
 	struct serial_struct tmp;
 	struct Aurora_board *bp = port_Board(port);
-	int error;
 	
 #ifdef AURORA_DEBUG
 	printk("aurora_get_serial_info: start\n");
 #endif
-	error = verify_area(VERIFY_WRITE, (void *) retinfo, sizeof(tmp));
-	if (error)
-		return error;
+	if (!access_ok(VERIFY_WRITE, (void *) retinfo, sizeof(tmp)))
+		return -EFAULT;
 	
 	memset(&tmp, 0, sizeof(tmp));
 	tmp.type = PORT_CIRRUS;

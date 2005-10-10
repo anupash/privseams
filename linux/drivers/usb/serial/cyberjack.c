@@ -4,7 +4,7 @@
  *  Copyright (C) 2001  REINER SCT
  *  Author: Matthias Bruestle
  *
- *  Contact: linux-usb@sii.li (see MAINTAINERS)
+ *  Contact: support@reiner-sct.com (see MAINTAINERS)
  *
  *  This program is largely derived from work by the linux-usb group
  *  and associated source files.  Please see the usb/serial files for
@@ -20,6 +20,11 @@
  *
  *  In case of problems, please write to the contact e-mail address
  *  mentioned above.
+ *
+ *  Please note that later models of the cyberjack reader family are
+ *  supported by a libusb-based userspace device driver.
+ *
+ *  Homepage: http://www.reiner-sct.de/support/treiber_cyberjack.php#linux
  */
 
 
@@ -208,10 +213,14 @@ static int cyberjack_write (struct usb_serial_port *port, const unsigned char *b
 		return (0);
 	}
 
-	if (port->write_urb->status == -EINPROGRESS) {
+	spin_lock(&port->lock);
+	if (port->write_urb_busy) {
+		spin_unlock(&port->lock);
 		dbg("%s - already writing", __FUNCTION__);
-		return (0);
+		return 0;
 	}
+	port->write_urb_busy = 1;
+	spin_unlock(&port->lock);
 
 	spin_lock_irqsave(&priv->lock, flags);
 
@@ -219,6 +228,7 @@ static int cyberjack_write (struct usb_serial_port *port, const unsigned char *b
 		/* To much data for buffer. Reset buffer. */
 		priv->wrfilled=0;
 		spin_unlock_irqrestore(&priv->lock, flags);
+		port->write_urb_busy = 0;
 		return (0);
 	}
 
@@ -263,6 +273,7 @@ static int cyberjack_write (struct usb_serial_port *port, const unsigned char *b
 			priv->wrfilled=0;
 			priv->wrsent=0;
 			spin_unlock_irqrestore(&priv->lock, flags);
+			port->write_urb_busy = 0;
 			return 0;
 		}
 
@@ -407,7 +418,8 @@ static void cyberjack_write_bulk_callback (struct urb *urb, struct pt_regs *regs
 	struct cyberjack_private *priv = usb_get_serial_port_data(port);
 
 	dbg("%s - port %d", __FUNCTION__, port->number);
-	
+
+	port->write_urb_busy = 0;
 	if (urb->status) {
 		dbg("%s - nonzero write bulk status received: %d", __FUNCTION__, urb->status);
 		return;
@@ -418,12 +430,6 @@ static void cyberjack_write_bulk_callback (struct urb *urb, struct pt_regs *regs
 	/* only do something if we have more data to send */
 	if( priv->wrfilled ) {
 		int length, blksize, result;
-
-		if (port->write_urb->status == -EINPROGRESS) {
-			dbg("%s - already writing", __FUNCTION__);
-			spin_unlock(&priv->lock);
-			return;
-		}
 
 		dbg("%s - transmitting data (frame n)", __FUNCTION__);
 

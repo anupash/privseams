@@ -122,10 +122,6 @@ config TANBAC_TB0229
 	  The TANBAC TB0229 (VR4131DIMM) is a MIPS-based platform manufactured by TANBAC.
 	  Please refer to <http://www.tanbac.co.jp/> about VR4131DIMM.
 
-config TANBAC_TB0219
-	bool "Added TANBAC TB0219 Base board support"
-	depends on TANBAC_TB0229
-
 config VICTOR_MPC30X
 	bool "Support for Victor MP-C303/304"
 	select DMA_NONCOHERENT
@@ -496,7 +492,7 @@ config SGI_SN0_N_MODE
 	  which allows for more memory.  Your system is most probably
 	  running in M-Mode, so you should say N here.
 
-config DISCONTIGMEM
+config ARCH_DISCONTIGMEM_ENABLE
 	bool
 	default y if SGI_IP27
 	help
@@ -1092,41 +1088,6 @@ config ARC32
 	depends on MACH_JAZZ || SNI_RM200_PCI || SGI_IP22 || SGI_IP32
 	default y
 
-config FB
-	bool
-	depends on MIPS_MAGNUM_4000 || OLIVETTI_M700
-	default y
-	---help---
-	  The frame buffer device provides an abstraction for the graphics
-	  hardware. It represents the frame buffer of some video hardware and
-	  allows application software to access the graphics hardware through
-	  a well-defined interface, so the software doesn't need to know
-	  anything about the low-level (hardware register) stuff.
-
-	  Frame buffer devices work identically across the different
-	  architectures supported by Linux and make the implementation of
-	  application programs easier and more portable; at this point, an X
-	  server exists which uses the frame buffer device exclusively.
-	  On several non-X86 architectures, the frame buffer device is the
-	  only way to use the graphics hardware.
-
-	  The device is accessed through special device nodes, usually located
-	  in the /dev directory, i.e. /dev/fb*.
-
-	  You need an utility program called fbset to make full use of frame
-	  buffer devices. Please read <file:Documentation/fb/framebuffer.txt>
-	  and the Framebuffer-HOWTO at <http://www.tldp.org/docs.html#howto>
-	  for more information.
-
-	  Say Y here and to the driver for your graphics board below if you
-	  are compiling a kernel for a non-x86 architecture.
-
-	  If you are compiling for the x86 architecture, you can say Y if you
-	  want to play with it, but it is not essential. Please note that
-	  running graphical applications that directly touch the hardware
-	  (e.g. an accelerated X server) and that are not frame buffer
-	  device-aware may cause unexpected results. If unsure, say N.
-
 config HAVE_STD_PC_SERIAL_PORT
 	bool
 
@@ -1420,6 +1381,12 @@ config HIGHMEM
 	bool "High Memory Support"
 	depends on MIPS32 && (CPU_R3000 || CPU_SB1 || CPU_R7000 || CPU_RM9000 || CPU_R10000) && !(MACH_DECSTATION || MOMENCO_JAGUAR_ATX)
 
+config ARCH_FLATMEM_ENABLE
+	def_bool y
+	depends on !NUMA
+
+source "mm/Kconfig"
+
 config SMP
 	bool "Multi-Processing support"
 	depends on CPU_RM9000 || (SIBYTE_SB1250 && !SIBYTE_STANDALONE) || SGI_IP27
@@ -1638,6 +1605,8 @@ config PM
 
 endmenu
 
+source "net/Kconfig"
+
 source "drivers/Kconfig"
 
 source "fs/Kconfig"
@@ -1658,5 +1627,9 @@ config GENERIC_HARDIRQS
 	default y
 
 config GENERIC_IRQ_PROBE
+	bool
+	default y
+
+config ISA_DMA_API
 	bool
 	default y

@@ -48,7 +48,7 @@
 
 DEFINE_SPINLOCK(mostek_lock);
 DEFINE_SPINLOCK(rtc_lock);
-unsigned long mstk48t02_regs = 0UL;
+void __iomem *mstk48t02_regs = NULL;
 #ifdef CONFIG_PCI
 unsigned long ds1287_regs = 0UL;
 #endif
@@ -59,8 +59,8 @@ u64 jiffies_64 = INITIAL_JIFFIES;
 
 EXPORT_SYMBOL(jiffies_64);
 
-static unsigned long mstk48t08_regs = 0UL;
-static unsigned long mstk48t59_regs = 0UL;
+static void __iomem *mstk48t08_regs;
+static void __iomem *mstk48t59_regs;
 
 static int set_rtc_mmss(unsigned long);
 
@@ -73,7 +73,7 @@ static __initdata struct sparc64_tick_ops dummy_tick_ops = {
 	.get_tick	= dummy_get_tick,
 };
 
-struct sparc64_tick_ops *tick_ops = &dummy_tick_ops;
+struct sparc64_tick_ops *tick_ops __read_mostly = &dummy_tick_ops;
 
 #define TICK_PRIV_BIT	(1UL << 63)
 
@@ -195,7 +195,7 @@ static unsigned long tick_add_tick(unsigned long adj, unsigned long offset)
 	return new_tick;
 }
 
-static struct sparc64_tick_ops tick_operations = {
+static struct sparc64_tick_ops tick_operations __read_mostly = {
 	.init_tick	=	tick_init_tick,
 	.get_tick	=	tick_get_tick,
 	.get_compare	=	tick_get_compare,
@@ -276,7 +276,7 @@ static unsigned long stick_add_compare(unsigned long adj)
 	return new_compare;
 }
 
-static struct sparc64_tick_ops stick_operations = {
+static struct sparc64_tick_ops stick_operations __read_mostly = {
 	.init_tick	=	stick_init_tick,
 	.get_tick	=	stick_get_tick,
 	.get_compare	=	stick_get_compare,
@@ -422,7 +422,7 @@ static unsigned long hbtick_add_compare(unsigned long adj)
 	return val;
 }
 
-static struct sparc64_tick_ops hbtick_operations = {
+static struct sparc64_tick_ops hbtick_operations __read_mostly = {
 	.init_tick	=	hbtick_init_tick,
 	.get_tick	=	hbtick_get_tick,
 	.get_compare	=	hbtick_get_compare,
@@ -437,10 +437,9 @@ static struct sparc64_tick_ops hbtick_operations = {
  * NOTE: On SUN5 systems the ticker interrupt comes in using 2
  *       interrupts, one at level14 and one with softint bit 0.
  */
-unsigned long timer_tick_offset;
-unsigned long timer_tick_compare;
+unsigned long timer_tick_offset __read_mostly;
 
-static unsigned long timer_ticks_per_nsec_quotient;
+static unsigned long timer_ticks_per_nsec_quotient __read_mostly;
 
 #define TICK_SIZE (tick_nsec / 1000)
 
@@ -464,7 +463,7 @@ static inline void timer_check_rtc(void)
 
 static irqreturn_t timer_interrupt(int irq, void *dev_id, struct pt_regs * regs)
 {
-	unsigned long ticks, pstate;
+	unsigned long ticks, compare, pstate;
 
 	write_seqlock(&xtime_lock);
 
@@ -483,14 +482,14 @@ static irqreturn_t timer_interrupt(int irq, void *dev_id, struct pt_regs * regs)
 				     : "=r" (pstate)
 				     : "i" (PSTATE_IE));
 
-		timer_tick_compare = tick_ops->add_compare(timer_tick_offset);
+		compare = tick_ops->add_compare(timer_tick_offset);
 		ticks = tick_ops->get_tick();
 
 		/* Restore PSTATE_IE. */
 		__asm__ __volatile__("wrpr	%0, 0x0, %%pstate"
 				     : /* no outputs */
 				     : "r" (pstate));
-	} while (time_after_eq(ticks, timer_tick_compare));
+	} while (time_after_eq(ticks, compare));
 
 	timer_check_rtc();
 
@@ -506,11 +505,6 @@ void timer_tick_interrupt(struct pt_regs *regs)
 
 	do_timer(regs);
 
-	/*
-	 * Only keep timer_tick_offset uptodate, but don't set TICK_CMPR.
-	 */
-	timer_tick_compare = tick_ops->get_compare() + timer_tick_offset;
-
 	timer_check_rtc();
 
 	write_sequnlock(&xtime_lock);
@@ -520,7 +514,7 @@ void timer_tick_interrupt(struct pt_regs *regs)
 /* Kick start a stopped clock (procedure from the Sun NVRAM/hostid FAQ). */
 static void __init kick_start_clock(void)
 {
-	unsigned long regs = mstk48t02_regs;
+	void __iomem *regs = mstk48t02_regs;
 	u8 sec, tmp;
 	int i, count;
 
@@ -604,7 +598,7 @@ static void __init kick_start_clock(void)
 /* Return nonzero if the clock chip battery is low. */
 static int __init has_low_battery(void)
 {
-	unsigned long regs = mstk48t02_regs;
+	void __iomem *regs = mstk48t02_regs;
 	u8 data1, data2;
 
 	spin_lock_irq(&mostek_lock);
@@ -623,7 +617,7 @@ static int __init has_low_battery(void)
 static void __init set_system_time(void)
 {
 	unsigned int year, mon, day, hour, min, sec;
-	unsigned long mregs = mstk48t02_regs;
+	void __iomem *mregs = mstk48t02_regs;
 #ifdef CONFIG_PCI
 	unsigned long dregs = ds1287_regs;
 #else
@@ -779,6 +773,7 @@ void __init clock_probe(void)
 		    strcmp(model, "mk48t59") &&
 		    strcmp(model, "m5819") &&
 		    strcmp(model, "m5819p") &&
+		    strcmp(model, "m5823") &&
 		    strcmp(model, "ds1287")) {
 			if (cbus != NULL) {
 				prom_printf("clock_probe: Central bus lacks timer chip.\n");
@@ -838,10 +833,12 @@ void __init clock_probe(void)
 
 			if (!strcmp(model, "ds1287") ||
 			    !strcmp(model, "m5819") ||
-			    !strcmp(model, "m5819p")) {
+			    !strcmp(model, "m5819p") ||
+			    !strcmp(model, "m5823")) {
 				ds1287_regs = edev->resource[0].start;
 			} else {
-				mstk48t59_regs = edev->resource[0].start;
+				mstk48t59_regs = (void __iomem *)
+					edev->resource[0].start;
 				mstk48t02_regs = mstk48t59_regs + MOSTEK_48T59_48T02;
 			}
 			break;
@@ -859,10 +856,12 @@ try_isa_clock:
 			}
 			if (!strcmp(model, "ds1287") ||
 			    !strcmp(model, "m5819") ||
-			    !strcmp(model, "m5819p")) {
+			    !strcmp(model, "m5819p") ||
+			    !strcmp(model, "m5823")) {
 				ds1287_regs = isadev->resource.start;
 			} else {
-				mstk48t59_regs = isadev->resource.start;
+				mstk48t59_regs = (void __iomem *)
+					isadev->resource.start;
 				mstk48t02_regs = mstk48t59_regs + MOSTEK_48T59_48T02;
 			}
 			break;
@@ -890,21 +889,24 @@ try_isa_clock:
 		}
 
 		if(model[5] == '0' && model[6] == '2') {
-			mstk48t02_regs = (((u64)clk_reg[0].phys_addr) |
-					  (((u64)clk_reg[0].which_io)<<32UL));
+			mstk48t02_regs = (void __iomem *)
+				(((u64)clk_reg[0].phys_addr) |
+				 (((u64)clk_reg[0].which_io)<<32UL));
 		} else if(model[5] == '0' && model[6] == '8') {
-			mstk48t08_regs = (((u64)clk_reg[0].phys_addr) |
-					  (((u64)clk_reg[0].which_io)<<32UL));
+			mstk48t08_regs = (void __iomem *)
+				(((u64)clk_reg[0].phys_addr) |
+				 (((u64)clk_reg[0].which_io)<<32UL));
 			mstk48t02_regs = mstk48t08_regs + MOSTEK_48T08_48T02;
 		} else {
-			mstk48t59_regs = (((u64)clk_reg[0].phys_addr) |
-					  (((u64)clk_reg[0].which_io)<<32UL));
+			mstk48t59_regs = (void __iomem *)
+				(((u64)clk_reg[0].phys_addr) |
+				 (((u64)clk_reg[0].which_io)<<32UL));
 			mstk48t02_regs = mstk48t59_regs + MOSTEK_48T59_48T02;
 		}
 		break;
 	}
 
-	if (mstk48t02_regs != 0UL) {
+	if (mstk48t02_regs != NULL) {
 		/* Report a low battery voltage condition. */
 		if (has_low_battery())
 			prom_printf("NVRAM: Low battery voltage!\n");
@@ -965,7 +967,7 @@ static void sparc64_start_timers(irqreturn_t (*cfunc)(int, void *, struct pt_reg
 	int err;
 
 	/* Register IRQ handler. */
-	err = request_irq(build_irq(0, 0, 0UL, 0UL), cfunc, SA_STATIC_ALLOC,
+	err = request_irq(build_irq(0, 0, 0UL, 0UL), cfunc, 0,
 			  "timer", NULL);
 
 	if (err) {
@@ -1084,7 +1086,7 @@ unsigned long long sched_clock(void)
 static int set_rtc_mmss(unsigned long nowtime)
 {
 	int real_seconds, real_minutes, chip_minutes;
-	unsigned long mregs = mstk48t02_regs;
+	void __iomem *mregs = mstk48t02_regs;
 #ifdef CONFIG_PCI
 	unsigned long dregs = ds1287_regs;
 #else

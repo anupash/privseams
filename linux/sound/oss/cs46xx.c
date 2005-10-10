@@ -388,7 +388,7 @@ static int cs_hardware_init(struct cs_card *card);
 static int cs46xx_powerup(struct cs_card *card, unsigned int type);
 static int cs461x_powerdown(struct cs_card *card, unsigned int type, int suspendflag);
 static void cs461x_clear_serial_FIFOs(struct cs_card *card, int type);
-static int cs46xx_suspend_tbl(struct pci_dev *pcidev, u32 state);
+static int cs46xx_suspend_tbl(struct pci_dev *pcidev, pm_message_t state);
 static int cs46xx_resume_tbl(struct pci_dev *pcidev);
 
 #ifndef CS46XX_ACPI_SUPPORT
@@ -3640,7 +3640,7 @@ static int cs46xx_restart_part(struct cs_card *card)
 
 static void cs461x_reset(struct cs_card *card);
 static void cs461x_proc_stop(struct cs_card *card);
-static int cs46xx_suspend(struct cs_card *card, u32 state)
+static int cs46xx_suspend(struct cs_card *card, pm_message_t state)
 {
 	unsigned int tmp;
 	CS_DBGOUT(CS_PM | CS_FUNCTION, 4, 
@@ -4174,7 +4174,7 @@ static int cs_ioctl_mixdev(struct inode *inode, struct file *file, unsigned int 
 				list_for_each(entry, &cs46xx_devs)
 				{
 					card = list_entry(entry, struct cs_card, list);
-					cs46xx_suspend(card, 0);
+					cs46xx_suspend(card, PMSG_ON);
 				}
 
 			}
@@ -5749,7 +5749,7 @@ static int cs46xx_pm_callback(struct pm_dev *dev, pm_request_t rqst, void *data)
 			case PM_SUSPEND:
 				CS_DBGOUT(CS_PM, 2, printk(KERN_INFO
 					"cs46xx: PM suspend request\n"));
-				if(cs46xx_suspend(card, 0))
+				if(cs46xx_suspend(card, PMSG_SUSPEND))
 				{
 				    CS_DBGOUT(CS_ERROR, 2, printk(KERN_INFO
 					"cs46xx: PM suspend request refused\n"));
@@ -5774,12 +5774,12 @@ static int cs46xx_pm_callback(struct pm_dev *dev, pm_request_t rqst, void *data)
 #endif
 
 #if CS46XX_ACPI_SUPPORT
-static int cs46xx_suspend_tbl(struct pci_dev *pcidev, u32 state)
+static int cs46xx_suspend_tbl(struct pci_dev *pcidev, pm_message_t state)
 {
 	struct cs_card *s = PCI_GET_DRIVER_DATA(pcidev);
 	CS_DBGOUT(CS_PM | CS_FUNCTION, 2, 
 		printk(KERN_INFO "cs46xx: cs46xx_suspend_tbl request\n"));
-	cs46xx_suspend(s, 0);
+	cs46xx_suspend(s, state);
 	return 0;
 }
 

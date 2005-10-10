@@ -4,8 +4,10 @@
 
 #include <linux/config.h>
 #include <linux/init.h>
+#include <linux/kexec.h>
 
 #include <asm/setup.h>
+#include <asm/page.h>
 
 #ifdef CONFIG_APUS
 #include <asm-m68k/machdep.h>
@@ -15,6 +17,7 @@ struct pt_regs;
 struct pci_bus;	
 struct pci_dev;
 struct seq_file;
+struct file;
 
 /* We export this macro for external modules like Alsa to know if
  * ppc_md.feature_call is implemented or not
@@ -93,6 +96,12 @@ struct machdep_calls {
 	/* Called at then very end of pcibios_init() */
 	void (*pcibios_after_init)(void);
 
+	/* Get access protection for /dev/mem */
+	pgprot_t	(*phys_mem_access_prot)(struct file *file,
+						unsigned long offset,
+						unsigned long size,
+						pgprot_t vma_prot);
+
 	/* this is for modules, since _machine can be a define -- Cort */
 	int ppc_machine;
 
@@ -106,6 +115,36 @@ struct machdep_calls {
 	/* functions for dealing with other cpus */
 	struct smp_ops_t *smp_ops;
 #endif /* CONFIG_SMP */
+
+#ifdef CONFIG_KEXEC
+	/* Called to shutdown machine specific hardware not already controlled
+	 * by other drivers.
+	 * XXX Should we move this one out of kexec scope?
+	 */
+	void (*machine_shutdown)(void);
+
+	/* Called to do the minimal shutdown needed to run a kexec'd kernel
+	 * to run successfully.
+	 * XXX Should we move this one out of kexec scope?
+	 */
+	void (*machine_crash_shutdown)(void);
+
+	/* Called to do what every setup is needed on image and the
+	 * reboot code buffer. Returns 0 on success.
+	 * Provide your own (maybe dummy) implementation if your platform
+	 * claims to support kexec.
+	 */
+	int (*machine_kexec_prepare)(struct kimage *image);
+
+	/* Called to handle any machine specific cleanup on image */
+	void (*machine_kexec_cleanup)(struct kimage *image);
+
+	/* Called to perform the _real_ kexec.
+	 * Do NOT allocate memory or fail here. We are past the point of
+	 * no return.
+	 */
+	void (*machine_kexec)(struct kimage *image);
+#endif /* CONFIG_KEXEC */
 };
 
 extern struct machdep_calls ppc_md;
@@ -121,6 +160,7 @@ typedef enum sys_ctrler_kind {
 	SYS_CTRLER_UNKNOWN = 0,
 	SYS_CTRLER_CUDA = 1,
 	SYS_CTRLER_PMU = 2,
+	SYS_CTRLER_SMU = 3,
 } sys_ctrler_t;
 
 extern sys_ctrler_t sys_ctrler;

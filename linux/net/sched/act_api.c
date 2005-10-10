@@ -171,10 +171,10 @@ repeat:
 				skb->tc_verd = SET_TC_OK2MUNGE(skb->tc_verd);
 				skb->tc_verd = CLR_TC_MUNGED(skb->tc_verd);
 			}
-			if (ret != TC_ACT_PIPE)
-				goto exec_done;
 			if (ret == TC_ACT_REPEAT)
 				goto repeat;	/* we need a ttl - JHS */
+			if (ret != TC_ACT_PIPE)
+				goto exec_done;
 		}
 		act = a->next;
 	}
@@ -228,7 +228,7 @@ tcf_action_dump_1(struct sk_buff *skb, struct tc_action *a, int bind, int ref)
 		return err;
 
 	RTA_PUT(skb, TCA_KIND, IFNAMSIZ, a->ops->kind);
-	if (tcf_action_copy_stats(skb, a))
+	if (tcf_action_copy_stats(skb, a, 0))
 		goto rtattr_failure;
 	r = (struct rtattr*) skb->tail;
 	RTA_PUT(skb, TCA_OPTIONS, 0, NULL);
@@ -380,19 +380,26 @@ err:
 	return NULL;
 }
 
-int tcf_action_copy_stats(struct sk_buff *skb, struct tc_action *a)
+int tcf_action_copy_stats(struct sk_buff *skb, struct tc_action *a,
+			  int compat_mode)
 {
-	int err;
+	int err = 0;
 	struct gnet_dump d;
 	struct tcf_act_hdr *h = a->priv;
 	
 	if (h == NULL)
 		goto errout;
 
-	if (a->type == TCA_OLD_COMPAT)
-		err = gnet_stats_start_copy_compat(skb, TCA_ACT_STATS,
-			TCA_STATS, TCA_XSTATS, h->stats_lock, &d);
-	else
+	/* compat_mode being true specifies a call that is supposed
+	 * to add additional backward compatiblity statistic TLVs.
+	 */
+	if (compat_mode) {
+		if (a->type == TCA_OLD_COMPAT)
+			err = gnet_stats_start_copy_compat(skb, 0,
+				TCA_STATS, TCA_XSTATS, h->stats_lock, &d);
+		else
+			return 0;
+	} else
 		err = gnet_stats_start_copy(skb, TCA_ACT_STATS,
 			h->stats_lock, &d);
 
@@ -421,17 +428,19 @@ errout:
 
 static int
 tca_get_fill(struct sk_buff *skb, struct tc_action *a, u32 pid, u32 seq,
-             unsigned flags, int event, int bind, int ref)
+             u16 flags, int event, int bind, int ref)
 {
 	struct tcamsg *t;
 	struct nlmsghdr *nlh;
 	unsigned char *b = skb->tail;
 	struct rtattr *x;
 
-	nlh = NLMSG_PUT(skb, pid, seq, event, sizeof(*t));
-	nlh->nlmsg_flags = flags;
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*t), flags);
+
 	t = NLMSG_DATA(nlh);
 	t->tca_family = AF_UNSPEC;
+	t->tca__pad1 = 0;
+	t->tca__pad2 = 0;
 	
 	x = (struct rtattr*) skb->tail;
 	RTA_PUT(skb, TCA_ACT_TAB, 0, NULL);
@@ -573,6 +582,8 @@ static int tca_action_flush(struct rtattr *rta, struct nlmsghdr *n, u32 pid)
 	nlh = NLMSG_PUT(skb, pid, n->nlmsg_seq, RTM_DELACTION, sizeof(*t));
 	t = NLMSG_DATA(nlh);
 	t->tca_family = AF_UNSPEC;
+	t->tca__pad1 = 0;
+	t->tca__pad2 = 0;
 
 	x = (struct rtattr *) skb->tail;
 	RTA_PUT(skb, TCA_ACT_TAB, 0, NULL);
@@ -662,7 +673,7 @@ err:
 }
 
 static int tcf_add_notify(struct tc_action *a, u32 pid, u32 seq, int event,
-                          unsigned flags)
+                          u16 flags)
 {
 	struct tcamsg *t;
 	struct nlmsghdr *nlh;
@@ -677,11 +688,12 @@ static int tcf_add_notify(struct tc_action *a, u32 pid, u32 seq, int event,
 
 	b = (unsigned char *)skb->tail;
 
-	nlh = NLMSG_PUT(skb, pid, seq, event, sizeof(*t));
-	nlh->nlmsg_flags = flags;
+	nlh = NLMSG_NEW(skb, pid, seq, event, sizeof(*t), flags);
 	t = NLMSG_DATA(nlh);
 	t->tca_family = AF_UNSPEC;
-	
+	t->tca__pad1 = 0;
+	t->tca__pad2 = 0;
+
 	x = (struct rtattr*) skb->tail;
 	RTA_PUT(skb, TCA_ACT_TAB, 0, NULL);
 
@@ -836,6 +848,8 @@ tc_dump_action(struct sk_buff *skb, struct netlink_callback *cb)
 	                cb->nlh->nlmsg_type, sizeof(*t));
 	t = NLMSG_DATA(nlh);
 	t->tca_family = AF_UNSPEC;
+	t->tca__pad1 = 0;
+	t->tca__pad2 = 0;
 
 	x = (struct rtattr *) skb->tail;
 	RTA_PUT(skb, TCA_ACT_TAB, 0, NULL);
@@ -874,7 +888,7 @@ static int __init tc_action_init(void)
 		link_p[RTM_GETACTION-RTM_BASE].dumpit = tc_dump_action;
 	}
 
-	printk("TC classifier action (bugs to netdev@oss.sgi.com cc "
+	printk("TC classifier action (bugs to netdev@vger.kernel.org cc "
 	       "hadi@cyberus.ca)\n");
 	return 0;
 }

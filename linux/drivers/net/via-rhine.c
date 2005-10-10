@@ -186,6 +186,7 @@ static const int multicast_filter_limit = 32;
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/pci.h>
+#include <linux/dma-mapping.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 #include <linux/skbuff.h>
@@ -390,7 +391,7 @@ enum backoff_bits {
 
 #ifdef USE_MMIO
 /* Registers we check that mmio and reg are the same. */
-int mmio_verify_registers[] = {
+static const int mmio_verify_registers[] = {
 	RxConfig, TxConfig, IntrEnable, ConfigA, ConfigB, ConfigC, ConfigD,
 	0
 };
@@ -506,7 +507,7 @@ static struct net_device_stats *rhine_get_stats(struct net_device *dev);
 static int netdev_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
 static struct ethtool_ops netdev_ethtool_ops;
 static int  rhine_close(struct net_device *dev);
-static void rhine_shutdown (struct device *gdev);
+static void rhine_shutdown (struct pci_dev *pdev);
 
 #define RHINE_WAIT_FOR(condition) do {					\
 	int i=1024;							\
@@ -740,7 +741,7 @@ static int __devinit rhine_init_one(struct pci_dev *pdev,
 		goto err_out;
 
 	/* this should always be supported */
-	rc = pci_set_dma_mask(pdev, 0xffffffff);
+	rc = pci_set_dma_mask(pdev, DMA_32BIT_MASK);
 	if (rc) {
 		printk(KERN_ERR "32-bit PCI DMA addresses not supported by "
 		       "the card!?\n");
@@ -989,7 +990,7 @@ static void alloc_rbufs(struct net_device *dev)
 		skb->dev = dev;                 /* Mark as being used by this device. */
 
 		rp->rx_skbuff_dma[i] =
-			pci_map_single(rp->pdev, skb->tail, rp->rx_buf_sz,
+			pci_map_single(rp->pdev, skb->data, rp->rx_buf_sz,
 				       PCI_DMA_FROMDEVICE);
 
 		rp->rx_ring[i].addr = cpu_to_le32(rp->rx_skbuff_dma[i]);
@@ -1197,8 +1198,10 @@ static int rhine_open(struct net_device *dev)
 		       dev->name, rp->pdev->irq);
 
 	rc = alloc_ring(dev);
-	if (rc)
+	if (rc) {
+		free_irq(rp->pdev->irq, dev);
 		return rc;
+	}
 	alloc_rbufs(dev);
 	alloc_tbufs(dev);
 	rhine_chip_reset(dev);
@@ -1395,7 +1398,7 @@ static void rhine_tx(struct net_device *dev)
 	while (rp->dirty_tx != rp->cur_tx) {
 		txstatus = le32_to_cpu(rp->tx_ring[entry].tx_status);
 		if (debug > 6)
-			printk(KERN_DEBUG " Tx scavenge %d status %8.8x.\n",
+			printk(KERN_DEBUG "Tx scavenge %d status %8.8x.\n",
 			       entry, txstatus);
 		if (txstatus & DescOwn)
 			break;
@@ -1466,7 +1469,7 @@ static void rhine_rx(struct net_device *dev)
 		int data_size = desc_status >> 16;
 
 		if (debug > 4)
-			printk(KERN_DEBUG " rhine_rx() status is %8.8x.\n",
+			printk(KERN_DEBUG "rhine_rx() status is %8.8x.\n",
 			       desc_status);
 		if (--boguscnt < 0)
 			break;
@@ -1484,7 +1487,7 @@ static void rhine_rx(struct net_device *dev)
 			} else if (desc_status & RxErr) {
 				/* There was a error. */
 				if (debug > 2)
-					printk(KERN_DEBUG " rhine_rx() Rx "
+					printk(KERN_DEBUG "rhine_rx() Rx "
 					       "error was %8.8x.\n",
 					       desc_status);
 				rp->stats.rx_errors++;
@@ -1515,7 +1518,7 @@ static void rhine_rx(struct net_device *dev)
 							    PCI_DMA_FROMDEVICE);
 
 				eth_copy_and_sum(skb,
-						 rp->rx_skbuff[entry]->tail,
+						 rp->rx_skbuff[entry]->data,
 						 pkt_len, 0);
 				skb_put(skb, pkt_len);
 				pci_dma_sync_single_for_device(rp->pdev,
@@ -1558,7 +1561,7 @@ static void rhine_rx(struct net_device *dev)
 				break;	/* Better luck next round. */
 			skb->dev = dev;	/* Mark as being used by this device. */
 			rp->rx_skbuff_dma[entry] =
-				pci_map_single(rp->pdev, skb->tail,
+				pci_map_single(rp->pdev, skb->data,
 					       rp->rx_buf_sz,
 					       PCI_DMA_FROMDEVICE);
 			rp->rx_ring[entry].addr = cpu_to_le32(rp->rx_skbuff_dma[entry]);
@@ -1892,12 +1895,14 @@ static void __devexit rhine_remove_one(struct pci_dev *pdev)
 	pci_set_drvdata(pdev, NULL);
 }
 
-static void rhine_shutdown (struct device *gendev)
+static void rhine_shutdown (struct pci_dev *pdev)
 {
-	struct pci_dev *pdev = to_pci_dev(gendev);
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct rhine_private *rp = netdev_priv(dev);
 	void __iomem *ioaddr = rp->base;
+
+	if (!(rp->quirks & rqWOL))
+		return; /* Nothing to do for non-WOL adapters */
 
 	rhine_power_init(dev);
 
@@ -1937,7 +1942,7 @@ static void rhine_shutdown (struct device *gendev)
 }
 
 #ifdef CONFIG_PM
-static int rhine_suspend(struct pci_dev *pdev, u32 state)
+static int rhine_suspend(struct pci_dev *pdev, pm_message_t state)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct rhine_private *rp = netdev_priv(dev);
@@ -1950,7 +1955,7 @@ static int rhine_suspend(struct pci_dev *pdev, u32 state)
 	pci_save_state(pdev);
 
 	spin_lock_irqsave(&rp->lock, flags);
-	rhine_shutdown(&pdev->dev);
+	rhine_shutdown(pdev);
 	spin_unlock_irqrestore(&rp->lock, flags);
 
 	free_irq(dev->irq, dev);
@@ -2004,9 +2009,7 @@ static struct pci_driver rhine_driver = {
 	.suspend	= rhine_suspend,
 	.resume		= rhine_resume,
 #endif /* CONFIG_PM */
-	.driver = {
-		.shutdown = rhine_shutdown,
-	}
+	.shutdown =	rhine_shutdown,
 };
 
 

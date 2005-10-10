@@ -95,6 +95,7 @@ static unsigned long vgacon_uni_pagedir[2];
 /* Description of the hardware situation */
 static unsigned long	vga_vram_base;		/* Base of video memory */
 static unsigned long	vga_vram_end;		/* End of video memory */
+static int		vga_vram_size;		/* Size of video memory */
 static u16		vga_video_port_reg;	/* Video register select port */
 static u16		vga_video_port_val;	/* Video register value port */
 static unsigned int	vga_video_num_columns;	/* Number of text columns */
@@ -288,6 +289,7 @@ static const char __init *vgacon_startup(void)
 
 	vga_vram_base = VGA_MAP_MEM(vga_vram_base);
 	vga_vram_end = VGA_MAP_MEM(vga_vram_end);
+	vga_vram_size = vga_vram_end - vga_vram_base;
 
 	/*
 	 *      Find out if there is a graphics card present.
@@ -337,14 +339,16 @@ static void vgacon_init(struct vc_data *c, int init)
 	c->vc_scan_lines = vga_scan_lines;
 	c->vc_font.height = vga_video_font_height;
 	c->vc_complement_mask = 0x7700;
+	if (vga_512_chars)
+		c->vc_hi_font_mask = 0x0800;
 	p = *c->vc_uni_pagedir_loc;
 	if (c->vc_uni_pagedir_loc == &c->vc_uni_pagedir ||
 	    !--c->vc_uni_pagedir_loc[1])
-		con_free_unimap(c->vc_num);
+		con_free_unimap(c);
 	c->vc_uni_pagedir_loc = vgacon_uni_pagedir;
 	vgacon_uni_pagedir[1]++;
 	if (!vgacon_uni_pagedir[0] && p)
-		con_set_default_unimap(c->vc_num);
+		con_set_default_unimap(c);
 }
 
 static inline void vga_set_mem_top(struct vc_data *c)
@@ -358,10 +362,10 @@ static void vgacon_deinit(struct vc_data *c)
 	if (!--vgacon_uni_pagedir[1]) {
 		c->vc_visible_origin = vga_vram_base;
 		vga_set_mem_top(c);
-		con_free_unimap(c->vc_num);
+		con_free_unimap(c);
 	}
 	c->vc_uni_pagedir_loc = &c->vc_uni_pagedir;
-	con_set_default_unimap(c->vc_num);
+	con_set_default_unimap(c);
 }
 
 static u8 vgacon_build_attr(struct vc_data *c, u8 color, u8 intensity,
@@ -502,9 +506,13 @@ static int vgacon_switch(struct vc_data *c)
 	 */
 	vga_video_num_columns = c->vc_cols;
 	vga_video_num_lines = c->vc_rows;
+
+	/* We can only copy out the size of the video buffer here,
+	 * otherwise we get into VGA BIOS */
+
 	if (!vga_is_gfx)
 		scr_memcpyw((u16 *) c->vc_origin, (u16 *) c->vc_screenbuf,
-			    c->vc_screenbuf_size);
+			    c->vc_screenbuf_size > vga_vram_size ? vga_vram_size : c->vc_screenbuf_size);
 	return 0;		/* Redrawing not needed */
 }
 
@@ -908,7 +916,7 @@ static int vgacon_adjust_height(struct vc_data *vc, unsigned fontheight)
 				c->vc_sw->con_cursor(c, CM_DRAW);
 			}
 			c->vc_font.height = fontheight;
-			vc_resize(c->vc_num, 0, rows);	/* Adjust console size */
+			vc_resize(c, 0, rows);	/* Adjust console size */
 		}
 	}
 	return 0;
@@ -959,7 +967,6 @@ static int vgacon_scrolldelta(struct vc_data *c, int lines)
 	if (!lines)		/* Turn scrollback off */
 		c->vc_visible_origin = c->vc_origin;
 	else {
-		int vram_size = vga_vram_end - vga_vram_base;
 		int margin = c->vc_size_row * 4;
 		int ul, we, p, st;
 
@@ -969,7 +976,7 @@ static int vgacon_scrolldelta(struct vc_data *c, int lines)
 			we = vga_rolled_over + c->vc_size_row;
 		} else {
 			ul = 0;
-			we = vram_size;
+			we = vga_vram_size;
 		}
 		p = (c->vc_visible_origin - vga_vram_base - ul + we) % we +
 		    lines * c->vc_size_row;
@@ -1010,9 +1017,13 @@ static void vgacon_save_screen(struct vc_data *c)
 		c->vc_x = ORIG_X;
 		c->vc_y = ORIG_Y;
 	}
+
+	/* We can't copy in more then the size of the video buffer,
+	 * or we'll be copying in VGA BIOS */
+
 	if (!vga_is_gfx)
 		scr_memcpyw((u16 *) c->vc_screenbuf, (u16 *) c->vc_origin,
-			    c->vc_screenbuf_size);
+			    c->vc_screenbuf_size > vga_vram_size ? vga_vram_size : c->vc_screenbuf_size);
 }
 
 static int vgacon_scroll(struct vc_data *c, int t, int b, int dir,

@@ -34,22 +34,6 @@
 extern struct sparc_phys_banks sp_banks[SPARC_PHYS_BANKS];
 
 /*
- * To debug kernel during syscall entry.
- */
-void syscall_trace_entry(struct pt_regs *regs)
-{
-	printk("scall entry: %s[%d]/cpu%d: %d\n", current->comm, current->pid, smp_processor_id(), (int) regs->u_regs[UREG_G1]);
-}
-
-/*
- * To debug kernel during syscall exit.
- */
-void syscall_trace_exit(struct pt_regs *regs)
-{
-	printk("scall exit: %s[%d]/cpu%d: %d\n", current->comm, current->pid, smp_processor_id(), (int) regs->u_regs[UREG_G1]);
-}
-
-/*
  * To debug kernel to catch accesses to certain virtual/physical addresses.
  * Mode = 0 selects physical watchpoints, mode = 1 selects virtual watchpoints.
  * flags = VM_READ watches memread accesses, flags = VM_WRITE watches memwrite accesses.
@@ -144,7 +128,9 @@ static void unhandled_fault(unsigned long address, struct task_struct *tsk,
 		       "at virtual address %016lx\n", (unsigned long)address);
 	}
 	printk(KERN_ALERT "tsk->{mm,active_mm}->context = %016lx\n",
-	       (tsk->mm ? tsk->mm->context : tsk->active_mm->context));
+	       (tsk->mm ?
+		CTX_HWBITS(tsk->mm->context) :
+		CTX_HWBITS(tsk->active_mm->context)));
 	printk(KERN_ALERT "tsk->{mm,active_mm}->pgd = %016lx\n",
 	       (tsk->mm ? (unsigned long) tsk->mm->pgd :
 		          (unsigned long) tsk->active_mm->pgd));

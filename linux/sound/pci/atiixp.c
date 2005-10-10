@@ -250,6 +250,7 @@ struct snd_atiixp_dma {
 	int running;
 	int pcm_open_flag;
 	int ac97_pcm_type;	/* index # of ac97_pcm to access, -1 = not used */
+	unsigned int saved_curptr;
 };
 
 /*
@@ -1333,8 +1334,8 @@ static irqreturn_t snd_atiixp_interrupt(int irq, void *dev_id, struct pt_regs *r
 
 static struct ac97_quirk ac97_quirks[] __devinitdata = {
 	{
-		.vendor = 0x103c,
-		.device = 0x006b,
+		.subvendor = 0x103c,
+		.subdevice = 0x006b,
 		.name = "HP Pavilion ZV5030US",
 		.type = AC97_TUNE_MUTE_LED
 	},
@@ -1375,6 +1376,8 @@ static int __devinit snd_atiixp_mixer_new(atiixp_t *chip, int clock, const char 
 		ac97.pci = chip->pci;
 		ac97.num = i;
 		ac97.scaps = AC97_SCAP_SKIP_MODEM;
+		if (! chip->spdif_over_aclink)
+			ac97.scaps |= AC97_SCAP_NO_SPDIF;
 		if ((err = snd_ac97_mixer(pbus, &ac97, &chip->ac97[i])) < 0) {
 			chip->ac97[i] = NULL; /* to be sure */
 			snd_printdd("atiixp: codec %d not available for audio\n", i);
@@ -1398,14 +1401,18 @@ static int __devinit snd_atiixp_mixer_new(atiixp_t *chip, int clock, const char 
 /*
  * power management
  */
-static int snd_atiixp_suspend(snd_card_t *card, unsigned int state)
+static int snd_atiixp_suspend(snd_card_t *card, pm_message_t state)
 {
 	atiixp_t *chip = card->pm_private_data;
 	int i;
 
 	for (i = 0; i < NUM_ATI_PCMDEVS; i++)
-		if (chip->pcmdevs[i])
+		if (chip->pcmdevs[i]) {
+			atiixp_dma_t *dma = &chip->dmas[i];
+			if (dma->substream && dma->running)
+				dma->saved_curptr = readl(chip->remap_addr + dma->ops->dt_cur);
 			snd_pcm_suspend_all(chip->pcmdevs[i]);
+		}
 	for (i = 0; i < NUM_ATI_CODECS; i++)
 		if (chip->ac97[i])
 			snd_ac97_suspend(chip->ac97[i]);
@@ -1417,7 +1424,7 @@ static int snd_atiixp_suspend(snd_card_t *card, unsigned int state)
 	return 0;
 }
 
-static int snd_atiixp_resume(snd_card_t *card, unsigned int state)
+static int snd_atiixp_resume(snd_card_t *card)
 {
 	atiixp_t *chip = card->pm_private_data;
 	int i;
@@ -1432,6 +1439,17 @@ static int snd_atiixp_resume(snd_card_t *card, unsigned int state)
 	for (i = 0; i < NUM_ATI_CODECS; i++)
 		if (chip->ac97[i])
 			snd_ac97_resume(chip->ac97[i]);
+
+	for (i = 0; i < NUM_ATI_PCMDEVS; i++)
+		if (chip->pcmdevs[i]) {
+			atiixp_dma_t *dma = &chip->dmas[i];
+			if (dma->substream && dma->running) {
+				dma->ops->enable_dma(chip, 1);
+				writel((u32)dma->desc_buf.addr | ATI_REG_LINKPTR_EN,
+				       chip->remap_addr + dma->ops->llp_offset);
+				writel(dma->saved_curptr, chip->remap_addr + dma->ops->dt_cur);
+			}
+		}
 
 	return 0;
 }
@@ -1627,7 +1645,7 @@ static struct pci_driver driver = {
 
 static int __init alsa_card_atiixp_init(void)
 {
-	return pci_module_init(&driver);
+	return pci_register_driver(&driver);
 }
 
 static void __exit alsa_card_atiixp_exit(void)

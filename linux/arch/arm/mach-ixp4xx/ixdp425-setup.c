@@ -3,7 +3,7 @@
  *
  * IXDP425/IXCDP1100 board-setup 
  *
- * Copyright (C) 2003-2004 MontaVista Software, Inc.
+ * Copyright (C) 2003-2005 MontaVista Software, Inc.
  *
  * Author: Deepak Saxena <dsaxena@plexity.net>
  */
@@ -13,7 +13,7 @@
 #include <linux/device.h>
 #include <linux/serial.h>
 #include <linux/tty.h>
-#include <linux/serial_core.h>
+#include <linux/serial_8250.h>
 
 #include <asm/types.h>
 #include <asm/setup.h>
@@ -24,46 +24,8 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/flash.h>
 
-#ifdef	__ARMEB__
-#define	REG_OFFSET	3
-#else
-#define	REG_OFFSET	0
-#endif
-
-/*
- * IXDP425 uses both chipset serial ports
- */
-static struct uart_port ixdp425_serial_ports[] = {
-	{
-		.membase	= (char*)(IXP4XX_UART1_BASE_VIRT + REG_OFFSET),
-		.mapbase	= (IXP4XX_UART1_BASE_PHYS),
-		.irq		= IRQ_IXP4XX_UART1,
-		.flags		= UPF_SKIP_TEST,
-		.iotype		= UPIO_MEM,	
-		.regshift	= 2,
-		.uartclk	= IXP4XX_UART_XTAL,
-		.line		= 0,
-		.type		= PORT_XSCALE,
-		.fifosize	= 32
-	} , {
-		.membase	= (char*)(IXP4XX_UART2_BASE_VIRT + REG_OFFSET),
-		.mapbase	= (IXP4XX_UART2_BASE_PHYS),
-		.irq		= IRQ_IXP4XX_UART2,
-		.flags		= UPF_SKIP_TEST,
-		.iotype		= UPIO_MEM,	
-		.regshift	= 2,
-		.uartclk	= IXP4XX_UART_XTAL,
-		.line		= 1,
-		.type		= PORT_XSCALE,
-		.fifosize	= 32
-	}
-};
-
 void __init ixdp425_map_io(void) 
 {
-	early_serial_setup(&ixdp425_serial_ports[0]);
-	early_serial_setup(&ixdp425_serial_ports[1]);
-
 	ixp4xx_map_io();
 }
 
@@ -74,7 +36,7 @@ static struct flash_platform_data ixdp425_flash_data = {
 
 static struct resource ixdp425_flash_resource = {
 	.start		= IXDP425_FLASH_BASE,
-	.end		= IXDP425_FLASH_BASE + IXDP425_FLASH_SIZE,
+	.end		= IXDP425_FLASH_BASE + IXDP425_FLASH_SIZE - 1,
 	.flags		= IORESOURCE_MEM,
 };
 
@@ -102,10 +64,55 @@ static struct platform_device ixdp425_i2c_controller = {
 	.num_resources	= 0
 };
 
+static struct resource ixdp425_uart_resources[] = {
+	{
+		.start		= IXP4XX_UART1_BASE_PHYS,
+		.end		= IXP4XX_UART1_BASE_PHYS + 0x0fff,
+		.flags		= IORESOURCE_MEM
+	},
+	{
+		.start		= IXP4XX_UART2_BASE_PHYS,
+		.end		= IXP4XX_UART2_BASE_PHYS + 0x0fff,
+		.flags		= IORESOURCE_MEM
+	}
+};
+
+static struct plat_serial8250_port ixdp425_uart_data[] = {
+	{
+		.mapbase	= IXP4XX_UART1_BASE_PHYS,
+		.membase	= (char *)IXP4XX_UART1_BASE_VIRT + REG_OFFSET,
+		.irq		= IRQ_IXP4XX_UART1,
+		.flags		= UPF_BOOT_AUTOCONF | UPF_SKIP_TEST,
+		.iotype		= UPIO_MEM,
+		.regshift	= 2,
+		.uartclk	= IXP4XX_UART_XTAL,
+	},
+	{
+		.mapbase	= IXP4XX_UART2_BASE_PHYS,
+		.membase	= (char *)IXP4XX_UART2_BASE_VIRT + REG_OFFSET,
+		.irq		= IRQ_IXP4XX_UART1,
+		.flags		= UPF_BOOT_AUTOCONF | UPF_SKIP_TEST,
+		.iotype		= UPIO_MEM,
+		.regshift	= 2,
+		.uartclk	= IXP4XX_UART_XTAL,
+	},
+	{ },
+};
+
+static struct platform_device ixdp425_uart = {
+	.name			= "serial8250",
+	.id			= 0,
+	.dev.platform_data	= ixdp425_uart_data,
+	.num_resources		= 2,
+	.resource		= ixdp425_uart_resources
+};
+
 static struct platform_device *ixdp425_devices[] __initdata = {
 	&ixdp425_i2c_controller,
-	&ixdp425_flash
+	&ixdp425_flash,
+	&ixdp425_uart
 };
+
 
 static void __init ixdp425_init(void)
 {
@@ -122,36 +129,39 @@ static void __init ixdp425_init(void)
 }
 
 MACHINE_START(IXDP425, "Intel IXDP425 Development Platform")
-	MAINTAINER("MontaVista Software, Inc.")
-	BOOT_MEM(PHYS_OFFSET, IXP4XX_PERIPHERAL_BASE_PHYS,
-		IXP4XX_PERIPHERAL_BASE_VIRT)
-	MAPIO(ixdp425_map_io)
-	INITIRQ(ixp4xx_init_irq)
+	/* Maintainer: MontaVista Software, Inc. */
+	.phys_ram	= PHYS_OFFSET,
+	.phys_io	= IXP4XX_PERIPHERAL_BASE_PHYS,
+	.io_pg_offst	= ((IXP4XX_PERIPHERAL_BASE_VIRT) >> 18) & 0xfffc,
+	.map_io		= ixdp425_map_io,
+	.init_irq	= ixp4xx_init_irq,
 	.timer		= &ixp4xx_timer,
-	BOOT_PARAMS(0x0100)
-	INIT_MACHINE(ixdp425_init)
+	.boot_params	= 0x0100,
+	.init_machine	= ixdp425_init,
 MACHINE_END
 
 MACHINE_START(IXDP465, "Intel IXDP465 Development Platform")
-	MAINTAINER("MontaVista Software, Inc.")
-	BOOT_MEM(PHYS_OFFSET, IXP4XX_PERIPHERAL_BASE_PHYS,
-		IXP4XX_PERIPHERAL_BASE_VIRT)
-	MAPIO(ixdp425_map_io)
-	INITIRQ(ixp4xx_init_irq)
+	/* Maintainer: MontaVista Software, Inc. */
+	.phys_ram	= PHYS_OFFSET,
+	.phys_io	= IXP4XX_PERIPHERAL_BASE_PHYS,
+	.io_pg_offst	= ((IXP4XX_PERIPHERAL_BASE_VIRT) >> 18) & 0xfffc,
+	.map_io		= ixdp425_map_io,
+	.init_irq	= ixp4xx_init_irq,
 	.timer		= &ixp4xx_timer,
-	BOOT_PARAMS(0x0100)
-	INIT_MACHINE(ixdp425_init)
+	.boot_params	= 0x0100,
+	.init_machine	= ixdp425_init,
 MACHINE_END
 
 MACHINE_START(IXCDP1100, "Intel IXCDP1100 Development Platform")
-	MAINTAINER("MontaVista Software, Inc.")
-	BOOT_MEM(PHYS_OFFSET, IXP4XX_PERIPHERAL_BASE_PHYS,
-		IXP4XX_PERIPHERAL_BASE_VIRT)
-	MAPIO(ixdp425_map_io)
-	INITIRQ(ixp4xx_init_irq)
+	/* Maintainer: MontaVista Software, Inc. */
+	.phys_ram	= PHYS_OFFSET,
+	.phys_io	= IXP4XX_PERIPHERAL_BASE_PHYS,
+	.io_pg_offst	= ((IXP4XX_PERIPHERAL_BASE_VIRT) >> 18) & 0xfffc,
+	.map_io		= ixdp425_map_io,
+	.init_irq	= ixp4xx_init_irq,
 	.timer		= &ixp4xx_timer,
-	BOOT_PARAMS(0x0100)
-	INIT_MACHINE(ixdp425_init)
+	.boot_params	= 0x0100,
+	.init_machine	= ixdp425_init,
 MACHINE_END
 
 /*
@@ -162,14 +172,15 @@ MACHINE_END
  */
 #ifdef CONFIG_ARCH_AVILA
 MACHINE_START(AVILA, "Gateworks Avila Network Platform")
-	MAINTAINER("Deepak Saxena <dsaxena@plexity.net>")
-	BOOT_MEM(PHYS_OFFSET, IXP4XX_PERIPHERAL_BASE_PHYS,
-		IXP4XX_PERIPHERAL_BASE_VIRT)
-	MAPIO(ixdp425_map_io)
-	INITIRQ(ixp4xx_init_irq)
+	/* Maintainer: Deepak Saxena <dsaxena@plexity.net> */
+	.phys_ram	= PHYS_OFFSET,
+	.phys_io	= IXP4XX_PERIPHERAL_BASE_PHYS,
+	.io_pg_offst	= ((IXP4XX_PERIPHERAL_BASE_VIRT) >> 18) & 0xfffc,
+	.map_io		= ixdp425_map_io,
+	.init_irq	= ixp4xx_init_irq,
 	.timer		= &ixp4xx_timer,
-	BOOT_PARAMS(0x0100)
-	INIT_MACHINE(ixdp425_init)
+	.boot_params	= 0x0100,
+	.init_machine	= ixdp425_init,
 MACHINE_END
 #endif
 
