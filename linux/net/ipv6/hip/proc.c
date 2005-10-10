@@ -2,7 +2,7 @@
 
 #ifdef CONFIG_PROC_FS
 
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 typedef struct {
 	char *page;
 	int count;
@@ -98,7 +98,7 @@ static int hip_proc_read_hadb_peer_addrs_func(hip_ha_t *entry, void *opaque)
 
 	if (entry->default_spi_out == 0) {
 		/* extra check for addr_any ? */
-		hip_in6_ntop(&entry->bex_address, addr_str);
+		hip_in6_ntop(&entry->preferred_address, addr_str);
 		if ( (len += snprintf(page+len, count-len,
 				      "\n SPI 0x0\n  %s", addr_str)) >= count)
 			goto error;
@@ -267,10 +267,10 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
 	if (len >= count)
 		goto err;
 
-	HIP_READ_LOCK_DB(&hip_local_hostid_db);
+	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
 
 	i=0;
-	list_for_each_entry(item,&hip_local_hostid_db.db_head,next) {
+	list_for_each_entry(item, &(*HIP_DB_LOCAL_HID).db_head, next) {
 		hip_in6_ntop(&item->lhi.hit, in6buf);
 		len += snprintf(page+len, count-len, "%d %d %s %s %s\n",
 				++i,
@@ -283,7 +283,7 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
 			break;
 	}
 
-	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
+	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 
 	if (len >= count) {
 		page[count-1] = '\0';
@@ -297,27 +297,8 @@ int hip_proc_read_lhi(char *page, char **start, off_t off,
         return(len);
 }
 
-#if 0
-int hip_proc_send_update(char *page, char **start, off_t off,
-			 int count, int *eof, void *data)
-{
-	HIP_DEBUG("\n");
-	hip_send_update_all(NULL, 0, 0, 0);
-	*eof = 1;
+#endif /* CONFIG_PROC_FS */
 
-	return 0;
-}
-
-/* only during testing */
-int hip_proc_send_notify(char *page, char **start, off_t off,
-			 int count, int *eof, void *data)
-{
-	hip_send_notify_all();
-	*eof = 1;
-	return 0;
-}
-#endif
-#endif /* CONFIG_HIP_USERSPACE */
 /**
  * hip_init_procfs - initialize HIP procfs support
  *
@@ -325,7 +306,7 @@ int hip_proc_send_notify(char *page, char **start, off_t off,
  */
 int hip_init_procfs(void)
 {
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 	HIP_DEBUG("procfs init\n");
 	hip_proc_root = create_proc_entry("hip", S_IFDIR, proc_net);
 	if (!hip_proc_root)
@@ -341,28 +322,9 @@ int hip_init_procfs(void)
 	if (!create_proc_read_entry("sdb_peer_addrs", 0, hip_proc_root,
 			       hip_proc_read_hadb_peer_addrs, NULL))
 		goto out_err_sdb_state;
-#if 0
-	/* a simple way to trigger sending of UPDATE packet to all peers */
-	if (!create_proc_read_entry("send_update", 0, hip_proc_root,
-			       hip_proc_send_update, NULL))
-		goto out_err_peer_addrs;
-	/* for testing dummy NOTIFY packets */
-	if (!create_proc_read_entry("send_notify", 0, hip_proc_root,
-			       hip_proc_send_notify, NULL))
-		goto out_err_send_update;
-#endif
 
 	HIP_DEBUG("profcs init successful\n");
-#endif /* CONFIG_HIP_USERSPACE */
-	return 1;
 
-#ifndef CONFIG_HIP_USERSPACE
-#if 0
- out_err_send_update:
-	remove_proc_entry("send_update", hip_proc_root);
- out_err_peer_addrs:
-	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
-#endif
  out_err_sdb_state:
 	remove_proc_entry("sdb_state", hip_proc_root);
  out_err_lhi:
@@ -372,7 +334,10 @@ int hip_init_procfs(void)
 
 	HIP_ERROR("profcs init failed\n");
 	return -1;
-#endif /* CONFIG_HIP_USERSPACE */
+#else
+	return 1;
+#endif /* HIP_KERNEL_DAEMON */
+
 }
 
 /**
@@ -380,17 +345,13 @@ int hip_init_procfs(void)
  */
 void hip_uninit_procfs(void)
 {
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 	HIP_DEBUG("\n");
 	remove_proc_entry("lhi", hip_proc_root);
 	remove_proc_entry("sdb_state", hip_proc_root);
 	remove_proc_entry("sdb_peer_addrs", hip_proc_root);
-#if 0
-	remove_proc_entry("send_update", hip_proc_root);
-	remove_proc_entry("send_notify", hip_proc_root);
-#endif
 	remove_proc_entry("hip", proc_net);
-#endif /* CONFIG_HIP_USERSPACE */
+#endif /* HIP_KERNEL_DAEMON */
 }
 
-#endif /* CONFIG_PROC_FS */
+#endif /* HIP_KERNEL_DAEMON */

@@ -285,6 +285,7 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
 
 int hip_is_hit(const hip_hit_t *hit) 
 {
+	HIP_DEBUG_IN6ADDR("received hit", (struct in6_addr *)hit);
 	return ipv6_addr_is_hit((struct in6_addr *)hit);
 }
 
@@ -337,21 +338,6 @@ const char *hip_algorithm_to_string(int algo)
 		str = algos[1];
 	return str;
 }
-
-/**
- * hip_get_current_birthday - set the current birthday counter into the cookie
- * @bc: cookie where the birthday field is set to
- *
- * Birthday is stored in network byte order.
- *
- * This function never touches the other fields of the cookie @bc.
- */
-#if 0
-uint64_t hip_get_current_birthday(void)
-{
-	return ((uint64_t)load_time << 32) | jiffies;
-}
-#endif
 
 /**
  * hip_birthday_success - compare two birthday counters

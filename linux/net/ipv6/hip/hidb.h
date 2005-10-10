@@ -1,12 +1,13 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
+#include "hip.h"
+#include "debug.h"
+
 #ifdef __KERNEL__
 #  include <linux/list.h>
 #  include <linux/spinlock.h>
 #  include <net/ipv6.h>
-#  include <net/hip.h>
-#  include "hip.h"
 #else
 #  include <sys/socket.h>
 #  include "list.h"
@@ -15,11 +16,10 @@ typedef struct { } rwlock_t;
 #define RW_LOCK_UNLOCKED (rwlock_t) { }
 #endif /* __KERNEL__ */
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
-#include "debug.h"
-#include "hip.h"
-#include "timer.h"
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
+#  include "timer.h"
+#endif
+
 #include "cookie.h"
 
 #define HIP_INIT_DB(name,id) \
@@ -55,7 +55,8 @@ struct hip_db_struct {
         int               db_cnt;
 };
 
-#if !defined __KERNEL__ || defined CONFIG_HIP_USERSPACE
+//#if HIP_USER_DAEMON || HIP_KERNEL_STUB
+
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
@@ -106,5 +107,5 @@ int hip_hit_is_our(struct in6_addr *hit);
 
 void hip_uninit_host_id_dbs(void);
 
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+//#endif /* HIP_USER_DAEMON || HIP_KERNEL_STUB */
 #endif /* _HIP_DB */

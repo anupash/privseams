@@ -18,7 +18,7 @@ static atomic_t hip_working = ATOMIC_INIT(0);
 
 time_t load_time;
 
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 static struct notifier_block hip_netdev_notifier;
 #endif
 static void hip_cleanup(void);
@@ -70,9 +70,6 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 	unsigned long offset,pleft;
 	unsigned int elt = 0;
 	int slcnt = *slistcnt;
-#ifdef CONFIG_HIP_DEBUG
-	unsigned int i;
-#endif
 
 	if (slcnt < 1) {
 		HIP_ERROR("Illegal use of function\n");
@@ -110,12 +107,6 @@ int hip_map_virtual_to_pages(struct scatterlist *slist, int *slistcnt,
 		offset += pleft;
 	}
 
-#ifdef CONFIG_HIP_DEBUG
-	for(i=0;i<=elt;i++) {
-		_HIP_DEBUG("Scatterlist: %x, page: %x, offset: %x, length: %x\n",
-			  i, (int)slist[i].page, slist[i].offset, slist[i].length);
-	}
-#endif
 	*slistcnt = elt+1;
 	return 0;
 }
@@ -141,13 +132,6 @@ void hip_unknown_spi(struct sk_buff *skb, uint32_t spi)
 	HIP_DEBUG("Received Unknown SPI: 0x%x\n", ntohl(spi));
 	HIP_DEBUG("TODO: rekey old SA ?\n");  /* and/or TODO: send NOTIFY ? */
 	return;
-#if 0
-	/* We cannot know the destination HIT */
-	err = hip_xmit_r1(skb, NULL);
-	if (err) {
-		HIP_ERROR("hip_xmit_r1 failed (%d)\n", err);
-	}
-#endif
 }
 
 /**
@@ -336,7 +320,7 @@ static inline int hip_rea_addr_ok(struct in6_addr *addr)
  * and 0 is returned. Else < 0 is returned and @addr_list contains
  * NULL.
  */
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 static int hip_create_device_addrlist(struct net_device *event_dev,
 				       struct hip_rea_info_addr_item **addr_list,
 				       int *idev_addr_count)
@@ -420,7 +404,7 @@ static int hip_create_device_addrlist(struct net_device *event_dev,
  * successfully for an address in the network device @ifindex.
  */
 void hip_handle_ipv6_dad_completed(int ifindex) {
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 	struct hip_work_order *hwo;
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
@@ -452,7 +436,7 @@ void hip_handle_ipv6_dad_completed(int ifindex) {
  * Workqueue runs this function when it is assigned a job related to
  * networking events.
  */
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 {
 	int err = 0;
@@ -510,7 +494,7 @@ void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
  * @ifindex: the interface index of the network device which caused the event
  */
 void hip_handle_inet6_addr_del(int ifindex) {
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 	struct hip_work_order *hwo;
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
@@ -536,7 +520,7 @@ void hip_handle_inet6_addr_del(int ifindex) {
  *
  * Returns: always %NOTIFY_DONE.
  */
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 static int hip_netdev_event_handler(struct notifier_block *notifier_block,
                                     unsigned long event, void *ptr)
 {
@@ -670,22 +654,6 @@ static int hip_xfrm_handler_notify(struct xfrm_state *x, int hard)
 	HIP_DEBUG("SPI=0x%x hard expiration=%d state=%d\n",
 		  ntohl(x->id.spi), hard, x->km.state);
 	HIP_DEBUG("TODO..send UPDATE ?\n");
-#if 0
-	if (SA is HIP SA) {
-		hip_ha_t *entry;
-
-		/* todo: zero the spi from hadb */
-		/* was this event caused by inbound SA ?*/
-		entry = hip_hadb_find_byspi(ntohl(x->id.spi));
-		if (entry) {
-			hip_send_update(entry, NULL, 0, 0, 0); /* non-mm UPDATE */
-			hip_ha_put(entry);
-		} else {
-			/* check if SA was outbound .. */
-		}
-	}
-#endif
-
 	return 0;
 }
 
@@ -703,9 +671,6 @@ static int hip_xfrm_handler_acquire(struct xfrm_state *xs,
 	int err = -EINVAL;
 	char str[INET6_ADDRSTRLEN];
 	struct ipv6hdr hdr = {0};
-#if 0
-	struct hip_work_order *hwo;
-#endif
 
 	hip_in6_ntop((struct in6_addr *) &(xs->id.daddr), str);
 	HIP_DEBUG("daddr=%s dir=%d\n", str, dir);
@@ -776,7 +741,7 @@ int hip_register_xfrm_km_handler(void)
 /* Init/uninit network interface event notifier. When a network event
    causes an event (e.g. it goes up or down, or is unregistered from
    the system), hip_netdev_event_handler is called. */
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 int hip_init_netdev_notifier(void)
 {
 	hip_netdev_notifier.notifier_call = hip_netdev_event_handler;
@@ -840,7 +805,7 @@ static int hip_worker(void *t)
 
 		job = hip_get_work_order();
 		if (!job) {
-			HIP_DEBUG("Did not get anything from the work queue\n");
+			_HIP_DEBUG("Did not get anything from the work queue\n");
 			result = KHIPD_ERROR;
 		} else {         
 			HIP_DEBUG("New job: type=%d subtype=%d\n", job->hdr.type, job->hdr.subtype);
@@ -848,16 +813,16 @@ static int hip_worker(void *t)
 		}
 		if (result < 0) {
 			if (result == KHIPD_ERROR)
-				HIP_INFO("Recoverable error occured (%d)\n", result);
+				_HIP_DEBUG("Recoverable error occured (%d)\n", result);
 			else {
 				/* maybe we should just recover and continue ? */
-				HIP_INFO("Unrecoverable error occured (%d). Cleaning up\n",
+				HIP_ERROR("Unrecoverable error occured (%d). Cleaning up\n",
 					 result);
 				break;
 			}
 		}
 
-		HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
+		_HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 
 #ifdef CONFIG_SMP
@@ -886,7 +851,7 @@ static int __init hip_init(void)
 #endif
 	memset(&hip_kthreads, 0, sizeof(hip_kthreads));
 
-#ifndef CONFIG_HIP_USERSPACE
+#if 0 /* XX FIX: IS THIS UNNECESSARY NOW? */
 	if(!hip_init_r1())
 		goto out;
 #endif
@@ -898,11 +863,9 @@ static int __init hip_init(void)
 
 	hip_init_beetdb();
 
-	//#ifndef CONFIG_HIP_USERSPACE
-	hip_init_hadb();	
-	//#endif
+	hip_init_hadb();
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 #ifdef CONFIG_HIP_RVS
 	hip_init_rvadb();
 #endif
@@ -933,7 +896,7 @@ static int __init hip_init(void)
 		}
 	}
 
-#ifdef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_STUB
 	if (hip_netlink_open()) {
 		HIP_ERROR("Failed to open netlink\n");
 		goto out;
@@ -957,7 +920,7 @@ static int __init hip_init(void)
 	if (hip_init_socket_handler() < 0)
 		goto out;
 
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 	if (hip_init_netdev_notifier() < 0)
 		goto out;
 #endif
@@ -998,7 +961,7 @@ static void __exit hip_cleanup(void)
 
 	/* disable callbacks for HIP packets and notifier chains */
 	inet6_del_protocol(&hip_protocol, IPPROTO_HIP);
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 	hip_uninit_netdev_notifier();
 #endif
 
@@ -1035,7 +998,7 @@ static void __exit hip_cleanup(void)
 	hip_delete_sp(XFRM_POLICY_IN);
 	hip_delete_sp(XFRM_POLICY_OUT);
 
-#ifdef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_STUB
 	hip_netlink_close();
 #endif
 
@@ -1044,19 +1007,19 @@ static void __exit hip_cleanup(void)
 #endif /* CONFIG_PROC_FS */
 
 	hip_uninit_socket_handler();
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 #ifdef CONFIG_HIP_RVS
 	hip_uninit_rvadb();
 #endif
 #endif
 	hip_uninit_beetdb();
 	hip_uninit_hadb();
-#ifndef CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 	hip_uninit_host_id_dbs();
 #endif
 	hip_uninit_all_eid_db();
 	hip_uninit_output_socket();
-#ifndef CONFIG_HIP_USERSPACE
+#if 0 /* XX FIX: IS THIS UNNECESSARY NOW? */
 	hip_uninit_r1();
 #endif
 

@@ -1,18 +1,9 @@
-#include "debug.h"
-#include "hidb.h"
-#include "hadb.h"
-
 #include "bos.h"
 
+#if HIP_KERNEL_DAEMON || HIP_USER_DAEMON
 
-
-#if (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
-
-#include "netdev.h"
-#include "list.h"
-
-extern int address_count;
-extern struct list_head addresses;
+int address_count;
+struct list_head addresses;
 
 /**
  * hip_create_signature - Calculate SHA1 hash over the data and sign it.
@@ -86,23 +77,13 @@ int hip_send_bos(const struct hip_common *msg)
 		goto out_err;
 	}
 
-#if 0
-	x = hip_xfrm_try_to_find_by_peer_hit(NULL);
-	if (!x) {
-		HIP_ERROR("Could not find dst HIT\n");
-		err = -ENOENT;
-		goto out_err;
-	}
-	memcpy(&hit_our, x->hit_our, sizeof(hip_hit_t));
-#endif
-
 	/* Determine our HIT */
 	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO) < 0) {
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
 	}
-
+	HIP_DEBUG_IN6ADDR("hit_our = ", &hit_our);
 	/* Determine our HOST ID public key */
 	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
 	if (!host_id_pub) {
@@ -142,20 +123,7 @@ int hip_send_bos(const struct hip_common *msg)
 		err = -EINVAL;
 		goto out_err;
 	}
-#if 0
-	/* Only DSA supported currently */
-	_HIP_ASSERT(hip_get_host_id_algo(host_id_private) == HIP_HI_DSA);
 
-	err = hip_build_param_signature_contents(bos,
-						 signature,
-						 ((HIP_SIG_DEFAULT_ALGO == HIP_HI_RSA) ?
-						  HIP_RSA_SIGNATURE_LEN  : HIP_DSA_SIGNATURE_LEN),
-						 HIP_SIG_DEFAULT_ALGO);
-	if (err) {
-		HIP_ERROR("Building of signature failed (%d)\n", err);
-		goto out_err;
-	}
-#endif
  	/************** BOS packet ready ***************/
 	/* Use All Nodes Addresses (link-local) from RFC2373 */
 	daddr.s6_addr32[0] = htonl(0xFF020000);
@@ -254,19 +222,6 @@ int hip_handle_bos(struct hip_common *bos,
 	HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
 		  str, len, hip_get_param_host_id_hostname(peer_host_id));
 
-#if 0
- 	peer_lhi.anonymous = 0;
-	ipv6_addr_copy(&peer_lhi.hit, &bos->hits);
- 	err = hip_add_host_id(HIP_DB_PEER_HID, &peer_lhi, peer_host_id,
-			      NULL, NULL, NULL);
- 	if (err == -EEXIST) {
- 		HIP_INFO("Host ID already exists. Ignoring.\n");
- 		err = 0;
- 	} else {
-		HIP_IFEL(err, -1, "Failed to add peer host id to the database\n");
-  	}
-#endif
-
 	/* Now save the peer IP address */
 	dstip = bos_saddr;
 	hip_in6_ntop(dstip, src);
@@ -299,32 +254,17 @@ int hip_handle_bos(struct hip_common *bos,
 			 "Failed to insert new peer info");
 		HIP_DEBUG("HA entry created.\n");
 
-#if 0
-		struct hip_work_order * hwo;
-		HIP_DEBUG("Adding new peer entry\n");
-                hip_in6_ntop(&bos->hits, src);
-		HIP_DEBUG("map HIT: %s\n", src);
-		hip_in6_ntop(dstip, src);
-		HIP_DEBUG("map IP: %s\n", src);
-
-		HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -1, 
-			 "Failed to insert peer map work order\n");
-		HIP_INIT_WORK_ORDER_HDR(hwo->hdr, HIP_WO_TYPE_MSG,
-					HIP_WO_SUBTYPE_ADDMAP,
-					dstip, &bos->hits, NULL, 0, 0, 0);
-		hip_insert_work_order(hwo);
-#endif
 	}
 
  out_err:
 	return err;
 }
 
-#endif /*(defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
+#endif /* HIP_KERNEL_DAEMON || HIP_USER_DAEMON */
 
 //extern int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
 
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 
 /* really ugly hack ripped from rea.c, must convert to list_head asap */
 struct hip_bos_kludge {
@@ -414,25 +354,27 @@ int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg
 		HIP_DEBUG("Scrolling rk....\n");
 		
 		_HIP_DEBUG("rk.array[%d] not NULL\n", i);
+		if (!ipv6_addr_any(&(rk.array[i]->hit_peer))) {
 			
-		(*end)->ai_family = family;
-		(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
+			(*end)->ai_family = family;
+			(*end)->ai_addr = (void *) (*end) + sizeof(struct my_addrinfo);
 			
-		if (family == AF_INET6) {
-			struct sockaddr_in6 *sin6p =
-				(struct sockaddr_in6 *) (*end)->ai_addr;
-			sin6p->sin6_flowinfo = 0;
-			sin6p->sin6_family = family;
-			sin6p->sin6_port = htons(port);
-			HIP_HEXDUMP("THE FOUND HIT IS: ", &rk.array[i]->hit_peer, 16);
-			/* Get the HIT */
-			memcpy (&sin6p->sin6_addr, &(rk.array[i]->hit_peer), sizeof (struct in6_addr));
-		} else {
-			/* TODO: is there any possibility to get here having family == AF_INET ? */
-		}
+			if (family == AF_INET6) {
+				struct sockaddr_in6 *sin6p =
+					(struct sockaddr_in6 *) (*end)->ai_addr;
+				sin6p->sin6_flowinfo = 0;
+				sin6p->sin6_family = family;
+				sin6p->sin6_port = htons(port);
+				HIP_HEXDUMP("THE FOUND HIT IS: ", &rk.array[i]->hit_peer, 16);
+				/* Get the HIT */
+				memcpy (&sin6p->sin6_addr, &(rk.array[i]->hit_peer), sizeof(struct in6_addr));
+			} else {
+				/* TODO: is there any possibility to get here having family == AF_INET ? */
+			}
 			
-		(*end)->ai_next = NULL;
+			(*end)->ai_next = NULL;
 			end = &((*end)->ai_next);
+		}
 	}
 	err = rk.count;
  out_err:
@@ -443,4 +385,4 @@ int handle_bos_peer_list(int family, int port, struct my_addrinfo **pai, int msg
 	return err;
 }
 
-#endif
+#endif /* HIP_KERNEL_DAEMON */

@@ -1,6 +1,7 @@
 int main(int argc, char *argv[])
 {
 	int err = 0;
+#if 0
 	struct hip_work_order ping;
 
 	/* Send a NETLINK ping so that we can communicate the pid of the agent
@@ -29,6 +30,7 @@ nk.\n");
 
  out_err:
 	hip_msg_free(ping.msg);
+#endif
 
 	return err;
 }

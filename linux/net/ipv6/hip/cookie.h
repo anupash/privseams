@@ -1,24 +1,24 @@
 #ifndef HIP_COOKIE_H
 #define HIP_COOKIE_H
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+#include "hip.h"
+#include "debug.h"
+#include <net/hip.h>
+#include "builder.h"
+#include "output.h"
+
 #ifdef __KERNEL__
 #  include <linux/types.h>
 #  include <linux/random.h>
 #  include <asm/scatterlist.h>
 #  include <net/ipv6.h>
 #  include "sysctl.h"
-#  include "hip.h"
 #else
-#include "list.h"
-#include "hipd.h"
+#  include "list.h"
+#  include "hipd.h"
 #endif /* __KERNEL__ */
 
-#include <net/hip.h>
-#include "debug.h"
-#include "hip.h"
-#include "builder.h"
-#include "output.h"
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 
 struct hip_r1entry {
 	struct hip_common *r1;
@@ -47,5 +47,5 @@ uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			  uint64_t birthday);
 
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
 #endif /* HIP_COOKIE_H */

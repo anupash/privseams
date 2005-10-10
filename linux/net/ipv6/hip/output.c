@@ -10,7 +10,8 @@
  */
 
 #include "output.h"
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 
 /**
  * hip_send_i1 - send an I1 packet to the responder
@@ -374,4 +375,4 @@ int hip_send_close(const struct hip_common *input)
 	return err;
 }
 
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

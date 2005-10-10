@@ -12,6 +12,8 @@
 #  include <net/hip.h>
 #endif /* __KERNEL__ */
 
+#include "debug.h"
+
 struct hip_ht_common {
 	struct list_head *head;
 	spinlock_t lock;

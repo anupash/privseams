@@ -1,11 +1,17 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
+
 #include <net/hip.h>
+#include "hip.h"
 #include "debug.h"
 #include "misc.h"
 #include "hidb.h"
 #include "hashtable.h"
 #include "builder.h"
+
+#if __KERNEL__
+#  include <net/ipv6.h>
+#endif
 
 #ifdef __KERNEL__
 #define HIP_LOCK_INIT(ha) do { spin_lock_init(&ha->lock); } while(0)
@@ -121,7 +127,6 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
 
-// **************** #if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
 /* Initialization functions */
 
 /* Accessors */

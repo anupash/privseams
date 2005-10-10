@@ -77,11 +77,6 @@ static int hip_verify_network_header(struct hip_common *hip_common,
 	} else {
 #ifdef CONFIG_HIP_RVS
 		HIP_DEBUG("Received HIT is ours or we are RVS\n");
-#else
-#if 0
-	        HIP_IFEL(!hip_xfrm_hit_is_our(&hip_common->hitr), -EFAULT,
-			 "Receiver HIT is not ours\n");
-#endif
 #endif
 	}
 
@@ -137,13 +132,6 @@ void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr)
 	    to established
 	  - currently this is may break things?
 	*/
-
-#if 0
-          if (ha->state == HIP_STATE_R2_SENT) {
-		ha->state = HIP_STATE_ESTABLISHED;
-		HIP_DEBUG("Transition to ESTABLISHED state from R2_SENT\n");
-          }
-#endif
 
 	ipv6_addr_copy(&hdr->daddr, &xs->hit_our);
 	ipv6_addr_copy(&hdr->saddr, &xs->hit_peer);

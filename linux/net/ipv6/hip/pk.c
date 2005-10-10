@@ -1,6 +1,6 @@
 #include "pk.h"
 
-#if !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE
+#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 int hip_rsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 	u8 sha1_digest[HIP_AH_SHA_LEN];
 	u8 signature[HIP_RSA_SIGNATURE_LEN];
@@ -59,7 +59,7 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 	struct in6_addr tmpaddr;	
 	struct hip_puzzle *pz = NULL;
 	uint8_t opaque[3];
-	uint64_t randi;
+	uint64_t randi = 0;
 
 	ipv6_addr_copy(&tmpaddr, &msg->hitr); /* so update is handled, too */
 
@@ -136,4 +136,4 @@ int hip_dsa_verify(struct hip_host_id *peer_pub, struct hip_common *msg)
 {
 	return verify(peer_pub, msg, 0);
 }
-#endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
+#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

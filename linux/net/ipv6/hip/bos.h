@@ -2,25 +2,23 @@
 #define HIP_BOS_NEW_H
 
 #include <net/hip.h>
-#include <linux/socket.h>
-
+#include "hip.h"
+#include "debug.h"
 #include "socket.h"
 #include "beet.h"
+#include "hidb.h"
+#include "hadb.h"
+#include "netlink.h"
 
 #ifdef __KERNEL__
-#include <linux/net.h>
-#include <linux/socket.h>
-
-//#include <linux/mm.h>
-//#include <net/sock.h>
-//#include <net/ipv6.h>
-//#include <net/addrconf.h>
-
+#  include <linux/net.h>
+#  include <linux/socket.h>
+#  include <linux/list.h>
 #else
-
-#include <sys/types.h>
-#include <netdb.h>
-
+#  include <sys/types.h>
+#  include <netdb.h>
+#  include "netdev.h"
+#  include "list.h"
 #endif
 
 //extern struct my_addrinfo;

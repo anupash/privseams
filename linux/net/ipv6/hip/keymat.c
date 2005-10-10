@@ -80,14 +80,14 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		     struct in6_addr *hit2, u8 *calc_index,
 		     uint64_t I, uint64_t J)
 {
-	int err, bufsize;
+	int bufsize, err = 0;
 	uint8_t index_nbr = 1;
 	int dstoffset = 0;
 	void *seedkey;
 	struct in6_addr *smaller_hit, *bigger_hit;
 	int hit1_is_bigger;
 	u8 *shabuffer = NULL;
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	struct crypto_tfm *sha = impl_sha1;
 	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
 	int nsg = HIP_MAX_SCATTERLISTS;
@@ -123,7 +123,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		2 * sizeof(uint64_t) + 1;
 	//bufsize = kij_len+2*sizeof(struct in6_addr)+ 1;
 
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, bufsize);
 	HIP_ASSERT(!err);
 
@@ -146,7 +146,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	seedkey = dstbuf;
 	hip_update_keymat_buffer(shabuffer, seedkey, HIP_AH_SHA_LEN,
 				 kij_len, index_nbr);
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	nsg = HIP_MAX_SCATTERLISTS;
 
 	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer,
@@ -155,7 +155,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 #endif
 
 	while (dstoffset < dstbuflen) {
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 		crypto_digest_digest(sha, sg, nsg, dstbuf + dstoffset);
 #else
 		hip_build_digest(HIP_DIGEST_SHA1, shabuffer,
@@ -322,10 +322,6 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 			goto out_err;
 		}
 		*Kn_is_at += HIP_AH_SHA_LEN;
-#if 0
-		_HIP_DEBUG("keymat K%u from offset %u\n", *calc_index, *Kn_is_at);
-		_HIP_HEXDUMP("", calc_index_keymat, HIP_AH_SHA_LEN);
-#endif
 		if (*Kn_is_at + HIP_AH_SHA_LEN < *keymat_index) {
 			HIP_DEBUG("skip until we are at right offset\n");
 			continue;

@@ -5,11 +5,9 @@
 #  include <net/ipv6.h>
 #  include <linux/types.h>
 #  include <net/hip.h>
-#  include "hip.h"
 #else
 #  include "list.h" /* userspace list implementation */
 #  include "hipd.h"
-#  include "debug.h"
 
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)

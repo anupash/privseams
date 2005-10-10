@@ -14,6 +14,7 @@
 #include "debug.h"
 #include "preinput.h"
 #include "workqueue.h"
+#include "hip.h"
 
 #ifdef __KERNEL__
 /* Called by transport layer */

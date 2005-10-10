@@ -16,13 +16,13 @@
 
 /* HIP Per Cpu WorkQueue */
 struct hip_pc_wq {
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 	struct semaphore worklock;
 #endif
 	struct list_head workqueue;
 };
 
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
 #else
 static struct hip_pc_wq hip_workqueue;
@@ -55,7 +55,7 @@ struct hip_work_order *hip_get_work_order(void)
 {
 	struct hip_work_order *err = NULL;
 	struct hip_pc_wq *wq;
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	unsigned long eflags;
 	int locked;
 
@@ -84,7 +84,7 @@ struct hip_work_order *hip_get_work_order(void)
 	list_del((&wq->workqueue)->next);
 
  out_err:	
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	local_irq_restore(eflags);
 #endif
 	return err;
@@ -105,10 +105,9 @@ struct hip_work_order *hip_get_work_order(void)
 int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	int err = 1;
-	unsigned long eflags;
 	struct hip_pc_wq *wq;
-
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
+	unsigned long eflags;
 	HIP_IFEL(cpu >= NR_CPUS, -1, 
 		"Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
 
@@ -123,12 +122,12 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 	if (wq) {
 		list_add_tail(&hwo->queue, &wq->workqueue);
 		/* what is the correct order of these two, l_i_r and up ? */
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 		up(&wq->worklock);
 #endif
 	}
 
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	local_irq_restore(eflags);
  out_err:
 #endif
@@ -143,13 +142,13 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
  */
 int hip_insert_work_order(struct hip_work_order *hwo)
 {
-#ifdef CONFIG_HIP_USERSPACE
+#if HIP_USER_DAEMON || HIP_KERNEL_STUB
 	int ret;
 #endif
 	if (hwo->hdr.type < 0 || hwo->hdr.type > HIP_MAX_WO_TYPES)
 		return -1;
 
-#ifdef CONFIG_HIP_USERSPACE
+#if HIP_USER_DAEMON || HIP_KERNEL_STUB
 	ret = hip_netlink_send(hwo);
 	hip_free_work_order(hwo);
 	return ret;
@@ -161,7 +160,7 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 int hip_init_workqueue()
 {
 	struct hip_pc_wq *wq;
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	unsigned long eflags;
 
 	local_irq_save(eflags);
@@ -171,7 +170,7 @@ int hip_init_workqueue()
 	wq = &hip_workqueue;
 #endif
  	INIT_LIST_HEAD(&wq->workqueue);
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
  	init_MUTEX_LOCKED(&wq->worklock);
  	put_cpu_var(hip_workqueue);
  	local_irq_restore(eflags);
@@ -184,7 +183,7 @@ void hip_uninit_workqueue()
 	struct list_head *pos,*iter;
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
 	unsigned long eflags;
 
 	local_irq_save(eflags);
@@ -197,7 +196,7 @@ void hip_uninit_workqueue()
 		hip_free_work_order(hwo);
 		list_del(pos);
 	}
-#ifdef __KERNEL__
+#if HIP_KERNEL_DAEMON
  	put_cpu_var(hip_workqueue); // test
 	local_irq_restore(eflags);
 #endif
@@ -249,13 +248,13 @@ int hip_do_work(struct hip_work_order *job)
 	case HIP_WO_TYPE_INCOMING:
 		HIP_START_TIMER(KMM_PARTIAL);
 		switch(job->hdr.subtype) {
-#if (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
+#if HIP_KERNEL_DAEMON  || HIP_USER_DAEMON
 		case HIP_WO_SUBTYPE_RECV_CONTROL:
 			res = hip_receive_control_packet(job->msg,
 							 &job->hdr.id1,
 							 &job->hdr.id2);
 			break;
-#endif /* (defined __KERNEL__ && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
+#endif
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
@@ -271,7 +270,7 @@ int hip_do_work(struct hip_work_order *job)
 		struct hip_keys *keys;
 		
 		switch(job->hdr.subtype) {
-#if defined __KERNEL__ && defined CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_STUB
 		case HIP_WO_SUBTYPE_SEND_PACKET:
 			res = hip_csum_send(&job->hdr.id1, &job->hdr.id2, 
 					    job->msg);
@@ -317,30 +316,6 @@ int hip_do_work(struct hip_work_order *job)
 				hip_delete_sa(job->hdr.arg1, &job->hdr.id2);
 			break;
 
-#if 0			
-		case HIP_WO_SUBTYPE_FINSA:
-			resp = hip_init_job(GFP_KERNEL);
-			if (!resp) 
-				break;
-			
-			resp->seq = job->seq;
-			res = resp->hdr.arg1 =
-				hip_finalize_sa(&job->hdr.id2,
-						job->hdr.arg1);
-			break;
-
-
-		case HIP_WO_SUBTYPE_XFRM_INIT:
-			resp = hip_init_job(GFP_KERNEL);
-			if (!resp) 
-				break;
-			
-			resp->seq = job->seq;
-			res = resp->hdr.arg1 =
-				hip_xfrm_dst_init(&job->hdr.id1,
-						  &job->hdr.id2);
-			break;
-#endif
 			/* BEET database management functions follow */			
 		case HIP_WO_SUBTYPE_XFRM_UPD:
 			resp = hip_init_job(GFP_KERNEL);
@@ -375,8 +350,8 @@ int hip_do_work(struct hip_work_order *job)
 			resp->seq = job->seq;
 			res = resp->hdr.arg1 = 0;
 			break;
-#endif /* defined __KERNEL__ && defined CONFIG_HIP_USERSPACE */
-#ifndef __KERNEL__
+#endif /* HIP_KERNEL_STUB */
+#if HIP_USER_DAEMON
 		case HIP_WO_SUBTYPE_SEND_I1:
 		{
 			hip_ha_t *entry;
@@ -396,34 +371,25 @@ int hip_do_work(struct hip_work_order *job)
 				entry->state = HIP_STATE_UNASSOCIATED;
 				goto send_i1_end;
 			}
-#if 0
-			/* Synchronize beet state (may be changed) */
-			res = hip_hadb_update_xfrm(entry);
-			if (res) {
-				HIP_ERROR("XFRM out synchronization failed\n");
-				entry->state = HIP_STATE_FAILED;
-				res = KHIPD_ERROR;
-				goto send_i1_end;
-			}
-#endif
+
 		send_i1_end:
 			if (entry)
 				hip_db_put_ha(entry, hip_hadb_delete_state);
 			break;
 		}
-#endif /* __KERNEL__ */
+#endif /* HIP_USER_DAEMON */
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
 			break;
 		}
 		
-#if defined __KERNEL__ && defined CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_STUB
 		if (resp) {
 			hip_netlink_send(resp);
 			hip_free_work_order(resp);
 		}
-#endif /* defined __KERNEL__ && defined CONFIG_HIP_USERSPACE */
+#endif
 
 		if (res < 0)
 			res = KHIPD_ERROR;
@@ -432,7 +398,7 @@ int hip_do_work(struct hip_work_order *job)
 	
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
-#if defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE
+#if HIP_KERNEL_DAEMON
 		case HIP_WO_SUBTYPE_IN6_EVENT:
 			hip_net_event((int)job->hdr.arg1, 0, (uint32_t) job->hdr.arg2);
 			res = KHIPD_OK;
@@ -442,33 +408,7 @@ int hip_do_work(struct hip_work_order *job)
 			res = KHIPD_OK;
 			break;
 #endif
-#if (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__
-		case HIP_WO_SUBTYPE_ADDMAP:
-			/* arg1 = d-hit, arg2=ipv6 */
-			res = hip_hadb_add_peer_info(&job->hdr.id2,
-						     &job->hdr.id1);
-			if (res < 0) {
-				res = KHIPD_ERROR;
-				break;
-			}
-
-#if 0
-			/* Synchronize the BEET database */
-			res = hip_xfrm_dst_init(&job->hdr.id2,
-						&job->hdr.id1);
-			if (res < 0)
-				res = KHIPD_ERROR;
-#endif
-			break;
-		case HIP_WO_SUBTYPE_DELMAP:
-			/* arg1 = d-hit arg2=d-ipv6 */
-			res = hip_del_peer_info(&job->hdr.id2,
-						&job->hdr.id1);
-			if (res < 0)
-				res = KHIPD_ERROR;
-			break;
-
-			/* FIXME: Synchronize the BEET database */
+#if HIP_KERNEL_DAEMON || HIP_USER_DAEMON
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */
@@ -484,15 +424,27 @@ int hip_do_work(struct hip_work_order *job)
 				ipv6_addr_copy(&hdr.daddr, &job->hdr.id2);
 				hip_handle_output(&hdr, NULL);
 			}
-#if 0
-			/* Synchronize the BEET database */
-			res = hip_xfrm_dst_init(&job->hdr.id2,
+			break;
+#endif /* CONFIG_HIP_RVS */
+		case HIP_WO_SUBTYPE_ADDMAP:
+			/* arg1 = d-hit, arg2=ipv6 */
+			res = hip_hadb_add_peer_info(&job->hdr.id2,
+						     &job->hdr.id1);
+			if (res < 0) {
+				res = KHIPD_ERROR;
+				break;
+			}
+
+			break;
+		case HIP_WO_SUBTYPE_DELMAP:
+			/* arg1 = d-hit arg2=d-ipv6 */
+			res = hip_del_peer_info(&job->hdr.id2,
 						&job->hdr.id1);
 			if (res < 0)
 				res = KHIPD_ERROR;
-#endif
 			break;
-#endif
+
+			/* FIXME: Synchronize the BEET database */
 		case HIP_WO_SUBTYPE_ADDHI:
 			HIP_DEBUG("Adding \n");
 			res = hip_handle_add_local_hi(job->msg);
@@ -516,7 +468,7 @@ int hip_do_work(struct hip_work_order *job)
 			HIP_DEBUG("Sending CLOSE\n");
 			res = hip_send_close(job->msg);
 			break;
-#endif /* (defined __KERNEL__  && !defined CONFIG_HIP_USERSPACE) || !defined __KERNEL__ */
+#endif /* HIP_KERNEL_DAEMON || HIP_USER_DAEMON */
 		default:
 			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);
 			res = KHIPD_ERROR;
@@ -529,5 +481,3 @@ int hip_do_work(struct hip_work_order *job)
 		hip_free_work_order(job);
 	return res;
 }
-
-

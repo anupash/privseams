@@ -1,9 +1,11 @@
 #ifndef HIP_CRYPTO_H
 #define HIP_CRYPTO_H
 
+#include "hip.h"
+#include "debug.h"
+
 #ifdef __KERNEL__
 #  include <linux/crypto.h>
-#  include "hip.h"
 #  include "dh.h"
 #  include "crypto/dh.h"
 
@@ -21,7 +23,6 @@ extern struct crypto_tfm *impl_sha1;
 #  include <openssl/bio.h>
 #  include <openssl/pem.h>
 #  include <openssl/err.h> 
-#  include "debug.h"
 
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */

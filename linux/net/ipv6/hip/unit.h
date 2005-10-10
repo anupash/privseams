@@ -1,17 +1,17 @@
 #ifndef HIP_UNIT
 #define HIP_UNIT
 
+#include "debug.h"
+
 #ifdef __KERNEL__
 #  include <linux/kernel.h>
 #  include <linux/types.h>
 #  include <net/hip.h>
-#  include "debug.h"
 #else
 #  include <stdio.h>
 #  include <stdint.h>
 #  include "libinet6/debug.h"
 #endif /* __KERNEL__ */
-
 
 /*
  * A maximum amount of test spaces, suites and cases have be fixed because they

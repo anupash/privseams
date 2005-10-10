@@ -15,7 +15,7 @@ int init_daemon()
 	 * Later on this will changed to the only command, without specifying the
 	 * path, because we will insert it into $PATH
 	 */
-	err = system("hipd -f");
+	err = system("../hipd/hipd -b");
 	if (err == -1)
 		printf("Please run 'make install' in top directory\n");
 		
