@@ -251,5 +251,7 @@ int hip_list_peers_add(struct in6_addr *address,
 
 int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
 
+int hip_hadb_update_xfrm(hip_ha_t *entry);
+
 
 #endif /* HIP_HADB_H */

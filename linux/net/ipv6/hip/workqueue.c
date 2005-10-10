@@ -266,9 +266,10 @@ int hip_do_work(struct hip_work_order *job)
 		break;
 	case HIP_WO_TYPE_OUTGOING:
 	{			
+#if HIP_KERNEL_STUB
 		struct hip_work_order * resp = NULL;
 		struct hip_keys *keys;
-		
+#endif
 		switch(job->hdr.subtype) {
 #if HIP_KERNEL_STUB
 		case HIP_WO_SUBTYPE_SEND_PACKET:
@@ -443,9 +444,8 @@ int hip_do_work(struct hip_work_order *job)
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
-
-			/* FIXME: Synchronize the BEET database */
 		case HIP_WO_SUBTYPE_ADDHI:
+			/* FIXME: Synchronize the BEET database */
 			HIP_DEBUG("Adding \n");
 			res = hip_handle_add_local_hi(job->msg);
 			break;

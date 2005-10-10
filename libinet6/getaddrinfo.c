@@ -987,7 +987,7 @@ getaddrinfo (const char *name, const char *service,
   int hip_transparent_mode;
 
   _HIP_DEBUG("flags=%d\n", hints->ai_flags);
-  _HIP_DEBUG("name='%s' service='%s'\n", name, service);
+  HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
     _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   else

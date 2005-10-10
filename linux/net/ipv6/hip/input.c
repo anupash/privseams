@@ -12,8 +12,14 @@
 #include "input.h"
 
 #if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
-static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac, 
-			   void *hmac_key, int hmac_type);
+int hip_handle_close(struct hip_common *close, hip_ha_t *entry);
+int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
+extern int hip_hadb_update_xfrm(hip_ha_t *entry);
+extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
+			struct in6_addr *i1_daddr, HIP_RVA *rva);
+
+extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
+			     uint32_t old_spi, uint32_t new_spi);
 
 /**
  * hip_controls_sane - check for illegal controls
@@ -35,6 +41,43 @@ static inline int hip_controls_sane(u16 controls, u16 legal)
 			      | HIP_CONTROL_SHT_MASK /* should check reserved ? */
 			      | HIP_CONTROL_DHT_MASK
 		)) | legal) == legal;
+}
+
+/**
+ * hip_verify_hmac - verify HMAC
+ * @buffer: the packet data used in HMAC calculation
+ * @hmac: the HMAC to be verified
+ * @hmac_key: integrity key used with HMAC
+ * @hmac_type: type of the HMAC digest algorithm.
+ *
+ * Returns: 0 if calculated HMAC is same as @hmac, otherwise < 0. On
+ * error < 0 is returned.
+ *
+ * FIX THE PACKET LEN BEFORE CALLING THIS FUNCTION
+ */
+static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
+			   void *hmac_key, int hmac_type)
+{
+	int err = 0;
+	u8 *hmac_res = NULL;
+
+	HIP_IFEL(!(hmac_res = HIP_MALLOC(HIP_AH_SHA_LEN, GFP_ATOMIC)), -ENOMEM,
+		 "HIP_MALLOC failed\n");
+
+	_HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
+
+	HIP_IFEL(!hip_write_hmac(hmac_type, hmac_key, buffer,
+				 hip_get_msg_total_len(buffer), hmac_res), -EINVAL,
+		 "Could not build hmac\n");
+
+	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
+	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
+
+ out_err:
+	if (hmac_res)
+		HIP_FREE(hmac_res);
+
+	return err;
 }
 
 /**
@@ -270,6 +313,116 @@ int hip_produce_keying_material(struct hip_common *msg,
 /*****************************************************************************
  *                           PACKET/PROTOCOL HANDLING                        *
  *****************************************************************************/
+
+int hip_receive_close(struct hip_common *close) 
+{
+	int state = 0;
+	int err = 0;
+	hip_ha_t *entry;
+	uint16_t mask;
+
+	/* XX FIX: CHECK THE SIGNATURE */
+
+	HIP_DEBUG("\n");
+	HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
+		 "Received NULL receiver HIT in CLOSE. Dropping\n");
+
+	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
+					HIP_CONTROL_DHT_ALL);
+	if (!hip_controls_sane(ntohs(close->control), mask
+			  //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
+			  //HIP_CONTROL_RVS_CAPABLE
+			  // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
+		               )) {
+		HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
+			  ntohs(close->control));
+		goto out_err;
+	}
+
+	entry = hip_hadb_find_byhits(&close->hits, &close->hitr);
+	if (!entry) {
+		HIP_DEBUG("No HA for the received close\n");
+		goto out_err;
+	} else {
+		barrier();
+		HIP_LOCK_HA(entry);
+		state = entry->state;
+	}
+
+ 	switch(state) {
+ 	case HIP_STATE_REKEYING: // XX CHECK: CORRECT?
+ 	case HIP_STATE_ESTABLISHED:
+	case HIP_STATE_CLOSING:
+		err = hip_handle_close(close, entry);
+		break;
+	default:
+		HIP_ERROR("Internal state (%d) is incorrect\n", state);
+		break;
+	}
+
+	if (entry) {
+		/* XX CHECK: is the put done twice? once already in handle? */
+		HIP_UNLOCK_HA(entry);
+		hip_put_ha(entry);
+	}
+ out_err:
+	return err;
+}
+
+int hip_receive_close_ack(struct hip_common *close_ack) 
+{
+	int state = 0;
+	int err = 0;
+	hip_ha_t *entry;
+	uint16_t mask;
+
+	/* XX FIX:  */
+
+	HIP_DEBUG("\n");
+
+	HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
+		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
+
+	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
+					HIP_CONTROL_DHT_ALL);
+	if (!hip_controls_sane(ntohs(close_ack->control), mask
+		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
+		       //HIP_CONTROL_RVS_CAPABLE
+		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
+		               )) {
+		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
+			  ntohs(close_ack->control));
+		goto out_err;
+	}
+
+	entry = hip_hadb_find_byhits(&close_ack->hits, &close_ack->hitr);
+	if (!entry) {
+		HIP_DEBUG("No HA for the received close ack\n");
+		goto out_err;
+	} else {
+		barrier();
+		HIP_LOCK_HA(entry);
+		state = entry->state;
+	}
+
+ 	switch(state) {
+	case HIP_STATE_CLOSING:
+	case HIP_STATE_CLOSED:
+		err = hip_handle_close_ack(close_ack, entry);
+		break;
+	default:
+		HIP_ERROR("Internal state (%d) is incorrect\n", state);
+		break;
+	}
+
+	if (entry) {
+		/* XX CHECK: is the put done twice? once already in handle? */
+		HIP_UNLOCK_HA(entry);
+		hip_put_ha(entry);
+	}
+ out_err:
+	return err;
+}
 
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
@@ -651,7 +804,7 @@ int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_daddr,
 		  hip_ha_t *entry)
 {
-	int err = 0, len, retransmission = 0;
+	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
 
@@ -968,7 +1121,6 @@ int hip_handle_i2(struct hip_common *i2,
 	hip_transform_suite_t esp_tfm, hip_tfm;
 	uint32_t spi_in, spi_out;
 	uint16_t crypto_len;
- 	struct in6_addr hit;
 	struct hip_spi_in_item spi_in_data;
 	uint64_t I, J;
  	HIP_DEBUG("\n");
@@ -1381,11 +1533,10 @@ int hip_handle_r2(struct hip_common *r2,
 		  struct in6_addr *r2_daddr,
 		  hip_ha_t *entry)
 {
-	uint16_t len;
 	struct hip_context *ctx = NULL;
 	//struct in6_addr *sender;
  	struct hip_esp_info *esp_info = NULL;
- 	struct hip_sig *sig = NULL;
+ 	//struct hip_sig *sig = NULL;
 	struct hip_spi_out_item spi_out_data;
 	int tfm, err = 0;
 	uint32_t spi_recvd, spi_in;
@@ -1500,13 +1651,12 @@ int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_daddr,
 		  hip_ha_t *entry)
 {
-	int err;
-	HIP_DEBUG("hip_handle_i1\n");
+	//int err;
 #ifdef CONFIG_HIP_RVS
   	struct hip_from *from;
 #endif
 	struct in6_addr *dst, *dstip;
-
+	HIP_DEBUG("hip_handle_i1\n");
 	dst = &i1->hits;
 	dstip = NULL;
 
@@ -1740,43 +1890,6 @@ int hip_receive_notify(struct hip_common *hip_common,
 }
 
 /**
- * hip_verify_hmac - verify HMAC
- * @buffer: the packet data used in HMAC calculation
- * @hmac: the HMAC to be verified
- * @hmac_key: integrity key used with HMAC
- * @hmac_type: type of the HMAC digest algorithm.
- *
- * Returns: 0 if calculated HMAC is same as @hmac, otherwise < 0. On
- * error < 0 is returned.
- *
- * FIX THE PACKET LEN BEFORE CALLING THIS FUNCTION
- */
-static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
-			   void *hmac_key, int hmac_type)
-{
-	int err = 0;
-	u8 *hmac_res = NULL;
-
-	HIP_IFEL(!(hmac_res = HIP_MALLOC(HIP_AH_SHA_LEN, GFP_ATOMIC)), -ENOMEM,
-		 "HIP_MALLOC failed\n");
-
-	_HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
-
-	HIP_IFEL(!hip_write_hmac(hmac_type, hmac_key, buffer,
-				 hip_get_msg_total_len(buffer), hmac_res), -EINVAL,
-		 "Could not build hmac\n");
-
-	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
-	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
-
- out_err:
-	if (hmac_res)
-		HIP_FREE(hmac_res);
-
-	return err;
-}
-
-/**
  * hip_receive_bos - receive BOS packet
  * @skb: sk_buff where the HIP packet is in
  *
@@ -1936,116 +2049,6 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
  out_err:
 
-	return err;
-}
-
-int hip_receive_close(struct hip_common *close) 
-{
-	int state = 0;
-	int err = 0;
-	hip_ha_t *entry;
-	uint16_t mask;
-
-	/* XX FIX: CHECK THE SIGNATURE */
-
-	HIP_DEBUG("\n");
-	HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
-		 "Received NULL receiver HIT in CLOSE. Dropping\n");
-
-	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
-					HIP_CONTROL_DHT_ALL);
-	if (!hip_controls_sane(ntohs(close->control), mask
-			  //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
-			  //HIP_CONTROL_RVS_CAPABLE
-			  // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
-		               )) {
-		HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
-			  ntohs(close->control));
-		goto out_err;
-	}
-
-	entry = hip_hadb_find_byhits(&close->hits, &close->hitr);
-	if (!entry) {
-		HIP_DEBUG("No HA for the received close\n");
-		goto out_err;
-	} else {
-		barrier();
-		HIP_LOCK_HA(entry);
-		state = entry->state;
-	}
-
- 	switch(state) {
- 	case HIP_STATE_REKEYING: // XX CHECK: CORRECT?
- 	case HIP_STATE_ESTABLISHED:
-	case HIP_STATE_CLOSING:
-		err = hip_handle_close(close, entry);
-		break;
-	default:
-		HIP_ERROR("Internal state (%d) is incorrect\n", state);
-		break;
-	}
-
-	if (entry) {
-		/* XX CHECK: is the put done twice? once already in handle? */
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
- out_err:
-	return err;
-}
-
-int hip_receive_close_ack(struct hip_common *close_ack) 
-{
-	int state = 0;
-	int err = 0;
-	hip_ha_t *entry;
-	uint16_t mask;
-
-	/* XX FIX:  */
-
-	HIP_DEBUG("\n");
-
-	HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
-		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
-
-	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
-					HIP_CONTROL_DHT_ALL);
-	if (!hip_controls_sane(ntohs(close_ack->control), mask
-		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
-		       //HIP_CONTROL_RVS_CAPABLE
-		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
-		               )) {
-		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
-			  ntohs(close_ack->control));
-		goto out_err;
-	}
-
-	entry = hip_hadb_find_byhits(&close_ack->hits, &close_ack->hitr);
-	if (!entry) {
-		HIP_DEBUG("No HA for the received close ack\n");
-		goto out_err;
-	} else {
-		barrier();
-		HIP_LOCK_HA(entry);
-		state = entry->state;
-	}
-
- 	switch(state) {
-	case HIP_STATE_CLOSING:
-	case HIP_STATE_CLOSED:
-		err = hip_handle_close_ack(close_ack, entry);
-		break;
-	default:
-		HIP_ERROR("Internal state (%d) is incorrect\n", state);
-		break;
-	}
-
-	if (entry) {
-		/* XX CHECK: is the put done twice? once already in handle? */
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
- out_err:
 	return err;
 }
 
