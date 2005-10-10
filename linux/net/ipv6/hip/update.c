@@ -231,7 +231,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	uint32_t prev_spi_in = 0, new_spi_in = 0;
 	uint16_t keymat_index = 0, mask;
 	struct hip_common *update_packet = NULL;
- 	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
+ 	//u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
 	int err = 0, nes_i = 1, need_to_generate_key = 0, dh_key_generated = 0;
 	
 	HIP_DEBUG("\n");
@@ -612,7 +612,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
 	struct in6_addr daddr;
-	u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
+	//u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
 	uint16_t mask;
 
 	/* 8.11.2  Processing an UPDATE packet in state REKEYING */
@@ -943,7 +943,7 @@ int hip_receive_update(struct hip_common *msg,
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
 	struct hip_hmac *hmac = NULL;
-	struct hip_signature *signature = NULL;
+	//struct hip_signature *signature = NULL;
 	uint32_t pkt_update_id = 0; /* UPDATE ID in packet */
 	uint32_t update_id_in = 0;  /* stored incoming UPDATE ID */
 	uint16_t keymat_index = 0;
@@ -1156,6 +1156,51 @@ int hip_receive_update(struct hip_common *msg,
 	return err;
 }
 
+/** hip_copy_spi_in_addresses - copy addresses to the inbound SPI
+ * @src: address list
+ * @spi_in: the inbound SPI the addresses are copied to
+ * @count: number of addresses in @src
+ *
+ * A simple helper function to copy interface addresses to the inbound
+ * SPI of. Caller must kfree the allocated memory.
+ *
+ * Returns: 0 on success, < 0 otherwise.
+ */
+int hip_copy_spi_in_addresses(struct hip_rea_info_addr_item *src,
+			      struct hip_spi_in_item *spi_in,
+			      int count) {
+	size_t s = count * sizeof(struct hip_rea_info_addr_item);
+	void *p = NULL;
+
+	HIP_DEBUG("src=0x%p count=%d\n", src, count);
+	if (!spi_in || (src && count <= 0)) {
+ 		HIP_ERROR("!spi_in or src & illegal count (%d)\n", count);
+		return -EINVAL;
+	}
+
+	if (src) {
+		p = HIP_MALLOC(s, GFP_ATOMIC);
+		if (!p) {
+			HIP_ERROR("kmalloc failed\n");
+			return -ENOMEM;
+		}
+		memcpy(p, src, s);
+	} else
+		count = 0;
+
+	_HIP_DEBUG("prev addresses_n=%d\n", spi_in->addresses_n);
+	if (spi_in->addresses) {
+		HIP_DEBUG("kfreeing old address list at 0x%p\n",
+			  spi_in->addresses);
+		HIP_FREE(spi_in->addresses);
+	}
+
+	spi_in->addresses_n = count;
+	spi_in->addresses = p;
+
+	return 0;
+}
+
 /** hip_send_update - send initial UPDATE packet to the peer
  * @entry: hadb entry corresponding to the peer
  * @addr_list: if non-NULL, REA parameter is added to the UPDATE
@@ -1357,49 +1402,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	} else
 		HIP_DEBUG("experimental: staying in ESTABLISHED (NES not added)\n");
 
-/** hip_copy_spi_in_addresses - copy addresses to the inbound SPI
- * @src: address list
- * @spi_in: the inbound SPI the addresses are copied to
- * @count: number of addresses in @src
- *
- * A simple helper function to copy interface addresses to the inbound
- * SPI of. Caller must kfree the allocated memory.
- *
- * Returns: 0 on success, < 0 otherwise.
- */
-int hip_copy_spi_in_addresses(struct hip_rea_info_addr_item *src,
-			      struct hip_spi_in_item *spi_in,
-			      int count) {
-	HIP_DEBUG("src=0x%p count=%d\n", src, count);
-	size_t s = count * sizeof(struct hip_rea_info_addr_item);
-	void *p = NULL;
-
-	if (!spi_in || (src && count <= 0)) {
- 		HIP_ERROR("!spi_in or src & illegal count (%d)\n", count);
-		return -EINVAL;
-	}
-
-	if (src) {
-		p = HIP_MALLOC(s, GFP_ATOMIC);
-		if (!p) {
-			HIP_ERROR("kmalloc failed\n");
-			return -ENOMEM;
-		}
-		memcpy(p, src, s);
-	} else
-		count = 0;
-
-	_HIP_DEBUG("prev addresses_n=%d\n", spi_in->addresses_n);
-	if (spi_in->addresses) {
-		HIP_DEBUG("kfreeing old address list at 0x%p\n",
-			  spi_in->addresses);
-		HIP_FREE(spi_in->addresses);
-	}
-
-	spi_in->addresses_n = count;
-	spi_in->addresses = p;
-	return 0;
-}
 
         HIP_DEBUG("Sending initial UPDATE packet\n");
 	err = hip_csum_send(NULL, &daddr, update_packet); // HANDLER
@@ -1508,7 +1510,7 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 		}
 	}
 
- out_err:
+out_err:
 	return;
 }
 

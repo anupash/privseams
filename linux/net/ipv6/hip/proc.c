@@ -324,7 +324,7 @@ int hip_init_procfs(void)
 		goto out_err_sdb_state;
 
 	HIP_DEBUG("profcs init successful\n");
-
+	return 1;
  out_err_sdb_state:
 	remove_proc_entry("sdb_state", hip_proc_root);
  out_err_lhi:

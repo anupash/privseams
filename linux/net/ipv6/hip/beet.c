@@ -201,7 +201,7 @@ int hip_beetdb_insert_state(hip_xfrm_t *x)
 	int err = 0;
 
 	/* assume already locked */
-
+	HIP_DEBUG("Trying to insert a new entry\n");
 	HIP_ASSERT(!(ipv6_addr_any(&x->hit_peer)));
 
 	if (!ipv6_addr_any(&x->hit_peer)) {
@@ -349,7 +349,7 @@ int hip_xfrm_update(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 		    uint32_t spi, int state, int dir)
 {
 	int err = 0;
-
+	HIP_DEBUG("\n");
 	if (dir == HIP_SPI_DIRECTION_IN)
 		err = hip_xfrm_update_inbound(hit_peer, hit_our,
 					      spi, state);
