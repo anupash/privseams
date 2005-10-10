@@ -63,11 +63,6 @@
 #include <asm/uaccess.h>
 #include <asm/system.h>
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#include <net/hip.h>
-#endif
-
 MODULE_AUTHOR("Cast of dozens");
 MODULE_DESCRIPTION("IPv6 protocol stack for Linux");
 MODULE_LICENSE("GPL");
@@ -117,11 +112,7 @@ static __inline__ struct ipv6_pinfo *inet6_sk_generic(struct sock *sk)
 	return (struct ipv6_pinfo *)(((u8 *)sk) + offset);
 }
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-int inet6_create(struct socket *sock, int protocol)
-#else
 static int inet6_create(struct socket *sock, int protocol)
-#endif /* CONFIG_HIP */
 {
 	struct inet_sock *inet;
 	struct ipv6_pinfo *np;
@@ -327,16 +318,13 @@ int inet6_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 			if (!(addr_type & IPV6_ADDR_MULTICAST))	{
 				/* For HIP implementation: If we have a HIT 
 				   then skip the address check */
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)	
-				if(!ipv6_addr_is_hit(&addr->sin6_addr)) 
-#endif	  
-					if (!ipv6_chk_addr(&addr->sin6_addr, 
-							   dev, 0)) {
-						if (dev)
-							dev_put(dev);
-						err = -EADDRNOTAVAIL;
-						goto out;
-					}
+				if (!ipv6_chk_addr(&addr->sin6_addr, 
+						   dev, 0)) {
+					if (dev)
+						dev_put(dev);
+					err = -EADDRNOTAVAIL;
+					goto out;
+				}
 			}
 			if (dev)
 				dev_put(dev);
@@ -531,13 +519,6 @@ static struct net_proto_family inet6_family_ops = {
 	.create = inet6_create,
 	.owner	= THIS_MODULE,
 };
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-EXPORT_SYMBOL(inet6_family_ops);
-EXPORT_SYMBOL(inet6_stream_ops);
-EXPORT_SYMBOL(inet6_dgram_ops);
-EXPORT_SYMBOL(inet6_create);
-#endif /* CONFIG_HIP */
 
 #ifdef CONFIG_SYSCTL
 extern void ipv6_sysctl_register(void);

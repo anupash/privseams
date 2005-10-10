@@ -82,10 +82,6 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#endif
-
 /* Set to 3 to get tracing... */
 #define ACONF_DEBUG 2
 
@@ -1675,16 +1671,6 @@ static int inet6_addr_del(int ifindex, struct in6_addr *pfx, int plen)
 			 */
 			if (idev->addr_list == NULL)
 				addrconf_ifdown(idev->dev, 1);
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-			/* We must avoid sending multiple UPDATEs when
-			 * network device goes down. addrconf_ifdown
-			 * sends NETDEV_DOWN notification, so we
-			 * handle address deletion only when there are
-			 * addresses left after deletion of an IPv6
-			 * address */
-			else
-				HIP_CALLFUNC(hip_handle_inet6_addr_del, 0)(ifindex);
-#endif
 			return 0;
 		}
 	}
@@ -2290,19 +2276,6 @@ static void addrconf_dad_completed(struct inet6_ifaddr *ifp)
 		addrconf_mod_timer(ifp, AC_RS, ifp->idev->cnf.rtr_solicit_interval);
 		spin_unlock_bh(&ifp->lock);
 	}
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	if (ipv6_addr_type(&ifp->addr) & IPV6_ADDR_LINKLOCAL) {
- 		printk(KERN_DEBUG "HIP DAD: skipping event on link local "
- 		       "address=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
- 		       NIP6(ifp->addr));
-	} else {
-		printk(KERN_DEBUG "HIP DAD: "
- 		       "address=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
-  		       NIP6(ifp->addr));
-		HIP_CALLFUNC(hip_handle_ipv6_dad_completed, 0)(dev->ifindex);
-	}
-#endif
 }
 
 #ifdef CONFIG_PROC_FS

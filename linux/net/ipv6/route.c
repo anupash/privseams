@@ -56,11 +56,6 @@
 
 #include <asm/uaccess.h>
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#endif
-
-
 #ifdef CONFIG_SYSCTL
 #include <linux/sysctl.h>
 #endif
@@ -526,16 +521,6 @@ struct dst_entry * ip6_route_output(struct sock *sk, struct flowi *fl)
 	struct rt6_info *rt;
 	int strict;
 	int attempts = 3;
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-
-	if (ipv6_addr_is_hit(&fl->fl6_dst))
-		HIP_CALLFUNC(hip_get_addr, 0)(&fl->fl6_dst, &fl->fl6_dst);
-
-	/* HIT is now replaced with IPv6, that is not necessarily the
-	 * same IPv6 address that is in the BEET SA :(
-	 */
-#endif
 
 	strict = ipv6_addr_type(&fl->fl6_dst) & (IPV6_ADDR_MULTICAST|IPV6_ADDR_LINKLOCAL);
 

@@ -56,9 +56,6 @@
 #include <net/xfrm.h>
 #include <net/checksum.h>
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#endif
 
 static int ip6_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *));
 
@@ -268,21 +265,6 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 	mtu = dst_pmtu(dst);
 
 	if ((skb->len <= mtu) || ipfragok) {
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		int ret;
-#if 0
- 		struct in6_addr src_hit, dst_hit;
- 		ipv6_addr_copy(&src_hit, &hdr->saddr);
- 		ipv6_addr_copy(&dst_hit, &hdr->daddr);
-#endif
-		if (dst && dst->xfrm) { /* store HITs for later use in esp6.c */
- 			ipv6_addr_copy(&dst->xfrm->src_hit, &hdr->saddr);
- 			ipv6_addr_copy(&dst->xfrm->dst_hit, &hdr->daddr);
- 		}
- 		ret = HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb);
-		if (ret < 0)
-			goto end_hip;
-#endif /* CONFIG_HIP */
 		IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);
 		return NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, dst->dev, ip6_maybe_reroute);
 	}
@@ -292,10 +274,6 @@ int ip6_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 	skb->dev = dst->dev;
 	icmpv6_send(skb, ICMPV6_PKT_TOOBIG, 0, mtu, skb->dev);
 	IP6_INC_STATS(IPSTATS_MIB_FRAGFAILS);
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
- end_hip:
-	kfree_skb(skb);
-#endif
 	return -EMSGSIZE;
 }
 
@@ -794,11 +772,6 @@ slow_path:
 int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 {
 	int err = 0;
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	struct in6_addr daddr;
-
-	memset(&daddr,0,sizeof(struct in6_addr));
-#endif
 
 	*dst = NULL;
 	if (sk) {
@@ -838,21 +811,6 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 	}
 
 	if (*dst == NULL) {
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		/* if we are dealing with a HIT and cannot find a source HIT
-		 * then we have an error situation and the sooner we bail out
-		 * the better.
-		 */
-		ipv6_addr_copy(&daddr,&fl->fl6_dst);
-		if (ipv6_addr_is_hit(&fl->fl6_dst)) {
-			if (!(HIP_CALLFUNC(hip_get_saddr,0) (fl, &fl->fl6_src))) {
-				err = -ENETUNREACH;
-				goto out_err_release;
-			}
-			/* daddr is now destination HIT */
-			/* fl->fl6_dst and fl->fl6_dst are HITs */
-		}
-#endif
 		*dst = ip6_route_output(sk, fl);
 	}
 	
@@ -873,16 +831,6 @@ int ip6_dst_lookup(struct sock *sk, struct dst_entry **dst, struct flowi *fl)
 		}
 		
 	}
-
-
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	if (ipv6_addr_is_hit(&daddr))
-		ipv6_addr_copy(&fl->fl6_dst,&daddr);
-	/* We need to have both HITs (src & dst) in fl
-	 * so that we can match the correct IPsec policy
-	 * The src addr is set few lines above.
-	 */
-#endif
 
 	return 0;
 
@@ -1226,12 +1174,6 @@ int ip6_push_pending_frames(struct sock *sk)
 	ipv6_addr_copy(&hdr->saddr, &fl->fl6_src);
 	ipv6_addr_copy(&hdr->daddr, final_dst);
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-	if (HIP_CALLFUNC(hip_handle_output, 0)(hdr, skb) != 0) {
-		kfree_skb(skb);
-		goto error;
-	}
-#endif
 	skb->dst = dst_clone(&rt->u.dst);
 	IP6_INC_STATS(IPSTATS_MIB_OUTREQUESTS);	
 	err = NF_HOOK(PF_INET6, NF_IP6_LOCAL_OUT, skb, NULL, skb->dst->dev, dst_output);

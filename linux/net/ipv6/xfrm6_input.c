@@ -17,10 +17,6 @@
 #include <net/ipv6.h>
 #include <net/xfrm.h>
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#endif
-
 static inline void ipip6_ecn_decapsulate(struct sk_buff *skb)
 {
 	struct ipv6hdr *outer_iph = skb->nh.ipv6h;
@@ -55,27 +51,11 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 		if (xfrm_nr == XFRM_MAX_DEPTH)
 			goto drop;
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		HIP_CALLPROC(hip_handle_esp)(ntohl(spi), iph);
-#endif
 		x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nexthdr, AF_INET6);
 		if (x == NULL) {
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-			/* SPI was unknown. Currently Linux IPsec doesn't seem to
-			 * do anything. HIP, on the other hand, assumes that the
-			 * connection was reset and tries to reestablish it.
-			 *
-			 * This could lead to DoSes... if birthday check is omitted.
-			 */
-			HIP_CALLPROC(hip_unknown_spi)(skb, spi);
-#endif
 			goto drop;
 		}
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		/* old code
-		   HIP_CALLFUNC(hip_update_spi_waitlist_ispending, 0)(ntohl(spi)); */
-#endif
 		spin_lock(&x->lock);
 		if (unlikely(x->km.state != XFRM_STATE_VALID))
 			goto drop_unlock;
@@ -117,15 +97,6 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			decaps = 1;
 			break;
 		}
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-		else if (x->props.mode == XFRM_MODE_BEET) {
-			/* printk(KERN_DEBUG "mode is BEET\n");*/
-			/* this should be us */
-			ipv6_addr_copy(&iph->daddr, (struct in6_addr *)&x->id.daddr);
-			/* the original sender */
-			ipv6_addr_copy(&iph->saddr, (struct in6_addr *)&x->props.saddr);
-		}
-#endif
 		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
 			goto drop;
 	} while (!err);

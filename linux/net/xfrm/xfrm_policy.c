@@ -25,10 +25,6 @@
 #include <net/xfrm.h>
 #include <net/ip.h>
 
-#if defined(CONFIG_HIP) || defined(CONFIG_HIP_MODULE)
-#include <net/hip_glue.h>
-#endif
-
 DECLARE_MUTEX(xfrm_cfg_sem);
 EXPORT_SYMBOL(xfrm_cfg_sem);
 
