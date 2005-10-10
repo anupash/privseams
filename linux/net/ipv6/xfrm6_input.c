@@ -44,7 +44,7 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 	seq = 0;
 	if (!spi && (err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) != 0)
 		goto drop;
-
+	
 	do {
 		struct ipv6hdr *iph = skb->nh.ipv6h;
 
@@ -52,17 +52,18 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			goto drop;
 
 		x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, nexthdr, AF_INET6);
-		if (x == NULL) {
+		if (x == NULL)
 			goto drop;
-		}
-
 		spin_lock(&x->lock);
 		if (unlikely(x->km.state != XFRM_STATE_VALID))
 			goto drop_unlock;
+
 		if (x->props.replay_window && xfrm_replay_check(x, seq))
 			goto drop_unlock;
+
 		if (xfrm_state_check_expire(x))
 			goto drop_unlock;
+
 		nexthdr = x->type->input(x, &(xfrm_vec[xfrm_nr].decap), skb);
 		if (nexthdr <= 0)
 			goto drop_unlock;
@@ -79,7 +80,7 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 
 		xfrm_vec[xfrm_nr++].xvec = x;
 
-		if (x->props.mode == XFRM_MODE_TUNNEL) { 
+		if (x->props.mode) { /* XXX */
 			if (nexthdr != IPPROTO_IPV6)
 				goto drop;
 			if (!pskb_may_pull(skb, sizeof(struct ipv6hdr)))
@@ -97,6 +98,7 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 			decaps = 1;
 			break;
 		}
+
 		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
 			goto drop;
 	} while (!err);
@@ -114,6 +116,7 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 
 	if (xfrm_nr + skb->sp->len > XFRM_MAX_DEPTH)
 		goto drop;
+
 	memcpy(skb->sp->x+skb->sp->len, xfrm_vec, xfrm_nr*sizeof(struct sec_decap_state));
 	skb->sp->len += xfrm_nr;
 	skb->ip_summed = CHECKSUM_NONE;
