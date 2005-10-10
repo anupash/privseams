@@ -306,7 +306,7 @@ static u32 esp4_get_max_size(struct xfrm_state *x, int mtu)
 	struct esp_data *esp = x->data;
 	u32 blksize = crypto_tfm_alg_blocksize(esp->conf.tfm);
 
-	if (x->props.mode) {
+	if (x->props.mode == XFRM_MODE_TUNNEL) {
 		mtu = (mtu + 2 + blksize-1)&~(blksize-1);
 	} else {
 		/* The worst case. */
@@ -428,7 +428,7 @@ static int esp_init_state(struct xfrm_state *x)
 	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
 		goto error;
 	x->props.header_len = sizeof(struct ip_esp_hdr) + esp->conf.ivlen;
-	if (x->props.mode)
+	if (x->props.mode == XFRM_MODE_TUNNEL)
 		x->props.header_len += sizeof(struct iphdr);
 	if (x->encap) {
 		struct xfrm_encap_tmpl *encap = x->encap;

@@ -1075,6 +1075,8 @@ static struct xfrm_state * pfkey_msg2xfrm_state(struct sadb_msg *hdr,
 		x->sel.family = pfkey_sadb_addr2xfrm_addr(addr, &x->sel.saddr);
 		x->sel.prefixlen_s = addr->sadb_address_prefixlen;
 	}
+	else
+		x->sel.family = x->props.family; /* Conservative */
 
 	if (ext_hdrs[SADB_X_EXT_NAT_T_TYPE-1]) {
 		struct sadb_x_nat_t_type* n_type;
@@ -1667,35 +1669,35 @@ parse_ipsecrequest(struct xfrm_policy *xp, struct sadb_x_ipsecrequest *rq)
 		if (!t->reqid && !(t->reqid = gen_reqid()))
 			return -ENOBUFS;
 	}
-
-	/* addresses present only in tunnel mode */
-	if (t->mode) {
-		switch (xp->family) {
+/* addresses present in any mode */
+	{
+		struct sockaddr *sa;
+		sa = (struct sockaddr *)(rq+1);
+		switch(sa->sa_family) {
 		case AF_INET:
-			sin = (void*)(rq+1);
-			if (sin->sin_family != AF_INET)
-				return -EINVAL;
+			sin = (struct sockaddr_in *)sa;
 			t->saddr.a4 = sin->sin_addr.s_addr;
 			sin++;
 			if (sin->sin_family != AF_INET)
 				return -EINVAL;
 			t->id.daddr.a4 = sin->sin_addr.s_addr;
+
 			break;
 #if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
 		case AF_INET6:
-			sin6 = (void *)(rq+1);
-			if (sin6->sin6_family != AF_INET6)
-				return -EINVAL;
+			sin6 = (struct sockaddr_in6 *)sa;
 			memcpy(t->saddr.a6, &sin6->sin6_addr, sizeof(struct in6_addr));
 			sin6++;
 			if (sin6->sin6_family != AF_INET6)
 				return -EINVAL;
 			memcpy(t->id.daddr.a6, &sin6->sin6_addr, sizeof(struct in6_addr));
+
 			break;
 #endif
 		default:
 			return -EINVAL;
 		}
+		t->outer_family = sa->sa_family;
 	}
 	/* No way to set this via kame pfkey */
 	t->aalgos = t->ealgos = t->calgos = ~0;

@@ -148,8 +148,9 @@ static int verify_newsa_info(struct xfrm_usersa_info *p,
 
 	err = -EINVAL;
 	switch (p->mode) {
-	case 0:
-	case 1:
+	case XFRM_MODE_TRANSPORT:
+	case XFRM_MODE_TUNNEL:
+	case XFRM_MODE_BEET:
 		break;
 
 	default:
@@ -622,6 +623,7 @@ static void copy_templates(struct xfrm_policy *xp, struct xfrm_user_tmpl *ut,
 		t->aalgos = ut->aalgos;
 		t->ealgos = ut->ealgos;
 		t->calgos = ut->calgos;
+		t->outer_family = ut->family;
 	}
 }
 

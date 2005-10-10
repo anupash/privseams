@@ -80,21 +80,88 @@ int xfrm6_rcv_spi(struct sk_buff **pskb, unsigned int *nhoffp, u32 spi)
 
 		xfrm_vec[xfrm_nr++].xvec = x;
 
-		if (x->props.mode) { /* XXX */
-			if (nexthdr != IPPROTO_IPV6)
-				goto drop;
-			if (!pskb_may_pull(skb, sizeof(struct ipv6hdr)))
-				goto drop;
-			if (skb_cloned(skb) &&
-			    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
-				goto drop;
-			if (x->props.flags & XFRM_STATE_DECAP_DSCP)
-				ipv6_copy_dscp(skb->nh.ipv6h, skb->h.ipv6h);
+		if (x->props.mode == XFRM_MODE_TUNNEL) {
+			if (x->sel.family == AF_INET6) {
+
+				if (nexthdr != IPPROTO_IPV6)
+					goto drop;
+				if (!pskb_may_pull(skb, sizeof(struct ipv6hdr)))
+					goto drop;
+				if (skb_cloned(skb) &&
+				    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
+					goto drop;
+				if (x->props.flags & XFRM_STATE_DECAP_DSCP)
+					ipv6_copy_dscp(skb->nh.ipv6h, skb->h.ipv6h);
+			} else if (x->sel.family == AF_INET) {
+
+				if (nexthdr != IPPROTO_IPIP)
+					goto drop;
+				if (!pskb_may_pull(skb, sizeof(struct iphdr)))
+					goto drop;
+				if (skb_cloned(skb) &&
+				    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
+					goto drop;
+				if (x->props.flags & XFRM_STATE_DECAP_DSCP)
+					ipv4_copy_dscp(skb->nh.iph, skb->h.ipiph);
+
+				memset(&(IPCB(skb)->opt), 0, sizeof(struct ip_options));
+				skb->protocol = htons(ETH_P_IP);
+			}
+
 			if (!(x->props.flags & XFRM_STATE_NOECN))
 				ipip6_ecn_decapsulate(skb);
 			skb->mac.raw = memmove(skb->data - skb->mac_len,
 					       skb->mac.raw, skb->mac_len);
 			skb->nh.raw = skb->data;
+			decaps = 1;
+			break;
+		} else if (x->props.mode == XFRM_MODE_BEET) {
+			int size = (x->sel.family == AF_INET) ? sizeof(struct iphdr) : sizeof(struct ipv6hdr);
+			int delta = sizeof(struct ipv6hdr) - sizeof(struct iphdr);
+			u8 proto = skb->nh.ipv6h->nexthdr, hops = skb->nh.ipv6h->hop_limit;
+			if (x->sel.family == AF_INET) {
+				/* Inner = IPv4, therefore the IPhdr must be shrunk */
+				/* Inner = 4, Outer = 6 */
+				skb->nh.raw += delta;
+			}
+
+			if (skb_cloned(skb) &&
+			    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
+				goto drop;
+
+			skb_push(skb, size);
+			memmove(skb->data, skb->nh.raw, size);
+			skb->nh.raw = skb->data;
+
+			skb->mac.raw = memmove(skb->data - skb->mac_len,
+					       skb->mac.raw, skb->mac_len);
+
+			if (x->sel.family == AF_INET6) {
+				struct ipv6hdr *ip6h = skb->nh.ipv6h;
+				ip6h->payload_len = htons(skb->len - size);
+				ipv6_addr_copy(&ip6h->daddr, (struct in6_addr *) &x->sel.daddr.a6);
+				ipv6_addr_copy(&ip6h->saddr, (struct in6_addr *) &x->sel.saddr.a6);
+			} else if (x->sel.family == AF_INET) {
+				struct iphdr *iph = (struct iphdr*) skb->nh.raw;
+				iph->ihl = (sizeof(struct iphdr) >> 2);
+				iph->version = 4;
+				iph->tos = 0;
+				iph->id = 0;
+				iph->frag_off = 0;
+				iph->ttl = hops;
+				iph->protocol = proto;
+				iph->daddr = x->sel.daddr.a4;
+				iph->saddr = x->sel.saddr.a4;
+				iph->tot_len = htons(skb->len);
+				ip_send_check(iph);
+				skb->protocol = htons(ETH_P_IP);
+				skb->h.raw = skb->nh.raw;
+
+				dst_release(skb->dst);
+				skb->dst = NULL;
+			} else
+				BUG_ON(1);
+
 			decaps = 1;
 			break;
 		}

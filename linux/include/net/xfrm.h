@@ -258,6 +258,10 @@ struct xfrm_tmpl
 /* Source address of tunnel. Ignored, if it is not a tunnel. */
 	xfrm_address_t		saddr;
 
+/* family of the outer addresses. The family may differ from
+   the one in selector */
+	unsigned short		outer_family;
+
 	__u32			reqid;
 
 /* Mode: transport/tunnel */

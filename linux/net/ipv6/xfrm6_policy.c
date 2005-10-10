@@ -26,6 +26,8 @@ static struct xfrm_policy_afinfo xfrm6_policy_afinfo;
 
 static struct xfrm_type_map xfrm6_type_map = { .lock = RW_LOCK_UNLOCKED };
 
+static void xfrm6_update_pmtu(struct dst_entry *dst, u32 mtu);
+
 static int xfrm6_dst_lookup(struct xfrm_dst **dst, struct flowi *fl)
 {
 	int err = 0;
@@ -74,16 +76,19 @@ __xfrm6_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 	struct dst_entry *dst, *dst_prev;
 	struct rt6_info *rt0 = (struct rt6_info*)(*dst_p);
 	struct rt6_info *rt  = rt0;
-	struct in6_addr *remote = &fl->fl6_dst;
-	struct in6_addr *local  = &fl->fl6_src;
 	struct flowi fl_tunnel = {
 		.nl_u = {
 			.ip6_u = {
-				.saddr = *local,
-				.daddr = *remote
+				.saddr = fl->fl6_src,
+				.daddr = fl->fl6_dst
 			}
 		}
 	};
+	union {
+		struct in6_addr *in6;
+		struct in_addr *in;
+	} remote, local;
+	unsigned short outer_family = 0, beet = 0;
 	int i;
 	int err = 0;
 	int header_len = 0;
@@ -95,7 +100,6 @@ __xfrm6_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 	for (i = 0; i < nx; i++) {
 		struct dst_entry *dst1 = dst_alloc(&xfrm6_dst_ops);
 		struct xfrm_dst *xdst;
-		int tunnel = 0;
 
 		if (unlikely(dst1 == NULL)) {
 			err = -ENOBUFS;
@@ -118,19 +122,35 @@ __xfrm6_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 
 		dst1->next = dst_prev;
 		dst_prev = dst1;
-		if (xfrm[i]->props.mode) {
-			remote = (struct in6_addr*)&xfrm[i]->id.daddr;
-			local  = (struct in6_addr*)&xfrm[i]->props.saddr;
-			tunnel = 1;
+		if (xfrm[i]->props.mode == XFRM_MODE_TUNNEL || xfrm[i]->props.mode == XFRM_MODE_BEET) {
+			outer_family = xfrm[i]->props.family;
+			beet = (xfrm[i]->props.mode == XFRM_MODE_BEET);
+			if (outer_family == AF_INET6) {
+				remote.in6 = (struct in6_addr*)&xfrm[i]->id.daddr;
+				local.in6 = (struct in6_addr*)&xfrm[i]->props.saddr;
+			} else if(outer_family == AF_INET){
+				remote.in = (struct in_addr*)&xfrm[i]->id.daddr;
+				local.in = (struct in_addr*)&xfrm[i]->props.saddr;
+			}
 		}
 		header_len += xfrm[i]->props.header_len;
 		trailer_len += xfrm[i]->props.trailer_len;
 
-		if (tunnel) {
-			ipv6_addr_copy(&fl_tunnel.fl6_dst, remote);
-			ipv6_addr_copy(&fl_tunnel.fl6_src, local);
+		if (outer_family) {
+			switch(outer_family) {
+			case AF_INET:
+				fl_tunnel.fl4_dst = remote.in->s_addr;
+				fl_tunnel.fl4_src = local.in->s_addr;
+				break;
+			case AF_INET6:
+				ipv6_addr_copy(&fl_tunnel.fl6_dst, remote.in6);
+				ipv6_addr_copy(&fl_tunnel.fl6_src, local.in6);
+				break;
+			default:
+				BUG_ON(1);
+			}
 			err = xfrm_dst_lookup((struct xfrm_dst **) &rt,
-					      &fl_tunnel, AF_INET6);
+					      &fl_tunnel, outer_family);
 			if (err)
 				goto error;
 		} else
@@ -181,6 +201,11 @@ __xfrm6_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 	}
 
 	xfrm_init_pmtu(dst);
+	if (beet && outer_family == AF_INET) {
+		int delta = sizeof(struct ipv6hdr) - sizeof(struct iphdr);
+		u32 mtu = dst_mtu(dst);
+		xfrm6_update_pmtu(dst, mtu + delta);
+	}
 	return 0;
 
 error:

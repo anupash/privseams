@@ -96,22 +96,79 @@ int xfrm4_rcv_encap(struct sk_buff *skb, __u16 encap_type)
 
 		iph = skb->nh.iph;
 
-		if (x->props.mode) {
-			if (iph->protocol != IPPROTO_IPIP)
-				goto drop;
-			if (!pskb_may_pull(skb, sizeof(struct iphdr)))
-				goto drop;
-			if (skb_cloned(skb) &&
-			    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
-				goto drop;
-			if (x->props.flags & XFRM_STATE_DECAP_DSCP)
-				ipv4_copy_dscp(iph, skb->h.ipiph);
+		if (x->props.mode == XFRM_MODE_TUNNEL) {
+			if (x->sel.family == AF_INET) {
+				if (iph->protocol != IPPROTO_IPIP)
+					goto drop;
+				if (!pskb_may_pull(skb, sizeof(struct iphdr)))
+					goto drop;
+				if (skb_cloned(skb) &&
+				    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
+					goto drop;
+				if (x->props.flags & XFRM_STATE_DECAP_DSCP)
+					ipv4_copy_dscp(iph, skb->h.ipiph);
+			} else if (x->sel.family == AF_INET6) {
+				/* Inner = 6, Outer = 4 */
+				if (skb->nh.iph->protocol != IPPROTO_IPV6)
+					goto drop;
+
+				if (skb_cloned(skb) &&
+				    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
+					goto drop;
+				skb->protocol = htons(ETH_P_IPV6);
+			} else
+				BUG_ON(1);
+
 			if (!(x->props.flags & XFRM_STATE_NOECN))
 				ipip_ecn_decapsulate(skb);
 			skb->mac.raw = memmove(skb->data - skb->mac_len,
 					       skb->mac.raw, skb->mac_len);
 			skb->nh.raw = skb->data;
 			memset(&(IPCB(skb)->opt), 0, sizeof(struct ip_options));
+			decaps = 1;
+			break;
+		} else if (x->props.mode == XFRM_MODE_BEET) {
+			int size = (x->sel.family == AF_INET) ? sizeof(struct iphdr) : sizeof(struct ipv6hdr);
+			int proto = skb->nh.iph->protocol;
+			int hops = skb->nh.iph->ttl;
+			int delta = sizeof(struct ipv6hdr) - sizeof(struct iphdr);
+			if (x->sel.family == AF_INET6) {
+				/* Here, the inner family is 6, therefore I have to
+				 * substitute the IPhdr by enlarging it */
+				if (skb_tailroom(skb) <  delta){
+					if (pskb_expand_head(skb, 0, delta, GFP_ATOMIC))
+						return -EINVAL;		//Just returning from here.
+				}
+				skb->nh.raw -= delta;
+			}
+
+			if (skb_cloned(skb) &&
+			    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
+				goto drop;
+
+			skb_push(skb, size);
+			memmove(skb->data, skb->nh.raw, size);
+			skb->nh.raw = skb->data;
+
+			if (x->sel.family == AF_INET) {
+				struct iphdr *iph = skb->nh.iph;
+				iph->tot_len = htons(skb->len);
+				iph->daddr = x->sel.daddr.a4;
+				iph->saddr = x->sel.saddr.a4;
+				ip_send_check(iph);
+			} else if (x->sel.family == AF_INET6) {
+				struct ipv6hdr *ip6h = skb->nh.ipv6h;
+				memset(ip6h->flow_lbl, 0, sizeof(ip6h->flow_lbl));
+				ip6h->version = 6;
+				ip6h->priority = 0;
+				ip6h->nexthdr = proto;
+				ip6h->hop_limit = hops;
+				ip6h->payload_len = htons(skb->len - size);
+				ipv6_addr_copy(&ip6h->daddr, (struct in6_addr *)&x->sel.daddr.a6);
+				ipv6_addr_copy(&ip6h->saddr, (struct in6_addr *)&x->sel.saddr.a6);
+				skb->protocol = htons(ETH_P_IPV6);
+			} else
+				BUG_ON(1);
 			decaps = 1;
 			break;
 		}

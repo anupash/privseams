@@ -16,6 +16,7 @@
 #include <net/inet_ecn.h>
 #include <net/ipv6.h>
 #include <net/xfrm.h>
+#include <net/ip.h>
 
 /* Add encapsulation header.
  *
@@ -42,7 +43,8 @@ static void xfrm6_encap(struct sk_buff *skb)
 	skb_push(skb, x->props.header_len);
 	iph = skb->nh.ipv6h;
 
-	if (!x->props.mode) {
+	if (x->props.mode == XFRM_MODE_TRANSPORT ||
+	    (x->props.mode == XFRM_MODE_BEET && x->props.family == AF_INET6)) {
 		u8 *prevhdr;
 		int hdr_len;
 
@@ -50,28 +52,58 @@ static void xfrm6_encap(struct sk_buff *skb)
 		skb->nh.raw = prevhdr - x->props.header_len;
 		skb->h.raw = skb->data + hdr_len;
 		memmove(skb->data, iph, hdr_len);
-		return;
+		if (x->props.mode == XFRM_MODE_TRANSPORT)
+			return;
 	}
 
 	skb->nh.raw = skb->data;
 	top_iph = skb->nh.ipv6h;
-	skb->nh.raw = &top_iph->nexthdr;
-	skb->h.ipv6h = top_iph + 1;
-
-	top_iph->version = 6;
-	top_iph->priority = iph->priority;
-	top_iph->flow_lbl[0] = iph->flow_lbl[0];
-	top_iph->flow_lbl[1] = iph->flow_lbl[1];
-	top_iph->flow_lbl[2] = iph->flow_lbl[2];
-	dsfield = ipv6_get_dsfield(top_iph);
-	dsfield = INET_ECN_encapsulate(dsfield, dsfield);
-	if (x->props.flags & XFRM_STATE_NOECN)
-		dsfield &= ~INET_ECN_MASK;
-	ipv6_change_dsfield(top_iph, 0, dsfield);
-	top_iph->nexthdr = IPPROTO_IPV6; 
-	top_iph->hop_limit = dst_metric(dst->child, RTAX_HOPLIMIT);
-	ipv6_addr_copy(&top_iph->saddr, (struct in6_addr *)&x->props.saddr);
-	ipv6_addr_copy(&top_iph->daddr, (struct in6_addr *)&x->id.daddr);
+	if (x->props.family == AF_INET6) {
+		skb->nh.raw = &top_iph->nexthdr;
+		skb->h.ipv6h = top_iph + 1;
+		ipv6_addr_copy(&top_iph->saddr, (struct in6_addr *)&x->props.saddr);
+		ipv6_addr_copy(&top_iph->daddr, (struct in6_addr *)&x->id.daddr);
+		if (x->props.mode == XFRM_MODE_TUNNEL) {
+			top_iph->version = 6;
+			top_iph->priority = iph->priority;
+			top_iph->flow_lbl[0] = iph->flow_lbl[0];
+			top_iph->flow_lbl[1] = iph->flow_lbl[1];
+			top_iph->flow_lbl[2] = iph->flow_lbl[2];
+			dsfield = ipv6_get_dsfield(top_iph);
+			dsfield = INET_ECN_encapsulate(dsfield, dsfield);
+			if (x->props.flags & XFRM_STATE_NOECN)
+				dsfield &= ~INET_ECN_MASK;
+			ipv6_change_dsfield(top_iph, 0, dsfield);
+			top_iph->nexthdr = IPPROTO_IPV6; 
+			top_iph->hop_limit = dst_metric(dst->child, RTAX_HOPLIMIT);
+		}
+	} else if (x->props.family == AF_INET) {
+		/* Inner = 6, Outer = 4 : changing the external IP hdr
+		 * to the outer addresses
+		 */
+		struct iphdr *top_iphv4;
+		u8 protocol = iph->nexthdr;
+		if (x->props.mode == XFRM_MODE_BEET) {
+			int delta = sizeof(struct ipv6hdr) - sizeof(struct iphdr);
+			skb->nh.raw = skb_pull(skb, delta);
+		}
+		top_iphv4 = skb->nh.iph;
+		skb->h.raw = skb->data + x->props.header_len;
+		top_iphv4->ihl = (sizeof(struct iphdr) >> 2);
+		top_iphv4->version = 4;
+		top_iphv4->id = 0;
+		top_iphv4->frag_off = htons(IP_DF);
+		top_iphv4->ttl = dst_metric(dst->child, RTAX_HOPLIMIT);
+		top_iphv4->saddr = x->props.saddr.a4;
+		top_iphv4->daddr = x->id.daddr.a4;
+		if (x->props.mode == XFRM_MODE_TUNNEL)
+			top_iphv4->protocol = IPPROTO_IPV6;
+		else {
+			skb->h.raw += top_iphv4->ihl*4;
+			top_iphv4->protocol = protocol;
+		}
+	} else
+		BUG_ON(1);
 }
 
 static int xfrm6_tunnel_check_size(struct sk_buff *skb)
@@ -104,7 +136,7 @@ int xfrm6_output(struct sk_buff *skb)
 			goto error_nolock;
 	}
 
-	if (x->props.mode) {
+	if (x->props.mode == XFRM_MODE_TUNNEL) {
 		err = xfrm6_tunnel_check_size(skb);
 		if (err)
 			goto error_nolock;

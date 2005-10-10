@@ -37,38 +37,81 @@ static void xfrm4_encap(struct sk_buff *skb)
 
 	iph = skb->nh.iph;
 	skb->h.ipiph = iph;
-
 	skb->nh.raw = skb_push(skb, x->props.header_len);
+
 	top_iph = skb->nh.iph;
 
-	if (!x->props.mode) {
+	if (x->props.mode == XFRM_MODE_TRANSPORT ||
+	    (x->props.mode == XFRM_MODE_BEET && x->props.family == AF_INET)) {
 		skb->h.raw += iph->ihl*4;
 		memmove(top_iph, iph, iph->ihl*4);
-		return;
+		if (x->props.mode == XFRM_MODE_TRANSPORT)
+			return;
 	}
 
-	top_iph->ihl = 5;
-	top_iph->version = 4;
+	if (x->props.family == AF_INET) {
+		top_iph->saddr = x->props.saddr.a4;
+		top_iph->daddr = x->id.daddr.a4;
+		if (x->props.mode == XFRM_MODE_TUNNEL) {
+			top_iph->ihl = 5;
+			top_iph->version = 4;
 
-	/* DS disclosed */
-	top_iph->tos = INET_ECN_encapsulate(iph->tos, iph->tos);
+			/* DS disclosed */
+			top_iph->tos = INET_ECN_encapsulate(iph->tos, iph->tos);
 
-	flags = x->props.flags;
-	if (flags & XFRM_STATE_NOECN)
-		IP_ECN_clear(top_iph);
+			flags = x->props.flags;
+			if (flags & XFRM_STATE_NOECN)
+				IP_ECN_clear(top_iph);
 
-	top_iph->frag_off = (flags & XFRM_STATE_NOPMTUDISC) ?
-		0 : (iph->frag_off & htons(IP_DF));
-	if (!top_iph->frag_off)
-		__ip_select_ident(top_iph, dst, 0);
+			top_iph->frag_off = (flags & XFRM_STATE_NOPMTUDISC) ?
+				0 : (iph->frag_off & htons(IP_DF));
+			if (!top_iph->frag_off)
+				__ip_select_ident(top_iph, dst, 0);
 
-	top_iph->ttl = dst_metric(dst->child, RTAX_HOPLIMIT);
+			top_iph->ttl = dst_metric(dst->child, RTAX_HOPLIMIT);
 
-	top_iph->saddr = x->props.saddr.a4;
-	top_iph->daddr = x->id.daddr.a4;
-	top_iph->protocol = IPPROTO_IPIP;
+			top_iph->protocol = IPPROTO_IPIP;
+			memset(&(IPCB(skb)->opt), 0, sizeof(struct ip_options));
+		}
+	} else if (x->props.family == AF_INET6) {
+		/* Inner = 4, Outer = 6*/
+		struct ipv6hdr *top_iph6;
+		int dsfield;
+		u8 protocol = iph->protocol;
+		if (x->props.mode == XFRM_MODE_BEET) {
+			int delta = sizeof(struct ipv6hdr) - sizeof(struct iphdr);
+			if (skb_headroom(skb) <  delta){
+				if (pskb_expand_head(skb, delta,0, GFP_ATOMIC))
+					return;
+			}
+			skb->nh.raw = skb_push(skb, delta);
+		}
+		top_iph6 = skb->nh.ipv6h;
+		skb->h.ipv6h = top_iph6 + 1;
+		/* DS disclosed */
+		top_iph6->version = 6;
+		top_iph6->priority = 0;
+		top_iph6->flow_lbl[0] = 0;
+		top_iph6->flow_lbl[1] = 0;
+		top_iph6->flow_lbl[2] = 0;
+		dsfield = ipv6_get_dsfield(top_iph6);
+		dsfield = INET_ECN_encapsulate(dsfield, dsfield);
+		flags = x->props.flags;
+		if (flags & XFRM_STATE_NOECN)
+			dsfield &= ~INET_ECN_MASK;
+		ipv6_change_dsfield(top_iph6, 0, dsfield);
 
-	memset(&(IPCB(skb)->opt), 0, sizeof(struct ip_options));
+		if (x->props.mode == XFRM_MODE_TUNNEL)
+			top_iph6->nexthdr = IPPROTO_IPIP;
+		else
+			top_iph6->nexthdr = protocol;
+		top_iph6->hop_limit = dst_metric(dst->child, RTAX_HOPLIMIT);
+		top_iph6->payload_len = htons(skb->len - sizeof(struct ipv6hdr));
+		ipv6_addr_copy(&top_iph6->saddr,(struct in6_addr *)&x->props.saddr);
+		ipv6_addr_copy(&top_iph6->daddr, (struct in6_addr *)&x->id.daddr);
+		skb->nh.raw = &skb->nh.ipv6h->nexthdr;
+	} else
+		BUG_ON(1);
 }
 
 static int xfrm4_tunnel_check_size(struct sk_buff *skb)
@@ -107,7 +150,7 @@ int xfrm4_output(struct sk_buff *skb)
 			goto error_nolock;
 	}
 
-	if (x->props.mode) {
+	if (x->props.mode == XFRM_MODE_TUNNEL) {
 		err = xfrm4_tunnel_check_size(skb);
 		if (err)
 			goto error_nolock;
@@ -124,6 +167,7 @@ int xfrm4_output(struct sk_buff *skb)
 	if (err)
 		goto error;
 
+	skb->nh.raw = skb->data;
 	x->curlft.bytes += skb->len;
 	x->curlft.packets++;
 

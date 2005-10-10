@@ -435,7 +435,7 @@ static int ipcomp6_init_state(struct xfrm_state *x)
 
 	memset(ipcd, 0, sizeof(*ipcd));
 	x->props.header_len = 0;
-	if (x->props.mode)
+	if (x->props.mode == XFRM_MODE_TUNNEL)
 		x->props.header_len += sizeof(struct ipv6hdr);
 	
 	down(&ipcomp6_resource_sem);
@@ -447,7 +447,7 @@ static int ipcomp6_init_state(struct xfrm_state *x)
 		goto error;
 	up(&ipcomp6_resource_sem);
 
-	if (x->props.mode) {
+	if (x->props.mode == XFRM_MODE_TUNNEL) {
 		err = ipcomp6_tunnel_attach(x);
 		if (err)
 			goto error_tunnel;

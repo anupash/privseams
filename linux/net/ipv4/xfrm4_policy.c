@@ -20,6 +20,8 @@ static struct xfrm_policy_afinfo xfrm4_policy_afinfo;
 
 static struct xfrm_type_map xfrm4_type_map = { .lock = RW_LOCK_UNLOCKED };
 
+static void xfrm4_update_pmtu(struct dst_entry *dst, u32 mtu);
+
 static int xfrm4_dst_lookup(struct xfrm_dst **dst, struct flowi *fl)
 {
 	return __ip_route_output_key((struct rtable**)dst, fl);
@@ -56,16 +58,19 @@ __xfrm4_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 	struct dst_entry *dst, *dst_prev;
 	struct rtable *rt0 = (struct rtable*)(*dst_p);
 	struct rtable *rt = rt0;
-	u32 remote = fl->fl4_dst;
-	u32 local  = fl->fl4_src;
 	struct flowi fl_tunnel = {
 		.nl_u = {
 			.ip4_u = {
-				.saddr = local,
-				.daddr = remote
+				.saddr = fl->fl4_src,
+				.daddr = fl->fl4_dst
 			}
 		}
 	};
+	union {
+		struct in6_addr *in6;
+		struct in_addr *in;
+	} remote, local;
+	unsigned short outer_family = 0, beet = 0;
 	int i;
 	int err;
 	int header_len = 0;
@@ -77,7 +82,6 @@ __xfrm4_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 	for (i = 0; i < nx; i++) {
 		struct dst_entry *dst1 = dst_alloc(&xfrm4_dst_ops);
 		struct xfrm_dst *xdst;
-		int tunnel = 0;
 
 		if (unlikely(dst1 == NULL)) {
 			err = -ENOBUFS;
@@ -98,21 +102,45 @@ __xfrm4_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 
 		dst1->next = dst_prev;
 		dst_prev = dst1;
-		if (xfrm[i]->props.mode) {
-			remote = xfrm[i]->id.daddr.a4;
-			local  = xfrm[i]->props.saddr.a4;
-			tunnel = 1;
+
+		if (xfrm[i]->props.mode == XFRM_MODE_TUNNEL || xfrm[i]->props.mode == XFRM_MODE_BEET) {
+			outer_family = xfrm[i]->props.family;
+			beet = (xfrm[i]->props.mode == XFRM_MODE_BEET);
+
+			if(outer_family == AF_INET6){
+				remote.in6 = (struct in6_addr*)&xfrm[i]->id.daddr;
+				local.in6 = (struct in6_addr*)&xfrm[i]->props.saddr;
+			} else if(outer_family == AF_INET){
+				remote.in = (struct in_addr*)&xfrm[i]->id.daddr;
+				local.in = (struct in_addr*)&xfrm[i]->props.saddr;
+			} else
+				BUG_ON(1);
 		}
 		header_len += xfrm[i]->props.header_len;
 		trailer_len += xfrm[i]->props.trailer_len;
 
-		if (tunnel) {
-			fl_tunnel.fl4_src = local;
-			fl_tunnel.fl4_dst = remote;
+		if (outer_family) {
+			switch(outer_family) {
+			case AF_INET:
+				fl_tunnel.fl4_dst = remote.in->s_addr;
+				fl_tunnel.fl4_src = local.in->s_addr;
+				break;
+			case AF_INET6:
+				ipv6_addr_copy(&fl_tunnel.fl6_dst, remote.in6);
+				ipv6_addr_copy(&fl_tunnel.fl6_src, local.in6);
+				break;
+			default:
+				BUG_ON(1);
+			}
 			err = xfrm_dst_lookup((struct xfrm_dst **)&rt,
-					      &fl_tunnel, AF_INET);
+					      &fl_tunnel, outer_family);
 			if (err)
 				goto error;
+			/* Without this, the atomic inc below segfaults */
+			if (outer_family == AF_INET6) {
+				rt->peer = NULL;
+				rt_bind_peer(rt,1);
+			}
 		} else
 			dst_hold(&rt->u.dst);
 	}
@@ -162,6 +190,11 @@ __xfrm4_bundle_create(struct xfrm_policy *policy, struct xfrm_state **xfrm, int 
 	}
 
 	xfrm_init_pmtu(dst);
+	if (beet && outer_family == AF_INET6) {
+		int delta = sizeof(struct ipv6hdr) - sizeof(struct iphdr);
+		u32 mtu = dst_mtu(dst);
+		xfrm4_update_pmtu(dst, mtu - delta);
+	}
 	return 0;
 
 error:

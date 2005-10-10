@@ -646,6 +646,7 @@ xfrm_tmpl_resolve(struct xfrm_policy *policy, struct flowi *fl,
 		if (tmpl->mode) {
 			remote = &tmpl->id.daddr;
 			local = &tmpl->saddr;
+			family = tmpl->outer_family;
 		}
 
 		x = xfrm_state_find(remote, local, fl, tmpl, policy, &error, family);
