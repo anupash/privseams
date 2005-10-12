@@ -42,85 +42,28 @@ SUBDIRS =
 # the best way to access it because the object must be built on this
 # directory and we don't want to make reduntant copies.
 #
-builder.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
+
 builder.c: builder.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
 cookie.c: cookie.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.c .
-cookie.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.h .
 crypto.c: crypto.h
-crypto.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto.h .
 hidb.c: hidb.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.c .
-hidb.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.h .
 dh.c: dh.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/dh.c .
-dh.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/dh.h .
 hadb.c: hadb.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.c .
-hadb.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.h .
-netlink.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/netlink.h .
 hashtable.c: hashtable.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.c .
-hashtable.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.h .
 keymat.c: keymat.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/keymat.c .
-keymat.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/keymat.h .
 misc.c: misc.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/misc.c .
-misc.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/misc.h .
 workqueue.c: workqueue.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/workqueue.c .
-workqueue.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/workqueue.h .
-bos.c: 
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/bos.c .
-bos.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/bos.h .
+bos.c: bos.h
 input.c: input.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.c .
-output.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/output.h .
 output.c: output.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/output.c .
-input.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.h .
-timer.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/timer.h .
 preoutput.c: preoutput.h
-preoutput.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/preoutput.h .
 preinput.c: preinput.h
-preinput.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/preinput.h .
 xfrm.c: xfrm.h
-xfrm.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/xfrm.h .
 beet.c: beet.h
-beet.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/beet.h .
-update.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.h .
 update.c: update.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.c .
-rvs.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.h .
 rvs.c: rvs.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.c .
-pk.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.h .
 pk.c: pk.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.c .
+
 
 tags:
 	etags $(hipd_SOURCES) $(include_HEADERS)
