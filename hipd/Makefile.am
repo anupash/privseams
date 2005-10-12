@@ -63,8 +63,5 @@ beet.c: beet.h
 update.c: update.h
 rvs.c: rvs.h
 pk.c: pk.h
-dbeug.c: debug.h
-
-tags:
-	etags $(hipd_SOURCES) $(include_HEADERS)
+debug.c: debug.h
 
