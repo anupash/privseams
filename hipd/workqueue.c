@@ -16,17 +16,10 @@
 
 /* HIP Per Cpu WorkQueue */
 struct hip_pc_wq {
-#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
-	struct semaphore worklock;
-#endif
 	struct list_head workqueue;
 };
 
-#if HIP_KERNEL_DAEMON
-static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
-#else
 static struct hip_pc_wq hip_workqueue;
-#endif
 
 /**
  * hwo_default_destructor - Default destructor for work order
@@ -55,27 +48,8 @@ struct hip_work_order *hip_get_work_order(void)
 {
 	struct hip_work_order *err = NULL;
 	struct hip_pc_wq *wq;
-#if HIP_KERNEL_DAEMON
-	unsigned long eflags;
-	int locked;
 
-	/* get_cpu_var / put_cpu_var ? */
-	wq = &__get_cpu_var(hip_workqueue);
-
-	/* Wait for job */
-	locked = down_interruptible(&wq->worklock);
-	if (locked) {
-		if (locked == -EINTR)
-			HIP_DEBUG("interrupted while trying to get lock\n");
-		return NULL;
-	}
-
-	/* every processor has its own worker thread, so
-	   spin lock is not needed. Only local irq disabling */
-	local_irq_save(eflags);
-#else
 	wq = &hip_workqueue;
-#endif
 
 	HIP_IFE(list_empty(&wq->workqueue), NULL);
 	HIP_IFEL(!(err = list_entry((&wq->workqueue)->next, struct hip_work_order, queue)),
@@ -84,9 +58,6 @@ struct hip_work_order *hip_get_work_order(void)
 	list_del((&wq->workqueue)->next);
 
  out_err:	
-#if HIP_KERNEL_DAEMON
-	local_irq_restore(eflags);
-#endif
 	return err;
 }
 
@@ -106,31 +77,14 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	int err = 1;
 	struct hip_pc_wq *wq;
-#if HIP_KERNEL_DAEMON
-	unsigned long eflags;
-	HIP_IFEL(cpu >= NR_CPUS, -1, 
-		"Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
 
-	_HIP_DEBUG("hwo=0x%p cpu=%d\n", hwo, cpu);
-	local_irq_save(eflags);
-
-	/* get_cpu_var / put_cpu_var ? */
-	wq = &per_cpu(hip_workqueue, cpu);
-#else
 	wq = &hip_workqueue;
-#endif
+
 	if (wq) {
 		list_add_tail(&hwo->queue, &wq->workqueue);
 		/* what is the correct order of these two, l_i_r and up ? */
-#if HIP_KERNEL_DAEMON
-		up(&wq->worklock);
-#endif
 	}
 
-#if HIP_KERNEL_DAEMON
-	local_irq_restore(eflags);
- out_err:
-#endif
 	return err;
 }
 
@@ -142,39 +96,24 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
  */
 int hip_insert_work_order(struct hip_work_order *hwo)
 {
-#if HIP_USER_DAEMON || HIP_KERNEL_STUB
 	int ret;
-#endif
+
 	if (hwo->hdr.type < 0 || hwo->hdr.type > HIP_MAX_WO_TYPES)
 		return -1;
 
-#if HIP_USER_DAEMON || HIP_KERNEL_STUB
 	ret = hip_netlink_send(hwo);
 	hip_free_work_order(hwo);
 	return ret;
-#else
-	return hip_insert_work_order_cpu(hwo, smp_processor_id());
-#endif
 }
 
 int hip_init_workqueue()
 {
 	struct hip_pc_wq *wq;
-#if HIP_KERNEL_DAEMON
-	unsigned long eflags;
 
-	local_irq_save(eflags);
-
- 	wq = &get_cpu_var(hip_workqueue);
-#else
 	wq = &hip_workqueue;
-#endif
+
  	INIT_LIST_HEAD(&wq->workqueue);
-#if HIP_KERNEL_DAEMON
- 	init_MUTEX_LOCKED(&wq->worklock);
- 	put_cpu_var(hip_workqueue);
- 	local_irq_restore(eflags);
-#endif
+
 	return 0;
 }
 
@@ -183,23 +122,14 @@ void hip_uninit_workqueue()
 	struct list_head *pos,*iter;
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
-#if HIP_KERNEL_DAEMON
-	unsigned long eflags;
 
-	local_irq_save(eflags);
-	wq = &get_cpu_var(hip_workqueue);
-#else
 	wq = &hip_workqueue;
-#endif
+
 	list_for_each_safe(pos, iter, &wq->workqueue) {
 		hwo = list_entry(pos, struct hip_work_order, queue);
 		hip_free_work_order(hwo);
 		list_del(pos);
 	}
-#if HIP_KERNEL_DAEMON
- 	put_cpu_var(hip_workqueue); // test
-	local_irq_restore(eflags);
-#endif
 }
 
 /**
@@ -248,13 +178,11 @@ int hip_do_work(struct hip_work_order *job)
 	case HIP_WO_TYPE_INCOMING:
 		HIP_START_TIMER(KMM_PARTIAL);
 		switch(job->hdr.subtype) {
-#if HIP_KERNEL_DAEMON  || HIP_USER_DAEMON
 		case HIP_WO_SUBTYPE_RECV_CONTROL:
 			res = hip_receive_control_packet(job->msg,
 							 &job->hdr.id1,
 							 &job->hdr.id2);
 			break;
-#endif
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
@@ -266,93 +194,7 @@ int hip_do_work(struct hip_work_order *job)
 		break;
 	case HIP_WO_TYPE_OUTGOING:
 	{			
-#if HIP_KERNEL_STUB
-		struct hip_work_order * resp = NULL;
-		struct hip_keys *keys;
-#endif
 		switch(job->hdr.subtype) {
-#if HIP_KERNEL_STUB
-		case HIP_WO_SUBTYPE_SEND_PACKET:
-			res = hip_csum_send(&job->hdr.id1, &job->hdr.id2, 
-					    job->msg);
-			break;
-			
-		case HIP_WO_SUBTYPE_ACQSPI:
-			resp = hip_init_job(GFP_KERNEL);
-			if (!resp) 
-				break;
-			
-			resp->seq = job->seq;
-			res = resp->hdr.arg1 =
-				hip_acquire_spi(&job->hdr.id1,
-						&job->hdr.id2);
-			break;
-			
-		case HIP_WO_SUBTYPE_ADDSA:
-			resp = hip_init_job(GFP_KERNEL);
-			if (!resp) 
-				break;
-			keys = hip_get_param(job->msg, HIP_PARAM_KEYS); 
-			if (!keys)
-				break;
-			
-			resp->seq = job->seq;
-			res = resp->hdr.arg1 = hip_add_sa(&job->hdr.id1,
-							  &job->hdr.id2,
-							  keys->spi,
-							  keys->alg,
-							  &keys->enc,
-							  &keys->auth,
-							  keys->acquired,
-							  keys->direction);
-			break;
-			
-		case HIP_WO_SUBTYPE_DELSA:
-			resp = hip_init_job(GFP_KERNEL);
-			if (!resp) 
-				break;
-			
-			resp->seq = job->seq;
-			res = resp->hdr.arg1 =
-				hip_delete_sa(job->hdr.arg1, &job->hdr.id2);
-			break;
-
-			/* BEET database management functions follow */			
-		case HIP_WO_SUBTYPE_XFRM_UPD:
-			resp = hip_init_job(GFP_KERNEL);
-			if (!resp) 
-				break;
-			
-			resp->seq = job->seq;
-			res = resp->hdr.arg1 =
-				hip_xfrm_update(&job->hdr.id1, &job->hdr.id2,
-						&job->hdr.id3,
-						job->hdr.arg1, job->hdr.arg2,
-						job->hdr.arg3);
-			break;
-			
-		case HIP_WO_SUBTYPE_XFRM_DEL:
-			resp = hip_init_job(GFP_KERNEL);
-			if (!resp) 
-				break;
-
-			resp->seq = job->seq;
-			res = resp->hdr.arg1 =
-				hip_xfrm_delete(&job->hdr.id1,
-						job->hdr.arg1,
-						job->hdr.arg2);
-			break;
-			
-		case HIP_WO_SUBTYPE_PING:
-			resp = hip_init_job(GFP_KERNEL);
-			if (!resp) 
-				break;
-			
-			resp->seq = job->seq;
-			res = resp->hdr.arg1 = 0;
-			break;
-#endif /* HIP_KERNEL_STUB */
-#if HIP_USER_DAEMON
 		case HIP_WO_SUBTYPE_SEND_I1:
 		{
 			hip_ha_t *entry;
@@ -378,20 +220,12 @@ int hip_do_work(struct hip_work_order *job)
 				hip_db_put_ha(entry, hip_hadb_delete_state);
 			break;
 		}
-#endif /* HIP_USER_DAEMON */
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
 			break;
 		}
 		
-#if HIP_KERNEL_STUB
-		if (resp) {
-			hip_netlink_send(resp);
-			hip_free_work_order(resp);
-		}
-#endif
-
 		if (res < 0)
 			res = KHIPD_ERROR;
 		break;
@@ -399,17 +233,6 @@ int hip_do_work(struct hip_work_order *job)
 	
 	case HIP_WO_TYPE_MSG:
 		switch(job->hdr.subtype) {
-#if HIP_KERNEL_DAEMON
-		case HIP_WO_SUBTYPE_IN6_EVENT:
-			hip_net_event((int)job->hdr.arg1, 0, (uint32_t) job->hdr.arg2);
-			res = KHIPD_OK;
-			break;
-		case HIP_WO_SUBTYPE_DEV_EVENT:
-			hip_net_event((int)job->hdr.arg1, 1, (uint32_t) job->hdr.arg2);
-			res = KHIPD_OK;
-			break;
-#endif
-#if HIP_KERNEL_DAEMON || HIP_USER_DAEMON
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
 			/* arg1 = d-hit, arg2=ipv6 */
@@ -468,7 +291,6 @@ int hip_do_work(struct hip_work_order *job)
 			HIP_DEBUG("Sending CLOSE\n");
 			res = hip_send_close(job->msg);
 			break;
-#endif /* HIP_KERNEL_DAEMON || HIP_USER_DAEMON */
 		default:
 			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);
 			res = KHIPD_ERROR;

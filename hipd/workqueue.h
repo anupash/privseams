@@ -3,14 +3,6 @@
 
 #include "hip.h"
 
-#ifdef __KERNEL__
-#  include <asm/semaphore.h>
-#  include <asm/percpu.h>
-#  include <asm/system.h>
-#  include <linux/list.h>
-#  include <linux/interrupt.h>
-#  include <net/ipv6.h>
-#else
 #  include <stdio.h>
 #  include "list.h"
 #  include <asm/byteorder.h>
@@ -35,9 +27,6 @@ struct ipv6hdr {
         struct  in6_addr        saddr;
         struct  in6_addr        daddr;
 };
-
-
-#endif
 
 #define HIP_INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_id1, hwo_id2, hwo_id3, hwo_arg1, hwo_arg2, hwo_arg3) \
 	do { \

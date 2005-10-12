@@ -4,14 +4,6 @@
 #include "hip.h"
 #include "debug.h"
 
-#ifdef __KERNEL__
-#  include <linux/crypto.h>
-#  include "dh.h"
-#  include "crypto/dh.h"
-
-extern struct crypto_tfm *impl_sha1;
-
-#else
 #  include <sys/time.h>
 #  include <time.h>
 #  include <net/hip.h>
@@ -24,11 +16,12 @@ extern struct crypto_tfm *impl_sha1;
 #  include <openssl/pem.h>
 #  include <openssl/err.h> 
 
+#include "hidb.h"
+
 #define HIP_DSA_SIG_SIZE 41 /* T(1) + R(20) + S(20)  from RFC 2536 */
 #define DSA_PRIV 20 /* Size in bytes of DSA private key and Q value */
 
-#endif /* __KERNEL__ */
-#include "hidb.h"
+
 
 /* These should be consistent with the table length in crypto.c and crypto/dh.c */
 #define HIP_DH_384                    1 /* 384-bit group */
@@ -41,13 +34,9 @@ extern struct crypto_tfm *impl_sha1;
 #define HIP_MAX_DH_GROUP_ID 7 
 
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
-#ifdef __KERNEL__
-int hip_build_digest_repeat(struct crypto_tfm *dgst, struct scatterlist *sg, 
-			    int nsg, void *out);
-#else
+
 int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
 int ssl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
-#endif
 
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,

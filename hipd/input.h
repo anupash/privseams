@@ -1,13 +1,6 @@
 #ifndef HIP_INPUT_H
 #define HIP_INPUT_H
 
-#ifdef __KERNEL__
-#  include <asm/atomic.h>
-#  include <linux/skbuff.h>
-#  include <net/ipv6.h>
-#  include <net/checksum.h>
-#endif /* __KERNEL__ */ 
-
 #ifdef CONFIG_HIP_RVS
 #  include "rvs.h"
 #endif
@@ -29,7 +22,6 @@
 #include "socket.h"
 #include "pk.h"
 
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr);
@@ -46,5 +38,4 @@ int hip_receive_bos(struct hip_common *, struct in6_addr *,
 void hip_hwo_input_destructor(struct hip_work_order *hwo);
 
 
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
 #endif /* HIP_INPUT_H */

@@ -4,23 +4,14 @@
 #include "hip.h"
 #include "debug.h"
 
-#ifdef __KERNEL__
-#  include <linux/list.h>
-#  include <linux/spinlock.h>
-#  include <net/ipv6.h>
-#else
 #  include <sys/socket.h>
 #  include "list.h"
+#include "timer.h"
+#include "cookie.h"
 
 typedef struct { } rwlock_t;
 #define RW_LOCK_UNLOCKED (rwlock_t) { }
-#endif /* __KERNEL__ */
 
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
-#  include "timer.h"
-#endif
-
-#include "cookie.h"
 
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
@@ -55,7 +46,6 @@ struct hip_db_struct {
         int               db_cnt;
 };
 
-//#if HIP_USER_DAEMON || HIP_KERNEL_STUB
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
@@ -111,5 +101,4 @@ int hip_handle_add_local_hi(const struct hip_common *input);
 
 int hip_handle_del_local_hi(const struct hip_common *input);
 
-//#endif /* HIP_USER_DAEMON || HIP_KERNEL_STUB */
 #endif /* _HIP_DB */

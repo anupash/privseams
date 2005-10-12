@@ -10,9 +10,6 @@
 
 #include "dh.h"
 
-#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
-spinlock_t dh_table_lock = SPIN_LOCK_UNLOCKED;
-#endif  /* HIP_KERNEL_DAEMON */
 DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
 
 /**
@@ -33,13 +30,8 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 
 	if (dh_table[group_id] == NULL) {
 		tmp = hip_generate_dh_key(group_id);
-#if HIP_KERNEL_DAEMON
-		spin_lock(&dh_table_lock);
-#endif
+
 		dh_table[group_id] = tmp;
-#if HIP_KERNEL_DAEMON
-		spin_unlock(&dh_table_lock);
-#endif
 
 		if (dh_table[group_id] == NULL) {
 			HIP_ERROR("DH key %d not found and could not create it\n",
@@ -48,17 +40,7 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 		}
 	}
 
-#if HIP_KERNEL_DAEMON
-	/* race condition problem... */
-	tmp = hip_dh_clone(dh_table[group_id]);
-
-	if (!tmp) {
-		HIP_ERROR("Could not clone DH-key\n");
-		return -2;
-	}
-#else
 	tmp = dh_table[group_id];
-#endif
 
 	res = hip_encode_dh_publickey(tmp, buffer, bufsize);
 	if (res < 0) {
@@ -70,9 +52,6 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 	//HIP_HEXDUMP("DH public key: ", buffer, res);
 
  err_free:
-#if HIP_KERNEL_DAEMON
-	hip_free_dh(tmp);
-#endif
 	return res;
 }
 
@@ -133,14 +112,8 @@ void hip_regen_dh_keys(u32 bitmask)
 				continue;
 			}
 
-#if HIP_KERNEL_DAEMON
-			spin_lock(&dh_table_lock);
-#endif
 			okey = dh_table[i];
 			dh_table[i] = tmp;
-#if HIP_KERNEL_DAEMON
-			spin_unlock(&dh_table_lock);
-#endif
 
 			hip_free_dh(okey);
 

@@ -1,19 +1,13 @@
 #ifndef HIP_PREINPUT_H
 #define HIP_PREINPUT_H
 
-#ifdef __KERNEL__
-#  include <linux/ipv6.h> /* struct ipv6hdr */
-#  include <linux/skbuff.h> /* struct sk_buff */
-#  include <linux/types.h>
-#endif
-
 #include <net/hip.h>
 #include "beet.h"
 #include "debug.h"
 #include "workqueue.h"
 #include "hip.h"
 
-#if defined CONFIG_HIP_HI3 && HIP_USER_DAEMON
+#if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
 
 struct hi3_ipv4_addr {
@@ -27,7 +21,6 @@ struct hi3_ipv6_addr {
 };
 #endif
 
-#ifndef __KERNEL__
 struct pseudo_header6
 {
         unsigned char src_addr[16];
@@ -45,7 +38,6 @@ struct pseudo_header
         u8 protocol;
         u16 packet_length;
 };
-#endif
 
 /**
  * Gets name for a message type
@@ -68,16 +60,11 @@ static inline const char *hip_msg_type_str(int type)
 	return str;
 }
 
-#ifdef __KERNEL__  
-void hip_handle_esp(uint32_t spi, struct ipv6hdr *hdr);
-int hip_inbound(struct sk_buff **skb, unsigned int *nhoff);
-#else
 #ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
 u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
 int hip_verify_network_header(struct hip_common *hip_common,
 			      struct sockaddr *src, struct sockaddr *dst, int len);
-#endif
 #endif
 
 #endif /* HIP_PREINPUT_H */

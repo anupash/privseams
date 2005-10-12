@@ -1,14 +1,6 @@
 #ifndef HIP_SECURITY_H
 #define HIP_SECURITY_H
 
-#ifdef __KERNEL__
-#  include <linux/types.h>
-#  include <net/ipv6.h>
-#  include <linux/in6.h>
-#  include <linux/xfrm.h>
-#  include <net/xfrm.h>
-#endif
-
 #include "hadb.h"
 #include "crypto.h"
 #include "debug.h"

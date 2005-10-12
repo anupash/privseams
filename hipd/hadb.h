@@ -9,19 +9,6 @@
 #include "hashtable.h"
 #include "builder.h"
 
-#if __KERNEL__
-#  include <net/ipv6.h>
-#endif
-
-#ifdef __KERNEL__
-#define HIP_LOCK_INIT(ha) do { spin_lock_init(&ha->lock); } while(0)
-#define HIP_LOCK_HA(ha) do { spin_lock_bh(&ha->lock); } while(0)
-#define HIP_UNLOCK_HA(ha) do { spin_unlock_bh(&ha->lock); } while(0)
-#define HIP_LOCK_HS(hs) do { spin_lock_bh(&hs->lock); } while(0)
-#define HIP_UNLOCK_HS(hs) do { spin_unlock_bh(&hs->lock); } while(0)
-#define HIP_LOCK_XF(xf) do { spin_lock_bh(&xf->lock); } while(0)
-#define HIP_UNLOCK_XF(xf) do { spin_unlock_bh(&xf->lock); } while(0)
-#else
 #include "netdev.h"
 
 #define HIP_LOCK_INIT(ha)
@@ -31,7 +18,6 @@
 #define HIP_UNLOCK_HS(hs)
 
 #define do_gettimeofday(x) gettimeofday(x, NULL)
-#endif /* __KERNEL__ */
 
 #define HIP_HADB_SIZE 53
 #define HIP_MAX_HAS 100
@@ -216,7 +202,6 @@ void hip_hadb_dump_spis_in(hip_ha_t *entry);
 void hip_hadb_dump_spis_out(hip_ha_t *entry);
 void hip_hadb_dump_hs_ht(void);
 
-// ******************** #endif /* !defined __KERNEL__ || !defined CONFIG_HIP_USERSPACE */
 
 typedef struct hip_peer_addr_opaque {
         struct in6_addr addr;

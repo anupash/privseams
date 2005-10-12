@@ -87,11 +87,7 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	struct in6_addr *smaller_hit, *bigger_hit;
 	int hit1_is_bigger;
 	u8 *shabuffer = NULL;
-#if HIP_KERNEL_DAEMON
-	struct crypto_tfm *sha = impl_sha1;
-	struct scatterlist sg[HIP_MAX_SCATTERLISTS];
-	int nsg = HIP_MAX_SCATTERLISTS;
-#endif
+
 	HIP_DEBUG("\n");
 	if (dstbuflen < HIP_AH_SHA_LEN) {
 		HIP_ERROR("dstbuf is too short (%d)\n", dstbuflen);
@@ -123,15 +119,8 @@ void hip_make_keymat(char *kij, size_t kij_len,
 		2 * sizeof(uint64_t) + 1;
 	//bufsize = kij_len+2*sizeof(struct in6_addr)+ 1;
 
-#if HIP_KERNEL_DAEMON
-	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer, bufsize);
-	HIP_ASSERT(!err);
-
-	crypto_digest_digest(sha, sg, nsg, dstbuf);
-#else
 	// XX FIXME: is this correct
 	hip_build_digest(HIP_DIGEST_SHA1, shabuffer, bufsize, dstbuf);
-#endif
 
 	_HIP_HEXDUMP("keymat digest", dstbuf, HIP_AH_SHA_LEN);
 
@@ -146,22 +135,11 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	seedkey = dstbuf;
 	hip_update_keymat_buffer(shabuffer, seedkey, HIP_AH_SHA_LEN,
 				 kij_len, index_nbr);
-#if HIP_KERNEL_DAEMON
-	nsg = HIP_MAX_SCATTERLISTS;
-
-	err = hip_map_virtual_to_pages(sg, &nsg, shabuffer,
-				       kij_len + HIP_AH_SHA_LEN + 1);
-	HIP_ASSERT(!err);
-#endif
 
 	while (dstoffset < dstbuflen) {
-#if HIP_KERNEL_DAEMON
-		crypto_digest_digest(sha, sg, nsg, dstbuf + dstoffset);
-#else
 		hip_build_digest(HIP_DIGEST_SHA1, shabuffer,
 				 kij_len + HIP_AH_SHA_LEN + 1,
 				 dstbuf + dstoffset);
-#endif
 		seedkey = dstbuf + dstoffset;
 		dstoffset += HIP_AH_SHA_LEN;
 		index_nbr++;

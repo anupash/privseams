@@ -9,8 +9,6 @@
 
 #include "cookie.h"
 
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
-
 /**
  * hip_calc_cookie_idx - get an index
  * @ip_i: Initiator's IPv6 address
@@ -52,9 +50,6 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
 	struct hip_r1entry * hip_r1table;
 	struct hip_host_id_entry *hid;
 	int idx, len;
-#ifdef __KERNEL__
-	unsigned long lf;
-#endif
 
 	/* Find the proper R1 table and copy the R1 message from the table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
@@ -133,10 +128,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	uint64_t digest = 0;
 	u8 cookie[48];
 	u8 max_k;
-#if HIP_KERNEL_DAEMON
-	struct scatterlist sg[2];
-	unsigned int nsg = 2;
-#endif /* HIP_KERNEL_DAEMON  */
 	int err = 0;
 	union {
 		struct hip_puzzle pz;
@@ -176,12 +167,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
 	}
 
-#if HIP_KERNEL_DAEMON
-	/* pre map the memory region (for SHA) */
-	HIP_IFEL(hip_map_virtual_to_pages(sg, &nsg, cookie, 48) || nsg < 1, 0,
-		 "Error mapping virtual addresses to physical pages\n");
-#endif /* HIP_KERNEL_DAEMON */
-
 	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
 	/* while loops should work even if the maxtries is unsigned
 	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
@@ -192,11 +177,9 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		
 		/* must be 8 */
 		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
-#if HIP_KERNEL_DAEMON
-		hip_build_digest_repeat(impl_sha1, sg, nsg, sha_digest);
-#else
+
 		hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
-#endif /* HIP_KERNEL_DAEMON */
+
                 /* copy the last 8 bytes for checking */
 		memcpy(&digest, sha_digest + 12, sizeof(uint64_t));
 
@@ -310,9 +293,6 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	struct hip_r1entry *result;
 	struct hip_host_id_entry *hid;
 	int err = 1;
-#ifdef __KERNEL__
-	unsigned long lf;
-#endif
 
 	/* Find the proper R1 table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
@@ -366,4 +346,3 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	return err;
 }
 
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

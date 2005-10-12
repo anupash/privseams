@@ -23,28 +23,6 @@
  *
  */
 
-#ifdef __KERNEL__
-#  include <linux/types.h>
-#  include <linux/config.h>
-#  include <linux/module.h>
-#  include <linux/kernel.h>
-#  include <linux/slab.h>
-#  include <linux/errno.h>
-#  include <linux/skbuff.h>
-#  include <net/ip.h>
-#  include <net/sock.h>
-#  include <asm/string.h>
-#  include <asm/byteorder.h>
-#  include <linux/in6.h>
-#  include <linux/timer.h>
-#  include <linux/time.h>
-#  include <linux/ioctl.h>
-#  include <linux/list.h>
-
-typedef uint16_t in_port_t;
-
-#else
-
 #  include <netinet/in.h>
 #  include <sys/time.h>
 #  include <sys/ioctl.h>
@@ -79,8 +57,6 @@ typedef struct {
 struct list_head {
 	struct list_head *next, *prev;
 };
-
-#endif /* __KERNEL__ */
 
 #define HIP_HIT_TYPE_MASK_HAA   0x80
 //#define HIP_HIT_TYPE_MASK_126   0x40
@@ -346,32 +322,18 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
 
-#ifdef __KERNEL__
- #ifndef hton64
- #define hton64(n) __cpu_to_be64(n)
- #endif
- #ifndef ntoh64
- #define ntoh64(n) __be64_to_cpu(n)
- #endif
-#else
- #if __BYTE_ORDER == __BIG_ENDIAN
+#if __BYTE_ORDER == __BIG_ENDIAN
   #define hton64(i) (i)
   #define ntoh64(i) (i)
- #else
+#else
   #define hton64(i) ( ((__u64)(htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ) )
   #define ntoh64 hton64
- #endif
-#endif /* __KERNEL__ */
+#endif
 
-#ifdef __KERNEL__
-#  define HIP_MALLOC(size, flags)  kmalloc(size, flags)
-#  define HIP_FREE(obj)            kfree(obj)
-#else
 #  define HIP_MALLOC(size, flags)  malloc(size)
 #  define HIP_FREE(obj)            free(obj)
 #  define GFP_ATOMIC               0
 #  define GFP_KERNEL               0
-#endif /* __KERNEL__ */
 
 #define HIP_AH_SHA_LEN                 20
 

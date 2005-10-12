@@ -1,16 +1,8 @@
 #ifndef HIP_HASHTABLE_H
 #define HIP_HASHTABLE_H
 
-#ifdef __KERNEL__
-#  include <linux/types.h>
-#  include <linux/spinlock.h>
-#  include <linux/list.h>
-#  include <linux/interrupt.h>
-#  include <linux/list.h>
-#else
 #  include "list.h"
 #  include <net/hip.h>
-#endif /* __KERNEL__ */
 
 #include "debug.h"
 
@@ -39,18 +31,9 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key);
 int hip_ht_add(HIP_HASHTABLE *ht, void *entry);
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
 
-#ifdef __KERNEL__
-#define HIP_LOCK_HT(hash) do { \
-	spin_lock_bh(&(hash)->lock); \
-} while(0)
 
-#define HIP_UNLOCK_HT(hash) do { \
-	spin_unlock_bh(&(hash)->lock); \
-} while(0)
-#else
 #define HIP_LOCK_HT(hash)
 #define HIP_UNLOCK_HT(hash)
-#endif
 
 #endif
 

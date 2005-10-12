@@ -86,8 +86,6 @@ static void hip_hadb_remove_state_hit(hip_ha_t *ha)
 	HIP_UNLOCK_HA(ha);
 }
 
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
-
 /*
   Support for multiple inbound IPsec SAs:
 
@@ -1598,7 +1596,6 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
 	return err;
 }
 
-#endif /* #if HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
 /******************************************************************************************************/
 
 void hip_hadb_dump_hs_ht(void)

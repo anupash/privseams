@@ -10,8 +10,6 @@
 
 #include "hidb.h"
 
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
-
 // FIXME: all get_any's should be removed (tkoponen)
 
 /*
@@ -663,4 +661,3 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 #undef HIP_WRITE_LOCK_DB
 #undef HIP_READ_UNLOCK_DB
 #undef HIP_WRITE_UNLOCK_DB
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

@@ -11,7 +11,6 @@
  */
 #include "input.h"
 
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry);
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
 extern int hip_hadb_update_xfrm(hip_ha_t *entry);
@@ -2052,4 +2051,3 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 	return err;
 }
 
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

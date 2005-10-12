@@ -11,11 +11,6 @@
 #include "hip.h"
 #include "debug.h"
 
-#ifdef __KERNEL__
-#  include <linux/types.h>
-#  include <net/ipv6.h>
-#  include <net/hip.h>
-#else /* not __KERNEL__ */
 #  include <asm/types.h>
 #  include <sys/errno.h>
 #  include <net/hip.h>
@@ -25,8 +20,6 @@
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
-
-#endif /* __KERNEL__ */
 
 #define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
 /* Removed in 2.6.11 - why ? */

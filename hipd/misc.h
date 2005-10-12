@@ -1,13 +1,10 @@
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
-#ifdef __KERNEL__
-#  include <net/ipv6.h>
-#  include <linux/types.h>
-#  include <net/hip.h>
-#else
-#  include "list.h" /* userspace list implementation */
-#  include "hipd.h"
+#include "list.h" /* userspace list implementation */
+#include "hipd.h"
+#include "debug.h"
+#include "hip.h"
 
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
@@ -27,11 +24,6 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 	return ((a->s6_addr32[0] | a->s6_addr32[1] | 
 		 a->s6_addr32[2] | a->s6_addr32[3] ) == 0); 
 }
-
-#endif /* __KERNEL__ */
-
-#include "debug.h"
-#include "hip.h"
 
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type);

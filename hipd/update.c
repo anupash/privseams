@@ -8,10 +8,6 @@
 #include "hadb.h"
 
 
-// (!defined __KERNEL__ && !defined HIP_KMOD && defined CONFIG_HIP_USERSPACE)
-
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
-
 /** hip_update_get_sa_keys - Get keys needed by UPDATE
  * @entry: corresponding hadb entry of the peer
  * @keymat_offset_new: value-result parameter for keymat index used
@@ -87,20 +83,11 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 */
 int hip_update_test_rea_addr(struct in6_addr *addr)
 {
-#if HIP_KERNEL_DAEMON
-	int addr_type = ipv6_addr_type(addr);
-	return !(addr_type == IPV6_ADDR_ANY ||
-		 addr_type & IPV6_ADDR_LOOPBACK ||
-		 addr_type & IPV6_ADDR_LINKLOCAL ||
-		 addr_type & IPV6_ADDR_SITELOCAL ||
-		 !(addr_type & IPV6_ADDR_UNICAST));
-#else
 	return !(IN6_IS_ADDR_UNSPECIFIED(addr) ||
 		 IN6_IS_ADDR_LOOPBACK(addr) ||
 		 IN6_IS_ADDR_LINKLOCAL(addr) ||
 		 IN6_IS_ADDR_SITELOCAL(addr) ||
 		 IN6_IS_ADDR_MULTICAST(addr));
-#endif
 }
 
 /** hip_update_handle_rea_parameter - Process REA parameters in the UPDATE
@@ -1514,4 +1501,3 @@ out_err:
 	return;
 }
 
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

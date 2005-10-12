@@ -8,7 +8,6 @@
  */
 
 #include "rvs.h"
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 HIP_HASHTABLE rva_table;
 
 static struct list_head rvadb[HIP_RVA_SIZE];
@@ -440,4 +439,3 @@ void hip_rvs_set_request_flag(struct in6_addr *hit)
 	entry->local_controls |= HIP_PSEUDO_CONTROL_REQ_RVS;
 	hip_put_ha(entry);
 }
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

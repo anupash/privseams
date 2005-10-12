@@ -113,9 +113,6 @@ int hip_ht_init(HIP_HASHTABLE *ht)
 	HIP_ASSERT(ht->hold);
 	HIP_ASSERT(ht->put);
 	HIP_ASSERT(ht->get_key);
-#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
-	spin_lock_init(&ht->lock);
-#endif
 
 	for(i=0; i<ht->hashsize; i++)
 		INIT_LIST_HEAD(&ht->head[i]);

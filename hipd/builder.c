@@ -47,10 +47,6 @@
 #include "builder.h"
 #include "debug.h"
 
-#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
-const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
-#endif  /* HIP_KERNEL_DAEMON */
-
 /**
  * hip_msg_init - initialize a network/daemon message
  * @msg: the message to be initialized
@@ -1237,7 +1233,6 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 	ipv6_addr_copy(&msg->hitr, hit_receiver ? hit_receiver : &in6addr_any);
 }
 
-#if HIP_KERNEL_DAEMON || HIP_USER_DAEMON
 /**
  * hip_build_param_hmac_contents - build and append a HIP hmac parameter
  * @msg:  the message where the hmac parameter will be appended
@@ -1332,7 +1327,6 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 
 	return err;
 }
-#endif /* HIP_KERNEL_DAEMON || HIP_USER_DAEMON */
 
 /**
  * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter

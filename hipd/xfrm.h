@@ -1,18 +1,14 @@
 #ifndef HIP_XFRM_H
 #define HIP_XFRM_H
 
-#ifdef __KERNEL__
-#  include <linux/xfrm.h>
-#  include <net/xfrm.h>
-#else
 #  include "netlink.h"
-#endif
 
 #include <net/hip.h>
 #include "hadb.h"
 #include "debug.h"
 #include "hip.h"
 
+#if 0
 #ifdef __KERNEL__
 /* For now, only the kernel module inserts the security policy */
 
@@ -20,6 +16,7 @@
 int hip_setup_sp(int dir);
 /* Unsetup IPsec security policy (module/hipd unload) */
 int hip_delete_sp(int dir);
+#endif
 #endif
 
 /* Allocates SPI for fixed time */

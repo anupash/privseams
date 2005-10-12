@@ -1,6 +1,5 @@
 #include "pk.h"
 
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 int hip_rsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 	u8 sha1_digest[HIP_AH_SHA_LEN];
 	u8 signature[HIP_RSA_SIGNATURE_LEN];
@@ -136,4 +135,3 @@ int hip_dsa_verify(struct hip_host_id *peer_pub, struct hip_common *msg)
 {
 	return verify(peer_pub, msg, 0);
 }
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

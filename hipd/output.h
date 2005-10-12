@@ -14,17 +14,6 @@
 #include "preoutput.h"
 #include "beet.h"
 
-#ifdef __KERNEL__
-#  include <net/ipv6.h>
-#  include <linux/skbuff.h>
-#  include <net/checksum.h>
-#  include <net/addrconf.h>
-#  include <net/xfrm.h>
-#  include <linux/skbuff.h>
-#endif /* __KERNEL__ */
-
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
-
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 struct hip_host_id *src_privkey,
@@ -37,5 +26,4 @@ void hip_send_notify_all(void);
 
 int hip_send_close(const struct hip_common *input);
 
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
 #endif /* HIP_OUTPUT_H */

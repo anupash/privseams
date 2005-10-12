@@ -11,8 +11,6 @@
 
 #include "output.h"
 
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
-
 /**
  * hip_send_i1 - send an I1 packet to the responder
  * @entry: the HIP database entry reserved for the peer
@@ -375,4 +373,3 @@ int hip_send_close(const struct hip_common *input)
 	return err;
 }
 
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */

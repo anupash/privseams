@@ -1,22 +1,12 @@
 #ifndef HIP_RVS_H
 #define HIP_RVS_H
 
-#ifdef __KERNEL__
-#  include <linux/spinlock.h>
-#  include <linux/types.h>
-#  include <asm/atomic.h>
-#  include <net/ipv6.h>
-#  include <linux/list.h>
-#  include <linux/spinlock.h>
-#endif /* __KERNEL__ */
 
 #include "hadb.h"
 #include "hashtable.h"
 #include "misc.h"
 #include "builder.h"
 #include "output.h"
-
-#if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
 
 #define HIP_RVA_MAX_IPS 2
 #define HIP_RVA_SIZE 7  /* small hash table = less wasted memory :) */
@@ -85,5 +75,4 @@ void hip_rva_fetch_ip_n(HIP_RVA *rva, struct in6_addr *dst, unsigned int n);
 int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen);
 void hip_rvs_set_request_flag(struct in6_addr *hit);
 
-#endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
 #endif
