@@ -50,6 +50,21 @@ typedef uint16_t in_port_t;
 #  include <sys/ioctl.h>
 #  include <stdint.h>
 
+#include "input.h"
+#include "builder.h"
+#include "hidb.h"
+#include "cookie.h"
+#include "misc.h"
+#include "output.h"
+#include "workqueue.h"
+#include "socket.h"
+#include "update.h"
+#include "hadb.h"
+#ifdef CONFIG_HIP_RVS
+#include "rvs.h"
+#endif
+#include "crypto.h"
+
 typedef uint8_t   u8;
 typedef uint16_t  u16;
 typedef uint32_t  u32;
@@ -1041,4 +1056,101 @@ struct hip_eid_db_entry {
 /* Some default settings for HIPL */
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
+
+#define HIP_IFE(func, eval) \
+{ \
+	if (func) { \
+		err = eval; \
+		goto out_err; \
+	} \
+}
+
+#define HIP_IFEL(func, eval, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+		goto out_err; \
+	} \
+}
+
+#define HIP_IFEB(func, eval, finally) \
+{ \
+	if (func) { \
+		err = eval; \
+                finally;\
+		goto out_err; \
+	} else {\
+		finally;\
+        }\
+}
+
+#define HIP_IFEBL(func, eval, finally, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+                finally;\
+		goto out_err; \
+	} else {\
+		finally;\
+        }\
+}
+
+#define HIP_IFEBL2(func, eval, finally, args...) \
+{ \
+	if (func) { \
+		HIP_ERROR(args); \
+		err = eval; \
+                finally;\
+        }\
+}
+
+#define jiffies random()
+#include "list.h"
+
+#define atomic_inc(x) \
+         (++(*x).counter)
+
+#define atomic_read(x) \
+         ((*x).counter)
+
+#define atomic_dec_and_test(x) \
+         (--((*x).counter) == 0)
+
+#define atomic_set(x, v) \
+         ((*x).counter = v)
+
+/* XX FIX: implement the locking for userspace properly */
+#define read_lock_irqsave(a,b) do {} while(0)
+#define spin_unlock_irqrestore(a,b) do {} while(0)
+#define write_lock_irqsave(a,b) do {} while(0)
+#define write_unlock_irqrestore(a,b) do {} while(0)
+#define read_unlock_irqrestore(a,b) do {} while(0)
+
+#ifndef MIN
+#  define MIN(a,b)	((a)<(b)?(a):(b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b)	((a)>(b)?(a):(b))
+#endif
+
+/* XX FIXME: implement with a userspace semaphore etc? */
+#define wmb() do {} while(0)
+#define barrier() do {} while(0)
+
+/* used by hip worker to announce completion of work order */
+#define KHIPD_OK                   0
+#define KHIPD_QUIT                -1
+#define KHIPD_ERROR               -2
+#define KHIPD_UNRECOVERABLE_ERROR -3
+#define HIP_MAX_SCATTERLISTS       5 // is this enough?
+
+int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
+void hip_net_event(int ifindex, uint32_t event_src, uint32_t event);
+
+extern struct socket *hip_output_socket;
+extern time_t load_time;
+
 #endif /* _NET_HIP */
