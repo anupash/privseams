@@ -3,7 +3,7 @@
 
 #include "list.h" /* userspace list implementation */
 #include "hipd.h"
-#include "debug.h"
+//#include "debug.h"
 #include "hip.h"
 
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,

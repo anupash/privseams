@@ -6,7 +6,7 @@
 #  include <linux/skbuff.h>
 
 #include "misc.h"
-#include "debug.h"
+//#include "debug.h"
 #include "hip.h"
 
 /* for debugging with in6_ntop */

@@ -23,25 +23,11 @@
  *
  */
 
-#  include <netinet/in.h>
-#  include <sys/time.h>
-#  include <sys/ioctl.h>
-#  include <stdint.h>
+#include <netinet/in.h>
+#include <sys/time.h>
+#include <sys/ioctl.h>
+#include <stdint.h>
 
-#include "input.h"
-#include "builder.h"
-#include "hidb.h"
-#include "cookie.h"
-#include "misc.h"
-#include "output.h"
-#include "workqueue.h"
-#include "socket.h"
-#include "update.h"
-#include "hadb.h"
-#ifdef CONFIG_HIP_RVS
-#include "rvs.h"
-#endif
-#include "crypto.h"
 
 typedef uint8_t   u8;
 typedef uint16_t  u16;
@@ -61,6 +47,23 @@ struct list_head {
 #define HIP_HIT_TYPE_MASK_HAA   0x80
 //#define HIP_HIT_TYPE_MASK_126   0x40
 #define HIP_HIT_TYPE_MASK_120   0x40
+
+#if 0
+#include "input.h"
+#include "builder.h"
+#include "hidb.h"
+#include "cookie.h"
+#include "misc.h"
+#include "output.h"
+#include "workqueue.h"
+#include "socket.h"
+#include "update.h"
+#include "hadb.h"
+#ifdef CONFIG_HIP_RVS
+#include "rvs.h"
+#endif
+#include "crypto.h"
+#endif //#if 0
 
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {

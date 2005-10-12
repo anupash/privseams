@@ -1,9 +1,8 @@
 #ifndef _HIP_NETLINK_H
 #define _HIP_NETLINK_H
 
-#include <net/hip.h> /* struct hip_work_order */
 #include "builder.h"
-#include "debug.h"
+//#include "debug.h"
 #include "hip.h"
 
 #  include <stdio.h>

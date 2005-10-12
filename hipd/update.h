@@ -1,7 +1,6 @@
 #ifndef HIP_UPDATE_H
 #define HIP_UPDATE_H
 
-#include <net/hip.h>
 #include "hip.h"
 
 /* FIXME: where to include these from in userspace? */

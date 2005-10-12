@@ -11,7 +11,7 @@
 #include <asm/types.h>
 #include <string.h>
 #include <netinet/in.h>
-#include <net/hip.h>
+#include <hip.h>
 #include <openssl/dsa.h>
 #include <openssl/sha.h>
 #include <openssl/bn.h>

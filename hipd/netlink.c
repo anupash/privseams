@@ -1,7 +1,7 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 
-#include "debug.h" /* logging facilities */
+//#include "debug.h" /* logging facilities */
 #include "netlink.h"
 #include "hipd.h"
 

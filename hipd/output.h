@@ -1,9 +1,8 @@
 #ifndef HIP_OUTPUT_H
 #define HIP_OUTPUT_H
 
-#include <net/hip.h>
 #include "hadb.h"
-#include "debug.h"
+//#include "debug.h"
 #include "misc.h"
 #include "hip.h"
 #include "hadb.h"

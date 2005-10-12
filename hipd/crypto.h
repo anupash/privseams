@@ -2,19 +2,19 @@
 #define HIP_CRYPTO_H
 
 #include "hip.h"
-#include "debug.h"
+//#include "debug.h"
 
-#  include <sys/time.h>
-#  include <time.h>
-#  include <net/hip.h>
-#  include <openssl/dsa.h>
-#  include <openssl/rsa.h>
-#  include <openssl/dh.h>
-#  include <openssl/sha.h>
-#  include <openssl/bn.h>
-#  include <openssl/bio.h>
-#  include <openssl/pem.h>
-#  include <openssl/err.h> 
+#include <sys/time.h>
+#include <time.h>
+#include <hip.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
+#include <openssl/dh.h>
+#include <openssl/sha.h>
+#include <openssl/bn.h>
+#include <openssl/bio.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
 
 #include "hidb.h"
 

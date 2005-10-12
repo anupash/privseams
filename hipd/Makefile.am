@@ -9,7 +9,7 @@ include $(HIPL)/Makefile.am.global
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
-CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE
+CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_DAEMON
 
 include_HEADERS = hipd.h crypto.h netlink.h
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
@@ -18,11 +18,11 @@ INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
 sbin_PROGRAMS = hipd
 hipd_SOURCES = pk.c rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
 hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
-hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c misc.c dh.c netlink.c bos.c
+hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c misc.c dh.c netlink.c bos.c debug.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a
-hipd_LDFLAGS += -lcrypto
+hipd_LDFLAGS = -lcrypto
 
 SUBDIRS =
 
@@ -63,7 +63,7 @@ beet.c: beet.h
 update.c: update.h
 rvs.c: rvs.h
 pk.c: pk.h
-
+dbeug.c: debug.h
 
 tags:
 	etags $(hipd_SOURCES) $(include_HEADERS)

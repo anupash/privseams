@@ -77,7 +77,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/if.h>
 #include <ctype.h>
 #include <openssl/dsa.h>
-#include <net/hip.h>
+#include <hip.h>
 
 #include "builder.h"
 #include "libinet6/crypto.h"

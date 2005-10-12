@@ -1,10 +1,9 @@
 #ifndef HIP_BOS_NEW_H
 #define HIP_BOS_NEW_H
 
-#include <net/hip.h>
 #include "hip.h"
 #include "debug.h"
-#include "socket.h"
+//#include "socket.h"
 #include "beet.h"
 #include "hidb.h"
 #include "hadb.h"

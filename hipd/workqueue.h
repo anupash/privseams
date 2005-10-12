@@ -3,9 +3,13 @@
 
 #include "hip.h"
 
-#  include <stdio.h>
-#  include "list.h"
-#  include <asm/byteorder.h>
+#include <stdio.h>
+#include <asm/byteorder.h>
+#include "list.h"
+//#include "debug.h"
+#include "timer.h"
+#include "hip.h"
+#include "bos.h"
 
 /* Remove when not necessary, taken from linux/ipv6.h */
 struct ipv6hdr {
@@ -40,12 +44,6 @@ struct ipv6hdr {
 		work_order_hdr.arg2 = hwo_arg2; \
 		work_order_hdr.arg3 = hwo_arg3; \
 		} while(0)
-
-#include <net/hip.h>
-#include "debug.h"
-#include "timer.h"
-#include "hip.h"
-#include "bos.h"
 
 #define HIP_WO_TYPE_INCOMING 1
 #define HIP_WO_TYPE_OUTGOING 2

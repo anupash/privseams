@@ -1,11 +1,10 @@
 #ifndef HIP_XFRM_H
 #define HIP_XFRM_H
 
-#  include "netlink.h"
+#include "netlink.h"
 
-#include <net/hip.h>
 #include "hadb.h"
-#include "debug.h"
+//#include "debug.h"
 #include "hip.h"
 
 #if 0

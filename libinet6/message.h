@@ -6,7 +6,7 @@
 #endif
 
 #include <errno.h>
-#include <net/hip.h>
+#include <hip.h>
 
 #include "debug.h"
 

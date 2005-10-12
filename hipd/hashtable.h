@@ -1,10 +1,9 @@
 #ifndef HIP_HASHTABLE_H
 #define HIP_HASHTABLE_H
 
-#  include "list.h"
-#  include <net/hip.h>
-
-#include "debug.h"
+#include "list.h"
+#include "hip.h"
+//#include "debug.h"
 
 struct hip_ht_common {
 	struct list_head *head;

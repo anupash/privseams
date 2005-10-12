@@ -5,9 +5,8 @@
 #  include "rvs.h"
 #endif
 
-#include <net/hip.h>
 #include "workqueue.h"
-#include "debug.h"
+//#include "debug.h"
 #include "xfrm.h"
 #include "hadb.h"
 #include "keymat.h"
@@ -21,6 +20,7 @@
 #include "output.h"
 #include "socket.h"
 #include "pk.h"
+//#include "rvs.h"
 
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,

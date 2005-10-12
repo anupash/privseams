@@ -5,10 +5,10 @@
 #ifndef NETDEV_H
 #define NETDEV_H
 
-#include <net/hip.h>
 #include <netinet/ip6.h>
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
+#include "hip.h"
 #include "netlink.h"
 #include "list.h"
 #include "debug.h"

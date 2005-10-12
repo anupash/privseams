@@ -1,9 +1,8 @@
 #ifndef HIP_PREINPUT_H
 #define HIP_PREINPUT_H
 
-#include <net/hip.h>
 #include "beet.h"
-#include "debug.h"
+//#include "debug.h"
 #include "workqueue.h"
 #include "hip.h"
 

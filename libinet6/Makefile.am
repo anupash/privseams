@@ -77,10 +77,10 @@ getendpointinfo.c: include/netdb.h
 list.h:
 	$(LN_S) -f $(HIPL_HIPD)/list.h .
 builder.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
+	$(LN_S) -f $(HIPL_HIPD)/builder.h .
 include/netdb.h:
 	$(LN_S) -f include_glibc$(usagi_libc) include
 builder.c: builder.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
+	$(LN_S) -f $(HIPL_HIPD)/builder.c .
 
 SUBDIRS = include_glibc21 include_glibc22 include_glibc23

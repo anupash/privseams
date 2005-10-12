@@ -1,9 +1,8 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
 
-#include <net/hip.h>
 #include "hip.h"
-#include "debug.h"
+//#include "debug.h"
 #include "misc.h"
 #include "hidb.h"
 #include "hashtable.h"

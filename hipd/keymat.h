@@ -3,10 +3,9 @@
 
 #include "list.h"
 
-#include <net/hip.h>
 #include "misc.h"
 #include "crypto.h"
-#include "debug.h"
+//#include "debug.h"
 #include "hip.h"
 
 void hip_make_keymat(char *kij, size_t kij_len,

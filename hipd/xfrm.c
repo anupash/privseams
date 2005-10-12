@@ -1,5 +1,5 @@
 #include "xfrm.h"
-#include "debug.h"
+//#include "debug.h"
 
 int hip_delete_sa(u32 spi, struct in6_addr *dst) {
 	struct hip_work_order req, resp;

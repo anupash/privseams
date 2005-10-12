@@ -3,7 +3,7 @@
 
 #include "hadb.h"
 #include "crypto.h"
-#include "debug.h"
+//#include "debug.h"
 #include "hip.h"
 
 int hip_insert_dh(u8 *buffer, int bufsize, int group_id);

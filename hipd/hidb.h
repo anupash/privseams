@@ -2,7 +2,7 @@
 #define _HIP_DB
 
 #include "hip.h"
-#include "debug.h"
+//#include "debug.h"
 
 #  include <sys/socket.h>
 #  include "list.h"

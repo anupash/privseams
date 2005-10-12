@@ -8,7 +8,6 @@
 
 #include "debug.h"
 #include "hip.h"
-#include <net/hip.h>
 #include "hashtable.h"
 #include "hadb.h"
 #include "workqueue.h"
