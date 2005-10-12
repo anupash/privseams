@@ -13,12 +13,12 @@ include $(HIPL)/Makefile.am.global
 CFLAGS  = -I$(HIPL_LIBINET6_INCLUDE)
 CFLAGS  += -I$(HIPL) -DCONFIG_HIP_DEBUG
 CFLAGS  += -DHIP_LOGFMT_LONG -g -L$(HIPL_LIBINET6_LIB) -I$(HIPL_HIPD)
-CFLAGS  += -I$(HIPL_LIBINET6)
+CFLAGS  += -I$(HIPL_LIBINET6) -I$(HIPL_LIBHIPTOOL)
 
 include_HEADERS = hipconf.h
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-LDADD    = ../libinet6/.libs/libinet6.a
+LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 LDFLAGS += -lcrypto
 
@@ -29,9 +29,5 @@ hipconf_SOURCES = hipconf.c
 # the best way to access it because the object must be built on this
 # directory and we don't want to make reduntant copies.
 #
-builder.h:
-	$(LN_S) -f $(HIPL_HIPD)/builder.h .
-builder.c: builder.h
-	$(LN_S) -f $(HIPL_HIPD)/builder.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)

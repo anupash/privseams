@@ -13,10 +13,10 @@ include $(HIPL)/Makefile.am.global
 CFLAGS = -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
 CFLAGS += -I$(HIPL_HIPD)
 CFLAGS += -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
-CFLAGS += -L$(HIPL_LIBINET6_LIB)
+CFLAGS += -L$(HIPL_LIBINET6_LIB) -I$(HIPL_LIBHIPTOOL)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-LDADD  = ../libinet6/.libs/libinet6.a
+LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 bin_PROGRAMS = conntest-client
 bin_PROGRAMS += conntest-server
