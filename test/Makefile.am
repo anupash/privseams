@@ -11,7 +11,7 @@ include $(HIPL)/Makefile.am.global
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 CFLAGS = -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
-CFLAGS += -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_LINUX_MODULE) -I$(HIPL_HIPD)
+CFLAGS += -I$(HIPL_HIPD)
 CFLAGS += -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
 CFLAGS += -L$(HIPL_LIBINET6_LIB)
 
@@ -57,8 +57,8 @@ hipconf.h:
 hipconf.c: hipconf.h
 	$(LN_S) -f $(HIPL_TOOLS)/hipconf.c .
 unit.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.h .
+	$(LN_S) -f $(HIPL_HIPD)/unit.h .
 unit.c: unit.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.c .
+	$(LN_S) -f $(HIPL_HIPD)/unit.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6

@@ -57,9 +57,8 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 
 # HIP additions to the flags.
-CFLAGS += -g -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_TOOLS) -I$(HIPL)
-CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE) -Iinclude_glibc
-CFLAGS += -I$(HIPL_HIPD)
+CFLAGS += -g -I$(HIPL_TOOLS) -I$(HIPL)
+CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_HIPD) -Iinclude_glibc
 
 include_HEADERS = libc-compat.h debug.h crypto.h message.h builder.h util.h
 
