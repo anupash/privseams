@@ -13,7 +13,7 @@ CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_DAEMON
 
 include_HEADERS = hipd.h netlink.h
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBHIPTOOL)
-INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
+INCLUDES += -I$(HIPL_LINUX_MODULE) -I$(HIPL)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c
