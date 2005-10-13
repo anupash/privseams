@@ -12,12 +12,37 @@
 
 /******************************************************************************/
 /**
+	Initialize HIP GUI.
+	
+	@return 0 on success, -1 on errors.
+*/
+int gui_init(void)
+{
+	int err = 0;
+	
+#ifndef CONFIG_HIPGUI_COMMANDLINE
+	HIP_DEBUG("Initializing GUI...\n");
+	if (gui_init_interface()) goto out_err;
+	HIP_DEBUG("GUI inialized succesfully...\n");
+#endif
+		
+	return (0);
+	
+out_err:
+	
+	return (-1);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	Ask GUI, if new hit should be accepted and added.
 
 	@param hit Pointer to hit that should be accepted.
 	@return 0 if accept, -1 on other cases.
 */
-int gui_new_hit(HIT_Item *hit)
+int gui_check_hit(HIT_Item *hit)
 {
 	/* Variables. */
 	HIT_Item *fhit = NULL;
@@ -25,7 +50,8 @@ int gui_new_hit(HIT_Item *hit)
 	char hits[128], hitr[128];
 	
 	/* First check for database and this hit. */
-	fhit = hit_db_find(&ndx, NULL, NULL, &hit->rhit, NULL, 0);
+	fhit = hit_db_find(&ndx, NULL, &hit->lhit, &hit->rhit,
+	                   hit->url, hit->port, 1);
 	if (fhit)
 	{
 		HIP_DEBUG("Found HIT from database with type \"%s\".\n",
@@ -48,7 +74,7 @@ int gui_new_hit(HIT_Item *hit)
 	}
 
 	/* If not found, ask user. */
-#ifdef CONFIG_HIPGUI_COMMANDLINE
+//#ifdef CONFIG_HIPGUI_COMMANDLINE
 	print_hit_to_buffer(hits, &hit->lhit);
 	print_hit_to_buffer(hitr, &hit->rhit);
 	
@@ -74,8 +100,11 @@ int gui_new_hit(HIT_Item *hit)
 		
 		fprintf(stdout, "Please, answer y or n...\n");
 	}
+/*#ifdef 1
 #else
 /* XX TODO: Call the real GUI here. */
+/*	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
+	gui_ask_hit_accept("testi");
 #endif
 
 	/* Add hit info to database, if answer was yes. */

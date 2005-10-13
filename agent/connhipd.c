@@ -77,7 +77,7 @@ int connhipd_init(void)
 	/* Start thread for connection handling. */
 	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
 	          "Starting thread for HIP daemon connection handling\n", n);
-	
+
 	pthread_create(&pt, NULL, connhipd_thread, msg);
 
 	return (0);
@@ -139,12 +139,12 @@ int connhipd_thread(void *data)
 		HIP_DEBUG("Whole message received successfully, asking for accept...\n");
 
 		/* TODO XX: Modify message and check message type. */
-		strcpy(hit.name, "test");
+		strcpy(hit.name, "");
 		hit.url = NULL;
-		hit.port = 1234;
+		hit.port = 0;
 		memcpy(&hit.lhit, &msg->hits, sizeof(struct in6_addr));
 		memcpy(&hit.rhit, &msg->hitr, sizeof(struct in6_addr));
-		ret = gui_new_hit(&hit);
+		ret = gui_check_hit(&hit);
 		
 		if (ret == 0)
 		{

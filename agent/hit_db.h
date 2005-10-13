@@ -5,8 +5,12 @@
 #ifndef HIT_DB_H
 #define HIT_DB_H
 
+
 /******************************************************************************/
 /* INCLUDES */
+#include <fcntl.h>
+#include <socket.h>
+#include <sys/un.h>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,7 +62,7 @@ int hit_db_add(char *, struct in6_addr *, struct in6_addr *,
 int hit_db_del(int);
 
 HIT_Item *hit_db_find(int *, char *, struct in6_addr *, struct in6_addr *,
-                      char *, uint16_t);
+                      char *, uint16_t, int);
 
 
 #endif /* END OF HEADER FILE */

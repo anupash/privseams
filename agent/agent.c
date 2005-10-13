@@ -11,7 +11,11 @@
 /**
 	main().
 */
+#ifdef CONFIG_HIPGUI_COMMANDLINE
 int main(int argc, char *argv[])
+#else
+int agent_main(void)
+#endif
 {
 	/* Variables. */
 	int err = 0;
@@ -22,6 +26,7 @@ int main(int argc, char *argv[])
 	/* Initialize database. */
 	HIP_IFE(hit_db_init(), -1);
 	
+#ifdef CONFIG_HIPGUI_COMMANDLINE
 	/* Initialize GUI. */
 //	HIP_IFE(gui_init(), -1);
 
@@ -33,6 +38,9 @@ int main(int argc, char *argv[])
 		/* Wait a little, dont waste all cpu here. */
 		sleep(100);
 	}
+#endif
+
+	return (0);
 
 out_err:
 //	connhipd_quit();

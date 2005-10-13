@@ -196,6 +196,7 @@ out_err:
 	@param hit Pointer to hip_lhi-struct.
 	@param url Pointer to url.
 	@param port Port number.
+	@param max_find Atmost return this many hits found.
 	@return Pointer to hit if found, NULL if not.
 */
 HIT_Item *hit_db_find(int *ndx,
@@ -203,11 +204,12 @@ HIT_Item *hit_db_find(int *ndx,
                       struct in6_addr *lhit,
                       struct in6_addr *rhit,
                       char *url,
-                      uint16_t port)
+                      uint16_t port,
+                      int max_find)
 {
 	/* Variables. */
 	HIT_Item *fh1 = NULL, *fh2 = NULL;
-	int n;
+	int n, hits_found = 0;
 	char buffer1[128], buffer2[128];
 
 	if (ndx)
@@ -243,6 +245,7 @@ HIT_Item *hit_db_find(int *ndx,
 		{
 			if (memcmp(&hit_db[n].lhit, lhit, sizeof(struct in6_addr)) == 0)
 			{
+				HIP_DEBUG("Found match for local hit...\n");
 				fh2 = &hit_db[n];
 			}
 		}
@@ -262,12 +265,11 @@ HIT_Item *hit_db_find(int *ndx,
 
 		if (rhit != NULL)
 		{
-			print_hit_to_buffer(buffer1, rhit);
-			print_hit_to_buffer(buffer2, &hit_db[n].rhit);
-			HIP_DEBUG("Checking remote hit:\n %s == %s...\n", buffer1, buffer2);
-			
 			if (memcmp(&hit_db[n].rhit, rhit, sizeof(struct in6_addr)) == 0)
 			{
+				print_hit_to_buffer(buffer1, rhit);
+				print_hit_to_buffer(buffer2, &hit_db[n].rhit);
+				HIP_DEBUG("Found match for remote hit:\n %s==%s\n", buffer1, buffer2);
 				fh2 = &hit_db[n];
 			}
 		}
@@ -318,6 +320,11 @@ HIT_Item *hit_db_find(int *ndx,
 			{
 				*ndx = n;
 			}
+			hits_found++;
+		}
+		
+		if (hits_found >= max_find)
+		{
 			break;
 		}
 	}

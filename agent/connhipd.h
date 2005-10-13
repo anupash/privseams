@@ -18,6 +18,7 @@
 #include "workqueue.h"
 #include "agent_tools.h"
 #include "hit_db.h"
+#include "gui_interface.h"
 
 
 /******************************************************************************/

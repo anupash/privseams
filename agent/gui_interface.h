@@ -12,11 +12,13 @@
 #include <string.h>
 
 #include "hit_db.h"
+#include "./gui/interface.h"
 
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int gui_new_hit(HIT_Item *);
+int gui_init(void);
+int gui_check_hit(HIT_Item *);
 
 
 #endif /* END OF HEADER FILE */
