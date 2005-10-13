@@ -15,11 +15,8 @@ include_HEADERS = hipd.h netlink.h
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBHIPTOOL)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
 
-#INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBHIPTOOL)
-#INCLUDES += -I$(HIPL_LINUX_MODULE) -I$(HIPL) 
-
 sbin_PROGRAMS = hipd
-hipd_SOURCES = rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
+hipd_SOURCES = rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c
 hipd_SOURCES += workqueue.c preoutput.c hadb.c
 hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c netlink.c bos.c debug.c
 
