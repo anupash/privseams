@@ -27,7 +27,7 @@ sbin_PROGRAMS = firewall
 firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c
 firewall_SOURCES +=  builder.c misc.c dh.c pk.c
 
-firewall_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a  
+firewall_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 SUBDIRS =
 
@@ -35,27 +35,14 @@ SUBDIRS =
 # the best way to access it because the object must be built on this
 # directory and we don't want to make reduntant copies.
 #
-builder.h:
-	$(LN_S) -f $(HIPL_HIPD)/builder.h .
-builder.c: builder.h
-	$(LN_S) -f $(HIPL_HIPD)/builder.c .
 cookie.c: cookie.h
 	$(LN_S) -f $(HIPL_HIPD)/cookie.c .
 cookie.h:
 	$(LN_S) -f $(HIPL_HIPD)/cookie.h .
-crypto.c: crypto.h 
-	$(LN_S) -f $(HIPL_HIPD)/crypto.c .
-#crypto.h
-crypto.h:
-	$(LN_S) -f $(HIPL_HIPD)/crypto.h .
 hidb.c: hidb.h
 	$(LN_S) -f $(HIPL_HIPD)/hidb.c .
 hidb.h:
 	$(LN_S) -f $(HIPL_HIPD)/hidb.h .
-#debug.c: debug.h
-#	$(LN_S) -f $(HIPL_HIPD)/debug.c .
-#debug.h:
-#	$(LN_S) -f $(HIPL_HIPD)/debug.h .
 dh.c: dh.h
 	$(LN_S) -f $(HIPL_HIPD)/dh.c .
 dh.h:
@@ -68,8 +55,6 @@ netlink.h:
 	$(LN_S) -f $(HIPL_HIPD)/netlink.h .
 hashtable.c: hashtable.h 
 	$(LN_S) -f $(HIPL_HIPD)/hashtable.h .	
-#hashtable.h
-	$(LN_S) -f $(HIPL_HIPD)/hashtable.c .
 hashtable.h:
 	$(LN_S) -f $(HIPL_HIPD)/hashtable.h .
 keymat.c: keymat.h
