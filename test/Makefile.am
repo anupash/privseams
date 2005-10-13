@@ -56,9 +56,5 @@ hipconf.h:
 	$(LN_S) -f $(HIPL_TOOLS)/hipconf.h .
 hipconf.c: hipconf.h
 	$(LN_S) -f $(HIPL_TOOLS)/hipconf.c .
-unit.h:
-	$(LN_S) -f $(HIPL_HIPD)/unit.h .
-unit.c: unit.h
-	$(LN_S) -f $(HIPL_HIPD)/unit.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6
