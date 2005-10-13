@@ -29,7 +29,7 @@
 #include <openssl/pem.h>
 
 #include "debug.h"
-#include "libinet6/crypto.h"
+#include "crypto.h"
 #include "builder.h"
 
 /* 0 is reserved */

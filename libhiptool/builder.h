@@ -14,7 +14,7 @@
 
 #include "../hipd/hip.h"
 #include "debug.h"
-#include "../hipd/crypto.h"
+#include "crypto.h"
 #include "../libinet6/include/bits/socket.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
