@@ -63,7 +63,7 @@ CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_HIPD) -Iinclude_glibc
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD  = ../libhiptool/.libs/libhiptool.a
 
-include_HEADERS = libc-compat.h debug.h crypto.h message.h builder.h util.h
+include_HEADERS = libc-compat.h crypto.h message.h builder.h util.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
