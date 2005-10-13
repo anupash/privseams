@@ -2,7 +2,7 @@
 #define HIP_PREINPUT_H
 
 #include "beet.h"
-//#include "debug.h"
+#include "debug.h"
 #include "workqueue.h"
 #include "hip.h"
 

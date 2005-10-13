@@ -12,19 +12,22 @@ include $(HIPL)/Makefile.am.global
 CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_DAEMON
 
 include_HEADERS = hipd.h netlink.h
-INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBHIPTOOL)
-INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
+#INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBHIPTOOL)
+#INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
+
+INCLUDES = -I$(PWD) -I$(HIPL_LIBHIPTOOL)
+INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
-hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c
+hipd_SOURCES += workqueue.c preoutput.c hadb.c
 hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c netlink.c bos.c debug.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 hipd_LDFLAGS = -lcrypto
 
-SUBDIRS =
+#SUBDIRS =
 
 # Hi3
 #CFLAGS += -DCONFIG_HIP_HI3
