@@ -60,7 +60,7 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += -g -I$(HIPL_TOOLS) -I$(HIPL) -I$(HIPL_LIBHIPTOOL)
 CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_HIPD) -Iinclude_glibc
 
-# For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
+# HIP library added
 LDADD  = ../libhiptool/.libs/libhiptool.a
 
 include_HEADERS = libc-compat.h util.h
