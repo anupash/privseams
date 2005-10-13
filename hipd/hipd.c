@@ -275,6 +275,7 @@ int main(int argc, char *argv[]) {
 
 			if (err == 0)
 			{
+				HIP_DEBUG("HIP agent ok.\n");
 				hip_agent_status = 1;
 			}
 			
@@ -318,7 +319,7 @@ int hip_agent_is_alive()
 int hip_agent_filter(struct hip_common *msg)
 {
 	int err = 0;
-	int n;
+	int n, sendn;
 	socklen_t alen;
 	
 	if (!hip_agent_is_alive())
@@ -328,12 +329,12 @@ int hip_agent_filter(struct hip_common *msg)
 	}
 
 	HIP_DEBUG("Filtering hip control message trough agent,"
-                  " message body size is %d bytes.\n",
-		  hip_get_msg_total_len(msg) - sizeof(struct hip_common));
+	          " message body size is %d bytes.\n",
+	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
 
 	alen = sizeof(agent_addr);			
 	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-		   0, (struct sockaddr *)&agent_addr, alen);
+	           0, (struct sockaddr *)&agent_addr, alen);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -344,13 +345,19 @@ int hip_agent_filter(struct hip_common *msg)
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 
 	alen = sizeof(agent_addr);
+	sendn = n;
 	n = recvfrom(hip_user_sock, msg, n, 0,
-		     (struct sockaddr *)&agent_addr, &alen);
+	             (struct sockaddr *)&agent_addr, &alen);
 	if (n < 0)
 	{
 		HIP_ERROR("Recvfrom() failed.\n");
 		err = -1;
 		goto out_err;
+	}
+	/* This happens, if agent rejected the packet. */
+	else if (sendn != n)
+	{
+		err = 1;
 	}
 
 out_err:

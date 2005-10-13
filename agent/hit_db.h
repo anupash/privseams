@@ -8,8 +8,16 @@
 /******************************************************************************/
 /* INCLUDES */
 #include <sys/types.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "hip.h"
+
+
+/******************************************************************************/
+/* DEFINES */
+#define HIT_DB_TYPE_ACCEPT				0
+#define HIT_DB_TYPE_DENY				1
 
 
 /******************************************************************************/
@@ -22,8 +30,10 @@ typedef struct
 		Maximum length for this is 48 + null.
 	*/
 	char name[48 + 1];
-	/** Stores HIT of this item. */
-	struct hip_lhi hit;
+	/** Stores local HIT of this item. */
+	struct in6_addr lhit;
+	/** Stores remote HIT of this item. */
+	struct in6_addr rhit;
 	/**
 		Stores url of this item.
 		Used for accepting connections for this HIT.
@@ -34,6 +44,8 @@ typedef struct
 		Used for accepting connections for this HIT.
 	*/
 	uint16_t port;
+	/** Is this hit accept or deny type. */
+	int type;
 } HIT_Item;
 
 
@@ -41,10 +53,12 @@ typedef struct
 /* FUNCTION DEFINITIONS */
 int hit_db_init(void);
 void hit_db_quit(void);
-int hit_db_add(char *, void *, char *, uint16_t);
-void hit_db_del(int);
+int hit_db_add(char *, struct in6_addr *, struct in6_addr *,
+               char *, uint16_t, int);
+int hit_db_del(int);
 
-HIT_Item *hit_db_find(int *, char *, void *, char *, uint16_t);
+HIT_Item *hit_db_find(int *, char *, struct in6_addr *, struct in6_addr *,
+                      char *, uint16_t);
 
 
 #endif /* END OF HEADER FILE */

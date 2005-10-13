@@ -7,6 +7,10 @@
 
 /******************************************************************************/
 /* INCLUDES */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "hit_db.h"
 
 

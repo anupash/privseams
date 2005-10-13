@@ -95,10 +95,16 @@ void hit_db_quit(void)
 	@param hit HIT of this item.
 	@param url URL, which is connected to this item, can be NULL.
 	@param port Port, which is connected to this item, can be 0 if not needed.
-	
+	@param type HIT type, accept or deny.
+
 	@return 0 on success, -1 on errors.
 */
-int hit_db_add(char *name, void *hit, char *url, uint16_t port)
+int hit_db_add(char *name,
+               struct in6_addr *lhit,
+               struct in6_addr *rhit,
+               char *url,
+               uint16_t port,
+               int type)
 {
 	/* Variables. */
 	int n;
@@ -117,8 +123,10 @@ int hit_db_add(char *name, void *hit, char *url, uint16_t port)
 	n = hit_db_n;
 	strncpy(hit_db[n].name, name, 48);
 	hit_db[n].name[48] = '\0';
-	memcpy(&hit_db[n].hit, hit, sizeof(struct hip_lhi));
+	memcpy(&hit_db[n].lhit, lhit, sizeof(struct in6_addr));
+	memcpy(&hit_db[n].rhit, rhit, sizeof(struct in6_addr));
 	hit_db[n].port = port;
+	hit_db[n].type = type;
 /* XX TODO: Copy url too someday: hi_db[n].url */
 
 	hit_db_n++; /* Count to next free item. */
@@ -190,18 +198,25 @@ out_err:
 	@param port Port number.
 	@return Pointer to hit if found, NULL if not.
 */
-HIT_Item *hit_db_find(int *ndx, char *name, void *hit, char *url, uint16_t port)
+HIT_Item *hit_db_find(int *ndx,
+                      char *name,
+                      struct in6_addr *lhit,
+                      struct in6_addr *rhit,
+                      char *url,
+                      uint16_t port)
 {
 	/* Variables. */
 	HIT_Item *fh1 = NULL, *fh2 = NULL;
 	int n;
-	
+	char buffer1[128], buffer2[128];
+
 	if (ndx)
 	{
 		*ndx = -1;
 	}
 
 	/* Loop trough all hits. */
+	HIP_DEBUG("Finding HIT from database.\n");
 	for (n = 0; n < hit_db_n; n++)
 	{
 		fh1 = NULL;
@@ -217,14 +232,16 @@ HIT_Item *hit_db_find(int *ndx, char *name, void *hit, char *url, uint16_t port)
 			}
 		}
 		
-		fh1 = fh2;
-		fh2 = NULL;
+		if (fh1 == NULL)
+		{
+			fh1 = fh2;
+			fh2 = NULL;
+		}
 
 		/* If hit is not NULL... */
-/* XX TODO: Compare hits. */
-		if (hit != NULL && 0)
+		if (lhit != NULL)
 		{
-			if (0)
+			if (memcmp(&hit_db[n].lhit, lhit, sizeof(struct in6_addr)) == 0)
 			{
 				fh2 = &hit_db[n];
 			}
@@ -237,8 +254,36 @@ HIT_Item *hit_db_find(int *ndx, char *name, void *hit, char *url, uint16_t port)
 			continue;
 		}
 
-		fh1 = fh2;
-		fh2 = NULL;
+		if (fh1 == NULL)
+		{
+			fh1 = fh2;
+			fh2 = NULL;
+		}
+
+		if (rhit != NULL)
+		{
+			print_hit_to_buffer(buffer1, rhit);
+			print_hit_to_buffer(buffer2, &hit_db[n].rhit);
+			HIP_DEBUG("Checking remote hit:\n %s == %s...\n", buffer1, buffer2);
+			
+			if (memcmp(&hit_db[n].rhit, rhit, sizeof(struct in6_addr)) == 0)
+			{
+				fh2 = &hit_db[n];
+			}
+		}
+
+		if (fh1 != NULL && fh2 != NULL && fh1 != fh2)
+		{
+			/* This hit didn't match exactly to given description. */
+			fh1 = NULL;
+			continue;
+		}
+		
+		if (fh1 == NULL)
+		{
+			fh1 = fh2;
+			fh2 = NULL;
+		}
 		
 /* XX TODO: Compare URLs. */
 
@@ -259,12 +304,16 @@ HIT_Item *hit_db_find(int *ndx, char *name, void *hit, char *url, uint16_t port)
 			continue;
 		}
 
-		fh1 = fh2;
-		fh2 = NULL;
+		if (fh1 == NULL)
+		{
+			fh1 = fh2;
+			fh2 = NULL;
+		}
 		
 		/* If reached this point and found hit. */
 		if (fh1 != NULL)
 		{
+			HIP_DEBUG("Remote hit matches with database.\n");
 			if (ndx)
 			{
 				*ndx = n;

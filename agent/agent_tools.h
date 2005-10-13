@@ -2,25 +2,23 @@
     HIP Agent
 */
 
-#ifndef AGENT_H
-#define AGENT_H
+#ifndef AGENT_TOOLS_H
+#define AGENT_TOOLS_H
 
 /******************************************************************************/
 /* INCLUDES */
-#include <fcntl.h>
 #include <socket.h>
-#include <sys/un.h>
+#include <sys/types.h>
 
 #include "hip.h"
-#include "linux/netlink.h"
-#include "linux/rtnetlink.h"
-#include "workqueue.h"
-#include "agent_tools.h"
 
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
+int agent_exec(void);
+void agent_exit(void);
 
+void print_hit_to_buffer(char *, struct in6_addr *);
 
 
 #endif /* END OF HEADER FILE */
