@@ -28,7 +28,7 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 
-#include "libinet6/debug.h"
+#include "debug.h"
 #include "libinet6/crypto.h"
 #include "builder.h"
 
