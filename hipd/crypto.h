@@ -6,7 +6,7 @@
 
 #include <sys/time.h>
 #include <time.h>
-#include <hip.h>
+#include "hip.h"
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <openssl/dh.h>

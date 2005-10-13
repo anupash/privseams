@@ -2,11 +2,12 @@
 #define _HIP_NETLINK_H
 
 #include "builder.h"
-//#include "debug.h"
+#include "debug.h"
 #include "hip.h"
 
-#  include <stdio.h>
-#  include <linux/netlink.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <linux/netlink.h>
 
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
 

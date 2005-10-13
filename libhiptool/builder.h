@@ -10,11 +10,12 @@
 
 #include <asm/types.h>
 #include <sys/errno.h>
-#include "misc.h"
+#include "../hipd/misc.h"
 
-#include "hip.h"
+#include "../hipd/hip.h"
 #include "debug.h"
-#include "crypto.h"
+#include "../hipd/crypto.h"
+#include "../libinet6/include/bits/socket.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE

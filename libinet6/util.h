@@ -12,7 +12,7 @@
 #include <malloc.h>
 
 #include "builder.h"
-#include "libinet6/debug.h"
+#include "debug.h"
 
 #define MAX_ITEM_LEN 256
 

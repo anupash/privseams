@@ -12,7 +12,7 @@ include $(HIPL)/Makefile.am.global
 CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_DAEMON
 
 include_HEADERS = hipd.h crypto.h netlink.h
-INCLUDES += -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBHIPTOOL)
+INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBHIPTOOL)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
 
 sbin_PROGRAMS = hipd
@@ -43,7 +43,6 @@ SUBDIRS =
 # directory and we don't want to make reduntant copies.
 #
 
-builder.c: builder.h
 cookie.c: cookie.h
 crypto.c: crypto.h
 hidb.c: hidb.h
@@ -63,5 +62,4 @@ beet.c: beet.h
 update.c: update.h
 rvs.c: rvs.h
 pk.c: pk.h
-debug.c: debug.h
 
