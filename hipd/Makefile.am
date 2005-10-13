@@ -16,9 +16,9 @@ INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBHIPTOOL)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = pk.c rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
+hipd_SOURCES = rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
 hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c
-hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c dh.c netlink.c bos.c debug.c
+hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c netlink.c bos.c debug.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
@@ -45,7 +45,6 @@ SUBDIRS =
 
 cookie.c: cookie.h
 hidb.c: hidb.h
-dh.c: dh.h
 hadb.c: hadb.h
 hashtable.c: hashtable.h
 keymat.c: keymat.h
@@ -59,5 +58,4 @@ xfrm.c: xfrm.h
 beet.c: beet.h
 update.c: update.h
 rvs.c: rvs.h
-pk.c: pk.h
 
