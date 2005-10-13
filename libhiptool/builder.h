@@ -10,9 +10,9 @@
 
 #include <asm/types.h>
 #include <sys/errno.h>
-#include "../hipd/misc.h"
 
-#include "../hipd/hip.h"
+#include "misc.h"
+#include "hip.h"
 #include "debug.h"
 #include "crypto.h"
 #include "../libinet6/include/bits/socket.h"
