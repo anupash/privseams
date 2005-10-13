@@ -42,7 +42,6 @@ include $(HIPL)/Makefile.am.global
 lib_LTLIBRARIES = libhiptool.la
 
 libhiptool_la_SOURCES = builder.c debug.c message.c
-#libhiptool_la_SOURCES = builder.c debug.c message.c
 
 CFLAGS = -g -DCONFIG_HIP_DEBUG -I$(HIPL_HIPD) -I$(HIPL_LIBINET6_INCLUDE)
 
