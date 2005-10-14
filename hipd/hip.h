@@ -48,6 +48,8 @@ struct list_head {
 //#define HIP_HIT_TYPE_MASK_126   0x40
 #define HIP_HIT_TYPE_MASK_120   0x40
 
+#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
+
 #if 0
 #include "input.h"
 #include "builder.h"

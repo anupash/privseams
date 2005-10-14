@@ -8,6 +8,7 @@
 #  include "list.h"
 #include "timer.h"
 #include "cookie.h"
+#include "pk.h"
 
 typedef struct { } rwlock_t;
 #define RW_LOCK_UNLOCKED (rwlock_t) { }

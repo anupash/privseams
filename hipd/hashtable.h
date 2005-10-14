@@ -3,7 +3,7 @@
 
 #include "list.h"
 #include "hip.h"
-//#include "debug.h"
+#include "debug.h"
 
 struct hip_ht_common {
 	struct list_head *head;

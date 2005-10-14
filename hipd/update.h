@@ -2,6 +2,7 @@
 #define HIP_UPDATE_H
 
 #include "hip.h"
+#include "builder.h"
 
 /* FIXME: where to include these from in userspace? */
 #  define IPV6_ADDR_ANY           0x0000U
