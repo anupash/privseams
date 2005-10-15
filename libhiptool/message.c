@@ -24,7 +24,7 @@
 int open_hip(void) {
 	/* we're using the socket only for setting socket options, so the stream
 	   option could be anything */
-	return socket(PF_HIP, SOCK_STREAM, 0);
+	return socket(32 , SOCK_STREAM, 0);
 }
 
 /**

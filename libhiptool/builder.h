@@ -15,13 +15,12 @@
 #include "hip.h"
 #include "debug.h"
 #include "crypto.h"
-//#include "../libinet6/include/bits/socket.h"
+#include "../libinet6/include/bits/socket.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
-
 #define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
 /* Removed in 2.6.11 - why ? */
 extern const struct in6_addr in6addr_any;

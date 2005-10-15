@@ -50,6 +50,7 @@ struct list_head {
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 
+#include "../libhiptool/builder.h"
 #if 0
 #include "input.h"
 #include "builder.h"
