@@ -50,7 +50,7 @@ struct list_head {
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 
-#include "../libhiptool/builder.h"
+//#include "../libhiptool/builder.h"
 #if 0
 #include "input.h"
 #include "builder.h"
@@ -1120,5 +1120,6 @@ void hip_net_event(int ifindex, uint32_t event_src, uint32_t event);
 
 extern struct socket *hip_output_socket;
 extern time_t load_time;
+//typedef struct hip_hadb_state hip_ha_t;
 
 #endif /* _NET_HIP */

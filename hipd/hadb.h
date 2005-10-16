@@ -116,7 +116,8 @@ void hip_uninit_hadb(void);
 
 /* Accessors */
 //hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
-hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
+//hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
+struct hip_hadb_state *hip_hadb_find_byspi_list(uint32_t spi);
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2);
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
 
