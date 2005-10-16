@@ -7,8 +7,8 @@
 #include <unistd.h>
 #include "../tools/hipconf.h"
 #include "conntest.h"
-#include "libinet6/debug.h"
-#include "libinet6/crypto.h"
+#include "debug.h"
+#include "crypto.h"
 
 #include "misc_install.h"
 

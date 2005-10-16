@@ -3,15 +3,8 @@
 
 #include "debug.h"
 
-#ifdef __KERNEL__
-#  include <linux/kernel.h>
-#  include <linux/types.h>
-#  include <net/hip.h>
-#else
-#  include <stdio.h>
-#  include <stdint.h>
-#  include "libinet6/debug.h"
-#endif /* __KERNEL__ */
+#include <stdio.h>
+#include <stdint.h>
 
 /*
  * A maximum amount of test spaces, suites and cases have be fixed because they

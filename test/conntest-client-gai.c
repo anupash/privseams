@@ -31,7 +31,7 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
-#include "libinet6/debug.h"
+#include "debug.h"
 
 #include "conntest.h"
 

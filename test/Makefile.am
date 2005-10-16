@@ -29,7 +29,7 @@ bin_PROGRAMS += hipsetupNew
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
 bin_PROGRAMS += first_test
-bin_PROGRAMS += second_test
+#bin_PROGRAMS += second_test
 
 sbin_SCRIPTS = hipsetup
 

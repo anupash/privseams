@@ -111,7 +111,7 @@ int convert_port_string_to_number(const char *servname, in_port_t *port)
   return err;
 
 }
-
+#if 0
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
 {
         if (!buf)
@@ -124,7 +124,7 @@ char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
                 ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
         return buf;
 }
-
+#endif
 int setmyeid(struct sockaddr_eid *my_eid,
 	     const char *servname,
 	     const struct endpoint *endpoint,

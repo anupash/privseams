@@ -22,7 +22,7 @@
 #include <config.h>
 #endif
 
-#include "libinet6/crypto.h"
+#include "crypto.h"
 #include "unit.h"
 #include "tools/hipconf.h"
 
