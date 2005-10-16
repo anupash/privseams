@@ -5,8 +5,6 @@
  */
 
 #include "update.h"
-#include "hadb.h"
-#include "builder.h"
 
 
 /** hip_update_get_sa_keys - Get keys needed by UPDATE
