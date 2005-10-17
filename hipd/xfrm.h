@@ -4,7 +4,7 @@
 #include "netlink.h"
 
 #include "hadb.h"
-//#include "debug.h"
+#include "debug.h"
 #include "hip.h"
 
 #if 0

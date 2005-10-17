@@ -57,7 +57,8 @@ preoutput.c: preoutput.h
 preinput.c: preinput.h
 xfrm.c: xfrm.h
 beet.c: beet.h
-netdev.c: netdev.h
+netlink.c: netlink.h
+netdev.c: netdev.h netlink.h
 update.c: update.h
 rvs.c: rvs.h
 

@@ -18,9 +18,9 @@ CFLAGS += `pkg-config --cflags --libs glib-2.0`
 CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 
 include_HEADERS =  netlink.h 
-include_HEADERS += firewall.h conntrack.h rule_management.h helpers.h builder.h misc.h pk.h  
-INCLUDES = -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
-INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL)	-I$(HIPL_HIPD)
+include_HEADERS += firewall.h conntrack.h rule_management.h helpers.h builder.h misc.h pk.h 
+INCLUDES = -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_LIBHIPTOOL)
+INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL) -I$(HIPL_HIPD)
 
 sbin_PROGRAMS = firewall
 
@@ -43,10 +43,10 @@ hidb.c: hidb.h
 	$(LN_S) -f $(HIPL_HIPD)/hidb.c .
 hidb.h:
 	$(LN_S) -f $(HIPL_HIPD)/hidb.h .
-dh.c: dh.h
-	$(LN_S) -f $(HIPL_HIPD)/dh.c .
 dh.h:
-	$(LN_S) -f $(HIPL_HIPD)/dh.h .
+	$(LN_S) -f $(HIPL_LIBHIPTOOL)/dh.h .
+dh.c: dh.h
+	$(LN_S) -f $(HIPL_LIBHIPTOOL)/dh.c .
 hadb.c: hadb.h
 	$(LN_S) -f $(HIPL_HIPD)/hadb.c .
 hadb.h:
@@ -61,10 +61,14 @@ keymat.c: keymat.h
 	$(LN_S) -f $(HIPL_HIPD)/keymat.c .
 keymat.h:
 	$(LN_S) -f $(HIPL_HIPD)/keymat.h .
-misc.c: misc.h
-	$(LN_S) -f $(HIPL_HIPD)/misc.c .
 misc.h:
-	$(LN_S) -f $(HIPL_HIPD)/misc.h .
+	$(LN_S) -f $(HIPL_LIBHIPTOOL)/misc.h .
+misc.c: misc.h
+	$(LN_S) -f $(HIPL_LIBHIPTOOL)/misc.c .
+builder.h:
+	$(LN_S) -f $(HIPL_LIBHIPTOOL)/builder.h .
+builder.c: builder.h
+	$(LN_S) -f $(HIPL_LIBHIPTOOL)/builder.c .
 workqueue.c: workqueue.h
 	$(LN_S) -f $(HIPL_HIPD)/workqueue.c .
 workqueue.h:
@@ -104,9 +108,9 @@ rvs.h:
 rvs.c: rvs.h
 	$(LN_S) -f $(HIPL_HIPD)/rvs.c
 pk.h:
-	$(LN_S) -f $(HIPL_HIPD)/pk.h
+	$(LN_S) -f $(HIPL_LIBHIPTOOL)/pk.h
 pk.c: pk.h
-	$(LN_S) -f $(HIPL_HIPD)/pk.c
+	$(LN_S) -f $(HIPL_LIBHIPTOOL)/pk.c
 tags:
 	etags $(firewall_SOURCES) $(include_HEADERS)
 

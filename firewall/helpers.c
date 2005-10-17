@@ -1,5 +1,4 @@
 #include <netinet/in.h>
-#include <net/hip.h>
 #include <linux/netfilter_ipv6.h>
 
 #include "debug.h"

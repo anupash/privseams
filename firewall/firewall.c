@@ -17,7 +17,7 @@
 #include <glib.h>
 #include <glib/glist.h>
 #include <string.h>
-#include <net/hip.h>
+#include "hip.h"
 
 #include "firewall.h"
 #include "rule_management.h"

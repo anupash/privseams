@@ -4,7 +4,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
-#include <net/hip.h>
+#include "hip.h"
 #include "firewall.h"
 #include "rule_management.h"
 

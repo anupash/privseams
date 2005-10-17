@@ -6,10 +6,9 @@
 #define NETDEV_H
 
 #include <netinet/ip6.h>
-//#include <linux/netlink.h>      /* get_my_addresses() support   */
-//#include <linux/rtnetlink.h>    /* get_my_addresses() support   */
+#include <linux/netlink.h>      /* get_my_addresses() support   */
+#include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 #include "hip.h"
-#include "netlink.h"
 #include "list.h"
 #include "debug.h"
 #include "netlink.h"
@@ -22,8 +21,5 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
 int filter_address(struct sockaddr *addr, int ifindex);
-
-extern int address_count;
-extern struct list_head addresses;
 
 #endif /* NETDEV_H */
