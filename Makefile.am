@@ -9,4 +9,4 @@ EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 
 # Note: doc and linux are not included
 #
-SUBDIRS = libhiptool libinet6 tools hipd test #firewall
+SUBDIRS = libhiptool libinet6 tools hipd test firewall
