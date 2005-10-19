@@ -18,6 +18,8 @@ int hip_delete_sp(int dir);
 #endif
 #endif
 
+int hip_setup_sp();
+
 /* Allocates SPI for fixed time */
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 

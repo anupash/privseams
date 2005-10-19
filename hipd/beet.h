@@ -6,13 +6,20 @@
 #ifndef HIP_BEET_H
 #define HIP_BEET_H
 
+#include <linux/xfrm.h>
+#include "netlink.h"
+
 #include "debug.h"
 #include "hip.h"
 #include "hashtable.h"
 #include "hadb.h"
 #include "workqueue.h"
 
-#define HIP_BEETDB_SIZE 53
+#define HIP_BEETDB_SIZE  53
+#define RTA_BUF_SIZE     2048
+#define XFRM_MODE_BEET   2
+//#define IPPROTO_ESP      50
+#define XFRM_TMPLS_BUF_SIZE 1024
 
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
@@ -47,7 +54,11 @@ int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
 		    uint32_t spi, int state, int dir);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
-int hip_for_each_xfrm(int (*func)(hip_xfrm_t *entry, void *opaq), void *opaque);
+//int hip_for_each_xfrm(int (*func)(hip_xfrm_t *entry, void *opaq), void *opaque);
+
+int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our, struct in6_addr *hit_peer, 
+			   struct in6_addr *tmpl_saddr, struct in6_addr *tmpl_daddr, int dir);
+int hip_xfrm_policy_delete();
 
 #endif /* HIP_BEET_H */
 

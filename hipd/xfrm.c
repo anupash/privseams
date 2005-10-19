@@ -1,5 +1,5 @@
 #include "xfrm.h"
-//#include "debug.h"
+#include "debug.h"
 
 int hip_delete_sa(u32 spi, struct in6_addr *dst) {
 	struct hip_work_order req, resp;
@@ -89,4 +89,21 @@ uint32_t hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		hip_msg_free(resp.msg);
 
 	return err;
+}
+
+
+int hip_setup_sp() {
+	/* The OUTGOING and INCOMING policy is set to the generic value */
+	//struct xfrm_address_t saddr, daddr;
+	struct in6_addr saddr, daddr;
+
+	memset(&saddr, 0, sizeof(struct in6_addr));
+	memset(&daddr, 0, sizeof(struct in6_addr));
+	saddr.s6_addr32[0] = htonl(0x40000000);
+	daddr.s6_addr32[0] = htonl(0x40000000);
+
+	hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, &saddr, &daddr, NULL, NULL, XFRM_POLICY_IN);
+	hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, &saddr, &daddr, NULL, NULL, XFRM_POLICY_OUT);
+
+	return 0;
 }

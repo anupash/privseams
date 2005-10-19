@@ -8,7 +8,6 @@
 #include "list.h"
 //#include "debug.h"
 #include "timer.h"
-#include "hip.h"
 #include "bos.h"
 
 /* Remove when not necessary, taken from linux/ipv6.h */

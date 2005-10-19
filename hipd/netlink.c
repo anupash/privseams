@@ -10,6 +10,24 @@
  * libnetlink functions (the originals were buggy...).
  */
 
+int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data, 
+	      int alen)
+{
+	int len = RTA_LENGTH(alen);
+	struct rtattr *rta;
+
+	if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen) {
+		fprintf(stderr, "addattr_l ERROR: message exceeded bound of %d\n",maxlen);
+		return -1;
+	}
+	rta = NLMSG_TAIL(n);
+	rta->rta_type = type;
+	rta->rta_len = len;
+	memcpy(RTA_DATA(rta), data, alen);
+	n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
+	return 0;
+}
+
 /* Processes a received netlink message(s) */
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
 {
@@ -138,7 +156,7 @@ int hip_netlink_receive(struct hip_nl_handle *nl,
  * handling of message source/destination validation and proper buffer
  * handling for junk messages.
  */
-static int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
+int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			unsigned groups, struct nlmsghdr *answer,
 			hip_filter_t junk, void *arg)
 {
@@ -380,12 +398,12 @@ int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int prot
                 HIP_PERROR("Cannot open a netlink socket");
                 return -1;
         }
-
+	_HIP_DEBUG("setsockopt SO_SNDBUF\n");
         if (setsockopt(rth->fd,SOL_SOCKET,SO_SNDBUF,&sndbuf,sizeof(sndbuf)) < 0) {
                 HIP_PERROR("SO_SNDBUF");
                 return -1;
         }
-
+	_HIP_DEBUG("setsockopt SO_RCVBUF\n");
         if (setsockopt(rth->fd,SOL_SOCKET,SO_RCVBUF,&rcvbuf,sizeof(rcvbuf)) < 0) {
                 HIP_PERROR("SO_RCVBUF");
                 return -1;
@@ -416,4 +434,8 @@ int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int prot
         return 0;
 }
 
+void hip_netlink_close(struct hip_nl_handle *rth)
+{
+	close(rth->fd);
+}
 

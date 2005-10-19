@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 	hip_set_logfmt(LOGFMT_LONG);
-	
+
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground) {
 		printf("foreground\n");
@@ -115,11 +115,14 @@ int main(int argc, char *argv[]) {
 	}
 	highest_descriptor = nl_ifaddr.fd;
 
+	HIP_DEBUG("--->Setting SP\n");
+	hip_setup_sp();
+
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
 	hip_netdev_init_addresses(&nl_ifaddr);
-
+	HIP_DEBUG("***Opening netlink\n");
 	/* Open the netlink socket for kernel communication */
 	if (hip_netlink_open(&nl_khipd, 0, NETLINK_HIP) < 0) {
 		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
@@ -141,6 +144,7 @@ int main(int argc, char *argv[]) {
         hip_init_rvadb();
 #endif	
 
+	
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
 
