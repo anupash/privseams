@@ -259,6 +259,7 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
          * call recvmsg() repeatedly until we get a message
          * with the NLMSG_DONE flag set
          */
+#if 0
         while(!done) {
                 /* get response */
 		if (hip_netlink_receive(nl, add_address, &done)) {
@@ -267,7 +268,7 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
                         return(-1);
                 }
         } /* end while(!done) - loop 1 */ 
-
+#endif
 	HIP_DEBUG("found %d usable addresses\n", address_count);
 	HIP_DEBUG("addrs=0x%p\n", &addresses);
         return(0);

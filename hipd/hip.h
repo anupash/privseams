@@ -783,7 +783,9 @@ struct hip_keys {
 	struct hip_crypto_key auth;       
 	uint32_t spi;
 	int alg;
-	int acquired;
+	int acquired; /* true if @spi was already acquired, like in a retransmission of I2.
+			 This flag is used in order to differentiate the addition of an SA,
+			 meaning either adding or updating --- it was in the KERNEL_STUB */
 	int direction;
 } __attribute__ ((packed));
 

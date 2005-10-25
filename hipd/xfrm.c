@@ -64,6 +64,10 @@ out:
 	return err;
 }
 
+/* Security associations in the kernel with BEET are bounded to the outer address, 
+ * meaning IP addresses. As a result the parameters to be given should be such 
+ * an addresses and not the HITs.
+ */
 uint32_t hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 		    uint32_t spi, int alg, struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
 		    int already_acquired, int direction) {
@@ -94,16 +98,41 @@ uint32_t hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
 
 int hip_setup_sp() {
 	/* The OUTGOING and INCOMING policy is set to the generic value */
-	//struct xfrm_address_t saddr, daddr;
+	/* FIXME: this function is used also for testing the SAs tools are correct */
 	struct in6_addr saddr, daddr;
+	struct hip_crypto_key enckey;
+	struct hip_crypto_key authkey;
+
+	char *temp1 = "0xc0291ff014dccd";
+	char *temp2 = "0x0123456789";
 
 	memset(&saddr, 0, sizeof(struct in6_addr));
 	memset(&daddr, 0, sizeof(struct in6_addr));
+#if 0
 	saddr.s6_addr32[0] = htonl(0x40000000);
 	daddr.s6_addr32[0] = htonl(0x40000000);
 
-	hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, &saddr, &daddr, NULL, NULL, XFRM_POLICY_IN);
+	hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, &daddr, &saddr, NULL, NULL, XFRM_POLICY_IN);
 	hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, &saddr, &daddr, NULL, NULL, XFRM_POLICY_OUT);
+
+	/* This is just an example of how to delete SPs, but it must not done in here */
+	HIP_DEBUG("deleting SPs....\n");
+	hip_xfrm_policy_delete(&daddr, &saddr, XFRM_POLICY_IN);
+	hip_xfrm_policy_delete(&saddr, &daddr, XFRM_POLICY_OUT);
+#endif
+	/*FIXME: this is a test part used to set the SA and check that it works as it should. */
+	saddr.s6_addr32[0] = htonl(0x3ffe0001);
+	daddr.s6_addr32[0] = htonl(0x3ffe0002);
+	
+	memset(enckey.key, 0, HIP_MAX_KEY_LEN);
+	memset(authkey.key, 0, HIP_MAX_KEY_LEN);
+
+
+	memcpy(enckey.key, temp1, HIP_MAX_KEY_LEN);
+	memcpy(authkey.key, temp2, HIP_MAX_KEY_LEN);
+
+	hip_xfrm_state_modify(XFRM_MSG_NEWSA, &saddr, &daddr, 
+			      23, 1, &enckey, 2, &authkey);
 
 	return 0;
 }

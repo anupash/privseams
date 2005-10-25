@@ -18,8 +18,8 @@
 #define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048
 #define XFRM_MODE_BEET   2
-//#define IPPROTO_ESP      50
 #define XFRM_TMPLS_BUF_SIZE 1024
+#define XFRM_ALGO_KEY_BUF_SIZE 512
 
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
@@ -58,7 +58,12 @@ int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 
 int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our, struct in6_addr *hit_peer, 
 			   struct in6_addr *tmpl_saddr, struct in6_addr *tmpl_daddr, int dir);
-int hip_xfrm_policy_delete();
+int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer, int dir);
+
+int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr, struct in6_addr *daddr, 
+			  __u32 spi, int ealg, struct hip_crypto_key *enckey, 
+			  int aalg, struct hip_crypto_key *authkey);
+int hip_xfrm_state_delete(struct in6_addr *peer_addr, __u32 spi);
 
 #endif /* HIP_BEET_H */
 

@@ -19,7 +19,7 @@ time_t load_time;
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
-	fprintf(stderr, "  -f run in foreground\n");
+	fprintf(stderr, "  -b run in foreground\n");
 #ifdef CONFIG_HIP_HI3
 	fprintf(stderr, "  -3 <i3 client configuration file>\n");
 #endif
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
 	hip_netdev_init_addresses(&nl_ifaddr);
 	HIP_DEBUG("***Opening netlink\n");
 	/* Open the netlink socket for kernel communication */
-	if (hip_netlink_open(&nl_khipd, 0, NETLINK_HIP) < 0) {
+	if (hip_netlink_open(&nl_khipd, 0, NETLINK_ROUTE) < 0) {
 		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
 		ret = 1;
 		goto out;
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
         hip_init_rvadb();
 #endif	
 
-	
+
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
 
@@ -160,10 +160,13 @@ int main(int argc, char *argv[]) {
 	}
 	
 	hip_msg_free(ping.msg);
+	HIP_DEBUG("Called hip_netlink_talk \n");
 
 #ifdef CONFIG_HIP_HI3
 	cl_init(i3_config);
 #endif
+
+#if 0
 
 	/* Enter to the select-loop */
 	for (;;) {
@@ -212,11 +215,13 @@ int main(int argc, char *argv[]) {
 		}
 		
 	}
+#endif
 
 out:
 	/* free allocated resources */
 	if (nl_ifaddr.fd)
 		close(nl_ifaddr.fd);
+
 	delete_all_addresses();
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), ret);
 out_out:

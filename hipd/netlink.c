@@ -290,7 +290,7 @@ int hip_netlink_talk(struct hip_nl_handle *nl,
         } tx, rx;
 	int msg_len;
 
-	HIP_DEBUG("entered\n");
+	_HIP_DEBUG("entered\n");
         /* Fill in the netlink message payload */
 	msg_len = hip_get_msg_total_len((const struct hip_common *)&req->msg);
 	memcpy(&tx.hdr, &req->hdr, sizeof(struct hip_work_order_hdr));
@@ -306,12 +306,14 @@ int hip_netlink_talk(struct hip_nl_handle *nl,
 
 	/* Let the talk insert any non-responses to our queue so that
            they will be processed later */
+	HIP_DEBUG("Calling netlink_talk...\n");
 	if (netlink_talk(nl, &tx.n, 0, 0, &rx.n,
 			 hip_netlink_receive_workorder, NULL) < 0) {
 		HIP_ERROR("Unable to talk over netlink.\n");
 		return -1;
 	}
-	
+	HIP_DEBUG("Called netlink_talk...\n");
+
 	msg_len = hip_get_msg_total_len((const struct hip_common *)rx.msg);
 	resp->msg = (struct hip_common *) HIP_MALLOC(msg_len, 0);
 	if (!resp->msg) {
