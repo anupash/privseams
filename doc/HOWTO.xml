@@ -201,6 +201,9 @@
        by specifying the option f. The rest of the
        instructions in this manual apply also to the userspace implementation
        with these small changes.
+    <para>
+       By default, the hipd starts on the foreground. If you want to start it
+       as a daemon (background) process, start it with "hipd/hipd -b".
     </para>
   </chapter>
   <chapter>
