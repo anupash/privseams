@@ -1047,7 +1047,7 @@ getaddrinfo (const char *name, const char *service,
     pservice = NULL;
 
   if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
-    int msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
+    socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
     int hipfd = open_hip(); // sets also errno
     int err = 0, port, i;
     if (hipfd < 0) {

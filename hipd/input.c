@@ -171,7 +171,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 				uint64_t I,
 				uint64_t J)
 {
-	u8 *dh_shared_key = NULL;
+	char *dh_shared_key = NULL;
 	int hip_transf_length, hmac_transf_length;
 	int auth_transf_length, esp_transf_length, we_are_HITg = 0;
 	int hip_tfm, esp_tfm, err = 0, dh_shared_len = 1024;

@@ -604,7 +604,8 @@ int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
 	u8 *data = private_key;
 	int offset = 0;
 	int len = data[offset++];
-	int slice, sig_len, err, res = 1;
+	int slice, err, res = 1;
+	unsigned int sig_len;
 	
 	/* Build the private key */
 	rsa = RSA_new();
@@ -929,7 +930,8 @@ RSA *create_rsa_key(int bits) {
  *
  * Returns: 0 if HIT was created successfully, else negative.
  */
-int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit) {
+int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
+	       struct in6_addr *hit) {
   int err = 0, pubkey_len = 0; // pubkey_len should be 405, calculated below
   //unsigned char *pubkey = NULL;
   char addrstr[INET6_ADDRSTRLEN];
@@ -1063,7 +1065,8 @@ int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit) {
  * XX TODO: similar to the dsa_to_hit except from the pubkey_len,
  *          this is not very elegant...
  */
-int rsa_to_hit(RSA *rsa_key, char *rsa, int type, struct in6_addr *hit) {
+int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
+	       struct in6_addr *hit) {
   int err = 0, pubkey_len = 0; 
   //unsigned char *pubkey = NULL;
   char addrstr[INET6_ADDRSTRLEN];

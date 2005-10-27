@@ -276,8 +276,8 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 		int len;
 		/*FIXME: from the algo_numbers, we need to map the protocol into the right string,
 		 * since the kernel accepts strings. */
-		const char *e_name = "des3_ede";
-		const char *a_name = "md5";
+		char *e_name = "des3_ede";
+		char *a_name = "md5";
 
 		/* XFRMA_ALG_AUTH */
 		memset(&alg, 0, sizeof(alg));

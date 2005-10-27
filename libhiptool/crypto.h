@@ -87,8 +87,10 @@ void hip_free_dh(DH *target);
 u16 hip_get_dh_size(u8 hip_dh_group_type);
 void get_random_bytes(void *buf, int n);
 
-int dsa_to_hit(DSA *dsa_key, char *dsa, int type, struct in6_addr *hit);
-int rsa_to_hit(RSA *rsa_key, char *rsa, int type, struct in6_addr *hit);
+int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
+	       struct in6_addr *hit);
+int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
+	       struct in6_addr *hit);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 
 DSA *create_dsa_key(int bits);

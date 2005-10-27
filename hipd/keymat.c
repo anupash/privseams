@@ -10,7 +10,7 @@
 
 #include "keymat.h"
 
-u8 *hip_create_keymat_buffer(u8 *kij, size_t kij_len, size_t hash_len, 
+u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len, 
 			     struct in6_addr *smaller_hit,
 			     struct in6_addr *bigger_hit,
 			     uint64_t I, uint64_t J)
