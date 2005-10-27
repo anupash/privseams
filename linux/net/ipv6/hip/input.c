@@ -15,9 +15,6 @@
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry);
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
 extern int hip_hadb_update_xfrm(hip_ha_t *entry);
-extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-			struct in6_addr *i1_daddr, HIP_RVA *rva);
-
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
 
