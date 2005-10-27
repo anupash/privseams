@@ -60,9 +60,12 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our, struct in6_addr *h
 			   struct in6_addr *tmpl_saddr, struct in6_addr *tmpl_daddr, int dir);
 int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer, int dir);
 
-int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr, struct in6_addr *daddr, 
-			  __u32 spi, int ealg, struct hip_crypto_key *enckey, 
-			  int aalg, struct hip_crypto_key *authkey);
+int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
+			  struct in6_addr *daddr, 
+			  __u32 spi, int ealg, struct hip_crypto_key *enckey,
+			  int enckey_len,
+			  int aalg, struct hip_crypto_key *authkey,
+			  int authkey_len);
 int hip_xfrm_state_delete(struct in6_addr *peer_addr, __u32 spi);
 
 #endif /* HIP_BEET_H */

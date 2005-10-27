@@ -234,9 +234,14 @@ static int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
  *
  * Returns: 0 if successful, else < 0
  */
-int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr, struct in6_addr *daddr, 
-			  __u32 spi, int ealg, struct hip_crypto_key *enckey, 
-			  int aalg, struct hip_crypto_key *authkey){
+int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
+			  struct in6_addr *daddr, 
+			  __u32 spi, int ealg,
+			  struct hip_crypto_key *enckey,
+			  int enckey_len,
+			  int aalg,
+			  struct hip_crypto_key *authkey,
+			  int authkey_len){
 
 	struct hip_nl_handle rth;
 	struct {
@@ -255,7 +260,7 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr, struct in6_addr *dadd
 	xfrm_init_lft(&req.xsinfo.lft);
 
 	req.xsinfo.mode = XFRM_MODE_BEET;
-	req.xsinfo.id.proto = IPPROTO_AH;
+	req.xsinfo.id.proto = IPPROTO_ESP;
 
 	memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
 	memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));

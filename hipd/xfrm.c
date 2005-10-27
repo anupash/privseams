@@ -103,9 +103,10 @@ int hip_setup_sp() {
 	struct hip_crypto_key enckey;
 	struct hip_crypto_key authkey;
 
-	char *temp1 = "0xc0291ff014dccd";
+	char *temp1 = "0x7aeaca3f87d060a12f4a4487d5a5c3355920fae69a96c831";
 	char *temp2 = "0x0123456789";
-
+	int enckey_len, authkey_len;
+	// 0x96358c90783bbfa3d7b196ceabe0536b
 	memset(&saddr, 0, sizeof(struct in6_addr));
 	memset(&daddr, 0, sizeof(struct in6_addr));
 #if 0
@@ -127,12 +128,15 @@ int hip_setup_sp() {
 	memset(enckey.key, 0, HIP_MAX_KEY_LEN);
 	memset(authkey.key, 0, HIP_MAX_KEY_LEN);
 
+	enckey_len = strlen(temp1);
+	authkey_len = strlen(temp2);
 
-	memcpy(enckey.key, temp1, HIP_MAX_KEY_LEN);
-	memcpy(authkey.key, temp2, HIP_MAX_KEY_LEN);
+	memcpy(enckey.key, temp1, enckey_len);
+	memcpy(authkey.key, temp2, authkey_len);
 
 	hip_xfrm_state_modify(XFRM_MSG_NEWSA, &saddr, &daddr, 
-			      23, 1, &enckey, 2, &authkey);
+			      23, 1, &enckey, enckey_len, 2, &authkey,
+			      authkey_len);
 
 	return 0;
 }
