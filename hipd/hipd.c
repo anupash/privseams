@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 	if (!i3_config) {
 		fprintf(stderr, "Please do pass a valid i3 configuration file.\n");
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 #endif
 
@@ -111,12 +111,12 @@ int main(int argc, char *argv[]) {
 	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR, NETLINK_ROUTE) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 	highest_descriptor = nl_ifaddr.fd;
 
 	HIP_DEBUG("--->Setting SP\n");
-	hip_setup_sp();
+	HIP_IFE(hip_setup_sp_prefix_pair(), -1);
 
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 	if (hip_netlink_open(&nl_khipd, 0, NETLINK_ROUTE) < 0) {
 		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 	
 	highest_descriptor = nl_khipd.fd > highest_descriptor ? nl_khipd.fd : highest_descriptor;
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
         if (hip_init_cipher() < 0) {
 		HIP_ERROR("Unable to init ciphers.\n");
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 
         hip_init_hadb();
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
 	if (hip_netlink_talk(&nl_khipd, &ping, &ping)) {
 		HIP_ERROR("Unable to connect to the kernel HIP daemon over netlink.\n");
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 	
 	hip_msg_free(ping.msg);
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-out:
+out_err:
 	/* free allocated resources */
 	if (nl_ifaddr.fd)
 		close(nl_ifaddr.fd);

@@ -5,6 +5,8 @@ int hip_delete_sa(u32 spi, struct in6_addr *dst) {
 	struct hip_work_order req, resp;
 	int err = 0;
 
+	/* XX FIX: rewrite without work orders */
+
 	resp.msg = NULL;
 	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING,
 				HIP_WO_SUBTYPE_DELSA, NULL, dst, NULL, 
@@ -36,6 +38,8 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
 	struct hip_work_order req, resp;
 	int err = 0;
 
+	/* XX FIXME: rewrite without work orders */
+
 	resp.msg = NULL;
 	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING,
 				HIP_WO_SUBTYPE_ACQSPI, srchit,
@@ -64,79 +68,76 @@ out:
 	return err;
 }
 
-/* Security associations in the kernel with BEET are bounded to the outer address, 
- * meaning IP addresses. As a result the parameters to be given should be such 
- * an addresses and not the HITs.
+/* Security associations in the kernel with BEET are bounded to the outer
+ * address, meaning IP addresses. As a result the parameters to be given
+ * should be such an addresses and not the HITs.
  */
-uint32_t hip_add_sa(struct in6_addr *srchit, struct in6_addr *dsthit,
-		    uint32_t spi, int alg, struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
-		    int already_acquired, int direction) {
-	struct hip_work_order req, resp;
-	int err;
-	req.msg = NULL;
-	resp.msg = NULL;
-	HIP_INIT_WORK_ORDER_HDR(req.hdr, HIP_WO_TYPE_OUTGOING,
-				HIP_WO_SUBTYPE_ADDSA, srchit, dsthit, NULL,
-				0, 0, 0);
-	HIP_IFE(!(req.msg = hip_msg_alloc()), 0);
+uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
+		     uint32_t *spi, int ealg,
+		     struct hip_crypto_key *enckey,
+		     struct hip_crypto_key *authkey,
+		     int already_acquired,
+		     int direction) {
+	/* XX FIX: how to deal with the direction? */
 
-	hip_build_user_hdr(req.msg, 0, 0);
-	HIP_IFE(hip_build_param_keys(req.msg, enckey, authkey, spi, alg, already_acquired, direction), 0);
-	HIP_IFEL(hip_netlink_talk(&nl_khipd, &req, &resp), 0, "Unable to send over netlink\n");
+	int err = 0, enckey_len, authkey_len;
+	int aalg = ealg;
 
-	err = resp.hdr.arg1;
+	HIP_ASSERT(spi);
 
+	enckey_len = hip_enc_key_length(ealg);
+	authkey_len = hip_auth_key_length_esp(aalg);
+	if (enckey <= 0 || authkey_len <= 0) {
+		err = -1;
+		HIP_ERROR("Bad enc or auth key len\n");
+		goto out_err;
+	}
+
+	/* XX CHECK: is there some kind of range for the SPIs ? */
+	if (!already_acquired)
+		get_random_bytes(spi, sizeof(uint32_t));
+
+	HIP_IFE(hip_xfrm_state_modify(XFRM_MSG_NEWSA, saddr, daddr, *spi,
+				      ealg, enckey, enckey_len, aalg,
+				      authkey, authkey_len), -1);
  out_err:
-	if (req.msg)
-		hip_msg_free(req.msg);
-	if (resp.msg)
-		hip_msg_free(resp.msg);
-
 	return err;
 }
 
+int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+			  struct in6_addr *src_addr,
+			  struct in6_addr *dst_addr) {
+	int err = 0;
+	HIP_IFE(hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, dst_hit, src_hit,
+				       dst_addr, src_addr,
+				       XFRM_POLICY_IN), -1);
+	HIP_IFE(hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, src_hit, dst_hit,
+				       src_addr, dst_addr,
+				       XFRM_POLICY_OUT), -1);
+ out_err:
+	return err;
+}
 
-int hip_setup_sp() {
+void hip_delete_prefix_sp_pair() {
+	hip_hit_t src_hit, dst_hit;
+
+	src_hit.s6_addr32[0] = htonl(HIP_HIT_TYPE_MASK_120);
+	dst_hit.s6_addr32[0] = htonl(HIP_HIT_TYPE_MASK_120);
+
+	hip_xfrm_policy_delete(&src_hit, &src_hit, XFRM_POLICY_IN);
+	hip_xfrm_policy_delete(&dst_hit, &dst_hit, XFRM_POLICY_OUT);
+}
+
+int hip_setup_sp_prefix_pair() {
+	int err = 0;
+	hip_hit_t src_hit, dst_hit;
+
 	/* The OUTGOING and INCOMING policy is set to the generic value */
-	/* FIXME: this function is used also for testing the SAs tools are correct */
-	struct in6_addr saddr, daddr;
-	struct hip_crypto_key enckey;
-	struct hip_crypto_key authkey;
+	src_hit.s6_addr32[0] = htonl(HIP_HIT_TYPE_MASK_120);
+	dst_hit.s6_addr32[0] = htonl(HIP_HIT_TYPE_MASK_120);
 
-	char *temp1 = "0x7aeaca3f87d060a12f4a4487d5a5c3355920fae69a96c831";
-	char *temp2 = "0x0123456789";
-	int enckey_len, authkey_len;
-	// 0x96358c90783bbfa3d7b196ceabe0536b
-	memset(&saddr, 0, sizeof(struct in6_addr));
-	memset(&daddr, 0, sizeof(struct in6_addr));
-#if 0
-	saddr.s6_addr32[0] = htonl(0x40000000);
-	daddr.s6_addr32[0] = htonl(0x40000000);
+	HIP_IFE(hip_setup_hit_sp_pair(&dst_hit, &src_hit, NULL, NULL), -1);
 
-	hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, &daddr, &saddr, NULL, NULL, XFRM_POLICY_IN);
-	hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, &saddr, &daddr, NULL, NULL, XFRM_POLICY_OUT);
-
-	/* This is just an example of how to delete SPs, but it must not done in here */
-	HIP_DEBUG("deleting SPs....\n");
-	hip_xfrm_policy_delete(&daddr, &saddr, XFRM_POLICY_IN);
-	hip_xfrm_policy_delete(&saddr, &daddr, XFRM_POLICY_OUT);
-#endif
-	/*FIXME: this is a test part used to set the SA and check that it works as it should. */
-	saddr.s6_addr32[0] = htonl(0x3ffe0001);
-	daddr.s6_addr32[0] = htonl(0x3ffe0002);
-	
-	memset(enckey.key, 0, HIP_MAX_KEY_LEN);
-	memset(authkey.key, 0, HIP_MAX_KEY_LEN);
-
-	enckey_len = strlen(temp1);
-	authkey_len = strlen(temp2);
-
-	memcpy(enckey.key, temp1, enckey_len);
-	memcpy(authkey.key, temp2, authkey_len);
-
-	hip_xfrm_state_modify(XFRM_MSG_NEWSA, &saddr, &daddr, 
-			      23, 1, &enckey, enckey_len, 2, &authkey,
-			      authkey_len);
-
-	return 0;
+ out_err:
+	return err;
 }

@@ -51,8 +51,10 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
  *
  * Returns: 0 if successful, else < 0
  */
-int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our, struct in6_addr *hit_peer, 
-			   struct in6_addr *tmpl_saddr, struct in6_addr *tmpl_daddr, int dir){
+int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
+			   struct in6_addr *hit_peer,
+			   struct in6_addr *tmpl_saddr,
+			   struct in6_addr *tmpl_daddr, int dir){
 
 	struct hip_nl_handle rth;
 	struct {
@@ -284,7 +286,6 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 
 		addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH,
 			  (void *)&alg, len);
-
 
 		/* XFRMA_ALG_CRYPT */
 		memset(&alg, 0, sizeof(alg));

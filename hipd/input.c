@@ -695,11 +695,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 	{
 		/* let the setup routine give us a SPI. */
-		HIP_IFEL(!(spi_in = hip_add_sa(&ctx->input->hits,
-					       &ctx->input->hitr, 
-					       0, transform_esp_suite, 
-					       &ctx->esp_in, &ctx->auth_in, 0,
-					       HIP_SPI_DIRECTION_IN)), -1, 
+		HIP_IFEL(hip_add_sa(&ctx->input->hits,
+				    &ctx->input->hitr, 
+				    &spi_in, transform_esp_suite, 
+				    &ctx->esp_in, &ctx->auth_in, 0,
+				    HIP_SPI_DIRECTION_IN), -1, 
 			 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 		/* XXX: -EAGAIN */
 		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1307,10 +1307,10 @@ int hip_handle_i2(struct hip_common *i2,
 		 "Error while adding the preferred peer address\n");
 
 	/* Set up IPsec associations */
-	spi_in = hip_add_sa(&entry->hit_peer, &entry->hit_our, 0, esp_tfm, 
-			    &ctx->esp_in, &ctx->auth_in, retransmission,
-			    HIP_SPI_DIRECTION_IN);	
-	if (!spi_in) {
+	err = hip_add_sa(&entry->hit_peer, &entry->hit_our, &spi_in,
+			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
+			 retransmission, HIP_SPI_DIRECTION_IN);	
+	if (err) {
 		HIP_ERROR("Failed to setup IPsec SPD/SA entries.\n");
 //		if (err == -EEXIST)
 //			HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
@@ -1328,7 +1328,7 @@ int hip_handle_i2(struct hip_common *i2,
 	barrier();
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
-	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, spi_out, esp_tfm, 
+	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
 			 retransmission, HIP_SPI_DIRECTION_OUT);
 	if (!err) {
@@ -1583,7 +1583,7 @@ int hip_handle_r2(struct hip_common *r2,
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
 
-	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, spi_recvd, tfm,
+	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, &spi_recvd, tfm,
 			 &ctx->esp_out, &ctx->auth_out, retransmission,
 			 HIP_SPI_DIRECTION_OUT);
 //	if (err == -EEXIST) {
