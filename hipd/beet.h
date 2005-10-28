@@ -7,8 +7,8 @@
 #define HIP_BEET_H
 
 #include <linux/xfrm.h>
-#include "netlink.h"
 
+#include "nlink.h"
 #include "debug.h"
 #include "hip.h"
 #include "hashtable.h"

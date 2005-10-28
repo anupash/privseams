@@ -1,8 +1,6 @@
 // FIXME: whenever something that is replicated in beet db is
 // modified, the modifications must be written there too.
 #include "hadb.h"
-#include "keymat.h"
-#include "pk.h"
 
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;

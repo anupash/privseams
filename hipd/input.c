@@ -522,7 +522,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
 	uint32_t spi_in = 0;
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
-	char *enc_in_msg = NULL, *host_id_in_enc = NULL, *iv = NULL;
+	char *enc_in_msg = NULL, *host_id_in_enc = NULL;
+	unsigned char *iv = NULL;
 	struct in6_addr daddr;
 	u8 *dh_data = NULL;
 	struct hip_esp_info *esp_info;
@@ -1112,7 +1113,8 @@ int hip_handle_i2(struct hip_common *i2,
 	int err = 0, retransmission = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
-	char *tmp_enc = NULL, *enc = NULL, *iv;
+	char *tmp_enc = NULL, *enc = NULL;
+	unsigned char *iv;
 	struct hip_host_id *host_id_in_enc = NULL;
 	struct hip_r1_counter *r1cntr;
 	struct hip_esp_info *esp_info = NULL;

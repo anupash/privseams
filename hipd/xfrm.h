@@ -1,7 +1,7 @@
 #ifndef HIP_XFRM_H
 #define HIP_XFRM_H
 
-#include "netlink.h"
+#include "nlink.h"
 
 #include "hadb.h"
 #include "debug.h"

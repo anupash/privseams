@@ -5,9 +5,8 @@
 #include "debug.h"
 #include "builder.h"
 #include "output.h"
-
-#  include "list.h"
-#  include "hipd.h"
+#include "list.h"
+#include "hipd.h"
 
 struct hip_r1entry {
 	struct hip_common *r1;

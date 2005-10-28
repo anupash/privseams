@@ -1,14 +1,14 @@
 #ifndef HIP_HADB_H
 #define HIP_HADB_H
 
+#include "keymat.h"
+#include "pk.h"
 #include "hip.h"
 #include "debug.h"
 #include "misc.h"
 #include "hidb.h"
 #include "hashtable.h"
 #include "builder.h"
-
-#include "netdev.h"
 
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 

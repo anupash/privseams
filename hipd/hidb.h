@@ -4,8 +4,8 @@
 #include "hip.h"
 #include "debug.h"
 
-#  include <sys/socket.h>
-#  include "list.h"
+#include <sys/socket.h>
+#include "list.h"
 #include "timer.h"
 #include "cookie.h"
 #include "pk.h"

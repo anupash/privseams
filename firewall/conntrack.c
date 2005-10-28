@@ -1,19 +1,4 @@
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <stdio.h>
-#include <glib.h>
-#include <glib/glist.h>
-#include <glib/gtypes.h>
-#include <glib/gthread.h>
-
-#include "debug.h"
 #include "conntrack.h"
-#include "firewall.h"
-#include "rule_management.h"
-#include "hip.h"
-#include "misc.h"
-#include "hadb.h"
-#include "pk.h"
 
 struct GList * hipList = NULL;
 struct GList * espList = NULL;

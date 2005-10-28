@@ -1,9 +1,4 @@
-#include <sys/socket.h>
-#include <linux/netlink.h>
-
-//#include "debug.h" /* logging facilities */
-#include "netlink.h"
-#include "hipd.h"
+#include "nlink.h"
 
 /*
  * Note that most of the functions are modified versions of
@@ -389,7 +384,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 
 int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int protocol)
 {
-        int addr_len;
+        socklen_t addr_len;
         int sndbuf = 32768;
         int rcvbuf = 32768;
 

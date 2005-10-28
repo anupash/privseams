@@ -1,11 +1,4 @@
-#include <netinet/in.h>
-#include <linux/netfilter_ipv6.h>
-
-#include "debug.h"
 #include "helpers.h"
-#include "rule_management.h"
-#include "firewall.h"
-
 
 /**
  * get char* out of in6_addr 

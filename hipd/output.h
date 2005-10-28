@@ -2,7 +2,6 @@
 #define HIP_OUTPUT_H
 
 #include "hadb.h"
-//#include "debug.h"
 #include "misc.h"
 #include "hip.h"
 #include "hadb.h"

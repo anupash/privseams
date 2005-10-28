@@ -1,13 +1,15 @@
-#ifndef _HIP_NETLINK_H
-#define _HIP_NETLINK_H
+#ifndef _HIP_NLINK_H
+#define _HIP_NLINK_H
+
+#include <sys/socket.h>
+#include <linux/netlink.h>
+#include <stdio.h>
+#include <stdint.h>
 
 #include "builder.h"
 #include "debug.h"
 #include "hip.h"
-
-#include <stdio.h>
-#include <stdint.h>
-#include <linux/netlink.h>
+#include "hipd.h"
 
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
 
@@ -28,8 +30,7 @@ struct netdev_address {
 	int if_index;
 };
 
-struct hip_nl_handle
-{
+struct hip_nl_handle {
         int                     fd;
         struct sockaddr_nl      local;
         struct sockaddr_nl      peer;
@@ -51,4 +52,4 @@ int hip_netlink_talk(struct hip_nl_handle *nl, struct hip_work_order *req, struc
 int hip_netlink_send(struct hip_work_order *hwo);
 void hip_netlink_close(struct hip_nl_handle *rth);
 
-#endif /* _HIP_NETLINK_H */
+#endif /* _HIP_NLINK_H */
