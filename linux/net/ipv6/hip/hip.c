@@ -821,6 +821,9 @@ static int hip_worker(void *t)
 			}
 		}
 
+                schedule();
+                /* try_to_freeze(PF_FREEZE); */
+
 		_HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}
 
