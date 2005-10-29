@@ -199,10 +199,10 @@ int setmyeid(struct sockaddr_eid *my_eid,
     }
   }
 
-  err = hip_get_global_option(msg);
+  err = hip_recv_daemon_msg(msg);
   if (err) {
     err = EEI_SYSTEM;
-    HIP_ERROR("Failed to send msg\n");
+    HIP_ERROR("Failed to recv msg\n");
     goto out_err;
   }
 
@@ -307,7 +307,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     }
   }
 
-  err = hip_get_global_option(msg);
+  err = hip_recv_daemon_msg(msg);
   if (err) {
     err = EEI_SYSTEM;
     goto out_err;
@@ -714,10 +714,10 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
   }
   
   /* Call the kernel */
-  err = hip_get_global_option(msg);
+  err = hip_recv_daemon_msg(msg);
   if (err) {
     err = EEI_SYSTEM;
-    HIP_ERROR("Failed to send msg\n");
+    HIP_ERROR("Failed to recv msg\n");
     goto out_err;
   }
 

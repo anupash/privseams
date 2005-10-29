@@ -9,10 +9,9 @@
 #include <hip.h>
 
 #include "debug.h"
+#include "nlink.h"
 
-int open_hip(void);
-int close_hip(int hipfd);
-int hip_get_global_option(struct hip_common *msg);
-int hip_set_global_option(const struct hip_common *msg);
+int hip_send_daemon_msg(const struct hip_common *msg);
+int hip_recv_daemon_msg(struct hip_common *msg);
 
 #endif /* HIP_MESSAGE_H */

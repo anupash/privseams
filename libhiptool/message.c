@@ -13,79 +13,36 @@
 
 #include "message.h"
 
-/**
- * open_hip - open the message channel for communicating with the HIP
- *            kernel module
- *
- * Returns: a file descriptor, or -1 if an error occurred. If an error
- * occurred, errno is also set.
- *
- */
-int open_hip(void) {
-	/* we're using the socket only for setting socket options, so the stream
-	   option could be anything */
-	return socket(PF_HIP, SOCK_STREAM, 0);
-}
+int hip_send_daemon_msg(const struct hip_common *msg) {
+	int err = 0;
+	struct hip_nl_handle hip_nl_msg;
 
-/**
- * close_hip - open the channel for communicating with the HIP kernel module
- * @hipfd: the filehandle to be closed
- *
- * Returns: zero on success, or -1 if an error occurred.
- *
- */
-int close_hip(int hipfd) {
-	return close(hipfd);
-}
+	memset(&hip_nl_msg, 0, sizeof(struct hip_nl_handle));
 
-int hip_set_global_option(const struct hip_common *msg) {
-	int err = 0, hipfd = -1;
-
-	hipfd = open_hip(); // sets also errno
-	if (hipfd < 0) {
+	if (hip_netlink_open(&hip_nl_msg, 0, NETLINK_HIP) < 0) {
 		HIP_ERROR("Failed to open HIP configuration channel\n");
-		err = -errno;
-		goto out;
+		err = -1;
+		goto out_err;
 	}
 
-	err = setsockopt(hipfd, IPPROTO_HIP, SO_HIP_GLOBAL_OPT, msg,
-			 hip_get_msg_total_len(msg));
+	err = hip_netlink_send_buf(&hip_nl_msg, msg,
+				   hip_get_msg_total_len(msg));
 	if (err) {
-		HIP_ERROR("setsockopt failed (%d)\n", err);
-		goto out_close;
+		HIP_ERROR("Sending of HIP msg failed (%d)\n", err);
+		goto out_err;
 	}
 
 	_HIP_DUMP_MSG(msg);
 
-out_close:
-	close(hipfd);
-out:
+out_err:
+	if (hip_nl_msg.fd)
+		hip_netlink_close(hip_nl_close);
+
 	return err;
 }
 
-int hip_get_global_option(struct hip_common *msg) {
-	int err = 0, hipfd = -1;
-	int msg_len = hip_get_msg_total_len(msg);
-
-	hipfd = open_hip(); // sets also errno
-	if (hipfd < 0) {
-		HIP_ERROR("Failed to open HIP configuration channel\n");
-		err = -errno;
-		goto out;
-	}
-
-	/* The return value SHOULD fit into the msg */
-	err = getsockopt(hipfd, IPPROTO_HIP, SO_HIP_GLOBAL_OPT, msg, &msg_len);
-	if (err) {
-		HIP_ERROR("getsockopt failed (%d)\n", err);
-		goto out_close;
-	}
-
-	_HIP_DUMP_MSG(msg);
-
-out_close:
-	close(hipfd);
-out:
-	return err;
+int hip_recv_daemon_msg(struct hip_common *msg) {
+	/* XX TODO: required by the native HIP API */
+	return -1;
 }
 

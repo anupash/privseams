@@ -113,7 +113,7 @@ HIP_UNIT_TEST_CASE(test_kernel) {
     err = hip_build_param_unit_test(msg, suiteid, caseid);
     HIP_UNIT_ASSERT(!err);
 
-    err = hip_set_global_option(msg);
+    err = hip_send_daemon_msg(msg);
     HIP_UNIT_ASSERT(!err);
     HIP_UNIT_ASSERT(!hip_get_msg_err(msg));
 }
