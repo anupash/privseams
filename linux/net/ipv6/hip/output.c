@@ -74,7 +74,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub)
 {
  	struct hip_common *msg;
- 	int err = 0, use_rsa = 0, dh_size,written, mask;
+ 	int err = 0,dh_size,written, mask;
  	u8 *dh_data = NULL;
  	/* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {

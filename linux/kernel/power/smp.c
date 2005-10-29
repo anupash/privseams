@@ -52,7 +52,7 @@ void disable_nonboot_cpus(void)
 	current->state = TASK_INTERRUPTIBLE;
 	schedule_timeout(HZ);
 	printk("...");
-	BUG_ON(smp_processor_id() != 0);
+	BUG_ON(raw_processor_id() != 0);
 
 	/* FIXME: for this to work, all the CPUs must be running
 	 * "idle" thread (or we deadlock). Is that guaranteed? */

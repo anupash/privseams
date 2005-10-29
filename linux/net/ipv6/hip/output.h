@@ -35,5 +35,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry);
 void hip_send_notify_all(void);
 
+int hip_send_close(const struct hip_common *input);
+
 #endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
 #endif /* HIP_OUTPUT_H */

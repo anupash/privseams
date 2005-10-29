@@ -30,6 +30,9 @@
 #include "pk.h"
 
 #if HIP_USER_DAEMON || HIP_KERNEL_DAEMON
+int hip_receive_control_packet(struct hip_common *msg,
+			       struct in6_addr *src_addr,
+			       struct in6_addr *dst_addr);
 
 int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
 int hip_receive_r1(struct hip_common *, struct in6_addr *, struct in6_addr *);
@@ -41,6 +44,7 @@ int hip_receive_notify(struct hip_common *, struct in6_addr *,
 int hip_receive_bos(struct hip_common *, struct in6_addr *,
 		    struct in6_addr *);
 void hip_hwo_input_destructor(struct hip_work_order *hwo);
+
 
 #endif /* HIP_USER_DAEMON || HIP_KERNEL_DAEMON */
 #endif /* HIP_INPUT_H */

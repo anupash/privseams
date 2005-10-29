@@ -225,10 +225,11 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	struct hip_lhi lhi;
 	struct hip_tlv_common *param = NULL;
 	struct hip_eid_endpoint *eid_endpoint = NULL;
-	struct in6_addr dsa_hit, rsa_hit;
+	//struct in6_addr dsa_hit, rsa_hit;
 	
 	HIP_DEBUG("\n");
-
+	HIP_DEBUG_IN6ADDR("input->hits = ", &input->hits);
+	HIP_DEBUG_IN6ADDR("input->hitr = ", &input->hitr);
 	if ((err = hip_get_msg_err(input)) != 0) {
 		HIP_ERROR("daemon failed (%d)\n", err);
 		goto out_err;
@@ -282,49 +283,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 }
 
 /**
- * hip_socket_handle_del_local_hi - handle deletion of a localhost host
- * identity
- * @msg: the message containing the hit to be deleted
- *
- * Returns: zero on success, or negative error value on failure
- */
-int hip_handle_del_local_hi(const struct hip_common *input)
-{
-	struct in6_addr *hit;
-	struct hip_lhi lhi;
-	char buf[46];
-	int err = 0;
-
-	
-	hit = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_HIT);
-	if (!hit) {
-		HIP_ERROR("no hit\n");
-		err = -ENODATA;
-		goto out_err;
-	}
-
-	hip_in6_ntop(hit, buf);
-	HIP_INFO("del HIT: %s\n", buf);
-
-	ipv6_addr_copy(&lhi.hit, hit);
-
-        err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi);
-        if (err) {
-		HIP_ERROR("deleting of local host identity failed\n");
-		goto out_err;
-        }
-        
-	/* XX TODO: remove associations from hadb & beetdb by the deleted HI */
-
-	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
-
- out_err:
-	
-	return err;
-}
-
-/**
  * hip_del_host_id - delete the given HI (network byte order) from the database.
  * @db: Database from which to delete
  * @lhi: the HIT to be deleted from the database
@@ -365,6 +323,49 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 	err = 0;
+	return err;
+}
+
+/**
+ * hip_socket_handle_del_local_hi - handle deletion of a localhost host
+ * identity
+ * @msg: the message containing the hit to be deleted
+ *
+ * Returns: zero on success, or negative error value on failure
+ */
+int hip_handle_del_local_hi(const struct hip_common *input)
+{
+	struct in6_addr *hit;
+	struct hip_lhi lhi;
+	char buf[46];
+	int err = 0;
+
+	
+	hit = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_HIT);
+	if (!hit) {
+		HIP_ERROR("no hit\n");
+		err = -ENODATA;
+		goto out_err;
+	}
+
+	hip_in6_ntop(hit, buf);
+	HIP_INFO("del HIT: %s\n", buf);
+
+	ipv6_addr_copy(&lhi.hit, hit);
+
+        err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi);
+        if (err) {
+		HIP_ERROR("deleting of local host identity failed\n");
+		goto out_err;
+        }
+        
+	/* XX TODO: remove associations from hadb & beetdb by the deleted HI */
+
+	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
+
+ out_err:
+	
 	return err;
 }
 

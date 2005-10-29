@@ -10,7 +10,7 @@ include $(HIPL)/Makefile.am.global
 # Note: HIPL is included because "libinet6/debug.h" is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-CFLAGS += -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
+CFLAGS = -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
 CFLAGS += -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_LINUX_MODULE) -I$(HIPL_HIPD)
 CFLAGS += -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
 CFLAGS += -L$(HIPL_LIBINET6_LIB)
@@ -29,7 +29,7 @@ bin_PROGRAMS += hipsetupNew
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
 bin_PROGRAMS += first_test
-bin_PROGRAMS += second_test
+#bin_PROGRAMS += second_test
 
 sbin_SCRIPTS = hipsetup
 
@@ -43,7 +43,7 @@ conntest_server_SOURCES = conntest-server.c conntest.c
 unittest_SOURCES = unit.c unittest.c hipconf.c suite.c
 hipsetupNew_SOURCES = hipsetupNew.c hipconf.c misc_install.c conntest.c
 first_test_SOURCES = first_test.c hipconf.c misc_install.c conntest.c
-second_test_SOURCES = second_test.c hipconf.c misc_install.c conntest.c
+#second_test_SOURCES = second_test.c hipconf.c misc_install.c conntest.c
 
 
 EXTRA_DIST = $(sbin_SCRIPTS)

@@ -107,5 +107,9 @@ int hip_hit_is_our(struct in6_addr *hit);
 
 void hip_uninit_host_id_dbs(void);
 
+int hip_handle_add_local_hi(const struct hip_common *input);
+
+int hip_handle_del_local_hi(const struct hip_common *input);
+
 //#endif /* HIP_USER_DAEMON || HIP_KERNEL_STUB */
 #endif /* _HIP_DB */

@@ -251,12 +251,11 @@ int hip_get_hits(struct in6_addr *dst_hit, struct in6_addr *src_hit)
 int hip_get_saddr(struct flowi *fl, struct in6_addr *hit_storage)
 {
 	hip_xfrm_t *entry;
-
 	if (!ipv6_addr_is_hit(&fl->fl6_dst)) {
 		HIP_ERROR("dst not a HIT\n");
 		return 0;
 	}
-
+	HIP_DEBUG_IN6ADDR("fl->fl6_dst = ", &fl->fl6_dst);
 	entry = hip_xfrm_try_to_find_by_peer_hit(&fl->fl6_dst);
 	if (!entry) {
 		HIP_ERROR("Unknown destination HIT\n");
@@ -821,6 +820,9 @@ static int hip_worker(void *t)
 				break;
 			}
 		}
+
+                schedule();
+                /* try_to_freeze(PF_FREEZE); */
 
 		_HIP_DEBUG("Work done (pid=%d, cpu=%d)\n", pid, cpu);
 	}

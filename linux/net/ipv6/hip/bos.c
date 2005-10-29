@@ -46,18 +46,18 @@ int hip_create_bos_signature(struct hip_host_id *priv, int algo, struct hip_comm
  */
 int hip_send_bos(const struct hip_common *msg)
 {
-	int err = 0, i = 0;
+	int err = 0; //i = 0;
 	struct hip_common *bos = NULL;
 	struct in6_addr hit_our;
 	struct in6_addr daddr;
  	struct hip_host_id  *host_id_pub = NULL;
 	struct hip_host_id *host_id_private = NULL;
-	u8 signature[HIP_RSA_SIGNATURE_LEN]; // assert RSA > DSA
-	struct net_device *saddr_dev;
-	struct inet6_dev *idev;
-	int addr_count = 0;
-	struct inet6_ifaddr *ifa = NULL;
-	struct hip_xfrm_t *x;
+	//u8 signature[HIP_RSA_SIGNATURE_LEN]; // assert RSA > DSA
+	//struct net_device *saddr_dev;
+	//struct inet6_dev *idev;
+	//int addr_count = 0;
+	//struct inet6_ifaddr *ifa = NULL;
+	//struct hip_xfrm_t *x;
 	struct netdev_address *n;
 	
 	HIP_DEBUG("\n");
@@ -192,7 +192,7 @@ int hip_handle_bos(struct hip_common *bos,
 {
 	int err = 0, len;
 	struct hip_host_id *peer_host_id;
-	struct hip_lhi peer_lhi;
+	//struct hip_lhi peer_lhi;
 	struct in6_addr peer_hit;
 	char *str;
 	struct in6_addr *dstip;
