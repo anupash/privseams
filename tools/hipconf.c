@@ -1031,7 +1031,7 @@ int main(int argc, char *argv[]) {
 	if (hip_get_msg_type(msg) == 0)
 		goto skip_msg;
 	
-	err = hip_send_daemon_msg(msg);
+	err = hip_send_daemon_info(msg);
 	if (err) {
 		HIP_ERROR("sending msg failed\n");
 		goto out_malloc;

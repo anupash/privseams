@@ -148,19 +148,6 @@ int main(int argc, char *argv[]) {
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
 
-	/* Ping kernel and announce our PID */
-	HIP_INIT_WORK_ORDER_HDR(ping.hdr, HIP_WO_TYPE_OUTGOING,
-				HIP_WO_SUBTYPE_PING, NULL, NULL, NULL,
-				getpid(), 0, 0);
-	ping.msg = hip_msg_alloc();
-	if (hip_netlink_talk(&nl_khipd, &ping, &ping)) {
-		HIP_ERROR("Unable to connect to the kernel HIP daemon over netlink.\n");
-		ret = 1;
-		goto out_err;
-	}
-	
-	hip_msg_free(ping.msg);
-	HIP_DEBUG("Called hip_netlink_talk \n");
 
 #ifdef CONFIG_HIP_HI3
 	cl_init(i3_config);

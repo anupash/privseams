@@ -13,7 +13,7 @@
 
 #include "message.h"
 
-int hip_send_daemon_msg(const struct hip_common *msg) {
+int hip_send_daemon_info(const struct hip_common *msg) {
 	int err = 0;
 	struct hip_nl_handle hip_nl_msg;
 
@@ -41,7 +41,7 @@ out_err:
 	return err;
 }
 
-int hip_recv_daemon_msg(struct hip_common *msg) {
+int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 	/* XX TODO: required by the native HIP API */
 	return -1;
 }
