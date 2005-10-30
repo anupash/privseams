@@ -98,11 +98,15 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 {
 	int ret;
 
+#if 0
 	if (hwo->hdr.type < 0 || hwo->hdr.type > HIP_MAX_WO_TYPES)
 		return -1;
 
 	ret = hip_netlink_send(hwo);
 	hip_free_work_order(hwo);
+#endif
+	/* XX FIX: handle the packet directly, do not send to the kernel */
+	ret = -1;
 	return ret;
 }
 

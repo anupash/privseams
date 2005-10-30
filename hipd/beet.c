@@ -105,8 +105,10 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 	if (req.xpinfo.sel.family == AF_UNSPEC)
 		req.xpinfo.sel.family = AF_INET6;
 
+#if 0
 	if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
 		exit(2);
+#endif
 
 	hip_netlink_close(&rth);
 

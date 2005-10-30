@@ -23,6 +23,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	return 0;
 }
 
+#if 0
 /* Processes a received netlink message(s) */
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
 {
@@ -58,6 +59,7 @@ int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
 
 	return ret;
 }
+#endif
 
 /* 
  * Unfortunately libnetlink does not provide a generic receive a
@@ -271,6 +273,7 @@ int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
         }
 }
 
+#if 0
 /*
  * Sends and receives a work order.
  */
@@ -322,6 +325,7 @@ int hip_netlink_talk(struct hip_nl_handle *nl,
 
 	return 0;
 }
+#endif
 
 int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
 {
@@ -333,6 +337,7 @@ int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
         return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
 
+#if 0
 /*
  * Sends a work order to kernel daemon.
  */
@@ -381,6 +386,7 @@ int hip_netlink_send(struct hip_work_order *hwo)
 	HIP_FREE(nlh);
 	return ret;
 }
+#endif
 
 int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int protocol)
 {

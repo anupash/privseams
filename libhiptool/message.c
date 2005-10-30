@@ -25,7 +25,7 @@ int hip_send_daemon_msg(const struct hip_common *msg) {
 		goto out_err;
 	}
 
-	err = hip_netlink_send_buf(&hip_nl_msg, msg,
+	err = hip_netlink_send_buf(&hip_nl_msg, (const char *) msg,
 				   hip_get_msg_total_len(msg));
 	if (err) {
 		HIP_ERROR("Sending of HIP msg failed (%d)\n", err);
@@ -36,7 +36,7 @@ int hip_send_daemon_msg(const struct hip_common *msg) {
 
 out_err:
 	if (hip_nl_msg.fd)
-		hip_netlink_close(hip_nl_close);
+		hip_netlink_close(&hip_nl_msg);
 
 	return err;
 }
