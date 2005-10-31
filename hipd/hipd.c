@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
+#include <socket.h>
+#include <sys/un.h>
 
 #include "hipd.h"
 #include "crypto.h"
@@ -33,6 +35,12 @@ struct hip_nl_handle nl_khipd;
 struct hip_nl_handle nl_ifaddr;
 time_t load_time;
 
+/* Communication interface to userspace apps (hipconf etc) */
+int hip_user_sock = 0;
+int hip_agent_status = 0;
+struct sockaddr_un agent_addr;
+
+
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
@@ -42,6 +50,7 @@ void usage() {
 #endif
 	fprintf(stderr, "\n");
 }
+
 
 /*
  * Cleanup and signal handler to free userspace and kernel space
@@ -60,6 +69,8 @@ void hip_exit(int signal) {
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
 	// rtnl_close(&rtnl);
+	if (hip_user_sock)
+		close(hip_user_sock);
 	exit(signal);
 }
 
@@ -77,6 +88,8 @@ int main(int argc, char *argv[]) {
 	struct timeval timeout;
 	struct hip_work_order ping;
 	int ret = 0;
+	struct hip_common *user_msg = NULL;
+	struct sockaddr_un daemon_addr;
 
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "b")) != -1) {		
@@ -101,7 +114,7 @@ int main(int argc, char *argv[]) {
 	if (!i3_config) {
 		fprintf(stderr, "Please do pass a valid i3 configuration file.\n");
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 #endif
 
@@ -124,11 +137,15 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);
 
+	/* Allocate user message. */
+	user_msg = hip_msg_alloc();
+	if (user_msg == NULL) goto out_err;
+
 	/* Open the netlink socket for address and IF events */
 	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR, NETLINK_ROUTE) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 	highest_descriptor = nl_ifaddr.fd;
 
@@ -141,15 +158,33 @@ int main(int argc, char *argv[]) {
 	if (hip_netlink_open(&nl_khipd, 0, NETLINK_HIP) < 0) {
 		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
-	
+
+
+	hip_user_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	if (hip_user_sock < 0)
+	{
+		HIP_ERROR("Could not create socket for user communication.\n");
+		err = -1;
+		goto out_err;
+	}
+	unlink(HIP_DAEMONADDR_PATH);
+	bzero(&daemon_addr, sizeof(daemon_addr));
+	daemon_addr.sun_family = AF_LOCAL;
+	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
+	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
+		      sizeof(daemon_addr)),
+		 -1, "Bind failed.");
+
 	highest_descriptor = nl_khipd.fd > highest_descriptor ? nl_khipd.fd : highest_descriptor;
+	highest_descriptor = (hip_user_sock > highest_descriptor) ?
+	  hip_user_sock : highest_descriptor;
 	
         if (hip_init_cipher() < 0) {
 		HIP_ERROR("Unable to init ciphers.\n");
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 
         hip_init_hadb();
@@ -169,7 +204,7 @@ int main(int argc, char *argv[]) {
 	if (hip_netlink_talk(&nl_khipd, &ping, &ping)) {
 		HIP_ERROR("Unable to connect to the kernel HIP daemon over netlink.\n");
 		ret = 1;
-		goto out;
+		goto out_err;
 	}
 	
 	hip_msg_free(ping.msg);
@@ -185,6 +220,7 @@ int main(int argc, char *argv[]) {
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
 		FD_SET(nl_khipd.fd, &read_fdset);
+		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(nl_ifaddr.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
@@ -211,6 +247,38 @@ int main(int argc, char *argv[]) {
 					    hip_netlink_receive_workorder,
 					    NULL);
 				
+		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
+			int n;
+			socklen_t alen;
+			err = 0;
+			HIP_DEBUG("Receiving user message(?).\n");
+			bzero(&agent_addr, sizeof(agent_addr));
+			alen = sizeof(agent_addr);
+			n = recvfrom(hip_user_sock, user_msg,
+				     sizeof(struct hip_common), 0,
+				     (struct sockaddr *)&agent_addr, &alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Recvfrom() failed.\n");
+				err = -1;
+			}
+			memset(user_msg, 0, sizeof(struct hip_common));
+			hip_build_user_hdr(user_msg, SO_HIP_DAEMON_PING_REPLY, 0);
+			alen = sizeof(agent_addr);			
+			n = sendto(hip_user_sock, user_msg, sizeof(struct hip_common),
+				   0, (struct sockaddr *)&agent_addr, alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Sendto() failed.\n");
+				err = -1;
+			}
+
+			if (err == 0)
+			{
+				hip_agent_status = 1;
+			}
+			
+                        /* XX FIX: handle the message from agent */
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
 				/* Something on IF and address event netlink socket,
 				   fetch it. */
@@ -226,13 +294,65 @@ int main(int argc, char *argv[]) {
 		
 	}
 
-out:
+out_err:
 	/* free allocated resources */
+	if (user_msg != NULL) HIP_FREE(user_msg);
+
 	if (nl_ifaddr.fd)
 		close(nl_ifaddr.fd);
+	if (hip_user_sock)
+		close(hip_user_sock);
 	delete_all_addresses();
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), ret);
 out_out:
 	return ret;
 }
 
+
+int hip_agent_is_alive()
+{
+	return (hip_agent_status);
+}
+
+
+int hip_agent_filter(struct hip_common *msg)
+{
+	int err = 0;
+	int n;
+	socklen_t alen;
+	
+	if (!hip_agent_is_alive())
+	{
+		HIP_DEBUG("Agent is not alive\n");
+		return (-ENOENT);
+	}
+
+	HIP_DEBUG("Filtering hip control message trough agent,"
+                  " message body size is %d bytes.\n",
+		  hip_get_msg_total_len(msg) - sizeof(struct hip_common));
+
+	alen = sizeof(agent_addr);			
+	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+		   0, (struct sockaddr *)&agent_addr, alen);
+	if (n < 0)
+	{
+		HIP_ERROR("Sendto() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+
+	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
+
+	alen = sizeof(agent_addr);
+	n = recvfrom(hip_user_sock, msg, n, 0,
+		     (struct sockaddr *)&agent_addr, &alen);
+	if (n < 0)
+	{
+		HIP_ERROR("Recvfrom() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+
+out_err:
+	return (err);
+}

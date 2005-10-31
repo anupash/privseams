@@ -7,13 +7,25 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* buf)
 {
 	struct hip_work_order hwo;
-	memset(&hwo, 0, sizeof(struct hip_work_order));
-	HIP_INIT_WORK_ORDER_HDR(hwo.hdr, HIP_WO_TYPE_OUTGOING,
-				HIP_WO_SUBTYPE_SEND_PACKET, src_addr,
-				peer_addr, NULL, 0, 0, 0);
-	hwo.msg = buf;
+	int err = 0;
 
-	return hip_netlink_send(&hwo);
+	err = hip_agent_filter(buf);
+	if (err == -ENOENT || err == 0)
+	{
+		HIP_DEBUG("Agent is %s running, processing packet\n",
+			  (err == -ENOENT) ? "not" : "");
+		memset(&hwo, 0, sizeof(struct hip_work_order));
+		HIP_INIT_WORK_ORDER_HDR(hwo.hdr, HIP_WO_TYPE_OUTGOING,
+					HIP_WO_SUBTYPE_SEND_PACKET, src_addr,
+					peer_addr, NULL, 0, 0, 0);
+		hwo.msg = buf;
+		err = hip_netlink_send(&hwo);
+	} else if (err) {
+		HIP_ERROR("Agent reject packet\n");
+		err = -1;
+	}	
+
+	return (err);
 }
 #else
 /*

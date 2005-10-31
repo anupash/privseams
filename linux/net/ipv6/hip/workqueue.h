@@ -96,6 +96,7 @@ struct ipv6hdr {
 #define HIP_WO_SUBTYPE_ADDRVS     211
 #define HIP_WO_SUBTYPE_SEND_BOS   212 // sending BOS packet
 #define HIP_WO_SUBTYPE_SEND_CLOSE 213
+#define HIP_WO_SUBTYPE_AGENT_PID  214
 
 int hip_init_workqueue(void);
 void hip_uninit_workqueue(void);

@@ -250,9 +250,17 @@ int hip_do_work(struct hip_work_order *job)
 		switch(job->hdr.subtype) {
 #if HIP_KERNEL_DAEMON  || HIP_USER_DAEMON
 		case HIP_WO_SUBTYPE_RECV_CONTROL:
-			res = hip_receive_control_packet(job->msg,
-							 &job->hdr.id1,
-							 &job->hdr.id2);
+			res = hip_agent_filter(job->msg);
+			if (res == -ENOENT || res == 0) {
+				HIP_DEBUG("Agent is %s running, processing packet\n",
+					  (res == -ENOENT) ? "not" : "");
+
+				res = hip_receive_control_packet(job->msg,
+								 &job->hdr.id1,
+								 &job->hdr.id2);
+			} else if (res) {
+				HIP_ERROR("Agent reject packet\n");
+			}
 			break;
 #endif
 		default:

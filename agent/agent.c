@@ -6,17 +6,12 @@
 /* INCLUDES */
 
 /* STANDARD */
-#include <fcntl.h>
-
-#include "hip.h"
-#include "linux/netlink.h"
-#include "linux/rtnetlink.h"
-#include "workqueue.h"
+#include "agent.h"
 
 
 /******************************************************************************/
 /* VARIABLES */
-struct hip_nl_handle nl_khipd;
+int hip_user_sock = 0;
 
 
 /******************************************************************************/
@@ -26,114 +21,117 @@ struct hip_nl_handle nl_khipd;
 int main(int argc, char *argv[])
 {
 	/* Variables. */
-	fd_set read_fdset;
-	int err = 0;
-	int highest_descriptor;
+	int err = 0, n, len;
+	struct sockaddr_un user_addr;
+	struct hip_common *msg = NULL;
+	socklen_t alen;
 
 	/* Initialize database. */
-	if (hit_db_init() < 0) goto out_err;
+//	HIP_IFE(hit_db_init(), -1);
+	
+	/* Allocate message. */
+	HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
 
-	struct hip_work_order ping;
-
-	/*
-		Send a NETLINK ping so that we can communicate the pid of
-		the agent and we know that netlink works.
-	*/
-
-	/* We may need a separate NETLINK_HIP_AGENT ?!? */
-	HIP_IFEL((hip_netlink_open(&nl_khipd, 0, NETLINK_HIP) < 0), -1,
-	         "Netlink address and IF events socket error: %s\n");
-
-	/* Ping kernel and announce our PID. */
-	HIP_INIT_WORK_ORDER_HDR(ping.hdr, HIP_WO_TYPE_OUTGOING,
-	                        HIP_WO_SUBTYPE_AGENT_PID, NULL, NULL, NULL,
-	                        getpid(), 0, 0);
-	ping.msg = hip_msg_alloc();
-	if (hip_netlink_talk(&nl_khipd, &ping, &ping))
+	/* Create and bind daemon socket. */
+	hip_user_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	if (hip_user_sock < 0)
 	{
-		HIP_ERROR("Unable to connect to the kernel HIP daemon over netlink.\n");
-		goto out;
+		HIP_ERROR("Failed to create socket.\n");
+		err = -1;
+		goto out_err;
 	}
 	
-	/* Add a similar select loop as in hipd.c */
+	bzero(&user_addr, sizeof(user_addr));
+	user_addr.sun_family = AF_LOCAL;
+	strcpy(user_addr.sun_path, tmpnam(NULL));
+	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&user_addr,
+		      sizeof(user_addr)),
+		 -1, "Bind failed.\n");
 
-	/* Enter to the select-loop */
+	/* Test connection. */
+	hip_build_user_hdr(msg, SO_HIP_DAEMON_PING, 0);
+	bzero(&user_addr, sizeof(user_addr));
+	user_addr.sun_family = AF_LOCAL;
+	strcpy(user_addr.sun_path, HIP_DAEMONADDR_PATH);
+	alen = sizeof(user_addr);
+	n = sendto(hip_user_sock, msg, sizeof(struct hip_common), 0,
+		   (struct sockaddr *)&user_addr, alen);
+	if (n < 0)
+	{
+		HIP_ERROR("Could not send ping to daemon.\n");
+		err = -1;
+		goto out_err;
+	}
+	bzero(&user_addr, sizeof(user_addr));
+	alen = sizeof(user_addr);
+	n = recvfrom(hip_user_sock, msg, sizeof(struct hip_common), 0,
+		     (struct sockaddr *)&user_addr, &alen);
+	if (n < 0)
+	{
+		HIP_ERROR("Did not receive ping reply from daemon.\n");
+		err = -1;
+		goto out_err;
+	}
+	
+	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n", n);
+
+	/* Start handling. */
 	for (;;)
 	{
-		struct hip_work_order *hwo;
-		
-		/* prepare file descriptor sets */
-		FD_ZERO(&read_fdset);
-		FD_SET(nl_khipd.fd, &read_fdset);
-		FD_SET(nl_ifaddr.fd, &read_fdset);
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		
-		_HIP_DEBUG("select\n");
+		HIP_DEBUG("Receiving msg\n");
 
-		/* wait for socket activity */
-#ifndef CONFIG_HIP_HI3
-		err = select((highest_descriptor + 1), &read_fdset, 
-		             NULL, NULL, &timeout);
-		if (err < 0)
+		bzero(&user_addr, sizeof(user_addr));
+		alen = sizeof(user_addr);
+		n = recvfrom(hip_user_sock, msg, sizeof(struct hip_common),
+			     MSG_PEEK,
+			     (struct sockaddr *)&user_addr, &alen);
+		if (n < 0)
 		{
-#else
-		err = cl_select((highest_descriptor + 1), &read_fdset, 
-		                NULL, NULL, &timeout);
-        if (err < 0)
+			HIP_ERROR("Error receiving message header from daemon.\n");
+			err = -1;
+			goto out_err;
+		}
+
+		HIP_DEBUG("Header received successfully\n");
+		alen = sizeof(user_addr);
+		len = hip_get_msg_total_len(msg);
+
+		HIP_DEBUG("Receiving message (%d bytes)\n", len);
+		n = recvfrom(hip_user_sock, msg, len, 0,
+			     (struct sockaddr *)&user_addr, &alen);
+
+		if (n < 0)
 		{
-				
-#endif
-			HIP_INFO("select() error: %s.\n", strerror(errno));
+			HIP_ERROR("Error receiving message parameters from daemon.\n");
+			err = -1;
+			goto out_err;
 		}
-		else if (err == 0)
-		{ 
-				/* idle cycle - select() timeout */               
-		}
-		else if (FD_ISSET(nl_khipd.fd, &read_fdset))
+
+		HIP_ASSERT(n == len);
+		HIP_DEBUG("Whole message received successfully\n");
+
+		/* TODO XX: Modify message and check message type. */
+		HIP_DEBUG("Message modified, sending back to daemon.\n");
+
+		alen = sizeof(user_addr);
+		n = sendto(hip_user_sock, msg, sizeof(struct hip_common), 0,
+			   (struct sockaddr *)&user_addr, alen);
+		if (n < 0)
 		{
-			/*
-				Something on kernel daemon netlink socket,
-				fetch it to the queue.
-			*/
-/*			hip_netlink_receive(&nl_khipd,
-					    hip_netlink_receive_workorder,
-					    NULL);*/
-		}
-		else if (FD_ISSET(nl_ifaddr.fd, &read_fdset))
-		{
-			/*
-				Something on IF and address event netlink socket,
-				fetch it.
-			*/
-			hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
-		}
-		else
-		{
-			HIP_INFO("Unknown socket activity.");
-		}
-			
-		while (hwo = hip_get_work_order())
-		{
-			HIP_DEBUG("Processing work order\n");
-			hip_do_work(hwo);
-		}
-		
+			HIP_ERROR("Could not send message back to daemon.\n");
+			err = -1;
+			goto out_err;
+		}		
+
+		HIP_DEBUG("Reply sent successfully\n");
 	}
-	
-	/*
-		handle messages in the loop and if packets are ok, send them
-		back using netlink messages to the hipd.
-	*/
-	
-	/* Return OK. */
-	return (0);
-	
-	/* Return failure. */
-out_err:
-	hip_msg_free(ping.msg);
 
-	return (-1);
+ out_err:
+	if (hip_user_sock) close(hip_user_sock);
+	if (msg != NULL) HIP_FREE(msg);
+
+	return err;
+
 }
 /* END OF FUNCTION */
 
