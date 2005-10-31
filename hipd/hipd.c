@@ -12,8 +12,11 @@
 
 #include "hipd.h"
 
-/* struct hip_nl_handle nl_khipd; */
+/* For receiving/sending HIP control messages */
 int hip_raw_sock = 0;
+
+/* Communication interface to userspace apps (hipconf etc) */
+int hip_user_sock = 0;
 
 struct hip_nl_handle nl_ifaddr;
 time_t load_time;
@@ -47,6 +50,9 @@ void hip_exit(int signal) {
 	// rtnl_close(&rtnl);
 	if (hip_raw_sock)
 		close(hip_raw_sock);
+	if (hip_user_sock)
+		close(hip_user_sock);
+
 	exit(signal);
 }
 
@@ -135,9 +141,16 @@ int main(int argc, char *argv[]) {
 		goto out_err;
 	}
 #endif
+
 	/* XX FIX: open a raw socket to listen for protocol 99 */
+
+	/* XX FIX: open a UDP UNIX localdomain listener to port
+	   HIP_DAEMON_PORT */
 	
-	highest_descriptor = hip_raw_sock > highest_descriptor ? hip_raw_sock : highest_descriptor;
+	highest_descriptor = (hip_raw_sock > highest_descriptor) ?
+	  hip_raw_sock : highest_descriptor;
+	highest_descriptor = (hip_user_sock > highest_descriptor) ?
+	  hip_user_sock : highest_descriptor;
 	
         if (hip_init_cipher() < 0) {
 		HIP_ERROR("Unable to init ciphers.\n");
@@ -167,6 +180,7 @@ int main(int argc, char *argv[]) {
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_raw_sock, &read_fdset);
+		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(nl_ifaddr.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
@@ -196,6 +210,8 @@ int main(int argc, char *argv[]) {
 					    NULL);
 #endif
 			
+		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
+			/* XX FIXME: hipconf etc message */
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
 				/* Something on IF and address event netlink socket,
 				   fetch it. */
@@ -215,6 +231,8 @@ out_err:
 	/* free allocated resources */
 	if (hip_raw_sock)
 		close(hip_raw_sock);
+	if (hip_user_sock)
+		close(hip_user_sock);
 	if (nl_ifaddr.fd)
 		close(nl_ifaddr.fd);
 
