@@ -367,6 +367,77 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	return err;
 }
 
+int hip_add_peer_map(const struct hip_common *input)
+{
+	struct in6_addr *hit, *ip;
+	int err = 0;
+
+	hit = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_HIT);
+	if (!hit) {
+		HIP_ERROR("handle async map: no hit\n");
+		err = -ENODATA;
+		goto out_err;
+	}
+
+	ip = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
+	if (!ip) {
+		HIP_ERROR("handle async map: no ipv6 address\n");
+		err = -ENODATA;
+		goto out_err;
+	}
+
+	HIP_DEBUG_HIT("add map HIT", hit);
+	HIP_DEBUG_IN6ADDR("add map IP", ip);
+	
+	err = hip_hadb_add_peer_info(hit, ip);
+ 	if (err) {
+ 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
+		goto out_err;
+	}
+
+ out_err:
+
+	return err;
+
+}
+
+int hip_del_peer_map(const struct hip_common *input)
+{
+	struct in6_addr *hit, *ip;
+	int err = 0;
+
+	hit = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_HIT);
+	if (!hit) {
+		HIP_ERROR("handle async map: no hit\n");
+		err = -ENODATA;
+		goto out;
+	}
+
+	ip = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
+	if (!ip) {
+		HIP_ERROR("handle async map: no ipv6 address\n");
+		err = -ENODATA;
+		goto out;
+	}
+
+	HIP_DEBUG_HIT("hit", hit);
+	HIP_DEBUG_IN6ADDR("ip", ip);
+
+	err = hip_del_peer_info(hit, ip);
+	if (err) {
+		HIP_ERROR("Failed to delete mapping\n");
+		goto out;
+	}
+	  
+ out:
+
+	return err;
+}
+
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
  */

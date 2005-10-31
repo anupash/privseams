@@ -768,42 +768,6 @@ int hip_handle_peer_map_work_order(const struct in6_addr *hit,
 	return err;
 }
 
-static int hip_add_peer_map(const struct hip_common *input, int rvs)
-{
-	struct in6_addr *hit, *ip;
-	int err = 0;
-
-	hit = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_HIT);
-	if (!hit) {
-		HIP_ERROR("handle async map: no hit\n");
-		err = -ENODATA;
-		goto out;
-	}
-
-	ip = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
-	if (!ip) {
-		HIP_ERROR("handle async map: no ipv6 address\n");
-		err = -ENODATA;
-		goto out;
-	}
-
-	HIP_DEBUG_HIT("add map HIT", hit);
-	HIP_DEBUG_IN6ADDR("add map IP", ip);
-	
- 	err = hip_handle_peer_map_work_order(hit, ip, 1, rvs);
- 	if (err) {
- 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
-	}
-
- out:
-
-	return err;
-
-}
-
-
 /**
  * hip_socket_handle_rvs - Handle a case where we want our host to register
  * with rendezvous server.
@@ -814,7 +778,6 @@ int hip_socket_handle_rvs(const struct hip_common *input)
 {
 	return hip_add_peer_map(input, 1);
 }
-
 
 /**
  * hip_socket_handle_add_peer_map_hit_ip - handle adding of a HIT-to-IPv6 mapping
@@ -829,48 +792,6 @@ int hip_socket_handle_add_peer_map_hit_ip(const struct hip_common *input)
 {
 	HIP_DEBUG("\n");
 	return hip_add_peer_map(input, 0);
-}
-
-/**
- * hipd_handle_async_del_map_hit_ip - handle deletion of a mapping
- * @msg: the message containing the mapping to be deleted
- *
- * Currently this function is unimplemented.
- *
- * Returns: zero on success, or negative error value on failure
- */
-int hip_socket_handle_del_peer_map_hit_ip(const struct hip_common *input)
-{
-	struct in6_addr *hit, *ip;
-	int err = 0;
-
-	hit = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_HIT);
-	if (!hit) {
-		HIP_ERROR("handle async map: no hit\n");
-		err = -ENODATA;
-		goto out;
-	}
-
-	ip = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
-	if (!ip) {
-		HIP_ERROR("handle async map: no ipv6 address\n");
-		err = -ENODATA;
-		goto out;
-	}
-
-	HIP_DEBUG_HIT("hit", hit);
-	HIP_DEBUG_IN6ADDR("ip", ip);
-
- 	err = hip_handle_peer_map_work_order(hit, ip, 0, 0);
- 	if (err) {
- 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
-	}
-
- out:
-
-	return err;
 }
 
 int hip_socket_handle_rst(const struct hip_common *input)

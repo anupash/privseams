@@ -17,6 +17,7 @@ int hip_raw_sock = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
+struct sockaddr_un user_addr;
 
 struct hip_nl_handle nl_ifaddr;
 time_t load_time;
@@ -71,6 +72,9 @@ int main(int argc, char *argv[]) {
 	struct hip_work_order ping;
 	int ret = 0;
 
+	struct hip_common *user_msg = NULL;
+	struct sockaddr_un daemon_addr;
+
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "b")) != -1) {		
 		switch (ch) {
@@ -117,6 +121,10 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);
 
+	/* Allocate user message. */
+	user_msg = hip_msg_alloc();
+	if (user_msg == NULL) goto out_err;
+
 	/* Open the netlink socket for address and IF events */
 	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR, NETLINK_ROUTE) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
@@ -144,9 +152,21 @@ int main(int argc, char *argv[]) {
 
 	/* XX FIX: open a raw socket to listen for protocol 99 */
 
-	/* XX FIX: open a UDP UNIX localdomain listener to port
-	   HIP_DAEMON_PORT */
-	
+	hip_user_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	if (hip_user_sock < 0)
+	{
+		HIP_ERROR("Could not create socket for user communication.\n");
+		err = -1;
+		goto out_err;
+	}
+	unlink(HIP_DAEMONADDR_PATH);
+	bzero(&daemon_addr, sizeof(daemon_addr));
+	daemon_addr.sun_family = AF_LOCAL;
+	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
+	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
+		      sizeof(daemon_addr)),
+		 -1, "Bind failed.");
+
 	highest_descriptor = (hip_raw_sock > highest_descriptor) ?
 	  hip_raw_sock : highest_descriptor;
 	highest_descriptor = (hip_user_sock > highest_descriptor) ?
@@ -211,7 +231,24 @@ int main(int argc, char *argv[]) {
 #endif
 			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
-			/* XX FIXME: hipconf etc message */
+			int n;
+			socklen_t alen;
+			err = 0;
+			HIP_DEBUG("Receiving user message(?).\n");
+			bzero(&user_addr, sizeof(user_addr));
+			alen = sizeof(user_addr);
+			n = recvfrom(hip_user_sock, user_msg,
+				     sizeof(struct hip_common), 0,
+				     (struct sockaddr *)&user_addr, &alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Recvfrom() failed.\n");
+				err = -1;
+			}
+
+			HIP_IFEL((err = hip_handle_user_msg(user_msg)),
+				 "Handing of user msg failed\n", -1);
+
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
 				/* Something on IF and address event netlink socket,
 				   fetch it. */

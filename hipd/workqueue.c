@@ -239,6 +239,7 @@ int hip_do_work(struct hip_work_order *job)
 		switch(job->hdr.subtype) {
 #ifdef CONFIG_HIP_RVS
 		case HIP_WO_SUBTYPE_ADDRVS:
+#if 0
 			/* arg1 = d-hit, arg2=ipv6 */
 			res = hip_hadb_add_peer_info(&job->hdr.id2,
 						     &job->hdr.id1);
@@ -253,6 +254,7 @@ int hip_do_work(struct hip_work_order *job)
 				hip_handle_output(&hdr, NULL);
 			}
 			break;
+#endif
 #endif /* CONFIG_HIP_RVS */
 		case HIP_WO_SUBTYPE_ADDMAP:
 			/* arg1 = d-hit, arg2=ipv6 */
@@ -306,4 +308,55 @@ int hip_do_work(struct hip_work_order *job)
 	if (job)
 		hip_free_work_order(job);
 	return res;
+}
+
+int hip_handle_user_msg(const struct hip_common *msg) {
+	int err = 0;
+	int msg_type;
+
+	err = hip_check_userspace_msg(msg);
+	if (err) {
+		HIP_ERROR("HIP socket option was invalid\n");
+		goto out_err;
+	}
+
+	msg_type = hip_get_msg_type(msg);
+	switch(msg_type) {
+	case SO_HIP_ADD_LOCAL_HI:
+		err = hip_handle_add_local_hi(msg);
+		break;
+	case SO_HIP_DEL_LOCAL_HI:
+		err = hip_handle_del_local_hi(msg);
+		break;
+	case SO_HIP_ADD_PEER_MAP_HIT_IP:
+		err = hip_add_peer_map(msg);
+		break;
+	case SO_HIP_DEL_PEER_MAP_HIT_IP:
+		err = hip_del_peer_map(msg);
+		break;
+	case SO_HIP_RST:
+		err = hip_send_close(msg);
+		break;
+	case SO_HIP_ADD_RVS:
+#if 0 /* XX FIXME */
+		err = hip_add_peer_map_hit_ip(msg);
+		err = hip_rvs_set_request_flag();
+		{
+			struct ipv6hdr hdr = {0};
+			ipv6_addr_copy(&hdr.daddr, &job->hdr.id2);
+			hip_handle_output(&hdr, NULL);
+		}
+#endif
+		break;
+	case SO_HIP_BOS:
+		err = hip_send_bos(msg);
+		break;
+	default:
+		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
+		err = -ESOCKTNOSUPPORT;
+	}
+
+ out_err:
+
+	return err;
 }
