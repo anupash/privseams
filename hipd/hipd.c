@@ -12,7 +12,9 @@
 
 #include "hipd.h"
 
-struct hip_nl_handle nl_khipd;
+/* struct hip_nl_handle nl_khipd; */
+int hip_raw_sock = 0;
+
 struct hip_nl_handle nl_ifaddr;
 time_t load_time;
 
@@ -43,6 +45,8 @@ void hip_exit(int signal) {
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
 	// rtnl_close(&rtnl);
+	if (hip_raw_sock)
+		close(hip_raw_sock);
 	exit(signal);
 }
 
@@ -123,14 +127,17 @@ int main(int argc, char *argv[]) {
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
 	hip_netdev_init_addresses(&nl_ifaddr);
 	HIP_DEBUG("***Opening netlink\n");
+#if 0
 	/* Open the netlink socket for kernel communication */
 	if (hip_netlink_open(&nl_khipd, 0, NETLINK_ROUTE) < 0) {
 		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
 		ret = 1;
 		goto out_err;
 	}
+#endif
+	/* XX FIX: open a raw socket to listen for protocol 99 */
 	
-	highest_descriptor = nl_khipd.fd > highest_descriptor ? nl_khipd.fd : highest_descriptor;
+	highest_descriptor = hip_raw_sock > highest_descriptor ? hip_raw_sock : highest_descriptor;
 	
         if (hip_init_cipher() < 0) {
 		HIP_ERROR("Unable to init ciphers.\n");
@@ -153,15 +160,13 @@ int main(int argc, char *argv[]) {
 	cl_init(i3_config);
 #endif
 
-#if 0
-
 	/* Enter to the select-loop */
 	for (;;) {
 		struct hip_work_order *hwo;
 		
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
-		FD_SET(nl_khipd.fd, &read_fdset);
+		FD_SET(hip_raw_sock, &read_fdset);
 		FD_SET(nl_ifaddr.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
@@ -181,13 +186,16 @@ int main(int argc, char *argv[]) {
 		} else if (err == 0) { 
 				/* idle cycle - select() timeout */               
 				
-		} else if (FD_ISSET(nl_khipd.fd, &read_fdset)) {
-				/* Something on kernel daemon netlink socket, fetch it
-				   to the queue */
+		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
+			/* Something on kernel daemon netlink socket,
+			   fetch it to the queue */
+			/* XX FIXME */
+#if 0
 			hip_netlink_receive(&nl_khipd,
 					    hip_netlink_receive_workorder,
 					    NULL);
-				
+#endif
+			
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
 				/* Something on IF and address event netlink socket,
 				   fetch it. */
@@ -201,11 +209,12 @@ int main(int argc, char *argv[]) {
 			hip_do_work(hwo);
 		}
 		
-	}
-#endif
+	  }
 
 out_err:
 	/* free allocated resources */
+	if (hip_raw_sock)
+		close(hip_raw_sock);
 	if (nl_ifaddr.fd)
 		close(nl_ifaddr.fd);
 
