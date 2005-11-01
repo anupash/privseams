@@ -152,21 +152,22 @@ int main(int argc, char *argv[]) {
 
 	/* XX FIX: open a raw socket to listen for protocol 99 */
 
-	hip_user_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)
 	{
 		HIP_ERROR("Could not create socket for user communication.\n");
 		err = -1;
 		goto out_err;
 	}
-	unlink(HIP_DAEMONADDR_PATH);
 	bzero(&daemon_addr, sizeof(daemon_addr));
-	daemon_addr.sun_family = AF_LOCAL;
+	daemon_addr.sun_family = AF_UNIX;
 	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
+	unlink(HIP_DAEMONADDR_PATH);
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
-		      sizeof(daemon_addr)),
+		      /*sizeof(daemon_addr)*/
+		strlen(daemon_addr.sun_path) + sizeof(daemon_addr.sun_family)),
 		 -1, "Bind failed.");
-
+	HIP_DEBUG("Local server up\n");
 	highest_descriptor = (hip_raw_sock > highest_descriptor) ?
 	  hip_raw_sock : highest_descriptor;
 	highest_descriptor = (hip_user_sock > highest_descriptor) ?

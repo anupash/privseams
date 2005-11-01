@@ -21,10 +21,10 @@ int hip_send_daemon_info(const struct hip_common *msg) {
 	socklen_t alen;
 
 	/* Allocate message. */
-	HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
-
+	//HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
+	HIP_DEBUG("msg length %d\n", hip_get_msg_total_len(msg));
 	/* Create and bind daemon socket. */
-	hip_user_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)
 	{
 		HIP_ERROR("Failed to create socket.\n");
@@ -33,20 +33,25 @@ int hip_send_daemon_info(const struct hip_common *msg) {
 	}
 
 	bzero(&user_addr, sizeof(user_addr));
-	user_addr.sun_family = AF_LOCAL;
-	strcpy(user_addr.sun_path, tmpnam(NULL));
+	user_addr.sun_family = AF_UNIX;
+	strcpy(user_addr.sun_path, HIP_DAEMONADDR_PATH);// tmpnam(NULL));
+#if 0
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&user_addr,
-		      sizeof(user_addr)),
+		      /*sizeof(user_addr)*/
+			strlen(user_addr.sun_path) + sizeof(user_addr.sun_family)),
 		 -1, "Bind failed.\n");
-
+#endif
 	alen = sizeof(user_addr);
-	n = sendto(hip_user_sock, msg, sizeof(struct hip_common), 0,
-		   (struct sockaddr *)&user_addr, alen);
+	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg)/*sizeof(struct hip_common)*/, 
+			0,(struct sockaddr *)&user_addr, alen);
 	if (n < 0) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -1;
 		goto out_err;
+	}else {
+		HIP_DEBUG("Sent %d bytes\n", n);
 	}
+		
 
  out_err:
 	if (hip_user_sock)
