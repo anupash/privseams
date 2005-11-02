@@ -238,17 +238,18 @@ int main(int argc, char *argv[]) {
 			HIP_DEBUG("Receiving user message(?).\n");
 			bzero(&user_addr, sizeof(user_addr));
 			alen = sizeof(user_addr);
-			n = recvfrom(hip_user_sock, user_msg,
-				     sizeof(struct hip_common), 0,
+			n = recvfrom(hip_user_sock, (void *)user_msg,
+				     HIP_MAX_PACKET, 0,
 				     (struct sockaddr *)&user_addr, &alen);
 			if (n < 0)
 			{
 				HIP_ERROR("Recvfrom() failed.\n");
 				err = -1;
-			}
-
+			} 
+			
+			//HIP_HEXDUMP("packet", user_msg,  hip_get_msg_total_len(user_msg));
 			HIP_IFEL((err = hip_handle_user_msg(user_msg)),
-				 "Handing of user msg failed\n", -1);
+				-1, "Handing of user msg failed\n");
 
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
 				/* Something on IF and address event netlink socket,

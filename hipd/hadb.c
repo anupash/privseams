@@ -371,7 +371,7 @@ int hip_add_peer_map(const struct hip_common *input)
 {
 	struct in6_addr *hit, *ip;
 	int err = 0;
-
+	//HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
 	if (!hit) {
@@ -388,9 +388,6 @@ int hip_add_peer_map(const struct hip_common *input)
 		goto out_err;
 	}
 
-	HIP_DEBUG_HIT("add map HIT", hit);
-	HIP_DEBUG_IN6ADDR("add map IP", ip);
-	
 	err = hip_hadb_add_peer_info(hit, ip);
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);

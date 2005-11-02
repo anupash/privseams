@@ -379,7 +379,7 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
  * @str: string to be printed before the HIT
  * @hit: the HIT to be printed
  */
-static inline void hip_print_hit(const char *str, const struct in6_addr *hit)
+void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
 	char dst[INET6_ADDRSTRLEN];
 

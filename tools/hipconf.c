@@ -759,7 +759,7 @@ int handle_map(struct hip_common *msg, int action,
 		err = -EINVAL;
 		goto out;
 	}
-
+	
 	ret = inet_pton(AF_INET6, opt[0], &hit);
 	if (ret < 0 && errno == EAFNOSUPPORT) {
 		HIP_PERROR("inet_pton: not a valid address family\n");
@@ -781,7 +781,6 @@ int handle_map(struct hip_common *msg, int action,
 		err = -EINVAL;
 		goto out;
 	}
-
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));
 	if (err) {
@@ -812,7 +811,7 @@ int handle_map(struct hip_common *msg, int action,
 		}
 		break;
 	}
-
+	
 out:
 	return err;
 }
@@ -1031,6 +1030,7 @@ int main(int argc, char *argv[]) {
 	if (hip_get_msg_type(msg) == 0)
 		goto skip_msg;
 	
+	/* send msg to hipd */
 	err = hip_send_daemon_info(msg);
 	if (err) {
 		HIP_ERROR("sending msg failed\n");
