@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
 	if (user_msg == NULL) goto out_err;
 
 	/* Open the netlink socket for address and IF events */
-	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR, NETLINK_ROUTE) < 0) {
+	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		ret = 1;
 		goto out_err;
@@ -141,16 +141,19 @@ int main(int argc, char *argv[]) {
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
 	hip_netdev_init_addresses(&nl_ifaddr);
 	HIP_DEBUG("***Opening netlink\n");
-#if 0
-	/* Open the netlink socket for kernel communication */
-	if (hip_netlink_open(&nl_khipd, 0, NETLINK_ROUTE) < 0) {
-		HIP_ERROR("Netlink khipd workorders socket error: %s\n", strerror(errno));
-		ret = 1;
-		goto out_err;
-	}
-#endif
 
-	/* XX FIX: open a raw socket to listen for protocol 99 */
+	/* See section 25 from Stevens */
+	HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW, HIP_PROTO)) <= 0),
+		 -1, "Raw socket creation failed. Not root?\n");
+
+	{
+		int on = 1;
+		HIP_IFEL((setsockopt(hip_raw_sock, IPPROTO_IP, IP_HDRINCL,
+				     &on, sizeof(on) < 0)), -1,
+			 "Reading the IP header from raw socket forbidden\n");
+	}
+
+
 
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)
@@ -219,18 +222,12 @@ int main(int argc, char *argv[]) {
 			HIP_INFO("select() error: %s.\n", strerror(errno));
 			
 		} else if (err == 0) { 
-				/* idle cycle - select() timeout */               
-				
+				/* idle cycle - select() timeout */
 		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
-			/* Something on kernel daemon netlink socket,
-			   fetch it to the queue */
-			/* XX FIXME */
-#if 0
-			hip_netlink_receive(&nl_khipd,
-					    hip_netlink_receive_workorder,
-					    NULL);
-#endif
-			
+			/* XX FIX: read an IPv6(HIP) message from the raw
+			   socket, and the IP addresses and IP header to
+			   hip_receive_control_packet() */
+			return -1;
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;

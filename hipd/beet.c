@@ -349,23 +349,3 @@ int hip_xfrm_state_delete(struct in6_addr *peer_addr, __u32 spi) {
 
 	return 0;
 }
-
-int hip_xfrm_add(hip_hit_t *hit_peer, hip_hit_t *hit_our, 
-		    struct in6_addr *addr, uint32_t spi,
-		    int state, int dir){
-
-	/* Here the SP and SA have to be added in the same manner as in IP tool */
-	
-	return 0;
-}
-
-
-int hip_xfrm_update(hip_hit_t *hit_peer, hip_hit_t *hit_our, 
-		    struct in6_addr *addr, uint32_t spi,
-		    int state, int dir) {
-	return -1; /* XX FIX: REWRITE USING XFRM */
-}
-
-int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir) {
-	return -1; /* XX FIXME: REWRITE USING XFRM */
-}

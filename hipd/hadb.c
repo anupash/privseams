@@ -239,69 +239,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
-int hip_hadb_update_xfrm_inbound(hip_ha_t *entry) {
-	struct hip_spi_in_item *item, *tmp;
-	int err = 0;
-	HIP_DEBUG("\n");
-	/* iterate over all inbound SPIs and send them to kernel */
-	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		HIP_DEBUG("Inbound SPI update: SPI=0x%x, state=%s\n",
-			  item->spi, hip_state_str(entry->state));
-		err = hip_xfrm_update(&entry->hit_peer,
-				      &entry->hit_our,
-				      NULL,
-			              item->spi,
-				      entry->state,
-				      HIP_SPI_DIRECTION_IN);
-		if (err)
-			goto out_err;
-	}
-
- out_err:
-	return err;
-}
-
-int hip_hadb_update_xfrm_outbound(hip_ha_t *entry) {
-	struct in6_addr empty;
-	struct in6_addr *addr;
-
-	/* why the address during the base exchange is not preferred? */
-
-	memset(&empty, 0, sizeof(empty));
-	//if (memcmp(&empty, &entry->preferred_address, sizeof(empty)))
-	addr = &entry->preferred_address;
-	//else
-	//addr = &entry->bex_address;
-
-	HIP_DEBUG("Outbound HIT update, default SPI=0x%x state=%s\n",
-		  entry->default_spi_out, hip_state_str(entry->state));
-	HIP_HEXDUMP("HIT: ", &entry->hit_peer, sizeof(struct in6_addr));
-	return hip_xfrm_update(&entry->hit_peer, &entry->hit_our, addr, 
-			       entry->default_spi_out,
-			       entry->state, HIP_SPI_DIRECTION_OUT);
-}
-
-int hip_hadb_update_xfrm(hip_ha_t *entry) {
-	int err;
-
-	/* update outbound xfrm first because inbound has depencies on
-	   outbound  */
-	HIP_DEBUG("Synchronizing the BEET database.\n");
-
-	err = hip_hadb_update_xfrm_outbound(entry);
-	if (err) {
-		HIP_ERROR("Failed to update outbound xfrm entries\n");
-		goto out_err;
-	}
-	err = hip_hadb_update_xfrm_inbound(entry);
-	if (err) {
-		HIP_ERROR("Failed to update inbound xfrm entries\n");
-		goto out_err;
-	}
- out_err:
-	return err;
-}
-
 /* Practically called only by when adding a HIT-IP mapping before bex */
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 {
@@ -352,14 +289,6 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	} else
 		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
 			  hip_state_str(entry->state));
-
-	/* Synchronize beet state (may be changed) */
-	err = hip_hadb_update_xfrm(entry);
-	if (err) {
-		HIP_ERROR("XFRM out synchronization failed\n");
-		err = -EFAULT;
-		goto out;
-	}
 
  out:
 	if (entry)

@@ -13,7 +13,6 @@
 
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry);
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
-extern int hip_hadb_update_xfrm(hip_ha_t *entry);
 extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			struct in6_addr *i1_daddr, HIP_RVA *rva);
 
@@ -427,7 +426,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr)
 {
-	hip_ha_t *entry = NULL, tmp;
+	hip_ha_t tmp;
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
@@ -481,28 +480,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 	if (err)
 		goto out_err;
 	
-	/* The synchronization of the beet database is not done with HIP_BOS */
-	/* .. it seems that is should be done anyway, BOS createas a new HA */
-	if (!skip_sync) {
- 		entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
- 		if (!entry) {
- 			HIP_ERROR("Did not find HA entry\n");
- 			err = -EFAULT;
- 			goto out_err;
- 		}
-		
- 		/* Synchronize beet state (may have been altered) */
- 		err = hip_hadb_update_xfrm(entry);
- 		if (err) {
- 			HIP_ERROR("XFRM out synchronization failed\n");
- 			err = -EFAULT;
- 			goto out_err;
- 		}
-	}
 
  out_err:
-	if (entry)
- 		hip_hadb_put_entry(entry);
+
 	return err;
 }
 
@@ -1633,14 +1613,6 @@ int hip_handle_r2(struct hip_common *r2,
 
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
-	/* Synchronize beet state (may have been altered) */
-	HIP_DEBUG("Synchronizing the BEET database\n");
-	err = hip_hadb_update_xfrm(entry);
-	if (err) {
-		HIP_ERROR("XFRM out synchronization failed\n");
-		err = -EFAULT;
-		goto out_err;
-	}
  out_err:
 	if (ctx)
 		HIP_FREE(ctx);

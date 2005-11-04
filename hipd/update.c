@@ -355,13 +355,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
-	HIP_DEBUG("moved to state REKEYING\n");
-        err = hip_hadb_update_xfrm(entry);
-        if (err) {
-                HIP_ERROR("XFRM synchronization failed\n");
-                err = -EFAULT;
-                goto out_err;
-        }
 
 	err = hip_csum_send(NULL, src_ip, update_packet);
 	if (err) {
@@ -522,12 +515,6 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* 4. The system cancels any timers protecting the UPDATE and
 	   transitions to ESTABLISHED. */
 	entry->state = HIP_STATE_ESTABLISHED;
-        err = hip_hadb_update_xfrm(entry);
-        if (err) {
-                HIP_ERROR("XFRM synchronization failed\n");
-                err = -EFAULT;
-                goto out_err;
-        }
 
 	HIP_DEBUG("Went back to ESTABLISHED state\n");
 
@@ -956,12 +943,6 @@ int hip_receive_update(struct hip_common *msg,
 	 * process from ESTABLISHED state */
 	if (state == HIP_STATE_R2_SENT) {
 		state = entry->state = HIP_STATE_ESTABLISHED;
-		err = hip_hadb_update_xfrm(entry);
-		if (err) {
-			HIP_ERROR("XFRM synchronization failed\n");
-			err = -EFAULT;
-			goto out_err;
-		}
 		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
 	}
 
@@ -1416,12 +1397,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	/* delete IPsec SA on failure */
 	HIP_ERROR("TODO: delete SA\n");
  out:
-        err = hip_hadb_update_xfrm(entry);
-        if (err) {
-                HIP_ERROR("XFRM synchronization failed\n");
-                err = -EFAULT;
-                goto out_err;
-        }
 
 	HIP_UNLOCK_HA(entry);
 	if (update_packet)

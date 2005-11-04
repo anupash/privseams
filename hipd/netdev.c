@@ -396,6 +396,22 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				free(reas);
 				break;
 			}
+		case XFRMGRP_ACQUIRE:
+			/* XX TODO */
+			return -1;
+			break;
+		case XFRMGRP_EXPIRE:
+			/* XX TODO */
+			return -1;
+			break;
+		case XFRMGRP_SA:
+			/* XX TODO */
+			return -1;
+			break;
+		case XFRMGRP_POLICY:
+			/* XX TODO */
+			return -1;
+			break;
 		skip_readdr:
 			break;
 		default:
