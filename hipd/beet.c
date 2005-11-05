@@ -16,12 +16,12 @@ static int preferred_family = AF_INET6;
 int xfrm_fill_selector(struct xfrm_selector *sel, struct in6_addr *hit_our, struct in6_addr *hit_peer) {
 
 	sel->family = preferred_family;
-	memcpy(&sel->daddr, &hit_peer, sizeof(sel->daddr));
-	memcpy(&sel->saddr, &hit_our, sizeof(sel->saddr));
+	memcpy(&sel->daddr, hit_peer, sizeof(sel->daddr));
+	memcpy(&sel->saddr, hit_our, sizeof(sel->saddr));
 
 	/* FIXME */
-	sel->prefixlen_d = 128; /* Hardcoded for AF_INET6 or 128???*/
-	sel->prefixlen_s = 128; /* Hardcoded for AF_INET6 */
+	sel->prefixlen_d = 2; /* Hardcoded for AF_INET6 or 128???*/
+	sel->prefixlen_s = 2; /* Hardcoded for AF_INET6 */
 	return 0;
 }
 
@@ -81,7 +81,7 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 	req.xpinfo.dir = dir;
 
 	/* SELECTOR <--> HITs */
-	xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our),
+	xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our);
 
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
@@ -105,10 +105,8 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 	if (req.xpinfo.sel.family == AF_UNSPEC)
 		req.xpinfo.sel.family = AF_INET6;
 
-#if 0
 	if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
 		exit(2);
-#endif
 
 	hip_netlink_close(&rth);
 

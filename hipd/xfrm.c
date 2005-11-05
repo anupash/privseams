@@ -72,10 +72,16 @@ void hip_delete_prefix_sp_pair() {
 int hip_setup_sp_prefix_pair() {
 	int err = 0;
 	hip_hit_t src_hit, dst_hit;
+	memset(&src_hit, 0, sizeof(hip_hit_t));
+	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* The OUTGOING and INCOMING policy is set to the generic value */
-	src_hit.s6_addr32[0] = htonl(HIP_HIT_TYPE_MASK_120);
-	dst_hit.s6_addr32[0] = htonl(HIP_HIT_TYPE_MASK_120);
+
+	/** FIXME: I am not that sure if the macro HIP_HIT_TYPE_MASK_120 is correct 
+	 * at the moment I opt for hardcoding the general policy 
+	 */
+	src_hit.s6_addr32[0] = htonl(0x40000000); //HIP_HIT_TYPE_MASK_120
+	dst_hit.s6_addr32[0] = htonl(0x40000000); //HIP_HIT_TYPE_MASK_120
 
 	HIP_IFE(hip_setup_hit_sp_pair(&dst_hit, &src_hit, NULL, NULL), -1);
 
