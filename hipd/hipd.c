@@ -148,11 +148,10 @@ int main(int argc, char *argv[]) {
 
 	{
 		int on = 1;
-		HIP_IFEL((setsockopt(hip_raw_sock, IPPROTO_IP, IP_HDRINCL,
-				     &on, sizeof(on) < 0)), -1,
+		HIP_IFEL((setsockopt(hip_raw_sock, IPPROTO_IPV6, IP_HDRINCL,
+				     &on, sizeof(on)) < 0), -1,
 			 "Reading the IP header from raw socket forbidden\n");
 	}
-
 
 
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
@@ -274,6 +273,10 @@ out_err:
 
 	delete_all_addresses();
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), ret);
+
+	/* On exit the general policy must be cancelled */
+	HIP_DEBUG("Deleting the General SPs\n"),
+	hip_delete_prefix_sp_pair();
 out_out:
 	return ret;
 }

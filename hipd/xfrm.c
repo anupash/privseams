@@ -61,9 +61,12 @@ int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 
 void hip_delete_prefix_sp_pair() {
 	hip_hit_t src_hit, dst_hit;
+	memset(&src_hit, 0, sizeof(hip_hit_t));
+	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
-	src_hit.s6_addr32[0] = htonl(HIP_HIT_TYPE_MASK_120);
-	dst_hit.s6_addr32[0] = htonl(HIP_HIT_TYPE_MASK_120);
+	/* See the comment in hip_setup_sp_prefix_pair() */
+	src_hit.s6_addr32[0] = htonl(0x40000000); //HIP_HIT_TYPE_MASK_120
+	dst_hit.s6_addr32[0] = htonl(0x40000000); //HIP_HIT_TYPE_MASK_120
 
 	hip_xfrm_policy_delete(&src_hit, &src_hit, XFRM_POLICY_IN);
 	hip_xfrm_policy_delete(&dst_hit, &dst_hit, XFRM_POLICY_OUT);
