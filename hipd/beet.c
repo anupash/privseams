@@ -91,6 +91,7 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 	tmpl->ealgos = (~(__u32)0);
 	tmpl->calgos = (~(__u32)0);
 	tmpl->optional = 0; /* required */
+	tmpls_len += sizeof(*tmpl);
 	if (tmpl_saddr && tmpl_daddr) {
 		memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
 		memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
