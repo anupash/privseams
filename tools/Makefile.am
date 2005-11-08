@@ -19,7 +19,7 @@ include_HEADERS = hipconf.h
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD    = ../libinet6/.libs/libinet6.a
 
-LDFLAGS += -lcrypto
+LDFLAGS = -lcrypto
 
 sbin_PROGRAMS = hipconf
 hipconf_SOURCES = hipconf.c

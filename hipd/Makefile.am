@@ -22,7 +22,7 @@ hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c misc.c dh.c netlink.c bo
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a
-hipd_LDFLAGS += -lcrypto
+hipd_LDFLAGS = -lcrypto
 
 SUBDIRS =
 
