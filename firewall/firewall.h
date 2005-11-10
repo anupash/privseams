@@ -3,7 +3,7 @@
 
 #include <netinet/in.h>
 #include <linux/netfilter.h>
-#include <libipq/libipq.h>
+#include <libipq.h>
 
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
