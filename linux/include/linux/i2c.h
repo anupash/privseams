@@ -36,7 +36,22 @@
 
 /* --- General options ------------------------------------------------	*/
 
-struct i2c_msg;
+/*
+ * I2C Message - used for pure i2c transaction, also from /dev interface
+ */
+struct i2c_msg {
+	__u16 addr;	/* slave address			*/
+ 	__u16 flags;		
+#define I2C_M_TEN	0x10	/* we have a ten bit chip address	*/
+#define I2C_M_RD	0x01
+#define I2C_M_NOSTART	0x4000
+#define I2C_M_REV_DIR_ADDR	0x2000
+#define I2C_M_IGNORE_NAK	0x1000
+#define I2C_M_NO_RD_ACK		0x0800
+ 	__u16 len;		/* msg length				*/
+ 	__u8 *buf;		/* pointer to msg data			*/
+};
+
 struct i2c_algorithm;
 struct i2c_adapter;
 struct i2c_client;
@@ -378,22 +393,6 @@ extern u32 i2c_get_functionality (struct i2c_adapter *adap);
 
 /* Return 1 if adapter supports everything we need, 0 if not. */
 extern int i2c_check_functionality (struct i2c_adapter *adap, u32 func);
-
-/*
- * I2C Message - used for pure i2c transaction, also from /dev interface
- */
-struct i2c_msg {
-	__u16 addr;	/* slave address			*/
- 	__u16 flags;		
-#define I2C_M_TEN	0x10	/* we have a ten bit chip address	*/
-#define I2C_M_RD	0x01
-#define I2C_M_NOSTART	0x4000
-#define I2C_M_REV_DIR_ADDR	0x2000
-#define I2C_M_IGNORE_NAK	0x1000
-#define I2C_M_NO_RD_ACK		0x0800
- 	__u16 len;		/* msg length				*/
- 	__u8 *buf;		/* pointer to msg data			*/
-};
 
 /* To determine what functionality is present */
 
