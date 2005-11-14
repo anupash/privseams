@@ -266,15 +266,16 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_dif
 }
 
 
+#if 0
 /**
  * hip_set_param_spi_value - set the spi value in spi_lsi parameter
  * @spi_lsi: the spi_lsi parameter
  * @spi:     the value of the spi in the spi_lsi value in host byte order
  *
  */
-void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi)
+void hip_set_param_spi_value(struct hip_esp_info *esp_info, uint32_t spi)
 {
-	hspi->spi = htonl(spi);
+	esp_info->spi = htonl(spi);
 }
 
 /**
@@ -283,11 +284,11 @@ void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi)
  *
  * Returns: the spi value in host byte order
  */
-uint32_t hip_get_param_spi_value(const struct hip_spi *hspi)
+uint32_t hip_get_param_spi_value(const struct hip_esp_info *esp_info)
 {
-	return ntohl(hspi->spi);
+	return ntohl(esp_info->spi);
 }
-
+#endif
 
 /**
  * hip_get_unit_test_suite_param_id - get suite id from unit test parameter
@@ -400,12 +401,11 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t valid[] =
 		{
 			HIP_PARAM_ESP_INFO,
-			HIP_PARAM_SPI, /* XX FIX: REMOVE */
 			HIP_PARAM_R1_COUNTER,
-			HIP_PARAM_REA,
+			HIP_PARAM_LOCATOR,
 			HIP_PARAM_PUZZLE,
 			HIP_PARAM_SOLUTION,
-			HIP_PARAM_NES,
+			HIP_PARAM_ESP_INFO,
 			HIP_PARAM_SEQ,
 			HIP_PARAM_ACK,
 			HIP_PARAM_DIFFIE_HELLMAN,
@@ -1838,36 +1838,32 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
 }
 
 /**
- * hip_build_param_rea - build HIP REA parameter
- *
- * XX FIX: deprecated, use build_locator
+ * hip_build_param_locator - build HIP locator parameter
  *
  * @msg:             the message where the REA will be appended
- * @spi:             SPI in host byte order
  * @addresses:       list of addresses
  * @address_count:   number of addresses in @addresses
  *
  * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_rea(struct hip_common *msg,
-			uint32_t spi,
-			struct hip_rea_info_addr_item *addresses,
+int hip_build_param_locator(struct hip_common *msg,
+			struct hip_locator_info_addr_item *addresses,
 			int address_count)
 {
 	int err = 0;
-	struct hip_rea rea_info;
+	struct hip_locator locator_info;
 	int addrs_len = address_count *
-		(sizeof(struct hip_rea_info_addr_item));
+		(sizeof(struct hip_locator_info_addr_item));
 
-	hip_set_param_type(&rea_info, HIP_PARAM_REA);
-	hip_calc_generic_param_len(&rea_info,
-				   sizeof(struct hip_rea),
+	hip_set_param_type(&locator_info, HIP_PARAM_LOCATOR);
+	hip_calc_generic_param_len(&locator_info,
+				   sizeof(struct hip_locator),
 				   addrs_len);
-	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea) -
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len);
-	rea_info.spi = htonl(spi);
-	err = hip_build_param(msg, &rea_info);
+
+	err = hip_build_param(msg, &locator_info);
 	if (err)
 		return err;
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
@@ -1877,13 +1873,6 @@ int hip_build_param_rea(struct hip_common *msg,
 		       addresses, addrs_len);
 
 	return err;
-}
-
-int hip_build_param_locator(struct hip_common *msg,
-			struct hip_locator_info_addr_item *addresses,
-			int address_count)
-{
-	return -1; /* XX FIX: implement similarly as the function above  */
 }
 
 /**
@@ -2001,8 +1990,9 @@ int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 	return err;
 }
 
+#if 0
 /**
- * hip_build_param_spi_lsi - build the SPI_LSI parameter
+ * hip_build_param_spi - build the SPI parameter
  * @msg: the message where the parameter will be appended
  * @lsi: the value of the lsi (in host byte order)
  * @spi: the value of the spi (in host byte order)
@@ -2023,6 +2013,7 @@ int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
         err = hip_build_param(msg, &hspi);
         return err;
 }
+#endif
 
 /**
  * hip_build_param_encrypted_3des_sha1 - build the hip_encrypted parameter
@@ -2321,31 +2312,6 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
 		   sockaddr_len);
         err = hip_build_param_contents(msg, sockaddr, HIP_PARAM_EID_SOCKADDR,
                                        sockaddr_len);
-        return err;
-}
-
-/**
- * hip_build_param_nes - build and append HIP NES parameter
- * @msg: the message where the parameter will be appended
- * @is_reply: 1 if this packet is a reply to another UPDATE
- * @keymat_index: Keymat Index in host byte order
- * @old_spi: Old SPI value in host byte order
- * @new_spi: New SPI value in host byte order
- * 
- * Returns: 0 on success, otherwise < 0.
- */
-int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
-                        uint32_t old_spi, uint32_t new_spi)
-{
-        int err = 0;
-        struct hip_nes nes;
-
-        hip_set_param_type(&nes, HIP_PARAM_NES);
-        hip_calc_generic_param_len(&nes, sizeof(struct hip_nes), 0);
-        nes.keymat_index = htons(keymat_index);
-        nes.old_spi = htonl(old_spi);
-        nes.new_spi = htonl(new_spi);
-        err = hip_build_param(msg, &nes);
         return err;
 }
 

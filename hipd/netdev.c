@@ -281,7 +281,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	int l, is_add, i;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
-	struct hip_rea_info_addr_item *reas;
+	struct hip_locator_info_addr_item *reas;
 	struct netdev_address *n, *t;
 	int pre_if_address_count;
 
@@ -366,35 +366,47 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				   last address */			   
 				HIP_DEBUG("sending 0-addr REA\n");
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
-						    SEND_UPDATE_REA);
+						    SEND_UPDATE_LOCATOR);
 			} else if (i == 0) {
 				HIP_DEBUG("no need to readdress\n");
 				goto skip_readdr;
 			}
 
-			reas = (struct hip_rea_info_addr_item *)
-				malloc(i * sizeof(struct hip_rea_info_addr_item));
-			if (reas) {
-				i = 0;
-				list_for_each_entry_safe(n, t, &addresses, next) {
-					/* advertise only the addresses which are in
-					   the same interface which caused the event */
-					if (n->if_index != ifa->ifa_index)
-						continue;
-
-					memcpy(&reas[i].address, SA2IP(&n->addr),
-					       SAIPLEN(&n->addr));
-					/* FIXME: Is this ok? (tkoponen), for boeing it is*/					reas[i].lifetime = 0;
-					/* For testing preferred address */
-					reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
-					i++;
-				}
-				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
-				hip_send_update_all(reas, i,
-						    ifa->ifa_index, SEND_UPDATE_REA);
-				free(reas);
-				break;
+			reas = (struct hip_locator_info_addr_item *)
+			 malloc(i  *sizeof(struct hip_locator_info_addr_item));
+			if (!reas) {
+				HIP_ERROR("malloc failed\n");
+				goto out;
 			}
+
+			i = 0;
+			
+			list_for_each_entry_safe(n, t, &addresses, next) {
+				/* advertise only the addresses which are in
+				   the same interface which caused the event */
+				if (n->if_index != ifa->ifa_index)
+					continue;
+				
+				memcpy(&reas[i].address, SA2IP(&n->addr),
+				       SAIPLEN(&n->addr));
+				/* FIXME: Is this ok? (tkoponen), for boeing it is*/					reas[i].lifetime = 0;
+				/* For testing preferred address */
+				reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
+				
+				reas[i].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL; 
+				reas[i].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6; 
+				reas[i].locator_length = sizeof(struct in6_addr) / 4; 
+				reas[i].reserved = 0;
+				reas[i].lifetime = 0;
+				
+				i++;
+			}
+			HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
+			hip_send_update_all(reas, i,
+					    ifa->ifa_index,
+					    SEND_UPDATE_LOCATOR);
+			free(reas);
+			break;
 		skip_readdr:
 			break;
 		default:
@@ -403,5 +415,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 		}
 	}
 
+ out:
+	
 	return 0;
 }

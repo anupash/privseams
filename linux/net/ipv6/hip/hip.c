@@ -470,17 +470,20 @@ void hip_net_event(int ifindex, uint32_t event_src, uint32_t event)
 		return;
         }
 
-	err = hip_create_device_addrlist(event_dev, &addr_list, &idev_addr_count);
+	err = hip_create_device_addrlist(event_dev, &addr_list,
+					 &idev_addr_count);
 	dev_put(event_dev);
 
 	if (err) {
 		HIP_ERROR("hip_create_device_addrlist failed, err=%d\n", err);
 	} else {
-		/* send UPDATEs if there are addresses to be informed to the peers */
+		/* send UPDATEs if there are addresses to be informed to the
+		   peers */
 		//if (idev_addr_count > 0 && addr_list)
 		hip_send_update_all(addr_list, idev_addr_count, ifindex, SEND_UPDATE_REA);
 		//else
-		//HIP_DEBUG("Netdev has no addresses to be informed, UPDATE not sent\n");
+		//HIP_DEBUG("Netdev has no addresses to be informed,
+		// UPDATE not sent\n");
 	}
 
 	if (addr_list)
