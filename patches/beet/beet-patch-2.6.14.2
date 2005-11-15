@@ -1,0 +1,3500 @@
+diff -urN linux-2.6.14.2/Documentation/networking/README.BEET linux-2.6.14.2-beet/Documentation/networking/README.BEET
+--- linux-2.6.14.2/Documentation/networking/README.BEET	1970-01-01 02:00:00.000000000 +0200
++++ linux-2.6.14.2-beet/Documentation/networking/README.BEET	2005-11-15 15:11:18.000000000 +0200
+@@ -0,0 +1,150 @@
++Linux BEET-mode patch
++
++Authors:	Abhinav Pathak <abpathak@iitk.ac.in>
++		Diego Beltrami <diego.beltrami@gmail.com>
++		Miika Komu <miika@iki.fi>
++		Kristian Slavov <kristian.slavov@nomadiclab.com>
++		Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
++
++
++Changelog:	May 25, 2005 this document created
++
++
++Description
++-----------
++This patch extends the native Linux 2.6 kernel IPsec to support 
++Bound-End-to-End-Tunnel (BEET) mode:
++
++Abstract
++
++   This document specifies a new mode, called Bound End-to-End Tunnel
++   (BEET) mode, for IPsec ESP.  The new mode augments the existing ESP
++   tunnel and transport modes.  For end-to-end tunnels, the new mode
++   provides limited tunnel mode semantics without the regular tunnel
++   mode overhead.  The mode is intended to support new uses of ESP,
++   including mobility and multi-address multi-homing.
++
++http://www.ietf.org/internet-drafts/draft-nikander-esp-beet-mode-03.txt
++
++Data Structures
++---------------
++
++* policy = inner = selector.family
++* SA = outer = props.family
++
++About protocol support
++----------------------
++
++The BEET mode supports both ESP and AH (IPComp is not meant to work alone with
++BEET because there is lack of information of xfrm_state: IPComp does not
++compress packets whose size is less than a certain threshold -see RFC 2394-).
++
++This patch allows only for plain family transform, meaning the inner and outer 
++families are the same.
++A second patch which deals with different family will be created.
++
++
++Packet en/decapsulation
++-----------------------
++
++Note: the family of the xfrm function in the input side is
++different. For example, in the inner=4, outer=6 case, xfrm4_output is
++called (because the socket is IPv4 socket) on the output side, and
++xfrm6_rcv_encap() is called on the input side (because the packet
++received is an IPv6 packet).
++
++
++****** OUTPUT ******
++
++When entering xfrm[4-6]_output() the packet is:
++
++	---------------------
++	|IP Hdr|     |      |
++	|INNER | TCP | Data |
++	---------------------
++		  |
++		  |
++	    xfrm[4-6]_encap()
++		  |
++		  |
++		  V
++	------------------------------
++	|IP Hdr|        |     |      |
++	|INNER |        | TCP | Data |
++	------------------------------
++		  |
++		  |
++       changing the IP hdr inner->outer
++		  |
++		  |
++		  V
++	------------------------------
++	|IP Hdr|        |     |      |
++	|OUTER |        | TCP | Data |
++	------------------------------
++		  |
++		  |
++		  |
++	   x->type->output()
++		  |
++		  |
++		  V
++	-------------------------------------------
++	|IP Hdr| ESP or |     |      | ESP   | ESP|
++	|INNER | AH hdr | TCP | Data |Trailer|Auth|
++	-------------------------------------------
++		  |                  |<---------->|
++		  |                    only if ESP is used
++		  |
++		  V
++	    packet to be sent
++
++
++
++****** INPUT ******
++
++The packet is received and the function xfrm[4-6]_rcv_encap() is invoked.
++The received packet is in the same format as it has been sent:
++
++	-------------------------------------------
++	|IP Hdr| ESP or |     |      | ESP   | ESP|
++	|OUTER | AH hdr | TCP | Data |Trailer|Auth|
++	-------------------------------------------
++		  |                  |<---------->|
++		  |                    only if ESP is used
++		  |
++       	      x->type->input()
++		  |
++		  |
++		  V
++	---------------------
++	|IP Hdr|     |      |
++	|OUTER | TCP | Data |
++	---------------------
++		  |
++		  |
++	 if mode==BEET the IP hdr is pushed
++	 (the length field is correctly readjusted and
++	  in case of IPv4 the checksum is properly set)
++		  |
++		  |
++		  V
++	------------------------------
++	|IP Hdr|        |     |      |
++	|INNER |        | TCP | Data |
++	------------------------------
++		  |
++		  |
++       	   Changing IPHdr outer->inner
++		  |
++		  |
++		  V
++	---------------------
++	|IP Hdr|     |      |
++	|INNER | TCP | Data |
++	---------------------
++		  |
++		  |
++		  |
++		  V
++	      netif_rx()
+diff -urN linux-2.6.14.2/include/linux/ipsec.h linux-2.6.14.2-beet/include/linux/ipsec.h
+--- linux-2.6.14.2/include/linux/ipsec.h	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/include/linux/ipsec.h	2005-11-15 15:11:18.000000000 +0200
+@@ -12,7 +12,8 @@
+ enum {
+ 	IPSEC_MODE_ANY		= 0,	/* We do not support this for SA */
+ 	IPSEC_MODE_TRANSPORT	= 1,
+-	IPSEC_MODE_TUNNEL	= 2
++	IPSEC_MODE_TUNNEL	= 2,
++	IPSEC_MODE_BEET         = 3
+ };
+ 
+ enum {
+diff -urN linux-2.6.14.2/include/linux/xfrm.h linux-2.6.14.2-beet/include/linux/xfrm.h
+--- linux-2.6.14.2/include/linux/xfrm.h	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/include/linux/xfrm.h	2005-11-15 15:11:18.000000000 +0200
+@@ -102,6 +102,13 @@
+ 	XFRM_SHARE_UNIQUE	/* Use once */
+ };
+ 
++enum
++{
++	XFRM_MODE_TRANSPORT = 0,
++	XFRM_MODE_TUNNEL,
++	XFRM_MODE_BEET
++};
++
+ /* Netlink configuration messages.  */
+ enum {
+ 	XFRM_MSG_BASE = 0x10,
+diff -urN linux-2.6.14.2/net/ipv4/ah4.c linux-2.6.14.2-beet/net/ipv4/ah4.c
+--- linux-2.6.14.2/net/ipv4/ah4.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/ah4.c	2005-11-15 15:11:18.000000000 +0200
+@@ -255,7 +255,7 @@
+ 		goto error;
+ 	
+ 	x->props.header_len = XFRM_ALIGN8(sizeof(struct ip_auth_hdr) + ahp->icv_trunc_len);
+-	if (x->props.mode)
++	if (x->props.mode == XFRM_MODE_TUNNEL)
+ 		x->props.header_len += sizeof(struct iphdr);
+ 	x->data = ahp;
+ 
+diff -urN linux-2.6.14.2/net/ipv4/esp4.c linux-2.6.14.2-beet/net/ipv4/esp4.c
+--- linux-2.6.14.2/net/ipv4/esp4.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/esp4.c	2005-11-15 15:12:51.000000000 +0200
+@@ -307,7 +307,7 @@
+ 	struct esp_data *esp = x->data;
+ 	u32 blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
+ 
+-	if (x->props.mode) {
++	if (x->props.mode == XFRM_MODE_TUNNEL) {
+ 		mtu = ALIGN(mtu + 2, blksize);
+ 	} else {
+ 		/* The worst case. */
+@@ -421,7 +421,7 @@
+ 	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
+ 		goto error;
+ 	x->props.header_len = sizeof(struct ip_esp_hdr) + esp->conf.ivlen;
+-	if (x->props.mode)
++	if (x->props.mode == XFRM_MODE_TUNNEL)
+ 		x->props.header_len += sizeof(struct iphdr);
+ 	if (x->encap) {
+ 		struct xfrm_encap_tmpl *encap = x->encap;
+diff -urN linux-2.6.14.2/net/ipv4/esp4.c~ linux-2.6.14.2-beet/net/ipv4/esp4.c~
+--- linux-2.6.14.2/net/ipv4/esp4.c~	1970-01-01 02:00:00.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/esp4.c~	2005-11-15 15:11:18.000000000 +0200
+@@ -0,0 +1,503 @@
++#include <linux/config.h>
++#include <linux/module.h>
++#include <net/ip.h>
++#include <net/xfrm.h>
++#include <net/esp.h>
++#include <asm/scatterlist.h>
++#include <linux/crypto.h>
++#include <linux/kernel.h>
++#include <linux/pfkeyv2.h>
++#include <linux/random.h>
++#include <net/icmp.h>
++#include <net/udp.h>
++
++/* decapsulation data for use when post-processing */
++struct esp_decap_data {
++	xfrm_address_t	saddr;
++	__u16		sport;
++	__u8		proto;
++};
++
++static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
++{
++	int err;
++	struct iphdr *top_iph;
++	struct ip_esp_hdr *esph;
++	struct crypto_tfm *tfm;
++	struct esp_data *esp;
++	struct sk_buff *trailer;
++	int blksize;
++	int clen;
++	int alen;
++	int nfrags;
++
++	/* Strip IP+ESP header. */
++	__skb_pull(skb, skb->h.raw - skb->data);
++	/* Now skb is pure payload to encrypt */
++
++	err = -ENOMEM;
++
++	/* Round to block size */
++	clen = skb->len;
++
++	esp = x->data;
++	alen = esp->auth.icv_trunc_len;
++	tfm = esp->conf.tfm;
++	blksize = ALIGN(crypto_tfm_alg_blocksize(tfm), 4);
++	clen = ALIGN(clen + 2, blksize);
++	if (esp->conf.padlen)
++		clen = ALIGN(clen, esp->conf.padlen);
++
++	if ((nfrags = skb_cow_data(skb, clen-skb->len+alen, &trailer)) < 0)
++		goto error;
++
++	/* Fill padding... */
++	do {
++		int i;
++		for (i=0; i<clen-skb->len - 2; i++)
++			*(u8*)(trailer->tail + i) = i+1;
++	} while (0);
++	*(u8*)(trailer->tail + clen-skb->len - 2) = (clen - skb->len)-2;
++	pskb_put(skb, trailer, clen - skb->len);
++
++	__skb_push(skb, skb->data - skb->nh.raw);
++	top_iph = skb->nh.iph;
++	esph = (struct ip_esp_hdr *)(skb->nh.raw + top_iph->ihl*4);
++	top_iph->tot_len = htons(skb->len + alen);
++	*(u8*)(trailer->tail - 1) = top_iph->protocol;
++
++	/* this is non-NULL only with UDP Encapsulation */
++	if (x->encap) {
++		struct xfrm_encap_tmpl *encap = x->encap;
++		struct udphdr *uh;
++		u32 *udpdata32;
++
++		uh = (struct udphdr *)esph;
++		uh->source = encap->encap_sport;
++		uh->dest = encap->encap_dport;
++		uh->len = htons(skb->len + alen - top_iph->ihl*4);
++		uh->check = 0;
++
++		switch (encap->encap_type) {
++		default:
++		case UDP_ENCAP_ESPINUDP:
++			esph = (struct ip_esp_hdr *)(uh + 1);
++			break;
++		case UDP_ENCAP_ESPINUDP_NON_IKE:
++			udpdata32 = (u32 *)(uh + 1);
++			udpdata32[0] = udpdata32[1] = 0;
++			esph = (struct ip_esp_hdr *)(udpdata32 + 2);
++			break;
++		}
++
++		top_iph->protocol = IPPROTO_UDP;
++	} else
++		top_iph->protocol = IPPROTO_ESP;
++
++	esph->spi = x->id.spi;
++	esph->seq_no = htonl(++x->replay.oseq);
++
++	if (esp->conf.ivlen)
++		crypto_cipher_set_iv(tfm, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++
++	do {
++		struct scatterlist *sg = &esp->sgbuf[0];
++
++		if (unlikely(nfrags > ESP_NUM_FAST_SG)) {
++			sg = kmalloc(sizeof(struct scatterlist)*nfrags, GFP_ATOMIC);
++			if (!sg)
++				goto error;
++		}
++		skb_to_sgvec(skb, sg, esph->enc_data+esp->conf.ivlen-skb->data, clen);
++		crypto_cipher_encrypt(tfm, sg, sg, clen);
++		if (unlikely(sg != &esp->sgbuf[0]))
++			kfree(sg);
++	} while (0);
++
++	if (esp->conf.ivlen) {
++		memcpy(esph->enc_data, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++		crypto_cipher_get_iv(tfm, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++	}
++
++	if (esp->auth.icv_full_len) {
++		esp->auth.icv(esp, skb, (u8*)esph-skb->data,
++		              sizeof(struct ip_esp_hdr) + esp->conf.ivlen+clen, trailer->tail);
++		pskb_put(skb, trailer, alen);
++	}
++
++	ip_send_check(top_iph);
++
++	err = 0;
++
++error:
++	return err;
++}
++
++/*
++ * Note: detecting truncated vs. non-truncated authentication data is very
++ * expensive, so we only support truncated data, which is the recommended
++ * and common case.
++ */
++static int esp_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_buff *skb)
++{
++	struct iphdr *iph;
++	struct ip_esp_hdr *esph;
++	struct esp_data *esp = x->data;
++	struct sk_buff *trailer;
++	int blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
++	int alen = esp->auth.icv_trunc_len;
++	int elen = skb->len - sizeof(struct ip_esp_hdr) - esp->conf.ivlen - alen;
++	int nfrags;
++	int encap_len = 0;
++
++	if (!pskb_may_pull(skb, sizeof(struct ip_esp_hdr)))
++		goto out;
++
++	if (elen <= 0 || (elen & (blksize-1)))
++		goto out;
++
++	/* If integrity check is required, do this. */
++	if (esp->auth.icv_full_len) {
++		u8 sum[esp->auth.icv_full_len];
++		u8 sum1[alen];
++		
++		esp->auth.icv(esp, skb, 0, skb->len-alen, sum);
++
++		if (skb_copy_bits(skb, skb->len-alen, sum1, alen))
++			BUG();
++
++		if (unlikely(memcmp(sum, sum1, alen))) {
++			x->stats.integrity_failed++;
++			goto out;
++		}
++	}
++
++	if ((nfrags = skb_cow_data(skb, 0, &trailer)) < 0)
++		goto out;
++
++	skb->ip_summed = CHECKSUM_NONE;
++
++	esph = (struct ip_esp_hdr*)skb->data;
++	iph = skb->nh.iph;
++
++	/* Get ivec. This can be wrong, check against another impls. */
++	if (esp->conf.ivlen)
++		crypto_cipher_set_iv(esp->conf.tfm, esph->enc_data, crypto_tfm_alg_ivsize(esp->conf.tfm));
++
++        {
++		u8 nexthdr[2];
++		struct scatterlist *sg = &esp->sgbuf[0];
++		u8 workbuf[60];
++		int padlen;
++
++		if (unlikely(nfrags > ESP_NUM_FAST_SG)) {
++			sg = kmalloc(sizeof(struct scatterlist)*nfrags, GFP_ATOMIC);
++			if (!sg)
++				goto out;
++		}
++		skb_to_sgvec(skb, sg, sizeof(struct ip_esp_hdr) + esp->conf.ivlen, elen);
++		crypto_cipher_decrypt(esp->conf.tfm, sg, sg, elen);
++		if (unlikely(sg != &esp->sgbuf[0]))
++			kfree(sg);
++
++		if (skb_copy_bits(skb, skb->len-alen-2, nexthdr, 2))
++			BUG();
++
++		padlen = nexthdr[0];
++		if (padlen+2 >= elen)
++			goto out;
++
++		/* ... check padding bits here. Silly. :-) */ 
++
++		if (x->encap && decap && decap->decap_type) {
++			struct esp_decap_data *encap_data;
++			struct udphdr *uh = (struct udphdr *) (iph+1);
++
++			encap_data = (struct esp_decap_data *) (decap->decap_data);
++			encap_data->proto = 0;
++
++			switch (decap->decap_type) {
++			case UDP_ENCAP_ESPINUDP:
++			case UDP_ENCAP_ESPINUDP_NON_IKE:
++				encap_data->proto = AF_INET;
++				encap_data->saddr.a4 = iph->saddr;
++				encap_data->sport = uh->source;
++				encap_len = (void*)esph - (void*)uh;
++				break;
++
++			default:
++				goto out;
++			}
++		}
++
++		iph->protocol = nexthdr[1];
++		pskb_trim(skb, skb->len - alen - padlen - 2);
++		memcpy(workbuf, skb->nh.raw, iph->ihl*4);
++		skb->h.raw = skb_pull(skb, sizeof(struct ip_esp_hdr) + esp->conf.ivlen);
++		skb->nh.raw += encap_len + sizeof(struct ip_esp_hdr) + esp->conf.ivlen;
++		memcpy(skb->nh.raw, workbuf, iph->ihl*4);
++		skb->nh.iph->tot_len = htons(skb->len);
++	}
++
++	return 0;
++
++out:
++	return -EINVAL;
++}
++
++static int esp_post_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_buff *skb)
++{
++  
++	if (x->encap) {
++		struct xfrm_encap_tmpl *encap;
++		struct esp_decap_data *decap_data;
++
++		encap = x->encap;
++		decap_data = (struct esp_decap_data *)(decap->decap_data);
++
++		/* first, make sure that the decap type == the encap type */
++		if (encap->encap_type != decap->decap_type)
++			return -EINVAL;
++
++		switch (encap->encap_type) {
++		default:
++		case UDP_ENCAP_ESPINUDP:
++		case UDP_ENCAP_ESPINUDP_NON_IKE:
++			/*
++			 * 1) if the NAT-T peer's IP or port changed then
++			 *    advertize the change to the keying daemon.
++			 *    This is an inbound SA, so just compare
++			 *    SRC ports.
++			 */
++			if (decap_data->proto == AF_INET &&
++			    (decap_data->saddr.a4 != x->props.saddr.a4 ||
++			     decap_data->sport != encap->encap_sport)) {
++				xfrm_address_t ipaddr;
++
++				ipaddr.a4 = decap_data->saddr.a4;
++				km_new_mapping(x, &ipaddr, decap_data->sport);
++					
++				/* XXX: perhaps add an extra
++				 * policy check here, to see
++				 * if we should allow or
++				 * reject a packet from a
++				 * different source
++				 * address/port.
++				 */
++			}
++		
++			/*
++			 * 2) ignore UDP/TCP checksums in case
++			 *    of NAT-T in Transport Mode, or
++			 *    perform other post-processing fixes
++			 *    as per * draft-ietf-ipsec-udp-encaps-06,
++			 *    section 3.1.2
++			 */
++			if (!x->props.mode)
++				skb->ip_summed = CHECKSUM_UNNECESSARY;
++
++			break;
++		}
++	}
++	return 0;
++}
++
++static u32 esp4_get_max_size(struct xfrm_state *x, int mtu)
++{
++	struct esp_data *esp = x->data;
++	u32 blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
++
++	if (x->props.mode) {
++		mtu = ALIGN(mtu + 2, blksize);
++	} else {
++		/* The worst case. */
++		mtu = ALIGN(mtu + 2, 4) + blksize - 4;
++	}
++	if (esp->conf.padlen)
++		mtu = ALIGN(mtu, esp->conf.padlen);
++
++	return mtu + x->props.header_len + esp->auth.icv_trunc_len;
++}
++
++static void esp4_err(struct sk_buff *skb, u32 info)
++{
++	struct iphdr *iph = (struct iphdr*)skb->data;
++	struct ip_esp_hdr *esph = (struct ip_esp_hdr*)(skb->data+(iph->ihl<<2));
++	struct xfrm_state *x;
++
++	if (skb->h.icmph->type != ICMP_DEST_UNREACH ||
++	    skb->h.icmph->code != ICMP_FRAG_NEEDED)
++		return;
++
++	x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, esph->spi, IPPROTO_ESP, AF_INET);
++	if (!x)
++		return;
++	NETDEBUG(KERN_DEBUG "pmtu discovery on SA ESP/%08x/%08x\n",
++		 ntohl(esph->spi), ntohl(iph->daddr));
++	xfrm_state_put(x);
++}
++
++static void esp_destroy(struct xfrm_state *x)
++{
++	struct esp_data *esp = x->data;
++
++	if (!esp)
++		return;
++
++	crypto_free_tfm(esp->conf.tfm);
++	esp->conf.tfm = NULL;
++	kfree(esp->conf.ivec);
++	esp->conf.ivec = NULL;
++	crypto_free_tfm(esp->auth.tfm);
++	esp->auth.tfm = NULL;
++	kfree(esp->auth.work_icv);
++	esp->auth.work_icv = NULL;
++	kfree(esp);
++}
++
++static int esp_init_state(struct xfrm_state *x)
++{
++	struct esp_data *esp = NULL;
++
++	/* null auth and encryption can have zero length keys */
++	if (x->aalg) {
++		if (x->aalg->alg_key_len > 512)
++			goto error;
++	}
++	if (x->ealg == NULL)
++		goto error;
++
++	esp = kmalloc(sizeof(*esp), GFP_KERNEL);
++	if (esp == NULL)
++		return -ENOMEM;
++
++	memset(esp, 0, sizeof(*esp));
++
++	if (x->aalg) {
++		struct xfrm_algo_desc *aalg_desc;
++
++		esp->auth.key = x->aalg->alg_key;
++		esp->auth.key_len = (x->aalg->alg_key_len+7)/8;
++		esp->auth.tfm = crypto_alloc_tfm(x->aalg->alg_name, 0);
++		if (esp->auth.tfm == NULL)
++			goto error;
++		esp->auth.icv = esp_hmac_digest;
++
++		aalg_desc = xfrm_aalg_get_byname(x->aalg->alg_name, 0);
++		BUG_ON(!aalg_desc);
++
++		if (aalg_desc->uinfo.auth.icv_fullbits/8 !=
++		    crypto_tfm_alg_digestsize(esp->auth.tfm)) {
++			NETDEBUG(KERN_INFO "ESP: %s digestsize %u != %hu\n",
++				 x->aalg->alg_name,
++				 crypto_tfm_alg_digestsize(esp->auth.tfm),
++				 aalg_desc->uinfo.auth.icv_fullbits/8);
++			goto error;
++		}
++
++		esp->auth.icv_full_len = aalg_desc->uinfo.auth.icv_fullbits/8;
++		esp->auth.icv_trunc_len = aalg_desc->uinfo.auth.icv_truncbits/8;
++
++		esp->auth.work_icv = kmalloc(esp->auth.icv_full_len, GFP_KERNEL);
++		if (!esp->auth.work_icv)
++			goto error;
++	}
++	esp->conf.key = x->ealg->alg_key;
++	esp->conf.key_len = (x->ealg->alg_key_len+7)/8;
++	if (x->props.ealgo == SADB_EALG_NULL)
++		esp->conf.tfm = crypto_alloc_tfm(x->ealg->alg_name, CRYPTO_TFM_MODE_ECB);
++	else
++		esp->conf.tfm = crypto_alloc_tfm(x->ealg->alg_name, CRYPTO_TFM_MODE_CBC);
++	if (esp->conf.tfm == NULL)
++		goto error;
++	esp->conf.ivlen = crypto_tfm_alg_ivsize(esp->conf.tfm);
++	esp->conf.padlen = 0;
++	if (esp->conf.ivlen) {
++		esp->conf.ivec = kmalloc(esp->conf.ivlen, GFP_KERNEL);
++		if (unlikely(esp->conf.ivec == NULL))
++			goto error;
++		get_random_bytes(esp->conf.ivec, esp->conf.ivlen);
++	}
++	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
++		goto error;
++	x->props.header_len = sizeof(struct ip_esp_hdr) + esp->conf.ivlen;
++	if (x->props.mode == XFRM_MODE_TUNNEL)
++		x->props.header_len += sizeof(struct iphdr);
++	if (x->encap) {
++		struct xfrm_encap_tmpl *encap = x->encap;
++
++		switch (encap->encap_type) {
++		default:
++			goto error;
++		case UDP_ENCAP_ESPINUDP:
++			x->props.header_len += sizeof(struct udphdr);
++			break;
++		case UDP_ENCAP_ESPINUDP_NON_IKE:
++			x->props.header_len += sizeof(struct udphdr) + 2 * sizeof(u32);
++			break;
++		}
++	}
++	x->data = esp;
++	x->props.trailer_len = esp4_get_max_size(x, 0) - x->props.header_len;
++	return 0;
++
++error:
++	x->data = esp;
++	esp_destroy(x);
++	x->data = NULL;
++	return -EINVAL;
++}
++
++static struct xfrm_type esp_type =
++{
++	.description	= "ESP4",
++	.owner		= THIS_MODULE,
++	.proto	     	= IPPROTO_ESP,
++	.init_state	= esp_init_state,
++	.destructor	= esp_destroy,
++	.get_max_size	= esp4_get_max_size,
++	.input		= esp_input,
++	.post_input	= esp_post_input,
++	.output		= esp_output
++};
++
++static struct net_protocol esp4_protocol = {
++	.handler	=	xfrm4_rcv,
++	.err_handler	=	esp4_err,
++	.no_policy	=	1,
++};
++
++static int __init esp4_init(void)
++{
++	struct xfrm_decap_state decap;
++
++	if (sizeof(struct esp_decap_data)  >
++	    sizeof(decap.decap_data)) {
++		extern void decap_data_too_small(void);
++
++		decap_data_too_small();
++	}
++
++	if (xfrm_register_type(&esp_type, AF_INET) < 0) {
++		printk(KERN_INFO "ip esp init: can't add xfrm type\n");
++		return -EAGAIN;
++	}
++	if (inet_add_protocol(&esp4_protocol, IPPROTO_ESP) < 0) {
++		printk(KERN_INFO "ip esp init: can't add protocol\n");
++		xfrm_unregister_type(&esp_type, AF_INET);
++		return -EAGAIN;
++	}
++	return 0;
++}
++
++static void __exit esp4_fini(void)
++{
++	if (inet_del_protocol(&esp4_protocol, IPPROTO_ESP) < 0)
++		printk(KERN_INFO "ip esp close: can't remove protocol\n");
++	if (xfrm_unregister_type(&esp_type, AF_INET) < 0)
++		printk(KERN_INFO "ip esp close: can't remove xfrm type\n");
++}
++
++module_init(esp4_init);
++module_exit(esp4_fini);
++MODULE_LICENSE("GPL");
+diff -urN linux-2.6.14.2/net/ipv4/esp4.c.orig linux-2.6.14.2-beet/net/ipv4/esp4.c.orig
+--- linux-2.6.14.2/net/ipv4/esp4.c.orig	1970-01-01 02:00:00.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/esp4.c.orig	2005-11-11 07:33:12.000000000 +0200
+@@ -0,0 +1,503 @@
++#include <linux/config.h>
++#include <linux/module.h>
++#include <net/ip.h>
++#include <net/xfrm.h>
++#include <net/esp.h>
++#include <asm/scatterlist.h>
++#include <linux/crypto.h>
++#include <linux/kernel.h>
++#include <linux/pfkeyv2.h>
++#include <linux/random.h>
++#include <net/icmp.h>
++#include <net/udp.h>
++
++/* decapsulation data for use when post-processing */
++struct esp_decap_data {
++	xfrm_address_t	saddr;
++	__u16		sport;
++	__u8		proto;
++};
++
++static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
++{
++	int err;
++	struct iphdr *top_iph;
++	struct ip_esp_hdr *esph;
++	struct crypto_tfm *tfm;
++	struct esp_data *esp;
++	struct sk_buff *trailer;
++	int blksize;
++	int clen;
++	int alen;
++	int nfrags;
++
++	/* Strip IP+ESP header. */
++	__skb_pull(skb, skb->h.raw - skb->data);
++	/* Now skb is pure payload to encrypt */
++
++	err = -ENOMEM;
++
++	/* Round to block size */
++	clen = skb->len;
++
++	esp = x->data;
++	alen = esp->auth.icv_trunc_len;
++	tfm = esp->conf.tfm;
++	blksize = ALIGN(crypto_tfm_alg_blocksize(tfm), 4);
++	clen = ALIGN(clen + 2, blksize);
++	if (esp->conf.padlen)
++		clen = ALIGN(clen, esp->conf.padlen);
++
++	if ((nfrags = skb_cow_data(skb, clen-skb->len+alen, &trailer)) < 0)
++		goto error;
++
++	/* Fill padding... */
++	do {
++		int i;
++		for (i=0; i<clen-skb->len - 2; i++)
++			*(u8*)(trailer->tail + i) = i+1;
++	} while (0);
++	*(u8*)(trailer->tail + clen-skb->len - 2) = (clen - skb->len)-2;
++	pskb_put(skb, trailer, clen - skb->len);
++
++	__skb_push(skb, skb->data - skb->nh.raw);
++	top_iph = skb->nh.iph;
++	esph = (struct ip_esp_hdr *)(skb->nh.raw + top_iph->ihl*4);
++	top_iph->tot_len = htons(skb->len + alen);
++	*(u8*)(trailer->tail - 1) = top_iph->protocol;
++
++	/* this is non-NULL only with UDP Encapsulation */
++	if (x->encap) {
++		struct xfrm_encap_tmpl *encap = x->encap;
++		struct udphdr *uh;
++		u32 *udpdata32;
++
++		uh = (struct udphdr *)esph;
++		uh->source = encap->encap_sport;
++		uh->dest = encap->encap_dport;
++		uh->len = htons(skb->len + alen - top_iph->ihl*4);
++		uh->check = 0;
++
++		switch (encap->encap_type) {
++		default:
++		case UDP_ENCAP_ESPINUDP:
++			esph = (struct ip_esp_hdr *)(uh + 1);
++			break;
++		case UDP_ENCAP_ESPINUDP_NON_IKE:
++			udpdata32 = (u32 *)(uh + 1);
++			udpdata32[0] = udpdata32[1] = 0;
++			esph = (struct ip_esp_hdr *)(udpdata32 + 2);
++			break;
++		}
++
++		top_iph->protocol = IPPROTO_UDP;
++	} else
++		top_iph->protocol = IPPROTO_ESP;
++
++	esph->spi = x->id.spi;
++	esph->seq_no = htonl(++x->replay.oseq);
++
++	if (esp->conf.ivlen)
++		crypto_cipher_set_iv(tfm, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++
++	do {
++		struct scatterlist *sg = &esp->sgbuf[0];
++
++		if (unlikely(nfrags > ESP_NUM_FAST_SG)) {
++			sg = kmalloc(sizeof(struct scatterlist)*nfrags, GFP_ATOMIC);
++			if (!sg)
++				goto error;
++		}
++		skb_to_sgvec(skb, sg, esph->enc_data+esp->conf.ivlen-skb->data, clen);
++		crypto_cipher_encrypt(tfm, sg, sg, clen);
++		if (unlikely(sg != &esp->sgbuf[0]))
++			kfree(sg);
++	} while (0);
++
++	if (esp->conf.ivlen) {
++		memcpy(esph->enc_data, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++		crypto_cipher_get_iv(tfm, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++	}
++
++	if (esp->auth.icv_full_len) {
++		esp->auth.icv(esp, skb, (u8*)esph-skb->data,
++		              sizeof(struct ip_esp_hdr) + esp->conf.ivlen+clen, trailer->tail);
++		pskb_put(skb, trailer, alen);
++	}
++
++	ip_send_check(top_iph);
++
++	err = 0;
++
++error:
++	return err;
++}
++
++/*
++ * Note: detecting truncated vs. non-truncated authentication data is very
++ * expensive, so we only support truncated data, which is the recommended
++ * and common case.
++ */
++static int esp_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_buff *skb)
++{
++	struct iphdr *iph;
++	struct ip_esp_hdr *esph;
++	struct esp_data *esp = x->data;
++	struct sk_buff *trailer;
++	int blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
++	int alen = esp->auth.icv_trunc_len;
++	int elen = skb->len - sizeof(struct ip_esp_hdr) - esp->conf.ivlen - alen;
++	int nfrags;
++	int encap_len = 0;
++
++	if (!pskb_may_pull(skb, sizeof(struct ip_esp_hdr)))
++		goto out;
++
++	if (elen <= 0 || (elen & (blksize-1)))
++		goto out;
++
++	/* If integrity check is required, do this. */
++	if (esp->auth.icv_full_len) {
++		u8 sum[esp->auth.icv_full_len];
++		u8 sum1[alen];
++		
++		esp->auth.icv(esp, skb, 0, skb->len-alen, sum);
++
++		if (skb_copy_bits(skb, skb->len-alen, sum1, alen))
++			BUG();
++
++		if (unlikely(memcmp(sum, sum1, alen))) {
++			x->stats.integrity_failed++;
++			goto out;
++		}
++	}
++
++	if ((nfrags = skb_cow_data(skb, 0, &trailer)) < 0)
++		goto out;
++
++	skb->ip_summed = CHECKSUM_NONE;
++
++	esph = (struct ip_esp_hdr*)skb->data;
++	iph = skb->nh.iph;
++
++	/* Get ivec. This can be wrong, check against another impls. */
++	if (esp->conf.ivlen)
++		crypto_cipher_set_iv(esp->conf.tfm, esph->enc_data, crypto_tfm_alg_ivsize(esp->conf.tfm));
++
++        {
++		u8 nexthdr[2];
++		struct scatterlist *sg = &esp->sgbuf[0];
++		u8 workbuf[60];
++		int padlen;
++
++		if (unlikely(nfrags > ESP_NUM_FAST_SG)) {
++			sg = kmalloc(sizeof(struct scatterlist)*nfrags, GFP_ATOMIC);
++			if (!sg)
++				goto out;
++		}
++		skb_to_sgvec(skb, sg, sizeof(struct ip_esp_hdr) + esp->conf.ivlen, elen);
++		crypto_cipher_decrypt(esp->conf.tfm, sg, sg, elen);
++		if (unlikely(sg != &esp->sgbuf[0]))
++			kfree(sg);
++
++		if (skb_copy_bits(skb, skb->len-alen-2, nexthdr, 2))
++			BUG();
++
++		padlen = nexthdr[0];
++		if (padlen+2 >= elen)
++			goto out;
++
++		/* ... check padding bits here. Silly. :-) */ 
++
++		if (x->encap && decap && decap->decap_type) {
++			struct esp_decap_data *encap_data;
++			struct udphdr *uh = (struct udphdr *) (iph+1);
++
++			encap_data = (struct esp_decap_data *) (decap->decap_data);
++			encap_data->proto = 0;
++
++			switch (decap->decap_type) {
++			case UDP_ENCAP_ESPINUDP:
++			case UDP_ENCAP_ESPINUDP_NON_IKE:
++				encap_data->proto = AF_INET;
++				encap_data->saddr.a4 = iph->saddr;
++				encap_data->sport = uh->source;
++				encap_len = (void*)esph - (void*)uh;
++				break;
++
++			default:
++				goto out;
++			}
++		}
++
++		iph->protocol = nexthdr[1];
++		pskb_trim(skb, skb->len - alen - padlen - 2);
++		memcpy(workbuf, skb->nh.raw, iph->ihl*4);
++		skb->h.raw = skb_pull(skb, sizeof(struct ip_esp_hdr) + esp->conf.ivlen);
++		skb->nh.raw += encap_len + sizeof(struct ip_esp_hdr) + esp->conf.ivlen;
++		memcpy(skb->nh.raw, workbuf, iph->ihl*4);
++		skb->nh.iph->tot_len = htons(skb->len);
++	}
++
++	return 0;
++
++out:
++	return -EINVAL;
++}
++
++static int esp_post_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_buff *skb)
++{
++  
++	if (x->encap) {
++		struct xfrm_encap_tmpl *encap;
++		struct esp_decap_data *decap_data;
++
++		encap = x->encap;
++		decap_data = (struct esp_decap_data *)(decap->decap_data);
++
++		/* first, make sure that the decap type == the encap type */
++		if (encap->encap_type != decap->decap_type)
++			return -EINVAL;
++
++		switch (encap->encap_type) {
++		default:
++		case UDP_ENCAP_ESPINUDP:
++		case UDP_ENCAP_ESPINUDP_NON_IKE:
++			/*
++			 * 1) if the NAT-T peer's IP or port changed then
++			 *    advertize the change to the keying daemon.
++			 *    This is an inbound SA, so just compare
++			 *    SRC ports.
++			 */
++			if (decap_data->proto == AF_INET &&
++			    (decap_data->saddr.a4 != x->props.saddr.a4 ||
++			     decap_data->sport != encap->encap_sport)) {
++				xfrm_address_t ipaddr;
++
++				ipaddr.a4 = decap_data->saddr.a4;
++				km_new_mapping(x, &ipaddr, decap_data->sport);
++					
++				/* XXX: perhaps add an extra
++				 * policy check here, to see
++				 * if we should allow or
++				 * reject a packet from a
++				 * different source
++				 * address/port.
++				 */
++			}
++		
++			/*
++			 * 2) ignore UDP/TCP checksums in case
++			 *    of NAT-T in Transport Mode, or
++			 *    perform other post-processing fixes
++			 *    as per * draft-ietf-ipsec-udp-encaps-06,
++			 *    section 3.1.2
++			 */
++			if (!x->props.mode)
++				skb->ip_summed = CHECKSUM_UNNECESSARY;
++
++			break;
++		}
++	}
++	return 0;
++}
++
++static u32 esp4_get_max_size(struct xfrm_state *x, int mtu)
++{
++	struct esp_data *esp = x->data;
++	u32 blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
++
++	if (x->props.mode) {
++		mtu = ALIGN(mtu + 2, blksize);
++	} else {
++		/* The worst case. */
++		mtu = ALIGN(mtu + 2, 4) + blksize - 4;
++	}
++	if (esp->conf.padlen)
++		mtu = ALIGN(mtu, esp->conf.padlen);
++
++	return mtu + x->props.header_len + esp->auth.icv_trunc_len;
++}
++
++static void esp4_err(struct sk_buff *skb, u32 info)
++{
++	struct iphdr *iph = (struct iphdr*)skb->data;
++	struct ip_esp_hdr *esph = (struct ip_esp_hdr*)(skb->data+(iph->ihl<<2));
++	struct xfrm_state *x;
++
++	if (skb->h.icmph->type != ICMP_DEST_UNREACH ||
++	    skb->h.icmph->code != ICMP_FRAG_NEEDED)
++		return;
++
++	x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, esph->spi, IPPROTO_ESP, AF_INET);
++	if (!x)
++		return;
++	NETDEBUG(KERN_DEBUG "pmtu discovery on SA ESP/%08x/%08x\n",
++		 ntohl(esph->spi), ntohl(iph->daddr));
++	xfrm_state_put(x);
++}
++
++static void esp_destroy(struct xfrm_state *x)
++{
++	struct esp_data *esp = x->data;
++
++	if (!esp)
++		return;
++
++	crypto_free_tfm(esp->conf.tfm);
++	esp->conf.tfm = NULL;
++	kfree(esp->conf.ivec);
++	esp->conf.ivec = NULL;
++	crypto_free_tfm(esp->auth.tfm);
++	esp->auth.tfm = NULL;
++	kfree(esp->auth.work_icv);
++	esp->auth.work_icv = NULL;
++	kfree(esp);
++}
++
++static int esp_init_state(struct xfrm_state *x)
++{
++	struct esp_data *esp = NULL;
++
++	/* null auth and encryption can have zero length keys */
++	if (x->aalg) {
++		if (x->aalg->alg_key_len > 512)
++			goto error;
++	}
++	if (x->ealg == NULL)
++		goto error;
++
++	esp = kmalloc(sizeof(*esp), GFP_KERNEL);
++	if (esp == NULL)
++		return -ENOMEM;
++
++	memset(esp, 0, sizeof(*esp));
++
++	if (x->aalg) {
++		struct xfrm_algo_desc *aalg_desc;
++
++		esp->auth.key = x->aalg->alg_key;
++		esp->auth.key_len = (x->aalg->alg_key_len+7)/8;
++		esp->auth.tfm = crypto_alloc_tfm(x->aalg->alg_name, 0);
++		if (esp->auth.tfm == NULL)
++			goto error;
++		esp->auth.icv = esp_hmac_digest;
++
++		aalg_desc = xfrm_aalg_get_byname(x->aalg->alg_name, 0);
++		BUG_ON(!aalg_desc);
++
++		if (aalg_desc->uinfo.auth.icv_fullbits/8 !=
++		    crypto_tfm_alg_digestsize(esp->auth.tfm)) {
++			NETDEBUG(KERN_INFO "ESP: %s digestsize %u != %hu\n",
++				 x->aalg->alg_name,
++				 crypto_tfm_alg_digestsize(esp->auth.tfm),
++				 aalg_desc->uinfo.auth.icv_fullbits/8);
++			goto error;
++		}
++
++		esp->auth.icv_full_len = aalg_desc->uinfo.auth.icv_fullbits/8;
++		esp->auth.icv_trunc_len = aalg_desc->uinfo.auth.icv_truncbits/8;
++
++		esp->auth.work_icv = kmalloc(esp->auth.icv_full_len, GFP_KERNEL);
++		if (!esp->auth.work_icv)
++			goto error;
++	}
++	esp->conf.key = x->ealg->alg_key;
++	esp->conf.key_len = (x->ealg->alg_key_len+7)/8;
++	if (x->props.ealgo == SADB_EALG_NULL)
++		esp->conf.tfm = crypto_alloc_tfm(x->ealg->alg_name, CRYPTO_TFM_MODE_ECB);
++	else
++		esp->conf.tfm = crypto_alloc_tfm(x->ealg->alg_name, CRYPTO_TFM_MODE_CBC);
++	if (esp->conf.tfm == NULL)
++		goto error;
++	esp->conf.ivlen = crypto_tfm_alg_ivsize(esp->conf.tfm);
++	esp->conf.padlen = 0;
++	if (esp->conf.ivlen) {
++		esp->conf.ivec = kmalloc(esp->conf.ivlen, GFP_KERNEL);
++		if (unlikely(esp->conf.ivec == NULL))
++			goto error;
++		get_random_bytes(esp->conf.ivec, esp->conf.ivlen);
++	}
++	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
++		goto error;
++	x->props.header_len = sizeof(struct ip_esp_hdr) + esp->conf.ivlen;
++	if (x->props.mode)
++		x->props.header_len += sizeof(struct iphdr);
++	if (x->encap) {
++		struct xfrm_encap_tmpl *encap = x->encap;
++
++		switch (encap->encap_type) {
++		default:
++			goto error;
++		case UDP_ENCAP_ESPINUDP:
++			x->props.header_len += sizeof(struct udphdr);
++			break;
++		case UDP_ENCAP_ESPINUDP_NON_IKE:
++			x->props.header_len += sizeof(struct udphdr) + 2 * sizeof(u32);
++			break;
++		}
++	}
++	x->data = esp;
++	x->props.trailer_len = esp4_get_max_size(x, 0) - x->props.header_len;
++	return 0;
++
++error:
++	x->data = esp;
++	esp_destroy(x);
++	x->data = NULL;
++	return -EINVAL;
++}
++
++static struct xfrm_type esp_type =
++{
++	.description	= "ESP4",
++	.owner		= THIS_MODULE,
++	.proto	     	= IPPROTO_ESP,
++	.init_state	= esp_init_state,
++	.destructor	= esp_destroy,
++	.get_max_size	= esp4_get_max_size,
++	.input		= esp_input,
++	.post_input	= esp_post_input,
++	.output		= esp_output
++};
++
++static struct net_protocol esp4_protocol = {
++	.handler	=	xfrm4_rcv,
++	.err_handler	=	esp4_err,
++	.no_policy	=	1,
++};
++
++static int __init esp4_init(void)
++{
++	struct xfrm_decap_state decap;
++
++	if (sizeof(struct esp_decap_data)  >
++	    sizeof(decap.decap_data)) {
++		extern void decap_data_too_small(void);
++
++		decap_data_too_small();
++	}
++
++	if (xfrm_register_type(&esp_type, AF_INET) < 0) {
++		printk(KERN_INFO "ip esp init: can't add xfrm type\n");
++		return -EAGAIN;
++	}
++	if (inet_add_protocol(&esp4_protocol, IPPROTO_ESP) < 0) {
++		printk(KERN_INFO "ip esp init: can't add protocol\n");
++		xfrm_unregister_type(&esp_type, AF_INET);
++		return -EAGAIN;
++	}
++	return 0;
++}
++
++static void __exit esp4_fini(void)
++{
++	if (inet_del_protocol(&esp4_protocol, IPPROTO_ESP) < 0)
++		printk(KERN_INFO "ip esp close: can't remove protocol\n");
++	if (xfrm_unregister_type(&esp_type, AF_INET) < 0)
++		printk(KERN_INFO "ip esp close: can't remove xfrm type\n");
++}
++
++module_init(esp4_init);
++module_exit(esp4_fini);
++MODULE_LICENSE("GPL");
+diff -urN linux-2.6.14.2/net/ipv4/ipcomp.c linux-2.6.14.2-beet/net/ipv4/ipcomp.c
+--- linux-2.6.14.2/net/ipv4/ipcomp.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/ipcomp.c	2005-11-15 15:11:18.000000000 +0200
+@@ -436,7 +436,7 @@
+ 
+ 	memset(ipcd, 0, sizeof(*ipcd));
+ 	x->props.header_len = 0;
+-	if (x->props.mode)
++	if (x->props.mode == XFRM_MODE_TUNNEL)
+ 		x->props.header_len += sizeof(struct iphdr);
+ 
+ 	down(&ipcomp_resource_sem);
+@@ -448,7 +448,7 @@
+ 		goto error;
+ 	up(&ipcomp_resource_sem);
+ 
+-	if (x->props.mode) {
++	if (x->props.mode == XFRM_MODE_TUNNEL) {
+ 		err = ipcomp_tunnel_attach(x);
+ 		if (err)
+ 			goto error_tunnel;
+diff -urN linux-2.6.14.2/net/ipv4/ipcomp.c.orig linux-2.6.14.2-beet/net/ipv4/ipcomp.c.orig
+--- linux-2.6.14.2/net/ipv4/ipcomp.c.orig	1970-01-01 02:00:00.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/ipcomp.c.orig	2005-11-11 07:33:12.000000000 +0200
+@@ -0,0 +1,518 @@
++/*
++ * IP Payload Compression Protocol (IPComp) - RFC3173.
++ *
++ * Copyright (c) 2003 James Morris <jmorris@intercode.com.au>
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation; either version 2 of the License, or (at your option) 
++ * any later version.
++ *
++ * Todo:
++ *   - Tunable compression parameters.
++ *   - Compression stats.
++ *   - Adaptive compression.
++ */
++#include <linux/config.h>
++#include <linux/module.h>
++#include <asm/scatterlist.h>
++#include <asm/semaphore.h>
++#include <linux/crypto.h>
++#include <linux/pfkeyv2.h>
++#include <linux/percpu.h>
++#include <linux/smp.h>
++#include <linux/list.h>
++#include <linux/vmalloc.h>
++#include <linux/rtnetlink.h>
++#include <net/ip.h>
++#include <net/xfrm.h>
++#include <net/icmp.h>
++#include <net/ipcomp.h>
++
++struct ipcomp_tfms {
++	struct list_head list;
++	struct crypto_tfm **tfms;
++	int users;
++};
++
++static DECLARE_MUTEX(ipcomp_resource_sem);
++static void **ipcomp_scratches;
++static int ipcomp_scratch_users;
++static LIST_HEAD(ipcomp_tfms_list);
++
++static int ipcomp_decompress(struct xfrm_state *x, struct sk_buff *skb)
++{
++	int err, plen, dlen;
++	struct iphdr *iph;
++	struct ipcomp_data *ipcd = x->data;
++	u8 *start, *scratch;
++	struct crypto_tfm *tfm;
++	int cpu;
++	
++	plen = skb->len;
++	dlen = IPCOMP_SCRATCH_SIZE;
++	start = skb->data;
++
++	cpu = get_cpu();
++	scratch = *per_cpu_ptr(ipcomp_scratches, cpu);
++	tfm = *per_cpu_ptr(ipcd->tfms, cpu);
++
++	err = crypto_comp_decompress(tfm, start, plen, scratch, &dlen);
++	if (err)
++		goto out;
++
++	if (dlen < (plen + sizeof(struct ip_comp_hdr))) {
++		err = -EINVAL;
++		goto out;
++	}
++
++	err = pskb_expand_head(skb, 0, dlen - plen, GFP_ATOMIC);
++	if (err)
++		goto out;
++		
++	skb_put(skb, dlen - plen);
++	memcpy(skb->data, scratch, dlen);
++	iph = skb->nh.iph;
++	iph->tot_len = htons(dlen + iph->ihl * 4);
++out:	
++	put_cpu();
++	return err;
++}
++
++static int ipcomp_input(struct xfrm_state *x,
++                        struct xfrm_decap_state *decap, struct sk_buff *skb)
++{
++	u8 nexthdr;
++	int err = 0;
++	struct iphdr *iph;
++	union {
++		struct iphdr	iph;
++		char 		buf[60];
++	} tmp_iph;
++
++
++	if ((skb_is_nonlinear(skb) || skb_cloned(skb)) &&
++	    skb_linearize(skb, GFP_ATOMIC) != 0) {
++	    	err = -ENOMEM;
++	    	goto out;
++	}
++
++	skb->ip_summed = CHECKSUM_NONE;
++
++	/* Remove ipcomp header and decompress original payload */	
++	iph = skb->nh.iph;
++	memcpy(&tmp_iph, iph, iph->ihl * 4);
++	nexthdr = *(u8 *)skb->data;
++	skb_pull(skb, sizeof(struct ip_comp_hdr));
++	skb->nh.raw += sizeof(struct ip_comp_hdr);
++	memcpy(skb->nh.raw, &tmp_iph, tmp_iph.iph.ihl * 4);
++	iph = skb->nh.iph;
++	iph->tot_len = htons(ntohs(iph->tot_len) - sizeof(struct ip_comp_hdr));
++	iph->protocol = nexthdr;
++	skb->h.raw = skb->data;
++	err = ipcomp_decompress(x, skb);
++
++out:	
++	return err;
++}
++
++static int ipcomp_compress(struct xfrm_state *x, struct sk_buff *skb)
++{
++	int err, plen, dlen, ihlen;
++	struct iphdr *iph = skb->nh.iph;
++	struct ipcomp_data *ipcd = x->data;
++	u8 *start, *scratch;
++	struct crypto_tfm *tfm;
++	int cpu;
++	
++	ihlen = iph->ihl * 4;
++	plen = skb->len - ihlen;
++	dlen = IPCOMP_SCRATCH_SIZE;
++	start = skb->data + ihlen;
++
++	cpu = get_cpu();
++	scratch = *per_cpu_ptr(ipcomp_scratches, cpu);
++	tfm = *per_cpu_ptr(ipcd->tfms, cpu);
++
++	err = crypto_comp_compress(tfm, start, plen, scratch, &dlen);
++	if (err)
++		goto out;
++
++	if ((dlen + sizeof(struct ip_comp_hdr)) >= plen) {
++		err = -EMSGSIZE;
++		goto out;
++	}
++	
++	memcpy(start + sizeof(struct ip_comp_hdr), scratch, dlen);
++	put_cpu();
++
++	pskb_trim(skb, ihlen + dlen + sizeof(struct ip_comp_hdr));
++	return 0;
++	
++out:	
++	put_cpu();
++	return err;
++}
++
++static int ipcomp_output(struct xfrm_state *x, struct sk_buff *skb)
++{
++	int err;
++	struct iphdr *iph;
++	struct ip_comp_hdr *ipch;
++	struct ipcomp_data *ipcd = x->data;
++	int hdr_len = 0;
++
++	iph = skb->nh.iph;
++	iph->tot_len = htons(skb->len);
++	hdr_len = iph->ihl * 4;
++	if ((skb->len - hdr_len) < ipcd->threshold) {
++		/* Don't bother compressing */
++		goto out_ok;
++	}
++
++	if ((skb_is_nonlinear(skb) || skb_cloned(skb)) &&
++	    skb_linearize(skb, GFP_ATOMIC) != 0) {
++		goto out_ok;
++	}
++	
++	err = ipcomp_compress(x, skb);
++	iph = skb->nh.iph;
++
++	if (err) {
++		goto out_ok;
++	}
++
++	/* Install ipcomp header, convert into ipcomp datagram. */
++	iph->tot_len = htons(skb->len);
++	ipch = (struct ip_comp_hdr *)((char *)iph + iph->ihl * 4);
++	ipch->nexthdr = iph->protocol;
++	ipch->flags = 0;
++	ipch->cpi = htons((u16 )ntohl(x->id.spi));
++	iph->protocol = IPPROTO_COMP;
++	ip_send_check(iph);
++	return 0;
++
++out_ok:
++	if (x->props.mode)
++		ip_send_check(iph);
++	return 0;
++}
++
++static void ipcomp4_err(struct sk_buff *skb, u32 info)
++{
++	u32 spi;
++	struct iphdr *iph = (struct iphdr *)skb->data;
++	struct ip_comp_hdr *ipch = (struct ip_comp_hdr *)(skb->data+(iph->ihl<<2));
++	struct xfrm_state *x;
++
++	if (skb->h.icmph->type != ICMP_DEST_UNREACH ||
++	    skb->h.icmph->code != ICMP_FRAG_NEEDED)
++		return;
++
++	spi = ntohl(ntohs(ipch->cpi));
++	x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr,
++	                      spi, IPPROTO_COMP, AF_INET);
++	if (!x)
++		return;
++	NETDEBUG(KERN_DEBUG "pmtu discovery on SA IPCOMP/%08x/%u.%u.%u.%u\n",
++		 spi, NIPQUAD(iph->daddr));
++	xfrm_state_put(x);
++}
++
++/* We always hold one tunnel user reference to indicate a tunnel */ 
++static struct xfrm_state *ipcomp_tunnel_create(struct xfrm_state *x)
++{
++	struct xfrm_state *t;
++	
++	t = xfrm_state_alloc();
++	if (t == NULL)
++		goto out;
++
++	t->id.proto = IPPROTO_IPIP;
++	t->id.spi = x->props.saddr.a4;
++	t->id.daddr.a4 = x->id.daddr.a4;
++	memcpy(&t->sel, &x->sel, sizeof(t->sel));
++	t->props.family = AF_INET;
++	t->props.mode = 1;
++	t->props.saddr.a4 = x->props.saddr.a4;
++	t->props.flags = x->props.flags;
++
++	if (xfrm_init_state(t))
++		goto error;
++
++	atomic_set(&t->tunnel_users, 1);
++out:
++	return t;
++
++error:
++	t->km.state = XFRM_STATE_DEAD;
++	xfrm_state_put(t);
++	t = NULL;
++	goto out;
++}
++
++/*
++ * Must be protected by xfrm_cfg_sem.  State and tunnel user references are
++ * always incremented on success.
++ */
++static int ipcomp_tunnel_attach(struct xfrm_state *x)
++{
++	int err = 0;
++	struct xfrm_state *t;
++
++	t = xfrm_state_lookup((xfrm_address_t *)&x->id.daddr.a4,
++	                      x->props.saddr.a4, IPPROTO_IPIP, AF_INET);
++	if (!t) {
++		t = ipcomp_tunnel_create(x);
++		if (!t) {
++			err = -EINVAL;
++			goto out;
++		}
++		xfrm_state_insert(t);
++		xfrm_state_hold(t);
++	}
++	x->tunnel = t;
++	atomic_inc(&t->tunnel_users);
++out:
++	return err;
++}
++
++static void ipcomp_free_scratches(void)
++{
++	int i;
++	void **scratches;
++
++	if (--ipcomp_scratch_users)
++		return;
++
++	scratches = ipcomp_scratches;
++	if (!scratches)
++		return;
++
++	for_each_cpu(i) {
++		void *scratch = *per_cpu_ptr(scratches, i);
++		if (scratch)
++			vfree(scratch);
++	}
++
++	free_percpu(scratches);
++}
++
++static void **ipcomp_alloc_scratches(void)
++{
++	int i;
++	void **scratches;
++
++	if (ipcomp_scratch_users++)
++		return ipcomp_scratches;
++
++	scratches = alloc_percpu(void *);
++	if (!scratches)
++		return NULL;
++
++	ipcomp_scratches = scratches;
++
++	for_each_cpu(i) {
++		void *scratch = vmalloc(IPCOMP_SCRATCH_SIZE);
++		if (!scratch)
++			return NULL;
++		*per_cpu_ptr(scratches, i) = scratch;
++	}
++
++	return scratches;
++}
++
++static void ipcomp_free_tfms(struct crypto_tfm **tfms)
++{
++	struct ipcomp_tfms *pos;
++	int cpu;
++
++	list_for_each_entry(pos, &ipcomp_tfms_list, list) {
++		if (pos->tfms == tfms)
++			break;
++	}
++
++	BUG_TRAP(pos);
++
++	if (--pos->users)
++		return;
++
++	list_del(&pos->list);
++	kfree(pos);
++
++	if (!tfms)
++		return;
++
++	for_each_cpu(cpu) {
++		struct crypto_tfm *tfm = *per_cpu_ptr(tfms, cpu);
++		crypto_free_tfm(tfm);
++	}
++	free_percpu(tfms);
++}
++
++static struct crypto_tfm **ipcomp_alloc_tfms(const char *alg_name)
++{
++	struct ipcomp_tfms *pos;
++	struct crypto_tfm **tfms;
++	int cpu;
++
++	/* This can be any valid CPU ID so we don't need locking. */
++	cpu = raw_smp_processor_id();
++
++	list_for_each_entry(pos, &ipcomp_tfms_list, list) {
++		struct crypto_tfm *tfm;
++
++		tfms = pos->tfms;
++		tfm = *per_cpu_ptr(tfms, cpu);
++
++		if (!strcmp(crypto_tfm_alg_name(tfm), alg_name)) {
++			pos->users++;
++			return tfms;
++		}
++	}
++
++	pos = kmalloc(sizeof(*pos), GFP_KERNEL);
++	if (!pos)
++		return NULL;
++
++	pos->users = 1;
++	INIT_LIST_HEAD(&pos->list);
++	list_add(&pos->list, &ipcomp_tfms_list);
++
++	pos->tfms = tfms = alloc_percpu(struct crypto_tfm *);
++	if (!tfms)
++		goto error;
++
++	for_each_cpu(cpu) {
++		struct crypto_tfm *tfm = crypto_alloc_tfm(alg_name, 0);
++		if (!tfm)
++			goto error;
++		*per_cpu_ptr(tfms, cpu) = tfm;
++	}
++
++	return tfms;
++
++error:
++	ipcomp_free_tfms(tfms);
++	return NULL;
++}
++
++static void ipcomp_free_data(struct ipcomp_data *ipcd)
++{
++	if (ipcd->tfms)
++		ipcomp_free_tfms(ipcd->tfms);
++	ipcomp_free_scratches();
++}
++
++static void ipcomp_destroy(struct xfrm_state *x)
++{
++	struct ipcomp_data *ipcd = x->data;
++	if (!ipcd)
++		return;
++	xfrm_state_delete_tunnel(x);
++	down(&ipcomp_resource_sem);
++	ipcomp_free_data(ipcd);
++	up(&ipcomp_resource_sem);
++	kfree(ipcd);
++}
++
++static int ipcomp_init_state(struct xfrm_state *x)
++{
++	int err;
++	struct ipcomp_data *ipcd;
++	struct xfrm_algo_desc *calg_desc;
++
++	err = -EINVAL;
++	if (!x->calg)
++		goto out;
++
++	if (x->encap)
++		goto out;
++
++	err = -ENOMEM;
++	ipcd = kmalloc(sizeof(*ipcd), GFP_KERNEL);
++	if (!ipcd)
++		goto out;
++
++	memset(ipcd, 0, sizeof(*ipcd));
++	x->props.header_len = 0;
++	if (x->props.mode)
++		x->props.header_len += sizeof(struct iphdr);
++
++	down(&ipcomp_resource_sem);
++	if (!ipcomp_alloc_scratches())
++		goto error;
++
++	ipcd->tfms = ipcomp_alloc_tfms(x->calg->alg_name);
++	if (!ipcd->tfms)
++		goto error;
++	up(&ipcomp_resource_sem);
++
++	if (x->props.mode) {
++		err = ipcomp_tunnel_attach(x);
++		if (err)
++			goto error_tunnel;
++	}
++
++	calg_desc = xfrm_calg_get_byname(x->calg->alg_name, 0);
++	BUG_ON(!calg_desc);
++	ipcd->threshold = calg_desc->uinfo.comp.threshold;
++	x->data = ipcd;
++	err = 0;
++out:
++	return err;
++
++error_tunnel:
++	down(&ipcomp_resource_sem);
++error:
++	ipcomp_free_data(ipcd);
++	up(&ipcomp_resource_sem);
++	kfree(ipcd);
++	goto out;
++}
++
++static struct xfrm_type ipcomp_type = {
++	.description	= "IPCOMP4",
++	.owner		= THIS_MODULE,
++	.proto	     	= IPPROTO_COMP,
++	.init_state	= ipcomp_init_state,
++	.destructor	= ipcomp_destroy,
++	.input		= ipcomp_input,
++	.output		= ipcomp_output
++};
++
++static struct net_protocol ipcomp4_protocol = {
++	.handler	=	xfrm4_rcv,
++	.err_handler	=	ipcomp4_err,
++	.no_policy	=	1,
++};
++
++static int __init ipcomp4_init(void)
++{
++	if (xfrm_register_type(&ipcomp_type, AF_INET) < 0) {
++		printk(KERN_INFO "ipcomp init: can't add xfrm type\n");
++		return -EAGAIN;
++	}
++	if (inet_add_protocol(&ipcomp4_protocol, IPPROTO_COMP) < 0) {
++		printk(KERN_INFO "ipcomp init: can't add protocol\n");
++		xfrm_unregister_type(&ipcomp_type, AF_INET);
++		return -EAGAIN;
++	}
++	return 0;
++}
++
++static void __exit ipcomp4_fini(void)
++{
++	if (inet_del_protocol(&ipcomp4_protocol, IPPROTO_COMP) < 0)
++		printk(KERN_INFO "ip ipcomp close: can't remove protocol\n");
++	if (xfrm_unregister_type(&ipcomp_type, AF_INET) < 0)
++		printk(KERN_INFO "ip ipcomp close: can't remove xfrm type\n");
++}
++
++module_init(ipcomp4_init);
++module_exit(ipcomp4_fini);
++
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("IP Payload Compression Protocol (IPComp) - RFC3173");
++MODULE_AUTHOR("James Morris <jmorris@intercode.com.au>");
++
+diff -urN linux-2.6.14.2/net/ipv4/xfrm4_input.c linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c
+--- linux-2.6.14.2/net/ipv4/xfrm4_input.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c	2005-11-15 15:11:18.000000000 +0200
+@@ -96,7 +96,7 @@
+ 
+ 		iph = skb->nh.iph;
+ 
+-		if (x->props.mode) {
++		if (x->props.mode == XFRM_MODE_TUNNEL) {
+ 			if (iph->protocol != IPPROTO_IPIP)
+ 				goto drop;
+ 			if (!pskb_may_pull(skb, sizeof(struct iphdr)))
+@@ -114,6 +114,29 @@
+ 			memset(&(IPCB(skb)->opt), 0, sizeof(struct ip_options));
+ 			decaps = 1;
+ 			break;
++		} else if (x->props.mode == XFRM_MODE_BEET) {
++			int size = sizeof(struct iphdr);
++			if (skb_cloned(skb) &&
++			    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
++				goto drop;
++
++			skb_push(skb, size);
++			memmove(skb->data, skb->nh.raw, size);
++			skb->nh.raw = skb->data;
++
++			if (x->sel.family == AF_INET) {
++				struct iphdr *iph = skb->nh.iph;
++				iph = skb->nh.iph;
++				iph->tot_len = htons(skb->len);
++				iph->daddr = x->sel.daddr.a4;
++				iph->saddr = x->sel.saddr.a4;
++				iph->check = 0;
++				iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);
++				skb->protocol = htons(ETH_P_IP);
++			} else
++				BUG_ON(1);
++			decaps = 1;
++			break;
+ 		}
+ 
+ 		if ((err = xfrm_parse_spi(skb, skb->nh.iph->protocol, &spi, &seq)) < 0)
+diff -urN linux-2.6.14.2/net/ipv4/xfrm4_output.c linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c
+--- linux-2.6.14.2/net/ipv4/xfrm4_output.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c	2005-11-15 15:11:18.000000000 +0200
+@@ -41,34 +41,37 @@
+ 	skb->nh.raw = skb_push(skb, x->props.header_len);
+ 	top_iph = skb->nh.iph;
+ 
+-	if (!x->props.mode) {
++	if (x->props.mode == XFRM_MODE_TRANSPORT ||
++	    x->props.mode == XFRM_MODE_BEET) {
+ 		skb->h.raw += iph->ihl*4;
+ 		memmove(top_iph, iph, iph->ihl*4);
+-		return;
++		if (!x->props.mode)
++			return;
+ 	}
+ 
+-	top_iph->ihl = 5;
+-	top_iph->version = 4;
++	if (x->props.mode == XFRM_MODE_TUNNEL) {
++		top_iph->ihl = 5;
++		top_iph->version = 4;
++
++		/* DS disclosed */
++		top_iph->tos = INET_ECN_encapsulate(iph->tos, iph->tos);
++
++		flags = x->props.flags;
++		if (flags & XFRM_STATE_NOECN)
++			IP_ECN_clear(top_iph);
++
++		top_iph->frag_off = (flags & XFRM_STATE_NOPMTUDISC) ?
++			0 : (iph->frag_off & htons(IP_DF));
++		if (!top_iph->frag_off)
++			__ip_select_ident(top_iph, dst, 0);
+ 
+-	/* DS disclosed */
+-	top_iph->tos = INET_ECN_encapsulate(iph->tos, iph->tos);
+-
+-	flags = x->props.flags;
+-	if (flags & XFRM_STATE_NOECN)
+-		IP_ECN_clear(top_iph);
+-
+-	top_iph->frag_off = (flags & XFRM_STATE_NOPMTUDISC) ?
+-		0 : (iph->frag_off & htons(IP_DF));
+-	if (!top_iph->frag_off)
+-		__ip_select_ident(top_iph, dst, 0);
+-
+-	top_iph->ttl = dst_metric(dst->child, RTAX_HOPLIMIT);
++		top_iph->ttl = dst_metric(dst->child, RTAX_HOPLIMIT);
+ 
++		top_iph->protocol = IPPROTO_IPIP;
++		memset(&(IPCB(skb)->opt), 0, sizeof(struct ip_options));
++	}
+ 	top_iph->saddr = x->props.saddr.a4;
+ 	top_iph->daddr = x->id.daddr.a4;
+-	top_iph->protocol = IPPROTO_IPIP;
+-
+-	memset(&(IPCB(skb)->opt), 0, sizeof(struct ip_options));
+ }
+ 
+ static int xfrm4_tunnel_check_size(struct sk_buff *skb)
+@@ -107,7 +110,7 @@
+ 			goto error_nolock;
+ 	}
+ 
+-	if (x->props.mode) {
++	if (x->props.mode == XFRM_MODE_TUNNEL) {
+ 		err = xfrm4_tunnel_check_size(skb);
+ 		if (err)
+ 			goto error_nolock;
+diff -urN linux-2.6.14.2/net/ipv6/ah6.c linux-2.6.14.2-beet/net/ipv6/ah6.c
+--- linux-2.6.14.2/net/ipv6/ah6.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/ah6.c	2005-11-15 15:11:18.000000000 +0200
+@@ -393,7 +393,7 @@
+ 		goto error;
+ 	
+ 	x->props.header_len = XFRM_ALIGN8(sizeof(struct ipv6_auth_hdr) + ahp->icv_trunc_len);
+-	if (x->props.mode)
++	if (x->props.mode == XFRM_MODE_TUNNEL)
+ 		x->props.header_len += sizeof(struct ipv6hdr);
+ 	x->data = ahp;
+ 
+diff -urN linux-2.6.14.2/net/ipv6/ah6.c.orig linux-2.6.14.2-beet/net/ipv6/ah6.c.orig
+--- linux-2.6.14.2/net/ipv6/ah6.c.orig	1970-01-01 02:00:00.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/ah6.c.orig	2005-11-11 07:33:12.000000000 +0200
+@@ -0,0 +1,471 @@
++/*
++ * Copyright (C)2002 USAGI/WIDE Project
++ * 
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ * 
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ * 
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ * Authors
++ *
++ *	Mitsuru KANDA @USAGI       : IPv6 Support 
++ * 	Kazunori MIYAZAWA @USAGI   :
++ * 	Kunihiro Ishiguro <kunihiro@ipinfusion.com>
++ * 	
++ * 	This file is derived from net/ipv4/ah.c.
++ */
++
++#include <linux/config.h>
++#include <linux/module.h>
++#include <net/ip.h>
++#include <net/ah.h>
++#include <linux/crypto.h>
++#include <linux/pfkeyv2.h>
++#include <linux/string.h>
++#include <net/icmp.h>
++#include <net/ipv6.h>
++#include <net/xfrm.h>
++#include <asm/scatterlist.h>
++
++static int zero_out_mutable_opts(struct ipv6_opt_hdr *opthdr)
++{
++	u8 *opt = (u8 *)opthdr;
++	int len = ipv6_optlen(opthdr);
++	int off = 0;
++	int optlen = 0;
++
++	off += 2;
++	len -= 2;
++
++	while (len > 0) {
++
++		switch (opt[off]) {
++
++		case IPV6_TLV_PAD0:
++			optlen = 1;
++			break;
++		default:
++			if (len < 2) 
++				goto bad;
++			optlen = opt[off+1]+2;
++			if (len < optlen)
++				goto bad;
++			if (opt[off] & 0x20)
++				memset(&opt[off+2], 0, opt[off+1]);
++			break;
++		}
++
++		off += optlen;
++		len -= optlen;
++	}
++	if (len == 0)
++		return 1;
++
++bad:
++	return 0;
++}
++
++/**
++ *	ipv6_rearrange_rthdr - rearrange IPv6 routing header
++ *	@iph: IPv6 header
++ *	@rthdr: routing header
++ *
++ *	Rearrange the destination address in @iph and the addresses in @rthdr
++ *	so that they appear in the order they will at the final destination.
++ *	See Appendix A2 of RFC 2402 for details.
++ */
++static void ipv6_rearrange_rthdr(struct ipv6hdr *iph, struct ipv6_rt_hdr *rthdr)
++{
++	int segments, segments_left;
++	struct in6_addr *addrs;
++	struct in6_addr final_addr;
++
++	segments_left = rthdr->segments_left;
++	if (segments_left == 0)
++		return;
++	rthdr->segments_left = 0; 
++
++	/* The value of rthdr->hdrlen has been verified either by the system
++	 * call if it is locally generated, or by ipv6_rthdr_rcv() for incoming
++	 * packets.  So we can assume that it is even and that segments is
++	 * greater than or equal to segments_left.
++	 *
++	 * For the same reason we can assume that this option is of type 0.
++	 */
++	segments = rthdr->hdrlen >> 1;
++
++	addrs = ((struct rt0_hdr *)rthdr)->addr;
++	ipv6_addr_copy(&final_addr, addrs + segments - 1);
++
++	addrs += segments - segments_left;
++	memmove(addrs + 1, addrs, (segments_left - 1) * sizeof(*addrs));
++
++	ipv6_addr_copy(addrs, &iph->daddr);
++	ipv6_addr_copy(&iph->daddr, &final_addr);
++}
++
++static int ipv6_clear_mutable_options(struct ipv6hdr *iph, int len)
++{
++	union {
++		struct ipv6hdr *iph;
++		struct ipv6_opt_hdr *opth;
++		struct ipv6_rt_hdr *rth;
++		char *raw;
++	} exthdr = { .iph = iph };
++	char *end = exthdr.raw + len;
++	int nexthdr = iph->nexthdr;
++
++	exthdr.iph++;
++
++	while (exthdr.raw < end) {
++		switch (nexthdr) {
++		case NEXTHDR_HOP:
++		case NEXTHDR_DEST:
++			if (!zero_out_mutable_opts(exthdr.opth)) {
++				LIMIT_NETDEBUG(
++					KERN_WARNING "overrun %sopts\n",
++					nexthdr == NEXTHDR_HOP ?
++						"hop" : "dest");
++				return -EINVAL;
++			}
++			break;
++
++		case NEXTHDR_ROUTING:
++			ipv6_rearrange_rthdr(iph, exthdr.rth);
++			break;
++
++		default :
++			return 0;
++		}
++
++		nexthdr = exthdr.opth->nexthdr;
++		exthdr.raw += ipv6_optlen(exthdr.opth);
++	}
++
++	return 0;
++}
++
++static int ah6_output(struct xfrm_state *x, struct sk_buff *skb)
++{
++	int err;
++	int extlen;
++	struct ipv6hdr *top_iph;
++	struct ip_auth_hdr *ah;
++	struct ah_data *ahp;
++	u8 nexthdr;
++	char tmp_base[8];
++	struct {
++		struct in6_addr daddr;
++		char hdrs[0];
++	} *tmp_ext;
++
++	top_iph = (struct ipv6hdr *)skb->data;
++	top_iph->payload_len = htons(skb->len - sizeof(*top_iph));
++
++	nexthdr = *skb->nh.raw;
++	*skb->nh.raw = IPPROTO_AH;
++
++	/* When there are no extension headers, we only need to save the first
++	 * 8 bytes of the base IP header.
++	 */
++	memcpy(tmp_base, top_iph, sizeof(tmp_base));
++
++	tmp_ext = NULL;
++	extlen = skb->h.raw - (unsigned char *)(top_iph + 1);
++	if (extlen) {
++		extlen += sizeof(*tmp_ext);
++		tmp_ext = kmalloc(extlen, GFP_ATOMIC);
++		if (!tmp_ext) {
++			err = -ENOMEM;
++			goto error;
++		}
++		memcpy(tmp_ext, &top_iph->daddr, extlen);
++		err = ipv6_clear_mutable_options(top_iph,
++						 extlen - sizeof(*tmp_ext) +
++						 sizeof(*top_iph));
++		if (err)
++			goto error_free_iph;
++	}
++
++	ah = (struct ip_auth_hdr *)skb->h.raw;
++	ah->nexthdr = nexthdr;
++
++	top_iph->priority    = 0;
++	top_iph->flow_lbl[0] = 0;
++	top_iph->flow_lbl[1] = 0;
++	top_iph->flow_lbl[2] = 0;
++	top_iph->hop_limit   = 0;
++
++	ahp = x->data;
++	ah->hdrlen  = (XFRM_ALIGN8(sizeof(struct ipv6_auth_hdr) + 
++				   ahp->icv_trunc_len) >> 2) - 2;
++
++	ah->reserved = 0;
++	ah->spi = x->id.spi;
++	ah->seq_no = htonl(++x->replay.oseq);
++	ahp->icv(ahp, skb, ah->auth_data);
++
++	err = 0;
++
++	memcpy(top_iph, tmp_base, sizeof(tmp_base));
++	if (tmp_ext) {
++		memcpy(&top_iph->daddr, tmp_ext, extlen);
++error_free_iph:
++		kfree(tmp_ext);
++	}
++
++error:
++	return err;
++}
++
++static int ah6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_buff *skb)
++{
++	/*
++	 * Before process AH
++	 * [IPv6][Ext1][Ext2][AH][Dest][Payload]
++	 * |<-------------->| hdr_len
++	 *
++	 * To erase AH:
++	 * Keeping copy of cleared headers. After AH processing,
++	 * Moving the pointer of skb->nh.raw by using skb_pull as long as AH
++	 * header length. Then copy back the copy as long as hdr_len
++	 * If destination header following AH exists, copy it into after [Ext2].
++	 * 
++	 * |<>|[IPv6][Ext1][Ext2][Dest][Payload]
++	 * There is offset of AH before IPv6 header after the process.
++	 */
++
++	struct ipv6_auth_hdr *ah;
++	struct ah_data *ahp;
++	unsigned char *tmp_hdr = NULL;
++	u16 hdr_len;
++	u16 ah_hlen;
++	int nexthdr;
++
++	if (!pskb_may_pull(skb, sizeof(struct ip_auth_hdr)))
++		goto out;
++
++	/* We are going to _remove_ AH header to keep sockets happy,
++	 * so... Later this can change. */
++	if (skb_cloned(skb) &&
++	    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
++		goto out;
++
++	hdr_len = skb->data - skb->nh.raw;
++	ah = (struct ipv6_auth_hdr*)skb->data;
++	ahp = x->data;
++	nexthdr = ah->nexthdr;
++	ah_hlen = (ah->hdrlen + 2) << 2;
++
++        if (ah_hlen != XFRM_ALIGN8(sizeof(struct ipv6_auth_hdr) + ahp->icv_full_len) &&
++            ah_hlen != XFRM_ALIGN8(sizeof(struct ipv6_auth_hdr) + ahp->icv_trunc_len))
++                goto out;
++
++	if (!pskb_may_pull(skb, ah_hlen))
++		goto out;
++
++	tmp_hdr = kmalloc(hdr_len, GFP_ATOMIC);
++	if (!tmp_hdr)
++		goto out;
++	memcpy(tmp_hdr, skb->nh.raw, hdr_len);
++	if (ipv6_clear_mutable_options(skb->nh.ipv6h, hdr_len))
++		goto out;
++	skb->nh.ipv6h->priority    = 0;
++	skb->nh.ipv6h->flow_lbl[0] = 0;
++	skb->nh.ipv6h->flow_lbl[1] = 0;
++	skb->nh.ipv6h->flow_lbl[2] = 0;
++	skb->nh.ipv6h->hop_limit   = 0;
++
++        {
++		u8 auth_data[MAX_AH_AUTH_LEN];
++
++		memcpy(auth_data, ah->auth_data, ahp->icv_trunc_len);
++		memset(ah->auth_data, 0, ahp->icv_trunc_len);
++		skb_push(skb, skb->data - skb->nh.raw);
++		ahp->icv(ahp, skb, ah->auth_data);
++		if (memcmp(ah->auth_data, auth_data, ahp->icv_trunc_len)) {
++			LIMIT_NETDEBUG(KERN_WARNING "ipsec ah authentication error\n");
++			x->stats.integrity_failed++;
++			goto free_out;
++		}
++	}
++
++	skb->nh.raw = skb_pull(skb, ah_hlen);
++	memcpy(skb->nh.raw, tmp_hdr, hdr_len);
++	skb->nh.ipv6h->payload_len = htons(skb->len - sizeof(struct ipv6hdr));
++	skb_pull(skb, hdr_len);
++	skb->h.raw = skb->data;
++
++
++	kfree(tmp_hdr);
++
++	return nexthdr;
++
++free_out:
++	kfree(tmp_hdr);
++out:
++	return -EINVAL;
++}
++
++static void ah6_err(struct sk_buff *skb, struct inet6_skb_parm *opt, 
++                    int type, int code, int offset, __u32 info)
++{
++	struct ipv6hdr *iph = (struct ipv6hdr*)skb->data;
++	struct ip_auth_hdr *ah = (struct ip_auth_hdr*)(skb->data+offset);
++	struct xfrm_state *x;
++
++	if (type != ICMPV6_DEST_UNREACH &&
++	    type != ICMPV6_PKT_TOOBIG)
++		return;
++
++	x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, ah->spi, IPPROTO_AH, AF_INET6);
++	if (!x)
++		return;
++
++	NETDEBUG(KERN_DEBUG "pmtu discovery on SA AH/%08x/"
++		 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
++		 ntohl(ah->spi), NIP6(iph->daddr));
++
++	xfrm_state_put(x);
++}
++
++static int ah6_init_state(struct xfrm_state *x)
++{
++	struct ah_data *ahp = NULL;
++	struct xfrm_algo_desc *aalg_desc;
++
++	if (!x->aalg)
++		goto error;
++
++	/* null auth can use a zero length key */
++	if (x->aalg->alg_key_len > 512)
++		goto error;
++
++	if (x->encap)
++		goto error;
++
++	ahp = kmalloc(sizeof(*ahp), GFP_KERNEL);
++	if (ahp == NULL)
++		return -ENOMEM;
++
++	memset(ahp, 0, sizeof(*ahp));
++
++	ahp->key = x->aalg->alg_key;
++	ahp->key_len = (x->aalg->alg_key_len+7)/8;
++	ahp->tfm = crypto_alloc_tfm(x->aalg->alg_name, 0);
++	if (!ahp->tfm)
++		goto error;
++	ahp->icv = ah_hmac_digest;
++	
++	/*
++	 * Lookup the algorithm description maintained by xfrm_algo,
++	 * verify crypto transform properties, and store information
++	 * we need for AH processing.  This lookup cannot fail here
++	 * after a successful crypto_alloc_tfm().
++	 */
++	aalg_desc = xfrm_aalg_get_byname(x->aalg->alg_name, 0);
++	BUG_ON(!aalg_desc);
++
++	if (aalg_desc->uinfo.auth.icv_fullbits/8 !=
++	    crypto_tfm_alg_digestsize(ahp->tfm)) {
++		printk(KERN_INFO "AH: %s digestsize %u != %hu\n",
++		       x->aalg->alg_name, crypto_tfm_alg_digestsize(ahp->tfm),
++		       aalg_desc->uinfo.auth.icv_fullbits/8);
++		goto error;
++	}
++	
++	ahp->icv_full_len = aalg_desc->uinfo.auth.icv_fullbits/8;
++	ahp->icv_trunc_len = aalg_desc->uinfo.auth.icv_truncbits/8;
++	
++	BUG_ON(ahp->icv_trunc_len > MAX_AH_AUTH_LEN);
++	
++	ahp->work_icv = kmalloc(ahp->icv_full_len, GFP_KERNEL);
++	if (!ahp->work_icv)
++		goto error;
++	
++	x->props.header_len = XFRM_ALIGN8(sizeof(struct ipv6_auth_hdr) + ahp->icv_trunc_len);
++	if (x->props.mode)
++		x->props.header_len += sizeof(struct ipv6hdr);
++	x->data = ahp;
++
++	return 0;
++
++error:
++	if (ahp) {
++		kfree(ahp->work_icv);
++		crypto_free_tfm(ahp->tfm);
++		kfree(ahp);
++	}
++	return -EINVAL;
++}
++
++static void ah6_destroy(struct xfrm_state *x)
++{
++	struct ah_data *ahp = x->data;
++
++	if (!ahp)
++		return;
++
++	kfree(ahp->work_icv);
++	ahp->work_icv = NULL;
++	crypto_free_tfm(ahp->tfm);
++	ahp->tfm = NULL;
++	kfree(ahp);
++}
++
++static struct xfrm_type ah6_type =
++{
++	.description	= "AH6",
++	.owner		= THIS_MODULE,
++	.proto	     	= IPPROTO_AH,
++	.init_state	= ah6_init_state,
++	.destructor	= ah6_destroy,
++	.input		= ah6_input,
++	.output		= ah6_output
++};
++
++static struct inet6_protocol ah6_protocol = {
++	.handler	=	xfrm6_rcv,
++	.err_handler	=	ah6_err,
++	.flags		=	INET6_PROTO_NOPOLICY,
++};
++
++static int __init ah6_init(void)
++{
++	if (xfrm_register_type(&ah6_type, AF_INET6) < 0) {
++		printk(KERN_INFO "ipv6 ah init: can't add xfrm type\n");
++		return -EAGAIN;
++	}
++
++	if (inet6_add_protocol(&ah6_protocol, IPPROTO_AH) < 0) {
++		printk(KERN_INFO "ipv6 ah init: can't add protocol\n");
++		xfrm_unregister_type(&ah6_type, AF_INET6);
++		return -EAGAIN;
++	}
++
++	return 0;
++}
++
++static void __exit ah6_fini(void)
++{
++	if (inet6_del_protocol(&ah6_protocol, IPPROTO_AH) < 0)
++		printk(KERN_INFO "ipv6 ah close: can't remove protocol\n");
++
++	if (xfrm_unregister_type(&ah6_type, AF_INET6) < 0)
++		printk(KERN_INFO "ipv6 ah close: can't remove xfrm type\n");
++
++}
++
++module_init(ah6_init);
++module_exit(ah6_fini);
++
++MODULE_LICENSE("GPL");
+diff -urN linux-2.6.14.2/net/ipv6/esp6.c linux-2.6.14.2-beet/net/ipv6/esp6.c
+--- linux-2.6.14.2/net/ipv6/esp6.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/esp6.c	2005-11-15 15:11:19.000000000 +0200
+@@ -358,7 +358,7 @@
+ 	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
+ 		goto error;
+ 	x->props.header_len = sizeof(struct ipv6_esp_hdr) + esp->conf.ivlen;
+-	if (x->props.mode)
++	if (x->props.mode == XFRM_MODE_TUNNEL)
+ 		x->props.header_len += sizeof(struct ipv6hdr);
+ 	x->data = esp;
+ 	return 0;
+diff -urN linux-2.6.14.2/net/ipv6/esp6.c.orig linux-2.6.14.2-beet/net/ipv6/esp6.c.orig
+--- linux-2.6.14.2/net/ipv6/esp6.c.orig	1970-01-01 02:00:00.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/esp6.c.orig	2005-11-11 07:33:12.000000000 +0200
+@@ -0,0 +1,417 @@
++/*
++ * Copyright (C)2002 USAGI/WIDE Project
++ * 
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ * 
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ * 
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ * Authors
++ *
++ *	Mitsuru KANDA @USAGI       : IPv6 Support 
++ * 	Kazunori MIYAZAWA @USAGI   :
++ * 	Kunihiro Ishiguro <kunihiro@ipinfusion.com>
++ * 	
++ * 	This file is derived from net/ipv4/esp.c
++ */
++
++#include <linux/config.h>
++#include <linux/module.h>
++#include <net/ip.h>
++#include <net/xfrm.h>
++#include <net/esp.h>
++#include <asm/scatterlist.h>
++#include <linux/crypto.h>
++#include <linux/kernel.h>
++#include <linux/pfkeyv2.h>
++#include <linux/random.h>
++#include <net/icmp.h>
++#include <net/ipv6.h>
++#include <linux/icmpv6.h>
++
++static int esp6_output(struct xfrm_state *x, struct sk_buff *skb)
++{
++	int err;
++	int hdr_len;
++	struct ipv6hdr *top_iph;
++	struct ipv6_esp_hdr *esph;
++	struct crypto_tfm *tfm;
++	struct esp_data *esp;
++	struct sk_buff *trailer;
++	int blksize;
++	int clen;
++	int alen;
++	int nfrags;
++
++	esp = x->data;
++	hdr_len = skb->h.raw - skb->data +
++		  sizeof(*esph) + esp->conf.ivlen;
++
++	/* Strip IP+ESP header. */
++	__skb_pull(skb, hdr_len);
++
++	/* Now skb is pure payload to encrypt */
++	err = -ENOMEM;
++
++	/* Round to block size */
++	clen = skb->len;
++
++	alen = esp->auth.icv_trunc_len;
++	tfm = esp->conf.tfm;
++	blksize = ALIGN(crypto_tfm_alg_blocksize(tfm), 4);
++	clen = ALIGN(clen + 2, blksize);
++	if (esp->conf.padlen)
++		clen = ALIGN(clen, esp->conf.padlen);
++
++	if ((nfrags = skb_cow_data(skb, clen-skb->len+alen, &trailer)) < 0) {
++		goto error;
++	}
++
++	/* Fill padding... */
++	do {
++		int i;
++		for (i=0; i<clen-skb->len - 2; i++)
++			*(u8*)(trailer->tail + i) = i+1;
++	} while (0);
++	*(u8*)(trailer->tail + clen-skb->len - 2) = (clen - skb->len)-2;
++	pskb_put(skb, trailer, clen - skb->len);
++
++	top_iph = (struct ipv6hdr *)__skb_push(skb, hdr_len);
++	esph = (struct ipv6_esp_hdr *)skb->h.raw;
++	top_iph->payload_len = htons(skb->len + alen - sizeof(*top_iph));
++	*(u8*)(trailer->tail - 1) = *skb->nh.raw;
++	*skb->nh.raw = IPPROTO_ESP;
++
++	esph->spi = x->id.spi;
++	esph->seq_no = htonl(++x->replay.oseq);
++
++	if (esp->conf.ivlen)
++		crypto_cipher_set_iv(tfm, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++
++	do {
++		struct scatterlist *sg = &esp->sgbuf[0];
++
++		if (unlikely(nfrags > ESP_NUM_FAST_SG)) {
++			sg = kmalloc(sizeof(struct scatterlist)*nfrags, GFP_ATOMIC);
++			if (!sg)
++				goto error;
++		}
++		skb_to_sgvec(skb, sg, esph->enc_data+esp->conf.ivlen-skb->data, clen);
++		crypto_cipher_encrypt(tfm, sg, sg, clen);
++		if (unlikely(sg != &esp->sgbuf[0]))
++			kfree(sg);
++	} while (0);
++
++	if (esp->conf.ivlen) {
++		memcpy(esph->enc_data, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++		crypto_cipher_get_iv(tfm, esp->conf.ivec, crypto_tfm_alg_ivsize(tfm));
++	}
++
++	if (esp->auth.icv_full_len) {
++		esp->auth.icv(esp, skb, (u8*)esph-skb->data,
++			sizeof(struct ipv6_esp_hdr) + esp->conf.ivlen+clen, trailer->tail);
++		pskb_put(skb, trailer, alen);
++	}
++
++	err = 0;
++
++error:
++	return err;
++}
++
++static int esp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_buff *skb)
++{
++	struct ipv6hdr *iph;
++	struct ipv6_esp_hdr *esph;
++	struct esp_data *esp = x->data;
++	struct sk_buff *trailer;
++	int blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
++	int alen = esp->auth.icv_trunc_len;
++	int elen = skb->len - sizeof(struct ipv6_esp_hdr) - esp->conf.ivlen - alen;
++
++	int hdr_len = skb->h.raw - skb->nh.raw;
++	int nfrags;
++	unsigned char *tmp_hdr = NULL;
++	int ret = 0;
++
++	if (!pskb_may_pull(skb, sizeof(struct ipv6_esp_hdr))) {
++		ret = -EINVAL;
++		goto out_nofree;
++	}
++
++	if (elen <= 0 || (elen & (blksize-1))) {
++		ret = -EINVAL;
++		goto out_nofree;
++	}
++
++	tmp_hdr = kmalloc(hdr_len, GFP_ATOMIC);
++	if (!tmp_hdr) {
++		ret = -ENOMEM;
++		goto out_nofree;
++	}
++	memcpy(tmp_hdr, skb->nh.raw, hdr_len);
++
++	/* If integrity check is required, do this. */
++        if (esp->auth.icv_full_len) {
++		u8 sum[esp->auth.icv_full_len];
++		u8 sum1[alen];
++
++		esp->auth.icv(esp, skb, 0, skb->len-alen, sum);
++
++		if (skb_copy_bits(skb, skb->len-alen, sum1, alen))
++			BUG();
++
++		if (unlikely(memcmp(sum, sum1, alen))) {
++			x->stats.integrity_failed++;
++			ret = -EINVAL;
++			goto out;
++		}
++	}
++
++	if ((nfrags = skb_cow_data(skb, 0, &trailer)) < 0) {
++		ret = -EINVAL;
++		goto out;
++	}
++
++	skb->ip_summed = CHECKSUM_NONE;
++
++	esph = (struct ipv6_esp_hdr*)skb->data;
++	iph = skb->nh.ipv6h;
++
++	/* Get ivec. This can be wrong, check against another impls. */
++	if (esp->conf.ivlen)
++		crypto_cipher_set_iv(esp->conf.tfm, esph->enc_data, crypto_tfm_alg_ivsize(esp->conf.tfm));
++
++        {
++		u8 nexthdr[2];
++		struct scatterlist *sg = &esp->sgbuf[0];
++		u8 padlen;
++
++		if (unlikely(nfrags > ESP_NUM_FAST_SG)) {
++			sg = kmalloc(sizeof(struct scatterlist)*nfrags, GFP_ATOMIC);
++			if (!sg) {
++				ret = -ENOMEM;
++				goto out;
++			}
++		}
++		skb_to_sgvec(skb, sg, sizeof(struct ipv6_esp_hdr) + esp->conf.ivlen, elen);
++		crypto_cipher_decrypt(esp->conf.tfm, sg, sg, elen);
++		if (unlikely(sg != &esp->sgbuf[0]))
++			kfree(sg);
++
++		if (skb_copy_bits(skb, skb->len-alen-2, nexthdr, 2))
++			BUG();
++
++		padlen = nexthdr[0];
++		if (padlen+2 >= elen) {
++			LIMIT_NETDEBUG(KERN_WARNING "ipsec esp packet is garbage padlen=%d, elen=%d\n", padlen+2, elen);
++			ret = -EINVAL;
++			goto out;
++		}
++		/* ... check padding bits here. Silly. :-) */ 
++
++		pskb_trim(skb, skb->len - alen - padlen - 2);
++		skb->h.raw = skb_pull(skb, sizeof(struct ipv6_esp_hdr) + esp->conf.ivlen);
++		skb->nh.raw += sizeof(struct ipv6_esp_hdr) + esp->conf.ivlen;
++		memcpy(skb->nh.raw, tmp_hdr, hdr_len);
++		skb->nh.ipv6h->payload_len = htons(skb->len - sizeof(struct ipv6hdr));
++		ret = nexthdr[1];
++	}
++
++out:
++	kfree(tmp_hdr);
++out_nofree:
++	return ret;
++}
++
++static u32 esp6_get_max_size(struct xfrm_state *x, int mtu)
++{
++	struct esp_data *esp = x->data;
++	u32 blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
++
++	if (x->props.mode) {
++		mtu = ALIGN(mtu + 2, blksize);
++	} else {
++		/* The worst case. */
++		u32 padsize = ((blksize - 1) & 7) + 1;
++		mtu = ALIGN(mtu + 2, padsize) + blksize - padsize;
++	}
++	if (esp->conf.padlen)
++		mtu = ALIGN(mtu, esp->conf.padlen);
++
++	return mtu + x->props.header_len + esp->auth.icv_full_len;
++}
++
++static void esp6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
++                     int type, int code, int offset, __u32 info)
++{
++	struct ipv6hdr *iph = (struct ipv6hdr*)skb->data;
++	struct ipv6_esp_hdr *esph = (struct ipv6_esp_hdr*)(skb->data+offset);
++	struct xfrm_state *x;
++
++	if (type != ICMPV6_DEST_UNREACH && 
++	    type != ICMPV6_PKT_TOOBIG)
++		return;
++
++	x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, esph->spi, IPPROTO_ESP, AF_INET6);
++	if (!x)
++		return;
++	printk(KERN_DEBUG "pmtu discovery on SA ESP/%08x/"
++			"%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n", 
++			ntohl(esph->spi), NIP6(iph->daddr));
++	xfrm_state_put(x);
++}
++
++static void esp6_destroy(struct xfrm_state *x)
++{
++	struct esp_data *esp = x->data;
++
++	if (!esp)
++		return;
++
++	crypto_free_tfm(esp->conf.tfm);
++	esp->conf.tfm = NULL;
++	kfree(esp->conf.ivec);
++	esp->conf.ivec = NULL;
++	crypto_free_tfm(esp->auth.tfm);
++	esp->auth.tfm = NULL;
++	kfree(esp->auth.work_icv);
++	esp->auth.work_icv = NULL;
++	kfree(esp);
++}
++
++static int esp6_init_state(struct xfrm_state *x)
++{
++	struct esp_data *esp = NULL;
++
++	/* null auth and encryption can have zero length keys */
++	if (x->aalg) {
++		if (x->aalg->alg_key_len > 512)
++			goto error;
++	}
++	if (x->ealg == NULL)
++		goto error;
++
++	if (x->encap)
++		goto error;
++
++	esp = kmalloc(sizeof(*esp), GFP_KERNEL);
++	if (esp == NULL)
++		return -ENOMEM;
++
++	memset(esp, 0, sizeof(*esp));
++
++	if (x->aalg) {
++		struct xfrm_algo_desc *aalg_desc;
++
++		esp->auth.key = x->aalg->alg_key;
++		esp->auth.key_len = (x->aalg->alg_key_len+7)/8;
++		esp->auth.tfm = crypto_alloc_tfm(x->aalg->alg_name, 0);
++		if (esp->auth.tfm == NULL)
++			goto error;
++		esp->auth.icv = esp_hmac_digest;
++ 
++		aalg_desc = xfrm_aalg_get_byname(x->aalg->alg_name, 0);
++		BUG_ON(!aalg_desc);
++ 
++		if (aalg_desc->uinfo.auth.icv_fullbits/8 !=
++			crypto_tfm_alg_digestsize(esp->auth.tfm)) {
++				printk(KERN_INFO "ESP: %s digestsize %u != %hu\n",
++					x->aalg->alg_name,
++					crypto_tfm_alg_digestsize(esp->auth.tfm),
++					aalg_desc->uinfo.auth.icv_fullbits/8);
++				goto error;
++		}
++ 
++		esp->auth.icv_full_len = aalg_desc->uinfo.auth.icv_fullbits/8;
++		esp->auth.icv_trunc_len = aalg_desc->uinfo.auth.icv_truncbits/8;
++ 
++		esp->auth.work_icv = kmalloc(esp->auth.icv_full_len, GFP_KERNEL);
++		if (!esp->auth.work_icv)
++			goto error;
++	}
++	esp->conf.key = x->ealg->alg_key;
++	esp->conf.key_len = (x->ealg->alg_key_len+7)/8;
++	if (x->props.ealgo == SADB_EALG_NULL)
++		esp->conf.tfm = crypto_alloc_tfm(x->ealg->alg_name, CRYPTO_TFM_MODE_ECB);
++	else
++		esp->conf.tfm = crypto_alloc_tfm(x->ealg->alg_name, CRYPTO_TFM_MODE_CBC);
++	if (esp->conf.tfm == NULL)
++		goto error;
++	esp->conf.ivlen = crypto_tfm_alg_ivsize(esp->conf.tfm);
++	esp->conf.padlen = 0;
++	if (esp->conf.ivlen) {
++		esp->conf.ivec = kmalloc(esp->conf.ivlen, GFP_KERNEL);
++		if (unlikely(esp->conf.ivec == NULL))
++			goto error;
++		get_random_bytes(esp->conf.ivec, esp->conf.ivlen);
++	}
++	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
++		goto error;
++	x->props.header_len = sizeof(struct ipv6_esp_hdr) + esp->conf.ivlen;
++	if (x->props.mode)
++		x->props.header_len += sizeof(struct ipv6hdr);
++	x->data = esp;
++	return 0;
++
++error:
++	x->data = esp;
++	esp6_destroy(x);
++	x->data = NULL;
++	return -EINVAL;
++}
++
++static struct xfrm_type esp6_type =
++{
++	.description	= "ESP6",
++	.owner	     	= THIS_MODULE,
++	.proto	     	= IPPROTO_ESP,
++	.init_state	= esp6_init_state,
++	.destructor	= esp6_destroy,
++	.get_max_size	= esp6_get_max_size,
++	.input		= esp6_input,
++	.output		= esp6_output
++};
++
++static struct inet6_protocol esp6_protocol = {
++	.handler 	=	xfrm6_rcv,
++	.err_handler	=	esp6_err,
++	.flags		=	INET6_PROTO_NOPOLICY,
++};
++
++static int __init esp6_init(void)
++{
++	if (xfrm_register_type(&esp6_type, AF_INET6) < 0) {
++		printk(KERN_INFO "ipv6 esp init: can't add xfrm type\n");
++		return -EAGAIN;
++	}
++	if (inet6_add_protocol(&esp6_protocol, IPPROTO_ESP) < 0) {
++		printk(KERN_INFO "ipv6 esp init: can't add protocol\n");
++		xfrm_unregister_type(&esp6_type, AF_INET6);
++		return -EAGAIN;
++	}
++
++	return 0;
++}
++
++static void __exit esp6_fini(void)
++{
++	if (inet6_del_protocol(&esp6_protocol, IPPROTO_ESP) < 0)
++		printk(KERN_INFO "ipv6 esp close: can't remove protocol\n");
++	if (xfrm_unregister_type(&esp6_type, AF_INET6) < 0)
++		printk(KERN_INFO "ipv6 esp close: can't remove xfrm type\n");
++}
++
++module_init(esp6_init);
++module_exit(esp6_fini);
++
++MODULE_LICENSE("GPL");
+diff -urN linux-2.6.14.2/net/ipv6/ipcomp6.c linux-2.6.14.2-beet/net/ipv6/ipcomp6.c
+--- linux-2.6.14.2/net/ipv6/ipcomp6.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/ipcomp6.c	2005-11-15 15:11:19.000000000 +0200
+@@ -434,7 +434,7 @@
+ 
+ 	memset(ipcd, 0, sizeof(*ipcd));
+ 	x->props.header_len = 0;
+-	if (x->props.mode)
++	if (x->props.mode == XFRM_MODE_TUNNEL)
+ 		x->props.header_len += sizeof(struct ipv6hdr);
+ 	
+ 	down(&ipcomp6_resource_sem);
+@@ -446,7 +446,7 @@
+ 		goto error;
+ 	up(&ipcomp6_resource_sem);
+ 
+-	if (x->props.mode) {
++	if (x->props.mode == XFRM_MODE_TUNNEL) {
+ 		err = ipcomp6_tunnel_attach(x);
+ 		if (err)
+ 			goto error_tunnel;
+diff -urN linux-2.6.14.2/net/ipv6/ipcomp6.c.orig linux-2.6.14.2-beet/net/ipv6/ipcomp6.c.orig
+--- linux-2.6.14.2/net/ipv6/ipcomp6.c.orig	1970-01-01 02:00:00.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/ipcomp6.c.orig	2005-11-11 07:33:12.000000000 +0200
+@@ -0,0 +1,518 @@
++/*
++ * IP Payload Compression Protocol (IPComp) for IPv6 - RFC3173
++ *
++ * Copyright (C)2003 USAGI/WIDE Project
++ *
++ * Author	Mitsuru KANDA  <mk@linux-ipv6.org>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ * 
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ * 
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ */
++/* 
++ * [Memo]
++ *
++ * Outbound:
++ *  The compression of IP datagram MUST be done before AH/ESP processing, 
++ *  fragmentation, and the addition of Hop-by-Hop/Routing header. 
++ *
++ * Inbound:
++ *  The decompression of IP datagram MUST be done after the reassembly, 
++ *  AH/ESP processing.
++ */
++#include <linux/config.h>
++#include <linux/module.h>
++#include <net/ip.h>
++#include <net/xfrm.h>
++#include <net/ipcomp.h>
++#include <asm/scatterlist.h>
++#include <asm/semaphore.h>
++#include <linux/crypto.h>
++#include <linux/pfkeyv2.h>
++#include <linux/random.h>
++#include <linux/percpu.h>
++#include <linux/smp.h>
++#include <linux/list.h>
++#include <linux/vmalloc.h>
++#include <linux/rtnetlink.h>
++#include <net/icmp.h>
++#include <net/ipv6.h>
++#include <linux/ipv6.h>
++#include <linux/icmpv6.h>
++
++struct ipcomp6_tfms {
++	struct list_head list;
++	struct crypto_tfm **tfms;
++	int users;
++};
++
++static DECLARE_MUTEX(ipcomp6_resource_sem);
++static void **ipcomp6_scratches;
++static int ipcomp6_scratch_users;
++static LIST_HEAD(ipcomp6_tfms_list);
++
++static int ipcomp6_input(struct xfrm_state *x, struct xfrm_decap_state *decap, struct sk_buff *skb)
++{
++	int err = 0;
++	u8 nexthdr = 0;
++	int hdr_len = skb->h.raw - skb->nh.raw;
++	unsigned char *tmp_hdr = NULL;
++	struct ipv6hdr *iph;
++	int plen, dlen;
++	struct ipcomp_data *ipcd = x->data;
++	u8 *start, *scratch;
++	struct crypto_tfm *tfm;
++	int cpu;
++
++	if ((skb_is_nonlinear(skb) || skb_cloned(skb)) &&
++		skb_linearize(skb, GFP_ATOMIC) != 0) {
++		err = -ENOMEM;
++		goto out;
++	}
++
++	skb->ip_summed = CHECKSUM_NONE;
++
++	/* Remove ipcomp header and decompress original payload */
++	iph = skb->nh.ipv6h;
++	tmp_hdr = kmalloc(hdr_len, GFP_ATOMIC);
++	if (!tmp_hdr)
++		goto out;
++	memcpy(tmp_hdr, iph, hdr_len);
++	nexthdr = *(u8 *)skb->data;
++	skb_pull(skb, sizeof(struct ipv6_comp_hdr)); 
++	skb->nh.raw += sizeof(struct ipv6_comp_hdr);
++	memcpy(skb->nh.raw, tmp_hdr, hdr_len);
++	iph = skb->nh.ipv6h;
++	iph->payload_len = htons(ntohs(iph->payload_len) - sizeof(struct ipv6_comp_hdr));
++	skb->h.raw = skb->data;
++
++	/* decompression */
++	plen = skb->len;
++	dlen = IPCOMP_SCRATCH_SIZE;
++	start = skb->data;
++
++	cpu = get_cpu();
++	scratch = *per_cpu_ptr(ipcomp6_scratches, cpu);
++	tfm = *per_cpu_ptr(ipcd->tfms, cpu);
++
++	err = crypto_comp_decompress(tfm, start, plen, scratch, &dlen);
++	if (err) {
++		err = -EINVAL;
++		goto out_put_cpu;
++	}
++
++	if (dlen < (plen + sizeof(struct ipv6_comp_hdr))) {
++		err = -EINVAL;
++		goto out_put_cpu;
++	}
++
++	err = pskb_expand_head(skb, 0, dlen - plen, GFP_ATOMIC);
++	if (err) {
++		goto out_put_cpu;
++	}
++
++	skb_put(skb, dlen - plen);
++	memcpy(skb->data, scratch, dlen);
++
++	iph = skb->nh.ipv6h;
++	iph->payload_len = htons(skb->len);
++	
++out_put_cpu:
++	put_cpu();
++out:
++	if (tmp_hdr)
++		kfree(tmp_hdr);
++	if (err)
++		goto error_out;
++	return nexthdr;
++error_out:
++	return err;
++}
++
++static int ipcomp6_output(struct xfrm_state *x, struct sk_buff *skb)
++{
++	int err;
++	struct ipv6hdr *top_iph;
++	int hdr_len;
++	struct ipv6_comp_hdr *ipch;
++	struct ipcomp_data *ipcd = x->data;
++	int plen, dlen;
++	u8 *start, *scratch;
++	struct crypto_tfm *tfm;
++	int cpu;
++
++	hdr_len = skb->h.raw - skb->data;
++
++	/* check whether datagram len is larger than threshold */
++	if ((skb->len - hdr_len) < ipcd->threshold) {
++		goto out_ok;
++	}
++
++	if ((skb_is_nonlinear(skb) || skb_cloned(skb)) &&
++		skb_linearize(skb, GFP_ATOMIC) != 0) {
++		goto out_ok;
++	}
++
++	/* compression */
++	plen = skb->len - hdr_len;
++	dlen = IPCOMP_SCRATCH_SIZE;
++	start = skb->h.raw;
++
++	cpu = get_cpu();
++	scratch = *per_cpu_ptr(ipcomp6_scratches, cpu);
++	tfm = *per_cpu_ptr(ipcd->tfms, cpu);
++
++	err = crypto_comp_compress(tfm, start, plen, scratch, &dlen);
++	if (err || (dlen + sizeof(struct ipv6_comp_hdr)) >= plen) {
++		put_cpu();
++		goto out_ok;
++	}
++	memcpy(start + sizeof(struct ip_comp_hdr), scratch, dlen);
++	put_cpu();
++	pskb_trim(skb, hdr_len + dlen + sizeof(struct ip_comp_hdr));
++
++	/* insert ipcomp header and replace datagram */
++	top_iph = (struct ipv6hdr *)skb->data;
++
++	top_iph->payload_len = htons(skb->len - sizeof(struct ipv6hdr));
++
++	ipch = (struct ipv6_comp_hdr *)start;
++	ipch->nexthdr = *skb->nh.raw;
++	ipch->flags = 0;
++	ipch->cpi = htons((u16 )ntohl(x->id.spi));
++	*skb->nh.raw = IPPROTO_COMP;
++
++out_ok:
++	return 0;
++}
++
++static void ipcomp6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
++		                int type, int code, int offset, __u32 info)
++{
++	u32 spi;
++	struct ipv6hdr *iph = (struct ipv6hdr*)skb->data;
++	struct ipv6_comp_hdr *ipcomph = (struct ipv6_comp_hdr*)(skb->data+offset);
++	struct xfrm_state *x;
++
++	if (type != ICMPV6_DEST_UNREACH && type != ICMPV6_PKT_TOOBIG)
++		return;
++
++	spi = ntohl(ntohs(ipcomph->cpi));
++	x = xfrm_state_lookup((xfrm_address_t *)&iph->daddr, spi, IPPROTO_COMP, AF_INET6);
++	if (!x)
++		return;
++
++	printk(KERN_DEBUG "pmtu discovery on SA IPCOMP/%08x/"
++			"%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
++			spi, NIP6(iph->daddr));
++	xfrm_state_put(x);
++}
++
++static struct xfrm_state *ipcomp6_tunnel_create(struct xfrm_state *x)
++{
++	struct xfrm_state *t = NULL;
++
++	t = xfrm_state_alloc();
++	if (!t)
++		goto out;
++
++	t->id.proto = IPPROTO_IPV6;
++	t->id.spi = xfrm6_tunnel_alloc_spi((xfrm_address_t *)&x->props.saddr);
++	memcpy(t->id.daddr.a6, x->id.daddr.a6, sizeof(struct in6_addr));
++	memcpy(&t->sel, &x->sel, sizeof(t->sel));
++	t->props.family = AF_INET6;
++	t->props.mode = 1;
++	memcpy(t->props.saddr.a6, x->props.saddr.a6, sizeof(struct in6_addr));
++
++	if (xfrm_init_state(t))
++		goto error;
++
++	atomic_set(&t->tunnel_users, 1);
++
++out:
++	return t;
++
++error:
++	xfrm_state_put(t);
++	goto out;
++}
++
++static int ipcomp6_tunnel_attach(struct xfrm_state *x)
++{
++	int err = 0;
++	struct xfrm_state *t = NULL;
++	u32 spi;
++
++	spi = xfrm6_tunnel_spi_lookup((xfrm_address_t *)&x->props.saddr);
++	if (spi)
++		t = xfrm_state_lookup((xfrm_address_t *)&x->id.daddr,
++					      spi, IPPROTO_IPV6, AF_INET6);
++	if (!t) {
++		t = ipcomp6_tunnel_create(x);
++		if (!t) {
++			err = -EINVAL;
++			goto out;
++		}
++		xfrm_state_insert(t);
++		xfrm_state_hold(t);
++	}
++	x->tunnel = t;
++	atomic_inc(&t->tunnel_users);
++
++out:
++	return err;
++}
++
++static void ipcomp6_free_scratches(void)
++{
++	int i;
++	void **scratches;
++
++	if (--ipcomp6_scratch_users)
++		return;
++
++	scratches = ipcomp6_scratches;
++	if (!scratches)
++		return;
++
++	for_each_cpu(i) {
++		void *scratch = *per_cpu_ptr(scratches, i);
++		if (scratch)
++			vfree(scratch);
++	}
++
++	free_percpu(scratches);
++}
++
++static void **ipcomp6_alloc_scratches(void)
++{
++	int i;
++	void **scratches;
++
++	if (ipcomp6_scratch_users++)
++		return ipcomp6_scratches;
++
++	scratches = alloc_percpu(void *);
++	if (!scratches)
++		return NULL;
++
++	ipcomp6_scratches = scratches;
++
++	for_each_cpu(i) {
++		void *scratch = vmalloc(IPCOMP_SCRATCH_SIZE);
++		if (!scratch)
++			return NULL;
++		*per_cpu_ptr(scratches, i) = scratch;
++	}
++
++	return scratches;
++}
++
++static void ipcomp6_free_tfms(struct crypto_tfm **tfms)
++{
++	struct ipcomp6_tfms *pos;
++	int cpu;
++
++	list_for_each_entry(pos, &ipcomp6_tfms_list, list) {
++		if (pos->tfms == tfms)
++			break;
++	}
++
++	BUG_TRAP(pos);
++
++	if (--pos->users)
++		return;
++
++	list_del(&pos->list);
++	kfree(pos);
++
++	if (!tfms)
++		return;
++
++	for_each_cpu(cpu) {
++		struct crypto_tfm *tfm = *per_cpu_ptr(tfms, cpu);
++		crypto_free_tfm(tfm);
++	}
++	free_percpu(tfms);
++}
++
++static struct crypto_tfm **ipcomp6_alloc_tfms(const char *alg_name)
++{
++	struct ipcomp6_tfms *pos;
++	struct crypto_tfm **tfms;
++	int cpu;
++
++	/* This can be any valid CPU ID so we don't need locking. */
++	cpu = raw_smp_processor_id();
++
++	list_for_each_entry(pos, &ipcomp6_tfms_list, list) {
++		struct crypto_tfm *tfm;
++
++		tfms = pos->tfms;
++		tfm = *per_cpu_ptr(tfms, cpu);
++
++		if (!strcmp(crypto_tfm_alg_name(tfm), alg_name)) {
++			pos->users++;
++			return tfms;
++		}
++	}
++
++	pos = kmalloc(sizeof(*pos), GFP_KERNEL);
++	if (!pos)
++		return NULL;
++
++	pos->users = 1;
++	INIT_LIST_HEAD(&pos->list);
++	list_add(&pos->list, &ipcomp6_tfms_list);
++
++	pos->tfms = tfms = alloc_percpu(struct crypto_tfm *);
++	if (!tfms)
++		goto error;
++
++	for_each_cpu(cpu) {
++		struct crypto_tfm *tfm = crypto_alloc_tfm(alg_name, 0);
++		if (!tfm)
++			goto error;
++		*per_cpu_ptr(tfms, cpu) = tfm;
++	}
++
++	return tfms;
++
++error:
++	ipcomp6_free_tfms(tfms);
++	return NULL;
++}
++
++static void ipcomp6_free_data(struct ipcomp_data *ipcd)
++{
++	if (ipcd->tfms)
++		ipcomp6_free_tfms(ipcd->tfms);
++	ipcomp6_free_scratches();
++}
++
++static void ipcomp6_destroy(struct xfrm_state *x)
++{
++	struct ipcomp_data *ipcd = x->data;
++	if (!ipcd)
++		return;
++	xfrm_state_delete_tunnel(x);
++	down(&ipcomp6_resource_sem);
++	ipcomp6_free_data(ipcd);
++	up(&ipcomp6_resource_sem);
++	kfree(ipcd);
++
++	xfrm6_tunnel_free_spi((xfrm_address_t *)&x->props.saddr);
++}
++
++static int ipcomp6_init_state(struct xfrm_state *x)
++{
++	int err;
++	struct ipcomp_data *ipcd;
++	struct xfrm_algo_desc *calg_desc;
++
++	err = -EINVAL;
++	if (!x->calg)
++		goto out;
++
++	if (x->encap)
++		goto out;
++
++	err = -ENOMEM;
++	ipcd = kmalloc(sizeof(*ipcd), GFP_KERNEL);
++	if (!ipcd)
++		goto out;
++
++	memset(ipcd, 0, sizeof(*ipcd));
++	x->props.header_len = 0;
++	if (x->props.mode)
++		x->props.header_len += sizeof(struct ipv6hdr);
++	
++	down(&ipcomp6_resource_sem);
++	if (!ipcomp6_alloc_scratches())
++		goto error;
++
++	ipcd->tfms = ipcomp6_alloc_tfms(x->calg->alg_name);
++	if (!ipcd->tfms)
++		goto error;
++	up(&ipcomp6_resource_sem);
++
++	if (x->props.mode) {
++		err = ipcomp6_tunnel_attach(x);
++		if (err)
++			goto error_tunnel;
++	}
++
++	calg_desc = xfrm_calg_get_byname(x->calg->alg_name, 0);
++	BUG_ON(!calg_desc);
++	ipcd->threshold = calg_desc->uinfo.comp.threshold;
++	x->data = ipcd;
++	err = 0;
++out:
++	return err;
++error_tunnel:
++	down(&ipcomp6_resource_sem);
++error:
++	ipcomp6_free_data(ipcd);
++	up(&ipcomp6_resource_sem);
++	kfree(ipcd);
++
++	goto out;
++}
++
++static struct xfrm_type ipcomp6_type = 
++{
++	.description	= "IPCOMP6",
++	.owner		= THIS_MODULE,
++	.proto		= IPPROTO_COMP,
++	.init_state	= ipcomp6_init_state,
++	.destructor	= ipcomp6_destroy,
++	.input		= ipcomp6_input,
++	.output		= ipcomp6_output,
++};
++
++static struct inet6_protocol ipcomp6_protocol = 
++{
++	.handler	= xfrm6_rcv,
++	.err_handler	= ipcomp6_err,
++	.flags		= INET6_PROTO_NOPOLICY,
++};
++
++static int __init ipcomp6_init(void)
++{
++	if (xfrm_register_type(&ipcomp6_type, AF_INET6) < 0) {
++		printk(KERN_INFO "ipcomp6 init: can't add xfrm type\n");
++		return -EAGAIN;
++	}
++	if (inet6_add_protocol(&ipcomp6_protocol, IPPROTO_COMP) < 0) {
++		printk(KERN_INFO "ipcomp6 init: can't add protocol\n");
++		xfrm_unregister_type(&ipcomp6_type, AF_INET6);
++		return -EAGAIN;
++	}
++	return 0;
++}
++
++static void __exit ipcomp6_fini(void)
++{
++	if (inet6_del_protocol(&ipcomp6_protocol, IPPROTO_COMP) < 0) 
++		printk(KERN_INFO "ipv6 ipcomp close: can't remove protocol\n");
++	if (xfrm_unregister_type(&ipcomp6_type, AF_INET6) < 0)
++		printk(KERN_INFO "ipv6 ipcomp close: can't remove xfrm type\n");
++}
++
++module_init(ipcomp6_init);
++module_exit(ipcomp6_fini);
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("IP Payload Compression Protocol (IPComp) for IPv6 - RFC3173");
++MODULE_AUTHOR("Mitsuru KANDA <mk@linux-ipv6.org>");
++
++
+diff -urN linux-2.6.14.2/net/ipv6/xfrm6_input.c linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c
+--- linux-2.6.14.2/net/ipv6/xfrm6_input.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c	2005-11-15 15:11:19.000000000 +0200
+@@ -80,7 +80,7 @@
+ 
+ 		xfrm_vec[xfrm_nr++].xvec = x;
+ 
+-		if (x->props.mode) { /* XXX */
++		if (x->props.mode == XFRM_MODE_TUNNEL) {
+ 			if (nexthdr != IPPROTO_IPV6)
+ 				goto drop;
+ 			if (!pskb_may_pull(skb, sizeof(struct ipv6hdr)))
+@@ -97,6 +97,30 @@
+ 			skb->nh.raw = skb->data;
+ 			decaps = 1;
+ 			break;
++		} else if (x->props.mode == XFRM_MODE_BEET) {
++			int size = sizeof(struct ipv6hdr);
++			if (skb_cloned(skb) &&
++			    pskb_expand_head(skb, 0, 0, GFP_ATOMIC))
++				goto drop;
++
++			skb_push(skb, size);
++			memmove(skb->data, skb->nh.raw, size);
++			skb->nh.raw = skb->data;
++
++			skb->mac.raw = memmove(skb->data - skb->mac_len,
++					       skb->mac.raw, skb->mac_len);
++
++			if (x->sel.family == AF_INET6) {
++				struct ipv6hdr *ip6h = skb->nh.ipv6h;
++				ip6h = skb->nh.ipv6h;
++				ip6h->payload_len = htons(skb->len - size);
++				ipv6_addr_copy(&ip6h->daddr, (struct in6_addr *) &x->sel.daddr.a6);
++				ipv6_addr_copy(&ip6h->saddr, (struct in6_addr *) &x->sel.saddr.a6);
++			} else
++				BUG_ON(1);
++
++			decaps = 1;
++			break;
+ 		}
+ 
+ 		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
+diff -urN linux-2.6.14.2/net/ipv6/xfrm6_output.c linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c
+--- linux-2.6.14.2/net/ipv6/xfrm6_output.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c	2005-11-15 15:11:19.000000000 +0200
+@@ -16,6 +16,7 @@
+ #include <net/inet_ecn.h>
+ #include <net/ipv6.h>
+ #include <net/xfrm.h>
++#include <net/ip.h>
+ 
+ /* Add encapsulation header.
+  *
+@@ -42,7 +43,8 @@
+ 	skb_push(skb, x->props.header_len);
+ 	iph = skb->nh.ipv6h;
+ 
+-	if (!x->props.mode) {
++	if (x->props.mode == XFRM_MODE_TRANSPORT ||
++	    x->props.mode == XFRM_MODE_BEET) {
+ 		u8 *prevhdr;
+ 		int hdr_len;
+ 
+@@ -50,26 +52,28 @@
+ 		skb->nh.raw = prevhdr - x->props.header_len;
+ 		skb->h.raw = skb->data + hdr_len;
+ 		memmove(skb->data, iph, hdr_len);
+-		return;
++		if (!x->props.mode)
++			return;
+ 	}
+ 
+ 	skb->nh.raw = skb->data;
+ 	top_iph = skb->nh.ipv6h;
+ 	skb->nh.raw = &top_iph->nexthdr;
+ 	skb->h.ipv6h = top_iph + 1;
+-
+-	top_iph->version = 6;
+-	top_iph->priority = iph->priority;
+-	top_iph->flow_lbl[0] = iph->flow_lbl[0];
+-	top_iph->flow_lbl[1] = iph->flow_lbl[1];
+-	top_iph->flow_lbl[2] = iph->flow_lbl[2];
+-	dsfield = ipv6_get_dsfield(top_iph);
+-	dsfield = INET_ECN_encapsulate(dsfield, dsfield);
+-	if (x->props.flags & XFRM_STATE_NOECN)
+-		dsfield &= ~INET_ECN_MASK;
+-	ipv6_change_dsfield(top_iph, 0, dsfield);
+-	top_iph->nexthdr = IPPROTO_IPV6; 
+-	top_iph->hop_limit = dst_metric(dst->child, RTAX_HOPLIMIT);
++	if(x->props.mode == XFRM_MODE_TUNNEL) {
++		top_iph->version = 6;
++		top_iph->priority = iph->priority;
++		top_iph->flow_lbl[0] = iph->flow_lbl[0];
++		top_iph->flow_lbl[1] = iph->flow_lbl[1];
++		top_iph->flow_lbl[2] = iph->flow_lbl[2];
++		dsfield = ipv6_get_dsfield(top_iph);
++		dsfield = INET_ECN_encapsulate(dsfield, dsfield);
++		if (x->props.flags & XFRM_STATE_NOECN)
++			dsfield &= ~INET_ECN_MASK;
++		ipv6_change_dsfield(top_iph, 0, dsfield);
++		top_iph->nexthdr = IPPROTO_IPV6; 
++		top_iph->hop_limit = dst_metric(dst->child, RTAX_HOPLIMIT);
++	}
+ 	ipv6_addr_copy(&top_iph->saddr, (struct in6_addr *)&x->props.saddr);
+ 	ipv6_addr_copy(&top_iph->daddr, (struct in6_addr *)&x->id.daddr);
+ }
+@@ -104,7 +108,7 @@
+ 			goto error_nolock;
+ 	}
+ 
+-	if (x->props.mode) {
++	if (x->props.mode == XFRM_MODE_TUNNEL) {
+ 		err = xfrm6_tunnel_check_size(skb);
+ 		if (err)
+ 			goto error_nolock;
+diff -urN linux-2.6.14.2/net/key/af_key.c linux-2.6.14.2-beet/net/key/af_key.c
+--- linux-2.6.14.2/net/key/af_key.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/key/af_key.c	2005-11-15 15:11:19.000000000 +0200
+@@ -1075,6 +1075,8 @@
+ 		x->sel.family = pfkey_sadb_addr2xfrm_addr(addr, &x->sel.saddr);
+ 		x->sel.prefixlen_s = addr->sadb_address_prefixlen;
+ 	}
++	else
++		x->sel.family = x->props.family; /* Conservative */
+ 
+ 	if (ext_hdrs[SADB_X_EXT_NAT_T_TYPE-1]) {
+ 		struct sadb_x_nat_t_type* n_type;
+diff -urN linux-2.6.14.2/net/xfrm/xfrm_user.c linux-2.6.14.2-beet/net/xfrm/xfrm_user.c
+--- linux-2.6.14.2/net/xfrm/xfrm_user.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-beet/net/xfrm/xfrm_user.c	2005-11-15 15:11:19.000000000 +0200
+@@ -148,8 +148,9 @@
+ 
+ 	err = -EINVAL;
+ 	switch (p->mode) {
+-	case 0:
+-	case 1:
++	case XFRM_MODE_TRANSPORT:
++	case XFRM_MODE_TUNNEL:
++	case XFRM_MODE_BEET:
+ 		break;
+ 
+ 	default:
+@@ -609,6 +610,7 @@
+ 	int i;
+ 
+ 	xp->xfrm_nr = nr;
++	xp->family = ut->family;
+ 	for (i = 0; i < nr; i++, ut++) {
+ 		struct xfrm_tmpl *t = &xp->xfrm_vec[i];
+ 
