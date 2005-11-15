@@ -4,6 +4,91 @@
 static int preferred_family = AF_INET6;
 
 
+
+/**
+ * Functions for setting up dummy interface
+ */
+
+int get_ctl_fd(void)
+{
+        int s_errno;
+        int fd;
+
+        fd = socket(PF_INET, SOCK_DGRAM, 0);
+        if (fd >= 0)
+                return fd;
+        s_errno = errno;
+        fd = socket(PF_PACKET, SOCK_DGRAM, 0);
+        if (fd >= 0)
+                return fd;
+        fd = socket(PF_INET6, SOCK_DGRAM, 0);
+        if (fd >= 0)
+                return fd;
+        errno = s_errno;
+        perror("Cannot create control socket");
+        return -1;
+}
+
+
+int do_chflags(const char *dev, __u32 flags, __u32 mask)
+{
+        struct ifreq ifr;
+        int fd;
+        int err;
+
+        strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+        fd = get_ctl_fd();
+        if (fd < 0)
+                return -1;
+        err = ioctl(fd, SIOCGIFFLAGS, &ifr);
+        if (err) {
+                perror("SIOCGIFFLAGS");
+                close(fd);
+                return -1;
+        }
+        if ((ifr.ifr_flags^flags)&mask) {
+                ifr.ifr_flags &= ~mask;
+                ifr.ifr_flags |= mask&flags;
+                err = ioctl(fd, SIOCSIFFLAGS, &ifr);
+                if (err)
+                        perror("SIOCSIFFLAGS");
+        }
+        close(fd);
+        return err;
+}
+
+
+int set_up_device(char *dev, int up)
+{
+	int err = -1;
+	__u32 mask = 0;
+	__u32 flags = 0;
+	
+	if(up == 1){
+		mask |= IFF_UP;
+		flags |= IFF_UP;
+	} else {
+		mask |= IFF_UP;
+		flags &= ~IFF_UP;
+	}
+	
+	err = do_chflags(dev, flags, mask);			
+	printf("setting %s done\n", dev);
+	return err;	 
+}
+
+
+
+
+/**
+ * Functions for setting up SA/SP
+ */
+
+
+
+
+
+
 /**
  * xfrm_fill_selector - fill in the selector.
  * Selector is bound to HITs

@@ -8,6 +8,15 @@
 
 #include <linux/xfrm.h>
 
+
+#include <time.h>
+#include <netdb.h>
+#include <net/if.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#include <linux/xfrm.h>
+#include <errno.h>
+
 #include "nlink.h"
 #include "debug.h"
 #include "hip.h"
@@ -43,7 +52,9 @@ typedef struct hip_xfrm_state hip_xfrm_t;
 
 void hip_beetdb_hold_entry(void *entry);
 void hip_beetdb_put_entry(void *entry);
-
+int get_ctl_fd(void);
+int do_chflags(const char *dev, __u32 flags, __u32 mask);
+int set_up_device(char *dev, int up);
 /*
  * These are wrappers to netlink calls (from the userspace daemon to
  * the kernel XFRM management) or to the BEET patch (from the kernel

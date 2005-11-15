@@ -286,7 +286,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	struct netdev_address *n, *t;
 	int pre_if_address_count;
 
-	HIP_DEBUG("\n");
 	addr = (struct sockaddr*) &ss_addr;
 	
 	for (; NLMSG_OK(msg, (u32)len);
@@ -406,6 +405,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			/* XX TODO  does this ever happen? */
 			return -1;
 			break;
+#if 0
 		case XFRMGRP_SA:
 			/* XX TODO  does this ever happen? */
 			return -1;
@@ -414,6 +414,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			/* XX TODO  does this ever happen? */
 			return -1;
 			break;
+#endif
 		case XFRM_MSG_GETSA:
 			return -1;
 			break;			
@@ -436,12 +437,14 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 		case XFRM_MSG_POLEXPIRE:
 			return -1;
 			break;			
+#if 0
 		case XFRM_MSG_FLUSHSA:
 			return -1;
 			break;			
 		case XFRM_MSG_FLUSHPOLICY:
 			return -1;
 			break;
+#endif
 		skip_readdr:
 			break;
 		default:
