@@ -102,6 +102,14 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
+	/**********/
+	/* ONLY FOR TESTING ... REMOVE AFTER THE HIPD WORKS PROPERLY */
+	/** This is to delete the general security policies in case they exist
+	 * due to for example a crash of the application
+	 */
+	hip_delete_prefix_sp_pair();
+	/**********/
+
 	hip_set_logfmt(LOGFMT_LONG);
 
 	/* Configuration is valid! Fork a daemon, if so configured */
@@ -126,40 +134,42 @@ int main(int argc, char *argv[]) {
 	if (user_msg == NULL) goto out_err;
 
 	/* Open the netlink socket for address and IF events */
-	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
+	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		ret = 1;
 		goto out_err;
 	}
 	highest_descriptor = nl_ifaddr.fd;
 
-	HIP_DEBUG("--->Setting SP\n");
-	HIP_IFE(hip_setup_sp_prefix_pair(), -1);
-
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
 	hip_netdev_init_addresses(&nl_ifaddr);
-	HIP_DEBUG("***Opening netlink\n");
-
-	/* See section 25 from Stevens */
-	HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW, HIP_PROTO)) <= 0),
-		 -1, "Raw socket creation failed. Not root?\n");
 
 	{
 		int on = 1;
+		/* See section 25 from Stevens */
+		HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW, HIP_PROTO)) <= 0),
+			 -1, "Raw socket creation failed. Not root?\n");
+
 		HIP_IFEL((setsockopt(hip_raw_sock, IPPROTO_IPV6, IP_HDRINCL,
-				     &on, sizeof(on)) < 0), -1,
+					      &on, sizeof(on)) < 0), -1,
 			 "Reading the IP header from raw socket forbidden\n");
+
 	}
 
 
+	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n", hip_raw_sock, highest_descriptor);
+	HIP_DEBUG("--->Setting SP\n");
+	HIP_IFE(hip_setup_sp_prefix_pair(), -1);
+	
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)
 	{
 		HIP_ERROR("Could not create socket for user communication.\n");
 		err = -1;
 		goto out_err;
+
 	}
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sun_family = AF_UNIX;
@@ -171,9 +181,9 @@ int main(int argc, char *argv[]) {
 		 -1, "Bind failed.");
 	HIP_DEBUG("Local server up\n");
 	highest_descriptor = (hip_raw_sock > highest_descriptor) ?
-	  hip_raw_sock : highest_descriptor;
+		hip_raw_sock : highest_descriptor;
 	highest_descriptor = (hip_user_sock > highest_descriptor) ?
-	  hip_user_sock : highest_descriptor;
+		hip_user_sock : highest_descriptor;
 	
         if (hip_init_cipher() < 0) {
 		HIP_ERROR("Unable to init ciphers.\n");
@@ -187,10 +197,8 @@ int main(int argc, char *argv[]) {
         hip_init_rvadb();
 #endif	
 
-
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();
-
 
 #ifdef CONFIG_HIP_HI3
 	cl_init(i3_config);
@@ -220,13 +228,16 @@ int main(int argc, char *argv[]) {
 #endif
 			HIP_INFO("select() error: %s.\n", strerror(errno));
 			
-		} else if (err == 0) { 
-				/* idle cycle - select() timeout */
+		} else if (err == 0) {
+			/* idle cycle - select() timeout */
+			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
 			/* XX FIX: read an IPv6(HIP) message from the raw
 			   socket, and the IP addresses and IP header to
 			   hip_receive_control_packet() */
-			return -1;
+			_HIP_DEBUG("Here we are\n");
+
+			//return -1;
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;
@@ -245,23 +256,21 @@ int main(int argc, char *argv[]) {
 			
 			//HIP_HEXDUMP("packet", user_msg,  hip_get_msg_total_len(user_msg));
 			HIP_IFEL((err = hip_handle_user_msg(user_msg)),
-				-1, "Handing of user msg failed\n");
-
+				 -1, "Handing of user msg failed\n");
+			
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
-				/* Something on IF and address event netlink socket,
-				   fetch it. */
+			/* Something on IF and address event netlink socket,
+			   fetch it. */
+			HIP_DEBUG("we are getting something ... ACQUIRE?\n");
 			hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}
-			
 		while (hwo = hip_get_work_order()) {
 			HIP_DEBUG("Processing work order\n");
 			hip_do_work(hwo);
 		}
-		
-	  }
-
+	}
 out_err:
 	/* free allocated resources */
 	if (hip_raw_sock)

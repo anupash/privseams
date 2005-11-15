@@ -385,7 +385,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 					memcpy(&reas[i].address, SA2IP(&n->addr),
 					       SAIPLEN(&n->addr));
-					/* FIXME: Is this ok? (tkoponen), for boeing it is*/					reas[i].lifetime = 0;
+					/* FIXME: Is this ok? (tkoponen), for boeing it is*/
+					reas[i].lifetime = 0;
 					/* For testing preferred address */
 					reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
 					i++;
@@ -397,49 +398,22 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				break;
 			}
 		case XFRMGRP_ACQUIRE:
-			/* XX TODO: does this ever happen? */
+			/* XX TODO */
+			HIP_DEBUG("\n");
 			return -1;
 			break;
 		case XFRMGRP_EXPIRE:
-			/* XX TODO: does this ever happen? */
+			/* XX TODO */
 			return -1;
 			break;
 		case XFRMGRP_SA:
-			/* XX TODO: does this ever happen? */
+			/* XX TODO */
 			return -1;
 			break;
 		case XFRMGRP_POLICY:
-			/* XX TODO: does this ever happen? */
+			/* XX TODO */
 			return -1;
 			break;
-		case XFRM_MSG_GETSA:
-			return -1;
-			break;			
-		case XFRM_MSG_ALLOCSPI:
-			return -1;
-			break;			
-		case XFRM_MSG_ACQUIRE:
-			HIP_DEBUG("acquire\n");
-			return -1;
-			break;			
-		case XFRM_MSG_EXPIRE:
-			return -1;
-			break;			
-		case XFRM_MSG_UPDPOLICY:
-			return -1;
-			break;			
-		case XFRM_MSG_UPDSA:
-			return -1;
-			break;			
-		case XFRM_MSG_POLEXPIRE:
-			return -1;
-			break;			
-		case XFRM_MSG_FLUSHSA:
-			return -1;
-			break;			
-		case XFRM_MSG_FLUSHPOLICY:
-			return -1;
-			break;			
 		skip_readdr:
 			break;
 		default:

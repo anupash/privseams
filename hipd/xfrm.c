@@ -65,8 +65,8 @@ void hip_delete_prefix_sp_pair() {
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* See the comment in hip_setup_sp_prefix_pair() */
-	src_hit.s6_addr32[0] = htonl(0x40000000); //HIP_HIT_TYPE_MASK_120
-	dst_hit.s6_addr32[0] = htonl(0x40000000); //HIP_HIT_TYPE_MASK_120
+	src_hit.s6_addr32[0] = 0x40000000; //HIP_HIT_TYPE_MASK_120   0x40000000
+	dst_hit.s6_addr32[0] = 0x40000000; //htonl(HIP_HIT_TYPE_MASK_120)   0x40000000
 
 	hip_xfrm_policy_delete(&src_hit, &src_hit, XFRM_POLICY_IN);
 	hip_xfrm_policy_delete(&dst_hit, &dst_hit, XFRM_POLICY_OUT);
@@ -83,8 +83,8 @@ int hip_setup_sp_prefix_pair() {
 	/** FIXME: I am not that sure if the macro HIP_HIT_TYPE_MASK_120 is correct 
 	 * at the moment I opt for hardcoding the general policy 
 	 */
-	src_hit.s6_addr32[0] = htonl(0x40000000); //HIP_HIT_TYPE_MASK_120
-	dst_hit.s6_addr32[0] = htonl(0x40000000); //HIP_HIT_TYPE_MASK_120
+	src_hit.s6_addr32[0] = 0x40000000; //HIP_HIT_TYPE_MASK_120   0x40000000
+	dst_hit.s6_addr32[0] = 0x40000000; //HIP_HIT_TYPE_MASK_120   0x40000000
 
 	HIP_IFE(hip_setup_hit_sp_pair(&dst_hit, &src_hit, NULL, NULL), -1);
 

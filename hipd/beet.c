@@ -151,8 +151,9 @@ int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer, 
 	if (hip_netlink_open(&rth, 0, NETLINK_XFRM) < 0)
 		exit(1);
 
-	if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
-		exit(2);
+	if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0) {
+		HIP_INFO("No associated policies to be deleted\n");
+	}
 
 	hip_netlink_close(&rth);
 
