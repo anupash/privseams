@@ -22,7 +22,7 @@ struct hip_pc_wq {
 	struct list_head workqueue;
 };
 
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 static DEFINE_PER_CPU(struct hip_pc_wq, hip_workqueue);
 #else
 static struct hip_pc_wq hip_workqueue;
@@ -55,7 +55,7 @@ struct hip_work_order *hip_get_work_order(void)
 {
 	struct hip_work_order *err = NULL;
 	struct hip_pc_wq *wq;
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 	unsigned long eflags;
 	int locked;
 
@@ -84,7 +84,7 @@ struct hip_work_order *hip_get_work_order(void)
 	list_del((&wq->workqueue)->next);
 
  out_err:	
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 	local_irq_restore(eflags);
 #endif
 	return err;
@@ -106,7 +106,7 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 {
 	int err = 1;
 	struct hip_pc_wq *wq;
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 	unsigned long eflags;
 	HIP_IFEL(cpu >= NR_CPUS, -1, 
 		"Invalid CPU number: %d (max cpus: %d)\n", cpu, NR_CPUS);
@@ -122,12 +122,12 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 	if (wq) {
 		list_add_tail(&hwo->queue, &wq->workqueue);
 		/* what is the correct order of these two, l_i_r and up ? */
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 		up(&wq->worklock);
 #endif
 	}
 
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 	local_irq_restore(eflags);
  out_err:
 #endif
@@ -160,7 +160,7 @@ int hip_insert_work_order(struct hip_work_order *hwo)
 int hip_init_workqueue()
 {
 	struct hip_pc_wq *wq;
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 	unsigned long eflags;
 
 	local_irq_save(eflags);
@@ -170,7 +170,7 @@ int hip_init_workqueue()
 	wq = &hip_workqueue;
 #endif
  	INIT_LIST_HEAD(&wq->workqueue);
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
  	init_MUTEX_LOCKED(&wq->worklock);
  	put_cpu_var(hip_workqueue);
  	local_irq_restore(eflags);
@@ -183,7 +183,7 @@ void hip_uninit_workqueue()
 	struct list_head *pos,*iter;
 	struct hip_pc_wq *wq;
 	struct hip_work_order *hwo;
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
 	unsigned long eflags;
 
 	local_irq_save(eflags);
@@ -196,7 +196,7 @@ void hip_uninit_workqueue()
 		hip_free_work_order(hwo);
 		list_del(pos);
 	}
-#if HIP_KERNEL_DAEMON
+#if HIP_KERNEL_DAEMON || HIP_KERNEL_STUB
  	put_cpu_var(hip_workqueue); // test
 	local_irq_restore(eflags);
 #endif
