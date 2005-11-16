@@ -6,6 +6,219 @@ static int preferred_family = AF_INET6;
 
 
 /**
+ * Functions for adding ip address
+ */
+
+
+
+
+static struct idxmap *idxmap[16];
+
+unsigned ll_name_to_index(const char *name)
+{
+        static char ncache[16];
+        static int icache;
+        struct idxmap *im;
+        int i;
+
+        if (name == NULL)
+                return 0;
+        if (icache && strcmp(name, ncache) == 0)
+                return icache;
+        for (i=0; i<16; i++) {
+                for (im = idxmap[i]; im; im = im->next) {
+                        if (strcmp(im->name, name) == 0) {
+                                icache = im->index;
+                                strcpy(ncache, name);
+                                return im->index;
+                        }
+                }
+        }
+
+        return if_nametoindex(name);
+}
+
+int get_unsigned(unsigned *val, const char *arg, int base)
+{
+        unsigned long res;
+        char *ptr;
+
+        if (!arg || !*arg)
+                return -1;
+        res = strtoul(arg, &ptr, base);
+        if (!ptr || ptr == arg || *ptr || res > UINT_MAX)
+                return -1;
+        *val = res;
+        return 0;
+}
+
+
+
+int get_addr_1(inet_prefix *addr, const char *name, int family)
+{
+        const char *cp;
+        unsigned char *ap = (unsigned char*)addr->data;
+        int i;
+
+        memset(addr, 0, sizeof(*addr));
+
+        if (strcmp(name, "default") == 0 ||
+            strcmp(name, "all") == 0 ||
+            strcmp(name, "any") == 0) {
+                if (family == AF_DECnet)
+                        return -1;
+                addr->family = family;
+                addr->bytelen = (family == AF_INET6 ? 16 : 4);
+                addr->bitlen = -1;
+                return 0;
+        }
+
+        if (strchr(name, ':')) {
+                addr->family = AF_INET6;
+                if (family != AF_UNSPEC && family != AF_INET6)
+                        return -1;
+                if (inet_pton(AF_INET6, name, addr->data) <= 0)
+                        return -1;
+                addr->bytelen = 16;
+                addr->bitlen = -1;
+                return 0;
+        }
+
+
+
+
+        addr->family = AF_INET;
+        if (family != AF_UNSPEC && family != AF_INET)
+                return -1;
+        addr->bytelen = 4;
+        addr->bitlen = -1;
+        for (cp=name, i=0; *cp; cp++) {
+                if (*cp <= '9' && *cp >= '0') {
+                        ap[i] = 10*ap[i] + (*cp-'0');
+                        continue;
+                }
+                if (*cp == '.' && ++i <= 3)
+                        continue;
+                return -1;
+        }
+        return 0;
+}
+
+
+
+int get_prefix_1(inet_prefix *dst, char *arg, int family)
+{
+        int err;
+        unsigned plen;
+        char *slash;
+
+
+        memset(dst, 0, sizeof(*dst));
+
+        if (strcmp(arg, "default") == 0 ||
+            strcmp(arg, "any") == 0 ||
+            strcmp(arg, "all") == 0) {
+                if (family == AF_DECnet)
+                        return -1;
+                dst->family = family;
+                dst->bytelen = 0;
+                dst->bitlen = 0;
+                return 0;
+        }
+
+        slash = strchr(arg, '/');
+        printf("slash %s\n", slash);
+        if (slash)
+               *slash = 0;
+
+        printf("arg %s, family %d\n", arg, family);
+        err = get_addr_1(dst, arg, family);
+        if (err == 0) {
+                switch(dst->family) {
+                        case AF_INET6:
+                                dst->bitlen = 128;
+                                break;
+                        case AF_DECnet:
+                                dst->bitlen = 16;
+                                break;
+                        default:
+                        case AF_INET:
+                                dst->bitlen = 32;
+                 }
+                if (slash) {
+                        if (get_unsigned(&plen, slash+1, 0) || plen > dst->bitlen) {
+                                err = -1;
+                                goto done;
+                        }
+                        dst->flags |= PREFIXLEN_SPECIFIED;
+                        dst->bitlen = plen;
+                }
+        }
+done:
+        if (slash)
+                *slash = '/';
+        return err;
+}
+
+
+
+
+
+
+
+int ipaddr_modify(int cmd, int family, char *ip, char *dev )
+{
+        struct hip_nl_handle rth;
+        struct {
+                struct nlmsghdr         n;
+                struct ifaddrmsg        ifa;
+                char                    buf[256];
+        } req;
+        char  *lcl_arg = NULL;
+        inet_prefix lcl;
+        int local_len = 0;
+        inet_prefix addr;
+        memset(&req, 0, sizeof(req));
+
+        req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+        req.n.nlmsg_flags = NLM_F_REQUEST;
+        req.n.nlmsg_type = cmd;
+        req.ifa.ifa_family = family; 
+
+        lcl_arg = ip;
+        get_prefix_1(&lcl, ip, req.ifa.ifa_family);
+        addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
+        local_len = lcl.bytelen;
+
+
+        if (hip_netlink_open(&rth, 0, NETLINK_ROUTE) < 0)
+                exit(1);
+
+        if ((req.ifa.ifa_index = ll_name_to_index(dev)) == 0) {
+                fprintf(stderr, "Cannot find device \"%s\"\n", dev);
+                return -1;
+	}
+        if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
+                exit(2);
+
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
  * Functions for setting up dummy interface
  */
 

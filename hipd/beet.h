@@ -29,6 +29,7 @@
 #define XFRM_MODE_BEET   2
 #define XFRM_TMPLS_BUF_SIZE 1024
 #define XFRM_ALGO_KEY_BUF_SIZE 512
+#define PREFIXLEN_SPECIFIED 1
 
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
@@ -47,6 +48,28 @@ struct hip_xfrm_state {
 						   * peer */
 	int                  state;               /* state */
 };
+
+struct idxmap
+{
+        struct idxmap * next;
+        unsigned        index;
+        int             type;
+        int             alen;
+        unsigned        flags;
+        unsigned char   addr[8];
+        char            name[16];
+};
+
+typedef struct
+{
+        __u8 family;
+        __u8 bytelen;
+        __s16 bitlen;
+        __u32 flags;
+        __u32 data[4];
+} inet_prefix;
+
+
 
 typedef struct hip_xfrm_state hip_xfrm_t;
 

@@ -167,7 +167,10 @@ int main(int argc, char *argv[]) {
 	HIP_IFE(hip_setup_sp_prefix_pair(), -1);
 	HIP_DEBUG("--->Setting %s\n", HIP_HIT_DEV);
 	HIP_IFE(set_up_device(HIP_HIT_DEV,1), -1);
+	HIP_DEBUG("--->Setting ip addr as 3ffe::2 %s\n", HIP_HIT_DEV);
+	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, "3ffe::2", "dummy0" ), -1);
 	
+
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)
 	{
