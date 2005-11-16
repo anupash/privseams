@@ -74,9 +74,8 @@
       HIP enabled java programs
     </para>
     <para>
-      The HIPL patched kernel is based on the official Linux kernel and it
-      should be distribution independent. The kernel has been tested on the
-      Debian Linux (Woody, Sarge) distribution.
+      &nbsp;* Linux 2.6 kernel with BEET patches, dummy device, XFRM and
+      XFRM_USER support
     </para>
   </chapter>
   <chapter>
@@ -187,23 +186,6 @@
     </para>
   </chapter>
   <chapter>
-    <title>Using the Userspace Implementation (Optional)</title>
-    <para>
-      This step is optional. Follow it if you want to run the HIP daemon
-      in the userspace instead of the kernel space.
-    </para>
-    <para>
-       First, you need to compile the kernel with the CONFIG_HIP_USERSPACE
-       option. Then, execute "modprobe hipmod", "hipd/hipd" and
-       "hipconf add hi default" in exactly that order. In order to run the
-       HIP daemon independently from the path, you might run "make install" in
-       in the top directory. The HIP deamon can be run in background
-       by specifying the option f. The rest of the
-       instructions in this manual apply also to the userspace implementation
-       with these small changes.
-    </para>
-  </chapter>
-  <chapter>
     <title>Compiling Userspace Applications</title>
     <para>
       After you have successfully compiled and installed the HIP kernel and
@@ -269,7 +251,7 @@
       &nbsp;ifconfig eth0 inet6 add 3ffe::2/64
     </para>
     <para>
-      &nbsp;modprobe hipmod
+      &nbsp;optional: modprobe hipmod
       </para>
     <para>
       &nbsp;cd somewhere/hipl
@@ -291,7 +273,7 @@
       &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
       </para>
     <para>
-      &nbsp;modprobe hipmod
+      &nbsp;optional: modprobe hipmod
     </para>
     <para>
       &nbsp;cd somewhere/hipl
@@ -479,7 +461,7 @@
       crash # cd path-to-hipl/test
     </para>
     <para>
-      crash # modprobe hipmod
+      crash # optional: modprobe hipmod
     </para>
     <para>
       crash # ../tools/hipconf add hi default
@@ -491,7 +473,7 @@
       oops # cd test
     </para>
     <para>
-      oops # modprobe hipmod
+      oops # optional: modprobe hipmod
     </para>
     <para>
       oops # ../tools/hipconf add hi default
@@ -655,7 +637,7 @@
       	  1. Start and initialize HIP module in each host:
     </para>
     <para>
-	  each-host # modprobe hipmod
+	  each-host # optional: modprobe hipmod
     </para>
     <para>
 	  each-host # hipl/tools/hipconf add hi default
