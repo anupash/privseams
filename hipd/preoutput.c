@@ -4,11 +4,30 @@
 #ifndef CONFIG_HIP_HI3
 // FIXME: This ifdef will be removed once the handler support is a bit more generic in hidb.
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-		  struct hip_common* buf)
+		  struct hip_common* msg)
 {
-	/* XX FIXME: send the packet directly to the network using
-	   a raw socket: first write an IP header, then the HIP message */
-	return -1;
+	int err = 0, ret, sock = 0, len = hip_get_msg_total_len(msg);
+	struct sockaddr_in6 src, dst;
+
+	memset(&src, 0, sizeof(src));
+	memset(&dst, 0, sizeof(dst));
+	memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
+	memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
+
+        HIP_IFEL((sock = socket(AF_INET6, SOCK_RAW, HIP_PROTO) < 0), -1,
+		 "Raw sock creation failed\n");
+        HIP_IFEL((bind(sock, (struct sockaddr *) &src, sizeof(src)) < 0), -1,
+		"Binding to raw sock failed\n");
+        HIP_IFEL((connect(sock, (struct sockaddr *) &dst, sizeof(dst)) < 0),
+		 -1, "Connecting of raw sock failed\n");
+	HIP_IFEL((send(sock, msg, len, 0) != len), -1,
+		 "Sending of HIP msg failed\n");
+
+ out_err:
+	if (sock)
+		close(sock);
+
+	return err;
 }
 #else
 /*
