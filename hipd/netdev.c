@@ -274,6 +274,40 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
         return(0);
 }
 
+int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
+	int err = 0;
+	hip_ha_t *entry;
+	hip_hit_t *dst_hit;
+	struct xfrm_user_acquire *acq;
+	struct in6_addr *dst_addr;
+
+	HIP_DEBUG("Acquire: sending I1\n");
+
+	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
+	dst_hit = (struct in6_addr *) &acq->id.daddr;
+	entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+
+	if (!entry) {
+#if 0
+		/* Try to Resolve the HIT to a hostname from /etc/hip/hosts,
+		   then resolve the hostname to an IP */
+		err = hip_reverse_resolve(); /* TBD */
+		err = hip_hadb_add_peer_info(dst_hit, dst_addr);
+#endif
+		HIP_ERROR("Failed to find entry\n");
+		err = -1;
+		goto out_err;
+	}
+
+	/* XX TODO: we should try resolving here to create an
+	   entry if an entry was not found */
+
+	HIP_IFEL(hip_send_i1(&entry->hit_peer, entry), -1,
+		 "Sending of I1 failed\n");
+ out_err:
+	return err;
+}
+
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
 	struct ifinfomsg *ifinfo; /* link layer specific message */
@@ -422,9 +456,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			return -1;
 			break;			
 		case XFRM_MSG_ACQUIRE:
-			HIP_DEBUG("acquire\n");
-			return -1;
-			break;			
+			return hip_netdev_handle_acquire(msg);
+			break;		
 		case XFRM_MSG_EXPIRE:
 			return -1;
 			break;			
