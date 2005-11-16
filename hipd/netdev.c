@@ -289,9 +289,13 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	if (!entry) {
 #if 0
-		/* Try to Resolve the HIT to a hostname from /etc/hip/hosts,
-		   then resolve the hostname to an IP */
-		err = hip_reverse_resolve(); /* TBD */
+		/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
+		   then resolve the hostname to an IP. The natural place to
+		   handle this is either in the getaddrinfo or
+		   getendpointinfo function with AI_NUMERICHOST flag set.
+		   We can fallback to e.g. DHT search if the mapping is not
+		   found from local files.*/
+		err = getendpointinfo(); /* TBD */
 		err = hip_hadb_add_peer_info(dst_hit, dst_addr);
 #endif
 		HIP_ERROR("Failed to find entry\n");

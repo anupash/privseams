@@ -105,8 +105,8 @@ int xfrm_fill_selector(struct xfrm_selector *sel, struct in6_addr *hit_our, stru
 	memcpy(&sel->saddr, hit_our, sizeof(sel->saddr));
 
 	/* FIXME */
-	sel->prefixlen_d = 2; /* Hardcoded for AF_INET6 or 128???*/
-	sel->prefixlen_s = 2; /* Hardcoded for AF_INET6 */
+	sel->prefixlen_d = 8; /* Hardcoded for AF_INET6 or 128???*/
+	sel->prefixlen_s = 8; /* Hardcoded for AF_INET6 */
 	return 0;
 }
 
