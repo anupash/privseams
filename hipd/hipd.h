@@ -22,6 +22,8 @@
 #include "i3_client_api.h"
 #endif
 
+#define HIP_HIT_DEV "dummy0"
+
 extern struct hip_nl_handle nl_khipd;
 extern time_t load_time;
 

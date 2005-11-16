@@ -38,6 +38,9 @@ void usage() {
  */
 void hip_exit(int signal) {
 	HIP_ERROR("Signal: %d\n", signal);
+
+	set_up_device(HIP_HIT_DEV, 0);
+
 #ifdef CONFIG_HIP_HI3
 	cl_exit();
 #endif
@@ -162,8 +165,8 @@ int main(int argc, char *argv[]) {
 	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n", hip_raw_sock, highest_descriptor);
 	HIP_DEBUG("--->Setting SP\n");
 	HIP_IFE(hip_setup_sp_prefix_pair(), -1);
-	HIP_DEBUG("--->Setting Dummy\n");
-	HIP_IFE(set_up_device("dummy0",1), -1);
+	HIP_DEBUG("--->Setting %s\n", HIP_HIT_DEV);
+	HIP_IFE(set_up_device(HIP_HIT_DEV,1), -1);
 	
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)
