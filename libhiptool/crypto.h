@@ -15,6 +15,9 @@
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
+#include <openssl/md5.h>
+#include <openssl/aes.h>
+#include <openssl/des.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
