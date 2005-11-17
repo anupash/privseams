@@ -136,6 +136,41 @@ int main(int argc, char *argv[]) {
 	user_msg = hip_msg_alloc();
 	if (user_msg == NULL) goto out_err;
 
+	/* Create default keys if necessary */
+	{
+		struct stat status;
+
+		if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT) {
+			hip_msg_init(user_msg);
+			ret = hip_serialize_host_id_action(user_msg,
+							   ACTION_NEW, 0, 1,
+							   NULL, NULL);
+			if (ret) {
+				ret = 1;
+				HIP_ERROR("Failed to create keys to %s\n",
+					  DEFAULT_CONFIG_DIR);
+				goto out_err;
+			}
+		}
+	}
+
+#if 0 /* Miika: segfaults */
+	/* Retrieve the keys to hipd */
+	hip_msg_init(user_msg);
+	ret = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1,
+					   NULL, NULL);
+	if (ret) {
+		HIP_ERROR("Could not load default keys\n");
+		goto out_err;
+	}
+
+	ret = hip_handle_add_local_hi(user_msg);
+	if (ret) {
+		HIP_ERROR("Adding of keys failed\n");
+		goto out_err;
+	}
+#endif
+
 	/* Open the netlink socket for address and IF events */
 	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
@@ -252,6 +287,7 @@ int main(int argc, char *argv[]) {
 			err = 0;
 			HIP_DEBUG("Receiving user message(?).\n");
 			bzero(&user_addr, sizeof(user_addr));
+			hip_msg_init(user_msg);
 			alen = sizeof(user_addr);
 			n = recvfrom(hip_user_sock, (void *)user_msg,
 				     HIP_MAX_PACKET, 0,

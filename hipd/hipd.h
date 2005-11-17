@@ -13,6 +13,7 @@
 #include "workqueue.h"
 #include "debug.h"
 #include "netdev.h"
+#include "hipconf.h"
 
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */

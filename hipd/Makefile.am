@@ -15,7 +15,7 @@ include_HEADERS = cookie.h hidb.h hadb.h hashtable.h keymat.h keymat.h \
                   workqueue.h bos.h input.h output.h preoutput.h preinput.h \
                   xfrm.h beet.h netdev.h update.h rvs.h
 INCLUDES = -I$(PWD) -I$(HIPL_LIBHIPTOOL)
-INCLUDES += -I$(HIPL) # -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES += -I$(HIPL) -I$(HIPL_TOOLS)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c hashtable.c keymat.c

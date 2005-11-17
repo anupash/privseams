@@ -6,6 +6,10 @@
 #include "debug.h"
 #include "hip.h"
 
+#ifdef CONFIG_HIP_LIBHIPTOOL
+#  include "hipconf.h"
+#endif /* CONFIG_HIP_LIBHIPTOOL */
+
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
 {
@@ -62,5 +66,8 @@ int hip_hmac_key_length(int tid);
 int hip_enc_key_length(int tid);
 int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
+int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
+				 int use_default, const char *hi_fmt,
+				 const char *hi_file);
 
 #endif /* HIP_MISC_H */

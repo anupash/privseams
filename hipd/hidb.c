@@ -30,7 +30,6 @@ HIP_INIT_DB(hip_local_hostid_db, "local_hid");
  *
  */
 
-
 /**
  * hip_uninit_hostid_db - uninitialize local/peer Host Id table
  * @db: Database structure to delete. 
