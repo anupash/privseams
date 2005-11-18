@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-#if 0 /* Miika: segfaults */
+#if 1 /* Miika: segfaults */
 	/* Retrieve the keys to hipd */
 	hip_msg_init(user_msg);
 	ret = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1,

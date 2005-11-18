@@ -654,53 +654,57 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
     HIP_INFO("No key file given, use default\n");
 
-    dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+    dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
       strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
-    rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+    rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
       strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
- 
-    dsa_filenamebase = malloc(dsa_filenamebase_len);
+    
+    /* DEFAULT_CONFIG_DIR/DEFAULT_HOST_DSA_KEY_FILE_BASE.DEFAULT_ANON_HI_FILE_NAME_SUFFIX)\0 */
+    dsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
     if (!dsa_filenamebase) {
       HIP_ERROR("Could allocate DSA file name\n");
       err = -ENOMEM;
       goto out;
     }
-    rsa_filenamebase = malloc(rsa_filenamebase_len);
+    rsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
     if (!rsa_filenamebase) {
       HIP_ERROR("Could allocate RSA file name\n");
       err = -ENOMEM;
       goto out;
     }
-    dsa_filenamebase_pub = malloc(dsa_filenamebase_len+4);
+    dsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
     if (!dsa_filenamebase) {
       HIP_ERROR("Could allocate DSA (pub) file name\n");
       err = -ENOMEM;
       goto out;
     }
-    rsa_filenamebase_pub = malloc(rsa_filenamebase_len+4);
+    rsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
     if (!rsa_filenamebase) {
       HIP_ERROR("Could allocate RSA (pub) file name\n");
       err = -ENOMEM;
       goto out;
     }
 
-    ret = snprintf(dsa_filenamebase, dsa_filenamebase_len+5, "%s/%s",
+    ret = snprintf(dsa_filenamebase,
+		   dsa_filenamebase_len +
+		   strlen(DEFAULT_ANON_HI_FILE_NAME_SUFFIX),
+		   "%s/%s%s",
                    DEFAULT_CONFIG_DIR,
-		   DEFAULT_HOST_DSA_KEY_FILE_BASE
+		   DEFAULT_HOST_DSA_KEY_FILE_BASE,
 		   DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
     if (ret <= 0) {
       err = -EINVAL;
       goto out;
     }
-    ret = snprintf(rsa_filenamebase, rsa_filenamebase_len+5, "%s/%s",
+    ret = snprintf(rsa_filenamebase, HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
                    DEFAULT_CONFIG_DIR,
-		   DEFAULT_HOST_RSA_KEY_FILE_BASE
+		   DEFAULT_HOST_RSA_KEY_FILE_BASE,
 		   DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
     if (ret <= 0) {
       err = -EINVAL;
       goto out;
     }
-    ret = snprintf(dsa_filenamebase_pub, dsa_filenamebase_len+4, "%s/%s%s",
+    ret = snprintf(dsa_filenamebase_pub, HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
 		   DEFAULT_CONFIG_DIR,
 		   DEFAULT_HOST_DSA_KEY_FILE_BASE,
 		   DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
@@ -708,7 +712,10 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       err = -EINVAL;
       goto out;
     }
-    ret = snprintf(rsa_filenamebase_pub, rsa_filenamebase_len+4, "%s/%s%s",
+    ret = snprintf(rsa_filenamebase_pub,
+		   rsa_filenamebase_len+
+		   strlen(DEFAULT_PUB_HI_FILE_NAME_SUFFIX),
+		   "%s/%s%s",
                    DEFAULT_CONFIG_DIR,
 		   DEFAULT_HOST_RSA_KEY_FILE_BASE,
 		   DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
@@ -719,8 +726,8 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     
   }
 
-  dsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
-  rsa_lhi.anonymous = htons(anon); // XX FIX: htons() needed?
+  dsa_lhi.anonymous = htons(anon);
+  rsa_lhi.anonymous = htons(anon);
   
   if (use_default) {
     HIP_DEBUG("Using dsa (anon hi) filenamebase: %s\n", dsa_filenamebase);
