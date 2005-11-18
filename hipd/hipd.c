@@ -39,6 +39,8 @@ void usage() {
 void hip_exit(int signal) {
 	HIP_ERROR("Signal: %d\n", signal);
 
+	hip_delete_prefix_sp_pair();
+
 	set_up_device(HIP_HIT_DEV, 0);
 
 #ifdef CONFIG_HIP_HI3
@@ -197,13 +199,21 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n", hip_raw_sock, highest_descriptor);
-	HIP_DEBUG("--->Setting SP\n");
+	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
+		  hip_raw_sock, highest_descriptor);
+
+	HIP_DEBUG("Setting SP\n");
+	hip_delete_prefix_sp_pair();
 	HIP_IFE(hip_setup_sp_prefix_pair(), -1);
-	HIP_DEBUG("--->Setting %s\n", HIP_HIT_DEV);
-	HIP_IFE(set_up_device(HIP_HIT_DEV,1), -1);
-	HIP_DEBUG("--->Setting ip addr as 3ffe::2 %s\n", HIP_HIT_DEV);
-	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, "3ffe::2", HIP_HIT_DEV), -1);
+
+	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
+	set_up_device(HIP_HIT_DEV, 0);
+	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), -1);
+
+	HIP_DEBUG("Setting ip addr as 3ffe::2 %s\n", HIP_HIT_DEV);
+	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, "3ffe::2",
+			      HIP_HIT_DEV), -1);
+
 #if 0	//Abi -  To add route
 	HIP_DEBUG("--->Setting ip route as 300e::2 %s\n", HIP_HIT_DEV);
 	HIP_IFE(iproute_modify(RTM_NEWADDR, 0, AF_INET6 , "4010::2", HIP_HIT_DEV ), -1);
