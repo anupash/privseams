@@ -251,16 +251,7 @@
       &nbsp;ifconfig eth0 inet6 add 3ffe::2/64
     </para>
     <para>
-      &nbsp;optional: modprobe hipmod
-      </para>
-    <para>
       &nbsp;cd somewhere/hipl
-    </para>
-    <para>
-      &nbsp;tools/hipconf new hi default # only the first time when you run hip
-    </para>
-    <para>
-      &nbsp;tools/hipconf add hi default
     </para>
     <para>
       &nbsp;test/conntest-server tcp 1111
@@ -273,16 +264,7 @@
       &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
       </para>
     <para>
-      &nbsp;optional: modprobe hipmod
-    </para>
-    <para>
       &nbsp;cd somewhere/hipl
-    </para>
-    <para>
-      &nbsp;tools/hipconf new hi default # only the first time when you run hip
-    </para>
-    <para>
-      &nbsp;tools/hipconf add hi default
     </para>
     <para>
       &nbsp;test/conntest-client-gai oops tcp 1111
@@ -294,15 +276,10 @@
     <para>
       This will setup a HIP connection between the two hosts (it may take a
       while if you are using virtual machines). You should replace
-      HIT_OF_XXX with the HIT of the host XXX. The host default HI is
-      generated with the command "hipconf new hi default" (only needed on
-      the first run) and sent to the kernel module with ".hipconf add hi
-      default" The value of the HIT can be found from file
-      /proc/net/hip/lhi. You can see information on current HIP connections
-      from file /proc/net/hip/sdb_state. Support for both of these /proc
-      files require that you select HIP debugging option during the kernel
-      compilation process. mknod command can be omitted if you already have
-      device file /dev/hip.
+      HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
+      creates if necessary) the host identities from /etc/hip automatically.
+      If you want to know the HITs of the localhost, you can invoke "hipconf
+      add hi default".
     </para>
     <para>
       Mappings between HITs and IPv6 addresses are usually set up
@@ -461,22 +438,10 @@
       crash # cd path-to-hipl/test
     </para>
     <para>
-      crash # optional: modprobe hipmod
-    </para>
-    <para>
-      crash # ../tools/hipconf add hi default
-    </para>
-    <para>
       crash # ./java HipServer 12345
     </para>
     <para>
       oops # cd test
-    </para>
-    <para>
-      oops # optional: modprobe hipmod
-    </para>
-    <para>
-      oops # ../tools/hipconf add hi default
     </para>
     <para>
       oops # ./java HipClient crash 12345 54321
@@ -571,7 +536,7 @@
     </para>
     <para>
     4. Insert the HIT to /etc/hosts, instead of /etc/hip/hosts. Then, add
-       the HIT-to-IP mapping with "hipconf add hi default". This is the
+       the HIT-to-IP mapping with "hipconf add map HIT IP". This is the
        quick-and-dirty method...
     </para>
   </chapter>
@@ -637,16 +602,10 @@
       	  1. Start and initialize HIP module in each host:
     </para>
     <para>
-	  each-host # optional: modprobe hipmod
-    </para>
-    <para>
-	  each-host # hipl/tools/hipconf add hi default
-    </para>
-    <para>
       2. At the initiator, you must modify the "/etc/hosts" file. In the file,
       responder's hostname must be mapped to the IPv6 address of the rendezvous
-      server. It must not be mapped to the responder's IPv6 address, or otherwise
-      the rendezvous server is not used at all!
+      server. It must not be mapped to the responder's IPv6 address, or
+      otherwise the rendezvous server is not used at all!
     </para>
     <para>
       The "/etc/hip/hosts" file should contain the hostname and HIT of the
