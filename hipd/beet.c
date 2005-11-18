@@ -161,6 +161,94 @@ done:
 }
 
 
+int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
+{
+        int len = RTA_LENGTH(4);
+        struct rtattr *rta;
+        if (NLMSG_ALIGN(n->nlmsg_len) + len > maxlen) {
+                fprintf(stderr,"addattr32: Error! max allowed bound %d exceeded\n",maxlen);
+                return -1;
+        }
+        rta = NLMSG_TAIL(n);
+        rta->rta_type = type;
+        rta->rta_len = len;
+        memcpy(RTA_DATA(rta), &data, 4);
+        n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + len;
+        return 0;
+}
+
+
+
+int iproute_modify(int cmd, int flags, int family, char *ip, char *dev)
+{
+        struct hip_nl_handle rth;
+        struct {
+                struct nlmsghdr         n;
+                struct rtmsg            r;
+                char                    buf[1024];
+        } req1;
+        inet_prefix dst;
+        int dst_ok = 0;
+        int idx;
+        memset(&req1, 0, sizeof(req1));
+
+        req1.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+        req1.n.nlmsg_flags = NLM_F_REQUEST|flags;
+        req1.n.nlmsg_type = cmd;
+        req1.r.rtm_family = family;
+        req1.r.rtm_table = RT_TABLE_MAIN;
+        req1.r.rtm_scope = RT_SCOPE_NOWHERE;
+
+        if (cmd != RTM_DELROUTE) {
+                req1.r.rtm_protocol = RTPROT_BOOT;
+                req1.r.rtm_scope = RT_SCOPE_UNIVERSE;
+                req1.r.rtm_type = RTN_UNICAST;
+        }
+
+	HIP_DEBUG("Setting %s as route for %s device with family %d\n", ip, dev, family);
+        get_prefix_1(&dst, ip, req1.r.rtm_family);
+        //if (req.r.rtm_family == AF_UNSPEC)
+                //req.r.rtm_family = dst.family;
+        req1.r.rtm_dst_len = dst.bitlen;
+        dst_ok = 1;
+        if (dst.bytelen)
+        addattr_l(&req1.n, sizeof(req1), RTA_DST, &dst.data, dst.bytelen);
+	if (hip_netlink_open(&rth, 0, NETLINK_ROUTE) < 0)
+                exit(1);
+
+         if ((idx = ll_name_to_index(dev)) == 0) {
+                 fprintf(stderr, "Cannot find device \"%s\"\n", dev);
+                 return -1;
+         }
+         addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
+
+
+ /*               if (req1.r.rtm_type == RTN_LOCAL ||
+                    req1.r.rtm_type == RTN_BROADCAST ||
+                    req1.r.rtm_type == RTN_NAT ||
+                    req1.r.rtm_type == RTN_ANYCAST)
+                        req1.r.rtm_table = RT_TABLE_LOCAL;
+                if (req1.r.rtm_type == RTN_LOCAL ||
+                    req1.r.rtm_type == RTN_NAT)
+                        req1.r.rtm_scope = RT_SCOPE_HOST;
+                else if (req1.r.rtm_type == RTN_BROADCAST ||
+                         req1.r.rtm_type == RTN_MULTICAST ||
+                         req1.r.rtm_type == RTN_ANYCAST)
+                        req1.r.rtm_scope = RT_SCOPE_LINK;
+                else if (req1.r.rtm_type == RTN_UNICAST ||
+                         req1.r.rtm_type == RTN_UNSPEC) {
+                        if (cmd == RTM_DELROUTE)
+                                req1.r.rtm_scope = RT_SCOPE_NOWHERE;
+                        else    req1.r.rtm_scope = RT_SCOPE_LINK;
+
+                        }
+*/
+        if (netlink_talk(&rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0)
+                exit(2);
+
+        return 0;
+}
+
 
 
 

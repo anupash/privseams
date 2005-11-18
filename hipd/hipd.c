@@ -203,7 +203,11 @@ int main(int argc, char *argv[]) {
 	HIP_DEBUG("--->Setting %s\n", HIP_HIT_DEV);
 	HIP_IFE(set_up_device(HIP_HIT_DEV,1), -1);
 	HIP_DEBUG("--->Setting ip addr as 3ffe::2 %s\n", HIP_HIT_DEV);
-	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, "3ffe::2", "dummy0" ), -1);
+	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, "3ffe::2", HIP_HIT_DEV), -1);
+#if 0	//Abi -  To add route
+	HIP_DEBUG("--->Setting ip route as 300e::2 %s\n", HIP_HIT_DEV);
+	HIP_IFE(iproute_modify(RTM_NEWADDR, 0, AF_INET6 , "4010::2", HIP_HIT_DEV ), -1);
+#endif
 	
 
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);

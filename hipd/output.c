@@ -86,8 +86,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_3DES_SHA1
 	};
 	//	struct hip_host_id  *host_id_pub = NULL;
-
- 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
+	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
  	/* Allocate memory for writing Diffie-Hellman shared secret */
 	HIP_IFEL((dh_size = hip_get_dh_size(HIP_DEFAULT_DH_GROUP_ID)) == 0, 
