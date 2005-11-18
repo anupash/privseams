@@ -112,7 +112,6 @@ int get_prefix_1(inet_prefix *dst, char *arg, int family)
         unsigned plen;
         char *slash;
 
-
         memset(dst, 0, sizeof(*dst));
 
         if (strcmp(arg, "default") == 0 ||

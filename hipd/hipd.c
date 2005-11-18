@@ -211,8 +211,14 @@ int main(int argc, char *argv[]) {
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), -1);
 
 	HIP_DEBUG("Setting ip addr as 3ffe::2 %s\n", HIP_HIT_DEV);
-	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, "3ffe::2",
-			      HIP_HIT_DEV), -1);
+	{
+	  /* Note: the memory needs to be allocated, it cannot be static */
+	  /* Note: ipaddr_modify alters the given memory! */
+	  char *test = malloc(10);
+	  strcpy(test, "3ffe::2/8");
+	  HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, test,
+				HIP_HIT_DEV), -1);
+	}
 
 #if 0	//Abi -  To add route
 	HIP_DEBUG("--->Setting ip route as 300e::2 %s\n", HIP_HIT_DEV);
