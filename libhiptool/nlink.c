@@ -441,4 +441,3 @@ void hip_netlink_close(struct hip_nl_handle *rth)
 {
 	close(rth->fd);
 }
-

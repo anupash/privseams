@@ -271,8 +271,11 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 					 NULL, NULL, NULL),
 		   -EFAULT,
 		   "adding of local host identity failed\n");
+
+	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
+		   "Failed to add HIT to the device\n");
 	}
-	
+
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
  out_err:
 	

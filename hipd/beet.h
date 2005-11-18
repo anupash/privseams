@@ -23,6 +23,7 @@
 #include "hashtable.h"
 #include "hadb.h"
 #include "workqueue.h"
+#include "misc.h"
 
 #define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048

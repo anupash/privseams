@@ -32,6 +32,51 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
+int hip_handle_keys() {
+	int err = 0;
+	struct stat status;
+	struct hip_common *user_msg = NULL;
+
+	HIP_IFE((!(user_msg = hip_msg_alloc())), -1);
+		
+	/* Create default keys if necessary */
+
+	if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT) {
+		hip_msg_init(user_msg);
+		err = hip_serialize_host_id_action(user_msg,
+						   ACTION_NEW, 0, 1,
+						   NULL, NULL);
+		if (err) {
+			err = 1;
+			HIP_ERROR("Failed to create keys to %s\n",
+				  DEFAULT_CONFIG_DIR);
+			goto out_err;
+		}
+	}
+	
+        /* Retrieve the keys to hipd */
+	hip_msg_init(user_msg);
+	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1,
+					   NULL, NULL);
+	if (err) {
+		HIP_ERROR("Could not load default keys\n");
+		goto out_err;
+	}
+	
+	err = hip_handle_add_local_hi(user_msg);
+	if (err) {
+		HIP_ERROR("Adding of keys failed\n");
+		goto out_err;
+	}
+
+ out_err:
+
+	if (user_msg)
+		HIP_FREE(user_msg);
+
+	return err;
+}
+
 /*
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
@@ -138,41 +183,6 @@ int main(int argc, char *argv[]) {
 	user_msg = hip_msg_alloc();
 	if (user_msg == NULL) goto out_err;
 
-	/* Create default keys if necessary */
-	{
-		struct stat status;
-
-		if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT) {
-			hip_msg_init(user_msg);
-			ret = hip_serialize_host_id_action(user_msg,
-							   ACTION_NEW, 0, 1,
-							   NULL, NULL);
-			if (ret) {
-				ret = 1;
-				HIP_ERROR("Failed to create keys to %s\n",
-					  DEFAULT_CONFIG_DIR);
-				goto out_err;
-			}
-		}
-	}
-
-#if 1 /* Miika: segfaults */
-	/* Retrieve the keys to hipd */
-	hip_msg_init(user_msg);
-	ret = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1,
-					   NULL, NULL);
-	if (ret) {
-		HIP_ERROR("Could not load default keys\n");
-		goto out_err;
-	}
-
-	ret = hip_handle_add_local_hi(user_msg);
-	if (ret) {
-		HIP_ERROR("Adding of keys failed\n");
-		goto out_err;
-	}
-#endif
-
 	/* Open the netlink socket for address and IF events */
 	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
@@ -210,21 +220,15 @@ int main(int argc, char *argv[]) {
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), -1);
 
-	HIP_DEBUG("Setting ip addr as 3ffe::2 %s\n", HIP_HIT_DEV);
+	HIP_DEBUG("Setting ip route\n", HIP_HIT_DEV);
 	{
-	  /* Note: the memory needs to be allocated, it cannot be static */
-	  /* Note: ipaddr_modify alters the given memory! */
-	  char *test = malloc(10);
-	  strcpy(test, "3ffe::2/8");
-	  HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, test,
-				HIP_HIT_DEV), -1);
+		hip_hit_t hit;
+		memset(&hit, 0, sizeof(hip_hit_t));
+		hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
+		HIP_IFE(hip_add_iface_local_route(&hit), -1);
 	}
 
-#if 0	//Abi -  To add route
-	HIP_DEBUG("--->Setting ip route as 300e::2 %s\n", HIP_HIT_DEV);
-	HIP_IFE(iproute_modify(RTM_NEWADDR, 0, AF_INET6 , "4010::2", HIP_HIT_DEV ), -1);
-#endif
-	
+	HIP_IFE(hip_handle_keys(), -1);
 
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)

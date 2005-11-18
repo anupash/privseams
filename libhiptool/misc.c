@@ -1086,3 +1086,29 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   
   return err;
 }
+
+char *hip_convert_hit_to_str(const hip_hit_t *local_hit, int use_prefix)
+{
+	int err = 0;
+	char *hit_str = NULL;
+	/* aaaa:bbbb:cccc:dddd:eeee:ffff:gggg:eeee/128\0  */
+	const int max_str_len = INET6_ADDRSTRLEN + 5;
+
+	HIP_IFE((!(hit_str = HIP_MALLOC(max_str_len, 0))), -1);
+	memset(hit_str, 0, max_str_len);
+	hip_in6_ntop(local_hit, hit_str);
+
+	if (use_prefix) {
+		memcpy(hit_str + strlen(hit_str), HIP_HIT_PREFIX_STR,
+		       strlen(HIP_HIT_PREFIX_STR));
+	}
+
+ out_err:
+
+	if (err && hit_str) {
+		HIP_FREE(hit_str);
+		hit_str = NULL;
+	}
+	
+	return hit_str;
+}

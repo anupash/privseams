@@ -248,11 +248,6 @@ int iproute_modify(int cmd, int flags, int family, char *ip, char *dev)
         return 0;
 }
 
-
-
-
-
-
 int ipaddr_modify(int cmd, int family, char *ip, char *dev )
 {
         struct hip_nl_handle rth;
@@ -291,19 +286,46 @@ int ipaddr_modify(int cmd, int family, char *ip, char *dev )
 	return 0;
 }
 
+int hip_add_iface_local_hit(const hip_hit_t *local_hit)
+{
+	int err = 0;
+	char *hit_str = NULL;
 
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, 1))), -1);
 
+	HIP_DEBUG("Adding HIT: %s\n", hit_str);
 
+	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, hit_str,
+			      HIP_HIT_DEV), -1);
 
+ out_err:
 
+	if (hit_str)
+		HIP_FREE(hit_str);
+	
+	return err;
+}
 
+int hip_add_iface_local_route(const hip_hit_t *local_hit)
+{
+	int err = 0;
+	char *hit_str = NULL;
 
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, 1))), -1);
 
+	HIP_DEBUG("Adding local route: %s\n", hit_str);
 
+	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, hit_str,
+			      HIP_HIT_DEV), -1);
 
+ out_err:
 
-
-
+	if (hit_str)
+		HIP_FREE(hit_str);
+	
+	
+	return err;
+}
 
 /**
  * Functions for setting up dummy interface
@@ -383,10 +405,6 @@ int set_up_device(char *dev, int up)
 /**
  * Functions for setting up SA/SP
  */
-
-
-
-
 
 
 /**
