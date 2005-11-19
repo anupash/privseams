@@ -126,11 +126,9 @@ int get_prefix_1(inet_prefix *dst, char *arg, int family)
         }
 
         slash = strchr(arg, '/');
-        printf("slash %s\n", slash);
         if (slash)
                *slash = 0;
 
-        printf("arg %s, family %d\n", arg, family);
         err = get_addr_1(dst, arg, family);
         if (err == 0) {
                 switch(dst->family) {
@@ -268,10 +266,13 @@ int ipaddr_modify(int cmd, int family, char *ip, char *dev )
         req.ifa.ifa_family = family; 
 
         lcl_arg = ip;
-        get_prefix_1(&lcl, ip, req.ifa.ifa_family);
+	HIP_DEBUG("IP got %s\n", ip);
+	get_prefix_1(&lcl, ip, req.ifa.ifa_family);
         addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
         local_len = lcl.bytelen;
-
+	// FIXED : prefix now adds - Abi
+	if (req.ifa.ifa_prefixlen == 0)
+                req.ifa.ifa_prefixlen = lcl.bitlen;
 
         if (hip_netlink_open(&rth, 0, NETLINK_ROUTE) < 0)
                 exit(1);
