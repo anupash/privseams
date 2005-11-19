@@ -315,8 +315,8 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, 1))), -1);
 
 	HIP_DEBUG("Adding local route: %s\n", hit_str);
-
-	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, hit_str,
+	
+	HIP_IFE(iproute_modify(RTM_NEWROUTE,  NLM_F_CREATE|NLM_F_EXCL, AF_INET6, hit_str,
 			      HIP_HIT_DEV), -1);
 
  out_err:
