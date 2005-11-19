@@ -278,8 +278,8 @@
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
       creates if necessary) the host identities from /etc/hip automatically.
-      If you want to know the HITs of the localhost, you can invoke "hipconf
-      add hi default".
+      If you want to know the HITs of the localhost, run "ifconfig dummy0" or
+      "ip addr show dummy0".
     </para>
     <para>
       Mappings between HITs and IPv6 addresses are usually set up
@@ -420,8 +420,8 @@
       You should have setup your networking environment as explained in
       section "Testing a HIP Connection Between Two Hosts", that is, you
       should have configured your /etc/hosts and /etc/hip/hosts
-      properly. You should have also created default host identities for
-      both of the hosts with "hipconf new hi default".
+      properly. However, hipd will automatically create your public keys,
+      so you don't have to worry about them.
     </para>
     <para>
       You cannot quite convert your normal Java networking application to a
