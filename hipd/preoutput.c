@@ -8,11 +8,13 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 {
 	int err = 0, ret, sock = 0, len = hip_get_msg_total_len(msg);
 	struct sockaddr_in6 src, dst;
-
+	HIP_DEBUG("\n");
 	memset(&src, 0, sizeof(src));
 	memset(&dst, 0, sizeof(dst));
-	memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
-	memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
+	if (src_addr)
+		memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
+	if (peer_addr)
+		memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
 
         HIP_IFEL((sock = socket(AF_INET6, SOCK_RAW, HIP_PROTO) < 0), -1,
 		 "Raw sock creation failed\n");

@@ -51,6 +51,7 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 		 "No preferred IP address for the peer.\n");
 
 	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);// HANDLER
+	HIP_DEBUG("err = %d\n", err);
 	if (!err) {
 		HIP_LOCK_HA(entry);
 		entry->state = HIP_STATE_I1_SENT;
