@@ -16,7 +16,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	if (peer_addr)
 		memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
 
-        HIP_IFEL((sock = socket(AF_INET6, SOCK_RAW, HIP_PROTO) < 0), -1,
+        HIP_IFEL((sock = socket(AF_INET6, SOCK_RAW, IPPROTO_HIP) < 0), -1,
 		 "Raw sock creation failed\n");
         HIP_IFEL((bind(sock, (struct sockaddr *) &src, sizeof(src)) < 0), -1,
 		"Binding to raw sock failed\n");

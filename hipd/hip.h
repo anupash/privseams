@@ -51,7 +51,10 @@ struct list_head {
 #define HIP_HIT_PREFIX_STR      "/8"
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
-#define HIP_PROTO               0x63
+#ifndef IPPROTO_HIP
+#define IPPROTO_HIP             99 /* Also in libinet6/include/netinet/in.h */
+#endif
+
 
 //#include "builder.h"
 #if 0

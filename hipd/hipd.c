@@ -199,8 +199,9 @@ int main(int argc, char *argv[]) {
 	{
 		int on = 1;
 		/* See section 25 from Stevens */
-		HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW, HIP_PROTO)) <= 0),
-			 -1, "Raw socket creation failed. Not root?\n");
+		HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW,
+						 IPPROTO_HIP)) <= 0), -1,
+			 "Raw socket creation failed. Not root?\n");
 
 		HIP_IFEL((setsockopt(hip_raw_sock, IPPROTO_IPV6, IP_HDRINCL,
 					      &on, sizeof(on)) < 0), -1,
