@@ -274,7 +274,7 @@ int hip_netdev_init_addresses(struct hip_nl_handle *nl)
         return(0);
 }
 
-int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
+int hip_netdev_handle_acquire(int hip_raw_sock, const struct nlmsghdr *msg) {
 	int err = 0;
 	hip_ha_t *entry;
 	hip_hit_t *dst_hit;
@@ -306,13 +306,13 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	/* XX TODO: we should try resolving here to create an
 	   entry if an entry was not found */
 
-	HIP_IFEL(hip_send_i1(&entry->hit_peer, entry), -1,
+	HIP_IFEL(hip_send_i1(hip_raw_sock, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
  out_err:
 	return err;
 }
 
-int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
+int hip_netdev_event(int hip_raw_sock, const struct nlmsghdr *msg, int len, void *arg)
 {
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
@@ -460,7 +460,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			return -1;
 			break;			
 		case XFRM_MSG_ACQUIRE:
-			return hip_netdev_handle_acquire(msg);
+			return hip_netdev_handle_acquire(hip_raw_sock, msg);
 			break;		
 		case XFRM_MSG_EXPIRE:
 			return -1;

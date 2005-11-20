@@ -318,7 +318,7 @@ int main(int argc, char *argv[]) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
 			HIP_DEBUG("we are getting something ... ACQUIRE?\n");
-			hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
+			hip_netlink_receive(hip_raw_sock, &nl_ifaddr, hip_netdev_event, NULL);
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}

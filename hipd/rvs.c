@@ -412,7 +412,7 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		hip_build_param_from(new_i1, original_src, 0);
 	}
 
-	err = hip_csum_send(NULL, final_dst, new_i1);
+	err = hip_csum_send(0, NULL, final_dst, new_i1);
 	if (err)
 		HIP_ERROR("Sending the modified I1 (RVS) failed: %d\n",err);
 	else {

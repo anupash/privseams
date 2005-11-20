@@ -22,7 +22,7 @@ struct hip_nl_handle;
 int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct hip_nl_handle *nl);
 void delete_all_addresses(void);
-int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
+int hip_netdev_event(int hip_raw_sock, const struct nlmsghdr *msg, int len, void *arg);
 int filter_address(struct sockaddr *addr, int ifindex);
 
 #endif /* NETDEV_H */

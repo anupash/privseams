@@ -19,7 +19,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct in6_addr *srchit, 
 		struct in6_addr *dst_ip, struct in6_addr *dst_hit);
-int hip_send_i1(struct in6_addr *dsthit, hip_ha_t *entry);
+int hip_send_i1(int hip_raw_sock, struct in6_addr *dsthit, hip_ha_t *entry);
 void hip_send_notify_all(void);
 
 int hip_send_close(const struct hip_common *input);
