@@ -120,7 +120,6 @@ int main(int argc, char *argv[]) {
 	int err;
 	struct timeval timeout;
 	struct hip_work_order ping;
-	int ret = 0;
 
 	struct hip_common *user_msg = NULL;
 	struct sockaddr_un daemon_addr;
@@ -139,17 +138,15 @@ int main(int argc, char *argv[]) {
 		case '?':
 		default:
 			usage();
-			goto out_out;
+			goto out_err;
 		}
 	}
 
 #ifdef CONFIG_HIP_HI3
 	/* Note that for now the Hi3 host identities are not loaded in. */
-	if (!i3_config) {
-		fprintf(stderr, "Please do pass a valid i3 configuration file.\n");
-		ret = 1;
-		goto out_err;
-	}
+	
+	HIP_IFEL(!i3_config, 1,
+		 "Please do pass a valid i3 configuration file.\n");
 #endif
 
 	/**********/
@@ -180,13 +177,12 @@ int main(int argc, char *argv[]) {
 	signal(SIGTERM, hip_exit);
 
 	/* Allocate user message. */
-	user_msg = hip_msg_alloc();
-	if (user_msg == NULL) goto out_err;
+	HIP_IFE(!(user_msg = hip_msg_alloc()), 1);
 
 	/* Open the netlink socket for address and IF events */
 	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
-		ret = 1;
+		err = 1;
 		goto out_err;
 	}
 	highest_descriptor = nl_ifaddr.fd;
@@ -200,11 +196,11 @@ int main(int argc, char *argv[]) {
 		int on = 1;
 		/* See section 25 from Stevens */
 		HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW,
-						 IPPROTO_HIP)) <= 0), -1,
+						 IPPROTO_HIP)) <= 0), 1,
 			 "Raw socket creation failed. Not root?\n");
 
 		HIP_IFEL((setsockopt(hip_raw_sock, IPPROTO_IPV6, IP_HDRINCL,
-					      &on, sizeof(on)) < 0), -1,
+					      &on, sizeof(on)) < 0), 1,
 			 "Reading the IP header from raw socket forbidden\n");
 
 	}
@@ -215,30 +211,25 @@ int main(int argc, char *argv[]) {
 
 	HIP_DEBUG("Setting SP\n");
 	hip_delete_prefix_sp_pair();
-	HIP_IFE(hip_setup_sp_prefix_pair(), -1);
+	HIP_IFE(hip_setup_sp_prefix_pair(), 1);
 
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
-	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), -1);
+	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 
 	HIP_DEBUG("Setting ip route\n", HIP_HIT_DEV);
 	{
 		hip_hit_t hit;
 		memset(&hit, 0, sizeof(hip_hit_t));
 		hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-		HIP_IFE(hip_add_iface_local_route(&hit), -1);
+		HIP_IFE(hip_add_iface_local_route(&hit), 1);
 	}
 
-	HIP_IFE(hip_handle_keys(), -1);
+	HIP_IFE(hip_handle_keys(), 1);
 
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (hip_user_sock < 0)
-	{
-		HIP_ERROR("Could not create socket for user communication.\n");
-		err = -1;
-		goto out_err;
-
-	}
+	HIP_IFEL((hip_user_sock < 0), 1,
+		 "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sun_family = AF_UNIX;
 	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
@@ -246,18 +237,14 @@ int main(int argc, char *argv[]) {
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
 		      /*sizeof(daemon_addr)*/
 		strlen(daemon_addr.sun_path) + sizeof(daemon_addr.sun_family)),
-		 -1, "Bind failed.");
+		 1, "Bind failed.");
 	HIP_DEBUG("Local server up\n");
 	highest_descriptor = (hip_raw_sock > highest_descriptor) ?
 		hip_raw_sock : highest_descriptor;
 	highest_descriptor = (hip_user_sock > highest_descriptor) ?
 		hip_user_sock : highest_descriptor;
 	
-        if (hip_init_cipher() < 0) {
-		HIP_ERROR("Unable to init ciphers.\n");
-		ret = 1;
-		goto out_err;
-	}
+        HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
         hip_init_hadb();
 
@@ -325,7 +312,7 @@ int main(int argc, char *argv[]) {
 			
 			//HIP_HEXDUMP("packet", user_msg,  hip_get_msg_total_len(user_msg));
 			HIP_IFEL((err = hip_handle_user_msg(user_msg)),
-				 -1, "Handing of user msg failed\n");
+				 1, "Handing of user msg failed\n");
 			
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
@@ -350,12 +337,12 @@ out_err:
 		close(nl_ifaddr.fd);
 
 	delete_all_addresses();
-	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), ret);
+	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
 	/* On exit the general policy must be cancelled */
 	HIP_DEBUG("Deleting the General SPs\n"),
 	hip_delete_prefix_sp_pair();
-out_out:
-	return ret;
+
+	return err;
 }
 
