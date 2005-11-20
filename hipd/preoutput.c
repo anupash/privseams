@@ -9,21 +9,25 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0, ret, sock = 0, len = hip_get_msg_total_len(msg);
 	struct sockaddr_in6 src, dst;
 	HIP_DEBUG("\n");
-	memset(&src, 0, sizeof(src));
-	memset(&dst, 0, sizeof(dst));
-	if (src_addr)
-		memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
-	if (peer_addr)
-		memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
 
         HIP_IFEL((sock = socket(AF_INET6, SOCK_RAW, IPPROTO_HIP) < 0), -1,
 		 "Raw sock creation failed\n");
 	
 	if (src_addr) {
+		memset(&src, 0, sizeof(src));
+		memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
+
+		HIP_DEBUG_IN6ADDR("src", src_addr);
 		HIP_IFEL((bind(sock, (struct sockaddr *) &src,
 			       sizeof(src)) < 0), -1,
 			 "Binding to raw sock failed\n");
 	}
+
+	HIP_DEBUG_IN6ADDR("dst", peer_addr);
+
+	memset(&dst, 0, sizeof(dst));
+	if (peer_addr)
+		memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
 
         HIP_IFEL((connect(sock, (struct sockaddr *) &dst, sizeof(dst)) < 0),
 		 -1, "Connecting of raw sock failed\n");
@@ -32,6 +36,9 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		 "Sending of HIP msg failed\n");
 
  out_err:
+	if (err)
+		HIP_ERROR("strerror: %s\n", strerror(errno));
+
 	if (sock)
 		close(sock);
 
