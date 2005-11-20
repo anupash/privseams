@@ -18,10 +18,16 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
         HIP_IFEL((sock = socket(AF_INET6, SOCK_RAW, IPPROTO_HIP) < 0), -1,
 		 "Raw sock creation failed\n");
-        HIP_IFEL((bind(sock, (struct sockaddr *) &src, sizeof(src)) < 0), -1,
-		"Binding to raw sock failed\n");
+	
+	if (src_addr) {
+		HIP_IFEL((bind(sock, (struct sockaddr *) &src,
+			       sizeof(src)) < 0), -1,
+			 "Binding to raw sock failed\n");
+	}
+
         HIP_IFEL((connect(sock, (struct sockaddr *) &dst, sizeof(dst)) < 0),
 		 -1, "Connecting of raw sock failed\n");
+
 	HIP_IFEL((send(sock, msg, len, 0) != len), -1,
 		 "Sending of HIP msg failed\n");
 
