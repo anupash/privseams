@@ -10,11 +10,15 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	struct sockaddr_in6 src, dst;
 	HIP_DEBUG("\n");
 
+	/* The source address is needed for m&m stuff. However, I am not sure
+	   if the binding is a good thing; the source address is then fixed
+	   instead of the host default (remember that we are using a global
+	   raw socket). This can screw up things. */
 	if (src_addr) {
 		memset(&src, 0, sizeof(src));
 		memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
 
-		HIP_DEBUG_IN6ADDR("src", src_addr);
+		HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
 		HIP_IFEL((bind(hip_raw_sock, (struct sockaddr *) &src,
 			       sizeof(src)) < 0), -1,
 			 "Binding to raw sock failed\n");
@@ -26,12 +30,22 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	if (peer_addr)
 		memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
 
+#if 0
         HIP_IFEL((connect(hip_raw_sock, (struct sockaddr *) &dst,
 			  sizeof(dst)) < 0),
 		 -1, "Connecting of raw sock failed\n");
+#endif
 
+#if 0
 	HIP_IFEL((send(hip_raw_sock, msg, len, 0) != len), -1,
 		 "Sending of HIP msg failed\n");
+#endif
+
+	HIP_IFEL((sendto(hip_raw_sock, msg, len, 0, (struct sockaddr *) &dst,
+			 sizeof(dst)) != len), -1,
+		 "Sending of HIP msg failed\n");
+
+	HIP_DEBUG("Packet sent ok\n");
 
  out_err:
 	if (err)
