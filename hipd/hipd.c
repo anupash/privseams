@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
 	struct hip_work_order ping;
 
 	struct hip_common *user_msg = NULL;
+	struct msghdr sock_msg;
 	struct sockaddr_un daemon_addr;
 
 	/* Parse command-line options */
@@ -283,12 +284,22 @@ int main(int argc, char *argv[]) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
-			/* XX FIX: read an IPv6(HIP) message from the raw
-			   socket, and the IP addresses and IP header to
-			   hip_receive_control_packet() */
-			_HIP_DEBUG("Here we are\n");
-			//err = hip_receive_control_packet(msg, saddr, daddr);
-			//return -1;
+			struct sockaddr_in6 peer;
+			int len;
+			socklen_t socklen;
+                        /* Something on HIP v6 socket */
+			hip_msg_init(user_msg);
+                        len = recvfrom(hip_raw_sock, user_msg, HIP_MAX_PACKET,
+				       0, (struct sockaddr *) &peer,
+				       &socklen);
+			
+                        if (len <= 0) {
+				HIP_ERROR("Receiving error or icmpv6?\n");
+                        } else {
+				err = hip_receive_control_packet(user_msg,
+								 NULL,
+								 &peer);
+                        }
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;
