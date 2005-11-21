@@ -1112,3 +1112,26 @@ char *hip_convert_hit_to_str(const hip_hit_t *local_hit, int use_prefix)
 	
 	return hit_str;
 }
+
+/*
+ * function maxof()
+ *
+ * in:          num_args = number of items
+ *              ... = list of integers
+ * out:         Returns the integer with the largest value from the
+ *              list provided.
+ */
+int maxof(int num_args, ...)
+{
+        int max, i, a;
+        va_list ap;
+
+        va_start(ap, num_args);
+        max = va_arg(ap, int);
+        for (i = 2; i < num_args; i++) {
+                if ((a = va_arg(ap, int)) > max)
+                        max = a;
+        }
+        va_end(ap);
+        return(max);
+}

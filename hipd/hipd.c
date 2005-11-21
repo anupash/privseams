@@ -128,10 +128,7 @@ int main(int argc, char *argv[]) {
 	char *i3_config = NULL;
 #endif
 	fd_set read_fdset;
-	int foreground = 1;
-	int highest_descriptor;
-	int s_net;
-	int err;
+	int foreground = 1, highest_descriptor, s_net, err = 0;
 	struct timeval timeout;
 	struct hip_work_order ping;
 
@@ -199,7 +196,6 @@ int main(int argc, char *argv[]) {
 		err = 1;
 		goto out_err;
 	}
-	highest_descriptor = nl_ifaddr.fd;
 
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
@@ -241,10 +237,8 @@ int main(int argc, char *argv[]) {
 		strlen(daemon_addr.sun_path) + sizeof(daemon_addr.sun_family)),
 		 1, "Bind failed.");
 	HIP_DEBUG("Local server up\n");
-	highest_descriptor = (hip_raw_sock > highest_descriptor) ?
-		hip_raw_sock : highest_descriptor;
-	highest_descriptor = (hip_user_sock > highest_descriptor) ?
-		hip_user_sock : highest_descriptor;
+
+	highest_descriptor = maxof(hip_raw_sock, hip_user_sock, nl_ifaddr.fd);
 	
         HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -293,7 +287,7 @@ int main(int argc, char *argv[]) {
 			   socket, and the IP addresses and IP header to
 			   hip_receive_control_packet() */
 			_HIP_DEBUG("Here we are\n");
-
+			//err = hip_receive_control_packet(msg, saddr, daddr);
 			//return -1;
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			int n;

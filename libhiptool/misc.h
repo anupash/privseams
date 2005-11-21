@@ -72,5 +72,6 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
 				 const char *hi_file);
 char *hip_convert_hit_to_str(const hip_hit_t *local_hit, int use_prefix);
+int maxof(int num_args, ...);
 
 #endif /* HIP_MISC_H */
