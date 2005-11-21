@@ -286,14 +286,11 @@ int main(int argc, char *argv[]) {
 		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
 			struct sockaddr_in6 me, peer;
 			int len;
-			socklen_t socklen;
-                        /* Something on HIP v6 socket */
+			socklen_t socklen = sizeof(struct in6_addr);
+
 			hip_msg_init(user_msg);
                         len = recvfrom(hip_raw_sock, user_msg, HIP_MAX_PACKET,
 				       0, (struct sockaddr *) &peer, &socklen);
-
-			/* IPv4 is not supported yet */
-			HIP_ASSERT(socklen == sizeof(struct sockaddr_in6));
 
                         if (len <= 0) {
 				HIP_ERROR("Receiving error or icmpv6?\n");
