@@ -67,7 +67,7 @@ int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
  * function that processes only a finite amount of messages and then
  * returns. 
 */
-int hip_netlink_receive(int hip_raw_sock, struct hip_nl_handle *nl, 
+int hip_netlink_receive(struct hip_nl_handle *nl, 
 			hip_filter_t handler,
 			void *arg) 
 {
@@ -126,7 +126,7 @@ int hip_netlink_receive(int hip_raw_sock, struct hip_nl_handle *nl,
                                 exit(1);
                         }
 
-                        err = handler(hip_raw_sock, h, len, arg);
+                        err = handler(h, len, arg);
                         if (err < 0)
                                 return err;
 
@@ -226,7 +226,7 @@ int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
                         if (nladdr.nl_pid != peer ||
                             h->nlmsg_seq != seq) {
                                 if (junk) {
-                                        err = junk(0, h, len, arg);
+                                        err = junk(h, len, arg);
                                         if (err < 0)
                                                 return err;
                                 }

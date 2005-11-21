@@ -8,9 +8,11 @@
 #include "workqueue.h"
 #include "hip.h"
 
+extern int hip_raw_sock;
+
 /* Called by userspace daemon or kernel packet processing to send a
    packet to wire */
-int hip_csum_send(int hip_raw_sock, struct in6_addr *src_addr, struct in6_addr *peer_addr,
+int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* buf);
 
 #endif /* HIP_PREOUTPUT_H */

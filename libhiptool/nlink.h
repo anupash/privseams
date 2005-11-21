@@ -11,7 +11,7 @@
 #include "hip.h"
 #include "hipd.h"
 
-typedef int (*hip_filter_t)(int hip_raw_sock, const struct nlmsghdr *n, int len, void *arg);
+typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
 
 
 #define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
@@ -42,7 +42,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	      int alen);
 
 int hip_netlink_open(struct hip_nl_handle *nl, unsigned subscriptions, int protocol);
-int hip_netlink_receive(int hip_raw_sock, struct hip_nl_handle *nl, hip_filter_t handler, void *arg);
+int hip_netlink_receive(struct hip_nl_handle *nl, hip_filter_t handler, void *arg);
 int hip_netlink_send_buf(struct hip_nl_handle *nl, const char *buf, int len);
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg);
 int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,

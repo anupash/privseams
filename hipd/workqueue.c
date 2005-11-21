@@ -210,7 +210,7 @@ int hip_do_work(struct hip_work_order *job)
 				goto send_i1_end;
 			}
 			HIP_DEBUG("*-*-*-*-*-*-*-*-*-*CALLING hip_send_i1 ***********\n");
-			res = hip_send_i1(0, &entry->hit_peer, entry);
+			res = hip_send_i1(&entry->hit_peer, entry);
 			if (res < 0) {
 				HIP_ERROR("Sending of I1 failed (%d)\n", res);
 				res = KHIPD_ERROR;

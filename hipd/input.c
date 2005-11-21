@@ -757,7 +757,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
 	/* state E1: Receive R1, process. If successful, send I2 and go to E2. */
-	HIP_IFE(hip_csum_send(0, NULL, &daddr, i2), -1);
+	HIP_IFE(hip_csum_send(NULL, &daddr, i2), -1);
 
  out_err:
 	if (i2)
@@ -1054,7 +1054,7 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	err = hip_csum_send(0, NULL, i2_saddr, r2); // HANDLER
+	err = hip_csum_send(NULL, i2_saddr, r2); // HANDLER
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
@@ -1952,7 +1952,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	HIP_IFEL(entry->sign(entry->our_priv, close_ack), -EINVAL,
 		 "Could not create signature\n");
 
-	HIP_IFE(hip_csum_send(0, NULL, &entry->preferred_address, close_ack), -1);
+	HIP_IFE(hip_csum_send(NULL, &entry->preferred_address, close_ack), -1);
 
 	entry->state = HIP_STATE_CLOSED;
 

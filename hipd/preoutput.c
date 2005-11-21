@@ -3,33 +3,19 @@
 /* Called by userspace daemon to send a packet to wire */
 #ifndef CONFIG_HIP_HI3
 // FIXME: This ifdef will be removed once the handler support is a bit more generic in hidb.
-int hip_csum_send(int hip_raw_sock, struct in6_addr *src_addr, struct in6_addr *peer_addr,
+int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* msg)
 {
-	int err = 0, ret, sock = 0, len = hip_get_msg_total_len(msg);
+	int err = 0, ret, len = hip_get_msg_total_len(msg);
 	struct sockaddr_in6 src, dst;
-	int on = 1;
-	int exists = 0;
 	HIP_DEBUG("\n");
-	sock = hip_raw_sock;
-	HIP_DEBUG("sock = %d\n", sock);
-	if (sock)
-		exists = 1;
-	if (!exists) {
-		HIP_IFEL((sock = socket(AF_INET6, SOCK_RAW, IPPROTO_HIP) <= 0), -1,
-			 "Raw sock creation failed\n");
-
-		HIP_IFEL((setsockopt(sock, IPPROTO_IPV6, IP_HDRINCL,
-				     &on, sizeof(on)) < 0), -1,
-			 "Reading the IP header from raw socket forbidden\n");
-	}
 
 	if (src_addr) {
 		memset(&src, 0, sizeof(src));
 		memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
 
 		HIP_DEBUG_IN6ADDR("src", src_addr);
-		HIP_IFEL((bind(sock, (struct sockaddr *) &src,
+		HIP_IFEL((bind(hip_raw_sock, (struct sockaddr *) &src,
 			       sizeof(src)) < 0), -1,
 			 "Binding to raw sock failed\n");
 	}
@@ -39,24 +25,17 @@ int hip_csum_send(int hip_raw_sock, struct in6_addr *src_addr, struct in6_addr *
 	memset(&dst, 0, sizeof(dst));
 	if (peer_addr)
 		memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
-/*
-        I don't know whether bind() is really necessary in here, since the bind
-	should be probably done only on the receiving, i.e. src addr.
-	HIP_IFEL((bind(hip_raw_sock, (struct sockaddr *) &dst,
-		       sizeof(dst)) < 0), -1,
-		 "Binding to raw sock failed\n");
-*/
-        HIP_IFEL((connect(sock, (struct sockaddr *) &dst, sizeof(dst)) < 0),
+
+        HIP_IFEL((connect(hip_raw_sock, (struct sockaddr *) &dst,
+			  sizeof(dst)) < 0),
 		 -1, "Connecting of raw sock failed\n");
-	HIP_IFEL((send(sock, msg, len, 0) != len), -1,
+
+	HIP_IFEL((send(hip_raw_sock, msg, len, 0) != len), -1,
 		 "Sending of HIP msg failed\n");
+
  out_err:
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
-
-
-	if (!exists)
-		close(sock);
 
 	return err;
 }
