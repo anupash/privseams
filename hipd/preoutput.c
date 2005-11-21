@@ -8,6 +8,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 {
 	int err = 0, ret, len = hip_get_msg_total_len(msg);
 	struct sockaddr_in6 src, dst;
+
 	HIP_DEBUG("\n");
 
 	/* The source address is needed for m&m stuff. However, I am not sure
@@ -36,11 +37,8 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		 -1, "Connecting of raw sock failed\n");
 #endif
 
-#if 0
-	HIP_IFEL((send(hip_raw_sock, msg, len, 0) != len), -1,
-		 "Sending of HIP msg failed\n");
-#endif
-
+	/* For some reason, neither sendmsg or send (with bind+connect)
+	   do not seem to work. */
 	HIP_IFEL((sendto(hip_raw_sock, msg, len, 0, (struct sockaddr *) &dst,
 			 sizeof(dst)) != len), -1,
 		 "Sending of HIP msg failed\n");
