@@ -79,14 +79,23 @@ int hip_handle_keys() {
 
 int hip_init_raw_sock() {
 	int on = 1, err = 0;
-	/* See section 25 from Stevens */
+	struct sockaddr_in6 any6_addr;
+
+	memset(&any6_addr, 0, sizeof(any6_addr));
+	any6_addr.sin6_addr = in6addr_any;
+
 	HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW,
 					 IPPROTO_HIP)) <= 0), 1,
 		 "Raw socket creation failed. Not root?\n");
-	setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_RECVERR, &on,
-		   sizeof(on));
-	setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_PKTINFO, &on,
-		   sizeof(on));
+	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_RECVERR, &on,
+		   sizeof(on)), -1, "setsockopt recverr failed\n");
+	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_PKTINFO, &on,
+		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
+
+	/* getsockname() does not work without bind - but this did not help? */
+	/* XX CHECK: does this fix the interface IP - bad for m&m ? */
+	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &any6_addr,
+		      sizeof(any6_addr)), -1, "bind to raw sock failed\n");
  out_err:
 	return err;
 }
