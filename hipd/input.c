@@ -432,6 +432,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 
 	HIP_DEBUG("Received packet type %d\n", type);
+	HIP_DEBUG_IN6ADDR("src", src_addr);
+	HIP_DEBUG_IN6ADDR("dst", dst_addr);
 	
 	switch(type) {
 	case HIP_I1:
