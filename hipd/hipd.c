@@ -146,8 +146,8 @@ int hip_read_control_msg(int hip_raw_sock, struct hip_common *hip_msg,
 
 	HIP_IFEL(!pktinfo, -1, "Could not determine IPv6 dst, dropping\n");
 
-	memcpy(saddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
-	memcpy(daddr, &msg.msg_name, sizeof(struct in6_addr));
+	memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
+	memcpy(saddr, &msg.msg_name, sizeof(struct in6_addr));
 	
 	HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
 	HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
