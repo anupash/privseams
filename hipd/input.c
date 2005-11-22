@@ -429,6 +429,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	hip_ha_t tmp;
 	int err = 0, type, skip_sync = 0;
 
+	HIP_DEBUG("4*** hip_msg %p\n", msg);
 	type = hip_get_msg_type(msg);
 
 	HIP_DEBUG("Received packet type %d\n", type);

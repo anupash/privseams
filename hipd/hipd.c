@@ -87,13 +87,14 @@ int hip_init_raw_sock() {
 	HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW,
 					 IPPROTO_HIP)) <= 0), 1,
 		 "Raw socket creation failed. Not root?\n");
-#if 0
+
 	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt recverr failed\n");
 	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
 
-	/* getsockname() does not work without bind - but this did not help? */
+#if 0
+	/* recvmsg() may need this?? */
 	/* XX CHECK: does this fix the interface IP - bad for m&m ? */
 	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &any6_addr,
 		      sizeof(any6_addr)), -1, "bind to raw sock failed\n");
@@ -102,23 +103,63 @@ int hip_init_raw_sock() {
 	return err;
 }
 
-int hip_recv_control_msg(int hip_raw_sock, struct hip_common *user_msg,
+int hip_read_control_msg(int hip_raw_sock, struct hip_common *hip_msg,
 			 struct in6_addr *my_addr, struct in6_addr *peer_addr)
 {
-	socklen_t socklen = sizeof(struct sockaddr_in6);
-	struct sockaddr_in6 me, peer;
-	int len, err = 0;
+        struct sockaddr_in6 addr_from;
+        struct cmsghdr *cmsg;
+        struct msghdr msg;
+        struct in6_pktinfo *pktinfo = NULL;
+        struct iovec iov;
+        char cbuff[CMSG_SPACE(256)];
+        int err = 0, len;
+
+        /* setup message header with control and receive buffers */
+        msg.msg_name = &addr_from;
+        msg.msg_namelen = sizeof(struct sockaddr_in6);
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+
+        memset(cbuff, 0, sizeof(cbuff));
+        msg.msg_control = cbuff;
+        msg.msg_controllen = sizeof(cbuff);
+        msg.msg_flags = 0;
+
+        iov.iov_len = HIP_MAX_PACKET;
+        iov.iov_base = hip_msg;
+
+	HIP_DEBUG("2*** hip_msg %p\n", hip_msg);
+	len = recvmsg(hip_raw_sock, &msg, 0);
+	HIP_DEBUG("3*** hip_msg %p\n", hip_msg);
+
+	/* ICMPv6 packet */
+	HIP_IFEL(len < 0, -1, "ICMPv6 error: errno=%d, %s\n",
+		 errno, strerror(errno));
+
+        //hip_msg = msg->msg_iov->iov_base;
+        //src = &src_ss;
+        //dst = &dst_ss;
+        //memset(src, 0, sizeof(struct sockaddr_storage));
+        //memset(dst, 0, sizeof(struct sockaddr_storage));
+        
+	/* destination address comes from ancillary data passed
+	 * with msg due to IPV6_PKTINFO socket option */
+	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
+		if ((cmsg->cmsg_level == IPPROTO_IPV6) && 
+		    (cmsg->cmsg_type == IPV6_PKTINFO)) {
+			pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+			break;
+		}
+	}
+
+	HIP_IFEL(!pktinfo, -1, "Could not determine IPv6 dst, dropping\n");
+
+	memcpy(my_addr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
+	/* source address is filled in from call to recvmsg() */
+	memcpy(peer_addr, &msg.msg_name, sizeof(struct in6_addr));
 	
-	HIP_IFEL(getsockname(hip_raw_sock, (struct sockaddr *) &me,
-			    &socklen), -1, "getsockname failed\n");
-
-	hip_msg_init(user_msg);
-	len = recvfrom(hip_raw_sock, user_msg, HIP_MAX_PACKET, 0,
-		       (struct sockaddr *) &peer, &socklen);
-	HIP_IFEL(len <= 0, -1, "Receiving error or icmpv6?\n");
-
-	memcpy(my_addr, &me.sin6_addr, sizeof(struct in6_addr));
-	memcpy(peer_addr, &peer.sin6_addr, sizeof(struct in6_addr));
+	HIP_DEBUG_IN6ADDR("my addr\n", my_addr);
+	HIP_DEBUG_IN6ADDR("peer addr\n", peer_addr);
 
  out_err:
 	return err;
@@ -165,7 +206,7 @@ int main(int argc, char *argv[]) {
 	struct timeval timeout;
 	struct hip_work_order ping;
 
-	struct hip_common *user_msg = NULL;
+	struct hip_common *hip_msg = NULL;
 	struct msghdr sock_msg;
 	struct sockaddr_un daemon_addr;
 
@@ -222,7 +263,7 @@ int main(int argc, char *argv[]) {
 	signal(SIGTERM, hip_exit);
 
 	/* Allocate user message. */
-	HIP_IFE(!(user_msg = hip_msg_alloc()), 1);
+	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
 	/* Open the netlink socket for address and IF events */
 	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
@@ -300,7 +341,9 @@ int main(int argc, char *argv[]) {
 		FD_SET(nl_ifaddr.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
-		
+
+		hip_msg_init(hip_msg);
+
 		_HIP_DEBUG("select\n");
 		/* wait for socket activity */
 #ifndef CONFIG_HIP_HI3
@@ -317,32 +360,34 @@ int main(int argc, char *argv[]) {
 			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
 			struct in6_addr my_addr, peer_addr;
-			err = hip_recv_control_msg(hip_raw_sock, user_msg,
+			HIP_DEBUG("1*** hip_msg %p\n", hip_msg);
+			err = hip_read_control_msg(hip_raw_sock, hip_msg,
 						   &my_addr, &peer_addr);
+			HIP_DEBUG("4*** hip_msg %p\n", hip_msg);
 			if (!err)
 				err = hip_receive_control_packet(hip_raw_sock,
-								 user_msg,
+								 hip_msg,
 								 &my_addr,
 								 &peer_addr);
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;
-			err = 0;
+
 			HIP_DEBUG("Receiving user message(?).\n");
 			bzero(&user_addr, sizeof(user_addr));
-			hip_msg_init(user_msg);
 			alen = sizeof(user_addr);
-			n = recvfrom(hip_user_sock, (void *)user_msg,
+			n = recvfrom(hip_user_sock, (void *)hip_msg,
 				     HIP_MAX_PACKET, 0,
-				     (struct sockaddr *)&user_addr, &alen);
+				     (struct sockaddr *) &user_addr,
+				     &alen);
 			if (n < 0)
 			{
 				HIP_ERROR("Recvfrom() failed.\n");
 				err = -1;
 			} 
 			
-			//HIP_HEXDUMP("packet", user_msg,  hip_get_msg_total_len(user_msg));
-			HIP_IFEL((err = hip_handle_user_msg(user_msg)),
+			//HIP_HEXDUMP("packet", hip_msg,  hip_get_msg_total_len(hip_msg));
+			HIP_IFEL((err = hip_handle_user_msg(hip_msg)),
 				 1, "Handing of user msg failed\n");
 			
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
@@ -353,11 +398,20 @@ int main(int argc, char *argv[]) {
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}
+#if 0
 		while (hwo = hip_get_work_order()) {
 			HIP_DEBUG("Processing work order\n");
 			hip_do_work(hwo);
 		}
+#endif
+		if (err) {
+			HIP_ERROR("Error (%d) %s, ignoring\n",
+				  strerror(errno));
+			err = 0;
+		}
+
 	}
+
 out_err:
 	/* free allocated resources */
 	if (hip_raw_sock)
