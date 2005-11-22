@@ -32,14 +32,19 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_handle_keys() {
+int hip_init_host_ids() {
 	int err = 0;
 	struct stat status;
 	struct hip_common *user_msg = NULL;
 
+	/* We are first serializing a message with HIs and then
+	   deserializing it. This building and parsing causes
+	   a minor overhead, but as a result we can reuse the code
+	   with hipconf. */
+
 	HIP_IFE((!(user_msg = hip_msg_alloc())), -1);
 		
-	/* Create default keys if necessary */
+	/* Create default keys if necessary. */
 
 	if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT) {
 		hip_msg_init(user_msg);
@@ -236,7 +241,7 @@ int main(int argc, char *argv[]) {
 		HIP_IFE(hip_add_iface_local_route(&hit), 1);
 	}
 
-	HIP_IFE(hip_handle_keys(), 1);
+	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_user_sock < 0), 1,
