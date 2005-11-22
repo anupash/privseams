@@ -293,9 +293,9 @@ int main(int argc, char *argv[]) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
+			socklen_t socklen = sizeof(struct sockaddr_in6);
 			struct sockaddr_in6 me, peer;
 			int len;
-			socklen_t socklen = sizeof(struct in6_addr);
 
 			hip_msg_init(user_msg);
                         len = recvfrom(hip_raw_sock, user_msg, HIP_MAX_PACKET,
