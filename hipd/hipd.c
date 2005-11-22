@@ -104,7 +104,7 @@ int hip_init_raw_sock() {
 }
 
 int hip_read_control_msg(int hip_raw_sock, struct hip_common *hip_msg,
-			 struct in6_addr *my_addr, struct in6_addr *peer_addr)
+			 struct in6_addr *saddr, struct in6_addr *daddr)
 {
         struct sockaddr_in6 addr_from;
         struct cmsghdr *cmsg;
@@ -128,20 +128,12 @@ int hip_read_control_msg(int hip_raw_sock, struct hip_common *hip_msg,
         iov.iov_len = HIP_MAX_PACKET;
         iov.iov_base = hip_msg;
 
-	HIP_DEBUG("2*** hip_msg %p\n", hip_msg);
 	len = recvmsg(hip_raw_sock, &msg, 0);
-	HIP_DEBUG("3*** hip_msg %p\n", hip_msg);
 
 	/* ICMPv6 packet */
 	HIP_IFEL(len < 0, -1, "ICMPv6 error: errno=%d, %s\n",
 		 errno, strerror(errno));
 
-        //hip_msg = msg->msg_iov->iov_base;
-        //src = &src_ss;
-        //dst = &dst_ss;
-        //memset(src, 0, sizeof(struct sockaddr_storage));
-        //memset(dst, 0, sizeof(struct sockaddr_storage));
-        
 	/* destination address comes from ancillary data passed
 	 * with msg due to IPV6_PKTINFO socket option */
 	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
@@ -154,12 +146,11 @@ int hip_read_control_msg(int hip_raw_sock, struct hip_common *hip_msg,
 
 	HIP_IFEL(!pktinfo, -1, "Could not determine IPv6 dst, dropping\n");
 
-	memcpy(my_addr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
-	/* source address is filled in from call to recvmsg() */
-	memcpy(peer_addr, &msg.msg_name, sizeof(struct in6_addr));
+	memcpy(saddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
+	memcpy(daddr, &msg.msg_name, sizeof(struct in6_addr));
 	
-	HIP_DEBUG_IN6ADDR("my addr\n", my_addr);
-	HIP_DEBUG_IN6ADDR("peer addr\n", peer_addr);
+	HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
+	HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
 
  out_err:
 	return err;
@@ -342,8 +333,6 @@ int main(int argc, char *argv[]) {
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 
-		hip_msg_init(hip_msg);
-
 		_HIP_DEBUG("select\n");
 		/* wait for socket activity */
 #ifndef CONFIG_HIP_HI3
@@ -354,34 +343,35 @@ int main(int argc, char *argv[]) {
 				     NULL, NULL, &timeout)) < 0) {
 				
 #endif
-			HIP_INFO("select() error: %s.\n", strerror(errno));
+			HIP_ERROR("select() error: %s.\n", strerror(errno));
 		} else if (err == 0) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
-			struct in6_addr my_addr, peer_addr;
-			HIP_DEBUG("1*** hip_msg %p\n", hip_msg);
+			struct in6_addr saddr, daddr;
+
+			hip_msg_init(hip_msg);
+		
 			err = hip_read_control_msg(hip_raw_sock, hip_msg,
-						   &my_addr, &peer_addr);
-			HIP_DEBUG("4*** hip_msg %p\n", hip_msg);
+						   &saddr, &daddr);
 			if (!err)
-				err = hip_receive_control_packet(hip_raw_sock,
-								 hip_msg,
-								 &my_addr,
-								 &peer_addr);
+				err = hip_receive_control_packet(hip_msg,
+								 &saddr,
+								 &daddr);
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;
 
 			HIP_DEBUG("Receiving user message(?).\n");
+			hip_msg_init(hip_msg);
+		
 			bzero(&user_addr, sizeof(user_addr));
 			alen = sizeof(user_addr);
 			n = recvfrom(hip_user_sock, (void *)hip_msg,
 				     HIP_MAX_PACKET, 0,
 				     (struct sockaddr *) &user_addr,
 				     &alen);
-			if (n < 0)
-			{
+			if (n < 0) {
 				HIP_ERROR("Recvfrom() failed.\n");
 				err = -1;
 			} 
@@ -405,11 +395,10 @@ int main(int argc, char *argv[]) {
 		}
 #endif
 		if (err) {
-			HIP_ERROR("Error (%d) %s, ignoring\n",
-				  strerror(errno));
+			HIP_ERROR("Error (%d) ignoring. %s\n", err,
+				  ((errno) ? strerror(errno) : ""));
 			err = 0;
 		}
-
 	}
 
 out_err:
