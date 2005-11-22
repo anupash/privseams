@@ -663,8 +663,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		  hip_get_host_id_algo((struct hip_host_id *)host_id_in_enc));
 	_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 
-	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, transform_hip_suite,	  
-				      host_id_in_enc_len, &ctx->hip_enc_out.key,
+	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv,
+				      transform_hip_suite,
+				      host_id_in_enc_len,
+				      &ctx->hip_enc_out.key,
 				      HIP_DIRECTION_ENCRYPT), -1, 
 		 "Building of param encrypted failed\n");
 
@@ -674,17 +676,16 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
         /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
-	{
-		/* let the setup routine give us a SPI. */
-		HIP_IFEL(hip_add_sa(&ctx->input->hits,
-				    &ctx->input->hitr, 
-				    &spi_in, transform_esp_suite, 
-				    &ctx->esp_in, &ctx->auth_in, 0,
-				    HIP_SPI_DIRECTION_IN), -1, 
-			 "Failed to setup IPsec SPD/SA entries, peer:src\n");
-		/* XXX: -EAGAIN */
-		HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
-	}
+
+	/* let the setup routine give us a SPI. */
+	HIP_IFEL(hip_add_sa(&ctx->input->hits,
+			    &ctx->input->hitr, 
+			    &spi_in, transform_esp_suite, 
+			    &ctx->esp_in, &ctx->auth_in, 0,
+			    HIP_SPI_DIRECTION_IN), -1, 
+		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
+	/* XXX: -EAGAIN */
+	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
  	HIP_ASSERT(esp_info); /* Builder internal error */

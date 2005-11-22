@@ -103,59 +103,6 @@ int hip_init_raw_sock() {
 	return err;
 }
 
-int hip_read_control_msg(int hip_raw_sock, struct hip_common *hip_msg,
-			 struct in6_addr *saddr, struct in6_addr *daddr)
-{
-        struct sockaddr_in6 addr_from;
-        struct cmsghdr *cmsg;
-        struct msghdr msg;
-        struct in6_pktinfo *pktinfo = NULL;
-        struct iovec iov;
-        char cbuff[CMSG_SPACE(256)];
-        int err = 0, len;
-
-        /* setup message header with control and receive buffers */
-        msg.msg_name = &addr_from;
-        msg.msg_namelen = sizeof(struct sockaddr_in6);
-        msg.msg_iov = &iov;
-        msg.msg_iovlen = 1;
-
-        memset(cbuff, 0, sizeof(cbuff));
-        msg.msg_control = cbuff;
-        msg.msg_controllen = sizeof(cbuff);
-        msg.msg_flags = 0;
-
-        iov.iov_len = HIP_MAX_PACKET;
-        iov.iov_base = hip_msg;
-
-	len = recvmsg(hip_raw_sock, &msg, 0);
-
-	/* ICMPv6 packet */
-	HIP_IFEL(len < 0, -1, "ICMPv6 error: errno=%d, %s\n",
-		 errno, strerror(errno));
-
-	/* destination address comes from ancillary data passed
-	 * with msg due to IPV6_PKTINFO socket option */
-	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
-		if ((cmsg->cmsg_level == IPPROTO_IPV6) && 
-		    (cmsg->cmsg_type == IPV6_PKTINFO)) {
-			pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
-			break;
-		}
-	}
-
-	HIP_IFEL(!pktinfo, -1, "Could not determine IPv6 dst, dropping\n");
-
-	memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
-	memcpy(saddr, &addr_from.sin6_addr, sizeof(struct in6_addr));
-	
-	HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
-	HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
-
- out_err:
-	return err;
-}
-
 /*
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
@@ -352,34 +299,20 @@ int main(int argc, char *argv[]) {
 
 			hip_msg_init(hip_msg);
 		
-			err = hip_read_control_msg(hip_raw_sock, hip_msg,
+			err = hip_read_control_msg(hip_raw_sock, hip_msg, 1,
 						   &saddr, &daddr);
 			if (!err)
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr);
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
-			int n;
-			socklen_t alen;
-
 			HIP_DEBUG("Receiving user message(?).\n");
 			hip_msg_init(hip_msg);
-		
-			bzero(&user_addr, sizeof(user_addr));
-			alen = sizeof(user_addr);
-			n = recvfrom(hip_user_sock, (void *)hip_msg,
-				     HIP_MAX_PACKET, 0,
-				     (struct sockaddr *) &user_addr,
-				     &alen);
-			if (n < 0) {
-				HIP_ERROR("Recvfrom() failed.\n");
-				err = -1;
-			} 
-			
-			//HIP_HEXDUMP("packet", hip_msg,  hip_get_msg_total_len(hip_msg));
+
+			err = hip_read_control_msg(hip_user_sock, hip_msg, 0,
+						   NULL, NULL);
 			HIP_IFEL((err = hip_handle_user_msg(hip_msg)),
 				 1, "Handing of user msg failed\n");
-			
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
