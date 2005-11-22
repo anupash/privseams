@@ -87,6 +87,7 @@ int hip_init_raw_sock() {
 	HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW,
 					 IPPROTO_HIP)) <= 0), 1,
 		 "Raw socket creation failed. Not root?\n");
+#if 0
 	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt recverr failed\n");
 	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_PKTINFO, &on,
@@ -96,6 +97,29 @@ int hip_init_raw_sock() {
 	/* XX CHECK: does this fix the interface IP - bad for m&m ? */
 	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &any6_addr,
 		      sizeof(any6_addr)), -1, "bind to raw sock failed\n");
+#endif
+ out_err:
+	return err;
+}
+
+int hip_recv_control_msg(int hip_raw_sock, struct hip_common *user_msg,
+			 struct in6_addr *my_addr, struct in6_addr *peer_addr)
+{
+	socklen_t socklen = sizeof(struct sockaddr_in6);
+	struct sockaddr_in6 me, peer;
+	int len, err = 0;
+	
+	HIP_IFEL(getsockname(hip_raw_sock, (struct sockaddr *) &me,
+			    &socklen), -1, "getsockname failed\n");
+
+	hip_msg_init(user_msg);
+	len = recvfrom(hip_raw_sock, user_msg, HIP_MAX_PACKET, 0,
+		       (struct sockaddr *) &peer, &socklen);
+	HIP_IFEL(len <= 0, -1, "Receiving error or icmpv6?\n");
+
+	memcpy(my_addr, &me.sin6_addr, sizeof(struct in6_addr));
+	memcpy(peer_addr, &peer.sin6_addr, sizeof(struct in6_addr));
+
  out_err:
 	return err;
 }
@@ -288,28 +312,18 @@ int main(int argc, char *argv[]) {
 				
 #endif
 			HIP_INFO("select() error: %s.\n", strerror(errno));
-			
 		} else if (err == 0) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
-			socklen_t socklen = sizeof(struct sockaddr_in6);
-			struct sockaddr_in6 me, peer;
-			int len;
-
-			hip_msg_init(user_msg);
-                        len = recvfrom(hip_raw_sock, user_msg, HIP_MAX_PACKET,
-				       0, (struct sockaddr *) &peer, &socklen);
-
-                        if (len <= 0) {
-				HIP_ERROR("Receiving error or icmpv6?\n");
-                        } else if (!(err = getsockname(hip_raw_sock,
-						     (struct sockaddr *) &me,
-						     &socklen))) {
-				err = hip_receive_control_packet(user_msg,
-								 &me.sin6_addr,
-								 &peer.sin6_addr);
-                        }
+			struct in6_addr my_addr, peer_addr;
+			err = hip_recv_control_msg(hip_raw_sock, user_msg,
+						   &my_addr, &peer_addr);
+			if (!err)
+				err = hip_receive_control_packet(hip_raw_sock,
+								 user_msg,
+								 &my_addr,
+								 &peer_addr);
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;
