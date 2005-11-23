@@ -93,7 +93,8 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 
-	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC)), -ENOMSG, "No HMAC parameter\n");
+	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC)),
+		 -ENOMSG, "No HMAC parameter\n");
 
 	/* hmac verification modifies the msg length temporarile, so we have
 	   to restore the length */
@@ -102,10 +103,14 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	len = (u8 *) hmac - (u8*) msg;
 	hip_set_msg_total_len(msg, len);
 
-	_HIP_HEXDUMP("HMACced data", msg, len);
+	HIP_HEXDUMP("HMAC key", crypto_key->key,
+		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
+
+	HIP_HEXDUMP("HMACced data", msg, len);
 	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
 
-	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key, HIP_DIGEST_SHA1_HMAC), 
+	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+				 HIP_DIGEST_SHA1_HMAC), 
 		 -1, "HMAC validation failed\n");
 	hip_set_msg_total_len(msg, orig_len);
 
