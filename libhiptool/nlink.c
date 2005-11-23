@@ -248,7 +248,7 @@ int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
                                                         memcpy(answer, h, h->nlmsg_len);
                                                 return 0;
                                         }
-                                        HIP_PERROR("RTNETLINK answers");
+                                        HIP_PERROR("NETLINK answers");
                                 }
                                 return -1;
                         }

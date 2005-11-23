@@ -683,15 +683,24 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 			struct xfrm_algo algo;
 			char buf[XFRM_ALGO_KEY_BUF_SIZE];
 		} alg;
+		/* Mappings from HIP to XFRM algo names */
+		char *e_algo_names[] =
+			{"reserved", "aes", "des3_ede", "des3_ede",
+			 "blowfish", "cipher_null", "cipher_null"};
+		char *a_algo_names[] =
+			{"reserved", "sha1", "sha1", "md5",
+			 "sha1", "sha1", "md5"};
+		char *e_name = e_algo_names[ealg];
+		char *a_name = a_algo_names[aalg];
 		int len;
-		/*FIXME: from the algo_numbers, we need to map the protocol into the right string,
-		 * since the kernel accepts strings. */
-		char *e_name = "des3_ede";
-		char *a_name = "md5";
+
+		HIP_ASSERT(ealg < sizeof(e_algo_names));
+		HIP_ASSERT(aalg < sizeof(a_algo_names));
 
 		/* XFRMA_ALG_AUTH */
 		memset(&alg, 0, sizeof(alg));
-		xfrm_algo_parse((void *)&alg, XFRMA_ALG_AUTH, a_name, authkey->key, sizeof(alg.buf));
+		xfrm_algo_parse((void *)&alg, XFRMA_ALG_AUTH, a_name,
+				authkey->key, sizeof(alg.buf));
 		len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
 		addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH,
@@ -699,7 +708,8 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 
 		/* XFRMA_ALG_CRYPT */
 		memset(&alg, 0, sizeof(alg));
-		xfrm_algo_parse((void *)&alg, XFRMA_ALG_CRYPT, e_name, enckey->key, sizeof(alg.buf));
+		xfrm_algo_parse((void *)&alg, XFRMA_ALG_CRYPT, e_name,
+				enckey->key, sizeof(alg.buf));
 	
 		len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 

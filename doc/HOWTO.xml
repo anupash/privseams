@@ -29,6 +29,10 @@
      &nbsp; * Linux Operating System
     </para>
     <para>
+      &nbsp;* A BEET patched Linux 2.6 kernel with dummy device, XFRM,
+      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support
+    </para>
+    <para>
       &nbsp;* OpenSSL-library and developer headers
     </para>
     <para>
@@ -72,10 +76,6 @@
     <para>
       &nbsp;* java compiler for "jip" (java hip resolver) if you want to build
       HIP enabled java programs
-    </para>
-    <para>
-      &nbsp;* Linux 2.6 kernel with BEET patches, dummy device, XFRM and
-      XFRM_USER support
     </para>
   </chapter>
   <chapter>

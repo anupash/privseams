@@ -98,12 +98,6 @@ int hip_init_raw_sock() {
 	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
 
-#if 0
-	/* recvmsg() may need this?? */
-	/* XX CHECK: does this fix the interface IP - bad for m&m ? */
-	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &any6_addr,
-		      sizeof(any6_addr)), -1, "bind to raw sock failed\n");
-#endif
  out_err:
 	return err;
 }
