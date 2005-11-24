@@ -84,19 +84,8 @@ int hip_calculate_shared_secret(struct hip_diffie_hellman *dhf, u8* buffer,
 		return -1;
         }
 
-#ifdef CONFIG_HIP_DEBUG
-	{
-		u8 *dh_data = NULL;
-		size_t res;
-		int dh_size = hip_get_dh_size(HIP_DEFAULT_DH_GROUP_ID);
-		dh_data = HIP_MALLOC(dh_size, GFP_KERNEL);
-		DH *tmp = dh_table[dhf->group_id];
-		res = hip_encode_dh_publickey(tmp, buffer, bufsize);
-		HIP_HEXDUMP("My DH public key: ", buffer, res);
-	}
-#endif
-	HIP_HEXDUMP("Peer DH pubkey", dhf->public_value, len);
-	HIP_HEXDUMP("shared key", buffer, bufsize);
+	_HIP_HEXDUMP("Peer DH pubkey", dhf->public_value, len);
+	_HIP_HEXDUMP("shared key", buffer, bufsize);
 
 	return err;
 }
