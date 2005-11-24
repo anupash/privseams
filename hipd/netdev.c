@@ -306,6 +306,11 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	/* XX TODO: we should try resolving here to create an
 	   entry if an entry was not found */
 
+	if (entry->state != HIP_STATE_UNASSOCIATED) {
+		HIP_DEBUG("I1 was already sent, ignoring\n");
+		goto out_err;
+	}
+
 	HIP_IFEL(hip_send_i1(&entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
  out_err:

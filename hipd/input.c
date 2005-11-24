@@ -1291,6 +1291,7 @@ int hip_handle_i2(struct hip_common *i2,
 		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(esp_info->new_spi);
+		HIP_DEBUG("Adding spi 0x%x\n", spi_out_data.spi);
 		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
 					 &spi_out_data), -1);
 		entry->esp_transform = hip_select_esp_transform(esp_tf);
@@ -1326,7 +1327,7 @@ int hip_handle_i2(struct hip_common *i2,
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
-			 retransmission, HIP_SPI_DIRECTION_OUT);
+			 1, HIP_SPI_DIRECTION_OUT);
 	if (err) {
 		HIP_DEBUG("Adding of outbound SA failed\n");
 
