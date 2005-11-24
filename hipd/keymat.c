@@ -102,7 +102,8 @@ void hip_make_keymat(char *kij, size_t kij_len,
 	bigger_hit =  hit1_is_bigger ? hit1 : hit2;
 	smaller_hit = hit1_is_bigger ? hit2 : hit1;
 
-	HIP_DEBUG("\n");
+	_HIP_HEXDUMP("kij", kij, kij_len);
+	_HIP_DEBUG("I=0x%llx J=0x%llx\n", I, J);
 	_HIP_HEXDUMP("bigger hit", bigger_hit, 16);
 	_HIP_HEXDUMP("smaller hit", smaller_hit, 16);
 	_HIP_HEXDUMP("index_nbr", (char *) &index_nbr,

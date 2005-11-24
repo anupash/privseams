@@ -218,15 +218,16 @@ int hip_produce_keying_material(struct hip_common *msg,
 	if (keymat_len % HIP_AH_SHA_LEN)
 		keymat_len += HIP_AH_SHA_LEN - (keymat_len % HIP_AH_SHA_LEN);
 
-	HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min, keymat_len);
+	HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min,
+		  keymat_len);
 	HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, GFP_KERNEL)), -ENOMEM,
 		 "No memory for KEYMAT\n");
 
 	/* 1024 should be enough for shared secret. The length of the
 	 * shared secret actually depends on the DH Group. */
 	/* TODO: 1024 -> hip_get_dh_size ? */
-	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)), -ENOMEM, 
-		 "No memory for DH shared key\n");
+	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
+		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
 
 	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)), -ENOENT, 
@@ -235,6 +236,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 							      dh_shared_key, dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed\n");
 	_HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
+	_HIP_HEXDUMP("DH SHARED PARAM", param, hip_get_param_total_len(param));
 	_HIP_HEXDUMP("DH SHARED KEY", dh_shared_key, dh_shared_len);
 	hip_make_keymat(dh_shared_key, dh_shared_len,
 			&km, keymat, keymat_len,
@@ -577,7 +579,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size, dh_req->group_id)) < 0, -ENOENT, 
 		 "Error while extracting DH key\n");
 
-	_HIP_HEXDUMP("Own DH key", dh_data, n);
+	_HIP_HEXDUMP("Own DH key: ", dh_data, dh_size);
 
 	HIP_IFEL(hip_build_param_diffie_hellman_contents(i2,dh_req->group_id,
 							 dh_data, written), -1, 
@@ -762,8 +764,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* todo: Also store the keys that will be given to ESP later */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
-	/* state E1: Receive R1, process. If successful, send I2 and go to E2. */
+	/* state E1: Receive R1, process. If successful,
+	   send I2 and go to E2. */
+
 	HIP_IFE(hip_csum_send(NULL, &daddr, i2), -1);
+
 
  out_err:
 	if (i2)
@@ -1150,8 +1155,7 @@ int hip_handle_i2(struct hip_common *i2,
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
 	   of a retransmission but then we'd had to fill ctx->hmac etc */
-	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J),
-		 -1,
+	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
 		 "Unable to produce keying material. Dropping I2\n");
 
 	/* verify HMAC */

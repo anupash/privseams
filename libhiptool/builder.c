@@ -1670,12 +1670,16 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 	HIP_ASSERT(pubkey_len >= sizeof(struct hip_tlv_common));
 
 	hip_set_param_type(&diffie_hellman, HIP_PARAM_DIFFIE_HELLMAN);
-	hip_calc_generic_param_len(&diffie_hellman, sizeof(struct hip_diffie_hellman),
+	hip_calc_generic_param_len(&diffie_hellman,
+				   sizeof(struct hip_diffie_hellman),
 				   pubkey_len);
 	diffie_hellman.group_id = group_id; /* 1 byte, no htons() */
 
 	err = hip_build_generic_param(msg, &diffie_hellman,
-				      sizeof(struct hip_diffie_hellman), pubkey);
+				      sizeof(struct hip_diffie_hellman),
+				      pubkey);
+
+	HIP_HEXDUMP("Own DH pubkey: ", pubkey, pubkey_len);
 
 	return err;
 }
