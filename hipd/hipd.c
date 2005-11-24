@@ -199,6 +199,21 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, hip_exit);
 	signal(SIGTERM, hip_exit);
 
+        HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
+
+        hip_init_hadb();
+
+#ifdef CONFIG_HIP_RVS
+        hip_init_rvadb();
+#endif	
+
+	/* Workqueue relies on an open netlink connection */
+	hip_init_workqueue();
+
+#ifdef CONFIG_HIP_HI3
+	cl_init(i3_config);
+#endif
+
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
@@ -252,21 +267,6 @@ int main(int argc, char *argv[]) {
 
 	highest_descriptor = maxof(hip_raw_sock, hip_user_sock, nl_ifaddr.fd);
 	
-        HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
-
-        hip_init_hadb();
-
-#ifdef CONFIG_HIP_RVS
-        hip_init_rvadb();
-#endif	
-
-	/* Workqueue relies on an open netlink connection */
-	hip_init_workqueue();
-
-#ifdef CONFIG_HIP_HI3
-	cl_init(i3_config);
-#endif
-
 	/* Enter to the select-loop */
 	for (;;) {
 		struct hip_work_order *hwo;

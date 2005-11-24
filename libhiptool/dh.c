@@ -23,10 +23,10 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 	size_t res;
 	DH *tmp;
 
-/*
- * First check that we have the key available.
- * Then encode it into the buffer
- */
+        /*
+	 * First check that we have the key available.
+	 * Then encode it into the buffer
+	 */
 
 	if (dh_table[group_id] == NULL) {
 		tmp = hip_generate_dh_key(group_id);

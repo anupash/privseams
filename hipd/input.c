@@ -230,8 +230,8 @@ int hip_produce_keying_material(struct hip_common *msg,
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
 
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)), -ENOENT, 
-		 "No Diffie-Hellman param found\n");
+	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
+		 -ENOENT,  "No Diffie-Hellman param found\n");
 	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret((struct hip_diffie_hellman *) param, 
 							      dh_shared_key, dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed\n");
