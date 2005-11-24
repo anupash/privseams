@@ -1310,7 +1310,8 @@ struct hip_spi_in_item *hip_hadb_get_spi_in_list(hip_ha_t *entry, uint32_t spi)
 
 /* add an address belonging to the SPI list */
 /* or update old values */
-int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
+int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
+			     struct in6_addr *addr,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr)
 {

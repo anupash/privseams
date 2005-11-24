@@ -1163,11 +1163,12 @@ int hip_handle_i2(struct hip_common *i2,
 		 "HMAC validation on i2 failed\n");
 	
 	/* decrypt the HOST_ID and verify it against the sender HIT */
-	HIP_IFEL(!(enc = hip_get_param(ctx->input, HIP_PARAM_ENCRYPTED)), -ENOENT,
-		 "Could not find enc parameter\n");
+	HIP_IFEL(!(enc = hip_get_param(ctx->input, HIP_PARAM_ENCRYPTED)),
+		 -ENOENT, "Could not find enc parameter\n");
 
-	HIP_IFEL(!(tmp_enc = HIP_MALLOC(hip_get_param_total_len(enc), GFP_KERNEL)),
-		 -ENOMEM, "No memory for temporary host_id\n");
+	HIP_IFEL(!(tmp_enc = HIP_MALLOC(hip_get_param_total_len(enc),
+					GFP_KERNEL)), -ENOMEM,
+		 "No memory for temporary host_id\n");
 
 	/* little workaround...
 	 * We have a function that calculates sha1 digest and then verifies the
@@ -1271,10 +1272,12 @@ int hip_handle_i2(struct hip_common *i2,
 		struct hip_esp_transform *esp_tf;
 		struct hip_spi_out_item spi_out_data;
 
-		HIP_IFEL(!(esp_tf = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM)), -ENOENT,
-			 "Did not find ESP transform on i2\n");
-		HIP_IFEL(!(esp_info = hip_get_param(ctx->input, HIP_PARAM_ESP_INFO)), -ENOENT,
-			 "Did not find SPI LSI on i2\n");
+		HIP_IFEL(!(esp_tf = hip_get_param(ctx->input,
+						  HIP_PARAM_ESP_TRANSFORM)),
+			 -ENOENT, "Did not find ESP transform on i2\n");
+		HIP_IFEL(!(esp_info = hip_get_param(ctx->input,
+						    HIP_PARAM_ESP_INFO)),
+			 -ENOENT, "Did not find SPI LSI on i2\n");
 
 		if (r1cntr)
 			entry->birthday = r1cntr->generation;
@@ -1295,7 +1298,8 @@ int hip_handle_i2(struct hip_common *i2,
 			 "Could not select proper ESP transform\n");
 	}
 
-	HIP_IFEL(hip_hadb_add_peer_addr(entry, i2_saddr, 0, 0, PEER_ADDR_STATE_ACTIVE), -1,
+	HIP_IFEL(hip_hadb_add_peer_addr(entry, i2_saddr, 0, 0,
+					PEER_ADDR_STATE_ACTIVE), -1,
 		 "Error while adding the preferred peer address\n");
 
 	/* Set up IPsec associations */
@@ -1323,13 +1327,14 @@ int hip_handle_i2(struct hip_common *i2,
 	err = hip_add_sa(&entry->hit_our, &entry->hit_peer, &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
 			 retransmission, HIP_SPI_DIRECTION_OUT);
-	if (!err) {
+	if (err) {
+		HIP_DEBUG("Adding of outbound SA failed\n");
+
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");
 //	} else if (err) {
 //		HIP_ERROR("Failed to setup IPsec SPD/SA entries, peer:dst (err=%d)\n", err);
 //		/* delete all IPsec related SPD/SA for this entry */
-		err = -1;
 		hip_hadb_delete_inbound_spi(entry, 0);
 		hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
@@ -1339,8 +1344,8 @@ int hip_handle_i2(struct hip_common *i2,
 
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
-	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1), -1, 
-		 "Failed to add an address to SPI list\n");
+	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
+		 -1,  "Failed to add an address to SPI list\n");
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
@@ -1582,7 +1587,7 @@ int hip_handle_r2(struct hip_common *r2,
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");
 //	} else 	if (err) {
-	if (!err) {
+	if (err) {
 		HIP_ERROR("hip_add_sa failed, peer:dst (err=%d)\n", err);
 		HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
 		err = -1;
