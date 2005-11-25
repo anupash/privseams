@@ -86,7 +86,7 @@ int hip_setup_sp_prefix_pair() {
 	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
 	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
 
-	HIP_IFE(hip_setup_hit_sp_pair(&dst_hit, &src_hit, NULL, NULL), -1);
+	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL), -1);
 
  out_err:
 	return err;

@@ -692,6 +692,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
+	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
+				       &ctx->input->hitr,
+				       r1_saddr, r1_daddr), -1,
+		 "Setting up SP pair failed\n");
+
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
  	HIP_ASSERT(esp_info); /* Builder internal error */
 	esp_info->new_spi = htonl(spi_in);
@@ -1320,7 +1325,6 @@ int hip_handle_i2(struct hip_common *i2,
 	/* ok, found an unused SPI to use */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 		
-	barrier();
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 	err = hip_add_sa(i2_saddr, i2_daddr, &spi_out, esp_tfm, 
@@ -1340,6 +1344,11 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 	/* XXX: Check if err = -EAGAIN... */
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_out);
+
+	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
+				       &ctx->input->hitr,
+				       i2_saddr, i2_daddr), -1,
+		 "Setting up SP pair failed\n");
 
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
