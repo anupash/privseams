@@ -25,6 +25,7 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 
 /* Setups the SA (with a given SPI if so said) */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
+		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    uint32_t *spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired, int direction);
