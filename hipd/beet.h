@@ -95,7 +95,7 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 			   struct in6_addr *tmpl_daddr, int dir, u8 proto,
 			   u8 hit_prefix);
 int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer,
-			   int dir, u8 hit_prefix);
+			   int dir, u8 proto, u8 hit_prefix);
 
 int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 			  struct in6_addr *daddr, 

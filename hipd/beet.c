@@ -548,7 +548,7 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
  */
 int hip_xfrm_policy_delete(struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer,
-			   int dir,
+			   int dir, u8 proto,
 			   u8 hit_prefix) {
 
 	struct hip_nl_handle rth;
