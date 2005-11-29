@@ -695,7 +695,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
-				       r1_saddr, r1_daddr, IPPROTO_ESP), -1,
+				       r1_saddr, r1_daddr, IPPROTO_HIP, 1), -1,
 		 "Setting up SP pair failed\n");
 
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
@@ -1350,7 +1350,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
-				       i2_saddr, i2_daddr, IPPROTO_ESP), -1,
+				       i2_saddr, i2_daddr, IPPROTO_HIP, 1), -1,
 		 "Setting up SP pair failed\n");
 
 	/* source IPv6 address is implicitly the preferred

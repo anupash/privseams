@@ -417,7 +417,11 @@ int set_up_device(char *dev, int up)
  *
  * Returns: 0
  */
-int xfrm_fill_selector(struct xfrm_selector *sel, struct in6_addr *hit_our, struct in6_addr *hit_peer, __u8 proto) {
+int xfrm_fill_selector(struct xfrm_selector *sel,
+		       struct in6_addr *hit_our,
+		       struct in6_addr *hit_peer,
+		       __u8 proto, u8 hit_prefix)
+{
 
 	sel->family = preferred_family;
 	memcpy(&sel->daddr, hit_peer, sizeof(sel->daddr));
@@ -428,10 +432,8 @@ int xfrm_fill_selector(struct xfrm_selector *sel, struct in6_addr *hit_our, stru
 		HIP_DEBUG("proto = %d\n", proto);
 		sel->proto = proto;
 	}
-	/* Hardcoded for AF_INET6 or 128???*/
-	sel->prefixlen_d = HIP_HIT_PREFIX_LEN;
-	/* Hardcoded for AF_INET6 */
-	sel->prefixlen_s = HIP_HIT_PREFIX_LEN;
+	sel->prefixlen_d = hit_prefix;
+	sel->prefixlen_s = hit_prefix;
 
 	return 0;
 }
@@ -465,7 +467,9 @@ int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
 int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer,
 			   struct in6_addr *tmpl_saddr,
-			   struct in6_addr *tmpl_daddr, int dir, __u8 proto){
+			   struct in6_addr *tmpl_daddr, int dir,
+			   __u8 proto, u8 hit_prefix)
+{
 
 	struct hip_nl_handle rth;
 	struct {
@@ -492,7 +496,8 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 	req.xpinfo.dir = dir;
 
 	/* SELECTOR <--> HITs */
-	xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, proto);
+	xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, proto,
+			   hit_prefix);
 
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
@@ -541,7 +546,10 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
  *
  * Returns: 0 if successful, else < 0
  */
-int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer, int dir) {
+int hip_xfrm_policy_delete(struct in6_addr *hit_our,
+			   struct in6_addr *hit_peer,
+			   int dir,
+			   u8 hit_prefix) {
 
 	struct hip_nl_handle rth;
 	struct {
@@ -561,7 +569,7 @@ int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer, 
 	req.xpid.dir = dir;
 
 	/* SELECTOR <--> HITs */
-	xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0);
+	xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0, hit_prefix);
 
 	if (req.xpid.sel.family == AF_UNSPEC)
 		req.xpid.sel.family = AF_INET6;
@@ -692,7 +700,7 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 
 	/* Selector */
 	xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			   req.xsinfo.id.proto);
+			   req.xsinfo.id.proto, HIP_HIT_PREFIX_LEN);
 	
 	{
 		struct {

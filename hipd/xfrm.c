@@ -49,19 +49,32 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 
 int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 			  struct in6_addr *src_addr,
-			  struct in6_addr *dst_addr, __u8 proto) {
+			  struct in6_addr *dst_addr, u8 proto,
+			  int use_full_prefix)
+{
 	int err = 0;
+	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+
 	HIP_IFE(hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, dst_hit, src_hit,
 				       src_addr, dst_addr,
-				       XFRM_POLICY_IN, proto), -1);
+				       XFRM_POLICY_IN, proto, prefix), -1);
 	HIP_IFE(hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, src_hit, dst_hit,
 				       dst_addr, src_addr,
-				       XFRM_POLICY_OUT, proto), -1);
+				       XFRM_POLICY_OUT, proto, prefix), -1);
  out_err:
 	return err;
 }
 
-void hip_delete_prefix_sp_pair() {
+void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+			    int use_full_prefix)
+{
+	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+
+	hip_xfrm_policy_delete(src_hit, src_hit, XFRM_POLICY_IN, prefix);
+	hip_xfrm_policy_delete(dst_hit, dst_hit, XFRM_POLICY_OUT, prefix);
+}
+
+void hip_delete_default_prefix_sp_pair() {
 	hip_hit_t src_hit, dst_hit;
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
@@ -70,25 +83,23 @@ void hip_delete_prefix_sp_pair() {
 	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
 	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
 
-	hip_xfrm_policy_delete(&src_hit, &src_hit, XFRM_POLICY_IN);
-	hip_xfrm_policy_delete(&dst_hit, &dst_hit, XFRM_POLICY_OUT);
+	hip_delete_hit_sp_pair(&src_hit, &dst_hit, 1);
 }
 
-int hip_setup_sp_prefix_pair() {
+int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
 	hip_hit_t src_hit, dst_hit;
+
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* The OUTGOING and INCOMING policy is set to the generic value */
 
-	/** FIXME: I am not that sure if the macro HIP_HIT_TYPE_MASK_120 is correct 
-	 * at the moment I opt for hardcoding the general policy 
-	 */
 	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
 	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
 
-	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0), -1);
+	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0, 0),
+		-1);
 
  out_err:
 	return err;

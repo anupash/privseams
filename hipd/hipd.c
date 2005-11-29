@@ -109,7 +109,7 @@ int hip_init_raw_sock() {
 void hip_exit(int signal) {
 	HIP_ERROR("Signal: %d\n", signal);
 
-	hip_delete_prefix_sp_pair();
+	hip_delete_default_prefix_sp_pair();
 
 	set_up_device(HIP_HIT_DEV, 0);
 
@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
 	/** This is to delete the general security policies in case they exist
 	 * due to for example a crash of the application
 	 */
-	hip_delete_prefix_sp_pair();
+	hip_delete_default_prefix_sp_pair();
 	/**********/
 
 	hip_set_logfmt(LOGFMT_LONG);
@@ -235,8 +235,8 @@ int main(int argc, char *argv[]) {
 		  hip_raw_sock, highest_descriptor);
 
 	HIP_DEBUG("Setting SP\n");
-	hip_delete_prefix_sp_pair();
-	HIP_IFE(hip_setup_sp_prefix_pair(), 1);
+	hip_delete_default_prefix_sp_pair();
+	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
 
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
@@ -346,8 +346,8 @@ out_err:
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
 	/* On exit the general policy must be cancelled */
-	HIP_DEBUG("Deleting the General SPs\n"),
-	hip_delete_prefix_sp_pair();
+	HIP_DEBUG("Deleting the General SPs\n");
+	hip_delete_default_prefix_sp_pair();
 
 	return err;
 }

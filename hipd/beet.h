@@ -89,11 +89,13 @@ int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
 		    uint32_t spi, int state, int dir);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
-//int hip_for_each_xfrm(int (*func)(hip_xfrm_t *entry, void *opaq), void *opaque);
-
-int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our, struct in6_addr *hit_peer, 
-			   struct in6_addr *tmpl_saddr, struct in6_addr *tmpl_daddr, int dir, __u8 proto);
-int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer, int dir);
+int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
+			   struct in6_addr *hit_peer, 
+			   struct in6_addr *tmpl_saddr,
+			   struct in6_addr *tmpl_daddr, int dir, u8 proto,
+			   u8 hit_prefix);
+int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer,
+			   int dir, u8 hit_prefix);
 
 int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 			  struct in6_addr *daddr, 
