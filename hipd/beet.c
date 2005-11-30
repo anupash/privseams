@@ -701,7 +701,7 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 
 	/* Selector */
 	xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			   req.xsinfo.id.proto, HIP_HIT_PREFIX_LEN);
+			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128);
 	
 	{
 		struct {
