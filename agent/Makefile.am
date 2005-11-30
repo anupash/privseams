@@ -9,10 +9,12 @@ include $(HIPL)/Makefile.am.global
 
 WX_CFLAGS := $(shell wx-config --libs)
 
+GTK_CFLAGS := $(shell gtk-config --cflags --libs)
+
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE
-CFLAGS += -DCONFIG_HIP_AGENT $(WX_LDFLAGS)
+CFLAGS += -DCONFIG_HIP_AGENT $(WX_LDFLAGS) $(GTK_CFLAGS)
 
 include_HEADERS = crypto.h netlink.h
 INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)

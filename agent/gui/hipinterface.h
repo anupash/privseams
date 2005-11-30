@@ -9,9 +9,11 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+#include "hit_db.h"
 #include "wx/wx.h"
 #include "hipagent.h"
 #include "hipkey.h"
+
 
 class HipInterface  
 {

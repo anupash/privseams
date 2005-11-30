@@ -11,6 +11,8 @@
 /* VARIABLES */
 /** This socket is used for communication between agent and HIP daemon. */
 int hip_user_sock = 0;
+/** This is just for waiting the connection thread to start properly. */
+int hip_agent_thread_started = 0;
 
 
 /******************************************************************************/
@@ -80,6 +82,10 @@ int connhipd_init(void)
 
 	pthread_create(&pt, NULL, connhipd_thread, msg);
 
+	hip_agent_thread_started = 0;
+	while (hip_agent_thread_started == 0) usleep(100 * 1000);
+	usleep(100 * 1000);
+
 	return (0);
 
 out_err:
@@ -105,9 +111,10 @@ int connhipd_thread(void *data)
 	HIT_Item hit;
 
 	/* Start handling. */
+	hip_agent_thread_started = 1;
 	while (agent_exec())
 	{
-		HIP_DEBUG("Receiving msg\n");
+		HIP_DEBUG("Waiting msg...\n");
 
 		bzero(&user_addr, sizeof(user_addr));
 		alen = sizeof(user_addr);
@@ -139,8 +146,8 @@ int connhipd_thread(void *data)
 		HIP_DEBUG("Whole message received successfully, asking for accept...\n");
 
 		/* TODO XX: Modify message and check message type. */
-		strcpy(hit.name, "");
-		hit.url = NULL;
+		strcpy(hit.name, "New HIT");
+		strcpy(hit.url, "<not set>");
 		hit.port = 0;
 		memcpy(&hit.lhit, &msg->hits, sizeof(struct in6_addr));
 		memcpy(&hit.rhit, &msg->hitr, sizeof(struct in6_addr));

@@ -20,6 +20,9 @@
 */
 #define HIT_DB_ITEMS_REALLOC			8
 
+#define HIT_DB_LOCK() { while (hit_db_lock); hit_db_lock = 1; }
+#define HIT_DB_UNLOCK() { hit_db_lock = 0; }
+
 
 /******************************************************************************/
 /* VARIABLES */
@@ -29,6 +32,9 @@ HIT_Item *hit_db = NULL;
 int hit_db_n = 0;
 /** Counts amount of allocated items. */
 int hit_db_ni = 0;
+
+/** Almost atomic lock. */
+int hit_db_lock = 1;
 
 
 /******************************************************************************/
@@ -43,6 +49,12 @@ int hit_db_ni = 0;
 */
 int hit_db_init(void)
 {
+	/* Variables. */
+	int err = 0;
+	
+	/* Lock just for sure. */
+	hit_db_lock = 1;
+	
 	/* Allocate minimum space for HI's and reset all data. */
 	hit_db = (HIT_Item *)malloc(sizeof(HIT_Item) * HIT_DB_ITEMS_REALLOC);
 	if (!hit_db) goto out_err;
@@ -51,8 +63,8 @@ int hit_db_init(void)
 	hit_db_ni = HIT_DB_ITEMS_REALLOC;
 	hit_db_n = 0;
 
-	/* Return OK. */
-	return (0);
+	hit_db_lock = 0;
+	goto out;
 
 	/* Return failure. */
 out_err:
@@ -63,8 +75,9 @@ out_err:
 		hit_db_ni = 0;
 		hit_db_n = 0;
 	}
-
-	return (-1);
+	err = -1;
+out:
+	return (err);
 }
 /* END OF FUNCTION */
 
@@ -76,6 +89,9 @@ out_err:
 */
 void hit_db_quit(void)
 {
+	/* Lock just for sure. */
+	hit_db_lock = 1;
+	
 	if (hit_db)
 	{
 		free(hit_db);
@@ -87,6 +103,18 @@ void hit_db_quit(void)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/**
+	Adds new HIT to database.
+*/
+int hit_db_add_hit(HIT_Item *hit)
+{
+	return (hit_db_add(hit->name, &hit->lhit, &hit->rhit,
+	                   hit->url, hit->port, hit->type));
+}
+/* END OF FUNCTION */
+
+	
 /******************************************************************************/
 /**
 	Adds new HIT to database.
@@ -103,11 +131,13 @@ int hit_db_add(char *name,
                struct in6_addr *lhit,
                struct in6_addr *rhit,
                char *url,
-               uint16_t port,
+               int port,
                int type)
 {
 	/* Variables. */
-	int n;
+	int n, err = 0;
+
+	HIT_DB_LOCK();
 
 	/* If there is no space for new item, allocate more space. */
 	if (hit_db_n >= hit_db_ni)
@@ -127,12 +157,17 @@ int hit_db_add(char *name,
 	memcpy(&hit_db[n].rhit, rhit, sizeof(struct in6_addr));
 	hit_db[n].port = port;
 	hit_db[n].type = type;
+	hit_db[n].index = n;
+	strcpy(hit_db[n].url, url);
+
 /* XX TODO: Copy url too someday: hi_db[n].url */
+	HIP_DEBUG("Calling GUI to show new HIT...");
+	gui_add_new_hit(&hit_db[n]);
+	HIP_DEBUG(" Add succesfull.\n");
 
 	hit_db_n++; /* Count to next free item. */
 	
-	/* Return OK. */
-	return (0);
+	goto out;
 
 	/* Return failure. */
 out_err:
@@ -142,8 +177,10 @@ out_err:
 		hit_db_ni = 0;
 		hit_db_n = 0;
 	}
-
-	return (-1);
+	err = -1;
+out:
+	HIT_DB_UNLOCK();
+	return (err);
 }
 /* END OF FUNCTION */
 
@@ -157,6 +194,11 @@ out_err:
 */
 int hit_db_del(int ndx)
 {
+	/* Variables. */
+	int i, err = 0;
+	
+	HIT_DB_LOCK();
+
 	/* Check that index is valid. */
 	if (ndx >= hit_db_n || ndx < 0) goto out_err;
 	if (strlen(hit_db[ndx].name) < 1) goto out_err;
@@ -176,12 +218,19 @@ int hit_db_del(int ndx)
 		hit_db = (HIT_Item *)realloc(hit_db, sizeof(HIT_Item) * hit_db_ni);
 	}
 	
-	/* Return OK. */
-	return (0);
+	/* Go trough the list and reset indexes. */
+	for (i = 0; i < hit_db_n; i++)
+	{
+		hit_db[i].index = i;
+	}
+	
+	goto out;
 
 	/* Return failure. */
 out_err:
-	return (-1);
+out:
+	HIT_DB_UNLOCK();
+	return (err);
 }
 /* END OF FUNCTION */
 
@@ -189,32 +238,48 @@ out_err:
 /******************************************************************************/
 /**
 	This function finds the first hit matching the given description.
-	
-	@param ndx Pointer where to store index of found item in hit db list.
-	           (Can be NULL. Set to -1, if nothing found)
+	If all parameters are invalid (pointer to number of results is not included
+	and number of maximum results is omitted),
+	then whole database is returned as result.
+
+	@param number Pointer where to store number of HITs found. (Can be NULL)
 	@param name Name of hit.
 	@param hit Pointer to hip_lhi-struct.
 	@param url Pointer to url.
 	@param port Port number.
 	@param max_find Atmost return this many hits found.
-	@return Pointer to hit if found, NULL if not.
+	@return Pointer to array of HITs if found, NULL if not.
+	        Pointer must be freed after usage.
 */
-HIT_Item *hit_db_find(int *ndx,
+HIT_Item *hit_db_find(int *number,
                       char *name,
                       struct in6_addr *lhit,
                       struct in6_addr *rhit,
                       char *url,
-                      uint16_t port,
+                      int port,
                       int max_find)
 {
 	/* Variables. */
-	HIT_Item *fh1 = NULL, *fh2 = NULL;
-	int n, hits_found = 0;
+	HIT_Item *fh1 = NULL, *fh2 = NULL, *hits = NULL;
+	int n, hits_found = 0, err = 0;
 	char buffer1[128], buffer2[128];
 
-	if (ndx)
+	HIT_DB_LOCK();
+
+	hits = malloc(sizeof(HIT_Item) * hit_db_n);
+	if (!hits) goto out_err;
+		
+	if (number)
 	{
-		*ndx = -1;
+		*number = 0;
+	}
+
+	/* If whole database should be returned? */
+	if (!name && !lhit && !rhit && !url && port == 0)
+	{
+		memcpy(hits, hit_db, sizeof(HIT_Item) * hit_db_n);
+		if (number) *number = hit_db_n;
+		goto out;
 	}
 
 	/* Loop trough all hits. */
@@ -274,7 +339,8 @@ HIT_Item *hit_db_find(int *ndx,
 			}
 		}
 
-		if (fh1 != NULL && fh2 != NULL && fh1 != fh2)
+		if ((fh1 != NULL && fh2 != NULL && fh1 != fh2) ||
+			(rhit != NULL && fh1 != NULL && fh1 != fh2))
 		{
 			/* This hit didn't match exactly to given description. */
 			fh1 = NULL;
@@ -316,10 +382,7 @@ HIT_Item *hit_db_find(int *ndx,
 		if (fh1 != NULL)
 		{
 			HIP_DEBUG("Remote hit matches with database.\n");
-			if (ndx)
-			{
-				*ndx = n;
-			}
+			memcpy(&hits[hits_found], fh1, sizeof(HIT_Item));
 			hits_found++;
 		}
 		
@@ -329,8 +392,21 @@ HIT_Item *hit_db_find(int *ndx,
 		}
 	}
 	
+	if (number) *number = hits_found;
+	hits = realloc(hits, sizeof(HIT_Item) * hits_found);
+	goto out;
+
 	/* Return found hit or NULL. */
-	return (fh1);
+out_err:
+	if (hits)
+	{
+		free(hits);
+		hits = NULL;
+	}
+	if (number) *number = 0;
+out:
+	HIT_DB_UNLOCK();
+	return (hits);
 }
 /* END OF FUNCTION */
 

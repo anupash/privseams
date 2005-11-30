@@ -13,19 +13,20 @@
 */
 #ifdef CONFIG_HIPGUI_COMMANDLINE
 int main(int argc, char *argv[])
+{
 #else
 int agent_main(void)
-#endif
 {
+#endif
 	/* Variables. */
 	int err = 0;
+
+	/* Initialize database. */
+	HIP_IFE(hit_db_init(), -1);
 
 	/* Initialize connection to HIP daemon. */
 	HIP_IFE(connhipd_init(), -1);
 
-	/* Initialize database. */
-	HIP_IFE(hit_db_init(), -1);
-	
 #ifdef CONFIG_HIPGUI_COMMANDLINE
 	/* Initialize GUI. */
 //	HIP_IFE(gui_init(), -1);
@@ -44,7 +45,7 @@ int agent_main(void)
 
 out_err:
 //	connhipd_quit();
-	hit_db_quit();
+//	hit_db_quit();
 //	gui_quit();
 	
 	return err;

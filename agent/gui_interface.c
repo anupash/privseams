@@ -47,7 +47,7 @@ int gui_check_hit(HIT_Item *hit)
 	/* Variables. */
 	HIT_Item *fhit = NULL;
 	int err = 0, ndx;
-	char hits[128], hitr[128];
+	char hits[128], hitr[128], msg[1024];
 	
 	/* First check for database and this hit. */
 	fhit = hit_db_find(&ndx, NULL, &hit->lhit, &hit->rhit,
@@ -74,12 +74,13 @@ int gui_check_hit(HIT_Item *hit)
 	}
 
 	/* If not found, ask user. */
-//#ifdef CONFIG_HIPGUI_COMMANDLINE
 	print_hit_to_buffer(hits, &hit->lhit);
 	print_hit_to_buffer(hitr, &hit->rhit);
 	
 	fprintf(stdout, "New HIT received, accept or not (y or n)?\n"
 	        " sender hit: %s\n receiver hit: %s\n", hits, hitr);
+
+#ifdef CONFIG_HIPGUI_COMMANDLINE
 
 	while (1)
 	{
@@ -100,24 +101,25 @@ int gui_check_hit(HIT_Item *hit)
 		
 		fprintf(stdout, "Please, answer y or n...\n");
 	}
-/*#ifdef 1
 #else
 /* XX TODO: Call the real GUI here. */
-/*	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
-	gui_ask_hit_accept("testi");
+	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
+	sprintf(msg, "New HIT received, accept?\n"
+	        " sender hit: %s\n receiver hit: %s", hits, hitr);
+	err = gui_ask_hit_accept("Accept new HIT?", msg);
 #endif
 
 	/* Add hit info to database, if answer was yes. */
 	if (err == 0)
 	{
 		HIP_DEBUG("Adding new HIT to database with type accept.\n");
-		hit_db_add("test", &hit->lhit, &hit->rhit, "yes", 0,
+		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
 		           HIT_DB_TYPE_ACCEPT);
 	}
 	if (err == -1)
 	{
 		HIP_DEBUG("Adding new HIT to database with type deny.\n");
-		hit_db_add("test", &hit->lhit, &hit->rhit, "no", 0,
+		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
 		           HIT_DB_TYPE_DENY);
 	}
 

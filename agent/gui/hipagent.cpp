@@ -13,42 +13,7 @@
 // headers
 // ----------------------------------------------------------------------------
 
-// for compilers that support precompilation, includes "wx/wx.h".
-#include "wx/wxprec.h"
-
-#ifdef __BORLANDC__
-    #pragma hdrstop
-#endif
-
-// for all others, include the necessary headers
-#ifndef WX_PRECOMP
-    #include "wx/app.h"
-    #include "wx/log.h"
-    #include "wx/frame.h"
-    #include "wx/menu.h"
-
-    #include "wx/button.h"
-    #include "wx/checkbox.h"
-    #include "wx/listbox.h"
-    #include "wx/statbox.h"
-    #include "wx/stattext.h"
-    #include "wx/textctrl.h"
-    #include "wx/msgdlg.h"
-#endif
-
-#include "wx/sysopt.h"
-#include "wx/bookctrl.h"
-#include "wx/sizer.h"
-#include "wx/colordlg.h"
-#include "wx/fontdlg.h"
-#include "wx/textdlg.h"
-#include "wx/file.h"
-
-#include <stdio.h>
-
 #include "hipagent.h"
-#include "hiptab.h"
-#include "hipinterface.h"
 
 
 extern "C"
@@ -56,8 +21,8 @@ extern "C"
 	int agent_main(void);
 }
 
-
-wxWindow *main_window = NULL;
+HipAgentFrame *frame = NULL;
+wxTimer *timer = NULL;
 
 
 // ----------------------------------------------------------------------------
@@ -78,6 +43,8 @@ enum
     HipAgent_Enable,
 	HipAgent_ImportKey,
 	HipAgent_ExportKey,
+	HipAgent_AskQuit,
+	HipAgent_Timer,
 
 	HipAgent_Notebook
 };
@@ -104,63 +71,6 @@ public:
     virtual bool OnInit();
 };
 
-// Define a new frame type: this is going to be our main frame
-class HipAgentFrame : public wxFrame
-{
-public:
-	void OnPageChanged(wxNotebookEvent& event);
-	void RefreshTabs();
-	void OnExportKey(wxCommandEvent& event);
-	void OnImportKey(wxCommandEvent& event);
-    // ctor(s) and dtor
-    HipAgentFrame(const wxString& title);
-    virtual ~HipAgentFrame();
-
-protected:
-    // event handlers
-#if USE_LOG
-    void OnButtonClearLog(wxCommandEvent& event);
-#endif // USE_LOG
-    void OnExit(wxCommandEvent& event);
-
-#if wxUSE_MENUS
-#if wxUSE_TOOLTIPS
-    void OnSetTooltip(wxCommandEvent& event);
-#endif // wxUSE_TOOLTIPS
-    void OnSetFgCol(wxCommandEvent& event);
-    void OnSetBgCol(wxCommandEvent& event);
-    void OnSetFont(wxCommandEvent& event);
-    void OnEnable(wxCommandEvent& event);
-#endif // wxUSE_MENUS
-
-    // initialize the book: add all pages to it
-    void InitBook();
-
-private:
-    // the panel containing everything
-    wxPanel *m_panel;
-
-	// list for personality data
-	HipPersonalityArray m_personalities;
-
-	HipInterface* m_hipInterface;
-
-    // the book containing the test pages
-    wxBookCtrlBase *m_book;
-
-    // and the image list for it
-    wxImageList *m_imaglist;
-
-#if wxUSE_MENUS
-    // last chosen fg/bg colours and font
-    wxColour m_colFg,
-             m_colBg;
-    wxFont   m_font;
-#endif // wxUSE_MENUS
-
-    // any class wishing to process wxHipAgent events must use this macro
-    DECLARE_EVENT_TABLE()
-};
 
 #if USE_LOG
 // A log target which just redirects the messages to a listbox
@@ -246,14 +156,17 @@ BEGIN_EVENT_TABLE(HipAgentFrame, wxFrame)
     EVT_MENU(HipAgent_SetTooltip, HipAgentFrame::OnSetTooltip)
 #endif // wxUSE_TOOLTIPS
 
-    EVT_MENU(HipAgent_SetFgColour, HipAgentFrame::OnSetFgCol)
-    EVT_MENU(HipAgent_SetBgColour, HipAgentFrame::OnSetBgCol)
-    EVT_MENU(HipAgent_SetFont,     HipAgentFrame::OnSetFont)
-    EVT_MENU(HipAgent_Enable,      HipAgentFrame::OnEnable)
+    EVT_MENU(HipAgent_SetFgColour,	HipAgentFrame::OnSetFgCol)
+    EVT_MENU(HipAgent_SetBgColour,	HipAgentFrame::OnSetBgCol)
+    EVT_MENU(HipAgent_SetFont,		HipAgentFrame::OnSetFont)
+    EVT_MENU(HipAgent_Enable,		HipAgentFrame::OnEnable)
 
 	EVT_MENU(HipAgent_ImportKey,	HipAgentFrame::OnImportKey)
-	EVT_MENU(HipAgent_ExportKey,	HipAgentFrame::OnExportKey)
+	EVT_MENU(HipAgent_ExportKey, 	HipAgentFrame::OnExportKey)
 
+	EVT_MENU(HipAgent_AskQuit,		HipAgentFrame::OnAskQuit)
+
+	EVT_TIMER(TIMER_ID,				HipAgentFrame::OnTimer)
 
 	EVT_NOTEBOOK_PAGE_CHANGED(HipAgent_Notebook, HipAgentFrame::OnPageChanged)
     EVT_MENU(wxID_EXIT, HipAgentFrame::OnExit)
@@ -274,20 +187,14 @@ bool HipAgentApp::OnInit()
 if ( !wxApp::OnInit() )
         return false;
 
-    // the reason for having these ifdef's is that I often run two copies of
-    // this sample side by side and it is useful to see which one is which
-
 #ifndef CONFIG_HIPGUI_COMMANDLINE
 	agent_main();
 #endif
 
-    wxFrame *frame = new HipAgentFrame(_T("HIP GUI"));
-    frame->Show();
-	main_window = frame;
+	frame = new HipAgentFrame(_T("HIP GUI"));
+	frame->Show();
 
-    //wxLog::AddTraceMask(_T("listbox"));
-    //wxLog::AddTraceMask(_T("scrollbar"));
-    //wxLog::AddTraceMask(_T("focus"));
+//	frame->MsgBox("Info", "Application starting...");
 
     return true;
 }
@@ -297,12 +204,13 @@ if ( !wxApp::OnInit() )
 // ----------------------------------------------------------------------------
 
 HipAgentFrame::HipAgentFrame(const wxString& title)
-            : wxFrame(NULL, wxID_ANY, title,
-                      wxPoint(0, 50), wxDefaultSize,
-                      wxDEFAULT_FRAME_STYLE |
-                      wxFULL_REPAINT_ON_RESIZE |
-                      wxCLIP_CHILDREN |
-                      wxTAB_TRAVERSAL)
+	: wxFrame(NULL, wxID_ANY, title,
+	          wxPoint(0, 50), wxDefaultSize,
+	          wxDEFAULT_FRAME_STYLE |
+	          wxFULL_REPAINT_ON_RESIZE |
+	          wxCLIP_CHILDREN |
+	          wxTAB_TRAVERSAL)
+	, timer(this, TIMER_ID)
 {
   //  printf("HipAgentFrame::HipAgentFrame\n");
   
@@ -324,7 +232,7 @@ HipAgentFrame::HipAgentFrame(const wxString& title)
 #endif // wxUSE_TOOLTIPS
     menuWidget->Append(HipAgent_SetBgColour, _T("&Apply changes...\tCtrl-A"));
     menuWidget->AppendSeparator();
-    menuWidget->Append(wxID_EXIT, _T("&Quit\tCtrl-Q"));
+    menuWidget->Append(HipAgent_AskQuit, _T("&Quit\tCtrl-Q"));
     mbar->Append(menuWidget, _T("&HIP"));
     SetMenuBar(mbar);
 
@@ -360,6 +268,28 @@ HipAgentFrame::HipAgentFrame(const wxString& title)
 
     sizerTop->Fit(this);
     sizerTop->SetSizeHints(this);
+
+	timer.Start(300);
+
+	{
+/*		HIT_Item hit;
+		strcpy(hit.name, "HIPL 3 test environment");
+		strcpy(hit.url, "hipl3");
+		hit.port = 80;
+		read_hit_from_buffer(&hit.rhit, "405d:e78b:acb9:2e24:cf50:3b16:9698:5491");
+		read_hit_from_buffer(&hit.lhit, "402e:d40b:a44d:0e54:5b26:583d:2a5e:dd76");
+		hit.type = 0;
+		hit_db_add_hit(&hit);
+
+		/*strcpy(hit.name, "HIPL 4 test environment");
+		strcpy(hit.url, "hipl4");
+		hit.port = 80;
+		read_hit_from_buffer(&hit.rhit, "40e5:01cd:01dc:8e83:2a1a:1c6e:8ea1:e6be");
+		read_hit_from_buffer(&hit.lhit, "402e:d40b:a44d:0e54:5b26:583d:2a5e:dd76");
+		hit.type = 0;
+		hit_db_add_hit(&hit);*/
+	}
+
 }
 
 void HipAgentFrame::InitBook()
@@ -384,7 +314,7 @@ HipAgentFrame::~HipAgentFrame()
 
 void HipAgentFrame::OnExit(wxCommandEvent& WXUNUSED(event))
 {
-    Close();
+//	Iconize(true);
 }
 
 #if USE_LOG
@@ -713,3 +643,37 @@ void HipAgentFrame::OnPageChanged(wxNotebookEvent &event)
 {
 	m_hipInterface->m_activePersonality = event.GetSelection();
 }
+
+void HipAgentFrame::OnAskQuit(wxCommandEvent &event)
+{
+	Close();
+}
+
+int HipAgentFrame::MsgBox(char *title, char *content)
+{
+	int err = 0;
+
+	wxMessageDialog dialog(NULL, _T(content), _T(title),
+	                       wxNO_DEFAULT | wxYES_NO | wxICON_INFORMATION);
+	
+	switch (dialog.ShowModal())
+	{
+	case wxID_YES:
+	    err = 0;
+	    break;
+	
+	case wxID_NO:
+	    err = -1;
+	    break;
+	
+	default:
+	    err = -1;
+	}
+	
+	return (err);
+}
+
+/*void HipAgentFrame::OnTimer(wxTimerEvent &event)
+{
+	gui_ask_new_hit_timer(this);
+}*/

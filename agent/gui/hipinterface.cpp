@@ -50,31 +50,13 @@ void HipInterface::InitHipKeys()
 		HipContext* context = new HipContext;
 		context->m_id = 0;
 		context->m_name = "Financial services";
-
-		HipKey* key = new HipKey;
-		key->m_id = 0;
-		key->m_hi = "1234-1234-1234";
-		key->m_name = "Nordea Solo";
-		key->m_port = "80";
-		key->m_url = "http://solo.nordea.fi";
-		context->m_keys.Add( key );
-		
-		key = new HipKey;
-		key->m_id = 1;
-		key->m_hi = "5678-5678-5678";
-		key->m_name = "OP Verkkopankki";
-		key->m_port = "80";
-		key->m_url = "http://www.op.fi";
-
-		context->m_keys.Add( key );
-
 		personality->m_contexts.Add( context );
 
 		context = new HipContext;
 		context->m_id = 0;
 		context->m_name = "Games";
 
-		key = new HipKey;
+		HipKey *key = new HipKey;
 		key->m_id = 0;
 		key->m_hi = "1234-1234-1234";
 		key->m_name = "Warcraft 3";
@@ -105,19 +87,13 @@ void HipInterface::InitHipKeys()
 		context->m_id = 0;
 		context->m_name = "Messaging";
 
-		key = new HipKey;
-		key->m_id = 0;
-		key->m_hi = "s24-s24-s24-s24-s24";
-		key->m_name = "Suomi24";
-		key->m_port = "80";
-		key->m_url = "http://www.suomi24.fi";
+		//context->m_keys.Add( key );
 
-		context->m_keys.Add( key );
-
-		personality->m_contexts.Add( context );
+		//personality->m_contexts.Add( context );
 
 		m_personalities.Add( personality );
 	}
+
 }
  
 // this function should update one or more fields of a hip key
