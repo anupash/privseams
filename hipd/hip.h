@@ -48,6 +48,7 @@ struct list_head {
 #define HIP_HIT_TYPE_MASK_120   0x40
 #define HIP_HIT_PREFIX          0x4000
 #define HIP_HIT_PREFIX_LEN      8     /* bits */
+#define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/8"
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */

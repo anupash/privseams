@@ -242,14 +242,6 @@ int main(int argc, char *argv[]) {
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 
-	HIP_DEBUG("Setting ip route\n", HIP_HIT_DEV);
-	{
-		hip_hit_t hit;
-		memset(&hit, 0, sizeof(hip_hit_t));
-		hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-		HIP_IFE(hip_add_iface_local_route(&hit), 1);
-	}
-
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);

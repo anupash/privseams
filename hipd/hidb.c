@@ -272,6 +272,9 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		   -EFAULT,
 		   "adding of local host identity failed\n");
 
+	  /* Adding the route just in case it does not exist */
+	  hip_add_iface_local_route(&lhi.hit);
+
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
 	}

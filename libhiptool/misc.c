@@ -1087,7 +1087,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   return err;
 }
 
-char *hip_convert_hit_to_str(const hip_hit_t *local_hit, int use_prefix)
+char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix)
 {
 	int err = 0;
 	char *hit_str = NULL;
@@ -1098,10 +1098,9 @@ char *hip_convert_hit_to_str(const hip_hit_t *local_hit, int use_prefix)
 	memset(hit_str, 0, max_str_len);
 	hip_in6_ntop(local_hit, hit_str);
 
-	if (use_prefix) {
-		memcpy(hit_str + strlen(hit_str), HIP_HIT_PREFIX_STR,
-		       strlen(HIP_HIT_PREFIX_STR));
-	}
+	if (prefix)
+		memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
+
 
  out_err:
 

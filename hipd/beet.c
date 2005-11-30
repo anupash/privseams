@@ -292,8 +292,7 @@ int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 	int err = 0;
 	char *hit_str = NULL;
 
-	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, 1))), -1);
-
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR))), -1);
 	HIP_DEBUG("Adding HIT: %s\n", hit_str);
 
 	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, hit_str,
@@ -312,7 +311,7 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 	int err = 0;
 	char *hit_str = NULL;
 
-	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, 1))), -1);
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
 
 	HIP_DEBUG("Adding local route: %s\n", hit_str);
 	
