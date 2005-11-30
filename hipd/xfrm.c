@@ -55,6 +55,8 @@ int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	int err = 0;
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
+	/* XX FIXME: remove the proto argument */
+
 	HIP_IFE(hip_xfrm_policy_modify(XFRM_MSG_NEWPOLICY, dst_hit, src_hit,
 				       src_addr, dst_addr,
 				       XFRM_POLICY_IN, proto, prefix), -1);

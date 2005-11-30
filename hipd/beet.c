@@ -428,7 +428,7 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	memcpy(&sel->saddr, hit_our, sizeof(sel->saddr));
 
 	/* FIXME */
-	if (proto){
+	if (proto) {
 		HIP_DEBUG("proto = %d\n", proto);
 		sel->proto = proto;
 	}
@@ -496,18 +496,19 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 	req.xpinfo.dir = dir;
 
 	/* SELECTOR <--> HITs */
-	xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, proto,
+	xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, 0,
 			   hit_prefix);
 
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
 
 	tmpl->family = preferred_family;
-	// The mode has to be BEET
+	/* The mode has to be BEET */
 	if (proto) {
 		tmpl->mode = XFRM_MODE_BEET;
 		tmpl->id.proto = proto;
 	}
+
 	tmpl->aalgos = (~(__u32)0);
 	tmpl->ealgos = (~(__u32)0);
 	tmpl->calgos = (~(__u32)0);

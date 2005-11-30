@@ -315,7 +315,7 @@ int main(int argc, char *argv[]) {
 		} else if (FD_ISSET(nl_ifaddr.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
-			HIP_DEBUG("we are getting something ... ACQUIRE?\n");
+			HIP_DEBUG("netlink receive\n");
 			hip_netlink_receive(&nl_ifaddr, hip_netdev_event, NULL);
 		} else {
 			HIP_INFO("Unknown socket activity.");
