@@ -6,14 +6,11 @@
 #ifndef HIP_BEET_H
 #define HIP_BEET_H
 
-#include <linux/xfrm.h>
-
 #include <time.h>
 #include <netdb.h>
 #include <net/if.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <linux/xfrm.h>
 #include <errno.h>
 
 #include "nlink.h"
@@ -23,6 +20,7 @@
 #include "hadb.h"
 #include "workqueue.h"
 #include "misc.h"
+#include "xfrm.h"
 
 #define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048
