@@ -9,6 +9,10 @@
 #include <time.h>
 #include <netdb.h>
 #include <net/if.h>
+#ifndef __u32
+/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
+#  include <linux/types.h>
+#endif
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <errno.h>
@@ -28,6 +32,11 @@
 #define XFRM_TMPLS_BUF_SIZE 1024
 #define XFRM_ALGO_KEY_BUF_SIZE 512
 #define PREFIXLEN_SPECIFIED 1
+
+/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
+#ifndef NETLINK_XFRM
+#  define NETLINK_XFRM            6       /* ipsec */
+#endif
 
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {

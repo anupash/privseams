@@ -2,6 +2,7 @@
 #define _HIP_NLINK_H
 
 #include <sys/socket.h>
+#include <linux/types.h>
 #include <linux/netlink.h>
 #include <stdio.h>
 #include <stdint.h>
