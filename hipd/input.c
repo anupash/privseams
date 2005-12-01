@@ -1593,7 +1593,7 @@ int hip_handle_r2(struct hip_common *r2,
 
 	err = hip_add_sa(r2_daddr, r2_saddr, &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
-			 &ctx->esp_out, &ctx->auth_out, retransmission,
+                        &ctx->esp_out, &ctx->auth_out, retransmission,
 			 HIP_SPI_DIRECTION_OUT);
 //	if (err == -EEXIST) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
