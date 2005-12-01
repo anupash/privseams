@@ -285,13 +285,17 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		if (err) {
 			HIP_ERROR("error while adding a new peer address\n");
 			err = -2;
-			goto out;
+			goto out_err;
 		}
 	} else
 		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
 			  hip_state_str(entry->state));
+	
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, hit,
+				       &entry->local_address, addr, 0, 0),
+		 -1, "Error in setting the SPs\n");
 
- out:
+out_err:
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
 	return err;

@@ -692,12 +692,12 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
-
+#if 0
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
 				       r1_saddr, r1_daddr, IPPROTO_ESP, 1), -1,
 		 "Setting up SP pair failed\n");
-
+#endif
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
  	HIP_ASSERT(esp_info); /* Builder internal error */
 	esp_info->new_spi = htonl(spi_in);
