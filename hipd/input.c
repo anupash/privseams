@@ -691,12 +691,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			    HIP_SPI_DIRECTION_IN), -1, 
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	/* XXX: -EAGAIN */
-	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
+	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
 				       r1_saddr, r1_daddr, IPPROTO_ESP, 1), -1,
 		 "Setting up SP pair failed\n");
+
+	HIP_DEBUG("Deleting the generic Policy\n");
+	hip_delete_default_prefix_sp_pair();
 
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
  	HIP_ASSERT(esp_info); /* Builder internal error */
@@ -1353,6 +1356,8 @@ int hip_handle_i2(struct hip_common *i2,
 				       i2_saddr, i2_daddr, IPPROTO_ESP, 1), -1,
 		 "Setting up SP pair failed\n");
 
+	HIP_DEBUG("Deleting the generic Policy\n");
+	hip_delete_default_prefix_sp_pair();
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
@@ -1593,7 +1598,7 @@ int hip_handle_r2(struct hip_common *r2,
 
 	err = hip_add_sa(r2_daddr, r2_saddr, &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
-			 &ctx->esp_out, &ctx->auth_out, retransmission,
+			 &ctx->esp_out, &ctx->auth_out, 1,
 			 HIP_SPI_DIRECTION_OUT);
 //	if (err == -EEXIST) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
