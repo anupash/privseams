@@ -50,6 +50,9 @@
       &nbsp;* glib (www.gtk.org) and development headers
     </para>
     <para>
+      &nbsp;* wxgtk library and development headers
+    </para>
+    <para>
       * Optional
     </para>
     <para>
@@ -201,6 +204,7 @@
        by specifying the option f. The rest of the
        instructions in this manual apply also to the userspace implementation
        with these small changes.
+    </para>
     <para>
        By default, the hipd starts on the foreground. If you want to start it
        as a daemon (background) process, start it with "hipd/hipd -b".
@@ -900,6 +904,9 @@
 
         <para>Clears all rules.</para>
   </chapter>
-
+  <chapter>
+    <title>HIP User Agent</title>
+      <para>XX TODO: Antti</para>
+  </chapter>
 </book>    
 
