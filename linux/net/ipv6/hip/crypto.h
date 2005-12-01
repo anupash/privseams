@@ -15,6 +15,9 @@ extern struct crypto_tfm *impl_sha1;
 #  include <sys/time.h>
 #  include <time.h>
 #  include <net/hip.h>
+#  include <openssl/des.h>
+#  include <openssl/md5.h>
+#  include <openssl/aes.h>
 #  include <openssl/dsa.h>
 #  include <openssl/rsa.h>
 #  include <openssl/dh.h>
