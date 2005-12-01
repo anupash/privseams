@@ -1,160 +1,6 @@
-diff -urN linux-2.6.14.2/Documentation/networking/README.BEET linux-2.6.14.2-beet/Documentation/networking/README.BEET
---- linux-2.6.14.2/Documentation/networking/README.BEET	1970-01-01 02:00:00.000000000 +0200
-+++ linux-2.6.14.2-beet/Documentation/networking/README.BEET	2005-11-15 15:11:18.000000000 +0200
-@@ -0,0 +1,150 @@
-+Linux BEET-mode patch
-+
-+Authors:	Abhinav Pathak <abpathak@iitk.ac.in>
-+		Diego Beltrami <diego.beltrami@gmail.com>
-+		Miika Komu <miika@iki.fi>
-+		Kristian Slavov <kristian.slavov@nomadiclab.com>
-+		Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
-+
-+
-+Changelog:	May 25, 2005 this document created
-+
-+
-+Description
-+-----------
-+This patch extends the native Linux 2.6 kernel IPsec to support 
-+Bound-End-to-End-Tunnel (BEET) mode:
-+
-+Abstract
-+
-+   This document specifies a new mode, called Bound End-to-End Tunnel
-+   (BEET) mode, for IPsec ESP.  The new mode augments the existing ESP
-+   tunnel and transport modes.  For end-to-end tunnels, the new mode
-+   provides limited tunnel mode semantics without the regular tunnel
-+   mode overhead.  The mode is intended to support new uses of ESP,
-+   including mobility and multi-address multi-homing.
-+
-+http://www.ietf.org/internet-drafts/draft-nikander-esp-beet-mode-03.txt
-+
-+Data Structures
-+---------------
-+
-+* policy = inner = selector.family
-+* SA = outer = props.family
-+
-+About protocol support
-+----------------------
-+
-+The BEET mode supports both ESP and AH (IPComp is not meant to work alone with
-+BEET because there is lack of information of xfrm_state: IPComp does not
-+compress packets whose size is less than a certain threshold -see RFC 2394-).
-+
-+This patch allows only for plain family transform, meaning the inner and outer 
-+families are the same.
-+A second patch which deals with different family will be created.
-+
-+
-+Packet en/decapsulation
-+-----------------------
-+
-+Note: the family of the xfrm function in the input side is
-+different. For example, in the inner=4, outer=6 case, xfrm4_output is
-+called (because the socket is IPv4 socket) on the output side, and
-+xfrm6_rcv_encap() is called on the input side (because the packet
-+received is an IPv6 packet).
-+
-+
-+****** OUTPUT ******
-+
-+When entering xfrm[4-6]_output() the packet is:
-+
-+	---------------------
-+	|IP Hdr|     |      |
-+	|INNER | TCP | Data |
-+	---------------------
-+		  |
-+		  |
-+	    xfrm[4-6]_encap()
-+		  |
-+		  |
-+		  V
-+	------------------------------
-+	|IP Hdr|        |     |      |
-+	|INNER |        | TCP | Data |
-+	------------------------------
-+		  |
-+		  |
-+       changing the IP hdr inner->outer
-+		  |
-+		  |
-+		  V
-+	------------------------------
-+	|IP Hdr|        |     |      |
-+	|OUTER |        | TCP | Data |
-+	------------------------------
-+		  |
-+		  |
-+		  |
-+	   x->type->output()
-+		  |
-+		  |
-+		  V
-+	-------------------------------------------
-+	|IP Hdr| ESP or |     |      | ESP   | ESP|
-+	|INNER | AH hdr | TCP | Data |Trailer|Auth|
-+	-------------------------------------------
-+		  |                  |<---------->|
-+		  |                    only if ESP is used
-+		  |
-+		  V
-+	    packet to be sent
-+
-+
-+
-+****** INPUT ******
-+
-+The packet is received and the function xfrm[4-6]_rcv_encap() is invoked.
-+The received packet is in the same format as it has been sent:
-+
-+	-------------------------------------------
-+	|IP Hdr| ESP or |     |      | ESP   | ESP|
-+	|OUTER | AH hdr | TCP | Data |Trailer|Auth|
-+	-------------------------------------------
-+		  |                  |<---------->|
-+		  |                    only if ESP is used
-+		  |
-+       	      x->type->input()
-+		  |
-+		  |
-+		  V
-+	---------------------
-+	|IP Hdr|     |      |
-+	|OUTER | TCP | Data |
-+	---------------------
-+		  |
-+		  |
-+	 if mode==BEET the IP hdr is pushed
-+	 (the length field is correctly readjusted and
-+	  in case of IPv4 the checksum is properly set)
-+		  |
-+		  |
-+		  V
-+	------------------------------
-+	|IP Hdr|        |     |      |
-+	|INNER |        | TCP | Data |
-+	------------------------------
-+		  |
-+		  |
-+       	   Changing IPHdr outer->inner
-+		  |
-+		  |
-+		  V
-+	---------------------
-+	|IP Hdr|     |      |
-+	|INNER | TCP | Data |
-+	---------------------
-+		  |
-+		  |
-+		  |
-+		  V
-+	      netif_rx()
 diff -urN linux-2.6.14.2/include/linux/ipsec.h linux-2.6.14.2-beet/include/linux/ipsec.h
 --- linux-2.6.14.2/include/linux/ipsec.h	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/include/linux/ipsec.h	2005-11-15 15:11:18.000000000 +0200
++++ linux-2.6.14.2-beet/include/linux/ipsec.h	2005-12-01 15:52:51.000000000 +0200
 @@ -12,7 +12,8 @@
  enum {
  	IPSEC_MODE_ANY		= 0,	/* We do not support this for SA */
@@ -167,7 +13,7 @@ diff -urN linux-2.6.14.2/include/linux/ipsec.h linux-2.6.14.2-beet/include/linux
  enum {
 diff -urN linux-2.6.14.2/include/linux/xfrm.h linux-2.6.14.2-beet/include/linux/xfrm.h
 --- linux-2.6.14.2/include/linux/xfrm.h	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/include/linux/xfrm.h	2005-11-15 15:11:18.000000000 +0200
++++ linux-2.6.14.2-beet/include/linux/xfrm.h	2005-12-01 15:52:51.000000000 +0200
 @@ -102,6 +102,13 @@
  	XFRM_SHARE_UNIQUE	/* Use once */
  };
@@ -184,7 +30,7 @@ diff -urN linux-2.6.14.2/include/linux/xfrm.h linux-2.6.14.2-beet/include/linux/
  	XFRM_MSG_BASE = 0x10,
 diff -urN linux-2.6.14.2/net/ipv4/ah4.c linux-2.6.14.2-beet/net/ipv4/ah4.c
 --- linux-2.6.14.2/net/ipv4/ah4.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv4/ah4.c	2005-11-15 15:11:18.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/ah4.c	2005-12-01 15:52:51.000000000 +0200
 @@ -255,7 +255,7 @@
  		goto error;
  	
@@ -196,7 +42,7 @@ diff -urN linux-2.6.14.2/net/ipv4/ah4.c linux-2.6.14.2-beet/net/ipv4/ah4.c
  
 diff -urN linux-2.6.14.2/net/ipv4/esp4.c linux-2.6.14.2-beet/net/ipv4/esp4.c
 --- linux-2.6.14.2/net/ipv4/esp4.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv4/esp4.c	2005-11-15 15:12:51.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/esp4.c	2005-12-01 15:52:51.000000000 +0200
 @@ -307,7 +307,7 @@
  	struct esp_data *esp = x->data;
  	u32 blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
@@ -217,7 +63,7 @@ diff -urN linux-2.6.14.2/net/ipv4/esp4.c linux-2.6.14.2-beet/net/ipv4/esp4.c
  		struct xfrm_encap_tmpl *encap = x->encap;
 diff -urN linux-2.6.14.2/net/ipv4/ipcomp.c linux-2.6.14.2-beet/net/ipv4/ipcomp.c
 --- linux-2.6.14.2/net/ipv4/ipcomp.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv4/ipcomp.c	2005-11-15 15:11:18.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/ipcomp.c	2005-12-01 15:52:51.000000000 +0200
 @@ -436,7 +436,7 @@
  
  	memset(ipcd, 0, sizeof(*ipcd));
@@ -238,7 +84,7 @@ diff -urN linux-2.6.14.2/net/ipv4/ipcomp.c linux-2.6.14.2-beet/net/ipv4/ipcomp.c
  			goto error_tunnel;
 diff -urN linux-2.6.14.2/net/ipv4/xfrm4_input.c linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c
 --- linux-2.6.14.2/net/ipv4/xfrm4_input.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c	2005-11-15 15:11:18.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c	2005-12-01 15:52:51.000000000 +0200
 @@ -96,7 +96,7 @@
  
  		iph = skb->nh.iph;
@@ -280,7 +126,7 @@ diff -urN linux-2.6.14.2/net/ipv4/xfrm4_input.c linux-2.6.14.2-beet/net/ipv4/xfr
  		if ((err = xfrm_parse_spi(skb, skb->nh.iph->protocol, &spi, &seq)) < 0)
 diff -urN linux-2.6.14.2/net/ipv4/xfrm4_output.c linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c
 --- linux-2.6.14.2/net/ipv4/xfrm4_output.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c	2005-11-15 15:11:18.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c	2005-12-01 15:52:51.000000000 +0200
 @@ -41,34 +41,37 @@
  	skb->nh.raw = skb_push(skb, x->props.header_len);
  	top_iph = skb->nh.iph;
@@ -350,7 +196,7 @@ diff -urN linux-2.6.14.2/net/ipv4/xfrm4_output.c linux-2.6.14.2-beet/net/ipv4/xf
  			goto error_nolock;
 diff -urN linux-2.6.14.2/net/ipv6/ah6.c linux-2.6.14.2-beet/net/ipv6/ah6.c
 --- linux-2.6.14.2/net/ipv6/ah6.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv6/ah6.c	2005-11-15 15:11:18.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/ah6.c	2005-12-01 15:52:51.000000000 +0200
 @@ -393,7 +393,7 @@
  		goto error;
  	
@@ -359,9 +205,10 @@ diff -urN linux-2.6.14.2/net/ipv6/ah6.c linux-2.6.14.2-beet/net/ipv6/ah6.c
 +	if (x->props.mode == XFRM_MODE_TUNNEL)
  		x->props.header_len += sizeof(struct ipv6hdr);
  	x->data = ahp;
+ 
 diff -urN linux-2.6.14.2/net/ipv6/esp6.c linux-2.6.14.2-beet/net/ipv6/esp6.c
 --- linux-2.6.14.2/net/ipv6/esp6.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv6/esp6.c	2005-11-15 15:11:19.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/esp6.c	2005-12-01 15:52:51.000000000 +0200
 @@ -358,7 +358,7 @@
  	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
  		goto error;
@@ -373,7 +220,7 @@ diff -urN linux-2.6.14.2/net/ipv6/esp6.c linux-2.6.14.2-beet/net/ipv6/esp6.c
  	return 0;
 diff -urN linux-2.6.14.2/net/ipv6/ipcomp6.c linux-2.6.14.2-beet/net/ipv6/ipcomp6.c
 --- linux-2.6.14.2/net/ipv6/ipcomp6.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv6/ipcomp6.c	2005-11-15 15:11:19.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/ipcomp6.c	2005-12-01 15:52:51.000000000 +0200
 @@ -434,7 +434,7 @@
  
  	memset(ipcd, 0, sizeof(*ipcd));
@@ -394,7 +241,7 @@ diff -urN linux-2.6.14.2/net/ipv6/ipcomp6.c linux-2.6.14.2-beet/net/ipv6/ipcomp6
  			goto error_tunnel;
 diff -urN linux-2.6.14.2/net/ipv6/xfrm6_input.c linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c
 --- linux-2.6.14.2/net/ipv6/xfrm6_input.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c	2005-11-15 15:11:19.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c	2005-12-01 15:52:51.000000000 +0200
 @@ -80,7 +80,7 @@
  
  		xfrm_vec[xfrm_nr++].xvec = x;
@@ -437,7 +284,7 @@ diff -urN linux-2.6.14.2/net/ipv6/xfrm6_input.c linux-2.6.14.2-beet/net/ipv6/xfr
  		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
 diff -urN linux-2.6.14.2/net/ipv6/xfrm6_output.c linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c
 --- linux-2.6.14.2/net/ipv6/xfrm6_output.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c	2005-11-15 15:11:19.000000000 +0200
++++ linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c	2005-12-01 15:52:51.000000000 +0200
 @@ -16,6 +16,7 @@
  #include <net/inet_ecn.h>
  #include <net/ipv6.h>
@@ -510,7 +357,7 @@ diff -urN linux-2.6.14.2/net/ipv6/xfrm6_output.c linux-2.6.14.2-beet/net/ipv6/xf
  			goto error_nolock;
 diff -urN linux-2.6.14.2/net/key/af_key.c linux-2.6.14.2-beet/net/key/af_key.c
 --- linux-2.6.14.2/net/key/af_key.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/key/af_key.c	2005-11-15 15:11:19.000000000 +0200
++++ linux-2.6.14.2-beet/net/key/af_key.c	2005-12-01 15:52:51.000000000 +0200
 @@ -1075,6 +1075,8 @@
  		x->sel.family = pfkey_sadb_addr2xfrm_addr(addr, &x->sel.saddr);
  		x->sel.prefixlen_s = addr->sadb_address_prefixlen;
@@ -522,7 +369,7 @@ diff -urN linux-2.6.14.2/net/key/af_key.c linux-2.6.14.2-beet/net/key/af_key.c
  		struct sadb_x_nat_t_type* n_type;
 diff -urN linux-2.6.14.2/net/xfrm/xfrm_user.c linux-2.6.14.2-beet/net/xfrm/xfrm_user.c
 --- linux-2.6.14.2/net/xfrm/xfrm_user.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/xfrm/xfrm_user.c	2005-11-15 15:11:19.000000000 +0200
++++ linux-2.6.14.2-beet/net/xfrm/xfrm_user.c	2005-12-01 15:52:52.000000000 +0200
 @@ -148,8 +148,9 @@
  
  	err = -EINVAL;

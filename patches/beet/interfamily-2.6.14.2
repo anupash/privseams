@@ -1,6 +1,160 @@
-diff -urN linux-2.6.14.2/include/net/xfrm.h linux-2.6.14.2-beet/include/net/xfrm.h
---- linux-2.6.14.2/include/net/xfrm.h	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/include/net/xfrm.h	2005-11-15 15:18:47.000000000 +0200
+diff -urN linux-2.6.14.2-beet/Documentation/networking/README.BEET linux-2.6.14.2-interfamily/Documentation/networking/README.BEET
+--- linux-2.6.14.2-beet/Documentation/networking/README.BEET	1970-01-01 02:00:00.000000000 +0200
++++ linux-2.6.14.2-interfamily/Documentation/networking/README.BEET	2005-12-01 16:00:26.000000000 +0200
+@@ -0,0 +1,150 @@
++Linux BEET-mode patch
++
++Authors:	Abhinav Pathak <abpathak@iitk.ac.in>
++		Diego Beltrami <diego.beltrami@gmail.com>
++		Miika Komu <miika@iki.fi>
++		Kristian Slavov <kristian.slavov@nomadiclab.com>
++		Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
++
++
++Changelog:	May 25, 2005 this document created
++
++
++Description
++-----------
++This patch extends the native Linux 2.6 kernel IPsec to support 
++Bound-End-to-End-Tunnel (BEET) mode:
++
++Abstract
++
++   This document specifies a new mode, called Bound End-to-End Tunnel
++   (BEET) mode, for IPsec ESP.  The new mode augments the existing ESP
++   tunnel and transport modes.  For end-to-end tunnels, the new mode
++   provides limited tunnel mode semantics without the regular tunnel
++   mode overhead.  The mode is intended to support new uses of ESP,
++   including mobility and multi-address multi-homing.
++
++http://www.ietf.org/internet-drafts/draft-nikander-esp-beet-mode-03.txt
++
++Data Structures
++---------------
++
++* policy = inner = selector.family
++* SA = outer = props.family
++
++About protocol support
++----------------------
++
++The BEET mode supports both ESP and AH (IPComp is not meant to work alone with
++BEET because there is lack of information of xfrm_state: IPComp does not
++compress packets whose size is less than a certain threshold -see RFC 2394-).
++
++This patch allows only for plain family transform, meaning the inner and outer 
++families are the same.
++A second patch which deals with different family will be created.
++
++
++Packet en/decapsulation
++-----------------------
++
++Note: the family of the xfrm function in the input side is
++different. For example, in the inner=4, outer=6 case, xfrm4_output is
++called (because the socket is IPv4 socket) on the output side, and
++xfrm6_rcv_encap() is called on the input side (because the packet
++received is an IPv6 packet).
++
++
++****** OUTPUT ******
++
++When entering xfrm[4-6]_output() the packet is:
++
++	---------------------
++	|IP Hdr|     |      |
++	|INNER | TCP | Data |
++	---------------------
++		  |
++		  |
++	    xfrm[4-6]_encap()
++		  |
++		  |
++		  V
++	------------------------------
++	|IP Hdr|        |     |      |
++	|INNER |        | TCP | Data |
++	------------------------------
++		  |
++		  |
++       changing the IP hdr inner->outer
++		  |
++		  |
++		  V
++	------------------------------
++	|IP Hdr|        |     |      |
++	|OUTER |        | TCP | Data |
++	------------------------------
++		  |
++		  |
++		  |
++	   x->type->output()
++		  |
++		  |
++		  V
++	-------------------------------------------
++	|IP Hdr| ESP or |     |      | ESP   | ESP|
++	|INNER | AH hdr | TCP | Data |Trailer|Auth|
++	-------------------------------------------
++		  |                  |<---------->|
++		  |                    only if ESP is used
++		  |
++		  V
++	    packet to be sent
++
++
++
++****** INPUT ******
++
++The packet is received and the function xfrm[4-6]_rcv_encap() is invoked.
++The received packet is in the same format as it has been sent:
++
++	-------------------------------------------
++	|IP Hdr| ESP or |     |      | ESP   | ESP|
++	|OUTER | AH hdr | TCP | Data |Trailer|Auth|
++	-------------------------------------------
++		  |                  |<---------->|
++		  |                    only if ESP is used
++		  |
++       	      x->type->input()
++		  |
++		  |
++		  V
++	---------------------
++	|IP Hdr|     |      |
++	|OUTER | TCP | Data |
++	---------------------
++		  |
++		  |
++	 if mode==BEET the IP hdr is pushed
++	 (the length field is correctly readjusted and
++	  in case of IPv4 the checksum is properly set)
++		  |
++		  |
++		  V
++	------------------------------
++	|IP Hdr|        |     |      |
++	|INNER |        | TCP | Data |
++	------------------------------
++		  |
++		  |
++       	   Changing IPHdr outer->inner
++		  |
++		  |
++		  V
++	---------------------
++	|IP Hdr|     |      |
++	|INNER | TCP | Data |
++	---------------------
++		  |
++		  |
++		  |
++		  V
++	      netif_rx()
+diff -urN linux-2.6.14.2-beet/include/net/xfrm.h linux-2.6.14.2-interfamily/include/net/xfrm.h
+--- linux-2.6.14.2-beet/include/net/xfrm.h	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-interfamily/include/net/xfrm.h	2005-12-01 15:59:04.000000000 +0200
 @@ -258,6 +258,10 @@
  /* Source address of tunnel. Ignored, if it is not a tunnel. */
  	xfrm_address_t		saddr;
@@ -12,9 +166,9 @@ diff -urN linux-2.6.14.2/include/net/xfrm.h linux-2.6.14.2-beet/include/net/xfrm
  	__u32			reqid;
  
  /* Mode: transport/tunnel */
-diff -urN linux-2.6.14.2/net/ipv4/xfrm4_input.c linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c
---- linux-2.6.14.2/net/ipv4/xfrm4_input.c	2005-11-15 15:33:32.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c	2005-11-15 15:18:47.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c linux-2.6.14.2-interfamily/net/ipv4/xfrm4_input.c
+--- linux-2.6.14.2-beet/net/ipv4/xfrm4_input.c	2005-12-01 16:10:58.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/ipv4/xfrm4_input.c	2005-12-01 15:59:04.000000000 +0200
 @@ -97,15 +97,28 @@
  		iph = skb->nh.iph;
  
@@ -101,9 +255,9 @@ diff -urN linux-2.6.14.2/net/ipv4/xfrm4_input.c linux-2.6.14.2-beet/net/ipv4/xfr
  			} else
  				BUG_ON(1);
  			decaps = 1;
-diff -urN linux-2.6.14.2/net/ipv4/xfrm4_output.c linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c
---- linux-2.6.14.2/net/ipv4/xfrm4_output.c	2005-11-15 15:33:32.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c	2005-11-15 15:18:47.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c linux-2.6.14.2-interfamily/net/ipv4/xfrm4_output.c
+--- linux-2.6.14.2-beet/net/ipv4/xfrm4_output.c	2005-12-01 16:10:58.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/ipv4/xfrm4_output.c	2005-12-01 15:59:04.000000000 +0200
 @@ -37,41 +37,81 @@
  
  	iph = skb->nh.iph;
@@ -216,9 +370,9 @@ diff -urN linux-2.6.14.2/net/ipv4/xfrm4_output.c linux-2.6.14.2-beet/net/ipv4/xf
  	x->curlft.bytes += skb->len;
  	x->curlft.packets++;
  
-diff -urN linux-2.6.14.2/net/ipv4/xfrm4_policy.c linux-2.6.14.2-beet/net/ipv4/xfrm4_policy.c
---- linux-2.6.14.2/net/ipv4/xfrm4_policy.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv4/xfrm4_policy.c	2005-11-15 15:18:47.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/ipv4/xfrm4_policy.c linux-2.6.14.2-interfamily/net/ipv4/xfrm4_policy.c
+--- linux-2.6.14.2-beet/net/ipv4/xfrm4_policy.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/ipv4/xfrm4_policy.c	2005-12-01 15:59:04.000000000 +0200
 @@ -20,6 +20,8 @@
  
  static struct xfrm_type_map xfrm4_type_map = { .lock = RW_LOCK_UNLOCKED };
@@ -326,9 +480,9 @@ diff -urN linux-2.6.14.2/net/ipv4/xfrm4_policy.c linux-2.6.14.2-beet/net/ipv4/xf
  	return 0;
  
  error:
-diff -urN linux-2.6.14.2/net/ipv6/xfrm6_input.c linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c
---- linux-2.6.14.2/net/ipv6/xfrm6_input.c	2005-11-15 15:33:32.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c	2005-11-15 15:18:47.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c linux-2.6.14.2-interfamily/net/ipv6/xfrm6_input.c
+--- linux-2.6.14.2-beet/net/ipv6/xfrm6_input.c	2005-12-01 16:10:58.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/ipv6/xfrm6_input.c	2005-12-01 15:59:04.000000000 +0200
 @@ -81,15 +81,33 @@
  		xfrm_vec[xfrm_nr++].xvec = x;
  
@@ -418,9 +572,9 @@ diff -urN linux-2.6.14.2/net/ipv6/xfrm6_input.c linux-2.6.14.2-beet/net/ipv6/xfr
  			} else
  				BUG_ON(1);
  
-diff -urN linux-2.6.14.2/net/ipv6/xfrm6_output.c linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c
---- linux-2.6.14.2/net/ipv6/xfrm6_output.c	2005-11-15 15:33:32.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c	2005-11-15 15:18:47.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c linux-2.6.14.2-interfamily/net/ipv6/xfrm6_output.c
+--- linux-2.6.14.2-beet/net/ipv6/xfrm6_output.c	2005-12-01 16:10:58.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/ipv6/xfrm6_output.c	2005-12-01 15:59:04.000000000 +0200
 @@ -44,7 +44,7 @@
  	iph = skb->nh.ipv6h;
  
@@ -508,9 +662,9 @@ diff -urN linux-2.6.14.2/net/ipv6/xfrm6_output.c linux-2.6.14.2-beet/net/ipv6/xf
  }
  
  static int xfrm6_tunnel_check_size(struct sk_buff *skb)
-diff -urN linux-2.6.14.2/net/ipv6/xfrm6_policy.c linux-2.6.14.2-beet/net/ipv6/xfrm6_policy.c
---- linux-2.6.14.2/net/ipv6/xfrm6_policy.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/ipv6/xfrm6_policy.c	2005-11-15 15:18:48.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/ipv6/xfrm6_policy.c linux-2.6.14.2-interfamily/net/ipv6/xfrm6_policy.c
+--- linux-2.6.14.2-beet/net/ipv6/xfrm6_policy.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/ipv6/xfrm6_policy.c	2005-12-01 15:59:04.000000000 +0200
 @@ -26,6 +26,8 @@
  
  static struct xfrm_type_map xfrm6_type_map = { .lock = RW_LOCK_UNLOCKED };
@@ -608,9 +762,9 @@ diff -urN linux-2.6.14.2/net/ipv6/xfrm6_policy.c linux-2.6.14.2-beet/net/ipv6/xf
  	return 0;
  
  error:
-diff -urN linux-2.6.14.2/net/key/af_key.c linux-2.6.14.2-beet/net/key/af_key.c
---- linux-2.6.14.2/net/key/af_key.c	2005-11-15 15:33:32.000000000 +0200
-+++ linux-2.6.14.2-beet/net/key/af_key.c	2005-11-15 15:18:48.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/key/af_key.c linux-2.6.14.2-interfamily/net/key/af_key.c
+--- linux-2.6.14.2-beet/net/key/af_key.c	2005-12-01 16:10:58.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/key/af_key.c	2005-12-01 15:59:04.000000000 +0200
 @@ -1670,35 +1670,35 @@
  		if (!t->reqid && !(t->reqid = gen_reqid()))
  			return -ENOBUFS;
@@ -657,9 +811,9 @@ diff -urN linux-2.6.14.2/net/key/af_key.c linux-2.6.14.2-beet/net/key/af_key.c
  	}
  	/* No way to set this via kame pfkey */
  	t->aalgos = t->ealgos = t->calgos = ~0;
-diff -urN linux-2.6.14.2/net/xfrm/xfrm_policy.c linux-2.6.14.2-beet/net/xfrm/xfrm_policy.c
---- linux-2.6.14.2/net/xfrm/xfrm_policy.c	2005-11-11 07:33:12.000000000 +0200
-+++ linux-2.6.14.2-beet/net/xfrm/xfrm_policy.c	2005-11-15 15:18:48.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/xfrm/xfrm_policy.c linux-2.6.14.2-interfamily/net/xfrm/xfrm_policy.c
+--- linux-2.6.14.2-beet/net/xfrm/xfrm_policy.c	2005-11-11 07:33:12.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/xfrm/xfrm_policy.c	2005-12-01 15:59:04.000000000 +0200
 @@ -646,6 +646,7 @@
  		if (tmpl->mode) {
  			remote = &tmpl->id.daddr;
@@ -668,9 +822,9 @@ diff -urN linux-2.6.14.2/net/xfrm/xfrm_policy.c linux-2.6.14.2-beet/net/xfrm/xfr
  		}
  
  		x = xfrm_state_find(remote, local, fl, tmpl, policy, &error, family);
-diff -urN linux-2.6.14.2/net/xfrm/xfrm_user.c linux-2.6.14.2-beet/net/xfrm/xfrm_user.c
---- linux-2.6.14.2/net/xfrm/xfrm_user.c	2005-11-15 15:33:32.000000000 +0200
-+++ linux-2.6.14.2-beet/net/xfrm/xfrm_user.c	2005-11-15 15:18:48.000000000 +0200
+diff -urN linux-2.6.14.2-beet/net/xfrm/xfrm_user.c linux-2.6.14.2-interfamily/net/xfrm/xfrm_user.c
+--- linux-2.6.14.2-beet/net/xfrm/xfrm_user.c	2005-12-01 16:10:58.000000000 +0200
++++ linux-2.6.14.2-interfamily/net/xfrm/xfrm_user.c	2005-12-01 15:59:04.000000000 +0200
 @@ -610,7 +610,6 @@
  	int i;
  
