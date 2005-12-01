@@ -22,7 +22,7 @@ INCLUDES += -I$(HIPL) -I$(HIPL_TOOLS)
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c hashtable.c keymat.c
 hipd_SOURCES += workqueue.c preoutput.c hadb.c
-hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c netdev.c bos.c
+hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a

@@ -8,7 +8,6 @@
 
 #include <linux/xfrm.h>
 
-
 #include <time.h>
 #include <netdb.h>
 #include <net/if.h>
@@ -106,6 +105,17 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 			  int aalg, struct hip_crypto_key *authkey,
 			  int authkey_len);
 int hip_xfrm_state_delete(struct in6_addr *peer_addr, __u32 spi);
+/* Allocates SPI for fixed time */
+uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
+
+/* Setups the SA (with a given SPI if so said) */
+uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
+		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
+		    uint32_t *spi, int ealg, struct hip_crypto_key *enckey,
+		    struct hip_crypto_key *authkey,
+		    int already_acquired, int direction);
+
+int hip_delete_sa(u32 spi, struct in6_addr *dst);
 
 #endif /* HIP_BEET_H */
 
