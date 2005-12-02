@@ -287,6 +287,15 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			err = -2;
 			goto out_err;
 		}
+
+		/*
+		 * Create a security policy for triggering base exchange.
+		 *
+		 * XX FIX: multiple identities support
+		 * alternative a) make generic HIT prefix based policy to work
+		 * alternative b) add SP pair for all local HITs
+		 *
+		 */
 		HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, hit,
 					       &entry->local_address, addr,
 					       0, 0), -1,
