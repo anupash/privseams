@@ -12,7 +12,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	struct rtattr *rta;
 
 	if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen) {
-		fprintf(stderr, "addattr_l ERROR: message exceeded bound of %d\n",maxlen);
+		HIP_ERROR("addattr_l ERROR: message exceeded bound of %d\n",maxlen);
 		return -1;
 	}
 	rta = NLMSG_TAIL(n);
@@ -109,7 +109,7 @@ int hip_netlink_receive(struct hip_nl_handle *nl,
                 }
                 if (msg.msg_namelen != sizeof(nladdr)) {
                         HIP_ERROR("Sender address length == %d\n", msg.msg_namelen);
-                        exit(1);
+                        return -1;
                 }
 		for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
                         int err;
@@ -123,7 +123,7 @@ int hip_netlink_receive(struct hip_nl_handle *nl,
                                 }
 
                                 HIP_ERROR("Malformed netlink message: len=%d\n", len);
-                                exit(1);
+                                return -1;
                         }
 
                         err = handler(h, len, arg);
@@ -140,7 +140,7 @@ int hip_netlink_receive(struct hip_nl_handle *nl,
 
                 if (status) {
                         HIP_ERROR("Remnant of size %d\n", status);
-                        exit(1);
+                        return -1;
                 }
 
 		/* All messages processed */
@@ -207,7 +207,7 @@ int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
                 if (msg.msg_namelen != sizeof(nladdr)) {
                         HIP_ERROR("sender address length == %d\n",
 				  msg.msg_namelen);
-                        exit(1);
+                        return -1;
                 }
                 for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
                         int err;
@@ -220,7 +220,7 @@ int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
                                         return -1;
                                 }
                                 HIP_ERROR("Malformed message: len=%d\n", len);
-                                exit(1);
+                                return -1;
                         }
 
                         if (nladdr.nl_pid != peer ||
@@ -268,7 +268,7 @@ int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
                 }
                 if (status) {
                         HIP_ERROR("Remnant of size %d\n", status);
-                        exit(1);
+                        return -1;
                 }
         }
 }
@@ -441,3 +441,1113 @@ void hip_netlink_close(struct hip_nl_handle *rth)
 {
 	close(rth->fd);
 }
+
+
+/**
+ * Functions for adding ip address
+ */
+
+unsigned ll_name_to_index(const char *name, struct idxmap *idxmap[])
+{
+        static char ncache[16];
+        static int icache;
+        struct idxmap *im;
+        int i;
+
+        if (name == NULL)
+                return 0;
+        if (icache && strcmp(name, ncache) == 0)
+                return icache;
+        for (i=0; i<16; i++) {
+                for (im = idxmap[i]; im; im = im->next) {
+                        if (strcmp(im->name, name) == 0) {
+                                icache = im->index;
+                                strcpy(ncache, name);
+                                return im->index;
+                        }
+                }
+        }
+
+        return if_nametoindex(name);
+}
+
+int get_unsigned(unsigned *val, const char *arg, int base)
+{
+        unsigned long res;
+        char *ptr;
+
+        if (!arg || !*arg)
+                return -1;
+        res = strtoul(arg, &ptr, base);
+        if (!ptr || ptr == arg || *ptr || res > UINT_MAX)
+                return -1;
+        *val = res;
+        return 0;
+}
+
+
+
+int get_addr_1(inet_prefix *addr, const char *name, int family)
+{
+        const char *cp;
+        unsigned char *ap = (unsigned char*)addr->data;
+        int i;
+
+        memset(addr, 0, sizeof(*addr));
+
+        if (strcmp(name, "default") == 0 ||
+            strcmp(name, "all") == 0 ||
+            strcmp(name, "any") == 0) {
+                if (family == AF_DECnet)
+                        return -1;
+                addr->family = family;
+                addr->bytelen = (family == AF_INET6 ? 16 : 4);
+                addr->bitlen = -1;
+                return 0;
+        }
+
+        if (strchr(name, ':')) {
+                addr->family = AF_INET6;
+                if (family != AF_UNSPEC && family != AF_INET6)
+                        return -1;
+                if (inet_pton(AF_INET6, name, addr->data) <= 0)
+                        return -1;
+                addr->bytelen = 16;
+                addr->bitlen = -1;
+                return 0;
+        }
+
+
+
+
+        addr->family = AF_INET;
+        if (family != AF_UNSPEC && family != AF_INET)
+                return -1;
+        addr->bytelen = 4;
+        addr->bitlen = -1;
+        for (cp=name, i=0; *cp; cp++) {
+                if (*cp <= '9' && *cp >= '0') {
+                        ap[i] = 10*ap[i] + (*cp-'0');
+                        continue;
+                }
+                if (*cp == '.' && ++i <= 3)
+                        continue;
+                return -1;
+        }
+        return 0;
+}
+
+int get_prefix_1(inet_prefix *dst, char *arg, int family)
+{
+        int err;
+        unsigned plen;
+        char *slash;
+
+        memset(dst, 0, sizeof(*dst));
+
+        if (strcmp(arg, "default") == 0 ||
+            strcmp(arg, "any") == 0 ||
+            strcmp(arg, "all") == 0) {
+                if (family == AF_DECnet)
+                        return -1;
+                dst->family = family;
+                dst->bytelen = 0;
+                dst->bitlen = 0;
+                return 0;
+        }
+
+        slash = strchr(arg, '/');
+        if (slash)
+               *slash = 0;
+
+        err = get_addr_1(dst, arg, family);
+        if (err == 0) {
+                switch(dst->family) {
+                        case AF_INET6:
+                                dst->bitlen = 128;
+                                break;
+                        case AF_DECnet:
+                                dst->bitlen = 16;
+                                break;
+                        default:
+                        case AF_INET:
+                                dst->bitlen = 32;
+                 }
+                if (slash) {
+                        if (get_unsigned(&plen, slash+1, 0) || plen > dst->bitlen) {
+                                err = -1;
+                                goto done;
+                        }
+                        dst->flags |= PREFIXLEN_SPECIFIED;
+                        dst->bitlen = plen;
+                }
+        }
+done:
+        if (slash)
+                *slash = '/';
+        return err;
+}
+
+
+int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
+{
+        int len = RTA_LENGTH(4);
+        struct rtattr *rta;
+        if (NLMSG_ALIGN(n->nlmsg_len) + len > maxlen) {
+                HIP_ERROR("addattr32: Error! max allowed bound %d exceeded\n",maxlen);
+                return -1;
+        }
+        rta = NLMSG_TAIL(n);
+        rta->rta_type = type;
+        rta->rta_len = len;
+        memcpy(RTA_DATA(rta), &data, 4);
+        n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + len;
+        return 0;
+}
+
+
+
+int iproute_modify(int cmd, int flags, int family, char *ip, char *dev,
+		   struct idxmap **idxmap)
+{
+        struct hip_nl_handle rth;
+        struct {
+                struct nlmsghdr         n;
+                struct rtmsg            r;
+                char                    buf[1024];
+        } req1;
+        inet_prefix dst;
+        int dst_ok = 0;
+        int idx;
+        memset(&req1, 0, sizeof(req1));
+
+        req1.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+        req1.n.nlmsg_flags = NLM_F_REQUEST|flags;
+        req1.n.nlmsg_type = cmd;
+        req1.r.rtm_family = family;
+        req1.r.rtm_table = RT_TABLE_MAIN;
+        req1.r.rtm_scope = RT_SCOPE_NOWHERE;
+
+        if (cmd != RTM_DELROUTE) {
+                req1.r.rtm_protocol = RTPROT_BOOT;
+                req1.r.rtm_scope = RT_SCOPE_UNIVERSE;
+                req1.r.rtm_type = RTN_UNICAST;
+        }
+
+	HIP_DEBUG("Setting %s as route for %s device with family %d\n",
+		  ip, dev, family);
+        get_prefix_1(&dst, ip, req1.r.rtm_family);
+        //if (req.r.rtm_family == AF_UNSPEC)
+                //req.r.rtm_family = dst.family;
+        req1.r.rtm_dst_len = dst.bitlen;
+        dst_ok = 1;
+        if (dst.bytelen)
+        addattr_l(&req1.n, sizeof(req1), RTA_DST, &dst.data, dst.bytelen);
+	if (hip_netlink_open(&rth, 0, NETLINK_ROUTE) < 0)
+                return -1;
+
+         if ((idx = ll_name_to_index(dev, idxmap)) == 0) {
+                 HIP_ERROR("Cannot find device \"%s\"\n", dev);
+                 return -1;
+         }
+         addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
+
+
+ /*               if (req1.r.rtm_type == RTN_LOCAL ||
+                    req1.r.rtm_type == RTN_BROADCAST ||
+                    req1.r.rtm_type == RTN_NAT ||
+                    req1.r.rtm_type == RTN_ANYCAST)
+                        req1.r.rtm_table = RT_TABLE_LOCAL;
+                if (req1.r.rtm_type == RTN_LOCAL ||
+                    req1.r.rtm_type == RTN_NAT)
+                        req1.r.rtm_scope = RT_SCOPE_HOST;
+                else if (req1.r.rtm_type == RTN_BROADCAST ||
+                         req1.r.rtm_type == RTN_MULTICAST ||
+                         req1.r.rtm_type == RTN_ANYCAST)
+                        req1.r.rtm_scope = RT_SCOPE_LINK;
+                else if (req1.r.rtm_type == RTN_UNICAST ||
+                         req1.r.rtm_type == RTN_UNSPEC) {
+                        if (cmd == RTM_DELROUTE)
+                                req1.r.rtm_scope = RT_SCOPE_NOWHERE;
+                        else    req1.r.rtm_scope = RT_SCOPE_LINK;
+
+                        }
+*/
+        if (netlink_talk(&rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0)
+                return -1;
+
+        return 0;
+}
+
+
+
+int iproute_get(struct rtnl_handle *rth, char *tos,
+		char *from, char *idev, char *odev, int notify,
+		int connected, char *to, int preferred_family,
+		struct idxmap **idxmap)
+{
+	struct {
+		struct nlmsghdr 	n;
+		struct rtmsg 		r;
+		char   			buf[1024];
+	} req;
+	int from_ok = 0;
+	inet_prefix addr;
+			
+	memset(&req, 0, sizeof(req));
+
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+	req.n.nlmsg_flags = NLM_F_REQUEST;
+	req.n.nlmsg_type = RTM_GETROUTE;
+	req.r.rtm_family = preferred_family;
+	req.r.rtm_table = 0;
+	req.r.rtm_protocol = 0;
+	req.r.rtm_scope = 0;
+	req.r.rtm_type = 0;
+	req.r.rtm_src_len = 0;
+	req.r.rtm_dst_len = 0;
+	req.r.rtm_tos = 0;
+	
+	if (tos && rtnl_dsfield_a2n(&req.r.rtm_tos, tos))
+	    return -1;
+
+	if (from) {
+		from_ok = 1;
+		get_prefix(&addr, from, req.r.rtm_family);
+		if (req.r.rtm_family == AF_UNSPEC)
+			req.r.rtm_family = addr.family;
+		if (addr.bytelen)
+			addattr_l(&req.n, sizeof(req), RTA_SRC, &addr.data,
+				  addr.bytelen);
+		req.r.rtm_src_len = addr.bitlen;
+	}
+
+	if (notify)
+		req.r.rtm_flags |= RTM_F_NOTIFY;
+
+	if (to) {
+		get_prefix(&addr, to, req.r.rtm_family);
+		if (req.r.rtm_family == AF_UNSPEC)
+			req.r.rtm_family = addr.family;
+		if (addr.bytelen)
+			addattr_l(&req.n, sizeof(req), RTA_DST, &addr.data,
+				  addr.bytelen);
+		req.r.rtm_dst_len = addr.bitlen;
+	}
+
+	if (req.r.rtm_dst_len == 0) {
+		HIP_ERROR("need at least destination address\n");
+		return -1;
+	}
+
+	ll_init_map(&rth);
+
+	if (idev || odev)  {
+		int idx;
+
+		if (idev) {
+			if ((idx = ll_name_to_index(idev, idxmap)) == 0) {
+				HIP_ERROR("Cannot find device \"%s\"\n", idev);
+				return -1;
+			}
+			addattr32(&req.n, sizeof(req), RTA_IIF, idx);
+		}
+		if (odev) {
+			if ((idx = ll_name_to_index(odev, idxmap)) == 0) {
+				HIP_ERROR("Cannot find device \"%s\"\n", odev);
+				return -1;
+			}
+			addattr32(&req.n, sizeof(req), RTA_OIF, idx);
+		}
+	}
+
+	if (req.r.rtm_family == AF_UNSPEC)
+		req.r.rtm_family = AF_INET;
+
+	if (rtnl_talk(&rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0)
+		return -1;
+
+	if (connected && !from_ok) {
+		struct rtmsg *r = NLMSG_DATA(&req.n);
+		int len = req.n.nlmsg_len;
+		struct rtattr * tb[RTA_MAX+1];
+
+		if (req.n.nlmsg_type != RTM_NEWROUTE) {
+			HIP_ERROR("Not a route?\n");
+			return -1;
+		}
+		len -= NLMSG_LENGTH(sizeof(*r));
+		if (len < 0) {
+			HIP_ERROR("Wrong len %d\n", len);
+			return -1;
+		}
+
+		parse_rtattr(tb, RTA_MAX, RTM_RTA(r), len);
+
+		if (tb[RTA_PREFSRC]) {
+			tb[RTA_PREFSRC]->rta_type = RTA_SRC;
+			r->rtm_src_len = 8*RTA_PAYLOAD(tb[RTA_PREFSRC]);
+		} else if (!tb[RTA_SRC]) {
+			HIP_ERROR("Failed to connect the route\n");
+			return -1;
+		}
+		if (!odev && tb[RTA_OIF])
+			tb[RTA_OIF]->rta_type = 0;
+		if (tb[RTA_GATEWAY])
+			tb[RTA_GATEWAY]->rta_type = 0;
+		if (!idev && tb[RTA_IIF])
+			tb[RTA_IIF]->rta_type = 0;
+		req.n.nlmsg_flags = NLM_F_REQUEST;
+		req.n.nlmsg_type = RTM_GETROUTE;
+
+		if (rtnl_talk(&rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0)
+			return -1;
+	}
+
+	/* XX FIXME: write the source address to "src" from rtnl answer.
+	   See iproute2-051007/lib/iproute.c:print_route */
+	HIP_ASSERT(0);
+
+	return 0;
+}
+
+int ipaddr_modify(int cmd, int family, char *ip, char *dev,
+		  struct idxmap **idxmap)
+{
+        struct hip_nl_handle rth;
+        struct {
+                struct nlmsghdr         n;
+                struct ifaddrmsg        ifa;
+                char                    buf[256];
+        } req;
+        char  *lcl_arg = NULL;
+        inet_prefix lcl;
+        int local_len = 0;
+        inet_prefix addr;
+        memset(&req, 0, sizeof(req));
+
+        req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+        req.n.nlmsg_flags = NLM_F_REQUEST;
+        req.n.nlmsg_type = cmd;
+        req.ifa.ifa_family = family; 
+
+        lcl_arg = ip;
+	HIP_DEBUG("IP got %s\n", ip);
+	get_prefix_1(&lcl, ip, req.ifa.ifa_family);
+        addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
+        local_len = lcl.bytelen;
+	// FIXED : prefix now adds - Abi
+	if (req.ifa.ifa_prefixlen == 0)
+                req.ifa.ifa_prefixlen = lcl.bitlen;
+
+        if (hip_netlink_open(&rth, 0, NETLINK_ROUTE) < 0)
+                return -1;
+
+        if ((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0) {
+                HIP_ERROR("Cannot find device \"%s\"\n", dev);
+                return -1;
+	}
+        if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
+                return -1;
+
+	return 0;
+}
+
+int hip_add_iface_local_hit(const hip_hit_t *local_hit)
+{
+	int err = 0;
+	char *hit_str = NULL;
+	struct idxmap *idxmap[16];
+
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR))), -1);
+	HIP_DEBUG("Adding HIT: %s\n", hit_str);
+
+	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, hit_str,
+			      HIP_HIT_DEV, idxmap), -1);
+
+ out_err:
+
+	if (hit_str)
+		HIP_FREE(hit_str);
+	
+	return err;
+}
+
+int hip_add_iface_local_route(const hip_hit_t *local_hit)
+{
+	int err = 0;
+	char *hit_str = NULL;
+	struct idxmap *idxmap[16];
+
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
+
+	HIP_DEBUG("Adding local route: %s\n", hit_str);
+	
+	HIP_IFE(iproute_modify(RTM_NEWROUTE,  NLM_F_CREATE|NLM_F_EXCL,
+			       AF_INET6, hit_str, HIP_HIT_DEV, idxmap), -1);
+
+ out_err:
+
+	if (hit_str)
+		HIP_FREE(hit_str);
+	
+	
+	return err;
+}
+
+/**
+ * Functions for setting up dummy interface
+ */
+
+int get_ctl_fd(void)
+{
+        int s_errno;
+        int fd;
+
+        fd = socket(PF_INET, SOCK_DGRAM, 0);
+        if (fd >= 0)
+                return fd;
+        s_errno = errno;
+        fd = socket(PF_PACKET, SOCK_DGRAM, 0);
+        if (fd >= 0)
+                return fd;
+        fd = socket(PF_INET6, SOCK_DGRAM, 0);
+        if (fd >= 0)
+                return fd;
+        errno = s_errno;
+        perror("Cannot create control socket");
+        return -1;
+}
+
+
+int do_chflags(const char *dev, __u32 flags, __u32 mask)
+{
+        struct ifreq ifr;
+        int fd;
+        int err;
+
+        strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+        fd = get_ctl_fd();
+        if (fd < 0)
+                return -1;
+        err = ioctl(fd, SIOCGIFFLAGS, &ifr);
+        if (err) {
+                perror("SIOCGIFFLAGS");
+                close(fd);
+                return -1;
+        }
+        if ((ifr.ifr_flags^flags)&mask) {
+                ifr.ifr_flags &= ~mask;
+                ifr.ifr_flags |= mask&flags;
+                err = ioctl(fd, SIOCSIFFLAGS, &ifr);
+                if (err)
+                        perror("SIOCSIFFLAGS");
+        }
+        close(fd);
+        return err;
+}
+
+
+int set_up_device(char *dev, int up)
+{
+	int err = -1;
+	__u32 mask = 0;
+	__u32 flags = 0;
+	
+	if(up == 1){
+		mask |= IFF_UP;
+		flags |= IFF_UP;
+	} else {
+		mask |= IFF_UP;
+		flags &= ~IFF_UP;
+	}
+	
+	err = do_chflags(dev, flags, mask);			
+	HIP_DEBUG("setting %s done\n", dev);
+	return err;	 
+}
+
+/**
+ * xfrm_fill_selector - fill in the selector.
+ * Selector is bound to HITs
+ * @sel: pointer to xfrm_selector to be filled in
+ * @hit_our: Source HIT
+ * @hit_peer : Peer HIT
+ *
+ * Returns: 0
+ */
+int xfrm_fill_selector(struct xfrm_selector *sel,
+		       struct in6_addr *hit_our,
+		       struct in6_addr *hit_peer,
+		       __u8 proto, u8 hit_prefix,
+		       int preferred_family)
+{
+
+	sel->family = preferred_family;
+	memcpy(&sel->daddr, hit_peer, sizeof(sel->daddr));
+	memcpy(&sel->saddr, hit_our, sizeof(sel->saddr));
+
+	/* FIXME */
+	if (proto) {
+		HIP_DEBUG("proto = %d\n", proto);
+		sel->proto = proto;
+	}
+	sel->prefixlen_d = hit_prefix;
+	sel->prefixlen_s = hit_prefix;
+
+	return 0;
+}
+
+/** xfrm_init_lft - Initializes the lft
+ * @lft: pointer to the lft struct to be initialized
+ *
+ * Returns: 0
+ */
+int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
+
+	lft->soft_byte_limit = XFRM_INF;
+	lft->hard_byte_limit = XFRM_INF;
+	lft->soft_packet_limit = XFRM_INF;
+	lft->hard_packet_limit = XFRM_INF;
+
+	return 0;
+}
+
+int get_u8(__u8 *val, const char *arg, int base)
+{
+	unsigned long res;
+	char *ptr;
+
+	if (!arg || !*arg)
+		return -1;
+	res = strtoul(arg, &ptr, base);
+	if (!ptr || ptr == arg || *ptr || res > 0xFF)
+		return -1;
+	*val = res;
+	return 0;
+}
+
+int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
+		    char *name, char *key, int max)
+{
+	int len;
+	int slen = strlen(key);
+
+	strncpy(alg->alg_name, name, sizeof(alg->alg_name));
+
+	if (slen > 2 && strncmp(key, "0x", 2) == 0) {
+		/* split two chars "0x" from the top */
+		char *p = key + 2;
+		int plen = slen - 2;
+		int i;
+		int j;
+
+		/* Converting hexadecimal numbered string into real key;
+		 * Convert each two chars into one char(value). If number
+		 * of the length is odd, add zero on the top for rounding.
+		 */
+
+		/* calculate length of the converted values(real key) */
+		len = (plen + 1) / 2;
+
+		if (len > max)
+			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
+
+		for (i = - (plen % 2), j = 0; j < len; i += 2, j++) {
+			char vbuf[3];
+			__u8 val;
+
+			vbuf[0] = i >= 0 ? p[i] : '0';
+			vbuf[1] = p[i + 1];
+			vbuf[2] = '\0';
+
+			if (get_u8(&val, vbuf, 16))
+				HIP_ERROR("\"ALGOKEY\" is invalid\n", key);
+
+			alg->alg_key[j] = val;
+		}
+	} else {
+		len = slen;
+		if (len > 0) {
+			if (len > max)
+				HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
+
+			strncpy(alg->alg_key, key, len);
+		}
+	}
+
+	alg->alg_key_len = len * 8;
+
+	return 0;
+}
+
+void rtnl_tab_initialize(char *file, char **tab, int size)
+{
+        char buf[512];
+        FILE *fp;
+
+        fp = fopen(file, "r");
+        if (!fp)
+                return;
+        while (fgets(buf, sizeof(buf), fp)) {
+                char *p = buf;
+                int id;
+                char namebuf[512];
+
+                while (*p == ' ' || *p == '\t')
+                        p++;
+                if (*p == '#' || *p == '\n' || *p == 0)
+                        continue;
+                if (sscanf(p, "0x%x %s\n", &id, namebuf) != 2 &&
+                    sscanf(p, "0x%x %s #", &id, namebuf) != 2 &&
+                    sscanf(p, "%d %s\n", &id, namebuf) != 2 &&
+                    sscanf(p, "%d %s #", &id, namebuf) != 2) {
+                        HIP_ERROR("Database %s is corrupted at %s\n",
+                                file, p);
+                        return;
+                }
+
+                if (id<0 || id>size)
+                        continue;
+
+                tab[id] = strdup(namebuf);
+        }
+        fclose(fp);
+}
+
+int rtnl_dsfield_a2n(__u32 *id, char *arg, char **rtnl_rtdsfield_tab)
+{
+        static char *cache = NULL;
+        static unsigned long res;
+        char *end;
+        int i;
+
+        if (cache && strcmp(cache, arg) == 0) {
+                *id = res;
+                return 0;
+        }
+
+	/* rtnl_rtdsfield_initialize() handled in hip_select_source_address */
+
+        for (i=0; i<256; i++) {
+                if (rtnl_rtdsfield_tab[i] &&
+                    strcmp(rtnl_rtdsfield_tab[i], arg) == 0) {
+                        cache = rtnl_rtdsfield_tab[i];
+                        res = i;
+                        *id = res;
+                        return 0;
+                }
+        }
+
+        res = strtoul(arg, &end, 16);
+        if (!end || end == arg || *end || res > 255)
+                return -1;
+        *id = res;
+        return 0;
+}
+
+int get_prefix(inet_prefix *dst, char *arg, int family)
+{
+        if (family == AF_PACKET) {
+                HIP_ERROR("Error: \"%s\" may be inet prefix, but it is not allowed in this context.\n", arg);
+                return -1;
+        }
+        if (get_prefix_1(dst, arg, family)) {
+                HIP_ERROR("Error: an inet prefix is expected rather than \"%s\".\n", arg);
+                return -1;
+        }
+        return 0;
+}
+
+int ll_remember_index(const struct sockaddr_nl *who, 
+                      struct nlmsghdr *n, void *arg,
+		      struct idxmap **idxmap)
+{
+        int h;
+        struct ifinfomsg *ifi = NLMSG_DATA(n);
+        struct idxmap *im, **imp;
+        struct rtattr *tb[IFLA_MAX+1];
+
+        if (n->nlmsg_type != RTM_NEWLINK)
+                return 0;
+
+        if (n->nlmsg_len < NLMSG_LENGTH(sizeof(ifi)))
+                return -1;
+
+
+        memset(tb, 0, sizeof(tb));
+        parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), IFLA_PAYLOAD(n));
+        if (tb[IFLA_IFNAME] == NULL)
+                return 0;
+
+        h = ifi->ifi_index&0xF;
+
+        for (imp=&idxmap[h]; (im=*imp)!=NULL; imp = &im->next)
+                if (im->index == ifi->ifi_index)
+                        break;
+
+        if (im == NULL) {
+                im = malloc(sizeof(*im));
+                if (im == NULL)
+                        return 0;
+                im->next = *imp;
+                im->index = ifi->ifi_index;
+                *imp = im;
+        }
+
+        im->type = ifi->ifi_type;
+        im->flags = ifi->ifi_flags;
+        if (tb[IFLA_ADDRESS]) {
+                int alen;
+                im->alen = alen = RTA_PAYLOAD(tb[IFLA_ADDRESS]);
+                if (alen > sizeof(im->addr))
+                        alen = sizeof(im->addr);
+                memcpy(im->addr, RTA_DATA(tb[IFLA_ADDRESS]), alen);
+        } else {
+                im->alen = 0;
+                memset(im->addr, 0, sizeof(im->addr));
+        }
+        strcpy(im->name, RTA_DATA(tb[IFLA_IFNAME]));
+        return 0;
+}
+
+int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
+{
+        struct {
+                struct nlmsghdr nlh;
+                struct rtgenmsg g;
+        } req;
+        struct sockaddr_nl nladdr;
+
+        memset(&nladdr, 0, sizeof(nladdr));
+        nladdr.nl_family = AF_NETLINK;
+
+        memset(&req, 0, sizeof(req));
+        req.nlh.nlmsg_len = sizeof(req);
+        req.nlh.nlmsg_type = type;
+        req.nlh.nlmsg_flags = NLM_F_ROOT|NLM_F_MATCH|NLM_F_REQUEST;
+        req.nlh.nlmsg_pid = 0;
+        req.nlh.nlmsg_seq = rth->dump = ++rth->seq;
+        req.g.rtgen_family = family;
+
+        return sendto(rth->fd, (void*)&req, sizeof(req), 0,
+                      (struct sockaddr*)&nladdr, sizeof(nladdr));
+}
+
+int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
+{
+        if (rtnl_wilddump_request(rth, AF_UNSPEC, RTM_GETLINK) < 0) {
+                perror("Cannot send dump request");
+                return -1;
+        }
+
+        if (rtnl_dump_filter(rth, ll_remember_index, &idxmap, NULL, NULL) < 0) {
+                HIP_ERROR("Dump terminated\n");
+                return -1;
+        }
+        return 0;
+}
+
+int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
+{
+        memset(tb, 0, sizeof(struct rtattr *) * (max + 1));
+        while (RTA_OK(rta, len)) {
+                if (rta->rta_type <= max)
+                        tb[rta->rta_type] = rta;
+                rta = RTA_NEXT(rta,len);
+        }
+        if (len)
+                HIP_ERROR("!!!Deficit %d, rta_len=%d\n", len, rta->rta_len);
+        return 0;
+}
+
+int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
+              unsigned groups, struct nlmsghdr *answer,
+              rtnl_filter_t junk,
+              void *jarg)
+{
+        int status;
+        unsigned seq;
+        struct nlmsghdr *h;
+        struct sockaddr_nl nladdr;
+        struct iovec iov = {
+                .iov_base = (void*) n,
+                .iov_len = n->nlmsg_len
+        };
+        struct msghdr msg = {
+                .msg_name = &nladdr,
+                .msg_namelen = sizeof(nladdr),
+                .msg_iov = &iov,
+                .msg_iovlen = 1,
+        };
+        char   buf[16384];
+
+        memset(&nladdr, 0, sizeof(nladdr));
+        nladdr.nl_family = AF_NETLINK;
+        nladdr.nl_pid = peer;
+        nladdr.nl_groups = groups;
+
+        n->nlmsg_seq = seq = ++rtnl->seq;
+
+        if (answer == NULL)
+                n->nlmsg_flags |= NLM_F_ACK;
+
+        status = sendmsg(rtnl->fd, &msg, 0);
+
+        if (status < 0) {
+                perror("Cannot talk to rtnetlink");
+                return -1;
+        }
+
+        memset(buf,0,sizeof(buf));
+
+        iov.iov_base = buf;
+
+        while (1) {
+                iov.iov_len = sizeof(buf);
+                status = recvmsg(rtnl->fd, &msg, 0);
+
+                if (status < 0) {
+                        if (errno == EINTR)
+                                continue;
+                        perror("OVERRUN");
+                        continue;
+                }
+                if (status == 0) {
+                        HIP_ERROR("EOF on netlink\n");
+                        return -1;
+                }
+                if (msg.msg_namelen != sizeof(nladdr)) {
+                        HIP_ERROR("sender address length == %d\n", msg.msg_namelen);
+                        return -1;
+                }
+                for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
+                        int err;
+                        int len = h->nlmsg_len;
+                        int l = len - sizeof(*h);
+
+                        if (l<0 || len>status) {
+                                if (msg.msg_flags & MSG_TRUNC) {
+                                        HIP_ERROR("Truncated message\n");
+                                        return -1;
+                                }
+                                HIP_ERROR("!!!malformed message: len=%d\n", len);
+                                return -1;
+                        }
+
+                        if (nladdr.nl_pid != peer ||
+                            h->nlmsg_pid != rtnl->local.nl_pid ||
+                            h->nlmsg_seq != seq) {
+                                if (junk) {
+                                        err = junk(&nladdr, h, jarg);
+                                        if (err < 0)
+                                                return err;
+                                }
+                                continue;
+                        }
+
+                        if (h->nlmsg_type == NLMSG_ERROR) {
+                                struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
+                                if (l < sizeof(struct nlmsgerr)) {
+                                        HIP_ERROR("ERROR truncated\n");
+                                } else {
+                                        errno = -err->error;
+                                        if (errno == 0) {
+                                                if (answer)
+                                                        memcpy(answer, h, h->nlmsg_len);
+                                                return 0;
+                                        }
+                                        perror("RTNETLINK answers");
+                                }
+                                return -1;
+                        }
+                        if (answer) {
+                                memcpy(answer, h, h->nlmsg_len);
+                                return 0;
+                        }
+
+                        HIP_ERROR("Unexpected reply!!!\n");
+
+                        status -= NLMSG_ALIGN(len);
+                        h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
+                }
+                if (msg.msg_flags & MSG_TRUNC) {
+                        HIP_ERROR("Message truncated\n");
+                        continue;
+                }
+                if (status) {
+                        HIP_ERROR("!!!Remnant of size %d\n", status);
+                        return -1;
+                }
+        }
+}
+
+int rtnl_dump_filter(struct rtnl_handle *rth,
+                     rtnl_filter_t filter,
+                     void *arg1,
+                     rtnl_filter_t junk,
+                     void *arg2)
+{
+        struct sockaddr_nl nladdr;
+        struct iovec iov;
+        struct msghdr msg = {
+                .msg_name = &nladdr,
+                .msg_namelen = sizeof(nladdr),
+                .msg_iov = &iov,
+                .msg_iovlen = 1,
+        };
+        char buf[16384];
+
+        iov.iov_base = buf;
+        while (1) {
+                int status;
+                struct nlmsghdr *h;
+
+                iov.iov_len = sizeof(buf);
+                status = recvmsg(rth->fd, &msg, 0);
+
+                if (status < 0) {
+                        if (errno == EINTR)
+                                continue;
+                        perror("OVERRUN");
+                        continue;
+                }
+
+                if (status == 0) {
+                        HIP_ERROR("EOF on netlink\n");
+                        return -1;
+                }
+
+                h = (struct nlmsghdr*)buf;
+                while (NLMSG_OK(h, status)) {
+                        int err;
+
+                        if (nladdr.nl_pid != 0 ||
+                            h->nlmsg_pid != rth->local.nl_pid ||
+                            h->nlmsg_seq != rth->dump) {
+                                if (junk) {
+                                        err = junk(&nladdr, h, arg2);
+                                        if (err < 0)
+                                                return err;
+                                }
+                                goto skip_it;
+                        }
+
+                        if (h->nlmsg_type == NLMSG_DONE)
+                                return 0;
+                        if (h->nlmsg_type == NLMSG_ERROR) {
+                                struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(h);
+                                if (h->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr))) {
+                                        HIP_ERROR("ERROR truncated\n");
+                                } else {
+                                        errno = -err->error;
+                                        perror("RTNETLINK answers");
+                                }
+                                return -1;
+                        }
+                        err = filter(&nladdr, h, arg1);
+                        if (err < 0)
+                                return err;
+
+skip_it:
+                        h = NLMSG_NEXT(h, status);
+                }
+                if (msg.msg_flags & MSG_TRUNC) {
+                        HIP_ERROR("Message truncated\n");
+                        continue;
+                }
+                if (status) {
+                        HIP_ERROR("!!!Remnant of size %d\n", status);
+                        return -1;
+                }
+        }
+}
+
+void rtnl_close(struct rtnl_handle *rth)
+{
+        close(rth->fd);
+}
+
+int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
+                      int protocol)
+{
+        socklen_t addr_len;
+        int sndbuf = 32768;
+        int rcvbuf = 32768;
+
+        memset(rth, 0, sizeof(rth));
+
+        rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
+        if (rth->fd < 0) {
+                perror("Cannot open netlink socket");
+                return -1;
+        }
+
+        if (setsockopt(rth->fd,SOL_SOCKET,SO_SNDBUF,&sndbuf,sizeof(sndbuf)) < 0) {
+                perror("SO_SNDBUF");
+                return -1;
+        }
+
+        if (setsockopt(rth->fd,SOL_SOCKET,SO_RCVBUF,&rcvbuf,sizeof(rcvbuf)) < 0) {
+                perror("SO_RCVBUF");
+                return -1;
+        }
+
+        memset(&rth->local, 0, sizeof(rth->local));
+        rth->local.nl_family = AF_NETLINK;
+        rth->local.nl_groups = subscriptions;
+
+        if (bind(rth->fd, (struct sockaddr*)&rth->local, sizeof(rth->local)) < 0) {
+                perror("Cannot bind netlink socket");
+                return -1;
+        }
+        addr_len = sizeof(rth->local);
+        if (getsockname(rth->fd, (struct sockaddr*)&rth->local, &addr_len) < 0) {
+                perror("Cannot getsockname");
+                return -1;
+        }
+        if (addr_len != sizeof(rth->local)) {
+                HIP_ERROR("Wrong address length %d\n", addr_len);
+                return -1;
+        }
+        if (rth->local.nl_family != AF_NETLINK) {
+                HIP_ERROR("Wrong address family %d\n", rth->local.nl_family);
+                return -1;
+        }
+        rth->seq = time(NULL);
+        return 0;
+}
+
+int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
+{
+	int err = 0;
+	int family = AF_INET6;
+	char src_str[INET6_ADDRSTRLEN], dst_str[INET6_ADDRSTRLEN];
+	struct rtnl_handle rth;
+	int rtnl_rtdsfield_init;
+	char *rtnl_rtdsfield_tab[256] = { "0",};
+	struct idxmap *idxmap[16];
+	
+	/* rtnl_rtdsfield_initialize() */
+        rtnl_rtdsfield_init = 1;
+        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",
+                            rtnl_rtdsfield_tab, 256);
+
+	HIP_IFEL((!inet_ntop(family, dst, dst_str, INET6_ADDRSTRLEN)), -1,
+		 "inet_pton\n");
+
+	HIP_IFEL(rtnl_open_byproto(&rth, 0, NETLINK_XFRM), -1,
+		 "Failed to open netlink socket\n");
+		
+	HIP_IFEL(iproute_get(&rth, 0, src_str, NULL, NULL, 0, 0, dst_str,
+			     family, idxmap),
+		 -1, "Finding ip route failed\n");
+
+	HIP_IFEL(inet_pton(family, src_str, src), -1, "inet_ntop\n");
+
+ out_err:
+	rtnl_close(&rth);
+
+	return err;
+}
+

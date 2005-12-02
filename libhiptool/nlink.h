@@ -13,6 +13,8 @@
 #include "hipd.h"
 
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
+typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
+			     const struct nlmsghdr *n, void *);
 
 
 #define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
@@ -39,6 +41,38 @@ struct hip_nl_handle {
         __u32                   dump;
 };
 
+struct idxmap
+{
+        struct idxmap * next;
+        unsigned        index;
+        int             type;
+        int             alen;
+        unsigned        flags;
+        unsigned char   addr[8];
+        char            name[16];
+};
+
+typedef struct
+{
+        __u8 family;
+        __u8 bytelen;
+        __s16 bitlen;
+        __u32 flags;
+        __u32 data[4];
+} inet_prefix;
+
+struct rtnl_handle
+{
+        int                     fd;
+        struct sockaddr_nl      local;
+        struct sockaddr_nl      peer;
+        __u32                   seq;
+        __u32                   dump;
+};
+
+int get_ctl_fd(void);
+int do_chflags(const char *dev, __u32 flags, __u32 mask);
+int set_up_device(char *dev, int up);
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data, 
 	      int alen);
 

@@ -56,35 +56,11 @@ struct hip_xfrm_state {
 	int                  state;               /* state */
 };
 
-struct idxmap
-{
-        struct idxmap * next;
-        unsigned        index;
-        int             type;
-        int             alen;
-        unsigned        flags;
-        unsigned char   addr[8];
-        char            name[16];
-};
-
-typedef struct
-{
-        __u8 family;
-        __u8 bytelen;
-        __s16 bitlen;
-        __u32 flags;
-        __u32 data[4];
-} inet_prefix;
-
-
-
 typedef struct hip_xfrm_state hip_xfrm_t;
 
 void hip_beetdb_hold_entry(void *entry);
 void hip_beetdb_put_entry(void *entry);
-int get_ctl_fd(void);
-int do_chflags(const char *dev, __u32 flags, __u32 mask);
-int set_up_device(char *dev, int up);
+
 /*
  * These are wrappers to netlink calls (from the userspace daemon to
  * the kernel XFRM management) or to the BEET patch (from the kernel
@@ -99,9 +75,10 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer, 
 			   struct in6_addr *tmpl_saddr,
 			   struct in6_addr *tmpl_daddr, int dir, u8 proto,
-			   u8 hit_prefix);
+			   u8 hit_prefix, int preferred_family);
 int hip_xfrm_policy_delete(struct in6_addr *hit_our, struct in6_addr *hit_peer,
-			   int dir, u8 proto, u8 hit_prefix);
+			   int dir, u8 proto, u8 hit_prefix,
+			   int preferred_family);
 
 int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 			  struct in6_addr *daddr, 
@@ -110,8 +87,10 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 			  __u32 spi, int ealg, struct hip_crypto_key *enckey,
 			  int enckey_len,
 			  int aalg, struct hip_crypto_key *authkey,
-			  int authkey_len);
-int hip_xfrm_state_delete(struct in6_addr *peer_addr, __u32 spi);
+			  int authkey_len,
+			  int preferred_family);
+int hip_xfrm_state_delete(struct in6_addr *peer_addr, __u32 spi,
+			  int preferred_family);
 /* Allocates SPI for fixed time */
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 

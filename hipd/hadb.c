@@ -288,6 +288,10 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			goto out_err;
 		}
 
+		HIP_IFEL(hip_select_source_address(&entry->preferred_address,
+							addr), -1,
+			 "Cannot find source address\n");
+
 		/*
 		 * Create a security policy for triggering base exchange.
 		 *
@@ -297,7 +301,7 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		 *
 		 */
 		HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, hit,
-					       &entry->local_address, addr,
+					       &entry->preferred_address, addr,
 					       0, 0), -1,
 			 "Error in setting the SPs\n");
 	} else
