@@ -447,7 +447,7 @@ void hip_netlink_close(struct hip_nl_handle *rth)
  * Functions for adding ip address
  */
 
-unsigned ll_name_to_index(const char *name, struct idxmap *idxmap[])
+unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
 {
         static char ncache[16];
         static int icache;
@@ -607,8 +607,8 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 
 
 
-int iproute_modify(int cmd, int flags, int family, char *ip, char *dev,
-		   struct idxmap **idxmap)
+int iproute_modify(int cmd, int flags, int family, char *ip,
+		   char *dev, struct idxmap **idxmap)
 {
         struct hip_nl_handle rth;
         struct {
@@ -646,12 +646,13 @@ int iproute_modify(int cmd, int flags, int family, char *ip, char *dev,
 	if (hip_netlink_open(&rth, 0, NETLINK_ROUTE) < 0)
                 return -1;
 
-         if ((idx = ll_name_to_index(dev, idxmap)) == 0) {
-                 HIP_ERROR("Cannot find device \"%s\"\n", dev);
-                 return -1;
-         }
-         addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
+	ll_init_map(&rth, idxmap);
 
+	if ((idx = ll_name_to_index(dev, idxmap)) == 0) {
+		HIP_ERROR("Cannot find device \"%s\"\n", dev);
+		return -1;
+	}
+	addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
 
  /*               if (req1.r.rtm_type == RTN_LOCAL ||
                     req1.r.rtm_type == RTN_BROADCAST ||
@@ -1160,12 +1161,12 @@ int get_prefix(inet_prefix *dst, char *arg, int family)
 }
 
 int ll_remember_index(const struct sockaddr_nl *who, 
-                      struct nlmsghdr *n, void *arg,
-		      struct idxmap **idxmap)
+                      struct nlmsghdr *n, void *arg)
 {
         int h;
         struct ifinfomsg *ifi = NLMSG_DATA(n);
         struct idxmap *im, **imp;
+	struct idxmap **idxmap = arg;
         struct rtattr *tb[IFLA_MAX+1];
 
         if (n->nlmsg_type != RTM_NEWLINK)
@@ -1241,7 +1242,7 @@ int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
                 return -1;
         }
 
-        if (rtnl_dump_filter(rth, ll_remember_index, &idxmap, NULL, NULL) < 0) {
+        if (rtnl_dump_filter(rth, ll_remember_index, idxmap, NULL, NULL) < 0) {
                 HIP_ERROR("Dump terminated\n");
                 return -1;
         }
@@ -1264,7 +1265,7 @@ int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
 int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
               unsigned groups, struct nlmsghdr *answer,
               rtnl_filter_t junk,
-              void *jarg)
+              void *jarg, struct idxmap **idxmap)
 {
         int status;
         unsigned seq;

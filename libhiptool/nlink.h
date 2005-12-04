@@ -12,11 +12,6 @@
 #include "hip.h"
 #include "hipd.h"
 
-typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
-typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
-			     const struct nlmsghdr *n, void *);
-
-
 #define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
         (void*)&((struct sockaddr_in*)x)->sin_addr : \
         (void*)&((struct sockaddr_in6*)x)->sin6_addr
@@ -69,6 +64,10 @@ struct rtnl_handle
         __u32                   seq;
         __u32                   dump;
 };
+
+typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
+typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
+			     const struct nlmsghdr *n, void *);
 
 int get_ctl_fd(void);
 int do_chflags(const char *dev, __u32 flags, __u32 mask);
