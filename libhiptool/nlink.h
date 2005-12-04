@@ -67,7 +67,7 @@ struct rtnl_handle
 
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
 typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
-			     const struct nlmsghdr *n, void *);
+			     const struct nlmsghdr *n, void **);
 
 int get_ctl_fd(void);
 int do_chflags(const char *dev, __u32 flags, __u32 mask);

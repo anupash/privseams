@@ -23,44 +23,6 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	return 0;
 }
 
-#if 0
-/* Processes a received netlink message(s) */
-int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg)
-{
-	struct hip_work_order *hwo;
-	struct nlmsghdr *tail = (struct nlmsghdr *) (((char *) n) + len);
-	int msg_len, ret;
-	
-	while (n < tail) {
-		hwo = (struct hip_work_order *)hip_init_job(GFP_KERNEL);
-		if (!hwo) {
-			HIP_ERROR("Out of memory.\n");
-			return -1;
-		}
-
-		memcpy(hwo, NLMSG_DATA(n), sizeof(struct hip_work_order_hdr));
-		msg_len = hip_get_msg_total_len((const struct hip_common *)&((struct hip_work_order *)NLMSG_DATA(n))->msg);	
-		hwo->msg = (struct hip_common *) HIP_MALLOC(msg_len, 0);
-		if (!hwo->msg) {
-			HIP_ERROR("Out of memory.\n");
-			free(hwo);
-			return -1;
-		}
-	
-		memcpy(hwo->msg, &((struct hip_work_order *)NLMSG_DATA(n))->msg, msg_len);
-	
-		/* Do not process the message here, but store it to the queue */
-		if (ret = hip_insert_work_order_cpu(hwo, 0) != 1) {
-			return ret;
-		}
-
-		n += NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr));
-	}
-
-	return ret;
-}
-#endif
-
 /* 
  * Unfortunately libnetlink does not provide a generic receive a
  * message function. This is a modified version of the rtnl_listen
@@ -273,59 +235,6 @@ int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
         }
 }
 
-#if 0
-/*
- * Sends and receives a work order.
- */
-int hip_netlink_talk(struct hip_nl_handle *nl,
-		     struct hip_work_order *req, 
-		     struct hip_work_order *resp) 
-{
-	struct {
-                struct nlmsghdr n;
-                struct hip_work_order_hdr hdr;
-                char msg[HIP_MAX_NETLINK_PACKET];
-        } tx, rx;
-	int msg_len;
-
-	_HIP_DEBUG("entered\n");
-        /* Fill in the netlink message payload */
-	msg_len = hip_get_msg_total_len((const struct hip_common *)&req->msg);
-	memcpy(&tx.hdr, &req->hdr, sizeof(struct hip_work_order_hdr));
-	memcpy(tx.msg, req->msg, msg_len);
-
-	/* Fill the header */
-	tx.n.nlmsg_len = NLMSG_LENGTH(msg_len +
-				      sizeof(struct hip_work_order_hdr));
-	tx.n.nlmsg_type = 0; // XX FIXME
-        tx.n.nlmsg_flags = 0;
-	tx.n.nlmsg_seq = 0; // XX FIXME
-        tx.n.nlmsg_pid = getpid(); /* self pid */
-
-	/* Let the talk insert any non-responses to our queue so that
-           they will be processed later */
-	HIP_DEBUG("Calling netlink_talk...\n");
-	if (netlink_talk(nl, &tx.n, 0, 0, &rx.n,
-			 hip_netlink_receive_workorder, NULL) < 0) {
-		HIP_ERROR("Unable to talk over netlink.\n");
-		return -1;
-	}
-	HIP_DEBUG("Called netlink_talk...\n");
-
-	msg_len = hip_get_msg_total_len((const struct hip_common *)rx.msg);
-	resp->msg = (struct hip_common *) HIP_MALLOC(msg_len, 0);
-	if (!resp->msg) {
-		HIP_ERROR("Out of memory!\n");
-		return -1;
-	}
-
-	/* Copy the response payload */
-	memcpy(&resp->hdr, &rx.hdr, sizeof(struct hip_work_order_hdr));
-	memcpy(resp->msg, rx.msg, msg_len);
-
-	return 0;
-}
-#endif
 
 int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
 {
@@ -336,57 +245,6 @@ int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
 
         return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
-
-#if 0
-/*
- * Sends a work order to kernel daemon.
- */
-int hip_netlink_send(struct hip_work_order *hwo) 
-{
-	struct hip_work_order *h;
-	struct nlmsghdr *nlh;
-	struct hip_common *dummy = NULL;
-	int msg_len, ret, nlh_len;
-
-	HIP_DEBUG("Sending a netlink message\n");
-
-	/* No message: allocate memory and create a dummy message */
-	if (!hwo->msg) {
-		/* assert: hip_insert_work_order frees this memory */
-		dummy = hip_msg_alloc();
-		if (!dummy) {
-			return -1;
-		}
-		if (!hip_build_netlink_dummy_header(dummy)) {
-			return -1;
-		}
-		hwo->msg = dummy;
-	}
-
-	msg_len = hip_get_msg_total_len((const struct hip_common *)hwo->msg);
-	nlh_len = NLMSG_SPACE(msg_len + sizeof(struct hip_work_order_hdr));
-	nlh = (struct nlmsghdr *) HIP_MALLOC(nlh_len, 0);
-	if (!nlh) {
-		HIP_ERROR("Out of memory\n");
-		return -1;
-	}
-	memset(nlh, 0, nlh_len);
-
-	/* Fill the netlink message header */
-	nlh->nlmsg_len = NLMSG_LENGTH(msg_len + sizeof(struct hip_work_order_hdr));
-	nlh->nlmsg_pid = getpid(); /* self pid */
-	nlh->nlmsg_flags = 0;
-	
-	/* Fill in the netlink message payload */
-	h = (struct hip_work_order *)NLMSG_DATA(nlh);
-	memcpy(h, hwo, sizeof(struct hip_work_order_hdr));
-	memcpy(&h->msg, hwo->msg, msg_len);
-
-        ret = hip_netlink_send_buf(&nl_khipd, (char*)nlh, nlh->nlmsg_len) <= 0;
-	HIP_FREE(nlh);
-	return ret;
-}
-#endif
 
 int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int protocol)
 {
@@ -607,8 +465,8 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 
 
 
-int iproute_modify(int cmd, int flags, int family, char *ip,
-		   char *dev, struct idxmap **idxmap)
+int hip_iproute_modify(int cmd, int flags, int family, char *ip,
+		       char *dev, struct idxmap **idxmap)
 {
         struct hip_nl_handle rth;
         struct {
@@ -654,38 +512,19 @@ int iproute_modify(int cmd, int flags, int family, char *ip,
 	}
 	addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
 
- /*               if (req1.r.rtm_type == RTN_LOCAL ||
-                    req1.r.rtm_type == RTN_BROADCAST ||
-                    req1.r.rtm_type == RTN_NAT ||
-                    req1.r.rtm_type == RTN_ANYCAST)
-                        req1.r.rtm_table = RT_TABLE_LOCAL;
-                if (req1.r.rtm_type == RTN_LOCAL ||
-                    req1.r.rtm_type == RTN_NAT)
-                        req1.r.rtm_scope = RT_SCOPE_HOST;
-                else if (req1.r.rtm_type == RTN_BROADCAST ||
-                         req1.r.rtm_type == RTN_MULTICAST ||
-                         req1.r.rtm_type == RTN_ANYCAST)
-                        req1.r.rtm_scope = RT_SCOPE_LINK;
-                else if (req1.r.rtm_type == RTN_UNICAST ||
-                         req1.r.rtm_type == RTN_UNSPEC) {
-                        if (cmd == RTM_DELROUTE)
-                                req1.r.rtm_scope = RT_SCOPE_NOWHERE;
-                        else    req1.r.rtm_scope = RT_SCOPE_LINK;
-
-                        }
-*/
         if (netlink_talk(&rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0)
                 return -1;
 
         return 0;
 }
 
-
-
-int iproute_get(struct rtnl_handle *rth, char *tos,
-		char *from, char *idev, char *odev, int notify,
-		int connected, char *to, int preferred_family,
-		struct idxmap **idxmap)
+int hip_iproute_get_src(struct rtnl_handle *rth,
+			char *from,
+			char *to,
+			char *idev,
+			char *odev,
+			int preferred_family,
+			struct idxmap **idxmap)
 {
 	struct {
 		struct nlmsghdr 	n;
@@ -709,37 +548,15 @@ int iproute_get(struct rtnl_handle *rth, char *tos,
 	req.r.rtm_dst_len = 0;
 	req.r.rtm_tos = 0;
 	
-	if (tos && rtnl_dsfield_a2n(&req.r.rtm_tos, tos))
-	    return -1;
+	HIP_ASSERT(to);
 
-	if (from) {
-		from_ok = 1;
-		get_prefix(&addr, from, req.r.rtm_family);
-		if (req.r.rtm_family == AF_UNSPEC)
-			req.r.rtm_family = addr.family;
-		if (addr.bytelen)
-			addattr_l(&req.n, sizeof(req), RTA_SRC, &addr.data,
-				  addr.bytelen);
-		req.r.rtm_src_len = addr.bitlen;
-	}
-
-	if (notify)
-		req.r.rtm_flags |= RTM_F_NOTIFY;
-
-	if (to) {
-		get_prefix(&addr, to, req.r.rtm_family);
-		if (req.r.rtm_family == AF_UNSPEC)
-			req.r.rtm_family = addr.family;
-		if (addr.bytelen)
-			addattr_l(&req.n, sizeof(req), RTA_DST, &addr.data,
-				  addr.bytelen);
-		req.r.rtm_dst_len = addr.bitlen;
-	}
-
-	if (req.r.rtm_dst_len == 0) {
-		HIP_ERROR("need at least destination address\n");
-		return -1;
-	}
+	get_prefix(&addr, to, req.r.rtm_family);
+	if (req.r.rtm_family == AF_UNSPEC)
+		req.r.rtm_family = addr.family;
+	if (addr.bytelen)
+		addattr_l(&req.n, sizeof(req), RTA_DST, &addr.data,
+			  addr.bytelen);
+	req.r.rtm_dst_len = addr.bitlen;
 
 	ll_init_map(&rth);
 
@@ -768,43 +585,6 @@ int iproute_get(struct rtnl_handle *rth, char *tos,
 	if (rtnl_talk(&rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0)
 		return -1;
 
-	if (connected && !from_ok) {
-		struct rtmsg *r = NLMSG_DATA(&req.n);
-		int len = req.n.nlmsg_len;
-		struct rtattr * tb[RTA_MAX+1];
-
-		if (req.n.nlmsg_type != RTM_NEWROUTE) {
-			HIP_ERROR("Not a route?\n");
-			return -1;
-		}
-		len -= NLMSG_LENGTH(sizeof(*r));
-		if (len < 0) {
-			HIP_ERROR("Wrong len %d\n", len);
-			return -1;
-		}
-
-		parse_rtattr(tb, RTA_MAX, RTM_RTA(r), len);
-
-		if (tb[RTA_PREFSRC]) {
-			tb[RTA_PREFSRC]->rta_type = RTA_SRC;
-			r->rtm_src_len = 8*RTA_PAYLOAD(tb[RTA_PREFSRC]);
-		} else if (!tb[RTA_SRC]) {
-			HIP_ERROR("Failed to connect the route\n");
-			return -1;
-		}
-		if (!odev && tb[RTA_OIF])
-			tb[RTA_OIF]->rta_type = 0;
-		if (tb[RTA_GATEWAY])
-			tb[RTA_GATEWAY]->rta_type = 0;
-		if (!idev && tb[RTA_IIF])
-			tb[RTA_IIF]->rta_type = 0;
-		req.n.nlmsg_flags = NLM_F_REQUEST;
-		req.n.nlmsg_type = RTM_GETROUTE;
-
-		if (rtnl_talk(&rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0)
-			return -1;
-	}
-
 	/* XX FIXME: write the source address to "src" from rtnl answer.
 	   See iproute2-051007/lib/iproute.c:print_route */
 	HIP_ASSERT(0);
@@ -812,8 +592,8 @@ int iproute_get(struct rtnl_handle *rth, char *tos,
 	return 0;
 }
 
-int ipaddr_modify(int cmd, int family, char *ip, char *dev,
-		  struct idxmap **idxmap)
+int hip_ipaddr_modify(int cmd, int family, char *ip, char *dev,
+		      struct idxmap **idxmap)
 {
         struct hip_nl_handle rth;
         struct {
@@ -858,13 +638,13 @@ int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 {
 	int err = 0;
 	char *hit_str = NULL;
-	struct idxmap *idxmap[16];
+	struct idxmap *idxmap[16] = {0};
 
 	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR))), -1);
 	HIP_DEBUG("Adding HIT: %s\n", hit_str);
 
-	HIP_IFE(ipaddr_modify(RTM_NEWADDR, AF_INET6, hit_str,
-			      HIP_HIT_DEV, idxmap), -1);
+	HIP_IFE(hip_ipaddr_modify(RTM_NEWADDR, AF_INET6, hit_str,
+				  HIP_HIT_DEV, idxmap), -1);
 
  out_err:
 
@@ -878,14 +658,15 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
 	int err = 0;
 	char *hit_str = NULL;
-	struct idxmap *idxmap[16];
+	struct idxmap *idxmap[16] = {0};
 
 	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
 
 	HIP_DEBUG("Adding local route: %s\n", hit_str);
 	
-	HIP_IFE(iproute_modify(RTM_NEWROUTE,  NLM_F_CREATE|NLM_F_EXCL,
-			       AF_INET6, hit_str, HIP_HIT_DEV, idxmap), -1);
+	HIP_IFE(hip_iproute_modify(RTM_NEWROUTE,  NLM_F_CREATE|NLM_F_EXCL,
+				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
+		-1);
 
  out_err:
 
@@ -1161,12 +942,12 @@ int get_prefix(inet_prefix *dst, char *arg, int family)
 }
 
 int ll_remember_index(const struct sockaddr_nl *who, 
-                      struct nlmsghdr *n, void *arg)
+                      struct nlmsghdr *n, void **arg)
 {
         int h;
         struct ifinfomsg *ifi = NLMSG_DATA(n);
         struct idxmap *im, **imp;
-	struct idxmap **idxmap = arg;
+	struct idxmap **idxmap = (struct idxmap **) arg;
         struct rtattr *tb[IFLA_MAX+1];
 
         if (n->nlmsg_type != RTM_NEWLINK)
@@ -1476,7 +1257,7 @@ int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
         int sndbuf = 32768;
         int rcvbuf = 32768;
 
-        memset(rth, 0, sizeof(rth));
+        memset(rth, 0, sizeof(struct rtnl_handle));
 
         rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
         if (rth->fd < 0) {
@@ -1527,7 +1308,7 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 	struct rtnl_handle rth;
 	int rtnl_rtdsfield_init;
 	char *rtnl_rtdsfield_tab[256] = { "0",};
-	struct idxmap *idxmap[16];
+	struct idxmap *idxmap[16] = { 0 };
 	
 	/* rtnl_rtdsfield_initialize() */
         rtnl_rtdsfield_init = 1;
@@ -1537,12 +1318,13 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 	HIP_IFEL((!inet_ntop(family, dst, dst_str, INET6_ADDRSTRLEN)), -1,
 		 "inet_pton\n");
 
+	/* XX FIXME: or NETLINK_ROUTE ?? */
 	HIP_IFEL(rtnl_open_byproto(&rth, 0, NETLINK_XFRM), -1,
 		 "Failed to open netlink socket\n");
 		
-	HIP_IFEL(iproute_get(&rth, 0, src_str, NULL, NULL, 0, 0, dst_str,
-			     family, idxmap),
-		 -1, "Finding ip route failed\n");
+	HIP_IFEL(hip_iproute_get_src(&rth, src_str, dst_str, NULL, NULL,
+				     family, idxmap), -1,
+		 "Finding ip route failed\n");
 
 	HIP_IFEL(inet_pton(family, src_str, src), -1, "inet_ntop\n");
 
