@@ -466,10 +466,10 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 
 
 
-int hip_iproute_modify(int cmd, int flags, int family, char *ip,
+int hip_iproute_modify(struct rtnl_handle *rth,
+		       int cmd, int flags, int family, char *ip,
 		       char *dev, struct idxmap **idxmap)
 {
-        struct rtnl_handle rth;
         struct {
                 struct nlmsghdr         n;
                 struct rtmsg            r;
@@ -503,21 +503,18 @@ int hip_iproute_modify(int cmd, int flags, int family, char *ip,
         if (dst.bytelen)
 		addattr_l(&req1.n, sizeof(req1), RTA_DST, &dst.data,
 			  dst.bytelen);
-	HIP_IFEL((rtnl_open_byproto(&rth, 0, NETLINK_ROUTE) < 0), -1,
-		"Failed to open netlink xfrm routing socket\n");
 
-	ll_init_map(&rth, idxmap);
+	ll_init_map(rth, idxmap);
 
 	HIP_IFEL(((idx = ll_name_to_index(dev, idxmap)) == 0), -1,
 		"ll_name_to_index failed\n");
 
 	addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
 
-        HIP_IFEL((netlink_talk(&rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+        HIP_IFEL((netlink_talk(rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 		"netlink_talk failed\n");
 
  out_err:
-	rtnl_close(&rth);
 
         return 0;
 }
@@ -596,10 +593,9 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	return 0;
 }
 
-int hip_ipaddr_modify(int cmd, int family, char *ip, char *dev,
-		      struct idxmap **idxmap)
+int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
+		      char *dev, struct idxmap **idxmap)
 {
-        struct rtnl_handle rth;
         struct {
                 struct nlmsghdr         n;
                 struct ifaddrmsg        ifa;
@@ -626,62 +622,15 @@ int hip_ipaddr_modify(int cmd, int family, char *ip, char *dev,
 	if (req.ifa.ifa_prefixlen == 0)
                 req.ifa.ifa_prefixlen = lcl.bitlen;
 
-        HIP_IFEL((rtnl_open_byproto(&rth, 0, NETLINK_ROUTE) < 0), -1,
-		 "Routing socket creation failed\n");
-
         HIP_IFEL(((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0),
 		 -1, "ll_name_to_index failed\n");
 
-        HIP_IFEL((netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+        HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 		 "netlink talk failed\n");
 
  out_err:
-	rtnl_close(&rth);
 
 	return 0;
-}
-
-int hip_add_iface_local_hit(const hip_hit_t *local_hit)
-{
-	int err = 0;
-	char *hit_str = NULL;
-	struct idxmap *idxmap[16] = {0};
-
-	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR))), -1);
-	HIP_DEBUG("Adding HIT: %s\n", hit_str);
-
-	HIP_IFE(hip_ipaddr_modify(RTM_NEWADDR, AF_INET6, hit_str,
-				  HIP_HIT_DEV, idxmap), -1);
-
- out_err:
-
-	if (hit_str)
-		HIP_FREE(hit_str);
-	
-	return err;
-}
-
-int hip_add_iface_local_route(const hip_hit_t *local_hit)
-{
-	int err = 0;
-	char *hit_str = NULL;
-	struct idxmap *idxmap[16] = {0};
-
-	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
-
-	HIP_DEBUG("Adding local route: %s\n", hit_str);
-	
-	HIP_IFE(hip_iproute_modify(RTM_NEWROUTE,  NLM_F_CREATE|NLM_F_EXCL,
-				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
-		-1);
-
- out_err:
-
-	if (hit_str)
-		HIP_FREE(hit_str);
-	
-	
-	return err;
 }
 
 /**
@@ -839,8 +788,10 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 		/* calculate length of the converted values(real key) */
 		len = (plen + 1) / 2;
 
-		if (len > max)
+		if (len > max) {
 			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
+			return -1;
+		}
 
 		for (i = - (plen % 2), j = 0; j < len; i += 2, j++) {
 			char vbuf[3];
@@ -858,8 +809,10 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 	} else {
 		len = slen;
 		if (len > 0) {
-			if (len > max)
+			if (len > max) {
+				return -1;
 				HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
+			}
 
 			strncpy(alg->alg_key, key, len);
 		}
@@ -1252,37 +1205,4 @@ skip_it:
         }
 }
 
-int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
-{
-	int err = 0;
-	int family = AF_INET6;
-	char src_str[INET6_ADDRSTRLEN], dst_str[INET6_ADDRSTRLEN];
-	struct rtnl_handle rth;
-	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { "0",};
-	struct idxmap *idxmap[16] = { 0 };
-	
-	/* rtnl_rtdsfield_initialize() */
-        rtnl_rtdsfield_init = 1;
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",
-                            rtnl_rtdsfield_tab, 256);
-
-	HIP_IFEL((!inet_ntop(family, dst, dst_str, INET6_ADDRSTRLEN)), -1,
-		 "inet_pton\n");
-
-	/* XX FIXME: or NETLINK_ROUTE ?? */
-	HIP_IFEL(rtnl_open_byproto(&rth, 0, NETLINK_XFRM), -1,
-		 "Failed to open netlink socket\n");
-		
-	HIP_IFEL(hip_iproute_get(&rth, src_str, dst_str, NULL, NULL,
-				 family, idxmap), -1,
-		 "Finding ip route failed\n");
-
-	HIP_IFEL(inet_pton(family, src_str, src), -1, "inet_ntop\n");
-
- out_err:
-	rtnl_close(&rth);
-
-	return err;
-}
 

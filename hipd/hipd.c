@@ -19,7 +19,13 @@ int hip_raw_sock = 0;
 int hip_user_sock = 0;
 struct sockaddr_un user_addr;
 
+/* For receiving events (acquire, new IP addresses) */
 struct rtnl_handle nl_ifaddr;
+
+/* For getting/setting routes and adding HITs (it was not possible to use
+   nf_ifaddr for this purpose). */
+struct rtnl_handle nl_route_only;
+
 time_t load_time;
 
 void usage() {
@@ -123,11 +129,14 @@ void hip_exit(int signal) {
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
-	// rtnl_close(&rtnl);
 	if (hip_raw_sock)
 		close(hip_raw_sock);
 	if (hip_user_sock)
 		close(hip_user_sock);
+	if (nl_ifaddr.fd)
+		rtnl_close(nl_ifaddr);
+	if (nl_route_only.fd)
+		rtnl_close(nl_route_only);
 
 	exit(signal);
 }
@@ -216,6 +225,12 @@ int main(int argc, char *argv[]) {
 
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
+
+	if (rtnl_open_byproto(&nl_route_only, 0, NETLINK_ROUTE) < 0) {
+		err = 1;
+		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
+		goto out_err;
+	}
 
 	/* Open the netlink socket for address and IF events */
 	if (rtnl_open_byproto(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
@@ -333,6 +348,8 @@ out_err:
 		close(hip_user_sock);
 	if (nl_ifaddr.fd)
 		rtnl_close(nl_ifaddr);
+	if (nl_route_only.fd)
+		rtnl_close(nl_route_only);
 
 	delete_all_addresses();
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);

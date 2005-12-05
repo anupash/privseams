@@ -6,10 +6,10 @@
 #endif
 
 #include <errno.h>
-#include <hip.h>
 
-#include "debug.h"
 #include "nlink.h"
+#include "debug.h"
+#include "hip.h"
 
 #define HIP_DAEMON_PORT 3030
 

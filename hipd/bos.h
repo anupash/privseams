@@ -4,12 +4,12 @@
 #include <sys/types.h>
 #include <netdb.h>
 
+#include "nlink.h"
 #include "hip.h"
 #include "debug.h"
 #include "beet.h"
 #include "hidb.h"
 #include "hadb.h"
-#include "nlink.h"
 #include "list.h"
 #include "netdev.h"
 

@@ -28,16 +28,6 @@ struct netdev_address {
 	int if_index;
 };
 
-#if 0
-struct hip_nl_handle {
-        int                     fd;
-        struct sockaddr_nl      local;
-        struct sockaddr_nl      peer;
-        __u32                   seq;
-        __u32                   dump;
-};
-#endif
-
 struct idxmap
 {
         struct idxmap * next;
