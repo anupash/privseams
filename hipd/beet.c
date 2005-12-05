@@ -13,12 +13,11 @@
  *
  * Returns: 0 if successful, else < 0
  */
-int hip_xfrm_policy_modify(struct rtnl_handle *rth,
-			   int cmd, struct in6_addr *hit_our,
-			   struct in6_addr *hit_peer,
+int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
+			   hip_hit_t *hit_our, hip_hit_t *hit_peer,
 			   struct in6_addr *tmpl_saddr,
-			   struct in6_addr *tmpl_daddr, int dir,
-			   __u8 proto, u8 hit_prefix,
+			   struct in6_addr *tmpl_daddr,
+			   int dir, u8 proto, u8 hit_prefix,
 			   int preferred_family)
 {
 	struct {
@@ -45,7 +44,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth,
 
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, 0,
-				  hit_prefix, preferred_family), -1);
+				   hit_prefix, preferred_family), -1);
 
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
@@ -63,8 +62,8 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth,
 	tmpl->optional = 0; /* required */
 	tmpls_len += sizeof(*tmpl);
 	if (tmpl_saddr && tmpl_daddr) {
-		HIP_HEXDUMP("tmpl_saddr", tmpl_saddr, 16);
-		HIP_HEXDUMP("tmpl_daddr", tmpl_daddr, 16);
+		HIP_DEBUG_IN6ADDR("tmpl_saddr", tmpl_saddr);
+		HIP_DEBUG_IN6ADDR("tmpl_daddr", tmpl_daddr);
 		memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
 		memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
 	}
@@ -301,7 +300,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
 
-	HIP_IFE(hip_xfrm_state_modify(&nl_ifaddr, XFRM_MSG_NEWSA,
+	HIP_IFE(hip_xfrm_state_modify(&nl_ipsec, XFRM_MSG_NEWSA,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
@@ -320,12 +319,12 @@ int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 
 	/* XX FIXME: remove the proto argument */
 
-	HIP_IFE(hip_xfrm_policy_modify(&nl_ifaddr, XFRM_MSG_NEWPOLICY,
+	HIP_IFE(hip_xfrm_policy_modify(&nl_ipsec, XFRM_MSG_NEWPOLICY,
 				       dst_hit, src_hit,
 				       src_addr, dst_addr,
 				       XFRM_POLICY_IN, proto, prefix,
 				       AF_INET6), -1);
-	HIP_IFE(hip_xfrm_policy_modify(&nl_ifaddr, XFRM_MSG_NEWPOLICY,
+	HIP_IFE(hip_xfrm_policy_modify(&nl_ipsec, XFRM_MSG_NEWPOLICY,
 				       src_hit, dst_hit,
 				       dst_addr, src_addr,
 				       XFRM_POLICY_OUT, proto, prefix,
@@ -339,9 +338,9 @@ void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 {
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
-	hip_xfrm_policy_delete(&nl_ifaddr, src_hit, src_hit, XFRM_POLICY_IN,
+	hip_xfrm_policy_delete(&nl_ipsec, src_hit, src_hit, XFRM_POLICY_IN,
 			       proto, prefix, AF_INET6);
-	hip_xfrm_policy_delete(&nl_ifaddr, dst_hit, dst_hit, XFRM_POLICY_OUT,
+	hip_xfrm_policy_delete(&nl_ipsec, dst_hit, dst_hit, XFRM_POLICY_OUT,
 			       proto, prefix, AF_INET6);
 }
 

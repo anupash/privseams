@@ -2,7 +2,7 @@
 
 /*
  * Note that most of the functions are modified versions of
- * libnetlink functions (the originals were buggy...).
+ * libnetlink functions.
  */
 
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data, 
@@ -519,9 +519,36 @@ int hip_iproute_modify(struct rtnl_handle *rth,
         return 0;
 }
 
+int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
+{
+	struct rtmsg *r = NLMSG_DATA(n);
+        struct rtattr *tb[RTA_MAX+1];
+	int err = 0;
+
+	/* see print_route() in ip/iproute.c */
+
+        parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
+
+	if (tb[RTA_SRC]) {
+		HIP_ASSERT(r->rtm_family == AF_INET6 &&
+			   (r->rtm_src_len+7)/8 == sizeof(struct in6_addr));
+		memcpy(src_addr, RTA_DATA(tb[RTA_SRC]), (r->rtm_src_len+7)/8);
+	} else if (tb[RTA_PREFSRC]) {
+		HIP_ASSERT(r->rtm_family == AF_INET6);
+		memcpy(src_addr, RTA_DATA(tb[RTA_PREFSRC]),
+		       sizeof(struct in6_addr));
+	} else {
+		HIP_ERROR("Could not find a source route\n");
+	}
+
+ out_err:
+
+	return err;
+}
+
 int hip_iproute_get(struct rtnl_handle *rth,
-		    char *from,
-		    char *to,
+		    struct in6_addr *src_addr,
+		    struct in6_addr *dst_addr,
 		    char *idev,
 		    char *odev,
 		    int preferred_family,
@@ -532,9 +559,16 @@ int hip_iproute_get(struct rtnl_handle *rth,
 		struct rtmsg 		r;
 		char   			buf[1024];
 	} req;
-	int from_ok = 0;
+	int err = 0, idx;
 	inet_prefix addr;
-			
+	char dst_str[INET6_ADDRSTRLEN];
+
+	HIP_ASSERT(dst_addr);
+
+	HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
+			     INET6_ADDRSTRLEN)), -1,
+		 "inet_pton\n");
+
 	memset(&req, 0, sizeof(req));
 
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
@@ -549,48 +583,32 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	req.r.rtm_dst_len = 0;
 	req.r.rtm_tos = 0;
 	
-	HIP_ASSERT(to);
-
-	get_prefix(&addr, to, req.r.rtm_family);
-	if (req.r.rtm_family == AF_UNSPEC)
-		req.r.rtm_family = addr.family;
+	get_prefix(&addr, dst_str, req.r.rtm_family);
 	if (addr.bytelen)
 		addattr_l(&req.n, sizeof(req), RTA_DST, &addr.data,
 			  addr.bytelen);
 	req.r.rtm_dst_len = addr.bitlen;
 
-	ll_init_map(&rth);
+	ll_init_map(rth, idxmap);
 
-	if (idev || odev)  {
-		int idx;
-
-		if (idev) {
-			if ((idx = ll_name_to_index(idev, idxmap)) == 0) {
-				HIP_ERROR("Cannot find device \"%s\"\n", idev);
-				return -1;
-			}
-			addattr32(&req.n, sizeof(req), RTA_IIF, idx);
-		}
-		if (odev) {
-			if ((idx = ll_name_to_index(odev, idxmap)) == 0) {
-				HIP_ERROR("Cannot find device \"%s\"\n", odev);
-				return -1;
-			}
-			addattr32(&req.n, sizeof(req), RTA_OIF, idx);
-		}
+	if (idev) {
+		HIP_IFEL(((idx = ll_name_to_index(idev, idxmap)) == 0),
+			 -1, "Cannot find device \"%s\"\n", idev);
+		addattr32(&req.n, sizeof(req), RTA_IIF, idx);
+	}
+	if (odev) {
+		HIP_IFEL(((idx = ll_name_to_index(odev, idxmap)) == 0),
+			 -1, "Cannot find device \"%s\"\n", odev);
+		addattr32(&req.n, sizeof(req), RTA_OIF, idx);
 	}
 
-	if (req.r.rtm_family == AF_UNSPEC)
-		req.r.rtm_family = AF_INET;
+	HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
 
-	if (rtnl_talk(&rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0)
-		return -1;
+	HIP_IFE(hip_parse_src_addr(&req.n, dst_addr), -1);
 
-	/* XX FIXME: write the source address to "src" from rtnl answer.
-	   See iproute2-051007/lib/iproute.c:print_route */
-	HIP_ASSERT(0);
+ out_err:
 
-	return 0;
+	return err;
 }
 
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
@@ -725,7 +743,6 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	memcpy(&sel->daddr, hit_peer, sizeof(sel->daddr));
 	memcpy(&sel->saddr, hit_our, sizeof(sel->saddr));
 
-	/* FIXME */
 	if (proto) {
 		HIP_DEBUG("proto = %d\n", proto);
 		sel->proto = proto;
@@ -999,7 +1016,8 @@ int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
                 rta = RTA_NEXT(rta,len);
         }
         if (len)
-                HIP_ERROR("!!!Deficit %d, rta_len=%d\n", len, rta->rta_len);
+                HIP_ERROR("!!!Deficit len %d, rta_len=%d\n",
+			  len, rta->rta_len);
         return 0;
 }
 

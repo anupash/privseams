@@ -507,7 +507,7 @@ int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR))), -1);
 	HIP_DEBUG("Adding HIT: %s\n", hit_str);
 
-	HIP_IFE(hip_ipaddr_modify(&nl_route_only, RTM_NEWADDR, AF_INET6,
+	HIP_IFE(hip_ipaddr_modify(&nl_route, RTM_NEWADDR, AF_INET6,
 				  hit_str, HIP_HIT_DEV, idxmap), -1);
 
  out_err:
@@ -528,7 +528,7 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 
 	HIP_DEBUG("Adding local route: %s\n", hit_str);
 	
-	HIP_IFE(hip_iproute_modify(&nl_route_only, RTM_NEWROUTE,
+	HIP_IFE(hip_iproute_modify(&nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
 				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
 		-1);
@@ -547,7 +547,6 @@ int hip_select_source_address(struct in6_addr *src,
 {
 	int err = 0;
 	int family = AF_INET6;
-	char src_str[INET6_ADDRSTRLEN], dst_str[INET6_ADDRSTRLEN];
 	int rtnl_rtdsfield_init;
 	char *rtnl_rtdsfield_tab[256] = { "0",};
 	struct idxmap *idxmap[16] = { 0 };
@@ -557,15 +556,11 @@ int hip_select_source_address(struct in6_addr *src,
         rtnl_tab_initialize("/etc/iproute2/rt_dsfield",
                             rtnl_rtdsfield_tab, 256);
 
-	HIP_IFEL((!inet_ntop(family, dst, dst_str, INET6_ADDRSTRLEN)), -1,
-		 "inet_pton\n");
-
-	HIP_IFEL(hip_iproute_get(&nl_route_only, src_str, dst_str, NULL, NULL,
+	HIP_IFEL(hip_iproute_get(&nl_route, src, dst, NULL, NULL,
 				 family, idxmap), -1,
 		 "Finding ip route failed\n");
 
-	HIP_IFEL(inet_pton(family, src_str, src), -1, "inet_ntop\n");
-
+	HIP_DEBUG_IN6ADDR("src", src);
  out_err:
 
 	return err;
