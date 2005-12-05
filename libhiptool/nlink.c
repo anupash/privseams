@@ -29,7 +29,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
  * function that processes only a finite amount of messages and then
  * returns. 
 */
-int hip_netlink_receive(struct hip_nl_handle *nl, 
+int hip_netlink_receive(struct rtnl_handle *nl, 
 			hip_filter_t handler,
 			void *arg) 
 {
@@ -115,7 +115,7 @@ int hip_netlink_receive(struct hip_nl_handle *nl,
  * handling of message source/destination validation and proper buffer
  * handling for junk messages.
  */
-int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
+int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			unsigned groups, struct nlmsghdr *answer,
 			hip_filter_t junk, void *arg)
 {
@@ -236,7 +236,7 @@ int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
 }
 
 
-int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
+int hip_netlink_send_buf(struct rtnl_handle *rth, const char *buf, int len)
 {
         struct sockaddr_nl nladdr;
 
@@ -246,7 +246,8 @@ int hip_netlink_send_buf(struct hip_nl_handle *rth, const char *buf, int len)
         return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
 
-int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int protocol)
+int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
+			  int protocol)
 {
         socklen_t addr_len;
         int sndbuf = 32768;
@@ -295,7 +296,7 @@ int hip_netlink_open(struct hip_nl_handle *rth, unsigned subscriptions, int prot
         return 0;
 }
 
-void hip_netlink_close(struct hip_nl_handle *rth)
+void rtnl_close(struct rtnl_handle *rth)
 {
 	close(rth->fd);
 }
@@ -468,14 +469,14 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 int hip_iproute_modify(int cmd, int flags, int family, char *ip,
 		       char *dev, struct idxmap **idxmap)
 {
-        struct hip_nl_handle rth;
+        struct rtnl_handle rth;
         struct {
                 struct nlmsghdr         n;
                 struct rtmsg            r;
                 char                    buf[1024];
         } req1;
         inet_prefix dst;
-        int dst_ok = 0;
+        int dst_ok = 0, err;
         int idx;
         memset(&req1, 0, sizeof(req1));
 
@@ -494,37 +495,40 @@ int hip_iproute_modify(int cmd, int flags, int family, char *ip,
 
 	HIP_DEBUG("Setting %s as route for %s device with family %d\n",
 		  ip, dev, family);
-        get_prefix_1(&dst, ip, req1.r.rtm_family);
+        HIP_IFEL(get_prefix_1(&dst, ip, req1.r.rtm_family), -1, "prefix\n");
         //if (req.r.rtm_family == AF_UNSPEC)
                 //req.r.rtm_family = dst.family;
         req1.r.rtm_dst_len = dst.bitlen;
         dst_ok = 1;
         if (dst.bytelen)
-        addattr_l(&req1.n, sizeof(req1), RTA_DST, &dst.data, dst.bytelen);
-	if (hip_netlink_open(&rth, 0, NETLINK_ROUTE) < 0)
-                return -1;
+		addattr_l(&req1.n, sizeof(req1), RTA_DST, &dst.data,
+			  dst.bytelen);
+	HIP_IFEL((rtnl_open_byproto(&rth, 0, NETLINK_ROUTE) < 0), -1,
+		"Failed to open netlink xfrm routing socket\n");
 
 	ll_init_map(&rth, idxmap);
 
-	if ((idx = ll_name_to_index(dev, idxmap)) == 0) {
-		HIP_ERROR("Cannot find device \"%s\"\n", dev);
-		return -1;
-	}
+	HIP_IFEL(((idx = ll_name_to_index(dev, idxmap)) == 0), -1,
+		"ll_name_to_index failed\n");
+
 	addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
 
-        if (netlink_talk(&rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0)
-                return -1;
+        HIP_IFEL((netlink_talk(&rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+		"netlink_talk failed\n");
+
+ out_err:
+	rtnl_close(&rth);
 
         return 0;
 }
 
-int hip_iproute_get_src(struct rtnl_handle *rth,
-			char *from,
-			char *to,
-			char *idev,
-			char *odev,
-			int preferred_family,
-			struct idxmap **idxmap)
+int hip_iproute_get(struct rtnl_handle *rth,
+		    char *from,
+		    char *to,
+		    char *idev,
+		    char *odev,
+		    int preferred_family,
+		    struct idxmap **idxmap)
 {
 	struct {
 		struct nlmsghdr 	n;
@@ -595,7 +599,7 @@ int hip_iproute_get_src(struct rtnl_handle *rth,
 int hip_ipaddr_modify(int cmd, int family, char *ip, char *dev,
 		      struct idxmap **idxmap)
 {
-        struct hip_nl_handle rth;
+        struct rtnl_handle rth;
         struct {
                 struct nlmsghdr         n;
                 struct ifaddrmsg        ifa;
@@ -603,8 +607,9 @@ int hip_ipaddr_modify(int cmd, int family, char *ip, char *dev,
         } req;
         char  *lcl_arg = NULL;
         inet_prefix lcl;
-        int local_len = 0;
+        int local_len = 0, err = 0;
         inet_prefix addr;
+
         memset(&req, 0, sizeof(req));
 
         req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
@@ -621,15 +626,17 @@ int hip_ipaddr_modify(int cmd, int family, char *ip, char *dev,
 	if (req.ifa.ifa_prefixlen == 0)
                 req.ifa.ifa_prefixlen = lcl.bitlen;
 
-        if (hip_netlink_open(&rth, 0, NETLINK_ROUTE) < 0)
-                return -1;
+        HIP_IFEL((rtnl_open_byproto(&rth, 0, NETLINK_ROUTE) < 0), -1,
+		 "Routing socket creation failed\n");
 
-        if ((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0) {
-                HIP_ERROR("Cannot find device \"%s\"\n", dev);
-                return -1;
-	}
-        if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
-                return -1;
+        HIP_IFEL(((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0),
+		 -1, "ll_name_to_index failed\n");
+
+        HIP_IFEL((netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+		 "netlink talk failed\n");
+
+ out_err:
+	rtnl_close(&rth);
 
 	return 0;
 }
@@ -697,7 +704,7 @@ int get_ctl_fd(void)
         if (fd >= 0)
                 return fd;
         errno = s_errno;
-        perror("Cannot create control socket");
+        HIP_PERROR("Cannot create control socket");
         return -1;
 }
 
@@ -714,7 +721,7 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
                 return -1;
         err = ioctl(fd, SIOCGIFFLAGS, &ifr);
         if (err) {
-                perror("SIOCGIFFLAGS");
+                HIP_PERROR("SIOCGIFFLAGS");
                 close(fd);
                 return -1;
         }
@@ -723,7 +730,7 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
                 ifr.ifr_flags |= mask&flags;
                 err = ioctl(fd, SIOCSIFFLAGS, &ifr);
                 if (err)
-                        perror("SIOCSIFFLAGS");
+                        HIP_PERROR("SIOCSIFFLAGS");
         }
         close(fd);
         return err;
@@ -1019,7 +1026,7 @@ int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
 int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
 {
         if (rtnl_wilddump_request(rth, AF_UNSPEC, RTM_GETLINK) < 0) {
-                perror("Cannot send dump request");
+                HIP_PERROR("Cannot send dump request");
                 return -1;
         }
 
@@ -1077,7 +1084,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
         status = sendmsg(rtnl->fd, &msg, 0);
 
         if (status < 0) {
-                perror("Cannot talk to rtnetlink");
+                HIP_PERROR("Cannot talk to rtnetlink");
                 return -1;
         }
 
@@ -1092,7 +1099,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                 if (status < 0) {
                         if (errno == EINTR)
                                 continue;
-                        perror("OVERRUN");
+                        HIP_PERROR("OVERRUN");
                         continue;
                 }
                 if (status == 0) {
@@ -1139,7 +1146,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                                                         memcpy(answer, h, h->nlmsg_len);
                                                 return 0;
                                         }
-                                        perror("RTNETLINK answers");
+                                        HIP_PERROR("RTNETLINK answers");
                                 }
                                 return -1;
                         }
@@ -1191,7 +1198,7 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
                 if (status < 0) {
                         if (errno == EINTR)
                                 continue;
-                        perror("OVERRUN");
+                        HIP_PERROR("OVERRUN");
                         continue;
                 }
 
@@ -1223,7 +1230,7 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
                                         HIP_ERROR("ERROR truncated\n");
                                 } else {
                                         errno = -err->error;
-                                        perror("RTNETLINK answers");
+                                        HIP_PERROR("RTNETLINK answers");
                                 }
                                 return -1;
                         }
@@ -1243,61 +1250,6 @@ skip_it:
                         return -1;
                 }
         }
-}
-
-void rtnl_close(struct rtnl_handle *rth)
-{
-        close(rth->fd);
-}
-
-int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
-                      int protocol)
-{
-        socklen_t addr_len;
-        int sndbuf = 32768;
-        int rcvbuf = 32768;
-
-        memset(rth, 0, sizeof(struct rtnl_handle));
-
-        rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
-        if (rth->fd < 0) {
-                perror("Cannot open netlink socket");
-                return -1;
-        }
-
-        if (setsockopt(rth->fd,SOL_SOCKET,SO_SNDBUF,&sndbuf,sizeof(sndbuf)) < 0) {
-                perror("SO_SNDBUF");
-                return -1;
-        }
-
-        if (setsockopt(rth->fd,SOL_SOCKET,SO_RCVBUF,&rcvbuf,sizeof(rcvbuf)) < 0) {
-                perror("SO_RCVBUF");
-                return -1;
-        }
-
-        memset(&rth->local, 0, sizeof(rth->local));
-        rth->local.nl_family = AF_NETLINK;
-        rth->local.nl_groups = subscriptions;
-
-        if (bind(rth->fd, (struct sockaddr*)&rth->local, sizeof(rth->local)) < 0) {
-                perror("Cannot bind netlink socket");
-                return -1;
-        }
-        addr_len = sizeof(rth->local);
-        if (getsockname(rth->fd, (struct sockaddr*)&rth->local, &addr_len) < 0) {
-                perror("Cannot getsockname");
-                return -1;
-        }
-        if (addr_len != sizeof(rth->local)) {
-                HIP_ERROR("Wrong address length %d\n", addr_len);
-                return -1;
-        }
-        if (rth->local.nl_family != AF_NETLINK) {
-                HIP_ERROR("Wrong address family %d\n", rth->local.nl_family);
-                return -1;
-        }
-        rth->seq = time(NULL);
-        return 0;
 }
 
 int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
@@ -1322,8 +1274,8 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 	HIP_IFEL(rtnl_open_byproto(&rth, 0, NETLINK_XFRM), -1,
 		 "Failed to open netlink socket\n");
 		
-	HIP_IFEL(hip_iproute_get_src(&rth, src_str, dst_str, NULL, NULL,
-				     family, idxmap), -1,
+	HIP_IFEL(hip_iproute_get(&rth, src_str, dst_str, NULL, NULL,
+				 family, idxmap), -1,
 		 "Finding ip route failed\n");
 
 	HIP_IFEL(inet_pton(family, src_str, src), -1, "inet_ntop\n");

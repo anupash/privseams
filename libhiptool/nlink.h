@@ -28,6 +28,7 @@ struct netdev_address {
 	int if_index;
 };
 
+#if 0
 struct hip_nl_handle {
         int                     fd;
         struct sockaddr_nl      local;
@@ -35,6 +36,7 @@ struct hip_nl_handle {
         __u32                   seq;
         __u32                   dump;
 };
+#endif
 
 struct idxmap
 {
@@ -75,15 +77,15 @@ int set_up_device(char *dev, int up);
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data, 
 	      int alen);
 
-int hip_netlink_open(struct hip_nl_handle *nl, unsigned subscriptions, int protocol);
-int hip_netlink_receive(struct hip_nl_handle *nl, hip_filter_t handler, void *arg);
-int hip_netlink_send_buf(struct hip_nl_handle *nl, const char *buf, int len);
+int hip_netlink_open(struct rtnl_handle *nl, unsigned subscriptions, int protocol);
+int hip_netlink_receive(struct rtnl_handle *nl, hip_filter_t handler, void *arg);
+int hip_netlink_send_buf(struct rtnl_handle *nl, const char *buf, int len);
 int hip_netlink_receive_workorder(const struct nlmsghdr *n, int len, void *arg);
-int netlink_talk(struct hip_nl_handle *nl, struct nlmsghdr *n, pid_t peer,
+int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			unsigned groups, struct nlmsghdr *answer,
 		 hip_filter_t junk, void *arg);
-int hip_netlink_talk(struct hip_nl_handle *nl, struct hip_work_order *req, struct hip_work_order *resp);
+int hip_netlink_talk(struct rtnl_handle *nl, struct hip_work_order *req, struct hip_work_order *resp);
 int hip_netlink_send(struct hip_work_order *hwo);
-void hip_netlink_close(struct hip_nl_handle *rth);
+void hip_netlink_close(struct rtnl_handle *rth);
 
 #endif /* _HIP_NLINK_H */

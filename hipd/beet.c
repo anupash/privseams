@@ -20,8 +20,7 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 			   __u8 proto, u8 hit_prefix,
 			   int preferred_family)
 {
-
-	struct hip_nl_handle rth;
+	struct rtnl_handle rth;
 	struct {
 		struct nlmsghdr			n;
 		struct xfrm_userpolicy_info	xpinfo;
@@ -73,7 +72,7 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 	addattr_l(&req.n, sizeof(req), XFRMA_TMPL,
 		  (void *)tmpls_buf, tmpls_len);
 
-	if (hip_netlink_open(&rth, 0, NETLINK_XFRM) < 0)
+	if (rtnl_open_byproto(&rth, 0, NETLINK_XFRM) < 0)
 		return -1;
 
 	if (req.xpinfo.sel.family == AF_UNSPEC)
@@ -82,7 +81,7 @@ int hip_xfrm_policy_modify(int cmd, struct in6_addr *hit_our,
 	if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
 		return -1;
 
-	hip_netlink_close(&rth);
+	rtnl_close(&rth);
 
 	return 0;
 
@@ -102,7 +101,7 @@ int hip_xfrm_policy_delete(struct in6_addr *hit_our,
 			   u8 hit_prefix,
 			   int preferred_family) {
 
-	struct hip_nl_handle rth;
+	struct rtnl_handle rth;
 	struct {
 		struct nlmsghdr			n;
 		struct xfrm_userpolicy_id	xpid;
@@ -126,14 +125,14 @@ int hip_xfrm_policy_delete(struct in6_addr *hit_our,
 	if (req.xpid.sel.family == AF_UNSPEC)
 		req.xpid.sel.family = AF_INET6;
 
-	if (hip_netlink_open(&rth, 0, NETLINK_XFRM) < 0)
+	if (rtnl_open_byproto(&rth, 0, NETLINK_XFRM) < 0)
 		return -1;
 
 	if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0) {
 		HIP_INFO("No associated policies to be deleted\n");
 	}
 
-	hip_netlink_close(&rth);
+	rtnl_close(&rth);
 
 	return 0;
 }
@@ -162,7 +161,7 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 			  int preferred_family)
 {
 
-	struct hip_nl_handle rth;
+	struct rtnl_handle rth;
 	struct {
 		struct nlmsghdr 	n;
 		struct xfrm_usersa_info xsinfo;
@@ -230,13 +229,13 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 
 	}
 
-	if (hip_netlink_open(&rth, 0, NETLINK_XFRM) < 0)
+	if (rtnl_open_byproto(&rth, 0, NETLINK_XFRM) < 0)
 		return -1;
 
 	if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
 		return -1;
 
-	hip_netlink_close(&rth);
+	rtnl_close(&rth);
 
 	return 0;
 }
@@ -251,7 +250,7 @@ int hip_xfrm_state_modify(int cmd, struct in6_addr *saddr,
 int hip_xfrm_state_delete(struct in6_addr *peer_addr, __u32 spi,
 			  int preferred_family) {
 
-	struct hip_nl_handle rth;
+	struct rtnl_handle rth;
 	struct {
 		struct nlmsghdr 	n;
 		struct xfrm_usersa_id	xsid;
@@ -270,13 +269,13 @@ int hip_xfrm_state_delete(struct in6_addr *peer_addr, __u32 spi,
 	req.xsid.spi = spi;
 	req.xsid.proto = IPPROTO_ESP;
 
-	if (hip_netlink_open(&rth, 0, NETLINK_XFRM) < 0)
+	if (rtnl_open_byproto(&rth, 0, NETLINK_XFRM) < 0)
 		return -1;
 
 	if (netlink_talk(&rth, &req.n, 0, 0, NULL, NULL, NULL) < 0)
 		return -1;
 
-	hip_netlink_close(&rth);
+	rtnl_close(&rth);
 
 	return 0;
 }

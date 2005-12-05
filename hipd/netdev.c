@@ -209,7 +209,7 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg) {
  * Use the netlink interface to retrieve a list of addresses for this
  * host's interfaces, and stores them into global addresses list.
  */
-int hip_netdev_init_addresses(struct hip_nl_handle *nl)
+int hip_netdev_init_addresses(struct rtnl_handle *nl)
 {
         struct sockaddr_nl nladdr;
         char buf[8192];

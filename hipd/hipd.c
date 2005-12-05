@@ -19,7 +19,7 @@ int hip_raw_sock = 0;
 int hip_user_sock = 0;
 struct sockaddr_un user_addr;
 
-struct hip_nl_handle nl_ifaddr;
+struct rtnl_handle nl_ifaddr;
 time_t load_time;
 
 void usage() {
@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
 	/* Open the netlink socket for address and IF events */
-	if (hip_netlink_open(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&nl_ifaddr, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		err = 1;
 		goto out_err;
@@ -332,7 +332,7 @@ out_err:
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (nl_ifaddr.fd)
-		close(nl_ifaddr.fd);
+		rtnl_close(nl_ifaddr);
 
 	delete_all_addresses();
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);

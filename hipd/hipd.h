@@ -25,7 +25,7 @@
 
 #define HIP_HIT_DEV "dummy0"
 
-extern struct hip_nl_handle nl_khipd;
+extern struct rtnl_handle nl_khipd;
 extern time_t load_time;
 
 #endif /* HIPD_H */
