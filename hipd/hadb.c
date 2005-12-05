@@ -177,7 +177,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 		
 		HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
 		HIP_DEBUG_HIT("hit:", hit);
-		entry = hip_hadb_find_byhits(hit,&our_hit);
+		entry = hip_hadb_find_byhits(hit, &our_hit);
                 if (!entry) {
                         continue;
                 } else {
@@ -241,7 +241,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 }
 
 /* Practically called only by when adding a HIT-IP mapping before bex */
-int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
+int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 {
 	int err = 0;
 	hip_ha_t *entry;
@@ -253,11 +253,11 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 	 * spin_lock_irqsave(&hip_sdb_lock, flags);
 	 */
 
-	HIP_DEBUG_HIT("HIT", hit);
-	HIP_DEBUG_IN6ADDR("addr", addr);
+	HIP_DEBUG_HIT("HIT", peer_hit);
+	HIP_DEBUG_IN6ADDR("addr", peer_addr);
 
 	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
-	entry = hip_hadb_try_to_find_by_peer_hit(hit);
+	entry = hip_hadb_try_to_find_by_peer_hit(peer_hit);
 	if (!entry) {
 		entry = hip_hadb_create_state(GFP_KERNEL);
 		if (!entry) {
@@ -265,22 +265,23 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			return -1;
 		}
 		_HIP_DEBUG("created a new sdb entry\n");
-		ipv6_addr_copy(&entry->hit_peer, hit);
+		ipv6_addr_copy(&entry->hit_peer, peer_hit);
 
 		/* XXX: This is wrong. As soon as we have native socket API, we
 		 * should enter here the correct sender... (currently unknown).
 		 */
 		if (!hip_init_us(entry, NULL))
-			_HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
-		else 
+			HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
+		else
 			HIP_INFO("Could not assign local hit, continuing\n");
+
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry); /* released at the end */
 	}
 
 	/* add initial HIT-IP mapping */
 	if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
-		err = hip_hadb_add_peer_addr(entry, addr, 0, 0,
+		err = hip_hadb_add_peer_addr(entry, peer_addr, 0, 0,
 					     PEER_ADDR_STATE_ACTIVE);
 		if (err) {
 			HIP_ERROR("error while adding a new peer address\n");
@@ -288,8 +289,8 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 			goto out_err;
 		}
 
-		HIP_IFEL(hip_select_source_address(&entry->preferred_address,
-							addr), -1,
+		HIP_IFEL(hip_select_source_address(&entry->local_address,
+							peer_addr), -1,
 			 "Cannot find source address\n");
 
 		/*
@@ -300,9 +301,9 @@ int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr)
 		 * alternative b) add SP pair for all local HITs
 		 *
 		 */
-		HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, hit,
-					       &entry->preferred_address, addr,
-					       0, 0), -1,
+		HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, peer_hit,
+					       &entry->local_address,
+					       peer_addr, 0, 0), -1,
 			 "Error in setting the SPs\n");
 	} else
 		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",

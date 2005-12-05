@@ -604,7 +604,7 @@ int hip_iproute_get(struct rtnl_handle *rth,
 
 	HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
 
-	HIP_IFE(hip_parse_src_addr(&req.n, dst_addr), -1);
+	HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
 
  out_err:
 

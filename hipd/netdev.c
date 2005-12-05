@@ -284,7 +284,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG("Acquire: sending I1\n");
 
 	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
-	dst_hit = (struct in6_addr *) &acq->id.daddr;
+	dst_hit = (struct in6_addr *) &acq->sel.daddr;
 	entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 
 	if (!entry) {

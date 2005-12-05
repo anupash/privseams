@@ -918,9 +918,9 @@ struct hip_hadb_state
 	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
 	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
 	uint32_t             default_spi_out;
-	struct in6_addr      preferred_address; /* preferred dst address to use when
+	struct in6_addr      preferred_address; /* preferred peer address to use when
 						 * sending data to peer */
-  //	struct in6_addr      local_address;   /* Local IP address: given by acquire? */
+        struct in6_addr      local_address;   /* Our IP address */
   //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 	uint32_t             lsi_peer;
 	uint32_t             lsi_our;
