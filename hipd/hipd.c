@@ -326,7 +326,7 @@ int main(int argc, char *argv[]) {
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
-			if (hip_read_control_msg(hip_user_sock, hip_msg))
+			if (hip_read_control_msg(hip_user_sock, hip_msg, 0, NULL, NULL))
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				hip_handle_user_msg(hip_msg);
