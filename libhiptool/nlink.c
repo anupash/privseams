@@ -250,50 +250,45 @@ int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
 			  int protocol)
 {
         socklen_t addr_len;
-        int sndbuf = 32768;
-        int rcvbuf = 32768;
+        int sndbuf = 32768, rcvbuf = 32768;
+	int err = 0, on = 1;
 
         memset(rth, 0, sizeof(rth));
 
-        rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
-        if (rth->fd < 0) {
-                HIP_PERROR("Cannot open a netlink socket");
-                return -1;
-        }
+        HIP_IFEL((rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol) < 0),
+		-1, "Cannot open a netlink socket");
+
 	_HIP_DEBUG("setsockopt SO_SNDBUF\n");
-        if (setsockopt(rth->fd,SOL_SOCKET,SO_SNDBUF,&sndbuf,sizeof(sndbuf)) < 0) {
-                HIP_PERROR("SO_SNDBUF");
-                return -1;
-        }
+        HIP_IFEL((setsockopt(rth->fd,SOL_SOCKET, SO_SNDBUF, &sndbuf,
+			     sizeof(sndbuf)) < 0), -1, "SO_SNDBUF");
+
 	_HIP_DEBUG("setsockopt SO_RCVBUF\n");
-        if (setsockopt(rth->fd,SOL_SOCKET,SO_RCVBUF,&rcvbuf,sizeof(rcvbuf)) < 0) {
-                HIP_PERROR("SO_RCVBUF");
-                return -1;
-        }
+        HIP_IFEL((setsockopt(rth->fd,SOL_SOCKET, SO_RCVBUF, &rcvbuf,
+			     sizeof(rcvbuf)) < 0), -1, "SO_RCVBUF");
 
         memset(&rth->local, 0, sizeof(rth->local));
         rth->local.nl_family = AF_NETLINK;
         rth->local.nl_groups = subscriptions;
 
-        if (bind(rth->fd, (struct sockaddr*)&rth->local, sizeof(rth->local)) < 0) {
-                HIP_PERROR("Cannot bind a netlink socket");
-                return -1;
-        }
+        HIP_IFEL((bind(rth->fd, (struct sockaddr*)&rth->local,
+		       sizeof(rth->local)) < 0), -1,
+		 "Cannot bind a netlink socket");
+
         addr_len = sizeof(rth->local);
-        if (getsockname(rth->fd, (struct sockaddr*)&rth->local, &addr_len) < 0) {
-                HIP_PERROR("Cannot getsockname");
-                return -1;
-        }
-        if (addr_len != sizeof(rth->local)) {
-                HIP_ERROR("Wrong address length %d\n", addr_len);
-                return -1;
-        }
-        if (rth->local.nl_family != AF_NETLINK) {
-                HIP_ERROR("Wrong address family %d\n", rth->local.nl_family);
-                return -1;
-        }
+        HIP_IFEL((getsockname(rth->fd, (struct sockaddr*)&rth->local,
+			      &addr_len) < 0), -1,
+		 "Cannot getsockname");
+
+        HIP_IFEL((addr_len != sizeof(rth->local)), -1,
+		 "Wrong address length %d\n", addr_len);
+
+        HIP_IFEL((rth->local.nl_family != AF_NETLINK), -1,
+		 "Wrong address family %d\n", rth->local.nl_family);
+
         rth->seq = time(NULL);
-        return 0;
+
+ out_err:
+        return err;
 }
 
 void rtnl_close(struct rtnl_handle *rth)

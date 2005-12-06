@@ -98,8 +98,10 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 		}
 	}
 
+#if 0
 	HIP_IFEL(!pktinfo && read_addr, -1,
 		 "Could not determine IPv6 dst, dropping\n");
+#endif
 
 	if (read_addr) {
 		memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
