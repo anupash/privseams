@@ -315,25 +315,28 @@ int main(int argc, char *argv[]) {
 
 			hip_msg_init(hip_msg);
 		
-			err = hip_read_control_msg(hip_raw_sock, hip_msg, 1,
-						   &saddr, &daddr);
-			if (!err)
+			if (hip_read_control_msg(hip_raw_sock, hip_msg, 1,
+						 &saddr, &daddr))
+				HIP_ERROR("Reading network msg failed\n");
+			else
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr);
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
-			HIP_DEBUG("Receiving user message(?).\n");
+			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
-			err = hip_read_control_msg(hip_user_sock, hip_msg, 0,
-						   NULL, NULL);
-			HIP_IFEL((err = hip_handle_user_msg(hip_msg)),
-				 1, "Handing of user msg failed\n");
+			if (hip_read_control_msg(hip_user_sock, hip_msg))
+				HIP_ERROR("Reading user msg failed\n");
+			else
+				hip_handle_user_msg(hip_msg);
 		} else if (FD_ISSET(nl_event.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
 			HIP_DEBUG("netlink receive\n");
-			hip_netlink_receive(&nl_event, hip_netdev_event, NULL);
+			if (hip_netlink_receive(&nl_event,
+						hip_netdev_event, NULL))
+				HIP_ERROR("Netlink receiving failed\n");
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}
