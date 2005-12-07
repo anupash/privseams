@@ -107,7 +107,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired, int direction);
 
-int hip_delete_sa(u32 spi, struct in6_addr *dst);
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family);
 
 #endif /* HIP_BEET_H */
 

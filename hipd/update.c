@@ -531,7 +531,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* delete old SAs */
 	if (prev_spi_out != new_spi_out) {
 		HIP_DEBUG("REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", prev_spi_out);
-		err = hip_delete_sa(prev_spi_out, hits);
+		/* SA is bounded to IP addresses! */
+		hip_delete_sa(prev_spi_out, hits, AF_INET6);
 		HIP_DEBUG("TODO: set new spi to 0\n");
 		_HIP_DEBUG("delete_sa out retval=%d\n", err);
 		err = 0;
@@ -540,7 +541,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 	if (prev_spi_in != new_spi_in) {
 		HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
-		err = hip_delete_sa(prev_spi_in, hitr);
+		/* SA is bounded to IP addresses! */
+		hip_delete_sa(prev_spi_in, hitr, AF_INET6);
 		/* remove old HIT-SPI mapping and add a new mapping */
 
 		/* actually should change hip_hadb_delete_inbound_spi

@@ -112,6 +112,8 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
 
+void hip_delete_all_sp();
+
 /* Initialization functions */
 
 /* Accessors */

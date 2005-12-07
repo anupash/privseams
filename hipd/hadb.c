@@ -1704,6 +1704,41 @@ void hip_uninit_hadb()
 	}
 }
 
+void hip_delete_all_sp()
+{
+	int i;
+	hip_ha_t *ha, *tmp;
+	//struct hip_hit_spi *hs, *tmp_hs;
+	struct hip_spi_in_item *item, *tmp_spi;
+	HIP_DEBUG("\n");
+
+	HIP_DEBUG("DEBUG: DUMP SPI LISTS\n");
+	//hip_hadb_dump_hs_ht();
+
+	/* I think this is not very safe deallocation.
+	 * Locking the hadb_spi and hadb_hit could be one option, but I'm not
+	 * very sure that it will work, as they are locked later in 
+	 * hip_hadb_remove_state() for a while.
+	 *
+	 * The list traversing is not safe in smp way :(
+	 */
+	HIP_DEBUG("DELETING HA HT\n");
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
+			hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
+
+
+			list_for_each_entry_safe(item, tmp_spi, &ha->spis_out, list) {
+				hip_delete_sa(item->spi, &ha->local_address, AF_INET6);
+			}
+
+			list_for_each_entry_safe(item, tmp_spi, &ha->spis_in, list) {
+				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6);
+			}
+		}
+	}
+}
+
 /**
 * hip_list_peers_add - private function to add an entry to the peer list
 * @addr: IPv6 address
@@ -1874,9 +1909,9 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
  				  item->spi, item->new_spi, item, item->addresses);
 			HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
-			hip_delete_sa(item->spi, &entry->hit_our);
+			hip_delete_sa(item->spi, &entry->hit_our, AF_INET6);
  			if (item->spi != item->new_spi)
- 				hip_delete_sa(item->new_spi, &entry->hit_our);
+ 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6);
  			if (item->addresses) {
  				HIP_DEBUG("deleting stored addrlist 0x%p\n",
  					  item->addresses);
@@ -1902,8 +1937,8 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
-			hip_delete_sa(item->spi, &entry->hit_peer);
-			hip_delete_sa(item->new_spi, &entry->hit_peer);
+			hip_delete_sa(item->spi, &entry->hit_peer, AF_INET6);
+			hip_delete_sa(item->new_spi, &entry->hit_peer, AF_INET6);
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);

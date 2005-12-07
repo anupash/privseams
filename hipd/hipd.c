@@ -118,7 +118,7 @@ int hip_init_raw_sock() {
 void hip_exit(int signal) {
 	HIP_ERROR("Signal: %d\n", signal);
 
-	hip_delete_default_prefix_sp_pair();
+	//hip_delete_default_prefix_sp_pair();
 
 	set_up_device(HIP_HIT_DEV, 0);
 
@@ -132,6 +132,7 @@ void hip_exit(int signal) {
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
+	hip_delete_all_sp();
 	if (hip_raw_sock)
 		close(hip_raw_sock);
 	if (hip_user_sock)
@@ -370,8 +371,9 @@ out_err:
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
 	/* On exit the general policy must be cancelled */
-	HIP_DEBUG("Deleting the General SPs\n");
-	hip_delete_default_prefix_sp_pair();
+	HIP_DEBUG("Deleting the SPs and SAs\n");
+	//hip_delete_default_prefix_sp_pair();
+	hip_delete_all_sp();
 
 	return err;
 }

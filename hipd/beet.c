@@ -265,8 +265,10 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	return err;
 }
 
-int hip_delete_sa(u32 spi, struct in6_addr *dst) {
-	return -1; /* XX FIXME: REWRITE USING XFRM */
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family) {
+
+	hip_xfrm_state_delete(&nl_ipsec, peer_addr, spi, family);
+
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
