@@ -117,10 +117,10 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
 				   hit_prefix, preferred_family), -1);
-
+/*
 	if (req.xpid.sel.family == AF_UNSPEC)
 		req.xpid.sel.family = AF_INET6;
-
+*/
 	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 		 "No associated policies to be deleted\n");
 
@@ -312,19 +312,20 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 			  struct in6_addr *src_addr,
 			  struct in6_addr *dst_addr, u8 proto,
-			  int use_full_prefix)
+			  int use_full_prefix, int update)
 {
 	int err = 0;
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+	int cmd = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
 	/* XX FIXME: remove the proto argument */
 
-	HIP_IFE(hip_xfrm_policy_modify(&nl_ipsec, XFRM_MSG_NEWPOLICY,
+	HIP_IFE(hip_xfrm_policy_modify(&nl_ipsec, cmd,
 				       dst_hit, src_hit,
 				       src_addr, dst_addr,
 				       XFRM_POLICY_IN, proto, prefix,
 				       AF_INET6), -1);
-	HIP_IFE(hip_xfrm_policy_modify(&nl_ipsec, XFRM_MSG_NEWPOLICY,
+	HIP_IFE(hip_xfrm_policy_modify(&nl_ipsec, cmd,
 				       src_hit, dst_hit,
 				       dst_addr, src_addr,
 				       XFRM_POLICY_OUT, proto, prefix,
@@ -338,9 +339,9 @@ void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 {
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
-	hip_xfrm_policy_delete(&nl_ipsec, src_hit, src_hit, XFRM_POLICY_IN,
+	hip_xfrm_policy_delete(&nl_ipsec, dst_hit, src_hit, XFRM_POLICY_IN,
 			       proto, prefix, AF_INET6);
-	hip_xfrm_policy_delete(&nl_ipsec, dst_hit, dst_hit, XFRM_POLICY_OUT,
+	hip_xfrm_policy_delete(&nl_ipsec, src_hit, dst_hit, XFRM_POLICY_OUT,
 			       proto, prefix, AF_INET6);
 }
 
@@ -368,7 +369,7 @@ int hip_setup_default_sp_prefix_pair() {
 	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
 	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
 
-	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0, 0),
+	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0, 0, 0),
 		-1);
 #endif
  out_err:

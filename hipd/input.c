@@ -692,12 +692,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
-#if 0
+//#if 0
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
-				       r1_saddr, r1_daddr, IPPROTO_ESP, 1), -1,
+				       r1_saddr, r1_daddr, IPPROTO_ESP, 1, 1), -1,
 		 "Setting up SP pair failed\n");
-#endif
+	hip_delete_hit_sp_pair(&ctx->input->hits, &ctx->input->hitr, 0, 0);
+//#endif
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
  	HIP_ASSERT(esp_info); /* Builder internal error */
 	esp_info->new_spi = htonl(spi_in);
@@ -1350,7 +1351,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
-				       i2_saddr, i2_daddr, IPPROTO_ESP, 1), -1,
+				       i2_saddr, i2_daddr, IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
 	/* source IPv6 address is implicitly the preferred
@@ -1593,7 +1594,7 @@ int hip_handle_r2(struct hip_common *r2,
 
 	err = hip_add_sa(r2_daddr, r2_saddr, &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
-                        &ctx->esp_out, &ctx->auth_out, retransmission,
+			 &ctx->esp_out, &ctx->auth_out, 1,
 			 HIP_SPI_DIRECTION_OUT);
 //	if (err == -EEXIST) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);

@@ -301,9 +301,9 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		 * alternative b) add SP pair for all local HITs
 		 *
 		 */
-		HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, peer_hit,
+		HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, &entry->hit_our,
 					       &entry->local_address,
-					       peer_addr, 0, 0), -1,
+					       peer_addr, 0, 0, 0), -1,
 			 "Error in setting the SPs\n");
 	} else
 		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
