@@ -255,8 +255,9 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 
 	memcpy(&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
 
-	req.xsid.spi = spi;
-	req.xsid.proto = IPPROTO_ESP;
+	req.xsid.spi = htonl(spi);
+	if (spi)
+		req.xsid.proto = IPPROTO_ESP;
 
 	HIP_IFE((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1);
 
