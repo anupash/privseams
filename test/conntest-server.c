@@ -29,7 +29,6 @@
 #  define __user
 #endif
 #include <signal.h>
-#include "libinet6/debug.h"
 #include "conntest.h"
 
 static void sig_handler(int signo) {

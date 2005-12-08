@@ -77,10 +77,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/if.h>
 #include <ctype.h>
 #include <openssl/dsa.h>
-#include <net/hip.h>
+#include <hip.h>
 
 #include "builder.h"
-#include "libinet6/crypto.h"
+#include "crypto.h"
 #include "libinet6/util.h"
 
 int convert_port_string_to_number(const char *servname, in_port_t *port)
@@ -111,7 +111,7 @@ int convert_port_string_to_number(const char *servname, in_port_t *port)
   return err;
 
 }
-
+#if 0
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
 {
         if (!buf)
@@ -124,7 +124,7 @@ char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
                 ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
         return buf;
 }
-
+#endif
 int setmyeid(struct sockaddr_eid *my_eid,
 	     const char *servname,
 	     const struct endpoint *endpoint,
@@ -199,10 +199,10 @@ int setmyeid(struct sockaddr_eid *my_eid,
     }
   }
 
-  err = hip_get_global_option(msg);
+  err = hip_recv_daemon_info(msg, 0);
   if (err) {
     err = EEI_SYSTEM;
-    HIP_ERROR("Failed to send msg\n");
+    HIP_ERROR("Failed to recv msg\n");
     goto out_err;
   }
 
@@ -307,7 +307,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     }
   }
 
-  err = hip_get_global_option(msg);
+  err = hip_recv_daemon_info(msg, 0);
   if (err) {
     err = EEI_SYSTEM;
     goto out_err;
@@ -714,10 +714,10 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
   }
   
   /* Call the kernel */
-  err = hip_get_global_option(msg);
+  err = hip_recv_daemon_info(msg, 0);
   if (err) {
     err = EEI_SYSTEM;
-    HIP_ERROR("Failed to send msg\n");
+    HIP_ERROR("Failed to recv msg\n");
     goto out_err;
   }
 
@@ -1455,7 +1455,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = rsa_to_hit(rsa, (char *) key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
+    err = rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1469,7 +1469,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = dsa_to_hit(dsa, (char *) key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
+    err = dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;

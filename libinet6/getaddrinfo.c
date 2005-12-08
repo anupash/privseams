@@ -718,7 +718,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
 		hip_build_param_contents(msg, (void *) at_ipv6->addr, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
 		hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-		hip_set_global_option(msg);
+		hip_send_daemon_info(msg);
 	      }
 	    }
 
@@ -1061,13 +1061,8 @@ getaddrinfo (const char *name, const char *service,
     pservice = NULL;
 
   if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
-    int msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
-    int hipfd = open_hip(); // sets also errno
+    socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
     int err = 0, port, i;
-    if (hipfd < 0) {
-      HIP_ERROR("Failed to open HIP configuration channel\n");
-      return(-errno);
-    }
     
     *pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
     if (*pai == NULL) {
@@ -1084,7 +1079,8 @@ getaddrinfo (const char *name, const char *service,
      * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
      * the struct sockaddr_in6 list
      */
-    err = getsockopt(hipfd, port, SO_HIP_GET_HIT_LIST, pai, &msg_len);
+    err = hip_recv_daemon_info(NULL, 0);
+    HIP_ASSERT(0); /* XX FIXME: fix recv_daemon_msg */
     if (err < 0) {
       HIP_ERROR("getsockopt failed (%d)\n", err);
     }

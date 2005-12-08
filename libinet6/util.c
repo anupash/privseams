@@ -34,19 +34,20 @@ char *getwithoutnewline(char *buffer, int count, FILE *f) {
  * contain substring, the return value is NULL.  
  */
 char *findsubstring(const char *string, const char *substring) {
+  char *str = (char *) string, *sub = (char *) substring;
   char *a, *b;
   
-  for (b = substring; *string != 0; string += 1) {
-    if (*string != *b)
+  for (b = sub; *str != 0; str += 1) {
+    if (*str != *b)
       continue;
-    a = string;
+    a = str;
     for (;;) {
       if (*b == 0)
-	return(string);
+	return(str);
       if (*a++ != *b++)
 	break;
     }
-    b = substring;
+    b = sub;
   }
   return((char *) NULL);
 }

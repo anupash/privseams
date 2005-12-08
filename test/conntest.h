@@ -13,7 +13,7 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
-#include "libinet6/debug.h"
+#include "debug.h"
 
 int create_socket(int proto);
 int create_serversocket(int proto, int port);

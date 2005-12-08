@@ -8,22 +8,7 @@
  * 
  */
 
-#include <linux/netfilter.h>
-#include <libipq.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/ip6.h>
-#include <stdio.h>
-#include <glib.h>
-#include <glib/glist.h>
-#include <string.h>
-#include <net/hip.h>
-
 #include "firewall.h"
-#include "rule_management.h"
-#include "debug.h"
-#include "helpers.h"
-#include "conntrack.h"
 
 //#define HIP_HEADER_START 128 //bytes
 #define BUFSIZE 2048

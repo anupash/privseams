@@ -49,7 +49,7 @@ libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
 libinet6_la_SOURCES += sa_len.c tempname.c
 
 # HIP additions
-libinet6_la_SOURCES += builder.c debug.c message.c crypto.c getendpointinfo.c util.c
+libinet6_la_SOURCES += getendpointinfo.c util.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_IO_MTSAFE_IO -D_USAGI -D_GNU_SOURCE
@@ -57,11 +57,13 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 
 # HIP additions to the flags.
-CFLAGS += -g -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_TOOLS) -I$(HIPL)
-CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE) -Iinclude_glibc
-CFLAGS += -I$(HIPL_HIPD)
+CFLAGS += -g -I$(HIPL_TOOLS) -I$(HIPL) -I$(HIPL_LIBHIPTOOL)
+CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_HIPD) -Iinclude_glibc
 
-include_HEADERS = libc-compat.h debug.h crypto.h message.h builder.h util.h
+# HIP library added
+LDADD  = ../libhiptool/.libs/libhiptool.a
+
+include_HEADERS = libc-compat.h util.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
@@ -73,14 +75,8 @@ EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 getendpointinfo.c: include/netdb.h
 
-# Some symlink kludges
-list.h:
-	$(LN_S) -f $(HIPL_HIPD)/list.h .
-builder.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
 include/netdb.h:
 	$(LN_S) -f include_glibc$(usagi_libc) include
-builder.c: builder.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
 
 SUBDIRS = include_glibc21 include_glibc22 include_glibc23
+

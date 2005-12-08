@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 			if (hip_get_msg_type(msg) == 0)
 				goto out_err;
 
-			err = hip_set_global_option(msg);
+			err = hip_send_daemon_info(msg);
 			if (err) {
 				HIP_ERROR("sending msg failed\n");
 				goto out_err;
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 			/* hipconf new hi does not involve any messages to kernel */
 			HIP_IFE((hip_get_msg_type(msg)), -1);
 
-			HIP_IFEL(hip_set_global_option(msg), -1, "Sending msg failed\n");
+			HIP_IFEL(hip_send_daemon_info(msg), -1, "Sending msg failed\n");
 #endif
 			err = handle_bos(msg, 0, (const char **) NULL, 0);
 			if (err) {
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 			if (hip_get_msg_type(msg) == 0)
 				goto out_err;
 			
-			err = hip_set_global_option(msg);
+			err = hip_send_daemon_info(msg);
 			if (err) {
 				HIP_ERROR("sending msg failed\n");
 				goto out_err;
