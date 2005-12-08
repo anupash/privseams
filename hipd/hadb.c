@@ -1728,12 +1728,16 @@ void hip_delete_all_sp()
 			hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
 
 
-			list_for_each_entry_safe(item, tmp_spi, &ha->spis_out, list) {
+			list_for_each_entry_safe(item, tmp_spi, &ha->spis_in, list) {
 				hip_delete_sa(item->spi, &ha->local_address, AF_INET6);
+				/* There is a mysterious SA after BEX: it has SPI = 0 */
+				hip_delete_sa(0, &ha->local_address, AF_INET6);
 			}
 
-			list_for_each_entry_safe(item, tmp_spi, &ha->spis_in, list) {
+			list_for_each_entry_safe(item, tmp_spi, &ha->spis_out, list) {
 				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6);
+				/* There is a mysterious SA after BEX: it has SPI = 0 */
+				hip_delete_sa(0, &ha->preferred_address, AF_INET6);
 			}
 		}
 	}
