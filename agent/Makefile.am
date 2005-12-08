@@ -39,15 +39,15 @@ SUBDIRS = gui
 # the best way to access it because the object must be built on this
 # directory and we don't want to make reduntant copies.
 #
-builder.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
-builder.c: builder.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
-crypto.c: crypto.h
-crypto.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto.h .
-netlink.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/netlink.h .
+#builder.h:
+#	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
+#builder.c: builder.h
+#	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
+#crypto.c: crypto.h
+#crypto.h:
+#	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto.h .
+#netlink.h:
+#	$(LN_S) -f $(HIPL_LINUX_MODULE)/netlink.h .
 
 tags:
 	etags $(hipd_SOURCES) $(include_HEADERS)

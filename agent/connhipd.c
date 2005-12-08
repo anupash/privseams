@@ -52,7 +52,7 @@ int connhipd_init(void)
 	         sizeof(user_addr)), -1, "Bind failed.\n");
 
 	/* Test connection. */
-	hip_build_user_hdr(msg, SO_HIP_DAEMON_PING, 0);
+	hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
 	bzero(&user_addr, sizeof(user_addr));
 	user_addr.sun_family = AF_LOCAL;
 	strcpy(user_addr.sun_path, HIP_DAEMONADDR_PATH);

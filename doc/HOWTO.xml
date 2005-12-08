@@ -54,6 +54,9 @@
       &nbsp;* glib (www.gtk.org) and development headers
     </para>
     <para>
+      &nbsp;* wxgtk 2.6.2 and libgtk-2.x library and development headers
+    </para>
+    <para>
       * Optional
     </para>
     <para>
@@ -838,6 +841,9 @@
 
         <para>Clears all rules.</para>
   </chapter>
-
+  <chapter>
+    <title>HIP User Agent</title>
+      <para>XX TODO: Antti</para>
+  </chapter>
 </book>    
 

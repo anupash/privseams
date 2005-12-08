@@ -29,6 +29,10 @@ struct rtnl_handle nl_route;
 /* XFRM SA/SP setup. It was not possible to use nl_event for this?? */
 struct rtnl_handle nl_ipsec;
 
+#ifdef CONFIG_HIP_AGENT
+int hip_agent_status = 0;
+#endif
+
 time_t load_time;
 
 void usage() {
@@ -40,6 +44,58 @@ void usage() {
 #endif
 	fprintf(stderr, "\n");
 }
+
+int hip_agent_is_alive()
+{
+       return (hip_agent_status);
+}
+
+int hip_agent_filter(struct hip_common *msg)
+{
+	int err = 0;
+	int n, sendn;
+	socklen_t alen;
+       
+	if (!hip_agent_is_alive())
+	{
+		HIP_DEBUG("Agent is not alive\n");
+		return (-ENOENT);
+	}
+	
+	HIP_DEBUG("Filtering hip control message trough agent,"
+		  " message body size is %d bytes.\n",
+		  hip_get_msg_total_len(msg) - sizeof(struct hip_common));
+	
+	alen = sizeof(agent_addr);                      
+	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+		   0, (struct sockaddr *)&agent_addr, alen);
+	if (n < 0)
+	{
+		HIP_ERROR("Sendto() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+	
+	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
+	
+	alen = sizeof(agent_addr);
+	sendn = n;
+	n = recvfrom(hip_user_sock, msg, n, 0,
+		     (struct sockaddr *)&agent_addr, &alen);
+	if (n < 0) {
+		HIP_ERROR("Recvfrom() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+	/* This happens, if agent rejected the packet. */
+	else if (sendn != n) {
+		err = 1;
+	}
+
+out_err:
+       return (err);
+}
+
 
 int hip_init_host_ids() {
 	int err = 0;

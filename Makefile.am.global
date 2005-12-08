@@ -11,3 +11,5 @@ HIPL_LINUX                = $(HIPL)/linux
 HIPL_LINUX_INCLUDE        = $(HIPL_LINUX)/include
 HIPL_LINUX_MODULE         = $(HIPL_LINUX)/khipd
 HIPL_LIBHIPTOOL           = $(HIPL)/libhiptool
+HIPL_AGENT                = $(HIPL)/agent
+HIPL_AGENT_GUI            = $(HIPL)agent/gui
