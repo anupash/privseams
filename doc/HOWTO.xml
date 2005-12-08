@@ -29,6 +29,10 @@
      &nbsp; * Linux Operating System
     </para>
     <para>
+      &nbsp;* A BEET patched Linux 2.6 kernel with dummy device, XFRM,
+      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support
+    </para>
+    <para>
       &nbsp;* OpenSSL-library and developer headers
     </para>
     <para>
@@ -72,11 +76,6 @@
     <para>
       &nbsp;* java compiler for "jip" (java hip resolver) if you want to build
       HIP enabled java programs
-    </para>
-    <para>
-      The HIPL patched kernel is based on the official Linux kernel and it
-      should be distribution independent. The kernel has been tested on the
-      Debian Linux (Woody, Sarge) distribution.
     </para>
   </chapter>
   <chapter>
@@ -187,26 +186,6 @@
     </para>
   </chapter>
   <chapter>
-    <title>Using the Userspace Implementation (Optional)</title>
-    <para>
-      This step is optional. Follow it if you want to run the HIP daemon
-      in the userspace instead of the kernel space.
-    </para>
-    <para>
-       First, you need to compile the kernel with the CONFIG_HIP_USERSPACE
-       option. Then, execute "modprobe hipmod", "hipd/hipd" and
-       "hipconf add hi default" in exactly that order. In order to run the
-       HIP daemon independently from the path, you might run "make install" in
-       in the top directory. The HIP deamon can be run in background
-       by specifying the option f. The rest of the
-       instructions in this manual apply also to the userspace implementation
-       with these small changes.
-    <para>
-       By default, the hipd starts on the foreground. If you want to start it
-       as a daemon (background) process, start it with "hipd/hipd -b".
-    </para>
-  </chapter>
-  <chapter>
     <title>Compiling Userspace Applications</title>
     <para>
       After you have successfully compiled and installed the HIP kernel and
@@ -272,16 +251,7 @@
       &nbsp;ifconfig eth0 inet6 add 3ffe::2/64
     </para>
     <para>
-      &nbsp;modprobe hipmod
-      </para>
-    <para>
       &nbsp;cd somewhere/hipl
-    </para>
-    <para>
-      &nbsp;tools/hipconf new hi default # only the first time when you run hip
-    </para>
-    <para>
-      &nbsp;tools/hipconf add hi default
     </para>
     <para>
       &nbsp;test/conntest-server tcp 1111
@@ -294,16 +264,7 @@
       &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
       </para>
     <para>
-      &nbsp;modprobe hipmod
-    </para>
-    <para>
       &nbsp;cd somewhere/hipl
-    </para>
-    <para>
-      &nbsp;tools/hipconf new hi default # only the first time when you run hip
-    </para>
-    <para>
-      &nbsp;tools/hipconf add hi default
     </para>
     <para>
       &nbsp;test/conntest-client-gai oops tcp 1111
@@ -315,15 +276,10 @@
     <para>
       This will setup a HIP connection between the two hosts (it may take a
       while if you are using virtual machines). You should replace
-      HIT_OF_XXX with the HIT of the host XXX. The host default HI is
-      generated with the command "hipconf new hi default" (only needed on
-      the first run) and sent to the kernel module with ".hipconf add hi
-      default" The value of the HIT can be found from file
-      /proc/net/hip/lhi. You can see information on current HIP connections
-      from file /proc/net/hip/sdb_state. Support for both of these /proc
-      files require that you select HIP debugging option during the kernel
-      compilation process. mknod command can be omitted if you already have
-      device file /dev/hip.
+      HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
+      creates if necessary) the host identities from /etc/hip automatically.
+      If you want to know the HITs of the localhost, run "ifconfig dummy0" or
+      "ip addr show dummy0".
     </para>
     <para>
       Mappings between HITs and IPv6 addresses are usually set up
@@ -464,8 +420,8 @@
       You should have setup your networking environment as explained in
       section "Testing a HIP Connection Between Two Hosts", that is, you
       should have configured your /etc/hosts and /etc/hip/hosts
-      properly. You should have also created default host identities for
-      both of the hosts with "hipconf new hi default".
+      properly. However, hipd will automatically create your public keys,
+      so you don't have to worry about them.
     </para>
     <para>
       You cannot quite convert your normal Java networking application to a
@@ -482,22 +438,10 @@
       crash # cd path-to-hipl/test
     </para>
     <para>
-      crash # modprobe hipmod
-    </para>
-    <para>
-      crash # ../tools/hipconf add hi default
-    </para>
-    <para>
       crash # ./java HipServer 12345
     </para>
     <para>
       oops # cd test
-    </para>
-    <para>
-      oops # modprobe hipmod
-    </para>
-    <para>
-      oops # ../tools/hipconf add hi default
     </para>
     <para>
       oops # ./java HipClient crash 12345 54321
@@ -592,7 +536,7 @@
     </para>
     <para>
     4. Insert the HIT to /etc/hosts, instead of /etc/hip/hosts. Then, add
-       the HIT-to-IP mapping with "hipconf add hi default". This is the
+       the HIT-to-IP mapping with "hipconf add map HIT IP". This is the
        quick-and-dirty method...
     </para>
   </chapter>
@@ -658,16 +602,10 @@
       	  1. Start and initialize HIP module in each host:
     </para>
     <para>
-	  each-host # modprobe hipmod
-    </para>
-    <para>
-	  each-host # hipl/tools/hipconf add hi default
-    </para>
-    <para>
       2. At the initiator, you must modify the "/etc/hosts" file. In the file,
       responder's hostname must be mapped to the IPv6 address of the rendezvous
-      server. It must not be mapped to the responder's IPv6 address, or otherwise
-      the rendezvous server is not used at all!
+      server. It must not be mapped to the responder's IPv6 address, or
+      otherwise the rendezvous server is not used at all!
     </para>
     <para>
       The "/etc/hip/hosts" file should contain the hostname and HIT of the

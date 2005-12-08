@@ -32,7 +32,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#include "libinet6/debug.h"
+#include "libhiptool/debug.h"
 
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *epinfo, *res = NULL;

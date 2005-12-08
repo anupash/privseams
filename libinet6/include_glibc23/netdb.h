@@ -45,7 +45,7 @@
 
 /* BEGIN HIPL PATCH */
 #include <net/if.h>
-#include <net/hip.h>
+#include <hip.h>
 /* END HIPL PATCH */
 
 /* Absolute file name for network data base files.  */

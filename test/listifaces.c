@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "libinet6/debug.h"
+#include "debug.h"
 
 int main(int argc,char *argv[]) {
   struct ifaddrs *g_ifaces = NULL, *g_iface;

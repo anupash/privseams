@@ -9,4 +9,5 @@ HIPL_LIBINET6_LIB_DYNAMIC = $(HIPL_LIBINET6_LIB)/libinet6.so
 HIPL_LIBINET6_INCLUDE     = $(HIPL_LIBINET6)/include
 HIPL_LINUX                = $(HIPL)/linux
 HIPL_LINUX_INCLUDE        = $(HIPL_LINUX)/include
-HIPL_LINUX_MODULE         = $(HIPL_LINUX)/net/ipv6/hip
+HIPL_LINUX_MODULE         = $(HIPL_LINUX)/khipd
+HIPL_LIBHIPTOOL           = $(HIPL)/libhiptool

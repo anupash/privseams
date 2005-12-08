@@ -11,12 +11,12 @@ include $(HIPL)/Makefile.am.global
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 CFLAGS = -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
-CFLAGS += -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_LINUX_MODULE) -I$(HIPL_HIPD)
+CFLAGS += -I$(HIPL_HIPD)
 CFLAGS += -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
-CFLAGS += -L$(HIPL_LIBINET6_LIB)
+CFLAGS += -L$(HIPL_LIBINET6_LIB) -I$(HIPL_LIBHIPTOOL)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-LDADD  = ../libinet6/.libs/libinet6.a
+LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 bin_PROGRAMS = conntest-client
 bin_PROGRAMS += conntest-server
@@ -29,7 +29,6 @@ bin_PROGRAMS += hipsetupNew
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
 bin_PROGRAMS += first_test
-#bin_PROGRAMS += second_test
 
 sbin_SCRIPTS = hipsetup
 
@@ -56,9 +55,5 @@ hipconf.h:
 	$(LN_S) -f $(HIPL_TOOLS)/hipconf.h .
 hipconf.c: hipconf.h
 	$(LN_S) -f $(HIPL_TOOLS)/hipconf.c .
-unit.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.h .
-unit.c: unit.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6
