@@ -12,7 +12,7 @@
 #include <string.h>
 
 #include "hit_db.h"
-#include "./gui/agent_interface.h"
+#include "agent_interface.h"
 
 
 /******************************************************************************/
