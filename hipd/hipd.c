@@ -30,7 +30,8 @@ struct rtnl_handle nl_route;
 struct rtnl_handle nl_ipsec;
 
 #ifdef CONFIG_HIP_AGENT
-int hip_agent_status = 0;
+int hip_agent_sock = 0, hip_agent_status = 0;
+struct sockaddr_un hip_agent_addr;
 #endif
 
 time_t load_time;
@@ -47,7 +48,7 @@ void usage() {
 
 int hip_agent_is_alive()
 {
-       return (hip_agent_status);
+       return hip_agent_status;
 }
 
 int hip_agent_filter(struct hip_common *msg)
@@ -66,9 +67,9 @@ int hip_agent_filter(struct hip_common *msg)
 		  " message body size is %d bytes.\n",
 		  hip_get_msg_total_len(msg) - sizeof(struct hip_common));
 	
-	alen = sizeof(agent_addr);                      
+	alen = sizeof(hip_agent_addr);                      
 	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-		   0, (struct sockaddr *)&agent_addr, alen);
+		   0, (struct sockaddr *)&hip_agent_addr, alen);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -78,10 +79,10 @@ int hip_agent_filter(struct hip_common *msg)
 	
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
-	alen = sizeof(agent_addr);
+	alen = sizeof(hip_agent_addr);
 	sendn = n;
 	n = recvfrom(hip_user_sock, msg, n, 0,
-		     (struct sockaddr *)&agent_addr, &alen);
+		     (struct sockaddr *)&hip_agent_addr, &alen);
 	if (n < 0) {
 		HIP_ERROR("Recvfrom() failed.\n");
 		err = -1;
@@ -193,6 +194,8 @@ void hip_exit(int signal) {
 		close(hip_raw_sock);
 	if (hip_user_sock)
 		close(hip_user_sock);
+	if (hip_agent_sock)
+		close(hip_agent_sock);
 	if (nl_event.fd)
 		rtnl_close(nl_event);
 	if (nl_route.fd)
@@ -335,11 +338,25 @@ int main(int argc, char *argv[]) {
 	unlink(HIP_DAEMONADDR_PATH);
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
 		      /*sizeof(daemon_addr)*/
-		strlen(daemon_addr.sun_path) + sizeof(daemon_addr.sun_family)),
-		 1, "Bind failed.");
-	HIP_DEBUG("Local server up\n");
+		      strlen(daemon_addr.sun_path) +
+		      sizeof(daemon_addr.sun_family)),
+		 1, "Bind on daemon addr failed.");
 
-	highest_descriptor = maxof(hip_raw_sock, hip_user_sock, nl_event.fd);
+	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_agent_sock < 0), 1,
+		 "Could not create socket for agent communication.\n");
+        unlink(HIP_AGENTADDR_PATH);
+        bzero(&hip_agent_addr, sizeof(hip_agent_addr));
+        hip_agent_addr.sun_family = AF_LOCAL;
+        strcpy(hip_agent_addr.sun_path, HIP_AGENTADDR_PATH);
+        HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
+                      sizeof(hip_agent_addr)),
+                 -1, "Bind on agent addr failed.");
+	
+	highest_descriptor = maxof(hip_raw_sock, hip_user_sock, nl_event.fd,
+				   hip_agent_sock);
+	
+	HIP_DEBUG("HIP daemon up and running\n");
 	
 	/* Enter to the select-loop */
 	for (;;) {
@@ -350,20 +367,22 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_raw_sock, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(nl_event.fd, &read_fdset);
+		FD_SET(hip_agent_sock, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
-
+		
 		_HIP_DEBUG("select\n");
 		/* wait for socket activity */
+
 #ifndef CONFIG_HIP_HI3
-		if ((err = select((highest_descriptor + 1), &read_fdset, 
-				  NULL, NULL, &timeout)) < 0) {
+                if ((err = select((highest_descriptor + 1), &read_fdset, 
+                                  NULL, NULL, &timeout)) < 0) {
 #else
-	        if ((err = cl_select((highest_descriptor + 1), &read_fdset, 
-				     NULL, NULL, &timeout)) < 0) {
-				
+                if ((err = cl_select((highest_descriptor + 1), &read_fdset, 
+                                     NULL, NULL, &timeout)) < 0) {
+                                
 #endif
-			HIP_ERROR("select() error: %s.\n", strerror(errno));
+                        HIP_ERROR("select() error: %s.\n", strerror(errno));
 		} else if (err == 0) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
@@ -387,6 +406,43 @@ int main(int argc, char *argv[]) {
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				hip_handle_user_msg(hip_msg);
+		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
+                        int n;
+                        socklen_t alen;
+                        err = 0;
+                        HIP_DEBUG("Receiving user message(?).\n");
+                        bzero(&hip_agent_addr, sizeof(hip_agent_addr));
+                        alen = sizeof(hip_agent_addr);
+                        n = recvfrom(hip_agent_sock, hip_msg,
+                                     sizeof(struct hip_common), 0,
+                                     (struct sockaddr *) &hip_agent_addr,
+				     &alen);
+                        if (n < 0)
+                        {
+                                HIP_ERROR("Recvfrom() failed.\n");
+                                err = -1;
+				continue;
+                        }
+                        memset(hip_msg, 0, sizeof(struct hip_common));
+                        hip_build_user_hdr(hip_msg, SO_HIP_AGENT_PING_REPLY,
+					   0);
+                        alen = sizeof(hip_agent_addr);                      
+                        n = sendto(hip_agent_sock, hip_msg,
+				   sizeof(struct hip_common),
+                                   0,
+				   (struct sockaddr *) &hip_agent_addr, alen);
+                        if (n < 0)
+                        {
+                                HIP_ERROR("Sendto() failed.\n");
+                                err = -1;
+				continue;
+                        }
+
+                        if (err == 0)
+                        {
+                                HIP_DEBUG("HIP agent ok.\n");
+                                hip_agent_status = 1;
+                        }
 		} else if (FD_ISSET(nl_event.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
@@ -411,25 +467,25 @@ int main(int argc, char *argv[]) {
 	}
 
 out_err:
-	/* free allocated resources */
-	if (hip_raw_sock)
-		close(hip_raw_sock);
-	if (hip_user_sock)
-		close(hip_user_sock);
-	if (nl_event.fd)
-		rtnl_close(nl_event);
-	if (nl_route.fd)
-		rtnl_close(nl_route);
-	if (nl_ipsec.fd)
-		rtnl_close(nl_ipsec);
+        /* free allocated resources */
+        if (hip_raw_sock)
+                close(hip_raw_sock);
+        if (hip_user_sock)
+                close(hip_user_sock);
+        if (nl_event.fd)
+                rtnl_close(nl_event);
+        if (nl_route.fd)
+                rtnl_close(nl_route);
+        if (nl_ipsec.fd)
+                rtnl_close(nl_ipsec);
+	
+        delete_all_addresses();
+        HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
-	delete_all_addresses();
-	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
-
-	/* On exit the general policy must be cancelled */
-	HIP_DEBUG("Deleting the SPs and SAs\n");
-	//hip_delete_default_prefix_sp_pair();
-	hip_delete_all_sp();
+        /* On exit the general policy must be cancelled */
+        HIP_DEBUG("Deleting the SPs and SAs\n");
+        //hip_delete_default_prefix_sp_pair();
+        hip_delete_all_sp();
 
 	return err;
 }

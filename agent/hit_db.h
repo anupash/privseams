@@ -9,7 +9,7 @@
 /******************************************************************************/
 /* INCLUDES */
 #include <fcntl.h>
-#include <socket.h>
+//#include <socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
 #include <stdlib.h>

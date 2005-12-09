@@ -310,27 +310,6 @@ int hip_do_work(struct hip_work_order *job)
 	return res;
 }
 
-int hip_handle_agent_ping(const struct hip_common *msg) {
-	int n, err = 0;
-	socklen_t alen;
-
-	HIP_DEBUG("Receiving user message(?).\n");
-	//bzero(&agent_addr, sizeof(agent_addr));
-	//alen = sizeof(agent_addr);
-
-	memset(user_msg, 0, sizeof(struct hip_common));
-	hip_build_user_hdr(user_msg, SO_HIP_AGENT_PING_REPLY, 0);
-	alen = sizeof(agent_addr);                      
-	n = sendto(hip_user_sock, user_msg, sizeof(struct hip_common),
-		   0, (struct sockaddr *)&agent_addr, alen);
-	HIP_IFEL((n < 0), -1, "Sendto() failed.\n");
-
-	HIP_DEBUG("HIP agent ok.\n");
-	hip_agent_status = 1;
-
-	return err;
-}
-
 int hip_handle_user_msg(const struct hip_common *msg) {
 	int err = 0;
 	int msg_type;
@@ -371,9 +350,6 @@ int hip_handle_user_msg(const struct hip_common *msg) {
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
-		break;
-	case SO_HIP_AGENT_PING:
-		err = hip_handle_agent_ping(msg);
 		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);

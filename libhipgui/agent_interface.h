@@ -9,7 +9,7 @@
 /* INCLUDES */
 #include "hit_db.h"
 
-#include <socket.h>
+//#include <socket.h>
 #include <sys/types.h>
 
 #ifdef __cplusplus

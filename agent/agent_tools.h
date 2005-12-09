@@ -7,7 +7,7 @@
 
 /******************************************************************************/
 /* INCLUDES */
-#include <socket.h>
+//#include <socket.h>
 #include <sys/types.h>
 
 #include "hip.h"
