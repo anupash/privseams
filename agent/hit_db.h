@@ -14,11 +14,12 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
+#include "debug.h"
 
 #ifndef __cplusplus
 #include "hip.h"
 #else
-#include <linux/in6.h>
+//#include <netinet/in6.h>
 #endif
 
 

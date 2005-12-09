@@ -47,13 +47,4 @@ libhiptool_la_SOURCES = builder.c debug.c message.c crypto.c misc.c pk.c dh.c \
 CFLAGS  = -g -DCONFIG_HIP_DEBUG -I$(HIPL_HIPD) -I$(HIPL_LIBINET6_INCLUDE)
 CFLAGS += -I$(HIPL_TOOLS) -DCONFIG_HIP_LIBHIPTOOL
 
-include_HEADERS = builder.h debug.h message.h crypto.h misc.h pk.h dh.h nlink.h
-
-builder.c: misc.h
-debug.c: debug.h
-message.c: message.h
-crypto.c: crypto.h
-misc.c: misc.h
-pk.c: pk.h
-dh.c: dh.h
-nlink.c: nlink.h
+include_HEADERS =
