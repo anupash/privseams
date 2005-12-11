@@ -20,14 +20,14 @@ int hip_user_sock = 0;
 struct sockaddr_un user_addr;
 
 /* For receiving events (acquire, new IP addresses) */
-struct rtnl_handle nl_event;
+struct rtnl_handle nl_event = { 0 };
 
 /* For getting/setting routes and adding HITs (it was not possible to use
    nf_event for this purpose). */
-struct rtnl_handle nl_route;
+struct rtnl_handle nl_route = { 0 };
 
 /* XFRM SA/SP setup. It was not possible to use nl_event for this?? */
-struct rtnl_handle nl_ipsec;
+struct rtnl_handle nl_ipsec = { 0 };
 
 time_t load_time;
 
@@ -120,6 +120,10 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
+	hip_delete_all_sp();
+
+	delete_all_addresses();
+
 	set_up_device(HIP_HIT_DEV, 0);
 
 #ifdef CONFIG_HIP_HI3
@@ -129,20 +133,20 @@ void hip_exit(int signal) {
 #ifdef CONFIG_HIP_RVS
         hip_uninit_rvadb();
 #endif
+
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
-	hip_delete_all_sp();
 	if (hip_raw_sock)
 		close(hip_raw_sock);
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (nl_event.fd)
-		rtnl_close(nl_event);
+		rtnl_close(&nl_event);
 	if (nl_route.fd)
-		rtnl_close(nl_route);
+		rtnl_close(&nl_route);
 	if (nl_ipsec.fd)
-		rtnl_close(nl_ipsec);
+		rtnl_close(&nl_ipsec);
 
 	exit(signal);
 }
@@ -349,25 +353,11 @@ int main(int argc, char *argv[]) {
 	}
 
 out_err:
-	/* free allocated resources */
-	if (hip_raw_sock)
-		close(hip_raw_sock);
-	if (hip_user_sock)
-		close(hip_user_sock);
-	if (nl_event.fd)
-		rtnl_close(nl_event);
-	if (nl_route.fd)
-		rtnl_close(nl_route);
-	if (nl_ipsec.fd)
-		rtnl_close(nl_ipsec);
 
-	delete_all_addresses();
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
-	/* On exit the general policy must be cancelled */
-	HIP_DEBUG("Deleting the SPs and SAs\n");
-	//hip_delete_default_prefix_sp_pair();
-	hip_delete_all_sp();
+	/* free allocated resources */
+	hip_exit(err);
 
 	return err;
 }
