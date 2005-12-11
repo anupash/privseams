@@ -3,9 +3,8 @@
 
 #include <netinet/in.h>
 #include <linux/netfilter.h>
-#include <libipq/libipq.h>
+#include <libipq.h>
 #include <linux/netfilter.h>
-#include <libipq/libipq.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
