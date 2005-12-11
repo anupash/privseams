@@ -5,7 +5,7 @@
 #include <glib/glist.h>
 #include <netinet/in.h>
 #include <linux/netfilter.h>
-#include <libipq/libipq.h>
+#include <libipq.h>
 #include <glib.h>
 #include <glib/glist.h>
 #include <glib/gthread.h>
