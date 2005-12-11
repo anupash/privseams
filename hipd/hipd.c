@@ -299,14 +299,8 @@ int main(int argc, char *argv[]) {
 
 		_HIP_DEBUG("select\n");
 		/* wait for socket activity */
-#ifndef CONFIG_HIP_HI3
-		if ((err = select((highest_descriptor + 1), &read_fdset, 
-				  NULL, NULL, &timeout)) < 0) {
-#else
-	        if ((err = cl_select((highest_descriptor + 1), &read_fdset, 
-				     NULL, NULL, &timeout)) < 0) {
-				
-#endif
+		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset, 
+				       NULL, NULL, &timeout)) < 0) {
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
 		} else if (err == 0) {
 			/* idle cycle - select() timeout */
