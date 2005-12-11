@@ -52,6 +52,9 @@ protected:
 	wxStaticText* m_staticTexts[100];
 	int m_staticTextCount;
 
+	wxButton *m_staticButtons[100];
+	int m_staticButtonsCount;
+
 	int current_context;
 
 

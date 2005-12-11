@@ -29,6 +29,8 @@ extern "C" {
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
 int gui_init_interface(void);
+void gui_quit_interface(void);
+
 int gui_ask_hit_accept(char *, char *);
 void gui_add_new_hit(HIT_Item *);
 void gui_ask_new_hit_timer(void *);

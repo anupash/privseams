@@ -21,9 +21,9 @@ int gui_init(void)
 	int err = 0;
 	
 #ifndef CONFIG_HIPGUI_COMMANDLINE
-	HIP_DEBUG("Initializing GUI...\n");
-	if (gui_init_interface()) goto out_err;
-	HIP_DEBUG("GUI inialized succesfully...\n");
+//	HIP_DEBUG("Initializing GUI...\n");
+//	if (gui_init_interface()) goto out_err;
+//	HIP_DEBUG("GUI inialized succesfully...\n");
 #endif
 		
 	return (0);
@@ -46,6 +46,7 @@ int gui_check_hit(HIT_Item *hit)
 {
 	/* Variables. */
 	HIT_Item *fhit = NULL;
+	struct in6_addr temp_hit;
 	int err = 0, ndx;
 	char hits[128], hitr[128], msg[1024];
 	
@@ -56,14 +57,21 @@ int gui_check_hit(HIT_Item *hit)
 	  or incoming.
 	*/
 	fhit = hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
-	                   hit->url, hit->port, 1);
-	if (!fhit) fhit= hit_db_search(&ndx, NULL, &hit->rhit, &hit->lhit,
-				     hit->url, hit->port, 1);
+	                   hit->url, hit->port, 1, 1);
+	if (!fhit)
+	{
+		memcpy(&temp_hit, &hit->lhit, sizeof(struct in6_addr));
+		memcpy(&hit->lhit, &hit->rhit, sizeof(struct in6_addr));
+		memcpy(&hit->rhit, &temp_hit, sizeof(struct in6_addr));
+		fhit= hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
+		                    hit->url, hit->port, 1, 1);
+	}
+
 	if (fhit)
 	{
 		HIP_DEBUG("Found HIT from database with type \"%s\".\n",
 		          ((fhit->type == HIT_DB_TYPE_ACCEPT) ? "accept" : "deny"));
-		
+
 		if (fhit->type == HIT_DB_TYPE_ACCEPT)
 		{
 			err = 0;
@@ -73,6 +81,8 @@ int gui_check_hit(HIT_Item *hit)
 			err = -1;
 		}
 		
+		free(fhit);
+
 		goto out;
 	}
 	else
@@ -121,13 +131,13 @@ int gui_check_hit(HIT_Item *hit)
 	{
 		HIP_DEBUG("Adding new HIT to database with type accept.\n");
 		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
-		           HIT_DB_TYPE_ACCEPT);
+		           HIT_DB_TYPE_ACCEPT, 0);
 	}
 	if (err == -1)
 	{
 		HIP_DEBUG("Adding new HIT to database with type deny.\n");
 		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
-		           HIT_DB_TYPE_DENY);
+		           HIT_DB_TYPE_DENY, 0);
 	}
 
 

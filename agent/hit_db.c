@@ -45,13 +45,20 @@ int hit_db_lock = 1;
 	Initialize HIP agent HIT database. This function must be called before
 	using database at all.
 	
+	@param file If not NULL, database is initialized from here.
 	@return 0 on success, -1 on errors.
 */
-int hit_db_init(void)
+int hit_db_init(char *file)
 {
 	/* Variables. */
 	int err = 0;
 	
+	if (file)
+	{
+		hit_db_lock = 0;
+		if (hit_db_load_from_file(file) == 0) goto out;
+	}
+
 	/* Lock just for sure. */
 	hit_db_lock = 1;
 	
@@ -86,9 +93,13 @@ out:
 /**
 	Deinitialize HIP agent HIT database. This function must be called when
 	closing application and stopping using database.
+
+	@param file If not NULL, database saved to here.
 */
-void hit_db_quit(void)
+void hit_db_quit(char *file)
 {
+	if (file) hit_db_save_to_file(file);
+
 	/* Lock just for sure. */
 	hit_db_lock = 1;
 	
@@ -105,12 +116,27 @@ void hit_db_quit(void)
 
 /******************************************************************************/
 /**
+	Clear HIT database.
+
+	@return 0 on success, -1 on errors.
+*/
+int hit_db_clear(void)
+{
+	HIT_DB_LOCK();
+	hit_db_quit(NULL);
+	return (hit_db_init(NULL));
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	Adds new HIT to database.
 */
-int hit_db_add_hit(HIT_Item *hit)
+int hit_db_add_hit(HIT_Item *hit, int nolock)
 {
 	return (hit_db_add(hit->name, &hit->lhit, &hit->rhit,
-	                   hit->url, hit->port, hit->type));
+	                   hit->url, hit->port, hit->type, nolock));
 }
 /* END OF FUNCTION */
 
@@ -124,6 +150,7 @@ int hit_db_add_hit(HIT_Item *hit)
 	@param url URL, which is connected to this item, can be NULL.
 	@param port Port, which is connected to this item, can be 0 if not needed.
 	@param type HIT type, accept or deny.
+	@param nolock Set to one if no database lock is needed.
 
 	@return 0 on success, -1 on errors.
 */
@@ -132,12 +159,13 @@ int hit_db_add(char *name,
                struct in6_addr *rhit,
                char *url,
                int port,
-               int type)
+               int type,
+               int nolock)
 {
 	/* Variables. */
 	int n, err = 0;
 
-	HIT_DB_LOCK();
+	if (!nolock) HIT_DB_LOCK();
 
 	/* If there is no space for new item, allocate more space. */
 	if (hit_db_n >= hit_db_ni)
@@ -181,7 +209,7 @@ out_err:
 	}
 	err = -1;
 out:
-	HIT_DB_UNLOCK();
+	if (!nolock) HIT_DB_UNLOCK();
 	return (err);
 }
 /* END OF FUNCTION */
@@ -191,20 +219,37 @@ out:
 /**
 	Delete hit with given index.
 	
-	@param ndx Index of hit in db list.
+	@param lhit Local HIT.
+	@param rhit Remote HIT.
+	@param nolock If no database locking is needed.
 	@return 0 if hit removed, -1 on errors.
 */
-int hit_db_del(int ndx)
+int hit_db_del(struct in6_addr *lhit, struct in6_addr *rhit, int nolock)
 {
 	/* Variables. */
-	int i, err = 0;
+	HIT_Item *fhit, temp_hit;
+	int i, err = 0, ndx;
 	
-	HIT_DB_LOCK();
+	if (!nolock) HIT_DB_LOCK();
 
-	/* Check that index is valid. */
-	if (ndx >= hit_db_n || ndx < 0) goto out_err;
-	if (strlen(hit_db[ndx].name) < 1) goto out_err;
-	
+	/* Search for given HIT pair. */
+	fhit = hit_db_search(&ndx, NULL, lhit, rhit, NULL, 0, 1, 0);
+	if (!fhit)
+	{
+		memcpy(&temp_hit, lhit, sizeof(struct in6_addr));
+		memcpy(lhit, rhit, sizeof(struct in6_addr));
+		memcpy(rhit, &temp_hit, sizeof(struct in6_addr));
+		fhit = hit_db_search(&ndx, NULL, lhit, rhit, NULL, 0, 1, 0);
+	}
+
+	if (!fhit)
+	{
+		err = -1;
+		goto out_err;
+	}
+
+	ndx = fhit->index;
+
 	/* Remove from list. */
 	if ((ndx + 1) >= hit_db_n);
 	else if (hit_db_n > 1)
@@ -231,7 +276,7 @@ int hit_db_del(int ndx)
 	/* Return failure. */
 out_err:
 out:
-	HIT_DB_UNLOCK();
+	if (!nolock) HIT_DB_UNLOCK();
 	return (err);
 }
 /* END OF FUNCTION */
@@ -250,23 +295,25 @@ out:
 	@param url Pointer to url.
 	@param port Port number.
 	@param max_find Atmost return this many hits found.
+	@param nolock If no database locking is needed.
 	@return Pointer to array of HITs if found, NULL if not.
 	        Pointer must be freed after usage.
 */
 HIT_Item *hit_db_search(int *number,
-			char *name,
-			struct in6_addr *lhit,
-			struct in6_addr *rhit,
-			char *url,
-			int port,
-			int max_find)
+			            char *name,
+			            struct in6_addr *lhit,
+			            struct in6_addr *rhit,
+			            char *url,
+			            int port,
+			            int max_find,
+			            int nolock)
 {
 	/* Variables. */
 	HIT_Item *fh1 = NULL, *fh2 = NULL, *hits = NULL;
 	int n, hits_found = 0, err = 0;
 	char buffer1[128], buffer2[128];
 
-	HIT_DB_LOCK();
+	if (!nolock) HIT_DB_LOCK();
 
 	hits = malloc(sizeof(HIT_Item) * hit_db_n);
 	if (!hits) goto out_err;
@@ -407,8 +454,147 @@ out_err:
 	}
 	if (number) *number = 0;
 out:
-	HIT_DB_UNLOCK();
+	if (!nolock) HIT_DB_UNLOCK();
 	return (hits);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Save database to file.
+	
+	@param file Filename for saving database.
+	@return 0 on success, -1 on errors.
+*/
+int hit_db_save_to_file(char *file)
+{
+	/* Variables. */
+	HIT_Item *items = NULL;
+	FILE *f = NULL;
+	int err = -1, i;
+	char lhit[128], rhit[128];
+	
+	HIT_DB_LOCK();
+	
+	HIP_DEBUG("Saving HIT database to %s.\n", file);
+
+	f = fopen(file, "w");
+	if (!f) goto out_err;
+
+	/* Write all HITs to file. */
+	for (i = 0; i < hit_db_n; i++)
+	{
+		print_hit_to_buffer(lhit, &hit_db[i].lhit);
+		print_hit_to_buffer(rhit, &hit_db[i].rhit);
+		fprintf(f, "%s %s %s %s %d %s\n",
+		        lhit, rhit, hit_db[i].name, hit_db[i].url, hit_db[i].port,
+		        ((hit_db[i].type == HIT_DB_TYPE_ACCEPT) ? "accept" : "deny"));
+	}
+	
+	err = 0;
+
+out_err:
+	if (f) fclose(f);
+	HIT_DB_UNLOCK();
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Load database from file.
+	
+	@param file Filename for saving database.
+	@return 0 on success, -1 on errors.
+*/
+int hit_db_load_from_file(char *file)
+{
+	/* Variables. */
+	HIT_Item item;
+	FILE *f = NULL;
+	struct in6_addr slhit, srhit;
+	char buf[1024], ch, lhit[128], rhit[128];
+	char name[128], url[320], type[128];
+	int err = 0, i, n, port;
+
+	hit_db_clear();
+	HIT_DB_LOCK();
+
+	HIP_DEBUG("Loading HIT database from %s.\n", file);
+
+	f = fopen(file, "r");
+	if (!f) goto out_err;
+
+	/* Start parsing. */
+	memset(buf, '\0', 1024); i = 0; n = -1;
+	for (ch = fgetc(f); ch != EOF; ch = fgetc(f))
+	{
+		/* Remove whitespaces from line start. */
+		if (i == 0 && (ch == ' ' || ch == '\t')) continue;
+		
+		/* Find end of line. */
+		if (ch != '\n')
+		{
+			buf[i] = ch;
+			i++;
+			continue;
+		}
+
+		/*
+			Check whether there is carriage return
+			in the stream and remove it.
+		*/
+		ch = fgetc(f);
+		
+		if (ch != '\r') ungetc(ch, f);
+		
+		/* Check for empty lines and for commented lines. */
+		if (strlen(buf) < 1) goto loop_end;
+		if (buf[0] == '#') goto loop_end;
+		
+		/* Parse values from current line. */
+		n = sscanf(buf, "%s %s %s %s %d %s",
+		           lhit, rhit, item.name, item.url, &item.port, type);
+		
+		if (n != 6)
+		{
+			HIP_DEBUG("Broken line in database file: %s", buf);
+			goto loop_end;
+		}
+		
+		HIP_DEBUG("Scanned line with values: %s %s %s %s %d %s\n",
+		          lhit, rhit, item.name, item.url, item.port, type);
+		
+		if (strstr(type, "accept") != NULL) item.type = HIT_DB_TYPE_ACCEPT;
+		else item.type = HIT_DB_TYPE_DENY;
+
+		read_hit_from_buffer(&item.lhit, lhit);
+		read_hit_from_buffer(&item.rhit, rhit);
+		
+		hit_db_add_hit(&item, 1);
+	
+	loop_end:
+		/* Clear buffer. */
+		memset(buf, '\0', 1024); i = 0;
+	}
+	
+	goto out;
+	
+out_err:
+	if (hit_db)
+	{
+		free(hit_db);
+		hit_db = NULL;
+		hit_db_ni = 0;
+		hit_db_n = 0;
+	}
+	err = -1;
+out:
+	if (f) fclose(f);
+	HIT_DB_UNLOCK();
+	return (err);
 }
 /* END OF FUNCTION */
 

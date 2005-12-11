@@ -113,7 +113,7 @@ void HipInterface::AddHipKey( HipKey& key )
 	// key.m_id = xxx;
 }
 
-void HipInterface::DeleteHipKey( HipKey& /*key*/ )
+void HipInterface::DeleteHipKey(int n)
 {
-	// delete the hip key corresponding to this key instance
+	m_personalities[m_activePersonality].m_contexts[m_activeContext].m_keys.RemoveAt(n);
 }

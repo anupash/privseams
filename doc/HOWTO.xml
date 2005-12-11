@@ -806,8 +806,12 @@
         <para>Clears all rules.</para>
   </chapter>
   <chapter>
-    <title>HIP User Agent</title>
-      <para>XX TODO: Antti</para>
+    <title>HIP User Agent and GUI</title>
+      <para>Manage HITs with graphical user interface.</para>
+      <para>When new HIT is received, it and local HIT is filtered
+            trough agent, which asks user for accepting the HIT pair.
+            Then HIT is saved into database and accept/reject is
+            returned to daemon.</para>
   </chapter>
 </book>    
 

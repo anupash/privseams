@@ -119,6 +119,11 @@ void HipTab::SetHipKeys( HipContext& context, wxSizer& sizer)
 
 			keyBoxSizer->Add(sizerRow, 1, wxALIGN_LEFT, 10);
 		}
+		/*{
+			wxButton *button = m_staticButtons[m_staticButtonsCount] = new wxButton(this, 0, "delete");
+			keyBoxSizer->Add(button, 0, wxALIGN_LEFT, 10);
+			m_staticButtonsCount++;
+		}*/
 	}	
 	children = GetChildren();
 	count = children.GetCount();
@@ -134,9 +139,10 @@ HipTab::HipTab( HipInterface& _interface, HipPersonality& personality, wxBookCtr
 {
   //  printf("HipTab::HipTab\n");
 
-  m_staticBoxCount = 0;
-  m_textCtrlCount = 0;
-  m_staticTextCount = 0;
+	m_staticBoxCount = 0;
+	m_textCtrlCount = 0;
+	m_staticTextCount = 0;
+	m_staticButtonsCount = 0;
 
 
 	DestroyKeyInformation();
@@ -239,6 +245,13 @@ void HipTab::DestroyKeyInformation()
 		m_staticBoxes[i]->Destroy();
 	}
 	m_staticBoxCount = 0;
+	
+	for (i = 0; i < m_staticButtonsCount; i++)
+	{
+		m_staticButtons[i]->Destroy();
+	}
+	m_staticButtonsCount = 0;
+	
 }
 
 void HipTab::KeysUpdated()

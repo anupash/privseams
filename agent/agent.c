@@ -22,7 +22,7 @@ int agent_main(void)
 	int err = 0;
 
 	/* Initialize database. */
-	HIP_IFE(hit_db_init(), -1);
+	HIP_IFE(hit_db_init("/etc/hip/agentdb"), -1);
 
 	/* Initialize connection to HIP daemon. */
 	HIP_IFE(connhipd_init(), -1);

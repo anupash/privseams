@@ -24,8 +24,6 @@ int hip_agent_thread_started = 0;
 
 	@return 0 on success, -1 on errors.
 */
-
-
 int connhipd_init(void)
 {
 	/* Variables. */
@@ -148,8 +146,8 @@ int connhipd_thread(void *data)
 		HIP_DEBUG("Whole message received successfully, asking for accept...\n");
 
 		/* TODO XX: Modify message and check message type. */
-		strcpy(hit.name, "New HIT");
-		strcpy(hit.url, "<not set>");
+		strcpy(hit.name, "NewHIT");
+		strcpy(hit.url, "<notset>");
 		hit.port = 0;
 		memcpy(&hit.lhit, &msg->hits, sizeof(struct in6_addr));
 		memcpy(&hit.rhit, &msg->hitr, sizeof(struct in6_addr));

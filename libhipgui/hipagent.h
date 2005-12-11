@@ -179,6 +179,7 @@ public:
 	void OnImportKey(wxCommandEvent& event);
 	void OnAskQuit(wxCommandEvent& event);
 	void OnTimer(wxTimerEvent &event);
+	void OnDeleteKey(wxCommandEvent &event);
 	
 	int MsgBox(char *title, char *content);
 
@@ -236,6 +237,7 @@ private:
 };
 
 #define TIMER_ID 0
+#define BUTTON_DELETE_KEY_ID 1000
 
 
 #endif // _WX_SAMPLE_HipAgent_H_

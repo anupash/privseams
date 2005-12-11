@@ -24,7 +24,7 @@ public:
 	void InitHipKeys();
 	void UpdateHipKey( HipKey &key );
 	void AddHipKey( HipKey &key );
-	void DeleteHipKey( HipKey &key );
+	void DeleteHipKey(int);
 
 	int m_activeContext;
 	int m_activePersonality;

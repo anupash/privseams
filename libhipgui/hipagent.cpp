@@ -43,6 +43,7 @@ enum
     HipAgent_Enable,
 	HipAgent_ImportKey,
 	HipAgent_ExportKey,
+	HipAgent_DeleteKey,
 	HipAgent_AskQuit,
 	HipAgent_Timer,
 
@@ -163,10 +164,13 @@ BEGIN_EVENT_TABLE(HipAgentFrame, wxFrame)
 
 	EVT_MENU(HipAgent_ImportKey,	HipAgentFrame::OnImportKey)
 	EVT_MENU(HipAgent_ExportKey, 	HipAgentFrame::OnExportKey)
+	EVT_MENU(HipAgent_DeleteKey, 	HipAgentFrame::OnDeleteKey)
 
 	EVT_MENU(HipAgent_AskQuit,		HipAgentFrame::OnAskQuit)
 
 	EVT_TIMER(TIMER_ID,				HipAgentFrame::OnTimer)
+
+	EVT_BUTTON(BUTTON_DELETE_KEY_ID,HipAgentFrame::OnDeleteKey)
 
 	EVT_NOTEBOOK_PAGE_CHANGED(HipAgent_Notebook, HipAgentFrame::OnPageChanged)
     EVT_MENU(wxID_EXIT, HipAgentFrame::OnExit)
@@ -226,8 +230,10 @@ HipAgentFrame::HipAgentFrame(const wxString& title)
     wxMenuBar *mbar = new wxMenuBar;
     wxMenu *menuWidget = new wxMenu;
 #if wxUSE_TOOLTIPS
-    menuWidget->Append(HipAgent_ImportKey, _T("&Import key...\tCtrl-I"));
-	menuWidget->Append(HipAgent_ExportKey, _T("E&xport key...\tCtrl-X"));
+    menuWidget->Append(HipAgent_ImportKey, _T("&Import keys...\tCtrl-I"));
+	menuWidget->Append(HipAgent_ExportKey, _T("E&xport keys...\tCtrl-X"));
+    menuWidget->AppendSeparator();
+	menuWidget->Append(HipAgent_DeleteKey, _T("&Delete key...\tCtrl-D"));
     menuWidget->AppendSeparator();
 #endif // wxUSE_TOOLTIPS
     menuWidget->Append(HipAgent_SetBgColour, _T("&Apply changes...\tCtrl-A"));
@@ -579,36 +585,14 @@ void HipAgentFrame::OnImportKey(wxCommandEvent &event)
 {
 	wxString filename = "";
 
-	wxFileDialog* dlg = new wxFileDialog(this, "Choose a file");
+	wxFileDialog* dlg = new wxFileDialog(this, "Choose a file", "", "", "*", wxOPEN);
 	int ret = dlg->ShowModal();
 
 	if( ret == wxID_OK )
 	{
-		filename = dlg->GetPath();
-
-		wxTextEntryDialog* textDlg = new wxTextEntryDialog(
-			this, 
-			"Give a name for the key", 
-			"Imported key");
-
-		ret = textDlg->ShowModal();
-
-		if( ret == wxID_OK )
-		{
-			HipKey* key = new HipKey;
-			key->m_name = textDlg->GetValue();
-			wxFile file(filename);
-			unsigned char* buffer = new unsigned char[file.Length()];
-			file.Read(buffer, file.Length());
-			file.Close();
-			key->m_hi = wxString(buffer);
-
-			delete buffer;
-
-			m_hipInterface->AddHipKey(*key);
-			RefreshTabs();
-	//		delete key;
-		}
+		wxString filename = dlg->GetPath();
+		hit_db_load_from_file((char *)filename.c_str());
+		RefreshTabs();
 	}
 
 	delete dlg;
@@ -616,12 +600,13 @@ void HipAgentFrame::OnImportKey(wxCommandEvent &event)
 
 void HipAgentFrame::OnExportKey(wxCommandEvent &event)
 {
-	wxFileDialog* dlg = new wxFileDialog(this, "Choose a file");
+	wxFileDialog* dlg = new wxFileDialog(this, "Choose a file", "", "", "*", wxSAVE);
 	int ret = dlg->ShowModal();
 
 	if( ret == wxID_OK )
 	{
-		wxString filename = dlg->GetFilename();
+		wxString filename = dlg->GetPath();
+		hit_db_save_to_file((char *)filename.c_str());
 	}
 
 	delete dlg;
@@ -646,6 +631,7 @@ void HipAgentFrame::OnPageChanged(wxNotebookEvent &event)
 
 void HipAgentFrame::OnAskQuit(wxCommandEvent &event)
 {
+	gui_quit_interface();
 	Close();
 }
 
@@ -673,7 +659,3 @@ int HipAgentFrame::MsgBox(char *title, char *content)
 	return (err);
 }
 
-/*void HipAgentFrame::OnTimer(wxTimerEvent &event)
-{
-	gui_ask_new_hit_timer(this);
-}*/

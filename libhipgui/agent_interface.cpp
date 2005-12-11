@@ -61,6 +61,17 @@ out_err:
 
 /******************************************************************************/
 /**
+	Close GUI interface.
+*/
+void gui_quit_interface(void)
+{
+	hit_db_quit("/etc/hip/agentdb");
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	Ask user for accept or denial of HIT.
 
 	@return 0 on success, -1 on errors.
@@ -117,7 +128,7 @@ void gui_add_new_hit(HIT_Item *hit)
 void HipAgentFrame::OnTimer(wxTimerEvent &event)
 {
 	HipKey *key;
-	char hit_str[64], port_str[32];
+	char rhit_str[64], lhit_str[64], port_str[32];
 	
 	switch (hit_msg)
 	{
@@ -144,10 +155,12 @@ void HipAgentFrame::OnTimer(wxTimerEvent &event)
 	case HIT_ADD2:
 	{
 		HipKey *key = new HipKey;
-		print_hit_to_buffer(hit_str, &hit_add_del.rhit);
+		print_hit_to_buffer(lhit_str, &hit_add_del.lhit);
+		print_hit_to_buffer(rhit_str, &hit_add_del.rhit);
 		sprintf(port_str, "%d", hit_add_del.port);
 		key->m_id = hit_add_del.index;
-		key->m_hi = hit_str;
+		key->m_lhi = lhit_str;
+		key->m_hi = rhit_str;
 		key->m_name = hit_add_del.name;
 		key->m_port = port_str;
 		key->m_url = hit_add_del.url;
@@ -158,6 +171,31 @@ void HipAgentFrame::OnTimer(wxTimerEvent &event)
 	}
 
 	} /* switch */
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Delete currently selected key.
+*/
+void HipAgentFrame::OnDeleteKey(wxCommandEvent &event)
+{
+	HipKey *key = new HipKey;
+	struct in6_addr lhit, rhit;
+	char *lhit_str, *rhit_str;
+
+	HipContext& context = m_hipInterface->m_personalities[m_hipInterface->m_activePersonality].m_contexts[m_hipInterface->m_activeContext];
+	
+	memcpy(key, &context.m_keys[0], sizeof(HipKey));
+	lhit_str = (char *)key->m_lhi.c_str();
+	rhit_str = (char *)key->m_hi.c_str();
+	read_hit_from_buffer(&lhit, lhit_str);
+	read_hit_from_buffer(&rhit, rhit_str);
+	
+	m_hipInterface->DeleteHipKey(0);
+	RefreshTabs();
+	hit_db_del(&lhit, &rhit, 1);
 }
 /* END OF FUNCTION */
 

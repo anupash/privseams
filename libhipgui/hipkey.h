@@ -11,6 +11,7 @@ public:
 
 public: // no getters yet for these
 	wxString m_name;
+	wxString m_lhi;
 	wxString m_hi;
 	wxString m_url;
 	wxString m_port;

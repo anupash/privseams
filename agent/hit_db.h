@@ -70,15 +70,20 @@ extern "C" {
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int hit_db_init(void);
-void hit_db_quit(void);
-int hit_db_add_hit(HIT_Item *);
+int hit_db_init(char *);
+void hit_db_quit(char *);
+int hit_db_clear(void);
+
+int hit_db_add_hit(HIT_Item *, int);
 int hit_db_add(char *, struct in6_addr *, struct in6_addr *,
-               char *, int, int);
-int hit_db_del(int);
+               char *, int, int, int);
+int hit_db_del(struct in6_addr *, struct in6_addr *, int);
 
 HIT_Item *hit_db_search(int *, char *, struct in6_addr *, struct in6_addr *,
-			char *, int, int);
+			            char *, int, int, int);
+
+int hit_db_save_to_file(char *);
+int hit_db_load_from_file(char *);
 
 
 /******************************************************************************/
