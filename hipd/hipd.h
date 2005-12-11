@@ -31,9 +31,8 @@
 #define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
 #endif
 
-extern struct rtnl_handle nl_event;
-extern struct rtnl_handle nl_route;
-extern struct rtnl_handle nl_ipsec;
+extern struct rtnl_handle hip_nl_route;
+extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;
 
 #endif /* HIPD_H */

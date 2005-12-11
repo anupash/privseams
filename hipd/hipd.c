@@ -17,17 +17,14 @@ int hip_raw_sock = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
-struct sockaddr_un user_addr;
+struct sockaddr_un hip_user_addr;
 
-/* For receiving XFRM events (acquire, expire, etc) */
-struct rtnl_handle nl_event = { 0 };
+/* For receiving netlink IPsec events (acquire, expire, etc) */
+struct rtnl_handle hip_nl_ipsec = { 0 };
 
 /* For getting/setting routes and adding HITs (it was not possible to use
-   nf_event for this purpose). */
-struct rtnl_handle nl_route = { 0 };
-
-/* XFRM SA/SP setup. It was not possible to use nl_event for this?? */
-struct rtnl_handle nl_ipsec = { 0 };
+   nf_ipsec for this purpose). */
+struct rtnl_handle hip_nl_route = { 0 };
 
 time_t load_time;
 
@@ -141,12 +138,12 @@ void hip_exit(int signal) {
 		close(hip_raw_sock);
 	if (hip_user_sock)
 		close(hip_user_sock);
-	if (nl_event.fd)
-		rtnl_close(&nl_event);
-	if (nl_route.fd)
-		rtnl_close(&nl_route);
-	if (nl_ipsec.fd)
-		rtnl_close(&nl_ipsec);
+	if (hip_nl_ipsec.fd)
+		rtnl_close(&hip_nl_ipsec);
+	if (hip_nl_route.fd)
+		rtnl_close(&hip_nl_route);
+	if (hip_nl_ipsec.fd)
+		rtnl_close(&hip_nl_ipsec);
 
 	exit(signal);
 }
@@ -236,12 +233,12 @@ int main(int argc, char *argv[]) {
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
-	if (rtnl_open_byproto(&nl_ipsec, 0, NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&hip_nl_ipsec, 0, NETLINK_XFRM) < 0) {
 		err = 1;
 		HIP_ERROR("IPsec socket error: %s\n", strerror(errno));
 		goto out_err;
 	}
-	if (rtnl_open_byproto(&nl_route,
+	if (rtnl_open_byproto(&hip_nl_route,
 			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6,
 			      NETLINK_ROUTE) < 0) {
 		err = 1;
@@ -250,7 +247,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* Open the netlink socket for address and IF events */
-	if (rtnl_open_byproto(&nl_event, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&hip_nl_ipsec, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		err = 1;
 		goto out_err;
@@ -259,7 +256,7 @@ int main(int argc, char *argv[]) {
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
-	hip_netdev_init_addresses(&nl_event);
+	hip_netdev_init_addresses(&hip_nl_ipsec);
 
 	HIP_IFE(hip_init_raw_sock(), -1);
 
@@ -289,7 +286,7 @@ int main(int argc, char *argv[]) {
 		 1, "Bind failed.");
 	HIP_DEBUG("Local server up\n");
 
-	highest_descriptor = maxof(nl_route.fd, hip_raw_sock, hip_user_sock, nl_event.fd);
+	highest_descriptor = maxof(hip_nl_route.fd, hip_raw_sock, hip_user_sock, hip_nl_ipsec.fd);
 	
 	/* Enter to the select-loop */
 	for (;;) {
@@ -297,10 +294,10 @@ int main(int argc, char *argv[]) {
 		
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
-		FD_SET(nl_route.fd, &read_fdset);
+		FD_SET(hip_nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
-		FD_SET(nl_event.fd, &read_fdset);
+		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 
@@ -332,18 +329,18 @@ int main(int argc, char *argv[]) {
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				hip_handle_user_msg(hip_msg);
-		} else if (FD_ISSET(nl_event.fd, &read_fdset)) {
+		} else if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
 			HIP_DEBUG("netlink receive\n");
-			if (hip_netlink_receive(&nl_event,
+			if (hip_netlink_receive(&hip_nl_ipsec,
 						hip_netdev_event, NULL))
 				HIP_ERROR("Netlink receiving failed\n");
-		} else if (FD_ISSET(nl_route.fd, &read_fdset)) {
+		} else if (FD_ISSET(hip_nl_route.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
 			HIP_DEBUG("netlink route receive\n");
-			if (hip_netlink_receive(&nl_route,
+			if (hip_netlink_receive(&hip_nl_route,
 						hip_netdev_event, NULL))
 				HIP_ERROR("Netlink receiving failed\n");
 		} else {
