@@ -19,7 +19,7 @@ int hip_raw_sock = 0;
 int hip_user_sock = 0;
 struct sockaddr_un user_addr;
 
-/* For receiving events (acquire, new IP addresses) */
+/* For receiving XFRM events (acquire, expire, etc) */
 struct rtnl_handle nl_event = { 0 };
 
 /* For getting/setting routes and adding HITs (it was not possible to use
@@ -241,14 +241,16 @@ int main(int argc, char *argv[]) {
 		HIP_ERROR("IPsec socket error: %s\n", strerror(errno));
 		goto out_err;
 	}
-	if (rtnl_open_byproto(&nl_route, 0, NETLINK_ROUTE) < 0) {
+	if (rtnl_open_byproto(&nl_route,
+			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6,
+			      NETLINK_ROUTE) < 0) {
 		err = 1;
 		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
 		goto out_err;
 	}
 
 	/* Open the netlink socket for address and IF events */
-	if (rtnl_open_byproto(&nl_event, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&nl_event, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		err = 1;
 		goto out_err;
@@ -287,7 +289,7 @@ int main(int argc, char *argv[]) {
 		 1, "Bind failed.");
 	HIP_DEBUG("Local server up\n");
 
-	highest_descriptor = maxof(hip_raw_sock, hip_user_sock, nl_event.fd);
+	highest_descriptor = maxof(nl_route.fd, hip_raw_sock, hip_user_sock, nl_event.fd);
 	
 	/* Enter to the select-loop */
 	for (;;) {
@@ -295,6 +297,7 @@ int main(int argc, char *argv[]) {
 		
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
+		FD_SET(nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(nl_event.fd, &read_fdset);
@@ -334,6 +337,13 @@ int main(int argc, char *argv[]) {
 			   fetch it. */
 			HIP_DEBUG("netlink receive\n");
 			if (hip_netlink_receive(&nl_event,
+						hip_netdev_event, NULL))
+				HIP_ERROR("Netlink receiving failed\n");
+		} else if (FD_ISSET(nl_route.fd, &read_fdset)) {
+			/* Something on IF and address event netlink socket,
+			   fetch it. */
+			HIP_DEBUG("netlink route receive\n");
+			if (hip_netlink_receive(&nl_route,
 						hip_netdev_event, NULL))
 				HIP_ERROR("Netlink receiving failed\n");
 		} else {
