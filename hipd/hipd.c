@@ -17,17 +17,14 @@ int hip_raw_sock = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
-struct sockaddr_un user_addr;
+struct sockaddr_un hip_user_addr;
 
-/* For receiving events (acquire, new IP addresses) */
-struct rtnl_handle nl_event;
+/* For receiving netlink IPsec events (acquire, expire, etc) */
+struct rtnl_handle hip_nl_ipsec = { 0 };
 
 /* For getting/setting routes and adding HITs (it was not possible to use
-   nf_event for this purpose). */
-struct rtnl_handle nl_route;
-
-/* XFRM SA/SP setup. It was not possible to use nl_event for this?? */
-struct rtnl_handle nl_ipsec;
+   nf_ipsec for this purpose). */
+struct rtnl_handle hip_nl_route = { 0 };
 
 time_t load_time;
 
@@ -120,6 +117,10 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
+	hip_delete_all_sp();
+
+	delete_all_addresses();
+
 	set_up_device(HIP_HIT_DEV, 0);
 
 #ifdef CONFIG_HIP_HI3
@@ -129,20 +130,20 @@ void hip_exit(int signal) {
 #ifdef CONFIG_HIP_RVS
         hip_uninit_rvadb();
 #endif
+
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
-	hip_delete_all_sp();
 	if (hip_raw_sock)
 		close(hip_raw_sock);
 	if (hip_user_sock)
 		close(hip_user_sock);
-	if (nl_event.fd)
-		rtnl_close(nl_event);
-	if (nl_route.fd)
-		rtnl_close(nl_route);
-	if (nl_ipsec.fd)
-		rtnl_close(nl_ipsec);
+	if (hip_nl_ipsec.fd)
+		rtnl_close(&hip_nl_ipsec);
+	if (hip_nl_route.fd)
+		rtnl_close(&hip_nl_route);
+	if (hip_nl_ipsec.fd)
+		rtnl_close(&hip_nl_ipsec);
 
 	exit(signal);
 }
@@ -232,19 +233,21 @@ int main(int argc, char *argv[]) {
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
-	if (rtnl_open_byproto(&nl_ipsec, 0, NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&hip_nl_ipsec, 0, NETLINK_XFRM) < 0) {
 		err = 1;
 		HIP_ERROR("IPsec socket error: %s\n", strerror(errno));
 		goto out_err;
 	}
-	if (rtnl_open_byproto(&nl_route, 0, NETLINK_ROUTE) < 0) {
+	if (rtnl_open_byproto(&hip_nl_route,
+			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6,
+			      NETLINK_ROUTE) < 0) {
 		err = 1;
 		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
 		goto out_err;
 	}
 
 	/* Open the netlink socket for address and IF events */
-	if (rtnl_open_byproto(&nl_event, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&hip_nl_ipsec, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		err = 1;
 		goto out_err;
@@ -253,7 +256,7 @@ int main(int argc, char *argv[]) {
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
-	hip_netdev_init_addresses(&nl_event);
+	hip_netdev_init_addresses(&hip_nl_ipsec);
 
 	HIP_IFE(hip_init_raw_sock(), -1);
 
@@ -283,7 +286,7 @@ int main(int argc, char *argv[]) {
 		 1, "Bind failed.");
 	HIP_DEBUG("Local server up\n");
 
-	highest_descriptor = maxof(hip_raw_sock, hip_user_sock, nl_event.fd);
+	highest_descriptor = maxof(hip_nl_route.fd, hip_raw_sock, hip_user_sock, hip_nl_ipsec.fd);
 	
 	/* Enter to the select-loop */
 	for (;;) {
@@ -291,22 +294,17 @@ int main(int argc, char *argv[]) {
 		
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
+		FD_SET(hip_nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
-		FD_SET(nl_event.fd, &read_fdset);
+		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 
 		_HIP_DEBUG("select\n");
 		/* wait for socket activity */
-#ifndef CONFIG_HIP_HI3
-		if ((err = select((highest_descriptor + 1), &read_fdset, 
-				  NULL, NULL, &timeout)) < 0) {
-#else
-	        if ((err = cl_select((highest_descriptor + 1), &read_fdset, 
-				     NULL, NULL, &timeout)) < 0) {
-				
-#endif
+		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset, 
+				       NULL, NULL, &timeout)) < 0) {
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
 		} else if (err == 0) {
 			/* idle cycle - select() timeout */
@@ -331,11 +329,18 @@ int main(int argc, char *argv[]) {
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				hip_handle_user_msg(hip_msg);
-		} else if (FD_ISSET(nl_event.fd, &read_fdset)) {
+		} else if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
 			HIP_DEBUG("netlink receive\n");
-			if (hip_netlink_receive(&nl_event,
+			if (hip_netlink_receive(&hip_nl_ipsec,
+						hip_netdev_event, NULL))
+				HIP_ERROR("Netlink receiving failed\n");
+		} else if (FD_ISSET(hip_nl_route.fd, &read_fdset)) {
+			/* Something on IF and address event netlink socket,
+			   fetch it. */
+			HIP_DEBUG("netlink route receive\n");
+			if (hip_netlink_receive(&hip_nl_route,
 						hip_netdev_event, NULL))
 				HIP_ERROR("Netlink receiving failed\n");
 		} else {
@@ -355,25 +360,11 @@ int main(int argc, char *argv[]) {
 	}
 
 out_err:
-	/* free allocated resources */
-	if (hip_raw_sock)
-		close(hip_raw_sock);
-	if (hip_user_sock)
-		close(hip_user_sock);
-	if (nl_event.fd)
-		rtnl_close(nl_event);
-	if (nl_route.fd)
-		rtnl_close(nl_route);
-	if (nl_ipsec.fd)
-		rtnl_close(nl_ipsec);
 
-	delete_all_addresses();
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
-	/* On exit the general policy must be cancelled */
-	HIP_DEBUG("Deleting the SPs and SAs\n");
-	//hip_delete_default_prefix_sp_pair();
-	hip_delete_all_sp();
+	/* free allocated resources */
+	hip_exit(err);
 
 	return err;
 }

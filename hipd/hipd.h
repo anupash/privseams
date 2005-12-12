@@ -25,9 +25,14 @@
 
 #define HIP_HIT_DEV "dummy0"
 
-extern struct rtnl_handle nl_event;
-extern struct rtnl_handle nl_route;
-extern struct rtnl_handle nl_ipsec;
+#ifdef CONFIG_HIP_HI3
+#define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
+#else
+#define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
+#endif
+
+extern struct rtnl_handle hip_nl_route;
+extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;
 
 #endif /* HIPD_H */
