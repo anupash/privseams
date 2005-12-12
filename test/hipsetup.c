@@ -3,12 +3,12 @@
 extern char *optarg;
 extern int optind, opterr, optopt;
 
-const char *usage_str = "hipsetupNew -h for help\n"
-	"hipsetupNew -m            to install hipmod module\n"
-	"hipsetupNew -i peer_name  for Base Exchange Initiator\n"
-	"hipsetupNew -r            for Base Exchange Responder\n"
-	"hipsetupNew -s            for Base Exchange SSH\n"
-	"hipsetupNew -b            for BOS (in initiator)\n"
+const char *usage_str = "hipsetup -h for help\n"
+	"hipsetup -m            to install hipmod module\n"
+	"hipsetup -i peer_name  for Base Exchange Initiator\n"
+	"hipsetup -r            for Base Exchange Responder\n"
+	"hipsetup -s            for Base Exchange SSH\n"
+	"hipsetup -b            for BOS (in initiator)\n"
 	"\n"
 	;
 
