@@ -195,14 +195,14 @@ void hip_exit(int signal) {
 		close(hip_raw_sock);
 	if (hip_user_sock)
 		close(hip_user_sock);
+	if (hip_nl_ipsec.fd)
+		rtnl_close(&hip_nl_ipsec);
+	if (hip_nl_route.fd)
+		rtnl_close(&hip_nl_route);
+	if (hip_nl_ipsec.fd)
+		rtnl_close(&hip_nl_ipsec);
 	if (hip_agent_sock)
 		close(hip_agent_sock);
-	if (nl_event.fd)
-		rtnl_close(nl_event);
-	if (nl_route.fd)
-		rtnl_close(nl_route);
-	if (nl_ipsec.fd)
-		rtnl_close(nl_ipsec);
 
 	exit(signal);
 }
@@ -356,7 +356,8 @@ int main(int argc, char *argv[]) {
                       sizeof(hip_agent_addr)),
                  -1, "Bind on agent addr failed.");
 	
-	highest_descriptor = maxof(hip_raw_sock, hip_user_sock, nl_event.fd,
+	highest_descriptor = maxof(hip_nl_route.fd, hip_raw_sock,
+				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_agent_sock);
 	
 	HIP_DEBUG("HIP daemon up and running\n");
@@ -367,25 +368,19 @@ int main(int argc, char *argv[]) {
 		
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
+		FD_SET(hip_nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
-		FD_SET(nl_event.fd, &read_fdset);
+		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		
 		_HIP_DEBUG("select\n");
 		/* wait for socket activity */
-
-#ifndef CONFIG_HIP_HI3
-                if ((err = select((highest_descriptor + 1), &read_fdset, 
-                                  NULL, NULL, &timeout)) < 0) {
-#else
-                if ((err = cl_select((highest_descriptor + 1), &read_fdset, 
-                                     NULL, NULL, &timeout)) < 0) {
-                                
-#endif
-                        HIP_ERROR("select() error: %s.\n", strerror(errno));
+		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset, 
+				       NULL, NULL, &timeout)) < 0) {
+			HIP_ERROR("select() error: %s.\n", strerror(errno));
 		} else if (err == 0) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
@@ -446,11 +441,18 @@ int main(int argc, char *argv[]) {
                                 HIP_DEBUG("HIP agent ok.\n");
                                 hip_agent_status = 1;
                         }
-		} else if (FD_ISSET(nl_event.fd, &read_fdset)) {
+		} else if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
 			HIP_DEBUG("netlink receive\n");
-			if (hip_netlink_receive(&nl_event,
+			if (hip_netlink_receive(&hip_nl_ipsec,
+						hip_netdev_event, NULL))
+				HIP_ERROR("Netlink receiving failed\n");
+		} else if (FD_ISSET(hip_nl_route.fd, &read_fdset)) {
+			/* Something on IF and address event netlink socket,
+			   fetch it. */
+			HIP_DEBUG("netlink route receive\n");
+			if (hip_netlink_receive(&hip_nl_route,
 						hip_netdev_event, NULL))
 				HIP_ERROR("Netlink receiving failed\n");
 		} else {
