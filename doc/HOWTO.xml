@@ -44,13 +44,6 @@
     <para>
       &nbsp;* iproute and its development headers
     </para>
-    <para>
-      &nbsp;* iptables development headers
-    </para>
-    <para>
-      &nbsp;* glib (www.gtk.org) and development headers
-    </para>
-    <para>
       &nbsp;* wxgtk 2.6.2 and libgtk-2.x library and development headers
     </para>
     <para>
@@ -65,6 +58,12 @@
     <para>
       &nbsp;* iptables userspace tools and IPv6 netfilter in the kernel
               (for the HIP firewall only)
+    </para>
+    <para>
+      &nbsp;* iptables development headers (HIP firewall)
+    </para>
+    <para>
+      &nbsp;* glib (www.gtk.org) and development headers (HIP firewall)
     </para>
     <para>
       &nbsp;* netcat6
@@ -171,6 +170,11 @@
       from the top directory does not currently build e.g. java libraries or
       telnet. Follow the instructions presented later in this document to
       build them.
+    </para>
+    <para>
+      Some features, like the HIP firewall are not compiled by default.
+      Run "./configure --enable-FEATURE" to compile those.
+      See "./configure --help" for a full list of options.
     </para>
   </chapter>
   <chapter>
