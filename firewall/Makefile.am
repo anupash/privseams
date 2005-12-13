@@ -17,15 +17,13 @@ CFLAGS += -L$(HIPL_LIBINET6_LIB)
 CFLAGS += `pkg-config --cflags --libs glib-2.0` 
 CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 
-include_HEADERS =  netlink.h 
-include_HEADERS += firewall.h conntrack.h rule_management.h helpers.h builder.h misc.h pk.h 
+include_HEADERS = firewall.h conntrack.h rule_management.h helpers.h
 INCLUDES = -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_LIBHIPTOOL)
 INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL) -I$(HIPL_HIPD)
 
 sbin_PROGRAMS = firewall
 
 firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c
-firewall_SOURCES +=  builder.c misc.c dh.c pk.c
 
 firewall_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
