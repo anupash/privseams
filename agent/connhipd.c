@@ -24,6 +24,8 @@ int hip_agent_thread_started = 0;
 
 	@return 0 on success, -1 on errors.
 */
+
+
 int connhipd_init(void)
 {
 	/* Variables. */
@@ -55,7 +57,7 @@ int connhipd_init(void)
 	hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
 	bzero(&user_addr, sizeof(user_addr));
 	user_addr.sun_family = AF_LOCAL;
-	strcpy(user_addr.sun_path, HIP_DAEMONADDR_PATH);
+	strcpy(user_addr.sun_path, HIP_AGENTADDR_PATH);
 	alen = sizeof(user_addr);
 	n = sendto(hip_user_sock, msg, sizeof(struct hip_common), 0,
 	           (struct sockaddr *)&user_addr, alen);

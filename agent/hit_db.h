@@ -77,8 +77,8 @@ int hit_db_add(char *, struct in6_addr *, struct in6_addr *,
                char *, int, int);
 int hit_db_del(int);
 
-HIT_Item *hit_db_find(int *, char *, struct in6_addr *, struct in6_addr *,
-                      char *, int, int);
+HIT_Item *hit_db_search(int *, char *, struct in6_addr *, struct in6_addr *,
+			char *, int, int);
 
 
 /******************************************************************************/

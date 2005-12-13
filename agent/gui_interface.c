@@ -49,9 +49,16 @@ int gui_check_hit(HIT_Item *hit)
 	int err = 0, ndx;
 	char hits[128], hitr[128], msg[1024];
 	
-	/* First check for database and this hit. */
-	fhit = hit_db_find(&ndx, NULL, &hit->lhit, &hit->rhit,
+	/*
+	  First search database. Do search twice,
+	  if first find did not find match. On second search swap
+	  hits, because we can not know whether this packet is outgoing
+	  or incoming.
+	*/
+	fhit = hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
 	                   hit->url, hit->port, 1);
+	if (!fhit) fhit= hit_db_search(&ndx, NULL, &hit->rhit, &hit->lhit,
+				     hit->url, hit->port, 1);
 	if (fhit)
 	{
 		HIP_DEBUG("Found HIT from database with type \"%s\".\n",

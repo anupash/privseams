@@ -145,12 +145,12 @@ int hit_db_add(char *name,
 		n = HIT_DB_ITEMS_REALLOC + hit_db_ni;
 		hit_db = (HIT_Item *)realloc(hit_db, sizeof(HIT_Item) * n);
 		if (!hit_db) goto out_err;
+		hit_db_ni = n;
 	}
-
-	hit_db_ni = n;
 
 	/* Copy info. */
 	n = hit_db_n;
+	HIP_DEBUG("New item has index #%d...\n", n);
 	strncpy(hit_db[n].name, name, 48);
 	hit_db[n].name[48] = '\0';
 	memcpy(&hit_db[n].lhit, lhit, sizeof(struct in6_addr));
@@ -166,7 +166,9 @@ int hit_db_add(char *name,
 	HIP_DEBUG(" Add succesfull.\n");
 
 	hit_db_n++; /* Count to next free item. */
-	
+	HIP_DEBUG("%d items in database.\n", hit_db_n);
+
+	err = 0;
 	goto out;
 
 	/* Return failure. */
@@ -251,13 +253,13 @@ out:
 	@return Pointer to array of HITs if found, NULL if not.
 	        Pointer must be freed after usage.
 */
-HIT_Item *hit_db_find(int *number,
-                      char *name,
-                      struct in6_addr *lhit,
-                      struct in6_addr *rhit,
-                      char *url,
-                      int port,
-                      int max_find)
+HIT_Item *hit_db_search(int *number,
+			char *name,
+			struct in6_addr *lhit,
+			struct in6_addr *rhit,
+			char *url,
+			int port,
+			int max_find)
 {
 	/* Variables. */
 	HIT_Item *fh1 = NULL, *fh2 = NULL, *hits = NULL;
