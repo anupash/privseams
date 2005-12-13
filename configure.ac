@@ -16,7 +16,6 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_PROG_RANLIB
 
 # Checks for libraries.
 AM_PROG_LIBTOOL
@@ -111,14 +110,25 @@ if test x"$glibc_version" = x"unknown"; then
 fi
 AC_SUBST(usagi_libc)
 
-AC_CONFIG_FILES([Makefile
-                libhiptool/Makefile
-                libinet6/Makefile
-                libinet6/include_glibc21/Makefile
-                libinet6/include_glibc22/Makefile
-                libinet6/include_glibc23/Makefile
-                tools/Makefile
-                hipd/Makefile
-		firewall/Makefile
-                test/Makefile])
+hipl_opt_build=
+
+AC_ARG_ENABLE(firewall,
+              [--enable-firewall compile HIP enabled firewall daemon],
+	      [echo "checking for firewall... yes"],
+              [echo "checking for firewall... no"])
+if test x"$enable_firewall" = x"yes"; then
+        hipl_opt_build="$hipl_opt_build firewall"
+        AC_DEFINE([CONFIG_HIP_FIREWALL], [], [Enable HIP firewall])
+fi
+
+AC_SUBST(hipl_opt_build, $hipl_opt_build)
+AC_CONFIG_FILES([ Makefile
+                  libhiptool/Makefile
+                  libinet6/Makefile
+                  libinet6/include_glibc21/Makefile
+                  libinet6/include_glibc22/Makefile
+                  libinet6/include_glibc23/Makefile
+                  tools/Makefile
+                  hipd/Makefile
+                  test/Makefile ])
 AC_OUTPUT
