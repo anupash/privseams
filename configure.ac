@@ -16,18 +16,20 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+AC_PROG_RANLIB
 
 # Checks for libraries.
 AM_PROG_LIBTOOL
-AC_CHECK_LIB([c], [__libc_main])
-AC_CHECK_LIB([crypto], [DSA_generate_key])
+AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
+AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
+AC_CHECK_LIB(glib, g_mutex_lock)
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 AC_HEADER_SYS_WAIT
 # Checks for header files.
 AC_HEADER_STDC
 
 AC_HEADER_STDBOOL
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h glib/glist.h glib.h libipq.h openssl/dsa.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -53,6 +55,7 @@ AC_FUNC_ERROR_AT_LINE
 AC_FUNC_GETPGRP
 AC_PROG_GCC_TRADITIONAL
 AC_HEADER_MAJOR
+AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_FUNC_MKTIME

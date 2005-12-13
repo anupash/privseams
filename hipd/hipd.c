@@ -17,17 +17,14 @@ int hip_raw_sock = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
-struct sockaddr_un user_addr;
+struct sockaddr_un hip_user_addr;
 
-/* For receiving events (acquire, new IP addresses) */
-struct rtnl_handle nl_event;
+/* For receiving netlink IPsec events (acquire, expire, etc) */
+struct rtnl_handle hip_nl_ipsec = { 0 };
 
 /* For getting/setting routes and adding HITs (it was not possible to use
-   nf_event for this purpose). */
-struct rtnl_handle nl_route;
-
-/* XFRM SA/SP setup. It was not possible to use nl_event for this?? */
-struct rtnl_handle nl_ipsec;
+   nf_ipsec for this purpose). */
+struct rtnl_handle hip_nl_route = { 0 };
 
 #ifdef CONFIG_HIP_AGENT
 int hip_agent_sock = 0, hip_agent_status = 0;
@@ -177,6 +174,10 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
+	hip_delete_all_sp();
+
+	delete_all_addresses();
+
 	set_up_device(HIP_HIT_DEV, 0);
 
 #ifdef CONFIG_HIP_HI3
@@ -291,19 +292,21 @@ int main(int argc, char *argv[]) {
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
-	if (rtnl_open_byproto(&nl_ipsec, 0, NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&hip_nl_ipsec, 0, NETLINK_XFRM) < 0) {
 		err = 1;
 		HIP_ERROR("IPsec socket error: %s\n", strerror(errno));
 		goto out_err;
 	}
-	if (rtnl_open_byproto(&nl_route, 0, NETLINK_ROUTE) < 0) {
+	if (rtnl_open_byproto(&hip_nl_route,
+			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6,
+			      NETLINK_ROUTE) < 0) {
 		err = 1;
 		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
 		goto out_err;
 	}
 
 	/* Open the netlink socket for address and IF events */
-	if (rtnl_open_byproto(&nl_event, RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6 | XFRMGRP_ACQUIRE, NETLINK_ROUTE | NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&hip_nl_ipsec, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0) {
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		err = 1;
 		goto out_err;
@@ -312,7 +315,7 @@ int main(int argc, char *argv[]) {
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
-	hip_netdev_init_addresses(&nl_event);
+	hip_netdev_init_addresses(&hip_nl_ipsec);
 
 	HIP_IFE(hip_init_raw_sock(), -1);
 
@@ -467,25 +470,11 @@ int main(int argc, char *argv[]) {
 	}
 
 out_err:
-        /* free allocated resources */
-        if (hip_raw_sock)
-                close(hip_raw_sock);
-        if (hip_user_sock)
-                close(hip_user_sock);
-        if (nl_event.fd)
-                rtnl_close(nl_event);
-        if (nl_route.fd)
-                rtnl_close(nl_route);
-        if (nl_ipsec.fd)
-                rtnl_close(nl_ipsec);
-	
-        delete_all_addresses();
-        HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
-        /* On exit the general policy must be cancelled */
-        HIP_DEBUG("Deleting the SPs and SAs\n");
-        //hip_delete_default_prefix_sp_pair();
-        hip_delete_all_sp();
+	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
+
+	/* free allocated resources */
+	hip_exit(err);
 
 	return err;
 }

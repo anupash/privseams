@@ -42,9 +42,6 @@
       &nbsp;* the latest versions of autoconf, automake, autoreconf and libtool
     </para>
     <para>
-      &nbsp;* perl, lorder
-    </para>
-    <para>
       &nbsp;* iproute and its development headers
     </para>
     <para>
