@@ -10,10 +10,11 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	struct sockaddr_in6 src, dst;
 
 	err = hip_agent_filter(msg);
-	if (err == -ENOENT || err == 0)
-	{
-		HIP_DEBUG("Agent is %s running, processing packet\n",
-			  (err == -ENOENT) ? "not" : "");
+	if (err == -ENOENT) {
+		HIP_DEBUG("No agent running, continuing\n");
+		err = 0;
+        } else if (err == 0) {
+		HIP_DEBUG("Agent accepted packet\n");
 	} else if (err) {
 		HIP_ERROR("Agent reject packet\n");
 		err = -1;
