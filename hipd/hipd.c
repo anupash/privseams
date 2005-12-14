@@ -65,7 +65,7 @@ int hip_agent_filter(struct hip_common *msg)
 		  hip_get_msg_total_len(msg) - sizeof(struct hip_common));
 	
 	alen = sizeof(hip_agent_addr);                      
-	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
 		   0, (struct sockaddr *)&hip_agent_addr, alen);
 	if (n < 0)
 	{
@@ -78,7 +78,7 @@ int hip_agent_filter(struct hip_common *msg)
 	
 	alen = sizeof(hip_agent_addr);
 	sendn = n;
-	n = recvfrom(hip_user_sock, msg, n, 0,
+	n = recvfrom(hip_agent_sock, msg, n, 0,
 		     (struct sockaddr *)&hip_agent_addr, &alen);
 	if (n < 0) {
 		HIP_ERROR("Recvfrom() failed.\n");
@@ -199,8 +199,6 @@ void hip_exit(int signal) {
 		rtnl_close(&hip_nl_ipsec);
 	if (hip_nl_route.fd)
 		rtnl_close(&hip_nl_route);
-	if (hip_nl_ipsec.fd)
-		rtnl_close(&hip_nl_ipsec);
 	if (hip_agent_sock)
 		close(hip_agent_sock);
 
@@ -356,11 +354,9 @@ int main(int argc, char *argv[]) {
                       sizeof(hip_agent_addr)),
                  -1, "Bind on agent addr failed.");
 	
-	highest_descriptor = maxof(hip_nl_route.fd, hip_raw_sock,
+	highest_descriptor = maxof(5, hip_nl_route.fd, hip_raw_sock,
 				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_agent_sock);
-	
-	HIP_DEBUG("HIP daemon up and running\n");
 	
 	/* Enter to the select-loop */
 	for (;;) {

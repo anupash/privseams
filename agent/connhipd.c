@@ -10,7 +10,7 @@
 /******************************************************************************/
 /* VARIABLES */
 /** This socket is used for communication between agent and HIP daemon. */
-int hip_user_sock = 0;
+int hip_agent_sock = 0;
 /** This is just for waiting the connection thread to start properly. */
 int hip_agent_thread_started = 0;
 
@@ -30,7 +30,7 @@ int connhipd_init(void)
 {
 	/* Variables. */
 	int err = 0, n, len;
-	struct sockaddr_un user_addr;
+	struct sockaddr_un agent_addr;
 	struct hip_common *msg = NULL;
 	socklen_t alen;
 	pthread_t pt;
@@ -39,38 +39,38 @@ int connhipd_init(void)
 	HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
 
 	/* Create and bind daemon socket. */
-	hip_user_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	if (hip_user_sock < 0)
+	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	if (hip_agent_sock < 0)
 	{
 		HIP_ERROR("Failed to create socket.\n");
 		err = -1;
 		goto out_err;
 	}
 	
-	bzero(&user_addr, sizeof(user_addr));
-	user_addr.sun_family = AF_LOCAL;
-	strcpy(user_addr.sun_path, tmpnam(NULL));
-	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&user_addr,
-	         sizeof(user_addr)), -1, "Bind failed.\n");
+	bzero(&agent_addr, sizeof(agent_addr));
+	agent_addr.sun_family = AF_LOCAL;
+	strcpy(agent_addr.sun_path, tmpnam(NULL));
+	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
+	         sizeof(agent_addr)), -1, "Bind failed.\n");
 
 	/* Test connection. */
 	hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
-	bzero(&user_addr, sizeof(user_addr));
-	user_addr.sun_family = AF_LOCAL;
-	strcpy(user_addr.sun_path, HIP_AGENTADDR_PATH);
-	alen = sizeof(user_addr);
-	n = sendto(hip_user_sock, msg, sizeof(struct hip_common), 0,
-	           (struct sockaddr *)&user_addr, alen);
+	bzero(&agent_addr, sizeof(agent_addr));
+	agent_addr.sun_family = AF_LOCAL;
+	strcpy(agent_addr.sun_path, HIP_AGENTADDR_PATH);
+	alen = sizeof(agent_addr);
+	n = sendto(hip_agent_sock, msg, sizeof(struct hip_common), 0,
+	           (struct sockaddr *)&agent_addr, alen);
 	if (n < 0)
 	{
 		HIP_ERROR("Could not send ping to daemon.\n");
 		err = -1;
 		goto out_err;
 	}
-	bzero(&user_addr, sizeof(user_addr));
-	alen = sizeof(user_addr);
-	n = recvfrom(hip_user_sock, msg, sizeof(struct hip_common), 0,
-	             (struct sockaddr *)&user_addr, &alen);
+	bzero(&agent_addr, sizeof(agent_addr));
+	alen = sizeof(agent_addr);
+	n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), 0,
+	             (struct sockaddr *)&agent_addr, &alen);
 	if (n < 0)
 	{
 		HIP_ERROR("Did not receive ping reply from daemon.\n");
@@ -91,7 +91,7 @@ int connhipd_init(void)
 	return (0);
 
 out_err:
-	if (hip_user_sock) close(hip_user_sock);
+	if (hip_agent_sock) close(hip_agent_sock);
 	if (msg != NULL) HIP_FREE(msg);
 
 	return err;
@@ -107,7 +107,7 @@ int connhipd_thread(void *data)
 {
 	/* Variables. */
 	int err = 0, n, len, ret;
-	struct sockaddr_un user_addr;
+	struct sockaddr_un agent_addr;
 	struct hip_common *msg = (struct hip_common *)data;
 	socklen_t alen;
 	HIT_Item hit;
@@ -118,10 +118,10 @@ int connhipd_thread(void *data)
 	{
 		HIP_DEBUG("Waiting msg...\n");
 
-		bzero(&user_addr, sizeof(user_addr));
-		alen = sizeof(user_addr);
-		n = recvfrom(hip_user_sock, msg, sizeof(struct hip_common), MSG_PEEK,
-		             (struct sockaddr *)&user_addr, &alen);
+		bzero(&agent_addr, sizeof(agent_addr));
+		alen = sizeof(agent_addr);
+		n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), MSG_PEEK,
+		             (struct sockaddr *)&agent_addr, &alen);
 		if (n < 0)
 		{
 			HIP_ERROR("Error receiving message header from daemon.\n");
@@ -130,12 +130,12 @@ int connhipd_thread(void *data)
 		}
 
 		HIP_DEBUG("Header received successfully\n");
-		alen = sizeof(user_addr);
+		alen = sizeof(agent_addr);
 		len = hip_get_msg_total_len(msg);
 
 		HIP_DEBUG("Receiving message (%d bytes)\n", len);
-		n = recvfrom(hip_user_sock, msg, len, 0,
-			     (struct sockaddr *)&user_addr, &alen);
+		n = recvfrom(hip_agent_sock, msg, len, 0,
+			     (struct sockaddr *)&agent_addr, &alen);
 
 		if (n < 0)
 		{
@@ -159,9 +159,9 @@ int connhipd_thread(void *data)
 		{
 			HIP_DEBUG("Message accepted, sending back to daemon.\n");
 
-			alen = sizeof(user_addr);
-			n = sendto(hip_user_sock, msg, sizeof(struct hip_common), 0,
-			           (struct sockaddr *)&user_addr, alen);
+			alen = sizeof(agent_addr);
+			n = sendto(hip_agent_sock, msg, sizeof(struct hip_common), 0,
+			           (struct sockaddr *)&agent_addr, alen);
 			if (n < 0)
 			{
 				HIP_ERROR("Could not send message back to daemon.\n");
@@ -175,9 +175,9 @@ int connhipd_thread(void *data)
 		{
 			HIP_DEBUG("Message rejected, sending reply to daemon.\n");
 
-			alen = sizeof(user_addr);
-			n = sendto(hip_user_sock, "no", 2, 0,
-			           (struct sockaddr *)&user_addr, alen);
+			alen = sizeof(agent_addr);
+			n = sendto(hip_agent_sock, "no", 2, 0,
+			           (struct sockaddr *)&agent_addr, alen);
 			if (n < 0)
 			{
 				HIP_ERROR("Could not send reply to daemon.\n");
@@ -191,7 +191,7 @@ int connhipd_thread(void *data)
 
 
  out_err:
-	if (hip_user_sock) close(hip_user_sock);
+	if (hip_agent_sock) close(hip_agent_sock);
 	if (msg != NULL) HIP_FREE(msg);
 	
 	agent_exit();
