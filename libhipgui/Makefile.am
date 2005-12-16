@@ -2,8 +2,7 @@
 HIPL = $(PWD)/..
 include $(HIPL)/Makefile.am.global
 
-CFLAGS = -DHIP_LOGFMT_LONG -g -O0 -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE
-CFLAGS += -DCONFIG_HIP_AGENT
+CFLAGS = -O0 $(GDB_CFLAG)
 
 WX_INCLUDES := $(shell wx-config --cxxflags)
 WX_CFLAGS := $(shell wx-config --libs)

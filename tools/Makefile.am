@@ -10,10 +10,9 @@ include $(HIPL)/Makefile.am.global
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-CFLAGS  = -I$(HIPL_LIBINET6_INCLUDE)
-CFLAGS  += -I$(HIPL) -DCONFIG_HIP_DEBUG
-CFLAGS  += -DHIP_LOGFMT_LONG -g -L$(HIPL_LIBINET6_LIB) -I$(HIPL_HIPD)
-CFLAGS  += -I$(HIPL_LIBINET6) -I$(HIPL_LIBHIPTOOL)
+CFLAGS = -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL) $(GDB_CFLAG)
+CFLAGS += -L$(HIPL_LIBINET6_LIB) -I$(HIPL_HIPD)
+CFLAGS += -I$(HIPL_LIBINET6) -I$(HIPL_LIBHIPTOOL)
 
 include_HEADERS = hipconf.h
 

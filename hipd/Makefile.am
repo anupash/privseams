@@ -9,8 +9,7 @@ include $(HIPL)/Makefile.am.global
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
-CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG
-CFLAGS += -DCONFIG_HIP_AGENT
+CFLAGS = $(GDB_CFLAG)
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.

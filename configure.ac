@@ -20,15 +20,13 @@ AC_PROG_MAKE_SET
 # Checks for libraries.
 AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
-AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
-AC_CHECK_LIB(glib, g_mutex_lock)
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 AC_HEADER_SYS_WAIT
 # Checks for header files.
 AC_HEADER_STDC
 
 AC_HEADER_STDBOOL
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h glib/glist.h glib.h libipq.h openssl/dsa.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h openssl/dsa.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -68,7 +66,7 @@ AC_FUNC_STRFTIME
 AC_FUNC_STRNLEN
 AC_FUNC_UTIME_NULL
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime ipq_create_handle])
+AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
 
 AC_MSG_CHECKING([for glibc version])
 AC_EGREP_CPP(%%%yes%%%, [
@@ -113,15 +111,41 @@ AC_SUBST(usagi_libc)
 hipl_opt_build=
 
 AC_ARG_ENABLE(firewall,
-              [--enable-firewall compile HIP enabled firewall daemon],
+              [  --enable-firewall compile HIP enabled firewall daemon],
 	      [echo "checking for firewall... yes"],
               [echo "checking for firewall... no"])
 if test x"$enable_firewall" = x"yes"; then
+        AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
+        AC_CHECK_LIB(glib, g_mutex_lock)
+        AC_CHECK_HEADERS(glib/glist.h glib.h libipq.h)
+        AC_CHECK_FUNCS(ipq_create_handle)
+        AC_DEFINE(CONFIG_HIP_FIREWALL)
         hipl_opt_build="$hipl_opt_build firewall"
-        AC_DEFINE([CONFIG_HIP_FIREWALL], [], [Enable HIP firewall])
 fi
 
-AC_SUBST(hipl_opt_build, $hipl_opt_build)
+AC_ARG_ENABLE(agent,
+              [  --enable-agent compile HIP user agent],
+             [echo "checking for agent... yes"],
+              [echo "checking for agent... no"])
+if test x"$enable_agent" = x"yes"; then
+# XX TODO: invoke "wx-config --basename" or "wx-config --libs" and check lib
+# XX TODO: invoke "wx-config --version" and test >= 2.6.2
+# XX TODO: invoke "wx-config --cflags" and check that e.g. wx/menu.h exists
+        AC_DEFINE(CONFIG_HIP_AGENT)
+        hipl_opt_build="$hipl_opt_build libhipgui agent"
+fi
+
+AC_SUBST(hipl_opt_build)
+
+# Some default settings. Later on, this can be optional as well.
+AC_DEFINE(HIP_LOGFMT_LONG)
+AC_DEFINE(CONFIG_HIP_DEBUG)
+AC_SUBST(GDB_CFLAG, "-g")
+
+# XX TODO: THESE SHOULD CFLAGS OPTIONS
+# * CONFIG_HIP_HI3
+# * CONFIG_HIP_RVS
+
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile
                   libinet6/Makefile

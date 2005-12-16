@@ -26,10 +26,8 @@ struct rtnl_handle hip_nl_ipsec = { 0 };
    nf_ipsec for this purpose). */
 struct rtnl_handle hip_nl_route = { 0 };
 
-#ifdef CONFIG_HIP_AGENT
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
-#endif
 
 time_t load_time;
 
@@ -45,7 +43,11 @@ void usage() {
 
 int hip_agent_is_alive()
 {
+#ifdef CONFIG_HIP_AGENT
        return hip_agent_status;
+#else
+       return 0;
+#endif /* CONFIG_HIP_AGENT */
 }
 
 int hip_agent_filter(struct hip_common *msg)
