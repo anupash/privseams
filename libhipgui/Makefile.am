@@ -1,6 +1,7 @@
 ## Makefile.am for HIP GUI
 CFLAGS = $(hipl_common_cflags) -O0
 
+# XX TODO: when wxgtk 2.6.2 ends in normal distros, configure without wx-config
 WX_INCLUDES := $(shell wx-config --cxxflags)
 WX_CFLAGS := $(shell wx-config --libs)
 

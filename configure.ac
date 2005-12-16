@@ -128,11 +128,18 @@ AC_ARG_ENABLE(agent,
              [echo "checking for agent... yes"],
               [echo "checking for agent... no"])
 if test x"$enable_agent" = x"yes"; then
-# XX TODO: invoke "wx-config --basename" or "wx-config --libs" and check lib
-# XX TODO: invoke "wx-config --version" and test >= 2.6.2
 # XX TODO: invoke "wx-config --cflags" and check that e.g. wx/menu.h exists
+# XX TODO: when wxgtk 2.6.2 ends in normal distros, replace with LIB_CHECK etc
         AC_DEFINE(CONFIG_HIP_AGENT)
         hipl_opt_build="$hipl_opt_build libhipgui agent"
+        
+	if ! type wx-config >/dev/null; then
+	   AC_MSG_ERROR([wx-config not found (install wxgtk?)])
+        fi
+	if test `wx-config --version|tr . 0` -lt 20602; then
+	   AC_MSG_ERROR([wx library is too old (< 2.6.2)])
+	fi
+	
 fi
 
 AC_ARG_ENABLE(rvs,
