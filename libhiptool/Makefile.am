@@ -37,7 +37,8 @@ lib_LTLIBRARIES = libhiptool.la
 libhiptool_la_SOURCES = builder.c debug.c message.c crypto.c misc.c pk.c dh.c \
                         nlink.c
 
-CFLAGS  = -I$(HIPL_HIPD) -I$(HIPL_LIBINET6_INCLUDE) $(GDB_CFLAG)
-CFLAGS += -I$(HIPL_TOOLS) -DCONFIG_HIP_LIBHIPTOOL
+CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
+
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 #include_HEADERS =

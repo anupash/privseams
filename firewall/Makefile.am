@@ -2,15 +2,13 @@ AUTOMAKE_OPTIONS = foreign
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
-CFLAGS = -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
-CFLAGS += -I$(HIPL_HIPD) -I/usr/include/libipq/
-CFLAGS += -L$(HIPL_LIBINET6_LIB) $(GDB_CFLAG)
+
+CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/ -L$(HIPL_LIBINET6_LIB)
 CFLAGS += `pkg-config --cflags --libs glib-2.0` 
 CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 
 include_HEADERS = firewall.h conntrack.h rule_management.h helpers.h
-INCLUDES = -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_LIBHIPTOOL)
-INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL) -I$(HIPL_HIPD)
+INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = firewall
 

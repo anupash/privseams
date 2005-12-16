@@ -3,10 +3,9 @@ AUTOMAKE_OPTIONS = foreign
 # Note: HIPL is included because "libinet6/debug.h" is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-CFLAGS = -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
-CFLAGS += -I$(HIPL_HIPD)
-CFLAGS += -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
-CFLAGS += -L$(HIPL_LIBINET6_LIB) -I$(HIPL_LIBHIPTOOL)
+CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
+
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a

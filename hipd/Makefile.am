@@ -2,15 +2,14 @@ AUTOMAKE_OPTIONS = foreign
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
-CFLAGS = $(GDB_CFLAG)
+CFLAGS = $(hipl_common_cflags)
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
 include_HEADERS = cookie.h hidb.h hadb.h hashtable.h keymat.h keymat.h \
                   workqueue.h bos.h input.h output.h preoutput.h preinput.h \
                   xfrm.h beet.h netdev.h update.h rvs.h
-INCLUDES = -I$(PWD) -I$(HIPL_LIBHIPTOOL)
-INCLUDES += -I$(HIPL) -I$(HIPL_TOOLS)
+INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c hashtable.c keymat.c

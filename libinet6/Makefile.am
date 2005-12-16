@@ -50,8 +50,8 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 
 # HIP additions to the flags.
-CFLAGS += -I$(HIPL_TOOLS) -I$(HIPL) -I$(HIPL_LIBHIPTOOL)
-CFLAGS += -I$(HIPL_HIPD) -Iinclude_glibc $(GDB_CFLAG)
+INCLUDES += $(hipl_common_include_paths) -Iinclude_glibc
+CFLAGS += $(hipl_common_cflags)
 
 # HIP library added
 LDADD  = ../libhiptool/.libs/libhiptool.a

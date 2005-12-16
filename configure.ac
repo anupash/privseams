@@ -153,11 +153,12 @@ fi
 
 AC_SUBST(hipl_opt_build)
 
-# Some default settings. Later on, this can be optional as well.
+# Some default settings (could be detected also with AC_ARG_ENABLE)
 AC_DEFINE(HIP_LOGFMT_LONG)
 AC_DEFINE(CONFIG_HIP_DEBUG)
 AC_SUBST(GDB_CFLAG, "-g")
 
+# Path definitions
 AC_SUBST(HIPL, `pwd`)
 AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
 AC_SUBST(HIPL_HIPD, "$HIPL/hipd")
@@ -170,6 +171,9 @@ AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
 AC_SUBST(HIPL_LIBHIPTOOL, "$HIPL/libhiptool")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
+
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_TOOLS")
+AC_SUBST(hipl_common_cflags, "$GDB_CFLAG")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile
