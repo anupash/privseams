@@ -439,6 +439,16 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 
 	HIP_DEBUG("Received packet type %d\n", type);
+
+	err = hip_agent_filter(msg);
+	if (err == -ENOENT) {
+		HIP_DEBUG("No agent running, continuing\n");
+		err = 0;
+	} else if (err == 0) {
+		HIP_DEBUG("Agent accepted packet\n");
+	} else if (err) {
+		HIP_ERROR("Agent reject packet\n");
+	}
 	
 	switch(type) {
 	case HIP_I1:

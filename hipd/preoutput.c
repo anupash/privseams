@@ -9,7 +9,16 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0, ret, len = hip_get_msg_total_len(msg);
 	struct sockaddr_in6 src, dst;
 
-	HIP_DEBUG("\n");
+	err = hip_agent_filter(msg);
+	if (err == -ENOENT) {
+		HIP_DEBUG("No agent running, continuing\n");
+		err = 0;
+        } else if (err == 0) {
+		HIP_DEBUG("Agent accepted packet\n");
+	} else if (err) {
+		HIP_ERROR("Agent reject packet\n");
+		err = -1;
+	}	
 
 	/* The source address is needed for m&m stuff. However, I am not sure
 	   if the binding is a good thing; the source address is then fixed
@@ -51,6 +60,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	return err;
 }
+
 #else
 /*
  * The callback for i3 "no matching id" callback.

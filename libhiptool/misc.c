@@ -1127,7 +1127,7 @@ int maxof(int num_args, ...)
 
         va_start(ap, num_args);
         max = va_arg(ap, int);
-        for (i = 2; i < num_args; i++) {
+        for (i = 2; i <= num_args; i++) {
                 if ((a = va_arg(ap, int)) > max)
                         max = a;
         }
