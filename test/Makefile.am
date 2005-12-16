@@ -1,12 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
 
-# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
-# is invoked manually directly in this dir. The global include file uses the
-# HIPL variable to setup some HIPL_* variables.
-# 
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 # Note: HIPL is included because "libinet6/debug.h" is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #

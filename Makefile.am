@@ -1,7 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
 # For "make dist"
-#EXTRA_DIST =  Makefile.am.global
 EXTRA_DIST = doc/COPYING doc/design_choices.tex doc/hipl.tex doc/HACKING
 EXTRA_DIST += doc/acronyms.tex doc/design_choices_macros.tex
 EXTRA_DIST += doc/HOWTO.xml doc/catalogue.tex doc/drafts doc/Makefile doc/fig

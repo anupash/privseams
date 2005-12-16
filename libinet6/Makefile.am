@@ -32,13 +32,6 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
-# is invoked manually directly in this dir. The global include file uses the
-# HIPL variable to setup some HIPL_* variables.
-# 
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 # XX TODO: How to make autoconf link libcrypto.a to libinet6.a?
 
 lib_LTLIBRARIES = libinet6.la

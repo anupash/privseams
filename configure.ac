@@ -135,6 +135,22 @@ if test x"$enable_agent" = x"yes"; then
         hipl_opt_build="$hipl_opt_build libhipgui agent"
 fi
 
+AC_ARG_ENABLE(rvs,
+              [  --enable-rvs compile HIP rendezvous extensions],
+             [echo "checking for rvs... yes"],
+              [echo "checking for rvs... no"])
+if test x"$enable_rvs" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_RVS)
+fi
+
+AC_ARG_ENABLE(hi3,
+              [  --enable-hi3 compile HIP Hi3 support],
+             [echo "checking for Hi3... yes"],
+              [echo "checking for Hi3... no"])
+if test x"$enable_hi3" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_HI3)
+fi
+
 AC_SUBST(hipl_opt_build)
 
 # Some default settings. Later on, this can be optional as well.
@@ -142,9 +158,18 @@ AC_DEFINE(HIP_LOGFMT_LONG)
 AC_DEFINE(CONFIG_HIP_DEBUG)
 AC_SUBST(GDB_CFLAG, "-g")
 
-# XX TODO: THESE SHOULD CFLAGS OPTIONS
-# * CONFIG_HIP_HI3
-# * CONFIG_HIP_RVS
+AC_SUBST(HIPL, `pwd`)
+AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
+AC_SUBST(HIPL_HIPD, "$HIPL/hipd")
+AC_SUBST(HIPL_FIREWALL, "$HIPL/firewall")
+AC_SUBST(HIPL_LIBINET6, "$HIPL/libinet6")
+AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
+AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
+AC_SUBST(HIPL_LIBINET6_LIB_DYNAMIC, "$HIPL_LIBINET6_LIB/libinet6.so")
+AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
+AC_SUBST(HIPL_LIBHIPTOOL, "$HIPL/libhiptool")
+AC_SUBST(HIPL_AGENT, "$HIPL/agent")
+AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile

@@ -1,7 +1,4 @@
 ## Makefile.am for HIP GUI
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 CFLAGS = -O0 $(GDB_CFLAG)
 
 WX_INCLUDES := $(shell wx-config --cxxflags)
