@@ -35,4 +35,8 @@ extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;
 
+int hip_agent_is_alive();
+int hip_agent_filter(struct hip_common *msg);
+
+
 #endif /* HIPD_H */

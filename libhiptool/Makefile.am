@@ -32,28 +32,13 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
-# is invoked manually directly in this dir. The global include file uses the
-# HIPL variable to setup some HIPL_* variables.
-# 
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 lib_LTLIBRARIES = libhiptool.la
 
 libhiptool_la_SOURCES = builder.c debug.c message.c crypto.c misc.c pk.c dh.c \
                         nlink.c
 
-CFLAGS  = -g -DCONFIG_HIP_DEBUG -I$(HIPL_HIPD) -I$(HIPL_LIBINET6_INCLUDE)
-CFLAGS += -I$(HIPL_TOOLS) -DCONFIG_HIP_LIBHIPTOOL
+CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 
-include_HEADERS = builder.h debug.h message.h crypto.h misc.h pk.h dh.h nlink.h
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
-builder.c: misc.h
-debug.c: debug.h
-message.c: message.h
-crypto.c: crypto.h
-misc.c: misc.h
-pk.c: pk.h
-dh.c: dh.h
-nlink.c: nlink.h
+#include_HEADERS =

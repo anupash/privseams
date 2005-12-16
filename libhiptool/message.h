@@ -18,4 +18,5 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type);
 int hip_read_control_msg(int socket, struct hip_common *hip_msg, int read_addr,
 			 struct in6_addr *saddr, struct in6_addr *daddr);
 
+
 #endif /* HIP_MESSAGE_H */
