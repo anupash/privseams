@@ -134,7 +134,7 @@ if test x"$enable_agent" = x"yes"; then
         hipl_opt_build="$hipl_opt_build libhipgui agent"
         
 	if ! type wx-config >/dev/null; then
-	   AC_MSG_ERROR([wx-config not found (install wxgtk?)])
+	   AC_MSG_ERROR([wx-config not found (install wxgtk > 2.6.2)])
         fi
 	if test `wx-config --version|tr . 0` -lt 20602; then
 	   AC_MSG_ERROR([wx library is too old (< 2.6.2)])
