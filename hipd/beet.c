@@ -273,7 +273,10 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family) {
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
-	return -1; /* XX FIXME: REWRITE USING XFRM */
+
+	uint32_t spi;
+	get_random_bytes(&spi, sizeof(uint32_t));
+	return spi; /* XX FIXME: REWRITE USING XFRM */
 }
 
 /* Security associations in the kernel with BEET are bounded to the outer
@@ -282,15 +285,16 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
  */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		     uint32_t *spi, int ealg,
-		     struct hip_crypto_key *enckey,
-		     struct hip_crypto_key *authkey,
-		     int already_acquired,
-		     int direction) {
+		    uint32_t *spi, int ealg,
+		    struct hip_crypto_key *enckey,
+		    struct hip_crypto_key *authkey,
+		    int already_acquired,
+		    int direction, int update) {
 	/* XX FIX: how to deal with the direction? */
 
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
+	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 
 	HIP_ASSERT(spi);
 
@@ -303,7 +307,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
 
-	HIP_IFE(hip_xfrm_state_modify(&hip_nl_ipsec, XFRM_MSG_NEWSA,
+	HIP_IFE(hip_xfrm_state_modify(&hip_nl_ipsec, cmd,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,

@@ -126,7 +126,7 @@
       &nbsp;[*] TCP/IP networking
     </para>
     <para>
-      &nbsp;&lt;*&gt; The IPv6 protocol (EXPERIMENTAL)
+      &nbsp;[*] The IPv6 protocol (EXPERIMENTAL)
     </para>
     <para>
       IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
