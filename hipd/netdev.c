@@ -281,6 +281,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	hip_hit_t *dst_hit;
 	struct xfrm_user_acquire *acq;
 	struct in6_addr *dst_addr;
+	struct sockaddr_storage ss_addr;
+	struct sockaddr *addr;
+	addr = (struct sockaddr*) &ss_addr;
 
 	HIP_DEBUG("Acquire: sending I1\n");
 
@@ -306,6 +309,16 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	/* XX TODO: we should try resolving here to create an
 	   entry if an entry was not found */
+
+	/* Let's fill in the local_address in here */
+	ipv6_addr_copy(&entry->local_address, ((struct in6_addr*)&acq->id.daddr));
+	/* The address and the corresponding ifindex should be added in here */
+	memset(addr, 0, sizeof(struct sockaddr_storage));
+	
+	//FIXE: acq->sel.family doesn't seem to contain the right value
+	addr->sa_family = AF_INET6;
+	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+	add_address_to_list(addr, acq->sel.ifindex);
 
 	if (entry->state != HIP_STATE_UNASSOCIATED) {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
