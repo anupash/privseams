@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
-#include <net/if.h>
+//#include <net/if.h>  /* Excluded for RH/Fedora compilation */
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
