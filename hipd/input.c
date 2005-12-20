@@ -1263,7 +1263,7 @@ int hip_handle_i2(struct hip_common *i2,
 		//ipv6_addr_copy(&entry->hit_our, &i2->hitr);
 		hip_init_us(entry, &i2->hitr);
 
-		ipv6_addr_copy(&entry->local_address, i2_daddr);
+		//ipv6_addr_copy(&entry->local_address, i2_daddr);
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);

@@ -356,7 +356,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 
-	err = hip_csum_send(NULL, src_ip, update_packet);
+	err = hip_csum_send(&entry->local_address, src_ip, update_packet);
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
