@@ -41,7 +41,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	return 0;
 }
 
-static void add_address_to_list(struct sockaddr *addr, int ifindex)
+void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
 
@@ -276,7 +276,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 }
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
-	int err = 0;
+	int err = 0, if_index = 0;
 	hip_ha_t *entry;
 	hip_hit_t *dst_hit;
 	struct xfrm_user_acquire *acq;
@@ -315,9 +315,12 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	/* The address and the corresponding ifindex should be added in here */
 	memset(addr, 0, sizeof(struct sockaddr_storage));
 	
-	//FIXE: acq->sel.family doesn't seem to contain the right value
+	//FIXME: acq->sel.family doesn't seem to contain the right value
 	addr->sa_family = AF_INET6;
 	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+	HIP_IFEL(!(if_index = addr2ifindx(entry->local_address)), -1, 
+		 "if_index NOT determined");
+
 	add_address_to_list(addr, acq->sel.ifindex);
 
 	if (entry->state != HIP_STATE_UNASSOCIATED) {

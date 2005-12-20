@@ -1251,6 +1251,10 @@ int hip_handle_i2(struct hip_common *i2,
 
 	/* Create state (if not previously done) */
 	if (!entry) {
+		int if_index;
+		struct sockaddr_storage ss_addr;
+		struct sockaddr *addr;
+		addr = (struct sockaddr*) &ss_addr;
 		/* we have no previous infomation on the peer, create
 		 * a new HIP HA */
 		HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
@@ -1263,7 +1267,15 @@ int hip_handle_i2(struct hip_common *i2,
 		//ipv6_addr_copy(&entry->hit_our, &i2->hitr);
 		hip_init_us(entry, &i2->hitr);
 
-		//ipv6_addr_copy(&entry->local_address, i2_daddr);
+		ipv6_addr_copy(&entry->local_address, i2_daddr);
+		HIP_IFEL(!(if_index = addr2ifindx(entry->local_address)), -1, 
+			 "if_index NOT determined");
+
+		memset(addr, 0, sizeof(struct sockaddr_storage));
+		addr->sa_family = AF_INET6;
+		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+		add_address_to_list(addr, if_index);//if_index = addr2ifindx(entry->local_address);
+		
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
