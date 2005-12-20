@@ -8,7 +8,7 @@
 
 #include <time.h>
 #include <netdb.h>
-#include <net/if.h>
+//#include <net/if.h> /* Excluded for RH/Fedora compilation */
 #ifndef __u32
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #  include <linux/types.h>
