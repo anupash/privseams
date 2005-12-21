@@ -472,10 +472,15 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			    &new_spi_out, esp_transform,
 			    we_are_HITg ? &espkey_gl : &espkey_lg,
 			    we_are_HITg ? &authkey_gl : &authkey_lg,
-			    0, HIP_SPI_DIRECTION_OUT, 1), -1,
+			    0, HIP_SPI_DIRECTION_OUT, prev_spi_in == new_spi_in), -1,
 		 "Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
+
+	HIP_IFEL(hip_setup_hit_sp_pair(hitr, hits,
+				       &entry->preferred_address, &entry->local_address,
+				       IPPROTO_ESP, 1, prev_spi_in == new_spi_in), -1,
+		 "Setting up SP pair failed\n");
 /*
 	HIP_IFEL(new_spi_in != hip_add_sa(hits, hitr, new_spi_in, esp_transform,
 					  we_are_HITg ? &espkey_lg  : &espkey_gl,
@@ -491,10 +496,15 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 &new_spi_in, esp_transform,
 			 we_are_HITg ? &espkey_lg  : &espkey_gl,
 			 we_are_HITg ? &authkey_lg : &authkey_gl,
-			 1, HIP_SPI_DIRECTION_IN, 1);
+			 1, HIP_SPI_DIRECTION_IN, prev_spi_in == new_spi_in);
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
 		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");
+
+	HIP_IFEL(hip_setup_hit_sp_pair(&hits, &hitr,
+				       &entry->local_address, &entry->preferred_address, 
+				       IPPROTO_ESP, 1, prev_spi_in == new_spi_in), -1,
+		 "Setting up SP pair failed\n");
 
 
 	HIP_DEBUG("New inbound SA created with SPI=0x%x\n", new_spi_in);
