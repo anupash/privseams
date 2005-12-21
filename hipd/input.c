@@ -783,7 +783,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* state E1: Receive R1, process. If successful,
 	   send I2 and go to E2. */
 
-	HIP_IFE(hip_csum_send(r1_saddr, &daddr, i2), -1);
+	HIP_IFE(hip_csum_send(r1_daddr, &daddr, i2), -1);
 
 
  out_err:

@@ -27,14 +27,19 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	   instead of the host default (remember that we are using a global
 	   raw socket). This can screw up things. */
 
+#if 0
 	HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
 	HIP_IFEL((bind(hip_raw_sock, (struct sockaddr *) &src,
 		       sizeof(src)) < 0), -1,
 		 "Binding to raw sock failed\n");
 
 	_HIP_DEBUG_IN6ADDR("dst", peer_addr);
+#endif
 
 	memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
+
+	HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
+	HIP_DEBUG_IN6ADDR("dst", &dst.sin6_addr);
 
 	msg->checksum = htons(0);
 	msg->checksum = checksum_packet((char *)msg, 
