@@ -293,6 +293,8 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 							peer_addr), -1,
 			 "Cannot find source address\n");
 
+		HIP_DEBUG("Source address found\n");
+
 		/*
 		 * Create a security policy for triggering base exchange.
 		 *

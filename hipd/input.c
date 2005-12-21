@@ -440,6 +440,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	HIP_DEBUG("Received packet type %d\n", type);
 
+	// XX FIXME: CHECK PACKET CSUM
+
 	err = hip_agent_filter(msg);
 	if (err == -ENOENT) {
 		HIP_DEBUG("No agent running, continuing\n");
@@ -781,7 +783,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* state E1: Receive R1, process. If successful,
 	   send I2 and go to E2. */
 
-	HIP_IFE(hip_csum_send(NULL, &daddr, i2), -1);
+	HIP_IFE(hip_csum_send(r1_saddr, &daddr, i2), -1);
 
 
  out_err:
@@ -1079,7 +1081,7 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	err = hip_csum_send(NULL, i2_saddr, r2); // HANDLER
+	err = hip_csum_send(i2_daddr, i2_saddr, r2); // HANDLER
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
