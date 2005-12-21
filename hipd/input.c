@@ -90,6 +90,7 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
 	int err = 0, len, orig_len;
+	u8 orig_checksum;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 
@@ -99,6 +100,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	/* hmac verification modifies the msg length temporarile, so we have
 	   to restore the length */
 	orig_len = hip_get_msg_total_len(msg);
+
+	/* hmac verification assumes that checksum is zero */
+	orig_checksum = hip_get_msg_checksum(msg);
+	hip_zero_msg_checksum(msg);
 
 	len = (u8 *) hmac - (u8*) msg;
 	hip_set_msg_total_len(msg, len);
@@ -112,7 +117,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC), 
 		 -1, "HMAC validation failed\n");
+
+	/* revert the changes to the packet */
 	hip_set_msg_total_len(msg, orig_len);
+	hip_set_msg_checksum(msg, orig_checksum);
 
  out_err:
 	return err;
@@ -439,6 +447,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 
 	HIP_DEBUG("Received packet type %d\n", type);
+
+	// XX FIXME: CHECK PACKET CSUM
 
 	err = hip_agent_filter(msg);
 	if (err == -ENOENT) {
@@ -781,7 +791,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* state E1: Receive R1, process. If successful,
 	   send I2 and go to E2. */
 
-	HIP_IFE(hip_csum_send(NULL, &daddr, i2), -1);
+	HIP_IFE(hip_csum_send(r1_daddr, &daddr, i2), -1);
 
 
  out_err:
@@ -1079,7 +1089,7 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	err = hip_csum_send(NULL, i2_saddr, r2); // HANDLER
+	err = hip_csum_send(i2_daddr, i2_saddr, r2); // HANDLER
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)

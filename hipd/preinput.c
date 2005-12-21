@@ -2,7 +2,7 @@
  * Checksumming is from Boeing's HIPD.
  */
 #include "preinput.h"
-#ifdef CONFIG_HIP_HI3
+
 /*
  * function checksum_packet() 
  *
@@ -128,5 +128,3 @@ int hip_verify_network_header(struct hip_common *hip_common,
 out_err:
         return err;
 }
-
-#endif //CONFIG_HIP_HI3
