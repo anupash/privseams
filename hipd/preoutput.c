@@ -41,7 +41,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
 	HIP_DEBUG_IN6ADDR("dst", &dst.sin6_addr);
 
-	msg->checksum = htons(0);
+	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char *)msg, 
 					(struct sockaddr *)&src, 
 					(struct sockaddr *)&dst);
@@ -133,7 +133,7 @@ int hip_csum_send(struct in6_addr *src_addr,
 		return -1;
 	}
 
-	msg->checksum = htons(0);
+	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char *)msg, 
 					(struct sockaddr *)&src, 
 					(struct sockaddr *)&dst);

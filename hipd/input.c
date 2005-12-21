@@ -90,6 +90,7 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
 	int err = 0, len, orig_len;
+	u8 orig_checksum;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 
@@ -99,6 +100,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	/* hmac verification modifies the msg length temporarile, so we have
 	   to restore the length */
 	orig_len = hip_get_msg_total_len(msg);
+
+	/* hmac verification assumes that checksum is zero */
+	orig_checksum = hip_get_msg_checksum(msg);
+	hip_zero_msg_checksum(msg);
 
 	len = (u8 *) hmac - (u8*) msg;
 	hip_set_msg_total_len(msg, len);
@@ -112,7 +117,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC), 
 		 -1, "HMAC validation failed\n");
+
+	/* revert the changes to the packet */
 	hip_set_msg_total_len(msg, orig_len);
+	hip_set_msg_checksum(msg, orig_checksum);
 
  out_err:
 	return err;
