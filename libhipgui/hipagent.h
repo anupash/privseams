@@ -1,3 +1,11 @@
+/*
+    HIP GUI
+    
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
+             Matti Saarinen
+*/
+
 /////////////////////////////////////////////////////////////////////////////
 // Program:     wxHipAgent HipAgent Sample
 // Name:        HipAgent.h
@@ -240,4 +248,5 @@ private:
 #define BUTTON_DELETE_KEY_ID 1000
 
 
-#endif // _WX_SAMPLE_HipAgent_H_
+#endif /* END OF HEADER FILE */
+/******************************************************************************/
