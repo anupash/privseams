@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "libinet6/debug.h"
+#include "debug.h"
 
 int main(int argc,char *argv[]) {
   struct ifaddrs *g_ifaces = NULL, *g_iface;
@@ -26,8 +26,8 @@ int main(int argc,char *argv[]) {
   printf("===getifaddrs===\n");
   for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
     sa_family_t family = g_iface->ifa_addr->sa_family;
-    printf("name: %s, family: %d, address: ", g_iface->ifa_name, family);
-    HIP_DEBUG_SOCKADDR("", family, g_iface->ifa_addr);
+    fprintf(stderr, "name: %s, family: %d, address ", g_iface->ifa_name, family);
+    HIP_DEBUG_SOCKADDR(NULL, family, g_iface->ifa_addr);
   }
 
   /* if_nameindex */
@@ -35,7 +35,7 @@ int main(int argc,char *argv[]) {
   printf("===nameindex===\n");
   i_ifaces = if_nameindex();
   for (i_iface = i_ifaces; i_iface->if_index; i_iface++) {
-    printf("name: %s index: %d\n", i_iface->if_name, i_iface->if_index);
+    fprintf(stderr, "name: %s index: %d\n", i_iface->if_name, i_iface->if_index);
   }
 
  out:

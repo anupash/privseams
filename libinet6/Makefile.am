@@ -32,13 +32,6 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
-# is invoked manually directly in this dir. The global include file uses the
-# HIPL variable to setup some HIPL_* variables.
-# 
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 # XX TODO: How to make autoconf link libcrypto.a to libinet6.a?
 
 lib_LTLIBRARIES = libinet6.la
@@ -49,7 +42,7 @@ libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
 libinet6_la_SOURCES += sa_len.c tempname.c
 
 # HIP additions
-libinet6_la_SOURCES += builder.c debug.c message.c getendpointinfo.c crypto.c
+libinet6_la_SOURCES += getendpointinfo.c util.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_IO_MTSAFE_IO -D_USAGI -D_GNU_SOURCE
@@ -57,18 +50,26 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 
 # HIP additions to the flags.
-CFLAGS += -g -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_TOOLS) -I$(HIPL)
-CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_LINUX_MODULE)
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc
+CFLAGS += $(hipl_common_cflags)
+
+# HIP library added
+LDADD  = ../libhiptool/.libs/libhiptool.a
+
+include_HEADERS = libc-compat.h util.h
+
+EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses
 # only getendpointinfo).
 #
-#libinet6_la_CFLAGS += -DHIP_TRANSPARENT_API
+#libinet6_la_CFLAGS = -DHIP_TRANSPARENT_API
 
-# Kludge: builder rule makes also the "include" symlink
-builder.h:
-	$(LN_S) $(HIPL_LINUX_MODULE)/builder.h .
-builder.c:
-	$(LN_S) $(HIPL_LINUX_MODULE)/builder.c .
-	$(LN_S) include_glibc$(usagi_libc) include
+getendpointinfo.c: include/netdb.h
+
+include/netdb.h:
+	$(LN_S) -f include_glibc$(usagi_libc) include
+
+SUBDIRS = include_glibc21 include_glibc22 include_glibc23
+

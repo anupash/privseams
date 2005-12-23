@@ -21,13 +21,14 @@
 
 #include "hipconf.h"
 
-const char *usage = "new|add|del hi default\n"
-                    "new|add|del hi anon|pub|default format filebasename\n"
-                    "add|del map hit ipv6\n"
-                    "rst all|hit\n"
-                    "rvs hit ipv6\n"
-                    "bos\n"
-;
+const char *usage = "new|add hi default\n"
+	"new|add hi anon|pub rsa|dsa filebasename\n"
+	"del <hit>\n"
+        "add|del map hit ipv6\n"
+        "rst all|hit\n"
+        "rvs hit ipv6\n"
+        "bos\n"
+	;
 
 
 /*
@@ -35,12 +36,13 @@ const char *usage = "new|add|del hi default\n"
  */
 int (*action_handler[])(struct hip_common *, int action,
 			const char *opt[], int optc) = {
-  NULL, /* reserved */
-  handle_hi,
-  handle_map,
-  handle_rst,
-  handle_rvs,
-  handle_bos
+	NULL, /* reserved */
+	handle_hi,
+	handle_map,
+	handle_rst,
+	handle_rvs,
+	handle_bos,
+	handle_del
 };
 
 /**
@@ -51,21 +53,21 @@ int (*action_handler[])(struct hip_common *, int action,
  * Returns the numeric action id correspoding to the symbolic @text
  */
 int get_action(char *text) {
-  int ret = -1;
+	int ret = -1;
 
-  if (!strcmp("add", text))
-    ret = ACTION_ADD;
-  else if (!strcmp("del", text))
-    ret = ACTION_DEL;
-  else if (!strcmp("rst", text))
-    ret = ACTION_RST;
-  else if (!strcmp("new", text))
-    ret = ACTION_NEW;
-  else if (!strcmp("rvs", text))
-	  ret = ACTION_RVS;
-  else if (!strcmp("bos", text))
-    ret = ACTION_BOS;
-  return ret;
+	if (!strcmp("add", text))
+		ret = ACTION_ADD;
+	else if (!strcmp("del", text))
+		ret = ACTION_DEL;
+	else if (!strcmp("rst", text))
+		ret = ACTION_RST;
+	else if (!strcmp("new", text))
+		ret = ACTION_NEW;
+	else if (!strcmp("rvs", text))
+		ret = ACTION_RVS;
+	else if (!strcmp("bos", text))
+		ret = ACTION_BOS;
+	return ret;
 }
 
 /**
@@ -75,23 +77,23 @@ int get_action(char *text) {
  * Returns: how many arguments needs to be given at least
  */
 int check_action_argc(int action) {
-  int count = -1;
+	int count = -1;
 
-  switch (action) {
-  case ACTION_ADD:
-  case ACTION_DEL:
-  case ACTION_NEW:
-    count = 2;
-    break;
-  case ACTION_RST:
-    count = 1;
-    break;
-  case ACTION_BOS:
-    count = 0;
-    break;
-  }
+	switch (action) {
+	case ACTION_ADD:
+	case ACTION_NEW:
+		count = 2;
+		break;
+	case ACTION_RST:
+	case ACTION_DEL:
+		count = 1;
+		break;
+	case ACTION_BOS:
+		count = 0;
+		break;
+	}
 
-  return count;
+	return count;
 }
 
 /**
@@ -101,46 +103,21 @@ int check_action_argc(int action) {
  * Returns: the numeric type id correspoding to the symbolic @text
  */
 int get_type(char *text) {
-  int ret = -1;
+	int ret = -1;
 
-  if (!strcmp("hi", text))
-    ret = TYPE_HI;
-  else if (!strcmp("map", text))
-    ret = TYPE_MAP;
-  else if (!strcmp("rst", text))
-    ret = TYPE_RST;
-  else if (!strcmp("rvs", text))
-	  ret = TYPE_RVS;
-  else if (!strcmp("bos", text))
-    ret = TYPE_BOS;
-  return ret;
-}
-
-/**
- * check_and_create_dir - check and create a directory
- * @dirname: the name of the directory
- * @mode:    creation mode for the directory, if it does not exist
- *
- * Returns: 0 if successful, or negative on error.
- */
-int check_and_create_dir(char *dirname, mode_t mode) {
-  int err = 0;
-  struct stat dir_stat;
-
-  HIP_INFO("dirname=%s mode=%o\n", dirname, mode);
-  err = stat(dirname, &dir_stat);
-  if (err && errno == ENOENT) { /* no such file or directory */
-    err = mkdir(dirname, mode);
-    if (err) {
-      HIP_ERROR("mkdir %s failed: %s\n", dirname,
-		strerror(errno));
-    }
-  } else if (err) {
-      HIP_ERROR("stat %s failed: %s\n", dirname,
-		strerror(errno));
-  }
-
-  return err;
+	if (!strcmp("hi", text))
+		ret = TYPE_HI;
+	else if (!strcmp("map", text))
+		ret = TYPE_MAP;
+	else if (!strcmp("rst", text))
+		ret = TYPE_RST;
+	else if (!strcmp("rvs", text))
+		ret = TYPE_RVS;
+	else if (!strcmp("bos", text))
+		ret = TYPE_BOS;
+	else if (!strcmp("del", text))
+		ret = TYPE_DEL;
+	return ret;
 }
 
 /**
@@ -203,10 +180,11 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out;
 	}
- out:
+out:
 	return err;
 
 }
+
 /**
  * handle_hi - handle the hipconf commands where the type is "hi"
  *
@@ -215,19 +193,7 @@ int handle_hi(struct hip_common *msg,
 	      int action,
 	      const char *opt[],
 	      int optc) {
-  int err, ret;
-  hip_hdr_type_t numeric_action = 0;
-  int anon = 0;
-  int use_default = 0;
-  char addrstr[INET6_ADDRSTRLEN];
-  char *filebasename = NULL;
-  int fmt;
-  struct hip_lhi lhi;
-  struct hip_host_id *host_id = NULL;
-  unsigned char *dsa_key_rr = NULL;
-  int dsa_key_rr_len;
-  DSA *dsa_key = NULL;
-  char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+  int err = 0, anon = 0, use_default = 0;
 
   _HIP_INFO("action=%d optc=%d\n", action, optc);
 
@@ -235,9 +201,9 @@ int handle_hi(struct hip_common *msg,
   if (optc < 1 || optc > 3) {
     HIP_ERROR("Too few arguments\n");
     err = -EINVAL;
-    goto out;
+    goto out_err;
   }
-
+  
   if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
     anon = 0;
   } else if(!strcmp(opt[OPT_HI_TYPE], "anon")) {
@@ -247,164 +213,27 @@ int handle_hi(struct hip_common *msg,
   } else {
     HIP_ERROR("Bad hi type (not public, anon or default)\n");
     err = -EINVAL;
-    goto out;
+    goto out_err;
   }  
-
+    
   if (use_default) {
     if (optc != 1) {
       HIP_ERROR("Wrong number of args for default\n");
       err = -EINVAL;
-      goto out;
+      goto out_err;
     }
   } else {
     if (optc != 3) {
       HIP_ERROR("Wrong number of args\n");
       err = -EINVAL;
-      goto out;
+      goto out_err;
     }
   }
 
-  memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
-  err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-  if (err) {
-    HIP_ERROR("gethostname failed (%d)\n", err);
-    goto out;
-  }
+  err = hip_serialize_host_id_action(msg, action, anon, use_default,
+				     opt[OPT_HI_FMT], opt[OPT_HI_FILE]);
 
-  HIP_INFO("Using hostname: %s\n", hostname);
-
-  fmt = HIP_KEYFILE_FMT_HIP_DSA_PEM;
-  if (!use_default && strcmp(opt[OPT_HI_FMT], "hip-pem-dsa")) {
-    HIP_ERROR("Only PEM encoded HIP DSA keys are supported\n");
-    err = -ENOSYS;
-    goto out;
-  }
-
-  /* Set filebasename (depending on whether the user supplied a filebasename or not) */
-  if (use_default == 0) {
-    HIP_ERROR("Only default HIs are currently supported\n");
-    filebasename = malloc(strlen(opt[OPT_HI_FILE]) + 1);
-    memcpy(filebasename, opt[OPT_HI_FILE], strlen(opt[OPT_HI_FILE]));
-  } else { /* create dynamically default filebasename */
-    int filebasename_len, ret;
-    HIP_ERROR("No key file given, use default\n");
-    filebasename_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-      strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
-    filebasename = malloc(filebasename_len);
-    if (!filebasename) {
-      HIP_ERROR("Could not allocate DSA file name\n");
-      err = -ENOMEM;
-      goto out;
-    }
-    ret = snprintf(filebasename, filebasename_len, "%s/%s", DEFAULT_CONFIG_DIR,
-		   DEFAULT_HOST_DSA_KEY_FILE_BASE);
-    if (ret <= 0) {
-      err = -EINVAL;
-      goto out;
-    }
-  }
-
-  lhi.anonymous = htons(anon); // XX FIX: htons() needed?
-
-  _HIP_DEBUG("Using filebasename: %s\n", filebasename);
-  
-  switch(action) {
-  case ACTION_NEW:
-    numeric_action = 0; /* zero means "do not send any message to kernel */
-
-    /* Default directory is created only in "hipconf new default hi" */
-    if (use_default) {
-      err = check_and_create_dir(DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_DIR_MODE);
-      if (err) {
-	HIP_ERROR("Could not create default directory\n", err);
-	goto out;
-      }
-    }
-
-    dsa_key = create_dsa_key(DSA_KEY_DEFAULT_BITS);
-    if (!dsa_key) {
-      HIP_ERROR("creation of dsa key failed\n");
-      err = -EINVAL;
-      goto out;  
-    }
-
-    err = save_dsa_private_key(filebasename, dsa_key);
-    if (err) {
-      HIP_ERROR("saving of dsa key failed\n");
-      goto out;
-    }
-    break;
-  case ACTION_ADD:
-    numeric_action = SO_HIP_ADD_LOCAL_HI;
-
-    err = load_dsa_private_key(filebasename, &dsa_key);
-    if (err) {
-      HIP_ERROR("Loading of the DSA key failed\n");
-      goto out;
-    }
-
-    dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
-    if (dsa_key_rr_len <= 0) {
-      HIP_ERROR("dsa_key_rr_len <= 0\n");
-      err = -EFAULT;
-      goto out;
-    }
-
-    err = dsa_to_hit(dsa_key_rr, HIP_HIT_TYPE_HASH126, &lhi.hit);
-    if (err) {
-      HIP_ERROR("Conversion from DSA to HIT failed\n");
-      goto out;
-    }
-    _HIP_HEXDUMP("Calculated HIT: ", &lhi.hit, sizeof(struct in6_addr));
-    break;
-  case ACTION_DEL:
-    numeric_action = SO_HIP_DEL_LOCAL_HI;
-    HIP_ERROR("Deletion of HI not implemented yet\n");
-    err = -ENOSYS;
-    break;
-  }
-
-  if (numeric_action == 0)
-    goto skip_msg;
-
-  /* The host id is not used for deletion for two reasons:
-     1) The private key is also <hack>included in the dsa_key_rr</hack>.
-     2) Lhi should be enough to do the deletion. */
-  if (numeric_action == ACTION_DEL)
-    goto skip_host_id;
-
-  err = alloc_and_set_host_id_param_hdr(&host_id, dsa_key_rr_len, HIP_HI_DSA,
-					hostname);
-  if (err) {
-    goto out;
-  }
-
-  err = hip_build_param_host_id(msg, host_id, dsa_key_rr, hostname);
-  if (err) {
-    HIP_ERROR("Building of host id failed\n");
-    goto out;
-  }
-
- skip_host_id:
-
-  err = hip_build_user_hdr(msg, numeric_action, 0);
-  if (err) {
-    HIP_ERROR("build hdr error %d\n", err);
-    goto out;
-  }
-
- skip_msg:
-
- out:
-
-  if (host_id)
-    free(host_id);
-  if (dsa_key)
-    DSA_free(dsa_key);
-  if (dsa_key_rr)
-    free(dsa_key_rr);
-  if (filebasename)
-    free(filebasename);
+ out_err:
 
   return err;
 }
@@ -423,73 +252,117 @@ int handle_hi(struct hip_common *msg,
  */
 int handle_map(struct hip_common *msg, int action,
 	       const char *opt[], int optc) {
-  int err = 0;
-  int ret;
-  struct in6_addr hit, ip6;
+	int err = 0;
+	int ret;
+	struct in6_addr hit, ip6;
 
-  HIP_INFO("action=%d optc=%d\n", action, optc);
+	HIP_INFO("action=%d optc=%d\n", action, optc);
 
-  if (optc != 2) {
-    HIP_ERROR("Missing arguments\n");
-    err = -EINVAL;
-    goto out;
-  }
+	if (optc != 2) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+	
+	ret = inet_pton(AF_INET6, opt[0], &hit);
+	if (ret < 0 && errno == EAFNOSUPPORT) {
+		HIP_PERROR("inet_pton: not a valid address family\n");
+		err = -EAFNOSUPPORT;
+		goto out;
+	} else if (ret == 0) {
+		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+		err = -EINVAL;
+		goto out;
+	}
 
-  ret = inet_pton(AF_INET6, opt[0], &hit);
-  if (ret < 0 && errno == EAFNOSUPPORT) {
-    HIP_PERROR("inet_pton: not a valid address family\n");
-    err = -EAFNOSUPPORT;
-    goto out;
-  } else if (ret == 0) {
-    HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-    err = -EINVAL;
-    goto out;
-  }
+	ret = inet_pton(AF_INET6, opt[1], &ip6);
+	if (ret < 0 && errno == EAFNOSUPPORT) {
+		HIP_PERROR("inet_pton: not a valid address family\n");
+		err = -EAFNOSUPPORT;
+		goto out;
+	} else if (ret == 0) {
+		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[1]);
+		err = -EINVAL;
+		goto out;
+	}
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
 
-  ret = inet_pton(AF_INET6, opt[1], &ip6);
-  if (ret < 0 && errno == EAFNOSUPPORT) {
-    HIP_PERROR("inet_pton: not a valid address family\n");
-    err = -EAFNOSUPPORT;
-    goto out;
-  } else if (ret == 0) {
-    HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[1]);
-    err = -EINVAL;
-    goto out;
-  }
+	err = hip_build_param_contents(msg, (void *) &ip6, HIP_PARAM_IPV6_ADDR,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
 
-  err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				 sizeof(struct in6_addr));
-  if (err) {
-    HIP_ERROR("build param hit failed: %s\n", strerror(err));
-    goto out;
-  }
+	switch(action) {
+	case ACTION_ADD:
+		err = hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+		if (err) {
+			HIP_ERROR("build hdr failed: %s\n", strerror(err));
+			goto out;
+		}
+		break;
+	case ACTION_DEL:
+		err = hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP, 0);
+		if (err) {
+			HIP_ERROR("build hdr failed: %s\n", strerror(err));
+			goto out;
+		}
+		break;
+	}
+	
+out:
+	return err;
+}
 
-  err = hip_build_param_contents(msg, (void *) &ip6, HIP_PARAM_IPV6_ADDR,
-				 sizeof(struct in6_addr));
-  if (err) {
-    HIP_ERROR("build param hit failed: %s\n", strerror(err));
-    goto out;
-  }
-
-  switch(action) {
-  case ACTION_ADD:
-    err = hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-    if (err) {
-      HIP_ERROR("build hdr failed: %s\n", strerror(err));
-      goto out;
-    }
-    break;
-  case ACTION_DEL:
-	  err = hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP, 0);
-	  if (err) {
-		  HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		  goto out;
-	  }
-	  break;
-  }
-
- out:
-  return err;
+int handle_del(struct hip_common *msg, int action,
+	       const char *opt[], int optc) 
+{
+ 	int err;
+ 	int ret;
+ 	struct in6_addr hit;
+ 	
+ 	if (optc != 1) {
+ 		HIP_ERROR("Missing arguments\n");
+ 		err = -EINVAL;
+ 		goto out;
+ 	}
+ 	
+ 	
+ 	ret = inet_pton(AF_INET6, opt[0], &hit);
+ 	if (ret < 0 && errno == EAFNOSUPPORT) {
+ 		HIP_PERROR("inet_pton: not a valid address family\n");
+ 		err = -EAFNOSUPPORT;
+ 		goto out;
+ 	} else if (ret == 0) {
+ 		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+ 		err = -EINVAL;
+ 		goto out;
+ 	}
+ 	
+ 	HIP_HEXDUMP("HIT to delete: ", &hit,
+ 		    sizeof(struct in6_addr));
+ 	
+ 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+ 				       sizeof(struct in6_addr));
+ 	if (err) {
+ 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+ 		goto out;
+ 	}
+ 	
+ 	err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0);
+ 	if (err) {
+ 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+ 		goto out;
+ 	}
+ 	
+out:
+	return err;
 }
 
 int handle_rst(struct hip_common *msg, int action,
@@ -575,102 +448,105 @@ int handle_bos(struct hip_common *msg, int action,
  */
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
-  int type_arg, err = 0;
-  long int action, type;
-  struct hip_common *msg;
+	int type_arg, err = 0;
+	long int action, type;
+	struct hip_common *msg;
 
-  if (argc < 2) {
-    err = -EINVAL;
-    //  display_usage();
-    HIP_ERROR("Invalid args.\n%s usage:\n%s\n", argv[0], usage);
-    goto out;
-  }
-  
-  hip_set_logtype(LOGTYPE_STDERR); // we don't want log messages via syslog
+	if (argc < 2) {
+		err = -EINVAL;
+		//  display_usage();
+		HIP_ERROR("Invalid args.\n%s usage:\n%s\n", argv[0], usage);
+		goto out;
+	}
 
-  action = get_action(argv[1]);
-  if (action <= 0 || action >= ACTION_MAX) {
-    err = -EINVAL;
-    HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
-    goto out;
-  }
-  _HIP_INFO("action=%d\n", action);
+	hip_set_logtype(LOGTYPE_STDERR); // we don't want log messages via syslog
 
-  if (argc-2 < check_action_argc(action)) {
-    err = -EINVAL;
-    HIP_ERROR("Not enough arguments given for the action '%s'\n", argv[1]);
-    goto out;
-  }
+	action = get_action(argv[1]);
+	if (action <= 0 || action >= ACTION_MAX) {
+		err = -EINVAL;
+		HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
+		goto out;
+	}
+	_HIP_INFO("action=%d\n", action);
+	
+	if (argc-2 < check_action_argc(action)) {
+		err = -EINVAL;
+		HIP_ERROR("Not enough arguments given for the action '%s'\n", argv[1]);
+		goto out;
+	}
+	
+	/* XX FIXME: THE RVS/RST HANDLING IS FUNKY. REWRITE */
+	
+	if (action != ACTION_RST &&
+	    action != ACTION_RVS &&
+	    action != ACTION_DEL &&
+	    action != ACTION_BOS) 
+	{
+		type_arg = 2;
+	} else {
+		type_arg = 1;
+	}
 
-  /* XX FIXME: THE RVS/RST HANDLING IS FUNKY. REWRITE */
+	type = get_type(argv[type_arg]);
+	if (type <= 0 || type >= TYPE_MAX) {
+		err = -EINVAL;
+		HIP_ERROR("Invalid type argument '%s'\n", argv[type_arg]);
+		goto out;
+	}
+	_HIP_INFO("type=%d\n", type);
 
-  if (action != ACTION_RST &&
-      action != ACTION_RVS &&
-      action != ACTION_BOS) 
-  {
-	  type_arg = 2;
-  } else {
-	  type_arg = 1;
-  }
+	msg = malloc(HIP_MAX_PACKET);
+	if (!msg) {
+		HIP_ERROR("malloc failed\n");
+		goto out;
+	}
+	hip_msg_init(msg);
 
-  type = get_type(argv[type_arg]);
-  if (type <= 0 || type >= TYPE_MAX) {
-	  err = -EINVAL;
-	  HIP_ERROR("Invalid type argument '%s'\n", argv[type_arg]);
-	  goto out;
-  }
-  _HIP_INFO("type=%d\n", type);
+	switch (action) {
+	case ACTION_RVS:
+		err = (*action_handler[TYPE_RVS])(msg, ACTION_RST,
+						  (const char **) &argv[2], argc - 2);
+		break;
+	case ACTION_DEL:
+		err = (*action_handler[TYPE_DEL])(msg, ACTION_DEL,
+						  (const char **) &argv[2], argc - 2);
+		break;
+	case ACTION_ADD:
+	case ACTION_NEW:
+		err = (*action_handler[type])(msg, action, (const char **) &argv[3],
+					      argc - 3);
+		break;
+	case ACTION_RST:
+		err = (*action_handler[TYPE_RST])(msg, ACTION_RST,
+						  (const char **) &argv[2], argc - 2);
+		break;
+	case ACTION_BOS:
+		err = (*action_handler[type])(msg, action, (const char **) NULL, 0);
+		break;
+	}
 
+	if (err) {
+		HIP_ERROR("failed to handle msg\n");
+		goto out_malloc;
+	}
 
-  msg = malloc(HIP_MAX_PACKET);
-  if (!msg) {
-	  HIP_ERROR("malloc failed\n");
-	  goto out;
-  }
-  hip_msg_init(msg);
+	/* hipconf new hi does not involve any messages to kernel */
+	if (hip_get_msg_type(msg) == 0)
+		goto skip_msg;
+	
+	/* send msg to hipd */
+	err = hip_send_daemon_info(msg);
+	if (err) {
+		HIP_ERROR("sending msg failed\n");
+		goto out_malloc;
+	}
 
+skip_msg:
 
-  switch (action) {
-  case ACTION_RVS:
-    err = (*action_handler[TYPE_RVS])(msg, ACTION_RST,
-				      (const char **) &argv[2], argc - 2);
-    break;
-  case ACTION_ADD:
-  case ACTION_DEL:
-  case ACTION_NEW:
-    err = (*action_handler[type])(msg, action, (const char **) &argv[3],
-				  argc - 3);
-    break;
-  case ACTION_RST:
-    err = (*action_handler[TYPE_RST])(msg, ACTION_RST,
-				      (const char **) &argv[2], argc - 2);
-    break;
-  case ACTION_BOS:
-    err = (*action_handler[type])(msg, action, (const char **) NULL, 0);
-    break;
-  }
-
-  if (err) {
-     HIP_ERROR("failed to handle msg\n");
-     goto out_malloc;
-  }
-
-  /* hipconf new hi does not involve any messages to kernel */
-  if (hip_get_msg_type(msg) == 0)
-    goto skip_msg;
-
-  err = hip_set_global_option(msg);
-  if (err) {
-     HIP_ERROR("sending msg failed\n");
-     goto out_malloc;
-  }
-
- skip_msg:
-
- out_malloc:
-  free(msg);
- out:
-
-  return err;
+out_malloc:
+	free(msg);
+out:
+	
+	return err;
 }
 #endif /* HIP_UNITTEST_MODE */

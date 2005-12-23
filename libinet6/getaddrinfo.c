@@ -68,12 +68,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
+#include "util.h"
+
+#include "bos.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
 
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX  108
+#endif
+
+#ifndef NUM_MAX_HITS
+#define NUM_MAX_HITS 50
 #endif
 
 struct gaih_service
@@ -92,6 +99,7 @@ struct gaih_servtuple
 
 static const struct gaih_servtuple nullserv;
 
+/* Moved to util.h, used in getendpointinfo.c
 struct gaih_addrtuple
   {
     struct gaih_addrtuple *next;
@@ -99,6 +107,7 @@ struct gaih_addrtuple
     char addr[16];
     uint32_t scopeid;
   };
+*/
 
 struct gaih_typeproto
   {
@@ -222,10 +231,12 @@ gaih_local (const char *name, const struct gaih_service *service,
   (*pai)->ai_addrlen = sizeof (struct sockaddr_un);
   (*pai)->ai_addr = (void *) (*pai) + sizeof (struct addrinfo);
 
+#if 0 /* does not compile */
 #if SALEN
   ((struct sockaddr_un *) (*pai)->ai_addr)->sun_len =
     sizeof (struct sockaddr_un);
 #endif /* SALEN */
+#endif
 
   ((struct sockaddr_un *)(*pai)->ai_addr)->sun_family = AF_LOCAL;
   memset(((struct sockaddr_un *)(*pai)->ai_addr)->sun_path, 0, UNIX_PATH_MAX);
@@ -360,69 +371,54 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
     }								\
  }
 
-
-/*
- * Returns true if address is a HIT 
- */
-static inline int ipv6_addr_is_hit(struct in6_addr *addr) 
-{
-        int bits;
-        bits = addr->s6_addr[0] & 0xC0;
-        if (bits == 0x80 || bits == 0x40)
-                return 1;
-
-        return 0;
-}
-
-
 #define gethosts_hit(_name)						\
  {									\
   struct in6_addr hit;							\
   FILE *fp = NULL;							\
-  char fqdn_str[255+1];							\
-  char hit_str[INET6_ADDRSTRLEN+1];					\
-  int lineno = 1;							\
+  char *fqdn_str;                                                       \
+  char *hit_str;                                                        \
+  int lineno = 1, i=0;                                                  \
+  char line[500];							\
+  List list;                                                            \
 									\
   /* TODO: check return values */					\
   fp = fopen(_PATH_HIP_HOSTS, "r");					\
 									\
-  while (fp) {								\
+  while (fp && getwithoutnewline(line, 500, fp) != NULL) {		\
     int c;								\
-    int ret;								\
-    memset(fqdn_str, 0, sizeof(fqdn_str));				\
-    memset(hit_str, 0, sizeof(hit_str));				\
-    ret = fscanf(fp, "%46s %255s", hit_str, fqdn_str);			\
-    if (ret == 2) {							\
-      _HIP_DEBUG("line %d hit=%s fqdn=%s\n", lineno, hit_str, fqdn_str);\
-      if (inet_pton(AF_INET6, hit_str, &hit) <= 0) {			\
-	HIP_DEBUG("hiphosts invalid hit\n");			        \
-        break;                                                          \
-      }									\
-      if ((strlen(_name) == strlen(fqdn_str)) &&			\
-	  strcmp(_name, fqdn_str) == 0) {				\
-	_HIP_DEBUG("** match on line %d **\n", lineno);			\
-	found_hits = 1;							\
-	if (*pat == NULL) {						\
-	  *pat = __alloca(sizeof(struct gaih_addrtuple));		\
-	  (*pat)->scopeid = 0;						\
-	}								\
-	(*pat)->next = NULL;						\
-	(*pat)->family = AF_INET6;					\
-	memcpy((*pat)->addr, &hit, sizeof(struct in6_addr));		\
-	pat = &((*pat)->next);						\
-      }									\
-    } else if (ret == EOF) {						\
-      _HIP_DEBUG("hiphosts EOF on line %d\n", lineno);			\
-      break;						                \
-    } else {								\
-      HIP_DEBUG("hiphosts fscanf ret != 2 on line %d\n", lineno);	\
-      break;		    		 		                \
-    }									\
-									\
+    int ret;                                                            \
     lineno++;								\
-  }									\
+    if(strlen(line)<=1) continue;                                       \
+    initlist(&list);                                                    \
+    extractsubstrings(line,&list);                                      \
+    for(i=0;i<length(&list);i++) {                                      \
+      if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		\
+	fqdn_str = getitem(&list,i);	               		        \
+      }                                                                 \
+    }									\
+    if ((strlen(_name) == strlen(fqdn_str)) &&		         	\
+      strcmp(_name, fqdn_str) == 0) {				        \
+      _HIP_DEBUG("** match on line %d **\n", lineno);			\
+      found_hits = 1;                                                   \
+                                                                        \
+      /* add every HIT to linked list */				\
+      for(i=0;i<length(&list);i++) {                                    \
+        ret = inet_pton(AF_INET6, getitem(&list,i), &hit);              \
+        if (ret < 1) continue;                                          \
+        if (*pat == NULL) {						\
+	  *pat = malloc(sizeof(struct gaih_addrtuple));		        \
+          (*pat)->scopeid = 0;						\
+        }								\
+        (*pat)->next = NULL;						\
+        (*pat)->family = AF_INET6;					\
+        memcpy((*pat)->addr, &hit, sizeof(struct in6_addr));		\
+        pat = &((*pat)->next);						\
+      }									\
+     }	                                                                \
+    destroy(&list);                                                     \
+  }	              							\
   if (fp)                                                               \
-    fclose(fp);								\
+    fclose(fp);			        				\
 }
 
 
@@ -566,7 +562,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
     {
       _HIP_DEBUG(">> name != NULL\n");
 
-      at = __alloca (sizeof (struct gaih_addrtuple));
+      at = malloc (sizeof (struct gaih_addrtuple));
 
       at->family = AF_UNSPEC;
       at->scopeid = 0;
@@ -648,6 +644,20 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	  _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
 
 	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6) {
+	    
+#if 0
+#ifdef CONFIG_HIP_AGENT
+	  if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
+	      hip_agent_is_alive()) {
+		  /* Communicate the name and port output to the agent
+		     synchronously with netlink. First send the name + port
+		     and then wait for answer (select). The agent filters
+		     or modifies the list. The agent implements gethosts_hit
+		     with some filtering. */
+	  }
+#endif
+#endif
+
 	    if (hip_transparent_mode) {
 	      _HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
 	      gethosts_hit(name);
@@ -665,6 +675,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	      }
 	    }
 	  }
+
 	  /* If we are looking for both IPv4 and IPv6 address we don't
 	     want the lookup functions to automatically promote IPv4
 	     addresses to IPv6 addresses.  Currently this is decided
@@ -690,39 +701,30 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    struct hip_common *msg;
 	    msg = malloc(HIP_MAX_PACKET);
 
-	    //printf(">>>>>>>>>MAP\n");
 	    for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next) {
 	      int i;
 	      struct sockaddr_in6 *s = (struct sockaddr_in6 *)at_hit->addr;
-	      //printf("test hit:");
-	      //for (i = 0; i < 16; i++)
-	      //printf("%02x", (unsigned char)at_hit->addr[i]);
 
 	      if (!ipv6_addr_is_hit((struct in6_addr *) at_hit->addr)) {
-		//printf(" is not HIT\n");
 		continue;
 	      }
-	      //printf(" is HIT -> map\n");
+
 	      for(at_ipv6 = orig_at; at_ipv6 != NULL; at_ipv6 = at_ipv6->next) {
-		//printf("\ttest ipv6:");
-		//for (i = 0; i < 16; i++)
-		//  printf("%02x", (unsigned char)at_ipv6->addr[i]);
 		if ((at_ipv6 == at_hit) ||
 		    ipv6_addr_is_hit((struct in6_addr *) at_ipv6->addr)) {
-		  //printf(": skip, is hit or same\n");
 		  continue;
 		}
-		//printf(": MAP\n");
+
 		hip_msg_init(msg);	
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
 		hip_build_param_contents(msg, (void *) at_ipv6->addr, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
 		hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-		hip_set_global_option(msg);
+		hip_send_daemon_info(msg);
 	      }
 	    }
 
 	    free(msg);
-	    //printf("\n\n<<<<<<<<<END MAP\n");
+
 	  }
 
 	  if (no_data != 0 && no_inet6_data != 0)
@@ -746,7 +748,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	      /* At this point address list contains, nothing, only
 		 HITs, HITs and IPv6(+IPv4) addresses, or only
 		 IPv6(+IPv4) addresses */
-	      //printf(">>>>>>>>>pre del: hit_at=%p next=%p is hit=%d family=%d\n", hit_at, hit_at->next, ipv6_addr_is_hit((struct in6_addr *)hit_at->addr), hit_at->family);
+
 	      if (ipv6_addr_is_hit((struct in6_addr *)hit_at->addr) &&
 		  (hit_at->next != NULL && !ipv6_addr_is_hit((struct in6_addr *)hit_at->next->addr))
 		  ) {
@@ -754,9 +756,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		   addresses (if there are any IPv6 addresses) */
 		struct gaih_addrtuple *nonhit_at = hit_at->next;
 		for(; nonhit_at != NULL && nonhit_at->family == AF_INET6; nonhit_at = nonhit_at->next) {
-		  //printf(">>>nonhit: nonhit_at=%p next=%p family=%d\n", nonhit_at, nonhit_at->next, ipv6_addr_is_hit((struct in6_addr *)nonhit_at->addr));
 		}
-		//printf("**hit_at=%p nonhit_at=%p next\n", hit_at, nonhit_at);
 		hit_at->next = nonhit_at;
 	      }
 	    }
@@ -770,18 +770,37 @@ gaih_inet (const char *name, const struct gaih_service *service,
     }
   else
     {
-      struct gaih_addrtuple *atr;
-      atr = at = __alloca (sizeof (struct gaih_addrtuple));
+      struct gaih_addrtuple **pat = &at;
+      struct gaih_addrtuple *atr, *attr;
+      atr = at = malloc (sizeof (struct gaih_addrtuple));
       memset (at, '\0', sizeof (struct gaih_addrtuple));
-
+      
       _HIP_DEBUG(">> name == NULL\n");
+      /* Find the local HIs here and add the HITs to atr */
+      if (req->ai_flags & AI_HIP) {
+	_HIP_DEBUG("AI_HIP set: get only local hits.\n");     
+	get_local_hits(service->name, pat);
+      } 
+      /* Transparent mode and !AI_HIP -> hits before ipv6 addresses? */
+      if (hip_transparent_mode && !(req->ai_flags & AI_HIP)) {
+	HIP_DEBUG("HIP_TRANSPARENT_MODE, AI_HIP not set:"); 
+	HIP_DEBUG("get HITs before IPv6 address\n");
+	get_local_hits(service->name, pat); 
+	attr = at;
+	while(attr->next != NULL) {
+	  attr = attr->next;
+	}
+	attr->next = malloc(sizeof (struct gaih_addrtuple));
+	memset (attr->next, '\0', sizeof (struct gaih_addrtuple));
+	attr->next->family = AF_INET6;
+      }
 
       if (req->ai_family == 0)
 	{
-	  at->next = __alloca (sizeof (struct gaih_addrtuple));
+	  at->next = malloc(sizeof (struct gaih_addrtuple));
 	  memset (at->next, '\0', sizeof (struct gaih_addrtuple));
 	}
-
+      
       if (req->ai_family == 0 || req->ai_family == AF_INET6)
 	{
 	  at->family = AF_INET6;
@@ -797,7 +816,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    *(uint32_t *) atr->addr = htonl (INADDR_LOOPBACK);
 	}
     }
-
+  
   if (pai == NULL) {
     _HIP_DEBUG("pai == NULL\n");
     return 0;
@@ -887,9 +906,11 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    (*pai)->ai_protocol = st2->protocol;
 	    (*pai)->ai_addrlen = socklen;
 	    (*pai)->ai_addr = (void *) (*pai) + sizeof(struct addrinfo);
+#if 0 /* does not compile */
 #if SALEN
 	    (*pai)->ai_addr->sa_len = socklen;
 #endif /* SALEN */
+#endif
 	    (*pai)->ai_addr->sa_family = family;
 
 	    if (family == AF_INET6)
@@ -937,9 +958,16 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    (*pai)->ai_next = NULL;
 	    pai = &((*pai)->ai_next);
 	  }
-
+	
 	at2 = at2->next;
       }
+    /* changed __alloca:s for the linked list 'at' to mallocs, 
+       free malloced memory from at */
+    if (at) {
+      free_gaih_addrtuple(at);
+      /* In case the caller of tries to free at again */
+      at = NULL;
+    }
   }
   return 0;
 }
@@ -953,6 +981,16 @@ static struct gaih gaih[] =
     { PF_UNSPEC, NULL }
   };
 
+/**
+ * getaddrinfo - retrieves the info of the specified peer
+ * @msg: message containing information about which unit tests to execute
+ *
+ * Process a request for the list of known peers
+ *
+ * Returns: zero on success, or negative error value on failure
+ * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
+ * database is returned
+ */
 int
 getaddrinfo (const char *name, const char *service,
 	     const struct addrinfo *hints, struct addrinfo **pai)
@@ -964,7 +1002,7 @@ getaddrinfo (const char *name, const char *service,
   int hip_transparent_mode;
 
   _HIP_DEBUG("flags=%d\n", hints->ai_flags);
-  _HIP_DEBUG("name='%s' service='%s'\n", name, service);
+  HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
     _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   else
@@ -989,7 +1027,7 @@ getaddrinfo (const char *name, const char *service,
 
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
-			  AI_HIP_NATIVE))
+			  AI_HIP_NATIVE|AI_KERNEL_LIST))
     return EAI_BADFLAGS;
 
   if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
@@ -1004,7 +1042,7 @@ getaddrinfo (const char *name, const char *service,
 #else
   hip_transparent_mode = 0;
 #endif
-
+  
   if (service && service[0])
     {
       char *c;
@@ -1022,6 +1060,33 @@ getaddrinfo (const char *name, const char *service,
     }
   else
     pservice = NULL;
+
+  if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
+    socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
+    int err = 0, port, i;
+    
+    *pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
+    if (*pai == NULL) {
+      HIP_ERROR("Unable to allocated memory\n");
+      err = -EAI_MEMORY;
+      return err;
+    }
+
+    if (!pservice)
+      port = 0;
+    else
+      port = pservice->num;
+    /* This is the case which is used after BOS packet is processed, as a second parameter
+     * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
+     * the struct sockaddr_in6 list
+     */
+    err = hip_recv_daemon_info(NULL, 0);
+    HIP_ASSERT(0); /* XX FIXME: fix recv_daemon_msg */
+    if (err < 0) {
+      HIP_ERROR("getsockopt failed (%d)\n", err);
+    }
+    return err;
+  }
 
   if (pai)
     end = &p;

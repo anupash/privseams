@@ -114,8 +114,8 @@ inet6_option_append(cmsg, typep, multx, plusy)
 		return(-1);
 	if (plusy < 0 || plusy > 7)
 		return(-1);
-	if (typep[0] > 255)
-		return(-1);
+	//if (typep[0] > 255)
+	//	return(-1);
 
 	/*
 	 * If this is the first option, allocate space for the
@@ -442,8 +442,8 @@ inet6_opt_append(void *extbuf, size_t extlen, int prevlen, uint8_t type,
 	 * The option type must have a value from 2 to 255, inclusive.
 	 * (0 and 1 are reserved for the Pad1 and PadN options, respectively.)
 	 */
-	if (type < 2 || type > 255)
-		return(-1);
+	//if (type < 2 || type > 255)
+	//	return(-1);
 
 	/*
 	 * The option data length must have a value between 0 and 255,

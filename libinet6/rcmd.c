@@ -133,7 +133,7 @@ rcmd_af(ahost, rport, locuser, remuser, cmd, fd2p, af)
 		*ahost = NULL;
 	ai = res;
 	refused = 0;
-	oldmask = __sigblock(sigmask(SIGURG));
+	oldmask = sigblock(sigmask(SIGURG));
 	for (timo = 1, lport = IPPORT_RESERVED - 1;;) {
 		s = rresvport_af(&lport, ai->ai_family);
 		if (s < 0) {
@@ -142,7 +142,7 @@ rcmd_af(ahost, rport, locuser, remuser, cmd, fd2p, af)
 					_("rcmd: socket: All ports in use\n"));
 			else
 				fprintf(stderr, "rcmd: socket: %m\n");
-			__sigsetmask(oldmask);
+			sigsetmask(oldmask);
 			freeaddrinfo(res);
 			return -1;
 		}
@@ -183,7 +183,7 @@ rcmd_af(ahost, rport, locuser, remuser, cmd, fd2p, af)
 		}
 		freeaddrinfo(res);
 		(void)fprintf(stderr, "%s: %s\n", *ahost, strerror(errno));
-		__sigsetmask(oldmask);
+	       sigsetmask(oldmask);
 		return -1;
 	}
 	lport--;
@@ -265,7 +265,7 @@ rcmd_af(ahost, rport, locuser, remuser, cmd, fd2p, af)
 		}
 		goto bad2;
 	}
-	__sigsetmask(oldmask);
+	sigsetmask(oldmask);
 	freeaddrinfo(res);
 	return s;
 bad2:
@@ -273,7 +273,7 @@ bad2:
 		(void)__close(*fd2p);
 bad:
 	(void)__close(s);
-	__sigsetmask(oldmask);
+	sigsetmask(oldmask);
 	freeaddrinfo(res);
 	return -1;
 }
