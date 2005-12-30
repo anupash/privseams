@@ -281,9 +281,28 @@ int handle_map(struct hip_common *msg, int action,
 		err = -EAFNOSUPPORT;
 		goto out;
 	} else if (ret == 0) {
-		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[1]);
-		err = -EINVAL;
-		goto out;
+		struct in_addr ip4;
+		int ret4;
+		
+		//Might be an ipv4 address. Lets catch it here.
+		
+		ret4 = inet_pton(AF_INET, opt[1], &ip4);
+
+		if (ret4 < 0 && errno == EAFNOSUPPORT) {
+                	HIP_PERROR("inet_pton: not a valid address family\n");
+                	err = -EAFNOSUPPORT;
+                	goto out;
+		}
+		else if (ret4 ==0) {
+		
+			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[1]);
+			err = -EINVAL;
+			goto out;
+		}
+		
+		IPV4_TO_IPV6_MAP(ip4, &ip6);
+		HIP_DEBUG("Mapped v4 to v6\n");
+		HIP_DEBUG_IN6ADDR("mapped v6 addr", &ip6); 	
 	}
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));

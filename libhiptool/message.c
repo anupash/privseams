@@ -113,3 +113,62 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
  out_err:
 	return err;
 }
+
+int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
+			 int read_addr, struct in6_addr *saddr,
+			 struct in6_addr *daddr)
+{
+        struct sockaddr_in addr_from;
+        struct cmsghdr *cmsg;
+        struct msghdr msg;
+        struct in_pktinfo *pktinfo = NULL;
+        struct iovec iov;
+        char cbuff[CMSG_SPACE(256)];
+        int err = 0, len;
+
+        /* setup message header with control and receive buffers */
+        msg.msg_name = &addr_from;
+        msg.msg_namelen = sizeof(struct sockaddr_in);
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+
+        memset(cbuff, 0, sizeof(cbuff));
+        msg.msg_control = cbuff;
+        msg.msg_controllen = sizeof(cbuff);
+        msg.msg_flags = 0;
+
+        iov.iov_len = HIP_MAX_PACKET;
+        iov.iov_base = hip_msg;
+
+	len = recvmsg(socket, &msg, 0);
+
+	/* ICMPv4 packet */
+	HIP_IFEL(len < 0, -1, "ICMPv4 error: errno=%d, %s\n",
+		 errno, strerror(errno));
+
+	/* destination address comes from ancillary data passed
+	 * with msg due to IP_PKTINFO socket option */
+	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
+		if ((cmsg->cmsg_level == IPPROTO_IP) && 
+		    (cmsg->cmsg_type == IP_PKTINFO)) {
+			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
+			break;
+		}
+	}
+
+#if 0
+	HIP_IFEL(!pktinfo && read_addr, -1,
+		 "Could not determine IPv4 dst, dropping\n");
+#endif
+
+	if (read_addr) {
+		IPV4_TO_IPV6_MAP(&pktinfo->ipi_addr, daddr);
+		IPV4_TO_IPV6_MAP(&addr_from.sin_addr, saddr);
+
+		HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
+		HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
+	}
+	
+ out_err:
+	return err;
+}

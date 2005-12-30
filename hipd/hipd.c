@@ -14,6 +14,7 @@
 
 /* For receiving/sending HIP control messages */
 int hip_raw_sock = 0;
+int hip_raw_sock_v4 = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
@@ -149,10 +150,11 @@ int hip_init_host_ids() {
 
 int hip_init_raw_sock() {
 	int on = 1, err = 0;
-	struct sockaddr_in6 any6_addr;
 
-	memset(&any6_addr, 0, sizeof(any6_addr));
-	any6_addr.sin6_addr = in6addr_any;
+	//AG: those are not used in this funtion??
+	//struct sockaddr_in6 any6_addr;
+	//memset(&any6_addr, 0, sizeof(any6_addr));
+	//any6_addr.sin6_addr = in6addr_any;
 
 	HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW,
 					 IPPROTO_HIP)) <= 0), 1,
@@ -162,6 +164,26 @@ int hip_init_raw_sock() {
 		   sizeof(on)), -1, "setsockopt recverr failed\n");
 	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
+
+ out_err:
+	return err;
+}
+
+int hip_init_raw_sock_v4() {
+	int on = 1, err = 0;
+
+	//struct sockaddr_in any4_addr;
+	//memset(&any4_addr, 0, sizeof(any4_addr));
+	//any4_addr.sin_addr = INADDR_ANY;
+
+	HIP_IFEL(((hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW,
+					 IPPROTO_HIP)) <= 0), 1,
+		 "Raw socket v4 creation failed. Not root?\n");
+
+	HIP_IFEL(setsockopt(hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on,
+		   sizeof(on)), -1, "setsockopt v4 recverr failed\n");
+	HIP_IFEL(setsockopt(hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on,
+		   sizeof(on)), -1, "setsockopt v4 pktinfo failed\n");
 
  out_err:
 	return err;
@@ -195,6 +217,8 @@ void hip_exit(int signal) {
 	hip_delete_all_sp();
 	if (hip_raw_sock)
 		close(hip_raw_sock);
+	if (hip_raw_sock_v4)
+		close(hip_raw_sock_v4);
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (hip_nl_ipsec.fd)
@@ -318,9 +342,12 @@ int main(int argc, char *argv[]) {
 	hip_netdev_init_addresses(&hip_nl_ipsec);
 
 	HIP_IFE(hip_init_raw_sock(), -1);
+	HIP_IFE(hip_init_raw_sock_v4(), -1);
 
 	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
 		  hip_raw_sock, highest_descriptor);
+	HIP_DEBUG("hip_raw_sock_v4 = %d highest_descriptor = %d\n",
+		  hip_raw_sock_v4, highest_descriptor);
 
 	HIP_DEBUG("Setting SP\n");
 	hip_delete_default_prefix_sp_pair();
@@ -356,9 +383,9 @@ int main(int argc, char *argv[]) {
                       sizeof(hip_agent_addr)),
                  -1, "Bind on agent addr failed.");
 	
-	highest_descriptor = maxof(5, hip_nl_route.fd, hip_raw_sock,
+	highest_descriptor = maxof(6, hip_nl_route.fd, hip_raw_sock,
 				   hip_user_sock, hip_nl_ipsec.fd,
-				   hip_agent_sock);
+				   hip_agent_sock, hip_raw_sock_v4);
 	
 	/* Enter to the select-loop */
 	for (;;) {
@@ -368,6 +395,7 @@ int main(int argc, char *argv[]) {
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock, &read_fdset);
+		FD_SET(hip_raw_sock_v4, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
@@ -388,6 +416,18 @@ int main(int argc, char *argv[]) {
 			hip_msg_init(hip_msg);
 		
 			if (hip_read_control_msg(hip_raw_sock, hip_msg, 1,
+						 &saddr, &daddr))
+				HIP_ERROR("Reading network msg failed\n");
+			else
+				err = hip_receive_control_packet(hip_msg,
+								 &saddr,
+								 &daddr);
+		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
+			struct in_addr saddr, daddr;
+
+			hip_msg_init(hip_msg);
+		
+			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg, 1,
 						 &saddr, &daddr))
 				HIP_ERROR("Reading network msg failed\n");
 			else

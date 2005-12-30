@@ -38,5 +38,15 @@ extern time_t load_time;
 int hip_agent_is_alive();
 int hip_agent_filter(struct hip_common *msg);
 
+#define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                    \
+         {(in6_addr_to)->s6_addr32[0] = 0;                               \
+          (in6_addr_to)->s6_addr32[1] = 0;                                \
+          (in6_addr_to)->s6_addr32[2] = htonl(0xffff);                    \
+         (in6_addr_to)->s6_addr32[3] = in_addr_from;}
+
+#define IPV6_TO_IPV4_MAP(in6_addr_from,in_addr_to)    \
+       { ((uint32_t *) in_addr_to)[0] =                        \
+         (uint32_t *) (in6_addr_from)->s6_addr32[3]; }
+
 
 #endif /* HIPD_H */

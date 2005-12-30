@@ -7,7 +7,8 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		  struct hip_common* msg)
 {
 	int err = 0, ret, len = hip_get_msg_total_len(msg);
-	struct sockaddr_in6 src, dst;
+	struct sockaddr src, dst;
+	int ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 
 	memset(&src, 0, sizeof(src));
 	memset(&dst, 0, sizeof(dst));
@@ -15,11 +16,17 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	HIP_ASSERT(peer_addr);
 
 	if (!src_addr) {
-		HIP_IFEL(hip_select_source_address(&src.sin6_addr,
-						   peer_addr), -1,
-			 "Cannot find source address\n");
+	  if (!ipv4)
+	    HIP_IFEL(hip_select_source_address(&((struct sockaddr_in6 *) &src)->sin6_addr,
+					       peer_addr), -1,
+			   "Cannot find source address\n");
+	  //else {}	//FIXME
 	} else {
-		memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
+		if (!ipv4)
+		  memcpy(&((struct sockaddr_in6 *) &src)->sin6_addr, src_addr, 
+			 sizeof(struct in6_addr));
+		else
+		  IPV6_TO_IPV4_MAP(src_addr, &(((struct sockaddr_in *) &src)->sin_addr));	
 	}
 
 	/* The source address is needed for m&m stuff. However, I am not sure
@@ -36,15 +43,17 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	_HIP_DEBUG_IN6ADDR("dst", peer_addr);
 #endif
 
-	memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
-
-	HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
-	HIP_DEBUG_IN6ADDR("dst", &dst.sin6_addr);
+	if (!ipv4) {
+		memcpy(&((struct sockaddr_in6 *) &dst)->sin6_addr, peer_addr, sizeof(struct in6_addr));
+		HIP_DEBUG_IN6ADDR("src", &((struct sockaddr_in6 *) &src)->sin6_addr);
+		HIP_DEBUG_IN6ADDR("dst", &((struct sockaddr_in6 *) &dst)->sin6_addr);
+	} else
+	  IPV6_TO_IPV4_MAP(peer_addr, &((struct sockaddr_in *) &dst)->sin_addr);
 
 	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char *)msg, 
-					(struct sockaddr *)&src, 
-					(struct sockaddr *)&dst);
+					&src, 
+					&dst);
 
 	err = hip_agent_filter(msg);
 	if (err == -ENOENT) {
@@ -59,14 +68,16 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 
 #if 0
-        HIP_IFEL((connect(hip_raw_sock, (struct sockaddr *) &dst,
+        HIP_IFEL((connect(ipv4 ? hip_raw_sock_ipv4 : hip_raw_sock, 
+			&dst,
 			  sizeof(dst)) < 0),
 		 -1, "Connecting of raw sock failed\n");
 #endif
 
 	/* For some reason, neither sendmsg or send (with bind+connect)
 	   do not seem to work. */
-	HIP_IFEL((sendto(hip_raw_sock, msg, len, 0, (struct sockaddr *) &dst,
+	HIP_IFEL((sendto(ipv4 ? hip_raw_sock_v4 : hip_raw_sock, 
+			msg, len, 0, &dst,
 			 sizeof(dst)) != len), -1,
 		 "Sending of HIP msg failed\n");
 
