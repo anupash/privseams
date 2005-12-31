@@ -534,7 +534,9 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 			   (r->rtm_src_len+7)/8 == sizeof(struct in6_addr));
 		memcpy(src_addr, RTA_DATA(tb[RTA_SRC]), (r->rtm_src_len+7)/8);
 	} else if (tb[RTA_PREFSRC]) {
-		HIP_ASSERT(r->rtm_family == AF_INET6);
+		//FIX-ME 
+		//What to do in case of AF_INET ?? MIIKA?
+		//HIP_ASSERT(r->rtm_family == AF_INET6);
 		memcpy(src_addr, RTA_DATA(tb[RTA_PREFSRC]),
 		       sizeof(struct in6_addr));
 	} else {
@@ -562,13 +564,25 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	int err = 0, idx;
 	inet_prefix addr;
 	char dst_str[INET6_ADDRSTRLEN];
-
+	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
+	HIP_DEBUG_IN6ADDR("src addr :", src_addr);
+	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
+
+	
+	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
+		ip4.s_addr = dst_addr->s6_addr32[3];
+		preferred_family = AF_INET;
+		HIP_IFEL((!inet_ntop(preferred_family, &ip4, dst_str,
+                             INET6_ADDRSTRLEN)), -1,"inet_pton\n");
+
+	}
+	else {	
 	HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
 			     INET6_ADDRSTRLEN)), -1,
 		 "inet_pton\n");
-
+	}
 	memset(&req, 0, sizeof(req));
 
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
