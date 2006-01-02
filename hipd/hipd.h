@@ -52,4 +52,16 @@ int hip_agent_filter(struct hip_common *msg);
        ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \ 
 	((in6_addr_a)->s6_addr32[3] == (in_addr_b).s_addr) )
 
+#define HIT_SIZE 16
+#define HIT2LSI(a) ( 0x01000000L | \
+                     (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
+
+#define IS_LSI32(a) ((a & 0xFF) == 0x01)
+
+#define HIT_IS_LSI(a) \
+        ((((__const uint32_t *) (a))[0] == 0)                                 \
+         && (((__const uint32_t *) (a))[1] == 0)                              \
+         && (((__const uint32_t *) (a))[2] == 0)                              \
+         && (((__const uint32_t *) (a))[3] != 0))                              
+
 #endif /* HIPD_H */
