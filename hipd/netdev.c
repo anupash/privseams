@@ -37,6 +37,10 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			return 0;
 		return 1;
 	}
+	/* AG FIXME more IPv4 address checking */
+	if (addr->sa_family == AF_INET) 
+		return 1;
+
 	/* add more filtering tests here */
 	return 0;
 }
@@ -56,8 +60,16 @@ static void add_address_to_list(struct sockaddr *addr, int ifindex)
 		HIP_ERROR("Could not allocate memory\n");
 		return;
 	}
+	/* AG convert IPv4 address to IPv6 */
+	if (addr->sa_family == AF_INET) {
+		struct sockaddr_in6 temp;
+		memset(&temp, 0, sizeof(temp));
+		temp.sin6_family = AF_INET6;
+		IPV4_TO_IPV6_MAP(&((struct sockaddr_in *)addr)->sin_addr, &temp.sin6_addr);
+	        memcpy(&n->addr, &temp, SALEN(&temp));
+	} else
+	        memcpy(&n->addr, addr, SALEN(addr));
 
-        memcpy(&n->addr, addr, SALEN(addr));
         n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);
 	list_add(&n->next, &addresses);
@@ -84,8 +96,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 } else {
 			/* remove from list if address matches */
                         if ((n->addr.ss_family == addr->sa_family) &&
-                            (memcmp(SA2IP(&n->addr), SA2IP(addr),
-                                    SAIPLEN(addr))==0)) {
+                            ((memcmp(SA2IP(&n->addr), SA2IP(addr),
+				     SAIPLEN(addr))==0)) || 
+			    IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), ((struct sockaddr_in *) addr)->sin_addr) ) {
                                 /* address match */
 				list_del(&n->next);
 				deleted = 1;
@@ -123,10 +136,11 @@ int hip_netdev_find_if(struct sockaddr *addr)
         struct netdev_address *n;
 	list_for_each_entry(n, &addresses, next) {
 		if ((n->addr.ss_family == addr->sa_family) &&
-		    (memcmp(SA2IP(&n->addr), SA2IP(addr),
-			    SAIPLEN(addr))==0)) {
+		    ((memcmp(SA2IP(&n->addr), SA2IP(addr),
+			     SAIPLEN(addr))==0)) ||
+		    IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), ((struct sockaddr_in *) addr)->sin_addr) )
 			return n->if_index;
-		}
+
 	}
 	
 	/* No matching address found */
