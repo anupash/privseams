@@ -16,7 +16,6 @@ static int count_if_addresses(int ifindex)
 	return i;
 }
 
-
 /* Returns 1 if the given address @addr is allowed to be one of the
    addresses of this host, 0 otherwise */
 int filter_address(struct sockaddr *addr, int ifindex)
