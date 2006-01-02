@@ -695,29 +695,41 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	      (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL))))
 	    gethosts (AF_INET, struct in_addr);
 
-	  /* perform HIT-IPv6 mapping if both addresses are found */
-	  if (no_inet6_data == 0 && found_hits) {
-	    struct gaih_addrtuple *at_ipv6, *at_hit;
+	  /* perform HIT-IPv6 mapping if both are found 
+	     AG: now the loop also takes in IPv4 addresses */
+	  if (found_hits) {
+	    struct gaih_addrtuple *at_ip, *at_hit;
 	    struct hip_common *msg;
 	    msg = malloc(HIP_MAX_PACKET);
 
 	    for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next) {
 	      int i;
-	      struct sockaddr_in6 *s = (struct sockaddr_in6 *)at_hit->addr;
+	      struct sockaddr_in6 *s;
+ 	      struct in6_addr addr6;
+
+	      if (at_hit->family != AF_INET6)
+		continue;
+
+	      s	= (struct sockaddr_in6 *)at_hit->addr;
 
 	      if (!ipv6_addr_is_hit((struct in6_addr *) at_hit->addr)) {
 		continue;
 	      }
 
-	      for(at_ipv6 = orig_at; at_ipv6 != NULL; at_ipv6 = at_ipv6->next) {
-		if ((at_ipv6 == at_hit) ||
-		    ipv6_addr_is_hit((struct in6_addr *) at_ipv6->addr)) {
+	      for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+		if ((at_ip == at_hit) ||
+		    ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 		  continue;
 		}
 
+		if (at_hit->family == AF_INET) {
+		  IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr)->s_addr, &addr6);
+		} else 
+		  addr6 = *(struct in6_addr *) at_ip->addr;
+
 		hip_msg_init(msg);	
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
-		hip_build_param_contents(msg, (void *) at_ipv6->addr, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
+		hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
 		hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
 		hip_send_daemon_info(msg);
 	      }
