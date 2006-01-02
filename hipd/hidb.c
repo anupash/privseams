@@ -55,7 +55,6 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 	HIP_WRITE_UNLOCK_DB(db);
 }
 
-
 /**
  * hip_get_hostid_entry_by_lhi - finds the host id corresponding to the given @lhi
  * @db: Database to be searched. Usually either %HIP_DB_PEER_HID or %HIP_DB_LOCAL_HID
