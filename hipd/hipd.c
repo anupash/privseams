@@ -371,6 +371,8 @@ int main(int argc, char *argv[]) {
 		      strlen(daemon_addr.sun_path) +
 		      sizeof(daemon_addr.sun_family)),
 		 1, "Bind on daemon addr failed.");
+	HIP_IFEL(chmod(daemon_addr.sun_path, S_IRWXO),
+		1, "Changing permissions of daemon addr failed.")
 
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_agent_sock < 0), 1,
