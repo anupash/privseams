@@ -423,10 +423,10 @@ int main(int argc, char *argv[]) {
 								 &saddr,
 								 &daddr);
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
-			struct in_addr saddr, daddr;
+			struct in6_addr saddr, daddr;
 
 			hip_msg_init(hip_msg);
-		
+			HIP_DEBUG("Getting a msg on v4\n");	
 			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg, 1,
 						 &saddr, &daddr))
 				HIP_ERROR("Reading network msg failed\n");

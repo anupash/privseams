@@ -9,22 +9,27 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0, ret, len = hip_get_msg_total_len(msg);
 	struct sockaddr src, dst;
 	int ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
+	int temp = 0;
+	struct sockaddr_in6 src6, dst6;
 
 	memset(&src, 0, sizeof(src));
+	memset(&src6, 0, sizeof(src6));
+	memset(&dst6, 0, sizeof(dst6));
 	memset(&dst, 0, sizeof(dst));
 
 	HIP_ASSERT(peer_addr);
 
 	if (!src_addr) {
-	  if (!ipv4)
+	  if (!ipv4){
 	    HIP_IFEL(hip_select_source_address(&((struct sockaddr_in6 *) &src)->sin6_addr,
 					       peer_addr), -1,
 			   "Cannot find source address\n");
-	  //else {}	//FIXME
+	 } else{}//FIXME
 	} else {
 		if (!ipv4)
-		  memcpy(&((struct sockaddr_in6 *) &src)->sin6_addr, src_addr, 
-			 sizeof(struct in6_addr));
+		 memcpy(&src6.sin6_addr, src_addr, sizeof(struct in6_addr));
+		//  memcpy(&((struct sockaddr_in6 *) &src)->sin6_addr, src_addr, 
+		//	 sizeof(struct in6_addr));
 		else
 		  IPV6_TO_IPV4_MAP(src_addr, &(((struct sockaddr_in *) &src)->sin_addr));	
 	}
@@ -33,9 +38,8 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	   if the binding is a good thing; the source address is then fixed
 	   instead of the host default (remember that we are using a global
 	   raw socket). This can screw up things. */
-
 #if 0
-	HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
+	HIP_DEBUG_IN6ADDR("src", src);
 	HIP_IFEL((bind(hip_raw_sock, (struct sockaddr *) &src,
 		       sizeof(src)) < 0), -1,
 		 "Binding to raw sock failed\n");
@@ -44,16 +48,18 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 #endif
 
 	if (!ipv4) {
-		memcpy(&((struct sockaddr_in6 *) &dst)->sin6_addr, peer_addr, sizeof(struct in6_addr));
+		memcpy(&dst6.sin6_addr, peer_addr, sizeof(struct in6_addr));
+		//memcpy(&((struct sockaddr_in6 *) &dst)->sin6_addr, peer_addr, sizeof(struct in6_addr));
 		HIP_DEBUG_IN6ADDR("src", &((struct sockaddr_in6 *) &src)->sin6_addr);
 		HIP_DEBUG_IN6ADDR("dst", &((struct sockaddr_in6 *) &dst)->sin6_addr);
 	} else
 	  IPV6_TO_IPV4_MAP(peer_addr, &((struct sockaddr_in *) &dst)->sin_addr);
 
 	hip_zero_msg_checksum(msg);
-	msg->checksum = checksum_packet((char *)msg, 
-					&src, 
-					&dst);
+	if(!ipv4) 
+		msg->checksum = checksum_packet((char *)msg, &src6, &dst6);
+	else 
+		msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
 	err = hip_agent_filter(msg);
 	if (err == -ENOENT) {
@@ -68,7 +74,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 
 #if 0
-        HIP_IFEL((connect(ipv4 ? hip_raw_sock_ipv4 : hip_raw_sock, 
+        HIP_IFEL((connect(ipv4 ? hip_raw_sock_v4 : hip_raw_sock, 
 			&dst,
 			  sizeof(dst)) < 0),
 		 -1, "Connecting of raw sock failed\n");
@@ -76,11 +82,20 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	/* For some reason, neither sendmsg or send (with bind+connect)
 	   do not seem to work. */
+	
+	len = hip_get_msg_total_len(msg);
+	HIP_HEXDUMP("Dumping packet ", msg, len);
+	temp = sendto(ipv4 ? hip_raw_sock_v4 : hip_raw_sock,
+                        msg, len, 0, ipv4 ? &dst : &dst6,
+                         ipv4 ? sizeof(dst) : sizeof(dst6));
+	HIP_DEBUG("send to %d, len %d ipv4 %d\n", temp, len, ipv4);
+	
+#if 0
 	HIP_IFEL((sendto(ipv4 ? hip_raw_sock_v4 : hip_raw_sock, 
 			msg, len, 0, &dst,
 			 sizeof(dst)) != len), -1,
 		 "Sending of HIP msg failed\n");
-
+#endif
 	HIP_DEBUG("Packet sent ok\n");
 
  out_err:

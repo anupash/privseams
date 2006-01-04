@@ -126,7 +126,10 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
 
-        /* setup message header with control and receive buffers */
+	char ipaddr[28];       //For debugging --abi
+ 
+	// HIP_HEXDUMP("Dumping msg", hip_msg,  hip_get_msg_total_len(hip_msg));
+	/* setup message header with control and receive buffers */
         msg.msg_name = &addr_from;
         msg.msg_namelen = sizeof(struct sockaddr_in);
         msg.msg_iov = &iov;
@@ -142,6 +145,9 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 
 	len = recvmsg(socket, &msg, 0);
 
+	HIP_DEBUG("msg len %d\n", len);
+	HIP_HEXDUMP("Dumping msg ", &msg,  len);
+	HIP_HEXDUMP("Dumping msg ", hip_msg,  len);
 	/* ICMPv4 packet */
 	HIP_IFEL(len < 0, -1, "ICMPv4 error: errno=%d, %s\n",
 		 errno, strerror(errno));
@@ -162,8 +168,15 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 #endif
 
 	if (read_addr) {
-		IPV4_TO_IPV6_MAP(&pktinfo->ipi_addr, daddr);
-		IPV4_TO_IPV6_MAP(&addr_from.sin_addr, saddr);
+		IPV4_TO_IPV6_MAP(addr_from.sin_addr.s_addr, saddr);
+		IPV4_TO_IPV6_MAP(pktinfo->ipi_addr.s_addr, daddr);
+
+		inet_ntop(AF_INET, &pktinfo->ipi_addr, ipaddr, 28);
+		HIP_DEBUG("Lets print address daddr %s\n", ipaddr);
+
+		inet_ntop(AF_INET, &addr_from.sin_addr, ipaddr, 28);
+		HIP_DEBUG("Lets print address saddr %s\n", ipaddr);
+
 
 		HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
 		HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);

@@ -447,7 +447,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 
 	HIP_DEBUG("Received packet type %d\n", type);
-
+	HIP_DUMP_MSG(msg);
+	HIP_HEXDUMP("dumping packet", msg,  40);
 	// XX FIXME: CHECK PACKET CSUM
 
 	err = hip_agent_filter(msg);
@@ -459,7 +460,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 	} else if (err) {
 		HIP_ERROR("Agent reject packet\n");
 	}
-	
 	switch(type) {
 	case HIP_I1:
 		err = hip_receive_i1(msg, src_addr, dst_addr);
