@@ -461,10 +461,15 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 				       &espkey_gl, &authkey_gl, &espkey_lg, &authkey_lg), -1);
 	/* todo: update entry keymat later */
 	hip_update_entry_keymat(entry, keymat_index, calc_index_new, Kn);
+	
+	/* XFRM API doesn't support multiple SA for one SP */
+	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
+	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6);
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6);
 
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
 				       &entry->preferred_address, &entry->local_address,
-				       IPPROTO_ESP, 1, prev_spi_in == new_spi_in), -1,
+				       IPPROTO_ESP, 1, prev_spi_out == new_spi_out), -1,
 		 "Setting up SP pair failed\n");
 
 	/* set up new outbound IPsec SA */
