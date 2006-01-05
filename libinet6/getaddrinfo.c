@@ -371,54 +371,70 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
     }								\
  }
 
-#define gethosts_hit(_name)						\
- {									\
-  struct in6_addr hit;							\
-  FILE *fp = NULL;							\
-  char *fqdn_str;                                                       \
-  char *hit_str;                                                        \
-  int lineno = 1, i=0;                                                  \
-  char line[500];							\
-  List list;                                                            \
-									\
-  /* TODO: check return values */					\
-  fp = fopen(_PATH_HIP_HOSTS, "r");					\
-									\
-  while (fp && getwithoutnewline(line, 500, fp) != NULL) {		\
-    int c;								\
-    int ret;                                                            \
-    lineno++;								\
-    if(strlen(line)<=1) continue;                                       \
-    initlist(&list);                                                    \
-    extractsubstrings(line,&list);                                      \
-    for(i=0;i<length(&list);i++) {                                      \
-      if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		\
-	fqdn_str = getitem(&list,i);	               		        \
-      }                                                                 \
-    }									\
-    if ((strlen(_name) == strlen(fqdn_str)) &&		         	\
-      strcmp(_name, fqdn_str) == 0) {				        \
-      _HIP_DEBUG("** match on line %d **\n", lineno);			\
-      found_hits = 1;                                                   \
-                                                                        \
-      /* add every HIT to linked list */				\
-      for(i=0;i<length(&list);i++) {                                    \
-        ret = inet_pton(AF_INET6, getitem(&list,i), &hit);              \
-        if (ret < 1) continue;                                          \
-        if (*pat == NULL) {						\
-	  *pat = malloc(sizeof(struct gaih_addrtuple));		        \
-          (*pat)->scopeid = 0;						\
-        }								\
-        (*pat)->next = NULL;						\
-        (*pat)->family = AF_INET6;					\
-        memcpy((*pat)->addr, &hit, sizeof(struct in6_addr));		\
-        pat = &((*pat)->next);						\
-      }									\
-     }	                                                                \
-    destroy(&list);                                                     \
-  }	              							\
-  if (fp)                                                               \
-    fclose(fp);			        				\
+int gethosts_hit(const char * _name, struct gaih_addrtuple ** pat)
+ {									
+  struct in6_addr hit;							
+  FILE *fp = NULL;							
+  char *fqdn_str;                                                       
+  char *hit_str;                                                        
+  int lineno = 1, i=0;                                                  
+  char line[500];							
+  List list;
+  int found_hits = 0;
+									
+  /* TODO: check return values */					
+  fp = fopen(_PATH_HIP_HOSTS, "r");					
+									
+  while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
+    int c;								
+    int ret;                                                            
+    lineno++;								
+    if(strlen(line)<=1) continue;                                       
+    initlist(&list);                                                    
+    extractsubstrings(line,&list);                                      
+    for(i=0;i<length(&list);i++) {                                      
+      if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		
+	fqdn_str = getitem(&list,i);	               		        
+      }                                                                 
+    }									
+    if ((strlen(_name) == strlen(fqdn_str)) &&		         	
+      strcmp(_name, fqdn_str) == 0) {				        
+      _HIP_DEBUG("** match on line %d **\n", lineno);			
+      found_hits = 1;                                                   
+                                                                        
+      /* add every HIT to linked list */				
+      for(i=0;i<length(&list);i++) {                                    
+	uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
+	struct gaih_addrtuple *prev_pat = NULL;	
+        ret = inet_pton(AF_INET6, getitem(&list,i), &hit);              
+        if (ret < 1) continue;                                          
+        if (*pat == NULL) {						
+	  *pat = malloc(sizeof(struct gaih_addrtuple));		        
+          (*pat)->scopeid = 0;						
+        }								
+        (*pat)->next = NULL;						
+        (*pat)->family = AF_INET6;					
+        memcpy((*pat)->addr, &hit, sizeof(struct in6_addr));		
+	prev_pat = pat;
+        pat = &((*pat)->next);						
+
+	/* AG: add LSI as well */					
+        if (*pat == NULL) {						
+	  *pat = malloc(sizeof(struct gaih_addrtuple));		        
+          (*pat)->scopeid = 0;						
+        }								
+        prev_pat->next = *pat;						
+        (*pat)->next = NULL;						
+        (*pat)->family = AF_INET;					
+        memcpy((*pat)->addr, &lsi, sizeof(hip_lsi_t));			
+        pat = &((*pat)->next);						
+      }									
+     }	                                                                
+    destroy(&list);                                                     
+  }	              							
+  if (fp)                                                               
+    fclose(fp);		
+  return found_hits;	        				
 }
 
 
@@ -443,11 +459,13 @@ gaih_inet (const char *name, const struct gaih_service *service,
   if (*pai)
     _HIP_DEBUG("pai:ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", (*pai)->ai_flags, (*pai)->ai_family, (*pai)->ai_socktype, (*pai)->ai_protocol);
 
+#if 0	//AG: not anymore needed
   if ((req->ai_flags & AI_HIP) &&
       (req->ai_family == PF_INET || (v4mapped & (req->ai_flags & AI_HIP)))) {
     HIP_DEBUG("IPv4 and AI_HIP not supported\n");
     return -EAI_BADFLAGS; /* or EAI_FAMILY ?*/
   }
+#endif
 
   if (req->ai_protocol || req->ai_socktype)
     {
@@ -643,8 +661,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	  _HIP_DEBUG("not IPv4 or IPv6, resolve name (!AI_NUMERICHOST)\n");
 	  _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
 
-	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6) {
-	    
+
 #if 0
 #ifdef CONFIG_HIP_AGENT
 	  if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
@@ -658,21 +675,20 @@ gaih_inet (const char *name, const struct gaih_service *service,
 #endif
 #endif
 
-	    if (hip_transparent_mode) {
-	      _HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
-	      gethosts_hit(name);
-	      if (req->ai_flags & AI_HIP) {
-		_HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
-	      } else {
-		_HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: get IPv6 addresses too\n");
-	      }
-	    } else /* not hip_transparent_mode */ {
-	      if (req->ai_flags & AI_HIP) {
-		_HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
-		gethosts_hit(name);
-	      } else {
-		_HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
-	      }
+	  if (hip_transparent_mode) {
+	    _HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
+	    found_hits |= gethosts_hit(name, pat);
+	    if (req->ai_flags & AI_HIP) {
+	      _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
+	    } else {
+	      _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: get IPv6 addresses too\n");
+	    }
+	  } else /* not hip_transparent_mode */ {
+	    if (req->ai_flags & AI_HIP) {
+	      _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
+	      found_hits |= gethosts_hit(name, pat);
+	    } else {
+	      _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
 	    }
 	  }
 
@@ -780,7 +796,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
 
     }
-  else
+  else /* name == NULL */
     {
       struct gaih_addrtuple **pat = &at;
       struct gaih_addrtuple *atr, *attr;
