@@ -273,11 +273,11 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	  /* Adding the route just in case it does not exist */
 	  hip_add_iface_local_route(&lhi.hit);
-	  hip_add_iface_local_route_lsi(HIT2LSI((uint8_t *) &lhi.hit));
+	  hip_add_iface_local_route_lsi(htonl(HIT2LSI((uint8_t *) &lhi.hit)));
 
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
-	  HIP_IFEL(hip_add_iface_local_lsi(HIT2LSI((uint8_t *) &lhi.hit)), -1,
+	  HIP_IFEL(hip_add_iface_local_lsi(htonl(HIT2LSI((uint8_t *) &lhi.hit))), -1,
 		   "Failed to add LSI to the device\n");
 	}
 
