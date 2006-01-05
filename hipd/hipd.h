@@ -48,8 +48,8 @@ int hip_agent_filter(struct hip_common *msg);
        { ((uint32_t *) in_addr_to)[0] =                        \
          (uint32_t *) (in6_addr_from)->s6_addr32[3]; }
 
-#define IPV6_EQ_IPV4(in6_addr_a,in_addr_b)    \
-       ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \ 
+#define IPV6_EQ_IPV4(in6_addr_a,in_addr_b)   \
+       ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
 	((in6_addr_a)->s6_addr32[3] == (in_addr_b).s_addr)) 
 #define REMOVE_IPV4_HEADER(hip_msg)		\
 	(void *)hip_msg+=20;
