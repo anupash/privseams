@@ -433,7 +433,7 @@ int main(int argc, char *argv[]) {
 				HIP_ERROR("Reading network msg failed\n");
 			else
 			{
-				REMOVE_IPV4_HEADER(hip_msg);
+				hip_msg = (((char *) hip_msg) + IPV4_HDR_SIZE);
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr);

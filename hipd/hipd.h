@@ -51,8 +51,9 @@ int hip_agent_filter(struct hip_common *msg);
 #define IPV6_EQ_IPV4(in6_addr_a,in_addr_b)   \
        ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
 	((in6_addr_a)->s6_addr32[3] == (in_addr_b).s_addr)) 
-#define REMOVE_IPV4_HEADER(hip_msg)		\
-	(void *)hip_msg+=20;
+//#define REMOVE_IPV4_HEADER(hip_msg)		\
+//	(uint8_t *)hip_msg+=20;
+#define IPV4_HDR_SIZE 20
 
 #define HIT_SIZE 16
 #define HIT2LSI(a) ( 0x01000000L | \
