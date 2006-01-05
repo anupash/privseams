@@ -179,7 +179,6 @@ int hip_init_raw_sock_v4() {
 	HIP_IFEL(((hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW,
 					 IPPROTO_HIP)) <= 0), 1,
 		 "Raw socket v4 creation failed. Not root?\n");
-
 	HIP_IFEL(setsockopt(hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt v4 recverr failed\n");
 	HIP_IFEL(setsockopt(hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on,
@@ -433,9 +432,12 @@ int main(int argc, char *argv[]) {
 						 &saddr, &daddr))
 				HIP_ERROR("Reading network msg failed\n");
 			else
+			{
+				REMOVE_IPV4_HEADER(hip_msg);
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr);
+			}
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);

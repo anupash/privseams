@@ -26,6 +26,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 			   "Cannot find source address\n");
 	 } else{}//FIXME
 	} else {
+		HIP_DEBUG("src_addr present\n");
 		if (!ipv4)
 		 memcpy(&src6.sin6_addr, src_addr, sizeof(struct in6_addr));
 		//  memcpy(&((struct sockaddr_in6 *) &src)->sin6_addr, src_addr, 
