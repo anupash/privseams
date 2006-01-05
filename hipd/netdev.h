@@ -29,4 +29,5 @@ void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
 int filter_address(struct sockaddr *addr, int ifindex);
 
+void add_address_to_list(struct sockaddr *addr, int ifindex);
 #endif /* NETDEV_H */
