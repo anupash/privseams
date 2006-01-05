@@ -464,7 +464,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	
 	/* XFRM API doesn't support multiple SA for one SP */
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
-	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6);
+	
 	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6);
 
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
@@ -1291,14 +1291,14 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	if (add_rea) {
 		/* REA is the first parameter of the UPDATE */
-		ipv6_addr_copy(&entry->local_address, &addr_list->address);
-		if (mapped_spi)
-			err = hip_build_param_rea(update_packet, mapped_spi,
-							    addr_list, addr_count);
-		else
-			err = hip_build_param_rea(update_packet, new_spi_in,
-							    addr_list, addr_count);
+		uint32_t spi_in = mapped_spi ? mapped_spi : new_spi_in;
+		
+		err = hip_build_param_rea(update_packet, spi_in,
+					  addr_list, addr_count);
+
 		HIP_IFEL(err, err, "Building of REA param failed\n");
+		hip_delete_sa(spi_in, &entry->local_address, AF_INET6);
+		ipv6_addr_copy(&entry->local_address, &addr_list->address);
 	} else
 		HIP_DEBUG("not adding REA\n");
 
