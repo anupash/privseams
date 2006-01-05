@@ -356,6 +356,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_AH_SHA_LEN                 20
 
 typedef struct in6_addr hip_hit_t;
+typedef struct in_addr hip_lsi_t;
 typedef uint16_t se_family_t;
 typedef uint16_t se_length_t;
 typedef uint16_t se_hip_flags_t;
@@ -925,8 +926,8 @@ struct hip_hadb_state
 						 * sending data to peer */
         struct in6_addr      local_address;   /* Our IP address */
   //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
-	uint32_t             lsi_peer;
-	uint32_t             lsi_our;
+	hip_lsi_t            lsi_peer;
+	hip_lsi_t            lsi_our;
 	int                  esp_transform;
 	uint64_t             birthday;
 	char                 *dh_shared_key;
@@ -1008,7 +1009,7 @@ struct hip_host_id_entry {
 	struct list_head next; 
 
 	struct hip_lhi lhi;
-	/* struct in_addr lsi; */
+	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
 	struct hip_r1entry *r1; /* precreated R1s */

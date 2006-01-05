@@ -548,34 +548,58 @@ int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 	return err;
 }
 
+int hip_add_iface_local_lsi(const hip_lsi_t lsi)
+{
+	int err = 0;
+	char lsi_str[INET_ADDRSTRLEN+5];
+	struct idxmap *idxmap[16] = {0};
+
+	HIP_IFE((!(inet_ntop(AF_INET, &lsi, lsi_str, sizeof(lsi_str)))), 
+		-1);
+	HIP_DEBUG("Adding LSI: %s\n", lsi_str);
+	HIP_IFE(hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET,
+                                  lsi_str, HIP_HIT_DEV, idxmap), -1);
+ out_err:
+
+	return err;
+}
+
 int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
 	int err = 0;
 	char *hit_str = NULL;
 	struct idxmap *idxmap[16] = {0};
-	char lsi_str[INET_ADDRSTRLEN+5];
 
-	if (HIT_IS_LSI(local_hit)) {
-	  HIP_IFE((!(inet_ntop(AF_INET, HIT2LSI((uint8_t *)local_hit), lsi_str, sizeof(lsi_str)))), -1);
-	  HIP_DEBUG("Adding local LSI route: %s\n", hit_str);	
-	  HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
-				     NLM_F_CREATE|NLM_F_EXCL,
-				     AF_INET, lsi_str, HIP_HIT_DEV, idxmap),
-		  -1);
-	} else {
-	  HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
-	  HIP_DEBUG("Adding local HIT route: %s\n", hit_str);	
-	  HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
-				     NLM_F_CREATE|NLM_F_EXCL,
-				     AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
-		  -1);
-	}
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
+	HIP_DEBUG("Adding local HIT route: %s\n", hit_str);	
+	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
+				   NLM_F_CREATE|NLM_F_EXCL,
+				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
+		-1);
 
  out_err:
-
-	if (hit_str)
-		HIP_FREE(hit_str);
 	
+	if (hit_str)
+	  HIP_FREE(hit_str);
+		
+	return err;
+}
+
+int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
+{
+	int err = 0;
+	struct idxmap *idxmap[16] = {0};
+	char lsi_str[INET_ADDRSTRLEN+5];
+
+	HIP_IFE((!(inet_ntop(AF_INET, &lsi, lsi_str, sizeof(lsi_str)))), 
+		-1);
+	HIP_DEBUG("Adding local LSI route: %s\n", lsi_str);
+	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
+				   NLM_F_CREATE|NLM_F_EXCL,
+				   AF_INET, lsi_str, HIP_HIT_DEV, idxmap),
+		-1);
+	
+ out_err:
 	
 	return err;
 }
