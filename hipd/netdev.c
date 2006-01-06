@@ -321,7 +321,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_IFEL(!(if_index = addr2ifindx(entry->local_address)), -1, 
 		 "if_index NOT determined");
 
-	add_address_to_list(addr, acq->sel.ifindex);
+	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
 	if (entry->state != HIP_STATE_UNASSOCIATED) {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
