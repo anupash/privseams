@@ -1651,8 +1651,10 @@ int hip_handle_r2(struct hip_common *r2,
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 	_HIP_DEBUG("add spi err ret=%d\n", err);
-
-	err = hip_ipv6_devaddr2ifindex(r2_daddr);
+	//if(IN6_IS_ADDR_V4MAPPED(r2_daddr))
+	//	err = hip_ipv4_devaddr2ifindex(r2_daddr);
+	//else
+		err = hip_ipv6_devaddr2ifindex(r2_daddr);
 	if (err != 0) {
 		HIP_DEBUG("ifindex=%d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);

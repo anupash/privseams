@@ -49,7 +49,13 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
 
-	tmpl->family = preferred_family;
+	if(IN6_IS_ADDR_V4MAPPED(tmpl_saddr) || IN6_IS_ADDR_V4MAPPED(tmpl_daddr))
+	{
+		HIP_DEBUG("IPv4 address found in tmpl policy\n");
+		tmpl->family = AF_INET;
+	}
+	else
+		tmpl->family = preferred_family;
 	/* The mode has to be BEET */
 	if (proto) {
 		tmpl->mode = XFRM_MODE_BEET;
@@ -62,10 +68,15 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	tmpl->optional = 0; /* required */
 	tmpls_len += sizeof(*tmpl);
 	if (tmpl_saddr && tmpl_daddr) {
-		HIP_DEBUG_IN6ADDR("tmpl_saddr", tmpl_saddr);
-		HIP_DEBUG_IN6ADDR("tmpl_daddr", tmpl_daddr);
-		memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
-		memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
+		HIP_DEBUG_IN6ADDR("tmpl_saddr in policy", tmpl_saddr);
+		HIP_DEBUG_IN6ADDR("tmpl_daddr in policy", tmpl_daddr);
+		if(tmpl->family == AF_INET){
+			tmpl->saddr.a4 = tmpl_saddr->s6_addr32[3];
+			tmpl->id.daddr.a4 = tmpl_daddr->s6_addr32[3];
+		} else {
+			memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
+			memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
+		}
 	}
 
 	addattr_l(&req.n, sizeof(req), XFRMA_TMPL,
@@ -162,6 +173,16 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	memset(&req, 0, sizeof(req));
 
+	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
+	{	
+		preferred_family = AF_INET;
+		req.xsinfo.saddr.a4 = saddr->s6_addr32[3];
+		req.xsinfo.id.daddr.a4 = daddr->s6_addr32[3];
+	} else {
+		memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
+	        memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
+ 	}
+	
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xsinfo));
 	req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.n.nlmsg_type = cmd;
@@ -172,14 +193,15 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	req.xsinfo.mode = XFRM_MODE_BEET;
 	req.xsinfo.id.proto = IPPROTO_ESP;
 
-	memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
-	memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
+	//memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
+	//memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
 	req.xsinfo.id.spi = htonl(spi);
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
 			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
-			   preferred_family), -1);
+			   AF_INET6), -1);
+			   //preferred_family), -1);
 	
 	{
 		struct {

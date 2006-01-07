@@ -50,7 +50,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 
 	if (!filter_address(addr, ifindex)) {
 		HIP_DEBUG("filtering this address\n");
-		return;
+		//return;
 	}
 
 	n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
@@ -134,11 +134,16 @@ int hip_netdev_find_if(struct sockaddr *addr)
 {
         struct netdev_address *n;
 	list_for_each_entry(n, &addresses, next) {
+		HIP_DEBUG("n family %d, addr family %d\n", n->addr.ss_family ,addr->sa_family);
+		HIP_DEBUG_IN6ADDR("n addr ",  &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
+		HIP_DEBUG("index %d\n", n->if_index);	
 		if ((n->addr.ss_family == addr->sa_family) &&
 		    ((memcmp(SA2IP(&n->addr), SA2IP(addr),
 			     SAIPLEN(addr))==0)) ||
-		    IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), ((struct sockaddr_in *) addr)->sin_addr) )
-			return n->if_index;
+			  IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), ((struct sockaddr_in *) addr)->sin_addr)){ 
+		HIP_DEBUG("index %d\n", n->if_index);	
+		return n->if_index;
+		}
 
 	}
 	
@@ -159,6 +164,18 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
 	ipv6_addr_copy(&a.sin6_addr, addr);
 	return hip_netdev_find_if((struct sockaddr *)&a);
 }
+#if 0
+int hip_ipv4_devaddr2ifindex(struct in6_addr *addr)
+{
+	struct sockaddr_in6 a;
+	a.sin6_family = AF_INET6;
+	//a.sin_addr.s_addr = addr->s6_addr32[3];
+	ipv6_addr_copy(&a.sin6_addr, addr);
+	HIP_DEBUG("IPV4\n");
+	return hip_netdev_find_if((struct sockaddr *)&a);
+}
+
+#endif
 
 int static add_address(const struct nlmsghdr *h, int len, void *arg) {
         struct sockaddr_storage ss_addr;
