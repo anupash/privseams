@@ -1125,7 +1125,7 @@ int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_daddr,		  
 		  hip_ha_t *ha)
 {
-	int err = 0, retransmission = 0;
+	int err = 0, retransmission = 0, initiator_reset = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
 	char *tmp_enc = NULL, *enc = NULL;
@@ -1163,16 +1163,18 @@ int hip_handle_i2(struct hip_common *i2,
 			 "Cookie solution rejected\n");
 	}
 
-	if (entry && (entry->state == HIP_STATE_R2_SENT ||
-		    entry->state == HIP_STATE_ESTABLISHED)) {
-		/* If the I2 packet is a retransmission, we need reuse the
- 		   the SPI/keymat that was setup already when the first I2 was
- 		   received. However it is a retransmission only if the
-		   responder is in R2-SENT STATE */
-		retransmission = 1;
-		HIP_DEBUG("Retransmission\n");
-  	} else {
-		HIP_DEBUG("Not a retransmission\n");
+	if (entry) {
+		/* required for SP set-up */
+		initiator_reset =
+			(entry->state == HIP_STATE_ESTABLISHED ? 1 : 0);
+
+			/* If the I2 packet is a retransmission, we need reuse
+			   the the SPI/keymat that was setup already when the
+			   first I2 was received. However it is a
+			   retransmission only if the responder is in R2-SENT
+			   STATE */
+		retransmission = 
+			(entry->state == HIP_STATE_R2_SENT ? 1 : 0);
 	}
 
 	/* Check HIP and ESP transforms, and produce keying material  */
@@ -1341,8 +1343,11 @@ int hip_handle_i2(struct hip_common *i2,
 					PEER_ADDR_STATE_ACTIVE), -1,
 		 "Error while adding the preferred peer address\n");
 
+	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
+
 	/* Set up IPsec associations */
-	err = hip_add_sa(i2_saddr, i2_daddr, &ctx->input->hits, &ctx->input->hitr,
+	err = hip_add_sa(i2_saddr, i2_daddr,
+			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			 retransmission, HIP_SPI_DIRECTION_IN, 0);
@@ -1363,7 +1368,8 @@ int hip_handle_i2(struct hip_common *i2,
 		
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
-	err = hip_add_sa(i2_daddr, i2_saddr, &ctx->input->hitr, &ctx->input->hits,
+	err = hip_add_sa(i2_daddr, i2_saddr,
+			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
 			 1, HIP_SPI_DIRECTION_OUT, 0);
@@ -1384,7 +1390,8 @@ int hip_handle_i2(struct hip_common *i2,
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
-				       i2_saddr, i2_daddr, IPPROTO_ESP, 1, 0), -1,
+				       i2_saddr, i2_daddr, IPPROTO_ESP, 1,
+				       initiator_reset), -1,
 		 "Setting up SP pair failed\n");
 
 	/* source IPv6 address is implicitly the preferred
