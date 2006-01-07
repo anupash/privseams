@@ -50,7 +50,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 
 	if (!filter_address(addr, ifindex)) {
 		HIP_DEBUG("filtering this address\n");
-		//return;
+		return;
 	}
 
 	n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
