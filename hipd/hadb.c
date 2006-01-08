@@ -61,7 +61,7 @@ static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 static inline void hip_hadb_rem_state_hit(void *entry)
 {
 	hip_ha_t *ha = (hip_ha_t *)entry;
-	HIP_DEBUG("*****************GOT into hip_hadb_rem_state_hit*****************\n");
+	HIP_DEBUG("\n");
 	ha->hastate &= ~HIP_HASTATE_HITOK;
 	hip_ht_delete(&hadb_hit, entry);
 }
@@ -679,7 +679,7 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 		return -ENOENT;
 	}
 
-	if (ipv6_addr_any(addr)) {
+	if (!ipv6_addr_any(addr)) {
 		hip_hadb_delete_inbound_spi(ha, 0);
 		hip_hadb_delete_outbound_spi(ha, 0);
 		hip_hadb_remove_state_hit(ha);
@@ -1911,12 +1911,13 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
  				  item->spi, item->new_spi, item, item->addresses);
 			HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
+			HIP_DEBUG_IN6ADDR("cheng", &entry->local_address);
 			hip_delete_sa(item->spi, &entry->local_address,
 				      AF_INET6);
+			// XX FIX: should be deleted like this?
 			//for(i = 0; i < item->addresses_n; i++)
-			//hip_delete_sa(item->spi,
-			//&item->addresses->address + i,
-			//AF_INET6);
+			//  hip_delete_sa(item->spi,
+			//    &item->addresses->address + i, AF_INET6);
  			if (item->spi != item->new_spi)
  				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6);
  			if (item->addresses) {
