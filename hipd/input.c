@@ -905,6 +905,10 @@ int hip_handle_r1(struct hip_common *r1,
  	HIP_IFEL(hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
 		 "Creation of I2 failed\n");
 
+	if (entry->state == HIP_STATE_I1_SENT) {
+		entry->state = HIP_STATE_I2_SENT;
+	}
+
  out_err:
 	if (ctx->dh_shared_key)
 		HIP_FREE(ctx->dh_shared_key);
@@ -986,11 +990,6 @@ int hip_receive_r1(struct hip_common *hip_common,
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
-		else {
-			if (state == HIP_STATE_I1_SENT) {
-				entry->state = HIP_STATE_I2_SENT;
-			}
-		}
 		HIP_UNLOCK_HA(entry);
 		break;
 	case HIP_STATE_R2_SENT:
@@ -1525,8 +1524,6 @@ int hip_receive_i2(struct hip_common *i2,
 		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
 			err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-			if (!err)
-				entry->state = HIP_STATE_R2_SENT;
 		} else {
 			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
 		}
@@ -1534,27 +1531,17 @@ int hip_receive_i2(struct hip_common *i2,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
-			entry->state = HIP_STATE_R2_SENT;
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
-			entry->state = HIP_STATE_R2_SENT;
  		break;
  	case HIP_STATE_CLOSING:
  	case HIP_STATE_CLOSED:
 		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
-			entry->state = HIP_STATE_R2_SENT;
  	case HIP_STATE_REKEYING:
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		//if (!err) {
-		//	entry->state = HIP_STATE_R2_SENT;
-		//	// SYNCH
-		//}
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -1814,7 +1801,6 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	case HIP_STATE_CLOSED:
 	case HIP_STATE_CLOSING:
 		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
-		entry->state = state;
 		break;
 	default:
 		/* should not happen */
