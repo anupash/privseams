@@ -95,7 +95,7 @@ int hip_xfrm_sa_flush(struct rtnl_handle *rth) {
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xfs));
 	req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.n.nlmsg_type = XFRM_MSG_FLUSHSA;
-	req.xfs.proto = IPROTO_ESP;
+	req.xfs.proto = IPPROTO_ESP;
 
 	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 		 "SA flush failed\n");
