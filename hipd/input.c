@@ -1365,7 +1365,7 @@ int hip_handle_i2(struct hip_common *i2,
 	
 	/* ok, found an unused SPI to use */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
-		
+
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 	err = hip_add_sa(i2_daddr, i2_saddr,
@@ -1431,6 +1431,7 @@ int hip_handle_i2(struct hip_common *i2,
 	   the entry there and looking it up there would be unneccesary waste
 	   of cycles */
 //	if (!ha && entry) {
+		HIP_DEBUG("state is %d\n", entry->state);
 	if (entry) {
 		wmb();
 #ifdef CONFIG_HIP_RVS
@@ -1443,8 +1444,12 @@ int hip_handle_i2(struct hip_common *i2,
 				  "wait for implementation specific time, "
 				  "moving to ESTABLISHED\n");
 			entry->state = HIP_STATE_ESTABLISHED;
-		} else
+		} else if (entry->state == HIP_STATE_ESTABLISHED) {
+			HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
+			HIP_DEBUG("Staying in ESTABLISHED.\n");
+		} else {
 			entry->state = HIP_STATE_R2_SENT;
+		}
 #endif /* CONFIG_HIP_RVS */
 	}
 

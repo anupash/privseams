@@ -1911,7 +1911,12 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
  				  item->spi, item->new_spi, item, item->addresses);
 			HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
-			hip_delete_sa(item->spi, &entry->hit_our, AF_INET6);
+			hip_delete_sa(item->spi, &entry->local_address,
+				      AF_INET6);
+			//for(i = 0; i < item->addresses_n; i++)
+			//hip_delete_sa(item->spi,
+			//&item->addresses->address + i,
+			//AF_INET6);
  			if (item->spi != item->new_spi)
  				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6);
  			if (item->addresses) {
@@ -1939,8 +1944,10 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
-			hip_delete_sa(item->spi, &entry->hit_peer, AF_INET6);
-			hip_delete_sa(item->new_spi, &entry->hit_peer, AF_INET6);
+			hip_delete_sa(item->spi, &entry->preferred_address,
+				      AF_INET6);
+			hip_delete_sa(item->new_spi, &entry->preferred_address,
+				      AF_INET6);
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);
