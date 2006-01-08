@@ -975,8 +975,9 @@ uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
 			  item->spi, item->new_spi);
 		if (item->seq_update_id == peer_update_id) {
-			return item->new_spi;
-			
+			if (item->new_spi)
+				return item->new_spi;
+			return item->spi;
 		}
         }
 	HIP_DEBUG("New SPI not found\n");
