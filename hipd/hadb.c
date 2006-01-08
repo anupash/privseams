@@ -1725,6 +1725,7 @@ void hip_delete_all_sp()
 	 * The list traversing is not safe in smp way :(
 	 */
 	HIP_DEBUG("DELETING HA HT\n");
+#if 1
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
 			hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
@@ -1739,6 +1740,12 @@ void hip_delete_all_sp()
 			}
 		}
 	}
+#else
+	/* flush'em all (flushing sa does not work) */
+	hip_flush_all_sa();
+	hip_flush_all_policy();
+
+#endif
 }
 
 /**
