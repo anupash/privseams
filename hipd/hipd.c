@@ -176,7 +176,14 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
+#if 1
 	hip_delete_all_sp();
+#else   /* This works even when the hipd crashes */
+	/* XX FIX: flushing sa does not work */
+	hip_send_close(NULL);
+	hip_flush_all_sa();
+	hip_flush_all_policy();
+#endif
 
 	delete_all_addresses();
 
@@ -192,7 +199,6 @@ void hip_exit(int signal) {
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
-	hip_delete_all_sp();
 	if (hip_raw_sock)
 		close(hip_raw_sock);
 	if (hip_user_sock)
