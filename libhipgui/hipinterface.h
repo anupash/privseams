@@ -1,3 +1,11 @@
+/*
+    HIP GUI
+    
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
+             Matti Saarinen
+*/
+
 // HipInterface.h: interface for the HipInterface class.
 //
 //////////////////////////////////////////////////////////////////////

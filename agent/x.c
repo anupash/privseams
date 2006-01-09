@@ -1,5 +1,8 @@
 /*
     HIP Agent
+    
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
 /******************************************************************************/
@@ -16,7 +19,7 @@
 
 /******************************************************************************/
 /**
-	Function.
+	This is a template file for new files.
 	
 	@param x x
 	@return value

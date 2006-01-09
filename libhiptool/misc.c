@@ -14,7 +14,7 @@ int addr2ifindx(struct in6_addr local_address)
 {
 	struct ifaddrs *g_ifaces = NULL, *g_iface;
 	struct if_nameindex *i_ifaces = NULL, *i_iface;
-	char *if_name = '\0';
+	char if_name[64];
 	int if_index = 0, err = 0;
 
 	 err = getifaddrs(&g_ifaces);
@@ -27,17 +27,20 @@ int addr2ifindx(struct in6_addr local_address)
 		 sa_family_t family = g_iface->ifa_addr->sa_family;
 		 fprintf(stderr, "name: %s, family: %d, address ", g_iface->ifa_name, family);
 		 HIP_DEBUG_SOCKADDR(NULL, family, g_iface->ifa_addr);
-
-		 if (!memcmp(SA2IP(g_iface->ifa_addr), &local_address, SAIPLEN(g_iface->ifa_addr)))
-			 if_name = i_iface->if_name;
-		 break;
+		 HIP_DEBUG_IN6ADDR("SA2IP() = \n", SA2IP(g_iface->ifa_addr));
+		 if (!memcmp(SA2IP(g_iface->ifa_addr), &local_address, SAIPLEN(g_iface->ifa_addr))) {
+			 strcpy(if_name, g_iface->ifa_name);
+			 break;
+		 }
 	 }
 
 	 if (strlen(if_name)) {
 		 i_ifaces = if_nameindex();
 		 for (i_iface = i_ifaces; i_iface->if_index; i_iface++) {
-			 if (!strcmp(i_iface->if_name, if_name))
+			 if (!strcmp(i_iface->if_name, if_name)){
 				 if_index = i_iface->if_index;
+				 break;
+			 }
 		 }
 	 }
 
