@@ -176,12 +176,11 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
-	hip_send_close(NULL);
-
 #if 1
 	hip_delete_all_sp();
 #else   /* This works even when the hipd crashes */
 	/* XX FIX: flushing sa does not work */
+	hip_send_close(NULL);
 	hip_flush_all_sa();
 	hip_flush_all_policy();
 #endif
