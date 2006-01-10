@@ -214,7 +214,7 @@ void hip_exit(int signal) {
 }
 
 int main(int argc, char *argv[]) {
-	char ch;
+	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
 #ifdef CONFIG_HIP_HI3
 	char *i3_config = NULL;
@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
 		case '?':
 		default:
 			usage();
-			goto out_err;
+			return err;
 		}
 	}
 
