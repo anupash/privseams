@@ -476,13 +476,13 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* set up new outbound IPsec SA */
 	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
 
-	HIP_IFEL(hip_add_sa(&entry->preferred_address, &entry->local_address,
-			    hits, hitr, 
-			    &new_spi_out, esp_transform,
-			    we_are_HITg ? &espkey_gl : &espkey_lg,
-			    we_are_HITg ? &authkey_gl : &authkey_lg,
-			    0, HIP_SPI_DIRECTION_OUT, 0), -1,
-		 "Setting up new outbound IPsec SA failed\n");
+	err = hip_add_sa(&entry->preferred_address, &entry->local_address,
+			 hits, hitr, 
+			 &new_spi_out, esp_transform,
+			 we_are_HITg ? &espkey_gl : &espkey_lg,
+			 we_are_HITg ? &authkey_gl : &authkey_lg,
+			 0, HIP_SPI_DIRECTION_OUT, 0); //, -1,
+	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
 
@@ -1101,6 +1101,43 @@ int hip_receive_update(struct hip_common *msg,
 		 !hip_update_exists_spi(entry, ntohl(nes->old_spi), HIP_SPI_DIRECTION_OUT, 0), -1,
 		 "Old SPI value 0x%x in NES parameter does not belong to the current list of outbound SPIs in HA\n",
 		 ntohl(nes->old_spi));
+
+	/**********************/
+	if (rea) {
+		struct hip_rea_info_addr_item *rea_address_item;
+		int i, n_addrs;
+		uint32_t spi;
+		n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea)) /
+			sizeof(struct hip_rea_info_addr_item);
+		spi = ntohl(rea->spi);
+		rea_address_item = (void *)rea + sizeof(struct hip_rea);
+		for(i = 0; i < n_addrs; i++, rea_address_item++) {
+			struct in6_addr *rea_address = &rea_address_item->address;
+			uint32_t lifetime = ntohl(rea_address_item->lifetime);
+			int is_preferred = ntohl(rea_address_item->reserved) == 1 << 31;
+			
+			HIP_DEBUG_HIT("REA address", rea_address);
+			HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
+				  is_preferred ? "yes" : "no", ntohl(rea_address_item->reserved),
+				  lifetime);
+			/* 2. check that the address is a legal unicast or anycast address */
+			if (!hip_update_test_rea_addr(rea_address))
+				continue;
+
+			if (i > 0) {
+				/* preferred address allowed only for the first address */
+				if (is_preferred)
+					HIP_ERROR("bug, preferred flag set to other than the first address\n");
+				is_preferred = 0;
+			}
+
+			if (is_preferred) {
+				hip_delete_sa(spi, &entry->preferred_address, AF_INET6);
+				ipv6_addr_copy(&entry->preferred_address, rea_address);
+			}
+		}
+	}
+	/**********************/
 
 	if (handle_upd == 2) {
 		/* REA, SEQ */
