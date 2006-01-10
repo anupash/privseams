@@ -240,6 +240,7 @@ int main(int argc, char *argv[]) {
 			break;
 #endif
 		case '?':
+		case 'h':
 		default:
 			usage();
 			goto out_err;
@@ -477,7 +478,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-out_err:
+ out_err:
 
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
