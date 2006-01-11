@@ -214,7 +214,7 @@ void hip_exit(int signal) {
 }
 
 int main(int argc, char *argv[]) {
-	char ch;
+	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
 #ifdef CONFIG_HIP_HI3
 	char *i3_config = NULL;
@@ -240,9 +240,10 @@ int main(int argc, char *argv[]) {
 			break;
 #endif
 		case '?':
+		case 'h':
 		default:
 			usage();
-			goto out_err;
+			return err;
 		}
 	}
 
@@ -477,7 +478,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-out_err:
+ out_err:
 
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
