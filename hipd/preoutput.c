@@ -86,9 +86,9 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	
 	len = hip_get_msg_total_len(msg);
 	HIP_HEXDUMP("Dumping packet ", msg, len);
-	temp = sendto(ipv4 ? hip_raw_sock_v4 : hip_raw_sock,
-                        msg, len, 0, ipv4 ? &dst : &dst6,
-                         ipv4 ? sizeof(dst) : sizeof(dst6));
+	temp = sendto((ipv4 ? hip_raw_sock_v4 : hip_raw_sock),
+                        msg, len, 0, (ipv4 ? &dst : &dst6),
+                         (ipv4 ? sizeof(dst) : sizeof(dst6)));
 	HIP_DEBUG("send to %d, len %d ipv4 %d\n", temp, len, ipv4);
 	
 #if 0
