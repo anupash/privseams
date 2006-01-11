@@ -131,7 +131,7 @@ int hip_flush_all_policy() {
 }
 
 int hip_flush_all_sa() {
-	return hip_xfrm_policy_flush(&hip_nl_ipsec);
+	return hip_xfrm_sa_flush(&hip_nl_ipsec);
 }
 
 /**
