@@ -348,8 +348,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	//FIXME: acq->sel.family doesn't seem to contain the right value
 	addr->sa_family = AF_INET6;
 	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+#if 0
 	HIP_IFEL(!(if_index = addr2ifindx(entry->local_address)), -1, 
 		 "if_index NOT determined");
+#endif
 
 	add_address_to_list(addr, acq->sel.ifindex);
 
