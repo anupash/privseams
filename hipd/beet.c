@@ -93,6 +93,58 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	return err;
 }
 
+int hip_xfrm_sa_flush(struct rtnl_handle *rth) {
+
+	struct {
+		struct nlmsghdr		  n;
+		struct xfrm_usersa_flush  xfs;
+	} req;
+	int err = 0;
+
+	memset(&req, 0, sizeof(req));
+
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xfs));
+	req.n.nlmsg_flags = NLM_F_REQUEST;
+	req.n.nlmsg_type = XFRM_MSG_FLUSHSA;
+	req.xfs.proto = IPPROTO_ESP;
+
+	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+		 "SA flush failed\n");
+
+ out_err:
+
+	return err;
+}
+
+int hip_xfrm_policy_flush(struct rtnl_handle *rth) {
+
+	struct {
+		struct nlmsghdr			n;
+	} req;
+	int err = 0;
+
+	memset(&req, 0, sizeof(req));
+
+	req.n.nlmsg_len = NLMSG_LENGTH(0);
+	req.n.nlmsg_flags = NLM_F_REQUEST;
+	req.n.nlmsg_type = XFRM_MSG_FLUSHPOLICY;
+
+	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+		 "Policy flush failed\n");
+
+ out_err:
+
+	return err;
+}
+
+int hip_flush_all_policy() {
+	return hip_xfrm_policy_flush(&hip_nl_ipsec);
+}
+
+int hip_flush_all_sa() {
+	return hip_xfrm_sa_flush(&hip_nl_ipsec);
+}
+
 /**
  * hip_xfrm_policy_delete - delete the Security Policy
  * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
@@ -319,6 +371,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 
 	HIP_ASSERT(spi);
+
+	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
 
 	enckey_len = hip_enc_key_length(ealg);
 	authkey_len = hip_auth_key_length_esp(aalg);

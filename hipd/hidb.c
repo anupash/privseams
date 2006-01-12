@@ -181,7 +181,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	
 	pubkey = hip_get_public_key(pubkey);
        	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
-				   hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign,
+				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
 				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
 
 	/* Called while the database is locked, perhaps not the best

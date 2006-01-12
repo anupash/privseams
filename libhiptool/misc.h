@@ -84,6 +84,6 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix);
 int maxof(int num_args, ...);
 
-int addr2ifindx(struct in6_addr local_address);
+int addr2ifindx(struct in6_addr *local_address);
 
 #endif /* HIP_MISC_H */

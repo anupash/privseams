@@ -812,7 +812,18 @@
       <para>When new HIT is received, it and local HIT is filtered
             trough agent, which asks user for accepting the HIT pair.
             Then HIT is saved into database and accept/reject is
-            returned to daemon.</para>
+            returned to daemon. User can also manage HITs trough graphical
+            user interface. The interface is very unfinished, and nothing
+            very usefull cannot actually be done yet.</para>
+      <para>
+      	To compile agent and GUI atleast following packages are needed (asuming you have debian):
+		1. gcc and g++ compilers, both should be at least version 4.0.
+		2. Package: xbase-clients - miscellaneous X clients
+		3. GTK 2.0 and development files for it (Package called libgtk2.0-dev).
+		4. Package: libxxf86vm-dev - X Video Mode selection library development files
+		5. Package: libpango1.0-dev - Development files for the Pango
+		6. wxGTK version 2.6.2 (was compiled manually from sources after installing previous)
+      </para>
   </chapter>
 </book>    
 

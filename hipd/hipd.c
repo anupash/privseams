@@ -197,7 +197,14 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
+#if 1
 	hip_delete_all_sp();
+#else   /* This works even when the hipd crashes */
+	/* XX FIX: flushing sa does not work */
+	hip_send_close(NULL);
+	hip_flush_all_sa();
+	hip_flush_all_policy();
+#endif
 
 	delete_all_addresses();
 
@@ -213,7 +220,6 @@ void hip_exit(int signal) {
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
-	hip_delete_all_sp();
 	if (hip_raw_sock)
 		close(hip_raw_sock);
 	if (hip_raw_sock_v4)
@@ -231,13 +237,13 @@ void hip_exit(int signal) {
 }
 
 int main(int argc, char *argv[]) {
-	char ch;
+	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
 #ifdef CONFIG_HIP_HI3
 	char *i3_config = NULL;
 #endif
 	fd_set read_fdset;
-	int foreground = 1, highest_descriptor, s_net, err = 0;
+	int foreground = 1, highest_descriptor = 0, s_net, err = 0;
 	struct timeval timeout;
 	struct hip_work_order ping;
 
@@ -257,9 +263,10 @@ int main(int argc, char *argv[]) {
 			break;
 #endif
 		case '?':
+		case 'h':
 		default:
 			usage();
-			goto out_err;
+			return err;
 		}
 	}
 
@@ -513,7 +520,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-out_err:
+ out_err:
 
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
