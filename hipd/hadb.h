@@ -9,6 +9,8 @@
 #include "hidb.h"
 #include "hashtable.h"
 #include "builder.h"
+#include "input.h" 	// required for declaration of receive functions
+#include "update.h"	// required for declaration of update function
 
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
@@ -237,6 +239,9 @@ int hip_list_peers_add(struct in6_addr *address,
 int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
 
 int hip_hadb_update_xfrm(hip_ha_t *entry);
+
+int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
+				   hip_rcv_func_set_t *new_func_set);
 
 
 #endif /* HIP_HADB_H */

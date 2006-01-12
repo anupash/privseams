@@ -921,7 +921,8 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
  */
 int hip_receive_update(struct hip_common *msg,
 		       struct in6_addr *update_saddr,
-		       struct in6_addr *update_daddr)
+		       struct in6_addr *update_daddr,
+		       hip_ha_t *entry)
 {
 	int err = 0, state = 0, is_retransmission = 0, handle_upd = 0;
 	struct in6_addr *hits;
@@ -938,7 +939,6 @@ int hip_receive_update(struct hip_common *msg,
 	uint16_t keymat_index = 0;
 	struct hip_dh_fixed *dh;
 	struct in6_addr *src_ip, *dst_ip;
-	hip_ha_t *entry = NULL;
 
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
 
@@ -948,8 +948,7 @@ int hip_receive_update(struct hip_common *msg,
 	dst_ip = update_daddr;
 	hits = &msg->hits;
 
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(hits, &msg->hitr)), -1,
-		 "Entry not found\n");
+	HIP_IFEL(!entry, -1, "Entry not found\n");
 	HIP_LOCK_HA(entry);
 	state = entry->state; /* todo: remove variable state */
 

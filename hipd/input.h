@@ -27,16 +27,49 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr);
 
-int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
-int hip_receive_r1(struct hip_common *, struct in6_addr *, struct in6_addr *);
-int hip_receive_i2(struct hip_common *, struct in6_addr *, struct in6_addr *);
-int hip_receive_i1(struct hip_common *, struct in6_addr *, struct in6_addr *);
-int hip_receive_r2(struct hip_common *, struct in6_addr *, struct in6_addr *);
-int hip_receive_notify(struct hip_common *, struct in6_addr *,
-		       struct in6_addr *);
-int hip_receive_bos(struct hip_common *, struct in6_addr *,
-		    struct in6_addr *);
+int hip_verify_packet_hmac(struct hip_common *, 
+			   struct hip_crypto_key *);
+			   
+int hip_receive_i1(struct hip_common *, 
+		   struct in6_addr *, 
+		   struct in6_addr *);
+		   
+int hip_receive_r1(struct hip_common *, 
+		   struct in6_addr *,
+		   struct in6_addr *,
+		   hip_ha_t *);
+		   
+int hip_receive_i2(struct hip_common *, 
+		   struct in6_addr *,
+		   struct in6_addr *,
+		   hip_ha_t *);
+		   
+int hip_receive_r2(struct hip_common *, 
+		   struct in6_addr *,
+		   struct in6_addr *,
+		   hip_ha_t *);
+		   
+int hip_receive_notify(struct hip_common *,
+		       struct in6_addr *, 
+		       struct in6_addr *,
+		       hip_ha_t*);
+		       
+int hip_receive_bos(struct hip_common *,
+		    struct in6_addr *,
+		    struct in6_addr *,
+		    hip_ha_t*);
+		    
+int hip_receive_close(struct hip_common *, 
+		      hip_ha_t*);
+			
+int hip_receive_close_ack(struct hip_common *, 
+		      	  hip_ha_t*);
+					     
 void hip_hwo_input_destructor(struct hip_work_order *hwo);
 
-
+/* this function is only for test purposes and will be removed after testing*/
+int violent_message(struct hip_common *, 
+		     struct in6_addr *, 
+		     struct in6_addr *,
+		     hip_ha_t *);
 #endif /* HIP_INPUT_H */

@@ -355,6 +355,14 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_AH_SHA_LEN                 20
 
+/* HIP_APPLY_FUNC takes a pointer and an command to execute.
+   it executes the command exec if cond != NULL */ 
+#define HIP_IFCS(condition, consequence) if( condition ) {	\
+	 	consequence ; 						\
+	 } else {							\
+	 	HIP_ERROR("No state information found.\n");		\
+	 }								\
+
 typedef struct in6_addr hip_hit_t;
 typedef uint16_t se_family_t;
 typedef uint16_t se_length_t;
@@ -366,6 +374,7 @@ typedef uint16_t hip_hdr_err_t;
 typedef uint16_t hip_tlv_type_t;
 typedef uint16_t hip_tlv_len_t;
 typedef struct hip_hadb_state hip_ha_t;
+typedef struct hip_hadb_rcv_func_set hip_rcv_func_set_t;
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
@@ -967,7 +976,58 @@ struct hip_hadb_state
 	char echo_data[4]; /* For base exchange or CLOSE, not for UPDATE */
 
 	int skbtest; /* just for testing */
+	
+	/* function pointer sets for modifying hip behaviour based on state information */
+	hip_rcv_func_set_t *hadb_rcv_func;		/* function pointers for
+recieved messages*/
+//	struct hadb_func_snd_set *hadb_snd_func;		/* function pointers for to messages*/
+//	struct hadb_func_auth_set *hadb_auth_func;		/* function pointers for authentication*/
+//	struct hadb_func_toplvl_set *hadb_toplvl_func;	/* function pointers to modify HIP at neuralgical points*/
 };
+
+struct hip_hadb_rcv_func_set{
+	int (*hip_fp_receive_r1)(struct hip_common *,
+				 struct in6_addr *, 
+				 struct in6_addr *,
+				 hip_ha_t*);
+				 
+	int (*hip_fp_receive_i2)(struct hip_common *,
+				 struct in6_addr *, 
+				 struct in6_addr *,
+				 hip_ha_t*);
+				 
+	int (*hip_fp_receive_r2)(struct hip_common *,
+				 struct in6_addr *,
+				 struct in6_addr *,
+				 hip_ha_t*);
+				 
+	int (*hip_fp_receive_update)(struct hip_common *,
+				     struct in6_addr *,
+				     struct in6_addr *,
+				     hip_ha_t*);
+				     
+	int (*hip_fp_receive_notify)(struct hip_common *,
+				     struct in6_addr *,
+				     struct in6_addr *,
+				     hip_ha_t*);
+				     
+	int (*hip_fp_receive_bos)(struct hip_common *,
+				  struct in6_addr *,
+				  struct in6_addr *,
+				  hip_ha_t*);
+				     
+	int (*hip_fp_receive_close)(struct hip_common *,
+				    hip_ha_t*);
+				       
+	int (*hip_fp_receive_close_ack)(struct hip_common *,
+					hip_ha_t*);	 
+	
+};
+
+/* default set of receive function pointers. This has to be in the global scope
+   TODO: move the default function sets to hadb.c */
+hip_rcv_func_set_t default_rcv_func_set;
+hip_rcv_func_set_t ahip_rcv_func_set;
 
 struct hip_cookie_entry {
 	int used;

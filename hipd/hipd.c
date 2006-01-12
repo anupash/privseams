@@ -29,6 +29,8 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
+
+
 time_t load_time;
 
 void usage() {
@@ -368,6 +370,7 @@ int main(int argc, char *argv[]) {
 				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_agent_sock);
 	
+	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
 	for (;;) {
 		struct hip_work_order *hwo;
@@ -382,7 +385,7 @@ int main(int argc, char *argv[]) {
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		
-		_HIP_DEBUG("select\n");
+		_HIP_DEBUG("select loop\n");
 		/* wait for socket activity */
 		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset, 
 				       NULL, NULL, &timeout)) < 0) {
