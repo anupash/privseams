@@ -10,7 +10,7 @@
 #include "misc.h"
 
 
-int addr2ifindx(struct in6_addr local_address)
+int addr2ifindx(struct in6_addr *local_address)
 {
 	struct ifaddrs *g_ifaces = NULL, *g_iface;
 	struct if_nameindex *i_ifaces = NULL, *i_iface;
@@ -28,7 +28,7 @@ int addr2ifindx(struct in6_addr local_address)
 		 fprintf(stderr, "name: %s, family: %d, address ", g_iface->ifa_name, family);
 		 HIP_DEBUG_SOCKADDR(NULL, family, g_iface->ifa_addr);
 		 HIP_DEBUG_IN6ADDR("SA2IP() = \n", SA2IP(g_iface->ifa_addr));
-		 if (!memcmp(SA2IP(g_iface->ifa_addr), &local_address, SAIPLEN(g_iface->ifa_addr))) {
+		 if (!memcmp(SA2IP(g_iface->ifa_addr), local_address, SAIPLEN(g_iface->ifa_addr))) {
 			 strcpy(if_name, g_iface->ifa_name);
 			 break;
 		 }
