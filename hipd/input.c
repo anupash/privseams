@@ -1141,7 +1141,7 @@ int hip_handle_i2(struct hip_common *i2,
  	HIP_DEBUG("\n");
 
 	/* Assume already locked ha, if ha is not NULL */
-	HIP_IFE(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)), -ENOMEM);
+	HIP_IFE(!(ctx = malloc(sizeof(struct hip_context))), -ENOMEM);
 	memset(ctx, 0, sizeof(struct hip_context));
 
 	/* Check packet validity */
