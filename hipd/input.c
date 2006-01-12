@@ -447,8 +447,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 
 	HIP_DEBUG("Received packet type %d\n", type);
-	HIP_DUMP_MSG(msg);
-	HIP_HEXDUMP("dumping packet", msg,  40);
+	_HIP_DUMP_MSG(msg);
+	_HIP_HEXDUMP("dumping packet", msg,  40);
 	// XX FIXME: CHECK PACKET CSUM
 
 	err = hip_agent_filter(msg);
