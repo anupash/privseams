@@ -48,6 +48,9 @@
 #  define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
 #  define HIP_DEBUG_HIT(str, hit) hip_print_hit(str, hit)
 
+
+
+
 #else
 
   #define HIP_DEBUG(fmt, args...) do { } while(0)
