@@ -553,7 +553,7 @@ int hip_iproute_get(struct rtnl_handle *rth,
 		    struct in6_addr *dst_addr,
 		    char *idev,
 		    char *odev,
-		    int preferred_family,
+		    int family,
 		    struct idxmap **idxmap)
 {
 	struct {
@@ -561,7 +561,7 @@ int hip_iproute_get(struct rtnl_handle *rth,
 		struct rtmsg 		r;
 		char   			buf[1024];
 	} req;
-	int err = 0, idx;
+	int err = 0, idx, preferred_family = family;
 	inet_prefix addr;
 	char dst_str[INET6_ADDRSTRLEN];
 	struct in_addr ip4;
