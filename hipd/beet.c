@@ -53,9 +53,10 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	{
 		HIP_DEBUG("IPv4 address found in tmpl policy\n");
 		tmpl->family = AF_INET;
-	}
-	else
+	} else {
 		tmpl->family = preferred_family;
+	}
+		
 	/* The mode has to be BEET */
 	if (proto) {
 		tmpl->mode = XFRM_MODE_BEET;
@@ -227,18 +228,18 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
 	{	
-		preferred_family = AF_INET;
 		req.xsinfo.saddr.a4 = saddr->s6_addr32[3];
 		req.xsinfo.id.daddr.a4 = daddr->s6_addr32[3];
+		req.xsinfo.family = AF_INET;
 	} else {
 		memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
 	        memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
+		req.xsinfo.family = preferred_family;
  	}
 	
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xsinfo));
 	req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.n.nlmsg_type = cmd;
-	req.xsinfo.family = preferred_family;
 
 	xfrm_init_lft(&req.xsinfo.lft);
 
