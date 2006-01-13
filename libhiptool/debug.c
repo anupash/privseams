@@ -388,4 +388,9 @@ void hip_print_hit(const char *str, const struct in6_addr *hit)
 	return;
 }
 
-
+void hip_print_lsi(const char *str, const struct in6_addr *lsi)
+{
+	char dst[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, lsi, dst, sizeof(dst));
+	HIP_DEBUG("%s: %s\n", str, dst);
+}

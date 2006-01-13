@@ -126,8 +126,6 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
 
-	char ipaddr[28];       //For debugging --abi
- 
 	// HIP_HEXDUMP("Dumping msg", hip_msg,  hip_get_msg_total_len(hip_msg));
 	/* setup message header with control and receive buffers */
         msg.msg_name = &addr_from;
@@ -171,16 +169,17 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 		IPV4_TO_IPV6_MAP(addr_from.sin_addr.s_addr, saddr);
 		IPV4_TO_IPV6_MAP(pktinfo->ipi_addr.s_addr, daddr);
 
-		inet_ntop(AF_INET, &pktinfo->ipi_addr, ipaddr, 28);
-		HIP_DEBUG("Lets print address daddr %s\n", ipaddr);
+		HIP_DEBUG_INADDR("daddr", &pktinfo->ipi_addr);
+		HIP_DEBUG_INADDR("daddr", &addr_from.sin_addr);
 
-		inet_ntop(AF_INET, &addr_from.sin_addr, ipaddr, 28);
-		HIP_DEBUG("Lets print address saddr %s\n", ipaddr);
-
-
-		HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
-		HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
+		HIP_DEBUG_IN6ADDR("mapped src\n", saddr);
+		HIP_DEBUG_IN6ADDR("mapped dst\n", daddr);
 	}
+
+	/* For some reason, the IPv4 header is always included.
+	   Let's remove it here. */
+	memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
+		HIP_MAX_PACKET - IPV4_HDR_SIZE);
 	
  out_err:
 	return err;

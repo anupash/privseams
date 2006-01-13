@@ -171,6 +171,7 @@ int hip_init_raw_sock() {
 
 int hip_init_raw_sock_v4() {
 	int on = 1, err = 0;
+	int off = 0;
 
 	//struct sockaddr_in any4_addr;
 	//memset(&any4_addr, 0, sizeof(any4_addr));
@@ -181,6 +182,7 @@ int hip_init_raw_sock_v4() {
 		 "Raw socket v4 creation failed. Not root?\n");
 	HIP_IFEL(setsockopt(hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt v4 recverr failed\n");
+
 	HIP_IFEL(setsockopt(hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt v4 pktinfo failed\n");
 
@@ -440,7 +442,6 @@ int main(int argc, char *argv[]) {
 				HIP_ERROR("Reading network msg failed\n");
 			else
 			{
-				hip_msg = (((char *) hip_msg) + IPV4_HDR_SIZE);
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr);

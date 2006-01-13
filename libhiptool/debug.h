@@ -38,6 +38,8 @@
 //#define HIP_DEBUG_HIT(str, hit) do {} while(0)
 #define HIP_DEBUG_HIT(str, hit)  hip_print_hit(str, hit)
 #define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
+#define HIP_DEBUG_LSI(str, hit)  hip_print_hit(str, lsi)
+#define HIP_DEBUG_INADDR(str, in)  hip_print_hit(str, in)
 //#define HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 /* these are used for disabling a debugging command temporarily */
@@ -51,6 +53,8 @@
 #define _HIP_ASSERT(s) do {} while(0)
 #define _HIP_DEBUG_HIT(str, hit) do {} while(0)
 #define _HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
+#define _HIP_DEBUG_LSI(str, lsi) do {} while(0)
+#define _HIP_DEBUG_INADDR(str, in) do {} while(0)
 
 enum logtype { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
 enum logfmt { LOGFMT_SHORT, LOGFMT_LONG };
