@@ -24,7 +24,10 @@ int addr2ifindx(struct in6_addr *local_address)
 	 }
 
 	 for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
-		 sa_family_t family = g_iface->ifa_addr->sa_family;
+		 sa_family_t family;
+		 if (!g_iface->ifa_addr)
+			 continue;
+		 family = g_iface->ifa_addr->sa_family;
 		 fprintf(stderr, "name: %s, family: %d, address ", g_iface->ifa_name, family);
 		 HIP_DEBUG_SOCKADDR(NULL, family, g_iface->ifa_addr);
 		 HIP_DEBUG_IN6ADDR("SA2IP() = \n", SA2IP(g_iface->ifa_addr));

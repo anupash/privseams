@@ -41,6 +41,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
 	/* Direction */
 	req.xpinfo.dir = dir;
+        req.xpinfo.flags = XFRM_POLICY_FLAG_SLEEP;
 
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, 0,
@@ -53,8 +54,12 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	{
 		HIP_DEBUG("IPv4 address found in tmpl policy\n");
 		tmpl->family = AF_INET;
+		HIP_DEBUG_INADDR("tmpl_saddr in policy", tmpl_saddr);
+		HIP_DEBUG_INADDR("tmpl_daddr in policy", tmpl_daddr);
 	} else {
 		tmpl->family = preferred_family;
+		HIP_DEBUG_IN6ADDR("tmpl_saddr in policy", tmpl_saddr);
+		HIP_DEBUG_IN6ADDR("tmpl_daddr in policy", tmpl_daddr);
 	}
 		
 	/* The mode has to be BEET */
@@ -69,8 +74,6 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	tmpl->optional = 0; /* required */
 	tmpls_len += sizeof(*tmpl);
 	if (tmpl_saddr && tmpl_daddr) {
-		HIP_DEBUG_IN6ADDR("tmpl_saddr in policy", tmpl_saddr);
-		HIP_DEBUG_IN6ADDR("tmpl_daddr in policy", tmpl_daddr);
 		if(tmpl->family == AF_INET){
 			tmpl->saddr.a4 = tmpl_saddr->s6_addr32[3];
 			tmpl->id.daddr.a4 = tmpl_daddr->s6_addr32[3];
