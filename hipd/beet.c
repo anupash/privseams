@@ -41,6 +41,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
 	/* Direction */
 	req.xpinfo.dir = dir;
+        req.xpinfo.flags = XFRM_POLICY_FLAG_SLEEP;
 
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, 0,
