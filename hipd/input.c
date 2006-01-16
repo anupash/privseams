@@ -11,8 +11,7 @@
  */
 #include "input.h"
 
-int hip_handle_close(struct hip_common *close, hip_ha_t *entry);
-int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
+
 extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			struct in6_addr *i1_daddr, HIP_RVA *rva);
 
@@ -365,7 +364,7 @@ int hip_receive_close(struct hip_common *close,
  	case HIP_STATE_REKEYING: // XX CHECK: CORRECT?
  	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_CLOSING:
-		err = hip_handle_close(close, entry);
+		err = entry->hadb_handle_func->hip_handle_close(close, entry);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -419,7 +418,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
  	switch(state) {
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
-		err = hip_handle_close_ack(close_ack, entry);
+		err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -1043,7 +1042,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
 		/* E1. The normal case. Process, send I2, goto E2. */
-		err = hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
@@ -1476,7 +1475,9 @@ int hip_handle_i2(struct hip_common *i2,
 
 	/* choose the set of processing function for the hadb_entry*/
 	HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set for receive functions\n");
+	HIP_IFEL(hip_hadb_set_handle_function_set(entry, &default_handle_func_set),
+		 -1, "Can't set new function pointer set for receive functions\n");
 	
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
@@ -1579,7 +1580,7 @@ int hip_receive_i2(struct hip_common *i2,
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
-		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry); //as there is no state established function pointers can't be used here
 		break;
 	case HIP_STATE_I2_SENT:
 		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
@@ -1591,18 +1592,18 @@ int hip_receive_i2(struct hip_common *i2,
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
- 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
- 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
  		break;
  	case HIP_STATE_CLOSING:
  	case HIP_STATE_CLOSED:
 		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
- 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
  	case HIP_STATE_REKEYING:
- 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -1913,7 +1914,7 @@ int hip_receive_r2(struct hip_common *hip_common,
  	switch(state) {
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
- 		err = hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
 		if (err) {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
 			goto out_err;
@@ -2018,7 +2019,7 @@ int hip_receive_bos(struct hip_common *bos,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* Possibly no state created yet */
-		err = hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
