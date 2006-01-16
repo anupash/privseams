@@ -55,7 +55,6 @@ out:
 	  return if_index;
 }
 
-
 /*
  * XX TODO: HAA
  * XX TODO: which one to use: this or the function just below?

@@ -777,7 +777,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
       	/********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
-	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(r1_daddr);
+	spi_in_data.ifindex = addr2ifindx(r1_daddr);
 	HIP_LOCK_HA(entry);
 	HIP_IFEB(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
@@ -1285,8 +1285,9 @@ int hip_handle_i2(struct hip_common *i2,
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
 		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+#if 0
 		add_address_to_list(addr, if_index);//if_index = addr2ifindx(entry->local_address);
-		
+#endif		
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
@@ -1400,7 +1401,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
-	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(i2_daddr);
+	spi_in_data.ifindex = addr2ifindx(i2_daddr);
 	if (spi_in_data.ifindex) {
 		HIP_DEBUG("ifindex=%d\n", spi_in_data.ifindex);
 	} else
@@ -1651,7 +1652,7 @@ int hip_handle_r2(struct hip_common *r2,
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 	_HIP_DEBUG("add spi err ret=%d\n", err);
 
-	err = hip_ipv6_devaddr2ifindex(r2_daddr);
+	err = addr2ifindx(r2_daddr);
 	if (err != 0) {
 		HIP_DEBUG("ifindex=%d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);

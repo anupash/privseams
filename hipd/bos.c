@@ -1,7 +1,9 @@
 #include "bos.h"
 
+#if 0
 int address_count;
 struct list_head addresses;
+#endif
 
 /**
  * hip_create_signature - Calculate SHA1 hash over the data and sign it.
@@ -57,7 +59,8 @@ int hip_send_bos(const struct hip_common *msg)
 	//struct inet6_ifaddr *ifa = NULL;
 	//struct hip_xfrm_t *x;
 	struct netdev_address *n;
-	
+	struct ifaddrs *g_ifaces = NULL, *g_iface;
+
 	HIP_DEBUG("\n");
 	
 	/* Extra consistency test */
@@ -130,11 +133,27 @@ int hip_send_bos(const struct hip_common *msg)
 	daddr.s6_addr32[3] = htonl(0x1);
 	HIP_HEXDUMP("dst addr:", &daddr, 16);
 
+#if 0
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
 		err = hip_csum_send(SA2IP(&n->addr), &daddr, bos);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
+	}
+#endif
+	HIP_IFEL(getifaddrs(&g_ifaces), -1,
+		 "getifaddrs failed\n");
+
+	for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
+		if (g_iface->ifa_addr &&
+		    filter_address(g_iface->ifa_addr, -1)) {
+			HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr),
+				    SAIPLEN(&n->addr));
+			err = hip_csum_send(SA2IP(g_iface->ifa_addr),
+					    &daddr, bos);
+			if (err)
+				HIP_ERROR("sending of BOS failed, err=%d\n", err);
+		}
 	}
 	err = 0;
 
@@ -145,6 +164,9 @@ out_err:
 		HIP_FREE(host_id_pub);
 	if (bos)
 		HIP_FREE(bos);
+	if (g_ifaces)
+		freeifaddrs(g_ifaces);
+
 	return err;
 }
 

@@ -185,7 +185,9 @@ void hip_exit(int signal) {
 	hip_flush_all_policy();
 #endif
 
+#if 0
 	delete_all_addresses();
+#endif
 
 	set_up_device(HIP_HIT_DEV, 0);
 
@@ -322,7 +324,9 @@ int main(int argc, char *argv[]) {
 	/* Resolve our current addresses, afterwards the events from
            kernel will maintain the list */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
+#if 0
 	hip_netdev_init_addresses(&hip_nl_ipsec);
+#endif
 
 	HIP_IFE(hip_init_raw_sock(), -1);
 
