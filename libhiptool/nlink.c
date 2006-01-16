@@ -537,8 +537,14 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 		//FIX-ME 
 		//What to do in case of AF_INET ?? MIIKA?
 		//HIP_ASSERT(r->rtm_family == AF_INET6);
-		memcpy(src_addr, RTA_DATA(tb[RTA_PREFSRC]),
-		       sizeof(struct in6_addr));
+	        if(r->rtm_family == AF_INET){
+                	memcpy(&(src_addr->s6_addr32[3]), RTA_DATA(tb[RTA_PREFSRC]),
+                                sizeof(struct in_addr));
+                        src_addr->s6_addr32[2] = htonl(0x0000ffff);
+                }
+                else
+			memcpy(src_addr, RTA_DATA(tb[RTA_PREFSRC]),
+				       sizeof(struct in6_addr));
 	} else {
 		HIP_ERROR("Could not find a source route\n");
 	}
