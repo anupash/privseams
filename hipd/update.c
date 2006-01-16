@@ -465,7 +465,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* XFRM API doesn't support multiple SA for one SP */
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
-	hip_delete_sa(prev_spi_in, &entry->preferred_address, AF_INET6);
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6);
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
@@ -478,7 +478,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 	err = hip_add_sa(&entry->preferred_address, &entry->local_address,
 			 hits, hitr, 
-			 &nes->new_spi/*&new_spi_out*/, esp_transform,
+			 /*&nes->new_spi*/ &new_spi_in, esp_transform,
 			 we_are_HITg ? &espkey_gl : &espkey_lg,
 			 we_are_HITg ? &authkey_gl : &authkey_lg,
 			 0, HIP_SPI_DIRECTION_OUT, 0); //, -1,
@@ -488,7 +488,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 	err = hip_add_sa(&entry->local_address, &entry->preferred_address,
 			 hitr, hits,
-			 &new_spi_in, esp_transform,
+			 &new_spi_out, esp_transform,
 			 we_are_HITg ? &espkey_lg  : &espkey_gl,
 			 we_are_HITg ? &authkey_lg : &authkey_gl,
 			 1, HIP_SPI_DIRECTION_IN, 0 /*prev_spi_out == new_spi_out*/ );
@@ -1270,6 +1270,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		HIP_DEBUG("mapped_spi=0x%x\n", mapped_spi);
 		if (mapped_spi) {
 			/* NES not needed */
+			/* NES shouldn't be sent, but at the moment we send it anyway, due to the structure
+			   of the old program */
 			add_nes = 1;
 			make_new_sa = 0;
 			_HIP_DEBUG("5.1 Mobility with single SA pair, readdress with no rekeying\n");
@@ -1322,7 +1324,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 			_HIP_DEBUG("is previously mapped ifindex\n");
 		}
 	} else
-		_HIP_DEBUG("not creating a new SA\n");
+		HIP_DEBUG("not creating a new SA\n");
 
 	_HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 
@@ -1388,8 +1390,10 @@ int hip_send_update(struct hip_hadb_state *entry,
  		HIP_DEBUG("Address set has changed, continue\n");
 
 	/* spi_in->spi is equal to nes_old_spi */
-	hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
-	ipv6_addr_copy(&entry->local_address, &addr_list->address);
+	if (memcmp(&entry->local_address, &addr_list->address, sizeof(struct in6_addr))) {
+		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
+		ipv6_addr_copy(&entry->local_address, &addr_list->address);
+	}
 
 	hip_update_set_new_spi_in(entry, nes_old_spi, nes_new_spi, 0);
 	entry->update_id_out++;
