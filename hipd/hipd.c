@@ -216,13 +216,13 @@ void hip_exit(int signal) {
 }
 
 int main(int argc, char *argv[]) {
-	char ch;
+	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
 #ifdef CONFIG_HIP_HI3
 	char *i3_config = NULL;
 #endif
 	fd_set read_fdset;
-	int foreground = 1, highest_descriptor, s_net, err = 0;
+	int foreground = 1, highest_descriptor = 0, s_net, err = 0;
 	struct timeval timeout;
 	struct hip_work_order ping;
 
@@ -242,9 +242,10 @@ int main(int argc, char *argv[]) {
 			break;
 #endif
 		case '?':
+		case 'h':
 		default:
 			usage();
-			goto out_err;
+			return err;
 		}
 	}
 
@@ -327,8 +328,8 @@ int main(int argc, char *argv[]) {
 
 	HIP_IFE(hip_init_raw_sock(), -1);
 
-	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
-		  hip_raw_sock, highest_descriptor);
+	_HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
+		   hip_raw_sock, highest_descriptor);
 
 	HIP_DEBUG("Setting SP\n");
 	hip_delete_default_prefix_sp_pair();
@@ -480,7 +481,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-out_err:
+ out_err:
 
 	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 

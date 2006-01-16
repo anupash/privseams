@@ -41,6 +41,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
 	/* Direction */
 	req.xpinfo.dir = dir;
+        req.xpinfo.flags = XFRM_POLICY_FLAG_SLEEP;
 
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, 0,
@@ -131,7 +132,7 @@ int hip_flush_all_policy() {
 }
 
 int hip_flush_all_sa() {
-	return hip_xfrm_policy_flush(&hip_nl_ipsec);
+	return hip_xfrm_sa_flush(&hip_nl_ipsec);
 }
 
 /**
