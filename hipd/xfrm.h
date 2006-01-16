@@ -102,6 +102,11 @@ enum
 	XFRM_SHARE_UNIQUE	/* Use once */
 };
 
+enum
+{
+       XFRM_POLICY_FLAG_SLEEP = 1
+};
+
 /* Netlink configuration messages.  */
 enum {
 	XFRM_MSG_BASE = 0x10,
