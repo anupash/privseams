@@ -33,7 +33,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		    IN6_IS_ADDR_LINKLOCAL(a) ||
 		    IN6_IS_ADDR_SITELOCAL(a) ||
 		    IN6_IS_ADDR_V4MAPPED(a) ||
-		    IN6_IS_ADDR_V4COMPAT(a))
+		    IN6_IS_ADDR_V4COMPAT(a) ||
+		    ipv6_addr_is_hit(a))
 			return 0;
 		return 1;
 	}
@@ -139,7 +140,7 @@ int hip_netdev_find_if(struct sockaddr *addr)
  */
 /* FIXME: The caller of this shoul be generalized to both IPv4 and
    IPv6 so that this function can be removed (tkoponen) */
-int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
+int hip_devaddr2ifindex(struct in6_addr *addr)
 {
 	struct sockaddr_in6 a;
 	a.sin6_family = AF_INET6;
@@ -205,74 +206,35 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg) {
 }
 
 /* 
- * function get_my_addresses()
- *
- * Use the netlink interface to retrieve a list of addresses for this
- * host's interfaces, and stores them into global addresses list.
+ * Note: this creates a new NETLINK socket (via getifaddrs), so this has to be
+ * run before the global NETLINK socket is opened. I did not have the time
+ * and energy to import all of the necessary functionality from iproute2.
+ * -miika
  */
 int hip_netdev_init_addresses(struct rtnl_handle *nl)
 {
-        struct sockaddr_nl nladdr;
-        char buf[8192];
-        struct nlmsghdr *h;
-        int status, done = 0;
-
-        /* netlink packet */
-        struct {
-                struct nlmsghdr n;
-                struct rtgenmsg g;
-        } req;
-
-        struct iovec iov = { buf, sizeof(buf) };
-        /* message response */
-        struct msghdr msg = {
-                (void*)&nladdr, sizeof(nladdr),
-                &iov, 1,
-                NULL, 0,
-                0
-        };
+	struct ifaddrs *g_ifaces = NULL, *g_iface;
+	int err = 0, if_index;
 
 	/* Initialize address list */
 	HIP_DEBUG("Initializing addresses...\n");
 	INIT_LIST_HEAD(&addresses);
-	address_count = 0;
 
-        /* setup request */
-        memset(&req, 0, sizeof(req));
-        req.n.nlmsg_len = sizeof(req);
-        req.n.nlmsg_type = RTM_GETADDR;
-        req.n.nlmsg_flags = NLM_F_ROOT | NLM_F_MATCH | NLM_F_REQUEST;
-        req.n.nlmsg_pid = 0;
-        req.n.nlmsg_seq = ++nl->seq;
-        req.g.rtgen_family = 0;
+	HIP_IFEL(getifaddrs(&g_ifaces), -1,
+		 "getifaddrs failed\n");
 
-	HIP_DEBUG("Sending an address request.\n");
+	for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
+		if (!g_iface->ifa_addr)
+			continue;
+		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
+			 -1, "if_nametoindex failed\n");
+		add_address_to_list(g_iface->ifa_addr, if_index);
+	}
 
-        /* send request */
-	if (hip_netlink_send_buf(nl, (const char *)&req, sizeof(req)) < 0) {
-		HIP_ERROR("Netlink: sendto() error: %s\n", strerror(errno));
-                return(-1);
-        }
-
-        HIP_DEBUG("Local addresses:\n");
-
-        /* receiving loop 1
-         * call recvmsg() repeatedly until we get a message
-         * with the NLMSG_DONE flag set
-         */
-#if 0
-        while(!done) {
-                /* get response */
-		if (hip_netlink_receive(nl, add_address, &done)) {
-                        HIP_ERROR("Netlink: recvmsg() error!\nerror: %s\n",
-				  strerror(errno));
-                        return(-1);
-                }
-        } /* end while(!done) - loop 1 */ 
-#endif
-	HIP_DEBUG("found %d usable addresses\n", address_count);
-	HIP_DEBUG("addrs=0x%p\n", &addresses);
-        return(0);
+ out_err:
+	if (g_ifaces)
+		freeifaddrs(g_ifaces);
+	return err;
 }
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
@@ -318,8 +280,8 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	//FIXME: acq->sel.family doesn't seem to contain the right value
 	addr->sa_family = AF_INET6;
 	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
-	HIP_IFEL(!(if_index = addr2ifindx(entry->local_address)), -1, 
-		 "if_index NOT determined");
+	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
+		 "if_index NOT determined\n");
 
 	add_address_to_list(addr, acq->sel.ifindex);
 

@@ -174,7 +174,7 @@ void hip_set_msg_err(struct hip_common *msg, hip_hdr_err_t err) {
 	msg->checksum = err;
 }
 
-void hip_get_msg_checksum(struct hip_common *msg) {
+uint16_t hip_get_msg_checksum(struct hip_common *msg) {
 	return msg->checksum; /* one byte, no ntohs() */
 }
 
