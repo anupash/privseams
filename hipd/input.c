@@ -777,7 +777,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
       	/********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
-	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(r1_daddr);
+	spi_in_data.ifindex = hip_devaddr2ifindex(r1_daddr);
 	HIP_LOCK_HA(entry);
 	HIP_IFEB(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
@@ -1280,7 +1280,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
 #if 0
-		HIP_IFEL(!(if_index = hip_ipv6_devaddr2ifindex(&entry->local_address)), -1, 
+		HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
 			 "if_index NOT determined");
 #endif
 
@@ -1402,7 +1402,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
-	spi_in_data.ifindex = hip_ipv6_devaddr2ifindex(i2_daddr);
+	spi_in_data.ifindex = hip_devaddr2ifindex(i2_daddr);
 	if (spi_in_data.ifindex) {
 		HIP_DEBUG("ifindex=%d\n", spi_in_data.ifindex);
 	} else
@@ -1655,7 +1655,7 @@ int hip_handle_r2(struct hip_common *r2,
 	//if(IN6_IS_ADDR_V4MAPPED(r2_daddr))
 	//	err = hip_ipv4_devaddr2ifindex(r2_daddr);
 	//else
-		err = hip_ipv6_devaddr2ifindex(r2_daddr);
+		err = hip__devaddr2ifindex(r2_daddr);
 	if (err != 0) {
 		HIP_DEBUG("ifindex=%d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);
