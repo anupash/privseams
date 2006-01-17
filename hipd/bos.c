@@ -1,8 +1,5 @@
 #include "bos.h"
 
-int address_count;
-struct list_head addresses;
-
 /**
  * hip_create_signature - Calculate SHA1 hash over the data and sign it.
  * @buffer_start: Pointer to start of the buffer over which the hash is

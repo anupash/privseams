@@ -1279,7 +1279,7 @@ int hip_handle_i2(struct hip_common *i2,
 		hip_init_us(entry, &i2->hitr);
 
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
-		HIP_IFEL(!(if_index = addr2ifindx(&entry->local_address)), -1, 
+		HIP_IFEL(!(if_index = hip_ipv6_devaddr2ifindex(&entry->local_address)), -1, 
 			 "if_index NOT determined");
 
 		memset(addr, 0, sizeof(struct sockaddr_storage));
