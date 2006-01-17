@@ -1655,7 +1655,7 @@ int hip_handle_r2(struct hip_common *r2,
 	//if(IN6_IS_ADDR_V4MAPPED(r2_daddr))
 	//	err = hip_ipv4_devaddr2ifindex(r2_daddr);
 	//else
-		err = hip__devaddr2ifindex(r2_daddr);
+		err = hip_devaddr2ifindex(r2_daddr);
 	if (err != 0) {
 		HIP_DEBUG("ifindex=%d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);
