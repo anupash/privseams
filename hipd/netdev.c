@@ -33,10 +33,9 @@ out_err:
 
 /* Returns 1 if the given address @addr is allowed to be one of the
    addresses of this host, 0 otherwise */
-int filter_address(struct sockaddr *addr, int ifindex)
+int filter_address(struct sockaddr *addr)
 {
-	HIP_DEBUG("ifindex=%d, address family=%d\n",
-		  ifindex, addr->sa_family);
+	HIP_DEBUG("address family=%d\n", addr->sa_family);
 	HIP_HEXDUMP("testing address=", SA2IP(addr), SAIPLEN(addr));
 
 	if (addr->sa_family == AF_INET6) {
@@ -60,7 +59,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
 
-	if (!filter_address(addr, ifindex)) {
+	if (!filter_address(addr)) {
 		HIP_DEBUG("filtering this address\n");
 		return;
 	}
@@ -491,7 +490,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				     g_iface = g_iface->ifa_next) {
 					if (g_iface->ifa_addr &&
 					    !memcmp(g_iface->ifa_name,
-						    if_name, strlen(if_name)) && filter_address(g_iface->ifa_addr, ifa->ifa_index)) {
+						    if_name, strlen(if_name)) && filter_address(g_iface->ifa_addr)) {
 					/* advertise only the addresses which are in
 					   the same interface which caused the event */
 

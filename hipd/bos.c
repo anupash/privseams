@@ -146,7 +146,7 @@ int hip_send_bos(const struct hip_common *msg)
 
 	for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
 		if (g_iface->ifa_addr &&
-		    filter_address(g_iface->ifa_addr, -1)) {
+		    filter_address(g_iface->ifa_addr)) {
 			HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr),
 				    SAIPLEN(&n->addr));
 			err = hip_csum_send(SA2IP(g_iface->ifa_addr),
