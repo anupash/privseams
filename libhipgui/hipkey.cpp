@@ -1,11 +1,3 @@
-/*
-    HIP GUI
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-             Matti Saarinen
-*/
-
 // HipKey.cpp: implementation of the HipKey class.
 //
 //////////////////////////////////////////////////////////////////////

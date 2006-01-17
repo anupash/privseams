@@ -1,8 +1,5 @@
 /*
     HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
 #ifndef AGENT_TOOLS_H

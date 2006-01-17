@@ -785,7 +785,7 @@ int get_u8(__u8 *val, const char *arg, int base)
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 		    char *name, char *key, int max)
 {
-	int len = 0;
+	int len;
 	int slen = strlen(key);
 
 	strncpy(alg->alg_name, name, sizeof(alg->alg_name));

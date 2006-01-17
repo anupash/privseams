@@ -589,7 +589,7 @@ int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 	BN_free(dsa_sig.r);
 	BN_free(dsa_sig.s);
 	DSA_free(dsa);
-	HIP_DEBUG("DSA verify: %d\n", err);
+	//HIP_DEBUG("DSA verify: %d\n", err);
 	
 	return err == 1 ? 0 : 1;
 }
@@ -734,6 +734,7 @@ int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	return err == 1 ? 0 : 1;
 }
+
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *dh_shared_key,
 			  size_t outlen)
 {

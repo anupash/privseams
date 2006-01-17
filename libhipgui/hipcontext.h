@@ -1,18 +1,10 @@
-/*
-    HIP GUI
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-             Matti Saarinen
-*/
-
 #ifndef __HIPCONTEXT_H__
 #define __HIPCONTEXT_H__
 
 #include <wx/dynarray.h>
 #include "hipkey.h"
 
-/* Create a class: linked list for containing personality data. */
+// create a class: linked list for containing personality data
 WX_DECLARE_OBJARRAY( HipKey, HipKeyArray );
 
 
@@ -30,6 +22,4 @@ public: // no getters yet
 	int m_id;
 };
 
-
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
+#endif 

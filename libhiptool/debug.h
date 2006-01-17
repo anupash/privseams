@@ -50,7 +50,6 @@
 #define _HIP_PERROR(s) do {} while(0)
 #define _HIP_ASSERT(s) do {} while(0)
 #define _HIP_DEBUG_HIT(str, hit) do {} while(0)
-#define _HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 enum logtype { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
 enum logfmt { LOGFMT_SHORT, LOGFMT_LONG };

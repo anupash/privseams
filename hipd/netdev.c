@@ -4,38 +4,25 @@
  */
 #include "netdev.h"
 
-static int count_if_addresses(int ifindex) {
-	struct ifaddrs *g_ifaces = NULL, *g_iface;
-	char if_name[64];
-	int if_index = 0, err = 0, count = 0;
+static int count_if_addresses(int ifindex)
+{
+	struct netdev_address *n, *t;
+	int i = 0;
 
-	HIP_IFEL(!if_indextoname(ifindex, if_name), -1,
-		 "if_indextoname failed\n");
-
-	HIP_IFEL(getifaddrs(&g_ifaces), -1, "getifaddrs failed\n");
-
-	for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
-		if (g_iface->ifa_addr && !memcmp(g_iface->ifa_name, if_name, strlen(if_name)))
-			count++;
+	list_for_each_entry_safe(n, t, &addresses, next) {
+		if (n->if_index == ifindex)
+			i++;
 	}
-
-	HIP_DEBUG("Found %d addresses on iface %s\n", if_name);
-out_err:
-	  if (g_ifaces)
-		  freeifaddrs(g_ifaces);
-
-	  return count;
+	return i;
 }
 
-/*
- * XX FIX: remove the ifindex!
- */
 
 /* Returns 1 if the given address @addr is allowed to be one of the
    addresses of this host, 0 otherwise */
-int filter_address(struct sockaddr *addr)
+int filter_address(struct sockaddr *addr, int ifindex)
 {
-	HIP_DEBUG("address family=%d\n", addr->sa_family);
+	HIP_DEBUG("ifindex=%d, address family=%d\n",
+		  ifindex, addr->sa_family);
 	HIP_HEXDUMP("testing address=", SA2IP(addr), SAIPLEN(addr));
 
 	if (addr->sa_family == AF_INET6) {
@@ -54,12 +41,11 @@ int filter_address(struct sockaddr *addr)
 	return 0;
 }
 
-#if 0
-void add_address_to_list(struct sockaddr *addr, int ifindex)
+static void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
 
-	if (!filter_address(addr)) {
+	if (!filter_address(addr, ifindex)) {
 		HIP_DEBUG("filtering this address\n");
 		return;
 	}
@@ -78,9 +64,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	address_count++;
 	HIP_DEBUG("added address, address_count at exit=%d\n", address_count);
 }
-#endif
 
-#if 0
 static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
         struct netdev_address *n, *t;
@@ -117,9 +101,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 	if (address_count < 0)
 		HIP_ERROR("BUG: address_count < 0\n", address_count);
 }
-#endif
 
-#if 0
 void delete_all_addresses(void)
 {
         struct netdev_address *n, *t;
@@ -135,9 +117,7 @@ void delete_all_addresses(void)
 			HIP_ERROR("BUG: address_count != 0\n", address_count);
 	}
 }
-#endif
 
-#if 0
 int hip_netdev_find_if(struct sockaddr *addr)
 {
         struct netdev_address *n;
@@ -152,9 +132,7 @@ int hip_netdev_find_if(struct sockaddr *addr)
 	/* No matching address found */
 	return 0;
 }
-#endif
 
-#if 0
 /* base exchange IPv6 addresses need to be put into ifindex2spi map,
  * so a function is needed which gets the ifindex of the network
  * device which has the address @addr 
@@ -168,9 +146,7 @@ int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
 	ipv6_addr_copy(&a.sin6_addr, addr);
 	return hip_netdev_find_if((struct sockaddr *)&a);
 }
-#endif
 
-#if 0
 int static add_address(const struct nlmsghdr *h, int len, void *arg) {
         struct sockaddr_storage ss_addr;
         struct sockaddr *addr = (struct sockaddr*) &ss_addr;
@@ -227,7 +203,6 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg) {
 
 	return 0;
 }
-#endif
 
 /* 
  * function get_my_addresses()
@@ -235,7 +210,6 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg) {
  * Use the netlink interface to retrieve a list of addresses for this
  * host's interfaces, and stores them into global addresses list.
  */
-#if 0
 int hip_netdev_init_addresses(struct rtnl_handle *nl)
 {
         struct sockaddr_nl nladdr;
@@ -300,17 +274,13 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 	HIP_DEBUG("addrs=0x%p\n", &addresses);
         return(0);
 }
-#endif
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
-	int err = 0, if_index = 0;
+	int err = 0;
 	hip_ha_t *entry;
 	hip_hit_t *dst_hit;
 	struct xfrm_user_acquire *acq;
 	struct in6_addr *dst_addr;
-	struct sockaddr_storage ss_addr;
-	struct sockaddr *addr;
-	addr = (struct sockaddr*) &ss_addr;
 
 	HIP_DEBUG("Acquire: sending I1\n");
 
@@ -337,21 +307,6 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	/* XX TODO: we should try resolving here to create an
 	   entry if an entry was not found */
 
-	/* Let's fill in the local_address in here */
-	ipv6_addr_copy(&entry->local_address, ((struct in6_addr*)&acq->id.daddr));
-	/* The address and the corresponding ifindex should be added in here */
-	memset(addr, 0, sizeof(struct sockaddr_storage));
-	
-	//FIXME: acq->sel.family doesn't seem to contain the right value
-	addr->sa_family = AF_INET6;
-	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
-	HIP_IFEL(!(if_index = addr2ifindx(&entry->local_address)), -1, 
-		 "if_index NOT determined\n");
-
-#if 0
-	add_address_to_list(addr, acq->sel.ifindex);
-#endif
-
 	if (entry->state != HIP_STATE_UNASSOCIATED) {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
 		goto out_err;
@@ -365,7 +320,6 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
-	struct ifaddrs *g_ifaces = NULL, *g_iface;
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
 	struct rtattr *rta, *tb[IFA_MAX+1];
@@ -375,7 +329,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	struct hip_rea_info_addr_item *reas;
 	struct netdev_address *n, *t;
 	int pre_if_address_count;
-	int err = 0;
 
 	addr = (struct sockaddr*) &ss_addr;
 	
@@ -396,7 +349,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			HIP_DEBUG("RTM_DELLINK\n");
 			//ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 			//delete_address_from_list(NULL, ifinfo->ifi_index);
-			//delete_address_from_list(NULL, ifindex);
+			delete_address_from_list(NULL, ifindex);
 			/* should do here
 			   hip_send_update_all(NULL, 0, ifindex, SEND_UPDATE_REA);
 			   but ifconfig ethX down never seems to come here
@@ -438,26 +391,16 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			HIP_DEBUG("Address event=%s ifindex=%d\n",
 				  is_add ? "add" : "del", ifa->ifa_index);
 			
-			/* update our address list - assuming that the
-			   address can already be found */
-			pre_if_address_count = count_if_addresses(ifa->ifa_index) - 1;
-			_HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
+			/* update our address list */
+			pre_if_address_count = count_if_addresses(ifa->ifa_index);
+			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
 				  pre_if_address_count, ifa->ifa_index);
-#if 0
 			if (is_add)
 				add_address_to_list(addr, ifa->ifa_index);
 			else
 				delete_address_from_list(addr, ifa->ifa_index);
+			i = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
-#endif
-			if (is_add)
-				i = pre_if_address_count + 1;
-			else
-				i = pre_if_address_count - 1;
-
-			HIP_DEBUG("preif=%d, i=%d", pre_if_address_count, i);
-			
-			//i = count_if_addresses(ifa->ifa_index);
 
 			/* handle HIP readdressing */
 
@@ -475,35 +418,22 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 			reas = (struct hip_rea_info_addr_item *)
 				malloc(i * sizeof(struct hip_rea_info_addr_item));
-			i = 0;
-			/* XX FIX: Make this a separate function */
 			if (reas) {
-				char if_name[64];
-
-				HIP_IFEL(!if_indextoname(ifa->ifa_index,
-							 if_name), -1,
-					 "if_indextoname failed\n");
-				HIP_IFEL(getifaddrs(&g_ifaces), -1,
-					 "getifaddrs failed\n");
-
-				for (g_iface = g_ifaces; g_iface;
-				     g_iface = g_iface->ifa_next) {
-					if (g_iface->ifa_addr &&
-					    !memcmp(g_iface->ifa_name,
-						    if_name, strlen(if_name)) && filter_address(g_iface->ifa_addr)) {
+				i = 0;
+				list_for_each_entry_safe(n, t, &addresses, next) {
 					/* advertise only the addresses which are in
 					   the same interface which caused the event */
+					if (n->if_index != ifa->ifa_index)
+						continue;
 
-						memcpy(&reas[i].address, SA2IP(&n->addr),
-						       SAIPLEN(&n->addr));
+					memcpy(&reas[i].address, SA2IP(&n->addr),
+					       SAIPLEN(&n->addr));
 					/* FIXME: Is this ok? (tkoponen), for boeing it is*/
 					reas[i].lifetime = 0;
 					/* For testing preferred address */
 					reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
 					i++;
-					}
 				}
-
 				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(reas, i,
 						    ifa->ifa_index, SEND_UPDATE_REA);
@@ -566,11 +496,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 		}
 	}
 
- out_err:
-	  if (g_ifaces)
-		  freeifaddrs(g_ifaces);
-
-	return err;
+	return 0;
 }
 
 int hip_add_iface_local_hit(const hip_hit_t *local_hit)

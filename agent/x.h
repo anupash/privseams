@@ -1,8 +1,5 @@
 /*
     HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
 #ifndef X_H
@@ -14,8 +11,6 @@
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-
-/* This is a template file for new files. */
 int function(int);
 
 

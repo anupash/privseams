@@ -50,7 +50,7 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
 
-	err = hip_csum_send(&entry->local_address, &daddr, (struct hip_common*) &i1);// HANDLER
+	err = hip_csum_send(NULL, &daddr, (struct hip_common*) &i1);// HANDLER
 	HIP_DEBUG("err = %d\n", err);
 	if (!err) {
 		HIP_LOCK_HA(entry);
@@ -235,7 +235,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-	HIP_IFEL(hip_csum_send(i1_saddr, dst_addr, r1pkt), -1, 
+	HIP_IFEL(hip_csum_send(NULL, dst_addr, r1pkt), -1, 
 		 "hip_xmit_r1 failed.\n");
  out_err:
 	if (r1pkt)

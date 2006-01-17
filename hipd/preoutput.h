@@ -7,7 +7,6 @@
 #include "preinput.h"
 #include "workqueue.h"
 #include "hip.h"
-#include "string.h"
 
 extern int hip_raw_sock;
 

@@ -1,11 +1,3 @@
-/*
-    HIP GUI
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-             Matti Saarinen
-*/
-
 /////////////////////////////////////////////////////////////////////////////
 // Program:     HipAgent 
 // Name:        HipAgent.cpp
@@ -206,6 +198,7 @@ if ( !wxApp::OnInit() )
 	frame = new HipAgentFrame(_T("HIP GUI"));
 	frame->Show();
 
+//	frame->MsgBox("Info", "Application starting...");
 
     return true;
 }
@@ -223,6 +216,7 @@ HipAgentFrame::HipAgentFrame(const wxString& title)
 	          wxTAB_TRAVERSAL)
 	, timer(this, TIMER_ID)
 {
+  //  printf("HipAgentFrame::HipAgentFrame\n");
   
     // init everything
     m_book = (wxBookCtrlBase *)NULL;
@@ -282,10 +276,31 @@ HipAgentFrame::HipAgentFrame(const wxString& title)
     sizerTop->SetSizeHints(this);
 
 	timer.Start(300);
+
+	{
+/*		HIT_Item hit;
+		strcpy(hit.name, "HIPL 3 test environment");
+		strcpy(hit.url, "hipl3");
+		hit.port = 80;
+		read_hit_from_buffer(&hit.rhit, "405d:e78b:acb9:2e24:cf50:3b16:9698:5491");
+		read_hit_from_buffer(&hit.lhit, "402e:d40b:a44d:0e54:5b26:583d:2a5e:dd76");
+		hit.type = 0;
+		hit_db_add_hit(&hit);
+
+		/*strcpy(hit.name, "HIPL 4 test environment");
+		strcpy(hit.url, "hipl4");
+		hit.port = 80;
+		read_hit_from_buffer(&hit.rhit, "40e5:01cd:01dc:8e83:2a1a:1c6e:8ea1:e6be");
+		read_hit_from_buffer(&hit.lhit, "402e:d40b:a44d:0e54:5b26:583d:2a5e:dd76");
+		hit.type = 0;
+		hit_db_add_hit(&hit);*/
+	}
+
 }
 
 void HipAgentFrame::InitBook()
 {
+  //   printf("HipAgentFrame::InitBook\n");
 	for( size_t i(0); i<m_personalities.Count(); i++ )
 	{
 		HipTab* tab = new HipTab( *m_hipInterface, m_personalities[i], m_book );

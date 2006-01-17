@@ -9,43 +9,6 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0, ret, len = hip_get_msg_total_len(msg);
 	struct sockaddr_in6 src, dst;
 
-	memset(&src, 0, sizeof(src));
-	memset(&dst, 0, sizeof(dst));
-
-	HIP_ASSERT(peer_addr);
-
-	if (!src_addr) {
-		HIP_IFEL(hip_select_source_address(&src.sin6_addr,
-						   peer_addr), -1,
-			 "Cannot find source address\n");
-	} else {
-		memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
-	}
-
-	/* The source address is needed for m&m stuff. However, I am not sure
-	   if the binding is a good thing; the source address is then fixed
-	   instead of the host default (remember that we are using a global
-	   raw socket). This can screw up things. */
-
-#if 0
-	HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
-	HIP_IFEL((bind(hip_raw_sock, (struct sockaddr *) &src,
-		       sizeof(src)) < 0), -1,
-		 "Binding to raw sock failed\n");
-
-	_HIP_DEBUG_IN6ADDR("dst", peer_addr);
-#endif
-
-	memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
-
-	HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
-	HIP_DEBUG_IN6ADDR("dst", &dst.sin6_addr);
-
-	hip_zero_msg_checksum(msg);
-	msg->checksum = checksum_packet((char *)msg, 
-					(struct sockaddr *)&src, 
-					(struct sockaddr *)&dst);
-
 	err = hip_agent_filter(msg);
 	if (err == -ENOENT) {
 		HIP_DEBUG("No agent running, continuing\n");
@@ -57,6 +20,25 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		err = -1;
 	}	
 
+	/* The source address is needed for m&m stuff. However, I am not sure
+	   if the binding is a good thing; the source address is then fixed
+	   instead of the host default (remember that we are using a global
+	   raw socket). This can screw up things. */
+	if (src_addr) {
+		memset(&src, 0, sizeof(src));
+		memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
+
+		HIP_DEBUG_IN6ADDR("src", &src.sin6_addr);
+		HIP_IFEL((bind(hip_raw_sock, (struct sockaddr *) &src,
+			       sizeof(src)) < 0), -1,
+			 "Binding to raw sock failed\n");
+	}
+
+	HIP_DEBUG_IN6ADDR("dst", peer_addr);
+
+	memset(&dst, 0, sizeof(dst));
+	if (peer_addr)
+		memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
 
 #if 0
         HIP_IFEL((connect(hip_raw_sock, (struct sockaddr *) &dst,
@@ -133,7 +115,7 @@ int hip_csum_send(struct in6_addr *src_addr,
 		return -1;
 	}
 
-	hip_zero_msg_checksum(msg);
+	msg->checksum = htons(0);
 	msg->checksum = checksum_packet((char *)msg, 
 					(struct sockaddr *)&src, 
 					(struct sockaddr *)&dst);

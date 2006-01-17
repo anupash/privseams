@@ -174,20 +174,13 @@ void hip_set_msg_err(struct hip_common *msg, hip_hdr_err_t err) {
 	msg->checksum = err;
 }
 
-uint16_t hip_get_msg_checksum(struct hip_common *msg) {
-	return msg->checksum; /* one byte, no ntohs() */
-}
-
 /**
  * hip_zero_msg_checksum - zero message checksum
  */
 void hip_zero_msg_checksum(struct hip_common *msg) {
-	msg->checksum = 0; /* one byte, no ntohs() */
+	msg->checksum = 0;
 }
 
-void hip_set_msg_checksum(struct hip_common *msg, u8 checksum) {
-	msg->checksum = checksum; /* one byte, no ntohs() */
-}
 
 /**
  * hip_get_param_total_len - get total size of message parameter

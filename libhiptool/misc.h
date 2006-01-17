@@ -6,16 +6,6 @@
 #include "debug.h"
 #include "hip.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <ifaddrs.h>
-//#include <net/if.h>  /* Excluded for RH/Fedora compilation */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"
 #endif /* CONFIG_HIP_LIBHIPTOOL */
@@ -83,7 +73,5 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 const char *hi_file);
 char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix);
 int maxof(int num_args, ...);
-
-int addr2ifindx(struct in6_addr *local_address);
 
 #endif /* HIP_MISC_H */

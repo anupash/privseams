@@ -1,11 +1,3 @@
-/*
-    HIP GUI
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-             Matti Saarinen
-*/
-
 #ifndef __HIPTAB_H__
 #define __HIPTAB_H__
 
@@ -71,5 +63,4 @@ protected:
 #endif
 };
 
-#endif /* END OF HEADER FILE */
-/******************************************************************************/
+#endif // __HIPTAB_H__

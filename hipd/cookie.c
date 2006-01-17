@@ -122,12 +122,12 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
 uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr, 
 			  int mode)
 {
-	uint64_t mask = 0;
-	uint64_t randval = 0;
+	uint64_t mask;
+	uint64_t randval;
 	uint64_t maxtries = 0;
 	uint64_t digest = 0;
 	u8 cookie[48];
-	u8 max_k = 0;
+	u8 max_k;
 	int err = 0;
 	union {
 		struct hip_puzzle pz;
