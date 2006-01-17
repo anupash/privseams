@@ -116,9 +116,12 @@ AC_ARG_ENABLE(firewall,
               [echo "checking for firewall... no"])
 if test x"$enable_firewall" = x"yes"; then
         AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
-        AC_CHECK_LIB(glib, g_mutex_lock)
-        AC_CHECK_HEADERS(glib/glist.h glib.h libipq.h)
-        AC_CHECK_FUNCS(ipq_create_handle)
+        AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
+# Do not work -mk
+#        AC_CHECK_HEADERS(glib-2.0/glib/glist.h,,
+#                         AC_MSG_ERROR(glibc development headers missing))
+#        AC_CHECK_HEADERS(libipq.h,,
+#                         AC_MSG_ERROR(libipq development headers missing))
         AC_DEFINE(CONFIG_HIP_FIREWALL)
         hipl_opt_build="$hipl_opt_build firewall"
 fi
@@ -139,7 +142,6 @@ if test x"$enable_agent" = x"yes"; then
 	if test `wx-config --version|tr . 0` -lt 20602; then
 	   AC_MSG_ERROR([wx library is too old (< 2.6.2)])
 	fi
-	
 fi
 
 AC_ARG_ENABLE(rvs,
@@ -191,6 +193,7 @@ AC_CONFIG_FILES([ Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile
+                  firewall/Makefile
                   libhipgui/Makefile
                   agent/Makefile])
 AC_OUTPUT

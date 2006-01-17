@@ -356,7 +356,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 
-	err = hip_csum_send(NULL, src_ip, update_packet);
+	err = hip_csum_send(&entry->local_address, src_ip, update_packet);
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
@@ -461,6 +461,16 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 				       &espkey_gl, &authkey_gl, &espkey_lg, &authkey_lg), -1);
 	/* todo: update entry keymat later */
 	hip_update_entry_keymat(entry, keymat_index, calc_index_new, Kn);
+	
+	/* XFRM API doesn't support multiple SA for one SP */
+	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
+	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6);
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6);
+
+	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
+				       &entry->preferred_address, &entry->local_address,
+				       IPPROTO_ESP, 1, prev_spi_out == new_spi_out), -1,
+		 "Setting up SP pair failed\n");
 
 	/* set up new outbound IPsec SA */
 	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
@@ -472,26 +482,20 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			    &new_spi_out, esp_transform,
 			    we_are_HITg ? &espkey_gl : &espkey_lg,
 			    we_are_HITg ? &authkey_gl : &authkey_lg,
-			    0, HIP_SPI_DIRECTION_OUT, 1), -1,
+			    0, HIP_SPI_DIRECTION_OUT, prev_spi_out == new_spi_out), -1,
 		 "Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
-/*
-	HIP_IFEL(new_spi_in != hip_add_sa(hits, hitr, new_spi_in, esp_transform,
-					  we_are_HITg ? &espkey_lg  : &espkey_gl,
-					  we_are_HITg ? &authkey_lg : &authkey_gl,
-					  1, HIP_SPI_DIRECTION_IN), -1,
-		 "Setting up new inbound IPsec SA failed\n");
-*/
+
 
 	/* FIXME: hip_add_sa MUST be fixed: the first two args are the Ip addrs, 
 	   the 3rd and the 4th correspond to HITS!!!*/
 	err = hip_add_sa(&entry->local_address, &entry->preferred_address,
-			 hits, hitr, 
+			 hits, hitr,
 			 &new_spi_in, esp_transform,
 			 we_are_HITg ? &espkey_lg  : &espkey_gl,
 			 we_are_HITg ? &authkey_lg : &authkey_gl,
-			 1, HIP_SPI_DIRECTION_IN, 1);
+			 1, HIP_SPI_DIRECTION_IN, prev_spi_out == new_spi_out);
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
 		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");

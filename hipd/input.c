@@ -90,6 +90,7 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
 	int err = 0, len, orig_len;
+	u8 orig_checksum;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 
@@ -99,6 +100,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	/* hmac verification modifies the msg length temporarile, so we have
 	   to restore the length */
 	orig_len = hip_get_msg_total_len(msg);
+
+	/* hmac verification assumes that checksum is zero */
+	orig_checksum = hip_get_msg_checksum(msg);
+	hip_zero_msg_checksum(msg);
 
 	len = (u8 *) hmac - (u8*) msg;
 	hip_set_msg_total_len(msg, len);
@@ -112,7 +117,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC), 
 		 -1, "HMAC validation failed\n");
+
+	/* revert the changes to the packet */
 	hip_set_msg_total_len(msg, orig_len);
+	hip_set_msg_checksum(msg, orig_checksum);
 
  out_err:
 	return err;
@@ -439,6 +447,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 
 	HIP_DEBUG("Received packet type %d\n", type);
+
+	// XX FIXME: CHECK PACKET CSUM
 
 	err = hip_agent_filter(msg);
 	if (err == -ENOENT) {
@@ -781,7 +791,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* state E1: Receive R1, process. If successful,
 	   send I2 and go to E2. */
 
-	HIP_IFE(hip_csum_send(NULL, &daddr, i2), -1);
+	HIP_IFE(hip_csum_send(r1_daddr, &daddr, i2), -1);
 
 
  out_err:
@@ -895,6 +905,10 @@ int hip_handle_r1(struct hip_common *r1,
  	HIP_IFEL(hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
 		 "Creation of I2 failed\n");
 
+	if (entry->state == HIP_STATE_I1_SENT) {
+		entry->state = HIP_STATE_I2_SENT;
+	}
+
  out_err:
 	if (ctx->dh_shared_key)
 		HIP_FREE(ctx->dh_shared_key);
@@ -976,11 +990,6 @@ int hip_receive_r1(struct hip_common *hip_common,
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
-		else {
-			if (state == HIP_STATE_I1_SENT) {
-				entry->state = HIP_STATE_I2_SENT;
-			}
-		}
 		HIP_UNLOCK_HA(entry);
 		break;
 	case HIP_STATE_R2_SENT:
@@ -1079,7 +1088,7 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	err = hip_csum_send(NULL, i2_saddr, r2); // HANDLER
+	err = hip_csum_send(i2_daddr, i2_saddr, r2); // HANDLER
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
@@ -1115,7 +1124,7 @@ int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_daddr,		  
 		  hip_ha_t *ha)
 {
-	int err = 0, retransmission = 0;
+	int err = 0, retransmission = 0, initiator_reset = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
 	char *tmp_enc = NULL, *enc = NULL;
@@ -1153,16 +1162,18 @@ int hip_handle_i2(struct hip_common *i2,
 			 "Cookie solution rejected\n");
 	}
 
-	if (entry && (entry->state == HIP_STATE_R2_SENT ||
-		    entry->state == HIP_STATE_ESTABLISHED)) {
-		/* If the I2 packet is a retransmission, we need reuse the
- 		   the SPI/keymat that was setup already when the first I2 was
- 		   received. However it is a retransmission only if the
-		   responder is in R2-SENT STATE */
-		retransmission = 1;
-		HIP_DEBUG("Retransmission\n");
-  	} else {
-		HIP_DEBUG("Not a retransmission\n");
+	if (entry) {
+		/* required for SP set-up */
+		initiator_reset =
+			(entry->state == HIP_STATE_ESTABLISHED ? 1 : 0);
+
+			/* If the I2 packet is a retransmission, we need reuse
+			   the the SPI/keymat that was setup already when the
+			   first I2 was received. However it is a
+			   retransmission only if the responder is in R2-SENT
+			   STATE */
+		retransmission = 
+			(entry->state == HIP_STATE_R2_SENT ? 1 : 0);
 	}
 
 	/* Check HIP and ESP transforms, and produce keying material  */
@@ -1251,6 +1262,10 @@ int hip_handle_i2(struct hip_common *i2,
 
 	/* Create state (if not previously done) */
 	if (!entry) {
+		int if_index;
+		struct sockaddr_storage ss_addr;
+		struct sockaddr *addr;
+		addr = (struct sockaddr*) &ss_addr;
 		/* we have no previous infomation on the peer, create
 		 * a new HIP HA */
 		HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
@@ -1264,6 +1279,14 @@ int hip_handle_i2(struct hip_common *i2,
 		hip_init_us(entry, &i2->hitr);
 
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
+		HIP_IFEL(!(if_index = addr2ifindx(&entry->local_address)), -1, 
+			 "if_index NOT determined");
+
+		memset(addr, 0, sizeof(struct sockaddr_storage));
+		addr->sa_family = AF_INET6;
+		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+		add_address_to_list(addr, if_index);//if_index = addr2ifindx(entry->local_address);
+		
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
@@ -1319,8 +1342,11 @@ int hip_handle_i2(struct hip_common *i2,
 					PEER_ADDR_STATE_ACTIVE), -1,
 		 "Error while adding the preferred peer address\n");
 
+	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
+
 	/* Set up IPsec associations */
-	err = hip_add_sa(i2_saddr, i2_daddr, &ctx->input->hits, &ctx->input->hitr,
+	err = hip_add_sa(i2_saddr, i2_daddr,
+			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			 retransmission, HIP_SPI_DIRECTION_IN, 0);
@@ -1338,10 +1364,11 @@ int hip_handle_i2(struct hip_common *i2,
 	
 	/* ok, found an unused SPI to use */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
-		
+
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
-	err = hip_add_sa(i2_daddr, i2_saddr, &ctx->input->hitr, &ctx->input->hits,
+	err = hip_add_sa(i2_daddr, i2_saddr,
+			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
 			 1, HIP_SPI_DIRECTION_OUT, 0);
@@ -1362,7 +1389,8 @@ int hip_handle_i2(struct hip_common *i2,
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
-				       i2_saddr, i2_daddr, IPPROTO_ESP, 1, 0), -1,
+				       i2_saddr, i2_daddr, IPPROTO_ESP, 1,
+				       initiator_reset), -1,
 		 "Setting up SP pair failed\n");
 
 	/* source IPv6 address is implicitly the preferred
@@ -1402,6 +1430,7 @@ int hip_handle_i2(struct hip_common *i2,
 	   the entry there and looking it up there would be unneccesary waste
 	   of cycles */
 //	if (!ha && entry) {
+		HIP_DEBUG("state is %d\n", entry->state);
 	if (entry) {
 		wmb();
 #ifdef CONFIG_HIP_RVS
@@ -1414,8 +1443,12 @@ int hip_handle_i2(struct hip_common *i2,
 				  "wait for implementation specific time, "
 				  "moving to ESTABLISHED\n");
 			entry->state = HIP_STATE_ESTABLISHED;
-		} else
+		} else if (entry->state == HIP_STATE_ESTABLISHED) {
+			HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
+			HIP_DEBUG("Staying in ESTABLISHED.\n");
+		} else {
 			entry->state = HIP_STATE_R2_SENT;
+		}
 #endif /* CONFIG_HIP_RVS */
 	}
 
@@ -1491,8 +1524,6 @@ int hip_receive_i2(struct hip_common *i2,
 		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
 			err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-			if (!err)
-				entry->state = HIP_STATE_R2_SENT;
 		} else {
 			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
 		}
@@ -1500,27 +1531,17 @@ int hip_receive_i2(struct hip_common *i2,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
-			entry->state = HIP_STATE_R2_SENT;
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
-			entry->state = HIP_STATE_R2_SENT;
  		break;
  	case HIP_STATE_CLOSING:
  	case HIP_STATE_CLOSED:
 		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		if (!err)
-			entry->state = HIP_STATE_R2_SENT;
  	case HIP_STATE_REKEYING:
  		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
-		//if (!err) {
-		//	entry->state = HIP_STATE_R2_SENT;
-		//	// SYNCH
-		//}
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -1780,7 +1801,6 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	case HIP_STATE_CLOSED:
 	case HIP_STATE_CLOSING:
 		err = hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
-		entry->state = state;
 		break;
 	default:
 		/* should not happen */
@@ -1998,7 +2018,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	HIP_DEBUG("CLOSED\n");
 
 	/* Note: I had some problems with deletion of peer info. Try to close
-	   a SA and then to re-establish without rmmod or killing
+	   a SA and then to re-establish without killing
 	   the hipd when you test the CLOSE. -miika */
 
 	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
