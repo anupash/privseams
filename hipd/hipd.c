@@ -29,6 +29,15 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
+/* We are caching the IP addresses of the host here. The reason is that during
+   in hip_handle_acquire it is not possible to call getifaddrs (it creates
+   a new netlink socket and seems like only one can be open per process).
+   Feel free to experiment by porting the required functionality from
+   iproute2/ip/ipaddrs.c:ipaddr_list_or_flush(). It would make these global
+   variable and most of the functions referencing them unnecessary -miika */
+int address_count;
+struct list_head addresses;
+
 time_t load_time;
 
 void usage() {
@@ -296,6 +305,12 @@ int main(int argc, char *argv[]) {
 	cl_init(i3_config);
 #endif
 
+	/* Resolve our current addresses, afterwards the events from kernel
+	   will maintain the list This needs to be done before opening
+	   NETLINK_ROUTE! See the comment about address_count global var. */
+	HIP_DEBUG("Initializing the netdev_init_addresses\n");
+	hip_netdev_init_addresses(&hip_nl_ipsec);
+
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
@@ -318,11 +333,6 @@ int main(int argc, char *argv[]) {
 		err = 1;
 		goto out_err;
 	}
-
-	/* Resolve our current addresses, afterwards the events from
-           kernel will maintain the list */
-	HIP_DEBUG("Initializing the netdev_init_addresses\n");
-	hip_netdev_init_addresses(&hip_nl_ipsec);
 
 	HIP_IFE(hip_init_raw_sock(), -1);
 
