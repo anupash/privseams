@@ -9,53 +9,6 @@
 
 #include "misc.h"
 
-
-int addr2ifindx(struct in6_addr *local_address)
-{
-	struct ifaddrs *g_ifaces = NULL, *g_iface;
-	struct if_nameindex *i_ifaces = NULL, *i_iface;
-	char if_name[64];
-	int if_index = 0, err = 0;
-
-	 err = getifaddrs(&g_ifaces);
-	 if (err) {
-		 HIP_ERROR("getifaddr failed\n");
-		 goto out;
-	 }
-
-	 for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
-		 sa_family_t family;
-		 if (!g_iface->ifa_addr)
-			 continue;
-		 family = g_iface->ifa_addr->sa_family;
-		 fprintf(stderr, "name: %s, family: %d, address ", g_iface->ifa_name, family);
-		 HIP_DEBUG_SOCKADDR(NULL, family, g_iface->ifa_addr);
-		 HIP_DEBUG_IN6ADDR("SA2IP() = \n", SA2IP(g_iface->ifa_addr));
-		 if (!memcmp(SA2IP(g_iface->ifa_addr), local_address, SAIPLEN(g_iface->ifa_addr))) {
-			 strcpy(if_name, g_iface->ifa_name);
-			 break;
-		 }
-	 }
-
-	 if (strlen(if_name)) {
-		 i_ifaces = if_nameindex();
-		 for (i_iface = i_ifaces; i_iface->if_index; i_iface++) {
-			 if (!strcmp(i_iface->if_name, if_name)){
-				 if_index = i_iface->if_index;
-				 break;
-			 }
-		 }
-	 }
-
-out:
-	  if (g_ifaces)
-		  freeifaddrs(g_ifaces);
-	  if (i_ifaces)
-		  if_freenameindex(i_ifaces);
-	  return if_index;
-}
-
-
 /*
  * XX TODO: HAA
  * XX TODO: which one to use: this or the function just below?
