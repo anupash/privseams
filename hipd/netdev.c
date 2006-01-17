@@ -33,7 +33,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		    IN6_IS_ADDR_LINKLOCAL(a) ||
 		    IN6_IS_ADDR_SITELOCAL(a) ||
 		    IN6_IS_ADDR_V4MAPPED(a) ||
-		    IN6_IS_ADDR_V4COMPAT(a))
+		    IN6_IS_ADDR_V4COMPAT(a) ||
+		    ipv6_addr_is_hit(a))
 			return 0;
 		return 1;
 	}
@@ -139,7 +140,7 @@ int hip_netdev_find_if(struct sockaddr *addr)
  */
 /* FIXME: The caller of this shoul be generalized to both IPv4 and
    IPv6 so that this function can be removed (tkoponen) */
-int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
+int hip_devaddr2ifindex(struct in6_addr *addr)
 {
 	struct sockaddr_in6 a;
 	a.sin6_family = AF_INET6;
@@ -279,7 +280,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	//FIXME: acq->sel.family doesn't seem to contain the right value
 	addr->sa_family = AF_INET6;
 	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
-	HIP_IFEL(!(if_index = hip_ipv6_devaddr2ifindex(&entry->local_address)), -1, 
+	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
 		 "if_index NOT determined\n");
 
 	add_address_to_list(addr, acq->sel.ifindex);
