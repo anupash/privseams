@@ -37,7 +37,8 @@ int hip_verify_packet_hmac(struct hip_common *,
 			   
 int hip_receive_i1(struct hip_common *, 
 		   struct in6_addr *, 
-		   struct in6_addr *);
+		   struct in6_addr *,
+		   hip_ha_t *);
 		   
 int hip_receive_r1(struct hip_common *, 
 		   struct in6_addr *,
@@ -103,9 +104,15 @@ int hip_handle_close_ack(struct hip_common *close_ack,
 					     
 void hip_hwo_input_destructor(struct hip_work_order *hwo);
 
-/* this function is only for test purposes and will be removed after testing*/
-int violent_message(struct hip_common *, 
-		     struct in6_addr *, 
-		     struct in6_addr *,
-		     hip_ha_t *);
+int hip_produce_keying_material(struct hip_common *msg,
+				struct hip_context *ctx,
+				uint64_t I,
+				uint64_t J);
+				
+int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
+		  struct in6_addr *r1_saddr,
+		  struct in6_addr *r1_daddr,
+		  hip_ha_t *entry);
+
+ 
 #endif /* HIP_INPUT_H */

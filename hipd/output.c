@@ -38,7 +38,7 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_IFEL(hip_init_us(entry, NULL), -EINVAL, "Could not assign a local host id\n");
 
-	hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
+	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
 			      mask, &entry->hit_our,
 			      dsthit);
 	/* Eight octet units, not including first */
@@ -109,6 +109,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
 	HIP_DEBUG("mask=0x%x\n", mask);
+	/* TODO: TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
@@ -251,7 +252,7 @@ void hip_send_notify(hip_ha_t *entry)
 	struct in6_addr daddr;
 
 	HIP_IFE(!(notify_packet = hip_msg_alloc()), -ENOMEM);
-	hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0,
+	entry->hadb_misc_func->hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0,
 			      &entry->hit_our, &entry->hit_peer);
 	HIP_IFEL(hip_build_param_notify(notify_packet, 1234, "ABCDEFGHIJ", 10), 0, 
 		 "Building of NOTIFY failed.\n");
@@ -322,7 +323,7 @@ int hip_send_close_all_peers(hip_ha_t *entry, void *ignore)
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
+	entry->hadb_misc_func->hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
 			      &entry->hit_peer);
 
 	/********ECHO (SIGNED) **********/

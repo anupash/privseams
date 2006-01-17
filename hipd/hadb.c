@@ -275,7 +275,14 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		HIP_IFEL(
 		    hip_hadb_set_rcv_function_set(entry, &default_handle_func_set),
 		    -1, "Can't set new function pointer set\n");
+		HIP_IFEL(
+		    hip_hadb_set_update_function_set(entry, &default_update_func_set),
+		    -1, "Can't set new function pointer set\n");
 		    
+		HIP_IFEL(
+		    hip_hadb_set_misc_function_set(entry, &ahip_misc_func_set),
+		    -1, "Can't set new function pointer set\n");
+		     
 		    
 		_HIP_DEBUG("created a new sdb entry\n");
 		ipv6_addr_copy(&entry->hit_peer, peer_hit);
@@ -1702,17 +1709,8 @@ void hip_init_hadb(void)
 	default_rcv_func_set.hip_fp_receive_close_ack = hip_receive_close_ack;
 	
 	/* initialize alternative function pointer sets for receiving messages*/
-	/* adaptive HIP function pointer set*/
-	ahip_rcv_func_set.hip_fp_receive_r1	= violent_message;
-	ahip_rcv_func_set.hip_fp_receive_i2	= violent_message;
-	ahip_rcv_func_set.hip_fp_receive_r2	= violent_message;
-	ahip_rcv_func_set.hip_fp_receive_update	= violent_message;
-	ahip_rcv_func_set.hip_fp_receive_notify	= violent_message;
-	ahip_rcv_func_set.hip_fp_receive_notify	= violent_message;
-	ahip_rcv_func_set.hip_fp_receive_close	= hip_receive_close;
-	ahip_rcv_func_set.hip_fp_receive_close	= hip_receive_close_ack;
+	/* insert your alternative function sets here!*/ 
 
-	
 	/* initialize default function pointer sets for handling messages*/
 	default_handle_func_set.hip_handle_r1  = hip_handle_r1;
 	default_handle_func_set.hip_handle_i2  = hip_handle_i2;
@@ -1722,17 +1720,29 @@ void hip_init_hadb(void)
 	default_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
 	
 	/* initialize alternative function pointer sets for handling messages*/
-	/* adaptive HIP function pointer set*/
-	ahip_handle_func_set.hip_handle_r1	  = violent_message;
-	ahip_handle_func_set.hip_handle_i2	  = violent_message;
-	ahip_handle_func_set.hip_handle_r2	  = violent_message;
-	ahip_handle_func_set.hip_handle_bos	  = violent_message;
-	ahip_handle_func_set.hip_handle_close     = hip_handle_close;
-	ahip_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
+	/* insert your alternative function sets here!*/ 
 	
+	/* initialize default function pointer sets for misc functions*/
+	default_misc_func_set.hip_solve_puzzle  	   = hip_solve_puzzle;
+	default_misc_func_set.hip_produce_keying_material  = hip_produce_keying_material;
+	default_misc_func_set.hip_create_i2		   = hip_create_i2;
+	default_misc_func_set.hip_build_network_hdr	   = hip_build_network_hdr;
+
+	/* initialize alternative function pointer sets for misc functions*/
+	/* insert your alternative function sets here!*/ 
+	
+	/* initialize default function pointer sets for update functions*/
+	default_update_func_set.hip_handle_update_plain_rea   = hip_handle_update_plain_rea;
+	default_update_func_set.hip_handle_update_addr_verify = hip_handle_update_addr_verify;
+	default_update_func_set.hip_update_handle_ack	      = hip_update_handle_ack;
+	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
+	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
+	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
+	
+	/* initialize alternative function pointer sets for update functions*/
+	/* insert your alternative function sets here!*/ 
+
 }
-
-
 
 
 /**
@@ -1773,6 +1783,43 @@ int hip_hadb_set_handle_function_set(hip_ha_t * entry,
 	return -1;
 }
 
+/**
+ * hip_hadb_set_misc_function_set - set function pointer set for an hadb record.
+ * Pointer values will not be copied!
+ * @entry:           pointer to the hadb record
+ * @new_func_set:    pointer to the new function set
+ *
+ * Returns: 0 if everything was stored successfully, otherwise < 0.
+ */
+int hip_hadb_set_misc_function_set(hip_ha_t * entry,
+				   hip_misc_func_set_t * new_func_set){
+	/* TODO: add check whether all function pointers are set */
+	if( entry ){
+		entry->hadb_misc_func = new_func_set;
+		return 0;
+	}
+	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
+	return -1;
+}
+
+/**
+ * hip_hadb_set_update_function_set - set function pointer set for an hadb record.
+ * Pointer values will not be copied!
+ * @entry:           pointer to the hadb record
+ * @new_func_set:    pointer to the new function set
+ *
+ * Returns: 0 if everything was stored successfully, otherwise < 0.
+ */
+int hip_hadb_set_update_function_set(hip_ha_t * entry,
+				     hip_update_func_set_t * new_func_set){
+	/* TODO: add check whether all function pointers are set */
+	if( entry ){
+		entry->hadb_update_func = new_func_set;
+		return 0;
+	}
+	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
+	return -1;
+}
 
 void hip_uninit_hadb()
 {

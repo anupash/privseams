@@ -33,7 +33,6 @@ typedef uint8_t   u8;
 typedef uint16_t  u16;
 typedef uint32_t  u32;
 typedef struct { volatile int counter; } atomic_t;
-
 typedef struct {
 	/* XX FIXME */
 } spinlock_t;
@@ -379,6 +378,8 @@ typedef uint16_t hip_tlv_len_t;
 typedef struct hip_hadb_state hip_ha_t;
 typedef struct hip_hadb_rcv_func_set hip_rcv_func_set_t;
 typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
+typedef struct hip_hadb_update_func_set hip_update_func_set_t;
+typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
@@ -989,8 +990,15 @@ struct hip_hadb_state
 	
 	/* handle func set. Do not modify these values directly. 
 	Use hip_hadb_set_handle_function_set instead */
-	hip_handle_func_set_t *hadb_handle_func;	
+	hip_handle_func_set_t *hadb_handle_func;
 
+	/* handle func set. Do not modify these values directly. 
+	Use hip_hadb_set_handle_function_set instead */
+	hip_misc_func_set_t *hadb_misc_func;	
+
+	/* handle func set. Do not modify these values directly. 
+	Use hip_hadb_set_handle_function_set instead */
+	hip_update_func_set_t *hadb_update_func;	
 };
 
 struct hip_hadb_rcv_func_set{
@@ -1070,10 +1078,68 @@ struct hip_hadb_handle_func_set{
 	/* TODO: add BOS here*/
 			     
 };
+
 /* default set of handle function pointers. This has to be in the global scope
    TODO: move the default function sets to hadb.c */
 hip_handle_func_set_t default_handle_func_set;
 hip_handle_func_set_t ahip_handle_func_set;
+
+
+struct hip_hadb_update_func_set{   
+	int (*hip_handle_update_plain_rea)(hip_ha_t *entry, 
+					struct hip_common *msg,
+					struct in6_addr *src_ip,
+					struct in6_addr *dst_ip);
+	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
+					  struct hip_common *msg,
+				  	  struct in6_addr *src_ip,
+					  struct in6_addr *dst_ip);
+	void (*hip_update_handle_ack)(hip_ha_t *entry,
+				   struct hip_ack *ack,
+				   int have_nes,
+				   struct hip_echo_response *echo_esp);
+	int (*hip_handle_update_established)(hip_ha_t *entry,
+					  struct hip_common *msg,
+					  struct in6_addr *src_ip,
+					  struct in6_addr *dst_ip);
+	int (*hip_handle_update_rekeying)(hip_ha_t *entry,
+				       struct hip_common *msg,
+				       struct in6_addr *src_ip);
+	int (*hip_update_send_addr_verify)(hip_ha_t *entry,
+					struct hip_common *msg,
+					struct in6_addr *src_ip,
+					uint32_t spi);
+	
+};
+
+/* default set of update function pointers. This has to be in the global scope
+   TODO: move the default function sets to hadb.c */
+hip_update_func_set_t default_update_func_set;
+hip_update_func_set_t ahip_update_func_set;
+
+
+struct hip_hadb_misc_func_set{ 
+	uint64_t (*hip_solve_puzzle)(void *puzzle,
+				  struct hip_common *hdr,
+				  int mode);  
+	int (*hip_produce_keying_material)(struct hip_common *msg,
+				 	struct hip_context *ctx,
+				 	uint64_t I,
+				 	uint64_t J);
+	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
+		  struct in6_addr *r1_saddr,
+		  struct in6_addr *r1_daddr,
+		  hip_ha_t *entry);
+	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
+			  uint16_t control, struct in6_addr *hit_sender,
+			  struct in6_addr *hit_receiver);
+			     
+};
+
+/* default set of miscellaneous function pointers. This has to be in the global scope
+   TODO: move the default function sets to hadb.c */
+hip_misc_func_set_t default_misc_func_set;
+hip_misc_func_set_t ahip_misc_func_set;
 
 
 

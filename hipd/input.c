@@ -464,7 +464,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		// no state
-		err = hip_receive_i1(msg, src_addr, dst_addr);
+		err = hip_receive_i1(msg, 
+				     src_addr, 
+				     dst_addr, 
+				     entry);
 		break;
 		
 	case HIP_I2:
@@ -621,7 +624,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* create I2 */
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(i2, HIP_I2, mask,
+	entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
 			      &(ctx->input->hitr),
 			      &(ctx->input->hits));
 
@@ -933,7 +936,7 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_IFEL(!(pz = hip_get_param(r1, HIP_PARAM_PUZZLE)), -EINVAL,
 			 "Malformed R1 packet. PUZZLE parameter missing\n");
 		HIP_IFEL((solved_puzzle =
-			  hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
+			  entry->hadb_misc_func->hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
 			 -EINVAL, "Solving of puzzle failed\n");
 		I = pz->I;
 		entry->puzzle_solution = solved_puzzle;
@@ -947,7 +950,7 @@ int hip_handle_r1(struct hip_common *r1,
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
 	   of a retransmission but then we'd had to fill ctx->hmac etc */
-	HIP_IFEL(hip_produce_keying_material(r1, ctx, I, solved_puzzle),
+	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I, solved_puzzle),
 			 -EINVAL, "Could not produce keying material\n");
 
 	/* Everything ok, save host id to HA */
@@ -960,7 +963,7 @@ int hip_handle_r1(struct hip_common *r1,
 	}
 
 	entry->peer_controls = ntohs(r1->control);
- 	HIP_IFEL(hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
+ 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
 		 "Creation of I2 failed\n");
 
 	if (entry->state == HIP_STATE_I1_SENT) {
@@ -1095,7 +1098,7 @@ int hip_create_r2(struct hip_context *ctx,
 	 * the R2's source HIT */
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(r2, HIP_R2, mask,
+	entry->hadb_misc_func->hip_build_network_hdr(r2, HIP_R2, mask,
 			      &entry->hit_our, &entry->hit_peer);
 
  	/********** ESP_INFO **********/
@@ -1235,7 +1238,10 @@ int hip_handle_i2(struct hip_common *i2,
 	/* Check HIP and ESP transforms, and produce keying material  */
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
-	   of a retransmission but then we'd had to fill ctx->hmac etc */
+	   of a retransmission but then we'd had to fill ctx->hmac etc 
+	   
+	   TH: I'm not sure if this could be replaced with a function pointer
+	   which is set from hadb. Usually you shouldn'y have state here, right?*/
 	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
 		 "Unable to produce keying material. Dropping I2\n");
 
@@ -1478,7 +1484,11 @@ int hip_handle_i2(struct hip_common *i2,
 		 -1, "Can't set new function pointer set for receive functions\n");
 	HIP_IFEL(hip_hadb_set_handle_function_set(entry, &default_handle_func_set),
 		 -1, "Can't set new function pointer set for receive functions\n");
-	
+	HIP_IFEL(hip_hadb_set_update_function_set(entry, &default_update_func_set),
+		 -1, "Can't set new function pointer set for update functions\n");
+	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &ahip_misc_func_set),
+		 -1, "Can't set new function pointer set for misc functions\n");
+		 
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	HIP_IFEL(hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
@@ -1602,6 +1612,7 @@ int hip_receive_i2(struct hip_common *i2,
  	case HIP_STATE_CLOSED:
 		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
  		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		break;
  	case HIP_STATE_REKEYING:
  		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
 		break;
@@ -1793,10 +1804,10 @@ int hip_handle_i1(struct hip_common *i1,
  */
 int hip_receive_i1(struct hip_common *hip_i1,
 		   struct in6_addr *i1_saddr,
-		   struct in6_addr *i1_daddr)
+		   struct in6_addr *i1_daddr,
+		   hip_ha_t *entry)
 {
 	int err = 0, state, mask;
-	hip_ha_t *entry;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
 #endif
@@ -1808,7 +1819,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
  	HIP_IFEL(!hip_controls_sane(ntohs(hip_i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(hip_i1->control));
 	
-	entry = hip_hadb_find_byhits(&hip_i1->hits, &hip_i1->hitr);
+	
 	if (entry) {
 		wmb();
 		state = entry->state;
@@ -2060,7 +2071,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
+	entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
 			      mask, &entry->hit_our,
 			      &entry->hit_peer);
 
@@ -2149,14 +2160,5 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 	return err;
 }
-/* this function is only for test purposes and will be removed after testing*/
-int violent_message(struct hip_common 	* msg, 
-		    struct in6_addr 	* hit1s, 
-		    struct in6_addr 	* hitr,
-		    hip_ha_t 		* entry){
-	int i;
-	for ( i = 0; i < 100; i++ ){ 
-		HIP_DEBUG("VIOLENT MESSAGE! AAAAAH!\n");
-	}
-}
+
 
