@@ -533,7 +533,7 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 
         parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
 	entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
-	addr.in6 = (struct in6_addr *) tb[entry];
+	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
 
 	if(r->rtm_family == AF_INET) {
 		IPV4_TO_IPV6_MAP(addr.in->s_addr, src_addr);
