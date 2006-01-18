@@ -134,6 +134,9 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		struct hip_solution sl;
 	} *u;
 
+	HIP_HEXDUMP("puzzle", puzzle_or_solution,
+		    (mode == HIP_VERIFY_PUZZLE ? sizeof(struct hip_solution) : sizeof(struct hip_puzzle)));
+
 	_HIP_DEBUG("\n");
 	/* pre-create cookie */
 	u = puzzle_or_solution;
@@ -150,6 +153,8 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 
 	mask = hton64((1ULL << u->pz.K) - 1);
 	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
+
+	HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
 
 	if (mode == HIP_VERIFY_PUZZLE) {
 		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hits);
@@ -317,9 +322,12 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_DEBUG("Solution's I (0x%llx), sent I (0x%llx)\n",
 		  solution->I, puzzle->I);
 
-	_HIP_HEXDUMP("opaque in solution", solution->opaque, 3);
-	_HIP_HEXDUMP("opaque in result", result->Copaque, 3);
-	_HIP_HEXDUMP("opaque in puzzle", puzzle->opaque, 3);
+	_HIP_HEXDUMP("opaque in solution", solution->opaque, 
+		     HIP_PUZZLE_OPAQUE_LEN);
+	_HIP_HEXDUMP("opaque in result", result->Copaque, 
+		     HIP_PUZZLE_OPAQUE_LEN);
+	_HIP_HEXDUMP("opaque in puzzle", puzzle->opaque, 
+		     HIP_PUZZLE_OPAQUE_LEN);
 
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
@@ -334,9 +342,12 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 		HIP_DEBUG("Received solution to an old puzzle\n");
 
 	} else {
+		HIP_HEXDUMP("solution", solution, sizeof(*solution));
+		HIP_HEXDUMP("puzzle", puzzle, sizeof(*puzzle));
 		HIP_IFEL(solution->I != puzzle->I, 0,
 			 "Solution's I did not match the sent I\n");
-		HIP_IFEL(memcmp(solution->opaque, puzzle->opaque, 3), 0, 
+		HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
+				HIP_PUZZLE_OPAQUE_LEN), 0, 
 			 "Solution's opaque data does not match the opaque data sent\n");
 	}
 	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 

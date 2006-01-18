@@ -892,7 +892,7 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 	int ifindex;
 
 	HIP_DEBUG_HIT("dst dev_addr", dev_addr);
-	ifindex = hip_ipv6_devaddr2ifindex(dev_addr);
+	ifindex = hip_devaddr2ifindex(dev_addr);
 	HIP_DEBUG("ifindex of dst dev=%d\n", ifindex);
 	if (!ifindex)
 		return 0;
