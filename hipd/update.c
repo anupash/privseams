@@ -1511,6 +1511,9 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
 
+	/* Until UPDATE really works, especially with radvd -Juha-Matti */
+	goto out_err;
+
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 	if (!ifindex) {
 		HIP_DEBUG("test: returning, ifindex=0 (fix this for non-mm UPDATE)\n");
