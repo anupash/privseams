@@ -37,6 +37,9 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			return 0;
 		return 1;
 	}
+
+	/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
+
 	/* AG FIXME more IPv4 address checking */
 	if (addr->sa_family == AF_INET) 
 		return 1;
@@ -310,10 +313,11 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	//FIXME: acq->sel.family doesn't seem to contain the right value
 	addr->sa_family = AF_INET6;
 	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
-#if 0
+
+	HIP_DEBUG_IN6ADDR("local addr", &entry->local_address);
+
 	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
 		 "if_index NOT determined\n");
-#endif
 
 	add_address_to_list(addr, acq->sel.ifindex);
 

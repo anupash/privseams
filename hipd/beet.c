@@ -54,14 +54,13 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	{
 		HIP_DEBUG("IPv4 address found in tmpl policy\n");
 		tmpl->family = AF_INET;
-		HIP_DEBUG_INADDR("tmpl_saddr in policy", tmpl_saddr);
-		HIP_DEBUG_INADDR("tmpl_daddr in policy", tmpl_daddr);
 	} else {
 		tmpl->family = preferred_family;
-		HIP_DEBUG_IN6ADDR("tmpl_saddr in policy", tmpl_saddr);
-		HIP_DEBUG_IN6ADDR("tmpl_daddr in policy", tmpl_daddr);
 	}
 		
+	HIP_DEBUG_IN6ADDR("tmpl_saddr in policy", tmpl_saddr);
+	HIP_DEBUG_IN6ADDR("tmpl_daddr in policy", tmpl_daddr);
+
 	/* The mode has to be BEET */
 	if (proto) {
 		tmpl->mode = XFRM_MODE_BEET;

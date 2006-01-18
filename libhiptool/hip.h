@@ -92,6 +92,31 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 }
 
+#define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
+         {(in6_addr_to)->s6_addr32[0] = 0;                                \
+          (in6_addr_to)->s6_addr32[1] = 0;                                \
+          (in6_addr_to)->s6_addr32[2] = htonl(0xffff);                    \
+         (in6_addr_to)->s6_addr32[3] = (uint32_t) (in_addr_from);}
+
+#define IPV6_TO_IPV4_MAP(in6_addr_from,in_addr_to)    \
+       { (in_addr_to) =                        \
+          ((in6_addr_from)->s6_addr32[3]); }
+
+#define IPV6_EQ_IPV4(in6_addr_a,in_addr_b)   \
+       ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
+	((in6_addr_a)->s6_addr32[3] == (in_addr_b).s_addr)) 
+
+#define HIT2LSI(a) ( 0x01000000L | \
+                     (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
+
+#define IS_LSI32(a) ((a & 0xFF) == 0x01)
+
+#define HIT_IS_LSI(a) \
+        ((((__const uint32_t *) (a))[0] == 0)                                 \
+         && (((__const uint32_t *) (a))[1] == 0)                              \
+         && (((__const uint32_t *) (a))[2] == 0)                              \
+         && (((__const uint32_t *) (a))[3] != 0))                              
+
 #define HIPL_VERSION 0.2
 
 #define HIP_MAX_PACKET 2048

@@ -383,12 +383,19 @@ void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
 	char dst[INET6_ADDRSTRLEN];
 
-	hip_in6_ntop(hit, dst);
-	HIP_DEBUG("%s: %s\n", str, dst);
+	if (IN6_IS_ADDR_V4MAPPED(hit)) {
+		struct in_addr in_addr;
+		IPV6_TO_IPV4_MAP(hit, in_addr.s_addr);
+		hip_print_lsi(str, &in_addr);
+	} else {
+		hip_in6_ntop(hit, dst);
+		HIP_DEBUG("%s: %s\n", str, dst);
+	}
+
 	return;
 }
 
-void hip_print_lsi(const char *str, const struct in6_addr *lsi)
+void hip_print_lsi(const char *str, const struct in_addr *lsi)
 {
 	char dst[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, lsi, dst, sizeof(dst));
