@@ -36,7 +36,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 #endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
-		    ipv6_addr_is_hit(a))
+		    ipv6_addr_is_hit(&a->sin6_addr))
 			return 0;
 		return 1;
 	}
