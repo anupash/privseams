@@ -389,10 +389,11 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	
 	HIP_IFEL(!(new_i1 = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");
+	
+	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
 	hip_build_network_hdr(new_i1, HIP_I1, 0,
 			      &(old_i1->hits),
 			      &(old_i1->hitr));
-
 	/* we need to add FROM field */
 	while ((tmp = hip_get_next_param(old_i1, NULL))) {
 		if (from_added || ntohs(tmp->type) <= HIP_PARAM_FROM) {
