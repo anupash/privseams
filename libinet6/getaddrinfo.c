@@ -487,7 +487,7 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at)
 	continue;
       }
       
-      if (at_hit->family == AF_INET) {
+      if (at_ip->family == AF_INET) {
 	IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
       } else 
 	addr6 = *(struct in6_addr *) at_ip->addr;
