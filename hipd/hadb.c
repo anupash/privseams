@@ -280,7 +280,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		    -1, "Can't set new function pointer set\n");
 		    
 		HIP_IFEL(
-		    hip_hadb_set_misc_function_set(entry, &ahip_misc_func_set),
+		    hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
 		    -1, "Can't set new function pointer set\n");
 		     
 		    
@@ -1748,7 +1748,7 @@ void hip_init_hadb(void)
 /**
  * hip_hadb_set_rcv_function_set - set function pointer set for an hadb record.
  *				   Pointer values will not be copied!
- * @entry:           pointer to the hadb record
+ * @entry:          e pointer to the hadb record
  * @new_func_set:    pointer to the new function set
  *
  * Returns: 0 if everything was stored successfully, otherwise < 0.

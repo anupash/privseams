@@ -2,6 +2,7 @@
  * Licence: GNU/GPL
  * Authors:
  * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Tobias Heer <tobi@tobibox.de>
  */
 
 #include "update.h"

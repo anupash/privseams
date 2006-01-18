@@ -9,6 +9,7 @@
  *  - Miika Komu <miika@iki.fi>
  *  - Mika Kousa <mkousa@cc.hut.fi>
  *  - Kristian Slavov <kslavov@hiit.fi>
+ *  - Tobias Heer <tobi@tobibox.de>
  *
  *  TODO:
  *  - split this file into net/hip.h (packet structs etc) and linux/hip.h

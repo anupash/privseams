@@ -1486,7 +1486,7 @@ int hip_handle_i2(struct hip_common *i2,
 		 -1, "Can't set new function pointer set for receive functions\n");
 	HIP_IFEL(hip_hadb_set_update_function_set(entry, &default_update_func_set),
 		 -1, "Can't set new function pointer set for update functions\n");
-	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &ahip_misc_func_set),
+	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
 		 -1, "Can't set new function pointer set for misc functions\n");
 		 
 	hip_hadb_insert_state(entry);
