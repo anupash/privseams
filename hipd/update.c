@@ -288,8 +288,10 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 
 	/* Set up new incoming IPsec SA, (Old SPI value to put in NES tlv) */
 	HIP_IFE(!(prev_spi_in = hip_get_spi_to_update_in_established(entry, dst_ip)), -1);
+	
 	HIP_IFEL(!(new_spi_in = hip_acquire_spi(hits, hitr)), -1, 
 		 "Error while acquiring a SPI\n");
+	
 
 	HIP_DEBUG("Acquired inbound SPI 0x%x\n", new_spi_in);
 	hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in, ntohl(nes->old_spi));
@@ -466,6 +468,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
 	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6);
+	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6);
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
@@ -481,7 +484,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 /*&nes->new_spi*/ &new_spi_in, esp_transform,
 			 we_are_HITg ? &espkey_gl : &espkey_lg,
 			 we_are_HITg ? &authkey_gl : &authkey_lg,
-			 0, HIP_SPI_DIRECTION_OUT, 0); //, -1,
+			 1, HIP_SPI_DIRECTION_OUT, 0); //, -1,
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
@@ -1135,7 +1138,7 @@ int hip_receive_update(struct hip_common *msg,
 			    memcmp(src_ip, &entry->preferred_address, sizeof(struct in6_addr))) {
 				hip_delete_sa(spi, &entry->preferred_address, AF_INET6);
 				ipv6_addr_copy(&entry->preferred_address, rea_address);
-			}
+			} 
 		}
 	}
 	/**********************/
