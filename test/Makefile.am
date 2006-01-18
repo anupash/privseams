@@ -1,23 +1,14 @@
 AUTOMAKE_OPTIONS = foreign
 
-# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
-# is invoked manually directly in this dir. The global include file uses the
-# HIPL variable to setup some HIPL_* variables.
-# 
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 # Note: HIPL is included because "libinet6/debug.h" is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-CFLAGS += -I$(HIPL_TOOLS) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL)
-CFLAGS += -I$(HIPL_LINUX_INCLUDE) -I$(HIPL_LINUX_MODULE)
-CFLAGS += -DHIP_UNITTEST_MODE -DCONFIG_HIP_DEBUG -DHIP_LOGFMT_LONG -g
-CFLAGS += -L$(HIPL_LIBINET6_LIB)
-CFLAGS += -g -DHIP_TRANSPARENT_MODE
+CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
+
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-LDADD  = ../libinet6/.libs/libinet6.a
+LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 bin_PROGRAMS = conntest-client
 bin_PROGRAMS += conntest-server
@@ -25,22 +16,28 @@ bin_PROGRAMS += conntest-client-gai
 bin_PROGRAMS += conntest-client-native
 bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
-bin_PROGRAMS += getaddrinfotest
-bin_PROGRAMS += conntest-server-legacy
+bin_PROGRAMS += unittest
+bin_PROGRAMS += hipsetup
+bin_PROGRAMS += libinet6test
+bin_PROGRAMS += listifaces
+bin_PROGRAMS += first_test
 
-sbin_SCRIPTS = hipsetup
+#sbin_SCRIPTS = hipsetup
 
 conntest_client_SOURCES = conntest-client.c 
-conntest_client_gai_SOURCES = conntest-client-gai.c
-conntest_client_native_SOURCES = conntest-client-native.c
+conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
+conntest_client_native_SOURCES = conntest-client-native.c conntest.c
 conntest_client_native_user_key_SOURCES = \
                         conntest-client-native-user-key.c
-conntest_server_native_SOURCES = conntest-server-native.c
-conntest_server_SOURCES = conntest-server.c
-conntest_server_legacy_SOURCES = conntest-server-legacy.c
-getaddrinfotest_SOURCES = getaddrinfotest.c
+conntest_server_native_SOURCES = conntest-server-native.c conntest.c
+conntest_server_SOURCES = conntest-server.c conntest.c
+unittest_SOURCES = unit.c unittest.c hipconf.c suite.c
+hipsetup_SOURCES = hipsetup.c hipconf.c misc_install.c conntest.c
+first_test_SOURCES = first_test.c hipconf.c misc_install.c conntest.c
+#second_test_SOURCES = second_test.c hipconf.c misc_install.c conntest.c
 
-EXTRA_DIST = $(sbin_SCRIPTS)
+
+#EXTRA_DIST = $(sbin_SCRIPTS)
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
 # the probably the best way to access it because the object must be built
@@ -50,9 +47,5 @@ hipconf.h:
 	$(LN_S) -f $(HIPL_TOOLS)/hipconf.h .
 hipconf.c: hipconf.h
 	$(LN_S) -f $(HIPL_TOOLS)/hipconf.c .
-unit.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.h .
-unit.c: unit.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/unit.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6

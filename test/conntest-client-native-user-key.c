@@ -32,11 +32,11 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#include "libinet6/debug.h"
+#include "libhiptool/debug.h"
 
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *epinfo, *res = NULL;
-  struct sockaddr_eid *my_eid;
+  struct sockaddr_eid my_eid;
   struct timeval stats_before, stats_after;
   unsigned long stats_diff_sec, stats_diff_usec;
   char mylovemostdata[IP_MAXPACKET];
@@ -94,9 +94,7 @@ int main(int argc,char *argv[]) {
     goto out;
   }
 
-  //err = setmyeid(&my_eid, "", endpoint, NULL);
-  my_eid = getlocaled(endpoint, "", NULL, NULL, NULL);
-  //my_eid = getlocaled(NULL, "", NULL, NULL, HIP_ED_ANY);
+  err = setmyeid(&my_eid, "", endpoint, NULL);
   if (err) {
     HIP_ERROR("Failed to set up my EID (%d)\n", err);
     err = 1;
@@ -104,7 +102,7 @@ int main(int argc,char *argv[]) {
   }
 
   /* We have to bind to the EID to use it. */
-  err = bind(sockfd, (struct sockaddr *)my_eid, sizeof(struct sockaddr_eid));
+  err = bind(sockfd, (struct sockaddr *) &my_eid, sizeof(struct sockaddr_eid));
   if (err) {
     HIP_PERROR("bind failed");
     goto out;
@@ -196,8 +194,7 @@ out:
     close(sockfd); // discard errors
   if (res)
      free_endpointinfo(res);
-  if(my_eid)
-    free(my_eid);
+
   HIP_INFO("Result of data transfer: %s.\n", (err ? "FAIL" : "OK"));
 
   return err;

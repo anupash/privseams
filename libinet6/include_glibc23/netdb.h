@@ -45,7 +45,7 @@
 
 /* BEGIN HIPL PATCH */
 #include <net/if.h>
-#include <net/hip.h>
+#include <hip.h>
 /* END HIPL PATCH */
 
 /* Absolute file name for network data base files.  */
@@ -446,10 +446,7 @@ struct gaicb
 /* XX TODO: begin these flags from where the AI_XX ends */
 # define EI_PASSIVE	0x0001	/* Socket address is intended for `bind'.  */
 # define EI_CANONNAME	0x0002	/* Request for canonical name.  */
-# define EI_HI_ANY      0x0008
-# define EI_HI_ANY_PUB  0x0010
-# define EI_HI_ANY_ANON 0x0020
-# define EI_ANON        0x0040 /* Return only anonymous endpoints */
+# define EI_ANON        XX_FIX_ME /* Return only anonymous endpoints */
 # define EI_NOLOCATORS  XX_FIX_ME /* Do not resolve IP addresses */
 # define EI_FALLBACK    XX_FIX_ME /* Fall back to plain TCP/IP is ok */
 
@@ -546,12 +543,6 @@ extern int setmyeid(struct sockaddr_eid *my_eid,
 		    const char *servname,
 		    const struct endpoint *endpoint,
 		    const struct if_nameindex *ifaces);
-
-extern struct sockaddr_eid *getlocaled(const struct endpoint *endpoint,
-				       const char *servname,
-				       const struct addrinfo *addrs,
-				       const struct if_nameindex *ifaces,
-				       int flags);
 
 /* Associate the endpoint of the peer to the address(es) of the peer. */
 int setpeereid(struct sockaddr_eid *peer_eid,

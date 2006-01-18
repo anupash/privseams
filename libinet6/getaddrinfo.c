@@ -70,11 +70,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "message.h"
 #include "util.h"
 
+#include "bos.h"
+
 #define GAIH_OKIFUNSPEC 0x0100
 #define GAIH_EAI        ~(GAIH_OKIFUNSPEC)
 
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX  108
+#endif
+
+#ifndef NUM_MAX_HITS
+#define NUM_MAX_HITS 50
 #endif
 
 struct gaih_service
@@ -93,16 +99,16 @@ struct gaih_servtuple
 
 static const struct gaih_servtuple nullserv;
 
-/* Moved to util.h
-
-  struct gaih_addrtuple
+/* Moved to util.h, used in getendpointinfo.c
+struct gaih_addrtuple
   {
-  struct gaih_addrtuple *next;
-  int family;
-  char addr[16];
-  uint32_t scopeid;
+    struct gaih_addrtuple *next;
+    int family;
+    char addr[16];
+    uint32_t scopeid;
   };
 */
+
 struct gaih_typeproto
   {
     int socktype;
@@ -225,10 +231,12 @@ gaih_local (const char *name, const struct gaih_service *service,
   (*pai)->ai_addrlen = sizeof (struct sockaddr_un);
   (*pai)->ai_addr = (void *) (*pai) + sizeof (struct addrinfo);
 
+#if 0 /* does not compile */
 #if SALEN
   ((struct sockaddr_un *) (*pai)->ai_addr)->sun_len =
     sizeof (struct sockaddr_un);
 #endif /* SALEN */
+#endif
 
   ((struct sockaddr_un *)(*pai)->ai_addr)->sun_family = AF_LOCAL;
   memset(((struct sockaddr_un *)(*pai)->ai_addr)->sun_path, 0, UNIX_PATH_MAX);
@@ -319,7 +327,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
 
   return 0;
 }
- 
+
 #define gethosts(_family, _type)				\
  {								\
   int i, herrno;						\
@@ -351,7 +359,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
       for (i = 0; h->h_addr_list[i]; i++)			\
 	{							\
 	  if (*pat == NULL) {					\
-	    *pat = malloc(sizeof(struct gaih_addrtuple));	\
+	    *pat = __alloca (sizeof(struct gaih_addrtuple));	\
 	    (*pat)->scopeid = 0;				\
 	  }							\
 	  (*pat)->next = NULL;					\
@@ -362,20 +370,6 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
 	}							\
     }								\
  }
-
-/*
- * Returns true if address is a HIT 
- */
-static inline int ipv6_addr_is_hit(struct in6_addr *addr) 
-{
-        int bits;
-        bits = addr->s6_addr[0] & 0xC0;
-        if (bits == 0x80 || bits == 0x40)
-                return 1;
-
-        return 0;
-}
-
 
 #define gethosts_hit(_name)						\
  {									\
@@ -439,6 +433,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
   int rc;
   int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
 		 (req->ai_flags & AI_V4MAPPED);
+
   if (service)
     _HIP_DEBUG("name='%s' service->name='%s' service->num=%d'\n", name, service->name, service->num);
   else 
@@ -567,7 +562,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
     {
       _HIP_DEBUG(">> name != NULL\n");
 
-      at = malloc(sizeof (struct gaih_addrtuple));
+      at = malloc (sizeof (struct gaih_addrtuple));
 
       at->family = AF_UNSPEC;
       at->scopeid = 0;
@@ -649,6 +644,20 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	  _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
 
 	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6) {
+	    
+#if 0
+#ifdef CONFIG_HIP_AGENT
+	  if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
+	      hip_agent_is_alive()) {
+		  /* Communicate the name and port output to the agent
+		     synchronously with netlink. First send the name + port
+		     and then wait for answer (select). The agent filters
+		     or modifies the list. The agent implements gethosts_hit
+		     with some filtering. */
+	  }
+#endif
+#endif
+
 	    if (hip_transparent_mode) {
 	      _HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
 	      gethosts_hit(name);
@@ -666,6 +675,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	      }
 	    }
 	  }
+
 	  /* If we are looking for both IPv4 and IPv6 address we don't
 	     want the lookup functions to automatically promote IPv4
 	     addresses to IPv6 addresses.  Currently this is decided
@@ -694,29 +704,29 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next) {
 	      int i;
 	      struct sockaddr_in6 *s = (struct sockaddr_in6 *)at_hit->addr;
-	      
+
 	      if (!ipv6_addr_is_hit((struct in6_addr *) at_hit->addr)) {
 		continue;
 	      }
-	      
+
 	      for(at_ipv6 = orig_at; at_ipv6 != NULL; at_ipv6 = at_ipv6->next) {
 		if ((at_ipv6 == at_hit) ||
 		    ipv6_addr_is_hit((struct in6_addr *) at_ipv6->addr)) {
 		  continue;
 		}
-		
+
 		hip_msg_init(msg);	
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
 		hip_build_param_contents(msg, (void *) at_ipv6->addr, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
 		hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-		hip_set_global_option(msg);
+		hip_send_daemon_info(msg);
 	      }
 	    }
 
 	    free(msg);
 
 	  }
-	  
+
 	  if (no_data != 0 && no_inet6_data != 0)
 	    {
 	      _HIP_DEBUG("nodata\n");
@@ -750,7 +760,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		hit_at->next = nonhit_at;
 	      }
 	    }
-	    
+
 	  }
 	}
 
@@ -764,7 +774,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
       struct gaih_addrtuple *atr, *attr;
       atr = at = malloc (sizeof (struct gaih_addrtuple));
       memset (at, '\0', sizeof (struct gaih_addrtuple));
-
+      
       _HIP_DEBUG(">> name == NULL\n");
       /* Find the local HIs here and add the HITs to atr */
       if (req->ai_flags & AI_HIP) {
@@ -790,7 +800,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	  at->next = malloc(sizeof (struct gaih_addrtuple));
 	  memset (at->next, '\0', sizeof (struct gaih_addrtuple));
 	}
-
+      
       if (req->ai_family == 0 || req->ai_family == AF_INET6)
 	{
 	  at->family = AF_INET6;
@@ -889,16 +899,18 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    *pai = malloc (sizeof (struct addrinfo) + socklen + namelen);
 	    if (*pai == NULL)
 	      return -EAI_MEMORY;
-	    
+
 	    (*pai)->ai_flags = req->ai_flags;
 	    (*pai)->ai_family = family;
 	    (*pai)->ai_socktype = st2->socktype;
 	    (*pai)->ai_protocol = st2->protocol;
 	    (*pai)->ai_addrlen = socklen;
 	    (*pai)->ai_addr = (void *) (*pai) + sizeof(struct addrinfo);
+#if 0 /* does not compile */
 #if SALEN
 	    (*pai)->ai_addr->sa_len = socklen;
 #endif /* SALEN */
+#endif
 	    (*pai)->ai_addr->sa_family = family;
 
 	    if (family == AF_INET6)
@@ -946,7 +958,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    (*pai)->ai_next = NULL;
 	    pai = &((*pai)->ai_next);
 	  }
-
+	
 	at2 = at2->next;
       }
     /* changed __alloca:s for the linked list 'at' to mallocs, 
@@ -957,7 +969,6 @@ gaih_inet (const char *name, const struct gaih_service *service,
       at = NULL;
     }
   }
-
   return 0;
 }
 
@@ -970,6 +981,16 @@ static struct gaih gaih[] =
     { PF_UNSPEC, NULL }
   };
 
+/**
+ * getaddrinfo - retrieves the info of the specified peer
+ * @msg: message containing information about which unit tests to execute
+ *
+ * Process a request for the list of known peers
+ *
+ * Returns: zero on success, or negative error value on failure
+ * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
+ * database is returned
+ */
 int
 getaddrinfo (const char *name, const char *service,
 	     const struct addrinfo *hints, struct addrinfo **pai)
@@ -979,17 +1000,20 @@ getaddrinfo (const char *name, const char *service,
   struct gaih *g = gaih, *pg = NULL;
   struct gaih_service gaih_service, *pservice;
   int hip_transparent_mode;
-  
+
   _HIP_DEBUG("flags=%d\n", hints->ai_flags);
-  _HIP_DEBUG("name='%s' service='%s'\n", name, service);
+  HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
     _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   else
     _HIP_DEBUG("hints=NULL\n");
 
+  //  if (*pai)
+  // HIP_DEBUG("pai:ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d\n", (*pai)->ai_flags, (*pai)->ai_family, (*pai)->ai_socktype, (*pai)->ai_protocol);
+
   if (name != NULL && name[0] == '*' && name[1] == 0)
     name = NULL;
-  
+
   if (service != NULL && service[0] == '*' && service[1] == 0)
     service = NULL;
 
@@ -1003,7 +1027,7 @@ getaddrinfo (const char *name, const char *service,
 
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
-			  AI_HIP_NATIVE))
+			  AI_HIP_NATIVE|AI_KERNEL_LIST))
     return EAI_BADFLAGS;
 
   if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
@@ -1013,13 +1037,12 @@ getaddrinfo (const char *name, const char *service,
     return EAI_BADFLAGS;
 
 #ifdef HIP_TRANSPARENT_MODE
-  _HIP_DEBUG("HIP_TRANSPARENT_MODE DEFINED\n");
   /* Transparent mode does not work with HIP native resolver */
   hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
 #else
   hip_transparent_mode = 0;
 #endif
-  _HIP_DEBUG("transparent mode?:%d\n",hip_transparent_mode);
+  
   if (service && service[0])
     {
       char *c;
@@ -1037,6 +1060,33 @@ getaddrinfo (const char *name, const char *service,
     }
   else
     pservice = NULL;
+
+  if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
+    socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
+    int err = 0, port, i;
+    
+    *pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
+    if (*pai == NULL) {
+      HIP_ERROR("Unable to allocated memory\n");
+      err = -EAI_MEMORY;
+      return err;
+    }
+
+    if (!pservice)
+      port = 0;
+    else
+      port = pservice->num;
+    /* This is the case which is used after BOS packet is processed, as a second parameter
+     * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
+     * the struct sockaddr_in6 list
+     */
+    err = hip_recv_daemon_info(NULL, 0);
+    HIP_ASSERT(0); /* XX FIXME: fix recv_daemon_msg */
+    if (err < 0) {
+      HIP_ERROR("getsockopt failed (%d)\n", err);
+    }
+    return err;
+  }
 
   if (pai)
     end = &p;

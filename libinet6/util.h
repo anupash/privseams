@@ -12,7 +12,7 @@
 #include <malloc.h>
 
 #include "builder.h"
-#include "libinet6/debug.h"
+#include "debug.h"
 
 #define MAX_ITEM_LEN 256
 
@@ -49,11 +49,9 @@ char *getitem(List *, int n);
 
 char *getwithoutnewline(char *buffer, int count, FILE *f);
 
-char *findsubstring(char *string, char *substring);
+char *findsubstring(const char *string, const char *substring);
 void findkeyfiles(char *path, List *list);
 void extractsubstrings(char *string, List *list);
 
 /* from getendpointinfo.c, make another header file? */
 int get_local_hits(const char *servname, struct gaih_addrtuple **adr);
-
-			

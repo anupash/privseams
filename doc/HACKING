@@ -62,25 +62,18 @@ QUICK-AND-DIRTY ARCH INSTRUCTIONS FOR DEVELOPERS
 ================================================
 
 These instructions assume that you want to access the HIPL source code
-using ssh. Also, the tla usage is optimized using hard-linked revision
-libraries.
+using ssh. Note: tla and bazaar provide the same functionality but
+bazaar was faster and more user friendly when this was written.
 
 # Register an account:
 #
-tla register-archive hipl-dev@freelists.org--hipl \
+baz register-archive hipl-dev@freelists.org--hipl \
        sftp://mkomu@hipl.hiit.fi/var/archive/hipl
-tla my-default-archive hipl-dev@freelists.org--hipl
-
-# Make a revision library (otherwise e.g. commit and changes take up to
-# 15 mins!)
-#
-mkdir ~/.tla-rev-lib
-tla my-revision-library ~/.tla-rev-lib/
-tla library-config --greedy --sparse ~/.tla-rev-lib/
+baz my-default-archive hipl-dev@freelists.org--hipl
 
 # Get a working copy from the main branch:
 #
-tla get --link hipl--main--2.6 hipl--main--2.6
+baz get hipl--main--2.6 hipl--main--2.6
 
 # Copy the tla hook if you want to get your commit logs to the mailing list:
 #
@@ -88,36 +81,57 @@ cp hipl--main--2.6/test/tla-hook ~/.arch-params/hook
 
 # Different ways to commit code:
 #
-a) tla commit # Open's your default editor and commits.
+a) baz commit # Open's your default editor and commits.
 b) emacs `tla make-log`; tla commit
-c) tla commit -s "Explanation jaada jaada"
+c) baz commit -s "Explanation jaada jaada"
 
 # How to check what your have modified in the tree
 #
-tla changes
+baz changes
 
 # How to make a branch from the current version of the main branch
 #
-tla my-default archive # Make sure that you are accessing the HIPL archive
-tla archive-setup hipl--mybranch--2.6
-tla tag hipl--main--2.6 hipl--mybranch--2.6
+baz my-default archive # Make sure that you are accessing the HIPL archive
+baz archive-setup hipl--mybranch--2.6
+baz tag hipl--main--2.6 hipl--mybranch--2.6
 
 # Get the new branch
 #
-tla get --link hipl--mybranch--2.6 hipl--mybranch--2.6
+baz get hipl--mybranch--2.6 hipl--mybranch--2.6
 
 # How to synchronize branches... remember to make clean commits, i.e. do
 # NOT commit a merge and local modifications in the same commit!
 #
 cd hipl--mybranch--2.6
-tla changes # Check that the tree is unmodified
-tla star-merge hipl--main--2.6
+baz changes # Check that the tree is unmodified
+baz star-merge hipl--main--2.6
+
+--- Optional ---
+
+Below are some instructions on using revision libraries. They speed-up
+tla/baz operations.
+
+# Make a revision library (otherwise e.g. commit and changes take up to
+# 15 mins!)
+#
+mkdir ~/.tla-rev-lib
+baz my-revision-library ~/.tla-rev-lib/
+baz library-config --greedy --sparse ~/.tla-rev-lib/
+
+# Get a working copy from the main branch using revision libraries:
+#
+baz get --link hipl--main--2.6 hipl--main--2.6
+
+Also, the tla usage is optimized using hard-linked revision
+libraries.
 
 # Run the command below in your working copy (e.g. monthly) if you
-# experience a serious slow-down in the commit speed:
+# experience a serious slow-down in the commit speed or you want to enable
+# revision libraries in your local copy:
 #
 cd hipl--main--2.6
-tla changes --link
+baz changes --link
+
 
 ARCH POLICY
 ===========
@@ -143,6 +157,10 @@ Some points in the branch quality assurance:
 
 UPGRADING THE KERNEL
 ====================
+
+# note: there is a perl script called "hashline" diff which is more
+# convinient to use in upgrading the kernel (to check for added/deleted
+# files)
 
 % <get the patch to ~/down>
 % cd hipl--fix--2.6/linux
