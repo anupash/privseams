@@ -31,7 +31,9 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		    IN6_IS_ADDR_LOOPBACK(a) ||
 		    IN6_IS_ADDR_MULTICAST(a) ||
 		    IN6_IS_ADDR_LINKLOCAL(a) ||
+#if 0 /* For Juha-Matti's experiments  */
 		    IN6_IS_ADDR_SITELOCAL(a) ||
+#endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
 		    ipv6_addr_is_hit(a))
