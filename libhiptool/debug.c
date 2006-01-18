@@ -374,6 +374,12 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 	HIP_DEBUG("%s\n", addr_str);
 }
 
+void hip_print_lsi(const char *str, const struct in_addr *lsi)
+{
+	char dst[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, lsi, dst, sizeof(dst));
+	HIP_DEBUG("%s: %s\n", str, dst);
+}
 /**
  * hip_print_hit - print a HIT
  * @str: string to be printed before the HIT
@@ -395,9 +401,3 @@ void hip_print_hit(const char *str, const struct in6_addr *hit)
 	return;
 }
 
-void hip_print_lsi(const char *str, const struct in_addr *lsi)
-{
-	char dst[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, lsi, dst, sizeof(dst));
-	HIP_DEBUG("%s: %s\n", str, dst);
-}
