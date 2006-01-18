@@ -300,7 +300,7 @@ int handle_map(struct hip_common *msg, int action,
 			goto out;
 		}
 		
-		IPV4_TO_IPV6_MAP(ip4.s_addr, &ip6);
+		IPV4_TO_IPV6_MAP(&ip4, &ip6);
 		HIP_DEBUG("Mapped v4 to v6\n");
 		HIP_DEBUG_IN6ADDR("mapped v6 addr", &ip6); 	
 	}

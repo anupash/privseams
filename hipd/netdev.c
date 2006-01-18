@@ -33,7 +33,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		    IN6_IS_ADDR_SITELOCAL(a) ||
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
-		    ipv6_addr_is_hit(a))
+		    ipv6_addr_is_hit(&a->sin6_addr))
 			return 0;
 		return 1;
 	}
@@ -68,7 +68,8 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 		struct sockaddr_in6 temp;
 		memset(&temp, 0, sizeof(temp));
 		temp.sin6_family = AF_INET6;
-		IPV4_TO_IPV6_MAP(&((struct sockaddr_in *)addr)->sin_addr, &temp.sin6_addr);
+		IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *)addr)->sin_addr),
+				 &temp.sin6_addr);
 	        memcpy(&n->addr, &temp, SALEN(&temp));
 	} else
 	        memcpy(&n->addr, addr, SALEN(addr));
@@ -101,7 +102,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                         if ((n->addr.ss_family == addr->sa_family) &&
                             ((memcmp(SA2IP(&n->addr), SA2IP(addr),
 				     SAIPLEN(addr))==0)) || 
-			    IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), ((struct sockaddr_in *) addr)->sin_addr) ) {
+			    IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr) ) {
                                 /* address match */
 				list_del(&n->next);
 				deleted = 1;
@@ -137,6 +138,10 @@ void delete_all_addresses(void)
 int hip_netdev_find_if(struct sockaddr *addr)
 {
         struct netdev_address *n;
+
+	HIP_DEBUG_IN6ADDR("Trying to find addr",
+			  &(((struct sockaddr_in6 *)addr)->sin6_addr));
+
 	list_for_each_entry(n, &addresses, next) {
 		HIP_DEBUG("n family %d, addr family %d\n", n->addr.ss_family ,addr->sa_family);
 		HIP_DEBUG_IN6ADDR("n addr ",  &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
@@ -144,7 +149,7 @@ int hip_netdev_find_if(struct sockaddr *addr)
 		if ((n->addr.ss_family == addr->sa_family) &&
 		    ((memcmp(SA2IP(&n->addr), SA2IP(addr),
 			     SAIPLEN(addr))==0)) ||
-			  IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), ((struct sockaddr_in *) addr)->sin_addr)){ 
+			  IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr)){ 
 		HIP_DEBUG("index %d\n", n->if_index);	
 		return n->if_index;
 		}
@@ -302,16 +307,20 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 		goto out_err;
 	}
 
-	/* XX TODO: we should try resolving here to create an
-	   entry if an entry was not found */
-
-	/* Let's fill in the local_address in here */
-	ipv6_addr_copy(&entry->local_address, ((struct in6_addr*)&acq->id.daddr));
 	/* The address and the corresponding ifindex should be added in here */
 	memset(addr, 0, sizeof(struct sockaddr_storage));
 	
-	//FIXME: acq->sel.family doesn't seem to contain the right value
-	addr->sa_family = AF_INET6;
+	/* XX FIX: the family should be fetched from acq */
+	if (IN6_IS_ADDR_V4MAPPED(&entry->preferred_address)) {
+		IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
+				 &entry->local_address);
+		addr->sa_family = AF_INET;
+	} else {
+		ipv6_addr_copy(&entry->local_address,
+			       ((struct in6_addr*)&acq->id.daddr));
+		addr->sa_family = AF_INET6;
+	}
+
 	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
 
 	HIP_DEBUG_IN6ADDR("local addr", &entry->local_address);

@@ -536,7 +536,7 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
 
 	if(r->rtm_family == AF_INET) {
-		IPV4_TO_IPV6_MAP(addr.in->s_addr, src_addr);
+		IPV4_TO_IPV6_MAP(addr.in, src_addr);
 	} else
 		memcpy(src_addr, addr.in6, sizeof(struct in6_addr));
 
@@ -567,7 +567,7 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
 	
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
-		IPV6_TO_IPV4_MAP(dst_addr, ip4.s_addr);
+		IPV6_TO_IPV4_MAP(dst_addr, &ip4);
 		preferred_family = AF_INET;
 		HIP_IFEL((!inet_ntop(preferred_family, &ip4, dst_str,
                              INET6_ADDRSTRLEN)), -1,"inet_pton\n");

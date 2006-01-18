@@ -32,7 +32,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		//  memcpy(&((struct sockaddr_in6 *) &src)->sin6_addr, src_addr, 
 		//	 sizeof(struct in6_addr));
 		else
-		  IPV6_TO_IPV4_MAP(src_addr, (((struct sockaddr_in *) &src)->sin_addr).s_addr);
+		  IPV6_TO_IPV4_MAP(src_addr, &((((struct sockaddr_in *) &src)->sin_addr)));
 	}
 
 	/* The source address is needed for m&m stuff. However, I am not sure
@@ -54,7 +54,7 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		HIP_DEBUG_IN6ADDR("src", &((struct sockaddr_in6 *) &src)->sin6_addr);
 		HIP_DEBUG_IN6ADDR("dst", &((struct sockaddr_in6 *) &dst)->sin6_addr);
 	} else
-		IPV6_TO_IPV4_MAP(peer_addr,(((struct sockaddr_in *) &dst)->sin_addr).s_addr);
+		IPV6_TO_IPV4_MAP(peer_addr,&((((struct sockaddr_in *) &dst)->sin_addr)));
 
 	hip_zero_msg_checksum(msg);
 	if(!ipv4) 

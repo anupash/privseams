@@ -166,8 +166,8 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 #endif
 
 	if (read_addr) {
-		IPV4_TO_IPV6_MAP(addr_from.sin_addr.s_addr, saddr);
-		IPV4_TO_IPV6_MAP(pktinfo->ipi_addr.s_addr, daddr);
+		IPV4_TO_IPV6_MAP(&addr_from.sin_addr, saddr);
+		IPV4_TO_IPV6_MAP(&pktinfo->ipi_addr, daddr);
 
 		HIP_DEBUG_IN6ADDR("mapped src\n", saddr);
 		HIP_DEBUG_IN6ADDR("mapped dst\n", daddr);
